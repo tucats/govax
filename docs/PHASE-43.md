@@ -946,3 +946,34 @@ uses the current Environment's `mem`/`cpu` (so the current P0/P1) or its
   shared. MODE-STACKS.md updated. Tests: `stacks_test.go` (layout,
   protections, pointers, the PCB page, reset on reuse; process 1's PCB;
   the initial PCB through memory).
+- 2026-10-07: Subtask 10 (per-process image state). `console/images.go`:
+  an `imageProcess` is one process's image state: its ICB list, the
+  symbols activation defines (`MAIN`, `SHARE$name_INITIALIZE`,
+  `SHARE$name_TRANSFER_n`), and its IMAGE$INIT driver page. The loader
+  (`imageLoad`, `imageFixup`, `setImageProtection`, `activateImage`,
+  `buildImageInitDriver`, `p1Stub`, and the header readers) are its
+  methods, and read and write the process's memory through its address
+  space (`vm.Memory`'s `...In` methods, and the new
+  `LookupPTEIn`/`StorePTEIn` for section protection), so an image can be
+  activated in a process that isn't current; its P0 high-water mark is
+  that process's `RegionSize[0]`. Process 1's state is the console's
+  (`Console.images()`), kept across INIT/VMINIT/ZERO as the ICB list
+  always was; `Console.ICBList` is gone, and RUN, SHOW IMAGES, the
+  debugger's lookups, and the console's other readers use process 1's.
+  Another process's is made by `imagesOf(env)` and dropped when a new
+  System is built (`newRTL`); Phase 45's process deletion should drop
+  it too. The Console's old method names (`activateImage`, `imageLoad`,
+  ...) remain as process 1's. Bug 5: process 1's activation symbols
+  are still set in the console's symbol table (so `EXAMINE MAIN` works),
+  another process's only in its own. Bug 1: process 1's driver stays at
+  `CONSOLE$SCRATCH+8` (rule 3, the layout; a nested RUN in process 1
+  reloads its P0 under the running image anyway), and every other
+  process's goes in a pool page of its own, kernel-writable, charged to
+  the process and freed with it. `runHost`, `runCommandLine`, and
+  `imageActive` stay on the Console: they describe the console's
+  foreground RUN of process 1. Tests: `images_test.go` (an image
+  activated in a second, non-current process: its section in that P0,
+  process 1's page untouched, separate ICB lists, high-water marks, and
+  symbols, the driver in a pool page with its `$EXIT` call and
+  `CONSOLE$SCRATCH` untouched, freed at removal; process 1's state kept
+  at INIT, others' dropped) and `TestAddressSpacePTEs`.

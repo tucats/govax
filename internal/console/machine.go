@@ -206,13 +206,14 @@ type Console struct {
 	// the normal verb table/DCL grammar. Reset alongside asmSession (see above).
 	assemblerMode bool
 
-	// ICBList is Phase 13's loaded-image list, in load order (main image first,
-	// each dependency appended as loaded.
-	//
-	// Reset by RUN itself (matching reset_icb_list, called at the start of
-	// every RUN) rather than by Zero/Init, since a loaded image's memory
+	// proc1Images is process 1's image state (images.go): its loaded-image
+	// list (Phase 13's ICB list), activation symbols, and driver. Reset by
+	// RUN itself (matching reset_icb_list, called at the start of every
+	// RUN) rather than by Zero/Init, since a loaded image's memory
 	// survives independently of the ICB bookkeeping describing it.
-	ICBList []*ICB
+	// otherImages is every other process's (Phase 43), by Environment.
+	proc1Images *imageProcess
+	otherImages map[*corevms.Environment]*imageProcess
 
 	// SharePrefix is a directory/filename prefix consulted when locating a
 	// sharable image dependency that isn't found under its bare name,
@@ -334,6 +335,10 @@ func (w consoleOutput) Write(p []byte) (int, error) {
 func (c *Console) newRTL() *corevms.Environment {
 	sys := corevms.NewSystem(c.CPU, c.Mem, c.Devices, c.Mounts)
 	librtl.Register(sys.Shims()) // LIBRTL.EXE's routines (docs/PHASE-34.md)
+
+	// The old System's other processes are gone with it, and so is their
+	// image state; process 1's is the console's and stays (images.go).
+	c.otherImages = nil
 
 	// $SETIMR's timers run on the engine's system time, the same time
 	// base as the interval clock (docs/PHASE-26.md subtask 11).

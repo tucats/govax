@@ -380,7 +380,7 @@ func TestShowImages(t *testing.T) {
 		t.Errorf("output = %q, want a \"no images\" message with an empty ICBList", buf.String())
 	}
 
-	c.ICBList = append(c.ICBList, &ICB{Name: "TEST.EXE", Base: 0x200, End: 0x400})
+	c.images().ICBList = append(c.images().ICBList, &ICB{Name: "TEST.EXE", Base: 0x200, End: 0x400})
 
 	buf.Reset()
 

@@ -81,7 +81,7 @@ func TestDispatch_runActivatesImage(t *testing.T) {
 		t.Fatalf("Dispatch(RUN/NOEXECUTE): %v", err)
 	}
 
-	if len(c.ICBList) == 0 {
+	if len(c.images().ICBList) == 0 {
 		t.Fatal("expected RUN to have loaded at least the main image")
 	}
 

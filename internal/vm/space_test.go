@@ -244,3 +244,34 @@ func TestAddressSpaceChecksKernelProtectionAndLength(t *testing.T) {
 	_, err = mem.TranslateIn(cpu, b, top, AccessRead)
 	assertAccessViolation(t, err, top)
 }
+
+// TestAddressSpacePTEs: LookupPTEIn and StorePTEIn read and write the
+// entry in the given space's table, not the current one's.
+func TestAddressSpacePTEs(t *testing.T) {
+	cpu, mem, a, b := newSpaceFixture(t)
+
+	pte, err := mem.LookupPTEIn(cpu, b, pageSize)
+	if err != nil || pte.PFN() != spaceBData>>9+1 {
+		t.Fatalf("B's PTE for page 1 = %#x (%v)", uint32(pte), err)
+	}
+
+	pte.SetProtection(ProtUR)
+
+	if err := mem.StorePTEIn(cpu, b, pageSize, pte); err != nil {
+		t.Fatal(err)
+	}
+
+	if got, _ := mem.LookupPTEIn(cpu, b, pageSize); got.Protection() != ProtUR {
+		t.Errorf("B's page 1 protection %v after StorePTEIn", got.Protection())
+	}
+
+	if got, _ := mem.LookupPTEIn(cpu, a, pageSize); got.Protection() != ProtUW {
+		t.Errorf("A's page 1 protection %v, want it unchanged", got.Protection())
+	}
+
+	cpu.SetPR(vax.MAPEN, 0)
+
+	if _, err := mem.LookupPTEIn(cpu, b, pageSize); err == nil {
+		t.Error("LookupPTEIn with mapping off succeeded")
+	}
+}

@@ -155,6 +155,51 @@ func (m *Memory) resolvePTE(pteAddr, addr uint32, access AccessType) (uint32, er
 	return pte.PFN()<<9 + addr&(pageSize-1), nil
 }
 
+// LookupPTEIn returns the page-table entry that maps addr in as (or in
+// the system page table, for an S0 address): LookupPTE for an address
+// space that may not be the current one. Like LookupPTE it checks neither
+// protection nor the valid bit, and changes nothing. With MAPEN off there
+// are no page tables, and it fails as LookupPTE does.
+func (m *Memory) LookupPTEIn(cpu *vax.CPU, as AddressSpace, addr uint32) (PTE, error) {
+	if cpu.PR(vax.MAPEN) == 0 {
+		return 0, accessViolation(addr)
+	}
+
+	pteAddr, err := m.spacePTEAddress(cpu, as, addr)
+	if err != nil {
+		return 0, err
+	}
+
+	raw, err := m.readPhysLongword(pteAddr)
+
+	return PTE(raw), err
+}
+
+// StorePTEIn writes pte as the page-table entry that maps addr in as:
+// StorePTE for an address space that may not be the current one. It
+// empties addr's translation-buffer slot, as StorePTE does: if as is the
+// current process's, the slot may hold the old entry; if it isn't, the
+// slot holds another process's page (or nothing), and emptying it costs
+// at most a page-table walk.
+func (m *Memory) StorePTEIn(cpu *vax.CPU, as AddressSpace, addr uint32, pte PTE) error {
+	if cpu.PR(vax.MAPEN) == 0 {
+		return accessViolation(addr)
+	}
+
+	pteAddr, err := m.spacePTEAddress(cpu, as, addr)
+	if err != nil {
+		return err
+	}
+
+	if err := m.writePhysLongword(pteAddr, uint32(pte)); err != nil {
+		return err
+	}
+
+	m.InvalidatePage(addr)
+
+	return nil
+}
+
 // LoadIn reads len(dest) bytes starting at addr in as (see TranslateIn)
 // into dest. It translates once per page the bytes touch, so it may cross
 // page boundaries freely.

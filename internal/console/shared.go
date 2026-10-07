@@ -47,7 +47,7 @@ func (icb *ICB) addCell(addr uint32, image string, offset uint32) {
 // from what the cell now holds, so it's the same whether a real shareable
 // image or a shim answers the call.
 func (c *Console) Cell(addr uint32) (string, bool) {
-	for _, icb := range c.ICBList {
+	for _, icb := range c.images().ICBList {
 		if cell, ok := icb.Cells[addr]; ok {
 			return sharedName(cell.Image, cell.Offset)
 		}
@@ -70,7 +70,7 @@ type sharedSymbolizer struct {
 func (s sharedSymbolizer) Symbolize(addr uint32) (string, bool) {
 	main := s.c.findMainICB()
 
-	for _, icb := range s.c.ICBList {
+	for _, icb := range s.c.images().ICBList {
 		if icb == main || addr < icb.Base || addr > icb.End {
 			continue
 		}

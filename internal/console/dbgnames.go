@@ -22,7 +22,7 @@ type imageNames struct {
 // whose debug symbol table has it: a routine, label, data symbol, or
 // constant in a module's DST, else a global in its GST.
 func (n imageNames) Lookup(path string) (uint32, bool) {
-	for _, icb := range n.c.ICBList {
+	for _, icb := range n.c.images().ICBList {
 		if icb.Debug == nil {
 			continue
 		}
@@ -47,7 +47,7 @@ func (n imageNames) Lookup(path string) (uint32, bool) {
 // string or an array of bytes reads as a byte, the type of its first
 // item. ok is false where no image's debug symbols have the name as data.
 func (n imageNames) DataSize(path string) (uint32, bool) {
-	for _, icb := range n.c.ICBList {
+	for _, icb := range n.c.images().ICBList {
 		d, ok := icb.Debug.DatumPath(path)
 		if !ok {
 			// A name only the image's global symbol table has (an image
@@ -83,7 +83,7 @@ func (n imageNames) DataSize(path string) (uint32, bool) {
 // element. Subscripts count from the array's lower bound, and one outside
 // the bounds is an error (ok false), as it is in the debugger.
 func (n imageNames) Element(path string, index int32) (addr, size uint32, ok bool) {
-	for _, icb := range n.c.ICBList {
+	for _, icb := range n.c.images().ICBList {
 		d, found := icb.Debug.DatumPath(path)
 		if !found || !d.IsArray() || len(d.Descriptor.Bounds) != 1 {
 			continue
@@ -113,7 +113,7 @@ func (n imageNames) Line(scope string, line int) (uint32, bool) {
 	if scope != "" {
 		module, _, _ := strings.Cut(scope, `\`)
 
-		for _, icb := range n.c.ICBList {
+		for _, icb := range n.c.images().ICBList {
 			if icb.Debug == nil {
 				continue
 			}
@@ -128,7 +128,7 @@ func (n imageNames) Line(scope string, line int) (uint32, bool) {
 
 	pc := n.c.CPU.GPR(vax.PC)
 
-	for _, icb := range n.c.ICBList {
+	for _, icb := range n.c.images().ICBList {
 		if icb.Debug == nil {
 			continue
 		}
@@ -140,7 +140,7 @@ func (n imageNames) Line(scope string, line int) (uint32, bool) {
 		}
 	}
 
-	for _, icb := range n.c.ICBList {
+	for _, icb := range n.c.images().ICBList {
 		if icb.Debug == nil {
 			continue
 		}
@@ -193,7 +193,7 @@ func (s consoleSymbolizer) Symbolize(addr uint32) (string, bool) {
 		return p.Symbolize(addr, s.radix)
 	}
 
-	for _, icb := range s.c.ICBList {
+	for _, icb := range s.c.images().ICBList {
 		if icb.Debug == nil || icb.Debug.Globals == nil {
 			continue
 		}

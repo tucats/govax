@@ -127,19 +127,19 @@ type ICB struct {
 // mark, matching reset_icb_list. Unlike the C source, there is no explicit
 // per-ISD/per-ICB freemem to port -- Go's GC reclaims them once ICBList is
 // replaced.
-func (c *Console) resetICBList() {
-	for _, icb := range c.ICBList {
-		c.setImageProtection(icb, false)
+func (p *imageProcess) resetICBList() {
+	for _, icb := range p.ICBList {
+		p.setImageProtection(icb, false)
 	}
 
-	c.ICBList = nil
-	c.RTL.RegionSize[0] = 0
+	p.ICBList = nil
+	p.process().RegionSize[0] = 0
 }
 
 // findMainICB returns the ICB flagged ICB_MAIN, or nil, matching
 // find_main_icb.
-func (c *Console) findMainICB() *ICB {
-	for _, icb := range c.ICBList {
+func (p *imageProcess) findMainICB() *ICB {
+	for _, icb := range p.ICBList {
 		if icb.Flags&icbMain != 0 {
 			return icb
 		}
@@ -151,9 +151,11 @@ func (c *Console) findMainICB() *ICB {
 // storeBytes writes data starting at virtual address addr, via translation
 // forced into kernel mode for the duration (see withKernelMode) regardless
 // of whatever mode the CPU was last left in -- this is console-driven
-// memory access (image loading, ASM's own code deposit, SHIM$ stub
-// synthesis), not an access made by a running program, so it must not be
-// gated by that program's own PSL.
+// memory access (ASM's own code deposit, SHIM$ stub synthesis), not an
+// access made by a running program, so it must not be gated by that
+// program's own PSL. It goes through the current process's mapping; image
+// activation, which may be for another process, uses imageProcess's own
+// accessors (images.go) instead.
 func (c *Console) storeBytes(addr uint32, data []byte) error {
 	return c.withKernelMode(func() error {
 		for i, b := range data {
@@ -171,18 +173,6 @@ func (c *Console) loadByte(addr uint32) (byte, error) {
 
 	err := c.withKernelMode(func() (err error) {
 		v, err = c.Mem.LoadByte(c.CPU, addr)
-
-		return err
-	})
-
-	return v, err
-}
-
-func (c *Console) loadWord(addr uint32) (uint16, error) {
-	var v uint16
-
-	err := c.withKernelMode(func() (err error) {
-		v, err = c.Mem.LoadWord(c.CPU, addr)
 
 		return err
 	})
@@ -216,14 +206,14 @@ func (c *Console) storeLong(addr, v uint32) error {
 // id, mask, channels, io_pages, flags, section_id, version) and the IHI's
 // own image-name field only ever feed this phase's C source's own debug
 // printing, with no consumer in this port.
-func (c *Console) readIHDTransferOffset(base uint32) (uint32, error) {
-	v, err := c.loadWord(base + 2)
+func (p *imageProcess) readIHDTransferOffset(base uint32) (uint32, error) {
+	v, err := p.loadWord(base + 2)
 
 	return uint32(v), err
 }
 
-func (c *Console) readIHDIdentOffset(base uint32) (uint32, error) {
-	v, err := c.loadWord(base + 6)
+func (p *imageProcess) readIHDIdentOffset(base uint32) (uint32, error) {
+	v, err := p.loadWord(base + 6)
 
 	return uint32(v), err
 }
@@ -235,8 +225,8 @@ const ihiSize = 80
 // readISD reads one Image Section Descriptor at addr, returning it along
 // with its own declared on-disk size (image_load's own loop advances by
 // this, not sizeof(ISD), since ISD records are variable-length).
-func (c *Console) readISD(addr uint32) (*ISD, uint32, error) {
-	size, err := c.loadWord(addr)
+func (p *imageProcess) readISD(addr uint32) (*ISD, uint32, error) {
+	size, err := p.loadWord(addr)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -245,32 +235,32 @@ func (c *Console) readISD(addr uint32) (*ISD, uint32, error) {
 		return nil, 0, nil
 	}
 
-	pages, err := c.loadWord(addr + 2)
+	pages, err := p.loadWord(addr + 2)
 	if err != nil {
 		return nil, 0, err
 	}
 
-	vpn, err := c.loadWord(addr + 4)
+	vpn, err := p.loadWord(addr + 4)
 	if err != nil {
 		return nil, 0, err
 	}
 
-	flags, err := c.loadLong(addr + 8)
+	flags, err := p.loadLong(addr + 8)
 	if err != nil {
 		return nil, 0, err
 	}
 
-	vbn, err := c.loadLong(addr + 12)
+	vbn, err := p.loadLong(addr + 12)
 	if err != nil {
 		return nil, 0, err
 	}
 
-	sectionID, err := c.loadLong(addr + 16)
+	sectionID, err := p.loadLong(addr + 16)
 	if err != nil {
 		return nil, 0, err
 	}
 
-	count, err := c.loadByte(addr + 20)
+	count, err := p.loadByte(addr + 20)
 	if err != nil {
 		return nil, 0, err
 	}
@@ -280,7 +270,7 @@ func (c *Console) readISD(addr uint32) (*ISD, uint32, error) {
 	if count >= 1 && count <= 39 {
 		buf := make([]byte, count)
 		for i := range buf {
-			b, err := c.loadByte(addr + 21 + uint32(i))
+			b, err := p.loadByte(addr + 21 + uint32(i))
 			if err != nil {
 				return nil, 0, err
 			}
@@ -296,29 +286,29 @@ func (c *Console) readISD(addr uint32) (*ISD, uint32, error) {
 
 // readIAF reads the fixed part of an Image Attribute/Fixup header at addr,
 // matching init_ihd_maps's IAF field table.
-func (c *Console) readIAF(addr uint32) (IAF, error) {
+func (p *imageProcess) readIAF(addr uint32) (IAF, error) {
 	var (
 		iaf IAF
 		err error
 	)
 
-	if iaf.OffsetGFix, err = c.loadLong(addr + 0x0C); err != nil {
+	if iaf.OffsetGFix, err = p.loadLong(addr + 0x0C); err != nil {
 		return iaf, err
 	}
 
-	if iaf.OffsetAddr, err = c.loadLong(addr + 0x10); err != nil {
+	if iaf.OffsetAddr, err = p.loadLong(addr + 0x10); err != nil {
 		return iaf, err
 	}
 
-	if iaf.OffsetChgprot, err = c.loadLong(addr + 0x14); err != nil {
+	if iaf.OffsetChgprot, err = p.loadLong(addr + 0x14); err != nil {
 		return iaf, err
 	}
 
-	if iaf.OffsetShl, err = c.loadLong(addr + 0x18); err != nil {
+	if iaf.OffsetShl, err = p.loadLong(addr + 0x18); err != nil {
 		return iaf, err
 	}
 
-	if iaf.ShrImgCnt, err = c.loadLong(addr + 0x1C); err != nil {
+	if iaf.ShrImgCnt, err = p.loadLong(addr + 0x1C); err != nil {
 		return iaf, err
 	}
 
@@ -329,19 +319,19 @@ func (c *Console) readIAF(addr uint32) (IAF, error) {
 // image of the same name is a no-op success (returning the existing ICB);
 // otherwise the file is opened, its header parsed, each section loaded or
 // zero-filled into P0 space starting at the current high-water mark
-// (c.RTL.RegionSize[0]), and -- if the image carries a FIXUPVEC section --
+// (p.process().RegionSize[0]), and -- if the image carries a FIXUPVEC section --
 // its sharable-image dependency list is built and recursively loaded
 // (secondary images only; a missing secondary image file is tolerated, not
 // fatal, matching image_load's own VAX_FNF handling one level up in
 // console_run/here).
-func (c *Console) imageLoad(fn string, flag uint32) (*ICB, error) {
-	for _, icb := range c.ICBList {
+func (p *imageProcess) imageLoad(fn string, flag uint32) (*ICB, error) {
+	for _, icb := range p.ICBList {
 		if icb.Name == fn {
 			return icb, nil
 		}
 	}
 
-	data, err := c.readImage(fn, flag == icbMain)
+	data, err := p.c.readImage(fn, flag == icbMain)
 	if err != nil {
 		return nil, err
 	}
@@ -359,38 +349,38 @@ func (c *Console) imageLoad(fn string, flag uint32) (*ICB, error) {
 	// mark (page zero of P0 can't be written on VMS -- it's the guard
 	// page VMInit installs, see vminit.go), then treats everything from
 	// there on as belonging to the image itself.
-	base := c.RTL.RegionSize[0] + 0x200
+	base := p.process().RegionSize[0] + 0x200
 
 	headerLen := int(nblocks) * 512
 	if headerLen > len(data) {
 		headerLen = len(data)
 	}
 
-	if err := c.storeBytes(base, data[:headerLen]); err != nil {
+	if err := p.storeBytes(base, data[:headerLen]); err != nil {
 		return nil, err
 	}
 
-	icb := &ICB{Base: c.RTL.RegionSize[0], Flags: flag | icbIncomplete, File: fn}
+	icb := &ICB{Base: p.process().RegionSize[0], Flags: flag | icbIncomplete, File: fn}
 	if flag == icbMain {
 		icb.Name = "<MAIN>"
 	} else {
 		icb.Name = fn
 	}
 
-	c.ICBList = append(c.ICBList, icb)
+	p.ICBList = append(p.ICBList, icb)
 
-	transferOffset, err := c.readIHDTransferOffset(base)
+	transferOffset, err := p.readIHDTransferOffset(base)
 	if err != nil {
 		return nil, err
 	}
 
-	identOffset, err := c.readIHDIdentOffset(base)
+	identOffset, err := p.readIHDIdentOffset(base)
 	if err != nil {
 		return nil, err
 	}
 
 	for n := uint32(0); n < 4; n++ {
-		v, err := c.loadLong(base + transferOffset + n*4)
+		v, err := p.loadLong(base + transferOffset + n*4)
 		if err != nil {
 			return nil, err
 		}
@@ -410,7 +400,7 @@ func (c *Console) imageLoad(fn string, flag uint32) (*ICB, error) {
 				sname = "MAIN"
 			}
 
-			c.Symbols.Set(sname, v, SymbolSystem)
+			p.setSymbol(sname, v)
 		}
 
 		icb.Transfer[n] = v
@@ -418,7 +408,7 @@ func (c *Console) imageLoad(fn string, flag uint32) (*ICB, error) {
 
 	isdAddr := base + identOffset + ihiSize
 	for i := 0; i < 1000; i++ {
-		isd, size, err := c.readISD(isdAddr)
+		isd, size, err := p.readISD(isdAddr)
 		if err != nil {
 			return nil, err
 		}
@@ -448,15 +438,15 @@ func (c *Console) imageLoad(fn string, flag uint32) (*ICB, error) {
 		if isd.Flags&isdDZRO != 0 {
 			for n := uint32(0); n < uint32(isd.Pages); n++ {
 				addr := icb.Base + ((n + uint32(isd.VPN)) << 9)
-				if addr >= c.RTL.RegionSize[0] {
-					c.RTL.RegionSize[0] = addr + 512
+				if addr >= p.process().RegionSize[0] {
+					p.process().RegionSize[0] = addr + 512
 				}
 
 				if addr+0x1FF > icb.End {
 					icb.End = addr + 0x1FF
 				}
 
-				if err := c.storeBytes(addr, make([]byte, 512)); err != nil {
+				if err := p.storeBytes(addr, make([]byte, 512)); err != nil {
 					return nil, err
 				}
 			}
@@ -468,8 +458,8 @@ func (c *Console) imageLoad(fn string, flag uint32) (*ICB, error) {
 
 		for n := uint32(0); n < uint32(isd.Pages); n++ {
 			addr := icb.Base + ((n + uint32(isd.VPN)) << 9)
-			if addr >= c.RTL.RegionSize[0] {
-				c.RTL.RegionSize[0] = addr + 512
+			if addr >= p.process().RegionSize[0] {
+				p.process().RegionSize[0] = addr + 512
 			}
 
 			if addr+0x1FF > icb.End {
@@ -483,7 +473,7 @@ func (c *Console) imageLoad(fn string, flag uint32) (*ICB, error) {
 				copy(block, data[off:])
 			}
 
-			if err := c.storeBytes(addr, block); err != nil {
+			if err := p.storeBytes(addr, block); err != nil {
 				return nil, err
 			}
 		}
@@ -496,12 +486,12 @@ func (c *Console) imageLoad(fn string, flag uint32) (*ICB, error) {
 	if icb.FixupISD != nil {
 		addr := icb.Base + (uint32(icb.FixupISD.VPN) << 9)
 
-		iaf, err := c.readIAF(addr)
+		iaf, err := p.readIAF(addr)
 		if err != nil {
 			return nil, err
 		}
 
-		namesOffset, err := c.loadLong(addr + iaf.OffsetShl + 16)
+		namesOffset, err := p.loadLong(addr + iaf.OffsetShl + 16)
 		if err != nil {
 			return nil, err
 		}
@@ -519,7 +509,7 @@ func (c *Console) imageLoad(fn string, flag uint32) (*ICB, error) {
 			nameAddr := naddr + 0x08
 			naddr += 0x40
 
-			nameLen, err := c.loadByte(nameAddr)
+			nameLen, err := p.loadByte(nameAddr)
 			if err != nil {
 				return nil, err
 			}
@@ -527,7 +517,7 @@ func (c *Console) imageLoad(fn string, flag uint32) (*ICB, error) {
 			buf := make([]byte, nameLen)
 
 			for i := range buf {
-				b, err := c.loadByte(nameAddr + 1 + uint32(i))
+				b, err := p.loadByte(nameAddr + 1 + uint32(i))
 				if err != nil {
 					return nil, err
 				}
@@ -544,7 +534,7 @@ func (c *Console) imageLoad(fn string, flag uint32) (*ICB, error) {
 				continue
 			}
 
-			dep, err := c.imageLoad(shr.Name, icbSecondary)
+			dep, err := p.imageLoad(shr.Name, icbSecondary)
 			if err != nil {
 				continue // matches image_load's VAX_FNF-is-tolerated handling
 			}
@@ -595,8 +585,8 @@ func findSHRByID(icb *ICB, id uint32) *SHR {
 // findLoadedICB returns the already-loaded ICB with the given name, or nil,
 // matching image_fixup's own inline "is it on an ICB list we already have"
 // scan.
-func (c *Console) findLoadedICB(name string) *ICB {
-	for _, icb := range c.ICBList {
+func (p *imageProcess) findLoadedICB(name string) *ICB {
+	for _, icb := range p.ICBList {
 		if icb.Name == name {
 			return icb
 		}
@@ -610,14 +600,14 @@ func (c *Console) findLoadedICB(name string) *ICB {
 // offset (if shr is itself a real loaded image, found by name on ICBList),
 // or the SHIM$<shr.Name>_<offset> stub address ensureShims registered,
 // matching image_fixup's own "on the ICB list, else look for a shim" order.
-func (c *Console) resolveFixupTarget(shr *SHR, offset uint32) (uint32, error) {
-	if dep := c.findLoadedICB(shr.Name); dep != nil {
+func (p *imageProcess) resolveFixupTarget(shr *SHR, offset uint32) (uint32, error) {
+	if dep := p.findLoadedICB(shr.Name); dep != nil {
 		return dep.Base + offset, nil
 	}
 
 	name := fmt.Sprintf("SHIM$%s_%08X", shr.Name, offset)
 
-	v, ok := c.Symbols.Get(name)
+	v, ok := p.c.Symbols.Get(name)
 	if !ok {
 		return 0, vmserrors.New(vmserrors.LIB_UNRESOLVED, name)
 	}
@@ -634,7 +624,7 @@ func (c *Console) resolveFixupTarget(shr *SHR, offset uint32) (uint32, error) {
 // value gets rebased by the dependency's load base). Matches image_fixup;
 // requires ensureShims to have already run (see runImage in run.go) since
 // an unresolved G^ target falls back to a SHIM$ symbol lookup.
-func (c *Console) imageFixup(icb *ICB) error {
+func (p *imageProcess) imageFixup(icb *ICB) error {
 	if icb.FixupISD == nil {
 		return nil
 	}
@@ -649,7 +639,7 @@ func (c *Console) imageFixup(icb *ICB) error {
 	if iaf.OffsetGFix != 0 {
 		naddr := addr + iaf.OffsetGFix
 
-		fixupCount, err := c.loadLong(naddr)
+		fixupCount, err := p.loadLong(naddr)
 		if err != nil {
 			return err
 		}
@@ -657,7 +647,7 @@ func (c *Console) imageFixup(icb *ICB) error {
 		for fixupCount != 0 {
 			naddr += 4
 
-			imageID, err := c.loadLong(naddr)
+			imageID, err := p.loadLong(naddr)
 			if err != nil {
 				return err
 			}
@@ -669,17 +659,17 @@ func (c *Console) imageFixup(icb *ICB) error {
 				for n := uint32(0); n < fixupCount; n++ {
 					naddr += 4
 
-					offset, err := c.loadLong(naddr)
+					offset, err := p.loadLong(naddr)
 					if err != nil {
 						return err
 					}
 
-					value, err := c.resolveFixupTarget(shr, offset)
+					value, err := p.resolveFixupTarget(shr, offset)
 					if err != nil {
 						return err
 					}
 
-					if err := c.storeLong(naddr, value); err != nil {
+					if err := p.storeLong(naddr, value); err != nil {
 						return err
 					}
 
@@ -688,7 +678,7 @@ func (c *Console) imageFixup(icb *ICB) error {
 			}
 
 			naddr += 4
-			if fixupCount, err = c.loadLong(naddr); err != nil {
+			if fixupCount, err = p.loadLong(naddr); err != nil {
 				return err
 			}
 		}
@@ -697,7 +687,7 @@ func (c *Console) imageFixup(icb *ICB) error {
 	if iaf.OffsetAddr != 0 {
 		naddr := addr + iaf.OffsetAddr
 
-		fixupCount, err := c.loadLong(naddr)
+		fixupCount, err := p.loadLong(naddr)
 		if err != nil {
 			return err
 		}
@@ -705,7 +695,7 @@ func (c *Console) imageFixup(icb *ICB) error {
 		for fixupCount != 0 {
 			naddr += 4
 
-			imageID, err := c.loadLong(naddr)
+			imageID, err := p.loadLong(naddr)
 			if err != nil {
 				return err
 			}
@@ -717,7 +707,7 @@ func (c *Console) imageFixup(icb *ICB) error {
 				for n := uint32(0); n < fixupCount; n++ {
 					naddr += 4
 
-					offset, err := c.loadLong(naddr)
+					offset, err := p.loadLong(naddr)
 					if err != nil {
 						return err
 					}
@@ -732,24 +722,24 @@ func (c *Console) imageFixup(icb *ICB) error {
 					// .ADDRESS failed (docs/DEVIATIONS.md).
 					vaddr := imageLow(icb) + offset
 
-					target, err := c.loadLong(vaddr)
+					target, err := p.loadLong(vaddr)
 					if err != nil {
 						return err
 					}
 
-					value, err := c.resolveFixupTarget(shr, target)
+					value, err := p.resolveFixupTarget(shr, target)
 					if err != nil {
 						return err
 					}
 
-					if err := c.storeLong(vaddr, value); err != nil {
+					if err := p.storeLong(vaddr, value); err != nil {
 						return err
 					}
 				}
 			}
 
 			naddr += 4
-			if fixupCount, err = c.loadLong(naddr); err != nil {
+			if fixupCount, err = p.loadLong(naddr); err != nil {
 				return err
 			}
 		}
@@ -815,10 +805,12 @@ func imageProtection(isd *ISD) vm.Protection {
 // a page outside the page tables (VMINIT shrank P0 since) is skipped.
 // The C source never sets image page protections, so every page stayed
 // at P0's default (UW); see docs/DEVIATIONS.md.
-func (c *Console) setImageProtection(icb *ICB, protect bool) {
-	if c.CPU == nil || c.Mem == nil || c.CPU.PR(vax.MAPEN) == 0 {
+func (p *imageProcess) setImageProtection(icb *ICB, protect bool) {
+	if p.c.CPU == nil || p.c.Mem == nil || p.c.CPU.PR(vax.MAPEN) == 0 {
 		return
 	}
+
+	space := p.space()
 
 	for _, isd := range icb.ISDList {
 		if isdType(isd.Flags) == isdUsrStack || isd.Flags&isdGBL != 0 {
@@ -833,13 +825,13 @@ func (c *Console) setImageProtection(icb *ICB, protect bool) {
 		for n := uint32(0); n < uint32(isd.Pages); n++ {
 			addr := icb.Base + ((n + uint32(isd.VPN)) << 9)
 
-			_, _, pte, err := c.Mem.LookupPTE(c.CPU, addr)
+			pte, err := p.c.Mem.LookupPTEIn(p.c.CPU, space, addr)
 			if err != nil || !pte.Valid() || pte.Protection() == prot {
 				continue
 			}
 
 			pte.SetProtection(prot)
-			_ = c.Mem.StorePTE(c.CPU, addr, pte)
+			_ = p.c.Mem.StorePTEIn(p.c.CPU, space, addr, pte)
 		}
 	}
 }

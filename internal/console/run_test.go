@@ -186,11 +186,11 @@ func TestRun_noExecuteLoadsAndFixesUpOnly(t *testing.T) {
 		t.Fatalf("Run: %v", err)
 	}
 
-	if len(c.ICBList) == 0 {
+	if len(c.images().ICBList) == 0 {
 		t.Fatal("expected Run to have loaded at least the main image")
 	}
 
-	if c.ICBList[0].Flags&icbFixed == 0 {
+	if c.images().ICBList[0].Flags&icbFixed == 0 {
 		t.Error("expected the main image to be fixed up")
 	}
 }
@@ -223,7 +223,7 @@ func TestRun_everyMilestoneFixture(t *testing.T) {
 				t.Fatalf("imageLoad(%s): %v", name, err)
 			}
 
-			for _, dep := range c.ICBList {
+			for _, dep := range c.images().ICBList {
 				if err := c.imageFixup(dep); err != nil {
 					t.Fatalf("imageFixup(%s dependency %s): %v", name, dep.Name, err)
 				}

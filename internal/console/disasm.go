@@ -311,7 +311,7 @@ func (c *Console) entryAt(pc uint32) (string, bool) {
 		return name, true
 	}
 
-	for _, icb := range c.ICBList {
+	for _, icb := range c.images().ICBList {
 		if icb.Debug == nil {
 			continue
 		}

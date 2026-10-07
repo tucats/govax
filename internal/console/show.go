@@ -1100,7 +1100,7 @@ func (c *Console) ShowImages(full bool) error {
 		return err
 	}
 
-	if len(c.ICBList) == 0 {
+	if len(c.images().ICBList) == 0 {
 		c.Printf("No VMS images loaded in memory.\n")
 
 		return nil
@@ -1108,7 +1108,7 @@ func (c *Console) ShowImages(full bool) error {
 
 	c.Printf("ACTIVE IMAGES IN MEMORY:\n")
 
-	for _, icb := range c.ICBList {
+	for _, icb := range c.images().ICBList {
 		c.Printf("    %-39s  %08X  %08X%s\n", icb.Name, icb.Base, icb.End, debugKind(icb))
 
 		if !full {

@@ -121,42 +121,17 @@ func (sys *System) ShareP1(base, end uint32) error {
 			return fmt.Errorf("shared page %08X is not in P1", va)
 		}
 
-		pteAddr, err := sys.pteAddress(as, va)
+		pte, err := sys.mem.LookupPTEIn(sys.cpu, as, va)
 		if err != nil {
 			return err
 		}
 
-		raw, err := sys.mem.LoadLongwordIn(sys.cpu, as, pteAddr)
-		if err != nil {
-			return err
-		}
-
-		if pte := vm.PTE(raw); pte.Valid() {
+		if pte.Valid() {
 			sys.sharedP1 = append(sys.sharedP1, sharedPage{va: va, pfn: pte.PFN()})
 		}
 	}
 
 	return nil
-}
-
-// pteAddress is the S0 virtual address of the PTE that maps the P0 or P1
-// address va in as.
-func (sys *System) pteAddress(as vm.AddressSpace, va uint32) (uint32, error) {
-	page := va & 0x3FFFFFFF / pageSize
-
-	switch va >> 30 {
-	case 0:
-		if page < as.P0LR {
-			return as.P0BR + page*4, nil
-		}
-
-	case 1:
-		if page >= as.P1LR {
-			return as.P1BR + page*4, nil
-		}
-	}
-
-	return 0, fmt.Errorf("%08X is not in the address space's P0 or P1 tables", va)
 }
 
 // BuildAddressSpace makes a new process's address space: P0 and P1 page
@@ -242,9 +217,11 @@ func (sys *System) writeTable(table, n uint32, pte func(uint32) vm.PTE) error {
 // pages (see BuildAddressSpace).
 func (sys *System) mapShared(s *ProcessSpace) error {
 	for _, sp := range sys.sharedP1 {
-		pteAddr, err := sys.pteAddress(s.AddressSpace, sp.va)
-		if err != nil {
-			continue // the vector is below this process's P1 table
+		// A P1 table too short to reach the vector's pages leaves them
+		// unmapped: an access is a length violation, as it would be with
+		// no vector at all.
+		if sp.va&0x3FFFFFFF/pageSize < s.P1LR {
+			continue
 		}
 
 		var pte vm.PTE
@@ -254,7 +231,7 @@ func (sys *System) mapShared(s *ProcessSpace) error {
 		pte.SetProtection(vm.ProtUR)
 		pte.SetOwner(uint8(vax.Kernel))
 
-		if err := sys.mem.StoreLongwordIn(sys.cpu, s.AddressSpace, pteAddr, uint32(pte)); err != nil {
+		if err := sys.mem.StorePTEIn(sys.cpu, s.AddressSpace, sp.va, pte); err != nil {
 			return err
 		}
 

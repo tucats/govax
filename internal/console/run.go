@@ -163,9 +163,12 @@ func languageName(code uint32) string {
 // protection (setImageProtection) -- only once every fixup is written,
 // as VMS's image activator likewise changes a section's protection after
 // fixing it up (the IAF's change-protection list). Returns the main
-// image's ICB. Needs ensureShims to have run.
-func (c *Console) activateImage(fn string) (*ICB, error) {
-	main, err := c.imageLoad(fn, icbMain)
+// image's ICB. Needs ensureShims to have run. The image goes into p's
+// process, through its address space, whichever process is current.
+func (p *imageProcess) activateImage(fn string) (*ICB, error) {
+	c := p.c
+
+	main, err := p.imageLoad(fn, icbMain)
 	if err != nil {
 		return nil, vmserrors.Wrap(vmserrors.CLI_ACTIVATE, err, fn)
 	}
@@ -174,17 +177,37 @@ func (c *Console) activateImage(fn string) (*ICB, error) {
 		c.Printf("Main image is %s\n", main.Name)
 	}
 
-	for _, dep := range c.ICBList {
-		if err := c.imageFixup(dep); err != nil {
+	for _, dep := range p.ICBList {
+		if err := p.imageFixup(dep); err != nil {
 			return nil, vmserrors.Wrap(vmserrors.CLI_FIXUP, err, dep.Name)
 		}
 	}
 
-	for _, icb := range c.ICBList {
-		c.setImageProtection(icb, true)
+	for _, icb := range p.ICBList {
+		p.setImageProtection(icb, true)
 	}
 
 	return main, nil
+}
+
+// Process 1's image activation. RUN, the debugger, and the console's
+// commands that show images (SHOW IMAGES, the symbol lookups) all work
+// on process 1, the console's own; these name its imageProcess's methods.
+
+func (c *Console) activateImage(fn string) (*ICB, error) { return c.images().activateImage(fn) }
+
+func (c *Console) imageLoad(fn string, flag uint32) (*ICB, error) {
+	return c.images().imageLoad(fn, flag)
+}
+
+func (c *Console) imageFixup(icb *ICB) error { return c.images().imageFixup(icb) }
+
+func (c *Console) resetICBList() { c.images().resetICBList() }
+
+func (c *Console) findMainICB() *ICB { return c.images().findMainICB() }
+
+func (c *Console) buildImageInitDriver(main *ICB, runInits bool) (uint32, bool, error) {
+	return c.images().buildImageInitDriver(main, runInits)
 }
 
 // DefaultRunInits reports RUN's own default for whether to invoke each
@@ -211,7 +234,8 @@ func mainTransferAddress(icb *ICB) (uint32, bool) {
 	return 0, false
 }
 
-// buildImageInitDriver writes a small procedure at CONSOLE$SCRATCH+8 (an
+// buildImageInitDriver writes a small procedure in p's driver page (for
+// process 1, at CONSOLE$SCRATCH+8; see imageProcess.driver) (an
 // empty entry mask, then one PUSHL/PUSHL/PUSHL/CALLS sequence per
 // dependency's LIB$INITIALIZE entry point if runInits, then a final CALLS
 // to main's own entry point, a call to $EXIT with main's status when the
@@ -220,31 +244,31 @@ func mainTransferAddress(icb *ICB) (uint32, bool) {
 // procedure. ok is false if main has no usable transfer address, matching
 // console_run's own "No transfer address!" case: no driver is written at
 // all, since a procedure with LIB$INITIALIZE calls but no final RET would
-// have nothing safe to fall through to. c.ICBList[1:] is main's dependency
+// have nothing safe to fall through to. p.ICBList[1:] is main's dependency
 // list in load order (id-0 self-references live only in each ICB's own
 // SHRList, never in ICBList itself, so no filtering is needed here).
-func (c *Console) buildImageInitDriver(main *ICB, runInits bool) (uint32, bool, error) {
+func (p *imageProcess) buildImageInitDriver(main *ICB, runInits bool) (uint32, bool, error) {
+	c := p.c
+
 	addr, ok := mainTransferAddress(main)
 	if !ok {
 		return 0, false, nil
 	}
 
-	base, found := c.Symbols.Get("CONSOLE$SCRATCH")
-	if !found {
-		return 0, false, vmserrors.New(vmserrors.CLI_NOSCRATCH)
+	driverAddr, err := p.driverAddress()
+	if err != nil {
+		return 0, false, err
 	}
-
-	driverAddr := base + 8
 
 	code := []byte{0x00, 0x00} // entry mask: no registers saved
 
 	if runInits {
-		for _, dep := range c.ICBList[1:] {
+		for _, dep := range p.ICBList[1:] {
 			if dep.Transfer[0] == 0 {
 				continue
 			}
 
-			initAddr, ok := c.Symbols.Get(fmt.Sprintf("SHARE$%s_INITIALIZE", dep.Name))
+			initAddr, ok := p.symbols[fmt.Sprintf("SHARE$%s_INITIALIZE", dep.Name)]
 			if !ok {
 				continue
 			}
@@ -273,32 +297,60 @@ func (c *Console) buildImageInitDriver(main *ICB, runInits bool) (uint32, bool, 
 	// doesn't return: it ends the image by returning from this driver's
 	// own console call frame. It needs the P1 vector's SYS$EXIT stub in
 	// memory; without one, the driver just returns main's status.
-	if exit, ok := c.p1Stub("SYS$EXIT"); ok {
+	if exit, ok := p.p1Stub("SYS$EXIT"); ok {
 		code = append(code, 0xDD, 0x50) // PUSHL R0
 		code = append(code, encodeCalls(1, exit)...)
 	}
 
 	code = append(code, 0x04) // RET
 
-	if err := c.storeBytes(driverAddr, code); err != nil {
+	if err := p.storeBytes(driverAddr, code); err != nil {
 		return 0, false, err
 	}
-	
+
 	return driverAddr, true, nil
+}
+
+// driverAddress is where p's IMAGE$INIT driver goes. Process 1's is
+// CONSOLE$SCRATCH+8, where it has always been. Another process's is a
+// pool page of its own, allocated the first time and freed with the
+// process; S0, so kernel mode alone may write it, and every mode may read
+// (and so run) it.
+func (p *imageProcess) driverAddress() (uint32, error) {
+	if p.env == nil {
+		base, found := p.c.Symbols.Get("CONSOLE$SCRATCH")
+		if !found {
+			return 0, vmserrors.New(vmserrors.CLI_NOSCRATCH)
+		}
+
+		return base + 8, nil
+	}
+
+	if p.driver == 0 {
+		page, err := p.env.AllocateS0(1, p.env.Process.PID, "IMAGE$INIT driver")
+		if err != nil {
+			return 0, err
+		}
+
+		p.driver = page
+	}
+
+	return p.driver, nil
 }
 
 // p1Stub returns the address of the P1-vector entry for service name,
 // if its stub is in memory: a procedure entry mask, then the XFC
 // instruction (opcode 0xFC, selector 0x7A, XFC$P1VECTOR) that calls the
 // service. The stubs are there once .P1VECTOR has been assembled, as
-// kernel.asm does.
-func (c *Console) p1Stub(name string) (uint32, bool) {
+// kernel.asm does. It looks in p's P1, where every process maps the
+// vector.
+func (p *imageProcess) p1Stub(name string) (uint32, bool) {
 	for _, e := range vmsdef.P1VectorTable {
 		if e.Name != name {
 			continue
 		}
 
-		w, err := c.Mem.LoadWord(c.CPU, e.Addr+2)
+		w, err := p.loadWord(e.Addr + 2)
 
 		return e.Addr, err == nil && w == 0x7AFC
 	}

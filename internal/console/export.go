@@ -234,7 +234,7 @@ func (c *Console) DebugProgramAt(addr uint32) *dbgsym.Program { return c.debugIm
 func (c *Console) DebugPrograms() []*dbgsym.Program {
 	var out []*dbgsym.Program
 
-	for _, icb := range c.ICBList {
+	for _, icb := range c.images().ICBList {
 		if icb.Debug != nil {
 			out = append(out, icb.Debug)
 		}
@@ -340,7 +340,7 @@ type ImageInfo struct {
 func (c *Console) Images() []ImageInfo {
 	out := make([]ImageInfo, 0)
 
-	for _, icb := range c.ICBList {
+	for _, icb := range c.images().ICBList {
 		// The image's first address is its lowest section's: the load
 		// offset alone would include the unused page 0 below it.
 		base := icb.Base

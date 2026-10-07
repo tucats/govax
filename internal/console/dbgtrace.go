@@ -18,7 +18,7 @@ import (
 // address range holds addr, or nil when addr is in no image or its image
 // has none.
 func (c *Console) debugImageAt(addr uint32) *dbgsym.Program {
-	for _, icb := range c.ICBList {
+	for _, icb := range c.images().ICBList {
 		if icb.Debug != nil && addr >= imageLow(icb) && addr <= icb.End {
 			return icb.Debug
 		}
