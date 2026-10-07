@@ -53,6 +53,10 @@ func TestStateNames(t *testing.T) {
 		{StateMWAIT, Resource(99), "MWAIT"},
 	}
 
+	if ResourceNone.String() != "NONE" {
+		t.Errorf("ResourceNone is %q", ResourceNone)
+	}
+
 	for _, tt := range tests {
 		if got := StateName(tt.state, tt.resource); got != tt.want {
 			t.Errorf("StateName(%s, %d) = %q, want %q", tt.state, tt.resource, got, tt.want)

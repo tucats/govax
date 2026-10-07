@@ -157,9 +157,13 @@ var resourceNames = [...]string{
 	ResourceModifiedPageWriter: "RWMPB",
 }
 
-// String returns the resource wait's name ("RWMBX", ...), or "MWAIT" for
-// a resource without one.
+// String returns the resource wait's name ("RWMBX", ...), "NONE" for
+// ResourceNone, or "MWAIT" for a resource without a name.
 func (r Resource) String() string {
+	if r == ResourceNone {
+		return "NONE"
+	}
+
 	if int(r) < len(resourceNames) && resourceNames[r] != "" {
 		return resourceNames[r]
 	}

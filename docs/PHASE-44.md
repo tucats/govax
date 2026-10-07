@@ -1,7 +1,7 @@
 # Phase 44 — Multiprocessing, part 2: the scheduler
 
 **Status:** in progress (started 2026-10-07); decisions taken 2026-10-06
-(see PHASE-43.md, Part A). Subtasks 1–2 done.
+(see PHASE-43.md, Part A). Subtasks 1–3 done.
 
 The program this phase belongs to — its goal, architecture, rules for
 every commit, decisions, and known bugs — is in
@@ -340,3 +340,45 @@ The layouts come from the User's Manual and, if Decision 7 allows, a VMS
     `Engine.RequestReschedule`, or the switch waits for the current
     quantum's end. The System has no engine pointer yet; the waits'
     subtask gives it one (or a callback).
+- 2026-10-07: **Subtask 3 done: switching.**
+  - `System.Schedule` now switches when the scheduler chooses another
+    process (`switchTo`, `corevms/schedule.go`): point PCBB at the
+    outgoing process's PCB (process 1 gets its PCB page from
+    `EnsurePCB` the first time it's switched out), write its
+    memory-management longwords from the CPU's live P0BR/P0LR/P1BR/
+    P1LR/ASTLVL/PME (`Engine.SaveMemoryContext`, new in
+    `cpu/context.go`: SVPCTX doesn't save them, and process 1's grow as
+    images expand P0, so they're written at every switch rather than
+    whenever they change), `SaveContext`, PCBB to the incoming PCB,
+    `LoadContext` (which empties the per-process TB entries and with
+    them the fetch window), then `SetCurrent`. With `SET DEBUG PROCESS`
+    each switch is traced (`DEBUG(PROCESS): SWITCH 00000301 ->
+    00000302, PC=...`). `ErrProcessSwitch` is gone. A switch with no
+    outgoing process (the current one deleted) is refused for now: the
+    CPU wouldn't be on the interrupt stack where `LoadContext` starts;
+    Phase 45's deletion settles it.
+  - The console's engine hooks (`SystemService`, `Shim`, `NextAST`,
+    `HandleAttention`, `DispatchException`) reach the System's current
+    process (`Console.running()`), not `c.RTL`. `c.RTL` stays process
+    1's Environment, so console commands keep their meaning; nothing
+    else needed changing. (Ctrl-C/Ctrl-Y ASTs therefore go to whichever
+    process is running; on VMS they belong to the terminal's owner.
+    Revisit with subtask 9.)
+  - Found while testing: a process made computable at the current
+    process's priority preempts it at the hook's next call (the book's
+    "higher or equal" rule, subtask 1), so a hand-built process 2 runs
+    first; and the scheduler's figures (CPU, quantum left) lag the
+    engine by the instructions since the hook's last call, which is
+    charged at the next one. `Engine.RequestReschedule` forces the
+    charge; SHOW SYSTEM (subtask 10) should do that before reading.
+  - `sched.Resource`'s `ResourceNone` prints as `NONE` (it printed
+    `MWAIT`).
+  - Tests: `internal/console/schedswitch_test.go`, booting as cmd/govax
+    does with the scheduler on: two counting processes at the same P0
+    address take turns exactly a quantum each (process 1 first using
+    the rest of the quantum it began at boot), each count right after
+    every turn, each process charged its instructions, the switches
+    traced, and process 1's PCB holding its address space; and
+    `$SETPRN` called by process 2 names process 2, not process 1. The
+    corevms test now checks a switch to a process with no PCB is
+    refused. Benchmarks unchanged.

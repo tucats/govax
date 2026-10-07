@@ -516,3 +516,31 @@ func (e *Engine) LoadContext() error {
 
 	return nil
 }
+
+// SaveMemoryContext writes the CPU's memory-management registers (P0BR,
+// P0LR, ASTLVL, P1BR, P1LR, and PME) into the last four longwords of the
+// PCB that PCBB points at, leaving the rest alone. SVPCTX doesn't save
+// them; VMS writes them into the PCB itself whenever it changes them. A
+// scheduler written in Go calls this before SaveContext instead, so the
+// PCB describes the address space as it is when the process stops
+// running, however its program regions grew while it ran.
+func (e *Engine) SaveMemoryContext() error {
+	p := PCB{
+		P0BR:   e.cpu.PR(vax.P0BR),
+		P0LR:   e.cpu.PR(vax.P0LR),
+		ASTLVL: e.cpu.PR(vax.ASTLVL),
+		P1BR:   e.cpu.PR(vax.P1BR),
+		P1LR:   e.cpu.PR(vax.P1LR),
+		PME:    e.cpu.PR(vax.PME)&1 != 0,
+	}
+
+	w := p.words()
+
+	var buf [PCBSize - PCBP0BR]byte
+
+	for i := range len(buf) / 4 {
+		binary.LittleEndian.PutUint32(buf[i*4:], w[PCBP0BR/4+i])
+	}
+
+	return e.mem.StorePhysical(e.cpu.PR(vax.PCBB)+PCBP0BR, buf[:])
+}

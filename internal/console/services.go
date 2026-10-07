@@ -99,51 +99,74 @@ func (c *Console) DCLGetInteger(r1, r2 uint32) uint32     { return 0 }
 // exists once Phase 13's kernel.asm bootstrap defines it.
 func (c *Console) DCLGetString(r1, r2 uint32) (uint32, bool) { return 0, false }
 
-// SystemService delegates to RTL (Phase 10's SYS$ dispatch).
+// running is the process the engine's hooks below reach: the System's
+// current process, the one whose context the CPU holds (docs/PHASE-44.md).
+// That's process 1, c.RTL, unless the scheduler has switched to another;
+// console commands keep using c.RTL, process 1, whichever runs. nil
+// before the first INIT.
+func (c *Console) running() *corevms.Environment {
+	if c.RTL == nil {
+		return nil
+	}
+
+	if cur := c.RTL.Current(); cur != nil {
+		return cur
+	}
+
+	return c.RTL
+}
+
+// SystemService delegates to the running process (Phase 10's SYS$
+// dispatch).
 func (c *Console) SystemService(pc uint32) (uint32, bool, error) {
-	r0, handled, err := c.RTL.SystemService(pc)
+	r0, handled, err := c.running().SystemService(pc)
 
 	return r0, handled, translateHalt(err)
 }
 
-// NextAST delegates to RTL, making Console a cpu.ASTSource as well: the
+// NextAST delegates to the running process, making Console a
+// cpu.ASTSource as well: the
 // engine asks at every instruction boundary whether an AST is due, and
 // the RTL, which owns the AST queues, answers (docs/PHASE-26.md subtask
 // 15). This only converts between the two packages' types, keeping
 // internal/rtl free of an internal/cpu import.
 func (c *Console) NextAST() (cpu.ASTCall, bool, error) {
-	routine, argList, returnPC, ok, err := c.RTL.NextAST()
+	routine, argList, returnPC, ok, err := c.running().NextAST()
 
 	return cpu.ASTCall{Routine: routine, ArgList: argList, ReturnPC: returnPC}, ok, err
 }
 
-// HandleAttention delegates to RTL, making Console a cpu.AttentionHandler:
+// HandleAttention delegates to the running process, making Console a
+// cpu.AttentionHandler:
 // when the user types CTRL/C (or CTRL/Y) while a program runs, the
 // engine asks whether the program has an AST enabled for it before
 // stopping the machine (docs/PHASE-26.md subtask 27).
 func (c *Console) HandleAttention(key byte) bool {
-	if c.RTL == nil {
+	env := c.running()
+	if env == nil {
 		return false
 	}
 
-	return c.RTL.Attention(key)
+	return env.Attention(key)
 }
 
-// DispatchException delegates to RTL, making Console a
+// DispatchException delegates to the running process, making Console a
 // cpu.ExceptionDispatcher: an exception kernel.asm's SCB sends to
 // console$handler is offered to the running program's condition
 // handlers before the console reports it (docs/PHASE-26.md subtask 31).
 func (c *Console) DispatchException(code uint32, params []uint32, pc uint32, psl vax.PSL) (bool, error) {
-	if c.RTL == nil {
+	env := c.running()
+	if env == nil {
 		return false, nil
 	}
 
-	return c.RTL.DispatchException(code, params, pc, psl)
+	return env.DispatchException(code, params, pc, psl)
 }
 
-// Shim delegates to RTL (Phase 10's LIB$/CRTL shim dispatch).
+// Shim delegates to the running process (Phase 10's LIB$/CRTL shim
+// dispatch).
 func (c *Console) Shim(code uint32) (uint32, bool, error) {
-	r0, handled, err := c.RTL.Shim(code)
+	r0, handled, err := c.running().Shim(code)
 
 	return r0, handled, translateHalt(err)
 }

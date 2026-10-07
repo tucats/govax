@@ -3,6 +3,7 @@ package corevms
 import (
 	"errors"
 	"slices"
+	"strings"
 	"testing"
 
 	"github.com/tucats/govax/internal/cpu"
@@ -101,9 +102,10 @@ func TestSchedule_oneProcess(t *testing.T) {
 	}
 }
 
-// TestSchedule_switchNotYet checks that choosing another process is
-// reported, until switching exists (subtask 3).
-func TestSchedule_switchNotYet(t *testing.T) {
+// TestSchedule_switchNeedsPCB checks that the scheduler choosing
+// another process switches to it, which a process without a hardware
+// PCB (the fixture's processes have no stacks) can't be.
+func TestSchedule_switchNeedsPCB(t *testing.T) {
 	env, _ := fixture()
 	p2 := newProcess(t, env)
 
@@ -116,8 +118,8 @@ func TestSchedule_switchNotYet(t *testing.T) {
 	}
 
 	_, err := env.Schedule(nil, 10, true) // quantum end: process 2's turn
-	if !errors.Is(err, ErrProcessSwitch) {
-		t.Errorf("err %v, want ErrProcessSwitch", err)
+	if err == nil || !strings.Contains(err.Error(), "no hardware PCB") {
+		t.Errorf("err %v, want no hardware PCB", err)
 	}
 
 	if h, _ := env.Scheduler().Current(); h != handle(p2) {

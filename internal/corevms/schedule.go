@@ -6,6 +6,7 @@ import (
 
 	"github.com/tucats/govax/internal/cpu"
 	"github.com/tucats/govax/internal/sched"
+	"github.com/tucats/govax/internal/vax"
 )
 
 // The System's scheduler (docs/PHASE-44.md). The rules of who runs next
@@ -18,11 +19,6 @@ import (
 // waiting. Until the idle loop (VMS's "null process") exists, nothing
 // lets a process wait in the scheduler, so it can't happen in practice.
 var ErrNoComputableProcess = errors.New("corevms: no process is computable")
-
-// ErrProcessSwitch is what Schedule returns when the scheduler chooses a
-// process other than the current one, until switching processes is
-// implemented (Phase 44, subtask 3).
-var ErrProcessSwitch = errors.New("corevms: switching processes isn't implemented yet")
 
 // handle is the scheduler's name for env's process: its PID.
 func handle(env *Environment) sched.Handle {
@@ -69,8 +65,9 @@ func (sys *System) CPUInstructions(env *Environment) uint64 {
 // due and allowed, has the scheduler choose who runs next. A process
 // that is waiting gives up the CPU even when preemption isn't allowed;
 // a quantum end or a preemption that isn't allowed yet is tried again at
-// the next instruction boundary, until it is.
-func (sys *System) Schedule(_ *cpu.Engine, ran int, preemptible bool) (int, error) {
+// the next instruction boundary, until it is. When the choice is another
+// process, Schedule switches the CPU to it (switchTo).
+func (sys *System) Schedule(e *cpu.Engine, ran int, preemptible bool) (int, error) {
 	s := sys.sched
 	s.Charge(ran)
 
@@ -91,8 +88,74 @@ func (sys *System) Schedule(_ *cpu.Engine, ran int, preemptible bool) (int, erro
 	}
 
 	if cur := sys.Current(); cur == nil || handle(cur) != h {
-		return 0, fmt.Errorf("%w (process %08X chosen)", ErrProcessSwitch, uint32(h))
+		next, found := sys.FindProcess(uint32(h))
+		if !found {
+			return 0, fmt.Errorf("corevms: the scheduler chose process %08X, which isn't in the table", uint32(h))
+		}
+
+		if err := sys.switchTo(e, cur, next); err != nil {
+			return 0, err
+		}
 	}
 
 	return s.QuantumLeft(), nil
+}
+
+// switchTo moves the CPU from process cur to
+// process next, between two instructions: what VMS's rescheduling
+// interrupt does with SVPCTX and LDPCTX (VAX/VMS Internals and Data
+// Structures, section 10.3).
+//
+//  1. cur's hardware PCB gets its state. The memory-management longwords
+//     go in first (SVPCTX doesn't save them; see
+//     cpu.Engine.SaveMemoryContext), then its registers, stack pointers,
+//     PC, and PSL. Process 1 gets a PCB page the first time it's
+//     switched out (EnsurePCB); PCBB is pointed at cur's PCB, which it
+//     may not have been yet.
+//  2. PCBB is pointed at next's PCB, and the CPU loads it: registers,
+//     address space (with the per-process TB entries and the instruction
+//     fetch window emptied), and the PC and PSL to resume at.
+//  3. next becomes the System's current process, the one the system
+//     service and AST hooks reach.
+func (sys *System) switchTo(e *cpu.Engine, cur, next *Environment) error {
+	if next.Stacks == nil || next.Stacks.PCB == 0 {
+		return fmt.Errorf("corevms: process %08X has no hardware PCB to switch to", next.Process.PID)
+	}
+
+	// With no process to save (the current one was deleted), the CPU
+	// isn't left on the interrupt stack, where LoadContext starts from.
+	// Nothing deletes the current process yet; Phase 45's deletion will.
+	if cur == nil {
+		return fmt.Errorf("corevms: no current process to switch from to %08X", next.Process.PID)
+	}
+
+	pcb, err := sys.EnsurePCB(cur)
+	if err != nil {
+		return err
+	}
+
+	sys.cpu.SetPR(vax.PCBB, pcb)
+
+	if err := e.SaveMemoryContext(); err != nil {
+		return err
+	}
+
+	if err := e.SaveContext(); err != nil {
+		return err
+	}
+
+	sys.cpu.SetPR(vax.PCBB, next.Stacks.PCBB)
+
+	if err := e.LoadContext(); err != nil {
+		return fmt.Errorf("corevms: loading process %08X: %w", next.Process.PID, err)
+	}
+
+	sys.SetCurrent(next)
+
+	if sys.cpu.DebugEnabled(vax.DebugProcess) {
+		fmt.Fprintf(sys.cpu.DebugWriter(), "DEBUG(PROCESS): SWITCH %08X -> %08X, PC=%08X\n",
+			cur.Process.PID, next.Process.PID, sys.cpu.GPR(vax.PC))
+	}
+
+	return nil
 }
