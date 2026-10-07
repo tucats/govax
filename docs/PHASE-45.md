@@ -211,8 +211,8 @@ for a process created without one.
     by govax in the test.
 14. **Close-out.** Status, progress log, PLAN.md, CLAUDE.md, HELP.
 
-    **To do before leaving Phase 45** (author's note, 2026-10-07, after
-    probe 2): the console's `SHOW DEVICE/FULL NLA0:` should print the
+    **Done** (2026-10-07; was: to do before leaving Phase 45, author's
+    note after probe 2): the console's `SHOW DEVICE/FULL NLA0:` should print the
     layout the VMS 7.1 system gives it, not govax's generic one. VMS shows:
 
         Device NLA0:, device type null device, is online, record-oriented device,
@@ -818,3 +818,17 @@ for a process created without one.
     the suspend tests (HIB, SS$_NORMAL), the quota and null-device tests,
     and a `SetCurrentPriority` call in the scheduler tests'
     `setBasePriority` helper.
+- 2026-10-07: `SHOW DEVICE/FULL NLA0:` (the to-do under subtask 14)
+  prints the VMS 7.1 layout: `Console.showNullDeviceFull`
+  (`console/device.go`) writes the two-line sentence (phrases from the
+  device type and DEVCHAR's REC, SHR, and MBX bits, wrapped at column 78),
+  then the four rows in VMS's two columns (first value right-justified to
+  32 columns, second to 39). Owner process is the allocating process's
+  name or `""`, the owner UIC `[g,m]` in octal, the protection VMS's
+  `S:RWPL,O:RWPL,G:RWPL,W:RWPL` (govax keeps none per device), and the
+  counts the device's own (VMS's 31 operations and 10 references are its
+  system's). `vax.init` gives NLA0: `ownuic` [1,1] and a buffer size of
+  512. The name works with or without a colon, in any case, for every
+  SHOW DEVICE. Terminals and mailboxes keep the generic layout; the same
+  could be done for them from a VMS run. Test:
+  `TestShowDeviceFull_nla0`.

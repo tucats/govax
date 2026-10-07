@@ -2,8 +2,11 @@ package console_test
 
 import (
 	"fmt"
+	"strings"
 	"testing"
 
+	"github.com/tucats/govax/internal/console"
+	"github.com/tucats/govax/internal/console/consoletest"
 	iodev "github.com/tucats/govax/internal/io"
 	"github.com/tucats/govax/internal/sched"
 )
@@ -126,5 +129,35 @@ func TestNullDevice_defined(t *testing.T) {
 	d, found := c.Devices.Find("NLA0:")
 	if !found || d.DevClass != iodev.DeviceClassMailbox || d.DevType != iodev.DeviceTypeNull {
 		t.Fatalf("NLA0: found %v, class %v; want the null device (mailbox class, type 3)", found, d)
+	}
+}
+
+// TestShowDeviceFull_nla0: SHOW DEVICE/FULL NLA0: in the layout the VMS 7.1
+// system gives it (docs/PHASE-45.md, probe 2), with govax's own counts, and
+// the name taken with or without its colon.
+func TestShowDeviceFull_nla0(t *testing.T) {
+	c, _ := scheduledConsole(t, longQuantum, brbSelf)
+	d := console.NewDispatcher(c, consoletest.ConsoleGrammar(t), nil)
+
+	want := strings.Join([]string{
+		"Device NLA0:, device type null device, is online, record-oriented device,",
+		"    shareable, mailbox device.",
+		"",
+		"    Error count                    0    Operations completed                  0",
+		`    Owner process                 ""    Owner UIC                         [1,1]`,
+		"    Owner process ID        00000000    Dev Prot    S:RWPL,O:RWPL,G:RWPL,W:RWPL",
+		"    Reference count                0    Default buffer size                 512",
+		"",
+	}, "\n")
+
+	for _, line := range []string{"SHOW DEVICE/FULL NLA0:", "SHOW DEVICE/FULL nla0"} {
+		got, err := sayConsole(t, c, d, line)
+		if err != nil {
+			t.Fatalf("%s: %v", line, err)
+		}
+
+		if got = strings.ReplaceAll(got, "\r", ""); got != want {
+			t.Errorf("%s:\n%s\nwant:\n%s", line, got, want)
+		}
 	}
 }

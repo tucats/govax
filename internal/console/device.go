@@ -2,8 +2,10 @@ package console
 
 import (
 	"fmt"
+	"strings"
 
 	iodev "github.com/tucats/govax/internal/io"
+	"github.com/tucats/govax/internal/vmsdef"
 )
 
 // DefineDevice implements the DEFINE/DEVICE console command, registering
@@ -24,7 +26,7 @@ func (c *Console) DefineDevice(name string, opts iodev.DeviceOptions) *iodev.Dev
 // VMS-realistic reformat.
 func (c *Console) ShowDevices(name string, full bool) error {
 	for _, d := range c.Devices.All() {
-		if name != "" && d.Name != name {
+		if name != "" && d.Name != strings.ToUpper(strings.TrimSuffix(name, ":")) {
 			continue
 		}
 
@@ -36,6 +38,12 @@ func (c *Console) ShowDevices(name string, full bool) error {
 
 		if d.DevClass == iodev.DeviceClassDisk {
 			c.showDiskDeviceFull(d)
+
+			continue
+		}
+
+		if d.DevClass == iodev.DeviceClassMailbox && d.DevType == iodev.DeviceTypeNull {
+			c.showNullDeviceFull(d)
 
 			continue
 		}
@@ -144,3 +152,82 @@ func (c *Console) statRow(label1 string, val1 any, label2 string, val2 any) {
 	c.Printf("    %-27s%12v    %-27s%12v\n", label1, val1, label2, val2)
 }
 
+
+// The DEVCHAR bits SHOW DEVICE/FULL names.
+var (
+	devRecord    = vmsdef.Symbols["DEV$M_REC"]
+	devShareable = vmsdef.Symbols["DEV$M_SHR"]
+	devMailbox   = vmsdef.Symbols["DEV$M_MBX"]
+)
+
+// showNullDeviceFull prints SHOW DEVICE/FULL of the null device NLA0: in
+// the layout VMS 7.1 gave it (testdata/mp/probe2, docs/PHASE-45.md):
+//
+//	Device NLA0:, device type null device, is online, record-oriented device,
+//	    shareable, mailbox device.
+//
+//	    Error count                    0    Operations completed                 31
+//	    Owner process                 ""    Owner UIC                         [1,1]
+//	    Owner process ID        00000000    Dev Prot    S:RWPL,O:RWPL,G:RWPL,W:RWPL
+//	    Reference count               10    Default buffer size                 512
+//
+// The characteristics after "is online" come from DEVCHAR's bits, and the
+// first sentence wraps where the next phrase would pass column 78. The
+// owner UIC is group and member in octal. The protection is VMS's for
+// NLA0: (govax keeps none per device). The counts are the device's own.
+func (c *Console) showNullDeviceFull(d *iodev.Device) {
+	phrases := []string{"device type null device", "is online"}
+
+	if d.Allocated() {
+		phrases = append(phrases, "allocated")
+	}
+
+	for _, ch := range []struct {
+		bit  uint32
+		text string
+	}{{devRecord, "record-oriented device"}, {devShareable, "shareable"}, {devMailbox, "mailbox device"}} {
+		if d.DevChar&ch.bit != 0 {
+			phrases = append(phrases, ch.text)
+		}
+	}
+
+	// "Device NLA0:" and the phrases, wrapped: a phrase that would take the
+	// line (with its comma) past column 78 starts the next, indented.
+	line := fmt.Sprintf("Device %s:", d.Name)
+
+	for _, p := range phrases {
+		if len(line)+len(", ")+len(p)+1 > 78 {
+			c.Printf("%s,\n", line)
+
+			line = "    " + p
+
+			continue
+		}
+
+		line += ", " + p
+	}
+
+	c.Printf("%s.\n\n", line)
+
+	owner := `""`
+
+	if d.PID != 0 && c.RTL != nil {
+		if env, found := c.RTL.FindProcess(d.PID); found && env.Process.Name != "" {
+			owner = fmt.Sprintf("%q", env.Process.Name)
+		}
+	}
+
+	c.vmsRow("Error count", d.ErrCnt, "Operations completed", d.OpCnt)
+	c.vmsRow("Owner process", owner, "Owner UIC", fmt.Sprintf("[%o,%o]", d.OwnUIC>>16, d.OwnUIC&0xFFFF))
+	c.vmsRow("Owner process ID", fmt.Sprintf("%08X", d.PID), "Dev Prot", "S:RWPL,O:RWPL,G:RWPL,W:RWPL")
+	c.vmsRow("Reference count", d.RefCnt, "Default buffer size", d.DevBufSize)
+}
+
+// vmsRow prints one line of SHOW DEVICE/FULL in VMS's two columns: the
+// first label and its value right-justified to 32 columns, then the
+// second to 39, with four blanks between.
+func (c *Console) vmsRow(label1 string, val1 any, label2 string, val2 any) {
+	v1, v2 := fmt.Sprint(val1), fmt.Sprint(val2)
+
+	c.Printf("    %s%*s    %s%*s\n", label1, 32-len(label1), v1, label2, 39-len(label2), v2)
+}
