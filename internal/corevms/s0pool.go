@@ -3,6 +3,8 @@ package corevms
 import (
 	"fmt"
 	"slices"
+
+	"github.com/tucats/govax/internal/vm"
 )
 
 // The S0 pool (Phase 43, subtask 6): the system-space pages a new process's
@@ -201,7 +203,10 @@ func (sys *System) S0Pool() *S0Pool { return sys.s0 }
 // pid (see S0Pool.Allocate) and clears them, so a page table made there
 // starts with every entry invalid and a stack starts zeroed. Each page is
 // cleared through its physical address, found from the S0 page table,
-// so it works whatever the current process is.
+// so it works whatever the current process is. Each page's protection is
+// also put back to S0's default, URKW (every mode reads, kernel writes),
+// in case the pages' last owner changed it (a stack's guard page, say);
+// SetS0Protection changes it.
 func (sys *System) AllocateS0(pages, pid uint32, purpose string) (uint32, error) {
 	if sys.s0 == nil {
 		return 0, fmt.Errorf("no S0 pool: VMINIT has not been run")
@@ -226,6 +231,11 @@ func (sys *System) AllocateS0(pages, pid uint32, purpose string) (uint32, error)
 			err = sys.mem.StorePhysical(pte.PFN()*pageSize, zero[:])
 		}
 
+		if err == nil && pte.Protection() != vm.ProtURKW {
+			pte.SetProtection(vm.ProtURKW)
+			err = sys.mem.StorePTE(sys.cpu, va, pte)
+		}
+
 		if err != nil {
 			sys.s0.Free(addr)
 
@@ -234,4 +244,27 @@ func (sys *System) AllocateS0(pages, pid uint32, purpose string) (uint32, error)
 	}
 
 	return addr, nil
+}
+
+// SetS0Protection sets the protection code of the pages S0 pages from
+// addr, and empties their translation-buffer entries (which remember the
+// old code). A process's stacks use it for their guard pages and their
+// modes' access (stacks.go).
+func (sys *System) SetS0Protection(addr, pages uint32, prot vm.Protection) error {
+	for i := range pages {
+		va := addr + i*pageSize
+
+		_, _, pte, err := sys.mem.LookupPTE(sys.cpu, va)
+		if err != nil {
+			return err
+		}
+
+		pte.SetProtection(prot)
+
+		if err := sys.mem.StorePTE(sys.cpu, va, pte); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }

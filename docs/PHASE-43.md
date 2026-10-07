@@ -923,3 +923,26 @@ uses the current Environment's `mem`/`cpu` (so the current P0/P1) or its
   vector page read-only; teardown gives back every frame and pool page;
   bad sizes and an exhausted pool leave nothing allocated;
   `RemoveProcess` tears down).
+- 2026-10-07: Subtask 9 (per-process privileged stacks).
+  `corevms/stacks.go`: `System.BuildStacks(pid, kernel, executive,
+  supervisor)` takes one pool run for a new process's three stacks, laid
+  out and protected as `docs/MODE-STACKS.md` describes process 1's
+  (kernel URKW, a no-access guard, executive EW, a guard, supervisor SW;
+  38 pages with `vax.init`'s sizes), and the user stack top is
+  `corevms.UserStackTop` (0x7FE00000) in the process's own P1. The open
+  question about the PCB's place is settled: a pool page of its own,
+  kernel-only (KW), its physical address kept for PCBB; VMS's process
+  header puts it beside the page tables, which a separate page doesn't
+  need. `Environment.Stacks` holds a process's (`ProcessStacks`);
+  VMINIT adopts its own as process 1's (`AdoptStacks`), with no PCB
+  page until `EnsurePCB` gives it one (VMINIT's layout has no room, and
+  the pool's bottom pages are the microkernel's, claimed as ASM deposits
+  it, so process 1's PCB must be allocated after that; Phase 44's
+  switcher does it). `InitialPCB` is a new process's first PCB (stacks,
+  address space, ASTLVL 4, a given PC and PSL). `AllocateS0` now puts
+  each page's protection back to S0's default (and empties its TB
+  entry), so a freed stack's guard pages don't follow its pages to the
+  next owner; `SetS0Protection` sets it. The interrupt stack stays
+  shared. MODE-STACKS.md updated. Tests: `stacks_test.go` (layout,
+  protections, pointers, the PCB page, reset on reuse; process 1's PCB;
+  the initial PCB through memory).

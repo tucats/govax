@@ -85,6 +85,11 @@ type Environment struct {
 	// before VMINIT has run, when there are no page tables.
 	Space *ProcessSpace
 
+	// Stacks is the process's kernel, executive, supervisor, and user
+	// stacks and its hardware PCB (stacks.go). Process 1's are VMINIT's;
+	// a new process's are built by BuildStacks. Nil before VMINIT.
+	Stacks *ProcessStacks
+
 	channels    []*channel
 	nextChannel uint32
 

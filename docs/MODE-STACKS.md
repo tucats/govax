@@ -45,6 +45,38 @@ The default of 8 pages applies both to the VMINIT command (the `/ESP` and
 and to Go callers of `Console.VMInit` passing 0 pages (the constant
 `defaultModeStackPages`).
 
+## Other processes' stacks (Phase 43)
+
+VMINIT's stacks are process 1's (the console's). Every other process gets
+its own kernel, executive, and supervisor stacks, because a process
+switched out in the middle of a system service leaves its frames on its
+own kernel stack. `corevms.System.BuildStacks`
+(`internal/corevms/stacks.go`) takes them from the S0 pool
+(`corevms/s0pool.go`) as one run, laid out as VMINIT lays process 1's:
+
+| Region | Size | Protection |
+| --- | --- | --- |
+| Kernel stack | the caller's (VMINIT's `/KSP` by default) | `URKW` |
+| Guard page | 1 page | `NA` |
+| Executive stack | the caller's | `EW` |
+| Guard page | 1 page | `NA` |
+| Supervisor stack | the caller's | `SW` |
+
+With `vax.init`'s sizes that is 38 pages. The process's user stack is in
+its own P1, with the same top as process 1's (`corevms.UserStackTop`,
+`0x7FE00000`): P1 is private, so the same address names a different page
+in each process. **The interrupt stack is shared**: interrupts belong to
+no process.
+
+Each process also has a pool page for its hardware PCB (the 96 bytes
+`LDPCTX` loads its registers from), kernel-only (`KW`), which PCBB names
+by physical address. Process 1 gets its PCB page the first time it needs
+one (`System.EnsurePCB`), since VMINIT's layout has no room for it.
+
+When the pool hands pages out again, `AllocateS0` puts their protection
+back to `URKW`, so a freed stack's guard pages don't follow its pages to
+their next owner.
+
 ## Why
 
 Before this change, the executive and supervisor stacks were in S0 but
@@ -71,8 +103,9 @@ stack's own top, so the modes would have shared one stack.
   for the executive and supervisor stacks only. A kernel stack overflow
   still runs into the page tables below it.
 - **S0, not P1.** VMS keeps each process's inner-mode stacks in P1 space
-  (per process). govax has one process and puts them in S0, which VMINIT
-  maps eagerly, so they never page-fault.
+  (per process). govax puts them in S0, process 1's where VMINIT lays
+  them out and other processes' in the S0 pool, which VMINIT maps
+  eagerly, so they never page-fault.
 
 ## Where it's tested
 
@@ -80,5 +113,9 @@ stack's own top, so the modes would have shared one stack.
   sizes, each page's protection, the guard pages, and which modes can
   write each stack) and `TestVMInit_modeStackSizes` (explicit sizes).
 - `internal/console/dcl/parse_test.go`: the grammar's defaults.
+- `internal/console/stacks_test.go`: another process's stacks
+  (`TestBuildStacks`: layout, protections, pointers, the PCB page, and
+  protections reset when the pool reuses the pages), process 1's PCB
+  page, and a new process's initial PCB.
 - `testdata/asm/cmkrnl.asm` runs a `$CMEXEC` routine on VMINIT's own
   executive stack, with memory management on.

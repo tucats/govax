@@ -24,7 +24,7 @@ type vmRegion struct {
 // fixed initial user stack pointer within it.
 const (
 	maxP1 = 0x80000000
-	spP1  = 0x7FE00000
+	spP1  = corevms.UserStackTop
 	// p1TotalSlots is the total number of P1-region page slots (the region
 	// is 1GB, 0x40000000 bytes), matching P1LR's "pages NOT on the list"
 	// convention (see internal/vm/translate.go's P1 handling).
@@ -374,6 +374,7 @@ func (c *Console) VMInit(p0Pages, p1Pages, s0Pages, kspPages, espPages, sspPages
 	// These P0 and P1 tables are process 1's address space; a new
 	// process gets tables of its own from the pool (BuildAddressSpace).
 	c.RTL.Space = corevms.AdoptAddressSpace(c.CPU, size[0], size[1])
+	c.RTL.Stacks = corevms.AdoptStacks(c.CPU)
 
 	c.DepositAddr = 0x200
 	c.CPU.SetPR(vax.MAPEN, 1)
