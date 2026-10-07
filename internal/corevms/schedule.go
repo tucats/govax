@@ -88,15 +88,23 @@ func (sys *System) Schedule(e *cpu.Engine, ran int, preemptible bool) (int, erro
 		return 1, nil
 	}
 
-	h, ok := s.Reschedule()
-	if !ok {
-		// Nobody can run: idle until somebody can (idle.go).
-		if h, ok = sys.idle(e); !ok {
-			return 0, ErrNoComputableProcess
+	// A process starting for the first time may fail to (its image
+	// can't be activated) and stop at once (startup.go): then the choice
+	// is made again, before anything runs.
+	for {
+		h, ok := s.Reschedule()
+		if !ok {
+			// Nobody can run: idle until somebody can (idle.go).
+			if h, ok = sys.idle(e); !ok {
+				return 0, ErrNoComputableProcess
+			}
 		}
-	}
 
-	if cur := sys.Current(); cur == nil || handle(cur) != h {
+		cur := sys.Current()
+		if cur != nil && handle(cur) == h {
+			break
+		}
+
 		next, found := sys.FindProcess(uint32(h))
 		if !found {
 			return 0, fmt.Errorf("corevms: the scheduler chose process %08X, which isn't in the table", uint32(h))
@@ -104,6 +112,10 @@ func (sys *System) Schedule(e *cpu.Engine, ran int, preemptible bool) (int, erro
 
 		if err := sys.switchTo(e, cur, next); err != nil {
 			return 0, err
+		}
+
+		if !next.Stopped {
+			break
 		}
 	}
 
@@ -184,7 +196,7 @@ func (sys *System) switchTo(e *cpu.Engine, cur, next *Environment) error {
 	// A process $CREPRC created starts the first time it runs, in its
 	// own context (creprc.go).
 	if next.Startup != nil {
-		return sys.startProcess(next)
+		return sys.startProcess(e, next)
 	}
 
 	return nil

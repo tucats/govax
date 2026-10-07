@@ -3,6 +3,8 @@ package console
 import (
 	"fmt"
 
+	"github.com/tucats/govax/internal/corevms"
+
 	"github.com/tucats/govax/internal/vax"
 	"github.com/tucats/govax/internal/vmsdef"
 	"github.com/tucats/govax/internal/vmserrors"
@@ -248,6 +250,13 @@ func mainTransferAddress(icb *ICB) (uint32, bool) {
 // list in load order (id-0 self-references live only in each ICB's own
 // SHRList, never in ICBList itself, so no filtering is needed here).
 func (p *imageProcess) buildImageInitDriver(main *ICB, runInits bool) (uint32, bool, error) {
+	return p.buildDriver(main, runInits, false)
+}
+
+// buildDriver is buildImageInitDriver, with a call to $HIBER first when
+// hibernate is set: for a process $CREPRC created with PRC$M_HIBER, which
+// waits to be woken before its image runs (activateCreatedImage).
+func (p *imageProcess) buildDriver(main *ICB, runInits, hibernate bool) (uint32, bool, error) {
 	c := p.c
 
 	addr, ok := mainTransferAddress(main)
@@ -261,6 +270,15 @@ func (p *imageProcess) buildImageInitDriver(main *ICB, runInits bool) (uint32, b
 	}
 
 	code := []byte{0x00, 0x00} // entry mask: no registers saved
+
+	if hibernate {
+		hiber, ok := p.p1Stub("SYS$HIBER")
+		if !ok {
+			return 0, false, fmt.Errorf("console: no SYS$HIBER stub for a process created to hibernate")
+		}
+
+		code = append(code, encodeCalls(0, hiber)...)
+	}
 
 	if runInits {
 		for _, dep := range p.ICBList[1:] {
@@ -372,4 +390,44 @@ func encodeCalls(argc, target uint32) []byte {
 		0x8F, byte(argc), byte(argc >> 8), byte(argc >> 16), byte(argc >> 24),
 		0x9F, byte(target), byte(target >> 8), byte(target >> 16), byte(target >> 24),
 	}
+}
+
+// activateCreatedImage is the System's ActivateImage hook (newRTL): the
+// startup of a process $CREPRC created (docs/PHASE-45.md, subtask 5)
+// activates the process's image into its own P0, as RUN activates one
+// into process 1's, and builds its IMAGE$INIT driver, running
+// LIB$INITIALIZE as RUN does by default. It returns the driver's address.
+//
+// The image is found as RUN finds a main image, by the console's default
+// directory (readImage), which is the new process's own when, as always
+// so far, process 1 created it. The name is never taken as a host file
+// by /HOST: a $CREPRC image name is a file specification.
+func (c *Console) activateCreatedImage(env *corevms.Environment, image string, hibernate bool) (uint32, error) {
+	if err := c.ensureShims(); err != nil {
+		return 0, err
+	}
+
+	savedHost := c.runHost
+	c.runHost = false
+
+	defer func() { c.runHost = savedHost }()
+
+	p := c.imagesOf(env)
+	p.resetICBList()
+
+	main, err := p.activateImage(image)
+	if err != nil {
+		return 0, err
+	}
+
+	driver, ok, err := p.buildDriver(main, c.DefaultRunInits(), hibernate)
+	if err != nil {
+		return 0, err
+	}
+
+	if !ok {
+		return 0, fmt.Errorf("console: image %s has no transfer address", image)
+	}
+
+	return driver, nil
 }

@@ -83,6 +83,17 @@ type System struct {
 	// (SetProcessSettings, which also gives the scheduler its quantum).
 	ProcessSettings ProcessSettings
 
+	// ActivateImage activates image in env's process, a process $CREPRC
+	// created, at its startup (startup.go): it loads the image and the
+	// shareable images it needs into the process's P0 and returns the
+	// address of a procedure that runs it. The procedure calls the
+	// image's main routine (after a $HIBER when hibernate is set), then
+	// $EXIT with what it returned, as RUN's IMAGE$INIT driver does. The
+	// console installs it, since image activation is the console's and
+	// corevms can't import the console; nil means created processes
+	// can't start.
+	ActivateImage func(env *Environment, image string, hibernate bool) (uint32, error)
+
 	// sched is the scheduler (schedule.go): every process in procs is
 	// in it, by PID. It only decides anything while the engine has the
 	// System installed as its scheduling hook.

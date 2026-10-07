@@ -2,9 +2,10 @@ package corevms
 
 import (
 	"errors"
-	"fmt"
+	"slices"
 
 	"github.com/tucats/govax/internal/cpu"
+	"github.com/tucats/govax/internal/lnm"
 	"github.com/tucats/govax/internal/vax"
 	"github.com/tucats/govax/internal/vmsdef"
 	"github.com/tucats/govax/internal/vmserrors"
@@ -377,6 +378,8 @@ func (env *Environment) CreateProcess(req CreateRequest) (*Environment, uint32) 
 		child.Logicals = env.Logicals.NewProcessView(uic, env.Logicals.NewJobTable())
 	}
 
+	env.inheritDefaults(child)
+
 	p := child.Process
 	p.UIC = uic
 	p.Name = req.Name
@@ -511,10 +514,25 @@ func (env *Environment) buildProcessMemory(child *Environment) bool {
 	return cpu.WritePCB(env.mem, stacks.PCBB, &start) == nil
 }
 
-// startProcess runs the startup of env, a process $CREPRC created, the
-// first time the scheduler switches to it. Process startup is
-// docs/PHASE-45.md's subtask 5; until it's written, a created process
-// can't run, and switching to one stops the run with this error.
-func (sys *System) startProcess(env *Environment) error {
-	return fmt.Errorf("corevms: process %08X can't start: process startup isn't written yet", env.Process.PID)
+// inheritDefaults gives child, a new process, its creator env's default
+// device and directory: env's SYS$DISK, if its process table has one, in
+// child's process table at the same access mode, and a copy of env's RMS
+// session, with its default directory. VMS hands both to a new process
+// in the block $CREPRC builds for it (the process quota block), so the
+// new process starts where its creator was when it was created, and
+// later changes on either side don't reach the other. (Which of the
+// creator's other process logical names a new process gets: none, by
+// the manual's silence; unconfirmed.)
+func (env *Environment) inheritDefaults(child *Environment) {
+	if e, err := env.Logicals.Translate(lnm.ProcessTableName, sysDiskName, lnm.User, 0); err == nil {
+		_, _ = child.Logicals.Define(lnm.ProcessTableName, sysDiskName, e.Mode, 0, slices.Clone(e.Equivalences))
+	}
+
+	if env.Session != nil {
+		child.Session = env.Session.ForProcess(child.Logicals)
+	}
 }
+
+// sysDiskName is the logical name whose translation is a process's
+// default device.
+const sysDiskName = "SYS$DISK"

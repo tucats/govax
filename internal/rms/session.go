@@ -2,6 +2,7 @@ package rms
 
 import (
 	"fmt"
+	"slices"
 	"strings"
 
 	"github.com/tucats/govax/internal/lnm"
@@ -98,6 +99,19 @@ type Session struct {
 // device/directory set yet.
 func NewSession(mounts *MountTable) *Session {
 	return &Session{Mounts: mounts, Logicals: lnm.NewDatabase(0)}
+}
+
+// ForProcess returns a copy of s for a new process whose logical names
+// are logicals: the same mounts and host fallback, and the same default
+// directory, which the new process may then change without changing s's
+// (docs/PHASE-45.md: a process $CREPRC creates starts in its creator's
+// default directory).
+func (s *Session) ForProcess(logicals *lnm.Database) *Session {
+	c := *s
+	c.Logicals = logicals
+	c.Default.Dirs = slices.Clone(s.Default.Dirs)
+
+	return &c
 }
 
 // SetDefault parses text (an operator-typed file specification, e.g.

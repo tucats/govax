@@ -215,9 +215,15 @@ for a process created without one.
 
 - The default directory and other inherited state of a `$CREPRC`
   subprocess (privileges? process logical names? none, per the manual,
-  but check): settled from the manual in subtask 5.
+  but check): settled from the manual in subtask 5. *Answered (subtask
+  5):* the manual doesn't say. govax copies the creator's default
+  directory and its process-table SYS$DISK at creation, as VMS's process
+  quota block carries them (unconfirmed), and nothing else: no other
+  process logical names. Privileges are subtask 4's.
 - Whether `$CREPRC` with no `image` is meaningful (VMS creates a process
   that does nothing useful); probably SS$_IVLOGNAM or an immediate exit.
+  *Answered (subtask 5), unconfirmed:* `$CREPRC` succeeds, and the new
+  process stops at startup with RMS$_FNF, as for any image not found.
 - PID reuse: the sequence number makes a reused slot's PID different;
   confirm the shape against a probe if Decision 7 allows.
 
@@ -365,3 +371,37 @@ for a process created without one.
   after `vax.init`, a detached process and per-group names, a creator
   without SETPRV and ALTPRI, PRCLM and a full pool leaving nothing
   behind, the pending-startup error).
+- 2026-10-07: Subtask 5 (process startup). `corevms/startup.go`: when
+  the scheduler first switches to a created process (`switchTo`, once the
+  CPU holds its context), `startProcess` runs instead of its first
+  instruction: it defines SYS$INPUT, SYS$OUTPUT, and SYS$ERROR in the
+  process's own process table, executive mode, with no attributes (each
+  only if `$CREPRC` gave it), has the console activate the image
+  (`System.ActivateImage`, installed by `newRTL` as
+  `Console.activateCreatedImage`: `imagesOf(env).activateImage` into the
+  process's P0, then its IMAGE$INIT driver, running LIB$INITIALIZE as
+  RUN does by default), and calls the driver with `Engine.CallEntry`, in
+  user mode on the process's user stack, on a sentinel frame, so the
+  image's return or `$EXIT` stops the process as Phase 44 stops any
+  process but process 1 (deletion is subtask 6). `PRC$M_HIBER` puts a
+  `CALLS #0, SYS$HIBER` at the head of the driver, so the process
+  hibernates (state HIB) until woken, before LIB$INITIALIZE and the
+  image. The default directory and SYS$DISK are copied from the creator
+  when `$CREPRC` creates the process (`inheritDefaults`,
+  `rms.Session.ForProcess`), not at startup: VMS hands them over in the
+  process quota block it builds then (unconfirmed). The image is found
+  as RUN finds one, by the console's default directory (the same as the
+  child's while process 1 is the creator), never as `/HOST`. A startup
+  that fails stops the process with a status: RMS$_FNF for a missing
+  image (and for an empty image name, answering an open question),
+  SS$_UNSUPPORTED for `LOGINOUT` (Phase 48's command interpreter), a
+  system or RMS status found in the error, or SS$_ABORT for govax's own
+  activation errors (all unconfirmed against VMS's termination
+  statuses). `Schedule` then chooses again before anything runs.
+  Tests (`console/creprc_test.go`): a child image, assembled and linked
+  by govax's MACRO and LINK, preempts process 1, writes its line on the
+  shared terminal, and stops with its status (3), after which process 1
+  runs on; its SYS$OUTPUT, missing SYS$INPUT, and copied default
+  directory; `PRC$M_HIBER` (hibernates, writes nothing until process 1's
+  `$WAKE`, then runs); and the failures (missing image, empty name,
+  LOGINOUT), each leaving process 1 running.

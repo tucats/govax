@@ -342,6 +342,10 @@ func (c *Console) newRTL() *corevms.Environment {
 
 	sys.SetProcessSettings(processSettings())
 
+	// A process $CREPRC creates activates its image with the console's
+	// image activator (docs/PHASE-45.md, subtask 5).
+	sys.ActivateImage = c.activateCreatedImage
+
 	// $SETIMR's timers run on the engine's system time, the same time
 	// base as the interval clock (docs/PHASE-26.md subtask 11).
 	if c.Engine != nil {

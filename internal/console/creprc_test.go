@@ -1,12 +1,16 @@
 package console_test
 
 import (
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
 	"github.com/tucats/govax/internal/console"
+	"github.com/tucats/govax/internal/console/consoletest"
 	"github.com/tucats/govax/internal/corevms"
 	"github.com/tucats/govax/internal/cpu"
+	"github.com/tucats/govax/internal/lnm"
 	"github.com/tucats/govax/internal/sched"
 	"github.com/tucats/govax/internal/vax"
 	"github.com/tucats/govax/internal/vmsdef"
@@ -283,22 +287,211 @@ func TestCreprc_limits(t *testing.T) {
 	}
 }
 
-// TestCreprc_startupPending: until process startup is written (subtask
-// 5), the scheduler switching to a created process stops the run with an
-// error that says so, rather than running from the PCB's PC 0.
-func TestCreprc_startupPending(t *testing.T) {
-	c, _ := scheduledConsole(t, longQuantum, nil)
+// Phase 45's subtask 5: process startup. A created process's first
+// dispatch defines its SYS$ names, activates its image in its own P0,
+// and calls it as RUN calls process 1's; the image's end stops the
+// process (subtask 6 will delete it).
+
+// childSource is the child's image: it writes a line through
+// LIB$PUT_OUTPUT, on the terminal it shares with process 1, and returns
+// status 3 (a success other than SS$_NORMAL, so the test sees it's the
+// image's).
+const childSource = `	.title	child
+	.psect	code,exe,nowrt
+	.entry	start,^m<>
+	pushaq	msg
+	calls	#1,g^lib$put_output
+	movl	#3,r0
+	ret
+	.psect	data,noexe,wrt
+msg:	.ascid	/Hello from the child/
+	.end	start
+`
+
+// buildChildImage assembles and links childSource with govax's MACRO and
+// LINK, returning the image's host path.
+func buildChildImage(t *testing.T, c *console.Console) string {
+	t.Helper()
+
+	dir := t.TempDir()
+	src, obj, exe := filepath.Join(dir, "child.mar"), filepath.Join(dir, "child.obj"), filepath.Join(dir, "child.exe")
+
+	if err := os.WriteFile(src, []byte(childSource), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	d := console.NewDispatcher(c, consoletest.ConsoleGrammar(t), nil)
+
+	for _, cmd := range []string{
+		`MACRO "` + src + `"/OBJECT="` + obj + `"`,
+		`LINK "` + obj + `"/EXECUTABLE="` + exe + `"`,
+	} {
+		if err := d.Dispatch(cmd); err != nil {
+			t.Fatalf("%s: %v", cmd, err)
+		}
+	}
+
+	return exe
+}
+
+// runUntil runs the machine, as the console's run loop does
+// (StepMachine: another process's image end stops that process), until
+// done reports true, failing after limit instructions.
+func runUntil(t *testing.T, c *console.Console, limit int, done func() bool) {
+	t.Helper()
+
+	for range limit {
+		if done() {
+			return
+		}
+
+		if err := c.StepMachine(); err != nil {
+			t.Fatalf("at PC %08X: %v", c.CPU.GPR(vax.PC), err)
+		}
+	}
+
+	t.Fatalf("not done after %d instructions", limit)
+}
+
+// TestCreprc_startup: a subprocess runs its image: it starts the first
+// time the scheduler switches to it (preempting process 1, at the same
+// priority), prints its line on the shared terminal, and stops when its
+// image returns, with the image's status, after which process 1 runs on.
+// Its SYS$OUTPUT is the output $CREPRC gave, in its own process table,
+// and its default directory is process 1's.
+func TestCreprc_startup(t *testing.T) {
+	c, out := scheduledConsole(t, longQuantum, brbSelf)
+	exe := buildChildImage(t, c)
 	one := c.RTL
 
-	child, st := one.CreateProcess(corevms.CreateRequest{BasePriority: 10})
+	out.Reset()
+
+	child, st := one.CreateProcess(corevms.CreateRequest{
+		Image: exe, Output: "TTA0:", Name: "CHILD", BasePriority: one.Process.BasePriority,
+	})
 	if st != 1 {
 		t.Fatalf("CreateProcess: status %08X", st)
 	}
 
 	c.Engine.RequestReschedule()
 
-	err := c.Engine.Step()
-	if err == nil || !strings.Contains(err.Error(), "startup") {
-		t.Errorf("switching to process %08X: %v; want an error about its startup", child.Process.PID, err)
+	sawChild := false
+
+	runUntil(t, c, 100000, func() bool {
+		sawChild = sawChild || c.RTL.Current() == child
+
+		return child.Stopped
+	})
+
+	if !sawChild {
+		t.Error("the child never ran")
+	}
+
+	if !strings.Contains(out.String(), "Hello from the child\n") {
+		t.Errorf("terminal output %q; want the child's line", out.String())
+	}
+
+	if child.Process.ExitStatus != 3 || child.Startup != nil {
+		t.Errorf("exit status %08X, startup %+v; want 3, done", child.Process.ExitStatus, child.Startup)
+	}
+
+	// Process 1 runs again.
+	step(t, c, 2)
+
+	if c.RTL.Current() != one || c.CPU.GPR(vax.PC) != codeAddr {
+		t.Errorf("after the child: process %08X at %08X; want process 1 spinning at %08X",
+			c.RTL.Current().Process.PID, c.CPU.GPR(vax.PC), codeAddr)
+	}
+
+	e, err := child.Logicals.Translate(lnm.ProcessTableName, "SYS$OUTPUT", lnm.User, 0)
+	if err != nil || e.Equivalences[0].Value != "TTA0:" || e.Mode != lnm.Executive {
+		t.Errorf("the child's SYS$OUTPUT: %+v, %v; want TTA0:, executive mode", e, err)
+	}
+
+	if _, err := child.Logicals.Translate(lnm.ProcessTableName, "SYS$INPUT", lnm.User, 0); err == nil {
+		t.Error("the child has a SYS$INPUT, though $CREPRC gave none")
+	}
+
+	if child.Session == nil || child.Session == one.Session || child.Session.DefaultString() != one.Session.DefaultString() {
+		t.Errorf("the child's default directory isn't a copy of process 1's")
+	}
+}
+
+// TestCreprc_startupHibernates: PRC$M_HIBER makes the new process
+// hibernate before its image runs, until process 1 wakes it.
+func TestCreprc_startupHibernates(t *testing.T) {
+	code, _ := assembleAt(t, `
+loop:	tstl	@#^X604			; wait for the child's PID
+	beql	loop
+	pushl	#0
+	pushal	@#^X604
+	calls	#2, @#sys$wake
+done:	brb	done
+`)
+
+	c, out := scheduledConsole(t, longQuantum, code)
+	exe := buildChildImage(t, c)
+	one := c.RTL
+
+	out.Reset()
+
+	child, st := one.CreateProcess(corevms.CreateRequest{
+		Image: exe, BasePriority: one.Process.BasePriority, Flags: vmsdef.Symbols["PRC$M_HIBER"],
+	})
+	if st != 1 {
+		t.Fatalf("CreateProcess: status %08X", st)
+	}
+
+	c.Engine.RequestReschedule()
+
+	runUntil(t, c, 100000, func() bool { return stateOf(child) == sched.StateHIB })
+
+	if strings.Contains(out.String(), "Hello") {
+		t.Errorf("the hibernating child wrote its line: %q", out.String())
+	}
+
+	setLongword(t, c, one, dataAddr+4, child.Process.PID)
+
+	runUntil(t, c, 100000, func() bool { return child.Stopped })
+
+	if !strings.Contains(out.String(), "Hello from the child") || child.Process.ExitStatus != 3 {
+		t.Errorf("after $WAKE: output %q, status %08X", out.String(), child.Process.ExitStatus)
+	}
+}
+
+// TestCreprc_startupFails: a process whose image can't be activated
+// stops at once with the failure's status (RMS$_FNF for a missing image;
+// SS$_UNSUPPORTED for LOGINOUT, the command interpreter Phase 48 adds),
+// and the scheduler chooses again before anything runs: process 1 goes
+// on.
+func TestCreprc_startupFails(t *testing.T) {
+	for _, tt := range []struct {
+		image string
+		want  uint32
+	}{
+		{"NOSUCH.EXE", vmsdef.Symbols["RMS$_FNF"]},
+		{"", vmsdef.Symbols["RMS$_FNF"]},
+		{"SYS$SYSTEM:LOGINOUT.EXE", vmsdef.Symbols["SS$_UNSUPPORTED"]},
+	} {
+		c, _ := scheduledConsole(t, longQuantum, brbSelf)
+		one := c.RTL
+
+		child, st := one.CreateProcess(corevms.CreateRequest{Image: tt.image, BasePriority: 10})
+		if st != 1 {
+			t.Fatalf("CreateProcess: status %08X", st)
+		}
+
+		c.Engine.RequestReschedule()
+		step(t, c, 1)
+
+		if !child.Stopped || child.Process.ExitStatus != tt.want {
+			t.Errorf("%q: stopped %v, status %08X; want stopped with %08X",
+				tt.image, child.Stopped, child.Process.ExitStatus, tt.want)
+		}
+
+		if c.RTL.Current() != one || c.CPU.GPR(vax.PC) != codeAddr {
+			t.Errorf("%q: process %08X at %08X runs; want process 1 at %08X",
+				tt.image, c.RTL.Current().Process.PID, c.CPU.GPR(vax.PC), codeAddr)
+		}
 	}
 }
