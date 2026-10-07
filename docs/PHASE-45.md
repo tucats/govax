@@ -211,6 +211,35 @@ for a process created without one.
     by govax in the test.
 14. **Close-out.** Status, progress log, PLAN.md, CLAUDE.md, HELP.
 
+    **For future SHOW DEVICE work** (author's note, 2026-10-07): the VMS
+    7.1 system's `SHOW DEVICE/FULL` of a terminal and of a mailbox, for
+    when govax's generic layout for those is replaced the way NLA0:'s was:
+
+        Terminal TTA0:, device type unknown, is online, record-oriented device, carriage
+            control.
+
+            Error count                    0    Operations completed                  0
+            Owner process                 ""    Owner UIC                      [SYSTEM]
+            Owner process ID        00000000    Dev Prot              S:RWPL,O:RWPL,G,W
+            Reference count                0    Default buffer size                  80
+
+        Device MBA11:, device type local memory mailbox, is online, record-oriented
+            device, shareable, mailbox device.
+
+            Error count                    0    Operations completed                  6
+            Owner process                 ""    Owner UIC                      [SYSTEM]
+            Owner process ID        00000000    Dev Prot              S:RWPL,O:RWPL,G,W
+            Reference count                1    Default buffer size               65535
+
+    Differences from NLA0:'s: the first word is the class (`Terminal`;
+    `Device` for a mailbox), the owner UIC prints as its identifier
+    (`[SYSTEM]`) where one exists and `[g,m]` where none does, the
+    protection is `S:RWPL,O:RWPL,G,W` (no group or world access shown as
+    just the letter), a terminal's DEVCHAR adds "carriage control" after
+    "record-oriented device", and the first line wraps at 80 columns
+    (`carriage` fits on the first line; "control." does not). A mailbox's
+    type is "local memory mailbox" and its buffer size 65535 there.
+
     **Done** (2026-10-07; was: to do before leaving Phase 45, author's
     note after probe 2): the console's `SHOW DEVICE/FULL NLA0:` should print the
     layout the VMS 7.1 system gives it, not govax's generic one. VMS shows:
