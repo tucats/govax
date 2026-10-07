@@ -1,6 +1,6 @@
 # Phase 46 — Multiprocessing, part 4: interprocess communication
 
-**Status:** in progress (subtask 1 done, 2026-10-07); decisions taken
+**Status:** in progress (subtasks 1-2 done, 2026-10-07); decisions taken
 2026-10-06 (see PHASE-43.md, Part A). Needs Phase 45.
 
 The program this phase belongs to is described in
@@ -137,7 +137,7 @@ as today).
    read, IO$M_NOW both ways, full mailbox with resource wait on and off,
    end-of-file messages, `$CANCEL` of a waiting read, attention ASTs
    delivered to the enabling process, a write waiting for its message to
-   be read.
+   be read. *Done (2026-10-07).*
 3. **Protection and lifetime.** UIC checks on `$ASSIGN`; temporary
    mailbox deleted when the last channel in any process goes; logical
    names in the job table; `$GETDVI` of a mailbox from either side
@@ -228,3 +228,45 @@ as today).
     spins; process 1 runs at the next instruction boundary, before
     process 2 goes on past its `$QIO`. With the report taken out, it
     fails: with a long quantum, nothing gives process 1 the CPU).
+- 2026-10-07: Subtask 2 (mailboxes between processes).
+  - **Harness** (`console/mbxpair_test.go`): a booted machine, process 1
+    and a hand-built process 2, each running its own MACRO program in
+    its own P0, sharing a permanent mailbox PIPE (process 1 `$CREMBX`es
+    it and `$WAKE`s process 2, which `$ASSIGN`s it). The order of events
+    is made certain by priority: process 1 at base 10, process 2 at 2,
+    so process 2, even boosted by 6, runs only while process 1 waits,
+    and process 1 runs again as soon as its wait ends. Where process 1
+    must wait for process 2 to block, it hibernates with a `$SCHDWK`
+    10 s on, which the idle loop reaches once process 2 waits. (On the
+    booted test machine each instruction is one emulated millisecond,
+    so a 10 ms timer fired before process 2 had done anything.)
+  - **Cases**, each checking both IOSBs (with the other process's PID)
+    and the data: a waiting `$QIOW` read, then a plain write handed to
+    it (process 1 seen in LEF, and running before process 2's `$QIOW`
+    returns); a plain write queued and pending until read (the writer
+    seen waiting for it, in LEF); IO$M_NOW reads and writes, and an
+    end-of-file message; a full mailbox with resource wait on (the
+    writer seen in MWAIT/RWMBX, its write finishing into process 1's
+    waiting read) and off (`$SETRWM`: SS$_MBFULL, the message lost);
+    `$CANCEL` of a pending read (SS$_CANCEL, and the next message goes
+    to the next read, not the cancelled one's buffer); and the three
+    attention ASTs (read attention, write attention, room
+    notification), each run in the process that enabled it, ending its
+    `$HIBER`, and in no other.
+  - **Fixed:** a write handed straight to a waiting read put the
+    *writer's* PID in its IOSB rather than the reader's (`send`, in
+    `mbxdriver.go`); within one process the two are the same, so no
+    earlier test could see it. The fix is caught by two of the cases.
+    *Unconfirmed:* an IO$M_NOW write handed to a waiting read gets the
+    reader's PID too (a queued one gets 0, as the driver's comment has
+    said since Phase 26).
+  - **Fixed:** a writer waiting in RWMBX was noticed only at the
+    scheduler's next look at its waiters. A read that makes room, or a
+    read that starts waiting, now reports a resource available
+    (`mailboxResourceAvailable`, PRI$_RESAVL) to each process waiting
+    for a mailbox, as subtask 1 does for I/O completions;
+    `reportEvent`'s test of the wait leaves a writer to another,
+    still full mailbox waiting. `corevms/ioboost_test.go`'s
+    `TestReportEvent_mailboxRoom` checks it (the console cases can't:
+    there process 1 waits right after making room, and the scheduler
+    finds the writer anyway).

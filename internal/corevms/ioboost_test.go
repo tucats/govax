@@ -136,3 +136,31 @@ func TestIOBoost(t *testing.T) {
 		}
 	}
 }
+
+// TestReportEvent_mailboxRoom: a process waiting to write to a full
+// mailbox (RWMBX) becomes computable as soon as another process's read
+// makes room, with a resource's boost (3), without the scheduler's next
+// look at its waiters.
+func TestReportEvent_mailboxRoom(t *testing.T) {
+	env, _ := fixture()
+	withScheduler(env)
+
+	a := newArena(t, env)
+	_, ch := crembx(t, env, a, 0, 4, 4, "")
+	buf := a.alloc(4)
+
+	writer := newProcess(t, env)
+	wch := assignCall(t, writer, a, mailboxOn(t, env, ch).Device.Name, 0)
+
+	wantR0(t, mbxQIO(t, writer, 0, wch, fnWriteNow, 0, 0, a.str("abcd"), 4), ssNormal)
+
+	if err := callWaiting(writer, serviceSysQio, 0, wch, fnWriteNow, 0, 0, 0, a.str("efgh"), 4); !errors.Is(err, ErrWait) {
+		t.Fatalf("write to a full mailbox: err %v, want ErrWait", err)
+	}
+
+	wantState(t, writer, sched.StateMWAIT, sched.ResourceMailbox)
+
+	wantR0(t, mbxQIO(t, env, 0, ch, fnReadNow, 0, 0, buf, 4), ssNormal)
+	wantState(t, writer, sched.StateCOM, sched.ResourceNone)
+	wantPriority(t, writer, 3)
+}

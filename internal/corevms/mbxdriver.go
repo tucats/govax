@@ -34,7 +34,8 @@ import (
 //	        was longer: SS$_BUFFEROVF, and the rest is lost), and the
 //	        writer's process ID
 //	write:  status, the message's length, and the reader's process ID
-//	        (0 for an IO$M_NOW write)
+//	        (0 for an IO$M_NOW write that was queued; one handed to a
+//	        waiting read has its reader's, unconfirmed)
 //
 // An end-of-file message (IO$_WRITEOF) is read as SS$_ENDOFFILE with no
 // data. A write longer than the mailbox's largest message is rejected
@@ -164,6 +165,7 @@ func mbxRead(env *Environment, req *ioRequest) (ioStatus, uint32) {
 		status := env.receive(req, msg)
 
 		env.deliverAttention(&m.roomAttention)
+		env.mailboxResourceAvailable()
 
 		return status, 0
 	}
@@ -175,6 +177,7 @@ func mbxRead(env *Environment, req *ioRequest) (ioStatus, uint32) {
 	m.readers = append(m.readers, req)
 
 	env.deliverAttention(&m.writeAttention)
+	env.mailboxResourceAvailable()
 
 	return ioStatus{}, ioPending
 }
@@ -256,7 +259,14 @@ func (env *Environment) send(m *Mailbox, req *ioRequest, msg *mailboxMessage) (i
 
 		env.completeIO(reader, env.receive(reader, msg))
 
-		return ioStatus{status: ssNormal, count: count, info: env.Process.PID}, 0
+		// The write's IOSB has the reader's PID: the process that made
+		// the read, not the writer, which is the current one.
+		pid := env.Process.PID
+		if reader.owner != nil {
+			pid = reader.owner.Process.PID
+		}
+
+		return ioStatus{status: ssNormal, count: count, info: pid}, 0
 	}
 
 	if m.queuedBytes()+uint32(len(msg.data)) > m.BufQuo {
@@ -287,6 +297,20 @@ func (env *Environment) send(m *Mailbox, req *ioRequest, msg *mailboxMessage) (i
 	msg.writer = req
 
 	return ioStatus{}, ioPending
+}
+
+// mailboxResourceAvailable reports to the scheduler that a mailbox has
+// room for a message, or a read waiting for one: each process waiting in
+// RWMBX (a write to a full mailbox) whose write can now go ahead becomes
+// computable, with a resource's boost (reportEvent tests its wait, so a
+// writer waiting for another mailbox stays waiting). Without this, the
+// writer would wait for the scheduler's next look at its waiters.
+func (env *Environment) mailboxResourceAvailable() {
+	for _, p := range env.procs.slots {
+		if p != nil && p.waiting != nil && p.waiting.resource == sched.ResourceMailbox {
+			p.reportEvent(sched.ClassResourceAvailable)
+		}
+	}
 }
 
 // mbxSense is IO$_SENSEMODE (and IO$_SENSECHAR): the IOSB's count word is
