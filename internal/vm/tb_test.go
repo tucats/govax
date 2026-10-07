@@ -121,6 +121,68 @@ func TestInvalidateTBClearsEverything(t *testing.T) {
 	}
 }
 
+// TestInvalidateProcessTBKeepsSystemSlots checks the flush LDPCTX makes on
+// a context switch: P0 and P1 translations go, S0 translations stay, the
+// STC is emptied (so an S0 access then hits the TB, not the STC), and
+// the flush is counted as a process flush, not a whole-buffer one.
+func TestInvalidateProcessTBKeepsSystemSlots(t *testing.T) {
+	cpu, mem := newTranslateFixture(t, 4)
+
+	p0Addr := uint32(2*pageSize) + 0x10    // P0 page 2
+	s0Addr := uint32(sysBase+pageSize) + 4 // S0 page 1, P0's page table
+
+	// Translating the P0 address walks P0's page table, which lives at an
+	// S0 address, so both regions get TB entries.
+	for _, addr := range []uint32{p0Addr, s0Addr} {
+		if _, err := mem.Translate(cpu, addr, AccessRead); err != nil {
+			t.Fatalf("Translate(%#x): %v", addr, err)
+		}
+	}
+
+	regions := func() (process, system int) {
+		for _, e := range mem.TBSnapshot() {
+			if e.VA>>30 < 2 {
+				process++
+			} else {
+				system++
+			}
+		}
+
+		return process, system
+	}
+
+	if p, s := regions(); p == 0 || s == 0 {
+		t.Fatalf("before: %d process and %d system entries, want some of each", p, s)
+	}
+
+	_, _, flushesBefore, pflushesBefore := mem.TBStats()
+
+	mem.InvalidateProcessTB()
+
+	if p, s := regions(); p != 0 || s == 0 {
+		t.Errorf("after: %d process and %d system entries, want none and some", p, s)
+	}
+
+	if _, _, flushes, pflushes := mem.TBStats(); flushes != flushesBefore || pflushes != pflushesBefore+1 {
+		t.Errorf("flushes, pflushes = %d, %d; want %d, %d", flushes, pflushes, flushesBefore, pflushesBefore+1)
+	}
+
+	stcTries, stcHits := mem.STCStats()
+	_, tbHits, _, _ := mem.TBStats() //nolint:dogsled
+
+	if _, err := mem.Translate(cpu, s0Addr, AccessRead); err != nil {
+		t.Fatal(err)
+	}
+
+	if tries, hits := mem.STCStats(); tries != stcTries+1 || hits != stcHits {
+		t.Errorf("STC tries, hits = %d, %d; want %d, %d (a miss: the STC was emptied)", tries, hits, stcTries+1, stcHits)
+	}
+
+	if _, hits, _, _ := mem.TBStats(); hits != tbHits+1 { //nolint:dogsled
+		t.Errorf("TB hits = %d, want %d (the S0 entry survived)", hits, tbHits+1)
+	}
+}
+
 // TestInvalidatePageClearsOnlyOneSlot matches vm.c's invalidate_page(addr)
 // (TBIS): only the one slot addr's own region/page maps to is cleared,
 // leaving every other cached mapping alone.

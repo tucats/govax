@@ -798,7 +798,9 @@ $SHOW,TB
 $SH,TB
   Shows the translation buffer: its hit and miss counts, and each entry in
   use (govax's own). The translation buffer is the cache of recent virtual
-  to physical address translations.
+  to physical address translations. Flushes counts the times the whole
+  buffer was emptied (MTPR to TBIA); PFlushes the times only its process
+  (P0 and P1) translations were, as LDPCTX does when it switches processes.
 
   Format:
 

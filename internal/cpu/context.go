@@ -346,7 +346,7 @@ func emulLdpctx(e *Engine, _ *Decoded) error {
 
 	if err != nil {
 		*e.cpu = saved
-		e.mem.InvalidateTB()
+		e.mem.InvalidateProcessTB()
 
 		return &Fault{Code: ExcReservedOp}
 	}
@@ -380,9 +380,9 @@ func (e *Engine) readLoadablePCB() (PCB, error) {
 func (e *Engine) loadContext(p *PCB) {
 	// The translation buffer caches page-table lookups. Those for P0 and
 	// P1 addresses came from the old process's page tables and would be
-	// wrong for the new one, so they must go. (S0's could stay, since
-	// every process shares S0; for now the whole buffer is emptied.)
-	e.mem.InvalidateTB()
+	// wrong for the new one, so they must go; S0's stay, since every
+	// process shares S0.
+	e.mem.InvalidateProcessTB()
 
 	for m := vax.Kernel; m <= vax.User; m++ {
 		e.cpu.SetPR(vax.PrivReg(m), p.SP[m])

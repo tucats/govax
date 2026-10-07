@@ -277,8 +277,14 @@ func ldpctxEngine(t *testing.T) (*Engine, PCB) {
 // the REI that follows then resumes the process in user mode.
 func TestLdpctxLoadsContext(t *testing.T) {
 	e, p := ldpctxEngine(t)
+	_, _, flushes, pflushes := e.mem.TBStats()
 
 	stepInstruction(t, e, 0x06) // LDPCTX
+
+	// Only the process half of the translation buffer is flushed.
+	if _, _, f, pf := e.mem.TBStats(); f != flushes || pf != pflushes+1 {
+		t.Errorf("TB flushes, process flushes = %d, %d; want %d, %d", f, pf, flushes, pflushes+1)
+	}
 
 	for r := vax.R0; r <= vax.FP; r++ {
 		if got := e.cpu.GPR(r); got != p.R[r] {

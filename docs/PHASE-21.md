@@ -138,7 +138,9 @@ Phase 17 sub-phase 3's `TB` trace point (which, absent a real cache, aliased
   increments it — dead instrumentation, not a hidden mechanism this port
   is missing. `Memory`'s own `pflushes` counter is kept (for `SHOW TB`
   output parity) but likewise never incremented; noted here rather than in
-  `docs/DEVIATIONS.md` since it's inert, not a fidelity question.
+  `docs/DEVIATIONS.md` since it's inert, not a fidelity question. (Since
+  Phase 43, subtask 5, it counts process flushes: LDPCTX's
+  `InvalidateProcessTB`.)
 - **`LDPCTX`/`SVPCTX` are not yet implemented** in this port (Phase 07's
   own open question — see `internal/cpu/procreg.go`'s doc comment). The C
   source's versions call `invalidate_tb()` before remapping `P0BR`/`P1BR`

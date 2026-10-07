@@ -822,3 +822,17 @@ uses the current Environment's `mem`/`cpu` (so the current P0/P1) or its
   `context_resched_test.go`, which assembles the manual's RESCHED example
   as a VAX program and runs two processes switching through it with the
   IPL 3 software interrupt.
+- 2026-10-07: Subtask 5 (per-process TB invalidation).
+  `vm.Memory.InvalidateProcessTB` empties the 64 TB slots that hold P0
+  and P1 translations (the TB indexes slots by region, 32 each, so
+  they're the first two blocks), and the STC and the instruction-fetch
+  window, keeping S0's; `LDPCTX` (and `LoadContext`) use it in place of
+  the whole-buffer flush. It's counted in SHOW TB's `PFlushes`, which had
+  never been incremented (Phase 21 kept it, always zero, for the display);
+  `HELP SHOW TB` (debug.help) now says what both flush counts mean.
+  Tests: `TestInvalidateProcessTBKeepsSystemSlots` (P0 entries gone, S0
+  entries kept and hit afterwards, the STC emptied, the counts), and
+  `TestLdpctxLoadsContext` checks LDPCTX counts one process flush. From
+  this subtask on, new comments describe behavior on its own terms
+  rather than citing the C reference (the author's direction).
+

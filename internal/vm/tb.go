@@ -257,21 +257,49 @@ func (t *tb) stcFill(vpage uint32, entry *tbEntry, mode vax.AccessMode) {
 // torn down — any cached copy of the *old* mapping must be thrown away
 // (invalidated), or a later access could wrongly reuse stale information:
 // reading/writing the wrong physical page, or being allowed an access that
-// should now be denied. The three Invalidate* methods below are the only
+// should now be denied. The four Invalidate* methods below are the only
 // ways cached entries get cleared outside of being naturally overwritten
 // by a newer translation, and every place elsewhere in this package (or in
 // internal/cpu, internal/console) that changes a PTE is expected to call
 // one of them — see translate.go's StorePTE and docs/PHASE-21.md's design
 // notes for the full list of real call sites.
 
-// InvalidateTB is the Go port of vm.c's invalidate_tb(): a full flush of
-// every TB slot (mapping and protection both), used whenever the OS
-// remaps P0BR/P1BR/etc. wholesale -- TBIA, and a context switch by
-// LDPCTX (internal/cpu/context.go; Phase 43).
+// InvalidateTB empties every TB slot (and the STC and the instruction-fetch
+// window): what MTPR to TBIA does, and what any wholesale change to the
+// page tables or their base registers needs. Counted in SHOW TB's
+// Flushes.
 func (m *Memory) InvalidateTB() {
 	m.tb.flushes++
 
 	for i := range m.tb.entries {
+		m.tb.entries[i] = tbEntry{}
+	}
+
+	m.tb.stcFlush()
+}
+
+// processSlots is how many TB slots hold P0 and P1 translations: tbIndex
+// gives each region a block of 32 slots, in region order, so P0's and
+// P1's (regions 0 and 1) are the first 64.
+const processSlots = 2 * tbSize / 4
+
+// InvalidateProcessTB empties the TB slots of process-space (P0 and P1)
+// translations, and the STC and the instruction-fetch window, keeping the
+// system-space (S0) slots: what LDPCTX does when it loads another
+// process's context (internal/cpu/context.go; Phase 43).
+//
+// Each process has its own P0 and P1 page tables, so a P0 or P1
+// translation cached for the old process says nothing about the new one:
+// the same virtual address may name a different physical page, or none.
+// S0 is mapped by the one system page table every process shares, so its
+// translations stay right across the switch, and keeping them spares the
+// new process a page-table walk for each system page it touches again.
+// The STC and the fetch window may hold a P0 or P1 page, so they're
+// emptied too. Counted in SHOW TB's PFlushes ("process flushes").
+func (m *Memory) InvalidateProcessTB() {
+	m.tb.pflushes++
+
+	for i := range m.tb.entries[:processSlots] {
 		m.tb.entries[i] = tbEntry{}
 	}
 
@@ -322,9 +350,9 @@ func (m *Memory) ResetTBCounters() {
 	m.tb.pflushes = 0
 }
 
-// TBStats reports the 128-entry translation buffer's own counters,
-// matching console_show.c's SHOW TB tb_try/tb_hit/tb_flush/tb_pflush
-// report.
+// TBStats reports the 128-entry translation buffer's counters, for SHOW
+// TB: lookups tried and hit, whole-buffer flushes (InvalidateTB), and
+// process flushes (InvalidateProcessTB).
 func (m *Memory) TBStats() (tries, hits, flushes, pflushes int64) {
 	return m.tb.tries, m.tb.hits, m.tb.flushes, m.tb.pflushes
 }
