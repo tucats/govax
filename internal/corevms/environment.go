@@ -79,6 +79,12 @@ type Environment struct {
 	// directly.
 	RegionSize [3]uint32
 
+	// Space is the process's address space: its P0 and P1 page tables
+	// (addrspace.go). Process 1's is VMINIT's tables (the console sets it
+	// after VMINIT); a new process's is built by BuildAddressSpace. Nil
+	// before VMINIT has run, when there are no page tables.
+	Space *ProcessSpace
+
 	channels    []*channel
 	nextChannel uint32
 

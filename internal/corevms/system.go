@@ -82,6 +82,10 @@ type System struct {
 	// s0 is the pool of S0 pages new processes' page tables, stacks, and
 	// PCBs come from (s0pool.go); nil until the console's VMINIT.
 	s0 *S0Pool
+
+	// sharedP1 is the P1 pages every process maps onto the same physical
+	// pages: the P1 vector's (ShareP1, addrspace.go).
+	sharedP1 []sharedPage
 }
 
 // NewSystem returns a new System driving cpu and mem, sharing devices and

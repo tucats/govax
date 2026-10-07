@@ -172,6 +172,12 @@ func (c *Console) depositAsmImage(a *asm.Assembler) error {
 			if err := c.storeBytes(base, p1); err != nil {
 				return err
 			}
+
+			// Every process maps these same physical pages as its own P1
+			// vector (corevms.ShareP1), so they're written once, here.
+			if err := c.RTL.ShareP1(base, end); err != nil {
+				return err
+			}
 		}
 	}
 

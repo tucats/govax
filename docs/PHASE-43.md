@@ -896,3 +896,30 @@ uses the current Environment's `mem`/`cpu` (so the current P0/P1) or its
   shared S0, the TB untouched, page-crossing loads and stores,
   demand-zero and the modify bit, kernel-mode protection, the space's
   own lengths) and `TestPCBAddressSpace`.
+- 2026-10-07: Subtask 8 (building and tearing down an address space).
+  `corevms/addrspace.go`: `ProcessPTE` is the PTE a process page starts
+  with (demand zero, user-owned, open to every mode; P0 page 0 a
+  no-access, kernel-owned guard), and VMINIT's P0 and P1 loops now use it,
+  so every process starts alike. `ProcessSpace` is a process's
+  `vm.AddressSpace` with its table sizes and pool allocations;
+  `Environment.Space` holds it. VMINIT makes process 1's with
+  `AdoptAddressSpace` (its own tables, never given back).
+  `System.BuildAddressSpace(pid, p0Pages, p1Pages)` allocates the two
+  tables from the S0 pool, writes them through their S0 addresses, and
+  maps the P1 vector: the console's ASM deposit of `.P1VECTOR` calls
+  `System.ShareP1`, which records the vector's pages and their physical
+  pages, and a new process maps those same pages read-only to every mode
+  (ProtUR) and kernel-owned, so it can call services through the vector
+  but can't change or delete it. The vector holds only trampolines and
+  the two `SYS$GL_*` cells nothing uses (subtask 1), so nothing in it
+  needs to be per process. `TeardownAddressSpace` frees every physical
+  page the tables map except the shared ones, then the tables' pool
+  pages; it refuses the CPU's current space and ignores process 1's.
+  `RemoveProcess` calls it. The table sizes are the caller's (the open
+  question): VMINIT's, 16384 and 8192 pages, cost 192 pool pages, and
+  Phase 45 picks what `$CREPRC` passes. Tests: `addrspace_test.go`
+  (process 1 adopts VMINIT's tables; a built space after `vax.init` has
+  its own P0, a guard page 0, P1's top and bottom pages, process 1's
+  vector page read-only; teardown gives back every frame and pool page;
+  bad sizes and an exhausted pool leave nothing allocated;
+  `RemoveProcess` tears down).

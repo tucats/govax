@@ -141,13 +141,14 @@ func (c *Console) VMInit(p0Pages, p1Pages, s0Pages, kspPages, espPages, sspPages
 		pStart: 0, pEnd: size[2] << 9,
 	}
 
-	// P0 region: grows up from virtual address 0. Its pages, like P1's,
-	// belong to user mode: a PTE's owner field (bits 23-24) names the
-	// access mode a page belongs to, which $CRETVA/$DELTVA check before
-	// replacing or deleting it (docs/PHASE-26.md subtask 35). The hardware
-	// ignores the field. PTEs start out invalid
-	// (no physical page assigned) and are demand-paged on first touch by
-	// internal/vm.Memory.Translate/AllocatePage.
+	// P0 region: grows up from virtual address 0. Each PTE is
+	// corevms.ProcessPTE's, as every process's are: invalid (no physical
+	// page assigned; demand-paged on first touch by
+	// internal/vm.Memory.Translate/AllocatePage), owned by user mode (a
+	// PTE's owner field, bits 23-24, names the access mode a page belongs
+	// to, which $CRETVA/$DELTVA check before replacing or deleting it;
+	// docs/PHASE-26.md subtask 35), and, but for page 0, a no-access
+	// guard, open to every mode.
 	paddr = roundUpPage(paddr)
 	p0br := paddr
 	p0PStart := page
@@ -155,15 +156,7 @@ func (c *Console) VMInit(p0Pages, p1Pages, s0Pages, kspPages, espPages, sspPages
 	c.CPU.SetPR(vax.P0LR, size[0])
 
 	for i := uint32(0); i < size[0]; i++ {
-		var pte vm.PTE
-
-		pte.SetProtection(vm.ProtUW)
-		pte.SetOwner(uint8(vax.User)) // the process's own page (see below)
-
-		if i == 0 {
-			pte.SetProtection(vm.ProtNA) // guard the bottom-most page
-			pte.SetOwner(uint8(vax.Kernel))
-		}
+		pte := corevms.ProcessPTE(false, i)
 
 		page++
 
@@ -193,10 +186,7 @@ func (c *Console) VMInit(p0Pages, p1Pages, s0Pages, kspPages, espPages, sspPages
 	c.CPU.SetPR(vax.P1BR, (paddr+0x80000000)-p1lr*4)
 
 	for i := uint32(0); i < size[1]; i++ {
-		var pte vm.PTE
-
-		pte.SetProtection(vm.ProtUW)
-		pte.SetOwner(uint8(vax.User))
+		pte := corevms.ProcessPTE(true, p1lr+i)
 
 		page++
 
@@ -380,6 +370,10 @@ func (c *Console) VMInit(p0Pages, p1Pages, s0Pages, kspPages, espPages, sspPages
 	// at s0Free, claims its pages from the pool's bottom as it's
 	// deposited (depositAsmImage).
 	c.RTL.SetS0Pool(corevms.NewS0Pool(c.s0Free, 0x80000000+size[2]<<9))
+
+	// These P0 and P1 tables are process 1's address space; a new
+	// process gets tables of its own from the pool (BuildAddressSpace).
+	c.RTL.Space = corevms.AdoptAddressSpace(c.CPU, size[0], size[1])
 
 	c.DepositAddr = 0x200
 	c.CPU.SetPR(vax.MAPEN, 1)
