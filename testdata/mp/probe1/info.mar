@@ -1,0 +1,92 @@
+	.title	info
+;
+; Phase 45 probe 1's second child (README.md): it reports what a
+; subprocess created with no input, output, or error finds, by writing
+; the translations of SYS$INPUT, SYS$OUTPUT, SYS$ERROR, and SYS$COMMAND
+; to the mailbox PROBE_MBX, one message each, then returns.
+;
+	$IODEF
+	$LNMDEF
+
+	.macro	check	?ok
+	blbs	r0,ok
+	brw	done
+ok:
+	.endm
+
+	.psect	data,noexe,wrt
+mbx_name:	.ascid	/PROBE_MBX/
+table:		.ascid	/LNM$FILE_DEV/
+ctl:		.ascid	/!AS = "!AD"/
+
+names:		.address	n_input,n_output,n_error,n_command
+n_input:	.ascid	/SYS$INPUT/
+n_output:	.ascid	/SYS$OUTPUT/
+n_error:	.ascid	/SYS$ERROR/
+n_command:	.ascid	/SYS$COMMAND/
+
+chan:		.word	0,0
+equiv:		.blkb	255
+equiv_len:	.long	0
+items:		.word	255,LNM$_STRING
+		.long	equiv,equiv_len
+		.long	0
+
+out_buf:	.blkb	300
+out_len:	.word	0,0
+out_desc:	.word	300
+		.byte	14,1
+		.long	out_buf
+iosb:		.quad	0
+
+	.psect	code,exe,nowrt
+	.entry	start,^m<r6,r7>
+
+	pushal	chan
+	pushaq	mbx_name
+	calls	#2,g^sys$assign
+	check
+
+	movab	names,r6
+	movl	#4,r7
+loop:	clrl	equiv_len
+	pushal	items			; itmlst
+	pushl	#0			; acmode
+	pushl	(r6)			; lognam
+	pushaq	table
+	pushl	#0			; attr
+	calls	#5,g^sys$trnlnm
+	blbs	r0,found
+	clrl	equiv_len		; none: report an empty translation
+found:	pushal	equiv			; !AD address
+	pushl	equiv_len		;     length
+	pushl	(r6)			; !AS
+	pushal	out_desc
+	pushal	out_len
+	pushaq	ctl
+	calls	#6,g^sys$fao
+	check
+	movw	out_len,out_desc
+	pushl	#0
+	pushl	#0
+	pushl	#0
+	pushl	#0
+	pushl	out_len+0		; (length again below)
+	pushal	out_buf
+	pushl	#0
+	pushl	#0
+	pushal	iosb
+	pushl	#<IO$_WRITEVBLK!IO$M_NOW>
+	movzwl	chan,-(sp)
+	pushl	#0
+	calls	#12,g^sys$qiow
+	movw	#300,out_desc
+	addl2	#4,r6
+	sobgtr	r7,again
+	brb	finish
+again:	brw	loop
+finish:
+	movl	#1,r0
+done:	ret
+
+	.end	start

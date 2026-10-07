@@ -671,3 +671,18 @@ for a process created without one.
   subtask 1's loose end: `mkdefs` reads
   `testdata/mp/defs/phase45-defined.txt` as well, so govax's macro
   library now has `$ACCDEF`, `$MSGDEF`, `$PQLDEF`, and `$PRCDEF`.
+- 2026-10-07: Probe 1 (a VMS 7.3 run for the subtasks so far),
+  `testdata/mp/probe1/` (README.md there). `probe1.mar` creates a
+  termination mailbox and a named information mailbox, a first child
+  (`child.mar`, output `NL:`) and, once that has hibernated, prints
+  `$GETJPI` of it and of the parent (thirty longword items, each with its
+  status), wakes it, and dumps the 84-byte termination message as 21
+  longwords. A second child (`info.mar`), created with no input, output,
+  or error, reports through the mailbox what `SYS$INPUT`, `SYS$OUTPUT`,
+  `SYS$ERROR`, and `SYS$COMMAND` translate to. It settles: the unknown
+  termination message fields (job ID, the word after the type, counts),
+  `JPI$_STATE`/`JOBTYPE`/`MODE` for a subprocess, the nominal quotas, and
+  the default I/O of a process created without any (govax gives it
+  none). `TestProbe1` runs the programs under govax; govax's report is in
+  its `-v` output for the side-by-side. The VMS run is for the author
+  (`exchange.cmd`, `probe1.com`, `copyout.cmd`); not made yet.

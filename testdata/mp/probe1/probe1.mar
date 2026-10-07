@@ -1,0 +1,342 @@
+	.title	probe1
+;
+; Phase 45 probe 1 (README.md): what VMS 7.3 does for $CREPRC with a
+; termination mailbox, and what $GETJPI says about a subprocess. It
+; prints, for the VMS run's log:
+;
+;   1. $GETJPI of the child while it hibernates, and of this process:
+;      each of a list of longword items, with its status.
+;   2. The termination message the child's deletion sent, as 21
+;      longwords with their offsets.
+;   3. What a second child, created with no input, output, or error,
+;      has for SYS$INPUT, SYS$OUTPUT, SYS$ERROR, and SYS$COMMAND (it
+;      reports through the mailbox PROBE_MBX).
+;
+; The command line holds the two images, CHILD.EXE and INFO.EXE, with
+; their directories, separated by a blank.
+;
+	$IODEF
+	$JPIDEF
+	$DVIDEF
+	$ACCDEF
+
+	.macro	check	?ok
+	blbs	r0,ok
+	brw	fail
+ok:
+	.endm
+
+; JPI name: one table entry, the item code and its name in 16 characters.
+	.macro	jpi	name,?start
+	.long	JPI$_'name
+start:	.ascii	/name/
+	.blkb	16-<.-start>
+	.endm
+
+	.psect	data,noexe,wrt
+image_desc:	.word	255
+		.byte	14,1
+		.long	image_buf
+image_buf:	.blkb	255
+img_len:	.word	0
+info_desc:	.word	0
+		.byte	14,1
+		.long	0
+child_name:	.ascid	/CHILD_1/
+info_name:	.ascid	/INFO_1/
+null_desc:	.ascid	/NL:/
+mbx_lognam:	.ascid	/PROBE_MBX/
+
+jpi_table:
+	jpi	STATE
+	jpi	PRI
+	jpi	PRIB
+	jpi	JOBTYPE
+	jpi	MODE
+	jpi	OWNER
+	jpi	MASTER_PID
+	jpi	PRCCNT
+	jpi	JOBPRCCNT
+	jpi	PRCLM
+	jpi	UIC
+	jpi	GRP
+	jpi	MEM
+	jpi	ASTLM
+	jpi	ASTCNT
+	jpi	ASTEN
+	jpi	BIOLM
+	jpi	DIOLM
+	jpi	CPULIM
+	jpi	TMBU
+	jpi	CREPRC_FLAGS
+	jpi	BYTLM
+	jpi	FILLM
+	jpi	PGFLQUOTA
+	jpi	TQLM
+	jpi	ENQLM
+	jpi	WSQUOTA
+	jpi	WSEXTENT
+	jpi	DFWSCNT
+	jpi	AUTHPRI
+jpi_end:
+
+item_ctl:	.ascid	/  !AD = !XL  (status !XL)/
+head_ctl:	.ascid	/!AS/
+child_head:	.ascid	/$GETJPI of the child, hibernating:/
+self_head:	.ascid	/$GETJPI of this process:/
+msg_head:	.ascid	/The child's termination message:/
+msg_ctl:	.ascid	/  +!XB  !XL/
+info_head:	.ascid	/The second child (no input, output, or error):/
+info_ctl:	.ascid	/  !AD/
+blank:		.ascid	/ /
+
+out_buf:	.blkb	300
+out_len:	.word	0,0
+out_desc:	.word	300
+		.byte	14,1
+		.long	out_buf
+
+one_item:	.word	4,0
+		.long	item_val,0
+		.long	0
+item_val:	.long	0
+
+; The termination mailbox and the information mailbox.
+term_chan:	.word	0,0
+term_unit:	.long	0
+info_chan:	.word	0,0
+dvi_items:	.word	4,DVI$_UNIT
+		.long	term_unit,0
+		.long	0
+my_pid:		.long	0
+my_prib:	.long	0
+my_items:	.word	4,JPI$_PID
+		.long	my_pid,0
+		.word	4,JPI$_PRIB
+		.long	my_prib,0
+		.long	0
+child_pid:	.long	0
+info_pid:	.long	0
+term_msg:	.blkb	ACC$K_TERMLEN
+iosb:		.quad	0
+info_msg:	.blkb	300
+
+	.psect	code,exe,nowrt
+	.entry	start,^m<r2,r3,r4,r5,r6,r7>
+
+; The two images from the command line.
+	pushal	img_len
+	pushl	#0
+	pushaq	image_desc
+	calls	#3,g^lib$get_foreign
+	check
+	movzwl	img_len,r2
+	locc	#32,r2,image_buf	; r0 = characters from the blank on
+	beql	noinfo
+	subl3	r0,r2,r3		; length of the first image
+	movw	r3,image_desc
+	decl	r0			; the second image
+	movw	r0,info_desc
+	incl	r1
+	movl	r1,info_desc+4
+	brb	haveimages
+noinfo:	movw	r2,image_desc
+haveimages:
+
+; The termination mailbox and its unit; the information mailbox, named.
+	pushl	#2048
+	pushl	#128
+	pushal	term_chan
+	pushl	#0
+	calls	#4,g^sys$crembx
+	check
+	pushal	dvi_items
+	pushl	#0
+	movzwl	term_chan,-(sp)
+	pushl	#0
+	calls	#4,g^sys$getdviw
+	check
+	pushaq	mbx_lognam
+	pushl	#0			; acmode
+	pushl	#0			; promsk
+	pushl	#2048			; bufquo
+	pushl	#300			; maxmsg
+	pushal	info_chan
+	pushl	#0			; prmflg
+	calls	#7,g^sys$crembx
+	check
+
+; Our own PID and base priority; the children get a higher one, so each
+; runs as soon as it is created.
+	pushl	#0
+	pushl	#0
+	pushl	#0
+	pushal	my_items
+	pushl	#0
+	pushl	#0
+	pushl	#0
+	calls	#7,g^sys$getjpiw
+	check
+	incl	my_prib
+	incl	my_prib
+
+; The first child: output to the null device, a termination mailbox.
+	pushl	#0			; stsflg
+	pushl	term_unit
+	pushl	#0			; uic
+	pushl	my_prib
+	pushaq	child_name
+	pushl	#0
+	pushl	#0
+	pushl	#0
+	pushaq	null_desc		; output
+	pushl	#0
+	pushaq	image_desc
+	pushal	child_pid
+	calls	#12,g^sys$creprc
+	check
+
+	pushaq	child_head
+	bsbw	say
+	movab	child_pid,r6
+	bsbw	show_items
+	pushaq	self_head
+	bsbw	say
+	clrl	r6
+	bsbw	show_items
+
+; Wake it, and read its termination message.
+	pushl	#0
+	pushal	child_pid
+	calls	#2,g^sys$wake
+	check
+	pushl	#0
+	pushl	#0
+	pushl	#0
+	pushl	#0
+	pushl	#ACC$K_TERMLEN
+	pushal	term_msg
+	pushl	#0
+	pushl	#0
+	pushal	iosb
+	pushl	#IO$_READVBLK
+	movzwl	term_chan,-(sp)
+	pushl	#0
+	calls	#12,g^sys$qiow
+	check
+	pushaq	msg_head
+	bsbw	say
+	clrl	r6
+10$:	pushl	term_msg(r6)
+	pushl	r6
+	pushal	out_desc
+	pushal	out_len
+	pushaq	msg_ctl
+	calls	#5,g^sys$fao
+	bsbw	print
+	addl2	#4,r6
+	cmpl	r6,#ACC$K_TERMLEN
+	blssu	10$
+
+; The second child: no input, output, or error; it writes four messages
+; to PROBE_MBX.
+	tstw	info_desc
+	bneq	15$
+	brw	finish
+15$:
+	pushl	#0
+	pushl	#0
+	pushl	#0
+	pushl	my_prib
+	pushaq	info_name
+	pushl	#0
+	pushl	#0
+	pushl	#0
+	pushl	#0
+	pushl	#0
+	pushaq	info_desc
+	pushal	info_pid
+	calls	#12,g^sys$creprc
+	check
+	pushaq	info_head
+	bsbw	say
+	movl	#4,r7
+20$:	pushl	#0
+	pushl	#0
+	pushl	#0
+	pushl	#0
+	pushl	#300
+	pushal	info_msg
+	pushl	#0
+	pushl	#0
+	pushal	iosb
+	pushl	#<IO$_READVBLK!IO$M_NOW>
+	movzwl	info_chan,-(sp)
+	pushl	#0
+	calls	#12,g^sys$qiow
+	movzwl	iosb,r0
+	blbs	r0,25$
+	brw	finish
+25$:	movzwl	iosb+2,r2
+	pushal	info_msg
+	pushl	r2
+	pushal	out_desc
+	pushal	out_len
+	pushaq	info_ctl
+	calls	#5,g^sys$fao
+	bsbw	print
+	decl	r7
+	bleq	finish
+	brw	20$
+finish:	movl	#1,r0
+fail:	ret
+
+; SAY: print the text whose descriptor address is on the stack (popped).
+say:	pushl	4(sp)
+	pushal	out_desc
+	pushal	out_len
+	pushaq	head_ctl
+	calls	#4,g^sys$fao
+	bsbw	print
+	movl	(sp)+,(sp)		; drop the argument, keep the return
+	rsb
+
+; PRINT: print what $FAO formatted into OUT_BUF.
+print:	movw	out_len,out_desc
+	pushaq	out_desc
+	calls	#1,g^lib$put_output
+	movw	#300,out_desc
+	rsb
+
+; SHOW_ITEMS: for every item in JPI_TABLE, $GETJPI process R6 points to
+; (0 for this one) and print the item, its value, and the status.
+show_items:
+	movab	jpi_table,r7
+30$:	movw	(r7),one_item+2
+	clrl	item_val
+	pushl	#0
+	pushl	#0
+	pushl	#0
+	pushal	one_item
+	pushl	#0
+	pushl	r6
+	pushl	#0
+	calls	#7,g^sys$getjpiw
+	pushl	r0			; status
+	pushl	item_val
+	pushal	4(r7)			; !AD address
+	pushl	#16			;     length
+	pushal	out_desc
+	pushal	out_len
+	pushaq	item_ctl
+	calls	#7,g^sys$fao
+	bsbw	print
+	addl2	#20,r7
+	movab	jpi_end,r0
+	cmpl	r7,r0
+	bgequ	40$
+	brw	30$
+40$:
+	rsb
+
+	.end	start
