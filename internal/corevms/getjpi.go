@@ -301,10 +301,30 @@ func (env *Environment) processTarget(pidadr, prcnam uint32, wildcard bool) (*En
 	return target, 0
 }
 
+// mayAffect is the privilege check of a service that changes another
+// process (VMS 5.0 System Services Reference Manual, $DELPRC's
+// "Privilege Restrictions"): a process may affect itself and any process
+// with its own UIC (its subprocesses among them) freely, another process
+// in its UIC group with the GROUP privilege, and any process with WORLD.
+// It returns 0, or SS$_NOPRIV.
+func (env *Environment) mayAffect(target *Environment) uint32 {
+	p, t := env.Process, target.Process
+
+	switch {
+	case target == env, t.UIC == p.UIC, p.hasPrivilege(privWORLD):
+		return 0
+	case t.UICGroup() == p.UICGroup() && p.hasPrivilege(privGROUP):
+		return 0
+	}
+
+	return ssNoPriv
+}
+
 // callerTarget is processTarget for the services that so far act only on
-// the calling process ($GETJPI, $SETPRI, $FORCEX, $DELPRC, $SCHDWK,
-// $CANWAK; $WAKE reaches any process since docs/PHASE-44.md, subtask 4): naming any other process is SS$_NONEXPR, as it was
-// when govax had one process. Acting on another process — its event
+// the calling process ($GETJPI, $SETPRI, $FORCEX, $SCHDWK, $CANWAK; $WAKE
+// reaches any process since docs/PHASE-44.md, subtask 4, and $DELPRC
+// since docs/PHASE-45.md, subtask 8): naming any other process is
+// SS$_NONEXPR, as it was when govax had one process. Acting on another process — its event
 // flags, ASTs, timers, and deletion, which must reach it even while it
 // isn't current — arrives with process creation (docs/PHASE-45.md).
 func (env *Environment) callerTarget(pidadr, prcnam uint32, wildcard bool) uint32 {

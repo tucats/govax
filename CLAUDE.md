@@ -216,7 +216,10 @@ expect adjustment as phases land):
   `$CREPRC` (`creprc.go`, quotas in `quotas.go`), process startup in the
   new process's context (`startup.go`), and deletion (`delete.go`:
   `DeleteProcess`'s rundown; the memory of the process the CPU is in is
-  freed by `switchTo` once the CPU leaves it), and the termination
+  freed by `switchTo` once the CPU leaves it; `$DELPRC` of another
+  process only marks it, `deletePending`, and `switchTo` deletes it when
+  it gets the CPU; an owner's deletion marks its subprocesses and waits,
+  MWAIT, until they've gone), and the termination
   message to the creator's mailbox (`termmsg.go`). An I/O request
   completes for the process that made it (`ioRequest.owner`, its IOSB
   through that process's address space). A waiting

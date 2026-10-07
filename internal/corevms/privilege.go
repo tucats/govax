@@ -67,6 +67,7 @@ var (
 	privSETPRV = privilegeBit("SETPRV")
 	privOPER   = privilegeBit("OPER")
 	privWORLD  = privilegeBit("WORLD")
+	privGROUP  = privilegeBit("GROUP")
 	privDETACH = privilegeBit("DETACH")
 	privNETMBX = privilegeBit("NETMBX")
 	privNOACNT = privilegeBit("NOACNT")

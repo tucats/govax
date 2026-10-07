@@ -513,3 +513,44 @@ for a process created without one.
   waiting in process 1 while the child is deleted, and with the message
   waiting in the mailbox; and a child whose image doesn't exist,
   reported as RMS$_FNF). The optional VMS 7.3 probe isn't done.
+- 2026-10-07: Subtask 8 (`$DELPRC` of others, subprocesses deleted with
+  their owner), from *VAX/VMS Internals and Data Structures*, sections
+  22.1.1, 22.2.1 (step 4), 22.2.2, and 22.2.3, and the VMS 5.0 System
+  Services Reference Manual's `$DELPRC` privilege rules. `$DELPRC` now
+  reaches any process (`processTarget`), and deleting one other than the
+  caller needs GROUP (same group) or WORLD unless it has the caller's UIC
+  (`mayAffect`, new, for subtask 9's services too; SS$_NOPRIV). It only
+  marks the target (`markForDeletion`, `Environment.deletePending`):
+  marking one already marked succeeds and does nothing more; a waiting
+  target becomes computable with a boost of 3 (the book's "potential
+  boost of 3"); and the service returns at once. The deletion runs in the
+  target's own context, as VMS's special kernel-mode AST does: `switchTo`
+  deletes a marked process as soon as the CPU holds it, before anything of
+  its own runs, and `Schedule` chooses again. Without the scheduler
+  installed nothing would dispatch the target, so it's deleted at once.
+  A process deleted that way ends with SS$_ABORT, unless its image had
+  already called `$EXIT` with a status of its own (VMS's final status for
+  an unfinished image is unconfirmed). `DeleteProcess` of a process
+  that owns subprocesses (found, as the book says, by scanning the table
+  for its PID as their owner) marks each of them and waits (MWAIT,
+  RWAST; the waiter takes no ASTs), marked itself; each subprocess's
+  deletion leaves its owner's count, and when none is left the owner's
+  wait ends and its deletion runs when it next gets the CPU. A tree is
+  deleted from its leaves up, an owner image's exit included (the
+  console's `StepMachine` deletes it; it waits instead). govax runs the
+  owner's whole rundown after its subprocesses have gone, where VMS runs
+  its RMS rundown first (steps 2 and 3); no program can tell. Process 1
+  is never deleted: another process's `$DELPRC` of it forgets its exit
+  handlers and queues a `$FORCEX`-style user-mode AST to `$EXIT` with
+  SS$_NORMAL, so the console's run ends, and its subprocesses live on, as
+  after any of its images (govax's choice; on VMS the console's process
+  would log out). Suspension isn't modeled yet: subtask 9's `$SUSPND` must
+  resume a target `$DELPRC` marks, as the book's step 2 says. Tests:
+  `corevms/delprc_test.go` (marking a hibernating process, the kept
+  `$EXIT` status, the privilege rules, process 1, deleting at once without
+  the scheduler, a tree with an owner waiting, ASTs or not, until its
+  last subprocess has gone) and `console/delprc_test.go`: process 1's
+  MACRO program `$CREPRC`s a hibernating child and `$DELPRC`s it; one
+  whose child has a hibernating grandchild, deleted first; and a child
+  whose image returns while its own subprocess hibernates, deleted after
+  it. Each deleted process's pool pages and page tables are freed.

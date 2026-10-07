@@ -89,8 +89,10 @@ func (sys *System) Schedule(e *cpu.Engine, ran int, preemptible bool) (int, erro
 	}
 
 	// A process starting for the first time may fail to (its image
-	// can't be activated) and be deleted at once (startup.go): then the
-	// choice is made again, before anything runs.
+	// can't be activated) and be deleted at once (startup.go), and one
+	// marked for deletion is deleted as it gets the CPU, or goes back to
+	// waiting for its subprocesses (delete.go): then the choice is made
+	// again, before anything runs.
 	for {
 		h, ok := s.Reschedule()
 		if !ok {
@@ -102,7 +104,16 @@ func (sys *System) Schedule(e *cpu.Engine, ran int, preemptible bool) (int, erro
 
 		cur := sys.Current()
 		if cur != nil && handle(cur) == h {
-			break
+			if !cur.deletePending {
+				break
+			}
+
+			// The CPU already holds a process marked for deletion: the
+			// deletion runs now, as switchTo would run it.
+			sys.DeleteProcess(cur)
+			sys.wakeWaiters()
+
+			continue
 		}
 
 		next, found := sys.FindProcess(uint32(h))
@@ -114,9 +125,13 @@ func (sys *System) Schedule(e *cpu.Engine, ran int, preemptible bool) (int, erro
 			return 0, err
 		}
 
-		if !next.Deleted {
+		if !next.Deleted && !next.deletePending {
 			break
 		}
+
+		// The process chosen was deleted, or went on waiting for its
+		// subprocesses to go: a deletion may have ended another's wait.
+		sys.wakeWaiters()
 	}
 
 	return sys.budget(e), nil
@@ -204,8 +219,17 @@ func (sys *System) switchTo(e *cpu.Engine, cur, next *Environment) error {
 		sys.releaseMemory(cur)
 	}
 
-	// A process $CREPRC created starts the first time it runs, in its
-	// own context (creprc.go).
+	// A process marked for deletion is deleted, in its own context, as
+	// soon as it gets the CPU (delete.go): VMS's special kernel-mode AST,
+	// delivered before anything else it would run. A process $CREPRC
+	// created starts the first time it runs, in its own context
+	// (creprc.go).
+	if next.deletePending {
+		sys.DeleteProcess(next)
+
+		return nil
+	}
+
 	if next.Startup != nil {
 		return sys.startProcess(e, next)
 	}

@@ -43,6 +43,11 @@ type waitCondition struct {
 	// can't tell from outside: the process is made computable at the
 	// next choice and tries again (a yield, as the old spin did).
 	over func() bool
+
+	// ignoreASTs keeps a queued AST from ending the wait: a process
+	// whose deletion waits for its subprocesses (delete.go) runs nothing
+	// more of its own.
+	ignoreASTs bool
 }
 
 // The boost classes govax gives the events that end each kind of wait.
@@ -166,7 +171,7 @@ func (sys *System) wakeWaiters() bool {
 		}
 
 		w := env.waiting
-		if w.over == nil || w.over() || env.astDeliverable() {
+		if w.over == nil || w.over() || (!w.ignoreASTs && env.astDeliverable()) {
 			env.endWait(w.class)
 			woke = true
 		}

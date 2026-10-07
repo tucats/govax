@@ -155,6 +155,12 @@ type Environment struct {
 	// the rest.
 	Deleted bool
 
+	// deletePending is set when the process has been marked for deletion
+	// but not yet deleted: by another process's $DELPRC, or because it
+	// waits for its subprocesses to be deleted first (delete.go). The
+	// scheduler deletes it the next time it gives it the CPU (switchTo).
+	deletePending bool
+
 	// Startup is what a process $CREPRC created still has to do before
 	// it runs its image: define its SYS$ names and activate the image
 	// (creprc.go). It's nil for process 1 and once the process has

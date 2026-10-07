@@ -3,6 +3,7 @@ package corevms
 import (
 	"fmt"
 
+	"github.com/tucats/govax/internal/sched"
 	"github.com/tucats/govax/internal/vax"
 )
 
@@ -40,16 +41,33 @@ import (
 // the deleted process has left it. A deleted process that isn't the
 // current one gives everything back at once.
 //
-// Subprocesses are left alone for now: deleting them with their owner,
-// and $DELPRC of another process, are subtask 8's.
+// A process that owns subprocesses can't be deleted before them: they
+// hold quotas it lent them, and they belong to its job. So the deletion
+// first marks each of them for deletion and, while any is left, waits
+// (step 4, and section 22.2.2's example): each subprocess, deleted in
+// its own context, leaves its owner's count, and when the last has gone,
+// the owner's deletion goes on. A tree of subprocesses is deleted from
+// its leaves up. (VMS runs the owner's RMS rundown before step 4; govax
+// waits first and runs the whole rundown once, which no program can tell
+// apart.)
+//
+// $DELPRC of another process (section 22.1.1) only marks it for
+// deletion (markForDeletion). The deletion runs, as above, the next time
+// the scheduler gives the process the CPU (switchTo): VMS's special
+// kernel-mode AST, queued to the target, which makes it computable with
+// a boost of 3, and which is the first thing it runs.
 
 // DeleteProcess deletes env's process (see above), unless it already has
-// been. Process 1, the console's, is never deleted: callers end its image
-// instead.
+// been. If env owns subprocesses, they are marked for deletion and env
+// waits for them to go (awaitSubprocesses): its own deletion goes on
+// when the scheduler next runs it. Process 1, the console's, is never
+// deleted: callers end its image instead.
 func (sys *System) DeleteProcess(env *Environment) {
-	if env.Deleted {
+	if env.Deleted || sys.awaitSubprocesses(env) {
 		return
 	}
+
+	env.deletePending = false
 
 	// Charge the CPU time used so far, while env is (as a rule) still the
 	// process the CPU holds: the unused CPU time it gives back, and its
@@ -89,6 +107,116 @@ func (sys *System) DeleteProcess(env *Environment) {
 		fmt.Fprintf(sys.cpu.DebugWriter(), "DEBUG(PROCESS): %08X deleted, status %08X\n",
 			env.Process.PID, env.Process.ExitStatus)
 	}
+}
+
+// markForDeletion is $DELPRC's part in its caller's context, for a
+// process other than the caller (VAX/VMS Internals and Data Structures,
+// section 22.1.1): env is marked for deletion, unless it already is, and
+// made computable if it's waiting, so that the scheduler soon gives it
+// the CPU and its deletion runs (switchTo). Its final status, the one its
+// termination message reports, is SS$_ABORT, unless its image has
+// already called $EXIT with a status of its own: VMS's for a process
+// deleted with its image unfinished is unconfirmed.
+//
+// Without the scheduler, nothing would ever give env the CPU: it's
+// deleted at once.
+//
+// (VMS also resumes a suspended process here, or its AST could never be
+// delivered; $SUSPND of another process is subtask 9's.)
+func (sys *System) markForDeletion(env *Environment) {
+	if env.Deleted || env.deletePending {
+		return
+	}
+
+	env.deletePending = true
+
+	if env.Process.ExitStatus == 0 {
+		env.Process.ExitStatus = ssAbort
+	}
+
+	if sys.engine == nil {
+		sys.DeleteProcess(env)
+
+		return
+	}
+
+	if env.waiting != nil {
+		env.endWait(sched.ClassResourceAvailable)
+	}
+
+	sys.requestReschedule()
+
+	if sys.cpu.DebugEnabled(vax.DebugProcess) {
+		fmt.Fprintf(sys.cpu.DebugWriter(), "DEBUG(PROCESS): %08X marked for deletion\n", env.Process.PID)
+	}
+}
+
+// subprocessesOf returns the processes env owns: those whose owner is
+// env's PID. As on VMS, nothing in the owner points to them, so the
+// whole table is searched (the book's section 22.2.2).
+func (sys *System) subprocessesOf(env *Environment) []*Environment {
+	var subs []*Environment
+
+	for _, p := range sys.procs.slots {
+		if p != nil && p != env && p.Process.Owner == env.Process.PID {
+			subs = append(subs, p)
+		}
+	}
+
+	return subs
+}
+
+// awaitSubprocesses is the deletion's step 4: every subprocess env owns
+// is marked for deletion, and if any is left, env waits until none is
+// (state MWAIT, resource RWAST: VMS's owner waits for the special
+// kernel-mode AST each subprocess sends it as it goes), marked for
+// deletion itself, so that the scheduler finishes its deletion when it
+// next runs it (switchTo). It reports whether env must wait. While env
+// waits, it takes no ASTs: its image is over.
+//
+// Without the scheduler, the subprocesses have already been deleted (by
+// markForDeletion), and there is nothing to wait for.
+func (sys *System) awaitSubprocesses(env *Environment) bool {
+	subs := sys.subprocessesOf(env)
+	if len(subs) == 0 {
+		return false
+	}
+
+	for _, sub := range subs {
+		sys.markForDeletion(sub)
+	}
+
+	if len(sys.subprocessesOf(env)) == 0 {
+		return false
+	}
+
+	w := &waitCondition{
+		state:      sched.StateMWAIT,
+		resource:   sched.ResourceAST,
+		class:      sched.ClassResourceAvailable,
+		over:       func() bool { return len(sys.subprocessesOf(env)) == 0 },
+		ignoreASTs: true,
+	}
+
+	if err := sys.sched.Wait(handle(env), w.state, w.resource); err != nil {
+		return false // not in the scheduler: nothing to wait in
+	}
+
+	if env.waiting == nil {
+		sys.waiters++
+	}
+
+	env.waiting = w
+	env.deletePending = true
+
+	sys.requestReschedule()
+
+	if sys.cpu.DebugEnabled(vax.DebugProcess) {
+		fmt.Fprintf(sys.cpu.DebugWriter(), "DEBUG(PROCESS): %08X waits for %d subprocess(es) to be deleted\n",
+			env.Process.PID, len(subs))
+	}
+
+	return true
 }
 
 // processRundown is what process deletion releases beyond image rundown

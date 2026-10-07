@@ -374,8 +374,9 @@ func (env *Environment) ImageRundown() {
 
 // The small process-control services (docs/PHASE-26.md subtask 30):
 // $SETPRN, $SETPRI, $FORCEX, and $DELPRC. Each names its target process
-// the usual way ([pidadr] ,[prcnam], processTarget), and govax's only
-// process is the caller, so "another process" is always SS$_NONEXPR.
+// the usual way ([pidadr] ,[prcnam], processTarget). $DELPRC reaches any
+// process (docs/PHASE-45.md, subtask 8); for the others, until subtask
+// 9, "another process" is SS$_NONEXPR.
 
 // maxPriority is the highest scheduling priority: 0-15 are ordinary
 // ("normal") priorities, 16-31 real-time ones.
@@ -518,23 +519,83 @@ func serviceSysSetrwm(env *Environment, argv []uint32) (uint32, error) {
 //
 //	SYS$DELPRC [pidadr] ,[prcnam]
 //
-// It deletes the target process, which can only be the caller: so it
-// doesn't return. Unlike $FORCEX, no exit handlers run: they're all
-// forgotten, and the image ends (ErrExit, as $EXIT ends it) with status
-// SS$_NORMAL. On VMS the process is then gone; govax has no logging out,
-// so the console carries on with the same process, as after any image.
-// The target is picked by processTarget (SS$_NONEXPR, SS$_IVLOGNAM,
-// SS$_ACCVIO).
+// It deletes the target process, picked by processTarget (SS$_NONEXPR,
+// SS$_IVLOGNAM, SS$_ACCVIO). Deleting another process needs GROUP or
+// WORLD unless it has the caller's UIC (mayAffect: SS$_NOPRIV). Unlike
+// $FORCEX, no exit handlers run.
+//
+// With the caller as the target, the call doesn't return: the exit
+// handlers are all forgotten, and the image ends (ErrExit, as $EXIT ends
+// it) with status SS$_NORMAL. A process $CREPRC created is then deleted
+// (delete.go), as when its image ends any other way. Process 1 isn't:
+// govax has no logging out, so the console carries on with the same
+// process, as after any image.
+//
+// Another process is marked for deletion (markForDeletion), and the
+// service returns at once: the deletion happens in the target's own
+// context, when the scheduler next gives it the CPU, and its
+// subprocesses are deleted before it (VAX/VMS Internals and Data
+// Structures, chapter 22). Marking a process already marked succeeds
+// and does nothing more.
+//
+// Process 1, deleted by another process, isn't deleted either: its exit
+// handlers are forgotten and its image is made to exit with SS$_NORMAL,
+// as $FORCEX would make it (a user-mode AST calling $EXIT), so the
+// console's run ends. Its subprocesses live on, as after any image of
+// process 1's. That is govax's choice: on VMS the console's process
+// would log out.
 func serviceSysDelprc(env *Environment, argv []uint32) (uint32, error) {
-	if st := env.callerTarget(optArg(argv, 0), optArg(argv, 1), false); st != 0 {
+	target, st := env.processTarget(optArg(argv, 0), optArg(argv, 1), false)
+	if st != 0 {
 		return st, nil
 	}
 
+	if st := env.mayAffect(target); st != 0 {
+		return st, nil
+	}
+
+	if target == env {
+		p := env.Process
+		p.exitHandlers = [4][]uint32{}
+		p.ExitStatus = ssNormal
+
+		return ssNormal, ErrExit
+	}
+
+	if target.isProcessOne() {
+		target.forceDeletedExit()
+
+		return ssNormal, nil
+	}
+
+	env.markForDeletion(target)
+
+	return ssNormal, nil
+}
+
+// isProcessOne reports whether env is process 1, the console's: the
+// process in the table's first slot.
+func (env *Environment) isProcessOne() bool {
+	return env.Process.PID&pidIndexMask == 1
+}
+
+// forceDeletedExit is another process's $DELPRC of process 1 (see
+// serviceSysDelprc): its exit handlers are forgotten, and a $FORCEX-style
+// user-mode AST to $EXIT, with SS$_NORMAL, is queued (once).
+func (env *Environment) forceDeletedExit() {
 	p := env.Process
 	p.exitHandlers = [4][]uint32{}
-	p.ExitStatus = ssNormal
 
-	return ssNormal, ErrExit
+	for _, a := range p.ast.queue {
+		if a.routine == exitEntryAddr && a.mode == uint32(vax.User) {
+			return
+		}
+	}
+
+	// A waiting process 1 that can take the AST becomes computable at
+	// the scheduler's next choice (waits.go).
+	env.queueAST(exitEntryAddr, ssNormal, uint32(vax.User))
+	env.requestReschedule()
 }
 
 func registerProcessServices(t *ServiceTable) {
