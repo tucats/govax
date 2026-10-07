@@ -72,8 +72,9 @@ const (
 
 // ssExQuota is SS$_EXQUOTA: what $CREPRC returns when the job already
 // has as many subprocesses as its PRCLM quota allows (the VMS 5.0 System
-// Services Reference Manual's $CREPRC entry; VMS also defines
-// SS$_EXPRCLM, which later versions may return instead: unconfirmed).
+// Services Reference Manual's $CREPRC entry). The same entry gives
+// SS$_EXPRCLM a different meaning: a user's limit on detached processes
+// (the UAF's MAXDETACH), which govax doesn't have.
 var ssExQuota = vmsdef.Symbols["SS$_EXQUOTA"]
 
 // newJob returns a new job whose master process has PID master, with the

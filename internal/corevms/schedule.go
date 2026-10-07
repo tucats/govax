@@ -181,6 +181,12 @@ func (sys *System) switchTo(e *cpu.Engine, cur, next *Environment) error {
 			cur.Process.PID, next.Process.PID, sys.cpu.GPR(vax.PC))
 	}
 
+	// A process $CREPRC created starts the first time it runs, in its
+	// own context (creprc.go).
+	if next.Startup != nil {
+		return sys.startProcess(next)
+	}
+
 	return nil
 }
 

@@ -301,3 +301,67 @@ for a process created without one.
   `TestJob_logicalNames` (the same through `$CRELNM`/`$TRNLNM`, and a
   subprocess's `$CREMBX` finding its owner's mailbox by name); the
   console's `TestLogical_jobTable`.
+- 2026-10-07: Subtask 4 (`$CREPRC`'s checks and creation), from the VMS
+  5.0 System Services Reference Manual's `$CREPRC` entry.
+  `corevms/creprc.go`: `serviceSysCreprc` reads the arguments and
+  `Environment.CreateProcess(CreateRequest)` does the rest, so Go code
+  (and tests) can create a process without building an argument list.
+  Statuses, each before anything is built: SS$_UNSUPPORTED with
+  `vax.process.scheduler` off; SS$_ACCVIO for an unreadable string,
+  descriptor, privilege mask, or quota list, or an unwritable pidadr
+  (probed by reading the longword and writing it back); SS$_IVLOGNAM
+  for a process name of 0 or more than 15 characters, or an image,
+  input, output, or error string over 255 (the manual's argument text
+  says 63 for image; its status list says 255 for all four, which govax
+  takes); SS$_IVQUOTAL for a quota code `$PQLDEF` lacks; SS$_IVSTSFLG for
+  a flag above `PRC$V_TCB` (bit 17, VMS 7.3's highest; the 5.0 manual
+  stops at bit 10); SS$_NOPRIV (DETACH or CMKRNL for a detached process
+  with another UIC, `PRC$M_BATCH`, or `PRC$M_NETWRK`; NETMBX for a
+  network process; PSWAPM and NOACNT for their flags); SS$_DUPLNAM in
+  the new process's UIC group; SS$_EXQUOTA for PRCLM and for CPU time
+  the creator can't spare; SS$_NOSLOT for a full process table, or no
+  room in the S0 pool (or no pool: no VMINIT), as this document's design
+  says (the manual's SS$_INSFMEM is for dynamic memory, which Go
+  provides). A failure after the process took its slot removes it
+  (`RemoveProcess`), giving back the job's count and every pool page.
+  A `uic` or `PRC$M_DETACH` makes a detached process: a new job with its
+  own logical-name table, no owner, the creator's user name and account.
+  `itemlst` and `node` (later VMS) are accepted and ignored.
+  The new process gets page tables of its creator's size (VMS sizes
+  every process's by one SYSGEN parameter; govax's stand-in is process
+  1's, from `vax.init`: 128 + 64 pool pages), VMINIT's default stacks (4
+  kernel, 8 executive, 8 supervisor pages, with guard pages: 22 pages),
+  and a PCB page, whose initial state is user mode on its stacks with PC
+  0 until startup sets it. It's computable in the scheduler at its base
+  priority (baspri's low five bits, no higher than the creator's without
+  ALTPRI; an omitted baspri is 0). Privileges: those asked for, or the
+  creator's current ones if prvadr is omitted (unconfirmed), ANDed with
+  the creator's without SETPRV; authorized for those and the creator's
+  authorized ones (unconfirmed). `PRC$M_SSRWAIT` turns resource wait
+  mode off; the other flags and mbxunt are recorded (`Process.CreateFlags`,
+  `TerminationMailbox`) and reported by `$GETJPI` (`JPI$_CREPRC_FLAGS`,
+  `JPI$_TMBU`); `PRC$M_HIBER` is subtask 5's. `Environment.Startup` holds
+  the image and the SYS$ equivalence strings; until subtask 5, a switch to
+  a process whose startup is pending stops the run with an error saying
+  so. Quotas (`quotas.go`, table-driven by PQL$_ code): the manual's three
+  steps (default; the list's last value; raised to the minimum, then
+  lowered to the creator's unless a detached process is created with
+  DETACH), nondeductible quotas in the process, pooled ones in the job
+  (set only for a detached process's new job), and CPULM's own rules
+  (half the creator's when not given; taken out of a limited creator's,
+  `Process.cpuDeducted`, for subtask 6 to give back). The manual's
+  status list also calls a subprocess quota above its creator's
+  SS$_EXQUOTA, against step 3's lowering; govax lowers. JTQUOTA, which
+  the manual calls deductible, is treated as the job's. The SYSGEN
+  defaults and minimums (PQL_D*, PQL_M*) are nominal, unconfirmed; a VMS
+  7.3 `SYSGEN SHOW/PQL` would settle them. New `Process` fields
+  `BufferedIOLimit`, `DirectIOLimit`, and `CPULimit` with `$GETJPI`'s
+  `JPI$_BIOLM`, `JPI$_DIOLM`, and `JPI$_CPULIM`. The manual also settles
+  subtask 2's open point: SS$_EXPRCLM is the UAF's MAXDETACH limit on
+  detached processes, not PRCLM. Tests: `corevms/creprc_test.go` (21
+  refusals, each leaving the table, scheduler, counts, CPU limit, and
+  pidadr unchanged; the quota steps; CPULM's rules) and
+  `console/creprc_test.go` (a MACRO program's `$CREPRC` of a subprocess
+  after `vax.init`, a detached process and per-group names, a creator
+  without SETPRV and ALTPRI, PRCLM and a full pool leaving nothing
+  behind, the pending-startup error).

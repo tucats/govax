@@ -153,6 +153,12 @@ type Environment struct {
 	// 1, which Phase 45 will delete instead.
 	Stopped bool
 
+	// Startup is what a process $CREPRC created still has to do before
+	// it runs its image: define its SYS$ names and activate the image
+	// (creprc.go). It's nil for process 1 and once the process has
+	// started.
+	Startup *ProcessStartup
+
 	// cpuTime is the CPU time the process has used, in VMS time units
 	// (showsys.go's accountTime).
 	cpuTime uint64

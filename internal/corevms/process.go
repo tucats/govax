@@ -70,6 +70,27 @@ type Process struct {
 	// enforced (docs/DEVIATIONS.md).
 	ASTLimit uint32
 
+	// BufferedIOLimit and DirectIOLimit are the BIOLM and DIOLM quotas:
+	// how many buffered and direct I/O requests may be outstanding at
+	// once. CPULimit is the CPULM quota, the CPU time the process may
+	// use, in 10-millisecond units, 0 meaning no limit. They're recorded
+	// ($CREPRC sets a new process's from its creator's; creprc.go) and
+	// reported by $GETJPI, but not enforced.
+	BufferedIOLimit, DirectIOLimit, CPULimit uint32
+
+	// cpuDeducted is how much of its creator's CPU time limit the
+	// process took when it was created (quotas.go's cpuLimit), to be
+	// given back when it's deleted; 0 when the creator had no limit.
+	cpuDeducted uint32
+
+	// CreateFlags are the status flags ($CREPRC's stsflg, the PRC$M_
+	// bits) the process was created with: $GETJPI's JPI$_CREPRC_FLAGS.
+	// TerminationMailbox is the unit number of the mailbox that gets
+	// the accounting message when the process is deleted (PCB$W_TMBU,
+	// $CREPRC's mbxunt), 0 for none. Both are 0 for process 1.
+	CreateFlags        uint32
+	TerminationMailbox uint32
+
 	// Priority and BasePriority are the process's current and base
 	// scheduling priorities (PCB$B_PRI, PCB$B_PRIB, as the user sees
 	// them: 0-31, higher runs first). govax has one process and no
@@ -182,6 +203,11 @@ const (
 	// user: ASTLM 24, base priority 4 (SYSGEN DEFPRI).
 	nominalASTLimit = 24
 	nominalPriority = 4
+
+	// The buffered and direct I/O quotas are nominal values in the range
+	// VMS's SYSTEM account has. There is no CPU time limit.
+	nominalBIOLM = 40
+	nominalDIOLM = 40
 )
 
 // NewProcess returns the default emulated process: PID nominalPID, user
@@ -203,9 +229,11 @@ func NewProcess() *Process {
 		WSExtent:   nominalWSExtent,
 		MinWSCount: nominalMinWSCount,
 
-		ASTLimit:     nominalASTLimit,
-		Priority:     nominalPriority,
-		BasePriority: nominalPriority,
+		ASTLimit:        nominalASTLimit,
+		BufferedIOLimit: nominalBIOLM,
+		DirectIOLimit:   nominalDIOLM,
+		Priority:        nominalPriority,
+		BasePriority:    nominalPriority,
 
 		AuthorizedPriority:   nominalPriority,
 		AuthorizedPrivileges: allPrivileges,
@@ -510,4 +538,5 @@ func registerProcessServices(t *ServiceTable) {
 	t.Register("SYS$FORCEX", serviceSysForcex)
 	t.Register("SYS$DELPRC", serviceSysDelprc)
 	t.Register("SYS$SETRWM", serviceSysSetrwm)
+	t.Register("SYS$CREPRC", serviceSysCreprc)
 }

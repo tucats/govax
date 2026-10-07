@@ -67,6 +67,9 @@ var (
 	privSETPRV = privilegeBit("SETPRV")
 	privOPER   = privilegeBit("OPER")
 	privWORLD  = privilegeBit("WORLD")
+	privDETACH = privilegeBit("DETACH")
+	privNETMBX = privilegeBit("NETMBX")
+	privNOACNT = privilegeBit("NOACNT")
 )
 
 // allPrivileges is every privilege's bit: the first PRV$K_NUMBER_OF_PRIVS
