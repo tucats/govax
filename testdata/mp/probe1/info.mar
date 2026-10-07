@@ -42,9 +42,11 @@ iosb:		.quad	0
 	.psect	code,exe,nowrt
 	.entry	start,^m<r6,r7>
 
+	pushl	#0			; mbxnam
+	pushl	#0			; acmode
 	pushal	chan
 	pushaq	mbx_name
-	calls	#2,g^sys$assign
+	calls	#4,g^sys$assign
 	check
 
 	movab	names,r6

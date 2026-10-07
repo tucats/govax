@@ -59,6 +59,11 @@ Run 2 (`vax/probe1-run2.log`) stopped at `step 2`: `$CREMBX` with 4
 arguments is `INSFARG` too. VMS 7.1 wants all seven (through `lognam`);
 govax accepts fewer, which is why its tests never noticed.
 
+Runs 3 and 4 got the first child's report but nothing from the second.
+Run 5 (`vax/probe1-run5.log`) read its termination message: final status
+`00000114`, SS$_INSFARG. The second child itself called `$ASSIGN` with 2
+arguments; VMS wants all 4.
+
 Nothing else is needed. If a program hangs on VMS (for instance, waiting
 for a termination message that doesn't come), press CTRL/Y and `STOP` the
 subprocesses; the log up to that point is still worth copying.
