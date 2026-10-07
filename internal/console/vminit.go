@@ -10,12 +10,8 @@ import (
 // vmRegion is one entry of Console.Regions, matching vax.h's own struct
 // VMREGION (name/pte_count/size/v_start/v_end/p_start/p_end) — see that
 // field's own doc comment. PStart/PEnd describe where VMInit's own PFN
-// counter had reached when the region's page table was written, exactly as
-// console_vminit.c's own "page" variable does — for P0/P1, whose pages are
-// now demand-paged (see below) rather than pre-mapped to that counter, this
-// remains purely descriptive bookkeeping carried over unchanged from the
-// C source's own (pre-DYNVM-support) display, not a claim that a page at
-// that physical address is actually resident yet.
+// counter had reached when the region's page table was written.
+// for P0/P1.
 type vmRegion struct {
 	name           string
 	size, pteCount uint32
@@ -23,9 +19,8 @@ type vmRegion struct {
 	pStart, pEnd   uint32
 }
 
-// maxP1 and spP1 match console_vminit.c's MAX_P1/SP_P1 constants: the top
-// of the 1GB P1 virtual address region, and the fixed initial user stack
-// pointer within it.
+// maxP1 and spP1: the top of the P1 virtual address region, and the
+// fixed initial user stack pointer within it.
 const (
 	maxP1 = 0x80000000
 	spP1  = 0x7FE00000
@@ -36,29 +31,7 @@ const (
 )
 
 // VMInit implements the VMINIT command: builds P0/P1/S0 page tables and
-// turns on virtual memory, matching console_vminit.c's console_vminit_dcl
-// — taking its `#ifdef DYNVM` demand-paging branch unconditionally (the
-// build the C source actually ships, `vax.h` always defining DYNVM), rather
-// than a prior version of this file's own `#ifndef DYNVM` eager-mapping
-// substitute (docs/PHASE-08.md's progress log has the original rationale
-// for that stand-in, which no longer applies now that internal/vm.Memory
-// has a real free-page allocator — see AllocatePage/ReservePage/
-// MappedPages and translate.go's Translate). S0 is still always eagerly
-// mapped, matching the C source's S0 PTE loop having no #ifdef DYNVM branch
-// of its own; only P0 and P1 pages start invalid and get demand-paged in on
-// first touch.
-//
-// The executive and supervisor stacks are laid out differently from the
-// C source's: each is its own run of S0 pages (8 by default) protected for
-// its mode (EW, SW), with a PTE$K_NONE guard page below it, so executive
-// and supervisor code has a stack it can write and an overflow faults
-// rather than running into the neighbouring stack. See
-// docs/MODE-STACKS.md. The C source's guard pages below the kernel and
-// interrupt stacks are still not ported.
-// CONSOLE$SCRATCH itself *is* reserved below, now that Phase 13's image
-// loader and SHIM$ stub synthesis are real consumers, and CONSOLE$STRINGPOOL*
-// is reserved below too, now that expr.go's quoted-string literal support
-// is a real consumer (see that file's parseQuotedString).
+// turns on virtual memory.
 func (c *Console) VMInit(p0Pages, p1Pages, s0Pages, kspPages, espPages, sspPages, ispPages, stringPoolPages uint32) error {
 	if err := c.requireInit(); err != nil {
 		return err
@@ -173,10 +146,7 @@ func (c *Console) VMInit(p0Pages, p1Pages, s0Pages, kspPages, espPages, sspPages
 	// replacing or deleting it (docs/PHASE-26.md subtask 35). The hardware
 	// ignores the field. PTEs start out invalid
 	// (no physical page assigned) and are demand-paged on first touch by
-	// internal/vm.Memory.Translate/AllocatePage — this port's only supported
-	// mode now, matching console_vminit.c's own #ifdef DYNVM branch (see
-	// docs/DEVIATIONS.md on why the non-DYNVM eager-mapping branch this
-	// file used to take is no longer replicated).
+	// internal/vm.Memory.Translate/AllocatePage.
 	paddr = roundUpPage(paddr)
 	p0br := paddr
 	p0PStart := page
@@ -409,8 +379,7 @@ func (c *Console) VMInit(p0Pages, p1Pages, s0Pages, kspPages, espPages, sspPages
 	c.VMInitValid = true
 	c.Mem.SetVMValid(true) // let Translate demand-page invalid P0/P1 PTEs from here on
 
-	// Matching console_vminit.c's own "Dump the translation buffer"
-	// step: invalidate_tb() plus a reset of its tries/hits/pflushes
+	// Invalidate_tb() plus a reset of its tries/hits/pflushes
 	// counters (tb_flush itself and the STC's own counters are left
 	// alone, same asymmetry as CLEAR TB — see docs/PHASE-21.md).
 	c.Mem.InvalidateTB()

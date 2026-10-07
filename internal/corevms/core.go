@@ -4,14 +4,6 @@ import (
 	"github.com/tucats/govax/internal/vax"
 )
 
-// Port of service.c's SYS$ services that don't need internal/io or the RMS
-// layer: virtual address region expansion. Its SYS$SETAST stub became a
-// real per-mode $SETAST in ast.go when AST delivery arrived, its
-// event-flag services moved to eventflags.go when common event flag
-// clusters did, SYS$GETJPIW to getjpi.go when it grew into a real
-// $GETJPI, and its SYS$DCLEXH recording stub to exit.go when exit
-// handlers began to be called (docs/PHASE-26.md).
-
 // serviceSysExpreg is SYS$EXPREG: expands one of the P0/P1/S0 virtual
 // address regions by pagcnt 512-byte pages, matching sys_expreg's own
 // region-size bookkeeping (Environment.RegionSize takes the place of

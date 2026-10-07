@@ -71,14 +71,14 @@ func TestAsm35Object(t *testing.T) {
 		t.Fatalf("assemble: %v", err)
 	}
 
-	real := readObjectFile(t, filepath.Join(asm35Dir, "vax", "asm35.obj"))
+	realFileName := readObjectFile(t, filepath.Join(asm35Dir, "vax", "asm35.obj"))
 
 	// .OCTA NEG's stale high quadword, followed by the .PACKED -12 after
 	// it (^X01, ^X2D).
 	stale := []byte{0xFD, 0xFF, 0xFF, 0xFF, 0, 0, 0, 0, 0xEF, 0xCD, 0xAB, 0x89, 0x67, 0x45, 0x23, 0x01, 0x01, 0x2D}
 	patched := false
 
-	for _, rec := range real.Records {
+	for _, rec := range realFileName.Records {
 		switch r := rec.(type) {
 		case *obj.EOM:
 			r.Severity = obj.SeveritySuccess
@@ -86,6 +86,7 @@ func TestAsm35Object(t *testing.T) {
 			for _, c := range r.Commands {
 				if i := bytes.Index(c.Data, stale); c.Op == obj.OpStoreImmediate && i >= 0 {
 					copy(c.Data[i+8:i+16], make([]byte, 8))
+					
 					patched = true
 				}
 			}
@@ -96,5 +97,5 @@ func TestAsm35Object(t *testing.T) {
 		t.Fatal("didn't find .OCTA NEG's stale high quadword in VAX MACRO's object")
 	}
 
-	requireSameObject(t, a, real)
+	requireSameObject(t, a, realFileName)
 }

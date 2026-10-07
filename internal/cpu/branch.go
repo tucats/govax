@@ -2,9 +2,9 @@ package cpu
 
 import "github.com/tucats/govax/internal/vax"
 
-// This is the Go port of emul_branch.c's simple branch-always/conditional
-// branches and its generic RSB/BSB/JSB/BLBS/BLBC handler. ACB and CASE (also
-// in emul_branch.c) are a separate, more involved sub-phase; see branchacb.go.
+// Simple branch-always/conditional branches and a generic
+// RSB/BSB/JSB/BLBS/BLBC handler. ACB and CASE are a separate,
+// more involved sub-phase; see branchacb.go.
 
 func init() {
 	reg := func(fn byte, h Handler) {
@@ -47,8 +47,7 @@ func emulBranchAlways(e *Engine, d *Decoded) error {
 
 // condBranch builds a Handler for one of the twelve simple conditional
 // branches: PC is replaced by the target operand iff test(psl) is true,
-// otherwise nothing happens -- matching emul_branch.c's BRANCH_HANDLER
-// macro.
+// otherwise nothing happens.
 func condBranch(test func(vax.PSL) bool) Handler {
 	return func(e *Engine, d *Decoded) error {
 		if test(e.cpu.PSL()) {
@@ -75,16 +74,9 @@ var (
 )
 
 // emulRsb is RSB: pop the return address off the stack into PC.
-//
-// emul_branch.c's RSB case calls load_register(15, vax.SP, 4) (load the
-// longword at vax.SP into register 15/PC) without checking its return
-// value at all, so a faulting pop would silently continue in the C source
-// rather than raising an access violation. Go's explicit error return makes
-// that mistake impossible to reproduce by accident, so this isn't
-// specifically replicated.
 func emulRsb(e *Engine, d *Decoded) error {
 	sp := e.cpu.GPR(vax.SP)
-	
+
 	ret, err := e.mem.LoadLongword(e.cpu, sp)
 	if err != nil {
 		return err
@@ -143,6 +135,6 @@ func emulBlbc(e *Engine, d *Decoded) error {
 	if v&1 == 0 {
 		e.cpu.SetGPR(vax.PC, d.Operands[1].Addr)
 	}
-	
+
 	return nil
 }

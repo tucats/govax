@@ -2,12 +2,7 @@ package cpu
 
 import "math/bits"
 
-// This is the Go port of emul_ash.c: ROTL, ASHL, ASHQ. Both use the
-// SETCONDITIONBITS(x, 0L) idiom in the C source, which incidentally always
-// force-clears C and never computes V at all; see docs/DEVIATIONS.md (the
-// finding logged in sub-phase 5/mov.go). Fixed here: C is left untouched
-// (never written) for all three, and V uses the manual's real formulas --
-// always 0 for ROTL, and shiftOverflow32/64 for a left-shifting ASHL/ASHQ.
+// ROTL, ASHL, ASHQ.
 
 func init() {
 	reg := func(fn byte, h Handler) {

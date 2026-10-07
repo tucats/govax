@@ -7,9 +7,8 @@ import (
 )
 
 // builtinSymbols is the fixed set of predefined, permanent system symbols
-// every assembly starts with — the literal name/value table half of
-// init_symbols.c's init_system_symbols(). The other half (one
-// "OPC$_<mnemonic>" symbol per defined single-byte opcode) is generated
+// every assembly starts with. The other component (one "OPC$_<mnemonic>"
+// symbol per defined single-byte opcode) is generated
 // from the live instruction table instead, in seedBuiltinSymbols below.
 var builtinSymbols = map[string]uint32{
 	// XFC function codes.
@@ -106,9 +105,8 @@ var builtinSymbols = map[string]uint32{
 // BuiltinSymbol looks up name (case-insensitively) in the predefined
 // system symbols every assembly starts with -- builtinSymbols, plus an
 // "OPC$_<mnemonic>" for each single-byte opcode. The console's expression
-// evaluator falls back on it, so the names init_symbols.c defined in the C
-// source's one shared symbol table (PTE$K_UR in SET PTE's PROT=, say) mean
-// the same thing at the console prompt as in ASM source.
+// evaluator falls back on it, so symbols mean the same thing at the 
+// console prompt as in ASM source.
 func BuiltinSymbol(name string) (uint32, bool) {
 	name = strings.ToUpper(name)
 
@@ -149,12 +147,12 @@ func BuiltinSymbols() map[string]uint32 {
 }
 
 // seedBuiltinSymbols populates a fresh Assembler's symbol table with the
-// permanent system symbols the reference tool defines at startup —
-// init_symbols.c's init_system_symbols(). Every testdata/asm fixture that
-// references one of these (kernel.asm's .SCB table, for instance, uses
-// EXC$CHMK/EXC$PRIV/... as vector codes) expects it to already exist
-// without a corresponding .SET in the source, the same way it would in a
-// freshly booted reference-tool console session — see docs/PHASE-11.md.
+// permanent system symbols the reference tool defines at startup. Every
+// testdata/asm fixture that references one of these (kernel.asm's .SCB
+// table, for instance, uses EXC$CHMK/EXC$PRIV/... as vector codes) 
+// expects it to already exist without a corresponding .SET in the source,
+// the same way it would in a freshly booted reference-tool console 
+// session — see docs/PHASE-11.md.
 func (a *Assembler) seedBuiltinSymbols() {
 	for name, value := range builtinSymbols {
 		sym := a.symbols.create(name)

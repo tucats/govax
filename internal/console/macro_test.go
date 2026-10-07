@@ -518,8 +518,11 @@ func TestDispatch_macroTraceback(t *testing.T) {
 	d, _ := newTestDispatcher(t)
 	dir := t.TempDir()
 	src := filepath.Join(dir, "tb.mar")
+	
 	writeHostFile(t, src, "\t.TITLE\tTB\n\t.PSECT\tCODE\n\t.ENTRY\tGO, ^M<>\n\tRET\n\t.END\tGO\n")
+
 	again := filepath.Join(dir, "tbon.mar")
+
 	writeHostFile(t, again, "\t.TITLE\tTB\n\t.ENABLE\tTRACEBACK\n\t.PSECT\tCODE\n\t.ENTRY\tGO, ^M<>\n\tRET\n\t.END\tGO\n")
 
 	for _, tc := range []struct {

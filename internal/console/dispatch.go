@@ -15,17 +15,6 @@ import (
 
 // Dispatcher parses one command line with the DCL grammar and runs the
 // handler bound to the verb or syntax it ends in.
-//
-// console_dispatch.c has two tiers: console_dispatch_table's "fixed"
-// commands, matched by their first four characters and parsed by hand
-// (EXAMINE, SET, STEP, ...), and the DCL grammar for the rest (SHOW,
-// CLEAR, VMINIT, ...). This port kept that split until docs/PHASE-37.md
-// moved every fixed command onto the grammar (commands.go,
-// setcommand.go); their old spellings ("EX", "D", "G", "@", ...) are
-// grammar verbs or aliases now. Two of them differ from the C source:
-// DEPOSIT (exam.go) is a Go-native addition, and RUN/R means what it does
-// in the C source (run.go's Console.Run, Phase 13) — VMS image
-// activation, not plain CPU execution (that's EXECUTE/GO/G).
 type Dispatcher struct {
 	Console *Console
 	Grammar *dcl.Grammar
@@ -58,8 +47,8 @@ func (d *Dispatcher) Dispatch(line string) error {
 		return nil
 	}
 
-	// console_dispatch.c checks vax.console.assembler_mode before ever
-	// reading a verb: while interactive ASM mode (docs/PHASE-19.md) is on,
+	// Check vax.console.assembler_mode before ever reading a verb:
+	// while interactive ASM mode (docs/PHASE-19.md) is on,
 	// every line -- including one that happens to spell a command name --
 	// is a statement for the assembler, not a console command.
 	if d.Console.assemblerMode {
@@ -104,13 +93,6 @@ func (d *Dispatcher) DispatchConsole(line string) error {
 		return err
 	}
 
-	// DBG_DCL: console_dispatch.c:121 sets the third-party DCL parser
-	// library's own verbosity knob (DCLsetdebug) before falling through to
-	// it. internal/console/dcl is this port's own grammar interpreter, not
-	// a wrapped external library with a separate verbosity knob to set, so
-	// this traces the line being handed to it instead -- the closest
-	// equivalent visibility this port can offer. See docs/PHASE-17.md
-	// sub-phase 5.
 	if d.Console.CPU != nil && d.Console.CPU.DebugEnabled(vax.DebugDCL) {
 		fmt.Fprintf(d.Console.CPU.DebugWriter(), "DEBUG(DCL): parsing %q\n", line)
 	}

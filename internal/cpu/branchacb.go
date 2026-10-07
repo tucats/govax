@@ -2,10 +2,6 @@ package cpu
 
 import "github.com/tucats/govax/internal/vax"
 
-// This is the Go port of emul_branch.c's emul_acb (ACBB/ACBW/ACBL; ACBF is
-// Phase 05's) and emul_case (CASEB/CASEW/CASEL) -- more involved control
-// flow than the simple/generic branches in branch.go, kept separate.
-
 func init() {
 	reg := func(fn byte, h Handler) {
 		instructionTable.SetHandler(instructionTable.Lookup(Opcode{Function: fn}), h)
@@ -25,15 +21,7 @@ func init() {
 // low-order bits of the true result," exactly the wraparound addResult
 // already produces), then the (updated) index is compared with the limit
 // to decide whether to branch. N/Z/V come from the updated index; C is
-// unaffected (never written), matching both the manual and the C source
-// (which never assigns vax.pslw.c in emul_acb at all).
-//
-// The branch condition fixes a confirmed bug in emul_acb.c: for a
-// non-negative addend, the manual specifies branching when index is less
-// than *or equal to* the limit, but the C source uses a strict `<`,
-// missing the case where a loop's index lands exactly on its limit (e.g.
-// counting up to and including limit). The negative-addend case (`index >=
-// limit`) was already correct in the C source. See docs/DEVIATIONS.md.
+// unaffected (never written), matching the manual.
 func emulAcb(size int) Handler {
 	return func(e *Engine, d *Decoded) error {
 		limit, err := d.Operands[0].Load(e.cpu, e.mem)
@@ -87,18 +75,6 @@ func emulAcb(size int) Handler {
 // displacement from the table immediately following the instruction (one
 // entry per value 0..limit), or to skip past the whole table if the
 // temporary exceeds the limit.
-//
-// Matches emul_case.c's choice to sign-extend the byte/word selector/base/
-// limit operands to full 32 bits before the subtraction/comparison/
-// indexing, rather than working at the operand's own narrower width the
-// way most of this phase's other instructions do. The manual's own note
-// ("the selector and base operands can both be considered as either signed
-// or unsigned") doesn't settle which width the internal arithmetic
-// actually happens at, and the two choices produce different results
-// exactly when an operand's own high bit is set -- this wasn't resolved
-// either way, so the C source's behavior is replicated rather than guessed
-// at; a genuine open question, not logged as a docs/DEVIATIONS.md finding
-// (no confirmed mismatch to log).
 func emulCase(size int) Handler {
 	return func(e *Engine, d *Decoded) error {
 		selRaw, err := d.Operands[0].Load(e.cpu, e.mem)
@@ -137,7 +113,7 @@ func emulCase(size int) Handler {
 			psl.SetC(false)
 			e.cpu.SetPSL(psl)
 			e.cpu.SetGPR(vax.PC, tableBase+2+limit*2)
-			
+
 			return nil
 		}
 

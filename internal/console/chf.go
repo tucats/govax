@@ -5,8 +5,9 @@ import (
 	"github.com/tucats/govax/internal/vax"
 )
 
-// This file is the Go port of interrupt.c's chf() (Condition Handling
-// Facility frame search) and format_exception() -- see docs/PHASE-20.md.
+// This file is Condition Handling Facility frame search and format
+// capability -- see docs/PHASE-20.md.
+//
 // Both only ever run for a fault whose SCB vector is kernel.asm's own
 // "console$handler" sentinel (0xFFFFFFFF): a real vector switches stack/
 // mode and resumes at a real handler address inside Engine.HandleFault
@@ -24,8 +25,8 @@ import (
 // internal/cpu deliberately doesn't provide on its own (see docs/PHASE-13.md's
 // "Key finding").
 
-// maxCHFDepth matches interrupt.c's MAX_CHF_DEPTH: the frame-chase bail-out
-// so a corrupt or cyclic FP chain can't hang the search forever.
+// maxCHFDepth is the frame-chase bail-out count, so a corrupt or cyclic
+// FP chain can't hang the search forever.
 const maxCHFDepth = 4096
 
 // handleConsoleFault is the Go port of format_exception(): try the
@@ -49,12 +50,9 @@ func (c *Console) handleConsoleFault(f *cpu.ConsoleHandlerFault) error {
 }
 
 // chf walks the call-frame chain from the live FP looking for a VMS
-// condition handler (frame offset 0, matching the standard CALL frame
-// layout emul_call.c's own buildCallFrame produces), invoking the first one
+// condition handler (frame offset 0, invoking the first one
 // found (invokeHandler) and, if it declines, continuing the search from
-// that frame's own caller -- exactly interrupt.c's own chf loop. Returns
-// true once some handler continues (see invokeHandler's own doc comment for
-// exactly what that means and a real C-source bug fixed along the way).
+// that frame's own caller. Returns true once some handler continues.
 func (c *Console) chf(f *cpu.ConsoleHandlerFault) (bool, error) {
 	fp := c.CPU.GPR(vax.FP)
 	ap := c.CPU.GPR(vax.AP)
@@ -80,14 +78,8 @@ func (c *Console) chf(f *cpu.ConsoleHandlerFault) (bool, error) {
 			}
 		}
 
-		// Skip the mask longword, saved AP, and saved-register area exactly
-		// as interrupt.c's own chf does, purely to advance addr past them
-		// and detect a corrupt frame the same way it would (a failing
-		// load here is a real error worth surfacing) -- the C source
-		// itself never actually consults the values once read: the *next*
-		// iteration's frame address always comes from the saved-FP slot
-		// below, not from this walk, so this is dead-but-faithfully-ported
-		// bookkeeping, not a control-flow dependency.
+		// Skip the mask longword, saved AP, and saved-register area, purely
+		// to advance addr past them and detect a corrupt frame.
 		maskWord, err := c.Mem.LoadLongword(c.CPU, fp+4)
 		if err != nil {
 			return false, err
@@ -140,22 +132,13 @@ func (c *Console) chf(f *cpu.ConsoleHandlerFault) (bool, error) {
 // (matching chf's own unconditional `vax.R0 = saved_r0; vax.R1 = saved_r1`
 // right after reading the handler's return code) -- a handler that declines
 // must not leave register corruption behind for the *next* frame's handler
-// to inherit. Only if the handler's R0 return code has bit 0 set (VMS's
-// SS$_CONTINUE convention -- tested with a real bitwise AND; see this
-// function's own note below on interrupt.c's `rc && 0x00000001`, almost
-// certainly a `&&`/`&` typo) does it additionally reload R0, R1, and PC from
-// the mechanism/signal arrays' own R0/R1/PC slots -- exactly VMS's own
-// resignal/continue protocol, where a handler communicates where to resume
-// (ordinarily the original fault PC, but a handler may have overwritten
-// that slot to redirect execution, e.g. to skip the faulting instruction)
-// by writing directly into those stack slots rather than through its own
-// return value. Fixing the C source's `&&` here isn't a replicate-as-is
-// case: with `&&`, any nonzero R0 (SS$_RESIGNAL and friends included, both
-// nonzero) would short-circuit true, so chf would treat every handler as
-// "continue" and never search further up the frame chain -- silently
-// breaking real resignaling. That's a plain C typo (VMS's SS$_CONTINUE
-// bit-0 convention is unambiguous), not an ISA fidelity question, so it's
-// fixed directly per this project's bug-fixing policy for clear-cut cases.
+// to inherit. Only if the handler's R0 return code has bit 0 set does it
+// additionally reload R0, R1, and PC from the mechanism/signal arrays'
+// own R0/R1/PC slots -- exactly VMS's own resignal/continue protocol,
+// where a handler communicates where to resume (ordinarily the original
+// fault PC, but a handler may have overwritten that slot to redirect
+// execution, e.g. to skip the faulting instruction) by writing directly
+// into those stack slots rather than through its own return value.
 func (c *Console) invokeHandler(f *cpu.ConsoleHandlerFault, handler, frameFP uint32, depth int) (bool, error) {
 	savedSP := c.CPU.GPR(vax.SP)
 	savedHalted := c.Engine.Halted()
@@ -241,7 +224,7 @@ func (c *Console) invokeHandler(f *cpu.ConsoleHandlerFault, handler, frameFP uin
 	}
 
 	mechargs := c.CPU.GPR(vax.SP) - 4
-	
+
 	if _, err := push(4); err != nil {
 		restore()
 
@@ -299,12 +282,7 @@ func (c *Console) invokeHandler(f *cpu.ConsoleHandlerFault, handler, frameFP uin
 // reporting (once chf found no handler that wanted the exception): print a
 // %VAX-E-CONHANDLER-style diagnostic naming the exception and its signal
 // arguments, then halt. Uses exceptionName's short SCB-style names (RESOP,
-// ACCVIO, ...) rather than porting errors.c's separate, longer-named
-// `exceptions[]` table (Reserved Operand, Access Control Violation, ...) --
-// matching this port's own existing precedent (reportStopReason's "Break on
-// fault" message, show.go's SHOW FAULT) of using the one exception-name
-// table it already has everywhere a C source call site would use either of
-// its two nearly-identical tables.
+// ACCVIO, ...).
 func (c *Console) formatException(f *cpu.ConsoleHandlerFault) error {
 	c.Printf("%%VAX-E-CONHANDLER, %s, PC=%08X  PSL=%08X\n", exceptionName(f.Code), f.PC, uint32(f.PSL))
 

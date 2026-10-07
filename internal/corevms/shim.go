@@ -1,20 +1,17 @@
 package corevms
 
-// ShimFunc implements one LIB$/CRTL shim routine (a librtl_*.c function),
-// matching shim.c's own CALLV signature: given the argument list already
+// ShimFunc implements one LIB$/CRTL shim routine: given the argument list already
 // resolved to native longwords, return the value shim() leaves in R0.
 type ShimFunc func(env *Environment, argv []uint32) (uint32, error)
 
-// shimEntry pairs a ShimFunc with the name shim.c's rtl_entry_list records
+// shimEntry pairs a ShimFunc with the name rtl_entry_list records
 // it under, purely for diagnostics (matching shim_dump's own listing).
 type shimEntry struct {
 	name string
 	fn   ShimFunc
 }
 
-// ShimTable is a numeric-code-keyed registry of ShimFuncs, the Go equivalent
-// of shim.c's rtl_entry_list — see doc.go's design note on why this is a
-// registry rather than a switch.
+// ShimTable is a numeric-code-keyed registry of ShimFuncs.
 type ShimTable struct {
 	entries map[uint32]shimEntry
 }

@@ -5,9 +5,6 @@ import (
 	"github.com/tucats/govax/internal/vaxfloat"
 )
 
-// ACB for the floating formats (originally the port of emul_branch.c's
-// ACBF case; ACBD wasn't in the C reference).
-
 func init() {
 	reg := func(fn byte, h Handler) {
 		instructionTable.SetHandler(instructionTable.Lookup(Opcode{Function: fn}), h)
@@ -27,10 +24,6 @@ func init() {
 // index, V is cleared, and C is unaffected. Overflow is a fault, leaving
 // the index unchanged; underflow with PSL<FU> clear makes the index zero,
 // and the comparison goes on with it.
-//
-// emul_branch.c's ACBF branched only when the index was strictly less
-// than the limit; the manual's "less than or equal" is used here, as in
-// the integer ACBs (docs/DEVIATIONS.md).
 func emulAcbFloat(e *Engine, d *Decoded) error {
 	limit, err := e.loadFloat(d, 0)
 	if err != nil {

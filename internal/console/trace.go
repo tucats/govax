@@ -5,20 +5,13 @@ import (
 	"github.com/tucats/govax/internal/vax"
 )
 
-// numTraceRegs is R0-R11 plus AP/FP -- registers.c's own reglist, and the
-// n<14 bound check_regset diffs against. SP/PC are deliberately excluded:
-// both change on every single instruction and would be pure noise in a
-// per-step diff, matching check_regset exactly.
 const numTraceRegs = 14
 
-// traceRegNames matches registers.c's reglist[] names for indices 0-13
-// (R0-R11, AP, FP).
 var traceRegNames = [numTraceRegs]string{
 	"R0", "R1", "R2", "R3", "R4", "R5", "R6", "R7", "R8", "R9", "R10", "R11", "AP", "FP",
 }
 
-// snapshotTraceRegs captures R0-R11/AP/FP and the PSL, matching
-// save_regset (registers.c:61-70).
+// snapshotTraceRegs captures R0-R11/AP/FP and the PSL.
 func (c *Console) snapshotTraceRegs() (regs [numTraceRegs]uint32, psl vax.PSL) {
 	for i := range regs {
 		regs[i] = c.CPU.GPR(vax.Reg(i))
@@ -28,8 +21,7 @@ func (c *Console) snapshotTraceRegs() (regs [numTraceRegs]uint32, psl vax.PSL) {
 }
 
 // printRegisterChanges diffs before/beforePSL against the CPU's current
-// state and prints every register that changed, matching check_regset
-// (registers.c:72-87) exactly: R0-R11 get their value printed in both hex
+// state and prints every register that changed: R0-R11 get their value printed in both hex
 // and decimal, AP/FP in hex only, and the PSL is reported last if it
 // changed.
 func (c *Console) printRegisterChanges(before [numTraceRegs]uint32, beforePSL vax.PSL) {
@@ -51,17 +43,13 @@ func (c *Console) printRegisterChanges(before [numTraceRegs]uint32, beforePSL va
 	}
 }
 
-// operandAccessNames matches console_disasm.c's own mp[] array (format_operands),
-// indexed by cpu.AccessKind.
 var operandAccessNames = [...]string{
 	"none", "read", "write", "modify", "address", "bitfield", "branch", "immediate",
 }
 
 // printOperandDump prints the most recently executed instruction's operands
 // -- access kind, and either the register (+ its value) or the computed
-// address/immediate value -- matching format_operands (console_disasm.c:
-// 183-207). Unlike the C source (which prints this before the instruction
-// runs), this necessarily reads state after cpu.Engine.Step returns --
+// address/immediate value. This necessarily reads state after cpu.Engine.Step returns;
 // Engine.Step decodes and executes in one call with no gap to hook between
 // the two -- so a written operand shows its new value rather than its
 // pre-execution one; see docs/PHASE-17.md sub-phase 8's own note on this.
@@ -93,10 +81,7 @@ func (c *Console) printOperandDump() {
 	}
 }
 
-// traceStackNames matches vax.c:113's own mode_name[] local to execute_vax
-// -- stack-pointer names, not to be confused with console_show.c's
-// differently-scoped mode_names[] (KERNEL/EXEC/SUPER/USER, see
-// accessModeNames in internal/cpu/call.go). See docs/PHASE-17.md sub-phase 7.
+
 var traceStackNames = [4]string{"KSP", "ESP", "SSP", "USP"}
 
 // traceStackName reports which stack pc's instruction will run on, matching
@@ -109,8 +94,7 @@ func traceStackName(psl vax.PSL) string {
 	return traceStackNames[psl.CurMod()]
 }
 
-// traceStep prints the instruction about to execute at pc, matching
-// vax.c:437-454's own `if (disasm) { ... }` block -- called immediately
+// traceStep prints the instruction about to execute at pc, called immediately
 // before cpu.Engine.Step by every loop that drives execution (Execute,
 // Step, Call), so an instruction is always traced (if at all) before it
 // runs, not after. Traces only when force is true or c.Trace is set
@@ -150,7 +134,7 @@ func (c *Console) traceStep(pc uint32, force bool) (finish func()) {
 		before    [numTraceRegs]uint32
 		beforePSL vax.PSL
 	)
-	
+
 	if trackRegs {
 		before, beforePSL = c.snapshotTraceRegs()
 	}
@@ -159,7 +143,7 @@ func (c *Console) traceStep(pc uint32, force bool) (finish func()) {
 		if trackRegs {
 			c.printRegisterChanges(before, beforePSL)
 		}
-		
+
 		if c.CPU.DebugEnabled(vax.DebugFullDisasm) {
 			c.printOperandDump()
 		}

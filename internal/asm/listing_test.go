@@ -59,6 +59,7 @@ func readRealListing(t *testing.T, path string) []realListLine {
 		}
 
 		number, numbered := 0, false
+
 		if len(line) >= 47 {
 			if n, err := strconv.Atoi(strings.TrimSpace(line[41:47])); err == nil {
 				number, numbered = n, true
@@ -165,13 +166,13 @@ func compareListing(t *testing.T, a *Assembler, path string) {
 	t.Helper()
 
 	lines := programLines(a)
-	real := readRealListing(t, path)
+	realPath := readRealListing(t, path)
 
-	if len(real) == 0 {
+	if len(realPath) == 0 {
 		t.Fatalf("%s: no source lines read", path)
 	}
 
-	for _, r := range real {
+	for _, r := range realPath {
 		l := lines[r.number]
 		if l == nil {
 			t.Errorf("line %d (%q): not recorded", r.number, r.text)
@@ -231,10 +232,8 @@ func TestListingLines(t *testing.T) {
 		libraries             func(t *testing.T) []MacroLibrary
 	}
 
-	var cases []fixture
-
+	cases := make([]fixture, 0)
 	starlet := func(t *testing.T) []MacroLibrary { return []MacroLibrary{govaxStarlet(t)} }
-
 	ladder := ladderSources(t, marDir)
 
 	for _, path := range ladder {

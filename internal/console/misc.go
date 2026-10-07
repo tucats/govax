@@ -24,10 +24,9 @@ var RunCommandLine string
 
 // Print implements the PRINT/ECHO console command: each item is a
 // double-quoted literal string, printed as it is, or an expression,
-// printed in the console's current radix, matching console_print.c —
-// including its CONSOLE_VERBOSE gate (console_print's own leading check):
-// PRINT is silent whenever SET NOVERBOSE has turned Console.Verbose off
-// (see set.go's SetVerbose/SetNoVerbose). The items are the DCL grammar's
+// printed in the console's current radix: PRINT is silent whenever
+// SET NOVERBOSE has turned Console.Verbose off (see set.go's
+// SetVerbose/SetNoVerbose). The items are the DCL grammar's
 // list of $expression values (docs/PHASE-37.md), quotes kept.
 func (c *Console) Print(items []string) error {
 	if !c.Verbose {
@@ -74,8 +73,7 @@ func (c *Console) Print(items []string) error {
 }
 
 // Running reports whether the console should keep reading commands,
-// matching vax.console.running (cleared by QUIT/EXIT — see
-// console_quit.c's console_exit_dcl).
+// matching vax.console.running (cleared by QUIT/EXIT.
 func (c *Console) Running() bool { return !c.quit }
 
 // CommandLineErr returns the failure of the one-shot command given on
@@ -93,10 +91,7 @@ func (c *Console) Quit() error {
 	return nil
 }
 
-// Time runs one command (via dispatch) and prints how long it took,
-// matching console_time.c — minus its Mac-only instruction-count/MIPS
-// reporting (vax.console.instruction_count has no equivalent counter in
-// internal/cpu.Engine to read).
+// Time runs one command (via dispatch) and prints how long it took.
 func (c *Console) Time(cmd string, dispatch func(string) error) error {
 	if err := c.requireInit(); err != nil {
 		return err
@@ -173,10 +168,7 @@ func (c *Console) IncludeCommandLine(dispatch func(string) error) error {
 }
 
 // Include reads path line by line, calling dispatch for each non-blank,
-// non-comment ("!"-prefixed) line — a simplified stand-in for
-// console_include.c's push_include/INCLUDE-stack machinery (which supports
-// nested includes via a file stack, /VERIFY echoing, and an ASM-mode
-// variant): this port just runs straight through one file, recursively,
+// non-comment ("!"-prefixed) line - run straight through one file, recursively,
 // since INCLUDE's only in-scope consumer right now is loading a startup
 // script like vax.init (see main.go). path is resolved through
 // c.Paths (docs/PHASE-15.md), so an unqualified name like "vax.init" is
@@ -213,8 +205,7 @@ func (c *Console) Include(path string, dispatch func(string) error) error {
 }
 
 // ClearSymbol implements CLEAR SYMBOL: a specific name, or every user
-// symbol (CLEAR SYMBOL/ALL) — matching console_clear.c's clear_symbols
-// case. Its /TEMPORARY distinction is ClearSymbolTemporary, below.
+// symbol (CLEAR SYMBOL/ALL) — Its /TEMPORARY distinction is ClearSymbolTemporary, below.
 func (c *Console) ClearSymbol(name string, all bool) error {
 	if err := c.requireInit(); err != nil {
 		return err
@@ -231,9 +222,7 @@ func (c *Console) ClearSymbol(name string, all bool) error {
 	return nil
 }
 
-// ClearSymbolTemporary implements CLEAR SYMBOL/TEMPORARY, matching
-// console_clear.c's clear_temp_symbols (case 115) — see
-// SymbolTable.ClearTemporary.
+// ClearSymbolTemporary implements CLEAR SYMBOL/TEMPORARY.
 func (c *Console) ClearSymbolTemporary() error {
 	if err := c.requireInit(); err != nil {
 		return err
@@ -244,9 +233,9 @@ func (c *Console) ClearSymbolTemporary() error {
 	return nil
 }
 
-// ClearString implements CLEAR STRINGS, matching console_clear.c's case
-// 105: resets CONSOLE$STRINGPOOL back to CONSOLE$STRINGPOOL_BASE and zeroes
-// the pool's backing storage — the write side of ShowString, requiring the
+// ClearString implements CLEAR STRINGS: resets CONSOLE$STRINGPOOL
+// back to CONSOLE$STRINGPOOL_BASE and zeroes the pool's backing
+// storage — the write side of ShowString, requiring the
 // same booted-microkernel symbols.
 func (c *Console) ClearString() error {
 	if err := c.requireInit(); err != nil {
@@ -268,12 +257,10 @@ func (c *Console) ClearString() error {
 	return c.Mem.Store(c.CPU, base, make([]byte, size))
 }
 
-// ClearTB implements CLEAR TB, matching console_clear.c's case 107: a full
-// translation-buffer flush plus a reset of its tries/hits/pflushes
-// counters — tb_flush itself and the sequential translation cache's own
-// try/hit counters are deliberately left alone, matching the C source
-// exactly (see docs/PHASE-21.md). Silent on success, matching the C
-// source's own lack of any confirmation printf here.
+// ClearTB implements CLEAR TB: a full translation-buffer flush plus a
+// reset of its tries/hits/pflushes counters — tb_flush itself and the
+// sequential translation cache's own try/hit counters are deliberately
+// left alone.
 func (c *Console) ClearTB() error {
 	if err := c.requireInit(); err != nil {
 		return err
@@ -285,31 +272,14 @@ func (c *Console) ClearTB() error {
 	return nil
 }
 
-// ClearMemory implements CLEAR MEMORY, matching console_clear.c's case 103
-// — which simply calls console_zero(), the same routine the ZERO command
-// itself runs (see console_clear.c's own module comment: "CLEAR MEMORY is
-// mapped to the ZERO command").
+// ClearMemory implements CLEAR MEMORY,  which simply calls console_zero(),
+// the same routine the ZERO command itself runs.
 func (c *Console) ClearMemory() error {
 	return c.Zero()
 }
 
-// ClearMemoryStatistics implements CLEAR MEMORY/STATISTICS, matching
-// console_clear.c's case 114 — which resets allocator byte-counters
-// (total_allocated/count_allocated/total_freed/count_freed) this port has
-// no equivalent of (internal/vm.Memory is a fixed-size byte slice, not a
-// tracked heap allocator).
-func (c *Console) ClearMemoryStatistics() error {
-	if err := c.requireInit(); err != nil {
-		return err
-	}
-
-	c.Printf("Memory allocation statistics are not modeled by this port.\n")
-
-	return nil
-}
-
-// ClearInterrupt implements CLEAR INTERRUPT <id>, matching console_clear.c's
-// case 102: removes every queued interrupt whose code matches id.
+// ClearInterrupt implements CLEAR INTERRUPT <id>. It removes every 
+// queued interrupt whose code matches id.
 func (c *Console) ClearInterrupt(code uint32) error {
 	if err := c.requireInit(); err != nil {
 		return err
@@ -327,9 +297,8 @@ func (c *Console) ClearInterrupt(code uint32) error {
 	return nil
 }
 
-// ClearAllInterrupts implements CLEAR INTERRUPT/ALL, matching
-// console_clear.c's case 110: empties the interrupt queue and cancels any
-// immediately-pending interrupt.
+// ClearAllInterrupts implements CLEAR INTERRUPT/ALL: empties the 
+// interrupt queue and cancels any immediately-pending interrupt.
 func (c *Console) ClearAllInterrupts() error {
 	if err := c.requireInit(); err != nil {
 		return err
@@ -346,4 +315,3 @@ func (c *Console) ClearAllInterrupts() error {
 
 	return nil
 }
-

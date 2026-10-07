@@ -54,7 +54,7 @@ func readFileArg(c *cursor) string {
 
 // pseudoData assembles .BYTE/.WORD/.LONG: a comma-separated list of
 // expressions, each stored at scale bytes and forward-reference-capable
-// (K_ADDR_B/W/L), matching asm_pseudo.c's cases 1-3.
+// (K_ADDR_B/W/L).
 func (a *Assembler) pseudoData(c *cursor, scale int) error {
 	return a.pseudoDataSigned(c, scale, false)
 }
@@ -338,7 +338,7 @@ func (a *Assembler) pseudoClear(c *cursor) error {
 }
 
 // asciiKind distinguishes .ASCII/.ASCIZ/.ASCIC/.ASCID's differing framing
-// around the raw character data, matching asm_pseudo.c's cases 7-10.
+// around the raw character data.
 type asciiKind int
 
 const (
@@ -353,13 +353,7 @@ const (
 // run of character data framed per
 // asciiKind — a trailing NUL (.ASCIZ), a leading one-byte count (.ASCIC), or
 // a leading VMS string descriptor whose address field points at the string
-// data immediately following it (.ASCID). Matches asm_pseudo.c's cases
-// 7-10, except that .ASCIC's count is a byte, as MACRO-32 defines it (and
-// as VMS's counted-string users, such as $FAO's !AC, read it), where
-// eVAX stored a 16-bit word; a string longer than 255 characters is
-// VAX_DATARANGE (docs/PHASE-26.md, docs/DEVIATIONS.md). The reference
-// tool also took an undelimited word as a string (.ASCII TEXT), which
-// MACRO-32 doesn't; that is now VAX_BADSTRING.
+// data immediately following it (.ASCID).
 func (a *Assembler) pseudoAscii(c *cursor, kind asciiKind) error {
 	if err := a.output(); err != nil {
 		return err
@@ -1257,9 +1251,7 @@ func (a *Assembler) pseudoInclude(c *cursor) error {
 	return a.assembleLines(src)
 }
 
-// pseudoP1Vector assembles .P1VECTOR, matching asm_pseudo.c's case 40
-// (`return p1_init();`) — a direct call into p1_vector.c's own p1_init(),
-// not deferred to anything downstream of assembly. For every entry in
+// pseudoP1Vector assembles .P1VECTOR. For every entry in
 // internal/vmsdef's fixed VMS P1VectorTable it defines the SYS$xxx symbol
 // (permanent, SymEntry for an ordinary CALL target or SymLabel for the one
 // JMP-reached entry, SYS$SRCHANDLER — see vmsdef.P1VectorEntry.Jmp) and deposits
@@ -1303,10 +1295,7 @@ func (a *Assembler) pseudoP1Vector(c *cursor) error {
 			flags = SymLabel
 		}
 
-		// unique=false: matching set_symbol_direct's own call in p1_init()
-		// (asm_symbols.c's set_symbol only rejects a redefinition when the
-		// caller has separately set ASM_UNIQUE ahead of the call — p1_init()
-		// never does), not .SHIM's own uniqueness-checked pseudoShim call
+		// unique=false: not .SHIM's own uniqueness-checked pseudoShim call
 		// this was originally modeled on. Running .P1VECTOR twice (e.g. a
 		// live console session that already booted kernel.asm's own
 		// ".p1vector" ASMing a second file — such as this project's own

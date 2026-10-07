@@ -26,8 +26,7 @@ func loadProgram(t *testing.T, c *Console, addr uint32, bytes ...byte) {
 // TestExecute_xfcQuitEmulatorStopsConsole exercises XFC$QUIT_EMULATION
 // (opcode 0xFC, selector 0x78) end to end through the console layer: it
 // must both halt the CPU (Execute returns cleanly, like any HALT) and stop
-// the console's own command loop (Running() goes false), matching
-// emul_xfc.c's own vax.halted = VAX_USERHALT plus vax.console.running = 0 --
+// the console's own command loop (Running() goes false) -
 // the two-part effect main.go's main() relies on (via Console.Running) to
 // exit the whole program instead of just returning to the "VAX>" prompt.
 func TestExecute_xfcQuitEmulatorStopsConsole(t *testing.T) {

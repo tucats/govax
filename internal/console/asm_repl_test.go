@@ -24,8 +24,7 @@ func newRunnableDispatcher(t *testing.T) (*Dispatcher, *Console) {
 // TestDispatchASM_bareEntersInteractiveMode confirms a bare "ASM" command
 // (no filename) puts the console into interactive assembler mode instead of
 // erroring out, and that DISASM/EXAMINE-style commands are rejected as
-// assembly statements while it's active -- matching console_dispatch.c's
-// own hand-off to assemble() ahead of any verb-table lookup.
+// assembly statements while it's active.
 func TestDispatchASM_bareEntersInteractiveMode(t *testing.T) {
 	d, c := newRunnableDispatcher(t)
 

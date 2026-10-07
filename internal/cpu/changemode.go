@@ -2,19 +2,6 @@ package cpu
 
 import "github.com/tucats/govax/internal/vax"
 
-// This is the Go port of interrupt.c's emul_chmx: CHMK/CHME/CHMS/CHMU, the
-// four "change mode" instructions a VMS-style RTL/system-service calling
-// convention (Phase 10) is built entirely on top of. Discovered missing
-// during Phase 12's integration pass -- the generated instruction table
-// (instructions_table.go) has always had correct rows for all four opcodes
-// (0xBC-0xBF, matching instruction_table.h exactly), but no phase ever
-// registered a Handler for them, so they silently fell through to
-// unimplementedHandler (a reserved-instruction fault) any time real code
-// executed one -- the CHMK any SYS$ service call compiles down to. Not an
-// ISA fidelity question (DEVIATIONS.md territory): the reference behavior
-// is unambiguous and this is a clear-cut missing implementation, the same
-// bar as this project's other "obvious gap, just fix it" findings.
-
 func init() {
 	reg := func(fn byte, h Handler) {
 		instructionTable.SetHandler(instructionTable.Lookup(Opcode{Function: fn}), h)
@@ -51,23 +38,10 @@ func emulChmx(e *Engine, d *Decoded) error {
 
 	// CHMx is a synchronous "system call" exception, not a retry-the-faulting-
 	// instruction one: its own return address must be the instruction *after*
-	// CHMx (matching emul_chmx.c's own explicit `vax.instruction_PC =
-	// vax.PC;` right before its set_fault call), not e.instructionPC's
-	// Step-assigned value (the CHMx instruction's own start address, correct
-	// for every other synchronous fault -- an access violation or reserved
-	// operand genuinely should re-execute the same instruction once fixed
-	// up, but a change-mode trap conceptually completes and returns like a
-	// subroutine call). Without this, raise() resets PC back to e.instructionPC
-	// before HandleFault pushes it, so REI/RET from the CHMx handler resumes
-	// at the CHMx instruction itself -- an infinite re-trap loop the moment
-	// any caller issues a second CHMx after the first one's handler returns
-	// (e.g. LIB$PUT_ONE's own per-byte "chmk #EXE$PUT_CONSOLE" loop). Found
-	// while building Phase 14's own interrupt-delivery test, which was the
-	// first fixture to actually complete a CHMK handler and attempt a
-	// second one.
+	// CHMx.
 	e.instructionPC = e.cpu.GPR(vax.PC)
 
 	modeIndex := d.Opcode.Function - 0xBC // 0=K, 1=E, 2=S, 3=U
-	
+
 	return &Fault{Code: ExcChangeModeK + Exception(modeIndex*4), Args: []uint32{code}}
 }

@@ -13,8 +13,7 @@
 // through the Debugger interface (debugger.go), and works with none
 // installed (the commands that start one then say it isn't available).
 //
-// This mirrors reference/eVAX/eVAX/Source/Console/console_*.c/driver.c, with
-// the scope adjustments recorded in docs/PHASE-08.md's progress log:
+// Changed as recorded in docs/PHASE-08.md's progress log:
 // device-dependent commands (SHOW DEVICE, DEFINE/DEVICE) were stubbed
 // pending Phase 09 (I/O) and are now wired up in device.go against
 // internal/io (the logical-name commands are Phase 25's logical.go, over

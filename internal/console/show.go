@@ -21,20 +21,8 @@ const (
 	disabledState = "disabled"
 )
 
-// This file implements the subset of console_show.c's dozens of SHOW
-// sub-displays this port covers — see docs/PHASE-16.md sub-phase 1 for the
-// inventory this file works through and what's still deliberately left
-// out (SHOW COMMAND_ARGS, SHOW EXPAND: no underlying data source yet; SHOW
-// DEBUG/ASSEMBLER_FLAGS/STEP_MODE/TRACE, SHOW WATCHPOINTS, SHOW BREAK's
-// /FAULT and /INSTRUCTION qualifiers: need new cross-cutting state
-// sub-phases 2-4 add; SHOW INSTRUCTIONS' /MODES and /PROFILE qualifiers;
-// SHOW ERROR: needs a design decision on whether this port adopts a
-// VAX-style status-code space at all).
-
 // ShowRegisters prints R0-R11 plus the AP/FP/SP/PC aliases in the same
 // four-column grid as the PSL beneath them, matching SHOW REGISTERS
-// (console_show.c's case 133, dump_registers()) — previously one register
-// per line, a formatting mismatch fixed here (see dumpRegisters).
 func (c *Console) ShowRegisters() error {
 	if err := c.requireInit(); err != nil {
 		return err
@@ -46,9 +34,7 @@ func (c *Console) ShowRegisters() error {
 }
 
 // dumpRegisters prints the R0-R11/AP/FP/SP/PC grid followed by the PSL
-// block, matching dump_registers() (registers.c) — shared by SHOW
-// REGISTERS (ShowRegisters) and SHOW CPU (ShowCPU), exactly as
-// dump_registers() itself is shared by both cases in the C source.
+// block, shared by SHOW REGISTERS (ShowRegisters) and SHOW CPU (ShowCPU).
 func (c *Console) dumpRegisters() {
 	c.Printf("\n\n    Registers:\n\n")
 	c.Printf("    R0:  %08X      R4:  %08X     R8:  %08X     AP:  %08X\n",
@@ -63,8 +49,7 @@ func (c *Console) dumpRegisters() {
 	c.dumpPSL()
 }
 
-// ShowPSL prints the processor status longword and its named fields,
-// matching SHOW PSL (console_show.c's case 135, dump_psl()).
+// ShowPSL prints the processor status longword and its named fields.
 func (c *Console) ShowPSL() error {
 	if err := c.requireInit(); err != nil {
 		return err
@@ -75,10 +60,7 @@ func (c *Console) ShowPSL() error {
 	return nil
 }
 
-// dumpPSL prints the PSL longword plus its PSW and PRIV field breakdowns,
-// matching dump_psl() (registers.c) — shared by SHOW PSL (ShowPSL) and
-// dump_registers (dumpRegisters), exactly as dump_psl() itself is shared
-// by both in the C source.
+// dumpPSL prints the PSL longword plus its PSW and PRIV field breakdowns.
 func (c *Console) dumpPSL() {
 	p := c.CPU.PSL()
 
@@ -92,14 +74,7 @@ func (c *Console) dumpPSL() {
 }
 
 // ShowMemory prints physical memory size and, once VMINIT has established
-// page tables, per-region P0/P1/S0 accounting, matching show_regions()
-// (console_show.c) — the function that actually backs the plain SHOW
-// MEMORY case (console_show.c's own case 138), not to be confused with
-// this port's own ShowRegions (SHOW REGIONS, an unrelated C function that
-// happens to share the "regions" name — see that function's own doc
-// comment). SHOW MEMORY's other two forms, /PRINT (printmem) and /DUMP
-// (decc_dump_memory, gated on a microkernel being loaded), aren't ported —
-// see docs/PHASE-16.md sub-phase 1a.
+// page tables, per-region P0/P1/S0 accounting.
 func (c *Console) ShowMemory() error {
 	if err := c.requireInit(); err != nil {
 		return err
@@ -119,10 +94,7 @@ func (c *Console) ShowMemory() error {
 	c.Printf("    Virtual Memory (currently %s)\n", state)
 
 	// If VMINIT has never been issued, this port has no console-specific
-	// knowledge of the memory layout, so it can't report on it — matching
-	// console_show.c's own !vax.vm_initialized/!VMVALID gate. VAX software
-	// may well have set up VM status of its own, but the console doesn't
-	// know about it either way.
+	// knowledge of the memory layout, so it can't report on it.
 	if !c.VMInitValid {
 		c.Printf("        Virtual memory configuration is unknown.\n")
 
@@ -247,11 +219,7 @@ func (c *Console) ShowRadix() error {
 	return nil
 }
 
-// ShowBase prints the console's current EXAMINE/DEPOSIT cursor, matching
-// SHOW BASE (console_show.c's own body is exactly `printf("Next storage
-// address is %08X\n", vax.console.deposit)` — nothing to do with region
-// base registers, a prior mismatch documented in docs/PHASE-16.md
-// sub-phase 1d and fixed here).
+// ShowBase prints the console's current EXAMINE/DEPOSIT cursor.
 func (c *Console) ShowBase() error {
 	if err := c.requireInit(); err != nil {
 		return err
@@ -263,8 +231,7 @@ func (c *Console) ShowBase() error {
 }
 
 // printBase is ShowBase's body, factored out so ShowCPU can reproduce
-// console_show.c's own case 136 (SHOW CPU) falling through into case 137
-// (SHOW BASE) without duplicating the format string.
+// SHOW CPU followed by SHOW BASE without duplicating the format string.
 func (c *Console) printBase() {
 	c.Printf("\n        Next storage address is %08X\n", c.DepositAddr)
 }
@@ -280,8 +247,6 @@ const (
 	StackUSP
 )
 
-// modeNames matches console_show.c's own mode_names[] (SHOW MODE, SHOW
-// STACK's reported mode name).
 var modeNames = [5]string{"KERNEL", "EXEC", "SUPER", "USER", "INTERRUPT"}
 
 func (k StackKind) name() string {
@@ -308,8 +273,7 @@ func (k StackKind) name() string {
 // internal/cpu/handlefault.go/call.go's own mode-transition code (e.g.
 // handlefault.go's `SetPR(vax.PrivReg(curMod), GPR(SP))` before a fault
 // switches to a new mode) for where that save happens; this only reads
-// the result, matching console_show.c's own set_mode_stack/restore pair's
-// net (observable) effect without needing a real, reversible switch here.
+// the result.
 func (c *Console) stackPointerFor(kind StackKind) uint32 {
 	psl := c.CPU.PSL()
 
@@ -346,13 +310,7 @@ func (c *Console) stackPointerFor(kind StackKind) uint32 {
 
 // ShowStack dumps live memory from a privileged mode's stack pointer
 // upward (one longword per line, formatted in the console's current
-// radix), matching console_show.c's shared SHOW STACK/KSP/ESP/SSP/ISP/USP
-// case (id 139-144) — not just the selected stack pointer's register
-// value, a prior mismatch documented in docs/PHASE-16.md sub-phase 1d and
-// fixed here. current selects the bare SHOW STACK form (id 139: whichever
-// mode is actually live right now, kind ignored); count, if nonzero,
-// overrides the default of one longword; all dumps until end-of-stack/
-// end-of-memory instead.
+// radix).
 func (c *Console) ShowStack(kind StackKind, current bool, count uint32, all bool) error {
 	if err := c.requireInit(); err != nil {
 		return err
@@ -415,11 +373,7 @@ func (c *Console) ShowStack(kind StackKind, current bool, count uint32, all bool
 }
 
 // privRegDisplay lists the privileged registers SHOW CPU's own privileged-
-// register block prints, in the same order as pr_names[]/MAXPRIVREG's loop
-// in console_show.c's case 136 (indices 0-4 — the mode stack pointers —
-// are shown separately, in the stack-pointers block, and every unnamed
-// "_PRnn" slot in pr_names[] is simply absent here rather than skipped by
-// a name check).
+// register block.
 var privRegDisplay = []struct {
 	name string
 	reg  vax.PrivReg
@@ -436,15 +390,7 @@ var privRegDisplay = []struct {
 
 // ShowCPU prints the registers/PSL, mode stack pointers, and privileged
 // register block, then falls through to SHOW BASE's "next storage
-// address" line, matching console_show.c's case 136 (SHOW CPU) falling
-// through into its own case 137 (SHOW BASE). The stack-pointer block reads
-// vax.KSP/ESP/SSP/USP/ISP (preg[0..4]) directly rather than the currently
-// active mode's live SP (GPR(SP)) — a quirk of the C source's own case 136
-// body, which prints those fields directly with no set_mode_stack() call
-// around it (contrast SHOW STACK's console_show.c case, which does call
-// set_mode_stack() and is ported via stackPointerFor for that reason); the
-// active mode's own preg[] slot is only refreshed when that mode is left,
-// so it reads stale here in both the C source and this port.
+// address" line.
 func (c *Console) ShowCPU() error {
 	if err := c.requireInit(); err != nil {
 		return err
@@ -489,10 +435,7 @@ func (c *Console) ShowCPU() error {
 }
 
 // ShowRegisterOrPrivReg implements the plain register/privileged-register
-// name shortcuts of SHOW (e.g. "SHOW R0", "SHOW PC", "SHOW P0BR") —
-// testdata/dcl/evax.dcl's show_types keywords with no /syntax= redirect of
-// their own, which stay on the bare SHOW verb (see dispatch.go's
-// bindGrammar).
+// name shortcuts of SHOW (e.g. "SHOW R0", "SHOW PC", "SHOW P0BR").
 func (c *Console) ShowRegisterOrPrivReg(name string) error {
 	if err := c.requireInit(); err != nil {
 		return err
@@ -516,9 +459,6 @@ func (c *Console) ShowRegisterOrPrivReg(name string) error {
 }
 
 // ShowMode prints the current privileged access mode, matching SHOW MODE.
-// Like the C source (`mode_names[ vax.pslw.cur_mod ]`), this indexes
-// purely by cur_mod and never reports "INTERRUPT" even if the interrupt
-// stack is currently active — a quirk of the C command, not this port.
 func (c *Console) ShowMode() error {
 	if err := c.requireInit(); err != nil {
 		return err
@@ -574,7 +514,7 @@ func (c *Console) ShowROM() error {
 }
 
 // ShowShim prints every RTL shim symbol (kernel.asm's `.shim` table, see
-// shim.go's ensureShims) matching shim.c's own shim_dump: for a nonzero
+// shim.go's ensureShims): for a nonzero
 // numeric-dispatch code, whether internal/corevms.Environment has a live
 // handler for it; for a code-0 entry, the already-assembled kernel.asm
 // routine it resolves to by name -- exactly shim_dump's own "resolves each
@@ -621,11 +561,7 @@ func (c *Console) ShowShim() error {
 }
 
 // ShowString walks kernel.asm's CONSOLE$STRINGPOOL linked list of VAX
-// string descriptors, matching SHOW STRING (console_show.c's own case
-// 121). Requires a booted microkernel (the pool's own symbols): reports an
-// error if they're undefined rather than the C source's !MKVALID gate,
-// since this port has no separate MKVALID-equivalent flag (see
-// docs/PHASE-16.md sub-phase 3's SET MKVALID entry).
+// string descriptors. Requires a booted microkernel.
 func (c *Console) ShowString() error {
 	if err := c.requireInit(); err != nil {
 		return err
@@ -709,12 +645,11 @@ func (c *Console) ShowString() error {
 
 // ShowPage reports one virtual address's page table entry (VALID/PROT/M/
 // OWNER/S/PFN, plus the physical address it resolves to and whether the
-// given access would be permitted), matching console_show.c's SHOW PAGE
-// (body is tracevm()) — a read-only diagnostic that reports a PTE's raw
-// contents even for a page a real access would refuse, unlike EXAMINE/
-// DEPOSIT which go through the enforcing internal/vm.Memory.Translate.
-// write selects /WRITE (the default is /READ, matching tracevm's own
-// mode==0 default).
+// given access would be permitted) - a read-only diagnostic that reports
+// a PTE's raw contents even for a page a real access would refuse,
+// unlike EXAMINE/DEPOSIT which go through the enforcing
+// internal/vm.Memory.Translate. The write flag selects /WRITE (the default
+// is /READ, matching tracevm's own mode==0 default).
 func (c *Console) ShowPage(addrExpr string, write bool) error {
 	if err := c.requireInit(); err != nil {
 		return err
@@ -839,11 +774,9 @@ func exceptionDesc(code cpu.Exception) string {
 }
 
 // ShowSCB dumps the 64 System Control Block exception-vector slots from
-// SCBB, matching showscb() (console_show.c). all requests every slot,
+// SCBB. The all flag  requests every slot,
 // including empty (zero) ones; the default only prints populated slots.
-// SCBB is a physical address (matching the C source's own MAPEN==0
-// override around this same read loop), read here the same way SHOW SCB's
-// C ancestor does.
+// SCBB is a physical address.
 func (c *Console) ShowSCB() error { return c.showSCB(false) }
 
 // ShowSCBAll implements SHOW SCB/ALL — see ShowSCB.
@@ -927,13 +860,10 @@ func (c *Console) showSCB(all bool) error {
 
 // ShowCallFrames walks the CALLS/CALLG frame chain from FP, printing
 // handler/mask/SPA/calltype/saved-AP/saved-FP/saved-PC/argument list per
-// frame, matching show_calls() (console_show.c). Decodes the mask
+// frame. Decodes the mask
 // longword using this port's own real-VAX-architecture bit layout (spa
 // bits 30-31, calltype bit 29, mask bits 16-27, psw bits 0-15 — see
-// internal/cpu/call.go's emulRet, the authoritative decode this mirrors),
-// not console_show.c's own union MASKREG bit-field declaration (a
-// different, C-compiler-bit-field-allocation-order-dependent layout that
-// has no bearing on what this port's own frames actually contain).
+// internal/cpu/call.go's emulRet, the authoritative decode this mirrors).
 func (c *Console) ShowCallFrames(countExpr string) error {
 	return c.ShowCalls(countExpr, false)
 }
@@ -1123,11 +1053,7 @@ func (c *Console) ShowCalls(countExpr string, symbolic bool) error {
 	return nil
 }
 
-// ShowRegions prints the P0/P1/S0 image-activation region limits, matching
-// SHOW REGIONS (console_show.c's own case 162, get_region_size loop) —
-// not to be confused with SHOW MEMORY's own internal show_regions() helper
-// (a different, unrelated dump; see docs/PHASE-16.md's own note on this
-// naming collision in the C source).
+// ShowRegions prints the P0/P1/S0 image-activation region limits.
 func (c *Console) ShowRegions() error {
 	if err := c.requireInit(); err != nil {
 		return err
@@ -1167,9 +1093,8 @@ func (c *Console) ShowSharePrefix() error {
 	return nil
 }
 
-// ShowImages lists every loaded image (main and sharable dependencies),
-// matching dump_icb_list (console_run.c). full adds each image's transfer
-// address(es) and dependency list.
+// ShowImages lists every loaded image (main and sharable dependencies).
+// The full flag adds each image's transfer address(es) and dependency list.
 func (c *Console) ShowImages(full bool) error {
 	if err := c.requireInit(); err != nil {
 		return err
@@ -1258,11 +1183,7 @@ func debugKind(icb *ICB) string {
 	return "  TRACEBACK"
 }
 
-// ShowSymbol prints one symbol's value, matching the single-name form of
-// SHOW SYMBOL (console_show.c's case 149). Unlike the C source, this
-// reports only the value and the attributes SymbolKind and Symbol track
-// (symbolKindLabel), not the C source's local/string distinctions (see
-// docs/PHASE-16.md sub-phase 1c). A name with VMS wildcards ("*", "%")
+// ShowSymbol prints one symbol's value. A name with VMS wildcards ("*", "%")
 // lists every symbol it matches instead, as ShowSymbols does; a name the
 // console's table lacks may still be a predefined system symbol
 // (asm.BuiltinSymbol).
@@ -1300,13 +1221,7 @@ func (c *Console) ShowSymbolsSystem(pattern string) error {
 }
 
 // ShowQuantum reports the interrupt-admission quantum countdown, matching
-// SHOW QUANTUM (console_show.c's case 128) — now portable per Phase 14's
-// own Engine.Quantum, see docs/PHASE-16.md sub-phase 1b. The C source's
-// second block (vax.uiquantum: a cooperative host-UI-event-polling
-// time-slice counter, relevant only to the C source's own Mac/Windows GUI
-// event pump) has no equivalent in this port — there is no such polling
-// loop to report on — so it's reported as not modeled rather than
-// replicated as a dead counter.
+// SHOW QUANTUM.
 func (c *Console) ShowQuantum() error {
 	if err := c.requireInit(); err != nil {
 		return err
@@ -1325,11 +1240,9 @@ func (c *Console) ShowQuantum() error {
 	return nil
 }
 
-// ShowClock reports the interval-clock/quantum state, matching SHOW CLOCK
-// (console_show.c's case 500) — now portable per Phase 14's own
-// ICR/NICR/ICCS state and Engine.Quantum, see docs/PHASE-16.md sub-phase
-// 1b. "clock_running" is exactly ICCS bit 0 (vax.h: "Copy of ICCS<0>"), so
-// this reads ICCS directly rather than needing a separate mirrored field.
+// ShowClock reports the interval-clock/quantum state.  "clock_running" is exactly
+// ICCS bit 0 (vax.h: "Copy of ICCS<0>"), so this reads ICCS directly rather than
+// needing a separate mirrored field.
 func (c *Console) ShowClock() error {
 	if err := c.requireInit(); err != nil {
 		return err
@@ -1379,11 +1292,7 @@ func (c *Console) ShowClock() error {
 }
 
 // ShowFault reports the fault/exception event history and pending device/
-// software interrupts, matching console_show.c's own SHOW FAULT case
-// (id 145): show_faults()'s history-ring dump (interrupt.c, now backed by
-// cpu.Engine.FaultHistory — see docs/PHASE-16.md's own fault-handling
-// follow-up) followed by Phase 14's own Engine.PendingInterrupts
-// (vax.interrupt_pending/vax.iqueue).
+// software interrupts.
 func (c *Console) ShowFault() error {
 	if err := c.requireInit(); err != nil {
 		return err
@@ -1436,32 +1345,9 @@ func (c *Console) ShowFault() error {
 	return nil
 }
 
-// ShowMap reports that this port has no RMS field-offset registry to
-// dump, matching SHOW MAP's intent (console_show.c's map_dump, over
-// structure_mapping.c's declarative FAB/RAB offset table) against a
-// deliberately different design: internal/rms (docs/PHASE-22.md) reads/
-// writes RMS struct fields directly at hardcoded Go offsets rather than
-// through a runtime registry (see that package's fab.go/rab.go) — there is
-// nothing for this command to dump, so it reports that rather than an empty
-// table.
-func (c *Console) ShowMap() error {
-	if err := c.requireInit(); err != nil {
-		return err
-	}
-
-	c.Printf("Not applicable to this port: RMS struct fields are read/written directly at\n")
-	c.Printf("hardcoded Go offsets (internal/rms/fab.go, rab.go), not through a runtime\n")
-	c.Printf("field-offset registry — see docs/PHASE-16.md sub-phase 1f.\n")
-
-	return nil
-}
-
-// tbModeNames matches vm.c's mode_name[] ({"READ", "WRITE"}), indexed by
-// the vm.AccessType a TB entry lets through (vm.TBEntry.Permits).
 var tbModeNames = [2]string{"READ", "WRITE"}
 
-// ShowTB implements SHOW TB, a direct port of console_show.c's case 155
-// plus vm.c's dump_tb(): the sequential translation cache's own try/hit/
+// ShowTB implements SHOW TB, the sequential translation cache's own try/hit/
 // miss/ratio line, whether TBDR has TB caching enabled, the 128-entry
 // translation buffer's own try/hit/miss/ratio/flush/pflush counters, and
 // one line per currently-populated TB slot. Ported as of Phase 21, which
@@ -1495,9 +1381,7 @@ func (c *Console) ShowTB() error {
 	// Each entry's MODE= says what a hit on it lets the CPU's current
 	// access mode do: "KERNEL WRITE" (reads and writes), "KERNEL READ"
 	// (reads; a write walks the page table, to set the page's modify bit
-	// or to fault), or "-NONE-" (every access walks). vm.c's dump_tb
-	// showed the one access type the entry was last checked for instead;
-	// govax's entries serve both (Study 1, R3 in docs/PERFORMANCE.md).
+	// or to fault), or "-NONE-" (every access walks).
 	curMod := c.CPU.PSL().CurMod()
 
 	for _, e := range c.Mem.TBSnapshot() {
@@ -1524,8 +1408,8 @@ func ratioPercent(tries, hits int64) int64 {
 	return int64(float64(hits) / float64(tries) * 100.0)
 }
 
-// accessAbbrev matches show_instructions()'s own operand-kind abbreviation
-// (console_show.c): "src"/"dst"/"mod"/"addr"/"br", "field" for a bit
+// accessAbbrev matches show_instructions()'s own operand-kind abbreviation:
+// "src"/"dst"/"mod"/"addr"/"br", "field" for a bit
 // field's base (OP_VA, which the generated table now uses; see
 // internal/cpu/gen's fieldBases), and "x" for anything else.
 func accessAbbrev(a cpu.AccessKind) string {
@@ -1573,8 +1457,7 @@ func sizeAbbrev(n int) string {
 	}
 }
 
-// ShowInstructions implements SHOW INSTRUCTIONS (console_show.c's case
-// 131 plus its own show_instructions() helper): with no qualifier, a
+// ShowInstructions implements SHOW INSTRUCTIONS: with no qualifier, a
 // four-per-line opcode/name grid (implemented instructions by default,
 // unimplemented with /UNIMPLEMENTED); with /ALL or an opcode filter, one
 // line per instruction with full operand access/size detail. /MODES and
@@ -1710,10 +1593,7 @@ func (c *Console) showInstructionsDetail(table *cpu.Table, opmatch int32) error 
 	return nil
 }
 
-// debugShowEntry is one row of ShowDebug's display, in the exact order
-// console_show.c's case 129 (SHOW DEBUG) prints them (console_show.c:439-564).
-// Not every SETDBG-settable name appears here — MEMORY/P1-P4 are settable
-// but never shown, matching the C source; see docs/PHASE-17.md.
+// debugShowEntry is one row of ShowDebug's display.
 type debugShowEntry struct {
 	flag vax.DebugFlags
 	name string
@@ -1721,32 +1601,31 @@ type debugShowEntry struct {
 }
 
 var debugShowEntries = []debugShowEntry{
-	{vax.DebugNative, "DEBUG", "Invoke native debugger?"},
-	{vax.DebugVM, "VM", "Debug virtual memory translations?"},
-	{vax.DebugTB, "TB", "Debug translation buffer caching?"},
-	{vax.DebugSymbols, "SYMBOLS", "Debug symbol table handling?"},
-	{vax.DebugExceptions, "EXCEPTIONS", "Debug exception handling?"},
-	{vax.DebugInterrupts, "INTERRUPTS", "Debug interrupt handling?"},
-	{vax.DebugCHM, "CHM", "Debug change-mode operations?"},
-	{vax.DebugRegisters, "REGISTERS", "Display changed registers on STEP?"},
-	{vax.DebugFullDisasm, "FULLDISASM", "Display operand values on disasm?"},
-	{vax.DebugUserHalt, "USERHALT", "HALT in user mode halts CPU?"},
-	{vax.DebugKeyboard, "KEYBOARD", "Debug console keyboard input?"},
-	{vax.DebugImages, "IMAGES", "Display image info on RUN command?"},
-	{vax.DebugServices, "SERVICES", "Debug P1 system service calls?"},
-	{vax.DebugDCL, "DCL", "Debug DCL parsing?"},
-	{vax.DebugExpand, "COMMAND", "Display command line expansions?"},
-	{vax.DebugLogicals, "LOGICALS", "Debug logical name operations?"},
-	{vax.DebugDevices, "DEVICES", "Debug device operations?"},
-	{vax.DebugProcess, "PROCESSES", "Debug process operations?"},
-	{vax.DebugLibinit, "LIBINIT", "Invoke LIB$INITIALIZE for images?"},
-	{vax.DebugRMS, "RMS", "Debug RMS operations?"},
-	{vax.DebugUserStep, "USERSTEP", "Step only affects USER mode?"},
+	{vax.DebugCHM, "CHM", "Debug change-mode operations"},
+	{vax.DebugExpand, "COMMAND", "Display command line expansions"},
+	{vax.DebugDCL, "DCL", "Debug DCL parsing"},
+	{vax.DebugNative, "DEBUG", "Invoke native debugger"},
+	{vax.DebugDevices, "DEVICES", "Debug device operations"},
+	{vax.DebugExceptions, "EXCEPTIONS", "Debug exception handling"},
+	{vax.DebugFullDisasm, "FULLDISASM", "Display operand values on disasm"},
+	{vax.DebugImages, "IMAGES", "Display image info on RUN command"},
+	{vax.DebugInterrupts, "INTERRUPTS", "Debug interrupt handling"},
+	{vax.DebugKeyboard, "KEYBOARD", "Debug console keyboard input"},
+	{vax.DebugLibinit, "LIBINIT", "Invoke LIB$INITIALIZE for images"},
+	{vax.DebugLogicals, "LOGICALS", "Debug logical name operations"},
+	{vax.DebugProcess, "PROCESSES", "Debug process operations"},
+	{vax.DebugRegisters, "REGISTERS", "Display changed registers on STEP"},
+	{vax.DebugRMS, "RMS", "Debug RMS operations"},
+	{vax.DebugServices, "SERVICES", "Debug P1 system service calls"},
+	{vax.DebugSymbols, "SYMBOLS", "Debug symbol table handling"},
+	{vax.DebugTB, "TB", "Debug translation buffer caching"},
+	{vax.DebugUserHalt, "USERHALT", "HALT in user mode halts CPU"},
+	{vax.DebugUserStep, "USERSTEP", "Step only affects USER mode"},
+	{vax.DebugVM, "VM", "Debug virtual memory translations"},
 }
 
-// ShowDebug implements SHOW DEBUG, matching console_show.c's case 129 and
-// its printbit helper: a bit that's set prints its plain name, a clear bit
-// prints "NO"+name, both followed by the flag's description.
+// ShowDebug implements SHOW DEBUG a bit that's set prints its plain name, 
+// a clear bit prints "NO"+name, both followed by the flag's description.
 func (c *Console) ShowDebug() error {
 	if err := c.requireInit(); err != nil {
 		return err
@@ -1769,7 +1648,7 @@ func (c *Console) ShowDebug() error {
 }
 
 // ShowTrace implements SHOW TRACE (also reached via the DISASSEMBLY
-// keyword), matching console_show.c's case 147.
+// keyword).
 func (c *Console) ShowTrace() error {
 	if err := c.requireInit(); err != nil {
 		return err

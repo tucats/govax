@@ -75,12 +75,10 @@ func (c *Console) ConsoleCommand(cmdLine string) uint32 {
 }
 
 // DCLPresent/DCLGetKeyword/DCLGetString/DCLGetInteger implement XFC$DCL's
-// four subfunctions — emul_xfc.c's own callback into dclrtl.c's
-// DCLpresent/DCLgetkeyword/DCLgetstring/DCLgetinteger, used by compiled
-// VAX code (chiefly the microkernel's own kernel.asm bootstrap, assembled
-// at vax_init time — see docs/PHASE-13.md) to ask the console's DCL parser
-// whether a qualifier was present on some other, already-parsed command
-// line and what value it carried.
+// four subfunctions, used by compiled VAX code (chiefly the microkernel's
+// own kernel.asm bootstrap, assembled at vax_init time — see docs/PHASE-13.md) 
+// to ask the console's DCL parser whether a qualifier was present on some 
+// other, already-parsed command line and what value it carried.
 //
 // Phase 08's DCL engine (internal/console/dcl) parses one complete command
 // line against the grammar as a single pass — it has no API for "re-open

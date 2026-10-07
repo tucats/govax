@@ -17,14 +17,12 @@ import (
 // treats the whole 8 bytes as one fixed magic value.
 var romMagic = [8]byte{';', 'R', 'O', 'M', 'I', 'M', 'G', '\r'}
 
-// SaveROM writes the console's ROM image to path in the binary format
-// save_binary.c's save_rom produces: the 8-byte magic, big-endian
-// base/end addresses, then a sequence of (big-endian ROM-relative offset,
-// big-endian page count [always 1], 512 bytes of page data) entries for
-// every non-all-zero 512-byte page, terminated by a zero-count entry —
-// matching reference/AUDIT.md's V1 finding that pins these fields to a
-// literal 4 bytes each (already reflected in the C source read for this
-// port, not a live bug to route around).
+// SaveROM writes the console's ROM image to path in the binary format:
+// the 8-byte magic, big-endian base/end addresses, then a sequence of
+// (big-endian ROM-relative offset, big-endian page count [always 1],
+// 512 bytes of page data) entries for every non-all-zero 512-byte page,
+// terminated by a zero-count entry — matching reference/AUDIT.md's V1
+// finding that pins these fields to a literal 4 bytes each.
 func (c *Console) SaveROM(path string) error {
 	if len(c.Engine.Memory().ROM) == 0 {
 		return vmserrors.New(vmserrors.RMS_NOIMAGE, "ROM")
@@ -151,7 +149,7 @@ func (c *Console) LoadROM(path string, noError bool) error {
 }
 
 // SaveNVRAM writes the console's NVRAM image to path, matching
-// save_binary.c's save_nvram: big-endian base address and size (no magic
+// NVRAM format: big-endian base address and size (no magic
 // header, and no per-page structure — the whole buffer is written at once).
 func (c *Console) SaveNVRAM(path string) error {
 	if len(c.Engine.Memory().NVRAM) == 0 {

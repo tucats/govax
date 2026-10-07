@@ -45,6 +45,7 @@ func TestAnalyzeCommand(t *testing.T) {
 // command, as govax analyze would.
 func TestRun_analyzeOneShot(t *testing.T) {
 	out := filepath.Join(t.TempDir(), "Hello.Anl")
+	
 	command, err := analyzeCommand([]string{"../../testdata/mar/vax/hello.obj"}, analyzeFlags{output: true, outputFile: out})
 	if err != nil {
 		t.Fatal(err)

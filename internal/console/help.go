@@ -6,15 +6,12 @@ import (
 	"strings"
 )
 
-// Help holds parsed HELP text, matching help.c's own vax.help file format
-// (documented in the file itself, internal/bootdata/files/vax.help -- the
-// single copy of this file; see that file's own History comment for why
-// there is no longer a separate testdata/dcl/vax.help): a "$"-prefixed
-// line marks a topic key (comma-separated 4-character, space-padded/
-// truncated tokens, one per HELP argument word); several consecutive "$"
-// lines with no text between them share the following body text (letting
-// synonyms like SHOW/SH point at the same section); body text runs until
-// the next "$" line or end of file.
+// Help holds parsed HELP text: a "$"-prefixed line marks a topic key
+// (comma-separated 4-character, space-padded/truncated tokens, one per
+// HELP argument word); several consecutive "$" lines with no text
+// between them share the following body text (letting synonyms like
+// SHOW/SH point at the same section); body text runs until the next
+// "$" line or end of file.
 type Help struct {
 	sections map[string]string // key (no leading '$', trimmed) -> body text
 }
@@ -94,10 +91,9 @@ func normalizeHelpToken(tok string) string {
 	return tok + strings.Repeat(" ", 4-len(tok))
 }
 
-// helpKey builds the "$"-line key for a HELP command's argument words,
-// matching help.c's read_verb-based key construction: each word is
-// normalized (normalizeHelpToken) and joined by commas; no arguments at
-// all maps to the literal key "HELP".
+// helpKey builds the "$"-line key for a HELP command's argument words: 
+// each word is normalized (normalizeHelpToken) and joined by commas; 
+// no arguments at all maps to the literal key "HELP".
 func helpKey(words []string) string {
 	if len(words) == 0 {
 		return "HELP"
@@ -136,9 +132,8 @@ func normalizeHelpKey(raw string) string {
 
 // Help implements the HELP console command against h (a nil Help, or a
 // topic with no matching section, prints a "no help available" message
-// rather than erroring — matching help.c's own VAX_NOHELPFILE/VAX_NOHELP
-// being non-fatal console messages, not something that aborts the
-// command loop).
+// rather than erroring — VAX_NOHELPFILE/VAX_NOHELP being non-fatal 
+// console messages, not something that aborts the command loop).
 func (c *Console) Help(h *Help, words []string) error {
 	if h == nil {
 		c.Printf("No help file available\n")
@@ -147,13 +142,13 @@ func (c *Console) Help(h *Help, words []string) error {
 	}
 
 	key := helpKey(words)
-	
+
 	c.Printf("\n")
 
 	body, ok := h.sections[key]
 	if !ok {
 		c.Printf("No help available for that topic\n")
-		
+
 		return nil
 	}
 

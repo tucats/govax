@@ -203,8 +203,7 @@ func vminitConsoleForStrings(t *testing.T) *Console {
 	return c
 }
 
-// TestEvaluator_quotedString matches asm_expr3's own '"' case
-// (reference/eVAX/eVAX/Source/Assembler/asm_expr.c): a quoted string
+// TestEvaluator_quotedString matches asm_expr3's own '"' case: a quoted string
 // literal builds a VAX string descriptor in the console string pool and
 // evaluates to that descriptor's address.
 func TestEvaluator_quotedString(t *testing.T) {
@@ -383,8 +382,8 @@ func TestEvaluator_quotedStringOverflow(t *testing.T) {
 	}
 }
 
-// TestEvaluator_registers: a register name is its contents (Phase 42's
-// bug 7), in either case and with the debugger's "%", and "." or "@" before
+// TestEvaluator_registers: a register name is its contents (Phase 42's bug 7),
+// in either case and with the debugger's "%", and "." or "@" before
 // one gives the same; before anything else they read the longword there.
 func TestEvaluator_registers(t *testing.T) {
 	cpu := vax.New()

@@ -1,9 +1,5 @@
 package corevms
 
-// Port of librtl_utils.c's string/buffer marshaling helpers, used throughout
-// this package's shims and services wherever the C source calls
-// store_string/load_string/load_dstring/str_get/str_put.
-
 // maxCStringLen mirrors load_dstring's own hardcoded scan bound (65535) for
 // a string with no caller-supplied length limit.
 const maxCStringLen = 65535

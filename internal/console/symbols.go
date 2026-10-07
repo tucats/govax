@@ -6,18 +6,13 @@ import (
 	"github.com/tucats/govax/internal/symtab"
 )
 
-// SymbolKind says who defined a symbol, matching the categories
-// reference/eVAX/eVAX/Source/Console/console_show.c's SHOW SYMBOL and
-// console_clear.c's CLEAR SYMBOL distinguish (system symbols like
-// CONSOLE$SCRATCH survive a VMINIT/CLEAR SYMBOL/ALL that wipes user-defined
-// ones; see console_vminit.c's "doesn't include reserved symbols with a $
-// character" comment). It's the argument to SymbolTable.Set; a stored
-// symbol records it as symtab.System.
+// SymbolKind says who defined a symbol.
 type SymbolKind int
 
 const (
 	SymbolUser SymbolKind = iota
 	SymbolSystem
+	SymbolDCL // Used by symbols created in the console via DCL ":=" syntax
 )
 
 // Symbol is one entry in a SymbolTable: a symtab.Symbol, whose flags hold
@@ -28,8 +23,7 @@ const (
 //   - Entry: defined by .ENTRY (or a .SHIM stub) or SET/ENTRY -- SYM_ENTRY
 //     in the C reference. SHOW SYMBOL displays it, and Disassemble/
 //     traceStep consult it (via EntryAt) to recognize a routine's
-//     register-save mask word instead of misdecoding it as an instruction
-//     (matching decode_opcode.c's own SYM_ENTRY scan).
+//     register-save mask word instead of misdecoding it as an instruction.
 //   - Permanent: defined with SET/PERMANENT -- SYM_PERMANENT in the C
 //     reference. CLEAR SYMBOL/TEMPORARY (ClearTemporary) removes every
 //     user symbol without it.
@@ -129,9 +123,9 @@ func (t *SymbolTable) FindByValue(v uint32) (string, bool) {
 
 // EntryAt returns the name of an entry-point symbol whose value equals
 // addr (the first by name when more than one matches), or ("", false) if
-// none — matching decode_opcode.c's own SYM_ENTRY scan by PC. Used by
-// Disassemble/traceStep to recognize a routine's register-save mask word
-// at its .ENTRY address instead of decoding it as an instruction.
+// none. Used by Disassemble/traceStep to recognize a routine's 
+// register-save mask word at its .ENTRY address instead of decoding
+// it as an instruction.
 func (t *SymbolTable) EntryAt(addr uint32) (string, bool) {
 	if s, ok := t.t.At(addr, (*Symbol).IsEntry); ok {
 		return s.Name, true
@@ -152,10 +146,9 @@ func (t *SymbolTable) ClearAll() {
 }
 
 // ClearTemporary removes every non-permanent user symbol, matching CLEAR
-// SYMBOL/TEMPORARY (console_clear.c's clear_temp_symbols) — a permanent one
-// (SET/PERMANENT) survives, as does every system symbol. Returns the count
-// removed, matching CLEAR SYMBOL/ALL's own report convention (see
-// ClearSymbol, misc.go).
+// SYMBOL/TEMPORARY — a permanent one (SET/PERMANENT) survives, as does 
+// every system symbol. Returns the count removed, matching CLEAR SYMBOL/ALL's
+// own report convention (seeClearSymbol, misc.go).
 func (t *SymbolTable) ClearTemporary() int {
 	return t.t.DeleteIf(func(s *Symbol) bool { return !s.IsSystem() && !s.IsPermanent() })
 }

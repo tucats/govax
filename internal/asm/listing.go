@@ -79,7 +79,7 @@ type listLine struct {
 
 	// collected says the line was taken into a macro definition or
 	// repeat block being collected, not assembled; skipped says a
-	// conditional left it out; and continued says the statement goes on
+	// conditional left it out; and continued says the statement goes
 	// on the next line.
 	collected bool
 	skipped   bool

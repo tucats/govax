@@ -338,7 +338,7 @@ type ImageInfo struct {
 // Images returns the loaded images, main image first, as the debugger's
 // SHOW IMAGE lists them.
 func (c *Console) Images() []ImageInfo {
-	var out []ImageInfo
+	out := make([]ImageInfo, 0)
 
 	for _, icb := range c.ICBList {
 		// The image's first address is its lowest section's: the load

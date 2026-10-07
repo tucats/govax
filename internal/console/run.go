@@ -50,10 +50,6 @@ type RunOptions struct {
 // transfers control to the main image's own entry point -- optionally
 // calling each dependency's LIB$INITIALIZE entry point first -- via a small
 // synthesized IMAGE$INIT driver procedure run through Console.Call.
-// Matches console_run.c's own strategy; see docs/PHASE-13.md's "Key
-// finding" for why none of this needs a real assembler, just the same
-// CALLS/PUSHL opcode bytes a real assembler would produce, written
-// directly.
 func (c *Console) Run(fn string, opts RunOptions) error {
 	if err := c.requireInit(); err != nil {
 		return err
@@ -77,7 +73,7 @@ func (c *Console) Run(fn string, opts RunOptions) error {
 		return err
 	}
 
-	// console_run.c restores the caller's mode here -- before building and
+	// Restores the caller's mode here -- before building and
 	// running IMAGE$INIT, not after -- so the loaded program executes in
 	// whatever mode RUN itself was invoked from.
 	c.Engine.SetModeStack(savedMode, false)
@@ -193,8 +189,7 @@ func (c *Console) activateImage(fn string) (*ICB, error) {
 
 // DefaultRunInits reports RUN's own default for whether to invoke each
 // dependency's LIB$INITIALIZE before any /INIT or /NOINIT qualifier
-// overrides it, matching console_run.c:208's `run_inits = vax.debug &
-// DBG_LIBINIT` -- DebugLibinit defaults on (vax.DebugDefault), so
+// overrides it, DebugLibinit defaults on (vax.DebugDefault), so
 // LIB$INITIALIZE runs by default, not only when /INIT is given explicitly.
 // See commands.go's runOptions, which applies the qualifiers.
 func (c *Console) DefaultRunInits() bool {
@@ -258,11 +253,7 @@ func (c *Console) buildImageInitDriver(main *ICB, runInits bool) (uint32, bool, 
 				c.Printf("Preparing call to LIB$INITIALIZE entry %08X for image %s\n", initAddr, dep.Name)
 			}
 			// LIBRTL's LIB$INITIALIZE apparently wants 100 as a special
-			// flag argument -- console_run.c's own comment says as much
-			// without explaining why; every other dependency gets 0
-			// (matching the C source's own hardcoded-0 third argument,
-			// not the commented-out "icb->transfer[0]" it never actually
-			// used). Replicated as-is.
+			// flag argument.
 			flag := uint32(0)
 			if dep.Name == "LIBRTL" {
 				flag = 100

@@ -11,12 +11,10 @@ import (
 // <offset>` pseudo-op table. code selects the numeric XFC$SHIM dispatch
 // (internal/corevms.ShimTable, already fully implemented by Phase 10) a
 // sharable image's real routine at (library, offset) is replaced by --
-// *except* when code is 0. asm_pseudo.c's own `.SHIM` handling (case 33)
-// branches on exactly this: a nonzero code synthesizes a small dispatch
-// stub (MOVL #code,R0 / XFC #0x7D / RET) and points SHIM$<library>_<offset>
-// at it; code 0 means there's no numeric dispatch at all for this routine
-// -- instead the pseudo-op does a plain `get_symbol(name)` and points
-// SHIM$<library>_<offset> directly at *that* symbol's existing address.
+// *except* when code is 0. code 0 means there's no numeric dispatch at
+// all for this routine -- instead the pseudo-op does a plain 
+// `get_symbol(name)` and points SHIM$<library>_<offset> directly at 
+// *that* symbol's existing address.
 //
 // This matters because kernel.asm's own second `.shim` table (lines
 // ~1546-1555) exclusively uses code 0 for routines it implements as real,
@@ -35,8 +33,7 @@ import (
 // "JSB to a HALT instruction" symptom this fix addresses. name is the
 // routine's own label as kernel.asm spells it (case-insensitive; symbol
 // lookup upcases), needed for both branches (code!=0 also defines this bare
-// name as a second symbol pointing at its own synthesized stub, matching
-// asm_pseudo.c's own `set_symbol(&bp, vax.console.deposit, SYM_ENTRY)` --
+// name as a second symbol pointing at its own synthesized stub.
 // SHOW SYMBOL's existing "(system, entry)" outputs for e.g. DECC$EXIT are
 // this project's kernel.asm doing exactly that already for the code==0
 // routines; ensureShims now does the equivalent for the code!=0 ones).
@@ -115,8 +112,7 @@ var baseShims = []shimEntry{
 // shimStubSize is the length in bytes of one synthesized stub: a 2-byte
 // (empty) entry mask, MOVL #code,R0 (6 bytes: opcode, immediate-mode byte,
 // 4-byte code), XFC #0x7D (2 bytes: opcode, immediate operand byte), RET
-// (1 byte) -- matching asm_pseudo.c's own `.SHIM` code-generation case 33
-// byte-for-byte.
+// (1 byte).
 const shimStubSize = 12
 
 // shimPageBytes is the space VMInit reserves for the stubs (vminit.go): one

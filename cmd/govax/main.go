@@ -1,25 +1,14 @@
-// Command govax is the interactive entry point for the VAX emulator —
-// the Go equivalent of reference/eVAX/eVAX/Source/Console/driver.c's
-// main(), matching its startup sequence (load the DCL grammar, allocate a
-// minimal machine, run vax.init as the real startup script, then prompt)
-// — see docs/PHASE-08.md's progress log for one deliberate departure from
-// driver.c: prompted input (via github.com/chzyer/readline for
-// history/editing, named explicitly in docs/PHASE-08.md's scope note,
-// rather than a bare fgets(stdin)).
+// Command govax is the interactive entry point for the VAX emulator. Its
+// job is toload the DCL grammar, allocate a minimal machine, run vax.init
+// as the real startup script, then prompt for console input.
 //
 // File location (console.dcl/vax.help/vax.init/kernel.asm/ssdef.asm, and any
-// other file a console command names) is docs/PHASE-15.md's own departure
-// from driver.c's hard CWD-relative "console.dcl" lookup: a repeatable -path
-// flag names directories searched, in order, after the name exactly as
-// given; an embedded copy of the required startup files
+// other file a console command names) is described in docs/PHASE-15.md's
+// repeatable -path flag, which names directories searched, in order, after
+// the name exactly as given; an embedded copy of the required startup files
 // (internal/bootdata) is always the last, implicit search location, so
 // "govax" with no -path flags at all still boots correctly with no
 // testdata/ checkout nearby.
-//
-// -instruction-limit/-time-limit (docs/PHASE-15.md's sub-phase 2, no C
-// reference equivalent) bound how long a single GO/CALL/STEP command may
-// run the emulated CPU, so a runaway program under development doesn't
-// hang the session; both default to unlimited.
 package main
 
 import (
@@ -47,9 +36,8 @@ import (
 	"golang.org/x/text/message"
 )
 
-// minimumVAXMemory matches driver.c's own MINIMUM_VAX_MEMORY (2048 pages,
-// 1MB): the minimal machine allocated before vax.init runs and does the
-// real INIT/VMINIT.
+// minimumVAXMemory is the minimal machine allocated before vax.init
+// runs and does the real INIT/VMINIT.
 const minimumVAXMemory = 2048 * 512
 
 // Version string. This is injected by the build tool by default, but defaults
@@ -311,15 +299,8 @@ func run(paths []string, instructionLimit int, timeLimit time.Duration, out io.W
 		aborted := func() bool { return attn != nil && attn.abortRequested() }
 
 		for c.Running() && !aborted() {
-			// driver.c's own prompt switches from "VAX> " to "ASM> " while a
-			// bare ASM command has put the console into interactive assembler
-			// mode (docs/PHASE-19.md) -- the ASM_ADDRPROMPT variant that also
-			// shows the current deposit address isn't implemented (off by
-			// default in the reference tool; see PHASE-19.md's own scope note).
-			// The debugger's session has its own prompt too, as the VMS
-			// debugger's does. Assembler mode comes first, as it does in
-			// Dispatcher.Dispatch. The console's own prompt is asked for
-			// each time, since SET PROMPT can change it.
+			// Wwitches between console, debugger,and mini-assembler prompts.
+			// The console prompt can be set via a SET PROMPT command.
 			prompt := c.Prompt()
 
 			if c.InAssemblerMode() {
@@ -340,6 +321,7 @@ func run(paths []string, instructionLimit int, timeLimit time.Duration, out io.W
 			}
 
 			line, err := rl.Readline()
+
 			if aborted() {
 				break
 			}

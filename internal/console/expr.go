@@ -12,8 +12,7 @@ import (
 
 // Evaluator parses console address/value expressions — a small, from-scratch
 // stand-in for the real assembler's asm_expr/asm_expr2/asm_expr3/asm_hex/
-// asm_dec (reference/eVAX/eVAX/Source/Assembler/asm_expr.c, asm_value.c),
-// which is Phase 11's scope, not this one's (see doc.go). It supports the
+// asm_dec, which is Phase 11's scope, not this one's (see doc.go). It supports the
 // subset console commands actually need: numeric literals in the current
 // radix (or a "^D"/"^X"/"^O"/"^B" prefix override, matching asm_hex/
 // asm_dec's radix-prefix handling), symbol names, "." for the current
@@ -22,7 +21,7 @@ import (
 // same precedence levels asm_expr's three-tier grammar uses. Register names
 // and indirect (@) register/PSL references are not supported — EXAMINE/
 // DEPOSIT special-case a bare register name themselves before ever calling
-// the evaluator (matching console_exam.c's own register short-circuit).
+// the evaluator.
 //
 // Phase 42 adds what the VMS debugger's address expressions use: a register
 // name (R0 to R11, AP, FP, SP, PC, PSL, and the debugger's %R0 spelling) is
@@ -619,13 +618,13 @@ func registerValue(e *Evaluator, name string) (uint32, bool) {
 }
 
 // parseQuotedString parses a double-quoted string literal, matching
-// asm_expr3's own '"' case (reference/eVAX/eVAX/Source/Assembler/
-// asm_expr.c): it appends the string's bytes into the console string pool
-// (CONSOLE$STRINGPOOL_BASE/_SIZE, reserved by VMInit -- see vminit.go),
-// builds a VAX string descriptor for it, links the descriptor onto the
-// pool's singly linked chain (the same chain ShowString walks via
-// CONSOLE$STRINGPOOL_BASE's head-of-chain longword), and returns the
-// descriptor's address as the expression's value.
+// asm_expr3's own '"' case: it appends the string's bytes into the
+// console string pool (CONSOLE$STRINGPOOL_BASE/_SIZE, reserved by 
+// VMInit -- see vminit.go), builds a VAX string descriptor for it,
+// links the descriptor onto the pool's singly linked chain (the 
+// same chain ShowString walks via CONSOLE$STRINGPOOL_BASE's 
+// head-of-chain longword), and returns the descriptor's address as
+// the expression's value.
 //
 // The pool layout, per string, mirrors the C source exactly: a 4-byte
 // "link" cell (initially zero, later overwritten with this string's own

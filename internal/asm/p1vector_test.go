@@ -16,15 +16,13 @@ func TestPseudoP1VectorRequiresMicrokernel(t *testing.T) {
 	}
 }
 
-// TestPseudoP1VectorIsIdempotent matches p1_init()'s own real behavior
-// (asm_symbols.c's set_symbol only rejects a redefinition when the caller
-// has separately raised ASM_UNIQUE beforehand, which set_symbol_direct's
-// call sites in p1_init() never do): running .P1VECTOR twice against the
-// same Assembler -- whether from one source ASMing ".P1VECTOR" twice, or
-// (the real scenario this matters for) a persistent console session that
-// already booted kernel.asm's own ".p1vector" line ASMing a second file
-// that also has one, e.g. testdata/asm/rms_roundtrip.asm outside full
-// console boot -- must not fail with a duplicate-symbol error.
+// TestPseudoP1VectorIsIdempotent matches p1_init()'s own real behavior:
+// running .P1VECTOR twice against the same Assembler -- whether from one
+// source ASMing ".P1VECTOR" twice, or (the real scenario this matters for)
+// a persistent console session that already booted kernel.asm's own
+// ".p1vector" line ASMing a second file that also has one, e.g.
+// testdata/asm/rms_roundtrip.asm outside full console boot -- must not
+// fail with a duplicate-symbol error.
 func TestPseudoP1VectorIsIdempotent(t *testing.T) {
 	a := New(true)
 

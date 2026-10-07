@@ -5,9 +5,7 @@ import (
 	"github.com/tucats/govax/internal/vm"
 )
 
-// This is the Go port of emul_bitfield.c's field instructions: EXTV/EXTZV,
-// CMPV/CMPZV, INSV, FFS/FFC. The bit-branch instructions that live in the
-// same C file (BBS/BBC/BBSS/BBCS/BBSC/BBCC/BBSSI/BBCCI) are in bitbranch.go.
+// Bit-field instructions: EXTV/EXTZV, CMPV/CMPZV, INSV, FFS/FFC.
 //
 // All six instructions share a position/size/base operand triplet: base is
 // either a register (the field lives in one or two adjacent registers) or a
@@ -32,8 +30,7 @@ func init() {
 }
 
 // bitFieldMask returns the low-order size-bit mask (0 for size <= 0, all 32
-// bits for size >= 32), avoiding the undefined-in-Go 1<<32 shift emul_bit-
-// field.c's own (1 << size) - 1 formula would need for a full-width field.
+// bits for size >= 32).
 func bitFieldMask(size int) uint32 {
 	if size <= 0 {
 		return 0
@@ -47,9 +44,6 @@ func bitFieldMask(size int) uint32 {
 }
 
 // signExtendBitField sign-extends a size-bit field value to a full 32 bits.
-// Port of emul_bitfield.c's bit_sext, avoided for size 0 (where the C
-// source's 1 << (size-1) shifts by -1, undefined behavior it happens to get
-// away with because the value is 0 regardless of the shift's outcome).
 func signExtendBitField(value uint32, size int) uint32 {
 	if size <= 0 || size >= 32 {
 		return value
@@ -113,10 +107,7 @@ func storeField(e *Engine, base Operand, position int32, size int, data uint32) 
 }
 
 // getRegisterField reads a size-bit field starting at bit position of the
-// register pair base/base+1. Port of emul_bitfield.c's get_register_field,
-// with its cross-register split arithmetic corrected -- see
-// docs/DEVIATIONS.md ("get_register_field/set_register_field split a field
-// one bit short of the base register").
+// register pair base/base+1.
 func getRegisterField(cpu *vax.CPU, position int32, size int, base vax.Reg) (uint32, error) {
 	if size < 0 || size > 32 || position < 0 || position > 31 || (base == vax.PC && int(position)+size > 31) {
 		return 0, &Fault{Code: ExcReservedOp}
@@ -136,8 +127,7 @@ func getRegisterField(cpu *vax.CPU, position int32, size int, base vax.Reg) (uin
 }
 
 // setRegisterField is getRegisterField's write-side counterpart, used by
-// INSV. Port of emul_bitfield.c's set_register_field, with the same
-// cross-register split fix.
+// INSV.
 func setRegisterField(cpu *vax.CPU, position int32, size int, base vax.Reg, data uint32) error {
 	if size < 0 || size > 32 || position < 0 || position > 31 || (base == vax.PC && int(position)+size > 31) {
 		return &Fault{Code: ExcReservedOp}
@@ -164,20 +154,14 @@ func setRegisterField(cpu *vax.CPU, position int32, size int, base vax.Reg, data
 
 // bitFieldByteSpan returns the byte address of the first byte touched by a
 // size-bit field at bit displacement position from base, and the field's bit
-// offset within that first byte -- the position>>3 / position&7 split
-// emul_bitfield.c's get_memory_field/set_memory_field both use, computed
-// once and shared by their Go ports below.
+// offset within that first byte.
 func bitFieldByteSpan(base uint32, position int32) (addr uint32, bitOff uint) {
 	return base + uint32(position>>3), uint(uint32(position) & 7)
 }
 
 // getMemoryField reads a size-bit field at bit displacement position from
 // base, byte-addressed and little-endian (bit 0 of the field is the
-// low-order bit of the byte at addr). Port of emul_bitfield.c's
-// get_memory_field, replacing its bit-by-bit loop with an equivalent
-// load-then-shift-then-mask (at most 5 bytes for a 32-bit field at any
-// sub-byte offset) -- same result, no ISA behavior to preserve in the loop
-// shape itself.
+// low-order bit of the byte at addr).
 func getMemoryField(cpu *vax.CPU, mem *vm.Memory, position int32, size int, base uint32) (uint32, error) {
 	if size < 0 || size > 32 {
 		return 0, &Fault{Code: ExcReservedOp}
@@ -205,10 +189,6 @@ func getMemoryField(cpu *vax.CPU, mem *vm.Memory, position int32, size int, base
 }
 
 // setMemoryField is getMemoryField's write-side counterpart, used by INSV.
-// Port of emul_bitfield.c's set_memory_field, reading the whole affected
-// byte span, merging data into it, and writing it back -- equivalent to
-// (and simpler than) the C source's write-as-you-go per-byte loop, since
-// nothing else can observe memory mid-instruction.
 func setMemoryField(cpu *vax.CPU, mem *vm.Memory, position int32, size int, base uint32, data uint32) error {
 	if size < 0 || size > 32 {
 		return &Fault{Code: ExcReservedOp}
@@ -246,8 +226,7 @@ func setMemoryField(cpu *vax.CPU, mem *vm.Memory, position int32, size int, base
 
 // emulExtv is EXTV/EXTZV: a size-bit field at position from base is
 // extracted (sign-extended for EXTV, zero-extended for EXTZV) and stored in
-// the destination longword. N/Z from the result, V <- 0, C <- 0 -- per the
-// manual and emul_bitfield.c's emul_extv.
+// the destination longword. N/Z from the result, V <- 0, C <- 0.
 func emulExtv(e *Engine, d *Decoded) error {
 	position, size, err := fieldOperands(e.cpu, e.mem, d.Operands[0], d.Operands[1])
 	if err != nil {
@@ -276,8 +255,7 @@ func emulExtv(e *Engine, d *Decoded) error {
 // emulCmpv is CMPV/CMPZV: a size-bit field at position from base is
 // extracted (sign-extended for CMPV, zero-extended for CMPZV) and compared
 // with the fourth (longword) operand; neither operand is modified. N/Z/C
-// from the comparison, V <- 0 -- per the manual and emul_bitfield.c's
-// emul_cmpv.
+// from the comparison, V <- 0.
 func emulCmpv(e *Engine, d *Decoded) error {
 	position, size, err := fieldOperands(e.cpu, e.mem, d.Operands[0], d.Operands[1])
 	if err != nil {
@@ -311,8 +289,7 @@ func emulCmpv(e *Engine, d *Decoded) error {
 
 // emulInsv is INSV: the low size bits of the first (longword) operand are
 // written into the size-bit field at position from base. Condition codes
-// are unaffected -- emul_bitfield.c's emul_insv never touches vax.pslw,
-// matching the manual (INSV isn't listed as affecting N/Z/V/C).
+// are unaffected.
 func emulInsv(e *Engine, d *Decoded) error {
 	data, err := d.Operands[0].Load(e.cpu, e.mem)
 	if err != nil {
@@ -330,9 +307,8 @@ func emulInsv(e *Engine, d *Decoded) error {
 // emulFf is FFS/FFC: the size-bit field at position from base is searched,
 // low bit first, for the first bit set (FFS) or clear (FFC); the
 // destination is written with the position of that bit (or position+size if
-// none matched). Z <- {a match was found}, N <- 0, V <- 0, C <- 0 -- per the
-// manual and emul_bitfield.c's emul_ff. A zero-size field is a special case
-// per the C source: no search is performed, Z is unconditionally set, and
+// none matched). Z <- {a match was found}, N <- 0, V <- 0, C <- 0. A zero-size
+// field is a special case: no search is performed, Z is unconditionally set, and
 // the destination gets position back unchanged.
 func emulFf(e *Engine, d *Decoded) error {
 	position, size, err := fieldOperands(e.cpu, e.mem, d.Operands[0], d.Operands[1])
@@ -369,7 +345,7 @@ func emulFf(e *Engine, d *Decoded) error {
 
 			return d.Operands[3].Store(e.cpu, e.mem, uint64(uint32(position)+uint32(n)))
 		}
-		
+
 		field >>= 1
 	}
 

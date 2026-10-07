@@ -205,6 +205,7 @@ func TestMacro_starletSources(t *testing.T) {
 	dir := t.TempDir()
 	src := filepath.Join(dir, "prog.mar")
 	objPath := filepath.Join(dir, "prog.obj")
+	
 	writeHostFile(t, src, "\tWHICH\n\t.END\n")
 
 	if err := c.Macro(MacroOptions{Source: src}); err != nil {

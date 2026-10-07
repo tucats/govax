@@ -91,7 +91,7 @@ func TestMachineStateOracle(t *testing.T) {
 		if strings.HasPrefix(cmd, "SHOW CALLS") && n+1 < len(entries) {
 			want = append([]string{" " + entries[n+1].command}, entries[n+1].output...)
 		}
-		
+
 		got := strings.Split(strings.TrimSuffix(stripAccessMode(out), "\n"), "\n")
 
 		// The log's blank lines are the ones in the middle of SHOW
@@ -272,7 +272,7 @@ func TestMachineShowAndSet(t *testing.T) {
 	// The stack dumps and the others take nothing, or a count.
 	for _, cmd := range []string{
 		"SHOW SP", "SHOW KSP 2", "SHOW CPU_STATUS", "SHOW TB", "SHOW MEMORY", "SHOW SCB",
-		"SHOW EXCEPTIONS", "SHOW REGIONS", "SHOW MAPS", "SHOW CLOCK",
+		"SHOW EXCEPTIONS", "SHOW REGIONS", "SHOW CLOCK",
 	} {
 		if _, err := sayErr(c, cmd); err != nil {
 			t.Errorf("%s: %v", cmd, err)
@@ -280,7 +280,7 @@ func TestMachineShowAndSet(t *testing.T) {
 	}
 
 	// CANCEL, and CLEAR as its synonym.
-	for _, cmd := range []string{"CANCEL TB", "CLEAR TB", "CANCEL INTERRUPT/ALL", "CANCEL MEMORY/STATISTICS"} {
+	for _, cmd := range []string{"CANCEL TB", "CLEAR TB", "CANCEL INTERRUPT/ALL"} {
 		if _, err := sayErr(c, cmd); err != nil {
 			t.Errorf("%s: %v", cmd, err)
 		}

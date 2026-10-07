@@ -4,8 +4,7 @@ import "testing"
 
 // TestForwardReferenceFixups exercises every fixup kind's patch-in
 // behavior directly against the symbol table, independent of the operand
-// encoder that normally drives it — matching set_symbol()'s fixup switch
-// in asm_symbols.c.
+// encoder that normally drives it.
 func TestForwardReferenceFixups(t *testing.T) {
 	cases := []struct {
 		name   string

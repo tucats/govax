@@ -177,11 +177,7 @@ func TestChf_handlerContinuesResumesAtOriginalFaultPC(t *testing.T) {
 
 // TestChf_handlerDeclinesRestoresRegistersAndKeepsSearching checks that a
 // declining handler (even R0, SS$_CONTINUE's bit 0 clear) doesn't stop the
-// search or leak its own register writes into the next frame's attempt --
-// this also exercises the fix to interrupt.c's own `rc && 0x00000001` typo
-// (see invokeHandler's doc comment): with the original `&&`, this handler's
-// nonzero-but-even return code (2) would have been wrongly treated as
-// "continue".
+// search or leak its own register writes into the next frame's attempt.
 func TestChf_handlerDeclinesRestoresRegistersAndKeepsSearching(t *testing.T) {
 	c, base := newCHFConsole(t)
 

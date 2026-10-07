@@ -13,14 +13,12 @@ import (
 )
 
 // defaultOrigin is the P0 deposit/PC location a fresh assembly starts at,
-// matching initialization.c's vax.console.deposit/p0_deposit default
-// (0x200) — the first 512 bytes of a real VAX's low memory are reserved
+// The first 512 bytes of a real VAX's low memory are reserved
 // (interrupt/exception vectors, restart parameter block, ROM scratch), so
 // ordinary code and data start just past them.
 const defaultOrigin = 0x200
 
-// defaultS0Base is the initial S0 deposit location, matching
-// initialization.c's vax.console.s0_deposit — the base of S0 (system)
+// defaultS0Base is the initial S0 deposit location, the base of S0 (system)
 // virtual address space.
 const defaultS0Base = 0x80000000
 
@@ -39,9 +37,8 @@ type Assembler struct {
 
 	// p0 and s0 are the console dialect's two absolute sections, based at
 	// the configured P0 origin (SetOrigin) and S0 origin (SetS0Origin).
-	// cur is the one output goes to; .REGION switches it, matching
-	// asm_pseudo.c's case 27, which swapped the active deposit counter
-	// (vax.console.deposit) with its saved counterpart.
+	// cur is the one output goes to; .REGION switches it between the active
+	// deposit counter and its saved counterpart.
 	p0  *section
 	s0  *section
 	cur *section
@@ -86,7 +83,7 @@ type Assembler struct {
 	// events is the MACRO dialect's output, in source order (see
 	// outEvent).
 	events []outEvent
-	// cased is the statement statement last returned, with its case as
+	// cased is the statement last returned, with its case as
 	// written (see preprocessCase).
 	cased string
 	// stmt numbers statements as they're assembled, so a store can tell
@@ -158,7 +155,7 @@ type Assembler struct {
 
 	// macros is the macro table, keyed by macro name (see macros.go), and
 	// defining the definition whose lines are being collected, or nil.
-	macros   map[string]*macroDef
+	macros map[string]*macroDef
 	// libraries are the macro libraries searched after the ones
 	// .LIBRARY names (dotLibraries, in the order named), and
 	// libraryResolver opens those (see maclib.go). Each is kept with
@@ -171,7 +168,7 @@ type Assembler struct {
 	// listing's statistics (listclose.go).
 	phases        [phaseCount]PhaseTime
 	objectRecords int
-	defining *definition
+	defining      *definition
 	// createdLabel is the number of the next created local label a
 	// macro call makes up (see bind).
 	createdLabel int
@@ -289,14 +286,13 @@ func (a *Assembler) SetIncludeResolver(resolve func(name string) (string, error)
 func (a *Assembler) Entry() (uint32, bool) { return a.entryAddr, a.entrySeen }
 
 // TakeEntry is Entry, plus clearing the "an entry was named" flag it
-// reports -- matching asm_pseudo.c's own ASM_ENTRY flag, which console.c's
-// post-command hook clears (`vax.assembler.flags &= ~ASM_ENTRY`) the moment
+// reports, which the console's post-command hook clears the moment
 // it fires the one-shot "CALL __ENTRY" this flag triggers. Since a bare
-// ".END" with no name never sets the flag in the first place (see case 11
-// in asm_pseudo.c) but doesn't clear it either, a persistent Assembler
-// reused across several "ASM <file>" commands (internal/console/asm.go)
-// needs this one-shot consumption so an earlier file's ".END name" doesn't
-// spuriously re-trigger on a later, entry-less file.
+// ".END" with no name never sets the flag in the first place but doesn't
+// clear it either, a persistent Assembler reused across several "ASM <file>"
+// commands (internal/console/asm.go) needs this one-shot consumption so an
+// earlier file's ".END name" doesn't spuriously re-trigger on a later, 
+// entry-less file.
 func (a *Assembler) TakeEntry() (uint32, bool) {
 	addr, ok := a.entryAddr, a.entrySeen
 	a.entrySeen = false
@@ -390,8 +386,7 @@ func (a *Assembler) BytesRange(from, to uint32) []byte {
 }
 
 // S0Origin returns the configured S0 base address: 0x80000000 by default,
-// matching initialization.c's vax.console.s0_deposit, or whatever
-// SetS0Origin last configured.
+// or whatever SetS0Origin last configured.
 func (a *Assembler) S0Origin() uint32 { return a.s0.base }
 
 // SetS0Origin sets the initial S0 deposit location (default 0x80000000).
@@ -553,7 +548,7 @@ func (a *Assembler) statement(raw string) (string, bool) {
 
 // caseCursor returns a cursor at c's position in the statement as
 // written (see preprocessCase), or c itself if c isn't reading the
-// statement statement last returned.
+// statement last returned.
 func (a *Assembler) caseCursor(c *cursor) *cursor {
 	if len(a.cased) != len(c.s) || !strings.EqualFold(a.cased, c.s) {
 		return c
@@ -580,12 +575,11 @@ func (e *Error) Unwrap() error {
 }
 
 // preprocessLine strips a trailing ";" comment and uppercases everything
-// outside single- or double-quoted regions, matching parse.c's uppercase()
-// — called once per line by the reference tool's console read loop, ahead
-// of both ordinary command dispatch and assembler-mode dispatch, so every
-// parser downstream of it can assume mnemonics/pseudo-ops/labels already
-// arrived in uppercase while quoted string contents kept their original
-// case.
+// outside single- or double-quoted regions, called once per line by the 
+// reference tool's console read loop, ahead of both ordinary command 
+// dispatch and assembler-mode dispatch, so every parser downstream of it
+// can assume mnemonics/pseudo-ops/labels already arrived in uppercase 
+// while quoted string contents kept their original case.
 //
 // A string directive's operands (.ASCIC/.ASCID/.ASCII/.ASCIZ) are
 // scanned by preprocessStrings instead, since MACRO-32 lets any printing
@@ -677,6 +671,7 @@ func preprocessCase(line string) (string, string, string) {
 				start := len(out)
 				out = append(out, bytes.ToUpper(b[i:i+n])...)
 				out = preprocessStrings(out, b[i+n:])
+
 				same(start)
 
 				break
@@ -685,6 +680,7 @@ func preprocessCase(line string) (string, string, string) {
 			if n := titleDirectiveAt(b, i); n > 0 {
 				start := len(out)
 				out = append(out, preprocessTitle(b[i:], n)...)
+
 				same(start)
 
 				break
@@ -694,7 +690,9 @@ func preprocessCase(line string) (string, string, string) {
 				start := len(out)
 				out = append(out, '^', 'A')
 				out = append(out, b[i+2:i+n]...)
+
 				same(start)
+
 				i += n - 1
 
 				continue
@@ -909,10 +907,7 @@ func isStringDelimiter(ch byte) bool {
 }
 
 // assembleStatement assembles one preprocessed line: an optional label,
-// then either a pseudo-op or a real instruction — matching assemble()'s
-// per-statement flow in asm.c (minus the interactive ASM-mode-toggle and
-// END-command special cases, which Phase 11's batch Assemble doesn't need:
-// a bare "END" always just ends the current assembleLines call).
+// then either a pseudo-op or a real instruction.
 func (a *Assembler) assembleStatement(line string) error {
 	if err := a.assembleStatementBody(line); err != nil {
 		return err
@@ -1142,7 +1137,7 @@ func (a *Assembler) assembleAssignment(c *cursor) (handled bool, err error) {
 	// A relocatable value: a label plus or minus a constant (the MACRO
 	// manual, §3.5). "." can only move within its own section.
 	sect, offset, ok := x.x.simpleRelocatable()
-	
+
 	switch {
 	case !ok, name == "." && sect != a.cur:
 		return true, vmserrors.New(vmserrors.VAX_RELEXPR)

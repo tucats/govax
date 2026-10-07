@@ -8,8 +8,8 @@ import (
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
-// privRegNames matches vax.c's pr_names[] table (the subset with an
-// architected name in internal/vax/registers.go's own PrivReg constants).
+// privRegNames table (the subset with an architected name in 
+// internal/vax/registers.go's own PrivReg constants).
 var privRegNames = map[string]vax.PrivReg{
 	"KSP": vax.KSP, "ESP": vax.ESP, "SSP": vax.SSP, "USP": vax.USP, "ISP": vax.ISP,
 	"P0BR": vax.P0BR, "P0LR": vax.P0LR, "P1BR": vax.P1BR, "P1LR": vax.P1LR,
@@ -21,9 +21,9 @@ var privRegNames = map[string]vax.PrivReg{
 	"PMR": vax.PMR, "SID": vax.SID, "TBCHK": vax.TBCHK,
 }
 
-// SetSymbol implements the "SET <name>=<value>" family of console_set.c's
-// SET command: a general register, a privileged register (by name), the
-// whole PSL (SET PSL=value), or — if none of those match — a plain symbol
+// SetSymbol implements the "SET <name>=<value>" family of the SET command: 
+// a general register, a privileged register (by name), the whole PSL 
+// (SET PSL=value), or — if none of those match — a plain symbol
 // definition. Matches console_set's own dispatch order (register, then
 // privileged-register-or-PSL name, then symbol). Equivalent to
 // SetSymbolQualified with every qualifier false — see that function for the
@@ -38,7 +38,7 @@ func (c *Console) SetSymbol(name string, value uint32) error {
 	return c.SetSymbolQualified(name, value, false, false, false)
 }
 
-// SetSymbolQualified is SetSymbol with console_set.c's own /PERMANENT,
+// SetSymbolQualified is SetSymbol with /PERMANENT,
 // /ENTRY, /LABEL qualifier scan applied (its own qualifier-token loop ahead
 // of the NAME=value parse — see setcommand.go's SET_SYMBOL) — see
 // symbols.go's Symbol.Permanent/IsEntry/IsLabel.
@@ -73,7 +73,7 @@ func (c *Console) SetSymbolQualified(name string, value uint32, permanent, entry
 		oldMode := c.CPU.PSL().CurMod()
 		c.CPU.SetPSL(vax.PSL(value))
 
-		// Matching console_set.c's own "SET PSL=value" case: a bare
+		// "SET PSL=value" case: a bare
 		// register overwrite calls read_psl_bits() right after, which
 		// invalidates cached TB protection state if CurMod changed. See
 		// docs/PHASE-21.md.
@@ -89,9 +89,7 @@ func (c *Console) SetSymbolQualified(name string, value uint32, permanent, entry
 	return nil
 }
 
-// pslFieldNames matches console_set.c's SET PSL sub-switch (its CHAR4
-// field names, spelled out in full here rather than 4-character-abbreviated
-// — see this file's own top-of-package convention). CUR_MOD (handled
+// pslFieldNames are the PSL field name. CUR_MOD (handled
 // separately in SetPSLField, below) also accepts the bare "MODE" spelling
 // as a convenience alias; unlike the C source, setting CUR_MOD here does
 // not check for/deliver a pending AST itself. govax delivers ASTs from the
@@ -137,11 +135,11 @@ func setPSLRange(set func(uint32), v, maxValue uint32) error {
 }
 
 // SetPSLField implements one "<field>=<value>" clause of SET PSL (setcommand.go
-// loops over a comma-separated list of these, matching console_set.c's own
-// parsing loop). CM/TP/FPD/IS/DV/FU/IV/T/N/Z/V/C are boolean bits (0 or 1);
+// loops over a comma-separated list of these. 
+// 
+// CM/TP/FPD/IS/DV/FU/IV/T/N/Z/V/C are boolean bits (0 or 1);
 // IPL is 0-31; PRV_MOD is 0-3; CUR_MOD/MODE switches the active mode/stack
-// via SetMode (the same set_mode_stack primitive console_set.c's own
-// CUR_MOD case calls before its otherwise-redundant SETPSL(cur_mod,...)).
+// via SetMode.
 func (c *Console) SetPSLField(field string, value uint32) error {
 	if err := c.requireInit(); err != nil {
 		return err
@@ -167,12 +165,7 @@ func (c *Console) SetPSLField(field string, value uint32) error {
 	return nil
 }
 
-// debugFlagNames matches console_set.c:598-621's SETDBG table (the 25 names
-// SET DEBUG accepts) — full keyword spellings rather than the C source's
-// 4-character abbreviation matching, matching this port's other hand-parsed
-// SET sub-verbs (RADIX, BREAKPOINT). FUNCTIONS/UNIMP have no SETDBG entry in
-// the C source either, so they're deliberately absent here too — see
-// docs/PHASE-17.md.
+// debugFlagNames (the 25 names SET DEBUG accepts) — see docs/PHASE-17.md.
 var debugFlagNames = map[string]vax.DebugFlags{
 	"RMS":        vax.DebugRMS,
 	"FULLDISASM": vax.DebugFullDisasm,
@@ -203,10 +196,10 @@ var debugFlagNames = map[string]vax.DebugFlags{
 	"USERSTEP":   vax.DebugUserStep,
 }
 
-// SetDebug implements SET DEBUG [name[,name...]] (alias SET DBG):
-// console_set.c:581-639. Each name may be prefixed NO to clear that one bit
+// SetDebug implements SET DEBUG [name[,name...]] (alias SET DBG).
+// Each name may be prefixed NO to clear that one bit
 // instead of setting it; a bare SET DEBUG with no names sets the DEBUG
-// (native-debugger) bit alone, matching console_set.c's isend(*p) case.
+// (native-debugger) bit alone.
 func (c *Console) SetDebug(names []string) error {
 	if len(names) == 0 {
 		c.CPU.SetDebug(c.CPU.Debug() | vax.DebugNative)
@@ -242,7 +235,7 @@ func (c *Console) SetDebug(names []string) error {
 	return nil
 }
 
-// setModeNames matches console_set.c's SET MODE sub-switch keywords, spelled
+// setModeNames SET MODE sub-switch keywords, spelled
 // out in full (see this file's own full-keyword convention). "INTERRUPT"
 // has no AccessMode of its own (set_mode_stack's mode value 4 means "switch
 // to the interrupt stack", not a fourth access mode) — SetMode handles it
@@ -252,11 +245,11 @@ var setModeNames = map[string]vax.AccessMode{
 	"SUPER": vax.Supervisor, "SUPERVISOR": vax.Supervisor, "USER": vax.User,
 }
 
-// SetMode implements SET MODE <KERNEL|EXEC|SUPER|USER|INTERRUPT>, matching
-// console_set.c:393-421's set_mode_stack calls. Like SetPSLField's CUR_MOD
-// case, this does not check for/deliver a pending AST (vax.pslw.cur_mod >=
-// vax.ASTLVL) itself: the RTL's AST delivery sees the new mode at the next
-// instruction boundary (see pslFieldNames' doc comment).
+// SetMode implements SET MODE <KERNEL|EXEC|SUPER|USER|INTERRUPT>.
+// Like SetPSLField's CUR_MOD case, this does not check for/deliver a
+// pending AST (vax.pslw.cur_mod >= vax.ASTLVL) itself: the RTL's AST 
+// delivery sees the new mode at the next instruction boundary (see 
+// pslFieldNames' doc comment).
 func (c *Console) SetMode(name string) error {
 	if err := c.requireInit(); err != nil {
 		return err
@@ -282,8 +275,7 @@ func (c *Console) SetMode(name string) error {
 // setModeStackByValue implements SET PSL CUR_MOD=<n>, which — unlike SET
 // MODE's keyword form — takes CUR_MOD's raw 0-3 numeric encoding (matching
 // AccessMode's own iota values) with no "INTERRUPT" case (SET PSL has no
-// numeric encoding for the interrupt stack; console_set.c's own SETPSL
-// range-checks CUR_MOD to 0-3 for exactly this reason).
+// numeric encoding for the interrupt stack.
 func (c *Console) setModeStackByValue(value uint32) error {
 	if value > uint32(vax.User) {
 		return vmserrors.New(vmserrors.CLI_INVSETPSL, value)
@@ -295,8 +287,7 @@ func (c *Console) setModeStackByValue(value uint32) error {
 }
 
 // SetTrace implements SET TRACE/SET DISASSEMBLY (enable) and SET NOTRACE/
-// SET NODISASSEMBLE (disable), matching console_set.c:928-939's own
-// vax.console.disasm assignment.
+// SET NODISASSEMBLE (disable).
 func (c *Console) SetTrace(on bool) {
 	c.Trace = on
 }
@@ -312,15 +303,11 @@ func (c *Console) SetRadix(radix int) error {
 	return nil
 }
 
-// SetVM implements SET VM/SET MAPEN (on) and SET NOVM/SET NOMAPEN (off),
-// matching console_set.c:641-661: sets/clears the MAPEN privileged register
-// directly (the same register the generic "SET MAPEN=<value>" form already
-// reaches via SetSymbol/privRegNames, this being only the bare on/off
-// keyword spelling console_set.c also accepts). Requires kernel mode,
-// matching the C source's own EXC_PRIV check — reported the same way this
-// port's other kernel-mode-only commands are (requireKernelMode), rather
-// than synthesizing a real EXC_PRIV fault delivery this port's console
-// commands don't otherwise perform.
+// SetVM implements SET VM/SET MAPEN (on) and SET NOVM/SET NOMAPEN (off).
+// Sets/clears the MAPEN privileged register directly (the same register
+// the generic "SET MAPEN=<value>" form already reaches via 
+// SetSymbol/privRegNames, this being only the bare on/off
+// keyword spelling acepted). Requires kernel mode.
 func (c *Console) SetVM(on bool) error {
 	if err := c.requireInit(); err != nil {
 		return err
@@ -340,10 +327,10 @@ func (c *Console) SetVM(on bool) error {
 	return nil
 }
 
-// SetBase implements SET BASE <addr>, matching console_set.c:880-887: sets
-// the EXAMINE/DEPOSIT cursor directly (Console.DepositAddr), the same
-// cursor SHOW BASE reports (see docs/PHASE-16.md sub-phase 1d's ShowBase
-// fix) and EXAMINE/DEPOSIT themselves advance after every access.
+// SetBase implements SET BASE <addr>, sets the EXAMINE/DEPOSIT cursor
+// directly (Console.DepositAddr), the same cursor SHOW BASE reports 
+// (see docs/PHASE-16.md sub-phase 1d's ShowBase fix) and EXAMINE/DEPOSIT
+// themselves advance after every access.
 func (c *Console) SetBase(addr uint32) error {
 	if err := c.requireInit(); err != nil {
 		return err
@@ -354,7 +341,7 @@ func (c *Console) SetBase(addr uint32) error {
 	return nil
 }
 
-// SetVerbose implements SET VERBOSE, matching console_set.c:888-890 (sets
+// SetVerbose implements SET VERBOSE command, sets
 // CONSOLE_VERBOSE; unlike SET VERIFY it doesn't touch Verify).
 func (c *Console) SetVerbose() error {
 	if err := c.requireInit(); err != nil {
@@ -366,8 +353,8 @@ func (c *Console) SetVerbose() error {
 	return nil
 }
 
-// SetVerify implements SET VERIFY, matching console_set.c:892-894 (sets
-// vax.console.verify; unlike SET VERBOSE it doesn't touch Verbose).
+// SetVerify implements SET VERIFY (sets vax.console.verify; 
+// unlike SET VERBOSE it doesn't touch Verbose).
 func (c *Console) SetVerify() error {
 	if err := c.requireInit(); err != nil {
 		return err
@@ -378,10 +365,7 @@ func (c *Console) SetVerify() error {
 	return nil
 }
 
-// SetNoVerbose implements SET NOVERBOSE, matching console_set.c:896-899:
-// clears *both* Verbose and Verify (the C source's own single NOVE case
-// clears vax.console.verify and CONSOLE_VERBOSE together — there is no
-// separate SET NOVERIFY).
+// SetNoVerbose implements SET NOVERBOSE - clears *both* Verbose and Verify.
 func (c *Console) SetNoVerbose() error {
 	if err := c.requireInit(); err != nil {
 		return err
@@ -393,11 +377,8 @@ func (c *Console) SetNoVerbose() error {
 	return nil
 }
 
-// SetQuantum implements SET QUANTUM <n>, matching console_set.c:846-861:
-// resets Engine's interrupt-admission quantum counter (both its initial
-// reload value and its current countdown), printing the same
-// resumed/suspended informational message the C source does when n crosses
-// the zero boundary.
+// SetQuantum implements SET QUANTUM <n>, resets Engine's interrupt-admission
+// quantum counter (both its initial reload value and its current countdown).
 func (c *Console) SetQuantum(n int) error {
 	if err := c.requireInit(); err != nil {
 		return err
@@ -418,12 +399,7 @@ func (c *Console) SetQuantum(n int) error {
 	return nil
 }
 
-// SetUIQuantum implements SET UIQUANTUM <n>, matching console_set.c:863-878
-// — the write side of the "USER INTF" line ShowQuantum already reports as
-// not modeled (see that method's own doc comment): this port has no
-// cooperative host-UI-event-polling loop for a uiquantum counter to pace,
-// so the value is parsed and accepted (matching the command's own syntax)
-// but has no effect beyond the same informational message.
+// SetUIQuantum implements SET UIQUANTUM <n>.
 func (c *Console) SetUIQuantum(n int) error {
 	if err := c.requireInit(); err != nil {
 		return err
@@ -434,11 +410,7 @@ func (c *Console) SetUIQuantum(n int) error {
 	return nil
 }
 
-// SetFaultHistory implements SET FAULT/SET HIST <n> (console_set.c's own
-// CHAR4('F','A','U','L')/CHAR4('H','I','S','T') cases, both spellings for
-// one verb, not a verb+qualifier — "HISTORY" is accepted too, matching this
-// file's own full-keyword convention): resizes cpu.Engine's fault/exception
-// event-history ring buffer, matching set_fault_history.
+// SetFaultHistory implements SET FAULT/SET HIST <n> 
 func (c *Console) SetFaultHistory(n int) error {
 	if err := c.requireInit(); err != nil {
 		return err
@@ -449,9 +421,7 @@ func (c *Console) SetFaultHistory(n int) error {
 	return nil
 }
 
-// pteFieldNames matches console_set.c's parse_pte_changes sub-switch,
-// spelled out in full (see this file's own convention) rather than
-// CHAR4-abbreviated.
+// pteFieldNames
 var pteFieldNames = map[string]func(pte *vm.PTE, v uint32){
 	"V":     func(pte *vm.PTE, v uint32) { pte.SetValid(v != 0) },
 	"VALID": func(pte *vm.PTE, v uint32) { pte.SetValid(v != 0) },
@@ -470,8 +440,7 @@ var pteFieldNames = map[string]func(pte *vm.PTE, v uint32){
 
 // SetPTE implements one "<addr> <field>=<value>[,<field>=<value>...]" SET
 // PTE/SET PAGE command (setPTECommand parses the field=value list and calls this
-// once per field, matching console_set.c's own parse_pte_changes loop
-// structure) — the write-side counterpart to ShowPage. Reports
+// once per field, the write-side counterpart to ShowPage. Reports
 // "Cannot SET PAGE when virtual memory is disabled" (not an error, matching
 // setpte's own VAX_OK-with-printf behavior) rather than failing if MAPEN is
 // off.

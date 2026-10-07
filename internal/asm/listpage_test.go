@@ -149,8 +149,7 @@ func TestFixtureListings(t *testing.T) {
 		extraRecords int
 	}
 
-	var cases []fixture
-
+	cases := make([]fixture, 0)
 	ladder := ladderSources(t, marDir)
 
 	for _, path := range ladder {
@@ -220,14 +219,16 @@ func TestFixtureListings(t *testing.T) {
 
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			real := readListing(t, tc.listing)
+			realPath := readListing(t, tc.listing)
 
 			// The system library real MACRO searched, by the name its
 			// listing gives it: govax's STARLET for a source that calls
 			// system macros, and an empty one for the rest.
 			var libs []MacroLibrary
-			for _, name := range listedLibraries(real) {
+
+			for _, name := range listedLibraries(realPath) {
 				var lib MacroLibrary = newMapLibrary(nil)
+
 				if tc.starlet {
 					lib = govaxStarlet(t)
 				}
@@ -308,7 +309,7 @@ func checkListing(t *testing.T, source, listing string, libs []MacroLibrary, che
 		src = string(data)
 	}
 
-	real := readListing(t, listing)
+	realPath := readListing(t, listing)
 
 	a := macroAssembler()
 	a.SetListing(true)
@@ -344,11 +345,11 @@ func checkListing(t *testing.T, source, listing string, libs []MacroLibrary, che
 		Assembler: "govax MACRO V0.0-0",
 		Source:    strings.ToUpper(filepath.Base(source)) + ";1",
 		Revised:   time.Now(),
-		Command:   real[len(real)-1],
+		Command:   realPath[len(realPath)-1],
 	})
 
 	gotSource, gotClosing := splitListing(t, got)
-	realSource, realClosing := splitListing(t, real)
+	realSource, realClosing := splitListing(t, realPath)
 
 	compareListingLines(t, gotSource, realSource)
 

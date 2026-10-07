@@ -203,14 +203,12 @@ type Console struct {
 	// assemblerMode is vax.console.assembler_mode (docs/PHASE-19.md): once a
 	// bare "ASM" command sets this, Dispatcher.Dispatch hands every
 	// subsequent line straight to Console.AssembleInteractiveLine instead of
-	// the normal verb table/DCL grammar, matching console_dispatch.c's own
-	// check ahead of read_verb. Reset alongside asmSession (see above).
+	// the normal verb table/DCL grammar. Reset alongside asmSession (see above).
 	assemblerMode bool
 
-	// ICBList is Phase 13's loaded-image list (console_run.c's icb_list),
-	// in load order (main image first, each dependency appended as loaded
-	// -- see image.go's doc comment on why this differs from, but is
-	// equivalent to, the C source's own insert-at-front design intent).
+	// ICBList is Phase 13's loaded-image list, in load order (main image first,
+	// each dependency appended as loaded.
+	//
 	// Reset by RUN itself (matching reset_icb_list, called at the start of
 	// every RUN) rather than by Zero/Init, since a loaded image's memory
 	// survives independently of the ICB bookkeeping describing it.
@@ -279,7 +277,7 @@ func New(out io.Writer) *Console {
 	c := &Console{
 		Symbols:          NewSymbolTable(),
 		Radix:            16,   // alloc_vax's own default
-		Verbose:          true, // initialization.c's own vax.console.flags = CONSOLE_EXPAND | CONSOLE_VERBOSE default
+		Verbose:          true, // CONSOLE_EXPAND | CONSOLE_VERBOSE default
 		Out:              out,
 		Devices:          iodev.NewDeviceTable(),
 		Logicals:         newLogicals(),
@@ -366,8 +364,7 @@ func (c *Console) newRTL() *corevms.Environment {
 // (matching the C source's vax_init flag).
 func (c *Console) Initialized() bool { return c.Engine != nil }
 
-// requireInit is the common guard nearly every command runs first, matching
-// every console_*.c handler's own "if (!vax_init) return VAX_NOVAX;" check.
+// requireInit is the common guard nearly every command runs first.
 func (c *Console) requireInit() error {
 	if !c.Initialized() {
 		return vmserrors.New(vmserrors.CLI_NOVAX)

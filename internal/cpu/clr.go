@@ -1,7 +1,5 @@
 package cpu
 
-// This is the Go port of emul_clr.c.
-
 func init() {
 	reg := func(fn byte, h Handler) {
 		instructionTable.SetHandler(instructionTable.Lookup(Opcode{Function: fn}), h)
@@ -28,6 +26,6 @@ func emulClr(e *Engine, d *Decoded) error {
 	psl.SetZ(true)
 	psl.SetV(false)
 	e.cpu.SetPSL(psl)
-	
+
 	return d.Operands[0].Store(e.cpu, e.mem, 0)
 }

@@ -11,16 +11,9 @@ import (
 	"github.com/tucats/govax/internal/vmsdef"
 )
 
-// Port of devices.c's sys_assign — built on Phase 09's
-// internal/io.DeviceTable, deferred to this phase per docs/PHASE-09.md's
-// own open questions (it needs the RTL calling convention and a
-// process/PID/UIC concept, neither of which existed yet) — and the
-// allocation and channel services docs/PHASE-26.md adds. devices.c's
-// other service, sys_getdviw, became the full $GETDVI in getdvi.go.
-
-// channel is one SYS$ASSIGN-created channel, the Go equivalent of devices.c's
-// struct CHAN. Channel numbers count up by 8 starting at 8 (nextChannel += 8
-// before use), matching find_device's own convention.
+// channel is one SYS$ASSIGN-created channel. Channel numbers count up 
+// by 8 starting at 8 (nextChannel += 8 before use), matching find_device's
+// own convention.
 type channel struct {
 	Name    string
 	Number  uint16
@@ -49,14 +42,6 @@ func (env *Environment) findChannel(number uint32) (*channel, bool) {
 
 // serviceSysAssign is SYS$ASSIGN: given a device name, creates and returns a
 // channel number bound to that device.
-//
-// devices.c's own sys_assign ignores str_get's "descriptor too large for a
-// 64-byte buffer" outcome (str_get leaves its buffer untouched and reports
-// failure only via an out-parameter the caller never checks), which would
-// read name[-1] a few lines later — a plain out-of-bounds bug, not an ISA
-// judgment call (this is RTL/emulator tooling, not VAX ISA behavior, same as
-// Phase 09's internal/io — see its own doc.go), so it's fixed here by
-// reporting SS_BADPARAM instead of replicating the out-of-bounds access.
 func serviceSysAssign(env *Environment, argv []uint32) (uint32, error) {
 	if len(argv) < 2 {
 		return ssInsfArg, nil

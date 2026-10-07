@@ -41,7 +41,7 @@ func openLibrary(t *testing.T, c *Console, loc rms.FileLocation) *lbr.Library {
 }
 
 func moduleNames(l *lbr.Library) []string {
-	var out []string
+	out := make([]string, 0, len(l.Indexes[0].Keys))
 	for _, k := range l.Indexes[0].Keys {
 		out = append(out, k.Name)
 	}
@@ -216,6 +216,7 @@ func TestLibrary_objectLink(t *testing.T) {
 	}
 
 	exe := filepath.Join(dir, "main.exe")
+
 	out.Reset()
 
 	err := c.Link(LinkOptions{

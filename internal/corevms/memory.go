@@ -1,15 +1,6 @@
 package corevms
 
-// Port of librtl_memory.c: a simple free-list allocator carving blocks out
-// of the P0 virtual address region (Environment.RegionSize[0], shared with
-// SYS$EXPREG — see environment.go's doc comment on that field) for malloc()
-// and LIB$GET_VM/FREE_VM/DELETE_VM_ZONE. This is a from-scratch
-// reimplementation of decc_malloc/decc_free's singly-linked-list bookkeeping
-// using Go slices instead of manual struct MEMBLK pointer-chasing — the
-// observable allocation/coalescing behavior is the same, only the storage
-// is idiomatic Go rather than a port of C list-splicing code.
-
-// LIBVM_* flags, matching librtl_memory.c's own bit values.
+// LIBVM_* flags.
 const (
 	libvmMalloc = 1
 	libvmLibrtl = 2

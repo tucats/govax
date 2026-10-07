@@ -150,11 +150,11 @@ func TestDebugRecordsForth(t *testing.T) {
 		t.Fatalf("assemble: %v", err)
 	}
 
-	real := readObjectFile(t, filepath.Join("..", "..", "testdata", "mar", "dst", "vax", "forth.obj"))
-	got := objectLike(t, a, real)
+	realFileName := readObjectFile(t, filepath.Join("..", "..", "testdata", "mar", "dst", "vax", "forth.obj"))
+	got := objectLike(t, a, realFileName)
 
 	gotRest, gotSyms := splitSymbolRecords(t, got)
-	wantRest, wantSyms := splitSymbolRecords(t, real)
+	wantRest, wantSyms := splitSymbolRecords(t, realFileName)
 
 	if g, w := dumpText(t, gotRest), dumpText(t, wantRest); g != w {
 		t.Errorf("object without symbol records:\n%s\nwant:\n%s", g, w)

@@ -9,11 +9,10 @@ import (
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
-// Assemble implements the batch form of the ASM <filename> command
-// (console_include.c's console_asm, called through console_include with an
-// implicit "/ASM"): reads path and assembles it into the console's
-// persistent ASM session (c.asmSession, created fresh on first use after
-// each VMINIT — see machine.go's doc comment on why multiple ASM commands
+// Assemble implements the batch form of the ASM <filename> command: 
+// reads path and assembles it into the console's persistent ASM 
+// session (c.asmSession, created fresh on first use after each VMINIT — 
+// see machine.go's doc comment on why multiple ASM commands
 // in a row must share one assembler: a later file can reference an earlier
 // one's labels, e.g. hello.asm's "@#lib$put_output" resolving to
 // kernel.asm's own .ENTRY lib$put_output once kernel.asm has been ASMed
@@ -32,8 +31,8 @@ import (
 // mergeAsmSymbols helpers below, so a file assembled in one form can be
 // continued in the other.
 //
-// Returns the assembler's own Entry() result, so asmCommand (commands.go) can replicate
-// console.c's "if ASM_ENTRY, push_command(CALL __ENTRY)" behavior: a
+// Returns the assembler's own Entry() result, so asmCommand (commands.go)
+// can replicate  "if ASM_ENTRY, push_command(CALL __ENTRY)" behavior: a
 // program whose .END named an explicit start address is invoked
 // immediately afterward, with no arguments, exactly as the reference
 // tool's own post-command hook does.

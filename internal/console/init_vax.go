@@ -7,8 +7,7 @@ import (
 )
 
 // Init allocates a fresh CPU/Memory/Engine of physBytes (rounded per
-// allocPhysMemory), matching console_init.c/initialization.c's
-// alloc_vax — minus ROM/NVRAM allocation (INIT/ROM, INIT/NVRAM; deferred to
+// allocPhysMemory), minus ROM/NVRAM allocation (INIT/ROM, INIT/NVRAM; deferred to
 // Phase 09, see doc.go) and everything alloc_vax sets up that belongs to a
 // later phase (assembler flags, debug/quantum settings with no consumer
 // yet). Radix/Verbose/Verify are preserved across a re-INIT, matching
@@ -40,13 +39,12 @@ func (c *Console) Init(physBytes uint32) error {
 
 // Zero clears physical memory and every symbol, and resets the region/stack
 // registers that only make sense relative to a zeroed, unmapped address
-// space — matching console_zero.c's ZERO command (also run by Init, as
-// console_init itself does).
+// space — also run by Init, as console_init itself does.
 func (c *Console) Zero() error {
 	if err := c.requireInit(); err != nil {
 		return err
 	}
-	
+
 	if err := c.requireKernelMode(); err != nil {
 		return err
 	}

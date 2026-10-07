@@ -189,8 +189,7 @@ func TestShowString(t *testing.T) {
 
 // TestShowPage_beforeFirstTouch covers this port's DYNVM demand paging
 // (internal/vm.Memory.AllocatePage, wired into Translate): a freshly
-// VMINIT'd P0 page has no physical page assigned yet, matching
-// console_vminit.c's own `#ifdef DYNVM` PTE-creation branch, so SHOW
+// VMINIT'd P0 page has no physical page assigned yet, so SHOW
 // PAGE's read-only tracevm-style report (LookupPTE never demand-pages)
 // shows it invalid until something actually accesses it.
 func TestShowPage_beforeFirstTouch(t *testing.T) {
@@ -584,7 +583,7 @@ func TestShowDebug(t *testing.T) {
 	if !strings.Contains(out, "REGISTERS  ") || strings.Contains(out, "NOREGISTERS") {
 		t.Errorf("output = %q, want REGISTERS reported set by default", out)
 	}
-	
+
 	if !strings.Contains(out, "NOVM  ") {
 		t.Errorf("output = %q, want VM reported clear by default", out)
 	}
@@ -612,7 +611,7 @@ func TestShowTrace(t *testing.T) {
 	}
 
 	c.Trace = true
-	
+
 	buf.Reset()
 
 	if err := d.Console.ShowTrace(); err != nil {
@@ -705,20 +704,6 @@ func TestShowInstructions_unknownOpcode(t *testing.T) {
 
 	if !strings.Contains(buf.String(), "No implemented instruction for opcode FF") {
 		t.Errorf("output = %q, want a not-found message for opcode FF", buf.String())
-	}
-}
-
-func TestShowMap(t *testing.T) {
-	d, _, buf := newShowDispatcher(t)
-
-	// "MAP" alone is ambiguous with the "MAPEN" register keyword; the
-	// grammar's own show_types keyword for this command is plural.
-	if err := d.Console.ShowMap(); err != nil {
-		t.Fatalf("Dispatch: %v", err)
-	}
-
-	if !strings.Contains(buf.String(), "Not applicable") {
-		t.Errorf("output = %q, want a not-applicable stub", buf.String())
 	}
 }
 

@@ -783,8 +783,7 @@ func parseDCLInteger(token string) (int64, error) {
 }
 
 // upcaseOutsideQuotes upcases every character not inside a double-quoted
-// substring — a direct port of DCLupcase (reference/eVAX/eVAX/Source/
-// Console/dclrtl.c). A prior version of this function also truncated the
+// substring. A prior version of this function also truncated the
 // line at an unquoted ';', but the real DCLupcase does no such thing (it
 // only tracks quote state and upcases outside it) -- that truncation was a
 // plain porting bug, found while implementing docs/PHASE-23.md's DELETE

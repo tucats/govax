@@ -7,9 +7,6 @@ import (
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
-// This is the Go port of emul_call.c: CALLS/CALLG procedure-call stack-frame
-// construction, RET, and REI.
-
 func init() {
 	reg := func(fn byte, h Handler) {
 		instructionTable.SetHandler(instructionTable.Lookup(Opcode{Function: fn}), h)
@@ -20,15 +17,12 @@ func init() {
 	reg(0xFB, emulCall) // CALLS
 }
 
-// emulCall is CALLS/CALLG's single shared handler (mirroring emul_call.c's
-// own emul_call, which dispatches on opcode->function internally rather than
-// having two separate routines).
+// emulCall is CALLS/CALLG's single shared handler.
 //
 // CALLG's arglist operand (operand 0, table-declared AccessAddress) accepts
-// Register mode, using the register's own *value* as the arglist address --
-// matching emul_call.c's own `is_register[0]` branch. A Phase 04 change
-// briefly made decode fault this generically for every OP_AD/OP_VA
-// consumer, reasoning the manual's "arglist.ab" (access type A) notation
+// Register mode, using the register's own *value* as the arglist address.
+// A Phase 04 change briefly made decode fault this generically for every
+// OP_AD/OP_VA consumer, reasoning the manual's "arglist.ab" (access type A) notation
 // forbids register mode and the C source's own workaround was therefore
 // dead code; Phase 12's first real end-to-end run of kernel.asm (this
 // project's own hand-written microkernel) found that its CHMK dispatcher's
@@ -36,15 +30,6 @@ func init() {
 // reuses the caller's own AP register value as the new arglist address
 // without redundantly rebuilding it in memory. Reverted per user direction
 // (2026-09-15); see operand.go's doc comment and docs/DEVIATIONS.md.
-//
-// Unlike emul_call.c, this port implements the manual's full PSW-effect
-// description rather than replicating the C source's gap: the entry mask's
-// reserved bits 13:12 are checked (reserved-operand fault if either is set,
-// per Note 1), condition codes are explicitly cleared, IV/DV are set from
-// entry-mask bits 14/15, and FU is cleared (T is left alone, "unaffected").
-// These are load-bearing for any real MACRO-32 procedure-call convention, so
-// -- per the user's direction (2026-09-14) -- fixed here rather than only
-// logged in docs/DEVIATIONS.md.
 func emulCall(e *Engine, d *Decoded) error {
 	var newAP uint32
 
@@ -71,9 +56,7 @@ func emulCall(e *Engine, d *Decoded) error {
 
 	newPC := d.Operands[1].Addr
 
-	// Save the SP as it stood after any CALLS count push (matching
-	// emul_call.c's ordering: savedSP is captured *after* that push, not
-	// before), then coerce it to be longword aligned.
+	// Save the SP as it stood after any CALLS count push, then coerce it to be longword aligned.
 	savedSP := e.cpu.GPR(vax.SP)
 	e.cpu.SetGPR(vax.SP, savedSP&0xFFFFFFFC)
 
@@ -172,31 +155,7 @@ func (e *Engine) buildCallFrame(newAP, newPC, savedSP, returnPC, returnFP uint32
 	return nil
 }
 
-// emulRet is RET: pops and unwinds the call frame CALLS/CALLG built, port of
-// emul_call.c's emul_ret.
-//
-// Unlike emul_call.c, this port implements the manual's full description
-// rather than replicating the C source's gap: "the PSW is replaced by bits
-// 15:0 of the temporary" (the popped mask longword) -- a full 16-bit
-// replacement, which subsumes the separately-stated "N <- tmp1<3>" etc.
-// condition-code formula, since bits 3:0 of the PSW *are* N/Z/V/C -- and
-// Note 1's reserved-operand fault if tmp1<15:8> is nonzero. emul_call.c's
-// C source instead only ever restores bits 6:15 (FU, DV, and the otherwise-
-// unused bits 8:15) and leaves bits 0:5 (N/Z/V/C, T, IV) at whatever the
-// callee left them, with no reserved-operand check at all. Fixed here per
-// the user's direction (2026-09-14) -- these are load-bearing for any real
-// MACRO-32 procedure-return convention, not an edge case worth only
-// documenting.
-//
-// If this frame was built by Engine.CallEntry (its saved PC and FP are both
-// SentinelReturn -- a combination no real CALLS instruction can produce),
-// this reports that completion via ErrConsoleCallReturned instead of
-// resuming at the sentinel "address", matching emul_call.c's own
-// vax.console.CALL_active/FFFFDEAF check in its emul_ret (see
-// docs/PHASE-13.md). Unlike the C source, this skips the CALL_active guard
-// flag: SentinelReturn is defined precisely because no legitimate program
-// state can produce it (see the C source's own comment to that effect), so
-// the flag only guards against an already-impossible coincidence.
+// emulRet is RET: pops and unwinds the call frame CALLS/CALLG built.
 func emulRet(e *Engine, d *Decoded) error {
 	sp := e.cpu.GPR(vax.FP) + 4
 
@@ -225,7 +184,7 @@ func emulRet(e *Engine, d *Decoded) error {
 	if err != nil {
 		return err
 	}
-	
+
 	sp += 4
 
 	pc, err := e.mem.LoadLongword(e.cpu, sp)
@@ -283,9 +242,9 @@ func emulRet(e *Engine, d *Decoded) error {
 	return nil
 }
 
-// SentinelReturn is the magic PC/FP value console_exec.c's console CALL
+// SentinelReturn is the magic PC/FP value the console CALL
 // command calls FFFFDEAF ("if-def"): a return-frame value no real CALLS
-// instruction can ever produce (see emul_call.c), used by Engine.CallEntry
+// instruction can ever produce, used by Engine.CallEntry
 // so a subsequent RET can be recognized as returning from a console-
 // initiated call rather than to a real caller.
 const SentinelReturn = 0xFFFFDEAF
@@ -295,7 +254,7 @@ const SentinelReturn = 0xFFFFDEAF
 var ErrConsoleCallReturned = vmserrors.New(vmserrors.VAX_CALLRET)
 
 // CallEntry builds a CALLS-shaped procedure-call frame directly (bypassing
-// instruction fetch/decode, the way console_exec.c's console_call hand-
+// instruction fetch/decode, the way console CALL hand-
 // builds its own frame rather than executing a real CALLS instruction)
 // to invoke entry with zero arguments -- the "caller" here is the console,
 // which has no VAX PC/FP context of its own to save, so the frame's return
@@ -303,16 +262,15 @@ var ErrConsoleCallReturned = vmserrors.New(vmserrors.VAX_CALLRET)
 // RET is caught by emulRet and reported via ErrConsoleCallReturned instead
 // of resuming at that meaningless address.
 //
-// args is the console CALL command's optional "(args...)" list
-// (console_exec.c's console_call): pushed right-to-left exactly like a real
-// CALLS instruction's own argument list, followed by the argument count,
-// before the frame itself is built. Phase 13's own call site (RUN's
-// IMAGE$INIT driver) always passes none.
+// args is the console CALL command's optional "(args...)" list, pushed
+// right-to-left exactly like a real CALLS instruction's own argument list,
+// followed by the argument count, before the frame itself is built. Phase
+// 13's own call site (RUN's IMAGE$INIT driver) always passes none.
 func (e *Engine) CallEntry(entry uint32, args ...uint32) error {
 	for i := len(args) - 1; i >= 0; i-- {
 		sp := e.cpu.GPR(vax.SP) - 4
 		e.cpu.SetGPR(vax.SP, sp)
-		
+
 		if err := e.mem.StoreLongword(e.cpu, sp, args[i]); err != nil {
 			return err
 		}
@@ -321,7 +279,7 @@ func (e *Engine) CallEntry(entry uint32, args ...uint32) error {
 	sp := e.cpu.GPR(vax.SP) - 4
 
 	e.cpu.SetGPR(vax.SP, sp)
-	
+
 	if err := e.mem.StoreLongword(e.cpu, sp, uint32(len(args))); err != nil {
 		return err
 	}
@@ -335,20 +293,7 @@ func (e *Engine) CallEntry(entry uint32, args ...uint32) error {
 }
 
 // emulRei is REI: return from exception or interrupt, restoring the mode the
-// machine was in before the exception/interrupt was taken. Port of
-// emul_call.c's emul_rei, minus its AST-delivery and pending-software-
-// interrupt (SISR) tail: both call interrupt(), the device-interrupt-queue
-// admission routine that Phase 03 already deferred to Phase 09 (see
-// docs/PHASE-03.md's design notes) -- REI's own PC/PSL/stack restore has no
-// dependency on that machinery and is fully ported here. (ASTs are now
-// delivered by the RTL at instruction boundaries instead, not through
-// REI and ASTLVL: see ast.go.)
-//
-// emul_rei.c restores SP from vax.preg[vax.pslw.cur_mod] unconditionally
-// after installing the new PSL, never consulting the new PSL's IS bit the
-// way setModeStack (internal/cpu/handlefault.go) does for the opposite
-// (fault-delivery) direction -- so a REI whose popped PSL has IS set doesn't
-// restore SP from ISP. Replicated as-is -- see docs/DEVIATIONS.md.
+// machine was in before the exception/interrupt was taken.
 func emulRei(e *Engine, d *Decoded) error {
 	sp := e.cpu.GPR(vax.SP)
 
@@ -380,10 +325,6 @@ func emulRei(e *Engine, d *Decoded) error {
 	e.cpu.SetGPR(vax.PC, newPC)
 
 	if newMode := e.cpu.PSL().CurMod(); oldPSL.CurMod() != newMode {
-		// Matching registers.c's read_psl_bits/write_psl_bits noticing a
-		// CurMod change and calling invalidate_tb_prot() -- see
-		// docs/PHASE-21.md and handlefault.go's setModeStack, this port's
-		// other real mode-change site.
 		e.mem.InvalidateProtection()
 
 		if e.cpu.DebugEnabled(vax.DebugCHM) {
@@ -395,6 +336,4 @@ func emulRei(e *Engine, d *Decoded) error {
 	return nil
 }
 
-// accessModeNames matches emul_call.c's own mode_name[] (KERNEL/EXEC/SUPER/
-// USER), used by emulRei's DebugCHM trace.
 var accessModeNames = [4]string{"KERNEL", "EXEC", "SUPER", "USER"}

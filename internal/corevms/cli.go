@@ -2,24 +2,14 @@ package corevms
 
 import "github.com/tucats/govax/internal/vmserrors"
 
-// Port of cli.c's sys_cli — the SYS$CLI callback service a running image
-// uses to ask its command-line interpreter (DCL) to do something on its
-// behalf. cli.c's own comment on the request format ("As best I can tell...")
-// signals this was reverse-engineered by the original author, not
-// implemented against a spec; only one request is even partially handled.
 
-// cliGetSymbol is the one request code (subrequest<<8 | request) cli.c
-// recognizes at all.
 const cliGetSymbol = 0x1305
 
-// cliUndefinedSymbol is CLI$_UNDSYM: cli.c's own hardcoded answer for a "get
-// symbol" request, unconditionally — this port has no symbol-table lookup
-// behind it either.
+// cliUndefinedSymbol is CLI$_UNDSYM.
 const cliUndefinedSymbol = 0x38140
 
 // ErrHalt is returned by a ServiceFunc/ShimFunc to request that the machine
-// halt, matching cli.c's own "vax.halted = 1" on an unrecognized CLI
-// request. Kept as a package-local sentinel rather than internal/cpu's
+// halt. Kept as a package-local sentinel rather than internal/cpu's
 // ErrHalted so this package doesn't need to import internal/cpu — whatever
 // wires an Environment into internal/cpu.SystemServices (internal/console)
 // translates this into cpu.ErrHalted.
@@ -29,7 +19,7 @@ var ErrHalt = vmserrors.New(vmserrors.LIB_HALT)
 // Every request other than "get symbol" is unimplemented in the C source
 // itself (a single default case lists over a dozen request codes as
 // comments, none actually handled), replicated as-is: an unrecognized
-// request halts the machine, matching cli.c's own diagnostic-and-halt path.
+// request halts the machine.
 func serviceSysCli(env *Environment, argv []uint32) (uint32, error) {
 	reqAddr := argv[0]
 

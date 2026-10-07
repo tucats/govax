@@ -10,7 +10,7 @@ import (
 
 // Execute runs the CPU starting at the current PC (or startAddr, if
 // non-nil) until it halts, hits a breakpoint, or an unhandled fault stops
-// it — the console's GO/EXECUTE command (console_exec.c's console_exec).
+// it — the console's GO/EXECUTE command.
 //
 // The run itself belongs to the debugger (docs/PHASE-42.md, subtask 4):
 // the breakpoints, the run loop, and the stop messages are in
@@ -109,10 +109,8 @@ func (c *Console) runPlain() error {
 func (c *Console) ReportStop(err error) error {
 	switch {
 	// A RET popping a console-initiated CallEntry frame (Console.Call,
-	// whether or not /STEP) is clean, expected completion, not an error --
-	// matches emul_call.c's own CALL_active/FFFFDEAF handling, which just
-	// restores the console's state and falls through with VAX_OK. No
-	// message is printed here, matching Call's own pre-existing silent
+	// whether or not /STEP) is clean, expected completion, not an error. 
+	// No message is printed here, matching Call's own pre-existing silent
 	// return on this same condition.
 	case errors.Is(err, cpu.ErrConsoleCallReturned):
 		if c.imageActive {
@@ -150,10 +148,9 @@ func (c *Console) ReportStop(err error) error {
 	// A fault whose SCB vector is kernel.asm's own "console$handler"
 	// sentinel isn't a real Go-level error at all -- it's this port's cue to
 	// run the VMS Condition Handling Facility search and, failing that,
-	// report the exception natively and halt, matching interrupt.c's own
-	// handle_fault/format_exception split (see docs/PHASE-20.md). Checked
-	// via errors.As, not folded into the errors.Is switch above, matching
-	// the FaultBreak check's own precedent just above it.
+	// report the exception natively and halt. Checked via errors.As, not 
+	// folded into the errors.Is switch above, matching the FaultBreak 
+	// check's own precedent just above it.
 	var chf *cpu.ConsoleHandlerFault
 	if errors.As(err, &chf) {
 		return c.handleConsoleFault(chf)

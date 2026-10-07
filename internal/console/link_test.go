@@ -186,6 +186,7 @@ func TestLink_helloPageProtection(t *testing.T) {
 	assembleFixture(t, c, "hello", dir)
 
 	exe := filepath.Join(dir, "hello.exe")
+	
 	if err := c.Link(LinkOptions{Objects: []string{filepath.Join(dir, "hello")}}); err != nil {
 		t.Fatalf("LINK: %v", err)
 	}

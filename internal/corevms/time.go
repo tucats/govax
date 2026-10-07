@@ -2,7 +2,6 @@ package corevms
 
 import "time"
 
-// Port of librtl_time.c.
 
 // shimDeccTime is DECC$TIME (shim code 32): the C library time() call —
 // seconds since the Unix epoch, optionally also stored at argv[0].

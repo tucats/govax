@@ -78,8 +78,7 @@ type DisassembleOptions struct {
 
 // DisassembleWith implements DISASSEMBLE: decodes and prints instructions
 // from start through end (at least one, starting at start, even if end <
-// start), matching console_disasm.c's own address-range loop, laid out
-// as opts say.
+// start).
 func (c *Console) DisassembleWith(start, end uint32, opts DisassembleOptions) error {
 	if err := c.requireInit(); err != nil {
 		return err
@@ -90,6 +89,7 @@ func (c *Console) DisassembleWith(start, end uint32, opts DisassembleOptions) er
 	}
 
 	r := memByteReader{c: c}
+
 	radix := opts.Radix
 	if radix == 0 {
 		radix = c.symbolRadix()
@@ -235,6 +235,7 @@ func (c *Console) printCaseTable(r disasm.ByteReader, dec disasm.Decoded, table 
 		}
 
 		c.Printf("%16s%s\n", "", text)
+
 		pc += 2
 	}
 
@@ -259,8 +260,7 @@ func (n imageConstants) Constant(pc, value uint32) (string, bool) {
 
 // decodeInstruction wraps disasm.Disassemble with entry-mask detection: if pc
 // is a routine's entry (see entryAt), the word there is a register-save
-// mask, not an instruction, and is decoded as one -- matching
-// decode_opcode.c's combined execute/disassemble entry point, which scans
+// mask, not an instruction, and is decoded as one. This scans
 // the symbol table by PC for exactly this reason. Without this, a mask
 // word like hello.asm's ".entry main, ^m<>" either misdecodes as a bogus
 // opcode or, worse, as some unrelated real instruction.

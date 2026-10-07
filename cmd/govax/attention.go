@@ -385,6 +385,7 @@ func (s *attentionStdin) rawMode() (enter, exit func() error) {
 
 	exit = func() error {
 		err := rm.Exit()
+		
 		s.setPrompt(false)
 
 		return err

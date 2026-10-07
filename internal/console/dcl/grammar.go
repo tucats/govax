@@ -124,8 +124,7 @@ type Parameter struct {
 
 // required reports whether this parameter must be supplied, matching
 // DCLprompt's DCL_REQ side effect: a parameter becomes required exactly when
-// its grammar statement carries a /prompt= clause (see dclrtl.c's
-// DCLprompt).
+// its grammar statement carries a /prompt= clause.
 func (p *Parameter) required() bool { return p.Prompt != "" }
 
 // qualifier resolves name (an unambiguous prefix, "NO"-negation allowed)
@@ -193,12 +192,9 @@ type Disallow struct {
 	Negated2 bool
 }
 
-// Entry is a verb or a syntax — the C source's shared struct DCL_VERB,
-// unified here because dclrtl.c itself treats them identically once parsing
-// is underway (see DCLdispatch's single "whichever entry has state
-// DCL_PRESENT" walk, and DCLkeysearch's verb<->syntax redirect). A verb is a
-// grammar-top-level "verb" statement; a syntax is a "syntax" statement,
-// reachable only via a Qualifier's or Keyword's Syntax redirect.
+// Entry is a verb or a syntax — a verb is a grammar-top-level "verb" statement; 
+// a syntax is a "syntax" statement, reachable only via a Qualifier's or Keyword's 
+// Syntax redirect.
 type Entry struct {
 	Name       string
 	ID         int64
@@ -208,7 +204,7 @@ type Entry struct {
 
 	// Assignment names the syntax a command line continues in when its
 	// first positional token is a name followed by "=" (the grammar's
-	// /assignment=): SET NAME=value, which console_set.c recognizes
+	// /assignment=): SET NAME=value is recognized
 	// before it looks for any SET keyword.
 	Assignment string
 

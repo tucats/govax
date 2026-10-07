@@ -277,9 +277,10 @@ func (a *Assembler) noCallRoutines() []*section {
 // in another psect.
 func (a *Assembler) lineRows() []lineRow {
 	var (
-		rows []lineRow
-		end  uint32 // where the last row's segment ends
+		end uint32 // where the last row's segment ends
 	)
+
+	rows := make([]lineRow, 0)
 
 	for _, l := range a.listLines {
 		if !l.debug || l.stmt == 0 || l.collected || l.skipped || l.endSect != l.sect || l.endLoc <= l.loc {

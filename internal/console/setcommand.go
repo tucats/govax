@@ -65,7 +65,7 @@ func (d *Dispatcher) bindSetCommands() {
 	g.Bind("SET_PROMPT", func(id int64, r *dcl.Result) error { return c.SetPrompt(r.String("TEXT")) })
 }
 
-// parseRadixArg accepts either console_set.c's own HEX/HEXA/16/DEC/DECI/10
+// parseRadixArg accepts either HEX/HEXA/16/DEC/DECI/10
 // keyword forms or a bare number (this port's own pre-existing, more
 // lenient numeric form, kept for backward compatibility — SetRadix itself
 // rejects anything but 8/10/16 either way).

@@ -14,31 +14,11 @@ import (
 	"github.com/tucats/govax/internal/vmsimage"
 )
 
-// This file is the Go port of console_run.c's image_load/image_fixup and
-// the IHD/IHI/ISD/IAF struct definitions from imgdef.h (Phase 13). Unlike
-// structure_mapping.c's generic, name-keyed map()/STROFF machinery (built
-// for the C source's interactive EXAMINE/DEPOSIT struct support), this
-// port reads each struct's fields directly at their documented byte
+// This handles image_load/image_fixup and the IHD/IHI/ISD/IAF struct definitions:
+// read each struct's fields directly at their documented byte
 // offsets -- matching the precedent already set by internal/rms's own port
 // of FAB/RAB field access (docs/PHASE-22.md), which has the same
 // "declarative offset table in C, direct typed reads in Go" relationship.
-// The offsets below are exactly console_run.c's own init_ihd_maps table, not
-// re-derived.
-//
-// This also answers reference/eVAX/AUDIT.md's own V8 finding, left
-// explicitly unresolved there ("read console_run.c's image-loading path
-// directly and resolve which case applies before triaging this further"):
-// whether IHD/IHI/ISD/IAF get overlaid directly onto raw file bytes as C
-// structs (in which case the 32-vs-64-bit LONGWORD bug would misalign
-// every field after the first, the same failure mode as V1's ROM format)
-// or built up field-by-field through VAX-memory accessors. It's the
-// latter -- console_run.c's own image_load reads each field with
-// load_memory calls at computed offsets, never a raw struct cast over the
-// file buffer -- so V8's worse-case branch doesn't apply, confirmed (not
-// assumed) by direct inspection while porting this file in Phase 13 and
-// re-confirmed as part of Phase 12's audit cross-check. This port's own
-// design (typed field reads through vm.Memory, see the doc comment above)
-// has no LONGWORD-width concept to misalign in the first place either way.
 
 // ICB flag bits, matching imgdef.h's ICB_* constants.
 const (
@@ -229,10 +209,9 @@ func (c *Console) storeLong(addr, v uint32) error {
 }
 
 // readIHDTransferOffset/readIHDIdentOffset read the two IHD fields
-// console_run.c's image_load actually consults for control flow
-// (init_ihd_maps's OFFSET_TRANSFER @2, OFFSET_IDENT @6); HEADER_BLOCKS @16
-// is read directly from the host-side file buffer instead (see imageLoad),
-// since it's needed before any of the header has been written into VAX
+// for control flow (init_ihd_maps's OFFSET_TRANSFER @2, OFFSET_IDENT @6); 
+// HEADER_BLOCKS @16 is read directly from the host-side file buffer instead
+// (see imageLoad), since it's needed before any of the header has been written into VAX
 // memory at all. The rest of the IHD (size, offset_dst/patch, major/minor
 // id, mask, channels, io_pages, flags, section_id, version) and the IHI's
 // own image-name field only ever feed this phase's C source's own debug

@@ -68,8 +68,8 @@ type Environment struct {
 	// from scratch), not by this Environment itself.
 	Mounts *rms.MountTable
 
-	// files is internal/rms's own "internal file index" table (rms.c's
-	// ifi[256]) — unlike Mounts, this really is one-per-process state (a
+	// files is internal/rms's own "internal file index" table — unlike
+	// Mounts, this really is one-per-process state (a
 	// freshly opened file has no business surviving a VMInit/Zero that
 	// wipes the address space the FAB/RAB describing it lived in), so
 	// NewEnvironment builds a fresh one on every call rather than taking
@@ -101,7 +101,7 @@ type Environment struct {
 	// consoleIn/consoleInBuf back DECC$GETS/EXE$INPUT/EXE$READ's console
 	// line reading (input.go). consoleOut is also where non-RMS console
 	// writes go (print.go, file.go); RMS's own "internal file index" table
-	// (rms.c's ifi[256]) now lives in internal/rms (docs/PHASE-22.md), not
+	// now lives in internal/rms (docs/PHASE-22.md), not
 	// here — Phase 10's stopgap version of that table was removed along
 	// with the rest of internal/rtl/rms.go.
 	consoleIn    io.Reader
@@ -353,8 +353,7 @@ func (env *Environment) SystemService(pc uint32) (uint32, bool, error) {
 		env.waitingPC = 0
 	}
 
-	// DBG_SERVICES: matches p1_vector.c:433's own "Debug P1 system service
-	// calls?" trace -- this port's table-driven service dispatch (see
+	// DBG_SERVICES: this port's table-driven service dispatch (see
 	// docs/PHASE-17.md sub-phase 4) gives every SYS$ call a single choke
 	// point, unlike the C source's switch-based call_service.
 	if env.cpu.DebugEnabled(vax.DebugServices) && !retry {

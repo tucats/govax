@@ -40,7 +40,6 @@ func (d *Dispatcher) bindMachine() {
 		"SHOW_CLOCK":   c.ShowClock,
 		"SHOW_BASE":    c.ShowBase,
 		"SHOW_MEMORY":  c.ShowMemory,
-		"SHOW_MAP":     c.ShowMap,
 		"SHOW_TB":      c.ShowTB,
 		"SHOW_REGIONS": c.ShowRegions,
 		"SHOW_SHIM":    c.ShowShim,
@@ -132,12 +131,9 @@ func (d *Dispatcher) bindMachine() {
 	g.Bind("CANCEL_MODE", func(id int64, r *dcl.Result) error { return d.Debugger.cancelMode() })
 	g.Bind("CANCEL_TB", func(id int64, r *dcl.Result) error { return c.ClearTB() })
 	g.Bind("CANCEL_MEMORY", func(id int64, r *dcl.Result) error {
-		if !r.Present("STATISTICS") {
-			return vmserrors.New(vmserrors.DBG_SYNTAX, "MEMORY")
-		}
-
-		return c.ClearMemoryStatistics()
+		return vmserrors.New(vmserrors.DBG_SYNTAX, "MEMORY")
 	})
+
 	g.Bind("CANCEL_INTERRUPT", func(id int64, r *dcl.Result) error {
 		if r.Present("ALL") {
 			return c.ClearAllInterrupts()

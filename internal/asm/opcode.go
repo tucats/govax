@@ -6,12 +6,11 @@ import (
 )
 
 // opcodeAliases maps an alternate mnemonic spelling to the real instruction
-// name the assembler should look up instead, matching asm_opcode.c's
-// alias_names table. The reference tool gates GAS-dialect-only entries
-// (JBR) behind a runtime dialect switch, but since the default dialect is
-// ASM_DIALECT_ANY — under which alias_opcode() matches every entry
-// regardless of its tagged dialect — this port just applies the whole
-// table unconditionally; see docs/PHASE-11.md.
+// name the assembler should look up instead. The reference tool gates 
+// GAS-dialect-only entries (JBR) behind a runtime dialect switch, but 
+// since the default dialect is ASM_DIALECT_ANY — under which alias_opcode() 
+// matches every entry regardless of its tagged dialect — this just 
+// applies the whole table unconditionally; see docs/PHASE-11.md.
 var opcodeAliases = map[string]string{
 	"JBR":    "JMP",
 	"BNEQU":  "BNEQ",

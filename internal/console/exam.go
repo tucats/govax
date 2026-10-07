@@ -9,9 +9,9 @@ import (
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
-// ExamSize is a EXAMINE/DEPOSIT data size/format, matching the subset of
-// console_exam.c's /BYTE, /WORD, /LONGWORD, /ASCII and /PTE format
-// qualifiers this port implements — see doc.go for the ones intentionally
+// ExamSize is a EXAMINE/DEPOSIT data size/format, supporting the subset
+// of /BYTE, /WORD, /LONGWORD, /ASCII and /PTE format
+// qualifiers — see doc.go for the ones intentionally
 // left out (/F_FLOATING, /D_FLOATING, /DESCRIPTOR, /COUNTED, /ZERO, the
 // register-value-only shortcuts) and why.
 type ExamSize int
@@ -24,8 +24,7 @@ const (
 	SizePTE
 )
 
-// registerNames matches console_exam.c's regnames table: R0-R15 plus the
-// AP/FP/SP/PC aliases.
+// registerNames R0-R15 plus the AP/FP/SP/PC aliases.
 var registerNames = map[string]vax.Reg{
 	"R0": vax.R0, "R1": vax.R1, "R2": vax.R2, "R3": vax.R3,
 	"R4": vax.R4, "R5": vax.R5, "R6": vax.R6, "R7": vax.R7,
@@ -46,9 +45,7 @@ func sizeBytes(sz ExamSize) uint32 {
 }
 
 // Examine implements EXAMINE: displays either a register (reg != "") or a
-// range of memory starting at addr, count units of size sz, matching
-// console_exam.c's core loop — minus the special-case data structures
-// listed in doc.go's scope note.
+// range of memory starting at addr, count units of size sz.
 func (c *Console) Examine(reg string, addr uint32, count uint32, sz ExamSize) error {
 	if err := c.requireInit(); err != nil {
 		return err

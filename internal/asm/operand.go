@@ -56,9 +56,7 @@ func branchFixup(scale int) fixupKind {
 	}
 }
 
-// storeScaled writes value at addr using the given byte width (1, 2, or 4),
-// matching the reference tool's repeated "switch on vax.assembler.scale"
-// blocks throughout asm_operand.c.
+// storeScaled writes value at addr using the given byte width (1, 2, or 4).
 func (a *Assembler) storeScaled(addr uint32, value uint32, scale int) error {
 	switch scale {
 	case 1:
@@ -95,9 +93,8 @@ func (a *Assembler) assembleOperand(c *cursor, inst *cpu.Instruction, opIndex in
 // assembleOperandRec is assembleOperand's recursive core: parsingIndex is
 // true only for the recursive call that parses an operand's base address
 // after a "[Rx]" index prefix has already been detected and encoded (see
-// the lookahead block below) — matching asm_operand.c's ASM_PARSING_IDX
-// flag, which stops that recursive call from scanning for (and re-encoding)
-// its own index prefix.
+// the lookahead block below) which stops that recursive call from scanning 
+// for (and re-encoding) its own index prefix.
 func (a *Assembler) assembleOperandRec(c *cursor, inst *cpu.Instruction, opIndex int, parsingIndex bool) error {
 	access := inst.Access[opIndex]
 	scale := inst.Scale[opIndex]
@@ -307,8 +304,7 @@ func (a *Assembler) assembleOperandRec(c *cursor, inst *cpu.Instruction, opIndex
 				// The fixup we just queued assumed the value starts right
 				// at `loc` (the short-literal layout); since this turns
 				// out to need a leading 0x8F mode byte first, shift it
-				// forward by one byte — matching asm_operand.c's own late
-				// correction of vax.console.last_symbol->forward->location.
+				// forward by one byte.
 				a.lastFixup.location++
 				a.lastFixup.prefix = 1
 			}
@@ -446,7 +442,7 @@ func (a *Assembler) assembleOperandRec(c *cursor, inst *cpu.Instruction, opIndex
 	}
 
 	// @(Rn)+ / @(Rn): autoincrement deferred, or (with no "+") the
-	// zero-displacement byte-deferred form asm_operand.c encodes for it.
+	// zero-displacement byte-deferred form.
 	if ch == '@' && c.peek() == '(' {
 		c.next()
 
@@ -686,7 +682,7 @@ func (a *Assembler) checkIndexBase(c *cursor, indexMode byte, baseAddr uint32, i
 	return a.recoverableAt(vmserrors.New(vmserrors.VAX_INDEXBASE, cpu.RegisterName(int(mode))), indexLoc)
 }
 
-// litKind mirrors asm_operand.c's ASM_LIT_NONE/SHORT/IMMEDIATE local flag.
+// ASM_LIT_NONE/SHORT/IMMEDIATE local flag.
 type litKind int
 
 const (
@@ -774,8 +770,7 @@ func (a *Assembler) immediateValue(c *cursor, loc uint32, fx fixupKind, scale in
 }
 
 // storeImmediateInt writes an I^# immediate literal's integer data: 1, 2,
-// or 4 bytes as asm_operand.c stored them, or a quadword or octaword, which
-// eVAX couldn't assemble (immediateValue has already widened the value).
+// or 4 bytes, or a quadword or octaword.
 func (a *Assembler) storeImmediateInt(scale int, value octa) error {
 	switch scale {
 	case 8:
@@ -861,10 +856,6 @@ func (a *Assembler) storeFloatBits(f vaxfloat.Format, bits vaxfloat.Bits) error 
 // I^# immediate's data, or one item of .F_FLOATING, .D_FLOATING,
 // .G_FLOATING, or .H_FLOATING. A value too large for the format is
 // VAX_FLOATRANGE; one too small is stored as zero.
-//
-// asm_operand.c's own D_FLOAT case advanced the deposit pointer by 4 mid-
-// branch and again by the full 8 afterward, over-advancing by 4 bytes; that
-// isn't replicated: exactly the format's size is written and advanced.
 func (a *Assembler) storeImmediateFloat(f vaxfloat.Format, value vaxfloat.Value) error {
 	bits, err := vaxfloat.Pack(f, value)
 	if errors.Is(err, vaxfloat.ErrOverflow) {

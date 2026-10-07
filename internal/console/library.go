@@ -355,6 +355,7 @@ func (l *library) write() error {
 
 	s := l.c.ContainerSession
 	write := s.RewriteRecordFile
+	
 	if l.opts.Create {
 		write = s.CreateRecordFile
 	}

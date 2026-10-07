@@ -6,9 +6,6 @@ import (
 	"strings"
 )
 
-// Port of librtl_print.c's decc_printf/decc_sprintf and the format engine
-// they share.
-//
 // decc_apply_format's own approach is "parse just enough of the directive to
 // know its type and argument count, then hand the original format text
 // straight to the host's own sprintf()" — this port does the same thing

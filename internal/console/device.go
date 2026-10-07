@@ -6,26 +6,22 @@ import (
 	iodev "github.com/tucats/govax/internal/io"
 )
 
-// DefineDevice implements the DEFINE/DEVICE console command
-// (define_device.c), registering a new device in c.Devices. Unlike most
-// console commands, this doesn't require INIT — devices.c's own device
-// list exists independent of vax_init, matching define_device.c's own
-// lack of a vax_init check.
+// DefineDevice implements the DEFINE/DEVICE console command, registering
+// a new device in c.Devices. Unlike most console commands, this doesn't
+// require INIT.
 func (c *Console) DefineDevice(name string, opts iodev.DeviceOptions) *iodev.Device {
 	return c.Devices.Define(name, opts)
 }
 
-// ShowDevices implements the SHOW DEVICES console command (show_device.c),
-// optionally filtered to one device by name and expanded to full detail
+// ShowDevices implements the SHOW DEVICES console command,optionally 
+// filtered to one device by name and expanded to full detail
 // with /FULL. Matches show_device's own behavior of printing nothing at
 // all when no device matches (no "no matching devices" fallback message —
 // unlike ShowLogicals, which does print one; that asymmetry is in the C
 // source, not invented here).
 //
 // A disk-class device's /FULL output (showDiskDeviceFull) is a from-scratch,
-// VMS-realistic reformat — not a port of show_device.c, which never
-// produced this layout itself (it just dumped raw struct fields, same as
-// the plain fallback below still does for every other device class).
+// VMS-realistic reformat.
 func (c *Console) ShowDevices(name string, full bool) error {
 	for _, d := range c.Devices.All() {
 		if name != "" && d.Name != name {

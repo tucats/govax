@@ -5,9 +5,6 @@ import (
 	"strings"
 )
 
-// Port of librtl_input.c's decc_gets/exe_input, plus the shared console-line
-// reader they (and file.go's EXE$READ fid-0 case) all build on.
-
 // consoleReader lazily wraps Environment.consoleIn in a *bufio.Reader,
 // cached so successive reads don't lose already-buffered-ahead bytes —
 // there is no equivalent concern in the C source, which reads directly
@@ -32,7 +29,7 @@ const ctrlZ = 0x1A
 // terminal does (internal/rms/terminal.go): the line ends at a carriage
 // return or line feed (a host "\r\n" pair is one end), neither of which
 // is part of it, or when maxLen bytes have been read. CTRL/Z ends a line
-// too, but with nothing read before it it is end of file (ok false), as is
+// too, but with nothing read before it, it is end of file (ok false), as is
 // the end of the host's input with nothing read. (Typed after text, CTRL/Z
 // is followed by another for the next read: cmd/govax/attention.go.)
 func readTerminalLine(env *Environment, maxLen int) (line string, ok bool) {

@@ -282,6 +282,7 @@ func quotedString(text string) (string, int, bool) {
 
 		if i+1 < len(text) && text[i+1] == '"' {
 			b.WriteByte('"')
+
 			i++
 
 			continue

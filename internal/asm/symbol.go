@@ -10,9 +10,7 @@ import (
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
-// SymFlag records characteristics of a symbol, matching asm_symbols.c's
-// SYM_* bit flags (the subset that affects assembly, as opposed to display
-// formatting only).
+// SymFlag records characteristics of a symbol.
 type SymFlag uint32
 
 const (
@@ -62,8 +60,7 @@ const (
 )
 
 // fixupKind says how a pending forward reference's value should be written
-// once the symbol resolves — matching vax.h's K_ADDR_*/K_DISP_*/K_BRANCH_*/
-// K_CASE_W constants (see asm_symbols.c's set_symbol()).
+// once the symbol resolves.
 type fixupKind int
 
 const (
@@ -650,8 +647,7 @@ func (a *Assembler) hasUnresolvedSymbols() bool {
 // own symbol table into Console.Symbols once its bytes have been
 // deposited into live memory. Each symbol's attributes are carried over
 // as symtab flags (symbolFlags), so, for one, the disassembler can
-// recognize a .ENTRY's register-save mask (decode_opcode.c's SYM_ENTRY
-// scan).
+// recognize a .ENTRY's register-save mask.
 func (a *Assembler) Symbols() *symtab.Table {
 	out := symtab.New()
 

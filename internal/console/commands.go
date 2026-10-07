@@ -9,6 +9,22 @@ import (
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
+const (
+	romTOKEN     = "ROM"
+	nvramTOKEN   = "NVRAM"
+	zeroTOKEN    = "ZERO"
+	bootTOKEN    = "BOOT"
+	timeTOKEN    = "TIME"
+	printTOKEN   = "PRINT"
+	helpTOKEN    = "HELP"
+	ifTOKEN      = "IF"
+	executeTOKEN = "EXECUTE"
+	asmTOKEN     = "ASM"
+	includeTOKEN = "INCLUDE"
+	callTOKEN    = "CALL"
+	runTOKEN     = "RUN"
+)
+
 // bindConsoleCommands binds the console's former fixed commands, which
 // docs/PHASE-37.md moved onto the DCL grammar (console.dcl's Phase 37
 // block). The grammar divides each command line into its qualifiers and
@@ -17,27 +33,27 @@ import (
 func (d *Dispatcher) bindConsoleCommands() {
 	g := d.Grammar
 
-	g.Bind("ZERO", func(id int64, r *dcl.Result) error { return d.Console.Zero() })
-	g.Bind("BOOT", notImplemented("BOOT", "device/RTL support"))
-	g.Bind("ROM", notImplemented("ROM", "device support"))
+	g.Bind(zeroTOKEN, func(id int64, r *dcl.Result) error { return d.Console.Zero() })
+	g.Bind(bootTOKEN, notImplemented(bootTOKEN, "device/RTL support"))
+	g.Bind(romTOKEN, notImplemented(romTOKEN, "device support"))
 
-	g.Bind("TIME", func(id int64, r *dcl.Result) error {
+	g.Bind(timeTOKEN, func(id int64, r *dcl.Result) error {
 		return d.Console.Time(r.String("COMMAND"), d.Dispatch)
 	})
 
-	g.Bind("PRINT", func(id int64, r *dcl.Result) error {
+	g.Bind(printTOKEN, func(id int64, r *dcl.Result) error {
 		return d.Console.Print(r.List("ITEMS"))
 	})
 
 	// A "/" starts a new word, as it does in DCL, so HELP SHOW
 	// SYMBOL/ALL finds the same "/ALL" topic as HELP SHOW SYMBOL /ALL.
-	g.Bind("HELP", func(id int64, r *dcl.Result) error {
+	g.Bind(helpTOKEN, func(id int64, r *dcl.Result) error {
 		return d.Console.Help(d.Help, strings.Fields(strings.ReplaceAll(r.String("TOPIC"), "/", " /")))
 	})
 
-	g.Bind("IF", d.ifCommand)
+	g.Bind(ifTOKEN, d.ifCommand)
 
-	g.Bind("EXECUTE", func(id int64, r *dcl.Result) error {
+	g.Bind(executeTOKEN, func(id int64, r *dcl.Result) error {
 		addr, err := d.optionalAddress(r, "ADDRESS")
 		if err != nil {
 			return err
@@ -45,12 +61,11 @@ func (d *Dispatcher) bindConsoleCommands() {
 
 		return d.Console.Execute(addr)
 	})
-	g.Bind("CALL", d.callCommand)
-	g.Bind("RUN", d.runCommand)
+	g.Bind(callTOKEN, d.callCommand)
+	g.Bind(runTOKEN, d.runCommand)
 
-
-	g.Bind("ASM", d.asmCommand)
-	g.Bind("INCLUDE", func(id int64, r *dcl.Result) error {
+	g.Bind(asmTOKEN, d.asmCommand)
+	g.Bind(includeTOKEN, func(id int64, r *dcl.Result) error {
 		return d.Console.Include(r.String("FILE"), d.Dispatch)
 	})
 	g.Bind("INCLUDE_COMMAND_LINE", func(id int64, r *dcl.Result) error {
@@ -76,9 +91,8 @@ func (d *Dispatcher) asmCommand(id int64, r *dcl.Result) error {
 	}
 
 	if hasEntry {
-		// console.c's own post-command hook: a .END-named entry address
-		// auto-invokes "CALL __ENTRY" (no arguments) once the file
-		// finishes assembling.
+		// An .END-named entry address auto-invokes "CALL __ENTRY" 
+		// (no arguments) once the file finishes assembling.
 		return d.Console.Call(entryAddr, false)
 	}
 
@@ -91,9 +105,9 @@ func (d *Dispatcher) asmCommand(id int64, r *dcl.Result) error {
 func romOrNVRAM(r *dcl.Result, noError bool) (kind, file string, err error) {
 	switch {
 	case r.Present("ROM"):
-		kind = "ROM"
+		kind = romTOKEN
 	case r.Present("NVRAM"):
-		kind = "NVRAM"
+		kind = nvramTOKEN
 	default:
 		return "", "", vmserrors.New(vmserrors.CLI_NEEDROMNVRAM)
 	}
@@ -109,8 +123,8 @@ func romOrNVRAM(r *dcl.Result, noError bool) (kind, file string, err error) {
 // saveCommand implements SAVE/ROM file and SAVE/NVRAM file (rom.go). The
 // plain .VAX-file SAVE isn't implemented; see rom.go's doc comment.
 func (d *Dispatcher) saveCommand(id int64, r *dcl.Result) error {
-	// console_save.c checks `if (!vax_init) return VAX_NOVAX;` before
-	// doing anything else -- ROM/NVRAM live on Engine.Memory(), which
+	// check `if (!vax_init) return VAX_NOVAX;` before doing anything
+	// else -- ROM/NVRAM live on Engine.Memory(), which
 	// doesn't exist until INIT has allocated a machine.
 	if err := d.Console.requireInit(); err != nil {
 		return err
@@ -130,7 +144,6 @@ func (d *Dispatcher) saveCommand(id int64, r *dcl.Result) error {
 
 // loadCommand implements LOAD/ROM and LOAD/NVRAM [/NOERROR] [file].
 func (d *Dispatcher) loadCommand(id int64, r *dcl.Result) error {
-	// console_load.c's same vax_init check as saveCommand's.
 	if err := d.Console.requireInit(); err != nil {
 		return err
 	}
@@ -199,8 +212,7 @@ func (d *Dispatcher) callCommand(id int64, r *dcl.Result) error {
 }
 
 // runOptions applies RUN's qualifiers to defaults, whose RunInits is
-// Console.DefaultRunInits (console_run.c's run_inits = vax.debug &
-// DBG_LIBINIT), which /INIT or /NOINIT overrides.
+// Console.DefaultRunInits, which /INIT or /NOINIT overrides.
 func runOptions(r *dcl.Result, defaultRunInits bool) RunOptions {
 	opts := RunOptions{RunInits: defaultRunInits}
 
@@ -241,8 +253,7 @@ func notImplemented(name, dependency string) dcl.Handler {
 	}
 }
 
-// ifCommand implements IF expression [THEN] command (console_if,
-// reference/eVAX/eVAX/Source/Console/console_include.c): when the
+// ifCommand implements IF expression [THEN] command: when the
 // expression is nonzero, the command is dispatched as a command line of
 // its own (so it can be any console command); otherwise it isn't run.
 // vax.init uses IF DEFINED("CONSOLE$ARG_FILE") THEN SET NOVERBOSE (see

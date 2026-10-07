@@ -2,9 +2,9 @@ package cpu
 
 import "github.com/tucats/govax/internal/vax"
 
-// This is the Go port of emul_bitfield.c's bit-branch instructions: BBS/BBC
-// (emul_bb) and BBSS/BBCS/BBSC/BBCC/BBSSI/BBCCI (emul_bbstate). Field
-// extraction and storage reuse getRegisterField/setRegisterField and
+// BBS/BBC and BBSS/BBCS/BBSC/BBCC/BBSSI/BBCCI. 
+//
+// Field extraction and storage reuse getRegisterField/setRegisterField and
 // getMemoryField/setMemoryField (bitfield.go) at size 1 rather than porting
 // emul_bbstate's own separate byte-pointer-based bit access -- both define
 // the identical "test/set/clear one bit at a bit position from a register or
@@ -44,7 +44,7 @@ func bitBranchPosition(e *Engine, posOp Operand) (int32, error) {
 // emulBb is BBS/BBC: branches to the third operand's target iff the single
 // bit at the first operand's position within the second (base) operand is
 // set (BBS) or clear (BBC). Neither operand is modified, and no condition
-// codes are affected -- port of emul_bitfield.c's emul_bb.
+// codes are affected.
 func emulBb(e *Engine, d *Decoded) error {
 	position, err := bitBranchPosition(e, d.Operands[0])
 	if err != nil {
@@ -73,10 +73,7 @@ func emulBb(e *Engine, d *Decoded) error {
 // against a per-opcode value, then unconditionally set or cleared to a
 // (possibly different) per-opcode value; branches to the third operand's
 // target iff the *original* bit matched the test. No condition codes are
-// affected -- port of emul_bitfield.c's emul_bbstate, whose own comment
-// derives the same test/set-value decode from the opcode's low two bits
-// used here (BBSSI/BBCCI first normalized to their non-interlocked
-// equivalents, since this project doesn't emulate multiple processors).
+// affected.
 func emulBbState(e *Engine, d *Decoded) error {
 	position, err := bitBranchPosition(e, d.Operands[0])
 	if err != nil {

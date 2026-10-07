@@ -122,10 +122,12 @@ func (a *Assembler) closingPages(p *listPager, opts ListingOptions) {
 
 	p.label = labelSynopsis
 	phase = StartPhase()
+
 	a.psectSynopsis(p)
 	a.phases[phaseSynopsisOutput] = phase.Elapsed()
 
 	phase = StartPhase()
+
 	a.crossReference(p)
 	a.phases[phaseCrossReference] = phase.Elapsed()
 
@@ -152,7 +154,7 @@ func (a *Assembler) closingPages(p *listPager, opts ListingOptions) {
 func (a *Assembler) listedSymbols() ([]*symbol, int) {
 	width := 15
 
-	var out []*symbol
+	out := make([]*symbol, 0)
 
 	for name, s := range a.symbols.byName {
 		if s.flags&(SymBuiltin|SymLocalLabel) != 0 {

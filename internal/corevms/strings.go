@@ -1,7 +1,5 @@
 package corevms
 
-// Port of librtl_strings.c — CRTL string/character-classification shims.
-//
 // The decc_isXXX routines all return 1 for true / 0 for false. A real C
 // library's ctype.h macros are only contractually "zero or nonzero" (many
 // implementations return a nonzero bitmask, not literally 1), but nothing

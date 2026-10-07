@@ -30,8 +30,7 @@ func TestDisassemble_singleInstruction(t *testing.T) {
 // disassembled as a register-save mask, not misdecoded as an instruction --
 // the gap reported against testdata/asm/hello.asm's ".entry main, ^m<>":
 // Assemble merges the SymEntry flag into Console.Symbols (asm.go), and
-// Disassemble/decodeInstruction (disasm.go) consult it by PC, matching the
-// C reference's decode_opcode.c SYM_ENTRY scan.
+// Disassemble/decodeInstruction (disasm.go) consult it by PC.
 func TestDisassemble_entryMask(t *testing.T) {
 	c, buf := newTestConsole(t)
 

@@ -58,10 +58,9 @@ type directive struct {
 }
 
 // directives is every directive name (without its leading "."), plus the
-// bare mnemonic aliases JEQL/JEQLU/JNEQ/JNEQU, matching asm_pseudo.c's
-// pseudos[] table. assemblePseudo tries it on every statement before the
-// instruction table, so a name has to be excluded here to ever reach a
-// real instruction.
+// bare mnemonic aliases JEQL/JEQLU/JNEQ/JNEQU. assemblePseudo tries it
+// on every statement before the instruction table, so a name has to be
+// excluded here to ever reach a real instruction.
 //
 // A directive allowed in the MACRO dialect has MACRO-32's own syntax and
 // meaning. The rest are eVAX's: some can't be expressed in an object
@@ -75,10 +74,7 @@ type directive struct {
 // and .MODE/.PTE — none are used by any testdata/asm fixture, and each
 // needs live VAX/console state (a mode stack, real page tables) this batch
 // assembler has no model of. .SYM is recognized (so it doesn't fall
-// through to the opcode table) but is a no-op, matching asm_pseudo.c's own
-// switch, which has a pseudos[] entry for "SYM" (code 23) with no
-// corresponding case — a pre-existing dead pseudo-op in the reference
-// tool, replicated as-is since it's harmless either way.
+// through to the opcode table) but is a no-op.
 //
 // It's filled in by init, since some directives (.IIF, .INCLUDE) assemble
 // statements themselves, which refers back to this table.
@@ -325,8 +321,7 @@ func (a *Assembler) assemblePseudo(c *cursor) (handled bool, err error) {
 		a.listConditional()
 	}
 
-	// Any directive other than .CASE empties the running .CASE block base,
-	// matching asm_pseudo.c's own reset ahead of its switch.
+	// Any directive other than .CASE empties the running .CASE block base.
 	if name != "CASE" {
 		a.caseBase = 0
 	}
