@@ -147,6 +147,11 @@ type Environment struct {
 	// process is in, in the scheduler (waits.go); nil when it isn't.
 	pendingWait *waitCondition
 	waiting     *waitCondition
+
+	// Stopped is set when the process's image ended and the process left
+	// the scheduler for good (StopProcess): a process other than process
+	// 1, which Phase 45 will delete instead.
+	Stopped bool
 }
 
 // NewEnvironment returns an Environment for a new VAX process running on

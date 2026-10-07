@@ -90,12 +90,37 @@ func (c *Console) runPlain() error {
 	for {
 		finish := c.traceStep(c.CPU.GPR(vax.PC), false)
 
-		if err := c.Engine.Step(); err != nil {
+		if err := c.StepMachine(); err != nil {
 			return c.ReportStop(err)
 		}
 
 		finish()
 	}
+}
+
+// StepMachine executes one instruction of whichever process the CPU is
+// running (Engine.Step), for the console's and the debugger's run loops.
+// With several processes (docs/PHASE-44.md, subtask 7), only process 1's
+// image ending ends the run, as only process 1's image is the console's
+// RUN, CALL, or GO: another process whose image ends (its main routine
+// returning, or $EXIT, both of which reach Step as
+// cpu.ErrConsoleCallReturned) just stops (corevms.System.StopProcess),
+// and the run goes on with the processes that are left. Every other
+// error, a HALT in another process included (HALT stops the machine,
+// whoever runs it), is returned as Step returned it.
+func (c *Console) StepMachine() error {
+	err := c.Engine.Step()
+	if err == nil {
+		return nil
+	}
+
+	if env := c.running(); env != c.RTL && errors.Is(err, cpu.ErrConsoleCallReturned) {
+		env.StopProcess(env)
+
+		return nil
+	}
+
+	return err
 }
 
 // ReportStop handles every "the run stopped for a benign, expected
@@ -121,7 +146,11 @@ func (c *Console) ReportStop(err error) error {
 		return nil
 
 	case errors.Is(err, cpu.ErrHalted):
-		if c.Verbose {
+		// A HALT in a process other than process 1 is unusual enough to
+		// report whatever the verbosity, naming the process.
+		if env := c.running(); env != c.RTL {
+			c.Printf("%%SYSTEM-S-HALT, cpu halted at PC = %08X in process %08X\n", c.CPU.GPR(vax.PC), env.Process.PID)
+		} else if c.Verbose {
 			c.Printf("%%SYSTEM-S-HALT, cpu halted at PC = %08X\n", c.CPU.GPR(vax.PC))
 		}
 

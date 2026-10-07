@@ -424,7 +424,7 @@ func (d *Debugger) stepOne() (outcome runOutcome, done bool, err error) {
 	userStep := c.Engine.CPU().DebugEnabled(vax.DebugUserStep)
 
 	for {
-		if stepErr := c.Engine.Step(); stepErr != nil {
+		if stepErr := c.StepMachine(); stepErr != nil {
 			outcome, err = d.reportStop(stepErr)
 
 			return outcome, true, err

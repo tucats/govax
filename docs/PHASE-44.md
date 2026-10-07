@@ -1,7 +1,7 @@
 # Phase 44 — Multiprocessing, part 2: the scheduler
 
 **Status:** in progress (started 2026-10-07); decisions taken 2026-10-06
-(see PHASE-43.md, Part A). Subtasks 1–6 done.
+(see PHASE-43.md, Part A). Subtasks 1–7 done.
 
 The program this phase belongs to — its goal, architecture, rules for
 every commit, decisions, and known bugs — is in
@@ -502,3 +502,25 @@ The layouts come from the User's Manual and, if Decision 7 allows, a VMS
     lowering itself to 2 with `$SETPRI` gives a computable process at 3
     the CPU at once and doesn't get it back. `corevms`: `$SETPRI`
     reaches the scheduler, and `JPI$_PRI` shows a wakeup's boost.
+- 2026-10-07: **Subtask 7 done: process-aware run loops.**
+  - Every way an image ends reaches `Engine.Step` as
+    `cpu.ErrConsoleCallReturned`: its outermost procedure's RET to the
+    frame RUN or CALL built, or `$EXIT` (and an unhandled condition's
+    exit) unwinding to it (`exitImage`). `Console.StepMachine` is `Step`
+    for the run loops (`runPlain`, the debugger's `runLoop` and
+    `stepOne`): when that comes from a process other than process 1, the
+    process stops (`System.StopProcess`: image rundown, out of the
+    scheduler for good, `Environment.Stopped`, a reschedule; it stays in
+    the table with its memory until Phase 45 deletes such processes) and
+    the run goes on. Only process 1's ends the console's RUN, CALL, or
+    GO.
+  - HALT stops the machine whoever executes it; one in another process
+    is reported whatever the verbosity, naming it (`%SYSTEM-S-HALT, cpu
+    halted at PC = ... in process 00000302`). What the console and
+    debugger show after a stop in another process is subtask 9's.
+  - Tests (`console/schedrun_test.go`): process 1's CALL counts to its
+    end although process 2's image ends first, by RET and by `$EXIT`,
+    with the console's run loop and the debugger's (each fails without
+    `StepMachine`); process 2 is stopped and out of the scheduler. A
+    kernel-mode HALT in process 2 stops a GO, naming the process. The
+    Phase 42 debugger oracles are unchanged.

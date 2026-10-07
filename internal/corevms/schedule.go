@@ -182,3 +182,30 @@ func (sys *System) switchTo(e *cpu.Engine, cur, next *Environment) error {
 
 	return nil
 }
+
+// StopProcess ends env's image and takes the process out of scheduling
+// for good: what becomes of a process other than process 1 when its
+// image ends (its main routine returns, or it calls $EXIT), until Phase
+// 45 deletes such processes. Its image is run down (channels, timers,
+// ASTs, exit handlers, ...; ImageRundown), it leaves the scheduler (so
+// it is never chosen again), and the scheduler is asked to choose, since
+// it may have been the current process. It stays in the process table,
+// with its address space, so its memory can still be examined.
+func (sys *System) StopProcess(env *Environment) {
+	env.ImageRundown()
+
+	if env.waiting != nil {
+		env.waiting = nil
+		sys.waiters--
+	}
+
+	env.pendingWait = nil
+	env.Stopped = true
+
+	_ = sys.sched.Remove(handle(env))
+	sys.requestReschedule()
+
+	if sys.cpu.DebugEnabled(vax.DebugProcess) {
+		fmt.Fprintf(sys.cpu.DebugWriter(), "DEBUG(PROCESS): %08X's image ended; the process stops\n", env.Process.PID)
+	}
+}

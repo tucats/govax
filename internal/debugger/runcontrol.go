@@ -296,7 +296,7 @@ func (d *Debugger) runLoop(skipFirstCheck bool, trace func(pc uint32) func()) (r
 		first = false
 		finish := trace(pc)
 
-		if err := c.Engine.Step(); err != nil {
+		if err := c.StepMachine(); err != nil {
 			return d.reportStop(err)
 		}
 
