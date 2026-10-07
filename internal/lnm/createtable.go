@@ -112,12 +112,13 @@ func (db *Database) CreateTable(tabnam, partab string, mode Mode, attr uint32) (
 }
 
 // defaultTableName returns an LNM$xxxx name (xxxx in hexadecimal) that
-// neither directory holds yet.
+// neither directory holds yet. The number is counted system-wide, so two
+// processes don't make up the same name for shareable tables.
 func (db *Database) defaultTableName() string {
 	for {
-		db.nextID++
+		db.shared.nextID++
 
-		name := fmt.Sprintf("LNM$%04X", db.nextID)
+		name := fmt.Sprintf("LNM$%04X", db.shared.nextID)
 		if !db.ProcessDirectory.hasName(name) && !db.SystemDirectory.hasName(name) {
 			return name
 		}

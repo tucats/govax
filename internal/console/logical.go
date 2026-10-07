@@ -131,6 +131,9 @@ func bindLogicalCommands(g *dcl.Grammar, c *Console) {
 		case r.Present("PROCESS"):
 			tables = []string{"LNM$PROCESS"}
 
+		case r.Present("JOB"):
+			tables = []string{"LNM$JOB"}
+
 		case r.Present("GROUP"):
 			tables = []string{"LNM$GROUP"}
 
@@ -150,10 +153,13 @@ func bindLogicalCommands(g *dcl.Grammar, c *Console) {
 }
 
 // logicalTableQualifier returns the table a DEFINE/ASSIGN/DEASSIGN
-// command names: /PROCESS, /GROUP, /SYSTEM, or /TABLE= (the grammar lets
-// only one through), defaulting to the process table.
+// command names: /PROCESS, /JOB, /GROUP, /SYSTEM, or /TABLE= (the grammar
+// lets only one through), defaulting to the process table.
 func logicalTableQualifier(r *dcl.Result) string {
 	switch {
+	case r.Present("JOB"):
+		return "LNM$JOB"
+
 	case r.Present("GROUP"):
 		return "LNM$GROUP"
 

@@ -86,11 +86,11 @@ $SH  ,LOG
 
     Qualifiers:
 
-        /PROCESS, /GROUP, /SYSTEM, /TABLE=(table[,...])
+        /PROCESS, /JOB, /GROUP, /SYSTEM, /TABLE=(table[,...])
 
             Search only the named table(s).  By default the tables that
-            LNM$DCL_LOGICAL names are searched: the process, group, and
-            system tables.
+            LNM$DCL_LOGICAL names are searched: the process, job, group,
+            and system tables.
 
         /FULL
 
@@ -152,10 +152,11 @@ $DEF
 
     Qualifiers:
 
-        /PROCESS, /GROUP, /SYSTEM, /TABLE=table
+        /PROCESS, /JOB, /GROUP, /SYSTEM, /TABLE=table
 
             The table to define the name in.  The default is the process
-            table, LNM$PROCESS.  /TABLE accepts a table name or a logical
+            table, LNM$PROCESS.  The job table, LNM$JOB, is shared by the
+            console's process and every subprocess it creates.  /TABLE accepts a table name or a logical
             name that translates to one, such as LNM$PROCESS.
 
         /USER_MODE, /SUPERVISOR_MODE, /EXECUTIVE_MODE
@@ -282,7 +283,7 @@ $DEAS
 
     Qualifiers:
 
-        /PROCESS, /GROUP, /SYSTEM, /TABLE=table
+        /PROCESS, /JOB, /GROUP, /SYSTEM, /TABLE=table
 
             The table to delete from.  The default is the process table.
             Deleting a table's name from LNM$PROCESS_DIRECTORY or

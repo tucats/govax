@@ -77,8 +77,8 @@ func TestCrembx(t *testing.T) {
 		t.Errorf("mailbox %+v, want temporary with the default sizes", m)
 	}
 
-	// The logical name, in LNM$TEMPORARY_MAILBOX (the process table).
-	e, err := env.Logicals.Translate("LNM$PROCESS", "MYMBX", lnm.User, 0)
+	// The logical name, in LNM$TEMPORARY_MAILBOX (the job table).
+	e, err := env.Logicals.Translate("LNM$JOB", "MYMBX", lnm.User, 0)
 	if err != nil || e.Equivalences[0].Value != "MBA1:" || e.Equivalences[0].Attrs&lnm.AttrTerminal == 0 {
 		t.Fatalf("MYMBX = %+v, %v; want \"MBA1:\", terminal", e, err)
 	}

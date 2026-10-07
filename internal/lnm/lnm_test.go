@@ -13,6 +13,13 @@ const testUIC = 0o123<<16 | 0o45
 
 const groupTable = "LNM$GROUP_000123"
 
+// jobTable is the first job's table, and fileDev what LNM$FILE_DEV
+// resolves to in the first process's view.
+const (
+	jobTable = "LNM$JOB_80000100"
+	fileDev  = ProcessTableName + "," + jobTable + "," + groupTable + "," + SystemTableName
+)
+
 // wantStatus fails t unless err is a VMSError carrying code.
 func wantStatus(t *testing.T, err error, code uint32) {
 	t.Helper()
@@ -78,19 +85,25 @@ func TestNewDatabase_standardTables(t *testing.T) {
 		t.Errorf("GroupTableName = %s, want %s", db.GroupTableName, groupTable)
 	}
 
+	if db.JobTableName != jobTable {
+		t.Errorf("JobTableName = %s, want %s", db.JobTableName, jobTable)
+	}
+
 	cases := map[string]string{
 		"LNM$PROCESS":        ProcessTableName,
 		ProcessTableName:     ProcessTableName,
+		"LNM$JOB":            jobTable,
+		jobTable:             jobTable,
 		"LNM$GROUP":          groupTable,
 		"LNM$SYSTEM":         SystemTableName,
 		SystemTableName:      SystemTableName,
-		"LNM$FILE_DEV":       ProcessTableName + "," + groupTable + "," + SystemTableName,
-		"LNM$DCL_LOGICAL":    ProcessTableName + "," + groupTable + "," + SystemTableName,
+		"LNM$FILE_DEV":       fileDev,
+		"LNM$DCL_LOGICAL":    fileDev,
 		"LNM$DIRECTORIES":    ProcessDirectoryName + "," + SystemDirectoryName,
 		ProcessDirectoryName: ProcessDirectoryName,
 		SystemDirectoryName:  SystemDirectoryName,
 
-		"LNM$TEMPORARY_MAILBOX": ProcessTableName,
+		"LNM$TEMPORARY_MAILBOX": jobTable,
 		"LNM$PERMANENT_MAILBOX": SystemTableName,
 	}
 
@@ -100,8 +113,8 @@ func TestNewDatabase_standardTables(t *testing.T) {
 		}
 	}
 
-	if got := len(db.Tables()); got != 5 {
-		t.Errorf("%d tables, want 5", got)
+	if got := len(db.Tables()); got != 6 {
+		t.Errorf("%d tables, want 6", got)
 	}
 
 	proc := db.ProcessDirectory.lookup(ProcessTableName, User, false).Target
@@ -114,7 +127,12 @@ func TestNewDatabase_standardTables(t *testing.T) {
 		t.Errorf("system table: shareable=%v parent=%v", sys.Shareable, sys.Parent.Name)
 	}
 
-	if got := tableNames(db.Children(db.SystemDirectory)); got != SystemTableName+","+groupTable {
+	job := db.SystemDirectory.lookup(jobTable, User, false).Target
+	if !job.Shareable || job.Parent != db.SystemDirectory {
+		t.Errorf("job table: shareable=%v parent=%v", job.Shareable, job.Parent.Name)
+	}
+
+	if got := tableNames(db.Children(db.SystemDirectory)); got != SystemTableName+","+groupTable+","+jobTable {
 		t.Errorf("Children(system directory) = %s", got)
 	}
 }
@@ -182,7 +200,7 @@ func TestResolveTables_redefineProcess(t *testing.T) {
 
 	mustDefine(t, db, ProcessDirectoryName, "LNM$PROCESS", Supervisor, "APPLICATION_NAMES", ProcessTableName)
 
-	want := "APPLICATION_NAMES," + ProcessTableName + "," + groupTable + "," + SystemTableName
+	want := "APPLICATION_NAMES," + fileDev
 	if got := mustResolve(t, db, "LNM$FILE_DEV"); got != want {
 		t.Errorf("LNM$FILE_DEV = %s, want %s", got, want)
 	}
@@ -193,7 +211,7 @@ func TestResolveTables_redefineProcess(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if got := tableNames(tables); got != ProcessTableName+","+groupTable+","+SystemTableName {
+	if got := tableNames(tables); got != fileDev {
 		t.Errorf("LNM$FILE_DEV at exec = %s", got)
 	}
 }
@@ -201,7 +219,7 @@ func TestResolveTables_redefineProcess(t *testing.T) {
 func TestResolveTables_skipsStaleSearchListElement(t *testing.T) {
 	db := NewDatabase(testUIC)
 
-	mustDefine(t, db, SystemDirectoryName, "LNM$FILE_DEV", Supervisor, "LNM$PROCESS", "LNM$JOB", "LNM$SYSTEM")
+	mustDefine(t, db, SystemDirectoryName, "LNM$FILE_DEV", Supervisor, "LNM$PROCESS", "LNM$NOSUCH", "LNM$SYSTEM")
 
 	if got := mustResolve(t, db, "LNM$FILE_DEV"); got != ProcessTableName+","+SystemTableName {
 		t.Errorf("LNM$FILE_DEV = %s", got)
@@ -548,8 +566,8 @@ func TestDelete_tableDeletesSubtables(t *testing.T) {
 		t.Errorf("OTHER = %s", got)
 	}
 
-	if got := len(db.Tables()); got != 6 {
-		t.Errorf("%d tables, want the 5 standard ones plus OTHER", got)
+	if got := len(db.Tables()); got != 7 {
+		t.Errorf("%d tables, want the 6 standard ones plus OTHER", got)
 	}
 }
 
@@ -737,5 +755,115 @@ func TestDefineProcessNames(t *testing.T) {
 		if e.Mode != wantMode || e.Equivalences[0].Attrs != wantAttrs {
 			t.Errorf("%s: mode %s attrs %#x, want %s %#x", name, e.Mode, e.Equivalences[0].Attrs, wantMode, wantAttrs)
 		}
+	}
+}
+
+// TestProcessView_sharing: a second process's view (a subprocess, in
+// the first's job) has a process table of its own, and shares the job,
+// group, and system tables: a name defined in the subprocess's process
+// table isn't seen by its parent, and one in the job table is
+// (docs/PHASE-45.md, subtask 3).
+func TestProcessView_sharing(t *testing.T) {
+	parent := NewDatabase(testUIC)
+	child := parent.NewProcessView(testUIC, parent.JobTableName)
+
+	if child.ProcessDirectory == parent.ProcessDirectory || child.SystemDirectory != parent.SystemDirectory {
+		t.Fatal("the views share a process directory, or don't share the system directory")
+	}
+
+	if got := mustResolve(t, child, "LNM$FILE_DEV"); got != fileDev {
+		t.Errorf("child's LNM$FILE_DEV = %s, want %s", got, fileDev)
+	}
+
+	mustDefine(t, child, "LNM$PROCESS", "MINE", Supervisor, "CHILD")
+	mustDefine(t, child, "LNM$JOB", "OURS", Supervisor, "SHARED")
+	mustDefine(t, parent, "LNM$PROCESS", "MINE", Supervisor, "PARENT")
+
+	if e := mustTranslate(t, parent, "LNM$FILE_DEV", "MINE"); e.Equivalences[0].Value != "PARENT" {
+		t.Errorf("the parent sees MINE = %s, want its own", e.Equivalences[0].Value)
+	}
+
+	if e := mustTranslate(t, child, "LNM$FILE_DEV", "MINE"); e.Equivalences[0].Value != "CHILD" {
+		t.Errorf("the child sees MINE = %s, want its own", e.Equivalences[0].Value)
+	}
+
+	if e := mustTranslate(t, parent, "LNM$FILE_DEV", "OURS"); e.Table.Name != jobTable {
+		t.Errorf("the parent finds the job's OURS in %s, want %s", e.Table.Name, jobTable)
+	}
+
+	// Deleting the child's process names leaves the parent's.
+	if _, err := child.Delete(ProcessTableName, "MINE", Supervisor); err != nil {
+		t.Fatal(err)
+	}
+
+	mustTranslate(t, parent, ProcessTableName, "MINE")
+
+	// A process-private table belongs to its process; a shareable one,
+	// to everyone.
+	if _, _, err := child.CreateTable("CHILD_TABLE", "LNM$PROCESS_TABLE", Supervisor, 0); err != nil {
+		t.Fatal(err)
+	}
+
+	if _, _, err := child.CreateTable("COMMON_TABLE", "LNM$SYSTEM_TABLE", Supervisor, 0); err != nil {
+		t.Fatal(err)
+	}
+
+	_, err := parent.ResolveTables("CHILD_TABLE", User)
+	wantStatus(t, err, vmserrors.SS_NOLOGTAB)
+
+	if got := mustResolve(t, parent, "COMMON_TABLE"); got != "COMMON_TABLE" {
+		t.Errorf("the parent's COMMON_TABLE = %s", got)
+	}
+
+	if got := len(parent.Tables()); got != 7 {
+		t.Errorf("the parent sees %d tables, want its 6 and COMMON_TABLE", got)
+	}
+}
+
+// TestProcessView_jobsAndGroups: a process in another job has another
+// job table, and a process in a new UIC group gets its group's table,
+// which a later process of the group shares.
+func TestProcessView_jobsAndGroups(t *testing.T) {
+	first := NewDatabase(testUIC)
+
+	const otherUIC = 0o200<<16 | 1
+
+	detached := first.NewProcessView(otherUIC, first.NewJobTable())
+	if detached.JobTableName != "LNM$JOB_80000200" || detached.GroupTableName != "LNM$GROUP_000200" {
+		t.Fatalf("second job: %s, %s", detached.JobTableName, detached.GroupTableName)
+	}
+
+	mustDefine(t, first, "LNM$JOB", "JOBNAME", Supervisor, "FIRST")
+
+	_, err := detached.Translate("LNM$FILE_DEV", "JOBNAME", User, 0)
+	wantStatus(t, err, vmserrors.SS_NOLOGNAM)
+
+	mustDefine(t, detached, "LNM$GROUP", "GROUPNAME", Supervisor, "G200")
+
+	sibling := first.NewProcessView(otherUIC, first.JobTableName)
+	if e := mustTranslate(t, sibling, "LNM$FILE_DEV", "GROUPNAME"); e.Table.Name != "LNM$GROUP_000200" {
+		t.Errorf("GROUPNAME found in %s", e.Table.Name)
+	}
+
+	if e := mustTranslate(t, sibling, "LNM$FILE_DEV", "JOBNAME"); e.Equivalences[0].Value != "FIRST" {
+		t.Errorf("JOBNAME = %s", e.Equivalences[0].Value)
+	}
+
+	_, err = first.Translate("LNM$FILE_DEV", "GROUPNAME", User, 0)
+	wantStatus(t, err, vmserrors.SS_NOLOGNAM)
+
+	// Default table names are unique across processes.
+	a, _, err := first.CreateTable("", "LNM$SYSTEM_TABLE", Supervisor, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	b, _, err := detached.CreateTable("", "LNM$SYSTEM_TABLE", Supervisor, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if a.Name == b.Name {
+		t.Errorf("two processes' default table names are both %s", a.Name)
 	}
 }

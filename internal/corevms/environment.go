@@ -49,12 +49,12 @@ type Environment struct {
 	// condition.go's startDispatch.
 	OnSignal func(UnhandledCondition)
 
-	// Logicals is the process's logical-name database (internal/lnm,
-	// Phase 25), injected rather than owned here: the console and this
-	// Environment both need to see the same tables. One lnm.Database
-	// holds both the process directory (process and job tables) and the
-	// system directory (system and group tables), so it stays here until
-	// the two are split for subprocesses (docs/PHASE-45.md).
+	// Logicals is the process's view of the logical-name database
+	// (internal/lnm, Phase 25): its own process directory and process
+	// table, and the system directory's tables (system, group, and job
+	// tables) every process shares. Process 1's is the console's, injected
+	// so the console's DEFINE and SHOW LOGICAL work on it; a subprocess
+	// gets a new view of its owner's (NewSubprocess, docs/PHASE-45.md).
 	Logicals *lnm.Database
 
 	// Session is the console's rms.Session, whose default directory

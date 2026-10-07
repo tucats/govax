@@ -16,6 +16,12 @@
 //     search list are plain logical names that callers can redefine.
 //   - Every table except a directory has a parent table. Deleting a table
 //     deletes its descendants too.
+//   - Each process has its own view, a Database: its process directory
+//     and process-private tables are its own, and the system directory
+//     with every shareable table (the system table, each UIC group's
+//     table, and each job's table) is shared by every view
+//     (docs/PHASE-45.md). A subprocess's view shares its creator's job
+//     table (NewProcessView).
 //
 // The behavioral reference is the VMS System Services Reference Manual's
 // $CRELNM/$CRELNT/$DELLNM/$TRNLNM descriptions and the VSI OpenVMS User's

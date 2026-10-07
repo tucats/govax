@@ -194,7 +194,7 @@ func (sys *System) removeStaleMailboxes() {
 // unit number.
 //
 // With lognam, a logical name for it is defined in LNM$TEMPORARY_MAILBOX
-// or LNM$PERMANENT_MAILBOX (LNM$PROCESS and LNM$SYSTEM in govax),
+// or LNM$PERMANENT_MAILBOX (the job table and the system table),
 // equated to "MBAn:" with the terminal attribute. If that name already
 // names a mailbox, no new one is made: the channel is assigned to that
 // one, so two parts of a program needn't agree which creates it.

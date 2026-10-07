@@ -272,3 +272,32 @@ for a process created without one.
   nominal (PRCLM 10, ...), standing in for the SYSTEM account's UAF
   entry. Tests: `job_test.go` (process 1's job, figure 20-2's tree, PRCLM,
   a full table).
+- 2026-10-07: Subtask 3 (per-process logical-name views and the job
+  table), from the User's Manual's tables 11-1, 11-2, and 11-4.
+  `lnm.Database` is now one process's view: its process directory and
+  private tables are its own, and the system directory with every
+  shareable table (system, group, and job tables) is held once, in a
+  `sharedTables` every view points to. `NewDatabase(uic)` makes the first
+  view and the shared tables; `NewJobTable` adds a job's table to the
+  system directory (permanent, kernel mode); `NewProcessView(uic,
+  jobTable)` makes another process's view, creating its group's table if
+  it's the group's first process. Each process directory has
+  `LNM$PROCESS`, `LNM$JOB`, and `LNM$GROUP`; `LNM$FILE_DEV` is PROCESS,
+  JOB, GROUP, SYSTEM; and `LNM$TEMPORARY_MAILBOX` is `LNM$JOB`, fixing
+  PHASE-43.md's bug 4. Default `LNM$xxxx` table names are counted
+  system-wide. Job table names stand for VMS's JIB address
+  (`LNM$JOB_xxxxxxxx`); govax's are `LNM$JOB_80000100`, `..._80000200`,
+  ..., a choice. `NewSubprocess` gives the subprocess a new view in its
+  owner's job; the console's database is still process 1's view (it
+  outlives INIT, as before). Visible changes: SHOW LOGICAL lists the job
+  table between the process and group tables, and SHOW
+  LOGICAL/STRUCTURE shows it under the system directory, as VMS's do.
+  The console's DEFINE, ASSIGN, DEASSIGN, and SHOW LOGICAL gain `/JOB`
+  (grammar, handlers, HELP). MOUNT's `DISK$` names stay in the system
+  table: VMS puts a private mount's in the job table, but govax's mounts
+  are system-wide. Tests: `lnm`'s `TestProcessView_sharing` (a name in a
+  subprocess's process table isn't seen by its parent, one in the job
+  table is) and `TestProcessView_jobsAndGroups`; `corevms`'s
+  `TestJob_logicalNames` (the same through `$CRELNM`/`$TRNLNM`, and a
+  subprocess's `$CREMBX` finding its owner's mailbox by name); the
+  console's `TestLogical_jobTable`.

@@ -115,9 +115,11 @@ func (j *Job) releaseSubprocess() {
 
 // NewSubprocess returns a new process created by owner, a subprocess in
 // owner's job, added to the process table (which gives it its PID) as
-// NewEnvironment adds a process. It shares owner's logical-name database
-// and takes owner's user name, account, and UIC, as a subprocess does on
-// VMS; everything else starts as a new process's does. consoleIn and
+// NewEnvironment adds a process. It takes owner's user name, account, and
+// UIC, as a subprocess does on VMS; everything else starts as a new
+// process's does. Its logical names are a new view of owner's database
+// (lnm.Database.NewProcessView): an empty process table of its own, and
+// the job, group, and system tables shared with owner. consoleIn and
 // consoleOut are its terminal input and output, as for NewEnvironment.
 //
 // The job counts it against its PRCLM quota: SS$_EXQUOTA if the job
@@ -129,7 +131,8 @@ func NewSubprocess(owner *Environment, consoleIn io.Reader, consoleOut io.Writer
 		return nil, vmserrors.New(ssExQuota)
 	}
 
-	env := newEnvironment(owner.System, owner.Logicals, consoleIn, consoleOut)
+	logicals := owner.Logicals.NewProcessView(owner.Process.UIC, owner.Logicals.JobTableName)
+	env := newEnvironment(owner.System, logicals, consoleIn, consoleOut)
 
 	p := env.Process
 	p.Username, p.Account, p.UIC = owner.Process.Username, owner.Process.Account, owner.Process.UIC

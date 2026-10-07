@@ -120,7 +120,7 @@ func TestShowLogical_tableListing(t *testing.T) {
 	// Wildcards list the matches under every searched table's header.
 	mustDispatch(t, d, "DEFINE/SYSTEM SYS$SYSDEVICE DUA0:")
 	wantOutput(t, d, buf, "SHOW LOGICAL SYS$S*",
-		"(LNM$PROCESS_TABLE)\n\n(LNM$GROUP_000001)\n\n(LNM$SYSTEM_TABLE)\n"+
+		"(LNM$PROCESS_TABLE)\n\n(LNM$JOB_80000100)\n\n(LNM$GROUP_000001)\n\n(LNM$SYSTEM_TABLE)\n"+
 			"  \"SYS$SYSDEVICE\" = \"DUA0:\"\n")
 
 	// /GROUP selects just the group table.
@@ -252,6 +252,7 @@ func TestCreateNameTable(t *testing.T) {
 			"(LNM$SYSTEM_DIRECTORY)\n"+
 			"    (LNM$SYSTEM_TABLE)\n"+
 			"    (LNM$GROUP_000001)\n"+
+			"    (LNM$JOB_80000100)\n"+
 			"    (NEWTAB)\n")
 
 	// Re-creating supersedes (and so empties) the table.
@@ -309,4 +310,21 @@ func TestLogicals_beforeInit(t *testing.T) {
 	if err := c.DefineLogicalName("LNM$PROCESS", "FOO", []string{"BAR"}, lnm.Supervisor, 0, true); err != nil {
 		t.Fatal(err)
 	}
+}
+
+// TestLogical_jobTable: DEFINE/JOB, SHOW LOGICAL/JOB, and DEASSIGN/JOB
+// work on the job table, which LNM$FILE_DEV searches after the process
+// table (docs/PHASE-45.md, subtask 3).
+func TestLogical_jobTable(t *testing.T) {
+	d, _, buf := logicalDispatcher(t)
+
+	mustDispatch(t, d, "DEFINE/JOB WORKAREA DUA1:[WORK]")
+	wantOutput(t, d, buf, "SHOW LOGICAL/JOB",
+		"(LNM$JOB_80000100)\n"+
+			"  \"WORKAREA\" = \"DUA1:[WORK]\"\n")
+	wantOutput(t, d, buf, "SHOW TRANSLATION WORKAREA",
+		"WORKAREA = \"DUA1:[WORK]\" (LNM$JOB_80000100)\n")
+
+	mustDispatch(t, d, "DEASSIGN/JOB WORKAREA")
+	wantOutput(t, d, buf, "SHOW LOGICAL/JOB", "(LNM$JOB_80000100)\n")
 }

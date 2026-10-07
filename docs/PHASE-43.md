@@ -451,7 +451,8 @@ To fix in the phase named (each with a regression test):
    `processTarget` can only find the caller (Phase 43/45).
 4. **`LNM$TEMPORARY_MAILBOX` translates to `LNM$PROCESS`**, not
    `LNM$JOB` as on VMS (`internal/lnm/database.go`); a subprocess wouldn't
-   see its parent's temporary mailbox names (Phase 45).
+   see its parent's temporary mailbox names (Phase 45). Fixed in Phase
+   45, subtask 3.
 5. **Image symbols are console-global** (`SHARE$xxx_INITIALIZE`, `MAIN`
    in `Console.Symbols`); a second process's activation would overwrite
    process 1's (Phase 43).

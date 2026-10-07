@@ -247,9 +247,10 @@ func (db *Database) dropTable(t *Table) {
 		db.dropTable(c)
 	}
 
-	for i, x := range db.tables {
+	list := db.listFor(t)
+	for i, x := range *list {
 		if x == t {
-			db.tables = append(db.tables[:i], db.tables[i+1:]...)
+			*list = append((*list)[:i], (*list)[i+1:]...)
 
 			break
 		}

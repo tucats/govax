@@ -161,3 +161,53 @@ func TestJob_noSlot(t *testing.T) {
 			env.Process.Job.SubprocessCount, env.Process.SubprocessCount)
 	}
 }
+
+// TestJob_logicalNames: a subprocess has a process table of its own and
+// shares its job's table with its owner: a name it defines in its
+// process table isn't seen by its owner, one in the job table is
+// (docs/PHASE-45.md, subtask 3). A temporary mailbox's name goes in the
+// job table (LNM$TEMPORARY_MAILBOX is LNM$JOB, docs/PHASE-43.md's bug 4),
+// so a subprocess finds its owner's mailbox by name.
+func TestJob_logicalNames(t *testing.T) {
+	parent, _ := fixture()
+	child := newSubprocess(t, parent)
+	a := newArena(t, parent)
+
+	define := func(env *Environment, table, name, value string) {
+		t.Helper()
+
+		list := a.items(item{code: lnmString, buflen: uint16(len(value)), buf: a.str(value)})
+		wantR0(t, callLNM(t, env, serviceSysCrelnm, 0, a.desc(table), a.desc(name), 0, list), ssNormal)
+	}
+
+	translate := func(env *Environment, name string) uint32 {
+		t.Helper()
+
+		return callLNM(t, env, serviceSysTrnlnm, 0, a.desc("LNM$FILE_DEV"), a.desc(name), 0, 0)
+	}
+
+	define(child, "LNM$PROCESS", "CHILD_ONLY", "X")
+	define(child, "LNM$JOB", "WHOLE_JOB", "Y")
+
+	wantR0(t, translate(parent, "CHILD_ONLY"), vmserrors.SS_NOLOGNAM)
+	wantR0(t, translate(child, "CHILD_ONLY"), ssNormal)
+	wantR0(t, translate(parent, "WHOLE_JOB"), ssNormal)
+
+	// The console's terminal names are process 1's own.
+	wantR0(t, translate(child, "TT"), vmserrors.SS_NOLOGNAM)
+
+	// A detached process is in a job of its own.
+	other := newProcess(t, parent)
+	other.Logicals = parent.Logicals.NewProcessView(other.Process.UIC, parent.Logicals.NewJobTable())
+	wantR0(t, translate(other, "WHOLE_JOB"), vmserrors.SS_NOLOGNAM)
+
+	r0, ch := crembx(t, parent, a, 0, 0, 0, "PARENT_MBX")
+	wantR0(t, r0, ssNormal)
+
+	r0, childCh := crembx(t, child, a, 0, 0, 0, "PARENT_MBX")
+	wantR0(t, r0, ssNormal)
+
+	if mailboxOn(t, parent, ch) != mailboxOn(t, child, childCh) {
+		t.Error("the subprocess's $CREMBX of the same name made a second mailbox")
+	}
+}
