@@ -10,8 +10,7 @@ func TestDeviceClassName(t *testing.T) {
 		{DeviceClassNone, "none"},
 		{DeviceClassDisk, "disk"},
 		{DeviceClassTT, "terminal"},
-		{DeviceClassMisc, "miscellaneous"},
-		{DeviceClass(201), "<unknown>"},
+		{DeviceClass(200), "<unknown>"},
 	}
 	for _, c := range cases {
 		if got := DeviceClassName(c.class); got != c.want {

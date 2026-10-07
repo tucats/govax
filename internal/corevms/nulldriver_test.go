@@ -11,7 +11,8 @@ import (
 
 func TestNull_qio(t *testing.T) {
 	env, out := fixture()
-	defineTestDevice(env, "NLA0", iodev.DeviceClassMisc)
+	nla := defineTestDevice(env, "NLA0", iodev.DeviceClassMailbox)
+	nla.DevType = iodev.DeviceTypeNull
 
 	a := newArena(t, env)
 	iosb := a.alloc(8)
@@ -22,11 +23,11 @@ func TestNull_qio(t *testing.T) {
 	other := newProcess(t, env)
 	assignCall(t, other, newArena(t, other), "NLA0", uint32(vax.User))
 
-	// A write is discarded but counted.
+	// A write is discarded, and its transfer count is 0, as on VMS 7.1.
 	wantR0(t, callQIO(t, env, qioArgs{channel: ch, function: fnWriteVBlk, iosb: iosb, p: [6]uint32{a.str("gone"), 4}}), ssNormal)
 
-	if st, n, _ := readIOSB(a, iosb); st != uint16(ssNormal) || n != 4 {
-		t.Errorf("write IOSB = %d, %d; want SS$_NORMAL, 4", st, n)
+	if st, n, _ := readIOSB(a, iosb); st != uint16(ssNormal) || n != 0 {
+		t.Errorf("write IOSB = %d, %d; want SS$_NORMAL, 0", st, n)
 	}
 
 	if out.Len() != 0 {
@@ -44,15 +45,16 @@ func TestNull_qio(t *testing.T) {
 	// A write from memory the process can't read is refused.
 	wantR0(t, callQIO(t, env, qioArgs{channel: ch, function: fnWriteVBlk, p: [6]uint32{badAddr, 4}}), ssAccVio)
 
-	// Sense mode reports the class; set mode and a function it doesn't
-	// have: success and SS$_ILLIOFUNC.
+	// Sense mode is refused (VMS 7.1: SS$_ILLIOFUNC); set mode succeeds.
 	sense := a.alloc(8)
-	wantR0(t, callQIO(t, env, qioArgs{channel: ch, function: fnSenseMode, iosb: iosb, p: [6]uint32{sense, 8}}), ssNormal)
-
-	if got := a.readLong(sense); byte(got) != byte(iodev.DeviceClassMisc) {
-		t.Errorf("sensed class %d, want %d", byte(got), byte(iodev.DeviceClassMisc))
-	}
-
+	wantR0(t, callQIO(t, env, qioArgs{channel: ch, function: fnSenseMode, p: [6]uint32{sense, 8}}), ssIllIoFunc)
 	wantR0(t, callQIO(t, env, qioArgs{channel: ch, function: fnSetMode, p: [6]uint32{sense, 8}}), ssNormal)
 	wantR0(t, callQIO(t, env, qioArgs{channel: ch, function: fnReadPrompt}), ssIllIoFunc)
+
+	// $CREMBX's cleanup of stale mailboxes leaves the null device.
+	env.removeStaleMailboxes()
+
+	if _, found := env.Devices.Find("NLA0"); !found {
+		t.Error("removeStaleMailboxes removed NLA0:")
+	}
 }

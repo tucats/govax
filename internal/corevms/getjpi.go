@@ -27,11 +27,14 @@ var (
 
 // Wildcard $GETJPI contexts, the longword at pidadr. VMS starts a
 // wildcard scan at -1 and keeps its own position there between calls;
-// programs loop until SS$_NOMOREPROC without interpreting it. govax's
-// context after a process is jpiContext | the process table index to
-// look at next: no real PID has 0xFFFF in its high bits (a PID has 21
-// bits). The scan visits the table in index order, skipping processes
-// the caller may not look at (mayAffect), and ends with SS$_NOMOREPROC.
+// programs loop until SS$_NOMOREPROC without interpreting it. After a
+// process the longword holds jpiContext | its process table index (VMS 7.1
+// left 0xFFFF0001, 0xFFFF0005, ... for processes 00000101, 00000105, ...,
+// testdata/mp/probe2), and the next call looks from the index after it:
+// no real PID has 0xFFFF in its high bits (a PID has 21 bits). The scan
+// visits the table in index order, skipping processes the caller may not
+// look at (mayAffect), and ends with SS$_NOMOREPROC, leaving the longword
+// as it was.
 const (
 	jpiWildcard = 0xFFFFFFFF
 	jpiContext  = 0xFFFF0000
@@ -314,7 +317,7 @@ func (env *Environment) processTarget(pidadr, prcnam uint32, wildcard bool) (*En
 
 	switch {
 	case wildcard && (pid == jpiWildcard || pid&0xFFFF0000 == jpiContext):
-		index := pid & 0xFFFF
+		index := pid&0xFFFF + 1
 		if pid == jpiWildcard {
 			index = 1
 		}
@@ -325,7 +328,7 @@ func (env *Environment) processTarget(pidadr, prcnam uint32, wildcard bool) (*En
 				continue
 			}
 
-			return writeBack(next, jpiContext|(index+1))
+			return writeBack(next, jpiContext|index)
 		}
 
 		return nil, ssNoMoreProc

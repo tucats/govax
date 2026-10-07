@@ -114,9 +114,9 @@ func (sys *System) DeleteProcess(env *Environment) {
 // section 22.1.1): env is marked for deletion, unless it already is, and
 // made computable if it's waiting, so that the scheduler soon gives it
 // the CPU and its deletion runs (switchTo). Its final status, the one its
-// termination message reports, is SS$_ABORT, unless its image has
-// already called $EXIT with a status of its own: VMS's for a process
-// deleted with its image unfinished is unconfirmed.
+// termination message reports, is whatever its image had called $EXIT
+// with, or 0: VMS 7.1 reported 0 for a hibernating child deleted with
+// $DELPRC (testdata/mp/probe2).
 //
 // Without the scheduler, nothing would ever give env the CPU: it's
 // deleted at once.
@@ -132,10 +132,6 @@ func (sys *System) markForDeletion(env *Environment) {
 
 	// A suspended process must run to be deleted (the book's step 2).
 	env.resume()
-
-	if env.Process.ExitStatus == 0 {
-		env.Process.ExitStatus = ssAbort
-	}
 
 	if sys.engine == nil {
 		sys.DeleteProcess(env)
@@ -330,7 +326,7 @@ func (env *Environment) CloseFiles() {
 // DeleteNow deletes env's process and, before it, its subprocesses,
 // leaves first, at once and without the scheduler: the console's STOP, and
 // the machine's shutdown (INIT, VMINIT, ZERO, govax's exit). The final
-// status of one whose image hadn't ended is SS$_ABORT, as for $DELPRC. A
+// status of one whose image hadn't ended is 0, as for $DELPRC. A
 // suspended process is resumed first. Process 1 is never deleted. If the
 // CPU is in a process deleted, its memory is freed once the CPU leaves it
 // (switchTo, or Console.ReturnToProcessOne).
@@ -344,10 +340,6 @@ func (sys *System) DeleteNow(env *Environment) {
 	}
 
 	env.resume()
-
-	if env.Process.ExitStatus == 0 {
-		env.Process.ExitStatus = ssAbort
-	}
 
 	sys.DeleteProcess(env)
 }

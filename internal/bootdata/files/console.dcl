@@ -110,7 +110,6 @@ grammar console
         keyword	video	/id=99
         keyword	bus	/id=128
         keyword mailbox	/id=160
-        keyword misc	/id=200
         keyword recmsl_storage/id=179
         keyword misc	/id=200
         
@@ -118,6 +117,8 @@ grammar console
         keyword	rk06		/id=1
         keyword	rk07		/id=2
         keyword	rp04		/id=3
+        ! The null device NLA0: has type 3, too.
+        keyword	null		/id=3
         keyword rp05		/id=4
         keyword rp06		/id=5
         keyword rm03		/id=6

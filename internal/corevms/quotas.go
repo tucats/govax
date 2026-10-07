@@ -64,7 +64,11 @@ type quotaRule struct {
 	field    func(p *Process) *uint32
 }
 
-// quotaRules are the quotas $PQLDEF defines.
+// quotaRules are the quotas $PQLDEF defines, with the defaults and minimums
+// (SYSGEN's PQL_Dxxx and PQL_Mxxx) that the VMS 7.1 simh system had in use
+// (SYSGEN SHOW/PQL, testdata/mp/probe2/vax): its working set and
+// paging file values are the larger ones its installation set, and ENQLM's
+// are not the stock 30 and 4.
 var quotaRules = []quotaRule{
 	{"ASTLM", 24, 4, quotaNondeductible, func(p *Process) *uint32 { return &p.ASTLimit }},
 	{"BIOLM", 18, 4, quotaNondeductible, func(p *Process) *uint32 { return &p.BufferedIOLimit }},
@@ -72,13 +76,13 @@ var quotaRules = []quotaRule{
 	{"CPULM", 0, 0, quotaDeductible, func(p *Process) *uint32 { return &p.CPULimit }},
 	{"DIOLM", 18, 4, quotaNondeductible, func(p *Process) *uint32 { return &p.DirectIOLimit }},
 	{"FILLM", 16, 2, quotaPooled, func(p *Process) *uint32 { return &p.Job.Pooled.FILLM }},
-	{"PGFLQUOTA", 8192, 512, quotaPooled, func(p *Process) *uint32 { return &p.Job.Pooled.PGFLQUOTA }},
+	{"PGFLQUOTA", 16400, 16400, quotaPooled, func(p *Process) *uint32 { return &p.Job.Pooled.PGFLQUOTA }},
 	{"PRCLM", 8, 0, quotaPooled, func(p *Process) *uint32 { return &p.Job.SubprocessLimit }},
 	{"TQELM", 8, 0, quotaPooled, func(p *Process) *uint32 { return &p.Job.Pooled.TQELM }},
-	{"WSQUOTA", 200, 60, quotaNondeductible, func(p *Process) *uint32 { return &p.WSQuota }},
-	{"WSDEFAULT", 100, 60, quotaNondeductible, func(p *Process) *uint32 { return &p.WSDefault }},
-	{"ENQLM", 30, 4, quotaPooled, func(p *Process) *uint32 { return &p.Job.Pooled.ENQLM }},
-	{"WSEXTENT", 400, 60, quotaNondeductible, func(p *Process) *uint32 { return &p.WSExtent }},
+	{"WSQUOTA", 588, 1024, quotaNondeductible, func(p *Process) *uint32 { return &p.WSQuota }},
+	{"WSDEFAULT", 294, 512, quotaNondeductible, func(p *Process) *uint32 { return &p.WSDefault }},
+	{"ENQLM", 128, 30, quotaPooled, func(p *Process) *uint32 { return &p.Job.Pooled.ENQLM }},
+	{"WSEXTENT", 16400, 16400, quotaNondeductible, func(p *Process) *uint32 { return &p.WSExtent }},
 	{"JTQUOTA", 1024, 0, quotaPooled, func(p *Process) *uint32 { return &p.Job.Pooled.JTQUOTA }},
 }
 

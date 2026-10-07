@@ -1,0 +1,133 @@
+
+$ MACRO/NOLIST CHILD
+$ MACRO/NOLIST PROBE2
+$ LINK CHILD
+$ LINK PROBE2
+$ here = F$ENVIRONMENT("DEFAULT")
+$ PROBE2 :== $DUA1:[000000]PROBE2.EXE
+$ PROBE2 DUA1:[000000]CHILD.EXE
+Experiment 1: $SUSPND and $RESUME of a child
+$CREPRC: 00000001
+$RESUME of a process that is not suspended: 00000001
+$SUSPND: 00000001
+  JPI$_STATE of the suspended child: 00000007
+$SUSPND of a process already suspended: 00000001
+$RESUME: 00000001
+$RESUME again: 00000001
+  JPI$_STATE after the resume: 00000007
+Experiment 2: $SETPRI of the child
+$SETPRI to 9: 00000001
+  previous priority: 00000006
+  JPI$_PRI afterwards: 00000008
+  JPI$_PRIB afterwards: 00000009
+Experiment 3: $FORCEX with the code 10000
+$FORCEX: 00000001
+  termination message: read status 0001, final status 00010000
+Experiment 4: $DELPRC of a hibernating child
+$CREPRC: 00000001
+$DELPRC: 00000001
+  termination message: read status 0001, final status 00000000
+Experiment 5: an image that does not exist
+$CREPRC: 00000001
+  termination message: read status 0001, final status 00018292
+Experiment 6: $CREPRC errors
+first PROBE2_A: 00000001
+second PROBE2_A (duplicate name): 00000094
+a 16 character name: 00000154
+a reserved bit in stsflg: 0000017C
+$DELPRC of PROBE2_A: 00000001
+Experiment 7: a process that does not exist
+$WAKE: 000008E8
+$RESUME: 000008E8
+$GETJPIW: 000008E8
+Experiment 8: $GETJPIW wildcard scan, the PID longword each time
+  pidadr FFFF0001, status 00000001, name "SWAPPER"
+  pidadr FFFF0005, status 00000001, name "CONFIGURE"
+  pidadr FFFF0007, status 00000001, name "IPCACP"
+  pidadr FFFF0008, status 00000001, name "ERRFMT"
+  pidadr FFFF0009, status 00000001, name "OPCOM"
+  pidadr FFFF000A, status 00000001, name "AUDIT_SERVER"
+  pidadr FFFF000B, status 00000001, name "JOB_CONTROL"
+  pidadr FFFF000C, status 00000001, name "QUEUE_MANAGER"
+  pidadr FFFF000D, status 00000001, name "SECURITY_SERVER"
+  pidadr FFFF000E, status 00000001, name "DNS$ADVER"
+  pidadr FFFF000F, status 00000001, name "LES$ACP_V30"
+  pidadr FFFF0010, status 00000001, name "REMACP"
+  pidadr FFFF0011, status 00000001, name "NET$ACP"
+  pidadr FFFF0012, status 00000001, name "NET$EVD"
+  pidadr FFFF0013, status 00000001, name "DTSS$CLERK"
+  pidadr FFFF0014, status 00000001, name "SYSTEM"
+  pidadr FFFF0014, status 000009A8, name ""
+Experiment 9: the null device
+$GETDVIW of NL:: 00000001
+  DVI$_DEVCLASS: 000000A0
+  DVI$_DEVTYPE: 00000003
+  DVI$_DEVCHAR: 0C150001
+$ASSIGN of NL:: 00000001
+$QIOW write to NL:: 00000001
+  IOSB first longword: 00000001
+$QIOW read from NL:: 00000001
+  IOSB first longword: 00000870
+  the read buffer (AAAAAAAA if untouched): AAAAAAAA
+$QIOW sense mode on NL:: 000000F4
+$ ! The quotas a process gets by default and at least (SYSGEN's PQL_ parameters).
+$ MCR SYSGEN
+SHOW/PQL
+
+Parameters in use: Active
+Parameter Name            Current    Default     Min.     Max.     Unit  Dynamic
+--------------            -------    -------    -------  -------   ----  -------
+PQL_DASTLM                     24         24         4     32767 Ast        D
+PQL_MASTLM                      4          4         4     32767 Ast        D
+PQL_DBIOLM                     18         18         4     32767 I/O        D
+PQL_MBIOLM                      4          4         4     32767 I/O        D
+PQL_DBYTLM                   8192       8192      1024        -1 Bytes      D
+PQL_MBYTLM                   1024       1024      1024        -1 Bytes      D
+PQL_DCPULM                      0          0         0        -1 10Ms       D
+PQL_MCPULM                      0          0         0        -1 10Ms       D
+PQL_DDIOLM                     18         18         4     32767 I/O        D
+PQL_MDIOLM                      4          4         4     32767 I/O        D
+PQL_DFILLM                     16         16         2     32767 Files      D
+PQL_MFILLM                      2          2         2     32767 Files      D
+PQL_DPGFLQUOTA              16400       8192       512        -1 Pages      D
+PQL_MPGFLQUOTA              16400        512       512        -1 Pages      D
+PQL_DPRCLM                      8          8         0     32767 Processes  D
+PQL_MPRCLM                      0          0         0     32767 Processes  D
+PQL_DTQELM                      8          8         0     32767 Timers     D
+PQL_MTQELM                      0          0         0     32767 Timers     D
+PQL_DWSDEFAULT                294        100        60        -1 Pages      
+PQL_MWSDEFAULT                512         60        60        -1 Pages      
+PQL_DWSQUOTA                  588        200        60        -1 Pages      D
+PQL_MWSQUOTA                 1024         60        60        -1 Pages      D
+PQL_DWSEXTENT               16400        400        60        -1 Pages      D
+PQL_MWSEXTENT               16400         60        60        -1 Pages      D
+PQL_DENQLM                    128        128         4     32767 Locks      D
+PQL_MENQLM                     30         30         4     32767 Locks      D
+PQL_DJTQUOTA                 1024       1024         0        -1 Bytes      D
+PQL_MJTQUOTA                    0          0         0        -1 Bytes      D
+EXIT
+$ ! The null device.
+$ SHOW DEVICE/FULL NLA0:
+
+Device NLA0:, device type null device, is online, record-oriented device,
+    shareable, mailbox device.
+
+    Error count                    0    Operations completed                 31
+    Owner process                 ""    Owner UIC                         [1,1]
+    Owner process ID        00000000    Dev Prot    S:RWPL,O:RWPL,G:RWPL,W:RWPL
+    Reference count               10    Default buffer size                 512
+
+$ WRITE SYS$OUTPUT "DEVCLASS ", F$GETDVI("NLA0:","DEVCLASS"), " DEVTYPE ", F$GETDVI("NL:","DEVTYPE")
+DEVCLASS 160 DEVTYPE 3
+$ ! Some defaults of the running system.
+$ MCR SYSGEN
+SHOW MAXPROCESSCNT
+MAXPROCESSCNT                 230         32        12      8192 Processes  
+SHOW PQL_DPRCLM
+PQL_DPRCLM                      8          8         0     32767 Processes  D
+SHOW DEFPRI
+DEFPRI                          4          4         1        31 Priority   D
+SHOW QUANTUM
+QUANTUM                        20         20         2     32767 10Ms       D
+EXIT
+$ SET NOVERIFY

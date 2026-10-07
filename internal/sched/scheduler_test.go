@@ -494,7 +494,8 @@ func TestSetBasePriority(t *testing.T) {
 		t.Errorf("computable %v, want %v", s.Computable(), want)
 	}
 
-	// A waiting process just takes the new priority.
+	// A waiting process takes the new base but keeps its current priority
+	// (VMS 7.1: JPI$_PRI 8 under a new JPI$_PRIB of 9).
 	if err := s.Wait(3, StateSUSP, ResourceNone); err != nil {
 		t.Fatal(err)
 	}
@@ -503,7 +504,7 @@ func TestSetBasePriority(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if info := mustInfo(t, s, 3); info.Base != 9 || info.Priority != 9 || info.State != StateSUSP {
+	if info := mustInfo(t, s, 3); info.Base != 9 || info.Priority != 4 || info.State != StateSUSP {
 		t.Errorf("info %+v", info)
 	}
 }

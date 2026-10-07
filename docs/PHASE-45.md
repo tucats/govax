@@ -211,6 +211,25 @@ for a process created without one.
     by govax in the test.
 14. **Close-out.** Status, progress log, PLAN.md, CLAUDE.md, HELP.
 
+    **To do before leaving Phase 45** (author's note, 2026-10-07, after
+    probe 2): the console's `SHOW DEVICE/FULL NLA0:` should print the
+    layout the VMS 7.1 system gives it, not govax's generic one. VMS shows:
+
+        Device NLA0:, device type null device, is online, record-oriented device,
+            shareable, mailbox device.
+
+            Error count                    0    Operations completed                 31
+            Owner process                 ""    Owner UIC                         [1,1]
+            Owner process ID        00000000    Dev Prot    S:RWPL,O:RWPL,G:RWPL,W:RWPL
+            Reference count               10    Default buffer size                 512
+
+    That is `DEVCHAR` 0C150001 (REC, SHR, AVL, MBX, ...), the type name
+    "null device", `Owner UIC [1,1]`, the protection `S:RWPL,O:RWPL,G:RWPL,
+    W:RWPL`, and a default buffer size of 512. The operation and reference
+    counts are the system's own. The same layout is wanted for `SHOW
+    DEVICE` and `F$GETDVI`-style items where govax prints them
+    (`internal/console/device.go`).
+
 ## Open questions
 
 - The default directory and other inherited state of a `$CREPRC`
@@ -746,3 +765,56 @@ for a process created without one.
     they now pass every argument. Tests: `corevms/argcount_test.go` and
     `TestEnvironmentSystemServiceInsfarg`.
   Probe 1 is finished (`vax/probe1-run6.log` is the complete run).
+- 2026-10-07: Probe 2's VMS run (OpenVMS V7.1, `testdata/mp/probe2/vax/
+  probe2.log`). What it settled, and what govax now does:
+  - **`$SUSPND`/`$RESUME`**: `$RESUME` of a process that isn't suspended
+    and `$SUSPND` of one already suspended are both SS$_NORMAL (govax
+    had SS$_SUSPENDED for the second). A hibernating child that is
+    suspended still shows `JPI$_STATE` 7 (HIB), not SUSP: govax's
+    suspended waiting process keeps its wait state too (it still isn't
+    woken until resumed), and only a computable or running one shows
+    SUSP (unconfirmed for that case).
+  - **`$SETPRI` of a hibernating child**: base priority 9, `JPI$_PRI`
+    left at 8: VMS doesn't make the current priority the new base for a
+    waiting process. `sched.SetBasePriority` now does the same
+    (`SetCurrentPriority`, new, sets the current priority directly). Not
+    matched: VMS's child had PRI 8 above its base 6 from the start
+    (a boost at creation); govax has 6.
+  - **Termination messages**: `$FORCEX` code `10000` is the final status
+    (as govax); an image that doesn't exist is RMS$_FNF (`00018292`, as
+    govax); **`$DELPRC` of a hibernating child gives final status 0**,
+    not SS$_ABORT: govax now reports 0 (the `ssAbort` assignments in
+    `markForDeletion` and `DeleteNow` are gone).
+  - **`$CREPRC` errors**: a duplicate name (`00000094`), a 16 character
+    name (`00000154`), a reserved `stsflg` bit (`0000017C`): govax's.
+    A PID that doesn't exist: `000008E8` (NONEXPR), as govax.
+  - **The wildcard scan**: the PID longword holds `FFFF0000` | the
+    process *index* of the process just returned (`FFFF0001`,
+    `FFFF0005`, ...), the scan goes in index order, and the last call is
+    SS$_NOMOREPROC (`000009A8`) with the longword unchanged. govax's
+    context was the index to look at *next*; it is now the index
+    returned, as VMS's.
+  - **NLA0:** `DVI$_DEVCLASS` is 160 (DC$_MAILBOX, not govax's 200: my
+    memory was wrong), `DEVTYPE` 3, `DEVCHAR` `0C150001`; a write has
+    IOSB `00000001` (transfer count **0**); a read is SS$_ENDOFFILE
+    (`870`) leaving the buffer; **sense mode is SS$_ILLIOFUNC** (`F4`).
+    govax now defines NLA0: that way (`vax.init`: class mailbox, type
+    `null`, new in `console.dcl`'s `dev_type`, DEVCHAR 202702849), picks
+    the null driver by device type (`driverFor`, since the class is the
+    mailbox driver's), counts nothing written, refuses sense mode, and
+    `removeStaleMailboxes` leaves it. `SHOW DEVICE/FULL NLA0:` is still
+    govax's generic layout: see the to-do under subtask 14.
+  - **`SYSGEN SHOW/PQL`** (current values): PQL_D: ASTLM 24, BIOLM 18,
+    BYTLM 8192, CPULM 0, DIOLM 18, FILLM 16, PGFLQUOTA 16400, PRCLM 8,
+    TQELM 8, WSDEFAULT 294, WSQUOTA 588, WSEXTENT 16400, ENQLM 128,
+    JTQUOTA 1024; PQL_M: ASTLM 4, BIOLM 4, BYTLM 1024, CPULM 0, DIOLM 4,
+    FILLM 2, PGFLQUOTA 16400, PRCLM 0, TQELM 0, WSDEFAULT 512, WSQUOTA
+    1024, WSEXTENT 16400, ENQLM 30, JTQUOTA 0. govax's `quotaRules` now
+    use them (they were the stock SYSGEN defaults: WS 100/200/400,
+    PGFLQUOTA 8192/512, ENQLM 30/4). Probe 1's child working set was
+    each minimum plus 4 pages, which govax doesn't add. Also:
+    MAXPROCESSCNT 230, DEFPRI 4, QUANTUM 20.
+  - Tests changed to match: the delete and wake tests (final status 0),
+    the suspend tests (HIB, SS$_NORMAL), the quota and null-device tests,
+    and a `SetCurrentPriority` call in the scheduler tests'
+    `setBasePriority` helper.

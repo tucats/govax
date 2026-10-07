@@ -11,8 +11,10 @@ asks VMS for them. It also captures a few system parameters.
 | `exchange.cmd`, `copyout.cmd` | The govax console scripts that build the exchange volume and copy the log back |
 | `vax/` | The VMS run's log |
 
-The experiments, and what govax answers today (`TestProbe2 -v` prints
-govax's whole report):
+The VMS 7.1 run is `vax/probe2.log` (2026-10-07), and `docs/PHASE-45.md`'s
+progress log lists what it settled and what govax changed. The
+experiments (`TestProbe2 -v` prints govax's whole report; the "govax"
+notes below are what govax said *before* the run):
 
 1. `$RESUME` of a process that isn't suspended (govax: SS$_NORMAL);
    `$SUSPND`; its `JPI$_STATE` (9, SUSP); `$SUSPND` of one already

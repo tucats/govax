@@ -387,7 +387,8 @@ func (s *Scheduler) Current() (Handle, bool) {
 }
 
 // SetBasePriority changes a process's base priority, as $SETPRI does.
-// Its current priority becomes the new base. A computable process moves
+// Its current priority becomes the new base (a waiting process's stays
+// as it is). A computable process moves
 // to its new priority's queue (at the back). A reschedule is requested if
 // the change means another process should run: the changed process is
 // computable and now preempts the current one, or it is current and a
@@ -418,8 +419,39 @@ func (s *Scheduler) SetBasePriority(h Handle, base int) error {
 		}
 
 	default:
-		p.base, p.priority = base, base
+		// A waiting process takes the new base but keeps its current
+		// priority until it next runs: VMS 7.1 showed JPI$_PRI 8 under a
+		// new JPI$_PRIB of 9 (testdata/mp/probe2).
+		p.base = base
 	}
+
+	return nil
+}
+
+// SetCurrentPriority sets a process's current priority directly, leaving
+// its base alone and its queue position as it is (a computable process
+// moves to the back of the new priority's queue). SetBasePriority leaves a
+// waiting process's current priority as it was, as VMS does; this is how
+// a caller that wants it changed too does that.
+func (s *Scheduler) SetCurrentPriority(h Handle, priority int) error {
+	if err := checkPriority(priority); err != nil {
+		return err
+	}
+
+	p, err := s.lookup(h)
+	if err != nil {
+		return err
+	}
+
+	if p.state == StateCOM {
+		s.leaveState(h, p)
+		p.priority = priority
+		s.makeComputable(h, p)
+
+		return nil
+	}
+
+	p.priority = priority
 
 	return nil
 }

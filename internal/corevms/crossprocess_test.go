@@ -170,7 +170,7 @@ func TestCross_suspendComputable(t *testing.T) {
 		t.Error("Suspended() is false")
 	}
 
-	wantR0(t, byPID(t, parent, serviceSysSuspnd, a, child), ssSuspended)
+	wantR0(t, byPID(t, parent, serviceSysSuspnd, a, child), ssNormal) // again: no error, as VMS 7.1
 
 	wantR0(t, byPID(t, parent, serviceSysResume, a, child), ssNormal)
 	wantState(t, child, sched.StateCOM, sched.ResourceNone)
@@ -180,9 +180,9 @@ func TestCross_suspendComputable(t *testing.T) {
 	wantState(t, child, sched.StateCOM, sched.ResourceNone)
 }
 
-// TestCross_suspendWaiting: a suspended hibernating process isn't woken
-// by a wakeup until it is resumed, and then goes back to HIB, or runs if
-// the wakeup has come.
+// TestCross_suspendWaiting: a suspended hibernating process still shows
+// HIB (as on VMS 7.1) but isn't woken by a wakeup until it is resumed;
+// then it runs if the wakeup has come.
 func TestCross_suspendWaiting(t *testing.T) {
 	parent, _ := fixture()
 	withScheduler(parent)
@@ -195,9 +195,9 @@ func TestCross_suspendWaiting(t *testing.T) {
 	}
 
 	wantR0(t, byPID(t, parent, serviceSysSuspnd, a, child), ssNormal)
-	wantState(t, child, sched.StateSUSP, sched.ResourceNone)
+	wantState(t, child, sched.StateHIB, sched.ResourceNone)
 
-	// Resumed with nothing happened: hibernating again.
+	// Resumed with nothing happened: hibernating still.
 	wantR0(t, byPID(t, parent, serviceSysResume, a, child), ssNormal)
 	wantState(t, child, sched.StateHIB, sched.ResourceNone)
 
@@ -205,7 +205,7 @@ func TestCross_suspendWaiting(t *testing.T) {
 	wantR0(t, byPID(t, parent, serviceSysSuspnd, a, child), ssNormal)
 	wantR0(t, byPID(t, parent, serviceSysWake, a, child), ssNormal)
 	parent.pollEvents()
-	wantState(t, child, sched.StateSUSP, sched.ResourceNone)
+	wantState(t, child, sched.StateHIB, sched.ResourceNone)
 
 	wantR0(t, byPID(t, parent, serviceSysResume, a, child), ssNormal)
 	parent.pollEvents()

@@ -14,10 +14,9 @@ import (
 //   - A computable or running process becomes SUSP at once, and computable
 //     again, with no boost, when resumed.
 //   - A waiting process (HIB, LEF, ...) keeps its wait (Environment.waiting)
-//     but is SUSP meanwhile: wakeWaiters leaves it alone, so an event that
-//     ends its wait isn't acted on until it is resumed. Resumed, it goes
-//     back to its wait state, and the next scheduler choice wakes it if
-//     its wait has ended.
+//     and its wait state: wakeWaiters leaves it alone, so an event that
+//     ends its wait isn't acted on until it is resumed. Resumed, the next
+//     scheduler choice wakes it if its wait has ended.
 //
 // VMS's suspend lets kernel-mode ASTs through, which govax doesn't model:
 // no AST is delivered to a suspended process, and the deletion of one is
@@ -40,9 +39,13 @@ func (env *Environment) suspend() bool {
 
 	// Wait puts a computable or running process into SUSP (a running one
 	// gives up the CPU at the next instruction boundary). A waiting one
-	// is moved to SUSP as well; its wait is kept for the resume.
-	if err := env.sched.Wait(handle(env), sched.StateSUSP, sched.ResourceNone); err == nil {
-		env.requestReschedule()
+	// keeps its wait state: VMS 7.1 still showed HIB for a hibernating
+	// child after $SUSPND (testdata/mp/probe2). It isn't woken meanwhile
+	// (wakeWaiters).
+	if env.waiting == nil {
+		if err := env.sched.Wait(handle(env), sched.StateSUSP, sched.ResourceNone); err == nil {
+			env.requestReschedule()
+		}
 	}
 
 	return true
@@ -58,9 +61,9 @@ func (env *Environment) resume() {
 
 	env.suspended = false
 
-	if w := env.waiting; w != nil {
-		_ = env.sched.Wait(handle(env), w.state, w.resource)
-	} else {
+	// A process that was waiting is still in its wait state; the next
+	// choice wakes it if what it waited for has happened.
+	if env.waiting == nil {
 		_, _ = env.sched.Ready(handle(env), sched.ClassNull)
 	}
 
@@ -75,7 +78,7 @@ func (env *Environment) resume() {
 // neither), which then doesn't run until $RESUME. A process may suspend
 // itself. Another process needs GROUP or WORLD unless it has the
 // caller's UIC (mayAffect: SS$_NOPRIV). Suspending a process that is
-// already suspended is SS$_SUSPENDED (unconfirmed; the process stays
+// already suspended is SS$_NORMAL too (VMS 7.1; the process stays
 // suspended once, and one $RESUME resumes it).
 func serviceSysSuspnd(env *Environment, argv []uint32) (uint32, error) {
 	target, st := env.processTarget(optArg(argv, 0), optArg(argv, 1), false)
@@ -87,9 +90,7 @@ func serviceSysSuspnd(env *Environment, argv []uint32) (uint32, error) {
 		return st, nil
 	}
 
-	if !target.suspend() {
-		return ssSuspended, nil
-	}
+	target.suspend()
 
 	return ssNormal, nil
 }

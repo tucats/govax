@@ -249,9 +249,9 @@ func TestCreprc_quotas(t *testing.T) {
 		{"ASTLM", p.ASTLimit, 50},
 		{"BIOLM", p.BufferedIOLimit, 4},
 		{"DIOLM", p.DirectIOLimit, 12},
-		{"WSDEFAULT (default)", p.WSDefault, 100},
-		{"WSQUOTA (default)", p.WSQuota, 200},
-		{"working set", p.WSLimit, 100},
+		{"WSDEFAULT (default, raised to the minimum)", p.WSDefault, 512},
+		{"WSQUOTA (default, raised to the minimum)", p.WSQuota, 1024},
+		{"working set", p.WSLimit, 512},
 		{"PRCLM (pooled, a subprocess's is ignored)", p.Job.SubprocessLimit, nominalPRCLM},
 		{"CPULM (the creator has none)", p.CPULimit, 0},
 	} {
@@ -273,13 +273,13 @@ func TestCreprc_quotas(t *testing.T) {
 	}
 
 	// The working-set default is held to the quota.
-	values, _, _ = resolveQuotas(creator, []QuotaItem{{pql("WSDEFAULT"), 250}, {pql("WSQUOTA"), 120}}, true, true)
+	values, _, _ = resolveQuotas(creator, []QuotaItem{{pql("WSDEFAULT"), 3000}, {pql("WSQUOTA"), 2000}}, true, true)
 	w := NewProcess()
 	w.Job = newJob(0x999)
 	applyQuotas(w, values, true)
 
-	if w.WSDefault != 120 || w.WSLimit != 120 {
-		t.Errorf("WSDEFAULT 250 over WSQUOTA 120: default %d, limit %d; want 120", w.WSDefault, w.WSLimit)
+	if w.WSDefault != 2000 || w.WSLimit != 2000 {
+		t.Errorf("WSDEFAULT 3000 over WSQUOTA 2000: default %d, limit %d; want 2000", w.WSDefault, w.WSLimit)
 	}
 }
 

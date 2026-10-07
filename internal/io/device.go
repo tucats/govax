@@ -22,17 +22,12 @@ const (
 	DeviceClassDisk    DeviceClass = 1
 	DeviceClassTT      DeviceClass = 66
 	DeviceClassMailbox DeviceClass = 160
-
-	// DeviceClassMisc is DC$_MISC (200), the class of the null device
-	// NLA0: (unconfirmed against VMS).
-	DeviceClassMisc DeviceClass = 200
 )
 
 var deviceClassNames = map[DeviceClass]string{
 	DeviceClassTT:      "terminal",
 	DeviceClassDisk:    "disk",
 	DeviceClassMailbox: "mailbox",
-	DeviceClassMisc:    "miscellaneous",
 	DeviceClassNone:    "none",
 }
 
@@ -203,6 +198,10 @@ type DeviceOptions struct {
 	RecSize, Sectors, Serial                          uint32
 	VolName, MediaName, MediaType, RootDevName        string
 }
+
+// DeviceTypeNull is the device type of the null device NLA0:, which
+// VMS 7.1 gave class DC$_MAILBOX and type 3 (testdata/mp/probe2).
+const DeviceTypeNull = 3
 
 // DeviceTable is the Go equivalent of devices.c's devices linked list.
 type DeviceTable struct {

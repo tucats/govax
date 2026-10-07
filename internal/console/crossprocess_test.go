@@ -6,7 +6,6 @@ import (
 
 	iodev "github.com/tucats/govax/internal/io"
 	"github.com/tucats/govax/internal/sched"
-	"github.com/tucats/govax/internal/vmsdef"
 )
 
 // Phase 45's subtask 9: the process-control services on other
@@ -96,13 +95,13 @@ func TestCross_suspendedChild(t *testing.T) {
 	// wakeup is pending, and the suspended child does not take it.
 	runUntil(t, c, 400000, func() bool { return atPause(0x644, dataAddr+0x10) })
 
-	suspended := vmsdef.Symbols["SS$_SUSPENDED"]
+	suspended := uint32(1) // VMS 7.1: no error either
 	if a, b, d := longwordAt(t, c, one, dataAddr+8), longwordAt(t, c, one, dataAddr+0xC), longwordAt(t, c, one, dataAddr+0x10); a != 1 || b != 1 || d != suspended {
 		t.Errorf("$SUSPND returned %08X, $WAKE %08X, $SUSPND again %08X", a, b, d)
 	}
 
-	if stateOf() != sched.StateSUSP || !child.Process.WakePending || !child.Suspended() {
-		t.Fatalf("suspended child: state %s, wake pending %v; want SUSP, pending", stateOf(), child.Process.WakePending)
+	if stateOf() != sched.StateHIB || !child.Process.WakePending || !child.Suspended() {
+		t.Fatalf("suspended child: state %s, wake pending %v; want HIB (still), pending", stateOf(), child.Process.WakePending)
 	}
 
 	setLongword(t, c, one, 0x644, 1)
@@ -125,7 +124,7 @@ func TestNullDevice_defined(t *testing.T) {
 	c, _ := scheduledConsole(t, longQuantum, brbSelf)
 
 	d, found := c.Devices.Find("NLA0:")
-	if !found || d.DevClass != iodev.DeviceClassMisc {
-		t.Fatalf("NLA0: found %v, class %v; want the miscellaneous class", found, d)
+	if !found || d.DevClass != iodev.DeviceClassMailbox || d.DevType != iodev.DeviceTypeNull {
+		t.Fatalf("NLA0: found %v, class %v; want the null device (mailbox class, type 3)", found, d)
 	}
 }

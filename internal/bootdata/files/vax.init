@@ -52,7 +52,8 @@ define/device tta0/devclass=term/devtype=vt100/devbufsiz=80
 
 ; The null device: writes are discarded and reads are at end of file.
 
-define/device nla0/devclass=misc
+; (202702849 is 0C150001 hex, the DEVCHAR VMS 7.1 gives NLA0:.)
+define/device nla0/devclass=mailbox/devtype=null/devchar=202702849
 
 ; TT and SYS$INPUT/OUTPUT/ERROR/COMMAND are predefined as _TTA0:.
 

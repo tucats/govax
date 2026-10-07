@@ -407,6 +407,12 @@ func setBasePriority(t *testing.T, env *corevms.Environment, pri int) {
 	if err := env.Scheduler().SetBasePriority(sched.Handle(env.Process.PID), pri); err != nil {
 		t.Fatal(err)
 	}
+
+	// SetBasePriority leaves a waiting process's current priority alone
+	// (as VMS does); these tests want it at the new base.
+	if err := env.Scheduler().SetCurrentPriority(sched.Handle(env.Process.PID), pri); err != nil {
+		t.Fatal(err)
+	}
 }
 
 // wakeThenMark: wake the process whose PID is at dataAddr+4, then mark

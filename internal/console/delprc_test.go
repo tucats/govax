@@ -7,7 +7,6 @@ import (
 
 	"github.com/tucats/govax/internal/console"
 	"github.com/tucats/govax/internal/corevms"
-	"github.com/tucats/govax/internal/vmsdef"
 )
 
 // Phase 45's subtask 8: $DELPRC of another process, whose deletion runs
@@ -90,7 +89,7 @@ func runDelprcParent(t *testing.T, c *console.Console, image string, baspri uint
 	return longwordAt(t, c, one, dataAddr), longwordAt(t, c, one, dataAddr+4), deleted
 }
 
-// wantGone checks that env has been deleted, with status SS$_ABORT, and
+// wantGone checks that env has been deleted, with final status 0, and
 // that none of its memory is left in the S0 pool.
 func wantGone(t *testing.T, c *console.Console, env *corevms.Environment) {
 	t.Helper()
@@ -99,8 +98,8 @@ func wantGone(t *testing.T, c *console.Console, env *corevms.Environment) {
 		t.Errorf("%08X wasn't deleted", env.Process.PID)
 	}
 
-	if env.Process.ExitStatus != vmsdef.Symbols["SS$_ABORT"] {
-		t.Errorf("%08X's final status is %08X, want SS$_ABORT", env.Process.PID, env.Process.ExitStatus)
+	if env.Process.ExitStatus != 0 {
+		t.Errorf("%08X's final status is %08X, want 0", env.Process.PID, env.Process.ExitStatus)
 	}
 
 	if env.Space.Owned() {

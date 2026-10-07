@@ -179,7 +179,7 @@ func (sys *System) removeStaleMailboxes() {
 	}
 
 	for _, d := range sys.Devices.All() {
-		if d.DevClass == iodev.DeviceClassMailbox {
+		if d.DevClass == iodev.DeviceClassMailbox && d.DevType != iodev.DeviceTypeNull {
 			sys.Devices.Remove(d)
 		}
 	}

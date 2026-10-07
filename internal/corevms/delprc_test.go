@@ -29,7 +29,7 @@ func delprc(t *testing.T, env *Environment, a *arena, pid uint32) uint32 {
 
 // TestDelprc_markOther: with the scheduler, $DELPRC of another process
 // returns at once and only marks it: a hibernating target is made
-// computable (boosted), and its final status is SS$_ABORT. Marking it
+// computable (boosted), and its final status is 0. Marking it
 // again succeeds and changes nothing. Its deletion, when it gets the CPU,
 // is the full one.
 func TestDelprc_markOther(t *testing.T) {
@@ -57,8 +57,8 @@ func TestDelprc_markOther(t *testing.T) {
 		t.Error("the child still counts as waiting")
 	}
 
-	if child.Process.ExitStatus != ssAbort {
-		t.Errorf("final status %08X, want SS$_ABORT", child.Process.ExitStatus)
+	if child.Process.ExitStatus != 0 {
+		t.Errorf("final status %08X, want 0", child.Process.ExitStatus)
 	}
 
 	wantR0(t, delprc(t, parent, a, child.Process.PID), ssNormal)
@@ -210,8 +210,8 @@ func TestDeleteProcess_ownerWaits(t *testing.T) {
 	wantState(t, owner, sched.StateMWAIT, sched.ResourceAST)
 
 	for _, sub := range []*Environment{first, second} {
-		if !sub.deletePending || sub.Process.ExitStatus != ssAbort {
-			t.Errorf("subprocess %08X: marked %v, status %08X; want marked, SS$_ABORT",
+		if !sub.deletePending || sub.Process.ExitStatus != 0 {
+			t.Errorf("subprocess %08X: marked %v, status %08X; want marked, 0",
 				sub.Process.PID, sub.deletePending, sub.Process.ExitStatus)
 		}
 	}

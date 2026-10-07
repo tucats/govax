@@ -152,7 +152,17 @@ var ioDrivers = map[iodev.DeviceClass]map[uint32]ioFunc{
 	iodev.DeviceClassTT:      terminalFunctions,
 	iodev.DeviceClassMailbox: mailboxFunctions,
 	iodev.DeviceClassDisk:    diskFunctions,
-	iodev.DeviceClassMisc:    nullFunctions,
+}
+
+// driverFor returns the function table of d's driver: its class's, except
+// that the null device, which VMS 7.1 gave the mailbox class, has its own
+// (nulldriver.go).
+func driverFor(d *iodev.Device) map[uint32]ioFunc {
+	if d.DevClass == iodev.DeviceClassMailbox && d.DevType == iodev.DeviceTypeNull {
+		return nullFunctions
+	}
+
+	return ioDrivers[d.DevClass]
 }
 
 // serviceSysQio is SYS$QIO:
@@ -302,7 +312,7 @@ func (env *Environment) queueIO(argv []uint32) (uint32, *ioRequest) {
 			number, c.Device.Name, req.function, req.modifiers)
 	}
 
-	perform, ok := ioDrivers[c.Device.DevClass][req.function]
+	perform, ok := driverFor(c.Device)[req.function]
 	if !ok {
 		return reject(ssIllIoFunc)
 	}
