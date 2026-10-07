@@ -311,10 +311,10 @@ func (m *Memory) translate(cpu *vax.CPU, addr uint32, access AccessType, signal 
 	// implementation rather than something this port added on its own.
 	switch region {
 	case 0: // P0: process program region.
-		// P0LR is the number of pages actually mapped, growing upward
-		// from page 0 — a P0 address is in range only if its page number
-		// doesn't exceed that count.
-		if page > cpu.PR(vax.P0LR) {
+		// P0LR is the number of pages the table describes, growing
+		// upward from page 0 — a P0 address is in range only if its page
+		// number is less than that count (pages 0 through P0LR-1).
+		if page >= cpu.PR(vax.P0LR) {
 			*entry = tbEntry{}
 
 			m.tb.stcFlush()
@@ -335,9 +335,9 @@ func (m *Memory) translate(cpu *vax.CPU, addr uint32, access AccessType, signal 
 		// *downward* from the top of the region (this is where the stack
 		// lives, and stacks conventionally grow toward lower addresses),
 		// so P1LR instead marks the *lowest* page number still considered
-		// part of the region — anything at or below P1LR is out of
-		// bounds, the mirror image of P0's check.
-		if page <= cpu.PR(vax.P1LR) {
+		// part of the region — anything below P1LR is out of bounds, the
+		// mirror image of P0's check.
+		if page < cpu.PR(vax.P1LR) {
 			*entry = tbEntry{}
 
 			m.tb.stcFlush()
@@ -348,13 +348,14 @@ func (m *Memory) translate(cpu *vax.CPU, addr uint32, access AccessType, signal 
 		pteVirtAddr = cpu.PR(vax.P1BR) + page*4
 		pteRecursive = true
 
-	case 2: // S0: system region. SBR is already a physical address.
+	case 2: // S0: system region. SBR is already a physical address, and
+		// SLR is a page count, as P0LR is.
 		// Unlike P0BR/P1BR, SBR (System Base Register) holds a *physical*
 		// address directly — the system region's own page table doesn't
 		// need translating to be found, since the kernel that owns it is
 		// mapped in a fixed, always-resident location. That's exactly why
 		// pteRecursive is false here but true for P0/P1 above.
-		if page > cpu.PR(vax.SLR) {
+		if page >= cpu.PR(vax.SLR) {
 			*entry = tbEntry{}
 
 			m.tb.stcFlush()
@@ -578,7 +579,7 @@ func (m *Memory) LookupPTE(cpu *vax.CPU, addr uint32) (region int, pteAddr uint3
 
 	switch region {
 	case 0:
-		if page > cpu.PR(vax.P0LR) {
+		if page >= cpu.PR(vax.P0LR) {
 			return region, 0, 0, accessViolation(addr)
 		}
 
@@ -586,7 +587,7 @@ func (m *Memory) LookupPTE(cpu *vax.CPU, addr uint32) (region int, pteAddr uint3
 		pteRecursive = true
 
 	case 1:
-		if page <= cpu.PR(vax.P1LR) {
+		if page < cpu.PR(vax.P1LR) {
 			return region, 0, 0, accessViolation(addr)
 		}
 
@@ -594,7 +595,7 @@ func (m *Memory) LookupPTE(cpu *vax.CPU, addr uint32) (region int, pteAddr uint3
 		pteRecursive = true
 
 	case 2:
-		if page > cpu.PR(vax.SLR) {
+		if page >= cpu.PR(vax.SLR) {
 			return region, 0, 0, accessViolation(addr)
 		}
 
@@ -647,7 +648,7 @@ func (m *Memory) StorePTE(cpu *vax.CPU, addr uint32, pte PTE) error {
 
 	switch region {
 	case 0:
-		if page > cpu.PR(vax.P0LR) {
+		if page >= cpu.PR(vax.P0LR) {
 			return accessViolation(addr)
 		}
 
@@ -655,7 +656,7 @@ func (m *Memory) StorePTE(cpu *vax.CPU, addr uint32, pte PTE) error {
 		pteRecursive = true
 
 	case 1:
-		if page <= cpu.PR(vax.P1LR) {
+		if page < cpu.PR(vax.P1LR) {
 			return accessViolation(addr)
 		}
 
@@ -663,7 +664,7 @@ func (m *Memory) StorePTE(cpu *vax.CPU, addr uint32, pte PTE) error {
 		pteRecursive = true
 
 	case 2:
-		if page > cpu.PR(vax.SLR) {
+		if page >= cpu.PR(vax.SLR) {
 			return accessViolation(addr)
 		}
 

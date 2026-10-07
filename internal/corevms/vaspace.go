@@ -347,7 +347,7 @@ func serviceSysCntreg(env *Environment, argv []uint32) (uint32, error) {
 		}
 
 	case regionP1:
-		bottom := p1Base + (env.cpu.PR(vax.P1LR)+1)*pageSize
+		bottom := p1Base + env.cpu.PR(vax.P1LR)*pageSize
 		if pagcnt == 0 || pagcnt > (s0Base-bottom)/pageSize {
 			return ssIllPagCnt, nil
 		}

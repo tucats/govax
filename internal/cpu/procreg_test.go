@@ -292,7 +292,7 @@ func TestEmulMtprTbisInvalidatesPage(t *testing.T) {
 	)
 
 	cpu.SetPR(vax.SBR, sbrPhys)
-	cpu.SetPR(vax.SLR, 0)
+	cpu.SetPR(vax.SLR, 1)
 
 	var pte vm.PTE
 

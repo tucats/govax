@@ -37,7 +37,7 @@ func newTranslateFixture(t *testing.T, npages int) (*vax.CPU, *Memory) {
 	cpu.SetPR(vax.MAPEN, 1)
 
 	cpu.SetPR(vax.SBR, sysPTBase)
-	cpu.SetPR(vax.SLR, uint32(npages-1))
+	cpu.SetPR(vax.SLR, uint32(npages))
 
 	var s0pte PTE
 
@@ -50,7 +50,7 @@ func newTranslateFixture(t *testing.T, npages int) (*vax.CPU, *Memory) {
 	}
 
 	cpu.SetPR(vax.P0BR, sysBase+pageSize) // system virtual page 1
-	cpu.SetPR(vax.P0LR, uint32(npages-1))
+	cpu.SetPR(vax.P0LR, uint32(npages))
 
 	for i := 0; i < npages; i++ {
 		var pte PTE
@@ -176,7 +176,7 @@ func TestTranslateNoDebugTraceWhenFlagsClear(t *testing.T) {
 func TestTranslateP0LengthViolation(t *testing.T) {
 	cpu, mem := newTranslateFixture(t, 4)
 
-	// Page 4 is beyond P0LR == 3.
+	// Page 4 is beyond P0LR == 4 (the last page is 3).
 	vaddr := uint32(4 * pageSize)
 	_, err := mem.Translate(cpu, vaddr, AccessRead)
 
@@ -280,7 +280,7 @@ func TestStorePTEP0RoundTrip(t *testing.T) {
 func TestStorePTES0RoundTrip(t *testing.T) {
 	cpu, mem := newTranslateFixture(t, 4)
 
-	vaddr := uint32(sysBase) // region 2 (S0), page 0 -- within SLR (npages-1 == 3)
+	vaddr := uint32(sysBase) // region 2 (S0), page 0 -- within SLR (npages == 4)
 
 	_, _, pte, err := mem.LookupPTE(cpu, vaddr)
 	if err != nil {
@@ -315,7 +315,7 @@ func TestStorePTEMAPENDisabledFaults(t *testing.T) {
 func TestStorePTELengthViolation(t *testing.T) {
 	cpu, mem := newTranslateFixture(t, 4)
 
-	vaddr := uint32(4 * pageSize) // beyond P0LR == 3
+	vaddr := uint32(4 * pageSize) // beyond P0LR == 4 (the last page is 3)
 	err := mem.StorePTE(cpu, vaddr, PTE(0))
 	assertAccessViolation(t, err, vaddr)
 }
@@ -331,7 +331,7 @@ func TestLookupPTEMAPENDisabledFaults(t *testing.T) {
 func TestLookupPTELengthViolation(t *testing.T) {
 	cpu, mem := newTranslateFixture(t, 4)
 
-	vaddr := uint32(4 * pageSize) // beyond P0LR == 3
+	vaddr := uint32(4 * pageSize) // beyond P0LR == 4 (the last page is 3)
 	_, _, _, err := mem.LookupPTE(cpu, vaddr) //nolint:dogsled
 	assertAccessViolation(t, err, vaddr)
 }
@@ -340,11 +340,51 @@ func TestTranslateP1LengthViolation(t *testing.T) {
 	cpu, mem := newTranslateFixture(t, 4)
 
 	// P1 space is region 1 (top bits 01); P1LR semantics are inverted: a
-	// page is valid only if page > P1LR. With P1LR left at its zero value,
-	// page 0 (<=0) must fault.
-	vaddr := uint32(1) << 30 // region 1, page 0
-	_, err := mem.Translate(cpu, vaddr, AccessRead)
-	assertAccessViolation(t, err, vaddr)
+	// page exists only if page >= P1LR (P1 grows down from its top). With
+	// P1LR at 2, pages 0 and 1 must fault.
+	cpu.SetPR(vax.P1LR, 2)
+
+	for _, page := range []uint32{0, 1} {
+		vaddr := uint32(1)<<30 | page*pageSize // region 1
+		_, err := mem.Translate(cpu, vaddr, AccessRead)
+		assertAccessViolation(t, err, vaddr)
+	}
+}
+
+// TestTranslateLengthBoundaries pins the architecture's length rule
+// (VAX Architecture Reference Manual, chapter 4): a P0 or S0 page number
+// must be less than P0LR or SLR, and a P1 page number at least P1LR. The
+// page exactly at each limit is the boundary case.
+func TestTranslateLengthBoundaries(t *testing.T) {
+	cpu, mem := newTranslateFixture(t, 4)
+
+	// P0: page 3 (P0LR-1) exists, page 4 (P0LR) doesn't.
+	if _, err := mem.Translate(cpu, 3*pageSize, AccessRead); err != nil {
+		t.Errorf("P0 page P0LR-1: %v", err)
+	}
+
+	assertAccessViolation(t, func() error { _, err := mem.Translate(cpu, 4*pageSize, AccessRead); return err }(), 4*pageSize)
+
+	// S0: page 4 (SLR) doesn't exist; LookupPTE and StorePTE agree.
+	s0 := uint32(sysBase + 4*pageSize)
+
+	_, _, _, err := mem.LookupPTE(cpu, s0) //nolint:dogsled
+	assertAccessViolation(t, err, s0)
+	assertAccessViolation(t, mem.StorePTE(cpu, s0, 0), s0)
+
+	// P1: with P1LR = 5, page 5's PTE is P1BR+5*4. Point P1BR so that PTE
+	// is P0's page-table entry 0 (a valid page), and page 5 translates,
+	// while page 4 is a length violation.
+	cpu.SetPR(vax.P1LR, 5)
+	cpu.SetPR(vax.P1BR, sysBase+pageSize-5*4)
+
+	p1 := uint32(1)<<30 | 5*pageSize
+
+	if _, err := mem.Translate(cpu, p1, AccessRead); err != nil {
+		t.Errorf("P1 page P1LR: %v", err)
+	}
+
+	assertAccessViolation(t, func() error { _, err := mem.Translate(cpu, p1-pageSize, AccessRead); return err }(), p1-pageSize)
 }
 
 func TestTranslateS1AlwaysFaults(t *testing.T) {
@@ -358,7 +398,7 @@ func TestTranslateS1AlwaysFaults(t *testing.T) {
 func TestTranslateS0LengthViolation(t *testing.T) {
 	cpu, mem := newTranslateFixture(t, 4)
 
-	vaddr := (uint32(2) << 30) | (4 * pageSize) // S0 page 4, beyond SLR == 3
+	vaddr := (uint32(2) << 30) | (4 * pageSize) // S0 page 4, beyond SLR == 4
 	_, err := mem.Translate(cpu, vaddr, AccessRead)
 	assertAccessViolation(t, err, vaddr)
 }
@@ -584,7 +624,7 @@ func TestTranslateFaultErrorMessages(t *testing.T) {
 func TestTranslateP0PTEItselfFaults(t *testing.T) {
 	cpu, mem := newTranslateFixture(t, 4)
 
-	// Point P0BR at a system virtual page number beyond SLR (3), so the
+	// Point P0BR at a system virtual page number beyond SLR (4 pages), so the
 	// recursive S0 translation of the PTE address itself faults.
 	cpu.SetPR(vax.P0BR, sysBase+10*pageSize)
 

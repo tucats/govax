@@ -87,7 +87,7 @@ func TestHandleFaultReadsVectorWithVMDisabled(t *testing.T) {
 	putLongword(t, e.cpu, e.mem, sbr, uint32(pte))
 
 	e.cpu.SetPR(vax.SBR, sbr)
-	e.cpu.SetPR(vax.SLR, 0) // only page 0 (the one PTE above) is in range
+	e.cpu.SetPR(vax.SLR, 1) // only page 0 (the one PTE above) is in range
 	e.cpu.SetGPR(vax.SP, stackVA)
 	e.cpu.SetPR(vax.KSP, stackVA) // matches current mode, so setModeStack no-ops
 
@@ -327,7 +327,7 @@ func TestSetModeStackRealModeChangeInvalidatesProtection(t *testing.T) {
 	)
 
 	cpu.SetPR(vax.SBR, sbrPhys)
-	cpu.SetPR(vax.SLR, 0)
+	cpu.SetPR(vax.SLR, 1)
 
 	var pte vm.PTE
 

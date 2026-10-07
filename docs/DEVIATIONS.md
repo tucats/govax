@@ -803,8 +803,8 @@ changed as a result.
     (`SS$_INSFWSL`) is checked.
   - `$CNTREG` deletes the pages but leaves `P0LR`/`P1LR` alone; the pages
     are gone either way. Its P1 end is the lowest page `P1LR` admits,
-    which, because of eVAX's P1 length check (`page <= P1LR` is out of
-    range), is the page after the one `P1LR` names.
+    the page `P1LR` names (since the length checks were fixed, Phase 43;
+    before, the page after it).
   - `$SETPRT` never charges the paging-file quota, and there are no
     sections, so its global-section rules don't arise.
   - The page-locking services (subtask 36) only remember which pages
@@ -2718,6 +2718,29 @@ widened."
   access on every hit, so the probe gets the probed mode's answer.
   `TestProbeTranslateChecksProbedMode` (`internal/vm/tb_test.go`) fails on
   the old TB and passes now.
+
+### [Phase 43] Length registers were each off by one
+
+- **Where**: `reference/eVAX/eVAX/Source/CPU/vm.c` (`vm()`'s region
+  switch, and `tracevm`/`setpte`), ported to `internal/vm/translate.go`
+  (`translate`, `LookupPTE`, `StorePTE`).
+- **What**: the VAX Architecture Reference Manual (chapter 4) makes P0LR
+  and SLR page *counts* (a page number must be less than the register),
+  and P1LR the lowest page that exists (a P1 page number must be at least
+  P1LR). The checks were `page > P0LR`, `page > SLR`, and `page <= P1LR`:
+  P0 and S0 each admitted one page past their tables (reading a PTE past
+  the table's end; with VMINIT's packed tables, P0's extra page used P1's
+  first PTE, and S0's extra page P0's guard PTE), and P1 refused its
+  lowest page, the one its table's first PTE maps.
+- **Status**: fixed in Go (2026-10-07), found while writing
+  `vm.AddressSpace` (Phase 43, subtask 7), whose page tables come from a
+  pool and must not be read past their end. Every length check now
+  follows the manual; VMINIT's register values were already the
+  architectural ones (P0LR and SLR the table sizes, P1LR the region's
+  lowest page), so P1 gains its bottom page and nothing else visible
+  moves. `TestTranslateLengthBoundaries` pins the three boundaries; test
+  fixtures that set an LR to the last page now set the count.
+  `$CNTREG`'s P1 end follows (the Phase 26 entry above).
 
 <!--
 Entry template:

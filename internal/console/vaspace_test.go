@@ -244,7 +244,7 @@ func TestCntreg(t *testing.T) {
 	}
 
 	// P1: its lowest page goes.
-	low := uint32(0x40000000) + (c.CPU.PR(vax.P1LR)+1)*512
+	low := uint32(0x40000000) + c.CPU.PR(vax.P1LR)*512
 
 	if got := callService(t, c, "SYS$CNTREG", 1, vaRetadr, 0, 1); got != ssNormal {
 		t.Fatalf("$CNTREG P1 = %#x", got)
