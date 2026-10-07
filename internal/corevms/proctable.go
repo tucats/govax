@@ -124,6 +124,7 @@ func (sys *System) addProcess(env *Environment) error {
 		t.sequence[index] = seq
 		t.slots[index] = env
 		env.Process.PID = pid(index, seq)
+		env.Process.LoginTime = sys.Clock()
 
 		// A new computable process may preempt the current one: let the
 		// scheduler look at the next instruction (waits.go).

@@ -216,7 +216,10 @@ expect adjustment as phases land):
   `$CREPRC` (`creprc.go`, quotas in `quotas.go`), process startup in the
   new process's context (`startup.go`), and deletion (`delete.go`:
   `DeleteProcess`'s rundown; the memory of the process the CPU is in is
-  freed by `switchTo` once the CPU leaves it). A waiting
+  freed by `switchTo` once the CPU leaves it), and the termination
+  message to the creator's mailbox (`termmsg.go`). An I/O request
+  completes for the process that made it (`ioRequest.owner`, its IOSB
+  through that process's address space). A waiting
   service says what it waits for (`waits.go`: `waitOn`, a state and a Go
   test), the process waits in the scheduler, and each scheduling call
   expires every process's timers and tests the waiters (`pollEvents`);

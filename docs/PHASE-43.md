@@ -612,9 +612,9 @@ uses the current Environment's `mem`/`cpu` (so the current P0/P1) or its
 
 | Where | What it does | Fixed in |
 | --- | --- | --- |
-| `mbxdriver.go` `receive`, `send` | a write completing a waiting read stores the message into the *reader's* buffer, and completes the reader's or writer's request | Phase 46 |
-| `qio.go` `completeIO` | stores the IOSB, sets the event flag, and queues the AST of a request that may be another process's (from `receive`/`send`, `cancelIO`) | Phase 46 (an `ioRequest` records its Environment) |
-| `mbxdriver.go` `deliverAttention`, `operator.go` `postMailboxMessage`/`operatorReplyTo` | queue attention ASTs and post messages for whichever process enabled them | Phase 46 |
+| `mbxdriver.go` `receive`, `send` | a write completing a waiting read stores the message into the *reader's* buffer, and completes the reader's or writer's request | Phase 45, subtask 7 (through the owner); Phase 46 tests every case |
+| `qio.go` `completeIO` | stores the IOSB, sets the event flag, and queues the AST of a request that may be another process's (from `receive`/`send`, `cancelIO`) | Phase 45, subtask 7 (`ioRequest.owner`) |
+| `mbxdriver.go` `deliverAttention`, `operator.go` `postMailboxMessage`/`operatorReplyTo` | queue attention ASTs and post messages for whichever process enabled them | `deliverAttention`: Phase 45, subtask 7 (`attentionRequest.owner`); OPCOM: Phase 46 |
 | `timers.go` `expireTimers` | runs only from the owning Environment's `NextAST`, so a waiting process's timers never expire while another runs | Phase 44 (the scheduler expires every process's) |
 | `ast.go` `NextAST` | pushes an AST frame on the current stack: correct only for the current process; the engine must ask the current one | Phase 44 |
 | `ctrlast.go` `Attention` | CTRL/C and CTRL/Y go to `Console.RTL` | Phase 46 (the terminal's owner) |

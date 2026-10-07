@@ -23,7 +23,7 @@ import (
 //     owner gave it that the process didn't use, which is only CPU time:
 //     the other quotas are pooled or nondeductible (step 10);
 //   - sends the termination message, if the creator asked for one (step
-//     11; subtask 7);
+//     11; termmsg.go);
 //   - takes the process out of the scheduler (SVPCTX), makes the null
 //     process current, frees its slot in the PCB vector, and then frees
 //     the pages it kept to the end, its kernel stack among them (steps
@@ -59,6 +59,7 @@ func (sys *System) DeleteProcess(env *Environment) {
 	env.ImageRundown()
 	env.processRundown()
 	sys.returnQuotas(env)
+	sys.sendTerminationMessage(env)
 
 	if env.waiting != nil {
 		env.waiting = nil

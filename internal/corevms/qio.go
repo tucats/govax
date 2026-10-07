@@ -1,6 +1,7 @@
 package corevms
 
 import (
+	"encoding/binary"
 	"fmt"
 
 	iodev "github.com/tucats/govax/internal/io"
@@ -102,6 +103,12 @@ type ioRequest struct {
 	// write (0 for none), the AST to queue (astadr 0 for none) and the
 	// access mode it runs in (the caller's).
 	efn, iosb, astadr, astprm, mode uint32
+
+	// owner is the process that requested it: its completion goes to
+	// that process (completeIO), whichever process is current then. Nil
+	// for a request the system makes for itself (postMailboxMessage, the
+	// termination message), which nothing waits for.
+	owner *Environment
 
 	// done is set once the request has completed (or been cancelled);
 	// cancelled says it was cancelled. A driver holding a pending
@@ -282,6 +289,7 @@ func (env *Environment) queueIO(argv []uint32) (uint32, *ioRequest) {
 		astadr:    astadr,
 		astprm:    astprm,
 		mode:      uint32(env.cpu.PSL().CurMod()),
+		owner:     env,
 	}
 
 	for i := range req.p {
@@ -326,6 +334,14 @@ func (env *Environment) queueIO(argv []uint32) (uint32, *ioRequest) {
 // unmapped it meanwhile, and VMS would lose the status too. An event
 // flag in a common cluster the process has since disassociated isn't
 // set.
+//
+// All of that is the requesting process's (req.owner), not necessarily
+// env's: a write to a mailbox completes the read another process has
+// waiting, and a process being deleted sends its termination message to
+// its creator's (docs/PHASE-43.md, "Touching another process's memory").
+// The IOSB is written through the owner's address space, and the event
+// flag, the AST, and the end of its wait (the scheduler's next look at
+// its waiters) are Go state of the owner's.
 func (env *Environment) completeIO(req *ioRequest, done ioStatus) {
 	if req.done {
 		return
@@ -333,26 +349,48 @@ func (env *Environment) completeIO(req *ioRequest, done ioStatus) {
 
 	req.done = true
 
-	for i, r := range env.pendingIO {
+	owner := req.owner
+	if owner == nil {
+		owner = env
+	}
+
+	for i, r := range owner.pendingIO {
 		if r == req {
-			env.pendingIO = append(env.pendingIO[:i], env.pendingIO[i+1:]...)
+			owner.pendingIO = append(owner.pendingIO[:i], owner.pendingIO[i+1:]...)
 
 			break
 		}
 	}
 
 	if req.iosb != 0 {
-		_ = env.mem.StoreLongword(env.cpu, req.iosb, done.status&0xFFFF|uint32(done.count)<<16)
-		_ = env.mem.StoreLongword(env.cpu, req.iosb+4, done.info)
+		var b [8]byte
+
+		binary.LittleEndian.PutUint32(b[0:], done.status&0xFFFF|uint32(done.count)<<16)
+		binary.LittleEndian.PutUint32(b[4:], done.info)
+		_ = owner.storeOwn(req.iosb, b[:])
 	}
 
-	if flags, bit, st := env.flagWord(req.efn); st == 0 {
+	if flags, bit, st := owner.flagWord(req.efn); st == 0 {
 		*flags |= 1 << bit
 	}
 
 	if req.astadr != 0 {
-		env.queueAST(req.astadr, req.astprm, req.mode)
+		owner.queueAST(req.astadr, req.astprm, req.mode)
 	}
+}
+
+// storeOwn stores data at addr in env's own address space, whichever
+// process the CPU is running: through the CPU's registers (and so with
+// the current mode's access checks) when it's env, or else through env's
+// page tables, as the system on env's behalf. Before VMINIT, when no
+// process has an address space of its own, addresses are physical either
+// way.
+func (env *Environment) storeOwn(addr uint32, data []byte) error {
+	if env.Space == nil || env == env.Current() {
+		return env.mem.Store(env.cpu, addr, data)
+	}
+
+	return env.mem.StoreIn(env.cpu, env.Space.AddressSpace, addr, data)
 }
 
 // cancelIO completes every request pending on channel c with

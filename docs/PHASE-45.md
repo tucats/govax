@@ -473,3 +473,43 @@ for a process created without one.
   never closed is on the volume after the image exits, and, for an image
   the instruction limit stopped, after the next `RUN/NOEXECUTE`, after
   ZERO, and after `EndSession`; each test fails without its fix.
+- 2026-10-07: Subtask 7 (the termination message), from the VMS 5.0
+  System Services Reference Manual's `$CREPRC` entry (mbxunt) and *VAX/VMS
+  Internals and Data Structures*, section 22.2.1, step 11, and table
+  22-1. `corevms/termmsg.go`: `DeleteProcess` sends it after the
+  process's rundown and the CPU time returned to its owner, before it
+  leaves the scheduler (the book's order; the manual says "before process
+  rundown is initiated", which govax reads as the final deletion). The
+  84-byte message is the manual's: `MSG$_DELPROC`, the final status (the
+  image's `$EXIT` status, or a failed startup's, so a creator learns of
+  RMS$_FNF this way), the PID, the deletion time, the account and user
+  names blank filled, the CPU time in 10 ms units, the login time, and
+  the owner's PID. The job ID (offset 12, which VMS 7.3 names
+  `ACC$L_JOBID`; the manual and the book call it unused), the word after
+  the message type, page faults, the two peaks, the I/O counts, and the
+  volume count are 0 (govax has no paging, counts no I/O, and mounts for
+  the whole system); all unconfirmed against a VMS run. It goes to the
+  mailbox as an IO$M_NOW write would, as from the deleted process (the
+  reader's IOSB has its PID); a mailbox that doesn't exist, is too small
+  (maxmsg under 84), or is full loses the message, as the manual says,
+  and so does the process's own temporary mailbox, gone with its last
+  channel in the rundown. Not modeled: the manual's "after the process
+  name has been set to null" (the process has left the table before any
+  other process runs). `Process.LoginTime` is new, set when the process
+  table takes a process in, with `$GETJPI`'s `JPI$_LOGINTIM`.
+  Needed for this, and pulled forward from Phase 46's subtask 1: an I/O
+  request records the process that made it (`ioRequest.owner`), and
+  `completeIO` completes it for that process, whichever is current: the
+  IOSB through the owner's address space (`Environment.storeOwn`), its
+  event flag, AST, and wait. The mailbox driver stores a read's data
+  through the reader's address space, and a mailbox's attention ASTs go
+  to the process that enabled them. Without that, a creator's read that
+  is waiting when its child is deleted would have been completed in the
+  child's memory. Tests: `corevms/termmsg_test.go` (every field, the
+  read's IOSB, a waiting read completed with the creator's flag and AST
+  rather than the child's, the four ways a message is lost) and
+  `console/termmsg_test.go` (a MACRO parent `$CREMBX`es, `$GETDVIW`s the
+  unit, `$CREPRC`s a child, and `$QIOW`s the message: with the read
+  waiting in process 1 while the child is deleted, and with the message
+  waiting in the mailbox; and a child whose image doesn't exist,
+  reported as RMS$_FNF). The optional VMS 7.3 probe isn't done.

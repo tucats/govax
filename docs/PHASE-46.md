@@ -126,6 +126,12 @@ as today).
    through the owner's address space; EF, AST, and boost to the owner.
    Audit every completion path (`qio.go`, `mbxdriver.go`, `ttdriver.go`,
    `diskdriver.go`, the ACP) from Phase 43's inventory.
+   *Partly done in Phase 45's subtask 7*, which needed it for the
+   termination message: `ioRequest.owner`, `completeIO` (IOSB through
+   the owner's address space, its event flag, AST, and wait), the
+   mailbox driver's read data, and attention ASTs. Still to do: the
+   I/O completion boost to the owner, and the audit of the other
+   drivers.
 2. **Mailboxes between processes.** Tests with two processes for every
    case `mbxdriver.go` documents: waiting read then write, write then
    read, IO$M_NOW both ways, full mailbox with resource wait on and off,

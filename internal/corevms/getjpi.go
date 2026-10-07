@@ -44,7 +44,8 @@ const maxProcessNameLength = 15
 // JPI$_JOBPRCCNT, JPI$_PRCLM, and the pooled quotas' limits) read the
 // process's Job (job.go); JPI$_OWNER and JPI$_PRCCNT its own PCB fields.
 // JPI$_BIOLM, JPI$_DIOLM, JPI$_CPULIM, JPI$_CREPRC_FLAGS, and JPI$_TMBU
-// are what $CREPRC gave the process (creprc.go).
+// are what $CREPRC gave the process (creprc.go); JPI$_LOGINTIM is when
+// the process table took it in.
 var jpiItemsByName = map[string]func(env *Environment) itemValue{
 	"JPI$_ACCOUNT":      func(env *Environment) itemValue { return itemPadded(env.Process.Account, 8) },
 	"JPI$_ASTACT":       func(env *Environment) itemValue { return itemLong(astModeMask(env.Process.ast.active)) },
@@ -93,6 +94,7 @@ var jpiItemsByName = map[string]func(env *Environment) itemValue{
 	"JPI$_CPULIM":       func(env *Environment) itemValue { return itemLong(env.Process.CPULimit) },
 	"JPI$_CREPRC_FLAGS": func(env *Environment) itemValue { return itemLong(env.Process.CreateFlags) },
 	"JPI$_TMBU":         func(env *Environment) itemValue { return itemLong(env.Process.TerminationMailbox) },
+	"JPI$_LOGINTIM":     func(env *Environment) itemValue { return itemQuad(env.Process.LoginTime) },
 }
 
 // schStateCurrent is SCH$C_CUR, the state of the running process.

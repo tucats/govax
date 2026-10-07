@@ -98,9 +98,12 @@ type Mailbox struct {
 }
 
 // attentionRequest is one attention AST a channel has enabled on a
-// mailbox: the routine, its parameter, and the access mode it runs in.
+// mailbox: the routine, its parameter, and the access mode it runs in,
+// and the process it's queued to (the channel's), which needn't be the
+// one whose write or read delivers it.
 type attentionRequest struct {
 	channel          *channel
+	owner            *Environment
 	ast, param, mode uint32
 }
 

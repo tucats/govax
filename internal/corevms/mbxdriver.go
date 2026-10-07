@@ -194,8 +194,15 @@ func (env *Environment) receive(reader *ioRequest, msg *mailboxMessage) ioStatus
 	size := int(reader.p[1] & 0xFFFF)
 	n := min(size, len(msg.data))
 
-	// The buffer was checked when the read was queued.
-	_ = env.mem.Store(env.cpu, reader.p[0], []byte(msg.data[:n]))
+	// The buffer was checked when the read was queued. It is in the
+	// reader's address space, which needn't be the current one: the
+	// writer may be another process.
+	owner := reader.owner
+	if owner == nil {
+		owner = env
+	}
+
+	_ = owner.storeOwn(reader.p[0], []byte(msg.data[:n]))
 
 	status := uint32(ssNormal)
 	if n < len(msg.data) {
@@ -328,7 +335,7 @@ func mbxSetMode(env *Environment, req *ioRequest) (ioStatus, uint32) {
 			continue
 		}
 
-		*k.list = append(*k.list, attentionRequest{channel: req.channel, ast: req.p[0], param: req.p[1], mode: mode})
+		*k.list = append(*k.list, attentionRequest{channel: req.channel, owner: env, ast: req.p[0], param: req.p[1], mode: mode})
 
 		if k.due {
 			env.deliverAttention(k.list)
@@ -355,7 +362,12 @@ func withoutChannel(list []attentionRequest, c *channel) []attentionRequest {
 // empty: each is delivered once.
 func (env *Environment) deliverAttention(list *[]attentionRequest) {
 	for _, a := range *list {
-		env.queueAST(a.ast, a.param, a.mode)
+		owner := a.owner
+		if owner == nil {
+			owner = env
+		}
+
+		owner.queueAST(a.ast, a.param, a.mode)
 	}
 
 	*list = nil

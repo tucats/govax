@@ -91,6 +91,11 @@ type Process struct {
 	CreateFlags        uint32
 	TerminationMailbox uint32
 
+	// LoginTime is when the process was created, in VMS system time
+	// (CTL$GQ_LOGIN): $GETJPI's JPI$_LOGINTIM, and the termination
+	// message's ACC$Q_LOGIN. The process table sets it (addProcess).
+	LoginTime uint64
+
 	// Priority and BasePriority are the process's current and base
 	// scheduling priorities (PCB$B_PRI, PCB$B_PRIB, as the user sees
 	// them: 0-31, higher runs first). govax has one process and no
