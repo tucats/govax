@@ -379,10 +379,14 @@ func serviceSysSetprn(env *Environment, argv []uint32) (uint32, error) {
 // It sets the target process's base priority to pri (its low five bits,
 // 0-31), storing the previous base priority at prvpri if that's given.
 // The process holds ALTPRI, so it may raise its priority. Its current
-// priority becomes the new base: govax has no scheduler to boost it.
-// The target is picked by processTarget (SS$_NONEXPR, SS$_IVLOGNAM,
-// SS$_ACCVIO); prvpri that can't be written is SS$_ACCVIO, with the
-// priority unchanged.
+// priority becomes the new base, in the scheduler too
+// (sched.SetBasePriority), which then reschedules if that means another
+// process should run: a process that lowers itself below a computable
+// one gives it the CPU at the next instruction (docs/PHASE-44.md,
+// subtask 6). The book's Table 10-3 lists a boost of 2 for "Set
+// Priority"; govax doesn't apply it (unconfirmed). The target is picked
+// by processTarget (SS$_NONEXPR, SS$_IVLOGNAM, SS$_ACCVIO); prvpri that
+// can't be written is SS$_ACCVIO, with the priority unchanged.
 func serviceSysSetpri(env *Environment, argv []uint32) (uint32, error) {
 	if st := env.callerTarget(optArg(argv, 0), optArg(argv, 1), false); st != 0 {
 		return st, nil
@@ -403,6 +407,10 @@ func serviceSysSetpri(env *Environment, argv []uint32) (uint32, error) {
 	}
 
 	p.BasePriority, p.Priority = pri, pri
+
+	if err := env.sched.SetBasePriority(handle(env), int(pri)); err == nil {
+		env.requestReschedule()
+	}
 
 	return ssNormal, nil
 }

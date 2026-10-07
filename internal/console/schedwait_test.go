@@ -395,3 +395,159 @@ func TestSchedulerIdle_noTimer(t *testing.T) {
 		t.Errorf("traced %d times, want once:\n%s", n, out.String())
 	}
 }
+
+// Phase 44's subtask 6: priority preemption.
+
+// setBasePriority gives env base priority pri, as $SETPRI would.
+func setBasePriority(t *testing.T, env *corevms.Environment, pri int) {
+	t.Helper()
+
+	env.Process.BasePriority, env.Process.Priority = uint32(pri), uint32(pri)
+
+	if err := env.Scheduler().SetBasePriority(sched.Handle(env.Process.PID), pri); err != nil {
+		t.Fatal(err)
+	}
+}
+
+// wakeThenMark: wake the process whose PID is at dataAddr+4, then mark
+// dataAddr+8 and spin.
+const wakeThenMark = `
+	pushl	#0
+	pushal	@#^X604
+	calls	#2, @#sys$wake
+	movl	#1, @#^X608		; after the $WAKE
+spin:	brb	spin
+`
+
+// hiberCount: hibernate; each time woken, count.
+const hiberCount = `
+loop:	calls	#0, @#sys$hiber
+	incl	@#^X600
+	brb	loop
+`
+
+// TestSchedulerPriority_wakePreempts: a process woken at a higher
+// priority than the waker's runs at the next instruction boundary, before
+// the waker's next instruction; one woken at a lower priority (even with
+// its boost) waits for the CPU.
+func TestSchedulerPriority_wakePreempts(t *testing.T) {
+	tests := []struct {
+		name    string
+		base    int
+		preempt bool
+	}{
+		{"higher", 8, true},
+		{"lower, boosted short of the waker", 0, false},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			waker, _ := assembleAt(t, wakeThenMark)
+			sleeper, _ := assembleAt(t, hiberCount)
+
+			c, _ := scheduledConsole(t, longQuantum, waker)
+			one := c.RTL
+			two := handBuiltProcess(t, c, sleeper)
+
+			setLongword(t, c, one, dataAddr+4, two.Process.PID)
+
+			// Process 2, outranking process 1, runs first and hibernates;
+			// then it gets the priority under test.
+			setBasePriority(t, two, 8)
+
+			for range 100 {
+				if stateOf(two) == sched.StateHIB {
+					break
+				}
+
+				step(t, c, 1)
+			}
+
+			if stateOf(two) != sched.StateHIB {
+				t.Fatalf("process 2 is %s, not hibernating", stateOf(two))
+			}
+
+			setBasePriority(t, two, tt.base)
+
+			// Until process 1's $WAKE has run.
+			for range 2000 {
+				if two.Process.WakePending {
+					break
+				}
+
+				step(t, c, 1)
+			}
+
+			step(t, c, 1) // the boundary after the $WAKE's XFC
+
+			if got := c.RTL.Current() == two; got != tt.preempt {
+				t.Fatalf("process 2 current %v, want %v", got, tt.preempt)
+			}
+
+			if tt.preempt && longwordAt(t, c, one, dataAddr+8) != 0 {
+				t.Error("process 1 went on past its $WAKE before process 2 ran")
+			}
+
+			step(t, c, 1000)
+
+			if n := countOf(t, c, two); (n == 1) != tt.preempt || n > 1 {
+				t.Errorf("process 2 woke %d times", n)
+			}
+
+			if longwordAt(t, c, one, dataAddr+8) != 1 {
+				t.Error("process 1 never went on")
+			}
+		})
+	}
+}
+
+// lowerSelf: $SETPRI this process to 2, then mark dataAddr+8 and spin.
+const lowerSelf = `
+	pushl	#0			; prvpri
+	pushl	#2			; pri
+	pushl	#0			; prcnam
+	pushl	#0			; pidadr
+	calls	#4, @#sys$setpri
+	movl	#1, @#^X608		; after the $SETPRI
+spin:	brb	spin
+`
+
+// TestSchedulerPriority_setpriLowers: a process that lowers its priority
+// below a computable process's gives it the CPU at the next instruction
+// boundary, and gets it back only when that process waits.
+func TestSchedulerPriority_setpriLowers(t *testing.T) {
+	code, _ := assembleAt(t, lowerSelf)
+
+	c, _ := scheduledConsole(t, longQuantum, code)
+	one := c.RTL
+	two := handBuiltProcess(t, c, counter())
+
+	setBasePriority(t, two, 3) // below process 1's 4: never runs yet
+
+	for range 1000 {
+		if c.RTL.Current() == two {
+			break
+		}
+
+		step(t, c, 1)
+	}
+
+	if c.RTL.Current() != two {
+		t.Fatal("process 2 never ran")
+	}
+
+	if longwordAt(t, c, one, dataAddr+8) != 0 {
+		t.Error("process 1 went on past its $SETPRI before process 2 ran")
+	}
+
+	if info, _ := one.Scheduler().Info(sched.Handle(one.Process.PID)); info.Base != 2 || info.Priority != 2 {
+		t.Errorf("process 1's priorities %+v, want 2", info)
+	}
+
+	step(t, c, 1000)
+
+	if longwordAt(t, c, one, dataAddr+8) != 0 || countOf(t, c, two) < 400 {
+		t.Errorf("process 1 ran again (%d) while process 2 (counted %d) outranks it",
+			longwordAt(t, c, one, dataAddr+8), countOf(t, c, two))
+	}
+}

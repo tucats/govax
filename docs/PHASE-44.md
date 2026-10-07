@@ -1,7 +1,7 @@
 # Phase 44 — Multiprocessing, part 2: the scheduler
 
 **Status:** in progress (started 2026-10-07); decisions taken 2026-10-06
-(see PHASE-43.md, Part A). Subtasks 1–5 done.
+(see PHASE-43.md, Part A). Subtasks 1–6 done.
 
 The program this phase belongs to — its goal, architecture, rules for
 every commit, decisions, and known bugs — is in
@@ -226,8 +226,9 @@ The layouts come from the User's Manual and, if Decision 7 allows, a VMS
 
 ## Open questions
 
-- Whether `$SETPRI`'s and `$GETJPI`'s view of "current priority" should
-  include boosts (VMS's `JPI$_PRI` does). Probably yes.
+- ~~Whether `$SETPRI`'s and `$GETJPI`'s view of "current priority" should
+  include boosts~~ Settled in subtask 6: `JPI$_PRI` is the scheduler's
+  current priority, boosts included; `JPI$_PRIB` the base.
 - ~~What VMS does at quantum end for a process at real-time priority~~
   Settled in subtask 1: nothing but a fresh quantum (the book, sections
   10.1.2.1 and 10.1.2.4); real-time processes run until they wait or a
@@ -477,3 +478,27 @@ The layouts come from the User's Manual and, if Decision 7 allows, a VMS
     the timer budget); hardware-clock idling sleeps until the timers;
     and with every process hibernating and no timer, the processes
     spin and the trace says so once. Benchmarks unchanged.
+- 2026-10-07: **Subtask 6 done: priority preemption.**
+  - Most of it was already in place: a process made computable at a
+    priority higher than or equal to the current one's requests a
+    reschedule (`sched`), and the events that make one computable ask
+    the engine to call the scheduler at the next boundary (`$WAKE` of
+    another process, `$SETEF` of a common flag, adding a process; timers
+    by the budget). Tests now show it end to end.
+  - `$SETPRI` gives the scheduler the new base priority
+    (`sched.SetBasePriority`: current priority = base; a computable
+    process requeued, preempting if it now outranks the current one;
+    the current one rescheduled if a computable process now outranks
+    it) and asks for a reschedule. Table 10-3's "Set Priority" boost of
+    2 isn't applied (**unconfirmed**: the book doesn't say which of
+    `$SETPRI`'s targets it reaches). `$SETPRI` still acts only on the
+    caller (Phase 45).
+  - `JPI$_PRI` reports the scheduler's current priority, boosts
+    included, as VMS's does (`currentPriority`).
+  - Tests (`console/schedwait_test.go`): a hibernating process at
+    priority 8 woken by process 1 (at 4) runs at the next boundary,
+    before process 1's next instruction; one at 0, boosted only to 3,
+    stays computable and never runs while process 1 computes; process 1
+    lowering itself to 2 with `$SETPRI` gives a computable process at 3
+    the CPU at once and doesn't get it back. `corevms`: `$SETPRI`
+    reaches the scheduler, and `JPI$_PRI` shows a wakeup's boost.

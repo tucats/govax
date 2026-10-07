@@ -52,7 +52,7 @@ var jpiItemsByName = map[string]func(env *Environment) itemValue{
 	"JPI$_CURPRIV":    func(env *Environment) itemValue { return itemQuad(env.Process.CurrentPrivileges) },
 	"JPI$_IMAGPRIV":   func(env *Environment) itemValue { return itemQuad(env.Process.ImagePrivileges) },
 	"JPI$_PROCPRIV":   func(env *Environment) itemValue { return itemQuad(env.Process.ProcessPrivileges) },
-	"JPI$_PRI":        func(env *Environment) itemValue { return itemLong(env.Process.Priority) },
+	"JPI$_PRI":        func(env *Environment) itemValue { return itemLong(env.currentPriority()) },
 	"JPI$_PRIB":       func(env *Environment) itemValue { return itemLong(env.Process.BasePriority) },
 	"JPI$_STATE":      func(env *Environment) itemValue { return itemLong(schStateCurrent) },
 	"JPI$_CLINAME":    func(env *Environment) itemValue { return itemString(env.Process.CLIName) },
@@ -303,4 +303,15 @@ func (env *Environment) callerTarget(pidadr, prcnam uint32, wildcard bool) uint3
 func registerJPIServices(t *ServiceTable) {
 	t.Register("SYS$GETJPI", serviceSysGetjpi)
 	t.Register("SYS$GETJPIW", serviceSysGetjpi)
+}
+
+// currentPriority is the process's current priority as $GETJPI's
+// JPI$_PRI reports it: the scheduler's, which includes any boost from the
+// event that ended its last wait, as VMS's does (docs/PHASE-44.md).
+func (env *Environment) currentPriority() uint32 {
+	if info, ok := env.sched.Info(handle(env)); ok {
+		return uint32(info.Priority)
+	}
+
+	return env.Process.Priority
 }

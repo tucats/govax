@@ -192,3 +192,29 @@ func TestWaits_wakeAnotherProcess(t *testing.T) {
 		t.Errorf("wake pending: caller %v, other %v; want only the other", env.Process.WakePending, other.Process.WakePending)
 	}
 }
+
+// TestSetpri_scheduler: $SETPRI changes the scheduler's base and current
+// priority, and $GETJPI's JPI$_PRI reports the scheduler's current
+// priority, boost included.
+func TestSetpri_scheduler(t *testing.T) {
+	env, _ := fixture()
+	withScheduler(env)
+
+	wantR0(t, callLNM(t, env, serviceSysSetpri, 0, 0, 6), ssNormal)
+
+	if info, _ := env.Scheduler().Info(handle(env)); info.Base != 6 || info.Priority != 6 {
+		t.Errorf("scheduler priorities %+v, want 6", info)
+	}
+
+	_ = callWaiting(env, serviceSysHiber)
+	env.Process.WakePending = true
+	env.wakeWaiters()
+
+	if got := env.currentPriority(); got != 9 {
+		t.Errorf("JPI$_PRI after a wakeup = %d, want 9 (6 + 3)", got)
+	}
+
+	if env.Process.BasePriority != 6 {
+		t.Errorf("JPI$_PRIB = %d, want 6", env.Process.BasePriority)
+	}
+}
