@@ -1,0 +1,1625 @@
+
+Analyze Object File                           7-OCT-2026 18:44:38.05   Page 1
+DUA1:[000000]R4_TRNLNM.OBJ;1
+ANALYZ V07-04
+
+This is an OpenVMS VAX object file
+
+1.  MODULE HEADER (OBJ$C_HDR_MHD), 54 bytes
+
+	structure level: 0
+	maximum record size: 512
+	module name: "R4_TRNLNM"
+	module version: "V1.0"
+	creation   date/time:  7-OCT-2026 18:44
+
+
+2.  LANGUAGE PROCESSOR HEADER (OBJ$C_HDR_LNM), 18 bytes
+
+	Textual information:
+	"VAX MACRO V5.4-3"
+
+
+3.  SOURCE FILE HEADER (OBJ$C_HDR_SRC), 24 bytes
+
+	Textual information:
+	"MACRO/NOLIST R4_TRNLNM"
+
+
+4.  TITLE HEADER (OBJ$C_HDR_TTL), 27 bytes
+
+	Textual information:
+	"every argument of $TRNLNM"
+
+
+5.  TRACEBACK INFORMATION (OBJ$C_TBT), 19 bytes
+
+	1)  Store Immediate, 17 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 09 00 00 00 00 00 BC 10|  0000  |.¼......|
+		 4E 4C 4E 52 54 5F 34 52|  0008  |R4_TRNLN|
+		                      4D|  0010  |M       |
+
+
+6.  GLOBAL SYMBOL DIRECTORY (OBJ$C_GSD), 16 bytes
+
+	1)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "SYS$TRNLNM"
+
+
+
+Analyze Object File                           7-OCT-2026 18:44:38.05   Page 2
+DUA1:[000000]R4_TRNLNM.OBJ;1
+ANALYZ V07-04
+
+7.  GLOBAL SYMBOL DIRECTORY (OBJ$C_GSD), 19 bytes
+
+	1)  Program Section Definition (GSD$C_PSC)
+		alignment: 1-byte boundary                       <-- psect 0
+		attribute flags:
+			(0)  GPS$V_PIC        0
+			(1)  GPS$V_LIB        0
+			(2)  GPS$V_OVR        0
+			(3)  GPS$V_REL        0
+			(4)  GPS$V_GBL        0
+			(5)  GPS$V_SHR        0
+			(6)  GPS$V_EXE        0
+			(7)  GPS$V_RD         0
+			(8)  GPS$V_WRT        0
+			(9)  GPS$V_VEC        0
+			(10) GPS$V_COM        0
+			(11) GPS$V_NOMOD      0
+		allocation: 0 (%X'00000000')
+		symbol: ".  ABS  ."
+
+
+8.  TEXT INFORMATION/RELOCATION (OBJ$C_TIR), 5 bytes
+
+	1)  TIR$C_STA_PB (4, %X'04')                            stack depth: 1
+		psect: 0
+		value: 0 (%X'00000000')
+
+	2)  TIR$C_CTL_SETRB (80, %X'50')                        stack depth: 0
+
+
+9.  GLOBAL SYMBOL DIRECTORY (OBJ$C_GSD), 14 bytes
+
+	1)  Program Section Definition (GSD$C_PSC)
+		alignment: 4-byte boundary                       <-- psect 1
+		attribute flags:
+			(0)  GPS$V_PIC        0
+			(1)  GPS$V_LIB        0
+			(2)  GPS$V_OVR        0
+			(3)  GPS$V_REL        1
+			(4)  GPS$V_GBL        0
+			(5)  GPS$V_SHR        0
+			(6)  GPS$V_EXE        0
+			(7)  GPS$V_RD         1
+			(8)  GPS$V_WRT        1
+			(9)  GPS$V_VEC        0
+			(10) GPS$V_COM        0
+			(11) GPS$V_NOMOD      0
+		allocation: 128 (%X'00000080')
+		symbol: "DATA"
+
+
+
+Analyze Object File                           7-OCT-2026 18:44:38.05   Page 3
+DUA1:[000000]R4_TRNLNM.OBJ;1
+ANALYZ V07-04
+
+10.  TEXT INFORMATION/RELOCATION (OBJ$C_TIR), 134 bytes
+
+	1)  TIR$C_STA_PB (4, %X'04')                            stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	2)  TIR$C_CTL_SETRB (80, %X'50')                        stack depth: 0
+
+	3)  Store Immediate, 128 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 00 00 00 00 00 00 00 00|  0000  |........|
+		 00 00 00 00 00 00 00 00|  0008  |........|
+		 00 00 00 00 00 00 00 00|  0010  |........|
+		 00 00 00 00 00 00 00 00|  0018  |........|
+		 00 00 00 00 00 00 00 00|  0020  |........|
+		 00 00 00 00 00 00 00 00|  0028  |........|
+		 00 00 00 00 00 00 00 00|  0030  |........|
+		 00 00 00 00 00 00 00 00|  0038  |........|
+		 00 00 00 00 00 00 00 00|  0040  |........|
+		 00 00 00 00 00 00 00 00|  0048  |........|
+		 00 00 00 00 00 00 00 00|  0050  |........|
+		 00 00 00 00 00 00 00 00|  0058  |........|
+		 00 00 00 00 00 00 00 00|  0060  |........|
+		 00 00 00 00 00 00 00 00|  0068  |........|
+		 00 00 00 00 00 00 00 00|  0070  |........|
+		 00 00 00 00 00 00 00 00|  0078  |........|
+
+
+11.  GLOBAL SYMBOL DIRECTORY (OBJ$C_GSD), 14 bytes
+
+	1)  Program Section Definition (GSD$C_PSC)
+		alignment: 4-byte boundary                       <-- psect 2
+		attribute flags:
+			(0)  GPS$V_PIC        0
+			(1)  GPS$V_LIB        0
+			(2)  GPS$V_OVR        0
+			(3)  GPS$V_REL        1
+			(4)  GPS$V_GBL        0
+			(5)  GPS$V_SHR        0
+			(6)  GPS$V_EXE        1
+			(7)  GPS$V_RD         1
+			(8)  GPS$V_WRT        0
+			(9)  GPS$V_VEC        0
+			(10) GPS$V_COM        0
+			(11) GPS$V_NOMOD      0
+		allocation: 771 (%X'00000303')
+		symbol: "CODE"
+
+
+12.  TEXT INFORMATION/RELOCATION (OBJ$C_TIR), 7 bytes
+
+	1)  TIR$C_STA_PB (4, %X'04')                            stack depth: 1
+		psect: 2
+		value: 0 (%X'00000000')
+
+Analyze Object File                           7-OCT-2026 18:44:38.05   Page 4
+DUA1:[000000]R4_TRNLNM.OBJ;1
+ANALYZ V07-04
+
+
+	2)  TIR$C_CTL_SETRB (80, %X'50')                        stack depth: 0
+
+	3)  TIR$C_STA_UB (7, %X'07')                            stack depth: 1
+		unsigned value: 192 (%X'000000C0')
+
+
+13.  GLOBAL SYMBOL DIRECTORY (OBJ$C_GSD), 22 bytes
+
+	1)  Entry Point Symbol and Mask Definition (GSD$C_EPM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		psect: 2
+		value: 0 (%X'00000000')
+		entry mask: <R6,R7>
+		symbol: "R4_TRNLNM"
+
+
+14.  TEXT INFORMATION/RELOCATION (OBJ$C_TIR), 2 bytes
+
+	1)  TIR$C_STO_W (38, %X'26')                            stack depth: 0
+
+
+15.  TEXT INFORMATION/RELOCATION (OBJ$C_TIR), 461 bytes
+
+	1)  Store Immediate, 10 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 00 DD 9F 9F 00 DD 00 DD|  0000  |Ý.Ý...Ý.|
+		                   05 FB|  0008  |û.      |
+
+	2)  TIR$C_STA_GBL (0, %X'00')                           stack depth: 1
+		symbol: "SYS$TRNLNM"
+
+	3)  TIR$C_STO_PICR (28, %X'1C')                         stack depth: 0
+
+	4)  Store Immediate, 5 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		          9F 7A 7A 00 01|  0000  |..zz.   |
+
+	5)  TIR$C_STA_PB (4, %X'04')                            stack depth: 1
+		psect: 1
+		value: 32 (%X'00000020')
+
+	6)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+
+Analyze Object File                           7-OCT-2026 18:44:38.05   Page 5
+DUA1:[000000]R4_TRNLNM.OBJ;1
+ANALYZ V07-04
+
+	7)  TIR$C_STO_LD (25, %X'19')                           stack depth: 0
+
+	8)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      9F|  0000  |.       |
+
+	9)  TIR$C_STA_PB (4, %X'04')                            stack depth: 1
+		psect: 1
+		value: 24 (%X'00000018')
+
+	10)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	11)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	12)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      9F|  0000  |.       |
+
+	13)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 16 (%X'00000010')
+
+	14)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	15)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	16)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      9F|  0000  |.       |
+
+	17)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 8 (%X'00000008')
+
+	18)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	19)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	20)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      9F|  0000  |.       |
+
+
+Analyze Object File                           7-OCT-2026 18:44:38.05   Page 6
+DUA1:[000000]R4_TRNLNM.OBJ;1
+ANALYZ V07-04
+
+	21)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	22)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	23)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	24)  Store Immediate, 2 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                   05 FB|  0000  |û.      |
+
+	25)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "SYS$TRNLNM"
+
+	26)  TIR$C_STO_PICR (28, %X'1C')                        stack depth: 0
+
+	27)  Store Immediate, 5 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		          9F 7A 7A 00 02|  0000  |..zz.   |
+
+	28)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 32 (%X'00000020')
+
+	29)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	30)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	31)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      9F|  0000  |.       |
+
+	32)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 24 (%X'00000018')
+
+	33)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	34)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	35)  Store Immediate, 1 byte:
+
+Analyze Object File                           7-OCT-2026 18:44:38.05   Page 7
+DUA1:[000000]R4_TRNLNM.OBJ;1
+ANALYZ V07-04
+
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      9F|  0000  |.       |
+
+	36)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 16 (%X'00000010')
+
+	37)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	38)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	39)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      9F|  0000  |.       |
+
+	40)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 8 (%X'00000008')
+
+	41)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	42)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	43)  Store Immediate, 4 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		             05 FB 00 DD|  0000  |Ý.û.    |
+
+	44)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "SYS$TRNLNM"
+
+	45)  TIR$C_STO_PICR (28, %X'1C')                        stack depth: 0
+
+	46)  Store Immediate, 5 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		          9F 7A 7A 00 03|  0000  |..zz.   |
+
+	47)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 32 (%X'00000020')
+
+	48)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+
+Analyze Object File                           7-OCT-2026 18:44:38.05   Page 8
+DUA1:[000000]R4_TRNLNM.OBJ;1
+ANALYZ V07-04
+
+	49)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	50)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      9F|  0000  |.       |
+
+	51)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 24 (%X'00000018')
+
+	52)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	53)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	54)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      9F|  0000  |.       |
+
+	55)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 16 (%X'00000010')
+
+	56)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	57)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	58)  Store Immediate, 2 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                   9F 9F|  0000  |..      |
+
+	59)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	60)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	61)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	62)  Store Immediate, 2 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                   05 FB|  0000  |û.      |
+
+
+Analyze Object File                           7-OCT-2026 18:44:38.06   Page 9
+DUA1:[000000]R4_TRNLNM.OBJ;1
+ANALYZ V07-04
+
+	63)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "SYS$TRNLNM"
+
+	64)  TIR$C_STO_PICR (28, %X'1C')                        stack depth: 0
+
+	65)  Store Immediate, 5 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		          9F 7A 7A 00 04|  0000  |..zz.   |
+
+	66)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 32 (%X'00000020')
+
+	67)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	68)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	69)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      9F|  0000  |.       |
+
+	70)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 24 (%X'00000018')
+
+	71)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	72)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	73)  Store Immediate, 2 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                   9F 9F|  0000  |..      |
+
+	74)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 8 (%X'00000008')
+
+	75)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	76)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	77)  Store Immediate, 1 byte:
+
+Analyze Object File                           7-OCT-2026 18:44:38.06   Page 10
+DUA1:[000000]R4_TRNLNM.OBJ;1
+ANALYZ V07-04
+
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      9F|  0000  |.       |
+
+	78)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	79)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	80)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	81)  Store Immediate, 2 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                   05 FB|  0000  |û.      |
+
+	82)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "SYS$TRNLNM"
+
+	83)  TIR$C_STO_PICR (28, %X'1C')                        stack depth: 0
+
+	84)  Store Immediate, 5 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		          9F 7A 7A 00 05|  0000  |..zz.   |
+
+	85)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 32 (%X'00000020')
+
+	86)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	87)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	88)  Store Immediate, 3 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                9F 00 DD|  0000  |Ý..     |
+
+	89)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 16 (%X'00000010')
+
+	90)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+
+Analyze Object File                           7-OCT-2026 18:44:38.06   Page 11
+DUA1:[000000]R4_TRNLNM.OBJ;1
+ANALYZ V07-04
+
+	91)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	92)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      9F|  0000  |.       |
+
+	93)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 8 (%X'00000008')
+
+	94)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	95)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	96)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      9F|  0000  |.       |
+
+	97)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	98)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	99)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	100)  Store Immediate, 2 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                   05 FB|  0000  |û.      |
+
+	101)  TIR$C_STA_GBL (0, %X'00')                         stack depth: 1
+		symbol: "SYS$TRNLNM"
+
+	102)  TIR$C_STO_PICR (28, %X'1C')                       stack depth: 0
+
+	103)  Store Immediate, 7 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		    9F 00 DD 7A 7A 00 06|  0000  |..zzÝ.. |
+
+	104)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 1
+		value: 24 (%X'00000018')
+
+	105)  Store Immediate, 1 byte:
+
+Analyze Object File                           7-OCT-2026 18:44:38.06   Page 12
+DUA1:[000000]R4_TRNLNM.OBJ;1
+ANALYZ V07-04
+
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	106)  TIR$C_STO_LD (25, %X'19')                         stack depth: 0
+
+	107)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      9F|  0000  |.       |
+
+	108)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 1
+		value: 16 (%X'00000010')
+
+	109)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	110)  TIR$C_STO_LD (25, %X'19')                         stack depth: 0
+
+	111)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      9F|  0000  |.       |
+
+	112)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 1
+		value: 8 (%X'00000008')
+
+	113)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	114)  TIR$C_STO_LD (25, %X'19')                         stack depth: 0
+
+	115)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      9F|  0000  |.       |
+
+	116)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	117)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	118)  TIR$C_STO_LD (25, %X'19')                         stack depth: 0
+
+
+Analyze Object File                           7-OCT-2026 18:44:38.06   Page 13
+DUA1:[000000]R4_TRNLNM.OBJ;1
+ANALYZ V07-04
+
+	119)  Store Immediate, 2 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                   05 FB|  0000  |û.      |
+
+	120)  TIR$C_STA_GBL (0, %X'00')                         stack depth: 1
+		symbol: "SYS$TRNLNM"
+
+	121)  TIR$C_STO_PICR (28, %X'1C')                       stack depth: 0
+
+	122)  Store Immediate, 11 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 00 DD 00 DD 7A 7A 00 07|  0000  |..zzÝ.Ý.|
+		                9F 9F 9F|  0008  |...     |
+
+	123)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	124)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	125)  TIR$C_STO_LD (25, %X'19')                         stack depth: 0
+
+	126)  Store Immediate, 2 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                   05 FB|  0000  |û.      |
+
+	127)  TIR$C_STA_GBL (0, %X'00')                         stack depth: 1
+		symbol: "SYS$TRNLNM"
+
+	128)  TIR$C_STO_PICR (28, %X'1C')                       stack depth: 0
+
+	129)  Store Immediate, 14 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 00 DD 00 DD 7A 7A 00 08|  0000  |..zzÝ.Ý.|
+		       05 FB 76 DF 9F 9F|  0008  |..ßvû.  |
+
+	130)  TIR$C_STA_GBL (0, %X'00')                         stack depth: 1
+		symbol: "SYS$TRNLNM"
+
+	131)  TIR$C_STO_PICR (28, %X'1C')                       stack depth: 0
+
+	132)  Store Immediate, 10 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 00 DD 00 DD 7A 7A 00 09|  0000  |..zzÝ.Ý.|
+		                   9F 9F|  0008  |..      |
+
+
+Analyze Object File                           7-OCT-2026 18:44:38.06   Page 14
+DUA1:[000000]R4_TRNLNM.OBJ;1
+ANALYZ V07-04
+
+	133)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 1
+		value: 8 (%X'00000008')
+
+	134)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	135)  TIR$C_STO_LD (25, %X'19')                         stack depth: 0
+
+	136)  Store Immediate, 4 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		             05 FB 00 DD|  0000  |Ý.û.    |
+
+	137)  TIR$C_STA_GBL (0, %X'00')                         stack depth: 1
+		symbol: "SYS$TRNLNM"
+
+	138)  TIR$C_STO_PICR (28, %X'1C')                       stack depth: 0
+
+	139)  Store Immediate, 10 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 00 DD 00 DD 7A 7A 00 0A|  0000  |..zzÝ.Ý.|
+		                   7F 9F|  0008  |..      |
+
+
+16.  TEXT INFORMATION/RELOCATION (OBJ$C_TIR), 462 bytes
+
+	1)  Store Immediate, 5 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		          05 FB 00 DD 76|  0000  |vÝ.û.   |
+
+	2)  TIR$C_STA_GBL (0, %X'00')                           stack depth: 1
+		symbol: "SYS$TRNLNM"
+
+	3)  TIR$C_STO_PICR (28, %X'1C')                         stack depth: 0
+
+	4)  Store Immediate, 9 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 00 DD 00 DD 7A 7A 00 0B|  0000  |..zzÝ.Ý.|
+		                      9F|  0008  |.       |
+
+	5)  TIR$C_STA_PB (4, %X'04')                            stack depth: 1
+		psect: 1
+		value: 16 (%X'00000010')
+
+	6)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+
+Analyze Object File                           7-OCT-2026 18:44:38.06   Page 15
+DUA1:[000000]R4_TRNLNM.OBJ;1
+ANALYZ V07-04
+
+	7)  TIR$C_STO_LD (25, %X'19')                           stack depth: 0
+
+	8)  Store Immediate, 5 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		          05 FB 00 DD 9F|  0000  |.Ý.û.   |
+
+	9)  TIR$C_STA_GBL (0, %X'00')                           stack depth: 1
+		symbol: "SYS$TRNLNM"
+
+	10)  TIR$C_STO_PICR (28, %X'1C')                        stack depth: 0
+
+	11)  Store Immediate, 15 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 00 DD 00 DD 7A 7A 00 0C|  0000  |..zzÝ.Ý.|
+		    05 FB 00 DD 9F 76 7F|  0008  |.v.Ý.û. |
+
+	12)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "SYS$TRNLNM"
+
+	13)  TIR$C_STO_PICR (28, %X'1C')                        stack depth: 0
+
+	14)  Store Immediate, 7 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		    9F 00 DD 7A 7A 00 0D|  0000  |..zzÝ.. |
+
+	15)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 24 (%X'00000018')
+
+	16)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	17)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	18)  Store Immediate, 6 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		       05 FB 00 DD 9F 9F|  0000  |..Ý.û.  |
+
+	19)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "SYS$TRNLNM"
+
+	20)  TIR$C_STO_PICR (28, %X'1C')                        stack depth: 0
+
+	21)  Store Immediate, 14 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 76 9F 00 DD 7A 7A 00 0E|  0000  |..zzÝ..v|
+		       05 FB 00 DD 9F 9F|  0008  |..Ý.û.  |
+
+
+Analyze Object File                           7-OCT-2026 18:44:38.06   Page 16
+DUA1:[000000]R4_TRNLNM.OBJ;1
+ANALYZ V07-04
+
+	22)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "SYS$TRNLNM"
+
+	23)  TIR$C_STO_PICR (28, %X'1C')                        stack depth: 0
+
+	24)  Store Immediate, 5 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		          9F 7A 7A 00 0F|  0000  |..zz.   |
+
+	25)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 32 (%X'00000020')
+
+	26)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	27)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	28)  Store Immediate, 8 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 05 FB 00 DD 9F 9F 00 DD|  0000  |Ý...Ý.û.|
+
+	29)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "SYS$TRNLNM"
+
+	30)  TIR$C_STO_PICR (28, %X'1C')                        stack depth: 0
+
+	31)  Store Immediate, 14 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 00 DD 76 DF 7A 7A 00 10|  0000  |..zzßvÝ.|
+		       05 FB 00 DD 9F 9F|  0008  |..Ý.û.  |
+
+	32)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "SYS$TRNLNM"
+
+	33)  TIR$C_STO_PICR (28, %X'1C')                        stack depth: 0
+
+	34)  Store Immediate, 11 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 00 DD 00 DD 7A 7A 00 11|  0000  |..zzÝ.Ý.|
+		                9F 9F 9F|  0008  |...     |
+
+	35)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	36)  Store Immediate, 1 byte:
+
+Analyze Object File                           7-OCT-2026 18:44:38.06   Page 17
+DUA1:[000000]R4_TRNLNM.OBJ;1
+ANALYZ V07-04
+
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	37)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	38)  Store Immediate, 2 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                   05 FB|  0000  |û.      |
+
+	39)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "SYS$TRNLNM"
+
+	40)  TIR$C_STO_PICR (28, %X'1C')                        stack depth: 0
+
+	41)  Store Immediate, 10 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 00 DD 00 DD 7A 7A 00 12|  0000  |..zzÝ.Ý.|
+		                   9F 9F|  0008  |..      |
+
+	42)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 8 (%X'00000008')
+
+	43)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	44)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	45)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      9F|  0000  |.       |
+
+	46)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	47)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	48)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	49)  Store Immediate, 2 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                   05 FB|  0000  |û.      |
+
+
+Analyze Object File                           7-OCT-2026 18:44:38.06   Page 18
+DUA1:[000000]R4_TRNLNM.OBJ;1
+ANALYZ V07-04
+
+	50)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "SYS$TRNLNM"
+
+	51)  TIR$C_STO_PICR (28, %X'1C')                        stack depth: 0
+
+	52)  Store Immediate, 9 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 00 DD 00 DD 7A 7A 00 13|  0000  |..zzÝ.Ý.|
+		                      9F|  0008  |.       |
+
+	53)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 16 (%X'00000010')
+
+	54)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	55)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	56)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      9F|  0000  |.       |
+
+	57)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 8 (%X'00000008')
+
+	58)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	59)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	60)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      9F|  0000  |.       |
+
+	61)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	62)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	63)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+
+Analyze Object File                           7-OCT-2026 18:44:38.06   Page 19
+DUA1:[000000]R4_TRNLNM.OBJ;1
+ANALYZ V07-04
+
+	64)  Store Immediate, 2 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                   05 FB|  0000  |û.      |
+
+	65)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "SYS$TRNLNM"
+
+	66)  TIR$C_STO_PICR (28, %X'1C')                        stack depth: 0
+
+	67)  Store Immediate, 7 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		    9F 00 DD 7A 7A 00 14|  0000  |..zzÝ.. |
+
+	68)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 24 (%X'00000018')
+
+	69)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	70)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	71)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      9F|  0000  |.       |
+
+	72)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 16 (%X'00000010')
+
+	73)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	74)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	75)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      9F|  0000  |.       |
+
+	76)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 8 (%X'00000008')
+
+	77)  Store Immediate, 1 byte:
+
+Analyze Object File                           7-OCT-2026 18:44:38.06   Page 20
+DUA1:[000000]R4_TRNLNM.OBJ;1
+ANALYZ V07-04
+
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	78)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	79)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      9F|  0000  |.       |
+
+	80)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	81)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	82)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	83)  Store Immediate, 2 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                   05 FB|  0000  |û.      |
+
+	84)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "SYS$TRNLNM"
+
+	85)  TIR$C_STO_PICR (28, %X'1C')                        stack depth: 0
+
+	86)  Store Immediate, 5 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		          9F 7A 7A 00 15|  0000  |..zz.   |
+
+	87)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 32 (%X'00000020')
+
+	88)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	89)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	90)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      9F|  0000  |.       |
+
+
+Analyze Object File                           7-OCT-2026 18:44:38.06   Page 21
+DUA1:[000000]R4_TRNLNM.OBJ;1
+ANALYZ V07-04
+
+	91)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 24 (%X'00000018')
+
+	92)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	93)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	94)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      9F|  0000  |.       |
+
+	95)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 16 (%X'00000010')
+
+	96)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	97)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	98)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      9F|  0000  |.       |
+
+	99)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 8 (%X'00000008')
+
+	100)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	101)  TIR$C_STO_LD (25, %X'19')                         stack depth: 0
+
+	102)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      9F|  0000  |.       |
+
+	103)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	104)  Store Immediate, 1 byte:
+
+Analyze Object File                           7-OCT-2026 18:44:38.06   Page 22
+DUA1:[000000]R4_TRNLNM.OBJ;1
+ANALYZ V07-04
+
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	105)  TIR$C_STO_LD (25, %X'19')                         stack depth: 0
+
+	106)  Store Immediate, 2 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                   05 FB|  0000  |û.      |
+
+	107)  TIR$C_STA_GBL (0, %X'00')                         stack depth: 1
+		symbol: "SYS$TRNLNM"
+
+	108)  TIR$C_STO_PICR (28, %X'1C')                       stack depth: 0
+
+	109)  Store Immediate, 5 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		          9F 7A 7A 00 16|  0000  |..zz.   |
+
+	110)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 1
+		value: 32 (%X'00000020')
+
+	111)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	112)  TIR$C_STO_LD (25, %X'19')                         stack depth: 0
+
+	113)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      9F|  0000  |.       |
+
+	114)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 1
+		value: 24 (%X'00000018')
+
+
+17.  TEXT INFORMATION/RELOCATION (OBJ$C_TIR), 208 bytes
+
+	1)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	2)  TIR$C_STO_LD (25, %X'19')                           stack depth: 0
+
+	3)  Store Immediate, 1 byte:
+
+Analyze Object File                           7-OCT-2026 18:44:38.07   Page 23
+DUA1:[000000]R4_TRNLNM.OBJ;1
+ANALYZ V07-04
+
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      9F|  0000  |.       |
+
+	4)  TIR$C_STA_PB (4, %X'04')                            stack depth: 1
+		psect: 1
+		value: 16 (%X'00000010')
+
+	5)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	6)  TIR$C_STO_LD (25, %X'19')                           stack depth: 0
+
+	7)  Store Immediate, 5 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		          05 FB 00 DD 9F|  0000  |.Ý.û.   |
+
+	8)  TIR$C_STA_GBL (0, %X'00')                           stack depth: 1
+		symbol: "SYS$TRNLNM"
+
+	9)  TIR$C_STO_PICR (28, %X'1C')                         stack depth: 0
+
+	10)  Store Immediate, 5 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		          9F 7A 7A 00 17|  0000  |..zz.   |
+
+	11)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 32 (%X'00000020')
+
+	12)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	13)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	14)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      9F|  0000  |.       |
+
+	15)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 24 (%X'00000018')
+
+	16)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+
+Analyze Object File                           7-OCT-2026 18:44:38.07   Page 24
+DUA1:[000000]R4_TRNLNM.OBJ;1
+ANALYZ V07-04
+
+	17)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	18)  Store Immediate, 3 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                9F 9F 9F|  0000  |...     |
+
+	19)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	20)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	21)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	22)  Store Immediate, 2 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                   05 FB|  0000  |û.      |
+
+	23)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "SYS$TRNLNM"
+
+	24)  TIR$C_STO_PICR (28, %X'1C')                        stack depth: 0
+
+	25)  Store Immediate, 5 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		          9F 7A 7A 00 18|  0000  |..zz.   |
+
+	26)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 32 (%X'00000020')
+
+	27)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	28)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	29)  Store Immediate, 4 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		             9F 9F 00 DD|  0000  |Ý...    |
+
+	30)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 8 (%X'00000008')
+
+	31)  Store Immediate, 1 byte:
+
+Analyze Object File                           7-OCT-2026 18:44:38.07   Page 25
+DUA1:[000000]R4_TRNLNM.OBJ;1
+ANALYZ V07-04
+
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	32)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	33)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      9F|  0000  |.       |
+
+	34)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	35)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	36)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	37)  Store Immediate, 2 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                   05 FB|  0000  |û.      |
+
+	38)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "SYS$TRNLNM"
+
+	39)  TIR$C_STO_PICR (28, %X'1C')                        stack depth: 0
+
+	40)  Store Immediate, 9 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 00 DD 00 DD 7A 7A 00 19|  0000  |..zzÝ.Ý.|
+		                      9F|  0008  |.       |
+
+	41)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 16 (%X'00000010')
+
+	42)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	43)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	44)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      9F|  0000  |.       |
+
+
+Analyze Object File                           7-OCT-2026 18:44:38.07   Page 26
+DUA1:[000000]R4_TRNLNM.OBJ;1
+ANALYZ V07-04
+
+	45)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 8 (%X'00000008')
+
+	46)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	47)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	48)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      9F|  0000  |.       |
+
+	49)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	50)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	51)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	52)  Store Immediate, 2 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                   05 FB|  0000  |û.      |
+
+	53)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "SYS$TRNLNM"
+
+	54)  TIR$C_STO_PICR (28, %X'1C')                        stack depth: 0
+
+	55)  Store Immediate, 16 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 00 DD 00 DD 7A 7A 00 1A|  0000  |..zzÝ.Ý.|
+		 05 FB 00 DD 00 DD 00 DD|  0008  |Ý.Ý.Ý.û.|
+
+	56)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "SYS$TRNLNM"
+
+	57)  TIR$C_STO_PICR (28, %X'1C')                        stack depth: 0
+
+	58)  Store Immediate, 5 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		          04 7A 7A 00 1B|  0000  |..zz.   |
+
+
+
+Analyze Object File                           7-OCT-2026 18:44:38.07   Page 27
+DUA1:[000000]R4_TRNLNM.OBJ;1
+ANALYZ V07-04
+
+18.  TRACEBACK INFORMATION (OBJ$C_TBT), 23 bytes
+
+	1)  Store Immediate, 3 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                00 BE 10|  0000  |.¾.     |
+
+	2)  TIR$C_STA_PL (6, %X'06')                            stack depth: 1
+		psect: 2
+		value: 0 (%X'00000000')
+
+	3)  TIR$C_STO_PIDR (27, %X'1B')                         stack depth: 0
+
+	4)  Store Immediate, 10 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 4C 4E 52 54 5F 34 52 09|  0000  |.R4_TRNL|
+		                   4D 4E|  0008  |NM      |
+
+
+19.  TRACEBACK INFORMATION (OBJ$C_TBT), 38 bytes
+
+	1)  Store Immediate, 3 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                00 B8 0F|  0000  |.¸.     |
+
+	2)  TIR$C_STA_PB (4, %X'04')                            stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	3)  TIR$C_STO_PIDR (27, %X'1B')                         stack depth: 0
+
+	4)  Store Immediate, 12 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 00 00 80 41 54 41 44 04|  0000  |.DATA...|
+		             00 B8 0F 00|  0008  |..¸.    |
+
+	5)  TIR$C_STA_PB (4, %X'04')                            stack depth: 1
+		psect: 2
+		value: 0 (%X'00000000')
+
+	6)  TIR$C_STO_PIDR (27, %X'1B')                         stack depth: 0
+
+	7)  Store Immediate, 11 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 00 03 03 45 44 4F 43 04|  0000  |.CODE...|
+		                BD 01 00|  0008  |..½     |
+
+
+
+Analyze Object File                           7-OCT-2026 18:44:38.07   Page 28
+DUA1:[000000]R4_TRNLNM.OBJ;1
+ANALYZ V07-04
+
+20.  END OF MODULE (OBJ$C_EOM), 7 bytes
+
+	severity: errors (2)
+	psect: 2
+	value: 0 (%X'00000000')
+
+
+
+Analyze Object File                           7-OCT-2026 18:44:38.07   Page 29
+DUA1:[000000]R4_TRNLNM.OBJ;1
+ANALYZ V07-04
+
+SUMMARY STATISTICS:
+
+Record Type	Count	Total Bytes
+
+OBJ$C_HDR	    4	   123
+OBJ$C_GSD	    5	    85
+OBJ$C_TIR	    7	  1279
+OBJ$C_EOM	    1	     7
+OBJ$C_DBG	    0	     0
+OBJ$C_TBT	    3	    80
+OBJ$C_LNK	    0	     0
+OBJ$C_EOMW	    0	     0
+
+Totals		   20	  1574
+
+
+The analysis uncovered NO errors.
+
+
+ANALYZE/OBJECT/OUTPUT=R4_TRNLNM.ANL R4_TRNLNM.OBJ                               

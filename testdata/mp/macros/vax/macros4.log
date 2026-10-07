@@ -1,0 +1,2377 @@
+
+$ MACRO/NOLIST R4_ADJSTK
+                                     0002       
+%MACRO-E-DIRSYNX, Directive syntax error                                !
+                                 9F  0002       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     0055       
+%MACRO-E-DIRSYNX, Directive syntax error                                      !
+                                 9F  0055       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     0066       
+%MACRO-E-DIRSYNX, Directive syntax error                                      !
+                                 9F  0066       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     0077       
+%MACRO-E-DIRSYNX, Directive syntax error                                      !
+                                 9F  0077       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     0088       
+%MACRO-E-DIRSYNX, Directive syntax error                                      !
+                                 9F  0088       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     0099       
+%MACRO-E-DIRSYNX, Directive syntax error                                      !
+                                 9F  0099       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     00D2       
+%MACRO-E-DIRSYNX, Directive syntax error                                      !
+                                 9F  00D2       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     00E7       
+%MACRO-E-DIRSYNX, Directive syntax error                                      !
+                                 9F  00E7       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     0134       
+%MACRO-E-DIRSYNX, Directive syntax error                                      !
+                                 9F  0134       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+$ ANALYZE/OBJECT/OUTPUT=R4_ADJSTK.ANL R4_ADJSTK.OBJ
+%ANALYZE-I-ERRORS, DUA1:[000000]R4_ADJSTK.OBJ;1                            0 errors
+$ MACRO/NOLIST R4_ADJWSL
+$ ANALYZE/OBJECT/OUTPUT=R4_ADJWSL.ANL R4_ADJWSL.OBJ
+%ANALYZE-I-ERRORS, DUA1:[000000]R4_ADJWSL.OBJ;1                            0 errors
+$ MACRO/NOLIST R4_ALLOC
+                                     0008       
+%MACRO-E-DIRSYNX, Directive syntax error                                !
+                                 9F  0008       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     0055       
+%MACRO-E-DIRSYNX, Directive syntax error                                       !
+                                 9F  0055       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     0129       
+%MACRO-E-DIRSYNX, Directive syntax error                                       !
+                                 9F  0129       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     013B       
+%MACRO-E-DIRSYNX, Directive syntax error                                       !
+                                 9F  013B       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     0151       
+%MACRO-E-DIRSYNX, Directive syntax error                                       !
+                                 9F  0151       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     0163       
+%MACRO-E-DIRSYNX, Directive syntax error                                       !
+                                 9F  0163       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     017B       
+%MACRO-E-DIRSYNX, Directive syntax error                                       !
+                                 9F  017B       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     018F       
+%MACRO-E-DIRSYNX, Directive syntax error                                       !
+                                 9F  018F       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     01A7       
+%MACRO-E-DIRSYNX, Directive syntax error                                       !
+                                 9F  01A7       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     01BB       
+%MACRO-E-DIRSYNX, Directive syntax error                                       !
+                                 9F  01BB       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                           000000EF  01CD       
+%MACRO-E-DIRSYNX, Directive syntax error                                           !
+                   00000000'EF   9F  01CD       
+%MACRO-E-OPRNDSYNX, Operand syntax error                     !
+                           000000EF  01E4       
+%MACRO-E-DIRSYNX, Directive syntax error                                             !
+                   00000000'EF   9F  01E4       
+%MACRO-E-OPRNDSYNX, Operand syntax error                       !
+                           000000EF  01FB       
+%MACRO-E-DIRSYNX, Directive syntax error                                              !
+                   00000000'EF   9F  01FB       
+%MACRO-E-OPRNDSYNX, Operand syntax error                        !
+                                     02BF       
+%MACRO-E-DIRSYNX, Directive syntax error                                       !
+                                 9F  02BF       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+$ ANALYZE/OBJECT/OUTPUT=R4_ALLOC.ANL R4_ALLOC.OBJ
+%ANALYZE-I-ERRORS, DUA1:[000000]R4_ALLOC.OBJ;1                             0 errors
+$ MACRO/NOLIST R4_DALLOC
+$ ANALYZE/OBJECT/OUTPUT=R4_DALLOC.ANL R4_DALLOC.OBJ
+%ANALYZE-I-ERRORS, DUA1:[000000]R4_DALLOC.OBJ;1                            0 errors
+$ MACRO/NOLIST R4_ASCEFC
+                                     0006       
+%MACRO-E-DIRSYNX, Directive syntax error                                !
+                                 9F  0006       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                 DD  0007       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                 DD  003C       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied      !
+                                     0050       
+%MACRO-E-DIRSYNX, Directive syntax error                                      !
+                                 9F  0050       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     0094       
+%MACRO-E-DIRSYNX, Directive syntax error                                      !
+                                 9F  0094       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     00A6       
+%MACRO-E-DIRSYNX, Directive syntax error                                      !
+                                 9F  00A6       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                 DD  00BE       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied      !
+                                 DD  00D0       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied      !
+                                     00E0       
+%MACRO-E-DIRSYNX, Directive syntax error                                      !
+                                 9F  00E0       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                 DD  00E1       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     00F1       
+%MACRO-E-DIRSYNX, Directive syntax error                                      !
+                                 9F  00F1       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                 DD  00F2       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     0106       
+%MACRO-E-DIRSYNX, Directive syntax error                                      !
+                                 9F  0106       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                 DD  0107       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     0117       
+%MACRO-E-DIRSYNX, Directive syntax error                                      !
+                                 9F  0117       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                 DD  0118       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     0128       
+%MACRO-E-DIRSYNX, Directive syntax error                                      !
+                                 9F  0128       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     019F       
+%MACRO-E-DIRSYNX, Directive syntax error                                      !
+                                 9F  019F       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                 DD  01A0       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     01B4       
+%MACRO-E-DIRSYNX, Directive syntax error                                      !
+                                 9F  01B4       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+$ ANALYZE/OBJECT/OUTPUT=R4_ASCEFC.ANL R4_ASCEFC.OBJ
+%ANALYZE-I-ERRORS, DUA1:[000000]R4_ASCEFC.OBJ;1                            0 errors
+$ MACRO/NOLIST R4_DACEFC
+                                 DD  0002       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied      !
+                                 DD  001B       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied      !
+$ ANALYZE/OBJECT/OUTPUT=R4_DACEFC.ANL R4_DACEFC.OBJ
+%ANALYZE-I-ERRORS, DUA1:[000000]R4_DACEFC.OBJ;1                            0 errors
+$ MACRO/NOLIST R4_DLCEFC
+                                     0002       
+%MACRO-E-DIRSYNX, Directive syntax error                                !
+                                 9F  0002       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     001F       
+%MACRO-E-DIRSYNX, Directive syntax error                                !
+                                 9F  001F       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+$ ANALYZE/OBJECT/OUTPUT=R4_DLCEFC.ANL R4_DLCEFC.OBJ
+%ANALYZE-I-ERRORS, DUA1:[000000]R4_DLCEFC.OBJ;1                            0 errors
+$ MACRO/NOLIST R4_WFLAND
+                                 DD  0002       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied      !
+                                 DD  0003       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                 DD  0020       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied      !
+                                 DD  002C       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied      !
+                                 DD  003A       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied      !
+                                 DD  0048       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied      !
+                                 DD  0058       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied      !
+                                 DD  0066       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied      !
+                                 DD  0072       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied      !
+                                 DD  009B       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied      !
+                                 DD  009C       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+$ ANALYZE/OBJECT/OUTPUT=R4_WFLAND.ANL R4_WFLAND.OBJ
+%ANALYZE-I-ERRORS, DUA1:[000000]R4_WFLAND.OBJ;1                            0 errors
+$ MACRO/NOLIST R4_WFLOR
+                                 DD  0002       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied      !
+                                 DD  0003       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                 DD  0020       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied      !
+                                 DD  002C       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied      !
+                                 DD  003A       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied      !
+                                 DD  0048       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied      !
+                                 DD  0058       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied      !
+                                 DD  0066       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied      !
+                                 DD  0072       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied      !
+                                 DD  009B       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied      !
+                                 DD  009C       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+$ ANALYZE/OBJECT/OUTPUT=R4_WFLOR.ANL R4_WFLOR.OBJ
+%ANALYZE-I-ERRORS, DUA1:[000000]R4_WFLOR.OBJ;1                             0 errors
+$ MACRO/NOLIST R4_SYNCH
+$ ANALYZE/OBJECT/OUTPUT=R4_SYNCH.ANL R4_SYNCH.OBJ
+%ANALYZE-I-ERRORS, DUA1:[000000]R4_SYNCH.OBJ;1                             0 errors
+$ MACRO/NOLIST R4_CANCEL
+                                 3C  0002       
+%MACRO-E-MCHINSTSYN, Machine instruction syntax error           !
+                                     0003       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                 3C  001C       
+%MACRO-E-MCHINSTSYN, Machine instruction syntax error           !
+                                     001D       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+$ ANALYZE/OBJECT/OUTPUT=R4_CANCEL.ANL R4_CANCEL.OBJ
+%ANALYZE-I-ERRORS, DUA1:[000000]R4_CANCEL.OBJ;1                            0 errors
+$ MACRO/NOLIST R4_SETAST
+                                 DD  0002       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied      !
+                                 DD  001B       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied      !
+$ ANALYZE/OBJECT/OUTPUT=R4_SETAST.ANL R4_SETAST.OBJ
+%ANALYZE-I-ERRORS, DUA1:[000000]R4_SETAST.OBJ;1                            0 errors
+$ MACRO/NOLIST R4_DCLAST
+                                     0004       
+%MACRO-E-DIRSYNX, Directive syntax error                                !
+                                 9F  0004       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     0029       
+%MACRO-E-DIRSYNX, Directive syntax error                                      !
+                                 9F  0029       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     0085       
+%MACRO-E-DIRSYNX, Directive syntax error                                      !
+                                 9F  0085       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     0095       
+%MACRO-E-DIRSYNX, Directive syntax error                                      !
+                                 9F  0095       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     00A5       
+%MACRO-E-DIRSYNX, Directive syntax error                                      !
+                                 9F  00A5       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     00B5       
+%MACRO-E-DIRSYNX, Directive syntax error                                      !
+                                 9F  00B5       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     010E       
+%MACRO-E-DIRSYNX, Directive syntax error                                      !
+                                 9F  010E       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+$ ANALYZE/OBJECT/OUTPUT=R4_DCLAST.ANL R4_DCLAST.OBJ
+%ANALYZE-I-ERRORS, DUA1:[000000]R4_DCLAST.OBJ;1                            0 errors
+$ MACRO/NOLIST R4_DCLEXH
+                                     0002       
+%MACRO-E-DIRSYNX, Directive syntax error                                !
+                                 9F  0002       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     001F       
+%MACRO-E-DIRSYNX, Directive syntax error                                !
+                                 9F  001F       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+$ ANALYZE/OBJECT/OUTPUT=R4_DCLEXH.ANL R4_DCLEXH.OBJ
+%ANALYZE-I-ERRORS, DUA1:[000000]R4_DCLEXH.OBJ;1                            0 errors
+$ MACRO/NOLIST R4_CANEXH
+$ ANALYZE/OBJECT/OUTPUT=R4_CANEXH.ANL R4_CANEXH.OBJ
+%ANALYZE-I-ERRORS, DUA1:[000000]R4_CANEXH.OBJ;1                            0 errors
+$ MACRO/NOLIST R4_SETEXV
+                   00000000'EF   DD  012E       
+%MACRO-E-OPRNDSYNX, Operand syntax error                                    !
+$ ANALYZE/OBJECT/OUTPUT=R4_SETEXV.ANL R4_SETEXV.OBJ
+%ANALYZE-I-ERRORS, DUA1:[000000]R4_SETEXV.OBJ;1                            0 errors
+$ MACRO/NOLIST R4_SETPRV
+$ ANALYZE/OBJECT/OUTPUT=R4_SETPRV.ANL R4_SETPRV.OBJ
+%ANALYZE-I-ERRORS, DUA1:[000000]R4_SETPRV.OBJ;1                            0 errors
+$ MACRO/NOLIST R4_CMKRNL
+                                     0004       
+%MACRO-E-DIRSYNX, Directive syntax error                                !
+                                 9F  0004       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     002D       
+%MACRO-E-DIRSYNX, Directive syntax error                                      !
+                                 9F  002D       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     0074       
+%MACRO-E-DIRSYNX, Directive syntax error                                      !
+                                 9F  0074       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     0082       
+%MACRO-E-DIRSYNX, Directive syntax error                                      !
+                                 9F  0082       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     00BA       
+%MACRO-E-DIRSYNX, Directive syntax error                                !
+                                 9F  00BA       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+$ ANALYZE/OBJECT/OUTPUT=R4_CMKRNL.ANL R4_CMKRNL.OBJ
+%ANALYZE-I-ERRORS, DUA1:[000000]R4_CMKRNL.OBJ;1                            0 errors
+$ MACRO/NOLIST R4_CMEXEC
+                                     0004       
+%MACRO-E-DIRSYNX, Directive syntax error                                !
+                                 9F  0004       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     002D       
+%MACRO-E-DIRSYNX, Directive syntax error                                      !
+                                 9F  002D       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     0074       
+%MACRO-E-DIRSYNX, Directive syntax error                                      !
+                                 9F  0074       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     0082       
+%MACRO-E-DIRSYNX, Directive syntax error                                      !
+                                 9F  0082       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     00BA       
+%MACRO-E-DIRSYNX, Directive syntax error                                !
+                                 9F  00BA       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+$ ANALYZE/OBJECT/OUTPUT=R4_CMEXEC.ANL R4_CMEXEC.OBJ
+%ANALYZE-I-ERRORS, DUA1:[000000]R4_CMEXEC.OBJ;1                            0 errors
+$ MACRO/NOLIST R4_ASCTIM
+                                     0006       
+%MACRO-E-DIRSYNX, Directive syntax error                                !
+                                 9F  0006       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     0062       
+%MACRO-E-DIRSYNX, Directive syntax error                                      !
+                                 9F  0062       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     00B6       
+%MACRO-E-DIRSYNX, Directive syntax error                                      !
+                                 9F  00B6       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     00CC       
+%MACRO-E-DIRSYNX, Directive syntax error                                      !
+                                 9F  00CC       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     010C       
+%MACRO-E-DIRSYNX, Directive syntax error                                      !
+                                 9F  010C       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     011E       
+%MACRO-E-DIRSYNX, Directive syntax error                                      !
+                                 9F  011E       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     0134       
+%MACRO-E-DIRSYNX, Directive syntax error                                      !
+                                 9F  0134       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     0146       
+%MACRO-E-DIRSYNX, Directive syntax error                                      !
+                                 9F  0146       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     0158       
+%MACRO-E-DIRSYNX, Directive syntax error                                      !
+                                 9F  0158       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     01D3       
+%MACRO-E-DIRSYNX, Directive syntax error                                      !
+                                 9F  01D3       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     01E9       
+%MACRO-E-DIRSYNX, Directive syntax error                                      !
+                                 9F  01E9       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+$ ANALYZE/OBJECT/OUTPUT=R4_ASCTIM.ANL R4_ASCTIM.OBJ
+%ANALYZE-I-ERRORS, DUA1:[000000]R4_ASCTIM.OBJ;1                            0 errors
+$ MACRO/NOLIST R4_BINTIM
+                                     0002       
+%MACRO-E-DIRSYNX, Directive syntax error                                !
+                                 9F  0002       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     0003       
+%MACRO-E-DIRSYNX, Directive syntax error                         !
+                                 9F  0003       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     002C       
+%MACRO-E-DIRSYNX, Directive syntax error                                      !
+                                 9F  002C       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     0038       
+%MACRO-E-DIRSYNX, Directive syntax error                                      !
+                                 9F  0038       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     004A       
+%MACRO-E-DIRSYNX, Directive syntax error                                      !
+                                 9F  004A       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     005C       
+%MACRO-E-DIRSYNX, Directive syntax error                                      !
+                                 9F  005C       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     0070       
+%MACRO-E-DIRSYNX, Directive syntax error                                      !
+                                 9F  0070       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     007E       
+%MACRO-E-DIRSYNX, Directive syntax error                                      !
+                                 9F  007E       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     008A       
+%MACRO-E-DIRSYNX, Directive syntax error                                      !
+                                 9F  008A       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     00B3       
+%MACRO-E-DIRSYNX, Directive syntax error                                !
+                                 9F  00B3       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     00B4       
+%MACRO-E-DIRSYNX, Directive syntax error                         !
+                                 9F  00B4       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+$ ANALYZE/OBJECT/OUTPUT=R4_BINTIM.ANL R4_BINTIM.OBJ
+%ANALYZE-I-ERRORS, DUA1:[000000]R4_BINTIM.OBJ;1                            0 errors
+$ MACRO/NOLIST R4_GETTIM
+                                     0002       
+%MACRO-E-DIRSYNX, Directive syntax error                                !
+                                 9F  0002       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     001F       
+%MACRO-E-DIRSYNX, Directive syntax error                                !
+                                 9F  001F       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+$ ANALYZE/OBJECT/OUTPUT=R4_GETTIM.ANL R4_GETTIM.OBJ
+%ANALYZE-I-ERRORS, DUA1:[000000]R4_GETTIM.OBJ;1                            0 errors
+$ MACRO/NOLIST R4_NUMTIM
+                                     0004       
+%MACRO-E-DIRSYNX, Directive syntax error                                !
+                                 9F  0004       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     002D       
+%MACRO-E-DIRSYNX, Directive syntax error                                      !
+                                 9F  002D       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     0074       
+%MACRO-E-DIRSYNX, Directive syntax error                                      !
+                                 9F  0074       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     0082       
+%MACRO-E-DIRSYNX, Directive syntax error                                      !
+                                 9F  0082       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     00BA       
+%MACRO-E-DIRSYNX, Directive syntax error                                !
+                                 9F  00BA       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+$ ANALYZE/OBJECT/OUTPUT=R4_NUMTIM.ANL R4_NUMTIM.OBJ
+%ANALYZE-I-ERRORS, DUA1:[000000]R4_NUMTIM.OBJ;1                            0 errors
+$ MACRO/NOLIST R4_FAOL
+                                     0002       
+%MACRO-E-DIRSYNX, Directive syntax error                                !
+                                 9F  0002       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     0003       
+%MACRO-E-DIRSYNX, Directive syntax error                         !
+                                 9F  0003       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     0006       
+%MACRO-E-DIRSYNX, Directive syntax error                         !
+                                 9F  0006       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     0047       
+%MACRO-E-DIRSYNX, Directive syntax error                                !
+                                 9F  0047       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     0078       
+%MACRO-E-DIRSYNX, Directive syntax error                                !
+                                 9F  0078       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     0090       
+%MACRO-E-DIRSYNX, Directive syntax error                                !
+                                 9F  0090       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     00AE       
+%MACRO-E-DIRSYNX, Directive syntax error                                !
+                                 9F  00AE       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     00AF       
+%MACRO-E-DIRSYNX, Directive syntax error                         !
+                                 9F  00AF       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     00C3       
+%MACRO-E-DIRSYNX, Directive syntax error                                !
+                                 9F  00C3       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     00C4       
+%MACRO-E-DIRSYNX, Directive syntax error                         !
+                                 9F  00C4       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     00D4       
+%MACRO-E-DIRSYNX, Directive syntax error                                !
+                                 9F  00D4       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     00D5       
+%MACRO-E-DIRSYNX, Directive syntax error                         !
+                                 9F  00D5       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     00DC       
+%MACRO-E-DIRSYNX, Directive syntax error                         !
+                                 9F  00DC       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     00E8       
+%MACRO-E-DIRSYNX, Directive syntax error                                !
+                                 9F  00E8       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     00E9       
+%MACRO-E-DIRSYNX, Directive syntax error                         !
+                                 9F  00E9       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     00EC       
+%MACRO-E-DIRSYNX, Directive syntax error                         !
+                                 9F  00EC       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     00F8       
+%MACRO-E-DIRSYNX, Directive syntax error                                !
+                                 9F  00F8       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     0101       
+%MACRO-E-DIRSYNX, Directive syntax error                         !
+                                 9F  0101       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     010D       
+%MACRO-E-DIRSYNX, Directive syntax error                                !
+                                 9F  010D       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     0112       
+%MACRO-E-DIRSYNX, Directive syntax error                         !
+                                 9F  0112       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     0124       
+%MACRO-E-DIRSYNX, Directive syntax error                                !
+                                 9F  0124       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     0127       
+%MACRO-E-DIRSYNX, Directive syntax error                         !
+                                 9F  0127       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     0135       
+%MACRO-E-DIRSYNX, Directive syntax error                                !
+                                 9F  0135       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     0138       
+%MACRO-E-DIRSYNX, Directive syntax error                         !
+                                 9F  0138       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     0144       
+%MACRO-E-DIRSYNX, Directive syntax error                                !
+                                 9F  0144       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     0145       
+%MACRO-E-DIRSYNX, Directive syntax error                         !
+                                 9F  0145       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     0159       
+%MACRO-E-DIRSYNX, Directive syntax error                                !
+                                 9F  0159       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     015A       
+%MACRO-E-DIRSYNX, Directive syntax error                         !
+                                 9F  015A       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     0172       
+%MACRO-E-DIRSYNX, Directive syntax error                                !
+                                 9F  0172       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     01C1       
+%MACRO-E-DIRSYNX, Directive syntax error                                !
+                                 9F  01C1       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     01D3       
+%MACRO-E-DIRSYNX, Directive syntax error                                !
+                                 9F  01D3       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     01E7       
+%MACRO-E-DIRSYNX, Directive syntax error                                !
+                                 9F  01E7       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     01E8       
+%MACRO-E-DIRSYNX, Directive syntax error                         !
+                                 9F  01E8       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+$ ANALYZE/OBJECT/OUTPUT=R4_FAOL.ANL R4_FAOL.OBJ
+%ANALYZE-I-ERRORS, DUA1:[000000]R4_FAOL.OBJ;1                              0 errors
+$ MACRO/NOLIST R4_FAO
+                                     0002       
+%MACRO-E-DIRSYNX, Directive syntax error                                !
+                                 9F  0002       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     0005       
+%MACRO-E-DIRSYNX, Directive syntax error                         !
+                                 9F  0005       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     0106       
+%MACRO-E-DIRSYNX, Directive syntax error                                 !
+                                 9F  0106       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     01F7       
+%MACRO-E-DIRSYNX, Directive syntax error                                 !
+                                 9F  01F7       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     0A5C       
+%MACRO-E-DIRSYNX, Directive syntax error                                 !
+                                 9F  0A5C       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     0A70       
+%MACRO-E-DIRSYNX, Directive syntax error                                 !
+                                 9F  0A70       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     0A80       
+%MACRO-E-DIRSYNX, Directive syntax error                                 !
+                                 9F  0A80       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     0A87       
+%MACRO-E-DIRSYNX, Directive syntax error                         !
+                                 9F  0A87       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     0A93       
+%MACRO-E-DIRSYNX, Directive syntax error                                 !
+                                 9F  0A93       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     0A96       
+%MACRO-E-DIRSYNX, Directive syntax error                         !
+                                 9F  0A96       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     0AAA       
+%MACRO-E-DIRSYNX, Directive syntax error                                 !
+                                 9F  0AAA       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     0ABA       
+%MACRO-E-DIRSYNX, Directive syntax error                                 !
+                                 9F  0ABA       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     0ACC       
+%MACRO-E-DIRSYNX, Directive syntax error                                 !
+                                 9F  0ACC       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     0ACF       
+%MACRO-E-DIRSYNX, Directive syntax error                         !
+                                 9F  0ACF       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     0ADD       
+%MACRO-E-DIRSYNX, Directive syntax error                                 !
+                                 9F  0ADD       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     0AE0       
+%MACRO-E-DIRSYNX, Directive syntax error                         !
+                                 9F  0AE0       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     0AF2       
+%MACRO-E-DIRSYNX, Directive syntax error                                 !
+                                 9F  0AF2       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     0AF5       
+%MACRO-E-DIRSYNX, Directive syntax error                         !
+                                 9F  0AF5       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     0B03       
+%MACRO-E-DIRSYNX, Directive syntax error                                 !
+                                 9F  0B03       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     0B06       
+%MACRO-E-DIRSYNX, Directive syntax error                         !
+                                 9F  0B06       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     0B18       
+%MACRO-E-DIRSYNX, Directive syntax error                                 !
+                                 9F  0B18       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     0B1B       
+%MACRO-E-DIRSYNX, Directive syntax error                         !
+                                 9F  0B1B       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     0B29       
+%MACRO-E-DIRSYNX, Directive syntax error                                 !
+                                 9F  0B29       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     0B2C       
+%MACRO-E-DIRSYNX, Directive syntax error                         !
+                                 9F  0B2C       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     0B3E       
+%MACRO-E-DIRSYNX, Directive syntax error                                 !
+                                 9F  0B3E       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     0B41       
+%MACRO-E-DIRSYNX, Directive syntax error                         !
+                                 9F  0B41       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     0B4F       
+%MACRO-E-DIRSYNX, Directive syntax error                                 !
+                                 9F  0B4F       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     0B52       
+%MACRO-E-DIRSYNX, Directive syntax error                         !
+                                 9F  0B52       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     0B64       
+%MACRO-E-DIRSYNX, Directive syntax error                                 !
+                                 9F  0B64       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     0B67       
+%MACRO-E-DIRSYNX, Directive syntax error                         !
+                                 9F  0B67       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     0B75       
+%MACRO-E-DIRSYNX, Directive syntax error                                 !
+                                 9F  0B75       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     0B78       
+%MACRO-E-DIRSYNX, Directive syntax error                         !
+                                 9F  0B78       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     0B8A       
+%MACRO-E-DIRSYNX, Directive syntax error                                 !
+                                 9F  0B8A       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     0B8D       
+%MACRO-E-DIRSYNX, Directive syntax error                         !
+                                 9F  0B8D       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     0B9B       
+%MACRO-E-DIRSYNX, Directive syntax error                                 !
+                                 9F  0B9B       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     0B9E       
+%MACRO-E-DIRSYNX, Directive syntax error                         !
+                                 9F  0B9E       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     0BB0       
+%MACRO-E-DIRSYNX, Directive syntax error                                 !
+                                 9F  0BB0       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     0BB3       
+%MACRO-E-DIRSYNX, Directive syntax error                         !
+                                 9F  0BB3       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     0BC1       
+%MACRO-E-DIRSYNX, Directive syntax error                                 !
+                                 9F  0BC1       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     0BC4       
+%MACRO-E-DIRSYNX, Directive syntax error                         !
+                                 9F  0BC4       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     0BD6       
+%MACRO-E-DIRSYNX, Directive syntax error                                 !
+                                 9F  0BD6       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     0BD9       
+%MACRO-E-DIRSYNX, Directive syntax error                         !
+                                 9F  0BD9       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     0BE7       
+%MACRO-E-DIRSYNX, Directive syntax error                                 !
+                                 9F  0BE7       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     0BEA       
+%MACRO-E-DIRSYNX, Directive syntax error                         !
+                                 9F  0BEA       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     0BFC       
+%MACRO-E-DIRSYNX, Directive syntax error                                 !
+                                 9F  0BFC       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     0BFF       
+%MACRO-E-DIRSYNX, Directive syntax error                         !
+                                 9F  0BFF       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     0C0D       
+%MACRO-E-DIRSYNX, Directive syntax error                                 !
+                                 9F  0C0D       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     0C10       
+%MACRO-E-DIRSYNX, Directive syntax error                         !
+                                 9F  0C10       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     0C22       
+%MACRO-E-DIRSYNX, Directive syntax error                                 !
+                                 9F  0C22       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     0C25       
+%MACRO-E-DIRSYNX, Directive syntax error                         !
+                                 9F  0C25       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     0C33       
+%MACRO-E-DIRSYNX, Directive syntax error                                 !
+                                 9F  0C33       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     0C36       
+%MACRO-E-DIRSYNX, Directive syntax error                         !
+                                 9F  0C36       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     0C48       
+%MACRO-E-DIRSYNX, Directive syntax error                                 !
+                                 9F  0C48       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     0C4B       
+%MACRO-E-DIRSYNX, Directive syntax error                         !
+                                 9F  0C4B       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     0C59       
+%MACRO-E-DIRSYNX, Directive syntax error                                 !
+                                 9F  0C59       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     0C5C       
+%MACRO-E-DIRSYNX, Directive syntax error                         !
+                                 9F  0C5C       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     0C6E       
+%MACRO-E-DIRSYNX, Directive syntax error                                 !
+                                 9F  0C6E       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     0C71       
+%MACRO-E-DIRSYNX, Directive syntax error                         !
+                                 9F  0C71       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     0C7F       
+%MACRO-E-DIRSYNX, Directive syntax error                                 !
+                                 9F  0C7F       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     0C82       
+%MACRO-E-DIRSYNX, Directive syntax error                         !
+                                 9F  0C82       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     0C94       
+%MACRO-E-DIRSYNX, Directive syntax error                                 !
+                                 9F  0C94       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     0C97       
+%MACRO-E-DIRSYNX, Directive syntax error                         !
+                                 9F  0C97       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     0CA5       
+%MACRO-E-DIRSYNX, Directive syntax error                                 !
+                                 9F  0CA5       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     0CA8       
+%MACRO-E-DIRSYNX, Directive syntax error                         !
+                                 9F  0CA8       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     0CBA       
+%MACRO-E-DIRSYNX, Directive syntax error                                 !
+                                 9F  0CBA       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     0CBD       
+%MACRO-E-DIRSYNX, Directive syntax error                         !
+                                 9F  0CBD       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     0CCB       
+%MACRO-E-DIRSYNX, Directive syntax error                                 !
+                                 9F  0CCB       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     0CCE       
+%MACRO-E-DIRSYNX, Directive syntax error                         !
+                                 9F  0CCE       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     0CE0       
+%MACRO-E-DIRSYNX, Directive syntax error                                 !
+                                 9F  0CE0       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     0CE3       
+%MACRO-E-DIRSYNX, Directive syntax error                         !
+                                 9F  0CE3       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     0CF1       
+%MACRO-E-DIRSYNX, Directive syntax error                                 !
+                                 9F  0CF1       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     0CF4       
+%MACRO-E-DIRSYNX, Directive syntax error                         !
+                                 9F  0CF4       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     0D06       
+%MACRO-E-DIRSYNX, Directive syntax error                                 !
+                                 9F  0D06       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     0D09       
+%MACRO-E-DIRSYNX, Directive syntax error                         !
+                                 9F  0D09       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     0D17       
+%MACRO-E-DIRSYNX, Directive syntax error                                 !
+                                 9F  0D17       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     0D1A       
+%MACRO-E-DIRSYNX, Directive syntax error                         !
+                                 9F  0D1A       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     0D2C       
+%MACRO-E-DIRSYNX, Directive syntax error                                 !
+                                 9F  0D2C       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     0D2F       
+%MACRO-E-DIRSYNX, Directive syntax error                         !
+                                 9F  0D2F       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     0D3D       
+%MACRO-E-DIRSYNX, Directive syntax error                                 !
+                                 9F  0D3D       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     0D40       
+%MACRO-E-DIRSYNX, Directive syntax error                         !
+                                 9F  0D40       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     0D4C       
+%MACRO-E-DIRSYNX, Directive syntax error                                 !
+                                 9F  0D4C       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     0D60       
+%MACRO-E-DIRSYNX, Directive syntax error                                 !
+                                 9F  0D60       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     1386       
+%MACRO-E-DIRSYNX, Directive syntax error                                 !
+                                 9F  1386       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     13F8       
+%MACRO-E-DIRSYNX, Directive syntax error                                 !
+                                 9F  13F8       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     146C       
+%MACRO-E-DIRSYNX, Directive syntax error                                 !
+                                 9F  146C       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+$ ANALYZE/OBJECT/OUTPUT=R4_FAO.ANL R4_FAO.OBJ
+%ANALYZE-I-ERRORS, DUA1:[000000]R4_FAO.OBJ;1                               0 errors
+$ MACRO/NOLIST R4_PUTMSG
+                                     0008       
+%MACRO-E-DIRSYNX, Directive syntax error                                !
+                                 9F  0008       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     0049       
+%MACRO-E-DIRSYNX, Directive syntax error                                      !
+                                 9F  0049       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     00E6       
+%MACRO-E-DIRSYNX, Directive syntax error                                      !
+                                 9F  00E6       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     00F8       
+%MACRO-E-DIRSYNX, Directive syntax error                                      !
+                                 9F  00F8       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     010E       
+%MACRO-E-DIRSYNX, Directive syntax error                                      !
+                                 9F  010E       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     0120       
+%MACRO-E-DIRSYNX, Directive syntax error                                      !
+                                 9F  0120       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     0136       
+%MACRO-E-DIRSYNX, Directive syntax error                                      !
+                                 9F  0136       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     0148       
+%MACRO-E-DIRSYNX, Directive syntax error                                      !
+                                 9F  0148       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     01D6       
+%MACRO-E-DIRSYNX, Directive syntax error                                      !
+                                 9F  01D6       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+$ ANALYZE/OBJECT/OUTPUT=R4_PUTMSG.ANL R4_PUTMSG.OBJ
+%ANALYZE-I-ERRORS, DUA1:[000000]R4_PUTMSG.OBJ;1                            0 errors
+$ MACRO/NOLIST R4_GETMSG
+                                     0006       
+%MACRO-E-DIRSYNX, Directive syntax error                                !
+                                 9F  0006       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     0007       
+%MACRO-E-DIRSYNX, Directive syntax error                         !
+                                 9F  0007       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                 DD  0008       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                 DD  0051       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied      !
+                                     006F       
+%MACRO-E-DIRSYNX, Directive syntax error                                      !
+                                 9F  006F       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     0089       
+%MACRO-E-DIRSYNX, Directive syntax error                                      !
+                                 9F  0089       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     00E3       
+%MACRO-E-DIRSYNX, Directive syntax error                                      !
+                                 9F  00E3       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     00E4       
+%MACRO-E-DIRSYNX, Directive syntax error                         !
+                                 9F  00E4       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     00F6       
+%MACRO-E-DIRSYNX, Directive syntax error                                      !
+                                 9F  00F6       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     00F7       
+%MACRO-E-DIRSYNX, Directive syntax error                         !
+                                 9F  00F7       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     0109       
+%MACRO-E-DIRSYNX, Directive syntax error                                      !
+                                 9F  0109       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                 DD  0110       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     0120       
+%MACRO-E-DIRSYNX, Directive syntax error                                      !
+                                 9F  0120       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                 DD  0123       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     0139       
+%MACRO-E-DIRSYNX, Directive syntax error                                      !
+                                 9F  0139       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                 DD  013A       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     014C       
+%MACRO-E-DIRSYNX, Directive syntax error                                      !
+                                 9F  014C       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                 DD  014D       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     0161       
+%MACRO-E-DIRSYNX, Directive syntax error                                      !
+                                 9F  0161       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     0162       
+%MACRO-E-DIRSYNX, Directive syntax error                         !
+                                 9F  0162       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                 DD  0163       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     0173       
+%MACRO-E-DIRSYNX, Directive syntax error                                      !
+                                 9F  0173       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     0174       
+%MACRO-E-DIRSYNX, Directive syntax error                         !
+                                 9F  0174       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                 DD  0175       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     0189       
+%MACRO-E-DIRSYNX, Directive syntax error                                      !
+                                 9F  0189       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     018A       
+%MACRO-E-DIRSYNX, Directive syntax error                         !
+                                 9F  018A       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                 DD  018B       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     019B       
+%MACRO-E-DIRSYNX, Directive syntax error                                      !
+                                 9F  019B       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     019C       
+%MACRO-E-DIRSYNX, Directive syntax error                         !
+                                 9F  019C       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                 DD  019D       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     01AD       
+%MACRO-E-DIRSYNX, Directive syntax error                                      !
+                                 9F  01AD       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     01AE       
+%MACRO-E-DIRSYNX, Directive syntax error                         !
+                                 9F  01AE       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     01C4       
+%MACRO-E-DIRSYNX, Directive syntax error                                      !
+                                 9F  01C4       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     025D       
+%MACRO-E-DIRSYNX, Directive syntax error                                      !
+                                 9F  025D       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                 DD  025E       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     0276       
+%MACRO-E-DIRSYNX, Directive syntax error                                      !
+                                 9F  0276       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     0277       
+%MACRO-E-DIRSYNX, Directive syntax error                         !
+                                 9F  0277       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     028D       
+%MACRO-E-DIRSYNX, Directive syntax error                                      !
+                                 9F  028D       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+$ ANALYZE/OBJECT/OUTPUT=R4_GETMSG.ANL R4_GETMSG.OBJ
+%ANALYZE-I-ERRORS, DUA1:[000000]R4_GETMSG.OBJ;1                            0 errors
+$ MACRO/NOLIST R4_CRELNM
+                                     0006       
+%MACRO-E-DIRSYNX, Directive syntax error                                !
+                                 9F  0006       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     0007       
+%MACRO-E-DIRSYNX, Directive syntax error                         !
+                                 9F  0007       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     0075       
+%MACRO-E-DIRSYNX, Directive syntax error                                      !
+                                 9F  0075       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     0093       
+%MACRO-E-DIRSYNX, Directive syntax error                                      !
+                                 9F  0093       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     00F9       
+%MACRO-E-DIRSYNX, Directive syntax error                                      !
+                                 9F  00F9       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     00FA       
+%MACRO-E-DIRSYNX, Directive syntax error                         !
+                                 9F  00FA       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     0110       
+%MACRO-E-DIRSYNX, Directive syntax error                                      !
+                                 9F  0110       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     0111       
+%MACRO-E-DIRSYNX, Directive syntax error                         !
+                                 9F  0111       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     0123       
+%MACRO-E-DIRSYNX, Directive syntax error                                      !
+                                 9F  0123       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     013B       
+%MACRO-E-DIRSYNX, Directive syntax error                                      !
+                                 9F  013B       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     0155       
+%MACRO-E-DIRSYNX, Directive syntax error                                      !
+                                 9F  0155       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     0169       
+%MACRO-E-DIRSYNX, Directive syntax error                                      !
+                                 9F  0169       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     017F       
+%MACRO-E-DIRSYNX, Directive syntax error                                      !
+                                 9F  017F       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     0180       
+%MACRO-E-DIRSYNX, Directive syntax error                         !
+                                 9F  0180       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     0192       
+%MACRO-E-DIRSYNX, Directive syntax error                                      !
+                                 9F  0192       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     0193       
+%MACRO-E-DIRSYNX, Directive syntax error                         !
+                                 9F  0193       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     01A9       
+%MACRO-E-DIRSYNX, Directive syntax error                                      !
+                                 9F  01A9       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     01AA       
+%MACRO-E-DIRSYNX, Directive syntax error                         !
+                                 9F  01AA       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     01BC       
+%MACRO-E-DIRSYNX, Directive syntax error                                      !
+                                 9F  01BC       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     01BD       
+%MACRO-E-DIRSYNX, Directive syntax error                         !
+                                 9F  01BD       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     01CF       
+%MACRO-E-DIRSYNX, Directive syntax error                                      !
+                                 9F  01CF       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     01D0       
+%MACRO-E-DIRSYNX, Directive syntax error                         !
+                                 9F  01D0       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     01E6       
+%MACRO-E-DIRSYNX, Directive syntax error                                      !
+                                 9F  01E6       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     027F       
+%MACRO-E-DIRSYNX, Directive syntax error                                      !
+                                 9F  027F       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     0299       
+%MACRO-E-DIRSYNX, Directive syntax error                                      !
+                                 9F  0299       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     029A       
+%MACRO-E-DIRSYNX, Directive syntax error                         !
+                                 9F  029A       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     02B4       
+%MACRO-E-DIRSYNX, Directive syntax error                                      !
+                                 9F  02B4       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+$ ANALYZE/OBJECT/OUTPUT=R4_CRELNM.ANL R4_CRELNM.OBJ
+%ANALYZE-I-ERRORS, DUA1:[000000]R4_CRELNM.OBJ;1                            0 errors
+$ MACRO/NOLIST R4_DELLNM
+                                     0006       
+%MACRO-E-DIRSYNX, Directive syntax error                                !
+                                 9F  0006       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     003B       
+%MACRO-E-DIRSYNX, Directive syntax error                                      !
+                                 9F  003B       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     00A7       
+%MACRO-E-DIRSYNX, Directive syntax error                                      !
+                                 9F  00A7       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     00B7       
+%MACRO-E-DIRSYNX, Directive syntax error                                      !
+                                 9F  00B7       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     00CB       
+%MACRO-E-DIRSYNX, Directive syntax error                                      !
+                                 9F  00CB       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     00DB       
+%MACRO-E-DIRSYNX, Directive syntax error                                      !
+                                 9F  00DB       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     013A       
+%MACRO-E-DIRSYNX, Directive syntax error                                      !
+                                 9F  013A       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+$ ANALYZE/OBJECT/OUTPUT=R4_DELLNM.ANL R4_DELLNM.OBJ
+%ANALYZE-I-ERRORS, DUA1:[000000]R4_DELLNM.OBJ;1                            0 errors
+$ MACRO/NOLIST R4_TRNLNM
+                                     0006       
+%MACRO-E-DIRSYNX, Directive syntax error                                !
+                                 9F  0006       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     0007       
+%MACRO-E-DIRSYNX, Directive syntax error                         !
+                                 9F  0007       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     0075       
+%MACRO-E-DIRSYNX, Directive syntax error                                      !
+                                 9F  0075       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     0093       
+%MACRO-E-DIRSYNX, Directive syntax error                                      !
+                                 9F  0093       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     00F9       
+%MACRO-E-DIRSYNX, Directive syntax error                                      !
+                                 9F  00F9       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     00FA       
+%MACRO-E-DIRSYNX, Directive syntax error                         !
+                                 9F  00FA       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     0110       
+%MACRO-E-DIRSYNX, Directive syntax error                                      !
+                                 9F  0110       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     0111       
+%MACRO-E-DIRSYNX, Directive syntax error                         !
+                                 9F  0111       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     0123       
+%MACRO-E-DIRSYNX, Directive syntax error                                      !
+                                 9F  0123       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     013B       
+%MACRO-E-DIRSYNX, Directive syntax error                                      !
+                                 9F  013B       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     0155       
+%MACRO-E-DIRSYNX, Directive syntax error                                      !
+                                 9F  0155       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     0169       
+%MACRO-E-DIRSYNX, Directive syntax error                                      !
+                                 9F  0169       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     017F       
+%MACRO-E-DIRSYNX, Directive syntax error                                      !
+                                 9F  017F       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     0180       
+%MACRO-E-DIRSYNX, Directive syntax error                         !
+                                 9F  0180       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     0192       
+%MACRO-E-DIRSYNX, Directive syntax error                                      !
+                                 9F  0192       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     0193       
+%MACRO-E-DIRSYNX, Directive syntax error                         !
+                                 9F  0193       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     01A9       
+%MACRO-E-DIRSYNX, Directive syntax error                                      !
+                                 9F  01A9       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     01AA       
+%MACRO-E-DIRSYNX, Directive syntax error                         !
+                                 9F  01AA       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     01BC       
+%MACRO-E-DIRSYNX, Directive syntax error                                      !
+                                 9F  01BC       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     01BD       
+%MACRO-E-DIRSYNX, Directive syntax error                         !
+                                 9F  01BD       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     01CF       
+%MACRO-E-DIRSYNX, Directive syntax error                                      !
+                                 9F  01CF       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     01D0       
+%MACRO-E-DIRSYNX, Directive syntax error                         !
+                                 9F  01D0       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     01E6       
+%MACRO-E-DIRSYNX, Directive syntax error                                      !
+                                 9F  01E6       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     027F       
+%MACRO-E-DIRSYNX, Directive syntax error                                      !
+                                 9F  027F       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     0299       
+%MACRO-E-DIRSYNX, Directive syntax error                                      !
+                                 9F  0299       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     029A       
+%MACRO-E-DIRSYNX, Directive syntax error                         !
+                                 9F  029A       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     02B4       
+%MACRO-E-DIRSYNX, Directive syntax error                                      !
+                                 9F  02B4       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+$ ANALYZE/OBJECT/OUTPUT=R4_TRNLNM.ANL R4_TRNLNM.OBJ
+%ANALYZE-I-ERRORS, DUA1:[000000]R4_TRNLNM.OBJ;1                            0 errors
+$ MACRO/NOLIST R4_CRELNT
+                                     0004       
+%MACRO-E-DIRSYNX, Directive syntax error                                !
+                                 9F  0004       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     01A7       
+%MACRO-E-DIRSYNX, Directive syntax error                                      !
+                                 9F  01A7       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     0210       
+%MACRO-E-DIRSYNX, Directive syntax error                                      !
+                                 9F  0210       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     022E       
+%MACRO-E-DIRSYNX, Directive syntax error                                      !
+                                 9F  022E       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     0248       
+%MACRO-E-DIRSYNX, Directive syntax error                                      !
+                                 9F  0248       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     0266       
+%MACRO-E-DIRSYNX, Directive syntax error                                      !
+                                 9F  0266       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     0280       
+%MACRO-E-DIRSYNX, Directive syntax error                                      !
+                                 9F  0280       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     029E       
+%MACRO-E-DIRSYNX, Directive syntax error                                      !
+                                 9F  029E       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     02B8       
+%MACRO-E-DIRSYNX, Directive syntax error                                      !
+                                 9F  02B8       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     02D6       
+%MACRO-E-DIRSYNX, Directive syntax error                                      !
+                                 9F  02D6       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     02F0       
+%MACRO-E-DIRSYNX, Directive syntax error                                      !
+                                 9F  02F0       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     030E       
+%MACRO-E-DIRSYNX, Directive syntax error                                      !
+                                 9F  030E       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     0328       
+%MACRO-E-DIRSYNX, Directive syntax error                                      !
+                                 9F  0328       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     0346       
+%MACRO-E-DIRSYNX, Directive syntax error                                      !
+                                 9F  0346       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     039E       
+%MACRO-E-DIRSYNX, Directive syntax error                                      !
+                                 9F  039E       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     03B8       
+%MACRO-E-DIRSYNX, Directive syntax error                                      !
+                                 9F  03B8       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     03D2       
+%MACRO-E-DIRSYNX, Directive syntax error                                      !
+                                 9F  03D2       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     03F0       
+%MACRO-E-DIRSYNX, Directive syntax error                                      !
+                                 9F  03F0       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     0412       
+%MACRO-E-DIRSYNX, Directive syntax error                                      !
+                                 9F  0412       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     0438       
+%MACRO-E-DIRSYNX, Directive syntax error                                      !
+                                 9F  0438       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     0462       
+%MACRO-E-DIRSYNX, Directive syntax error                                      !
+                                 9F  0462       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     0490       
+%MACRO-E-DIRSYNX, Directive syntax error                                      !
+                                 9F  0490       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     0637       
+%MACRO-E-DIRSYNX, Directive syntax error                                      !
+                                 9F  0637       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     0665       
+%MACRO-E-DIRSYNX, Directive syntax error                                      !
+                                 9F  0665       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+$ ANALYZE/OBJECT/OUTPUT=R4_CRELNT.ANL R4_CRELNT.OBJ
+%ANALYZE-I-ERRORS, DUA1:[000000]R4_CRELNT.OBJ;1                            0 errors
+$ MACRO/NOLIST R4_CRELOG
+                                     0004       
+%MACRO-E-DIRSYNX, Directive syntax error                                !
+                                 9F  0004       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     0005       
+%MACRO-E-DIRSYNX, Directive syntax error                         !
+                                 9F  0005       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     005D       
+%MACRO-E-DIRSYNX, Directive syntax error                                      !
+                                 9F  005D       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     0071       
+%MACRO-E-DIRSYNX, Directive syntax error                                      !
+                                 9F  0071       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     00A2       
+%MACRO-E-DIRSYNX, Directive syntax error                                      !
+                                 9F  00A2       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     00A3       
+%MACRO-E-DIRSYNX, Directive syntax error                         !
+                                 9F  00A3       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     00B3       
+%MACRO-E-DIRSYNX, Directive syntax error                                      !
+                                 9F  00B3       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     00B4       
+%MACRO-E-DIRSYNX, Directive syntax error                         !
+                                 9F  00B4       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     00C4       
+%MACRO-E-DIRSYNX, Directive syntax error                                      !
+                                 9F  00C4       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     00DA       
+%MACRO-E-DIRSYNX, Directive syntax error                                      !
+                                 9F  00DA       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     00F2       
+%MACRO-E-DIRSYNX, Directive syntax error                                      !
+                                 9F  00F2       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     0104       
+%MACRO-E-DIRSYNX, Directive syntax error                                      !
+                                 9F  0104       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     0118       
+%MACRO-E-DIRSYNX, Directive syntax error                                      !
+                                 9F  0118       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     0119       
+%MACRO-E-DIRSYNX, Directive syntax error                         !
+                                 9F  0119       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     0129       
+%MACRO-E-DIRSYNX, Directive syntax error                                      !
+                                 9F  0129       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     012A       
+%MACRO-E-DIRSYNX, Directive syntax error                         !
+                                 9F  012A       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     013A       
+%MACRO-E-DIRSYNX, Directive syntax error                                      !
+                                 9F  013A       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     013B       
+%MACRO-E-DIRSYNX, Directive syntax error                         !
+                                 9F  013B       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                   00000000'EF   DD  013C       
+%MACRO-E-OPRNDSYNX, Operand syntax error                   !
+                                     014F       
+%MACRO-E-DIRSYNX, Directive syntax error                                      !
+                                 9F  014F       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     0150       
+%MACRO-E-DIRSYNX, Directive syntax error                         !
+                                 9F  0150       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                   00000000'EF   DD  0151       
+%MACRO-E-OPRNDSYNX, Operand syntax error                     !
+                                     0164       
+%MACRO-E-DIRSYNX, Directive syntax error                                      !
+                                 9F  0164       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     0165       
+%MACRO-E-DIRSYNX, Directive syntax error                         !
+                                 9F  0165       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                   00000000'EF   DD  0166       
+%MACRO-E-OPRNDSYNX, Operand syntax error                      !
+                                     0179       
+%MACRO-E-DIRSYNX, Directive syntax error                                      !
+                                 9F  0179       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     017A       
+%MACRO-E-DIRSYNX, Directive syntax error                         !
+                                 9F  017A       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     018E       
+%MACRO-E-DIRSYNX, Directive syntax error                                      !
+                                 9F  018E       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     01F4       
+%MACRO-E-DIRSYNX, Directive syntax error                                      !
+                                 9F  01F4       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     0208       
+%MACRO-E-DIRSYNX, Directive syntax error                                      !
+                                 9F  0208       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     0209       
+%MACRO-E-DIRSYNX, Directive syntax error                         !
+                                 9F  0209       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     0219       
+%MACRO-E-DIRSYNX, Directive syntax error                                      !
+                                 9F  0219       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+$ ANALYZE/OBJECT/OUTPUT=R4_CRELOG.ANL R4_CRELOG.OBJ
+%ANALYZE-I-ERRORS, DUA1:[000000]R4_CRELOG.OBJ;1                            0 errors
+$ MACRO/NOLIST R4_DELLOG
+                   00000000'EF   DD  00CB       
+%MACRO-E-OPRNDSYNX, Operand syntax error                                !
+                   00000000'EF   DD  00E0       
+%MACRO-E-OPRNDSYNX, Operand syntax error                                  !
+                   00000000'EF   DD  00F5       
+%MACRO-E-OPRNDSYNX, Operand syntax error                                   !
+$ ANALYZE/OBJECT/OUTPUT=R4_DELLOG.ANL R4_DELLOG.OBJ
+%ANALYZE-I-ERRORS, DUA1:[000000]R4_DELLOG.OBJ;1                            0 errors
+$ MACRO/NOLIST R4_TRNLOG
+                                     0008       
+%MACRO-E-DIRSYNX, Directive syntax error                                !
+                                 9F  0008       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     000B       
+%MACRO-E-DIRSYNX, Directive syntax error                         !
+                                 9F  000B       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     0064       
+%MACRO-E-DIRSYNX, Directive syntax error                                      !
+                                 9F  0064       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     00AD       
+%MACRO-E-DIRSYNX, Directive syntax error                                      !
+                                 9F  00AD       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     014C       
+%MACRO-E-DIRSYNX, Directive syntax error                                      !
+                                 9F  014C       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     0166       
+%MACRO-E-DIRSYNX, Directive syntax error                                      !
+                                 9F  0166       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     017C       
+%MACRO-E-DIRSYNX, Directive syntax error                                      !
+                                 9F  017C       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     0183       
+%MACRO-E-DIRSYNX, Directive syntax error                         !
+                                 9F  0183       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     0195       
+%MACRO-E-DIRSYNX, Directive syntax error                                      !
+                                 9F  0195       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     0198       
+%MACRO-E-DIRSYNX, Directive syntax error                         !
+                                 9F  0198       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     01B2       
+%MACRO-E-DIRSYNX, Directive syntax error                                      !
+                                 9F  01B2       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     01C8       
+%MACRO-E-DIRSYNX, Directive syntax error                                      !
+                                 9F  01C8       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     01DE       
+%MACRO-E-DIRSYNX, Directive syntax error                                      !
+                                 9F  01DE       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     01E1       
+%MACRO-E-DIRSYNX, Directive syntax error                         !
+                                 9F  01E1       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     01F3       
+%MACRO-E-DIRSYNX, Directive syntax error                                      !
+                                 9F  01F3       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     01F6       
+%MACRO-E-DIRSYNX, Directive syntax error                         !
+                                 9F  01F6       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     020C       
+%MACRO-E-DIRSYNX, Directive syntax error                                      !
+                                 9F  020C       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     020F       
+%MACRO-E-DIRSYNX, Directive syntax error                         !
+                                 9F  020F       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     0221       
+%MACRO-E-DIRSYNX, Directive syntax error                                      !
+                                 9F  0221       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     0224       
+%MACRO-E-DIRSYNX, Directive syntax error                         !
+                                 9F  0224       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     023A       
+%MACRO-E-DIRSYNX, Directive syntax error                                      !
+                                 9F  023A       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     023D       
+%MACRO-E-DIRSYNX, Directive syntax error                         !
+                                 9F  023D       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     024F       
+%MACRO-E-DIRSYNX, Directive syntax error                                      !
+                                 9F  024F       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     0252       
+%MACRO-E-DIRSYNX, Directive syntax error                         !
+                                 9F  0252       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     0264       
+%MACRO-E-DIRSYNX, Directive syntax error                                      !
+                                 9F  0264       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                           000000EF  0267       
+%MACRO-E-DIRSYNX, Directive syntax error                                !
+                   00000000'EF   9F  0267       
+%MACRO-E-OPRNDSYNX, Operand syntax error                        !
+                                     027E       
+%MACRO-E-DIRSYNX, Directive syntax error                                      !
+                                 9F  027E       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                           000000EF  0281       
+%MACRO-E-DIRSYNX, Directive syntax error                               !
+                   00000000'EF   9F  0281       
+%MACRO-E-OPRNDSYNX, Operand syntax error                       !
+                                     0298       
+%MACRO-E-DIRSYNX, Directive syntax error                                      !
+                                 9F  0298       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                           000000EF  029B       
+%MACRO-E-DIRSYNX, Directive syntax error                               !
+                   00000000'EF   9F  029B       
+%MACRO-E-OPRNDSYNX, Operand syntax error                       !
+                                     02B2       
+%MACRO-E-DIRSYNX, Directive syntax error                                      !
+                                 9F  02B2       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                           000000EF  02B5       
+%MACRO-E-DIRSYNX, Directive syntax error                               !
+                   00000000'EF   9F  02B5       
+%MACRO-E-OPRNDSYNX, Operand syntax error                       !
+                                     02CC       
+%MACRO-E-DIRSYNX, Directive syntax error                                      !
+                                 9F  02CC       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                           000000EF  02CF       
+%MACRO-E-DIRSYNX, Directive syntax error                                !
+                   00000000'EF   9F  02CF       
+%MACRO-E-OPRNDSYNX, Operand syntax error                        !
+                                     02E6       
+%MACRO-E-DIRSYNX, Directive syntax error                                      !
+                                 9F  02E6       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     0300       
+%MACRO-E-DIRSYNX, Directive syntax error                                      !
+                                 9F  0300       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     03D6       
+%MACRO-E-DIRSYNX, Directive syntax error                                      !
+                                 9F  03D6       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     03F4       
+%MACRO-E-DIRSYNX, Directive syntax error                                      !
+                                 9F  03F4       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     0416       
+%MACRO-E-DIRSYNX, Directive syntax error                                      !
+                                 9F  0416       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+$ ANALYZE/OBJECT/OUTPUT=R4_TRNLOG.ANL R4_TRNLOG.OBJ
+%ANALYZE-I-ERRORS, DUA1:[000000]R4_TRNLOG.OBJ;1                            0 errors
+$ MACRO/NOLIST R4_SNDOPR
+                                     0005       
+%MACRO-E-DIRSYNX, Directive syntax error                                !
+                                 9F  0005       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     0028       
+%MACRO-E-DIRSYNX, Directive syntax error                                      !
+                                 9F  0028       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     006F       
+%MACRO-E-DIRSYNX, Directive syntax error                                      !
+                                 9F  006F       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     007E       
+%MACRO-E-DIRSYNX, Directive syntax error                                      !
+                                 9F  007E       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     00B9       
+%MACRO-E-DIRSYNX, Directive syntax error                                !
+                                 9F  00B9       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+$ ANALYZE/OBJECT/OUTPUT=R4_SNDOPR.ANL R4_SNDOPR.OBJ
+%ANALYZE-I-ERRORS, DUA1:[000000]R4_SNDOPR.OBJ;1                            0 errors
+$ MACRO/NOLIST R4_EXPREG
+                                 DD  0008       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied      !
+                                 DD  003D       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied      !
+                                 DD  00C2       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied      !
+                                 DD  00D4       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied      !
+                                 DD  00E6       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied      !
+                                 DD  00F8       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied      !
+                                 DD  010E       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied      !
+                                 DD  0120       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied      !
+                                 DD  01AA       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied      !
+$ ANALYZE/OBJECT/OUTPUT=R4_EXPREG.ANL R4_EXPREG.OBJ
+%ANALYZE-I-ERRORS, DUA1:[000000]R4_EXPREG.OBJ;1                            0 errors
+$ MACRO/NOLIST R4_CNTREG
+                                 DD  0008       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied      !
+                                 DD  003D       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied      !
+                                 DD  00C2       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied      !
+                                 DD  00D4       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied      !
+                                 DD  00E6       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied      !
+                                 DD  00F8       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied      !
+                                 DD  010E       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied      !
+                                 DD  0120       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied      !
+                                 DD  01AA       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied      !
+$ ANALYZE/OBJECT/OUTPUT=R4_CNTREG.ANL R4_CNTREG.OBJ
+%ANALYZE-I-ERRORS, DUA1:[000000]R4_CNTREG.OBJ;1                            0 errors
+$ MACRO/NOLIST R4_CRETVA
+                                     0006       
+%MACRO-E-DIRSYNX, Directive syntax error                                !
+                                 9F  0006       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     0033       
+%MACRO-E-DIRSYNX, Directive syntax error                                      !
+                                 9F  0033       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     009B       
+%MACRO-E-DIRSYNX, Directive syntax error                                      !
+                                 9F  009B       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     00AB       
+%MACRO-E-DIRSYNX, Directive syntax error                                      !
+                                 9F  00AB       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     00BB       
+%MACRO-E-DIRSYNX, Directive syntax error                                      !
+                                 9F  00BB       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     00CB       
+%MACRO-E-DIRSYNX, Directive syntax error                                      !
+                                 9F  00CB       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     0126       
+%MACRO-E-DIRSYNX, Directive syntax error                                      !
+                                 9F  0126       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+$ ANALYZE/OBJECT/OUTPUT=R4_CRETVA.ANL R4_CRETVA.OBJ
+%ANALYZE-I-ERRORS, DUA1:[000000]R4_CRETVA.OBJ;1                            0 errors
+$ MACRO/NOLIST R4_DELTVA
+                                     0006       
+%MACRO-E-DIRSYNX, Directive syntax error                                !
+                                 9F  0006       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     0033       
+%MACRO-E-DIRSYNX, Directive syntax error                                      !
+                                 9F  0033       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     009B       
+%MACRO-E-DIRSYNX, Directive syntax error                                      !
+                                 9F  009B       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     00AB       
+%MACRO-E-DIRSYNX, Directive syntax error                                      !
+                                 9F  00AB       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     00BB       
+%MACRO-E-DIRSYNX, Directive syntax error                                      !
+                                 9F  00BB       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     00CB       
+%MACRO-E-DIRSYNX, Directive syntax error                                      !
+                                 9F  00CB       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     0126       
+%MACRO-E-DIRSYNX, Directive syntax error                                      !
+                                 9F  0126       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+$ ANALYZE/OBJECT/OUTPUT=R4_DELTVA.ANL R4_DELTVA.OBJ
+%ANALYZE-I-ERRORS, DUA1:[000000]R4_DELTVA.OBJ;1                            0 errors
+$ MACRO/NOLIST R4_LCKPAG
+                                     0006       
+%MACRO-E-DIRSYNX, Directive syntax error                                !
+                                 9F  0006       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     0033       
+%MACRO-E-DIRSYNX, Directive syntax error                                      !
+                                 9F  0033       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     009B       
+%MACRO-E-DIRSYNX, Directive syntax error                                      !
+                                 9F  009B       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     00AB       
+%MACRO-E-DIRSYNX, Directive syntax error                                      !
+                                 9F  00AB       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     00BB       
+%MACRO-E-DIRSYNX, Directive syntax error                                      !
+                                 9F  00BB       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     00CB       
+%MACRO-E-DIRSYNX, Directive syntax error                                      !
+                                 9F  00CB       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     0126       
+%MACRO-E-DIRSYNX, Directive syntax error                                      !
+                                 9F  0126       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+$ ANALYZE/OBJECT/OUTPUT=R4_LCKPAG.ANL R4_LCKPAG.OBJ
+%ANALYZE-I-ERRORS, DUA1:[000000]R4_LCKPAG.OBJ;1                            0 errors
+$ MACRO/NOLIST R4_ULKPAG
+                                     0006       
+%MACRO-E-DIRSYNX, Directive syntax error                                !
+                                 9F  0006       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     0033       
+%MACRO-E-DIRSYNX, Directive syntax error                                      !
+                                 9F  0033       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     009B       
+%MACRO-E-DIRSYNX, Directive syntax error                                      !
+                                 9F  009B       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     00AB       
+%MACRO-E-DIRSYNX, Directive syntax error                                      !
+                                 9F  00AB       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     00BB       
+%MACRO-E-DIRSYNX, Directive syntax error                                      !
+                                 9F  00BB       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     00CB       
+%MACRO-E-DIRSYNX, Directive syntax error                                      !
+                                 9F  00CB       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     0126       
+%MACRO-E-DIRSYNX, Directive syntax error                                      !
+                                 9F  0126       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+$ ANALYZE/OBJECT/OUTPUT=R4_ULKPAG.ANL R4_ULKPAG.OBJ
+%ANALYZE-I-ERRORS, DUA1:[000000]R4_ULKPAG.OBJ;1                            0 errors
+$ MACRO/NOLIST R4_LKWSET
+                                     0006       
+%MACRO-E-DIRSYNX, Directive syntax error                                !
+                                 9F  0006       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     0033       
+%MACRO-E-DIRSYNX, Directive syntax error                                      !
+                                 9F  0033       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     009B       
+%MACRO-E-DIRSYNX, Directive syntax error                                      !
+                                 9F  009B       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     00AB       
+%MACRO-E-DIRSYNX, Directive syntax error                                      !
+                                 9F  00AB       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     00BB       
+%MACRO-E-DIRSYNX, Directive syntax error                                      !
+                                 9F  00BB       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     00CB       
+%MACRO-E-DIRSYNX, Directive syntax error                                      !
+                                 9F  00CB       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     0126       
+%MACRO-E-DIRSYNX, Directive syntax error                                      !
+                                 9F  0126       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+$ ANALYZE/OBJECT/OUTPUT=R4_LKWSET.ANL R4_LKWSET.OBJ
+%ANALYZE-I-ERRORS, DUA1:[000000]R4_LKWSET.OBJ;1                            0 errors
+$ MACRO/NOLIST R4_ULWSET
+                                     0006       
+%MACRO-E-DIRSYNX, Directive syntax error                                !
+                                 9F  0006       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     0033       
+%MACRO-E-DIRSYNX, Directive syntax error                                      !
+                                 9F  0033       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     009B       
+%MACRO-E-DIRSYNX, Directive syntax error                                      !
+                                 9F  009B       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     00AB       
+%MACRO-E-DIRSYNX, Directive syntax error                                      !
+                                 9F  00AB       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     00BB       
+%MACRO-E-DIRSYNX, Directive syntax error                                      !
+                                 9F  00BB       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     00CB       
+%MACRO-E-DIRSYNX, Directive syntax error                                      !
+                                 9F  00CB       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     0126       
+%MACRO-E-DIRSYNX, Directive syntax error                                      !
+                                 9F  0126       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+$ ANALYZE/OBJECT/OUTPUT=R4_ULWSET.ANL R4_ULWSET.OBJ
+%ANALYZE-I-ERRORS, DUA1:[000000]R4_ULWSET.OBJ;1                            0 errors
+$ MACRO/NOLIST R4_SETPRT
+                                 DD  0004       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied      !
+                                     0009       
+%MACRO-E-DIRSYNX, Directive syntax error                         !
+                                 9F  0009       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     004E       
+%MACRO-E-DIRSYNX, Directive syntax error                                      !
+                                 9F  004E       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                 DD  00A6       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied      !
+                                 DD  00E3       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied      !
+                                 DD  00FB       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied      !
+                                 DD  010F       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied      !
+                                     0118       
+%MACRO-E-DIRSYNX, Directive syntax error                              !
+                                 9F  0118       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                 DD  0126       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied      !
+                                     012B       
+%MACRO-E-DIRSYNX, Directive syntax error                              !
+                                 9F  012B       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                 DD  0139       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied      !
+                                     013E       
+%MACRO-E-DIRSYNX, Directive syntax error                              !
+                                 9F  013E       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                 DD  014C       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied      !
+                                     0151       
+%MACRO-E-DIRSYNX, Directive syntax error                              !
+                                 9F  0151       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     0169       
+%MACRO-E-DIRSYNX, Directive syntax error                                      !
+                                 9F  0169       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     017D       
+%MACRO-E-DIRSYNX, Directive syntax error                                      !
+                                 9F  017D       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                 DD  018F       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied      !
+                                     0194       
+%MACRO-E-DIRSYNX, Directive syntax error                              !
+                                 9F  0194       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                 DD  01A2       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied      !
+                                     01A7       
+%MACRO-E-DIRSYNX, Directive syntax error                              !
+                                 9F  01A7       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                 DD  01B5       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied      !
+                                 DD  01CD       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied      !
+                                 DD  01E9       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied      !
+                                     0265       
+%MACRO-E-DIRSYNX, Directive syntax error                                      !
+                                 9F  0265       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                 DD  0298       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied      !
+                                 DD  02B4       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied      !
+$ ANALYZE/OBJECT/OUTPUT=R4_SETPRT.ANL R4_SETPRT.OBJ
+%ANALYZE-I-ERRORS, DUA1:[000000]R4_SETPRT.OBJ;1                            0 errors
+$ MACRO/NOLIST R4_SETRWM
+$ ANALYZE/OBJECT/OUTPUT=R4_SETRWM.ANL R4_SETRWM.OBJ
+%ANALYZE-I-ERRORS, DUA1:[000000]R4_SETRWM.OBJ;1                            0 errors
+$ MACRO/NOLIST R4_GETSYI
+                                     0006       
+%MACRO-E-DIRSYNX, Directive syntax error                                !
+                                 9F  0006       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     00E6       
+%MACRO-E-DIRSYNX, Directive syntax error                                      !
+                                 9F  00E6       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     018B       
+%MACRO-E-DIRSYNX, Directive syntax error                                      !
+                                 9F  018B       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     01A1       
+%MACRO-E-DIRSYNX, Directive syntax error                                      !
+                                 9F  01A1       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     01B7       
+%MACRO-E-DIRSYNX, Directive syntax error                                      !
+                                 9F  01B7       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     01D1       
+%MACRO-E-DIRSYNX, Directive syntax error                                      !
+                                 9F  01D1       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     01E7       
+%MACRO-E-DIRSYNX, Directive syntax error                                      !
+                                 9F  01E7       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     0201       
+%MACRO-E-DIRSYNX, Directive syntax error                                      !
+                                 9F  0201       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     024D       
+%MACRO-E-DIRSYNX, Directive syntax error                                      !
+                                 9F  024D       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     0263       
+%MACRO-E-DIRSYNX, Directive syntax error                                      !
+                                 9F  0263       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     027F       
+%MACRO-E-DIRSYNX, Directive syntax error                                      !
+                                 9F  027F       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     0297       
+%MACRO-E-DIRSYNX, Directive syntax error                                      !
+                                 9F  0297       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     02B3       
+%MACRO-E-DIRSYNX, Directive syntax error                                      !
+                                 9F  02B3       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     02CB       
+%MACRO-E-DIRSYNX, Directive syntax error                                      !
+                                 9F  02CB       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     02E1       
+%MACRO-E-DIRSYNX, Directive syntax error                                      !
+                                 9F  02E1       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     02FB       
+%MACRO-E-DIRSYNX, Directive syntax error                                      !
+                                 9F  02FB       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     0319       
+%MACRO-E-DIRSYNX, Directive syntax error                                      !
+                                 9F  0319       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     0457       
+%MACRO-E-DIRSYNX, Directive syntax error                                      !
+                                 9F  0457       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     047B       
+%MACRO-E-DIRSYNX, Directive syntax error                                      !
+                                 9F  047B       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+$ ANALYZE/OBJECT/OUTPUT=R4_GETSYI.ANL R4_GETSYI.OBJ
+%ANALYZE-I-ERRORS, DUA1:[000000]R4_GETSYI.OBJ;1                            0 errors
+$ MACRO/NOLIST R4_GETSYIW
+                                     0006       
+%MACRO-E-DIRSYNX, Directive syntax error                                !
+                                 9F  0006       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     00E6       
+%MACRO-E-DIRSYNX, Directive syntax error                                     !
+                                 9F  00E6       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     018B       
+%MACRO-E-DIRSYNX, Directive syntax error                                     !
+                                 9F  018B       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     01A1       
+%MACRO-E-DIRSYNX, Directive syntax error                                     !
+                                 9F  01A1       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     01B7       
+%MACRO-E-DIRSYNX, Directive syntax error                                     !
+                                 9F  01B7       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     01D1       
+%MACRO-E-DIRSYNX, Directive syntax error                                     !
+                                 9F  01D1       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     01E7       
+%MACRO-E-DIRSYNX, Directive syntax error                                     !
+                                 9F  01E7       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     0201       
+%MACRO-E-DIRSYNX, Directive syntax error                                     !
+                                 9F  0201       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     024D       
+%MACRO-E-DIRSYNX, Directive syntax error                                     !
+                                 9F  024D       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     0263       
+%MACRO-E-DIRSYNX, Directive syntax error                                     !
+                                 9F  0263       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     027F       
+%MACRO-E-DIRSYNX, Directive syntax error                                     !
+                                 9F  027F       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     0297       
+%MACRO-E-DIRSYNX, Directive syntax error                                     !
+                                 9F  0297       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     02B3       
+%MACRO-E-DIRSYNX, Directive syntax error                                     !
+                                 9F  02B3       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     02CB       
+%MACRO-E-DIRSYNX, Directive syntax error                                     !
+                                 9F  02CB       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     02E1       
+%MACRO-E-DIRSYNX, Directive syntax error                                     !
+                                 9F  02E1       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     02FB       
+%MACRO-E-DIRSYNX, Directive syntax error                                     !
+                                 9F  02FB       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     0319       
+%MACRO-E-DIRSYNX, Directive syntax error                                     !
+                                 9F  0319       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     0457       
+%MACRO-E-DIRSYNX, Directive syntax error                                     !
+                                 9F  0457       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     047B       
+%MACRO-E-DIRSYNX, Directive syntax error                                     !
+                                 9F  047B       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+$ ANALYZE/OBJECT/OUTPUT=R4_GETSYIW.ANL R4_GETSYIW.OBJ
+%ANALYZE-I-ERRORS, DUA1:[000000]R4_GETSYIW.OBJ;1                           0 errors
+$ MACRO/NOLIST R4_IDTOASC
+                                 DD  000C       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied      !
+                   00000000'EF   DD  0032       
+%MACRO-E-OPRNDSYNX, Operand syntax error                                  !
+                   00000000'EF   DD  005D       
+%MACRO-E-OPRNDSYNX, Operand syntax error                                  !
+                   00000000'EF   DD  0084       
+%MACRO-E-OPRNDSYNX, Operand syntax error                                  !
+                   00000000'EF   DD  00D2       
+%MACRO-E-OPRNDSYNX, Operand syntax error                                  !
+                   00000000'EF   DD  00F9       
+%MACRO-E-OPRNDSYNX, Operand syntax error                                  !
+                   00000000'EF   DD  0120       
+%MACRO-E-OPRNDSYNX, Operand syntax error                                  !
+                                 DD  016D       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied      !
+                                 DD  0183       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied      !
+                   00000000'EF   DD  0199       
+%MACRO-E-OPRNDSYNX, Operand syntax error                                  !
+                   00000000'EF   DD  01B4       
+%MACRO-E-OPRNDSYNX, Operand syntax error                                  !
+                                 DD  01D3       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied      !
+                                 DD  01E9       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied      !
+                                 DD  0203       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied      !
+                                 DD  0219       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied      !
+                                 DD  0233       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied      !
+                                 DD  0249       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied      !
+                   00000000'EF   DD  025F       
+%MACRO-E-OPRNDSYNX, Operand syntax error                                 !
+                   00000000'EF   DD  027A       
+%MACRO-E-OPRNDSYNX, Operand syntax error                                      !
+                   00000000'EF   DD  0295       
+%MACRO-E-OPRNDSYNX, Operand syntax error                                 !
+                   00000000'EF   DD  02B0       
+%MACRO-E-OPRNDSYNX, Operand syntax error                                 !
+                   00000000'EF   DD  02CB       
+%MACRO-E-OPRNDSYNX, Operand syntax error                                   !
+                   00000000'EF   DD  02E6       
+%MACRO-E-OPRNDSYNX, Operand syntax error                                  !
+                   00000000'EF   DD  0301       
+%MACRO-E-OPRNDSYNX, Operand syntax error                                    !
+                   00000000'EF   DD  031C       
+%MACRO-E-OPRNDSYNX, Operand syntax error                                 !
+                   00000000'EF   DD  0337       
+%MACRO-E-OPRNDSYNX, Operand syntax error                                   !
+                   00000000'EF   DD  043C       
+%MACRO-E-OPRNDSYNX, Operand syntax error                                  !
+                   00000000'EF   DD  04A5       
+%MACRO-E-OPRNDSYNX, Operand syntax error                                  !
+                   00000000'EF   DD  04C8       
+%MACRO-E-OPRNDSYNX, Operand syntax error                                  !
+                   00000000'EF   DD  04E3       
+%MACRO-E-OPRNDSYNX, Operand syntax error                                  !
+$ ANALYZE/OBJECT/OUTPUT=R4_IDTOASC.ANL R4_IDTOASC.OBJ
+%ANALYZE-I-ERRORS, DUA1:[000000]R4_IDTOASC.OBJ;1                           0 errors
+$ MACRO/NOLIST R4_ASCTOID
+                                     0006       
+%MACRO-E-DIRSYNX, Directive syntax error                                !
+                                 9F  0006       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     003B       
+%MACRO-E-DIRSYNX, Directive syntax error                                     !
+                                 9F  003B       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     00A7       
+%MACRO-E-DIRSYNX, Directive syntax error                                     !
+                                 9F  00A7       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     00B7       
+%MACRO-E-DIRSYNX, Directive syntax error                                     !
+                                 9F  00B7       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     00CB       
+%MACRO-E-DIRSYNX, Directive syntax error                                     !
+                                 9F  00CB       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     00DB       
+%MACRO-E-DIRSYNX, Directive syntax error                                     !
+                                 9F  00DB       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+                                     013A       
+%MACRO-E-DIRSYNX, Directive syntax error                                     !
+                                 9F  013A       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied!
+$ ANALYZE/OBJECT/OUTPUT=R4_ASCTOID.ANL R4_ASCTOID.OBJ
+%ANALYZE-I-ERRORS, DUA1:[000000]R4_ASCTOID.OBJ;1                           0 errors
+$ MACRO/NOLIST R4_UNWIND
+$ ANALYZE/OBJECT/OUTPUT=R4_UNWIND.ANL R4_UNWIND.OBJ
+%ANALYZE-I-ERRORS, DUA1:[000000]R4_UNWIND.OBJ;1                            0 errors
+$ MACRO/NOLIST R4_BRKTHRU
+$ ANALYZE/OBJECT/OUTPUT=R4_BRKTHRU.ANL R4_BRKTHRU.OBJ
+%ANALYZE-I-ERRORS, DUA1:[000000]R4_BRKTHRU.OBJ;1                           0 errors
+$ MACRO/NOLIST R4_BRKTHRUW
+$ ANALYZE/OBJECT/OUTPUT=R4_BRKTHRUW.ANL R4_BRKTHRUW.OBJ
+%ANALYZE-I-ERRORS, DUA1:[000000]R4_BRKTHRUW.OBJ;1                          0 errors
+$ MACRO/NOLIST R4_CREPRC
+$ ANALYZE/OBJECT/OUTPUT=R4_CREPRC.ANL R4_CREPRC.OBJ
+%ANALYZE-I-ERRORS, DUA1:[000000]R4_CREPRC.OBJ;1                            0 errors
+$ SET NOVERIFY

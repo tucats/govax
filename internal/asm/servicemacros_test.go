@@ -27,6 +27,7 @@ type serviceReloc struct {
 	off, size int
 	pic       bool
 	target    string
+	sym       bool // the target is a global symbol, not a program section
 }
 
 // serviceCodeStream rebuilds the bytes of m's CODE program section, and its
@@ -152,7 +153,7 @@ func serviceCodeStream(t *testing.T, m *obj.Module) ([]byte, []serviceReloc) {
 						target = to.sym
 					}
 
-					relocs = append(relocs, serviceReloc{off: at, size: n, pic: c.Op == picr || c.Op == pidr, target: target})
+					relocs = append(relocs, serviceReloc{off: at, size: n, pic: c.Op == picr || c.Op == pidr, target: target, sym: to.isSym})
 					size = max(size, off+n)
 				}
 
@@ -177,7 +178,7 @@ func serviceCodeStream(t *testing.T, m *obj.Module) ([]byte, []serviceReloc) {
 // PC-relative displacements masked (they depend on where the code is).
 // ok[n] is false for a chunk that doesn't disassemble to a complete call
 // of the short form's instructions. Calls with no marker are missing.
-func callChunks(bytes []byte, relocs []serviceReloc, count int) (text map[int]string, ok map[int]bool) {
+func callChunks(bytes []byte, relocs []serviceReloc, count int, errs []int) (text map[int]string, ok map[int]bool) {
 	text, ok = map[int]string{}, map[int]bool{}
 
 	find := func(n, from int) int {
@@ -201,10 +202,20 @@ func callChunks(bytes []byte, relocs []serviceReloc, count int) (text map[int]st
 			continue // a call the module doesn't have
 		}
 
+		// A call real MACRO reported an error for (the log gives the
+		// offset in the code) leaves whatever it likes in the object.
+		errored := false
+
+		for _, e := range errs {
+			if e >= start && e <= end {
+				errored = true
+			}
+		}
+
 		// An argument list built in line (the macro without a suffix) is a
 		// count and that many addresses: longwords, not instructions.
 		if lines, isList := listChunk(bytes[start:end], start, relocs); isList {
-			text[n], ok[n] = strings.Join(lines, "\n"), true
+			text[n], ok[n] = strings.Join(lines, "\n"), !errored
 			start = end + 4
 
 			continue
@@ -212,7 +223,7 @@ func callChunks(bytes []byte, relocs []serviceReloc, count int) (text map[int]st
 
 		var (
 			lines    []string
-			complete = true
+			complete = !unknownSymbol(relocs, start, end)
 			last     string
 		)
 
@@ -240,11 +251,83 @@ func callChunks(bytes []byte, relocs []serviceReloc, count int) (text map[int]st
 		}
 
 		text[n] = strings.Join(lines, "\n")
-		ok[n] = complete && (last == "CALLS" || last == "CALLG")
+		ok[n] = complete && !errored && (last == "CALLS" || last == "CALLG")
 		start = end + 4
 	}
 
 	return text, ok
+}
+
+var (
+	logSectionRE = regexp.MustCompile(`^\$ MACRO/NOLIST (\w+)`)
+	logOffsetRE  = regexp.MustCompile(`([0-9A-F]{4,8})\s*$`)
+	logMessageRE = regexp.MustCompile(`^%MACRO-[EFW]-`)
+)
+
+// macroErrors returns the code offsets of the errors and warnings real
+// MACRO reported for the probe called name, from the log of the run that
+// assembled it (each message follows a line ending in the offset).
+func macroErrors(t *testing.T, name string) []int {
+	t.Helper()
+
+	logName := "macros.log"
+
+	switch {
+	case strings.HasPrefix(name, "lst_"), strings.HasPrefix(name, "ext_"):
+		logName = "macros3.log"
+	case strings.HasPrefix(name, "r4_"):
+		logName = "macros4.log"
+	case strings.HasPrefix(name, "r5_"):
+		logName = "macros5.log"
+	}
+
+	data, err := os.ReadFile(filepath.Join(serviceDir, "vax", logName))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var (
+		offsets []int
+		inside  bool
+		prev    string
+	)
+
+	for _, line := range strings.Split(string(data), "\n") {
+		if m := logSectionRE.FindStringSubmatch(line); m != nil {
+			inside = strings.EqualFold(m[1], name)
+			prev = ""
+
+			continue
+		}
+
+		if inside && logMessageRE.MatchString(line) {
+			if m := logOffsetRE.FindStringSubmatch(prev); m != nil {
+				var off int
+
+				if _, err := fmt.Sscanf(m[1], "%X", &off); err == nil {
+					offsets = append(offsets, off)
+				}
+			}
+		}
+
+		prev = line
+	}
+
+	return offsets
+}
+
+// unknownSymbol is true when a relocation in [from, to) refers to a global
+// symbol other than a system service's. The probes' values are all in the
+// program, so such a reference is what real MACRO leaves for a keyword the
+// macro doesn't have.
+func unknownSymbol(relocs []serviceReloc, from, to int) bool {
+	for _, r := range relocs {
+		if r.sym && r.off >= from && r.off < to && !strings.HasPrefix(r.target, "SYS$") {
+			return true
+		}
+	}
+
+	return false
 }
 
 // listChunk reads chunk, which starts at offset base of the CODE stream, as
@@ -261,6 +344,10 @@ func listChunk(chunk []byte, base int, relocs []serviceReloc) ([]string, bool) {
 	}
 
 	var lines []string
+
+	if unknownSymbol(relocs, base, base+len(chunk)) {
+		return nil, false
+	}
 
 	for o := 0; o < len(chunk); o += 4 {
 		line := fmt.Sprintf(".LONG %02X%02X%02X%02X", chunk[o+3], chunk[o+2], chunk[o+1], chunk[o])
@@ -322,8 +409,12 @@ func TestServiceMacroObjects(t *testing.T) {
 		t.Fatalf("no probes: %v", err)
 	}
 
-	lists, _ := filepath.Glob(filepath.Join(serviceDir, "lst_*.mar"))
-	probes = append(probes, lists...)
+	// The argument-list and CALLG forms (round 3), the other services (round
+	// 3's, with keywords that are partly wrong, and round 4's).
+	for _, prefix := range []string{"lst_", "ext_", "r4_"} {
+		more, _ := filepath.Glob(filepath.Join(serviceDir, prefix+"*.mar"))
+		probes = append(probes, more...)
+	}
 
 	for _, path := range probes {
 		name := strings.TrimSuffix(filepath.Base(path), ".mar")
@@ -343,7 +434,7 @@ func TestServiceMacroObjects(t *testing.T) {
 
 			real := readObjectFile(t, filepath.Join(serviceDir, "vax", name+".obj"))
 			realBytes, realRelocs := serviceCodeStream(t, real)
-			realText, realOK := callChunks(realBytes, realRelocs, len(calls))
+			realText, realOK := callChunks(realBytes, realRelocs, len(calls), macroErrors(t, name))
 
 			// The probe without the calls real MACRO had an error for. A
 			// call is a line starting with a tab and "$"; the marker line
@@ -381,7 +472,7 @@ func TestServiceMacroObjects(t *testing.T) {
 			}
 
 			if len(keep) == 0 {
-				if strings.HasPrefix(name, "lst_") {
+				if strings.HasPrefix(name, "lst_") || strings.HasPrefix(name, "ext_") || strings.HasPrefix(name, "r4_") {
 					t.Skip("real MACRO made nothing of these forms: the service has no such macro")
 				}
 
@@ -401,7 +492,7 @@ func TestServiceMacroObjects(t *testing.T) {
 
 			ours := objectLike(t, a, real)
 			ourBytes, ourRelocs := serviceCodeStream(t, ours)
-			ourText, _ := callChunks(ourBytes, ourRelocs, len(calls))
+			ourText, _ := callChunks(ourBytes, ourRelocs, len(calls), nil)
 
 			bad := 0
 

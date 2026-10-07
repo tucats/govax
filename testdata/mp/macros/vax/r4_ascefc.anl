@@ -1,0 +1,857 @@
+
+Analyze Object File                           7-OCT-2026 18:44:35.38   Page 1
+DUA1:[000000]R4_ASCEFC.OBJ;1
+ANALYZ V07-04
+
+This is an OpenVMS VAX object file
+
+1.  MODULE HEADER (OBJ$C_HDR_MHD), 54 bytes
+
+	structure level: 0
+	maximum record size: 512
+	module name: "R4_ASCEFC"
+	module version: "V1.0"
+	creation   date/time:  7-OCT-2026 18:44
+
+
+2.  LANGUAGE PROCESSOR HEADER (OBJ$C_HDR_LNM), 18 bytes
+
+	Textual information:
+	"VAX MACRO V5.4-3"
+
+
+3.  SOURCE FILE HEADER (OBJ$C_HDR_SRC), 24 bytes
+
+	Textual information:
+	"MACRO/NOLIST R4_ASCEFC"
+
+
+4.  TITLE HEADER (OBJ$C_HDR_TTL), 27 bytes
+
+	Textual information:
+	"every argument of $ASCEFC"
+
+
+5.  TRACEBACK INFORMATION (OBJ$C_TBT), 19 bytes
+
+	1)  Store Immediate, 17 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 09 00 00 00 00 00 BC 10|  0000  |.¼......|
+		 46 45 43 53 41 5F 34 52|  0008  |R4_ASCEF|
+		                      43|  0010  |C       |
+
+
+6.  GLOBAL SYMBOL DIRECTORY (OBJ$C_GSD), 16 bytes
+
+	1)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "SYS$ASCEFC"
+
+
+
+Analyze Object File                           7-OCT-2026 18:44:35.38   Page 2
+DUA1:[000000]R4_ASCEFC.OBJ;1
+ANALYZ V07-04
+
+7.  GLOBAL SYMBOL DIRECTORY (OBJ$C_GSD), 19 bytes
+
+	1)  Program Section Definition (GSD$C_PSC)
+		alignment: 1-byte boundary                       <-- psect 0
+		attribute flags:
+			(0)  GPS$V_PIC        0
+			(1)  GPS$V_LIB        0
+			(2)  GPS$V_OVR        0
+			(3)  GPS$V_REL        0
+			(4)  GPS$V_GBL        0
+			(5)  GPS$V_SHR        0
+			(6)  GPS$V_EXE        0
+			(7)  GPS$V_RD         0
+			(8)  GPS$V_WRT        0
+			(9)  GPS$V_VEC        0
+			(10) GPS$V_COM        0
+			(11) GPS$V_NOMOD      0
+		allocation: 0 (%X'00000000')
+		symbol: ".  ABS  ."
+
+
+8.  TEXT INFORMATION/RELOCATION (OBJ$C_TIR), 5 bytes
+
+	1)  TIR$C_STA_PB (4, %X'04')                            stack depth: 1
+		psect: 0
+		value: 0 (%X'00000000')
+
+	2)  TIR$C_CTL_SETRB (80, %X'50')                        stack depth: 0
+
+
+9.  GLOBAL SYMBOL DIRECTORY (OBJ$C_GSD), 14 bytes
+
+	1)  Program Section Definition (GSD$C_PSC)
+		alignment: 4-byte boundary                       <-- psect 1
+		attribute flags:
+			(0)  GPS$V_PIC        0
+			(1)  GPS$V_LIB        0
+			(2)  GPS$V_OVR        0
+			(3)  GPS$V_REL        1
+			(4)  GPS$V_GBL        0
+			(5)  GPS$V_SHR        0
+			(6)  GPS$V_EXE        0
+			(7)  GPS$V_RD         1
+			(8)  GPS$V_WRT        1
+			(9)  GPS$V_VEC        0
+			(10) GPS$V_COM        0
+			(11) GPS$V_NOMOD      0
+		allocation: 128 (%X'00000080')
+		symbol: "DATA"
+
+
+
+Analyze Object File                           7-OCT-2026 18:44:35.38   Page 3
+DUA1:[000000]R4_ASCEFC.OBJ;1
+ANALYZ V07-04
+
+10.  TEXT INFORMATION/RELOCATION (OBJ$C_TIR), 134 bytes
+
+	1)  TIR$C_STA_PB (4, %X'04')                            stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	2)  TIR$C_CTL_SETRB (80, %X'50')                        stack depth: 0
+
+	3)  Store Immediate, 128 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 00 00 00 00 00 00 00 00|  0000  |........|
+		 00 00 00 00 00 00 00 00|  0008  |........|
+		 00 00 00 00 00 00 00 00|  0010  |........|
+		 00 00 00 00 00 00 00 00|  0018  |........|
+		 00 00 00 00 00 00 00 00|  0020  |........|
+		 00 00 00 00 00 00 00 00|  0028  |........|
+		 00 00 00 00 00 00 00 00|  0030  |........|
+		 00 00 00 00 00 00 00 00|  0038  |........|
+		 00 00 00 00 00 00 00 00|  0040  |........|
+		 00 00 00 00 00 00 00 00|  0048  |........|
+		 00 00 00 00 00 00 00 00|  0050  |........|
+		 00 00 00 00 00 00 00 00|  0058  |........|
+		 00 00 00 00 00 00 00 00|  0060  |........|
+		 00 00 00 00 00 00 00 00|  0068  |........|
+		 00 00 00 00 00 00 00 00|  0070  |........|
+		 00 00 00 00 00 00 00 00|  0078  |........|
+
+
+11.  GLOBAL SYMBOL DIRECTORY (OBJ$C_GSD), 14 bytes
+
+	1)  Program Section Definition (GSD$C_PSC)
+		alignment: 4-byte boundary                       <-- psect 2
+		attribute flags:
+			(0)  GPS$V_PIC        0
+			(1)  GPS$V_LIB        0
+			(2)  GPS$V_OVR        0
+			(3)  GPS$V_REL        1
+			(4)  GPS$V_GBL        0
+			(5)  GPS$V_SHR        0
+			(6)  GPS$V_EXE        1
+			(7)  GPS$V_RD         1
+			(8)  GPS$V_WRT        0
+			(9)  GPS$V_VEC        0
+			(10) GPS$V_COM        0
+			(11) GPS$V_NOMOD      0
+		allocation: 491 (%X'000001EB')
+		symbol: "CODE"
+
+
+12.  TEXT INFORMATION/RELOCATION (OBJ$C_TIR), 7 bytes
+
+	1)  TIR$C_STA_PB (4, %X'04')                            stack depth: 1
+		psect: 2
+		value: 0 (%X'00000000')
+
+Analyze Object File                           7-OCT-2026 18:44:35.38   Page 4
+DUA1:[000000]R4_ASCEFC.OBJ;1
+ANALYZ V07-04
+
+
+	2)  TIR$C_CTL_SETRB (80, %X'50')                        stack depth: 0
+
+	3)  TIR$C_STA_UB (7, %X'07')                            stack depth: 1
+		unsigned value: 192 (%X'000000C0')
+
+
+13.  GLOBAL SYMBOL DIRECTORY (OBJ$C_GSD), 22 bytes
+
+	1)  Entry Point Symbol and Mask Definition (GSD$C_EPM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		psect: 2
+		value: 0 (%X'00000000')
+		entry mask: <R6,R7>
+		symbol: "R4_ASCEFC"
+
+
+14.  TEXT INFORMATION/RELOCATION (OBJ$C_TIR), 2 bytes
+
+	1)  TIR$C_STO_W (38, %X'26')                            stack depth: 0
+
+
+15.  TEXT INFORMATION/RELOCATION (OBJ$C_TIR), 461 bytes
+
+	1)  Store Immediate, 8 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 04 FB DD 9F 00 DD 00 DD|  0000  |Ý.Ý..Ýû.|
+
+	2)  TIR$C_STA_GBL (0, %X'00')                           stack depth: 1
+		symbol: "SYS$ASCEFC"
+
+	3)  TIR$C_STO_PICR (28, %X'1C')                         stack depth: 0
+
+	4)  Store Immediate, 13 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 00 44 8F DD 7A 7A 00 01|  0000  |..zzÝ.D.|
+		          9F 33 DD 00 00|  0008  |..Ý3.   |
+
+	5)  TIR$C_STA_PB (4, %X'04')                            stack depth: 1
+		psect: 1
+		value: 8 (%X'00000008')
+
+	6)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+
+Analyze Object File                           7-OCT-2026 18:44:35.39   Page 5
+DUA1:[000000]R4_ASCEFC.OBJ;1
+ANALYZ V07-04
+
+	7)  TIR$C_STO_LD (25, %X'19')                           stack depth: 0
+
+	8)  Store Immediate, 4 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		             04 FB 11 DD|  0000  |Ý.û.    |
+
+	9)  TIR$C_STA_GBL (0, %X'00')                           stack depth: 1
+		symbol: "SYS$ASCEFC"
+
+	10)  TIR$C_STO_PICR (28, %X'1C')                        stack depth: 0
+
+	11)  Store Immediate, 13 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 00 44 8F DD 7A 7A 00 02|  0000  |..zzÝ.D.|
+		          9F 33 DD 00 00|  0008  |..Ý3.   |
+
+	12)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 8 (%X'00000008')
+
+	13)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	14)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	15)  Store Immediate, 3 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                04 FB DD|  0000  |Ýû.     |
+
+	16)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "SYS$ASCEFC"
+
+	17)  TIR$C_STO_PICR (28, %X'1C')                        stack depth: 0
+
+	18)  Store Immediate, 17 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 00 44 8F DD 7A 7A 00 03|  0000  |..zzÝ.D.|
+		 FB 11 DD 9F 33 DD 00 00|  0008  |..Ý3.Ý.û|
+		                      04|  0010  |.       |
+
+	19)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "SYS$ASCEFC"
+
+	20)  TIR$C_STO_PICR (28, %X'1C')                        stack depth: 0
+
+	21)  Store Immediate, 13 bytes:
+
+Analyze Object File                           7-OCT-2026 18:44:35.39   Page 6
+DUA1:[000000]R4_ASCEFC.OBJ;1
+ANALYZ V07-04
+
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 00 44 8F DD 7A 7A 00 04|  0000  |..zzÝ.D.|
+		          9F 00 DD 00 00|  0008  |..Ý..   |
+
+	22)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 8 (%X'00000008')
+
+	23)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	24)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	25)  Store Immediate, 4 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		             04 FB 11 DD|  0000  |Ý.û.    |
+
+	26)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "SYS$ASCEFC"
+
+	27)  TIR$C_STO_PICR (28, %X'1C')                        stack depth: 0
+
+	28)  Store Immediate, 9 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 33 DD 00 DD 7A 7A 00 05|  0000  |..zzÝ.Ý3|
+		                      9F|  0008  |.       |
+
+	29)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 8 (%X'00000008')
+
+	30)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	31)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	32)  Store Immediate, 4 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		             04 FB 11 DD|  0000  |Ý.û.    |
+
+	33)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "SYS$ASCEFC"
+
+	34)  TIR$C_STO_PICR (28, %X'1C')                        stack depth: 0
+
+	35)  Store Immediate, 13 bytes:
+
+Analyze Object File                           7-OCT-2026 18:44:35.39   Page 7
+DUA1:[000000]R4_ASCEFC.OBJ;1
+ANALYZ V07-04
+
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 00 DD 00 DD 7A 7A 00 06|  0000  |..zzÝ.Ý.|
+		          04 FB 11 DD 9F|  0008  |.Ý.û.   |
+
+	36)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "SYS$ASCEFC"
+
+	37)  TIR$C_STO_PICR (28, %X'1C')                        stack depth: 0
+
+	38)  Store Immediate, 13 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 00 DD 00 DD 7A 7A 00 07|  0000  |..zzÝ.Ý.|
+		          04 FB 76 DD 9F|  0008  |.Ývû.   |
+
+	39)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "SYS$ASCEFC"
+
+	40)  TIR$C_STO_PICR (28, %X'1C')                        stack depth: 0
+
+	41)  Store Immediate, 9 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 00 DD 00 DD 7A 7A 00 08|  0000  |..zzÝ.Ý.|
+		                      9F|  0008  |.       |
+
+	42)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 8 (%X'00000008')
+
+	43)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	44)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	45)  Store Immediate, 3 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                04 FB DD|  0000  |Ýû.     |
+
+	46)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "SYS$ASCEFC"
+
+	47)  TIR$C_STO_PICR (28, %X'1C')                        stack depth: 0
+
+	48)  Store Immediate, 13 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 00 DD 00 DD 7A 7A 00 09|  0000  |..zzÝ.Ý.|
+		          04 FB DD 76 7F|  0008  |.vÝû.   |
+
+
+Analyze Object File                           7-OCT-2026 18:44:35.39   Page 8
+DUA1:[000000]R4_ASCEFC.OBJ;1
+ANALYZ V07-04
+
+	49)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "SYS$ASCEFC"
+
+	50)  TIR$C_STO_PICR (28, %X'1C')                        stack depth: 0
+
+	51)  Store Immediate, 12 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 33 DD 00 DD 7A 7A 00 0A|  0000  |..zzÝ.Ý3|
+		             04 FB DD 9F|  0008  |.Ýû.    |
+
+	52)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "SYS$ASCEFC"
+
+	53)  TIR$C_STO_PICR (28, %X'1C')                        stack depth: 0
+
+	54)  Store Immediate, 12 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 76 DD 00 DD 7A 7A 00 0B|  0000  |..zzÝ.Ýv|
+		             04 FB DD 9F|  0008  |.Ýû.    |
+
+	55)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "SYS$ASCEFC"
+
+	56)  TIR$C_STO_PICR (28, %X'1C')                        stack depth: 0
+
+	57)  Store Immediate, 16 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 00 44 8F DD 7A 7A 00 0C|  0000  |..zzÝ.D.|
+		 04 FB DD 9F 00 DD 00 00|  0008  |..Ý..Ýû.|
+
+	58)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "SYS$ASCEFC"
+
+	59)  TIR$C_STO_PICR (28, %X'1C')                        stack depth: 0
+
+	60)  Store Immediate, 12 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 00 DD 76 DD 7A 7A 00 0D|  0000  |..zzÝvÝ.|
+		             04 FB DD 9F|  0008  |.Ýû.    |
+
+	61)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "SYS$ASCEFC"
+
+	62)  TIR$C_STO_PICR (28, %X'1C')                        stack depth: 0
+
+	63)  Store Immediate, 10 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 00 DD 00 DD 7A 7A 00 0E|  0000  |..zzÝ.Ý.|
+		                   DD 9F|  0008  |.Ý      |
+
+
+Analyze Object File                           7-OCT-2026 18:44:35.39   Page 9
+DUA1:[000000]R4_ASCEFC.OBJ;1
+ANALYZ V07-04
+
+	64)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	65)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	66)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	67)  Store Immediate, 2 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                   04 FB|  0000  |û.      |
+
+	68)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "SYS$ASCEFC"
+
+	69)  TIR$C_STO_PICR (28, %X'1C')                        stack depth: 0
+
+	70)  Store Immediate, 4 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		             7A 7A 00 0F|  0000  |..zz    |
+
+
+16.  TEXT INFORMATION/RELOCATION (OBJ$C_TIR), 262 bytes
+
+	1)  Store Immediate, 5 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		          9F 00 DD 00 DD|  0000  |Ý.Ý..   |
+
+	2)  TIR$C_STA_PB (4, %X'04')                            stack depth: 1
+		psect: 1
+		value: 8 (%X'00000008')
+
+	3)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	4)  TIR$C_STO_LD (25, %X'19')                           stack depth: 0
+
+	5)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      DD|  0000  |Ý       |
+
+	6)  TIR$C_STA_PB (4, %X'04')                            stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+
+Analyze Object File                           7-OCT-2026 18:44:35.39   Page 10
+DUA1:[000000]R4_ASCEFC.OBJ;1
+ANALYZ V07-04
+
+	7)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	8)  TIR$C_STO_LD (25, %X'19')                           stack depth: 0
+
+	9)  Store Immediate, 2 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                   04 FB|  0000  |û.      |
+
+	10)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "SYS$ASCEFC"
+
+	11)  TIR$C_STO_PICR (28, %X'1C')                        stack depth: 0
+
+	12)  Store Immediate, 7 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		    DD 00 DD 7A 7A 00 10|  0000  |..zzÝ.Ý |
+
+	13)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 16 (%X'00000010')
+
+	14)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	15)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	16)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      9F|  0000  |.       |
+
+	17)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 8 (%X'00000008')
+
+	18)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	19)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	20)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      DD|  0000  |Ý       |
+
+
+Analyze Object File                           7-OCT-2026 18:44:35.39   Page 11
+DUA1:[000000]R4_ASCEFC.OBJ;1
+ANALYZ V07-04
+
+	21)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	22)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	23)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	24)  Store Immediate, 2 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                   04 FB|  0000  |û.      |
+
+	25)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "SYS$ASCEFC"
+
+	26)  TIR$C_STO_PICR (28, %X'1C')                        stack depth: 0
+
+	27)  Store Immediate, 5 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		          DD 7A 7A 00 11|  0000  |..zzÝ   |
+
+	28)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 24 (%X'00000018')
+
+	29)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	30)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	31)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      DD|  0000  |Ý       |
+
+	32)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 16 (%X'00000010')
+
+	33)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	34)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	35)  Store Immediate, 1 byte:
+
+Analyze Object File                           7-OCT-2026 18:44:35.39   Page 12
+DUA1:[000000]R4_ASCEFC.OBJ;1
+ANALYZ V07-04
+
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      9F|  0000  |.       |
+
+	36)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 8 (%X'00000008')
+
+	37)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	38)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	39)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      DD|  0000  |Ý       |
+
+	40)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	41)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	42)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	43)  Store Immediate, 2 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                   04 FB|  0000  |û.      |
+
+	44)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "SYS$ASCEFC"
+
+	45)  TIR$C_STO_PICR (28, %X'1C')                        stack depth: 0
+
+	46)  Store Immediate, 16 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 00 44 8F DD 7A 7A 00 12|  0000  |..zzÝ.D.|
+		 04 FB DD 9F 33 DD 00 00|  0008  |..Ý3.Ýû.|
+
+	47)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "SYS$ASCEFC"
+
+	48)  TIR$C_STO_PICR (28, %X'1C')                        stack depth: 0
+
+	49)  Store Immediate, 17 bytes:
+
+Analyze Object File                           7-OCT-2026 18:44:35.39   Page 13
+DUA1:[000000]R4_ASCEFC.OBJ;1
+ANALYZ V07-04
+
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 00 44 8F DD 7A 7A 00 13|  0000  |..zzÝ.D.|
+		 FB 11 DD 9F 00 DD 00 00|  0008  |..Ý..Ý.û|
+		                      04|  0010  |.       |
+
+	50)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "SYS$ASCEFC"
+
+	51)  TIR$C_STO_PICR (28, %X'1C')                        stack depth: 0
+
+	52)  Store Immediate, 9 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 00 DD 00 DD 7A 7A 00 14|  0000  |..zzÝ.Ý.|
+		                      9F|  0008  |.       |
+
+	53)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 8 (%X'00000008')
+
+	54)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	55)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	56)  Store Immediate, 4 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		             04 FB 11 DD|  0000  |Ý.û.    |
+
+	57)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "SYS$ASCEFC"
+
+	58)  TIR$C_STO_PICR (28, %X'1C')                        stack depth: 0
+
+	59)  Store Immediate, 12 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 00 DD 00 DD 7A 7A 00 15|  0000  |..zzÝ.Ý.|
+		             04 FB 7E 7C|  0008  ||~û.    |
+
+	60)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "SYS$ASCEFC"
+
+	61)  TIR$C_STO_PICR (28, %X'1C')                        stack depth: 0
+
+	62)  Store Immediate, 5 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		          04 7A 7A 00 16|  0000  |..zz.   |
+
+
+
+Analyze Object File                           7-OCT-2026 18:44:35.39   Page 14
+DUA1:[000000]R4_ASCEFC.OBJ;1
+ANALYZ V07-04
+
+17.  TRACEBACK INFORMATION (OBJ$C_TBT), 23 bytes
+
+	1)  Store Immediate, 3 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                00 BE 10|  0000  |.¾.     |
+
+	2)  TIR$C_STA_PL (6, %X'06')                            stack depth: 1
+		psect: 2
+		value: 0 (%X'00000000')
+
+	3)  TIR$C_STO_PIDR (27, %X'1B')                         stack depth: 0
+
+	4)  Store Immediate, 10 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 45 43 53 41 5F 34 52 09|  0000  |.R4_ASCE|
+		                   43 46|  0008  |FC      |
+
+
+18.  TRACEBACK INFORMATION (OBJ$C_TBT), 38 bytes
+
+	1)  Store Immediate, 3 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                00 B8 0F|  0000  |.¸.     |
+
+	2)  TIR$C_STA_PB (4, %X'04')                            stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	3)  TIR$C_STO_PIDR (27, %X'1B')                         stack depth: 0
+
+	4)  Store Immediate, 12 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 00 00 80 41 54 41 44 04|  0000  |.DATA...|
+		             00 B8 0F 00|  0008  |..¸.    |
+
+	5)  TIR$C_STA_PB (4, %X'04')                            stack depth: 1
+		psect: 2
+		value: 0 (%X'00000000')
+
+	6)  TIR$C_STO_PIDR (27, %X'1B')                         stack depth: 0
+
+	7)  Store Immediate, 11 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 00 01 EB 45 44 4F 43 04|  0000  |.CODEë..|
+		                BD 01 00|  0008  |..½     |
+
+
+
+Analyze Object File                           7-OCT-2026 18:44:35.40   Page 15
+DUA1:[000000]R4_ASCEFC.OBJ;1
+ANALYZ V07-04
+
+19.  END OF MODULE (OBJ$C_EOM), 7 bytes
+
+	severity: errors (2)
+	psect: 2
+	value: 0 (%X'00000000')
+
+
+
+Analyze Object File                           7-OCT-2026 18:44:35.40   Page 16
+DUA1:[000000]R4_ASCEFC.OBJ;1
+ANALYZ V07-04
+
+SUMMARY STATISTICS:
+
+Record Type	Count	Total Bytes
+
+OBJ$C_HDR	    4	   123
+OBJ$C_GSD	    5	    85
+OBJ$C_TIR	    6	   871
+OBJ$C_EOM	    1	     7
+OBJ$C_DBG	    0	     0
+OBJ$C_TBT	    3	    80
+OBJ$C_LNK	    0	     0
+OBJ$C_EOMW	    0	     0
+
+Totals		   19	  1166
+
+
+The analysis uncovered NO errors.
+
+
+ANALYZE/OBJECT/OUTPUT=R4_ASCEFC.ANL R4_ASCEFC.OBJ                               

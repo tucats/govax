@@ -1,0 +1,545 @@
+
+Analyze Object File                           7-OCT-2026 18:44:38.80   Page 1
+DUA1:[000000]R4_SNDOPR.OBJ;1
+ANALYZ V07-04
+
+This is an OpenVMS VAX object file
+
+1.  MODULE HEADER (OBJ$C_HDR_MHD), 54 bytes
+
+	structure level: 0
+	maximum record size: 512
+	module name: "R4_SNDOPR"
+	module version: "V1.0"
+	creation   date/time:  7-OCT-2026 18:44
+
+
+2.  LANGUAGE PROCESSOR HEADER (OBJ$C_HDR_LNM), 18 bytes
+
+	Textual information:
+	"VAX MACRO V5.4-3"
+
+
+3.  SOURCE FILE HEADER (OBJ$C_HDR_SRC), 24 bytes
+
+	Textual information:
+	"MACRO/NOLIST R4_SNDOPR"
+
+
+4.  TITLE HEADER (OBJ$C_HDR_TTL), 27 bytes
+
+	Textual information:
+	"every argument of $SNDOPR"
+
+
+5.  TRACEBACK INFORMATION (OBJ$C_TBT), 19 bytes
+
+	1)  Store Immediate, 17 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 09 00 00 00 00 00 BC 10|  0000  |.¼......|
+		 50 4F 44 4E 53 5F 34 52|  0008  |R4_SNDOP|
+		                      52|  0010  |R       |
+
+
+6.  GLOBAL SYMBOL DIRECTORY (OBJ$C_GSD), 16 bytes
+
+	1)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "SYS$SNDOPR"
+
+
+
+Analyze Object File                           7-OCT-2026 18:44:38.80   Page 2
+DUA1:[000000]R4_SNDOPR.OBJ;1
+ANALYZ V07-04
+
+7.  GLOBAL SYMBOL DIRECTORY (OBJ$C_GSD), 19 bytes
+
+	1)  Program Section Definition (GSD$C_PSC)
+		alignment: 1-byte boundary                       <-- psect 0
+		attribute flags:
+			(0)  GPS$V_PIC        0
+			(1)  GPS$V_LIB        0
+			(2)  GPS$V_OVR        0
+			(3)  GPS$V_REL        0
+			(4)  GPS$V_GBL        0
+			(5)  GPS$V_SHR        0
+			(6)  GPS$V_EXE        0
+			(7)  GPS$V_RD         0
+			(8)  GPS$V_WRT        0
+			(9)  GPS$V_VEC        0
+			(10) GPS$V_COM        0
+			(11) GPS$V_NOMOD      0
+		allocation: 0 (%X'00000000')
+		symbol: ".  ABS  ."
+
+
+8.  TEXT INFORMATION/RELOCATION (OBJ$C_TIR), 5 bytes
+
+	1)  TIR$C_STA_PB (4, %X'04')                            stack depth: 1
+		psect: 0
+		value: 0 (%X'00000000')
+
+	2)  TIR$C_CTL_SETRB (80, %X'50')                        stack depth: 0
+
+
+9.  GLOBAL SYMBOL DIRECTORY (OBJ$C_GSD), 14 bytes
+
+	1)  Program Section Definition (GSD$C_PSC)
+		alignment: 4-byte boundary                       <-- psect 1
+		attribute flags:
+			(0)  GPS$V_PIC        0
+			(1)  GPS$V_LIB        0
+			(2)  GPS$V_OVR        0
+			(3)  GPS$V_REL        1
+			(4)  GPS$V_GBL        0
+			(5)  GPS$V_SHR        0
+			(6)  GPS$V_EXE        0
+			(7)  GPS$V_RD         1
+			(8)  GPS$V_WRT        1
+			(9)  GPS$V_VEC        0
+			(10) GPS$V_COM        0
+			(11) GPS$V_NOMOD      0
+		allocation: 128 (%X'00000080')
+		symbol: "DATA"
+
+
+
+Analyze Object File                           7-OCT-2026 18:44:38.80   Page 3
+DUA1:[000000]R4_SNDOPR.OBJ;1
+ANALYZ V07-04
+
+10.  TEXT INFORMATION/RELOCATION (OBJ$C_TIR), 134 bytes
+
+	1)  TIR$C_STA_PB (4, %X'04')                            stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	2)  TIR$C_CTL_SETRB (80, %X'50')                        stack depth: 0
+
+	3)  Store Immediate, 128 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 00 00 00 00 00 00 00 00|  0000  |........|
+		 00 00 00 00 00 00 00 00|  0008  |........|
+		 00 00 00 00 00 00 00 00|  0010  |........|
+		 00 00 00 00 00 00 00 00|  0018  |........|
+		 00 00 00 00 00 00 00 00|  0020  |........|
+		 00 00 00 00 00 00 00 00|  0028  |........|
+		 00 00 00 00 00 00 00 00|  0030  |........|
+		 00 00 00 00 00 00 00 00|  0038  |........|
+		 00 00 00 00 00 00 00 00|  0040  |........|
+		 00 00 00 00 00 00 00 00|  0048  |........|
+		 00 00 00 00 00 00 00 00|  0050  |........|
+		 00 00 00 00 00 00 00 00|  0058  |........|
+		 00 00 00 00 00 00 00 00|  0060  |........|
+		 00 00 00 00 00 00 00 00|  0068  |........|
+		 00 00 00 00 00 00 00 00|  0070  |........|
+		 00 00 00 00 00 00 00 00|  0078  |........|
+
+
+11.  GLOBAL SYMBOL DIRECTORY (OBJ$C_GSD), 14 bytes
+
+	1)  Program Section Definition (GSD$C_PSC)
+		alignment: 4-byte boundary                       <-- psect 2
+		attribute flags:
+			(0)  GPS$V_PIC        0
+			(1)  GPS$V_LIB        0
+			(2)  GPS$V_OVR        0
+			(3)  GPS$V_REL        1
+			(4)  GPS$V_GBL        0
+			(5)  GPS$V_SHR        0
+			(6)  GPS$V_EXE        1
+			(7)  GPS$V_RD         1
+			(8)  GPS$V_WRT        0
+			(9)  GPS$V_VEC        0
+			(10) GPS$V_COM        0
+			(11) GPS$V_NOMOD      0
+		allocation: 214 (%X'000000D6')
+		symbol: "CODE"
+
+
+12.  TEXT INFORMATION/RELOCATION (OBJ$C_TIR), 7 bytes
+
+	1)  TIR$C_STA_PB (4, %X'04')                            stack depth: 1
+		psect: 2
+		value: 0 (%X'00000000')
+
+Analyze Object File                           7-OCT-2026 18:44:38.80   Page 4
+DUA1:[000000]R4_SNDOPR.OBJ;1
+ANALYZ V07-04
+
+
+	2)  TIR$C_CTL_SETRB (80, %X'50')                        stack depth: 0
+
+	3)  TIR$C_STA_UB (7, %X'07')                            stack depth: 1
+		unsigned value: 192 (%X'000000C0')
+
+
+13.  GLOBAL SYMBOL DIRECTORY (OBJ$C_GSD), 22 bytes
+
+	1)  Entry Point Symbol and Mask Definition (GSD$C_EPM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		psect: 2
+		value: 0 (%X'00000000')
+		entry mask: <R6,R7>
+		symbol: "R4_SNDOPR"
+
+
+14.  TEXT INFORMATION/RELOCATION (OBJ$C_TIR), 2 bytes
+
+	1)  TIR$C_STO_W (38, %X'26')                            stack depth: 0
+
+
+15.  TEXT INFORMATION/RELOCATION (OBJ$C_TIR), 334 bytes
+
+	1)  Store Immediate, 6 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		       02 FB 9F 7E 00 3C|  0000  |<.~.û.  |
+
+	2)  TIR$C_STA_GBL (0, %X'00')                           stack depth: 1
+		symbol: "SYS$SNDOPR"
+
+	3)  TIR$C_STO_PICR (28, %X'1C')                         stack depth: 0
+
+	4)  Store Immediate, 8 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 9F 7E 22 3C 7A 7A 00 01|  0000  |..zz<"~.|
+
+	5)  TIR$C_STA_PB (4, %X'04')                            stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	6)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+
+Analyze Object File                           7-OCT-2026 18:44:38.80   Page 5
+DUA1:[000000]R4_SNDOPR.OBJ;1
+ANALYZ V07-04
+
+	7)  TIR$C_STO_LD (25, %X'19')                           stack depth: 0
+
+	8)  Store Immediate, 2 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                   02 FB|  0000  |û.      |
+
+	9)  TIR$C_STA_GBL (0, %X'00')                           stack depth: 1
+		symbol: "SYS$SNDOPR"
+
+	10)  TIR$C_STO_PICR (28, %X'1C')                        stack depth: 0
+
+	11)  Store Immediate, 10 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 9F 7E 22 3C 7A 7A 00 02|  0000  |..zz<"~.|
+		                   02 FB|  0008  |û.      |
+
+	12)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "SYS$SNDOPR"
+
+	13)  TIR$C_STO_PICR (28, %X'1C')                        stack depth: 0
+
+	14)  Store Immediate, 8 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 9F 7E 00 3C 7A 7A 00 03|  0000  |..zz<.~.|
+
+	15)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	16)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	17)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	18)  Store Immediate, 2 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                   02 FB|  0000  |û.      |
+
+	19)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "SYS$SNDOPR"
+
+	20)  TIR$C_STO_PICR (28, %X'1C')                        stack depth: 0
+
+	21)  Store Immediate, 8 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 9F 7E 00 3C 7A 7A 00 04|  0000  |..zz<.~.|
+
+
+Analyze Object File                           7-OCT-2026 18:44:38.80   Page 6
+DUA1:[000000]R4_SNDOPR.OBJ;1
+ANALYZ V07-04
+
+	22)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	23)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	24)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	25)  Store Immediate, 2 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                   02 FB|  0000  |û.      |
+
+	26)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "SYS$SNDOPR"
+
+	27)  TIR$C_STO_PICR (28, %X'1C')                        stack depth: 0
+
+	28)  Store Immediate, 11 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 7F 7E 00 3C 7A 7A 00 05|  0000  |..zz<.~.|
+		                02 FB 76|  0008  |vû.     |
+
+	29)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "SYS$SNDOPR"
+
+	30)  TIR$C_STO_PICR (28, %X'1C')                        stack depth: 0
+
+	31)  Store Immediate, 10 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 9F 7E 22 3C 7A 7A 00 06|  0000  |..zz<"~.|
+		                   02 FB|  0008  |û.      |
+
+	32)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "SYS$SNDOPR"
+
+	33)  TIR$C_STO_PICR (28, %X'1C')                        stack depth: 0
+
+	34)  Store Immediate, 10 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 9F 7E 76 3C 7A 7A 00 07|  0000  |..zz<v~.|
+		                   02 FB|  0008  |û.      |
+
+	35)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "SYS$SNDOPR"
+
+	36)  TIR$C_STO_PICR (28, %X'1C')                        stack depth: 0
+
+
+Analyze Object File                           7-OCT-2026 18:44:38.80   Page 7
+DUA1:[000000]R4_SNDOPR.OBJ;1
+ANALYZ V07-04
+
+	37)  Store Immediate, 8 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 9F 7E 00 3C 7A 7A 00 08|  0000  |..zz<.~.|
+
+	38)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	39)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	40)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	41)  Store Immediate, 2 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                   02 FB|  0000  |û.      |
+
+	42)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "SYS$SNDOPR"
+
+	43)  TIR$C_STO_PICR (28, %X'1C')                        stack depth: 0
+
+	44)  Store Immediate, 5 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		          3C 7A 7A 00 09|  0000  |..zz<   |
+
+	45)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 8 (%X'00000008')
+
+	46)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	47)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	48)  Store Immediate, 2 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                   9F 7E|  0000  |~.      |
+
+	49)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	50)  Store Immediate, 1 byte:
+
+Analyze Object File                           7-OCT-2026 18:44:38.80   Page 8
+DUA1:[000000]R4_SNDOPR.OBJ;1
+ANALYZ V07-04
+
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |ï       |
+
+	51)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	52)  Store Immediate, 2 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                   02 FB|  0000  |û.      |
+
+	53)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "SYS$SNDOPR"
+
+	54)  TIR$C_STO_PICR (28, %X'1C')                        stack depth: 0
+
+	55)  Store Immediate, 10 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 9F 7E 00 3C 7A 7A 00 0A|  0000  |..zz<.~.|
+		                   02 FB|  0008  |û.      |
+
+	56)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "SYS$SNDOPR"
+
+	57)  TIR$C_STO_PICR (28, %X'1C')                        stack depth: 0
+
+	58)  Store Immediate, 11 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 DD 7E 00 3C 7A 7A 00 0B|  0000  |..zz<.~Ý|
+		                02 FB 00|  0008  |.û.     |
+
+	59)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "SYS$SNDOPR"
+
+	60)  TIR$C_STO_PICR (28, %X'1C')                        stack depth: 0
+
+	61)  Store Immediate, 5 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		          04 7A 7A 00 0C|  0000  |..zz.   |
+
+
+16.  TRACEBACK INFORMATION (OBJ$C_TBT), 23 bytes
+
+	1)  Store Immediate, 3 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                00 BE 10|  0000  |.¾.     |
+
+	2)  TIR$C_STA_PL (6, %X'06')                            stack depth: 1
+		psect: 2
+		value: 0 (%X'00000000')
+
+
+Analyze Object File                           7-OCT-2026 18:44:38.81   Page 9
+DUA1:[000000]R4_SNDOPR.OBJ;1
+ANALYZ V07-04
+
+	3)  TIR$C_STO_PIDR (27, %X'1B')                         stack depth: 0
+
+	4)  Store Immediate, 10 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 4F 44 4E 53 5F 34 52 09|  0000  |.R4_SNDO|
+		                   52 50|  0008  |PR      |
+
+
+17.  TRACEBACK INFORMATION (OBJ$C_TBT), 38 bytes
+
+	1)  Store Immediate, 3 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                00 B8 0F|  0000  |.¸.     |
+
+	2)  TIR$C_STA_PB (4, %X'04')                            stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	3)  TIR$C_STO_PIDR (27, %X'1B')                         stack depth: 0
+
+	4)  Store Immediate, 12 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 00 00 80 41 54 41 44 04|  0000  |.DATA...|
+		             00 B8 0F 00|  0008  |..¸.    |
+
+	5)  TIR$C_STA_PB (4, %X'04')                            stack depth: 1
+		psect: 2
+		value: 0 (%X'00000000')
+
+	6)  TIR$C_STO_PIDR (27, %X'1B')                         stack depth: 0
+
+	7)  Store Immediate, 11 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 00 00 D6 45 44 4F 43 04|  0000  |.CODEÖ..|
+		                BD 01 00|  0008  |..½     |
+
+
+18.  END OF MODULE (OBJ$C_EOM), 7 bytes
+
+	severity: errors (2)
+	psect: 2
+	value: 0 (%X'00000000')
+
+
+
+Analyze Object File                           7-OCT-2026 18:44:38.81   Page 10
+DUA1:[000000]R4_SNDOPR.OBJ;1
+ANALYZ V07-04
+
+SUMMARY STATISTICS:
+
+Record Type	Count	Total Bytes
+
+OBJ$C_HDR	    4	   123
+OBJ$C_GSD	    5	    85
+OBJ$C_TIR	    5	   482
+OBJ$C_EOM	    1	     7
+OBJ$C_DBG	    0	     0
+OBJ$C_TBT	    3	    80
+OBJ$C_LNK	    0	     0
+OBJ$C_EOMW	    0	     0
+
+Totals		   18	   777
+
+
+The analysis uncovered NO errors.
+
+
+ANALYZE/OBJECT/OUTPUT=R4_SNDOPR.ANL R4_SNDOPR.OBJ                               

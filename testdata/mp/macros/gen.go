@@ -386,8 +386,15 @@ func main() {
 		text, calls := r4Probe(s)
 		write(name+".mar", text)
 		write(name+".calls", strings.Join(calls, "\n")+"\n")
+	}
 
-		names = append(names, name)
+	// Round 5: what round 4 left open.
+	{
+		text, calls := r5Probe()
+		write("r5_misc.mar", text)
+		write("r5_misc.calls", strings.Join(calls, "\n")+"\n")
+
+		names = append(names, "r5_misc")
 	}
 
 	// The command procedure.
@@ -437,7 +444,7 @@ func main() {
 	}
 
 	x.WriteString("DIRECTORY DUA1:[000000]\nDISMOUNT DUA1\n")
-	fmt.Fprintf(&o, "COPY DUA1:[000000]MACROS.LOG \"%s/vax/macros4.log\"/HOST/QUIET\n", dir)
+	fmt.Fprintf(&o, "COPY DUA1:[000000]MACROS.LOG \"%s/vax/macros5.log\"/HOST/QUIET\n", dir)
 	o.WriteString("DISMOUNT DUA1\n")
 
 	write("exchange.cmd", x.String())
@@ -732,6 +739,62 @@ func r4Probe(s r4Service) (string, []string) {
 	}
 
 	b.WriteString("\tRET\n\t.END\tR4_" + s.name + "\n")
+
+	return b.String(), calls
+}
+
+// r5Probe is round 5: the few things round 4 left open (docs/PHASE-45.md).
+// $TRNLOG's LOGNAM and RSLLEN and $CRELNT's TABNAM never had a call in
+// which -(R6) could show their size, because another required argument was
+// missing; $IDTOASC's third argument has a keyword that is not RESNAM or
+// any of round 4's candidates, and an unknown size.
+func r5Probe() (string, []string) {
+	var (
+		b     strings.Builder
+		calls []string
+	)
+
+	b.WriteString("\t.TITLE\tR5_MISC\twhat round 4 left open\n\t.IDENT\t/V1.0/\n;\n")
+	b.WriteString("; Written by testdata/mp/macros/gen.go (docs/PHASE-45.md).\n;\n")
+	b.WriteString("\t.PSECT\tDATA,WRT,NOEXE,LONG\n")
+
+	for i := range 14 {
+		fmt.Fprintf(&b, "ADR%d:\t.LONG\t0,0\n", i+1)
+	}
+
+	b.WriteString("\t.PSECT\tCODE,EXE,NOWRT,LONG\n\t.ENTRY\tR5_MISC,^M<R6,R7>\n")
+
+	list := []string{
+		"$TRNLOG_S\tLOGNAM=-(R6), RSLBUF=ADR3",
+		"$TRNLOG_S\tLOGNAM=ADR1, RSLBUF=ADR3, RSLLEN=-(R6)",
+		"$TRNLOG_S\tLOGNAM=ADR1, RSLBUF=-(R6)",
+		"$TRNLOG_S\tLOGNAM=ADR1, RSLBUF=ADR3, TABLE=-(R6)",
+		"$TRNLOG_S\tLOGNAM=ADR1, RSLBUF=ADR3, ACMODE=-(R6)",
+		"$CRELNT_S\tPARTAB=ADR7, TABNAM=-(R6)",
+		"$CRELNT_S\tPARTAB=ADR7, TABNAM=(R6)+",
+		"$CRELNT_S\tPARTAB=ADR7, TABNAM=ADR6[R7]",
+		"$CRELNT_S\tPARTAB=-(R6), TABNAM=ADR6",
+		"$IDTOASC_S\t#1, ADR2, -(R6)",
+		"$IDTOASC_S\t#1, ADR2, (R6)+",
+		"$IDTOASC_S\t#1, ADR2, ADR3[R7]",
+		"$IDTOASC_S\t#1, ADR2, ADR3, -(R6)",
+		"$IDTOASC_S\t#1, -(R6)",
+	}
+
+	// Candidates for $IDTOASC's third argument's keyword.
+	for _, k := range []string{"RSLNAM", "RSLBUF", "RSLDSC", "NAMBUF", "NAMDSC", "NAMDESC", "NAMEDSC", "NAME", "NAMADR",
+		"RESNM", "RESDSC", "RESDESC", "RESBUF", "RESLT", "RESNAMDSC", "IDNAM", "IDNAME", "BUF", "BUFFER", "BUFADR", "DESCR", "DSC",
+		"RESNAMBUF", "RESNMBUF", "RESNMDSC", "IDNMBUF", "IDNMDSC", "TEXT", "STRING", "STR", "STRBUF", "STRDSC", "OUTBUF", "OUTADR"} {
+		list = append(list, fmt.Sprintf("$IDTOASC_S\t%s=ADR9", k))
+	}
+
+	for _, c := range list {
+		calls = append(calls, c)
+		b.WriteString("\t" + c + "\n")
+		fmt.Fprintf(&b, "\t.LONG\t^X7A7A%04X\n", len(calls))
+	}
+
+	b.WriteString("\tRET\n\t.END\tR5_MISC\n")
 
 	return b.String(), calls
 }

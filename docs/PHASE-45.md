@@ -933,3 +933,41 @@ for a process created without one.
   TBLFLG, IDTOASC and TRNLOG's names, ALLOC's fifth argument, ADJSTK's,
   GETMSG's, and CRELNT's required arguments), so a round 4 should settle
   them first.
+
+- 2026-10-07: Macro probes, round 4 (`testdata/mp/macros/r4_*`, results in
+  `vax/` with `macros4.log`), and the macros for every other system service
+  govax implements: `$ADJSTK` through `$UNWIND`, `$FAO`, `$FAOL`, `$GETMSG`,
+  the logical-name services, the memory services, `$GETSYI(W)`,
+  `$IDTOASC`/`$ASCTOID`, and `$BRKTHRU(W)` (52 services), each as `NAME_S`,
+  `NAME` (an argument list in line) and `NAME_G`, at the end of
+  `starlet.mar`. The probes gave each service's keywords by position and by
+  name, its required arguments (a call without one is an error MACRO
+  reports at the call), what an omitted argument pushes (`#0`, or `0` for an
+  address; GETMSG's FLAGS `#15`, BRKTHRU's CARCON `#32`), the size of what
+  each address argument points to (`-(R6)` shows it), and which adjacent
+  arguments are pushed as one `CLRQ` when both are omitted or zero:
+  ALLOC (FLAGS, ACMODE), ASCEFC (NAME, EFN), BRKTHRU (ASTPRM, ASTADR),
+  (TIMOUT, REQID), (FLAGS, CARCON), (IOSB, SNDTYP), (MSGBUF, EFN), CNTREG
+  and EXPREG (RETADR, PAGCNT), CRELOG and DELLOG (LOGNAM, TBLFLG), DCLAST
+  (ACMODE, ASTPRM), GETSYI(W) (ASTPRM, ASTADR), SETEXV (ACMODE, ADDRES),
+  SETPRT (PROT, ACMODE), SYNCH (IOSB, EFN), WFLAND and WFLOR (MASK, EFN).
+  What was surprising: a keyword a `_S` macro doesn't have is not an error:
+  the text becomes the first positional argument still free, and the object
+  refers to a global symbol of that name (the manual's names were wrong for
+  `$TRNLOG`, whose are `RSLLEN` and `RSLBUF`, for `$CRELOG` and `$DELLOG`
+  (`TBLFLG`), and for `$IDTOASC`'s third argument, whose real name is not
+  known); `$ADJSTK`'s ADJUST is a signed word (`CVTWL`); several
+  arguments the manual shows in brackets are not checked (`$CRELNM` and
+  `$TRNLNM`'s ITMLST, all of `$IDTOASC`'s and `$BRKTHRU`'s) while others
+  the manual brackets are required (`$CRELNT`'s PARTAB, `$SETPRT`'s PROT);
+  `$FAO` pushes only the P arguments given (up to 17), with a count of 3
+  plus how many; `$CREPRC`'s ITMLST is a longword and NODE a quadword.
+  `TestServiceMacroObjects` now takes the `lst_`, `ext_`, and `r4_` probes
+  too, and excludes a call real MACRO reported an error for (by the code
+  offset in the log, `macros3.log`/`macros4.log`) or whose object refers
+  to a symbol that isn't a system service: 667 further calls of round 4,
+  and the earlier rounds' calls of these services, make the same code in
+  govax's macros. Unconfirmed: the keyword and size of `$IDTOASC`'s third
+  argument, the sizes of `$TRNLOG`'s LOGNAM and RSLLEN and `$CRELNT`'s
+  TABNAM (the usual ones for a name and a length are used). A small
+  round 5 (`r5_misc`) asks for them.
