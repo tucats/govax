@@ -47,8 +47,8 @@ func TestS0PoolAfterVaxInit(t *testing.T) {
 		t.Errorf("pool base %08X, want the page after the microkernel's end, %08X", base, end)
 	}
 
-	const perProcess = 129 + 65 + 38 + 1 // page tables, stacks, PCB
-	if n := pool.FreePages() / perProcess; n < 30 {
-		t.Errorf("room for %d processes, want at least 30", n)
+	const perProcess = 128 + 64 + 38 + 1 // page tables, stacks, PCB
+	if n := pool.FreePages() / perProcess; n < 34 {
+		t.Errorf("room for %d processes, want at least 34", n)
 	}
 }

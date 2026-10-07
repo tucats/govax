@@ -27,15 +27,14 @@ import (
 //
 // How many processes fit, with vax.init's VMINIT /P0=16384 /P1=8192
 // /S0=8192 /KSP=20: S0 is 8192 pages (4 MB). VMINIT's own layout takes
-// pages 0-311 and the microkernel the next 11, so the pool is pages
-// 323-8191, 7869 pages (TestS0PoolAfterVaxInit measures it; the start
+// pages 0-308 and the microkernel the next 11, so the pool is pages
+// 320-8191, 7872 pages (TestS0PoolAfterVaxInit measures it; the start
 // moves with the microkernel's size). A process with VMINIT's sizes needs
-// 129 P0 page-table pages (16384 PTEs, 4 bytes each, 128 to a page, plus
-// the page VMINIT's layout rounds up by), 65 P1 page-table pages, and 38
-// stack pages (20 kernel, 1 guard and 8 executive, 1 guard and 8
-// supervisor), and a page for its PCB: 233 pages, so 33 processes fit
-// beside process 1. Smaller page tables for subprocesses would let more
-// fit (an open question for subtask 8).
+// 128 P0 page-table pages (16384 PTEs, 4 bytes each, 128 to a page), 64
+// P1 page-table pages, 38 stack pages (20 kernel, 1 guard and 8
+// executive, 1 guard and 8 supervisor), and a page for its PCB: 231
+// pages, so 34 processes fit beside process 1. Smaller page tables for
+// subprocesses would let more fit (an open question for subtask 8).
 
 // S0Allocation is one run of pool pages handed out by the S0 pool.
 type S0Allocation struct {

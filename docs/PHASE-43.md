@@ -855,4 +855,19 @@ uses the current Environment's `mem`/`cpu` (so the current P0/P1) or its
   beside process 1. Tests: `corevms/s0pool_test.go` (first fit and
   holes, exhaustion, FreeProcess, Claim, clearing and freeing at
   removal on a mapped S0).
+- 2026-10-07: VMINIT's page rounding fixed (the author's call, found in
+  subtask 6). `roundUpPage` always advanced to the *next* page, even from
+  an address already on a page boundary, so VMINIT left an unused page
+  after each of its three page tables (each of which, with `vax.init`'s
+  sizes, fills its last page exactly), and the region table's PTE page
+  counts (SHOW MEMORY) were one too high for such tables. Now it rounds
+  only when needed, and `pageTablePages` counts a table's pages. This
+  moves every S0 address after the S0 page table down by a page or more
+  (P0's table by one, P1's by two, the stacks, CONSOLE$SCRATCH, the shim
+  page, the SCB, the string pool, and the microkernel by three); no test
+  or oracle depended on them. After `vax.init` VMINIT's layout is now S0
+  pages 0-308, the microkernel 309-319, and the pool 320-8191 (7872
+  pages): at 231 pages per process (128 + 64 page-table pages, 38 stack
+  pages, a PCB page), 34 processes. Tests: `TestVMInit_pageTablesPacked`
+  and `TestPageRounding`.
 

@@ -92,7 +92,7 @@ func (c *Console) VMInit(p0Pages, p1Pages, s0Pages, kspPages, espPages, sspPages
 
 	page := uint32(0)
 	for _, s := range size {
-		page += (s*4)/512 + 1
+		page += pageTablePages(s)
 	}
 
 	if page+32 > size[2] {
@@ -136,7 +136,7 @@ func (c *Console) VMInit(p0Pages, p1Pages, s0Pages, kspPages, espPages, sspPages
 	}
 
 	c.Regions[2] = vmRegion{
-		name: "S0", size: size[2], pteCount: (size[2]*4)/512 + 1,
+		name: "S0", size: size[2], pteCount: pageTablePages(size[2]),
 		vStart: 0x80000000, vEnd: 0x80000000 + size[2]<<9,
 		pStart: 0, pEnd: size[2] << 9,
 	}
@@ -177,7 +177,7 @@ func (c *Console) VMInit(p0Pages, p1Pages, s0Pages, kspPages, espPages, sspPages
 	c.CPU.SetPR(vax.P0BR, p0br+0x80000000)
 
 	c.Regions[0] = vmRegion{
-		name: "P0", size: size[0], pteCount: (size[0]*4)/512 + 1,
+		name: "P0", size: size[0], pteCount: pageTablePages(size[0]),
 		vStart: 0, vEnd: size[0] << 9,
 		pStart: p0PStart << 9, pEnd: (p0PStart + size[0]) << 9,
 	}
@@ -208,7 +208,7 @@ func (c *Console) VMInit(p0Pages, p1Pages, s0Pages, kspPages, espPages, sspPages
 	}
 
 	c.Regions[1] = vmRegion{
-		name: "P1", size: size[1], pteCount: (size[1]*4)/512 + 1,
+		name: "P1", size: size[1], pteCount: pageTablePages(size[1]),
 		vStart: p1Base, vEnd: p1Base + size[1]<<9,
 		pStart: p1PStart << 9, pEnd: (p1PStart + size[1]) << 9,
 	}
@@ -446,6 +446,14 @@ func (c *Console) setS0Protection(paddr, pages uint32, prot vm.Protection) error
 	return nil
 }
 
+// roundUpPage rounds addr up to the next page boundary; an address
+// already on one is unchanged.
 func roundUpPage(addr uint32) uint32 {
-	return (addr>>9 + 1) << 9
+	return (addr + 511) &^ 511
+}
+
+// pageTablePages is how many pages a page table of n entries (4 bytes
+// each, 128 to a page) fills.
+func pageTablePages(n uint32) uint32 {
+	return (n*4 + 511) / 512
 }
