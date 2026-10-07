@@ -1,0 +1,497 @@
+	.title	probe2
+;
+; Phase 45 probe 2 (README.md): the statuses of the process-control
+; services at their edges, and the null device, on VMS. Each experiment
+; prints a line "what: status" (or the value asked about). The command
+; line is the image of CHILD.EXE (testdata/mp/child.mar, which prints,
+; hibernates, and returns the status 7).
+;
+; Every service is called with all its arguments (probe 1 found that VMS
+; refuses fewer).
+;
+	$IODEF
+	$JPIDEF
+	$DVIDEF
+	$ACCDEF
+
+; CHECK: a failure of setup ends the program, saying why.
+	.macro	check	?ok
+	blbs	r0,ok
+	brw	fail
+ok:
+	.endm
+
+; RESULT text: print "text: R0", for the status a service just returned.
+	.macro	result	text,?ctl
+	pushl	r0
+	.save_psect
+	.psect	data,noexe,wrt
+ctl:	.ascid	/text: !XL/
+	.restore_psect
+	pushal	out_desc
+	pushal	out_len
+	pushaq	ctl
+	calls	#4,g^sys$fao
+	bsbw	print
+	.endm
+
+; VALUE text,longword: print "text: longword" and nothing else.
+	.macro	value	text,what,?ctl
+	pushl	what
+	.save_psect
+	.psect	data,noexe,wrt
+ctl:	.ascid	/text: !XL/
+	.restore_psect
+	pushal	out_desc
+	pushal	out_len
+	pushaq	ctl
+	calls	#4,g^sys$fao
+	bsbw	print
+	.endm
+
+; SAY text: print a line.
+	.macro	say	text,?ctl
+	.save_psect
+	.psect	data,noexe,wrt
+ctl:	.ascid	/text/
+	.restore_psect
+	pushaq	ctl
+	calls	#1,g^lib$put_output
+	.endm
+
+	.psect	data,noexe,wrt
+image_desc:	.word	255
+		.byte	14,1
+		.long	image_buf
+image_buf:	.blkb	255
+img_len:	.word	0
+nosuch_desc:	.ascid	/NOSUCH.EXE/
+null_desc:	.ascid	/NL:/
+name_a:		.ascid	/PROBE2_A/
+name_long:	.ascid	/SIXTEEN_CHARS_XX/
+nl_dev:		.ascid	/NL:/
+
+out_buf:	.blkb	300
+out_len:	.word	0,0
+out_desc:	.word	300
+		.byte	14,1
+		.long	out_buf
+
+; Arguments of CREATE: the image, name, and termination mailbox unit,
+; and the flags.
+cr_image:	.long	0
+cr_name:	.long	0
+cr_unit:	.long	0
+cr_flags:	.long	0
+
+term_chan:	.word	0,0
+term_unit:	.long	0
+dvi_items:	.word	4,DVI$_UNIT
+		.long	term_unit,0
+		.long	0
+my_prib:	.long	0
+my_items:	.word	4,JPI$_PRIB
+		.long	my_prib,0
+		.long	0
+child_pid:	.long	0
+other_pid:	.long	0
+bogus_pid:	.long	^X7FFF
+one_item:	.word	4,0
+		.long	item_val,0
+		.long	0
+item_val:	.long	0
+prvpri:		.long	0
+term_msg:	.blkb	ACC$K_TERMLEN
+iosb:		.quad	0
+tenth:		.long	-1000000,-1
+
+; The null device.
+nl_chan:	.word	0,0
+nl_buf:		.ascii	/hello/
+nl_read:	.long	^XAAAAAAAA
+nl_dev_class:	.long	0
+nl_dev_type:	.long	0
+nl_dev_char:	.long	0
+nl_items:	.word	4,DVI$_DEVCLASS
+		.long	nl_dev_class,0
+		.word	4,DVI$_DEVTYPE
+		.long	nl_dev_type,0
+		.word	4,DVI$_DEVCHAR
+		.long	nl_dev_char,0
+		.long	0
+
+; The wildcard scan.
+scan_pid:	.long	-1
+scan_name:	.blkb	15
+scan_len:	.long	0
+scan_items:	.word	15,JPI$_PRCNAM
+		.long	scan_name,scan_len
+		.long	0
+scan_ctl:	.ascid	/  pidadr !XL, status !XL, name "!AD"/
+scan_count:	.long	0
+
+	.psect	code,exe,nowrt
+	.entry	start,^m<r2,r3,r4,r5,r6,r7,r8,r9>
+
+	pushal	img_len
+	pushl	#0
+	pushaq	image_desc
+	calls	#3,g^lib$get_foreign
+	check
+	movw	img_len,image_desc
+
+; The termination mailbox, and our base priority.
+	pushl	#0
+	pushl	#0
+	pushl	#0
+	pushl	#4096
+	pushl	#128
+	pushal	term_chan
+	pushl	#0
+	calls	#7,g^sys$crembx
+	check
+	pushl	#0
+	pushl	#0
+	pushl	#0
+	pushl	#0
+	pushal	dvi_items
+	pushl	#0
+	movzwl	term_chan,-(sp)
+	pushl	#0
+	calls	#8,g^sys$getdviw
+	check
+	movl	#JPI$_PRIB,r6
+	bsbw	jpi_self
+	incl	my_prib
+	incl	my_prib
+
+	movab	image_desc,cr_image
+	movl	term_unit,cr_unit
+
+; ---- 1. $SUSPND and $RESUME ----
+	say	<Experiment 1: $SUSPND and $RESUME of a child>
+	bsbw	create
+	result	<$CREPRC>
+	bsbw	resume_child
+	result	<$RESUME of a process that is not suspended>
+	bsbw	suspend_child
+	result	<$SUSPND>
+	movl	#JPI$_STATE,r6
+	bsbw	jpi_child
+	value	<  JPI$_STATE of the suspended child>,item_val
+	bsbw	suspend_child
+	result	<$SUSPND of a process already suspended>
+	bsbw	resume_child
+	result	<$RESUME>
+	bsbw	resume_child
+	result	<$RESUME again>
+	movl	#JPI$_STATE,r6
+	bsbw	jpi_child
+	value	<  JPI$_STATE after the resume>,item_val
+
+; ---- 2. $SETPRI ----
+	say	<Experiment 2: $SETPRI of the child>
+	pushl	#0			; prvpri address, below
+	movab	prvpri,(sp)
+	pushl	#9			; pri
+	pushl	#0			; prcnam
+	pushal	child_pid
+	calls	#4,g^sys$setpri
+	result	<$SETPRI to 9>
+	value	<  previous priority>,prvpri
+	movl	#JPI$_PRI,r6
+	bsbw	jpi_child
+	value	<  JPI$_PRI afterwards>,item_val
+	movl	#JPI$_PRIB,r6
+	bsbw	jpi_child
+	value	<  JPI$_PRIB afterwards>,item_val
+
+; ---- 3. $FORCEX: the final status of a forced exit ----
+	say	<Experiment 3: $FORCEX with the code 10000>
+	pushl	#^X10000		; code
+	pushl	#0			; prcnam
+	pushal	child_pid
+	calls	#3,g^sys$forcex
+	result	<$FORCEX>
+	bsbw	pause
+	bsbw	read_term
+	bsbw	print_term
+
+; ---- 4. $DELPRC: the final status of a deleted process ----
+	say	<Experiment 4: $DELPRC of a hibernating child>
+	bsbw	create
+	result	<$CREPRC>
+	pushl	#0			; prcnam
+	pushal	child_pid
+	calls	#2,g^sys$delprc
+	result	<$DELPRC>
+	bsbw	pause
+	bsbw	read_term
+	bsbw	print_term
+
+; ---- 5. an image that doesn't exist ----
+	say	<Experiment 5: an image that does not exist>
+	movab	nosuch_desc,cr_image
+	bsbw	create
+	result	<$CREPRC>
+	bsbw	pause
+	bsbw	read_term
+	bsbw	print_term
+	movab	image_desc,cr_image
+
+; ---- 6. the errors $CREPRC reports before it creates anything ----
+	say	<Experiment 6: $CREPRC errors>
+	clrl	cr_unit
+	movab	name_a,cr_name
+	bsbw	create
+	result	<first PROBE2_A>
+	movl	child_pid,other_pid
+	bsbw	create
+	result	<second PROBE2_A (duplicate name)>
+	movab	name_long,cr_name
+	bsbw	create
+	result	<a 16 character name>
+	clrl	cr_name
+	movl	#^X80000000,cr_flags
+	bsbw	create
+	result	<a reserved bit in stsflg>
+	clrl	cr_flags
+	pushl	#0
+	pushal	other_pid
+	calls	#2,g^sys$delprc
+	result	<$DELPRC of PROBE2_A>
+
+; ---- 7. services on a process that doesn't exist ----
+	say	<Experiment 7: a process that does not exist>
+	pushl	#0
+	pushal	bogus_pid
+	calls	#2,g^sys$wake
+	result	<$WAKE>
+	pushl	#0
+	pushal	bogus_pid
+	calls	#2,g^sys$resume
+	result	<$RESUME>
+	pushl	#0
+	pushl	#0
+	pushl	#0
+	pushal	one_item
+	pushl	#0
+	pushal	bogus_pid
+	pushl	#0
+	calls	#7,g^sys$getjpiw
+	result	<$GETJPIW>
+
+; ---- 8. the wildcard scan ----
+	say	<Experiment 8: $GETJPIW wildcard scan, the PID longword each time>
+	movl	#-1,scan_pid
+	clrl	scan_count
+scan:	clrl	scan_len
+	pushl	#0
+	pushl	#0
+	pushl	#0
+	pushal	scan_items
+	pushl	#0
+	pushal	scan_pid
+	pushl	#0
+	calls	#7,g^sys$getjpiw
+	movl	r0,r8
+	pushal	scan_name
+	pushl	scan_len
+	pushl	r8
+	pushl	scan_pid
+	pushal	out_desc
+	pushal	out_len
+	pushaq	scan_ctl
+	calls	#7,g^sys$fao
+	bsbw	print
+	incl	scan_count
+	cmpl	scan_count,#40
+	bgequ	scandone
+	blbs	r8,scan
+scandone:
+
+; ---- 9. the null device ----
+	say	<Experiment 9: the null device>
+	pushl	#0			; nullarg
+	pushl	#0			; astprm
+	pushl	#0			; astadr
+	pushl	#0			; iosb
+	pushal	nl_items
+	pushaq	nl_dev
+	pushl	#0			; chan
+	pushl	#0			; efn
+	calls	#8,g^sys$getdviw
+	result	<$GETDVIW of NL:>
+	value	<  DVI$_DEVCLASS>,nl_dev_class
+	value	<  DVI$_DEVTYPE>,nl_dev_type
+	value	<  DVI$_DEVCHAR>,nl_dev_char
+	pushl	#0			; mbxnam
+	pushl	#0			; acmode
+	pushal	nl_chan
+	pushaq	nl_dev
+	calls	#4,g^sys$assign
+	result	<$ASSIGN of NL:>
+	pushl	#0
+	pushl	#0
+	pushl	#0
+	pushl	#0
+	pushl	#5			; p2: length
+	pushal	nl_buf			; p1
+	pushl	#0
+	pushl	#0
+	pushal	iosb
+	pushl	#IO$_WRITEVBLK
+	movzwl	nl_chan,-(sp)
+	pushl	#0
+	calls	#12,g^sys$qiow
+	result	<$QIOW write to NL:>
+	value	<  IOSB first longword>,iosb
+	pushl	#0
+	pushl	#0
+	pushl	#0
+	pushl	#0
+	pushl	#4			; p2: length
+	pushal	nl_read			; p1
+	pushl	#0
+	pushl	#0
+	pushal	iosb
+	pushl	#IO$_READVBLK
+	movzwl	nl_chan,-(sp)
+	pushl	#0
+	calls	#12,g^sys$qiow
+	result	<$QIOW read from NL:>
+	value	<  IOSB first longword>,iosb
+	value	<  the read buffer (AAAAAAAA if untouched)>,nl_read
+	pushl	#0
+	pushl	#0
+	pushl	#0
+	pushl	#0
+	pushl	#8			; p2: length
+	pushal	nl_read			; p1
+	pushl	#0
+	pushl	#0
+	pushal	iosb
+	pushl	#IO$_SENSEMODE
+	movzwl	nl_chan,-(sp)
+	pushl	#0
+	calls	#12,g^sys$qiow
+	result	<$QIOW sense mode on NL:>
+
+	movl	#1,r0
+	ret
+
+fail:	pushl	r0
+	pushal	out_desc
+	pushal	out_len
+	pushaq	fail_ctl
+	calls	#4,g^sys$fao
+	bsbw	print
+	movl	#1,r0
+	ret
+
+; CREATE: $CREPRC of the image at CR_IMAGE, named CR_NAME, with the
+; termination mailbox CR_UNIT and the flags CR_FLAGS, its PID in
+; CHILD_PID. Returns the status.
+create:	pushl	cr_flags		; stsflg
+	pushl	cr_unit			; mbxunt
+	pushl	#0			; uic
+	pushl	my_prib			; baspri
+	pushl	cr_name			; prcnam
+	pushl	#0			; quota
+	pushl	#0			; prvadr
+	pushl	#0			; error
+	pushaq	null_desc		; output
+	pushl	#0			; input
+	pushl	cr_image
+	pushal	child_pid
+	calls	#12,g^sys$creprc
+	rsb
+
+suspend_child:
+	pushl	#0			; flags
+	pushl	#0			; prcnam
+	pushal	child_pid
+	calls	#3,g^sys$suspnd
+	rsb
+
+resume_child:
+	pushl	#0			; prcnam
+	pushal	child_pid
+	calls	#2,g^sys$resume
+	rsb
+
+; JPI_CHILD / JPI_SELF: the item R6 of the child (or this process) into
+; ITEM_VAL; R0 is the status.
+jpi_self:
+	clrl	r7
+	brb	jpi
+jpi_child:
+	movab	child_pid,r7
+jpi:	movw	r6,one_item+2
+	clrl	item_val
+	pushl	#0
+	pushl	#0
+	pushl	#0
+	pushal	one_item
+	pushl	#0
+	pushl	r7
+	pushl	#0
+	calls	#7,g^sys$getjpiw
+	cmpl	r7,#0
+	bneq	10$
+	movl	item_val,my_prib	; (the only self item asked for)
+10$:	rsb
+
+; PAUSE: wait 100 ms, for a process deleted or forced to exit to finish.
+pause:	pushl	#0			; flags
+	pushl	#0			; reqidt
+	pushl	#0			; astadr
+	pushal	tenth
+	pushl	#1			; efn
+	calls	#5,g^sys$setimr
+	pushl	#1
+	calls	#1,g^sys$waitfr
+	rsb
+
+; READ_TERM: read the termination mailbox without waiting.
+read_term:
+	clrl	term_msg+ACC$L_FINALSTS
+	pushl	#0
+	pushl	#0
+	pushl	#0
+	pushl	#0
+	pushl	#ACC$K_TERMLEN
+	pushal	term_msg
+	pushl	#0
+	pushl	#0
+	pushal	iosb
+	pushl	#<IO$_READVBLK!IO$M_NOW>
+	movzwl	term_chan,-(sp)
+	pushl	#0
+	calls	#12,g^sys$qiow
+	rsb
+
+; PRINT_TERM: the read's status and the message's final status.
+print_term:
+	movzwl	iosb,r0
+	pushl	term_msg+ACC$L_FINALSTS
+	pushl	r0
+	pushal	out_desc
+	pushal	out_len
+	pushaq	term_ctl
+	calls	#5,g^sys$fao
+	bsbw	print
+	rsb
+
+; PRINT: print what $FAO formatted into OUT_BUF.
+print:	movw	out_len,out_desc
+	pushaq	out_desc
+	calls	#1,g^lib$put_output
+	movw	#300,out_desc
+	rsb
+
+	.psect	data,noexe,wrt
+fail_ctl:	.ascid	/FAILED with status !XL/
+term_ctl:	.ascid	/  termination message: read status !XW, final status !XL/
+
+	.end	start
