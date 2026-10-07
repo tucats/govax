@@ -172,7 +172,7 @@ func TestPhase23Acceptance_fullOperatorSession(t *testing.T) {
 		t.Fatalf("Dispatch PURGE BAR.TXT: %v", err)
 	}
 
-	if !strings.Contains(buf.String(), "%PURGE-S-PURGED, BAR.TXT purged") {
+	if !strings.Contains(buf.String(), "%PURGE-S-PURGED, BAR.TXT;1 purged") {
 		t.Errorf("PURGE output = %q, want a %%PURGE-S-PURGED confirmation", buf.String())
 	}
 

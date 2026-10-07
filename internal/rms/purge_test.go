@@ -2,6 +2,7 @@ package rms
 
 import (
 	"errors"
+	"slices"
 	"testing"
 
 	"github.com/tucats/ods2/volume"
@@ -51,8 +52,8 @@ func TestSession_purgeDefaultLimitKeepsOnlyHighestVersion(t *testing.T) {
 		t.Fatalf("Purge: %v", err)
 	}
 
-	if len(purged) != 3 {
-		t.Errorf("Purge(*.TXT) touched %d distinct names, want 3 (FOO/BAR/BAZ)", len(purged))
+	if want := []string{"FOO.TXT;1", "FOO.TXT;2", "BAR.TXT;1"}; !slices.Equal(sortedCopy(purged), sortedCopy(want)) {
+		t.Errorf("Purge(*.TXT) reported %v, want exactly the deleted versions %v", purged, want)
 	}
 
 	names := mfdEntryNames(t, vol)
@@ -221,4 +222,11 @@ func TestSession_purgeNoMatchesIsNotAnError(t *testing.T) {
 	if len(purged) != 0 {
 		t.Errorf("Purge(*.NOSUCHTYPE) touched %v, want no names touched", purged)
 	}
+}
+
+func sortedCopy(in []string) []string {
+	out := slices.Clone(in)
+	slices.Sort(out)
+
+	return out
 }

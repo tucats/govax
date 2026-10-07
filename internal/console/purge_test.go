@@ -81,7 +81,7 @@ func TestConsolePurge_trimsVersionsAndPrintsConfirmation(t *testing.T) {
 		t.Fatalf("Purge: %v", err)
 	}
 
-	if !strings.Contains(buf.String(), "%PURGE-S-PURGED, FOO.TXT purged (keeping 1 version(s))") {
+	if !strings.Contains(buf.String(), "%PURGE-S-PURGED, FOO.TXT;1 purged") {
 		t.Errorf("Purge output = %q, want a PURGE-S-PURGED confirmation", buf.String())
 	}
 
@@ -121,7 +121,7 @@ func TestDispatch_purgeViaDCL(t *testing.T) {
 		t.Fatalf("Dispatch PURGE FOO.TXT: %v", err)
 	}
 
-	if !strings.Contains(buf.String(), "%PURGE-S-PURGED, FOO.TXT purged (keeping 1 version(s))") {
+	if !strings.Contains(buf.String(), "%PURGE-S-PURGED, FOO.TXT;1 purged") {
 		t.Errorf("Dispatch PURGE output = %q, want a PURGE-S-PURGED confirmation", buf.String())
 	}
 }
@@ -152,7 +152,7 @@ func TestDispatch_purgeExplicitLimit(t *testing.T) {
 		t.Fatalf("Dispatch PURGE FOO.TXT/LIMIT=2: %v", err)
 	}
 
-	if !strings.Contains(buf.String(), "%PURGE-S-PURGED, FOO.TXT purged (keeping 2 version(s))") {
+	if !strings.Contains(buf.String(), "%PURGE-S-PURGED, FOO.TXT;1 purged") {
 		t.Errorf("Dispatch PURGE/LIMIT=2 output = %q, want a keeping-2 confirmation", buf.String())
 	}
 

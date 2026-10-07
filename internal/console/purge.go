@@ -24,8 +24,8 @@ import (
 // real operator would see for that exact condition.
 
 // Purge trims every name specText matches down to its keep most recent
-// surviving versions, printing one "%PURGE-S-PURGED, NAME.TYPE purged
-// (keeping N version(s))" confirmation line per name actually touched —
+// surviving versions, printing one "%PURGE-S-PURGED, NAME.TYPE;N purged"
+// confirmation line per version actually deleted (none for a version kept) —
 // see internal/rms.Session.Purge's own doc comment for exactly how specText
 // is resolved, and why any version it carries is overridden rather than
 // honored.
@@ -65,7 +65,7 @@ func (c *Console) Purge(specText string, keep uint16) error {
 	}
 
 	for _, name := range purged {
-		c.Printf("%%PURGE-S-PURGED, %s purged (keeping %d version(s))\n", name, keep)
+		c.Printf("%%PURGE-S-PURGED, %s purged\n", name)
 	}
 
 	return nil

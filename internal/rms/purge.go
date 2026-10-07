@@ -2,6 +2,7 @@ package rms
 
 import (
 	"fmt"
+	"sort"
 
 	"github.com/tucats/ods2/filespec"
 	"github.com/tucats/ods2/volume"
@@ -121,11 +122,18 @@ func purgeOnVolume(vol *volume.Volume, spec filespec.Spec, keep uint16) (purged 
 		}
 
 		for _, name := range distinctNames(group.matches) {
+			doomed := excessVersions(group.matches, name, keep)
+			if len(doomed) == 0 {
+				continue
+			}
+
 			if purgeErr := volume.PurgeVersions(dir, name, keep, bm, ib); purgeErr != nil {
 				return purged, purgeErr
 			}
 
-			purged = append(purged, name)
+			for _, v := range doomed {
+				purged = append(purged, fmt.Sprintf("%s;%d", name, v))
+			}
 		}
 	}
 
@@ -145,6 +153,28 @@ type InvalidLimitError struct {
 
 func (e *InvalidLimitError) Error() string {
 	return fmt.Sprintf("rms: /LIMIT=%d is invalid; must be at least 1 (DELETE NAME;* removes every version)", e.Limit)
+}
+
+// excessVersions returns the versions of name in matches that a purge
+// keeping the newest keep versions deletes, oldest first -- the same set
+// volume.PurgeVersions deletes, worked out here because it doesn't report
+// them. A name with keep or fewer versions yields none.
+func excessVersions(matches []filespec.Match, name string, keep uint16) []uint16 {
+	var versions []uint16
+
+	for _, m := range matches {
+		if m.Name+"."+m.Type == name {
+			versions = append(versions, m.Version)
+		}
+	}
+
+	if len(versions) <= int(keep) {
+		return nil
+	}
+
+	sort.Slice(versions, func(i, j int) bool { return versions[i] < versions[j] })
+
+	return versions[:len(versions)-int(keep)]
 }
 
 // distinctNames returns matches' combined "NAME.TYPE" names with
