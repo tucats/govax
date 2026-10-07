@@ -1,7 +1,7 @@
 # Phase 45 — Multiprocessing, part 3: creating and deleting processes
 
-**Status:** planned (2026-10-06); decisions taken 2026-10-06 (see
-PHASE-43.md, Part A). Not started. Needs Phases 43 and 44.
+**Status:** in progress (2026-10-07); decisions taken 2026-10-06 (see
+PHASE-43.md, Part A). Needs Phases 43 and 44.
 
 The program this phase belongs to is described in
 [PHASE-43.md](PHASE-43.md), Part A. Read that first.
@@ -226,3 +226,24 @@ for a process created without one.
 - 2026-10-06: Planned with Phase 43.
 - 2026-10-06: The author took every recommended decision in
   PHASE-43.md, Part A.
+- 2026-10-07: Subtask 1 (definitions). Of the names this phase needs,
+  `internal/vmsdef` already had the `JPI$_` items (`JPI$_STATE`,
+  `JPI$_OWNER`, `JPI$_PRCCNT`, `JPI$_MASTER_PID`, ...) and every `SS$_`
+  code `$CREPRC` returns (`SS$_DUPLNAM`, `SS$_NOSLOT`, `SS$_IVQUOTAL`,
+  `SS$_EXQUOTA`, `SS$_NOMOREPROC`). Missing were `$PRCDEF`, `$PQLDEF`,
+  `$ACCDEF`, and `MSG$_DELPROC` (only in `LibrarySymbols`). The local
+  definition files are behind the clean-room hook, so the values come from
+  the manual and a probe instead: the VMS 5.0 System Services Reference
+  Manual's `$CREPRC` entry gives the termination message's offsets
+  (`ACC$`, 84 bytes), STARLET.OLB gives `MSG$_DELPROC` (3), and the
+  manual names the `PRC$M_` flags and `PQL$_` codes without values.
+  Those are entered **unconfirmed** (`testdata/mp/defs/phase45-expected.txt`,
+  merged with `gen -values`), and `testdata/mp/defs` holds a probe for the
+  author's VMS 7.3 system: `$PRCDEF`, `$PQLDEF`, `$ACCDEF`, and `$MSGDEF`,
+  each called with `GLOBAL`, so the objects' GSDs list every name and
+  value; `decode.go` turns them into `defined.txt` for `gen -replace`
+  (README.md there). `TestSymbols_CREPRC_values` checks the masks against
+  the bits and the message layout. Still to do after the run: confirm the
+  values (and whether 7.3's message has a job ID where 5.0's manual says
+  "not used", offset 12), and have `mkdefs` add `$PRCDEF`/`$PQLDEF`/
+  `$ACCDEF` to govax's STARLET.MLB for subtask 13's MACRO test.

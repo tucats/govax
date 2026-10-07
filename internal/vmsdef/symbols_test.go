@@ -421,3 +421,41 @@ func TestSymbols_matchLibrarySymbols(t *testing.T) {
 		}
 	}
 }
+
+// TestSymbols_CREPRC_values checks the definitions $CREPRC uses (Phase
+// 45): every PRC$M_ stsflg mask is 1 << its PRC$V_ bit, and the
+// termination message's fields ($ACCDEF) sit at the System Services
+// Reference Manual's offsets, the last ending at ACC$K_TERMLEN.
+func TestSymbols_CREPRC_values(t *testing.T) {
+	for name, mask := range Symbols {
+		field, ok := strings.CutPrefix(name, "PRC$M_")
+		if !ok {
+			continue
+		}
+
+		bit, ok := Symbols["PRC$V_"+field]
+		if !ok {
+			t.Errorf("%s has no PRC$V_%s", name, field)
+		} else if mask != 1<<bit {
+			t.Errorf("%s = %#x, want 1<<%d", name, mask, bit)
+		}
+	}
+
+	want := map[string]uint32{
+		"ACC$W_MSGTYP": 0, "ACC$L_FINALSTS": 4, "ACC$L_PID": 8,
+		"ACC$Q_TERMTIME": 16, "ACC$T_ACCOUNT": 24, "ACC$T_USERNAME": 32,
+		"ACC$L_CPUTIM": 44, "ACC$Q_LOGIN": 72, "ACC$L_OWNER": 80,
+		"ACC$K_TERMLEN": 84, "MSG$_DELPROC": 3,
+		"PQL$_LISTEND": 0, "PQL$_PRCLM": 8,
+	}
+
+	for name, v := range want {
+		if got, ok := Symbols[name]; !ok || got != v {
+			t.Errorf("%s = %#x (defined %v), want %#x", name, got, ok, v)
+		}
+	}
+
+	if Symbols["ACC$L_OWNER"]+4 != Symbols["ACC$K_TERMLEN"] {
+		t.Errorf("ACC$L_OWNER doesn't end the %d-byte message", Symbols["ACC$K_TERMLEN"])
+	}
+}

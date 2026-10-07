@@ -1,0 +1,9 @@
+	.TITLE	DEF_PQL	$PQLDEF's names and values
+	.IDENT	/V1.0/
+;
+; A Phase 45 definition probe (testdata/mp/defs/README.md). With GLOBAL,
+; every name the macro defines is a global symbol, so the object's GSD
+; lists each name and its value.
+;
+	$PQLDEF	GLOBAL
+	.END

@@ -34,6 +34,15 @@ import (
 //     so the same bit can have several names (IO$M_NOECHO and
 //     IO$M_CANCTRLO are both bit 6).
 //   - SCH$C_: $STATEDEF's scheduling states, what JPI$_STATE returns.
+//   - PRC$: $PRCDEF's $CREPRC status-flag (stsflg) bits and masks.
+//   - PQL$_: $PQLDEF's quota-list codes, the bytes of $CREPRC's quota
+//     argument.
+//   - ACC$: $ACCDEF's termination message: the offsets of its fields,
+//     and its length, ACC$K_TERMLEN. MSG$_DELPROC ($MSGDEF) is its type.
+//     These four families are Phase 45's (testdata/mp/defs), the ACC$
+//     offsets from the System Services Reference Manual; the PRC$ and
+//     PQL$ values are unconfirmed until real MACRO's run of the probes
+//     there (docs/PHASE-45.md).
 //   - SYI$: $SYIDEF's $GETSYI item codes and SYI$C_ values.
 //   - DVI$: $DVIDEF's $GETDVI item codes, item-code flags
 //     (DVI$M_SECONDARY), and DVI$C_ values.
