@@ -75,6 +75,12 @@ type System struct {
 	// NodeName is the system's node name ($GETSYI's SYI$_NODENAME).
 	NodeName string
 
+	// ProcessSettings are the multiprocessing settings
+	// (procsettings.go). NewSystem sets the defaults; the console
+	// replaces them with the vax.process.* settings. Nothing acts on
+	// them until Phase 44.
+	ProcessSettings ProcessSettings
+
 	// procs is the process table: every process's Environment by its
 	// PID's index, and which one is current (proctable.go).
 	procs *processTable
@@ -106,6 +112,7 @@ func NewSystem(cpu *vax.CPU, mem *vm.Memory, devices *iodev.DeviceTable, mounts 
 		Operator:          newOperatorState(),
 		Clock:             wallClock,
 		NodeName:          nominalNodeName,
+		ProcessSettings:   DefaultProcessSettings(),
 		procs:             newProcessTable(),
 	}
 

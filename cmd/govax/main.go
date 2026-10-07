@@ -28,6 +28,7 @@ import (
 	"github.com/tucats/govax/internal/bootdata"
 	"github.com/tucats/govax/internal/console"
 	"github.com/tucats/govax/internal/console/dcl"
+	"github.com/tucats/govax/internal/corevms"
 	"github.com/tucats/govax/internal/cpu"
 	"github.com/tucats/govax/internal/debugger"
 	"github.com/tucats/govax/internal/respath"
@@ -536,6 +537,10 @@ var validConfigs = map[string]bool{
 	"vax.default.volume.type":      true,
 	"vax.default.volume.directory": true,
 	"vax.disassemble.symbolic":     true,
+
+	"vax.process.scheduler": true,
+	"vax.process.quantum":   true,
+	"vax.process.preempt":   true,
 }
 
 func auditConfig() {
@@ -552,5 +557,11 @@ func auditConfig() {
 
 			count++
 		}
+	}
+
+	// A key whose value must be one of a few words is checked too: the
+	// console would quietly use the default.
+	if _, err := corevms.ParsePreemptMode(settings.Get("vax.process.preempt")); err != nil {
+		fmt.Printf("\nWarning, %v; the default, all, will be used\n", err)
 	}
 }

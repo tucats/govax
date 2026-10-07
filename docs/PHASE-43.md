@@ -977,3 +977,17 @@ uses the current Environment's `mem`/`cpu` (so the current P0/P1) or its
   symbols, the driver in a pool page with its `$EXIT` call and
   `CONSOLE$SCRATCH` untouched, freed at removal; process 1's state kept
   at INIT, others' dropped) and `TestAddressSpacePTEs`.
+- 2026-10-07: Subtask 11 (settings and help). `corevms/procsettings.go`:
+  `ProcessSettings` (`Scheduler`, `Quantum`, `Preempt`), its defaults
+  (`DefaultProcessSettings`: off, 20,000 instructions, `all`), and
+  `PreemptMode` with `ParsePreemptMode` for `all`, `user`, and `none`.
+  `System.ProcessSettings` holds them; the console reads
+  `vax.process.scheduler`, `vax.process.quantum`, and
+  `vax.process.preempt` into each System it builds
+  (`console/procsettings.go`), keeping a default for a key that's unset
+  or bad. Nothing acts on them until Phase 44. The keys are in
+  `validConfigs`, and `auditConfig` also warns at startup when
+  `vax.process.preempt` isn't one of its three values (the console would
+  otherwise use `all` silently). `HELP CONFIG KEYS` has a Processes
+  section. Tests: `TestParsePreemptMode`, `TestNewSystemProcessSettings`,
+  `TestProcessSettings`.

@@ -340,6 +340,8 @@ func (c *Console) newRTL() *corevms.Environment {
 	// image state; process 1's is the console's and stays (images.go).
 	c.otherImages = nil
 
+	sys.ProcessSettings = processSettings()
+
 	// $SETIMR's timers run on the engine's system time, the same time
 	// base as the interval clock (docs/PHASE-26.md subtask 11).
 	if c.Engine != nil {

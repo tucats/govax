@@ -57,6 +57,8 @@
 //                          settings, and the default volume)
 //              10/06/26    Added KEYS (Ctrl/C, Ctrl/Y, Ctrl/Z); revised GO
 //                          and CALL for Ctrl/C
+//              10/07/26    Added the vax.process.* keys to CONFIG KEYS
+//                          (docs/PHASE-43.md)
 
 This is the help documentation for the govax VAX emulator.  Topic sections are
 marked by a "$" delimiter.  This is followed by as many tokens of the help
@@ -1696,6 +1698,30 @@ $CONF,KEY
         vax.quantum                   The number of instructions between
                                       clock ticks when vax.hardware.clock
                                       is false.  Default 20.
+
+    Processes
+
+        These are for running several processes at once, which govax is
+        being extended to do.  govax reads them, but until that work is
+        complete they change nothing.
+
+        vax.process.scheduler         true or false: whether processes
+                                      other than the console's own can be
+                                      created and run.  Default false.
+
+        vax.process.quantum           The number of instructions a
+                                      process runs before another process
+                                      of the same priority may have the
+                                      CPU.  Default 20000.
+
+        vax.process.preempt           Which access modes a process can
+                                      lose the CPU in, when its quantum
+                                      ends or a higher-priority process
+                                      can run: all (as on VMS), user
+                                      (user mode only), or none (only
+                                      when the process waits).  Default
+                                      all; govax warns at startup about
+                                      any other value.
 
     Debugging switches
 
