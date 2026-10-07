@@ -1,6 +1,7 @@
 package console
 
 import (
+	"github.com/tucats/govax/internal/corevms"
 	"github.com/tucats/govax/internal/cpu"
 	"github.com/tucats/govax/internal/vax"
 	"github.com/tucats/govax/internal/vm"
@@ -373,6 +374,12 @@ func (c *Console) VMInit(p0Pages, p1Pages, s0Pages, kspPages, espPages, sspPages
 	// standalone assembly with no live page table backing it, since that
 	// literal address is where this VM's S0 page table itself lives.
 	c.s0Free = 0x80000000 + paddr
+
+	// The rest of S0 is the pool new processes' page tables, stacks, and
+	// PCBs come from (corevms/s0pool.go). The microkernel, which ASM puts
+	// at s0Free, claims its pages from the pool's bottom as it's
+	// deposited (depositAsmImage).
+	c.RTL.SetS0Pool(corevms.NewS0Pool(c.s0Free, 0x80000000+size[2]<<9))
 
 	c.DepositAddr = 0x200
 	c.CPU.SetPR(vax.MAPEN, 1)

@@ -138,6 +138,13 @@ func (c *Console) depositAsmImage(a *asm.Assembler) error {
 		if err := c.storeBytes(a.S0Origin(), s0); err != nil {
 			return err
 		}
+
+		// Those S0 pages are no longer free for new processes' structures.
+		if pool := c.RTL.S0Pool(); pool != nil {
+			if err := pool.Claim(a.S0End()); err != nil {
+				return err
+			}
+		}
 	}
 
 	// .SCB/.VECTOR poke a longword directly at 0x80000000+SCBB+code (see

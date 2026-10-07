@@ -835,4 +835,24 @@ uses the current Environment's `mem`/`cpu` (so the current P0/P1) or its
   `TestLdpctxLoadsContext` checks LDPCTX counts one process flush. From
   this subtask on, new comments describe behavior on its own terms
   rather than citing the C reference (the author's direction).
+- 2026-10-07: Subtask 6 (the S0 page allocator). `corevms/s0pool.go`:
+  an `S0Pool` hands out contiguous runs of S0 pages, first fit from the
+  bottom, each recorded with its process's PID and a purpose
+  (`Allocations`, for SHOW MEMORY later); `Free`, `FreeProcess`,
+  `FreePages`, and an `S0ExhaustedError` that says how long the longest
+  free run was. The System holds one (`SetS0Pool`/`S0Pool`), made by
+  VMINIT for S0 from `s0Free` to S0's end; INIT and ZERO alone leave none.
+  The microkernel, which ASM deposits at `s0Free`, takes its pages with
+  `Claim` as `depositAsmImage` stores them, so the pool starts past it
+  (and ASM can't later overwrite a process's pages: `Claim` over an
+  allocation is an error). `System.AllocateS0` also clears the pages,
+  through each page's physical address from the S0 page table, so a new
+  page table starts all invalid. `RemoveProcess` frees whatever a process
+  still holds. Measured after `vax.init` (`TestS0PoolAfterVaxInit`):
+  VMINIT's layout is S0 pages 0-311, the microkernel 312-322, and the
+  pool 323-8191, 7869 pages; at 233 pages per process (129 + 65
+  page-table pages, 38 stack pages, a PCB page) that's 33 processes
+  beside process 1. Tests: `corevms/s0pool_test.go` (first fit and
+  holes, exhaustion, FreeProcess, Claim, clearing and freeing at
+  removal on a mapped S0).
 

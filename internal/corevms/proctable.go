@@ -132,7 +132,8 @@ func (sys *System) addProcess(env *Environment) error {
 // for a later process (which will get a different PID: the slot's
 // sequence number moves on). If it was the current process, there is
 // none until SetCurrent names one. Removing a process that isn't in the
-// table does nothing.
+// table does nothing. Any S0 pool pages still allocated to the process
+// are freed.
 func (sys *System) RemoveProcess(env *Environment) {
 	t := sys.procs
 	index := env.Process.PID & pidIndexMask
@@ -142,6 +143,10 @@ func (sys *System) RemoveProcess(env *Environment) {
 	}
 
 	t.slots[index] = nil
+
+	if sys.s0 != nil {
+		sys.s0.FreeProcess(env.Process.PID)
+	}
 
 	if t.current == env {
 		t.current = nil

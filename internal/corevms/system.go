@@ -78,6 +78,10 @@ type System struct {
 	// procs is the process table: every process's Environment by its
 	// PID's index, and which one is current (proctable.go).
 	procs *processTable
+
+	// s0 is the pool of S0 pages new processes' page tables, stacks, and
+	// PCBs come from (s0pool.go); nil until the console's VMINIT.
+	s0 *S0Pool
 }
 
 // NewSystem returns a new System driving cpu and mem, sharing devices and
