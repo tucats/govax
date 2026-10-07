@@ -871,3 +871,28 @@ uses the current Environment's `mem`/`cpu` (so the current P0/P1) or its
   pages, a PCB page), 34 processes. Tests: `TestVMInit_pageTablesPacked`
   and `TestPageRounding`.
 
+- 2026-10-07: The length registers fixed (found writing subtask 7).
+  `translate`, `LookupPTE`, and `StorePTE` checked `page > P0LR`,
+  `page > SLR`, and `page <= P1LR`, where the Architecture Reference
+  Manual (chapter 4) makes P0LR and SLR page counts and P1LR the lowest
+  P1 page that exists: P0 and S0 admitted a page past their tables, and
+  P1 refused its lowest page. A process's pool-allocated tables mustn't
+  be read past their end, so this came first. VMINIT's register values
+  were already the architectural ones, so P1's bottom page becomes
+  reachable and nothing else visible moves; `$CNTREG`'s P1 end is now
+  the page P1LR names. `TestTranslateLengthBoundaries`; logged in
+  `DEVIATIONS.md`.
+- 2026-10-07: Subtask 7 (address spaces). `internal/vm/space.go`:
+  `vm.AddressSpace` (P0BR, P0LR, P1BR, P1LR; plain lengths, ASTLVL and
+  PME unpacked away), `CurrentAddressSpace(cpu)`, and `Memory`'s
+  `TranslateIn`, `LoadIn`, `StoreIn`, `LoadLongwordIn`, and
+  `StoreLongwordIn`, which look a P0 or P1 address up in the given
+  space's tables (an S0 address in the system table, as for every
+  process). Protection is checked as kernel mode; demand-zero pages are
+  allocated and the modify bit set as `Translate` does. They never read
+  or fill the TB or the STC, which hold the current process's
+  translations, so each call walks the tables. `cpu.PCB.AddressSpace`
+  gives a PCB's. Tests: `space_test.go` (one P0 address in two spaces,
+  shared S0, the TB untouched, page-crossing loads and stores,
+  demand-zero and the modify bit, kernel-mode protection, the space's
+  own lengths) and `TestPCBAddressSpace`.

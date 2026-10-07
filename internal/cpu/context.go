@@ -95,6 +95,13 @@ type PCB struct {
 	PME        bool
 }
 
+// AddressSpace is the process's P0 and P1 page tables, as its PCB
+// describes them: what Go code passes to vm.Memory's ...In methods to
+// read or write the process's memory while another process is current.
+func (p *PCB) AddressSpace() vm.AddressSpace {
+	return vm.AddressSpace{P0BR: p.P0BR, P0LR: p.P0LR, P1BR: p.P1BR, P1LR: p.P1LR}
+}
+
 // pcbWords is a PCB as it is laid out in memory: 24 little-endian
 // longwords.
 type pcbWords [PCBSize / 4]uint32

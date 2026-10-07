@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/tucats/govax/internal/vax"
+	"github.com/tucats/govax/internal/vm"
 )
 
 // Addresses for the process-context tests. Memory mapping is off in these
@@ -491,5 +492,16 @@ func TestSaveLoadContext(t *testing.T) {
 	// Not on the interrupt stack now, so LoadContext refuses.
 	if got := faultCode(t, e.LoadContext()); got != ExcPrivileged {
 		t.Errorf("LoadContext in user mode: fault %#x, want ExcPrivileged", got)
+	}
+}
+
+// TestPCBAddressSpace: a PCB's address space is its four memory-management
+// registers, with ASTLVL and PME left out of the lengths.
+func TestPCBAddressSpace(t *testing.T) {
+	p := validPCB()
+
+	want := vm.AddressSpace{P0BR: 0x80000000, P0LR: 0x4000, P1BR: 0x7F800000, P1LR: 0x1FE000}
+	if got := p.AddressSpace(); got != want {
+		t.Errorf("AddressSpace() = %+v, want %+v", got, want)
 	}
 }
