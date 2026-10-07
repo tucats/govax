@@ -15,9 +15,9 @@ import (
 // named by its PID) and is the engine's cpu.Scheduler hook, installed
 // by the console when vax.process.scheduler is on.
 
-// ErrNoComputableProcess is what Schedule returns when every process is
-// waiting. Until the idle loop (VMS's "null process") exists, nothing
-// lets a process wait in the scheduler, so it can't happen in practice.
+// ErrNoComputableProcess is what Schedule returns when there is no
+// process at all to run (every waiter is retried before that; see
+// retryWaiters).
 var ErrNoComputableProcess = errors.New("corevms: no process is computable")
 
 // handle is the scheduler's name for env's process: its PID.
@@ -71,6 +71,10 @@ func (sys *System) Schedule(e *cpu.Engine, ran int, preemptible bool) (int, erro
 	s := sys.sched
 	s.Charge(ran)
 
+	// A waiting process whose wait is over becomes computable now, which
+	// may preempt the current one (waits.go).
+	sys.wakeWaiters()
+
 	if !s.RescheduleRequested() {
 		return s.QuantumLeft(), nil
 	}
@@ -84,7 +88,13 @@ func (sys *System) Schedule(e *cpu.Engine, ran int, preemptible bool) (int, erro
 
 	h, ok := s.Reschedule()
 	if !ok {
-		return 0, ErrNoComputableProcess
+		// Nobody can run: every waiter tries its wait again, as each
+		// did before the scheduler (until subtask 5's idle loop).
+		sys.retryWaiters()
+
+		if h, ok = s.Reschedule(); !ok {
+			return 0, ErrNoComputableProcess
+		}
 	}
 
 	if cur := sys.Current(); cur == nil || handle(cur) != h {

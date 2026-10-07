@@ -2,6 +2,7 @@ package corevms
 
 import (
 	iodev "github.com/tucats/govax/internal/io"
+	"github.com/tucats/govax/internal/cpu"
 	"github.com/tucats/govax/internal/rms"
 	"github.com/tucats/govax/internal/sched"
 	"github.com/tucats/govax/internal/vax"
@@ -86,6 +87,16 @@ type System struct {
 	// in it, by PID. It only decides anything while the engine has the
 	// System installed as its scheduling hook.
 	sched *sched.Scheduler
+
+	// engine is the engine the System is the scheduling hook of
+	// (InstallScheduler), or nil when the scheduler isn't in use; then
+	// waiting services spin as they always have (waits.go).
+	engine *cpu.Engine
+
+	// waiters counts the processes waiting in the scheduler (those with
+	// Environment.waiting set), so the scheduler skips testing them
+	// when there are none.
+	waiters int
 
 	// procs is the process table: every process's Environment by its
 	// PID's index, and which one is current (proctable.go).

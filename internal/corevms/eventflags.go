@@ -188,6 +188,12 @@ func serviceSysSetef(env *Environment, argv []uint32) (uint32, error) {
 	st = flagStatus(*word, bit)
 	*word |= 1 << bit
 
+	// A common event flag is shared: a process waiting for it (CEF) may
+	// now go on, so the scheduler gets to look (waits.go).
+	if argv[0]&0xFF >= 64 {
+		env.requestReschedule()
+	}
+
 	return st, nil
 }
 
@@ -349,7 +355,9 @@ func (env *Environment) disassociateClusters() {
 
 // waitFor is the shared body of the wait services: it finds efn's cluster
 // (SS$_ILLEFC/SS$_UNASEFC as for $SETEF) and completes with SS$_NORMAL
-// once done(cluster flags) holds, or reports ErrWait to be called again.
+// once done(cluster flags) holds, or reports ErrWait to be called again:
+// with the scheduler, the process is in the LEF state (CEF for a common
+// cluster) until done holds (waits.go).
 func (env *Environment) waitFor(efn uint32, done func(flags uint32) bool) (uint32, error) {
 	word, _, st := env.eventFlagWord(efn)
 	if st != 0 {
@@ -357,10 +365,22 @@ func (env *Environment) waitFor(efn uint32, done func(flags uint32) bool) (uint3
 	}
 
 	if !done(*word) {
-		return 0, ErrWait
+		return 0, env.waitOnFlag(efn, env.flagTest(efn, done))
 	}
 
 	return ssNormal, nil
+}
+
+// flagTest returns a wait's test for the scheduler: whether done holds
+// for efn's cluster's flags. The cluster is looked up each time, so the
+// test stays right if the process gives up a common cluster meanwhile
+// (and then reports the wait over, for the service to report the error).
+func (env *Environment) flagTest(efn uint32, done func(flags uint32) bool) func() bool {
+	return func() bool {
+		word, _, st := env.flagWord(efn)
+
+		return st != 0 || done(*word)
+	}
 }
 
 // serviceSysWaitfr is SYS$WAITFR: waits until event flag efn is set.
@@ -420,8 +440,10 @@ func serviceSysSynch(env *Environment, argv []uint32) (uint32, error) {
 		return st, nil
 	}
 
-	if *word&(1<<bit) == 0 {
-		return 0, ErrWait // step 1: not set yet
+	set := func(flags uint32) bool { return flags&(1<<bit) != 0 }
+
+	if !set(*word) {
+		return 0, env.waitOnFlag(efn, env.flagTest(efn, set)) // step 1: not set yet
 	}
 
 	if iosb == 0 {
@@ -439,7 +461,7 @@ func serviceSysSynch(env *Environment, argv []uint32) (uint32, error) {
 
 	*word &^= 1 << bit // step 3: a false alarm
 
-	return 0, ErrWait
+	return 0, env.waitOnFlag(efn, env.flagTest(efn, set))
 }
 
 func registerEventFlagServices(t *ServiceTable) {

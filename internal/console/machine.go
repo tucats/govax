@@ -352,7 +352,7 @@ func (c *Console) newRTL() *corevms.Environment {
 		// scheduling hook (docs/PHASE-44.md); off, the engine has none
 		// and never pays for one.
 		if sys.ProcessSettings.Scheduler {
-			c.Engine.SetScheduler(sys, sys.ProcessSettings.Preempt.Modes())
+			sys.InstallScheduler(c.Engine)
 		}
 	}
 

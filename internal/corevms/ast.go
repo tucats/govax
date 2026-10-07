@@ -190,35 +190,7 @@ func (env *Environment) NextAST() (routine, argList, returnPC uint32, ok bool, e
 		return 0, 0, 0, false, nil
 	}
 
-	psl := env.cpu.PSL()
-	if psl.IPL() >= astDeliveryIPL || psl.IS() {
-		return 0, 0, 0, false, nil
-	}
-
-	// Look for the most privileged mode, from kernel out to the CPU's
-	// current mode, with an AST that can run.
-	mode, i := uint32(0), -1
-
-	for m := uint32(0); m <= uint32(psl.CurMod()) && i < 0; m++ {
-		// Disabling ASTs in a mode also holds back every less privileged
-		// mode's ASTs.
-		if !p.ast.enabled[m] {
-			break
-		}
-
-		if p.ast.active[m] {
-			continue
-		}
-
-		for n, a := range p.ast.queue {
-			if a.mode == m {
-				mode, i = m, n
-
-				break
-			}
-		}
-	}
-
+	mode, i := p.deliverableAST(env.cpu.PSL())
 	if i < 0 {
 		return 0, 0, 0, false, nil
 	}
@@ -239,6 +211,38 @@ func (env *Environment) NextAST() (routine, argList, returnPC uint32, ok bool, e
 	p.ast.frame[mode] = sp
 
 	return a.routine, sp, astExitAddr, true, nil
+}
+
+// deliverableAST finds the AST the process would take next if the CPU
+// were at psl (see this file's opening comment for the conditions): its
+// mode, and its index in the queue, or -1 if none can run. It changes
+// nothing, so it can be asked about a process that isn't running.
+func (p *Process) deliverableAST(psl vax.PSL) (mode uint32, index int) {
+	if psl.IPL() >= astDeliveryIPL || psl.IS() {
+		return 0, -1
+	}
+
+	// Look for the most privileged mode, from kernel out to psl's
+	// current mode, with an AST that can run.
+	for m := uint32(0); m <= uint32(psl.CurMod()); m++ {
+		// Disabling ASTs in a mode also holds back every less privileged
+		// mode's ASTs.
+		if !p.ast.enabled[m] {
+			break
+		}
+
+		if p.ast.active[m] {
+			continue
+		}
+
+		for n, a := range p.ast.queue {
+			if a.mode == m {
+				return m, n
+			}
+		}
+	}
+
+	return 0, -1
 }
 
 // enterASTMode prepares the CPU to run an AST of mode (which is the

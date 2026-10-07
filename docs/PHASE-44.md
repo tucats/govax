@@ -1,7 +1,7 @@
 # Phase 44 — Multiprocessing, part 2: the scheduler
 
 **Status:** in progress (started 2026-10-07); decisions taken 2026-10-06
-(see PHASE-43.md, Part A). Subtasks 1–3 done.
+(see PHASE-43.md, Part A). Subtasks 1–4 done.
 
 The program this phase belongs to — its goal, architecture, rules for
 every commit, decisions, and known bugs — is in
@@ -382,3 +382,55 @@ The layouts come from the User's Manual and, if Decision 7 allows, a VMS
     `$SETPRN` called by process 2 names process 2, not process 1. The
     corevms test now checks a switch to a process with no PCB is
     refused. Benchmarks unchanged.
+- 2026-10-07: **Subtask 4 done: wait states** (`corevms/waits.go`).
+  - A waiting service now says what it waits for before returning
+    `ErrWait`: `env.waitOn(state, resource, class, over)`, where `over`
+    is a Go test of whether the wait has ended (`waitOnFlag` picks LEF
+    or CEF by the flag's cluster). `SystemService` and `Shim` pass that
+    to `enterWait`, which, when the scheduler is installed, puts the
+    process in that wait (`sched.Wait`) and asks the engine to
+    reschedule; without the scheduler nothing changes and the process
+    spins on its XFC as before. A service that waits without saying why
+    is in LEF with no test, computable again at the next choice (a
+    yield): the debugger's wait in condition dispatch
+    (`OnUnhandled`) is one, rightly, since it isn't a VMS wait.
+  - The waits: `$HIBER` (HIB, until a wakeup is pending), `$WAITFR`/
+    `$WFLOR`/`$WFLAND` and `$SYNCH`'s flag step (LEF, or CEF for flags
+    64-127, until the flags hold; the cluster is looked up at each test),
+    `$QIOW` with a pending request (LEF, until the driver completes
+    it), and a write to a full mailbox, by `$QIO` or `$QIOW` (MWAIT/
+    RWMBX, until a read is waiting or there's room for the message).
+  - `System.Schedule` first tests every waiting process
+    (`wakeWaiters`, skipped when `System.waiters` is 0): each one's due
+    timers are expired, and one whose test is true, or that has an AST
+    it could take where it waits (`astDeliverable`: NextAST's rules at
+    the PSL saved in its PCB, from the new side-effect-free
+    `Process.deliverableAST`), becomes computable with its wait's boost
+    class. It then runs the AST, and its XFC, run again after the AST's
+    REI, finishes or waits again, as on VMS. When nothing is computable,
+    every waiter is made computable without a boost to retry
+    (`retryWaiters`): today's spin, until subtask 5's idle loop.
+  - Boost classes (**unconfirmed**, govax's choice, since VMS's come
+    from whoever reports the event): HIB and RWMBX end with
+    `PRI$_RESAVL` (3, the book's "Wake a Process"/"Resource
+    Available"), event-flag and `$QIOW` waits with `PRI$_IOCOM` (2).
+  - `$WAKE` reaches any process in the table (`processTarget`), setting
+    its wakeup and, for another process, asking for a reschedule so a
+    woken process of higher or equal priority preempts at once.
+    `$SETEF` of a common flag asks for one too. `$SCHDWK`/`$CANWAK`
+    still act only on the caller (Phase 45, with timers across
+    processes).
+  - The console installs the scheduler with `System.InstallScheduler`
+    (which keeps the engine, for `RequestReschedule`), answering subtask
+    2's note.
+  - Tests: `internal/console/schedwait_test.go`, booted with the
+    scheduler on and a quantum longer than the run, so only waits
+    switch: two processes ping-pong with `$WAKE`/`$HIBER` and through a
+    common event flag cluster (`$ASCEFC`, `$SETEF`, `$WAITFR`), taking
+    turns evenly with the other seen in HIB or CEF; and a hibernating
+    process wakes by its own `$SETIMR` AST while process 1 never waits.
+    Each fails with the wait states disabled (checked by hand).
+    `internal/corevms/waits_test.go`: each service's state and resource,
+    its end (and the boost), no change without the scheduler, the
+    unspecified wait, `retryWaiters`, and `$WAKE` of another process.
+    Benchmarks unchanged.

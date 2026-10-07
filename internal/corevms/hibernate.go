@@ -1,6 +1,9 @@
 package corevms
 
-import "github.com/tucats/govax/internal/vmsdef"
+import (
+	"github.com/tucats/govax/internal/sched"
+	"github.com/tucats/govax/internal/vmsdef"
+)
 
 // Hibernation and wakeups (docs/PHASE-26.md subtask 14): $HIBER, $WAKE,
 // $SCHDWK, and $CANWAK.
@@ -20,22 +23,28 @@ import "github.com/tucats/govax/internal/vmsdef"
 //
 // On VMS, $WAKE and $SCHDWK usually come from *another* process (a
 // server waking a client), or from an AST routine in the same process,
-// interrupting its own $HIBER. govax has one process, so the targets
-// they accept are only this process. ASTs arrive with subtask 15.
+// interrupting its own $HIBER. $WAKE reaches any process in the process
+// table (docs/PHASE-44.md, subtask 4); $SCHDWK and $CANWAK still act
+// only on the caller, until Phase 45 makes timers reach other processes.
+// With the scheduler, a hibernating process is in the HIB state, giving
+// the CPU to others until its wakeup is pending (waits.go).
 
 // serviceSysHiber is SYS$HIBER: waits until a wakeup is pending, then
 // consumes it. It takes no arguments and always returns SS$_NORMAL.
 //
 // Waiting uses the event-flag waits' mechanism: while no wakeup is
-// pending the service returns ErrWait, the engine re-executes its XFC on
-// the next instruction step, and interrupts are delivered in between.
-// Each retry first expires due timers, so a $SCHDWK wakeup ends the wait
-// on the first step after its time.
+// pending the service returns ErrWait, and its XFC runs again later (at
+// the next instruction, or, with the scheduler, once a wakeup is
+// pending), interrupts and ASTs being delivered in between. Each retry
+// first expires due timers, so a $SCHDWK wakeup ends the wait on the
+// first step after its time.
 func serviceSysHiber(env *Environment, _ []uint32) (uint32, error) {
 	env.expireTimers()
 
 	if !env.Process.WakePending {
-		return 0, ErrWait
+		p := env.Process
+
+		return 0, env.waitOn(sched.StateHIB, sched.ResourceNone, hibernateBoost, func() bool { return p.WakePending })
 	}
 
 	env.Process.WakePending = false
@@ -51,12 +60,20 @@ func serviceSysHiber(env *Environment, _ []uint32) (uint32, error) {
 // with neither), ending its $HIBER now or its next one. See
 // processTarget for how the process is picked and its error statuses.
 // The privileges VMS requires to wake another process always pass.
+// Another process hibernating is made computable at the scheduler's next
+// choice, which is asked for now, so a woken process of higher priority
+// preempts the caller at once.
 func serviceSysWake(env *Environment, argv []uint32) (uint32, error) {
-	if st := env.callerTarget(optArg(argv, 0), optArg(argv, 1), false); st != 0 {
+	target, st := env.processTarget(optArg(argv, 0), optArg(argv, 1), false)
+	if st != 0 {
 		return st, nil
 	}
 
-	env.Process.WakePending = true
+	target.Process.WakePending = true
+
+	if target != env {
+		env.requestReschedule()
+	}
 
 	return ssNormal, nil
 }

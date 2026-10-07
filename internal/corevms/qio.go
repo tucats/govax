@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	iodev "github.com/tucats/govax/internal/io"
+	"github.com/tucats/govax/internal/sched"
 	"github.com/tucats/govax/internal/vax"
 	"github.com/tucats/govax/internal/vm"
 	"github.com/tucats/govax/internal/vmsdef"
@@ -183,8 +184,8 @@ func serviceSysQiow(env *Environment, argv []uint32) (uint32, error) {
 	fp := env.cpu.GPR(vax.FP)
 
 	if n := len(env.qiowWaits); n > 0 && env.qiowWaits[n-1].fp == fp {
-		if !env.qiowWaits[n-1].req.done {
-			return 0, ErrWait
+		if req := env.qiowWaits[n-1].req; !req.done {
+			return 0, env.waitOnIO(req)
 		}
 
 		env.qiowWaits = env.qiowWaits[:n-1]
@@ -203,7 +204,14 @@ func serviceSysQiow(env *Environment, argv []uint32) (uint32, error) {
 
 	env.qiowWaits = append(env.qiowWaits, qiowWait{fp: fp, req: pending})
 
-	return 0, ErrWait
+	return 0, env.waitOnIO(pending)
+}
+
+// waitOnIO is a $QIOW's wait for its request: in the LEF state (VMS's
+// $QIOW waits on the request's event flag), until the driver completes
+// it (waits.go).
+func (env *Environment) waitOnIO(req *ioRequest) error {
+	return env.waitOn(sched.StateLEF, sched.ResourceNone, eventFlagBoost, func() bool { return req.done })
 }
 
 // queueIO is the body of $QIO and $QIOW. It returns $QIO's status, and

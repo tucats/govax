@@ -141,6 +141,12 @@ type Environment struct {
 	// (ErrWait), so SystemService traces only its first attempt; 0 when
 	// no service is waiting.
 	waitingPC uint32
+
+	// pendingWait is what the service now running said it waits for,
+	// before returning ErrWait (waitOn), and waiting the wait the
+	// process is in, in the scheduler (waits.go); nil when it isn't.
+	pendingWait *waitCondition
+	waiting     *waitCondition
 }
 
 // NewEnvironment returns an Environment for a new VAX process running on
@@ -254,6 +260,7 @@ func (env *Environment) Shim(code uint32) (uint32, bool, error) {
 	}
 
 	r0, err := callHandler(fn, env, argv)
+	env.enterWait(errors.Is(err, ErrWait))
 
 	return r0, true, err
 }
@@ -303,9 +310,11 @@ func (env *Environment) SystemService(pc uint32) (uint32, bool, error) {
 
 	r0, err := callHandler(fn, env, argv)
 
-	// A waiting service is called again on every instruction step until
-	// its wait is satisfied (ErrWait); only its first attempt is traced.
+	// A waiting service is called again until its wait is satisfied
+	// (ErrWait); only its first attempt is traced. With the scheduler,
+	// the process waits in it meanwhile (waits.go).
 	waiting := errors.Is(err, ErrWait)
+	env.enterWait(waiting)
 
 	var call *CallRequest
 

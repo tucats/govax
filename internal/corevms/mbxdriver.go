@@ -1,6 +1,7 @@
 package corevms
 
 import (
+	"github.com/tucats/govax/internal/sched"
 	"github.com/tucats/govax/internal/vm"
 )
 
@@ -255,6 +256,15 @@ func (env *Environment) send(m *Mailbox, req *ioRequest, msg *mailboxMessage) (i
 		if env.Process.ResourceWaitDisabled || req.modified(ioModNoRSWait) {
 			return ioStatus{status: ssMbFull}, 0
 		}
+
+		// The writer waits in RWMBX until a read is waiting for a
+		// message or reads have made room for this one (waits.go).
+		size := uint32(len(msg.data))
+		_ = env.waitOn(sched.StateMWAIT, sched.ResourceMailbox, resourceBoost, func() bool {
+			m.prune()
+
+			return len(m.readers) > 0 || m.queuedBytes()+size <= m.BufQuo
+		})
 
 		return ioStatus{}, ioResourceWait
 	}

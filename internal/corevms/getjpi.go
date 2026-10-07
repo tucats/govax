@@ -282,8 +282,8 @@ func (env *Environment) processTarget(pidadr, prcnam uint32, wildcard bool) (*En
 }
 
 // callerTarget is processTarget for the services that so far act only on
-// the calling process ($GETJPI, $SETPRI, $FORCEX, $DELPRC, $WAKE,
-// $SCHDWK, $CANWAK): naming any other process is SS$_NONEXPR, as it was
+// the calling process ($GETJPI, $SETPRI, $FORCEX, $DELPRC, $SCHDWK,
+// $CANWAK; $WAKE reaches any process since docs/PHASE-44.md, subtask 4): naming any other process is SS$_NONEXPR, as it was
 // when govax had one process. Acting on another process — its event
 // flags, ASTs, timers, and deletion, which must reach it even while it
 // isn't current — arrives with process creation (docs/PHASE-45.md).
