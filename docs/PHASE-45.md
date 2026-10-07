@@ -1,6 +1,6 @@
 # Phase 45 — Multiprocessing, part 3: creating and deleting processes
 
-**Status:** in progress (2026-10-07); decisions taken 2026-10-06 (see
+**Status:** done (2026-10-07); decisions taken 2026-10-06 (see
 PHASE-43.md, Part A). Needs Phases 43 and 44.
 
 The program this phase belongs to is described in
@@ -209,7 +209,8 @@ for a process created without one.
     child with a termination mailbox, `$GETJPI` it, wait for the
     termination message, print the child's status; assembled and linked
     by govax in the test.
-14. **Close-out.** Status, progress log, PLAN.md, CLAUDE.md, HELP.
+14. **Close-out.** Status, progress log, PLAN.md, CLAUDE.md, HELP. *Done
+    (2026-10-07).*
 
     **For future SHOW DEVICE work** (author's note, 2026-10-07): the VMS
     7.1 system's `SHOW DEVICE/FULL` of a terminal and of a mailbox, for
@@ -274,6 +275,61 @@ for a process created without one.
   process stops at startup with RMS$_FNF, as for any image not found.
 - PID reuse: the sequence number makes a reused slot's PID different;
   confirm the shape against a probe if Decision 7 allows.
+
+## Carry forward
+
+Things Phase 45 did not get to, so that they are not lost. Each is either
+waiting on a run on the VAX, or optional work for a later phase.
+
+1. **Round 5 probe (not yet run).** `testdata/mp/macros/r5_misc.mar` (48
+   calls; `exchange.cmd`, `macros.com`, and `copyout.cmd` are for it, the
+   exchange volume `testdata/disks/mp-macros.dsk` is built, and its log
+   will be `vax/macros5.log`). It asks for: `$IDTOASC`'s third argument
+   (a descriptor; real MACRO takes no keyword `RESNAM` for it, and the 9
+   other names tried in round 4 were not it: the probe tries 34 more, and
+   its size by position), `$TRNLOG`'s LOGNAM and RSLLEN sizes, and
+   `$CRELNT`'s TABNAM size. After the run: audit `vax/macros5.log` (it may
+   quote a line of a macro's expansion), read it with `dumpcode.go
+   -calls`, correct the `$IDTOASC`, `$TRNLOG`, and `$CRELNT` macros in
+   `starlet.mar` (and the comment that lists them as unconfirmed), add
+   `r5_` to `TestServiceMacroObjects`' list of probe prefixes (the log
+   case for `r5_` is already there), run `go generate ./internal/bootdata`,
+   and update this doc. Until then the macros use `RESNAM`, a quadword for
+   it, a quadword for TRNLOG's LOGNAM and a word for RSLLEN, and a quadword
+   for CRELNT's TABNAM.
+2. **Unconfirmed behavior** (each marked where it is described above): a
+   child's priority at creation (+2 above its base, as probe 1 showed
+   once), a child's working-set size (+4 pages), SYSTEM's AST limit (50),
+   the default directory and other state a subprocess inherits, PID reuse
+   (the shape of a reused slot's PID), `$SETPRI`'s boost rules for
+   real-time priorities across processes. Probes 1 and 2 on VMS 7.1 settled
+   what they could; a probe on VMS 7.3 (or the same system) could settle
+   these.
+3. **The argument-count check** (`argcount.go`) has minimums for the
+   services probed and about 35 required-argument minimums from the
+   manuals; the rest of the services, and any new one, have none. A probe
+   could find them as probe 1 found `SS$_INSFARG` for `$GETDVI`.
+4. **Macros not probed in other forms.** The list and `_G` forms of the
+   other services (round 4) follow the rule found for the first 23 and
+   are checked only where round 3's clean calls cover them. `$FAO`'s list
+   form is the one with a variable length (3 plus the P arguments given);
+   it matches round 3's calls. `$HIBER` has no list or `_G` macro in real
+   MACRO and none here for the list form.
+5. **Use the macros.** `testdata/mp/crechild.mar`, `child.mar`, and the
+   probe programs call the services by hand (`PUSHL ...; CALLS`); they
+   could use `$CREPRC_S` and the others now, as a test of the macros in
+   real programs. Not done.
+6. **`SHOW DEVICE/FULL` for terminals and mailboxes** in VMS 7.1's layouts
+   (the note under subtask 14 has both): govax prints its generic layout
+   for them. Wanted before Phase 46, which makes mailboxes real.
+7. **Services with no macros.** The system services govax does not
+   implement have none either (`$ENQ`/`$DEQ`: Phase 47; `$CRMPSC`,
+   `$MGBLSC`, global sections: Phase 46). Each new service gets its macro
+   by the same method: a `testdata/mp/macros` probe (`gen.go`), a run on
+   the VAX, `starlet.mar`, and `TestServiceMacroObjects`.
+8. **Phases 46 to 48** need what this phase built: the mailbox
+   (`mailbox.go`), event flags, and the null device are the starting
+   points; the termination mailbox's message is built in `termmsg.go`.
 
 ## Progress log
 
@@ -971,3 +1027,14 @@ for a process created without one.
   argument, the sizes of `$TRNLOG`'s LOGNAM and RSLLEN and `$CRELNT`'s
   TABNAM (the usual ones for a name and a length are used). A small
   round 5 (`r5_misc`) asks for them.
+
+- 2026-10-07: Close-out (subtask 14). Status, PLAN.md, CLAUDE.md, and the
+  console help (STOP, and the macros MACRO's own library now has) updated.
+  What the phase leaves, for the record:
+  - Done: `$CREPRC` and process startup, rundown and deletion, the
+    termination message, jobs and job logical names, the process-control
+    services across processes, `$GETJPI`/`$GETDVI` of others and wildcards,
+    NL:, STOP, the argument-count check (`SS$_INSFARG`), two probes on VMS
+    7.1 (`testdata/mp/probe1`, `probe2`), the MACRO test, and macros for 75
+    system services.
+  - What is left is listed under "Carry forward", above the progress log.
