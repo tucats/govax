@@ -89,6 +89,7 @@ jpi_end:
 
 fail_ctl:	.ascid	/FAILED with status !XL/
 images_ctl:	.ascid	/images: first !UW, second !UW/
+term2_ctl:	.ascid	/  its termination message: read status !XW, final status !XL/
 step_ctl:	.ascid	/step !UL/
 item_ctl:	.ascid	/  !AD = !XL  (status !XL)/
 head_ctl:	.ascid	/!AS/
@@ -278,9 +279,9 @@ haveimages:
 	bneq	15$
 	brw	finish
 15$:
-	pushl	#0
-	pushl	#0
-	pushl	#0
+	pushl	#0			; stsflg
+	pushl	term_unit		; mbxunt
+	pushl	#0			; uic
 	pushl	my_prib
 	pushaq	info_name
 	pushl	#0
@@ -294,6 +295,26 @@ haveimages:
 	check
 	pushaq	info_head
 	bsbw	say
+	pushl	#0
+	pushl	#0
+	pushl	#0
+	pushl	#0
+	pushl	#ACC$K_TERMLEN
+	pushal	term_msg
+	pushl	#0
+	pushl	#0
+	pushal	iosb
+	pushl	#<IO$_READVBLK!IO$M_NOW>
+	movzwl	term_chan,-(sp)
+	pushl	#0
+	calls	#12,g^sys$qiow
+	pushl	term_msg+ACC$L_FINALSTS
+	movzwl	iosb,-(sp)
+	pushal	out_desc
+	pushal	out_len
+	pushaq	term2_ctl
+	calls	#5,g^sys$fao
+	bsbw	print
 	movl	#4,r7
 20$:	pushl	#0
 	pushl	#0
