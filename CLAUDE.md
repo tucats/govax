@@ -13,9 +13,10 @@ never had.
   index.
 - `docs/PHASE-00.md` … `PHASE-48.md` — one doc per phase: goal, C-source file
   mapping, deliverables, open questions, and a dated progress log (all
-  done through 42; 40 follows 38 directly: there is no Phase 39). Phases
-  43–48 are the planned multiprocessing program (subprocesses, a scheduler,
-  interprocess mailboxes and shared memory, RMS file sharing);
+  done through 43; 40 follows 38 directly: there is no Phase 39). Phases
+  43–48 are the multiprocessing program (subprocesses, a scheduler,
+  interprocess mailboxes and shared memory, RMS file sharing; 44–48
+  planned);
   `PHASE-43.md`'s Part A describes the whole program. Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
 - `docs/DEVIATIONS.md` — running log of suspected ISA/behavior fidelity issues found in
@@ -104,9 +105,18 @@ expect adjustment as phases land):
   instruction-fetch window (`FetchByte`/`TryFetchByte`/..., one page
   translated once; docs/PERFORMANCE.md, Study 1, R4), data through the
   Load/Store methods; anything that empties the STC empties the window.
+  `space.go` (Phase 43): a `vm.AddressSpace` (P0BR/P0LR/P1BR/P1LR) names
+  one process's page tables, and `TranslateIn`/`LoadIn`/`StoreIn`/
+  `LookupPTEIn`/`StorePTEIn` reach a process that isn't current through
+  it (kernel-mode protection, no TB). `InvalidateProcessTB` empties only
+  P0/P1 TB slots, as LDPCTX does. The length checks follow the
+  architecture: P0LR and SLR are page counts, P1LR the lowest P1 page.
 - `internal/cpu` — instruction decode/execute engine and instruction-set emulation
-  (Phases 03-07). Phase 35 finished the set: every instruction but LDPCTX and
-  SVPCTX has a handler (`TestEveryInstructionImplemented`). Each operand has a
+  (Phases 03-07). Phase 35 finished the set and Phase 43 added LDPCTX and
+  SVPCTX: every instruction has a handler (`TestEveryInstructionImplemented`).
+  `context.go` has the 96-byte hardware PCB (`PCB`, `ReadPCB`/`WritePCB`
+  by physical address), the two instructions, and `Engine.SaveContext`/
+  `LoadContext`, the same code for a Go scheduler (Phase 44). Each operand has a
   `DataType` in the generated table, which decides how a short literal or
   floating operand is read. F, D, G, and H instructions run on
   `internal/vaxfloat` (`fpu.go` is the CPU's side), packed decimal on
@@ -171,15 +181,24 @@ expect adjustment as phases land):
   (Phase 31).
 - `internal/lnm` — VMS logical-name database: directories, tables, access modes,
   search lists, `$TRNLNM`-style lookup and RMS file-spec translation (Phase 25).
-  A leaf package shared by the console, `internal/rms`, and `internal/coreos`.
-- `internal/coreos` — VMS RTL/system-service simulation (Phase 10).
+  A leaf package shared by the console, `internal/rms`, and `internal/corevms`.
+- `internal/corevms` — VMS RTL/system-service simulation (Phase 10). Since
+  Phase 43, what every process shares is a `System` (`system.go`: the
+  machine, service and shim registries, devices, mounts, mailboxes, common
+  event flags, OPCOM, the clock, the process table (`proctable.go`, real
+  PIDs), the S0 page pool (`s0pool.go`), and `ProcessSettings`), and each
+  process is an `Environment` that embeds it, with its `Space`
+  (`addrspace.go`: `BuildAddressSpace`, the shared P1 vector, teardown)
+  and `Stacks` (`stacks.go`: privileged stacks and the PCB page). Process
+  1 is the console's, on VMINIT's tables and stacks; the console keeps
+  each process's image state (`internal/console/images.go`).
 - `internal/librtl` — LIBRTL.EXE's routines (Phase 34): the LIB$ and STR$
   shims a program reaches through `SHIM$LIBRTL_<offset>` stubs. `Routines`
   lists each with its transfer-vector offset (checked against
   `vmsdef.ImageSymbols`) and XFC$SHIM code; the console registers them into
   each RTL environment and builds the stubs from the same table. The process
   machinery they use (condition dispatch, the heap, memory) stays in
-  `internal/coreos`, reached through `export.go`. Each further *RTL.EXE emulated
+  `internal/corevms`, reached through `export.go`. Each further *RTL.EXE emulated
   gets a package like it. New routines are written from DIGITAL's manuals
   (clean room), and checked on VMS where a probe can: LIB$CREATE_DIR
   (`createdir.go`) against `testdata/credir/libcrd.mar`'s VMS 7.3 run
@@ -273,7 +292,7 @@ expect adjustment as phases land):
   on either side (`ReadRecordFile`/`CreateRecordFile`, and `RewriteRecordFile`,
   which keeps a volume file's version; `recordfile.go`; Phase
   27). The sole place in this project allowed to import `ods2`; owns its
-  own IFI (open-file) table separately from `internal/coreos`'s state, since it
+  own IFI (open-file) table separately from `internal/corevms`'s state, since it
   tracks real `ods2` handles Phase 10's RTL layer never needed. `go.mod`
   pins a tagged `ods2` release, so a plain clone builds; a local, gitignored
   `go.work` (`use .` / `use ../ods2`) overrides it with the sibling checkout

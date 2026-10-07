@@ -1,6 +1,6 @@
 # Phase 43 — Multiprocessing, part 1: processes as objects
 
-**Status:** in progress (started 2026-10-07); decisions taken 2026-10-06.
+**Status:** done (2026-10-07); decisions taken 2026-10-06.
 
 Phase 43 is the first of six phases (43–48) that let govax run several VMS
 processes at once on one engine. This document has two parts:
@@ -715,13 +715,20 @@ uses the current Environment's `mem`/`cpu` (so the current P0/P1) or its
 
 - Should the hardware PCB live next to each process's kernel stack (as
   VMS's process header does) or in its own small pool? Either; decided in
-  subtask 4/9.
+  subtask 4/9. *Answered (subtask 9):* a pool page of its own,
+  kernel-only.
 - Does anything in `kernel.asm` assume one process (fixed stack symbols,
-  `CTL$`-style cells)? Subtask 1 checks.
+  `CTL$`-style cells)? Subtask 1 checks. *Answered (subtask 1):* no
+  per-process layout, but three scratch cells a preempted microkernel
+  routine could leave half-used (Phase 44).
 - Page-table sizes for subprocesses: VMINIT's (16384 P0 and 8192 P1 pages
   in `vax.init`) cost about 192 pool pages each. If that limits the
   process count, a subprocess could get smaller tables (VMS sizes them by
-  quotas); decided in subtask 8.
+  quotas); decided in subtask 8. *Answered (subtasks 8 and 12):* the
+  builder takes the sizes; Phase 45 chooses what `$CREPRC` passes. P1
+  needs at least `corevms.MinP1Pages` (4097) for the user stack, so P1's
+  table costs at least 33 pages; with VMINIT's sizes, about 34
+  processes fit beside process 1.
 
 ## Progress log
 
@@ -1008,3 +1015,13 @@ uses the current Environment's `mem`/`cpu` (so the current P0/P1) or its
   below P1's top; the vector is 145 pages down), so
   `corevms.MinP1Pages` (4097) names the smallest useful one. The whole
   suite passes unchanged.
+- 2026-10-07: Subtask 13 (close-out). Status set to done; the open
+  questions answered above; `PHASE-44.md`'s "What earlier phases leave in
+  place" lists exactly what Phase 43 hands over (building a process by
+  hand, process 1's PCB, the settings, the per-process image state);
+  `PLAN.md`'s row, and `CLAUDE.md`'s package notes (`corevms.System` and
+  the process table, `ProcessSpace`/`ProcessStacks`, `vm.AddressSpace`,
+  `cpu/context.go`), updated. `CLAUDE.md` also named the RTL package
+  `internal/coreos`, its old name; it's `internal/corevms`. Help: `HELP
+  CONFIG KEYS` (subtask 11) is the only user-visible change; nothing else
+  a user can do is new until Phase 44.

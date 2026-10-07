@@ -26,7 +26,24 @@ already wait (`$HIBER`, `$WAITFR`, mailbox reads).
   per-process `Environment`s; hardware PCBs, `Engine.SaveContext`/
   `LoadContext` (the `SVPCTX`/`LDPCTX` code); `vm.AddressSpace`;
   per-process stacks and image state; the three `vax.process.*` settings,
-  read but inert.
+  read but inert. Specifically, as Phase 43 left them (its progress log
+  has the details):
+  - Building a process by hand: `corevms.NewEnvironment` (adds it to the
+    table), `System.BuildAddressSpace(pid, p0, p1)` (P1 at least
+    `corevms.MinP1Pages` for the user stack), `System.BuildStacks`, and
+    `corevms.InitialPCB` written with `cpu.WritePCB` at
+    `Stacks.PCBB`; `console/handswitch_test.go` is the worked example.
+    `System.RemoveProcess` frees the address space and pool pages.
+  - Process 1 has no PCB page until `System.EnsurePCB` gives it one,
+    which must happen after the microkernel is assembled (the pool's
+    bottom pages are claimed by it); its PCB's memory-management
+    longwords must be written before its first `SaveContext`, which
+    doesn't write them.
+  - `System.ProcessSettings` holds the three settings; `Current`/
+    `SetCurrent` are the Go side's current process, which nothing yet
+    keeps in step with PCBB.
+  - The console's image state is per process (`imagesOf(env)`), but RUN
+    only ever activates in process 1.
 - The wait-by-retry model: a waiting service returns `ErrWait`, the
   engine re-executes the XFC (`internal/cpu/xfc.go`).
 - `Engine.Step`'s per-instruction work: limits, attention, the clock
