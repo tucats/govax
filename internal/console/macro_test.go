@@ -550,6 +550,7 @@ func TestDispatch_macroTraceback(t *testing.T) {
 		m := readObject(t, d.Console, rms.FileLocation{Host: true, Name: object})
 
 		tbt, dbg := 0, 0
+		
 		for _, r := range m.Records {
 			switch r.RecordType() {
 			case obj.RecTBT:

@@ -162,6 +162,7 @@ func TestShimTable_codesDistinctAndRegistered(t *testing.T) {
 // holds is an error, not a write over the SCB that follows the page.
 func TestEnsureShims_refusesToOverflowPage(t *testing.T) {
 	saved := shimTable
+	
 	t.Cleanup(func() { shimTable = saved })
 
 	shimTable = append([]shimEntry{}, saved...)

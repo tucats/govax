@@ -253,6 +253,7 @@ func TestMacro_realStarlet(t *testing.T) {
 
 	c, out := newTestConsole(t)
 	c.HostLibrary = vmsLibDir
+	
 	defer func() {
 		if t.Failed() {
 			t.Log(out.String())

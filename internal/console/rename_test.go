@@ -38,6 +38,7 @@ func renameLines(t *testing.T, d *Dispatcher, out *bytes.Buffer, command string)
 	t.Helper()
 
 	out.Reset()
+	
 	err := d.Dispatch(command)
 
 	return strings.Split(strings.TrimRight(out.String(), "\n"), "\n"), err

@@ -757,26 +757,49 @@ $SAVE
                         image is saved to.  If omitted, the default
                         name of "Saved.VAX" is assumed.
 
-$SAVE,/TEX
+    See also:
 
-    The SAVE/TEXT command writes the entire state of the virtual VAX to a
-    text file.  This text file can be re-read by using the INCLUDE
-    command.
+        SAVE/ROM        Save the current ROM storage as a file
+        SAVE/NVRAM      Save the current NVRAM storage as a file
+
+$SAVE,/ROM
+
+    The SAVE/ROM command writes system ROM to an external file.
 
     Syntax:
 
-        SAVE/TEXT <file-path>
+        SAVE/ROM <file-path>
 
     Parameter:
 
         <file-path>     This is the name of the file where the emulator
-                        state is to be saved.  The name can be enclosed in
+                        ROM image is to be saved.  The name can be enclosed in
                         quotation marks if it contains imbedded blanks.
                         The file will be overwritten if it already exists.
     
     Example:
 
-        SAVE/TEXT "myvax.status"
+        SAVE/ROM "current.rom"
+
+$SAVE,/NVR
+
+    The SAVE/NVRAM command writes system NVRAM storage to an external file.
+
+    Syntax:
+
+        SAVE/NVRAM <file-path>
+
+    Parameter:
+
+        <file-path>     This is the name of the file where the emulator
+                        NVRAM image is to be saved.  The name can be enclosed in
+                        quotation marks if it contains imbedded blanks.
+                        The file will be overwritten if it already exists.
+    
+    Example:
+
+        SAVE/NVRAM "latest.nvram"
+
 
 $@   
 $INCL

@@ -267,7 +267,9 @@ func TestDispatch_macroCrossReference(t *testing.T) {
 	d, _ := newTestDispatcher(t)
 	dir := t.TempDir()
 	src := filepath.Join(dir, "xr.mar")
+
 	writeHostFile(t, src, "\t.TITLE\tXR\n\t.PSECT\tD\nVAL = 1\n\t.LONG\tVAL\n\t.END\n")
+	
 	listing := rms.FileLocation{Host: true, Name: filepath.Join(dir, "xr.lis")}
 
 	for _, tc := range []struct {
@@ -310,7 +312,9 @@ func TestDispatch_macroShow(t *testing.T) {
 	d, _ := newTestDispatcher(t)
 	dir := t.TempDir()
 	src := filepath.Join(dir, "show.mar")
+	
 	writeHostFile(t, src, "\t.TITLE\tSHOW\n\t.PSECT\tD\n\t.MACRO\tONE\n\t.BYTE\t^X5A\n\t.ENDM\tONE\n\tONE\t\t; the call\n\t.END\n")
+	
 	listing := rms.FileLocation{Host: true, Name: filepath.Join(dir, "show.lis")}
 
 	if err := d.Dispatch(`MACRO "` + src + `"/NOOBJECT/LIST/SHOW=(EXPANSIONS)`); err != nil {

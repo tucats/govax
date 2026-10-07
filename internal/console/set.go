@@ -410,7 +410,7 @@ func (c *Console) SetUIQuantum(n int) error {
 	return nil
 }
 
-// SetFaultHistory implements SET FAULT/SET HIST <n> 
+// SetFaultHistory implements SET FAULT/SET HIST <n>.
 func (c *Console) SetFaultHistory(n int) error {
 	if err := c.requireInit(); err != nil {
 		return err
@@ -421,7 +421,7 @@ func (c *Console) SetFaultHistory(n int) error {
 	return nil
 }
 
-// pteFieldNames
+// pteFieldNames.
 var pteFieldNames = map[string]func(pte *vm.PTE, v uint32){
 	"V":     func(pte *vm.PTE, v uint32) { pte.SetValid(v != 0) },
 	"VALID": func(pte *vm.PTE, v uint32) { pte.SetValid(v != 0) },

@@ -94,7 +94,7 @@ func TestSetSymbol_pslInvalidatesProtectionOnModeChange(t *testing.T) {
 		t.Errorf("STCStats() hits = %d after SET PSL changed CurMod, want %d (the STC emptied)", stcHits, stcHitsBefore)
 	}
 
-	if _, tbHits, _, _ := c.Mem.TBStats(); tbHits != tbHitsBefore+1 { //nolint:dogsled
+	if _, tbHits, _, _ := c.Mem.TBStats(); tbHits != tbHitsBefore+1 {
 		t.Errorf("TBStats() hits = %d after SET PSL changed CurMod, want %d (the TB mapping kept)", tbHits, tbHitsBefore+1)
 	}
 }

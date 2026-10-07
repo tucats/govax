@@ -22,7 +22,7 @@ const (
 )
 
 // ShowRegisters prints R0-R11 plus the AP/FP/SP/PC aliases in the same
-// four-column grid as the PSL beneath them, matching SHOW REGISTERS
+// four-column grid as the PSL beneath them, matching SHOW REGISTERS.
 func (c *Console) ShowRegisters() error {
 	if err := c.requireInit(); err != nil {
 		return err
@@ -249,7 +249,7 @@ const (
 
 var modeNames = [5]string{"KERNEL", "EXEC", "SUPER", "USER", "INTERRUPT"}
 
-func (k StackKind) name() string {
+func (k StackKind) String() string {
 	switch k {
 	case StackESP:
 		return "ESP"
@@ -334,7 +334,7 @@ func (c *Console) ShowStack(kind StackKind, current bool, count uint32, all bool
 		modeName = modeNames[modeIdx]
 	} else {
 		sp = c.stackPointerFor(kind)
-		modeName = kind.name()
+		modeName = kind.String()
 	}
 
 	c.Printf("    %s MODE SP = %08X:\n", modeName, sp)
@@ -1624,7 +1624,7 @@ var debugShowEntries = []debugShowEntry{
 	{vax.DebugVM, "VM", "Debug virtual memory translations"},
 }
 
-// ShowDebug implements SHOW DEBUG a bit that's set prints its plain name, 
+// ShowDebug implements SHOW DEBUG a bit that's set prints its plain name,
 // a clear bit prints "NO"+name, both followed by the flag's description.
 func (c *Console) ShowDebug() error {
 	if err := c.requireInit(); err != nil {

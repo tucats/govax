@@ -105,6 +105,7 @@ func buildRMS3Tree(t *testing.T, c *Console) {
 		{"[TEST]F.DAT", ""},
 	} {
 		var records [][]byte
+		
 		for _, l := range strings.Split(f.text, "\n") {
 			if l != "" {
 				records = append(records, []byte(l))
