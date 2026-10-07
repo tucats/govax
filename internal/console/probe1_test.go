@@ -52,6 +52,7 @@ func TestProbe1(t *testing.T) {
 	t.Logf("\n%s", report)
 
 	for _, want := range []string{
+		"step 10",
 		"$GETJPI of the child, hibernating:",
 		"= 00000007  (status 00000001)", // the child hibernates: SCH$C_HIB
 		"$GETJPI of this process:",

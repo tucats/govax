@@ -104,11 +104,15 @@ iosb:		.quad	0
 	pushl	#0			; prmflg
 	calls	#4,g^sys$crembx
 	check
+	pushl	#0			; nullarg
+	pushl	#0			; astprm
+	pushl	#0			; astadr
+	pushl	#0			; iosb
 	pushal	dvi_items
 	pushl	#0			; devnam
 	movzwl	mbx_chan,-(sp)
 	pushl	#0			; efn
-	calls	#4,g^sys$getdviw
+	calls	#8,g^sys$getdviw
 	check
 
 ; Our own PID and base priority; the child gets a higher one, so it runs

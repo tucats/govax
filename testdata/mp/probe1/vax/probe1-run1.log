@@ -1,0 +1,47 @@
+
+$ MACRO/NOLIST CHILD
+$ MACRO/NOLIST INFO
+$ MACRO/NOLIST PROBE1
+$ LINK CHILD
+$ LINK INFO
+$ LINK PROBE1
+$ ! The parent takes the two images, with their directory, as its command
+$ ! line, separated by a blank.
+$ here = F$ENVIRONMENT("DEFAULT")
+$ PROBE1 :== $DUA1:[000000]PROBE1.EXE
+$ SHOW PROCESS
+
+ 7-OCT-2026 16:25:40.01   User: SYSTEM           Process ID:   00000114
+                          Node: SIMVAX           Process name: "SYSTEM"
+
+Terminal:           OPA0:
+User Identifier:    [SYSTEM]
+Base priority:      4
+Default file spec:  DUA1:[000000]
+
+Devices allocated:  SIMVAX$DUA1:
+                    SIMVAX$OPA0:
+
+Devices mounted: SIMVAX$DUA1:
+$ PROBE1 DUA1:[000000]CHILD.EXE DUA1:[000000]INFO.EXE
+%SYSTEM-F-INSFARG, insufficient call arguments
+$ SHOW SYSTEM
+OpenVMS V7.1  on node SIMVAX   7-OCT-2026 16:25:40.02  Uptime  0 04:48:29
+  Pid    Process Name    State  Pri      I/O       CPU       Page flts  Pages
+00000101 SWAPPER         HIB     16        0   0 00:00:00.01         0      0   
+00000105 CONFIGURE       HIB      8        5   0 00:00:00.00       112    167   
+00000107 IPCACP          HIB     10        7   0 00:00:00.00        96    169   
+00000108 ERRFMT          HIB      8      146   0 00:00:00.01       141    234   
+00000109 OPCOM           HIB      9      220   0 00:00:00.03       307    147   
+0000010A AUDIT_SERVER    HIB     10       52   0 00:00:00.03       541    741   
+0000010B JOB_CONTROL     HIB     10       37   0 00:00:00.01       226    336   
+0000010C QUEUE_MANAGER   HIB     10       33   0 00:00:00.03       652    959   
+0000010D SECURITY_SERVER HIB     10       27   0 00:00:00.03       955   1028   
+0000010E DNS$ADVER       LEF      5     1947   0 00:00:00.18     16562   2316   
+0000010F LES$ACP_V30     HIB      8      104   0 00:00:00.05       206    276   
+00000110 REMACP          HIB      8        8   0 00:00:00.00        82     48   
+00000111 NET$ACP         HIB      5       43   0 00:00:00.05       860    816   
+00000112 NET$EVD         HIB      6       15   0 00:00:00.05      1230    666   
+00000113 DTSS$CLERK      LEF     12      147   0 00:00:00.03       627    516   
+00000114 SYSTEM          CUR      4     1722   0 00:00:01.95     28420    359   
+$ SET NOVERIFY

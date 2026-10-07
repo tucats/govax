@@ -26,6 +26,13 @@
 ok:
 	.endm
 
+; STEP n: say which step is about to run, so a log that ends early shows
+; where (a service rejecting its arguments ends the program silently).
+	.macro	step	n
+	movl	#n,r0
+	bsbw	mark
+	.endm
+
 ; JPI name: one table entry, the item code and its name in 16 characters.
 	.macro	jpi	name,?start
 	.long	JPI$_'name
@@ -80,6 +87,7 @@ jpi_table:
 	jpi	AUTHPRI
 jpi_end:
 
+step_ctl:	.ascid	/step !UL/
 item_ctl:	.ascid	/  !AD = !XL  (status !XL)/
 head_ctl:	.ascid	/!AS/
 child_head:	.ascid	/$GETJPI of the child, hibernating:/
@@ -125,6 +133,7 @@ info_msg:	.blkb	300
 	.entry	start,^m<r2,r3,r4,r5,r6,r7>
 
 ; The two images from the command line.
+	step	1
 	pushal	img_len
 	pushl	#0
 	pushaq	image_desc
@@ -144,18 +153,25 @@ noinfo:	movw	r2,image_desc
 haveimages:
 
 ; The termination mailbox and its unit; the information mailbox, named.
+	step	2
 	pushl	#2048
 	pushl	#128
 	pushal	term_chan
 	pushl	#0
 	calls	#4,g^sys$crembx
 	check
+	step	3
+	pushl	#0			; nullarg
+	pushl	#0			; astprm
+	pushl	#0			; astadr
+	pushl	#0			; iosb
 	pushal	dvi_items
 	pushl	#0
 	movzwl	term_chan,-(sp)
 	pushl	#0
-	calls	#4,g^sys$getdviw
+	calls	#8,g^sys$getdviw
 	check
+	step	4
 	pushaq	mbx_lognam
 	pushl	#0			; acmode
 	pushl	#0			; promsk
@@ -168,6 +184,7 @@ haveimages:
 
 ; Our own PID and base priority; the children get a higher one, so each
 ; runs as soon as it is created.
+	step	5
 	pushl	#0
 	pushl	#0
 	pushl	#0
@@ -181,6 +198,7 @@ haveimages:
 	incl	my_prib
 
 ; The first child: output to the null device, a termination mailbox.
+	step	6
 	pushl	#0			; stsflg
 	pushl	term_unit
 	pushl	#0			; uic
@@ -196,6 +214,7 @@ haveimages:
 	calls	#12,g^sys$creprc
 	check
 
+	step	7
 	pushaq	child_head
 	bsbw	say
 	movab	child_pid,r6
@@ -206,6 +225,7 @@ haveimages:
 	bsbw	show_items
 
 ; Wake it, and read its termination message.
+	step	8
 	pushl	#0
 	pushal	child_pid
 	calls	#2,g^sys$wake
@@ -224,6 +244,7 @@ haveimages:
 	pushl	#0
 	calls	#12,g^sys$qiow
 	check
+	step	9
 	pushaq	msg_head
 	bsbw	say
 	clrl	r6
@@ -240,6 +261,7 @@ haveimages:
 
 ; The second child: no input, output, or error; it writes four messages
 ; to PROBE_MBX.
+	step	10
 	tstw	info_desc
 	bneq	15$
 	brw	finish
@@ -290,6 +312,15 @@ haveimages:
 	brw	20$
 finish:	movl	#1,r0
 fail:	ret
+
+; MARK: print "step R0".
+mark:	pushl	r0
+	pushal	out_desc
+	pushal	out_len
+	pushaq	step_ctl
+	calls	#4,g^sys$fao
+	bsbw	print
+	rsb
 
 ; SAY: print the text whose descriptor address is on the stack (popped).
 say:	pushl	4(sp)

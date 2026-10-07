@@ -1,7 +1,9 @@
 # Phase 45 probe 1: a subprocess and its termination message on VMS
 
 `docs/PHASE-45.md` records several things about `$CREPRC` and `$GETJPI` as
-unconfirmed. This probe asks VMS 7.3 for them:
+unconfirmed. This probe asks VMS for them. (The simh system answers `OpenVMS V7.1` in
+SHOW SYSTEM, not 7.3: the earlier probes' "VMS 7.3" is the version of the
+macro assembler and linker, which may differ from the running system.)
 
 | File | What it holds |
 | ---- | ------------- |
@@ -47,6 +49,12 @@ under govax, so the two reports can be put side by side.
 3. Dismount the volume and copy the container back, then:
 
        govax console < testdata/mp/probe1/copyout.cmd
+
+Run 1 (2026-10-07, `vax/probe1-run1.log`) ended at once with
+`%SYSTEM-F-INSFARG`, before any output: a service was called with fewer
+arguments than VMS 7.1 requires (suspects: `$GETDVIW` with 4, `$CREPRC`
+with 12). The programs now print `step n` before each service so a log
+that ends early shows where, and `$GETDVIW` is called with 8 arguments.
 
 Nothing else is needed. If a program hangs on VMS (for instance, waiting
 for a termination message that doesn't come), press CTRL/Y and `STOP` the
