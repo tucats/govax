@@ -54,6 +54,10 @@ adds the other system services:
 | `ext_*.mar` | The other system services govax implements (`$ADJSTK` through `$UNWIND`, `$FAO`, `$GETMSG`, the logical name services, the memory services, ...), each in all three forms. The argument lists are the manual's as best they are known; a keyword that is wrong shows as an error, and a later round tries another |
 | `ext_extra.mar` | `$GETDVI`'s `NULLARG` and `$CREMBX`'s `FLAGS` alone and beside the arguments they pair with, and candidate keywords for `$CREPRC`'s two extra arguments |
 
+govax's macros have the `$NAME` and `$NAME_G` forms for the 23 services and
+`TestServiceMacroObjects` compares them (`lst_*`) with these objects. The
+`ext_*` services have no macros yet.
+
 `macros.com`, `exchange.cmd`, and `copyout.cmd` are now for round 3 only
 (75 programs; the results go to `vax/`, the log to `vax/macros3.log`).
 

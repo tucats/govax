@@ -191,7 +191,7 @@ func callChunks(bytes []byte, relocs []serviceReloc, count int) (text map[int]st
 	}
 
 	allowed := map[string]bool{"PUSHL": true, "PUSHAB": true, "PUSHAW": true, "PUSHAL": true, "PUSHAQ": true,
-		"MOVZWL": true, "CLRQ": true, "CALLS": true}
+		"MOVZWL": true, "CLRQ": true, "CALLS": true, "CALLG": true}
 	mask := regexp.MustCompile(`L\^\^X[0-9A-F]{8}`)
 	start := 2
 
@@ -199,6 +199,15 @@ func callChunks(bytes []byte, relocs []serviceReloc, count int) (text map[int]st
 		end := find(n, start)
 		if end < 0 {
 			continue // a call the module doesn't have
+		}
+
+		// An argument list built in line (the macro without a suffix) is a
+		// count and that many addresses: longwords, not instructions.
+		if lines, isList := listChunk(bytes[start:end], start, relocs); isList {
+			text[n], ok[n] = strings.Join(lines, "\n"), true
+			start = end + 4
+
+			continue
 		}
 
 		var (
@@ -231,15 +240,76 @@ func callChunks(bytes []byte, relocs []serviceReloc, count int) (text map[int]st
 		}
 
 		text[n] = strings.Join(lines, "\n")
-		ok[n] = complete && last == "CALLS"
+		ok[n] = complete && (last == "CALLS" || last == "CALLG")
 		start = end + 4
 	}
 
 	return text, ok
 }
 
+// listChunk reads chunk, which starts at offset base of the CODE stream, as
+// an argument list: a count n and then n longwords, whole. It returns the
+// longwords as text, with the relocations in them named.
+func listChunk(chunk []byte, base int, relocs []serviceReloc) ([]string, bool) {
+	if len(chunk) < 4 || len(chunk)%4 != 0 {
+		return nil, false
+	}
+
+	count := int(chunk[0]) | int(chunk[1])<<8 | int(chunk[2])<<16 | int(chunk[3])<<24
+	if count < 0 || count > 20 || len(chunk) != 4*(count+1) {
+		return nil, false
+	}
+
+	var lines []string
+
+	for o := 0; o < len(chunk); o += 4 {
+		line := fmt.Sprintf(".LONG %02X%02X%02X%02X", chunk[o+3], chunk[o+2], chunk[o+1], chunk[o])
+
+		for _, r := range relocs {
+			if r.off >= base+o && r.off < base+o+4 {
+				line += fmt.Sprintf(" [@%d %s]", r.off-base-o, r.target)
+			}
+		}
+
+		lines = append(lines, line)
+	}
+
+	return lines, true
+}
+
+// listArgsClean is false for a call of an argument-list macro (no _S or _G
+// suffix) with an argument whose form .ADDRESS can't take: real MACRO
+// reports an error, and what it leaves in the object is not the list.
+func listArgsClean(line string) bool {
+	fields := strings.SplitN(strings.TrimPrefix(line, "\t"), "\t", 2)
+	if strings.HasSuffix(fields[0], "_S") || len(fields) < 2 {
+		return true
+	}
+
+	// _G takes the list's address, one operand. Real MACRO takes "ARGLST=X"
+	// for a keyword that isn't there, reports an error, and leaves its
+	// operand out of the object.
+	if strings.HasSuffix(fields[0], "_G") {
+		return !strings.Contains(fields[1], "=")
+	}
+
+	for _, arg := range strings.Split(fields[1], ",") {
+		_, value, found := strings.Cut(arg, "=")
+		if !found {
+			return false
+		}
+
+		if !listValueRE.MatchString(strings.TrimSpace(value)) {
+			return false
+		}
+	}
+
+	return true
+}
+
 var (
-	shortCallRE = regexp.MustCompile(`^\t\$\w+_S(\t|$)`)
+	listValueRE = regexp.MustCompile(`^(0|[A-Za-z_][A-Za-z0-9_$]*)$`)
+	shortCallRE = regexp.MustCompile(`^\t\$\w+(\t|$)`)
 	markerRE    = regexp.MustCompile(`^\t\.LONG\t\^X7A7A([0-9A-F]{4})$`)
 )
 
@@ -251,6 +321,9 @@ func TestServiceMacroObjects(t *testing.T) {
 	if err != nil || len(probes) == 0 {
 		t.Fatalf("no probes: %v", err)
 	}
+
+	lists, _ := filepath.Glob(filepath.Join(serviceDir, "lst_*.mar"))
+	probes = append(probes, lists...)
 
 	for _, path := range probes {
 		name := strings.TrimSuffix(filepath.Base(path), ".mar")
@@ -272,8 +345,7 @@ func TestServiceMacroObjects(t *testing.T) {
 			realBytes, realRelocs := serviceCodeStream(t, real)
 			realText, realOK := callChunks(realBytes, realRelocs, len(calls))
 
-			// The probe without the calls real MACRO had an error for and
-			// the argument-list forms, which govax's macros don't have. A
+			// The probe without the calls real MACRO had an error for. A
 			// call is a line starting with a tab and "$"; the marker line
 			// after it goes with it.
 			var (
@@ -288,7 +360,7 @@ func TestServiceMacroObjects(t *testing.T) {
 				case strings.HasPrefix(l, "\t$"):
 					number++
 
-					drop = !(shortCallRE.MatchString(l) && realOK[number])
+					drop = !(shortCallRE.MatchString(l) && realOK[number] && listArgsClean(l))
 					if !drop {
 						keep[number] = true
 					}
@@ -309,11 +381,19 @@ func TestServiceMacroObjects(t *testing.T) {
 			}
 
 			if len(keep) == 0 {
+				if strings.HasPrefix(name, "lst_") {
+					t.Skip("real MACRO made nothing of these forms: the service has no such macro")
+				}
+
 				t.Fatal("no call to compare")
 			}
 
 			a := macroAssembler()
 			a.SetMacroLibraries(govaxStarlet(t))
+
+			if d := os.Getenv("SERVICE_MACRO_DUMP"); d != "" {
+				_ = os.WriteFile(filepath.Join(d, name+".kept.mar"), []byte(strings.Join(kept, "\n")), 0o644)
+			}
 
 			if _, err := a.Assemble(strings.Join(kept, "\n")); err != nil {
 				t.Fatalf("assemble: %v", err)

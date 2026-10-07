@@ -904,3 +904,32 @@ for a process created without one.
   syntax error after emitting a CALLG). A third round could settle them.
   NULLARG and FLAGS were accepted by real MACRO, as the manual's
   8-argument `$GETDVI` and later `$CREMBX` suggest.
+
+- 2026-10-07: Macro probes, round 3 (`testdata/mp/macros`, results in `vax/`
+  with `macros3.log`): the 23 services in the argument-list form and the
+  `_G` form, 46 other system services, and `$GETDVI`'s NULLARG and
+  `$CREMBX`'s FLAGS beside the arguments they pair with. Findings, now in
+  `starlet.mar` and checked by `TestServiceMacroObjects` (which now
+  includes `lst_*`, and the plain `$NAME` calls of `svc_*`; calls real
+  MACRO took with an error are left out, as are `_G` calls spelled
+  `ARGLST=X`, whose keyword real MACRO reports and drops):
+  - `$NAME` (no suffix) is `.LONG n` and one `.ADDRESS` per argument, in
+    line: an omitted argument is `.ADDRESS 0`, values are written without
+    `#`, `$CREPRC`'s BASPRI defaults to 2, and an addressing mode
+    `.ADDRESS` can't take (`#5`, `(R6)`, `-(R6)`, `ADR[R7]`, `@#ADR`) is an
+    error in real MACRO. `$HIBER` has no such form.
+  - `$NAME_G LST` is `CALLG LST,G^SYS$NAME`; the operand may be any mode.
+    The macro's one formal is named LST, so `ARGLST=ADR1` is not a
+    keyword (real MACRO reports it).
+  - `$CREPRC` has two more arguments, the keywords ITMLST (13th) and NODE
+    (14th); `$GETDVI`'s last is NULLARG, an address that pairs with
+    ASTPRM (the pair is one `CLRQ -(SP)` when both are omitted); `$CREMBX`'s
+    last is FLAGS, a value. The contexts of ITMLST and NODE (longword,
+    quadword) are unconfirmed.
+  - `$FAO_S` pushes only the P arguments given, and its count is 3 plus
+    how many were given (macros for it are not written yet).
+  Not yet written: macros for the other services. Round 3 left their
+  keywords and required arguments partly wrong (CRELOG and DELLOG's
+  TBLFLG, IDTOASC and TRNLOG's names, ALLOC's fifth argument, ADJSTK's,
+  GETMSG's, and CRELNT's required arguments), so a round 4 should settle
+  them first.
