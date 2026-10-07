@@ -270,10 +270,20 @@ func (d *Debugger) runLoop(skipFirstCheck bool, trace func(pc uint32) func()) (r
 	d.snapshotWatches()
 
 	for {
+		// A process switch due at this boundary happens first, so the
+		// checks below see the process that will run the instruction.
+		if err := c.BeginStep(); err != nil {
+			return d.reportStop(err)
+		}
+
 		pc := c.CPU.GPR(vax.PC)
 		d.shown.ok = false
 
-		if !first {
+		// The eventpoints are process 1's (Console.RunningProcessOne):
+		// another process at the same address doesn't reach them.
+		mine := c.RunningProcessOne()
+
+		if !first && mine {
 			d.traceHit(pc)
 
 			if d.breakpointHit(pc) {
@@ -289,11 +299,17 @@ func (d *Debugger) runLoop(skipFirstCheck bool, trace func(pc uint32) func()) (r
 
 		// A STEP/RETURN waiting for this RET fires before it runs, even on
 		// the run's first instruction.
-		if d.returnDue() {
+		if mine && d.returnDue() {
 			return runStopped, nil
 		}
 
-		first = false
+		// The first-instruction exemption (resuming at a breakpoint) lasts
+		// until process 1 runs an instruction: if another process runs
+		// first, process 1 comes back to the same breakpoint unchecked.
+		if mine {
+			first = false
+		}
+
 		finish := trace(pc)
 
 		if err := c.StepMachine(); err != nil {
@@ -304,8 +320,10 @@ func (d *Debugger) runLoop(skipFirstCheck bool, trace func(pc uint32) func()) (r
 
 		// A watched location the instruction changed stops the program
 		// after it; so does a condition nobody handled, at the
-		// instruction that raised it.
-		if d.watchHit(pc) || d.signalBreak() || d.unhandledBreak() {
+		// instruction that raised it. Watchpoints are checked after
+		// process 1's instructions only (a change another process makes
+		// to a shared S0 location is seen after process 1's next one).
+		if (c.RunningProcessOne() && d.watchHit(pc)) || d.signalBreak() || d.unhandledBreak() {
 			return runStopped, nil
 		}
 	}

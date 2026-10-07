@@ -62,7 +62,16 @@ func (e *Engine) SetScheduler(s Scheduler, modes PreemptModes) {
 	e.scheduler = s
 	e.preemptModes = modes
 	e.schedBudget, e.schedLeft = 0, 0
+
+	if s == nil {
+		e.schedLeft = noSchedulerBudget
+	}
 }
+
+// noSchedulerBudget is schedLeft with no scheduler installed: so large
+// that SwitchIfDue's one test sends it home at once. (Step only counts
+// schedLeft down when there is a scheduler.)
+const noSchedulerBudget = 1 << 62
 
 // RequestReschedule asks for the Scheduler to be called at the next
 // instruction boundary, sooner than its count would: a process has just
@@ -99,4 +108,58 @@ func (e *Engine) schedule() error {
 	e.schedBudget, e.schedLeft = next, next
 
 	return nil
+}
+
+// FreezeScheduling stops the engine calling the scheduler, so the
+// process the CPU holds keeps it, whatever happens, until the function
+// it returns is called (docs/PHASE-44.md, subtask 8). The debugger's STEP
+// freezes scheduling so a step is one instruction of the debugged
+// process, and a nested run (the console's condition-handler call) so
+// the outer run finds the CPU as it left it. Freezes nest. Instructions
+// run while frozen are charged, and a reschedule asked for meanwhile
+// made, at the first scheduler call after the last unfreeze.
+func (e *Engine) FreezeScheduling() (unfreeze func()) {
+	e.schedFrozen++
+
+	done := false
+
+	return func() {
+		if !done {
+			done = true
+			e.schedFrozen--
+		}
+	}
+}
+
+// SchedulingFrozen reports whether scheduling is frozen.
+func (e *Engine) SchedulingFrozen() bool {
+	return e.schedFrozen > 0
+}
+
+// SwitchIfDue gives the scheduler its turn now, if it is due at the
+// coming instruction boundary (and scheduling isn't frozen), instead of
+// at the start of the next Step: so a run loop that looks at the next
+// instruction before running it (a breakpoint at its PC, the trace) sees
+// the process that will run it. Step then has nothing left to do for the
+// scheduler at this boundary. An error is the scheduler's.
+func (e *Engine) SwitchIfDue() error {
+	// The usual case, one test, small enough to be inlined into the run
+	// loops: not due, or no scheduler at all (noSchedulerBudget).
+	if e.schedLeft > 0 {
+		return nil
+	}
+
+	return e.switchIfDue()
+}
+
+// switchIfDue is SwitchIfDue's rarer half, kept out of line so that
+// SwitchIfDue stays small enough to inline.
+//
+//go:noinline
+func (e *Engine) switchIfDue() error {
+	if e.scheduler == nil || e.schedFrozen > 0 {
+		return nil
+	}
+
+	return e.schedule()
 }

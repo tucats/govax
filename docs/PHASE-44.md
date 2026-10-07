@@ -1,7 +1,7 @@
 # Phase 44 — Multiprocessing, part 2: the scheduler
 
 **Status:** in progress (started 2026-10-07); decisions taken 2026-10-06
-(see PHASE-43.md, Part A). Subtasks 1–7 done.
+(see PHASE-43.md, Part A). Subtasks 1–8 done.
 
 The program this phase belongs to — its goal, architecture, rules for
 every commit, decisions, and known bugs — is in
@@ -524,3 +524,44 @@ The layouts come from the User's Manual and, if Decision 7 allows, a VMS
     `StepMachine`); process 2 is stopped and out of the scheduler. A
     kernel-mode HALT in process 2 stops a GO, naming the process. The
     Phase 42 debugger oracles are unchanged.
+- 2026-10-07: **Subtask 8 done: frozen scheduling; process 1's
+  eventpoints** (PHASE-43.md's bugs 7 and 9).
+  - `Engine.FreezeScheduling()` (nesting; returns the unfreeze) holds
+    back the scheduler's calls, so the CPU's process keeps it. The
+    instruction count goes on while frozen, so the instructions are
+    charged, and a reschedule asked for meanwhile happens, at the first
+    call after the last unfreeze. The debugger's STEP freezes for the
+    whole command (Decision 11: stepping freezes the other processes;
+    GO lets them run again), and the CHF's nested condition-handler run
+    (`chf.go`'s `Console.Call`) freezes around the call, fixing bug 7.
+  - Breakpoints, tracepoints, instruction breakpoints, STEP/RETURN's
+    wait, and watchpoints are process 1's (`Console.RunningProcessOne`):
+    the debugger's run loop checks them only while process 1 runs, so
+    another process at the same P0 address passes them (bug 9).
+    Watchpoints are checked after process 1's instructions only: a
+    change another process makes to a shared (S0) location is reported
+    after process 1's next instruction. A GO from a breakpoint exempts
+    process 1's first instruction from the check until process 1 runs
+    it (formerly the loop's first instruction, which with a switch at
+    once was another process's: process 1 then stopped at the same
+    breakpoint again, forever).
+  - `Engine.SwitchIfDue` (`Console.BeginStep`) gives the scheduler its
+    turn before the run loops look at the next instruction, so the
+    trace and the checks see the process that will run it. (For
+    breakpoints alone it isn't needed: a process is switched out only
+    after its next instruction was checked. A test confirms it either
+    way.) Its fast path is one compare, inlined into the loops (with no
+    scheduler the budget sits at a huge value); an A/B of
+    `BenchmarkSieve` shows no difference beyond noise.
+  - `sched.Scheduler.RequestReschedule`: a reschedule as if the quantum
+    had ended (for tests, and later for the services).
+  - Tests: `cpu` (freeze nesting, charging after unfreeze, the deferred
+    reschedule; `SwitchIfDue` when due, not due, frozen, without a
+    scheduler); `console/schedrun_test.go` with the debugger and both
+    processes running the same counter at the same address: a
+    breakpoint stops only process 1, one count per GO, at the BRB, at
+    the INCL, and with a switch forced at each GO; breakpoints on both
+    instructions stop at each of process 1's instructions in turn; STEP
+    40 leaves process 2 where it was and GO lets it run. Each fix
+    except `BeginStep` fails a test when undone. The Phase 42 debugger
+    oracles are unchanged.

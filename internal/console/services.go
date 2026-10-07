@@ -116,6 +116,15 @@ func (c *Console) running() *corevms.Environment {
 	return c.RTL
 }
 
+// RunningProcessOne reports whether the CPU is running process 1, the
+// console's (and the debugger's: docs/PHASE-43.md, Decision 11) process.
+// The debugger's breakpoints, tracepoints, and watchpoints act only then
+// (docs/PHASE-44.md, subtask 8): a P0 address names process 1's memory,
+// and another process reaching the same address is somewhere else.
+func (c *Console) RunningProcessOne() bool {
+	return c.running() == c.RTL
+}
+
 // SystemService delegates to the running process (Phase 10's SYS$
 // dispatch).
 func (c *Console) SystemService(pc uint32) (uint32, bool, error) {

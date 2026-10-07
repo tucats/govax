@@ -88,6 +88,10 @@ func (c *Console) Step(startAddr *uint32, mode string) error {
 // but no breakpoints: what GO and CALL do on a console without a debugger.
 func (c *Console) runPlain() error {
 	for {
+		if err := c.BeginStep(); err != nil {
+			return c.ReportStop(err)
+		}
+
 		finish := c.traceStep(c.CPU.GPR(vax.PC), false)
 
 		if err := c.StepMachine(); err != nil {
@@ -96,6 +100,15 @@ func (c *Console) runPlain() error {
 
 		finish()
 	}
+}
+
+// BeginStep lets the scheduler switch processes now, if it's due to at
+// this boundary, so that what a run loop looks at before the next
+// instruction (its PC, for a breakpoint or the trace) is the process
+// that will run it (cpu.Engine.SwitchIfDue). Run loops call it before
+// those checks, then StepMachine.
+func (c *Console) BeginStep() error {
+	return c.Engine.SwitchIfDue()
 }
 
 // StepMachine executes one instruction of whichever process the CPU is

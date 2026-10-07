@@ -168,3 +168,72 @@ func TestSchedulerPreemptibleArgument(t *testing.T) {
 		t.Errorf("preemptible %v, want %v", f.preemptible, want)
 	}
 }
+
+// TestFreezeScheduling: while scheduling is frozen the hook isn't
+// called; freezes nest; the instructions run meanwhile are charged at the
+// first call after the last unfreeze, and a reschedule asked for
+// meanwhile happens then.
+func TestFreezeScheduling(t *testing.T) {
+	e := loopEngine(t)
+	f := &fakeScheduler{next: 3}
+	e.SetScheduler(f, cpu.PreemptAllModes)
+
+	steps(t, e, 1) // the first call
+
+	outer := e.FreezeScheduling()
+	inner := e.FreezeScheduling()
+
+	e.RequestReschedule()
+	steps(t, e, 10)
+
+	inner()
+	inner() // a second call changes nothing
+	steps(t, e, 2)
+
+	if len(f.ran) != 1 || !e.SchedulingFrozen() {
+		t.Fatalf("hook called %d times while frozen (frozen %v)", len(f.ran)-1, e.SchedulingFrozen())
+	}
+
+	outer()
+	steps(t, e, 1)
+
+	if want := []int{0, 13}; !slices.Equal(f.ran, want) {
+		t.Errorf("ran %v, want %v", f.ran, want)
+	}
+}
+
+// TestSwitchIfDue: the hook is called early only when it's due at this
+// boundary and scheduling isn't frozen; Step then doesn't call it again.
+func TestSwitchIfDue(t *testing.T) {
+	e := loopEngine(t)
+	f := &fakeScheduler{next: 3}
+	e.SetScheduler(f, cpu.PreemptAllModes)
+
+	if err := e.SwitchIfDue(); err != nil || len(f.ran) != 1 {
+		t.Fatalf("not called when due: %v, %d calls", err, len(f.ran))
+	}
+
+	steps(t, e, 1)
+
+	if err := e.SwitchIfDue(); err != nil || len(f.ran) != 1 {
+		t.Errorf("called when not due: %v, %d calls", err, len(f.ran))
+	}
+
+	steps(t, e, 2) // the budget is spent
+
+	unfreeze := e.FreezeScheduling()
+
+	if err := e.SwitchIfDue(); err != nil || len(f.ran) != 1 {
+		t.Errorf("called while frozen: %d calls", len(f.ran))
+	}
+
+	unfreeze()
+
+	if err := e.SwitchIfDue(); err != nil || len(f.ran) != 2 {
+		t.Errorf("not called after unfreezing: %d calls", len(f.ran))
+	}
+
+	if err := (&cpu.Engine{}).SwitchIfDue(); err != nil {
+		t.Errorf("no scheduler: %v", err)
+	}
+}

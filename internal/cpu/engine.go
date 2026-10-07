@@ -89,6 +89,11 @@ type Engine struct {
 	schedBudget, schedLeft int
 	preemptModes           PreemptModes
 
+	// schedFrozen counts FreezeScheduling calls not yet undone: while
+	// it's above zero, Step doesn't call the scheduler, so no process
+	// switch happens.
+	schedFrozen int
+
 	// decoded is Step's own pair of reusable Decoded buffers -- see Step's
 	// doc comment on why they exist (a Phase 12 performance-pass finding,
 	// not part of the original Phase 03 design). decoded[current&1] is the
@@ -212,6 +217,7 @@ func NewEngine(cpu *vax.CPU, mem *vm.Memory) *Engine {
 		quantumCurrent:  quantum,
 		quantumInitial:  quantum,
 		faultHistoryMax: defaultFaultHistory,
+		schedLeft:       noSchedulerBudget,
 		hardwareClock:   settings.GetBool("vax.hardware.clock"),
 		lastClock:       uint64(time.Now().UnixMilli()),
 		bootTime:        vmsdef.Time(time.Now()),
@@ -390,7 +396,7 @@ func (e *Engine) Step() error {
 	// stack, at a raised IPL) is never switched away from, and before AST
 	// delivery, so a process switched to gets its own pending ASTs at once.
 	if e.scheduler != nil {
-		if e.schedLeft <= 0 {
+		if e.schedLeft <= 0 && e.schedFrozen == 0 {
 			if err := e.schedule(); err != nil {
 				return err
 			}

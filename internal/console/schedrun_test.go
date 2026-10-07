@@ -145,3 +145,141 @@ func TestSchedulerRun_haltInOtherProcess(t *testing.T) {
 		t.Errorf("the HALT doesn't name process 2:\n%s", out.String())
 	}
 }
+
+// Phase 44's subtask 8: the debugger with several processes.
+
+// debuggedPair boots with the scheduler on and a short quantum, both
+// processes running counter() at the same P0 address, with a debugger
+// installed and a breakpoint at bp, and runs (GO) to the first stop.
+func debuggedPair(t *testing.T, bp uint32) (*console.Console, *debugger.Debugger, *corevms.Environment) {
+	t.Helper()
+
+	c, _ := scheduledConsole(t, "5", counter())
+	two := handBuiltProcess(t, c, counter())
+
+	db := debugger.Install(c, consoletest.DebugGrammar(t), nil)
+	db.AddBreakpoint(bp)
+
+	if err := c.Execute(nil); err != nil {
+		t.Fatalf("GO: %v", err)
+	}
+
+	return c, db, two
+}
+
+// TestSchedulerDebug_breakpointsAreProcessOnes: a breakpoint stops
+// process 1 only. Process 2, running the same code at the same address,
+// passes it without stopping; each GO stops in process 1 at the
+// breakpoint, one count on. The cases cover the boundaries where a
+// switch happens: on the counter's INCL, where process 1 is often
+// switched back in (the check must see process 1 there, not the process
+// it replaces), and with a switch forced at each GO's first boundary
+// (process 1, back at the breakpoint it was stopped at, must not stop
+// again before running it).
+func TestSchedulerDebug_breakpointsAreProcessOnes(t *testing.T) {
+	for _, tt := range []struct {
+		name   string
+		bp     uint32
+		first  uint32 // process 1's count at the first stop (GO runs the first instruction unchecked)
+		forced bool
+	}{
+		{"at the BRB", codeAddr + 6, 1, false},
+		{"at the INCL", codeAddr, 1, false},
+		{"at the BRB, switching at once", codeAddr + 6, 1, true},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			c, db, two := debuggedPair(t, tt.bp)
+			one := c.RTL
+
+			for i := range 30 {
+				if c.RTL.Current() != one || c.CPU.GPR(vax.PC) != tt.bp {
+					t.Fatalf("stop %d: process %08X at %08X, want process 1 at the breakpoint",
+						i, c.RTL.Current().Process.PID, c.CPU.GPR(vax.PC))
+				}
+
+				if got, want := countOf(t, c, one), tt.first+uint32(i); got != want {
+					t.Fatalf("stop %d: process 1 counted %d, want %d", i, got, want)
+				}
+
+				if tt.forced {
+					one.Scheduler().RequestReschedule()
+					c.Engine.RequestReschedule()
+				}
+
+				if err := db.Dispatch("GO"); err != nil {
+					t.Fatalf("GO: %v", err)
+				}
+			}
+
+			if countOf(t, c, two) < 10 {
+				t.Errorf("process 2 counted only %d: it should have run past the breakpoint", countOf(t, c, two))
+			}
+		})
+	}
+}
+
+// TestSchedulerDebug_stepFreezes: a STEP runs process 1 alone, however
+// many quanta it takes; GO lets process 2 run again.
+func TestSchedulerDebug_stepFreezes(t *testing.T) {
+	c, db, two := debuggedPair(t, codeAddr+6)
+	one := c.RTL
+
+	before, oneBefore := countOf(t, c, two), countOf(t, c, one)
+
+	if err := db.Dispatch("STEP 40"); err != nil {
+		t.Fatalf("STEP: %v", err)
+	}
+
+	if c.RTL.Current() != one || countOf(t, c, two) != before {
+		t.Errorf("during STEP 40: process 2 counted %d to %d; current is process 1: %v",
+			before, countOf(t, c, two), c.RTL.Current() == one)
+	}
+
+	// (How far 40 steps take it depends on the debugger's step mode;
+	// what matters is that it moved and process 2 didn't.)
+	if countOf(t, c, one) == oneBefore {
+		t.Error("process 1 didn't move in 40 steps")
+	}
+
+	for range 10 {
+		if err := db.Dispatch("GO"); err != nil {
+			t.Fatalf("GO: %v", err)
+		}
+	}
+
+	if countOf(t, c, two) == before {
+		t.Error("process 2 never ran after the STEP")
+	}
+}
+
+// TestSchedulerDebug_everyInstruction: with a breakpoint on both of the
+// counter's instructions, each GO runs exactly one instruction of
+// process 1, so the stops alternate between them. Process 1 is switched
+// out and back in at every kind of boundary, and each time the check
+// before its next instruction must be made for it, not for the process
+// it replaced (or a stop is missed, and the same address comes twice).
+func TestSchedulerDebug_everyInstruction(t *testing.T) {
+	c, db, two := debuggedPair(t, codeAddr)
+	db.AddBreakpoint(codeAddr + 6)
+
+	one := c.RTL
+	last := c.CPU.GPR(vax.PC)
+
+	for i := range 60 {
+		if err := db.Dispatch("GO"); err != nil {
+			t.Fatalf("GO: %v", err)
+		}
+
+		pc := c.CPU.GPR(vax.PC)
+		if c.RTL.Current() != one || pc == last {
+			t.Fatalf("stop %d: process %08X at %08X after %08X: want process 1, at the other breakpoint",
+				i, c.RTL.Current().Process.PID, pc, last)
+		}
+
+		last = pc
+	}
+
+	if countOf(t, c, two) < 10 {
+		t.Errorf("process 2 counted only %d", countOf(t, c, two))
+	}
+}

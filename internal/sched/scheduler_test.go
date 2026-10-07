@@ -628,6 +628,19 @@ func TestFigure10_2(t *testing.T) {
 	}
 }
 
+// TestRequestReschedule: a requested reschedule puts the current
+// process behind an equal one.
+func TestRequestReschedule(t *testing.T) {
+	s := newScheduler(t, 100, 4, 4)
+	run(s, 1)
+
+	s.RequestReschedule()
+
+	if got := run(s, 1); got[0] != 2 {
+		t.Errorf("ran %v, want process 2", got)
+	}
+}
+
 // TestCharge checks charging instructions in batches: the CPU count,
 // QuantumLeft, and a quantum end inside a batch.
 func TestCharge(t *testing.T) {

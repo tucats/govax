@@ -279,6 +279,14 @@ func (s *Scheduler) QuantumLeft() int {
 	return s.cur.quantumLeft
 }
 
+// RequestReschedule asks for the current process to be rescheduled at
+// the next chance, as if its quantum had ended: it goes to the back of
+// its queue, and the highest-priority computable process runs (VMS's
+// SCH$RESCHED request, section 10.3).
+func (s *Scheduler) RequestReschedule() {
+	s.reschedule = true
+}
+
 // RescheduleRequested reports whether the current process should give
 // up the CPU at the next chance.
 func (s *Scheduler) RescheduleRequested() bool {

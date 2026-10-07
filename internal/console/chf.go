@@ -235,7 +235,13 @@ func (c *Console) invokeHandler(f *cpu.ConsoleHandlerFault, handler, frameFP uin
 		c.Printf("DEBUG: condition handler executing CALL %08X ( %08X, %08X )\n", handler, sigargs, mechargs)
 	}
 
+	// The handler's run is nested inside the program's: it must run in
+	// this process and come back to it, so no other process may run
+	// meanwhile (docs/PHASE-43.md, bug 7; docs/PHASE-44.md, subtask 8).
+	unfreeze := c.Engine.FreezeScheduling()
 	callErr := c.Call(handler, false, sigargs, mechargs)
+
+	unfreeze()
 
 	restore()
 

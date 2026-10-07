@@ -303,6 +303,11 @@ func (d *Debugger) stepRun(startAddr *uint32, req stepRequest) (runOutcome, erro
 
 	c.Engine.BeginRun()
 
+	// A step is of the debugged process alone: no other process runs
+	// while it does (docs/PHASE-43.md, Decision 11; docs/PHASE-44.md,
+	// subtask 8). GO lets them run again.
+	defer c.Engine.FreezeScheduling()()
+
 	var (
 		outcome runOutcome
 		err     error
