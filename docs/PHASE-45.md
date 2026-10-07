@@ -720,3 +720,16 @@ for a process created without one.
     its run; unconfirmed); a child's working set values are 4 pages
     above its creator's; the SYSTEM account's ASTLM is 50 (govax 24).
     The parent's CREPRC_FLAGS is 0x400 (PRC$M_INTER) and its ASTCNT 0x30.
+  - **No input, output, or error** (runs 4 to 6; the second child failed
+    with INSFARG, SS$_INSFARG = `0x114`, on its own `$ASSIGN` with 2 of 4
+    arguments, until run 6): a process `$CREPRC` created with none of
+    them finds `SYS$INPUT`, `SYS$OUTPUT`, `SYS$ERROR`, and `SYS$COMMAND`
+    with no translation in `LNM$FILE_DEV` (the probe can't tell an
+    undefined name from an empty one). govax defines none of them for such
+    a process, which agrees. Its termination status was 1.
+  - **Argument counts**: VMS 7.1 rejects a service called with fewer
+    arguments than it takes (SS$_INSFARG), where govax never does:
+    `$GETDVIW` needs 8, `$CREMBX` 7, `$ASSIGN` 4. A check in govax's
+    dispatcher, with the minimums from the manual, would catch such
+    programs; not done.
+  Probe 1 is finished (`vax/probe1-run6.log` is the complete run).
