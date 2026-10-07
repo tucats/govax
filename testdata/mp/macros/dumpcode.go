@@ -355,7 +355,7 @@ func chunked(bytes []byte, relocs []reloc, callsFile string) {
 			break
 		}
 
-		fmt.Printf("=== %d: %s\n", n, calls[n-1])
+		fmt.Printf("=== %d @%04X: %s\n", n, start, calls[n-1])
 
 		chunk := bytes[start:end]
 		first := strings.Fields(calls[n-1] + " x")[0]

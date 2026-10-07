@@ -352,19 +352,19 @@ func main() {
 	}
 
 	// The command procedures and console scripts below are for the latest
-	// round only (round 3): round 2's probes (svc_*) have their results in
-	// vax/ already. names is reset here, then the round's files added.
+	// round only (round 4): the results of rounds 2 and 3 (svc_*, lst_*,
+	// ext_*) are in vax/ already. names is reset here, then the round's
+	// files added.
 	names = nil
 
-	// Round 3: the argument-list and _G forms of the services above, the
-	// other system services in all their forms, and the extra keywords.
+	// Round 3 (written, but not in the scripts): the argument-list and _G
+	// forms of the services above, the other system services in all their
+	// forms, and the extra keywords.
 	for _, s := range services {
 		name := "lst_" + strings.ToLower(s.name)
 		text, calls := probeForms(s, []string{"$" + s.name, "$" + s.name + "_G"}, true, "LST_")
 		write(name+".mar", text)
 		write(name+".calls", strings.Join(calls, "\n")+"\n")
-
-		names = append(names, name)
 	}
 
 	for _, s := range extServices {
@@ -372,16 +372,22 @@ func main() {
 		text, calls := probeForms(s, []string{"$" + s.name + "_S", "$" + s.name, "$" + s.name + "_G"}, true, "EXT_")
 		write(name+".mar", text)
 		write(name+".calls", strings.Join(calls, "\n")+"\n")
-
-		names = append(names, name)
 	}
 
 	{
 		text, calls := extraProbe()
 		write("ext_extra.mar", text)
 		write("ext_extra.calls", strings.Join(calls, "\n")+"\n")
+	}
 
-		names = append(names, "ext_extra")
+	// Round 4: every other system service, by keyword and by position.
+	for _, s := range r4Services {
+		name := "r4_" + strings.ToLower(s.name)
+		text, calls := r4Probe(s)
+		write(name+".mar", text)
+		write(name+".calls", strings.Join(calls, "\n")+"\n")
+
+		names = append(names, name)
 	}
 
 	// The command procedure.
@@ -431,7 +437,7 @@ func main() {
 	}
 
 	x.WriteString("DIRECTORY DUA1:[000000]\nDISMOUNT DUA1\n")
-	fmt.Fprintf(&o, "COPY DUA1:[000000]MACROS.LOG \"%s/vax/macros3.log\"/HOST/QUIET\n", dir)
+	fmt.Fprintf(&o, "COPY DUA1:[000000]MACROS.LOG \"%s/vax/macros4.log\"/HOST/QUIET\n", dir)
 	o.WriteString("DISMOUNT DUA1\n")
 
 	write("exchange.cmd", x.String())
@@ -502,6 +508,230 @@ func extraProbe() (string, []string) {
 	}
 
 	b.WriteString("\tRET\n\t.END\tEXT_EXTRA\n")
+
+	return b.String(), calls
+}
+
+// r4Service is one of round 4's: a service's keywords as the manual gives
+// them (no guess at which are required; the probe leaves each out in turn),
+// other names that might be the right ones for a keyword the earlier rounds
+// found unknown, and calls of its own.
+type r4Service struct {
+	name  string
+	args  []arg
+	alts  []string
+	extra []string
+}
+
+// fao is $FAO's argument list: the three it always has, and P1 to P17.
+func fao() []arg {
+	list := []arg{a("CTRSTR"), a("OUTLEN"), a("OUTBUF")}
+
+	for i := 1; i <= 17; i++ {
+		list = append(list, v(fmt.Sprintf("P%d", i)))
+	}
+
+	return list
+}
+
+// r4Services are the services round 3 left open (docs/PHASE-45.md): every
+// other service govax implements, their keywords the manual's. Round 3
+// showed that a keyword a macro doesn't know is taken, silently, for the
+// text of a positional argument (the object then refers to a symbol of
+// that name), so an unknown keyword shows in the object as a reference to
+// it, and a call with the wrong arguments for a required one is an error
+// MACRO reports.
+var r4Services = []r4Service{
+	{"ADJSTK", []arg{v("ACMODE"), w("ADJUST"), a("NEWADR")}, nil, nil},
+	{"ADJWSL", []arg{v("PAGCNT"), a("WSETLM")}, nil, nil},
+	{"ALLOC", []arg{a("DEVNAM"), a("PHYLEN"), a("PHYBUF"), v("ACMODE"), v("FLAGS")}, []string{"FLAG", "ALLFLG", "OPTIONS"}, nil},
+	{"DALLOC", []arg{a("DEVNAM"), v("ACMODE")}, nil, nil},
+	{"ASCEFC", []arg{v("EFN"), a("NAME"), v("PROT"), v("PERM")}, nil, nil},
+	{"DACEFC", []arg{v("EFN")}, nil, nil},
+	{"DLCEFC", []arg{a("NAME")}, nil, nil},
+	{"WFLAND", []arg{v("EFN"), v("MASK")}, nil, nil},
+	{"WFLOR", []arg{v("EFN"), v("MASK")}, nil, nil},
+	{"SYNCH", []arg{v("EFN"), a("IOSB")}, nil, nil},
+	{"CANCEL", []arg{w("CHAN")}, nil, nil},
+	{"SETAST", []arg{v("ENBFLG")}, nil, nil},
+	{"DCLAST", []arg{a("ASTADR"), v("ASTPRM"), v("ACMODE")}, nil, nil},
+	{"DCLEXH", []arg{a("DESBLK")}, nil, nil},
+	{"CANEXH", []arg{a("DESBLK")}, nil, nil},
+	{"SETEXV", []arg{v("VECTOR"), a("ADDRES"), v("ACMODE"), a("PRVHND")}, []string{"ADDRESS"}, nil},
+	{"SETPRV", []arg{v("ENBFLG"), a("PRVADR"), v("PRMFLG"), a("PRVPRV")}, nil, nil},
+	{"CMKRNL", []arg{a("ROUTIN"), a("ARGLST")}, nil, nil},
+	{"CMEXEC", []arg{a("ROUTIN"), a("ARGLST")}, nil, nil},
+	{"ASCTIM", []arg{a("TIMLEN"), a("TIMBUF"), a("TIMADR"), v("CVTFLG")}, nil, nil},
+	{"BINTIM", []arg{a("TIMBUF"), a("TIMADR")}, nil, nil},
+	{"GETTIM", []arg{a("TIMADR")}, nil, nil},
+	{"NUMTIM", []arg{a("TIMBUF"), a("TIMADR")}, nil, nil},
+	{"FAOL", []arg{a("CTRSTR"), a("OUTLEN"), a("OUTBUF"), a("PRMLST")}, nil, nil},
+	{"FAO", fao(), nil, nil},
+	{"PUTMSG", []arg{a("MSGVEC"), a("ACTRTN"), a("FACNAM"), v("ACTPRM")}, nil, nil},
+	{"GETMSG", []arg{v("MSGID"), a("MSGLEN"), a("BUFADR"), v("FLAGS"), a("OUTADR")}, nil, nil},
+	{"CRELNM", []arg{a("ATTR"), a("TABNAM"), a("LOGNAM"), a("ACMODE"), a("ITMLST")}, nil, nil},
+	{"DELLNM", []arg{a("TABNAM"), a("LOGNAM"), a("ACMODE")}, nil, nil},
+	{"TRNLNM", []arg{a("ATTR"), a("TABNAM"), a("LOGNAM"), a("ACMODE"), a("ITMLST")}, nil, nil},
+	{"CRELNT", []arg{a("ATTR"), a("RESNAM"), a("RESLEN"), a("QUOTA"), a("PROMSK"), a("TABNAM"), a("PARTAB"), a("ACMODE")}, nil, nil},
+	{"CRELOG", []arg{v("TBLFLG"), a("LOGNAM"), a("EQLNAM"), v("ACMODE")}, []string{"TBL", "TABLE", "TABFLG"}, nil},
+	{"DELLOG", []arg{v("TBLFLG"), a("LOGNAM"), v("ACMODE")}, []string{"TBL", "TABLE", "TABFLG"}, nil},
+	{"TRNLOG", []arg{a("LOGNAM"), a("RSLLEN"), a("RSLBUF"), a("TABLE"), a("ACMODE"), v("DSBMSK")},
+		[]string{"RLENGTH", "RESLEN", "RESBUF", "RESULT", "DSBMASK"}, nil},
+	{"SNDOPR", []arg{a("MSGBUF"), w("CHAN")}, nil, nil},
+	{"EXPREG", []arg{v("PAGCNT"), a("RETADR"), v("ACMODE"), v("REGION")}, nil, nil},
+	{"CNTREG", []arg{v("PAGCNT"), a("RETADR"), v("ACMODE"), v("REGION")}, nil, nil},
+	{"CRETVA", []arg{a("INADR"), a("RETADR"), v("ACMODE")}, nil, nil},
+	{"DELTVA", []arg{a("INADR"), a("RETADR"), v("ACMODE")}, nil, nil},
+	{"LCKPAG", []arg{a("INADR"), a("RETADR"), v("ACMODE")}, nil, nil},
+	{"ULKPAG", []arg{a("INADR"), a("RETADR"), v("ACMODE")}, nil, nil},
+	{"LKWSET", []arg{a("INADR"), a("RETADR"), v("ACMODE")}, nil, nil},
+	{"ULWSET", []arg{a("INADR"), a("RETADR"), v("ACMODE")}, nil, nil},
+	{"SETPRT", []arg{a("INADR"), a("RETADR"), v("ACMODE"), v("PROT"), a("PRVPRT")}, nil, nil},
+	{"SETRWM", []arg{v("WATFLG")}, nil, nil},
+	{"GETSYI", []arg{v("EFN"), a("CSIDADR"), a("NODENAME"), a("ITMLST"), a("IOSB"), a("ASTADR"), v("ASTPRM")}, nil, nil},
+	{"GETSYIW", []arg{v("EFN"), a("CSIDADR"), a("NODENAME"), a("ITMLST"), a("IOSB"), a("ASTADR"), v("ASTPRM")}, nil, nil},
+	{"IDTOASC", []arg{v("ID"), a("NAMLEN"), a("RESNAM"), a("RESID"), a("ATTRIB"), a("CONTXT")},
+		[]string{"IDENT", "IDENTIFIER", "IDVAL", "VALUE", "RESNAME", "RESULT", "RESIDENT", "VALID", "CONTEXT"}, nil},
+	{"ASCTOID", []arg{a("NAME"), a("ID"), a("ATTRIB")}, nil, nil},
+	{"UNWIND", []arg{a("DEPADR"), a("NEWPC")}, nil, nil},
+	{"BRKTHRU", []arg{v("EFN"), a("MSGBUF"), v("SENDTO"), v("SNDTYP"), a("IOSB"), v("CARCON"), v("FLAGS"), v("REQID"), v("TIMOUT"), a("ASTADR"), v("ASTPRM")}, nil, nil},
+	{"BRKTHRUW", []arg{v("EFN"), a("MSGBUF"), v("SENDTO"), v("SNDTYP"), a("IOSB"), v("CARCON"), v("FLAGS"), v("REQID"), v("TIMOUT"), a("ASTADR"), v("ASTPRM")}, nil, nil},
+	// $CREPRC's thirteenth and fourteenth arguments: the keywords are
+	// known (round 3), their sizes are not.
+	{"CREPRC", []arg{a("ITMLST"), a("NODE")}, nil, []string{
+		"$CREPRC_S\tIMAGE=ADR2, ITMLST=-(R6)",
+		"$CREPRC_S\tIMAGE=ADR2, NODE=-(R6)",
+		"$CREPRC_S\tIMAGE=ADR2, ITMLST=(R6)+",
+		"$CREPRC_S\tIMAGE=ADR2, NODE=(R6)+",
+		"$CREPRC_S\tIMAGE=ADR2, ITMLST=ADR9[R7]",
+		"$CREPRC_S\tIMAGE=ADR2, NODE=ADR9[R7]",
+		"$CREPRC_S\tIMAGE=ADR2, ITMLST=#5",
+		"$CREPRC_S\tIMAGE=ADR2, NODE=#5",
+		"$CREPRC_S\tIMAGE=ADR2, ITMLST=0",
+		"$CREPRC_S\tIMAGE=ADR2, NODE=0",
+		"$CREPRC_S\tIMAGE=ADR2, ITMLST=0, NODE=0",
+		"$CREPRC_S\tIMAGE=ADR2, ITMLST=ADR9, NODE=ADR10",
+	}},
+}
+
+// r4Probe writes one service's round 4 program. Every call is the short
+// form (the argument-list and CALLG forms follow one rule, round 3), and
+// ends with a marker as the earlier rounds' do. For a service of n
+// arguments, in this order:
+//
+//   - no arguments, and every argument by keyword;
+//   - each argument left out of the full call, so that an error shows the
+//     ones that are required;
+//   - each argument alone, by keyword, with an address (ADRk) and in the
+//     form that shows its size, -(R6): a call with a keyword the macro
+//     doesn't have shows as a reference to a symbol of that name;
+//   - each alternative name for a keyword, alone;
+//   - the first k arguments by position, k from 1 to n, each written ADRk:
+//     the object shows each one's order and how it is passed (PUSHL for a
+//     value, PUSHAB for an address, MOVZWL or CVTWL for a word), whatever
+//     the macro calls it;
+//   - each adjacent pair left out of the full call, which shows the pairs
+//     the macro joins into one CLRQ;
+//   - every argument by keyword as zero (0 for an address, #0 for a value).
+func r4Probe(s r4Service) (string, []string) {
+	var (
+		b     strings.Builder
+		calls []string
+	)
+
+	n := len(s.args)
+
+	fmt.Fprintf(&b, "\t.TITLE\tR4_%s\tevery argument of $%s\n\t.IDENT\t/V1.0/\n;\n", s.name, s.name)
+	b.WriteString("; Written by testdata/mp/macros/gen.go (docs/PHASE-45.md).\n;\n")
+	b.WriteString("\t.PSECT\tDATA,WRT,NOEXE,LONG\n")
+
+	for i := range max(n, 14) + 2 {
+		fmt.Fprintf(&b, "ADR%d:\t.LONG\t0,0\n", i+1)
+	}
+
+	b.WriteString("\t.PSECT\tCODE,EXE,NOWRT,LONG\n")
+	fmt.Fprintf(&b, "\t.ENTRY\tR4_%s,^M<R6,R7>\n", s.name)
+
+	macro := "$" + s.name + "_S"
+
+	emit := func(text string) {
+		calls = append(calls, strings.TrimSpace(text))
+		b.WriteString(text + "\n")
+		fmt.Fprintf(&b, "\t.LONG\t^X7A7A%04X\n", len(calls))
+	}
+
+	// keyword renders a call from the arguments whose index is in use,
+	// with text(i) the argument's text.
+	keyword := func(use func(i int) bool, text func(i int) string) string {
+		var parts []string
+
+		for i, g := range s.args {
+			if use(i) {
+				parts = append(parts, g.name+"="+text(i))
+			}
+		}
+
+		if len(parts) == 0 {
+			return "\t" + macro
+		}
+
+		return "\t" + macro + "\t" + strings.Join(parts, ", ")
+	}
+
+	// A value is a distinctive number, an address ADRk.
+	given := func(i int) string { return s.args[i].given(i) }
+	zero := func(i int) string {
+		if s.args[i].kind == 'a' {
+			return "0"
+		}
+
+		return "#0"
+	}
+
+	none := func(int) bool { return false }
+	all := func(int) bool { return true }
+
+	emit(keyword(none, given))
+	emit(keyword(all, given))
+
+	// Each argument left out of the full call.
+	for k := range s.args {
+		emit(keyword(func(i int) bool { return i != k }, given))
+	}
+
+	// Each argument alone: as the probe's i-th address or number, and as
+	// -(R6), which shows how big a thing an address argument points to.
+	for k := range s.args {
+		emit(keyword(func(i int) bool { return i == k }, given))
+		emit(keyword(func(i int) bool { return i == k }, func(int) string { return "-(R6)" }))
+	}
+
+	for _, alt := range s.alts {
+		emit("\t" + macro + "\t" + alt + "=ADR9")
+	}
+
+	// The first k arguments by position.
+	for k := 1; k <= n; k++ {
+		parts := make([]string, k)
+		for i := range k {
+			parts[i] = fmt.Sprintf("ADR%d", i+1)
+		}
+
+		emit("\t" + macro + "\t" + strings.Join(parts, ", "))
+	}
+
+	// Each adjacent pair left out.
+	for k := 0; k+1 < n; k++ {
+		emit(keyword(func(i int) bool { return i != k && i != k+1 }, given))
+	}
+
+	emit(keyword(all, zero))
+
+	for _, c := range s.extra {
+		emit("\t" + c)
+	}
+
+	b.WriteString("\tRET\n\t.END\tR4_" + s.name + "\n")
 
 	return b.String(), calls
 }
