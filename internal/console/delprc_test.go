@@ -29,7 +29,7 @@ loop:	calls	#0,g^sys$hiber
 // that status too if it can't create the subprocess.)
 const spawnerSource = `	.title	spawner
 	.psect	data,noexe,wrt
-args:	.long	11, pid, image, 0, 0, 0, 0, 0, 0, %[2]d, 0, 0
+args:	.long	12, pid, image, 0, 0, 0, 0, 0, 0, %[2]d, 0, 0, 0
 pid:	.long	0
 image:	.ascid	|%[1]s|
 	.psect	code,exe,nowrt
@@ -51,7 +51,7 @@ const delprcParent = `
 	callg	delarg, @#sys$delprc
 	movl	r0, @#^X600
 done:	brb	done
-crearg:	.long	11, ^X604, image, 0, 0, 0, 0, 0, 0, %[1]d, 0, 0
+crearg:	.long	12, ^X604, image, 0, 0, 0, 0, 0, 0, %[1]d, 0, 0, 0
 delarg:	.long	2, ^X604, 0
 image:	.word	%[3]d, 0
 	.long	imagetext

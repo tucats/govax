@@ -731,5 +731,18 @@ for a process created without one.
     arguments than it takes (SS$_INSFARG), where govax never does:
     `$GETDVIW` needs 8, `$CREMBX` 7, `$ASSIGN` 4. A check in govax's
     dispatcher, with the minimums from the manual, would catch such
-    programs; not done.
+    programs. Done afterwards, as below.
+  - **The argument-count check** (`corevms/argcount.go`):
+    `SystemService` refuses a call with fewer arguments than
+    `serviceMinArgs` lists, SS$_INSFARG, before the service runs. Eleven
+    services have their full counts, the ones VMS 7.1 refused or took in
+    probe 1 ($GETDVI(W) 8, $CREMBX 7, $ASSIGN 4, and, taken as exactly
+    enough, $GETJPI(W) 7, $CREPRC 12, $QIO(W) 12, $TRNLNM 5, $WAKE 2); the
+    thirty-odd others have only the required arguments of the manual's
+    syntax, so govax is never stricter than the manual. The RMS services
+    and any service not listed have no minimum. Calls made from Go (the
+    unit tests) are not checked. govax's own MACRO test programs
+    (`delprc`, `termmsg`, `crossprocess` tests) had short argument lists;
+    they now pass every argument. Tests: `corevms/argcount_test.go` and
+    `TestEnvironmentSystemServiceInsfarg`.
   Probe 1 is finished (`vax/probe1-run6.log` is the complete run).

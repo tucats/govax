@@ -133,18 +133,42 @@ func TestEnvironmentShim(t *testing.T) {
 
 func TestEnvironmentSystemServiceRecoversHandlerPanic(t *testing.T) {
 	env, _ := fixture()
-	// SYS$SETEF expects one argument; calling it with none indexes argv[0]
-	// out of range -- exactly the kind of malformed-argument-list scenario
-	// callHandler's recover() exists for (see environment.go's doc comment).
+	// A handler that indexes argv[0] out of range -- exactly the kind of
+	// malformed-argument-list scenario callHandler's recover() exists for
+	// (see environment.go's doc comment). SYS$HIBER has no minimum
+	// argument count (argcount.go), so the call reaches the handler.
+	env.services.Register("SYS$HIBER", func(_ *Environment, argv []uint32) (uint32, error) {
+		return argv[0], nil
+	})
 	putArgs(t, env, 0x2000, nil)
 
-	_, handled, err := env.SystemService(0x7FFEE000) // SYS$SETEF
+	_, handled, err := env.SystemService(p1VectorAddr("SYS$HIBER"))
 	if !handled {
-		t.Fatal("SYS$SETEF not handled")
+		t.Fatal("SYS$HIBER not handled")
 	}
 
 	if err == nil {
 		t.Fatal("err = nil, want the recovered panic reported as an error")
+	}
+}
+
+// TestEnvironmentSystemServiceInsfarg: a service called with fewer
+// arguments than VMS requires is refused with SS$_INSFARG before it runs
+// (argcount.go): SYS$SETEF takes one.
+func TestEnvironmentSystemServiceInsfarg(t *testing.T) {
+	env, _ := fixture()
+	putArgs(t, env, 0x2000, nil)
+
+	r0, handled, err := env.SystemService(p1VectorAddr("SYS$SETEF"))
+	if !handled || err != nil || r0 != ssInsfArg {
+		t.Errorf("SYS$SETEF with no arguments: R0 %08X, handled %v, err %v; want SS$_INSFARG", r0, handled, err)
+	}
+
+	// One argument is enough to reach the service.
+	putArgs(t, env, 0x2000, []uint32{3})
+
+	if r0, _, _ = env.SystemService(p1VectorAddr("SYS$SETEF")); r0 == ssInsfArg {
+		t.Error("SYS$SETEF with its argument was refused")
 	}
 }
 

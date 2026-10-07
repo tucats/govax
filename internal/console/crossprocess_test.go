@@ -37,7 +37,7 @@ w2:	tstl	@#^X644
 	callg	frcarg, @#sys$forcex
 	movl	r0, @#^X618
 done:	brb	done
-crearg:	.long	11, ^X604, image, 0, 0, 0, 0, 0, 0, %[1]d, 0
+crearg:	.long	12, ^X604, image, 0, 0, 0, 0, 0, 0, %[1]d, 0, 0, 0
 resarg:	.long	2, ^X604, 0
 susarg:	.long	2, ^X604, 0, 0
 wakarg:	.long	2, ^X604, 0

@@ -36,12 +36,12 @@ const termParent = `
 	callg	qio, @#sys$qiow
 	movl	r0, @#^X600
 done:	brb	done
-mbx:	.long	2, 0, ^X%[1]X
-dvi:	.long	4, 0, 0, 0, items
+mbx:	.long	7, 0, ^X%[1]X, 0, 0, 0, 0, 0
+dvi:	.long	8, 0, 0, 0, items, 0, 0, 0, 0
 items:	.word	4, %[3]d
 	.long	^X%[2]X, 0
 	.long	0
-crearg:	.long	11, ^X604, image, 0, 0, 0, 0, 0, 0, %[4]d, 0, 0
+crearg:	.long	12, ^X604, image, 0, 0, 0, 0, 0, 0, %[4]d, 0, 0, 0
 image:	.word	%[5]d, 0
 	.long	imagetext
 qio:	.long	12, 0, 0, %[6]d, ^X%[7]X, 0, 0, ^X%[8]X, 128, 0, 0, 0, 0

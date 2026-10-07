@@ -345,6 +345,11 @@ func (env *Environment) SystemService(pc uint32) (uint32, bool, error) {
 		}
 	}
 
+	// Too few arguments are refused before the service runs (argcount.go).
+	if min, ok := serviceMinArgs[entry.Name]; ok && env.services.ReadsArgs(entry.Name) && len(argv) < min {
+		return ssInsfArg, true, nil
+	}
+
 	r0, err := callHandler(fn, env, argv)
 
 	// A waiting service is called again until its wait is satisfied
