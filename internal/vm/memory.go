@@ -278,6 +278,37 @@ func (m *Memory) phys(addr uint32, size uint32) ([]byte, error) {
 	return nil, &PhysicalAddressError{Addr: addr}
 }
 
+// LoadPhysical copies len(dest) bytes of memory, starting at the physical
+// address addr, into dest. Nothing is translated: the address names a byte
+// of RAM (or ROM/NVRAM) directly, whatever MAPEN and the page tables say.
+// A few hardware structures are located by physical address -- the
+// process control block that PCBB points at is the one internal/cpu's
+// LDPCTX and SVPCTX read and write through this (Phase 43).
+func (m *Memory) LoadPhysical(addr uint32, dest []byte) error {
+	b, err := m.phys(addr, uint32(len(dest)))
+	if err != nil {
+		return err
+	}
+
+	copy(dest, b)
+
+	return nil
+}
+
+// StorePhysical copies src into memory starting at the physical address
+// addr, untranslated; LoadPhysical's counterpart. The instruction-fetch
+// window reads RAM in place, so it sees the new bytes without a flush.
+func (m *Memory) StorePhysical(addr uint32, src []byte) error {
+	b, err := m.phys(addr, uint32(len(src)))
+	if err != nil {
+		return err
+	}
+
+	copy(b, src)
+
+	return nil
+}
+
 // readPhysLongword and writePhysLongword give translate.go direct,
 // untranslated access to a page table entry's storage (PTEs live at
 // physical addresses computed from P0BR/P1BR/SBR, not virtual ones).

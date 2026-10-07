@@ -266,8 +266,8 @@ func (t *tb) stcFill(vpage uint32, entry *tbEntry, mode vax.AccessMode) {
 
 // InvalidateTB is the Go port of vm.c's invalidate_tb(): a full flush of
 // every TB slot (mapping and protection both), used whenever the OS
-// remaps P0BR/P1BR/etc. wholesale -- TBIA, and (once implemented) a
-// context switch via LDPCTX/SVPCTX, see docs/PHASE-21.md's open item.
+// remaps P0BR/P1BR/etc. wholesale -- TBIA, and a context switch by
+// LDPCTX (internal/cpu/context.go; Phase 43).
 func (m *Memory) InvalidateTB() {
 	m.tb.flushes++
 

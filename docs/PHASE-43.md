@@ -785,3 +785,40 @@ uses the current Environment's `mem`/`cpu` (so the current P0/P1) or its
   them act on another. Tests: `proctable_test.go` (PIDs, reuse,
   sequence wrap, a full table, names by group, processTarget, $SETPRN's
   SS$_DUPLNAM).
+- 2026-10-07: Subtask 4 (the hardware PCB, `SVPCTX`, and `LDPCTX`).
+  `internal/cpu/context.go`: the 96-byte PCB's offsets (`PCBKSP` ...
+  `PCBP1LRPM`, `PCBSize`), a `PCB` struct with `ReadPCB`/`WritePCB`
+  (physical addresses, through the new `vm.Memory.LoadPhysical`/
+  `StorePhysical`), and the two instructions, following the VAX
+  Architecture Reference Manual (EY-3459E, 1987), chapter 6, operation
+  text line by line. `LDPCTX` checks every UNDEFINED case before changing
+  anything (not on the interrupt stack; P0BR, or P1BR + 2**23, not an
+  aligned S0 address; the MBZ bits of the P0LR/ASTLVL and P1LR/PME
+  longwords; ASTLVL above 4) and takes the preferred reserved-operand
+  fault. The one UNDEFINED case it can't check ahead, a kernel stack it
+  can't push the PC and PSL on, restores the registers saved before the
+  load and then faults (govax's choice). `SVPCTX` reads the PC and PSL off
+  the stack before writing anything, so an access violation there
+  restarts cleanly, and never writes the PCB's memory-management
+  longwords (its note 1). `vax.PME` names privileged register 61 (the
+  manual's name for what govax called PMR). `LDPCTX` empties the whole
+  TB for now; subtask 5 narrows it to P0 and P1. `Engine.SaveContext`/
+  `LoadContext` are the Go switcher's halves, sharing the instructions'
+  code (`registerContext`, `readLoadablePCB`, `loadContext`):
+  SaveContext has the effect of an IPL 3 interrupt plus `SVPCTX` (the PCB
+  gets the PC of the next instruction and the current PSL, the live SP
+  goes into its mode's slot, and the CPU is left in kernel mode on the
+  interrupt stack at IPL max(3, IPL)); it refuses to run on the interrupt
+  stack (`ErrContextOnInterruptStack`). LoadContext has the effect of
+  `LDPCTX` plus `REI`, without the push and pop. The IPL 3 and the
+  interrupt-style PSL (previous mode kernel, other bits clear) are govax's
+  choices, **unconfirmed** by any manual (no probe can see them). The
+  PCB's place in memory (beside the kernel stack, or a pool of its own;
+  an open question) is left to subtask 9, which allocates it; PCBB is
+  still 0 until then. `TestEveryInstructionImplemented` lost its two
+  exceptions. Tests: `context_test.go` (layout, SVPCTX from either
+  stack and its IPL rule, privilege, LDPCTX's loads and each UNDEFINED
+  case, a bad kernel stack, SaveContext/LoadContext round trip) and
+  `context_resched_test.go`, which assembles the manual's RESCHED example
+  as a VAX program and runs two processes switching through it with the
+  IPL 3 software interrupt.

@@ -229,22 +229,20 @@ func TestNewInstructionsDecode(t *testing.T) {
 }
 
 // TestEveryInstructionImplemented checks every instruction in the table
-// has a handler (Phase 35 finished the set), except the two left out by
-// Phase 35's Decision 1, LDPCTX and SVPCTX, and the table's placeholder
-// entries: the reserved opcodes (RSVD_xx), which raise the
-// reserved-instruction fault, and the FD/FE/FF prefix bytes (EXT_xx). So
-// SHOW INSTRUCTIONS/UNIMPLEMENTED lists only those.
+// has a handler (Phase 35 finished the set but for LDPCTX and SVPCTX,
+// which Phase 43 added), except the table's placeholder entries: the
+// reserved opcodes (RSVD_xx), which raise the reserved-instruction fault,
+// and the FD/FE/FF prefix bytes (EXT_xx). So SHOW
+// INSTRUCTIONS/UNIMPLEMENTED lists only those.
 func TestEveryInstructionImplemented(t *testing.T) {
-	notImplemented := map[string]bool{"LDPCTX": true, "SVPCTX": true}
-
 	for _, inst := range instructionTable.All() {
 		placeholder := strings.HasPrefix(inst.Name, "RSVD_") || strings.HasPrefix(inst.Name, "EXT_")
 
 		switch implemented := instructionTable.Implemented(inst); {
-		case !implemented && !placeholder && !notImplemented[inst.Name]:
+		case !implemented && !placeholder:
 			t.Errorf("%s has no handler", inst.Name)
-		case implemented && (placeholder || notImplemented[inst.Name]):
-			t.Errorf("%s has a handler; update this test and PHASE-35.md's Decision 1", inst.Name)
+		case implemented && placeholder:
+			t.Errorf("%s has a handler; update this test", inst.Name)
 		}
 	}
 }

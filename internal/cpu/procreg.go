@@ -4,8 +4,7 @@ import "github.com/tucats/govax/internal/vax"
 
 // This is the Go port of emul_procreg.c: MTPR/MFPR and the privileged-
 // register access-kind table (init_reg_access/set_priv_reg). LDPCTX/SVPCTX,
-// also defined in emul_procreg.c, are out of this phase's scope -- see
-// docs/PHASE-07.md's open questions.
+// also defined in emul_procreg.c, are in context.go (Phase 43).
 
 // privAccess says whether a privileged register may be read, written, or
 // both via MTPR/MFPR, matching emul_procreg.c's priv_reg_access[] (values

@@ -77,6 +77,7 @@ const (
 	TBIA   PrivReg = 57 // Translation Buffer Invalidate All
 	TBIS   PrivReg = 58 // Translation Buffer Invalidate Single
 	PMR    PrivReg = 61 // Performance Monitoring Register
+	PME    PrivReg = 61 // the Architecture Reference Manual's name for PMR: Performance Monitor Enable
 	SID    PrivReg = 62 // System Identification REgister
 	TBCHK  PrivReg = 63 // Translation Buffer Check
 )

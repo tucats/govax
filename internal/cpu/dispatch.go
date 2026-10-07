@@ -13,8 +13,8 @@ type Handler func(e *Engine, d *Decoded) error
 // unimplementedHandler is every Instruction's Handler until a real one is
 // registered — the Go equivalent of init_emulators.c's default
 // emul_unimplemented, which every table slot starts with before the
-// explicitly-implemented ones are overridden. Since Phase 35 only LDPCTX,
-// SVPCTX, and the reserved opcodes are left with it
+// explicitly-implemented ones are overridden. Since Phase 43 (LDPCTX and
+// SVPCTX, context.go) only the reserved opcodes are left with it
 // (TestEveryInstructionImplemented).
 func unimplementedHandler(e *Engine, d *Decoded) error {
 	return &Fault{Code: ExcPrivileged}

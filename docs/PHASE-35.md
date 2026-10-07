@@ -341,7 +341,8 @@ The author accepted each proposal below on 2026-10-02.
    context from a PCB, and govax runs processes through its RTL rather
    than a VMS scheduler, so nothing reaches them today. Decided: out of
    scope, left for a phase that needs them; Phase 07's and Phase 21's
-   notes about them stay as they are.
+   notes about them stay as they are. (Phase 43, subtask 4, implemented
+   them: `internal/cpu/context.go`.)
 2. **How the floating core does its arithmetic.** `math/big.Float`
    supports each format's exact precision and half-away-from-zero
    rounding (`big.ToNearestAway`), so it's the shortest path to correct
