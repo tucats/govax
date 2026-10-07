@@ -125,6 +125,10 @@ func (sys *System) addProcess(env *Environment) error {
 		t.slots[index] = env
 		env.Process.PID = pid(index, seq)
 
+		// A new computable process may preempt the current one: let the
+		// scheduler look at the next instruction (waits.go).
+		sys.requestReschedule()
+
 		if t.current == nil {
 			t.current = env
 		}

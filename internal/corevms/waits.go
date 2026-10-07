@@ -132,34 +132,53 @@ func (env *Environment) endWait(class sched.Class) {
 	_, _ = env.sched.Ready(handle(env), class)
 }
 
+// pollEvents is what the scheduler does before each choice: every
+// process's due timers expire (so a timer's event flag, wakeup, or AST
+// happens on time whichever process it belongs to, not only when that
+// process next runs), and then every waiting process is tested
+// (wakeWaiters).
+func (sys *System) pollEvents() {
+	for _, env := range sys.procs.slots {
+		if env != nil {
+			env.expireTimers()
+		}
+	}
+
+	if sys.wakeWaiters() {
+		sys.idleSpinning = false
+	}
+}
+
 // wakeWaiters tests every waiting process (see this file's opening
 // comment): one whose wait is over, or that has an AST it could take,
-// becomes computable. Each process's due timers are expired first, so a
-// timer's flag, wakeup, or AST counts.
-func (sys *System) wakeWaiters() {
+// becomes computable. It reports whether any did.
+func (sys *System) wakeWaiters() bool {
 	if sys.waiters == 0 {
-		return
+		return false
 	}
+
+	woke := false
 
 	for _, env := range sys.procs.slots {
 		if env == nil || env.waiting == nil {
 			continue
 		}
 
-		env.expireTimers()
-
 		w := env.waiting
 		if w.over == nil || w.over() || env.astDeliverable() {
 			env.endWait(w.class)
+			woke = true
 		}
 	}
+
+	return woke
 }
 
 // retryWaiters makes every waiting process computable, without a boost,
-// to try its wait again: what the scheduler does when no process is
-// computable, until the idle loop (subtask 5). Each then spins on its
-// XFC as it did before the scheduler, so waits still end as emulated
-// time passes.
+// to try its wait again: what the idle loop falls back on when no timer
+// can end a wait (idle.go). Each then spins on its XFC as it did before
+// the scheduler, between instructions where CTRL/C and the run's limits
+// are checked.
 func (sys *System) retryWaiters() {
 	for _, env := range sys.procs.slots {
 		if env != nil && env.waiting != nil {

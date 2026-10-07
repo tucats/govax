@@ -98,6 +98,11 @@ type System struct {
 	// when there are none.
 	waiters int
 
+	// idleSpinning is set while every process waits with no timer due to
+	// end a wait, the waiters retrying their services (idle.go), so the
+	// SET DEBUG PROCESS trace notes that only once.
+	idleSpinning bool
+
 	// procs is the process table: every process's Environment by its
 	// PID's index, and which one is current (proctable.go).
 	procs *processTable

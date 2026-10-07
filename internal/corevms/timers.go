@@ -23,7 +23,12 @@ import (
 // its event flags (eventFlagWord runs expireTimers first). The second
 // path is what subtask 11 started with, when there were no ASTs and
 // event flags were only visible through services; it remains for code
-// driven without an engine.
+// driven without an engine. Those two expire only the running process's
+// timers. With the scheduler (docs/PHASE-44.md, subtask 5), every
+// process's are expired at each scheduling call (pollEvents, waits.go),
+// which comes no later than the next timer of any process is due
+// (System.budget), and an idle CPU moves time on to the next one
+// (idle.go): so timers are system-wide in effect, as on VMS.
 
 // timerRequest is one entry in the process's timer queue (a VMS timer
 // queue entry, TQE). Two services queue them, and VMS keeps both kinds in

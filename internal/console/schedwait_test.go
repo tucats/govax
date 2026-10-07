@@ -4,11 +4,13 @@ import (
 	"fmt"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/tucats/govax/internal/asm"
 	"github.com/tucats/govax/internal/console"
 	"github.com/tucats/govax/internal/corevms"
 	"github.com/tucats/govax/internal/sched"
+	"github.com/tucats/govax/internal/vax"
 	"github.com/tucats/govax/internal/vmsdef"
 )
 
@@ -213,5 +215,183 @@ func TestSchedulerWait_astWakesWaiter(t *testing.T) {
 
 	if countOf(t, c, c.RTL) == 0 {
 		t.Error("process 1 never ran")
+	}
+}
+
+// Phase 44's subtask 5: idling, and timers that end waits on time.
+
+// timerWait: note the time ($GETTIM, at dataAddr+0x18), set a timer
+// DELTA ahead on event flag 1, wait for it, note the time again (at
+// dataAddr+0x10), mark the wait over (dataAddr+8), and hibernate for
+// good. DELTA is .set by the caller.
+const timerWait = `
+	pushal	@#^X618
+	calls	#1, @#sys$gettim	; when the timer was set
+	pushl	#0			; flags
+	pushl	#0			; reqidt
+	pushl	#0			; astadr
+	pushal	@#delta			; daytim
+	pushl	#1			; efn
+	calls	#5, @#sys$setimr
+	pushl	#1
+	calls	#1, @#sys$waitfr
+	pushal	@#^X610
+	calls	#1, @#sys$gettim	; when it woke
+	movl	#1, @#^X608		; done
+sleep:	calls	#0, @#sys$hiber
+	brb	sleep
+delta:	.quad	DELTA
+`
+
+// timerProgram assembles timerWait with a delay of ms milliseconds.
+func timerProgram(t *testing.T, ms int) []byte {
+	t.Helper()
+
+	code, _ := assembleAt(t, strings.Replace(timerWait, "DELTA", fmt.Sprint(-ms*10_000), 1))
+
+	return code
+}
+
+// quadAt reads the quadword at addr in env's own P0.
+func quadAt(t *testing.T, c *console.Console, env *corevms.Environment, addr uint32) uint64 {
+	t.Helper()
+
+	lo, hi := longwordAt(t, c, env, addr), longwordAt(t, c, env, addr+4)
+
+	return uint64(hi)<<32 | uint64(lo)
+}
+
+// runUntilDone steps until every env has marked its wait over (at
+// dataAddr+8), failing after limit instructions; it returns how many it
+// ran.
+func runUntilDone(t *testing.T, c *console.Console, limit int, envs ...*corevms.Environment) int {
+	t.Helper()
+
+	for n := 0; n < limit; n++ {
+		done := true
+
+		for _, env := range envs {
+			if longwordAt(t, c, env, dataAddr+8) == 0 {
+				done = false
+			}
+		}
+
+		if done {
+			return n
+		}
+
+		step(t, c, 1)
+	}
+
+	t.Fatalf("not done after %d instructions", limit)
+
+	return limit
+}
+
+// waitSlack allows for the instructions between timerWait's two $GETTIMs
+// and its timer: vax.init runs the quantum clock at one millisecond per
+// instruction (SET QUANTUM 1), so they add a few milliseconds.
+const waitSlack = 20
+
+// waitedMS is how long env waited for its timer, in milliseconds of
+// system time, and when it woke.
+func waitedMS(t *testing.T, c *console.Console, env *corevms.Environment) (float64, uint64) {
+	t.Helper()
+
+	set, woke := quadAt(t, c, env, dataAddr+0x18), quadAt(t, c, env, dataAddr+0x10)
+
+	return float64(woke-set) / 10_000, woke
+}
+
+// TestSchedulerIdle_timersInOrder: two processes wait for timers, 2s and
+// 1s ahead. With nothing else to run, the scheduler idles, jumping the
+// quantum clock to each timer in turn: each process wakes in time order,
+// on time, after a few dozen instructions instead of the thousands that
+// two seconds of spinning would take.
+func TestSchedulerIdle_timersInOrder(t *testing.T) {
+	c, out := scheduledConsole(t, longQuantum, timerProgram(t, 2000))
+	one := c.RTL
+	two := handBuiltProcess(t, c, timerProgram(t, 1000))
+
+	c.CPU.SetDebug(c.CPU.Debug() | vax.DebugProcess)
+
+	if n := runUntilDone(t, c, 5000, one, two); n > 200 {
+		t.Errorf("took %d instructions; idling should have skipped the waits", n)
+	}
+
+	waitOne, wokeOne := waitedMS(t, c, one)
+	waitTwo, wokeTwo := waitedMS(t, c, two)
+
+	if wokeTwo >= wokeOne {
+		t.Errorf("process 2 (1s timer) woke at %d, not before process 1 (2s) at %d", wokeTwo, wokeOne)
+	}
+
+	if waitOne < 2000 || waitOne > 2000+waitSlack || waitTwo < 1000 || waitTwo > 1000+waitSlack {
+		t.Errorf("waited %.1f and %.1f ms, want 2000 and 1000", waitOne, waitTwo)
+	}
+
+	if !strings.Contains(out.String(), "DEBUG(PROCESS): IDLE for") {
+		t.Errorf("no idle traced:\n%s", out.String())
+	}
+}
+
+// TestSchedulerIdle_timerWhileBusy: a process waiting for a timer wakes
+// on time while another process computes through a quantum far longer
+// than the wait: the scheduler is called when the timer is due, not only
+// at quantum ends.
+func TestSchedulerIdle_timerWhileBusy(t *testing.T) {
+	c, _ := scheduledConsole(t, longQuantum, counter())
+	two := handBuiltProcess(t, c, timerProgram(t, 10))
+
+	runUntilDone(t, c, 100_000, two)
+
+	if waited, _ := waitedMS(t, c, two); waited < 10 || waited > 10+waitSlack {
+		t.Errorf("waited %.1f ms, want 10", waited)
+	}
+
+	if countOf(t, c, c.RTL) == 0 {
+		t.Error("process 1 never ran")
+	}
+}
+
+// TestSchedulerIdle_hardwareClock: with the host's clock, idling sleeps
+// until the timer is due.
+func TestSchedulerIdle_hardwareClock(t *testing.T) {
+	setSetting(t, "vax.hardware.clock", "true")
+
+	c, _ := scheduledConsole(t, longQuantum, timerProgram(t, 40))
+	one := c.RTL
+	two := handBuiltProcess(t, c, timerProgram(t, 20))
+
+	begin := time.Now()
+
+	if n := runUntilDone(t, c, 100_000, one, two); n > 1000 {
+		t.Errorf("took %d instructions; idling should have slept instead", n)
+	}
+
+	if d := time.Since(begin); d < 40*time.Millisecond {
+		t.Errorf("finished in %v, before the 40ms timer", d)
+	}
+
+	if w, _ := waitedMS(t, c, one); w < 40 {
+		t.Errorf("process 1 waited %.1f ms, want 40 at least", w)
+	}
+}
+
+// TestSchedulerIdle_noTimer: with every process hibernating and no timer
+// due, the processes retry their waits, as a lone waiting process always
+// has, and the trace says so once.
+func TestSchedulerIdle_noTimer(t *testing.T) {
+	code, _ := assembleAt(t, "sleep:	calls	#0, @#sys$hiber\n	brb	sleep\n")
+
+	c, out := scheduledConsole(t, longQuantum, code)
+	handBuiltProcess(t, c, code)
+
+	c.CPU.SetDebug(c.CPU.Debug() | vax.DebugProcess)
+
+	step(t, c, 500)
+
+	if n := strings.Count(out.String(), "no timer is due"); n != 1 {
+		t.Errorf("traced %d times, want once:\n%s", n, out.String())
 	}
 }

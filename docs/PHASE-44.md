@@ -1,7 +1,7 @@
 # Phase 44 — Multiprocessing, part 2: the scheduler
 
 **Status:** in progress (started 2026-10-07); decisions taken 2026-10-06
-(see PHASE-43.md, Part A). Subtasks 1–4 done.
+(see PHASE-43.md, Part A). Subtasks 1–5 done.
 
 The program this phase belongs to — its goal, architecture, rules for
 every commit, decisions, and known bugs — is in
@@ -434,3 +434,46 @@ The layouts come from the User's Manual and, if Decision 7 allows, a VMS
     its end (and the boost), no change without the scheduler, the
     unspecified wait, `retryWaiters`, and `$WAKE` of another process.
     Benchmarks unchanged.
+- 2026-10-07: **Subtask 5 done: idle and timers.**
+  - Engine (`cpu/idle.go`): `IdleUntil(t, limit)` moves emulated time to
+    `t` for a scheduler with nothing to run: in quantum-clock mode the
+    clock jumps there (whole milliseconds, rounding up; refused while
+    the interval clock runs or interrupts are queued, whose ticks can't
+    be skipped), in hardware-clock mode it sleeps, in 10 ms slices, at
+    most `limit`, stopping early for a control key.
+    `InstructionsUntil(t)` is how many instructions run before the
+    quantum clock reaches `t` (exact: the rest of this millisecond plus
+    whole ones); in hardware-clock mode, a fixed 16,384.
+  - corevms: timers are system-wide in effect. Every scheduling call
+    first expires every process's due timers (`pollEvents`), and the
+    budget the hook returns is the rest of the quantum but no more than
+    the instructions until the next timer of any process
+    (`System.budget`, `nextTimer`), so a timer ends its process's wait
+    on time while another process runs.
+  - The null process (`corevms/idle.go`): when nothing is computable,
+    `idle` moves time to the next timer due, expires it, tests the
+    waiters, and repeats until one can run (at most 64 timers per call,
+    so timers that end no wait, such as a repeating `$SCHDWK` for a
+    process that isn't hibernating, can't keep it from checking for
+    CTRL/C; and at most 50 ms of sleep in hardware-clock mode). With no
+    timer pending, every waiter retries its service (the old spin),
+    between instructions where CTRL/C and the limits are checked, and
+    `SET DEBUG PROCESS` notes it once (`IDLE: every process waits and no
+    timer is due`); each jump is traced as `IDLE for n ms`.
+  - Bug fixed: adding a process asked the scheduler for a reschedule
+    but not the engine, whose budget could be a whole quantum, so a new
+    process waited for the current one's quantum end or service call
+    (the earlier tests all made service calls, or asked by hand).
+    `addProcess` now calls `requestReschedule`.
+  - Note for test writers: vax.init sets `SET QUANTUM 1`, one emulated
+    millisecond per instruction, so instruction counts show up in
+    measured times at that rate.
+  - Tests: `cpu/idle_test.go` (`InstructionsUntil` exact, the quantum
+    jump and its refusal, the hardware sleep, its limit, and CTRL/C);
+    `console/schedwait_test.go`: two processes waiting on 2 s and 1 s
+    timers wake in time order and on time after a few dozen
+    instructions; a timer wait ends on time while the other process
+    computes through a 10-million-instruction quantum (it fails without
+    the timer budget); hardware-clock idling sleeps until the timers;
+    and with every process hibernating and no timer, the processes
+    spin and the trace says so once. Benchmarks unchanged.

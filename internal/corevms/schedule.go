@@ -71,12 +71,13 @@ func (sys *System) Schedule(e *cpu.Engine, ran int, preemptible bool) (int, erro
 	s := sys.sched
 	s.Charge(ran)
 
-	// A waiting process whose wait is over becomes computable now, which
-	// may preempt the current one (waits.go).
-	sys.wakeWaiters()
+	// Every process's due timers expire, and a waiting process whose
+	// wait is over becomes computable now, which may preempt the
+	// current one (waits.go).
+	sys.pollEvents()
 
 	if !s.RescheduleRequested() {
-		return s.QuantumLeft(), nil
+		return sys.budget(e), nil
 	}
 
 	// No current process in the scheduler means the last one waited (or
@@ -88,11 +89,8 @@ func (sys *System) Schedule(e *cpu.Engine, ran int, preemptible bool) (int, erro
 
 	h, ok := s.Reschedule()
 	if !ok {
-		// Nobody can run: every waiter tries its wait again, as each
-		// did before the scheduler (until subtask 5's idle loop).
-		sys.retryWaiters()
-
-		if h, ok = s.Reschedule(); !ok {
+		// Nobody can run: idle until somebody can (idle.go).
+		if h, ok = sys.idle(e); !ok {
 			return 0, ErrNoComputableProcess
 		}
 	}
@@ -108,7 +106,22 @@ func (sys *System) Schedule(e *cpu.Engine, ran int, preemptible bool) (int, erro
 		}
 	}
 
-	return s.QuantumLeft(), nil
+	return sys.budget(e), nil
+}
+
+// budget is how many instructions may run before the scheduler is
+// called again: the rest of the current process's quantum, but no later
+// than the next timer of any process is due, so that a timer ends its
+// process's wait on time even while another process runs (pollEvents
+// expires it at that call).
+func (sys *System) budget(e *cpu.Engine) int {
+	n := sys.sched.QuantumLeft()
+
+	if t, ok := sys.nextTimer(); ok && e != nil {
+		n = min(n, e.InstructionsUntil(t))
+	}
+
+	return n
 }
 
 // switchTo moves the CPU from process cur to
