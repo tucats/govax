@@ -33,12 +33,25 @@ type arg struct {
 	kind byte
 }
 
-// A service is a macro: its keywords in order, and how many are required
-// (the manual brackets the rest as optional).
+// A service is a macro: its keywords in order, and which are required (the
+// manual leaves the rest in brackets). Round 1 (vax/round1) guessed that
+// the first few were; real MACRO reported an error for a call without
+// SCHDWK's DAYTIM, SETPRI's PRI, GETJPI's ITMLST, and so on, so round 2
+// names them.
 type service struct {
 	name     string
 	args     []arg
-	required int
+	required []string
+}
+
+func (s service) isRequired(name string) bool {
+	for _, r := range s.required {
+		if r == name {
+			return true
+		}
+	}
+
+	return false
 }
 
 func v(n string) arg { return arg{n, 'v'} }
@@ -47,29 +60,29 @@ func a(n string) arg { return arg{n, 'a'} }
 
 var services = []service{
 	{"CREPRC", []arg{a("PIDADR"), a("IMAGE"), a("INPUT"), a("OUTPUT"), a("ERROR"), a("PRVADR"), a("QUOTA"), a("PRCNAM"),
-		v("BASPRI"), v("UIC"), w("MBXUNT"), v("STSFLG")}, 0},
-	{"DELPRC", []arg{a("PIDADR"), a("PRCNAM")}, 0},
-	{"WAKE", []arg{a("PIDADR"), a("PRCNAM")}, 0},
-	{"HIBER", nil, 0},
-	{"SCHDWK", []arg{a("PIDADR"), a("PRCNAM"), a("DAYTIM"), a("REPTIM")}, 1},
-	{"CANWAK", []arg{a("PIDADR"), a("PRCNAM")}, 0},
-	{"FORCEX", []arg{a("PIDADR"), a("PRCNAM"), v("CODE")}, 0},
-	{"SUSPND", []arg{a("PIDADR"), a("PRCNAM"), v("FLAGS")}, 0},
-	{"RESUME", []arg{a("PIDADR"), a("PRCNAM")}, 0},
-	{"SETPRI", []arg{a("PIDADR"), a("PRCNAM"), v("PRI"), a("PRVPRI")}, 1},
-	{"SETPRN", []arg{a("PRCNAM")}, 0},
-	{"GETJPI", []arg{v("EFN"), a("PIDADR"), a("PRCNAM"), a("ITMLST"), a("IOSB"), a("ASTADR"), v("ASTPRM")}, 1},
-	{"GETJPIW", []arg{v("EFN"), a("PIDADR"), a("PRCNAM"), a("ITMLST"), a("IOSB"), a("ASTADR"), v("ASTPRM")}, 1},
-	{"GETDVI", []arg{v("EFN"), w("CHAN"), a("DEVNAM"), a("ITMLST"), a("IOSB"), a("ASTADR"), v("ASTPRM")}, 1},
-	{"GETDVIW", []arg{v("EFN"), w("CHAN"), a("DEVNAM"), a("ITMLST"), a("IOSB"), a("ASTADR"), v("ASTPRM")}, 1},
-	{"CREMBX", []arg{v("PRMFLG"), a("CHAN"), v("MAXMSG"), v("BUFQUO"), v("PROMSK"), v("ACMODE"), a("LOGNAM")}, 1},
-	{"DELMBX", []arg{w("CHAN")}, 1},
-	{"SETIMR", []arg{v("EFN"), a("DAYTIM"), a("ASTADR"), v("REQIDT"), v("FLAGS")}, 1},
-	{"CANTIM", []arg{v("REQIDT"), v("ACMODE")}, 0},
-	{"WAITFR", []arg{v("EFN")}, 1},
-	{"SETEF", []arg{v("EFN")}, 1},
-	{"CLREF", []arg{v("EFN")}, 1},
-	{"READEF", []arg{v("EFN"), a("STATE")}, 1},
+		v("BASPRI"), v("UIC"), w("MBXUNT"), v("STSFLG")}, nil},
+	{"DELPRC", []arg{a("PIDADR"), a("PRCNAM")}, nil},
+	{"WAKE", []arg{a("PIDADR"), a("PRCNAM")}, nil},
+	{"HIBER", nil, nil},
+	{"SCHDWK", []arg{a("PIDADR"), a("PRCNAM"), a("DAYTIM"), a("REPTIM")}, []string{"DAYTIM"}},
+	{"CANWAK", []arg{a("PIDADR"), a("PRCNAM")}, nil},
+	{"FORCEX", []arg{a("PIDADR"), a("PRCNAM"), v("CODE")}, nil},
+	{"SUSPND", []arg{a("PIDADR"), a("PRCNAM"), v("FLAGS")}, nil},
+	{"RESUME", []arg{a("PIDADR"), a("PRCNAM")}, nil},
+	{"SETPRI", []arg{a("PIDADR"), a("PRCNAM"), v("PRI"), a("PRVPRI")}, []string{"PRI"}},
+	{"SETPRN", []arg{a("PRCNAM")}, nil},
+	{"GETJPI", []arg{v("EFN"), a("PIDADR"), a("PRCNAM"), a("ITMLST"), a("IOSB"), a("ASTADR"), v("ASTPRM")}, []string{"ITMLST"}},
+	{"GETJPIW", []arg{v("EFN"), a("PIDADR"), a("PRCNAM"), a("ITMLST"), a("IOSB"), a("ASTADR"), v("ASTPRM")}, []string{"ITMLST"}},
+	{"GETDVI", []arg{v("EFN"), w("CHAN"), a("DEVNAM"), a("ITMLST"), a("IOSB"), a("ASTADR"), v("ASTPRM")}, []string{"ITMLST"}},
+	{"GETDVIW", []arg{v("EFN"), w("CHAN"), a("DEVNAM"), a("ITMLST"), a("IOSB"), a("ASTADR"), v("ASTPRM")}, []string{"ITMLST"}},
+	{"CREMBX", []arg{v("PRMFLG"), a("CHAN"), v("MAXMSG"), v("BUFQUO"), v("PROMSK"), v("ACMODE"), a("LOGNAM")}, []string{"CHAN"}},
+	{"DELMBX", []arg{w("CHAN")}, []string{"CHAN"}},
+	{"SETIMR", []arg{v("EFN"), a("DAYTIM"), a("ASTADR"), v("REQIDT"), v("FLAGS")}, []string{"DAYTIM"}},
+	{"CANTIM", []arg{v("REQIDT"), v("ACMODE")}, nil},
+	{"WAITFR", []arg{v("EFN")}, []string{"EFN"}},
+	{"SETEF", []arg{v("EFN")}, []string{"EFN"}},
+	{"CLREF", []arg{v("EFN")}, []string{"EFN"}},
+	{"READEF", []arg{v("EFN"), a("STATE")}, []string{"EFN", "STATE"}},
 }
 
 // number is a distinctive value for argument i of a call: its position
@@ -105,10 +118,17 @@ func call(macro string, s service, given map[string]string) string {
 
 // probe writes one service's program: the macro in its short (_S) and
 // long (no suffix) forms, with the required arguments only, every
-// argument, every optional argument left out in turn, every argument in
-// each of the addressing forms the macros must tell apart.
-func probe(s service) string {
-	var b strings.Builder
+// argument, every optional argument left out in turn, every optional
+// argument alone beside the required ones, and each argument in the
+// addressing forms the macros must tell apart. After every call is a
+// marker, ".LONG ^X7A7Axxxx" (xxxx the call's number from 1), which
+// dumpcode.go finds in the object to tell where each call's code ends,
+// whatever the call did.
+func probe(s service) (string, []string) {
+	var (
+		b     strings.Builder
+		calls []string
+	)
 
 	fmt.Fprintf(&b, "\t.TITLE\tSVC_%s\tevery form of $%s\n\t.IDENT\t/V1.0/\n;\n", s.name, s.name)
 	b.WriteString("; Written by testdata/mp/macros/gen.go (docs/PHASE-45.md).\n;\n")
@@ -121,79 +141,95 @@ func probe(s service) string {
 	b.WriteString("\t.PSECT\tCODE,EXE,NOWRT,LONG\n")
 	fmt.Fprintf(&b, "\t.ENTRY\tSVC_%s,^M<R6,R7>\n", s.name)
 
+	emit := func(text string) {
+		calls = append(calls, strings.TrimSpace(text))
+		b.WriteString(text + "\n")
+		fmt.Fprintf(&b, "\t.LONG\t^X7A7A%04X\n", len(calls))
+	}
+
+	// base is a call giving the required arguments only.
+	base := func() map[string]string {
+		m := map[string]string{}
+
+		for i, g := range s.args {
+			if s.isRequired(g.name) {
+				m[g.name] = g.given(i)
+			}
+		}
+
+		return m
+	}
+
 	for _, form := range []string{"$" + s.name + "_S", "$" + s.name} {
 		fmt.Fprintf(&b, "; %s\n", form)
 
-		// No arguments, and the required ones.
-		b.WriteString(call(form, s, nil) + "\n")
+		// Nothing, only the required, everything.
+		emit(call(form, s, nil))
+		emit(call(form, s, base()))
 
-		req := map[string]string{}
-		for i, g := range s.args[:s.required] {
-			req[g.name] = g.given(i)
-		}
-
-		b.WriteString(call(form, s, req) + "\n")
-
-		// Every argument.
 		all := map[string]string{}
 		for i, g := range s.args {
 			all[g.name] = g.given(i)
 		}
 
-		b.WriteString(call(form, s, all) + "\n")
+		emit(call(form, s, all))
 
-		// Each optional argument left out, the others given.
-		for i := s.required; i < len(s.args); i++ {
+		// Each optional argument left out, the rest given.
+		for i, g := range s.args {
+			if s.isRequired(g.name) {
+				continue
+			}
+
 			some := map[string]string{}
-			for j, g := range s.args {
+			for j, h := range s.args {
 				if j != i {
-					some[g.name] = g.given(j)
+					some[h.name] = h.given(j)
 				}
 			}
 
-			b.WriteString(call(form, s, some) + "\n")
+			emit(call(form, s, some))
 		}
 
-		// Each argument alone, so that a pair of defaults shows.
+		// Each optional argument alone with the required ones.
 		for i, g := range s.args {
-			one := map[string]string{g.name: g.given(i)}
-			for j, h := range s.args[:s.required] {
-				one[h.name] = h.given(j)
+			if s.isRequired(g.name) {
+				continue
 			}
 
-			b.WriteString(call(form, s, one) + "\n")
+			one := base()
+			one[g.name] = g.given(i)
+
+			emit(call(form, s, one))
 		}
 
-		// Each argument in every form the macros must tell apart, the
+		// Each argument in the forms the macros must tell apart, the
 		// others at their required values.
 		for i, g := range s.args {
 			var forms []string
 
 			switch g.kind {
 			case 'a':
-				forms = []string{"(R6)", "4(R6)", "@4(R6)", "@#ADR1", "ADR1[R7]", "(R6)+", "-(R6)", "R6", "#5", "0", "@(R6)+"}
+				forms = []string{"(R6)", "-(R6)", "ADR1[R7]", "#5", "0", "@#ADR1"}
 			case 'w':
-				forms = []string{"R6", "(R6)", "4(R6)", "@#ADR1", "ADR1", "#5", "#0", "0", "ADR1[R7]", "(R6)+"}
+				forms = []string{"R6", "#5", "#0", "0", "ADR1", "#^X1234"}
 			default:
-				forms = []string{"R6", "(R6)", "4(R6)", "@#ADR1", "ADR1", "#5", "#0", "0", "ADR1[R7]", "(R6)+", "#^X12345678", "#ADR1"}
+				forms = []string{"R6", "#5", "#0", "0", "ADR1", "#^X12345678", "ADR1[R7]"}
 			}
 
 			for _, f := range forms {
-				one := map[string]string{g.name: f}
-				for j, h := range s.args[:s.required] {
-					if j != i {
-						one[h.name] = h.given(j)
-					}
-				}
+				one := base()
+				one[g.name] = f
 
-				b.WriteString(call(form, s, one) + "\n")
+				emit(call(form, s, one))
 			}
+
+			_ = i
 		}
 	}
 
 	b.WriteString("\tRET\n\t.END\tSVC_" + s.name + "\n")
 
-	return b.String()
+	return b.String(), calls
 }
 
 func main() {
@@ -201,7 +237,9 @@ func main() {
 
 	for _, s := range services {
 		name := "svc_" + strings.ToLower(s.name)
-		write(name+".mar", probe(s))
+		text, calls := probe(s)
+		write(name+".mar", text)
+		write(name+".calls", strings.Join(calls, "\n")+"\n")
 
 		names = append(names, name)
 	}

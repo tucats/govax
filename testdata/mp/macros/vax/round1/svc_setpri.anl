@@ -1,0 +1,3406 @@
+
+Analyze Object File                           7-OCT-2026 17:07:02.48   Page 1
+DUA1:[000000]SVC_SETPRI.OBJ;1
+ANALYZ V07-04
+
+This is an OpenVMS VAX object file
+
+1.  MODULE HEADER (OBJ$C_HDR_MHD), 55 bytes
+
+	structure level: 0
+	maximum record size: 512
+	module name: "SVC_SETPRI"
+	module version: "V1.0"
+	creation   date/time:  7-OCT-2026 17:07
+
+
+2.  LANGUAGE PROCESSOR HEADER (OBJ$C_HDR_LNM), 18 bytes
+
+	Textual information:
+	"VAX MACRO V5.4-3"
+
+
+3.  SOURCE FILE HEADER (OBJ$C_HDR_SRC), 25 bytes
+
+	Textual information:
+	"MACRO/NOLIST SVC_SETPRI"
+
+
+4.  TITLE HEADER (OBJ$C_HDR_TTL), 23 bytes
+
+	Textual information:
+	"every form of $SETPRI"
+
+
+5.  TRACEBACK INFORMATION (OBJ$C_TBT), 20 bytes
+
+	1)  Store Immediate, 18 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 0A 00 00 00 00 00 BC 11|  0000  |.М......|
+		 50 54 45 53 5F 43 56 53|  0008  |SVC_SETP|
+		                   49 52|  0010  |RI      |
+
+
+6.  GLOBAL SYMBOL DIRECTORY (OBJ$C_GSD), 16 bytes
+
+	1)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "SYS$SETPRI"
+
+
+
+Analyze Object File                           7-OCT-2026 17:07:02.48   Page 2
+DUA1:[000000]SVC_SETPRI.OBJ;1
+ANALYZ V07-04
+
+7.  GLOBAL SYMBOL DIRECTORY (OBJ$C_GSD), 19 bytes
+
+	1)  Program Section Definition (GSD$C_PSC)
+		alignment: 1-byte boundary                       <-- psect 0
+		attribute flags:
+			(0)  GPS$V_PIC        0
+			(1)  GPS$V_LIB        0
+			(2)  GPS$V_OVR        0
+			(3)  GPS$V_REL        0
+			(4)  GPS$V_GBL        0
+			(5)  GPS$V_SHR        0
+			(6)  GPS$V_EXE        0
+			(7)  GPS$V_RD         0
+			(8)  GPS$V_WRT        0
+			(9)  GPS$V_VEC        0
+			(10) GPS$V_COM        0
+			(11) GPS$V_NOMOD      0
+		allocation: 0 (%X'00000000')
+		symbol: ".  ABS  ."
+
+
+8.  TEXT INFORMATION/RELOCATION (OBJ$C_TIR), 5 bytes
+
+	1)  TIR$C_STA_PB (4, %X'04')                            stack depth: 1
+		psect: 0
+		value: 0 (%X'00000000')
+
+	2)  TIR$C_CTL_SETRB (80, %X'50')                        stack depth: 0
+
+
+9.  GLOBAL SYMBOL DIRECTORY (OBJ$C_GSD), 14 bytes
+
+	1)  Program Section Definition (GSD$C_PSC)
+		alignment: 4-byte boundary                       <-- psect 1
+		attribute flags:
+			(0)  GPS$V_PIC        0
+			(1)  GPS$V_LIB        0
+			(2)  GPS$V_OVR        0
+			(3)  GPS$V_REL        1
+			(4)  GPS$V_GBL        0
+			(5)  GPS$V_SHR        0
+			(6)  GPS$V_EXE        0
+			(7)  GPS$V_RD         1
+			(8)  GPS$V_WRT        1
+			(9)  GPS$V_VEC        0
+			(10) GPS$V_COM        0
+			(11) GPS$V_NOMOD      0
+		allocation: 112 (%X'00000070')
+		symbol: "DATA"
+
+
+
+Analyze Object File                           7-OCT-2026 17:07:02.48   Page 3
+DUA1:[000000]SVC_SETPRI.OBJ;1
+ANALYZ V07-04
+
+10.  TEXT INFORMATION/RELOCATION (OBJ$C_TIR), 118 bytes
+
+	1)  TIR$C_STA_PB (4, %X'04')                            stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	2)  TIR$C_CTL_SETRB (80, %X'50')                        stack depth: 0
+
+	3)  Store Immediate, 112 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 00 00 00 00 00 00 00 00|  0000  |........|
+		 00 00 00 00 00 00 00 00|  0008  |........|
+		 00 00 00 00 00 00 00 00|  0010  |........|
+		 00 00 00 00 00 00 00 00|  0018  |........|
+		 00 00 00 00 00 00 00 00|  0020  |........|
+		 00 00 00 00 00 00 00 00|  0028  |........|
+		 00 00 00 00 00 00 00 00|  0030  |........|
+		 00 00 00 00 00 00 00 00|  0038  |........|
+		 00 00 00 00 00 00 00 00|  0040  |........|
+		 00 00 00 00 00 00 00 00|  0048  |........|
+		 00 00 00 00 00 00 00 00|  0050  |........|
+		 00 00 00 00 00 00 00 00|  0058  |........|
+		 00 00 00 00 00 00 00 00|  0060  |........|
+		 00 00 00 00 00 00 00 00|  0068  |........|
+
+
+11.  GLOBAL SYMBOL DIRECTORY (OBJ$C_GSD), 14 bytes
+
+	1)  Program Section Definition (GSD$C_PSC)
+		alignment: 4-byte boundary                       <-- psect 2
+		attribute flags:
+			(0)  GPS$V_PIC        0
+			(1)  GPS$V_LIB        0
+			(2)  GPS$V_OVR        0
+			(3)  GPS$V_REL        1
+			(4)  GPS$V_GBL        0
+			(5)  GPS$V_SHR        0
+			(6)  GPS$V_EXE        1
+			(7)  GPS$V_RD         1
+			(8)  GPS$V_WRT        0
+			(9)  GPS$V_VEC        0
+			(10) GPS$V_COM        0
+			(11) GPS$V_NOMOD      0
+		allocation: 2036 (%X'000007F4')
+		symbol: "CODE"
+
+
+12.  TEXT INFORMATION/RELOCATION (OBJ$C_TIR), 7 bytes
+
+	1)  TIR$C_STA_PB (4, %X'04')                            stack depth: 1
+		psect: 2
+		value: 0 (%X'00000000')
+
+
+Analyze Object File                           7-OCT-2026 17:07:02.48   Page 4
+DUA1:[000000]SVC_SETPRI.OBJ;1
+ANALYZ V07-04
+
+	2)  TIR$C_CTL_SETRB (80, %X'50')                        stack depth: 0
+
+	3)  TIR$C_STA_UB (7, %X'07')                            stack depth: 1
+		unsigned value: 192 (%X'000000C0')
+
+
+13.  GLOBAL SYMBOL DIRECTORY (OBJ$C_GSD), 23 bytes
+
+	1)  Entry Point Symbol and Mask Definition (GSD$C_EPM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		psect: 2
+		value: 0 (%X'00000000')
+		entry mask: <R6,R7>
+		symbol: "SVC_SETPRI"
+
+
+14.  TEXT INFORMATION/RELOCATION (OBJ$C_TIR), 2 bytes
+
+	1)  TIR$C_STO_W (38, %X'26')                            stack depth: 0
+
+
+15.  TEXT INFORMATION/RELOCATION (OBJ$C_TIR), 466 bytes
+
+	1)  Store Immediate, 9 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 FB 00 DD 00 DD DD 00 DD|  0000  |н.нн.н.ћ|
+		                      04|  0008  |.       |
+
+	2)  TIR$C_STA_GBL (0, %X'00')                           stack depth: 1
+		symbol: "SYS$SETPRI"
+
+	3)  TIR$C_STO_PICR (28, %X'1C')                         stack depth: 0
+
+	4)  Store Immediate, 6 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		       9F 00 DD DD 00 DD|  0000  |н.нн..  |
+
+	5)  TIR$C_STA_PB (4, %X'04')                            stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	6)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |я       |
+
+
+Analyze Object File                           7-OCT-2026 17:07:02.48   Page 5
+DUA1:[000000]SVC_SETPRI.OBJ;1
+ANALYZ V07-04
+
+	7)  TIR$C_STO_LD (25, %X'19')                           stack depth: 0
+
+	8)  Store Immediate, 2 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                   04 FB|  0000  |ћ.      |
+
+	9)  TIR$C_STA_GBL (0, %X'00')                           stack depth: 1
+		symbol: "SYS$SETPRI"
+
+	10)  TIR$C_STO_PICR (28, %X'1C')                        stack depth: 0
+
+	11)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      9F|  0000  |.       |
+
+	12)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 24 (%X'00000018')
+
+	13)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |я       |
+
+	14)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	15)  Store Immediate, 3 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                9F 33 DD|  0000  |н3.     |
+
+	16)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 8 (%X'00000008')
+
+	17)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |я       |
+
+	18)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	19)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      9F|  0000  |.       |
+
+	20)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	21)  Store Immediate, 1 byte:
+
+Analyze Object File                           7-OCT-2026 17:07:02.48   Page 6
+DUA1:[000000]SVC_SETPRI.OBJ;1
+ANALYZ V07-04
+
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |я       |
+
+	22)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	23)  Store Immediate, 2 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                   04 FB|  0000  |ћ.      |
+
+	24)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "SYS$SETPRI"
+
+	25)  TIR$C_STO_PICR (28, %X'1C')                        stack depth: 0
+
+	26)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      9F|  0000  |.       |
+
+	27)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 24 (%X'00000018')
+
+	28)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |я       |
+
+	29)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	30)  Store Immediate, 5 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		          9F 00 DD 33 DD|  0000  |н3н..   |
+
+	31)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	32)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |я       |
+
+	33)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	34)  Store Immediate, 2 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                   04 FB|  0000  |ћ.      |
+
+
+Analyze Object File                           7-OCT-2026 17:07:02.48   Page 7
+DUA1:[000000]SVC_SETPRI.OBJ;1
+ANALYZ V07-04
+
+	35)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "SYS$SETPRI"
+
+	36)  TIR$C_STO_PICR (28, %X'1C')                        stack depth: 0
+
+	37)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      9F|  0000  |.       |
+
+	38)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 24 (%X'00000018')
+
+	39)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |я       |
+
+	40)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	41)  Store Immediate, 2 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                   9F DD|  0000  |н.      |
+
+	42)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 8 (%X'00000008')
+
+	43)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |я       |
+
+	44)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	45)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      9F|  0000  |.       |
+
+	46)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	47)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |я       |
+
+	48)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	49)  Store Immediate, 2 bytes:
+
+Analyze Object File                           7-OCT-2026 17:07:02.48   Page 8
+DUA1:[000000]SVC_SETPRI.OBJ;1
+ANALYZ V07-04
+
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                   04 FB|  0000  |ћ.      |
+
+	50)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "SYS$SETPRI"
+
+	51)  TIR$C_STO_PICR (28, %X'1C')                        stack depth: 0
+
+	52)  Store Immediate, 5 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		          9F 33 DD 00 DD|  0000  |н.н3.   |
+
+	53)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 8 (%X'00000008')
+
+	54)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |я       |
+
+	55)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	56)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      9F|  0000  |.       |
+
+	57)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	58)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |я       |
+
+	59)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	60)  Store Immediate, 2 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                   04 FB|  0000  |ћ.      |
+
+	61)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "SYS$SETPRI"
+
+	62)  TIR$C_STO_PICR (28, %X'1C')                        stack depth: 0
+
+	63)  Store Immediate, 6 bytes:
+
+Analyze Object File                           7-OCT-2026 17:07:02.48   Page 9
+DUA1:[000000]SVC_SETPRI.OBJ;1
+ANALYZ V07-04
+
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		       9F 00 DD DD 00 DD|  0000  |н.нн..  |
+
+	64)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	65)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |я       |
+
+	66)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	67)  Store Immediate, 2 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                   04 FB|  0000  |ћ.      |
+
+	68)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "SYS$SETPRI"
+
+	69)  TIR$C_STO_PICR (28, %X'1C')                        stack depth: 0
+
+	70)  Store Immediate, 4 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		             9F DD 00 DD|  0000  |н.н.    |
+
+	71)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 8 (%X'00000008')
+
+	72)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |я       |
+
+	73)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	74)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      9F|  0000  |.       |
+
+	75)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	76)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |я       |
+
+
+Analyze Object File                           7-OCT-2026 17:07:02.48   Page 10
+DUA1:[000000]SVC_SETPRI.OBJ;1
+ANALYZ V07-04
+
+	77)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	78)  Store Immediate, 2 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                   04 FB|  0000  |ћ.      |
+
+	79)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "SYS$SETPRI"
+
+	80)  TIR$C_STO_PICR (28, %X'1C')                        stack depth: 0
+
+	81)  Store Immediate, 7 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		    9F 00 DD 33 DD 00 DD|  0000  |н.н3н.. |
+
+	82)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	83)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |я       |
+
+	84)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	85)  Store Immediate, 2 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                   04 FB|  0000  |ћ.      |
+
+	86)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "SYS$SETPRI"
+
+	87)  TIR$C_STO_PICR (28, %X'1C')                        stack depth: 0
+
+	88)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      9F|  0000  |.       |
+
+	89)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 24 (%X'00000018')
+
+	90)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |я       |
+
+	91)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+
+Analyze Object File                           7-OCT-2026 17:07:02.49   Page 11
+DUA1:[000000]SVC_SETPRI.OBJ;1
+ANALYZ V07-04
+
+	92)  Store Immediate, 4 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		             9F 00 DD DD|  0000  |нн..    |
+
+	93)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	94)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |я       |
+
+	95)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	96)  Store Immediate, 2 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                   04 FB|  0000  |ћ.      |
+
+	97)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "SYS$SETPRI"
+
+	98)  TIR$C_STO_PICR (28, %X'1C')                        stack depth: 0
+
+	99)  Store Immediate, 9 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 FB 66 9F 00 DD DD 00 DD|  0000  |н.нн..fћ|
+		                      04|  0008  |.       |
+
+	100)  TIR$C_STA_GBL (0, %X'00')                         stack depth: 1
+		symbol: "SYS$SETPRI"
+
+	101)  TIR$C_STO_PICR (28, %X'1C')                       stack depth: 0
+
+	102)  Store Immediate, 10 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 04 A6 9F 00 DD DD 00 DD|  0000  |н.нн..І.|
+		                   04 FB|  0008  |ћ.      |
+
+	103)  TIR$C_STA_GBL (0, %X'00')                         stack depth: 1
+		symbol: "SYS$SETPRI"
+
+	104)  TIR$C_STO_PICR (28, %X'1C')                       stack depth: 0
+
+	105)  Store Immediate, 10 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 04 B6 9F 00 DD DD 00 DD|  0000  |н.нн..Ж.|
+		                   04 FB|  0008  |ћ.      |
+
+
+Analyze Object File                           7-OCT-2026 17:07:02.49   Page 12
+DUA1:[000000]SVC_SETPRI.OBJ;1
+ANALYZ V07-04
+
+	106)  TIR$C_STA_GBL (0, %X'00')                         stack depth: 1
+		symbol: "SYS$SETPRI"
+
+	107)  TIR$C_STO_PICR (28, %X'1C')                       stack depth: 0
+
+	108)  Store Immediate, 6 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		       9F 00 DD DD 00 DD|  0000  |н.нн..  |
+
+	109)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	110)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      9F|  0000  |.       |
+
+	111)  TIR$C_STO_LW (22, %X'16')                         stack depth: 0
+
+	112)  Store Immediate, 2 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                   04 FB|  0000  |ћ.      |
+
+	113)  TIR$C_STA_GBL (0, %X'00')                         stack depth: 1
+		symbol: "SYS$SETPRI"
+
+	114)  TIR$C_STO_PICR (28, %X'1C')                       stack depth: 0
+
+	115)  Store Immediate, 6 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		       DF 00 DD DD 00 DD|  0000  |н.нн.п  |
+
+	116)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	117)  Store Immediate, 2 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                   EF 47|  0000  |Gя      |
+
+	118)  TIR$C_STO_LD (25, %X'19')                         stack depth: 0
+
+	119)  Store Immediate, 2 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                   04 FB|  0000  |ћ.      |
+
+	120)  TIR$C_STA_GBL (0, %X'00')                         stack depth: 1
+		symbol: "SYS$SETPRI"
+
+
+
+Analyze Object File                           7-OCT-2026 17:07:02.49   Page 13
+DUA1:[000000]SVC_SETPRI.OBJ;1
+ANALYZ V07-04
+
+16.  TEXT INFORMATION/RELOCATION (OBJ$C_TIR), 461 bytes
+
+	1)  TIR$C_STO_PICR (28, %X'1C')                         stack depth: 0
+
+	2)  Store Immediate, 9 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 FB 86 DF 00 DD DD 00 DD|  0000  |н.нн.п.ћ|
+		                      04|  0008  |.       |
+
+	3)  TIR$C_STA_GBL (0, %X'00')                           stack depth: 1
+		symbol: "SYS$SETPRI"
+
+	4)  TIR$C_STO_PICR (28, %X'1C')                         stack depth: 0
+
+	5)  Store Immediate, 9 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 FB 76 DF 00 DD DD 00 DD|  0000  |н.нн.пvћ|
+		                      04|  0008  |.       |
+
+	6)  TIR$C_STA_GBL (0, %X'00')                           stack depth: 1
+		symbol: "SYS$SETPRI"
+
+	7)  TIR$C_STO_PICR (28, %X'1C')                         stack depth: 0
+
+	8)  Store Immediate, 9 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 FB 56 9F 00 DD DD 00 DD|  0000  |н.нн..Vћ|
+		                      04|  0008  |.       |
+
+	9)  TIR$C_STA_GBL (0, %X'00')                           stack depth: 1
+		symbol: "SYS$SETPRI"
+
+	10)  TIR$C_STO_PICR (28, %X'1C')                        stack depth: 0
+
+	11)  Store Immediate, 13 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 05 8F DF 00 DD DD 00 DD|  0000  |н.нн.п..|
+		          04 FB 00 00 00|  0008  |...ћ.   |
+
+	12)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "SYS$SETPRI"
+
+	13)  TIR$C_STO_PICR (28, %X'1C')                        stack depth: 0
+
+	14)  Store Immediate, 9 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 FB 00 DD 00 DD DD 00 DD|  0000  |н.нн.н.ћ|
+		                      04|  0008  |.       |
+
+
+Analyze Object File                           7-OCT-2026 17:07:02.49   Page 14
+DUA1:[000000]SVC_SETPRI.OBJ;1
+ANALYZ V07-04
+
+	15)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "SYS$SETPRI"
+
+	16)  TIR$C_STO_PICR (28, %X'1C')                        stack depth: 0
+
+	17)  Store Immediate, 9 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 FB 96 9F 00 DD DD 00 DD|  0000  |н.нн...ћ|
+		                      04|  0008  |.       |
+
+	18)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "SYS$SETPRI"
+
+	19)  TIR$C_STO_PICR (28, %X'1C')                        stack depth: 0
+
+	20)  Store Immediate, 6 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		       9F 66 9F DD 00 DD|  0000  |н.н.f.  |
+
+	21)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	22)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |я       |
+
+	23)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	24)  Store Immediate, 2 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                   04 FB|  0000  |ћ.      |
+
+	25)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "SYS$SETPRI"
+
+	26)  TIR$C_STO_PICR (28, %X'1C')                        stack depth: 0
+
+	27)  Store Immediate, 7 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		    9F 04 A6 9F DD 00 DD|  0000  |н.н.І.. |
+
+	28)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	29)  Store Immediate, 1 byte:
+
+Analyze Object File                           7-OCT-2026 17:07:02.49   Page 15
+DUA1:[000000]SVC_SETPRI.OBJ;1
+ANALYZ V07-04
+
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |я       |
+
+	30)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	31)  Store Immediate, 2 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                   04 FB|  0000  |ћ.      |
+
+	32)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "SYS$SETPRI"
+
+	33)  TIR$C_STO_PICR (28, %X'1C')                        stack depth: 0
+
+	34)  Store Immediate, 7 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		    9F 04 B6 9F DD 00 DD|  0000  |н.н.Ж.. |
+
+	35)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	36)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |я       |
+
+	37)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	38)  Store Immediate, 2 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                   04 FB|  0000  |ћ.      |
+
+	39)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "SYS$SETPRI"
+
+	40)  TIR$C_STO_PICR (28, %X'1C')                        stack depth: 0
+
+	41)  Store Immediate, 4 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		             9F DD 00 DD|  0000  |н.н.    |
+
+	42)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	43)  Store Immediate, 1 byte:
+
+Analyze Object File                           7-OCT-2026 17:07:02.49   Page 16
+DUA1:[000000]SVC_SETPRI.OBJ;1
+ANALYZ V07-04
+
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      9F|  0000  |.       |
+
+	44)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	45)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      9F|  0000  |.       |
+
+	46)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	47)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |я       |
+
+	48)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	49)  Store Immediate, 2 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                   04 FB|  0000  |ћ.      |
+
+	50)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "SYS$SETPRI"
+
+	51)  TIR$C_STO_PICR (28, %X'1C')                        stack depth: 0
+
+	52)  Store Immediate, 4 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		             7F DD 00 DD|  0000  |н.н.    |
+
+	53)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	54)  Store Immediate, 2 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                   EF 47|  0000  |Gя      |
+
+	55)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	56)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      9F|  0000  |.       |
+
+
+Analyze Object File                           7-OCT-2026 17:07:02.49   Page 17
+DUA1:[000000]SVC_SETPRI.OBJ;1
+ANALYZ V07-04
+
+	57)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	58)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |я       |
+
+	59)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	60)  Store Immediate, 2 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                   04 FB|  0000  |ћ.      |
+
+	61)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "SYS$SETPRI"
+
+	62)  TIR$C_STO_PICR (28, %X'1C')                        stack depth: 0
+
+	63)  Store Immediate, 6 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		       9F 86 7F DD 00 DD|  0000  |н.н...  |
+
+	64)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	65)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |я       |
+
+	66)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	67)  Store Immediate, 2 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                   04 FB|  0000  |ћ.      |
+
+	68)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "SYS$SETPRI"
+
+	69)  TIR$C_STO_PICR (28, %X'1C')                        stack depth: 0
+
+	70)  Store Immediate, 6 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		       9F 76 7F DD 00 DD|  0000  |н.н.v.  |
+
+	71)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+Analyze Object File                           7-OCT-2026 17:07:02.49   Page 18
+DUA1:[000000]SVC_SETPRI.OBJ;1
+ANALYZ V07-04
+
+
+	72)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |я       |
+
+	73)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	74)  Store Immediate, 2 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                   04 FB|  0000  |ћ.      |
+
+	75)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "SYS$SETPRI"
+
+	76)  TIR$C_STO_PICR (28, %X'1C')                        stack depth: 0
+
+	77)  Store Immediate, 6 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		       9F 56 9F DD 00 DD|  0000  |н.н.V.  |
+
+	78)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	79)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |я       |
+
+	80)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	81)  Store Immediate, 2 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                   04 FB|  0000  |ћ.      |
+
+	82)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "SYS$SETPRI"
+
+	83)  TIR$C_STO_PICR (28, %X'1C')                        stack depth: 0
+
+	84)  Store Immediate, 14 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 00 00 05 8F 7F DD 00 DD|  0000  |н.н.....|
+		       9F 00 00 00 00 00|  0008  |......  |
+
+	85)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+
+Analyze Object File                           7-OCT-2026 17:07:02.49   Page 19
+DUA1:[000000]SVC_SETPRI.OBJ;1
+ANALYZ V07-04
+
+	86)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |я       |
+
+	87)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	88)  Store Immediate, 2 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                   04 FB|  0000  |ћ.      |
+
+	89)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "SYS$SETPRI"
+
+	90)  TIR$C_STO_PICR (28, %X'1C')                        stack depth: 0
+
+	91)  Store Immediate, 6 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		       9F 00 DD DD 00 DD|  0000  |н.нн..  |
+
+	92)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	93)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |я       |
+
+	94)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	95)  Store Immediate, 2 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                   04 FB|  0000  |ћ.      |
+
+	96)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "SYS$SETPRI"
+
+	97)  TIR$C_STO_PICR (28, %X'1C')                        stack depth: 0
+
+	98)  Store Immediate, 3 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                DD 00 DD|  0000  |н.н     |
+
+
+17.  TEXT INFORMATION/RELOCATION (OBJ$C_TIR), 462 bytes
+
+	1)  Store Immediate, 3 bytes:
+
+Analyze Object File                           7-OCT-2026 17:07:02.49   Page 20
+DUA1:[000000]SVC_SETPRI.OBJ;1
+ANALYZ V07-04
+
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                9F 96 9F|  0000  |...     |
+
+	2)  TIR$C_STA_PB (4, %X'04')                            stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	3)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |я       |
+
+	4)  TIR$C_STO_LD (25, %X'19')                           stack depth: 0
+
+	5)  Store Immediate, 2 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                   04 FB|  0000  |ћ.      |
+
+	6)  TIR$C_STA_GBL (0, %X'00')                           stack depth: 1
+		symbol: "SYS$SETPRI"
+
+	7)  TIR$C_STO_PICR (28, %X'1C')                         stack depth: 0
+
+	8)  Store Immediate, 7 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		    9F 00 DD 56 DD 00 DD|  0000  |н.нVн.. |
+
+	9)  TIR$C_STA_PB (4, %X'04')                            stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	10)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |я       |
+
+	11)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	12)  Store Immediate, 2 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                   04 FB|  0000  |ћ.      |
+
+	13)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "SYS$SETPRI"
+
+	14)  TIR$C_STO_PICR (28, %X'1C')                        stack depth: 0
+
+	15)  Store Immediate, 7 bytes:
+
+Analyze Object File                           7-OCT-2026 17:07:02.49   Page 21
+DUA1:[000000]SVC_SETPRI.OBJ;1
+ANALYZ V07-04
+
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		    9F 00 DD 66 DD 00 DD|  0000  |н.нfн.. |
+
+	16)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	17)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |я       |
+
+	18)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	19)  Store Immediate, 2 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                   04 FB|  0000  |ћ.      |
+
+	20)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "SYS$SETPRI"
+
+	21)  TIR$C_STO_PICR (28, %X'1C')                        stack depth: 0
+
+	22)  Store Immediate, 8 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 9F 00 DD 04 A6 DD 00 DD|  0000  |н.нІ.н..|
+
+	23)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	24)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |я       |
+
+	25)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	26)  Store Immediate, 2 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                   04 FB|  0000  |ћ.      |
+
+	27)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "SYS$SETPRI"
+
+	28)  TIR$C_STO_PICR (28, %X'1C')                        stack depth: 0
+
+	29)  Store Immediate, 3 bytes:
+
+Analyze Object File                           7-OCT-2026 17:07:02.49   Page 22
+DUA1:[000000]SVC_SETPRI.OBJ;1
+ANALYZ V07-04
+
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                DD 00 DD|  0000  |н.н     |
+
+	30)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	31)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      9F|  0000  |.       |
+
+	32)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	33)  Store Immediate, 3 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                9F 00 DD|  0000  |н..     |
+
+	34)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	35)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |я       |
+
+	36)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	37)  Store Immediate, 2 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                   04 FB|  0000  |ћ.      |
+
+	38)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "SYS$SETPRI"
+
+	39)  TIR$C_STO_PICR (28, %X'1C')                        stack depth: 0
+
+	40)  Store Immediate, 3 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                DD 00 DD|  0000  |н.н     |
+
+	41)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	42)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |я       |
+
+
+Analyze Object File                           7-OCT-2026 17:07:02.50   Page 23
+DUA1:[000000]SVC_SETPRI.OBJ;1
+ANALYZ V07-04
+
+	43)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	44)  Store Immediate, 3 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                9F 00 DD|  0000  |н..     |
+
+	45)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	46)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |я       |
+
+	47)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	48)  Store Immediate, 2 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                   04 FB|  0000  |ћ.      |
+
+	49)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "SYS$SETPRI"
+
+	50)  TIR$C_STO_PICR (28, %X'1C')                        stack depth: 0
+
+	51)  Store Immediate, 7 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		    9F 00 DD 05 DD 00 DD|  0000  |н.н.н.. |
+
+	52)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	53)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |я       |
+
+	54)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	55)  Store Immediate, 2 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                   04 FB|  0000  |ћ.      |
+
+	56)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "SYS$SETPRI"
+
+	57)  TIR$C_STO_PICR (28, %X'1C')                        stack depth: 0
+
+
+Analyze Object File                           7-OCT-2026 17:07:02.50   Page 24
+DUA1:[000000]SVC_SETPRI.OBJ;1
+ANALYZ V07-04
+
+	58)  Store Immediate, 7 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		    9F 00 DD 00 DD 00 DD|  0000  |н.н.н.. |
+
+	59)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	60)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |я       |
+
+	61)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	62)  Store Immediate, 2 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                   04 FB|  0000  |ћ.      |
+
+	63)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "SYS$SETPRI"
+
+	64)  TIR$C_STO_PICR (28, %X'1C')                        stack depth: 0
+
+	65)  Store Immediate, 3 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                DD 00 DD|  0000  |н.н     |
+
+	66)  TIR$C_STA_UB (7, %X'07')                           stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	67)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |я       |
+
+	68)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	69)  Store Immediate, 3 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                9F 00 DD|  0000  |н..     |
+
+	70)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	71)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |я       |
+
+
+Analyze Object File                           7-OCT-2026 17:07:02.50   Page 25
+DUA1:[000000]SVC_SETPRI.OBJ;1
+ANALYZ V07-04
+
+	72)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	73)  Store Immediate, 2 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                   04 FB|  0000  |ћ.      |
+
+	74)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "SYS$SETPRI"
+
+	75)  TIR$C_STO_PICR (28, %X'1C')                        stack depth: 0
+
+	76)  Store Immediate, 3 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                DD 00 DD|  0000  |н.н     |
+
+	77)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	78)  Store Immediate, 2 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                   EF 47|  0000  |Gя      |
+
+	79)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	80)  Store Immediate, 3 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                9F 00 DD|  0000  |н..     |
+
+	81)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	82)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |я       |
+
+	83)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	84)  Store Immediate, 2 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                   04 FB|  0000  |ћ.      |
+
+	85)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "SYS$SETPRI"
+
+	86)  TIR$C_STO_PICR (28, %X'1C')                        stack depth: 0
+
+
+Analyze Object File                           7-OCT-2026 17:07:02.50   Page 26
+DUA1:[000000]SVC_SETPRI.OBJ;1
+ANALYZ V07-04
+
+	87)  Store Immediate, 7 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		    9F 00 DD 86 DD 00 DD|  0000  |н.н.н.. |
+
+	88)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	89)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |я       |
+
+	90)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	91)  Store Immediate, 2 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                   04 FB|  0000  |ћ.      |
+
+	92)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "SYS$SETPRI"
+
+	93)  TIR$C_STO_PICR (28, %X'1C')                        stack depth: 0
+
+	94)  Store Immediate, 11 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 12 34 56 78 8F DD 00 DD|  0000  |н.н.xV4.|
+		                9F 00 DD|  0008  |н..     |
+
+	95)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	96)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |я       |
+
+	97)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	98)  Store Immediate, 2 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                   04 FB|  0000  |ћ.      |
+
+	99)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "SYS$SETPRI"
+
+	100)  TIR$C_STO_PICR (28, %X'1C')                       stack depth: 0
+
+	101)  Store Immediate, 3 bytes:
+
+Analyze Object File                           7-OCT-2026 17:07:02.50   Page 27
+DUA1:[000000]SVC_SETPRI.OBJ;1
+ANALYZ V07-04
+
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                DD 00 DD|  0000  |н.н     |
+
+	102)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	103)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      8F|  0000  |.       |
+
+	104)  TIR$C_STO_LW (22, %X'16')                         stack depth: 0
+
+	105)  Store Immediate, 3 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                9F 00 DD|  0000  |н..     |
+
+	106)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	107)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |я       |
+
+	108)  TIR$C_STO_LD (25, %X'19')                         stack depth: 0
+
+	109)  Store Immediate, 2 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                   04 FB|  0000  |ћ.      |
+
+	110)  TIR$C_STA_GBL (0, %X'00')                         stack depth: 1
+		symbol: "SYS$SETPRI"
+
+	111)  TIR$C_STO_PICR (28, %X'1C')                       stack depth: 0
+
+	112)  Store Immediate, 6 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		       9F 00 DD DD 66 9F|  0000  |.fнн..  |
+
+	113)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	114)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |я       |
+
+
+Analyze Object File                           7-OCT-2026 17:07:02.50   Page 28
+DUA1:[000000]SVC_SETPRI.OBJ;1
+ANALYZ V07-04
+
+	115)  TIR$C_STO_LD (25, %X'19')                         stack depth: 0
+
+	116)  Store Immediate, 2 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                   04 FB|  0000  |ћ.      |
+
+	117)  TIR$C_STA_GBL (0, %X'00')                         stack depth: 1
+		symbol: "SYS$SETPRI"
+
+	118)  TIR$C_STO_PICR (28, %X'1C')                       stack depth: 0
+
+	119)  Store Immediate, 7 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		    9F 00 DD DD 04 A6 9F|  0000  |.І.нн.. |
+
+	120)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+
+18.  TEXT INFORMATION/RELOCATION (OBJ$C_TIR), 463 bytes
+
+	1)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |я       |
+
+	2)  TIR$C_STO_LD (25, %X'19')                           stack depth: 0
+
+	3)  Store Immediate, 2 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                   04 FB|  0000  |ћ.      |
+
+	4)  TIR$C_STA_GBL (0, %X'00')                           stack depth: 1
+		symbol: "SYS$SETPRI"
+
+	5)  TIR$C_STO_PICR (28, %X'1C')                         stack depth: 0
+
+	6)  Store Immediate, 7 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		    9F 00 DD DD 04 B6 9F|  0000  |.Ж.нн.. |
+
+	7)  TIR$C_STA_PB (4, %X'04')                            stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	8)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |я       |
+
+
+Analyze Object File                           7-OCT-2026 17:07:02.50   Page 29
+DUA1:[000000]SVC_SETPRI.OBJ;1
+ANALYZ V07-04
+
+	9)  TIR$C_STO_LD (25, %X'19')                           stack depth: 0
+
+	10)  Store Immediate, 2 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                   04 FB|  0000  |ћ.      |
+
+	11)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "SYS$SETPRI"
+
+	12)  TIR$C_STO_PICR (28, %X'1C')                        stack depth: 0
+
+	13)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      9F|  0000  |.       |
+
+	14)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	15)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      9F|  0000  |.       |
+
+	16)  TIR$C_STO_LW (22, %X'16')                          stack depth: 0
+
+	17)  Store Immediate, 4 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		             9F 00 DD DD|  0000  |нн..    |
+
+	18)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	19)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |я       |
+
+	20)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	21)  Store Immediate, 2 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                   04 FB|  0000  |ћ.      |
+
+	22)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "SYS$SETPRI"
+
+	23)  TIR$C_STO_PICR (28, %X'1C')                        stack depth: 0
+
+
+Analyze Object File                           7-OCT-2026 17:07:02.50   Page 30
+DUA1:[000000]SVC_SETPRI.OBJ;1
+ANALYZ V07-04
+
+	24)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      DF|  0000  |п       |
+
+	25)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	26)  Store Immediate, 2 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                   EF 47|  0000  |Gя      |
+
+	27)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	28)  Store Immediate, 4 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		             9F 00 DD DD|  0000  |нн..    |
+
+	29)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	30)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |я       |
+
+	31)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	32)  Store Immediate, 2 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                   04 FB|  0000  |ћ.      |
+
+	33)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "SYS$SETPRI"
+
+	34)  TIR$C_STO_PICR (28, %X'1C')                        stack depth: 0
+
+	35)  Store Immediate, 6 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		       9F 00 DD DD 86 DF|  0000  |п.нн..  |
+
+	36)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	37)  Store Immediate, 1 byte:
+
+Analyze Object File                           7-OCT-2026 17:07:02.50   Page 31
+DUA1:[000000]SVC_SETPRI.OBJ;1
+ANALYZ V07-04
+
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |я       |
+
+	38)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	39)  Store Immediate, 2 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                   04 FB|  0000  |ћ.      |
+
+	40)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "SYS$SETPRI"
+
+	41)  TIR$C_STO_PICR (28, %X'1C')                        stack depth: 0
+
+	42)  Store Immediate, 6 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		       9F 00 DD DD 76 DF|  0000  |пvнн..  |
+
+	43)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	44)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |я       |
+
+	45)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	46)  Store Immediate, 2 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                   04 FB|  0000  |ћ.      |
+
+	47)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "SYS$SETPRI"
+
+	48)  TIR$C_STO_PICR (28, %X'1C')                        stack depth: 0
+
+	49)  Store Immediate, 6 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		       9F 00 DD DD 56 9F|  0000  |.Vнн..  |
+
+	50)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	51)  Store Immediate, 1 byte:
+
+Analyze Object File                           7-OCT-2026 17:07:02.50   Page 32
+DUA1:[000000]SVC_SETPRI.OBJ;1
+ANALYZ V07-04
+
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |я       |
+
+	52)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	53)  Store Immediate, 2 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                   04 FB|  0000  |ћ.      |
+
+	54)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "SYS$SETPRI"
+
+	55)  TIR$C_STO_PICR (28, %X'1C')                        stack depth: 0
+
+	56)  Store Immediate, 10 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 DD DD 00 00 00 05 8F DF|  0000  |п.....нн|
+		                   9F 00|  0008  |..      |
+
+	57)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	58)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |я       |
+
+	59)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	60)  Store Immediate, 2 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                   04 FB|  0000  |ћ.      |
+
+	61)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "SYS$SETPRI"
+
+	62)  TIR$C_STO_PICR (28, %X'1C')                        stack depth: 0
+
+	63)  Store Immediate, 6 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		       9F 00 DD DD 00 DD|  0000  |н.нн..  |
+
+	64)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	65)  Store Immediate, 1 byte:
+
+Analyze Object File                           7-OCT-2026 17:07:02.50   Page 33
+DUA1:[000000]SVC_SETPRI.OBJ;1
+ANALYZ V07-04
+
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |я       |
+
+	66)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	67)  Store Immediate, 2 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                   04 FB|  0000  |ћ.      |
+
+	68)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "SYS$SETPRI"
+
+	69)  TIR$C_STO_PICR (28, %X'1C')                        stack depth: 0
+
+	70)  Store Immediate, 6 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		       9F 00 DD DD 96 9F|  0000  |..нн..  |
+
+	71)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	72)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |я       |
+
+	73)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	74)  Store Immediate, 2 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                   04 FB|  0000  |ћ.      |
+
+	75)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "SYS$SETPRI"
+
+	76)  TIR$C_STO_PICR (28, %X'1C')                        stack depth: 0
+
+	77)  Store Immediate, 4 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		             00 00 00 04|  0000  |....    |
+
+	78)  TIR$C_STA_UB (7, %X'07')                           stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	79)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	80)  TIR$C_STA_UB (7, %X'07')                           stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+
+Analyze Object File                           7-OCT-2026 17:07:02.50   Page 34
+DUA1:[000000]SVC_SETPRI.OBJ;1
+ANALYZ V07-04
+
+	81)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	82)  TIR$C_STA_UB (7, %X'07')                           stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	83)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	84)  TIR$C_STA_UB (7, %X'07')                           stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	85)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	86)  Store Immediate, 4 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		             00 00 00 04|  0000  |....    |
+
+	87)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	88)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	89)  TIR$C_STA_UB (7, %X'07')                           stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	90)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	91)  TIR$C_STA_UB (7, %X'07')                           stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	92)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	93)  TIR$C_STA_UB (7, %X'07')                           stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	94)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	95)  Store Immediate, 4 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		             00 00 00 04|  0000  |....    |
+
+	96)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	97)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	98)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 8 (%X'00000008')
+
+
+Analyze Object File                           7-OCT-2026 17:07:02.50   Page 35
+DUA1:[000000]SVC_SETPRI.OBJ;1
+ANALYZ V07-04
+
+	99)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	100)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 1
+		value: 24 (%X'00000018')
+
+	101)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	102)  Store Immediate, 4 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		             00 00 00 04|  0000  |....    |
+
+	103)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	104)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	105)  TIR$C_STA_UB (7, %X'07')                          stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	106)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	107)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 1
+		value: 24 (%X'00000018')
+
+	108)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	109)  Store Immediate, 4 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		             00 00 00 04|  0000  |....    |
+
+	110)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	111)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	112)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 1
+		value: 8 (%X'00000008')
+
+	113)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	114)  TIR$C_STA_UB (7, %X'07')                          stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	115)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	116)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 1
+		value: 24 (%X'00000018')
+
+Analyze Object File                           7-OCT-2026 17:07:02.51   Page 36
+DUA1:[000000]SVC_SETPRI.OBJ;1
+ANALYZ V07-04
+
+
+	117)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	118)  Store Immediate, 4 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		             00 00 00 04|  0000  |....    |
+
+	119)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	120)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	121)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 1
+		value: 8 (%X'00000008')
+
+	122)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	123)  TIR$C_STA_UB (7, %X'07')                          stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	124)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	125)  Store Immediate, 4 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		             00 00 00 04|  0000  |....    |
+
+	126)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	127)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	128)  TIR$C_STA_UB (7, %X'07')                          stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	129)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	130)  TIR$C_STA_UB (7, %X'07')                          stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	131)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	132)  TIR$C_STA_UB (7, %X'07')                          stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	133)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	134)  Store Immediate, 4 bytes:
+
+Analyze Object File                           7-OCT-2026 17:07:02.51   Page 37
+DUA1:[000000]SVC_SETPRI.OBJ;1
+ANALYZ V07-04
+
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		             00 00 00 04|  0000  |....    |
+
+	135)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	136)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	137)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 1
+		value: 8 (%X'00000008')
+
+	138)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	139)  TIR$C_STA_UB (7, %X'07')                          stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	140)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	141)  TIR$C_STA_UB (7, %X'07')                          stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	142)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	143)  Store Immediate, 4 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		             00 00 00 04|  0000  |....    |
+
+	144)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	145)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	146)  TIR$C_STA_UB (7, %X'07')                          stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	147)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	148)  TIR$C_STA_UB (7, %X'07')                          stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	149)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	150)  Store Immediate, 4 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		             00 00 00 04|  0000  |....    |
+
+	151)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+
+
+Analyze Object File                           7-OCT-2026 17:07:02.51   Page 38
+DUA1:[000000]SVC_SETPRI.OBJ;1
+ANALYZ V07-04
+
+19.  TEXT INFORMATION/RELOCATION (OBJ$C_TIR), 462 bytes
+
+	1)  TIR$C_STO_PIDR (27, %X'1B')                         stack depth: 0
+
+	2)  TIR$C_STA_UB (7, %X'07')                            stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	3)  TIR$C_STO_PIDR (27, %X'1B')                         stack depth: 0
+
+	4)  TIR$C_STA_UB (7, %X'07')                            stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	5)  TIR$C_STO_PIDR (27, %X'1B')                         stack depth: 0
+
+	6)  TIR$C_STA_PB (4, %X'04')                            stack depth: 1
+		psect: 1
+		value: 24 (%X'00000018')
+
+	7)  TIR$C_STO_PIDR (27, %X'1B')                         stack depth: 0
+
+	8)  Store Immediate, 4 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		             00 00 00 04|  0000  |....    |
+
+	9)  TIR$C_STA_UB (7, %X'07')                            stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	10)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	11)  TIR$C_STA_UB (7, %X'07')                           stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	12)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	13)  TIR$C_STA_UB (7, %X'07')                           stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	14)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	15)  Store Immediate, 4 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		             00 00 00 04|  0000  |....    |
+
+	16)  TIR$C_STA_UB (7, %X'07')                           stack depth: 1
+		unsigned value: 4 (%X'00000004')
+
+	17)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	18)  TIR$C_STA_UB (7, %X'07')                           stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+
+Analyze Object File                           7-OCT-2026 17:07:02.51   Page 39
+DUA1:[000000]SVC_SETPRI.OBJ;1
+ANALYZ V07-04
+
+	19)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	20)  TIR$C_STA_UB (7, %X'07')                           stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	21)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	22)  TIR$C_STA_UB (7, %X'07')                           stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	23)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	24)  Store Immediate, 4 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		             00 00 00 04|  0000  |....    |
+
+	25)  TIR$C_STA_UB (7, %X'07')                           stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	26)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	27)  TIR$C_STA_UB (7, %X'07')                           stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	28)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	29)  TIR$C_STA_UB (7, %X'07')                           stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	30)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	31)  Store Immediate, 4 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		             00 00 00 04|  0000  |....    |
+
+	32)  TIR$C_STA_UB (7, %X'07')                           stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	33)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	34)  TIR$C_STA_UB (7, %X'07')                           stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	35)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	36)  TIR$C_STA_UB (7, %X'07')                           stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	37)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	38)  Store Immediate, 4 bytes:
+
+Analyze Object File                           7-OCT-2026 17:07:02.51   Page 40
+DUA1:[000000]SVC_SETPRI.OBJ;1
+ANALYZ V07-04
+
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		             00 00 00 04|  0000  |....    |
+
+	39)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	40)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	41)  TIR$C_STA_UB (7, %X'07')                           stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	42)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	43)  TIR$C_STA_UB (7, %X'07')                           stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	44)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	45)  TIR$C_STA_UB (7, %X'07')                           stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	46)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	47)  Store Immediate, 4 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		             00 00 00 04|  0000  |....    |
+
+	48)  TIR$C_STA_UB (7, %X'07')                           stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	49)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	50)  TIR$C_STA_UB (7, %X'07')                           stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	51)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	52)  TIR$C_STA_UB (7, %X'07')                           stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	53)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	54)  Store Immediate, 4 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		             00 00 00 04|  0000  |....    |
+
+	55)  TIR$C_STA_UB (7, %X'07')                           stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+
+Analyze Object File                           7-OCT-2026 17:07:02.51   Page 41
+DUA1:[000000]SVC_SETPRI.OBJ;1
+ANALYZ V07-04
+
+	56)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	57)  TIR$C_STA_UB (7, %X'07')                           stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	58)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	59)  TIR$C_STA_UB (7, %X'07')                           stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	60)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	61)  TIR$C_STA_UB (7, %X'07')                           stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	62)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	63)  Store Immediate, 4 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		             00 00 00 04|  0000  |....    |
+
+	64)  TIR$C_STA_UB (7, %X'07')                           stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	65)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	66)  TIR$C_STA_UB (7, %X'07')                           stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	67)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	68)  TIR$C_STA_UB (7, %X'07')                           stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	69)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	70)  Store Immediate, 4 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		             00 00 00 04|  0000  |....    |
+
+	71)  TIR$C_STA_UB (7, %X'07')                           stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	72)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	73)  TIR$C_STA_UB (7, %X'07')                           stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	74)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	75)  TIR$C_STA_UB (7, %X'07')                           stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+
+Analyze Object File                           7-OCT-2026 17:07:02.51   Page 42
+DUA1:[000000]SVC_SETPRI.OBJ;1
+ANALYZ V07-04
+
+	76)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	77)  Store Immediate, 4 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		             00 00 00 04|  0000  |....    |
+
+	78)  TIR$C_STA_UB (7, %X'07')                           stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	79)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	80)  TIR$C_STA_UB (7, %X'07')                           stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	81)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	82)  TIR$C_STA_UB (7, %X'07')                           stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	83)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	84)  TIR$C_STA_UB (7, %X'07')                           stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	85)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	86)  Store Immediate, 4 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		             00 00 00 04|  0000  |....    |
+
+	87)  TIR$C_STA_UB (7, %X'07')                           stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	88)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	89)  TIR$C_STA_UB (7, %X'07')                           stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	90)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	91)  TIR$C_STA_UB (7, %X'07')                           stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	92)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	93)  Store Immediate, 4 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		             00 00 00 04|  0000  |....    |
+
+	94)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+Analyze Object File                           7-OCT-2026 17:07:02.51   Page 43
+DUA1:[000000]SVC_SETPRI.OBJ;1
+ANALYZ V07-04
+
+
+	95)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	96)  TIR$C_STA_UB (7, %X'07')                           stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	97)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	98)  TIR$C_STA_UB (7, %X'07')                           stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	99)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	100)  Store Immediate, 4 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		             00 00 00 04|  0000  |....    |
+
+	101)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	102)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	103)  TIR$C_STA_UB (7, %X'07')                          stack depth: 1
+		unsigned value: 4 (%X'00000004')
+
+	104)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	105)  TIR$C_STA_UB (7, %X'07')                          stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	106)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	107)  TIR$C_STA_UB (7, %X'07')                          stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	108)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	109)  Store Immediate, 4 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		             00 00 00 04|  0000  |....    |
+
+	110)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	111)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	112)  TIR$C_STA_UB (7, %X'07')                          stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+
+Analyze Object File                           7-OCT-2026 17:07:02.51   Page 44
+DUA1:[000000]SVC_SETPRI.OBJ;1
+ANALYZ V07-04
+
+	113)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	114)  TIR$C_STA_UB (7, %X'07')                          stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	115)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	116)  Store Immediate, 4 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		             00 00 00 04|  0000  |....    |
+
+	117)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	118)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	119)  TIR$C_STA_UB (7, %X'07')                          stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	120)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	121)  TIR$C_STA_UB (7, %X'07')                          stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	122)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	123)  Store Immediate, 4 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		             00 00 00 04|  0000  |....    |
+
+	124)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	125)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	126)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	127)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	128)  TIR$C_STA_UB (7, %X'07')                          stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	129)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	130)  TIR$C_STA_UB (7, %X'07')                          stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+
+Analyze Object File                           7-OCT-2026 17:07:02.51   Page 45
+DUA1:[000000]SVC_SETPRI.OBJ;1
+ANALYZ V07-04
+
+	131)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	132)  Store Immediate, 4 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		             00 00 00 04|  0000  |....    |
+
+	133)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	134)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	135)  TIR$C_STA_UB (7, %X'07')                          stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	136)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	137)  TIR$C_STA_UB (7, %X'07')                          stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	138)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	139)  Store Immediate, 4 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		             00 00 00 04|  0000  |....    |
+
+	140)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	141)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	142)  TIR$C_STA_UB (7, %X'07')                          stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	143)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	144)  TIR$C_STA_UB (7, %X'07')                          stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	145)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	146)  TIR$C_STA_UB (7, %X'07')                          stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	147)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	148)  Store Immediate, 4 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		             00 00 00 04|  0000  |....    |
+
+
+Analyze Object File                           7-OCT-2026 17:07:02.51   Page 46
+DUA1:[000000]SVC_SETPRI.OBJ;1
+ANALYZ V07-04
+
+	149)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	150)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	151)  TIR$C_STA_UB (7, %X'07')                          stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	152)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	153)  TIR$C_STA_UB (7, %X'07')                          stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	154)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	155)  Store Immediate, 4 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		             00 00 00 04|  0000  |....    |
+
+	156)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	157)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	158)  TIR$C_STA_UB (7, %X'07')                          stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	159)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	160)  TIR$C_STA_UB (7, %X'07')                          stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	161)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	162)  Store Immediate, 4 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		             00 00 00 04|  0000  |....    |
+
+	163)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	164)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	165)  TIR$C_STA_UB (7, %X'07')                          stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	166)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+
+Analyze Object File                           7-OCT-2026 17:07:02.52   Page 47
+DUA1:[000000]SVC_SETPRI.OBJ;1
+ANALYZ V07-04
+
+	167)  TIR$C_STA_UB (7, %X'07')                          stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	168)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	169)  TIR$C_STA_UB (7, %X'07')                          stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	170)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	171)  Store Immediate, 4 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		             00 00 00 04|  0000  |....    |
+
+	172)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	173)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	174)  TIR$C_STA_UB (7, %X'07')                          stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	175)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	176)  TIR$C_STA_UB (7, %X'07')                          stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	177)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	178)  Store Immediate, 4 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		             00 00 00 04|  0000  |....    |
+
+	179)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	180)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	181)  TIR$C_STA_UB (7, %X'07')                          stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	182)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	183)  TIR$C_STA_UB (7, %X'07')                          stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	184)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	185)  Store Immediate, 4 bytes:
+
+Analyze Object File                           7-OCT-2026 17:07:02.52   Page 48
+DUA1:[000000]SVC_SETPRI.OBJ;1
+ANALYZ V07-04
+
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		             00 00 00 04|  0000  |....    |
+
+	186)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	187)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	188)  TIR$C_STA_UB (7, %X'07')                          stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	189)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	190)  TIR$C_STA_UB (7, %X'07')                          stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	191)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	192)  Store Immediate, 4 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		             00 00 00 04|  0000  |....    |
+
+	193)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	194)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	195)  TIR$C_STA_UB (7, %X'07')                          stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	196)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	197)  TIR$C_STA_UB (7, %X'07')                          stack depth: 1
+		unsigned value: 4 (%X'00000004')
+
+	198)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	199)  TIR$C_STA_UB (7, %X'07')                          stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	200)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	201)  Store Immediate, 4 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		             00 00 00 04|  0000  |....    |
+
+	202)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+
+Analyze Object File                           7-OCT-2026 17:07:02.52   Page 49
+DUA1:[000000]SVC_SETPRI.OBJ;1
+ANALYZ V07-04
+
+	203)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	204)  TIR$C_STA_UB (7, %X'07')                          stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	205)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	206)  TIR$C_STA_UB (7, %X'07')                          stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	207)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	208)  Store Immediate, 4 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		             00 00 00 04|  0000  |....    |
+
+	209)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	210)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	211)  TIR$C_STA_UB (7, %X'07')                          stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	212)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	213)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	214)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	215)  TIR$C_STA_UB (7, %X'07')                          stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	216)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	217)  Store Immediate, 4 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		             00 00 00 04|  0000  |....    |
+
+	218)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	219)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	220)  TIR$C_STA_UB (7, %X'07')                          stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+
+Analyze Object File                           7-OCT-2026 17:07:02.52   Page 50
+DUA1:[000000]SVC_SETPRI.OBJ;1
+ANALYZ V07-04
+
+	221)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	222)  TIR$C_STA_UB (7, %X'07')                          stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	223)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	224)  Store Immediate, 4 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		             00 00 00 04|  0000  |....    |
+
+	225)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+
+20.  TEXT INFORMATION/RELOCATION (OBJ$C_TIR), 270 bytes
+
+	1)  TIR$C_STO_PIDR (27, %X'1B')                         stack depth: 0
+
+	2)  TIR$C_STA_UB (7, %X'07')                            stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	3)  TIR$C_STO_PIDR (27, %X'1B')                         stack depth: 0
+
+	4)  TIR$C_STA_UB (7, %X'07')                            stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	5)  TIR$C_STO_PIDR (27, %X'1B')                         stack depth: 0
+
+	6)  Store Immediate, 4 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		             00 00 00 04|  0000  |....    |
+
+	7)  TIR$C_STA_PB (4, %X'04')                            stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	8)  TIR$C_STO_PIDR (27, %X'1B')                         stack depth: 0
+
+	9)  TIR$C_STA_UB (7, %X'07')                            stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	10)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	11)  TIR$C_STA_UB (7, %X'07')                           stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	12)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	13)  TIR$C_STA_UB (7, %X'07')                           stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+
+Analyze Object File                           7-OCT-2026 17:07:02.52   Page 51
+DUA1:[000000]SVC_SETPRI.OBJ;1
+ANALYZ V07-04
+
+	14)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	15)  Store Immediate, 4 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		             00 00 00 04|  0000  |....    |
+
+	16)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	17)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	18)  TIR$C_STA_UB (7, %X'07')                           stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	19)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	20)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	21)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	22)  TIR$C_STA_UB (7, %X'07')                           stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	23)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	24)  Store Immediate, 4 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		             00 00 00 04|  0000  |....    |
+
+	25)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	26)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	27)  TIR$C_STA_UB (7, %X'07')                           stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	28)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	29)  TIR$C_STA_UB (7, %X'07')                           stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	30)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	31)  Store Immediate, 4 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		             00 00 00 04|  0000  |....    |
+
+
+Analyze Object File                           7-OCT-2026 17:07:02.52   Page 52
+DUA1:[000000]SVC_SETPRI.OBJ;1
+ANALYZ V07-04
+
+	32)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	33)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	34)  TIR$C_STA_UB (7, %X'07')                           stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	35)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	36)  TIR$C_STA_UB (7, %X'07')                           stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	37)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	38)  Store Immediate, 4 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		             00 00 00 04|  0000  |....    |
+
+	39)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	40)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	41)  TIR$C_STA_UB (7, %X'07')                           stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	42)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	43)  TIR$C_STA_UB (7, %X'07')                           stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	44)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	45)  Store Immediate, 4 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		             00 00 00 04|  0000  |....    |
+
+	46)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	47)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	48)  TIR$C_STA_UB (7, %X'07')                           stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	49)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+
+Analyze Object File                           7-OCT-2026 17:07:02.52   Page 53
+DUA1:[000000]SVC_SETPRI.OBJ;1
+ANALYZ V07-04
+
+	50)  TIR$C_STA_UB (7, %X'07')                           stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	51)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	52)  Store Immediate, 4 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		             00 00 00 04|  0000  |....    |
+
+	53)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	54)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	55)  TIR$C_STA_UB (7, %X'07')                           stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	56)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	57)  TIR$C_STA_UB (7, %X'07')                           stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	58)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	59)  TIR$C_STA_UB (7, %X'07')                           stack depth: 1
+		unsigned value: 4 (%X'00000004')
+
+	60)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	61)  Store Immediate, 4 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		             00 00 00 04|  0000  |....    |
+
+	62)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	63)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	64)  TIR$C_STA_UB (7, %X'07')                           stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	65)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	66)  TIR$C_STA_UB (7, %X'07')                           stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	67)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	68)  Store Immediate, 4 bytes:
+
+Analyze Object File                           7-OCT-2026 17:07:02.52   Page 54
+DUA1:[000000]SVC_SETPRI.OBJ;1
+ANALYZ V07-04
+
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		             00 00 00 04|  0000  |....    |
+
+	69)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	70)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	71)  TIR$C_STA_UB (7, %X'07')                           stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	72)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	73)  TIR$C_STA_UB (7, %X'07')                           stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	74)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	75)  Store Immediate, 4 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		             00 00 00 04|  0000  |....    |
+
+	76)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	77)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	78)  TIR$C_STA_UB (7, %X'07')                           stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	79)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	80)  TIR$C_STA_UB (7, %X'07')                           stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	81)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	82)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	83)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	84)  Store Immediate, 4 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		             00 00 00 04|  0000  |....    |
+
+	85)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+Analyze Object File                           7-OCT-2026 17:07:02.52   Page 55
+DUA1:[000000]SVC_SETPRI.OBJ;1
+ANALYZ V07-04
+
+
+	86)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	87)  TIR$C_STA_UB (7, %X'07')                           stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	88)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	89)  TIR$C_STA_UB (7, %X'07')                           stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	90)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	91)  Store Immediate, 4 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		             00 00 00 04|  0000  |....    |
+
+	92)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	93)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	94)  TIR$C_STA_UB (7, %X'07')                           stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	95)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	96)  TIR$C_STA_UB (7, %X'07')                           stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	97)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	98)  TIR$C_STA_UB (7, %X'07')                           stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	99)  TIR$C_STO_PIDR (27, %X'1B')                        stack depth: 0
+
+	100)  Store Immediate, 4 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		             00 00 00 04|  0000  |....    |
+
+	101)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	102)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	103)  TIR$C_STA_UB (7, %X'07')                          stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+
+Analyze Object File                           7-OCT-2026 17:07:02.52   Page 56
+DUA1:[000000]SVC_SETPRI.OBJ;1
+ANALYZ V07-04
+
+	104)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	105)  TIR$C_STA_UB (7, %X'07')                          stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	106)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	107)  Store Immediate, 4 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		             00 00 00 04|  0000  |....    |
+
+	108)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	109)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	110)  TIR$C_STA_UB (7, %X'07')                          stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	111)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	112)  TIR$C_STA_UB (7, %X'07')                          stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	113)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	114)  Store Immediate, 4 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		             00 00 00 04|  0000  |....    |
+
+	115)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	116)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	117)  TIR$C_STA_UB (7, %X'07')                          stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	118)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	119)  TIR$C_STA_UB (7, %X'07')                          stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	120)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	121)  TIR$C_STA_UB (7, %X'07')                          stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	122)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+
+Analyze Object File                           7-OCT-2026 17:07:02.52   Page 57
+DUA1:[000000]SVC_SETPRI.OBJ;1
+ANALYZ V07-04
+
+	123)  Store Immediate, 4 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		             00 00 00 04|  0000  |....    |
+
+	124)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	125)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	126)  TIR$C_STA_UB (7, %X'07')                          stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	127)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	128)  TIR$C_STA_UB (7, %X'07')                          stack depth: 1
+		unsigned value: 0 (%X'00000000')
+
+	129)  TIR$C_STO_PIDR (27, %X'1B')                       stack depth: 0
+
+	130)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      04|  0000  |.       |
+
+
+21.  TRACEBACK INFORMATION (OBJ$C_TBT), 24 bytes
+
+	1)  Store Immediate, 3 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                00 BE 11|  0000  |.О.     |
+
+	2)  TIR$C_STA_PL (6, %X'06')                            stack depth: 1
+		psect: 2
+		value: 0 (%X'00000000')
+
+	3)  TIR$C_STO_PIDR (27, %X'1B')                         stack depth: 0
+
+	4)  Store Immediate, 11 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 54 45 53 5F 43 56 53 0A|  0000  |.SVC_SET|
+		                49 52 50|  0008  |PRI     |
+
+
+22.  TRACEBACK INFORMATION (OBJ$C_TBT), 38 bytes
+
+	1)  Store Immediate, 3 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                00 B8 0F|  0000  |.И.     |
+
+
+Analyze Object File                           7-OCT-2026 17:07:02.52   Page 58
+DUA1:[000000]SVC_SETPRI.OBJ;1
+ANALYZ V07-04
+
+	2)  TIR$C_STA_PB (4, %X'04')                            stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	3)  TIR$C_STO_PIDR (27, %X'1B')                         stack depth: 0
+
+	4)  Store Immediate, 12 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 00 00 70 41 54 41 44 04|  0000  |.DATAp..|
+		             00 B8 0F 00|  0008  |..И.    |
+
+	5)  TIR$C_STA_PB (4, %X'04')                            stack depth: 1
+		psect: 2
+		value: 0 (%X'00000000')
+
+	6)  TIR$C_STO_PIDR (27, %X'1B')                         stack depth: 0
+
+	7)  Store Immediate, 11 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 00 07 F4 45 44 4F 43 04|  0000  |.CODEє..|
+		                BD 01 00|  0008  |..Н     |
+
+
+23.  END OF MODULE (OBJ$C_EOM), 7 bytes
+
+	severity: errors (2)
+	psect: 2
+	value: 0 (%X'00000000')
+
+
+
+Analyze Object File                           7-OCT-2026 17:07:02.53   Page 59
+DUA1:[000000]SVC_SETPRI.OBJ;1
+ANALYZ V07-04
+
+SUMMARY STATISTICS:
+
+Record Type	Count	Total Bytes
+
+OBJ$C_HDR	    4	   121
+OBJ$C_GSD	    5	    86
+OBJ$C_TIR	   10	  2716
+OBJ$C_EOM	    1	     7
+OBJ$C_DBG	    0	     0
+OBJ$C_TBT	    3	    82
+OBJ$C_LNK	    0	     0
+OBJ$C_EOMW	    0	     0
+
+Totals		   23	  3012
+
+
+The analysis uncovered NO errors.
+
+
+ANALYZE/OBJECT/OUTPUT=SVC_SETPRI.ANL SVC_SETPRI.OBJ                             

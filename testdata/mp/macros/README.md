@@ -25,6 +25,23 @@ Everything here except `vax/` is written by `gen.go`:
 Each probe was checked with govax's own assembler before the VAX run, with
 empty stub macros whose keywords are the ones in the program: all assemble.
 
+## Round 1 and round 2
+
+Round 1 (2026-10-07; its objects, analyses, and logs are in `vax/round1/`)
+showed that the `_S` forms follow one model, that the unsuffixed forms
+build an argument list in line (a `.LONG` count, then a `.LONG` for each
+argument), and that several services have required arguments the probe had
+wrong (`SCHDWK`'s `DAYTIM`, `SETPRI`'s `PRI`, `GETJPI`'s and `GETDVI`'s
+`ITMLST`, `CREMBX`'s `CHAN`, `SETIMR`'s `DAYTIM`, ...), so a call without
+one made a broken stream that could not be matched to its source line.
+Round 2 (this directory's generator) names the true required arguments and
+ends every call with a marker, `.LONG ^X7A7Axxxx`, that `dumpcode.go`
+finds in the object. `svc_*.calls` lists the calls in order. To see what
+real MACRO did for a probe:
+
+    go run testdata/mp/macros/dumpcode.go -calls testdata/mp/macros/svc_wake.calls \
+        testdata/mp/macros/vax/svc_wake.anl
+
 ## The VAX run
 
 1. Build the exchange volume, from the repository root:
