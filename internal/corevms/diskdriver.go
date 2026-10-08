@@ -84,6 +84,8 @@ var (
 	fibNMCTL    = vmsdef.Symbols["FIB$W_NMCTL"]
 	fibVERLIMIT = vmsdef.Symbols["FIB$W_VERLIMIT"]
 	fibMWrite   = vmsdef.Symbols["FIB$M_WRITE"]
+	fibMNoRead  = vmsdef.Symbols["FIB$M_NOREAD"]
+	fibMNoWrite = vmsdef.Symbols["FIB$M_NOWRITE"]
 	fibMExtend  = vmsdef.Symbols["FIB$M_EXTEND"]
 	// $FIBDEF's listings give no FIB$M_ masks for the name control bits,
 	// only their bit numbers.
@@ -111,6 +113,7 @@ var acpStatuses = []struct {
 	{rms.ErrACPDirNotEmpty, vmsdef.Symbols["SS$_DIRNOTEMPTY"]},
 	{rms.ErrACPProtected, vmsdef.Symbols["SS$_NOPRIV"]},
 	{rms.ErrACPIllegalBlock, vmsdef.Symbols["SS$_ILLBLKNUM"]},
+	{rms.ErrACPAccessConflict, vmsdef.Symbols["SS$_ACCONFLICT"]},
 }
 
 // Other statuses the disk driver reports.
@@ -299,7 +302,7 @@ func diskAccess(env *Environment, req *ioRequest) (ioStatus, uint32) {
 	}
 
 	if open {
-		a, err := env.Mounts.ACPAccess(diskDevice(req), fid, f.acctl&fibMWrite != 0)
+		a, err := env.Mounts.ACPAccessWith(diskDevice(req), fid, fibAccessMode(f.acctl))
 		if err != nil {
 			return ioStatus{status: acpStatus(err)}, 0
 		}
@@ -513,5 +516,17 @@ func (env *Environment) deaccessChannel(c *channel) {
 	if c.acp != nil {
 		_ = c.acp.Deaccess()
 		c.acp = nil
+	}
+}
+
+// fibAccessMode is the access FIB$L_ACCTL asks for: writing
+// (FIB$M_WRITE), and keeping others from reading (FIB$M_NOREAD) or
+// writing (FIB$M_NOWRITE) the file while it's accessed. An access that
+// conflicts with the file's other accessors' fails with SS$_ACCONFLICT.
+func fibAccessMode(acctl uint32) rms.ACPAccessMode {
+	return rms.ACPAccessMode{
+		Write:   acctl&fibMWrite != 0,
+		NoRead:  acctl&fibMNoRead != 0,
+		NoWrite: acctl&fibMNoWrite != 0,
 	}
 }

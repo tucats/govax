@@ -230,7 +230,9 @@ func TestSysOpen_diskFileForRead(t *testing.T) {
 // still succeed (it doesn't itself check for an armed File), but the first
 // SYS$PUT that tried to extend the file past its current length would fail
 // deep inside ods2 — see writefile.go's own OpenForWrite doc comment for
-// why.
+// why. The stream is connected with RAB$V_EOF: without it, it would start
+// at the file's first record, where a $PUT can't go (RMS$_NEF;
+// TestSharing_appendToExisting).
 func TestSysOpen_diskFileForWrite(t *testing.T) {
 	f := newCreateFixture(t, true)
 
@@ -248,7 +250,13 @@ func TestSysOpen_diskFileForWrite(t *testing.T) {
 		t.Errorf("r0 = %d, want rmsNormal (%d)", r0, rmsNormal)
 	}
 
-	ifi := connectRAB(t, f.ctx, testFabAddr)
+	ifi := readWord(t, f.ctx, testFabAddr+fabIFI)
+	putRAB(t, f.ctx, testFabAddr)
+	putLongwordAt(t, f.ctx, testRabAddr+rabROP, ropEOF)
+
+	if _, err := SysConnect(f.ctx, []uint32{testRabAddr}); err != nil {
+		t.Fatalf("SysConnect: %v", err)
+	}
 
 	h, _ := f.ctx.Files.Lookup(ifi)
 	if h.Writer == nil {

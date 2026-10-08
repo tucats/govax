@@ -143,11 +143,12 @@ func (t *MountTable) ACPDelete(device string, req ACPDeleteRequest) (ACPDeleted,
 		}
 	}
 
+	// An accessed file (by IO$_ACCESS or an RMS open) is only marked
+	// for delete: ods2 deletes it at its last deaccess.
 	if req.DeleteFile {
-		if m.accessed[result.FID] > 0 {
-			m.markDoomed(result.FID, nil) // the entry, if any, is gone
-			result.Deferred = true
-		} else if err := deleteHeader(vol, result.FID, bm, ib); err != nil {
+		result.Deferred = vol.Accessed(result.FID.toOds2())
+
+		if err := deleteHeader(vol, result.FID, bm, ib); err != nil {
 			return result, err
 		}
 	}
@@ -166,7 +167,7 @@ func (m *mountedVolume) checkDeletable(fid FileID, deleteFile bool) error {
 	}
 
 	f, err := m.Volume.OpenFID(fid.toOds2())
-	if err != nil || m.doomed[fid] != nil {
+	if err != nil || m.doomed[fid] != nil || f.MarkedForDelete() {
 		return ErrACPNoSuchFile
 	}
 
@@ -247,23 +248,13 @@ func (m *mountedVolume) markDoomed(fid FileID, entry *acpEntry) {
 	m.doomed[fid] = entry
 }
 
-// access records one more access of the file with ID fid.
-func (m *mountedVolume) access(fid FileID) {
-	if m.accessed == nil {
-		m.accessed = map[FileID]int{}
-	}
-
-	m.accessed[fid]++
-}
-
-// release records the end of one access of the file with ID fid, and
-// deletes the file if that was the last and it's marked for deletion.
+// release follows the end of one access of the file with ID fid: if it
+// was the last, and the file is a temporary one marked for deletion with
+// its directory entry (ACPCreate's Temporary), both go now.
 func (m *mountedVolume) release(fid FileID) error {
-	if m.accessed[fid]--; m.accessed[fid] > 0 {
+	if m.Volume.Accessed(fid.toOds2()) {
 		return nil
 	}
-
-	delete(m.accessed, fid)
 
 	entry, doomed := m.doomed[fid]
 	if !doomed {

@@ -72,6 +72,11 @@ func (ctx *Context) openByNAM(fab, nam uint32, fac byte, chain []xabEntry, xabSt
 
 	device := dviDevice(dvi)
 
+	shr, err := ctx.loadByte(fab + fabSHR)
+	if err != nil {
+		return 0, true, err
+	}
+
 	vol, ok := ctx.Mounts.Lookup(device)
 	if !ok {
 		return fail(rmsDeviceError)
@@ -84,7 +89,7 @@ func (ctx *Context) openByNAM(fab, nam uint32, fac byte, chain []xabEntry, xabSt
 	)
 
 	if byFID {
-		if ifi, sts, err = openFID(ctx, fac, device, vol, fid); err != nil || sts != 0 {
+		if ifi, sts, err = openFID(ctx, fac, shr, device, vol, fid); err != nil || sts != 0 {
 			if err != nil {
 				return 0, true, err
 			}
@@ -117,7 +122,7 @@ func (ctx *Context) openByNAM(fab, nam uint32, fac byte, chain []xabEntry, xabSt
 
 		entry, sts := lookupVersion(dir, specFileName(spec), spec.Version)
 		if sts == 0 {
-			if ifi, sts, err = openFID(ctx, fac, device, vol, entry.Fid); err != nil {
+			if ifi, sts, err = openFID(ctx, fac, shr, device, vol, entry.Fid); err != nil {
 				return 0, true, err
 			}
 		}

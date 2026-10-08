@@ -268,6 +268,11 @@ func createOnVolume(ctx *Context, fabAddr uint32, fac byte, p parsedName, cif bo
 		return 0, found, false, 0, err
 	}
 
+	shr, err := ctx.loadByte(fabAddr + fabSHR)
+	if err != nil {
+		return 0, found, false, 0, err
+	}
+
 	if spec.Name == "" && spec.Type == "" {
 		return 0, found, false, rmsFileNameError, nil
 	}
@@ -287,7 +292,7 @@ func createOnVolume(ctx *Context, fabAddr uint32, fac byte, p parsedName, cif bo
 	// FAB$V_CIF: a file that's already there is opened instead.
 	if cif {
 		if entry, sts := lookupVersion(dir, name, spec.Version); sts == 0 {
-			ifi, sts, err := openFID(ctx, fac, spec.Device, vol, entry.Fid)
+			ifi, sts, err := openFID(ctx, fac, shr, spec.Device, vol, entry.Fid)
 			if err != nil || sts != 0 {
 				return 0, found, false, sts, err
 			}
@@ -341,6 +346,15 @@ func createOnVolume(ctx *Context, fabAddr uint32, fac byte, p parsedName, cif bo
 		return 0, found, false, rmsDeviceError, nil
 	}
 
+	// The creator is the new file's first accessor, so no one else can
+	// have it: the access can't fail but by a Go-level error.
+	mode := accessMode(fac, shr)
+
+	a, err := vol.AccessFile(f, mode)
+	if err != nil {
+		return 0, found, false, rmsDeviceError, nil
+	}
+
 	n, t := splitEntryName(name)
 	found = foundFile{
 		Parsed: p, Device: spec.Device, Dirs: spec.Dirs,
@@ -349,7 +363,9 @@ func createOnVolume(ctx *Context, fabAddr uint32, fac byte, p parsedName, cif bo
 	}
 	found.HighVer, found.LowVer = versionsAround(dir, name, version)
 
-	return ctx.Files.Alloc(&FileHandle{File: f, Writable: true, Access: fac}), found, false, 0, nil
+	h := &FileHandle{File: f, Accessor: a, Mode: mode, Writable: true, Access: fac}
+
+	return ctx.Files.Alloc(h), found, false, 0, nil
 }
 
 // loadFileSpecString reads the FAB$L_FNA/FAB$B_FNS pair out of the FAB at

@@ -69,6 +69,10 @@ var (
 	ErrACPEndOfFile    = errors.New("rms: end of file")                  // SS$_ENDOFFILE
 	ErrACPBadBlock     = errors.New("rms: virtual block number is zero") // SS$_BADPARAM
 	ErrACPDeviceFull   = errors.New("rms: no room to extend the file")   // SS$_DEVICEFULL
+
+	// ErrACPAccessConflict is an access that conflicts with the file's
+	// other accessors' (sharing.go).
+	ErrACPAccessConflict = errors.New("rms: file accessed in a conflicting way") // SS$_ACCONFLICT
 )
 
 // ACPLookup finds the file called name ("NAME.TYP;VER", or without a
@@ -146,6 +150,11 @@ type ACPFile struct {
 	fid      FileID
 	writable bool
 
+	// access is the file system's access of the file (ods2's
+	// volume.Access), shared with the file's other accessors, RMS's
+	// among them.
+	access *volume.Access
+
 	// usedAtAccess is how many blocks held data when the file was
 	// accessed, and maxWritten the highest block WriteVirtual has written
 	// since: Deaccess moves the end of file only if a write went past it.
@@ -157,13 +166,27 @@ type ACPFile struct {
 	released bool
 }
 
+// ACPAccessMode is how an IO$_ACCESS uses the file: FIB$L_ACCTL's
+// FIB$M_WRITE (Write), FIB$M_NOREAD (no one else may read it), and
+// FIB$M_NOWRITE (no one else may write it).
+type ACPAccessMode struct {
+	Write, NoRead, NoWrite bool
+}
+
 // ACPAccess opens the file with ID fid on the volume mounted on device,
-// for reading, or for writing too if write. A read-only mount refuses
-// write access.
+// for reading, or for writing too if write, sharing it with anyone.
+func (t *MountTable) ACPAccess(device string, fid FileID, write bool) (*ACPFile, error) {
+	return t.ACPAccessWith(device, fid, ACPAccessMode{Write: write})
+}
+
+// ACPAccessWith opens the file with ID fid on the volume mounted on
+// device for an accessor using mode. A read-only mount refuses write
+// access; an access that conflicts with the file's other accessors (an
+// RMS open's too) is ErrACPAccessConflict.
 //
 // A file marked for deletion (see acpdelete.go) can't be accessed
 // (ErrACPNoSuchFile).
-func (t *MountTable) ACPAccess(device string, fid FileID, write bool) (*ACPFile, error) {
+func (t *MountTable) ACPAccessWith(device string, fid FileID, mode ACPAccessMode) (*ACPFile, error) {
 	m, ok := t.mounts[normalizeDeviceName(device)]
 	if !ok {
 		return nil, ErrACPNotMounted
@@ -175,34 +198,22 @@ func (t *MountTable) ACPAccess(device string, fid FileID, write bool) (*ACPFile,
 		return nil, ErrACPNoSuchFile
 	}
 
-	if write && !t.Writable(device) {
+	if mode.Write && !t.Writable(device) {
 		return nil, ErrACPWriteLocked
 	}
 
-	f, err := vol.OpenFID(fid.toOds2())
+	a, err := vol.Access(fid.toOds2(), volume.AccessMode{Write: mode.Write, NoRead: mode.NoRead, NoWrite: mode.NoWrite})
+	if errors.Is(err, volume.ErrAccessConflict) {
+		return nil, ErrACPAccessConflict
+	}
+
 	if err != nil {
 		return nil, ErrACPNoSuchFile
 	}
 
-	if write {
-		bm, err := f.Device.Bitmap()
-		if err != nil {
-			return nil, err
-		}
+	f := a.File
 
-		ib, err := f.Device.IndexBitmap()
-		if err != nil {
-			return nil, err
-		}
-
-		if err := f.OpenForWrite(bm, ib); err != nil {
-			return nil, err
-		}
-	}
-
-	m.access(fid)
-
-	return &ACPFile{file: f, fid: fid, writable: write, usedAtAccess: f.UsedBlocks(), mount: m}, nil
+	return &ACPFile{file: f, fid: fid, writable: mode.Write, access: a, usedAtAccess: f.UsedBlocks(), mount: m}, nil
 }
 
 // FileID is the accessed file's ID.
@@ -346,6 +357,23 @@ func (a *ACPFile) DeaccessWithAttributes(change func(*ACPAttributes)) error {
 	err := a.close(change)
 	a.released = true
 
+	// The file system's deaccess: the header written back, and the file
+	// deleted if it was deleted while accessed, freeing blocks the
+	// bitmaps then need written for.
+	if a.access != nil {
+		if derr := a.access.Deaccess(); err == nil {
+			err = derr
+		}
+
+		if bm, ib, berr := deviceBitmaps(a.file.Device); berr != nil {
+			if err == nil {
+				err = berr
+			}
+		} else if ferr := flushBitmaps(bm, ib); err == nil {
+			err = ferr
+		}
+	}
+
 	if a.mount != nil {
 		if rerr := a.mount.release(a.fid); err == nil {
 			err = rerr
@@ -365,10 +393,11 @@ func (a *ACPFile) close(change func(*ACPAttributes)) error {
 		return nil
 	}
 
-	if a.maxWritten > a.usedAtAccess {
-		if err := a.file.Close(); err != nil {
-			return err
-		}
+	// The end of file moves to just past the highest block written, if
+	// that's past where it is (another accessor may have moved it
+	// further).
+	if a.maxWritten > a.usedAtAccess && a.maxWritten > a.file.UsedBlocks() {
+		a.file.SetEndOfFile(a.maxWritten+1, 0)
 	}
 
 	bm, err := a.file.Device.Bitmap()

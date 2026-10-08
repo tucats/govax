@@ -170,7 +170,7 @@ func (env *Environment) enterFile(req *ioRequest, f *fib, name string, change fu
 	}
 
 	if access {
-		a, err := env.Mounts.ACPAccess(dev, f.fid, f.acctl&fibMWrite != 0)
+		a, err := env.Mounts.ACPAccessWith(dev, f.fid, fibAccessMode(f.acctl))
 		if err != nil {
 			return ioStatus{status: acpStatus(err)}, 0
 		}

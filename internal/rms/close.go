@@ -80,19 +80,23 @@ func SysClose(ctx *Context, argv []uint32) (uint32, error) {
 			}
 		}
 
-		if err := closeVolumeFile(handle); err != nil {
+		// The XABs apply to a file written through this FAB, and not to
+		// one deleted while open, which is about to go.
+		xabs := func() error {
+			if !handle.Writable || handle.File.MarkedForDelete() {
+				return nil
+			}
+
+			return applyCloseXABs(handle.File, in, vmstime.FromTime(time.Now()))
+		}
+
+		if err := closeVolumeFile(handle, xabs); err != nil {
 			// A genuine underlying ods2/volume-layer failure while
 			// finalizing the file's on-disk size — not a Go bug, so
 			// it's reported as an ordinary (if generic) RMS device
 			// error rather than propagated as a Go error, the same
 			// convention create.go's createOnVolume already uses for
 			// vol.CreateFile failures.
-			return storeStatus(ctx, fabAddr, fabSTS, fabSTV, rmsDeviceError)
-		}
-
-		if !handle.Writable {
-			// Nothing to update.
-		} else if err := applyCloseXABs(handle.File, in, vmstime.FromTime(time.Now())); err != nil {
 			return storeStatus(ctx, fabAddr, fabSTS, fabSTV, rmsDeviceError)
 		}
 	}
@@ -131,12 +135,50 @@ func SysClose(ctx *Context, argv []uint32) (uint32, error) {
 // no-op on a File that was never armed for writing at all — exactly what
 // a read-only-opened file is — so there's no need for this function to
 // separately detect and skip that case.
-func closeVolumeFile(handle *FileHandle) error {
-	if handle.Writer != nil {
-		return handle.Writer.Close()
+//
+// A file opened through the file system's access (handle.Accessor, every
+// $OPEN and $CREATE of a volume file: sharing.go) is shared with its
+// other openers, so the Writer is flushed rather than closed: its last
+// records go on the disk and the file's end of file past them, in the
+// shared header, which the last opener's Deaccess writes back. That
+// Deaccess also deletes a file deleted while open.
+//
+// finish, if not nil, is called once the records are written and before
+// the file is deaccessed: $CLOSE's XABs.
+func closeVolumeFile(handle *FileHandle, finish func() error) error {
+	if finish == nil {
+		finish = func() error { return nil }
 	}
 
-	return handle.File.Close()
+	if handle.Accessor == nil {
+		var err error
+		if handle.Writer != nil {
+			err = handle.Writer.Close()
+		} else {
+			err = handle.File.Close()
+		}
+
+		if err != nil {
+			return err
+		}
+
+		return finish()
+	}
+
+	var err error
+	if handle.Writer != nil {
+		err = handle.Writer.Flush()
+	}
+
+	if err == nil {
+		err = finish()
+	}
+
+	if derr := handle.Accessor.Deaccess(); err == nil {
+		err = derr
+	}
+
+	return err
 }
 
 // Rundown closes every file t has open and empties the table but for its
@@ -159,7 +201,7 @@ func (t *FileTable) Rundown() (int, error) {
 
 		if h.IsRecordDevice() {
 			h.Device.Close()
-		} else if err := closeVolumeFile(h); err != nil && firstErr == nil {
+		} else if err := closeVolumeFile(h, nil); err != nil && firstErr == nil {
 			firstErr = err
 		}
 

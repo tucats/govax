@@ -87,11 +87,22 @@ type FileHandle struct {
 	// none.
 	Access byte
 
+	// Accessor is the file system's access of File (ods2's volume.Access,
+	// sharing.go), which $CLOSE ends; Mode is how it accesses the file,
+	// from FAB$B_FAC and FAB$B_SHR.
+	Accessor *volume.Access
+	Mode     volume.AccessMode
+
 	// Reader/Writer are set once File has actually been armed for
 	// reading or writing respectively (see this type's own doc comment
 	// for why that's a separate step from File being non-nil at all).
 	Reader *odsrms.Reader
 	Writer *odsrms.Writer
+
+	// NotAtEOF is set when a stream for $PUT was connected at the start
+	// of a file that has records (no RAB$V_EOF): it has no Writer, and
+	// its $PUT fails with RMS$_NEF.
+	NotAtEOF bool
 }
 
 // IsConsole reports whether h is the terminal-pseudo-device case (Console

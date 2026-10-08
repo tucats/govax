@@ -56,7 +56,7 @@ func SysConnect(ctx *Context, argv []uint32) (uint32, error) {
 	}
 
 	if !handle.IsConsole() && !handle.IsRecordDevice() {
-		if failStatus, err := armForFAC(ctx, handle, fabAddr); err != nil {
+		if failStatus, err := armForFAC(ctx, handle, fabAddr, rabAddr); err != nil {
 			return 0, err
 		} else if failStatus != 0 {
 			return storeStatus(ctx, rabAddr, rabSTS, rabSTV, failStatus)
@@ -90,8 +90,13 @@ func SysConnect(ctx *Context, argv []uint32) (uint32, error) {
 // (create.go): err is a genuine VAX-memory-access failure, to propagate
 // unchanged; a nonzero failStatus is an ordinary RMS$_ failure for the
 // caller to store into the RAB and return as R0; both zero means success.
-func armForFAC(ctx *Context, handle *FileHandle, fabAddr uint32) (failStatus uint32, err error) {
+func armForFAC(ctx *Context, handle *FileHandle, fabAddr, rabAddr uint32) (failStatus uint32, err error) {
 	fac, err := ctx.loadByte(fabAddr + fabFAC)
+	if err != nil {
+		return 0, err
+	}
+
+	rop, err := ctx.loadLongword(rabAddr + rabROP)
 	if err != nil {
 		return 0, err
 	}
@@ -104,7 +109,18 @@ func armForFAC(ctx *Context, handle *FileHandle, fabAddr uint32) (failStatus uin
 	switch {
 	case fac&facPut != 0:
 		if handle.Writer == nil {
-			w, err := odsrms.NewWriter(handle.File)
+			// A sequential stream starts at the beginning of the file,
+			// where a $PUT can only go if the file is empty; RAB$V_EOF
+			// starts it at the end of the file instead (RMS manual,
+			// RAB$L_ROP). A stream at the start of a file with records
+			// in it gets no Writer: its $PUT is RMS$_NEF.
+			if rop&ropEOF == 0 && odsrms.FileByteLength(handle.File.Header.RecordAttributes) > 0 {
+				handle.NotAtEOF = true
+
+				return 0, nil
+			}
+
+			w, err := odsrms.NewAppender(handle.File)
 			if err != nil {
 				// handle.File wasn't armed for writing (volume.File.
 				// OpenForWrite never called on it) or has an
@@ -114,6 +130,9 @@ func armForFAC(ctx *Context, handle *FileHandle, fabAddr uint32) (failStatus uin
 				return rmsDeviceError, nil
 			}
 
+			// A file others may read or write gets each record on the
+			// disk as it's put, at the end of file as it is then.
+			w.SetShared(handle.Accessor != nil && sharedStream(handle.Mode))
 			handle.Writer = w
 		}
 	case fac&facGet != 0:

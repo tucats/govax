@@ -1,6 +1,7 @@
 package rms
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 	"testing"
@@ -10,20 +11,11 @@ import (
 	"github.com/tucats/ods2/volume"
 )
 
-// These tests are Phase 47's: two VAX processes using one file on one
+// These tests are Phase 47's: VAX processes using one file on one
 // volume. Each "process" is its own Context (its own memory and file
 // table) over one shared MountTable, which is exactly how
 // internal/corevms gives every process its RMS: the volumes are system
 // state, the open files are the process's.
-
-// The FAB$B_FAC and FAB$B_SHR bits the tests use, and RAB$M_EOF, which
-// asks $CONNECT to position the stream at the end of the file.
-var (
-	shrPut = byte(vmsConst("FAB$M_SHRPUT"))
-	shrGet = byte(vmsConst("FAB$M_SHRGET"))
-	ropEOF = vmsConst("RAB$M_EOF")
-	fabSHR = fabOffset("SHR")
-)
 
 // sharer is one process in a sharing test: its RMS Context, with one FAB
 // and one RAB at the fixture's usual addresses.
@@ -259,19 +251,10 @@ func numbered(prefix string, n, size int) []string {
 	return out
 }
 
-// pending skips a test that shows a sharing defect Phase 47 hasn't fixed
-// yet: subtask is the one that fixes it, and removes the call.
-func pending(t *testing.T, subtask int) {
-	t.Helper()
-	t.Skipf("fixed by Phase 47, subtask %d", subtask)
-}
-
 // TestSharing_accessConflict: a file opened for writing with no sharing
 // (FAB$B_SHR 0, which for a writer means FAB$V_NIL) can't be opened by
 // anyone else; RMS$_FLK.
 func TestSharing_accessConflict(t *testing.T) {
-	pending(t, 3)
-
 	p, _ := newSharers(t, 2)
 	a, b := p[0], p[1]
 
@@ -290,8 +273,6 @@ func TestSharing_accessConflict(t *testing.T) {
 // and none is lost (RMS manual, "Inserting Records into Sequential
 // Files").
 func TestSharing_twoWritersAppend(t *testing.T) {
-	pending(t, 5)
-
 	p, mounts := newSharers(t, 2)
 	a, b := p[0], p[1]
 
@@ -314,8 +295,6 @@ func TestSharing_twoWritersAppend(t *testing.T) {
 // open for writing; when the second closes it, the first's extension
 // (its blocks and its records) must survive.
 func TestSharing_extendThenClose(t *testing.T) {
-	pending(t, 4)
-
 	p, mounts := newSharers(t, 2)
 	a, b := p[0], p[1]
 
@@ -341,8 +320,6 @@ func TestSharing_extendThenClose(t *testing.T) {
 // TestSharing_readerSeesAppend: a reader sharing a file with a writer
 // reads records the writer appended after the reader opened it.
 func TestSharing_readerSeesAppend(t *testing.T) {
-	pending(t, 5)
-
 	p, mounts := newSharers(t, 2)
 	a, b := p[0], p[1]
 
@@ -375,11 +352,19 @@ func TestSharing_readerSeesAppend(t *testing.T) {
 // RAB$V_EOF positions the stream at the end of the file, and $PUT
 // appends there.
 func TestSharing_appendToExisting(t *testing.T) {
-	pending(t, 4)
-
 	p, mounts := newSharers(t, 1)
 
 	writeFile(t, mounts, "MORE.DAT", "R0", "R1")
+
+	// Without RAB$V_EOF, the stream is at the first record: no $PUT.
+	p[0].mustOpen("MORE.DAT", facPut, 0, false, 0)
+	putRecord(t, p[0].ctx, testRabAddr, []byte("R2"))
+
+	if r0, err := SysPut(p[0].ctx, []uint32{testRabAddr}); err != nil || r0 != rmsNotAtEOF {
+		t.Errorf("$PUT at the start of the file: %#x, %v; want RMS$_NEF", r0, err)
+	}
+
+	p[0].close()
 
 	p[0].mustOpen("MORE.DAT", facPut, 0, false, ropEOF)
 	p[0].put("R2")
@@ -393,8 +378,6 @@ func TestSharing_appendToExisting(t *testing.T) {
 // open leaves the directory at once, but stays readable by that process
 // until it closes the file; then it's gone, and its space with it.
 func TestSharing_deleteWhileOpen(t *testing.T) {
-	pending(t, 3)
-
 	p, mounts := newSharers(t, 1)
 	a := p[0]
 
@@ -428,4 +411,151 @@ func TestSharing_deleteWhileOpen(t *testing.T) {
 	}
 
 	checkVolume(t, mounts)
+}
+
+// TestSharing_arbitration: a second open of a file is refused (RMS$_FLK)
+// exactly when its access or sharing conflicts with the first's, by the
+// RMS manual's FAB$B_FAC and FAB$B_SHR rules: GET is read access, PUT
+// write access; FAB$B_SHR 0 is SHRGET for a reader and NIL for a writer;
+// NIL takes precedence; UPI shares writing.
+func TestSharing_arbitration(t *testing.T) {
+	shrNone := byte(0)
+	nilBit := byte(vmsConst("FAB$M_NIL"))
+	upi := byte(vmsConst("FAB$M_UPI"))
+
+	cases := []struct {
+		name       string
+		fac1, shr1 byte
+		fac2, shr2 byte
+		locked     bool
+	}{
+		{"two default readers", facGet, shrNone, facGet, shrNone, false},
+		{"a default reader keeps writers out", facGet, shrNone, facPut, shrGet | shrPut, true},
+		{"a reader sharing writers, then a writer sharing readers", facGet, shrGet | shrPut, facPut, shrGet | shrPut, false},
+		{"a default writer keeps everyone out", facPut, shrNone, facGet, shrGet | shrPut, true},
+		{"a writer sharing readers, then a reader sharing writers", facPut, shrGet, facGet, shrGet | shrPut, false},
+		{"a writer sharing readers, then a reader not sharing writers", facPut, shrGet, facGet, shrGet, true},
+		{"two writers sharing writes", facPut, shrGet | shrPut, facPut, shrGet | shrPut, false},
+		{"a writer sharing reads only, then a writer", facPut, shrGet, facPut, shrGet | shrPut, true},
+		{"NIL takes precedence", facPut, nilBit | shrGet | shrPut, facGet, shrGet | shrPut, true},
+		{"a reader not sharing reads", facGet, shrPut, facGet, shrGet | shrPut, true},
+		{"UPI shares reading and writing", facPut, upi, facPut, upi, false},
+		{"UPI, then a writer sharing nothing", facPut, upi, facPut, shrNone, true},
+	}
+
+	for _, c := range cases {
+		t.Run(c.name, func(t *testing.T) {
+			p, mounts := newSharers(t, 2)
+			a, b := p[0], p[1]
+
+			writeFile(t, mounts, "ARB.DAT", "R0")
+
+			a.mustOpen("ARB.DAT", c.fac1, c.shr1, false, ropEOF)
+
+			r0 := b.open("ARB.DAT", c.fac2, c.shr2, false, ropEOF)
+			if locked := r0 == rmsFileLocked; locked != c.locked || !locked && r0&1 == 0 {
+				t.Errorf("second open: status %#x; want locked %v", r0, c.locked)
+			}
+
+			if r0&1 != 0 {
+				b.close()
+			}
+
+			a.close()
+
+			// Once both have closed, an open that shares nothing works.
+			a.mustOpen("ARB.DAT", facPut, shrNone, false, ropEOF)
+			a.close()
+		})
+	}
+}
+
+// TestSharing_manualExample is the RMS manual's (FAB$B_FAC): A reads
+// sharing GET and PUT; B writes sharing GET and PUT; C, reading and
+// sharing only GET, is refused because of B; and had C come before B, B
+// would have been refused instead.
+func TestSharing_manualExample(t *testing.T) {
+	p, mounts := newSharers(t, 3)
+	a, b, c := p[0], p[1], p[2]
+
+	writeFile(t, mounts, "EX.DAT", "R0")
+
+	a.mustOpen("EX.DAT", facGet, shrGet|shrPut, false, 0)
+	b.mustOpen("EX.DAT", facPut, shrGet|shrPut, false, ropEOF)
+
+	if r0 := c.open("EX.DAT", facGet, shrGet, false, 0); r0 != rmsFileLocked {
+		t.Errorf("C after B: status %#x, want RMS$_FLK", r0)
+	}
+
+	b.close()
+	c.mustOpen("EX.DAT", facGet, shrGet, false, 0)
+
+	if r0 := b.open("EX.DAT", facPut, shrGet|shrPut, false, ropEOF); r0 != rmsFileLocked {
+		t.Errorf("B after C: status %#x, want RMS$_FLK", r0)
+	}
+
+	a.close()
+	c.close()
+}
+
+// TestSharing_rundownReleases: a process's rundown closes its files, and
+// so ends their accesses.
+func TestSharing_rundownReleases(t *testing.T) {
+	p, _ := newSharers(t, 2)
+	a, b := p[0], p[1]
+
+	a.mustOpen("RUN.DAT", facPut, 0, true, 0)
+	a.put("kept")
+
+	if r0 := b.open("RUN.DAT", facGet, shrGet, false, 0); r0 != rmsFileLocked {
+		t.Fatalf("open while A has it: %#x", r0)
+	}
+
+	if _, err := a.ctx.Files.Rundown(); err != nil {
+		t.Fatal(err)
+	}
+
+	b.mustOpen("RUN.DAT", facGet, shrGet, false, 0)
+
+	if rec, sts := b.get(); rec != "kept" || sts&1 == 0 {
+		t.Errorf("after A's rundown: %q, %#x", rec, sts)
+	}
+
+	b.close()
+}
+
+// TestSharing_rmsAndACP: an RMS open and an IO$_ACCESS of the same file
+// are arbitrated together.
+func TestSharing_rmsAndACP(t *testing.T) {
+	p, mounts := newSharers(t, 1)
+	a := p[0]
+
+	a.mustOpen("BOTH.DAT", facPut, 0, true, 0) // NIL: no sharing
+
+	fid, _, err := mounts.ACPLookup("DUA0", mfd, "BOTH.DAT")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if _, err := mounts.ACPAccess("DUA0", fid, false); !errors.Is(err, ErrACPAccessConflict) {
+		t.Errorf("IO$_ACCESS of a file RMS has with no sharing: %v", err)
+	}
+
+	a.close()
+
+	acc, err := mounts.ACPAccessWith("DUA0", fid, ACPAccessMode{NoWrite: true})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if r0 := a.open("BOTH.DAT", facPut, shrGet|shrPut, false, ropEOF); r0 != rmsFileLocked {
+		t.Errorf("RMS writer after an IO$_ACCESS denying writers: %#x", r0)
+	}
+
+	if err := acc.Deaccess(); err != nil {
+		t.Fatal(err)
+	}
+
+	a.mustOpen("BOTH.DAT", facPut, shrGet|shrPut, false, ropEOF)
+	a.close()
 }

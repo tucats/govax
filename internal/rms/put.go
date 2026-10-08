@@ -76,6 +76,10 @@ func SysPut(ctx *Context, argv []uint32) (uint32, error) {
 	// the moment SYS$CREATE allocates it (see ifi.go's FileHandle doc
 	// comment).
 	if !handle.IsConsole() && !handle.IsRecordDevice() && handle.Writer == nil {
+		if handle.NotAtEOF {
+			return storeStatus(ctx, rabAddr, rabSTS, rabSTV, rmsNotAtEOF)
+		}
+
 		return storeStatus(ctx, rabAddr, rabSTS, rabSTV, rmsPrivilegeViolation)
 	}
 

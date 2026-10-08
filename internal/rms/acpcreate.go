@@ -169,8 +169,12 @@ func (t *MountTable) ACPCreate(device string, req ACPCreateRequest) (ACPCreated,
 
 	switch {
 	case req.Access:
-		m.access(result.FID)
-		result.File = &ACPFile{file: f, fid: result.FID, writable: req.Write, mount: m}
+		a, err := vol.AccessFile(f, volume.AccessMode{Write: req.Write})
+		if err != nil {
+			return ACPCreated{}, err
+		}
+
+		result.File = &ACPFile{file: f, fid: result.FID, writable: req.Write, access: a, mount: m}
 
 		if req.Temporary {
 			m.markDoomed(result.FID, entry)

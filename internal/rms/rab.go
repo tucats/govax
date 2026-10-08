@@ -97,6 +97,10 @@ var (
 	ropASY = vmsConst("RAB$M_ASY")
 )
 
+// ropEOF is RAB$M_EOF: $CONNECT positions the stream at the end of the
+// file, so $PUT appends.
+var ropEOF = vmsConst("RAB$M_EOF")
+
 // RAB$B_RAC values (record access modes) this package recognizes. Real
 // VMS defines several (sequential, keyed by an indexed file's key, direct
 // by RFA, ...); this phase implements sequential organization only

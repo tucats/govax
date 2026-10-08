@@ -76,6 +76,10 @@ var (
 	// sharing rules — see FAB$B_SHR in fab.h/the RMS manual).
 	rmsFileLocked = vmsConst("RMS$_FLK")
 
+	// rmsNotAtEOF is RMS$_NEF: a sequential $PUT on a stream that isn't
+	// at the end of the file.
+	rmsNotAtEOF = vmsConst("RMS$_NEF")
+
 	// rmsFileNotFound is RMS$_FNF: SYS$OPEN's target file spec doesn't
 	// exist. Also the natural error for looking a name up in an
 	// ods2 volume.Directory and not finding it.

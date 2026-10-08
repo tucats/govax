@@ -1,6 +1,6 @@
 # Phase 47 — Multiprocessing, part 5: files shared between processes
 
-**Status:** in progress (subtasks 1-2 done 2026-10-08); decisions taken 2026-10-06 (see
+**Status:** in progress (subtasks 1-4 done 2026-10-08); decisions taken 2026-10-06 (see
 PHASE-43.md, Part A). Needs Phase 45 (independent of Phase
 46).
 
@@ -243,13 +243,15 @@ questions:
 
 ## Open questions
 
-- Explicit accessor lists or lock modes for file arbitration (subtask 3).
+- ~~Explicit accessor lists or lock modes for file arbitration~~
+  (neither: the file system's access counts, in ods2's shared File;
+  subtasks 3-4 below).
 - ~~Whether VMS 7.3 RMS allows several writers on a sequential file with
   variable-length records~~ (yes, by the manual; see the survey), and how
   a reader sees an append (a probe, if the manual doesn't say).
-- Host files (`Session.Locate`'s host side): two processes writing one
-  host file get no arbitration today. Probably: the same accessor list
-  keyed by host path; decided in subtask 3.
+- ~~Host files~~: decided in subtasks 3-4: no arbitration. A host file is
+  the host's; ods2's access counts are per ODS-2 volume, and a host path
+  has no file ID to key them by. Logged as a known gap.
 
 ## Progress log
 
@@ -292,3 +294,46 @@ questions:
     image rundown's dequeue doesn't invalidate.
   - A lock on the conversion queue gets blocking notices for what its
     granted mode blocks, as a granted one does.
+- 2026-10-08: Subtasks 3 and 4, done together, since where arbitration
+  lives decided both. On VMS the file system (the XQP), not RMS, keeps
+  each open file's accessor counts in its FCB, and RMS turns FAC and SHR
+  into the access it asks for; govax does the same, the FCB being ods2's
+  (ods2 Phase 5, `docs/PHASE-05.md` there):
+  - **ods2** (`volume/access.go`): `Volume.Access(fid, AccessMode{Write,
+    NoRead, NoWrite})`, `AccessFile` for a file just created, and
+    `Access.Deaccess`. While a file is accessed, `Access` and `OpenFID`
+    return one shared `*File` (the FCB): header, extents, end of file
+    (`SetEndOfFile`, `WriteAttributes`). Arbitration is the XQP's: every
+    accessor reads, so an access fails (`ErrAccessConflict`) if someone
+    denies reading, if it writes and someone denies writing, if it denies
+    reading and anyone has the file, or if it denies writing and someone
+    writes. `DeleteFile`/`DeleteHeader` of an accessed file remove the
+    entry and mark it for delete; the last `Deaccess` frees it (a version
+    limit's purge is covered, going through `DeleteFile`). ods2's `rms`:
+    `NewAppender`, `Writer.SetShared` (each `Put` at the end of file as it
+    is then, written through), `Writer.Flush`, and Readers that ask the
+    file for its end of file each time they reach it.
+  - **govax RMS** (`internal/rms/sharing.go`): `accessMode` maps FAC and
+    SHR (the manual's defaults: SHRGET for a reader, NIL for a writer;
+    NIL first) onto ods2's access; `$OPEN`, `$CREATE` (and CIF), and the
+    NAM-block opens use it, and a conflict is RMS$_FLK. `$CLOSE` and
+    rundown flush the Writer, apply the XABs, and deaccess. `$CONNECT`
+    honors RAB$V_EOF (an appender); a `$PUT` stream connected at the start
+    of a file with records gets RMS$_NEF, as the manual's `$PUT` lists
+    (until now govax overwrote the file from its first block: survey row
+    4). A stream on a file others may read or write is a shared Writer.
+  - **The ACP** (`acp.go`, `acpdelete.go`, `acpcreate.go`): IO$_ACCESS
+    goes through the same counts (`ACPAccessWith`, FIB$M_WRITE, NOREAD,
+    NOWRITE; SS$_ACCONFLICT), so RMS and `$QIO` opens are arbitrated
+    together; `mountedVolume.accessed` is gone, and `doomed` is kept only
+    for temporary files created with an entry.
+  - All six survey tests pass (subtask 5's two included), with new ones:
+    a table of FAC/SHR classes, the manual's A/B/C example, rundown
+    releasing, and RMS against the ACP.
+  - Unconfirmed, for a probe: that an RMS opener asking only for PUT
+    still counts as reading (the XQP model: it's refused by an opener
+    without SHRGET); that FAB$V_UPI alone shares reading as well as
+    writing.
+  - **ods2 isn't tagged yet.** govax builds with the local `go.work`;
+    `GOWORK=off go build ./...` fails until ods2 is tagged (v0.1.16),
+    pushed, and pinned (`GOWORK=off go get github.com/tucats/ods2@v0.1.16`).

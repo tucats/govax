@@ -48,6 +48,11 @@ func SysOpen(ctx *Context, argv []uint32) (uint32, error) {
 	// A FAB that asks for no access is opened for GET.
 	fac = facAccess(fac, facGet)
 
+	shr, err := ctx.loadByte(fabAddr + fabSHR)
+	if err != nil {
+		return 0, err
+	}
+
 	// Of the access a FAB can ask for, this package implements GET, PUT,
 	// and UPD; a FAB asking only for others (DEL, TRN) can't be opened.
 	if fac&(facGet|facPut|facUpd) == 0 {
@@ -150,7 +155,7 @@ func SysOpen(ctx *Context, argv []uint32) (uint32, error) {
 			break
 		}
 
-		ifi, found, failStatus, err = openOnVolume(ctx, fac, p)
+		ifi, found, failStatus, err = openOnVolume(ctx, fac, shr, p)
 		if err != nil {
 			return 0, err
 		}
@@ -197,7 +202,7 @@ func SysOpen(ctx *Context, argv []uint32) (uint32, error) {
 // a nonzero failStatus is an ordinary RMS$_ failure for the caller to
 // store into the FAB and return as R0, and both zero means ifi holds the
 // freshly allocated handle for the now-open file.
-func openOnVolume(ctx *Context, fac byte, p parsedName) (ifi uint16, found foundFile, failStatus uint32, err error) {
+func openOnVolume(ctx *Context, fac, shr byte, p parsedName) (ifi uint16, found foundFile, failStatus uint32, err error) {
 	spec := p.spec()
 
 	vol, ok := ctx.Mounts.Lookup(spec.Device)
@@ -219,7 +224,7 @@ func openOnVolume(ctx *Context, fac byte, p parsedName) (ifi uint16, found found
 		return 0, found, sts, nil
 	}
 
-	if ifi, sts, err = openFID(ctx, fac, spec.Device, vol, entry.Fid); err != nil || sts != 0 {
+	if ifi, sts, err = openFID(ctx, fac, shr, spec.Device, vol, entry.Fid); err != nil || sts != 0 {
 		return 0, found, sts, err
 	}
 
@@ -233,9 +238,11 @@ func openOnVolume(ctx *Context, fac byte, p parsedName) (ifi uint16, found found
 	return ifi, found, 0, nil
 }
 
-// openFID opens the file whose ID is fid on vol (mounted as device),
-// arming it for writing when fac asks to write, and allocates its IFI.
-func openFID(ctx *Context, fac byte, device string, vol *volume.Volume, fid ondisk.Fid) (uint16, uint32, error) {
+// openFID opens the file whose ID is fid on vol (mounted as device) for
+// access fac with sharing shr, and allocates its IFI. The file system
+// access (sharing.go) arms the file for writing when fac asks to write,
+// and fails with RMS$_FLK if another opener's access or sharing conflicts.
+func openFID(ctx *Context, fac, shr byte, device string, vol *volume.Volume, fid ondisk.Fid) (uint16, uint32, error) {
 	// Real RMS lets a program SYS$OPEN a file read-only even on a
 	// read-only-mounted device — only actually asking to write is a
 	// problem, unlike SYS$CREATE (create.go), which always implies
@@ -245,30 +252,19 @@ func openFID(ctx *Context, fac byte, device string, vol *volume.Volume, fid ondi
 		return 0, rmsPrivilegeViolation, nil
 	}
 
-	f, err := vol.OpenFID(fid)
+	mode := accessMode(fac, shr)
+
+	// A file ID that names no file (a bad FAB$V_NAM open, or a directory
+	// entry pointing at a header ods2 then failed to read) is RMS$_FNF,
+	// as is a file deleted while another process has it open.
+	a, err := vol.Access(fid, mode)
 	if err != nil {
-		// A file ID that names no file: a bad FAB$V_NAM open, or a
-		// directory entry pointing at a header ods2 then failed to read.
-		return 0, rmsFileNotFound, nil
+		return 0, accessStatus(err), nil
 	}
 
-	if wantsWrite {
-		bm, err := f.Device.Bitmap()
-		if err != nil {
-			return 0, 0, err
-		}
+	h := &FileHandle{File: a.File, Accessor: a, Mode: mode, Writable: wantsWrite, Access: fac}
 
-		ib, err := f.Device.IndexBitmap()
-		if err != nil {
-			return 0, 0, err
-		}
-
-		if err := f.OpenForWrite(bm, ib); err != nil {
-			return 0, rmsDeviceError, nil
-		}
-	}
-
-	return ctx.Files.Alloc(&FileHandle{File: f, Writable: wantsWrite, Access: fac}), 0, nil
+	return ctx.Files.Alloc(h), 0, nil
 }
 
 // parseOpenVersion interprets a file spec's version field (spec.Version —
