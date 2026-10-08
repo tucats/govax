@@ -1,0 +1,88 @@
+	.title	probe3c
+;
+; The child of Phase 46's probe 3 (README.md). It assigns the two
+; mailboxes its creator made, P3_A (creator to child) and P3_B (child to
+; creator), and first sends on P3_B what $GETDVI says of each: DVI$_PID
+; and DVI$_OWNUIC of P3_A, DVI$_PID of P3_B, and its own PID. Then, until
+; it reads an end-of-file message, it reads one message from P3_A and
+; sends back on P3_B the read's I/O status block followed by the data it
+; read. Every write is a plain $QIOW (no IO$M_NOW), so it finishes only
+; when the creator has read the report. The report of the end-of-file
+; read is the last; then the child ends with status 1.
+;
+	$IODEF
+	$DVIDEF
+	$JPIDEF
+	$SSDEF
+
+; CHECK: end the child with the service's failure status.
+	.macro	check	?ok
+	blbs	r0,ok
+	brw	fail
+ok:
+	.endm
+
+	.psect	data,noexe,wrt
+name_a:		.ascid	/P3_A/
+name_b:		.ascid	/P3_B/
+chan_a:		.word	0,0
+chan_b:		.word	0,0
+
+; The first report: four longwords.
+first:
+a_pid:		.long	0
+a_ownuic:	.long	0
+b_pid:		.long	0
+my_pid:		.long	0
+a_items:	.word	4,DVI$_PID
+		.long	a_pid,0
+		.word	4,DVI$_OWNUIC
+		.long	a_ownuic,0
+		.long	0
+b_items:	.word	4,DVI$_PID
+		.long	b_pid,0
+		.long	0
+my_items:	.word	4,JPI$_PID
+		.long	my_pid,0
+		.long	0
+
+; A report: the read's IOSB, then the data.
+report:
+r_iosb:		.quad	0
+r_data:		.blkb	64
+w_iosb:		.quad	0
+r_len:		.long	0
+
+	.psect	code,exe,nowrt
+	.entry	start,^m<>
+	$assign_s	devnam=name_a, chan=chan_a
+	check
+	$assign_s	devnam=name_b, chan=chan_b
+	check
+	$getdviw_s	chan=chan_a, itmlst=a_items
+	check
+	$getdviw_s	chan=chan_b, itmlst=b_items
+	check
+	$getjpiw_s	itmlst=my_items
+	check
+	$qiow_s	chan=chan_b, func=#IO$_WRITEVBLK, iosb=w_iosb, -
+		p1=first, p2=#16
+	check
+
+; Read a message, and report it.
+loop:	$qiow_s	chan=chan_a, func=#IO$_READVBLK, iosb=r_iosb, -
+		p1=r_data, p2=#64
+	check
+	movzwl	r_iosb+2,r_len
+	addl2	#8,r_len
+	$qiow_s	chan=chan_b, func=#IO$_WRITEVBLK, iosb=w_iosb, -
+		p1=report, p2=r_len
+	check
+	cmpw	r_iosb,#SS$_ENDOFFILE
+	beql	done
+	brw	loop
+
+done:	movl	#1,r0
+fail:	ret
+
+	.end	start

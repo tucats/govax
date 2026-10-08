@@ -11,15 +11,19 @@ VMS's macro library.
 
 | File | What it holds |
 | ---- | ------------- |
-| `def_acc.mar`, `def_msg.mar`, `def_pql.mar`, `def_prc.mar` | `$ACCDEF`, `$MSGDEF`, `$PQLDEF`, `$PRCDEF`, each with `GLOBAL` |
-| `defs.com` | Assembles each with `/NOLIST` and analyzes its object |
-| `exchange.cmd` | The govax console script that builds the exchange volume |
+| `def_acc.mar`, `def_msg.mar`, `def_pql.mar`, `def_prc.mar` | `$ACCDEF`, `$MSGDEF`, `$PQLDEF`, `$PRCDEF`, each with `GLOBAL` (Phase 45) |
+| `def_sec.mar`, `def_lck.mar`, `def_lki.mar`, `def_psl.mar`, `def_dc.mar` | `$SECDEF`, `$LCKDEF`, `$LKIDEF`, `$PSLDEF`, `$DCDEF` (Phase 46: global sections, the lock services Phase 47 needs, access modes, device classes; not yet run) |
+| `defs.com` | Assembles Phase 46's with `/NOLIST` and analyzes their objects |
+| `exchange.cmd` | The govax console script that builds the exchange volume (Phase 46's) |
 | `copyout.cmd` | The govax console script that copies the results into `vax/` |
-| `vax/` | The VMS 7.3 run's objects, analyses, and log (2026-10-07) |
+| `vax/` | The VMS 7.3 run's objects, analyses, and log (`defs45.log`, 2026-10-07); Phase 46's log will be `defs46.log` |
 | `decode.go` | Turns the objects into `phase45-defined.txt` |
 | `phase45-defined.txt` | Every name and value the four macros define |
 
 ## The VAX run
+
+Phase 46's probes run with the other end-of-Phase-46 runs, on one volume
+(`../run46/README.md`). The steps below are for this directory alone.
 
 1. Build the exchange volume, from the repository root:
 
@@ -46,6 +50,11 @@ it into `internal/vmsdef`'s `Symbols`. The `MSG$_` values agree with
 STARLET.OLB's (`TestSymbols_matchLibrarySymbols`), and the `ACC$` offsets
 with the manual's, except that VMS 7.3 has `ACC$L_JOBID` at offset 12,
 which VMS 5.0's manual lists as unused.
+
+`decode.go` reads every `vax/def_*.obj`, so once Phase 46's objects are
+back the same two commands add their names too. `$SECDEF`'s values are
+already in `vmsdef.LibrarySymbols` (STARLET.OLB), which the probe will
+confirm; `$LCKDEF`, `$LKIDEF`, and `$PSLDEF` are new to govax.
 
 `internal/bootdata/mkdefs` can build `$PRCDEF`, `$PQLDEF`, and `$ACCDEF`
 for govax's own macro library from `phase45-defined.txt`, when a MACRO

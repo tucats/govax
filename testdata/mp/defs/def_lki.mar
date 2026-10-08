@@ -1,0 +1,9 @@
+	.TITLE	DEF_LKI	$LKIDEF's names and values ($GETLKI items)
+	.IDENT	/V1.0/
+;
+; A Phase 46 definition probe (testdata/mp/defs/README.md). With GLOBAL,
+; every name the macro defines is a global symbol, so the object's GSD
+; lists each name and its value.
+;
+	$LKIDEF	GLOBAL
+	.END

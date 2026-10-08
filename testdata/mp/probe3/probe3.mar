@@ -1,0 +1,578 @@
+	.title	probe3
+;
+; Phase 46's probe 3 (README.md): what docs/PHASE-46 left unconfirmed
+; about mailboxes between processes, global sections, and RMS on a
+; mailbox, asked of VMS. Each experiment prints "what: result". A PID
+; prints as PARENT, CHILD, ZERO, or OTHER, then its value, so that the
+; lines compare between runs. The command line is the image of
+; PROBE3C.EXE (probe3c.mar), the child of part 1.
+;
+; Part 1, mailboxes between two processes: the PIDs in each IOSB, of a
+; plain write and an IO$M_NOW write, handed to a waiting read or queued;
+; $GETDVI of a mailbox from both sides, with messages queued.
+; Part 2, global sections (one process): $CRMPSC's and $MGBLSC's retadr
+; with SEC$M_EXPREG, the statuses of their errors, ident matching, and
+; $DGBLSC. The services are called with CALLS, not their macros, which
+; govax doesn't have yet.
+; Part 3, RMS on a mailbox and on NL:: the FAB after $OPEN, whether an
+; asynchronous $PUT waits for its message to be read, and $GET of an
+; end-of-file message.
+;
+	$IODEF
+	$JPIDEF
+	$DVIDEF
+	$ACCDEF
+	$SSDEF
+	$FABDEF
+	$RABDEF
+
+; The section flags, from STARLET's $SECDEF (govax's macro library
+; doesn't have $SECDEF yet).
+sec_gbl = ^X1
+sec_crf = ^X2
+sec_wrt = ^X8
+sec_perm = ^X4000
+sec_sysgbl = ^X8000
+sec_expreg = ^X20000
+sec_pagfil = ^X80000
+mat_all = 0
+mat_equ = 1
+mat_leq = 2
+
+; CHECK: a failure of setup ends the program, saying why.
+	.macro	check	?ok
+	blbs	r0,ok
+	brw	fail
+ok:
+	.endm
+
+; SAY text: print a line.
+	.macro	say	text,?ctl
+	.save_psect
+	.psect	data,noexe,wrt,long
+ctl:	.ascid	/text/
+	.restore_psect
+	pushaq	ctl
+	calls	#1,g^lib$put_output
+	.endm
+
+; RESULT text: print "text: R0".
+	.macro	result	text,?ctl
+	.save_psect
+	.psect	data,noexe,wrt,long
+ctl:	.ascid	/text: !XL/
+	.restore_psect
+	$fao_s	ctrstr=ctl, outlen=out_len, outbuf=out_desc, p1=r0
+	bsbw	print
+	.endm
+
+; VALUE text,longword: print "text: longword".
+	.macro	value	text,what,?ctl
+	.save_psect
+	.psect	data,noexe,wrt,long
+ctl:	.ascid	/text: !XL/
+	.restore_psect
+	$fao_s	ctrstr=ctl, outlen=out_len, outbuf=out_desc, p1=what
+	bsbw	print
+	.endm
+
+; PIDIS text,longword: print "text: WHO value", WHO naming the PID.
+	.macro	pidis	text,what,?ctl
+	.save_psect
+	.psect	data,noexe,wrt,long
+ctl:	.ascid	/text: !AS !XL/
+	.restore_psect
+	movl	what,r1
+	bsbw	who
+	$fao_s	ctrstr=ctl, outlen=out_len, outbuf=out_desc, p1=r3, p2=r1
+	bsbw	print
+	.endm
+
+; IOSB text,iosb: print an I/O status block: its status, its count, and
+; the PID in its second longword.
+	.macro	iosb	text,where,?ctl
+	.save_psect
+	.psect	data,noexe,wrt,long
+ctl:	.ascid	/text: status !XL, count !UL, PID !AS !XL/
+	.restore_psect
+	movzwl	where,r4
+	movzwl	where+2,r5
+	movl	where+4,r1
+	bsbw	who
+	$fao_s	ctrstr=ctl, outlen=out_len, outbuf=out_desc, -
+		p1=r4, p2=r5, p3=r3, p4=r1
+	bsbw	print
+	.endm
+
+; SECTION text: print R0 and the range in RETADR.
+	.macro	section	text,?ctl
+	.save_psect
+	.psect	data,noexe,wrt,long
+ctl:	.ascid	/text: status !XL, retadr !XL to !XL/
+	.restore_psect
+	$fao_s	ctrstr=ctl, outlen=out_len, outbuf=out_desc, -
+		p1=r0, p2=retadr, p3=retadr+4
+	bsbw	print
+	.endm
+
+; CRMPSC flags,name,pagcnt,ident,relpag: SYS$CRMPSC at INADR (P0, with
+; SEC$M_EXPREG), its range in RETADR. Arguments in order: inadr, retadr,
+; acmode, flags, gsdnam, ident, relpag, chan, pagcnt, vbn, prot, pfc.
+	.macro	crmpsc	flags,name,pagcnt=#4,ident=#0,relpag=#0
+	clrq	retadr
+	pushl	#0			; pfc
+	pushl	#0			; prot
+	pushl	#0			; vbn
+	pushl	pagcnt
+	pushl	#0			; chan
+	pushl	relpag
+	pushl	ident
+	pushl	name
+	pushl	flags
+	pushl	#0			; acmode
+	pushal	retadr
+	pushal	inadr
+	calls	#12,g^sys$crmpsc
+	.endm
+
+; MGBLSC flags,name,ident,relpag: SYS$MGBLSC the same way. Arguments:
+; inadr, retadr, acmode, flags, gsdnam, ident, relpag.
+	.macro	mgblsc	flags,name,ident=#0,relpag=#0
+	clrq	retadr
+	pushl	relpag
+	pushl	ident
+	pushl	name
+	pushl	flags
+	pushl	#0			; acmode
+	pushal	retadr
+	pushal	inadr
+	calls	#7,g^sys$mgblsc
+	.endm
+
+; DGBLSC flags,name,ident. Arguments: flags, gsdnam, ident.
+	.macro	dgblsc	flags,name,ident=#0
+	pushl	ident
+	pushl	name
+	pushl	flags
+	calls	#3,g^sys$dgblsc
+	.endm
+
+	.psect	data,noexe,wrt,long
+image_desc:	.word	255
+		.byte	14,1
+		.long	image_buf
+image_buf:	.blkb	255
+img_len:	.word	0
+nl_desc:	.ascid	/NL:/
+child_name:	.ascid	/PROBE3_CHILD/
+name_a:		.ascid	/P3_A/
+name_b:		.ascid	/P3_B/
+name_r:		.ascid	/P3_R/
+
+who_zero:	.ascid	/ZERO/
+who_parent:	.ascid	/PARENT/
+who_child:	.ascid	/CHILD/
+who_other:	.ascid	/OTHER/
+
+out_buf:	.blkb	300
+out_len:	.word	0,0
+out_desc:	.word	300
+		.byte	14,1
+		.long	out_buf
+
+my_pid:		.long	0
+my_items:	.word	4,JPI$_PID
+		.long	my_pid,0
+		.long	0
+child_pid:	.long	0
+c_state:	.long	0
+st_items:	.word	4,JPI$_STATE
+		.long	c_state,0
+		.long	0
+polls:		.long	0
+
+chan_a:		.word	0,0
+chan_b:		.word	0,0
+chan_t:		.word	0,0
+chan_r:		.word	0,0
+term_unit:	.long	0
+t_items:	.word	4,DVI$_UNIT
+		.long	term_unit,0
+		.long	0
+term_msg:	.blkb	ACC$K_TERMLEN
+
+; $GETDVI of P3_A from the parent's side.
+d_pid:		.long	0
+d_ownuic:	.long	0
+d_refcnt:	.long	0
+d_depend:	.long	0
+d_depend2:	.long	0
+d_bufsiz:	.long	0
+d_items:	.word	4,DVI$_PID
+		.long	d_pid,0
+		.word	4,DVI$_OWNUIC
+		.long	d_ownuic,0
+		.word	4,DVI$_REFCNT
+		.long	d_refcnt,0
+		.word	4,DVI$_DEVDEPEND
+		.long	d_depend,0
+		.word	4,DVI$_DEVDEPEND2
+		.long	d_depend2,0
+		.word	4,DVI$_DEVBUFSIZ
+		.long	d_bufsiz,0
+		.long	0
+
+; The child's reports: the IOSB of its read, then the data. The first
+; report is four longwords instead (probe3c.mar).
+rep:
+rep_iosb:	.quad	0
+rep_data:	.blkb	64
+b_iosb:		.quad	0
+w_iosb:		.quad	0
+p3_iosb:	.quad	0
+msg_p1:		.ascii	/P1/
+msg_p2:		.ascii	/P2/
+msg_p3:		.ascii	/P3/
+msg_n1:		.ascii	/N1/
+msg_n2:		.ascii	/N2/
+ef_state:	.long	0
+sixty:		.long	-600000000,-1		; 60 seconds
+hundredth:	.long	-100000,-1		; 10 milliseconds
+
+; Part 2.
+inadr:		.long	^X200,^X200		; P0, with SEC$M_EXPREG
+retadr:		.quad	0
+map1:		.quad	0
+map2:		.quad	0
+sec_name:	.ascid	/P3_SEC/
+ids_name:	.ascid	/P3_IDS/
+ro_name:	.ascid	/P3_RO/
+nosuch_name:	.ascid	/P3_NOSUCH/
+id_create:	.long	mat_all,<1@24>!5	; version 1.5
+id_equ16:	.long	mat_equ,<1@24>!6
+id_equ15:	.long	mat_equ,<1@24>!5
+id_leq14:	.long	mat_leq,<1@24>!4
+id_leq16:	.long	mat_leq,<1@24>!6
+id_leq25:	.long	mat_leq,<2@24>!5
+id_all20:	.long	mat_all,<2@24>
+id_equ20:	.long	mat_equ,<2@24>
+id_bad:		.long	7,<1@24>!5		; no such match control
+
+; Part 3.
+		.align	long
+r_fab:		$FAB	FNM=<P3_R:>, FAC=<GET,PUT>
+r_rab:		$RAB	FAB=r_fab, ROP=ASY, RBF=r_put, RSZ=5, UBF=r_get, USZ=80
+r_put:		.ascii	/hello/
+r_get:		.blkb	80
+r_iosb:		.quad	0
+r_buf:		.blkb	80
+		.align	long
+n_fab:		$FAB	FNM=<NL:>, FAC=<GET,PUT>
+n_rab:		$RAB	FAB=n_fab, UBF=r_get, USZ=80
+
+	.psect	code,exe,nowrt
+	.entry	start,^m<r2,r3,r4,r5,r6,r7,r8,r9>
+
+	pushal	img_len
+	pushl	#0
+	pushaq	image_desc
+	calls	#3,g^lib$get_foreign
+	check
+	movw	img_len,image_desc
+	$getjpiw_s	itmlst=my_items
+	check
+
+;
+; Part 1: mailboxes between two processes.
+;
+	say	<Part 1: mailboxes between two processes>
+	$crembx_s	chan=chan_a, maxmsg=#64, bufquo=#1024, lognam=name_a
+	check
+	$crembx_s	chan=chan_b, maxmsg=#64, bufquo=#1024, lognam=name_b
+	check
+	$crembx_s	chan=chan_t, maxmsg=#128, bufquo=#512
+	check
+	$getdviw_s	chan=chan_t, itmlst=t_items
+	check
+	$creprc_s	pidadr=child_pid, image=image_desc, output=nl_desc, -
+			prcnam=child_name, mbxunt=term_unit
+	check
+
+; The child's first report: what $GETDVI says on its side.
+	bsbw	readb
+	pidis	<1.1 child's DVI$_PID of P3_A (the parent made it)>,rep
+	value	<1.1 child's DVI$_OWNUIC of P3_A>,rep+4
+	pidis	<1.1 child's DVI$_PID of P3_B>,rep+8
+	pidis	<1.1 the child's own PID>,rep+12
+	iosb	<1.1 parent's read of the child's plain write>,b_iosb
+	$getdviw_s	chan=chan_a, itmlst=d_items
+	check
+	pidis	<1.2 parent's DVI$_PID of P3_A>,d_pid
+	value	<1.2 parent's DVI$_OWNUIC of P3_A>,d_ownuic
+	value	<1.2 parent's DVI$_REFCNT of P3_A>,d_refcnt
+	value	<1.2 parent's DVI$_DEVDEPEND of P3_A (empty)>,d_depend
+	value	<1.2 parent's DVI$_DEVDEPEND2 of P3_A (empty)>,d_depend2
+	value	<1.2 parent's DVI$_DEVBUFSIZ of P3_A>,d_bufsiz
+
+; 1.3: a plain write handed to a waiting read.
+	bsbw	waitlef
+	$qiow_s	chan=chan_a, func=#IO$_WRITEVBLK, iosb=w_iosb, -
+		p1=msg_p1, p2=#2
+	check
+	iosb	<1.3 plain write to a waiting read: the write's IOSB>,w_iosb
+	bsbw	readb
+	iosb	<1.3 the read's IOSB>,rep_iosb
+
+; 1.4: with the child busy (writing its report of P2, which we don't
+; read yet), an IO$M_NOW write and a plain write are queued.
+	$qiow_s	chan=chan_a, func=#IO$_WRITEVBLK, iosb=w_iosb, -
+		p1=msg_p2, p2=#2
+	check
+	iosb	<1.4 plain write P2: the write's IOSB>,w_iosb
+	$qiow_s	chan=chan_a, func=#<IO$_WRITEVBLK!IO$M_NOW>, iosb=w_iosb, -
+		p1=msg_n1, p2=#2
+	check
+	iosb	<1.4 IO$M_NOW write N1, queued: the write's IOSB>,w_iosb
+	$qio_s	efn=#4, chan=chan_a, func=#IO$_WRITEVBLK, iosb=p3_iosb, -
+		p1=msg_p3, p2=#2
+	result	<1.4 plain $QIO write P3, queued: $QIO's status>
+	$getdviw_s	chan=chan_a, itmlst=d_items
+	check
+	value	<1.4 DVI$_DEVDEPEND of P3_A, two messages queued>,d_depend
+	value	<1.4 DVI$_DEVDEPEND2 of P3_A, two messages queued>,d_depend2
+	value	<1.4 DVI$_REFCNT of P3_A>,d_refcnt
+	bsbw	readb
+	iosb	<1.4 P2's read IOSB>,rep_iosb
+	bsbw	readb
+	iosb	<1.4 N1's read IOSB (a queued IO$M_NOW write)>,rep_iosb
+	bsbw	readb
+	iosb	<1.4 P3's read IOSB (a queued plain write)>,rep_iosb
+	$waitfr_s	efn=#4
+	check
+	iosb	<1.4 P3's write IOSB, after it was read>,p3_iosb
+
+; 1.5: an IO$M_NOW write handed to a waiting read.
+	bsbw	waitlef
+	$qiow_s	chan=chan_a, func=#<IO$_WRITEVBLK!IO$M_NOW>, iosb=w_iosb, -
+		p1=msg_n2, p2=#2
+	check
+	iosb	<1.5 IO$M_NOW write to a waiting read: the write's IOSB>,w_iosb
+	bsbw	readb
+	iosb	<1.5 the read's IOSB>,rep_iosb
+
+; 1.6: an end-of-file message (plain) to a waiting read.
+	bsbw	waitlef
+	$qiow_s	chan=chan_a, func=#IO$_WRITEOF, iosb=w_iosb
+	check
+	iosb	<1.6 end-of-file message to a waiting read: the write's IOSB>,w_iosb
+	bsbw	readb
+	iosb	<1.6 the read's IOSB>,rep_iosb
+
+	$qiow_s	chan=chan_t, func=#IO$_READVBLK, iosb=w_iosb, -
+		p1=term_msg, p2=#ACC$K_TERMLEN
+	check
+	value	<1.7 the child's final status>,term_msg+ACC$L_FINALSTS
+
+;
+; Part 2: global sections.
+;
+	say	<Part 2: global sections>
+	crmpsc	#<sec_gbl!sec_pagfil!sec_wrt!sec_expreg>,#sec_name
+	section	<2.1 $CRMPSC of a new 4-page section>
+	movq	retadr,map1
+	mgblsc	#<sec_wrt!sec_expreg>,#sec_name
+	section	<2.2 $MGBLSC of it>
+	movq	retadr,map2
+	movl	#^X1234ABCD,@map1
+	value	<2.2 written through the first mapping, read through the second>,@map2
+	crmpsc	#<sec_gbl!sec_pagfil!sec_wrt!sec_expreg>,#sec_name
+	section	<2.3 $CRMPSC of the same name again>
+	value	<2.3 what the third mapping holds>,@retadr
+	crmpsc	#<sec_gbl!sec_pagfil!sec_wrt!sec_expreg>,#sec_name,pagcnt=#8
+	section	<2.4 $CRMPSC of the same name, bigger>
+	mgblsc	#<sec_wrt!sec_expreg>,#nosuch_name
+	section	<2.5 $MGBLSC of a name that doesn't exist>
+	crmpsc	#<sec_gbl!sec_pagfil!sec_wrt!sec_expreg>,#ids_name,pagcnt=#0
+	section	<2.6 $CRMPSC with pagcnt 0>
+	mgblsc	#<sec_wrt!sec_expreg>,#sec_name,relpag=#10
+	section	<2.7 $MGBLSC with relpag past the section's end>
+	mgblsc	#<sec_wrt!sec_expreg>,#sec_name,relpag=#2
+	section	<2.8 $MGBLSC with relpag 2 of 4>
+	crmpsc	#<sec_gbl!sec_pagfil!sec_crf!sec_expreg>,#ids_name
+	section	<2.9 $CRMPSC with SEC$M_CRF and SEC$M_PAGFIL>
+	crmpsc	#<sec_pagfil!sec_wrt!sec_expreg>,#ids_name
+	section	<2.10 $CRMPSC with SEC$M_PAGFIL but not SEC$M_GBL>
+	crmpsc	#<sec_gbl!sec_wrt!sec_expreg>,#ids_name
+	section	<2.11 $CRMPSC with SEC$M_GBL but not SEC$M_PAGFIL (no channel)>
+	crmpsc	#<sec_perm!sec_pagfil!sec_wrt!sec_expreg>,#ids_name
+	section	<2.12 $CRMPSC with SEC$M_PERM but not SEC$M_GBL>
+	crmpsc	#<sec_sysgbl!sec_pagfil!sec_wrt!sec_expreg>,#ids_name
+	section	<2.13 $CRMPSC with SEC$M_SYSGBL but not SEC$M_GBL>
+
+; Idents: P3_IDS is version 1.5.
+	crmpsc	#<sec_gbl!sec_pagfil!sec_wrt!sec_expreg>,#ids_name,ident=#id_create
+	section	<2.14 $CRMPSC of P3_IDS, version 1.5>
+	mgblsc	#<sec_expreg>,#ids_name,ident=#id_equ15
+	section	<2.15 $MGBLSC, SEC$K_MATEQU 1.5>
+	mgblsc	#<sec_expreg>,#ids_name,ident=#id_equ16
+	section	<2.15 $MGBLSC, SEC$K_MATEQU 1.6>
+	mgblsc	#<sec_expreg>,#ids_name,ident=#id_leq14
+	section	<2.15 $MGBLSC, SEC$K_MATLEQ 1.4>
+	mgblsc	#<sec_expreg>,#ids_name,ident=#id_leq16
+	section	<2.15 $MGBLSC, SEC$K_MATLEQ 1.6>
+	mgblsc	#<sec_expreg>,#ids_name,ident=#id_leq25
+	section	<2.15 $MGBLSC, SEC$K_MATLEQ 2.5>
+	mgblsc	#<sec_expreg>,#ids_name,ident=#id_all20
+	section	<2.15 $MGBLSC, SEC$K_MATALL 2.0>
+	mgblsc	#<sec_expreg>,#ids_name,ident=#id_bad
+	section	<2.15 $MGBLSC, match control 7>
+	mgblsc	#<sec_expreg>,#ids_name
+	section	<2.15 $MGBLSC, no ident>
+	crmpsc	#<sec_gbl!sec_pagfil!sec_wrt!sec_expreg>,#ids_name,ident=#id_equ20
+	section	<2.16 $CRMPSC of P3_IDS, SEC$K_MATEQU 2.0>
+	mgblsc	#<sec_expreg>,#ids_name,ident=#id_equ20
+	section	<2.16 then $MGBLSC, SEC$K_MATEQU 2.0>
+
+; Writable and read-only.
+	crmpsc	#<sec_gbl!sec_pagfil!sec_expreg>,#ro_name
+	section	<2.17 $CRMPSC of P3_RO, not writable>
+	mgblsc	#<sec_wrt!sec_expreg>,#ro_name
+	section	<2.17 $MGBLSC of P3_RO, writable>
+	mgblsc	#<sec_expreg>,#ro_name
+	section	<2.17 $MGBLSC of P3_RO, read-only>
+
+; $DGBLSC.
+	dgblsc	#0,#sec_name
+	result	<2.18 $DGBLSC of P3_SEC while mapped>
+	mgblsc	#<sec_wrt!sec_expreg>,#sec_name
+	section	<2.18 then $MGBLSC of P3_SEC>
+	value	<2.18 what the first mapping still holds>,@map1
+	dgblsc	#0,#nosuch_name
+	result	<2.19 $DGBLSC of a name that doesn't exist>
+	dgblsc	#sec_sysgbl,#ro_name
+	result	<2.20 $DGBLSC of a group section with SEC$M_SYSGBL>
+
+;
+; Part 3: RMS on a mailbox and on NL:.
+;
+	say	<Part 3: RMS on a mailbox and on NL:>
+	$crembx_s	chan=chan_r, maxmsg=#80, bufquo=#1024, lognam=name_r
+	check
+	$open	fab=r_fab
+	result	<3.1 $OPEN of a mailbox>
+	value	<3.1 FAB$L_DEV>,r_fab+FAB$L_DEV
+	movzwl	r_fab+FAB$W_MRS,r6
+	value	<3.1 FAB$W_MRS>,r6
+	movzbl	r_fab+FAB$B_RFM,r6
+	value	<3.1 FAB$B_RFM>,r6
+	movzbl	r_fab+FAB$B_RAT,r6
+	value	<3.1 FAB$B_RAT>,r6
+	movzbl	r_fab+FAB$B_ORG,r6
+	value	<3.1 FAB$B_ORG>,r6
+	$connect	rab=r_rab
+	result	<3.2 $CONNECT (asynchronous)>
+	$wait	rab=r_rab
+	$put	rab=r_rab
+	result	<3.3 asynchronous $PUT, no one reading>
+	$qiow_s	chan=chan_r, func=#<IO$_READVBLK!IO$M_NOW>, iosb=r_iosb, -
+		p1=r_buf, p2=#80
+	iosb	<3.3 then a read of the mailbox>,r_iosb
+	$wait	rab=r_rab
+	result	<3.3 then $WAIT>
+	value	<3.3 RAB$L_STS>,r_rab+RAB$L_STS
+	bicl2	#RAB$M_ASY,r_rab+RAB$L_ROP
+	$qiow_s	chan=chan_r, func=#<IO$_WRITEVBLK!IO$M_NOW>, iosb=r_iosb, -
+		p1=msg_p1, p2=#2
+	$get	rab=r_rab
+	result	<3.4 $GET of a message>
+	movzwl	r_rab+RAB$W_RSZ,r6
+	value	<3.4 RAB$W_RSZ>,r6
+	$qiow_s	chan=chan_r, func=#<IO$_WRITEOF!IO$M_NOW>, iosb=r_iosb
+	$get	rab=r_rab
+	result	<3.5 $GET of an end-of-file message>
+	value	<3.5 RAB$L_STV>,r_rab+RAB$L_STV
+	$close	fab=r_fab
+	result	<3.6 $CLOSE>
+
+	$open	fab=n_fab
+	result	<3.7 $OPEN of NL:>
+	value	<3.7 FAB$L_DEV>,n_fab+FAB$L_DEV
+	movzwl	n_fab+FAB$W_MRS,r6
+	value	<3.7 FAB$W_MRS>,r6
+	$connect	rab=n_rab
+	$get	rab=n_rab
+	result	<3.7 $GET from NL:>
+	$close	fab=n_fab
+
+	say	<Done>
+	movl	#1,r0
+	ret
+
+abort:	say	<ABORTED>
+	movl	#1,r0
+	ret
+
+fail:	$fao_s	ctrstr=fail_ctl, outlen=out_len, outbuf=out_desc, p1=r0
+	bsbw	print
+	movl	#1,r0
+	ret
+
+; READB: read the child's next report from P3_B into REP, its IOSB in
+; B_IOSB, giving up after 60 seconds.
+readb:	$setimr_s	efn=#2, daytim=sixty, reqidt=#2
+	check
+	$qio_s	efn=#1, chan=chan_b, func=#IO$_READVBLK, iosb=b_iosb, -
+		p1=rep, p2=#72
+	check
+	$wflor_s	efn=#1, mask=#6
+	check
+	$readef_s	efn=#1, state=ef_state
+	$cantim_s	reqidt=#2
+	bbs	#1,ef_state,readb_got
+	say	<TIMED OUT waiting for the child's report>
+	brw	abort
+readb_got:
+	rsb
+
+; WAITLEF: wait (up to 10 seconds) for the child to be waiting, in LEF:
+; its read of P3_A.
+waitlef:
+	clrl	polls
+waitlef_poll:
+	$getjpiw_s	pidadr=child_pid, itmlst=st_items
+	check
+	cmpl	c_state,#5			; SCH$C_LEF
+	beql	waitlef_done
+	aoblss	#1000,polls,waitlef_sleep
+	say	<TIMED OUT waiting for the child to wait>
+	brw	abort
+waitlef_sleep:
+	$setimr_s	efn=#3, daytim=hundredth
+	$waitfr_s	efn=#3
+	brw	waitlef_poll
+waitlef_done:
+	rsb
+
+; WHO: R3 is the address of the name of the PID in R1.
+who:	moval	who_zero,r3
+	tstl	r1
+	beql	10$
+	moval	who_parent,r3
+	cmpl	r1,my_pid
+	beql	10$
+	moval	who_child,r3
+	cmpl	r1,child_pid
+	beql	10$
+	moval	who_other,r3
+10$:	rsb
+
+print:	movw	out_len,out_desc
+	pushaq	out_desc
+	calls	#1,g^lib$put_output
+	movw	#300,out_desc
+	rsb
+
+	.psect	data,noexe,wrt,long
+fail_ctl:	.ascid	/FAILED with status !XL/
+
+	.end	start

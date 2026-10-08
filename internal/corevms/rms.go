@@ -53,4 +53,7 @@ func registerRMSServices(t *ServiceTable) {
 	t.Register("SYS$RENAME", func(env *Environment, argv []uint32) (uint32, error) {
 		return rms.SysRename(env.rmsContext(), argv)
 	})
+	t.Register("SYS$WAIT", func(env *Environment, argv []uint32) (uint32, error) {
+		return rms.SysWait(env.rmsContext(), argv)
+	})
 }

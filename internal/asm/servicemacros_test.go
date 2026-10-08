@@ -279,6 +279,8 @@ func macroErrors(t *testing.T, name string) []int {
 		logName = "macros4.log"
 	case strings.HasPrefix(name, "r5_"):
 		logName = "macros5.log"
+	case strings.HasPrefix(name, "r6_"):
+		logName = "macros6.log"
 	}
 
 	data, err := os.ReadFile(filepath.Join(serviceDir, "vax", logName))

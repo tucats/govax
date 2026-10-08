@@ -181,19 +181,18 @@ as today).
 Things Phase 46 did not get to, so that they are not lost. Each is either
 waiting on a run on the VAX, or optional work for a later phase.
 
-1. **The optional probes** (above) were not run: mailbox IOSBs between two
-   processes (whose PID each gets, including an IO$M_NOW write handed to
-   a waiting read), `$GETDVI` of a mailbox with messages queued
-   (DVI$_DEVDEPEND's message count), and a global section's `retadr` and
-   `$MGBLSC` behavior. `testdata/mp/mbxpingpong.mar` and `mbxpong.mar`
-   are written to run on VMS too and haven't been (`testdata/mp/README.md`
-   has the commands).
-2. **No macros for the global section services.** govax's STARLET has no
-   `$CRMPSC`, `$MGBLSC`, or `$DGBLSC` (in any form), so a MACRO program
-   reaches them only through the P1 vector by hand, as
-   `console/gblsec_test.go` does. Adding them means a probe round like
-   Phase 45's (`testdata/mp/macros`): keywords, which are required, what
-   an omitted one pushes, and the size of each address.
+1. **The VAX runs are ready, not run** (`testdata/mp/run46`, one volume
+   and `@RUN46`): probe 3 (`testdata/mp/probe3`: the optional probes
+   above, and most of the unconfirmed items below), the ping-pong pair,
+   the macro probes' round 5 (left from Phase 45) and round 6, and the
+   definition probes for `$SECDEF`, `$LCKDEF`, `$LKIDEF`, `$PSLDEF`, and
+   `$DCDEF`. After the run: audit the MACRO logs, then follow
+   `testdata/mp/run46/README.md`'s "After the run".
+2. **No macros for the global section services** yet. govax's STARLET
+   has no `$CRMPSC`, `$MGBLSC`, or `$DGBLSC`, so a MACRO program reaches
+   them only through `CALLS` (as probe 3 does) or the P1 vector by hand
+   (as `console/gblsec_test.go` does). Round 6 of the macro probe asks
+   real MACRO for them; the macros follow its results.
 3. **Unconfirmed behavior** (each marked in the progress log): the boost
    classes of a terminal set or sense mode, of a mailbox attention AST,
    of `$SETEF` (none), and of a CTRL/C or CTRL/Y AST to a waiting process;
@@ -603,3 +602,25 @@ waiting on a run on the VAX, or optional work for a later phase.
   PLAN.md, CLAUDE.md, and `console.help` (KEYS: CTRL/C and CTRL/Y ASTs in
   any process, and a program waiting for input no longer holding up the
   others).
+- 2026-10-08: The VAX runs prepared (`testdata/mp/run46`), so that one
+  session answers everything Phases 45 and 46 left for VMS:
+  - **Macro probe round 6** (`testdata/mp/macros/r6_*.mar`, from gen.go,
+    round 4's generator now taking the round's prefix): `$CRMPSC`,
+    `$MGBLSC`, `$DGBLSC`, `$ENQ(W)`, `$DEQ`, `$GETLKI(W)`; round 5 runs in
+    the same session, each round with its own log
+    (`TestServiceMacroObjects` knows round 6's).
+  - **Definition probes** for `$SECDEF`, `$LCKDEF`, `$LKIDEF`, `$PSLDEF`,
+    and `$DCDEF` (`testdata/mp/defs`; Phase 45's log is now `defs45.log`).
+  - **Probe 3** (`testdata/mp/probe3`): part 1, mailbox IOSBs between two
+    processes (the child is a mailbox echo that reports each read's IOSB),
+    `$GETDVI` from both sides and with messages queued; part 2, global
+    section results and statuses (by `CALLS`); part 3, RMS on a mailbox
+    and NL:, with an asynchronous `$PUT` to ask whether it waits for the
+    read without risking a deadlock. `TestProbe3` runs it under govax.
+  - **Fixed:** `SYS$WAIT` wasn't implemented (its P1 vector entry was a
+    reserved operand fault), which probe 3's part 3 found under govax.
+    govax's RMS completes every operation before returning, with or
+    without RAB$V_ASY, so `$WAIT` returns RAB$L_STS (`rms/wait.go`,
+    `TestSysWait`).
+  - The ping-pong pair gets `pingpong.com`; its VMS log will be
+    `testdata/mp/vax/pingpong.log`.

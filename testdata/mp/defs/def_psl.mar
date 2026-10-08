@@ -1,0 +1,9 @@
+	.TITLE	DEF_PSL	$PSLDEF's names and values (access modes, PSL fields)
+	.IDENT	/V1.0/
+;
+; A Phase 46 definition probe (testdata/mp/defs/README.md). With GLOBAL,
+; every name the macro defines is a global symbol, so the object's GSD
+; lists each name and its value.
+;
+	$PSLDEF	GLOBAL
+	.END

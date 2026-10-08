@@ -1,15 +1,11 @@
-$ ! MACROS.COM - Phase 45's system service macro probes
+$ ! MACROS.COM - the system service macro probes, rounds 5 and 6
 $ ! (testdata/mp/macros/README.md). Written by gen.go. Run it with the
 $ ! exchange volume as the default directory:
 $ !
-$ !     @MACROS/OUTPUT=MACROS.LOG
+$ !     @MACROS
 $ !
-$ ! Each program is assembled with /NOLIST, so no listing of a macro
-$ ! expansion is made, and its object is analyzed.
+$ ! Each round writes its own log, MACROS5.LOG and MACROS6.LOG.
 $ !
-$ SET NOON
-$ SET VERIFY
-$ MACRO/NOLIST R5_MISC
-$ ANALYZE/OBJECT/OUTPUT=R5_MISC.ANL R5_MISC.OBJ
-$ SET NOVERIFY
+$ @MACROS5/OUTPUT=MACROS5.LOG
+$ @MACROS6/OUTPUT=MACROS6.LOG
 $ EXIT

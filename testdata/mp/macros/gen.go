@@ -383,37 +383,71 @@ func main() {
 	// Round 4: every other system service, by keyword and by position.
 	for _, s := range r4Services {
 		name := "r4_" + strings.ToLower(s.name)
-		text, calls := r4Probe(s)
+		text, calls := r4Probe(s, "R4")
 		write(name+".mar", text)
 		write(name+".calls", strings.Join(calls, "\n")+"\n")
 	}
 
 	// Round 5: what round 4 left open.
+	var round5, round6 []string
+
 	{
 		text, calls := r5Probe()
 		write("r5_misc.mar", text)
 		write("r5_misc.calls", strings.Join(calls, "\n")+"\n")
 
-		names = append(names, "r5_misc")
+		round5 = append(round5, "r5_misc")
 	}
 
-	// The command procedure.
-	var c strings.Builder
+	// Round 6 (docs/PHASE-46 - interprocess comm.md): the global section
+	// services, which have no macros yet, and the lock services Phase 47
+	// needs, by round 4's method.
+	for _, s := range r6Services {
+		name := "r6_" + strings.ToLower(s.name)
+		text, calls := r4Probe(s, "R6")
+		write(name+".mar", text)
+		write(name+".calls", strings.Join(calls, "\n")+"\n")
 
-	c.WriteString("$ ! MACROS.COM - Phase 45's system service macro probes\n")
-	c.WriteString("$ ! (testdata/mp/macros/README.md). Written by gen.go. Run it with the\n")
-	c.WriteString("$ ! exchange volume as the default directory:\n$ !\n")
-	c.WriteString("$ !     @MACROS/OUTPUT=MACROS.LOG\n$ !\n")
-	c.WriteString("$ ! Each program is assembled with /NOLIST, so no listing of a macro\n")
-	c.WriteString("$ ! expansion is made, and its object is analyzed.\n$ !\n")
-	c.WriteString("$ SET NOON\n$ SET VERIFY\n")
-
-	for _, n := range names {
-		fmt.Fprintf(&c, "$ MACRO/NOLIST %s\n$ ANALYZE/OBJECT/OUTPUT=%s.ANL %s.OBJ\n", strings.ToUpper(n), strings.ToUpper(n), strings.ToUpper(n))
+		round6 = append(round6, name)
 	}
 
-	c.WriteString("$ SET NOVERIFY\n$ EXIT\n")
-	write("macros.com", c.String())
+	names = append(append(names, round5...), round6...)
+
+	// The command procedures: one per round, each with its own log, and
+	// MACROS.COM, which runs both.
+	roundProcedure := func(n int, programs []string) {
+		var c strings.Builder
+
+		fmt.Fprintf(&c, "$ ! MACROS%d.COM - round %d of the system service macro probes\n", n, n)
+		c.WriteString("$ ! (testdata/mp/macros/README.md). Written by gen.go. MACROS.COM runs it.\n$ !\n")
+		c.WriteString("$ ! Each program is assembled with /NOLIST, so no listing of a macro\n")
+		c.WriteString("$ ! expansion is made, and its object is analyzed.\n$ !\n")
+		c.WriteString("$ SET NOON\n$ SET VERIFY\n")
+
+		for _, p := range programs {
+			up := strings.ToUpper(p)
+			fmt.Fprintf(&c, "$ MACRO/NOLIST %s\n$ ANALYZE/OBJECT/OUTPUT=%s.ANL %s.OBJ\n", up, up, up)
+		}
+
+		c.WriteString("$ SET NOVERIFY\n$ EXIT\n")
+		write(fmt.Sprintf("macros%d.com", n), c.String())
+	}
+
+	roundProcedure(5, round5)
+	roundProcedure(6, round6)
+
+	write("macros.com", `$ ! MACROS.COM - the system service macro probes, rounds 5 and 6
+$ ! (testdata/mp/macros/README.md). Written by gen.go. Run it with the
+$ ! exchange volume as the default directory:
+$ !
+$ !     @MACROS
+$ !
+$ ! Each round writes its own log, MACROS5.LOG and MACROS6.LOG.
+$ !
+$ @MACROS5/OUTPUT=MACROS5.LOG
+$ @MACROS6/OUTPUT=MACROS6.LOG
+$ EXIT
+`)
 
 	// The govax console scripts.
 	var x, o strings.Builder
@@ -439,12 +473,13 @@ func main() {
 		fmt.Fprintf(&o, "COPY DUA1:[000000]%s.ANL \"%s/vax/%s.anl\"/HOST/QUIET\n", up, dir, n)
 	}
 
-	for _, n := range []string{"macros.com"} {
+	for _, n := range []string{"macros.com", "macros5.com", "macros6.com"} {
 		fmt.Fprintf(&x, "COPY \"%s/%s\"/HOST DUA1:[000000]%s\n", dir, n, strings.ToUpper(n))
 	}
 
 	x.WriteString("DIRECTORY DUA1:[000000]\nDISMOUNT DUA1\n")
-	fmt.Fprintf(&o, "COPY DUA1:[000000]MACROS.LOG \"%s/vax/macros5.log\"/HOST/QUIET\n", dir)
+	fmt.Fprintf(&o, "COPY DUA1:[000000]MACROS5.LOG \"%s/vax/macros5.log\"/HOST/QUIET\n", dir)
+	fmt.Fprintf(&o, "COPY DUA1:[000000]MACROS6.LOG \"%s/vax/macros6.log\"/HOST/QUIET\n", dir)
 	o.WriteString("DISMOUNT DUA1\n")
 
 	write("exchange.cmd", x.String())
@@ -621,7 +656,29 @@ var r4Services = []r4Service{
 	}},
 }
 
-// r4Probe writes one service's round 4 program. Every call is the short
+// r6Services are round 6's (docs/PHASE-46 - interprocess comm.md): the
+// global section services, which govax implements (Phase 46) but has no
+// macros for, and the lock management services Phase 47 implements. The
+// keywords are the System Services Reference Manual's. $ENQ's RSDM_ID
+// (resource domains) may be later than VMS 7.3; if it is, it shows as a
+// reference to a symbol of that name, and the positional calls show how
+// many arguments the macro has.
+var r6Services = []r4Service{
+	{"CRMPSC", []arg{a("INADR"), a("RETADR"), v("ACMODE"), v("FLAGS"), a("GSDNAM"), a("IDENT"), v("RELPAG"),
+		w("CHAN"), v("PAGCNT"), v("VBN"), v("PROT"), v("PFC")}, nil, nil},
+	{"MGBLSC", []arg{a("INADR"), a("RETADR"), v("ACMODE"), v("FLAGS"), a("GSDNAM"), a("IDENT"), v("RELPAG")}, nil, nil},
+	{"DGBLSC", []arg{v("FLAGS"), a("GSDNAM"), a("IDENT")}, nil, nil},
+	{"ENQ", []arg{v("EFN"), v("LKMODE"), a("LKSB"), v("FLAGS"), a("RESNAM"), v("PARID"), a("ASTADR"), v("ASTPRM"),
+		a("BLKAST"), v("ACMODE"), v("RSDM_ID"), v("NULLARG")}, []string{"RSDMID", "NULL"}, nil},
+	{"ENQW", []arg{v("EFN"), v("LKMODE"), a("LKSB"), v("FLAGS"), a("RESNAM"), v("PARID"), a("ASTADR"), v("ASTPRM"),
+		a("BLKAST"), v("ACMODE"), v("RSDM_ID"), v("NULLARG")}, []string{"RSDMID", "NULL"}, nil},
+	{"DEQ", []arg{v("LKID"), a("VALBLK"), v("ACMODE"), v("FLAGS")}, nil, nil},
+	{"GETLKI", []arg{v("EFN"), a("LKIDADR"), a("ITMLST"), a("IOSB"), a("ASTADR"), v("ASTPRM"), v("NULLARG")}, nil, nil},
+	{"GETLKIW", []arg{v("EFN"), a("LKIDADR"), a("ITMLST"), a("IOSB"), a("ASTADR"), v("ASTPRM"), v("NULLARG")}, nil, nil},
+}
+
+// r4Probe writes one service's round 4 program (and round 6's: round is
+// the prefix of its title and entry point). Every call is the short
 // form (the argument-list and CALLG forms follow one rule, round 3), and
 // ends with a marker as the earlier rounds' do. For a service of n
 // arguments, in this order:
@@ -640,7 +697,7 @@ var r4Services = []r4Service{
 //   - each adjacent pair left out of the full call, which shows the pairs
 //     the macro joins into one CLRQ;
 //   - every argument by keyword as zero (0 for an address, #0 for a value).
-func r4Probe(s r4Service) (string, []string) {
+func r4Probe(s r4Service, round string) (string, []string) {
 	var (
 		b     strings.Builder
 		calls []string
@@ -648,7 +705,7 @@ func r4Probe(s r4Service) (string, []string) {
 
 	n := len(s.args)
 
-	fmt.Fprintf(&b, "\t.TITLE\tR4_%s\tevery argument of $%s\n\t.IDENT\t/V1.0/\n;\n", s.name, s.name)
+	fmt.Fprintf(&b, "\t.TITLE\t%s_%s\tevery argument of $%s\n\t.IDENT\t/V1.0/\n;\n", round, s.name, s.name)
 	b.WriteString("; Written by testdata/mp/macros/gen.go (docs/PHASE-45.md).\n;\n")
 	b.WriteString("\t.PSECT\tDATA,WRT,NOEXE,LONG\n")
 
@@ -657,7 +714,7 @@ func r4Probe(s r4Service) (string, []string) {
 	}
 
 	b.WriteString("\t.PSECT\tCODE,EXE,NOWRT,LONG\n")
-	fmt.Fprintf(&b, "\t.ENTRY\tR4_%s,^M<R6,R7>\n", s.name)
+	fmt.Fprintf(&b, "\t.ENTRY\t%s_%s,^M<R6,R7>\n", round, s.name)
 
 	macro := "$" + s.name + "_S"
 
@@ -738,7 +795,7 @@ func r4Probe(s r4Service) (string, []string) {
 		emit("\t" + c)
 	}
 
-	b.WriteString("\tRET\n\t.END\tR4_" + s.name + "\n")
+	b.WriteString("\tRET\n\t.END\t" + round + "_" + s.name + "\n")
 
 	return b.String(), calls
 }
