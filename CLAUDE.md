@@ -383,8 +383,10 @@ expect adjustment as phases land):
   NL: opens a `RecordDevice` stream from `Context.Devices` (`recdevice.go`,
   Phase 46; `internal/corevms` is the opener). Phase 47: files shared
   between processes. Every `$OPEN`/`$CREATE` and IO$_ACCESS goes through
-  ods2's `Volume.Access` (`sharing.go`: FAC/SHR mapped to the file
-  system's write/no-read/no-write; RMS$_FLK, SS$_ACCONFLICT), and while a
+  ods2's `Volume.Access` (`sharing.go`: the File Applications guide's
+  per-operation FAC/SHR rule over a per-file list of RMS openers, and
+  ods2's coarser write/no-read/no-write counts underneath; RMS$_FLK,
+  SS$_ACCONFLICT), and while a
   file is open every opener shares ods2's one `*File` (the FCB: header,
   extents, end of file); a file deleted while open goes at its last close.
   RAB$V_EOF appends (RMS$_NEF otherwise); a stream on a file others may

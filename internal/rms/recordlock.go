@@ -13,27 +13,32 @@ import (
 // (RAB$L_ROP) say how. They're locks in the system's lock database
 // (internal/lck), as VMS's RMS takes them in VMS's lock manager.
 //
-// The RMS manual describes the options (RAB$L_ROP, "Record Locking
-// Options") but not which lock RMS takes by default; that is govax's
-// choice, unconfirmed:
+// The rules are the Guide to OpenVMS File Applications' (section 7.2)
+// and the RMS manual's RAB$L_ROP options:
 //
-//   - A stream locks records only in a file whose opener lets others
-//     write it (FAB$B_SHR with PUT, UPD, or DEL), and not with FAB$V_UPI,
-//     which turns RMS's locking off.
-//   - $GET locks the record it returns, and unlocks the one before
-//     (RAB$V_ULK keeps every lock until $FREE or $RELEASE).
-//   - The lock is EX for a stream that may write, PR for one that only
-//     reads; RAB$V_RLK makes it PW (others may still read the record
-//     with a query lock), RAB$V_REA PR.
+//   - A stream locks records when its opener lets others write the file
+//     (FAB$B_SHR with PUT, UPD, or DEL), and not with FAB$V_UPI, which
+//     turns RMS's locking off.
+//   - $GET locks the record it returns, and unlocks the one before. With
+//     RAB$V_ULK (manual unlocking) locks stay until $FREE, $RELEASE, or
+//     the file's close, through errors too; otherwise an error (a record
+//     locked by another stream) unlocks the stream's record as well.
+//   - The lock is exclusive by default, for every stream, reading or not
+//     (EX: no other stream may lock the record); RAB$V_RLK write-locks it
+//     (PW: others may still read it with no lock), RAB$V_REA read-locks it
+//     (PR: others may read-lock it too). The guide's Table 7-6 is the
+//     lock modes' compatibility.
 //   - RAB$V_NLK (no lock) takes a query: a CR lock taken and dropped at
-//     once. Refused, the $GET fails with RMS$_RLK; granted while another
-//     stream holds the record, it returns RMS$_OK_RLK ("record can be
-//     read but not written").
+//     once. Refused (an exclusive lock), the $GET fails with RMS$_RLK;
+//     granted while another stream holds a write or read lock, it returns
+//     RMS$_OK_RLK.
 //   - A lock refused is RMS$_RLK, and the record isn't consumed: the
 //     next $GET tries it again. With RAB$V_RRL the record is returned
-//     without a lock (RMS$_SUC, as the manual gives for sequential
-//     files); with RAB$V_WAT the $GET waits for the lock. (RAB$V_TMO's
-//     time limit on that wait isn't implemented.)
+//     without a lock (RMS$_SUC, as for any sequential file); with
+//     RAB$V_WAT the $GET waits for the lock, and then returns
+//     RMS$_OK_WAT. (RAB$V_TMO's time limit on that wait isn't
+//     implemented.) Locking a record the stream already holds is
+//     RMS$_OK_ALK.
 //
 // A record is named by its record's file address (RFA): its virtual
 // block and the offset in it of its first byte. Each stream's record
@@ -111,7 +116,8 @@ type streamLocks struct {
 
 // locksRecords reports whether handle's stream takes record locks.
 func (ctx *Context) locksRecords(handle *FileHandle) bool {
-	return ctx.Locks != nil && handle.Accessor != nil && !handle.Mode.NoWrite && handle.Share&shrUPI == 0
+	return ctx.Locks != nil && handle.Accessor != nil && sharingOps(handle.Access, handle.Share)&opWrites != 0 &&
+		handle.Share&shrUPI == 0
 }
 
 // fileLock returns handle's NL lock on its file, taking it the first
@@ -143,19 +149,17 @@ func (ctx *Context) fileLock(handle *FileHandle) (*lck.Lock, error) {
 	return l, nil
 }
 
-// recordLockMode is the mode $GET locks a record in, from the stream's
-// access and RAB$L_ROP.
-func recordLockMode(handle *FileHandle, rop uint32) lck.Mode {
+// recordLockMode is the mode $GET locks a record in, from RAB$L_ROP:
+// exclusive unless RLK (write lock) or REA (read lock; RLK wins if both).
+func recordLockMode(rop uint32) lck.Mode {
 	switch {
 	case rop&ropRLK != 0:
 		return lck.PW
 	case rop&ropREA != 0:
 		return lck.PR
-	case handle.Mode.Write:
-		return lck.EX
 	}
 
-	return lck.PR
+	return lck.EX
 }
 
 // lockResult is what locking a record came to.
@@ -163,6 +167,7 @@ type lockResult int
 
 const (
 	lockHeld    lockResult = iota // the record is locked for the stream
+	lockAlready                   // the stream had it locked already
 	lockNone                      // returned without a lock (NLK, RRL)
 	lockRefused                   // RMS$_RLK
 	lockWait                      // waiting for it (WAT)
@@ -174,7 +179,7 @@ const (
 func (ctx *Context) lockRecord(handle *FileHandle, r rfa, rop uint32) (lockResult, bool, error) {
 	s := &handle.locks
 	if s.records[r] != nil {
-		return lockHeld, false, nil
+		return lockAlready, false, nil
 	}
 
 	parent, err := ctx.fileLock(handle)
@@ -208,7 +213,7 @@ func (ctx *Context) lockRecord(handle *FileHandle, r rfa, rop uint32) (lockResul
 		return lockNone, held, nil
 	}
 
-	req.Mode = recordLockMode(handle, rop)
+	req.Mode = recordLockMode(rop)
 	req.NoQueue = rop&ropWAT == 0
 	req.Data = ctx.Waker
 
@@ -310,7 +315,7 @@ func (ctx *Context) getLocked(rabAddr uint32, handle *FileHandle) (uint32, error
 		ctx.holdRecord(handle, s.pendingAt, s.waiting)
 		s.waiting = nil
 
-		return ctx.returnLocked(rabAddr, handle, rop, rmsNormal)
+		return ctx.returnLocked(rabAddr, handle, rop, rmsOKWaited)
 	}
 
 	if s.pending == nil {
@@ -333,14 +338,24 @@ func (ctx *Context) getLocked(rabAddr uint32, handle *FileHandle) (uint32, error
 
 	switch result {
 	case lockRefused:
+		// An error unlocks the stream's record, unless it unlocks
+		// manually (the guide, 7.2.1 and 7.2.4.1).
+		if rop&ropULK == 0 {
+			ctx.unlockRecords(handle, nil)
+		}
+
 		return storeStatus(ctx, rabAddr, rabSTS, rabSTV, rmsRecordLocked)
 	case lockWait:
 		return 0, ctx.awaitLock(s.waiting)
 	}
 
 	sts := rmsNormal
-	if held {
+
+	switch {
+	case held:
 		sts = rmsOKRecordLocked
+	case result == lockAlready:
+		sts = rmsOKAlreadyLocked
 	}
 
 	return ctx.returnLocked(rabAddr, handle, rop, sts)

@@ -99,6 +99,10 @@ type FileHandle struct {
 	Share byte
 	locks streamLocks
 
+	// claim is the open's place in its file's list of RMS openers
+	// (sharing.go), released at $CLOSE.
+	claim *openerClaim
+
 	// Reader/Writer are set once File has actually been armed for
 	// reading or writing respectively (see this type's own doc comment
 	// for why that's a separate step from File being non-nil at all).

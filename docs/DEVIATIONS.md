@@ -2765,12 +2765,20 @@ widened."
 - **Where**: `internal/rms/sharing.go`, `recordlock.go`, `erase.go`;
   `internal/lck`; `internal/corevms/enq.go`, `locks.go`; ods2's
   `volume/access.go`.
-- **What**: where the RMS and System Services manuals and the Internals
-  book leave a rule open, govax chose (each also in
-  `docs/PHASE-47 - RMS and processes.md`'s progress log):
-  - Arbitration is the file system's: every accessor reads, so an RMS
-    opener asking only for PUT is refused by one not sharing GET.
-    FAB$V_UPI alone shares reading as well as writing.
+- **What**: the *Guide to OpenVMS File Applications* (VMS 7.3; read
+  2026-10-08, after Phase 47 was first closed) settled most of what the
+  RMS and System Services manuals left open: file arbitration per record
+  operation (Tables 7-3 and 7-4: write access implies read, write
+  sharing implies read sharing), exclusive record locks by default for
+  every stream, the RLK/REA/NLK compatibilities (Table 7-6), an error
+  unlocking the stream's record unless ULK, RMS$_OK_WAT after a wait,
+  RMS$_OK_ALK, RRL's RMS$_SUC, and shared sequential files written to the
+  disk on each change. govax follows it (see the phase doc's log). What
+  is still govax's choice:
+  - FAB$V_UPI shares every operation. And with UPI the guide says RMS
+    keeps neither buffers nor the end of file coherent between openers
+    (readers see appends only by closing and opening again); govax's
+    shared FCB keeps them coherent anyway.
   - The lock manager queues a new lock behind anything queued, and a
     conversion that isn't down behind queued conversions (FIFO); a
     down conversion is granted at once. A converting lock gets blocking
@@ -2779,10 +2787,9 @@ widened."
     block, whether the process exited or was deleted; image rundown's
     dequeue doesn't. SS$_NOTQUEUED is written to the LKSB too. A grant
     boosts as "resource available".
-  - Record locks: only in a file its opener lets others write (not UPI);
-    EX for a stream that may write, PR for a reader, PW with RLK, PR with
-    REA; NLK a CR query; a refused lock doesn't consume the record.
-    RAB$V_TMO's limit on a wait isn't implemented.
+  - Record-lock deadlocks: the guide has the lock manager deny one
+    request after DEADLOCK_WAIT (RMS$_DEADLOCK with RAB$V_WAT); govax has
+    no deadlock detection, so they wait forever.
   - `$ERASE` of a file another process writes is RMS$_FLK (no
     FAB$V_ERL in VMS 7.3's definitions); an open FAB is RMS$_IFI.
   - DISMOUNT with files open is refused (VMS marks the volume for

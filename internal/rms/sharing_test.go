@@ -415,9 +415,11 @@ func TestSharing_deleteWhileOpen(t *testing.T) {
 
 // TestSharing_arbitration: a second open of a file is refused (RMS$_FLK)
 // exactly when its access or sharing conflicts with the first's, by the
-// RMS manual's FAB$B_FAC and FAB$B_SHR rules: GET is read access, PUT
-// write access; FAB$B_SHR 0 is SHRGET for a reader and NIL for a writer;
-// NIL takes precedence; UPI shares writing.
+// File Applications guide's per-operation rules (Tables 7-3 and 7-4):
+// each operation one asks for must be in the other's sharing, both
+// ways; write access implies GET, write sharing implies SHRGET;
+// FAB$B_SHR 0 is SHRGET for a reader and NIL for a writer; NIL takes
+// precedence; UPI shares everything.
 func TestSharing_arbitration(t *testing.T) {
 	shrNone := byte(0)
 	nilBit := byte(vmsConst("FAB$M_NIL"))
@@ -438,7 +440,10 @@ func TestSharing_arbitration(t *testing.T) {
 		{"two writers sharing writes", facPut, shrGet | shrPut, facPut, shrGet | shrPut, false},
 		{"a writer sharing reads only, then a writer", facPut, shrGet, facPut, shrGet | shrPut, true},
 		{"NIL takes precedence", facPut, nilBit | shrGet | shrPut, facGet, shrGet | shrPut, true},
-		{"a reader not sharing reads", facGet, shrPut, facGet, shrGet | shrPut, true},
+		{"sharing PUT implies sharing GET", facGet, shrPut, facGet, shrGet | shrPut, false},
+		{"an updater, then one sharing only PUT", facGet | facUpd, shrGet | shrPut | shrUpd, facGet, shrGet | shrPut, true},
+		{"a writer sharing PUT, then an updater", facPut, shrGet | shrPut, facGet | facUpd, shrGet | shrPut | shrUpd, true},
+		{"a writer sharing PUT and UPD, then an updater", facPut, shrGet | shrPut | shrUpd, facGet | facUpd, shrGet | shrPut | shrUpd, false},
 		{"UPI shares reading and writing", facPut, upi, facPut, upi, false},
 		{"UPI, then a writer sharing nothing", facPut, upi, facPut, shrNone, true},
 	}

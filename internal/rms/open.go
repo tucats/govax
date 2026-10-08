@@ -254,15 +254,22 @@ func openFID(ctx *Context, fac, shr byte, device string, vol *volume.Volume, fid
 
 	mode := accessMode(fac, shr)
 
+	claim := ctx.Mounts.claimOpen(device, fileIDFrom(fid), fac, shr)
+	if claim == nil {
+		return 0, rmsFileLocked, nil
+	}
+
 	// A file ID that names no file (a bad FAB$V_NAM open, or a directory
 	// entry pointing at a header ods2 then failed to read) is RMS$_FNF,
 	// as is a file deleted while another process has it open.
 	a, err := vol.Access(fid, mode)
 	if err != nil {
+		claim.release()
+
 		return 0, accessStatus(err), nil
 	}
 
-	h := &FileHandle{File: a.File, Accessor: a, Mode: mode, Share: effectiveSharing(fac, shr), Writable: wantsWrite, Access: fac}
+	h := &FileHandle{File: a.File, Accessor: a, Mode: mode, Share: effectiveSharing(fac, shr), Writable: wantsWrite, Access: fac, claim: claim}
 
 	return ctx.Files.Alloc(h), 0, nil
 }

@@ -363,7 +363,8 @@ func createOnVolume(ctx *Context, fabAddr uint32, fac byte, p parsedName, cif bo
 	}
 	found.HighVer, found.LowVer = versionsAround(dir, name, version)
 
-	h := &FileHandle{File: f, Accessor: a, Mode: mode, Share: effectiveSharing(fac, shr), Writable: true, Access: fac}
+	h := &FileHandle{File: f, Accessor: a, Mode: mode, Share: effectiveSharing(fac, shr), Writable: true, Access: fac,
+		claim: ctx.Mounts.claimOpen(spec.Device, fileIDFrom(f.Header.Fid), fac, shr)}
 
 	return ctx.Files.Alloc(h), found, false, 0, nil
 }

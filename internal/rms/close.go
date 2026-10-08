@@ -187,6 +187,8 @@ func closeVolumeFile(handle *FileHandle, finish func() error) error {
 		err = derr
 	}
 
+	handle.claim.release()
+
 	return err
 }
 

@@ -30,6 +30,10 @@ type mountedVolume struct {
 	// deleted while accessed is marked for delete there. It starts nil,
 	// and goes with the volume at DISMOUNT.
 	doomed map[FileID]*acpEntry
+
+	// openers is the RMS opens of each open file, by file ID, for
+	// RMS's arbitration (sharing.go).
+	openers map[FileID][]*opener
 }
 
 // MountTable tracks which VAX device names currently have an ODS-2 volume

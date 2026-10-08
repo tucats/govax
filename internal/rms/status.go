@@ -90,6 +90,12 @@ var (
 	rmsRecordNotLocked = vmsConst("RMS$_RNL")
 	rmsInvalidISI      = vmsConst("RMS$_ISI")
 
+	// rmsOKWaited is RMS$_OK_WAT, a record a $GET had to wait for
+	// (RAB$V_WAT); rmsOKAlreadyLocked RMS$_OK_ALK, a record the stream
+	// had locked already.
+	rmsOKWaited        = vmsConst("RMS$_OK_WAT")
+	rmsOKAlreadyLocked = vmsConst("RMS$_OK_ALK")
+
 	// rmsFileNotFound is RMS$_FNF: SYS$OPEN's target file spec doesn't
 	// exist. Also the natural error for looking a name up in an
 	// ods2 volume.Directory and not finding it.

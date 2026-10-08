@@ -182,7 +182,8 @@ func TestRecordLock_ulkFreeRelease(t *testing.T) {
 }
 
 // TestRecordLock_wait: with RAB$V_WAT a $GET of a locked record waits,
-// and, called again once the lock is granted, returns the record.
+// and, called again once the lock is granted, returns the record with
+// RMS$_OK_WAT.
 func TestRecordLock_wait(t *testing.T) {
 	p, mounts, waits := newLockingSharers(t, 2)
 	a, b := p[0], p[1]
@@ -210,8 +211,8 @@ func TestRecordLock_wait(t *testing.T) {
 		t.Fatal("the wait isn't over after A let go")
 	}
 
-	if rec, sts := b.get(); rec != "R0" || sts != rmsNormal {
-		t.Errorf("B's $GET, called again: %q, %#x", rec, sts)
+	if rec, sts := b.get(); rec != "R0" || sts != rmsOKWaited {
+		t.Errorf("B's $GET, called again: %q, %#x; want R0, RMS$_OK_WAT", rec, sts)
 	}
 
 	a.close()
@@ -237,4 +238,71 @@ func TestRecordLock_unshared(t *testing.T) {
 
 	a.close()
 	b.close()
+}
+
+// TestRecordLock_readersDefault: by default every stream locks
+// exclusively, readers too (the guide, 7.2.2.5); read locks (REA) share.
+func TestRecordLock_readersDefault(t *testing.T) {
+	p, mounts, _ := newLockingSharers(t, 2)
+	a, b := p[0], p[1]
+
+	writeFile(t, mounts, "RD.DAT", "R0", "R1")
+
+	a.mustOpen("RD.DAT", facGet, shrAll, false, 0)
+	b.mustOpen("RD.DAT", facGet, shrAll, false, 0)
+
+	a.get()
+
+	if _, sts := b.get(); sts != rmsRecordLocked {
+		t.Errorf("a second reader's default $GET: %#x, want RMS$_RLK", sts)
+	}
+
+	a.close()
+	b.close()
+
+	a.mustOpen("RD.DAT", facGet, shrAll, false, 0)
+	b.mustOpen("RD.DAT", facGet, shrAll, false, 0)
+
+	a.getWith(ropREA)
+
+	if rec, sts := b.getWith(ropREA); rec != "R0" || sts != rmsNormal {
+		t.Errorf("two read locks: %q, %#x", rec, sts)
+	}
+
+	if rec, sts := p[0].getWith(ropNLK); rec != "R1" || sts != rmsNormal {
+		t.Errorf("A's query of a free record: %q, %#x", rec, sts)
+	}
+
+	a.close()
+	b.close()
+}
+
+// TestRecordLock_errorUnlocks: a refused $GET unlocks the stream's
+// record, unless ULK.
+func TestRecordLock_errorUnlocks(t *testing.T) {
+	p, mounts, _ := newLockingSharers(t, 3)
+	a, b, c := p[0], p[1], p[2]
+
+	writeFile(t, mounts, "E.DAT", "R0", "R1")
+
+	a.mustOpen("E.DAT", facGet, shrAll, false, 0)
+	b.mustOpen("E.DAT", facGet, shrAll, false, 0)
+	c.mustOpen("E.DAT", facGet, shrAll, false, 0)
+
+	b.getWith(ropRRL) // B is past R0, unlocked
+	b.get()           // B holds R1
+	a.get()           // A holds R0
+
+	// A's next $GET (R1) is refused: A's R0 goes too.
+	if _, sts := a.get(); sts != rmsRecordLocked {
+		t.Fatalf("A's $GET of B's record: %#x", sts)
+	}
+
+	if rec, sts := c.get(); rec != "R0" || sts != rmsNormal {
+		t.Errorf("C after A's error: %q, %#x; want R0 free", rec, sts)
+	}
+
+	a.close()
+	b.close()
+	c.close()
 }

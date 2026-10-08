@@ -457,6 +457,34 @@ questions:
   (the two RMS bugs fixed, and the rules chosen without a manual or
   probe, as candidates for a VMS 7.3 probe round).
 
+- 2026-10-08: After close-out, the author provided the *Guide to OpenVMS
+  File Applications* (VMS 7.3, `vms-file-applications-7.3.txt` with the
+  other manuals). Checked against its chapter 7:
+  - **File arbitration** is per record operation (Tables 7-3 and 7-4: a
+    new opener's GET/PUT/UPD/DEL must each be in every current opener's
+    sharing, and each current opener's in its own; write access implies
+    GET, write sharing implies SHRGET). govax's read-or-write rule was
+    coarser: an opener sharing only PUT now admits an updater no longer,
+    and a reader sharing PUT shares reading. `sharing.go` keeps an RMS
+    opener list per file (`mountedVolume.openers`) for this test; ods2's
+    coarse access counts still arbitrate RMS against IO$_ACCESS.
+  - **Record locks** are exclusive by default for every stream, readers
+    included (7.2.2.5); govax had PR for a read-only stream. An error
+    (RMS$_RLK) unlocks the stream's record unless ULK (7.2.1, 7.2.4.1);
+    a $GET that waited returns RMS$_OK_WAT (7.2.3.2); a record already
+    locked by the stream is RMS$_OK_ALK (7.2.4.2). Confirmed as they
+    were: RLK as a write lock and REA as a read lock (Table 7-6), NLK's
+    RMS$_OK_RLK against write and read locks, RRL's RMS$_SUC on sequential
+    files, ULK keeping locks through errors, locking only when others may
+    write and not with UPI.
+  - **Shared sequential files**: a shared one is written to the disk on
+    each modification, an unshared one only when a buffer fills (3.2.2.2)
+    — govax's shared and unshared Writers.
+  - New tests: arbitration cases the coarse rule couldn't tell apart,
+    `TestRecordLock_readersDefault`, `TestRecordLock_errorUnlocks`.
+    DEVIATIONS' "[Phase 47] File sharing and lock rules" entry now lists
+    only what's still unconfirmed.
+
 ## Carry forward
 
 - **ods2 v0.1.17**: ods2's commits after v0.1.16 (`Reader`/
@@ -464,10 +492,10 @@ questions:
   files' headers) need tagging and pushing, then `GOWORK=off go get
   github.com/tucats/ods2@v0.1.17`; until then govax builds only with the
   local `go.work`.
-- **A probe round** for the unconfirmed rules in DEVIATIONS' "[Phase 47]
-  File sharing and lock rules" entry: FAC/SHR pairs and their statuses,
-  a reader of a write-shared file seeing appends, RMS's default record
-  lock modes, `$ENQ`'s LKSB on SS$_NOTQUEUED, DISMOUNT with files open.
+- **A probe round** for what DEVIATIONS' "[Phase 47] File sharing and
+  lock rules" entry still lists: UPI, the lock manager's queueing,
+  value-block invalidation at rundown, `$ENQ`'s LKSB on SS$_NOTQUEUED,
+  `$ERASE` of a file being written, DISMOUNT with files open.
 - Not done, for later: `$GETLKI`; ENQLM/ASTLM quotas; deadlock
   detection; RAB$V_TMO on record-lock waits; `$FIND`, `$UPDATE`,
   `$DELETE`, `$TRUNCATE`, RAB$V_TPT; a stream both reading and writing
