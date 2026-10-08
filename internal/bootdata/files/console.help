@@ -65,6 +65,9 @@
 //              10/08/26    MACRO's own library: the global section and lock
 //                          service macros, $SECDEF, $LCKDEF, $LKIDEF,
 //                          $PSLDEF, and $DCDEF
+//              10/08/26    Brought up to date: CONFIG KEYS' processes,
+//                          SHOW INSTRUCTIONS, XFC$CONSOLE_CMD's case,
+//                          LINK/DEBUG and the debugger
 //              10/08/26    KEYS: CTRL/C and CTRL/Y ASTs in any process; a
 //                          program waiting for input doesn't hold up the
 //                          others (docs/PHASE-46 - interprocess comm.md)
@@ -440,8 +443,8 @@ $SH  ,DEV
 $SHOW,INST
 $SH  ,INST
     The SHOW INSTRUCTION command prints a reminder of the instruction
-    opcode values.  It only displays the instructions that are implemented
-    in this version of the emulator.  The SHOW INSTRUCTIONS/ALL command
+    opcode values, for every VAX instruction (govax implements them
+    all).  The SHOW INSTRUCTIONS/ALL command
     displays additional information about each instructions operands, if
     any.
 
@@ -456,9 +459,9 @@ $SHOW,UNIM,INST
 $SH  ,INST,/UNI
 $SH  ,UNIM,INST
     The SHOW INSTRUCTIONS/UNIMPLEMENTED command displays a table of the
-    VAX instructions that are *not* currently implemented in the current
-    version of govax.  Use of these instructions results in a reserved
-    opcode fault.
+    VAX instructions govax doesn't implement, whose use would be a
+    reserved instruction fault.  govax implements every instruction, so
+    the table is empty ("0 Instructions.").
 
     Syntax: 
 
@@ -1713,13 +1716,16 @@ $CONF,KEY
 
     Processes
 
-        These are for running several processes at once, which govax is
-        being extended to do.  With vax.process.scheduler on, the CPU
-        is shared among the processes that exist, VMS's way: by
-        priority, a quantum at a time among equals, and giving the CPU
-        to another while one waits (SHOW SYSTEM lists them).  Creating
-        processes ($CREPRC, LIB$SPAWN) comes later, so for now only the
-        console's own process runs.
+        These are for running several processes at once.  With
+        vax.process.scheduler on, a program can create processes
+        ($CREPRC; LIB$SPAWN isn't there yet), and the CPU is shared
+        among them VMS's way: by priority, a quantum at a time among
+        equals, and giving the CPU to another while one waits.
+        Mailboxes, common event flags, and global sections work between
+        them, and a process waiting for a line from the terminal lets
+        the others run.  SHOW SYSTEM lists them, and STOP deletes one.
+        With it off, only the console's own process runs, and $CREPRC
+        returns %SYSTEM-E-UNSUPPORTED.
 
         vax.process.scheduler         true or false: whether processes
                                       other than the console's own can be
@@ -2950,11 +2956,10 @@ $XFC
     XFC  #XFC$CONSOLE_CMD       ; 03
 
     The R0 register must point to a counted ASCII string that contains
-    a single govax console command.  The command is executed, and the
-    return code is stored back in R0, replacing it's contents.
-
-    The command text *must* be in upper-case or it will not be 
-    recognized.  This limitation will be removed in a future release.
+    a single govax console command.  The command is executed, as if it
+    were typed at the VAX> prompt (in either case), and the return code
+    is stored back in R0, replacing its contents: 0 if the command
+    succeeded, 1 if it failed.
 
 
     XFC  #XFC$VM                ; 7F
@@ -3617,8 +3622,8 @@ $LINK
                         MACRO/DEBUG) in the debug symbol table too, and
                         marks the image for the debugger, as VMS LINK
                         does.  /DEBUG includes /TRACEBACK, even if
-                        /NOTRACEBACK is given.  govax has no debugger,
-                        so RUN runs such an image as any other.  A
+                        /NOTRACEBACK is given.  RUN starts such an
+                        image under the debugger (see HELP RUN).  A
                         user-written debugger module (/DEBUG=<file>)
                         isn't supported.  /NODEBUG is the default.
 
