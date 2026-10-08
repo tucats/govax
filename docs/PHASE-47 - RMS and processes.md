@@ -1,6 +1,6 @@
 # Phase 47 — Multiprocessing, part 5: files shared between processes
 
-**Status:** in progress (subtask 1 done 2026-10-08); decisions taken 2026-10-06 (see
+**Status:** in progress (subtasks 1-2 done 2026-10-08); decisions taken 2026-10-06 (see
 PHASE-43.md, Part A). Needs Phase 45 (independent of Phase
 46).
 
@@ -259,3 +259,36 @@ questions:
 - 2026-10-08: Subtask 1 (survey) done: findings above, six skipped
   tests in `internal/rms/sharing_test.go`, each failing as described
   before it was skipped.
+- 2026-10-08: Subtask 2: `internal/lck`, from the System Services manual
+  ($ENQ, $DEQ) and the Internals book's chapter 13. A `Manager` of
+  resources (name, UIC group or 0 for system, access mode, parent
+  resource) with granted, conversion, and waiting queues; the six modes
+  and the manual's compatibility table; NOQUEUE; conversions (a lock
+  never blocks its own: section 13.2.2); sublocks (the parent must be
+  the caller's and granted; SUBLOCKS on dequeuing a parent); CANCEL;
+  DEQALL by access mode or of a lock's sublocks; value blocks (copied to
+  a lock granted or converted up, stored by PW or EX on the way down or
+  out; INVVALBLK); blocking notices, once per grant. Operations return
+  `Event`s (granted, blocking, aborted, canceled), for any owner;
+  `lck.Deliver` hands each to its lock's `Data` if that's a `Notifier`,
+  which is how $ENQ's completions and RMS's waits will be told.
+  `System.Locks` holds the one database; image rundown dequeues the
+  process's user-mode locks, process deletion all of them
+  (`corevms/locks.go`). Waiting is left to the callers: a waiter sleeps
+  on its event flag (Phase 44's waits) and its `Notify` sets it, which
+  subtasks 6 and 7 build and test across processes. Rules chosen where
+  the sources don't say, unconfirmed:
+  - A new lock waits if anything is queued, compatible or not (FIFO,
+    as this doc's design said), and a conversion that isn't down waits
+    if the conversion queue isn't empty. The book's description
+    (13.2.1, 13.2.2) compares only with the granted modes; the FIFO
+    rule keeps a stream of compatible requests from starving a queued
+    one.
+  - A conversion to a mode no more restrictive than the old (every mode
+    compatible with the old is compatible with the new) is granted at
+    once, even past queued conversions.
+  - At process deletion, a PW or EX lock still held invalidates its
+    value block, whether the process ended by `$EXIT` or `$DELPRC`;
+    image rundown's dequeue doesn't invalidate.
+  - A lock on the conversion queue gets blocking notices for what its
+    granted mode blocks, as a granted one does.

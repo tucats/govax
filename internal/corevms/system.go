@@ -6,6 +6,7 @@ import (
 
 	iodev "github.com/tucats/govax/internal/io"
 	"github.com/tucats/govax/internal/cpu"
+	"github.com/tucats/govax/internal/lck"
 	"github.com/tucats/govax/internal/rms"
 	"github.com/tucats/govax/internal/sched"
 	"github.com/tucats/govax/internal/vax"
@@ -64,6 +65,10 @@ type System struct {
 	// Sections are the global sections $CRMPSC has created (gblsec.go),
 	// system state like the mailboxes.
 	Sections *GlobalSections
+
+	// Locks is the lock database (internal/lck, Phase 47): every
+	// resource and lock $ENQ and RMS have made, system state too.
+	Locks *lck.Manager
 
 	// Operator is OPCOM's state: the console's operator classes and the
 	// outstanding operator requests (operator.go).
@@ -165,6 +170,7 @@ func NewSystem(cpu *vax.CPU, mem *vm.Memory, devices *iodev.DeviceTable, mounts 
 		EventFlagClusters: NewCommonEventFlags(),
 		Mailboxes:         NewMailboxTable(),
 		Sections:          NewGlobalSections(),
+		Locks:             lck.NewManager(),
 		Operator:          newOperatorState(),
 		Clock:             wallClock,
 		NodeName:          nominalNodeName,

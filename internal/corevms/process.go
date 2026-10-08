@@ -372,6 +372,7 @@ func (env *Environment) ImageRundown() {
 	env.cancelConditions()
 	env.cancelPageLocks()
 	env.unmapSections()
+	env.dequeueUserLocks()
 	env.resetImagePrivileges()
 	env.qiowWaits = nil
 }

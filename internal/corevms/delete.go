@@ -223,13 +223,15 @@ func (sys *System) awaitSubprocesses(env *Environment) bool {
 // leaves a process's privileged-mode state for its next image): every
 // channel, in any access mode, so a temporary mailbox the process held
 // the last channel to is deleted; every device it allocated; and every
-// AST, exit handler, and I/O request still queued, in any mode.
+// AST, exit handler, and I/O request still queued, in any mode; and
+// every lock it holds or waits for.
 func (env *Environment) processRundown() {
 	for _, c := range append([]*channel(nil), env.channels...) {
 		env.releaseChannel(c)
 	}
 
 	env.deallocateAll(uint32(vax.Kernel))
+	env.releaseLocks()
 
 	p := env.Process
 	p.ast.queue = nil
