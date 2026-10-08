@@ -80,6 +80,86 @@ earlier docs point here.
 12. **Probe** (optional): a VMS 7.3 run for what the survey leaves open.
 13. **Close-out**.
 
+## Survey (subtask 1)
+
+From the RMS Reference Manual (OpenVMS 7.3, `OVMS_731_RMS.pdf`: the
+services, RAB$L_ROP, RAB$B_TMO, FAB$B_FAC) and the Guide to OpenVMS File
+Applications (7.3: section 8.2, Table 8-1, and 8.6's record stream
+context, Table 8-3).
+
+**Which operations a sequential file has** (guide, Table 8-1): $GET,
+$PUT (at the end of file only, but for RAB$V_TPT and a random
+$PUT with UIF on fixed-length records), $FIND, and $UPDATE (disk
+only; "the record length for sequential files cannot change"). $DELETE
+"removes an existing record from a relative or indexed file. You cannot
+use this service when processing sequential files"; its condition
+values include RMS$_IOP, the status govax returns.
+
+**Access** (FAB$B_FAC): $UPDATE needs FAB$V_UPD; $TRUNCATE and
+RAB$V_TPT need FAB$V_TRN ("This option applies only to sequential
+files"); a $PUT with TPT without TRN is RMS$_FAC (the manual, $PUT).
+$DELETE needs FAB$V_DEL.
+
+**The stream's context** (guide 8.6, Table 8-3). Each RAB has a
+*current record* and a *next record*:
+
+| Service | Current | Next |
+| --- | --- | --- |
+| $CONNECT | none | first record (RAB$V_EOF: end of file) |
+| $GET, sequential, last service not $FIND | old next | new current + 1 |
+| $GET, sequential, after a $FIND | unchanged | current + 1 |
+| $GET, random (RFA) | new | new current + 1 |
+| $PUT, sequential file | none | end of file |
+| $FIND, sequential | old next | new current + 1 |
+| $FIND, random | new | unchanged |
+| $UPDATE | none | unchanged |
+| $TRUNCATE | none | end of file |
+| $REWIND | unchanged | first record |
+| $FREE, $RELEASE | none | unchanged |
+
+The current record is undefined after $CONNECT, after any failed
+operation, and after any successful service but $GET and $FIND; then
+$UPDATE, $DELETE, $RELEASE, and $TRUNCATE are rejected (RMS$_CUR, in
+their condition values). A failed operation leaves the next record
+alone. $FIND writes RAB$W_RFA; RAB$L_RBF and RAB$W_RSZ are undefined
+after it. $UPDATE writes RAB$W_RFA too.
+
+**$UPDATE**: the record must be locked by this stream (by its $FIND or
+$GET), in move mode (RAB$L_RBF, RAB$W_RSZ). A sequential file's record
+can't change length (RMS$_RSZ, govax's choice of status). For a stream
+format file "the Update service functions in the same manner as the Put
+service, with one exception: ... you do not have to set ... RAB$V_TPT to
+update data in the middle of a file": govax takes that as the same
+in-place rule, the length unchanged (unconfirmed: what VMS does with a
+stream record of another length).
+
+**$TRUNCATE**: "resetting the logical end-of-file position to the
+beginning of the current record"; in sequential access only immediately
+after a successful $GET or $FIND. Space isn't freed or erased. A
+truncated file's records past the end are gone for every stream.
+
+**RAB$V_TPT** (truncate on put): a sequential $PUT "can occur at any
+point in the file, truncating the file at that point. The end-of-file
+mark is set to the position immediately following the last byte
+written." Without it, a $PUT anywhere but the end of file is RMS$_NEF
+(govax's rule since Phase 47).
+
+**RAB$V_TMO** with RAB$V_WAT: RAB$B_TMO is the longest wait in seconds
+(0 to 255) for a locked record; when it runs out the operation fails
+with RMS$_TMO. (TMO also has terminal and mailbox meanings, not this
+subtask's.)
+
+**$FIND** takes RAB$B_RAC SEQ or RFA (KEY is for relative and indexed
+files: RMS$_RAC here), RAB$V_NLK, RLK, REA, RRL, ULK, WAT, TMO, and
+returns RMS$_OK_* as $GET does. It locks the record as $GET would.
+
+**What only VMS can settle** (unconfirmed choices, for a probe):
+$UPDATE's status for a changed length on a sequential file (govax
+RMS$_RSZ); $UPDATE of a stream file's record to another length; the
+status for an RFA that doesn't start a record (govax RMS$_RFA); whether
+$PUT with TPT locks the record it writes; whether $TRUNCATE drops the
+stream's record locks.
+
 ## Open questions
 
 - Which of these the author wants first, or at all; the order above is
@@ -91,3 +171,5 @@ earlier docs point here.
 
 - 2026-10-08: Planned, from the carry-forward sections of Phases 45–48
   (PHASE-48.md's close-out).
+- 2026-10-08: Started, in the suggested order (RMS first). Subtask 1,
+  the survey, is above ("Survey").
