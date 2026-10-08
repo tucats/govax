@@ -559,3 +559,44 @@ func TestSharing_rmsAndACP(t *testing.T) {
 	a.mustOpen("BOTH.DAT", facPut, shrGet|shrPut, false, ropEOF)
 	a.close()
 }
+
+// TestSharing_flush: $FLUSH puts an unshared writer's records, and the
+// end of file past them, on the disk without closing the file: a second
+// mount of the same container (another system reading the disk) reads
+// them.
+func TestSharing_flush(t *testing.T) {
+	path := newTestVolumeFile(t, "FLUSH")
+
+	mounts := NewMountTable()
+	if err := mounts.Mount("DUA0", path, true); err != nil {
+		t.Fatal(err)
+	}
+
+	w := &sharer{t: t, name: "writer", ctx: &Context{
+		Mem: vm.NewMemory(1 << 20), CPU: vax.New(), Mounts: mounts,
+		Files: NewFileTable(nil), Logicals: newTestLogicals(t),
+	}}
+	w.mustOpen("F.DAT", facPut, 0, true, 0) // no sharing: records are buffered
+	w.put("one")
+	w.put("two")
+
+	if r0, err := SysFlush(w.ctx, []uint32{testRabAddr}); err != nil || r0 != rmsNormal {
+		t.Fatalf("$FLUSH: %#x, %v", r0, err)
+	}
+
+	other := NewMountTable()
+	if err := other.Mount("DUA0", path, false); err != nil {
+		t.Fatal(err)
+	}
+
+	wantRecords(t, records(t, other, "F.DAT"), "one", "two")
+
+	if err := other.Dismount("DUA0"); err != nil {
+		t.Fatal(err)
+	}
+
+	w.put("three")
+	w.close()
+
+	wantRecords(t, records(t, mounts, "F.DAT"), "one", "two", "three")
+}

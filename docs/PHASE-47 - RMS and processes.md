@@ -1,6 +1,6 @@
 # Phase 47 — Multiprocessing, part 5: files shared between processes
 
-**Status:** in progress (subtasks 1-4 done 2026-10-08); decisions taken 2026-10-06 (see
+**Status:** in progress (subtasks 1-5 done 2026-10-08); decisions taken 2026-10-06 (see
 PHASE-43.md, Part A). Needs Phase 45 (independent of Phase
 46).
 
@@ -334,6 +334,22 @@ questions:
     still counts as reading (the XQP model: it's refused by an opener
     without SHRGET); that FAB$V_UPI alone shares reading as well as
     writing.
-  - **ods2 isn't tagged yet.** govax builds with the local `go.work`;
-    `GOWORK=off go build ./...` fails until ods2 is tagged (v0.1.16),
-    pushed, and pinned (`GOWORK=off go get github.com/tucats/ods2@v0.1.16`).
+  - ods2's changes are tagged v0.1.16 (the author tagged and pushed
+    them) and pinned in `go.mod`.
+- 2026-10-08: Subtask 5. Most of it came with subtasks 3-4 (shared
+  Writers appending at the current end of file, written through; Readers
+  that see appends). Added: `$FLUSH` (`internal/rms/flush.go`, the P1
+  vector entry and `$FLUSH` macro were there already): the Writer's
+  partial block and end of file, then the header, on the disk without a
+  close, so an unshared file's XABFHC end of file is "the values at the
+  time of the last Close or Flush", as the manual says; a shared file's
+  is current, since XABFHC is filled from the shared header. Tests:
+  `TestSharing_flush` (a second mount of the container reads what was
+  flushed) and `TestSharedFile_twoAppenders` (`internal/console`): two
+  real processes, one priority, a 300-instruction quantum, each a MACRO
+  loop opening `DUA0:LOG.DAT` with SHR=GET|PUT and RAB$V_EOF and putting
+  60 numbered records; all 120 arrive, each process's in order, with
+  about a dozen alternations. Not done: `$OPEN` FAC=GET|PUT reading to
+  the end and then appending through one RAB (a FileHandle is one
+  direction; `$CONNECT` arms PUT when both are asked for), and
+  RAB$V_TPT.
