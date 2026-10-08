@@ -97,12 +97,29 @@ func (env *Environment) WriteOutput(s string) { env.writeConsole(s) }
 // a line of at most maxLen bytes from its input stream (SYS$INPUT, the
 // console terminal), as a terminal read does (readTerminalLine), without
 // the line's terminator. ok is false at the end of the input: CTRL/Z
-// typed on an empty line, or the end of the host's input.
-func (env *Environment) ReadInputLine(prompt string, maxLen int) (line string, ok bool) {
-	env.writeConsole(prompt)
+// typed on an empty line, or the end of the host's input. With the
+// scheduler on, err is ErrWait while the line hasn't been typed, or
+// another process's read comes first: the caller is called again
+// (terminal.go); the prompt is written only once.
+func (env *Environment) ReadInputLine(prompt string, maxLen int) (line string, ok bool, err error) {
+	if err := env.awaitTerminal(maxLen, prompt, lineEnd); err != nil {
+		return "", false, err
+	}
 
-	return readTerminalLine(env, maxLen)
+	line, ok = readTerminalLine(env, maxLen)
+	env.terminalDone()
+
+	return line, ok, nil
 }
+
+// AwaitTerminal and TerminalDone are awaitTerminal and terminalDone
+// for a line read (lineEnd) by RMS's $GET of the terminal
+// (rms.Context's hooks).
+func (env *Environment) AwaitTerminal(maxLen int, prompt string) error {
+	return env.awaitTerminal(maxLen, prompt, lineEnd)
+}
+
+func (env *Environment) TerminalDone() { env.terminalDone() }
 
 // StatusText is the message line for a status value as the system shows
 // it, such as "%SYSTEM-S-NORMAL, normal successful completion". A status

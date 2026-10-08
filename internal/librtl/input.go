@@ -37,7 +37,11 @@ func libGetInput(env *corevms.Environment, argv []uint32) (uint32, error) {
 		}
 	}
 
-	line, ok := env.ReadInputLine(p, maxInputLength)
+	line, ok, err := env.ReadInputLine(p, maxInputLength)
+	if err != nil {
+		return 0, err // waiting for the line: called again
+	}
+
 	if !ok {
 		return rmsEOF, nil
 	}

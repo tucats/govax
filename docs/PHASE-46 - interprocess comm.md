@@ -1,6 +1,6 @@
 # Phase 46 — Multiprocessing, part 4: interprocess communication
 
-**Status:** in progress (subtasks 1-6 done, 2026-10-08); decisions taken
+**Status:** in progress (subtasks 1-7 done, 2026-10-08); decisions taken
 2026-10-06 (see PHASE-43.md, Part A). Needs Phase 45.
 
 The program this phase belongs to is described in
@@ -154,7 +154,7 @@ as today).
    *Done (2026-10-08).*
 7. **The shared terminal** (bug 6). Tests with a scripted input stream:
    a process waiting for input while another runs; Ctrl-C delivery;
-   the console prompt afterwards.
+   the console prompt afterwards. *Done (2026-10-08).*
 8. **A MACRO test**: `testdata/mp/mbxpingpong.mar` (parent and child via
    `$CREPRC`, exchanging messages both ways through two mailboxes, plus
    a CEF handshake): an early version of Phase 48's milestone, without
@@ -474,3 +474,61 @@ as today).
     for the ones not yet written) and `TestRMSMailbox_null` (NL::
     `$CREATE`, `$CONNECT`, `$PUT`, `$CLOSE`, `$OPEN`, `$CONNECT` succeed,
     `$GET` is RMS$_EOF, FAB$L_DEV says record oriented).
+- 2026-10-08: Subtask 7 (the shared terminal; bug 6).
+  - **No new reader goroutine was needed:** cmd/govax's
+    `attentionStdin` already has one pump goroutine owning the host
+    terminal and a byte channel that both readline (at a prompt) and the
+    programs' reads take from. What was missing was a way to ask whether
+    a read would wait: `attentionStdin.Ready` (a byte queued, or the
+    input ended), passed on by the console's `consoleInput`, is
+    `corevms.TerminalSource`. An input that can't say (a test's script,
+    a file) is always ready, so nothing changes for it.
+  - **`corevms/terminal.go`:** every process reads the terminal through
+    one buffer (`System.terminalReader`; before, each process wrapped the
+    shared stream in its own `bufio.Reader`, and what one took ahead was
+    lost to the others). A read (`awaitTerminal`) joins the terminal's
+    FIFO queue and goes ahead only when it's first and a whole line is
+    buffered (`lineReady`: its terminator, CTRL/Z, its size, or the end
+    of the input, pulling in whatever the source has without waiting);
+    otherwise it waits in LEF, its service run again when that's true.
+    A read's prompt is written once, when its turn comes, so a second
+    process's prompt doesn't appear while the first is still being
+    typed to. A read that has its line, or a process's rundown, gives
+    up the turn. Only with the scheduler on and a `TerminalSource`
+    input; otherwise reads block as before.
+  - **The readers:** the terminal driver's reads (`terminalRead`: a read
+    that must wait returns `ioResourceWait`, so the `$QIO` is made again;
+    IO$M_PURGE discards type-ahead only when the read is first made;
+    IO$M_TIMED with 0 seconds never waits), RMS's terminal `$GET`
+    (through `rms.Context.AwaitTerminal`/`TerminalDone`; the RAB's prompt
+    goes with the read), and `LIB$GET_INPUT` and `LIB$GET_FOREIGN`
+    (`Environment.ReadInputLine` now returns ErrWait, which subtask 6's
+    `XFC$SHIM` fix lets a shim return). The old `DECC$GETS` and
+    `EXE$INPUT` shims still block. *Unconfirmed simplification:* a
+    terminal `$QIO` read that must wait makes the `$QIO` itself wait,
+    rather than returning with the read pending; a program that waits
+    for the read's event flag right away sees no difference.
+  - **Idling:** with every process waiting and no timer due, a process
+    waiting for a line makes the idle loop wait in the host for input
+    (polling `Ready` each millisecond, up to 50 ms, then back to the
+    engine, which checks CTRL/C), instead of spinning the waiters.
+  - **CTRL/C and CTRL/Y** go to the process that enabled an AST for the
+    key, the running one first, then the others by PID
+    (`System.AttentionAny`, used by `Console.HandleAttention`); a waiting
+    process is told at once (boost class PRI$_TICOM, *unconfirmed*). With
+    no AST enabled anywhere, the machine stops as before.
+  - Tests: `corevms/terminal_test.go` (two processes reading in turn,
+    each in LEF until its line and its turn; a partial line ends no
+    wait; prompts written once, the second's only when the first has
+    its line; type-ahead kept for the next read; a deleted reader gives
+    up its turn; no waiting without the scheduler) and
+    `console/sharedterm_test.go` (`TestSharedTerminal`: on a booted
+    machine with scripted input, process 1 waits in a `$QIOW` read
+    (LEF) while process 2 counts; CTRL/C runs process 2's CTRL/C AST
+    and doesn't stop the machine; the typed line completes process 1's
+    read, IOSB and data). Not tested here: the console's own prompt
+    after a run stopped while a process waited (readline's reads go
+    through `promptReader`, which this doesn't change).
+  - `TestExecute_stopsOnAttention` failed once in a full run and passed
+    30 times alone: it races `Engine.Attention` on a goroutine against
+    `Execute`'s start. A pre-existing flake, not this subtask's.

@@ -82,6 +82,15 @@ type Context struct {
 	// NAM$T_DVI's device name.
 	NodeName string
 
+	// AwaitTerminal, if set, is asked before a terminal $GET reads a
+	// record of up to maxLen characters, with the read's prompt: it
+	// writes the prompt (once) and returns nil when the record can be
+	// read, or an error (the process waiting: the service is called
+	// again). TerminalDone is called when the record has been read.
+	// Unset, the prompt is written and the read waits in the host.
+	AwaitTerminal func(maxLen int, prompt string) error
+	TerminalDone  func()
+
 	// Devices opens the record devices (mailboxes, NL:) a file
 	// specification may name (recdevice.go); nil means none can be.
 	Devices DeviceOpener

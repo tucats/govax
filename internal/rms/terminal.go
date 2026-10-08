@@ -28,10 +28,24 @@ func terminalRecord(ctx *Context, rabAddr uint32, capacity int) (record []byte, 
 		return nil, 0, err
 	}
 
+	prompt := ""
+
 	if rop&ropPMT != 0 {
-		if err := writePrompt(ctx, rabAddr); err != nil {
+		if prompt, err = readPrompt(ctx, rabAddr); err != nil {
 			return nil, 0, err
 		}
+	}
+
+	if ctx.AwaitTerminal != nil {
+		if err := ctx.AwaitTerminal(capacity, prompt); err != nil {
+			return nil, 0, err
+		}
+
+		if ctx.TerminalDone != nil {
+			defer ctx.TerminalDone()
+		}
+	} else if prompt != "" && ctx.Console != nil {
+		_, _ = io.WriteString(ctx.Console, prompt)
 	}
 
 	r := ctx.ConsoleIn
@@ -72,30 +86,23 @@ func terminalRecord(ctx *Context, rabAddr uint32, capacity int) (record []byte, 
 	return record, 0, nil
 }
 
-// writePrompt writes a RAB's prompt (RAB$L_PBF, RAB$B_PSZ) to the console.
-func writePrompt(ctx *Context, rabAddr uint32) error {
+// readPrompt reads a RAB's prompt (RAB$L_PBF, RAB$B_PSZ).
+func readPrompt(ctx *Context, rabAddr uint32) (string, error) {
 	pbf, err := ctx.loadLongword(rabAddr + rabPBF)
 	if err != nil {
-		return err
+		return "", err
 	}
 
 	psz, err := ctx.loadByte(rabAddr + rabPSZ)
 	if err != nil {
-		return err
+		return "", err
 	}
 
-	if psz == 0 || ctx.Console == nil {
-		return nil
+	if psz == 0 {
+		return "", nil
 	}
 
-	prompt, err := ctx.loadFixedString(pbf, int(psz))
-	if err != nil {
-		return err
-	}
-
-	_, _ = io.WriteString(ctx.Console, prompt)
-
-	return nil
+	return ctx.loadFixedString(pbf, int(psz))
 }
 
 // swallowLineFeed reads the "\n" of a "\r\n" pair, but only if it has

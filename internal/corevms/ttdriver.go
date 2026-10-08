@@ -239,14 +239,28 @@ func (env *Environment) terminalRead(req *ioRequest, prompt string) (ioStatus, u
 
 	r := env.consoleReader()
 
-	if req.modified(ioModPurge) {
+	// A zero time limit means "only what's already typed ahead".
+	pollOnly := req.modified(ioModTimed) && req.p[2] == 0
+
+	// A purge throws away what was typed before the read was made: not
+	// what is typed while it waits.
+	if req.modified(ioModPurge) && !env.inTerminalQueue() {
 		_, _ = r.Discard(r.Buffered())
 	}
 
-	env.writeConsole(prompt)
+	// The read waits its turn and for its line (terminal.go): the request
+	// is made again then.
+	if pollOnly {
+		env.writeConsole(prompt)
+	} else {
+		ends := func(b byte) bool { return set.has(b) || b == '\n' && set.has(ttCarriageReturn) }
 
-	// A zero time limit means "only what's already typed ahead".
-	pollOnly := req.modified(ioModTimed) && req.p[2] == 0
+		if err := env.awaitTerminal(int(size), prompt, ends); err != nil {
+			return ioStatus{}, ioResourceWait
+		}
+
+		defer env.terminalDone()
+	}
 
 	var (
 		count      uint32

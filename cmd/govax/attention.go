@@ -105,6 +105,9 @@ type attentionStdin struct {
 	// aborting is true once CTRL/Y has asked govax to end.
 	aborting atomic.Bool
 
+	// pumpEnded is set when the pump has stopped: the input has ended.
+	pumpEnded atomic.Bool
+
 	// interrupt is closed to end a program's read that is waiting for
 	// input (interruptRead), and replaced by a fresh one.
 	mu        sync.Mutex
@@ -147,7 +150,10 @@ func newAttentionStdin(r io.Reader, out io.Writer, vmsMode bool, getEngine func(
 // readers: the line's text and a CTRL/Z that ends it, then a CTRL/Z that
 // is the next read's end of file; or just that one, echoing *Exit*.
 func (s *attentionStdin) pump(r io.Reader) {
-	defer close(s.bytes)
+	defer func() {
+		close(s.bytes)
+		s.pumpEnded.Store(true)
+	}()
 
 	buf := make([]byte, 4096)
 
@@ -336,6 +342,23 @@ func (s *attentionStdin) Read(p []byte) (int, error) {
 
 	case <-s.done:
 		return 0, io.EOF
+	}
+}
+
+// Ready reports whether a program's Read would return at once: a key is
+// waiting, or the input has ended. It makes the terminal a
+// corevms.TerminalSource, so a process reading it waits in the
+// scheduler, not in Read, until its line has been typed.
+func (s *attentionStdin) Ready() bool {
+	if len(s.bytes) > 0 || s.pumpEnded.Load() {
+		return true
+	}
+
+	select {
+	case <-s.done:
+		return true
+	default:
+		return false
 	}
 }
 

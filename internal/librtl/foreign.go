@@ -70,7 +70,11 @@ func libGetForeign(env *corevms.Environment, argv []uint32) (uint32, error) {
 			return ssAccVio, nil
 		}
 
-		line, ok := env.ReadInputLine(p, maxInputLength)
+		line, ok, err := env.ReadInputLine(p, maxInputLength)
+		if err != nil {
+			return 0, err // waiting for the line: called again
+		}
+
 		if !ok {
 			status = rmsEOF
 		}

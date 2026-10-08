@@ -95,6 +95,16 @@ func (sys *System) idle(e *cpu.Engine) (sched.Handle, bool) {
 		}
 	}
 
+	// A process waiting for a line: wait for the terminal, a while, in
+	// the host rather than spinning, then look again.
+	if _, ok := sys.nextTimer(); !ok && sys.waitForTerminalInput(idleWaitLimit) {
+		sys.pollEvents()
+
+		if h, ok := sys.sched.Reschedule(); ok {
+			return h, true
+		}
+	}
+
 	sys.retryWaiters()
 
 	return sys.sched.Reschedule()

@@ -317,6 +317,17 @@ func (r consoleInput) Read(p []byte) (int, error) {
 	return r.c.In.Read(p)
 }
 
+// Ready makes consoleInput a corevms.TerminalSource: whether a read
+// would get a byte (or the end of the input) at once. An input that
+// can't say (a test's script, a file) never makes a reader wait.
+func (r consoleInput) Ready() bool {
+	if src, ok := r.c.In.(corevms.TerminalSource); ok {
+		return src.Ready()
+	}
+
+	return true
+}
+
 type consoleOutput struct{ c *Console }
 
 func (w consoleOutput) Write(p []byte) (int, error) {

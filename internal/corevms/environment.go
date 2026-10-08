@@ -244,6 +244,9 @@ func (env *Environment) rmsContext() *rms.Context {
 		ConsoleIn: env.consoleReader(),
 		NodeName:  env.NodeName,
 		Devices:   env,
+
+		AwaitTerminal: env.AwaitTerminal,
+		TerminalDone:  env.TerminalDone,
 	}
 }
 

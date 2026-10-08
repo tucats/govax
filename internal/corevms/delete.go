@@ -237,6 +237,8 @@ func (env *Environment) processRundown() {
 
 	env.pendingIO = nil
 	env.qiowWaits = nil
+
+	env.terminalDone()
 }
 
 // cpuQuotaUnit is the CPU time limit's unit, 10 milliseconds, in VMS

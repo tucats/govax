@@ -1,6 +1,9 @@
 package corevms
 
 import (
+	"bufio"
+	"io"
+
 	iodev "github.com/tucats/govax/internal/io"
 	"github.com/tucats/govax/internal/cpu"
 	"github.com/tucats/govax/internal/rms"
@@ -138,6 +141,12 @@ type System struct {
 	// sharedP1 is the P1 pages every process maps onto the same physical
 	// pages: the P1 vector's (ShareP1, addrspace.go).
 	sharedP1 []sharedPage
+
+	// terminalBuffers are the buffers processes read the terminal
+	// through, one per input stream, and terminalQueue the reads waiting
+	// for their turn, in order (terminal.go).
+	terminalBuffers map[io.Reader]*bufio.Reader
+	terminalQueue   []*terminalRead
 }
 
 // NewSystem returns a new System driving cpu and mem, sharing devices and

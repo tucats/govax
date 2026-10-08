@@ -1,5 +1,7 @@
 package corevms
 
+import "github.com/tucats/govax/internal/sched"
+
 // CTRL/C and CTRL/Y ASTs (docs/PHASE-26.md subtask 27).
 //
 // # What they're for
@@ -96,6 +98,35 @@ func (env *Environment) Attention(key byte) bool {
 	}
 
 	return env.deliverAttentionASTs(AttentionCtrlY)
+}
+
+// AttentionAny is Attention for the whole system (docs/PHASE-46.md,
+// subtask 7): the key goes to the process that enabled an AST for it,
+// first the running one (current), then the others in PID order; one
+// waiting (for a terminal line, say) is told at once, so it runs its AST.
+// It returns false, and the machine stops, if no process takes it.
+func (sys *System) AttentionAny(current *Environment, key byte) bool {
+	envs := []*Environment{current}
+
+	for _, e := range sys.procs.slots {
+		if e != nil && e != current {
+			envs = append(envs, e)
+		}
+	}
+
+	for _, e := range envs {
+		if e == nil || e.Deleted || !e.Attention(key) {
+			continue
+		}
+
+		if e.waiting != nil {
+			e.reportEvent(sched.ClassTerminalInput)
+		}
+
+		return true
+	}
+
+	return false
 }
 
 // deliverAttentionASTs queues and removes every request for key,

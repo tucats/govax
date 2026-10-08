@@ -6,17 +6,17 @@ import (
 )
 
 // consoleReader lazily wraps Environment.consoleIn in a *bufio.Reader,
-// cached so successive reads don't lose already-buffered-ahead bytes —
-// there is no equivalent concern in the C source, which reads directly
-// from the process's real stdin each time.
+// cached so successive reads don't lose already-buffered-ahead bytes.
+// Every process reading the same stream (the terminal) shares one
+// buffer (System.terminalReader), so what one process's read took ahead
+// is there for the next process's (docs/PHASE-46.md, subtask 7).
 func (env *Environment) consoleReader() *bufio.Reader {
 	if env.consoleInBuf == nil {
-		src := env.consoleIn
-		if src == nil {
-			src = strings.NewReader("")
+		if env.consoleIn == nil {
+			env.consoleInBuf = bufio.NewReader(strings.NewReader(""))
+		} else {
+			env.consoleInBuf = env.terminalReader(env.consoleIn)
 		}
-
-		env.consoleInBuf = bufio.NewReader(src)
 	}
 
 	return env.consoleInBuf

@@ -184,7 +184,7 @@ func (c *Console) HandleAttention(key byte) bool {
 		return false
 	}
 
-	return env.Attention(key)
+	return env.AttentionAny(env, key)
 }
 
 // DispatchException delegates to the running process, making Console a
