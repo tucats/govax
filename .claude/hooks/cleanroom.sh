@@ -53,13 +53,14 @@ if printf '%s' "$text" | grep -Eq '(^|[^a-z0-9_])vmslib([^a-z0-9_]|$)'; then
 fi
 
 # Real-MACRO output not yet audited for STARLET macro expansion text goes
-# here, refused until the author has checked it. None is waiting: Phase
-# 28's rmscopy.lis, fabalign.lis, and qiow.lis, and the Phase 32 oracle's
-# logs (testdata/mar/rms/vax), were audited by the author on 2026-09-30,
-# and the logs of the macro probe's rounds 5 and 6 and of Phase 46's
+# here, refused until the author has checked it. Phase 28's rmscopy.lis,
+# fabalign.lis, and qiow.lis, and the Phase 32 oracle's logs
+# (testdata/mar/rms/vax), were audited by the author on 2026-09-30, and
+# the logs of the macro probe's rounds 5 and 6 and of Phase 46's
 # definition probes (testdata/mp/run46) on 2026-10-08; none holds
-# expansion text.
-unaudited=''
+# expansion text. Waiting: Phase 48's definition probes' log
+# (testdata/mp/run48), once it has run.
+unaudited='mp/defs/vax/defs48[.]log'
 if [ -n "$unaudited" ] && printf '%s' "$text" | grep -Eq "$unaudited"; then
 	refuse "this names real-MACRO output that may show STARLET macro text and hasn't been audited"
 fi
