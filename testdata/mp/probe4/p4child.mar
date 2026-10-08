@@ -1,0 +1,10 @@
+	.title	p4child
+;
+; Probe 4's image to run (README.md): it ends at once with the status 3,
+; a success other than SS$_NORMAL, so a report shows whose status it is.
+;
+	.psect	code,exe,nowrt
+	.entry	start,^m<>
+	movl	#3,r0
+	ret
+	.end	start

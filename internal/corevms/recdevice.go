@@ -255,11 +255,16 @@ func (r *recordDevice) Close() {
 // executive mode (as VMS keeps SYS$OUTPUT open as a process-permanent
 // file), which a change of SYS$OUTPUT's translation replaces; it returns
 // the write's status, or ErrWait while the mailbox is full. Otherwise the
-// record is a line on the terminal, and the status is SS$_NORMAL.
+// record is a line on the terminal, and the status is SS$_NORMAL. A
+// SYS$OUTPUT that names a file (no device, or a disk) gets the line as a
+// record of that file (outfile.go), or, if the file can't be written, the
+// terminal does.
 func (env *Environment) PutOutput(record string) (uint32, error) {
 	device, st := env.deviceName("SYS$OUTPUT")
-	if st != 0 {
-		env.writeConsole(record + "\n")
+	if st != 0 || env.isFileDevice(device) {
+		if !env.putOutputFile(record) {
+			env.writeConsole(record + "\n")
+		}
 
 		return ssNormal, nil
 	}
@@ -291,3 +296,12 @@ func (env *Environment) PutOutput(record string) (uint32, error) {
 
 	return status, err
 }
+
+// isFileDevice reports whether device, SYS$OUTPUT's, holds files: a disk,
+// or a name that isn't a device at all (a host file's).
+func (env *Environment) isFileDevice(device string) bool {
+	d, found := env.Devices.Find(device)
+
+	return !found || d.DevClass == iodev.DeviceClassDisk
+}
+

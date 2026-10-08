@@ -1,0 +1,15 @@
+	.title	p4nocli
+;
+; Probe 4's image for a process with no CLI (README.md, step 11): $CREPRC
+; runs it directly, and it calls LIB$SPAWN, ending with LIB$SPAWN's
+; status, which its termination message carries (LIB$_NOCLI, by the
+; manual).
+;
+	.psect	data,noexe,wrt,long
+cmd:	.ascid	/SHOW TIME/
+	.psect	code,exe,nowrt
+	.entry	start,^m<>
+	pushaq	cmd
+	calls	#1,g^lib$spawn
+	ret
+	.end	start

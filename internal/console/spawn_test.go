@@ -1,6 +1,8 @@
 package console_test
 
 import (
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -303,5 +305,42 @@ func TestSpawnCommand(t *testing.T) {
 
 	if n := len(c.RTL.Processes()); n != 1 {
 		t.Errorf("%d processes at the end, want only process 1", n)
+	}
+}
+
+// TestSpawn_outputFile: a subprocess whose SYS$OUTPUT is a file
+// (SPAWN/OUTPUT, LIB$SPAWN's output-file) writes its lines there, the
+// CLI's messages and its images' LIB$PUT_OUTPUT alike, not on the
+// terminal.
+func TestSpawn_outputFile(t *testing.T) {
+	c, out := scheduledConsole(t, longQuantum, brbSelf)
+	echo := buildImage(t, c, "echo", echoSource)
+	d := console.NewDispatcher(c, consoletest.ConsoleGrammar(t), nil)
+
+	if err := d.Dispatch(`ECHO :== "$` + echo + `"`); err != nil {
+		t.Fatal(err)
+	}
+
+	log := filepath.Join(t.TempDir(), "spawn.log")
+	commands := writeCommands(t, "ECHO first", "FROBNICATE", "ECHO last")
+
+	out.Reset()
+
+	if err := d.Dispatch(`SPAWN/INPUT="` + commands + `"/OUTPUT="` + log + `"`); err != nil {
+		t.Fatal(err)
+	}
+
+	if strings.Contains(out.String(), "FIRST") {
+		t.Errorf("the subprocess wrote on the terminal: %q", out.String())
+	}
+
+	b, err := os.ReadFile(log)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	want := "FIRST\n%DCL-W-IVVERB, unrecognized command verb - check validity and spelling\n \\FROBNICATE\\\nLAST\n"
+	if string(b) != want {
+		t.Errorf("the output file:\n%s\nwant:\n%s", b, want)
 	}
 }

@@ -97,6 +97,9 @@ type Environment struct {
 	// through when it names a mailbox or NL: (recdevice.go).
 	outputStream *recordDevice
 
+	// outputFile is SYS$OUTPUT when it names a file (outfile.go).
+	outputFile *outputFile
+
 	// sectionPages are the pages of the process's address space mapped
 	// to global sections (gblsec.go), which image rundown unmaps.
 	sectionPages map[uint32]bool

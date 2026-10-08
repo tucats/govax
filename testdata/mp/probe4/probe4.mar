@@ -1,0 +1,244 @@
+	.title	probe4
+;
+; Phase 48 probe 4 (testdata/mp/probe4/README.md): what VMS's LIB$SPAWN
+; and DCL do that govax's subprocess CLI guesses at. Each step prints one
+; line, "n what: result", the statuses in hexadecimal; the spawned
+; processes write their own output to P4_n.LOG, which PROBE4.COM types
+; afterwards.
+;
+; It uses only system services and LIBRTL, and definition macros govax's
+; library has too, so govax can run it as well; the CLI$M_ flags, which
+; $CLIDEF would define, are left as external symbols, which LINK resolves
+; from STARLET.OLB.
+;
+	$IODEF
+	$DVIDEF
+	$ACCDEF
+	$JPIDEF
+	$LNMDEF
+	$PSLDEF
+
+	.psect	data,noexe,wrt,long
+; Commands for the spawned processes, and their output files.
+c_run:		.ascid	/RUN P4CHILD/
+c_exit:		.ascid	/EXIT 7/
+c_bad:		.ascid	/FROBNICATE/
+c_nosuch:	.ascid	/RUN NOSUCH/
+c_lognam:	.ascid	"SHOW LOGICAL/PROCESS P4_*"
+c_symbol:	.ascid	/SHOW SYMBOL P4SYM/
+o_1:		.ascid	/P4_1.LOG/
+o_2:		.ascid	/P4_2.LOG/
+o_3:		.ascid	/P4_3.LOG/
+o_4:		.ascid	/P4_4.LOG/
+o_5:		.ascid	/P4_5.LOG/
+o_6:		.ascid	/P4_6.LOG/
+o_7:		.ascid	/P4_7.LOG/
+o_9:		.ascid	/P4_9.LOG/
+o_10:		.ascid	/P4_10.LOG/
+loginout:	.ascid	/SYS$SYSTEM:LOGINOUT.EXE/
+cmds:		.ascid	/P4CMDS.COM/
+nocli:		.ascid	/P4NOCLI.EXE/
+p10_name:	.ascid	/P4_LOGINOUT/
+p11_name:	.ascid	/P4_NOCLI/
+
+; The process logical names step 5 looks for in the subprocess.
+proctab:	.ascid	/LNM$PROCESS/
+n_user:		.ascid	/P4_USER/
+n_super:	.ascid	/P4_SUPER/
+n_exec:		.ascid	/P4_EXEC/
+n_conf:		.ascid	/P4_CONF/
+lnm_items:	.word	1,LNM$_STRING
+		.long	lnm_value,0
+		.long	0
+lnm_value:	.ascii	/X/
+
+; The report's lines.
+l_1:	.ascid	/1 RUN P4CHILD: spawn !XL, completion !XL/
+l_2:	.ascid	/2 EXIT 7: spawn !XL, completion !XL/
+l_3:	.ascid	/3 FROBNICATE: spawn !XL, completion !XL/
+l_4:	.ascid	/4 RUN NOSUCH: spawn !XL, completion !XL/
+l_5:	.ascid	"5 SHOW LOGICAL/PROCESS P4_*: spawn !XL, completion !XL"
+l_6:	.ascid	/6 SHOW SYMBOL P4SYM: spawn !XL, completion !XL/
+l_7:	.ascid	"7 SHOW SYMBOL P4SYM, CLI$M_NOCLISYM: spawn !XL, completion !XL"
+l_8:	.ascid	/8 flags ^X200: spawn !XL/
+l_9a:	.ascid	/9 NOWAIT: spawn !XL, the event flag just after: !XL/
+l_9b:	.ascid	/9 NOWAIT: default name "!AD"/
+l_9c:	.ascid	/9 NOWAIT: completion !XL, the event flag at the end: !XL/
+l_10:	.ascid	/10 $CREPRC of LOGINOUT: create !XL, final status !XL/
+l_11:	.ascid	/11 LIB$SPAWN with no CLI: create !XL, final status !XL/
+l_end:	.ascid	/end/
+
+nocli_flags:	.long	CLI$M_NOCLISYM
+bad_flags:	.long	^X200
+nowait_flags:	.long	CLI$M_NOWAIT
+efn_11:		.byte	11
+
+status:		.long	0
+spawned:	.long	0
+flag_state:	.long	0
+pid:		.long	0
+iosb:		.quad	0
+term_chan:	.word	0,0
+term_unit:	.long	0
+dvi_items:	.word	4,DVI$_UNIT
+		.long	term_unit,0
+		.long	0
+term_msg:	.blkb	ACC$K_TERMLEN
+name_buf:	.blkb	16
+name_len:	.word	0,0
+jpi_items:	.word	15,JPI$_PRCNAM
+		.long	name_buf,name_len
+		.long	0
+out_buf:	.blkb	132
+out_desc:	.word	132
+		.byte	14,1
+		.long	out_buf
+out_len:	.word	0,0
+
+	.psect	code,exe,nowrt
+	.entry	start,^m<r2,r3,r4,r5,r6>
+
+; 1-4: a command each, waiting; the completion status.
+	moval	c_run,r2
+	moval	o_1,r3
+	clrl	r4
+	moval	l_1,r6
+	bsbw	spawn_and_report
+	moval	c_exit,r2
+	moval	o_2,r3
+	moval	l_2,r6
+	bsbw	spawn_and_report
+	moval	c_bad,r2
+	moval	o_3,r3
+	moval	l_3,r6
+	bsbw	spawn_and_report
+	moval	c_nosuch,r2
+	moval	o_4,r3
+	moval	l_4,r6
+	bsbw	spawn_and_report
+
+; 5: which process logical names the subprocess has: one each in user,
+; supervisor, and executive mode, and one CONFINE.
+	$crelnm_s	tabnam=proctab, lognam=n_user, itmlst=lnm_items, -
+			acmode=#PSL$C_USER
+	$crelnm_s	tabnam=proctab, lognam=n_super, itmlst=lnm_items, -
+			acmode=#PSL$C_SUPER
+	$crelnm_s	tabnam=proctab, lognam=n_exec, itmlst=lnm_items, -
+			acmode=#PSL$C_EXEC
+	$crelnm_s	tabnam=proctab, lognam=n_conf, itmlst=lnm_items, -
+			acmode=#PSL$C_USER, attr=#LNM$M_CONFINE
+	moval	c_lognam,r2
+	moval	o_5,r3
+	moval	l_5,r6
+	bsbw	spawn_and_report
+
+; 6, 7: the DCL symbol P4SYM (PROBE4.COM defines it), copied or not.
+	moval	c_symbol,r2
+	moval	o_6,r3
+	moval	l_6,r6
+	bsbw	spawn_and_report
+	moval	o_7,r3
+	moval	nocli_flags,r4
+	moval	l_7,r6
+	bsbw	spawn_and_report
+
+; 8: a flag LIB$SPAWN doesn't define.
+	moval	c_run,r2
+	moval	o_1,r3
+	moval	bad_flags,r4
+	bsbw	spawn
+	$fao_s	ctrstr=l_8, outlen=out_len, outbuf=out_desc, p1=r0
+	bsbw	print
+
+; 9: CLI$M_NOWAIT, with event flag 11 set beforehand: is it cleared when
+; the subprocess is made? Its default name. Its completion, once the
+; flag is set again.
+	$setef_s	efn=#11
+	clrl	status
+	pushab	efn_11				; 8: event flag
+	pushal	status				; 7: completion status
+	pushal	pid				; 6: process ID
+	clrl	-(sp)				; 5: no name: the default
+	pushal	nowait_flags			; 4: flags
+	pushaq	o_9				; 3: output file
+	clrl	-(sp)				; 2: input file
+	pushaq	c_run				; 1: command
+	calls	#8,g^lib$spawn
+	movl	r0,spawned
+	$readef_s	efn=#11, state=flag_state
+	$fao_s	ctrstr=l_9a, outlen=out_len, outbuf=out_desc, -
+		p1=spawned, p2=r0
+	bsbw	print
+	$getjpiw_s	pidadr=pid, itmlst=jpi_items, iosb=iosb
+	movzwl	name_len,r2
+	$fao_s	ctrstr=l_9b, outlen=out_len, outbuf=out_desc, -
+		p1=r2, p2=#name_buf
+	bsbw	print
+	$waitfr_s	efn=#11
+	$readef_s	efn=#11, state=flag_state
+	$fao_s	ctrstr=l_9c, outlen=out_len, outbuf=out_desc, -
+		p1=status, p2=r0
+	bsbw	print
+
+; 10, 11: $CREPRC of LOGINOUT, reading P4CMDS.COM; and of P4NOCLI, which
+; calls LIB$SPAWN with no CLI. Each final status comes from the
+; termination mailbox.
+	$crembx_s	chan=term_chan, maxmsg=#128, bufquo=#512
+	$getdviw_s	chan=term_chan, itmlst=dvi_items
+	$creprc_s	image=loginout, input=cmds, output=o_10, -
+			prcnam=p10_name, mbxunt=term_unit
+	moval	l_10,r6
+	bsbw	report_end
+	$creprc_s	image=nocli, prcnam=p11_name, mbxunt=term_unit
+	moval	l_11,r6
+	bsbw	report_end
+
+	pushaq	l_end
+	calls	#1,g^lib$put_output
+	movl	#1,r0
+	ret
+
+; Spawn the command at R2, output to R3, flags at R4 (or 0), and wait;
+; print the line whose control string is at R6 with LIB$SPAWN's status
+; and the completion status.
+spawn_and_report:
+	bsbw	spawn
+	$fao_s	ctrstr=(r6), outlen=out_len, outbuf=out_desc, -
+		p1=r0, p2=status
+	bsbw	print
+	rsb
+
+; LIB$SPAWN: the command at R2, output to R3, flags at R4 (or none),
+; waiting; the completion status in STATUS.
+spawn:	clrl	status
+	pushal	status				; 7: completion status
+	clrl	-(sp)				; 6: process ID
+	clrl	-(sp)				; 5: name
+	pushl	r4				; 4: flags
+	pushl	r3				; 3: output file
+	clrl	-(sp)				; 2: input file
+	pushl	r2				; 1: command
+	calls	#7,g^lib$spawn
+	rsb
+
+; Print the line at R6 with $CREPRC's status (R0) and the final status
+; the termination mailbox reports.
+report_end:
+	movl	r0,spawned
+	clrl	term_msg+ACC$L_FINALSTS
+	blbc	r0,10$
+	$qiow_s	chan=term_chan, func=#IO$_READVBLK, iosb=iosb, -
+		p1=term_msg, p2=#ACC$K_TERMLEN
+10$:	$fao_s	ctrstr=(r6), outlen=out_len, outbuf=out_desc, -
+		p1=spawned, p2=term_msg+ACC$L_FINALSTS
+	bsbw	print
+	rsb
+
+; Print what $FAO formatted into OUT_BUF.
+print:	movw	out_len,out_desc
+	pushaq	out_desc
+	calls	#1,g^lib$put_output
+	movw	#132,out_desc
+	rsb
+
+	.end	start

@@ -352,3 +352,30 @@ subprocess to run, and the definitions a MACRO program needs to call
   running at the next run, /INPUT of a command file), `cmd/govax`'s
   `TestRun_spawnAtThePrompt` (typed at the prompt, the debugger
   installed), `TestGrammarSplit`; the evax grammar's verb count is 49.
+- 2026-10-08: Subtask 7, the VMS side prepared (the run itself is the
+  author's). `testdata/mp/run48/` puts every Phase 48 question on one
+  exchange volume run by `@RUN48`: the `$CLIDEF`/`$LIBDEF` definition
+  probes (subtask 3), the milestone both ways (`milestone.com`, each
+  run's files typed), and probe 4 (`testdata/mp/probe4/`), eleven steps
+  asking what govax guesses: the completion status of a spawned RUN,
+  EXIT 7, an unknown verb, and RUN of a missing image (and DCL's
+  messages for the last two); which process logical names (user,
+  supervisor, executive, CONFINE) and DCL symbols (with and without
+  CLI$M_NOCLISYM) a subprocess gets; LIB$SPAWN's status for an undefined
+  flag; with CLI$M_NOWAIT, whether the event flag is cleared, the default
+  name, and the completion; a `$CREPRC` of LOGINOUT reading a command
+  file (its final status); LIB$SPAWN from a process with no CLI; and
+  DCL's own SPAWN messages. `TestProbe4` runs the same program under
+  govax and logs its report and the spawned processes' logs, for the
+  comparison; govax answers every step. The definitions' MACRO log is
+  on the clean-room hook's unaudited list until the author has checked
+  it, as Phase 46's was.
+  Found by probe 4 under govax and fixed: a process whose SYS$OUTPUT is
+  a file (LIB$SPAWN's output-file, SPAWN/OUTPUT, `$CREPRC`'s output)
+  wrote its lines on the terminal, since `PutOutput` knew only devices.
+  Now a SYS$OUTPUT naming a file (no device, or a disk) gets each line as
+  a record of that file (`corevms/outfile.go`): created at the first line,
+  or, for a CLI process, when it starts, as DCL makes its log at login
+  even if nothing is written; written through whole at each line
+  (`RewriteRecordFile`, keeping the version), so the creator reading it
+  after the process ends sees everything. `TestSpawn_outputFile`.

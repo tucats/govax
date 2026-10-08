@@ -9,8 +9,10 @@
 | `probe1/`, `probe2/` | Phase 45's runtime probes |
 | `probe3/` | Phase 46's runtime probe: mailboxes between processes, global sections, RMS on a mailbox |
 | `macros/` | The system service macro probes (Phase 45 rounds 1-5, Phase 46 round 6) |
+| `probe4/` | Phase 48's runtime probe: LIB$SPAWN and DCL's SPAWN |
 | `run46/` | Every VAX run waiting at the end of Phase 46, on one volume |
-| `vax/` | The VMS run of the ping-pong pair (`pingpong.log`, 2026-10-08) |
+| `run48/` | Every VAX run of Phase 48, on one volume |
+| `vax/` | The VMS runs of the ping-pong pair (`pingpong.log`, 2026-10-08) and of the milestone (`milestone.log`, from `run48`) |
 
 `internal/console`'s `TestCreChild` assembles and links both with govax and
 runs the parent under the scheduler. The programs use only system services

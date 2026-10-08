@@ -88,6 +88,9 @@ func (env *Environment) startInterpreter(cli *CLIStartup) (uint32, error) {
 
 	env.HasCLI = true
 
+	// The CLI's SYS$OUTPUT, if it's a file, is made now (outfile.go).
+	env.openOutputFile()
+
 	return env.Interpreter.Start(env, cli)
 }
 
