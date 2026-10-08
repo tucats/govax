@@ -146,13 +146,28 @@ func (t *MountTable) Mount(device, path string, writable bool) error {
 // sibling ods2 module); this method's only added responsibility is
 // forgetting the MountTable entry afterward.
 //
-// Dismount fails if device has nothing mounted on it.
+// Dismount fails if device has nothing mounted on it, and, wrapping
+// ErrFilesOpen, if a process has files on it open (Phase 47: a process
+// stopped by the console may still have them, and closing the container
+// under it would lose its later writes); DismountAll goes ahead anyway.
 func (t *MountTable) Dismount(device string) error {
+	return t.dismount(device, false)
+}
+
+// ErrFilesOpen is the error Dismount wraps for a volume with files open.
+var ErrFilesOpen = errors.New("files are open on the volume")
+
+// dismount is Dismount, going ahead with files open if force.
+func (t *MountTable) dismount(device string, force bool) error {
 	key := normalizeDeviceName(device)
 
 	entry, ok := t.mounts[key]
 	if !ok {
 		return fmt.Errorf("rms: %s: not mounted", key)
+	}
+
+	if n := entry.Volume.OpenFiles(); n > 0 && !force {
+		return fmt.Errorf("rms: %s: %d %w", key, n, ErrFilesOpen)
 	}
 
 	if err := entry.Volume.Dismount(); err != nil {
@@ -169,7 +184,8 @@ func (t *MountTable) Dismount(device string) error {
 // all) reach its container. govax calls it as a session ends: a volume
 // left mounted would otherwise lose them, leaving files whose headers
 // its bitmaps don't account for. It goes on past a failure and returns
-// every failure.
+// every failure. A volume with files open is dismounted too (ods2 writes
+// their headers first), as the session is ending.
 func (t *MountTable) DismountAll() error {
 	devices := make([]string, 0, len(t.mounts))
 	for key := range t.mounts {
@@ -181,7 +197,7 @@ func (t *MountTable) DismountAll() error {
 	var errs []error
 
 	for _, device := range devices {
-		if err := t.Dismount(device); err != nil {
+		if err := t.dismount(device, true); err != nil {
 			errs = append(errs, err)
 		}
 	}

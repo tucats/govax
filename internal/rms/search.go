@@ -1,6 +1,7 @@
 package rms
 
 import (
+	"sort"
 	"strconv"
 	"strings"
 
@@ -46,11 +47,15 @@ type searchState struct {
 	Elem  int
 
 	// Dirs is the current element's directories, nil before it's been
-	// started; Dir and Entry are the next directory and entry to look
-	// at.
-	Dirs  []searchDir
-	Dir   int
-	Entry int
+	// started, and Dir the next one to look in. Last is the entry the
+	// search last returned from it (HaveLast false: none yet); the search
+	// goes on with the entry after it in directory order, not by its
+	// place in the list, since the directory may have changed between
+	// calls (Phase 47: another process creating or deleting files in it).
+	Dirs     []searchDir
+	Dir      int
+	Last     ondisk.DirEntry
+	HaveLast bool
 
 	// Found is whether any file has been returned.
 	Found bool
@@ -78,11 +83,45 @@ func (ctx *Context) saveSearch(nam uint32, names []parsedName) error {
 }
 
 // searchDir is one directory a search looks in: its path, the directory,
-// and which of the path's levels came from a wildcard or an ellipsis.
+// and which of the path's levels came from a wildcard or an ellipsis;
+// Vol is the volume it's on.
 type searchDir struct {
+	Vol  *volume.Volume
 	Path []string
 	Dir  *volume.Directory
 	Wild []bool
+}
+
+// current lists d's entries as the directory has them now: it opens the
+// directory again by its file ID, since a wildcard context keeps d across
+// calls, and Dir's header and map are those of when the search began.
+func (d *searchDir) current() ([]ondisk.DirEntry, error) {
+	if d.Vol == nil {
+		return d.Dir.List()
+	}
+
+	dir, err := d.Vol.OpenDirectory(d.Dir.Header.Fid)
+	if err != nil {
+		return nil, err
+	}
+
+	d.Dir = dir
+
+	return dir.List()
+}
+
+// entriesAfter is the index of the first of entries (in directory order:
+// names ascending, each name's versions descending) that comes after
+// last.
+func entriesAfter(entries []ondisk.DirEntry, last ondisk.DirEntry) int {
+	return sort.Search(len(entries), func(i int) bool {
+		e := entries[i]
+		if c := strings.Compare(e.Name, last.Name); c != 0 {
+			return c > 0
+		}
+
+		return e.Version < last.Version
+	})
 }
 
 // searchDirs returns the directories a search of d looks in, in the
@@ -99,7 +138,7 @@ func searchDirs(vol *volume.Volume, d dirSpec) []searchDir {
 		elems = elems[1:]
 	}
 
-	return walkSearch(vol, searchDir{Dir: mfd}, elems)
+	return walkSearch(vol, searchDir{Vol: vol, Dir: mfd}, elems)
 }
 
 // walkSearch returns the directories below node that elems lead to.
@@ -171,6 +210,7 @@ func subdirectories(vol *volume.Volume, node searchDir) []searchDir {
 		}
 
 		out = append(out, searchDir{
+			Vol:  vol,
 			Path: append(append([]string{}, node.Path...), name),
 			Dir:  dir,
 			Wild: append(append([]bool{}, node.Wild...), false),
@@ -419,7 +459,7 @@ func (ctx *Context) searchContext(nam uint32, st *searchState) (sts, stv uint32,
 				st.Dirs = []searchDir{}
 			}
 
-			st.Dir, st.Entry = 0, 0
+			st.Dir, st.HaveLast = 0, false
 
 			// A later search list element's expanded string replaces
 			// the first's (the oracle's SEARCH case 6).
@@ -431,24 +471,31 @@ func (ctx *Context) searchContext(nam uint32, st *searchState) (sts, stv uint32,
 		}
 
 		for st.Dir < len(st.Dirs) {
-			d := st.Dirs[st.Dir]
+			d := &st.Dirs[st.Dir]
 
-			entries, err := d.Dir.List()
+			// The directory as it is now: its header and map read
+			// again, in case it has grown or moved since the last call.
+			entries, err := d.current()
 			if err != nil {
 				entries = nil
 			}
 
 			sel := selected(entries, p)
 
-			for i := st.Entry; i < len(entries); i++ {
+			start := 0
+			if st.HaveLast {
+				start = entriesAfter(entries, st.Last)
+			}
+
+			for i := start; i < len(entries); i++ {
 				if !sel[i] {
 					continue
 				}
 
-				st.Entry = i + 1
+				st.Last, st.HaveLast = entries[i], true
 				st.Found = true
 
-				if err := ctx.storeLongword(nam+namFNB, matchFNB(p.FNB, d)); err != nil {
+				if err := ctx.storeLongword(nam+namFNB, matchFNB(p.FNB, *d)); err != nil {
 					return 0, 0, err
 				}
 
@@ -456,7 +503,7 @@ func (ctx *Context) searchContext(nam uint32, st *searchState) (sts, stv uint32,
 			}
 
 			st.Dir++
-			st.Entry = 0
+			st.HaveLast = false
 		}
 
 		st.Elem++

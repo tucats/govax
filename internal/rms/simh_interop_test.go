@@ -431,8 +431,9 @@ func TestSimhInterop_writeThenRereadEmptyDsk(t *testing.T) {
 		t.Fatalf("Mount (read-only remount): %v", err)
 	}
 
+	// DismountAll, as a session's end: the file read below is left open.
 	defer func() {
-		if err := readMounts.Dismount("DUA0"); err != nil {
+		if err := readMounts.DismountAll(); err != nil {
 			t.Errorf("Dismount (read-only): %v", err)
 		}
 	}()

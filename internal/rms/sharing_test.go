@@ -600,3 +600,130 @@ func TestSharing_flush(t *testing.T) {
 
 	wantRecords(t, records(t, mounts, "F.DAT"), "one", "two", "three")
 }
+
+// Where TestSharing_searchWhileChanged lays out its NAM and its name
+// strings.
+const (
+	testNamAddr = 0x6000
+	testESAAddr = 0x6100
+	testRSAAddr = 0x6200
+)
+
+// search runs $SEARCH for s's FAB (with its NAM), returning the
+// resultant name and the status.
+func (s *sharer) search() (string, uint32) {
+	s.t.Helper()
+
+	r0, err := SysSearch(s.ctx, []uint32{testFabAddr})
+	if err != nil {
+		s.t.Fatal(err)
+	}
+
+	if r0&1 == 0 {
+		return "", r0
+	}
+
+	n := readByte(s.t, s.ctx, testNamAddr+namRSL)
+	buf := make([]byte, n)
+
+	for i := range buf {
+		buf[i] = readByte(s.t, s.ctx, testRSAAddr+uint32(i))
+	}
+
+	return string(buf), r0
+}
+
+// TestSharing_searchWhileChanged: a wildcard $SEARCH goes on correctly
+// while another process adds files to the directory between its calls,
+// enough to make the directory grow: no name is returned twice, none
+// that was there throughout is missed, and a name added after the
+// search's place is found.
+func TestSharing_searchWhileChanged(t *testing.T) {
+	p, mounts := newSharers(t, 1)
+	a := p[0]
+
+	writeFile(t, mounts, "F05.DAT", "x")
+	writeFile(t, mounts, "F50.DAT", "x")
+	writeFile(t, mounts, "F95.DAT", "x")
+
+	ctx := a.ctx
+	newFAB(t, ctx, "DUA0:[000000...]F*.DAT;*") // a wildcard directory: a context
+	putByte(t, ctx, testFabAddr+fabBID, fabBIDValue)
+	putByte(t, ctx, testFabAddr+fabBLN, fabBLNValue)
+	putLongwordAt(t, ctx, testFabAddr+fabNAM, testNamAddr)
+	putByte(t, ctx, testNamAddr+namBID, namBIDValue)
+	putByte(t, ctx, testNamAddr+namBLN, namBLNValue)
+	putLongwordAt(t, ctx, testNamAddr+namESA, testESAAddr)
+	putByte(t, ctx, testNamAddr+namESS, 255)
+	putLongwordAt(t, ctx, testNamAddr+namRSA, testRSAAddr)
+	putByte(t, ctx, testNamAddr+namRSS, 255)
+
+	if r0, err := SysParse(ctx, []uint32{testFabAddr}); err != nil || r0&1 == 0 {
+		t.Fatalf("$PARSE: %#x, %v", r0, err)
+	}
+
+	first, sts := a.search()
+	if sts&1 == 0 || !strings.Contains(first, "F05.DAT") {
+		t.Fatalf("first $SEARCH: %q, %#x", first, sts)
+	}
+
+	// Another process adds names before and after F05, many of them.
+	for i := 0; i < 100; i += 3 {
+		writeFile(t, mounts, fmt.Sprintf("F%02d.DAT", i), "x")
+	}
+
+	seen := map[string]bool{first: true}
+
+	for {
+		name, sts := a.search()
+		if sts == rmsNoMoreFiles {
+			break
+		}
+
+		if sts&1 == 0 {
+			t.Fatalf("$SEARCH: %#x after %d names", sts, len(seen))
+		}
+
+		if seen[name] {
+			t.Errorf("%s returned twice", name)
+		}
+
+		seen[name] = true
+	}
+
+	for _, want := range []string{"F50.DAT;1", "F95.DAT;1", "F99.DAT;1", "F06.DAT;1"} {
+		found := false
+
+		for name := range seen {
+			if strings.HasSuffix(name, want) {
+				found = true
+			}
+		}
+
+		if !found {
+			t.Errorf("%s wasn't found", want)
+		}
+	}
+
+	checkVolume(t, mounts)
+}
+
+// TestSharing_dismountWithOpenFiles: DISMOUNT refuses a volume with a
+// file open; once it's closed, the volume dismounts.
+func TestSharing_dismountWithOpenFiles(t *testing.T) {
+	p, mounts := newSharers(t, 1)
+	a := p[0]
+
+	a.mustOpen("OPEN.DAT", facPut, 0, true, 0)
+	a.put("kept")
+
+	if err := mounts.Dismount("DUA0"); !errors.Is(err, ErrFilesOpen) {
+		t.Errorf("Dismount with a file open: %v", err)
+	}
+
+	a.close()
+
+	if err := mounts.Dismount("DUA0"); err != nil {
+		t.Errorf("Dismount after the close: %v", err)
+	}
+}

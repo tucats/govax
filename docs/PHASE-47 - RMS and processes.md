@@ -1,6 +1,6 @@
 # Phase 47 — Multiprocessing, part 5: files shared between processes
 
-**Status:** in progress (subtasks 1-7 done 2026-10-08); decisions taken 2026-10-06 (see
+**Status:** in progress (subtasks 1-8 done 2026-10-08); decisions taken 2026-10-06 (see
 PHASE-43.md, Part A). Needs Phase 45 (independent of Phase
 46).
 
@@ -399,3 +399,33 @@ questions:
   too; a lock grant boosts as "resource available"; the 11th and later
   arguments ($ENQ's rsdm_id and null argument) are ignored. Not done:
   `$GETLKI`, ENQLM and ASTLM quotas, deadlock detection.
+- 2026-10-08: Subtask 8, directories and volume metadata.
+  - **`$SEARCH` contexts** (survey): a wildcard-directory or search-list
+    context now opens each directory again by its file ID on every
+    `$SEARCH` (`searchDir.current`) and goes on after the last entry it
+    returned, by name and version, rather than by its index, which
+    another process's creations shift. `TestSharing_searchWhileChanged`
+    (34 files created between calls, the directory growing) found names
+    missed before the fix. The tree of directories a context walks is
+    still fixed when its search starts: a subdirectory created later
+    isn't searched (unconfirmed what VMS does). The no-context search
+    already reads the directory by NAM$W_DID on each call, and goes on
+    by position (NAM$L_WCC), which is VMS's own rule (Phase 33's oracle);
+    left as it is.
+  - **Deletion of an open file** by any path (`$QIO` IO$_DELETE, the
+    console's DELETE and PURGE, a version limit's purge, the
+    delete-and-recreate of `RewriteRecordFile`) is deferred by ods2 (the
+    FCB); rename of an open file goes through the shared File too.
+  - **DISMOUNT** with files open (a process the console stopped may hold
+    them) is refused (`rms.ErrFilesOpen`, reported as SS$_NOMOUNT); at a
+    session's end `DismountAll` goes ahead, and ods2's `Dismount` (new in
+    its Phase 5) writes the open files' headers first. VMS's DISMOUNT
+    marks the volume for dismount instead (unconfirmed detail; govax
+    refuses).
+  - Nothing else holds volume state across calls: the console's
+    `Session` keeps only its default directory's spec, each service
+    opens directories afresh, and the bitmaps are one cache per device.
+    Console commands that take several volume steps run only at the
+    prompt, when no process runs (Decision 4).
+  - ods2's additions (record offsets, `OpenFiles`) need a tag, v0.1.17,
+    and the pin.
