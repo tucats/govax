@@ -1,7 +1,7 @@
 # Phase 47 — Multiprocessing, part 5: files shared between processes
 
-**Status:** planned (2026-10-06); decisions taken 2026-10-06 (see
-PHASE-43.md, Part A). Not started. Needs Phase 45 (independent of Phase
+**Status:** in progress (subtask 1 done 2026-10-08); decisions taken 2026-10-06 (see
+PHASE-43.md, Part A). Needs Phase 45 (independent of Phase
 46).
 
 The program this phase belongs to is described in
@@ -187,12 +187,66 @@ because the console only runs at the prompt (Decision 4); checked.
 10. **Close-out.** Status, progress log, PLAN.md, CLAUDE.md (`internal/lck`,
     the FCB), HELP, DEVIATIONS for unconfirmed rules.
 
+## Survey findings (subtask 1)
+
+Every piece of state below is kept across service calls, by a handle or a
+process, about something another process can change. `sharing_test.go`
+(`internal/rms`) has a test for each defect, two processes being two
+`Context`s over one `MountTable`; each is skipped (`pending`) until the
+subtask named fixes it. All six failed as described when written.
+
+| # | State | Kept by | What goes wrong | Test | Fix |
+| --- | --- | --- | --- | --- | --- |
+| 1 | No arbitration at all: `FAB$B_SHR` is never read | — | a writer that shares nothing doesn't stop a second open | `accessConflict` (opens, RMS$_NORMAL) | 3 |
+| 2 | The file header and extent map (`volume.File.Header`, `Extents`) | each `volume.File` | `CloseWithFinalByte` writes the handle's copy back: a second writer's close drops the first's extents (cluster allocated, used by no file) and end of file (records lost, or a corrupt record read) | `twoWritersAppend`, `extendThenClose` | 4 |
+| 3 | The end of file, as the highest block written (`maxWrittenVBN`) | each `volume.File` | the last close decides the end of file for everyone | `extendThenClose` | 4 |
+| 4 | The write position and partial last block (`rms.Writer.vbn`, `buf`) | each `rms.Writer` | always starts at VBN 1: an open for `$PUT` overwrites the file from its start, even in one process (RAB$V_EOF isn't implemented); two writers write over each other, and a partial block reaches the disk only at `$CLOSE` | `appendToExisting`, `twoWritersAppend` | 4, 5 |
+| 5 | The end of file a reader stops at, and its buffered block (`rms.Reader`'s `blockStream`) | each `rms.Reader` | fixed when the reader is made: records appended later are never seen (RMS$_EOF) | `readerSeesAppend` | 5 |
+| 6 | Whether a file is open | only the ACP path (`mountedVolume.accessed`) | an RMS open isn't counted: deleting the file (IO$_DELETE, the console's DELETE, a version limit's purge on `$CREATE`) frees its header and blocks at once, and the next file created reuses them under the open reader | `deleteWhileOpen` | 3 |
+
+Also found, for later subtasks:
+
+- **`$SEARCH` contexts** (`searchState.Dirs`) hold `*volume.Directory`
+  values, each with its own copy of the directory's header and extents,
+  from the first `$SEARCH` of a wildcard sequence to the last. A
+  directory that grows meanwhile (another process creating files) is
+  read through the stale map. Subtask 8.
+- **Version limits**: `$CREATE`'s `enforceVersionLimit` (ods2) deletes the
+  oldest versions without asking whether they're open (row 6).
+- **Host files** (`Session.Locate`'s host side) have no arbitration either;
+  subtask 3 decides.
+- **Rundown** already closes a process's files (`FileTable.Rundown`, Phase
+  45), so it only has to release the accessor (subtask 3) and locks
+  (subtasks 2 and 6).
+- Allocation is coherent: each device's storage and index bitmaps are one
+  cache (`Device.Bitmap`/`IndexBitmap`), and directory and header changes
+  are each written through within one service.
+- No RMS service but `$PUT`, `$GET`, and `$CLOSE` reads or writes records
+  of a disk file: `$FLUSH`, `$FIND`, `$FREE`, `$RELEASE`, `$REWIND`,
+  `$UPDATE`, `$TRUNCATE`, and `$ERASE` aren't implemented. Subtasks 5 and 6
+  add what sharing needs (`$FLUSH`; `$FIND`, `$FREE`, `$RELEASE` if the
+  record-lock rules call for them).
+
+The RMS manual (OpenVMS 7.3, `OVMS_731_RMS.pdf`) settles two of the open
+questions:
+
+- Several writers may share a sequential file: in "Inserting Records into
+  Sequential Files" (the `$PUT` chapter), RMS moves a sharing writer's
+  position to the new end of file another writer made, so no record is
+  overwritten. No restriction to a record format is given.
+- FAB$B_FAC's description gives the arbitration rule with a worked
+  example (processes A, B, C): GET implies read access, PUT, DEL, UPD,
+  and TRN write access; a new accessor is refused if it isn't compatible
+  with every current accessor, both ways. FAB$B_SHR's gives the defaults
+  (SHRGET for GET, NIL for any write access) and says NIL takes
+  precedence over the other bits.
+
 ## Open questions
 
 - Explicit accessor lists or lock modes for file arbitration (subtask 3).
-- Whether VMS 7.3 RMS allows several writers on a sequential file with
-  variable-length records, and how a reader sees an append (the RMS
-  manual and, if allowed, a probe).
+- ~~Whether VMS 7.3 RMS allows several writers on a sequential file with
+  variable-length records~~ (yes, by the manual; see the survey), and how
+  a reader sees an append (a probe, if the manual doesn't say).
 - Host files (`Session.Locate`'s host side): two processes writing one
   host file get no arbitration today. Probably: the same accessor list
   keyed by host path; decided in subtask 3.
@@ -202,3 +256,6 @@ because the console only runs at the prompt (Decision 4); checked.
 - 2026-10-06: Planned with Phase 43.
 - 2026-10-06: The author took every recommended decision in
   PHASE-43.md, Part A.
+- 2026-10-08: Subtask 1 (survey) done: findings above, six skipped
+  tests in `internal/rms/sharing_test.go`, each failing as described
+  before it was skipped.
