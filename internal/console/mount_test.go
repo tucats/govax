@@ -499,3 +499,54 @@ func TestDispatch_mountMessage(t *testing.T) {
 		t.Errorf("MOUNT output with the console not verbose = %q, want none", buf.String())
 	}
 }
+
+// TestShowDevices_operationsCompleted: for a mounted volume, SHOW
+// DEVICE/FULL's "Operations completed" is ods2's count of the volume's
+// block reads and writes since the mount, so writing a file makes it
+// grow; with nothing mounted it's the device record's own count.
+func TestShowDevices_operationsCompleted(t *testing.T) {
+	c, buf := newTestConsole(t)
+	path := newTestContainer(t, "TESTVOL")
+
+	c.DefineDevice("DUA0", iodev.DeviceOptions{DevClass: iodev.DeviceClassDisk})
+
+	operations := func() int {
+		t.Helper()
+		buf.Reset()
+
+		if err := c.ShowDevices("DUA0", true); err != nil {
+			t.Fatalf("ShowDevices: %v", err)
+		}
+
+		_, after, found := strings.Cut(buf.String(), "Operations completed")
+		if !found {
+			t.Fatalf("no Operations completed in:\n%s", buf.String())
+		}
+
+		n, err := strconv.Atoi(strings.Fields(after)[0])
+		if err != nil {
+			t.Fatalf("Operations completed: %v", err)
+		}
+
+		return n
+	}
+
+	if n := operations(); n != 0 {
+		t.Errorf("unmounted: %d operations, want 0", n)
+	}
+
+	if err := c.Mount("DUA0", path, true); err != nil {
+		t.Fatalf("Mount: %v", err)
+	}
+
+	before := operations()
+
+	records := [][]byte{[]byte("one"), []byte("two")}
+	if _, err := c.ContainerSession.CreateRecordFile(rms.FileLocation{Name: "DUA0:[000000]OPS.DAT"}, rms.TextRecords, records); err != nil {
+		t.Fatal(err)
+	}
+
+	if after := operations(); after <= before {
+		t.Errorf("operations %d after writing a file, %d before; want more", after, before)
+	}
+}

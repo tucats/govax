@@ -276,6 +276,20 @@ func (t *MountTable) VolumeStats(device string) (volume.VolumeStats, bool, error
 	return stats, true, err
 }
 
+// Operations returns how many logical I/O operations (block reads and
+// writes) ods2 has done on device's mounted volume since it was mounted,
+// as a longword (VMS's UCB$L_OPCNT, which SHOW DEVICE/FULL calls
+// "Operations completed" and $GETDVI's DVI$_OPCNT returns), and whether
+// anything is mounted there. Like VolumeStats, it reads Devices[0].
+func (t *MountTable) Operations(device string) (uint32, bool) {
+	entry, ok := t.mounts[normalizeDeviceName(device)]
+	if !ok {
+		return 0, false
+	}
+
+	return uint32(entry.Volume.Devices[0].Operations()), true
+}
+
 // DirectoryExists reports whether dir, a directory specification such as
 // "[WORK]" or "[WORK.SUB]", names an existing directory on the volume
 // mounted on device. A device with nothing mounted, or a dir that isn't a

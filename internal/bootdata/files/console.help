@@ -442,7 +442,10 @@ $SH  ,DEV
         
             If this qualifier is present then all information about
             the device (essentially the device control block contents)
-            is displayed.
+            is displayed.  For a disk with a volume mounted, "Operations
+            completed" is the number of block reads and writes done on
+            the volume since it was mounted, and the size, free space,
+            label, and file count are read from the volume itself.
  
 $SHOW,INST
 $SH  ,INST

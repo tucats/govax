@@ -434,3 +434,10 @@ subprocess to run, and the definitions a MACRO program needs to call
   `DEBUG:`, which the tests' filter missed; and Phase 45's unused
   `ssSuspended` is gone. DEVIATIONS.md's Phases 43–48 entry keeps only
   what no run has settled.
+- 2026-10-08: ods2 v0.1.18 counts each volume's logical I/O operations
+  (`Device.Operations`, `Volume.Operations`: block reads and writes).
+  `rms.MountTable.Operations` returns a mounted device's, and SHOW
+  DEVICE/FULL's "Operations completed" and `$GETDVI`'s `DVI$_OPCNT`
+  report it for a disk with a volume mounted (the device record's own
+  count otherwise). Tests: `TestShowDevices_operationsCompleted`,
+  `TestGetdvi_operationCount`; HELP SHOW DEVICE says what it counts.

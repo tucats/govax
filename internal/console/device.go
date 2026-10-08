@@ -79,6 +79,10 @@ func (c *Console) ShowDevices(name string, full bool) error {
 //	    Volume label         "OPENVMS071"    Cluster size                         3
 //	    Number of files               353    Maximum files allowed            38900
 //
+// "Operations completed" is, for a mounted volume, the logical I/O
+// operations (block reads and writes) ods2 has counted since the mount
+// (rms.MountTable.Operations), and d.OpCnt otherwise.
+//
 // "Reference count" is d.RefCnt, the count SYS$ASSIGN already maintains
 // (internal/rtl/devices.go) — the real VMS meaning of a device's
 // reference count (outstanding channel assigns), not anything specific to
@@ -132,8 +136,15 @@ func (c *Console) showDiskDeviceFull(d *iodev.Device) {
 		allocClause = ", allocated"
 	}
 
+	// A mounted volume's operations are ods2's count of its block reads
+	// and writes; otherwise the device record's own (normally 0).
+	operations := d.OpCnt
+	if n, ok := c.Mounts.Operations(d.Name); ok {
+		operations = n
+	}
+
 	c.Printf("Disk %s:%s, is online%s%s, file-oriented device.\n\n", d.Name, typeClause, allocClause, mountClause)
-	c.statRow("Error count", d.ErrCnt, "Operations completed", d.OpCnt)
+	c.statRow("Error count", d.ErrCnt, "Operations completed", operations)
 	c.statRow("Reference count", d.RefCnt, "Default buffer size", d.DevBufSize)
 	c.statRow("Total blocks", totalBlocks, "Free blocks", freeBlocks)
 	c.Printf("\n")

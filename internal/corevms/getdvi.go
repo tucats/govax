@@ -62,7 +62,7 @@ var dviItemsByName = map[string]dviItemFunc{
 	"DVI$_OWNUIC":    dviLong(func(d *iodev.Device) uint32 { return d.OwnUIC }),
 	"DVI$_REFCNT":    dviLong(func(d *iodev.Device) uint32 { return d.RefCnt }),
 	"DVI$_ERRCNT":    dviLong(func(d *iodev.Device) uint32 { return d.ErrCnt }),
-	"DVI$_OPCNT":     dviLong(func(d *iodev.Device) uint32 { return d.OpCnt }),
+	"DVI$_OPCNT":     func(env *Environment, d *iodev.Device) itemValue { return itemLong(env.operationCount(d)) },
 	"DVI$_ACPPID":    dviLong(func(d *iodev.Device) uint32 { return d.ACPPID }),
 	"DVI$_LOCKID":    dviLong(func(d *iodev.Device) uint32 { return d.LockID }),
 	"DVI$_RECSIZ":    dviLong(func(d *iodev.Device) uint32 { return d.RecSize }),
@@ -400,4 +400,18 @@ func (env *Environment) dviTarget(chanNum, devnam uint32) (*iodev.Device, uint32
 func registerDVIServices(t *ServiceTable) {
 	t.Register("SYS$GETDVI", serviceSysGetdvi)
 	t.Register("SYS$GETDVIW", serviceSysGetdvi)
+}
+
+// operationCount is DVI$_OPCNT, the operations a device has completed:
+// for a disk with a volume mounted, the logical I/O operations (block
+// reads and writes) ods2 has counted since the mount, as SHOW
+// DEVICE/FULL reports them; otherwise the device record's own count.
+func (env *Environment) operationCount(d *iodev.Device) uint32 {
+	if d.DevClass == iodev.DeviceClassDisk && env.Mounts != nil {
+		if n, ok := env.Mounts.Operations(d.Name); ok {
+			return n
+		}
+	}
+
+	return d.OpCnt
 }

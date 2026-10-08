@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	iodev "github.com/tucats/govax/internal/io"
+	"github.com/tucats/govax/internal/rms"
 	"github.com/tucats/govax/internal/vax"
 	"github.com/tucats/govax/internal/vmsdef"
 )
@@ -223,5 +224,37 @@ func TestGetdvi_debugTrace(t *testing.T) {
 
 	if !strings.Contains(trace.String(), "DEBUG: SYS$GETDVI looks up device DKA0") {
 		t.Errorf("trace = %q", trace.String())
+	}
+}
+
+// TestGetdvi_operationCount: DVI$_OPCNT of a disk with a volume mounted
+// is ods2's count of the volume's block reads and writes since the
+// mount (as SHOW DEVICE/FULL shows it), so a write makes it grow.
+func TestGetdvi_operationCount(t *testing.T) {
+	env, a, channel := diskFixture(t, true)
+
+	opcnt := func() uint32 {
+		t.Helper()
+
+		v := dviValues(t, env, a, channel, 0, "DVI$_OPCNT")[0]
+		if len(v) != 4 {
+			t.Fatalf("DVI$_OPCNT returned %d bytes, want 4", len(v))
+		}
+
+		return uint32(v[0]) | uint32(v[1])<<8 | uint32(v[2])<<16 | uint32(v[3])<<24
+	}
+
+	before := opcnt()
+	if want, _ := env.Mounts.Operations("DUA0"); before != want || before == 0 {
+		t.Errorf("DVI$_OPCNT %d, want the volume's %d (and some: DATA.BIN was copied on)", before, want)
+	}
+
+	records := [][]byte{[]byte("one"), []byte("two")}
+	if _, err := rms.NewSession(env.Mounts).CreateRecordFile(rms.FileLocation{Name: "DUA0:[000000]OPS.DAT"}, rms.TextRecords, records); err != nil {
+		t.Fatal(err)
+	}
+
+	if after := opcnt(); after <= before {
+		t.Errorf("DVI$_OPCNT %d after writing a file, %d before; want more", after, before)
 	}
 }
