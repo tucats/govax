@@ -215,3 +215,26 @@ stream's record locks.
   (unconfirmed: VMS may refuse at once, as without WAT). TMO's terminal
   and mailbox meanings are untouched. Tests: `TestRecordLock_timeout`,
   `TestLocks_waitDeadline`.
+- 2026-10-08: Subtask 6, `$GETLKI` and `$GETLKIW` (`corevms/getlki.go`),
+  from the System Services manual (VMS 5.0's, the one on hand). Items:
+  PID, STATE, PARENT, LCKREFCNT, RSBREFCNT, LOCKID, LKID, MSTLKID,
+  REMLKID, CSID, MSTCSID, SYSTEM (cluster IDs 0, a lock its own master),
+  NAMSPACE, RESNAM, VALBLK, GRANTCOUNT/LCKCOUNT, CVTCOUNT, WAITCOUNT,
+  and the lists BLOCKING, BLOCKEDBY, LOCKS (24-byte entries,
+  LKI$C_LENGTH); the range and byte-range items are SS$_BADPARAM. The
+  return length is the manual's longword (bytes, entry size in 16-30,
+  bit 31 when the buffer was short; govax writes whole entries only).
+  Access: the caller's mode must be the lock's or inner (SS$_IVMODE), a
+  system-wide resource needs exec/kernel mode or SYSLCK (SS$_NOSYSLCK),
+  another group's lock WORLD (SS$_NOWORLD); a wildcard scan (lock ID 0
+  or -1) skips what the caller may not see and ends with
+  SS$_NOMORELOCK. It completes at once, as $GETJPI does (event flag,
+  IOSB, AST). `internal/lck/info.go` gained `All`, `Sublocks`,
+  `Subresources`, `QueueLengths`, and the blocking relation `Blocks`
+  (with `Blockers`, `BlockedBy`): a lock holding an incompatible mode,
+  or queued ahead asking for one (the queues are granted in order) —
+  the book's rule for the deadlock search, which subtask 8 will follow.
+  Minimum argument count 3 (the manual's required arguments).
+  Unconfirmed: the wildcard context written back to LKIDADR (the high
+  bit and the last lock ID); a waiting lock's granted mode (reported as
+  NL); whole list entries on a short buffer.

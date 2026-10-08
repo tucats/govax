@@ -160,7 +160,8 @@ expect adjustment as phases land):
   resources (name, UIC group or 0, access mode, parent) with granted,
   conversion, and waiting queues (FIFO), the six modes' compatibility
   table, NOQUEUE, conversions, sublocks, CANCEL, DEQALL, value blocks,
-  blocking notices. Operations return `Event`s for any owner, and
+  blocking notices; `info.go` (Phase 49) answers `$GETLKI`'s questions
+  and defines which lock blocks which (`Blocks`). Operations return `Event`s for any owner, and
   `lck.Deliver` hands each to its lock's `Data` if that's a `Notifier`
   (how `$ENQ` completes in the owner's process and an RMS record-lock
   wait is woken). No deadlock detection. A leaf package; owners are PIDs.
@@ -260,7 +261,7 @@ expect adjustment as phases land):
   `System.Locks` is the one lock database (`internal/lck`); `$ENQ`,
   `$ENQW`, `$DEQ` are `enq.go` (each request's `enqRequest` is its
   lock's notifier: LKSB, event flag, completion and blocking ASTs in the
-  owner's process); image rundown dequeues user-mode locks, process
+  owner's process); `$GETLKI(W)` is `getlki.go` (Phase 49); image rundown dequeues user-mode locks, process
   deletion all (`locks.go`); the RMS context carries the database, the
   PID, and a record-lock wait (`awaitLock`, `lockWaker`). The
   console's engine hooks reach the current process (`Console.running`);

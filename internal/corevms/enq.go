@@ -377,9 +377,12 @@ func serviceSysDeq(env *Environment, argv []uint32) (uint32, error) {
 	return ssNormal, nil
 }
 
-// registerLockServices registers $ENQ, $ENQW, and $DEQ.
+// registerLockServices registers $ENQ, $ENQW, $DEQ, and $GETLKI and
+// $GETLKIW (getlki.go).
 func registerLockServices(t *ServiceTable) {
 	t.Register("SYS$ENQ", serviceSysEnq)
 	t.Register("SYS$ENQW", serviceSysEnqw)
 	t.Register("SYS$DEQ", serviceSysDeq)
+	t.Register("SYS$GETLKI", serviceSysGetlki)
+	t.Register("SYS$GETLKIW", serviceSysGetlki)
 }
