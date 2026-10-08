@@ -337,11 +337,11 @@ the same manager (Decision 10).
 | Phase | Doc | Summary |
 | --- | --- | --- |
 | 43 | this doc, Part B | Processes as objects: system/process state split, process table, hardware PCB with LDPCTX/SVPCTX, per-process address spaces and stacks, cross-address-space access. One process still runs; a Go test switches into a second by hand |
-| 44 | [PHASE-44.md](PHASE-44.md) | The scheduler: `internal/sched`, the engine's reschedule hook, quantum and priority preemption, wait states from waiting services, idle and timers, process-aware run loops and debugger, SHOW SYSTEM |
-| 45 | [PHASE-45.md](PHASE-45.md) | Creating and deleting processes: `$CREPRC`, process startup and image activation in the new process, rundown and deletion, termination mailbox, jobs and logical-name tables, the other process-control services across processes, `$GETJPI` wildcards, NL: |
-| 46 | [PHASE-46.md](PHASE-46.md) | Interprocess communication: mailboxes between processes, common event flags, global sections (shared memory), RMS on mailbox and null devices, terminal reads that don't block the machine |
-| 47 | [PHASE-47.md](PHASE-47.md) | Files shared between processes: the lock manager and `$ENQ`/`$DEQ`, file access arbitration (RMS$_FLK), a shared file control block in ods2, shared sequential files, record locks, volume-integrity stress tests |
-| 48 | [PHASE-48.md](PHASE-48.md) | `LIB$SPAWN` and the milestone: the subprocess CLI, the parent/child MACRO programs, the acceptance tests, the scheduler flag on by default, documentation |
+| 44 | [PHASE-44.md](PHASE-44%20-%20scheduler.md) | The scheduler: `internal/sched`, the engine's reschedule hook, quantum and priority preemption, wait states from waiting services, idle and timers, process-aware run loops and debugger, SHOW SYSTEM |
+| 45 | [PHASE-45.md](PHASE-45%20-%20create%20and%20delete%20process.md) | Creating and deleting processes: `$CREPRC`, process startup and image activation in the new process, rundown and deletion, termination mailbox, jobs and logical-name tables, the other process-control services across processes, `$GETJPI` wildcards, NL: |
+| 46 | [PHASE-46.md](PHASE-46%20-%20interprocess%20comm.md) | Interprocess communication: mailboxes between processes, common event flags, global sections (shared memory), RMS on mailbox and null devices, terminal reads that don't block the machine |
+| 47 | [PHASE-47.md](PHASE-47%20-%20RMS%20and%20processes.md) | Files shared between processes: the lock manager and `$ENQ`/`$DEQ`, file access arbitration (RMS$_FLK), a shared file control block in ods2, shared sequential files, record locks, volume-integrity stress tests |
+| 48 | [PHASE-48.md](PHASE-48%20-%20LIB_SPAWN.md) | `LIB$SPAWN` and the milestone: the subprocess CLI, the parent/child MACRO programs, the acceptance tests, the scheduler flag on by default, documentation |
 
 Each phase leaves govax working and its new pieces tested. 44 needs 43;
 45 needs 44; 46 and 47 need 45 and are independent of each other; 48

@@ -5,7 +5,7 @@ PHASE-43.md, Part A).
 
 The program this phase belongs to — its goal, architecture, rules for
 every commit, decisions, and known bugs — is in
-[PHASE-43.md](PHASE-43.md), Part A. Read that first.
+[PHASE-43.md](PHASE-43%20-%20processes.md), Part A. Read that first.
 
 ## Goal
 
