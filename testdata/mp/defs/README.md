@@ -12,18 +12,20 @@ VMS's macro library.
 | File | What it holds |
 | ---- | ------------- |
 | `def_acc.mar`, `def_msg.mar`, `def_pql.mar`, `def_prc.mar` | `$ACCDEF`, `$MSGDEF`, `$PQLDEF`, `$PRCDEF`, each with `GLOBAL` (Phase 45) |
-| `def_sec.mar`, `def_lck.mar`, `def_lki.mar`, `def_psl.mar`, `def_dc.mar` | `$SECDEF`, `$LCKDEF`, `$LKIDEF`, `$PSLDEF`, `$DCDEF` (Phase 46: global sections, the lock services Phase 47 needs, access modes, device classes; not yet run) |
-| `defs.com` | Assembles Phase 46's with `/NOLIST` and analyzes their objects |
-| `exchange.cmd` | The govax console script that builds the exchange volume (Phase 46's) |
+| `def_sec.mar`, `def_lck.mar`, `def_lki.mar`, `def_psl.mar`, `def_dc.mar` | `$SECDEF`, `$LCKDEF`, `$LKIDEF`, `$PSLDEF`, `$DCDEF` (Phase 46: global sections, the lock services Phase 47 needs, access modes, device classes) |
+| `def_cli.mar`, `def_lib.mar` | `$CLIDEF`, `$LIBDEF` (Phase 48: the `CLI$M_` flags and `LIB$_` statuses a program calling `LIB$SPAWN` uses; not yet run) |
+| `defs.com` | Assembles Phase 48's with `/NOLIST` and analyzes their objects |
+| `exchange.cmd` | The govax console script that builds the exchange volume (Phase 48's) |
 | `copyout.cmd` | The govax console script that copies the results into `vax/` |
-| `vax/` | The VMS 7.3 run's objects, analyses, and log (`defs45.log`, 2026-10-07); Phase 46's log will be `defs46.log` |
+| `vax/` | The VMS 7.3 runs' objects, analyses, and logs (`defs45.log`, 2026-10-07; `defs46.log`, 2026-10-08); Phase 48's log will be `defs48.log` |
 | `decode.go` | Turns the objects into `defined.txt` |
 | `defined.txt` | Every name and value the four macros define |
 
 ## The VAX run
 
-Phase 46's probes run with the other end-of-Phase-46 runs, on one volume
-(`../run46/README.md`). The steps below are for this directory alone.
+Phase 46's probes ran with the other end-of-Phase-46 runs, on one volume
+(`../run46/README.md`), and Phase 48's will run with that phase's
+(`../run48/README.md`). The steps below are for this directory alone.
 
 1. Build the exchange volume, from the repository root:
 

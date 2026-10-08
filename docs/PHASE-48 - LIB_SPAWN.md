@@ -282,3 +282,19 @@ subprocess to run, and the definitions a MACRO program needs to call
   LIB$_NOCLI); and SS$_UNSUPPORTED with the scheduler off.
   `TestEnsureShims_overflowPage` replaces the two tests of the page
   limit.
+- 2026-10-08: Subtask 3, first part. On "no MLB for LIB": VMS has no
+  macro library of LIB$ calls either; a MACRO program calls LIB$SPAWN
+  with an argument list and `CALLS`, as for any RTL routine. What it
+  does take from VMS's macro library is two definition macros: `$CLIDEF`
+  (the CLI$M_ flags) and `$LIBDEF` (the LIB$_ statuses), and govax's
+  library has neither. govax knows their values (STARLET.OLB's, in
+  `vmsdef.LibrarySymbols`), but not which names each macro defines, which
+  only real MACRO's output can say (clean room). So
+  `testdata/mp/defs/def_cli.mar` and `def_lib.mar` are new definition
+  probes, `$CLIDEF GLOBAL` and `$LIBDEF GLOBAL`, with `defs.com`,
+  `exchange.cmd`, and `copyout.cmd` now for them; they'll run with the
+  phase's other VMS work (subtask 7's `run48`). Once `defined.txt` has
+  them, `mkdefs` generates the two macros as it does the others. Until
+  then a program doesn't call the macros and uses the names as external
+  symbols, which MACRO leaves to LINK and LINK resolves from STARLET.OLB's
+  values, as on VMS.

@@ -1,7 +1,8 @@
 $ ! DEFS.COM - the definition probes (testdata/mp/defs/README.md): Phase
-$ ! 46's, for $SECDEF, $LCKDEF, $LKIDEF, $PSLDEF, and $DCDEF. (Phase 45's,
-$ ! DEF_ACC, DEF_MSG, DEF_PQL, and DEF_PRC, ran on 2026-10-07; their results
-$ ! are in vax/.) Run it with the exchange volume as the default directory:
+$ ! 48's, for $CLIDEF and $LIBDEF. (Phase 45's, DEF_ACC, DEF_MSG, DEF_PQL,
+$ ! and DEF_PRC, ran on 2026-10-07, and Phase 46's, DEF_SEC, DEF_LCK,
+$ ! DEF_LKI, DEF_PSL, and DEF_DC, on 2026-10-08; their results are in
+$ ! vax/.) Run it with the exchange volume as the default directory:
 $ !
 $ !     @DEFS/OUTPUT=DEFS.LOG
 $ !
@@ -10,15 +11,9 @@ $ ! expansion is made, and its object is analyzed.
 $ !
 $ SET NOON
 $ SET VERIFY
-$ MACRO/NOLIST DEF_SEC
-$ ANALYZE/OBJECT/OUTPUT=DEF_SEC.ANL DEF_SEC.OBJ
-$ MACRO/NOLIST DEF_LCK
-$ ANALYZE/OBJECT/OUTPUT=DEF_LCK.ANL DEF_LCK.OBJ
-$ MACRO/NOLIST DEF_LKI
-$ ANALYZE/OBJECT/OUTPUT=DEF_LKI.ANL DEF_LKI.OBJ
-$ MACRO/NOLIST DEF_PSL
-$ ANALYZE/OBJECT/OUTPUT=DEF_PSL.ANL DEF_PSL.OBJ
-$ MACRO/NOLIST DEF_DC
-$ ANALYZE/OBJECT/OUTPUT=DEF_DC.ANL DEF_DC.OBJ
+$ MACRO/NOLIST DEF_CLI
+$ ANALYZE/OBJECT/OUTPUT=DEF_CLI.ANL DEF_CLI.OBJ
+$ MACRO/NOLIST DEF_LIB
+$ ANALYZE/OBJECT/OUTPUT=DEF_LIB.ANL DEF_LIB.OBJ
 $ SET NOVERIFY
 $ EXIT

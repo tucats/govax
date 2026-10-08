@@ -1,0 +1,10 @@
+	.TITLE	DEF_LIB	$LIBDEF's names and values (LIB$ statuses)
+	.IDENT	/V1.0/
+;
+; A Phase 48 definition probe (testdata/mp/defs/README.md): the LIB$_
+; statuses LIB$SPAWN and the other LIB$ routines return. With GLOBAL,
+; every name the macro defines is a global symbol, so the object's GSD
+; lists each name and its value.
+;
+	$LIBDEF	GLOBAL
+	.END
