@@ -53,9 +53,11 @@ func TestProcessTable_PIDs(t *testing.T) {
 	}
 }
 
-// TestProcessTable_reuse: a deleted process's slot goes to the next new
-// process, with the slot's sequence number moved on, so the old PID
-// finds nothing (VAX/VMS Internals and Data Structures, 20.1.4).
+// TestProcessTable_reuse: a new process takes the next slot after the
+// last one given, as VMS 7.3 did (testdata/mp/probe5/vax, step 2), not
+// the freed one; when the search comes round to a freed slot, its
+// sequence number has moved on, so the old PID finds nothing (VAX/VMS
+// Internals and Data Structures, 20.1.4).
 func TestProcessTable_reuse(t *testing.T) {
 	env, _ := fixture()
 	p2 := newProcess(t, env)
@@ -65,6 +67,16 @@ func TestProcessTable_reuse(t *testing.T) {
 
 	if _, ok := env.FindProcess(old); ok {
 		t.Errorf("FindProcess(%08X) found a removed process", old)
+	}
+
+	p3 := newProcess(t, env)
+	if p3.Process.PID != 0x303 {
+		t.Errorf("the next process's PID = %08X, want 00000303, the next slot's", p3.Process.PID)
+	}
+
+	// Every slot from 4 up, then round to 2 again: its second process.
+	for range MaxProcesses - 3 {
+		newProcess(t, env)
 	}
 
 	p2b := newProcess(t, env)

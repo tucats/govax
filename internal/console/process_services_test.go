@@ -602,11 +602,11 @@ func TestJPIASTState_assembledProgram(t *testing.T) {
 	}{
 		{"ASTEN", 0xF, "every mode enabled"},
 		{"ASTACT", 0, "no AST running"},
-		{"ASTCNT", 24, "the whole quota"},
+		{"ASTCNT", 50, "the whole quota (SYSTEM's)"},
 		{"STATE", 14, "SCH$C_CUR"},
 		{"ASTENOFF", 0xE, "kernel disabled by $SETAST(0)"},
 		{"ASTACTIN", 0x1, "a kernel AST running"},
-		{"ASTCNTTMR", 23, "one timer AST outstanding"},
+		{"ASTCNTTMR", 49, "one timer AST outstanding"},
 	}
 
 	for _, ch := range checks {

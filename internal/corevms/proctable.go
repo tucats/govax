@@ -17,7 +17,11 @@ import (
 // the slot's next occupant: a stale PID is told from a live one by
 // comparing the whole PID with the one the slot's process holds.
 // Slot 0 belongs to the "null process" (the idle loop), so real processes
-// start at index 1, and a new process takes the lowest free index.
+// start at index 1. A new process takes the next free index after the
+// one the last new process took, wrapping round: VMS 7.3 gave a process
+// made after another's deletion the next index (PID 00000137, then
+// 00000138; testdata/mp/probe5/vax, step 2), not the freed one. (The
+// book's VMS searches from the lowest index; govax follows 7.3's run.)
 // (VAX/VMS Internals and Data Structures, section 20.1.3, "The PCB
 // Vector", and 20.1.4, "Fabrication of Process IDs", figure 20-4.)
 //
@@ -59,6 +63,10 @@ var (
 // occupies (by index), each slot's sequence number, and which process is
 // current, the one whose context the CPU holds.
 type processTable struct {
+	// last is the index the last process added took; the next search
+	// for a free slot starts after it.
+	last uint32
+
 	// slots[i] is the process at index i, or nil if the slot is free.
 	// slots[0] is always nil: index 0 is the null process's.
 	slots [MaxProcesses + 1]*Environment
@@ -89,7 +97,8 @@ func pid(index, sequence uint32) uint32 {
 	return sequence<<pidIndexBits | index
 }
 
-// addProcess gives env a slot in the table: the lowest free index, with
+// addProcess gives env a slot in the table: the next free index after
+// the last one given (wrapping round), with
 // that slot's next sequence number, which together make its PID
 // (env.Process.PID). The first process added becomes the current one.
 // A process whose name is already another process's in its UIC group
@@ -99,7 +108,8 @@ func pid(index, sequence uint32) uint32 {
 func (sys *System) addProcess(env *Environment) error {
 	t := sys.procs
 
-	for index := uint32(1); index <= MaxProcesses; index++ {
+	for n := range uint32(MaxProcesses) {
+		index := (t.last+n)%MaxProcesses + 1
 		if t.slots[index] != nil {
 			continue
 		}
@@ -116,13 +126,20 @@ func (sys *System) addProcess(env *Environment) error {
 		}
 
 		// The scheduler knows the process from now on, as computable;
-		// it can refuse only a priority outside 0-31.
+		// it can refuse only a priority outside 0-31. It starts at its
+		// base priority. (VAX/VMS Internals and Data Structures, 20.3,
+		// step 18, gives a new process a boost of 6 for its swap-in;
+		// VMS 7.1's child was 2 above its base when its creator looked,
+		// testdata/mp/probe1, and VMS 7.3's 3 above, probe5, step 1.
+		// Neither fits a plain boost of 6, so govax adds none:
+		// unconfirmed.)
 		if err := sys.sched.Add(sched.Handle(pid(index, seq)), int(env.Process.BasePriority), sched.ClassNull); err != nil {
 			return err
 		}
 
 		t.sequence[index] = seq
 		t.slots[index] = env
+		t.last = index
 		env.Process.PID = pid(index, seq)
 		env.Process.LoginTime = sys.Clock()
 

@@ -206,10 +206,12 @@ const (
 	nominalWSExtent   = 16400
 	nominalMinWSCount = 20
 
-	// The AST quota and priority are VMS's defaults for an interactive
-	// user: ASTLM 24, base priority 4 (SYSGEN DEFPRI). (The SYSTEM
-	// account on the VMS 7.1 run had ASTLM 50; govax keeps 24.)
-	nominalASTLimit = 24
+	// The AST quota is the SYSTEM account's, ASTLM 50, as the VMS 7.1
+	// and 7.3 runs reported it (testdata/mp/probe1/vax, probe5/vax);
+	// the priority is VMS's default for an interactive user, base
+	// priority 4 (SYSGEN DEFPRI). A $CREPRC child gets PQL_DASTLM, 24
+	// (quotas.go).
+	nominalASTLimit = 50
 	nominalPriority = 4
 
 	// The buffered and direct I/O quotas are nominal values in the range

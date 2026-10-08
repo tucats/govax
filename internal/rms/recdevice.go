@@ -80,10 +80,9 @@ func (h *FileHandle) IsRecordDevice() bool {
 // openRecordDevice is $CREATE's and $OPEN's step for a name whose
 // device lookup is: if it's a record device, it opens a stream on it,
 // allocates the IFI, and reports the device in the FAB (FAB$L_DEV and
-// FAB$L_SDC, its characteristics). FAB$W_MRS is left as it was: VMS 7.3
-// reported 0 for a mailbox whose largest message is 80, in a FAB that
-// had 0 there (testdata/mp/probe3; *unconfirmed* whether it stores 0 or
-// stores nothing). found
+// FAB$L_SDC, its characteristics), and stores 0 in FAB$W_MRS: VMS 7.3
+// did, over 1234 (testdata/mp/probe5/vax, step 6; probe3 had seen 0
+// over 0). found
 // is false if lookup isn't a record device. A device that can't be
 // opened is RMS$_PRV for SS$_NOPRIV, and RMS$_DNR otherwise, with the
 // system service status in FAB$L_STV.
@@ -112,6 +111,12 @@ func (ctx *Context) openRecordDevice(fabAddr uint32, lookup string, fac byte) (i
 
 			return 0, true, 0, 0, err
 		}
+	}
+
+	if err := ctx.storeWord(fabAddr+fabMRS, 0); err != nil {
+		dev.Close()
+
+		return 0, true, 0, 0, err
 	}
 
 	return ctx.Files.Alloc(&FileHandle{Device: dev, Access: fac}), true, 0, 0, nil

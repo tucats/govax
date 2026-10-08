@@ -243,14 +243,11 @@ func (env *Environment) enqueue(argv []uint32) (uint32, *enqRequest) {
 		})
 	}
 
+	// A request that fails, SS$_NOTQUEUED included, leaves the lock
+	// status block alone: VMS 7.3 left a NOQUEUE request's status and
+	// lock ID as they were (testdata/mp/probe5/vax, step 4).
 	if err != nil {
-		st := lockErrorStatus(err)
-		if st == ssNotQueued {
-			binary.LittleEndian.PutUint16(lksbBytes[0:], uint16(st))
-			_ = env.storeOwn(lksb, lksbBytes[:2])
-		}
-
-		return st, nil
+		return lockErrorStatus(err), nil
 	}
 
 	defer lck.Deliver(events)

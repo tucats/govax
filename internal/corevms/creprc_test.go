@@ -250,9 +250,9 @@ func TestCreprc_quotas(t *testing.T) {
 		{"ASTLM", p.ASTLimit, 50},
 		{"BIOLM", p.BufferedIOLimit, 4},
 		{"DIOLM", p.DirectIOLimit, 12},
-		{"WSDEFAULT (default, raised to the minimum)", p.WSDefault, 512},
-		{"WSQUOTA (default, raised to the minimum)", p.WSQuota, 1024},
-		{"working set", p.WSLimit, 512},
+		{"WSDEFAULT (default, raised to the minimum, and 4 pages)", p.WSDefault, 516},
+		{"WSQUOTA (default, raised to the minimum, and 4 pages)", p.WSQuota, 1028},
+		{"working set", p.WSLimit, 516},
 		{"PRCLM (pooled, a subprocess's is ignored)", p.Job.SubprocessLimit, nominalPRCLM},
 		{"CPULM (the creator has none)", p.CPULimit, 0},
 	} {
@@ -273,14 +273,15 @@ func TestCreprc_quotas(t *testing.T) {
 			d.ASTLimit, d.Job.SubprocessLimit, d.Job.Pooled.FILLM)
 	}
 
-	// The working-set default is held to the quota.
+	// The working-set default is held to the quota (and then each gets
+	// $CREPRC's 4 pages).
 	values, _, _ = resolveQuotas(creator, []QuotaItem{{pql("WSDEFAULT"), 3000}, {pql("WSQUOTA"), 2000}}, true, true)
 	w := NewProcess()
 	w.Job = newJob(0x999)
 	applyQuotas(w, values, true)
 
-	if w.WSDefault != 2000 || w.WSLimit != 2000 {
-		t.Errorf("WSDEFAULT 3000 over WSQUOTA 2000: default %d, limit %d; want 2000", w.WSDefault, w.WSLimit)
+	if w.WSDefault != 2004 || w.WSLimit != 2004 {
+		t.Errorf("WSDEFAULT 3000 over WSQUOTA 2000: default %d, limit %d; want 2004", w.WSDefault, w.WSLimit)
 	}
 }
 

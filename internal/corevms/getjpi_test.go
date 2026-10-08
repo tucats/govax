@@ -71,8 +71,8 @@ func TestServiceSysGetjpiItems(t *testing.T) {
 		{name: "JPI$_WSEXTENT", long: p.WSExtent},
 		{name: "JPI$_WSAUTHEXT", long: p.WSExtent},
 		{name: "JPI$_WSSIZE", long: p.WSLimit},
-		{name: "JPI$_ASTLM", long: 24},
-		{name: "JPI$_ASTCNT", long: 24},
+		{name: "JPI$_ASTLM", long: 50},
+		{name: "JPI$_ASTCNT", long: 50},
 		{name: "JPI$_ASTEN", long: 0xF},
 		{name: "JPI$_ASTACT", long: 0},
 		{name: "JPI$_PRI", long: 4},
@@ -265,8 +265,8 @@ func TestServiceSysGetjpiASTItems(t *testing.T) {
 		return a.readLong(buf)
 	}
 
-	if got := get("JPI$_ASTCNT"); got != 21 {
-		t.Errorf("JPI$_ASTCNT = %d, want 21 (24 less two queued ASTs and one timer AST)", got)
+	if got := get("JPI$_ASTCNT"); got != 47 {
+		t.Errorf("JPI$_ASTCNT = %d, want 47 (50 less two queued ASTs and one timer AST)", got)
 	}
 
 	if got := get("JPI$_ASTEN"); got != 0x5 {

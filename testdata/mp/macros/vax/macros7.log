@@ -1,0 +1,181 @@
+
+$ MACRO/NOLIST R7_LOCK
+                   00000000'EF   DD  00A5       
+%MACRO-E-OPRNDSYNX, Operand syntax error                               !
+                   00000000'EF   DD  00CA       
+%MACRO-E-OPRNDSYNX, Operand syntax error                                !
+                   00000000'EF   DD  00EF       
+%MACRO-E-OPRNDSYNX, Operand syntax error                                !
+                   00000000'EF   DD  0114       
+%MACRO-E-OPRNDSYNX, Operand syntax error                            !
+                   00000000'EF   DD  0139       
+%MACRO-E-OPRNDSYNX, Operand syntax error                           !
+                   00000000'EF   DD  015E       
+%MACRO-E-OPRNDSYNX, Operand syntax error                                !
+                   00000000'EF   DD  0183       
+%MACRO-E-OPRNDSYNX, Operand syntax error                                 !
+                   00000000'EF   DD  01A8       
+%MACRO-E-OPRNDSYNX, Operand syntax error                                 !
+                   00000000'EF   DD  01CD       
+%MACRO-E-OPRNDSYNX, Operand syntax error                            !
+                   00000000'EF   DD  01F2       
+%MACRO-E-OPRNDSYNX, Operand syntax error                           !
+                   00000000'EF   DD  0217       
+%MACRO-E-OPRNDSYNX, Operand syntax error                            !
+                   00000000'EF   DD  023C       
+%MACRO-E-OPRNDSYNX, Operand syntax error                            !
+                   00000000'EF   DD  0261       
+%MACRO-E-OPRNDSYNX, Operand syntax error                              !
+                   00000000'EF   DD  0286       
+%MACRO-E-OPRNDSYNX, Operand syntax error                             !
+                   00000000'EF   DD  02AB       
+%MACRO-E-OPRNDSYNX, Operand syntax error                              !
+                   00000000'EF   DD  02D0       
+%MACRO-E-OPRNDSYNX, Operand syntax error                              !
+                   00000000'EF   DD  02F5       
+%MACRO-E-OPRNDSYNX, Operand syntax error                             !
+                   00000000'EF   DD  031A       
+%MACRO-E-OPRNDSYNX, Operand syntax error                           !
+                   00000000'EF   DD  033F       
+%MACRO-E-OPRNDSYNX, Operand syntax error                           !
+                   00000000'EF   DD  0364       
+%MACRO-E-OPRNDSYNX, Operand syntax error                          !
+                   00000000'EF   DD  0389       
+%MACRO-E-OPRNDSYNX, Operand syntax error                             !
+                   00000000'EF   DD  03AE       
+%MACRO-E-OPRNDSYNX, Operand syntax error                             !
+                   00000000'EF   DD  03D3       
+%MACRO-E-OPRNDSYNX, Operand syntax error                            !
+                   00000000'EF   DD  041F       
+%MACRO-E-OPRNDSYNX, Operand syntax error                           !
+                   00000000'EF   DD  0444       
+%MACRO-E-OPRNDSYNX, Operand syntax error                             !
+                   00000000'EF   DD  0469       
+%MACRO-E-OPRNDSYNX, Operand syntax error                               !
+                   00000000'EF   DD  048E       
+%MACRO-E-OPRNDSYNX, Operand syntax error                           !
+                   00000000'EF   DD  04B3       
+%MACRO-E-OPRNDSYNX, Operand syntax error                              !
+                   00000000'EF   DD  04D8       
+%MACRO-E-OPRNDSYNX, Operand syntax error                               !
+                   00000000'EF   DD  04FD       
+%MACRO-E-OPRNDSYNX, Operand syntax error                              !
+                   00000000'EF   DD  0522       
+%MACRO-E-OPRNDSYNX, Operand syntax error                            !
+                   00000000'EF   DD  0547       
+%MACRO-E-OPRNDSYNX, Operand syntax error                              !
+                   00000000'EF   DD  056C       
+%MACRO-E-OPRNDSYNX, Operand syntax error                              !
+                   00000000'EF   DD  0591       
+%MACRO-E-OPRNDSYNX, Operand syntax error                            !
+                   00000000'EF   DD  05B6       
+%MACRO-E-OPRNDSYNX, Operand syntax error                            !
+                   00000000'EF   DD  05DB       
+%MACRO-E-OPRNDSYNX, Operand syntax error                            !
+                   00000000'EF   DD  0600       
+%MACRO-E-OPRNDSYNX, Operand syntax error                              !
+                   00000000'EF   DD  0625       
+%MACRO-E-OPRNDSYNX, Operand syntax error                             !
+                   00000000'EF   DD  064A       
+%MACRO-E-OPRNDSYNX, Operand syntax error                              !
+                   00000000'EF   DD  066F       
+%MACRO-E-OPRNDSYNX, Operand syntax error                               !
+                   00000000'EF   DD  0694       
+%MACRO-E-OPRNDSYNX, Operand syntax error                             !
+                   00000000'EF   DD  06B9       
+%MACRO-E-OPRNDSYNX, Operand syntax error                               !
+                   00000000'EF   DD  06DE       
+%MACRO-E-OPRNDSYNX, Operand syntax error                            !
+                   00000000'EF   DD  0703       
+%MACRO-E-OPRNDSYNX, Operand syntax error                           !
+                   00000000'EF   DD  0726       
+%MACRO-E-OPRNDSYNX, Operand syntax error                                    !
+                   00000000'EF   DD  0749       
+%MACRO-E-OPRNDSYNX, Operand syntax error                                     !
+                   00000000'EF   DD  076C       
+%MACRO-E-OPRNDSYNX, Operand syntax error                                     !
+                   00000000'EF   DD  078F       
+%MACRO-E-OPRNDSYNX, Operand syntax error                                 !
+                   00000000'EF   DD  07B2       
+%MACRO-E-OPRNDSYNX, Operand syntax error                                !
+                   00000000'EF   DD  07FA       
+%MACRO-E-OPRNDSYNX, Operand syntax error                                      !
+                   00000000'EF   DD  081D       
+%MACRO-E-OPRNDSYNX, Operand syntax error                                      !
+                   00000000'EF   DD  0840       
+%MACRO-E-OPRNDSYNX, Operand syntax error                                 !
+                   00000000'EF   DD  0863       
+%MACRO-E-OPRNDSYNX, Operand syntax error                                !
+                   00000000'EF   DD  0886       
+%MACRO-E-OPRNDSYNX, Operand syntax error                                 !
+                   00000000'EF   DD  08A9       
+%MACRO-E-OPRNDSYNX, Operand syntax error                                 !
+                   00000000'EF   DD  08CC       
+%MACRO-E-OPRNDSYNX, Operand syntax error                                   !
+                   00000000'EF   DD  08EF       
+%MACRO-E-OPRNDSYNX, Operand syntax error                                  !
+                   00000000'EF   DD  0912       
+%MACRO-E-OPRNDSYNX, Operand syntax error                                   !
+                   00000000'EF   DD  0935       
+%MACRO-E-OPRNDSYNX, Operand syntax error                                   !
+                   00000000'EF   DD  0958       
+%MACRO-E-OPRNDSYNX, Operand syntax error                                  !
+                   00000000'EF   DD  097B       
+%MACRO-E-OPRNDSYNX, Operand syntax error                                !
+                   00000000'EF   DD  099E       
+%MACRO-E-OPRNDSYNX, Operand syntax error                                !
+                   00000000'EF   DD  09C1       
+%MACRO-E-OPRNDSYNX, Operand syntax error                               !
+                   00000000'EF   DD  09E4       
+%MACRO-E-OPRNDSYNX, Operand syntax error                                  !
+                   00000000'EF   DD  0A07       
+%MACRO-E-OPRNDSYNX, Operand syntax error                                  !
+                   00000000'EF   DD  0A2A       
+%MACRO-E-OPRNDSYNX, Operand syntax error                                 !
+                   00000000'EF   DD  0A4D       
+%MACRO-E-OPRNDSYNX, Operand syntax error                                     !
+                   00000000'EF   DD  0A70       
+%MACRO-E-OPRNDSYNX, Operand syntax error                                !
+                   00000000'EF   DD  0A93       
+%MACRO-E-OPRNDSYNX, Operand syntax error                                  !
+                   00000000'EF   DD  0AB6       
+%MACRO-E-OPRNDSYNX, Operand syntax error                                    !
+                   00000000'EF   DD  0AD9       
+%MACRO-E-OPRNDSYNX, Operand syntax error                                !
+                   00000000'EF   DD  0AFC       
+%MACRO-E-OPRNDSYNX, Operand syntax error                                   !
+                   00000000'EF   DD  0B1F       
+%MACRO-E-OPRNDSYNX, Operand syntax error                                    !
+                   00000000'EF   DD  0B42       
+%MACRO-E-OPRNDSYNX, Operand syntax error                                   !
+                   00000000'EF   DD  0B65       
+%MACRO-E-OPRNDSYNX, Operand syntax error                                 !
+                   00000000'EF   DD  0B88       
+%MACRO-E-OPRNDSYNX, Operand syntax error                                   !
+                   00000000'EF   DD  0BAB       
+%MACRO-E-OPRNDSYNX, Operand syntax error                                   !
+                   00000000'EF   DD  0BCE       
+%MACRO-E-OPRNDSYNX, Operand syntax error                                 !
+                   00000000'EF   DD  0BF1       
+%MACRO-E-OPRNDSYNX, Operand syntax error                                 !
+                   00000000'EF   DD  0C14       
+%MACRO-E-OPRNDSYNX, Operand syntax error                                 !
+                   00000000'EF   DD  0C37       
+%MACRO-E-OPRNDSYNX, Operand syntax error                                   !
+                   00000000'EF   DD  0C5A       
+%MACRO-E-OPRNDSYNX, Operand syntax error                                  !
+                   00000000'EF   DD  0C7D       
+%MACRO-E-OPRNDSYNX, Operand syntax error                                   !
+                   00000000'EF   DD  0CA0       
+%MACRO-E-OPRNDSYNX, Operand syntax error                                    !
+                   00000000'EF   DD  0CC3       
+%MACRO-E-OPRNDSYNX, Operand syntax error                                  !
+                   00000000'EF   DD  0CE6       
+%MACRO-E-OPRNDSYNX, Operand syntax error                                    !
+                   00000000'EF   DD  0D09       
+%MACRO-E-OPRNDSYNX, Operand syntax error                                 !
+                   00000000'EF   DD  0D2C       
+%MACRO-E-OPRNDSYNX, Operand syntax error                                !
+$ ANALYZE/OBJECT/OUTPUT=R7_LOCK.ANL R7_LOCK.OBJ
+%ANALYZE-I-ERRORS, DUA1:[000000]R7_LOCK.OBJ;1                              0 errors
+$ SET NOVERIFY

@@ -40,11 +40,13 @@ var serviceMinArgs = map[string]int{
 	"SYS$TRNLNM":  5,
 	"SYS$WAKE":    2,
 
+	// Seen on VMS 7.3 (testdata/mp/probe5, step 8).
+	"SYS$ADJWSL": 2,
+	"SYS$ALLOC":  4,
+	"SYS$ASCEFC": 4,
+
 	// Required arguments, from the System Services Reference Manual.
 	"SYS$ADJSTK": 3,
-	"SYS$ADJWSL": 1,
-	"SYS$ALLOC":  1,
-	"SYS$ASCEFC": 2,
 	"SYS$ASCTIM": 2,
 	"SYS$BINTIM": 2,
 	"SYS$CANCEL": 1,

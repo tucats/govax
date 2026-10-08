@@ -202,5 +202,18 @@ func applyQuotas(p *Process, values map[uint32]uint32, detached bool) {
 	}
 
 	p.WSDefault = min(p.WSDefault, p.WSQuota)
+
+	// A new process's default working set and working-set quota are 4
+	// pages above the values the rules give (after they were lowered to
+	// the creator's): VMS 7.1's child had each PQL minimum plus 4
+	// (testdata/mp/probe1), and VMS 7.3's each default plus 4 (DFWSCNT
+	// 516, WSQUOTA 1028; testdata/mp/probe5/vax, step 1). Why is
+	// unconfirmed: perhaps the pages of the process header.
+	p.WSDefault += wsCreationPages
+	p.WSQuota += wsCreationPages
 	p.WSLimit = p.WSDefault
 }
+
+// wsCreationPages is what $CREPRC adds to a new process's working set
+// (see applyQuotas).
+const wsCreationPages = 4

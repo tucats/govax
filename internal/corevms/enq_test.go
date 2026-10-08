@@ -131,6 +131,10 @@ func TestEnq_flags(t *testing.T) {
 	}
 
 	wantR0(t, b.enq("RES", lck.CR, lckNoQueue), ssNotQueued)
+
+	if st := b.status(); st == ssNotQueued {
+		t.Errorf("NOQUEUE: the LKSB's status is SS$_NOTQUEUED; VMS leaves it alone")
+	}
 	wantR0(t, b.enq("RES", lck.Mode(6), 0), ssBadParam)
 	wantR0(t, b.enq("", lck.NL, 0), ssAccVio)
 	wantR0(t, b.enq("A_NAME_THAT_IS_MUCH_TOO_LONG_TO_BE_ONE", lck.NL, 0), ssIvBufLen)

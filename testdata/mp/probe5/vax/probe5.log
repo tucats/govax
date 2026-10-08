@@ -1,0 +1,146 @@
+
+1 child at creation: PRI 5, PRIB 2, DFWSCNT 516, WSQUOTA 1028, ASTLM 24
+1 self: PRI 5, PRIB 4, DFWSCNT 512, WSQUOTA 1024, ASTLM 50
+2 the same name created again: PID 00000137, then 00000138
+3 P5INFO: create 00000001, final status 00000001
+4 $ENQW NOQUEUE, conflicting: R0 000009B8, LKSB status EEEE, lock ID EEEEEEEE
+5 $ENQW PR VALBLK after the EX holder's deletion: R0 00000001, LKSB status 0001
+6 $OPEN of a mailbox, MRS 1234 before: 00010001, MRS 0
+7 $ERASE of a file open for writing: 0001828A; $OPEN after the writer's $CLOSE: 00010001
+8 SYS$ADJWSL: 2 argument(s) (00000001)
+8 SYS$ALLOC: 4 argument(s) (00000144)
+8 SYS$ASCEFC: 4 argument(s) (000000EC)
+%SYSTEM-F-ACCVIO, access violation, reason mask=01, virtual address=007C0000, PC=818D49B3, PSL=03C00000
+%TRACE-F-TRACEBACK, symbolic stack dump follows
+module name     routine name                     line       rel PC    abs PC
+
+PROBE5          START                                      818D3DB3  818D49B3
+PROBE5          CODE                                       0000041F  0000101F
+default: 00010001 "DUA1:[000000]X.Y;"
+SYS$DISK: 00000001 "DUA1:"
+P5_PARENT: 000001BC ""
+$ ! 9: verb abbreviations: R for RUN, MC for MCR, EXI and LO in a
+$ ! subprocess, and the status each leaves.
+$ R P5INFO
+default: 00010001 "DUA1:[000000]X.Y;"
+SYS$DISK: 00000001 "DUA1:"
+P5_PARENT: 00000001 "X"
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ MC P5INFO
+%DCL-W-ACTIMAGE, error activating image P5INFO
+-CLI-E-IMAGEFNF, image file not found SIMVAX$DUA0:[SYS0.SYSCOMMON.][SYSEXE]P5INFO.EXE;
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X100388B2"
+$ SPAWN/OUTPUT=P5_EXI.LOG EXI 5
+%DCL-S-SPAWNED, process SYSTEM_1 spawned
+%DCL-S-ATTACHED, terminal now attached to process SYSTEM_1
+%DCL-S-RETURNED, control returned to process SYSTEM
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00000005"
+$ SPAWN/OUTPUT=P5_LO.LOG LO
+%DCL-S-SPAWNED, process SYSTEM_1 spawned
+%DCL-S-ATTACHED, terminal now attached to process SYSTEM_1
+%DCL-S-RETURNED, control returned to process SYSTEM
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ ! 10: SHOW LOGICAL of a name with no translation: its status.
+$ SHOW LOGICAL P5_NO_SUCH_NAME
+%SHOW-S-NOTRAN, no translation for logical name P5_NO_SUCH_NAME
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X10788019"
+$ ! 11: RUN of a file that isn't an image: the messages and the status.
+$ RUN PROBE5.MAR
+%DCL-W-ACTIMAGE, error activating image PROBE5.MAR
+-CLI-E-IMGNAME, image file DUA1:[000000]PROBE5.MAR;1
+-IMGACT-F-BADHDR, an error was discovered in the image header
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X104D8C84"
+$ ! 12: the access modes of the process logical names a subprocess gets.
+$ DEFINE/SUPERVISOR P5_SUPER X
+$ DEFINE/EXECUTIVE P5_EXEC X
+$ SPAWN/OUTPUT=P5_LNM.LOG SHOW LOGICAL/FULL/PROCESS P5_*
+%DCL-S-SPAWNED, process SYSTEM_1 spawned
+%DCL-S-ATTACHED, terminal now attached to process SYSTEM_1
+%DCL-S-RETURNED, control returned to process SYSTEM
+$ ! 13: the console terminal's and the null device's characteristics,
+$ ! SHOW DEVICE/FULL of each and of a mailbox, and SHOW DEVICE of a
+$ ! prefix and of no device.
+$ WRITE SYS$OUTPUT F$FAO("OPA0: DEVCHAR !XL DEVTYPE !UL DEVBUFSIZ !UL", -
+	F$GETDVI("OPA0:","DEVCHAR"), F$GETDVI("OPA0:","DEVTYPE"), -
+	F$GETDVI("OPA0:","DEVBUFSIZ"))
+OPA0: DEVCHAR 0C040087 DEVTYPE 96 DEVBUFSIZ 205
+$ WRITE SYS$OUTPUT F$FAO("NLA0: DEVCHAR !XL DEVTYPE !UL DEVBUFSIZ !UL", -
+	F$GETDVI("NLA0:","DEVCHAR"), F$GETDVI("NLA0:","DEVTYPE"), -
+	F$GETDVI("NLA0:","DEVBUFSIZ"))
+NLA0: DEVCHAR 0C150001 DEVTYPE 3 DEVBUFSIZ 512
+$ SHOW DEVICE/FULL OPA0:
+
+Terminal OPA0:, device type VT100, is online, enabled as operator terminal,
+    record-oriented device, carriage control.
+
+    Error count                    0    Operations completed              26463
+    Owner process           "SYSTEM"    Owner UIC                      [SYSTEM]
+    Owner process ID        00000114    Dev Prot              S:RWPL,O:RWPL,G,W
+    Reference count                2    Default buffer size                 205
+
+$ SHOW DEVICE/FULL NLA0:
+
+Device NLA0:, device type null device, is online, record-oriented device,
+    shareable, mailbox device.
+
+    Error count                    0    Operations completed                 33
+    Owner process                 ""    Owner UIC                         [1,1]
+    Owner process ID        00000000    Dev Prot    S:RWPL,O:RWPL,G:RWPL,W:RWPL
+    Reference count               10    Default buffer size                 512
+
+$ SHOW DEVICE/FULL MBA1:
+
+Device MBA1:, device type unknown, is online, record-oriented device, shareable,
+    mailbox device.
+
+    Error count                    0    Operations completed                 43
+    Owner process                 ""    Owner UIC                      [SYSTEM]
+    Owner process ID        00000000    Dev Prot                   S,O:RWPL,G,W
+    Reference count                2    Default buffer size                1024
+
+$ SHOW DEVICE MB
+
+Device                  Device           Error
+ Name                   Status           Count
+MBA1:                   Online               0
+MBA2:                   Online               0
+MBA3:                   Online               0
+MBA4:                   Online               0
+MBA5:                   Online               0
+MBA9:                   Online               0
+MBA10:                  Online               0
+MBA11:                  Online               0
+MBA12:                  Online               0
+MBA13:                  Online               0
+MBA14:                  Online               0
+MBA15:                  Online               0
+MBA16:                  Online               0
+MBA17:                  Online               0
+MBA19:                  Online               0
+MBA20:                  Online               0
+MBA21:                  Online               0
+MBA22:                  Online               0
+$ SHOW DEVICE XYZ
+%SYSTEM-W-NOSUCHDEV, no such device available
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X10000908"
+$ SET NOVERIFY
+ 
+DUA1:[000000]P5_LO.LOG;1
+ 
+  Process SYSTEM_1 logged out at  8-OCT-2026 16:31:17.34
+ 
+DUA1:[000000]P5_LNM.LOG;1
+ 
+
+(LNM$PROCESS_TABLE)	[kernel]
+			[no protection information]
+
+  "P5_PARENT" [super] = "X"
+  "P5_SUPER" [super] = "X"
