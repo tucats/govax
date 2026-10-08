@@ -1,6 +1,6 @@
 # Phase 47 — Multiprocessing, part 5: files shared between processes
 
-**Status:** in progress (subtasks 1-8 done 2026-10-08); decisions taken 2026-10-06 (see
+**Status:** in progress (subtasks 1-9 done 2026-10-08); decisions taken 2026-10-06 (see
 PHASE-43.md, Part A). Needs Phase 45 (independent of Phase
 46).
 
@@ -429,3 +429,24 @@ questions:
     prompt, when no process runs (Decision 4).
   - ods2's additions (record offsets, `OpenFiles`) need a tag, v0.1.17,
     and the pin.
+- 2026-10-08: Subtask 9, stress tests (`internal/console/stress_test.go`):
+  three processes at one priority on a 40-instruction quantum, on a
+  2000-block volume, each run ended by closing everything, dismounting,
+  mounting again, `MountTable.VerifyVolume` (new, `internal/rms/verify.go`:
+  ods2's bitmap-against-headers analysis, and every directory entry
+  leading to a file), and reading every record back:
+  - `TestStress_threeAppenders`: 150 records each, 5 to 36 bytes, to one
+    write-shared file; every record in order per process, interleaved.
+  - `TestStress_createAndErase`: 40 turns each of `$CREATE` (a new
+    version), `$PUT`, `$CLOSE`, and, every other turn, `$ERASE`, in one
+    directory; the kept versions are all there with their records, the
+    erased ones gone.
+  - `TestStress_extendTogether`: 200 records each to files of their
+    own, unshared, extending at once.
+  The two-process case is subtask 5's `TestSharedFile_twoAppenders`. For
+  them, `$ERASE` (`internal/rms/erase.go`, from the manual: the FAB not
+  open; a file another process reads is deleted at its close, one it
+  writes is RMS$_FLK, FAB$V_ERL not being in VMS 7.3's definitions;
+  wildcards RMS$_WLD) and a bug fix: `$CLOSE` now clears FAB$W_IFI, as
+  the manual's Close output table says (a FAB closed and reused for
+  `$ERASE`, `$OPEN`, or `$CREATE` was refused, RMS$_IFI, before).

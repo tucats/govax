@@ -111,6 +111,13 @@ func SysClose(ctx *Context, argv []uint32) (uint32, error) {
 	// disk.
 	ctx.Files.Release(ifi)
 
+	// The FAB is closed: FAB$W_IFI is cleared (RMS manual, the Close
+	// service's output fields), so it can be used for another $OPEN,
+	// $CREATE, or $ERASE, which require it 0.
+	if err := ctx.storeWord(fabAddr+fabIFI, 0); err != nil {
+		return 0, err
+	}
+
 	return storeStatus(ctx, fabAddr, fabSTS, fabSTV, rmsNormal)
 }
 

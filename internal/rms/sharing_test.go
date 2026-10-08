@@ -727,3 +727,66 @@ func TestSharing_dismountWithOpenFiles(t *testing.T) {
 		t.Errorf("Dismount after the close: %v", err)
 	}
 }
+
+// erase runs $ERASE for DUA0:name with s's FAB, returning the status.
+func (s *sharer) erase(name string) uint32 {
+	s.t.Helper()
+
+	ctx := s.ctx
+	newFAB(s.t, ctx, "DUA0:"+name)
+	putWord(s.t, ctx, testFabAddr+fabIFI, 0)
+
+	r0, err := SysErase(ctx, []uint32{testFabAddr})
+	if err != nil {
+		s.t.Fatal(err)
+	}
+
+	return r0
+}
+
+// TestSharing_erase: $ERASE deletes a file; one another process reads is
+// deleted at its close; one another process writes is RMS$_FLK.
+func TestSharing_erase(t *testing.T) {
+	p, mounts := newSharers(t, 2)
+	a, b := p[0], p[1]
+
+	writeFile(t, mounts, "GONE.DAT", "x")
+
+	if r0 := a.erase("GONE.DAT"); r0 != rmsNormal {
+		t.Fatalf("$ERASE: %#x", r0)
+	}
+
+	if r0 := a.erase("GONE.DAT"); r0 != rmsFileNotFound {
+		t.Errorf("$ERASE again: %#x, want RMS$_FNF", r0)
+	}
+
+	writeFile(t, mounts, "READ.DAT", "r0")
+	b.mustOpen("READ.DAT", facGet, shrGet|shrPut|shrDel, false, 0)
+
+	if r0 := a.erase("READ.DAT"); r0 != rmsNormal {
+		t.Errorf("$ERASE of a file another reads: %#x", r0)
+	}
+
+	if rec, sts := b.get(); rec != "r0" || sts != rmsNormal {
+		t.Errorf("the reader after the $ERASE: %q, %#x", rec, sts)
+	}
+
+	b.close()
+
+	b.mustOpen("WRITE.DAT", facPut, shrGet|shrPut, true, 0)
+
+	if r0 := a.erase("WRITE.DAT"); r0 != rmsFileLocked {
+		t.Errorf("$ERASE of a file another writes: %#x, want RMS$_FLK", r0)
+	}
+
+	b.close()
+
+	problems, err := mounts.VerifyVolume("DUA0")
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	for _, p := range problems {
+		t.Error(p)
+	}
+}
