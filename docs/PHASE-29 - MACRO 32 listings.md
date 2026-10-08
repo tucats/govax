@@ -912,7 +912,7 @@ The author decided each of these on 2026-10-02.
     program names it: govax's `$FAB` builds its options from the
     `FAB$M_` masks where VMS's uses the `FAB$V_` bit numbers, and a
     table lists the ones referred to *(govax's now uses the bit numbers
-    too, 2026-10-04, [PHASE-36.md](PHASE-36%20-%20FORTH.md))*;
+    too, 2026-10-04, [PHASE-36 - FORTH](PHASE-36%20-%20FORTH.md))*;
   - the system library's macro counts and the GETS count are masked:
     the macros are split into helpers differently (`fabalign`'s `$FAB`
     takes 7 macros from VMS's library and 5 from govax's), and their
@@ -1204,7 +1204,7 @@ The author decided each of these on 2026-10-02.
     real macros, one short line and four, show 1.
   - A library macro is listed at its calls, with no definition line.
     Nothing a library's definition does is recorded. *(Superseded
-    2026-10-04, [PHASE-36.md](PHASE-36%20-%20FORTH.md): real MACRO's listing of
+    2026-10-04, [PHASE-36 - FORTH](PHASE-36%20-%20FORTH.md): real MACRO's listing of
     `forth.mar` defines a library macro at the line that loaded it.)*
   - A two-byte opcode's value is its bytes as a word, prefix low
     (`CVTDH` is `32FD`), as the binary field shows it.

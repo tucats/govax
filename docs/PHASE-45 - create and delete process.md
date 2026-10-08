@@ -4,7 +4,7 @@
 PHASE-43.md, Part A). Needs Phases 43 and 44.
 
 The program this phase belongs to is described in
-[PHASE-43.md](PHASE-43%20-%20processes.md), Part A. Read that first.
+[PHASE-43 - processes](PHASE-43%20-%20processes.md), Part A. Read that first.
 
 ## Goal
 

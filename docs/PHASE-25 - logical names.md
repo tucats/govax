@@ -84,11 +84,11 @@ is traceable.
 
 | Where | What it does | Problem vs. VMS |
 | --- | --- | --- |
-| [internal/io/logical.go](../internal/io/logical.go) | `LogicalNameTable`: a map of tables, where each table maps a name to **one** `Value`. `InitLogicals` seeds `LNM$TABLE` and a table called `LNM$FILE_DEV` holding `SYS$INPUT`/`OUTPUT`/`ERROR`/`COMMAND` = `TTA0:`. | `LNM$FILE_DEV` is a **table** here. In VMS it is a *logical name* (a search list of tables). There are no directories, no search order, no iterative translation, no search lists, and no access modes. Attributes are matched by equality, not as a bitmask. `Get` falls back to the table `LNM$ROOT`, which doesn't exist in VMS. |
+| `internal/io/logical.go` (deleted in subtask 4) | `LogicalNameTable`: a map of tables, where each table maps a name to **one** `Value`. `InitLogicals` seeds `LNM$TABLE` and a table called `LNM$FILE_DEV` holding `SYS$INPUT`/`OUTPUT`/`ERROR`/`COMMAND` = `TTA0:`. | `LNM$FILE_DEV` is a **table** here. In VMS it is a *logical name* (a search list of tables). There are no directories, no search order, no iterative translation, no search lists, and no access modes. Attributes are matched by equality, not as a bitmask. `Get` falls back to the table `LNM$ROOT`, which doesn't exist in VMS. |
 | [internal/console/device.go:141-175](../internal/console/device.go#L141-L175) + `DEFINE_LOGICAL` binding in [dispatch.go:375](../internal/console/dispatch.go#L375) | `DEFINE/LOGICAL name value [/TABLE=]`, which defaults to the table `LNM_PROCESS` (an underscore, not `$`). `SHOW LOGICAL_NAMES [name] [/TABLE=]`. | The default table name is wrong: `LNM_PROCESS` is never searched, including by RMS, which only looks in `LNM$FILE_DEV`. So **a name defined with the console's own DEFINE command is invisible to RMS today.** `DEFINE/LOGICAL` isn't VMS syntax. The SHOW output doesn't follow the VMS format. |
 | [internal/rms/create.go:59](../internal/rms/create.go#L59), [open.go:61](../internal/rms/open.go#L61) | Look up the **entire** file-spec string as a name in the table `LNM$FILE_DEV`, then replace the spec with the value. | This isn't how VMS translates: it doesn't split off the leftmost `name:` component, doesn't iterate, doesn't handle search lists, and doesn't handle `_`. `SCRATCH:PAYROLL.DAT` never translates. |
 | [internal/rms/session.go](../internal/rms/session.go) (DIRECTORY/TYPE/COPY/DELETE/PURGE/SET DEFAULT) | Parse the operator's spec directly with `filespec.Parse`. | No logical-name translation at all. |
-| [internal/coreos/logicals.go](../internal/coreos/logicals.go) | `SYS$TRNLNM` looks up one table name exactly. `LNM$_MAX_INDEX` is always 1. `LNM$_INDEX` is ignored. | A call like `$TRNLNM(tabnam="LNM$FILE_DEV", ...)`, the most common form in real code, only works by accident of the seeding described above. There's no `$CRELNM`/`$DELLNM`/`$CRELNT`, even though all three are already in the P1 vector ([internal/vmsdef/p1vector.go](../internal/vmsdef/p1vector.go)). |
+| [internal/corevms/logicals.go](../internal/corevms/logicals.go) | `SYS$TRNLNM` looks up one table name exactly. `LNM$_MAX_INDEX` is always 1. `LNM$_INDEX` is ignored. | A call like `$TRNLNM(tabnam="LNM$FILE_DEV", ...)`, the most common form in real code, only works by accident of the seeding described above. There's no `$CRELNM`/`$DELLNM`/`$CRELNT`, even though all three are already in the P1 vector ([internal/vmsdef/p1vector.go](../internal/vmsdef/p1vector.go)). |
 | `internal/bootdata/files/console.dcl` | `verb define` has only the `/LOGICAL` and `/DEVICE` syntax-redirect qualifiers. | A bare `DEFINE name value` doesn't parse. |
 
 The data model is the core problem (single-valued names and no directories), so
@@ -105,7 +105,7 @@ The logical-name database moves out of `internal/io` into a new package,
   subsystem that the console, RMS, and RTL all use, so none of those packages
   is the natural owner.
 - A leaf package can be imported by `internal/console`, `internal/rms`, and
-  `internal/coreos`, and by any later RTL/system-service package, without cycles.
+  `internal/corevms`, and by any later RTL/system-service package, without cycles.
   This matches the user's requirement that the database be available to "the RMS
   package and any peer package to that".
 - Ownership stays the same as today. The `Console` constructs one
@@ -385,7 +385,7 @@ the process default directory. RMS then gets its default device by translating
   - `MOUNT`/`DISMOUNT` translate their device argument, with `_` suppressing
     translation. On VMS, `MOUNT` also defines the volume label as a logical
     name. Open question 3 asks whether to do that too.
-- **`internal/coreos`**:
+- **`internal/corevms`**:
   - Rewrite `SYS$TRNLNM` against `internal/lnm`: table-name resolution through
     the directories, `LNM$_INDEX` for search-list elements, a real
     `LNM$_MAX_INDEX`, `LNM$_ATTRIBUTES` with the real `LNM$M_EXISTS`/
@@ -629,7 +629,7 @@ one step that changes wiring. Subtasks 5-8 can be done in any order after 4, but
   byte-for-byte identical to before.
 - **Cross-checks.** The generated `$LNMDEF` values independently match what
   govax already hard-coded:
-  - `internal/coreos/logicals.go`: `LNM$M_CASE_BLIND` = `0x2000000`,
+  - `internal/corevms/logicals.go`: `LNM$M_CASE_BLIND` = `0x2000000`,
     `LNM$_STRING` = 2 through `LNM$_MAX_INDEX` = 7.
   - `internal/io/logical.go`: `LNM$M_TABLE` = `0x8`, `LNM$M_TERMINAL` =
     `0x200`.
@@ -637,7 +637,7 @@ one step that changes wiring. Subtasks 5-8 can be done in any order after 4, but
     question 5's 7.3 limits.
 
   `LNM$_CHAIN` (-1) is stored as `0xFFFFFFFF`.
-- **Finding for subtask 8.** Three `SS$_` codes in `internal/coreos/status.go` are
+- **Finding for subtask 8.** Three `SS$_` codes in `internal/corevms/status.go` are
   **not in the VAX 7.3 `$SSDEF` at all**: `ssNoSuchFac` = 9276, `ssInvArg` =
   4042, and `ssTooManyArgs` = 10060. No name in `ssdef.txt` has any of those
   values either. They probably come from eVAX or from a later/Alpha VMS.
@@ -1012,7 +1012,7 @@ one step that changes wiring. Subtasks 5-8 can be done in any order after 4, but
 
 ### 2026-09-27 — Subtask 8: system services
 
-- **`internal/coreos/logicals.go` rewritten.** It now holds seven services, all
+- **`internal/corevms/logicals.go` rewritten.** It now holds seven services, all
   registered through `ServiceTable.Register`: `SYS$TRNLNM`, `SYS$CRELNM`,
   `SYS$DELLNM`, `SYS$CRELNT`, `SYS$CRELOG`, `SYS$DELLOG`, and `SYS$TRNLOG`.
   They follow the VMS 5.0 System Services Reference Manual. Item codes and
@@ -1099,7 +1099,7 @@ one step that changes wiring. Subtasks 5-8 can be done in any order after 4, but
   checks that it runs to completion, which it still does. It's an upstream
   eVAX fixture, so it was left alone.
 - **Tests.**
-  - `internal/coreos/logicals_test.go` (rewritten around a small memory
+  - `internal/corevms/logicals_test.go` (rewritten around a small memory
     "arena" helper): every `$TRNLNM` item code, including index past the
     end, overflow, bad item/index, case-blind, acmode, and a chained or
     looping list. Also `$CRELNM` with positional attributes, `LNM$_TABLE`,

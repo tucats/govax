@@ -50,54 +50,54 @@ questions, and a progress log extended as that phase is worked.
 
 | Phase | Doc | Summary |
 | --- | --- | --- |
-| 00 | [PHASE-00.md](PHASE-00%20-%20bootstrap.md) | Project bootstrap & source import |
-| 01 | [PHASE-01.md](PHASE-01%20-%20vrtual%20hardware.md) | CPU hardware definition |
-| 02 | [PHASE-02.md](PHASE-02%20-%20virtual%20memory.md) | Virtual memory support |
-| 03 | [PHASE-03.md](PHASE-03%20-%20instructoin%20decode.md) | Instruction decode engine |
-| 04 | [PHASE-04.md](PHASE-04%20-%20core%20instructions.md) | Core instruction families (move/integer/branch) |
-| 05 | [PHASE-05.md](PHASE-05%20-%20floating%20point.md) | Floating point |
-| 06 | [PHASE-06.md](PHASE-06%20-%20strings%20and%20bitfields.md) | String, bitfield & queue instructions |
-| 07 | [PHASE-07.md](PHASE-07%20-%20calls%20and%20prv%20instructions.md) | Procedure calls, privileged & misc instructions |
-| 08 | [PHASE-08.md](PHASE-08%20-%20console.md) | Console functionality |
-| 09 | [PHASE-09.md](PHASE-09%20-%20devices.md) | I/O & device support |
-| 10 | [PHASE-10.md](PHASE-10%20-%20RTL%20simulators.md) | RTL simulators |
-| 11 | [PHASE-11.md](PHASE-11%20-%20ASM%20and%20DISASM.md) | Assembler / disassembler |
-| 12 | [PHASE-12.md](PHASE-12%20-%20regression%20testing.md) | Integration & regression |
-| 13 | [PHASE-13.md](PHASE-13%20-%20image%20activation.md) | VMS image activation (RUN) |
-| 14 | [PHASE-14.md](PHASE-14%20-%20timers%20and%20interrupts.md) | Interval timer & device-interrupt delivery |
-| 15 | [PHASE-15.md](PHASE-15%20-%20host%20system%20ux.md) | UX / ease-of-use support |
-| 16 | [PHASE-16.md](PHASE-16%20-%20console%20commands.md) | Console command fit-and-finish (SHOW/CLEAR/SET gaps) |
-| 17 | [PHASE-17.md](PHASE-17%20-%20SET%20and%20SHOW.md) | `SET`/`SHOW DEBUG`, `SET`/`SHOW TRACE`, instruction-trace infrastructure |
-| 18 | [PHASE-18.md](PHASE-18%20-%20STEP.md) | Flow of control: `STEP`/`SET STEP`/`SHOW STEP_MODE`, future breakpoints/watchpoints |
-| 19 | [PHASE-19.md](PHASE-19%20-%20ASM%20REPL.md) | Interactive `ASM` REPL mode |
-| 20 | [PHASE-20.md](PHASE-20%20-%20shims%20and%20exceptions.md) | RTL shim resolution fix, and console-native exception reporting (CHF) |
-| 21 | [PHASE-21.md](PHASE-21%20-%20TB%20and%20STC.md) | Translation buffer / sequential translation cache |
-| 22 | [PHASE-22.md](PHASE-22%20-%20ODS2.md) | RMS system services backed by `github.com/tucats/ods2` |
-| 23 | [PHASE-23.md](PHASE-23%20-%20Filles-11%20console%20cmds.md) | Console commands to support using Files-11 containers |
-| 24 | [PHASE-24.md](PHASE-24%20-%20RAB%20and%20FAB.md) | `.RMSDEF`/`.FAB`/`.RAB` assembler pseudo-ops |
-| 25 | [PHASE-25.md](PHASE-25%20-%20logical%20names.md) | VMS-faithful logical names (tables, iterative translation, DEFINE/ASSIGN/SHOW LOGICAL, `$CRELNM`/`$TRNLNM`) |
-| 26 | [PHASE-26.md](PHASE-26%20-%20more%20system%20services.md) | Expanding system services (emulated process record; `$ADJSTK`, `$ADJWSL`, `$ALLOC`, `$ASCEFC`, ...) |
-| 27 | [PHASE-27.md](PHASE-27%20-%20MACRO32%20objects.md) | MACRO-32 object modules: `MACRO` command producing VAX `.OBJ` files from `.MAR` source |
-| 28 | [PHASE-28.md](PHASE-28%20-%20MACRO32%20macros.md) | The MACRO-32 macro facility (`.MACRO`, `.MCALL`, `STARLET.MLB`) and a librarian (`LIBRARY`) |
-| 29 | [PHASE-29.md](PHASE-29%20-%20MACRO%2032%20listings.md) | MACRO listings (`/LIST`, cross reference), traceback and debugger records, LINK's debug symbol table, and `LINK/DEBUG` (DMT and GST) — done. Objects, listings, and images match real MACRO's and LINK's, and VMS prints the same tracebacks |
-| 30 | [PHASE-30.md](PHASE-30%20-%20LINK.md) | A govax `LINK`: `.OBJ` modules to a runnable `.EXE` — done; its images match real LINK's and run on VMS |
-| 31 | [PHASE-31.md](PHASE-31%20-%20clean%20room.md) | Build without licensed VMS material: one symbol table, an augmenting gen, captured GSTs — done |
-| 32 | [PHASE-32.md](PHASE-32%20-%20STARLET.MLB.md) | govax's own RMS macros ($FAB, $RAB, $NAM, XABs, services, $xxxDEF), written clean-room — done |
-| 33 | [PHASE-33.md](PHASE-33%20-%20NAM%20and%20XAB.md) | RMS name blocks and XABs at run time: $PARSE, $SEARCH, $DISPLAY, NAM/XABs on $OPEN/$CREATE/$CLOSE — done; matches VMS 7.3 on a runtime oracle |
-| 34 | [PHASE-34.md](PHASE-34%20-%20CREATE%20DIR.md) | `CREATE/DIRECTORY` (owner UIC, version limit, protection), with ods2 support; LIB$CREATE_DIR and `internal/librtl` — done; both match VMS 7.3 on oracle runs |
-| 35 | [PHASE-35.md](PHASE-35%20-%20octaword%20instructions.md) | The rest of the instruction set: G/H floating, octaword moves, EMOD/POLY, packed decimal and EDITPC — done; matches VMS on a 567-case oracle |
-| 36 | [PHASE-36.md](PHASE-36%20-%20FORTH.md) | The FORTH fixture (`testdata/mar/forth.mar`): RMS terminal I/O, LIB$PUT_OUTPUT/LIB$GET_FOREIGN, DCL symbols and foreign commands, MACRO listing/object fixes — done; object, listing, image, and map match VMS 7.3 |
-| 37 | [PHASE-37.md](PHASE-37%20-%20DCL%20grammar.md) | The console's fixed commands (EXAMINE, DEPOSIT, SET, STEP, RUN, ...) move onto the DCL grammar, which gains `$expression`, separators, assignments, and nonegatable keywords — done |
-| 38 | [PHASE-38.md](PHASE-38%20-%20ANALYZE%20OBJ.md) | `ANALYZE/OBJECT`, matching VMS 7.3's output line for line (records, GSD, TIR commands, dumps, errors, pages); the verb laid out for a later `ANALYZE/IMAGE` — done; matches VMS 7.3 byte for byte on 54 fixtures |
-| 40 | [PHASE-40.md](PHASE-40%20-%20ANALYZE%20IMAGE.md) | `ANALYZE/IMAGE`, matching VMS 7.3's output line for line (image header, ISDs, fixup section, errors, pages) — done; matches VMS 7.3 byte for byte on 29 fixtures |
-| 41 | [PHASE-41.md](PHASE-41%20-%20symbolic%20disassembly.md) | Symbolic disassembly from a loaded image's DST, DMT, and GST, as the VMS debugger's `EXAMINE/INSTRUCTION` shows it; the disassembler moves to `internal/disasm`, symbols to `internal/symtab`, debug tables to `internal/dbgsym` (groundwork for a debugger mode) — done; `DISASSEMBLE` matches the VMS 7.3 debugger's 514 lines in 7 sessions, on VMS's images and govax's relinks |
-| 42 | [PHASE-42.md](PHASE-42%20-%20debugger%20package.md) | The debugger as its own package (`internal/debugger`), grammar (`debug.dcl`), and `DBG>` prompt, entered by GO, CALL, and RUN/DEBUG; SET/SHOW split between console and debugger; VMS-compatible breakpoints, STEP, and EXAMINE; fixes to the existing run-control bugs — done; every probe session of `testdata/dbg` and `testdata/dbgcmd` (18) is replayed and compared with VMS 7.3's debugger log, with the remaining differences listed |
-| 43 | [PHASE-43.md](PHASE-43%20-%20processes.md) | Multiprocessing, part 1 (and the plan for 43–48): system and process state split, a process table, hardware PCBs with LDPCTX/SVPCTX, per-process address spaces and stacks — done; a Go test builds a second process and switches the CPU into it and back |
-| 44 | [PHASE-44.md](PHASE-44%20-%20scheduler.md) | Multiprocessing, part 2: the scheduler (`internal/sched`), quantum and priority preemption, wait states, idle, process-aware run loops, SHOW SYSTEM — done; processes built by hand share the CPU by VMS's rules, deterministically |
-| 45 | [PHASE-45.md](PHASE-45%20-%20create%20and%20delete%20process.md) | Multiprocessing, part 3: `$CREPRC`, process startup, rundown and deletion, termination mailboxes, jobs and job logical names, process-control services across processes, STOP, NL:, and the process and system service macros checked against real MACRO — done; a MACRO program creates a child, reads its termination message, and `$GETJPI`s it |
-| 46 | [PHASE-46.md](PHASE-46%20-%20interprocess%20comm.md) | Multiprocessing, part 4: mailboxes, common event flags, and global sections between processes; RMS on mailboxes and NL:; a terminal that doesn't block other processes — done; a MACRO parent and child exchange messages through two mailboxes, with a common event flag handshake |
-| 47 | [PHASE-47.md](PHASE-47%20-%20RMS%20and%20processes.md) | Multiprocessing, part 5: a lock manager and `$ENQ`/`$DEQ`, RMS file sharing (RMS$_FLK), a shared file control block in ods2, shared sequential files, record locks — planned |
-| 48 | [PHASE-48.md](PHASE-48%20-%20LIB_SPAWN.md) | Multiprocessing, part 6: `LIB$SPAWN` and a subprocess CLI; the milestone (MACRO parent and child passing mailbox messages and sharing files without corrupting the volume) — planned |
+| 00 | [PHASE-00 - bootstrap](PHASE-00%20-%20bootstrap.md) | Project bootstrap & source import |
+| 01 | [PHASE-01 - vrtual hardware](PHASE-01%20-%20vrtual%20hardware.md) | CPU hardware definition |
+| 02 | [PHASE-02 - virtual memory](PHASE-02%20-%20virtual%20memory.md) | Virtual memory support |
+| 03 | [PHASE-03 - instructoin decode](PHASE-03%20-%20instructoin%20decode.md) | Instruction decode engine |
+| 04 | [PHASE-04 - core instructions](PHASE-04%20-%20core%20instructions.md) | Core instruction families (move/integer/branch) |
+| 05 | [PHASE-05 - floating point](PHASE-05%20-%20floating%20point.md) | Floating point |
+| 06 | [PHASE-06 - strings and bitfields](PHASE-06%20-%20strings%20and%20bitfields.md) | String, bitfield & queue instructions |
+| 07 | [PHASE-07 - calls and prv instructions](PHASE-07%20-%20calls%20and%20prv%20instructions.md) | Procedure calls, privileged & misc instructions |
+| 08 | [PHASE-08 - console](PHASE-08%20-%20console.md) | Console functionality |
+| 09 | [PHASE-09 - devices](PHASE-09%20-%20devices.md) | I/O & device support |
+| 10 | [PHASE-10 - RTL simulators](PHASE-10%20-%20RTL%20simulators.md) | RTL simulators |
+| 11 | [PHASE-11 - ASM and DISASM](PHASE-11%20-%20ASM%20and%20DISASM.md) | Assembler / disassembler |
+| 12 | [PHASE-12 - regression testing](PHASE-12%20-%20regression%20testing.md) | Integration & regression |
+| 13 | [PHASE-13 - image activation](PHASE-13%20-%20image%20activation.md) | VMS image activation (RUN) |
+| 14 | [PHASE-14 - timers and interrupts](PHASE-14%20-%20timers%20and%20interrupts.md) | Interval timer & device-interrupt delivery |
+| 15 | [PHASE-15 - host system ux](PHASE-15%20-%20host%20system%20ux.md) | UX / ease-of-use support |
+| 16 | [PHASE-16 - console commands](PHASE-16%20-%20console%20commands.md) | Console command fit-and-finish (SHOW/CLEAR/SET gaps) |
+| 17 | [PHASE-17 - SET and SHOW](PHASE-17%20-%20SET%20and%20SHOW.md) | `SET`/`SHOW DEBUG`, `SET`/`SHOW TRACE`, instruction-trace infrastructure |
+| 18 | [PHASE-18 - STEP](PHASE-18%20-%20STEP.md) | Flow of control: `STEP`/`SET STEP`/`SHOW STEP_MODE`, future breakpoints/watchpoints |
+| 19 | [PHASE-19 - ASM REPL](PHASE-19%20-%20ASM%20REPL.md) | Interactive `ASM` REPL mode |
+| 20 | [PHASE-20 - shims and exceptions](PHASE-20%20-%20shims%20and%20exceptions.md) | RTL shim resolution fix, and console-native exception reporting (CHF) |
+| 21 | [PHASE-21 - TB and STC](PHASE-21%20-%20TB%20and%20STC.md) | Translation buffer / sequential translation cache |
+| 22 | [PHASE-22 - ODS2](PHASE-22%20-%20ODS2.md) | RMS system services backed by `github.com/tucats/ods2` |
+| 23 | [PHASE-23 - Filles-11 console cmds](PHASE-23%20-%20Filles-11%20console%20cmds.md) | Console commands to support using Files-11 containers |
+| 24 | [PHASE-24 - RAB and FAB](PHASE-24%20-%20RAB%20and%20FAB.md) | `.RMSDEF`/`.FAB`/`.RAB` assembler pseudo-ops |
+| 25 | [PHASE-25 - logical names](PHASE-25%20-%20logical%20names.md) | VMS-faithful logical names (tables, iterative translation, DEFINE/ASSIGN/SHOW LOGICAL, `$CRELNM`/`$TRNLNM`) |
+| 26 | [PHASE-26 - more system services](PHASE-26%20-%20more%20system%20services.md) | Expanding system services (emulated process record; `$ADJSTK`, `$ADJWSL`, `$ALLOC`, `$ASCEFC`, ...) |
+| 27 | [PHASE-27 - MACRO32 objects](PHASE-27%20-%20MACRO32%20objects.md) | MACRO-32 object modules: `MACRO` command producing VAX `.OBJ` files from `.MAR` source |
+| 28 | [PHASE-28 - MACRO32 macros](PHASE-28%20-%20MACRO32%20macros.md) | The MACRO-32 macro facility (`.MACRO`, `.MCALL`, `STARLET.MLB`) and a librarian (`LIBRARY`) |
+| 29 | [PHASE-29 - MACRO 32 listings](PHASE-29%20-%20MACRO%2032%20listings.md) | MACRO listings (`/LIST`, cross reference), traceback and debugger records, LINK's debug symbol table, and `LINK/DEBUG` (DMT and GST) — done. Objects, listings, and images match real MACRO's and LINK's, and VMS prints the same tracebacks |
+| 30 | [PHASE-30 - LINK](PHASE-30%20-%20LINK.md) | A govax `LINK`: `.OBJ` modules to a runnable `.EXE` — done; its images match real LINK's and run on VMS |
+| 31 | [PHASE-31 - clean room](PHASE-31%20-%20clean%20room.md) | Build without licensed VMS material: one symbol table, an augmenting gen, captured GSTs — done |
+| 32 | [PHASE-32 - STARLET.MLB](PHASE-32%20-%20STARLET.MLB.md) | govax's own RMS macros ($FAB, $RAB, $NAM, XABs, services, $xxxDEF), written clean-room — done |
+| 33 | [PHASE-33 - NAM and XAB](PHASE-33%20-%20NAM%20and%20XAB.md) | RMS name blocks and XABs at run time: $PARSE, $SEARCH, $DISPLAY, NAM/XABs on $OPEN/$CREATE/$CLOSE — done; matches VMS 7.3 on a runtime oracle |
+| 34 | [PHASE-34 - CREATE DIR](PHASE-34%20-%20CREATE%20DIR.md) | `CREATE/DIRECTORY` (owner UIC, version limit, protection), with ods2 support; LIB$CREATE_DIR and `internal/librtl` — done; both match VMS 7.3 on oracle runs |
+| 35 | [PHASE-35 - octaword instructions](PHASE-35%20-%20octaword%20instructions.md) | The rest of the instruction set: G/H floating, octaword moves, EMOD/POLY, packed decimal and EDITPC — done; matches VMS on a 567-case oracle |
+| 36 | [PHASE-36 - FORTH](PHASE-36%20-%20FORTH.md) | The FORTH fixture (`testdata/mar/forth.mar`): RMS terminal I/O, LIB$PUT_OUTPUT/LIB$GET_FOREIGN, DCL symbols and foreign commands, MACRO listing/object fixes — done; object, listing, image, and map match VMS 7.3 |
+| 37 | [PHASE-37 - DCL grammar](PHASE-37%20-%20DCL%20grammar.md) | The console's fixed commands (EXAMINE, DEPOSIT, SET, STEP, RUN, ...) move onto the DCL grammar, which gains `$expression`, separators, assignments, and nonegatable keywords — done |
+| 38 | [PHASE-38 - ANALYZE OBJ](PHASE-38%20-%20ANALYZE%20OBJ.md) | `ANALYZE/OBJECT`, matching VMS 7.3's output line for line (records, GSD, TIR commands, dumps, errors, pages); the verb laid out for a later `ANALYZE/IMAGE` — done; matches VMS 7.3 byte for byte on 54 fixtures |
+| 40 | [PHASE-40 - ANALYZE IMAGE](PHASE-40%20-%20ANALYZE%20IMAGE.md) | `ANALYZE/IMAGE`, matching VMS 7.3's output line for line (image header, ISDs, fixup section, errors, pages) — done; matches VMS 7.3 byte for byte on 29 fixtures |
+| 41 | [PHASE-41 - symbolic disassembly](PHASE-41%20-%20symbolic%20disassembly.md) | Symbolic disassembly from a loaded image's DST, DMT, and GST, as the VMS debugger's `EXAMINE/INSTRUCTION` shows it; the disassembler moves to `internal/disasm`, symbols to `internal/symtab`, debug tables to `internal/dbgsym` (groundwork for a debugger mode) — done; `DISASSEMBLE` matches the VMS 7.3 debugger's 514 lines in 7 sessions, on VMS's images and govax's relinks |
+| 42 | [PHASE-42 - debugger package](PHASE-42%20-%20debugger%20package.md) | The debugger as its own package (`internal/debugger`), grammar (`debug.dcl`), and `DBG>` prompt, entered by GO, CALL, and RUN/DEBUG; SET/SHOW split between console and debugger; VMS-compatible breakpoints, STEP, and EXAMINE; fixes to the existing run-control bugs — done; every probe session of `testdata/dbg` and `testdata/dbgcmd` (18) is replayed and compared with VMS 7.3's debugger log, with the remaining differences listed |
+| 43 | [PHASE-43 - processes](PHASE-43%20-%20processes.md) | Multiprocessing, part 1 (and the plan for 43–48): system and process state split, a process table, hardware PCBs with LDPCTX/SVPCTX, per-process address spaces and stacks — done; a Go test builds a second process and switches the CPU into it and back |
+| 44 | [PHASE-44 - scheduler](PHASE-44%20-%20scheduler.md) | Multiprocessing, part 2: the scheduler (`internal/sched`), quantum and priority preemption, wait states, idle, process-aware run loops, SHOW SYSTEM — done; processes built by hand share the CPU by VMS's rules, deterministically |
+| 45 | [PHASE-45 - create and delete process](PHASE-45%20-%20create%20and%20delete%20process.md) | Multiprocessing, part 3: `$CREPRC`, process startup, rundown and deletion, termination mailboxes, jobs and job logical names, process-control services across processes, STOP, NL:, and the process and system service macros checked against real MACRO — done; a MACRO program creates a child, reads its termination message, and `$GETJPI`s it |
+| 46 | [PHASE-46 - interprocess comm](PHASE-46%20-%20interprocess%20comm.md) | Multiprocessing, part 4: mailboxes, common event flags, and global sections between processes; RMS on mailboxes and NL:; a terminal that doesn't block other processes — done; a MACRO parent and child exchange messages through two mailboxes, with a common event flag handshake |
+| 47 | [PHASE-47 - RMS and processes](PHASE-47%20-%20RMS%20and%20processes.md) | Multiprocessing, part 5: a lock manager and `$ENQ`/`$DEQ`, RMS file sharing (RMS$_FLK), a shared file control block in ods2, shared sequential files, record locks — planned |
+| 48 | [PHASE-48 - LIB_SPAWN](PHASE-48%20-%20LIB_SPAWN.md) | Multiprocessing, part 6: `LIB$SPAWN` and a subprocess CLI; the milestone (MACRO parent and child passing mailbox messages and sharing files without corrupting the volume) — planned |
 
 Phase 13 was split out of Phase 10 once that phase's own investigation found that
 `console_run.c`'s `RUN` command (real `.exe` image activation: ICB/ISD/IHD/IHI struct

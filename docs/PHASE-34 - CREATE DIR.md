@@ -608,7 +608,7 @@ LIB$CREATE_DIR device-directory-spec [,owner-UIC] [,protection-enable]
   page, when the 43rd shim arrives.
 - 2026-10-04: LIB$PUT_OUTPUT and LIB$GET_FOREIGN joined `internal/librtl`
   (codes 40 and 41) as part of the FORTH fixture's work; see
-  [PHASE-36.md](PHASE-36%20-%20FORTH.md), which also records the terminal $GET, DCL
+  [PHASE-36 - FORTH](PHASE-36%20-%20FORTH.md), which also records the terminal $GET, DCL
   symbols and foreign commands, and the assembler fixes found on the way.
 - 2026-10-06: LIB$GET_INPUT joined `internal/librtl` (`input.go`, code
   42, transfer-vector offset 0x410): a program calling it had failed to
