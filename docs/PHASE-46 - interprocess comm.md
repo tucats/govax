@@ -1,6 +1,6 @@
 # Phase 46 — Multiprocessing, part 4: interprocess communication
 
-**Status:** in progress (subtasks 1-7 done, 2026-10-08); decisions taken
+**Status:** in progress (subtasks 1-8 done, 2026-10-08); decisions taken
 2026-10-06 (see PHASE-43.md, Part A). Needs Phase 45.
 
 The program this phase belongs to is described in
@@ -158,7 +158,7 @@ as today).
 8. **A MACRO test**: `testdata/mp/mbxpingpong.mar` (parent and child via
    `$CREPRC`, exchanging messages both ways through two mailboxes, plus
    a CEF handshake): an early version of Phase 48's milestone, without
-   the files.
+   the files. *Done (2026-10-08).*
 9. **Close-out.** Status, progress log, PLAN.md, CLAUDE.md, HELP.
 
 ## Optional probes (Decision 7)
@@ -532,3 +532,28 @@ as today).
   - `TestExecute_stopsOnAttention` failed once in a full run and passed
     30 times alone: it races `Engine.Attention` on a goroutine against
     `Execute`'s start. A pre-existing flake, not this subtask's.
+- 2026-10-08: Subtask 8 (a MACRO test).
+  - **`testdata/mp/mbxpingpong.mar`** and its child **`mbxpong.mar`**,
+    written, like Phase 45's `crechild.mar`, with system services and RTL
+    routines only, to run unchanged on VMS. The parent associates a
+    temporary common event flag cluster (PINGPONG, flags 64-95), makes
+    two temporary mailboxes with logical names (PP_TO_CHILD,
+    PP_TO_PARENT) and a termination mailbox, and `$CREPRC`s the child
+    named on its command line. The child associates the cluster,
+    `$ASSIGN`s the mailboxes by name (from the job table they share), and
+    sets flag 65; the parent waits for it, then three times writes
+    "PING n" (a plain write, finishing when the child has read it) and
+    reads the child's "PONG n". An end-of-file message ends the child's
+    loop, which it reports with flag 66; the parent's flag 67 lets it
+    end, and the parent prints the child's final status from the
+    termination message.
+  - **Deterministic output:** each side prints before it sends and waits
+    for the other before it prints again, so the fifteen lines (in the
+    program's header) are the same however the two processes are
+    scheduled.
+  - Test: `console/mbxpingpong_test.go` (`TestMbxPingPong`: both images
+    assembled and linked by govax, the parent run as process 1's image,
+    at a long quantum and at a 5-instruction one; the output whole, and
+    only process 1 left). It passed as first written: no fixes were
+    needed. Not yet run on VMS (`testdata/mp/README.md` has the
+    commands).

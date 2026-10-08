@@ -1,0 +1,212 @@
+	.title	mbxpingpong
+;
+; Phase 46's interprocess program (docs/PHASE-46 - interprocess comm.md,
+; subtask 8). It creates a subprocess running the image named on the
+; command line (MBXPONG.EXE, from MBXPONG.MAR), and the two talk through
+; two temporary mailboxes, which the child finds by their logical names,
+; and a temporary common event flag cluster:
+;
+; - the child sets flag 65 when it has its channels and the cluster;
+; - three times, the parent writes "PING n" to PP_TO_CHILD and the child
+;   answers "PONG n" on PP_TO_PARENT;
+; - the parent writes an end-of-file message, and the child, seeing it,
+;   sets flag 66;
+; - the parent sets flag 67, which lets the child end, and reads the
+;   child's termination message from a third mailbox.
+;
+; Each side prints before it sends and waits for the other before it
+; prints again, so the output is the same however the two are scheduled.
+; It is written to run on VMS and on govax with this output:
+;
+;	Child: running
+;	Parent: child is ready
+;	Parent: sending PING 1
+;	Child: got PING 1
+;	Parent: got PONG 1
+;	Parent: sending PING 2
+;	Child: got PING 2
+;	Parent: got PONG 2
+;	Parent: sending PING 3
+;	Child: got PING 3
+;	Parent: got PONG 3
+;	Child: end of file
+;	Parent: child saw end of file
+;	Child: done
+;	Parent: child ended with status 00000001
+;
+	$IODEF
+	$DVIDEF
+	$ACCDEF
+
+; CHECK: end the program with the service's failure status in R0.
+	.macro	check	?ok
+	blbs	r0,ok
+	brw	fail
+ok:
+	.endm
+
+; IOCHECK: the same, for the status in the I/O status block.
+	.macro	iocheck	?ok
+	movzwl	iosb,r0
+	blbs	r0,ok
+	brw	fail
+ok:
+	.endm
+
+	.psect	data,noexe,wrt
+; The child's image name, from the command line.
+image_desc:	.word	255
+		.byte	14,1
+		.long	image_buf
+image_buf:	.blkb	255
+img_len:	.word	0
+
+; The names the two processes share.
+cluster_name:	.ascid	/PINGPONG/
+to_child_name:	.ascid	/PP_TO_CHILD/
+to_parent_name:	.ascid	/PP_TO_PARENT/
+child_name:	.ascid	/PONG_1/
+term_desc:	.ascid	/TT:/			; the child writes to our terminal
+
+ready_msg:	.ascid	/Parent: child is ready/
+eof_msg:	.ascid	/Parent: child saw end of file/
+ping_ctl:	.ascid	/PING !UL/
+send_ctl:	.ascid	/Parent: sending !AD/
+got_ctl:	.ascid	/Parent: got !AD/
+end_ctl:	.ascid	/Parent: child ended with status !XL/
+
+; A message, and a line to print.
+msg_buf:	.blkb	64
+msg_desc:	.word	64
+		.byte	14,1
+		.long	msg_buf
+msg_len:	.word	0,0
+out_buf:	.blkb	132
+out_desc:	.word	132
+		.byte	14,1
+		.long	out_buf
+out_len:	.word	0,0
+
+; The channels: to the child, from the child, and the termination
+; mailbox, whose unit number $CREPRC wants.
+to_child:	.word	0,0
+to_parent:	.word	0,0
+term_chan:	.word	0,0
+term_unit:	.long	0
+dvi_items:	.word	4,DVI$_UNIT
+		.long	term_unit,0
+		.long	0
+
+child_pid:	.long	0
+count:		.long	0
+term_msg:	.blkb	ACC$K_TERMLEN
+iosb:		.quad	0
+
+	.psect	code,exe,nowrt
+	.entry	start,^m<>
+
+; The child's image comes from the command line.
+	pushal	img_len			; out-len
+	pushl	#0			; prompt
+	pushaq	image_desc
+	calls	#3,g^lib$get_foreign
+	check
+	movw	img_len,image_desc
+
+; The common event flag cluster (flags 64-95), its handshake flags clear.
+	$ascefc_s	efn=#64, name=cluster_name
+	check
+	$clref_s	efn=#65
+	check
+	$clref_s	efn=#66
+	check
+	$clref_s	efn=#67
+	check
+
+; The two mailboxes, whose logical names go in the job's table, where
+; the subprocess finds them, and the termination mailbox.
+	$crembx_s	chan=to_child, maxmsg=#64, bufquo=#256, -
+			lognam=to_child_name
+	check
+	$crembx_s	chan=to_parent, maxmsg=#64, bufquo=#256, -
+			lognam=to_parent_name
+	check
+	$crembx_s	chan=term_chan, maxmsg=#128, bufquo=#512
+	check
+	$getdviw_s	chan=term_chan, itmlst=dvi_items
+	check
+
+	$creprc_s	pidadr=child_pid, image=image_desc, output=term_desc, -
+			prcnam=child_name, mbxunt=term_unit
+	check
+
+; Wait for the child to be ready.
+	$waitfr_s	efn=#65
+	check
+	pushaq	ready_msg
+	calls	#1,g^lib$put_output
+
+; Three pings, each answered. A write without IO$M_NOW finishes when the
+; child has read the message.
+	movl	#1,count
+ping:	$fao_s	ctrstr=ping_ctl, outlen=msg_len, outbuf=msg_desc, p1=count
+	check
+	$fao_s	ctrstr=send_ctl, outlen=out_len, outbuf=out_desc, -
+		p1=msg_len, p2=#msg_buf		; !AD
+	check
+	bsbw	print
+
+	$qiow_s	chan=to_child, func=#IO$_WRITEVBLK, iosb=iosb, -
+		p1=msg_buf, p2=msg_len
+	check
+	iocheck
+
+	$qiow_s	chan=to_parent, func=#IO$_READVBLK, iosb=iosb, -
+		p1=msg_buf, p2=#64
+	check
+	iocheck
+	movzwl	iosb+2,msg_len
+	$fao_s	ctrstr=got_ctl, outlen=out_len, outbuf=out_desc, -
+		p1=msg_len, p2=#msg_buf		; !AD
+	check
+	bsbw	print
+
+	incl	count
+	cmpl	count,#3
+	bgtr	pinged
+	brw	ping
+
+; An end-of-file message ends the child's loop; it says so with flag 66.
+pinged:	$qiow_s	chan=to_child, func=#IO$_WRITEOF, iosb=iosb
+	check
+	iocheck
+	$waitfr_s	efn=#66
+	check
+	pushaq	eof_msg
+	calls	#1,g^lib$put_output
+
+; Let the child end, and read its termination message.
+	$setef_s	efn=#67
+	check
+	$qiow_s	chan=term_chan, func=#IO$_READVBLK, iosb=iosb, -
+		p1=term_msg, p2=#ACC$K_TERMLEN
+	check
+	iocheck
+	$fao_s	ctrstr=end_ctl, outlen=out_len, outbuf=out_desc, -
+		p1=term_msg+ACC$L_FINALSTS
+	check
+	bsbw	print
+
+	$dacefc_s	efn=#64
+	check
+	movl	#1,r0
+fail:	ret
+
+; Print what $FAO formatted into OUT_BUF.
+print:	movw	out_len,out_desc
+	pushaq	out_desc
+	calls	#1,g^lib$put_output
+	movw	#132,out_desc
+	rsb
+
+	.end	start

@@ -1,0 +1,99 @@
+	.title	mbxpong
+;
+; The child of MBXPINGPONG.MAR (docs/PHASE-46 - interprocess comm.md,
+; subtask 8). It associates with its creator's common event flag
+; cluster, assigns channels to the two mailboxes by their logical names,
+; and sets flag 65 to say it is ready. Then it answers each "PING n" it
+; reads with "PONG n", until an end-of-file message, which it reports
+; with flag 66. It ends, with the status 1, when its creator sets flag 67.
+;
+	$IODEF
+	$SSDEF
+
+; CHECK: end the program with the service's failure status in R0.
+	.macro	check	?ok
+	blbs	r0,ok
+	brw	fail
+ok:
+	.endm
+
+	.psect	data,noexe,wrt
+cluster_name:	.ascid	/PINGPONG/
+to_child_name:	.ascid	/PP_TO_CHILD/
+to_parent_name:	.ascid	/PP_TO_PARENT/
+
+run_msg:	.ascid	/Child: running/
+eof_msg:	.ascid	/Child: end of file/
+done_msg:	.ascid	/Child: done/
+got_ctl:	.ascid	/Child: got !AD/
+
+msg_buf:	.blkb	64
+msg_len:	.long	0
+out_buf:	.blkb	132
+out_desc:	.word	132
+		.byte	14,1
+		.long	out_buf
+out_len:	.word	0,0
+
+in_chan:	.word	0,0
+out_chan:	.word	0,0
+iosb:		.quad	0
+
+	.psect	code,exe,nowrt
+	.entry	start,^m<>
+	pushaq	run_msg
+	calls	#1,g^lib$put_output
+
+	$ascefc_s	efn=#64, name=cluster_name
+	check
+	$assign_s	devnam=to_child_name, chan=in_chan
+	check
+	$assign_s	devnam=to_parent_name, chan=out_chan
+	check
+	$setef_s	efn=#65
+	check
+
+; Read a message; an end-of-file message ends the loop.
+read:	$qiow_s	chan=in_chan, func=#IO$_READVBLK, iosb=iosb, -
+		p1=msg_buf, p2=#64
+	check
+	movzwl	iosb,r0
+	cmpl	r0,#SS$_ENDOFFILE
+	bneq	5$
+	brw	eof
+5$:	blbs	r0,10$
+	brw	fail
+10$:	movzwl	iosb+2,msg_len
+	$fao_s	ctrstr=got_ctl, outlen=out_len, outbuf=out_desc, -
+		p1=msg_len, p2=#msg_buf		; !AD
+	check
+	movw	out_len,out_desc
+	pushaq	out_desc
+	calls	#1,g^lib$put_output
+	movw	#132,out_desc
+
+; PING becomes PONG.
+	movb	#^A/O/,msg_buf+1
+	$qiow_s	chan=out_chan, func=#IO$_WRITEVBLK, iosb=iosb, -
+		p1=msg_buf, p2=msg_len
+	check
+	movzwl	iosb,r0
+	blbs	r0,20$
+	brw	fail
+20$:	brw	read
+
+; Say so, and wait to be let go.
+eof:	pushaq	eof_msg
+	calls	#1,g^lib$put_output
+	$setef_s	efn=#66
+	check
+	$waitfr_s	efn=#67
+	check
+	pushaq	done_msg
+	calls	#1,g^lib$put_output
+	$dacefc_s	efn=#64
+	check
+	movl	#1,r0
+fail:	ret
+
+	.end	start
