@@ -62,6 +62,9 @@
 //              10/07/26    Added STOP; MACRO's own macro library has the
 //                          process and other system service macros
 //                          (docs/PHASE-45.md)
+//              10/08/26    KEYS: CTRL/C and CTRL/Y ASTs in any process; a
+//                          program waiting for input doesn't hold up the
+//                          others (docs/PHASE-46 - interprocess comm.md)
 
 This is the help documentation for the govax VAX emulator.  Topic sections are
 marked by a "$" delimiter.  This is followed by as many tokens of the help
@@ -1756,14 +1759,18 @@ $KEY
                 for a line of input stops too.  At a prompt, it cancels
                 the line being typed.  A program that has enabled a CTRL/C
                 AST gets the AST instead (or its CTRL/Y AST, if it has
-                only that).  govax echoes *Interrupt*.
+                only that).  With several processes, the AST goes to the
+                running process if it enabled one, else to the first
+                other process (by PID) that did.  govax echoes
+                *Interrupt*.
 
     Ctrl/Y      Ends govax, returning to the host's shell: the command
                 running stops, mounted volumes are dismounted, and the
                 terminal is put back as it was.  If govax doesn't end (a
                 command that doesn't finish), a second Ctrl/Y exits at
                 once.  A program that has enabled a CTRL/Y AST gets the
-                AST instead.  govax echoes *Interrupt*.
+                AST instead, chosen among processes as for Ctrl/C.  govax
+                echoes *Interrupt*.
 
     Ctrl/Z      End of file.  On an empty line, the read waiting gets
                 the end of file, and govax echoes *Exit*.  Typed after
@@ -1778,6 +1785,11 @@ $KEY
     The other control keys keep their host meanings: the line editor's
     at a prompt, and the host terminal's while a program runs.  Nothing
     suspends govax.
+
+    With the scheduler on (vax.process.scheduler), a process waiting for
+    a line from the terminal lets the other processes run.  Processes
+    reading the terminal get its lines in the order they asked, and each
+    read's prompt appears when its turn comes.
 
 $HELP
 

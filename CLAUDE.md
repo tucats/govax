@@ -13,9 +13,9 @@ never had.
   index.
 - `docs/PHASE-00.md` … `PHASE-48.md` — one doc per phase: goal, C-source file
   mapping, deliverables, open questions, and a dated progress log (all
-  done through 45; 40 follows 38 directly: there is no Phase 39). Phases
+  done through 46; 40 follows 38 directly: there is no Phase 39). Phases
   43–48 are the multiprocessing program (subprocesses, a scheduler,
-  interprocess mailboxes and shared memory, RMS file sharing; 46–48
+  interprocess mailboxes and shared memory, RMS file sharing; 47–48
   planned);
   `PHASE-43.md`'s Part A describes the whole program. Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
@@ -226,7 +226,18 @@ expect adjustment as phases land):
   service says what it waits for (`waits.go`: `waitOn`, a state and a Go
   test), the process waits in the scheduler, and each scheduling call
   expires every process's timers and tests the waiters (`pollEvents`);
-  with nothing to run, `idle.go` moves time to the next timer. CPU time
+  with nothing to run, `idle.go` moves time to the next timer. Phase 46:
+  an event is reported when it happens (`reportEvent`, SCH$RSE: an I/O
+  completion with its request's boost class, a timer, a common event
+  flag set through `postFlag`, mailbox room), making the waiter
+  computable at once; UIC protection (`uicprot.go`) on mailboxes and
+  global sections; global sections (`gblsec.go`: `$CRMPSC`, `$MGBLSC`,
+  `$DGBLSC`, page-file sections whose frames the section owns,
+  `System.releaseFrame`); mailbox and NL: record streams for RMS
+  (`recdevice.go`; `LIB$PUT_OUTPUT` writes to a mailbox SYS$OUTPUT); and
+  the shared terminal (`terminal.go`: one buffer, reads in FIFO order,
+  a read with no whole line waits in LEF, with the scheduler on and a
+  `TerminalSource` input). CPU time
   and SHOW SYSTEM/SHOW PROCESS's reports are in `showsys.go`. The
   console's engine hooks reach the current process (`Console.running`);
   `Console.RTL` stays process 1, and only process 1's image ending ends
@@ -352,7 +363,10 @@ expect adjustment as phases land):
   `TestCreateDirectoryOracle` (`testdata/credir`) checks headers and
   messages against VMS 7.3's run. A RAB connected to the terminal reads lines from the
   console's input, prompting with RAB$L_PBF when RAB$V_PMT is set
-  (`terminal.go`).
+  (`terminal.go`; with the shared terminal, through
+  `Context.AwaitTerminal`, Phase 46). A name whose device is a mailbox or
+  NL: opens a `RecordDevice` stream from `Context.Devices` (`recdevice.go`,
+  Phase 46; `internal/corevms` is the opener).
 - `internal/link` — the VAX linker (Phase 30): builds a VMS executable image from
   `internal/obj` modules, laid out as real LINK lays images out (byte for byte on
   the fixtures). The console's `LINK` command (`internal/console/link.go`) drives it.

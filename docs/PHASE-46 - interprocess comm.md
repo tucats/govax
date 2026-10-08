@@ -1,7 +1,7 @@
 # Phase 46 — Multiprocessing, part 4: interprocess communication
 
-**Status:** in progress (subtasks 1-8 done, 2026-10-08); decisions taken
-2026-10-06 (see PHASE-43.md, Part A). Needs Phase 45.
+**Status:** done (2026-10-08); decisions taken 2026-10-06 (see
+PHASE-43.md, Part A). Needs Phase 45. What's left is in "Carry forward".
 
 The program this phase belongs to is described in
 [PHASE-43.md](PHASE-43.md), Part A. Read that first.
@@ -160,6 +160,7 @@ as today).
    a CEF handshake): an early version of Phase 48's milestone, without
    the files. *Done (2026-10-08).*
 9. **Close-out.** Status, progress log, PLAN.md, CLAUDE.md, HELP.
+   *Done (2026-10-08).*
 
 ## Optional probes (Decision 7)
 
@@ -174,6 +175,47 @@ as today).
 - `SEC$M_EXPREG` placement interplay with the image's P0 high-water mark
   (`RegionSize`). *Settled in subtask 5:* the mapping starts at the
   first page above the mark and moves it, as `$CRETVA` does.
+
+## Carry forward
+
+Things Phase 46 did not get to, so that they are not lost. Each is either
+waiting on a run on the VAX, or optional work for a later phase.
+
+1. **The optional probes** (above) were not run: mailbox IOSBs between two
+   processes (whose PID each gets, including an IO$M_NOW write handed to
+   a waiting read), `$GETDVI` of a mailbox with messages queued
+   (DVI$_DEVDEPEND's message count), and a global section's `retadr` and
+   `$MGBLSC` behavior. `testdata/mp/mbxpingpong.mar` and `mbxpong.mar`
+   are written to run on VMS too and haven't been (`testdata/mp/README.md`
+   has the commands).
+2. **No macros for the global section services.** govax's STARLET has no
+   `$CRMPSC`, `$MGBLSC`, or `$DGBLSC` (in any form), so a MACRO program
+   reaches them only through the P1 vector by hand, as
+   `console/gblsec_test.go` does. Adding them means a probe round like
+   Phase 45's (`testdata/mp/macros`): keywords, which are required, what
+   an omitted one pushes, and the size of each address.
+3. **Unconfirmed behavior** (each marked in the progress log): the boost
+   classes of a terminal set or sense mode, of a mailbox attention AST,
+   of `$SETEF` (none), and of a CTRL/C or CTRL/Y AST to a waiting process;
+   that either access is enough for a mailbox `$ASSIGN`, and SETPROT's
+   argument and who may use it; a mailbox's DVI$_PID being its creator's;
+   several global section statuses (SS$_ILLPAGCNT, SS$_BADPARAM,
+   SS$_IVSECFLG, `$DGBLSC` not checking the protection mask), no
+   logical-name translation of a section name, and a `$CRMPSC` whose
+   ident matches no section of the name making another; FAB$W_MRS of a
+   mailbox; whether RMS's `$PUT` to a mailbox waits for the message to be
+   read.
+4. **Terminal simplifications:** a terminal `$QIO` read that must wait
+   makes the `$QIO` itself wait, rather than returning with the read
+   pending (a program doing other work before it waits for the read's
+   event flag would see the difference). The old `DECC$GETS` and
+   `EXE$INPUT` shims still block every process. The console's own prompt
+   after a run stopped while a process waited for input isn't tested.
+5. **File-backed sections** (`$CRMPSC` of a file's blocks, private or
+   global) are SS$_UNSUPPORTED; so is `SEC$M_EXPREG` in P1.
+6. **The flaky test** `TestExecute_stopsOnAttention` (it races
+   `Engine.Attention` on a goroutine against `Execute`'s start) predates
+   this phase and is still there.
 
 ## Progress log
 
@@ -557,3 +599,7 @@ as today).
     only process 1 left). It passed as first written: no fixes were
     needed. Not yet run on VMS (`testdata/mp/README.md` has the
     commands).
+- 2026-10-08: Subtask 9 (close-out): status, the carry-forward list,
+  PLAN.md, CLAUDE.md, and `console.help` (KEYS: CTRL/C and CTRL/Y ASTs in
+  any process, and a program waiting for input no longer holding up the
+  others).
