@@ -1,0 +1,20 @@
+	.title	p5lock
+;
+; Probe 5's lock holder (README.md, step 5): it takes the resource P5VAL
+; in exclusive mode with a value block, then hibernates until it is
+; deleted, holding the lock.
+;
+	$LCKDEF
+
+	.psect	data,noexe,wrt,long
+lksb:	.long	0,0				; status, lock ID
+	.blkb	16				; the value block
+resnam:	.ascid	/P5VAL/
+
+	.psect	code,exe,nowrt
+	.entry	start,^m<>
+	$enqw_s	lkmode=#LCK$K_EXMODE, lksb=lksb, flags=#LCK$M_VALBLK, -
+		resnam=resnam
+10$:	$hiber_s
+	brb	10$
+	.end	start

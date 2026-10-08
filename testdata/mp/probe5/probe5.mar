@@ -1,0 +1,308 @@
+	.title	probe5
+;
+; The multiprocessing program's last probe (README.md): what Phases 45 to
+; 47 chose without a manual or a run to settle it. Each step prints
+; lines "n what: result", the statuses in hexadecimal.
+;
+; It uses only system services, RMS, and LIBRTL, and macros govax's
+; library has too, so govax runs it as well (TestProbe5).
+;
+	$IODEF
+	$DVIDEF
+	$ACCDEF
+	$JPIDEF
+	$LNMDEF
+	$PSLDEF
+	$LCKDEF
+	$SSDEF
+	$FABDEF
+
+	.psect	data,noexe,wrt,long
+sleep:		.ascid	/P5SLEEP.EXE/
+info:		.ascid	/P5INFO.EXE/
+locker:		.ascid	/P5LOCK.EXE/
+n_sleep:	.ascid	/P5_SLEEP/
+n_info:		.ascid	/P5_INFO/
+n_lock:		.ascid	/P5_LOCK/
+o_info:		.ascid	/P5_INFO.LOG/
+proctab:	.ascid	/LNM$PROCESS/
+n_parent:	.ascid	/P5_PARENT/
+lnm_items:	.word	1,LNM$_STRING
+		.long	lnm_value,0
+		.long	0
+lnm_value:	.ascii	/X/
+res:		.ascid	/P5RES/
+val:		.ascid	/P5VAL/
+mbxnam:		.ascid	/P5MBX/
+two_sec:	.ascid	/0 00:00:02.00/
+
+; The report's lines.
+l_1a:	.ascid	"1 child at creation: PRI !UL, PRIB !UL, DFWSCNT !UL, WSQUOTA !UL, ASTLM !UL"
+l_1b:	.ascid	"1 self: PRI !UL, PRIB !UL, DFWSCNT !UL, WSQUOTA !UL, ASTLM !UL"
+l_2:	.ascid	"2 the same name created again: PID !XL, then !XL"
+l_3:	.ascid	"3 P5INFO: create !XL, final status !XL"
+l_4:	.ascid	"4 $ENQW NOQUEUE, conflicting: R0 !XL, LKSB status !XW, lock ID !XL"
+l_5:	.ascid	"5 $ENQW PR VALBLK after the EX holder's deletion: R0 !XL, LKSB status !XW"
+l_6:	.ascid	"6 $OPEN of a mailbox, MRS 1234 before: !XL, MRS !UW"
+l_7:	.ascid	"7 $ERASE of a file open for writing: !XL; $OPEN after the writer's $CLOSE: !XL"
+l_8:	.ascid	"8 !AC: !UL argument(s) (!XL)"
+l_end:	.ascid	/end/
+
+; Each argument-count case: the number of arguments the manual gives the
+; service, its entry point, and its name (a counted string). Only
+; services harmless with every argument zero are here (none that acts on
+; its own process with a zero PID or name, or calls a routine at address
+; 0). A zero count ends the table.
+	.macro	svc	name, n
+	.long	n
+	.address	SYS$'name
+	.ascic	/SYS$'name/
+	.endm	svc
+argtab:	svc	ADJWSL,2
+	svc	ALLOC,5
+	svc	ASCEFC,4
+	svc	ASCTIM,4
+	svc	BINTIM,2
+	svc	CANCEL,1
+	svc	CANTIM,2
+	svc	CLREF,1
+	svc	CRELNM,5
+	svc	CRELNT,8
+	svc	CRELOG,4
+	svc	CRETVA,3
+	svc	CRMPSC,12
+	svc	DACEFC,1
+	svc	DALLOC,2
+	svc	DASSGN,1
+	svc	DELLNM,3
+	svc	DELLOG,3
+	svc	DELMBX,1
+	svc	DELTVA,3
+	svc	DEQ,4
+	svc	DGBLSC,3
+	svc	DLCEFC,1
+	svc	ENQ,12
+	svc	EXPREG,4
+	svc	FAO,3
+	svc	FAOL,4
+	svc	GETJPI,7
+	svc	GETMSG,5
+	svc	GETSYI,7
+	svc	GETTIM,1
+	svc	LKWSET,3
+	svc	MGBLSC,7
+	svc	NUMTIM,2
+	svc	QIO,12
+	svc	READEF,2
+	svc	SETEF,1
+	svc	SETIMR,5
+	svc	SNDOPR,2
+	svc	TRNLOG,6
+	svc	ULWSET,3
+	.long	0
+
+; A file open for writing (step 7), and the FABs that $ERASE and $OPEN
+; it; the mailbox's FAB (step 6).
+	.align	long
+wfab:	$fab	fnm=<P5ERASE.DAT>, fac=<PUT>, rfm=VAR, org=SEQ
+	.align	long
+wrab:	$rab	fab=wfab, rbf=lnm_value, rsz=1
+	.align	long
+efab:	$fab	fnm=<P5ERASE.DAT>
+	.align	long
+ofab:	$fab	fnm=<P5ERASE.DAT>, fac=<GET>
+	.align	long
+mfab:	$fab	fnm=<P5MBX:>, fac=<GET>, mrs=1234
+
+	.align	long
+status:		.long	0
+erased:		.long	0
+pid:		.long	0
+pid2:		.long	0
+delta:		.quad	0
+iosb:		.quad	0
+lksb1:		.long	0,0
+		.blkb	16
+lksb2:		.long	^XEEEEEEEE,^XEEEEEEEE
+		.blkb	16
+term_chan:	.word	0,0
+mbx_chan:	.word	0,0
+term_unit:	.long	0
+dvi_items:	.word	4,DVI$_UNIT
+		.long	term_unit,0
+		.long	0
+term_msg:	.blkb	ACC$K_TERMLEN
+pri:		.long	0
+prib:		.long	0
+dfwscnt:	.long	0
+wsquota:	.long	0
+astlm:		.long	0
+jpi_items:	.word	4,JPI$_PRI
+		.long	pri,0
+		.word	4,JPI$_PRIB
+		.long	prib,0
+		.word	4,JPI$_DFWSCNT
+		.long	dfwscnt,0
+		.word	4,JPI$_WSQUOTA
+		.long	wsquota,0
+		.word	4,JPI$_ASTLM
+		.long	astlm,0
+		.long	0
+out_buf:	.blkb	132
+out_desc:	.word	132
+		.byte	14,1
+		.long	out_buf
+out_len:	.word	0,0
+
+	.psect	code,exe,nowrt
+	.entry	start,^m<r2,r3,r4,r5,r6>
+
+	$crembx_s	chan=term_chan, maxmsg=#128, bufquo=#512
+	$getdviw_s	chan=term_chan, itmlst=dvi_items
+	$bintim_s	timbuf=two_sec, timadr=delta
+
+; 1: a subprocess's priority, working set, and AST limit at creation,
+; read before it has run; and the creator's own.
+	$creprc_s	pidadr=pid, image=sleep, prcnam=n_sleep, -
+			mbxunt=term_unit
+	moval	pid,r2
+	moval	l_1a,r6
+	bsbw	report_jpi
+	clrl	r2
+	moval	l_1b,r6
+	bsbw	report_jpi
+
+; 2: delete it, and make the same name again: the second PID.
+	movl	pid,pid2
+	$delprc_s	pidadr=pid2
+	bsbw	read_term
+	$creprc_s	pidadr=pid, image=sleep, prcnam=n_sleep, -
+			mbxunt=term_unit
+	$fao_s	ctrstr=l_2, outlen=out_len, outbuf=out_desc, -
+		p1=pid2, p2=pid
+	bsbw	print
+	$delprc_s	pidadr=pid
+	bsbw	read_term
+
+; 3: what a subprocess inherits (P5INFO writes it to P5_INFO.LOG): the
+; default directory, SYS$DISK, and P5_PARENT, a name in this process's
+; table.
+	$crelnm_s	tabnam=proctab, lognam=n_parent, itmlst=lnm_items, -
+			acmode=#PSL$C_SUPER
+	$creprc_s	image=info, output=o_info, prcnam=n_info, -
+			mbxunt=term_unit
+	movl	r0,status
+	bsbw	read_term
+	$fao_s	ctrstr=l_3, outlen=out_len, outbuf=out_desc, -
+		p1=status, p2=term_msg+ACC$L_FINALSTS
+	bsbw	print
+
+; 4: a NOQUEUE request that conflicts: its status, and what it leaves in
+; the lock status block.
+	$enqw_s	lkmode=#LCK$K_EXMODE, lksb=lksb1, resnam=res
+	$enqw_s	lkmode=#LCK$K_EXMODE, lksb=lksb2, resnam=res, -
+		flags=#LCK$M_NOQUEUE
+	movzwl	lksb2,r2
+	$fao_s	ctrstr=l_4, outlen=out_len, outbuf=out_desc, -
+		p1=r0, p2=r2, p3=lksb2+4
+	bsbw	print
+	$deq_s	lkid=lksb1+4
+
+; 5: a process holding P5VAL in EX with a value block is deleted; then a
+; PR request with a value block: is the value block marked invalid?
+	$creprc_s	image=locker, prcnam=n_lock, pidadr=pid, -
+			mbxunt=term_unit
+	$schdwk_s	daytim=delta
+	$hiber_s
+	$delprc_s	pidadr=pid
+	bsbw	read_term
+	$enqw_s	lkmode=#LCK$K_PRMODE, lksb=lksb1, resnam=val, -
+		flags=#LCK$M_VALBLK
+	movzwl	lksb1,r2
+	$fao_s	ctrstr=l_5, outlen=out_len, outbuf=out_desc, -
+		p1=r0, p2=r2
+	bsbw	print
+	$deq_s	lkid=lksb1+4
+
+; 6: $OPEN of a mailbox: what it does to FAB$W_MRS.
+	$crembx_s	chan=mbx_chan, maxmsg=#100, lognam=mbxnam
+	$open	fab=mfab
+	movzwl	mfab+FAB$W_MRS,r2
+	$fao_s	ctrstr=l_6, outlen=out_len, outbuf=out_desc, -
+		p1=r0, p2=r2
+	bsbw	print
+	$close	fab=mfab
+	$dassgn_s	chan=mbx_chan
+
+; 7: $ERASE of a file another FAB has open for writing; then, once the
+; writer has closed it, whether it is still there.
+	$create	fab=wfab
+	$connect	rab=wrab
+	$put	rab=wrab
+	$erase	fab=efab
+	movl	r0,erased
+	$close	fab=wfab
+	$open	fab=ofab
+	movl	r0,status
+	$close	fab=ofab
+	$fao_s	ctrstr=l_7, outlen=out_len, outbuf=out_desc, -
+		p1=erased, p2=status
+	bsbw	print
+	$erase	fab=efab
+
+; 8: each service's smallest argument count: called with 0, 1, 2, ...
+; arguments, all zero, until it no longer answers SS$_INSFARG.
+	moval	argtab,r5
+10$:	tstl	(r5)
+	beql	50$
+	clrl	r3
+20$:	movl	r3,r4
+30$:	tstl	r4
+	beql	40$
+	clrl	-(sp)
+	decl	r4
+	brb	30$
+40$:	calls	r3,@4(r5)
+	cmpl	r0,#SS$_INSFARG
+	bneq	45$
+	incl	r3
+	cmpl	r3,(r5)
+	bleq	20$
+45$:	moval	8(r5),r2
+	$fao_s	ctrstr=l_8, outlen=out_len, outbuf=out_desc, -
+		p1=r2, p2=r3, p3=r0
+	bsbw	print
+	movzbl	8(r5),r2			; the next case follows the name
+	addl2	#9,r2
+	addl2	r2,r5
+	brb	10$
+
+50$:	pushaq	l_end
+	calls	#1,g^lib$put_output
+	movl	#1,r0
+	ret
+
+; Read the termination mailbox's next message: a process ended.
+read_term:
+	clrl	term_msg+ACC$L_FINALSTS
+	$qiow_s	chan=term_chan, func=#IO$_READVBLK, iosb=iosb, -
+		p1=term_msg, p2=#ACC$K_TERMLEN
+	rsb
+
+; $GETJPIW of the PID at (R2) (or this process, for R2 0); print the
+; line at R6 with its items.
+report_jpi:
+	$getjpiw_s	pidadr=(r2), itmlst=jpi_items, iosb=iosb
+	$fao_s	ctrstr=(r6), outlen=out_len, outbuf=out_desc, -
+		p1=pri, p2=prib, p3=dfwscnt, p4=wsquota, p5=astlm
+	bsbw	print
+	rsb
+
+; Print what $FAO formatted into OUT_BUF.
+print:	movw	out_len,out_desc
+	pushaq	out_desc
+	calls	#1,g^lib$put_output
+	movw	#132,out_desc
+	rsb
+
+	.end	start

@@ -1,0 +1,62 @@
+	.title	p5info
+;
+; Probe 5's inheritance report (README.md, step 3): run by $CREPRC with
+; its output to P5_INFO.LOG, it writes what it inherited: the default
+; device and directory (a $PARSE of X.Y), and what its process table
+; holds for SYS$DISK and for P5_PARENT, a name its creator defined in
+; its own.
+;
+	$NAMDEF
+	$LNMDEF
+
+	.psect	data,noexe,wrt,long
+fab:	$fab	fnm=<X.Y>, nam=nam
+nam:	$nam	esa=esa, ess=255
+esa:	.blkb	255
+proctab:	.ascid	/LNM$PROCESS/
+n_disk:		.ascid	/SYS$DISK/
+n_parent:	.ascid	/P5_PARENT/
+value:		.blkb	255
+value_len:	.word	0,0
+items:		.word	255,LNM$_STRING
+		.long	value,value_len
+		.long	0
+l_default:	.ascid	/default: !XL "!AD"/
+l_name:		.ascid	/!AS: !XL "!AD"/
+out_buf:	.blkb	132
+out_desc:	.word	132
+		.byte	14,1
+		.long	out_buf
+out_len:	.word	0,0
+
+	.psect	code,exe,nowrt
+	.entry	start,^m<r2>
+	$parse	fab=fab
+	movzbl	nam+NAM$B_ESL,r2
+	$fao_s	ctrstr=l_default, outlen=out_len, outbuf=out_desc, -
+		p1=r0, p2=r2, p3=#esa
+	bsbw	print
+	moval	n_disk,r2
+	bsbw	translate
+	moval	n_parent,r2
+	bsbw	translate
+	movl	#1,r0
+	ret
+
+; Translate the name at R2 in the process table and print it.
+translate:
+	clrw	value_len
+	$trnlnm_s	tabnam=proctab, lognam=(r2), itmlst=items
+	movzwl	value_len,r1
+	$fao_s	ctrstr=l_name, outlen=out_len, outbuf=out_desc, -
+		p1=r2, p2=r0, p3=r1, p4=#value
+	bsbw	print
+	rsb
+
+print:	movw	out_len,out_desc
+	pushaq	out_desc
+	calls	#1,g^lib$put_output
+	movw	#132,out_desc
+	rsb
+
+	.end	start

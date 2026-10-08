@@ -389,7 +389,7 @@ func main() {
 	}
 
 	// Round 5: what round 4 left open.
-	var round5, round6 []string
+	var round5, round6, round7 []string
 
 	{
 		text, calls := r5Probe()
@@ -411,7 +411,17 @@ func main() {
 		round6 = append(round6, name)
 	}
 
-	names = append(append(names, round5...), round6...)
+	// Round 7 (the multiprocessing program's close-out, docs/PHASE-48 -
+	// LIB_SPAWN.md): what round 6 left open.
+	{
+		text, calls := r7Probe()
+		write("r7_lock.mar", text)
+		write("r7_lock.calls", strings.Join(calls, "\n")+"\n")
+
+		round7 = append(round7, "r7_lock")
+	}
+
+	names = append(append(append(names, round5...), round6...), round7...)
 
 	// The command procedures: one per round, each with its own log, and
 	// MACROS.COM, which runs both.
@@ -435,17 +445,18 @@ func main() {
 
 	roundProcedure(5, round5)
 	roundProcedure(6, round6)
+	roundProcedure(7, round7)
 
-	write("macros.com", `$ ! MACROS.COM - the system service macro probes, rounds 5 and 6
+	write("macros.com", `$ ! MACROS.COM - the system service macro probes, round 7
 $ ! (testdata/mp/macros/README.md). Written by gen.go. Run it with the
 $ ! exchange volume as the default directory:
 $ !
 $ !     @MACROS
 $ !
-$ ! Each round writes its own log, MACROS5.LOG and MACROS6.LOG.
+$ ! Rounds 5 and 6 have run (MACROS5.COM and MACROS6.COM, logs in vax/);
+$ ! round 7 writes MACROS7.LOG.
 $ !
-$ @MACROS5/OUTPUT=MACROS5.LOG
-$ @MACROS6/OUTPUT=MACROS6.LOG
+$ @MACROS7/OUTPUT=MACROS7.LOG
 $ EXIT
 `)
 
@@ -852,6 +863,63 @@ func r5Probe() (string, []string) {
 	}
 
 	b.WriteString("\tRET\n\t.END\tR5_MISC\n")
+
+	return b.String(), calls
+}
+
+// r7Probe is round 7: the keywords of $ENQ's twelfth and thirteenth
+// arguments and $GETLKI's seventh, which round 6 found are not NULLARG.
+// Each candidate is given alone, as KEYWORD=ADR9: one that is the
+// macro's own puts ADR9's address in its argument's place in the
+// object; one that isn't becomes the text of the first positional
+// argument not yet given (round 3's finding), a reference to a global
+// symbol of its name. The last calls give every argument by position,
+// to show where the twelfth and thirteenth go.
+func r7Probe() (string, []string) {
+	var (
+		b     strings.Builder
+		calls []string
+	)
+
+	b.WriteString("\t.TITLE\tR7_LOCK\twhat round 6 left open\n\t.IDENT\t/V1.0/\n;\n")
+	b.WriteString("; Written by testdata/mp/macros/gen.go (docs/PHASE-48 - LIB_SPAWN.md).\n;\n")
+	b.WriteString("\t.PSECT\tDATA,WRT,NOEXE,LONG\n")
+
+	for i := range 14 {
+		fmt.Fprintf(&b, "ADR%d:\t.LONG\t0,0\n", i+1)
+	}
+
+	b.WriteString("\t.PSECT\tCODE,EXE,NOWRT,LONG\n\t.ENTRY\tR7_LOCK,^M<R6,R7>\n")
+
+	candidates := []string{
+		"NULLARG", "NULLARG1", "NULLARG2", "NULL", "NUL", "RESERVED", "RESERVED1", "RESERVED2",
+		"RSVD", "RSV", "RSV1", "RSV2", "UNUSED", "SPARE", "SPARE1", "SPARE2", "DUMMY",
+		"P12", "P13", "P7", "ARG12", "ARG13", "ARG7", "PRIORITY", "PRI", "LKPRI", "TIMEOUT", "TMO",
+		"CONTXT", "CONTEXT", "RSDMID", "RSDM", "DOMAIN", "LOCKID", "LKID", "NODE", "CSID",
+		"FLAGS2", "FLAG2", "XFLAGS", "LKMODE2", "OWNER", "OWNERID", "TXID", "TID",
+	}
+
+	list := []string{
+		"$ENQ_S\t#0, #1, ADR1, #0, ADR2, #0, #0, #0, #0, #0, #0, ADR12, ADR13",
+		"$ENQ_S\tLKMODE=#1, LKSB=ADR1, RSDM_ID=ADR11",
+		"$GETLKI_S\t#0, ADR1, ADR2, ADR4, #0, #0, ADR7",
+	}
+
+	for _, k := range candidates {
+		list = append(list, fmt.Sprintf("$ENQ_S\tLKMODE=#1, LKSB=ADR1, %s=ADR9", k))
+	}
+
+	for _, k := range candidates {
+		list = append(list, fmt.Sprintf("$GETLKI_S\tLKIDADR=ADR1, ITMLST=ADR2, %s=ADR9", k))
+	}
+
+	for _, c := range list {
+		calls = append(calls, c)
+		b.WriteString("\t" + c + "\n")
+		fmt.Fprintf(&b, "\t.LONG\t^X7A7A%04X\n", len(calls))
+	}
+
+	b.WriteString("\tRET\n\t.END\tR7_LOCK\n")
 
 	return b.String(), calls
 }

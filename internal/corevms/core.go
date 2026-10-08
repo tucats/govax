@@ -10,7 +10,9 @@ import (
 // get_region_size/set_region_size's VAX-memory-cell indirection — see
 // docs/PHASE-10.md's open questions).
 func serviceSysExpreg(env *Environment, argv []uint32) (uint32, error) {
-	pageCount, retAddr, mode, region := argv[0], argv[1], argv[2], argv[3]
+	// An argument the caller didn't pass is 0 (testdata/mp/probe5 calls
+	// it with fewer than four: it mustn't fail in Go).
+	pageCount, retAddr, mode, region := optArg(argv, 0), optArg(argv, 1), optArg(argv, 2), optArg(argv, 3)
 
 	if region > 2 {
 		return ssInvArg, nil

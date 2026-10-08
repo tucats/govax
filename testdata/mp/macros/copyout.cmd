@@ -23,6 +23,8 @@ COPY DUA1:[000000]R6_GETLKI.OBJ "testdata/mp/macros/vax/r6_getlki.obj"/HOST/BINA
 COPY DUA1:[000000]R6_GETLKI.ANL "testdata/mp/macros/vax/r6_getlki.anl"/HOST/QUIET
 COPY DUA1:[000000]R6_GETLKIW.OBJ "testdata/mp/macros/vax/r6_getlkiw.obj"/HOST/BINARY/QUIET
 COPY DUA1:[000000]R6_GETLKIW.ANL "testdata/mp/macros/vax/r6_getlkiw.anl"/HOST/QUIET
+COPY DUA1:[000000]R7_LOCK.OBJ "testdata/mp/macros/vax/r7_lock.obj"/HOST/BINARY/QUIET
+COPY DUA1:[000000]R7_LOCK.ANL "testdata/mp/macros/vax/r7_lock.anl"/HOST/QUIET
 COPY DUA1:[000000]MACROS5.LOG "testdata/mp/macros/vax/macros5.log"/HOST/QUIET
 COPY DUA1:[000000]MACROS6.LOG "testdata/mp/macros/vax/macros6.log"/HOST/QUIET
 DISMOUNT DUA1

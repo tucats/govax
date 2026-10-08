@@ -1,0 +1,10 @@
+	.title	p5sleep
+;
+; Probe 5's process that stays (README.md): it hibernates until it is
+; deleted.
+;
+	.psect	code,exe,nowrt
+	.entry	start,^m<>
+10$:	$hiber_s
+	brb	10$
+	.end	start
