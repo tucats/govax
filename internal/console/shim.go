@@ -116,10 +116,11 @@ var baseShims = []shimEntry{
 const shimStubSize = 12
 
 // shimPageBytes is the space VMInit reserves for the stubs (vminit.go): one
-// page, room for 42. The SCB follows it directly, so ensureShims refuses to
-// write past it. When more shims than fit are needed, raise this (in whole
-// pages) -- VMInit's reservation uses it -- and the error and
-// TestEnsureShims_fitsReservedPage will stop complaining.
+// page, room for 42. The SCB follows it directly, so ensureShims never
+// writes past it: the stubs that don't fit go to a page of their own from
+// the S0 pool (shimOverflow). VMInit's page isn't made bigger, since
+// that would move the SCB and everything VMInit places after it, which
+// listings and tests show.
 const shimPageBytes = 512
 
 // ensureShims synthesizes a dispatch stub for every shimTable entry that
@@ -138,19 +139,8 @@ func (c *Console) ensureShims() error {
 		return nil
 	}
 
-	stubs := 0
-
-	for _, e := range shimTable {
-		if e.code != 0 {
-			stubs++
-		}
-	}
-
-	if need := stubs * shimStubSize; need > shimPageBytes {
-		return fmt.Errorf("console: %d shim stubs need %d bytes, but VMInit reserves %d (shimPageBytes, internal/console/shim.go)", stubs, need, shimPageBytes)
-	}
-
-	addr := c.shimBase
+	addr, end := c.shimBase, c.shimBase+shimPageBytes
+	overflowed := false
 
 	for _, e := range shimTable {
 		shimName := fmt.Sprintf("SHIM$%s_%08X", e.library, e.offset)
@@ -176,6 +166,20 @@ func (c *Console) ensureShims() error {
 			0x04, // RET
 		}
 
+		// VMInit's page is full: the rest go to an overflow page (once).
+		if addr+shimStubSize > end {
+			if overflowed {
+				return fmt.Errorf("console: too many shim stubs for VMINIT's page and one overflow page (internal/console/shim.go)")
+			}
+
+			page, err := c.shimOverflow()
+			if err != nil {
+				return err
+			}
+
+			addr, end, overflowed = page, page+512, true
+		}
+
 		if err := c.storeBytes(addr, stub); err != nil {
 			return err
 		}
@@ -190,3 +194,17 @@ func (c *Console) ensureShims() error {
 
 	return nil
 }
+
+// shimOverflow returns a page for the shim stubs that don't fit in the
+// page VMInit reserved: a page of the S0 pool, the system's own (PID 0),
+// for the life of the machine. S0, so every process's image reaches its
+// stubs at the same addresses, as it does the first page's; kernel mode
+// alone may write it, and every mode may read (and so run) it.
+func (c *Console) shimOverflow() (uint32, error) {
+	if c.RTL == nil {
+		return 0, fmt.Errorf("console: no room for the shim stubs (VMINIT has not been run)")
+	}
+
+	return c.RTL.AllocateS0(1, 0, "shim stubs")
+}
+

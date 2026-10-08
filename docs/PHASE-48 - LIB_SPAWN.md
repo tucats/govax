@@ -233,3 +233,52 @@ subprocess to run, and the definitions a MACRO program needs to call
   unknown verb, a foreign command, a failing image, an alias, LOGOUT
   and nothing after it; the terminal, prompted, with EXIT's status; a
   missing SYS$INPUT; RUN of a missing image).
+- 2026-10-08: Subtask 2 (`LIB$SPAWN`). `librtl/spawn.go` reads the 13
+  arguments (LIB$_WRONUMARG for more; SS$_ACCVIO for an argument it
+  can't read, or an output longword it can't write, before anything is
+  made) and `corevms/spawn.go`'s `Environment.Spawn` does the rest:
+  SS$_UNSUPPORTED with the scheduler off, LIB$_NOCLI from a process
+  with no CLI (a `$CREPRC` child running an image; `HasCLI`), LIB$_INVARG
+  for a flag bit `$CLIDEF` doesn't define for it (above CLI$M_SUBSYSTEM),
+  the event flag checked as `$SETEF` checks one. The subprocess is made
+  by `CreateProcess`, at the parent's base priority and with its current
+  privileges, named as asked or by default the user name and `_n`
+  (SYSTEM_1, SYSTEM_2, ...: the smallest n free in the group, the user
+  name shortened to fit 15 characters), with its SYS$INPUT and
+  SYS$OUTPUT the files asked for or the parent's process-table
+  translations (SYS$ERROR follows an output-file, or is the parent's),
+  and its startup's `CLI` set to run the command (or SYS$INPUT) with the
+  prompt. Unless CLI$M_NOLOGNAM, the parent's user- and supervisor-mode
+  process logical names are copied, but not CONFINE ones (DCL's SPAWN
+  help); unless CLI$M_NOCLISYM, its DCL symbols (the console's for
+  process 1, a CLI's own for a CLI process; `CommandInterpreter.
+  InheritSymbols`). The event flag is cleared at once. Completion is
+  done directly in Go (the design's choice between that and a
+  termination mailbox): `DeleteProcess` calls `completeSpawn` after the
+  termination message, which writes the final status to
+  completion-status-address through the parent's address space, sets
+  the event flag (`postFlag`), queues the AST in the mode LIB$SPAWN was
+  called from, and reports the event to the parent. Without
+  CLI$M_NOWAIT the caller waits (LEF) until the subprocess is deleted
+  (`AwaitSpawn`, the shim's retry finding `spawnWait`). LIB$SPAWN is
+  LIBRTL offset 0x518, shim code 43. That made 43 shim stubs, one more
+  than VMINIT's 512-byte stub page holds; rather than make the page
+  bigger, which would move the SCB and everything VMINIT places after
+  it, the stubs that don't fit go to an overflow page from the S0 pool
+  (`shimOverflow`), so no address moves. Accepted and ignored:
+  CLI$M_NOTIFY, NOCONTROL, NOKEYPAD, TRUSTED, AUTHPRIV, SUBSYSTEM, the
+  cli and table-name arguments; CTRL/Y and CTRL/C while the parent
+  waits do what they do to any run. Unconfirmed (for subtask 7's
+  probe): the default name, the event flag's clearing, the modes and
+  which names are copied, the order of the completion's effects. HELP
+  CONFIG KEYS' "Processes" now describes LIB$SPAWN and the CLI. Tests
+  (`console/spawn_test.go`): a MACRO parent spawning `ECHO from the
+  child` (the console's ECHO foreign command, inherited) and waiting,
+  then checking the completion status; another with CLI$M_NOWAIT, an
+  event flag, and an AST (the subprocess, at its parent's priority,
+  preempts it at once, so its line comes first, then the AST, then the
+  parent's lines); `Spawn`'s rules in Go (names, priority, owner, SYS$
+  names, which logical names are copied, NOLOGNAM, LIB$_INVARG,
+  LIB$_NOCLI); and SS$_UNSUPPORTED with the scheduler off.
+  `TestEnsureShims_overflowPage` replaces the two tests of the page
+  limit.

@@ -1722,15 +1722,24 @@ $CONF,KEY
 
         These are for running several processes at once.  With
         vax.process.scheduler on, a program can create processes
-        ($CREPRC; LIB$SPAWN isn't there yet), and the CPU is shared
-        among them VMS's way: by priority, a quantum at a time among
-        equals, and giving the CPU to another while one waits.
-        Mailboxes, common event flags, global sections, the lock
-        services ($ENQ, $ENQW, $DEQ), and shared files (see MOUNT) work
-        between them, and a process waiting for a line from the
-        terminal lets the others run.  SHOW SYSTEM lists them, and STOP deletes one.
-        With it off, only the console's own process runs, and $CREPRC
-        returns %SYSTEM-E-UNSUPPORTED.
+        ($CREPRC, and LIB$SPAWN), and the CPU is shared among them
+        VMS's way: by priority, a quantum at a time among equals, and
+        giving the CPU to another while one waits.  Mailboxes, common
+        event flags, global sections, the lock services ($ENQ, $ENQW,
+        $DEQ), and shared files (see MOUNT) work between them, and a
+        process waiting for a line from the terminal lets the others
+        run.  SHOW SYSTEM lists them, and STOP deletes one.  With it
+        off, only the console's own process runs, and $CREPRC and
+        LIB$SPAWN return %SYSTEM-E-UNSUPPORTED.
+
+        A process LIB$SPAWN creates, or $CREPRC creates to run
+        LOGINOUT.EXE, runs a small command interpreter in place of DCL.
+        It runs one command (LIB$SPAWN's command-string) or reads its
+        commands from SYS$INPUT (the terminal, a mailbox, or a file),
+        running each command's image in turn in the same process.  It
+        knows RUN, MCR, foreign commands and other DCL symbols, symbol
+        assignments, DELETE/SYMBOL, EXIT, and LOGOUT; anything else is
+        %DCL-W-IVVERB.
 
         vax.process.scheduler         true or false: whether processes
                                       other than the console's own can be

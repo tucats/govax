@@ -3,30 +3,11 @@ package console
 import (
 	"errors"
 	"fmt"
-	"strings"
 	"testing"
 
 	"github.com/tucats/govax/internal/cpu"
 	"github.com/tucats/govax/internal/vax"
 )
-
-// TestEnsureShims_fitsReservedPage checks that the stubs ensureShims
-// synthesizes fit the one page VMInit reserves for them. Only entries
-// with a nonzero code get a stub; code-0 entries resolve to kernel.asm
-// routines. (42 stubs fill one page; shimPageBytes says how many pages.)
-func TestEnsureShims_fitsReservedPage(t *testing.T) {
-	stubs := 0
-
-	for _, e := range shimTable {
-		if e.code != 0 {
-			stubs++
-		}
-	}
-
-	if got := stubs * shimStubSize; got > shimPageBytes {
-		t.Fatalf("%d shim stubs need %d bytes, only %d reserved: raise shimPageBytes (internal/console/shim.go) by a page", stubs, got, shimPageBytes)
-	}
-}
 
 func TestEnsureShims_definesSymbolsAndIsIdempotent(t *testing.T) {
 	c := newRunnableConsole(t)
@@ -158,22 +139,75 @@ func TestShimTable_codesDistinctAndRegistered(t *testing.T) {
 	}
 }
 
-// TestEnsureShims_refusesToOverflowPage: more stubs than shimPageBytes
-// holds is an error, not a write over the SCB that follows the page.
-func TestEnsureShims_refusesToOverflowPage(t *testing.T) {
+// TestEnsureShims_overflowPage: the stubs that don't fit in the page
+// VMInit reserves go to an overflow page from the S0 pool, so nothing is
+// written over the SCB that follows the reserved page, and each stub's
+// symbol names it where it is; more than the overflow page holds is an
+// error.
+func TestEnsureShims_overflowPage(t *testing.T) {
 	saved := shimTable
-	
+
 	t.Cleanup(func() { shimTable = saved })
 
+	perPage := shimPageBytes / shimStubSize
+
+	// Fill both pages exactly.
+	fillers := 2 * perPage
+
+	for _, e := range saved {
+		if e.code != 0 {
+			fillers--
+		}
+	}
+
 	shimTable = append([]shimEntry{}, saved...)
-	for i := 0; i < shimPageBytes/shimStubSize+1; i++ {
+	for i := 0; i < fillers; i++ {
 		shimTable = append(shimTable, shimEntry{name: fmt.Sprintf("TEST$FILLER%d", i), library: "TEST", offset: uint32(i), code: uint32(1000 + i)})
 	}
 
 	c := newRunnableConsole(t)
+	if _, _, err := c.Assemble(kernelPath(t)); err != nil {
+		t.Fatalf("Assemble(kernel.asm): %v", err)
+	}
 
-	err := c.ensureShims()
-	if err == nil || !strings.Contains(err.Error(), "shimPageBytes") {
-		t.Fatalf("ensureShims with too many stubs: err = %v, want one naming shimPageBytes", err)
+	scb := c.CPU.PR(vax.SCBB)
+
+	before := make([]byte, 512)
+	if err := c.Mem.LoadPhysical(scb, before); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := c.ensureShims(); err != nil {
+		t.Fatalf("ensureShims: %v", err)
+	}
+
+	after := make([]byte, 512)
+	if err := c.Mem.LoadPhysical(scb, after); err != nil {
+		t.Fatal(err)
+	}
+
+	if string(before) != string(after) {
+		t.Error("ensureShims wrote over the SCB")
+	}
+
+	last := fmt.Sprintf("TEST$FILLER%d", fillers-1)
+
+	addr, ok := c.Symbols.Get(last)
+	if !ok || (addr >= c.shimBase && addr < c.shimBase+shimPageBytes) {
+		t.Errorf("%s at %08X (%v); want it in an overflow page, not VMInit's at %08X", last, addr, ok, c.shimBase)
+	}
+
+	// One more doesn't fit.
+	for i := fillers; i < fillers+1; i++ {
+		shimTable = append(shimTable, shimEntry{name: fmt.Sprintf("TEST$FILLER%d", i), library: "TEST", offset: uint32(i), code: uint32(1000 + i)})
+	}
+
+	c = newRunnableConsole(t)
+	if _, _, err := c.Assemble(kernelPath(t)); err != nil {
+		t.Fatalf("Assemble(kernel.asm): %v", err)
+	}
+
+	if err := c.ensureShims(); err == nil {
+		t.Error("ensureShims with one stub too many for two pages: no error")
 	}
 }

@@ -182,6 +182,12 @@ type Environment struct {
 	// started.
 	Startup *ProcessStartup
 
+	// spawn is set for a subprocess LIB$SPAWN created: what it tells its
+	// parent when it ends; spawnWait is the subprocess a LIB$SPAWN of
+	// this process waits for (spawn.go).
+	spawn     *spawnCompletion
+	spawnWait *Environment
+
 	// HasCLI says the process has a command interpreter: process 1 (the
 	// console is its CLI), and a process LIB$SPAWN or $CREPRC of LOGINOUT
 	// created (cliprocess.go). LIB$SPAWN needs one in its caller, as
