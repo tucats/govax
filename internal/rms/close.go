@@ -90,6 +90,8 @@ func SysClose(ctx *Context, argv []uint32) (uint32, error) {
 			return applyCloseXABs(handle.File, in, vmstime.FromTime(time.Now()))
 		}
 
+		handle.locks.release()
+
 		if err := closeVolumeFile(handle, xabs); err != nil {
 			// A genuine underlying ods2/volume-layer failure while
 			// finalizing the file's on-disk size — not a Go bug, so
@@ -198,6 +200,8 @@ func (t *FileTable) Rundown() (int, error) {
 		if h.IsConsole() {
 			continue
 		}
+
+		h.locks.release()
 
 		if h.IsRecordDevice() {
 			h.Device.Close()

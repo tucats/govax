@@ -1,6 +1,6 @@
 # Phase 47 — Multiprocessing, part 5: files shared between processes
 
-**Status:** in progress (subtasks 1-5 done 2026-10-08); decisions taken 2026-10-06 (see
+**Status:** in progress (subtasks 1-6 done 2026-10-08); decisions taken 2026-10-06 (see
 PHASE-43.md, Part A). Needs Phase 45 (independent of Phase
 46).
 
@@ -353,3 +353,23 @@ questions:
   the end and then appending through one RAB (a FileHandle is one
   direction; `$CONNECT` arms PUT when both are asked for), and
   RAB$V_TPT.
+- 2026-10-08: Subtask 6, record locks (`internal/rms/recordlock.go`), on
+  `System.Locks`. The RMS manual describes the RAB$L_ROP options (RLK,
+  REA, NLK, RRL, ULK, WAT, TMO), `$FREE` and `$RELEASE` (RMS$_RNL with
+  nothing locked), and RMS$_RLK/RMS$_OK_RLK, but not which lock RMS takes
+  by default (that's in the *Guide to OpenVMS File Applications*, not at
+  hand). govax's rules, all unconfirmed, are in `recordlock.go`'s comment:
+  a stream locks only in a file its opener lets others write (and not
+  with UPI); `$GET` locks the record it returns and drops the previous
+  (ULK keeps them); EX for a stream that may write, PR for a reader, PW
+  with RLK, PR with REA; NLK is a CR query (RMS$_OK_RLK if another holds
+  the record); a refused lock is RMS$_RLK and the record isn't consumed;
+  RRL returns it unlocked (RMS$_SUC); WAT waits (LEF, `Context.AwaitLock`,
+  woken at once by the grant's `lck.Notifier`). A record is named by its
+  RFA (block and offset, from ods2's new `Reader.RecordOffset`/
+  `Writer.RecordOffset`), as a sublock of a per-stream NL lock on the
+  file, system-wide and in executive mode, released at `$CLOSE` and
+  rundown. `$GET` and `$PUT` now return RAB$W_RFA. Not done: RAB$V_TMO's
+  limit on a wait, `$FIND` (not implemented), and `$PUT` locking the
+  record it writes (a govax stream is one direction). The ods2 change
+  needs a tag (v0.1.17) and pin before `GOWORK=off` builds again.

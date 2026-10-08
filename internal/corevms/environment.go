@@ -247,6 +247,11 @@ func (env *Environment) rmsContext() *rms.Context {
 
 		AwaitTerminal: env.AwaitTerminal,
 		TerminalDone:  env.TerminalDone,
+
+		Locks:     env.Locks,
+		PID:       env.Process.PID,
+		AwaitLock: env.awaitLock,
+		Waker:     lockWaker{env},
 	}
 }
 

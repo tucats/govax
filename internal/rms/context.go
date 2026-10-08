@@ -4,6 +4,7 @@ import (
 	"bufio"
 	"io"
 
+	"github.com/tucats/govax/internal/lck"
 	"github.com/tucats/govax/internal/lnm"
 	"github.com/tucats/govax/internal/vax"
 	"github.com/tucats/govax/internal/vm"
@@ -94,6 +95,21 @@ type Context struct {
 	// Devices opens the record devices (mailboxes, NL:) a file
 	// specification may name (recdevice.go); nil means none can be.
 	Devices DeviceOpener
+
+	// Locks is the system's lock database (internal/lck), where RMS takes
+	// its record locks (recordlock.go), and PID the process they're
+	// taken for. nil Locks: no record locking.
+	Locks *lck.Manager
+	PID   uint32
+
+	// AwaitLock, if set, makes the process wait until over reports true
+	// (a record lock granted, RAB$V_WAT), returning the error the
+	// service returns to be called again then.
+	AwaitLock func(over func() bool) error
+
+	// Waker, if set, is the Data of a record lock the stream waits for:
+	// told the lock is granted, it makes the process computable at once.
+	Waker lck.Notifier
 }
 
 // loadByte/loadWord/loadLongword/storeByte/storeWord/storeLongword are

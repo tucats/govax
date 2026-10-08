@@ -262,7 +262,7 @@ func openFID(ctx *Context, fac, shr byte, device string, vol *volume.Volume, fid
 		return 0, accessStatus(err), nil
 	}
 
-	h := &FileHandle{File: a.File, Accessor: a, Mode: mode, Writable: wantsWrite, Access: fac}
+	h := &FileHandle{File: a.File, Accessor: a, Mode: mode, Share: effectiveSharing(fac, shr), Writable: wantsWrite, Access: fac}
 
 	return ctx.Files.Alloc(h), 0, nil
 }

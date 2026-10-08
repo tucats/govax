@@ -2,6 +2,7 @@ package corevms
 
 import (
 	"github.com/tucats/govax/internal/lck"
+	"github.com/tucats/govax/internal/sched"
 	"github.com/tucats/govax/internal/vax"
 )
 
@@ -34,4 +35,22 @@ func (env *Environment) releaseLocks() {
 	}
 
 	lck.Deliver(env.Locks.Release(lck.Owner(env.Process.PID), true))
+}
+
+// awaitLock makes the process wait, in LEF as for a lock's event flag,
+// until over reports true: an RMS stream waiting for a record lock
+// (RAB$V_WAT).
+func (env *Environment) awaitLock(over func() bool) error {
+	return env.waitOn(sched.StateLEF, sched.ResourceNone, resourceBoost, over)
+}
+
+// lockWaker is the lck.Notifier of a lock a process waits for: its grant
+// ends the wait at once (Phase 46's reportEvent), rather than at the
+// scheduler's next look.
+type lockWaker struct{ env *Environment }
+
+func (w lockWaker) Notify(ev lck.Event) {
+	if ev.Kind == lck.EventGranted {
+		w.env.reportEvent(resourceBoost)
+	}
 }

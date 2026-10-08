@@ -147,6 +147,10 @@ func SysPut(ctx *Context, argv []uint32) (uint32, error) {
 			// anticipated exactly this SYS$PUT use.
 			return storeStatus(ctx, rabAddr, rabSTS, rabSTV, rmsRecordTooBig)
 		}
+
+		if err := ctx.storeRFA(rabAddr, rfaAt(handle.Writer.RecordOffset())); err != nil {
+			return 0, err
+		}
 	}
 
 	return storeStatus(ctx, rabAddr, rabSTS, rabSTV, rmsNormal)

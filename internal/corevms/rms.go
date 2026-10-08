@@ -59,4 +59,10 @@ func registerRMSServices(t *ServiceTable) {
 	t.Register("SYS$FLUSH", func(env *Environment, argv []uint32) (uint32, error) {
 		return rms.SysFlush(env.rmsContext(), argv)
 	})
+	t.Register("SYS$FREE", func(env *Environment, argv []uint32) (uint32, error) {
+		return rms.SysFree(env.rmsContext(), argv)
+	})
+	t.Register("SYS$RELEASE", func(env *Environment, argv []uint32) (uint32, error) {
+		return rms.SysRelease(env.rmsContext(), argv)
+	})
 }

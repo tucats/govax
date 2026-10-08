@@ -80,6 +80,16 @@ var (
 	// at the end of the file.
 	rmsNotAtEOF = vmsConst("RMS$_NEF")
 
+	// rmsRecordLocked is RMS$_RLK, a record another stream has locked;
+	// rmsOKRecordLocked RMS$_OK_RLK, a record read with a query lock that
+	// another stream holds; rmsRecordNotLocked RMS$_RNL, $FREE or
+	// $RELEASE with nothing to unlock (recordlock.go). rmsInvalidISI is
+	// RMS$_ISI, a RAB connected to no stream.
+	rmsRecordLocked    = vmsConst("RMS$_RLK")
+	rmsOKRecordLocked  = vmsConst("RMS$_OK_RLK")
+	rmsRecordNotLocked = vmsConst("RMS$_RNL")
+	rmsInvalidISI      = vmsConst("RMS$_ISI")
+
 	// rmsFileNotFound is RMS$_FNF: SYS$OPEN's target file spec doesn't
 	// exist. Also the natural error for looking a name up in an
 	// ods2 volume.Directory and not finding it.

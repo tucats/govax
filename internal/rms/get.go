@@ -95,6 +95,25 @@ func SysGet(ctx *Context, argv []uint32) (uint32, error) {
 		return storeStatus(ctx, rabAddr, rabSTS, rabSTV, rmsPrivilegeViolation)
 	}
 
+	if ctx.locksRecords(handle) {
+		return ctx.getLocked(rabAddr, handle)
+	}
+
+	record, sts := nextRecord(handle)
+	if sts != 0 {
+		return storeStatus(ctx, rabAddr, rabSTS, rabSTV, sts)
+	}
+
+	if err := ctx.storeRFA(rabAddr, rfaAt(handle.Reader.RecordOffset())); err != nil {
+		return 0, err
+	}
+
+	return storeRecord(ctx, rabAddr, record)
+}
+
+// nextRecord reads handle's next record, or returns the status for why
+// not: RMS$_EOF at the end of the file, RMS$_DEV for a corrupt record.
+func nextRecord(handle *FileHandle) ([]byte, uint32) {
 	record, err := handle.Reader.Next()
 	if err != nil {
 		if errors.Is(err, io.EOF) {
@@ -103,7 +122,7 @@ func SysGet(ctx *Context, argv []uint32) (uint32, error) {
 			// finds out it has read every record the file has, the same
 			// role Go's own io.EOF plays for this package's underlying
 			// odsrms.Reader.
-			return storeStatus(ctx, rabAddr, rabSTS, rabSTV, rmsEOF)
+			return nil, rmsEOF
 		}
 
 		// Anything else (odsrms.ErrCorruptRecord: a truncated or
@@ -114,10 +133,10 @@ func SysGet(ctx *Context, argv []uint32) (uint32, error) {
 		// this package already uses for every other ods2-layer failure
 		// (for instance, create.go's createOnVolume on a failing
 		// vol.CreateFile).
-		return storeStatus(ctx, rabAddr, rabSTS, rabSTV, rmsDeviceError)
+		return nil, rmsDeviceError
 	}
 
-	return storeRecord(ctx, rabAddr, record)
+	return record, 0
 }
 
 // getTerminal is SYS$GET for a RAB connected to the terminal: it reads a
@@ -160,6 +179,12 @@ const maxTerminalRecord = 65535
 // storeRecord copies a record SYS$GET has read into the caller's buffer
 // and sets RAB$W_RSZ to its length (see SysGet's doc comment).
 func storeRecord(ctx *Context, rabAddr uint32, record []byte) (uint32, error) {
+	return storeRecordStatus(ctx, rabAddr, record, rmsNormal)
+}
+
+// storeRecordStatus is storeRecord returning sts, a success status, if
+// the record is stored.
+func storeRecordStatus(ctx *Context, rabAddr uint32, record []byte, sts uint32) (uint32, error) {
 	destAddr, err := ctx.loadLongword(rabAddr + rabUBF)
 	if err != nil {
 		return 0, err
@@ -201,5 +226,5 @@ func storeRecord(ctx *Context, rabAddr uint32, record []byte) (uint32, error) {
 		return 0, err
 	}
 
-	return storeStatus(ctx, rabAddr, rabSTS, rabSTV, rmsNormal)
+	return storeStatus(ctx, rabAddr, rabSTS, rabSTV, sts)
 }

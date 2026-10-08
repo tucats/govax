@@ -93,6 +93,12 @@ type FileHandle struct {
 	Accessor *volume.Access
 	Mode     volume.AccessMode
 
+	// Share is the FAB$B_SHR the file was opened with, after its
+	// defaults (effectiveSharing); locks are the stream's record locks
+	// (recordlock.go).
+	Share byte
+	locks streamLocks
+
 	// Reader/Writer are set once File has actually been armed for
 	// reading or writing respectively (see this type's own doc comment
 	// for why that's a separate step from File being non-nil at all).

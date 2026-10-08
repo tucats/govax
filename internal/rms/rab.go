@@ -81,6 +81,11 @@ var (
 	// it (ropPMT): prompt the terminal before reading.
 	rabROP = rabOffset("ROP")
 
+	// rabRFA is RAB$W_RFA, the record's file address: six bytes, the
+	// virtual block (a longword) and the byte offset in it (a word) of
+	// the record $GET or $PUT last reached (recordlock.go).
+	rabRFA = rabOffset("RFA")
+
 	// rabPBF/rabPSZ are RAB$L_PBF/RAB$B_PSZ, the prompt buffer's address
 	// and size: the text a terminal $GET writes before reading, when
 	// RAB$V_PMT is set.
