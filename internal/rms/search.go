@@ -192,7 +192,7 @@ func subdirectories(vol *volume.Volume, node searchDir) []searchDir {
 		return nil
 	}
 
-	var out []searchDir
+	out := make([]searchDir, 0)
 
 	last := ""
 

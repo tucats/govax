@@ -26,7 +26,7 @@ var ErrServiceWait = errors.New("cpu: system service waiting")
 // internal/rtl directly, so internal/cpu stays independent of both (matching
 // this project's layering: internal/cpu doesn't know about the console or
 // RTL phases built on top of it).
-type SystemServices interface {
+type SystemServices interface { //nolint:interfacebloat
 	// ConsoleWriteByte/ConsoleReadByte implement XFC$CONSOLE_WRITE (R0's low
 	// byte is the byte to write) and XFC$CONSOLE_READ (returns the byte read).
 	ConsoleWriteByte(b byte)

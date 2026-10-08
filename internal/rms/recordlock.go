@@ -264,6 +264,7 @@ func (ctx *Context) unlockRecords(handle *FileHandle, keep *rfa) int {
 		events, _ := s.mgr.Dequeue(l.Owner, l.ID, lck.DequeueOptions{})
 		lck.Deliver(events)
 		delete(s.records, r)
+		
 		n++
 	}
 

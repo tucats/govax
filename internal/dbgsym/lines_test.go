@@ -85,6 +85,8 @@ func listing(t *testing.T, path string) []listedLine {
 		})
 	}
 
+	_ = sc.Err()
+
 	return out
 }
 

@@ -15,7 +15,7 @@ func (c *Console) DefineDevice(name string, opts iodev.DeviceOptions) *iodev.Dev
 	return c.Devices.Define(name, opts)
 }
 
-// ShowDevices implements the SHOW DEVICES console command,optionally 
+// ShowDevices implements the SHOW DEVICES console command,optionally
 // filtered to one device by name and expanded to full detail
 // with /FULL. Matches show_device's own behavior of printing nothing at
 // all when no device matches (no "no matching devices" fallback message —
@@ -117,7 +117,7 @@ func (c *Console) showDiskDeviceFull(d *iodev.Device) {
 	}
 
 	mountClause := ""
-	
+
 	if mounted {
 		access := "READ ONLY"
 		if c.Mounts.Writable(d.Name) {
@@ -151,7 +151,6 @@ func (c *Console) showDiskDeviceFull(d *iodev.Device) {
 func (c *Console) statRow(label1 string, val1 any, label2 string, val2 any) {
 	c.Printf("    %-27s%12v    %-27s%12v\n", label1, val1, label2, val2)
 }
-
 
 // The DEVCHAR bits SHOW DEVICE/FULL names.
 var (

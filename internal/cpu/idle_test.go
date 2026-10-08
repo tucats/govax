@@ -84,6 +84,7 @@ func TestIdleUntilHardware(t *testing.T) {
 	e.hardwareClock = true
 
 	begin := time.Now()
+
 	if !e.IdleUntil(e.SystemTime()+20*vmsTicksPerMillisecond, time.Second) {
 		t.Error("didn't reach a time 20ms away")
 	}
@@ -93,6 +94,7 @@ func TestIdleUntilHardware(t *testing.T) {
 	}
 
 	begin = time.Now()
+	
 	if e.IdleUntil(e.SystemTime()+10_000*vmsTicksPerMillisecond, 15*time.Millisecond) {
 		t.Error("reached a time 10s away with a 15ms limit")
 	}

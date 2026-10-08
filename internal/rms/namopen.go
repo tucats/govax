@@ -76,6 +76,8 @@ var allOutputs = namOutputs{Expanded: true, Resultant: true, FNB: true}
 // and the strings as VMS does but no FID, DID, or DVI (the oracle's OPEN
 // case 10).
 func (ctx *Context) fillNAM(fab, nam uint32, f foundFile, out namOutputs) (uint32, error) {
+	_ = fab 
+	
 	if out.Expanded {
 		if err := ctx.storeExpanded(nam, f.Parsed); err != nil {
 			return 0, err

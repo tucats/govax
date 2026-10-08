@@ -84,6 +84,8 @@ func debuggerSymbols(t *testing.T, name string) []debuggerSymbol {
 		}
 	}
 
+	_ = sc.Err()
+
 	return out
 }
 

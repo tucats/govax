@@ -116,6 +116,7 @@ func lineTable(prog []byte, startPC, base uint32) ([]Line, error) {
 
 		case lnIncrLinum, lnIncrLinumW, lnIncrLinumL:
 			line += int(n)
+
 			if stmts {
 				stmt = 1
 			}
@@ -125,12 +126,14 @@ func lineTable(prog []byte, startPC, base uint32) ([]Line, error) {
 
 		case lnSetLinumIncr, lnSetLinumIncrW:
 			incr = int(n)
+
 			if stmts {
 				stmt = 1
 			}
 
 		case lnResetLinumIncr:
 			incr = 1
+			
 			if stmts {
 				stmt = 1
 			}

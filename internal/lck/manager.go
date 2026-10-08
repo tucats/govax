@@ -406,7 +406,6 @@ func (m *Manager) Dequeue(owner Owner, id ID, opts DequeueOptions) ([]Event, err
 
 			return append(events, m.blockingNotices(res)...), nil
 		}
-		// A waiting request is aborted, as without Cancel.
 	}
 
 	if l.sublocks > 0 {
@@ -676,7 +675,7 @@ func remove(q []*Lock, l *Lock) []*Lock {
 // of the lock's events: govax's $ENQ completes its request or delivers a
 // blocking AST, and RMS's own locks wake a waiting stream.
 type Notifier interface {
-	Notify(Event)
+	Notify(e Event)
 }
 
 // Deliver tells each event's lock owner of it, if the lock's Data is a

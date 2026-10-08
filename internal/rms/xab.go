@@ -118,12 +118,12 @@ func (ctx *Context) xabChain(fab uint32) ([]xabEntry, uint32, uint32, error) {
 			return nil, 0, 0, err
 		}
 
-		min, ok := xabLengths[cod]
+		minLength, ok := xabLengths[cod]
 		if !ok {
 			return nil, rmsInvalidXABCode, addr, nil
 		}
 
-		if bln < min {
+		if bln < minLength {
 			return nil, rmsInvalidXAB, addr, nil
 		}
 

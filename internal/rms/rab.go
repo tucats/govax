@@ -112,10 +112,12 @@ var ropEOF = vmsConst("RAB$M_EOF")
 // (fab.go's orgSeq), so racSeq is the only access mode SYS$PUT/SYS$GET
 // accept — anything else is rejected with a real RMS$_ error rather than
 // silently misbehaving.
+//
+// racRFA is for future expansion (no indexed-file support yet).
 var (
 	racSeq = byte(vmsConst("RAB$C_SEQ")) // sequential access; the only mode this phase implements.
 	racKey = byte(vmsConst("RAB$C_KEY")) // keyed access; not implemented (no indexed-file support yet).
-	racRFA = byte(vmsConst("RAB$C_RFA")) // direct access by record file address; not implemented.
+	//racRFA = byte(vmsConst("RAB$C_RFA")) // direct access by record file address; not implemented.
 )
 
 // rabOffset looks up keyword (e.g. "RAC") in internal/vmsdef.RABFields —

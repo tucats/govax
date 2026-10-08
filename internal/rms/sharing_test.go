@@ -36,8 +36,7 @@ func newSharers(t *testing.T, n int) ([]*sharer, *MountTable) {
 	}
 
 	logicals := newTestLogicals(t)
-
-	var out []*sharer
+	out := make([]*sharer, 0)
 
 	for i := range n {
 		out = append(out, &sharer{
@@ -241,7 +240,7 @@ func wantRecords(t *testing.T, got []string, want ...string) {
 // numbered returns n records, prefix followed by a number, each padded
 // to size bytes.
 func numbered(prefix string, n, size int) []string {
-	var out []string
+	out := make([]string, 0, n)
 
 	for i := range n {
 		r := fmt.Sprintf("%s%03d", prefix, i)

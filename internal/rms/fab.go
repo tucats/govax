@@ -205,8 +205,8 @@ func facAccess(fac, implied byte) byte {
 var (
 	orgSeq = byte(vmsConst("FAB$C_SEQ")) // sequential; the only organization this phase implements.
 	orgRel = byte(vmsConst("FAB$C_REL")) // relative; not implemented.
-	orgIdx = byte(vmsConst("FAB$C_IDX")) // indexed; not implemented.
-	orgHsh = byte(vmsConst("FAB$C_HSH")) // hashed; not implemented.
+	//orgIdx = byte(vmsConst("FAB$C_IDX")) // indexed; not implemented.
+	//orgHsh = byte(vmsConst("FAB$C_HSH")) // hashed; not implemented.
 )
 
 // fabOffset looks up keyword (e.g. "FAC") in internal/vmsdef.FABFields,

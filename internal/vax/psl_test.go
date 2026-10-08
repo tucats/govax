@@ -89,7 +89,7 @@ func TestPSLIPLMasksToFiveBits(t *testing.T) {
 
 func TestPSLAccessModesMasksToTwoBits(t *testing.T) {
 	var p PSL
-	
+
 	p.SetCurMod(User)
 	p.SetPrvMod(Kernel)
 
@@ -133,7 +133,7 @@ func TestPSLBitLayoutMatchesArchitectureManual(t *testing.T) {
 		{"TP", pslTP, 30},
 		{"CM", pslCM, 31},
 	}
-	
+
 	for _, tc := range cases {
 		if tc.mask != 1<<tc.bit {
 			t.Errorf("%s mask = %#x, want bit %d (%#x)", tc.name, tc.mask, tc.bit, uint32(1)<<tc.bit)

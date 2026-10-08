@@ -222,13 +222,14 @@ func storeSize(cmds []Command) int {
 func EncodeDST(recs []DSTRecord) ([]Command, error) {
 	var (
 		out []Command
-		imm []byte
 	)
 
+	imm := make([]byte, 0)
 	flush := func() {
 		for len(imm) > 0 {
 			n := min(len(imm), MaxImmediate)
 			out = append(out, Command{Op: OpStoreImmediate, Data: append([]byte(nil), imm[:n]...)})
+
 			imm = imm[n:]
 		}
 	}
@@ -248,7 +249,7 @@ func EncodeDST(recs []DSTRecord) ([]Command, error) {
 			}
 
 			imm = append(imm, r.Data[at:a.Offset]...)
-			
+
 			flush()
 
 			out = append(out, a.Commands...)

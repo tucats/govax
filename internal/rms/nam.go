@@ -107,6 +107,7 @@ func fabNames(ctx *Context, fab, nam uint32) (nameInputs, error) {
 	}
 
 	dn := ""
+	
 	if dns > 0 {
 		if dn, err = ctx.loadFixedString(dna, int(dns)); err != nil {
 			return in, err
