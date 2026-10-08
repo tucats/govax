@@ -794,8 +794,8 @@ All settled (2026-09-30):
   the fpu and bit-field tests, and a `CALL` case in `dispatch_test.go`.
   `$ASSIGN_S DEVNAM=I^#5,CHAN=#6` joins the STARLET comparison.
 - Still open, not part of this: other packages have older lint findings
-  (an unused `strPut` in `internal/coreos/utils.go`, an ineffective assignment
-  in `internal/coreos/core.go`, a gosimple hint in `cmd/govax/grammar.go`).
+  (an unused `strPut` in `internal/corevms/utils.go`, an ineffective assignment
+  in `internal/corevms/core.go`, a gosimple hint in `cmd/govax/grammar.go`).
   G/H floating, octawords, and packed decimal belong to a later phase. (Phase 35
   implemented them.)
 

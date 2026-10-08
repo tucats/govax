@@ -121,7 +121,7 @@ default) is the sane choice for this model, and the phase's own tests use it.
   upstream behavior to port either, and no current fixture exercises this
   path (`LIB$GET_INPUT`/`EXE$INPUT` already work correctly via a Go RTL shim
   that reads `Console.In` directly, bypassing RXCS/RXDB entirely — see
-  `internal/coreos/input.go`). A real interactive front end wiring a live byte
+  `internal/corevms/input.go`). A real interactive front end wiring a live byte
   source to `DeliverConsoleByte` is future work.
 - **Assembler/session-placement issue found during this phase's own testing,
   not fixed here**: assembling a second file in the same `asmSession` after

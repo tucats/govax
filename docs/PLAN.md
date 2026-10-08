@@ -186,7 +186,7 @@ later `SYS$RENAME`) backed
 by genuine ODS-2 volume/file access via the sibling Go module
 `github.com/tucats/ods2`, plus a new console `MOUNT` command attaching a
 disk-image container to a device. Phase 10's existing `rms.c` port
-(`internal/coreos/rms.go`) is a stopgap that just `fopen`s an arbitrary host path
+(`internal/corevms/rms.go`) is a stopgap that just `fopen`s an arbitrary host path
 and calls it "RMS" — incomplete, not VMS-faithful, and removed outright rather
 than kept as a fallback, per the user's explicit direction: the point of this
 phase is a true VMS-like file system, faithful enough (since `ods2` implements
@@ -303,7 +303,7 @@ Phase 26, requested by the user 2026-09-27, starts a running record of system
 services added beyond the eVAX set, one subtask per service; PHASE-26.md is
 meant to keep growing as more are added, and its "Conventions for implementing
 a service" section is the starting point for each new one. The first batch:
-- `coreos.Process`, the emulated process record (PID, username SYSTEM, UIC
+- `corevms.Process`, the emulated process record (PID, username SYSTEM, UIC
   [1,4], working-set quotas), replacing the Environment's loose PID/UIC.
 - `$ADJSTK` (a less privileged mode's saved stack pointer) and `$ADJWSL`
   (working-set limit, recorded but not enforced).
@@ -320,7 +320,7 @@ assembled code. Simplifications and the event-flag behavior change are in
 `DEVIATIONS.md`.
 
 A second batch added `$DALLOC`, `$DACEFC`/`$DLCEFC`, a real `$GETJPI`/`$GETJPIW`
-(21 items over `coreos.Process`, with `$JPIDEF` generated from VMS 7.3 SDL), and
+(21 items over `corevms.Process`, with `$JPIDEF` generated from VMS 7.3 SDL), and
 `$WAITFR`/`$WFLAND`/`$WFLOR`. An unsatisfied wait re-executes the service's `XFC`
 (`cpu.ErrServiceWait`), so the interval timer's interrupt, govax's only
 asynchronous source, can end it; `testdata/asm/wait_timer.asm` shows exactly

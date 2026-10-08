@@ -34,7 +34,7 @@ to every subsystem. This port has no such global (`CLAUDE.md`: "State lives in
 an instantiated struct passed explicitly"), but `internal/vax.CPU` is already
 threaded as a parameter (or held as a field) into every layer that needs a
 `DBG_*` check: `internal/cpu.Engine` holds one, `internal/vm.Memory`'s
-translation methods take one as a parameter, and `internal/coreos.Environment`
+translation methods take one as a parameter, and `internal/corevms.Environment`
 holds one. So the bitmask (and an accompanying trace-output `io.Writer`) live
 on `*vax.CPU` (`internal/vax/debug.go`) rather than introducing a new
 cross-cutting type or threading a new parameter through every constructor —
@@ -194,7 +194,7 @@ below says exactly what it traces.
   `vm.c`'s own `DBG_TB` printf, which likewise only ever fires on a hit) and
   is no longer an alias of `VM` — see docs/PHASE-21.md.
 
-## Sub-phase 4: `internal/coreos` tracing (`LOGICALS`, `DEVICES`, `RMS`, `SERVICES`, `PROCESS`)
+## Sub-phase 4: `internal/corevms` tracing (`LOGICALS`, `DEVICES`, `RMS`, `SERVICES`, `PROCESS`)
 
 Per the "coarser granularity" design decision above, each of these traces one
 line per service/operation call (name + key arguments), not per internal
@@ -202,18 +202,18 @@ item-code sub-case:
 
 - **`LOGICALS`** — `internal/console/device.go`'s `Console.DefineLogical`
   (the `DEFINE/LOGICAL` console command, matching `set_logical`'s trace) and
-  `internal/coreos/logicals.go`'s `serviceSysTrnlnm` (matching `get_logical`'s).
-- **`DEVICES`** — `internal/coreos/devices.go`'s `serviceSysGetdviw` (all 5 of
+  `internal/corevms/logicals.go`'s `serviceSysTrnlnm` (matching `get_logical`'s).
+- **`DEVICES`** — `internal/corevms/devices.go`'s `serviceSysGetdviw` (all 5 of
   `devices.c`'s `DBG_DEVICES` sites are there, not in `sys_assign` as
   initially assumed before checking the source).
-- **`RMS`** — `internal/coreos/rms.go`'s `serviceSysCreate`/`serviceSysConnect`/
+- **`RMS`** — `internal/corevms/rms.go`'s `serviceSysCreate`/`serviceSysConnect`/
   `serviceSysPut`.
-- **`SERVICES`** — `internal/coreos/environment.go`'s `SystemService`, the single
+- **`SERVICES`** — `internal/corevms/environment.go`'s `SystemService`, the single
   choke point every `SYS$` call goes through (matches `p1_vector.c:433`'s
   "Debug P1 system service calls?" exactly — this port's table-driven service
   dispatch gives it a single call site the C source's `switch`-based
   `call_service` didn't have).
-- **`PROCESS`** — `internal/coreos/core.go`'s `serviceSysGetjpiw`, matching
+- **`PROCESS`** — `internal/corevms/core.go`'s `serviceSysGetjpiw`, matching
   `service.c:152`.
 
 ## Sub-phase 5: `internal/console` tracing (`IMAGES`, `LIBINIT`, `DCL`)
@@ -471,11 +471,11 @@ C-side consumer has one wired here — see "Flags with no wired behavior"
 and "Explicitly out of scope" above for the handful that don't (each with
 its own documented reason, not a silent gap).**
 
-### 2026-09-15 — Sub-phase 4 complete: `internal/coreos` tracing
+### 2026-09-15 — Sub-phase 4 complete: `internal/corevms` tracing
 
 `LOGICALS`: `Console.DefineLogical` (`internal/console/device.go`, guarded
 against a nil `c.CPU` since this command deliberately doesn't require
-`INIT`) and `serviceSysTrnlnm` (`internal/coreos/logicals.go`), matching
+`INIT`) and `serviceSysTrnlnm` (`internal/corevms/logicals.go`), matching
 `set_logical`/`get_logical`'s three outcomes (table not found/name not
 found/value) rather than the item-list sub-case prints.
 
@@ -486,16 +486,16 @@ both the plan section above and here). Traces the resolved device name once,
 matching `devices.c:326`.
 
 `RMS`: `serviceSysCreate`/`serviceSysConnect`/`serviceSysPut`
-(`internal/coreos/rms.go`), one summary line each matching `rms_create`/
+(`internal/corevms/rms.go`), one summary line each matching `rms_create`/
 `rms_connect`/`rms_put`'s own entry traces (not their further per-branch
 prints).
 
-`SERVICES`: `Environment.SystemService` (`internal/coreos/environment.go`) —
+`SERVICES`: `Environment.SystemService` (`internal/corevms/environment.go`) —
 the single choke point every `SYS$` call already goes through in this
 port's table-driven dispatch, so one trace call covers what `p1_vector.c`
 needed its own dedicated `call_service` switch case for.
 
-`PROCESS`: `serviceSysGetjpiw` (`internal/coreos/core.go`) — this closed a
+`PROCESS`: `serviceSysGetjpiw` (`internal/corevms/core.go`) — this closed a
 small pre-existing gap the function's own doc comment had flagged: `argv[2]`
 (an optional process-name descriptor) was deliberately left unread because
 "this port has no equivalent trace output to feed"; now that it does, it's
@@ -504,7 +504,7 @@ read and traced, and the comment updated to say so.
 Tests: one trace-present test per wired call site, plus explicit
 trace-absent tests for `serviceSysTrnlnm` and `Console.DefineLogical`
 (the latter also covered for the pre-`INIT` nil-`CPU` case, since this
-command doesn't require it) — `internal/coreos/logicals_test.go`,
+command doesn't require it) — `internal/corevms/logicals_test.go`,
 `devices_test.go`, `rms_test.go`, `rtl_test.go`, `core_test.go`,
 `internal/console/device_test.go`. `go build ./...`, `go vet ./...`,
 `go test ./...` all clean.

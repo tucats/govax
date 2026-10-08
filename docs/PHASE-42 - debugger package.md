@@ -204,7 +204,7 @@ activation and rundown, the IMAGE$INIT driver, `Engine.CallEntry`, the
 CHF and `handleConsoleFault`, and the machine's lifetime. It exports
 what the debugger needs (the engine, memory, symbol tables, loaded
 images and their `dbgsym.Program`s, the expression evaluator, and the
-classification of a stop). Like `internal/coreos`'s `export.go`, these
+classification of a stop). Like `internal/corevms`'s `export.go`, these
 go in one file, so the surface stays visible.
 
 Run control moves to the debugger: `runLoop`, the breakpoint lists,

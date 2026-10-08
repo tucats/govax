@@ -1211,7 +1211,7 @@ above record the answers:
   (`a8b9eee`) changed two tests' `var x []T` to `make([]T, n)` where
   `make([]T, 0, n)` was meant, so each started with empty elements.
   `TestSubrecords_roundTrip` (`internal/obj`) panicked on nil subrecords,
-  and `TestGetjpi_privileges` (`internal/coreos`) failed. Each is fixed in
+  and `TestGetjpi_privileges` (`internal/corevms`) failed. Each is fixed in
   its own commit. `golangci-lint` still reports `dispFixup` as unused, as
   it did before this subtask. Subtask 7's displacement work is the
   likely place to use it or remove it.

@@ -298,7 +298,7 @@ inherited by assumption:
   operation) — and, by the same root cause, **R2-R5** (`SYS$CLI`'s buffer index,
   every system-service `argv` slot, `str_get`/`str_put`'s descriptor-data pointer,
   `SYS$GETDVIW`/`SYS$GETJPIW`'s item-list addresses): none apply, for the same
-  structural reason as N1. `internal/coreos`'s service handlers uniformly take
+  structural reason as N1. `internal/corevms`'s service handlers uniformly take
   `argv []uint32` (checked across every `service*.go`/`cli.go`/`devices.go`
   file — no exceptions found), and `rms.go`'s FAB/RAB field access reads a real VAX
   address via `vm.Memory.LoadLongword` and resolves it through `loadString`/further

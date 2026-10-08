@@ -110,7 +110,7 @@ The logical-name database moves out of `internal/io` into a new package,
   package and any peer package to that".
 - Ownership stays the same as today. The `Console` constructs one
   `*lnm.Database` in `New`, alongside `Devices`/`Mounts`, and passes the same
-  pointer into `coreos.NewEnvironment` and `rms.Context`/`rms.Session`. There's no
+  pointer into `corevms.NewEnvironment` and `rms.Context`/`rms.Session`. There's no
   package-level singleton (as required by the PLAN.md architecture rules).
   Logical names survive `INIT`/`ZERO` exactly as the current `Logicals` field
   does.
@@ -435,7 +435,7 @@ the process default directory. RMS then gets its default device by translating
    NESTED, and so on).
 4. **Done.** **Swap consumers over to `internal/lnm`** without changing behavior:
    - `Console` builds a `*lnm.Database`.
-   - `coreos.Environment` and `rms.Context`/`Session` take it instead of
+   - `corevms.Environment` and `rms.Context`/`Session` take it instead of
      `*iodev.LogicalNameTable`.
    - The console's device names move from the fake `LNM$FILE_DEV` table into
      `LNM$PROCESS_TABLE`.
@@ -513,12 +513,12 @@ one step that changes wiring. Subtasks 5-8 can be done in any order after 4, but
    exactly like the process table? *Recommendation: leave it out for now. The
    directory-based design makes it a few lines to add later.* **CONFIRMED: leave
    it out for now.**
-2. **UIC group number.** `coreos.Environment` already has a nominal UIC
+2. **UIC group number.** `corevms.Environment` already has a nominal UIC
    (`nominalUIC`). The group table should be named from its group field
    (`LNM$GROUP_000001`, or whatever `nominalUIC` holds), which means the UIC has
    to move somewhere the console-owned `lnm.Database` can see it at
    construction. *Recommendation: pass the UIC into `lnm.NewDatabase`, and
-   have `coreos.NewEnvironment` take it from the same place.* **CONFIRMED: passing
+   have `corevms.NewEnvironment` take it from the same place.* **CONFIRMED: passing
    the uic into new database.**
 3. **Default system-table and mount-time names.** Should `MOUNT` define the
    volume label as a logical name (as VMS does, in the system table for
@@ -773,10 +773,10 @@ one step that changes wiring. Subtasks 5-8 can be done in any order after 4, but
 ### 2026-09-27 — Subtask 4: consumers moved to `internal/lnm`
 
 - **Ownership.** `Console.New` builds the single `*lnm.Database`
-  (`newLogicals` in `internal/console/device.go`) from `coreos.NominalUIC`.
+  (`newLogicals` in `internal/console/device.go`) from `corevms.NominalUIC`.
   That constant was `nominalUIC`, exported so that the group table and the
   RTL's reported UIC come from one place (open question 2). The database is
-  passed unchanged into `coreos.NewEnvironment` and on to `rms.Context`. The
+  passed unchanged into `corevms.NewEnvironment` and on to `rms.Context`. The
   `Logicals` field names stay the same; only their type changed.
 - **Process-permanent names.** New `lnm.Database.DefineProcessNames(terminal)`
   defines `SYS$INPUT`/`OUTPUT`/`ERROR`/`COMMAND` (executive mode,
@@ -975,7 +975,7 @@ one step that changes wiring. Subtasks 5-8 can be done in any order after 4, but
     unparseable spec is still `RMS$_FNF`.
   - A spec with no device now gets `SYS$DISK`'s. Before, it always failed
     with `RMS$_DNR`.
-  - `rms.Context.Session` (set through the new `coreos.Environment.Session`,
+  - `rms.Context.Session` (set through the new `corevms.Environment.Session`,
     which the console's new `newRTL` helper fills in) supplies SET
     DEFAULT's directory.
 - **MOUNT/DISMOUNT.**

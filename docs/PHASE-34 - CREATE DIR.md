@@ -21,7 +21,7 @@ CREATE/DIRECTORY directory-spec[,...]
 ```
 
 - **`/OWNER_UIC`** sets the new directory's owner. Without it, the owner is
-  the process UIC, `[1,4]` (`coreos.NominalUIC`, or the live process's UIC
+  the process UIC, `[1,4]` (`corevms.NominalUIC`, or the live process's UIC
   when one exists). `PARENT` means the parent directory's owner.
 - **`/VERSION_LIMIT`** sets the default version limit for files created in
   the new directory. Without it, the limit is the parent directory's. 0
@@ -290,7 +290,7 @@ LIB$CREATE_DIR device-directory-spec [,owner-UIC] [,protection-enable]
 
 **Design.**
 
-- `coreos` keeps the process-level machinery: the condition dispatcher, the
+- `corevms` keeps the process-level machinery: the condition dispatcher, the
   call frames, and the heap that DECC$MALLOC shares with LIB$GET_VM. It
   exports what an RTL package needs: the CPU and memory, reading a string
   descriptor, starting a software signal, setting the caller's handler,
@@ -306,7 +306,7 @@ LIB$CREATE_DIR device-directory-spec [,owner-UIC] [,protection-enable]
 
 **Subtasks.**
 
-10. **`internal/librtl`, and the move.** The coreos export API; the
+10. **`internal/librtl`, and the move.** The corevms export API; the
     routines and their tests move; the console wires the package in.
     `TestConditions*` and the other RUN tests keep passing unchanged.
 11. **Owners default to the parent's** (Decision 6): `rms`,
@@ -406,7 +406,7 @@ LIB$CREATE_DIR device-directory-spec [,owner-UIC] [,protection-enable]
     `W:RE` both work), `/ALLOCATION`, and `/LOG`.
   - **Binding** (`internal/console/create.go`, bound in `logical.go` with
     `CREATE_NAME_TABLE`): the process UIC is the RTL process's, or
-    `coreos.NominalUIC` before INIT. Bad qualifier values are
+    `corevms.NominalUIC` before INIT. Bad qualifier values are
     `CLI_BADQUALIFIER`, before anything is made. In a list, a directory
     that fails is reported and the rest are still made; the command then
     fails with its message inhibited (exit status only).
@@ -492,11 +492,11 @@ LIB$CREATE_DIR device-directory-spec [,owner-UIC] [,protection-enable]
   (subtasks 10-15, Decisions 5-8), from the LIB$ manual's description.
 - 2026-10-01: Subtask 10 done: `internal/librtl`, and every LIBRTL shim
   moved into it.
-  - **coreos's export API** (`internal/coreos/export.go`): `CPU`, `Memory`,
+  - **corevms's export API** (`internal/corevms/export.go`): `CPU`, `Memory`,
     `Shims`, `StringDescriptor`, `Signal` (LIB$SIGNAL/LIB$STOP's
     dispatch), `SetCallerHandler`, `ConditionToReturn` (LIB$SIG_TO_RET's
     unwind), and the heap: `AllocateVM`, `FreeVM`, `FreeVMZone`. The
-    dispatcher, frames, and heap stay in coreos; signal.go, unwind.go, and
+    dispatcher, frames, and heap stay in corevms; signal.go, unwind.go, and
     memory.go lost their shim functions, and math.go went.
   - **librtl** (`doc.go`, `routines.go`, `math.go`, `strings.go`, `vm.go`,
     `condition.go`): LIB$ADAWI, STR$UPCASE, LIB$GET_VM, LIB$FREE_VM,
@@ -508,9 +508,9 @@ LIB$CREATE_DIR device-directory-spec [,owner-UIC] [,protection-enable]
     its LIBRTL rows from `librtl.Routines`. A new test checks every stub's
     code is distinct and registered.
   - **Tests:** the routine tests moved to librtl and drive the routines
-    through the shim table; coreos's dispatcher tests call the exported
+    through the shim table; corevms's dispatcher tests call the exported
     methods. The RUN tests of conditions pass unchanged.
-  - Found while moving: coreos's allocator takes a flag before the zone, so
+  - Found while moving: corevms's allocator takes a flag before the zone, so
     `AllocateVM` passes both; LIB$GET_VM still asks for zone 0, keeping
     eVAX's behavior (its zone-id was never applied).
   - **A limit to watch:** VMInit reserves one 512-byte page for shim stubs,
@@ -576,7 +576,7 @@ LIB$CREATE_DIR device-directory-spec [,owner-UIC] [,protection-enable]
     blocks for a longword 4 there. govax reads it as a longword by
     reference.
   - An unreadable argument, a 0 descriptor address included, signals
-    SS$_ACCVIO (reason 0, the address) through coreos's `Signal`, the
+    SS$_ACCVIO (reason 0, the address) through corevms's `Signal`, the
     hardware's signal array.
   - Every owner, protection (the manual's %XDBFF/%X37FF example too), and
     version limit matched. One field doesn't, masked and logged in

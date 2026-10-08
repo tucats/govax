@@ -86,13 +86,13 @@ unit-tested, ready for Phase 13 to drive through a real loaded image.
 
 ## Deliverables
 
-- `internal/coreos` package implementing the calling convention (argument-list marshaling
+- `internal/corevms` package implementing the calling convention (argument-list marshaling
   from a VAX arg pointer) and the library routines above as registry entries, depending
   on `internal/io` (Phase 09) for device/logical-name resolution.
 - `internal/cpu`'s XFC opcode, fully implemented against a small `SystemServices`
   hook interface (so `internal/cpu` doesn't need to import `internal/console`/
-  `internal/coreos`) that `internal/console.Console` implements, delegating SYS$/shim
-  selectors to an embedded `*coreos.Environment`.
+  `internal/corevms`) that `internal/console.Console` implements, delegating SYS$/shim
+  selectors to an embedded `*corevms.Environment`.
 - Tests: unit tests per LIB$ routine and per SYS$ service where feasible (constructing
   the argument scenario directly in `vm.Memory`, no image loader needed), plus RMS
   round-trip tests (create/connect/put through the emulated FAB/RAB layer, including the
@@ -162,7 +162,7 @@ unit-tested, ready for Phase 13 to drive through a real loaded image.
 
 ### 2026-09-14 — Sub-phase 2: RTL calling convention, SYS$ services, RMS, CLI
 
-- Added `internal/coreos`: `Environment` (the per-process calling-convention
+- Added `internal/corevms`: `Environment` (the per-process calling-convention
   state), `ShimTable`/`ServiceTable` (numeric-code and name-keyed
   registries, matching `internal/cpu`'s `Table`/`Handler` shape per the
   explicit design constraint recorded above), and `p1vector.go` (the full
@@ -200,7 +200,7 @@ unit-tested, ready for Phase 13 to drive through a real loaded image.
   phase's own `Delete` (CRUD-completeness the C source didn't need but
   this port's callers do).
 - `SYS$CLI`'s halt-on-unrecognized-request behavior surfaces through a new
-  package-local `coreos.ErrHalt` sentinel (kept local rather than importing
+  package-local `corevms.ErrHalt` sentinel (kept local rather than importing
   `internal/cpu.ErrHalted`, so this package doesn't need to depend on
   `internal/cpu` at all) — whatever wires an `Environment` into
   `cpu.SystemServices` (Console, next sub-phase) translates it. This
@@ -217,7 +217,7 @@ unit-tested, ready for Phase 13 to drive through a real loaded image.
   behavior, so the policy doesn't apply; the two real bugs found (RMS's
   misplaced brace, the XFC R0-ordering issue) are both documented at the
   point they were found rather than only here.
-- `internal/coreos`'s new files each have their own test file exercising every
+- `internal/corevms`'s new files each have their own test file exercising every
   handler directly (constructing the argument list / VAX-memory scenario
   by hand, no image loader needed — see `docs/PHASE-13.md`), including
   argument-count and unknown-item-code/unknown-address error paths;
@@ -262,12 +262,12 @@ unit-tested, ready for Phase 13 to drive through a real loaded image.
 
 - `internal/console/services.go` makes `Console` implement
   `cpu.SystemServices`: `SystemService`/`Shim` delegate to a new
-  `Console.RTL` (`*coreos.Environment`), created fresh alongside the Engine
+  `Console.RTL` (`*corevms.Environment`), created fresh alongside the Engine
   on every `Init`/`Zero` (`init.go`) since both are addressed through the
   same CPU/Memory pair; `ConsoleWriteByte`/`ReadByte`/`ConsoleCommand` are
   handled directly against new `Console.In`/`Dispatcher` fields.
-  `coreos.ErrHalt` is translated to `cpu.ErrHalted` at this boundary
-  (`translateHalt`), keeping `internal/coreos` free of any `internal/cpu`
+  `corevms.ErrHalt` is translated to `cpu.ErrHalted` at this boundary
+  (`translateHalt`), keeping `internal/corevms` free of any `internal/cpu`
   dependency.
 - The `XFC$DCL` callback methods (`DCLPresent`/`GetKeyword`/`GetString`/
   `GetInteger`) are left as documented stubs: Phase 08's DCL engine has no
@@ -308,7 +308,7 @@ unit-tested, ready for Phase 13 to drive through a real loaded image.
   `rtl_entry_list`) is correctly unimplemented here too, reported the
   same "not handled" way `call_service`/`shim()` report it.
 - Full `docs/DEVIATIONS.md`-policy review across the whole phase: no VAX
-  ISA/hardware-fidelity findings anywhere in `internal/coreos` or the
+  ISA/hardware-fidelity findings anywhere in `internal/corevms` or the
   `internal/cpu`/`internal/console` wiring around it — every C source file
   this phase ports (`p1_vector.c`, `shim.c`, `service.c`, `devices.c`,
   `logical_names.c`, `cli.c`, `rms.c`, `structure_mapping.c`, the eight
@@ -329,5 +329,5 @@ unit-tested, ready for Phase 13 to drive through a real loaded image.
   Running the named `testdata/exe/` fixtures end-to-end is Phase 13's
   milestone to hit, not this phase's.
 - Full-repo `go build ./...`, `go vet ./...`, `gofmt -l .` (no output),
-  and `go test ./...` all clean. `go test ./internal/coreos/... -cover`:
+  and `go test ./...` all clean. `go test ./internal/corevms/... -cover`:
   76.8%; `go test ./internal/console/... -cover`: 79.4%. Phase complete.

@@ -116,7 +116,7 @@ still just flat Go data, organized by file within one package.
 
 `internal/rms/fab.go`/`rab.go` are updated to read their field offsets from
 `internal/vmsdef` instead of maintaining their own private literals (exactly
-how `internal/coreos/p1vector.go` was already cut over to build its dispatch
+how `internal/corevms/p1vector.go` was already cut over to build its dispatch
 index over `vmsdef.P1VectorTable` instead of owning its own copy) — a nice
 side effect of this phase: it deletes the last hand-duplicated-constant risk
 `fab.go`'s own doc comment already worried about (the `fabFNS`/48-vs-52 bug it
@@ -275,7 +275,7 @@ subset exactly.)
 
 - Requested by the user, directly following `docs/PHASE-11.md`'s own
   `.P1VECTOR` work landing: "similar need for the p1vector shared storage
-  area between asm and coreos" for `.RMSDEF`/`.FAB`/`.RAB`, which `internal/rms`
+  area between asm and corevms" for `.RMSDEF`/`.FAB`/`.RAB`, which `internal/rms`
   and `internal/asm` would otherwise need independently.
 - Delegated research (subagent, ~224s/123K tokens): confirmed `reference/eVAX`
   has no FAB/RAB/RMSDEF pseudo-op precedent at all (grepped `asm_pseudo.c`'s
@@ -320,7 +320,7 @@ subset exactly.)
   unchanged, `Entry`/`Table` renamed to `P1VectorEntry`/`P1VectorTable` to
   leave room for this phase's own `Field`/`Constant` types in the same
   package without a name collision), updated every consumer
-  (`internal/coreos/p1vector.go`, `internal/coreos/rtl_test.go`,
+  (`internal/corevms/p1vector.go`, `internal/corevms/rtl_test.go`,
   `internal/asm/pseudo.go`, `internal/asm/p1vector_test.go`) and every code
   comment naming the old import path. This phase's own FAB/RAB/RMS-status
   data (rest of subtask 1) lands as new files in this same package rather

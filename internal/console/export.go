@@ -17,7 +17,7 @@ import (
 // owns what makes the machine a VMS one: image activation and rundown, the
 // condition handling facility (CHF), the symbol tables and the loaded
 // images' debug symbols, and the machine's lifetime. Like
-// internal/coreos's export.go, the exported names the debugger needs and
+// internal/corevms's export.go, the exported names the debugger needs and
 // that have no other reason to be public are gathered here, so the
 // boundary is visible in one place. (The engine, CPU, memory, output
 // stream, and expression evaluator are exported fields and methods of
