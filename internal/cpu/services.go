@@ -83,9 +83,17 @@ type SystemServices interface {
 // return address. So when the procedure executes RET, the XFC runs
 // again, calling the service again, which picks up where it left off
 // (the RTL keeps track of how far it got). R0 is left alone.
+//
+// With Image set, the call starts an image instead (the subprocess CLI's
+// RUN, docs/PHASE-48.md): the frame's saved PC and FP are SentinelReturn,
+// as Engine.CallEntry's are, so the image's $EXIT unwinds to this frame
+// and no further, and its return reports ErrConsoleCallReturned rather
+// than returning into the caller. Whoever asked for the call puts the
+// caller's PC, FP, and AP back then: the frame doesn't hold them.
 type ServiceCall struct {
 	Routine uint32 // the procedure's entry mask address
 	ArgList uint32 // its argument list (a count longword, then arguments)
+	Image   bool   // the frame is an image's outermost one (see above)
 }
 
 func (c *ServiceCall) Error() string {

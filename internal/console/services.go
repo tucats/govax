@@ -239,7 +239,7 @@ func translateHalt(err error) error {
 	case errors.Is(err, corevms.ErrExit):
 		return cpu.ErrImageExit
 	case errors.As(err, &call):
-		return &cpu.ServiceCall{Routine: call.Routine, ArgList: call.ArgList}
+		return &cpu.ServiceCall{Routine: call.Routine, ArgList: call.ArgList, Image: call.Image}
 	}
 
 	return err

@@ -1,7 +1,7 @@
 # Phase 48 — Multiprocessing, part 6: LIB$SPAWN and the milestone
 
-**Status:** planned (2026-10-06); decisions taken 2026-10-06 (see
-PHASE-43.md, Part A). Not started. Needs Phases 43–47.
+**Status:** in progress (started 2026-10-08); decisions taken
+2026-10-06 (see PHASE-43.md, Part A). Needs Phases 43–47.
 
 The program this phase belongs to is described in
 [PHASE-43 - processes](PHASE-43%20-%20processes.md), Part A. Read that first.
@@ -136,24 +136,41 @@ them with PIDs and times masked.
 
 ## Subtasks
 
-1. **`LIB$SPAWN`'s arguments and creation** in `internal/librtl`, on
-   Phase 45's process creation; symbol and logical-name copying;
-   completion status, event flag, AST; waiting. Tests in Go.
-2. **The subprocess CLI**: RUN, foreign commands, MCR (if wanted),
-   EXIT/LOGOUT, unknown verbs; command string or SYS$INPUT; LOGINOUT via
-   `$CREPRC`. Tests.
-3. **Console SPAWN** (optional).
-4. **The milestone programs** and their README.
-5. **The acceptance tests** as above.
-6. **Probe** (optional) and the masked comparison.
-7. **Scheduler on by default**: run the whole suite with the flag on;
+Reordered and expanded on 2026-10-08, when work started: the CLI comes
+first, since `LIB$SPAWN` can't be tested without something for the
+subprocess to run, and the definitions a MACRO program needs to call
+`LIB$SPAWN` (`$CLIDEF`, `$LIBDEF`) are a subtask of their own.
+
+1. **The subprocess CLI's machinery and commands** (`internal/console/
+   subcli.go`, `corevms/cliprocess.go`): a process that runs a CLI
+   instead of an image, running one image after another in the same
+   process; the engine's image call (`cpu.ServiceCall.Image`); command
+   input from SYS$INPUT (terminal, mailbox, NL:, file); RUN, MCR,
+   foreign commands and aliases, symbol assignments, DELETE/SYMBOL,
+   EXIT/LOGOUT, unknown verbs; `$CREPRC` of LOGINOUT. Tests.
+2. **`LIB$SPAWN`** in `internal/librtl`, on `$CREPRC`'s process
+   creation: the arguments, flags, process name, SYS$INPUT/SYS$OUTPUT,
+   symbol and logical-name copying, completion status, event flag, AST,
+   waiting and `CLI$M_NOWAIT`, `LIB$_NOCLI`. Tests in Go and from MACRO.
+3. **`$CLIDEF` and `$LIBDEF`** for govax's own macro library: a
+   definition probe for VMS (as Phase 45's `testdata/mp/defs`), and the
+   macros generated from its output. Until the probe has run, a program
+   uses the names as external symbols, which LINK resolves from
+   STARLET.OLB's values (`vmsdef.LibrarySymbols`), as on VMS.
+4. **Console SPAWN** (optional).
+5. **The milestone programs** and their README.
+6. **The acceptance tests** as above.
+7. **Probe** (optional) and the masked comparison; with it, the
+   `LIB$SPAWN` behaviors only VMS settles (the default process name,
+   the completion status, which logical names are copied).
+8. **Scheduler on by default**: run the whole suite with the flag on;
    fix what differs; flip the default (Decision 5); `HELP CONFIG KEYS`.
-8. **Documentation**: `CLAUDE.md` (the new packages and the process
+9. **Documentation**: `CLAUDE.md` (the new packages and the process
    model), `PLAN.md` (the program's summary, as earlier multi-phase
    efforts have), `MODE-STACKS.md`, `PERFORMANCE.md` (context-switch
    cost), `DEVIATIONS.md` (every unconfirmed rule from Phases 43–48 in
    one place), HELP for every new command.
-9. **Close-out** of Phase 48 and of the program.
+10. **Close-out** of Phase 48 and of the program.
 
 ## Open questions
 
@@ -168,3 +185,51 @@ them with PIDs and times masked.
 - 2026-10-06: Planned with Phase 43.
 - 2026-10-06: The author took every recommended decision in
   PHASE-43.md, Part A.
+- 2026-10-08: Started. Subtask 1 (the subprocess CLI). Design: the
+  CLI runs in its process as a small procedure in a pool page of the
+  process's own (the "CLI stub": `MOVL #64,R0; XFC #XFC$SHIM; PUSHL R0;
+  CALLS #1,SYS$EXIT; RET`), whose shim, `EXE$CLI_COMMAND`, is the CLI
+  in Go (`Console.cliCommand`). It reads a command and carries it out;
+  a command that runs an image has it activated in the process's P0 (as
+  `$CREPRC`'s startup activates one) and returns a `corevms.CallRequest`
+  with the new `Image` flag, so the engine calls the image's IMAGE$INIT
+  driver on a frame whose saved PC and FP are the console's sentinel
+  (`cpu.ServiceCall.Image`; shims may now return a call, as services
+  could). The image's `$EXIT` or return then ends just the image
+  (`ErrConsoleCallReturned`), and `StepMachine` hands the process back
+  to the CLI (`endCLIImage`): $STATUS is R0, DCL's message is shown for
+  a failure (unless STS$M_INHIB_MSG), the image is run down (user-mode
+  process logical names, `ImageRundown`), and FP, AP, and PC (the stub's
+  MOVL) are put back, so the shim runs again for the next command. With
+  no more commands the shim returns $STATUS and the stub's `$EXIT` logs
+  the process out: its deletion, with that final status. A command line
+  not there yet (the terminal's, a mailbox's) and output to a full
+  mailbox wait through the usual `ErrWait` retry. The CLI's input is
+  `corevms.Environment.OpenCommandInput`: SYS$INPUT undefined in the
+  process table, or a terminal, is the shared terminal (prompted with
+  "$ "); a mailbox or NL: is read a message at a time; anything else is
+  a file, read whole. `$CREPRC` of LOGINOUT (any directory, any
+  version) now starts the CLI reading SYS$INPUT (`System.Interpreter`,
+  the console's `cliHost`), replacing Phase 45's SS$_UNSUPPORTED.
+  Commands: `$` prefixes and `!` comments, symbol assignments and
+  DELETE/SYMBOL (the console's code, now methods on a symbol table so
+  each CLI has its own), foreign commands and aliases, RUN (qualifiers
+  ignored; quotes keep a host path whole), MCR, EXIT [status], LOGOUT,
+  and `%DCL-W-IVVERB` (with the verb between backslashes on the next line, as DCL shows
+  it) for anything else; RUN of a missing image is `%DCL-W-ACTIMAGE`
+  and the status's message. Unconfirmed against VMS: the verb
+  abbreviations (`R` for RUN, `MC`, `LO`, `EXI`); EXIT ending a
+  subprocess's CLI (an interactive DCL may ignore EXIT at command level
+  0); that the CLI goes on after a failing command when SYS$INPUT is a
+  file or mailbox; ACTIMAGE's second line. `Environment.HasCLI` (set
+  for process 1 and CLI processes) is for `LIB$SPAWN`'s `LIB$_NOCLI`.
+  Bug found and fixed: image rundown kept the heap's block lists
+  (LIB$GET_VM, malloc), though the next image is loaded at the bottom
+  of P0 again, over them, so a block left on the free list could be
+  handed out inside the next image (process 1's RUNs had the same bug).
+  `ImageRundown` now forgets the heap (`releaseHeap`), as VMS's deletes
+  the P0 pages it was in. Tests: `cpu`'s `TestXfcShimImageCall`;
+  `console/subcli_test.go` (a command file with RUN, a comment, an
+  unknown verb, a foreign command, a failing image, an alias, LOGOUT
+  and nothing after it; the terminal, prompted, with EXIT's status; a
+  missing SYS$INPUT; RUN of a missing image).

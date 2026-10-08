@@ -57,9 +57,15 @@ import (
 // procedure returns to the service's XFC, calling the service again. The
 // console turns it into a cpu.ServiceCall. $EXIT uses it to call exit
 // handlers.
+//
+// Image makes the call an image's start rather than a procedure call
+// that returns to the service: the subprocess CLI (docs/PHASE-48.md)
+// runs each command's image this way, so that the image's $EXIT ends the
+// image and not the CLI (cpu.ServiceCall).
 type CallRequest struct {
 	Routine uint32
 	ArgList uint32
+	Image   bool
 }
 
 func (r *CallRequest) Error() string {

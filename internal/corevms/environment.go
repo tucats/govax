@@ -182,6 +182,12 @@ type Environment struct {
 	// started.
 	Startup *ProcessStartup
 
+	// HasCLI says the process has a command interpreter: process 1 (the
+	// console is its CLI), and a process LIB$SPAWN or $CREPRC of LOGINOUT
+	// created (cliprocess.go). LIB$SPAWN needs one in its caller, as
+	// VMS's does (LIB$_NOCLI).
+	HasCLI bool
+
 	// cpuTime is the CPU time the process has used, in VMS time units
 	// (showsys.go's accountTime).
 	cpuTime uint64

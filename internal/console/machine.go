@@ -264,6 +264,10 @@ type Console struct {
 	// (dclsym.go): foreign commands and command abbreviations.
 	dclSymbols dclSymbols
 
+	// clis are the command interpreters of the processes that run one
+	// (subcli.go: LIB$SPAWN's, and $CREPRC's of LOGINOUT), by process.
+	clis map[*corevms.Environment]*subprocessCLI
+
 	// runCommandLine is RunCommandLine, taken when govax's one-shot
 	// command runs, for that command's RUN to give its image.
 	runCommandLine string
@@ -355,6 +359,7 @@ func (c *Console) newRTL() *corevms.Environment {
 	// The old System's other processes are gone with it, and so is their
 	// image state; process 1's is the console's and stays (images.go).
 	c.otherImages = nil
+	c.clis = nil
 
 	sys.SetProcessSettings(processSettings())
 
@@ -364,7 +369,16 @@ func (c *Console) newRTL() *corevms.Environment {
 
 	// A deleted process's image state goes with it (docs/PHASE-45.md,
 	// subtask 6).
-	sys.ProcessDeleted = func(env *corevms.Environment) { delete(c.otherImages, env) }
+	sys.ProcessDeleted = func(env *corevms.Environment) {
+		delete(c.otherImages, env)
+		delete(c.clis, env)
+	}
+
+	// A process LIB$SPAWN creates, or $CREPRC creates to run LOGINOUT,
+	// runs the subprocess CLI (subcli.go, docs/PHASE-48.md), whose shim
+	// is the console's.
+	sys.Interpreter = cliHost{c}
+	sys.Shims().Register(cliShimCode, "EXE$CLI_COMMAND", c.cliCommand)
 
 	// $SETIMR's timers run on the engine's system time, the same time
 	// base as the interval clock (docs/PHASE-26.md subtask 11).
@@ -388,6 +402,10 @@ func (c *Console) newRTL() *corevms.Environment {
 	}
 
 	env.Session = c.ContainerSession
+
+	// The console is process 1's command interpreter: LIB$SPAWN works in
+	// it (corevms.Environment.HasCLI).
+	env.HasCLI = true
 
 	// A condition nobody handled goes to the debugger first, if there is
 	// one that wants it. The hook reads c.OnUnhandled each time, so a

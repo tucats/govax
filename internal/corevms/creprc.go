@@ -87,8 +87,13 @@ const (
 // runs its image, as $CREPRC asked: the image to activate, and the
 // equivalence strings of its SYS$INPUT, SYS$OUTPUT, and SYS$ERROR
 // logical names (empty when not given).
+//
+// CLI, when set, starts a command interpreter in the process instead of
+// an image (cliprocess.go): LIB$SPAWN sets it, and a $CREPRC of
+// LOGINOUT gets one reading SYS$INPUT.
 type ProcessStartup struct {
 	Image, Input, Output, Error string
+	CLI                         *CLIStartup
 }
 
 // QuotaItem is one entry of $CREPRC's quota list: a PQL$_ code and the

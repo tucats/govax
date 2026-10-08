@@ -122,3 +122,67 @@ func TestXfcImageExitWithoutConsoleCallHalts(t *testing.T) {
 		t.Errorf("R0 = %#x, want the exit status 0x2A", c.GPR(vax.R0))
 	}
 }
+
+// TestXfcShimImageCall: a shim answering with an image's *ServiceCall
+// (the subprocess CLI's RUN, docs/PHASE-48.md) has the image called on a
+// frame whose saved PC and FP are SentinelReturn: the image's $EXIT
+// unwinds to that frame and no further, reporting ErrConsoleCallReturned
+// with SP back where it was at the shim's XFC, and the outer frame (the
+// CLI's own CallEntry frame) still on the stack.
+func TestXfcShimImageCall(t *testing.T) {
+	e := newEngine()
+	c := e.cpu
+
+	const (
+		cli     = 0x1000
+		image   = 0x1100
+		stub    = 0x1200
+		argList = 0x8F00
+	)
+
+	// The CLI: entry mask, then XFC #XFC$SHIM.
+	putBytes(t, c, e.mem, cli, 0x00, 0x00, 0xFC, xfcShim)
+	// The image: entry mask, then CALLS #0, @#stub (a service).
+	putBytes(t, c, e.mem, image, 0x00, 0x00, 0xFB, 0x00, 0x9F, 0x00, 0x12, 0x00, 0x00)
+	p1Stub(t, e, stub)
+
+	c.SetGPR(vax.SP, 0x9000)
+
+	if err := e.CallEntry(cli); err != nil {
+		t.Fatal(err)
+	}
+
+	cliFP, cliSP := c.GPR(vax.FP), c.GPR(vax.SP)
+
+	fake := &fakeServices{shimHandled: true, shimErr: &ServiceCall{Routine: image, ArgList: argList, Image: true}}
+	e.SetSystemServices(fake)
+
+	if err := e.Step(); err != nil { // the shim's XFC: calls the image
+		t.Fatal(err)
+	}
+
+	if c.GPR(vax.PC) != image+2 || c.GPR(vax.AP) != argList {
+		t.Fatalf("after the shim: PC=%#x AP=%#x, want the image (%#x), AP %#x", c.GPR(vax.PC), c.GPR(vax.AP), image+2, argList)
+	}
+
+	fake.serviceHandled, fake.serviceRC, fake.serviceErr = true, 0x2A, ErrImageExit
+
+	if err := e.Step(); err != nil { // CALLS to the service stub
+		t.Fatal(err)
+	}
+
+	if err := e.Step(); !errors.Is(err, ErrConsoleCallReturned) { // $EXIT
+		t.Fatalf("Step at the service = %v, want ErrConsoleCallReturned", err)
+	}
+
+	if c.GPR(vax.SP) != cliSP || c.GPR(vax.R0) != 0x2A {
+		t.Errorf("SP=%#x R0=%#x, want the CLI's SP %#x and the status 0x2A", c.GPR(vax.SP), c.GPR(vax.R0), cliSP)
+	}
+
+	// The CLI's frame is intact: its saved PC and FP are CallEntry's.
+	for off, want := range map[uint32]uint32{12: SentinelReturn, 16: SentinelReturn} {
+		if v, err := e.mem.LoadLongword(c, cliFP+off); err != nil || v != want {
+			t.Errorf("the CLI's frame at FP+%d = %#x (%v), want %#x", off, v, err, want)
+		}
+	}
+}

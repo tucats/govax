@@ -137,7 +137,11 @@ func (c *Console) StepMachine() error {
 	}
 
 	if env := c.running(); env != c.RTL && errors.Is(err, cpu.ErrConsoleCallReturned) {
-		env.DeleteProcess(env)
+		// An image a subprocess's CLI ran has ended, and the CLI goes on
+		// (subcli.go); otherwise the process's own run is over.
+		if !c.cliImageEnded(env) {
+			env.DeleteProcess(env)
+		}
 
 		return nil
 	}

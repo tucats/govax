@@ -106,6 +106,12 @@ type System struct {
 	// can't start.
 	ActivateImage func(env *Environment, image string, hibernate bool) (uint32, error)
 
+	// Interpreter is the command interpreter a process created to run one
+	// (LIB$SPAWN's, or $CREPRC's of LOGINOUT) runs instead of an image
+	// (cliprocess.go, docs/PHASE-48.md). The console installs it, as it
+	// does ActivateImage; nil means such processes can't start.
+	Interpreter CommandInterpreter
+
 	// ProcessDeleted, if set, is called when a process has been deleted
 	// (DeleteProcess), for what the console keeps for each process (its
 	// image state) to go too.

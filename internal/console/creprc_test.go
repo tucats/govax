@@ -468,9 +468,8 @@ done:	brb	done
 }
 
 // TestCreprc_startupFails: a process whose image can't be activated
-// is deleted at once with the failure's status (RMS$_FNF for a missing image;
-// SS$_UNSUPPORTED for LOGINOUT, the command interpreter Phase 48 adds),
-// and the scheduler chooses again before anything runs: process 1 goes
+// is deleted at once with the failure's status (RMS$_FNF for a missing
+// image), and the scheduler chooses again before anything runs: process 1 goes
 // on.
 func TestCreprc_startupFails(t *testing.T) {
 	for _, tt := range []struct {
@@ -479,7 +478,6 @@ func TestCreprc_startupFails(t *testing.T) {
 	}{
 		{"NOSUCH.EXE", vmsdef.Symbols["RMS$_FNF"]},
 		{"", vmsdef.Symbols["RMS$_FNF"]},
-		{"SYS$SYSTEM:LOGINOUT.EXE", vmsdef.Symbols["SS$_UNSUPPORTED"]},
 	} {
 		c, _ := scheduledConsole(t, longQuantum, brbSelf)
 		one := c.RTL

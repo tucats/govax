@@ -308,7 +308,10 @@ func emulXfcP1Vector(e *Engine) error {
 // comment on setting R0 even when a handled call also reports an error.
 // A shim that waits (ErrServiceWait: LIB$PUT_OUTPUT to a full mailbox,
 // docs/PHASE-46.md) runs again: the XFC is re-executed, with R0 still
-// selecting it.
+// selecting it. A shim may also ask for a procedure to be called (a
+// *ServiceCall), as a service may; since R0 selects the shim, that's
+// only of use for an image's call, after which the shim's caller puts
+// its own registers back (the subprocess CLI, docs/PHASE-48.md).
 func emulXfcShim(e *Engine) error {
 	if e.services == nil {
 		return &Fault{Code: ExcPrivileged}
@@ -327,6 +330,11 @@ func emulXfcShim(e *Engine) error {
 		e.cpu.SetGPR(vax.PC, e.instructionPC) // run this XFC again next Step
 
 		return nil
+	}
+
+	var call *ServiceCall
+	if errors.As(err, &call) {
+		return e.callForService(call)
 	}
 
 	e.cpu.SetGPR(vax.R0, r0)

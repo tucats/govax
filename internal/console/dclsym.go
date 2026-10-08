@@ -200,8 +200,15 @@ func isDCLSymbolChar(ch byte) bool {
 	return isDCLSymbolStart(ch) || (ch >= '0' && ch <= '9') || ch == '*'
 }
 
-// assignSymbol defines (or redefines) the symbol written as name.
+// assignSymbol defines (or redefines) the symbol written as name in the
+// console's table.
 func (c *Console) assignSymbol(name, op, text string) error {
+	return c.dclSymbols.assign(name, op, text)
+}
+
+// assign defines (or redefines) the symbol written as name in t, with
+// operator op and the text after it (see splitAssignment).
+func (t *dclSymbols) assign(name, op, text string) error {
 	full := strings.ToUpper(strings.Replace(name, "*", "", 1))
 	if strings.Contains(full, "*") {
 		return vmserrors.New(vmserrors.CLI_EXPSYN, name)
@@ -228,11 +235,11 @@ func (c *Console) assignSymbol(name, op, text string) error {
 		value, integer = v, isInt
 	}
 
-	if c.dclSymbols == nil {
-		c.dclSymbols = dclSymbols{}
+	if *t == nil {
+		*t = dclSymbols{}
 	}
 
-	c.dclSymbols[full] = dclSymbol{
+	(*t)[full] = dclSymbol{
 		name: full, minLength: minLength, value: value,
 		global: strings.HasSuffix(op, "=="), integer: integer,
 	}
@@ -383,6 +390,11 @@ func isDeleteSymbol(verb, rest string) bool {
 // deleteSymbols is DELETE/SYMBOL: rest is its qualifiers, then the name
 // of the symbol to delete (all of it, or an allowed abbreviation).
 func (c *Console) deleteSymbols(rest string) error {
+	return c.dclSymbols.delete(rest)
+}
+
+// delete is DELETE/SYMBOL on t (deleteSymbols).
+func (t dclSymbols) delete(rest string) error {
 	name := ""
 
 	for _, field := range strings.Fields(strings.ReplaceAll(rest, "/", " /")) {
@@ -391,14 +403,25 @@ func (c *Console) deleteSymbols(rest string) error {
 		}
 	}
 
-	sym, ok := c.dclSymbols.lookup(name)
+	sym, ok := t.lookup(name)
 	if name == "" || !ok {
 		return vmserrors.New(vmserrors.CLI_UNDEFSYM, name)
 	}
 
-	delete(c.dclSymbols, sym.name)
+	delete(t, sym.name)
 
 	return nil
+}
+
+// clone returns a copy of t: what a spawned subprocess's CLI starts with
+// (subcli.go).
+func (t dclSymbols) clone() dclSymbols {
+	c := make(dclSymbols, len(t))
+	for name, sym := range t {
+		c[name] = sym
+	}
+
+	return c
 }
 
 // ShowDCLSymbols is SHOW SYMBOL/DCL [name]: the DCL symbol name means (an

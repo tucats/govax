@@ -3,7 +3,6 @@ package corevms
 import (
 	"errors"
 	"fmt"
-	"strings"
 
 	"github.com/tucats/govax/internal/cpu"
 	"github.com/tucats/govax/internal/lnm"
@@ -93,10 +92,12 @@ func (sys *System) startProcess(e *cpu.Engine, env *Environment) error {
 // its image, activated by the console. It returns the address of the
 // procedure that runs the image.
 //
-// An image of SYS$SYSTEM:LOGINOUT.EXE asks for a command interpreter in
-// the new process, which is Phase 48's; until then it fails with
-// SS$_UNSUPPORTED. An empty image name is no file at all: RMS$_FNF.
-// (What VMS does with $CREPRC's image omitted is unconfirmed.)
+// A process LIB$SPAWN created (st.CLI), or one $CREPRC created to run
+// SYS$SYSTEM:LOGINOUT.EXE, runs a command interpreter instead: the
+// procedure returned is the interpreter's (System.Interpreter,
+// cliprocess.go), and LOGINOUT's reads its commands from SYS$INPUT. An
+// empty image name is no file at all: RMS$_FNF. (What VMS does with
+// $CREPRC's image omitted is unconfirmed.)
 func (env *Environment) prepareImage(st *ProcessStartup) (uint32, error) {
 	for _, n := range []struct{ name, value string }{
 		{"SYS$INPUT", st.Input}, {"SYS$OUTPUT", st.Output}, {"SYS$ERROR", st.Error},
@@ -112,8 +113,8 @@ func (env *Environment) prepareImage(st *ProcessStartup) (uint32, error) {
 	}
 
 	switch {
-	case strings.Contains(strings.ToUpper(st.Image), "LOGINOUT"):
-		return 0, vmserrors.New(ssUnsupported)
+	case st.CLI != nil || isLoginout(st.Image):
+		return env.startInterpreter(st.CLI)
 	case st.Image == "":
 		return 0, vmserrors.New(rmsFNF)
 	case env.ActivateImage == nil:

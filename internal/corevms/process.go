@@ -356,7 +356,8 @@ func serviceSysAdjwsl(env *Environment, argv []uint32) (uint32, error) {
 // temporary ones nobody else uses), cancels its outstanding $SETIMR
 // timers and $SCHDWK wakeups, discards its queued user-mode ASTs, and
 // forgets its user-mode exit handlers and any $PUTMSG or $CMKRNL left
-// waiting for its routine, and unmaps the global sections it mapped. The console calls it when an
+// waiting for its routine, unmaps the global sections it mapped, and
+// forgets its heap (releaseHeap). The console calls it when an
 // image started by RUN returns or exits (and does its own logical-name
 // rundown alongside).
 func (env *Environment) ImageRundown() {
@@ -376,6 +377,16 @@ func (env *Environment) ImageRundown() {
 	env.resetImagePrivileges()
 	env.qiowWaits = nil
 	env.enqWaits = nil
+	env.releaseHeap()
+}
+
+// releaseHeap forgets the image's heap (LIB$GET_VM's and malloc's blocks,
+// memory.go), as VMS's image rundown deletes the P0 pages the heap was
+// in: the next image is loaded from the bottom of P0 again, over where
+// the blocks were, so a block left on the free list would hand out
+// memory inside it.
+func (env *Environment) releaseHeap() {
+	env.memAllocated, env.memFreed = nil, nil
 }
 
 // The small process-control services (docs/PHASE-26.md subtask 30):

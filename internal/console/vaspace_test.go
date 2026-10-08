@@ -91,7 +91,6 @@ func pteAt(t *testing.T, c *Console, addr uint32) vm.PTE {
 
 // Status values the address space services return.
 var (
-	ssNormal    = vmsdef.Symbols["SS$_NORMAL"]
 	ssAccVio    = vmsdef.Symbols["SS$_ACCVIO"]
 	ssNoPriv    = vmsdef.Symbols["SS$_NOPRIV"]
 	ssPagOwnVio = vmsdef.Symbols["SS$_PAGOWNVIO"]
