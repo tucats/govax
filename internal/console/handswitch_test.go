@@ -71,7 +71,7 @@ func program(parts ...[]byte) ([]byte, uint32) {
 }
 
 // step runs n instructions, failing the test on an error.
-func step(t *testing.T, c *console.Console, n int) {
+func step(t testing.TB, c *console.Console, n int) {
 	t.Helper()
 
 	for range n {

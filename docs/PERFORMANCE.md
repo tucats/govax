@@ -801,6 +801,35 @@ each, Apple M5 Max, Go 1.26.0, quantum clock:
   numbers drifted up about 4% over the day, so compare only runs made
   together.
 
+## Check: context switches (Phase 48, 2026-10-08)
+
+Phase 48's plan asked what a context switch costs, now that several
+processes run. `BenchmarkContextSwitch` (`internal/console`) runs two
+processes counting in their own P0s at the same priority, one
+instruction per op, at a quantum of 10 instructions (a switch every 10)
+and at the default, 20,000 (almost none). Apple M5 Max, Go 1.26.0,
+quantum clock, 5 runs of 2,000,000 instructions each:
+
+| Quantum | ns/instruction |
+|---|---|
+| 10 | 61.8–62.2 |
+| 20,000 | 25.5–26.9 |
+
+- A switch costs about 36 ns × 10 ≈ **360 ns**: the scheduler's choice
+  (`System.Schedule`, `internal/sched`), saving and loading the PCB (the
+  Go side of SVPCTX and LDPCTX), emptying the P0 and P1 translation
+  buffer entries, and the next instructions' TB refills.
+- At the default quantum that is 360 / 20,000 ≈ 0.02 ns per
+  instruction, below the noise of the 25 ns an instruction costs. A
+  quantum of 10 makes a CPU-bound pair about 2.4 times as slow.
+- A profile at quantum 10 puts about half of the time in
+  `System.Schedule`. The largest single part is `budget`'s scan of every
+  process's timers (`nextTimer`), done at each quantum's end to bound
+  the next one; the PCB copies are smaller. Keeping the next timer's time
+  up to date as timers are set and cancelled would remove the scan.
+  Not worth it at any quantum a user would choose; noted for a workload
+  with many processes and timers.
+
 ---
 
 ## Deferred design issues
@@ -811,7 +840,8 @@ the console through `XFC$CONSOLE_PUT` and leaves the interval clock
 stopped, and the engine keeps time itself (`internal/cpu/clock.go`).
 Context switching is still deferred.* *(2026-10-07: Phase 44 gates it
 with a per-process instruction count, as suggested below; see "Check: the
-scheduler hook".)*
+scheduler hook". 2026-10-08: what a switch costs is "Check: context
+switches".)*
 
 The interval clock interrupt is a holdover from eVAX's goal of emulating VAX
 hardware. govax's focus is now running VMS programs, and the clock

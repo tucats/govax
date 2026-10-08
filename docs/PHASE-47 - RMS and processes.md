@@ -487,16 +487,23 @@ questions:
 
 ## Carry forward
 
-- **ods2 v0.1.17**: ods2's commits after v0.1.16 (`Reader`/
+*Reviewed 2026-10-08, at the program's close-out (PHASE-48.md):* the
+ods2 item is done, the probe round is partly probe 5 (`testdata/mp/final`,
+the last VAX run), and the features are Phase 49's.
+
+- **ods2 v0.1.17**: *Done; govax pins v0.1.18 (which adds the operation
+  counts SHOW DEVICE/FULL shows).* Was: ods2's commits after v0.1.16 (`Reader`/
   `Writer.RecordOffset`, `Volume.OpenFiles`, `Dismount` writing open
   files' headers) need tagging and pushing, then `GOWORK=off go get
   github.com/tucats/ods2@v0.1.17`; until then govax builds only with the
   local `go.work`.
-- **A probe round** for what DEVIATIONS' "[Phase 47] File sharing and
+- **A probe round** (probe 5 asks `$ENQ`'s LKSB on SS$_NOTQUEUED,
+  value-block invalidation, and `$ERASE` of a file being written; the
+  rest stay in DEVIATIONS) for what DEVIATIONS' "[Phase 47] File sharing and
   lock rules" entry still lists: UPI, the lock manager's queueing,
   value-block invalidation at rundown, `$ENQ`'s LKSB on SS$_NOTQUEUED,
   `$ERASE` of a file being written, DISMOUNT with files open.
-- Not done, for later: `$GETLKI`; ENQLM/ASTLM quotas; deadlock
+- *Moved to Phase 49 (PHASE-49 - record updates and locks.md):* `$GETLKI`; ENQLM/ASTLM quotas; deadlock
   detection; RAB$V_TMO on record-lock waits; `$FIND`, `$UPDATE`,
   `$DELETE`, `$TRUNCATE`, RAB$V_TPT; a stream both reading and writing
   through one RAB (FAC=GET|PUT); host-file arbitration; a context

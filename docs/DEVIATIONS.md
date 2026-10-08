@@ -2851,9 +2851,21 @@ widened."
     LOGOUT's report with zero I/O counts, page faults, and peaks (govax
     keeps none, as in the termination message). The console keeps no
     `$STATUS` symbol for SPAWN to set.
+  - **The close-out** (2026-10-08): TTA0:'s DEVCHAR (0C040007); SHOW
+    DEVICE/FULL naming only [1,4] by identifier (`[SYSTEM]`), its
+    sentence wrapped a word at a time within 80 columns, and a terminal's
+    protection always VMS 7.1's `S:RWPL,O:RWPL,G,W`; an operation counted
+    for every `$QIO` that completes, whatever its status; the debugger's
+    SHOW PROCESS layout (govax's own).
 - **Status**: unconfirmed but for what the VMS runs settled (probes 1
-  to 4, the ping-pong pair, the milestone); the rest are candidates for
-  later probes.
+  to 4, the ping-pong pair, the milestone). `testdata/mp/final` (probe 5
+  and round 7 of the macro probes, prepared at the close-out) asks about
+  Phase 45's child priority, working set, AST limit, PID reuse, and
+  inheritance; the argument-count minimums; `$ENQ`'s LKSB on
+  SS$_NOTQUEUED and value blocks; FAB$W_MRS after a mailbox `$OPEN`;
+  `$ERASE` of an open file; the verb abbreviations, statuses, and
+  copied names' modes; and device characteristics. The rest are
+  candidates for later probes.
 
 <!--
 Entry template:

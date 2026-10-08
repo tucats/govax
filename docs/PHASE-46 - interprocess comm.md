@@ -180,6 +180,10 @@ as today).
 
 Things Phase 46 did not get to, so that they are not lost. Each is either
 waiting on a run on the VAX, or optional work for a later phase.
+*Reviewed 2026-10-08, at the program's close-out (PHASE-48.md):* items 3
+and 5 are done; item 1 is round 7 of the macro probes and item 2 partly
+probe 5 (`testdata/mp/final`, the last VAX run); items 3's pending
+terminal reads and 4 are Phase 49's.
 
 1. **The keywords of `$ENQ`'s 12th and 13th arguments and `$GETLKI`'s
    7th** aren't known (round 6: not NULLARG); govax's macros call them
@@ -204,7 +208,8 @@ waiting on a run on the VAX, or optional work for a later phase.
    (`TestTerminal_inputShims`). The console's own prompt after a run
    stopped while a process waited for input isn't tested.
 4. **File-backed sections** (`$CRMPSC` of a file's blocks, private or
-   global) are SS$_UNSUPPORTED; so is `SEC$M_EXPREG` in P1.
+   global) are SS$_UNSUPPORTED; so is `SEC$M_EXPREG` in P1. *Moved to
+   Phase 49.*
 5. **The flaky test** `TestExecute_stopsOnAttention` (it raced
    `Engine.Attention` on a goroutine against `Execute`'s start, whose
    `BeginRun` clears a CTRL/C typed before it). *Fixed (2026-10-08):*

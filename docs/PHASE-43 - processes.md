@@ -1028,3 +1028,7 @@ uses the current Environment's `mem`/`cpu` (so the current P0/P1) or its
   `internal/coreos`, its old name; it's `internal/corevms`. Help: `HELP
   CONFIG KEYS` (subtask 11) is the only user-visible change; nothing else
   a user can do is new until Phase 44.
+- 2026-10-08: The program is done (PHASE-48.md's close-out): the
+  milestone passes under several quanta and matches VMS's run. What it
+  left for later is Phase 49 (`PHASE-49 - record updates and locks.md`),
+  and what only VMS can settle is `testdata/mp/final`'s run.

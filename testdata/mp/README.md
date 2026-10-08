@@ -2,16 +2,18 @@
 
 | Path | What it holds |
 | ---- | ------------- |
-| `defs/` | The `$PRCDEF`, `$PQLDEF`, `$ACCDEF`, and `$MSGDEF` definition probes (subtask 1) |
+| `defs/` | The definition probes: `$PRCDEF`, `$PQLDEF`, `$ACCDEF`, `$MSGDEF` (Phase 45), five more (Phase 46), `$CLIDEF` and `$LIBDEF` (Phase 48) |
 | `crechild.mar`, `child.mar` | Subtask 13's program: a parent that `$CREPRC`s a child with a termination mailbox, `$GETJPI`s it, wakes it, and prints its final status |
 | `mbxpingpong.mar`, `mbxpong.mar`, `pingpong.com` | Phase 46's subtask 8: a parent and child exchanging messages both ways through two temporary mailboxes, with a common event flag handshake |
 | `msparent.mar`, `mschild.mar` | Phase 48's milestone: a parent and child, started by `$CREPRC` or `LIB$SPAWN`, exchanging messages through mailboxes and writing a shared file and one each on an ODS-2 volume |
 | `probe1/`, `probe2/` | Phase 45's runtime probes |
 | `probe3/` | Phase 46's runtime probe: mailboxes between processes, global sections, RMS on a mailbox |
-| `macros/` | The system service macro probes (Phase 45 rounds 1-5, Phase 46 round 6) |
-| `probe4/` | Phase 48's runtime probe: LIB$SPAWN and DCL's SPAWN |
+| `macros/` | The system service macro probes (Phase 45 rounds 1-5, Phase 46 round 6, round 7 at the program's close-out) |
+| `probe4/` | Phase 48's runtime probe: LIB$SPAWN and DCL's SPAWN (run; govax matches it) |
+| `probe5/` | The program's last runtime probe: what Phases 45-48 still guess at |
 | `run46/` | Every VAX run waiting at the end of Phase 46, on one volume |
-| `run48/` | Every VAX run of Phase 48, on one volume |
+| `run48/` | Every VAX run of Phase 48, on one volume (run 2026-10-08) |
+| `final/` | The program's last VAX run: macro round 7 and probe 5 (prepared, not yet run) |
 | `vax/` | The VMS runs of the ping-pong pair (`pingpong.log`, 2026-10-08) and of the milestone (`milestone.log`, from `run48`) |
 
 `internal/console`'s `TestCreChild` assembles and links both with govax and

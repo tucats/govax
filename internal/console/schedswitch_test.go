@@ -26,7 +26,7 @@ import (
 // let the engine's hook do the switching.
 
 // setSetting sets a configuration key for the length of the test.
-func setSetting(t *testing.T, key, value string) {
+func setSetting(t testing.TB, key, value string) {
 	t.Helper()
 
 	old, had := settings.Get(key), settings.Exists(key)
@@ -64,7 +64,7 @@ func counter() []byte {
 // scheduledConsole boots a console with the scheduler on at the given
 // quantum, and puts process 1 in user mode at IPL 0, about to run code at
 // codeAddr in its P0.
-func scheduledConsole(t *testing.T, quantum string, code []byte) (*console.Console, *bytes.Buffer) {
+func scheduledConsole(t testing.TB, quantum string, code []byte) (*console.Console, *bytes.Buffer) {
 	t.Helper()
 
 	setSetting(t, "vax.process.scheduler", "true")
@@ -103,7 +103,7 @@ func scheduledConsole(t *testing.T, quantum string, code []byte) (*console.Conso
 // handBuiltProcess adds a process to c's system with its own address
 // space, stacks, and PCB, starting in user mode at codeAddr in its P0,
 // where code is put.
-func handBuiltProcess(t *testing.T, c *console.Console, code []byte) *corevms.Environment {
+func handBuiltProcess(t testing.TB, c *console.Console, code []byte) *corevms.Environment {
 	t.Helper()
 
 	sys := c.RTL.System
@@ -302,5 +302,25 @@ func TestScheduler_servicesReachCurrent(t *testing.T) {
 
 	if countOf(t, c, one) == 0 || countOf(t, c, two) == 0 {
 		t.Errorf("counts %d and %d: both should have run", countOf(t, c, one), countOf(t, c, two))
+	}
+}
+
+// BenchmarkContextSwitch measures what a context switch costs
+// (docs/PERFORMANCE.md, "Check: context switches"): two processes, each
+// counting in its own P0, share the CPU at the quantum each sub-benchmark
+// names. At 10 instructions a quantum the CPU switches every 10
+// instructions; at the default, 20,000, almost never. The difference in
+// time per instruction, times the quantum, is a switch's cost. Each op
+// is one instruction.
+func BenchmarkContextSwitch(b *testing.B) {
+	for _, quantum := range []string{"10", "20000"} {
+		b.Run("quantum="+quantum, func(b *testing.B) {
+			c, _ := scheduledConsole(b, quantum, counter())
+			handBuiltProcess(b, c, counter())
+			c.CPU.SetDebug(c.CPU.Debug() &^ vax.DebugProcess)
+
+			b.ResetTimer()
+			step(b, c, b.N)
+		})
 	}
 }

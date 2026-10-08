@@ -11,12 +11,13 @@ never had.
 
 - `docs/PLAN.md` — high-level plan, locked-in architecture decisions, and the phase
   index.
-- `docs/PHASE-00.md` … `PHASE-48.md` — one doc per phase: goal, C-source file
+- `docs/PHASE-00.md` … `PHASE-49.md` — one doc per phase: goal, C-source file
   mapping, deliverables, open questions, and a dated progress log (all
-  done through 47; 40 follows 38 directly: there is no Phase 39). Phases
-  43–48 are the multiprocessing program (subprocesses, a scheduler,
-  interprocess mailboxes and shared memory, RMS file sharing and the lock
-  manager; 48 planned);
+  done through 48, 49 planned; 40 follows 38 directly: there is no Phase
+  39). Phases 43–48 are the multiprocessing program (subprocesses, a
+  scheduler, interprocess mailboxes and shared memory, RMS file sharing
+  and the lock manager, LIB$SPAWN; done 2026-10-08; PLAN.md summarizes
+  it), and Phase 49 the work it left for later;
   `PHASE-43.md`'s Part A describes the whole program. Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
 - `docs/DEVIATIONS.md` — running log of suspected ISA/behavior fidelity issues found in
@@ -55,6 +56,11 @@ never had.
   five psects, macro-built dictionary; Phase 36), run by `internal/console`'s
   `TestForth` tests; its VMS 7.3 object, listing, image, and map are in
   `testdata/mar/vax/`, and govax's match them.
+- `testdata/mp/` — the multiprocessing program's programs and VMS runs
+  (README.md): the milestone (`msparent.mar`, `mschild.mar`), probes 1 to
+  5, the definition probes (`defs`), the system service macro probes
+  (`macros`, rounds 1 to 7), and each VAX run's exchange scripts
+  (`run46`, `run48`, `final`); `vax/` directories hold VMS's output.
 - `testdata/mar/` — Phase 27's MACRO-32 fixtures, with real VAX MACRO's objects,
   listings, and analyses in `vax/` (see its README for the simh round trip).
   `testdata/disks/` holds local-only ODS-2 containers (gitignored).
@@ -192,7 +198,10 @@ expect adjustment as phases land):
   oracle tests; `TestDebuggerSessionOracle` replays every session and
   keeps the list of what still differs (`expectedDifferences`).
   `SET MODE` takes the VMS display modes and govax's access modes;
-  the console and the debugger each have their own radix.
+  the console and the debugger each have their own radix. `SET PROCESS
+  [pid|name]` (`process.go`) moves the CPU to another process so the
+  debugger shows its context (STEP and breakpoints stay with process 1),
+  and the debugger's `SHOW PROCESS` lists the processes.
   `internal/console/consoletest` is its test support.
 - `internal/io` — device abstraction (Phase 09).
 - `internal/vmsdef` — VMS's own definitions, shared by the assembler, RTL, RMS,
@@ -258,7 +267,15 @@ expect adjustment as phases land):
   `Console.RTL` stays process 1, and only process 1's image ending ends
   a console run (`Console.StepMachine`). A run that stops in another
   process leaves the CPU there until the next run or the debugger's EXIT
-  (`Console.ReturnToProcessOne`).
+  (`Console.ReturnToProcessOne`). Phase 48: `LIB$SPAWN`'s process side
+  (`spawn.go`: the subprocess, its SYS$ names, copied logical names and
+  symbols, the completion in Go at deletion; `Environment.SpawnNotice`);
+  processes that run a CLI rather than an image (`cliprocess.go`:
+  `CommandInterpreter`, the console's; `$CREPRC` of LOGINOUT;
+  `OpenCommandInput`; LOGOUT's report, `logout.go`); a SYS$OUTPUT that
+  names a file (`outfile.go`). The scheduler is on by default
+  (`vax.process.scheduler`). Every completed `$QIO` counts in its
+  device's operations (UCB$L_OPCNT; a mounted disk's are ods2's).
 - `internal/librtl` — LIBRTL.EXE's routines (Phase 34): the LIB$ and STR$
   shims a program reaches through `SHIM$LIBRTL_<offset>` stubs. `Routines`
   lists each with its transfer-vector offset (checked against
@@ -275,7 +292,13 @@ expect adjustment as phases land):
   foreign command's text (DCL symbols, `internal/console/dclsym.go`), or
   what follows the image on `govax run IMAGE text...`.
   LIB$GET_INPUT (`input.go`) reads a line from the terminal with the
-  terminal's rules (`Environment.ReadInputLine`).
+  terminal's rules (`Environment.ReadInputLine`). LIB$SPAWN (`spawn.go`,
+  Phase 48) reads its 13 arguments and calls `Environment.Spawn`. The
+  subprocess runs govax's small CLI in place of DCL
+  (`internal/console/subcli.go`: RUN, MCR, foreign commands, symbols,
+  SHOW SYMBOL, SHOW LOGICAL, EXIT, LOGOUT; its stub's shim,
+  `EXE$CLI_COMMAND`, runs one image after another in the process), and
+  the console's SPAWN (`spawncmd.go`) calls LIB$SPAWN in process 1.
 - `internal/disasm` — the disassembler (Phase 11; moved out of `internal/asm` in
   Phase 41 so other packages can use it): `Disassemble` decodes one instruction
   with `internal/cpu`'s table into a `Decoded` of structured `Operand`s

@@ -97,7 +97,8 @@ questions, and a progress log extended as that phase is worked.
 | 45 | [PHASE-45 - create and delete process](PHASE-45%20-%20create%20and%20delete%20process.md) | Multiprocessing, part 3: `$CREPRC`, process startup, rundown and deletion, termination mailboxes, jobs and job logical names, process-control services across processes, STOP, NL:, and the process and system service macros checked against real MACRO — done; a MACRO program creates a child, reads its termination message, and `$GETJPI`s it |
 | 46 | [PHASE-46 - interprocess comm](PHASE-46%20-%20interprocess%20comm.md) | Multiprocessing, part 4: mailboxes, common event flags, and global sections between processes; RMS on mailboxes and NL:; a terminal that doesn't block other processes — done; a MACRO parent and child exchange messages through two mailboxes, with a common event flag handshake |
 | 47 | [PHASE-47 - RMS and processes](PHASE-47%20-%20RMS%20and%20processes.md) | Multiprocessing, part 5: a lock manager and `$ENQ`/`$DEQ`, RMS file sharing (RMS$_FLK), a shared file control block in ods2, shared sequential files, record locks — done; three processes on a short quantum share a volume (appending, creating and erasing, extending) and it checks clean |
-| 48 | [PHASE-48 - LIB_SPAWN](PHASE-48%20-%20LIB_SPAWN.md) | Multiprocessing, part 6: `LIB$SPAWN`, a subprocess CLI (and LOGINOUT through `$CREPRC`), the console's SPAWN, SYS$OUTPUT as a file, the scheduler on by default; the milestone (a MACRO parent and child, by `$CREPRC` and by `LIB$SPAWN`, passing mailbox messages and sharing files without corrupting the volume) passes under several quanta — done but for the VMS run (`testdata/mp/run48`) |
+| 48 | [PHASE-48 - LIB_SPAWN](PHASE-48%20-%20LIB_SPAWN.md) | Multiprocessing, part 6: `LIB$SPAWN`, a subprocess CLI (and LOGINOUT through `$CREPRC`), the console's SPAWN, SYS$OUTPUT as a file, the scheduler on by default; the milestone (a MACRO parent and child, by `$CREPRC` and by `LIB$SPAWN`, passing mailbox messages and sharing files without corrupting the volume) passes under several quanta, and matches VMS's run of it — done; the close-out added the debugger's SET PROCESS, VMS's SHOW DEVICE layouts, and one more VMS run (`testdata/mp/final`, prepared) |
+| 49 | [PHASE-49 - record updates and locks](PHASE-49%20-%20record%20updates%20and%20locks.md) | What the multiprocessing program left for later: RMS `$FIND`/`$UPDATE`/`$TRUNCATE`, read-write streams, RAB$V_TMO; `$GETLKI`, lock quotas, deadlock detection; file-backed sections; pending terminal reads; per-process I/O counts — planned |
 
 Phase 13 was split out of Phase 10 once that phase's own investigation found that
 `console_run.c`'s `RUN` command (real `.exe` image activation: ICB/ISD/IHD/IHI struct
@@ -470,6 +471,11 @@ plan and its decisions; each phase's doc has its progress log.
   to false, only the console's process runs and `$CREPRC`/`LIB$SPAWN`
   return SS$_UNSUPPORTED.
 
+- **Checked against VMS.** Probes 1 to 4 and the milestone ran on VMS
+  (7.1 and 7.3); govax matches probe 4's report and logs and the
+  milestone's output and files (`TestProbe4`, `TestMilestone_vmsLog`).
+
 What remains unconfirmed against VMS is listed in DEVIATIONS.md
-("[Phases 43–48] Multiprocessing rules chosen without a manual or probe"),
-and the last VMS run, `testdata/mp/run48`, is waiting.
+("[Phases 43–48] Multiprocessing rules chosen without a manual or probe");
+`testdata/mp/final` (probe 5 and round 7 of the macro probes) is the next
+VMS run. What the program left for later is Phase 49.

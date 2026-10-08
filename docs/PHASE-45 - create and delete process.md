@@ -280,8 +280,12 @@ for a process created without one.
 
 Things Phase 45 did not get to, so that they are not lost. Each is either
 waiting on a run on the VAX, or optional work for a later phase.
+*Reviewed 2026-10-08, at the program's close-out (PHASE-48.md):* every
+item is done, or its questions are in `testdata/mp/final` (the last VAX
+run: probe 5), or it was only a note; nothing here is open otherwise.
 
-1. **Round 5 probe (not yet run).** `testdata/mp/macros/r5_misc.mar` (48
+1. **Round 5 probe.** *Done: it ran with Phase 46's VAX runs (PHASE-46.md,
+   2026-10-08); the macros were corrected.* Was: `testdata/mp/macros/r5_misc.mar` (48
    calls; `exchange.cmd`, `macros.com`, and `copyout.cmd` are for it, the
    exchange volume `testdata/disks/mp-macros.dsk` is built, and its log
    will be `vax/macros5.log`). It asks for: `$IDTOASC`'s third argument
@@ -297,7 +301,9 @@ waiting on a run on the VAX, or optional work for a later phase.
    and update this doc. Until then the macros use `RESNAM`, a quadword for
    it, a quadword for TRNLOG's LOGNAM and a word for RSLLEN, and a quadword
    for CRELNT's TABNAM.
-2. **Unconfirmed behavior** (each marked where it is described above): a
+2. **Unconfirmed behavior** (each marked where it is described above,
+   and gathered in DEVIATIONS.md's Phases 43–48 entry; probe 5's steps 1
+   to 3 ask about the first five): a
    child's priority at creation (+2 above its base, as probe 1 showed
    once), a child's working-set size (+4 pages), SYSTEM's AST limit (50),
    the default directory and other state a subprocess inherits, PID reuse
@@ -305,7 +311,8 @@ waiting on a run on the VAX, or optional work for a later phase.
    real-time priorities across processes. Probes 1 and 2 on VMS 7.1 settled
    what they could; a probe on VMS 7.3 (or the same system) could settle
    these.
-3. **The argument-count check** (`argcount.go`) has minimums for the
+3. **The argument-count check** (`argcount.go`; probe 5's step 8 asks
+   about 41 services) has minimums for the
    services probed and about 35 required-argument minimums from the
    manuals; the rest of the services, and any new one, have none. A probe
    could find them as probe 1 found `SS$_INSFARG` for `$GETDVI`.
@@ -330,7 +337,7 @@ waiting on a run on the VAX, or optional work for a later phase.
    `showRecordDeviceFull` prints both, and NLA0:'s, as VMS does.
 7. **Services with no macros.** The system services govax does not
    implement have none either (`$ENQ`/`$DEQ`: Phase 47; `$CRMPSC`,
-   `$MGBLSC`, global sections: Phase 46). Each new service gets its macro
+   `$MGBLSC`, global sections: Phase 46; *both done, round 6*). Each new service gets its macro
    by the same method: a `testdata/mp/macros` probe (`gen.go`), a run on
    the VAX, `starlet.mar`, and `TestServiceMacroObjects`.
 8. **Phases 46 to 48** need what this phase built: the mailbox

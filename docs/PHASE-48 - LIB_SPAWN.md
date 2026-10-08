@@ -1,7 +1,9 @@
 # Phase 48 — Multiprocessing, part 6: LIB$SPAWN and the milestone
 
-**Status:** in progress (started 2026-10-08); decisions taken
-2026-10-06 (see PHASE-43.md, Part A). Needs Phases 43–47.
+**Status:** done (2026-10-08), and with it the multiprocessing program;
+decisions taken 2026-10-06 (see PHASE-43.md, Part A). Needs Phases
+43–47. What the program left for later is Phase 49's; what only VMS can
+settle is `testdata/mp/final`'s, the next VAX run.
 
 The program this phase belongs to is described in
 [PHASE-43 - processes](PHASE-43%20-%20processes.md), Part A. Read that first.
@@ -165,12 +167,13 @@ subprocess to run, and the definitions a MACRO program needs to call
    the completion status, which logical names are copied).
 8. **Scheduler on by default**: run the whole suite with the flag on;
    fix what differs; flip the default (Decision 5); `HELP CONFIG KEYS`.
-9. **Documentation**: `CLAUDE.md` (the new packages and the process
+9. **Documentation** *(done)*: `CLAUDE.md` (the new packages and the process
    model), `PLAN.md` (the program's summary, as earlier multi-phase
    efforts have), `MODE-STACKS.md`, `PERFORMANCE.md` (context-switch
    cost), `DEVIATIONS.md` (every unconfirmed rule from Phases 43–48 in
    one place), HELP for every new command.
-10. **Close-out** of Phase 48 and of the program.
+10. **Close-out** of Phase 48 and of the program *(done: the progress
+    log's last entries)*.
 
 ## Open questions
 
@@ -493,3 +496,34 @@ subprocess to run, and the definitions a MACRO program needs to call
   "*" (govax's layout, unconfirmed). Tests: `TestSetProcess` (a
   subprocess hibernating in an image; by name and by PID, back, and
   NONEXPR), `TestGrammarSplit`; HELP SET PROCESS and SHOW PROCESS.
+- 2026-10-08: The next VAX run, prepared (`testdata/mp/final`): round 7
+  of the macro probes (`r7_lock`, written by `gen.go`: candidate
+  keywords for `$ENQ`'s twelfth and thirteenth arguments and
+  `$GETLKI`'s seventh) and probe 5 (`testdata/mp/probe5`: a
+  subprocess's priority, working set, and AST limit at creation; PID
+  reuse; what a subprocess inherits; `$ENQ` NOQUEUE and value blocks
+  after an EX holder's deletion; `$OPEN` of a mailbox and FAB$W_MRS;
+  `$ERASE` of a file open for writing; 41 services' argument-count
+  minimums; and, from DCL, verb abbreviations, statuses, the copied
+  names' modes, device characteristics, and SHOW DEVICE). `TestProbe5`
+  runs probe 5 under govax; it found `$EXPREG` failing in Go when called
+  with fewer than four arguments (fixed: `optArg`). The clean-room hook
+  lists round 7's MACRO log as unaudited.
+- 2026-10-08: Subtask 9, the documentation. `CLAUDE.md` (the phase
+  range, `testdata/mp`, LIB$SPAWN and the subprocess CLI, corevms's
+  Phase 48 files, the debugger's SET PROCESS); `PLAN.md` (Phase 48's
+  row, Phase 49's, and the program's summary); `PERFORMANCE.md` ("Check:
+  context switches": `BenchmarkContextSwitch` puts a switch at about
+  360 ns, 0.02 ns an instruction at the default quantum; most of it is
+  `System.Schedule`, chiefly `budget`'s scan of every process's timers);
+  `DEVIATIONS.md` (every unconfirmed rule of Phases 43–48 in one entry,
+  with what `testdata/mp/final` asks); `MODE-STACKS.md` already had
+  Phase 43's other processes' stacks, and Phase 48 changed none. Phase
+  49's plan (`PHASE-49 - record updates and locks.md`) takes over the
+  carry-forward sections' features, which now point to it or to
+  `testdata/mp/final`.
+- 2026-10-08: Close-out (subtask 10). Phases 43–48 are done: every
+  carry-forward item of Phases 44–47 is done, in Phase 49's plan, or a
+  question for `testdata/mp/final`. Waiting on the author: the audit of
+  `defs48.log` (and, after the next run, of round 7's log; both on the
+  clean-room hook's list) and the `testdata/mp/final` run.
