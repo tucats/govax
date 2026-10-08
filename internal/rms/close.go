@@ -57,7 +57,9 @@ func SysClose(ctx *Context, argv []uint32) (uint32, error) {
 	// console itself stays open and usable for whatever the VAX program
 	// does next (creating another TTA0: file, for instance). Only the
 	// real-volume case below needs any actual close work done.
-	if !handle.IsConsole() {
+	if handle.IsRecordDevice() {
+		handle.Device.Close()
+	} else if !handle.IsConsole() {
 		// A file opened for writing takes the revision date and number
 		// of a XABRDT, and the protection of a XABPRO, as it's closed
 		// (docs/PHASE-33.md, subtask 5).
@@ -155,7 +157,9 @@ func (t *FileTable) Rundown() (int, error) {
 			continue
 		}
 
-		if err := closeVolumeFile(h); err != nil && firstErr == nil {
+		if h.IsRecordDevice() {
+			h.Device.Close()
+		} else if err := closeVolumeFile(h); err != nil && firstErr == nil {
 			firstErr = err
 		}
 

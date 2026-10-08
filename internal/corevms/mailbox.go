@@ -111,6 +111,10 @@ type Mailbox struct {
 	messages []*mailboxMessage
 	readers  []*ioRequest
 
+	// recordReaders are the processes waiting in an RMS $GET for a
+	// message (recdevice.go), told when one comes.
+	recordReaders []*Environment
+
 	// readAttention, writeAttention, and roomAttention are the attention
 	// ASTs channels have enabled with IO$_SETMODE (mbxdriver.go): each is
 	// delivered once, then forgotten.

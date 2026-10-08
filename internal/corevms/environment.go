@@ -93,6 +93,10 @@ type Environment struct {
 	channels    []*channel
 	nextChannel uint32
 
+	// outputStream is the stream PutOutput writes SYS$OUTPUT's records
+	// through when it names a mailbox or NL: (recdevice.go).
+	outputStream *recordDevice
+
 	// sectionPages are the pages of the process's address space mapped
 	// to global sections (gblsec.go), which image rundown unmaps.
 	sectionPages map[uint32]bool
@@ -239,6 +243,7 @@ func (env *Environment) rmsContext() *rms.Context {
 		Console:   env.consoleOut,
 		ConsoleIn: env.consoleReader(),
 		NodeName:  env.NodeName,
+		Devices:   env,
 	}
 }
 

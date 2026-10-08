@@ -306,6 +306,9 @@ func emulXfcP1Vector(e *Engine) error {
 // emulXfcShim is XFC$SHIM: R0 selects a LIB$/CRTL shim routine by numeric
 // code, matching emul_xfc.c's `return shim()`. See emulXfcP1Vector's doc
 // comment on setting R0 even when a handled call also reports an error.
+// A shim that waits (ErrServiceWait: LIB$PUT_OUTPUT to a full mailbox,
+// docs/PHASE-46.md) runs again: the XFC is re-executed, with R0 still
+// selecting it.
 func emulXfcShim(e *Engine) error {
 	if e.services == nil {
 		return &Fault{Code: ExcPrivileged}
@@ -318,6 +321,12 @@ func emulXfcShim(e *Engine) error {
 		}
 
 		return &Fault{Code: ExcReservedOp}
+	}
+
+	if errors.Is(err, ErrServiceWait) {
+		e.cpu.SetGPR(vax.PC, e.instructionPC) // run this XFC again next Step
+
+		return nil
 	}
 
 	e.cpu.SetGPR(vax.R0, r0)

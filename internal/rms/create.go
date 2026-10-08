@@ -118,9 +118,19 @@ func SysCreate(ctx *Context, argv []uint32) (uint32, error) {
 		created bool
 	)
 
-	if normalizeDeviceName(p.Lookup) == consoleDeviceName {
+	devIFI, isDevice, devStatus, devSTV, err := ctx.openRecordDevice(fabAddr, p.Lookup, fac)
+	if err != nil {
+		return 0, err
+	}
+
+	switch {
+	case isDevice && devStatus != 0:
+		return fabStatus(ctx, fabAddr, devStatus, devSTV)
+	case isDevice:
+		ifi = devIFI
+	case normalizeDeviceName(p.Lookup) == consoleDeviceName:
 		ifi = ctx.Files.Alloc(&FileHandle{Console: ctx.Console, Access: fac})
-	} else {
+	default:
 		newIFI, found, opened, failStatus, err := createOnVolume(ctx, fabAddr, fac, p, fop&fopCIF != 0)
 		if err != nil {
 			return 0, err

@@ -75,7 +75,7 @@ func SysPut(ctx *Context, argv []uint32) (uint32, error) {
 	// no such check: a FileHandle's Console field is ready to write to
 	// the moment SYS$CREATE allocates it (see ifi.go's FileHandle doc
 	// comment).
-	if !handle.IsConsole() && handle.Writer == nil {
+	if !handle.IsConsole() && !handle.IsRecordDevice() && handle.Writer == nil {
 		return storeStatus(ctx, rabAddr, rabSTS, rabSTV, rmsPrivilegeViolation)
 	}
 
@@ -109,6 +109,10 @@ func SysPut(ctx *Context, argv []uint32) (uint32, error) {
 	// stricter string type). record is what both the console-write and
 	// the ods2 Writer.Put paths below actually consume.
 	record := []byte(recordString)
+
+	if handle.IsRecordDevice() {
+		return putRecordDevice(ctx, rabAddr, handle, record)
+	}
 
 	if handle.IsConsole() {
 		if _, err := handle.Console.Write(record); err != nil {

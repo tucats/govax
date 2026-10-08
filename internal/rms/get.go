@@ -80,6 +80,10 @@ func SysGet(ctx *Context, argv []uint32) (uint32, error) {
 		return getTerminal(ctx, rabAddr)
 	}
 
+	if handle.IsRecordDevice() {
+		return getRecordDevice(ctx, rabAddr, handle)
+	}
+
 	if handle.Reader == nil {
 		// SYS$CONNECT's own armForFAC (connect.go) already reports
 		// RMS$_PRV at CONNECT time for a FAB that never asked for

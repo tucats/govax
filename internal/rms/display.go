@@ -20,7 +20,7 @@ func SysDisplay(ctx *Context, argv []uint32) (uint32, error) {
 	}
 
 	h, ok := ctx.Files.Lookup(ifi)
-	if !ok || h.IsConsole() {
+	if !ok || h.IsConsole() || h.IsRecordDevice() {
 		return fabStatus(ctx, fab, rmsInvalidIFI, 0)
 	}
 

@@ -502,6 +502,40 @@ func TestEmulXfcShim(t *testing.T) {
 	}
 }
 
+// TestEmulXfcShimWait: a shim reporting ErrServiceWait leaves R0 (its
+// selector) alone and PC on the XFC, so the next Step calls the same
+// shim again; once it completes, R0 is its result.
+func TestEmulXfcShimWait(t *testing.T) {
+	e, f := xfcEngine()
+	f.shimHandled = true
+	f.shimErr = ErrServiceWait
+	f.shimRC = 0xBAD
+
+	e.cpu.SetGPR(vax.R0, 14)
+	e.cpu.SetGPR(vax.PC, base)
+	putBytes(t, e.cpu, e.mem, base, 0xFC, xfcShim, 0x01) // then NOP
+
+	for i := 0; i < 3; i++ {
+		if err := e.Step(); err != nil {
+			t.Fatalf("Step %d: %v", i, err)
+		}
+
+		if pc, r0 := e.cpu.GPR(vax.PC), e.cpu.GPR(vax.R0); pc != base || r0 != 14 || f.shimCode != 14 {
+			t.Fatalf("after a waiting shim: PC %#x, R0 %#x, code %d; want %#x, 14, 14", pc, r0, f.shimCode, base)
+		}
+	}
+
+	f.shimErr, f.shimRC = nil, 1
+
+	if err := e.Step(); err != nil {
+		t.Fatalf("Step: %v", err)
+	}
+
+	if pc, r0 := e.cpu.GPR(vax.PC), e.cpu.GPR(vax.R0); pc != base+2 || r0 != 1 {
+		t.Errorf("after completion PC = %#x, R0 = %#x, want %#x and 1", pc, r0, base+2)
+	}
+}
+
 func TestEmulXfcShimUnhandledFaults(t *testing.T) {
 	e := newEngine()
 	e.cpu.SetGPR(vax.SP, 0x7000)

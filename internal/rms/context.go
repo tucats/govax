@@ -81,6 +81,10 @@ type Context struct {
 	// NodeName is the system's node name, as $GETSYI reports it: part of
 	// NAM$T_DVI's device name.
 	NodeName string
+
+	// Devices opens the record devices (mailboxes, NL:) a file
+	// specification may name (recdevice.go); nil means none can be.
+	Devices DeviceOpener
 }
 
 // loadByte/loadWord/loadLongword/storeByte/storeWord/storeLongword are

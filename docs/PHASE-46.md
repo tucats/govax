@@ -1,6 +1,6 @@
 # Phase 46 — Multiprocessing, part 4: interprocess communication
 
-**Status:** in progress (subtasks 1-5 done, 2026-10-08); decisions taken
+**Status:** in progress (subtasks 1-6 done, 2026-10-08); decisions taken
 2026-10-06 (see PHASE-43.md, Part A). Needs Phase 45.
 
 The program this phase belongs to is described in
@@ -151,6 +151,7 @@ as today).
    protected by a `BBSSI` spinlock under small quanta. *Done (2026-10-08).*
 6. **RMS on mailboxes and NL:**. Tests: a child whose SYS$OUTPUT is a
    mailbox; its `LIB$PUT_OUTPUT` lines read by the parent.
+   *Done (2026-10-08).*
 7. **The shared terminal** (bug 6). Tests with a scripted input stream:
    a process waiting for input while another runs; Ctrl-C delivery;
    the console prompt afterwards.
@@ -423,3 +424,53 @@ as today).
     600 increments land. Without the lock, about 240 are lost.
     Process 2's deletion takes its reference away and leaves process
     1's).
+- 2026-10-08: Subtask 6 (RMS on mailboxes and NL:).
+  - **RMS side** (`rms/recdevice.go`): a `RecordDevice` (a stream on one
+    channel: `Put`, `Get`, `Close`, its DEVCHAR and largest record) and
+    a `DeviceOpener`, `rms.Context.Devices`. `$CREATE` and `$OPEN` of a
+    name whose device lookup is a mailbox or NL: open a stream (before
+    the terminal and volume cases), with FAB$L_DEV and FAB$L_SDC the
+    device's DEVCHAR and FAB$W_MRS its largest message; `$CONNECT` has
+    nothing to arm; `$PUT` and `$GET` go to the stream; `$CLOSE` and
+    RMS rundown close it; `$DISPLAY` of one is RMS$_IFI, as for the
+    terminal. Statuses: a record longer than the mailbox's largest
+    message RMS$_RSZ; another failure of a put RMS$_WER, of a get
+    RMS$_RER, with the SS$ status in STV (the RMS manual's convention);
+    the end of the data RMS$_EOF; an open refused by the mailbox's
+    protection RMS$_PRV (STV SS$_NOPRIV). *Unconfirmed:* FAB$W_MRS.
+  - **Device side** (`corevms/recdevice.go`): the Environment is the
+    opener. Opening assigns an executive-mode channel (so a temporary
+    mailbox lasts while the file is open) after checking the FAB's
+    access against the mailbox's protection. A `$PUT` is a mailbox write
+    that doesn't wait for its reader (a waiting `$QIO` read gets it at
+    once, or it's queued); a full mailbox makes it wait for room
+    (RWMBX), or, with resource wait off, SS$_MBFULL. A `$GET` takes the
+    oldest message, completing a write waiting for it and making room,
+    or, with none, waits in LEF; every write that queues a message
+    (`send`, a `$QIO`'s or a `$PUT`'s) reports the event to the
+    processes waiting in a `$GET` (`Mailbox.recordReaders`), so the
+    reader runs at once, as subtask 1's completions do. NL: takes any
+    record and gives none. *Unconfirmed:* that RMS's `$PUT` to a mailbox
+    doesn't wait for the message to be read (the design's choice; a
+    probe could settle it).
+  - **`LIB$PUT_OUTPUT`** now writes to SYS$OUTPUT, not straight to the
+    terminal: `Environment.PutOutput` translates SYS$OUTPUT and, for a
+    mailbox or NL:, writes the record as a message through a stream the
+    process keeps open in executive mode (VMS's process-permanent
+    SYS$OUTPUT; reopened if the translation changes), returning the
+    write's status. Anything else is a line on the terminal, as before.
+  - **Fixed:** a shim that waited (`ErrWait`, now possible for
+    `LIB$PUT_OUTPUT` to a full mailbox) wasn't run again: `XFC$SHIM` set
+    R0 (which selects the shim) to the shim's result and went on, so the
+    call was lost. It now re-executes the XFC with R0 untouched, as
+    `XFC$P1VECTOR` does for a waiting service (`cpu/xfc.go`;
+    `TestEmulXfcShimWait`). Subtask 7's terminal reads will need it too.
+  - Tests (`console/rmsmbx_test.go`): `TestRMSMailbox_childOutput`
+    (process 1 makes the temporary mailbox CHILDOUT, room for two
+    lines, and `$CREPRC`s a child at a lower priority with CHILDOUT as
+    its output; while process 1 sleeps the child writes two lines and
+    waits for room (seen in MWAIT); process 1 `$OPEN`s CHILDOUT and
+    `$GET`s the four lines whole and in order, waiting (seen in LEF)
+    for the ones not yet written) and `TestRMSMailbox_null` (NL::
+    `$CREATE`, `$CONNECT`, `$PUT`, `$CLOSE`, `$OPEN`, `$CONNECT` succeed,
+    `$GET` is RMS$_EOF, FAB$L_DEV says record oriented).

@@ -129,6 +129,21 @@ func SysOpen(ctx *Context, argv []uint32) (uint32, error) {
 			return fabStatus(ctx, fabAddr, rmsWildcardError, 0)
 		}
 
+		devIFI, isDevice, devStatus, devSTV, err := ctx.openRecordDevice(fabAddr, p.Lookup, fac)
+		if err != nil {
+			return 0, err
+		}
+
+		if isDevice {
+			if devStatus != 0 {
+				return fabStatus(ctx, fabAddr, devStatus, devSTV)
+			}
+
+			ifi, failStatus = devIFI, 0
+
+			break
+		}
+
 		if normalizeDeviceName(p.Lookup) == consoleDeviceName {
 			ifi, failStatus = ctx.Files.Alloc(&FileHandle{Console: ctx.Console, Access: fac}), 0
 

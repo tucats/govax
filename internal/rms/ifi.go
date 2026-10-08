@@ -63,6 +63,10 @@ type FileHandle struct {
 	// that which check to use isn't scattered across every caller.
 	Console io.Writer
 
+	// Device is set only for a record device's stream: a mailbox or NL:
+	// (recdevice.go). Check IsRecordDevice.
+	Device RecordDevice
+
 	// File is the underlying ODS-2 file, set only for the real-volume
 	// case (nil for the console case).
 	File *volume.File

@@ -55,7 +55,7 @@ func SysConnect(ctx *Context, argv []uint32) (uint32, error) {
 		return storeStatus(ctx, rabAddr, rabSTS, rabSTV, rmsInvalidIFI)
 	}
 
-	if !handle.IsConsole() {
+	if !handle.IsConsole() && !handle.IsRecordDevice() {
 		if failStatus, err := armForFAC(ctx, handle, fabAddr); err != nil {
 			return 0, err
 		} else if failStatus != 0 {

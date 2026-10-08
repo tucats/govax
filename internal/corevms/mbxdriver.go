@@ -309,6 +309,7 @@ func (env *Environment) send(m *Mailbox, req *ioRequest, msg *mailboxMessage) (i
 	m.messages = append(m.messages, msg)
 
 	env.deliverAttention(&m.readAttention)
+	m.reportToRecordReaders()
 
 	if req.modified(ioModNow) {
 		return ioStatus{status: ssNormal, count: count}, 0
