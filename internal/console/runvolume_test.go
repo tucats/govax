@@ -94,3 +94,25 @@ func TestDispatch_runHost(t *testing.T) {
 		t.Errorf("RUN .../HOST: %v", err)
 	}
 }
+
+// TestRun_recordUpdates runs testdata/rms49/update.mar, a MACRO-32
+// program that uses $FIND, $UPDATE, $TRUNCATE, and $REWIND on a file on
+// a volume (docs/PHASE-49.md); it returns 999, or the step that failed.
+func TestRun_recordUpdates(t *testing.T) {
+	c := newBootableConsole(t)
+	mountFreshContainer(t, c, "DUA0")
+
+	if err := c.Macro(MacroOptions{
+		Source: filepath.Join("..", "..", "testdata", "rms49", "update.mar"), Object: "DUA0:[000000]UPDATE.OBJ",
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := c.Link(LinkOptions{Objects: []string{"DUA0:[000000]UPDATE"}}); err != nil {
+		t.Fatal(err)
+	}
+
+	if got := runImageBounded(t, c, "DUA0:[000000]UPDATE.EXE", 1_000_000); got != 999 {
+		t.Errorf("R0 = %d, want 999 (another value is the step that failed)", got)
+	}
+}

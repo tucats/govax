@@ -278,7 +278,8 @@ func TestSysPut_invalidRAC(t *testing.T) {
 // TestSysPut_noWriteAccess confirms SYS$PUT through a RAB that was
 // SYS$CONNECTed for reading only (FAB$B_FAC asking for FAB$V_GET, not
 // FAB$V_PUT — the same setup TestSysConnect_readArming in connect_test.go
-// builds) fails with RMS$_PRV rather than dereferencing a nil Writer.
+// builds) fails with RMS$_FAC (the RMS manual: a record operation the file
+// access doesn't allow) rather than dereferencing a nil Writer.
 func TestSysPut_noWriteAccess(t *testing.T) {
 	f := newCreateFixture(t, true)
 
@@ -335,8 +336,8 @@ func TestSysPut_noWriteAccess(t *testing.T) {
 		t.Fatalf("SysPut: %v", err)
 	}
 
-	if r0 != rmsPrivilegeViolation {
-		t.Errorf("r0 = %d, want rmsPrivilegeViolation (%d)", r0, rmsPrivilegeViolation)
+	if r0 != rmsFACNotAllowed {
+		t.Errorf("r0 = %d, want RMS$_FAC (%d)", r0, rmsFACNotAllowed)
 	}
 }
 

@@ -130,7 +130,7 @@ func (ctx *Context) openRecordDevice(fabAddr uint32, lookup string, fac byte) (i
 // status in RAB$L_STV.
 func putRecordDevice(ctx *Context, rabAddr uint32, h *FileHandle, record []byte) (uint32, error) {
 	if h.Access&facPut == 0 {
-		return storeStatus(ctx, rabAddr, rabSTS, rabSTV, rmsPrivilegeViolation)
+		return storeStatus(ctx, rabAddr, rabSTS, rabSTV, rmsFACNotAllowed)
 	}
 
 	rop, err := ctx.loadLongword(rabAddr + rabROP)
@@ -185,7 +185,7 @@ func putResult(ctx *Context, rabAddr, status uint32) (uint32, error) {
 // other failure.
 func getRecordDevice(ctx *Context, rabAddr uint32, h *FileHandle) (uint32, error) {
 	if h.Access&facGet == 0 {
-		return storeStatus(ctx, rabAddr, rabSTS, rabSTV, rmsPrivilegeViolation)
+		return storeStatus(ctx, rabAddr, rabSTS, rabSTV, rmsFACNotAllowed)
 	}
 
 	record, status, err := h.Device.Get()

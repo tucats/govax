@@ -67,48 +67,31 @@ func SysGet(ctx *Context, argv []uint32) (uint32, error) {
 		return storeStatus(ctx, rabAddr, rabSTS, rabSTV, rmsInvalidIFI)
 	}
 
-	rac, err := ctx.loadByte(rabAddr + rabRAC)
-	if err != nil {
-		return 0, err
-	}
+	if handle.IsConsole() || handle.IsRecordDevice() {
+		rac, err := ctx.loadByte(rabAddr + rabRAC)
+		if err != nil {
+			return 0, err
+		}
 
-	if rac != racSeq {
-		return storeStatus(ctx, rabAddr, rabSTS, rabSTV, rmsInvalidRAC)
-	}
+		if rac != racSeq {
+			return storeStatus(ctx, rabAddr, rabSTS, rabSTV, rmsInvalidRAC)
+		}
 
-	if handle.IsConsole() {
-		return getTerminal(ctx, rabAddr)
-	}
+		if handle.IsConsole() {
+			return getTerminal(ctx, rabAddr)
+		}
 
-	if handle.IsRecordDevice() {
 		return getRecordDevice(ctx, rabAddr, handle)
 	}
 
-	if handle.Reader == nil {
-		// SYS$CONNECT's own armForFAC (connect.go) already reports
-		// RMS$_PRV at CONNECT time for a FAB that never asked for
-		// FAB$V_GET access, so a nil Reader here means this RAB's FAB was
-		// instead armed for writing only (FAB$V_PUT) and a GET was
-		// attempted through it anyway — the same "wrong direction"
-		// condition, just discovered one step later. Mirrors SysPut's own
-		// equivalent nil-Writer check.
-		return storeStatus(ctx, rabAddr, rabSTS, rabSTV, rmsPrivilegeViolation)
+	// A file on a volume: the record the stream's context and RAB$B_RAC
+	// choose (stream.go), locked if the stream locks records.
+	found, r0, err := ctx.locate(rabAddr, handle, false)
+	if err != nil || found.sts == 0 {
+		return r0, err
 	}
 
-	if ctx.locksRecords(handle) {
-		return ctx.getLocked(rabAddr, handle)
-	}
-
-	record, sts := nextRecord(handle)
-	if sts != 0 {
-		return storeStatus(ctx, rabAddr, rabSTS, rabSTV, sts)
-	}
-
-	if err := ctx.storeRFA(rabAddr, rfaAt(handle.Reader.RecordOffset())); err != nil {
-		return 0, err
-	}
-
-	return storeRecord(ctx, rabAddr, record)
+	return storeRecordStatus(ctx, rabAddr, found.record, found.sts)
 }
 
 // nextRecord reads handle's next record, or returns the status for why

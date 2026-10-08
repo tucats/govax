@@ -418,6 +418,12 @@ expect adjustment as phases land):
   `$ERASE`, `$FREE`, `$RELEASE`; `$SEARCH` contexts reopen directories
   each call; `MountTable.VerifyVolume` (`verify.go`) checks a volume;
   DISMOUNT refuses a volume with files open (`DismountAll` forces).
+  Phase 49: each stream's current and next records (`stream.go`, the
+  File Applications guide's Table 8-3), shared by `$GET` and `$FIND`
+  (`locate`; sequential or by RFA), and `recordops.go`'s `$FIND`,
+  `$UPDATE` (in place, same length), `$TRUNCATE`, `$DELETE` (RMS$_IOP
+  on sequential files), `$REWIND`; `$PUT` with RAB$V_TPT; one stream may
+  both read and write.
 - `internal/link` — the VAX linker (Phase 30): builds a VMS executable image from
   `internal/obj` modules, laid out as real LINK lays images out (byte for byte on
   the fixtures). The console's `LINK` command (`internal/console/link.go`) drives it.

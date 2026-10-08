@@ -96,6 +96,17 @@ var (
 	rmsOKWaited        = vmsConst("RMS$_OK_WAT")
 	rmsOKAlreadyLocked = vmsConst("RMS$_OK_ALK")
 
+	// The record operations' own failures (stream.go, Phase 49):
+	// rmsFACNotAllowed is RMS$_FAC, an operation the file wasn't opened
+	// for (FAB$B_FAC); rmsNoCurrent RMS$_CUR, $UPDATE or $TRUNCATE with
+	// no current record; rmsInvalidRFA RMS$_RFA, an RFA that names no
+	// record; rmsTimedOut RMS$_TMO, a record lock not granted within
+	// RAB$B_TMO's seconds.
+	rmsFACNotAllowed = vmsConst("RMS$_FAC")
+	rmsNoCurrent     = vmsConst("RMS$_CUR")
+	rmsInvalidRFA    = vmsConst("RMS$_RFA")
+	rmsTimedOut      = vmsConst("RMS$_TMO")
+
 	// rmsFileNotFound is RMS$_FNF: SYS$OPEN's target file spec doesn't
 	// exist. Also the natural error for looking a name up in an
 	// ods2 volume.Directory and not finding it.

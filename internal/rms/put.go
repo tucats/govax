@@ -65,22 +65,15 @@ func SysPut(ctx *Context, argv []uint32) (uint32, error) {
 	}
 
 	// A real ODS-2-backed file has to have been armed for writing by
-	// SYS$CONNECT (connect.go's armForFAC) before SYS$PUT can use it —
-	// armForFAC itself already reports RMS$_PRV at CONNECT time for a
-	// FAB that never asked for FAB$V_PUT access, so a nil Writer here
-	// means this RAB's FAB was instead armed for reading only (SYS$OPEN/
-	// SYS$CONNECT with FAB$V_GET, docs/PHASE-22.md's later subtasks) and
-	// a PUT was attempted through it anyway — the same "no write access"
-	// condition, just discovered one step later. The console case needs
-	// no such check: a FileHandle's Console field is ready to write to
-	// the moment SYS$CREATE allocates it (see ifi.go's FileHandle doc
-	// comment).
+	// SYS$CONNECT (connect.go's armForFAC) before SYS$PUT can use it: a
+	// nil Writer here means the FAB never asked for FAB$V_PUT access (it
+	// was opened to read, say), and a $PUT is RMS$_FAC, a record
+	// operation the file access doesn't allow (RMS manual, FAB$B_FAC).
+	// The console case needs no such check: a FileHandle's Console field
+	// is ready to write to the moment SYS$CREATE allocates it (see
+	// ifi.go's FileHandle doc comment).
 	if !handle.IsConsole() && !handle.IsRecordDevice() && handle.Writer == nil {
-		if handle.NotAtEOF {
-			return storeStatus(ctx, rabAddr, rabSTS, rabSTV, rmsNotAtEOF)
-		}
-
-		return storeStatus(ctx, rabAddr, rabSTS, rabSTV, rmsPrivilegeViolation)
+		return storeStatus(ctx, rabAddr, rabSTS, rabSTV, rmsFACNotAllowed)
 	}
 
 	// RAB$W_RSZ/RAB$L_RBF (rab.go) are, on SYS$PUT, both set by the
@@ -134,6 +127,10 @@ func SysPut(ctx *Context, argv []uint32) (uint32, error) {
 			return storeStatus(ctx, rabAddr, rabSTS, rabSTV, rmsDeviceError)
 		}
 	} else {
+		if sts, err := ctx.putPosition(rabAddr, handle); err != nil || sts != 0 {
+			return sts, err
+		}
+
 		if err := handle.Writer.Put(record); err != nil {
 			// The sibling ods2 module's rms.Writer.Put only ever
 			// fails this way for a record whose length doesn't fit
@@ -151,7 +148,48 @@ func SysPut(ctx *Context, argv []uint32) (uint32, error) {
 		if err := ctx.storeRFA(rabAddr, rfaAt(handle.Writer.RecordOffset())); err != nil {
 			return 0, err
 		}
+
+		// A $PUT leaves no current record, and the next one at the end
+		// of the file (stream.go).
+		handle.stream.lost()
+		handle.stream.atEnd = true
 	}
 
 	return storeStatus(ctx, rabAddr, rabSTS, rabSTV, rmsNormal)
+}
+
+// putPosition checks that a $PUT on a volume file may write where the
+// stream is: at the end of the file, or, with RAB$V_TPT (truncate on
+// put) and FAB$V_TRN access, at the next record, the file then being cut
+// off there so the record ends it (RMS manual, RAB$L_ROP). It returns 0,
+// or the status it stored in the RAB: RMS$_NEF away from the end without
+// TPT, RMS$_FAC with TPT but without TRN.
+func (ctx *Context) putPosition(rabAddr uint32, h *FileHandle) (uint32, error) {
+	if h.atEndOfFile() {
+		return 0, nil
+	}
+
+	rop, err := ctx.loadLongword(rabAddr + rabROP)
+	if err != nil {
+		return 0, err
+	}
+
+	fail := func(sts uint32) (uint32, error) {
+		h.stream.lost()
+
+		return storeStatus(ctx, rabAddr, rabSTS, rabSTV, sts)
+	}
+
+	switch {
+	case rop&ropTPT == 0:
+		return fail(rmsNotAtEOF)
+	case h.stream.fac&facTrn == 0:
+		return fail(rmsFACNotAllowed)
+	}
+
+	// The Writer is shared (a stream with TRN access changes the file in
+	// place: connect.go), so its next Put starts at the new end.
+	h.truncateAt(h.stream.next)
+
+	return 0, nil
 }

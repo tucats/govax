@@ -102,14 +102,13 @@ func (ctx *Context) loadRFA(rabAddr uint32) (rfa, error) {
 }
 
 // streamLocks is a stream's record locks: the NL lock on its file, the
-// record locks under it by RFA, and a record read but not yet returned
-// (its lock refused, or waited for).
+// record locks under it by RFA, and a lock it waits for (RAB$V_WAT) and
+// the record that lock is for.
 type streamLocks struct {
 	mgr     *lck.Manager
 	file    *lck.Lock
 	records map[rfa]*lck.Lock
 
-	pending   []byte
 	pendingAt rfa
 	waiting   *lck.Lock
 }
@@ -264,7 +263,7 @@ func (ctx *Context) unlockRecords(handle *FileHandle, keep *rfa) int {
 		events, _ := s.mgr.Dequeue(l.Owner, l.ID, lck.DequeueOptions{})
 		lck.Deliver(events)
 		delete(s.records, r)
-		
+
 		n++
 	}
 
@@ -296,88 +295,13 @@ func (s *streamLocks) release() {
 	*s = streamLocks{}
 }
 
-// getLocked is $GET for a stream that locks records: it reads the next
-// record (or retries one whose lock was refused or waited for), locks it
-// as RAB$L_ROP says, and returns it, or returns why not.
-func (ctx *Context) getLocked(rabAddr uint32, handle *FileHandle) (uint32, error) {
-	rop, err := ctx.loadLongword(rabAddr + rabROP)
-	if err != nil {
-		return 0, err
-	}
+// dropWaiting gives up the record lock the stream waits for.
+func (ctx *Context) dropWaiting(h *FileHandle) {
+	ls := &h.locks
 
-	s := &handle.locks
-
-	// A lock waited for: granted now, or still not.
-	if s.waiting != nil {
-		if s.waiting.State != lck.Granted {
-			return 0, ctx.awaitLock(s.waiting)
-		}
-
-		ctx.holdRecord(handle, s.pendingAt, s.waiting)
-		s.waiting = nil
-
-		return ctx.returnLocked(rabAddr, handle, rop, rmsOKWaited)
-	}
-
-	if s.pending == nil {
-		record, sts := nextRecord(handle)
-		if sts != 0 {
-			if sts == rmsEOF && rop&ropULK == 0 {
-				ctx.unlockRecords(handle, nil)
-			}
-
-			return storeStatus(ctx, rabAddr, rabSTS, rabSTV, sts)
-		}
-
-		s.pending, s.pendingAt = record, rfaAt(handle.Reader.RecordOffset())
-	}
-
-	result, held, err := ctx.lockRecord(handle, s.pendingAt, rop)
-	if err != nil {
-		return 0, err
-	}
-
-	switch result {
-	case lockRefused:
-		// An error unlocks the stream's record, unless it unlocks
-		// manually (the guide, 7.2.1 and 7.2.4.1).
-		if rop&ropULK == 0 {
-			ctx.unlockRecords(handle, nil)
-		}
-
-		return storeStatus(ctx, rabAddr, rabSTS, rabSTV, rmsRecordLocked)
-	case lockWait:
-		return 0, ctx.awaitLock(s.waiting)
-	}
-
-	sts := rmsNormal
-
-	switch {
-	case held:
-		sts = rmsOKRecordLocked
-	case result == lockAlready:
-		sts = rmsOKAlreadyLocked
-	}
-
-	return ctx.returnLocked(rabAddr, handle, rop, sts)
-}
-
-// returnLocked returns the pending record with status sts, dropping the
-// stream's other record locks unless RAB$V_ULK keeps them.
-func (ctx *Context) returnLocked(rabAddr uint32, handle *FileHandle, rop, sts uint32) (uint32, error) {
-	s := &handle.locks
-	record, at := s.pending, s.pendingAt
-	s.pending = nil
-
-	if rop&ropULK == 0 {
-		ctx.unlockRecords(handle, &at)
-	}
-
-	if err := ctx.storeRFA(rabAddr, at); err != nil {
-		return 0, err
-	}
-
-	return storeRecordStatus(ctx, rabAddr, record, sts)
+	events, _ := ls.mgr.Dequeue(ls.waiting.Owner, ls.waiting.ID, lck.DequeueOptions{})
+	lck.Deliver(events)
+	ls.waiting = nil
 }
 
 // awaitLock waits for l (RAB$V_WAT): the service is called again when

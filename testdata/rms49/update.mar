@@ -1,0 +1,125 @@
+	.TITLE	UPDATE	$FIND, $UPDATE, $TRUNCATE, $REWIND (govax Phase 49)
+;
+; Writes three records to a new file, then through the same stream
+; rewinds, updates the first, finds the second, truncates the file
+; there, appends a record, and reads the file back. Returns 999 in R0
+; if every step did what RMS says, or the number of the step that
+; didn't.
+;
+	$RABDEF
+	$RMSDEF
+
+; OK goes on if R0 is a success, and to FAIL if not; EXPECT if R0 is
+; the status STS. (FAIL is too far for a byte branch.)
+	.MACRO	OK,?L
+	BLBS	R0,L
+	BRW	FAIL
+L:
+	.ENDM	OK
+
+	.MACRO	EXPECT,STS,?L
+	CMPL	R0,#STS
+	BEQL	L
+	BRW	FAIL
+L:
+	.ENDM	EXPECT
+
+	.PSECT	DATA,WRT,NOEXE,LONG
+FAB:	$FAB	FNM=<DUA0:[000000]UPD.DAT>,FAC=<GET,PUT,UPD,TRN>,RFM=VAR
+RAB:	$RAB	FAB=FAB,UBF=BUF,USZ=80
+BUF:	.BLKB	80
+AAA:	.ASCII	/AAA/
+BBB:	.ASCII	/BBB/
+CCC:	.ASCII	/CCC/
+DDD:	.ASCII	/DDD/
+XXX:	.ASCII	/XXX/
+
+	.PSECT	CODE,NOWRT,EXE
+	.ENTRY	START,^M<R6>
+	CLRL	R6
+	INCL	R6			; 1
+	$CREATE	FAB=FAB
+	OK
+	INCL	R6			; 2
+	$CONNECT RAB=RAB
+	OK
+	INCL	R6			; 3
+	MOVAB	AAA,R1
+	BSBW	PUT
+	OK
+	INCL	R6			; 4
+	MOVAB	BBB,R1
+	BSBW	PUT
+	OK
+	INCL	R6			; 5
+	MOVAB	CCC,R1
+	BSBW	PUT
+	OK
+	INCL	R6			; 6
+	$REWIND	RAB=RAB
+	OK
+	INCL	R6			; 7
+	MOVAB	AAA,R1
+	BSBW	GET
+	OK
+	INCL	R6			; 8: $UPDATE AAA to XXX
+	MOVW	#3,RAB+RAB$W_RSZ
+	MOVAB	XXX,RAB+RAB$L_RBF
+	$UPDATE	RAB=RAB
+	OK
+	INCL	R6			; 9: a second $UPDATE has no current record
+	$UPDATE	RAB=RAB
+	EXPECT	RMS$_CUR
+	INCL	R6			; 10: $FIND BBB
+	$FIND	RAB=RAB
+	OK
+	INCL	R6			; 11: and cut the file off there
+	$TRUNCATE RAB=RAB
+	OK
+	INCL	R6			; 12
+	MOVAB	DDD,R1
+	BSBW	PUT
+	OK
+	INCL	R6			; 13
+	$REWIND	RAB=RAB
+	OK
+	INCL	R6			; 14
+	MOVAB	XXX,R1
+	BSBW	GET
+	OK
+	INCL	R6			; 15
+	MOVAB	DDD,R1
+	BSBW	GET
+	OK
+	INCL	R6			; 16
+	$GET	RAB=RAB
+	EXPECT	RMS$_EOF
+	INCL	R6			; 17
+	$CLOSE	FAB=FAB
+	OK
+	MOVL	#999,R6
+FAIL:	MOVL	R6,R0
+	RET
+
+; PUT writes the three bytes at R1 as a record.
+PUT:	MOVW	#3,RAB+RAB$W_RSZ
+	MOVL	R1,RAB+RAB$L_RBF
+	$PUT	RAB=RAB
+	RSB
+
+; GET reads a record, returning a failure (R0 0) unless it is the three
+; bytes at R1.
+GET:	PUSHL	R1
+	$GET	RAB=RAB
+	MOVL	(SP)+,R1
+	BLBC	R0,10$
+	CMPW	RAB+RAB$W_RSZ,#3
+	BNEQ	20$
+	CMPC3	#3,(R1),BUF
+	BNEQ	20$
+	MOVL	#1,R0
+10$:	RSB
+20$:	CLRL	R0
+	RSB
+
+	.END	START

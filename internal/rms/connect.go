@@ -70,8 +70,8 @@ func SysConnect(ctx *Context, argv []uint32) (uint32, error) {
 	return storeStatus(ctx, rabAddr, rabSTS, rabSTV, rmsNormal)
 }
 
-// armForFAC arms handle's underlying ODS-2 file for reading or writing,
-// according to whichever access bit the FAB at fabAddr's own FAB$B_FAC
+// armForFAC arms handle's underlying ODS-2 file for reading, writing, or
+// both, according to the access bits the FAB at fabAddr's own FAB$B_FAC
 // field has set — matching how SYS$CREATE/SYS$OPEN recorded, back when
 // the file was first opened, what the calling program said it wanted to
 // do with it.
@@ -106,48 +106,42 @@ func armForFAC(ctx *Context, handle *FileHandle, fabAddr, rabAddr uint32) (failS
 		fac = handle.Access
 	}
 
-	switch {
-	case fac&facPut != 0:
-		if handle.Writer == nil {
-			// A sequential stream starts at the beginning of the file,
-			// where a $PUT can only go if the file is empty; RAB$V_EOF
-			// starts it at the end of the file instead (RMS manual,
-			// RAB$L_ROP). A stream at the start of a file with records
-			// in it gets no Writer: its $PUT is RMS$_NEF.
-			if rop&ropEOF == 0 && odsrms.FileByteLength(handle.File.Header.RecordAttributes) > 0 {
-				handle.NotAtEOF = true
-
-				return 0, nil
-			}
-
-			w, err := odsrms.NewAppender(handle.File)
-			if err != nil {
-				// handle.File wasn't armed for writing (volume.File.
-				// OpenForWrite never called on it) or has an
-				// unsupported record format — a real ods2-layer
-				// problem, not a Go bug, so it's reported as an
-				// ordinary RMS device error rather than propagated.
-				return rmsDeviceError, nil
-			}
-
-			// A file others may read or write gets each record on the
-			// disk as it's put, at the end of file as it is then.
-			w.SetShared(handle.Accessor != nil && sharedStream(handle.Mode))
-			handle.Writer = w
-		}
-	case fac&facGet != 0:
-		if handle.Reader == nil {
-			r, err := odsrms.NewReader(handle.File)
-			if err != nil {
-				return rmsDeviceError, nil
-			}
-
-			handle.Reader = r
-		}
-	default:
-		// Neither FAB$V_PUT nor FAB$V_GET was ever asked for — nothing
-		// for CONNECT to arm this stream to do.
+	if fac&(facPut|facReads) == 0 {
+		// None of PUT, GET, UPD, DEL, or TRN was ever asked for —
+		// nothing for CONNECT to arm this stream to do.
 		return rmsPrivilegeViolation, nil
+	}
+
+	// The stream's context starts at the first record, or with RAB$V_EOF
+	// at the end of the file (RMS manual, RAB$L_ROP); a $PUT at the start
+	// of a file with records in it is RMS$_NEF (stream.go).
+	handle.startStream(fac, rop)
+
+	if fac&facPut != 0 && handle.Writer == nil {
+		w, err := odsrms.NewAppender(handle.File)
+		if err != nil {
+			// handle.File wasn't armed for writing (volume.File.
+			// OpenForWrite never called on it) or has an unsupported
+			// record format — a real ods2-layer problem, not a Go bug, so
+			// it's reported as an ordinary RMS device error rather than
+			// propagated.
+			return rmsDeviceError, nil
+		}
+
+		// A file others may read or write, or that this stream also reads
+		// or changes in place, gets each record on the disk as it's put,
+		// at the end of file as it is then.
+		w.SetShared(handle.Accessor != nil && handle.stream.fresh)
+		handle.Writer = w
+	}
+
+	if fac&facReads != 0 && handle.Reader == nil {
+		r, err := odsrms.NewReader(handle.File)
+		if err != nil {
+			return rmsDeviceError, nil
+		}
+
+		handle.Reader = r
 	}
 
 	return 0, nil

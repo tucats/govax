@@ -42,21 +42,19 @@ import (
 //
 // Otherwise, File holds the underlying ods2 volume.File (opened via
 // volume.Volume.CreateFile or volume.Volume.OpenFID — see the sibling
-// ods2 module), and exactly one of Reader or Writer is set once the file
+// ods2 module), and Reader or Writer (or both) is set once the file
 // has actually been armed for record-by-record access: Reader once
 // SYS$OPEN/SYS$CONNECT has set the file up for reading (backing
-// SYS$GET), or Writer once SYS$CREATE/SYS$CONNECT has set it up for
+// SYS$GET), and Writer once SYS$CREATE/SYS$CONNECT has set it up for
 // writing (backing SYS$PUT). Both are nil for a File that SYS$CREATE has
 // just made but SYS$CONNECT hasn't armed yet — this package's IFI table
 // tracks "this file is open" and "this stream is ready for GET/PUT" as
 // two separate steps, the same two-step CREATE-then-CONNECT (or
 // OPEN-then-CONNECT) sequence a real VAX program has to perform.
 //
-// Never both Reader and Writer at once: this phase implements sequential
-// organization only, where a given connection is inherently one
-// direction or the other (real RMS lets a file be simultaneously open
-// for GET and PUT through *different* RABs on the same FAB, but not
-// through the same RAB — this phase doesn't need that generality).
+// A stream opened for both (FAB$B_FAC with GET and PUT) has both: it
+// reads with Reader and appends with Writer, its context (stream.go)
+// saying where (Phase 49).
 type FileHandle struct {
 	// Console is set only for the terminal-pseudo-device case. Check
 	// IsConsole rather than comparing this field to nil directly, so
@@ -109,10 +107,9 @@ type FileHandle struct {
 	Reader *odsrms.Reader
 	Writer *odsrms.Writer
 
-	// NotAtEOF is set when a stream for $PUT was connected at the start
-	// of a file that has records (no RAB$V_EOF): it has no Writer, and
-	// its $PUT fails with RMS$_NEF.
-	NotAtEOF bool
+	// stream is the record stream's context: its current and next
+	// records (stream.go).
+	stream streamContext
 }
 
 // IsConsole reports whether h is the terminal-pseudo-device case (Console

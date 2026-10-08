@@ -68,4 +68,21 @@ func registerRMSServices(t *ServiceTable) {
 	t.Register("SYS$RELEASE", func(env *Environment, argv []uint32) (uint32, error) {
 		return rms.SysRelease(env.rmsContext(), argv)
 	})
+
+	// Phase 49: the record operations past $GET and $PUT.
+	t.Register("SYS$FIND", func(env *Environment, argv []uint32) (uint32, error) {
+		return rms.SysFind(env.rmsContext(), argv)
+	})
+	t.Register("SYS$UPDATE", func(env *Environment, argv []uint32) (uint32, error) {
+		return rms.SysUpdate(env.rmsContext(), argv)
+	})
+	t.Register("SYS$TRUNCATE", func(env *Environment, argv []uint32) (uint32, error) {
+		return rms.SysTruncate(env.rmsContext(), argv)
+	})
+	t.Register("SYS$DELETE", func(env *Environment, argv []uint32) (uint32, error) {
+		return rms.SysDelete(env.rmsContext(), argv)
+	})
+	t.Register("SYS$REWIND", func(env *Environment, argv []uint32) (uint32, error) {
+		return rms.SysRewind(env.rmsContext(), argv)
+	})
 }

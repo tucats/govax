@@ -173,3 +173,32 @@ stream's record locks.
   (PHASE-48.md's close-out).
 - 2026-10-08: Started, in the suggested order (RMS first). Subtask 1,
   the survey, is above ("Survey").
+- 2026-10-08: Subtasks 2 to 4, in one change since they share the
+  stream's context. `internal/rms/stream.go` keeps each stream's current
+  and next records (the guide's Table 8-3) in `FileHandle.stream`, and
+  `locate` is $GET's and $FIND's common step: the record by RAB$B_RAC
+  (sequential or RFA; `validRFA` checks an RFA is in the file and, for
+  Fixed and Variable records, on a record boundary), its lock
+  (`lockFound`), and the context's move. The record is read again after
+  a lock wait, so a stream that waited sees the other's $UPDATE (the old
+  `streamLocks.pending` copy is gone). `recordops.go` has `$FIND`,
+  `$UPDATE` (in place, same length; `writeAt`), `$TRUNCATE`
+  (`truncateAt`: the end of file moves; blocks stay), `$DELETE`
+  (RMS$_IOP: sequential files only), and `$REWIND`; `$PUT` checks the
+  end-of-file rule and RAB$V_TPT (`putPosition`), replacing
+  `FileHandle.NotAtEOF`. `$CONNECT` arms a Reader and a Writer as
+  FAB$B_FAC asks (both for GET and PUT); a stream that also reads or
+  changes records in place gets a shared (write-through) Writer and
+  reads from the disk each time (`streamContext.fresh`). Wrong-direction
+  $GET and $PUT are now RMS$_FAC, as the manual lists, not RMS$_PRV.
+  Decisions, unconfirmed: UPD, DEL, and TRN access let a stream $GET and
+  $FIND (`facReads`); $UPDATE in a record-locking stream needs the
+  record locked (RMS$_RNL); a stream-format record can't change length
+  either (RMS$_RSZ); $FIND on the terminal or a mailbox reads a record
+  and drops it; $REWIND there does nothing. ods2 (sibling module)
+  gained `Reader.Offset`/`SeekTo`, and a shared Writer now rereads the
+  file's last block at each Put (an in-place update there isn't
+  overwritten): ods2 commit e4697bd, not yet tagged, so govax's go.mod
+  pin needs a new ods2 release before `GOWORK=off` builds. Tests:
+  `recordops_test.go` (eight), and `TestRun_recordUpdates`
+  (`testdata/rms49/update.mar`, a MACRO program run end to end).

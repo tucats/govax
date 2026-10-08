@@ -393,7 +393,8 @@ func TestSysGet_consoleCtrlZAfterText(t *testing.T) {
 
 // TestSysGet_noReadAccess confirms SYS$GET through a RAB that was
 // SYS$CONNECTed for writing only (FAB$V_PUT, arming a Writer but no
-// Reader) fails with RMS$_PRV rather than dereferencing a nil Reader —
+// Reader) fails with RMS$_FAC (the RMS manual: a record operation the file
+// access doesn't allow) rather than dereferencing a nil Reader —
 // the mirror image of put_test.go's own TestSysPut_noWriteAccess.
 func TestSysGet_noReadAccess(t *testing.T) {
 	f := newCreateFixture(t, true)
@@ -411,8 +412,8 @@ func TestSysGet_noReadAccess(t *testing.T) {
 		t.Fatalf("SysGet: %v", err)
 	}
 
-	if r0 != rmsPrivilegeViolation {
-		t.Errorf("r0 = %d, want rmsPrivilegeViolation (%d)", r0, rmsPrivilegeViolation)
+	if r0 != rmsFACNotAllowed {
+		t.Errorf("r0 = %d, want RMS$_FAC (%d)", r0, rmsFACNotAllowed)
 	}
 }
 
