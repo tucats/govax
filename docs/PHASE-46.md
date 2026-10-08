@@ -1,6 +1,6 @@
 # Phase 46 — Multiprocessing, part 4: interprocess communication
 
-**Status:** in progress (subtasks 1-3 done, 2026-10-07); decisions taken
+**Status:** in progress (subtasks 1-4 done, 2026-10-07); decisions taken
 2026-10-06 (see PHASE-43.md, Part A). Needs Phase 45.
 
 The program this phase belongs to is described in
@@ -144,7 +144,7 @@ as today).
    (message count in `DVI$_DEVDEPEND`, reference count, owner UIC).
    *Done (2026-10-07).*
 4. **Common event flags across processes**, with CEF waits and temporary
-   cluster lifetime. Tests.
+   cluster lifetime. Tests. *Done (2026-10-07).*
 5. **Global sections**: create, map, delete, rundown unmapping, reference
    counts, name scopes, errors (SS$_GPTFULL-style exhaustion,
    SS$_NOSUCHSEC, SS$_DUPLNAM...). Tests: two processes sharing a counter
@@ -311,3 +311,43 @@ as today).
     another job (its name with it, from the creator's job table) and
     with a deleted process's rundown; and `$GETDVI` from both sides and
     by name.
+- 2026-10-07: Subtask 4 (common event flags across processes). From
+  *VAX/VMS Internals and Data Structures*, sections 10.1 (common event
+  blocks, CEF wait queues) and 12.1.2-12.1.4 (SCH$POSTEF).
+  - **Already in place:** clusters are system state shared by every
+    process in a UIC group; a wait on a common flag is a CEF wait whose
+    test reads the cluster each time; image rundown (and so process
+    deletion, which runs it) disassociates, and a temporary cluster goes
+    with its last association. The scheduler's test of every waiter
+    already ended another process's CEF wait, and `$SETEF` of a common
+    flag asked for a reschedule so that test came soon.
+  - **SCH$POSTEF** (`Environment.postFlag`, `eventflags.go`): every place
+    that sets an event flag (`$SETEF`, a request completing in
+    `completeIO`, a `$QIO` rejected after its flag was cleared, a timer,
+    `$GETJPI`, `$GETDVI`, `$GETSYI`, `$BRKTHRU`) now sets it through
+    one routine, which, for a common cluster, reports the event
+    (`reportEvent`) to every process associated with the cluster
+    (`reportClusterEvent`): each whose wait it satisfies becomes
+    computable at once, with the setter's boost class, and may preempt.
+    Before, only `$SETEF` caused a reschedule: a common flag set by a
+    timer or a completing request in one process left the others
+    waiting until the scheduler next looked, up to a quantum later.
+  - **Boost classes:** a request's own class (I/O completion for
+    `$GETJPI` and the like, the request's for a `$QIO`), PRI$_TIMER for
+    a timer, and none (PRI$_NULL) for `$SETEF`, which Table 10-3 doesn't
+    list (its "other events with no boost"). *Unconfirmed:* `$SETEF`'s
+    class. The fallback test of every waiter still gives an event flag
+    wait an I/O completion's boost.
+  - Tests: `corevms/cefwait_test.go` (`$SETEF` ending another process's
+    `$WAITFR` at once with no boost; a `$WFLAND` across processes needing
+    both flags; the same cluster under cluster numbers 2 and 3; a
+    same-named cluster in another UIC group left alone; a timer's flag
+    (boost 3) and a `$GETJPIW`'s (boost 2) ending another's wait; a
+    temporary cluster outliving its creator's `$DACEFC` in another
+    process, keeping its flags, and going with that process's deletion,
+    a permanent one staying) and `console/cefpair_test.go`
+    (`TestCommonFlagPair_handshake`: on a booted machine, two processes
+    hand flags 65-68 back and forth, each seen in CEF; each wait ends
+    before the setter goes on past the instruction that set the flag.
+    Its last flag is set by a `$GETJPIW`; with `postFlag`'s report taken
+    out, process 2 runs on past it).

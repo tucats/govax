@@ -32,7 +32,9 @@ import (
 // (reportEvent, docs/PHASE-46.md subtask 1): an I/O request completing,
 // an attention AST, or a timer expiring makes its process computable at
 // once, boosted by the event's own class, and may preempt the process
-// that caused it, as on VMS. The test at each choice remains for the
+// that caused it, as on VMS. A flag set in a common event flag cluster,
+// however it's set, is reported to every process associated with the
+// cluster (postFlag, eventflags.go; subtask 4). The test at each choice remains for the
 // events that aren't reported this way.
 
 // waitCondition is what a waiting process waits for.

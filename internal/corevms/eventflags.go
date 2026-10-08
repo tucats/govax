@@ -4,6 +4,7 @@ import (
 	"errors"
 	"sort"
 
+	"github.com/tucats/govax/internal/sched"
 	"github.com/tucats/govax/internal/vmsdef"
 )
 
@@ -186,15 +187,51 @@ func serviceSysSetef(env *Environment, argv []uint32) (uint32, error) {
 	}
 
 	st = flagStatus(*word, bit)
-	*word |= 1 << bit
-
-	// A common event flag is shared: a process waiting for it (CEF) may
-	// now go on, so the scheduler gets to look (waits.go).
-	if argv[0]&0xFF >= 64 {
-		env.requestReschedule()
-	}
+	env.postFlag(argv[0], setefBoost)
 
 	return st, nil
+}
+
+// setefBoost is the boost class of a $SETEF: none. Table 10-3 of VAX/VMS
+// Internals and Data Structures doesn't list setting an event flag, so
+// it is one of its "other events with no boost"; unconfirmed.
+const setefBoost = sched.ClassNull
+
+// postFlag sets event flag efn, as VMS's SCH$POSTEF does for $SETEF and
+// for every request that completes by setting a flag (an I/O request, a
+// timer, $GETJPI, ...). A flag in one of the process's common clusters
+// is shared, so, as the book says (section 12.1.4), each process waiting
+// for flags in that cluster is told of the event: one whose wait is now
+// satisfied becomes computable at once, boosted by class, and may
+// preempt (reportClusterEvent). A local flag is the process's own; the
+// caller reports the event to it. A flag the process can't reach
+// (SS$_ILLEFC, SS$_UNASEFC) is left alone: the caller has checked it
+// already, or, for a request completing later, the process has given up
+// the cluster since.
+func (env *Environment) postFlag(efn uint32, class sched.Class) {
+	word, bit, st := env.flagWord(efn)
+	if st != 0 {
+		return
+	}
+
+	*word |= 1 << bit
+
+	if efn&0xFF >= 64 {
+		env.reportClusterEvent(env.Process.CommonClusters[(efn&0xFF)/32-2], class)
+	}
+}
+
+// reportClusterEvent reports an event (reportEvent) to every process
+// associated with common cluster c: on VMS, the processes in the
+// cluster's wait queue. reportEvent ignores a process that isn't
+// waiting, and leaves one whose wait isn't over (another cluster, other
+// flags, a $WFLAND still missing one) waiting.
+func (env *Environment) reportClusterEvent(c *EventFlagCluster, class sched.Class) {
+	for _, p := range env.procs.slots {
+		if p != nil && (p.Process.CommonClusters[0] == c || p.Process.CommonClusters[1] == c) {
+			p.reportEvent(class)
+		}
+	}
 }
 
 // serviceSysReadef is SYS$READEF: returns the whole 32-flag cluster

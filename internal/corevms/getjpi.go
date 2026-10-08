@@ -273,7 +273,7 @@ func serviceSysGetjpi(env *Environment, argv []uint32) (uint32, error) {
 		}
 	}
 
-	*flags |= 1 << bit
+	env.postFlag(efn, sched.ClassIOCompletion)
 
 	if astadr != 0 {
 		env.queueAST(astadr, astprm, uint32(env.cpu.PSL().CurMod()))

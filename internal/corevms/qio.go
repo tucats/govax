@@ -294,7 +294,7 @@ func (env *Environment) queueIO(argv []uint32) (uint32, *ioRequest) {
 	// reject ends a request that won't complete: the flag is set, and st
 	// is the service's status.
 	reject := func(st uint32) (uint32, *ioRequest) {
-		*flags |= 1 << bit
+		env.postFlag(efn, sched.ClassIOCompletion)
 
 		return st, nil
 	}
@@ -407,9 +407,7 @@ func (env *Environment) completeIO(req *ioRequest, done ioStatus) {
 		_ = owner.storeOwn(req.iosb, b[:])
 	}
 
-	if flags, bit, st := owner.flagWord(req.efn); st == 0 {
-		*flags |= 1 << bit
-	}
+	owner.postFlag(req.efn, req.boost)
 
 	if req.astadr != 0 {
 		owner.queueAST(req.astadr, req.astprm, req.mode)

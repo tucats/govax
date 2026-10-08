@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	iodev "github.com/tucats/govax/internal/io"
+	"github.com/tucats/govax/internal/sched"
 	"github.com/tucats/govax/internal/vmsdef"
 )
 
@@ -497,7 +498,7 @@ func (env *Environment) breakthrough(argv []uint32) (uint32, error) {
 		env.writeConsole(prefix + msg + postfix)
 	}
 
-	*flags |= 1 << bit
+	env.postFlag(efn, sched.ClassIOCompletion)
 
 	if iosb != 0 {
 		// Status, terminals sent to, timed out (0), set NOBROADCAST (0).

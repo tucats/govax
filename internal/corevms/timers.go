@@ -108,9 +108,7 @@ func (env *Environment) expireTimers() {
 			continue
 		}
 
-		if word, bit, st := env.flagWord(t.efn); st == 0 {
-			*word |= 1 << bit
-		}
+		env.postFlag(t.efn, sched.ClassTimer)
 
 		if t.astadr != 0 {
 			env.queueAST(t.astadr, t.reqidt, t.mode)
