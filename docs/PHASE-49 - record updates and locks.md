@@ -238,3 +238,17 @@ stream's record locks.
   Unconfirmed: the wildcard context written back to LKIDADR (the high
   bit and the last lock ID); a waiting lock's granted mode (reported as
   NL); whole list entries on a short buffer.
+- 2026-10-08: Subtask 7, the lock quotas (`corevms/lockquota.go`).
+  ENQLM is govax's pooled job quota (`Job.Pooled.ENQLM`; the book's
+  JIB$W_ENQLM): every lock of every process in the job counts, RMS's
+  file and record locks included, and a new lock past it is
+  SS$_EXENQLM (`$ENQ`) or RMS$_EXENQLM (a record lock, through the new
+  `rms.Context.CanLock`); a conversion takes none. JPI$_ENQCNT (new) is
+  what's left. ASTLM: a lock request's completion AST counts as
+  outstanding from the request until it's delivered (`remainingASTs`,
+  so JPI$_ASTCNT shows it), and an `$ENQ` asking for a completion or
+  blocking AST with none left is SS$_EXQUOTA (unconfirmed;
+  SS$_EXASTLM is the other candidate). An armed blocking AST isn't
+  counted (unconfirmed). Only the lock services enforce ASTLM; the
+  other AST services still don't. Tests: `TestEnq_quotas`,
+  `TestRecordLock_quota`.

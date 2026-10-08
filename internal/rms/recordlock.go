@@ -174,6 +174,7 @@ const (
 	lockNone                      // returned without a lock (NLK, RRL)
 	lockRefused                   // RMS$_RLK
 	lockWait                      // waiting for it (WAT)
+	lockQuota                     // RMS$_EXENQLM: no lock left of the job's ENQLM
 )
 
 // lockRecord locks the record at r for handle's stream as rop says,
@@ -185,9 +186,19 @@ func (ctx *Context) lockRecord(handle *FileHandle, r rfa, rop uint32) (lockResul
 		return lockAlready, false, nil
 	}
 
+	// Each lock RMS takes, the file's and the record's, counts against
+	// the job's ENQLM quota (Phase 49).
+	if ctx.CanLock != nil && !ctx.CanLock() {
+		return lockQuota, false, nil
+	}
+
 	parent, err := ctx.fileLock(handle)
 	if err != nil {
 		return 0, false, err
+	}
+
+	if ctx.CanLock != nil && !ctx.CanLock() {
+		return lockQuota, false, nil
 	}
 
 	owner := lck.Owner(ctx.PID)

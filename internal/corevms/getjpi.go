@@ -88,6 +88,7 @@ var jpiItemsByName = map[string]func(env *Environment) itemValue{
 	"JPI$_PGFLQUOTA":    func(env *Environment) itemValue { return itemLong(env.Process.Job.Pooled.PGFLQUOTA) },
 	"JPI$_TQLM":         func(env *Environment) itemValue { return itemLong(env.Process.Job.Pooled.TQELM) },
 	"JPI$_ENQLM":        func(env *Environment) itemValue { return itemLong(env.Process.Job.Pooled.ENQLM) },
+	"JPI$_ENQCNT":       func(env *Environment) itemValue { return itemLong(env.remainingLocks()) },
 	"JPI$_PID":          func(env *Environment) itemValue { return itemLong(env.Process.PID) },
 	"JPI$_PRCNAM":       func(env *Environment) itemValue { return itemString(env.Process.Name) },
 	"JPI$_TERMINAL":     func(env *Environment) itemValue { return itemString(env.Process.Terminal) },
@@ -165,8 +166,10 @@ func astModeMask(modes [4]bool) uint32 {
 
 // remainingASTs is JPI$_ASTCNT: what's left of the AST quota. VMS charges
 // an AST against the quota from the moment it's requested until it's
-// delivered, so both queued ASTs and $SETIMR timers that will queue one
-// count. (Nothing stops the count reaching 0: the quota isn't enforced.)
+// delivered, so queued ASTs, $SETIMR timers that will queue one, and
+// lock requests whose completion AST is still to come all count. Only
+// the lock services refuse a request when it reaches 0 (getlki.go's
+// quota checks, Phase 49); the others don't enforce it.
 func (env *Environment) remainingASTs() uint32 {
 	outstanding := uint32(len(env.Process.ast.queue))
 
@@ -175,6 +178,8 @@ func (env *Environment) remainingASTs() uint32 {
 			outstanding++
 		}
 	}
+
+	outstanding += env.pendingLockASTs()
 
 	return env.Process.ASTLimit - min(outstanding, env.Process.ASTLimit)
 }

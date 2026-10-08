@@ -320,11 +320,15 @@ func (ctx *Context) lockFound(rabAddr uint32, h *FileHandle, r rfa, rop uint32) 
 		}
 
 		switch result {
-		case lockRefused:
+		case lockRefused, lockQuota:
 			// An error unlocks the stream's record, unless it unlocks
 			// manually (the guide, 7.2.1 and 7.2.4.1).
 			if rop&ropULK == 0 {
 				ctx.unlockRecords(h, nil)
+			}
+
+			if result == lockQuota {
+				return rmsExEnqLm, nil
 			}
 
 			return rmsRecordLocked, nil

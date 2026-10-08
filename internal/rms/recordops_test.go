@@ -394,3 +394,20 @@ func TestRecordLock_timeout(t *testing.T) {
 	a.close()
 	b.close()
 }
+
+// TestRecordLock_quota: a record lock past the job's ENQLM quota is
+// RMS$_EXENQLM.
+func TestRecordLock_quota(t *testing.T) {
+	p, mounts, _ := newLockingSharers(t, 1)
+	a := p[0]
+
+	writeFile(t, mounts, "Q.DAT", "R0")
+	a.mustOpen("Q.DAT", facGet|facUpd, shrAll, false, 0)
+
+	a.ctx.CanLock = func() bool { return false }
+	a.wantGet("", rmsExEnqLm)
+
+	a.ctx.CanLock = func() bool { return true }
+	a.wantGet("R0", rmsNormal)
+	a.close()
+}

@@ -194,6 +194,16 @@ func (env *Environment) enqueue(argv []uint32) (uint32, *enqRequest) {
 
 	*word &^= 1 << bit
 
+	// The quotas (lockquota.go): an AST asked for needs one left of
+	// ASTLM, and a new lock one of the job's ENQLM.
+	if (req.astadr != 0 || req.blkast != 0) && env.remainingASTs() == 0 {
+		return ssExQuota, nil
+	}
+
+	if flags&lckConvert == 0 && env.remainingLocks() == 0 {
+		return ssExEnqLm, nil
+	}
+
 	owner := lck.Owner(env.Process.PID)
 
 	var (

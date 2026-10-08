@@ -171,3 +171,41 @@ func TestGetlki_access(t *testing.T) {
 		t.Errorf("B's scan from another group: %x, want its own lock", got)
 	}
 }
+
+// TestEnq_quotas: a new lock past the job's ENQLM is SS$_EXENQLM (a
+// conversion isn't), and JPI$_ENQCNT counts down; a request asking for
+// an AST with none of ASTLM left is SS$_EXQUOTA.
+func TestEnq_quotas(t *testing.T) {
+	a, b := newLockPair(t)
+	a.env.Process.Job.Pooled.ENQLM = 2
+
+	sameJob := a.env.Process.Job == b.env.Process.Job
+
+	wantR0(t, a.enq("ONE", lck.EX, 0), ssNormal)
+
+	if got := a.env.remainingLocks(); got != 1 {
+		t.Errorf("JPI$_ENQCNT after one lock: %d, want 1", got)
+	}
+
+	if sameJob {
+		// B's lock is the job's second: the pool is shared.
+		wantR0(t, b.enq("TWO", lck.EX, 0), ssNormal)
+	} else {
+		wantR0(t, a.enq("TWO", lck.EX, 0), ssNormal)
+	}
+
+	other := newLockCaller(t, a.env, 0x30000)
+	wantR0(t, other.enq("THREE", lck.EX, 0), ssExEnqLm)
+
+	// A conversion takes no more of the quota.
+	wantR0(t, a.enq("", lck.NL, lckConvert), ssNormal)
+
+	// The AST quota: A has one AST queued (the first $ENQ's completion
+	// AST, never delivered here) and a second (the conversion's).
+	a.env.Process.ASTLimit = 2
+	a.env.Process.Job.Pooled.ENQLM = 100
+
+	wantR0(t, other.enq("FOUR", lck.EX, 0), ssExQuota)
+
+	wantR0(t, callLNM(t, a.env, serviceSysEnq, 5, uint32(lck.EX), other.lksb, 0, other.a.desc("FIVE"), 0, 0, 0, 0, 0), ssNormal)
+}

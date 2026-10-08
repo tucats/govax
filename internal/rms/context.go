@@ -108,6 +108,11 @@ type Context struct {
 	// the service returns to be called again then.
 	AwaitLock func(over func() bool, deadline uint64) error
 
+	// CanLock, if set, reports whether the process may take another lock
+	// (its job's ENQLM quota has one left); when it can't, a record lock
+	// is RMS$_EXENQLM. nil: no limit.
+	CanLock func() bool
+
 	// Clock, if set, is the system time, in VMS's 100-nanosecond units:
 	// what a record lock wait's time limit (RAB$V_TMO) is measured by.
 	// nil: no time limits.

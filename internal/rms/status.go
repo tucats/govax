@@ -107,6 +107,10 @@ var (
 	rmsInvalidRFA    = vmsConst("RMS$_RFA")
 	rmsTimedOut      = vmsConst("RMS$_TMO")
 
+	// rmsExEnqLm is RMS$_EXENQLM: a record lock past the job's ENQLM
+	// quota.
+	rmsExEnqLm = vmsConst("RMS$_EXENQLM")
+
 	// rmsFileNotFound is RMS$_FNF: SYS$OPEN's target file spec doesn't
 	// exist. Also the natural error for looking a name up in an
 	// ods2 volume.Directory and not finding it.

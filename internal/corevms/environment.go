@@ -282,6 +282,7 @@ func (env *Environment) rmsContext() *rms.Context {
 		AwaitLock: env.awaitLock,
 		Waker:     lockWaker{env},
 		Clock:     env.Clock,
+		CanLock:   func() bool { return env.remainingLocks() > 0 },
 	}
 }
 
