@@ -96,6 +96,41 @@ func toUpperASCII(s string) string {
 	return string(b)
 }
 
+// TestDefinitionProbeObjects assembles the multiprocessing program's
+// definition probes (testdata/mp/defs: each a $xxxDEF macro called with
+// GLOBAL, Phases 45, 46, and 48) with govax's own STARLET.MLB and checks
+// each object against real MACRO's, record for record: the macros
+// mkdefs generated from defined.txt define the same names, with the same
+// values, in the same order.
+func TestDefinitionProbeObjects(t *testing.T) {
+	dir := filepath.Join("..", "..", "testdata", "mp", "defs")
+
+	sources, err := filepath.Glob(filepath.Join(dir, "def_*.mar"))
+	if err != nil || len(sources) == 0 {
+		t.Fatalf("the definition probes: %v, %v", sources, err)
+	}
+
+	for _, source := range sources {
+		name := strings.TrimSuffix(filepath.Base(source), ".mar")
+
+		t.Run(name, func(t *testing.T) {
+			src, err := os.ReadFile(source)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			a := macroAssembler()
+			a.SetMacroLibraries(govaxStarlet(t))
+
+			if _, err := a.Assemble(string(src)); err != nil {
+				t.Fatalf("assemble: %v", err)
+			}
+
+			requireSameObject(t, a, readObjectFile(t, filepath.Join(dir, "vax", name+".obj")))
+		})
+	}
+}
+
 // TestRMSBlockAlignmentMessage: govax's $FAB displays real MACRO's
 // informational message for a block that isn't longword aligned, and
 // only for that one (testdata/mar/macros/fabalign.mar, whose real MACRO

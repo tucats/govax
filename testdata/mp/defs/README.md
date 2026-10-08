@@ -13,18 +13,18 @@ VMS's macro library.
 | ---- | ------------- |
 | `def_acc.mar`, `def_msg.mar`, `def_pql.mar`, `def_prc.mar` | `$ACCDEF`, `$MSGDEF`, `$PQLDEF`, `$PRCDEF`, each with `GLOBAL` (Phase 45) |
 | `def_sec.mar`, `def_lck.mar`, `def_lki.mar`, `def_psl.mar`, `def_dc.mar` | `$SECDEF`, `$LCKDEF`, `$LKIDEF`, `$PSLDEF`, `$DCDEF` (Phase 46: global sections, the lock services Phase 47 needs, access modes, device classes) |
-| `def_cli.mar`, `def_lib.mar` | `$CLIDEF`, `$LIBDEF` (Phase 48: the `CLI$M_` flags and `LIB$_` statuses a program calling `LIB$SPAWN` uses; not yet run) |
+| `def_cli.mar`, `def_lib.mar` | `$CLIDEF`, `$LIBDEF` (Phase 48: the `CLI$M_` flags and `LIB$_` statuses a program calling `LIB$SPAWN` uses; run 2026-10-08) |
 | `defs.com` | Assembles Phase 48's with `/NOLIST` and analyzes their objects |
 | `exchange.cmd` | The govax console script that builds the exchange volume (Phase 48's) |
 | `copyout.cmd` | The govax console script that copies the results into `vax/` |
-| `vax/` | The VMS 7.3 runs' objects, analyses, and logs (`defs45.log`, 2026-10-07; `defs46.log`, 2026-10-08); Phase 48's log will be `defs48.log` |
+| `vax/` | The VMS 7.3 runs' objects, analyses, and logs (`defs45.log`, 2026-10-07; `defs46.log` and `defs48.log`, 2026-10-08) |
 | `decode.go` | Turns the objects into `defined.txt` |
-| `defined.txt` | Every name and value the four macros define |
+| `defined.txt` | Every name and value the probes' macros define |
 
 ## The VAX run
 
 Phase 46's probes ran with the other end-of-Phase-46 runs, on one volume
-(`../run46/README.md`), and Phase 48's will run with that phase's
+(`../run46/README.md`), and Phase 48's ran with that phase's
 (`../run48/README.md`). The steps below are for this directory alone.
 
 1. Build the exchange volume, from the repository root:
@@ -60,4 +60,7 @@ confirm; `$LCKDEF`, `$LKIDEF`, and `$PSLDEF` are new to govax.
 
 `internal/bootdata/mkdefs` can build `$PRCDEF`, `$PQLDEF`, and `$ACCDEF`
 for govax's own macro library from `defined.txt`, when a MACRO
-program needs them (docs/PHASE-45.md, subtask 13).
+program needs them (docs/PHASE-45.md, subtask 13); `$CLIDEF` and
+`$LIBDEF` are there since Phase 48. `internal/asm`'s
+`TestDefinitionProbeObjects` assembles every probe here with govax's
+library and checks its object against real MACRO's, record for record.

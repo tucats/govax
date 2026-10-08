@@ -1,6 +1,6 @@
 //go:build ignore
 
-// decode reads the definition probes (Phases 45 and 46)' objects (README.md): real
+// decode reads the objects of the definition probes (Phases 45, 46, and 48; README.md): real
 // VAX MACRO's vax/def_*.obj (copied off the exchange volume by
 // copyout.cmd), each a $xxxDEF macro called with GLOBAL, so the
 // object's global symbol directory holds every name the macro defines,
@@ -56,7 +56,7 @@ func main() {
 	var b strings.Builder
 
 	b.WriteString("# The names each $xxxDEF macro defines, as real VAX MACRO (VMS 7.3)\n")
-	b.WriteString("# assembled the definition probes (Phases 45 and 46): testdata/mp/defs/decode.go\n")
+	b.WriteString("# assembled the definition probes (Phases 45, 46, and 48): testdata/mp/defs/decode.go\n")
 	b.WriteString("# wrote this from testdata/mp/defs/vax/def_*.obj.\n")
 
 	for _, path := range objects {

@@ -392,3 +392,13 @@ subprocess to run, and the definitions a MACRO program needs to call
   Settings`, `TestProcessSettings`), and `TestProcessSettings_
   schedulerDefault` checks both ways. HELP CONFIG KEYS and HELP SPAWN
   give the new default.
+- 2026-10-08: The author's VMS run (`testdata/mp/run48`) is back.
+  Subtask 3 finished: `decode.go` read `def_cli.obj` and `def_lib.obj`
+  into `defined.txt` (314 names new to `vmsdef.Symbols`, none differing
+  from STARLET.OLB's values), and `mkdefs` generated `$CLIDEF` and
+  `$LIBDEF` for govax's macro library. `internal/asm`'s new
+  `TestDefinitionProbeObjects` assembles all eleven definition probes of
+  `testdata/mp/defs` (Phases 45, 46, and 48) with govax's library and
+  checks each object against real MACRO's, record for record. The
+  definitions' MACRO log, `defs48.log`, waits for the author's audit
+  (the clean-room hook) and isn't read or committed.
