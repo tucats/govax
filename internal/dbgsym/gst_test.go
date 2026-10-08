@@ -54,6 +54,8 @@ func mapSymbols(t *testing.T, name string) map[string]uint32 {
 		}
 	}
 
+	_ = sc.Err()
+
 	return out
 }
 
@@ -151,6 +153,7 @@ func TestGlobalsMatchSymbolize(t *testing.T) {
 			want := strings.TrimSpace(strings.TrimPrefix(lines[i+1], "!"))
 
 			got := "nothing"
+			
 			if s, off, ok := p.Globals.Nearest(uint32(addr), nil); ok {
 				radix := 16
 				if decimal {

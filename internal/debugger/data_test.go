@@ -42,7 +42,7 @@ func TestPSLTable(t *testing.T) {
 	c.CPU.SetPSL(vax.PSL(0x041F000F))
 
 	rows := strings.Split(say(t, c, "EXAMINE PSL"), "\n")
-	if len(rows) < 3 || !strings.HasSuffix(rows[2], "KERNEL KERNEL  1F  0  0  0 0 1 1 1 1") ||
+	if len(rows) < 3 || !strings.HasSuffix(rows[2], "KERNEL KERNEL  1F  0  0  0 0 1 1 1 1") || //nolint:dupword
 		!strings.Contains(rows[2], " 1 KERNEL") {
 		t.Errorf("EXAMINE PSL of a kernel-mode PSL:\n%s", strings.Join(rows, "\n"))
 	}

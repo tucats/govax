@@ -38,7 +38,8 @@ func renameCmd(t *testing.T, s *Session, inputs []string, output string, opts Re
 func wantRenamed(t *testing.T, results []RenamedFile, pairs ...string) {
 	t.Helper()
 
-	var got []string
+	got := make([]string, 0)
+
 	for _, r := range results {
 		got = append(got, r.Old, r.New)
 	}

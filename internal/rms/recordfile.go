@@ -339,7 +339,6 @@ func (s *Session) readHostRecords(path string, kind RecordKind) ([][]byte, error
 // hostRecords splits a host file's bytes, read from path, into records in
 // kind's layout.
 func hostRecords(path string, data []byte, kind RecordKind) ([][]byte, error) {
-
 	switch kind {
 	case VariableRecords:
 		records, err := obj.ReadRecords(bytes.NewReader(data))

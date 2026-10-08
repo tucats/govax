@@ -330,7 +330,7 @@ func hostPathOf(text string) (string, error) {
 
 	parts := strings.Split(strings.TrimPrefix(inner, "."), ".")
 
-	var out []string
+	 out :=make([]string, 0)
 
 	if up := parts[0]; strings.Trim(up, "-") == "" {
 		for range up {

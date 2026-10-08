@@ -275,6 +275,8 @@ func decodeOperand(cpu *vax.CPU, mem *vm.Memory, pc *uint32, access AccessKind, 
 // address in the instruction stream: a memory operand there. This port
 // used to give it no address at all (PUSHAL I^#5 pushed zero).
 func decodeImmediate(cpu *vax.CPU, mem *vm.Memory, pc *uint32, size int, dtype DataType, op *Operand) error {
+	_ = dtype
+
 	if op.Access == AccessAddress || op.Access == AccessVarField {
 		op.Kind = OperandMemory
 		op.Addr = *pc

@@ -84,6 +84,7 @@ func TestSchedulerCadence(t *testing.T) {
 
 	// A budget below 1 is taken as 1.
 	f.next = 0
+	
 	steps(t, e, 5) // 2 left of the 3, then 1 each
 
 	if want := []int{0, 3, 3, 1, 3, 1, 1}; !slices.Equal(f.ran, want) {

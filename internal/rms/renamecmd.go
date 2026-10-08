@@ -216,7 +216,7 @@ func (s *Session) expandRenameInput(input string, sticky *filespec.Spec) ([]reso
 		return expandSpec(s.Logicals, input, s.Default)
 	}
 
-	var out []resolvedSpec
+	out := make([]resolvedSpec, 0)
 
 	for _, f := range fs {
 		spec, err := parseTranslated(f, *sticky)

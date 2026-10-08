@@ -127,7 +127,8 @@ func (h *harness) state(label string) string {
 
 // states is state for each label, space separated.
 func (h *harness) states(labels ...string) string {
-	var out []string
+	out := make([]string, 0, len(labels))
+
 	for _, l := range labels {
 		out = append(out, h.state(l))
 	}
@@ -137,6 +138,7 @@ func (h *harness) states(labels ...string) string {
 
 func (h *harness) convert(label string, mode Mode, opts ConvertOptions) error {
 	l := h.locks[label]
+
 	if opts.Data == nil {
 		opts.Data = label
 	}
@@ -172,8 +174,8 @@ func TestNewLocks(t *testing.T) {
 		modes []Mode
 		want  string
 	}{
-		{[]Mode{PR, PR, CR}, "PR PR CR"},
-		{[]Mode{CW, CW, CR}, "CW CW CR"},
+		{[]Mode{PR, PR, CR}, "PR PR CR"}, //nolint:dupword
+		{[]Mode{CW, CW, CR}, "CW CW CR"}, //nolint:dupword
 		{[]Mode{PR, CW}, "PR wait:CW"},
 		{[]Mode{EX, NL, CR}, "EX NL wait:CR"},
 		{[]Mode{PW, CR, PR}, "PW CR wait:PR"},
@@ -248,7 +250,7 @@ func TestDequeueGrantsWaiters(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if got := h.states("A", "B", "C", "D", "E"); got != "gone PR PR wait:PW wait:CR" {
+	if got := h.states("A", "B", "C", "D", "E"); got != "gone PR PR wait:PW wait:CR" { //nolint:dupword
 		t.Errorf("after A: %s", got)
 	}
 
@@ -309,7 +311,7 @@ func TestConversions(t *testing.T) {
 		h := newHarness(t)
 		_ = h.enq("A", 1, "RES", PR)
 		_ = h.enq("B", 2, "RES", PR)
-		_ = h.enq("W", 3, "RES", EX)  // waits
+		_ = h.enq("W", 3, "RES", EX)             // waits
 		_ = h.convert("B", PW, ConvertOptions{}) // waits for A
 
 		_ = h.deq("A", DequeueOptions{})
@@ -325,7 +327,7 @@ func TestConversions(t *testing.T) {
 		_ = h.enq("B", 2, "RES", CR)
 		_ = h.convert("A", CR, ConvertOptions{})
 
-		if got := h.states("A", "B"); got != "CR CR" {
+		if got := h.states("A", "B"); got != "CR CR" {//nolint:dupword
 			t.Errorf("%s", got)
 		}
 	})
@@ -466,7 +468,7 @@ func TestNameSpaces(t *testing.T) {
 	_ = h.enq("G2", 3, "RES", EX, func(r *Request) { r.Group = 2 })
 	_ = h.enq("K", 4, "RES", EX, func(r *Request) { r.AccessMode = 0 })
 
-	if got := h.states("G1", "SYS", "G2", "K"); got != "EX EX EX EX" {
+	if got := h.states("G1", "SYS", "G2", "K"); got != "EX EX EX EX" {//nolint:dupword
 		t.Errorf("%s", got)
 	}
 
@@ -476,7 +478,7 @@ func TestNameSpaces(t *testing.T) {
 	_ = h.enq("S2", 6, "REC", EX, parent(h.locks["P2"]))
 	_ = h.enq("S3", 5, "REC", EX, parent(h.locks["P1"]))
 
-	if got := h.states("S1", "S2", "S3"); got != "EX EX wait:EX" {
+	if got := h.states("S1", "S2", "S3"); got != "EX EX wait:EX" {//nolint:dupword
 		t.Errorf("sub-resources: %s", got)
 	}
 }
@@ -503,7 +505,7 @@ func TestSublocks(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if got := h.states("P", "S", "SS"); got != "CR gone gone" {
+	if got := h.states("P", "S", "SS"); got != "CR gone gone" {//nolint:dupword
 		t.Errorf("after DequeueAll of P's sublocks: %s", got)
 	}
 
@@ -527,6 +529,7 @@ func TestSublocks(t *testing.T) {
 // at the access mode and less privileged ones.
 func TestDequeueAllByMode(t *testing.T) {
 	h := newHarness(t)
+
 	for mode := uint8(0); mode < 4; mode++ {
 		label := fmt.Sprint("M", mode)
 		_ = h.enq(label, 1, label, EX, func(r *Request) { r.AccessMode = mode })
@@ -538,7 +541,7 @@ func TestDequeueAllByMode(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if got := h.states("M0", "M1", "M2", "M3", "OTHER"); got != "EX EX gone gone EX" {
+	if got := h.states("M0", "M1", "M2", "M3", "OTHER"); got != "EX EX gone gone EX" {//nolint:dupword
 		t.Errorf("%s", got)
 	}
 }
@@ -555,7 +558,7 @@ func TestRelease(t *testing.T) {
 	events := h.m.Release(1, true)
 	h.record(events)
 
-	if got := h.states("A", "A2", "B", "C"); got != "gone gone PR gone" {
+	if got := h.states("A", "A2", "B", "C"); got != "gone gone PR gone" {//nolint:dupword
 		t.Errorf("%s", got)
 	}
 
@@ -583,12 +586,14 @@ func TestValueBlock(t *testing.T) {
 
 	// A new lock with VALBLK gets it.
 	_ = h.enq("B", 2, "RES", PR, valblk)
+
 	if got := h.locks["B"].Value; got != v {
 		t.Errorf("B's copy = %v, want %v", got, v)
 	}
 
 	// Without VALBLK, nothing is copied.
 	_ = h.enq("C", 3, "RES", PR)
+
 	if got := h.locks["C"].Value; got != (ValueBlock{}) {
 		t.Errorf("C's copy = %v", got)
 	}
@@ -600,6 +605,7 @@ func TestValueBlock(t *testing.T) {
 
 	// An EX dequeue does.
 	_ = h.convert("A", EX, ConvertOptions{ValueBlock: true})
+
 	if got := h.locks["A"].Value; got != v {
 		t.Errorf("A's copy after converting up = %v, want %v", got, v)
 	}
@@ -609,6 +615,7 @@ func TestValueBlock(t *testing.T) {
 	_ = h.deq("A", DequeueOptions{Value: &v2})
 
 	_ = h.enq("E", 5, "RES", CR, valblk)
+
 	if got := h.locks["E"].Value; got != v2 {
 		t.Errorf("E's copy = %v, want %v", got, v2)
 	}
@@ -700,7 +707,7 @@ func TestDeadlockWaits(t *testing.T) {
 	_ = h.enq("A2", 1, "TWO", EX)
 	_ = h.enq("B1", 2, "ONE", EX)
 
-	if got := h.states("A2", "B1"); got != "wait:EX wait:EX" {
+	if got := h.states("A2", "B1"); got != "wait:EX wait:EX" {//nolint:dupword
 		t.Fatalf("%s", got)
 	}
 

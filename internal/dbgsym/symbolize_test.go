@@ -132,6 +132,8 @@ func examineBlocks(t *testing.T, name string) []examineBlock {
 		cur.lines = append(cur.lines, examineLine{location: loc, text: strings.TrimLeft(text, " ")})
 	}
 
+	_ = sc.Err()
+
 	return out
 }
 
@@ -237,6 +239,7 @@ func TestSymbolicInstructions(t *testing.T) {
 					// A range typed as a line starts with the line's
 					// name (LineName).
 					loc := fmt.Sprintf("%08X", pc)
+
 					if b.symbolic {
 						if n, ok := p.LineName(pc, b.radix); ok && i == 0 && strings.Contains(b.start, "%LINE") {
 							loc = n

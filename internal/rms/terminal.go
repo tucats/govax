@@ -19,7 +19,7 @@ const ctrlZ = 0x1A
 // feed (a host "\r\n" pair is one end), neither of which is part of it,
 // or when capacity bytes have been read: the terminal driver ends a read
 // when the buffer fills, and whatever was typed beyond it is the next
-// record. A Ctrl/Z ends a record too, but with nothing read before it it
+// record. A Ctrl/Z ends a record too, but with nothing read before it
 // is end of file: status is RMS$_EOF, as it is at the end of the host's
 // input with nothing read. status is 0 for a record.
 func terminalRecord(ctx *Context, rabAddr uint32, capacity int) (record []byte, status uint32, err error) {
