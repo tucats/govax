@@ -13,10 +13,10 @@ never had.
   index.
 - `docs/PHASE-00.md` … `PHASE-48.md` — one doc per phase: goal, C-source file
   mapping, deliverables, open questions, and a dated progress log (all
-  done through 46; 40 follows 38 directly: there is no Phase 39). Phases
+  done through 47; 40 follows 38 directly: there is no Phase 39). Phases
   43–48 are the multiprocessing program (subprocesses, a scheduler,
-  interprocess mailboxes and shared memory, RMS file sharing; 47–48
-  planned);
+  interprocess mailboxes and shared memory, RMS file sharing and the lock
+  manager; 48 planned);
   `PHASE-43.md`'s Part A describes the whole program. Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
 - `docs/DEVIATIONS.md` — running log of suspected ISA/behavior fidelity issues found in
@@ -149,6 +149,15 @@ expect adjustment as phases land):
   `Charge` (quantum; no quantum end for real-time), `Wait`/`Ready` (and
   the higher-or-equal preemption test), `SetBasePriority`, `Choose`. A
   leaf package; processes are opaque `Handle`s (PIDs).
+- `internal/lck` — the lock manager (Phase 47), from the System Services
+  manual ($ENQ/$DEQ) and the Internals book's chapter 13: a `Manager` of
+  resources (name, UIC group or 0, access mode, parent) with granted,
+  conversion, and waiting queues (FIFO), the six modes' compatibility
+  table, NOQUEUE, conversions, sublocks, CANCEL, DEQALL, value blocks,
+  blocking notices. Operations return `Event`s for any owner, and
+  `lck.Deliver` hands each to its lock's `Data` if that's a `Notifier`
+  (how `$ENQ` completes in the owner's process and an RMS record-lock
+  wait is woken). No deadlock detection. A leaf package; owners are PIDs.
 - `internal/console` — interactive monitor + DCL grammar interpreter (Phase 08).
   Every console command is parsed by the DCL grammar
   (`internal/bootdata/files/console.dcl`); Phase 37 moved the last
@@ -238,7 +247,13 @@ expect adjustment as phases land):
   the shared terminal (`terminal.go`: one buffer, reads in FIFO order,
   a read with no whole line waits in LEF, with the scheduler on and a
   `TerminalSource` input). CPU time
-  and SHOW SYSTEM/SHOW PROCESS's reports are in `showsys.go`. The
+  and SHOW SYSTEM/SHOW PROCESS's reports are in `showsys.go`. Phase 47:
+  `System.Locks` is the one lock database (`internal/lck`); `$ENQ`,
+  `$ENQW`, `$DEQ` are `enq.go` (each request's `enqRequest` is its
+  lock's notifier: LKSB, event flag, completion and blocking ASTs in the
+  owner's process); image rundown dequeues user-mode locks, process
+  deletion all (`locks.go`); the RMS context carries the database, the
+  PID, and a record-lock wait (`awaitLock`, `lockWaker`). The
   console's engine hooks reach the current process (`Console.running`);
   `Console.RTL` stays process 1, and only process 1's image ending ends
   a console run (`Console.StepMachine`). A run that stops in another
@@ -366,7 +381,18 @@ expect adjustment as phases land):
   (`terminal.go`; with the shared terminal, through
   `Context.AwaitTerminal`, Phase 46). A name whose device is a mailbox or
   NL: opens a `RecordDevice` stream from `Context.Devices` (`recdevice.go`,
-  Phase 46; `internal/corevms` is the opener).
+  Phase 46; `internal/corevms` is the opener). Phase 47: files shared
+  between processes. Every `$OPEN`/`$CREATE` and IO$_ACCESS goes through
+  ods2's `Volume.Access` (`sharing.go`: FAC/SHR mapped to the file
+  system's write/no-read/no-write; RMS$_FLK, SS$_ACCONFLICT), and while a
+  file is open every opener shares ods2's one `*File` (the FCB: header,
+  extents, end of file); a file deleted while open goes at its last close.
+  RAB$V_EOF appends (RMS$_NEF otherwise); a stream on a file others may
+  use writes each record through at the current end of file. Record
+  locks (`recordlock.go`, by RFA, on `Context.Locks`), `$FLUSH`,
+  `$ERASE`, `$FREE`, `$RELEASE`; `$SEARCH` contexts reopen directories
+  each call; `MountTable.VerifyVolume` (`verify.go`) checks a volume;
+  DISMOUNT refuses a volume with files open (`DismountAll` forces).
 - `internal/link` — the VAX linker (Phase 30): builds a VMS executable image from
   `internal/obj` modules, laid out as real LINK lays images out (byte for byte on
   the fixtures). The console's `LINK` command (`internal/console/link.go`) drives it.

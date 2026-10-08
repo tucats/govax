@@ -1,6 +1,6 @@
 # Phase 47 — Multiprocessing, part 5: files shared between processes
 
-**Status:** in progress (subtasks 1-9 done 2026-10-08); decisions taken 2026-10-06 (see
+**Status:** done (2026-10-08); decisions taken 2026-10-06 (see
 PHASE-43.md, Part A). Needs Phase 45 (independent of Phase
 46).
 
@@ -450,3 +450,26 @@ questions:
   wildcards RMS$_WLD) and a bug fix: `$CLOSE` now clears FAB$W_IFI, as
   the manual's Close output table says (a FAB closed and reused for
   `$ERASE`, `$OPEN`, or `$CREATE` was refused, RMS$_IFI, before).
+- 2026-10-08: Subtask 10, close-out: this status; PLAN.md's index;
+  CLAUDE.md (`internal/lck`, the lock services in `internal/corevms`, file
+  sharing in `internal/rms` and ods2's FCB); HELP (MOUNT's services and
+  sharing, DISMOUNT with files open, CONFIG KEYS' Processes); DEVIATIONS
+  (the two RMS bugs fixed, and the rules chosen without a manual or
+  probe, as candidates for a VMS 7.3 probe round).
+
+## Carry forward
+
+- **ods2 v0.1.17**: ods2's commits after v0.1.16 (`Reader`/
+  `Writer.RecordOffset`, `Volume.OpenFiles`, `Dismount` writing open
+  files' headers) need tagging and pushing, then `GOWORK=off go get
+  github.com/tucats/ods2@v0.1.17`; until then govax builds only with the
+  local `go.work`.
+- **A probe round** for the unconfirmed rules in DEVIATIONS' "[Phase 47]
+  File sharing and lock rules" entry: FAC/SHR pairs and their statuses,
+  a reader of a write-shared file seeing appends, RMS's default record
+  lock modes, `$ENQ`'s LKSB on SS$_NOTQUEUED, DISMOUNT with files open.
+- Not done, for later: `$GETLKI`; ENQLM/ASTLM quotas; deadlock
+  detection; RAB$V_TMO on record-lock waits; `$FIND`, `$UPDATE`,
+  `$DELETE`, `$TRUNCATE`, RAB$V_TPT; a stream both reading and writing
+  through one RAB (FAC=GET|PUT); host-file arbitration; a context
+  `$SEARCH` seeing subdirectories created after it began.

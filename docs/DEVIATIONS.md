@@ -2745,6 +2745,51 @@ widened."
   fixtures that set an LR to the last page now set the count.
   `$CNTREG`'s P1 end follows (the Phase 26 entry above).
 
+### [Phase 47] RMS overwrote a file opened for $PUT, and $CLOSE left FAB$W_IFI set
+
+- **Where**: govax's own RMS (`internal/rms/connect.go`, `put.go`,
+  `close.go`); not from the C source.
+- **What**: a `$CONNECT` for `$PUT` on an existing file made a Writer at
+  the file's first block whatever RAB$L_ROP said, so `$PUT`s overwrote
+  the file from its start (RAB$V_EOF was ignored; VMS appends with it,
+  and refuses a `$PUT` not at the end of a sequential file, RMS$_NEF).
+  And `$CLOSE` never cleared FAB$W_IFI, which the RMS manual's Close
+  output table says it does, so a closed FAB reused for `$ERASE` (which
+  requires it 0) was refused.
+- **Status**: fixed in Go (2026-10-08, Phase 47 subtasks 3-4 and 9):
+  RAB$V_EOF appends, a stream at the start of a file with records gets
+  RMS$_NEF on `$PUT`, and `$CLOSE` clears FAB$W_IFI.
+
+### [Phase 47] File sharing and lock rules chosen without a manual or probe
+
+- **Where**: `internal/rms/sharing.go`, `recordlock.go`, `erase.go`;
+  `internal/lck`; `internal/corevms/enq.go`, `locks.go`; ods2's
+  `volume/access.go`.
+- **What**: where the RMS and System Services manuals and the Internals
+  book leave a rule open, govax chose (each also in
+  `docs/PHASE-47 - RMS and processes.md`'s progress log):
+  - Arbitration is the file system's: every accessor reads, so an RMS
+    opener asking only for PUT is refused by one not sharing GET.
+    FAB$V_UPI alone shares reading as well as writing.
+  - The lock manager queues a new lock behind anything queued, and a
+    conversion that isn't down behind queued conversions (FIFO); a
+    down conversion is granted at once. A converting lock gets blocking
+    notices for its granted mode.
+  - A PW or EX lock still held at process deletion invalidates its value
+    block, whether the process exited or was deleted; image rundown's
+    dequeue doesn't. SS$_NOTQUEUED is written to the LKSB too. A grant
+    boosts as "resource available".
+  - Record locks: only in a file its opener lets others write (not UPI);
+    EX for a stream that may write, PR for a reader, PW with RLK, PR with
+    REA; NLK a CR query; a refused lock doesn't consume the record.
+    RAB$V_TMO's limit on a wait isn't implemented.
+  - `$ERASE` of a file another process writes is RMS$_FLK (no
+    FAB$V_ERL in VMS 7.3's definitions); an open FAB is RMS$_IFI.
+  - DISMOUNT with files open is refused (VMS marks the volume for
+    dismount instead).
+  - Host files get no arbitration.
+- **Status**: unconfirmed; candidates for a VMS 7.3 probe round.
+
 <!--
 Entry template:
 

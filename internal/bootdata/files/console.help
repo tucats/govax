@@ -68,6 +68,10 @@
 //              10/08/26    Brought up to date: CONFIG KEYS' processes,
 //                          SHOW INSTRUCTIONS, XFC$CONSOLE_CMD's case,
 //                          LINK/DEBUG and the debugger
+//              10/08/26    MOUNT: file sharing between processes, record
+//                          locks, $FLUSH/$ERASE/$FREE/$RELEASE; DISMOUNT
+//                          refuses a volume with files open; CONFIG
+//                          KEYS' processes: $ENQ/$DEQ (docs/PHASE-47)
 //              10/08/26    KEYS: CTRL/C and CTRL/Y ASTs in any process; a
 //                          program waiting for input doesn't hold up the
 //                          others (docs/PHASE-46 - interprocess comm.md)
@@ -1721,9 +1725,10 @@ $CONF,KEY
         ($CREPRC; LIB$SPAWN isn't there yet), and the CPU is shared
         among them VMS's way: by priority, a quantum at a time among
         equals, and giving the CPU to another while one waits.
-        Mailboxes, common event flags, and global sections work between
-        them, and a process waiting for a line from the terminal lets
-        the others run.  SHOW SYSTEM lists them, and STOP deletes one.
+        Mailboxes, common event flags, global sections, the lock
+        services ($ENQ, $ENQW, $DEQ), and shared files (see MOUNT) work
+        between them, and a process waiting for a line from the
+        terminal lets the others run.  SHOW SYSTEM lists them, and STOP deletes one.
         With it off, only the console's own process runs, and $CREPRC
         returns %SYSTEM-E-UNSUPPORTED.
 
@@ -2979,9 +2984,19 @@ $MOUN
     The MOUNT command attaches a disk-image container file to a device
     name, making a real ODS-2 volume available for RMS file access by a
     program: the SYS$CREATE, SYS$OPEN, SYS$CLOSE, SYS$CONNECT, SYS$GET,
-    SYS$PUT, SYS$RENAME, SYS$PARSE, SYS$SEARCH, and SYS$DISPLAY services,
-    with name blocks (NAM) and the XABDAT, XABRDT, XABFHC, XABPRO, XABALL,
-    and XABSUM extended attribute blocks.
+    SYS$PUT, SYS$FLUSH, SYS$ERASE, SYS$FREE, SYS$RELEASE, SYS$RENAME,
+    SYS$PARSE, SYS$SEARCH, and SYS$DISPLAY services, with name blocks
+    (NAM) and the XABDAT, XABRDT, XABFHC, XABPRO, XABALL, and XABSUM
+    extended attribute blocks.
+
+    Several processes can use one file at once, by VMS's rules: an open
+    whose access (FAB$B_FAC) or sharing (FAB$B_SHR) conflicts with
+    another opener's fails with RMS$_FLK; writers sharing a sequential
+    file each append at its end of file (connect with RAB$V_EOF), and
+    readers see what they append; in a file others may write, $GET locks
+    the record it returns (RMS$_RLK for one another stream holds;
+    RAB$V_NLK, RRL, ULK, RLK, REA, and WAT as RMS has them).  A file
+    deleted while it's open goes when its last opener closes it.
     If the named device is not already known to the console, MOUNT creates
     it automatically as a disk-class device.
 
@@ -3039,7 +3054,10 @@ $DISM
     console; only its mounted volume is removed.  A later MOUNT command
     can attach a different container to the same device name.
 
-    Dismounting a device with nothing currently mounted on it is an error.
+    Dismounting a device with nothing currently mounted on it is an error,
+    and so is dismounting one with files open (a process the console
+    stopped may still have some): close them, or STOP the process,
+    first.  When govax exits, every volume is dismounted regardless.
 
     Syntax:
 
