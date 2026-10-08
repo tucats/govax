@@ -145,6 +145,9 @@ type Environment struct {
 	pendingIO []*ioRequest
 	qiowWaits []qiowWait
 
+	// enqWaits are the $ENQWs waiting for their requests (enq.go).
+	enqWaits []enqWait
+
 	// waitingPC is the P1-vector address of a service currently waiting
 	// (ErrWait), so SystemService traces only its first attempt; 0 when
 	// no service is waiting.

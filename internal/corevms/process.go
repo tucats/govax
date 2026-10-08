@@ -365,6 +365,7 @@ func (env *Environment) ImageRundown() {
 	env.deallocateUserDevices()
 	env.disassociateClusters()
 	env.cancelTimers()
+	env.dequeueUserLocks()
 	env.flushUserASTs()
 	env.cancelUserExitHandlers()
 	env.cancelPutmsgCalls()
@@ -372,9 +373,9 @@ func (env *Environment) ImageRundown() {
 	env.cancelConditions()
 	env.cancelPageLocks()
 	env.unmapSections()
-	env.dequeueUserLocks()
 	env.resetImagePrivileges()
 	env.qiowWaits = nil
+	env.enqWaits = nil
 }
 
 // The small process-control services (docs/PHASE-26.md subtask 30):

@@ -239,6 +239,7 @@ func (env *Environment) processRundown() {
 
 	env.pendingIO = nil
 	env.qiowWaits = nil
+	env.enqWaits = nil
 
 	env.terminalDone()
 }

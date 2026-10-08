@@ -689,3 +689,24 @@ func TestResourcesFreed(t *testing.T) {
 		t.Errorf("%d locks left", n)
 	}
 }
+
+// TestDeadlockWaits: there is no deadlock detection. Two owners each
+// holding one resource and waiting for the other's wait forever, until
+// one's locks go (as its rundown, after Ctrl-C, takes them).
+func TestDeadlockWaits(t *testing.T) {
+	h := newHarness(t)
+	_ = h.enq("A1", 1, "ONE", EX)
+	_ = h.enq("B2", 2, "TWO", EX)
+	_ = h.enq("A2", 1, "TWO", EX)
+	_ = h.enq("B1", 2, "ONE", EX)
+
+	if got := h.states("A2", "B1"); got != "wait:EX wait:EX" {
+		t.Fatalf("%s", got)
+	}
+
+	h.record(h.m.Release(1, true))
+
+	if got := h.states("B1"); got != "EX" {
+		t.Errorf("after owner 1's rundown: %s", got)
+	}
+}

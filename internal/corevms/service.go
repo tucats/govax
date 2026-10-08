@@ -83,6 +83,7 @@ func registerServices(t *ServiceTable) {
 	registerDeviceServices(t)
 	registerDVIServices(t)
 	registerQIOServices(t)
+	registerLockServices(t)
 	registerMailboxServices(t)
 	registerOperatorServices(t)
 	registerLogicalServices(t)

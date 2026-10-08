@@ -1,6 +1,6 @@
 # Phase 47 — Multiprocessing, part 5: files shared between processes
 
-**Status:** in progress (subtasks 1-6 done 2026-10-08); decisions taken 2026-10-06 (see
+**Status:** in progress (subtasks 1-7 done 2026-10-08); decisions taken 2026-10-06 (see
 PHASE-43.md, Part A). Needs Phase 45 (independent of Phase
 46).
 
@@ -373,3 +373,29 @@ questions:
   limit on a wait, `$FIND` (not implemented), and `$PUT` locking the
   record it writes (a govax stream is one direction). The ods2 change
   needs a tag (v0.1.17) and pin before `GOWORK=off` builds again.
+- 2026-10-08: Subtask 7, `$ENQ`, `$ENQW`, `$DEQ` (`corevms/enq.go`), by
+  the System Services manual. A request's lock carries an `enqRequest`
+  (its `lck.Notifier`): granted, aborted (SS$_ABORT), or canceled
+  (SS$_CANCEL), it writes the LKSB status (and value block) through its
+  owner's address space, sets the owner's event flag, queues the
+  completion AST in the caller's mode, and reports the event (the owner,
+  if waiting, computable at once); a blocking event queues the blocking
+  AST. `$ENQ` clears the event flag, checks the LKSB (SS$_ACCVIO), takes
+  the resource name by descriptor (SS$_IVBUFLEN past 31), qualifies it by
+  the UIC group unless LCK$M_SYSTEM (SYSLCK or an inner mode, else
+  SS$_NOSYSLCK), maximizes acmode with the caller's mode, and converts
+  with LCK$M_CONVERT (the ID from the LKSB); granted at once it completes
+  at once, or returns SS$_SYNCH with no flag or AST under LCK$M_SYNCSTS.
+  `$ENQW` waits (LEF) as `$QIOW` does. `$DEQ` does one lock, CANCEL,
+  DEQALL by mode or of a lock's sublocks, a value block, and INVVALBLK,
+  refusing a lock of another process or a more privileged mode
+  (SS$_IVLOCKID). Image rundown now dequeues user-mode locks before it
+  flushes user-mode ASTs, so an aborted request's AST goes too. Tests:
+  `enq_test.go` (corevms) and `TestLockedSection_enqw` (console: two
+  processes, a 5-instruction quantum, a global-section counter guarded by
+  `$ENQW`/`$DEQ`; all 600 increments land, and the processes wait for
+  each other), and `lck`'s `TestDeadlockWaits` (no detection; a rundown
+  breaks it). Unconfirmed: SS$_NOTQUEUED is written to the LKSB status
+  too; a lock grant boosts as "resource available"; the 11th and later
+  arguments ($ENQ's rsdm_id and null argument) are ignored. Not done:
+  `$GETLKI`, ENQLM and ASTLM quotas, deadlock detection.
