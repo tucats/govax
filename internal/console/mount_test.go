@@ -290,7 +290,7 @@ func TestShowDevices_mountedVolumeLine(t *testing.T) {
 // TestShowDevices_mountedVolumeLineOnlyForDisks confirms showDiskDeviceFull
 // is never reached for a non-disk device -- SHOW DEVICE/FULL's VMS-style
 // disk header only makes sense for the device class MOUNT actually
-// targets; every other class still gets the plain raw-field dump.
+// targets; a terminal gets its own layout (showRecordDeviceFull).
 func TestShowDevices_mountedVolumeLineOnlyForDisks(t *testing.T) {
 	c, buf := newTestConsole(t)
 
@@ -300,8 +300,8 @@ func TestShowDevices_mountedVolumeLineOnlyForDisks(t *testing.T) {
 		t.Fatalf("ShowDevices: %v", err)
 	}
 
-	if strings.Contains(buf.String(), "is online") {
-		t.Errorf("ShowDevices for a terminal device printed the disk-only header: %q", buf.String())
+	if out := buf.String(); strings.Contains(out, "file-oriented") || !strings.HasPrefix(out, "Terminal TTA0:") {
+		t.Errorf("ShowDevices for a terminal device: %q, want the terminal's layout", out)
 	}
 }
 

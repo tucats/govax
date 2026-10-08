@@ -391,6 +391,12 @@ func (env *Environment) completeIO(req *ioRequest, done ioStatus) {
 
 	req.done = true
 
+	// The device's count of operations completed (VMS's UCB$L_OPCNT,
+	// $GETDVI's DVI$_OPCNT, SHOW DEVICE/FULL's "Operations completed").
+	if req.channel != nil && req.channel.Device != nil {
+		req.channel.Device.OpCnt++
+	}
+
 	owner := req.owner
 	if owner == nil {
 		owner = env

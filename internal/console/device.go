@@ -42,8 +42,8 @@ func (c *Console) ShowDevices(name string, full bool) error {
 			continue
 		}
 
-		if d.DevClass == iodev.DeviceClassMailbox && d.DevType == iodev.DeviceTypeNull {
-			c.showNullDeviceFull(d)
+		if d.DevClass == iodev.DeviceClassMailbox || d.DevClass == iodev.DeviceClassTT {
+			c.showRecordDeviceFull(d)
 
 			continue
 		}
@@ -163,61 +163,85 @@ func (c *Console) statRow(label1 string, val1 any, label2 string, val2 any) {
 	c.Printf("    %-27s%12v    %-27s%12v\n", label1, val1, label2, val2)
 }
 
-// The DEVCHAR bits SHOW DEVICE/FULL names.
-var (
-	devRecord    = vmsdef.Symbols["DEV$M_REC"]
-	devShareable = vmsdef.Symbols["DEV$M_SHR"]
-	devMailbox   = vmsdef.Symbols["DEV$M_MBX"]
+// The DEVCHAR bits SHOW DEVICE/FULL names, in bit order, which is the
+// order VMS names them in.
+var deviceCharacteristics = []struct {
+	bit  uint32
+	text string
+}{
+	{vmsdef.Symbols["DEV$M_REC"], "record-oriented device"},
+	{vmsdef.Symbols["DEV$M_CCL"], "carriage control"},
+	{vmsdef.Symbols["DEV$M_SHR"], "shareable"},
+	{vmsdef.Symbols["DEV$M_MBX"], "mailbox device"},
+}
+
+// terminalProtection is the protection SHOW DEVICE/FULL shows for a
+// terminal, VMS 7.1's for TTA0: (govax keeps none per terminal), and
+// nullProtection NLA0:'s.
+const (
+	terminalProtection = 0xFF00
+	nullProtection     = 0
 )
 
-// showNullDeviceFull prints SHOW DEVICE/FULL of the null device NLA0: in
-// the layout VMS 7.1 gave it (testdata/mp/probe2, docs/PHASE-45.md):
+// showRecordDeviceFull prints SHOW DEVICE/FULL of a terminal, a mailbox,
+// or the null device NLA0: in the layouts VMS 7.1 gave them
+// (testdata/mp/probe2 and the author's notes, docs/PHASE-45.md):
+//
+//	Terminal TTA0:, device type unknown, is online, record-oriented device, carriage
+//	    control.
+//
+//	    Error count                    0    Operations completed                  0
+//	    Owner process                 ""    Owner UIC                      [SYSTEM]
+//	    Owner process ID        00000000    Dev Prot              S:RWPL,O:RWPL,G,W
+//	    Reference count                0    Default buffer size                  80
+//
+//	Device MBA11:, device type local memory mailbox, is online, record-oriented
+//	    device, shareable, mailbox device.
 //
 //	Device NLA0:, device type null device, is online, record-oriented device,
 //	    shareable, mailbox device.
 //
-//	    Error count                    0    Operations completed                 31
-//	    Owner process                 ""    Owner UIC                         [1,1]
-//	    Owner process ID        00000000    Dev Prot    S:RWPL,O:RWPL,G:RWPL,W:RWPL
-//	    Reference count               10    Default buffer size                 512
-//
-// The characteristics after "is online" come from DEVCHAR's bits, and the
-// first sentence wraps where the next phrase would pass column 78. The
-// owner UIC is group and member in octal. The protection is VMS's for
-// NLA0: (govax keeps none per device). The counts are the device's own.
-func (c *Console) showNullDeviceFull(d *iodev.Device) {
-	phrases := []string{"device type null device", "is online"}
+// The sentence starts with "Terminal" for a terminal and "Device"
+// otherwise; the characteristics after "is online" come from DEVCHAR's
+// bits; and it wraps a word at a time, a line taking words while it
+// stays within 80 columns. The owner UIC is shown as uicText shows it,
+// and the protection as protectionText does: a mailbox's own (its
+// $CREMBX promsk), VMS's for a terminal or NLA0:. The counts are the
+// device's own: operations are counted as each $QIO completes.
+func (c *Console) showRecordDeviceFull(d *iodev.Device) {
+	first := "Device"
+	if d.DevClass == iodev.DeviceClassTT {
+		first = "Terminal"
+	}
+
+	phrases := []string{"device type " + recordDeviceTypeName(d), "is online"}
 
 	if d.Allocated() {
 		phrases = append(phrases, "allocated")
 	}
 
-	for _, ch := range []struct {
-		bit  uint32
-		text string
-	}{{devRecord, "record-oriented device"}, {devShareable, "shareable"}, {devMailbox, "mailbox device"}} {
+	for _, ch := range deviceCharacteristics {
 		if d.DevChar&ch.bit != 0 {
 			phrases = append(phrases, ch.text)
 		}
 	}
 
-	// "Device NLA0:" and the phrases, wrapped: a phrase that would take the
-	// line (with its comma) past column 78 starts the next, indented.
-	line := fmt.Sprintf("Device %s:", d.Name)
+	words := strings.Fields(first + " " + d.Name + ":, " + strings.Join(phrases, ", ") + ".")
+	line := words[0]
 
-	for _, p := range phrases {
-		if len(line)+len(", ")+len(p)+1 > 78 {
-			c.Printf("%s,\n", line)
+	for _, w := range words[1:] {
+		if len(line)+1+len(w) > 80 {
+			c.Printf("%s\n", line)
 
-			line = "    " + p
+			line = "    " + w
 
 			continue
 		}
 
-		line += ", " + p
+		line += " " + w
 	}
 
-	c.Printf("%s.\n\n", line)
+	c.Printf("%s\n\n", line)
 
 	owner := `""`
 
@@ -227,10 +251,94 @@ func (c *Console) showNullDeviceFull(d *iodev.Device) {
 		}
 	}
 
+	protection := uint32(nullProtection)
+
+	switch {
+	case d.DevClass == iodev.DeviceClassTT:
+		protection = terminalProtection
+	case c.RTL != nil:
+		if m, ok := c.RTL.Mailboxes.For(d); ok {
+			protection = m.Protection
+		}
+	}
+
 	c.vmsRow("Error count", d.ErrCnt, "Operations completed", d.OpCnt)
-	c.vmsRow("Owner process", owner, "Owner UIC", fmt.Sprintf("[%o,%o]", d.OwnUIC>>16, d.OwnUIC&0xFFFF))
-	c.vmsRow("Owner process ID", fmt.Sprintf("%08X", d.PID), "Dev Prot", "S:RWPL,O:RWPL,G:RWPL,W:RWPL")
+	c.vmsRow("Owner process", owner, "Owner UIC", uicText(d.OwnUIC))
+	c.vmsRow("Owner process ID", fmt.Sprintf("%08X", d.PID), "Dev Prot", protectionText(protection))
 	c.vmsRow("Reference count", d.RefCnt, "Default buffer size", d.DevBufSize)
+}
+
+// recordDeviceTypeName is a terminal's or mailbox's device type as SHOW
+// DEVICE/FULL names it. Device types are numbered within each class: a
+// mailbox's type 1 (DT$_MBX) is "local memory mailbox" and 3 the null
+// device; a terminal's are the terminal types (VT100). Any other is
+// "unknown", as VMS 7.1 showed its TTA0:.
+func recordDeviceTypeName(d *iodev.Device) string {
+	if d.DevClass == iodev.DeviceClassMailbox {
+		switch d.DevType {
+		case 1:
+			return "local memory mailbox"
+		case iodev.DeviceTypeNull:
+			return "null device"
+		}
+
+		return "unknown"
+	}
+
+	if d.DevClass == iodev.DeviceClassTT {
+		if name, ok := iodev.DeviceTypeName(d.DevType); ok && d.DevType >= 64 {
+			return name
+		}
+	}
+
+	return "unknown"
+}
+
+// systemUIC is [1,4], the SYSTEM account's UIC.
+const systemUIC = 1<<16 | 4
+
+// uicText is a UIC as SHOW DEVICE/FULL shows it: by its identifier where
+// it has one, "[SYSTEM]" for [1,4] (govax has no rights database, and
+// SYSTEM is its one account), and otherwise "[group,member]" in octal,
+// as VMS 7.1 showed NLA0:'s [1,1].
+func uicText(uic uint32) string {
+	if uic == systemUIC {
+		return "[SYSTEM]"
+	}
+
+	return fmt.Sprintf("[%o,%o]", uic>>16, uic&0xFFFF)
+}
+
+// protectionText is a protection mask (corevms's uicprot.go: four 4-bit
+// fields, System, Owner, Group, World, each bit denying read, write,
+// logical, and physical access) as SHOW DEVICE/FULL shows it: each
+// category's letter, then the accesses it allows as R, W, P, and L, as
+// "S:RWPL,O:RWPL,G,W" shows a category allowed nothing.
+func protectionText(mask uint32) string {
+	parts := make([]string, 0, 4)
+
+	for i, category := range []string{"S", "O", "G", "W"} {
+		field := mask >> (4 * i) & 0xF
+
+		allowed := ""
+
+		for _, a := range []struct {
+			bit    uint32
+			letter string
+		}{{1, "R"}, {2, "W"}, {8, "P"}, {4, "L"}} {
+			if field&a.bit == 0 {
+				allowed += a.letter
+			}
+		}
+
+		if allowed == "" {
+			parts = append(parts, category)
+		} else {
+			parts = append(parts, category+":"+allowed)
+		}
+	}
+
+	return strings.Join(parts, ",")
 }
 
 // vmsRow prints one line of SHOW DEVICE/FULL in VMS's two columns: the

@@ -441,3 +441,23 @@ subprocess to run, and the definitions a MACRO program needs to call
   report it for a disk with a volume mounted (the device record's own
   count otherwise). Tests: `TestShowDevices_operationsCompleted`,
   `TestGetdvi_operationCount`; HELP SHOW DEVICE says what it counts.
+- 2026-10-08: The program's close-out began: the author chose to move
+  Phase 47's deferred features and Phase 46's file-backed sections to a
+  new Phase 49, to add the debugger's SET PROCESS now, and to prepare
+  one more VMS probe round for what's still unconfirmed. First, Phase
+  45's carry-forward item 6: SHOW DEVICE/FULL of a terminal or a
+  mailbox in VMS 7.1's layouts (Phase 45's subtask 14 note), by
+  `showRecordDeviceFull` (`console/device.go`), which NLA0: now shares:
+  "Terminal" or "Device" first, the device type within its class
+  ("local memory mailbox", "null device", the terminal types), the
+  characteristics from DEVCHAR (CCL is "carriage control"), the
+  sentence wrapped a word at a time within 80 columns (VMS's three
+  samples all fit that rule; NLA0:'s phrase rule gave the same
+  result), the owner UIC [1,4] as `[SYSTEM]` (`uicText`; other UICs in
+  octal), and the protection as VMS writes it (`protectionText`: a
+  mailbox's from its promsk; VMS 7.1's `S:RWPL,O:RWPL,G,W` for a
+  terminal). `vax.init` gives TTA0: a terminal's DEVCHAR (0C040007:
+  REC, CCL, TRM, AVL, IDV, ODV; unconfirmed) and SYSTEM's UIC. Every
+  `$QIO` now counts in its device's operations completed when it
+  completes (`completeIO`), as VMS's UCB$L_OPCNT. Test:
+  `TestShowDeviceFull_terminalAndMailbox`.

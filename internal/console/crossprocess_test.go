@@ -161,3 +161,82 @@ func TestShowDeviceFull_nla0(t *testing.T) {
 		}
 	}
 }
+
+// showMailboxSource creates a permanent mailbox, SHOWBOX, that only the
+// system and its owner may use, and ends: the mailbox outlives it.
+const showMailboxSource = `	.title	showbox
+	.psect	data,noexe,wrt
+chan:	.blkw	1
+name:	.ascid	/SHOWBOX/
+	.psect	code,exe,nowrt
+	.entry	start,^m<>
+	$crembx_s prmflg=#1,chan=chan,maxmsg=#256,promsk=#^XFF00,lognam=name
+	ret
+	.end	start
+`
+
+// TestShowDeviceFull_terminalAndMailbox: SHOW DEVICE/FULL of TTA0: and of
+// a mailbox, in the layouts VMS 7.1 gave a terminal and a mailbox
+// (docs/PHASE-45.md, subtask 14's note): "Terminal" first for a
+// terminal, its sentence wrapped a word at a time at 80 columns, the
+// owner UIC [1,4] as [SYSTEM], and the protection as VMS shows it, the
+// mailbox's from its $CREMBX promsk.
+func TestShowDeviceFull_terminalAndMailbox(t *testing.T) {
+	c, _ := scheduledConsole(t, longQuantum, brbSelf)
+	d := console.NewDispatcher(c, consoletest.ConsoleGrammar(t), nil)
+
+	if err := c.Run(buildImage(t, c, "showbox", showMailboxSource), console.RunOptions{}); err != nil {
+		t.Fatal(err)
+	}
+
+	show := func(name string) []string {
+		t.Helper()
+
+		got, err := sayConsole(t, c, d, "SHOW DEVICE/FULL "+name)
+		if err != nil {
+			t.Fatalf("SHOW DEVICE/FULL %s: %v", name, err)
+		}
+
+		return strings.Split(strings.ReplaceAll(got, "\r", ""), "\n")
+	}
+
+	tt := show("TTA0:")
+	want := []string{
+		"Terminal TTA0:, device type VT100, is online, record-oriented device, carriage",
+		"    control.",
+		"",
+	}
+
+	if len(tt) < 7 || strings.Join(tt[:3], "\n") != strings.Join(want, "\n") ||
+		!strings.HasSuffix(tt[4], "Owner UIC                      [SYSTEM]") ||
+		!strings.HasSuffix(tt[5], "Dev Prot              S:RWPL,O:RWPL,G,W") ||
+		!strings.HasSuffix(tt[6], "Default buffer size                  80") {
+		t.Errorf("TTA0:\n%s", strings.Join(tt, "\n"))
+	}
+
+	unit := ""
+
+	for _, dev := range c.Devices.All() {
+		if dev.DevClass == iodev.DeviceClassMailbox && dev.DevType != iodev.DeviceTypeNull {
+			unit = dev.Name
+		}
+	}
+
+	if unit == "" {
+		t.Fatal("no mailbox")
+	}
+
+	mbx := show(unit)
+	want = []string{
+		"Device " + unit + ":, device type local memory mailbox, is online, record-oriented",
+		"    device, shareable, mailbox device.",
+		"",
+	}
+
+	if len(mbx) < 7 || strings.Join(mbx[:3], "\n") != strings.Join(want, "\n") ||
+		!strings.HasSuffix(mbx[4], "Owner UIC                      [SYSTEM]") ||
+		!strings.HasSuffix(mbx[5], "Dev Prot              S:RWPL,O:RWPL,G,W") ||
+		!strings.HasSuffix(mbx[6], "Default buffer size                 256") {
+		t.Errorf("%s:\n%s", unit, strings.Join(mbx, "\n"))
+	}
+}

@@ -48,7 +48,9 @@ print " "
 
 ; Create devices
 
-define/device tta0/devclass=term/devtype=vt100/devbufsiz=80
+; (201588743 is 0C040007 hex: REC, CCL, TRM, AVL, IDV, ODV, a terminal's
+; DEVCHAR; 65540 is [1,4], SYSTEM's UIC, the owner VMS 7.1 showed TTA0:.)
+define/device tta0/devclass=term/devtype=vt100/devbufsiz=80/devchar=201588743/ownuic=65540
 
 ; The null device: writes are discarded and reads are at end of file.
 

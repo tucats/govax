@@ -325,8 +325,9 @@ waiting on a run on the VAX, or optional work for a later phase.
    They have not been assembled by real MACRO; the macros have, in effect,
    for the same calls (`TestServiceMacroObjects`).
 6. **`SHOW DEVICE/FULL` for terminals and mailboxes** in VMS 7.1's layouts
-   (the note under subtask 14 has both): govax prints its generic layout
-   for them. Wanted before Phase 46, which makes mailboxes real.
+   (the note under subtask 14 has both). *Done (2026-10-08, in the
+   program's close-out; PHASE-48.md's progress log):*
+   `showRecordDeviceFull` prints both, and NLA0:'s, as VMS does.
 7. **Services with no macros.** The system services govax does not
    implement have none either (`$ENQ`/`$DEQ`: Phase 47; `$CRMPSC`,
    `$MGBLSC`, global sections: Phase 46). Each new service gets its macro

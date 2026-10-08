@@ -94,7 +94,7 @@ func TestShowDevices_allocated(t *testing.T) {
 		t.Errorf("SHOW DEVICE/FULL output missing the allocated disk header: %q", out)
 	}
 
-	if !strings.Contains(out, "Device TTA1, allocated") {
+	if !strings.Contains(out, "Terminal TTA1:, device type unknown, is online, allocated.") {
 		t.Errorf("SHOW DEVICE/FULL output missing the allocated terminal: %q", out)
 	}
 
