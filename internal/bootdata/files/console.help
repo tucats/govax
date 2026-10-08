@@ -435,8 +435,11 @@ $SH  ,DEV
     
         name
         
-            The name of a device to display.  If omitted then all
-            known psueodevices are displayed.
+            The name of a device to display, or the start of one: SHOW
+            DEVICE DU shows every device whose name begins with DU
+            (DUA0, DUA1, ...).  If no device's does, the command says
+            %SYSTEM-W-NOSUCHDEV.  If omitted then all known devices are
+            displayed.
         
         /FULL
         

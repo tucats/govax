@@ -15,20 +15,31 @@ func (c *Console) DefineDevice(name string, opts iodev.DeviceOptions) *iodev.Dev
 	return c.Devices.Define(name, opts)
 }
 
-// ShowDevices implements the SHOW DEVICES console command,optionally
-// filtered to one device by name and expanded to full detail
-// with /FULL. Matches show_device's own behavior of printing nothing at
-// all when no device matches (no "no matching devices" fallback message —
-// unlike ShowLogicals, which does print one; that asymmetry is in the C
-// source, not invented here).
+// ShowDevices implements the SHOW DEVICES console command, expanded to
+// full detail with /FULL. A name selects, as on VMS, every device whose
+// name begins with it ("DU" shows DUA0, DUA1, ...; a colon or a leading
+// "_" is ignored), and when no device does, the command says
+// %SYSTEM-W-NOSUCHDEV, as VMS's SHOW DEVICE does (the author's VMS
+// system, 2026-10-08).
 //
 // A disk-class device's /FULL output (showDiskDeviceFull) is a from-scratch,
 // VMS-realistic reformat.
 func (c *Console) ShowDevices(name string, full bool) error {
+	prefix := strings.ToUpper(strings.TrimPrefix(strings.TrimSuffix(strings.TrimSpace(name), ":"), "_"))
+	shown := 0
+
+	defer func() {
+		if shown == 0 && prefix != "" {
+			c.Printf("%%%s\n", strings.TrimPrefix(conditionLine(ssNOSUCHDEV), "-"))
+		}
+	}()
+
 	for _, d := range c.Devices.All() {
-		if name != "" && d.Name != strings.ToUpper(strings.TrimSuffix(name, ":")) {
+		if !strings.HasPrefix(d.Name, prefix) {
 			continue
 		}
+
+		shown++
 
 		if !full {
 			c.Printf("Device %s\n", d.Name)

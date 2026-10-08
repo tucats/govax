@@ -471,3 +471,9 @@ subprocess to run, and the definitions a MACRO program needs to call
   against `Execute`'s `BeginRun`, which clears a CTRL/C typed before a
   run; its goroutine now presses CTRL/C every millisecond until
   `Execute` returns (200 runs, and 20 under the race detector, pass).
+- 2026-10-08: From the author's VMS system: SHOW DEVICE takes the start
+  of a device name (`SHOW DEVICE DU` shows every DU device), and with no
+  device matching says `%SYSTEM-W-NOSUCHDEV, no such device available`.
+  The console's SHOW DEVICE now does both (it matched one whole name and
+  printed nothing for none, as the C source did). Test:
+  `TestShowDevices_prefix`; HELP SHOW DEVICE says so.

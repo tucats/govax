@@ -46,8 +46,8 @@ func TestConsoleDefineAndShowDevices(t *testing.T) {
 		t.Fatalf("ShowDevices NOSUCH: %v", err)
 	}
 
-	if buf.String() != "" {
-		t.Errorf("ShowDevices for a nonexistent name printed output %q, want none (matches show_device.c: no fallback message)", buf.String())
+	if want := "%SYSTEM-W-NOSUCHDEV, no such device available\n"; buf.String() != want {
+		t.Errorf("ShowDevices for a nonexistent name printed output %q, want VMS's %q", buf.String(), want)
 	}
 }
 
@@ -106,5 +106,34 @@ func TestShowDevices_allocated(t *testing.T) {
 
 	if !disk.Allocated() {
 		t.Error("kernel-mode allocation was released by image rundown")
+	}
+}
+
+// TestShowDevices_prefix: SHOW DEVICE's name is a prefix, as on VMS: "DU"
+// shows every DU device, and a name no device begins with is
+// %SYSTEM-W-NOSUCHDEV.
+func TestShowDevices_prefix(t *testing.T) {
+	c, buf := newTestConsole(t)
+
+	for _, name := range []string{"DUA0", "DUA1", "DKA0"} {
+		c.DefineDevice(name, iodev.DeviceOptions{DevClass: iodev.DeviceClassDisk})
+	}
+
+	if err := c.ShowDevices("du", false); err != nil {
+		t.Fatal(err)
+	}
+
+	if out := buf.String(); !strings.Contains(out, "DUA0") || !strings.Contains(out, "DUA1") || strings.Contains(out, "DKA0") {
+		t.Errorf("SHOW DEVICE DU: %q, want DUA0 and DUA1 only", out)
+	}
+
+	buf.Reset()
+
+	if err := c.ShowDevices("MUA:", false); err != nil {
+		t.Fatal(err)
+	}
+
+	if out := buf.String(); out != "%SYSTEM-W-NOSUCHDEV, no such device available\n" {
+		t.Errorf("SHOW DEVICE MUA: %q, want NOSUCHDEV", out)
 	}
 }
