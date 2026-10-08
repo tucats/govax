@@ -461,3 +461,13 @@ subprocess to run, and the definitions a MACRO program needs to call
   `$QIO` now counts in its device's operations completed when it
   completes (`completeIO`), as VMS's UCB$L_OPCNT. Test:
   `TestShowDeviceFull_terminalAndMailbox`.
+- 2026-10-08: Close-out, Phase 46's carry-forward items 3 and 5.
+  `EXE$INPUT` and `DECC$GETS` read the shared terminal through its
+  queue (`readSharedConsoleLine`: `awaitTerminal` for a line ending in
+  a newline, which is what they read), so with the scheduler on a read
+  with no whole line typed waits in LEF and the shim runs again, rather
+  than the machine stopping in the host's read (`TestTerminal_
+  inputShims`). `TestExecute_stopsOnAttention` raced its one CTRL/C
+  against `Execute`'s `BeginRun`, which clears a CTRL/C typed before a
+  run; its goroutine now presses CTRL/C every millisecond until
+  `Execute` returns (200 runs, and 20 under the race detector, pass).

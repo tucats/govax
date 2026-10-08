@@ -140,3 +140,47 @@ func TestTerminal_withoutScheduler(t *testing.T) {
 		t.Errorf("read: %q, %v, %v; want now", line, ok, err)
 	}
 }
+
+// TestTerminal_inputShims: EXE$INPUT and DECC$GETS read the shared
+// terminal as LIB$GET_INPUT does: with no whole line typed, the shim
+// waits in LEF (ErrWait) rather than stopping the machine in the host's
+// read, and once the line is there it's read, EXE$INPUT's without its
+// newline, DECC$GETS's with it.
+func TestTerminal_inputShims(t *testing.T) {
+	env, _ := fixture()
+	withScheduler(env)
+
+	term := &scriptedTerminal{}
+	env.consoleIn = term
+
+	a := newArena(t, env)
+	buf := a.alloc(80)
+
+	if _, err := shimExeInput(env, []uint32{buf, 80}); !errors.Is(err, ErrWait) {
+		t.Fatalf("EXE$INPUT with nothing typed: %v, want ErrWait", err)
+	}
+
+	env.enterWait(true)
+	wantState(t, env, sched.StateLEF, sched.ResourceNone)
+
+	term.typeIn("half")
+	env.pollEvents()
+	wantState(t, env, sched.StateLEF, sched.ResourceNone)
+
+	term.typeIn(" a line\nnext\n")
+	env.pollEvents()
+	wantState(t, env, sched.StateCOM, sched.ResourceNone)
+
+	n, err := shimExeInput(env, []uint32{buf, 80})
+	if err != nil || a.readString(buf, uint16(n)) != "half a line" {
+		t.Errorf("EXE$INPUT: %d, %v; want the line without its newline", n, err)
+	}
+
+	if addr, err := shimDeccGets(env, []uint32{buf}); err != nil || addr != buf || a.readString(buf, 5) != "next\n" {
+		t.Errorf("DECC$GETS: %08X, %v, %q; want the line with its newline", addr, err, a.readString(buf, 5))
+	}
+
+	if len(env.terminalQueue) != 0 {
+		t.Errorf("the terminal's queue has %d reads, want none", len(env.terminalQueue))
+	}
+}

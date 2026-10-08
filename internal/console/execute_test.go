@@ -3,6 +3,7 @@ package console
 import (
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/tucats/govax/internal/cpu"
 	"github.com/tucats/govax/internal/vax"
@@ -242,24 +243,47 @@ func TestExecute_beginRunGivesEachCommandAFreshBudget(t *testing.T) {
 // mid-run, Execute's own Step loop must stop cleanly -- at the end of
 // whatever instruction is currently in flight, not mid-instruction -- and
 // report it via reportStopReason, rather than hang (this program is an
-// infinite loop) or propagate an error. Attention is set from a separate
-// goroutine, exactly matching its real caller (main.go's background
-// terminal-reading goroutine) and its documented "safe to call from any
-// goroutine" contract; a generous instruction-limit safety net keeps this
-// deterministic-in-practice test from ever truly hanging if that contract
-// were somehow broken.
+// infinite loop) or propagate an error. Attention is called from a
+// separate goroutine, as its real caller (main.go's background
+// terminal-reading goroutine) calls it, under its "safe to call from any
+// goroutine" contract. A run's start (BeginRun) clears a CTRL/C typed
+// before it, so the goroutine presses CTRL/C again every millisecond
+// until Execute returns: one press lands after the run has begun,
+// whichever goroutine is scheduled first. (A single press used to race
+// BeginRun, and the run then ended at the instruction limit instead.)
+// The instruction limit is a safety net against a hang.
 func TestExecute_stopsOnAttention(t *testing.T) {
 	c, buf := newTestConsole(t)
 	loadProgram(t, c, 0x200,
 		opNop,
 		0x11, 0xFD, // BRB base (displacement -3: back to the NOP)
 	)
-	c.Engine.SetLimits(1_000_000, 0)
+	c.Engine.SetLimits(500_000_000, 0)
 
-	go c.Engine.Attention()
+	done := make(chan struct{})
+	pressed := make(chan struct{})
+
+	go func() {
+		defer close(pressed)
+
+		for {
+			c.Engine.Attention()
+
+			select {
+			case <-done:
+				return
+			case <-time.After(time.Millisecond):
+			}
+		}
+	}()
 
 	addr := uint32(0x200)
-	if err := c.Execute(&addr); err != nil {
+	err := c.Execute(&addr)
+
+	close(done)
+	<-pressed
+
+	if err != nil {
 		t.Fatalf("Execute: %v (want a clean stop, not an error)", err)
 	}
 

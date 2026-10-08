@@ -197,14 +197,19 @@ waiting on a run on the VAX, or optional work for a later phase.
 3. **Terminal simplifications:** a terminal `$QIO` read that must wait
    makes the `$QIO` itself wait, rather than returning with the read
    pending (a program doing other work before it waits for the read's
-   event flag would see the difference). The old `DECC$GETS` and
-   `EXE$INPUT` shims still block every process. The console's own prompt
-   after a run stopped while a process waited for input isn't tested.
+   event flag would see the difference): moved to Phase 49. *Done
+   (2026-10-08, the program's close-out):* the old `DECC$GETS` and
+   `EXE$INPUT` shims wait their turn at the shared terminal, as
+   LIB$GET_INPUT does, rather than blocking every process
+   (`TestTerminal_inputShims`). The console's own prompt after a run
+   stopped while a process waited for input isn't tested.
 4. **File-backed sections** (`$CRMPSC` of a file's blocks, private or
    global) are SS$_UNSUPPORTED; so is `SEC$M_EXPREG` in P1.
-5. **The flaky test** `TestExecute_stopsOnAttention` (it races
-   `Engine.Attention` on a goroutine against `Execute`'s start) predates
-   this phase and is still there.
+5. **The flaky test** `TestExecute_stopsOnAttention` (it raced
+   `Engine.Attention` on a goroutine against `Execute`'s start, whose
+   `BeginRun` clears a CTRL/C typed before it). *Fixed (2026-10-08):*
+   the goroutine presses CTRL/C every millisecond until `Execute`
+   returns.
 
 ## Progress log
 
