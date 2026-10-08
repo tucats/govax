@@ -114,6 +114,11 @@ type ioRequest struct {
 	// (ioBoost): the boost its owner gets if the completion ends a wait.
 	boost sched.Class
 
+	// noFlag is set for a request whose completion sets no event flag:
+	// one RMS makes for a $PUT (recdevice.go), which the process waits
+	// for by the request itself.
+	noFlag bool
+
 	// done is set once the request has completed (or been cancelled);
 	// cancelled says it was cancelled. A driver holding a pending
 	// request drops it once it's done.
@@ -407,7 +412,9 @@ func (env *Environment) completeIO(req *ioRequest, done ioStatus) {
 		_ = owner.storeOwn(req.iosb, b[:])
 	}
 
-	owner.postFlag(req.efn, req.boost)
+	if !req.noFlag {
+		owner.postFlag(req.efn, req.boost)
+	}
 
 	if req.astadr != 0 {
 		owner.queueAST(req.astadr, req.astprm, req.mode)

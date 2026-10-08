@@ -10,7 +10,7 @@ end-of-Phase-46 runs (`../run46/README.md`); `probe3.com` is its part.
 | `probe3c.mar` | The child of part 1: it reads messages from one mailbox and reports each read's IOSB on another |
 | `probe3.com` | Assembles, links, and runs it |
 | `exchange.cmd`, `copyout.cmd` | Build a volume of probe 3 alone (`testdata/disks/mp-probe3.dsk`) and copy its log back, for running it again by itself |
-| `vax/` | The VMS runs' logs: `probe3-run1.log` (2026-10-08, with `../run46`), and `probe3.log`, the second run's |
+| `vax/` | The VMS runs' logs: `probe3-run1.log` (2026-10-08, with `../run46`), and `probe3.log`, the second run's (2026-10-08), which govax's report now matches but for PIDs and mapped addresses |
 
 ## The first run
 

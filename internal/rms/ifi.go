@@ -67,6 +67,10 @@ type FileHandle struct {
 	// (recdevice.go). Check IsRecordDevice.
 	Device RecordDevice
 
+	// PutPending is set while an asynchronous $PUT to Device waits for
+	// its record to be read; $WAIT finishes it.
+	PutPending bool
+
 	// File is the underlying ODS-2 file, set only for the real-volume
 	// case (nil for the console case).
 	File *volume.File

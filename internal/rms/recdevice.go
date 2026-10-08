@@ -6,11 +6,14 @@ package rms
 //
 // A record-oriented device has no files, no directories, and no
 // attributes; RMS reads and writes it a record at a time, each record
-// one device transfer. On a mailbox, $PUT writes one message, and $GET
-// reads one: the oldest waiting, or, with none, the next to arrive (the
-// process waits for it); an end-of-file message is RMS$_EOF. On NL:,
-// $PUT throws the record away and $GET is always RMS$_EOF. $CLOSE gives
-// back the channel $CREATE or $OPEN assigned.
+// one device transfer. On a mailbox, $PUT writes one message, and
+// finishes when the message has been read (VMS 7.3, testdata/mp/probe3):
+// the process waits for that, or, with RAB$V_ASY, the $PUT returns
+// RMS$_PENDING and $WAIT waits. $GET reads one: the oldest waiting, or,
+// with none, the next to arrive (the process waits for it); an
+// end-of-file message is RMS$_EOF (RAB$L_STV 0). On NL:, $PUT throws the
+// record away and $GET is always RMS$_EOF. $CLOSE gives back the channel
+// $CREATE or $OPEN assigned.
 //
 // That's what lets a process's SYS$OUTPUT be a mailbox: a subprocess
 // created with its output going to a mailbox writes its lines there, and
@@ -28,14 +31,18 @@ type RecordDevice interface {
 	// FAB$L_SDC report.
 	Characteristics() uint32
 
-	// MaxRecord is the longest record the device takes (a mailbox's
-	// largest message), 0 for no limit.
-	MaxRecord() uint32
+	// Put writes record, and finishes when the record has been read. If
+	// it can't finish yet, an asynchronous Put (async) reports pending,
+	// and WaitPut finishes it later; a synchronous one returns the
+	// process's wait as its error. A non-nil error is the process
+	// waiting (the service is called again later, and Put carries on
+	// with the same record) or a failure of the machine, not an RMS
+	// condition.
+	Put(record []byte, async bool) (status uint32, pending bool, err error)
 
-	// Put writes record. A non-nil error is the process waiting (the
-	// service is called again later) or a failure of the machine, not an
-	// RMS condition.
-	Put(record []byte) (status uint32, err error)
+	// WaitPut waits for a pending Put to finish, returning its status
+	// (SS$_NORMAL if none is pending). A non-nil error is as for Put.
+	WaitPut() (status uint32, err error)
 
 	// Get reads a record: SS$_ENDOFFILE at the end of the data, or the
 	// record and SS$_NORMAL. A non-nil error is as for Put.
@@ -57,6 +64,7 @@ type DeviceOpener interface {
 // The RMS statuses of a record device's failures: the operation's
 // status, its STV the system service status.
 var (
+	rmsPending    = vmsConst("RMS$_PENDING")
 	rmsReadError  = vmsConst("RMS$_RER")
 	rmsWriteError = vmsConst("RMS$_WER")
 	ssEndOfFile   = vmsConst("SS$_ENDOFFILE")
@@ -72,7 +80,10 @@ func (h *FileHandle) IsRecordDevice() bool {
 // openRecordDevice is $CREATE's and $OPEN's step for a name whose
 // device lookup is: if it's a record device, it opens a stream on it,
 // allocates the IFI, and reports the device in the FAB (FAB$L_DEV and
-// FAB$L_SDC, its characteristics; FAB$W_MRS, its largest record). found
+// FAB$L_SDC, its characteristics). FAB$W_MRS is left as it was: VMS 7.3
+// reported 0 for a mailbox whose largest message is 80, in a FAB that
+// had 0 there (testdata/mp/probe3; *unconfirmed* whether it stores 0 or
+// stores nothing). found
 // is false if lookup isn't a record device. A device that can't be
 // opened is RMS$_PRV for SS$_NOPRIV, and RMS$_DNR otherwise, with the
 // system service status in FAB$L_STV.
@@ -103,28 +114,56 @@ func (ctx *Context) openRecordDevice(fabAddr uint32, lookup string, fac byte) (i
 		}
 	}
 
-	if err := ctx.storeWord(fabAddr+fabOffset("MRS"), uint16(dev.MaxRecord())); err != nil {
-		dev.Close()
-
-		return 0, true, 0, 0, err
-	}
-
 	return ctx.Files.Alloc(&FileHandle{Device: dev, Access: fac}), true, 0, 0, nil
 }
 
 // putRecordDevice is $PUT's step for a record device: the record goes
-// to the device. A record longer than the device takes is RMS$_RSZ; any
-// other failure RMS$_WER, with the system service status in RAB$L_STV.
+// to the device, and the $PUT finishes when it has been read: until then
+// the process waits, or, with RAB$V_ASY, the $PUT is RMS$_PENDING and
+// $WAIT finishes it (waitRecordDevice). A record longer than the device
+// takes is RMS$_RSZ; any other failure RMS$_WER, with the system service
+// status in RAB$L_STV.
 func putRecordDevice(ctx *Context, rabAddr uint32, h *FileHandle, record []byte) (uint32, error) {
 	if h.Access&facPut == 0 {
 		return storeStatus(ctx, rabAddr, rabSTS, rabSTV, rmsPrivilegeViolation)
 	}
 
-	status, err := h.Device.Put(record)
+	rop, err := ctx.loadLongword(rabAddr + rabROP)
 	if err != nil {
 		return 0, err
 	}
 
+	status, pending, err := h.Device.Put(record, rop&ropASY != 0)
+	if err != nil {
+		return 0, err
+	}
+
+	if pending {
+		h.PutPending = true
+
+		return rabStatus(ctx, rabAddr, rmsPending, 0)
+	}
+
+	return putResult(ctx, rabAddr, status)
+}
+
+// waitRecordDevice is $WAIT's step for a record device whose $PUT is
+// pending: it waits for the record to be read, then stores the $PUT's
+// status as putRecordDevice would have.
+func waitRecordDevice(ctx *Context, rabAddr uint32, h *FileHandle) (uint32, error) {
+	status, err := h.Device.WaitPut()
+	if err != nil {
+		return 0, err
+	}
+
+	h.PutPending = false
+
+	return putResult(ctx, rabAddr, status)
+}
+
+// putResult stores a record device $PUT's RMS status for the system
+// service status of its write.
+func putResult(ctx *Context, rabAddr, status uint32) (uint32, error) {
 	switch status {
 	case ssNormal:
 		return storeStatus(ctx, rabAddr, rabSTS, rabSTV, rmsNormal)
@@ -153,7 +192,8 @@ func getRecordDevice(ctx *Context, rabAddr uint32, h *FileHandle) (uint32, error
 	case ssNormal:
 		return storeRecord(ctx, rabAddr, record)
 	case ssEndOfFile:
-		return storeStatus(ctx, rabAddr, rabSTS, rabSTV, rmsEOF)
+		// RAB$L_STV is 0 (VMS 7.3, testdata/mp/probe3).
+		return rabStatus(ctx, rabAddr, rmsEOF, 0)
 	}
 
 	return rabStatus(ctx, rabAddr, rmsReadError, status)

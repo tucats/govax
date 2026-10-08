@@ -318,7 +318,7 @@ func TestGetdvi_mailboxBothSides(t *testing.T) {
 	wantR0(t, mbxQIO(t, groupmate, 0, gch, fnWriteNow, 0, 0, a.str("two"), 3), ssNormal)
 
 	items := []string{"DVI$_DEVDEPEND", "DVI$_REFCNT", "DVI$_PID", "DVI$_OWNUIC", "DVI$_VPROT", "DVI$_DEVNAM"}
-	want := []string{long(2), long(2), long(env.Process.PID), long(uic(0o100, 1)), long(0xF000), "_" + m.Device.Name + ":"}
+	want := []string{long(2), long(2), long(0), long(uic(0o100, 1)), long(0xF000), "_" + m.Device.Name + ":"}
 
 	for _, side := range []struct {
 		env *Environment

@@ -39,6 +39,7 @@ var (
 	ssGptFull    = vmsdef.Symbols["SS$_GPTFULL"]
 	ssIvLogNam   = vmsdef.Symbols["SS$_IVLOGNAM"]
 	ssUnsupport  = vmsdef.Symbols["SS$_UNSUPPORTED"]
+	ssEndOfFile  = vmsdef.Symbols["SS$_ENDOFFILE"]
 )
 
 // pageFile is the flags of a writable page-file global section.
@@ -185,21 +186,43 @@ func TestCrmpsc_errors(t *testing.T) {
 		{"page file without GBL", "X", secPAGFIL, 1, ssIvSecFlg},
 		{"PERM without GBL", "X", secPERM, 1, ssIvSecFlg},
 		{"copy on reference in the page file", "X", pageFile | secCRF, 1, ssIvSecFlg},
-		{"a file section", "X", secGBL | secWRT, 1, ssUnsupport},
-		{"a private section", "X", secWRT, 1, ssUnsupport},
-		{"no pages", "X", pageFile, 0, ssIllPagCnt},
+		// A file section with no channel, and no pages, as VMS 7.3 answers
+		// them (testdata/mp/probe3).
+		{"a file section", "X", secGBL | secWRT, 1, ssIvSecFlg},
+		{"a private section", "X", secWRT, 1, ssIvSecFlg},
+		{"no pages", "X", pageFile, 0, ssEndOfFile},
 		{"no name", "", pageFile, 1, ssIvLogNam},
 		{"a long name", strings.Repeat("N", 44), pageFile, 1, ssIvLogNam},
 	}
 
+	// Each failure writes -1 to both longwords of retadr.
 	for _, tc := range cases {
+		putRange(t, c, vaRetadr, 0, 0)
+
 		if got := crmpsc(t, c, tc.name, tc.flags, secPages, secPages, tc.pagcnt, 0); got != tc.want {
 			t.Errorf("%s: %#x, want %#x", tc.what, got, tc.want)
 		}
+
+		if a, b := getRange(t, c, vaRetadr); a != 0xFFFFFFFF || b != 0xFFFFFFFF {
+			t.Errorf("%s: retadr %08X to %08X, want -1 to -1", tc.what, a, b)
+		}
 	}
+
+	// A file section on a channel isn't supported.
+	putRange(t, c, vaInadr, secPages, secPages)
+
+	if got := callService(t, c, "SYS$CRMPSC", vaInadr, vaRetadr, 0, secGBL, putName(t, c, "X"), 0, 0, 5, 1, 0, 0, 0); got != ssUnsupport {
+		t.Errorf("a file section on a channel: %#x, want SS$_UNSUPPORTED", got)
+	}
+
+	putRange(t, c, vaRetadr, 0, 0)
 
 	if got := mgblsc(t, c, "NONE", 0, secPages, secPages, 0, 0); got != ssNoSuchSec {
 		t.Errorf("$MGBLSC of no section: %#x, want SS$_NOSUCHSEC", got)
+	}
+
+	if a, b := getRange(t, c, vaRetadr); a != 0xFFFFFFFF || b != 0xFFFFFFFF {
+		t.Errorf("$MGBLSC of no section: retadr %08X to %08X, want -1 to -1", a, b)
 	}
 
 	if got := mgblsc(t, c, "NONE", secPAGFIL, secPages, secPages, 0, 0); got != ssIvSecFlg {
@@ -211,12 +234,17 @@ func TestCrmpsc_errors(t *testing.T) {
 		t.Fatalf("$CRMPSC RO = %#x", got)
 	}
 
-	if got := mgblsc(t, c, "RO", secWRT, secPages+0x200, secPages+0x200, 0, 0); got != ssNoPriv {
-		t.Errorf("writable mapping of a read-only section: %#x, want SS$_NOPRIV", got)
+	// VMS maps it writable anyway (testdata/mp/probe3).
+	if got := mgblsc(t, c, "RO", secWRT, secPages+0x200, secPages+0x200, 0, 0); got != ssNormal {
+		t.Errorf("writable mapping of a section created read-only: %#x, want SS$_NORMAL", got)
 	}
 
-	if got := mgblsc(t, c, "RO", 0, secPages+0x200, secPages+0x200, 1, 0); got != ssBadParam {
-		t.Errorf("relpag past the section: %#x, want SS$_BADPARAM", got)
+	if err := c.Mem.StoreLongword(c.CPU, secPages+0x200, 0x5A5A5A5A); err != nil {
+		t.Errorf("writing through the writable mapping: %v", err)
+	}
+
+	if got := mgblsc(t, c, "RO", 0, secPages+0x400, secPages+0x400, 1, 0); got != ssEndOfFile {
+		t.Errorf("relpag past the section: %#x, want SS$_ENDOFFILE", got)
 	}
 
 	// A group section isn't found as a system one.

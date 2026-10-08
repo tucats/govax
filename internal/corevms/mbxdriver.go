@@ -34,8 +34,9 @@ import (
 //	        was longer: SS$_BUFFEROVF, and the rest is lost), and the
 //	        writer's process ID
 //	write:  status, the message's length, and the reader's process ID
-//	        (0 for an IO$M_NOW write that was queued; one handed to a
-//	        waiting read has its reader's, unconfirmed)
+//	        (0 for an IO$M_NOW write, which finishes before anyone has
+//	        read it, even when a read was waiting: VMS 7.3,
+//	        testdata/mp/probe3)
 //
 // An end-of-file message (IO$_WRITEOF) is read as SS$_ENDOFFILE with no
 // data. A write longer than the mailbox's largest message is rejected
@@ -286,11 +287,16 @@ func (env *Environment) send(m *Mailbox, req *ioRequest, msg *mailboxMessage) (i
 
 		env.completeIO(reader, env.receive(reader, msg))
 
-		// The write's IOSB has the reader's PID: the process that made
-		// the read, not the writer, which is the current one.
+		// A plain write's IOSB has the reader's PID: the process that
+		// made the read, not the writer, which is the current one. An
+		// IO$M_NOW write's has 0, as when it's queued.
 		pid := env.Process.PID
 		if reader.owner != nil {
 			pid = reader.owner.Process.PID
+		}
+
+		if req != nil && req.modified(ioModNow) {
+			pid = 0
 		}
 
 		return ioStatus{status: ssNormal, count: count, info: pid}, 0

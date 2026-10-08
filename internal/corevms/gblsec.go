@@ -125,9 +125,11 @@ type GlobalSection struct {
 	// minor in 0-23.
 	Ident uint32
 
-	// Writable is set for a section created with SEC$M_WRT, which may be
-	// mapped read/write; Permanent for one created with SEC$M_PERM that
-	// $DGBLSC hasn't deleted.
+	// Writable is set for a section created with SEC$M_WRT. VMS maps a
+	// page-file section read/write on request whether or not it was
+	// created writable (testdata/mp/probe3), so nothing checks it.
+	// Permanent is set for one created with SEC$M_PERM that $DGBLSC
+	// hasn't deleted.
 	Writable  bool
 	Permanent bool
 
@@ -386,38 +388,47 @@ func (env *Environment) readIdent(addr uint32) (sectionIdent, uint32) {
 // SEC$M_EXPREG. If a section named gsdnam whose ident matches already
 // exists in the scope, it's mapped (as by $MGBLSC, SEC$M_WRT asking for
 // write access) and the service returns SS$_NORMAL; if not, a section of
-// pagcnt pages (SS$_ILLPAGCNT for 0) is created, with ident's version
+// pagcnt pages (SS$_ENDOFFILE for 0, as VMS 7.3 says) is created, with ident's version
 // and protection mask prot, mapped, and the service returns SS$_CREATED.
 // The mapping is mapSection's. If it fails, a section just created goes
 // again (unless permanent).
 //
 // Other statuses: SS$_IVSECFLG for an unknown flag, SEC$M_PERM or
-// SEC$M_SYSGBL without SEC$M_GBL, or SEC$M_CRF with SEC$M_PAGFIL;
-// SS$_UNSUPPORTED for a section of a file (no SEC$M_PAGFIL) or by PFN;
-// SS$_NOPRIV; SS$_GSDFULL, SS$_GPTFULL, SS$_INSFMEM; readSectionArgs's.
+// SEC$M_SYSGBL without SEC$M_GBL, SEC$M_CRF with SEC$M_PAGFIL, or a
+// section of a file (no SEC$M_PAGFIL) with no channel; SS$_UNSUPPORTED for
+// a section of a file on a channel, or by PFN; SS$_NOPRIV; SS$_GSDFULL,
+// SS$_GPTFULL, SS$_INSFMEM; readSectionArgs's. Any failure before a page
+// is mapped writes -1 to both longwords of retadr (failRetadr).
+//
+// The statuses for pagcnt 0 and for a file section with no channel are
+// VMS 7.3's (testdata/mp/probe3). *Unconfirmed:* which rule gives the
+// second SS$_IVSECFLG: probe 3 tried only SEC$M_GBL!SEC$M_WRT!SEC$M_EXPREG
+// with channel 0, and govax takes the missing channel as the reason.
 func serviceSysCrmpsc(env *Environment, argv []uint32) (uint32, error) {
 	known := secGBL | secCRF | secDZRO | secWRT | secPERM | secSYSGBL | secPFNMAP | secEXPREG | secPAGFIL
 	flags := optArg(argv, 3)
 
 	switch {
 	case flags&^known != 0:
-		return ssIvSecFlg, nil
+		return env.failRetadr(argv, ssIvSecFlg)
 	case flags&(secPERM|secSYSGBL|secPAGFIL) != 0 && flags&secGBL == 0:
-		return ssIvSecFlg, nil
+		return env.failRetadr(argv, ssIvSecFlg)
 	case flags&secPAGFIL != 0 && flags&secCRF != 0:
-		return ssIvSecFlg, nil
+		return env.failRetadr(argv, ssIvSecFlg)
+	case flags&secPAGFIL == 0 && optArg(argv, 7)&0xFFFF == 0:
+		return env.failRetadr(argv, ssIvSecFlg)
 	case flags&secPFNMAP != 0, flags&secPAGFIL == 0:
-		return ssUnsupport, nil
+		return env.failRetadr(argv, ssUnsupport)
 	}
 
 	a, st := env.readSectionArgs(argv)
 	if st != 0 {
-		return st, nil
+		return env.failRetadr(argv, st)
 	}
 
 	r, st := env.mapRange(a)
 	if st != 0 {
-		return st, nil
+		return env.failRetadr(argv, st)
 	}
 
 	p := env.Process
@@ -429,11 +440,11 @@ func serviceSysCrmpsc(env *Environment, argv []uint32) (uint32, error) {
 
 	pagcnt := optArg(argv, 8)
 	if pagcnt == 0 {
-		return ssIllPagCnt, nil
+		return env.failRetadr(argv, ssEndOfFile)
 	}
 
 	if system && !p.hasPrivilege(privSYSGBL) || flags&secPERM != 0 && !p.hasPrivilege(privPRMGBL) {
-		return ssNoPriv, nil
+		return env.failRetadr(argv, ssNoPriv)
 	}
 
 	s, st := env.createSection(&GlobalSection{
@@ -447,7 +458,7 @@ func serviceSysCrmpsc(env *Environment, argv []uint32) (uint32, error) {
 		Permanent:  flags&secPERM != 0,
 	}, int(pagcnt))
 	if st != ssNormal {
-		return st, nil
+		return env.failRetadr(argv, st)
 	}
 
 	if st := env.mapSection(s, a, r); st != ssNormal {
@@ -470,22 +481,22 @@ func serviceSysCrmpsc(env *Environment, argv []uint32) (uint32, error) {
 // SS$_IVSECFLG.
 func serviceSysMgblsc(env *Environment, argv []uint32) (uint32, error) {
 	if optArg(argv, 3)&^(secWRT|secSYSGBL|secEXPREG) != 0 {
-		return ssIvSecFlg, nil
+		return env.failRetadr(argv, ssIvSecFlg)
 	}
 
 	a, st := env.readSectionArgs(argv)
 	if st != 0 {
-		return st, nil
+		return env.failRetadr(argv, st)
 	}
 
 	r, st := env.mapRange(a)
 	if st != 0 {
-		return st, nil
+		return env.failRetadr(argv, st)
 	}
 
 	s := env.Sections.find(a.name, a.flags&secSYSGBL != 0, env.Process.UICGroup(), a.ident)
 	if s == nil {
-		return ssNoSuchSec, nil
+		return env.failRetadr(argv, ssNoSuchSec)
 	}
 
 	return env.mapSection(s, a, r), nil
@@ -538,6 +549,15 @@ func serviceSysDgblsc(env *Environment, argv []uint32) (uint32, error) {
 	return ssNormal, nil
 }
 
+// failRetadr returns status, for a $CRMPSC or $MGBLSC that fails before
+// mapping a page, after writing -1 to both longwords of its retadr (if
+// any), as VMS 7.3 does (testdata/mp/probe3).
+func (env *Environment) failRetadr(argv []uint32, status uint32) (uint32, error) {
+	_ = env.storeRetadr(optArg(argv, 1), nil)
+
+	return status, nil
+}
+
 // mapRange is the pages a mapping may use, lowest first, before the
 // section's size limits them: with SEC$M_EXPREG, every page from the
 // first page above P0's high-water mark (Environment.RegionSize[0]) up
@@ -585,9 +605,11 @@ func (env *Environment) mapRange(a sectionArgs) (pageRange, uint32) {
 // privileged modes with SEC$M_WRT, read-only for them without. A page
 // already there is replaced as by $CRETVA (SS$_PAGOWNVIO if a more
 // privileged mode owns it; SS$_NOPRIV for a system page, SS$_VASFULL
-// beyond the page table). Mapping writable a section not created
-// writable, or without the access its protection gives the process, is
-// SS$_NOPRIV. Mapping past P0's high-water mark moves it, as $CRETVA
+// beyond the page table). Mapping without the access the section's
+// protection gives the process is SS$_NOPRIV; a section may be mapped
+// writable whether or not it was created so (VMS 7.3,
+// testdata/mp/probe3). relpag at or past the section's end is
+// SS$_ENDOFFILE (the same). Mapping past P0's high-water mark moves it, as $CRETVA
 // does. retadr receives the range mapped (from storeRetadr; on an error,
 // what was mapped before it).
 func (env *Environment) mapSection(s *GlobalSection, a sectionArgs, r pageRange) uint32 {
@@ -598,12 +620,16 @@ func (env *Environment) mapSection(s *GlobalSection, a sectionArgs, r pageRange)
 		want |= accessWrite
 	}
 
-	if write && !s.Writable || !env.Process.uicAccess(s.Owner, s.Protection, want) {
+	if !env.Process.uicAccess(s.Owner, s.Protection, want) {
+		_ = env.storeRetadr(a.retadr, nil)
+
 		return ssNoPriv
 	}
 
 	if a.relpag >= uint32(len(s.Frames)) {
-		return ssBadParam
+		_ = env.storeRetadr(a.retadr, nil)
+
+		return ssEndOfFile
 	}
 
 	frames := s.Frames[a.relpag:]

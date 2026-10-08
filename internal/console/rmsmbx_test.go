@@ -93,7 +93,7 @@ line4:	.ascid	/line 4 of the child./
 // CHILDOUT (maxmsg 64, bufquo 48: room for two 20-byte lines), create a
 // subprocess running the image %[1]s at base priority %[2]d with
 // CHILDOUT as its output (its PID at data+4), sleep 10 s (the child
-// fills the mailbox meanwhile), then $OPEN CHILDOUT and $GET four
+// writes its first line meanwhile), then $OPEN CHILDOUT and $GET four
 // records, storing each $GET's status and RSZ at data+0x20 up, the
 // records at data+0x100 up, and 1 at data.
 const outParent = `
@@ -128,10 +128,22 @@ wakeup:	.long	4, 0, 0, delta, 0
 delta:	.quad	-100000000
 `
 
+// queuedMessages is how many messages the system's mailboxes hold.
+func queuedMessages(c *console.Console) int {
+	n := 0
+	for _, m := range c.RTL.Mailboxes.All() {
+		n += m.Messages()
+	}
+
+	return n
+}
+
 // TestRMSMailbox_childOutput: the child's lines arrive whole and in
-// order. The child fills the mailbox while process 1 sleeps and waits
-// for room (MWAIT, RWMBX); process 1's $GETs make room, and then wait
-// (LEF) for the lines the child hasn't written yet.
+// order. Each of the child's LIB$PUT_OUTPUT lines (an RMS $PUT) finishes
+// only when it has been read, as on VMS (testdata/mp/probe3): while
+// process 1 sleeps, the child writes its first line and waits (LEF) with
+// it in the mailbox; process 1's $GETs take each line, and wait (LEF)
+// for the ones the child hasn't written yet.
 func TestRMSMailbox_childOutput(t *testing.T) {
 	c, _ := scheduledConsole(t, longQuantum, brbSelf)
 	exe := buildImage(t, c, "outchild", outChild)
@@ -148,12 +160,14 @@ func TestRMSMailbox_childOutput(t *testing.T) {
 
 	putFABRAB(t, c, one, "CHILDOUT", byte(vmsdef.Symbols["FAB$M_GET"]))
 
-	sawChildMWAIT, sawParentLEF := false, false
+	sawChildLEF, sawParentLEF := false, false
 
 	runUntil(t, c, 400000, func() bool {
-		if pid := longwordAt(t, c, one, mbxData+4); pid != 0 {
-			if child, ok := one.FindProcess(pid); ok && stateOf(child) == sched.StateMWAIT {
-				sawChildMWAIT = true
+		// Before process 1 opens the mailbox: the child waiting for its
+		// first line to be read, the line in the mailbox.
+		if pid := longwordAt(t, c, one, mbxData+4); pid != 0 && longwordAt(t, c, one, mbxData+8) == 0 {
+			if child, ok := one.FindProcess(pid); ok && stateOf(child) == sched.StateLEF && queuedMessages(c) == 1 {
+				sawChildLEF = true
 			}
 		}
 
@@ -186,8 +200,8 @@ func TestRMSMailbox_childOutput(t *testing.T) {
 		}
 	}
 
-	if !sawChildMWAIT || !sawParentLEF {
-		t.Errorf("seen: the child waiting for room %v, process 1 waiting for a line %v; want both", sawChildMWAIT, sawParentLEF)
+	if !sawChildLEF || !sawParentLEF {
+		t.Errorf("seen: the child waiting for its line to be read %v, process 1 waiting for a line %v; want both", sawChildLEF, sawParentLEF)
 	}
 }
 

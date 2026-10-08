@@ -20,14 +20,16 @@ import (
 // it. The access the FAB asks for is checked against the mailbox's
 // protection when it's opened (read for FAB$V_GET, write for FAB$V_PUT).
 //
-// A $PUT is a mailbox write that doesn't wait for its message to be
-// read: a waiting read gets it at once, or it's queued and the $PUT
-// completes. If the mailbox is full, the writer waits for room, as a
-// $QIO write does in resource wait mode (RWMBX), or, with resource wait
-// mode off, gets SS$_MBFULL. A $GET takes the oldest message, or, with
-// none, waits (LEF) for one. *Unconfirmed:* that VMS's RMS doesn't wait
-// for a $PUT's message to be read; the subtask's design says so, and an
-// output mailbox a parent reads only when it chooses needs it.
+// A $PUT is a plain mailbox write (no IO$M_NOW), which finishes when its
+// message has been read, as VMS 7.3's RMS does (testdata/mp/probe3: an
+// asynchronous $PUT with no one reading was RMS$_PENDING): a waiting read
+// gets it at once, or it's queued and the writer waits (LEF) until it's
+// read. An asynchronous one (RAB$V_ASY) returns pending instead, and
+// $WAIT waits (WaitPut). If the mailbox is full, the writer waits for
+// room first, as a $QIO write does in resource wait mode (RWMBX), or,
+// with resource wait mode off, gets SS$_MBFULL. The write completes
+// without setting an event flag. A $GET takes the oldest message, or,
+// with none, waits (LEF) for one.
 
 // fabFACGet and fabFACPut are FAB$B_FAC's read and write bits.
 var (
@@ -40,6 +42,13 @@ type recordDevice struct {
 	env *Environment
 	ch  *channel
 	mbx *Mailbox // nil for NL:
+
+	// A $PUT not yet finished: putting is set from its start; putRecord
+	// is its record, and putWrite its write, once sent, until a reader
+	// has taken the message.
+	putting   bool
+	putRecord []byte
+	putWrite  *ioRequest
 }
 
 // OpenRecordDevice is rms.DeviceOpener's one method: device (a physical
@@ -79,35 +88,95 @@ func (env *Environment) OpenRecordDevice(device string, fac byte) (rms.RecordDev
 // Characteristics is the device's DEVCHAR.
 func (r *recordDevice) Characteristics() uint32 { return r.env.devChar(r.ch.Device) }
 
-// MaxRecord is a mailbox's largest message; NL: has no limit.
-func (r *recordDevice) MaxRecord() uint32 {
+// Put writes record as one message (see this file's opening comment).
+// A synchronous Put returns ErrWait until the message has been read (or,
+// first, while the mailbox is full); called again, it carries on with
+// the record it started with. An asynchronous one reports pending
+// instead.
+func (r *recordDevice) Put(record []byte, async bool) (uint32, bool, error) {
 	if r.mbx == nil {
-		return 0
+		return ssNormal, false, nil
 	}
 
-	return r.mbx.MaxMsg
+	if !r.putting {
+		r.putting, r.putRecord, r.putWrite = true, record, nil
+	}
+
+	if status, done := r.advancePut(); done {
+		return status, false, nil
+	}
+
+	if async {
+		return 0, true, nil
+	}
+
+	return 0, false, r.waitPut()
 }
 
-// Put writes record as one message (see this file's opening comment).
-// It returns ErrWait while the mailbox is full.
-func (r *recordDevice) Put(record []byte) (uint32, error) {
-	m, env := r.mbx, r.env
-	if m == nil {
+// WaitPut waits for a pending Put (rms.RecordDevice's).
+func (r *recordDevice) WaitPut() (uint32, error) {
+	if !r.putting {
 		return ssNormal, nil
 	}
 
-	if uint32(len(record)) > m.MaxMsg {
-		return ssMbTooSml, nil
+	if status, done := r.advancePut(); done {
+		return status, nil
 	}
 
-	req := &ioRequest{channel: r.ch, function: ioCode("IO$_WRITEVBLK"), modifiers: ioModNow, owner: env}
+	return 0, r.waitPut()
+}
 
-	st, reject := env.send(m, req, &mailboxMessage{data: string(record), pid: env.Process.PID})
-	if reject == ioResourceWait {
-		return 0, ErrWait
+// advancePut takes the $PUT under way as far as it can go: sends its
+// message, if it hasn't been, and reports whether it's finished, with
+// its status: SS$_NORMAL once a reader has taken the message, at once
+// if one was waiting.
+func (r *recordDevice) advancePut() (uint32, bool) {
+	m, env := r.mbx, r.env
+
+	finish := func(status uint32) (uint32, bool) {
+		r.putting, r.putRecord, r.putWrite = false, nil, nil
+
+		return status, true
 	}
 
-	return st.status, nil
+	if r.putWrite == nil {
+		if uint32(len(r.putRecord)) > m.MaxMsg {
+			return finish(ssMbTooSml)
+		}
+
+		req := &ioRequest{channel: r.ch, function: ioCode("IO$_WRITEVBLK"), owner: env, noFlag: true, boost: sched.ClassIOCompletion}
+
+		st, reject := env.send(m, req, &mailboxMessage{data: string(r.putRecord), pid: env.Process.PID})
+
+		switch reject {
+		case ioResourceWait:
+			return 0, false // the mailbox is full: send waits for room
+		case ioPending:
+			r.putWrite = req // queued, until a reader takes it
+		default:
+			return finish(st.status) // a reader took it, or it failed
+		}
+	}
+
+	switch {
+	case r.putWrite.cancelled:
+		return finish(ssAbort)
+	case r.putWrite.done:
+		return finish(ssNormal)
+	}
+
+	return 0, false
+}
+
+// waitPut returns the wait of a $PUT that can't finish yet: for room in
+// the mailbox (send has said so), or for its message to be read.
+func (r *recordDevice) waitPut() error {
+	req := r.putWrite
+	if req == nil {
+		return ErrWait
+	}
+
+	return r.env.waitOn(sched.StateLEF, sched.ResourceNone, eventFlagBoost, func() bool { return req.done })
 }
 
 // Get reads the oldest message (see this file's opening comment). It
@@ -218,5 +287,7 @@ func (env *Environment) PutOutput(record string) (uint32, error) {
 		env.outputStream = out
 	}
 
-	return out.Put([]byte(record))
+	status, _, err := out.Put([]byte(record), false)
+
+	return status, err
 }

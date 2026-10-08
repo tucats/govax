@@ -88,8 +88,14 @@ var (
 	rabPSZ = rabOffset("PSZ")
 )
 
-// ropPMT is RAB$M_PMT, the ROP bit asking a terminal $GET to prompt.
-var ropPMT = vmsConst("RAB$M_PMT")
+// ropPMT is RAB$M_PMT, the ROP bit asking a terminal $GET to prompt;
+// ropASY is RAB$M_ASY, asking for an operation that would wait to return
+// RMS$_PENDING instead, and finish at $WAIT (only a record device's $PUT
+// can wait so).
+var (
+	ropPMT = vmsConst("RAB$M_PMT")
+	ropASY = vmsConst("RAB$M_ASY")
+)
 
 // RAB$B_RAC values (record access modes) this package recognizes. Real
 // VMS defines several (sequential, keyed by an indexed file's key, direct

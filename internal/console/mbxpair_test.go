@@ -442,7 +442,9 @@ func TestMailboxPair_full(t *testing.T) {
 
 		p.iosb(p.one, 16, "first read", ssNormal, 4, two)
 		p.iosb(p.one, 24, "second read", ssNormal, 4, two)
-		p.iosb(p.two, 24, "second write", ssNormal, 4, p.one.Process.PID)
+		// An IO$M_NOW write's IOSB has PID 0, even handed to a waiting
+		// read (VMS 7.3, testdata/mp/probe3).
+		p.iosb(p.two, 24, "second write", ssNormal, 4, 0)
 
 		if got := p.text(p.one, 48, 8); got != "abcdefgh" {
 			t.Errorf("read %q, want \"abcdefgh\"", got)

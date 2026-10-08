@@ -171,7 +171,7 @@ as today).
 ## Open questions
 
 - Whether a read's IOSB should carry the writer's PID when the write was
-  IO$M_NOW (it does in govax now; check the manual's wording).
+  IO$M_NOW. *Settled by probe 3:* it does, on VMS 7.3 as in govax.
 - `SEC$M_EXPREG` placement interplay with the image's P0 high-water mark
   (`RegionSize`). *Settled in subtask 5:* the mapping starts at the
   first page above the mark and moves it, as `$CRETVA` does.
@@ -181,34 +181,28 @@ as today).
 Things Phase 46 did not get to, so that they are not lost. Each is either
 waiting on a run on the VAX, or optional work for a later phase.
 
-1. **Probe 3 to run again** (`testdata/mp/probe3`: its own volume and
-   scripts). Its first run (with `testdata/mp/run46`, 2026-10-08) stopped
-   at once, SS$_MBTOOSML; the rest of that session worked (see the
-   progress log). Most of the unconfirmed items below wait on it.
-2. **The keywords of `$ENQ`'s 12th and 13th arguments and `$GETLKI`'s
+1. **The keywords of `$ENQ`'s 12th and 13th arguments and `$GETLKI`'s
    7th** aren't known (round 6: not NULLARG); govax's macros call them
    ARG12, ARG13, and ARG7. A later probe round can try candidates, as
    round 5 did for `$IDTOASC`.
-3. **Unconfirmed behavior** (each marked in the progress log): the boost
-   classes of a terminal set or sense mode, of a mailbox attention AST,
-   of `$SETEF` (none), and of a CTRL/C or CTRL/Y AST to a waiting process;
-   that either access is enough for a mailbox `$ASSIGN`, and SETPROT's
-   argument and who may use it; a mailbox's DVI$_PID being its creator's;
-   several global section statuses (SS$_ILLPAGCNT, SS$_BADPARAM,
-   SS$_IVSECFLG, `$DGBLSC` not checking the protection mask), no
-   logical-name translation of a section name, and a `$CRMPSC` whose
-   ident matches no section of the name making another; FAB$W_MRS of a
-   mailbox; whether RMS's `$PUT` to a mailbox waits for the message to be
-   read.
-4. **Terminal simplifications:** a terminal `$QIO` read that must wait
+2. **Unconfirmed behavior** (each marked in the progress log; probe 3
+   settled the rest): the boost classes of a terminal set or sense mode,
+   of a mailbox attention AST, of `$SETEF` (none), and of a CTRL/C or
+   CTRL/Y AST to a waiting process; that either access is enough for a
+   mailbox `$ASSIGN`, and SETPROT's argument and who may use it;
+   `$DGBLSC` not checking the protection mask; no logical-name
+   translation of a section name; which rule makes a file section with
+   no channel SS$_IVSECFLG; whether `$OPEN` of a mailbox stores 0 in
+   FAB$W_MRS or leaves it alone.
+3. **Terminal simplifications:** a terminal `$QIO` read that must wait
    makes the `$QIO` itself wait, rather than returning with the read
    pending (a program doing other work before it waits for the read's
    event flag would see the difference). The old `DECC$GETS` and
    `EXE$INPUT` shims still block every process. The console's own prompt
    after a run stopped while a process waited for input isn't tested.
-5. **File-backed sections** (`$CRMPSC` of a file's blocks, private or
+4. **File-backed sections** (`$CRMPSC` of a file's blocks, private or
    global) are SS$_UNSUPPORTED; so is `SEC$M_EXPREG` in P1.
-6. **The flaky test** `TestExecute_stopsOnAttention` (it races
+5. **The flaky test** `TestExecute_stopsOnAttention` (it races
    `Engine.Attention` on a goroutine against `Execute`'s start) predates
    this phase and is still there.
 
@@ -647,3 +641,37 @@ waiting on a run on the VAX, or optional work for a later phase.
     code (`TestServiceMacroObjects`, with rounds 5 and 6 added). VMS 7.3's
     `$ENQ` has 13 arguments and `$GETLKI` 7; the keywords of the ones past
     the manual's lists aren't known.
+- 2026-10-08: Probe 3's second run (`testdata/mp/probe3/vax/probe3.log`)
+  ran to the end. govax's report (`TestProbe3`) now matches it line for
+  line, apart from PIDs and the mapped addresses (VMS's P0 holds the
+  shareable RTL images after the program, govax's doesn't; the sizes
+  match). **Confirmed** as govax had them: the PIDs in every mailbox
+  IOSB but one, `$GETDVI`'s message count and reference count, the
+  section statuses for flags without SEC$M_GBL, ident matching (and a
+  `$CRMPSC` whose ident matches no section of the name creates another),
+  NOSUCHSEC, `$DGBLSC`, FAB$L_DEV, and `$GET` of messages and end of file.
+  **Changed** to VMS's behavior:
+  - A mailbox's DVI$_PID is 0, from either side (it was the creator's);
+    its owner UIC is still the creator's.
+  - An IO$M_NOW write's IOSB has PID 0 even when a waiting read takes
+    the message (it had the reader's).
+  - `$CRMPSC` and `$MGBLSC` write -1 to both longwords of retadr when
+    they fail before mapping a page (`failRetadr`).
+  - `$CRMPSC` with pagcnt 0 and `$MGBLSC` with relpag past the section's
+    end are SS$_ENDOFFILE (were SS$_ILLPAGCNT and SS$_BADPARAM); a file
+    section with no channel is SS$_IVSECFLG (was SS$_UNSUPPORTED, which
+    a file section on a channel still is).
+  - A section created without SEC$M_WRT may be mapped writable (was
+    SS$_NOPRIV).
+  - `$OPEN` of a mailbox leaves FAB$W_MRS alone (it stored the largest
+    message; VMS showed 0).
+  - **An RMS `$PUT` to a mailbox finishes when its message has been
+    read** (it finished at once): VMS returned RMS$_PENDING for an
+    asynchronous `$PUT` no one was reading. A synchronous `$PUT` (and so
+    `LIB$PUT_OUTPUT` to a mailbox SYS$OUTPUT) waits in LEF; with
+    RAB$V_ASY it returns RMS$_PENDING and `$WAIT` waits
+    (`rms/recdevice.go`, `rms/wait.go`, `corevms/recdevice.go`). The
+    write sets no event flag (`ioRequest.noFlag`).
+    `TestRMSMailbox_childOutput` now sees the child waiting for its first
+    line to be read.
+  - RAB$L_STV after a `$GET` of end of file is 0 (it was RMS$_EOF).

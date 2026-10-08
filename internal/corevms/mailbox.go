@@ -343,9 +343,9 @@ func serviceSysCrembx(env *Environment, argv []uint32) (uint32, error) {
 		m.logicalName, m.logicalTable, m.logicalMode = name, table, lnm.Mode(mode)
 	}
 
-	// The creator owns it ($GETDVI's DVI$_PID and DVI$_OWNUIC) for as
-	// long as it exists, whoever else assigns channels to it.
-	d.PID = env.Process.PID
+	// The creator's UIC owns it ($GETDVI's DVI$_OWNUIC) for as long as it
+	// exists, whoever else assigns channels to it. No process owns it:
+	// its DVI$_PID is 0, from either side (VMS 7.3, testdata/mp/probe3).
 	env.Mailboxes.byDevice[d] = m
 	env.storeNewChannel(chanAdr, device, d, mode)
 

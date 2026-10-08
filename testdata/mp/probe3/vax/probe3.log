@@ -1,0 +1,95 @@
+
+$ MACRO/NOLIST PROBE3C
+$ MACRO/NOLIST PROBE3
+$ LINK PROBE3C
+$ LINK PROBE3
+$ here = F$ENVIRONMENT("DEFAULT")
+$ PROBE3 :== $DUA1:[000000]PROBE3.EXE
+$ PROBE3 DUA1:[000000]PROBE3C.EXE
+Part 1: mailboxes between two processes
+1.1 child's DVI$_PID of P3_A (the parent made it): ZERO 00000000
+1.1 child's DVI$_OWNUIC of P3_A: 00010004
+1.1 child's DVI$_PID of P3_B: ZERO 00000000
+1.1 the child's own PID: CHILD 00000127
+1.1 parent's read of the child's plain write: status 00000001, count 16, PID CHILD 00000127
+1.2 parent's DVI$_PID of P3_A: ZERO 00000000
+1.2 parent's DVI$_OWNUIC of P3_A: 00010004
+1.2 parent's DVI$_REFCNT of P3_A: 00000002
+1.2 parent's DVI$_DEVDEPEND of P3_A (empty): 00000000
+1.2 parent's DVI$_DEVDEPEND2 of P3_A (empty): 00000000
+1.2 parent's DVI$_DEVBUFSIZ of P3_A: 00000040
+1.3 plain write to a waiting read: the write's IOSB: status 00000001, count 2, PID CHILD 00000127
+1.3 the read's IOSB: status 00000001, count 2, PID PARENT 00000114
+1.4 plain write P2: the write's IOSB: status 00000001, count 2, PID CHILD 00000127
+1.4 IO$M_NOW write N1, queued: the write's IOSB: status 00000001, count 2, PID ZERO 00000000
+1.4 plain $QIO write P3, queued: $QIO's status: 00000001
+1.4 DVI$_DEVDEPEND of P3_A, two messages queued: 00000002
+1.4 DVI$_DEVDEPEND2 of P3_A, two messages queued: 00000000
+1.4 DVI$_REFCNT of P3_A: 00000002
+1.4 P2's read IOSB: status 00000001, count 2, PID PARENT 00000114
+1.4 N1's read IOSB (a queued IO$M_NOW write): status 00000001, count 2, PID PARENT 00000114
+1.4 P3's read IOSB (a queued plain write): status 00000001, count 2, PID PARENT 00000114
+1.4 P3's write IOSB, after it was read: status 00000001, count 2, PID CHILD 00000127
+1.5 IO$M_NOW write to a waiting read: the write's IOSB: status 00000001, count 2, PID ZERO 00000000
+1.5 the read's IOSB: status 00000001, count 2, PID PARENT 00000114
+1.6 end-of-file message to a waiting read: the write's IOSB: status 00000001, count 0, PID CHILD 00000127
+1.6 the read's IOSB: status 00000870, count 0, PID PARENT 00000114
+1.7 the child's final status: 00000001
+Part 2: global sections
+2.1 $CRMPSC of a new 4-page section: status 00000619, retadr 00026A00 to 000271FF
+2.2 $MGBLSC of it: status 00000001, retadr 00027200 to 000279FF
+2.2 written through the first mapping, read through the second: 1234ABCD
+2.3 $CRMPSC of the same name again: status 00000001, retadr 00027A00 to 000281FF
+2.3 what the third mapping holds: 1234ABCD
+2.4 $CRMPSC of the same name, bigger: status 00000001, retadr 00028200 to 000289FF
+2.5 $MGBLSC of a name that doesn't exist: status 00000978, retadr FFFFFFFF to FFFFFFFF
+2.6 $CRMPSC with pagcnt 0: status 00000870, retadr FFFFFFFF to FFFFFFFF
+2.7 $MGBLSC with relpag past the section's end: status 00000870, retadr FFFFFFFF to FFFFFFFF
+2.8 $MGBLSC with relpag 2 of 4: status 00000001, retadr 00028A00 to 00028DFF
+2.9 $CRMPSC with SEC$M_CRF and SEC$M_PAGFIL: status 0000016C, retadr FFFFFFFF to FFFFFFFF
+2.10 $CRMPSC with SEC$M_PAGFIL but not SEC$M_GBL: status 0000016C, retadr FFFFFFFF to FFFFFFFF
+2.11 $CRMPSC with SEC$M_GBL but not SEC$M_PAGFIL (no channel): status 0000016C, retadr FFFFFFFF to FFFFFFFF
+2.12 $CRMPSC with SEC$M_PERM but not SEC$M_GBL: status 0000016C, retadr FFFFFFFF to FFFFFFFF
+2.13 $CRMPSC with SEC$M_SYSGBL but not SEC$M_GBL: status 0000016C, retadr FFFFFFFF to FFFFFFFF
+2.14 $CRMPSC of P3_IDS, version 1.5: status 00000619, retadr 00028E00 to 000295FF
+2.15 $MGBLSC, SEC$K_MATEQU 1.5: status 00000001, retadr 00029600 to 00029DFF
+2.15 $MGBLSC, SEC$K_MATEQU 1.6: status 00000978, retadr FFFFFFFF to FFFFFFFF
+2.15 $MGBLSC, SEC$K_MATLEQ 1.4: status 00000001, retadr 00029E00 to 0002A5FF
+2.15 $MGBLSC, SEC$K_MATLEQ 1.6: status 00000978, retadr FFFFFFFF to FFFFFFFF
+2.15 $MGBLSC, SEC$K_MATLEQ 2.5: status 00000978, retadr FFFFFFFF to FFFFFFFF
+2.15 $MGBLSC, SEC$K_MATALL 2.0: status 00000001, retadr 0002A600 to 0002ADFF
+2.15 $MGBLSC, match control 7: status 000002E4, retadr FFFFFFFF to FFFFFFFF
+2.15 $MGBLSC, no ident: status 00000001, retadr 0002AE00 to 0002B5FF
+2.16 $CRMPSC of P3_IDS, SEC$K_MATEQU 2.0: status 00000619, retadr 0002B600 to 0002BDFF
+2.16 then $MGBLSC, SEC$K_MATEQU 2.0: status 00000001, retadr 0002BE00 to 0002C5FF
+2.17 $CRMPSC of P3_RO, not writable: status 00000619, retadr 0002C600 to 0002CDFF
+2.17 $MGBLSC of P3_RO, writable: status 00000001, retadr 0002CE00 to 0002D5FF
+2.17 $MGBLSC of P3_RO, read-only: status 00000001, retadr 0002D600 to 0002DDFF
+2.18 $DGBLSC of P3_SEC while mapped: 00000001
+2.18 then $MGBLSC of P3_SEC: status 00000978, retadr FFFFFFFF to FFFFFFFF
+2.18 what the first mapping still holds: 1234ABCD
+2.19 $DGBLSC of a name that doesn't exist: 00000978
+2.20 $DGBLSC of a group section with SEC$M_SYSGBL: 00000978
+Part 3: RMS on a mailbox and on NL:
+3.1 $OPEN of a mailbox: 00010001
+3.1 FAB$L_DEV: 0C150001
+3.1 FAB$W_MRS: 00000000
+3.1 FAB$B_RFM: 00000002
+3.1 FAB$B_RAT: 00000000
+3.1 FAB$B_ORG: 00000000
+3.2 $CONNECT (asynchronous): 00010001
+3.3 asynchronous $PUT, no one reading: 00018009
+3.3 then a read of the mailbox: status 00000001, count 5, PID PARENT 00000114
+3.3 then $WAIT: 00010001
+3.3 RAB$L_STS: 00010001
+3.4 $GET of a message: 00010001
+3.4 RAB$W_RSZ: 00000002
+3.5 $GET of an end-of-file message: 0001827A
+3.5 RAB$L_STV: 00000000
+3.6 $CLOSE: 00010001
+3.7 $OPEN of NL:: 00010001
+3.7 FAB$L_DEV: 0C150001
+3.7 FAB$W_MRS: 00000000
+3.7 $GET from NL:: 0001827A
+Done
+$ SET NOVERIFY
