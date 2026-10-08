@@ -145,14 +145,17 @@ func (env *Environment) storeRetadr(retadr uint32, done []uint32) bool {
 }
 
 // replacePTE writes pte as the page table entry for the page at addr,
-// giving back the physical page the old entry had, if it was valid.
+// giving back the physical page the old entry had, if it was valid (or,
+// for a global section's page, the section's reference: releaseFrame).
 func (env *Environment) replacePTE(addr uint32, old, pte vm.PTE) bool {
 	if env.mem.StorePTE(env.cpu, addr, pte) != nil {
 		return false
 	}
 
+	delete(env.sectionPages, addr)
+
 	if old.Valid() {
-		env.mem.FreePage(old.PFN())
+		env.releaseFrame(old.PFN())
 	}
 
 	return true

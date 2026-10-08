@@ -356,7 +356,7 @@ func serviceSysAdjwsl(env *Environment, argv []uint32) (uint32, error) {
 // temporary ones nobody else uses), cancels its outstanding $SETIMR
 // timers and $SCHDWK wakeups, discards its queued user-mode ASTs, and
 // forgets its user-mode exit handlers and any $PUTMSG or $CMKRNL left
-// waiting for its routine. The console calls it when an
+// waiting for its routine, and unmaps the global sections it mapped. The console calls it when an
 // image started by RUN returns or exits (and does its own logical-name
 // rundown alongside).
 func (env *Environment) ImageRundown() {
@@ -371,6 +371,7 @@ func (env *Environment) ImageRundown() {
 	env.cancelChangeModeCalls()
 	env.cancelConditions()
 	env.cancelPageLocks()
+	env.unmapSections()
 	env.resetImagePrivileges()
 	env.qiowWaits = nil
 }

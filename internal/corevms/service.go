@@ -63,6 +63,7 @@ func registerServices(t *ServiceTable) {
 	registerCoreServices(t)
 	registerAddressSpaceServices(t)
 	registerPageProtectionServices(t)
+	registerSectionServices(t)
 	registerProcessServices(t)
 	registerSuspendServices(t)
 	registerPrivilegeServices(t)

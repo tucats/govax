@@ -250,7 +250,8 @@ func (sys *System) mapShared(s *ProcessSpace) error {
 }
 
 // TeardownAddressSpace gives back everything s uses: every physical page
-// its P0 and P1 pages were given (but not the shared ones), then its page
+// its P0 and P1 pages were given (but not the shared ones; a global
+// section's page only loses the section a reference), then its page
 // tables' S0 pages. It does nothing for process 1's space, whose tables
 // are VMINIT's. The process must not be the current one: the CPU's
 // registers, and the translation buffer, would still describe tables
@@ -276,7 +277,7 @@ func (sys *System) TeardownAddressSpace(s *ProcessSpace) error {
 			pte := vm.PTE(binary.LittleEndian.Uint32(buf[i*4:]))
 
 			if pte.Valid() && !s.shared[pte.PFN()] {
-				sys.mem.FreePage(pte.PFN())
+				sys.releaseFrame(pte.PFN())
 			}
 		}
 

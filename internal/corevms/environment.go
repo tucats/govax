@@ -93,6 +93,10 @@ type Environment struct {
 	channels    []*channel
 	nextChannel uint32
 
+	// sectionPages are the pages of the process's address space mapped
+	// to global sections (gblsec.go), which image rundown unmaps.
+	sectionPages map[uint32]bool
+
 	// Process is the emulated VMS process this Environment runs images in:
 	// its PID, username, UIC and quota state (process.go,
 	// docs/PHASE-26.md). Built fresh by NewEnvironment.

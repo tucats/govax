@@ -1,6 +1,6 @@
 # Phase 46 — Multiprocessing, part 4: interprocess communication
 
-**Status:** in progress (subtasks 1-4 done, 2026-10-07); decisions taken
+**Status:** in progress (subtasks 1-5 done, 2026-10-08); decisions taken
 2026-10-06 (see PHASE-43.md, Part A). Needs Phase 45.
 
 The program this phase belongs to is described in
@@ -148,7 +148,7 @@ as today).
 5. **Global sections**: create, map, delete, rundown unmapping, reference
    counts, name scopes, errors (SS$_GPTFULL-style exhaustion,
    SS$_NOSUCHSEC, SS$_DUPLNAM...). Tests: two processes sharing a counter
-   protected by a `BBSSI` spinlock under small quanta.
+   protected by a `BBSSI` spinlock under small quanta. *Done (2026-10-08).*
 6. **RMS on mailboxes and NL:**. Tests: a child whose SYS$OUTPUT is a
    mailbox; its `LIB$PUT_OUTPUT` lines read by the parent.
 7. **The shared terminal** (bug 6). Tests with a scripted input stream:
@@ -171,7 +171,8 @@ as today).
 - Whether a read's IOSB should carry the writer's PID when the write was
   IO$M_NOW (it does in govax now; check the manual's wording).
 - `SEC$M_EXPREG` placement interplay with the image's P0 high-water mark
-  (`RegionSize`).
+  (`RegionSize`). *Settled in subtask 5:* the mapping starts at the
+  first page above the mark and moves it, as `$CRETVA` does.
 
 ## Progress log
 
@@ -351,3 +352,74 @@ as today).
     before the setter goes on past the instruction that set the flag.
     Its last flag is set by a `$GETJPIW`; with `postFlag`'s report taken
     out, process 2 runs on past it).
+- 2026-10-08: Subtask 5 (global sections). From the System Services
+  manual's descriptions and *VAX/VMS Internals and Data Structures*,
+  sections 14.3 (the global section descriptor) and 16.3 (the section
+  services).
+  - **`corevms/gblsec.go`:** `$CRMPSC`, `$MGBLSC`, `$DGBLSC`, and the
+    system's `GlobalSections` table (`System.Sections`). Page-file
+    sections only (`SEC$M_GBL!SEC$M_PAGFIL`, with `SEC$M_WRT`,
+    `SEC$M_SYSGBL`, `SEC$M_PERM`, `SEC$M_EXPREG`); a file section
+    (private or global) or one mapped by PFN is SS$_UNSUPPORTED. The
+    `SEC$` names are in `vmsdef.LibrarySymbols` (STARLET.OLB's
+    `$SECDEF`), not `vmsdef.Symbols`.
+  - **Frames:** a section's physical pages are allocated, zeroed, when
+    it's created, and the section owns them; a mapping writes valid PTEs
+    pointing at them (no global page table, no paging). The reference
+    count is the number of process PTEs mapping the section, as the
+    book says. Every place that gave back a replaced PTE's physical page
+    (`replacePTE`, so `$CRETVA`/`$DELTVA`/`$CNTREG`, and
+    `TeardownAddressSpace`) now goes through `System.releaseFrame`,
+    which, for a section's page, drops the count instead. A temporary
+    section goes when the count reaches zero; a permanent one
+    (PRMGBL) stays until `$DGBLSC`, which (book, 16.3.3) takes the name
+    off the list at once (a new section may take it), clears the
+    permanent flag, and leaves the section to go with its last mapping.
+  - **Image rundown** (`unmapSections`): VMS deletes P0 at image exit;
+    govax keeps P0, but each page the process mapped to a section is
+    reset to a new process's demand-zero PTE and the section loses the
+    reference. Process deletion runs it too, and teardown catches
+    anything left.
+  - **Names and scope:** 1-43 characters (SS$_IVLOGNAM), compared as
+    given, a group section seen in its creator's UIC group, a system
+    one (SYSGBL to create or delete) everywhere. *Unconfirmed:* no
+    logical-name translation of the name (the book mentions one for
+    shared-memory sections; govax doesn't model shared memory).
+  - **Idents:** a section's version (major in bits 24-31, minor 0-23)
+    from the ident quadword; `$MGBLSC` matches with SEC$K_MATALL,
+    MATEQU (same version), or MATLEQ (same major, section minor at
+    least the mapper's); another control is SS$_IVSECIDCTL.
+    *Unconfirmed:* a `$CRMPSC` whose ident matches no existing section
+    of the name creates another (SS$_CREATED), several sections sharing
+    the name.
+  - **Mapping:** at inadr's pages (either order), lowest first, as many
+    as both the range and the section from relpag have; read-only
+    (KR/ER/SR/UR for the access mode) or, with SEC$M_WRT, read/write.
+    `$CRMPSC` of an existing section maps it and returns SS$_NORMAL,
+    SS$_CREATED when it made it. Mapping needs read access by the UIC
+    protection mask (`prot`, against the creator's UIC; `uicprot.go`),
+    write access too for a writable mapping, and a writable mapping of a
+    section not created writable is SS$_NOPRIV. With SEC$M_EXPREG the
+    mapping starts above P0's high-water mark (never page 0) and moves
+    it; expanding P1 is SS$_UNSUPPORTED.
+  - **Limits:** GBLSECTIONS (128, SS$_GSDFULL) and GBLPAGES (4096,
+    SS$_GPTFULL), fields of the table; physical memory running out is
+    SS$_INSFMEM.
+  - *Unconfirmed statuses:* SS$_ILLPAGCNT for pagcnt 0, SS$_BADPARAM
+    for relpag past the section's end, SS$_IVSECFLG for SEC$M_CRF with
+    SEC$M_PAGFIL and for PERM, SYSGBL, or PAGFIL without GBL; `$DGBLSC`
+    doesn't check the protection mask (only the privileges).
+  - Tests: `console/gblsec_test.go` (on process 1, through the P1
+    vector: create and map, a second `$CRMPSC` and a read-only
+    `$MGBLSC` from page 1 onto the same frames; the flag, name, and
+    argument errors; protection; each ident match control; a temporary
+    section going with its last `$DELTVA` and its frames freed, a
+    permanent one keeping its contents unmapped, `$DGBLSC` while
+    mapped, image rundown; the limits and SEC$M_EXPREG) and
+    `console/gblpair_test.go` (`TestGlobalSectionPair_spinlock`: two
+    processes map COUNTER at different addresses and each add 1 to it
+    300 times under a `BBSSI`/`BBCCI` spinlock, with a 5-instruction
+    quantum; the CPU changes process while the lock is held, and all
+    600 increments land. Without the lock, about 240 are lost.
+    Process 2's deletion takes its reference away and leaves process
+    1's).

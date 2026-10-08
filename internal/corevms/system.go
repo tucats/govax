@@ -58,6 +58,10 @@ type System struct {
 	// INIT/VMINIT/ZERO start with none.
 	Mailboxes *MailboxTable
 
+	// Sections are the global sections $CRMPSC has created (gblsec.go),
+	// system state like the mailboxes.
+	Sections *GlobalSections
+
 	// Operator is OPCOM's state: the console's operator classes and the
 	// outstanding operator requests (operator.go).
 	Operator *operatorState
@@ -151,6 +155,7 @@ func NewSystem(cpu *vax.CPU, mem *vm.Memory, devices *iodev.DeviceTable, mounts 
 
 		EventFlagClusters: NewCommonEventFlags(),
 		Mailboxes:         NewMailboxTable(),
+		Sections:          NewGlobalSections(),
 		Operator:          newOperatorState(),
 		Clock:             wallClock,
 		NodeName:          nominalNodeName,
