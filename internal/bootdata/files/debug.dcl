@@ -111,6 +111,7 @@ grammar debugger
         keyword     vm                  /syntax=set_vm
         keyword     mapen               /syntax=set_vm
         keyword     base                /syntax=set_base/nonegatable
+        keyword     process             /syntax=set_process/nonegatable
 
     verb set/id=20
         parameter   what/id=21                  -
@@ -185,6 +186,14 @@ grammar debugger
         syntax set_module/id=279
             qualifier   all/id=280/nonegatable
             parameter   modules/id=281          -
+                        /type=$rest_of_line
+
+        ! SET PROCESS [/VISIBLE] [pid|name] makes a process the visible
+        ! one, whose registers and memory EXAMINE, DEPOSIT, and SHOW
+        ! REGISTERS see; with neither, the console's own (process 1).
+        syntax set_process/id=316
+            qualifier   visible/id=317/nonegatable
+            parameter   process/id=318          -
                         /type=$rest_of_line
 
         ! SET RADIX [/INPUT|/OUTPUT] DECIMAL|HEXADECIMAL|OCTAL|BINARY. With
@@ -266,6 +275,8 @@ grammar debugger
         keyword     mode                /syntax=show_mode
         keyword     radix               /syntax=show_radix
         keyword     image               /syntax=show_image
+        keyword     process             /syntax=show_process
+        keyword     processes           /syntax=show_process
         keyword     images              /syntax=show_image
         keyword     module              /syntax=show_module
         keyword     modules             /syntax=show_module
@@ -347,6 +358,7 @@ grammar debugger
         syntax show_image/id=270
             qualifier   full/id=271
         syntax show_module/id=272
+        syntax show_process/id=319
         syntax show_symbol/id=273
             qualifier   address/id=274
             qualifier   type/id=275

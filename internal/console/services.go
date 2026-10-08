@@ -153,6 +153,43 @@ func (c *Console) ReturnToProcessOne() error {
 	return c.RTL.SwitchCPU(c.Engine, c.RTL)
 }
 
+// ShowProcessContext moves the CPU to env's process, for the debugger's
+// SET PROCESS: its registers and memory are then what EXAMINE and SHOW
+// REGISTERS see, as after a run that stopped in it. The next run gives
+// the CPU back to process 1 (ReturnToProcessOne). Not while a nested run
+// has scheduling frozen.
+func (c *Console) ShowProcessContext(env *corevms.Environment) error {
+	if c.RTL == nil || c.Engine == nil || env == c.running() {
+		return nil
+	}
+
+	if c.Engine.SchedulingFrozen() {
+		return fmt.Errorf("console: can't change process during a nested run")
+	}
+
+	return c.RTL.SwitchCPU(c.Engine, env)
+}
+
+// ProcessPC is env's PC: the CPU's if the CPU holds env's process, and
+// otherwise the one saved in its hardware PCB when it last lost the CPU
+// (0 if it has never had it).
+func (c *Console) ProcessPC(env *corevms.Environment) uint32 {
+	if env == c.running() {
+		return c.CPU.GPR(vax.PC)
+	}
+
+	if env.Stacks == nil || env.Stacks.PCBB == 0 {
+		return 0
+	}
+
+	pcb, err := cpu.ReadPCB(c.Mem, env.Stacks.PCBB)
+	if err != nil {
+		return 0
+	}
+
+	return pcb.PC
+}
+
 // SystemService delegates to the running process (Phase 10's SYS$
 // dispatch).
 func (c *Console) SystemService(pc uint32) (uint32, bool, error) {

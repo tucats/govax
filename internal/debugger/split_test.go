@@ -132,6 +132,7 @@ func TestGrammarSplit(t *testing.T) {
 		{"SHOW MODE", debuggerOnly},
 		{"SHOW IMAGE", debuggerOnly},
 		{"SHOW MODULE", debuggerOnly},
+		{"SHOW PROCESS", both},
 		{"SHOW SYMBOL A", both}, // the console abbreviates SYMBOLS; the debugger's is VMS's SHOW SYMBOL
 		{"SHOW SCOPE", debuggerOnly},
 		{"SHOW LANGUAGE", debuggerOnly},
@@ -163,6 +164,8 @@ func TestGrammarSplit(t *testing.T) {
 		{"SET SOURCE A", debuggerOnly},
 		{"SET MODE SYMBOLIC", debuggerOnly},
 		{"SET MODULE A", debuggerOnly},
+		{"SET PROCESS 302", debuggerOnly},
+		{"SET PROCESS", debuggerOnly},
 		{"SET PSL N=1", debuggerOnly},
 		{"SET PTE 200 VALID=1", debuggerOnly},
 		{"SET FAULT 3", debuggerOnly},

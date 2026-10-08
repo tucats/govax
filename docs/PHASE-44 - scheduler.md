@@ -240,7 +240,11 @@ The layouts come from the User's Manual and, if Decision 7 allows, a VMS
   command's name and syntax against the VMS debugger's own (its SET
   PROCESS is for multiprocess programs; a probe could settle the form).
   Not yet scheduled to a subtask; a candidate for subtask 10, beside
-  SHOW SYSTEM/SHOW PROCESS, or a later phase.
+  SHOW SYSTEM/SHOW PROCESS, or a later phase. *Done (2026-10-08, in the
+  program's close-out; PHASE-48.md's progress log):* `SET PROCESS
+  [/VISIBLE] [pid|name]` and `SHOW PROCESS` (`debugger/process.go`);
+  STEP and breakpoints stay with process 1, and the next run gives the
+  CPU back to it.
 
 ## Open questions
 

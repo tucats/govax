@@ -477,3 +477,19 @@ subprocess to run, and the definitions a MACRO program needs to call
   The console's SHOW DEVICE now does both (it matched one whole name and
   printed nothing for none, as the C source did). Test:
   `TestShowDevices_prefix`; HELP SHOW DEVICE says so.
+- 2026-10-08: Close-out, Phase 44's future work: the debugger's SET
+  PROCESS (`debugger/process.go`, `debug.dcl` ids 316–319). `SET
+  PROCESS [/VISIBLE] [pid|name]` makes a process the visible one: the
+  CPU moves to it (`Console.ShowProcessContext`, through
+  `System.SwitchCPU`, as when a run stops in it), so EXAMINE, DEPOSIT,
+  and SHOW REGISTERS see its context; with no name it's process 1
+  again. A pid is hexadecimal, a name is looked up in process 1's group,
+  and a missing process is `%SYSTEM-W-NONEXPR`. Running is unchanged
+  (Decision 11): STEP and breakpoints stay with process 1, and GO, STEP,
+  and CALL hand the CPU back to it first. `SHOW PROCESS` (the debugger's
+  own; the console keeps its VMS-style one) lists every process's PID,
+  name, state (`System.ProcessState`), and PC (`Console.ProcessPC`: the
+  CPU's, or the one saved in the process's PCB), the visible one marked
+  "*" (govax's layout, unconfirmed). Tests: `TestSetProcess` (a
+  subprocess hibernating in an image; by name and by PID, back, and
+  NONEXPR), `TestGrammarSplit`; HELP SET PROCESS and SHOW PROCESS.

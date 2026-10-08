@@ -57,6 +57,7 @@ func (d *Dispatcher) bind() {
 	d.bindExamine()
 	d.bindMachine()
 	d.bindProgram()
+	d.bindProcess()
 
 	g.Bind("EXIT", end)
 	g.Bind("QUIT", end)

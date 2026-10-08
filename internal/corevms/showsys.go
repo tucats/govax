@@ -89,6 +89,14 @@ func (sys *System) mappedPages(env *Environment) int {
 	return count(0, env.Space.P0Pages) + count(0x80000000-env.Space.P1Pages*pageSize, env.Space.P1Pages)
 }
 
+// ProcessState is SHOW SYSTEM's state for env (processState): the
+// debugger's SHOW PROCESS shows it too.
+func (sys *System) ProcessState(env *Environment) string {
+	state, _ := sys.processState(env)
+
+	return state
+}
+
 // processState is SHOW SYSTEM's state for env: the scheduler's, or, with
 // no scheduler installed, CUR for the process the CPU holds and COM for
 // the rest.

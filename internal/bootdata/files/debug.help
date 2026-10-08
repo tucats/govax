@@ -548,6 +548,22 @@ $SE,MODU
   changes only the "set" column of SHOW MODULE and which modules a SHOW
   SYMBOL with no IN looks in.
 
+$SET,PROC
+$SE,PROC
+  Makes a process the visible one: the one whose registers and memory
+  EXAMINE, DEPOSIT, SHOW REGISTERS, and the rest show.
+
+  Format:
+
+    SET PROCESS [/VISIBLE] [pid | name]
+
+  pid is a process ID in hexadecimal (302 or 00000302); name is a process
+  name, as SHOW PROCESS lists it. With neither, the console's own process
+  (process 1) is made visible again. The CPU moves to the process, as
+  when a run stops in it. Running is unchanged: STEP and breakpoints
+  belong to process 1, and GO, STEP, and CALL give the CPU back to
+  process 1 first. A process that isn't there is %SYSTEM-W-NONEXPR.
+
 $SET,PSL
 $SE,PSL
   Changes fields of the processor status longword (govax's own).
@@ -887,6 +903,16 @@ $SH,MODU
   Format:
 
     SHOW MODULE
+
+$SHOW,PROC
+$SH,PROC
+  Lists the processes: each one's PID, name, scheduling state (as SHOW
+  SYSTEM shows it), and PC, the visible one (see SET PROCESS) marked
+  with "*".
+
+  Format:
+
+    SHOW PROCESS
 
 $SHOW,SYMB
 $SH,SYMB
