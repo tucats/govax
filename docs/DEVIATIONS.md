@@ -2870,8 +2870,15 @@ widened."
   - **Still open after it:** a child's current priority at creation (VMS
     7.1 saw base+2, 7.3 base+3; the book's boost of 6 fits neither;
     govax: the base); `$ENQ`'s twelfth argument's keyword (ARG12);
-    the other services' argument minimums (`p5args`, the second run);
     the brief SHOW DEVICE's disk columns (from memory).
+  - **Statuses of an all-zero call** (`p5args`, 2026-10-08): every
+    argument minimum now matches VMS 7.3's, but with every argument 0
+    some services report a different error first: VMS gave SS$_ACCVIO
+    for `$CRELOG`, `$CRMPSC`, `$DGBLSC`, `$MGBLSC`, `$GETJPI`, and
+    `$TRNLOG` (govax: SS$_BADPARAM, the section services' own statuses,
+    or, for `$GETJPI`, success), and SS$_BADPARAM for `$GETSYI` and
+    `$SNDOPR` (govax: SS$_ACCVIO). Which argument VMS checked first
+    can't be told from an all-zero call, so govax's order stands.
   - **Not modeled:** services that run in the caller's mode (`$ASCTIM`,
     `$BINTIM`, `$FAO`, `$FAOL`, `$NUMTIM`) fault on a bad address on
     VMS, which signals an access violation; govax's return SS$_ACCVIO.

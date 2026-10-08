@@ -255,7 +255,7 @@ func TestServiceSysCanwak(t *testing.T) {
 		t.Fatal("a cancelled wakeup still woke the process")
 	}
 
-	wantR0(t, callLNM(t, env, serviceSysReadef, 3), ssWasSet)
+	wantR0(t, callLNM(t, env, readefState, 3), ssWasSet)
 
 	// Other processes.
 	wantR0(t, callLNM(t, env, serviceSysCanwak, 0, a.desc("OTHER")), ssNonExpr)

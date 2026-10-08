@@ -45,7 +45,7 @@ ok1:	pushal	@#iosb1
 ok2:	cmpl	@#iosb1, #1		; the request's status
 	beql	ok3
 	brw	fail
-ok3:	pushl	#0
+ok3:	pushal	@#efstate		; the state longword (VMS requires it)
 	pushl	#3
 	calls	#2, @#sys$readef
 	cmpl	r0, #9			; SS$_WASSET: $SYNCH left flag 3 set
@@ -74,7 +74,7 @@ ok4:
 ok5:	cmpl	@#iosb2, #1
 	beql	ok6
 	brw	fail
-ok6:	pushl	#0
+ok6:	pushal	@#efstate		; the state longword (VMS requires it)
 	pushl	#4
 	calls	#2, @#sys$readef
 	cmpl	r0, #9			; SS$_WASSET
@@ -99,6 +99,7 @@ delta30: .quad	-^D300000		; 30ms
 iosb1:	.long	0, 0
 iosb2:	.long	0, 0
 pid:	.long	0
+efstate: .long	0
 
 ; A $GETJPI item list: JPI$_PID (^X319) into PID, then the terminator.
 itmlst:	.word	4, ^X319

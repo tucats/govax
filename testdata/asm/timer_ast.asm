@@ -39,7 +39,7 @@ ok1:	calls	#0, @#sys$hiber		; woken by TMRAST's $WAKE
 	cmpl	@#astparam, #^X77
 	beql	ok2
 	brw	fail
-ok2:	pushl	#0
+ok2:	pushal	@#efstate		; the state longword (VMS requires it)
 	pushl	#4
 	calls	#2, @#sys$readef
 	cmpl	r0, #9			; SS$_WASSET: the timer set flag 4 too
@@ -127,6 +127,7 @@ astparam:	.long	0
 jpiparam:	.long	0
 done:		.long	0
 pid:		.long	0
+efstate: .long	0
 
 ; A $GETJPI item list: JPI$_PID (^X319) into PID, then the terminator.
 itmlst:	.word	4, ^X319

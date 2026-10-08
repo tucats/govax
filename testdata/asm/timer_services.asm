@@ -56,7 +56,7 @@ ok3:
 ok4:
 
 ; ---- 4. flag 5 never set ----
-	pushl	#0
+	pushal	@#efstate		; the state longword (VMS requires it)
 	pushl	#5
 	calls	#2, @#sys$readef
 	cmpl	r0, #1
@@ -72,5 +72,6 @@ fail:	movl	#0, r0
 
 delta20: .quad	-^D200000		; 20ms
 delta50: .quad	-^D500000		; 50ms
+efstate: .long	0
 
 	.end	main

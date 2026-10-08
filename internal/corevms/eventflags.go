@@ -244,10 +244,10 @@ func serviceSysReadef(env *Environment, argv []uint32) (uint32, error) {
 		return st, nil
 	}
 
-	if state := optArg(argv, 1); state != 0 {
-		if err := env.mem.StoreLongword(env.cpu, state, *word); err != nil {
-			return ssAccVio, nil
-		}
+	// The state longword is required: 0 is SS$_ACCVIO, as VMS 7.3
+	// answered it (testdata/mp/probe5/vax/p5args.log).
+	if err := env.mem.StoreLongword(env.cpu, optArg(argv, 1), *word); err != nil || optArg(argv, 1) == 0 {
+		return ssAccVio, nil
 	}
 
 	return flagStatus(*word, bit), nil

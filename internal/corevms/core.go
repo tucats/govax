@@ -1,5 +1,7 @@
 package corevms
 
+import "github.com/tucats/govax/internal/vmsdef"
+
 import (
 	"github.com/tucats/govax/internal/vax"
 )
@@ -16,6 +18,12 @@ func serviceSysExpreg(env *Environment, argv []uint32) (uint32, error) {
 
 	if region > 2 {
 		return ssInvArg, nil
+	}
+
+	// No pages is SS$_ILLPAGCNT, as VMS 7.3 answered it
+	// (testdata/mp/probe5/vax/p5args.log).
+	if pageCount == 0 {
+		return vmsdef.Symbols["SS$_ILLPAGCNT"], nil
 	}
 
 	curMod := uint32(env.cpu.PSL().CurMod())

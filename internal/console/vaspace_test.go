@@ -33,6 +33,13 @@ func newServiceConsole(t *testing.T) *Console {
 func callService(t *testing.T, c *Console, name string, args ...uint32) uint32 {
 	t.Helper()
 
+	// Pass every argument, as a program's $xxx_S macro does: the
+	// arguments not given are 0. (VMS refuses fewer than its count with
+	// SS$_INSFARG; testdata/mp/probe5's step 8.)
+	for len(args) < fullArgCounts[name] {
+		args = append(args, 0)
+	}
+
 	addr, ok := c.Symbols.Get(name)
 	if !ok {
 		t.Fatalf("no %s symbol", name)
@@ -43,6 +50,13 @@ func callService(t *testing.T, c *Console, name string, args ...uint32) uint32 {
 	}
 
 	return c.CPU.GPR(vax.R0)
+}
+
+// fullArgCounts are the argument counts of the services these tests call
+// with fewer (the System Services Reference Manual's).
+var fullArgCounts = map[string]int{
+	"SYS$CRETVA": 3, "SYS$DELTVA": 3, "SYS$EXPREG": 4, "SYS$LKWSET": 3,
+	"SYS$ULWSET": 3, "SYS$LCKPAG": 3, "SYS$ULKPAG": 3, "SYS$SETPRT": 5,
 }
 
 // Scratch addresses for the address space tests: an address range array,

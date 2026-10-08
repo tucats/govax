@@ -15,7 +15,7 @@ func TestServiceSysClrefSetefReadef(t *testing.T) {
 		t.Fatalf("SETEF: r0=%d err=%v, want ssWasClr (the flag was clear)", r0, err)
 	}
 
-	if r0, err := serviceSysReadef(env, []uint32{3}); err != nil || r0 != ssWasSet {
+	if r0, err := readefState(env, []uint32{3}); err != nil || r0 != ssWasSet {
 		t.Fatalf("READEF after SETEF: r0=%d err=%v, want ssWasSet", r0, err)
 	}
 
@@ -23,7 +23,7 @@ func TestServiceSysClrefSetefReadef(t *testing.T) {
 		t.Fatalf("CLREF: r0=%d err=%v, want ssWasSet (the flag was set)", r0, err)
 	}
 
-	if r0, err := serviceSysReadef(env, []uint32{3}); err != nil || r0 != ssWasClr {
+	if r0, err := readefState(env, []uint32{3}); err != nil || r0 != ssWasClr {
 		t.Fatalf("READEF after CLREF: r0=%d err=%v, want ssWasClr", r0, err)
 	}
 }
@@ -120,4 +120,19 @@ func putWord(t *testing.T, env *Environment, addr uint32, v uint16) {
 	if err := env.mem.StoreWord(env.cpu, addr, v); err != nil {
 		t.Fatalf("StoreWord(%#x): %v", addr, err)
 	}
+}
+
+// readefScratch is a longword the tests' $READEF calls store the state
+// in: VMS requires the state argument (SS$_ACCVIO without it;
+// testdata/mp/probe5/vax/p5args.log), and these tests look only at R0.
+const readefScratch = 0xFFF00
+
+// readefState is $READEF with the scratch state longword when the call
+// gives none.
+func readefState(env *Environment, argv []uint32) (uint32, error) {
+	if len(argv) < 2 {
+		argv = append(argv, readefScratch)
+	}
+
+	return serviceSysReadef(env, argv)
 }

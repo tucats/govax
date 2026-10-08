@@ -46,11 +46,11 @@ func TestServiceSysSetimrDelta(t *testing.T) {
 
 	*now += 49 * ms
 
-	wantR0(t, callLNM(t, env, serviceSysReadef, 4), ssWasClr)
+	wantR0(t, callLNM(t, env, readefState, 4), ssWasClr)
 
 	*now += 1 * ms
 
-	wantR0(t, callLNM(t, env, serviceSysReadef, 4), ssWasSet)
+	wantR0(t, callLNM(t, env, readefState, 4), ssWasSet)
 
 	if env.PendingTimers() != 0 {
 		t.Errorf("%d timers queued after expiry, want 0", env.PendingTimers())
@@ -67,11 +67,11 @@ func TestServiceSysSetimrAbsoluteAndDefaults(t *testing.T) {
 
 	*now += 10 * ms
 
-	wantR0(t, callLNM(t, env, serviceSysReadef, 0), ssWasSet)
+	wantR0(t, callLNM(t, env, readefState, 0), ssWasSet)
 
 	// An absolute time already past fires at the next check.
 	wantR0(t, callLNM(t, env, serviceSysSetimr, 7, a.quad(1)), ssNormal)
-	wantR0(t, callLNM(t, env, serviceSysReadef, 7), ssWasSet)
+	wantR0(t, callLNM(t, env, readefState, 7), ssWasSet)
 
 	// A $WAITFR on a timer's flag waits until the time passes.
 	wantR0(t, callLNM(t, env, serviceSysSetimr, 9, a.quad(-5*ms)), ssNormal)
@@ -114,12 +114,12 @@ func TestServiceSysSetimrCommonCluster(t *testing.T) {
 
 	*now += ms
 
-	wantR0(t, callLNM(t, env, serviceSysReadef, 65), ssWasSet)
+	wantR0(t, callLNM(t, env, readefState, 65), ssWasSet)
 	wantR0(t, callLNM(t, env, serviceSysDacefc, 64), ssNormal)
 
 	*now += ms
 
-	wantR0(t, callLNM(t, env, serviceSysReadef, 1), ssWasClr) // runs the expiry
+	wantR0(t, callLNM(t, env, readefState, 1), ssWasClr) // runs the expiry
 
 	if c, _ := env.EventFlagClusters.Lookup(1, "T"); c.Flags&(1<<2) != 0 {
 		t.Error("timer set a flag in a cluster the process had disassociated")
@@ -144,7 +144,7 @@ func TestServiceSysCantim(t *testing.T) {
 
 	*now += ms
 
-	wantR0(t, callLNM(t, env, serviceSysReadef, 3), ssWasSet)
+	wantR0(t, callLNM(t, env, readefState, 3), ssWasSet)
 
 	if flagSet(env, 1) || flagSet(env, 2) {
 		t.Error("a cancelled timer set its flag")
@@ -187,5 +187,5 @@ func TestTimersImageRundown(t *testing.T) {
 
 	*now += ms
 
-	wantR0(t, callLNM(t, env, serviceSysReadef, 5), ssWasClr)
+	wantR0(t, callLNM(t, env, readefState, 5), ssWasClr)
 }

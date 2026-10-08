@@ -221,11 +221,11 @@ func TestServiceSysBintim(t *testing.T) {
 
 	*now += 10*vmsdef.TicksPerSecond - 1
 
-	wantR0(t, callLNM(t, env, serviceSysReadef, 3), ssWasClr)
+	wantR0(t, callLNM(t, env, readefState, 3), ssWasClr)
 
 	*now++
 
-	wantR0(t, callLNM(t, env, serviceSysReadef, 3), ssWasSet)
+	wantR0(t, callLNM(t, env, readefState, 3), ssWasSet)
 }
 
 func TestServiceSysBintimErrors(t *testing.T) {

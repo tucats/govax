@@ -74,7 +74,7 @@ func TestServiceSysAscefc(t *testing.T) {
 		t.Errorf("references = %d, want 2 (clusters 2 and 3)", c.References())
 	}
 
-	wantR0(t, callLNM(t, env, serviceSysReadef, 97), ssWasSet)
+	wantR0(t, callLNM(t, env, readefState, 97), ssWasSet)
 }
 
 func TestServiceSysAscefcReassociate(t *testing.T) {
@@ -109,7 +109,7 @@ func TestServiceSysAscefcReassociate(t *testing.T) {
 	}
 
 	wantR0(t, callLNM(t, env, serviceSysAscefc, 127, a.desc("KEEP")), ssNormal)
-	wantR0(t, callLNM(t, env, serviceSysReadef, 96), ssWasSet)
+	wantR0(t, callLNM(t, env, readefState, 96), ssWasSet)
 }
 
 func TestServiceSysAscefcProtection(t *testing.T) {

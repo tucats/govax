@@ -544,3 +544,15 @@ subprocess to run, and the definitions a MACRO program needs to call
   run's child priority fits it. Step 8 stopped at `$ASCTIM`, which
   signals on VMS; `p5args.mar` (`TestProbe5Args`) asks the rest in a
   second, small run (`exchange2.cmd`, `copyout2.cmd`).
+- 2026-10-08: The second run (`p5args`) is back: the smallest argument
+  count of 32 more services. Every minimum is now VMS 7.3's
+  (`corevms/argcount.go`, all 35 from this probe in one group); `$ENQ`
+  takes 11, `$SETIMR` 4, `$GETSYI` 7, `$EXPREG` 4, and the page and
+  section services their full counts. Also adopted: `$EXPREG` of 0
+  pages is SS$_ILLPAGCNT, and `$READEF` needs its state address
+  (SS$_ACCVIO without it). govax's own callers that passed fewer were
+  corrected: three `testdata/asm` fixtures now give `$READEF` a state
+  longword (their golden snapshots regenerated), and the tests that
+  call services from Go pass every argument (`callService` pads with
+  zeros, as a `_S` macro does; `readefState`). What still differs, the
+  status of a few all-zero calls, is in DEVIATIONS.md.
