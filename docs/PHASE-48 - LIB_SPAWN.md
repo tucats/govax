@@ -527,3 +527,20 @@ subprocess to run, and the definitions a MACRO program needs to call
   question for `testdata/mp/final`. Waiting on the author: the audit of
   `defs48.log` (and, after the next run, of round 7's log; both on the
   clean-room hook's list) and the `testdata/mp/final` run.
+- 2026-10-08: The last VAX run (`testdata/mp/final`) is back; the
+  author audited `defs48.log` and round 7's log, and both left the
+  clean-room hook's list. Round 7: `$ENQ`'s thirteenth argument is
+  PRIORITY, `$GETLKI`'s seventh RESERVED (govax's macros renamed;
+  `TestServiceMacroObjects` covers `r7_`); the twelfth is still unknown.
+  Probe 5 (its README has the table): adopted a child's working set 4
+  pages above the quota rules' (`wsCreationPages`), SYSTEM's ASTLM 50,
+  PID slots in rotation (`processTable.last`), a failed `$ENQ` leaving
+  the LKSB alone, FAB$W_MRS 0 after a mailbox `$OPEN`, `$ADJWSL`/
+  `$ALLOC`/`$ASCEFC` minimums 2/4/4; in the subprocess CLI, a spawned
+  LOGOUT's line (`SubprocessLogoutLine`), SHOW$_NOTRAN's status, and
+  RUN of a non-image (IMGNAME, BADHDR); SHOW LOGICAL/FULL's table
+  header; SHOW DEVICE's brief layout (the disk columns from memory).
+  The book's creation boost of 6 was tried and backed out: neither VMS
+  run's child priority fits it. Step 8 stopped at `$ASCTIM`, which
+  signals on VMS; `p5args.mar` (`TestProbe5Args`) asks the rest in a
+  second, small run (`exchange2.cmd`, `copyout2.cmd`).

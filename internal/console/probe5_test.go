@@ -83,3 +83,39 @@ func TestProbe5(t *testing.T) {
 		}
 	}
 }
+
+// TestProbe5Args runs probe 5's step 8 again, for the services VMS's
+// first run didn't reach (testdata/mp/probe5/p5args.mar), and logs
+// govax's report to set beside VMS's (vax/p5args.log, once it has run).
+func TestProbe5Args(t *testing.T) {
+	c, out := scheduledConsole(t, longQuantum, brbSelf)
+
+	exe := buildImage(t, c, "p5args", readProbe5Source(t, "p5args"))
+
+	out.Reset()
+
+	if err := c.Run(exe, console.RunOptions{}); err != nil {
+		t.Fatalf("RUN: %v\n%s", err, out.String())
+	}
+
+	report := strings.Join(programLines(out.String()), "\n")
+	t.Logf("\n%s", report)
+
+	for _, want := range []string{"8 SYS$CANCEL", "8 SYS$ULWSET", "end"} {
+		if !strings.Contains(report, want) {
+			t.Errorf("the report lacks %q", want)
+		}
+	}
+}
+
+// readProbe5Source reads one of probe 5's programs.
+func readProbe5Source(t *testing.T, name string) string {
+	t.Helper()
+
+	src, err := os.ReadFile(filepath.Join("..", "..", "testdata", "mp", "probe5", name+".mar"))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	return string(src)
+}

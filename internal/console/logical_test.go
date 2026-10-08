@@ -329,3 +329,15 @@ func TestLogical_jobTable(t *testing.T) {
 	mustDispatch(t, d, "DEASSIGN/JOB WORKAREA")
 	wantOutput(t, d, buf, "SHOW LOGICAL/JOB", "\n(LNM$JOB_80000100)\n\n")
 }
+
+// TestShowLogical_fullTableHeader: with /FULL a table's header adds its
+// access mode and a protection line, as VMS 7.3's SHOW LOGICAL/FULL of
+// the process table showed them (testdata/mp/probe5/vax, step 12).
+func TestShowLogical_fullTableHeader(t *testing.T) {
+	d, _, buf := logicalDispatcher(t)
+
+	mustDispatch(t, d, "DEFINE/SUPERVISOR P5_SUPER X")
+	wantOutput(t, d, buf, "SHOW LOGICAL/FULL/PROCESS P5_*",
+		"\n(LNM$PROCESS_TABLE)\t[kernel]\n\t\t\t[no protection information]\n\n"+
+			"  \"P5_SUPER\" [super] = \"X\"\n")
+}

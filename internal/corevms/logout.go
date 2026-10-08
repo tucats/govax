@@ -25,6 +25,16 @@ import (
 // termination message (termmsg.go); the CPU time is the process's, and
 // the elapsed time runs from its creation.
 
+// SubprocessLogoutLine is what a spawned subprocess's LOGOUT command
+// writes, as VMS 7.3's DCL wrote it (testdata/mp/probe5/vax, step 9):
+//
+//	  Process SYSTEM_1 logged out at  8-OCT-2026 16:31:17.34
+func (env *Environment) SubprocessLogoutLine() string {
+	date, _ := formatVMSTime(env.Clock(), false)
+
+	return fmt.Sprintf("  Process %s logged out at %s", env.Process.Name, date)
+}
+
 // LogoutReport is the report for env's job logging out now: the full
 // one, or with interactive the one line.
 func (env *Environment) LogoutReport(interactive bool) []string {

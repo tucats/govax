@@ -290,6 +290,17 @@ func (t *MountTable) Operations(device string) (uint32, bool) {
 	return uint32(entry.Volume.Devices[0].Operations()), true
 }
 
+// OpenFiles returns how many files are open on device's mounted volume
+// (SHOW DEVICE's transaction count), or 0 with nothing mounted there.
+func (t *MountTable) OpenFiles(device string) int {
+	entry, ok := t.mounts[normalizeDeviceName(device)]
+	if !ok {
+		return 0
+	}
+
+	return entry.Volume.OpenFiles()
+}
+
 // DirectoryExists reports whether dir, a directory specification such as
 // "[WORK]" or "[WORK.SUB]", names an existing directory on the volume
 // mounted on device. A device with nothing mounted, or a dir that isn't a

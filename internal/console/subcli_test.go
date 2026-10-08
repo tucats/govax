@@ -8,7 +8,9 @@ import (
 	"testing"
 
 	"github.com/tucats/govax/internal/console"
+	"github.com/tucats/govax/internal/console/consoletest"
 	"github.com/tucats/govax/internal/corevms"
+	"github.com/tucats/govax/internal/rms"
 	"github.com/tucats/govax/internal/vmsdef"
 )
 
@@ -280,5 +282,69 @@ func TestCLI_runMissingImage(t *testing.T) {
 
 	if cli.Process.ExitStatus != 3 {
 		t.Errorf("final status %08X, want the child's 3", cli.Process.ExitStatus)
+	}
+}
+
+// TestCLI_probe5Answers: what VMS 7.3's DCL did in testdata/mp/probe5's
+// run, in govax's CLI: RUN of a volume file that isn't an image names
+// the file and blames its header (step 11); SHOW LOGICAL of a name with
+// no translation ends with SHOW$_NOTRAN (step 10); a spawned
+// subprocess's LOGOUT says so in one line (step 9).
+func TestCLI_probe5Answers(t *testing.T) {
+	c, out := scheduledConsole(t, longQuantum, brbSelf)
+	d := console.NewDispatcher(c, consoletest.ConsoleGrammar(t), nil)
+
+	path := filepath.Join(t.TempDir(), "work.dsk")
+	if err := c.InitializeContainer(path, 2000, "WORK", 0, "RD54"); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := c.Mount("DUA0", path, true); err != nil {
+		t.Fatal(err)
+	}
+
+	records := make([][]byte, 50)
+	for i := range records {
+		records[i] = []byte("\t.title\ttext")
+	}
+
+	if _, err := c.ContainerSession.CreateRecordFile(rms.FileLocation{Name: "DUA0:[000000]TEXT.MAR"}, rms.TextRecords, records); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := d.Dispatch("SET DEFAULT DUA0:[000000]"); err != nil {
+		t.Fatal(err)
+	}
+
+	out.Reset()
+
+	cli := loginout(t, c, writeCommands(t, "RUN TEXT.MAR", "SHOW LOGICAL NO_SUCH_NAME"))
+
+	got, _ := splitLogoutReport(programLines(out.String()))
+	want := []string{
+		"RUN TEXT.MAR",
+		"%DCL-W-ACTIMAGE, error activating image TEXT.MAR",
+		"-CLI-E-IMGNAME, image file DUA0:[000000]TEXT.MAR;1",
+		"-IMGACT-F-BADHDR, an error was discovered in the image header",
+		"SHOW LOGICAL NO_SUCH_NAME",
+		"%SHOW-S-NOTRAN, no translation for logical name NO_SUCH_NAME",
+	}
+
+	if strings.Join(got, "\n") != strings.Join(want, "\n") {
+		t.Errorf("output:\n%s\nwant:\n%s", strings.Join(got, "\n"), strings.Join(want, "\n"))
+	}
+
+	if cli.Process.ExitStatus != 0x10788019 {
+		t.Errorf("final status %08X, want SHOW$_NOTRAN with STS$M_INHIB_MSG, 10788019", cli.Process.ExitStatus)
+	}
+
+	out.Reset()
+
+	if err := d.Dispatch("SPAWN LOGOUT"); err != nil {
+		t.Fatal(err)
+	}
+
+	if s := out.String(); !strings.Contains(s, "  Process SYSTEM_1 logged out at ") {
+		t.Errorf("SPAWN LOGOUT: %q, want the subprocess's logout line", s)
 	}
 }

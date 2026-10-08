@@ -299,7 +299,9 @@ func (d logicalDisplay) logicalTables(specs []string) ([]*lnm.Table, error) {
 //
 //     A name that isn't found prints %SHOW-S-NOTRAN.
 func (c *Console) ShowLogical(names, tables []string, full bool) error {
-	return logicalDisplay{db: c.Logicals, out: c.Printf}.show(names, tables, full)
+	_, err := logicalDisplay{db: c.Logicals, out: c.Printf}.show(names, tables, full)
+
+	return err
 }
 
 // logicalDisplay is SHOW LOGICAL's display of one process's logical
@@ -310,21 +312,22 @@ type logicalDisplay struct {
 	out func(format string, args ...any)
 }
 
-// show is SHOW LOGICAL (see Console.ShowLogical).
-func (d logicalDisplay) show(names, tables []string, full bool) error {
+// show is SHOW LOGICAL (see Console.ShowLogical). untranslated reports
+// that a name (not a wildcard) had no translation: %SHOW-S-NOTRAN.
+func (d logicalDisplay) show(names, tables []string, full bool) (untranslated bool, err error) {
 	if len(tables) == 0 {
 		tables = []string{dclLogicalName}
 	}
 
 	searched, err := d.logicalTables(tables)
 	if err != nil {
-		return err
+		return false, err
 	}
 
 	if len(names) == 0 {
 		d.listLogicalTables(searched, "*", full)
 
-		return nil
+		return false, nil
 	}
 
 	for _, name := range names {
@@ -336,18 +339,29 @@ func (d logicalDisplay) show(names, tables []string, full bool) error {
 
 		if !d.showLogicalName(searched, name, full) {
 			d.out("%%SHOW-S-NOTRAN, no translation for logical name %s\n", name)
+
+			untranslated = true
 		}
 	}
 
-	return nil
+	return untranslated, nil
 }
 
 // listLogicalTables prints each table's header, between blank lines as
 // VMS's SHOW LOGICAL has it (testdata/mp/probe4/vax/probe4.log), and its
-// names that match pattern.
+// names that match pattern. With full, the header adds the table's
+// access mode and a line about its protection, as VMS 7.3's SHOW
+// LOGICAL/FULL of the process table did (testdata/mp/probe5/vax, step
+// 12): "(LNM$PROCESS_TABLE)<tab>[kernel]", then three tabs and "[no
+// protection information]". (govax keeps no table protection, so every
+// table says so; unconfirmed for the shareable tables.)
 func (d logicalDisplay) listLogicalTables(tables []*lnm.Table, pattern string, full bool) {
 	for _, t := range tables {
-		d.out("\n(%s)\n\n", t.Name)
+		if full {
+			d.out("\n(%s)\t[%s]\n\t\t\t[no protection information]\n\n", t.Name, t.Mode)
+		} else {
+			d.out("\n(%s)\n\n", t.Name)
+		}
 
 		entries := t.Entries()
 

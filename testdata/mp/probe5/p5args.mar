@@ -1,0 +1,97 @@
+	.title	p5args
+;
+; Probe 5's step 8 again (README.md), for the services the first run
+; didn't reach: VMS signaled an access violation in $ASCTIM, which, like
+; $BINTIM, $FAO, $FAOL, and $NUMTIM, runs in its caller's mode and so
+; faults on a zero address where an inner-mode service returns
+; SS$_ACCVIO. Those five are left out. For each service the rest: the
+; smallest argument count, all zero, it doesn't refuse with SS$_INSFARG.
+;
+	$SSDEF
+
+	.psect	data,noexe,wrt,long
+l_8:	.ascid	"8 !AC: !UL argument(s) (!XL)"
+l_end:	.ascid	/end/
+
+; Each case: the manual's argument count, the entry point, the name.
+	.macro	svc	name, n
+	.long	n
+	.address	SYS$'name
+	.ascic	/SYS$'name/
+	.endm	svc
+argtab:	svc	CANCEL,1
+	svc	CANTIM,2
+	svc	CLREF,1
+	svc	CRELNM,5
+	svc	CRELNT,8
+	svc	CRELOG,4
+	svc	CRETVA,3
+	svc	CRMPSC,12
+	svc	DACEFC,1
+	svc	DALLOC,2
+	svc	DASSGN,1
+	svc	DELLNM,3
+	svc	DELLOG,3
+	svc	DELMBX,1
+	svc	DELTVA,3
+	svc	DEQ,4
+	svc	DGBLSC,3
+	svc	DLCEFC,1
+	svc	ENQ,12
+	svc	EXPREG,4
+	svc	GETJPI,7
+	svc	GETSYI,7
+	svc	GETTIM,1
+	svc	LKWSET,3
+	svc	MGBLSC,7
+	svc	QIO,12
+	svc	READEF,2
+	svc	SETEF,1
+	svc	SETIMR,5
+	svc	SNDOPR,2
+	svc	TRNLOG,6
+	svc	ULWSET,3
+	.long	0
+
+	.align	long
+out_buf:	.blkb	132
+out_desc:	.word	132
+		.byte	14,1
+		.long	out_buf
+out_len:	.word	0,0
+
+	.psect	code,exe,nowrt
+	.entry	start,^m<r2,r3,r4,r5>
+	moval	argtab,r5
+10$:	tstl	(r5)
+	beql	50$
+	clrl	r3
+20$:	movl	r3,r4
+30$:	tstl	r4
+	beql	40$
+	clrl	-(sp)
+	decl	r4
+	brb	30$
+40$:	calls	r3,@4(r5)
+	cmpl	r0,#SS$_INSFARG
+	bneq	45$
+	incl	r3
+	cmpl	r3,(r5)
+	bleq	20$
+45$:	moval	8(r5),r2
+	$fao_s	ctrstr=l_8, outlen=out_len, outbuf=out_desc, -
+		p1=r2, p2=r3, p3=r0
+	movw	out_len,out_desc
+	pushaq	out_desc
+	calls	#1,g^lib$put_output
+	movw	#132,out_desc
+	movzbl	8(r5),r2			; the next case follows the name
+	addl2	#9,r2
+	addl2	r2,r5
+	brb	10$
+
+50$:	pushaq	l_end
+	calls	#1,g^lib$put_output
+	movl	#1,r0
+	ret
+	.end	start

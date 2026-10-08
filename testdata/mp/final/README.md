@@ -2,7 +2,7 @@
 
 Everything Phases 43–48 still ask VMS, on one exchange volume, run by
 one command procedure (prepared 2026-10-08, at the program's close-out;
-docs/PHASE-48.md). Each part has its own directory and README.
+docs/PHASE-48.md; run by the author the same day, its logs audited). Each part has its own directory and README.
 
 | Part | Directory | What it asks | Log |
 | ---- | --------- | ------------ | --- |
@@ -50,3 +50,26 @@ probe 5's log.
 - Probe 5: `go test ./internal/console -run TestProbe5 -v` prints govax's
   side; each difference settles one of DEVIATIONS.md's unconfirmed
   rules.
+
+## What it answered (2026-10-08)
+
+- Round 7: `$ENQ`'s thirteenth argument is PRIORITY and `$GETLKI`'s
+  seventh RESERVED; no candidate was `$ENQ`'s twelfth.
+- Probe 5: see `../probe5/README.md`, "What VMS answered". Step 8 stopped
+  at `$ASCTIM`, which signaled an access violation, so the second run
+  below asks the rest.
+
+## The second run
+
+Probe 5's step 8 for the services the first run didn't reach
+(`../probe5/p5args.mar`):
+
+    govax console < testdata/mp/final/exchange2.cmd
+
+attach `testdata/disks/mp-final2.dsk`, set its `[000000]` as the default,
+`@P5ARGS/OUTPUT=P5ARGS.LOG`, then
+
+    govax console < testdata/mp/final/copyout2.cmd
+
+The log goes to `../probe5/vax/p5args.log`; `TestProbe5Args` prints
+govax's side. It holds program output only, no MACRO listing.

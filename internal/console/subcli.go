@@ -1,6 +1,7 @@
 package console
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 
@@ -8,6 +9,7 @@ import (
 	"github.com/tucats/govax/internal/lnm"
 	"github.com/tucats/govax/internal/vax"
 	"github.com/tucats/govax/internal/vmsdef"
+	"github.com/tucats/govax/internal/vmserrors"
 )
 
 // The subprocess CLI (docs/PHASE-48.md, Decision 8 in docs/PHASE-43.md).
@@ -122,8 +124,9 @@ type subprocessCLI struct {
 	prompt string
 
 	// login is set for LOGINOUT's CLI (see this file's opening comment);
-	// reported is set once it has written LOGOUT's report.
-	login, reported bool
+	// reported is set once it has written LOGOUT's report; logoutCommand
+	// once a LOGOUT command has logged it out.
+	login, reported, logoutCommand bool
 
 	// input is its SYS$INPUT, opened at the first read.
 	input corevms.CommandInput
@@ -276,6 +279,16 @@ func (c *Console) cliCommand(env *corevms.Environment, _ []uint32) (uint32, erro
 			if cli.login && !cli.reported && cli.input != nil {
 				cli.reported = true
 				cli.output = append(cli.output, cli.env.LogoutReport(cli.input.Interactive())...)
+
+				continue
+			}
+
+			// A spawned subprocess's LOGOUT says so in one line; one
+			// that ends with its command, or with EXIT, says nothing
+			// (VMS 7.3, testdata/mp/probe4 and probe5).
+			if !cli.login && cli.logoutCommand && !cli.reported {
+				cli.reported = true
+				cli.output = append(cli.output, cli.env.SubprocessLogoutLine())
 
 				continue
 			}
@@ -448,6 +461,7 @@ func (c *Console) cliExecute(cli *subprocessCLI, line string) uint32 {
 
 	case isVerb(word, "LOGOUT", 2):
 		cli.loggedOut = true
+		cli.logoutCommand = true
 
 	case isVerb(word, "EXIT", 3):
 		if v := strings.TrimSpace(dclText(rest, false)); v != "" {
@@ -500,10 +514,20 @@ func (c *Console) cliRunImage(cli *subprocessCLI, image, commandLine string) uin
 		// The status has STS$M_INHIB_MSG set, its message having been
 		// shown, as VMS's DCL returned it (testdata/mp/probe4).
 		status := corevms.StartupStatus(err)
-		if status == rmsFNF {
+
+		switch found, ok := c.foundImageFile(env, image); {
+		case status == rmsFNF:
 			status = cliStatusImageFNF
 			cli.say("-CLI-E-IMAGEFNF, image file not found %s", c.imageFileSpec(env, image))
-		} else {
+
+		case ok && !fixupFailed(err):
+			// The file is there but isn't an image: VMS 7.3 named it and
+			// blamed its header (testdata/mp/probe5/vax, step 11).
+			status = imgactBadHdr
+			cli.say("-CLI-E-IMGNAME, image file %s", found)
+			cli.say("-IMGACT-F-BADHDR, an error was discovered in the image header")
+
+		default:
 			cli.say("-%s", strings.TrimPrefix(env.StatusText(status), "%"))
 		}
 
@@ -550,6 +574,45 @@ func (c *Console) endCLIImage(cli *subprocessCLI) {
 // rmsFNF is RMS$_FNF, the status corevms gives an image that isn't
 // there.
 var rmsFNF = vmsdef.Symbols["RMS$_FNF"]
+
+// fixupFailed reports whether an activation failed fixing up an image
+// that loaded (vmserrors.CLI_FIXUP), rather than loading it.
+func fixupFailed(err error) bool {
+	for e := err; e != nil; e = errors.Unwrap(e) {
+		if ve, ok := e.(vmserrors.VMSError); ok && ve.Status == vmserrors.CLI_FIXUP {
+			return true
+		}
+	}
+
+	return false
+}
+
+// imgactBadHdr is IMGACT$_BADHDR, the image activator's status for a
+// file whose image header is wrong (VMS 7.3's, %X004D8C84; govax's
+// tables have no IMGACT$ facility).
+const imgactBadHdr = 0x004D8C84
+
+// foundImageFile is the full name, version and all, of the volume file
+// RUN image found (with the default type .EXE), and true; or false when
+// there is none or it's a host file.
+func (c *Console) foundImageFile(env *corevms.Environment, image string) (string, bool) {
+	s := env.Session
+	if s == nil {
+		return "", false
+	}
+
+	loc, err := s.Locate(image, false)
+	if err != nil || loc.Host {
+		return "", false
+	}
+
+	_, found, err := s.ReadRawFile(withDefaultType(loc, "EXE"))
+	if err != nil {
+		return "", false
+	}
+
+	return found.Name, true
+}
 
 // imageFileSpec is image as RMS expands it, with the default type .EXE,
 // for DCL's IMAGEFNF message ("DUA0:[000000]NOSUCH.EXE;"); as typed,
@@ -632,7 +695,8 @@ func (cli *subprocessCLI) showSymbol(fields []string) {
 // (its process table, its job's, its group's, the system's): the
 // console's display (logicalDisplay), on SYS$OUTPUT. The status is
 // SS$_NORMAL with STS$M_INHIB_MSG set, as VMS's DCL returned it
-// (testdata/mp/probe4; unconfirmed for a name with no translation).
+// (testdata/mp/probe4), or SHOW$_NOTRAN with it when a name had no
+// translation (probe5).
 func (cli *subprocessCLI) showLogical(fields []string) {
 	var names, tables []string
 
@@ -664,14 +728,25 @@ func (cli *subprocessCLI) showLogical(fields []string) {
 	}
 
 	d := logicalDisplay{db: cli.env.Logicals, out: cli.printf}
-	if err := d.show(names, tables, full); err != nil {
+
+	untranslated, err := d.show(names, tables, full)
+	if err != nil {
 		cli.complete(err)
 
 		return
 	}
 
 	cli.status = ssNormal | stsInhibitMsg
+	if untranslated {
+		cli.status = showNotran | stsInhibitMsg
+	}
 }
+
+// showNotran is SHOW$_NOTRAN, SHOW LOGICAL's status for a name with no
+// translation (VMS 7.3's $STATUS, %X10788019 with STS$M_INHIB_MSG;
+// testdata/mp/probe5/vax, step 10). govax's tables have no SHOW$
+// facility, so the value is VMS's.
+const showNotran = 0x00788019
 
 // stsInhibitMsg is STS$M_INHIB_MSG: a status whose message has already
 // been shown.

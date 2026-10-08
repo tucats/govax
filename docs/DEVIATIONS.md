@@ -2857,15 +2857,29 @@ widened."
     protection always VMS 7.1's `S:RWPL,O:RWPL,G,W`; an operation counted
     for every `$QIO` that completes, whatever its status; the debugger's
     SHOW PROCESS layout (govax's own).
+  - **Settled by `testdata/mp/final`** (2026-10-08) and now govax's:
+    a child's working set 4 pages above the quota rules'; SYSTEM's AST
+    limit 50; PID slots taken in rotation; a failed `$ENQ` leaving the
+    LKSB alone; FAB$W_MRS 0 after a mailbox `$OPEN`; three argument
+    minimums; `$ENQ`'s PRIORITY and `$GETLKI`'s RESERVED keywords; the
+    subprocess CLI's logout line, NOTRAN status, and RUN of a non-image;
+    SHOW LOGICAL/FULL's table header; SHOW DEVICE's brief layout and
+    NOSUCHDEV. Confirmed as govax had them: inheritance, copied names
+    and their modes, value blocks after a holder's deletion, `$ERASE` of
+    an open file, NLA0:'s characteristics.
+  - **Still open after it:** a child's current priority at creation (VMS
+    7.1 saw base+2, 7.3 base+3; the book's boost of 6 fits neither;
+    govax: the base); `$ENQ`'s twelfth argument's keyword (ARG12);
+    the other services' argument minimums (`p5args`, the second run);
+    the brief SHOW DEVICE's disk columns (from memory).
+  - **Not modeled:** services that run in the caller's mode (`$ASCTIM`,
+    `$BINTIM`, `$FAO`, `$FAOL`, `$NUMTIM`) fault on a bad address on
+    VMS, which signals an access violation; govax's return SS$_ACCVIO.
+    MCR runs an image from SYS$SYSTEM on VMS; govax has no SYS$SYSTEM,
+    and its CLI's MCR runs the name as RUN would.
 - **Status**: unconfirmed but for what the VMS runs settled (probes 1
-  to 4, the ping-pong pair, the milestone). `testdata/mp/final` (probe 5
-  and round 7 of the macro probes, prepared at the close-out) asks about
-  Phase 45's child priority, working set, AST limit, PID reuse, and
-  inheritance; the argument-count minimums; `$ENQ`'s LKSB on
-  SS$_NOTQUEUED and value blocks; FAB$W_MRS after a mailbox `$OPEN`;
-  `$ERASE` of an open file; the verb abbreviations, statuses, and
-  copied names' modes; and device characteristics. The rest are
-  candidates for later probes.
+  to 5, the ping-pong pair, the milestone, macro rounds 1 to 7); the
+  rest are candidates for later probes.
 
 <!--
 Entry template:

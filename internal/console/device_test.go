@@ -20,8 +20,8 @@ func TestConsoleDefineAndShowDevices(t *testing.T) {
 		t.Fatalf("ShowDevices: %v", err)
 	}
 
-	if !strings.Contains(buf.String(), "Device DKA0") {
-		t.Errorf("ShowDevices output = %q, want it to mention Device DKA0", buf.String())
+	if !strings.Contains(buf.String(), "\nDKA0:                   Online               0") {
+		t.Errorf("ShowDevices output = %q, want DKA0's line in VMS's brief layout", buf.String())
 	}
 
 	buf.Reset()
@@ -135,5 +135,42 @@ func TestShowDevices_prefix(t *testing.T) {
 
 	if out := buf.String(); out != "%SYSTEM-W-NOSUCHDEV, no such device available\n" {
 		t.Errorf("SHOW DEVICE MUA: %q, want NOSUCHDEV", out)
+	}
+}
+
+// TestShowDevices_briefLayout: SHOW DEVICE without /FULL in VMS 7.3's
+// layout (testdata/mp/probe5/vax, step 13): a blank line, the heading,
+// and a line per device; a disk with a volume mounted is "Mounted", with
+// its label and free blocks.
+func TestShowDevices_briefLayout(t *testing.T) {
+	c, buf := newTestConsole(t)
+	path := newTestContainer(t, "TESTVOL")
+
+	c.DefineDevice("MBA1", iodev.DeviceOptions{DevClass: iodev.DeviceClassMailbox})
+	c.DefineDevice("DUA0", iodev.DeviceOptions{DevClass: iodev.DeviceClassDisk})
+
+	if err := c.ShowDevices("MB", false); err != nil {
+		t.Fatal(err)
+	}
+
+	want := "\nDevice                  Device           Error\n" +
+		" Name                   Status           Count\n" +
+		"MBA1:                   Online               0\n"
+	if buf.String() != want {
+		t.Errorf("SHOW DEVICE MB:\n%q\nwant\n%q", buf.String(), want)
+	}
+
+	if err := c.Mount("DUA0", path, true); err != nil {
+		t.Fatal(err)
+	}
+
+	buf.Reset()
+
+	if err := c.ShowDevices("DUA0", false); err != nil {
+		t.Fatal(err)
+	}
+
+	if out := buf.String(); !strings.Contains(out, "DUA0:                   Mounted              0  TESTVOL") {
+		t.Errorf("SHOW DEVICE DUA0, mounted:\n%s", out)
 	}
 }

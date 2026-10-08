@@ -34,6 +34,8 @@ func (c *Console) ShowDevices(name string, full bool) error {
 		}
 	}()
 
+	disks := -1 // the kind of device the last brief heading was for
+
 	for _, d := range c.Devices.All() {
 		if !strings.HasPrefix(d.Name, prefix) {
 			continue
@@ -42,7 +44,13 @@ func (c *Console) ShowDevices(name string, full bool) error {
 		shown++
 
 		if !full {
-			c.Printf("Device %s\n", d.Name)
+			disk := d.DevClass == iodev.DeviceClassDisk
+			if kind := map[bool]int{false: 0, true: 1}[disk]; kind != disks {
+				disks = kind
+				c.showDeviceHeading(disk)
+			}
+
+			c.showDeviceLine(d, disk)
 
 			continue
 		}
@@ -76,6 +84,58 @@ func (c *Console) ShowDevices(name string, full bool) error {
 	}
 
 	return nil
+}
+
+// The brief SHOW DEVICE, as VMS 7.3 laid it out for mailboxes
+// (testdata/mp/probe5/vax, step 13):
+//
+//
+//	Device                  Device           Error
+//	 Name                   Status           Count
+//	MBA1:                   Online               0
+//
+// A blank line and the two-line heading start each run of devices of one
+// kind. A disk has four more columns, its volume's label, free blocks,
+// transaction count (files open), and mount count, laid out as VMS's
+// SHOW DEVICE D is remembered (unconfirmed: no run has shown a disk),
+// and its status is "Mounted" when a volume is.
+const (
+	deviceHeading1 = "Device                  Device           Error"
+	deviceHeading2 = " Name                   Status           Count"
+	diskHeading1   = "    Volume         Free  Trans Mnt"
+	diskHeading2   = "     Label        Blocks Count Cnt"
+)
+
+// showDeviceHeading prints the brief layout's heading.
+func (c *Console) showDeviceHeading(disk bool) {
+	if disk {
+		c.Printf("\n%s%s\n%s%s\n", deviceHeading1, diskHeading1, deviceHeading2, diskHeading2)
+
+		return
+	}
+
+	c.Printf("\n%s\n%s\n", deviceHeading1, deviceHeading2)
+}
+
+// showDeviceLine prints d's line of the brief layout.
+func (c *Console) showDeviceLine(d *iodev.Device, disk bool) {
+	if !disk {
+		c.Printf("%-24s%-12s%10d\n", d.Name+":", "Online", d.ErrCnt)
+
+		return
+	}
+
+	stats, mounted, err := c.Mounts.VolumeStats(d.Name)
+	if !mounted || err != nil {
+		c.Printf("%-24s%-12s%10d\n", d.Name+":", "Online", d.ErrCnt)
+
+		return
+	}
+
+	label, _ := c.Mounts.VolumeLabel(d.Name)
+	open := c.Mounts.OpenFiles(d.Name)
+
+	c.Printf("%-24s%-12s%10d  %-12s %9d %5d %3d\n", d.Name+":", "Mounted", d.ErrCnt, label, stats.FreeBlocks, open, 1)
 }
 
 // showDiskDeviceFull prints SHOW DEVICE/FULL's disk-class output in the
