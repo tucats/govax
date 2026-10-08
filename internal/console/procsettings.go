@@ -22,7 +22,11 @@ const (
 func processSettings() corevms.ProcessSettings {
 	ps := corevms.DefaultProcessSettings()
 
-	ps.Scheduler = settings.GetBool(schedulerSetting)
+	// The scheduler is on (the default) unless the setting says
+	// otherwise (Phase 48, Decision 5 in docs/PHASE-43.md).
+	if settings.Exists(schedulerSetting) {
+		ps.Scheduler = settings.GetBool(schedulerSetting)
+	}
 
 	if q := settings.GetInt(quantumSetting); q > 0 {
 		ps.Quantum = q

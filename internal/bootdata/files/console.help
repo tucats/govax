@@ -1001,7 +1001,8 @@ $RUN ,/DEB
 $SPAWN
     SPAWN creates a subprocess of the console's process, as DCL's SPAWN and
     a program's LIB$SPAWN do, and (unless /NOWAIT) waits for it to end.  It
-    needs vax.process.scheduler on (see HELP CONFIG KEYS).
+    needs vax.process.scheduler on, as it is unless the configuration turns
+    it off (see HELP CONFIG KEYS).
 
     Syntax:
 
@@ -1753,8 +1754,8 @@ $CONF,KEY
     Processes
 
         These are for running several processes at once.  With
-        vax.process.scheduler on, a program can create processes
-        ($CREPRC, and LIB$SPAWN), and the CPU is shared among them
+        vax.process.scheduler on (the default), a program can create
+        processes ($CREPRC, and LIB$SPAWN), and the CPU is shared among them
         VMS's way: by priority, a quantum at a time among equals, and
         giving the CPU to another while one waits.  Mailboxes, common
         event flags, global sections, the lock services ($ENQ, $ENQW,
@@ -1775,7 +1776,7 @@ $CONF,KEY
 
         vax.process.scheduler         true or false: whether processes
                                       other than the console's own can be
-                                      created and run.  Default false.
+                                      created and run.  Default true.
 
         vax.process.quantum           The number of instructions a
                                       process runs before another process

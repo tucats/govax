@@ -23,11 +23,11 @@ func TestParsePreemptMode(t *testing.T) {
 }
 
 // TestNewSystemProcessSettings: a new System starts with the defaults:
-// no scheduler, VMS's preemption rule.
+// the scheduler on (since Phase 48), VMS's preemption rule.
 func TestNewSystemProcessSettings(t *testing.T) {
 	env, _ := fixture()
 
-	if got := env.ProcessSettings; got != DefaultProcessSettings() || got.Scheduler || got.Quantum != DefaultProcessQuantum {
+	if got := env.ProcessSettings; got != DefaultProcessSettings() || !got.Scheduler || got.Quantum != DefaultProcessQuantum {
 		t.Errorf("ProcessSettings = %+v", got)
 	}
 }

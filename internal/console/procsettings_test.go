@@ -42,7 +42,29 @@ func TestProcessSettings(t *testing.T) {
 
 	withSettings(t, map[string]string{schedulerSetting: "false", quantumSetting: "-3", preemptSetting: "sometimes"})
 
-	if got := processSettings(); got != corevms.DefaultProcessSettings() {
-		t.Errorf("with bad values, ProcessSettings = %+v, want the defaults", got)
+	want = corevms.DefaultProcessSettings()
+	want.Scheduler = false
+
+	if got := processSettings(); got != want {
+		t.Errorf("with the scheduler off and bad values, ProcessSettings = %+v, want %+v", got, want)
+	}
+}
+
+// TestProcessSettings_schedulerDefault: with vax.process.scheduler not
+// set, the scheduler is on (Phase 48, Decision 5); set to false, it's
+// off.
+func TestProcessSettings_schedulerDefault(t *testing.T) {
+	withSettings(t, map[string]string{schedulerSetting: "true"})
+
+	_ = settings.Delete(schedulerSetting)
+
+	if !processSettings().Scheduler {
+		t.Error("with vax.process.scheduler unset, the scheduler is off")
+	}
+
+	settings.Set(schedulerSetting, "false")
+
+	if processSettings().Scheduler {
+		t.Error("with vax.process.scheduler false, the scheduler is on")
 	}
 }

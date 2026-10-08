@@ -64,10 +64,11 @@ func pql(name string) uint32 { return vmsdef.Symbols["PQL$_"+name] }
 // unreadable is an address beyond the fixture's memory.
 const unreadable = 0x00F00000
 
-// TestCreprc_unsupported: with vax.process.scheduler off (the default),
-// $CREPRC is SS$_UNSUPPORTED, whatever its arguments.
+// TestCreprc_unsupported: with vax.process.scheduler off, $CREPRC is
+// SS$_UNSUPPORTED, whatever its arguments.
 func TestCreprc_unsupported(t *testing.T) {
 	env, _ := fixture()
+	env.ProcessSettings.Scheduler = false
 	a := newArena(t, env)
 
 	r0 := callLNM(t, env, serviceSysCreprc, creprcArgs(map[int]uint32{argPrcnam: a.desc("WORKER")})...)

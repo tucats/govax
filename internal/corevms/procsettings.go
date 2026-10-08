@@ -72,7 +72,8 @@ func ParsePreemptMode(text string) (PreemptMode, error) {
 type ProcessSettings struct {
 	// Scheduler is vax.process.scheduler: whether the engine may run
 	// processes other than process 1, and $CREPRC and LIB$SPAWN create
-	// them (Decision 5: off until Phase 48's milestone passes).
+	// them. On by default since Phase 48's milestone passed (Decision 5
+	// in docs/PHASE-43.md); the key can still turn it off.
 	Scheduler bool
 
 	// Quantum is vax.process.quantum: instructions per quantum.
@@ -84,5 +85,5 @@ type ProcessSettings struct {
 
 // DefaultProcessSettings are the settings with none of the keys set.
 func DefaultProcessSettings() ProcessSettings {
-	return ProcessSettings{Quantum: DefaultProcessQuantum, Preempt: PreemptAll}
+	return ProcessSettings{Scheduler: true, Quantum: DefaultProcessQuantum, Preempt: PreemptAll}
 }

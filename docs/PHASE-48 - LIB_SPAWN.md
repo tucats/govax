@@ -379,3 +379,16 @@ subprocess to run, and the definitions a MACRO program needs to call
   even if nothing is written; written through whole at each line
   (`RewriteRecordFile`, keeping the version), so the creator reading it
   after the process ends sees everything. `TestSpawn_outputFile`.
+- 2026-10-08: Subtask 8 (the scheduler on by default, Decision 5). With
+  the milestone passing, the whole suite was run with
+  `vax.process.scheduler` defaulting to true: everything passed as it
+  was, the MACRO, LINK, ANALYZE, debugger, RMS, and instruction-set
+  oracles included, since with one process the scheduler changes
+  nothing a test sees (Phase 44's design). So the default is flipped:
+  `corevms.DefaultProcessSettings` has the scheduler on, and the console
+  turns it off only when the key is set to false (`settings.Exists`). The
+  three tests that asserted the old default now say so (`TestCreprc_
+  unsupported` turns the scheduler off itself; `TestNewSystemProcess
+  Settings`, `TestProcessSettings`), and `TestProcessSettings_
+  schedulerDefault` checks both ways. HELP CONFIG KEYS and HELP SPAWN
+  give the new default.
