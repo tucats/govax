@@ -330,3 +330,25 @@ subprocess to run, and the definitions a MACRO program needs to call
   `run` subcommand under `--instruction-limit`, then checks the volume.
   Learned on the way: LINK puts a bare `/EXECUTABLE` name beside its
   object, which was a host file, so the test names the volume.
+- 2026-10-08: Subtask 4 (the console's SPAWN), included since it costs
+  little on the LIB$SPAWN path and makes the CLI usable at the prompt.
+  `SPAWN [/NOWAIT] [/INPUT=] [/OUTPUT=] [/PROCESS=] [/PROMPT=]
+  [/NOSYMBOLS] [/NOLOGICAL_NAMES] [command]` (`console.dcl` verb 1690;
+  `console/spawncmd.go`) writes a procedure that calls LIB$SPAWN, its
+  argument list, flags, and strings in two S0 pool pages of the
+  system's (allocated once per machine; not CONSOLE$SCRATCH, where an
+  image stopped mid-run may still return), and calls it in process 1 as
+  CALL does, through the debugger when one is installed. So the
+  subprocess is made exactly as a program's LIB$SPAWN makes one, and
+  process 1 waits in LIB$SPAWN while the machine runs. Process 1 may run
+  in user mode, and only kernel mode may write the pool pages, so the
+  console passes no process-id or completion-status address and finds
+  the new process by comparing the process table before and after.
+  Messages as DCL's: `%DCL-S-SPAWNED, process NAME spawned` for
+  /NOWAIT, `%DCL-S-RETURNED, control returned to process SYSTEM` after
+  a wait (unconfirmed wording). A /NOWAIT subprocess runs only while the
+  machine runs (Decision 4), which HELP SPAWN says. Tests:
+  `TestSpawnCommand` (a foreign command, /NOWAIT and its subprocess
+  running at the next run, /INPUT of a command file), `cmd/govax`'s
+  `TestRun_spawnAtThePrompt` (typed at the prompt, the debugger
+  installed), `TestGrammarSplit`; the evax grammar's verb count is 49.

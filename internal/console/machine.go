@@ -268,6 +268,10 @@ type Console struct {
 	// (subcli.go: LIB$SPAWN's, and $CREPRC's of LOGINOUT), by process.
 	clis map[*corevms.Environment]*subprocessCLI
 
+	// spawnPage is the S0 pool page SPAWN writes its call to LIB$SPAWN
+	// in (spawncmd.go), allocated on first use on each machine.
+	spawnPage uint32
+
 	// runCommandLine is RunCommandLine, taken when govax's one-shot
 	// command runs, for that command's RUN to give its image.
 	runCommandLine string
@@ -360,6 +364,7 @@ func (c *Console) newRTL() *corevms.Environment {
 	// image state; process 1's is the console's and stays (images.go).
 	c.otherImages = nil
 	c.clis = nil
+	c.spawnPage = 0
 
 	sys.SetProcessSettings(processSettings())
 

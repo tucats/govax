@@ -2,6 +2,7 @@ package main
 
 import (
 	"bytes"
+	"io"
 	"os"
 	"path/filepath"
 	"strings"
@@ -121,5 +122,49 @@ func TestRun_milestone(t *testing.T) {
 
 	if err := mounts.DismountAll(); err != nil {
 		t.Fatal(err)
+	}
+}
+
+// TestRun_spawnAtThePrompt: SPAWN typed at the VAX> prompt, where the
+// debugger is installed and runs the console's call to LIB$SPAWN: a
+// foreign command the console defined runs in the subprocess, and the
+// prompt comes back.
+func TestRun_spawnAtThePrompt(t *testing.T) {
+	dir := t.TempDir()
+	src := filepath.Join(dir, "hello.mar")
+
+	if err := os.WriteFile(src, []byte(`	.title	hello
+	.psect	data,noexe,wrt
+msg:	.ascid	/Hello from a subprocess/
+	.psect	code,exe,nowrt
+	.entry	start,^m<>
+	pushaq	msg
+	calls	#1,g^lib$put_output
+	movl	#1,r0
+	ret
+	.end	start
+`), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	setConfig(t, "vax.process.scheduler", "true")
+
+	for _, command := range []string{macroCommand(src, macroFlags{}), linkCommand([]string{filepath.Join(dir, "hello")}, linkFlags{})} {
+		var buf bytes.Buffer
+		if err := run(nil, 0, 0, &buf, emptyStdin(), []string{command}); err != nil {
+			t.Fatalf("%s: %v\n%s", command, err, buf.String())
+		}
+	}
+
+	script := `HELLO :== "$` + filepath.Join(dir, "hello.exe") + "\"\nSPAWN HELLO\nSHOW SYSTEM\n"
+
+	var buf bytes.Buffer
+	if err := run(nil, 50_000_000, 0, &buf, io.NopCloser(strings.NewReader(script)), nil); err != nil {
+		t.Fatalf("run: %v\n%s", err, buf.String())
+	}
+
+	out := buf.String()
+	if !strings.Contains(out, "Hello from a subprocess") || !strings.Contains(out, "%DCL-S-RETURNED") {
+		t.Errorf("output:\n%s\nwant the subprocess's line and DCL's RETURNED message", out)
 	}
 }

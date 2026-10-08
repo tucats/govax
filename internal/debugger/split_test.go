@@ -56,6 +56,7 @@ func TestGrammarSplit(t *testing.T) {
 		{"PURGE", consoleOnly},
 		{"RENAME A B", consoleOnly},
 		{"RUN A", consoleOnly},
+		{"SPAWN/NOWAIT/PROCESS=X RUN A", consoleOnly},
 		{"SAVE/ROM A", consoleOnly},
 		{"TIME", consoleOnly},
 		{"TYPE A", consoleOnly},

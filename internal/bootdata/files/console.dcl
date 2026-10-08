@@ -912,6 +912,23 @@ grammar console
         qualifier   execute/id=1685
     verb r/alias=run
 
+    ! SPAWN [command] makes a subprocess running the subprocess CLI, as
+    ! LIB$SPAWN does, and waits for it unless /NOWAIT.
+    verb spawn/id=1690
+        qualifier   wait/id=1691
+        qualifier   input/id=1692               -
+                    /type=$string
+        qualifier   output/id=1693              -
+                    /type=$string
+        qualifier   process/id=1694             -
+                    /type=$string
+        qualifier   prompt/id=1695              -
+                    /type=$string
+        qualifier   symbols/id=1696
+        qualifier   logical_names/id=1697
+        parameter   command/id=1698             -
+                    /type=$rest_of_line
+
     ! ASM [file] assembles a file with the console's assembler, or with
     ! no file enters interactive assembler mode. A host file name with
     ! lowercase letters or a "/" must be quoted, as everywhere in DCL.

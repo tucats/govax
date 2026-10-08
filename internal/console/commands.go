@@ -67,6 +67,18 @@ func (d *Dispatcher) bindConsoleCommands() {
 	})
 	g.Bind(callTOKEN, d.callCommand)
 	g.Bind(runTOKEN, d.runCommand)
+	g.Bind("SPAWN", func(id int64, r *dcl.Result) error {
+		return d.Console.Spawn(SpawnOptions{
+			Command:        r.String("COMMAND"),
+			Input:          r.String("INPUT"),
+			Output:         r.String("OUTPUT"),
+			Process:        r.String("PROCESS"),
+			Prompt:         r.String("PROMPT"),
+			NoWait:         r.Negated("WAIT"),
+			NoSymbols:      r.Negated("SYMBOLS"),
+			NoLogicalNames: r.Negated("LOGICAL_NAMES"),
+		})
+	})
 
 	g.Bind(asmTOKEN, d.asmCommand)
 	g.Bind(includeTOKEN, func(id int64, r *dcl.Result) error {

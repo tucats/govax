@@ -236,3 +236,72 @@ func TestSpawn_schedulerOff(t *testing.T) {
 		t.Errorf("status %08X, want SS$_UNSUPPORTED", st)
 	}
 }
+
+// TestSpawnCommand: the console's SPAWN runs a command in a subprocess
+// (here a foreign command the console defined) and waits for it, then
+// says control has come back to process 1 (SYSTEM); SPAWN/NOWAIT makes
+// one that runs only when the machine next runs, and says so; SPAWN/INPUT
+// reads a file of commands.
+func TestSpawnCommand(t *testing.T) {
+	c, out := scheduledConsole(t, longQuantum, brbSelf)
+	echo := buildImage(t, c, "echo", echoSource)
+	child := buildChildImage(t, c)
+	d := console.NewDispatcher(c, consoletest.ConsoleGrammar(t), nil)
+
+	dispatch := func(line string) string {
+		t.Helper()
+
+		out.Reset()
+
+		if err := d.Dispatch(line); err != nil {
+			t.Fatalf("%s: %v\n%s", line, err, out.String())
+		}
+
+		return strings.Join(programLines(out.String()), "|")
+	}
+
+	const returned = "%DCL-S-RETURNED, control returned to process SYSTEM"
+
+	dispatch(`ECHO :== "$` + echo + `"`)
+
+	if got := dispatch("SPAWN ECHO hello there"); got != "HELLO THERE|"+returned {
+		t.Errorf("SPAWN ECHO: %q", got)
+	}
+
+	if got := dispatch("SPAWN/NOWAIT/PROCESS=LATER ECHO later"); got != "%DCL-S-SPAWNED, process LATER spawned" {
+		t.Errorf("SPAWN/NOWAIT: %q", got)
+	}
+
+	if n := len(c.RTL.Processes()); n != 2 {
+		t.Errorf("%d processes after SPAWN/NOWAIT, want 2", n)
+	}
+
+	// LATER runs when the machine next runs: during this RUN, if the
+	// scheduler gives it the CPU before the child's image ends the run,
+	// or else during the SPAWN after it.
+	out.Reset()
+
+	if err := c.Run(child, console.RunOptions{}); err != nil {
+		t.Fatal(err)
+	}
+
+	ran := strings.Join(programLines(out.String()), "|")
+	if !strings.Contains(ran, "Hello from the child") {
+		t.Errorf("RUN: %q", ran)
+	}
+
+	commands := writeCommands(t, "ECHO one", "ECHO two")
+	spawned := dispatch(`SPAWN/INPUT="` + commands + `"`)
+
+	if !strings.HasSuffix(spawned, "ONE|TWO|"+returned) {
+		t.Errorf("SPAWN/INPUT: %q", spawned)
+	}
+
+	if n := strings.Count(ran+"|"+spawned, "LATER"); n != 1 {
+		t.Errorf("LATER's line appeared %d times in %q and %q, want once", n, ran, spawned)
+	}
+
+	if n := len(c.RTL.Processes()); n != 1 {
+		t.Errorf("%d processes at the end, want only process 1", n)
+	}
+}

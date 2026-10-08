@@ -998,6 +998,38 @@ $RUN ,/DEB
     FOREIGN), or give the text after the file name on govax's own command
     line ("govax run forth.exe 2 3 + .").
 
+$SPAWN
+    SPAWN creates a subprocess of the console's process, as DCL's SPAWN and
+    a program's LIB$SPAWN do, and (unless /NOWAIT) waits for it to end.  It
+    needs vax.process.scheduler on (see HELP CONFIG KEYS).
+
+    Syntax:
+
+        SPAWN [/NOWAIT] [/INPUT=file] [/OUTPUT=file] [/PROCESS=name]
+              [/PROMPT=string] [/NOSYMBOLS] [/NOLOGICAL_NAMES] [command]
+
+    The subprocess runs govax's small command interpreter, which stands in
+    for DCL: it runs the command and logs out, or, with no command, reads
+    commands from its input until the end of the input or LOGOUT.  It knows
+    RUN, MCR, foreign commands and other symbols (it gets copies of the
+    console's, and of its process logical names, unless /NOSYMBOLS or
+    /NOLOGICAL_NAMES), symbol assignments, DELETE/SYMBOL, EXIT, and LOGOUT.
+
+        /NOWAIT         Don't wait: the subprocess runs while the machine
+                        runs (the next RUN, GO, or CALL), not at the VAX>
+                        prompt.
+        /INPUT=file     The subprocess's SYS$INPUT: the terminal, a mailbox,
+                        or a file of commands.  Default: the console's.
+        /OUTPUT=file    Its SYS$OUTPUT (a terminal, mailbox, or NL:).
+        /PROCESS=name   Its name.  Default: the user name and "_n".
+        /PROMPT=string  The prompt for commands read from the terminal.
+                        Default: "$ ".
+
+    Example:
+
+        VAX> HELLO :== $DUA0:[WORK]HELLO.EXE
+        VAX> SPAWN HELLO
+
 $SYMB
     A symbol assignment gives a name to a string, as DCL's do.  When the first
     word of a command is a symbol, its value replaces the word before the
