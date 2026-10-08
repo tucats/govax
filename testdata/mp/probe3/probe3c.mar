@@ -70,8 +70,10 @@ r_len:		.long	0
 	check
 
 ; Read a message, and report it.
+; At most 56 bytes, so that a report (with the 8-byte IOSB) fits in
+; P3_B's largest message, 64.
 loop:	$qiow_s	chan=chan_a, func=#IO$_READVBLK, iosb=r_iosb, -
-		p1=r_data, p2=#64
+		p1=r_data, p2=#56
 	check
 	movzwl	r_iosb+2,r_len
 	addl2	#8,r_len

@@ -1,0 +1,1638 @@
+
+Analyze Object File                           8-OCT-2026 06:19:13.57   Page 1
+DUA1:[000000]DEF_LKI.OBJ;1
+ANALYZ V07-04
+
+This is an OpenVMS VAX object file
+
+1.  MODULE HEADER (OBJ$C_HDR_MHD), 52 bytes
+
+	structure level: 0
+	maximum record size: 512
+	module name: "DEF_LKI"
+	module version: "V1.0"
+	creation   date/time:  8-OCT-2026 06:19
+
+
+2.  LANGUAGE PROCESSOR HEADER (OBJ$C_HDR_LNM), 18 bytes
+
+	Textual information:
+	"VAX MACRO V5.4-3"
+
+
+3.  SOURCE FILE HEADER (OBJ$C_HDR_SRC), 22 bytes
+
+	Textual information:
+	"MACRO/NOLIST DEF_LKI"
+
+
+4.  TITLE HEADER (OBJ$C_HDR_TTL), 42 bytes
+
+	Textual information:
+	"$LKIDEF's names and values ($GETLKI item"
+
+
+5.  TRACEBACK INFORMATION (OBJ$C_TBT), 17 bytes
+
+	1)  Store Immediate, 15 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 07 00 00 00 00 00 BC 0E|  0000  |.¼......|
+		    49 4B 4C 5F 46 45 44|  0008  |DEF_LKI |
+
+
+6.  GLOBAL SYMBOL DIRECTORY (OBJ$C_GSD), 474 bytes
+
+	1)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 13 (%X'0000000D')
+		symbol: "LKI$B_GRMODE"
+
+	2)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+
+Analyze Object File                           8-OCT-2026 06:19:13.57   Page 2
+DUA1:[000000]DEF_LKI.OBJ;1
+ANALYZ V07-04
+
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 14 (%X'0000000E')
+		symbol: "LKI$B_QUEUE"
+
+	3)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 2 (%X'00000002')
+		symbol: "LKI$B_RMOD"
+
+	4)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 12 (%X'0000000C')
+		symbol: "LKI$B_RQMODE"
+
+	5)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 1 (%X'00000001')
+		symbol: "LKI$B_STATE_GRMODE"
+
+	6)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+
+Analyze Object File                           8-OCT-2026 06:19:13.57   Page 3
+DUA1:[000000]DEF_LKI.OBJ;1
+ANALYZ V07-04
+
+		value: 2 (%X'00000002')
+		symbol: "LKI$B_STATE_QUEUE"
+
+	7)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 0 (%X'00000000')
+		symbol: "LKI$B_STATE_RQMODE"
+
+	8)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 3 (%X'00000003')
+		symbol: "LKI$B_STATUS"
+
+	9)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 56 (%X'00000038')
+		symbol: "LKI$C_BR_LENGTH"
+
+	10)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 0 (%X'00000000')
+		symbol: "LKI$C_CONVERT"
+
+	11)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+
+Analyze Object File                           8-OCT-2026 06:19:13.57   Page 4
+DUA1:[000000]DEF_LKI.OBJ;1
+ANALYZ V07-04
+
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 1 (%X'00000001')
+		symbol: "LKI$C_GRANTED"
+
+	12)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 24 (%X'00000018')
+		symbol: "LKI$C_LENGTH"
+
+	13)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 0 (%X'00000000')
+		symbol: "LKI$C_LISTEND"
+
+	14)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 1 (%X'00000001')
+		symbol: "LKI$C_LKBTYPE"
+
+	15)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+
+Analyze Object File                           8-OCT-2026 06:19:13.57   Page 5
+DUA1:[000000]DEF_LKI.OBJ;1
+ANALYZ V07-04
+
+		value: -2 (%X'FFFFFFFE')
+		symbol: "LKI$C_RETRY"
+
+	16)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 2 (%X'00000002')
+		symbol: "LKI$C_RSBTYPE"
+
+	17)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: -7 (%X'FFFFFFF9')
+		symbol: "LKI$C_RSPDOLOCL"
+
+	18)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: -6 (%X'FFFFFFFA')
+		symbol: "LKI$C_RSPGRANTD"
+
+	19)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: -4 (%X'FFFFFFFC')
+		symbol: "LKI$C_RSPNOTQED"
+
+	20)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+
+Analyze Object File                           8-OCT-2026 06:19:13.57   Page 6
+DUA1:[000000]DEF_LKI.OBJ;1
+ANALYZ V07-04
+
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: -5 (%X'FFFFFFFB')
+		symbol: "LKI$C_RSPQUEUED"
+
+
+7.  GLOBAL SYMBOL DIRECTORY (OBJ$C_GSD), 481 bytes
+
+	1)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: -8 (%X'FFFFFFF8')
+		symbol: "LKI$C_RSPRESEND"
+
+	2)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: -3 (%X'FFFFFFFD')
+		symbol: "LKI$C_SCSWAIT"
+
+	3)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: -1 (%X'FFFFFFFF')
+		symbol: "LKI$C_WAITING"
+
+	4)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+
+Analyze Object File                           8-OCT-2026 06:19:13.57   Page 7
+DUA1:[000000]DEF_LKI.OBJ;1
+ANALYZ V07-04
+
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 56 (%X'00000038')
+		symbol: "LKI$K_BR_LENGTH"
+
+	5)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 24 (%X'00000018')
+		symbol: "LKI$K_LENGTH"
+
+	6)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 20 (%X'00000014')
+		symbol: "LKI$L_CSID"
+
+	7)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 16 (%X'00000010')
+		symbol: "LKI$L_LKID"
+
+	8)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 0 (%X'00000000')
+		symbol: "LKI$L_LOCKID"
+
+
+Analyze Object File                           8-OCT-2026 06:19:13.57   Page 8
+DUA1:[000000]DEF_LKI.OBJ;1
+ANALYZ V07-04
+
+	9)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 8 (%X'00000008')
+		symbol: "LKI$L_MSTCSID"
+
+	10)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 0 (%X'00000000')
+		symbol: "LKI$L_MSTLKID"
+
+	11)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 4 (%X'00000004')
+		symbol: "LKI$L_PID"
+
+	12)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 16 (%X'00000010')
+		symbol: "LKI$L_REMLKID"
+
+	13)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+
+Analyze Object File                           8-OCT-2026 06:19:13.58   Page 9
+DUA1:[000000]DEF_LKI.OBJ;1
+ANALYZ V07-04
+
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 20 (%X'00000014')
+		symbol: "LKI$L_REMSYSID"
+
+	14)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 8 (%X'00000008')
+		symbol: "LKI$L_SYSID"
+
+	15)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: -2147483648 (%X'80000000')
+		symbol: "LKI$M_SYSNAM"
+
+	16)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 48 (%X'00000030')
+		symbol: "LKI$Q_GRLENGTH"
+
+	17)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 40 (%X'00000028')
+		symbol: "LKI$Q_GRSTART"
+
+
+Analyze Object File                           8-OCT-2026 06:19:13.58   Page 10
+DUA1:[000000]DEF_LKI.OBJ;1
+ANALYZ V07-04
+
+	18)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 32 (%X'00000020')
+		symbol: "LKI$Q_RQLENGTH"
+
+	19)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 24 (%X'00000018')
+		symbol: "LKI$Q_RQSTART"
+
+	20)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 0 (%X'00000000')
+		symbol: "LKI$R_STATUS_BITS"
+
+	21)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 8 (%X'00000008')
+		symbol: "LKI$S_GRLENGTH"
+
+
+8.  GLOBAL SYMBOL DIRECTORY (OBJ$C_GSD), 483 bytes
+
+	1)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+
+Analyze Object File                           8-OCT-2026 06:19:13.58   Page 11
+DUA1:[000000]DEF_LKI.OBJ;1
+ANALYZ V07-04
+
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 8 (%X'00000008')
+		symbol: "LKI$S_GRSTART"
+
+	2)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 56 (%X'00000038')
+		symbol: "LKI$S_LKIDEF"
+
+	3)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 4 (%X'00000004')
+		symbol: "LKI$S_NAMSPACE"
+
+	4)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 8 (%X'00000008')
+		symbol: "LKI$S_RQLENGTH"
+
+	5)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+
+Analyze Object File                           8-OCT-2026 06:19:13.58   Page 12
+DUA1:[000000]DEF_LKI.OBJ;1
+ANALYZ V07-04
+
+		value: 8 (%X'00000008')
+		symbol: "LKI$S_RQSTART"
+
+	6)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 3 (%X'00000003')
+		symbol: "LKI$S_STATEF"
+
+	7)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 31 (%X'0000001F')
+		symbol: "LKI$V_SYSNAM"
+
+	8)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 0 (%X'00000000')
+		symbol: "LKI$W_GROUP"
+
+	9)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 518 (%X'00000206')
+		symbol: "LKI$_BLOCKEDBY"
+
+	10)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+
+Analyze Object File                           8-OCT-2026 06:19:13.58   Page 13
+DUA1:[000000]DEF_LKI.OBJ;1
+ANALYZ V07-04
+
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 526 (%X'0000020E')
+		symbol: "LKI$_BLOCKEDBY_BR"
+
+	11)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 529 (%X'00000211')
+		symbol: "LKI$_BLOCKER_BR"
+
+	12)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 519 (%X'00000207')
+		symbol: "LKI$_BLOCKING"
+
+	13)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 527 (%X'0000020F')
+		symbol: "LKI$_BLOCKING_BR"
+
+	14)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+
+Analyze Object File                           8-OCT-2026 06:19:13.58   Page 14
+DUA1:[000000]DEF_LKI.OBJ;1
+ANALYZ V07-04
+
+		value: 265 (%X'00000109')
+		symbol: "LKI$_BRL"
+
+	15)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 264 (%X'00000108')
+		symbol: "LKI$_CSID"
+
+	16)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 521 (%X'00000209')
+		symbol: "LKI$_CVTCOUNT"
+
+	17)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 523 (%X'0000020B')
+		symbol: "LKI$_GRANTCOUNT"
+
+	18)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 267 (%X'0000010B')
+		symbol: "LKI$_LASTLKB"
+
+	19)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+
+Analyze Object File                           8-OCT-2026 06:19:13.58   Page 15
+DUA1:[000000]DEF_LKI.OBJ;1
+ANALYZ V07-04
+
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 530 (%X'00000212')
+		symbol: "LKI$_LASTRSB"
+
+	20)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 517 (%X'00000205')
+		symbol: "LKI$_LCKCOUNT"
+
+	21)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 259 (%X'00000103')
+		symbol: "LKI$_LCKREFCNT"
+
+
+9.  GLOBAL SYMBOL DIRECTORY (OBJ$C_GSD), 480 bytes
+
+	1)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 263 (%X'00000107')
+		symbol: "LKI$_LKID"
+
+	2)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+
+Analyze Object File                           8-OCT-2026 06:19:13.58   Page 16
+DUA1:[000000]DEF_LKI.OBJ;1
+ANALYZ V07-04
+
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 260 (%X'00000104')
+		symbol: "LKI$_LOCKID"
+
+	3)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 520 (%X'00000208')
+		symbol: "LKI$_LOCKS"
+
+	4)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 528 (%X'00000210')
+		symbol: "LKI$_LOCKS_BR"
+
+	5)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 524 (%X'0000020C')
+		symbol: "LKI$_MSTCSID"
+
+	6)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 262 (%X'00000106')
+		symbol: "LKI$_MSTLKID"
+
+
+Analyze Object File                           8-OCT-2026 06:19:13.58   Page 17
+DUA1:[000000]DEF_LKI.OBJ;1
+ANALYZ V07-04
+
+	7)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 512 (%X'00000200')
+		symbol: "LKI$_NAMSPACE"
+
+	8)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 258 (%X'00000102')
+		symbol: "LKI$_PARENT"
+
+	9)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 256 (%X'00000100')
+		symbol: "LKI$_PID"
+
+	10)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 266 (%X'0000010A')
+		symbol: "LKI$_RANGE"
+
+	11)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+
+Analyze Object File                           8-OCT-2026 06:19:13.58   Page 18
+DUA1:[000000]DEF_LKI.OBJ;1
+ANALYZ V07-04
+
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 261 (%X'00000105')
+		symbol: "LKI$_REMLKID"
+
+	12)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 513 (%X'00000201')
+		symbol: "LKI$_RESNAM"
+
+	13)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 24 (%X'00000018')
+		symbol: "LKI$_RNG_Q_GRLENGTH"
+
+	14)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 16 (%X'00000010')
+		symbol: "LKI$_RNG_Q_GRSTART"
+
+	15)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 8 (%X'00000008')
+		symbol: "LKI$_RNG_Q_RQLENGTH"
+
+
+Analyze Object File                           8-OCT-2026 06:19:13.58   Page 19
+DUA1:[000000]DEF_LKI.OBJ;1
+ANALYZ V07-04
+
+	16)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 0 (%X'00000000')
+		symbol: "LKI$_RNG_Q_RQSTART"
+
+	17)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 8 (%X'00000008')
+		symbol: "LKI$_RNG_S_GRLENGTH"
+
+	18)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 8 (%X'00000008')
+		symbol: "LKI$_RNG_S_GRSTART"
+
+	19)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 32 (%X'00000020')
+		symbol: "LKI$_RNG_S_RNGDEF"
+
+	20)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+
+Analyze Object File                           8-OCT-2026 06:19:13.58   Page 20
+DUA1:[000000]DEF_LKI.OBJ;1
+ANALYZ V07-04
+
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 8 (%X'00000008')
+		symbol: "LKI$_RNG_S_RQLENGTH"
+
+
+10.  GLOBAL SYMBOL DIRECTORY (OBJ$C_GSD), 466 bytes
+
+	1)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 8 (%X'00000008')
+		symbol: "LKI$_RNG_S_RQSTART"
+
+	2)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 514 (%X'00000202')
+		symbol: "LKI$_RSBREFCNT"
+
+	3)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 257 (%X'00000101')
+		symbol: "LKI$_STATE"
+
+	4)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 516 (%X'00000204')
+		symbol: "LKI$_SYSTEM"
+
+Analyze Object File                           8-OCT-2026 06:19:13.59   Page 21
+DUA1:[000000]DEF_LKI.OBJ;1
+ANALYZ V07-04
+
+
+	5)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 515 (%X'00000203')
+		symbol: "LKI$_VALBLK"
+
+	6)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 525 (%X'0000020D')
+		symbol: "LKI$_VALBLKST"
+
+	7)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 522 (%X'0000020A')
+		symbol: "LKI$_WAITCOUNT"
+
+	8)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 11 (%X'0000000B')
+		symbol: "LKISND$B_FILL_2"
+
+	9)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+
+Analyze Object File                           8-OCT-2026 06:19:13.59   Page 22
+DUA1:[000000]DEF_LKI.OBJ;1
+ANALYZ V07-04
+
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 13 (%X'0000000D')
+		symbol: "LKISND$B_FILL_3"
+
+	10)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 12 (%X'0000000C')
+		symbol: "LKISND$B_ITEM_LENGTH"
+
+	11)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 10 (%X'0000000A')
+		symbol: "LKISND$B_TYPE"
+
+	12)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 16 (%X'00000010')
+		symbol: "LKISND$C_HDRLEN"
+
+	13)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 16 (%X'00000010')
+		symbol: "LKISND$K_HDRLEN"
+
+
+Analyze Object File                           8-OCT-2026 06:19:13.59   Page 23
+DUA1:[000000]DEF_LKI.OBJ;1
+ANALYZ V07-04
+
+	14)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 16 (%X'00000010')
+		symbol: "LKISND$S_LKISNDDEF"
+
+	15)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 14 (%X'0000000E')
+		symbol: "LKISND$W_FILL_4"
+
+	16)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 4 (%X'00000004')
+		symbol: "LKISND$W_FLAGS"
+
+	17)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 0 (%X'00000000')
+		symbol: "LKISND$W_RETSIZE"
+
+	18)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+
+Analyze Object File                           8-OCT-2026 06:19:13.59   Page 24
+DUA1:[000000]DEF_LKI.OBJ;1
+ANALYZ V07-04
+
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 6 (%X'00000006')
+		symbol: "LKISND$W_SEQNUM"
+
+	19)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 8 (%X'00000008')
+		symbol: "LKISND$W_SIZE"
+
+
+11.  GLOBAL SYMBOL DIRECTORY (OBJ$C_GSD), 288 bytes
+
+	1)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 2 (%X'00000002')
+		symbol: "LKISND$W_STATUS"
+
+	2)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 17 (%X'00000011')
+		symbol: "LKIUSR$B_IGNORE_OWN"
+
+	3)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 16 (%X'00000010')
+		symbol: "LKIUSR$B_RQMODE"
+
+Analyze Object File                           8-OCT-2026 06:19:13.59   Page 25
+DUA1:[000000]DEF_LKI.OBJ;1
+ANALYZ V07-04
+
+
+	4)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 20 (%X'00000014')
+		symbol: "LKIUSR$C_LENGTH"
+
+	5)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 20 (%X'00000014')
+		symbol: "LKIUSR$K_BLOCKER_START"
+
+	6)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 20 (%X'00000014')
+		symbol: "LKIUSR$K_LENGTH"
+
+	7)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 8 (%X'00000008')
+		symbol: "LKIUSR$Q_LENGTH"
+
+	8)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+
+Analyze Object File                           8-OCT-2026 06:19:13.59   Page 26
+DUA1:[000000]DEF_LKI.OBJ;1
+ANALYZ V07-04
+
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 0 (%X'00000000')
+		symbol: "LKIUSR$Q_START"
+
+	9)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 8 (%X'00000008')
+		symbol: "LKIUSR$S_LENGTH"
+
+	10)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 20 (%X'00000014')
+		symbol: "LKIUSR$S_LKIUSRDEF"
+
+	11)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 8 (%X'00000008')
+		symbol: "LKIUSR$S_START"
+
+
+12.  GLOBAL SYMBOL DIRECTORY (OBJ$C_GSD), 19 bytes
+
+	1)  Program Section Definition (GSD$C_PSC)
+		alignment: 1-byte boundary                       <-- psect 0
+		attribute flags:
+			(0)  GPS$V_PIC        0
+			(1)  GPS$V_LIB        0
+			(2)  GPS$V_OVR        0
+			(3)  GPS$V_REL        0
+			(4)  GPS$V_GBL        0
+			(5)  GPS$V_SHR        0
+			(6)  GPS$V_EXE        0
+
+Analyze Object File                           8-OCT-2026 06:19:13.59   Page 27
+DUA1:[000000]DEF_LKI.OBJ;1
+ANALYZ V07-04
+
+			(7)  GPS$V_RD         0
+			(8)  GPS$V_WRT        0
+			(9)  GPS$V_VEC        0
+			(10) GPS$V_COM        0
+			(11) GPS$V_NOMOD      0
+		allocation: 0 (%X'00000000')
+		symbol: ".  ABS  ."
+
+
+13.  TEXT INFORMATION/RELOCATION (OBJ$C_TIR), 5 bytes
+
+	1)  TIR$C_STA_PB (4, %X'04')                            stack depth: 1
+		psect: 0
+		value: 0 (%X'00000000')
+
+	2)  TIR$C_CTL_SETRB (80, %X'50')                        stack depth: 0
+
+
+14.  GLOBAL SYMBOL DIRECTORY (OBJ$C_GSD), 15 bytes
+
+	1)  Program Section Definition (GSD$C_PSC)
+		alignment: 1-byte boundary                       <-- psect 1
+		attribute flags:
+			(0)  GPS$V_PIC        0
+			(1)  GPS$V_LIB        0
+			(2)  GPS$V_OVR        0
+			(3)  GPS$V_REL        0
+			(4)  GPS$V_GBL        0
+			(5)  GPS$V_SHR        0
+			(6)  GPS$V_EXE        1
+			(7)  GPS$V_RD         1
+			(8)  GPS$V_WRT        1
+			(9)  GPS$V_VEC        0
+			(10) GPS$V_COM        0
+			(11) GPS$V_NOMOD      0
+		allocation: 0 (%X'00000000')
+		symbol: "$ABS$"
+
+
+15.  TEXT INFORMATION/RELOCATION (OBJ$C_TIR), 5 bytes
+
+	1)  TIR$C_STA_PB (4, %X'04')                            stack depth: 1
+		psect: 0
+		value: 0 (%X'00000000')
+
+	2)  TIR$C_CTL_SETRB (80, %X'50')                        stack depth: 0
+
+
+16.  TRACEBACK INFORMATION (OBJ$C_TBT), 4 bytes
+
+	1)  Store Immediate, 2 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                   BD 01|  0000  |.½      |
+
+
+
+Analyze Object File                           8-OCT-2026 06:19:13.59   Page 28
+DUA1:[000000]DEF_LKI.OBJ;1
+ANALYZ V07-04
+
+17.  END OF MODULE (OBJ$C_EOM), 2 bytes
+
+	severity: successful (0)
+
+
+
+Analyze Object File                           8-OCT-2026 06:19:13.59   Page 29
+DUA1:[000000]DEF_LKI.OBJ;1
+ANALYZ V07-04
+
+SUMMARY STATISTICS:
+
+Record Type	Count	Total Bytes
+
+OBJ$C_HDR	    4	   134
+OBJ$C_GSD	    8	  2706
+OBJ$C_TIR	    2	    10
+OBJ$C_EOM	    1	     2
+OBJ$C_DBG	    0	     0
+OBJ$C_TBT	    2	    21
+OBJ$C_LNK	    0	     0
+OBJ$C_EOMW	    0	     0
+
+Totals		   17	  2873
+
+
+The analysis uncovered NO errors.
+
+
+ANALYZE/OBJECT/OUTPUT=DEF_LKI.ANL DEF_LKI.OBJ                                   

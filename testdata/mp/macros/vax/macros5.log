@@ -1,0 +1,73 @@
+
+$ MACRO/NOLIST R5_MISC
+                   00000000'EF   DD  01AC       
+%MACRO-E-OPRNDSYNX, Operand syntax error                                  !
+                   00000000'EF   DD  01C7       
+%MACRO-E-OPRNDSYNX, Operand syntax error                                  !
+                   00000000'EF   DD  01E2       
+%MACRO-E-OPRNDSYNX, Operand syntax error                                  !
+                                 DD  0201       
+%MACRO-E-NOTENUFOPR, Not enough operands supplied      !
+                   00000000'EF   DD  0217       
+%MACRO-E-OPRNDSYNX, Operand syntax error                                  !
+                   00000000'EF   DD  0232       
+%MACRO-E-OPRNDSYNX, Operand syntax error                                   !
+                   00000000'EF   DD  024D       
+%MACRO-E-OPRNDSYNX, Operand syntax error                                   !
+                   00000000'EF   DD  0268       
+%MACRO-E-OPRNDSYNX, Operand syntax error                                !
+                   00000000'EF   DD  0283       
+%MACRO-E-OPRNDSYNX, Operand syntax error                                  !
+                   00000000'EF   DD  029E       
+%MACRO-E-OPRNDSYNX, Operand syntax error                                 !
+                   00000000'EF   DD  02B9       
+%MACRO-E-OPRNDSYNX, Operand syntax error                                  !
+                   00000000'EF   DD  02D4       
+%MACRO-E-OPRNDSYNX, Operand syntax error                                   !
+                   00000000'EF   DD  02EF       
+%MACRO-E-OPRNDSYNX, Operand syntax error                                  !
+                   00000000'EF   DD  030A       
+%MACRO-E-OPRNDSYNX, Operand syntax error                                 !
+                   00000000'EF   DD  0325       
+%MACRO-E-OPRNDSYNX, Operand syntax error                                     !
+                   00000000'EF   DD  0340       
+%MACRO-E-OPRNDSYNX, Operand syntax error                                 !
+                   00000000'EF   DD  035B       
+%MACRO-E-OPRNDSYNX, Operand syntax error                                  !
+                   00000000'EF   DD  0376       
+%MACRO-E-OPRNDSYNX, Operand syntax error                               !
+                   00000000'EF   DD  0391       
+%MACRO-E-OPRNDSYNX, Operand syntax error                                  !
+                   00000000'EF   DD  03AC       
+%MACRO-E-OPRNDSYNX, Operand syntax error                                  !
+                   00000000'EF   DD  03C7       
+%MACRO-E-OPRNDSYNX, Operand syntax error                                 !
+                   00000000'EF   DD  03E2       
+%MACRO-E-OPRNDSYNX, Operand syntax error                               !
+                   00000000'EF   DD  03FD       
+%MACRO-E-OPRNDSYNX, Operand syntax error                                     !
+                   00000000'EF   DD  0418       
+%MACRO-E-OPRNDSYNX, Operand syntax error                                    !
+                   00000000'EF   DD  0433       
+%MACRO-E-OPRNDSYNX, Operand syntax error                                    !
+                   00000000'EF   DD  044E       
+%MACRO-E-OPRNDSYNX, Operand syntax error                                   !
+                   00000000'EF   DD  0469       
+%MACRO-E-OPRNDSYNX, Operand syntax error                                   !
+                   00000000'EF   DD  0484       
+%MACRO-E-OPRNDSYNX, Operand syntax error                                !
+                   00000000'EF   DD  049F       
+%MACRO-E-OPRNDSYNX, Operand syntax error                                  !
+                   00000000'EF   DD  04BA       
+%MACRO-E-OPRNDSYNX, Operand syntax error                               !
+                   00000000'EF   DD  04D5       
+%MACRO-E-OPRNDSYNX, Operand syntax error                                  !
+                   00000000'EF   DD  04F0       
+%MACRO-E-OPRNDSYNX, Operand syntax error                                  !
+                   00000000'EF   DD  050B       
+%MACRO-E-OPRNDSYNX, Operand syntax error                                  !
+                   00000000'EF   DD  0526       
+%MACRO-E-OPRNDSYNX, Operand syntax error                                  !
+$ ANALYZE/OBJECT/OUTPUT=R5_MISC.ANL R5_MISC.OBJ
+%ANALYZE-I-ERRORS, DUA1:[000000]R5_MISC.OBJ;1                              0 errors
+$ SET NOVERIFY

@@ -1,5 +1,10 @@
 # The VAX runs waiting at the end of Phase 46, in one session
 
+**Run 2026-10-08.** Everything worked but probe 3, which stopped at once
+(SS$_MBTOOSML) and left its child waiting; see `../probe3/README.md`,
+which has scripts to run it again by itself. What the rest settled is in
+`docs/PHASE-46 - interprocess comm.md`'s progress log.
+
 Everything Phases 45 and 46 left for VMS to answer, on one exchange
 volume, run by one command procedure. Each part has its own directory,
 README, and scripts; this directory only puts them together.
@@ -53,7 +58,7 @@ not macro text), as are the probe 3 and ping-pong logs (program output).
   in `starlet.mar` are written for `$CRMPSC`, `$MGBLSC`, `$DGBLSC`, and
   (in Phase 47) the lock services, until every object matches.
 - Definitions: `go run testdata/mp/defs/decode.go` and
-  `go run ./internal/vmsdef/gen -values testdata/mp/defs/phase45-defined.txt`,
+  `go run ./internal/vmsdef/gen -values testdata/mp/defs/defined.txt`,
   then `$SECDEF` and the rest for govax's macro library
   (`internal/bootdata/mkdefs`).
 - Probe 3: `go test ./internal/console -run TestProbe3 -v` prints govax's

@@ -9,7 +9,25 @@ end-of-Phase-46 runs (`../run46/README.md`); `probe3.com` is its part.
 | `probe3.mar` | The program: three parts, each line `what: result` |
 | `probe3c.mar` | The child of part 1: it reads messages from one mailbox and reports each read's IOSB on another |
 | `probe3.com` | Assembles, links, and runs it |
-| `vax/` | The VMS run's log, `probe3.log` (not yet run) |
+| `exchange.cmd`, `copyout.cmd` | Build a volume of probe 3 alone (`testdata/disks/mp-probe3.dsk`) and copy its log back, for running it again by itself |
+| `vax/` | The VMS runs' logs: `probe3-run1.log` (2026-10-08, with `../run46`), and `probe3.log`, the second run's |
+
+## The first run
+
+The first run (`vax/probe3-run1.log`) stopped at its first read of P3_B
+with SS$_MBTOOSML: VMS refuses a mailbox read whose buffer is longer than
+the mailbox's largest message, as it refuses such a write. The parent
+ended, and its child, waiting for its report to be read, had to be
+stopped by hand. govax accepted the read; it now refuses it too
+(`corevms/mbxdriver.go`). The probe now reads no more than the largest
+message, and deletes its child whenever it ends early.
+
+## Running it again
+
+From the repository root, `govax console < testdata/mp/probe3/exchange.cmd`;
+on the VAX, from SYSTEM, with the volume as the default directory,
+`@PROBE3/OUTPUT=PROBE3.LOG`; then
+`govax console < testdata/mp/probe3/copyout.cmd`.
 
 A PID prints as PARENT, CHILD, or ZERO, then its value, so lines compare
 between runs and systems. `TestProbe3` (`internal/console`) runs the same

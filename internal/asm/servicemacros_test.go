@@ -412,8 +412,10 @@ func TestServiceMacroObjects(t *testing.T) {
 	}
 
 	// The argument-list and CALLG forms (round 3), the other services (round
-	// 3's, with keywords that are partly wrong, and round 4's).
-	for _, prefix := range []string{"lst_", "ext_", "r4_"} {
+	// 3's, with keywords that are partly wrong, and round 4's), what round 4
+	// left open (round 5), and the global section and lock services (round
+	// 6).
+	for _, prefix := range []string{"lst_", "ext_", "r4_", "r5_", "r6_"} {
 		more, _ := filepath.Glob(filepath.Join(serviceDir, prefix+"*.mar"))
 		probes = append(probes, more...)
 	}
@@ -474,7 +476,7 @@ func TestServiceMacroObjects(t *testing.T) {
 			}
 
 			if len(keep) == 0 {
-				if strings.HasPrefix(name, "lst_") || strings.HasPrefix(name, "ext_") || strings.HasPrefix(name, "r4_") {
+				if !strings.HasPrefix(name, "svc_") {
 					t.Skip("real MACRO made nothing of these forms: the service has no such macro")
 				}
 

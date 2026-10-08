@@ -356,14 +356,14 @@ waiting on a run on the VAX, or optional work for a later phase.
   a probe, `testdata/mp/defs`: `$PRCDEF`, `$PQLDEF`, `$ACCDEF`, and
   `$MSGDEF`, each called with `GLOBAL`, so the objects' GSDs list every
   name and value. The author ran it on VMS 7.3 the same day; `decode.go`
-  turned the objects into `phase45-defined.txt`, and `gen -values` merged
+  turned the objects into `defined.txt`, and `gen -values` merged
   all 222 names (README.md there), replacing the expected values. Every
   expected `PRC$` and `PQL$` value was right. VMS 7.3's message has
   `ACC$L_JOBID` at offset 12, which the 5.0 manual calls unused; the
   `MSG$_` values agree with STARLET.OLB's. `TestSymbols_CREPRC_values`
   checks the masks against the bits and the message layout. Still to do,
   for subtask 13's MACRO test: have `mkdefs` add `$PRCDEF`/`$PQLDEF`/
-  `$ACCDEF` to govax's STARLET.MLB from `phase45-defined.txt`.
+  `$ACCDEF` to govax's STARLET.MLB from `defined.txt`.
 - 2026-10-07: Subtask 2 (jobs), from *VAX/VMS Internals and Data
   Structures*, section 20.1.1 (steps 3, 8, 17, 19), figure 20-2, and
   table 20-3. `corevms/job.go`: a `Job` (VMS's JIB) with the master PID
@@ -778,7 +778,7 @@ waiting on a run on the VAX, or optional work for a later phase.
   sources assemble on VMS, which makes them a run oracle (README.md
   there); that run has not been made. Also done for this subtask,
   subtask 1's loose end: `mkdefs` reads
-  `testdata/mp/defs/phase45-defined.txt` as well, so govax's macro
+  `testdata/mp/defs/defined.txt` as well, so govax's macro
   library now has `$ACCDEF`, `$MSGDEF`, `$PQLDEF`, and `$PRCDEF`.
 - 2026-10-07: Probe 1 (a VMS 7.3 run for the subtasks so far),
   `testdata/mp/probe1/` (README.md there). `probe1.mar` creates a

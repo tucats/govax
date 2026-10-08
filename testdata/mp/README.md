@@ -9,7 +9,7 @@
 | `probe3/` | Phase 46's runtime probe: mailboxes between processes, global sections, RMS on a mailbox |
 | `macros/` | The system service macro probes (Phase 45 rounds 1-5, Phase 46 round 6) |
 | `run46/` | Every VAX run waiting at the end of Phase 46, on one volume |
-| `vax/` | The VMS run of the ping-pong pair (`pingpong.log`, not yet run) |
+| `vax/` | The VMS run of the ping-pong pair (`pingpong.log`, 2026-10-08) |
 
 `internal/console`'s `TestCreChild` assembles and links both with govax and
 runs the parent under the scheduler. The programs use only system services
@@ -38,6 +38,7 @@ the same way (`TestMbxPingPong`, at a long and a 5-instruction quantum):
     $ MBXPINGPONG DUA1:[DIR]MBXPONG.EXE
 
 The output should be the fifteen lines in `mbxpingpong.mar`'s header.
-`pingpong.com` does all of this; it runs with the other end-of-Phase-46
-runs (`run46/README.md`), and its log goes to `vax/pingpong.log`. The pair
-hasn't been run on VMS yet.
+`pingpong.com` does all of this; it ran with the other end-of-Phase-46
+runs (`run46/README.md`), and its log is `vax/pingpong.log`. There, the
+parent's ten lines are the same as govax's; the child's five went to the
+terminal (`TT:`), not to the log, as `/OUTPUT` sends only the parent's.

@@ -1,0 +1,4561 @@
+
+Analyze Object File                           8-OCT-2026 06:19:12.37   Page 1
+DUA1:[000000]R6_ENQ.OBJ;1
+ANALYZ V07-04
+
+This is an OpenVMS VAX object file
+
+1.  MODULE HEADER (OBJ$C_HDR_MHD), 51 bytes
+
+	structure level: 0
+	maximum record size: 512
+	module name: "R6_ENQ"
+	module version: "V1.0"
+	creation   date/time:  8-OCT-2026 06:19
+
+
+2.  LANGUAGE PROCESSOR HEADER (OBJ$C_HDR_LNM), 18 bytes
+
+	Textual information:
+	"VAX MACRO V5.4-3"
+
+
+3.  SOURCE FILE HEADER (OBJ$C_HDR_SRC), 21 bytes
+
+	Textual information:
+	"MACRO/NOLIST R6_ENQ"
+
+
+4.  TITLE HEADER (OBJ$C_HDR_TTL), 24 bytes
+
+	Textual information:
+	"every argument of $ENQ"
+
+
+5.  TRACEBACK INFORMATION (OBJ$C_TBT), 16 bytes
+
+	1)  Store Immediate, 14 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 06 00 00 00 00 00 BC 0D|  0000  |.М......|
+		       51 4E 45 5F 36 52|  0008  |R6_ENQ  |
+
+
+6.  GLOBAL SYMBOL DIRECTORY (OBJ$C_GSD), 45 bytes
+
+	1)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "NULL"
+
+	2)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+
+Analyze Object File                           8-OCT-2026 06:19:12.37   Page 2
+DUA1:[000000]R6_ENQ.OBJ;1
+ANALYZ V07-04
+
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "NULLARG"
+
+	3)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "RSDMID"
+
+	4)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        0
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		symbol: "SYS$ENQ"
+
+
+7.  GLOBAL SYMBOL DIRECTORY (OBJ$C_GSD), 19 bytes
+
+	1)  Program Section Definition (GSD$C_PSC)
+		alignment: 1-byte boundary                       <-- psect 0
+		attribute flags:
+			(0)  GPS$V_PIC        0
+			(1)  GPS$V_LIB        0
+			(2)  GPS$V_OVR        0
+			(3)  GPS$V_REL        0
+			(4)  GPS$V_GBL        0
+			(5)  GPS$V_SHR        0
+			(6)  GPS$V_EXE        0
+			(7)  GPS$V_RD         0
+			(8)  GPS$V_WRT        0
+			(9)  GPS$V_VEC        0
+			(10) GPS$V_COM        0
+			(11) GPS$V_NOMOD      0
+		allocation: 0 (%X'00000000')
+		symbol: ".  ABS  ."
+
+
+8.  TEXT INFORMATION/RELOCATION (OBJ$C_TIR), 5 bytes
+
+	1)  TIR$C_STA_PB (4, %X'04')                            stack depth: 1
+		psect: 0
+		value: 0 (%X'00000000')
+
+
+Analyze Object File                           8-OCT-2026 06:19:12.37   Page 3
+DUA1:[000000]R6_ENQ.OBJ;1
+ANALYZ V07-04
+
+	2)  TIR$C_CTL_SETRB (80, %X'50')                        stack depth: 0
+
+
+9.  GLOBAL SYMBOL DIRECTORY (OBJ$C_GSD), 14 bytes
+
+	1)  Program Section Definition (GSD$C_PSC)
+		alignment: 4-byte boundary                       <-- psect 1
+		attribute flags:
+			(0)  GPS$V_PIC        0
+			(1)  GPS$V_LIB        0
+			(2)  GPS$V_OVR        0
+			(3)  GPS$V_REL        1
+			(4)  GPS$V_GBL        0
+			(5)  GPS$V_SHR        0
+			(6)  GPS$V_EXE        0
+			(7)  GPS$V_RD         1
+			(8)  GPS$V_WRT        1
+			(9)  GPS$V_VEC        0
+			(10) GPS$V_COM        0
+			(11) GPS$V_NOMOD      0
+		allocation: 128 (%X'00000080')
+		symbol: "DATA"
+
+
+10.  TEXT INFORMATION/RELOCATION (OBJ$C_TIR), 134 bytes
+
+	1)  TIR$C_STA_PB (4, %X'04')                            stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	2)  TIR$C_CTL_SETRB (80, %X'50')                        stack depth: 0
+
+	3)  Store Immediate, 128 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 00 00 00 00 00 00 00 00|  0000  |........|
+		 00 00 00 00 00 00 00 00|  0008  |........|
+		 00 00 00 00 00 00 00 00|  0010  |........|
+		 00 00 00 00 00 00 00 00|  0018  |........|
+		 00 00 00 00 00 00 00 00|  0020  |........|
+		 00 00 00 00 00 00 00 00|  0028  |........|
+		 00 00 00 00 00 00 00 00|  0030  |........|
+		 00 00 00 00 00 00 00 00|  0038  |........|
+		 00 00 00 00 00 00 00 00|  0040  |........|
+		 00 00 00 00 00 00 00 00|  0048  |........|
+		 00 00 00 00 00 00 00 00|  0050  |........|
+		 00 00 00 00 00 00 00 00|  0058  |........|
+		 00 00 00 00 00 00 00 00|  0060  |........|
+		 00 00 00 00 00 00 00 00|  0068  |........|
+		 00 00 00 00 00 00 00 00|  0070  |........|
+		 00 00 00 00 00 00 00 00|  0078  |........|
+
+
+
+Analyze Object File                           8-OCT-2026 06:19:12.37   Page 4
+DUA1:[000000]R6_ENQ.OBJ;1
+ANALYZ V07-04
+
+11.  GLOBAL SYMBOL DIRECTORY (OBJ$C_GSD), 14 bytes
+
+	1)  Program Section Definition (GSD$C_PSC)
+		alignment: 4-byte boundary                       <-- psect 2
+		attribute flags:
+			(0)  GPS$V_PIC        0
+			(1)  GPS$V_LIB        0
+			(2)  GPS$V_OVR        0
+			(3)  GPS$V_REL        1
+			(4)  GPS$V_GBL        0
+			(5)  GPS$V_SHR        0
+			(6)  GPS$V_EXE        1
+			(7)  GPS$V_RD         1
+			(8)  GPS$V_WRT        0
+			(9)  GPS$V_VEC        0
+			(10) GPS$V_COM        0
+			(11) GPS$V_NOMOD      0
+		allocation: 3212 (%X'00000C8C')
+		symbol: "CODE"
+
+
+12.  TEXT INFORMATION/RELOCATION (OBJ$C_TIR), 7 bytes
+
+	1)  TIR$C_STA_PB (4, %X'04')                            stack depth: 1
+		psect: 2
+		value: 0 (%X'00000000')
+
+	2)  TIR$C_CTL_SETRB (80, %X'50')                        stack depth: 0
+
+	3)  TIR$C_STA_UB (7, %X'07')                            stack depth: 1
+		unsigned value: 192 (%X'000000C0')
+
+
+13.  GLOBAL SYMBOL DIRECTORY (OBJ$C_GSD), 19 bytes
+
+	1)  Entry Point Symbol and Mask Definition (GSD$C_EPM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        1
+			(4)  GSY$V_COMM       0
+		psect: 2
+		value: 0 (%X'00000000')
+		entry mask: <R6,R7>
+		symbol: "R6_ENQ"
+
+
+14.  TEXT INFORMATION/RELOCATION (OBJ$C_TIR), 2 bytes
+
+	1)  TIR$C_STO_W (38, %X'26')                            stack depth: 0
+
+
+
+Analyze Object File                           8-OCT-2026 06:19:12.37   Page 5
+DUA1:[000000]R6_ENQ.OBJ;1
+ANALYZ V07-04
+
+15.  TEXT INFORMATION/RELOCATION (OBJ$C_TIR), 461 bytes
+
+	1)  Store Immediate, 18 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 7E 7C 00 DD 7E 7C 7E 7C|  0000  ||~|~н.|~|
+		 00 DD DD 9F 7E 7C 00 DD|  0008  |н.|~.нн.|
+		                   0D FB|  0010  |ћ.      |
+
+	2)  TIR$C_STA_GBL (0, %X'00')                           stack depth: 1
+		symbol: "SYS$ENQ"
+
+	3)  TIR$C_STO_PICR (28, %X'1C')                         stack depth: 0
+
+	4)  Store Immediate, 19 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 8F DD 7E 7C 7A 7A 00 01|  0000  |..zz|~н.|
+		 00 AA 8F DD 00 00 00 BB|  0008  |Л...н.Њ.|
+		                9F 00 00|  0010  |...     |
+
+	5)  TIR$C_STA_PB (4, %X'04')                            stack depth: 1
+		psect: 1
+		value: 64 (%X'00000040')
+
+	6)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |я       |
+
+	7)  TIR$C_STO_LD (25, %X'19')                           stack depth: 0
+
+	8)  Store Immediate, 7 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		    9F 00 00 00 88 8F DD|  0000  |н...... |
+
+	9)  TIR$C_STA_PB (4, %X'04')                            stack depth: 1
+		psect: 1
+		value: 48 (%X'00000030')
+
+	10)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |я       |
+
+	11)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	12)  Store Immediate, 7 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		    9F 00 00 00 66 8F DD|  0000  |н.f.... |
+
+
+Analyze Object File                           8-OCT-2026 06:19:12.37   Page 6
+DUA1:[000000]R6_ENQ.OBJ;1
+ANALYZ V07-04
+
+	13)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 32 (%X'00000020')
+
+	14)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |я       |
+
+	15)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	16)  Store Immediate, 7 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		    9F 00 00 00 44 8F DD|  0000  |н.D.... |
+
+	17)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 16 (%X'00000010')
+
+	18)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |я       |
+
+	19)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	20)  Store Immediate, 3 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                DD 22 DD|  0000  |н"н     |
+
+	21)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "NULLARG"
+
+	22)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |я       |
+
+	23)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	24)  Store Immediate, 2 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                   0D FB|  0000  |ћ.      |
+
+	25)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "SYS$ENQ"
+
+	26)  TIR$C_STO_PICR (28, %X'1C')                        stack depth: 0
+
+	27)  Store Immediate, 19 bytes:
+
+Analyze Object File                           8-OCT-2026 06:19:12.37   Page 7
+DUA1:[000000]R6_ENQ.OBJ;1
+ANALYZ V07-04
+
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 8F DD 7E 7C 7A 7A 00 02|  0000  |..zz|~н.|
+		 00 AA 8F DD 00 00 00 BB|  0008  |Л...н.Њ.|
+		                9F 00 00|  0010  |...     |
+
+	28)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 64 (%X'00000040')
+
+	29)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |я       |
+
+	30)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	31)  Store Immediate, 7 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		    9F 00 00 00 88 8F DD|  0000  |н...... |
+
+	32)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 48 (%X'00000030')
+
+	33)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |я       |
+
+	34)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	35)  Store Immediate, 7 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		    9F 00 00 00 66 8F DD|  0000  |н.f.... |
+
+	36)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 32 (%X'00000020')
+
+	37)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |я       |
+
+	38)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	39)  Store Immediate, 7 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		    9F 00 00 00 44 8F DD|  0000  |н.D.... |
+
+
+Analyze Object File                           8-OCT-2026 06:19:12.37   Page 8
+DUA1:[000000]R6_ENQ.OBJ;1
+ANALYZ V07-04
+
+	40)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 16 (%X'00000010')
+
+	41)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |я       |
+
+	42)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	43)  Store Immediate, 3 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                DD 22 DD|  0000  |н"н     |
+
+	44)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "NULLARG"
+
+	45)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |я       |
+
+	46)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	47)  Store Immediate, 2 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                   0D FB|  0000  |ћ.      |
+
+	48)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "SYS$ENQ"
+
+	49)  TIR$C_STO_PICR (28, %X'1C')                        stack depth: 0
+
+	50)  Store Immediate, 19 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 8F DD 7E 7C 7A 7A 00 03|  0000  |..zz|~н.|
+		 00 AA 8F DD 00 00 00 BB|  0008  |Л...н.Њ.|
+		                9F 00 00|  0010  |...     |
+
+	51)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 64 (%X'00000040')
+
+	52)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |я       |
+
+	53)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+
+Analyze Object File                           8-OCT-2026 06:19:12.37   Page 9
+DUA1:[000000]R6_ENQ.OBJ;1
+ANALYZ V07-04
+
+	54)  Store Immediate, 7 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		    9F 00 00 00 88 8F DD|  0000  |н...... |
+
+	55)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 48 (%X'00000030')
+
+	56)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |я       |
+
+	57)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	58)  Store Immediate, 7 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		    9F 00 00 00 66 8F DD|  0000  |н.f.... |
+
+	59)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 32 (%X'00000020')
+
+	60)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |я       |
+
+	61)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	62)  Store Immediate, 7 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		    9F 00 00 00 44 8F DD|  0000  |н.D.... |
+
+	63)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 16 (%X'00000010')
+
+	64)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |я       |
+
+	65)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	66)  Store Immediate, 2 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                   DD DD|  0000  |нн      |
+
+
+Analyze Object File                           8-OCT-2026 06:19:12.37   Page 10
+DUA1:[000000]R6_ENQ.OBJ;1
+ANALYZ V07-04
+
+	67)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "NULLARG"
+
+	68)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |я       |
+
+	69)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	70)  Store Immediate, 2 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                   0D FB|  0000  |ћ.      |
+
+	71)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "SYS$ENQ"
+
+	72)  TIR$C_STO_PICR (28, %X'1C')                        stack depth: 0
+
+	73)  Store Immediate, 19 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 8F DD 7E 7C 7A 7A 00 04|  0000  |..zz|~н.|
+		 00 AA 8F DD 00 00 00 BB|  0008  |Л...н.Њ.|
+		                9F 00 00|  0010  |...     |
+
+	74)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 64 (%X'00000040')
+
+	75)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |я       |
+
+	76)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	77)  Store Immediate, 7 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		    9F 00 00 00 88 8F DD|  0000  |н...... |
+
+	78)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 48 (%X'00000030')
+
+	79)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |я       |
+
+	80)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+
+Analyze Object File                           8-OCT-2026 06:19:12.38   Page 11
+DUA1:[000000]R6_ENQ.OBJ;1
+ANALYZ V07-04
+
+	81)  Store Immediate, 7 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		    9F 00 00 00 66 8F DD|  0000  |н.f.... |
+
+	82)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 32 (%X'00000020')
+
+	83)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |я       |
+
+	84)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	85)  Store Immediate, 10 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 DD 9F 00 00 00 44 8F DD|  0000  |н.D....н|
+		                   DD 22|  0008  |"н      |
+
+	86)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "NULLARG"
+
+	87)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |я       |
+
+	88)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	89)  Store Immediate, 2 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                   0D FB|  0000  |ћ.      |
+
+	90)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "SYS$ENQ"
+
+	91)  TIR$C_STO_PICR (28, %X'1C')                        stack depth: 0
+
+	92)  Store Immediate, 19 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 8F DD 7E 7C 7A 7A 00 05|  0000  |..zz|~н.|
+		 00 AA 8F DD 00 00 00 BB|  0008  |Л...н.Њ.|
+		                9F 00 00|  0010  |...     |
+
+	93)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 64 (%X'00000040')
+
+	94)  Store Immediate, 1 byte:
+
+Analyze Object File                           8-OCT-2026 06:19:12.38   Page 12
+DUA1:[000000]R6_ENQ.OBJ;1
+ANALYZ V07-04
+
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |я       |
+
+	95)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	96)  Store Immediate, 7 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		    9F 00 00 00 88 8F DD|  0000  |н...... |
+
+	97)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 48 (%X'00000030')
+
+	98)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |я       |
+
+	99)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	100)  Store Immediate, 7 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		    9F 00 00 00 66 8F DD|  0000  |н.f.... |
+
+	101)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 1
+		value: 32 (%X'00000020')
+
+
+16.  TEXT INFORMATION/RELOCATION (OBJ$C_TIR), 461 bytes
+
+	1)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |я       |
+
+	2)  TIR$C_STO_LD (25, %X'19')                           stack depth: 0
+
+	3)  Store Immediate, 3 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                9F 00 DD|  0000  |н..     |
+
+	4)  TIR$C_STA_PB (4, %X'04')                            stack depth: 1
+		psect: 1
+		value: 16 (%X'00000010')
+
+	5)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |я       |
+
+
+Analyze Object File                           8-OCT-2026 06:19:12.38   Page 13
+DUA1:[000000]R6_ENQ.OBJ;1
+ANALYZ V07-04
+
+	6)  TIR$C_STO_LD (25, %X'19')                           stack depth: 0
+
+	7)  Store Immediate, 3 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                DD 22 DD|  0000  |н"н     |
+
+	8)  TIR$C_STA_GBL (0, %X'00')                           stack depth: 1
+		symbol: "NULLARG"
+
+	9)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |я       |
+
+	10)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	11)  Store Immediate, 2 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                   0D FB|  0000  |ћ.      |
+
+	12)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "SYS$ENQ"
+
+	13)  TIR$C_STO_PICR (28, %X'1C')                        stack depth: 0
+
+	14)  Store Immediate, 19 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 8F DD 7E 7C 7A 7A 00 06|  0000  |..zz|~н.|
+		 00 AA 8F DD 00 00 00 BB|  0008  |Л...н.Њ.|
+		                9F 00 00|  0010  |...     |
+
+	15)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 64 (%X'00000040')
+
+	16)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |я       |
+
+	17)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	18)  Store Immediate, 7 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		    9F 00 00 00 88 8F DD|  0000  |н...... |
+
+	19)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 48 (%X'00000030')
+
+
+Analyze Object File                           8-OCT-2026 06:19:12.38   Page 14
+DUA1:[000000]R6_ENQ.OBJ;1
+ANALYZ V07-04
+
+	20)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |я       |
+
+	21)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	22)  Store Immediate, 15 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 00 DD 00 00 00 66 8F DD|  0000  |н.f...н.|
+		    9F 00 00 00 44 8F DD|  0008  |н.D.... |
+
+	23)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 16 (%X'00000010')
+
+	24)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |я       |
+
+	25)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	26)  Store Immediate, 3 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                DD 22 DD|  0000  |н"н     |
+
+	27)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "NULLARG"
+
+	28)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |я       |
+
+	29)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	30)  Store Immediate, 2 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                   0D FB|  0000  |ћ.      |
+
+	31)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "SYS$ENQ"
+
+	32)  TIR$C_STO_PICR (28, %X'1C')                        stack depth: 0
+
+	33)  Store Immediate, 19 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 8F DD 7E 7C 7A 7A 00 07|  0000  |..zz|~н.|
+		 00 AA 8F DD 00 00 00 BB|  0008  |Л...н.Њ.|
+		                9F 00 00|  0010  |...     |
+
+Analyze Object File                           8-OCT-2026 06:19:12.38   Page 15
+DUA1:[000000]R6_ENQ.OBJ;1
+ANALYZ V07-04
+
+
+	34)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 64 (%X'00000040')
+
+	35)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |я       |
+
+	36)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	37)  Store Immediate, 7 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		    9F 00 00 00 88 8F DD|  0000  |н...... |
+
+	38)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 48 (%X'00000030')
+
+	39)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |я       |
+
+	40)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	41)  Store Immediate, 3 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                9F 00 DD|  0000  |н..     |
+
+	42)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 32 (%X'00000020')
+
+	43)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |я       |
+
+	44)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	45)  Store Immediate, 7 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		    9F 00 00 00 44 8F DD|  0000  |н.D.... |
+
+	46)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 16 (%X'00000010')
+
+	47)  Store Immediate, 1 byte:
+
+Analyze Object File                           8-OCT-2026 06:19:12.38   Page 16
+DUA1:[000000]R6_ENQ.OBJ;1
+ANALYZ V07-04
+
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |я       |
+
+	48)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	49)  Store Immediate, 3 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                DD 22 DD|  0000  |н"н     |
+
+	50)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "NULLARG"
+
+	51)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |я       |
+
+	52)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	53)  Store Immediate, 2 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                   0D FB|  0000  |ћ.      |
+
+	54)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "SYS$ENQ"
+
+	55)  TIR$C_STO_PICR (28, %X'1C')                        stack depth: 0
+
+	56)  Store Immediate, 19 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 8F DD 7E 7C 7A 7A 00 08|  0000  |..zz|~н.|
+		 00 AA 8F DD 00 00 00 BB|  0008  |Л...н.Њ.|
+		                9F 00 00|  0010  |...     |
+
+	57)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 64 (%X'00000040')
+
+	58)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |я       |
+
+	59)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	60)  Store Immediate, 15 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 00 DD 00 00 00 88 8F DD|  0000  |н.....н.|
+		    9F 00 00 00 66 8F DD|  0008  |н.f.... |
+
+
+Analyze Object File                           8-OCT-2026 06:19:12.39   Page 17
+DUA1:[000000]R6_ENQ.OBJ;1
+ANALYZ V07-04
+
+	61)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 32 (%X'00000020')
+
+	62)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |я       |
+
+	63)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	64)  Store Immediate, 7 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		    9F 00 00 00 44 8F DD|  0000  |н.D.... |
+
+	65)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 16 (%X'00000010')
+
+	66)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |я       |
+
+	67)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	68)  Store Immediate, 3 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                DD 22 DD|  0000  |н"н     |
+
+	69)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "NULLARG"
+
+	70)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |я       |
+
+	71)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	72)  Store Immediate, 2 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                   0D FB|  0000  |ћ.      |
+
+	73)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "SYS$ENQ"
+
+	74)  TIR$C_STO_PICR (28, %X'1C')                        stack depth: 0
+
+	75)  Store Immediate, 19 bytes:
+
+Analyze Object File                           8-OCT-2026 06:19:12.39   Page 18
+DUA1:[000000]R6_ENQ.OBJ;1
+ANALYZ V07-04
+
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 8F DD 7E 7C 7A 7A 00 09|  0000  |..zz|~н.|
+		 00 AA 8F DD 00 00 00 BB|  0008  |Л...н.Њ.|
+		                9F 00 00|  0010  |...     |
+
+	76)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 64 (%X'00000040')
+
+	77)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |я       |
+
+	78)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	79)  Store Immediate, 3 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                9F 00 DD|  0000  |н..     |
+
+	80)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 48 (%X'00000030')
+
+	81)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |я       |
+
+	82)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	83)  Store Immediate, 7 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		    9F 00 00 00 66 8F DD|  0000  |н.f.... |
+
+	84)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 32 (%X'00000020')
+
+	85)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |я       |
+
+	86)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	87)  Store Immediate, 7 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		    9F 00 00 00 44 8F DD|  0000  |н.D.... |
+
+
+Analyze Object File                           8-OCT-2026 06:19:12.39   Page 19
+DUA1:[000000]R6_ENQ.OBJ;1
+ANALYZ V07-04
+
+	88)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 16 (%X'00000010')
+
+	89)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |я       |
+
+	90)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	91)  Store Immediate, 3 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                DD 22 DD|  0000  |н"н     |
+
+	92)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "NULLARG"
+
+	93)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |я       |
+
+	94)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	95)  Store Immediate, 2 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                   0D FB|  0000  |ћ.      |
+
+	96)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "SYS$ENQ"
+
+	97)  TIR$C_STO_PICR (28, %X'1C')                        stack depth: 0
+
+	98)  Store Immediate, 27 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 8F DD 7E 7C 7A 7A 00 0A|  0000  |..zz|~н.|
+		 00 AA 8F DD 00 00 00 BB|  0008  |Л...н.Њ.|
+		 00 88 8F DD 00 DD 00 00|  0010  |..н.н...|
+		                9F 00 00|  0018  |...     |
+
+	99)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 48 (%X'00000030')
+
+	100)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |я       |
+
+
+Analyze Object File                           8-OCT-2026 06:19:12.39   Page 20
+DUA1:[000000]R6_ENQ.OBJ;1
+ANALYZ V07-04
+
+	101)  TIR$C_STO_LD (25, %X'19')                         stack depth: 0
+
+	102)  Store Immediate, 7 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		    9F 00 00 00 66 8F DD|  0000  |н.f.... |
+
+	103)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 1
+		value: 32 (%X'00000020')
+
+	104)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |я       |
+
+	105)  TIR$C_STO_LD (25, %X'19')                         stack depth: 0
+
+	106)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      DD|  0000  |н       |
+
+
+17.  TEXT INFORMATION/RELOCATION (OBJ$C_TIR), 461 bytes
+
+	1)  Store Immediate, 6 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		       9F 00 00 00 44 8F|  0000  |.D....  |
+
+	2)  TIR$C_STA_PB (4, %X'04')                            stack depth: 1
+		psect: 1
+		value: 16 (%X'00000010')
+
+	3)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |я       |
+
+	4)  TIR$C_STO_LD (25, %X'19')                           stack depth: 0
+
+	5)  Store Immediate, 3 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                DD 22 DD|  0000  |н"н     |
+
+	6)  TIR$C_STA_GBL (0, %X'00')                           stack depth: 1
+		symbol: "NULLARG"
+
+	7)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |я       |
+
+
+Analyze Object File                           8-OCT-2026 06:19:12.39   Page 21
+DUA1:[000000]R6_ENQ.OBJ;1
+ANALYZ V07-04
+
+	8)  TIR$C_STO_LD (25, %X'19')                           stack depth: 0
+
+	9)  Store Immediate, 2 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                   0D FB|  0000  |ћ.      |
+
+	10)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "SYS$ENQ"
+
+	11)  TIR$C_STO_PICR (28, %X'1C')                        stack depth: 0
+
+	12)  Store Immediate, 15 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 8F DD 7E 7C 7A 7A 00 0B|  0000  |..zz|~н.|
+		    9F 00 DD 00 00 00 BB|  0008  |Л...н.. |
+
+	13)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 64 (%X'00000040')
+
+	14)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |я       |
+
+	15)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	16)  Store Immediate, 7 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		    9F 00 00 00 88 8F DD|  0000  |н...... |
+
+	17)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 48 (%X'00000030')
+
+	18)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |я       |
+
+	19)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	20)  Store Immediate, 7 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		    9F 00 00 00 66 8F DD|  0000  |н.f.... |
+
+	21)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 32 (%X'00000020')
+
+
+Analyze Object File                           8-OCT-2026 06:19:12.39   Page 22
+DUA1:[000000]R6_ENQ.OBJ;1
+ANALYZ V07-04
+
+	22)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |я       |
+
+	23)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	24)  Store Immediate, 7 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		    9F 00 00 00 44 8F DD|  0000  |н.D.... |
+
+	25)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 16 (%X'00000010')
+
+	26)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |я       |
+
+	27)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	28)  Store Immediate, 3 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                DD 22 DD|  0000  |н"н     |
+
+	29)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "NULLARG"
+
+	30)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |я       |
+
+	31)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	32)  Store Immediate, 2 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                   0D FB|  0000  |ћ.      |
+
+	33)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "SYS$ENQ"
+
+	34)  TIR$C_STO_PICR (28, %X'1C')                        stack depth: 0
+
+	35)  Store Immediate, 15 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 00 DD 7E 7C 7A 7A 00 0C|  0000  |..zz|~н.|
+		    9F 00 00 00 AA 8F DD|  0008  |н.Њ.... |
+
+
+Analyze Object File                           8-OCT-2026 06:19:12.39   Page 23
+DUA1:[000000]R6_ENQ.OBJ;1
+ANALYZ V07-04
+
+	36)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 64 (%X'00000040')
+
+	37)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |я       |
+
+	38)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	39)  Store Immediate, 7 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		    9F 00 00 00 88 8F DD|  0000  |н...... |
+
+	40)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 48 (%X'00000030')
+
+	41)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |я       |
+
+	42)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	43)  Store Immediate, 7 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		    9F 00 00 00 66 8F DD|  0000  |н.f.... |
+
+	44)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 32 (%X'00000020')
+
+	45)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |я       |
+
+	46)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	47)  Store Immediate, 7 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		    9F 00 00 00 44 8F DD|  0000  |н.D.... |
+
+	48)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 16 (%X'00000010')
+
+	49)  Store Immediate, 1 byte:
+
+Analyze Object File                           8-OCT-2026 06:19:12.39   Page 24
+DUA1:[000000]R6_ENQ.OBJ;1
+ANALYZ V07-04
+
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |я       |
+
+	50)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	51)  Store Immediate, 3 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                DD 22 DD|  0000  |н"н     |
+
+	52)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "NULLARG"
+
+	53)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |я       |
+
+	54)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	55)  Store Immediate, 2 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                   0D FB|  0000  |ћ.      |
+
+	56)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "SYS$ENQ"
+
+	57)  TIR$C_STO_PICR (28, %X'1C')                        stack depth: 0
+
+	58)  Store Immediate, 19 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 8F DD 7E 7C 7A 7A 00 0D|  0000  |..zz|~н.|
+		 00 AA 8F DD 00 00 00 BB|  0008  |Л...н.Њ.|
+		                9F 00 00|  0010  |...     |
+
+	59)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 64 (%X'00000040')
+
+	60)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |я       |
+
+	61)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	62)  Store Immediate, 7 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		    9F 00 00 00 88 8F DD|  0000  |н...... |
+
+
+Analyze Object File                           8-OCT-2026 06:19:12.39   Page 25
+DUA1:[000000]R6_ENQ.OBJ;1
+ANALYZ V07-04
+
+	63)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 48 (%X'00000030')
+
+	64)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |я       |
+
+	65)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	66)  Store Immediate, 7 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		    9F 00 00 00 66 8F DD|  0000  |н.f.... |
+
+	67)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 32 (%X'00000020')
+
+	68)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |я       |
+
+	69)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	70)  Store Immediate, 7 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		    9F 00 00 00 44 8F DD|  0000  |н.D.... |
+
+	71)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 16 (%X'00000010')
+
+	72)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |я       |
+
+	73)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	74)  Store Immediate, 6 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		       0D FB 11 DD 22 DD|  0000  |н"н.ћ.  |
+
+	75)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "SYS$ENQ"
+
+	76)  TIR$C_STO_PICR (28, %X'1C')                        stack depth: 0
+
+	77)  Store Immediate, 22 bytes:
+
+Analyze Object File                           8-OCT-2026 06:19:12.39   Page 26
+DUA1:[000000]R6_ENQ.OBJ;1
+ANALYZ V07-04
+
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 7E 7C 7E 7C 7A 7A 00 0E|  0000  |..zz|~|~|
+		 7E 7C 00 DD 7E 7C 00 DD|  0008  |н.|~н.|~|
+		       0D FB 11 DD DD 9F|  0010  |.нн.ћ.  |
+
+	78)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "SYS$ENQ"
+
+	79)  TIR$C_STO_PICR (28, %X'1C')                        stack depth: 0
+
+	80)  Store Immediate, 22 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 7E 7C 7E 7C 7A 7A 00 0F|  0000  |..zz|~|~|
+		 7E 7C 00 DD 7E 7C 00 DD|  0008  |н.|~н.|~|
+		       0D FB 76 DD DD 9F|  0010  |.ннvћ.  |
+
+	81)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "SYS$ENQ"
+
+	82)  TIR$C_STO_PICR (28, %X'1C')                        stack depth: 0
+
+	83)  Store Immediate, 23 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 7E 7C 7E 7C 7A 7A 00 10|  0000  |..zz|~|~|
+		 7E 7C 00 DD 7E 7C 00 DD|  0008  |н.|~н.|~|
+		    0D FB 00 DD 22 DD 9F|  0010  |.н"н.ћ. |
+
+	84)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "SYS$ENQ"
+
+	85)  TIR$C_STO_PICR (28, %X'1C')                        stack depth: 0
+
+	86)  Store Immediate, 23 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 7E 7C 7E 7C 7A 7A 00 11|  0000  |..zz|~|~|
+		 7E 7C 00 DD 7E 7C 00 DD|  0008  |н.|~н.|~|
+		    0D FB 00 DD 76 DD 9F|  0010  |.нvн.ћ. |
+
+	87)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "SYS$ENQ"
+
+	88)  TIR$C_STO_PICR (28, %X'1C')                        stack depth: 0
+
+	89)  Store Immediate, 12 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 7E 7C 7E 7C 7A 7A 00 12|  0000  |..zz|~|~|
+		             7E 7C 00 DD|  0008  |н.|~    |
+
+
+
+Analyze Object File                           8-OCT-2026 06:19:12.39   Page 27
+DUA1:[000000]R6_ENQ.OBJ;1
+ANALYZ V07-04
+
+18.  TEXT INFORMATION/RELOCATION (OBJ$C_TIR), 461 bytes
+
+	1)  Store Immediate, 5 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		          9F 7E 7C 00 DD|  0000  |н.|~.   |
+
+	2)  TIR$C_STA_PB (4, %X'04')                            stack depth: 1
+		psect: 1
+		value: 16 (%X'00000010')
+
+	3)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |я       |
+
+	4)  TIR$C_STO_LD (25, %X'19')                           stack depth: 0
+
+	5)  Store Immediate, 5 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		          0D FB 00 DD DD|  0000  |нн.ћ.   |
+
+	6)  TIR$C_STA_GBL (0, %X'00')                           stack depth: 1
+		symbol: "SYS$ENQ"
+
+	7)  TIR$C_STO_PICR (28, %X'1C')                         stack depth: 0
+
+	8)  Store Immediate, 23 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 7E 7C 7E 7C 7A 7A 00 13|  0000  |..zz|~|~|
+		 7E 7C 00 DD 7E 7C 00 DD|  0008  |н.|~н.|~|
+		    0D FB 00 DD DD 76 DF|  0010  |пvнн.ћ. |
+
+	9)  TIR$C_STA_GBL (0, %X'00')                           stack depth: 1
+		symbol: "SYS$ENQ"
+
+	10)  TIR$C_STO_PICR (28, %X'1C')                        stack depth: 0
+
+	11)  Store Immediate, 28 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 7E 7C 7E 7C 7A 7A 00 14|  0000  |..zz|~|~|
+		 00 DD 00 DD 7E 7C 00 DD|  0008  |н.|~н.н.|
+		 DD 9F 00 00 00 44 8F DD|  0010  |н.D....н|
+		             0D FB 00 DD|  0018  |н.ћ.    |
+
+	12)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "SYS$ENQ"
+
+	13)  TIR$C_STO_PICR (28, %X'1C')                        stack depth: 0
+
+	14)  Store Immediate, 24 bytes:
+
+Analyze Object File                           8-OCT-2026 06:19:12.40   Page 28
+DUA1:[000000]R6_ENQ.OBJ;1
+ANALYZ V07-04
+
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 7E 7C 7E 7C 7A 7A 00 15|  0000  |..zz|~|~|
+		 00 DD 00 DD 7E 7C 00 DD|  0008  |н.|~н.н.|
+		 0D FB 00 DD DD 9F 76 DD|  0010  |нv.нн.ћ.|
+
+	15)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "SYS$ENQ"
+
+	16)  TIR$C_STO_PICR (28, %X'1C')                        stack depth: 0
+
+	17)  Store Immediate, 15 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 7E 7C 7E 7C 7A 7A 00 16|  0000  |..zz|~|~|
+		    9F 00 DD 7E 7C 00 DD|  0008  |н.|~н.. |
+
+	18)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 32 (%X'00000020')
+
+	19)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |я       |
+
+	20)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	21)  Store Immediate, 8 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 0D FB 00 DD DD 9F 00 DD|  0000  |н..нн.ћ.|
+
+	22)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "SYS$ENQ"
+
+	23)  TIR$C_STO_PICR (28, %X'1C')                        stack depth: 0
+
+	24)  Store Immediate, 24 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 7E 7C 7E 7C 7A 7A 00 17|  0000  |..zz|~|~|
+		 76 7F 00 DD 7E 7C 00 DD|  0008  |н.|~н..v|
+		 0D FB 00 DD DD 9F 00 DD|  0010  |н..нн.ћ.|
+
+	25)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "SYS$ENQ"
+
+	26)  TIR$C_STO_PICR (28, %X'1C')                        stack depth: 0
+
+	27)  Store Immediate, 26 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 7E 7C 7E 7C 7A 7A 00 18|  0000  |..zz|~|~|
+		 00 66 8F DD 7E 7C 00 DD|  0008  |н.|~н.f.|
+
+Analyze Object File                           8-OCT-2026 06:19:12.40   Page 29
+DUA1:[000000]R6_ENQ.OBJ;1
+ANALYZ V07-04
+
+		 00 DD DD 9F 7E 7C 00 00|  0010  |..|~.нн.|
+		                   0D FB|  0018  |ћ.      |
+
+	28)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "SYS$ENQ"
+
+	29)  TIR$C_STO_PICR (28, %X'1C')                        stack depth: 0
+
+	30)  Store Immediate, 22 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 7E 7C 7E 7C 7A 7A 00 19|  0000  |..zz|~|~|
+		 7E 7C 76 DD 7E 7C 00 DD|  0008  |н.|~нv|~|
+		       0D FB 00 DD DD 9F|  0010  |.нн.ћ.  |
+
+	31)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "SYS$ENQ"
+
+	32)  TIR$C_STO_PICR (28, %X'1C')                        stack depth: 0
+
+	33)  Store Immediate, 13 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 7E 7C 7E 7C 7A 7A 00 1A|  0000  |..zz|~|~|
+		          9F 00 DD 00 DD|  0008  |н.н..   |
+
+	34)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 48 (%X'00000030')
+
+	35)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |я       |
+
+	36)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	37)  Store Immediate, 10 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 00 DD DD 9F 7E 7C 00 DD|  0000  |н.|~.нн.|
+		                   0D FB|  0008  |ћ.      |
+
+	38)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "SYS$ENQ"
+
+	39)  TIR$C_STO_PICR (28, %X'1C')                        stack depth: 0
+
+	40)  Store Immediate, 24 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 7E 7C 7E 7C 7A 7A 00 1B|  0000  |..zz|~|~|
+		 00 DD 76 DF 00 DD 00 DD|  0008  |н.н.пvн.|
+		 0D FB 00 DD DD 9F 7E 7C|  0010  ||~.нн.ћ.|
+
+
+Analyze Object File                           8-OCT-2026 06:19:12.40   Page 30
+DUA1:[000000]R6_ENQ.OBJ;1
+ANALYZ V07-04
+
+	41)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "SYS$ENQ"
+
+	42)  TIR$C_STO_PICR (28, %X'1C')                        stack depth: 0
+
+	43)  Store Immediate, 28 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 7E 7C 7E 7C 7A 7A 00 1C|  0000  |..zz|~|~|
+		 00 00 00 88 8F DD 00 DD|  0008  |н.н.....|
+		 DD 9F 7E 7C 00 DD 00 DD|  0010  |н.н.|~.н|
+		             0D FB 00 DD|  0018  |н.ћ.    |
+
+	44)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "SYS$ENQ"
+
+	45)  TIR$C_STO_PICR (28, %X'1C')                        stack depth: 0
+
+	46)  Store Immediate, 24 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 7E 7C 7E 7C 7A 7A 00 1D|  0000  |..zz|~|~|
+		 00 DD 00 DD 76 DD 00 DD|  0008  |н.нvн.н.|
+		 0D FB 00 DD DD 9F 7E 7C|  0010  ||~.нн.ћ.|
+
+	47)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "SYS$ENQ"
+
+	48)  TIR$C_STO_PICR (28, %X'1C')                        stack depth: 0
+
+	49)  Store Immediate, 9 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 7E 7C 7E 7C 7A 7A 00 1E|  0000  |..zz|~|~|
+		                      9F|  0008  |.       |
+
+	50)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 64 (%X'00000040')
+
+	51)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |я       |
+
+	52)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	53)  Store Immediate, 11 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 DD 9F 7E 7C 00 DD 7E 7C|  0000  ||~н.|~.н|
+		                FB 00 DD|  0008  |н.ћ     |
+
+
+
+Analyze Object File                           8-OCT-2026 06:19:12.40   Page 31
+DUA1:[000000]R6_ENQ.OBJ;1
+ANALYZ V07-04
+
+19.  TEXT INFORMATION/RELOCATION (OBJ$C_TIR), 461 bytes
+
+	1)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      0D|  0000  |.       |
+
+	2)  TIR$C_STA_GBL (0, %X'00')                           stack depth: 1
+		symbol: "SYS$ENQ"
+
+	3)  TIR$C_STO_PICR (28, %X'1C')                         stack depth: 0
+
+	4)  Store Immediate, 22 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 7E 7C 7E 7C 7A 7A 00 1F|  0000  |..zz|~|~|
+		 7E 7C 00 DD 7E 7C 76 DF|  0008  |пv|~н.|~|
+		       0D FB 00 DD DD 9F|  0010  |.нн.ћ.  |
+
+	5)  TIR$C_STA_GBL (0, %X'00')                           stack depth: 1
+		symbol: "SYS$ENQ"
+
+	6)  TIR$C_STO_PICR (28, %X'1C')                         stack depth: 0
+
+	7)  Store Immediate, 28 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 00 DD 7E 7C 7A 7A 00 20|  0000  | .zz|~н.|
+		 00 DD 00 00 00 AA 8F DD|  0008  |н.Њ...н.|
+		 DD 9F 7E 7C 00 DD 7E 7C|  0010  ||~н.|~.н|
+		             0D FB 00 DD|  0018  |н.ћ.    |
+
+	8)  TIR$C_STA_GBL (0, %X'00')                           stack depth: 1
+		symbol: "SYS$ENQ"
+
+	9)  TIR$C_STO_PICR (28, %X'1C')                         stack depth: 0
+
+	10)  Store Immediate, 24 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 00 DD 7E 7C 7A 7A 00 21|  0000  |!.zz|~н.|
+		 00 DD 7E 7C 00 DD 76 DD|  0008  |нvн.|~н.|
+		 0D FB 00 DD DD 9F 7E 7C|  0010  ||~.нн.ћ.|
+
+	11)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "SYS$ENQ"
+
+	12)  TIR$C_STO_PICR (28, %X'1C')                        stack depth: 0
+
+	13)  Store Immediate, 28 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 8F DD 7E 7C 7A 7A 00 22|  0000  |".zz|~н.|
+		 00 DD 00 DD 00 00 00 BB|  0008  |Л...н.н.|
+		 DD 9F 7E 7C 00 DD 7E 7C|  0010  ||~н.|~.н|
+
+Analyze Object File                           8-OCT-2026 06:19:12.40   Page 32
+DUA1:[000000]R6_ENQ.OBJ;1
+ANALYZ V07-04
+
+		             0D FB 00 DD|  0018  |н.ћ.    |
+
+	14)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "SYS$ENQ"
+
+	15)  TIR$C_STO_PICR (28, %X'1C')                        stack depth: 0
+
+	16)  Store Immediate, 24 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 76 DD 7E 7C 7A 7A 00 23|  0000  |#.zz|~нv|
+		 00 DD 7E 7C 00 DD 00 DD|  0008  |н.н.|~н.|
+		 0D FB 00 DD DD 9F 7E 7C|  0010  ||~.нн.ћ.|
+
+	17)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "SYS$ENQ"
+
+	18)  TIR$C_STO_PICR (28, %X'1C')                        stack depth: 0
+
+	19)  Store Immediate, 19 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 7E 7C 7E 7C 7A 7A 00 24|  0000  |$.zz|~|~|
+		 7E 7C 00 DD 7E 7C 00 DD|  0008  |н.|~н.|~|
+		                DD DD 9F|  0010  |.нн     |
+
+	20)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "NULLARG"
+
+	21)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |я       |
+
+	22)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	23)  Store Immediate, 2 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                   0D FB|  0000  |ћ.      |
+
+	24)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "SYS$ENQ"
+
+	25)  TIR$C_STO_PICR (28, %X'1C')                        stack depth: 0
+
+	26)  Store Immediate, 19 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 7E 7C 7E 7C 7A 7A 00 25|  0000  |%.zz|~|~|
+		 7E 7C 00 DD 7E 7C 00 DD|  0008  |н.|~н.|~|
+		                DD DD 9F|  0010  |.нн     |
+
+
+Analyze Object File                           8-OCT-2026 06:19:12.40   Page 33
+DUA1:[000000]R6_ENQ.OBJ;1
+ANALYZ V07-04
+
+	27)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "NULLARG"
+
+	28)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |я       |
+
+	29)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	30)  Store Immediate, 2 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                   0D FB|  0000  |ћ.      |
+
+	31)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "SYS$ENQ"
+
+	32)  TIR$C_STO_PICR (28, %X'1C')                        stack depth: 0
+
+	33)  Store Immediate, 19 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 7E 7C 7E 7C 7A 7A 00 26|  0000  |&.zz|~|~|
+		 7E 7C 00 DD 7E 7C 00 DD|  0008  |н.|~н.|~|
+		                DD DD 9F|  0010  |.нн     |
+
+	34)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "RSDMID"
+
+	35)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |я       |
+
+	36)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	37)  Store Immediate, 2 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                   0D FB|  0000  |ћ.      |
+
+	38)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "SYS$ENQ"
+
+	39)  TIR$C_STO_PICR (28, %X'1C')                        stack depth: 0
+
+	40)  Store Immediate, 19 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 7E 7C 7E 7C 7A 7A 00 27|  0000  |'.zz|~|~|
+		 7E 7C 00 DD 7E 7C 00 DD|  0008  |н.|~н.|~|
+		                DD DD 9F|  0010  |.нн     |
+
+
+Analyze Object File                           8-OCT-2026 06:19:12.40   Page 34
+DUA1:[000000]R6_ENQ.OBJ;1
+ANALYZ V07-04
+
+	41)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "NULL"
+
+	42)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |я       |
+
+	43)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	44)  Store Immediate, 2 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                   0D FB|  0000  |ћ.      |
+
+	45)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "SYS$ENQ"
+
+	46)  TIR$C_STO_PICR (28, %X'1C')                        stack depth: 0
+
+	47)  Store Immediate, 19 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 7E 7C 7E 7C 7A 7A 00 28|  0000  |(.zz|~|~|
+		 7E 7C 00 DD 7E 7C 00 DD|  0008  |н.|~н.|~|
+		                DD DD 9F|  0010  |.нн     |
+
+	48)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	49)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |я       |
+
+	50)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	51)  Store Immediate, 2 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                   0D FB|  0000  |ћ.      |
+
+	52)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "SYS$ENQ"
+
+	53)  TIR$C_STO_PICR (28, %X'1C')                        stack depth: 0
+
+	54)  Store Immediate, 18 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 7E 7C 7E 7C 7A 7A 00 29|  0000  |).zz|~|~|
+		 7E 7C 00 DD 7E 7C 00 DD|  0008  |н.|~н.|~|
+		                   DD 9F|  0010  |.н      |
+
+
+Analyze Object File                           8-OCT-2026 06:19:12.40   Page 35
+DUA1:[000000]R6_ENQ.OBJ;1
+ANALYZ V07-04
+
+	55)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 8 (%X'00000008')
+
+	56)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |я       |
+
+	57)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	58)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      DD|  0000  |н       |
+
+	59)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	60)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |я       |
+
+	61)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	62)  Store Immediate, 2 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                   0D FB|  0000  |ћ.      |
+
+	63)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "SYS$ENQ"
+
+	64)  TIR$C_STO_PICR (28, %X'1C')                        stack depth: 0
+
+	65)  Store Immediate, 5 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		          7C 7A 7A 00 2A|  0000  |*.zz|   |
+
+
+20.  TEXT INFORMATION/RELOCATION (OBJ$C_TIR), 463 bytes
+
+	1)  Store Immediate, 12 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 DD 7E 7C 00 DD 7E 7C 7E|  0000  |~|~н.|~н|
+		             9F 7E 7C 00|  0008  |.|~.    |
+
+	2)  TIR$C_STA_PB (4, %X'04')                            stack depth: 1
+		psect: 1
+		value: 16 (%X'00000010')
+
+
+Analyze Object File                           8-OCT-2026 06:19:12.40   Page 36
+DUA1:[000000]R6_ENQ.OBJ;1
+ANALYZ V07-04
+
+	3)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |я       |
+
+	4)  TIR$C_STO_LD (25, %X'19')                           stack depth: 0
+
+	5)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      DD|  0000  |н       |
+
+	6)  TIR$C_STA_PB (4, %X'04')                            stack depth: 1
+		psect: 1
+		value: 8 (%X'00000008')
+
+	7)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |я       |
+
+	8)  TIR$C_STO_LD (25, %X'19')                           stack depth: 0
+
+	9)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      DD|  0000  |н       |
+
+	10)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	11)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |я       |
+
+	12)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	13)  Store Immediate, 2 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                   0D FB|  0000  |ћ.      |
+
+	14)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "SYS$ENQ"
+
+	15)  TIR$C_STO_PICR (28, %X'1C')                        stack depth: 0
+
+	16)  Store Immediate, 17 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 7E 7C 7E 7C 7A 7A 00 2B|  0000  |+.zz|~|~|
+		 00 DD 00 DD 7E 7C 00 DD|  0008  |н.|~н.н.|
+		                      DD|  0010  |н       |
+
+Analyze Object File                           8-OCT-2026 06:19:12.40   Page 37
+DUA1:[000000]R6_ENQ.OBJ;1
+ANALYZ V07-04
+
+
+	17)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 24 (%X'00000018')
+
+	18)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |я       |
+
+	19)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	20)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      9F|  0000  |.       |
+
+	21)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 16 (%X'00000010')
+
+	22)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |я       |
+
+	23)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	24)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      DD|  0000  |н       |
+
+	25)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 8 (%X'00000008')
+
+	26)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |я       |
+
+	27)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	28)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      DD|  0000  |н       |
+
+	29)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	30)  Store Immediate, 1 byte:
+
+Analyze Object File                           8-OCT-2026 06:19:12.41   Page 38
+DUA1:[000000]R6_ENQ.OBJ;1
+ANALYZ V07-04
+
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |я       |
+
+	31)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	32)  Store Immediate, 2 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                   0D FB|  0000  |ћ.      |
+
+	33)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "SYS$ENQ"
+
+	34)  TIR$C_STO_PICR (28, %X'1C')                        stack depth: 0
+
+	35)  Store Immediate, 15 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 7E 7C 7E 7C 7A 7A 00 2C|  0000  |,.zz|~|~|
+		    9F 00 DD 7E 7C 00 DD|  0008  |н.|~н.. |
+
+	36)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 32 (%X'00000020')
+
+	37)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |я       |
+
+	38)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	39)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      DD|  0000  |н       |
+
+	40)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 24 (%X'00000018')
+
+	41)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |я       |
+
+	42)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	43)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      9F|  0000  |.       |
+
+
+Analyze Object File                           8-OCT-2026 06:19:12.41   Page 39
+DUA1:[000000]R6_ENQ.OBJ;1
+ANALYZ V07-04
+
+	44)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 16 (%X'00000010')
+
+	45)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |я       |
+
+	46)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	47)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      DD|  0000  |н       |
+
+	48)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 8 (%X'00000008')
+
+	49)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |я       |
+
+	50)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	51)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      DD|  0000  |н       |
+
+	52)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	53)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |я       |
+
+	54)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	55)  Store Immediate, 2 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                   0D FB|  0000  |ћ.      |
+
+	56)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "SYS$ENQ"
+
+	57)  TIR$C_STO_PICR (28, %X'1C')                        stack depth: 0
+
+	58)  Store Immediate, 13 bytes:
+
+Analyze Object File                           8-OCT-2026 06:19:12.41   Page 40
+DUA1:[000000]R6_ENQ.OBJ;1
+ANALYZ V07-04
+
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 7E 7C 7E 7C 7A 7A 00 2D|  0000  |-.zz|~|~|
+		          DD 7E 7C 00 DD|  0008  |н.|~н   |
+
+	59)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 40 (%X'00000028')
+
+	60)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |я       |
+
+	61)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	62)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      9F|  0000  |.       |
+
+	63)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 32 (%X'00000020')
+
+	64)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |я       |
+
+	65)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	66)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      DD|  0000  |н       |
+
+	67)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 24 (%X'00000018')
+
+	68)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |я       |
+
+	69)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	70)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      9F|  0000  |.       |
+
+
+Analyze Object File                           8-OCT-2026 06:19:12.41   Page 41
+DUA1:[000000]R6_ENQ.OBJ;1
+ANALYZ V07-04
+
+	71)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 16 (%X'00000010')
+
+	72)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |я       |
+
+	73)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	74)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      DD|  0000  |н       |
+
+	75)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 8 (%X'00000008')
+
+	76)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |я       |
+
+	77)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	78)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      DD|  0000  |н       |
+
+	79)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	80)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |я       |
+
+	81)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	82)  Store Immediate, 2 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                   0D FB|  0000  |ћ.      |
+
+	83)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "SYS$ENQ"
+
+	84)  TIR$C_STO_PICR (28, %X'1C')                        stack depth: 0
+
+	85)  Store Immediate, 13 bytes:
+
+Analyze Object File                           8-OCT-2026 06:19:12.41   Page 42
+DUA1:[000000]R6_ENQ.OBJ;1
+ANALYZ V07-04
+
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 7E 7C 7E 7C 7A 7A 00 2E|  0000  |..zz|~|~|
+		          9F 00 DD 00 DD|  0008  |н.н..   |
+
+	86)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 48 (%X'00000030')
+
+	87)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |я       |
+
+	88)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	89)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      DD|  0000  |н       |
+
+	90)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 40 (%X'00000028')
+
+	91)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |я       |
+
+	92)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	93)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      9F|  0000  |.       |
+
+	94)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 32 (%X'00000020')
+
+	95)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |я       |
+
+	96)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	97)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      DD|  0000  |н       |
+
+
+Analyze Object File                           8-OCT-2026 06:19:12.41   Page 43
+DUA1:[000000]R6_ENQ.OBJ;1
+ANALYZ V07-04
+
+	98)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 24 (%X'00000018')
+
+	99)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |я       |
+
+	100)  TIR$C_STO_LD (25, %X'19')                         stack depth: 0
+
+	101)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      9F|  0000  |.       |
+
+	102)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 1
+		value: 16 (%X'00000010')
+
+	103)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |я       |
+
+	104)  TIR$C_STO_LD (25, %X'19')                         stack depth: 0
+
+	105)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      DD|  0000  |н       |
+
+	106)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 1
+		value: 8 (%X'00000008')
+
+	107)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |я       |
+
+	108)  TIR$C_STO_LD (25, %X'19')                         stack depth: 0
+
+	109)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      DD|  0000  |н       |
+
+	110)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	111)  Store Immediate, 1 byte:
+
+Analyze Object File                           8-OCT-2026 06:19:12.41   Page 44
+DUA1:[000000]R6_ENQ.OBJ;1
+ANALYZ V07-04
+
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |я       |
+
+	112)  TIR$C_STO_LD (25, %X'19')                         stack depth: 0
+
+	113)  Store Immediate, 2 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                   0D FB|  0000  |ћ.      |
+
+	114)  TIR$C_STA_GBL (0, %X'00')                         stack depth: 1
+		symbol: "SYS$ENQ"
+
+	115)  TIR$C_STO_PICR (28, %X'1C')                       stack depth: 0
+
+	116)  Store Immediate, 11 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 7E 7C 7E 7C 7A 7A 00 2F|  0000  |/.zz|~|~|
+		                DD 00 DD|  0008  |н.н     |
+
+	117)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 1
+		value: 56 (%X'00000038')
+
+	118)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |я       |
+
+	119)  TIR$C_STO_LD (25, %X'19')                         stack depth: 0
+
+	120)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      9F|  0000  |.       |
+
+	121)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 1
+		value: 48 (%X'00000030')
+
+	122)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |я       |
+
+	123)  TIR$C_STO_LD (25, %X'19')                         stack depth: 0
+
+	124)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      DD|  0000  |н       |
+
+
+Analyze Object File                           8-OCT-2026 06:19:12.41   Page 45
+DUA1:[000000]R6_ENQ.OBJ;1
+ANALYZ V07-04
+
+	125)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 1
+		value: 40 (%X'00000028')
+
+	126)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |я       |
+
+	127)  TIR$C_STO_LD (25, %X'19')                         stack depth: 0
+
+	128)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      9F|  0000  |.       |
+
+	129)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 1
+		value: 32 (%X'00000020')
+
+	130)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |я       |
+
+	131)  TIR$C_STO_LD (25, %X'19')                         stack depth: 0
+
+	132)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      DD|  0000  |н       |
+
+	133)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 1
+		value: 24 (%X'00000018')
+
+	134)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |я       |
+
+	135)  TIR$C_STO_LD (25, %X'19')                         stack depth: 0
+
+	136)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      9F|  0000  |.       |
+
+	137)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 1
+		value: 16 (%X'00000010')
+
+	138)  Store Immediate, 1 byte:
+
+Analyze Object File                           8-OCT-2026 06:19:12.41   Page 46
+DUA1:[000000]R6_ENQ.OBJ;1
+ANALYZ V07-04
+
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |я       |
+
+	139)  TIR$C_STO_LD (25, %X'19')                         stack depth: 0
+
+	140)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      DD|  0000  |н       |
+
+	141)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 1
+		value: 8 (%X'00000008')
+
+	142)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |я       |
+
+	143)  TIR$C_STO_LD (25, %X'19')                         stack depth: 0
+
+	144)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      DD|  0000  |н       |
+
+	145)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	146)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |я       |
+
+	147)  TIR$C_STO_LD (25, %X'19')                         stack depth: 0
+
+	148)  Store Immediate, 2 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                   0D FB|  0000  |ћ.      |
+
+	149)  TIR$C_STA_GBL (0, %X'00')                         stack depth: 1
+		symbol: "SYS$ENQ"
+
+	150)  TIR$C_STO_PICR (28, %X'1C')                       stack depth: 0
+
+	151)  Store Immediate, 9 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 7E 7C 7E 7C 7A 7A 00 30|  0000  |0.zz|~|~|
+		                      9F|  0008  |.       |
+
+
+Analyze Object File                           8-OCT-2026 06:19:12.41   Page 47
+DUA1:[000000]R6_ENQ.OBJ;1
+ANALYZ V07-04
+
+	152)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 1
+		value: 64 (%X'00000040')
+
+	153)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |я       |
+
+	154)  TIR$C_STO_LD (25, %X'19')                         stack depth: 0
+
+	155)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      DD|  0000  |н       |
+
+	156)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 1
+		value: 56 (%X'00000038')
+
+	157)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |я       |
+
+	158)  TIR$C_STO_LD (25, %X'19')                         stack depth: 0
+
+	159)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      9F|  0000  |.       |
+
+	160)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 1
+		value: 48 (%X'00000030')
+
+	161)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |я       |
+
+	162)  TIR$C_STO_LD (25, %X'19')                         stack depth: 0
+
+	163)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      DD|  0000  |н       |
+
+	164)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 1
+		value: 40 (%X'00000028')
+
+	165)  Store Immediate, 1 byte:
+
+Analyze Object File                           8-OCT-2026 06:19:12.41   Page 48
+DUA1:[000000]R6_ENQ.OBJ;1
+ANALYZ V07-04
+
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |я       |
+
+	166)  TIR$C_STO_LD (25, %X'19')                         stack depth: 0
+
+	167)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      9F|  0000  |.       |
+
+	168)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 1
+		value: 32 (%X'00000020')
+
+
+21.  TEXT INFORMATION/RELOCATION (OBJ$C_TIR), 467 bytes
+
+	1)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |я       |
+
+	2)  TIR$C_STO_LD (25, %X'19')                           stack depth: 0
+
+	3)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      DD|  0000  |н       |
+
+	4)  TIR$C_STA_PB (4, %X'04')                            stack depth: 1
+		psect: 1
+		value: 24 (%X'00000018')
+
+	5)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |я       |
+
+	6)  TIR$C_STO_LD (25, %X'19')                           stack depth: 0
+
+	7)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      9F|  0000  |.       |
+
+	8)  TIR$C_STA_PB (4, %X'04')                            stack depth: 1
+		psect: 1
+		value: 16 (%X'00000010')
+
+	9)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |я       |
+
+
+Analyze Object File                           8-OCT-2026 06:19:12.41   Page 49
+DUA1:[000000]R6_ENQ.OBJ;1
+ANALYZ V07-04
+
+	10)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	11)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      DD|  0000  |н       |
+
+	12)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 8 (%X'00000008')
+
+	13)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |я       |
+
+	14)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	15)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      DD|  0000  |н       |
+
+	16)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	17)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |я       |
+
+	18)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	19)  Store Immediate, 2 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                   0D FB|  0000  |ћ.      |
+
+	20)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "SYS$ENQ"
+
+	21)  TIR$C_STO_PICR (28, %X'1C')                        stack depth: 0
+
+	22)  Store Immediate, 9 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 00 DD 7E 7C 7A 7A 00 31|  0000  |1.zz|~н.|
+		                      DD|  0008  |н       |
+
+	23)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 72 (%X'00000048')
+
+
+Analyze Object File                           8-OCT-2026 06:19:12.42   Page 50
+DUA1:[000000]R6_ENQ.OBJ;1
+ANALYZ V07-04
+
+	24)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |я       |
+
+	25)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	26)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      9F|  0000  |.       |
+
+	27)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 64 (%X'00000040')
+
+	28)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |я       |
+
+	29)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	30)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      DD|  0000  |н       |
+
+	31)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 56 (%X'00000038')
+
+	32)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |я       |
+
+	33)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	34)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      9F|  0000  |.       |
+
+	35)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 48 (%X'00000030')
+
+	36)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |я       |
+
+
+Analyze Object File                           8-OCT-2026 06:19:12.42   Page 51
+DUA1:[000000]R6_ENQ.OBJ;1
+ANALYZ V07-04
+
+	37)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	38)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      DD|  0000  |н       |
+
+	39)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 40 (%X'00000028')
+
+	40)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |я       |
+
+	41)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	42)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      9F|  0000  |.       |
+
+	43)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 32 (%X'00000020')
+
+	44)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |я       |
+
+	45)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	46)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      DD|  0000  |н       |
+
+	47)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 24 (%X'00000018')
+
+	48)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |я       |
+
+	49)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	50)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      9F|  0000  |.       |
+
+
+Analyze Object File                           8-OCT-2026 06:19:12.42   Page 52
+DUA1:[000000]R6_ENQ.OBJ;1
+ANALYZ V07-04
+
+	51)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 16 (%X'00000010')
+
+	52)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |я       |
+
+	53)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	54)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      DD|  0000  |н       |
+
+	55)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 8 (%X'00000008')
+
+	56)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |я       |
+
+	57)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	58)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      DD|  0000  |н       |
+
+	59)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	60)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |я       |
+
+	61)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	62)  Store Immediate, 2 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                   0D FB|  0000  |ћ.      |
+
+	63)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "SYS$ENQ"
+
+	64)  TIR$C_STO_PICR (28, %X'1C')                        stack depth: 0
+
+	65)  Store Immediate, 7 bytes:
+
+Analyze Object File                           8-OCT-2026 06:19:12.42   Page 53
+DUA1:[000000]R6_ENQ.OBJ;1
+ANALYZ V07-04
+
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		    DD 7E 7C 7A 7A 00 32|  0000  |2.zz|~н |
+
+	66)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 80 (%X'00000050')
+
+	67)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |я       |
+
+	68)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	69)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      DD|  0000  |н       |
+
+	70)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 72 (%X'00000048')
+
+	71)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |я       |
+
+	72)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	73)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      9F|  0000  |.       |
+
+	74)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 64 (%X'00000040')
+
+	75)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |я       |
+
+	76)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	77)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      DD|  0000  |н       |
+
+	78)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 56 (%X'00000038')
+
+Analyze Object File                           8-OCT-2026 06:19:12.42   Page 54
+DUA1:[000000]R6_ENQ.OBJ;1
+ANALYZ V07-04
+
+
+	79)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |я       |
+
+	80)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	81)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      9F|  0000  |.       |
+
+	82)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 48 (%X'00000030')
+
+	83)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |я       |
+
+	84)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	85)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      DD|  0000  |н       |
+
+	86)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 40 (%X'00000028')
+
+	87)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |я       |
+
+	88)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	89)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      9F|  0000  |.       |
+
+	90)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 32 (%X'00000020')
+
+	91)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |я       |
+
+
+Analyze Object File                           8-OCT-2026 06:19:12.42   Page 55
+DUA1:[000000]R6_ENQ.OBJ;1
+ANALYZ V07-04
+
+	92)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	93)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      DD|  0000  |н       |
+
+	94)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 24 (%X'00000018')
+
+	95)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |я       |
+
+	96)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	97)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      9F|  0000  |.       |
+
+	98)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 16 (%X'00000010')
+
+	99)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |я       |
+
+	100)  TIR$C_STO_LD (25, %X'19')                         stack depth: 0
+
+	101)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      DD|  0000  |н       |
+
+	102)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 1
+		value: 8 (%X'00000008')
+
+	103)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |я       |
+
+	104)  TIR$C_STO_LD (25, %X'19')                         stack depth: 0
+
+	105)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      DD|  0000  |н       |
+
+
+Analyze Object File                           8-OCT-2026 06:19:12.42   Page 56
+DUA1:[000000]R6_ENQ.OBJ;1
+ANALYZ V07-04
+
+	106)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	107)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |я       |
+
+	108)  TIR$C_STO_LD (25, %X'19')                         stack depth: 0
+
+	109)  Store Immediate, 2 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                   0D FB|  0000  |ћ.      |
+
+	110)  TIR$C_STA_GBL (0, %X'00')                         stack depth: 1
+		symbol: "SYS$ENQ"
+
+	111)  TIR$C_STO_PICR (28, %X'1C')                       stack depth: 0
+
+	112)  Store Immediate, 7 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		    9F 00 DD 7A 7A 00 33|  0000  |3.zzн.. |
+
+	113)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 1
+		value: 88 (%X'00000058')
+
+	114)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |я       |
+
+	115)  TIR$C_STO_LD (25, %X'19')                         stack depth: 0
+
+	116)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      DD|  0000  |н       |
+
+	117)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 1
+		value: 80 (%X'00000050')
+
+	118)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |я       |
+
+	119)  TIR$C_STO_LD (25, %X'19')                         stack depth: 0
+
+	120)  Store Immediate, 1 byte:
+
+Analyze Object File                           8-OCT-2026 06:19:12.42   Page 57
+DUA1:[000000]R6_ENQ.OBJ;1
+ANALYZ V07-04
+
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      DD|  0000  |н       |
+
+	121)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 1
+		value: 72 (%X'00000048')
+
+	122)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |я       |
+
+	123)  TIR$C_STO_LD (25, %X'19')                         stack depth: 0
+
+	124)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      9F|  0000  |.       |
+
+	125)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 1
+		value: 64 (%X'00000040')
+
+	126)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |я       |
+
+	127)  TIR$C_STO_LD (25, %X'19')                         stack depth: 0
+
+	128)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      DD|  0000  |н       |
+
+	129)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 1
+		value: 56 (%X'00000038')
+
+	130)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |я       |
+
+	131)  TIR$C_STO_LD (25, %X'19')                         stack depth: 0
+
+	132)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      9F|  0000  |.       |
+
+	133)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 1
+		value: 48 (%X'00000030')
+
+Analyze Object File                           8-OCT-2026 06:19:12.42   Page 58
+DUA1:[000000]R6_ENQ.OBJ;1
+ANALYZ V07-04
+
+
+	134)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |я       |
+
+	135)  TIR$C_STO_LD (25, %X'19')                         stack depth: 0
+
+	136)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      DD|  0000  |н       |
+
+	137)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 1
+		value: 40 (%X'00000028')
+
+	138)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |я       |
+
+	139)  TIR$C_STO_LD (25, %X'19')                         stack depth: 0
+
+	140)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      9F|  0000  |.       |
+
+	141)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 1
+		value: 32 (%X'00000020')
+
+	142)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |я       |
+
+	143)  TIR$C_STO_LD (25, %X'19')                         stack depth: 0
+
+	144)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      DD|  0000  |н       |
+
+	145)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 1
+		value: 24 (%X'00000018')
+
+	146)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |я       |
+
+
+Analyze Object File                           8-OCT-2026 06:19:12.42   Page 59
+DUA1:[000000]R6_ENQ.OBJ;1
+ANALYZ V07-04
+
+	147)  TIR$C_STO_LD (25, %X'19')                         stack depth: 0
+
+	148)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      9F|  0000  |.       |
+
+	149)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 1
+		value: 16 (%X'00000010')
+
+	150)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |я       |
+
+	151)  TIR$C_STO_LD (25, %X'19')                         stack depth: 0
+
+	152)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      DD|  0000  |н       |
+
+	153)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 1
+		value: 8 (%X'00000008')
+
+	154)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |я       |
+
+	155)  TIR$C_STO_LD (25, %X'19')                         stack depth: 0
+
+	156)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      DD|  0000  |н       |
+
+	157)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	158)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |я       |
+
+	159)  TIR$C_STO_LD (25, %X'19')                         stack depth: 0
+
+	160)  Store Immediate, 2 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                   0D FB|  0000  |ћ.      |
+
+
+Analyze Object File                           8-OCT-2026 06:19:12.42   Page 60
+DUA1:[000000]R6_ENQ.OBJ;1
+ANALYZ V07-04
+
+	161)  TIR$C_STA_GBL (0, %X'00')                         stack depth: 1
+		symbol: "SYS$ENQ"
+
+	162)  TIR$C_STO_PICR (28, %X'1C')                       stack depth: 0
+
+	163)  Store Immediate, 19 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 8F DD 7E 7C 7A 7A 00 34|  0000  |4.zz|~н.|
+		 00 AA 8F DD 00 00 00 BB|  0008  |Л...н.Њ.|
+		                9F 00 00|  0010  |...     |
+
+	164)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 1
+		value: 64 (%X'00000040')
+
+	165)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |я       |
+
+	166)  TIR$C_STO_LD (25, %X'19')                         stack depth: 0
+
+	167)  Store Immediate, 7 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		    9F 00 00 00 88 8F DD|  0000  |н...... |
+
+	168)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 1
+		value: 48 (%X'00000030')
+
+	169)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |я       |
+
+	170)  TIR$C_STO_LD (25, %X'19')                         stack depth: 0
+
+	171)  Store Immediate, 7 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		    9F 00 00 00 66 8F DD|  0000  |н.f.... |
+
+	172)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 1
+		value: 32 (%X'00000020')
+
+	173)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |я       |
+
+
+Analyze Object File                           8-OCT-2026 06:19:12.42   Page 61
+DUA1:[000000]R6_ENQ.OBJ;1
+ANALYZ V07-04
+
+	174)  TIR$C_STO_LD (25, %X'19')                         stack depth: 0
+
+	175)  Store Immediate, 7 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		    9F 00 00 00 44 8F DD|  0000  |н.D.... |
+
+	176)  TIR$C_STA_PB (4, %X'04')                          stack depth: 1
+		psect: 1
+		value: 16 (%X'00000010')
+
+	177)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |я       |
+
+	178)  TIR$C_STO_LD (25, %X'19')                         stack depth: 0
+
+	179)  Store Immediate, 2 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                   DD DD|  0000  |нн      |
+
+	180)  TIR$C_STA_GBL (0, %X'00')                         stack depth: 1
+		symbol: "NULLARG"
+
+	181)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |я       |
+
+	182)  TIR$C_STO_LD (25, %X'19')                         stack depth: 0
+
+	183)  Store Immediate, 2 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                   0D FB|  0000  |ћ.      |
+
+	184)  TIR$C_STA_GBL (0, %X'00')                         stack depth: 1
+		symbol: "SYS$ENQ"
+
+
+22.  TEXT INFORMATION/RELOCATION (OBJ$C_TIR), 461 bytes
+
+	1)  TIR$C_STO_PICR (28, %X'1C')                         stack depth: 0
+
+	2)  Store Immediate, 19 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 8F DD 7E 7C 7A 7A 00 35|  0000  |5.zz|~н.|
+		 00 AA 8F DD 00 00 00 BB|  0008  |Л...н.Њ.|
+		                9F 00 00|  0010  |...     |
+
+
+Analyze Object File                           8-OCT-2026 06:19:12.43   Page 62
+DUA1:[000000]R6_ENQ.OBJ;1
+ANALYZ V07-04
+
+	3)  TIR$C_STA_PB (4, %X'04')                            stack depth: 1
+		psect: 1
+		value: 64 (%X'00000040')
+
+	4)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |я       |
+
+	5)  TIR$C_STO_LD (25, %X'19')                           stack depth: 0
+
+	6)  Store Immediate, 7 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		    9F 00 00 00 88 8F DD|  0000  |н...... |
+
+	7)  TIR$C_STA_PB (4, %X'04')                            stack depth: 1
+		psect: 1
+		value: 48 (%X'00000030')
+
+	8)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |я       |
+
+	9)  TIR$C_STO_LD (25, %X'19')                           stack depth: 0
+
+	10)  Store Immediate, 7 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		    9F 00 00 00 66 8F DD|  0000  |н.f.... |
+
+	11)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 32 (%X'00000020')
+
+	12)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |я       |
+
+	13)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	14)  Store Immediate, 9 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 DD 9F 00 00 00 44 8F DD|  0000  |н.D....н|
+		                      DD|  0008  |н       |
+
+	15)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "NULLARG"
+
+	16)  Store Immediate, 1 byte:
+
+Analyze Object File                           8-OCT-2026 06:19:12.43   Page 63
+DUA1:[000000]R6_ENQ.OBJ;1
+ANALYZ V07-04
+
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |я       |
+
+	17)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	18)  Store Immediate, 2 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                   0D FB|  0000  |ћ.      |
+
+	19)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "SYS$ENQ"
+
+	20)  TIR$C_STO_PICR (28, %X'1C')                        stack depth: 0
+
+	21)  Store Immediate, 19 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 8F DD 7E 7C 7A 7A 00 36|  0000  |6.zz|~н.|
+		 00 AA 8F DD 00 00 00 BB|  0008  |Л...н.Њ.|
+		                9F 00 00|  0010  |...     |
+
+	22)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 64 (%X'00000040')
+
+	23)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |я       |
+
+	24)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	25)  Store Immediate, 7 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		    9F 00 00 00 88 8F DD|  0000  |н...... |
+
+	26)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 48 (%X'00000030')
+
+	27)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |я       |
+
+	28)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	29)  Store Immediate, 7 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		    9F 00 00 00 66 8F DD|  0000  |н.f.... |
+
+
+Analyze Object File                           8-OCT-2026 06:19:12.43   Page 64
+DUA1:[000000]R6_ENQ.OBJ;1
+ANALYZ V07-04
+
+	30)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 32 (%X'00000020')
+
+	31)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |я       |
+
+	32)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	33)  Store Immediate, 6 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		       DD 22 DD 9F 00 DD|  0000  |н..н"н  |
+
+	34)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "NULLARG"
+
+	35)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |я       |
+
+	36)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	37)  Store Immediate, 2 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                   0D FB|  0000  |ћ.      |
+
+	38)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "SYS$ENQ"
+
+	39)  TIR$C_STO_PICR (28, %X'1C')                        stack depth: 0
+
+	40)  Store Immediate, 19 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 8F DD 7E 7C 7A 7A 00 37|  0000  |7.zz|~н.|
+		 00 AA 8F DD 00 00 00 BB|  0008  |Л...н.Њ.|
+		                9F 00 00|  0010  |...     |
+
+	41)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 64 (%X'00000040')
+
+	42)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |я       |
+
+	43)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+
+Analyze Object File                           8-OCT-2026 06:19:12.43   Page 65
+DUA1:[000000]R6_ENQ.OBJ;1
+ANALYZ V07-04
+
+	44)  Store Immediate, 7 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		    9F 00 00 00 88 8F DD|  0000  |н...... |
+
+	45)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 48 (%X'00000030')
+
+	46)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |я       |
+
+	47)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	48)  Store Immediate, 9 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 7E 7C 00 00 00 66 8F DD|  0000  |н.f...|~|
+		                      9F|  0008  |.       |
+
+	49)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 16 (%X'00000010')
+
+	50)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |я       |
+
+	51)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	52)  Store Immediate, 3 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                DD 22 DD|  0000  |н"н     |
+
+	53)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "NULLARG"
+
+	54)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |я       |
+
+	55)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	56)  Store Immediate, 2 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                   0D FB|  0000  |ћ.      |
+
+
+Analyze Object File                           8-OCT-2026 06:19:12.43   Page 66
+DUA1:[000000]R6_ENQ.OBJ;1
+ANALYZ V07-04
+
+	57)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "SYS$ENQ"
+
+	58)  TIR$C_STO_PICR (28, %X'1C')                        stack depth: 0
+
+	59)  Store Immediate, 19 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 8F DD 7E 7C 7A 7A 00 38|  0000  |8.zz|~н.|
+		 00 AA 8F DD 00 00 00 BB|  0008  |Л...н.Њ.|
+		                9F 00 00|  0010  |...     |
+
+	60)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 64 (%X'00000040')
+
+	61)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |я       |
+
+	62)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	63)  Store Immediate, 7 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		    9F 00 00 00 88 8F DD|  0000  |н...... |
+
+	64)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 48 (%X'00000030')
+
+	65)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |я       |
+
+	66)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	67)  Store Immediate, 11 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 00 44 8F DD 00 DD 00 DD|  0000  |н.н.н.D.|
+		                9F 00 00|  0008  |...     |
+
+	68)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 16 (%X'00000010')
+
+	69)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |я       |
+
+
+Analyze Object File                           8-OCT-2026 06:19:12.43   Page 67
+DUA1:[000000]R6_ENQ.OBJ;1
+ANALYZ V07-04
+
+	70)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	71)  Store Immediate, 3 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                DD 22 DD|  0000  |н"н     |
+
+	72)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "NULLARG"
+
+	73)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |я       |
+
+	74)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	75)  Store Immediate, 2 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                   0D FB|  0000  |ћ.      |
+
+	76)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "SYS$ENQ"
+
+	77)  TIR$C_STO_PICR (28, %X'1C')                        stack depth: 0
+
+	78)  Store Immediate, 19 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 8F DD 7E 7C 7A 7A 00 39|  0000  |9.zz|~н.|
+		 00 AA 8F DD 00 00 00 BB|  0008  |Л...н.Њ.|
+		                9F 00 00|  0010  |...     |
+
+	79)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 64 (%X'00000040')
+
+	80)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |я       |
+
+	81)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	82)  Store Immediate, 11 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 00 DD 00 00 00 88 8F DD|  0000  |н.....н.|
+		                9F 00 DD|  0008  |н..     |
+
+	83)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 32 (%X'00000020')
+
+
+Analyze Object File                           8-OCT-2026 06:19:12.43   Page 68
+DUA1:[000000]R6_ENQ.OBJ;1
+ANALYZ V07-04
+
+	84)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |я       |
+
+	85)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	86)  Store Immediate, 7 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		    9F 00 00 00 44 8F DD|  0000  |н.D.... |
+
+	87)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 16 (%X'00000010')
+
+	88)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |я       |
+
+	89)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	90)  Store Immediate, 3 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                DD 22 DD|  0000  |н"н     |
+
+	91)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "NULLARG"
+
+	92)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |я       |
+
+	93)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	94)  Store Immediate, 2 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                   0D FB|  0000  |ћ.      |
+
+	95)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "SYS$ENQ"
+
+	96)  TIR$C_STO_PICR (28, %X'1C')                        stack depth: 0
+
+	97)  Store Immediate, 19 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 8F DD 7E 7C 7A 7A 00 3A|  0000  |:.zz|~н.|
+		 00 AA 8F DD 00 00 00 BB|  0008  |Л...н.Њ.|
+		                9F 00 00|  0010  |...     |
+
+
+Analyze Object File                           8-OCT-2026 06:19:12.43   Page 69
+DUA1:[000000]R6_ENQ.OBJ;1
+ANALYZ V07-04
+
+	98)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 64 (%X'00000040')
+
+	99)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |я       |
+
+
+23.  TEXT INFORMATION/RELOCATION (OBJ$C_TIR), 456 bytes
+
+	1)  TIR$C_STO_LD (25, %X'19')                           stack depth: 0
+
+	2)  Store Immediate, 9 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 00 00 00 66 8F DD 7E 7C|  0000  ||~н.f...|
+		                      9F|  0008  |.       |
+
+	3)  TIR$C_STA_PB (4, %X'04')                            stack depth: 1
+		psect: 1
+		value: 32 (%X'00000020')
+
+	4)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |я       |
+
+	5)  TIR$C_STO_LD (25, %X'19')                           stack depth: 0
+
+	6)  Store Immediate, 7 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		    9F 00 00 00 44 8F DD|  0000  |н.D.... |
+
+	7)  TIR$C_STA_PB (4, %X'04')                            stack depth: 1
+		psect: 1
+		value: 16 (%X'00000010')
+
+	8)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |я       |
+
+	9)  TIR$C_STO_LD (25, %X'19')                           stack depth: 0
+
+	10)  Store Immediate, 3 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                DD 22 DD|  0000  |н"н     |
+
+	11)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "NULLARG"
+
+
+Analyze Object File                           8-OCT-2026 06:19:12.43   Page 70
+DUA1:[000000]R6_ENQ.OBJ;1
+ANALYZ V07-04
+
+	12)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |я       |
+
+	13)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	14)  Store Immediate, 2 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                   0D FB|  0000  |ћ.      |
+
+	15)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "SYS$ENQ"
+
+	16)  TIR$C_STO_PICR (28, %X'1C')                        stack depth: 0
+
+	17)  Store Immediate, 23 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 8F DD 7E 7C 7A 7A 00 3B|  0000  |;.zz|~н.|
+		 00 AA 8F DD 00 00 00 BB|  0008  |Л...н.Њ.|
+		    9F 00 DD 00 DD 00 00|  0010  |..н.н.. |
+
+	18)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 48 (%X'00000030')
+
+	19)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |я       |
+
+	20)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	21)  Store Immediate, 7 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		    9F 00 00 00 66 8F DD|  0000  |н.f.... |
+
+	22)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 32 (%X'00000020')
+
+	23)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |я       |
+
+	24)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	25)  Store Immediate, 7 bytes:
+
+Analyze Object File                           8-OCT-2026 06:19:12.43   Page 71
+DUA1:[000000]R6_ENQ.OBJ;1
+ANALYZ V07-04
+
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		    9F 00 00 00 44 8F DD|  0000  |н.D.... |
+
+	26)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 16 (%X'00000010')
+
+	27)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |я       |
+
+	28)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	29)  Store Immediate, 3 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                DD 22 DD|  0000  |н"н     |
+
+	30)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "NULLARG"
+
+	31)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |я       |
+
+	32)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	33)  Store Immediate, 2 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                   0D FB|  0000  |ћ.      |
+
+	34)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "SYS$ENQ"
+
+	35)  TIR$C_STO_PICR (28, %X'1C')                        stack depth: 0
+
+	36)  Store Immediate, 23 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 8F DD 7E 7C 7A 7A 00 3C|  0000  |<.zz|~н.|
+		 00 DD 00 DD 00 00 00 BB|  0008  |Л...н.н.|
+		    9F 00 00 00 88 8F DD|  0010  |н...... |
+
+	37)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 48 (%X'00000030')
+
+	38)  Store Immediate, 1 byte:
+
+Analyze Object File                           8-OCT-2026 06:19:12.43   Page 72
+DUA1:[000000]R6_ENQ.OBJ;1
+ANALYZ V07-04
+
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |я       |
+
+	39)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	40)  Store Immediate, 7 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		    9F 00 00 00 66 8F DD|  0000  |н.f.... |
+
+	41)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 32 (%X'00000020')
+
+	42)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |я       |
+
+	43)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	44)  Store Immediate, 7 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		    9F 00 00 00 44 8F DD|  0000  |н.D.... |
+
+	45)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 16 (%X'00000010')
+
+	46)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |я       |
+
+	47)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	48)  Store Immediate, 3 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                DD 22 DD|  0000  |н"н     |
+
+	49)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "NULLARG"
+
+	50)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |я       |
+
+	51)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	52)  Store Immediate, 2 bytes:
+
+Analyze Object File                           8-OCT-2026 06:19:12.44   Page 73
+DUA1:[000000]R6_ENQ.OBJ;1
+ANALYZ V07-04
+
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                   0D FB|  0000  |ћ.      |
+
+	53)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "SYS$ENQ"
+
+	54)  TIR$C_STO_PICR (28, %X'1C')                        stack depth: 0
+
+	55)  Store Immediate, 9 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 7E 7C 7E 7C 7A 7A 00 3D|  0000  |=.zz|~|~|
+		                      9F|  0008  |.       |
+
+	56)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 64 (%X'00000040')
+
+	57)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |я       |
+
+	58)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	59)  Store Immediate, 7 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		    9F 00 00 00 88 8F DD|  0000  |н...... |
+
+	60)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 48 (%X'00000030')
+
+	61)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |я       |
+
+	62)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	63)  Store Immediate, 7 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		    9F 00 00 00 66 8F DD|  0000  |н.f.... |
+
+	64)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 32 (%X'00000020')
+
+	65)  Store Immediate, 1 byte:
+
+Analyze Object File                           8-OCT-2026 06:19:12.44   Page 74
+DUA1:[000000]R6_ENQ.OBJ;1
+ANALYZ V07-04
+
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |я       |
+
+	66)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	67)  Store Immediate, 7 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		    9F 00 00 00 44 8F DD|  0000  |н.D.... |
+
+	68)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 16 (%X'00000010')
+
+	69)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |я       |
+
+	70)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	71)  Store Immediate, 3 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                DD 22 DD|  0000  |н"н     |
+
+	72)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "NULLARG"
+
+	73)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |я       |
+
+	74)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	75)  Store Immediate, 2 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                   0D FB|  0000  |ћ.      |
+
+	76)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "SYS$ENQ"
+
+	77)  TIR$C_STO_PICR (28, %X'1C')                        stack depth: 0
+
+	78)  Store Immediate, 15 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 00 DD 7E 7C 7A 7A 00 3E|  0000  |>.zz|~н.|
+		    9F 00 00 00 AA 8F DD|  0008  |н.Њ.... |
+
+
+Analyze Object File                           8-OCT-2026 06:19:12.44   Page 75
+DUA1:[000000]R6_ENQ.OBJ;1
+ANALYZ V07-04
+
+	79)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 64 (%X'00000040')
+
+	80)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |я       |
+
+	81)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	82)  Store Immediate, 7 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		    9F 00 00 00 88 8F DD|  0000  |н...... |
+
+	83)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 48 (%X'00000030')
+
+	84)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |я       |
+
+	85)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	86)  Store Immediate, 7 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		    9F 00 00 00 66 8F DD|  0000  |н.f.... |
+
+	87)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 32 (%X'00000020')
+
+	88)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |я       |
+
+	89)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	90)  Store Immediate, 7 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		    9F 00 00 00 44 8F DD|  0000  |н.D.... |
+
+	91)  TIR$C_STA_PB (4, %X'04')                           stack depth: 1
+		psect: 1
+		value: 16 (%X'00000010')
+
+	92)  Store Immediate, 1 byte:
+
+Analyze Object File                           8-OCT-2026 06:19:12.44   Page 76
+DUA1:[000000]R6_ENQ.OBJ;1
+ANALYZ V07-04
+
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |я       |
+
+	93)  TIR$C_STO_LD (25, %X'19')                          stack depth: 0
+
+	94)  Store Immediate, 6 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		       0D FB 11 DD 22 DD|  0000  |н"н.ћ.  |
+
+	95)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "SYS$ENQ"
+
+	96)  TIR$C_STO_PICR (28, %X'1C')                        stack depth: 0
+
+	97)  Store Immediate, 21 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 7E 7C 7E 7C 7A 7A 00 3F|  0000  |?.zz|~|~|
+		 7E 7C 00 DD 7E 7C 00 DD|  0008  |н.|~н.|~|
+		          DD 00 DD 00 DD|  0010  |н.н.н   |
+
+	98)  TIR$C_STA_GBL (0, %X'00')                          stack depth: 1
+		symbol: "NULLARG"
+
+	99)  Store Immediate, 1 byte:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                      EF|  0000  |я       |
+
+	100)  TIR$C_STO_LD (25, %X'19')                         stack depth: 0
+
+	101)  Store Immediate, 2 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                   0D FB|  0000  |ћ.      |
+
+	102)  TIR$C_STA_GBL (0, %X'00')                         stack depth: 1
+		symbol: "SYS$ENQ"
+
+	103)  TIR$C_STO_PICR (28, %X'1C')                       stack depth: 0
+
+	104)  Store Immediate, 5 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		          04 7A 7A 00 40|  0000  |@.zz.   |
+
+
+24.  TRACEBACK INFORMATION (OBJ$C_TBT), 20 bytes
+
+	1)  Store Immediate, 3 bytes:
+
+Analyze Object File                           8-OCT-2026 06:19:12.44   Page 77
+DUA1:[000000]R6_ENQ.OBJ;1
+ANALYZ V07-04
+
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                00 BE 0D|  0000  |.О.     |
+
+	2)  TIR$C_STA_PL (6, %X'06')                            stack depth: 1
+		psect: 2
+		value: 0 (%X'00000000')
+
+	3)  TIR$C_STO_PIDR (27, %X'1B')                         stack depth: 0
+
+	4)  Store Immediate, 7 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		    51 4E 45 5F 36 52 06|  0000  |.R6_ENQ |
+
+
+25.  TRACEBACK INFORMATION (OBJ$C_TBT), 38 bytes
+
+	1)  Store Immediate, 3 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                00 B8 0F|  0000  |.И.     |
+
+	2)  TIR$C_STA_PB (4, %X'04')                            stack depth: 1
+		psect: 1
+		value: 0 (%X'00000000')
+
+	3)  TIR$C_STO_PIDR (27, %X'1B')                         stack depth: 0
+
+	4)  Store Immediate, 12 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 00 00 80 41 54 41 44 04|  0000  |.DATA...|
+		             00 B8 0F 00|  0008  |..И.    |
+
+	5)  TIR$C_STA_PB (4, %X'04')                            stack depth: 1
+		psect: 2
+		value: 0 (%X'00000000')
+
+	6)  TIR$C_STO_PIDR (27, %X'1B')                         stack depth: 0
+
+	7)  Store Immediate, 11 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 00 0C 8C 45 44 4F 43 04|  0000  |.CODE...|
+		                BD 01 00|  0008  |..Н     |
+
+
+26.  END OF MODULE (OBJ$C_EOM), 7 bytes
+
+	severity: errors (2)
+	psect: 2
+	value: 0 (%X'00000000')
+
+
+
+Analyze Object File                           8-OCT-2026 06:19:12.44   Page 78
+DUA1:[000000]R6_ENQ.OBJ;1
+ANALYZ V07-04
+
+SUMMARY STATISTICS:
+
+Record Type	Count	Total Bytes
+
+OBJ$C_HDR	    4	   114
+OBJ$C_GSD	    5	   111
+OBJ$C_TIR	   13	  4300
+OBJ$C_EOM	    1	     7
+OBJ$C_DBG	    0	     0
+OBJ$C_TBT	    3	    74
+OBJ$C_LNK	    0	     0
+OBJ$C_EOMW	    0	     0
+
+Totals		   26	  4606
+
+
+The analysis uncovered NO errors.
+
+
+ANALYZE/OBJECT/OUTPUT=R6_ENQ.ANL R6_ENQ.OBJ                                     

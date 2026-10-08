@@ -8,8 +8,9 @@
 // testdata/mar/rms/defined.txt: what real VAX MACRO made of govax's
 // definition probes, one $xxxDEF and a .LONG of each candidate name
 // (testdata/mar/rms/decode.go); and, since Phase 45, from
-// testdata/mp/defs/phase45-defined.txt ($PRCDEF, $PQLDEF, $ACCDEF, and
-// $MSGDEF, from global symbol directories). The macros are generated
+// testdata/mp/defs/defined.txt ($PRCDEF, $PQLDEF, $ACCDEF, and
+// $MSGDEF; and since Phase 46 $SECDEF, $LCKDEF, $LKIDEF, $PSLDEF, and
+// $DCDEF; from global symbol directories). The macros are generated
 // from those lists, not written from VMS's own.
 package main
 
@@ -28,7 +29,7 @@ import (
 // internal/bootdata; a family in both is taken from the first.
 var defined = []string{
 	filepath.Join("..", "..", "testdata", "mar", "rms", "defined.txt"),
-	filepath.Join("..", "..", "testdata", "mp", "defs", "phase45-defined.txt"),
+	filepath.Join("..", "..", "testdata", "mp", "defs", "defined.txt"),
 }
 
 var (

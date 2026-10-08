@@ -1,0 +1,7488 @@
+
+Analyze Object File                           8-OCT-2026 06:19:13.75   Page 1
+DUA1:[000000]DEF_DC.OBJ;1
+ANALYZ V07-04
+
+This is an OpenVMS VAX object file
+
+1.  MODULE HEADER (OBJ$C_HDR_MHD), 51 bytes
+
+	structure level: 0
+	maximum record size: 512
+	module name: "DEF_DC"
+	module version: "V1.0"
+	creation   date/time:  8-OCT-2026 06:19
+
+
+2.  LANGUAGE PROCESSOR HEADER (OBJ$C_HDR_LNM), 18 bytes
+
+	Textual information:
+	"VAX MACRO V5.4-3"
+
+
+3.  SOURCE FILE HEADER (OBJ$C_HDR_SRC), 21 bytes
+
+	Textual information:
+	"MACRO/NOLIST DEF_DC"
+
+
+4.  TITLE HEADER (OBJ$C_HDR_TTL), 42 bytes
+
+	Textual information:
+	"$DCDEF's names and values (device classe"
+
+
+5.  TRACEBACK INFORMATION (OBJ$C_TBT), 16 bytes
+
+	1)  Store Immediate, 14 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 06 00 00 00 00 00 BC 0D|  0000  |.¼......|
+		       43 44 5F 46 45 44|  0008  |DEF_DC  |
+
+
+6.  GLOBAL SYMBOL DIRECTORY (OBJ$C_GSD), 465 bytes
+
+	1)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 6 (%X'00000006')
+		symbol: "AT$_BDA"
+
+	2)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+
+Analyze Object File                           8-OCT-2026 06:19:13.75   Page 2
+DUA1:[000000]DEF_DC.OBJ;1
+ANALYZ V07-04
+
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 9 (%X'00000009')
+		symbol: "AT$_BVP"
+
+	3)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 11 (%X'0000000B')
+		symbol: "AT$_BVP_NIP"
+
+	4)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 10 (%X'0000000A')
+		symbol: "AT$_BVP_SSP"
+
+	5)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 4 (%X'00000004')
+		symbol: "AT$_CI"
+
+	6)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+
+Analyze Object File                           8-OCT-2026 06:19:13.75   Page 3
+DUA1:[000000]DEF_DC.OBJ;1
+ANALYZ V07-04
+
+		value: 52 (%X'00000034')
+		symbol: "AT$_CIMNA"
+
+	7)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 54 (%X'00000036')
+		symbol: "AT$_DEMNA"
+
+	8)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 15 (%X'0000000F')
+		symbol: "AT$_DISK9"
+
+	9)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 7 (%X'00000007')
+		symbol: "AT$_DMB32"
+
+	10)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 2 (%X'00000002')
+		symbol: "AT$_DR"
+
+	11)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+
+Analyze Object File                           8-OCT-2026 06:19:13.75   Page 4
+DUA1:[000000]DEF_DC.OBJ;1
+ANALYZ V07-04
+
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 8 (%X'00000008')
+		symbol: "AT$_DRB32"
+
+	12)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 13 (%X'0000000D')
+		symbol: "AT$_GENBI"
+
+	13)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 33 (%X'00000021')
+		symbol: "AT$_GENXMI"
+
+	14)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 29 (%X'0000001D')
+		symbol: "AT$_HSX50"
+
+	15)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+
+Analyze Object File                           8-OCT-2026 06:19:13.76   Page 5
+DUA1:[000000]DEF_DC.OBJ;1
+ANALYZ V07-04
+
+		value: 39 (%X'00000027')
+		symbol: "AT$_IOP"
+
+	16)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 12 (%X'0000000C')
+		symbol: "AT$_KA410"
+
+	17)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 12 (%X'0000000C')
+		symbol: "AT$_KA420"
+
+	18)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 31 (%X'0000001F')
+		symbol: "AT$_KA43"
+
+	19)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 34 (%X'00000022')
+		symbol: "AT$_KA440"
+
+	20)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+
+Analyze Object File                           8-OCT-2026 06:19:13.76   Page 6
+DUA1:[000000]DEF_DC.OBJ;1
+ANALYZ V07-04
+
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 34 (%X'00000022')
+		symbol: "AT$_KA46"
+
+	21)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 41 (%X'00000029')
+		symbol: "AT$_KA49"
+
+	22)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 59 (%X'0000003B')
+		symbol: "AT$_KA4A"
+
+	23)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 35 (%X'00000023')
+		symbol: "AT$_KA520"
+
+	24)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+
+Analyze Object File                           8-OCT-2026 06:19:13.76   Page 7
+DUA1:[000000]DEF_DC.OBJ;1
+ANALYZ V07-04
+
+		value: 35 (%X'00000023')
+		symbol: "AT$_KA550"
+
+	25)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 63 (%X'0000003F')
+		symbol: "AT$_KA560"
+
+
+7.  GLOBAL SYMBOL DIRECTORY (OBJ$C_GSD), 464 bytes
+
+	1)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 60 (%X'0000003C')
+		symbol: "AT$_KA600"
+
+	2)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 24 (%X'00000018')
+		symbol: "AT$_KA640"
+
+	3)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 29 (%X'0000001D')
+		symbol: "AT$_KDM70"
+
+
+Analyze Object File                           8-OCT-2026 06:19:13.76   Page 8
+DUA1:[000000]DEF_DC.OBJ;1
+ANALYZ V07-04
+
+	4)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 40 (%X'00000028')
+		symbol: "AT$_LAMB"
+
+	5)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 0 (%X'00000000')
+		symbol: "AT$_MBA"
+
+	6)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 23 (%X'00000017')
+		symbol: "AT$_MBUSGFX"
+
+	7)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 22 (%X'00000016')
+		symbol: "AT$_MBUSIO"
+
+	8)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+
+Analyze Object File                           8-OCT-2026 06:19:13.76   Page 9
+DUA1:[000000]DEF_DC.OBJ;1
+ANALYZ V07-04
+
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 3 (%X'00000003')
+		symbol: "AT$_MPM"
+
+	9)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 14 (%X'0000000E')
+		symbol: "AT$_NBI"
+
+	10)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 30 (%X'0000001E')
+		symbol: "AT$_NI"
+
+	11)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 5 (%X'00000005')
+		symbol: "AT$_NULL"
+
+	12)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 19 (%X'00000013')
+		symbol: "AT$_PRTR9"
+
+
+Analyze Object File                           8-OCT-2026 06:19:13.76   Page 10
+DUA1:[000000]DEF_DC.OBJ;1
+ANALYZ V07-04
+
+	13)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 61 (%X'0000003D')
+		symbol: "AT$_SCSI_B"
+
+	14)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 20 (%X'00000014')
+		symbol: "AT$_SFUN9"
+
+	15)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 32 (%X'00000020')
+		symbol: "AT$_SJA"
+
+	16)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 18 (%X'00000012')
+		symbol: "AT$_TAPE9"
+
+	17)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+
+Analyze Object File                           8-OCT-2026 06:19:13.76   Page 11
+DUA1:[000000]DEF_DC.OBJ;1
+ANALYZ V07-04
+
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 42 (%X'0000002A')
+		symbol: "AT$_TC"
+
+	18)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 17 (%X'00000011')
+		symbol: "AT$_TERM9"
+
+	19)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 62 (%X'0000003E')
+		symbol: "AT$_TT600"
+
+	20)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 1 (%X'00000001')
+		symbol: "AT$_UBA"
+
+	21)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 21 (%X'00000015')
+		symbol: "AT$_USER9"
+
+
+Analyze Object File                           8-OCT-2026 06:19:13.76   Page 12
+DUA1:[000000]DEF_DC.OBJ;1
+ANALYZ V07-04
+
+	22)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 38 (%X'00000026')
+		symbol: "AT$_VME"
+
+	23)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 43 (%X'0000002B')
+		symbol: "AT$_X1303"
+
+	24)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 16 (%X'00000010')
+		symbol: "AT$_XBI"
+
+	25)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 27 (%X'0000001B')
+		symbol: "AT$_XBI_PLUS_BI"
+
+
+8.  GLOBAL SYMBOL DIRECTORY (OBJ$C_GSD), 461 bytes
+
+	1)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+
+Analyze Object File                           8-OCT-2026 06:19:13.76   Page 13
+DUA1:[000000]DEF_DC.OBJ;1
+ANALYZ V07-04
+
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 26 (%X'0000001A')
+		symbol: "AT$_XBI_PLUS_XMI"
+
+	2)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 28 (%X'0000001C')
+		symbol: "AT$_XJA"
+
+	3)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 36 (%X'00000024')
+		symbol: "AT$_XSA"
+
+	4)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 25 (%X'00000019')
+		symbol: "AT$_XWATCH"
+
+	5)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+
+Analyze Object File                           8-OCT-2026 06:19:13.76   Page 14
+DUA1:[000000]DEF_DC.OBJ;1
+ANALYZ V07-04
+
+		value: 37 (%X'00000025')
+		symbol: "AT$_XZA"
+
+	6)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 53 (%X'00000035')
+		symbol: "AT$_XZA_DSSI"
+
+	7)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 37 (%X'00000025')
+		symbol: "AT$_XZA_SCSI"
+
+	8)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 98 (%X'00000062')
+		symbol: "DC$_AUDIO"
+
+	9)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 128 (%X'00000080')
+		symbol: "DC$_BUS"
+
+	10)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+
+Analyze Object File                           8-OCT-2026 06:19:13.76   Page 15
+DUA1:[000000]DEF_DC.OBJ;1
+ANALYZ V07-04
+
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 65 (%X'00000041')
+		symbol: "DC$_CARD"
+
+	11)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 97 (%X'00000061')
+		symbol: "DC$_DECVOICE"
+
+	12)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 1 (%X'00000001')
+		symbol: "DC$_DISK"
+
+	13)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 67 (%X'00000043')
+		symbol: "DC$_LP"
+
+	14)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+
+Analyze Object File                           8-OCT-2026 06:19:13.76   Page 16
+DUA1:[000000]DEF_DC.OBJ;1
+ANALYZ V07-04
+
+		value: 160 (%X'000000A0')
+		symbol: "DC$_MAILBOX"
+
+	15)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 200 (%X'000000C8')
+		symbol: "DC$_MISC"
+
+	16)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 96 (%X'00000060')
+		symbol: "DC$_REALTIME"
+
+	17)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 170 (%X'000000AA')
+		symbol: "DC$_REMCSL_STORAGE"
+
+	18)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 32 (%X'00000020')
+		symbol: "DC$_SCOM"
+
+	19)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+
+Analyze Object File                           8-OCT-2026 06:19:13.77   Page 17
+DUA1:[000000]DEF_DC.OBJ;1
+ANALYZ V07-04
+
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 2 (%X'00000002')
+		symbol: "DC$_TAPE"
+
+	20)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 66 (%X'00000042')
+		symbol: "DC$_TERM"
+
+	21)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 99 (%X'00000063')
+		symbol: "DC$_VIDEO"
+
+	22)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 70 (%X'00000046')
+		symbol: "DC$_WORKSTATION"
+
+	23)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+
+Analyze Object File                           8-OCT-2026 06:19:13.77   Page 18
+DUA1:[000000]DEF_DC.OBJ;1
+ANALYZ V07-04
+
+		value: 44 (%X'0000002C')
+		symbol: "DT$_AHA1742A"
+
+
+9.  GLOBAL SYMBOL DIRECTORY (OBJ$C_GSD), 466 bytes
+
+	1)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 20 (%X'00000014')
+		symbol: "DT$_AIE"
+
+	2)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 19 (%X'00000013')
+		symbol: "DT$_AIO"
+
+	3)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 1 (%X'00000001')
+		symbol: "DT$_AMD79C30A"
+
+	4)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 16 (%X'00000010')
+		symbol: "DT$_BCA"
+
+
+Analyze Object File                           8-OCT-2026 06:19:13.77   Page 19
+DUA1:[000000]DEF_DC.OBJ;1
+ANALYZ V07-04
+
+	5)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 15 (%X'0000000F')
+		symbol: "DT$_BCI750"
+
+	6)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 12 (%X'0000000C')
+		symbol: "DT$_BDA50"
+
+	7)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 21 (%X'00000015')
+		symbol: "DT$_BSA"
+
+	8)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 8 (%X'00000008')
+		symbol: "DT$_BS_DT07"
+
+	9)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+
+Analyze Object File                           8-OCT-2026 06:19:13.77   Page 20
+DUA1:[000000]DEF_DC.OBJ;1
+ANALYZ V07-04
+
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 73 (%X'00000049')
+		symbol: "DT$_CD_LOADER_1"
+
+	10)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 12 (%X'0000000C')
+		symbol: "DT$_CI"
+
+	11)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 2 (%X'00000002')
+		symbol: "DT$_CI750"
+
+	12)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 1 (%X'00000001')
+		symbol: "DT$_CI780"
+
+	13)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 47 (%X'0000002F')
+		symbol: "DT$_CIPCA"
+
+
+Analyze Object File                           8-OCT-2026 06:19:13.77   Page 21
+DUA1:[000000]DEF_DC.OBJ;1
+ANALYZ V07-04
+
+	14)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 28 (%X'0000001C')
+		symbol: "DT$_CIXCD"
+
+	15)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 78 (%X'0000004E')
+		symbol: "DT$_CL_CLIP"
+
+	16)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 1 (%X'00000001')
+		symbol: "DT$_CR11"
+
+	17)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 33 (%X'00000021')
+		symbol: "DT$_CRX50"
+
+	18)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+
+Analyze Object File                           8-OCT-2026 06:19:13.77   Page 22
+DUA1:[000000]DEF_DC.OBJ;1
+ANALYZ V07-04
+
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 1 (%X'00000001')
+		symbol: "DT$_DAP_DEVICE"
+
+	19)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 20 (%X'00000014')
+		symbol: "DT$_DEBNT"
+
+	20)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 1 (%X'00000001')
+		symbol: "DT$_DECVOICE"
+
+	21)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 6 (%X'00000006')
+		symbol: "DT$_DECW_INPUT"
+
+	22)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 5 (%X'00000005')
+		symbol: "DT$_DECW_OUTPUT"
+
+
+Analyze Object File                           8-OCT-2026 06:19:13.77   Page 23
+DUA1:[000000]DEF_DC.OBJ;1
+ANALYZ V07-04
+
+	23)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 7 (%X'00000007')
+		symbol: "DT$_DECW_PSEUDO"
+
+
+10.  GLOBAL SYMBOL DIRECTORY (OBJ$C_GSD), 475 bytes
+
+	1)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 25 (%X'00000019')
+		symbol: "DT$_DELUA"
+
+	2)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 22 (%X'00000016')
+		symbol: "DT$_DEQNA"
+
+	3)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 14 (%X'0000000E')
+		symbol: "DT$_DEUNA"
+
+	4)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+
+Analyze Object File                           8-OCT-2026 06:19:13.77   Page 24
+DUA1:[000000]DEF_DC.OBJ;1
+ANALYZ V07-04
+
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 71 (%X'00000047')
+		symbol: "DT$_DHU"
+
+	5)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 70 (%X'00000046')
+		symbol: "DT$_DHV"
+
+	6)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 41 (%X'00000029')
+		symbol: "DT$_DISK9"
+
+	7)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 37 (%X'00000025')
+		symbol: "DT$_DIV32"
+
+	8)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+
+Analyze Object File                           8-OCT-2026 06:19:13.77   Page 25
+DUA1:[000000]DEF_DC.OBJ;1
+ANALYZ V07-04
+
+		value: 6 (%X'00000006')
+		symbol: "DT$_DMA_520"
+
+	9)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 8 (%X'00000008')
+		symbol: "DT$_DMA_560"
+
+	10)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 27 (%X'0000001B')
+		symbol: "DT$_DMB32"
+
+	11)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 1 (%X'00000001')
+		symbol: "DT$_DMC11"
+
+	12)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 10 (%X'0000000A')
+		symbol: "DT$_DMF32"
+
+	13)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+
+Analyze Object File                           8-OCT-2026 06:19:13.77   Page 26
+DUA1:[000000]DEF_DC.OBJ;1
+ANALYZ V07-04
+
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 9 (%X'00000009')
+		symbol: "DT$_DMP11"
+
+	14)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 2 (%X'00000002')
+		symbol: "DT$_DMR11"
+
+	15)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 23 (%X'00000017')
+		symbol: "DT$_DMV11"
+
+	16)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 69 (%X'00000045')
+		symbol: "DT$_DMZ32"
+
+	17)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+
+Analyze Object File                           8-OCT-2026 06:19:13.77   Page 27
+DUA1:[000000]DEF_DC.OBJ;1
+ANALYZ V07-04
+
+		value: 1 (%X'00000001')
+		symbol: "DT$_DN11"
+
+	18)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 7 (%X'00000007')
+		symbol: "DT$_DR11C"
+
+	19)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 4 (%X'00000004')
+		symbol: "DT$_DR11W"
+
+	20)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 3 (%X'00000003')
+		symbol: "DT$_DR750"
+
+	21)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 2 (%X'00000002')
+		symbol: "DT$_DR780"
+
+	22)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+
+Analyze Object File                           8-OCT-2026 06:19:13.78   Page 28
+DUA1:[000000]DEF_DC.OBJ;1
+ANALYZ V07-04
+
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 15 (%X'0000000F')
+		symbol: "DT$_DRB32"
+
+	23)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 2 (%X'00000002')
+		symbol: "DT$_DTC04"
+
+	24)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 3 (%X'00000003')
+		symbol: "DT$_DTC05"
+
+	25)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 4 (%X'00000004')
+		symbol: "DT$_DTCN5"
+
+
+11.  GLOBAL SYMBOL DIRECTORY (OBJ$C_GSD), 481 bytes
+
+	1)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+
+Analyze Object File                           8-OCT-2026 06:19:13.78   Page 29
+DUA1:[000000]DEF_DC.OBJ;1
+ANALYZ V07-04
+
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 66 (%X'00000042')
+		symbol: "DT$_DZ11"
+
+	2)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 67 (%X'00000043')
+		symbol: "DT$_DZ32"
+
+	3)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 68 (%X'00000044')
+		symbol: "DT$_DZ730"
+
+	4)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 51 (%X'00000033')
+		symbol: "DT$_EA_DEANA"
+
+	5)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 49 (%X'00000031')
+		symbol: "DT$_EC_PMAD"
+
+
+Analyze Object File                           8-OCT-2026 06:19:13.78   Page 30
+DUA1:[000000]DEF_DC.OBJ;1
+ANALYZ V07-04
+
+	6)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 118 (%X'00000076')
+		symbol: "DT$_EF51"
+
+	7)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 119 (%X'00000077')
+		symbol: "DT$_EF52"
+
+	8)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 120 (%X'00000078')
+		symbol: "DT$_EF53"
+
+	9)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 121 (%X'00000079')
+		symbol: "DT$_EF54"
+
+	10)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+
+Analyze Object File                           8-OCT-2026 06:19:13.78   Page 31
+DUA1:[000000]DEF_DC.OBJ;1
+ANALYZ V07-04
+
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 122 (%X'0000007A')
+		symbol: "DT$_EF58"
+
+	11)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 72 (%X'00000048')
+		symbol: "DT$_EL_ELAN"
+
+	12)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 74 (%X'0000004A')
+		symbol: "DT$_EO_3C598"
+
+	13)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 40 (%X'00000028')
+		symbol: "DT$_EP_LANCE"
+
+	14)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 54 (%X'00000036')
+		symbol: "DT$_ER_DE200"
+
+
+Analyze Object File                           8-OCT-2026 06:19:13.78   Page 32
+DUA1:[000000]DEF_DC.OBJ;1
+ANALYZ V07-04
+
+	15)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 69 (%X'00000045')
+		symbol: "DT$_ER_DE205"
+
+	16)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 53 (%X'00000035')
+		symbol: "DT$_ER_DE422"
+
+	17)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 67 (%X'00000043')
+		symbol: "DT$_ER_DE425"
+
+	18)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 46 (%X'0000002E')
+		symbol: "DT$_ESE20"
+
+	19)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+
+Analyze Object File                           8-OCT-2026 06:19:13.78   Page 33
+DUA1:[000000]DEF_DC.OBJ;1
+ANALYZ V07-04
+
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 74 (%X'0000004A')
+		symbol: "DT$_ESE25"
+
+	20)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 96 (%X'00000060')
+		symbol: "DT$_ESE52"
+
+	21)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 97 (%X'00000061')
+		symbol: "DT$_ESE56"
+
+	22)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 98 (%X'00000062')
+		symbol: "DT$_ESE58"
+
+	23)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 24 (%X'00000018')
+		symbol: "DT$_ES_LANCE"
+
+
+Analyze Object File                           8-OCT-2026 06:19:13.78   Page 34
+DUA1:[000000]DEF_DC.OBJ;1
+ANALYZ V07-04
+
+	24)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 29 (%X'0000001D')
+		symbol: "DT$_ET_DEBNA"
+
+
+12.  GLOBAL SYMBOL DIRECTORY (OBJ$C_GSD), 475 bytes
+
+	1)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 34 (%X'00000022')
+		symbol: "DT$_ET_DEBNI"
+
+	2)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 29 (%X'0000001D')
+		symbol: "DT$_ET_DEBNT"
+
+	3)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 68 (%X'00000044')
+		symbol: "DT$_EW_DE435"
+
+	4)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+
+Analyze Object File                           8-OCT-2026 06:19:13.78   Page 35
+DUA1:[000000]DEF_DC.OBJ;1
+ANALYZ V07-04
+
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 76 (%X'0000004C')
+		symbol: "DT$_EW_DE450"
+
+	5)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 77 (%X'0000004D')
+		symbol: "DT$_EW_DE500"
+
+	6)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 55 (%X'00000037')
+		symbol: "DT$_EW_TULIP"
+
+	7)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 42 (%X'0000002A')
+		symbol: "DT$_EXABYTE"
+
+	8)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+
+Analyze Object File                           8-OCT-2026 06:19:13.78   Page 36
+DUA1:[000000]DEF_DC.OBJ;1
+ANALYZ V07-04
+
+		value: 36 (%X'00000024')
+		symbol: "DT$_EX_DEMNA"
+
+	9)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 52 (%X'00000034')
+		symbol: "DT$_EY_NITC2"
+
+	10)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 164 (%X'000000A4')
+		symbol: "DT$_EZ31"
+
+	11)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 169 (%X'000000A9')
+		symbol: "DT$_EZ31L"
+
+	12)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 165 (%X'000000A5')
+		symbol: "DT$_EZ32"
+
+	13)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+
+Analyze Object File                           8-OCT-2026 06:19:13.78   Page 37
+DUA1:[000000]DEF_DC.OBJ;1
+ANALYZ V07-04
+
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 170 (%X'000000AA')
+		symbol: "DT$_EZ32L"
+
+	14)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 166 (%X'000000A6')
+		symbol: "DT$_EZ33"
+
+	15)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 171 (%X'000000AB')
+		symbol: "DT$_EZ33L"
+
+	16)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 167 (%X'000000A7')
+		symbol: "DT$_EZ34"
+
+	17)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+
+Analyze Object File                           8-OCT-2026 06:19:13.78   Page 38
+DUA1:[000000]DEF_DC.OBJ;1
+ANALYZ V07-04
+
+		value: 168 (%X'000000A8')
+		symbol: "DT$_EZ35"
+
+	18)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 113 (%X'00000071')
+		symbol: "DT$_EZ51"
+
+	19)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 114 (%X'00000072')
+		symbol: "DT$_EZ52"
+
+	20)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 115 (%X'00000073')
+		symbol: "DT$_EZ53"
+
+	21)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 116 (%X'00000074')
+		symbol: "DT$_EZ54"
+
+	22)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+
+Analyze Object File                           8-OCT-2026 06:19:13.79   Page 39
+DUA1:[000000]DEF_DC.OBJ;1
+ANALYZ V07-04
+
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 174 (%X'000000AE')
+		symbol: "DT$_EZ56R"
+
+	23)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 117 (%X'00000075')
+		symbol: "DT$_EZ58"
+
+	24)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 35 (%X'00000023')
+		symbol: "DT$_EZ_SGEC"
+
+
+13.  GLOBAL SYMBOL DIRECTORY (OBJ$C_GSD), 471 bytes
+
+	1)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 50 (%X'00000032')
+		symbol: "DT$_EZ_TGEC"
+
+	2)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+
+Analyze Object File                           8-OCT-2026 06:19:13.79   Page 40
+DUA1:[000000]DEF_DC.OBJ;1
+ANALYZ V07-04
+
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 56 (%X'00000038')
+		symbol: "DT$_FA_DEFAA"
+
+	3)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 57 (%X'00000039')
+		symbol: "DT$_FC_DEFTA"
+
+	4)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 48 (%X'00000030')
+		symbol: "DT$_FC_DEFZA"
+
+	5)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 129 (%X'00000081')
+		symbol: "DT$_FD1"
+
+	6)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 130 (%X'00000082')
+		symbol: "DT$_FD2"
+
+
+Analyze Object File                           8-OCT-2026 06:19:13.79   Page 41
+DUA1:[000000]DEF_DC.OBJ;1
+ANALYZ V07-04
+
+	7)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 131 (%X'00000083')
+		symbol: "DT$_FD3"
+
+	8)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 132 (%X'00000084')
+		symbol: "DT$_FD4"
+
+	9)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 133 (%X'00000085')
+		symbol: "DT$_FD5"
+
+	10)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 134 (%X'00000086')
+		symbol: "DT$_FD6"
+
+	11)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+
+Analyze Object File                           8-OCT-2026 06:19:13.79   Page 42
+DUA1:[000000]DEF_DC.OBJ;1
+ANALYZ V07-04
+
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 135 (%X'00000087')
+		symbol: "DT$_FD7"
+
+	12)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 136 (%X'00000088')
+		symbol: "DT$_FD8"
+
+	13)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 11 (%X'0000000B')
+		symbol: "DT$_FP_FEPCM"
+
+	14)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 58 (%X'0000003A')
+		symbol: "DT$_FQ_DEFQA"
+
+	15)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 59 (%X'0000003B')
+		symbol: "DT$_FR_DEFEA"
+
+
+Analyze Object File                           8-OCT-2026 06:19:13.79   Page 43
+DUA1:[000000]DEF_DC.OBJ;1
+ANALYZ V07-04
+
+	16)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 16 (%X'00000010')
+		symbol: "DT$_FT1"
+
+	17)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 17 (%X'00000011')
+		symbol: "DT$_FT2"
+
+	18)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 18 (%X'00000012')
+		symbol: "DT$_FT3"
+
+	19)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 19 (%X'00000013')
+		symbol: "DT$_FT4"
+
+	20)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+
+Analyze Object File                           8-OCT-2026 06:19:13.79   Page 44
+DUA1:[000000]DEF_DC.OBJ;1
+ANALYZ V07-04
+
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 20 (%X'00000014')
+		symbol: "DT$_FT5"
+
+	21)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 21 (%X'00000015')
+		symbol: "DT$_FT6"
+
+	22)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 22 (%X'00000016')
+		symbol: "DT$_FT7"
+
+	23)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 23 (%X'00000017')
+		symbol: "DT$_FT8"
+
+	24)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 39 (%X'00000027')
+		symbol: "DT$_FT_NI"
+
+
+Analyze Object File                           8-OCT-2026 06:19:13.79   Page 45
+DUA1:[000000]DEF_DC.OBJ;1
+ANALYZ V07-04
+
+	25)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 38 (%X'00000026')
+		symbol: "DT$_FT_TRACE_RAM"
+
+
+14.  GLOBAL SYMBOL DIRECTORY (OBJ$C_GSD), 467 bytes
+
+	1)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 43 (%X'0000002B')
+		symbol: "DT$_FX_DEMFA"
+
+	2)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 54 (%X'00000036')
+		symbol: "DT$_GENERIC_DK"
+
+	3)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 35 (%X'00000023')
+		symbol: "DT$_GENERIC_DU"
+
+	4)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+
+Analyze Object File                           8-OCT-2026 06:19:13.79   Page 46
+DUA1:[000000]DEF_DC.OBJ;1
+ANALYZ V07-04
+
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 28 (%X'0000001C')
+		symbol: "DT$_GENERIC_MK"
+
+	5)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 5 (%X'00000005')
+		symbol: "DT$_GENERIC_SCSI"
+
+	6)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 18 (%X'00000012')
+		symbol: "DT$_GENERIC_TU"
+
+	7)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 70 (%X'00000046')
+		symbol: "DT$_HC_OTTO"
+
+	8)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+
+Analyze Object File                           8-OCT-2026 06:19:13.79   Page 47
+DUA1:[000000]DEF_DC.OBJ;1
+ANALYZ V07-04
+
+		value: 58 (%X'0000003A')
+		symbol: "DT$_HST00"
+
+	9)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 59 (%X'0000003B')
+		symbol: "DT$_HST01"
+
+	10)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 141 (%X'0000008D')
+		symbol: "DT$_HSX00"
+
+	11)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 142 (%X'0000008E')
+		symbol: "DT$_HSX01"
+
+	12)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 31 (%X'0000001F')
+		symbol: "DT$_HSX50"
+
+	13)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+
+Analyze Object File                           8-OCT-2026 06:19:13.79   Page 48
+DUA1:[000000]DEF_DC.OBJ;1
+ANALYZ V07-04
+
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 127 (%X'0000007F')
+		symbol: "DT$_HSZ10"
+
+	14)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 154 (%X'0000009A')
+		symbol: "DT$_HSZ15"
+
+	15)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 152 (%X'00000098')
+		symbol: "DT$_HSZ20"
+
+	16)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 153 (%X'00000099')
+		symbol: "DT$_HSZ40"
+
+	17)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+
+Analyze Object File                           8-OCT-2026 06:19:13.79   Page 49
+DUA1:[000000]DEF_DC.OBJ;1
+ANALYZ V07-04
+
+		value: 73 (%X'00000049')
+		symbol: "DT$_HW_OTTO"
+
+	18)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 16 (%X'00000010')
+		symbol: "DT$_HX_DRQ3B"
+
+	19)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 61 (%X'0000003D')
+		symbol: "DT$_IC_DETRA"
+
+	20)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 62 (%X'0000003E')
+		symbol: "DT$_IQ_DEQRA"
+
+	21)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 63 (%X'0000003F')
+		symbol: "DT$_IR_DW300"
+
+	22)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+
+Analyze Object File                           8-OCT-2026 06:19:13.80   Page 50
+DUA1:[000000]DEF_DC.OBJ;1
+ANALYZ V07-04
+
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 48 (%X'00000030')
+		symbol: "DT$_ISP1020"
+
+
+15.  GLOBAL SYMBOL DIRECTORY (OBJ$C_GSD), 476 bytes
+
+	1)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 75 (%X'0000004B')
+		symbol: "DT$_IW_TC4048"
+
+	2)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 10 (%X'0000000A')
+		symbol: "DT$_IX_IEX11"
+
+	3)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 14 (%X'0000000E')
+		symbol: "DT$_KDA25"
+
+	4)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+
+Analyze Object File                           8-OCT-2026 06:19:13.80   Page 51
+DUA1:[000000]DEF_DC.OBJ;1
+ANALYZ V07-04
+
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 11 (%X'0000000B')
+		symbol: "DT$_KDA50"
+
+	5)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 12 (%X'0000000C')
+		symbol: "DT$_KDB50"
+
+	6)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 31 (%X'0000001F')
+		symbol: "DT$_KDM70"
+
+	7)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 19 (%X'00000013')
+		symbol: "DT$_KFBTA"
+
+	8)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 36 (%X'00000024')
+		symbol: "DT$_KFMSA"
+
+
+Analyze Object File                           8-OCT-2026 06:19:13.80   Page 52
+DUA1:[000000]DEF_DC.OBJ;1
+ANALYZ V07-04
+
+	9)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 26 (%X'0000001A')
+		symbol: "DT$_KFQSA"
+
+	10)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 26 (%X'0000001A')
+		symbol: "DT$_KFSQSA"
+
+	11)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 21 (%X'00000015')
+		symbol: "DT$_KSB50"
+
+	12)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 41 (%X'00000029')
+		symbol: "DT$_KWV32"
+
+	13)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+
+Analyze Object File                           8-OCT-2026 06:19:13.80   Page 53
+DUA1:[000000]DEF_DC.OBJ;1
+ANALYZ V07-04
+
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 37 (%X'00000025')
+		symbol: "DT$_LA100"
+
+	14)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 2 (%X'00000002')
+		symbol: "DT$_LA11"
+
+	15)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 36 (%X'00000024')
+		symbol: "DT$_LA12"
+
+	16)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 33 (%X'00000021')
+		symbol: "DT$_LA120"
+
+	17)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 3 (%X'00000003')
+		symbol: "DT$_LA180"
+
+
+Analyze Object File                           8-OCT-2026 06:19:13.80   Page 54
+DUA1:[000000]DEF_DC.OBJ;1
+ANALYZ V07-04
+
+	18)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 37 (%X'00000025')
+		symbol: "DT$_LA24"
+
+	19)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 34 (%X'00000022')
+		symbol: "DT$_LA34"
+
+	20)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 32 (%X'00000020')
+		symbol: "DT$_LA36"
+
+	21)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 35 (%X'00000023')
+		symbol: "DT$_LA38"
+
+	22)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+
+Analyze Object File                           8-OCT-2026 06:19:13.80   Page 55
+DUA1:[000000]DEF_DC.OBJ;1
+ANALYZ V07-04
+
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 74 (%X'0000004A')
+		symbol: "DT$_LAT"
+
+	23)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 32 (%X'00000020')
+		symbol: "DT$_LAX"
+
+	24)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 4 (%X'00000004')
+		symbol: "DT$_LC_DMF32"
+
+	25)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 5 (%X'00000005')
+		symbol: "DT$_LESI"
+
+
+16.  GLOBAL SYMBOL DIRECTORY (OBJ$C_GSD), 462 bytes
+
+	1)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 5 (%X'00000005')
+		symbol: "DT$_LI_DMB32"
+
+Analyze Object File                           8-OCT-2026 06:19:13.80   Page 56
+DUA1:[000000]DEF_DC.OBJ;1
+ANALYZ V07-04
+
+
+	2)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 1 (%X'00000001')
+		symbol: "DT$_LP11"
+
+	3)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 1 (%X'00000001')
+		symbol: "DT$_LPA11"
+
+	4)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 38 (%X'00000026')
+		symbol: "DT$_LQP02"
+
+	5)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 1 (%X'00000001')
+		symbol: "DT$_MBX"
+
+	6)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+
+Analyze Object File                           8-OCT-2026 06:19:13.80   Page 57
+DUA1:[000000]DEF_DC.OBJ;1
+ANALYZ V07-04
+
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 17 (%X'00000011')
+		symbol: "DT$_ML11"
+
+	7)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 11 (%X'0000000B')
+		symbol: "DT$_MR_TU70"
+
+	8)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 12 (%X'0000000C')
+		symbol: "DT$_MR_TU72"
+
+	9)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 13 (%X'0000000D')
+		symbol: "DT$_MW_TSU05"
+
+	10)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 14 (%X'0000000E')
+		symbol: "DT$_MW_TSV05"
+
+
+Analyze Object File                           8-OCT-2026 06:19:13.80   Page 58
+DUA1:[000000]DEF_DC.OBJ;1
+ANALYZ V07-04
+
+	11)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 8 (%X'00000008')
+		symbol: "DT$_MX_MUX200"
+
+	12)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 29 (%X'0000001D')
+		symbol: "DT$_N5380"
+
+	13)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 35 (%X'00000023')
+		symbol: "DT$_N53C94"
+
+	14)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 43 (%X'0000002B')
+		symbol: "DT$_N710_DSSI"
+
+	15)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+
+Analyze Object File                           8-OCT-2026 06:19:13.80   Page 59
+DUA1:[000000]DEF_DC.OBJ;1
+ANALYZ V07-04
+
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 42 (%X'0000002A')
+		symbol: "DT$_N710_SCSI"
+
+	16)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 13 (%X'0000000D')
+		symbol: "DT$_NI"
+
+	17)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 18 (%X'00000012')
+		symbol: "DT$_NISCA"
+
+	18)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 26 (%X'0000001A')
+		symbol: "DT$_NQ_3271"
+
+	19)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 3 (%X'00000003')
+		symbol: "DT$_NULL"
+
+
+Analyze Object File                           8-OCT-2026 06:19:13.80   Page 60
+DUA1:[000000]DEF_DC.OBJ;1
+ANALYZ V07-04
+
+	20)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 6 (%X'00000006')
+		symbol: "DT$_NV_X29"
+
+	21)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 5 (%X'00000005')
+		symbol: "DT$_NW_X25"
+
+	22)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 5 (%X'00000005')
+		symbol: "DT$_PCL11R"
+
+	23)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 6 (%X'00000006')
+		symbol: "DT$_PCL11T"
+
+
+17.  GLOBAL SYMBOL DIRECTORY (OBJ$C_GSD), 461 bytes
+
+	1)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+
+Analyze Object File                           8-OCT-2026 06:19:13.81   Page 61
+DUA1:[000000]DEF_DC.OBJ;1
+ANALYZ V07-04
+
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 4 (%X'00000004')
+		symbol: "DT$_PIPE"
+
+	2)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 6 (%X'00000006')
+		symbol: "DT$_PRTR9"
+
+	3)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 2 (%X'00000002')
+		symbol: "DT$_PV"
+
+	4)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 14 (%X'0000000E')
+		symbol: "DT$_QDA25"
+
+	5)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+
+Analyze Object File                           8-OCT-2026 06:19:13.81   Page 62
+DUA1:[000000]DEF_DC.OBJ;1
+ANALYZ V07-04
+
+		value: 11 (%X'0000000B')
+		symbol: "DT$_QDA50"
+
+	6)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 22 (%X'00000016')
+		symbol: "DT$_RA60"
+
+	7)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 38 (%X'00000026')
+		symbol: "DT$_RA70"
+
+	8)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 80 (%X'00000050')
+		symbol: "DT$_RA71"
+
+	9)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 79 (%X'0000004F')
+		symbol: "DT$_RA72"
+
+	10)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+
+Analyze Object File                           8-OCT-2026 06:19:13.81   Page 63
+DUA1:[000000]DEF_DC.OBJ;1
+ANALYZ V07-04
+
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 92 (%X'0000005C')
+		symbol: "DT$_RA73"
+
+	11)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 20 (%X'00000014')
+		symbol: "DT$_RA80"
+
+	12)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 21 (%X'00000015')
+		symbol: "DT$_RA81"
+
+	13)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 30 (%X'0000001E')
+		symbol: "DT$_RA82"
+
+	14)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+
+Analyze Object File                           8-OCT-2026 06:19:13.81   Page 64
+DUA1:[000000]DEF_DC.OBJ;1
+ANALYZ V07-04
+
+		value: 39 (%X'00000027')
+		symbol: "DT$_RA90"
+
+	15)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 64 (%X'00000040')
+		symbol: "DT$_RA92"
+
+	16)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 80 (%X'00000050')
+		symbol: "DT$_RAH72"
+
+	17)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 175 (%X'000000AF')
+		symbol: "DT$_RAID0"
+
+	18)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 176 (%X'000000B0')
+		symbol: "DT$_RAID5"
+
+	19)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+
+Analyze Object File                           8-OCT-2026 06:19:13.81   Page 65
+DUA1:[000000]DEF_DC.OBJ;1
+ANALYZ V07-04
+
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 58 (%X'0000003A')
+		symbol: "DT$_RAM_DISK"
+
+	20)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 18 (%X'00000012')
+		symbol: "DT$_RB02"
+
+	21)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 19 (%X'00000013')
+		symbol: "DT$_RB80"
+
+	22)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 23 (%X'00000017')
+		symbol: "DT$_RC25"
+
+	23)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+
+Analyze Object File                           8-OCT-2026 06:19:13.81   Page 66
+DUA1:[000000]DEF_DC.OBJ;1
+ANALYZ V07-04
+
+		value: 10 (%X'0000000A')
+		symbol: "DT$_RC26P"
+
+	24)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 24 (%X'00000018')
+		symbol: "DT$_RCF25"
+
+	25)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 29 (%X'0000001D')
+		symbol: "DT$_RD26"
+
+
+18.  GLOBAL SYMBOL DIRECTORY (OBJ$C_GSD), 475 bytes
+
+	1)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 31 (%X'0000001F')
+		symbol: "DT$_RD31"
+
+	2)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 40 (%X'00000028')
+		symbol: "DT$_RD32"
+
+
+Analyze Object File                           8-OCT-2026 06:19:13.81   Page 67
+DUA1:[000000]DEF_DC.OBJ;1
+ANALYZ V07-04
+
+	3)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 45 (%X'0000002D')
+		symbol: "DT$_RD33"
+
+	4)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 25 (%X'00000019')
+		symbol: "DT$_RD51"
+
+	5)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 27 (%X'0000001B')
+		symbol: "DT$_RD52"
+
+	6)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 28 (%X'0000001C')
+		symbol: "DT$_RD53"
+
+	7)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+
+Analyze Object File                           8-OCT-2026 06:19:13.81   Page 68
+DUA1:[000000]DEF_DC.OBJ;1
+ANALYZ V07-04
+
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 32 (%X'00000020')
+		symbol: "DT$_RD54"
+
+	8)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 7 (%X'00000007')
+		symbol: "DT$_RDRX"
+
+	9)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 43 (%X'0000002B')
+		symbol: "DT$_RF30"
+
+	10)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 56 (%X'00000038')
+		symbol: "DT$_RF31"
+
+	11)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 83 (%X'00000053')
+		symbol: "DT$_RF31F"
+
+
+Analyze Object File                           8-OCT-2026 06:19:13.81   Page 69
+DUA1:[000000]DEF_DC.OBJ;1
+ANALYZ V07-04
+
+	12)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 81 (%X'00000051')
+		symbol: "DT$_RF32"
+
+	13)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 81 (%X'00000051')
+		symbol: "DT$_RF35"
+
+	14)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 123 (%X'0000007B')
+		symbol: "DT$_RF36"
+
+	15)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 124 (%X'0000007C')
+		symbol: "DT$_RF37"
+
+	16)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+
+Analyze Object File                           8-OCT-2026 06:19:13.81   Page 70
+DUA1:[000000]DEF_DC.OBJ;1
+ANALYZ V07-04
+
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 44 (%X'0000002C')
+		symbol: "DT$_RF70"
+
+	17)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 44 (%X'0000002C')
+		symbol: "DT$_RF71"
+
+	18)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 57 (%X'00000039')
+		symbol: "DT$_RF72"
+
+	19)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 77 (%X'0000004D')
+		symbol: "DT$_RF73"
+
+	20)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 125 (%X'0000007D')
+		symbol: "DT$_RF74"
+
+
+Analyze Object File                           8-OCT-2026 06:19:13.81   Page 71
+DUA1:[000000]DEF_DC.OBJ;1
+ANALYZ V07-04
+
+	21)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 126 (%X'0000007E')
+		symbol: "DT$_RF75"
+
+	22)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 83 (%X'00000053')
+		symbol: "DT$_RFF31"
+
+	23)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 75 (%X'0000004B')
+		symbol: "DT$_RFH31"
+
+	24)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 82 (%X'00000052')
+		symbol: "DT$_RFH32"
+
+	25)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+
+Analyze Object File                           8-OCT-2026 06:19:13.82   Page 72
+DUA1:[000000]DEF_DC.OBJ;1
+ANALYZ V07-04
+
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 82 (%X'00000052')
+		symbol: "DT$_RFH35"
+
+	26)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 76 (%X'0000004C')
+		symbol: "DT$_RFH72"
+
+
+19.  GLOBAL SYMBOL DIRECTORY (OBJ$C_GSD), 467 bytes
+
+	1)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 78 (%X'0000004E')
+		symbol: "DT$_RFH73"
+
+	2)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 1 (%X'00000001')
+		symbol: "DT$_RK06"
+
+	3)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 2 (%X'00000002')
+		symbol: "DT$_RK07"
+
+Analyze Object File                           8-OCT-2026 06:19:13.82   Page 73
+DUA1:[000000]DEF_DC.OBJ;1
+ANALYZ V07-04
+
+
+	4)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 9 (%X'00000009')
+		symbol: "DT$_RL01"
+
+	5)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 10 (%X'0000000A')
+		symbol: "DT$_RL02"
+
+	6)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 6 (%X'00000006')
+		symbol: "DT$_RM03"
+
+	7)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 15 (%X'0000000F')
+		symbol: "DT$_RM05"
+
+	8)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+
+Analyze Object File                           8-OCT-2026 06:19:13.82   Page 74
+DUA1:[000000]DEF_DC.OBJ;1
+ANALYZ V07-04
+
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 13 (%X'0000000D')
+		symbol: "DT$_RM80"
+
+	9)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 3 (%X'00000003')
+		symbol: "DT$_RP04"
+
+	10)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 4 (%X'00000004')
+		symbol: "DT$_RP05"
+
+	11)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 5 (%X'00000005')
+		symbol: "DT$_RP06"
+
+	12)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 7 (%X'00000007')
+		symbol: "DT$_RP07"
+
+
+Analyze Object File                           8-OCT-2026 06:19:13.82   Page 75
+DUA1:[000000]DEF_DC.OBJ;1
+ANALYZ V07-04
+
+	13)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 8 (%X'00000008')
+		symbol: "DT$_RP07HT"
+
+	14)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 17 (%X'00000011')
+		symbol: "DT$_RQDX3"
+
+	15)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 53 (%X'00000035')
+		symbol: "DT$_RRD40"
+
+	16)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 52 (%X'00000034')
+		symbol: "DT$_RRD40S"
+
+	17)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+
+Analyze Object File                           8-OCT-2026 06:19:13.82   Page 76
+DUA1:[000000]DEF_DC.OBJ;1
+ANALYZ V07-04
+
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 72 (%X'00000048')
+		symbol: "DT$_RRD42"
+
+	18)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 139 (%X'0000008B')
+		symbol: "DT$_RRD43"
+
+	19)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 140 (%X'0000008C')
+		symbol: "DT$_RRD44"
+
+	20)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 34 (%X'00000022')
+		symbol: "DT$_RRD50"
+
+	21)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 13 (%X'0000000D')
+		symbol: "DT$_RRD50P"
+
+
+Analyze Object File                           8-OCT-2026 06:19:13.82   Page 77
+DUA1:[000000]DEF_DC.OBJ;1
+ANALYZ V07-04
+
+	22)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 9 (%X'00000009')
+		symbol: "DT$_RUX50P"
+
+	23)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 16 (%X'00000010')
+		symbol: "DT$_RV20"
+
+	24)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 23 (%X'00000017')
+		symbol: "DT$_RV20P"
+
+	25)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 24 (%X'00000018')
+		symbol: "DT$_RV60"
+
+
+20.  GLOBAL SYMBOL DIRECTORY (OBJ$C_GSD), 465 bytes
+
+	1)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+
+Analyze Object File                           8-OCT-2026 06:19:13.82   Page 78
+DUA1:[000000]DEF_DC.OBJ;1
+ANALYZ V07-04
+
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 16 (%X'00000010')
+		symbol: "DT$_RV80"
+
+	2)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 23 (%X'00000017')
+		symbol: "DT$_RV80P"
+
+	3)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 156 (%X'0000009C')
+		symbol: "DT$_RW504"
+
+	4)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 157 (%X'0000009D')
+		symbol: "DT$_RW510"
+
+	5)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+
+Analyze Object File                           8-OCT-2026 06:19:13.82   Page 79
+DUA1:[000000]DEF_DC.OBJ;1
+ANALYZ V07-04
+
+		value: 158 (%X'0000009E')
+		symbol: "DT$_RW514"
+
+	6)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 159 (%X'0000009F')
+		symbol: "DT$_RW516"
+
+	7)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 71 (%X'00000047')
+		symbol: "DT$_RWZ01"
+
+	8)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 150 (%X'00000096')
+		symbol: "DT$_RWZ21"
+
+	9)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 163 (%X'000000A3')
+		symbol: "DT$_RWZ31"
+
+	10)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+
+Analyze Object File                           8-OCT-2026 06:19:13.82   Page 80
+DUA1:[000000]DEF_DC.OBJ;1
+ANALYZ V07-04
+
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 173 (%X'000000AD')
+		symbol: "DT$_RWZ51"
+
+	11)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 160 (%X'000000A0')
+		symbol: "DT$_RWZ52"
+
+	12)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 161 (%X'000000A1')
+		symbol: "DT$_RWZ53"
+
+	13)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 162 (%X'000000A2')
+		symbol: "DT$_RWZ54"
+
+	14)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+
+Analyze Object File                           8-OCT-2026 06:19:13.82   Page 81
+DUA1:[000000]DEF_DC.OBJ;1
+ANALYZ V07-04
+
+		value: 16 (%X'00000010')
+		symbol: "DT$_RX01"
+
+	15)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 11 (%X'0000000B')
+		symbol: "DT$_RX02"
+
+	16)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 12 (%X'0000000C')
+		symbol: "DT$_RX04"
+
+	17)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 37 (%X'00000025')
+		symbol: "DT$_RX18"
+
+	18)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 55 (%X'00000037')
+		symbol: "DT$_RX23"
+
+	19)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+
+Analyze Object File                           8-OCT-2026 06:19:13.82   Page 82
+DUA1:[000000]DEF_DC.OBJ;1
+ANALYZ V07-04
+
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 62 (%X'0000003E')
+		symbol: "DT$_RX23S"
+
+	20)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 67 (%X'00000043')
+		symbol: "DT$_RX26"
+
+	21)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 36 (%X'00000024')
+		symbol: "DT$_RX33"
+
+	22)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 63 (%X'0000003F')
+		symbol: "DT$_RX33S"
+
+	23)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+
+Analyze Object File                           8-OCT-2026 06:19:13.83   Page 83
+DUA1:[000000]DEF_DC.OBJ;1
+ANALYZ V07-04
+
+		value: 42 (%X'0000002A')
+		symbol: "DT$_RX35"
+
+	24)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 26 (%X'0000001A')
+		symbol: "DT$_RX50"
+
+	25)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 23 (%X'00000017')
+		symbol: "DT$_RZ01"
+
+
+21.  GLOBAL SYMBOL DIRECTORY (OBJ$C_GSD), 462 bytes
+
+	1)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 107 (%X'0000006B')
+		symbol: "DT$_RZ13"
+
+	2)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 108 (%X'0000006C')
+		symbol: "DT$_RZ14"
+
+
+Analyze Object File                           8-OCT-2026 06:19:13.83   Page 84
+DUA1:[000000]DEF_DC.OBJ;1
+ANALYZ V07-04
+
+	3)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 109 (%X'0000006D')
+		symbol: "DT$_RZ15"
+
+	4)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 110 (%X'0000006E')
+		symbol: "DT$_RZ16"
+
+	5)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 111 (%X'0000006F')
+		symbol: "DT$_RZ17"
+
+	6)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 112 (%X'00000070')
+		symbol: "DT$_RZ18"
+
+	7)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+
+Analyze Object File                           8-OCT-2026 06:19:13.83   Page 85
+DUA1:[000000]DEF_DC.OBJ;1
+ANALYZ V07-04
+
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 48 (%X'00000030')
+		symbol: "DT$_RZ22"
+
+	8)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 49 (%X'00000031')
+		symbol: "DT$_RZ23"
+
+	9)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 66 (%X'00000042')
+		symbol: "DT$_RZ23L"
+
+	10)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 50 (%X'00000032')
+		symbol: "DT$_RZ24"
+
+	11)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 87 (%X'00000057')
+		symbol: "DT$_RZ24L"
+
+
+Analyze Object File                           8-OCT-2026 06:19:13.83   Page 86
+DUA1:[000000]DEF_DC.OBJ;1
+ANALYZ V07-04
+
+	12)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 59 (%X'0000003B')
+		symbol: "DT$_RZ25"
+
+	13)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 88 (%X'00000058')
+		symbol: "DT$_RZ25L"
+
+	14)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 93 (%X'0000005D')
+		symbol: "DT$_RZ26"
+
+	15)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 143 (%X'0000008F')
+		symbol: "DT$_RZ26B"
+
+	16)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+
+Analyze Object File                           8-OCT-2026 06:19:13.83   Page 87
+DUA1:[000000]DEF_DC.OBJ;1
+ANALYZ V07-04
+
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 138 (%X'0000008A')
+		symbol: "DT$_RZ26L"
+
+	17)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 155 (%X'0000009B')
+		symbol: "DT$_RZ26M"
+
+	18)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 99 (%X'00000063')
+		symbol: "DT$_RZ27"
+
+	19)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 144 (%X'00000090')
+		symbol: "DT$_RZ27B"
+
+	20)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 151 (%X'00000097')
+		symbol: "DT$_RZ27L"
+
+
+Analyze Object File                           8-OCT-2026 06:19:13.83   Page 88
+DUA1:[000000]DEF_DC.OBJ;1
+ANALYZ V07-04
+
+	21)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 128 (%X'00000080')
+		symbol: "DT$_RZ28"
+
+	22)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 145 (%X'00000091')
+		symbol: "DT$_RZ28B"
+
+	23)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 172 (%X'000000AC')
+		symbol: "DT$_RZ28L"
+
+	24)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 137 (%X'00000089')
+		symbol: "DT$_RZ29"
+
+	25)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+
+Analyze Object File                           8-OCT-2026 06:19:13.83   Page 89
+DUA1:[000000]DEF_DC.OBJ;1
+ANALYZ V07-04
+
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 146 (%X'00000092')
+		symbol: "DT$_RZ29B"
+
+
+22.  GLOBAL SYMBOL DIRECTORY (OBJ$C_GSD), 462 bytes
+
+	1)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 69 (%X'00000045')
+		symbol: "DT$_RZ31"
+
+	2)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 101 (%X'00000065')
+		symbol: "DT$_RZ34L"
+
+	3)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 86 (%X'00000056')
+		symbol: "DT$_RZ35"
+
+	4)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 102 (%X'00000066')
+		symbol: "DT$_RZ35L"
+
+Analyze Object File                           8-OCT-2026 06:19:13.83   Page 90
+DUA1:[000000]DEF_DC.OBJ;1
+ANALYZ V07-04
+
+
+	5)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 94 (%X'0000005E')
+		symbol: "DT$_RZ36"
+
+	6)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 103 (%X'00000067')
+		symbol: "DT$_RZ36L"
+
+	7)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 100 (%X'00000064')
+		symbol: "DT$_RZ37"
+
+	8)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 104 (%X'00000068')
+		symbol: "DT$_RZ38"
+
+	9)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+
+Analyze Object File                           8-OCT-2026 06:19:13.83   Page 91
+DUA1:[000000]DEF_DC.OBJ;1
+ANALYZ V07-04
+
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 51 (%X'00000033')
+		symbol: "DT$_RZ55"
+
+	10)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 89 (%X'00000059')
+		symbol: "DT$_RZ55L"
+
+	11)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 60 (%X'0000003C')
+		symbol: "DT$_RZ56"
+
+	12)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 90 (%X'0000005A')
+		symbol: "DT$_RZ56L"
+
+	13)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 61 (%X'0000003D')
+		symbol: "DT$_RZ57"
+
+
+Analyze Object File                           8-OCT-2026 06:19:13.83   Page 92
+DUA1:[000000]DEF_DC.OBJ;1
+ANALYZ V07-04
+
+	14)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 68 (%X'00000044')
+		symbol: "DT$_RZ57I"
+
+	15)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 91 (%X'0000005B')
+		symbol: "DT$_RZ57L"
+
+	16)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 70 (%X'00000046')
+		symbol: "DT$_RZ58"
+
+	17)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 106 (%X'0000006A')
+		symbol: "DT$_RZ59"
+
+	18)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+
+Analyze Object File                           8-OCT-2026 06:19:13.83   Page 93
+DUA1:[000000]DEF_DC.OBJ;1
+ANALYZ V07-04
+
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 84 (%X'00000054')
+		symbol: "DT$_RZ72"
+
+	19)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 85 (%X'00000055')
+		symbol: "DT$_RZ73"
+
+	20)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 147 (%X'00000093')
+		symbol: "DT$_RZ73B"
+
+	21)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 95 (%X'0000005F')
+		symbol: "DT$_RZ74"
+
+	22)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 148 (%X'00000094')
+		symbol: "DT$_RZ74B"
+
+
+Analyze Object File                           8-OCT-2026 06:19:13.84   Page 94
+DUA1:[000000]DEF_DC.OBJ;1
+ANALYZ V07-04
+
+	23)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 105 (%X'00000069')
+		symbol: "DT$_RZ75"
+
+	24)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 149 (%X'00000095')
+		symbol: "DT$_RZ75B"
+
+	25)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 24 (%X'00000018')
+		symbol: "DT$_RZF01"
+
+
+23.  GLOBAL SYMBOL DIRECTORY (OBJ$C_GSD), 470 bytes
+
+	1)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 7 (%X'00000007')
+		symbol: "DT$_SB_ISB11"
+
+	2)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+
+Analyze Object File                           8-OCT-2026 06:19:13.84   Page 95
+DUA1:[000000]DEF_DC.OBJ;1
+ANALYZ V07-04
+
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 30 (%X'0000001E')
+		symbol: "DT$_SCSII"
+
+	3)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 71 (%X'00000047')
+		symbol: "DT$_SCSI_MO"
+
+	4)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 7 (%X'00000007')
+		symbol: "DT$_SCSI_SCANNER_1"
+
+	5)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 37 (%X'00000025')
+		symbol: "DT$_SCSI_XTENDR"
+
+	6)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+
+Analyze Object File                           8-OCT-2026 06:19:13.84   Page 96
+DUA1:[000000]DEF_DC.OBJ;1
+ANALYZ V07-04
+
+		value: 46 (%X'0000002E')
+		symbol: "DT$_SE_DPV11"
+
+	7)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 45 (%X'0000002D')
+		symbol: "DT$_SE_DUP11"
+
+	8)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 3 (%X'00000003')
+		symbol: "DT$_SFUN9"
+
+	9)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 44 (%X'0000002C')
+		symbol: "DT$_SF_DSF32"
+
+	10)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 27 (%X'0000001B')
+		symbol: "DT$_SHAC"
+
+	11)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+
+Analyze Object File                           8-OCT-2026 06:19:13.84   Page 97
+DUA1:[000000]DEF_DC.OBJ;1
+ANALYZ V07-04
+
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 2 (%X'00000002')
+		symbol: "DT$_SHRMBX"
+
+	12)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 25 (%X'00000019')
+		symbol: "DT$_SII"
+
+	13)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 30 (%X'0000001E')
+		symbol: "DT$_SJ_DSV11"
+
+	14)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 72 (%X'00000048')
+		symbol: "DT$_SLU"
+
+	15)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+
+Analyze Object File                           8-OCT-2026 06:19:13.84   Page 98
+DUA1:[000000]DEF_DC.OBJ;1
+ANALYZ V07-04
+
+		value: 31 (%X'0000001F')
+		symbol: "DT$_SL_DSB32"
+
+	16)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 42 (%X'0000002A')
+		symbol: "DT$_SM_DSF32"
+
+	17)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 65 (%X'00000041')
+		symbol: "DT$_SSTRIPE"
+
+	18)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 34 (%X'00000022')
+		symbol: "DT$_SWIFT"
+
+	19)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 7 (%X'00000007')
+		symbol: "DT$_T3270"
+
+	20)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+
+Analyze Object File                           8-OCT-2026 06:19:13.84   Page 99
+DUA1:[000000]DEF_DC.OBJ;1
+ANALYZ V07-04
+
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 6 (%X'00000006')
+		symbol: "DT$_TA78"
+
+	21)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 19 (%X'00000013')
+		symbol: "DT$_TA79"
+
+	22)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 9 (%X'00000009')
+		symbol: "DT$_TA81"
+
+	23)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 46 (%X'0000002E')
+		symbol: "DT$_TA85"
+
+
+24.  GLOBAL SYMBOL DIRECTORY (OBJ$C_GSD), 472 bytes
+
+	1)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+
+Analyze Object File                           8-OCT-2026 06:19:13.84   Page 100
+DUA1:[000000]DEF_DC.OBJ;1
+ANALYZ V07-04
+
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 54 (%X'00000036')
+		symbol: "DT$_TA86"
+
+	2)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 55 (%X'00000037')
+		symbol: "DT$_TA87"
+
+	3)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 21 (%X'00000015')
+		symbol: "DT$_TA90"
+
+	4)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 36 (%X'00000024')
+		symbol: "DT$_TA90E"
+
+	5)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 44 (%X'0000002C')
+		symbol: "DT$_TA91"
+
+
+Analyze Object File                           8-OCT-2026 06:19:13.84   Page 101
+DUA1:[000000]DEF_DC.OBJ;1
+ANALYZ V07-04
+
+	6)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 51 (%X'00000033')
+		symbol: "DT$_TAD85"
+
+	7)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 20 (%X'00000014')
+		symbol: "DT$_TAPE9"
+
+	8)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 43 (%X'0000002B')
+		symbol: "DT$_TAPE_LOADER_1"
+
+	9)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 56 (%X'00000038')
+		symbol: "DT$_TD34"
+
+	10)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+
+Analyze Object File                           8-OCT-2026 06:19:13.84   Page 102
+DUA1:[000000]DEF_DC.OBJ;1
+ANALYZ V07-04
+
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 57 (%X'00000039')
+		symbol: "DT$_TD44"
+
+	11)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 1 (%X'00000001')
+		symbol: "DT$_TE16"
+
+	12)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 10 (%X'0000000A')
+		symbol: "DT$_TEK401X"
+
+	13)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 73 (%X'00000049')
+		symbol: "DT$_TERM9"
+
+	14)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 22 (%X'00000016')
+		symbol: "DT$_TF30"
+
+
+Analyze Object File                           8-OCT-2026 06:19:13.84   Page 103
+DUA1:[000000]DEF_DC.OBJ;1
+ANALYZ V07-04
+
+	15)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 23 (%X'00000017')
+		symbol: "DT$_TF70"
+
+	16)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 22 (%X'00000016')
+		symbol: "DT$_TF85"
+
+	17)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 52 (%X'00000034')
+		symbol: "DT$_TF86"
+
+	18)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 10 (%X'0000000A')
+		symbol: "DT$_TK50"
+
+	19)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+
+Analyze Object File                           8-OCT-2026 06:19:13.84   Page 104
+DUA1:[000000]DEF_DC.OBJ;1
+ANALYZ V07-04
+
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 8 (%X'00000008')
+		symbol: "DT$_TK50P"
+
+	20)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 29 (%X'0000001D')
+		symbol: "DT$_TK50S"
+
+	21)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 17 (%X'00000011')
+		symbol: "DT$_TK60"
+
+	22)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 24 (%X'00000018')
+		symbol: "DT$_TK60P"
+
+	23)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 15 (%X'0000000F')
+		symbol: "DT$_TK70"
+
+
+Analyze Object File                           8-OCT-2026 06:19:13.85   Page 105
+DUA1:[000000]DEF_DC.OBJ;1
+ANALYZ V07-04
+
+	24)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 31 (%X'0000001F')
+		symbol: "DT$_TK70L"
+
+	25)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 22 (%X'00000016')
+		symbol: "DT$_TK70P"
+
+
+25.  GLOBAL SYMBOL DIRECTORY (OBJ$C_GSD), 470 bytes
+
+	1)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 33 (%X'00000021')
+		symbol: "DT$_TK7LP"
+
+	2)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 53 (%X'00000035')
+		symbol: "DT$_TKZ09"
+
+	3)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+
+Analyze Object File                           8-OCT-2026 06:19:13.85   Page 106
+DUA1:[000000]DEF_DC.OBJ;1
+ANALYZ V07-04
+
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 47 (%X'0000002F')
+		symbol: "DT$_TKZ60"
+
+	4)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 12 (%X'0000000C')
+		symbol: "DT$_TK_FCM"
+
+	5)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 69 (%X'00000045')
+		symbol: "DT$_TL810"
+
+	6)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 70 (%X'00000046')
+		symbol: "DT$_TL820"
+
+	7)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+
+Analyze Object File                           8-OCT-2026 06:19:13.85   Page 107
+DUA1:[000000]DEF_DC.OBJ;1
+ANALYZ V07-04
+
+		value: 32 (%X'00000020')
+		symbol: "DT$_TLZ04"
+
+	8)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 45 (%X'0000002D')
+		symbol: "DT$_TLZ06"
+
+	9)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 60 (%X'0000003C')
+		symbol: "DT$_TLZ07"
+
+	10)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 48 (%X'00000030')
+		symbol: "DT$_TLZ6"
+
+	11)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 61 (%X'0000003D')
+		symbol: "DT$_TLZ7"
+
+	12)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+
+Analyze Object File                           8-OCT-2026 06:19:13.85   Page 108
+DUA1:[000000]DEF_DC.OBJ;1
+ANALYZ V07-04
+
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 26 (%X'0000001A')
+		symbol: "DT$_TM32"
+
+	13)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 32 (%X'00000020')
+		symbol: "DT$_TM32P"
+
+	14)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 4 (%X'00000004')
+		symbol: "DT$_TQ_BTS"
+
+	15)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 4 (%X'00000004')
+		symbol: "DT$_TS11"
+
+	16)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+
+Analyze Object File                           8-OCT-2026 06:19:13.85   Page 109
+DUA1:[000000]DEF_DC.OBJ;1
+ANALYZ V07-04
+
+		value: 27 (%X'0000001B')
+		symbol: "DT$_TSZ05"
+
+	17)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 34 (%X'00000022')
+		symbol: "DT$_TSZ07"
+
+	18)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 35 (%X'00000023')
+		symbol: "DT$_TSZ08"
+
+	19)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 0 (%X'00000000')
+		symbol: "DT$_TTYUNKN"
+
+	20)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 2 (%X'00000002')
+		symbol: "DT$_TU45"
+
+	21)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+
+Analyze Object File                           8-OCT-2026 06:19:13.85   Page 110
+DUA1:[000000]DEF_DC.OBJ;1
+ANALYZ V07-04
+
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 47 (%X'0000002F')
+		symbol: "DT$_TU56"
+
+	22)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 14 (%X'0000000E')
+		symbol: "DT$_TU58"
+
+	23)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 3 (%X'00000003')
+		symbol: "DT$_TU77"
+
+	24)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 5 (%X'00000005')
+		symbol: "DT$_TU78"
+
+	25)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+
+Analyze Object File                           8-OCT-2026 06:19:13.85   Page 111
+DUA1:[000000]DEF_DC.OBJ;1
+ANALYZ V07-04
+
+		value: 7 (%X'00000007')
+		symbol: "DT$_TU80"
+
+
+26.  GLOBAL SYMBOL DIRECTORY (OBJ$C_GSD), 472 bytes
+
+	1)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 8 (%X'00000008')
+		symbol: "DT$_TU81"
+
+	2)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 6 (%X'00000006')
+		symbol: "DT$_TU81P"
+
+	3)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 25 (%X'00000019')
+		symbol: "DT$_TZ30"
+
+	4)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 30 (%X'0000001E')
+		symbol: "DT$_TZ30S"
+
+
+Analyze Object File                           8-OCT-2026 06:19:13.85   Page 112
+DUA1:[000000]DEF_DC.OBJ;1
+ANALYZ V07-04
+
+	5)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 38 (%X'00000026')
+		symbol: "DT$_TZ85"
+
+	6)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 41 (%X'00000029')
+		symbol: "DT$_TZ857"
+
+	7)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 39 (%X'00000027')
+		symbol: "DT$_TZ86"
+
+	8)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 71 (%X'00000047')
+		symbol: "DT$_TZ865"
+
+	9)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+
+Analyze Object File                           8-OCT-2026 06:19:13.85   Page 113
+DUA1:[000000]DEF_DC.OBJ;1
+ANALYZ V07-04
+
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 49 (%X'00000031')
+		symbol: "DT$_TZ867"
+
+	10)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 40 (%X'00000028')
+		symbol: "DT$_TZ87"
+
+	11)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 68 (%X'00000044')
+		symbol: "DT$_TZ875"
+
+	12)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 50 (%X'00000032')
+		symbol: "DT$_TZ877"
+
+	13)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 62 (%X'0000003E')
+		symbol: "DT$_TZ88"
+
+
+Analyze Object File                           8-OCT-2026 06:19:13.85   Page 114
+DUA1:[000000]DEF_DC.OBJ;1
+ANALYZ V07-04
+
+	14)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 63 (%X'0000003F')
+		symbol: "DT$_TZ885"
+
+	15)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 64 (%X'00000040')
+		symbol: "DT$_TZ887"
+
+	16)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 65 (%X'00000041')
+		symbol: "DT$_TZ89"
+
+	17)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 66 (%X'00000042')
+		symbol: "DT$_TZ895"
+
+	18)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+
+Analyze Object File                           8-OCT-2026 06:19:13.85   Page 115
+DUA1:[000000]DEF_DC.OBJ;1
+ANALYZ V07-04
+
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 67 (%X'00000043')
+		symbol: "DT$_TZ897"
+
+	19)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 33 (%X'00000021')
+		symbol: "DT$_TZK10"
+
+	20)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 37 (%X'00000025')
+		symbol: "DT$_TZK11"
+
+	21)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 27 (%X'0000001B')
+		symbol: "DT$_TZX0"
+
+	22)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 3 (%X'00000003')
+		symbol: "DT$_UDA50"
+
+
+Analyze Object File                           8-OCT-2026 06:19:13.85   Page 116
+DUA1:[000000]DEF_DC.OBJ;1
+ANALYZ V07-04
+
+	23)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 4 (%X'00000004')
+		symbol: "DT$_UDA50A"
+
+	24)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 21 (%X'00000015')
+		symbol: "DT$_UK_KTC32"
+
+	25)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 14 (%X'0000000E')
+		symbol: "DT$_UNA11"
+
+
+27.  GLOBAL SYMBOL DIRECTORY (OBJ$C_GSD), 471 bytes
+
+	1)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 3 (%X'00000003')
+		symbol: "DT$_UQPORT"
+
+	2)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+
+Analyze Object File                           8-OCT-2026 06:19:13.86   Page 117
+DUA1:[000000]DEF_DC.OBJ;1
+ANALYZ V07-04
+
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 4 (%X'00000004')
+		symbol: "DT$_USER9"
+
+	3)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 4 (%X'00000004')
+		symbol: "DT$_VD"
+
+	4)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 2 (%X'00000002')
+		symbol: "DT$_VK100"
+
+	5)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 3 (%X'00000003')
+		symbol: "DT$_VL_VS8200"
+
+	6)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+
+Analyze Object File                           8-OCT-2026 06:19:13.86   Page 118
+DUA1:[000000]DEF_DC.OBJ;1
+ANALYZ V07-04
+
+		value: 1 (%X'00000001')
+		symbol: "DT$_VS100"
+
+	7)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 2 (%X'00000002')
+		symbol: "DT$_VS125"
+
+	8)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 1 (%X'00000001')
+		symbol: "DT$_VT05"
+
+	9)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 96 (%X'00000060')
+		symbol: "DT$_VT100"
+
+	10)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 97 (%X'00000061')
+		symbol: "DT$_VT101"
+
+	11)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+
+Analyze Object File                           8-OCT-2026 06:19:13.86   Page 119
+DUA1:[000000]DEF_DC.OBJ;1
+ANALYZ V07-04
+
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 98 (%X'00000062')
+		symbol: "DT$_VT102"
+
+	12)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 99 (%X'00000063')
+		symbol: "DT$_VT105"
+
+	13)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 100 (%X'00000064')
+		symbol: "DT$_VT125"
+
+	14)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 101 (%X'00000065')
+		symbol: "DT$_VT131"
+
+	15)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+
+Analyze Object File                           8-OCT-2026 06:19:13.86   Page 120
+DUA1:[000000]DEF_DC.OBJ;1
+ANALYZ V07-04
+
+		value: 102 (%X'00000066')
+		symbol: "DT$_VT132"
+
+	16)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 3 (%X'00000003')
+		symbol: "DT$_VT173"
+
+	17)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 64 (%X'00000040')
+		symbol: "DT$_VT52"
+
+	18)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 65 (%X'00000041')
+		symbol: "DT$_VT55"
+
+	19)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 64 (%X'00000040')
+		symbol: "DT$_VT5X"
+
+	20)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+
+Analyze Object File                           8-OCT-2026 06:19:13.86   Page 121
+DUA1:[000000]DEF_DC.OBJ;1
+ANALYZ V07-04
+
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 14 (%X'0000000E')
+		symbol: "DT$_XA_DRV11WA"
+
+	21)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 13 (%X'0000000D')
+		symbol: "DT$_XI_DR11C"
+
+	22)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 4 (%X'00000004')
+		symbol: "DT$_XJ_2780"
+
+	23)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 3 (%X'00000003')
+		symbol: "DT$_XK_3271"
+
+	24)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+
+Analyze Object File                           8-OCT-2026 06:19:13.86   Page 122
+DUA1:[000000]DEF_DC.OBJ;1
+ANALYZ V07-04
+
+		value: 9 (%X'00000009')
+		symbol: "DT$_XP_PCL11B"
+
+
+28.  GLOBAL SYMBOL DIRECTORY (OBJ$C_GSD), 363 bytes
+
+	1)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 33 (%X'00000021')
+		symbol: "DT$_XQ_DELQA"
+
+	2)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 38 (%X'00000026')
+		symbol: "DT$_XQ_DEQTA"
+
+	3)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 39 (%X'00000027')
+		symbol: "DT$_XVIB"
+
+	4)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 11 (%X'0000000B')
+		symbol: "DT$_XV_3271"
+
+
+Analyze Object File                           8-OCT-2026 06:19:13.86   Page 123
+DUA1:[000000]DEF_DC.OBJ;1
+ANALYZ V07-04
+
+	5)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 41 (%X'00000029')
+		symbol: "DT$_XZA_DSSI"
+
+	6)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 40 (%X'00000028')
+		symbol: "DT$_XZA_SCSI"
+
+	7)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 28 (%X'0000001C')
+		symbol: "DT$_YI_KMS11K"
+
+	8)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 15 (%X'0000000F')
+		symbol: "DT$_YN_X25"
+
+	9)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+
+Analyze Object File                           8-OCT-2026 06:19:13.86   Page 124
+DUA1:[000000]DEF_DC.OBJ;1
+ANALYZ V07-04
+
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 16 (%X'00000010')
+		symbol: "DT$_YO_X25"
+
+	10)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 17 (%X'00000011')
+		symbol: "DT$_YP_ADCCP"
+
+	11)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 18 (%X'00000012')
+		symbol: "DT$_YQ_3271"
+
+	12)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 19 (%X'00000013')
+		symbol: "DT$_YR_DDCMP"
+
+	13)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 20 (%X'00000014')
+		symbol: "DT$_YS_SDLC"
+
+
+Analyze Object File                           8-OCT-2026 06:19:13.86   Page 125
+DUA1:[000000]DEF_DC.OBJ;1
+ANALYZ V07-04
+
+	14)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 32 (%X'00000020')
+		symbol: "DT$_ZS_DST32"
+
+	15)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 71 (%X'00000047')
+		symbol: "DT$_ZS_PBXDI"
+
+	16)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 47 (%X'0000002F')
+		symbol: "DT$_ZT_DSW"
+
+	17)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 79 (%X'0000004F')
+		symbol: "DT$_ZW_PBXDP"
+
+
+29.  GLOBAL SYMBOL DIRECTORY (OBJ$C_GSD), 19 bytes
+
+	1)  Program Section Definition (GSD$C_PSC)
+		alignment: 1-byte boundary                       <-- psect 0
+
+Analyze Object File                           8-OCT-2026 06:19:13.86   Page 126
+DUA1:[000000]DEF_DC.OBJ;1
+ANALYZ V07-04
+
+		attribute flags:
+			(0)  GPS$V_PIC        0
+			(1)  GPS$V_LIB        0
+			(2)  GPS$V_OVR        0
+			(3)  GPS$V_REL        0
+			(4)  GPS$V_GBL        0
+			(5)  GPS$V_SHR        0
+			(6)  GPS$V_EXE        0
+			(7)  GPS$V_RD         0
+			(8)  GPS$V_WRT        0
+			(9)  GPS$V_VEC        0
+			(10) GPS$V_COM        0
+			(11) GPS$V_NOMOD      0
+		allocation: 0 (%X'00000000')
+		symbol: ".  ABS  ."
+
+
+30.  TEXT INFORMATION/RELOCATION (OBJ$C_TIR), 5 bytes
+
+	1)  TIR$C_STA_PB (4, %X'04')                            stack depth: 1
+		psect: 0
+		value: 0 (%X'00000000')
+
+	2)  TIR$C_CTL_SETRB (80, %X'50')                        stack depth: 0
+
+
+31.  GLOBAL SYMBOL DIRECTORY (OBJ$C_GSD), 15 bytes
+
+	1)  Program Section Definition (GSD$C_PSC)
+		alignment: 1-byte boundary                       <-- psect 1
+		attribute flags:
+			(0)  GPS$V_PIC        0
+			(1)  GPS$V_LIB        0
+			(2)  GPS$V_OVR        0
+			(3)  GPS$V_REL        0
+			(4)  GPS$V_GBL        0
+			(5)  GPS$V_SHR        0
+			(6)  GPS$V_EXE        1
+			(7)  GPS$V_RD         1
+			(8)  GPS$V_WRT        1
+			(9)  GPS$V_VEC        0
+			(10) GPS$V_COM        0
+			(11) GPS$V_NOMOD      0
+		allocation: 0 (%X'00000000')
+		symbol: "$ABS$"
+
+
+32.  TEXT INFORMATION/RELOCATION (OBJ$C_TIR), 5 bytes
+
+	1)  TIR$C_STA_PB (4, %X'04')                            stack depth: 1
+		psect: 0
+		value: 0 (%X'00000000')
+
+
+Analyze Object File                           8-OCT-2026 06:19:13.86   Page 127
+DUA1:[000000]DEF_DC.OBJ;1
+ANALYZ V07-04
+
+	2)  TIR$C_CTL_SETRB (80, %X'50')                        stack depth: 0
+
+
+33.  TRACEBACK INFORMATION (OBJ$C_TBT), 4 bytes
+
+	1)  Store Immediate, 2 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                   BD 01|  0000  |.½      |
+
+
+34.  END OF MODULE (OBJ$C_EOM), 2 bytes
+
+	severity: successful (0)
+
+
+
+Analyze Object File                           8-OCT-2026 06:19:13.87   Page 128
+DUA1:[000000]DEF_DC.OBJ;1
+ANALYZ V07-04
+
+SUMMARY STATISTICS:
+
+Record Type	Count	Total Bytes
+
+OBJ$C_HDR	    4	   132
+OBJ$C_GSD	   25	 10707
+OBJ$C_TIR	    2	    10
+OBJ$C_EOM	    1	     2
+OBJ$C_DBG	    0	     0
+OBJ$C_TBT	    2	    20
+OBJ$C_LNK	    0	     0
+OBJ$C_EOMW	    0	     0
+
+Totals		   34	 10871
+
+
+The analysis uncovered NO errors.
+
+
+ANALYZE/OBJECT/OUTPUT=DEF_DC.ANL DEF_DC.OBJ                                     

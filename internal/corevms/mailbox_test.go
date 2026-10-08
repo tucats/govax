@@ -312,6 +312,14 @@ func TestMailboxDriver_queuedMessages(t *testing.T) {
 		t.Errorf("third write: %#x with %d messages; want SS$_MBFULL, 2", st, m.Messages())
 	}
 
+	// A read buffer longer than the mailbox's largest message is
+	// rejected too, as VMS 7.3 rejects it (testdata/mp/probe3).
+	wantR0(t, mbxQIO(t, env, 0, ch, fnReadVBlk, iosb, 0, buf, 17), ssMbTooSml)
+
+	if m.Messages() != 2 {
+		t.Error("a read too long for the mailbox took a message")
+	}
+
 	// An unwritable read buffer is rejected before anything is taken.
 	wantR0(t, mbxQIO(t, env, 0, ch, fnReadVBlk, iosb, 0, badAddr, 16), ssAccVio)
 

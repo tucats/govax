@@ -1,0 +1,694 @@
+
+Analyze Object File                           8-OCT-2026 06:19:13.51   Page 1
+DUA1:[000000]DEF_LCK.OBJ;1
+ANALYZ V07-04
+
+This is an OpenVMS VAX object file
+
+1.  MODULE HEADER (OBJ$C_HDR_MHD), 52 bytes
+
+	structure level: 0
+	maximum record size: 512
+	module name: "DEF_LCK"
+	module version: "V1.0"
+	creation   date/time:  8-OCT-2026 06:19
+
+
+2.  LANGUAGE PROCESSOR HEADER (OBJ$C_HDR_LNM), 18 bytes
+
+	Textual information:
+	"VAX MACRO V5.4-3"
+
+
+3.  SOURCE FILE HEADER (OBJ$C_HDR_SRC), 22 bytes
+
+	Textual information:
+	"MACRO/NOLIST DEF_LCK"
+
+
+4.  TITLE HEADER (OBJ$C_HDR_TTL), 42 bytes
+
+	Textual information:
+	"$LCKDEF's names and values (lock managem"
+
+
+5.  TRACEBACK INFORMATION (OBJ$C_TBT), 17 bytes
+
+	1)  Store Immediate, 15 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 07 00 00 00 00 00 BC 0E|  0000  |.¼......|
+		    4B 43 4C 5F 46 45 44|  0008  |DEF_LCK |
+
+
+6.  GLOBAL SYMBOL DIRECTORY (OBJ$C_GSD), 479 bytes
+
+	1)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 1 (%X'00000001')
+		symbol: "LCK$K_CRMODE"
+
+	2)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+
+Analyze Object File                           8-OCT-2026 06:19:13.51   Page 2
+DUA1:[000000]DEF_LCK.OBJ;1
+ANALYZ V07-04
+
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 2 (%X'00000002')
+		symbol: "LCK$K_CWMODE"
+
+	3)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 5 (%X'00000005')
+		symbol: "LCK$K_EXMODE"
+
+	4)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 0 (%X'00000000')
+		symbol: "LCK$K_NLMODE"
+
+	5)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 3 (%X'00000003')
+		symbol: "LCK$K_PRMODE"
+
+	6)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+
+Analyze Object File                           8-OCT-2026 06:19:13.51   Page 3
+DUA1:[000000]DEF_LCK.OBJ;1
+ANALYZ V07-04
+
+		value: 4 (%X'00000004')
+		symbol: "LCK$K_PWMODE"
+
+	7)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 8192 (%X'00002000')
+		symbol: "LCK$M_BYPASS"
+
+	8)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 2 (%X'00000002')
+		symbol: "LCK$M_CANCEL"
+
+	9)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 2 (%X'00000002')
+		symbol: "LCK$M_CONVERT"
+
+	10)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 64 (%X'00000040')
+		symbol: "LCK$M_CVTSYS"
+
+	11)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+
+Analyze Object File                           8-OCT-2026 06:19:13.51   Page 4
+DUA1:[000000]DEF_LCK.OBJ;1
+ANALYZ V07-04
+
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 1 (%X'00000001')
+		symbol: "LCK$M_DEQALL"
+
+	12)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 2048 (%X'00000800')
+		symbol: "LCK$M_EXPEDITE"
+
+	13)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 4 (%X'00000004')
+		symbol: "LCK$M_INVVALBLK"
+
+	14)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 1024 (%X'00000400')
+		symbol: "LCK$M_NODLCKBLK"
+
+	15)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+
+Analyze Object File                           8-OCT-2026 06:19:13.51   Page 5
+DUA1:[000000]DEF_LCK.OBJ;1
+ANALYZ V07-04
+
+		value: 512 (%X'00000200')
+		symbol: "LCK$M_NODLCKWT"
+
+	16)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 4 (%X'00000004')
+		symbol: "LCK$M_NOQUEUE"
+
+	17)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 32 (%X'00000020')
+		symbol: "LCK$M_NOQUOTA"
+
+	18)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 256 (%X'00000100')
+		symbol: "LCK$M_PROTECT"
+
+	19)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 4096 (%X'00001000')
+		symbol: "LCK$M_QUECVT"
+
+	20)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+
+Analyze Object File                           8-OCT-2026 06:19:13.51   Page 6
+DUA1:[000000]DEF_LCK.OBJ;1
+ANALYZ V07-04
+
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 128 (%X'00000080')
+		symbol: "LCK$M_RECOVER"
+
+	21)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 8 (%X'00000008')
+		symbol: "LCK$M_SYNCSTS"
+
+
+7.  GLOBAL SYMBOL DIRECTORY (OBJ$C_GSD), 457 bytes
+
+	1)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 16 (%X'00000010')
+		symbol: "LCK$M_SYSTEM"
+
+	2)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 1 (%X'00000001')
+		symbol: "LCK$M_VALBLK"
+
+	3)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+
+Analyze Object File                           8-OCT-2026 06:19:13.51   Page 7
+DUA1:[000000]DEF_LCK.OBJ;1
+ANALYZ V07-04
+
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 2 (%X'00000002')
+		symbol: "LCK$S_LCKDEF"
+
+	4)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 13 (%X'0000000D')
+		symbol: "LCK$V_BYPASS"
+
+	5)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 1 (%X'00000001')
+		symbol: "LCK$V_CANCEL"
+
+	6)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 1 (%X'00000001')
+		symbol: "LCK$V_CONVERT"
+
+	7)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 6 (%X'00000006')
+		symbol: "LCK$V_CVTSYS"
+
+
+Analyze Object File                           8-OCT-2026 06:19:13.51   Page 8
+DUA1:[000000]DEF_LCK.OBJ;1
+ANALYZ V07-04
+
+	8)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 0 (%X'00000000')
+		symbol: "LCK$V_DEQALL"
+
+	9)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 11 (%X'0000000B')
+		symbol: "LCK$V_EXPEDITE"
+
+	10)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 2 (%X'00000002')
+		symbol: "LCK$V_INVVALBLK"
+
+	11)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 10 (%X'0000000A')
+		symbol: "LCK$V_NODLCKBLK"
+
+	12)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+
+Analyze Object File                           8-OCT-2026 06:19:13.51   Page 9
+DUA1:[000000]DEF_LCK.OBJ;1
+ANALYZ V07-04
+
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 9 (%X'00000009')
+		symbol: "LCK$V_NODLCKWT"
+
+	13)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 2 (%X'00000002')
+		symbol: "LCK$V_NOQUEUE"
+
+	14)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 5 (%X'00000005')
+		symbol: "LCK$V_NOQUOTA"
+
+	15)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 8 (%X'00000008')
+		symbol: "LCK$V_PROTECT"
+
+	16)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 12 (%X'0000000C')
+		symbol: "LCK$V_QUECVT"
+
+
+Analyze Object File                           8-OCT-2026 06:19:13.51   Page 10
+DUA1:[000000]DEF_LCK.OBJ;1
+ANALYZ V07-04
+
+	17)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 7 (%X'00000007')
+		symbol: "LCK$V_RECOVER"
+
+	18)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 3 (%X'00000003')
+		symbol: "LCK$V_SYNCSTS"
+
+	19)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 4 (%X'00000004')
+		symbol: "LCK$V_SYSTEM"
+
+	20)  Global Symbol Specification (GSD$C_SYM)
+		data type: DSC$K_DTYPE_Z (0)
+		symbol flags:
+			(0)  GSY$V_WEAK       0
+			(1)  GSY$V_DEF        1
+			(2)  GSY$V_UNI        0
+			(3)  GSY$V_REL        0
+			(4)  GSY$V_COMM       0
+		psect: 0
+		value: 0 (%X'00000000')
+		symbol: "LCK$V_VALBLK"
+
+
+8.  GLOBAL SYMBOL DIRECTORY (OBJ$C_GSD), 19 bytes
+
+	1)  Program Section Definition (GSD$C_PSC)
+		alignment: 1-byte boundary                       <-- psect 0
+
+Analyze Object File                           8-OCT-2026 06:19:13.52   Page 11
+DUA1:[000000]DEF_LCK.OBJ;1
+ANALYZ V07-04
+
+		attribute flags:
+			(0)  GPS$V_PIC        0
+			(1)  GPS$V_LIB        0
+			(2)  GPS$V_OVR        0
+			(3)  GPS$V_REL        0
+			(4)  GPS$V_GBL        0
+			(5)  GPS$V_SHR        0
+			(6)  GPS$V_EXE        0
+			(7)  GPS$V_RD         0
+			(8)  GPS$V_WRT        0
+			(9)  GPS$V_VEC        0
+			(10) GPS$V_COM        0
+			(11) GPS$V_NOMOD      0
+		allocation: 0 (%X'00000000')
+		symbol: ".  ABS  ."
+
+
+9.  TEXT INFORMATION/RELOCATION (OBJ$C_TIR), 5 bytes
+
+	1)  TIR$C_STA_PB (4, %X'04')                            stack depth: 1
+		psect: 0
+		value: 0 (%X'00000000')
+
+	2)  TIR$C_CTL_SETRB (80, %X'50')                        stack depth: 0
+
+
+10.  GLOBAL SYMBOL DIRECTORY (OBJ$C_GSD), 15 bytes
+
+	1)  Program Section Definition (GSD$C_PSC)
+		alignment: 1-byte boundary                       <-- psect 1
+		attribute flags:
+			(0)  GPS$V_PIC        0
+			(1)  GPS$V_LIB        0
+			(2)  GPS$V_OVR        0
+			(3)  GPS$V_REL        0
+			(4)  GPS$V_GBL        0
+			(5)  GPS$V_SHR        0
+			(6)  GPS$V_EXE        1
+			(7)  GPS$V_RD         1
+			(8)  GPS$V_WRT        1
+			(9)  GPS$V_VEC        0
+			(10) GPS$V_COM        0
+			(11) GPS$V_NOMOD      0
+		allocation: 0 (%X'00000000')
+		symbol: "$ABS$"
+
+
+11.  TEXT INFORMATION/RELOCATION (OBJ$C_TIR), 5 bytes
+
+	1)  TIR$C_STA_PB (4, %X'04')                            stack depth: 1
+		psect: 0
+		value: 0 (%X'00000000')
+
+
+Analyze Object File                           8-OCT-2026 06:19:13.52   Page 12
+DUA1:[000000]DEF_LCK.OBJ;1
+ANALYZ V07-04
+
+	2)  TIR$C_CTL_SETRB (80, %X'50')                        stack depth: 0
+
+
+12.  TRACEBACK INFORMATION (OBJ$C_TBT), 4 bytes
+
+	1)  Store Immediate, 2 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                   BD 01|  0000  |.½      |
+
+
+13.  END OF MODULE (OBJ$C_EOM), 2 bytes
+
+	severity: successful (0)
+
+
+
+Analyze Object File                           8-OCT-2026 06:19:13.52   Page 13
+DUA1:[000000]DEF_LCK.OBJ;1
+ANALYZ V07-04
+
+SUMMARY STATISTICS:
+
+Record Type	Count	Total Bytes
+
+OBJ$C_HDR	    4	   134
+OBJ$C_GSD	    4	   970
+OBJ$C_TIR	    2	    10
+OBJ$C_EOM	    1	     2
+OBJ$C_DBG	    0	     0
+OBJ$C_TBT	    2	    21
+OBJ$C_LNK	    0	     0
+OBJ$C_EOMW	    0	     0
+
+Totals		   13	  1137
+
+
+The analysis uncovered NO errors.
+
+
+ANALYZE/OBJECT/OUTPUT=DEF_LCK.ANL DEF_LCK.OBJ                                   

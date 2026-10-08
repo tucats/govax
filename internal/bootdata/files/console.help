@@ -62,6 +62,9 @@
 //              10/07/26    Added STOP; MACRO's own macro library has the
 //                          process and other system service macros
 //                          (docs/PHASE-45.md)
+//              10/08/26    MACRO's own library: the global section and lock
+//                          service macros, $SECDEF, $LCKDEF, $LKIDEF,
+//                          $PSLDEF, and $DCDEF
 //              10/08/26    KEYS: CTRL/C and CTRL/Y ASTs in any process; a
 //                          program waiting for input doesn't hold up the
 //                          others (docs/PHASE-46 - interprocess comm.md)
@@ -3525,12 +3528,14 @@ $MACR
     govax's own has the RMS macros ($FAB, $RAB, $NAM, the XABs, their
     _STORE forms, and $OPEN, $GET, $PUT, $CLOSE, and the other RMS
     services), the symbol definition macros ($FABDEF, $RMSDEF, $SSDEF,
-    $IODEF, and others), and system service macros: $EXIT_S, $ASSIGN_S,
-    $DASSGN_S, $QIO_S, and $QIOW_S; the process services ($CREPRC_S,
-    $DELPRC_S, $WAKE_S, $HIBER_S, $SCHDWK_S, $SETPRI_S, $GETJPI_S,
-    $SETIMR_S, $CREMBX_S, $WAITFR_S, and the like); and the other
-    services ($FAO_S, $GETMSG_S, $CRELNM_S, $TRNLNM_S, $EXPREG_S,
-    $GETSYI_S, and so on).  Each is also there as NAME (an argument list
+    $IODEF, $SECDEF, $LCKDEF, $PSLDEF, $DCDEF, and others), and system
+    service macros: $EXIT_S, $ASSIGN_S, $DASSGN_S, $QIO_S, and $QIOW_S;
+    the process services ($CREPRC_S, $DELPRC_S, $WAKE_S, $HIBER_S,
+    $SCHDWK_S, $SETPRI_S, $GETJPI_S, $SETIMR_S, $CREMBX_S, $WAITFR_S, and
+    the like); the global section services ($CRMPSC_S, $MGBLSC_S,
+    $DGBLSC_S); the lock services ($ENQ_S, $ENQW_S, $DEQ_S, $GETLKI_S,
+    $GETLKIW_S); and the other services ($FAO_S, $GETMSG_S, $CRELNM_S,
+    $TRNLNM_S, $EXPREG_S, $GETSYI_S, and so on).  Each is also there as NAME (an argument list
     in line) and NAME_G (CALLG), and gives the same code as VAX MACRO's.
     Macro libraries are made with LIBRARY/MACRO.
 

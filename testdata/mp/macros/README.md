@@ -106,6 +106,15 @@ name. Each was assembled with govax before the VAX run, with stub macros
 whose keywords are the program's: all assemble. Round 6's log is
 `vax/macros6.log`.
 
+Rounds 5 and 6 ran on 2026-10-08 (logs audited by the author). Round 5:
+`$IDTOASC`'s third keyword is `NAMBUF` (a quadword); `$TRNLOG`'s LOGNAM
+is a quadword and RSLLEN a word; `$CRELNT`'s TABNAM a quadword. Round 6:
+the section services' address arguments are all quadwords, and their
+pairs and required arguments are in `starlet.mar`'s comment; VMS 7.3's
+`$ENQ` takes 13 arguments and `$GETLKI` 7, the last ones' keywords
+unknown (not `NULLARG`). `TestServiceMacroObjects` compares every call
+real MACRO assembled without error, in both rounds.
+
 ## The VAX run
 
 Rounds 5 and 6 run with the other end-of-Phase-46 runs, on one volume:

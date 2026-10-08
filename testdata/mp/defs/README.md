@@ -17,8 +17,8 @@ VMS's macro library.
 | `exchange.cmd` | The govax console script that builds the exchange volume (Phase 46's) |
 | `copyout.cmd` | The govax console script that copies the results into `vax/` |
 | `vax/` | The VMS 7.3 run's objects, analyses, and log (`defs45.log`, 2026-10-07); Phase 46's log will be `defs46.log` |
-| `decode.go` | Turns the objects into `phase45-defined.txt` |
-| `phase45-defined.txt` | Every name and value the four macros define |
+| `decode.go` | Turns the objects into `defined.txt` |
+| `defined.txt` | Every name and value the four macros define |
 
 ## The VAX run
 
@@ -43,9 +43,9 @@ Phase 46's probes run with the other end-of-Phase-46 runs, on one volume
 ## Into govax's tables
 
     go run testdata/mp/defs/decode.go
-    go run ./internal/vmsdef/gen -values testdata/mp/defs/phase45-defined.txt
+    go run ./internal/vmsdef/gen -values testdata/mp/defs/defined.txt
 
-The first writes `phase45-defined.txt` from the objects; the second merges
+The first writes `defined.txt` from the objects; the second merges
 it into `internal/vmsdef`'s `Symbols`. The `MSG$_` values agree with
 STARLET.OLB's (`TestSymbols_matchLibrarySymbols`), and the `ACC$` offsets
 with the manual's, except that VMS 7.3 has `ACC$L_JOBID` at offset 12,
@@ -57,5 +57,5 @@ already in `vmsdef.LibrarySymbols` (STARLET.OLB), which the probe will
 confirm; `$LCKDEF`, `$LKIDEF`, and `$PSLDEF` are new to govax.
 
 `internal/bootdata/mkdefs` can build `$PRCDEF`, `$PQLDEF`, and `$ACCDEF`
-for govax's own macro library from `phase45-defined.txt`, when a MACRO
+for govax's own macro library from `defined.txt`, when a MACRO
 program needs them (docs/PHASE-45.md, subtask 13).

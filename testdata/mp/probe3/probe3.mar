@@ -509,20 +509,32 @@ n_rab:		$RAB	FAB=n_fab, UBF=r_get, USZ=80
 	ret
 
 abort:	say	<ABORTED>
+	bsbw	stopchild
 	movl	#1,r0
 	ret
 
 fail:	$fao_s	ctrstr=fail_ctl, outlen=out_len, outbuf=out_desc, p1=r0
 	bsbw	print
+	bsbw	stopchild
 	movl	#1,r0
 	ret
 
+; STOPCHILD: a run that ends early deletes the child, if it still lives,
+; so that it isn't left waiting for a reader.
+stopchild:
+	tstl	child_pid
+	beql	stopchild_done
+	$delprc_s	pidadr=child_pid
+stopchild_done:
+	rsb
+
 ; READB: read the child's next report from P3_B into REP, its IOSB in
-; B_IOSB, giving up after 60 seconds.
+; B_IOSB, giving up after 60 seconds. (A mailbox read's buffer may not be
+; longer than the mailbox's largest message: VMS refuses it, SS$_MBTOOSML.)
 readb:	$setimr_s	efn=#2, daytim=sixty, reqidt=#2
 	check
 	$qio_s	efn=#1, chan=chan_b, func=#IO$_READVBLK, iosb=b_iosb, -
-		p1=rep, p2=#72
+		p1=rep, p2=#64			; no more than P3_B's largest message
 	check
 	$wflor_s	efn=#1, mask=#6
 	check

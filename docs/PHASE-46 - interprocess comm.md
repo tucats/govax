@@ -181,18 +181,14 @@ as today).
 Things Phase 46 did not get to, so that they are not lost. Each is either
 waiting on a run on the VAX, or optional work for a later phase.
 
-1. **The VAX runs are ready, not run** (`testdata/mp/run46`, one volume
-   and `@RUN46`): probe 3 (`testdata/mp/probe3`: the optional probes
-   above, and most of the unconfirmed items below), the ping-pong pair,
-   the macro probes' round 5 (left from Phase 45) and round 6, and the
-   definition probes for `$SECDEF`, `$LCKDEF`, `$LKIDEF`, `$PSLDEF`, and
-   `$DCDEF`. After the run: audit the MACRO logs, then follow
-   `testdata/mp/run46/README.md`'s "After the run".
-2. **No macros for the global section services** yet. govax's STARLET
-   has no `$CRMPSC`, `$MGBLSC`, or `$DGBLSC`, so a MACRO program reaches
-   them only through `CALLS` (as probe 3 does) or the P1 vector by hand
-   (as `console/gblsec_test.go` does). Round 6 of the macro probe asks
-   real MACRO for them; the macros follow its results.
+1. **Probe 3 to run again** (`testdata/mp/probe3`: its own volume and
+   scripts). Its first run (with `testdata/mp/run46`, 2026-10-08) stopped
+   at once, SS$_MBTOOSML; the rest of that session worked (see the
+   progress log). Most of the unconfirmed items below wait on it.
+2. **The keywords of `$ENQ`'s 12th and 13th arguments and `$GETLKI`'s
+   7th** aren't known (round 6: not NULLARG); govax's macros call them
+   ARG12, ARG13, and ARG7. A later probe round can try candidates, as
+   round 5 did for `$IDTOASC`.
 3. **Unconfirmed behavior** (each marked in the progress log): the boost
    classes of a terminal set or sense mode, of a mailbox attention AST,
    of `$SETEF` (none), and of a CTRL/C or CTRL/Y AST to a waiting process;
@@ -624,3 +620,30 @@ waiting on a run on the VAX, or optional work for a later phase.
     `TestSysWait`).
   - The ping-pong pair gets `pingpong.com`; its VMS log will be
     `testdata/mp/vax/pingpong.log`.
+- 2026-10-08: The VAX session ran (`testdata/mp/run46`; the author
+  audited the MACRO logs, and the clean-room hook's entry for them is
+  gone).
+  - **Probe 3** stopped at its first read: VMS refuses a mailbox read
+    whose buffer is longer than the mailbox's largest message
+    (SS$_MBTOOSML), as it refuses such a write. Its child was left waiting
+    for its report to be read and had to be stopped by hand. **Fixed:**
+    govax's mailbox driver refuses the read too (`mbxdriver.go`;
+    `TestMailboxDriver_*` in `mailbox_test.go`); with it, govax's run of
+    the original probe stopped where VMS's did. The probe now reads no
+    more than the largest message, and deletes its child if it ends
+    early. It is to run again by itself (`testdata/mp/probe3`).
+  - **The ping-pong pair** ran on VMS; the parent's ten lines match
+    govax's (the child's went to the terminal, not the log).
+  - **Definitions:** `$SECDEF`, `$LCKDEF`, `$LKIDEF`, `$PSLDEF`, and
+    `$DCDEF` (819 new names; `SEC$` and `DC$` agree with STARLET.OLB's),
+    merged into `vmsdef.Symbols`, and their macros are now in govax's
+    library (`mkdefs` builds every family in the file, now named
+    `testdata/mp/defs/defined.txt`).
+  - **Macros, round 5:** `$IDTOASC`'s third keyword is NAMBUF (the manual
+    says RESNAM), and ID is required; `$TRNLOG`'s and `$CRELNT`'s sizes
+    were as assumed. **Round 6:** `$CRMPSC`, `$MGBLSC`, `$DGBLSC`, `$ENQ`,
+    `$ENQW`, `$DEQ`, `$GETLKI`, and `$GETLKIW` written, in all three
+    forms; every call real MACRO assembled without error gives the same
+    code (`TestServiceMacroObjects`, with rounds 5 and 6 added). VMS 7.3's
+    `$ENQ` has 13 arguments and `$GETLKI` 7; the keywords of the ones past
+    the manual's lists aren't known.

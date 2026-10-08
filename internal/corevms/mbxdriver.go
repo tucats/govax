@@ -39,7 +39,8 @@ import (
 //
 // An end-of-file message (IO$_WRITEOF) is read as SS$_ENDOFFILE with no
 // data. A write longer than the mailbox's largest message is rejected
-// with SS$_MBTOOSML.
+// with SS$_MBTOOSML, and so is a read whose buffer is longer than it
+// (VMS 7.3 did so for probe 3, testdata/mp/probe3).
 //
 // # A full mailbox
 //
@@ -164,11 +165,17 @@ func mbxRead(env *Environment, req *ioRequest) (ioStatus, uint32) {
 		return ioStatus{}, ssNoPriv
 	}
 
-	if !env.accessible(req.p[0], req.p[1]&0xFFFF, vm.AccessWrite) {
+	m := env.mailboxFor(req)
+	size := req.p[1] & 0xFFFF
+
+	if size > m.MaxMsg {
+		return ioStatus{}, ssMbTooSml
+	}
+
+	if !env.accessible(req.p[0], size, vm.AccessWrite) {
 		return ioStatus{}, ssAccVio
 	}
 
-	m := env.mailboxFor(req)
 	m.prune()
 
 	if len(m.messages) > 0 {

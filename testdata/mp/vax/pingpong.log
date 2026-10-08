@@ -1,0 +1,18 @@
+
+$ MACRO/NOLIST MBXPONG
+$ MACRO/NOLIST MBXPINGPONG
+$ LINK MBXPONG
+$ LINK MBXPINGPONG
+$ here = F$ENVIRONMENT("DEFAULT")
+$ MBXPINGPONG :== $DUA1:[000000]MBXPINGPONG.EXE
+$ MBXPINGPONG DUA1:[000000]MBXPONG.EXE
+Parent: child is ready
+Parent: sending PING 1
+Parent: got PONG 1
+Parent: sending PING 2
+Parent: got PONG 2
+Parent: sending PING 3
+Parent: got PONG 3
+Parent: child saw end of file
+Parent: child ended with status 00000001
+$ SET NOVERIFY
