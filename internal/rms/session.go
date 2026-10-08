@@ -207,6 +207,34 @@ func (s *Session) DefaultString() string {
 	return out
 }
 
+// ExpandName is specText as RMS expands it, with its logical names
+// translated and the default device and directory applied (a search
+// list's first element): "DUA0:[000000]NOSUCH.EXE;", with the device as
+// the user should see it and ";" alone when no version is given, as
+// DCL's messages show a file that wasn't found.
+func (s *Session) ExpandName(specText string) (string, error) {
+	specs, err := expandSpec(s.Logicals, specText, s.Default)
+	if err != nil {
+		return "", err
+	}
+
+	r := specs[0]
+	spec := r.Spec
+	spec.Device = ""
+
+	text := spec.String()
+	if spec.Version == "" {
+		text += ";"
+	}
+
+	device := r.Display
+	if device == "" {
+		device = r.Spec.Device
+	}
+
+	return device + ":" + text, nil
+}
+
 // resolveVolume resolves specText (translating its logical names and
 // applying the default device and directory) and looks up the resulting
 // device in Mounts. A search list resolves to its first element, the

@@ -402,3 +402,35 @@ subprocess to run, and the definitions a MACRO program needs to call
   checks each object against real MACRO's, record for record. The
   definitions' MACRO log, `defs48.log`, waits for the author's audit
   (the clean-room hook) and isn't read or committed.
+- 2026-10-08: Subtask 7, the VMS run's answers. The milestone ran on
+  VMS 7.3 both ways with the output and files govax's test expects
+  (`testdata/mp/vax/milestone.log`; the `$CREPRC` child's two lines went
+  to the terminal), and `TestMilestone_vmsLog` now holds the
+  expectations to that log. Probe 4 (`testdata/mp/probe4/vax/
+  probe4.log`) agreed with govax on steps 1–3 and 8–11 (statuses, the
+  default name SYSTEM_1, the event flag cleared and set, the final
+  status of a LOGINOUT job, LIB$_NOCLI) and on which logical names
+  (user and supervisor, not executive or CONFINE) and symbols a
+  subprocess gets. Changed to match it: RUN of a missing image is
+  `-CLI-E-IMAGEFNF, image file not found DEV:[DIR]NAME.EXE;` (the name
+  as RMS expands it, `rms.Session.ExpandName`) with the status
+  CLI$_IMAGEFNF and STS$M_INHIB_MSG; the CLI has SHOW SYMBOL (DCL's
+  line, or `%DCL-W-UNDSYM`) and SHOW LOGICAL (the console's display,
+  now `logicalDisplay` over a process's own tables, status SS$_NORMAL
+  with STS$M_INHIB_MSG), and SHOW LOGICAL's table headers, the
+  console's too, stand between blank lines as VMS's do; LOGINOUT's CLI
+  (`CLIStartup.Login`) reading a file or mailbox echoes each line (DCL's
+  verify; the ping-pong log of Phase 46 shows it too) and ends with
+  LOGOUT's report (`corevms/logout.go`, VMS's layout, govax's counts
+  zero as in the termination message; an interactive job's one line is
+  unconfirmed); the CLI writes what it has queued before it runs a
+  command or calls an image, so an echo comes first; and the console's
+  SPAWN prints `%DCL-S-SPAWNED` and, when it waits, `%DCL-S-ATTACHED`
+  when the subprocess has been made (`Environment.SpawnNotice`), before
+  its output. `TestProbe4` now compares govax's report with VMS's line
+  for line and each spawned process's log with VMS's (the volume, the
+  logout time, and LOGOUT's counts masked); both match. Also: the
+  `$GETJPIW` process trace was the one `DEBUG(PROCESS)` line written as
+  `DEBUG:`, which the tests' filter missed; and Phase 45's unused
+  `ssSuspended` is gone. DEVIATIONS.md's Phases 43–48 entry keeps only
+  what no run has settled.

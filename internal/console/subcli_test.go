@@ -72,6 +72,46 @@ func programLines(out string) []string {
 	return lines
 }
 
+// splitLogoutReport splits a LOGINOUT job's output lines (programLines,
+// so with no blank lines) at LOGOUT's report.
+func splitLogoutReport(lines []string) (before, report []string) {
+	for i, line := range lines {
+		if strings.HasPrefix(line, "  SYSTEM       job terminated at ") {
+			return lines[:i], lines[i:]
+		}
+	}
+
+	return lines, nil
+}
+
+// checkLogoutReport checks LOGOUT's report for a job that isn't
+// interactive (corevms's LogoutReport) as programLines leaves it: VMS's
+// lines, less the blank one, with govax's counts.
+func checkLogoutReport(t *testing.T, report []string) {
+	t.Helper()
+
+	want := []string{
+		"  SYSTEM       job terminated at ",
+		"  Accounting information:",
+		"  Buffered I/O count:               0         Peak working set size:       0",
+		"  Direct I/O count:                 0         Peak page file size:         0",
+		"  Page faults:                      0         Mounted volumes:             0",
+		"  Charged CPU time:           ",
+	}
+
+	if len(report) != len(want) {
+		t.Errorf("LOGOUT's report:\n%s", strings.Join(report, "\n"))
+
+		return
+	}
+
+	for i, w := range want {
+		if !strings.HasPrefix(report[i], w) {
+			t.Errorf("LOGOUT's report, line %d: %q, want %q...", i+1, report[i], w)
+		}
+	}
+}
+
 // loginout creates a process running LOGINOUT (the CLI) with SYS$INPUT
 // input, runs the machine until it has been deleted, and returns it.
 func loginout(t *testing.T, c *console.Console, input string) *corevms.Environment {
@@ -109,8 +149,10 @@ func writeCommands(t *testing.T, lines ...string) string {
 // comment, an unknown verb (DCL's message, and the CLI goes on), a
 // symbol assignment and the foreign command it defines (its text, as
 // DCL treats it, reaching LIB$GET_FOREIGN), a failing image (its status's
-// message), an alias, and LOGOUT, after which nothing more runs. The
-// process ends with the last command's status.
+// message), an alias, and LOGOUT, after which nothing more runs. Its
+// input being a file, it echoes each line it reads (DCL's verify), and
+// LOGOUT writes the job's report. The process ends with the last
+// command's status.
 func TestCLI_commandFile(t *testing.T) {
 	c, out := scheduledConsole(t, longQuantum, brbSelf)
 
@@ -136,17 +178,29 @@ func TestCLI_commandFile(t *testing.T) {
 	cli := loginout(t, c, commands)
 
 	want := []string{
+		"$ ! a comment",
+		`$ RUN "` + child + `"`,
 		"Hello from the child",
+		"$ FROBNICATE",
 		"%DCL-W-IVVERB, unrecognized command verb - check validity and spelling",
 		` \FROBNICATE\`,
+		`$ ECHO :== "$` + echo + `"`,
+		"$ ECHO some   text",
 		"SOME TEXT",
+		`$ RUN "` + abort + `"`,
 		"%SYSTEM-F-ABORT, abort",
+		`$ SAY*IT :== ECHO said`,
+		"$ SAY it again",
 		"SAID IT AGAIN",
+		"$ LOGOUT",
 	}
 
-	if got := programLines(out.String()); strings.Join(got, "\n") != strings.Join(want, "\n") {
+	got, report := splitLogoutReport(programLines(out.String()))
+	if strings.Join(got, "\n") != strings.Join(want, "\n") {
 		t.Errorf("output:\n%s\nwant:\n%s", strings.Join(got, "\n"), strings.Join(want, "\n"))
 	}
+
+	checkLogoutReport(t, report)
 
 	if cli.Process.ExitStatus != 1 {
 		t.Errorf("final status %08X, want the last image's, 1", cli.Process.ExitStatus)
@@ -171,8 +225,10 @@ func TestCLI_terminal(t *testing.T) {
 
 	cli := loginout(t, c, "")
 
-	if got := strings.Join(programLines(out.String()), "\n"); got != "$ Hello from the child\n$ " {
-		t.Errorf("output %q, want the prompt, the child's line, and the prompt for EXIT", got)
+	// An interactive job's LOGOUT writes one line (unconfirmed).
+	const want = "$ Hello from the child\n$   SYSTEM       logged out at "
+	if got := strings.Join(programLines(out.String()), "\n"); !strings.HasPrefix(got, want) || strings.Count(got, "\n") != 1 {
+		t.Errorf("output %q, want the prompt, the child's line, the prompt for EXIT, and LOGOUT's line", got)
 	}
 
 	if cli.Process.ExitStatus != 7 {
@@ -193,7 +249,10 @@ func TestCLI_missingInput(t *testing.T) {
 }
 
 // TestCLI_runMissingImage: RUN of an image that isn't there shows DCL's
-// activation message with the status's, and the CLI goes on.
+// activation message and IMAGEFNF's, with the image's name as RMS expands
+// it (here a host file, with no volume mounted), and the CLI goes on; the
+// status is CLI$_IMAGEFNF with STS$M_INHIB_MSG, as on VMS
+// (testdata/mp/probe4, step 4).
 func TestCLI_runMissingImage(t *testing.T) {
 	c, out := scheduledConsole(t, longQuantum, brbSelf)
 
@@ -204,11 +263,20 @@ func TestCLI_runMissingImage(t *testing.T) {
 
 	cli := loginout(t, c, commands)
 
-	got := programLines(out.String())
-	if len(got) != 3 || !strings.HasPrefix(got[0], "%DCL-W-ACTIMAGE, error activating image NOSUCH") ||
-		!strings.HasPrefix(got[1], "-RMS-E-FNF, ") || got[2] != "Hello from the child" {
-		t.Errorf("output:\n%s", strings.Join(got, "\n"))
+	got, report := splitLogoutReport(programLines(out.String()))
+	want := []string{
+		"RUN NOSUCH",
+		"%DCL-W-ACTIMAGE, error activating image NOSUCH",
+		"-CLI-E-IMAGEFNF, image file not found NOSUCH.EXE;",
+		`RUN "` + child + `"`,
+		"Hello from the child",
 	}
+
+	if strings.Join(got, "\n") != strings.Join(want, "\n") {
+		t.Errorf("output:\n%s\nwant:\n%s", strings.Join(got, "\n"), strings.Join(want, "\n"))
+	}
+
+	checkLogoutReport(t, report)
 
 	if cli.Process.ExitStatus != 3 {
 		t.Errorf("final status %08X, want the child's 3", cli.Process.ExitStatus)

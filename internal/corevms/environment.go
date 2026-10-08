@@ -191,6 +191,11 @@ type Environment struct {
 	spawn     *spawnCompletion
 	spawnWait *Environment
 
+	// SpawnNotice, if set, is called when this process's LIB$SPAWN has
+	// made a subprocess, before it runs: the console's SPAWN says so
+	// then, as DCL's does.
+	SpawnNotice func(child *Environment, wait bool)
+
 	// HasCLI says the process has a command interpreter: process 1 (the
 	// console is its CLI), and a process LIB$SPAWN or $CREPRC of LOGINOUT
 	// created (cliprocess.go). LIB$SPAWN needs one in its caller, as

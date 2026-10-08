@@ -254,13 +254,13 @@ func (c *Console) CreateNameTable(table, parent string, mode lnm.Mode, log bool)
 // logicalTables resolves each of specs (table names, or logical names
 // that translate to tables, such as LNM$DCL_LOGICAL) into one list of
 // tables in search order, listing a table reached twice only once.
-func (c *Console) logicalTables(specs []string) ([]*lnm.Table, error) {
+func (d logicalDisplay) logicalTables(specs []string) ([]*lnm.Table, error) {
 	var out []*lnm.Table
 
 	seen := map[*lnm.Table]bool{}
 
 	for _, spec := range specs {
-		tables, err := c.Logicals.ResolveTables(spec, lnm.User)
+		tables, err := d.db.ResolveTables(spec, lnm.User)
 		if err != nil {
 			return nil, err
 		}
@@ -283,7 +283,8 @@ func (c *Console) logicalTables(specs []string) ([]*lnm.Table, error) {
 // string's translation attributes.
 //
 //   - With no names, every searched table is listed: a "(TABLE)" header,
-//     then each name in it, alphabetically.
+//     with a blank line before and after it, then each name in it,
+//     alphabetically.
 //
 //   - A name with "*" or "%" wildcards lists the matching names the same
 //     way, under the header of every table searched.
@@ -298,45 +299,55 @@ func (c *Console) logicalTables(specs []string) ([]*lnm.Table, error) {
 //
 //     A name that isn't found prints %SHOW-S-NOTRAN.
 func (c *Console) ShowLogical(names, tables []string, full bool) error {
+	return logicalDisplay{db: c.Logicals, out: c.Printf}.show(names, tables, full)
+}
+
+// logicalDisplay is SHOW LOGICAL's display of one process's logical
+// names (db), written through out: the console's (process 1's), or a
+// subprocess CLI's on its SYS$OUTPUT.
+type logicalDisplay struct {
+	db  *lnm.Database
+	out func(format string, args ...any)
+}
+
+// show is SHOW LOGICAL (see Console.ShowLogical).
+func (d logicalDisplay) show(names, tables []string, full bool) error {
 	if len(tables) == 0 {
 		tables = []string{dclLogicalName}
 	}
 
-	searched, err := c.logicalTables(tables)
+	searched, err := d.logicalTables(tables)
 	if err != nil {
 		return err
 	}
 
 	if len(names) == 0 {
-		c.listLogicalTables(searched, "*", full)
+		d.listLogicalTables(searched, "*", full)
 
 		return nil
 	}
 
 	for _, name := range names {
 		if lnm.HasWildcards(name) {
-			c.listLogicalTables(searched, name, full)
+			d.listLogicalTables(searched, name, full)
 
 			continue
 		}
 
-		if !c.showLogicalName(searched, name, full) {
-			c.Printf("%%SHOW-S-NOTRAN, no translation for logical name %s\n", name)
+		if !d.showLogicalName(searched, name, full) {
+			d.out("%%SHOW-S-NOTRAN, no translation for logical name %s\n", name)
 		}
 	}
 
 	return nil
 }
 
-// listLogicalTables prints each table's header and its names that match
-// pattern, with a blank line between tables.
-func (c *Console) listLogicalTables(tables []*lnm.Table, pattern string, full bool) {
-	for i, t := range tables {
-		if i > 0 {
-			c.Printf("\n")
-		}
-
-		c.Printf("(%s)\n", t.Name)
+// listLogicalTables prints each table's header, between blank lines as
+// VMS's SHOW LOGICAL has it (testdata/mp/probe4/vax/probe4.log), and its
+// names that match pattern.
+func (d logicalDisplay) listLogicalTables(tables []*lnm.Table, pattern string, full bool) {
+	for _, t := range tables {
+		d.out("\n(%s)\n\n", t.Name)
 
 		entries := t.Entries()
 
@@ -350,7 +361,7 @@ func (c *Console) listLogicalTables(tables []*lnm.Table, pattern string, full bo
 			multi := j > 0 && entries[j-1].Name == e.Name ||
 				j+1 < len(entries) && entries[j+1].Name == e.Name
 
-			c.printLogicalEntry("  ", e, full || multi, full, "")
+			d.printLogicalEntry("  ", e, full || multi, full, "")
 		}
 	}
 }
@@ -358,21 +369,21 @@ func (c *Console) listLogicalTables(tables []*lnm.Table, pattern string, full bo
 // showLogicalName prints name's definition from the first of tables that
 // has it, then its iterative translations. It reports whether any table
 // had name.
-func (c *Console) showLogicalName(tables []*lnm.Table, name string, full bool) bool {
-	e := c.findLogical(tables, name)
+func (d logicalDisplay) showLogicalName(tables []*lnm.Table, name string, full bool) bool {
+	e := d.findLogical(tables, name)
 	if e == nil {
 		return false
 	}
 
-	c.printLogicalChain(tables, e, 0, []string{e.Name}, full)
+	d.printLogicalChain(tables, e, 0, []string{e.Name}, full)
 
 	return true
 }
 
 // findLogical returns name's entry in the first of tables that has it.
-func (c *Console) findLogical(tables []*lnm.Table, name string) *lnm.Entry {
+func (d logicalDisplay) findLogical(tables []*lnm.Table, name string) *lnm.Entry {
 	for _, t := range tables {
-		if e, err := c.Logicals.Translate(t.Name, name, lnm.User, 0); err == nil {
+		if e, err := d.db.Translate(t.Name, name, lnm.User, 0); err == nil {
 			return e
 		}
 	}
@@ -385,13 +396,13 @@ func (c *Console) findLogical(tables []*lnm.Table, name string) *lnm.Entry {
 // logical name, that name's own chain at level+1. chain holds the names
 // already printed on this path, so a circular definition stops instead
 // of repeating; levels stop at lnm.MaxDepth.
-func (c *Console) printLogicalChain(tables []*lnm.Table, e *lnm.Entry, level int, chain []string, full bool) {
+func (d logicalDisplay) printLogicalChain(tables []*lnm.Table, e *lnm.Entry, level int, chain []string, full bool) {
 	prefix := "  "
 	if level > 0 {
 		prefix = fmt.Sprintf("%-2d", level)
 	}
 
-	c.printLogicalEntry(prefix, e, full, full, e.Table.Name)
+	d.printLogicalEntry(prefix, e, full, full, e.Table.Name)
 
 	if level+1 >= lnm.MaxDepth {
 		return
@@ -407,8 +418,8 @@ func (c *Console) printLogicalChain(tables []*lnm.Table, e *lnm.Entry, level int
 			continue
 		}
 
-		if ne := c.findLogical(tables, next); ne != nil {
-			c.printLogicalChain(tables, ne, level+1, append(chain[:len(chain):len(chain)], next), full)
+		if ne := d.findLogical(tables, next); ne != nil {
+			d.printLogicalChain(tables, ne, level+1, append(chain[:len(chain):len(chain)], next), full)
 		}
 	}
 }
@@ -421,7 +432,7 @@ func (c *Console) printLogicalChain(tables []*lnm.Table, e *lnm.Entry, level int
 // showMode adds the "[mode]" tag, showAttrs the equivalence attributes,
 // and table (when not "") the trailing "(TABLE)". A table-name entry,
 // which has no equivalence strings, shows as [table] = "".
-func (c *Console) printLogicalEntry(prefix string, e *lnm.Entry, showMode, showAttrs bool, table string) {
+func (d logicalDisplay) printLogicalEntry(prefix string, e *lnm.Entry, showMode, showAttrs bool, table string) {
 	var b strings.Builder
 
 	fmt.Fprintf(&b, "%s%q", prefix, e.Name)
@@ -445,10 +456,10 @@ func (c *Console) printLogicalEntry(prefix string, e *lnm.Entry, showMode, showA
 		fmt.Fprintf(&b, " (%s)", table)
 	}
 
-	c.Printf("%s\n", b.String())
+	d.out("%s\n", b.String())
 
 	for _, q := range e.Equivalences[min(1, len(e.Equivalences)):] {
-		c.Printf("        = %q%s\n", q.Value, attrTags(q.Attrs, showAttrs))
+		d.out("        = %q%s\n", q.Value, attrTags(q.Attrs, showAttrs))
 	}
 }
 

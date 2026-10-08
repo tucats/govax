@@ -78,3 +78,9 @@ child writes to `TT:`, so in a batch or `/OUTPUT` log its two lines go to
 the terminal instead; the `LIB$SPAWN` child writes to its parent's
 SYS$OUTPUT.
 
+VMS 7.3 ran it so on 2026-10-08 (`vax/milestone.log`, from `run48`):
+both ways the output was the header's lines (the `$CREPRC` child's on
+the terminal), and the files' records were govax's, `SHARED.DAT`'s
+alternating one for one. `TestMilestone_vmsLog` holds `TestMilestone`'s
+expectations to that log.
+

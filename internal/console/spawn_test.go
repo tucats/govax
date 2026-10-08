@@ -266,7 +266,11 @@ func TestSpawnCommand(t *testing.T) {
 
 	dispatch(`ECHO :== "$` + echo + `"`)
 
-	if got := dispatch("SPAWN ECHO hello there"); got != "HELLO THERE|"+returned {
+	// DCL's messages come when the subprocess is made, before it runs
+	// (testdata/mp/probe4/vax/probe4.log).
+	const attached = "%DCL-S-SPAWNED, process SYSTEM_1 spawned|%DCL-S-ATTACHED, terminal now attached to process SYSTEM_1|"
+
+	if got := dispatch("SPAWN ECHO hello there"); got != attached+"HELLO THERE|"+returned {
 		t.Errorf("SPAWN ECHO: %q", got)
 	}
 

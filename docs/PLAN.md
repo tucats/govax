@@ -97,7 +97,7 @@ questions, and a progress log extended as that phase is worked.
 | 45 | [PHASE-45 - create and delete process](PHASE-45%20-%20create%20and%20delete%20process.md) | Multiprocessing, part 3: `$CREPRC`, process startup, rundown and deletion, termination mailboxes, jobs and job logical names, process-control services across processes, STOP, NL:, and the process and system service macros checked against real MACRO — done; a MACRO program creates a child, reads its termination message, and `$GETJPI`s it |
 | 46 | [PHASE-46 - interprocess comm](PHASE-46%20-%20interprocess%20comm.md) | Multiprocessing, part 4: mailboxes, common event flags, and global sections between processes; RMS on mailboxes and NL:; a terminal that doesn't block other processes — done; a MACRO parent and child exchange messages through two mailboxes, with a common event flag handshake |
 | 47 | [PHASE-47 - RMS and processes](PHASE-47%20-%20RMS%20and%20processes.md) | Multiprocessing, part 5: a lock manager and `$ENQ`/`$DEQ`, RMS file sharing (RMS$_FLK), a shared file control block in ods2, shared sequential files, record locks — done; three processes on a short quantum share a volume (appending, creating and erasing, extending) and it checks clean |
-| 48 | [PHASE-48 - LIB_SPAWN](PHASE-48%20-%20LIB_SPAWN.md) | Multiprocessing, part 6: `LIB$SPAWN` and a subprocess CLI; the milestone (MACRO parent and child passing mailbox messages and sharing files without corrupting the volume) — planned |
+| 48 | [PHASE-48 - LIB_SPAWN](PHASE-48%20-%20LIB_SPAWN.md) | Multiprocessing, part 6: `LIB$SPAWN`, a subprocess CLI (and LOGINOUT through `$CREPRC`), the console's SPAWN, SYS$OUTPUT as a file, the scheduler on by default; the milestone (a MACRO parent and child, by `$CREPRC` and by `LIB$SPAWN`, passing mailbox messages and sharing files without corrupting the volume) passes under several quanta — done but for the VMS run (`testdata/mp/run48`) |
 
 Phase 13 was split out of Phase 10 once that phase's own investigation found that
 `console_run.c`'s `RUN` command (real `.exe` image activation: ICB/ISD/IHD/IHI struct
@@ -426,3 +426,50 @@ programs that call system macros assemble. It also added a librarian.
   libraries byte for byte as LIBRARIAN did, and its listings and
   extractions match LIBRARIAN's. VMS assembles and links with govax's
   libraries, and LIBRARIAN changes them. See PHASE-28.md.
+
+## The multiprocessing program (Phases 43–48)
+
+Phases 43 to 48 (2026-10-06 to 2026-10-08) made govax run several VMS
+processes at once on one engine. PHASE-43.md's Part A is the program's
+plan and its decisions; each phase's doc has its progress log.
+
+- **Processes.** System state (`corevms.System`: devices, mounts,
+  mailboxes, common event flags, global sections, the lock database, the
+  process table, the S0 pool) is split from process state
+  (`corevms.Environment`, one per process). Each process has its own P0
+  and P1 page tables, privileged stacks, and a 96-byte hardware PCB in S0;
+  the CPU switches between them with the same Go code as the LDPCTX and
+  SVPCTX instructions. Process 1, the console's, keeps VMINIT's layout,
+  so nothing an oracle sees moved.
+- **Scheduling.** `internal/sched` holds VMS's rules (the Internals book,
+  chapter 10): 32 priorities, a quantum counted in instructions, boosts
+  and decay, preemption at any instruction boundary below IPL 3. A
+  service that must wait puts its process in a VMS wait state (LEF, CEF,
+  HIB, MWAIT, SUSP) and the next computable process runs; with none, the
+  machine idles to the next timer. Runs are deterministic.
+- **Creating and ending processes.** `$CREPRC` (subprocesses, detached
+  processes, quotas, privileges, termination mailboxes), process startup
+  and rundown, `$DELPRC`, and the process-control services across
+  processes; jobs and job logical-name tables; STOP and SHOW SYSTEM.
+- **Communication.** Mailboxes between processes (also as RMS record
+  streams, with NL:), common event flags, global sections, and a shared
+  terminal whose reads don't block the machine.
+- **Files.** A lock manager (`internal/lck`) with `$ENQ`/`$DEQ`; RMS file
+  sharing by FAC and SHR, one shared file control block per open file in
+  ods2, shared sequential files, record locks.
+- **LIB$SPAWN.** A subprocess running govax's small command interpreter
+  in place of DCL (RUN, MCR, foreign commands, symbols, LOGOUT), with its
+  parent's symbols and logical names, completion status, event flag, and
+  AST; `$CREPRC` of LOGINOUT gets the same CLI; the console has SPAWN.
+- **The milestone.** `testdata/mp/msparent.mar` starts `mschild.mar` by
+  `$CREPRC` or `LIB$SPAWN`; they exchange messages through two mailboxes
+  and append to one shared file and a file each on an ODS-2 volume. Run
+  both ways under three quanta, the output, the files, and the volume's
+  structure all check (`TestMilestone`, and through `govax run`).
+- **On by default.** `vax.process.scheduler` is true since Phase 48; set
+  to false, only the console's process runs and `$CREPRC`/`LIB$SPAWN`
+  return SS$_UNSUPPORTED.
+
+What remains unconfirmed against VMS is listed in DEVIATIONS.md
+("[Phases 43–48] Multiprocessing rules chosen without a manual or probe"),
+and the last VMS run, `testdata/mp/run48`, is waiting.

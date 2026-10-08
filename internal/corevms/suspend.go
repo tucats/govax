@@ -1,9 +1,6 @@
 package corevms
 
-import (
-	"github.com/tucats/govax/internal/sched"
-	"github.com/tucats/govax/internal/vmsdef"
-)
+import "github.com/tucats/govax/internal/sched"
 
 // Suspension (docs/PHASE-45.md, subtask 9): $SUSPND and $RESUME.
 //
@@ -23,8 +20,6 @@ import (
 // preceded by its resumption (markForDeletion), so it can run. The flags
 // argument of $SUSPND (kernel-mode, supervisor-mode suspension in later
 // VMS) is accepted and ignored (unconfirmed).
-
-var ssSuspended = vmsdef.Symbols["SS$_SUSPENDED"]
 
 // Suspended reports whether the process is suspended.
 func (env *Environment) Suspended() bool { return env.suspended }

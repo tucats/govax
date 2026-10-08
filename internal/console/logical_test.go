@@ -109,7 +109,7 @@ func TestShowLogical_tableListing(t *testing.T) {
 
 	mustDispatch(t, d, "DEFINE/USER_MODE SYS$OUTPUT X.LIS")
 	wantOutput(t, d, buf, "SHOW LOGICAL/TABLE=LNM$PROCESS",
-		"(LNM$PROCESS_TABLE)\n"+
+		"\n(LNM$PROCESS_TABLE)\n\n"+
 			"  \"SYS$COMMAND\" = \"_TTA0:\"\n"+
 			"  \"SYS$ERROR\" = \"_TTA0:\"\n"+
 			"  \"SYS$INPUT\" = \"_TTA0:\"\n"+
@@ -117,14 +117,15 @@ func TestShowLogical_tableListing(t *testing.T) {
 			"  \"SYS$OUTPUT\" [exec] = \"_TTA0:\"\n"+
 			"  \"TT\" = \"_TTA0:\"\n")
 
-	// Wildcards list the matches under every searched table's header.
+	// Wildcards list the matches under every searched table's header,
+	// each between blank lines as VMS shows it.
 	mustDispatch(t, d, "DEFINE/SYSTEM SYS$SYSDEVICE DUA0:")
 	wantOutput(t, d, buf, "SHOW LOGICAL SYS$S*",
-		"(LNM$PROCESS_TABLE)\n\n(LNM$JOB_80000100)\n\n(LNM$GROUP_000001)\n\n(LNM$SYSTEM_TABLE)\n"+
+		"\n(LNM$PROCESS_TABLE)\n\n\n(LNM$JOB_80000100)\n\n\n(LNM$GROUP_000001)\n\n\n(LNM$SYSTEM_TABLE)\n\n"+
 			"  \"SYS$SYSDEVICE\" = \"DUA0:\"\n")
 
 	// /GROUP selects just the group table.
-	wantOutput(t, d, buf, "SHOW LOGICAL/GROUP", "(LNM$GROUP_000001)\n")
+	wantOutput(t, d, buf, "SHOW LOGICAL/GROUP", "\n(LNM$GROUP_000001)\n\n")
 
 	// A directory lists its table names.
 	buf.Reset()
@@ -320,11 +321,11 @@ func TestLogical_jobTable(t *testing.T) {
 
 	mustDispatch(t, d, "DEFINE/JOB WORKAREA DUA1:[WORK]")
 	wantOutput(t, d, buf, "SHOW LOGICAL/JOB",
-		"(LNM$JOB_80000100)\n"+
+		"\n(LNM$JOB_80000100)\n\n"+
 			"  \"WORKAREA\" = \"DUA1:[WORK]\"\n")
 	wantOutput(t, d, buf, "SHOW TRANSLATION WORKAREA",
 		"WORKAREA = \"DUA1:[WORK]\" (LNM$JOB_80000100)\n")
 
 	mustDispatch(t, d, "DEASSIGN/JOB WORKAREA")
-	wantOutput(t, d, buf, "SHOW LOGICAL/JOB", "(LNM$JOB_80000100)\n")
+	wantOutput(t, d, buf, "SHOW LOGICAL/JOB", "\n(LNM$JOB_80000100)\n\n")
 }

@@ -12,12 +12,33 @@ other VMS work (`../run48/README.md`); `probe4.com` is its part.
 | `p4cmds.com` | Step 10's commands, the SYS$INPUT of a `$CREPRC` of LOGINOUT |
 | `probe4.com` | Assembles, links, and runs it, types the spawned processes' logs, then tries DCL's SPAWN, waiting and not |
 | `exchange.cmd`, `copyout.cmd` | Build a volume of probe 4 alone (`testdata/disks/mp-probe4.dsk`) and copy its log back, for running it by itself |
-| `vax/` | The VMS run's log, `probe4.log` (not yet run) |
+| `vax/` | The VMS run's log, `probe4.log` (2026-10-08, from `../run48`) |
 
-`TestProbe4` (`internal/console`) runs the same program under govax;
-`go test ./internal/console -run TestProbe4 -v` prints govax's report and
-the spawned processes' logs, to set beside VMS's. (govax's CLI has no
-SHOW command, so steps 5 to 7's logs are its unknown-verb message.)
+`TestProbe4` (`internal/console`) runs the same program under govax and
+compares it with VMS's run: the report line for line, and each spawned
+process's log with the volume's name, the logout time, and LOGOUT's
+counts masked. `go test ./internal/console -run TestProbe4 -v` prints
+govax's side.
+
+## What VMS answered
+
+Most of govax's guesses held: steps 1, 2, 3, 8, 9, 10 and 11 gave
+govax's statuses, the default name SYSTEM_1, and the event flag cleared
+by `LIB$SPAWN` and set at the end; the subprocess got the user- and
+supervisor-mode process names but not the executive-mode or CONFINE
+ones (step 5), and the parent's symbols unless `CLI$M_NOCLISYM` (steps
+6 and 7). What VMS showed that govax then changed (docs/PHASE-48.md):
+
+- Step 4: RUN of a missing image is `-CLI-E-IMAGEFNF, image file not
+  found DUA1:[000000]NOSUCH.EXE;` after `%DCL-W-ACTIMAGE`, and the status
+  is CLI$_IMAGEFNF with STS$M_INHIB_MSG (100388B2), not RMS$_FNF.
+- Steps 5 to 7: DCL's SHOW LOGICAL (status 10000001) and SHOW SYMBOL
+  (`%DCL-W-UNDSYM`, CLI$_UNDSYM), which govax's CLI didn't have; and SHOW
+  LOGICAL's table header between blank lines, which the console's lacked.
+- Step 10: a LOGINOUT job reading a file echoes each line (verify) and
+  ends with LOGOUT's accounting report.
+- DCL's SPAWN prints `%DCL-S-SPAWNED` and `%DCL-S-ATTACHED` before it
+  waits, as well as `%DCL-S-RETURNED` after.
 
 ## The steps
 

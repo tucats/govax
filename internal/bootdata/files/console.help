@@ -1014,14 +1014,18 @@ $SPAWN
     commands from its input until the end of the input or LOGOUT.  It knows
     RUN, MCR, foreign commands and other symbols (it gets copies of the
     console's, and of its process logical names, unless /NOSYMBOLS or
-    /NOLOGICAL_NAMES), symbol assignments, DELETE/SYMBOL, EXIT, and LOGOUT.
+    /NOLOGICAL_NAMES), symbol assignments, DELETE/SYMBOL, SHOW SYMBOL,
+    SHOW LOGICAL, EXIT, and LOGOUT.  SPAWN says when the subprocess has
+    been made (%DCL-S-SPAWNED, and %DCL-S-ATTACHED if it waits) and when
+    control is back (%DCL-S-RETURNED), as DCL does.
 
         /NOWAIT         Don't wait: the subprocess runs while the machine
                         runs (the next RUN, GO, or CALL), not at the VAX>
                         prompt.
         /INPUT=file     The subprocess's SYS$INPUT: the terminal, a mailbox,
                         or a file of commands.  Default: the console's.
-        /OUTPUT=file    Its SYS$OUTPUT (a terminal, mailbox, or NL:).
+        /OUTPUT=file    Its SYS$OUTPUT: a terminal, a mailbox, NL:, or a
+                        file, which gets each line as a record.
         /PROCESS=name   Its name.  Default: the user name and "_n".
         /PROMPT=string  The prompt for commands read from the terminal.
                         Default: "$ ".
@@ -1771,8 +1775,11 @@ $CONF,KEY
         commands from SYS$INPUT (the terminal, a mailbox, or a file),
         running each command's image in turn in the same process.  It
         knows RUN, MCR, foreign commands and other DCL symbols, symbol
-        assignments, DELETE/SYMBOL, EXIT, and LOGOUT; anything else is
-        %DCL-W-IVVERB.
+        assignments, DELETE/SYMBOL, SHOW SYMBOL, SHOW LOGICAL, EXIT,
+        and LOGOUT; anything else is %DCL-W-IVVERB.  LOGINOUT's,
+        reading a file or a mailbox, echoes each command as it reads
+        it, as DCL's verify does in a batch job, and ends with
+        LOGOUT's accounting report.
 
         vax.process.scheduler         true or false: whether processes
                                       other than the console's own can be

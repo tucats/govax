@@ -246,3 +246,95 @@ func TestMilestone_schedulerOff(t *testing.T) {
 		})
 	}
 }
+
+// TestMilestone_vmsLog holds TestMilestone's expectations to VMS's run of
+// the same two programs (testdata/mp/vax/milestone.log, from
+// testdata/mp/run48's MILESTONE.COM): each way, the parent's lines are
+// milestoneWant's, and the files TYPE showed have the records
+// checkMilestoneFiles looks for. In the $CREPRC run the child's two
+// lines went to the terminal, not the log (its SYS$OUTPUT is the
+// terminal, as $CREPRC's caller gave it none), so they're left out of
+// that comparison; in govax the console's output is both.
+func TestMilestone_vmsLog(t *testing.T) {
+	data, err := os.ReadFile(filepath.Join("..", "..", "testdata", "mp", "vax", "milestone.log"))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	lines := strings.Split(strings.ReplaceAll(string(data), "\r", ""), "\n")
+
+	// Each run: the program's lines, then TYPE's: SHARED.DAT's records,
+	// and for each of PARENT.DAT and CHILD.DAT a blank line (a space),
+	// its name, a blank line, and its records.
+	runs := map[string][]string{}
+	how := ""
+
+	for _, line := range lines {
+		if h, ok := strings.CutPrefix(line, "Parent: starting the child by "); ok {
+			how = h
+		}
+
+		if how != "" && line != "" {
+			runs[how] = append(runs[how], line)
+		}
+	}
+
+	records := func(who string) []string {
+		var r []string
+		for n := 1; n <= milestoneRounds; n++ {
+			r = append(r, fmt.Sprintf("%s %d", who, n))
+		}
+
+		return r
+	}
+
+	for _, how := range []string{"$CREPRC", "LIB$SPAWN"} {
+		run := runs[how]
+
+		var want []string
+
+		for _, line := range milestoneWant(how) {
+			if how == "LIB$SPAWN" || !strings.HasPrefix(line, "Child: ") {
+				want = append(want, line)
+			}
+		}
+
+		if len(run) < len(want) || strings.Join(run[:len(want)], "\n") != strings.Join(want, "\n") {
+			t.Errorf("%s: VMS's lines:\n%s\nwant:\n%s", how, strings.Join(run, "\n"), strings.Join(want, "\n"))
+
+			continue
+		}
+
+		typed := strings.Join(run[len(want):], "\n")
+		files := strings.Split(typed, "\n \nDUA1:[000000]")
+
+		if len(files) != 3 {
+			t.Errorf("%s: TYPE's output:\n%s", how, typed)
+
+			continue
+		}
+
+		// SHARED.DAT: both processes' records, each's in order.
+		next := map[string]int{"PARENT": 1, "CHILD": 1}
+
+		for _, r := range strings.Split(files[0], "\n") {
+			who, n, _ := strings.Cut(r, " ")
+			if n != fmt.Sprint(next[who]) {
+				t.Errorf("%s: SHARED.DAT record %q, want %s %d next", how, r, who, next[who])
+			}
+
+			next[who]++
+		}
+
+		if next["PARENT"] != milestoneRounds+1 || next["CHILD"] != milestoneRounds+1 {
+			t.Errorf("%s: SHARED.DAT's records: %v", how, next)
+		}
+
+		for i, who := range []string{"PARENT", "CHILD"} {
+			want := who + ".DAT;1\n \n" + strings.Join(records(who), "\n")
+			if files[i+1] != want {
+				t.Errorf("%s: %s.DAT:\n%s\nwant:\n%s", how, who, files[i+1], want)
+			}
+		}
+	}
+}

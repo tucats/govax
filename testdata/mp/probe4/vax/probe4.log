@@ -1,0 +1,75 @@
+
+1 RUN P4CHILD: spawn 00000001, completion 00000003
+2 EXIT 7: spawn 00000001, completion 00000007
+3 FROBNICATE: spawn 00000001, completion 00038090
+4 RUN NOSUCH: spawn 00000001, completion 100388B2
+5 SHOW LOGICAL/PROCESS P4_*: spawn 00000001, completion 10000001
+6 SHOW SYMBOL P4SYM: spawn 00000001, completion 00000001
+7 SHOW SYMBOL P4SYM, CLI$M_NOCLISYM: spawn 00000001, completion 00038140
+8 flags ^X200: spawn 00158234
+9 NOWAIT: spawn 00000001, the event flag just after: 00000001
+9 NOWAIT: default name "SYSTEM_1"
+9 NOWAIT: completion 00000003, the event flag at the end: 00000009
+10 $CREPRC of LOGINOUT: create 00000001, final status 00038090
+11 LIB$SPAWN with no CLI: create 00000001, final status 0015837C
+end
+ 
+DUA1:[000000]P4_1.LOG;1
+ 
+ 
+DUA1:[000000]P4_10.LOG;1
+ 
+$ ! P4CMDS.COM - probe 4's commands for a LOGINOUT process (README.md,
+$ ! step 10): its SYS$INPUT.
+$ RUN P4CHILD
+$ FROBNICATE
+%DCL-W-IVVERB, unrecognized command verb - check validity and spelling
+ \FROBNICATE\
+$ LOGOUT
+  SYSTEM       job terminated at  8-OCT-2026 12:17:12.53
+
+  Accounting information:
+  Buffered I/O count:              11         Peak working set size:     287
+  Direct I/O count:                 7         Peak page file size:      2984
+  Page faults:                    284         Mounted volumes:             0
+  Charged CPU time:           0 00:00:00.01   Elapsed time:     0 00:00:00.01
+ 
+DUA1:[000000]P4_2.LOG;1
+ 
+ 
+DUA1:[000000]P4_3.LOG;1
+ 
+%DCL-W-IVVERB, unrecognized command verb - check validity and spelling
+ \FROBNICATE\
+ 
+DUA1:[000000]P4_4.LOG;1
+ 
+%DCL-W-ACTIMAGE, error activating image NOSUCH
+-CLI-E-IMAGEFNF, image file not found DUA1:[000000]NOSUCH.EXE;
+ 
+DUA1:[000000]P4_5.LOG;1
+ 
+
+(LNM$PROCESS_TABLE)
+
+  "P4_SUPER" = "X"
+  "P4_USER" = "X"
+ 
+DUA1:[000000]P4_6.LOG;1
+ 
+  P4SYM == "a global symbol"
+ 
+DUA1:[000000]P4_7.LOG;1
+ 
+%DCL-W-UNDSYM, undefined symbol - check validity and spelling
+ 
+DUA1:[000000]P4_9.LOG;1
+ 
+%DCL-S-SPAWNED, process SYSTEM_1 spawned
+%DCL-S-ATTACHED, terminal now attached to process SYSTEM_1
+%DCL-S-RETURNED, control returned to process SYSTEM
+  $STATUS == "%X00000003"
+%DCL-S-SPAWNED, process P4_NOWAIT spawned
+ 
+DUA1:[000000]P4_N.LOG;1
+ 

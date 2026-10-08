@@ -53,6 +53,12 @@ type CLIStartup struct {
 	// Prompt is the prompt the CLI writes before reading a command from
 	// the terminal; empty for DCL's "$ ".
 	Prompt string
+
+	// Login is set for LOGINOUT's CLI, which logs a job in rather than
+	// running a spawned command: reading a file or a mailbox, it echoes
+	// each command (DCL's verify, on in a job that isn't interactive),
+	// and it ends with LOGOUT's report (LogoutReport).
+	Login bool
 }
 
 // isLoginout reports whether image names LOGINOUT.EXE, the image
@@ -83,7 +89,7 @@ func (env *Environment) startInterpreter(cli *CLIStartup) (uint32, error) {
 	}
 
 	if cli == nil {
-		cli = &CLIStartup{}
+		cli = &CLIStartup{Login: true}
 	}
 
 	env.HasCLI = true

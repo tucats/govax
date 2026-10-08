@@ -24,6 +24,10 @@ import (
 //	                            value replaces the word
 //	name :== value (and :=, ==, =)   define a DCL symbol
 //	DELETE/SYMBOL name          remove one
+//	SHOW SYMBOL name            show a DCL symbol, as DCL's SHOW SYMBOL
+//	SHOW LOGICAL [name...]      show logical names, as the console's
+//	                            SHOW LOGICAL (/PROCESS, /JOB, /GROUP,
+//	                            /SYSTEM, /TABLE=, /FULL)
 //	EXIT [status], LOGOUT       log out
 //
 // Anything else is an unrecognized verb (DCL's %DCL-W-IVVERB). A line may
@@ -67,6 +71,13 @@ import (
 // The CLI's DCL symbols are its own, a copy of its parent's when
 // LIB$SPAWN copies them (InheritSymbols); its $STATUS is the status of
 // the last command, which becomes the process's final status.
+//
+// LOGINOUT's CLI (a $CREPRC of LOGINOUT.EXE; corevms.CLIStartup's Login)
+// logs a job in, and does two things a spawned one doesn't, as VMS's
+// DCL did in testdata/mp/probe4's run: reading its commands from a file
+// or a mailbox, it echoes each line as it reads it (DCL's verify, on in
+// a job that isn't interactive); and when it logs out, it writes
+// LOGOUT's report (corevms's LogoutReport).
 
 // cliShimCode is the XFC$SHIM code of EXE$CLI_COMMAND, the CLI's shim.
 // It's govax's own, so it takes a code no LIBRTL routine or kernel.asm
@@ -80,14 +91,19 @@ const (
 	cliStubArgList = 24
 )
 
-// cliStatusIVVERB is CLI$_IVVERB, DCL's status for an unrecognized
-// command verb; cliStatusInsfprm is CLI$_INSFPRM, for a command missing
-// a parameter it requires.
+// DCL's statuses: CLI$_IVVERB for an unrecognized command verb,
+// CLI$_IVKEYW for an unrecognized keyword (SHOW's), CLI$_INSFPRM for a
+// command missing a parameter it requires, CLI$_UNDSYM for SHOW SYMBOL
+// of a symbol that isn't defined, and CLI$_IMAGEFNF for RUN of an image
+// that isn't there.
 var (
-	ssNormal         = vmsdef.Symbols["SS$_NORMAL"]
-	ssUnsupported    = vmsdef.Symbols["SS$_UNSUPPORTED"]
-	cliStatusIVVERB  = vmsdef.LibrarySymbols["CLI$_IVVERB"]
-	cliStatusInsfprm = vmsdef.LibrarySymbols["CLI$_INSFPRM"]
+	ssNormal          = vmsdef.Symbols["SS$_NORMAL"]
+	ssUnsupported     = vmsdef.Symbols["SS$_UNSUPPORTED"]
+	cliStatusIVVERB   = vmsdef.LibrarySymbols["CLI$_IVVERB"]
+	cliStatusIVKEYW   = vmsdef.LibrarySymbols["CLI$_IVKEYW"]
+	cliStatusInsfprm  = vmsdef.LibrarySymbols["CLI$_INSFPRM"]
+	cliStatusUndsym   = vmsdef.LibrarySymbols["CLI$_UNDSYM"]
+	cliStatusImageFNF = vmsdef.LibrarySymbols["CLI$_IMAGEFNF"]
 )
 
 // subprocessCLI is one process's CLI.
@@ -105,6 +121,10 @@ type subprocessCLI struct {
 	// prompt is written before each command read from the terminal.
 	prompt string
 
+	// login is set for LOGINOUT's CLI (see this file's opening comment);
+	// reported is set once it has written LOGOUT's report.
+	login, reported bool
+
 	// input is its SYS$INPUT, opened at the first read.
 	input corevms.CommandInput
 
@@ -114,11 +134,19 @@ type subprocessCLI struct {
 	// status is its $STATUS: the last command's status.
 	status uint32
 
-	// output are lines it has still to write to SYS$OUTPUT.
-	output []string
+	// output are lines it has still to write to SYS$OUTPUT; partial is
+	// the start of a line printf hasn't finished.
+	output  []string
+	partial string
 
 	// loggedOut is set when it has no more commands to run.
 	loggedOut bool
+
+	// pending is the command read and not yet carried out; driver is
+	// the IMAGE$INIT driver of the image a command activated, not yet
+	// called.
+	pending *string
+	driver  uint32
 
 	// imageActive is set while an image a command started runs; fp and
 	// ap are the CLI's registers at the shim's XFC, put back when it
@@ -175,6 +203,7 @@ func (h cliHost) Start(env *corevms.Environment, start *corevms.CLIStartup) (uin
 	cli := c.cliOf(env)
 	cli.command, cli.hasCommand = start.Command, start.Command != ""
 	cli.prompt = start.Prompt
+	cli.login = start.Login
 
 	if cli.prompt == "" {
 		cli.prompt = "$ "
@@ -226,37 +255,59 @@ func (c *Console) cliCommand(env *corevms.Environment, _ []uint32) (uint32, erro
 		return ssUnsupported, nil // not a CLI's process
 	}
 
+	// Each step starts by writing what's queued for SYS$OUTPUT, so a
+	// command's echo comes before what it does, and its messages before
+	// the image it starts; a full mailbox makes the shim wait there and
+	// come back to the same step.
 	for {
 		if err := cli.flush(); err != nil {
 			return 0, err // a full mailbox: called again
 		}
 
+		if driver := cli.driver; driver != 0 {
+			cli.driver = 0
+			cli.imageActive = true
+			cli.fp, cli.ap = c.CPU.GPR(vax.FP), c.CPU.GPR(vax.AP)
+
+			return 0, &corevms.CallRequest{Routine: driver, ArgList: cli.stub + cliStubArgList, Image: true}
+		}
+
 		if cli.loggedOut {
+			if cli.login && !cli.reported && cli.input != nil {
+				cli.reported = true
+				cli.output = append(cli.output, cli.env.LogoutReport(cli.input.Interactive())...)
+
+				continue
+			}
+
 			return cli.status, nil
 		}
 
-		line, ok, err := cli.nextLine()
-		if err != nil {
-			return 0, err // waiting for the line: called again
-		}
+		if cli.pending == nil {
+			line, ok, err := cli.nextLine()
+			if err != nil {
+				return 0, err // waiting for the line: called again
+			}
 
-		if !ok {
-			cli.loggedOut = true
+			if !ok {
+				cli.loggedOut = true
+
+				continue
+			}
+
+			if cli.login && !cli.input.Interactive() {
+				cli.say("%s", line) // DCL's verify
+			}
+
+			cli.pending = &line
 
 			continue
 		}
 
+		line := *cli.pending
+		cli.pending = nil
 		cli.depth = 0
-
-		driver := c.cliExecute(cli, line)
-		if driver == 0 {
-			continue
-		}
-
-		cli.imageActive = true
-		cli.fp, cli.ap = c.CPU.GPR(vax.FP), c.CPU.GPR(vax.AP)
-
-		return 0, &corevms.CallRequest{Routine: driver, ArgList: cli.stub + cliStubArgList, Image: true}
+		cli.driver = c.cliExecute(cli, line)
 	}
 }
 
@@ -297,6 +348,25 @@ func (cli *subprocessCLI) nextLine() (string, bool, error) {
 // say queues a line for SYS$OUTPUT.
 func (cli *subprocessCLI) say(format string, args ...any) {
 	cli.output = append(cli.output, fmt.Sprintf(format, args...))
+}
+
+// printf queues text for SYS$OUTPUT a line at a time, keeping the start
+// of a line that has no newline yet: the console's displays (SHOW
+// LOGICAL's) write through it.
+func (cli *subprocessCLI) printf(format string, args ...any) {
+	text := cli.partial + fmt.Sprintf(format, args...)
+
+	for {
+		line, rest, found := strings.Cut(text, "\n")
+		if !found {
+			cli.partial = text
+
+			return
+		}
+
+		cli.output = append(cli.output, line)
+		text = rest
+	}
 }
 
 // flush writes the lines say queued to SYS$OUTPUT (corevms's PutOutput:
@@ -373,6 +443,9 @@ func (c *Console) cliExecute(cli *subprocessCLI, line string) uint32 {
 
 		return c.cliRunImage(cli, image, dclText(text, true))
 
+	case isVerb(word, "SHOW", 2):
+		cli.show(rest)
+
 	case isVerb(word, "LOGOUT", 2):
 		cli.loggedOut = true
 
@@ -421,10 +494,20 @@ func (c *Console) cliRunImage(cli *subprocessCLI, image, commandLine string) uin
 
 	driver, err := c.activateCreatedImage(env, image, false)
 	if err != nil {
-		cli.status = corevms.StartupStatus(err)
 		cli.say("%%DCL-W-ACTIMAGE, error activating image %s", strings.ToUpper(image))
-		cli.say("-%s", strings.TrimPrefix(env.StatusText(cli.status), "%"))
 		c.traceCLI(cli, "can't run %s: %v", image, err)
+
+		// The status has STS$M_INHIB_MSG set, its message having been
+		// shown, as VMS's DCL returned it (testdata/mp/probe4).
+		status := corevms.StartupStatus(err)
+		if status == rmsFNF {
+			status = cliStatusImageFNF
+			cli.say("-CLI-E-IMAGEFNF, image file not found %s", c.imageFileSpec(env, image))
+		} else {
+			cli.say("-%s", strings.TrimPrefix(env.StatusText(status), "%"))
+		}
+
+		cli.status = status | stsInhibitMsg
 
 		return 0
 	}
@@ -462,6 +545,132 @@ func (c *Console) endCLIImage(cli *subprocessCLI) {
 	c.CPU.SetGPR(vax.FP, cli.fp)
 	c.CPU.SetGPR(vax.AP, cli.ap)
 	c.CPU.SetGPR(vax.PC, cli.stub+cliStubLoop)
+}
+
+// rmsFNF is RMS$_FNF, the status corevms gives an image that isn't
+// there.
+var rmsFNF = vmsdef.Symbols["RMS$_FNF"]
+
+// imageFileSpec is image as RMS expands it, with the default type .EXE,
+// for DCL's IMAGEFNF message ("DUA0:[000000]NOSUCH.EXE;"); as typed,
+// with .EXE;, when it doesn't name a volume file.
+func (c *Console) imageFileSpec(env *corevms.Environment, image string) string {
+	name := strings.ToUpper(image)
+
+	if s := env.Session; s != nil {
+		if loc, err := s.Locate(image, false); err == nil && !loc.Host {
+			if spec, err := s.ExpandName(withDefaultType(loc, "EXE").Name); err == nil {
+				return spec
+			}
+		}
+	}
+
+	if !strings.Contains(name[strings.LastIndexAny(name, ":]>")+1:], ".") {
+		name += ".EXE"
+	}
+
+	return name + ";"
+}
+
+// show is SHOW: SHOW SYMBOL and SHOW LOGICAL, the two a CLI has.
+func (cli *subprocessCLI) show(rest string) {
+	fields := commandFields(rest)
+	if len(fields) == 0 || strings.HasPrefix(fields[0], "/") {
+		cli.fail(cliStatusInsfprm, "%DCL-W-INSFPRM, missing command parameters - supply all required parameters", "")
+
+		return
+	}
+
+	keyword := strings.ToUpper(fields[0])
+
+	switch {
+	case isVerb(keyword, "SYMBOL", 3):
+		cli.showSymbol(fields[1:])
+	case isVerb(keyword, "LOGICAL", 3):
+		cli.showLogical(fields[1:])
+	default:
+		cli.fail(cliStatusIVKEYW, "%DCL-W-IVKEYW, unrecognized keyword - check validity and spelling", keyword)
+	}
+}
+
+// showSymbol is SHOW SYMBOL name: the symbol's line, as the console's
+// SHOW SYMBOL/DCL shows it, or (as VMS's DCL did in testdata/mp/probe4)
+// %DCL-W-UNDSYM with no second line. A wildcard name shows each symbol
+// it matches. Qualifiers (/LOCAL, /GLOBAL) are accepted and ignored.
+func (cli *subprocessCLI) showSymbol(fields []string) {
+	name := ""
+
+	for _, f := range fields {
+		if !strings.HasPrefix(f, "/") {
+			name = strings.ToUpper(f)
+
+			break
+		}
+	}
+
+	if name == "" {
+		cli.fail(cliStatusInsfprm, "%DCL-W-INSFPRM, missing command parameters - supply all required parameters", "")
+
+		return
+	}
+
+	shown := cli.symbols.matching(name)
+	if len(shown) == 0 {
+		cli.fail(cliStatusUndsym, "%DCL-W-UNDSYM, undefined symbol - check validity and spelling", "")
+
+		return
+	}
+
+	for _, sym := range shown {
+		cli.say("%s", sym.showLine())
+	}
+
+	cli.status = ssNormal
+}
+
+// showLogical is SHOW LOGICAL, in the process's own logical-name tables
+// (its process table, its job's, its group's, the system's): the
+// console's display (logicalDisplay), on SYS$OUTPUT. The status is
+// SS$_NORMAL with STS$M_INHIB_MSG set, as VMS's DCL returned it
+// (testdata/mp/probe4; unconfirmed for a name with no translation).
+func (cli *subprocessCLI) showLogical(fields []string) {
+	var names, tables []string
+
+	full := false
+
+	for _, f := range fields {
+		q, value, _ := strings.Cut(strings.ToUpper(f), "=")
+
+		switch {
+		case !strings.HasPrefix(q, "/"):
+			for _, n := range strings.Split(f, ",") {
+				if n = strings.TrimSpace(n); n != "" {
+					names = append(names, strings.ToUpper(n))
+				}
+			}
+		case isVerb(q, "/PROCESS", 2):
+			tables = []string{"LNM$PROCESS"}
+		case isVerb(q, "/JOB", 2):
+			tables = []string{"LNM$JOB"}
+		case isVerb(q, "/GROUP", 2):
+			tables = []string{"LNM$GROUP"}
+		case isVerb(q, "/SYSTEM", 2):
+			tables = []string{"LNM$SYSTEM"}
+		case isVerb(q, "/TABLE", 2):
+			tables = strings.Split(strings.Trim(value, "()"), ",")
+		case isVerb(q, "/FULL", 2):
+			full = true
+		}
+	}
+
+	d := logicalDisplay{db: cli.env.Logicals, out: cli.printf}
+	if err := d.show(names, tables, full); err != nil {
+		cli.complete(err)
+
+		return
+	}
+
+	cli.status = ssNormal | stsInhibitMsg
 }
 
 // stsInhibitMsg is STS$M_INHIB_MSG: a status whose message has already

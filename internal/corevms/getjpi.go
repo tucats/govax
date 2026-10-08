@@ -228,7 +228,7 @@ func serviceSysGetjpi(env *Environment, argv []uint32) (uint32, error) {
 			}
 		}
 
-		fmt.Fprintf(env.cpu.DebugWriter(), "DEBUG: SYS$GETJPIW EFN=%d PRCNAM=%q\n", efn, name)
+		fmt.Fprintf(env.cpu.DebugWriter(), "DEBUG(PROCESS): SYS$GETJPIW EFN=%d PRCNAM=%q\n", efn, name)
 	}
 
 	flags, bit, st := env.eventFlagWord(efn)

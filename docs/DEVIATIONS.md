@@ -2797,6 +2797,64 @@ widened."
   - Host files get no arbitration.
 - **Status**: unconfirmed; candidates for a VMS 7.3 probe round.
 
+### [Phases 43–48] Multiprocessing rules chosen without a manual or probe
+
+- **Where**: `internal/sched`; `internal/corevms` (`proctable.go`,
+  `schedule.go`, `waits.go`, `creprc.go`, `startup.go`, `delete.go`,
+  `termmsg.go`, `mbxdriver.go`, `gblsec.go`, `terminal.go`, `spawn.go`,
+  `cliprocess.go`, `outfile.go`); `internal/console/subcli.go`,
+  `spawncmd.go`; `internal/cpu/context.go`.
+- **What**: the multiprocessing program followed DIGITAL's manuals, the
+  book *VAX/VMS Internals and Data Structures* (Decision 6), and the VMS
+  runs of `testdata/mp` (probes 1 to 3, the ping-pong pair). Where none
+  of them settled a rule, govax chose one. This is the list in one place;
+  each phase's doc says more where the rule is described (search it for
+  "unconfirmed"), and Phase 47's file and lock rules are the entry above.
+  - **Phase 43:** the PID's layout (an 8-bit slot index and a 13-bit
+    sequence, every slot starting at sequence 2, so process 2 is
+    00000302); the IPL (3) and interrupt-style PSL a context switch
+    leaves behind.
+  - **Phase 44:** that VMS 7.3 numbers MWAIT resources as the book's VMS
+    3.3 does; the boost classes of events whose reporter govax doesn't
+    track (a wakeup or resource: 3; an event flag or `$QIOW`: 2);
+    `$SETPRI`'s "Set Priority" boost not applied; SHOW SYSTEM's and SHOW
+    PROCESS's layouts where no sample showed them (a short node name's
+    padding, uptime past 9 days, SHOW PROCESS from memory).
+  - **Phase 45:** a child's priority at creation, its working-set size,
+    SYSTEM's AST limit, the PQL defaults and minimums; what a subprocess
+    inherits besides its default directory and SYS$DISK (nothing); the
+    privileges and authorized mask for an omitted prvadr; PID reuse; the
+    termination statuses of a startup that fails (RMS$_FNF, SS$_ABORT);
+    `$SETPRI`'s rules for real-time priorities across processes; the
+    services' argument-count minimums beyond those probed.
+  - **Phase 46:** the boost classes of a terminal set/sense mode, a
+    mailbox attention AST, `$SETEF`, and a CTRL/C or CTRL/Y AST; that
+    either access suffices for a mailbox `$ASSIGN`; SETPROT's argument;
+    `$DGBLSC` not checking protection; no logical-name translation of a
+    section name; which rule makes a file section with no channel
+    SS$_IVSECFLG; FAB$W_MRS after `$OPEN` of a mailbox; a terminal read
+    that must wait making the `$QIO` itself wait.
+  - **Phase 48:** `testdata/mp/probe4`'s VMS run (2026-10-08) confirmed
+    the default process name, the event flag's clearing, which process
+    logical names and symbols a subprocess gets, the CLI's statuses
+    (and that it goes on after a failing command), EXIT's, and DCL's
+    messages, and govax now matches it in full (`TestProbe4`). Still
+    chosen: the access modes the copied names keep (their own); the
+    order of the completion's effects (status, event flag, AST); the
+    verb abbreviations (`R` for RUN, `MC`, `LO`, `EXI`, `SH`, `SYM`,
+    `LOG`); LIB$SPAWN's flags NOTIFY, NOCONTROL, NOKEYPAD, TRUSTED,
+    AUTHPRIV, and SUBSYSTEM, and its cli and table-name arguments, doing
+    nothing; a SYS$OUTPUT file written through whole at each line;
+    STS$M_INHIB_MSG on every activation failure's status (VMS showed it
+    for an image not found); SHOW LOGICAL's status when a name has no
+    translation; an interactive LOGINOUT job's one-line LOGOUT message;
+    LOGOUT's report with zero I/O counts, page faults, and peaks (govax
+    keeps none, as in the termination message). The console keeps no
+    `$STATUS` symbol for SPAWN to set.
+- **Status**: unconfirmed but for what the VMS runs settled (probes 1
+  to 4, the ping-pong pair, the milestone); the rest are candidates for
+  later probes.
+
 <!--
 Entry template:
 

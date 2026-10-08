@@ -190,6 +190,10 @@ func (env *Environment) Spawn(req SpawnRequest) (*Environment, uint32) {
 			p.PID, child.Process.PID, name, req.Command)
 	}
 
+	if env.SpawnNotice != nil {
+		env.SpawnNotice(child, req.Flags&cliNoWait == 0)
+	}
+
 	return child, ssNormal
 }
 

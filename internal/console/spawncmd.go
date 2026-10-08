@@ -4,6 +4,7 @@ import (
 	"encoding/binary"
 	"fmt"
 
+	"github.com/tucats/govax/internal/corevms"
 	"github.com/tucats/govax/internal/vmsdef"
 	"github.com/tucats/govax/internal/vmserrors"
 )
@@ -48,9 +49,9 @@ const (
 )
 
 // Spawn is SPAWN (see above). It reports LIB$SPAWN's failure as an
-// error; when a /NOWAIT subprocess has been made, it says so as DCL does
-// (%DCL-S-SPAWNED), and when process 1 has waited for one, that control
-// has come back (%DCL-S-RETURNED).
+// error; when the subprocess has been made, it says so as DCL does
+// (%DCL-S-SPAWNED, and %DCL-S-ATTACHED if it waits), and when process 1
+// has waited for one, that control has come back (%DCL-S-RETURNED).
 func (c *Console) Spawn(o SpawnOptions) error {
 	if err := c.requireInit(); err != nil {
 		return err
@@ -135,11 +136,19 @@ func (c *Console) Spawn(o SpawnOptions) error {
 		return err
 	}
 
-	// The processes there are now, to tell which one LIB$SPAWN made.
-	before := map[uint32]bool{}
-	for _, env := range c.RTL.Processes() {
-		before[env.Process.PID] = true
+	// DCL's messages: when the subprocess has been made, before it runs,
+	// that it was (and, if SPAWN waits, that the terminal is now its);
+	// when SPAWN has waited, that control is back. VMS's DCL wrote them
+	// so in testdata/mp/probe4's run.
+	c.RTL.SpawnNotice = func(child *corevms.Environment, wait bool) {
+		c.Printf("%%DCL-S-SPAWNED, process %s spawned\n", child.Process.Name)
+
+		if wait {
+			c.Printf("%%DCL-S-ATTACHED, terminal now attached to process %s\n", child.Process.Name)
+		}
 	}
+
+	defer func() { c.RTL.SpawnNotice = nil }()
 
 	if err := c.Call(page, false); err != nil {
 		return err
@@ -149,22 +158,8 @@ func (c *Console) Spawn(o SpawnOptions) error {
 		return fmt.Errorf("%s", trimPercent(c.RTL.StatusText(status)))
 	}
 
-	if o.NoWait {
-		name := ""
-
-		for _, env := range c.RTL.Processes() {
-			if !before[env.Process.PID] {
-				name = env.Process.Name
-			}
-		}
-
-		c.Printf("%%DCL-S-SPAWNED, process %s spawned\n", name)
-
-		return nil
-	}
-
-	if name := c.RTL.Process.Name; name != "" {
-		c.Printf("%%DCL-S-RETURNED, control returned to process %s\n", name)
+	if !o.NoWait {
+		c.Printf("%%DCL-S-RETURNED, control returned to process %s\n", c.RTL.Process.Name)
 	}
 
 	return nil

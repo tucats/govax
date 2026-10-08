@@ -1,0 +1,101 @@
+
+Parent: starting the child by $CREPRC
+Parent: round 1 acknowledged
+Parent: round 2 acknowledged
+Parent: round 3 acknowledged
+Parent: round 4 acknowledged
+Parent: round 5 acknowledged
+Parent: round 6 acknowledged
+Parent: round 7 acknowledged
+Parent: round 8 acknowledged
+Parent: child ended with status 00000003
+Parent: SHARED.DAT has 8 records from the parent and 8 from the child
+PARENT 1
+CHILD 1
+PARENT 2
+CHILD 2
+PARENT 3
+CHILD 3
+PARENT 4
+CHILD 4
+PARENT 5
+CHILD 5
+PARENT 6
+CHILD 6
+PARENT 7
+CHILD 7
+PARENT 8
+CHILD 8
+ 
+DUA1:[000000]PARENT.DAT;1
+ 
+PARENT 1
+PARENT 2
+PARENT 3
+PARENT 4
+PARENT 5
+PARENT 6
+PARENT 7
+PARENT 8
+ 
+DUA1:[000000]CHILD.DAT;1
+ 
+CHILD 1
+CHILD 2
+CHILD 3
+CHILD 4
+CHILD 5
+CHILD 6
+CHILD 7
+CHILD 8
+Parent: starting the child by LIB$SPAWN
+Child: running
+Parent: round 1 acknowledged
+Parent: round 2 acknowledged
+Parent: round 3 acknowledged
+Parent: round 4 acknowledged
+Parent: round 5 acknowledged
+Parent: round 6 acknowledged
+Parent: round 7 acknowledged
+Parent: round 8 acknowledged
+Child: done
+Parent: child ended with status 00000003
+Parent: SHARED.DAT has 8 records from the parent and 8 from the child
+PARENT 1
+CHILD 1
+PARENT 2
+CHILD 2
+PARENT 3
+CHILD 3
+PARENT 4
+CHILD 4
+PARENT 5
+CHILD 5
+PARENT 6
+CHILD 6
+PARENT 7
+CHILD 7
+PARENT 8
+CHILD 8
+ 
+DUA1:[000000]PARENT.DAT;1
+ 
+PARENT 1
+PARENT 2
+PARENT 3
+PARENT 4
+PARENT 5
+PARENT 6
+PARENT 7
+PARENT 8
+ 
+DUA1:[000000]CHILD.DAT;1
+ 
+CHILD 1
+CHILD 2
+CHILD 3
+CHILD 4
+CHILD 5
+CHILD 6
+CHILD 7
+CHILD 8

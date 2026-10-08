@@ -228,7 +228,7 @@ func TestServiceSysGetjpiDebugProcessTrace(t *testing.T) {
 
 	getjpi(t, env, 5, 0, a.desc("MYPROC"), a.items(), 0)
 
-	if !strings.Contains(buf.String(), `DEBUG: SYS$GETJPIW EFN=5 PRCNAM="MYPROC"`) {
+	if !strings.Contains(buf.String(), `DEBUG(PROCESS): SYS$GETJPIW EFN=5 PRCNAM="MYPROC"`) {
 		t.Errorf("output = %q, want a SYS$GETJPIW trace naming EFN and PRCNAM", buf.String())
 	}
 }

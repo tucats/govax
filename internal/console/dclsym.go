@@ -437,27 +437,7 @@ func (t dclSymbols) clone() dclSymbols {
 func (c *Console) ShowDCLSymbols(name string) error {
 	name = strings.ToUpper(strings.TrimSpace(name))
 
-	var shown []dclSymbol
-
-	switch {
-	case name == "" || lnm.HasWildcards(name):
-		for _, sym := range c.dclSymbols {
-			if name == "" || lnm.Match(name, sym.name) {
-				shown = append(shown, sym)
-			}
-		}
-
-		sort.Slice(shown, func(i, j int) bool { return shown[i].name < shown[j].name })
-
-	default:
-		sym, ok := c.dclSymbols.lookup(name)
-		if !ok {
-			return vmserrors.New(vmserrors.CLI_UNDEFSYM, name)
-		}
-
-		shown = append(shown, sym)
-	}
-
+	shown := c.dclSymbols.matching(name)
 	if len(shown) == 0 {
 		if name == "" {
 			c.Printf("No DCL symbols are defined\n")
@@ -473,6 +453,31 @@ func (c *Console) ShowDCLSymbols(name string) error {
 	}
 
 	return nil
+}
+
+// matching returns the symbols SHOW SYMBOL shows for name (in upper
+// case): the one it means (an abbreviation it allows will do), the ones
+// a wildcard name matches, or with no name every one, in name order.
+func (t dclSymbols) matching(name string) []dclSymbol {
+	if name != "" && !lnm.HasWildcards(name) {
+		if sym, ok := t.lookup(name); ok {
+			return []dclSymbol{sym}
+		}
+
+		return nil
+	}
+
+	var shown []dclSymbol
+
+	for _, sym := range t {
+		if name == "" || lnm.Match(name, sym.name) {
+			shown = append(shown, sym)
+		}
+	}
+
+	sort.Slice(shown, func(i, j int) bool { return shown[i].name < shown[j].name })
+
+	return shown
 }
 
 // showLine is sym's line in SHOW SYMBOL/DCL.
