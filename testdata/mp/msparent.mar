@@ -1,0 +1,357 @@
+	.title	msparent
+;
+; The multiprocessing milestone's parent (docs/PHASE-48 - LIB_SPAWN.md,
+; subtask 5; docs/PHASE-43 - processes.md, "The milestone"). It starts a
+; child, MSCHILD.EXE (from MSCHILD.MAR), either with $CREPRC or with
+; LIB$SPAWN and the command RUN, and the two:
+;
+; - exchange messages through two temporary mailboxes, which the child
+;   finds by their logical names, MS_TO_CHILD and MS_TO_PARENT: eight
+;   rounds of "MSG n" from the parent, each answered "ACK n";
+; - both append a record for each round to one file, SHARED.DAT, opened
+;   with write sharing, the parent's while the child is writing its own,
+;   and each writes a file of its own, PARENT.DAT and CHILD.DAT;
+; - at the end the parent sends "DONE", learns of the child's end (from
+;   its termination mailbox after $CREPRC, from LIB$SPAWN's event flag
+;   and completion status after LIB$SPAWN), and reads SHARED.DAT back,
+;   counting each process's records.
+;
+; The command line (LIB$GET_FOREIGN) chooses how: "CREPRC image" or
+; "SPAWN image", image being MSCHILD.EXE's file name. Run it with the
+; default directory on a volume where it may make the three files:
+;
+;	$ MSPARENT :== $DUA1:[DIR]MSPARENT.EXE
+;	$ MSPARENT SPAWN DUA1:[DIR]MSCHILD.EXE
+;
+; If a service fails, the parent says so ("Parent: failed with status
+; nnnnnnnn") and ends with that status. Otherwise each side prints only
+; when the other is waiting for it, so the output
+; is the same however the two are scheduled ("$CREPRC" or "LIB$SPAWN" on
+; the first line):
+;
+;	Parent: starting the child by LIB$SPAWN
+;	Child: running
+;	Parent: round 1 acknowledged
+;	...
+;	Parent: round 8 acknowledged
+;	Child: done
+;	Parent: child ended with status 00000003
+;	Parent: SHARED.DAT has 8 records from the parent and 8 from the child
+;
+; It uses only system services, RMS, and RTL routines, so it assembles and
+; runs on VMS as it does on govax. CLI$M_NOWAIT is left undefined, an
+; external symbol LINK resolves from STARLET.OLB.
+;
+	$IODEF
+	$ACCDEF
+	$DVIDEF
+	$RABDEF
+	$RMSDEF
+
+; CHECK: end the program with the service's failure status in R0.
+	.macro	check	?ok
+	blbs	r0,ok
+	brw	fail
+ok:
+	.endm
+
+; IOCHECK: the same, for the status in the I/O status block.
+	.macro	iocheck	?ok
+	movzwl	iosb,r0
+	blbs	r0,ok
+	brw	fail
+ok:
+	.endm
+
+; PRINT: write the descriptor's text on SYS$OUTPUT.
+	.macro	print	desc
+	pushaq	desc
+	calls	#1,g^lib$put_output
+	.endm
+
+rounds = 8				; the rounds of messages
+spawn_efn = 10				; LIB$SPAWN's completion event flag
+
+	.psect	data,noexe,wrt,long
+; The command line, and the image's name in it.
+cmd_desc:	.word	255
+		.byte	14,1
+		.long	cmd_buf
+cmd_buf:	.blkb	255
+cmd_len:	.word	0,0
+image_desc:	.word	0
+		.byte	14,1
+		.long	0
+
+to_child_name:	.ascid	/MS_TO_CHILD/
+to_parent_name:	.ascid	/MS_TO_PARENT/
+child_name:	.ascid	/MS_CHILD/
+term_desc:	.ascid	/TT:/			; the $CREPRC child writes here
+
+creprc_msg:	.ascid	/Parent: starting the child by $CREPRC/
+spawn_msg:	.ascid	/Parent: starting the child by LIB$SPAWN/
+usage_msg:	.ascid	/Parent: the command line is CREPRC or SPAWN, then the child's image/
+msg_ctl:	.ascid	/MSG !UL/
+ack_ctl:	.ascid	/ACK !UL/
+rec_ctl:	.ascid	/PARENT !UL/
+run_ctl:	.ascid	/RUN !AD/
+round_ctl:	.ascid	/Parent: round !UL acknowledged/
+bad_ctl:	.ascid	/Parent: round !UL: the reply was !AD/
+end_ctl:	.ascid	/Parent: child ended with status !XL/
+sum_ctl:	.ascid	/Parent: SHARED.DAT has !UL records from the parent and !UL from the child/
+fail_ctl:	.ascid	/Parent: failed with status !XL/
+done_text:	.ascii	/DONE/
+parent_text:	.ascii	/PARENT /
+child_text:	.ascii	/CHILD /
+
+; A message, the reply expected, a record, and a line to print.
+msg_buf:	.blkb	64
+msg_desc:	.word	64
+		.byte	14,1
+		.long	msg_buf
+msg_len:	.word	0,0
+exp_buf:	.blkb	64
+exp_desc:	.word	64
+		.byte	14,1
+		.long	exp_buf
+exp_len:	.word	0,0
+rec_buf:	.blkb	80
+rec_desc:	.word	80
+		.byte	14,1
+		.long	rec_buf
+rec_len:	.word	0,0
+out_buf:	.blkb	132
+out_desc:	.word	132
+		.byte	14,1
+		.long	out_buf
+out_len:	.word	0,0
+
+; The channels: to the child, from the child, and the termination
+; mailbox, whose unit number $CREPRC wants.
+to_child:	.word	0,0
+to_parent:	.word	0,0
+term_chan:	.word	0,0
+term_unit:	.long	0
+dvi_items:	.word	4,DVI$_UNIT
+		.long	term_unit,0
+		.long	0
+
+; LIB$SPAWN's flags and event flag, and what it reports.
+spawn_flags:	.long	CLI$M_NOWAIT
+spawn_efn_byte:	.byte	spawn_efn
+spawn_status:	.long	0
+
+child_pid:	.long	0
+count:		.long	0
+end_status:	.long	0
+fail_status:	.long	0
+parents:	.long	0
+children:	.long	0
+term_msg:	.blkb	ACC$K_TERMLEN
+iosb:		.quad	0
+
+; The files: SHARED.DAT, shared with the child for writing (each writer's
+; records go at the end of the file, wherever the other's have put it);
+; PARENT.DAT, the parent's own; and SHARED.DAT again, to read it back.
+	.align	long
+shared_fab:	$FAB	FNM=<SHARED.DAT>, FAC=<PUT>, SHR=<GET,PUT>, -
+			ORG=SEQ, RFM=VAR, RAT=CR
+shared_rab:	$RAB	FAB=shared_fab, ROP=EOF, RBF=rec_buf
+own_fab:	$FAB	FNM=<PARENT.DAT>, FAC=<PUT>, ORG=SEQ, RFM=VAR, RAT=CR
+own_rab:	$RAB	FAB=own_fab, RBF=rec_buf
+read_fab:	$FAB	FNM=<SHARED.DAT>, FAC=<GET>, SHR=<GET,PUT>
+read_rab:	$RAB	FAB=read_fab, UBF=rec_buf, USZ=80
+
+	.psect	code,exe,nowrt
+	.entry	start,^m<r2,r3,r4,r5>
+
+; The command line: CREPRC or SPAWN, a blank, and the child's image.
+	pushal	cmd_len
+	pushl	#0
+	pushaq	cmd_desc
+	calls	#3,g^lib$get_foreign
+	check
+	locc	#^A/ /,cmd_len,cmd_buf
+	bneq	10$
+	print	usage_msg
+	movl	#4,r0				; a severe error
+	ret
+10$:	decl	r0				; the image follows the blank
+	incl	r1
+	movw	r0,image_desc
+	movl	r1,image_desc+4
+
+; The files, made before the child can open SHARED.DAT.
+	$create	fab=shared_fab
+	check
+	$connect	rab=shared_rab
+	check
+	$create	fab=own_fab
+	check
+	$connect	rab=own_rab
+	check
+
+; The two mailboxes, whose logical names go in the job's table, where
+; the child finds them.
+	$crembx_s	chan=to_child, maxmsg=#64, bufquo=#256, -
+			lognam=to_child_name
+	check
+	$crembx_s	chan=to_parent, maxmsg=#64, bufquo=#256, -
+			lognam=to_parent_name
+	check
+
+	cmpb	cmd_buf,#^A/S/
+	bneq	creprc
+	brw	spawn
+
+; $CREPRC: the child runs MSCHILD.EXE directly, its end reported to a
+; termination mailbox.
+creprc:	print	creprc_msg
+	$crembx_s	chan=term_chan, maxmsg=#128, bufquo=#512
+	check
+	$getdviw_s	chan=term_chan, itmlst=dvi_items
+	check
+	$creprc_s	pidadr=child_pid, image=image_desc, output=term_desc, -
+			prcnam=child_name, mbxunt=term_unit
+	check
+	brw	talk
+
+; LIB$SPAWN: the child's CLI runs "RUN image", without making us wait;
+; its end sets the event flag, and its final status comes back.
+spawn:	print	spawn_msg
+	movzwl	image_desc,r2
+	$fao_s	ctrstr=run_ctl, outlen=out_len, outbuf=out_desc, -
+		p1=r2, p2=image_desc+4		; !AD
+	check
+	movw	out_len,out_desc
+	pushab	spawn_efn_byte			; event flag
+	pushal	spawn_status			; completion status
+	pushal	child_pid			; process ID
+	pushaq	child_name			; process name
+	pushal	spawn_flags			; flags
+	clrl	-(sp)				; output file: ours
+	clrl	-(sp)				; input file: ours
+	pushaq	out_desc			; the command
+	calls	#8,g^lib$spawn
+	movw	#132,out_desc
+	check
+
+; The rounds. A mailbox write without IO$M_NOW finishes when the child
+; has read the message; then each process appends its record of the
+; round to SHARED.DAT, at the same time, and the parent reads the reply.
+talk:	movl	#1,count
+round:	$fao_s	ctrstr=msg_ctl, outlen=msg_len, outbuf=msg_desc, p1=count
+	check
+	$qiow_s	chan=to_child, func=#IO$_WRITEVBLK, iosb=iosb, -
+		p1=msg_buf, p2=msg_len
+	check
+	iocheck
+
+	$fao_s	ctrstr=rec_ctl, outlen=rec_len, outbuf=rec_desc, p1=count
+	check
+	bsbw	put_records
+	check
+
+	$qiow_s	chan=to_parent, func=#IO$_READVBLK, iosb=iosb, -
+		p1=msg_buf, p2=#64
+	check
+	iocheck
+	movzwl	iosb+2,msg_len
+	$fao_s	ctrstr=ack_ctl, outlen=exp_len, outbuf=exp_desc, p1=count
+	check
+	cmpc5	msg_len,msg_buf,#0,exp_len,exp_buf
+	beql	20$
+	$fao_s	ctrstr=bad_ctl, outlen=out_len, outbuf=out_desc, -
+		p1=count, p2=msg_len, p3=#msg_buf
+	bsbw	print_out
+	movl	#4,r0
+	ret
+20$:	$fao_s	ctrstr=round_ctl, outlen=out_len, outbuf=out_desc, p1=count
+	check
+	bsbw	print_out
+
+	incl	count
+	cmpl	count,#rounds
+	bgtr	30$
+	brw	round
+
+; The end: "DONE", then wait for the child to end.
+30$:	$qiow_s	chan=to_child, func=#IO$_WRITEVBLK, iosb=iosb, -
+		p1=done_text, p2=#4
+	check
+	iocheck
+
+	cmpb	cmd_buf,#^A/S/
+	beql	40$
+	$qiow_s	chan=term_chan, func=#IO$_READVBLK, iosb=iosb, -
+		p1=term_msg, p2=#ACC$K_TERMLEN
+	check
+	iocheck
+	movl	term_msg+ACC$L_FINALSTS,end_status
+	brb	50$
+40$:	$waitfr_s	efn=#spawn_efn
+	check
+	movl	spawn_status,end_status
+50$:	$fao_s	ctrstr=end_ctl, outlen=out_len, outbuf=out_desc, -
+		p1=end_status
+	check
+	bsbw	print_out
+
+; Read SHARED.DAT back, counting each process's records.
+	$close	fab=shared_fab
+	check
+	$close	fab=own_fab
+	check
+	$open	fab=read_fab
+	check
+	$connect	rab=read_rab
+	check
+60$:	$get	rab=read_rab
+	blbc	r0,70$
+	cmpc3	#7,rec_buf,parent_text
+	bneq	65$
+	incl	parents
+	brb	60$
+65$:	cmpc3	#6,rec_buf,child_text
+	bneq	60$
+	incl	children
+	brb	60$
+70$:	cmpl	r0,#RMS$_EOF
+	beql	80$
+	brw	fail
+80$:	$close	fab=read_fab
+	check
+	$fao_s	ctrstr=sum_ctl, outlen=out_len, outbuf=out_desc, -
+		p1=parents, p2=children
+	check
+	bsbw	print_out
+	movl	#1,r0
+	ret
+
+; A service failed: say which status, and end with it.
+fail:	movl	r0,fail_status
+	$fao_s	ctrstr=fail_ctl, outlen=out_len, outbuf=out_desc, -
+		p1=fail_status
+	bsbw	print_out
+	movl	fail_status,r0
+	ret
+
+; Append REC_BUF's record (REC_LEN long) to SHARED.DAT and PARENT.DAT,
+; returning the first failure's status, or the last success's.
+put_records:
+	movw	rec_len,shared_rab+RAB$W_RSZ
+	movw	rec_len,own_rab+RAB$W_RSZ
+	$put	rab=shared_rab
+	blbc	r0,10$
+	$put	rab=own_rab
+10$:	rsb
+
+; Print what $FAO formatted into OUT_BUF.
+print_out:
+	movw	out_len,out_desc
+	pushaq	out_desc
+	calls	#1,g^lib$put_output
+	movw	#132,out_desc
+	rsb
+
+	.end	start

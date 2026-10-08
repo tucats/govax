@@ -298,3 +298,35 @@ subprocess to run, and the definitions a MACRO program needs to call
   then a program doesn't call the macros and uses the names as external
   symbols, which MACRO leaves to LINK and LINK resolves from STARLET.OLB's
   values, as on VMS.
+- 2026-10-08: Subtasks 5 and 6 (the milestone programs and the
+  acceptance tests). The programs are `testdata/mp/msparent.mar` and
+  `mschild.mar` (not `parent.mar`/`child.mar`: Phase 45's
+  `child.mar` is `TestCreChild`'s), described in `testdata/mp/README.md`.
+  The parent's command line is `CREPRC image` or `SPAWN image`; it makes
+  `SHARED.DAT` (FAC=PUT, SHR=GET|PUT, RAB$V_EOF) and `PARENT.DAT`, two
+  temporary mailboxes (`MS_TO_CHILD`, `MS_TO_PARENT`, in the job table),
+  and starts the child: by `$CREPRC` with a termination mailbox, or by
+  `LIB$SPAWN` of `RUN image` with CLI$M_NOWAIT (an external symbol LINK
+  resolves from STARLET.OLB), event flag 10, and a completion status.
+  Eight rounds: the parent writes `MSG n` (finished when the child has
+  read it), appends `PARENT n` to both its files while the child appends
+  `CHILD n` to its two, and reads the child's `ACK n`. Then `DONE`, the
+  child's end (its status, 3, from the termination message or
+  LIB$SPAWN's completion status), and `SHARED.DAT` read back and
+  counted. A failing service is reported (`Parent: failed with status
+  ...`). Every line is printed while the other process waits, so the
+  output is the same however they're scheduled. Tests:
+  `console/milestone_test.go`'s `TestMilestone` assembles and links both
+  with govax's MACRO and LINK onto a fresh volume and runs each way at
+  quanta 7, 500, and 20,000, checking the output line by line, PARENT.DAT
+  and CHILD.DAT whole, SHARED.DAT's 16 records (each process's in order;
+  the writers change 14 or 15 times), and, after a dismount and mount,
+  ods2's volume analysis (`VerifyVolume`): all six runs passed the first
+  time they ran, once the programs assembled. `TestMilestone_schedulerOff`
+  is the negative test (SS$_UNSUPPORTED from both, reported by the
+  parent, no process made). `cmd/govax`'s `TestRun_milestone` builds the
+  programs with the `macro` and `link` subcommands onto the configured
+  default volume (`vax.default.volume.file`) and runs both ways with the
+  `run` subcommand under `--instruction-limit`, then checks the volume.
+  Learned on the way: LINK puts a bare `/EXECUTABLE` name beside its
+  object, which was a host file, so the test names the volume.
