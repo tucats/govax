@@ -244,7 +244,7 @@ func (ctx *Context) locate(rabAddr uint32, h *FileHandle, find bool) (located, u
 	result := rmsNormal
 
 	if ctx.locksRecords(h) {
-		lockSts, err := ctx.lockFound(h, rfaAt(target), rop)
+		lockSts, err := ctx.lockFound(rabAddr, h, rfaAt(target), rop)
 		if err != nil || lockSts == 0 {
 			return located{}, 0, err
 		}
@@ -280,21 +280,33 @@ func (ctx *Context) locate(rabAddr uint32, h *FileHandle, find bool) (located, u
 // lockFound locks the record at r that $GET or $FIND found, as RAB$L_ROP
 // says, and drops the stream's other record locks unless RAB$V_ULK keeps
 // them. It returns the success status for the record (RMS$_NORMAL,
-// RMS$_OK_RLK, RMS$_OK_ALK, RMS$_OK_WAT), an error status (RMS$_RLK), or
-// 0 with err the process's wait for the lock.
-func (ctx *Context) lockFound(h *FileHandle, r rfa, rop uint32) (uint32, error) {
+// RMS$_OK_RLK, RMS$_OK_ALK, RMS$_OK_WAT), an error status (RMS$_RLK, or
+// RMS$_TMO when a wait's time limit ran out), or 0 with err the
+// process's wait for the lock.
+func (ctx *Context) lockFound(rabAddr uint32, h *FileHandle, r rfa, rop uint32) (uint32, error) {
 	ls := &h.locks
 	sts := rmsNormal
 
 	switch {
 	case ls.waiting != nil && ls.pendingAt == r:
-		// A lock waited for: granted now, or still not.
+		// A lock waited for: granted now, or still not, or not in the
+		// time RAB$B_TMO allows (RMS$_TMO, and the wait is given up).
 		if ls.waiting.State != lck.Granted {
-			return 0, ctx.awaitLock(ls.waiting)
+			if ls.deadline == 0 || ctx.Clock() < ls.deadline {
+				return 0, ctx.awaitLock(h, ls.waiting)
+			}
+
+			ctx.dropWaiting(h)
+
+			if rop&ropULK == 0 {
+				ctx.unlockRecords(h, nil)
+			}
+
+			return rmsTimedOut, nil
 		}
 
 		ctx.holdRecord(h, r, ls.waiting)
-		ls.waiting = nil
+		ls.waiting, ls.deadline = nil, 0
 		sts = rmsOKWaited
 	default:
 		if ls.waiting != nil {
@@ -319,7 +331,11 @@ func (ctx *Context) lockFound(h *FileHandle, r rfa, rop uint32) (uint32, error) 
 		case lockWait:
 			ls.pendingAt = r
 
-			return 0, ctx.awaitLock(ls.waiting)
+			if ls.deadline, err = ctx.lockDeadline(rabAddr, rop); err != nil {
+				return 0, err
+			}
+
+			return 0, ctx.awaitLock(h, ls.waiting)
 		case lockAlready:
 			sts = rmsOKAlreadyLocked
 		}

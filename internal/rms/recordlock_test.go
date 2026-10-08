@@ -22,7 +22,7 @@ func newLockingSharers(t *testing.T, n int) ([]*sharer, *MountTable, []func() bo
 	for i, s := range p {
 		s.ctx.Locks = locks
 		s.ctx.PID = uint32(0x301 + i)
-		s.ctx.AwaitLock = func(over func() bool) error {
+		s.ctx.AwaitLock = func(over func() bool, _ uint64) error {
 			waits[i] = over
 
 			return errTestWait

@@ -202,3 +202,16 @@ stream's record locks.
   pin needs a new ods2 release before `GOWORK=off` builds. Tests:
   `recordops_test.go` (eight), and `TestRun_recordUpdates`
   (`testdata/rms49/update.mar`, a MACRO program run end to end).
+- 2026-10-08: Subtask 5, RAB$V_TMO. When a record lock wait (RAB$V_WAT)
+  begins with TMO set, the stream's `streamLocks.deadline` is
+  RAB$B_TMO seconds on (`lockDeadline`, by the new `Context.Clock`);
+  called again after it with the lock still not granted, the $GET or
+  $FIND gives up the wait and fails with RMS$_TMO (the record stays the
+  next, and the stream's locks go unless ULK). `Context.AwaitLock` now
+  takes the deadline: corevms keeps it as `Environment.waitDeadline`,
+  which ends the wait, and which `nextTimer` counts so an idle machine
+  moves time to it; it isn't a timer request ($CANTIM, JPI$_TQCNT don't
+  see it). A TMO of 0 times out at the first look after the wait begins
+  (unconfirmed: VMS may refuse at once, as without WAT). TMO's terminal
+  and mailbox meanings are untouched. Tests: `TestRecordLock_timeout`,
+  `TestLocks_waitDeadline`.

@@ -323,3 +323,74 @@ func TestUpdate_locked(t *testing.T) {
 
 	wantRecords(t, records(t, mounts, "L.DAT"), "U0", "R1")
 }
+
+// TestRecordLock_timeout: a $GET waiting for a record with RAB$V_TMO
+// gives up when RAB$B_TMO's seconds have passed: RMS$_TMO, the record
+// still next; a wait whose lock comes in time succeeds as before.
+func TestRecordLock_timeout(t *testing.T) {
+	p, mounts, _ := newLockingSharers(t, 2)
+	a, b := p[0], p[1]
+
+	var now uint64 = 1_000_000_000
+
+	var deadlines []uint64
+
+	b.ctx.Clock = func() uint64 { return now }
+	b.ctx.AwaitLock = func(_ func() bool, deadline uint64) error {
+		deadlines = append(deadlines, deadline)
+
+		return errTestWait
+	}
+
+	writeFile(t, mounts, "TMO.DAT", "R0", "R1")
+	a.mustOpen("TMO.DAT", facGet|facUpd, shrAll, false, 0)
+	b.mustOpen("TMO.DAT", facGet|facUpd, shrAll, false, 0)
+
+	a.wantGet("R0", rmsNormal)
+
+	putByte(t, b.ctx, testRabAddr+rabTMO, 5)
+	putLongwordAt(t, b.ctx, testRabAddr+rabROP, ropWAT|ropTMO)
+	putLongwordAt(t, b.ctx, testRabAddr+rabUBF, testRecordAddr)
+	putWord(t, b.ctx, testRabAddr+rabUSZ, 1024)
+
+	get := func() (uint32, error) { return SysGet(b.ctx, []uint32{testRabAddr}) }
+
+	if _, err := get(); err != errTestWait {
+		t.Fatalf("B's $GET: %v, want a wait", err)
+	}
+
+	if want := now + 5*10_000_000 + 1; len(deadlines) != 1 || deadlines[0] != want {
+		t.Fatalf("deadlines %v, want [%d]", deadlines, want)
+	}
+
+	now += 4 * 10_000_000
+
+	if _, err := get(); err != errTestWait {
+		t.Fatalf("B's $GET after 4 seconds: %v, want a wait", err)
+	}
+
+	now += 10_000_000 + 1
+
+	if r0, err := get(); err != nil || r0 != rmsTimedOut {
+		t.Fatalf("B's $GET after 5 seconds: %#x, %v; want RMS$_TMO", r0, err)
+	}
+
+	// The record is still B's next; this time A lets it go in time.
+	if _, err := get(); err != errTestWait {
+		t.Fatalf("B's second $GET: %v, want a wait", err)
+	}
+
+	wantRecStatus(t, "A's $FREE", a.call(SysFree, 0), rmsNormal)
+	b.wantGet("R0", rmsOKWaited)
+
+	// No TMO: no deadline.
+	a.wantGet("R1", rmsNormal)
+	putLongwordAt(t, b.ctx, testRabAddr+rabROP, ropWAT)
+
+	if _, err := get(); err != errTestWait || deadlines[len(deadlines)-1] != 0 {
+		t.Fatalf("B's $GET without TMO: %v, deadline %d; want a wait with none", err, deadlines[len(deadlines)-1])
+	}
+
+	a.close()
+	b.close()
+}

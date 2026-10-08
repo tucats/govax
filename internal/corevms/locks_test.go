@@ -79,3 +79,43 @@ func TestLocks_imageRundown(t *testing.T) {
 		t.Error("the executive-mode lock went at image rundown")
 	}
 }
+
+// TestLocks_waitDeadline: a record lock wait with a time limit
+// (RAB$V_TMO) ends when the clock reaches it; idling moves time to it as
+// to a timer; it is no timer request ($GETJPI's count), and expiring it
+// clears it.
+func TestLocks_waitDeadline(t *testing.T) {
+	env, _ := fixture()
+	now := fakeClock(env)
+	deadline := *now + 5*1000*ms
+
+	if err := env.awaitLock(func() bool { return false }, deadline); err != ErrWait {
+		t.Fatalf("awaitLock: %v, want ErrWait", err)
+	}
+
+	over := env.pendingWait.over
+	env.pendingWait = nil
+
+	if over() {
+		t.Error("the wait is over before its deadline")
+	}
+
+	if next, ok := env.nextTimer(); !ok || next != deadline {
+		t.Errorf("nextTimer = %d, %v; want the deadline %d", next, ok, deadline)
+	}
+
+	if n := env.PendingTimers(); n != 0 {
+		t.Errorf("%d timer requests, want 0", n)
+	}
+
+	*now = deadline
+	env.expireTimers()
+
+	if !over() {
+		t.Error("the wait isn't over at its deadline")
+	}
+
+	if _, ok := env.nextTimer(); ok {
+		t.Error("the deadline is still due after expiring")
+	}
+}

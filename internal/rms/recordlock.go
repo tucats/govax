@@ -36,9 +36,9 @@ import (
 //     next $GET tries it again. With RAB$V_RRL the record is returned
 //     without a lock (RMS$_SUC, as for any sequential file); with
 //     RAB$V_WAT the $GET waits for the lock, and then returns
-//     RMS$_OK_WAT. (RAB$V_TMO's time limit on that wait isn't
-//     implemented.) Locking a record the stream already holds is
-//     RMS$_OK_ALK.
+//     RMS$_OK_WAT; with RAB$V_TMO too, for at most RAB$B_TMO seconds,
+//     and then it fails with RMS$_TMO (Phase 49). Locking a record the
+//     stream already holds is RMS$_OK_ALK.
 //
 // A record is named by its record's file address (RFA): its virtual
 // block and the offset in it of its first byte. Each stream's record
@@ -111,6 +111,10 @@ type streamLocks struct {
 
 	pendingAt rfa
 	waiting   *lck.Lock
+
+	// deadline is when the wait for waiting runs out (RAB$V_TMO), in
+	// system time; 0 for no limit.
+	deadline uint64
 }
 
 // locksRecords reports whether handle's stream takes record locks.
@@ -301,17 +305,43 @@ func (ctx *Context) dropWaiting(h *FileHandle) {
 
 	events, _ := ls.mgr.Dequeue(ls.waiting.Owner, ls.waiting.ID, lck.DequeueOptions{})
 	lck.Deliver(events)
-	ls.waiting = nil
+	ls.waiting, ls.deadline = nil, 0
 }
 
-// awaitLock waits for l (RAB$V_WAT): the service is called again when
-// it's granted.
-func (ctx *Context) awaitLock(l *lck.Lock) error {
+// awaitLock waits for the stream's lock l (RAB$V_WAT): the service is
+// called again when it's granted, or when the wait's time limit, if it
+// has one, runs out.
+func (ctx *Context) awaitLock(h *FileHandle, l *lck.Lock) error {
 	if ctx.AwaitLock == nil {
 		return errors.New("rms: a record lock wait with no way to wait")
 	}
 
-	return ctx.AwaitLock(func() bool { return l.State == lck.Granted })
+	return ctx.AwaitLock(func() bool { return l.State == lck.Granted }, h.locks.deadline)
+}
+
+// The RAB fields of a record lock wait's time limit: RAB$V_TMO asks for
+// one, RAB$B_TMO is its length in seconds (0 to 255; RMS manual).
+var (
+	ropTMO = vmsConst("RAB$M_TMO")
+	rabTMO = rabOffset("TMO")
+)
+
+// lockDeadline is when a record lock wait starting now runs out, by the
+// RAB at rabAddr's RAB$V_TMO and RAB$B_TMO; 0 for no limit (no TMO, or
+// no Clock to measure one by).
+func (ctx *Context) lockDeadline(rabAddr, rop uint32) (uint64, error) {
+	if rop&ropTMO == 0 || ctx.Clock == nil {
+		return 0, nil
+	}
+
+	seconds, err := ctx.loadByte(rabAddr + rabTMO)
+	if err != nil {
+		return 0, err
+	}
+
+	// A deadline of 0 would mean none: a wait of 0 seconds ends a tick
+	// after it starts, as good as at once.
+	return ctx.Clock() + uint64(seconds)*10_000_000 + 1, nil
 }
 
 // SysFree implements SYS$FREE (RAB at argv[0]): every record the stream

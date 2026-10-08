@@ -103,9 +103,15 @@ type Context struct {
 	PID   uint32
 
 	// AwaitLock, if set, makes the process wait until over reports true
-	// (a record lock granted, RAB$V_WAT), returning the error the
-	// service returns to be called again then.
-	AwaitLock func(over func() bool) error
+	// (a record lock granted, RAB$V_WAT), or, if deadline isn't 0, until
+	// the system time (Clock) reaches it (RAB$V_TMO), returning the error
+	// the service returns to be called again then.
+	AwaitLock func(over func() bool, deadline uint64) error
+
+	// Clock, if set, is the system time, in VMS's 100-nanosecond units:
+	// what a record lock wait's time limit (RAB$V_TMO) is measured by.
+	// nil: no time limits.
+	Clock func() uint64
 
 	// Waker, if set, is the Data of a record lock the stream waits for:
 	// told the lock is granted, it makes the process computable at once.

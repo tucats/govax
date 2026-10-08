@@ -139,6 +139,12 @@ type Environment struct {
 	// timers is the process's $SETIMR timer queue (timers.go).
 	timers []*timerRequest
 
+	// waitDeadline is when the process's current wait runs out, in
+	// system time (an RMS record lock wait with RAB$V_TMO); 0 for none.
+	// It isn't a timer request (no $CANTIM, no JPI$_TQCNT), but idling
+	// moves time to it as to one, and it ends the wait (timers.go).
+	waitDeadline uint64
+
 	// attentionASTs are the CTRL/C and CTRL/Y AST requests enabled on
 	// the process's terminal channels (ctrlast.go).
 	attentionASTs []attentionAST
@@ -275,6 +281,7 @@ func (env *Environment) rmsContext() *rms.Context {
 		PID:       env.Process.PID,
 		AwaitLock: env.awaitLock,
 		Waker:     lockWaker{env},
+		Clock:     env.Clock,
 	}
 }
 

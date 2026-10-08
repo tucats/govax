@@ -34,8 +34,9 @@ const maxIdleJumps = 64
 // mode before going back to running instructions.
 const idleWaitLimit = 50 * time.Millisecond
 
-// nextTimer returns when the next timer of any process is due, and false
-// if no process has one.
+// nextTimer returns when the next timer of any process is due, or a
+// wait's time limit (Environment.waitDeadline) runs out, and false if
+// no process has either.
 func (sys *System) nextTimer() (uint64, bool) {
 	next := uint64(math.MaxUint64)
 	found := false
@@ -49,6 +50,10 @@ func (sys *System) nextTimer() (uint64, bool) {
 			if t.expiry < next {
 				next, found = t.expiry, true
 			}
+		}
+
+		if d := env.waitDeadline; d != 0 && d < next {
+			next, found = d, true
 		}
 	}
 

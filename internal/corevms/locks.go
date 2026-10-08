@@ -39,9 +39,14 @@ func (env *Environment) releaseLocks() {
 
 // awaitLock makes the process wait, in LEF as for a lock's event flag,
 // until over reports true: an RMS stream waiting for a record lock
-// (RAB$V_WAT).
-func (env *Environment) awaitLock(over func() bool) error {
-	return env.waitOn(sched.StateLEF, sched.ResourceNone, resourceBoost, over)
+// (RAB$V_WAT). A deadline that isn't 0 ends the wait then too
+// (RAB$V_TMO): the service, called again, fails with RMS$_TMO.
+func (env *Environment) awaitLock(over func() bool, deadline uint64) error {
+	env.waitDeadline = deadline
+
+	return env.waitOn(sched.StateLEF, sched.ResourceNone, resourceBoost, func() bool {
+		return over() || deadline != 0 && env.Clock() >= deadline
+	})
 }
 
 // lockWaker is the lck.Notifier of a lock a process waits for: its grant

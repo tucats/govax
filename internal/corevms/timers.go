@@ -77,6 +77,12 @@ func wallClock() uint64 { return vmsdef.Time(time.Now()) }
 // (reportEvent): a process waiting for it becomes computable with the
 // timer's boost (PRI$_TIMER).
 func (env *Environment) expireTimers() {
+	if d := env.waitDeadline; d != 0 && env.Clock() >= d {
+		// A wait's time limit (environment.go): the wait is over.
+		env.waitDeadline = 0
+		env.reportEvent(sched.ClassTimer)
+	}
+
 	if len(env.timers) == 0 {
 		return
 	}
@@ -198,6 +204,7 @@ func serviceSysCantim(env *Environment, argv []uint32) (uint32, error) {
 // and scheduled wakeups are cancelled when the image exits.
 func (env *Environment) cancelTimers() {
 	env.timers = nil
+	env.waitDeadline = 0
 }
 
 // PendingTimers reports how many timer requests (including scheduled
