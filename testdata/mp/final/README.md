@@ -72,4 +72,5 @@ attach `testdata/disks/mp-final2.dsk`, set its `[000000]` as the default,
     govax console < testdata/mp/final/copyout2.cmd
 
 The log goes to `../probe5/vax/p5args.log`; `TestProbe5Args` prints
-govax's side. It holds program output only, no MACRO listing.
+govax's side. It holds program output only, no MACRO listing. It ran on
+2026-10-08, and every argument minimum is now govax's.
