@@ -60,8 +60,8 @@ fi
 # definition probes (testdata/mp/run46) on 2026-10-08, as were Phase 48's
 # definition probes' log (testdata/mp/run48) and macro round 7's
 # (testdata/mp/final); none holds expansion text. Phase 49's probe's
-# MACRO log (testdata/probe49, copied back by copyout.cmd) waits for the
-# author's audit.
+# MACRO logs (testdata/probe49/vax, rounds 1 and 2) were audited on
+# 2026-10-09: empty. Nothing waits now.
 unaudited=''
 if [ -n "$unaudited" ] && printf '%s' "$text" | grep -Eq "$unaudited"; then
 	refuse "this names real-MACRO output that may show STARLET macro text and hasn't been audited"
