@@ -1,0 +1,116 @@
+# Phase 49's probe
+
+What Phase 49's subtasks chose without a manual to settle it
+(`docs/PHASE-49 - record updates and locks.md`, each subtask's
+"Unconfirmed" items). One program, `probe6.mar`, in one process: two
+streams on one file stand in for two processes where record locks are
+asked about, and a process's lock on itself stands in for a deadlock.
+
+| File | What it holds |
+| ---- | ------------- |
+| `probe6.mar` | The program: steps 1 to 9, each line `n what: result` |
+| `probe6.com` | Builds and runs it; MACRO's and LINK's output to their own logs |
+| `exchange.cmd`, `copyout.cmd` | Make the exchange volume and copy the logs back |
+| `vax/` | The VMS run's logs, once it has run |
+
+`TestProbe6` (`internal/console`) runs the program under govax;
+`go test ./internal/console -run TestProbe6 -v` prints govax's report,
+to set beside VMS's. Writing it already found one bug: `$OPEN` refused
+a FAB whose only access was DEL or TRN.
+
+## The steps
+
+Statuses are hexadecimal; govax's answers (2026-10-09) are in
+parentheses.
+
+1. `$UPDATE` of a record to another length, in a variable-length file
+   and in a stream file (RMS$_RSZ for both).
+2. `$GET` by an RFA one byte into the first record (RMS$_RFA).
+3. `$OPEN` and `$GET` in a stream whose only access is UPD, and one
+   whose only is TRN (both succeed).
+4. Two streams on one shared file, R1 R2 R3:
+   - a: B's `$GET` of the record A has locked (RMS$_RLK, the baseline);
+   - b: A's `$PUT` with RAB$V_TPT where R2 was, and B's `$GET` of the
+     record it put, by the RFA the `$PUT` returned: does `$PUT` lock it?
+     (it doesn't);
+   - c: A reads R1 and the next record with ULK and `$TRUNCATE`s at the
+     second; B's `$GET` of R1: does `$TRUNCATE` keep A's locks? (it
+     does);
+   - d: `$UPDATE` of a record read with RAB$V_NLK (RMS$_RNL);
+   - e: B's `$GET` of a locked record with WAT and TMO of 0 and of 2
+     seconds: the status and how long it took (RMS$_TMO, after about
+     0 and 2 s).
+5. `$GETLKI`:
+   - a: from the wildcard lock ID -1, holding two locks: each call's
+     status, the context it writes back, and the lock ID (the high bit
+     and the last lock ID; SS$_NOMORELOCK at the end);
+   - b: LKI$_STATE of an EX request waiting behind another: the granted
+     mode a waiting lock reports (NL, 0);
+   - c: LKI$_LOCKS of a resource with two locks into a 30-byte buffer:
+     the return length longword (one whole 24-byte entry, the entry size
+     in bits 16-30, bit 31 for the short buffer: 80180018).
+6. A process holding a resource in EX asks for it in EX again: is that
+   found as a deadlock, and when? A 20-second timer ends the wait if
+   not (SS$_DEADLOCK after DEADLOCK_WAIT, about 10 s).
+7. File-backed sections:
+   - a: a new file, ALQ=10 and nothing written, mapped whole on a user
+     file open's channel: the status and the pages mapped (SS$_NORMAL,
+     not SS$_CREATED, for a private section; 10 pages, the allocation,
+     not the end of file);
+   - b: after a write to page 6 and `$DELTVA`, the file's end of file
+     and allocation (XABFHC: EBK and FFB unchanged, 0 and 0);
+   - c: `$UPDSEC` with nothing modified: the status, the IOSB, the event
+     flag, and whether the AST runs (SS$_NOTMODIFIED, in the IOSB too,
+     the flag set, no AST);
+   - d: `$CRMPSC` on a disk channel with no file accessed
+     (SS$_FILNOTACC);
+   - e: a global section of a file opened read-only, then `$MGBLSC`
+     with SEC$M_WRT (SS$_CREATED, then SS$_NOWRT);
+   - f: `$OPEN` of NLA0: with FAB$V_UFO (RMS$_SUPPORT; VMS may give a
+     channel).
+8. The buffered and direct I/O counts each of these adds (JPI$_BUFIO,
+   JPI$_DIRIO): a `$QIOW` write to NLA0:; a LIB$PUT_OUTPUT line (to
+   PROBE6.LOG, a file, on VMS); `$CREATE`, ten 80-byte `$PUT`s, and
+   `$CLOSE`; `$OPEN`, `$GET` to the end, `$CLOSE`. govax counts the
+   `$QIOW` and a line as one buffered I/O each, and ods2's block
+   operations as direct I/Os (29 and 16), which won't match RMS's.
+9. A wildcard directory search, `[P6*...]P6F.DAT`, of [P6A] and [P6C];
+   after its first file, [P6] (behind it in the walk), [P6A.B] and
+   [P6B] (ahead) are made: which it finds ([P6A], [P6A.B], [P6B],
+   [P6C], then RMS$_NMF).
+
+## The VAX run
+
+1. Build the exchange volume, from the repository root:
+
+       govax console < testdata/probe49/exchange.cmd
+
+   This makes `testdata/disks/probe49.dsk` (RD53 size, label PROBE49,
+   gitignored).
+2. Attach it to the simh VAX, mount it, set its `[000000]` as the
+   default directory, and run, from the SYSTEM account:
+
+       @PROBE6
+
+   Nothing should wait longer than step 6's 20 seconds (step 4e's two
+   seconds and step 7c's one aside).
+3. Dismount, copy the container back, and run:
+
+       govax console < testdata/probe49/copyout.cmd
+
+   The logs go to `vax/`: `probe6.log` (the report), `p6link.log`, and
+   MACRO's.
+
+**Audit MACRO's log before anything reads it.** A MACRO error message
+can quote a line of a macro's expansion, so Claude's clean-room hook
+(`.claude/hooks/cleanroom.sh`) refuses any tool call that names it
+until the author has checked it and taken it off the hook's
+`unaudited` list. The report and LINK's log are fine to read.
+
+If MACRO or LINK failed, PROBE6.LOG won't be there: the build logs say
+why.
+
+## After the run
+
+`go test ./internal/console -run TestProbe6 -v` prints govax's side;
+each difference settles one of the phase doc's unconfirmed items.

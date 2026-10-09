@@ -439,3 +439,21 @@ stream's record locks.
   back at `$CLOSE`, and such an open on a volume mounted read-only is
   RMS$_PRV. Tests: `TestTruncate_trnOnly`, `TestSysOpen_facDeleteOnly`
   (replacing `TestSysOpen_facUnimplementedOnly`).
+- 2026-10-09: Subtask 12, the probe, prepared (`testdata/probe49`,
+  README.md): `probe6.mar`, one process, nine steps asking what the
+  subtasks left unconfirmed: $UPDATE to another length (variable and
+  stream), an RFA inside a record, UPD-only and TRN-only streams' $GET,
+  record locks between two streams ($PUT with TPT, $TRUNCATE, NLK and
+  $UPDATE, WAT with TMO 0 and 2), `$GETLKI`'s wildcard context, a
+  waiting lock's granted mode, a short LKI$_LOCKS buffer, a process
+  deadlocked on its own lock, file sections (the size of an unwritten
+  ALQ file, the end of file after section writes, `$UPDSEC` with
+  nothing modified, a disk channel with no file, `$MGBLSC` WRT of a
+  read-only file section, UFO on NLA0:), the I/O counts of four
+  operations, and a `$SEARCH` seeing directories made during it.
+  `TestProbe6` runs it under govax and logs the report; the README
+  lists govax's answers beside each question. `probe6.com` keeps
+  MACRO's output in a log of its own, on the clean-room hook's
+  unaudited list until the author has checked it. Waiting for the VAX
+  run. Not asked: terminal reads (IO$M_PURGE with reads queued, a
+  timed read), the deadlock victim among several processes, ASTLM.

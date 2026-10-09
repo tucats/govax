@@ -1,0 +1,655 @@
+	.title	probe6
+;
+; Phase 49's probe (README.md): what its subtasks chose without a manual
+; to settle it. Each step prints lines "n what: result", the statuses in
+; hexadecimal.
+;
+; It uses only system services, RMS, and LIBRTL, and macros govax's
+; library has too, so govax runs it as well (TestProbe6). Run it with
+; the default directory on a volume it may make files and directories
+; on.
+;
+	$IODEF
+	$JPIDEF
+	$LCKDEF
+	$LKIDEF
+	$SECDEF
+	$SSDEF
+	$RMSDEF
+	$FABDEF
+	$RABDEF
+	$NAMDEF
+	$XABFHCDEF
+
+	.psect	data,noexe,wrt,long
+
+; The report's lines.
+l_1:	.ascid	"1 $UPDATE to another length: VAR !XL, STM !XL"
+l_2:	.ascid	"2 $GET by an RFA inside a record: !XL"
+l_3:	.ascid	"3 FAC=UPD only: $OPEN !XL, $GET !XL; FAC=TRN only: $OPEN !XL, $GET !XL"
+l_4a:	.ascid	"4a another stream's $GET of a locked record: !XL"
+l_4b:	.ascid	"4b $PUT with TPT: !XL; another stream's $GET of its record: !XL"
+l_4c:	.ascid	"4c $TRUNCATE: !XL; another stream's $GET of a record locked before: !XL"
+l_4d:	.ascid	"4d $UPDATE of a record read with NLK: !XL"
+l_4e:	.ascid	"4e $GET of a locked record, WAT and TMO=!UL: !XL after !UL.!2ZL s"
+l_5a:	.ascid	"5a $GETLKIW wildcard: !XL, context !XL, lock !XL"
+l_5b:	.ascid	"5b a waiting EX lock's LKI$_STATE: !XL, requested !UB, granted !UB, queue !UB"
+l_5c:	.ascid	"5c LKI$_LOCKS, 2 locks, a 30-byte buffer: !XL, return length !XL"
+l_6:	.ascid	"6 a process waiting for its own EX lock: LKSB !XW after !UL s"
+l_7a:	.ascid	"7a $CRMPSC, ALQ=10, nothing written: !XL, !UL pages"
+l_7b:	.ascid	"7b after writing page 6 and $DELTVA: EBK !UL, FFB !UL, HBK !UL"
+l_7c:	.ascid	"7c $UPDSEC, nothing modified: !XL, IOSB !XL !XL, flag !XL, ASTs !UL"
+l_7d:	.ascid	"7d $CRMPSC on a disk channel with no file: !XL"
+l_7e:	.ascid	"7e read-only global file section: $CRMPSC !XL, $MGBLSC WRT !XL"
+l_7f:	.ascid	"7f $OPEN NLA0: with UFO: !XL, STV !XL"
+l_8:	.ascid	"8 !AC: BUFIO +!UL, DIRIO +!UL"
+l_9:	.ascid	"9 $SEARCH: !XL !AD"
+l_end:	.ascid	/end/
+
+; Step 8's cases.
+c_qio:	.ascic	/a $QIOW write to NLA0:/
+c_put:	.ascic	/a LIB$PUT_OUTPUT line/
+c_crt:	.ascic	/$CREATE, ten 80-byte $PUTs, $CLOSE/
+c_rd:	.ascic	/$OPEN, $GETs to the end, $CLOSE/
+c_line:	.ascid	/8 (the measured line)/
+
+; Steps 1 to 3: a variable-length and a stream file of three records.
+	.align	long
+vfab:	$fab	fnm=<P6VAR.DAT>, fac=<GET,PUT,UPD>, rfm=VAR
+	.align	long
+vrab:	$rab	fab=vfab, ubf=buf, usz=80
+	.align	long
+sfab:	$fab	fnm=<P6STM.DAT>, fac=<GET,PUT,UPD>, rfm=STM
+	.align	long
+srab:	$rab	fab=sfab, ubf=buf, usz=80
+	.align	long
+ufab:	$fab	fnm=<P6VAR.DAT>, fac=<UPD>
+	.align	long
+urab:	$rab	fab=ufab, ubf=buf, usz=80
+	.align	long
+tfab:	$fab	fnm=<P6VAR.DAT>, fac=<TRN>
+	.align	long
+trab:	$rab	fab=tfab, ubf=buf, usz=80
+
+; Step 4: one file, two streams.
+	.align	long
+afab:	$fab	fnm=<P6SHR.DAT>, fac=<GET,PUT,UPD,TRN>, rfm=VAR, -
+		shr=<GET,PUT,UPD,DEL>
+	.align	long
+arab:	$rab	fab=afab, ubf=buf, usz=80
+	.align	long
+bfab:	$fab	fnm=<P6SHR.DAT>, fac=<GET,PUT,UPD>, shr=<GET,PUT,UPD,DEL>
+	.align	long
+brab:	$rab	fab=bfab, ubf=buf2, usz=80
+
+; Step 7's files.
+	.align	long
+xfab:	$fab	fnm=<P6SEC.DAT>, fac=<GET,PUT,UPD>, fop=UFO, alq=10, -
+		rfm=FIX, mrs=512, shr=<GET,PUT,UPD>
+	.align	long
+hfab:	$fab	fnm=<P6SEC.DAT>, fac=<GET>, xab=fhc, shr=<GET,PUT,UPD>
+	.align	long
+fhc:	$xabfhc
+	.align	long
+rofab:	$fab	fnm=<P6SEC.DAT>, fac=<GET>, fop=UFO, shr=<GET,PUT,UPD>
+	.align	long
+nfab:	$fab	fnm=<NLA0:>, fac=<GET>, fop=UFO
+
+; Step 8's file.
+	.align	long
+iofab:	$fab	fnm=<P6IO.DAT>, fac=<GET,PUT>, rfm=VAR
+	.align	long
+iorab:	$rab	fab=iofab, rbf=buf, rsz=80, ubf=buf, usz=80
+
+; Step 9: directories, a file in each, and the search.
+d_p6a:	.ascid	/[P6A]/
+d_p6c:	.ascid	/[P6C]/
+d_p6:	.ascid	/[P6]/
+d_p6ab:	.ascid	/[P6A.B]/
+d_p6b:	.ascid	/[P6B]/
+	.align	long
+f_p6a:	$fab	fnm=<[P6A]P6F.DAT>, fac=<PUT>
+	.align	long
+f_p6c:	$fab	fnm=<[P6C]P6F.DAT>, fac=<PUT>
+	.align	long
+f_p6:	$fab	fnm=<[P6]P6F.DAT>, fac=<PUT>
+	.align	long
+f_p6ab:	$fab	fnm=<[P6A.B]P6F.DAT>, fac=<PUT>
+	.align	long
+f_p6b:	$fab	fnm=<[P6B]P6F.DAT>, fac=<PUT>
+	.align	long
+qfab:	$fab	fnm=<[P6*...]P6F.DAT>, nam=qnam
+	.align	long
+qnam:	$nam	esa=esa, ess=255, rsa=rsa, rss=255
+esa:	.blkb	255
+rsa:	.blkb	255
+
+rec1:	.ascii	/R1/
+rec2:	.ascii	/R2/
+rec3:	.ascii	/R3/
+t2:	.ascii	/T2/
+u1:	.ascii	/U1/
+abc:	.ascii	/ABC/
+long4:	.ascii	/ABCD/
+res_a:	.ascid	/P6A/
+res_b:	.ascid	/P6B/
+res_d:	.ascid	/P6D/
+gsec:	.ascid	/P6GSEC/
+sysdisk: .ascid	/SYS$DISK/
+nla0:	.ascid	/NLA0:/
+twenty:	.ascid	/0 00:00:20.00/
+one_sec: .ascid	/0 00:00:01.00/
+
+	.align	long
+status:		.long	0
+status2:	.long	0
+count:		.long	0
+asts:		.long	0
+t0:		.quad	0
+t1:		.quad	0
+delta:		.quad	0
+tick:		.quad	0
+iosb:		.quad	0
+chan:		.word	0,0
+nlchan:		.word	0,0
+rfa:		.blkb	6
+		.word	0
+p0adr:		.long	^X200,^X200
+range:		.long	0,0
+range2:		.long	0,0
+lksb1:		.long	0,0
+lksb2:		.long	0,0
+lksb3:		.long	0,0
+lkctx:		.long	0
+lockid:		.long	0
+lkstate:	.long	0
+lklen:		.long	0
+lkbuf:		.blkb	32
+lki_id:		.word	4,LKI$_LOCKID
+		.long	lockid,0
+		.long	0
+lki_state:	.word	3,LKI$_STATE
+		.long	lkstate,0
+		.long	0
+lki_locks:	.word	30,LKI$_LOCKS
+		.long	lkbuf,lklen
+		.long	0
+bufio:		.long	0
+dirio:		.long	0
+bufio0:		.long	0
+dirio0:		.long	0
+jpi_io:		.word	4,JPI$_BUFIO
+		.long	bufio,0
+		.word	4,JPI$_DIRIO
+		.long	dirio,0
+		.long	0
+buf:		.blkb	80
+buf2:		.blkb	80
+out_buf:	.blkb	132
+out_desc:	.word	132
+		.byte	14,1
+		.long	out_buf
+out_len:	.word	0,0
+
+	.psect	code,exe,nowrt
+	.entry	start,^m<r2,r3,r4,r5,r6,r7,r8>
+
+; 1: $UPDATE of a record to another length, in a variable-length file
+; and in a stream file.
+	$create	fab=vfab
+	$connect	rab=vrab
+	bsbw	three_v
+	$rewind	rab=vrab
+	$get	rab=vrab
+	movab	abc,vrab+RAB$L_RBF
+	movw	#3,vrab+RAB$W_RSZ
+	$update	rab=vrab
+	movl	r0,status
+	$create	fab=sfab
+	$connect	rab=srab
+	movab	rec1,srab+RAB$L_RBF
+	movw	#2,srab+RAB$W_RSZ
+	$put	rab=srab
+	movab	rec2,srab+RAB$L_RBF
+	$put	rab=srab
+	$rewind	rab=srab
+	$get	rab=srab
+	movab	abc,srab+RAB$L_RBF
+	movw	#3,srab+RAB$W_RSZ
+	$update	rab=srab
+	movl	r0,status2
+	$fao_s	ctrstr=l_1, outlen=out_len, outbuf=out_desc, -
+		p1=status, p2=status2
+	bsbw	print
+	$close	fab=sfab
+
+; 2: $GET by an RFA one byte into the first record.
+	$rewind	rab=vrab
+	$get	rab=vrab
+	movc3	#6,vrab+RAB$W_RFA,rfa
+	incw	rfa+4
+	movc3	#6,rfa,vrab+RAB$W_RFA
+	movb	#RAB$C_RFA,vrab+RAB$B_RAC
+	$get	rab=vrab
+	movl	r0,status
+	$fao_s	ctrstr=l_2, outlen=out_len, outbuf=out_desc, -
+		p1=status
+	bsbw	print
+	$close	fab=vfab
+
+; 3: $GET in a stream whose only access is UPD, and one whose only
+; access is TRN.
+	clrl	status2
+	$open	fab=ufab
+	movl	r0,status
+	blbc	r0,31$
+	$connect	rab=urab
+	$get	rab=urab
+	movl	r0,status2
+31$:	$close	fab=ufab
+	clrl	r3
+	$open	fab=tfab
+	movl	r0,r2
+	blbc	r0,32$
+	$connect	rab=trab
+	$get	rab=trab
+	movl	r0,r3
+32$:	$close	fab=tfab
+	$fao_s	ctrstr=l_3, outlen=out_len, outbuf=out_desc, -
+		p1=status, p2=status2, p3=r2, p4=r3
+	bsbw	print
+
+; 4: two streams on one shared file of three records, R1 R2 R3.
+	$create	fab=afab
+	$connect	rab=arab
+	movab	rec1,arab+RAB$L_RBF
+	movw	#2,arab+RAB$W_RSZ
+	$put	rab=arab
+	movab	rec2,arab+RAB$L_RBF
+	$put	rab=arab
+	movab	rec3,arab+RAB$L_RBF
+	$put	rab=arab
+	$free	rab=arab
+	$open	fab=bfab
+	$connect	rab=brab
+	movb	#RAB$C_RFA,brab+RAB$B_RAC
+
+; 4a: A reads R1 (locking it); B asks for it by RFA.
+	$rewind	rab=arab
+	$get	rab=arab
+	movc3	#6,arab+RAB$W_RFA,rfa
+	movc3	#6,rfa,brab+RAB$W_RFA
+	$get	rab=brab
+	movl	r0,status
+	$fao_s	ctrstr=l_4a, outlen=out_len, outbuf=out_desc, -
+		p1=status
+	bsbw	print
+
+; 4b: A frees R1, and $PUTs T2 with TPT where R2 is (the next record);
+; B asks for T2 by the RFA A's $PUT returned: does the $PUT lock it?
+	$free	rab=arab
+	movab	t2,arab+RAB$L_RBF
+	movw	#2,arab+RAB$W_RSZ
+	bisl2	#RAB$M_TPT,arab+RAB$L_ROP
+	$put	rab=arab
+	movl	r0,status
+	bicl2	#RAB$M_TPT,arab+RAB$L_ROP
+	movc3	#6,arab+RAB$W_RFA,brab+RAB$W_RFA
+	$get	rab=brab
+	movl	r0,status2
+	$fao_s	ctrstr=l_4b, outlen=out_len, outbuf=out_desc, -
+		p1=status, p2=status2
+	bsbw	print
+	$free	rab=arab
+	$free	rab=brab
+
+; 4c: A reads R1 and T2, keeping both locked (ULK), and truncates at T2;
+; B asks for R1: does $TRUNCATE drop A's locks?
+	bisl2	#RAB$M_ULK,arab+RAB$L_ROP
+	$rewind	rab=arab
+	$get	rab=arab
+	$get	rab=arab
+	$truncate	rab=arab
+	movl	r0,status
+	bicl2	#RAB$M_ULK,arab+RAB$L_ROP
+	movc3	#6,rfa,brab+RAB$W_RFA
+	$get	rab=brab
+	movl	r0,status2
+	$fao_s	ctrstr=l_4c, outlen=out_len, outbuf=out_desc, -
+		p1=status, p2=status2
+	bsbw	print
+	$free	rab=arab
+	$free	rab=brab
+
+; 4d: A reads R1 without locking it (NLK), and updates it.
+	bisl2	#RAB$M_NLK,arab+RAB$L_ROP
+	$rewind	rab=arab
+	$get	rab=arab
+	bicl2	#RAB$M_NLK,arab+RAB$L_ROP
+	movab	u1,arab+RAB$L_RBF
+	movw	#2,arab+RAB$W_RSZ
+	$update	rab=arab
+	movl	r0,status
+	$fao_s	ctrstr=l_4d, outlen=out_len, outbuf=out_desc, -
+		p1=status
+	bsbw	print
+	$free	rab=arab
+
+; 4e: A locks R1; B waits for it with a time limit of 0, then 2 seconds.
+	$rewind	rab=arab
+	$get	rab=arab
+	movc3	#6,rfa,brab+RAB$W_RFA
+	bisl2	#<RAB$M_WAT!RAB$M_TMO>,brab+RAB$L_ROP
+	clrl	r6
+	bsbw	timed_get
+	movl	#2,r6
+	bsbw	timed_get
+	bicl2	#<RAB$M_WAT!RAB$M_TMO>,brab+RAB$L_ROP
+	$close	fab=bfab
+	$close	fab=afab
+
+; 5a: two locks, then $GETLKIW from the wildcard lock ID -1 until it
+; stops.
+	$enqw_s	lkmode=#LCK$K_EXMODE, lksb=lksb1, resnam=res_a
+	$enqw_s	lkmode=#LCK$K_EXMODE, lksb=lksb2, resnam=res_b
+	mnegl	#1,lkctx
+	movl	#6,r6
+51$:	clrl	lockid
+	$getlkiw_s	lkidadr=lkctx, itmlst=lki_id, iosb=iosb
+	movl	r0,status
+	$fao_s	ctrstr=l_5a, outlen=out_len, outbuf=out_desc, -
+		p1=status, p2=lkctx, p3=lockid
+	bsbw	print
+	blbc	status,52$
+	sobgtr	r6,51$
+52$:
+
+; 5b: a second EX request for P6A waits behind the first: its state.
+	$enq_s	efn=#3, lkmode=#LCK$K_EXMODE, lksb=lksb3, resnam=res_a
+	mnegl	#1,lkstate
+	$getlkiw_s	lkidadr=lksb3+4, itmlst=lki_state, iosb=iosb
+	movl	r0,status
+	movzbl	lkstate,r2
+	movzbl	lkstate+1,r3
+	movzbl	lkstate+2,r4
+	$fao_s	ctrstr=l_5b, outlen=out_len, outbuf=out_desc, -
+		p1=status, p2=r2, p3=r3, p4=r4
+	bsbw	print
+
+; 5c: P6A's locks (two, 24 bytes each) into a 30-byte buffer.
+	mnegl	#1,lklen
+	$getlkiw_s	lkidadr=lksb1+4, itmlst=lki_locks, iosb=iosb
+	movl	r0,status
+	$fao_s	ctrstr=l_5c, outlen=out_len, outbuf=out_desc, -
+		p1=status, p2=lklen
+	bsbw	print
+	$deq_s	lkid=lksb1+4
+	$waitfr_s	efn=#3
+	$deq_s	lkid=lksb3+4
+	$deq_s	lkid=lksb2+4
+
+; 6: the process holds P6D in EX and asks for it in EX again: is that
+; found as a deadlock? A 20-second timer ends the wait if not.
+	$enqw_s	lkmode=#LCK$K_EXMODE, lksb=lksb1, resnam=res_d
+	clrl	lksb2
+	$enq_s	efn=#5, lkmode=#LCK$K_EXMODE, lksb=lksb2, resnam=res_d
+	$bintim_s	timbuf=twenty, timadr=delta
+	$gettim_s	timadr=t0
+	$setimr_s	efn=#6, daytim=delta
+	$wflor_s	efn=#5, mask=#<<1@5>!<1@6>>
+	$gettim_s	timadr=t1
+	$cantim_s
+	bsbw	elapsed
+	movzwl	lksb2,r2
+	$fao_s	ctrstr=l_6, outlen=out_len, outbuf=out_desc, -
+		p1=r2, p2=r6
+	bsbw	print
+	$deq_s	lkid=lksb1+4
+	$waitfr_s	efn=#5
+	$deq_s	lkid=lksb2+4
+
+; 7a: a new file of ten blocks allocated and none written, on a
+; channel, mapped whole: how many pages?
+	$create	fab=xfab
+	movw	xfab+FAB$L_STV,chan
+	$crmpsc_s	inadr=p0adr, retadr=range, chan=chan, -
+			flags=#<SEC$M_WRT!SEC$M_EXPREG>
+	movl	r0,status
+	clrl	r5
+	blbc	status,71$
+	subl3	range,range+4,r5
+	incl	r5
+	ashl	#-9,r5,r5
+71$:	$fao_s	ctrstr=l_7a, outlen=out_len, outbuf=out_desc, -
+		p1=status, p2=r5
+	bsbw	print
+
+; 7b: write page 6 (if it was mapped), unmap it, and see the file's end
+; of file.
+	cmpl	r5,#6
+	blss	72$
+	movl	range,r2
+	movl	#^X66666666,<5*512>(r2)
+72$:	blbc	status,73$
+	$deltva_s	inadr=range
+73$:	$dassgn_s	chan=chan
+	$open	fab=hfab
+	$close	fab=hfab
+	movzwl	fhc+XAB$W_FFB,r2
+	$fao_s	ctrstr=l_7b, outlen=out_len, outbuf=out_desc, -
+		p1=fhc+XAB$L_EBK, p2=r2, p3=fhc+XAB$L_HBK
+	bsbw	print
+
+; 7c: map it again and $UPDSEC with nothing modified: the status, the
+; IOSB, the event flag, and whether the AST runs.
+	$open	fab=xfab
+	movw	xfab+FAB$L_STV,chan
+	$crmpsc_s	inadr=p0adr, retadr=range, chan=chan, -
+			flags=#<SEC$M_WRT!SEC$M_EXPREG>
+	mnegl	#1,iosb
+	mnegl	#1,iosb+4
+	clrl	asts
+	$clref_s	efn=#7
+	$updsec_s	inadr=range, efn=#7, iosb=iosb, astadr=ast
+	movl	r0,status
+	$readef_s	efn=#7, state=count
+	movl	r0,status2
+	$bintim_s	timbuf=one_sec, timadr=tick
+	$setimr_s	efn=#8, daytim=tick
+	$waitfr_s	efn=#8
+	$fao_s	ctrstr=l_7c, outlen=out_len, outbuf=out_desc, -
+		p1=status, p2=iosb, p3=iosb+4, p4=status2, p5=asts
+	bsbw	print
+	$deltva_s	inadr=range
+	$dassgn_s	chan=chan
+
+; 7d: a channel to the disk with no file accessed.
+	$assign_s	devnam=sysdisk, chan=chan
+	$crmpsc_s	inadr=p0adr, retadr=range, chan=chan, -
+			flags=#SEC$M_EXPREG
+	movl	r0,status
+	$fao_s	ctrstr=l_7d, outlen=out_len, outbuf=out_desc, -
+		p1=status
+	bsbw	print
+	$dassgn_s	chan=chan
+
+; 7e: a global section of the file opened read-only, then mapped
+; writable.
+	$open	fab=rofab
+	movw	rofab+FAB$L_STV,chan
+	$crmpsc_s	inadr=p0adr, retadr=range, chan=chan, gsdnam=gsec, -
+			flags=#<SEC$M_GBL!SEC$M_EXPREG>
+	movl	r0,status
+	clrq	range2
+	$mgblsc_s	inadr=p0adr, retadr=range2, gsdnam=gsec, -
+			flags=#<SEC$M_WRT!SEC$M_EXPREG>
+	movl	r0,status2
+	$fao_s	ctrstr=l_7e, outlen=out_len, outbuf=out_desc, -
+		p1=status, p2=status2
+	bsbw	print
+	$deltva_s	inadr=range
+	tstl	range2
+	beql	75$
+	$deltva_s	inadr=range2
+75$:	$dassgn_s	chan=chan
+
+; 7f: a user file open of the null device.
+	clrl	nfab+FAB$L_STV
+	$open	fab=nfab
+	movl	r0,status
+	$fao_s	ctrstr=l_7f, outlen=out_len, outbuf=out_desc, -
+		p1=status, p2=nfab+FAB$L_STV
+	bsbw	print
+	blbc	status,76$
+	$dassgn_s	chan=nfab+FAB$L_STV
+76$:
+
+; 8: the buffered and direct I/O counts of a few operations.
+	$assign_s	devnam=nla0, chan=nlchan
+	bsbw	io_before
+	$qiow_s	chan=nlchan, func=#IO$_WRITEVBLK, iosb=iosb, -
+		p1=abc, p2=#3
+	moval	c_qio,r6
+	bsbw	io_after
+	$dassgn_s	chan=nlchan
+
+	bsbw	io_before
+	pushaq	c_line
+	calls	#1,g^lib$put_output
+	moval	c_put,r6
+	bsbw	io_after
+
+	bsbw	io_before
+	$create	fab=iofab
+	$connect	rab=iorab
+	movl	#10,r7
+81$:	$put	rab=iorab
+	sobgtr	r7,81$
+	$close	fab=iofab
+	moval	c_crt,r6
+	bsbw	io_after
+
+	bsbw	io_before
+	$open	fab=iofab
+	$connect	rab=iorab
+82$:	$get	rab=iorab
+	blbs	r0,82$
+	$close	fab=iofab
+	moval	c_rd,r6
+	bsbw	io_after
+
+; 9: a wildcard directory search, [P6*...]; after its first file, [P6]
+; (behind it), [P6A.B] and [P6B] (ahead) are made.
+	pushaq	d_p6a
+	calls	#1,g^lib$create_dir
+	pushaq	d_p6c
+	calls	#1,g^lib$create_dir
+	moval	f_p6a,r2
+	bsbw	touch
+	moval	f_p6c,r2
+	bsbw	touch
+	$parse	fab=qfab
+	bsbw	search
+	pushaq	d_p6
+	calls	#1,g^lib$create_dir
+	pushaq	d_p6ab
+	calls	#1,g^lib$create_dir
+	pushaq	d_p6b
+	calls	#1,g^lib$create_dir
+	moval	f_p6,r2
+	bsbw	touch
+	moval	f_p6ab,r2
+	bsbw	touch
+	moval	f_p6b,r2
+	bsbw	touch
+	movl	#8,r6
+91$:	bsbw	search
+	blbc	status,92$
+	sobgtr	r6,91$
+92$:
+
+	pushaq	l_end
+	calls	#1,g^lib$put_output
+	movl	#1,r0
+	ret
+
+; Write R1, R2, R3 to VRAB's file.
+three_v:
+	movab	rec1,vrab+RAB$L_RBF
+	movw	#2,vrab+RAB$W_RSZ
+	$put	rab=vrab
+	movab	rec2,vrab+RAB$L_RBF
+	$put	rab=vrab
+	movab	rec3,vrab+RAB$L_RBF
+	$put	rab=vrab
+	rsb
+
+; B's $GET of the record at RFA, waiting at most R6 seconds: print it.
+timed_get:
+	movb	r6,brab+RAB$B_TMO
+	$gettim_s	timadr=t0
+	$get	rab=brab
+	movl	r0,status
+	$gettim_s	timadr=t1
+	bsbw	elapsed
+	movzbl	brab+RAB$B_TMO,r8
+	$fao_s	ctrstr=l_4e, outlen=out_len, outbuf=out_desc, -
+		p1=r8, p2=status, p3=r6, p4=r7
+	bsbw	print
+	rsb
+
+; The time from T0 to T1: whole seconds in R6, hundredths in R7.
+elapsed:
+	subl3	t0,t1,delta
+	sbwc	t0+4,t1+4
+	movl	t1+4,delta+4
+	ediv	#100000,delta,r6,r7	; hundredths
+	clrl	r7
+	ediv	#100,r6,r6,r7
+	rsb
+
+; The AST $UPDSEC may queue.
+	.entry	ast,^m<>
+	incl	asts
+	ret
+
+; Read the I/O counts before an operation (IO_BEFORE), and after it
+; print the case at R6 with what they grew by (IO_AFTER).
+io_before:
+	$getjpiw_s	itmlst=jpi_io, iosb=iosb
+	movl	bufio,bufio0
+	movl	dirio,dirio0
+	rsb
+io_after:
+	$getjpiw_s	itmlst=jpi_io, iosb=iosb
+	subl2	bufio0,bufio
+	subl2	dirio0,dirio
+	$fao_s	ctrstr=l_8, outlen=out_len, outbuf=out_desc, -
+		p1=r6, p2=bufio, p3=dirio
+	bsbw	print
+	rsb
+
+; Create the file whose FAB is at R2, empty.
+touch:	$create	fab=(r2)
+	$close	fab=(r2)
+	rsb
+
+; One $SEARCH of QFAB: print its status and the name found.
+search:	$search	fab=qfab
+	movl	r0,status
+	clrl	r2
+	blbc	status,1$
+	movzbl	qnam+NAM$B_RSL,r2
+1$:	$fao_s	ctrstr=l_9, outlen=out_len, outbuf=out_desc, -
+		p1=status, p2=r2, p3=#rsa
+	bsbw	print
+	rsb
+
+; Print what $FAO formatted into OUT_BUF.
+print:	movw	out_len,out_desc
+	pushaq	out_desc
+	calls	#1,g^lib$put_output
+	movw	#132,out_desc
+	rsb
+
+	.end	start
