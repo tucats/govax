@@ -424,10 +424,13 @@ func TestSysOpen_facNone(t *testing.T) {
 	}
 }
 
-// TestSysOpen_facUnimplementedOnly: a FAB that asks only for access this
-// package doesn't implement (delete) is refused with RMS$_PRV.
-func TestSysOpen_facUnimplementedOnly(t *testing.T) {
+// TestSysOpen_facDeleteOnly: a FAB whose only access is DEL opens (DEL
+// is write access, and since Phase 49 every kind of access is
+// implemented: $DELETE of a sequential file's record is RMS$_IOP).
+func TestSysOpen_facDeleteOnly(t *testing.T) {
 	f := newCreateFixture(t, true)
+	writeFile(t, f.ctx.Mounts, "TEST.DAT", "ONE")
+
 	newFAB(t, f.ctx, "DUA0:TEST.DAT")
 	putByte(t, f.ctx, testFabAddr+fabFAC, byte(vmsConst("FAB$M_DEL")))
 
@@ -436,8 +439,8 @@ func TestSysOpen_facUnimplementedOnly(t *testing.T) {
 		t.Fatalf("SysOpen: %v", err)
 	}
 
-	if r0 != rmsPrivilegeViolation {
-		t.Errorf("r0 = %d, want rmsPrivilegeViolation (%d)", r0, rmsPrivilegeViolation)
+	if r0 != rmsNormal {
+		t.Errorf("r0 = %#x, want RMS$_NORMAL", r0)
 	}
 }
 

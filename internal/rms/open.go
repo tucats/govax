@@ -53,12 +53,6 @@ func SysOpen(ctx *Context, argv []uint32) (uint32, error) {
 		return 0, err
 	}
 
-	// Of the access a FAB can ask for, this package implements GET, PUT,
-	// and UPD; a FAB asking only for others (DEL, TRN) can't be opened.
-	if fac&(facGet|facPut|facUpd) == 0 {
-		return storeStatus(ctx, fabAddr, fabSTS, fabSTV, rmsPrivilegeViolation)
-	}
-
 	nam, failStatus, err := fabNAMBlock(ctx, fabAddr)
 	if err != nil {
 		return 0, err
@@ -252,7 +246,7 @@ func openFID(ctx *Context, fac, shr byte, device string, vol *volume.Volume, fid
 	// read-only-mounted device — only actually asking to write is a
 	// problem, unlike SYS$CREATE (create.go), which always implies
 	// writing and so always has to check this.
-	wantsWrite := fac&(facPut|facUpd) != 0
+	wantsWrite := fac&facWrite != 0
 	if wantsWrite && !ctx.Mounts.Writable(device) {
 		return 0, rmsPrivilegeViolation, nil
 	}

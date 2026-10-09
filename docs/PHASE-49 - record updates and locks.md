@@ -431,3 +431,11 @@ stream's record locks.
   walk it had. Unconfirmed (for a probe): that VMS's search sees a
   directory made ahead of it and not one made behind it. Test:
   `TestSharing_searchNewSubdirectory`. Subtask 11 is done.
+- 2026-10-09: A fix found while writing the probe (subtask 12): `$OPEN`
+  still refused a FAB whose only access was DEL or TRN (RMS$_PRV), a
+  check from before this phase implemented them; it's gone. And
+  `$OPEN` now counts every write access (PUT, UPD, DEL, TRN) as asking
+  to write (`openFID`), so a TRN-only stream's truncation is written
+  back at `$CLOSE`, and such an open on a volume mounted read-only is
+  RMS$_PRV. Tests: `TestTruncate_trnOnly`, `TestSysOpen_facDeleteOnly`
+  (replacing `TestSysOpen_facUnimplementedOnly`).

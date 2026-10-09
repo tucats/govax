@@ -4,6 +4,8 @@ import (
 	"testing"
 
 	"github.com/tucats/govax/internal/lck"
+	"github.com/tucats/govax/internal/vax"
+	"github.com/tucats/govax/internal/vm"
 )
 
 // Tests of the record operations past $GET and $PUT and the stream
@@ -206,6 +208,44 @@ func TestTruncate(t *testing.T) {
 
 	wantRecords(t, records(t, mounts, "T.DAT"), append(recs[:19:19], "NEW19", "NEW20")...)
 	checkVolume(t, mounts)
+}
+
+// TestTruncate_trnOnly: a FAB whose only access is TRN opens, reads, and
+// truncates (TRN is write access: the new end of file is written back
+// at $CLOSE); on a volume mounted read-only it is RMS$_PRV.
+func TestTruncate_trnOnly(t *testing.T) {
+	path := newTestVolumeFile(t, "TRN")
+
+	newSharer := func(writable bool) (*sharer, *MountTable) {
+		mounts := NewMountTable()
+		if err := mounts.Mount("DUA0", path, writable); err != nil {
+			t.Fatal(err)
+		}
+
+		return &sharer{t: t, name: "A", ctx: &Context{
+			Mem: vm.NewMemory(1 << 20), CPU: vax.New(), Mounts: mounts,
+			Files: NewFileTable(nil), Logicals: newTestLogicals(t),
+		}}, mounts
+	}
+
+	a, mounts := newSharer(true)
+	writeFile(t, mounts, "T.DAT", "ONE", "TWO", "THREE")
+
+	a.mustOpen("T.DAT", facTrn, 0, false, 0)
+	a.wantGet("ONE", rmsNormal)
+	a.wantGet("TWO", rmsNormal)
+	wantRecStatus(t, "$TRUNCATE", a.call(SysTruncate, 0), rmsNormal)
+	a.close()
+
+	wantRecords(t, records(t, mounts, "T.DAT"), "ONE")
+	checkVolume(t, mounts)
+
+	if err := mounts.Dismount("DUA0"); err != nil {
+		t.Fatal(err)
+	}
+
+	ro, _ := newSharer(false)
+	wantRecStatus(t, "$OPEN FAC=TRN, read-only volume", ro.open("T.DAT", facTrn, 0, false, 0), rmsPrivilegeViolation)
 }
 
 // TestPut_truncateOnPut: a $PUT away from the end of the file is
