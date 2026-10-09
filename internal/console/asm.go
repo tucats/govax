@@ -200,6 +200,10 @@ func (c *Console) mergeAsmSymbols(a *asm.Assembler) {
 		} else {
 			c.Symbols.Set(s.Name, s.Value, kind)
 		}
+
+		if strings.EqualFold(s.Name, "EXE$INITIALIZE") {
+			c.kernelPlaced = true
+		}
 	}
 }
 

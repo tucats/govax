@@ -4,8 +4,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/tucats/govax/internal/console"
-	"github.com/tucats/govax/internal/console/consoletest"
 	"github.com/tucats/govax/internal/cpu"
 	"github.com/tucats/govax/internal/vax"
 )
@@ -110,8 +108,6 @@ func TestShowFault_reportsHistoryAndNoneYet(t *testing.T) {
 // history.
 func TestDispatch_setBreakpointFaultInterceptsExecution(t *testing.T) {
 	c, buf := newTestConsole(t)
-	g := consoletest.ConsoleGrammar(t)
-	d := console.NewDispatcher(c, g, nil)
 
 	loadProgram(t, c, 0x200, 0xFD, 0x00)
 	c.CPU.SetGPR(vax.PC, 0x200)
@@ -122,7 +118,7 @@ func TestDispatch_setBreakpointFaultInterceptsExecution(t *testing.T) {
 
 	buf.Reset()
 
-	if err := d.DispatchConsole("GO"); err != nil {
+	if err := c.Debugger.Dispatch("GO"); err != nil {
 		t.Fatalf("Dispatch(GO): %v", err)
 	}
 

@@ -92,6 +92,8 @@ func (d *Dispatcher) bind() {
 		})
 	})
 
+	g.Bind("ASM", d.asmCommand)
+
 	g.Bind("STEP", func(id int64, r *dcl.Result) error { return d.step(r) })
 
 	d.bindSetStep()
@@ -317,4 +319,28 @@ func lastCallMode(line string) string {
 	}
 
 	return mode
+}
+
+// asmCommand implements ASM [file]: the batch form assembles a file into
+// the machine's memory, and a bare ASM enters interactive assembler mode
+// (the console's dispatcher feeds it the following lines, whichever
+// grammar is current). A file that ends with an entry address (.END
+// name) is called, as the console's ASM did.
+func (d *Dispatcher) asmCommand(id int64, r *dcl.Result) error {
+	c := d.Debugger.Console
+
+	if !r.Present("FILE") {
+		return c.AssembleBegin()
+	}
+
+	entry, hasEntry, err := c.Assemble(r.String("FILE"))
+	if err != nil {
+		return err
+	}
+
+	if hasEntry {
+		return c.Call(entry, false)
+	}
+
+	return nil
 }

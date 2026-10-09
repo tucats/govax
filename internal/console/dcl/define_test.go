@@ -47,7 +47,7 @@ func TestLoadConsoleGrammar(t *testing.T) {
 		t.Errorf("grammar name = %q, want EVAX", g.Name)
 	}
 
-	wantVerbs := []string{"DEFINE", "ABOUT", "EXIT", "QUIT", "TEST", "CALL", "CLEAR", "VMINIT", "SHOW", "MOUNT", "DISMOUNT", "INITIALIZE", "DIRECTORY", "DELETE", "PURGE", "TYPE"}
+	wantVerbs := []string{"DEFINE", "ABOUT", "EXIT", "QUIT", "TEST", "CLEAR", "VMINIT", "SHOW", "MOUNT", "DISMOUNT", "INITIALIZE", "DIRECTORY", "DELETE", "PURGE", "TYPE"}
 	for _, v := range wantVerbs {
 		if _, ok := g.entries[v]; !ok {
 			t.Errorf("missing verb %s", v)
@@ -111,8 +111,8 @@ func TestLoadEvaxGrammar_verbCount(t *testing.T) {
 	// examine, deposit, and disassemble (with their aliases, ten verbs)
 	// back out for the debugger's grammar. Phase 45 adds stop, and Phase
 	// 48 spawn.
-	if len(g.verbOrder) != 49 {
-		t.Errorf("got %d verbs, want 49: %v", len(g.verbOrder), verbNames(g))
+	if len(g.verbOrder) != 45 {
+		t.Errorf("got %d verbs, want 45: %v", len(g.verbOrder), verbNames(g))
 	}
 }
 

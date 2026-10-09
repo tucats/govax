@@ -11,7 +11,7 @@ import (
 )
 
 func TestDispatch_stepAndGo(t *testing.T) {
-	d, c := newTestDispatcher(t)
+	_, c := newTestDispatcher(t)
 	c.CPU.SetDebug(c.CPU.Debug() &^ vax.DebugUserStep)
 	loadProgram(t, c, 0x200, opNop, opNop, opHalt)
 
@@ -25,7 +25,7 @@ func TestDispatch_stepAndGo(t *testing.T) {
 		t.Errorf("PC after STEP = %#x, want 0x201", c.CPU.GPR(vax.PC))
 	}
 
-	if err := d.DispatchConsole("GO"); err != nil {
+	if err := c.Debugger.Dispatch("GO"); err != nil {
 		t.Fatalf("Dispatch(GO): %v", err)
 	}
 
@@ -46,7 +46,7 @@ func TestDispatch_callStepQualifier(t *testing.T) {
 		t.Fatalf("Dispatch(ASM): %v", err)
 	}
 
-	if err := d.DispatchConsole("CALL/STEP TEST"); err != nil {
+	if err := c.Debugger.Dispatch("CALL/STEP TEST"); err != nil {
 		t.Fatalf("Dispatch(CALL/STEP): %v", err)
 	}
 }
@@ -76,7 +76,7 @@ func TestDispatch_callStepStopsAfterOneInstruction(t *testing.T) {
 		t.Fatalf("Dispatch(ASM): %v", err)
 	}
 
-	if err := d.DispatchConsole("CALL/STEP DBLTEST(^D21)"); err != nil {
+	if err := c.Debugger.Dispatch("CALL/STEP DBLTEST(^D21)"); err != nil {
 		t.Fatalf("Dispatch(CALL/STEP): %v", err)
 	}
 

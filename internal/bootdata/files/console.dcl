@@ -220,7 +220,7 @@ grammar console
                     /prompt="Code"
 
 
-    ! CALL is in the Phase 37 block at the end of this file.
+    ! GO and CALL are the debugger's (debug.dcl); ASM is there too.
 
     
     ! CLEAR (docs/PHASE-42.md): what is left of it at the console. The
@@ -874,26 +874,6 @@ grammar console
                     /type=$rest_of_line         -
                     /prompt="Command"
 
-    ! EXECUTE [address] runs the CPU (GO, G).
-    verb execute/id=1660
-        parameter   address/id=1661             -
-                    /type=$expression
-    verb go/alias=execute
-    verb g/alias=execute
-
-    ! CALL[/STEP] routine[(argument,...)]: the argument list may follow
-    ! the routine after a blank, so it's a parameter of its own too.
-    verb call/id=1670
-        qualifier   step/id=1671/nonegatable
-        qualifier   break/alias=step
-        qualifier   debug/alias=step
-        qualifier   dbg/alias=step
-        parameter   routine/id=1672             -
-                    /type=$expression           -
-                    /prompt="Routine"
-        parameter   arguments/id=1673           -
-                    /type=$expression
-
     ! RUN activates a VMS image. /NOINIT and /INIT override whether each
     ! shareable image's LIB$INITIALIZE runs; /DEBUG (/STEP, /BREAK) runs
     ! it under the debugger, stopped at its first instruction, and /NODEBUG
@@ -932,6 +912,9 @@ grammar console
     ! ASM [file] assembles a file with the console's assembler, or with
     ! no file enters interactive assembler mode. A host file name with
     ! lowercase letters or a "/" must be quoted, as everywhere in DCL.
+    ! The console accepts ASM only until the microkernel is in place (it
+    ! is how vax.init loads kernel.asm); after that it is the debugger's
+    ! command (debug.dcl).
     verb asm/id=1720
         parameter   file/id=1721                -
                     /type=$string

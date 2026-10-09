@@ -1870,3 +1870,23 @@ without a check on VMS).
 - **Checked** by unit tests, and by hand through a pseudo-terminal: a
   spinning image and an RMS reader, RUN at the console and under the
   debugger, each key at the prompt, mid-run, and at a program's read.
+
+## 2026-10-09: GO, CALL, and ASM move to the debugger
+
+- `console.dcl` lost EXECUTE/GO/G and CALL; `debug.dcl` already had GO and
+  CALL and gained ASM/ASSEMBLE (`Dispatcher.asmCommand` in
+  `internal/debugger/dispatch.go`). The assembler's interactive mode is
+  still the console dispatcher's (`assemblerMode`), so ASM-mode lines work
+  at `DBG>`; END's auto-CALL goes through the debugger.
+- The console keeps ASM only until the microkernel is in place
+  (`Console.kernelPlaced`, set when an ASM'd file defines EXE$INITIALIZE;
+  reset by VMINIT and INIT); then it says Unrecognized verb. `vax.init`
+  now runs `DEBUG`, `GO EXE$INITIALIZE`, `EXIT`.
+- Help: the ASM topics (and their pseudo-op pages) moved to `debug.help`;
+  `console.help` keeps a short ASM pointer, and loses GO/EXECUTE/CALL.
+  The DO topic was removed: DO (assemble and run one instruction) was
+  never implemented in the Go port.
+- Tests: `consoletest.InstallDebugger` and `consoletest.DebugMode`;
+  `internal/console` package-internal tests use `plainDebugger`
+  (`plaindebugger_test.go`); the CALL/ASM dispatch tests moved to
+  `internal/debugger/asmcall_test.go`; `TestGrammarSplit` updated.

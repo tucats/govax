@@ -83,6 +83,7 @@ func (c *Console) Zero() error {
 	c.VMInitValid = false
 	c.asmSession = nil // matching vminit.go's own reset -- a zeroed address space invalidates any prior ASM session's state
 	c.assemblerMode = false
+	c.kernelPlaced = false
 
 	return nil
 }

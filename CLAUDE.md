@@ -190,13 +190,18 @@ expect adjustment as phases land):
   (`internal/bootdata/files`), with `debug.help` and the `DBG> ` prompt.
   **The console and the debugger are two front ends to one machine, each
   with its own grammar:** `console.dcl` has the VMS command line (RUN,
-  MACRO, LINK, MOUNT, DIRECTORY, DEFINE, SET DEFAULT, SAVE/LOAD, GO and
-  CALL, ...) and `debug.dcl` the machine's commands (EXAMINE, DEPOSIT,
+  MACRO, LINK, MOUNT, DIRECTORY, DEFINE, SET DEFAULT, SAVE/LOAD, ...) and `debug.dcl` the machine's commands (EXAMINE, DEPOSIT,
   EVALUATE, STEP, SET/SHOW/CANCEL BREAK, TRACE, WATCH, SHOW REGISTERS,
   CALLS, IMAGE, SYMBOL, SET MODE/RADIX, ...); `TestGrammarSplit` says which
   command is in which. The debugger imports `internal/console`, which knows
   it only through the `console.Debugger` interface (`debugger.go`);
   `cmd/govax` installs it, and the console works without one. A session
+  GO, CALL, and ASM are debugger commands (live code): the console has
+  no GO or CALL, and accepts ASM only until the microkernel is in place
+  (`Console.kernelPlaced`, set when ASM defines EXE$INITIALIZE), which is
+  how `vax.init` loads it before `DEBUG` / `GO EXE$INITIALIZE` / `EXIT`.
+  Tests that need them install the debugger and enter its mode with
+  `consoletest.InstallDebugger` and `consoletest.DebugMode`. A session
   starts at the console's `DEBUG`, when a `GO`/`CALL` stops, and for `RUN`
   of an image linked `/DEBUG` (or `RUN/DEBUG`), stopped at the main
   routine's first instruction; a run that ends by itself returns to

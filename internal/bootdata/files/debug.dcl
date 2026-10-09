@@ -58,6 +58,16 @@ grammar debugger
         parameter   arguments/id=12             -
                     /type=$expression
 
+    ! ASM [file] assembles a file with the console's assembler, into the
+    ! machine's memory, or with no file enters interactive assembler mode
+    ! (one statement per line, until END). A host file name with lowercase
+    ! letters or a "/" must be quoted, as everywhere in DCL. The assembler
+    ! moved here from the console (it works on live code, like DEPOSIT).
+    verb asm/id=66
+        parameter   file/id=67                  -
+                    /type=$string
+    verb assemble/alias=asm
+
     ! STEP[/qualifiers] [count] takes count steps (one if none is given).
     ! /LINE (the default) and /INSTRUCTION say how far a step goes;
     ! /OVER (the default), /INTO (/IN), and /RETURN say what to do about

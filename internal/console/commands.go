@@ -18,10 +18,8 @@ const (
 	printTOKEN   = "PRINT"
 	helpTOKEN    = "HELP"
 	ifTOKEN      = "IF"
-	executeTOKEN = "EXECUTE"
 	asmTOKEN     = "ASM"
 	includeTOKEN = "INCLUDE"
-	callTOKEN    = "CALL"
 	runTOKEN     = "RUN"
 )
 
@@ -57,15 +55,6 @@ func (d *Dispatcher) bindConsoleCommands() {
 
 	g.Bind(ifTOKEN, d.ifCommand)
 
-	g.Bind(executeTOKEN, func(id int64, r *dcl.Result) error {
-		addr, err := d.optionalAddress(r, "ADDRESS")
-		if err != nil {
-			return err
-		}
-
-		return d.Console.Execute(addr)
-	})
-	g.Bind(callTOKEN, d.callCommand)
 	g.Bind(runTOKEN, d.runCommand)
 	g.Bind("SPAWN", func(id int64, r *dcl.Result) error {
 		return d.Console.Spawn(SpawnOptions{
@@ -97,6 +86,11 @@ func (d *Dispatcher) bindConsoleCommands() {
 // when a file is named, or AssembleBegin's interactive mode
 // (docs/PHASE-19.md) for a bare "ASM".
 func (d *Dispatcher) asmCommand(id int64, r *dcl.Result) error {
+	// Once the microkernel is in place ASM is the debugger's command.
+	if d.Console.kernelPlaced {
+		return vmserrors.New(vmserrors.CLI_UNRECOGNIZED, "verb", "ASM")
+	}
+
 	if !r.Present("FILE") {
 		return d.Console.AssembleBegin()
 	}
@@ -212,19 +206,6 @@ func (d *Dispatcher) optionalAddress(r *dcl.Result, name string) (*uint32, error
 // one whole expression.
 func (d *Dispatcher) evalWhole(text string) (uint32, error) {
 	return d.Console.EvalWhole(text)
-}
-
-// callCommand implements CALL [/STEP] routine[(argument[,argument...])]
-// (Console.Call; console_call's argument-list syntax). The argument list
-// follows the routine directly ("F(1,2)", part of the ROUTINE expression)
-// or after a blank ("F (1,2)", the ARGUMENTS parameter).
-func (d *Dispatcher) callCommand(id int64, r *dcl.Result) error {
-	addr, args, err := d.Console.ParseCall(r.String("ROUTINE"), r.String("ARGUMENTS"))
-	if err != nil {
-		return err
-	}
-
-	return d.Console.Call(addr, r.Present("STEP"), args...)
 }
 
 // runOptions applies RUN's qualifiers to defaults, whose RunInits is

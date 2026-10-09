@@ -1,8 +1,6 @@
 package console
 
 import (
-	"errors"
-	"os"
 	"path/filepath"
 	"runtime"
 	"strings"
@@ -10,7 +8,6 @@ import (
 
 	"github.com/tucats/govax/internal/console/dcl"
 	"github.com/tucats/govax/internal/vax"
-	"github.com/tucats/govax/internal/vmserrors"
 )
 
 // evaxGrammarPathForConsole locates internal/bootdata/files/evax.dcl, the
@@ -90,84 +87,6 @@ func TestDispatch_runActivatesImage(t *testing.T) {
 	// end-to-end here too, via the "R" abbreviation.
 	if err := d.Dispatch(`R "` + exeFixturePath(t, "simple.exe") + `"`); err != nil {
 		t.Fatalf("Dispatch(R): %v", err)
-	}
-}
-
-// TestDispatch_asmThenCall exercises ASM and CALL together through the
-// full Dispatcher (Phase 12): assembling xor.asm merges its "test" label
-// into Console.Symbols, so a plain "CALL TEST" (no explicit address, no
-// arguments) can find it by name and run it to completion.
-func TestDispatch_asmThenCall(t *testing.T) {
-	c := newRunnableConsole(t)
-	g := loadEvaxGrammar(t)
-	d := NewDispatcher(c, g, nil)
-
-	if err := d.Dispatch(`ASM "` + asmFixturePath(t, "xor.asm") + `"`); err != nil {
-		t.Fatalf("Dispatch(ASM): %v", err)
-	}
-
-	if err := d.Dispatch("CALL TEST"); err != nil {
-		t.Fatalf("Dispatch(CALL): %v", err)
-	}
-
-	const want = 0xC8600 ^ 0x10
-
-	if got := c.CPU.GPR(vax.R4); got != want {
-		t.Errorf("R4 = %#x, want %#x", got, want)
-	}
-}
-
-// TestDispatch_callWithArgumentList checks CALL's "(arg1[,arg2...])"
-// syntax (console_call's own optional argument list, Phase 12) against a
-// small hand-assembled routine that doubles its one argument.
-func TestDispatch_callWithArgumentList(t *testing.T) {
-	c := newRunnableConsole(t)
-	g := loadEvaxGrammar(t)
-	d := NewDispatcher(c, g, nil)
-
-	src := "\t.entry\tdbltest, ^m<>\n\tmovl\t4(ap), r0\n\taddl2\tr0, r0\n\tret\n\t.end\n"
-	path := filepath.Join(t.TempDir(), "dbl_test.asm")
-
-	if err := os.WriteFile(path, []byte(src), 0o644); err != nil {
-		t.Fatalf("WriteFile: %v", err)
-	}
-
-	if err := d.Dispatch(`ASM "` + path + `"`); err != nil {
-		t.Fatalf("Dispatch(ASM): %v", err)
-	}
-
-	if err := d.Dispatch("CALL DBLTEST(^D21)"); err != nil {
-		t.Fatalf("Dispatch(CALL): %v", err)
-	}
-
-	if got := c.CPU.GPR(vax.R0); got != 42 {
-		t.Errorf("R0 = %d, want 42", got)
-	}
-
-	// The argument list may follow the routine after a blank.
-	if err := d.Dispatch("CALL DBLTEST (^D4)"); err != nil {
-		t.Fatalf("Dispatch(CALL, blank before the list): %v", err)
-	}
-
-	if got := c.CPU.GPR(vax.R0); got != 8 {
-		t.Errorf("R0 = %d, want 8", got)
-	}
-
-	if err := d.Dispatch("CALL DBLTEST(^D21)"); err != nil {
-		t.Fatalf("Dispatch(CALL): %v", err)
-	}
-
-	// Text after the argument list, or after an address with no list, is
-	// an error, and nothing is called.
-	for _, cmd := range []string{"CALL DBLTEST(^D5) JUNK", "CALL DBLTEST JUNK"} {
-		err := d.Dispatch(cmd)
-		if !errors.Is(err, vmserrors.New(vmserrors.CLI_EXTRAPARAMETER)) {
-			t.Errorf("Dispatch(%s) = %v, want EXTRAPARAMETER", cmd, err)
-		}
-
-		if got := c.CPU.GPR(vax.R0); got != 42 {
-			t.Errorf("after %s, R0 = %d, want 42 (not called)", cmd, got)
-		}
 	}
 }
 

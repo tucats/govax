@@ -146,16 +146,50 @@ func TestCommands_zero(t *testing.T) {
 	}
 }
 
-// TestCommands_goGrammar checks GO's spellings as the grammar reads them.
-// STEP, EXAMINE, DEPOSIT, and DISASSEMBLE are the debugger's now
-// (docs/PHASE-42.md), and its tests cover them.
-func TestCommands_goGrammar(t *testing.T) {
+// TestCommands_goIsNotConsole checks that GO and its spellings, CALL, and
+// (once the microkernel is in place) ASM are the debugger's commands: the
+// console's grammar has no GO or CALL (docs/PHASE-42.md's command split
+// test checks the debugger has them).
+func TestCommands_goIsNotConsole(t *testing.T) {
 	g := loadEvaxGrammar(t)
 
-	for _, line := range []string{"G", "GO 200", "EXEC", "EXECUTE ."} {
-		if r, err := g.Parse(line); err != nil || r.Active != "EXECUTE" {
-			t.Errorf("%s: %v", line, err)
+	for _, line := range []string{"G", "GO 200", "EXEC", "EXECUTE .", "CALL A"} {
+		if _, err := g.Parse(line); err == nil {
+			t.Errorf("%s parsed as a console command", line)
 		}
+	}
+}
+
+// TestCommands_asmOnlyBeforeKernel checks that the console's ASM works
+// until the microkernel is in place and then says it is unrecognized.
+func TestCommands_asmOnlyBeforeKernel(t *testing.T) {
+	c := newRunnableConsole(t)
+	d := NewDispatcher(c, loadEvaxGrammar(t), nil)
+
+	// A stand-in microkernel: all that matters is that it defines
+	// EXE$INITIALIZE.
+	kernel := filepath.Join(t.TempDir(), "kernel.asm")
+	src := "\t.entry\texe$initialize, ^m<>\n\tret\n\t.end\n"
+
+	if err := os.WriteFile(kernel, []byte(src), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := d.Dispatch(`ASM "` + asmFixturePath(t, "xor.asm") + `"`); err != nil {
+		t.Fatalf("ASM before the microkernel: %v", err)
+	}
+
+	if err := d.Dispatch(`ASM "` + kernel + `"`); err != nil {
+		t.Fatalf("ASM of the microkernel: %v", err)
+	}
+
+	err := d.Dispatch(`ASM "` + asmFixturePath(t, "xor.asm") + `"`)
+	if !errors.Is(err, vmserrors.New(vmserrors.CLI_UNRECOGNIZED)) {
+		t.Errorf("ASM after the microkernel = %v, want UNRECOGNIZED", err)
+	}
+
+	if err := d.Dispatch("ASM"); err == nil || c.InAssemblerMode() {
+		t.Errorf("bare ASM after the microkernel = %v (assembler mode %v)", err, c.InAssemblerMode())
 	}
 }
 

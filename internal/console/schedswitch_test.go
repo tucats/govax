@@ -75,6 +75,7 @@ func scheduledConsole(t testing.TB, quantum string, code []byte) (*console.Conso
 	c := console.New(&out)
 	c.Paths = respath.New(nil, bootdata.FS)
 	d := console.NewDispatcher(c, consoletest.ConsoleGrammar(t), nil)
+	consoletest.InstallDebugger(t, c, d)
 
 	if err := c.Include("vax.init", d.Dispatch); err != nil {
 		t.Fatalf("vax.init: %v\n%s", err, out.String())

@@ -34,12 +34,22 @@ load/nvram/noerror
 ;	Assemble the microkernel
 
 print " "
+
+; ASM is the console's only until the microkernel is in place; after this,
+; it is a debugger command.
+
 asm  "kernel.asm"
 clear sym/all
 
 
 set quantum 1
+
+; GO is a debugger command: start the debugger, run the microkernel's
+; initialization, and return to the console.
+
+debug
 go exe$initialize
+exit
 
 set debug nouserhalt
 set debug process

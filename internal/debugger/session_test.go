@@ -27,13 +27,13 @@ func newRoutedSession(t *testing.T) (*console.Console, *console.Dispatcher, *deb
 	return c, d, dbgOf(c)
 }
 
-// TestGoThatHaltsReturnsToConsole: GO at the console that runs to a HALT
-// leaves no session behind: the prompt stays VAX>.
+// TestGoThatHaltsReturnsToConsole: GO, with no session open, that runs to a
+// HALT leaves no session behind: the prompt stays VAX>.
 func TestGoThatHaltsReturnsToConsole(t *testing.T) {
-	c, d, db := newRoutedSession(t)
+	c, _, db := newRoutedSession(t)
 	loadProgram(t, c, 0x200, opNop, opHalt)
 
-	if err := d.Dispatch("GO 200"); err != nil {
+	if err := c.Debugger.Dispatch("GO 200"); err != nil {
 		t.Fatalf("GO: %v", err)
 	}
 
@@ -50,7 +50,7 @@ func TestGoThatBreaksOpensSession(t *testing.T) {
 	loadProgram(t, c, 0x200, opNop, opNop, opNop, opHalt)
 	db.AddBreakpoint(0x202)
 
-	if err := d.Dispatch("GO 200"); err != nil {
+	if err := c.Debugger.Dispatch("GO 200"); err != nil {
 		t.Fatalf("GO: %v", err)
 	}
 
@@ -120,11 +120,11 @@ func TestDebuggerStepAtPrompt(t *testing.T) {
 // TestCallStepStopsAfterFirstInstruction: CALL/STEP runs only the routine's
 // first instruction and opens a session; a plain CALL that returns doesn't.
 func TestCallStepStopsAfterFirstInstruction(t *testing.T) {
-	c, d, db := newRoutedSession(t)
+	c, _, db := newRoutedSession(t)
 	noUserStep(c)
 	loadCallProgram(t, c)
 
-	if err := d.Dispatch("CALL 200"); err != nil {
+	if err := c.Debugger.Dispatch("CALL 200"); err != nil {
 		t.Fatalf("CALL: %v", err)
 	}
 
@@ -132,7 +132,7 @@ func TestCallStepStopsAfterFirstInstruction(t *testing.T) {
 		t.Error("a CALL that returned left a session open")
 	}
 
-	if err := d.Dispatch("CALL/STEP 200"); err != nil {
+	if err := c.Debugger.Dispatch("CALL/STEP 200"); err != nil {
 		t.Fatalf("CALL/STEP: %v", err)
 	}
 
@@ -210,14 +210,14 @@ func loadSpinner(t *testing.T, c *console.Console) {
 	c.Engine.SetLimits(100_000_000, 0)
 }
 
-// TestCtrlCReturnsToConsole: Ctrl-C interrupting a program the console
-// started (GO) returns to the console's prompt, as CTRL/C returns to DCL's:
-// it opens no debugger session.
+// TestCtrlCReturnsToConsole: Ctrl-C interrupting a program started by GO
+// with no session open returns to the console's prompt, as CTRL/C returns
+// to DCL's: it opens no debugger session.
 func TestCtrlCReturnsToConsole(t *testing.T) {
-	c, d, db := newRoutedSession(t)
+	c, _, db := newRoutedSession(t)
 	loadSpinner(t, c)
 
-	interruptWhile(t, c, func() error { return d.Dispatch("GO 200") })
+	interruptWhile(t, c, func() error { return c.Debugger.Dispatch("GO 200") })
 
 	if c.Engine.StoppedBy() != cpu.AttentionCtrlC {
 		t.Fatalf("StoppedBy = %#x, want CTRL/C", c.Engine.StoppedBy())

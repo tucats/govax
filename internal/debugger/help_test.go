@@ -64,6 +64,7 @@ func TestDebuggerHelpTopics(t *testing.T) {
 	h := consoletest.ParseHelp(t, "debug.help")
 
 	topics := [][]string{
+		{"ASM"}, {"ASM", "LABELS"}, {"ASM", "ADDRESSING"}, {"ASM", "PSEUDO", "QUAD"}, {"ASM", "PSEUDO", "BYTE"},
 		{"SET", "BREAK"}, {"SET", "TRACE"}, {"SET", "WATCH"}, {"SET", "STEP"},
 		{"SET", "SOURCE"}, {"SET", "MODE"}, {"SET", "RADIX"}, {"SET", "MODULE"},
 		{"SET", "PSL"}, {"SET", "PTE"}, {"SET", "FAULT"}, {"SET", "VM"}, {"SET", "BASE"},

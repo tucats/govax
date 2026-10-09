@@ -220,19 +220,19 @@ func TestRun_asGivenPathWinsOverPathFlag(t *testing.T) {
 }
 
 // TestRun_interactiveAsmRepl exercises docs/PHASE-19.md's own interactive
-// "ASM" mode end to end through the real readline loop: a bare ASM enters
+// "ASM" mode (a debugger command once the microkernel is in place) end to end through the real readline loop: a bare ASM enters
 // assembler mode, several lines are typed one at a time (matching what a
 // real terminal session would feed the readline loop), and "END <entry>"
 // both exits the mode and auto-CALLs the routine just typed -- confirmed by
 // EXAMINE-ing the register it set afterward from the debugger.
 func TestRun_interactiveAsmRepl(t *testing.T) {
 	script := strings.Join([]string{
+		"DEBUG",
 		"ASM",
 		".ENTRY MYTEST,^M<>",
 		"MOVL #42,R0",
 		"RET",
 		"END MYTEST",
-		"DEBUG",
 		"EXAMINE R0",
 	}, "\n") + "\n"
 
@@ -256,11 +256,11 @@ func TestRun_interactiveAsmRepl(t *testing.T) {
 // EXAMINE/INSTRUCTION then shows.
 func TestRun_bareAsmStartsAtX200(t *testing.T) {
 	script := strings.Join([]string{
+		"DEBUG",
 		"ASM",
 		"MOVL #42,R0",
 		"HALT",
 		"END",
-		"DEBUG",
 		"EXAMINE/INSTRUCTION 200",
 	}, "\n") + "\n"
 

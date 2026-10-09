@@ -390,6 +390,7 @@ func (c *Console) VMInit(p0Pages, p1Pages, s0Pages, kspPages, espPages, sspPages
 	c.Mem.ResetTBCounters()
 	c.asmSession = nil // a fresh address space invalidates any prior ASM session's state
 	c.assemblerMode = false
+	c.kernelPlaced = false
 
 	return nil
 }

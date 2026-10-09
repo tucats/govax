@@ -34,7 +34,6 @@ func TestGrammarSplit(t *testing.T) {
 		// Verbs the console keeps: the VMS commands and the machine's
 		// life cycle.
 		{"ABOUT", consoleOnly},
-		{"ASM", consoleOnly},
 		{"ASSIGN A B", consoleOnly},
 		{"BOOT", consoleOnly},
 		{"COPY A B", consoleOnly},
@@ -66,9 +65,8 @@ func TestGrammarSplit(t *testing.T) {
 
 		// Verbs both have, each its own: starting and ending a run, help,
 		// and command files.
-		{"GO", both},
-		{"EXECUTE 200", both},
-		{"CALL A", both},
+		{"ASM", both}, // the console keeps it until the microkernel is in place
+		{"ASSEMBLE", both},
 		{"EXIT", both},
 		{"QUIT", both},
 		{"HELP", both},
@@ -76,6 +74,11 @@ func TestGrammarSplit(t *testing.T) {
 		{"@A", both},
 
 		// Verbs the debugger took from the console.
+		{"GO", debuggerOnly},
+		{"G", debuggerOnly},
+		{"EXECUTE 200", debuggerOnly},
+		{"CALL A", debuggerOnly},
+		{"CALL/STEP A", debuggerOnly},
 		{"EXAMINE 200", debuggerOnly},
 		{"EX 200", debuggerOnly},
 		{"DEPOSIT 200 = 1", debuggerOnly},

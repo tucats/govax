@@ -206,6 +206,11 @@ type Console struct {
 	// the normal verb table/DCL grammar. Reset alongside asmSession (see above).
 	assemblerMode bool
 
+	// kernelPlaced is set once ASM has defined EXE$INITIALIZE, the
+	// microkernel's entry; from then on the console's own ASM command
+	// refuses, and ASM is the debugger's. Reset with asmSession.
+	kernelPlaced bool
+
 	// proc1Images is process 1's image state (images.go): its loaded-image
 	// list (Phase 13's ICB list), activation symbols, and driver. Reset by
 	// RUN itself (matching reset_icb_list, called at the start of every
