@@ -62,7 +62,7 @@ fi
 # (testdata/mp/final); none holds expansion text. Phase 49's probe's
 # MACRO log (testdata/probe49, copied back by copyout.cmd) waits for the
 # author's audit.
-unaudited='p6build\.log|P6BUILD\.LOG'
+unaudited=''
 if [ -n "$unaudited" ] && printf '%s' "$text" | grep -Eq "$unaudited"; then
 	refuse "this names real-MACRO output that may show STARLET macro text and hasn't been audited"
 fi

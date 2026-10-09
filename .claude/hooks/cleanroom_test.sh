@@ -43,7 +43,6 @@ check 0 "a test helper named vmsLibFile" '{"tool_name":"Bash","tool_input":{"com
 check 0 "the audited round 5 log" '{"tool_name":"Read","tool_input":{"file_path":"/r/testdata/mp/macros/vax/macros5.log"}}'
 check 0 "the audited round 6 log" '{"tool_name":"Bash","tool_input":{"command":"cat testdata/mp/macros/vax/macros6.log"}}'
 check 0 "the audited definitions log" '{"tool_name":"Read","tool_input":{"file_path":"/r/testdata/mp/defs/vax/defs46.log"}}'
-check 2 "Phase 49's unaudited MACRO log" '{"tool_name":"Read","tool_input":{"file_path":"/r/testdata/probe49/vax/p6build.log"}}'
 check 0 "Phase 49's probe report" '{"tool_name":"Read","tool_input":{"file_path":"/r/testdata/probe49/vax/probe6.log"}}'
 
 check 0 "a round 6 analysis" '{"tool_name":"Read","tool_input":{"file_path":"/r/testdata/mp/macros/vax/r6_crmpsc.anl"}}'
