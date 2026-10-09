@@ -1,0 +1,383 @@
+	.title	probe6b
+;
+; Phase 49's probe, round 2 (README.md): what the first round left
+; open. Each step prints lines "n what: result", every status in
+; hexadecimal, so that a failure early in a step shows.
+;
+; It uses only system services, RMS, and LIBRTL, and macros govax's
+; library has too, so govax runs it as well (TestProbe6b).
+;
+	$SECDEF
+	$RMSDEF
+	$FABDEF
+	$RABDEF
+	$XABFHCDEF
+
+	.psect	data,noexe,wrt,long
+
+; The report's lines.
+l_1u:	.ascid	"1 !AS: $UPDATE of R1 to !AD: !XL"
+l_1g:	.ascid	"1   $GET: !XL !AD"
+l_4a:	.ascid	"4 A's $GET of R1: !XL"
+l_4t:	.ascid	"4 B's $GET, WAT and TMO=!UL: !XL after !UL.!2ZL s; RAB$W_RFA then !XL,!XW; RAB$B_RAC !UB"
+l_7a:	.ascid	"7a $CREATE, UFO, ALQ=10, !AS: !XL, STV !XL"
+l_7b:	.ascid	"7b $CRMPSC of it: !XL, !UL pages"
+l_7c:	.ascid	"7c after writing page 6: $DELTVA !XL, $DASSGN !XL; $OPEN !XL, EBK !UL, FFB !UL, HBK !UL"
+l_7d1:	.ascid	"7d three blocks written: $CREATE !XL, $CLOSE !XL; $OPEN UFO !XL, STV !XL"
+l_7d2:	.ascid	"7d $CRMPSC of it: !XL, !UL pages"
+l_7e:	.ascid	"7e $UPDSEC, !AS: !XL, IOSB !XL !XL, flag !XL, ASTs !UL"
+l_7f:	.ascid	"7f read-only: $OPEN UFO !XL, STV !XL; $CRMPSC GBL !XL; $MGBLSC WRT !XL"
+l_skip:	.ascid	"7 the rest skipped: no channel"
+l_end:	.ascid	/end/
+
+n_shr:	.ascid	/shared/
+n_nosh:	.ascid	/not shared/
+n_none:	.ascid	/nothing modified/
+n_one:	.ascid	/a page modified/
+n_long:	.ascid	/P6S1.DAT, longer/
+n_short: .ascid	/P6S2.DAT, shorter/
+
+; Step 1: stream files, and the records put in them.
+	.align	long
+s1fab:	$fab	fnm=<P6S1.DAT>, fac=<GET,PUT,UPD>, rfm=STM
+	.align	long
+s2fab:	$fab	fnm=<P6S2.DAT>, fac=<GET,PUT,UPD>, rfm=STM
+	.align	long
+srab:	$rab	ubf=buf, usz=80
+
+; Step 4: one file, two streams.
+	.align	long
+afab:	$fab	fnm=<P6T.DAT>, fac=<GET,PUT>, rfm=VAR, shr=<GET,PUT,UPD,DEL>
+	.align	long
+arab:	$rab	fab=afab, ubf=buf, usz=80
+	.align	long
+bfab:	$fab	fnm=<P6T.DAT>, fac=<GET>, shr=<GET,PUT,UPD,DEL>
+	.align	long
+brab:	$rab	fab=bfab, ubf=buf2, usz=80
+
+; Step 7's files.
+	.align	long
+xfab:	$fab	fnm=<P6X.DAT>, fac=<GET,PUT,UPD>, fop=UFO, alq=10, -
+		rfm=FIX, mrs=512, shr=<GET,PUT,UPD>
+	.align	long
+x2fab:	$fab	fnm=<P6X2.DAT>, fac=<GET,PUT,UPD>, fop=UFO, alq=10, -
+		rfm=FIX, mrs=512
+	.align	long
+hfab:	$fab	fnm=<P6X.DAT>, fac=<GET>, xab=fhc, shr=<GET,PUT,UPD>
+	.align	long
+fhc:	$xabfhc
+	.align	long
+wfab:	$fab	fnm=<P6W.DAT>, fac=<PUT>, alq=10, rfm=FIX, mrs=512
+	.align	long
+wrab:	$rab	fab=wfab, rbf=block, rsz=512
+	.align	long
+ufab:	$fab	fnm=<P6W.DAT>, fac=<GET,PUT,UPD>, fop=UFO, shr=<GET,PUT,UPD>
+	.align	long
+rofab:	$fab	fnm=<P6W.DAT>, fac=<GET>, fop=UFO, shr=<GET,PUT,UPD>
+
+rec1:	.ascii	/R1/
+rec2:	.ascii	/R2/
+rec3:	.ascii	/R3/
+abc:	.ascii	/ABC/
+gsec:	.ascid	/P6BSEC/
+one_sec: .ascid	/0 00:00:01.00/
+
+	.align	long
+status:		.long	0
+status2:	.long	0
+status3:	.long	0
+status4:	.long	0
+flag:		.long	0
+asts:		.long	0
+chan:		.long	0
+rfa:		.blkb	6
+		.word	0
+t0:		.quad	0
+t1:		.quad	0
+delta:		.quad	0
+tick:		.quad	0
+iosb:		.quad	0
+p0adr:		.long	^X200,^X200
+range:		.long	0,0
+range2:		.long	0,0
+buf:		.blkb	80
+buf2:		.blkb	80
+block:		.blkb	512
+out_buf:	.blkb	132
+out_desc:	.word	132
+		.byte	14,1
+		.long	out_buf
+out_len:	.word	0,0
+
+	.psect	code,exe,nowrt
+	.entry	start,^m<r2,r3,r4,r5,r6,r7,r8,r9>
+
+; 1: a stream file's $UPDATE of R1 to a longer and to a shorter record:
+; the status, then the file's records read back.
+	moval	s1fab,r9
+	moval	n_long,r8
+	moval	abc,r7
+	movl	#3,r6
+	bsbw	stm_case
+	moval	s2fab,r9
+	moval	n_short,r8
+	moval	abc,r7
+	movl	#1,r6
+	bsbw	stm_case
+
+; 4: A locks R1; B asks for it by RFA with WAT and TMO=0, then, its RFA
+; set again, with TMO=2: each status, how long it took, and what the RAB
+; holds afterwards.
+	$create	fab=afab
+	$connect	rab=arab
+	movab	rec1,arab+RAB$L_RBF
+	movw	#2,arab+RAB$W_RSZ
+	$put	rab=arab
+	movab	rec2,arab+RAB$L_RBF
+	$put	rab=arab
+	$free	rab=arab
+	$rewind	rab=arab
+	$get	rab=arab
+	movl	r0,status
+	movc3	#6,arab+RAB$W_RFA,rfa
+	$fao_s	ctrstr=l_4a, outlen=out_len, outbuf=out_desc, -
+		p1=status
+	bsbw	print
+	$open	fab=bfab
+	$connect	rab=brab
+	bisl2	#<RAB$M_WAT!RAB$M_TMO>,brab+RAB$L_ROP
+	clrl	r6
+	bsbw	timed_get
+	movl	#2,r6
+	bsbw	timed_get
+	$close	fab=bfab
+	$close	fab=afab
+
+; 7a: a new file of ten blocks on a channel (UFO), shared; if that
+; fails, not shared.
+	$create	fab=xfab
+	movl	r0,status
+	$fao_s	ctrstr=l_7a, outlen=out_len, outbuf=out_desc, -
+		p1=#n_shr, p2=status, p3=xfab+FAB$L_STV
+	bsbw	print
+	movzwl	xfab+FAB$L_STV,chan
+	blbs	status,71$
+	$create	fab=x2fab
+	movl	r0,status
+	$fao_s	ctrstr=l_7a, outlen=out_len, outbuf=out_desc, -
+		p1=#n_nosh, p2=status, p3=x2fab+FAB$L_STV
+	bsbw	print
+	movzwl	x2fab+FAB$L_STV,chan
+	blbs	status,71$
+	pushaq	l_skip
+	calls	#1,g^lib$put_output
+	brw	79$
+
+; 7b: map it whole, writable.
+71$:	clrq	range
+	$crmpsc_s	inadr=p0adr, retadr=range, chan=chan, -
+			flags=#<SEC$M_WRT!SEC$M_EXPREG>
+	movl	r0,status
+	clrl	r5
+	blbc	status,72$
+	subl3	range,range+4,r5
+	incl	r5
+	ashl	#-9,r5,r5
+72$:	$fao_s	ctrstr=l_7b, outlen=out_len, outbuf=out_desc, -
+		p1=status, p2=r5
+	bsbw	print
+
+; 7c: write page 6 (if it's there), unmap, deassign; then the file's
+; end of file and allocation (P6X.DAT, the shared case's file).
+	clrl	status2
+	cmpl	r5,#6
+	blss	73$
+	movl	range,r2
+	movl	#^X66666666,<5*512>(r2)
+73$:	blbc	status,74$
+	$deltva_s	inadr=range
+	movl	r0,status2
+74$:	$dassgn_s	chan=chan
+	movl	r0,status3
+	clrl	fhc+XAB$L_EBK
+	clrw	fhc+XAB$W_FFB
+	clrl	fhc+XAB$L_HBK
+	$open	fab=hfab
+	movl	r0,status4
+	$close	fab=hfab
+	movzwl	fhc+XAB$W_FFB,r2
+	$fao_s	ctrstr=l_7c, outlen=out_len, outbuf=out_desc, -
+		p1=status2, p2=status3, p3=status4, -
+		p4=fhc+XAB$L_EBK, p5=r2, p6=fhc+XAB$L_HBK
+	bsbw	print
+
+; 7d: a file of ten blocks with three written (its end of file at
+; block 4), opened UFO and mapped whole: how many pages?
+79$:	$create	fab=wfab
+	movl	r0,status
+	$connect	rab=wrab
+	$put	rab=wrab
+	$put	rab=wrab
+	$put	rab=wrab
+	$close	fab=wfab
+	movl	r0,status2
+	$open	fab=ufab
+	movl	r0,status3
+	$fao_s	ctrstr=l_7d1, outlen=out_len, outbuf=out_desc, -
+		p1=status, p2=status2, p3=status3, p4=ufab+FAB$L_STV
+	bsbw	print
+	blbs	status3,75$
+	brw	78$
+75$:	movzwl	ufab+FAB$L_STV,chan
+	clrq	range
+	$crmpsc_s	inadr=p0adr, retadr=range, chan=chan, -
+			flags=#<SEC$M_WRT!SEC$M_EXPREG>
+	movl	r0,status
+	clrl	r5
+	blbc	status,76$
+	subl3	range,range+4,r5
+	incl	r5
+	ashl	#-9,r5,r5
+76$:	$fao_s	ctrstr=l_7d2, outlen=out_len, outbuf=out_desc, -
+		p1=status, p2=r5
+	bsbw	print
+	blbc	status,77$
+
+; 7e: $UPDSEC with nothing modified, then with a page modified: the
+; status, the IOSB, the event flag, and whether the AST runs.
+	moval	n_none,r8
+	bsbw	updsec
+	movl	range,r2
+	movl	#^X77777777,(r2)
+	moval	n_one,r8
+	bsbw	updsec
+	$deltva_s	inadr=range
+77$:	$dassgn_s	chan=chan
+
+; 7f: the file opened read-only, a global section of it, then mapped
+; writable.
+78$:	$open	fab=rofab
+	movl	r0,status
+	movzwl	rofab+FAB$L_STV,chan
+	clrl	status2
+	clrl	status3
+	blbc	status,80$
+	clrq	range
+	$crmpsc_s	inadr=p0adr, retadr=range, chan=chan, gsdnam=gsec, -
+			flags=#<SEC$M_GBL!SEC$M_EXPREG>
+	movl	r0,status2
+	clrq	range2
+	$mgblsc_s	inadr=p0adr, retadr=range2, gsdnam=gsec, -
+			flags=#<SEC$M_WRT!SEC$M_EXPREG>
+	movl	r0,status3
+80$:	$fao_s	ctrstr=l_7f, outlen=out_len, outbuf=out_desc, -
+		p1=status, p2=rofab+FAB$L_STV, p3=status2, p4=status3
+	bsbw	print
+	blbc	status2,81$
+	$deltva_s	inadr=range
+81$:	blbc	status3,82$
+	$deltva_s	inadr=range2
+82$:	blbc	status,83$
+	$dassgn_s	chan=chan
+83$:
+	pushaq	l_end
+	calls	#1,g^lib$put_output
+	movl	#1,r0
+	ret
+
+; Step 1's case: the stream file whose FAB is at R9 (named at R8): put
+; R1 R2 R3, $UPDATE R1 to the R6 bytes at R7, and read the file back.
+stm_case:
+	movl	r9,srab+RAB$L_FAB
+	$create	fab=(r9)
+	$connect	rab=srab
+	movw	#2,srab+RAB$W_RSZ
+	movab	rec1,srab+RAB$L_RBF
+	$put	rab=srab
+	movab	rec2,srab+RAB$L_RBF
+	$put	rab=srab
+	movab	rec3,srab+RAB$L_RBF
+	$put	rab=srab
+	$rewind	rab=srab
+	$get	rab=srab
+	movl	r7,srab+RAB$L_RBF
+	movw	r6,srab+RAB$W_RSZ
+	$update	rab=srab
+	movl	r0,status
+	$fao_s	ctrstr=l_1u, outlen=out_len, outbuf=out_desc, -
+		p1=r8, p2=r6, p3=r7, p4=status
+	bsbw	print
+	$rewind	rab=srab
+	movl	#6,r5
+1$:	$get	rab=srab
+	movl	r0,status
+	clrl	r2
+	blbc	status,2$
+	movzwl	srab+RAB$W_RSZ,r2
+2$:	$fao_s	ctrstr=l_1g, outlen=out_len, outbuf=out_desc, -
+		p1=status, p2=r2, p3=srab+RAB$L_RBF
+	bsbw	print
+	blbc	status,3$
+	sobgtr	r5,1$
+3$:	$close	fab=(r9)
+	rsb
+
+; B's $GET of R1 by RFA, waiting at most R6 seconds: print it.
+timed_get:
+	movb	#RAB$C_RFA,brab+RAB$B_RAC
+	movc3	#6,rfa,brab+RAB$W_RFA
+	movb	r6,brab+RAB$B_TMO
+	$gettim_s	timadr=t0
+	$get	rab=brab
+	movl	r0,status
+	$gettim_s	timadr=t1
+	bsbw	elapsed
+	movzbl	brab+RAB$B_TMO,r8
+	movzwl	brab+RAB$W_RFA+4,r3
+	movzbl	brab+RAB$B_RAC,r4
+	$fao_s	ctrstr=l_4t, outlen=out_len, outbuf=out_desc, -
+		p1=r8, p2=status, p3=r6, p4=r7, -
+		p5=brab+RAB$W_RFA, p6=r3, p7=r4
+	bsbw	print
+	rsb
+
+; The time from T0 to T1: whole seconds in R6, hundredths in R7.
+elapsed:
+	subl3	t0,t1,delta
+	sbwc	t0+4,t1+4
+	movl	t1+4,delta+4
+	ediv	#100000,delta,r6,r7	; hundredths
+	clrl	r7
+	ediv	#100,r6,r6,r7
+	rsb
+
+; $UPDSEC of RANGE (the case named at R8): print what it did.
+updsec:	mnegl	#1,iosb
+	mnegl	#1,iosb+4
+	clrl	asts
+	$clref_s	efn=#7
+	$updsec_s	inadr=range, efn=#7, iosb=iosb, astadr=ast
+	movl	r0,status
+	$bintim_s	timbuf=one_sec, timadr=tick
+	$setimr_s	efn=#8, daytim=tick
+	$waitfr_s	efn=#8
+	$readef_s	efn=#7, state=flag
+	movl	r0,status2
+	$fao_s	ctrstr=l_7e, outlen=out_len, outbuf=out_desc, -
+		p1=r8, p2=status, p3=iosb, p4=iosb+4, p5=status2, p6=asts
+	bsbw	print
+	rsb
+
+; The AST $UPDSEC may queue.
+	.entry	ast,^m<>
+	incl	asts
+	ret
+
+; Print what $FAO formatted into OUT_BUF.
+print:	movw	out_len,out_desc
+	pushaq	out_desc
+	calls	#1,g^lib$put_output
+	movw	#132,out_desc
+	rsb
+
+	.end	start

@@ -502,3 +502,9 @@ stream's record locks.
   (`storeRecordStatus`); a program printing RBF after `$GET` printed
   whatever it last pointed RBF at. The RMS tests' `$GET` helper now
   reads the record through RBF.
+- 2026-10-09: The probe's second round prepared (`testdata/probe49`,
+  `probe6b.mar`; README.md, "Round 2"): a stream file's `$UPDATE` to
+  another length and the file read back; the record-lock timeout with
+  the RFA set again, and what the RAB holds after; and the file-section
+  cases with every status printed, a written file's section size added.
+  `TestProbe6b` runs it under govax. Waiting for the VAX run.

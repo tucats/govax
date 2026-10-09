@@ -11,9 +11,10 @@ asked about, and a process's lock on itself stands in for a deadlock.
 | `probe6.mar` | The program: steps 1 to 9, each line `n what: result` |
 | `probe6.com` | Builds and runs it; MACRO's and LINK's output to their own logs |
 | `exchange.cmd`, `copyout.cmd` | Make the exchange volume and copy the logs back |
-| `vax/` | The VMS run's logs, once it has run |
+| `probe6b.mar`, `probe6b.com`, `exchange2.cmd`, `copyout2.cmd` | Round 2: what round 1 left open |
+| `vax/` | The VMS runs' logs: `probe6.log` (2026-10-09), and round 2's once it has run |
 
-`TestProbe6` (`internal/console`) runs the program under govax;
+`TestProbe6` and `TestProbe6b` (`internal/console`) run the programs under govax;
 `go test ./internal/console -run TestProbe6 -v` prints govax's report,
 to set beside VMS's. Writing it already found one bug: `$OPEN` refused
 a FAB whose only access was DEL or TRN.
@@ -114,3 +115,51 @@ why.
 
 `go test ./internal/console -run TestProbe6 -v` prints govax's side;
 each difference settles one of the phase doc's unconfirmed items.
+
+## What VMS answered (2026-10-09)
+
+| Step | VMS 7.3 | govax now |
+| ---- | ------- | --------- |
+| 1 | RMS$_RSZ for the variable-length file; SS$_NORMAL for the stream file | the variable-length case as VMS; the stream case asked again (round 2) |
+| 2 | RMS$_EOF: no record-boundary check; a length word read from the byte the RFA names ran past the end | the same |
+| 3, 4a to 4d | as govax | unchanged |
+| 4e | TMO=0: RMS$_TMO at once; TMO=2: RMS$_RFA at once (the probe didn't set the RFA again after the failure) | asked again (round 2) |
+| 5a | context FE0000E6 after lock 1A0000E6: ^XFE over the lock's index; more locks than the probe's own | context ^XFE over the lock ID |
+| 5b, 5c, 6 | as govax (granted NL; 80180018; SS$_DEADLOCK after 9 s) | unchanged |
+| 7a, 7b, 7c, 7e | SS$_IVSECFLG, then failures that follow from it: 7a's `$CREATE` must have failed (no channel; the probe didn't print its status) | asked again (round 2) |
+| 7d | SS$_IVCHNLSEC | the same |
+| 7f | RMS$_NORMAL, a channel to NLA0: | the same |
+| 8 | NLA0: write: direct; a line to a log file: nothing; create/10 puts/close: 3 buffered, 7 direct; open/gets/close: 2 and 1 | NL: is direct; RMS counts by a model fitted to these totals (`internal/rms/iocount.go`) |
+| 9 | as govax | unchanged |
+
+## Round 2
+
+`probe6b.mar` asks again what round 1 left open, printing every status:
+
+1. A stream file's `$UPDATE` of R1 to a longer and to a shorter record,
+   then the file read back (govax: RMS$_RSZ, the file unchanged).
+4. B's `$GET` by RFA of a record A has locked, with WAT and TMO=0, then
+   with its RFA set again and TMO=2: the status, the time, and
+   RAB$W_RFA and RAB$B_RAC afterwards (govax: RMS$_TMO, at once and
+   after 2 s; the RAB unchanged).
+7. a: `$CREATE` with UFO and ALQ=10, shared (and, if that fails, not
+   shared): the status and FAB$L_STV; b: `$CRMPSC` of it (govax: 10
+   pages); c: after writing page 6, `$DELTVA`, `$DASSGN`, and the end
+   of file (govax: EBK 0, FFB 0, HBK 10); d: a file of ten blocks with
+   three written, opened UFO and mapped (govax: 10 pages, the
+   allocation); e: `$UPDSEC` with nothing modified, then with a page
+   modified (govax: SS$_NOTMODIFIED, no AST; SS$_NORMAL, the AST); f:
+   the file opened read-only, a global section of it, and `$MGBLSC`
+   writable (govax: SS$_CREATED, SS$_NOWRT).
+
+Run it as round 1, with its own volume:
+
+    govax console < testdata/probe49/exchange2.cmd
+
+attach `testdata/disks/probe49b.dsk`, set its `[000000]` as the default,
+`@PROBE6B`, then
+
+    govax console < testdata/probe49/copyout2.cmd
+
+The report goes to `vax/probe6b.log`. MACRO's log comes back too; audit
+it, as round 1's, before anything reads it.
