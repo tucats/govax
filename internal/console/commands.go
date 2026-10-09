@@ -248,7 +248,11 @@ func (d *Dispatcher) ifCommand(id int64, r *dcl.Result) error {
 		command = strings.TrimSpace(tail)
 	}
 
+	// IF leaves $STATUS alone (the User's Manual, 13.15): the THEN
+	// command's status is the line's, and a false IF doesn't change it.
 	if v == 0 {
+		d.Console.keepStatus()
+
 		return nil
 	}
 

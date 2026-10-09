@@ -20,8 +20,8 @@ never had.
   it), and Phase 49 the work it left for later (done 2026-10-09);
   `PHASE-43.md`'s Part A describes the whole program. Phase 50 (in
   progress) makes the console a DCL command interpreter: command
-  procedures and command levels, symbol substitution, and expressions
-  are done; then `$STATUS`/ON, labels, IF, and the lexical functions. Read the relevant phase doc
+  procedures and command levels, symbol substitution, expressions, and
+  `$STATUS`/ON are done; then labels, IF, and the lexical functions. Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
 - `docs/DEVIATIONS.md` — running log of suspected ISA/behavior fidelity issues found in
   the C source during porting (see "Bug-fixing policy" below).
@@ -243,7 +243,15 @@ expect adjustment as phases land):
   is reading, else skipped (SKPDAT), and a `$` line ends that reader's
   input. An error or severe status ends the procedure (DCL's default
   ON ERROR THEN EXIT), EXIT ends it (at level 0, govax), QUIT always
-  ends govax. A level's `procedureSource` keeps the whole file and a
+  ends govax. **Statuses** (`dclstatus.go`): `$STATUS`/`$SEVERITY` are
+  global string symbols set around each line `DispatchConsole` reads
+  (`statusOf`); a handler's error becomes VMS's condition value for the
+  same message name (`conditionValue`, CLI_IVVERB is CLI$_IVVERB), and a
+  handler can name its status (`setCommandStatus`: @, RUN's image exit
+  status) or keep it (`keepStatus`: SHOW SYMBOL, IF, CONTINUE). Each
+  level's `onAction` is ON's and SET [NO]ON's; `procedureLine` shows a
+  command's message, then takes the action; a procedure ends with a
+  `procedureExit` (end of file, EXIT, `EXIT n`, or the error action). A level's `procedureSource` keeps the whole file and a
   cursor (`Position`/`Seek`/`Rewind`) for the coming GOTO and labels.
   `vax.init` is a DCL procedure, run like a login command procedure
   (`RunHostProcedure`); the one-shot command on govax's command line

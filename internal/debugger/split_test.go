@@ -85,7 +85,7 @@ func TestGrammarSplit(t *testing.T) {
 		{"CALL A", debuggerOnly},
 		{"CALL/STEP A", debuggerOnly},
 		{"EXAMINE 200", debuggerOnly},
-		{"EX 200", debuggerOnly},
+		{"EX 200", both}, // the console's EXIT, with a status
 		{"DEPOSIT 200 = 1", debuggerOnly},
 		{"STEP", debuggerOnly},
 		{"S", debuggerOnly},

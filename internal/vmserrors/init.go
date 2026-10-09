@@ -19,4 +19,5 @@ func DefineMessage(status uint32, fac uint32, id, text string) {
 	severity := severityFlag[status&Severity]
 
 	Messages[status] = facility + "-" + severity + "-" + id + ", " + text
+	MessageNames[status] = id
 }

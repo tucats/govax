@@ -606,13 +606,19 @@ func (t *dclSymbolTable) clone() dclSymbolTable {
 //
 // "==" is a global symbol's, "=" a local one's, and an "*" marks the
 // shortest abbreviation. A quote in a string value is shown as it is, not
-// doubled (the User's Manual's PROMPT example, 12.6.1).
+// doubled (the User's Manual's PROMPT example, 12.6.1). $STATUS and
+// $SEVERITY are global symbols too (dclstatus.go).
 // Unconfirmed against VMS: the integer line's spacing.
 func (c *Console) showDCLSymbols(cmd symbolCommand) error {
 	shown, err := c.dclSymbols.show(cmd)
 	if err != nil {
 		return err
 	}
+
+	// SHOW SYMBOL leaves $STATUS alone when it succeeds (the User's
+	// Manual, 13.15), so SHOW SYMBOL $SEVERITY after SHOW SYMBOL $STATUS
+	// shows the same command's.
+	c.keepStatus()
 
 	for _, sym := range shown {
 		c.Printf("%s\n", sym.showLine())

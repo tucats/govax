@@ -83,14 +83,18 @@ func (d *Dispatcher) DispatchConsole(line string) error {
 		return d.assembleInteractiveLine(line)
 	}
 
-	// DCL's first phase: symbols between apostrophes are replaced
-	// before anything reads the line (dclsubst.go).
-	line, err := d.Console.substituteApostrophes(line)
-	if err != nil {
-		return err
-	}
+	// The line is one command, whose status becomes $STATUS
+	// (dclstatus.go).
+	return d.Console.statusOf(func() error {
+		// DCL's first phase: symbols between apostrophes are replaced
+		// before anything reads the line (dclsubst.go).
+		line, err := d.Console.substituteApostrophes(line)
+		if err != nil {
+			return err
+		}
 
-	return d.dispatchCommand(line)
+		return d.dispatchCommand(line)
+	})
 }
 
 // dispatchCommand executes a console command line that has been through
@@ -224,7 +228,13 @@ func (d *Dispatcher) bindGrammar() {
 
 	// EXIT ends the command procedure it's in, or govax at the terminal;
 	// QUIT ends govax wherever it is (procedure.go).
-	g.Bind("EXIT", func(id int64, r *dcl.Result) error { return d.Console.Exit() })
+	g.Bind("EXIT", d.exitCommand)
+	g.Bind("ON", d.onCommand)
+	g.Bind("CONTINUE", func(id int64, r *dcl.Result) error {
+		d.Console.keepStatus()
+
+		return nil
+	})
 	g.Bind("QUIT", func(id int64, r *dcl.Result) error { return d.Console.Quit() })
 	g.Bind("DEBUG", func(id int64, r *dcl.Result) error { return d.Console.StartDebugger() })
 

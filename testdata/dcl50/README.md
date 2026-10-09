@@ -100,7 +100,9 @@ log; every case matches. The answers that changed govax:
   level, the terminal's among them, is STKOVF; each level goes on after
   either (both warnings). `/OUTPUT=.LOG` makes a file named `.LOG` in the
   default directory, which govax still refuses (open).
-- **Statuses** (section D, and `$STATUS` throughout): for subtask 10.
+- **Statuses** (section D, and `$STATUS` throughout): subtask 10 follows
+  them; `TestProbe50Oracle` compares each case's `$STATUS` too, and
+  `TestProbe50Statuses` replays section D.
   `$STATUS` is a string, `"%X00030001"` after success; IVVERB's is
   `%X00038090`; a status a message was already shown for has bit 28 set
   (`%X10951238` after TYPE's failure); EXIT's status is shown as a

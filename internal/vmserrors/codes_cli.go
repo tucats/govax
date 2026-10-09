@@ -166,6 +166,8 @@ const (
 	cliIvVerb
 	cliAbVerb
 	cliLexNotImpl
+	cliNoThen
+	cliInsfPrm
 )
 
 // CLI facility status codes -- CLI_ prefix, matching real VMS's CLI$_
@@ -399,6 +401,12 @@ const (
 	// CLI_LEXNOTIMPL reports a call of one of VMS's lexical functions
 	// govax doesn't have yet (govax's words).
 	CLI_LEXNOTIMPL = CLIFacility<<FacilityPosition | cliLexNotImpl<<MessagePosition | StatusWarning
+
+	// ON's messages (docs/PHASE-50, subtask 10), in DCL's words for its
+	// CLI$_ messages of the same names: CLI_NOTHEN an ON without THEN,
+	// CLI_INSFPRM nothing after THEN.
+	CLI_NOTHEN  = CLIFacility<<FacilityPosition | cliNoThen<<MessagePosition | StatusWarning
+	CLI_INSFPRM = CLIFacility<<FacilityPosition | cliInsfPrm<<MessagePosition | StatusWarning
 )
 
 func init() {
@@ -525,6 +533,8 @@ func init() {
 	DefineMessage(CLI_IVVERB, CLIFacility, "IVVERB", "unrecognized command verb - check validity and spelling")
 	DefineMessage(CLI_ABVERB, CLIFacility, "ABVERB", "ambiguous command verb - supply more characters")
 	DefineMessage(CLI_LEXNOTIMPL, CLIFacility, "LEXNOTIMPL", "lexical function !S is not implemented yet")
+	DefineMessage(CLI_NOTHEN, CLIFacility, "NOTHEN", "IF or ON statement syntax error - check placement of THEN keyword")
+	DefineMessage(CLI_INSFPRM, CLIFacility, "INSFPRM", "missing command parameters - supply all required parameters")
 	DefineMessage(CLI_IVCHAR, CLIFacility, "IVCHAR", "invalid numeric value - check for invalid digits")
 	DefineMessage(CLI_STKOVF, CLIFacility, "STKOVF", "command procedures too deeply nested - limit to 32 levels")
 	DefineMessage(CLI_BADLIMIT, CLIFacility, "BADLIMIT", "Invalid /LIMIT value !D (must be at least 1; DELETE NAME;* removes every version)")

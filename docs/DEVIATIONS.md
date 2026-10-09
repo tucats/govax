@@ -2999,6 +2999,57 @@ widened."
 - **Status**: fixed to VMS 7.3's behavior where the probe answered; the
   rest unconfirmed, for a later round.
 
+### [Phase 50] Statuses and ON: rules from the manual, the probe, and choice
+
+- **Where**: `internal/console/dclstatus.go`, `procedure.go`, `run.go`;
+  `internal/vmsdef/messages.go`, `internal/corevms/message.go`.
+- **What**: `$STATUS`, `$SEVERITY`, EXIT's status, ON, and SET [NO]ON
+  follow the OpenVMS User's Manual (7.3), 13.8 to 13.15. VMS 7.3's run of
+  `testdata/dcl50` settled: `$STATUS` and `$SEVERITY` are global string
+  symbols (`"%X00030001"`, `"0"`); a command that succeeds gives
+  CLI$_NORMAL; a DCL message's status is its CLI$_ value, without bit 28
+  though its message was shown (`TestProbe50Oracle` compares every case's
+  `$STATUS`); SHOW SYMBOL leaves `$STATUS` alone; the end of a procedure
+  passes `$STATUS` on, unmarked and not shown again (each of the 31
+  levels of `probe50r.com` ended with STKOVF's %X00038128); EXIT without
+  a status passes it with bit 28 set (%X10038028); `EXIT n` passes n, its
+  message shown at the level above unless n is odd or has bit 28 set, and
+  `$STATUS` is n as given; the system facility's message 0 is SS$_NORMAL's
+  only (EXIT 0, 2, and 4 show `%NONAME-x-NOMSG, Message number
+  0000000n`; `vmsdef.LookupMessage` and corevms's NOMSG stand-in now say
+  so). `TestProbe50Statuses` replays section D.
+  Chosen without VMS:
+  - govax's statuses are its own codes; a failure's condition value is
+    VMS's for the message of the same name in the matching facility
+    (CLI_IVVERB is CLI$_IVVERB), with govax's severity, and govax's own
+    code where VMS has no such name. Any other Go error is SS$_ABORT.
+    Successful govax commands that are images on VMS (DIRECTORY, TYPE,
+    ...) give CLI$_NORMAL, not the image's status.
+  - EXIT without a status sets bit 28 whatever the status, a success too
+    (the probe showed it only after a warning).
+  - When ON's action is taken, `$STATUS` is the failing command's, and
+    the action's own command sets it as any command does (CONTINUE
+    leaves it). The manual says `$STATUS` "in general" becomes success
+    (13.9.1); the common `ON ERROR THEN GOTO` handler that reads
+    `$STATUS` suggests otherwise.
+  - ON's command, already through apostrophe substitution as part of
+    the ON line, is dispatched as a line again when it runs, so a value
+    holding apostrophes is substituted a second time.
+  - ON CONTROL_Y doesn't change the error action or SET NOON; an error
+    ON turns SET NOON off (13.10 says so). ON and SET [NO]ON at the
+    terminal are accepted and do nothing.
+  - SKPDAT's warning sets `$STATUS` and can take ON's action.
+  - RUN of an image that ends with a failure shows the status's message
+    (unless bit 28 is set) and fails; one stopped another way (a HALT, a
+    limit, CTRL/C) reports nothing, and a run under the debugger leaves
+    `$STATUS` alone.
+  - A procedure that isn't found is govax's SS$_NOSUCHFILE, a warning;
+    VMS gave DCL-E-OPENIN with RMS-E-FNF (`$STATUS` %X10018292), an
+    error, which would end the calling procedure. TYPE of a missing file
+    differs too.
+- **Status**: fixed to VMS 7.3's behavior where the probe answered; the
+  rest unconfirmed, for a later round.
+
 <!--
 Entry template:
 

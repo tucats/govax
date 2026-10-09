@@ -7,9 +7,9 @@ parameters and `/OUTPUT`, a local symbol table per level, VMS's default
 error action, and EXIT that ends a procedure. Later rounds (subtasks 8
 onward) make the console more fully a DCL command interpreter. Subtasks
 8 and 9, symbol substitution and expressions, are done and checked
-against VMS 7.3 (2026-10-09);
-labels and GOTO, IF/THEN/ELSE, `$STATUS`, ON, and the other lexical
-functions are next.
+against VMS 7.3 (2026-10-09), and so is subtask 10, `$STATUS`, EXIT's
+status, ON, and SET [NO]ON (2026-10-09); labels and GOTO, IF/THEN/ELSE,
+and the other lexical functions are next.
 
 The console should act like a VMS DCL command processor. Until now it
 had INCLUDE (and `@` as its alias), which runs a file of console
@@ -241,6 +241,39 @@ name may be any prefix that names one of VMS's lexical functions
 CLI_LEXNOTIMPL). Subtask 9 gives it F$INTEGER, F$LENGTH, and F$STRING;
 subtask 14 adds the rest.
 
+### Statuses and ON (subtask 10)
+
+`internal/console/dclstatus.go` keeps `$STATUS` and `$SEVERITY` (13.14)
+as reserved global symbols, strings as VMS shows them
+(`$STATUS == "%X00030001"`), set after each command line
+`DispatchConsole` reads (`statusOf`). A command reports success with nil
+and failure with an error, so `conditionValue` turns the error into a
+VMS condition value: VMS's value for the message of the same name
+(CLI_IVVERB is CLI$_IVVERB, %X00038090), with govax's severity, or
+govax's own code where VMS has none, with bit 28 (STS$M_INHIB_MSG) for a
+message already shown. Success is CLI$_NORMAL. SHOW SYMBOL, IF, CONTINUE,
+and EXIT leave `$STATUS` alone when they succeed (13.15, and the probe
+for SHOW SYMBOL); RUN gives the image's exit status (and shows its
+message if it failed), and @ the procedure's.
+
+How a procedure ends decides @'s status (`procedureExit`), as VMS 7.3
+showed: at the end of the file, `$STATUS` as it is, not shown again; at
+EXIT, `$STATUS` with bit 28 set; at `EXIT n`, n, its message shown at
+the level above unless n is odd or has bit 28; and by the error action,
+the failing status with bit 28 (13.8). The procedure's failure is the
+command's own error when it has one (`statusErr`), so its message keeps
+govax's text and arguments.
+
+Each level has an `onAction`: ON's severity and command (taken once,
+then the default is back, 13.9.1), SET NOON's off switch (13.10), and ON
+CONTROL_Y's command (13.12). The procedure loop (`procedureLine`) looks
+at each command's status after showing its message: by default an error
+or severe error ends the procedure; ON's severity or worse runs ON's
+command at the level, which is handled the same way. CONTROL_Y's command
+is kept for subtask 18, which delivers Ctrl/Y to procedures; until then
+Ctrl/Y still ends govax. What was chosen without VMS is in DEVIATIONS.md
+("[Phase 50] Statuses and ON").
+
 ## Subtasks
 
 1. **Survey**: the User's Manual's rules for `@`, parameters, command
@@ -309,6 +342,13 @@ Later rounds of this phase, in a likely order:
 - The rest of what `testdata/dcl50`'s round 1 left open (its README):
   a negative number divided by zero, `''NAME` without its closing
   apostrophe, a foreign command's `&`.
+- For a round 2, on statuses (DEVIATIONS.md's "[Phase 50] Statuses and
+  ON"): EXIT with no status after a success (is bit 28 set?); `$STATUS`
+  at an ON ERROR THEN GOTO label; whether ON's command is substituted
+  when ON is read or when it runs (`ON ERROR THEN WRITE SYS$OUTPUT
+  "''$STATUS'"`); ON CONTROL_Y and SET NOON together; SKPDAT and ON
+  WARNING; `ON FOO` (IVKEYW?) and `EXIT 3 4`; where `EXIT n`'s message
+  goes with `/OUTPUT`.
 
 (Answered by `testdata/dcl50`: a ninth parameter is CLI$_DEFOVF, the
 32nd level CLI$_STKOVF, both warnings; the expression and substitution
@@ -384,3 +424,24 @@ details are in DEVIATIONS.md.)
   the first pass is gone again (an `&` value now goes in quoted). At the
   author's request, `?` is no longer an alias of HELP, in the console or
   the debugger.
+- 2026-10-09: Subtask 10. `internal/console/dclstatus.go`: `$STATUS`
+  and `$SEVERITY` (global string symbols, set by `statusOf` around each
+  line `DispatchConsole` reads), `conditionValue` (govax's statuses as
+  VMS's condition values, by message name; `vmserrors.MessageNames` is
+  now filled by `DefineMessage`), `statusError` for a status given as a
+  VMS value (an image's, EXIT's), ON (`onAction`, per level; ON
+  CONTROL_Y's command kept for subtask 18), SET [NO]ON, CONTINUE, and
+  EXIT's status. `procedure.go`'s loop now runs each line through
+  `procedureLine` (message, then the level's action) and ends with a
+  `procedureExit` (see "Statuses and ON"). RUN reports its image's exit
+  status (`imageCompletion`): a failure shows its message and fails RUN,
+  so `govax run IMAGE` of an image that fails exits nonzero. New
+  messages: CLI_NOTHEN, CLI_INSFPRM. The system facility's message 0 is
+  now SS$_NORMAL's only (`vmsdef.LookupMessage`; NONAME-x-NOMSG for EXIT
+  0, 2, and 4, as VMS showed). HELP: ON, CONTINUE, SET ON, SYMBOL
+  STATUS, and EXIT's status. Tests: `dclstatus_test.go`;
+  `TestProbe50Oracle` now compares every case's `$STATUS` with VMS's
+  (all 109 match); `TestProbe50Statuses` replays section D (all but TYPE
+  and @ of a missing file, whose messages are govax's). The console's
+  `EX` is EXIT's abbreviation, so `EX 200` now parses there as `EXIT
+  200` (TestGrammarSplit).

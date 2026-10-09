@@ -166,6 +166,13 @@ func (c *Console) ReportStop(err error) error {
 	case errors.Is(err, cpu.ErrConsoleCallReturned):
 		if c.imageActive {
 			c.imageActive = false
+
+			// The image's completion status, for RUN to report
+			// (imageCompletion).
+			if c.RTL != nil {
+				c.imageStatus, c.imageEnded = c.RTL.Process.ExitStatus, true
+			}
+
 			c.imageRundown()
 		}
 

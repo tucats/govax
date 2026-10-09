@@ -86,6 +86,8 @@
 //                          and LEXICAL: DCL's expressions, 'SYMBOL' and
 //                          &SYMBOL, and the lexical functions so far
 //              10/09/26    Removed "?" for HELP
+//              10/09/26    Added ON, CONTINUE, SET [NO]ON, EXIT status,
+//                          and SYMBOL STATUS: $STATUS and $SEVERITY
 
 This is the help documentation for the govax VAX emulator.  Topic sections are
 marked by a "$" delimiter.  This is followed by as many tokens of the help
@@ -634,7 +636,65 @@ $EXIT
 
     Syntax:
 
-        EXIT
+        EXIT [status]
+
+    Parameters:
+
+        status      An expression (see HELP SYMBOL EXPRESSIONS) whose
+                    integer value is the procedure's status, the $STATUS
+                    of the level that ran it.  A status that isn't a
+                    success (an even number) has its message shown there,
+                    unless its bit 28 says it has been shown already.
+                    Without a status, the procedure's status is $STATUS,
+                    marked as shown.  See HELP SYMBOL STATUS.
+
+    Example:
+
+        $ EXIT 1            ! end the procedure, successfully
+
+$ON
+
+    The ON command says what a command procedure does when one of its
+    commands fails, or when CTRL/Y is pressed while it runs.  Without
+    one, a procedure ends when a command fails with an error or a fatal
+    error, and goes on after a warning.
+
+    Syntax:
+
+        ON condition THEN [$] command
+
+    Parameters:
+
+        condition   WARNING         a warning, an error, or a fatal error
+                    ERROR           an error or a fatal error
+                    SEVERE_ERROR    a fatal error
+                    CONTROL_Y       CTRL/Y (not delivered yet: CTRL/Y
+                                    still ends govax)
+
+        command     The command to run in place of the procedure's usual
+                    action, such as EXIT, CONTINUE, or SHOW SYMBOL
+                    $STATUS.
+
+    The command runs once: after it, the usual action is back until the
+    next ON.  ON applies only to the command level it is in, so a
+    procedure the procedure runs has its own.  SET NOON turns the
+    checking off, and SET ON (or an ON) back on.  At the terminal, ON
+    is accepted and does nothing.
+
+    Example:
+
+        $ ON WARNING THEN EXIT
+        $ ON ERROR THEN CONTINUE
+
+$CONT
+
+    The CONTINUE command does nothing, and leaves $STATUS as it was: in
+    a command procedure, ON ERROR THEN CONTINUE makes the procedure go on
+    after an error.
+
+    Syntax:
+
+        CONTINUE
 
 $QUIT
 
@@ -876,7 +936,9 @@ $@
 
     The procedure ends at its last line, at an EXIT, or when a command
     fails with an error or a fatal error (a warning doesn't end it).  An
-    error ends the procedures that ran it too.
+    error ends the procedures that ran it too.  ON and SET [NO]ON change
+    what a failure does, and EXIT can give the procedure's status (see
+    HELP ON, HELP EXIT, and HELP SYMBOL STATUS).
 
     Example:
 
@@ -1087,6 +1149,28 @@ $SYM ,SUBS
 
     Data lines in a procedure, and debugger commands, are not substituted.
 
+$SYMB,STAT
+$SYM ,STAT
+    Each command ends with a status, a VMS condition value, which DCL keeps
+    in the global symbol $STATUS, and its severity in $SEVERITY:
+
+        $ SHOW SYMBOL $STATUS
+          $STATUS == "%X00030001"
+
+    The low three bits are the severity: 0 a warning, 1 success, 2 an
+    error, 3 informational, 4 fatal.  So $STATUS is odd (true) after a
+    command that succeeded:
+
+        $ IF $STATUS THEN PRINT "it worked"
+
+    Bit 28 set means the status's message has been shown already, so it
+    isn't shown again.  A command that succeeds gives %X00030001; one that
+    fails gives VMS's condition value for its message, where VMS has one.
+    RUN gives the image's exit status (showing its message if it failed),
+    and @ the procedure's (see HELP EXIT).  SHOW SYMBOL, IF, and CONTINUE
+    leave $STATUS as it was when they succeed.  In a command procedure, the
+    status decides whether the procedure goes on (see HELP ON).
+
 $LEXI
     A lexical function returns an integer or a string, in an expression
     (see HELP SYMBOL EXPRESSIONS) or between apostrophes.  Its arguments are
@@ -1142,6 +1226,7 @@ $SET
         SET ASSEMBLER
         SET DEBUG
         SET DEFAULT
+        SET ON
         SET PROMPT
         SET QUANTUM
         SET RADIX
@@ -1344,6 +1429,20 @@ $SET ,NOVE
         SET VERIFY
         
         SET NOVERIFY
+
+$SET ,ON  
+$SET ,NOON
+
+    The SET NOON command makes the command procedure it is in go on
+    whatever its commands' statuses: no failure ends it, and ON's command
+    isn't run.  $STATUS and $SEVERITY are still set.  SET ON turns the
+    checking back on, with the action that was in effect before.  Each
+    command level has its own setting; at the terminal, SET [NO]ON does
+    nothing.
+
+    Syntax:
+
+        SET [NO]ON
 
 $SET ,RAD 
 $SET ,RADI
@@ -1804,6 +1903,7 @@ $HELP
     DIRECTORY       List the files on a mounted volume
     DEBUG           Start the debugger on the virtual VAX
     DISMOUNT        Detach a device's mounted disk-image container
+    CONTINUE        Do nothing (ON ERROR THEN CONTINUE)
     EXIT            End a command procedure, or govax at the terminal
     IF              Run a command when an expression is true
     INITIALIZE      Initialize the virtual VAX, or a disk-image container
@@ -1812,6 +1912,7 @@ $HELP
     LOAD            Load a saved memory image
     MACRO           Assemble a MACRO-32 source file into an object module
     MOUNT           Attach a disk-image container file to a device
+    ON              Choose what a command procedure does when a command fails
     PRINT           Print messages or expressions
     PURGE           Delete old versions of files on a mounted volume
     QUIT            Quit govax

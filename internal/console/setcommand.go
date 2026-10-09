@@ -52,6 +52,7 @@ func (d *Dispatcher) bindSetCommands() {
 		return c.SetVerbose()
 	})
 	g.Bind("SET_VERIFY", func(id int64, r *dcl.Result) error { return c.SetVerify() })
+	g.Bind("SET_ON", func(id int64, r *dcl.Result) error { return c.SetOn(!r.Negated("WHAT")) })
 
 	g.Bind("SET_QUANTUM", func(id int64, r *dcl.Result) error { return c.SetQuantum(int(r.Int("COUNT"))) })
 	g.Bind("SET_UIQUANTUM", func(id int64, r *dcl.Result) error { return c.SetUIQuantum(int(r.Int("COUNT"))) })

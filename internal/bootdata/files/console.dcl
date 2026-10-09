@@ -204,11 +204,33 @@ grammar console
 
     verb about /entry=exe$about
 
-    ! EXIT ends the command procedure it's in, or govax at the terminal;
-    ! QUIT ends govax wherever it is.
+    ! EXIT [status] ends the command procedure it's in, or govax at the
+    ! terminal; the status, a DCL expression, is the procedure's. QUIT
+    ! ends govax wherever it is.
     verb exit
+        parameter   status/id=1645              -
+                    /type=$rest_of_line
 
     verb quit
+
+    ! ON condition THEN [$] command: what a command procedure does when a
+    ! command fails with the condition's severity or worse, or on Ctrl/Y
+    ! (docs/PHASE-50, subtask 10). CONTINUE does nothing, and goes on.
+    type on_conditions
+        keyword     warning/id=1
+        keyword     error/id=2
+        keyword     severe_error/id=3
+        keyword     control_y/id=4
+
+    verb on/id=1646
+        parameter   condition/id=1647           -
+                    /type=on_conditions         -
+                    /prompt="Condition"
+        parameter   command/id=1648             -
+                    /type=$rest_of_line         -
+                    /prompt="Command"
+
+    verb continue/id=1649
 
     ! DEBUG starts a debugger session on the machine as it stands, with
     ! nothing running (docs/PHASE-42.md). It is how to look at memory and
@@ -943,6 +965,7 @@ grammar console
         keyword     uiquantum           /syntax=set_uiquantum/nonegatable
         keyword     default             /syntax=set_default/nonegatable
         keyword     prompt              /syntax=set_prompt/nonegatable/value
+        keyword     on                  /syntax=set_on
 
 
     verb set/id=1760/assignment=set_symbol
@@ -983,6 +1006,10 @@ grammar console
                     /type=$any/list
 
     syntax set_verbose/id=1799
+
+    ! SET ON and SET NOON: whether a command procedure acts on its
+    ! commands' statuses (docs/PHASE-50, subtask 10).
+    syntax set_on/id=1812
     syntax set_verify/id=1800
 
     syntax set_quantum/id=1801

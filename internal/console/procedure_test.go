@@ -329,8 +329,10 @@ func TestProcedure_dataLines(t *testing.T) {
 	proc := writeProcedure(t, t.TempDir(), "data.com",
 		`$ PRINT "a"`, "1993", "", "1994", `$ PRINT "b"`, "1995")
 
-	if err := d.Dispatch("@" + proc); err != nil {
-		t.Fatal(err)
+	// The procedure ends with SKPDAT's status, a warning whose message
+	// has been shown.
+	if err := d.Dispatch("@" + proc); !errors.Is(err, vmserrors.New(vmserrors.CLI_SKPDAT)) || !vmserrors.MessageInhibited(err) {
+		t.Errorf("@data: %v, want SKPDAT, shown", err)
 	}
 
 	skpdat := `%DCL-W-SKPDAT, image data (records not beginning with "$") ignored` + "\n"

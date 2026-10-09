@@ -99,7 +99,6 @@ const (
 // of a symbol that isn't defined, and CLI$_IMAGEFNF for RUN of an image
 // that isn't there.
 var (
-	ssNormal          = vmsdef.Symbols["SS$_NORMAL"]
 	ssUnsupported     = vmsdef.Symbols["SS$_UNSUPPORTED"]
 	cliStatusIVVERB   = vmsdef.LibrarySymbols["CLI$_IVVERB"]
 	cliStatusIVKEYW   = vmsdef.LibrarySymbols["CLI$_IVKEYW"]
@@ -746,10 +745,6 @@ func (cli *subprocessCLI) showLogical(fields []string) {
 // testdata/mp/probe5/vax, step 10). govax's tables have no SHOW$
 // facility, so the value is VMS's.
 const showNotran = 0x00788019
-
-// stsInhibitMsg is STS$M_INHIB_MSG: a status whose message has already
-// been shown.
-const stsInhibitMsg = 0x10000000
 
 // complete sets $STATUS from a command's error, showing its message.
 func (cli *subprocessCLI) complete(err error) {

@@ -29,8 +29,14 @@ type Message struct {
 const messageKeyMask = 0x0FFFFFF8
 
 // LookupMessage returns the message for condition value code, if the
-// system message file has one.
+// system message file has one. The system facility's message 0 is
+// SS$_NORMAL's, a success only: VMS 7.3 showed the other severities of
+// it (0, 2, and 4) as having no message (testdata/dcl50's EXIT cases).
 func LookupMessage(code uint32) (Message, bool) {
+	if code&messageKeyMask == 0 && code&7 != 1 {
+		return Message{}, false
+	}
+
 	m, ok := Messages[code&messageKeyMask]
 
 	return m, ok

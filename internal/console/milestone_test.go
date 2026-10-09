@@ -230,9 +230,11 @@ func TestMilestone_schedulerOff(t *testing.T) {
 			c, out, _ := milestoneMachine(t, longQuantum)
 			c.RTL.ProcessSettings.Scheduler = false
 
+			// The parent's image ends with SS$_UNSUPPORTED, which RUN
+			// reports.
 			opts := console.RunOptions{CommandLine: mode + " DUA0:[000000]MSCHILD.EXE"}
-			if err := c.Run("DUA0:[000000]MSPARENT.EXE", opts); err != nil {
-				t.Fatalf("RUN: %v\n%s", err, out.String())
+			if err := c.Run("DUA0:[000000]MSPARENT.EXE", opts); err == nil || !strings.Contains(err.Error(), "-UNSUPPORTED,") {
+				t.Fatalf("RUN: %v, want SS$_UNSUPPORTED\n%s", err, out.String())
 			}
 
 			got := programLines(out.String())

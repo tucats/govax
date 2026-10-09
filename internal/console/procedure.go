@@ -58,8 +58,13 @@ type commandLevel struct {
 	source *procedureSource
 
 	// exiting is set by EXIT: the level ends after the command that's
-	// running now.
+	// running now, with exit as its status.
 	exiting bool
+	exit    procedureExit
+
+	// on is the level's error handling: ON's and SET [NO]ON's
+	// (dclstatus.go).
+	on onAction
 
 	// output is the level's /OUTPUT file, nil without one. restoreOut is
 	// the Console.Out it replaced, put back when the level ends.
@@ -340,7 +345,7 @@ func (d *Dispatcher) atCommand(text string) error {
 		return err
 	}
 
-	return d.Console.runProcedure(cmd, d.Dispatch)
+	return d.Console.procedureCommand(cmd, d.Dispatch)
 }
 
 // RunProcedure runs the DCL command procedure in file, with no
@@ -348,39 +353,86 @@ func (d *Dispatcher) atCommand(text string) error {
 // dispatch: what "@file" does, for callers outside the console's own
 // dispatcher.
 func (c *Console) RunProcedure(file string, dispatch func(string) error) error {
-	return c.runProcedure(procedureCommand{file: file}, dispatch)
+	return c.procedureCommand(procedureCommand{file: file}, dispatch)
 }
 
 // RunHostProcedure is RunProcedure for a host file, whatever the default
 // device: govax's own startup procedure, vax.init, found through the
 // search path (c.Paths) even when SET DEFAULT is on a volume.
 func (c *Console) RunHostProcedure(file string, dispatch func(string) error) error {
-	return c.runProcedure(procedureCommand{file: file, host: true}, dispatch)
+	return c.procedureCommand(procedureCommand{file: file, host: true}, dispatch)
 }
 
 // RunDebuggerProcedure is the debugger's @: a debugger command
 // procedure, whose lines are all commands, with no "$" (the VMS
 // debugger's format). It runs at a new command level, like any other.
 func (c *Console) RunDebuggerProcedure(file string, dispatch func(string) error) error {
-	return c.runProcedure(procedureCommand{file: file, plain: true}, dispatch)
+	return c.procedureCommand(procedureCommand{file: file, plain: true}, dispatch)
+}
+
+// procedureExit is how a command procedure ended: its status, which
+// becomes $STATUS at the level above, and whether that level shows the
+// status's message (show), as it does for EXIT with a status. cause is
+// the error behind the status, when it is a command's ($STATUS's
+// statusErr), so @ fails with that error and its message.
+type procedureExit struct {
+	status uint32
+	show   bool
+	cause  error
+}
+
+// procedureCommand runs the procedure cmd names (runProcedure) as a
+// command: @'s status is the procedure's (setCommandStatus), and a
+// failure is returned as an error, whose message is shown only when the
+// procedure ended with EXIT and a status that asks for it.
+func (c *Console) procedureCommand(cmd procedureCommand, dispatch func(string) error) error {
+	exit, err := c.runProcedure(cmd, dispatch)
+	if err != nil {
+		return err
+	}
+
+	c.setCommandStatus(exit.status, exit.cause)
+
+	if exit.status&1 != 0 {
+		return nil
+	}
+
+	failure := exit.cause
+	if failure == nil {
+		failure = c.statusFailure(exit.status)
+	}
+
+	if !exit.show {
+		return vmserrors.InhibitMessage(failure)
+	}
+
+	return failure
 }
 
 // runProcedure runs the procedure cmd names at a new command level, with
 // its parameters as P1 to P8, until its last command, an EXIT, or a
-// command that fails with an error or severe error. The last is DCL's
-// default action, ON ERROR THEN EXIT (User's Manual, 13.8): the message
-// is shown, the procedure ends, and the @ command fails with the same
-// status, with its message marked as shown so no level shows it again. A
-// failure with a warning, success, or informational status is shown, and
-// the procedure goes on.
-func (c *Console) runProcedure(cmd procedureCommand, dispatch func(string) error) (err error) {
+// command whose status the level's error handling ends it on (onAction):
+// by default an error or a severe error, DCL's ON ERROR THEN EXIT (User's
+// Manual, 13.8). Each command's message is shown as it fails. The
+// procedure ends with a status (procedureExit), as VMS 7.3 ended them in
+// testdata/dcl50:
+//
+//   - at the end of the file, $STATUS as it is, its message not shown
+//     again;
+//   - at EXIT, the status EXIT gives, or $STATUS marked as shown
+//     (STS$M_INHIB_MSG) when it gives none;
+//   - by the error action, $STATUS marked as shown (13.8).
+//
+// An error is returned only when the procedure couldn't start, or its
+// /OUTPUT file couldn't be written.
+func (c *Console) runProcedure(cmd procedureCommand, dispatch func(string) error) (exit procedureExit, err error) {
 	if len(c.levels) >= maxCommandLevels {
-		return vmserrors.New(vmserrors.CLI_STKOVF)
+		return exit, vmserrors.New(vmserrors.CLI_STKOVF)
 	}
 
 	source, err := c.openProcedure(cmd.file, cmd.host)
 	if err != nil {
-		return err
+		return exit, err
 	}
 
 	source.plain = cmd.plain
@@ -393,7 +445,7 @@ func (c *Console) runProcedure(cmd procedureCommand, dispatch func(string) error
 	if cmd.hasOutput {
 		out, err := c.openProcedureOutput(cmd.output)
 		if err != nil {
-			return err
+			return exit, err
 		}
 
 		level.output, level.restoreOut, level.redirected = out, c.Out, true
@@ -431,56 +483,105 @@ func (c *Console) runProcedure(cmd procedureCommand, dispatch func(string) error
 			break
 		}
 
-		var status error
-
 		switch {
 		case data && !c.readingInput():
 			// Nothing reads the procedure's input, so DCL skips the data,
 			// with one warning for each run of data lines.
-			if !skipping {
-				status = vmserrors.New(vmserrors.CLI_SKPDAT)
+			wasSkipping := skipping
+			skipping = true
+
+			if wasSkipping {
+				continue
 			}
 
-			skipping = true
+			skipped := func() error {
+				return c.statusOf(func() error { return vmserrors.New(vmserrors.CLI_SKPDAT) })
+			}
+
+			if ended, stop := c.procedureLine(level, dispatch, skipped); stop {
+				return ended, nil
+			}
+
+			continue
 
 		case data:
 			skipping = false
-			status = dispatch(line)
 
 		default:
 			skipping = false
 
 			// What was reading the procedure's input has come to its end.
 			if !source.plain {
-				status = c.endInput(dispatch)
-			}
-
-			if status == nil {
-				status = dispatch(line)
+				if ended, stop := c.procedureLine(level, dispatch, func() error { return c.endInput(dispatch) }); stop {
+					return ended, nil
+				}
 			}
 		}
 
-		if status == nil {
-			continue
-		}
-
-		var ve vmserrors.VMSError
-		if errors.As(status, &ve) && ve.Status == vmserrors.VAX_QUIT {
-			c.quit = true
-
-			return nil
-		}
-
-		if !vmserrors.MessageInhibited(status) {
-			c.procedureMessage(level, status)
-		}
-
-		if endsProcedure(status) {
-			return vmserrors.InhibitMessage(status)
+		if ended, stop := c.procedureLine(level, dispatch, func() error { return dispatch(line) }); stop {
+			return ended, nil
 		}
 	}
 
-	return nil
+	if level.exiting {
+		return level.exit, nil
+	}
+
+	return procedureExit{status: c.status, cause: c.statusErr}, nil
+}
+
+// procedureLine runs one of level's lines (run) and what its status
+// makes the level do: its message is shown, and its status may run the
+// ON command's action (which is handled the same way, being a command
+// at this level) or end the procedure, with the status the procedure
+// ends with (stop true). QUIT ends it too, and govax with it. The action
+// goes to dispatch, as the level's lines do.
+func (c *Console) procedureLine(level *commandLevel, dispatch func(string) error, run func() error) (exit procedureExit, stop bool) {
+	for run != nil {
+		c.statusSet = false
+
+		err := run()
+		run = nil
+
+		var ve vmserrors.VMSError
+		if errors.As(err, &ve) && ve.Status == vmserrors.VAX_QUIT {
+			c.quit = true
+
+			return procedureExit{status: c.status, cause: c.statusErr}, true
+		}
+
+		if err != nil && !vmserrors.MessageInhibited(err) {
+			c.procedureMessage(level, err)
+		}
+
+		// The command's status: what it set $STATUS to, or, for a line
+		// that didn't go through DCL (a debugger command), its error's.
+		var (
+			status uint32
+			cause  error
+		)
+
+		switch {
+		case c.statusSet:
+			status, cause = c.status, c.statusErr
+		case err != nil:
+			status, cause = conditionValue(err), err
+		default:
+			continue
+		}
+
+		command, exits, act := level.on.take(status)
+
+		switch {
+		case !act:
+		case exits:
+			return procedureExit{status: status | stsInhibitMsg, cause: cause}, true
+		default:
+			run = func() error { return dispatch(command) }
+		}
+	}
+
+	return procedureExit{}, false
 }
 
 // readingInput reports whether something other than DCL reads the
@@ -536,31 +637,31 @@ func (c *Console) procedureMessage(level *commandLevel, err error) {
 	}
 }
 
-// endsProcedure reports whether a command's failure ends the procedure
-// it's in, by DCL's default action: an error or a severe error does, a
-// warning doesn't. A failure that isn't a VMS status is an error.
-func endsProcedure(err error) bool {
-	var ve vmserrors.VMSError
-	if !errors.As(err, &ve) {
-		return true
+// Exit is the console's EXIT [status]: in a command procedure it ends
+// the procedure, and the level above goes on (User's Manual, 13.7.1),
+// with status (nil for none) as the procedure's status (13.14.2). With
+// none, the procedure's status is $STATUS, marked as shown (VMS 7.3 gave
+// %X10038028 after a procedure whose last command had failed with
+// %X00038028, testdata/dcl50). At the terminal it ends govax, as QUIT
+// does.
+func (c *Console) Exit(status *uint32) error {
+	level := c.currentLevel()
+	if level == nil {
+		return c.Quit()
 	}
 
-	severity := ve.SeverityCode()
+	level.exiting = true
+	level.exit = procedureExit{status: c.status | stsInhibitMsg, cause: c.statusErr}
 
-	return severity == vmserrors.StatusError || severity == vmserrors.StatusSevere
-}
-
-// Exit is the console's EXIT: in a command procedure it ends the
-// procedure, and the level above goes on (User's Manual, 13.7.1); at the
-// terminal it ends govax, as QUIT does.
-func (c *Console) Exit() error {
-	if level := c.currentLevel(); level != nil {
-		level.exiting = true
-
-		return nil
+	if status != nil {
+		level.exit = procedureExit{status: *status, show: *status&stsInhibitMsg == 0}
 	}
 
-	return c.Quit()
+	// EXIT itself leaves $STATUS alone: the procedure's status is set
+	// when @ ends.
+	c.keepStatus()
+
+	return nil
 }
 
 // openProcedure reads the command procedure file names. Where the file is,

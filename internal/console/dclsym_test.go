@@ -184,9 +184,12 @@ func TestShowDCLSymbols(t *testing.T) {
 
 	all := `  NEG = -1   Hex = FFFFFFFF  Octal = 37777777777
   SAY = "a "b" c"
+  $SEVERITY == "1"
+  $STATUS == "%X00030001"
   FO*RTH == "$FORTH"
   N == 42   Hex = 0000002A  Octal = 00000000052
 `
+	// $STATUS and $SEVERITY are global symbols (dclstatus.go).
 	if got := show("SHOW SYMBOL *"); got != all {
 		t.Errorf("all:\n%s\nwant:\n%s", got, all)
 	}
@@ -203,7 +206,7 @@ func TestShowDCLSymbols(t *testing.T) {
 		t.Errorf("/ALL (the local table): %q, want %q", got, want)
 	}
 
-	if got, want := show("SHOW SYMBOL/GLOBAL/ALL"), "  FO*RTH == \"$FORTH\"\n  N == 42   Hex = 0000002A  Octal = 00000000052\n"; got != want {
+	if got, want := show("SHOW SYMBOL/GLOBAL/ALL"), "  $SEVERITY == \"1\"\n  $STATUS == \"%X00030001\"\n  FO*RTH == \"$FORTH\"\n  N == 42   Hex = 0000002A  Octal = 00000000052\n"; got != want {
 		t.Errorf("/GLOBAL/ALL: %q, want %q", got, want)
 	}
 
@@ -292,8 +295,8 @@ func TestDCLSymbols_localAndGlobal(t *testing.T) {
 
 	show("DELETE/SYMBOL/GLOBAL/ALL")
 
-	if err := d.Dispatch("SHOW SYMBOL *"); !hasStatus(err, vmserrors.CLI_UNDSYM) {
-		t.Errorf("SHOW SYMBOL * after DELETE/SYMBOL/GLOBAL/ALL: %v, want CLI_UNDSYM", err)
+	if err := d.Dispatch("SHOW SYMBOL X*"); !hasStatus(err, vmserrors.CLI_UNDSYM) {
+		t.Errorf("SHOW SYMBOL X* after DELETE/SYMBOL/GLOBAL/ALL: %v, want CLI_UNDSYM", err)
 	}
 
 	for line, code := range map[string]uint32{

@@ -8,6 +8,7 @@ import (
 	"github.com/tucats/govax/internal/console"
 	"github.com/tucats/govax/internal/console/consoletest"
 	"github.com/tucats/govax/internal/vax"
+	"github.com/tucats/govax/internal/vmserrors"
 )
 
 // runImage loads the image at path with RUN's options opts on a runnable
@@ -25,7 +26,9 @@ func runImage(t *testing.T, path string, opts console.RunOptions) (*console.Cons
 	buf := c.Out.(*bytes.Buffer)
 	buf.Reset()
 
-	if err := c.Run(path, opts); err != nil {
+	// An image that ends with a failure whose message has been shown (an
+	// unhandled condition's) fails RUN quietly, as DCL's RUN does.
+	if err := c.Run(path, opts); err != nil && !vmserrors.MessageInhibited(err) {
 		t.Fatalf("RUN: %v", err)
 	}
 

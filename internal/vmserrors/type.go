@@ -112,6 +112,8 @@ var FacilityNames = map[uint32]string{
 	VAXFacility:   "VAX", // These are the errors used by govax internally
 }
 
+// MessageNames maps a fully constructed status code to its message's
+// short identifier ("IVVERB"), as registered by DefineMessage.
 var MessageNames = map[uint32]string{}
 
 // Equals tests to see if an error matches a given known status code,

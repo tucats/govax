@@ -113,9 +113,9 @@ func TestLoadEvaxGrammar_verbCount(t *testing.T) {
 	// back out for the debugger's grammar. Phase 45 adds stop, and Phase
 	// 48 spawn. Phase 50 removes include and its alias @: the console
 	// reads "@file" before the grammar. It also drops "?", an old alias
-	// of HELP.
-	if len(g.verbOrder) != 42 {
-		t.Errorf("got %d verbs, want 42: %v", len(g.verbOrder), verbNames(g))
+	// of HELP, and adds ON and CONTINUE.
+	if len(g.verbOrder) != 44 {
+		t.Errorf("got %d verbs, want 44: %v", len(g.verbOrder), verbNames(g))
 	}
 }
 

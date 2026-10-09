@@ -197,8 +197,14 @@ func TestForth_foreignCommand(t *testing.T) {
 
 	out.Reset()
 
-	if err := d.Dispatch("fort 1 nosuch 2"); err != nil {
-		t.Fatal(err)
+	// FORTH ends with SS$_ABORT, which RUN reports, as DCL does: the
+	// message, and $STATUS.
+	if err := d.Dispatch("fort 1 nosuch 2"); err == nil || err.Error() != "SYSTEM-F-ABORT, abort" {
+		t.Errorf("fort 1 nosuch 2: %v, want SS$_ABORT", err)
+	}
+
+	if st := c.Status(); st != vmsdef.Symbols["SS$_ABORT"] {
+		t.Errorf("$STATUS = %08X, want SS$_ABORT", st)
 	}
 
 	if got, want := out.String(), "NOSUCH: not found\n"; got != want {

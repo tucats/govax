@@ -275,6 +275,21 @@ type Console struct {
 	// last. Each has its own local symbol table in dclSymbols.
 	levels []*commandLevel
 
+	// status is $STATUS, the last command's condition value, and
+	// commandStatus what the command being dispatched says about it
+	// (dclstatus.go). statusSet is set each time a command sets $STATUS,
+	// for the procedure loop's ON check. statusErr is the error $STATUS
+	// came from, if any.
+	status        uint32
+	statusErr     error
+	commandStatus commandStatus
+	statusSet     bool
+
+	// imageStatus is the completion status of the last image RUN ran to
+	// its end, and imageEnded says one did (run.go).
+	imageStatus uint32
+	imageEnded  bool
+
 	// clis are the command interpreters of the processes that run one
 	// (subcli.go: LIB$SPAWN's, and $CREPRC's of LOGINOUT), by process.
 	clis map[*corevms.Environment]*subprocessCLI
@@ -307,6 +322,8 @@ func New(out io.Writer) *Console {
 
 	c.Logicals.Trace = c.traceLogicals
 	c.ContainerSession.Logicals = c.Logicals
+
+	c.setStatus(ssNormal, nil)
 
 	// An input host file named with no directory, and not in the current
 	// directory, is looked for along c.Paths too, ending with govax's

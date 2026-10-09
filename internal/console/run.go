@@ -103,7 +103,16 @@ func (c *Console) Run(fn string, opts RunOptions) error {
 	c.imageActive = true
 
 	if !c.runsUnderDebugger(main, opts.Debug) {
-		return c.Call(driverAddr, false)
+		c.imageEnded = false
+		if c.RTL != nil {
+			c.RTL.Process.ExitStatus = ssNormal
+		}
+
+		if err := c.Call(driverAddr, false); err != nil {
+			return err
+		}
+
+		return c.imageCompletion()
 	}
 
 	if c.Debugger == nil {
@@ -433,4 +442,27 @@ func (c *Console) activateCreatedImage(env *corevms.Environment, image string, h
 	}
 
 	return driver, nil
+}
+
+// imageCompletion is what RUN reports when its image has run to its end
+// ($EXIT): the image's status is the command's, as DCL makes it $STATUS,
+// and a failure is returned, its message shown unless the image's status
+// says it has been (STS$M_INHIB_MSG, as an unhandled condition's has).
+// When the run stopped some other way (a HALT, a limit, CTRL/C), nothing
+// is reported.
+func (c *Console) imageCompletion() error {
+	if !c.imageEnded {
+		return nil
+	}
+
+	c.imageEnded = false
+	status := c.imageStatus
+
+	c.setCommandStatus(status, nil)
+
+	if status&1 != 0 {
+		return nil
+	}
+
+	return c.statusFailure(status)
 }
