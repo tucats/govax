@@ -95,6 +95,8 @@ func (r *recordDevice) Characteristics() uint32 { return r.env.devChar(r.ch.Devi
 // instead.
 func (r *recordDevice) Put(record []byte, async bool) (uint32, bool, error) {
 	if r.mbx == nil {
+		r.env.countIO(false)
+
 		return ssNormal, false, nil
 	}
 
@@ -135,6 +137,12 @@ func (r *recordDevice) advancePut() (uint32, bool) {
 
 	finish := func(status uint32) (uint32, bool) {
 		r.putting, r.putRecord, r.putWrite = false, nil, nil
+
+		// A record written, as one buffered I/O (iocount.go); one too
+		// long for the mailbox is refused before any I/O.
+		if status != ssMbTooSml {
+			env.countIO(false)
+		}
 
 		return status, true
 	}
@@ -184,6 +192,8 @@ func (r *recordDevice) waitPut() error {
 func (r *recordDevice) Get() ([]byte, uint32, error) {
 	m, env := r.mbx, r.env
 	if m == nil {
+		env.countIO(false)
+
 		return nil, ssEndOfFile, nil
 	}
 
@@ -216,6 +226,7 @@ func (r *recordDevice) Get() ([]byte, uint32, error) {
 
 	env.deliverAttention(&m.roomAttention)
 	env.mailboxResourceAvailable()
+	env.countIO(false) // a record read, as one buffered I/O (iocount.go)
 
 	if msg.eof {
 		return nil, ssEndOfFile, nil
@@ -262,8 +273,12 @@ func (r *recordDevice) Close() {
 func (env *Environment) PutOutput(record string) (uint32, error) {
 	device, st := env.deviceName("SYS$OUTPUT")
 	if st != 0 || env.isFileDevice(device) {
-		if !env.putOutputFile(record) {
+		written := false
+		env.countVolumeIO(func() { written = env.putOutputFile(record) })
+
+		if !written {
 			env.writeConsole(record + "\n")
+			env.countIO(false)
 		}
 
 		return ssNormal, nil
@@ -280,6 +295,7 @@ func (env *Environment) PutOutput(record string) (uint32, error) {
 		dev, found, st := env.OpenRecordDevice(device, fabFACPut)
 		if !found {
 			env.writeConsole(record + "\n")
+			env.countIO(false)
 
 			return ssNormal, nil
 		}

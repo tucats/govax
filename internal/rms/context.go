@@ -92,6 +92,11 @@ type Context struct {
 	AwaitTerminal func(maxLen int, prompt string) error
 	TerminalDone  func()
 
+	// CountBufferedIO, if set, counts one buffered I/O operation for the
+	// process: a record read from or written to the terminal, as the
+	// $QIO VMS's RMS would make for it counts (corevms's iocount.go).
+	CountBufferedIO func()
+
 	// Devices opens the record devices (mailboxes, NL:) a file
 	// specification may name (recdevice.go); nil means none can be.
 	Devices DeviceOpener

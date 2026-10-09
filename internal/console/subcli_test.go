@@ -1,6 +1,7 @@
 package console_test
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -88,14 +89,16 @@ func splitLogoutReport(lines []string) (before, report []string) {
 
 // checkLogoutReport checks LOGOUT's report for a job that isn't
 // interactive (corevms's LogoutReport) as programLines leaves it: VMS's
-// lines, less the blank one, with govax's counts.
+// lines, less the blank one, with govax's counts. The buffered I/O
+// count is the job's own (it has read commands and written lines), so
+// it is checked for its place, and to be more than 0.
 func checkLogoutReport(t *testing.T, report []string) {
 	t.Helper()
 
 	want := []string{
 		"  SYSTEM       job terminated at ",
 		"  Accounting information:",
-		"  Buffered I/O count:               0         Peak working set size:       0",
+		"  Buffered I/O count:",
 		"  Direct I/O count:                 0         Peak page file size:         0",
 		"  Page faults:                      0         Mounted volumes:             0",
 		"  Charged CPU time:           ",
@@ -105,6 +108,12 @@ func checkLogoutReport(t *testing.T, report []string) {
 		t.Errorf("LOGOUT's report:\n%s", strings.Join(report, "\n"))
 
 		return
+	}
+
+	var buffered int
+	if _, err := fmt.Sscanf(report[2], "  Buffered I/O count: %d", &buffered); err != nil || buffered == 0 ||
+		report[2] != fmt.Sprintf("  Buffered I/O count:%16d         Peak working set size:       0", buffered) {
+		t.Errorf("LOGOUT's report, line 3: %q, want a buffered I/O count past 0, in its column", report[2])
 	}
 
 	for i, w := range want {

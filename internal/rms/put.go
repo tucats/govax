@@ -126,6 +126,8 @@ func SysPut(ctx *Context, argv []uint32) (uint32, error) {
 		if _, err := handle.Console.Write([]byte{'\n'}); err != nil {
 			return storeStatus(ctx, rabAddr, rabSTS, rabSTV, rmsDeviceError)
 		}
+
+		ctx.countBufferedIO()
 	} else {
 		if sts, err := ctx.putPosition(rabAddr, handle); err != nil || sts != 0 {
 			return sts, err

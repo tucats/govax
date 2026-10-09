@@ -108,6 +108,7 @@ func (env *Environment) ReadInputLine(prompt string, maxLen int) (line string, o
 
 	line, ok = readTerminalLine(env, maxLen)
 	env.terminalDone()
+	env.countIO(false)
 
 	return line, ok, nil
 }

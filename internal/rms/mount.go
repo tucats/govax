@@ -290,6 +290,19 @@ func (t *MountTable) Operations(device string) (uint32, bool) {
 	return uint32(entry.Volume.Devices[0].Operations()), true
 }
 
+// TotalOperations returns how many logical I/O operations ods2 has done
+// on every mounted volume together (each volume's Operations, summed).
+// The caller compares two of them to count what happened between.
+func (t *MountTable) TotalOperations() uint64 {
+	var total uint64
+
+	for _, entry := range t.mounts {
+		total += uint64(entry.Volume.Devices[0].Operations())
+	}
+
+	return total
+}
+
 // OpenFiles returns how many files are open on device's mounted volume
 // (SHOW DEVICE's transaction count), or 0 with nothing mounted there.
 func (t *MountTable) OpenFiles(device string) int {

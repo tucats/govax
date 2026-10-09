@@ -23,66 +23,39 @@ import "github.com/tucats/govax/internal/rms"
 // this call was actually made against (env.rmsContext, environment.go),
 // then forward argv to the real handler unchanged.
 func registerRMSServices(t *ServiceTable) {
-	t.Register("SYS$CREATE", func(env *Environment, argv []uint32) (uint32, error) {
-		return rms.SysCreate(env.rmsContext(), argv)
-	})
-	t.Register("SYS$CONNECT", func(env *Environment, argv []uint32) (uint32, error) {
-		return rms.SysConnect(env.rmsContext(), argv)
-	})
-	t.Register("SYS$OPEN", func(env *Environment, argv []uint32) (uint32, error) {
-		return rms.SysOpen(env.rmsContext(), argv)
-	})
-	t.Register("SYS$CLOSE", func(env *Environment, argv []uint32) (uint32, error) {
-		return rms.SysClose(env.rmsContext(), argv)
-	})
-	t.Register("SYS$GET", func(env *Environment, argv []uint32) (uint32, error) {
-		return rms.SysGet(env.rmsContext(), argv)
-	})
-	t.Register("SYS$PUT", func(env *Environment, argv []uint32) (uint32, error) {
-		return rms.SysPut(env.rmsContext(), argv)
-	})
-	t.Register("SYS$PARSE", func(env *Environment, argv []uint32) (uint32, error) {
-		return rms.SysParse(env.rmsContext(), argv)
-	})
-	t.Register("SYS$SEARCH", func(env *Environment, argv []uint32) (uint32, error) {
-		return rms.SysSearch(env.rmsContext(), argv)
-	})
-	t.Register("SYS$DISPLAY", func(env *Environment, argv []uint32) (uint32, error) {
-		return rms.SysDisplay(env.rmsContext(), argv)
-	})
-	t.Register("SYS$RENAME", func(env *Environment, argv []uint32) (uint32, error) {
-		return rms.SysRename(env.rmsContext(), argv)
-	})
-	t.Register("SYS$WAIT", func(env *Environment, argv []uint32) (uint32, error) {
-		return rms.SysWait(env.rmsContext(), argv)
-	})
-	t.Register("SYS$FLUSH", func(env *Environment, argv []uint32) (uint32, error) {
-		return rms.SysFlush(env.rmsContext(), argv)
-	})
-	t.Register("SYS$ERASE", func(env *Environment, argv []uint32) (uint32, error) {
-		return rms.SysErase(env.rmsContext(), argv)
-	})
-	t.Register("SYS$FREE", func(env *Environment, argv []uint32) (uint32, error) {
-		return rms.SysFree(env.rmsContext(), argv)
-	})
-	t.Register("SYS$RELEASE", func(env *Environment, argv []uint32) (uint32, error) {
-		return rms.SysRelease(env.rmsContext(), argv)
-	})
+	for name, fn := range rmsServices {
+		t.Register(name, func(env *Environment, argv []uint32) (status uint32, err error) {
+			// The volume blocks the service read and wrote are the
+			// process's direct I/O (iocount.go).
+			env.countVolumeIO(func() { status, err = fn(env.rmsContext(), argv) })
 
-	// Phase 49: the record operations past $GET and $PUT.
-	t.Register("SYS$FIND", func(env *Environment, argv []uint32) (uint32, error) {
-		return rms.SysFind(env.rmsContext(), argv)
-	})
-	t.Register("SYS$UPDATE", func(env *Environment, argv []uint32) (uint32, error) {
-		return rms.SysUpdate(env.rmsContext(), argv)
-	})
-	t.Register("SYS$TRUNCATE", func(env *Environment, argv []uint32) (uint32, error) {
-		return rms.SysTruncate(env.rmsContext(), argv)
-	})
-	t.Register("SYS$DELETE", func(env *Environment, argv []uint32) (uint32, error) {
-		return rms.SysDelete(env.rmsContext(), argv)
-	})
-	t.Register("SYS$REWIND", func(env *Environment, argv []uint32) (uint32, error) {
-		return rms.SysRewind(env.rmsContext(), argv)
-	})
+			return status, err
+		})
+	}
+}
+
+// rmsServices are the RMS services, by name: Phase 22's and 33's, and
+// Phase 49's record operations past $GET and $PUT ($FIND, $UPDATE,
+// $TRUNCATE, $DELETE, $REWIND).
+var rmsServices = map[string]func(*rms.Context, []uint32) (uint32, error){
+	"SYS$CREATE":   rms.SysCreate,
+	"SYS$CONNECT":  rms.SysConnect,
+	"SYS$OPEN":     rms.SysOpen,
+	"SYS$CLOSE":    rms.SysClose,
+	"SYS$GET":      rms.SysGet,
+	"SYS$PUT":      rms.SysPut,
+	"SYS$PARSE":    rms.SysParse,
+	"SYS$SEARCH":   rms.SysSearch,
+	"SYS$DISPLAY":  rms.SysDisplay,
+	"SYS$RENAME":   rms.SysRename,
+	"SYS$WAIT":     rms.SysWait,
+	"SYS$FLUSH":    rms.SysFlush,
+	"SYS$ERASE":    rms.SysErase,
+	"SYS$FREE":     rms.SysFree,
+	"SYS$RELEASE":  rms.SysRelease,
+	"SYS$FIND":     rms.SysFind,
+	"SYS$UPDATE":   rms.SysUpdate,
+	"SYS$TRUNCATE": rms.SysTruncate,
+	"SYS$DELETE":   rms.SysDelete,
+	"SYS$REWIND":   rms.SysRewind,
 }

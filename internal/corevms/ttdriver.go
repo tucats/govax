@@ -251,13 +251,13 @@ func (env *Environment) terminalRead(req *ioRequest, prompt string) (ioStatus, u
 	if pollOnly {
 		env.writeConsole(prompt)
 
-		return env.readTerminalLine(r, req, &set, true), 0
+		return env.readQIOLine(r, req, &set, true), 0
 	}
 
 	// The read waits its turn and for its line (terminal.go): the request
 	// stays pending, and completes when the terminal's queue reads it.
 	ends := func(b byte) bool { return set.has(b) || b == '\n' && set.has(ttCarriageReturn) }
-	read := func(r *bufio.Reader) ioStatus { return env.readTerminalLine(r, req, &set, false) }
+	read := func(r *bufio.Reader) ioStatus { return env.readQIOLine(r, req, &set, false) }
 
 	if env.queueTerminalRead(req, int(size), prompt, ends, read) {
 		return ioStatus{}, ioPending
@@ -266,14 +266,14 @@ func (env *Environment) terminalRead(req *ioRequest, prompt string) (ioStatus, u
 	return read(r), 0
 }
 
-// readTerminalLine reads req's line from r into its buffer (p1, p2
+// readQIOLine reads req's line from r into its buffer (p1, p2
 // characters; checked when the request was made), ending at a
 // terminator in set, and returns the request's completion status. With
 // pollOnly it reads only what r already holds (SS$_TIMEOUT if that runs
 // out first). env is the process that made the request, which needn't
 // be the one the CPU is running when a pending read completes: the
 // characters are stored through its address space.
-func (env *Environment) readTerminalLine(r *bufio.Reader, req *ioRequest, set *terminatorSet, pollOnly bool) ioStatus {
+func (env *Environment) readQIOLine(r *bufio.Reader, req *ioRequest, set *terminatorSet, pollOnly bool) ioStatus {
 	buf, size := req.p[0], req.p[1]&0xFFFF
 
 	var (

@@ -101,6 +101,7 @@ func readSharedConsoleLine(env *Environment, maxLen int) (string, error) {
 
 	line, err := readConsoleLine(env, maxLen)
 	env.terminalDone()
+	env.countIO(false)
 
 	if err != nil {
 		line = ""

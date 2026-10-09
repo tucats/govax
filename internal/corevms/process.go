@@ -150,6 +150,10 @@ type Process struct {
 	// saves in the process header.
 	ExitStatus uint32
 
+	// BufferedIO and DirectIO count the I/O operations completed for the
+	// process (PHD$L_BIOCNT, PHD$L_DIOCNT; iocount.go).
+	BufferedIO, DirectIO uint32
+
 	// putmsg holds the $PUTMSG calls whose action routine is running,
 	// innermost last (an action routine may call $PUTMSG itself;
 	// message.go).

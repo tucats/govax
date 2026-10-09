@@ -365,7 +365,7 @@ stream's record locks.
   LIB$GET_INPUT, the input shims, which still wait in their service).
   Before each scheduling choice `pollEvents` calls `serviceTerminal`,
   which reads the line of each pending read at the head of the queue
-  whose line is there (`readTerminalLine`, storing through the owner's
+  whose line is there (`readQIOLine`, storing through the owner's
   address space, since another process may be current) and completes
   it: IOSB, event flag, AST, and the owner's wait ended, boosted as
   terminal input. A synchronous read finishing services the next read at
@@ -384,3 +384,23 @@ stream's record locks.
   `TestTerminal_cancelPending`; the console's `TestPendingTerminalRead`
   (a MACRO program working while its read is pending), and
   `TestSharedTerminal` ($QIOW) unchanged.
+- 2026-10-09: Subtask 11, part 1: per-process I/O counts
+  (`corevms/iocount.go`), from the Internals book, section 18.3.3 (I/O
+  postprocessing increments PHD$L_DIOCNT or PHD$L_BIOCNT as a request
+  completes). `Process.BufferedIO`/`DirectIO`; JPI$_BUFIO and JPI$_DIRIO;
+  SHOW SYSTEM's I/O column (their sum); the termination message's
+  ACC$L_BIOCNT/ACC$L_DIOCNT; LOGOUT's report. Counted: every `$QIO`
+  completing for a process (`completeIO`; a cancelled one too, a
+  rejected one not), direct for a disk, buffered otherwise; one
+  buffered I/O per record RMS reads or writes on the terminal, a
+  mailbox, or NL: (`rms.Context.CountBufferedIO`, the record device's
+  Put and Get), and per LIB$PUT_OUTPUT/LIB$GET_INPUT line; and, as
+  direct I/O, the ods2 block operations each RMS service did on the
+  mounted volumes (`countVolumeIO`, by `MountTable.TotalOperations`
+  before and after; the RMS services are now registered from one table,
+  `rmsServices`, through it), and LIB$PUT_OUTPUT's to a file.
+  Unconfirmed approximation: ods2's caching and transfer sizes aren't
+  RMS's, so the direct counts won't match a VMS run's; section paging
+  isn't counted (paging I/O, as on VMS). Tests: `TestIOCount_terminal`,
+  `TestIOCount_disk`, `TestIOCount_volume`; the subprocess CLI's LOGOUT
+  report now shows its buffered count.

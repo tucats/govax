@@ -397,6 +397,13 @@ func (env *Environment) completeIO(req *ioRequest, done ioStatus) {
 		req.channel.Device.OpCnt++
 	}
 
+	// The requester's I/O count (iocount.go): not for a request the
+	// system made for itself, nor for one RMS made for a record, which
+	// RMS's record counts.
+	if req.owner != nil && !req.noFlag && req.channel != nil {
+		req.owner.countIO(isDirectIO(req.channel.Device))
+	}
+
 	owner := req.owner
 	if owner == nil {
 		owner = env

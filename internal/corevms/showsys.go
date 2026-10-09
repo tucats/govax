@@ -140,14 +140,16 @@ func systemLine(pid uint32, name, state string, pri int, io uint32, cpu uint64, 
 }
 
 // SystemReport is SHOW SYSTEM's display, a line per process, in PID
-// order, after the title (naming system and node) and the column
+// order (its I/O column the process's buffered and direct I/O counts
+// together, iocount.go), after the title (naming system and node) and the column
 // headings.
 func (sys *System) SystemReport(system, node string) []string {
 	lines := []string{systemTitle(system, node, sys.Clock(), sys.BootTime), systemHeadings}
 
 	for _, env := range sys.Processes() {
 		state, pri := sys.processState(env)
-		lines = append(lines, systemLine(env.Process.PID, env.Process.Name, state, pri, 0, sys.CPUTime(env), 0, sys.mappedPages(env)))
+		io := env.Process.BufferedIO + env.Process.DirectIO
+		lines = append(lines, systemLine(env.Process.PID, env.Process.Name, state, pri, io, sys.CPUTime(env), 0, sys.mappedPages(env)))
 	}
 
 	return lines
