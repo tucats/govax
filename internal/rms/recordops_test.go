@@ -184,6 +184,67 @@ func TestUpdate(t *testing.T) {
 	checkVolume(t, mounts)
 }
 
+// TestUpdate_stream: in a stream file, $UPDATE to another length
+// writes the record and its CR LF over the file's bytes, moving nothing,
+// as VMS 7.3 did (testdata/probe49, round 2, step 1): "ABC" over the
+// first of R1 R2 R3 leaves ABC, 2, R3; "A" leaves A, a lone line feed
+// (a record of its own), R2, R3. Past the end of the file it's RMS$_RSZ.
+func TestUpdate_stream(t *testing.T) {
+	cases := []struct {
+		update string
+		want   []string
+	}{
+		{"ABC", []string{"ABC", "2", "R3"}},
+		{"A", []string{"A", "\n", "R2", "R3"}},
+	}
+
+	for _, c := range cases {
+		p, _ := newSharers(t, 1)
+		a := p[0]
+
+		ctx := a.ctx
+		newFAB(t, ctx, "DUA0:S.DAT")
+		putByte(t, ctx, testFabAddr+fabFAC, facGet|facPut|facUpd)
+		putByte(t, ctx, testFabAddr+fabRFM, byte(vmsConst("FAB$C_STM")))
+
+		if r0, err := SysCreate(ctx, []uint32{testFabAddr}); err != nil || r0&1 == 0 {
+			t.Fatalf("$CREATE: %#x, %v", r0, err)
+		}
+
+		putRAB(t, ctx, testFabAddr)
+		putByte(t, ctx, testRabAddr+rabRAC, racSeq)
+
+		if r0, err := SysConnect(ctx, []uint32{testRabAddr}); err != nil || r0&1 == 0 {
+			t.Fatalf("$CONNECT: %#x, %v", r0, err)
+		}
+
+		for _, r := range []string{"R1", "R2", "R3"} {
+			a.put(r)
+		}
+
+		wantRecStatus(t, "$REWIND", a.call(SysRewind, 0), rmsNormal)
+		a.wantGet("R1", rmsNormal)
+		wantRecStatus(t, "$UPDATE to "+c.update, a.update(c.update), rmsNormal)
+		wantRecStatus(t, "$REWIND", a.call(SysRewind, 0), rmsNormal)
+
+		for _, w := range c.want {
+			a.wantGet(w, rmsNormal)
+		}
+
+		a.wantGet("", rmsEOF)
+
+		// R3 again, made far longer: past the end of the file.
+		wantRecStatus(t, "$REWIND", a.call(SysRewind, 0), rmsNormal)
+
+		for range c.want {
+			a.get()
+		}
+
+		wantRecStatus(t, "$UPDATE past the end", a.update("MUCH LONGER"), rmsRecordTooBig)
+		a.close()
+	}
+}
+
 // TestTruncate: $TRUNCATE ends the file at the current record (a file
 // of several blocks cut off in its second), and $PUT appends there; it
 // needs FAB$V_TRN access and a current record.
@@ -424,6 +485,11 @@ func TestRecordLock_timeout(t *testing.T) {
 
 	if r0, err := get(); err != nil || r0 != rmsTimedOut {
 		t.Fatalf("B's $GET after 5 seconds: %#x, %v; want RMS$_TMO", r0, err)
+	}
+
+	// The RFA is cleared (VMS 7.3's; testdata/probe49, round 2, step 4).
+	if got := b.rabRFAOf(); got != (rfa{}) {
+		t.Errorf("RAB$W_RFA after RMS$_TMO %+v, want 0", got)
 	}
 
 	// The record is still B's next; this time A lets it go in time.

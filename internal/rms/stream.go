@@ -251,6 +251,16 @@ func (ctx *Context) locate(rabAddr uint32, h *FileHandle, find bool) (located, u
 		}
 
 		if lockSts&1 == 0 {
+			// A wait that ran out leaves no RFA in the RAB: VMS 7.3
+			// cleared RAB$W_RFA (testdata/probe49, round 2, step 4).
+			// Whether other lock failures (RMS$_RLK) do is unconfirmed;
+			// govax leaves the RFA then.
+			if lockSts == rmsTimedOut {
+				if err := ctx.storeRFA(rabAddr, rfa{}); err != nil {
+					return located{}, 0, err
+				}
+			}
+
 			return fail(lockSts)
 		}
 

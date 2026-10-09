@@ -85,8 +85,11 @@ func findOnDevice(ctx *Context, rabAddr uint32, h *FileHandle) (uint32, error) {
 // record (found by $GET or $FIND) is replaced by the record at RAB$L_RBF,
 // RAB$W_RSZ bytes long, in place. A sequential file's record can't
 // change length: a record of another length is RMS$_RSZ (the RMS
-// manual's rule for sequential files; govax applies it to the stream
-// formats too, unconfirmed). It needs FAB$V_UPD access (RMS$_FAC) and a
+// manual's rule for sequential files). A stream file's can: VMS 7.3
+// writes the new record and its terminator over the file's bytes from
+// the old record's start, moving nothing (testdata/probe49, round 2,
+// step 1: "ABC" over the first of R1 R2 R3 left ABC, 2, R3; "A" left A,
+// a lone line feed, R2, R3; streamUpdate). It needs FAB$V_UPD access (RMS$_FAC) and a
 // current record (RMS$_CUR); in a stream that locks records, the record
 // must be locked by it (RMS$_RNL, unconfirmed). The RFA goes in
 // RAB$W_RFA; afterwards there's no current record, and the next record
@@ -131,7 +134,8 @@ func SysUpdate(ctx *Context, argv []uint32) (uint32, error) {
 		return 0, err
 	}
 
-	if int(rsz) != len(old) {
+	terminator, stream := streamTerminator(handle.File)
+	if int(rsz) != len(old) && !stream {
 		return fail(rmsRecordTooBig)
 	}
 
@@ -146,9 +150,21 @@ func SysUpdate(ctx *Context, argv []uint32) (uint32, error) {
 	}
 
 	at := s.current
+	data := []byte(record)
+
+	if int(rsz) != len(old) {
+		// A stream record of another length: the record and its
+		// terminator over what is there. One that would run past the
+		// end of the file is RMS$_RSZ (unconfirmed).
+		data = append(data, terminator...)
+		if at+int64(len(data)) > handle.endOfFile() {
+			return fail(rmsRecordTooBig)
+		}
+	}
+
 	handle.wrote(ctx, at)
 
-	if err := writeAt(handle.File, at+recordFraming(handle.File), []byte(record)); err != nil {
+	if err := writeAt(handle.File, at+recordFraming(handle.File), data); err != nil {
 		return fail(rmsDeviceError)
 	}
 
@@ -171,6 +187,22 @@ func recordFraming(f *volume.File) int64 {
 	}
 
 	return 0
+}
+
+// streamTerminator returns the bytes that end a record of f's format, and
+// whether it is a stream format at all: CR LF for Stream, LF for
+// Stream_LF, CR for Stream_CR.
+func streamTerminator(f *volume.File) (string, bool) {
+	switch f.Header.RecordAttributes.Format {
+	case ondisk.RecordFormatStreamCRLF:
+		return "\r\n", true
+	case ondisk.RecordFormatStreamLF:
+		return "\n", true
+	case ondisk.RecordFormatStreamCR:
+		return "\r", true
+	}
+
+	return "", false
 }
 
 // writeAt writes data into f at byte offset off, over what is there:

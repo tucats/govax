@@ -738,17 +738,19 @@ func TestSessionCopy_crlf(t *testing.T) {
 	}
 }
 
+// corruptVariable is a Variable-format file's bytes: a whole record, then
+// a length word (40) with only 6 bytes after it.
+const corruptVariable = "\x04\x00line\x28\x00broken"
+
 // TestSessionCopy_ignoreRecoversFromCorruptRecord confirms /IGNORE
-// recovers from a corrupt record (a Stream_CRLF file ending in a lone
-// '\r' with no following '\n' -- odsrms.ErrCorruptRecord's own documented
-// trigger for that format) by restarting the destination as an exact raw
-// byte copy, matching ods2's own cmdCopy/copyOneFile.
+// recovers from a corrupt record (a Variable file whose second record's
+// length word runs past the end of the file: odsrms.ErrCorruptRecord) by
+// restarting the destination as an exact raw byte copy, matching ods2's
+// own cmdCopy/copyOneFile.
 func TestSessionCopy_ignoreRecoversFromCorruptRecord(t *testing.T) {
 	s, vol := newCopyTestSession(t)
 
-	const corrupt = "line one\r\nbroken\r"
-
-	createFormattedTestFile(t, vol, "CORRUPT.TXT", corrupt, ondisk.RecordFormatStreamCRLF)
+	createFormattedTestFile(t, vol, "CORRUPT.TXT", corruptVariable, ondisk.RecordFormatVariable)
 
 	outPath := filepath.Join(t.TempDir(), "ignored.out")
 
@@ -761,8 +763,8 @@ func TestSessionCopy_ignoreRecoversFromCorruptRecord(t *testing.T) {
 		t.Fatalf("ReadFile: %v", err)
 	}
 
-	if string(got) != corrupt {
-		t.Errorf("/IGNORE-recovered content = %q, want the original raw bytes %q", got, corrupt)
+	if string(got) != corruptVariable {
+		t.Errorf("/IGNORE-recovered content = %q, want the original raw bytes %q", got, corruptVariable)
 	}
 }
 
@@ -773,7 +775,7 @@ func TestSessionCopy_ignoreRecoversFromCorruptRecord(t *testing.T) {
 func TestSessionCopy_withoutIgnoreFailsOnCorruptRecord(t *testing.T) {
 	s, vol := newCopyTestSession(t)
 
-	createFormattedTestFile(t, vol, "CORRUPT.TXT", "line one\r\nbroken\r", ondisk.RecordFormatStreamCRLF)
+	createFormattedTestFile(t, vol, "CORRUPT.TXT", corruptVariable, ondisk.RecordFormatVariable)
 
 	outPath := filepath.Join(t.TempDir(), "failed.out")
 

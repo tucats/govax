@@ -24,7 +24,12 @@ func TestProbe6(t *testing.T) {
 func TestProbe6b(t *testing.T) {
 	runProbe6(t, "probe6b",
 		"1 P6S1.DAT", "1 P6S2.DAT", "4 A's", "4 B's $GET, WAT and TMO=0", "4 B's $GET, WAT and TMO=2",
-		"7a ", "7b ", "7c ", "7d ", "7e $UPDSEC, nothing", "7e $UPDSEC, a page", "7f ", "end")
+		"7a ", "7b ", "7c ", "7d ", "7f ", "end")
+}
+
+// TestProbe6c runs the probe's third round (probe6c.mar) the same way.
+func TestProbe6c(t *testing.T) {
+	runProbe6(t, "probe6c", "7a ", "7b ", "7c ", "7d ", "7e $UPDSEC, nothing", "7e $UPDSEC, a page", "7f ", "end")
 }
 
 // runProbe6 builds testdata/probe49's program name, runs it with a new

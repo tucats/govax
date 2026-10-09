@@ -508,3 +508,28 @@ stream's record locks.
   the RFA set again, and what the RAB holds after; and the file-section
   cases with every status printed, a written file's section size added.
   `TestProbe6b` runs it under govax. Waiting for the VAX run.
+- 2026-10-09: The probe's second round on VMS (`vax/probe6b.log`; its
+  MACRO log audited). Settled, and govax now does:
+  - A stream file's `$UPDATE` to another length writes the record and
+    its terminator over the file's bytes, moving nothing (past the end
+    of the file, RMS$_RSZ, unconfirmed; `streamTerminator`). The RMS
+    manual's STREAM rule (records end at CR LF, LF, VT, or FF; the last
+    three kept in the record; leading nulls skipped; a lone CR is data)
+    is now ods2's reader's (sibling module, commit f9df5a9: needs a
+    tagged release and govax's go.mod pin before `GOWORK=off` builds
+    pass). The COPY /IGNORE tests' corrupt file is now a Variable
+    record whose length runs past the end.
+  - A `$GET` that times out (RMS$_TMO) clears RAB$W_RFA (RMS$_RLK's
+    unconfirmed: left alone).
+  - A user file open of a write-shared file (SHRPUT, SHRUPD, SHRDEL)
+    without FAB$V_UPI is RMS$_SHR (the RMS manual, FAB$V_UFO and
+    FAB$V_UPI; `ufoSharing`), and a UFO `$CREATE` puts the end of file
+    at the end of block ALQ (the manual; `ufoEndOfFile`).
+  - A private file section is SS$_CREATED.
+  - `testdata/sec49`'s programs follow: UPI on the shared UFO opens,
+    SS$_CREATED for private sections.
+  A third round (`probe6c.mar`) asks step 7 again with UPI: the end of
+  file after a section write, a written file's section size,
+  `$UPDSEC`, `$MGBLSC` writable of a read-only file's section.
+  Tests: `TestUpdate_stream`, `TestRecordLock_timeout`, `TestUFO_create`,
+  `TestProbe6b`, `TestProbe6c`; ods2's `TestReaderStreamCRLFTerminators`.

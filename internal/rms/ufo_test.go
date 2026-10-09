@@ -74,9 +74,10 @@ func TestUFO_create(t *testing.T) {
 		t.Errorf("ReadPage past the allocation: %v, want ErrACPEndOfFile", err)
 	}
 
-	// A page write doesn't move the end of file.
-	if eof := a.EndOfFileBlock(); eof != 0 {
-		t.Errorf("end of file block %d after a page write, want 0", eof)
+	// A new UFO file ends at the end of block ALQ (the RMS manual), and
+	// a page write doesn't move that.
+	if used := a.EndOfFileBlock(); used != 3 {
+		t.Errorf("%d blocks used after a page write, want 3", used)
 	}
 
 	if st, _ := SysClose(f.ctx, []uint32{testFabAddr}); st != rmsInvalidIFI {

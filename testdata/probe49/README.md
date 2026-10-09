@@ -12,9 +12,10 @@ asked about, and a process's lock on itself stands in for a deadlock.
 | `probe6.com` | Builds and runs it; MACRO's and LINK's output to their own logs |
 | `exchange.cmd`, `copyout.cmd` | Make the exchange volume and copy the logs back |
 | `probe6b.mar`, `probe6b.com`, `exchange2.cmd`, `copyout2.cmd` | Round 2: what round 1 left open |
-| `vax/` | The VMS runs' logs: `probe6.log` (2026-10-09), and round 2's once it has run |
+| `probe6c.mar`, `probe6c.com`, `exchange3.cmd`, `copyout3.cmd` | Round 3: round 2's step 7 with FAB$V_UPI |
+| `vax/` | The VMS runs' logs: `probe6.log`, `probe6b.log` (2026-10-09), and round 3's once it has run |
 
-`TestProbe6` and `TestProbe6b` (`internal/console`) run the programs under govax;
+`TestProbe6`, `TestProbe6b`, and `TestProbe6c` (`internal/console`) run the programs under govax;
 `go test ./internal/console -run TestProbe6 -v` prints govax's report,
 to set beside VMS's. Writing it already found one bug: `$OPEN` refused
 a FAB whose only access was DEL or TRN.
@@ -163,3 +164,30 @@ attach `testdata/disks/probe49b.dsk`, set its `[000000]` as the default,
 
 The report goes to `vax/probe6b.log`. MACRO's log comes back too; audit
 it, as round 1's, before anything reads it.
+
+### What VMS answered (round 2, 2026-10-09)
+
+| Step | VMS 7.3 | govax now |
+| ---- | ------- | --------- |
+| 1 | a stream `$UPDATE` to another length succeeds, writing the record and CR LF over the file's bytes: "ABC" over R1 left ABC, 2, R3; "A" left A, a lone LF (a record of its own), R2, R3 | the same (`$UPDATE`; ods2's STREAM reader now ends records at LF, VT, and FF too, as the RMS manual says) |
+| 4 | RMS$_TMO after 0 and 2 seconds; RAB$W_RFA cleared afterwards | the same |
+| 7a | UFO with SHR=GET,PUT,UPD: RMS$_SHR (the RMS manual: UFO of a write-shared file needs FAB$V_UPI); not shared: a channel | the same |
+| 7b | a private file section: SS$_CREATED, 10 pages for ALQ=10 (the manual: UFO's `$CREATE` sets the end of file at the end of block ALQ) | the same |
+| 7c to 7f | not reached (the shared file wasn't made; the UFO opens were shared without UPI) | asked again (round 3) |
+
+## Round 3
+
+`probe6c.mar` is round 2's step 7 with FAB$V_UPI on the shared opens:
+7c, the end of file after a section write (govax: EBK 11, FFB 0, the
+end of block 10); 7d, a file of ten blocks with three written, mapped
+(govax: 10 pages, the allocation); 7e, `$UPDSEC` (govax: SS$_NOTMODIFIED
+with no AST, then SS$_NORMAL with one); 7f, `$MGBLSC` writable of a
+read-only file's section (govax: SS$_NOWRT).
+
+    govax console < testdata/probe49/exchange3.cmd
+
+(`testdata/disks/probe49c.dsk`; already built), `@PROBE6C`, then
+
+    govax console < testdata/probe49/copyout3.cmd
+
+The report goes to `vax/probe6c.log`; audit MACRO's log as before.

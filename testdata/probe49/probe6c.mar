@@ -1,0 +1,242 @@
+	.title	probe6c
+;
+; Phase 49's probe, round 3 (README.md): round 2's step 7, the file
+; sections, with FAB$V_UPI, which a user file open of a write-shared
+; file needs (RMS$_SHR without it, round 2). Each line is "7x what:
+; result", every status in hexadecimal.
+;
+; It uses only system services, RMS, and LIBRTL, and macros govax's
+; library has too, so govax runs it as well (TestProbe6c).
+;
+	$SECDEF
+	$RMSDEF
+	$FABDEF
+	$RABDEF
+	$XABFHCDEF
+
+	.psect	data,noexe,wrt,long
+
+; The report's lines.
+l_7a:	.ascid	"7a $CREATE, UFO, ALQ=10, !AS: !XL, STV !XL"
+l_7b:	.ascid	"7b $CRMPSC of it: !XL, !UL pages"
+l_7c:	.ascid	"7c after writing page 6: $DELTVA !XL, $DASSGN !XL; $OPEN !XL, EBK !UL, FFB !UL, HBK !UL"
+l_7d1:	.ascid	"7d three blocks written: $CREATE !XL, $CLOSE !XL; $OPEN UFO !XL, STV !XL"
+l_7d2:	.ascid	"7d $CRMPSC of it: !XL, !UL pages"
+l_7e:	.ascid	"7e $UPDSEC, !AS: !XL, IOSB !XL !XL, flag !XL, ASTs !UL"
+l_7f:	.ascid	"7f read-only: $OPEN UFO !XL, STV !XL; $CRMPSC GBL !XL; $MGBLSC WRT !XL"
+l_skip:	.ascid	"7 the rest skipped: no channel"
+l_end:	.ascid	/end/
+
+n_shr:	.ascid	/shared with UPI/
+n_nosh:	.ascid	/not shared/
+n_none:	.ascid	/nothing modified/
+n_one:	.ascid	/a page modified/
+
+; Step 7's files.
+	.align	long
+xfab:	$fab	fnm=<P6X.DAT>, fac=<GET,PUT,UPD>, fop=UFO, alq=10, -
+		rfm=FIX, mrs=512, shr=<GET,PUT,UPD,UPI>
+	.align	long
+x2fab:	$fab	fnm=<P6X2.DAT>, fac=<GET,PUT,UPD>, fop=UFO, alq=10, -
+		rfm=FIX, mrs=512
+	.align	long
+hfab:	$fab	fnm=<P6X.DAT>, fac=<GET>, xab=fhc, shr=<GET,PUT,UPD>
+	.align	long
+fhc:	$xabfhc
+	.align	long
+wfab:	$fab	fnm=<P6W.DAT>, fac=<PUT>, alq=10, rfm=FIX, mrs=512
+	.align	long
+wrab:	$rab	fab=wfab, rbf=block, rsz=512
+	.align	long
+ufab:	$fab	fnm=<P6W.DAT>, fac=<GET,PUT,UPD>, fop=UFO, shr=<GET,PUT,UPD,UPI>
+	.align	long
+rofab:	$fab	fnm=<P6W.DAT>, fac=<GET>, fop=UFO, shr=<GET,PUT,UPD,UPI>
+
+gsec:	.ascid	/P6BSEC/
+one_sec: .ascid	/0 00:00:01.00/
+
+	.align	long
+status:		.long	0
+status2:	.long	0
+status3:	.long	0
+status4:	.long	0
+flag:		.long	0
+asts:		.long	0
+chan:		.long	0
+tick:		.quad	0
+iosb:		.quad	0
+p0adr:		.long	^X200,^X200
+range:		.long	0,0
+range2:		.long	0,0
+block:		.blkb	512
+out_buf:	.blkb	132
+out_desc:	.word	132
+		.byte	14,1
+		.long	out_buf
+out_len:	.word	0,0
+
+	.psect	code,exe,nowrt
+	.entry	start,^m<r2,r3,r4,r5,r6,r7,r8,r9>
+
+; 7a: a new file of ten blocks on a channel (UFO), shared; if that
+; fails, not shared.
+	$create	fab=xfab
+	movl	r0,status
+	$fao_s	ctrstr=l_7a, outlen=out_len, outbuf=out_desc, -
+		p1=#n_shr, p2=status, p3=xfab+FAB$L_STV
+	bsbw	print
+	movzwl	xfab+FAB$L_STV,chan
+	blbs	status,71$
+	$create	fab=x2fab
+	movl	r0,status
+	$fao_s	ctrstr=l_7a, outlen=out_len, outbuf=out_desc, -
+		p1=#n_nosh, p2=status, p3=x2fab+FAB$L_STV
+	bsbw	print
+	movzwl	x2fab+FAB$L_STV,chan
+	blbs	status,71$
+	pushaq	l_skip
+	calls	#1,g^lib$put_output
+	brw	79$
+
+; 7b: map it whole, writable.
+71$:	clrq	range
+	$crmpsc_s	inadr=p0adr, retadr=range, chan=chan, -
+			flags=#<SEC$M_WRT!SEC$M_EXPREG>
+	movl	r0,status
+	clrl	r5
+	blbc	status,72$
+	subl3	range,range+4,r5
+	incl	r5
+	ashl	#-9,r5,r5
+72$:	$fao_s	ctrstr=l_7b, outlen=out_len, outbuf=out_desc, -
+		p1=status, p2=r5
+	bsbw	print
+
+; 7c: write page 6 (if it's there), unmap, deassign; then the file's
+; end of file and allocation (P6X.DAT, the shared case's file).
+	clrl	status2
+	cmpl	r5,#6
+	blss	73$
+	movl	range,r2
+	movl	#^X66666666,<5*512>(r2)
+73$:	blbc	status,74$
+	$deltva_s	inadr=range
+	movl	r0,status2
+74$:	$dassgn_s	chan=chan
+	movl	r0,status3
+	clrl	fhc+XAB$L_EBK
+	clrw	fhc+XAB$W_FFB
+	clrl	fhc+XAB$L_HBK
+	$open	fab=hfab
+	movl	r0,status4
+	$close	fab=hfab
+	movzwl	fhc+XAB$W_FFB,r2
+	$fao_s	ctrstr=l_7c, outlen=out_len, outbuf=out_desc, -
+		p1=status2, p2=status3, p3=status4, -
+		p4=fhc+XAB$L_EBK, p5=r2, p6=fhc+XAB$L_HBK
+	bsbw	print
+
+; 7d: a file of ten blocks with three written (its end of file at
+; block 4), opened UFO and mapped whole: how many pages?
+79$:	$create	fab=wfab
+	movl	r0,status
+	$connect	rab=wrab
+	$put	rab=wrab
+	$put	rab=wrab
+	$put	rab=wrab
+	$close	fab=wfab
+	movl	r0,status2
+	$open	fab=ufab
+	movl	r0,status3
+	$fao_s	ctrstr=l_7d1, outlen=out_len, outbuf=out_desc, -
+		p1=status, p2=status2, p3=status3, p4=ufab+FAB$L_STV
+	bsbw	print
+	blbs	status3,75$
+	brw	78$
+75$:	movzwl	ufab+FAB$L_STV,chan
+	clrq	range
+	$crmpsc_s	inadr=p0adr, retadr=range, chan=chan, -
+			flags=#<SEC$M_WRT!SEC$M_EXPREG>
+	movl	r0,status
+	clrl	r5
+	blbc	status,76$
+	subl3	range,range+4,r5
+	incl	r5
+	ashl	#-9,r5,r5
+76$:	$fao_s	ctrstr=l_7d2, outlen=out_len, outbuf=out_desc, -
+		p1=status, p2=r5
+	bsbw	print
+	blbc	status,77$
+
+; 7e: $UPDSEC with nothing modified, then with a page modified: the
+; status, the IOSB, the event flag, and whether the AST runs.
+	moval	n_none,r8
+	bsbw	updsec
+	movl	range,r2
+	movl	#^X77777777,(r2)
+	moval	n_one,r8
+	bsbw	updsec
+	$deltva_s	inadr=range
+77$:	$dassgn_s	chan=chan
+
+; 7f: the file opened read-only, a global section of it, then mapped
+; writable.
+78$:	$open	fab=rofab
+	movl	r0,status
+	movzwl	rofab+FAB$L_STV,chan
+	clrl	status2
+	clrl	status3
+	blbc	status,80$
+	clrq	range
+	$crmpsc_s	inadr=p0adr, retadr=range, chan=chan, gsdnam=gsec, -
+			flags=#<SEC$M_GBL!SEC$M_EXPREG>
+	movl	r0,status2
+	clrq	range2
+	$mgblsc_s	inadr=p0adr, retadr=range2, gsdnam=gsec, -
+			flags=#<SEC$M_WRT!SEC$M_EXPREG>
+	movl	r0,status3
+80$:	$fao_s	ctrstr=l_7f, outlen=out_len, outbuf=out_desc, -
+		p1=status, p2=rofab+FAB$L_STV, p3=status2, p4=status3
+	bsbw	print
+	blbc	status2,81$
+	$deltva_s	inadr=range
+81$:	blbc	status3,82$
+	$deltva_s	inadr=range2
+82$:	blbc	status,83$
+	$dassgn_s	chan=chan
+83$:
+	pushaq	l_end
+	calls	#1,g^lib$put_output
+	movl	#1,r0
+	ret
+
+; $UPDSEC of RANGE (the case named at R8): print what it did.
+updsec:	mnegl	#1,iosb
+	mnegl	#1,iosb+4
+	clrl	asts
+	$clref_s	efn=#7
+	$updsec_s	inadr=range, efn=#7, iosb=iosb, astadr=ast
+	movl	r0,status
+	$bintim_s	timbuf=one_sec, timadr=tick
+	$setimr_s	efn=#8, daytim=tick
+	$waitfr_s	efn=#8
+	$readef_s	efn=#7, state=flag
+	movl	r0,status2
+	$fao_s	ctrstr=l_7e, outlen=out_len, outbuf=out_desc, -
+		p1=r8, p2=status, p3=iosb, p4=iosb+4, p5=status2, p6=asts
+	bsbw	print
+	rsb
+
+; The AST $UPDSEC may queue.
+	.entry	ast,^m<>
+	incl	asts
+	ret
+
+; Print what $FAO formatted into OUT_BUF.
+print:	movw	out_len,out_desc
+	pushaq	out_desc
+	calls	#1,g^lib$put_output
+	movw	#132,out_desc
+	rsb
+
+	.end	start

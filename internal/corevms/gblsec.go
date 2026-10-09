@@ -688,7 +688,14 @@ func (env *Environment) createPrivateSection(argv []uint32) (uint32, error) {
 		return env.failRetadr(argv, st)
 	}
 
-	return env.mapProcessSection(f, vbn, pages, a, r), nil
+	// A private file section, made, is SS$_CREATED, as a global one is:
+	// VMS 7.3's status (testdata/probe49, round 2, step 7b).
+	st = env.mapProcessSection(f, vbn, pages, a, r)
+	if st == ssNormal {
+		st = ssCreated
+	}
+
+	return st, nil
 }
 
 // serviceSysMgblsc is SYS$MGBLSC, map global section:

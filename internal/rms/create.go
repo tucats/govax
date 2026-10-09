@@ -72,6 +72,12 @@ func SysCreate(ctx *Context, argv []uint32) (uint32, error) {
 		return 0, err
 	}
 
+	if shr, err := ctx.loadByte(fabAddr + fabSHR); err != nil {
+		return 0, err
+	} else if sts := ufoSharing(fop, shr); sts != 0 {
+		return fabStatus(ctx, fabAddr, sts, 0)
+	}
+
 	// The spec's logical names are translated ("SYS$OUTPUT" becomes the
 	// console terminal) and the default device and directory applied.
 	// A search list creates the file in its first element, as RMS does.
@@ -201,8 +207,15 @@ func SysCreate(ctx *Context, argv []uint32) (uint32, error) {
 		status = rmsCreated
 	}
 
-	// FAB$V_UFO: the file goes to a channel instead (ufo.go).
+	// FAB$V_UFO: the file goes to a channel instead (ufo.go), a new
+	// one ending where FAB$L_ALQ does.
 	if fop&fopUFO != 0 {
+		if created {
+			if err := ctx.ufoEndOfFile(fabAddr, ifi); err != nil {
+				return 0, err
+			}
+		}
+
 		return ctx.userFileOpen(fabAddr, ifi, device, status)
 	}
 

@@ -32,7 +32,41 @@ var (
 	fopUFO     = vmsConst("FAB$M_UFO")
 	rmsSupport = vmsConst("RMS$_SUPPORT")
 	rmsChannel = vmsConst("RMS$_CHN")
+	rmsSharing = vmsConst("RMS$_SHR")
 )
+
+// ufoSharing checks a user file open's FAB$B_SHR (fop its FAB$L_FOP):
+// the RMS manual (FAB$V_UFO, FAB$V_UPI) requires FAB$V_UPI when the file
+// is write shared (SHRPUT, SHRUPD, or SHRDEL), and VMS 7.3 refused such
+// an open without it with RMS$_SHR (testdata/probe49, round 2, step 7).
+// It returns that status, or 0.
+func ufoSharing(fop uint32, shr byte) uint32 {
+	if fop&fopUFO != 0 && shr&(shrPut|shrUpd|shrDel) != 0 && shr&shrUPI == 0 {
+		return rmsSharing
+	}
+
+	return 0
+}
+
+// ufoEndOfFile is a user file open's $CREATE's end of file: the RMS
+// manual (FAB$V_UFO) sets it "to the end of the block specified in the
+// FAB$L_ALQ field on input", so a section of the new file maps every
+// block asked for.
+func (ctx *Context) ufoEndOfFile(fabAddr uint32, ifi uint16) error {
+	h, ok := ctx.Files.Lookup(ifi)
+	if !ok || h.File == nil {
+		return nil
+	}
+
+	alq, err := ctx.loadLongword(fabAddr + fabOffset("ALQ"))
+	if err != nil || alq == 0 {
+		return err
+	}
+
+	h.File.SetEndOfFile(alq+1, 0)
+
+	return nil
+}
 
 // userFileOpen finishes a $OPEN or $CREATE with FAB$V_UFO: the file just
 // opened as IFI ifi, on device, is handed to a channel, whose number goes
