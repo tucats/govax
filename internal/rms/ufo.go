@@ -23,9 +23,10 @@ package rms
 // ACPFile, the same kind of access a disk IO$_ACCESS makes, which keeps
 // the open's place among the file's RMS openers until it ends, and
 // Context.AssignFileChannel (internal/corevms) puts it on a new channel.
-// Only files on a mounted volume can be opened this way: a UFO open of
-// the terminal, a mailbox, or NL: is RMS$_SUPPORT (unconfirmed: VMS gives
-// a channel to the device).
+// A UFO open of a device that holds no files (the terminal, a mailbox,
+// NL:) gives a channel to the device itself, with nothing accessed on
+// it, as VMS 7.3's did (testdata/probe49, step 7f: $OPEN of NLA0: with
+// UFO, RMS$_NORMAL and a channel in FAB$L_STV).
 
 var (
 	fopUFO     = vmsConst("FAB$M_UFO")
@@ -36,20 +37,36 @@ var (
 // userFileOpen finishes a $OPEN or $CREATE with FAB$V_UFO: the file just
 // opened as IFI ifi, on device, is handed to a channel, whose number goes
 // to FAB$L_STV, FAB$W_IFI is cleared, and FAB$L_STS gets status (the
-// open's success status). A file not on a volume, or a process with no
-// way to assign a channel, is RMS$_SUPPORT; a channel that can't be
-// assigned is RMS$_CHN, with the system service status in FAB$L_STV. On
-// failure the file is closed again.
+// open's success status). A record device or the terminal is closed
+// again and the channel is to the device. A process with no way to
+// assign a channel is RMS$_SUPPORT; a channel that can't be assigned is
+// RMS$_CHN, with the system service status in FAB$L_STV. On failure the
+// file is closed again.
 func (ctx *Context) userFileOpen(fabAddr uint32, ifi uint16, device string, status uint32) (uint32, error) {
 	h, ok := ctx.Files.Lookup(ifi)
 	if !ok {
 		return fabStatus(ctx, fabAddr, rmsInvalidIFI, 0)
 	}
 
-	if h.File == nil || h.Accessor == nil || ctx.AssignFileChannel == nil {
+	if ctx.AssignFileChannel == nil {
 		ctx.closeHandle(ifi, h)
 
 		return fabStatus(ctx, fabAddr, rmsSupport, 0)
+	}
+
+	if h.File == nil || h.Accessor == nil {
+		ctx.closeHandle(ifi, h)
+
+		channel, st := ctx.AssignFileChannel(device, nil)
+		if st&1 == 0 {
+			return fabStatus(ctx, fabAddr, rmsChannel, st)
+		}
+
+		if err := ctx.storeWord(fabAddr+fabIFI, 0); err != nil {
+			return 0, err
+		}
+
+		return fabStatus(ctx, fabAddr, status, uint32(channel))
 	}
 
 	m := ctx.Mounts.mounts[normalizeDeviceName(device)]

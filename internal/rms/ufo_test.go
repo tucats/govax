@@ -133,22 +133,33 @@ func TestUFO_open(t *testing.T) {
 	}
 }
 
-// TestUFO_refused: UFO of the terminal is RMS$_SUPPORT, as is UFO with
-// no way to assign a channel; a channel that can't be assigned is
-// RMS$_CHN with the service's status in FAB$L_STV. Each time the file
-// is closed again (a later exclusive open succeeds).
-func TestUFO_refused(t *testing.T) {
+// TestUFO_device: UFO of a device that holds no files (the terminal
+// here) gives a channel to the device, with no file on it, its number in
+// FAB$L_STV (VMS 7.3's answer for NLA0:; testdata/probe49, step 7f).
+func TestUFO_device(t *testing.T) {
 	f := newCreateFixture(t, true)
 
 	newFAB(t, f.ctx, "TTA0:")
 	putLongwordAt(t, f.ctx, testFabAddr+fabFOP, fopUFO)
-	f.ctx.AssignFileChannel = (&ufoChannels{}).assign
 
-	if st, _ := SysCreate(f.ctx, []uint32{testFabAddr}); st != rmsSupport {
-		t.Errorf("UFO of the terminal: %#x, want RMS$_SUPPORT", st)
+	u := &ufoChannels{}
+	f.ctx.AssignFileChannel = u.assign
+
+	if st, _ := SysOpen(f.ctx, []uint32{testFabAddr}); st != rmsNormal {
+		t.Fatalf("UFO of the terminal: %#x, want RMS$_NORMAL", st)
 	}
 
-	f.ctx.AssignFileChannel = nil
+	if stv := readLongword(t, f.ctx, testFabAddr+fabSTV); stv != 8 || len(u.files) != 1 || u.files[0] != nil || u.device[0] != "TTA0" {
+		t.Errorf("FAB$L_STV %d, channels %v %q; want channel 8 to TTA0: with no file", stv, u.files, u.device)
+	}
+}
+
+// TestUFO_refused: UFO with no way to assign a channel is RMS$_SUPPORT;
+// a channel that can't be assigned is RMS$_CHN with the service's status
+// in FAB$L_STV. Each time the file is closed again (a later exclusive
+// open succeeds).
+func TestUFO_refused(t *testing.T) {
+	f := newCreateFixture(t, true)
 
 	newFAB(t, f.ctx, "DUA0:A.DAT")
 	putLongwordAt(t, f.ctx, testFabAddr+fabFOP, fopUFO)

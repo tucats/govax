@@ -64,9 +64,14 @@ var lkiQueue = map[lck.State]byte{
 var lkiEntryLength = int(vmsdef.Symbols["LKI$C_LENGTH"])
 
 // lkiWildcardContext marks a lock ID longword as a wildcard scan's
-// place: the high bit, with the last lock ID returned below it (lock IDs
-// are small). That VMS keeps its place the same way is unconfirmed.
-const lkiWildcardContext = 0x80000000
+// place: ^XFE in the high byte, with the last lock ID returned below it
+// (lkiContextIndex; govax's lock IDs are small). VMS 7.3 wrote its
+// context so (testdata/probe49, step 5a: FE0000E6 after lock 1A0000E6,
+// whose high byte is a sequence number govax's IDs don't have).
+const (
+	lkiWildcardContext = 0xFE000000
+	lkiContextIndex    = 0x00FFFFFF
+)
 
 // lkiItem is one $GETLKI item's value for a lock: its bytes, and for a
 // list item the size of one entry.
@@ -267,12 +272,12 @@ func (env *Environment) lockInformation(lkidadr, itmlst uint32) uint32 {
 
 	var l *lck.Lock
 
-	if lkid == 0 || lkid&lkiWildcardContext != 0 {
+	if lkid == 0 || lkid&^lkiContextIndex == lkiWildcardContext || lkid == math.MaxUint32 {
 		// A wildcard scan: the next lock after the last one returned
 		// that the caller may look at.
 		after := lck.ID(0)
 		if lkid != 0 && lkid != math.MaxUint32 {
-			after = lck.ID(lkid &^ lkiWildcardContext)
+			after = lck.ID(lkid & lkiContextIndex)
 		}
 
 		for _, o := range env.Locks.All() {

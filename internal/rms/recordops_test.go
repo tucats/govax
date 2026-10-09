@@ -107,7 +107,8 @@ func TestFind_sequential(t *testing.T) {
 // TestFind_byRFA: $FIND by RFA makes a record current without moving
 // the next record (but a sequential $GET after it reads the found record
 // and goes on from there); $GET by RFA moves the next record past it; an
-// RFA that names no record is RMS$_RFA.
+// RFA outside the file is RMS$_RFA, and one inside a record reads from
+// there.
 func TestFind_byRFA(t *testing.T) {
 	p, mounts := newSharers(t, 1)
 	a := p[0]
@@ -131,10 +132,16 @@ func TestFind_byRFA(t *testing.T) {
 	a.sequential()
 	a.wantGet("R1", rmsNormal)
 
-	for _, bad := range []rfa{{1, 1}, {9, 0}, {0, 0}, {1, 600}} {
+	for _, bad := range []rfa{{9, 0}, {0, 0}, {1, 600}} {
 		a.byRFA(bad)
 		wantRecStatus(t, "$FIND of a bad RFA", a.call(SysFind, 0), rmsInvalidRFA)
 	}
+
+	// One byte into R0: the length word there (R0's length's high byte,
+	// then 'R') runs past the end of the file (VMS 7.3: RMS$_EOF;
+	// testdata/probe49, step 2).
+	a.byRFA(rfa{1, 1})
+	wantRecStatus(t, "$FIND inside a record", a.call(SysFind, 0), rmsEOF)
 
 	a.close()
 }

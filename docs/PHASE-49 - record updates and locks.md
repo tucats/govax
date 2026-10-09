@@ -457,3 +457,42 @@ stream's record locks.
   unaudited list until the author has checked it. Waiting for the VAX
   run. Not asked: terminal reads (IO$M_PURGE with reads queued, a
   timed read), the deadlock victim among several processes, ASTLM.
+- 2026-10-09: The VAX run of the probe (`testdata/probe49/vax/probe6.log`;
+  the MACRO log empty, audited by the author). What it settled, and
+  govax now does:
+  - Step 2: VMS doesn't check that an RFA starts a record; one byte into
+    a variable-length record it read a length word from there and
+    returned RMS$_EOF. `validRFA` checks only that the RFA is in the
+    file, and a record reached by RFA that ods2 finds corrupt (its
+    length past the end) is RMS$_EOF (`locate`).
+  - Step 5a: the wildcard context `$GETLKI` writes back is ^XFE in the
+    high byte and the lock's index below (FE0000E6 for lock 1A0000E6);
+    govax's is FE and its lock ID (`lkiWildcardContext`). VMS's process
+    held other locks too (DCL's, RMS's), so the scan didn't reach
+    SS$_NOMORELOCK in six calls.
+  - Steps 5b, 5c, 6: as govax (NL for a waiting lock's granted mode;
+    80180018; SS$_DEADLOCK after 9 seconds for a process waiting for
+    its own lock).
+  - Step 7d: a disk channel with no file is SS$_IVCHNLSEC, not
+    SS$_FILNOTACC.
+  - Step 7f: a UFO open of NLA0: succeeds with a channel to the device
+    in FAB$L_STV (`userFileOpen`, `AssignFileChannel` with no file).
+  - Step 8: a `$QIOW` write to NLA0: is direct I/O; a LIB$PUT_OUTPUT
+    line to a file counts nothing; `$CREATE`, ten `$PUT`s, `$CLOSE` were
+    3 buffered and 7 direct; `$OPEN`, `$GET`s, `$CLOSE` 2 and 1. The
+    count of ods2's block operations (29 and 16) is gone; RMS counts by
+    a model fitted to these two totals (`rms/iocount.go`: `$CREATE` 2
+    and 5, `$OPEN` 1 buffered, `$CLOSE` 1 and 1 direct if written, one
+    direct I/O per 16-block buffer read or written, `$ERASE`/`$RENAME`
+    1 buffered; `Context.CountIO`). Unconfirmed beyond the two totals.
+  - Steps 1 (the variable-length file), 3, 4a to 4d, 9: as govax.
+  - Left open: step 1's stream file (VMS's `$UPDATE` to another length
+    succeeded: what does the file hold then?); step 4e's 2-second case
+    (VMS answered RMS$_RFA at once: the failed TMO=0 `$GET` must have
+    changed RAB$W_RFA, which the probe didn't set again); and step 7,
+    where every case after 7a looks like the knock-on of a failed
+    `$CREATE` in 7a (its status wasn't printed; with no channel,
+    `$CRMPSC` of a private section is SS$_IVSECFLG). A second round
+    asks these.
+  Tests: `TestFind_byRFA`, `TestGetlki_access`, `TestUFO_device`,
+  `TestIOCount_null`, `rms`'s `TestIOCount_model`.

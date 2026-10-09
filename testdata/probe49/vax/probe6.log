@@ -1,0 +1,35 @@
+1 $UPDATE to another length: VAR 000186A4, STM 00010001
+2 $GET by an RFA inside a record: 0001827A
+3 FAC=UPD only: $OPEN 00010001, $GET 00010001; FAC=TRN only: $OPEN 00010001, $GET 00010001
+4a another stream's $GET of a locked record: 000182AA
+4b $PUT with TPT: 00010001; another stream's $GET of its record: 00010001
+4c $TRUNCATE: 00010001; another stream's $GET of a record locked before: 000182AA
+4d $UPDATE of a record read with NLK: 000181A0
+4e $GET of a locked record, WAT and TMO=0: 000181B0 after 0.01 s
+4e $GET of a locked record, WAT and TMO=2: 0001865C after 0.00 s
+5a $GETLKIW wildcard: 00000001, context FE0000E6, lock 1A0000E6
+5a $GETLKIW wildcard: 00000001, context FE0000EC, lock 050000EC
+5a $GETLKIW wildcard: 00000001, context FE0000EE, lock 030000EE
+5a $GETLKIW wildcard: 00000001, context FE0000EF, lock 2B0000EF
+5a $GETLKIW wildcard: 00000001, context FE0000FB, lock 020000FB
+5a $GETLKIW wildcard: 00000001, context FE0000FC, lock 010000FC
+5b a waiting EX lock's LKI$_STATE: 00000001, requested 5, granted 0, queue 255
+5c LKI$_LOCKS, 2 locks, a 30-byte buffer: 00000001, return length 80180018
+6 a process waiting for its own EX lock: LKSB 0E0A after 9 s
+7a $CRMPSC, ALQ=10, nothing written: 0000016C, 0 pages
+7b after writing page 6 and $DELTVA: EBK 0, FFB 0, HBK 0
+7c $UPDSEC, nothing modified: 00000024, IOSB 00000024 00000000, flag 00000009, ASTs 0
+7d $CRMPSC on a disk channel with no file: 0000026C
+7e read-only global file section: $CRMPSC 0000013C, $MGBLSC WRT 00000978
+7f $OPEN NLA0: with UFO: 00010001, STV 00000070
+8 a $QIOW write to NLA0:: BUFIO +0, DIRIO +1
+8 (the measured line)
+8 a LIB$PUT_OUTPUT line: BUFIO +0, DIRIO +0
+8 $CREATE, ten 80-byte $PUTs, $CLOSE: BUFIO +3, DIRIO +7
+8 $OPEN, $GETs to the end, $CLOSE: BUFIO +2, DIRIO +1
+9 $SEARCH: 00010001 DUA1:[P6A]P6F.DAT;1
+9 $SEARCH: 00010001 DUA1:[P6A.B]P6F.DAT;1
+9 $SEARCH: 00010001 DUA1:[P6B]P6F.DAT;1
+9 $SEARCH: 00010001 DUA1:[P6C]P6F.DAT;1
+9 $SEARCH: 000182CA 
+end

@@ -86,14 +86,6 @@ func terminalRecord(ctx *Context, rabAddr uint32, capacity int) (record []byte, 
 	return record, 0, nil
 }
 
-// countBufferedIO counts a terminal record as a buffered I/O, if the
-// caller asked for counts (Context.CountBufferedIO).
-func (ctx *Context) countBufferedIO() {
-	if ctx.CountBufferedIO != nil {
-		ctx.CountBufferedIO()
-	}
-}
-
 // readPrompt reads a RAB's prompt (RAB$L_PBF, RAB$B_PSZ).
 func readPrompt(ctx *Context, rabAddr uint32) (string, error) {
 	pbf, err := ctx.loadLongword(rabAddr + rabPBF)

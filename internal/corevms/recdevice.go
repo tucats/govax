@@ -95,7 +95,7 @@ func (r *recordDevice) Characteristics() uint32 { return r.env.devChar(r.ch.Devi
 // instead.
 func (r *recordDevice) Put(record []byte, async bool) (uint32, bool, error) {
 	if r.mbx == nil {
-		r.env.countIO(false)
+		r.env.countIO(true) // NL:, direct I/O (iocount.go)
 
 		return ssNormal, false, nil
 	}
@@ -192,7 +192,7 @@ func (r *recordDevice) waitPut() error {
 func (r *recordDevice) Get() ([]byte, uint32, error) {
 	m, env := r.mbx, r.env
 	if m == nil {
-		env.countIO(false)
+		env.countIO(true) // NL:, direct I/O (iocount.go)
 
 		return nil, ssEndOfFile, nil
 	}
@@ -273,10 +273,7 @@ func (r *recordDevice) Close() {
 func (env *Environment) PutOutput(record string) (uint32, error) {
 	device, st := env.deviceName("SYS$OUTPUT")
 	if st != 0 || env.isFileDevice(device) {
-		written := false
-		env.countVolumeIO(func() { written = env.putOutputFile(record) })
-
-		if !written {
+		if !env.putOutputFile(record) {
 			env.writeConsole(record + "\n")
 			env.countIO(false)
 		}

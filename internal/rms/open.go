@@ -107,6 +107,10 @@ func SysOpen(ctx *Context, argv []uint32) (uint32, error) {
 		ifi   uint16
 		found foundFile
 		ok    bool
+
+		// deviceName is the device a record device's or the terminal's
+		// open names (for a user file open, ufo.go).
+		deviceName string
 	)
 
 	for _, p := range names {
@@ -138,13 +142,13 @@ func SysOpen(ctx *Context, argv []uint32) (uint32, error) {
 				return fabStatus(ctx, fabAddr, devStatus, devSTV)
 			}
 
-			ifi, failStatus = devIFI, 0
+			ifi, failStatus, deviceName = devIFI, 0, p.Lookup
 
 			break
 		}
 
 		if normalizeDeviceName(p.Lookup) == consoleDeviceName {
-			ifi, failStatus = ctx.Files.Alloc(&FileHandle{Console: ctx.Console, Access: fac}), 0
+			ifi, failStatus, deviceName = ctx.Files.Alloc(&FileHandle{Console: ctx.Console, Access: fac}), 0, p.Lookup
 
 			break
 		}
@@ -181,6 +185,10 @@ func SysOpen(ctx *Context, argv []uint32) (uint32, error) {
 
 	// FAB$V_UFO: the file goes to a channel instead (ufo.go).
 	if fop&fopUFO != 0 {
+		if !ok {
+			found.Device = deviceName
+		}
+
 		return ctx.userFileOpen(fabAddr, ifi, found.Device, rmsNormal)
 	}
 
@@ -269,6 +277,7 @@ func openFID(ctx *Context, fac, shr byte, device string, vol *volume.Volume, fid
 	}
 
 	h := &FileHandle{File: a.File, Accessor: a, Mode: mode, Share: effectiveSharing(fac, shr), Writable: wantsWrite, Access: fac, claim: claim}
+	ctx.countIO(ioOpenBuffered, 0)
 
 	return ctx.Files.Alloc(h), 0, nil
 }

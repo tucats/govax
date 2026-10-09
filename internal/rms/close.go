@@ -92,6 +92,12 @@ func SysClose(ctx *Context, argv []uint32) (uint32, error) {
 
 		handle.locks.release()
 
+		if handle.written {
+			ctx.countIO(ioCloseBuffered, 1)
+		} else {
+			ctx.countIO(ioCloseBuffered, 0)
+		}
+
 		if err := closeVolumeFile(handle, xabs); err != nil {
 			// A genuine underlying ods2/volume-layer failure while
 			// finalizing the file's on-disk size — not a Go bug, so

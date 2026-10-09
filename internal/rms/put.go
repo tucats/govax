@@ -127,11 +127,13 @@ func SysPut(ctx *Context, argv []uint32) (uint32, error) {
 			return storeStatus(ctx, rabAddr, rabSTS, rabSTV, rmsDeviceError)
 		}
 
-		ctx.countBufferedIO()
+		ctx.countIO(1, 0)
 	} else {
 		if sts, err := ctx.putPosition(rabAddr, handle); err != nil || sts != 0 {
 			return sts, err
 		}
+
+		handle.wrote(ctx, handle.endOfFile())
 
 		if err := handle.Writer.Put(record); err != nil {
 			// The sibling ods2 module's rms.Writer.Put only ever

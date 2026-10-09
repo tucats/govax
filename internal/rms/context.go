@@ -92,10 +92,10 @@ type Context struct {
 	AwaitTerminal func(maxLen int, prompt string) error
 	TerminalDone  func()
 
-	// CountBufferedIO, if set, counts one buffered I/O operation for the
-	// process: a record read from or written to the terminal, as the
-	// $QIO VMS's RMS would make for it counts (corevms's iocount.go).
-	CountBufferedIO func()
+	// CountIO, if set, counts buffered and direct I/O operations for the
+	// process, by the model in iocount.go (corevms's iocount.go keeps
+	// the counts).
+	CountIO func(buffered, direct uint32)
 
 	// Devices opens the record devices (mailboxes, NL:) a file
 	// specification may name (recdevice.go); nil means none can be.
@@ -119,9 +119,9 @@ type Context struct {
 	CanLock func() bool
 
 	// AssignFileChannel, if set, assigns the process a channel to device
-	// with the file f accessed on it, for a user file open (FAB$V_UFO,
-	// ufo.go), returning the channel's number and a system service
-	// status. nil: UFO is RMS$_SUPPORT.
+	// with the file f accessed on it (nil: a device that holds no files),
+	// for a user file open (FAB$V_UFO, ufo.go), returning the channel's
+	// number and a system service status. nil: UFO is RMS$_SUPPORT.
 	AssignFileChannel func(device string, f *ACPFile) (uint16, uint32)
 
 	// Clock, if set, is the system time, in VMS's 100-nanosecond units:

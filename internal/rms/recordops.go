@@ -146,6 +146,7 @@ func SysUpdate(ctx *Context, argv []uint32) (uint32, error) {
 	}
 
 	at := s.current
+	handle.wrote(ctx, at)
 
 	if err := writeAt(handle.File, at+recordFraming(handle.File), []byte(record)); err != nil {
 		return fail(rmsDeviceError)

@@ -128,9 +128,9 @@ func SysCreate(ctx *Context, argv []uint32) (uint32, error) {
 	case isDevice && devStatus != 0:
 		return fabStatus(ctx, fabAddr, devStatus, devSTV)
 	case isDevice:
-		ifi = devIFI
+		ifi, device = devIFI, p.Lookup
 	case normalizeDeviceName(p.Lookup) == consoleDeviceName:
-		ifi = ctx.Files.Alloc(&FileHandle{Console: ctx.Console, Access: fac})
+		ifi, device = ctx.Files.Alloc(&FileHandle{Console: ctx.Console, Access: fac}), p.Lookup
 	default:
 		newIFI, found, opened, failStatus, err := createOnVolume(ctx, fabAddr, fac, p, fop&fopCIF != 0)
 		if err != nil {
@@ -139,6 +139,10 @@ func SysCreate(ctx *Context, argv []uint32) (uint32, error) {
 
 		if failStatus != 0 {
 			return fabStatus(ctx, fabAddr, failStatus, stvFor(failStatus))
+		}
+
+		if !opened {
+			ctx.countIO(ioCreateBuffered, ioCreateDirect)
 		}
 
 		// A new file takes the XABs' attributes; then, new or opened by

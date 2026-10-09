@@ -24,12 +24,8 @@ import "github.com/tucats/govax/internal/rms"
 // then forward argv to the real handler unchanged.
 func registerRMSServices(t *ServiceTable) {
 	for name, fn := range rmsServices {
-		t.Register(name, func(env *Environment, argv []uint32) (status uint32, err error) {
-			// The volume blocks the service read and wrote are the
-			// process's direct I/O (iocount.go).
-			env.countVolumeIO(func() { status, err = fn(env.rmsContext(), argv) })
-
-			return status, err
+		t.Register(name, func(env *Environment, argv []uint32) (uint32, error) {
+			return fn(env.rmsContext(), argv)
 		})
 	}
 }

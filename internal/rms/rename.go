@@ -215,6 +215,8 @@ func renameSpecs(ctx *Context, oldSpecs, newSpecs []resolvedSpec) (r volume.Rena
 		return r, rmsSystemError, rmsSystemError
 	}
 
+	ctx.countIO(1, 0) // the file system's call (iocount.go)
+
 	return r, rmsNormal, 0
 }
 

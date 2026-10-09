@@ -70,6 +70,8 @@ func SysErase(ctx *Context, argv []uint32) (uint32, error) {
 		return fabStatus(ctx, fabAddr, sts, stvFor(sts))
 	}
 
+	ctx.countIO(1, 0)
+
 	return fabStatus(ctx, fabAddr, rmsNormal, 0)
 }
 

@@ -127,10 +127,12 @@ func (h *FileHandle) recordAt(off int64) ([]byte, int64, uint32) {
 	return record, h.Reader.Offset(), 0
 }
 
-// validRFA reports whether r can name a record of h's file: in the file,
-// and, for formats whose records start at known boundaries, on one (a
-// Fixed record's multiple of its size, a Variable record's even byte).
-// It returns the record's offset.
+// validRFA reports whether r can name a record of h's file: a byte in
+// the file. It returns the record's offset. Whether a record starts
+// there isn't checked: VMS 7.3 doesn't (testdata/probe49, step 2: a
+// $GET by an RFA one byte into a variable-length record read a length
+// word from there and returned RMS$_EOF), so the record is whatever the
+// bytes at the offset make of it.
 func (h *FileHandle) validRFA(r rfa) (int64, bool) {
 	if r.vbn == 0 || r.offset >= ondisk.BlockSize {
 		return 0, false
@@ -139,19 +141,6 @@ func (h *FileHandle) validRFA(r rfa) (int64, bool) {
 	off := int64(r.vbn-1)*ondisk.BlockSize + int64(r.offset)
 	if off >= h.endOfFile() {
 		return 0, false
-	}
-
-	attr := h.File.Header.RecordAttributes
-
-	switch attr.Format {
-	case ondisk.RecordFormatFixed, ondisk.RecordFormatUndefined:
-		if attr.MaxRecordSize == 0 || off%int64(attr.MaxRecordSize) != 0 {
-			return 0, false
-		}
-	case ondisk.RecordFormatVariable, ondisk.RecordFormatVFC:
-		if off%2 != 0 {
-			return 0, false
-		}
 	}
 
 	return off, true
@@ -225,6 +214,18 @@ func (ctx *Context) locate(rabAddr uint32, h *FileHandle, find bool) (located, u
 	}
 
 	record, end, sts := h.recordAt(target)
+	if sts == 0 {
+		h.readBuffer.touch(ctx, target)
+	}
+
+	// An RFA that doesn't start a record reads a "record" from whatever
+	// is there; one whose length runs past the end of the file is
+	// RMS$_EOF, as VMS 7.3's was (validRFA). The next record is left
+	// where it was.
+	if rac == racRFA && sts == rmsDeviceError {
+		return fail(rmsEOF)
+	}
+
 	if sts != 0 {
 		// At the end of the file, a stream that unlocks automatically
 		// gives up its record lock (Phase 47).

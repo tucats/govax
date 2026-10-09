@@ -110,6 +110,18 @@ type FileHandle struct {
 	// stream is the record stream's context: its current and next
 	// records (stream.go).
 	stream streamContext
+
+	// readBuffer and writeBuffer are the last multiblock buffers the
+	// stream read and wrote, and written whether it wrote anything, for
+	// the I/O counts (iocount.go).
+	readBuffer, writeBuffer ioBuffer
+	written                 bool
+}
+
+// wrote counts a record written at byte offset off (iocount.go).
+func (h *FileHandle) wrote(ctx *Context, off int64) {
+	h.written = true
+	h.writeBuffer.touch(ctx, off)
 }
 
 // IsConsole reports whether h is the terminal-pseudo-device case (Console

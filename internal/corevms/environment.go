@@ -288,7 +288,10 @@ func (env *Environment) rmsContext() *rms.Context {
 		AwaitTerminal: env.AwaitTerminal,
 		TerminalDone:  env.TerminalDone,
 
-		CountBufferedIO: func() { env.countIO(false) },
+		CountIO: func(buffered, direct uint32) {
+			env.Process.BufferedIO += buffered
+			env.Process.DirectIO += direct
+		},
 
 		Locks:     env.Locks,
 		PID:       env.Process.PID,

@@ -150,6 +150,12 @@ func TestGetlki_access(t *testing.T) {
 			}
 
 			pids = append(pids, binary.LittleEndian.Uint32(data))
+
+			// The context written back: ^XFE and the lock's ID (VMS 7.3's
+			// form; testdata/probe49, step 5a).
+			if v := c.a.readLong(ctx); v&0xFF000000 != 0xFE000000 || v&0x00FFFFFF == 0 {
+				t.Errorf("scan context %08X, want FE and a lock ID", v)
+			}
 		}
 
 		t.Fatal("the scan didn't end")

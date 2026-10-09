@@ -12,26 +12,25 @@ import iodev "github.com/tucats/govax/internal/io"
 // SHOW SYSTEM's I/O column (their sum), the termination message's
 // ACC$L_BIOCNT and ACC$L_DIOCNT, and LOGOUT's report.
 //
-// Which kind an operation is depends on its device: a disk's transfers
-// are direct I/O (the device reads and writes the program's buffer),
-// and a terminal's, a mailbox's, or the null device's are buffered (the
-// data goes through a system buffer).
+// Which kind a request is depends on its device's driver. A disk's
+// transfers are direct I/O, and so, on VMS 7.3, is a write to the null
+// device (testdata/probe49, step 8); a terminal's and a mailbox's are
+// buffered.
 //
 // govax counts:
 //
 //   - every $QIO request that completes for the process (completeIO),
 //     by its device;
-//   - each record RMS reads from or writes to the terminal, a mailbox,
-//     or NL: (and LIB$PUT_OUTPUT's and LIB$GET_INPUT's lines) as one
-//     buffered I/O, as RMS's own $QIO for it would be;
-//   - for an RMS service on a volume, the block reads and writes ods2
-//     did for it (a mounted volume's operation count, before and after)
-//     as direct I/Os: VMS's RMS reads and writes its buffers with one
-//     $QIO a buffer, and ods2's block operations stand in for those.
-//     *Unconfirmed approximation*: ods2's caching and transfer sizes
-//     aren't RMS's, so the counts won't match a VMS run's.
+//   - each record RMS reads from or writes to a mailbox or NL: (and
+//     LIB$GET_INPUT's lines, and LIB$PUT_OUTPUT's to the terminal), as
+//     one I/O of the device's kind, as RMS's own $QIO for it would be;
+//   - RMS's I/O on volume files, by internal/rms's model
+//     (rms/iocount.go: the file system's calls are buffered I/O, the
+//     multiblock buffers direct), through rms.Context.CountIO.
 //
-// A section's page reads and writes are paging I/O, not counted, as on
+// LIB$PUT_OUTPUT's lines to a file count nothing: VMS's RMS buffered
+// such a short line (step 8: a line to the probe's log was 0 and 0). A
+// section's page reads and writes are paging I/O, not counted, as on
 // VMS.
 
 // countIO counts one completed I/O operation for env's process: direct
@@ -44,25 +43,8 @@ func (env *Environment) countIO(direct bool) {
 	}
 }
 
-// isDirectIO reports whether I/O to d is direct (a disk), not buffered.
+// isDirectIO reports whether I/O to d is direct, not buffered: a disk,
+// or the null device.
 func isDirectIO(d *iodev.Device) bool {
-	return d != nil && d.DevClass == iodev.DeviceClassDisk
-}
-
-// countVolumeIO runs fn and counts as env's direct I/O the block
-// operations every mounted volume did meanwhile (see above).
-func (env *Environment) countVolumeIO(fn func()) {
-	if env.Mounts == nil {
-		fn()
-
-		return
-	}
-
-	before := env.Mounts.TotalOperations()
-
-	fn()
-
-	if after := env.Mounts.TotalOperations(); after > before {
-		env.Process.DirectIO += uint32(after - before)
-	}
+	return d != nil && (d.DevClass == iodev.DeviceClassDisk || d.DevType == iodev.DeviceTypeNull && d.DevClass == iodev.DeviceClassMailbox)
 }

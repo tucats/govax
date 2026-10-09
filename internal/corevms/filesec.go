@@ -83,6 +83,7 @@ var (
 	ssNoWrt       = vmsdef.Symbols["SS$_NOWRT"]
 	ssNotFileDev  = vmsdef.Symbols["SS$_NOTFILEDEV"]
 	ssNotModified = vmsdef.Symbols["SS$_NOTMODIFIED"]
+	ssIvChnlSec   = vmsdef.Symbols["SS$_IVCHNLSEC"]
 )
 
 // sectionFile is a file sections are made of: how many sections use it,
@@ -513,8 +514,8 @@ func (env *Environment) raiseP0Mark(addr uint32) {
 // ($CRMPSC's chan) and returns its file: SS$_NOPRIV for a channel not
 // assigned or assigned from a mode more privileged than the caller's (the
 // manual's rule), SS$_NOTFILEDEV for a device that isn't a disk, and
-// SS$_FILNOTACC for a disk channel with no file accessed (unconfirmed:
-// the manual lists no status for it). With SEC$M_WRT and not SEC$M_CRF,
+// SS$_IVCHNLSEC for a disk channel with no file accessed (VMS 7.3's;
+// testdata/probe49, step 7d). With SEC$M_WRT and not SEC$M_CRF,
 // a file accessed read-only is SS$_NOWRT.
 func (env *Environment) fileSectionChannel(chanNumber, flags uint32) (*rms.ACPFile, uint32) {
 	c, ok := env.findChannel(chanNumber)
@@ -527,7 +528,7 @@ func (env *Environment) fileSectionChannel(chanNumber, flags uint32) (*rms.ACPFi
 	}
 
 	if c.acp == nil {
-		return nil, ssFilNotAcc
+		return nil, ssIvChnlSec
 	}
 
 	if flags&secWRT != 0 && flags&secCRF == 0 && !c.acp.Writable() {

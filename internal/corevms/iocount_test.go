@@ -4,6 +4,8 @@ import (
 	"encoding/binary"
 	"testing"
 
+	iodev "github.com/tucats/govax/internal/io"
+	"github.com/tucats/govax/internal/vax"
 	"github.com/tucats/govax/internal/vmsdef"
 )
 
@@ -65,20 +67,19 @@ func TestIOCount_disk(t *testing.T) {
 	}
 }
 
-// TestIOCount_volume: an RMS service's block operations on a mounted
-// volume are the caller's direct I/O.
-func TestIOCount_volume(t *testing.T) {
-	env, _, _ := diskFixture(t, true)
+// TestIOCount_null: a write to the null device is direct I/O, as on VMS
+// 7.3 (testdata/probe49, step 8).
+func TestIOCount_null(t *testing.T) {
+	env, _ := fixture()
+	nla := defineTestDevice(env, "NLA0", iodev.DeviceClassMailbox)
+	nla.DevType = iodev.DeviceTypeNull
 
-	before := env.Process.DirectIO
-	ops := env.Mounts.TotalOperations()
+	a := newArena(t, env)
+	ch := assignCall(t, env, a, "NLA0", uint32(vax.User))
 
-	env.countVolumeIO(func() {
-		vol, _ := env.Mounts.Lookup("DUA0")
-		vol.Devices[0].CountOperation(3) // as three block reads would
-	})
+	wantR0(t, callQIO(t, env, qioArgs{channel: ch, function: fnWriteVBlk, iosb: a.alloc(8), p: [6]uint32{a.str("abc"), 3}}), ssNormal)
 
-	if done := env.Mounts.TotalOperations() - ops; done == 0 || env.Process.DirectIO-before != uint32(done) {
-		t.Errorf("%d block operations, direct I/O %d more; want them counted", done, env.Process.DirectIO-before)
+	if env.Process.DirectIO != 1 || env.Process.BufferedIO != 0 {
+		t.Errorf("buffered %d, direct %d; want 0, 1", env.Process.BufferedIO, env.Process.DirectIO)
 	}
 }
