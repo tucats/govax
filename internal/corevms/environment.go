@@ -136,6 +136,10 @@ type Environment struct {
 	openFiles map[uint32]*os.File
 	nextFID   uint32
 
+	// hostClaims are the open files' places among their files' openers
+	// (System.HostOpeners), by descriptor.
+	hostClaims map[uint32]*rms.HostClaim
+
 	// CommandLine is the text of the command that ran the current image,
 	// after its verb: what LIB$GET_FOREIGN returns. A foreign command
 	// sets it (internal/console's RunOptions.CommandLine); RUN leaves it
@@ -254,6 +258,7 @@ func newEnvironment(sys *System, logicals *lnm.Database, consoleIn io.Reader, co
 		consoleIn:  consoleIn,
 		consoleOut: consoleOut,
 		openFiles:  map[uint32]*os.File{},
+		hostClaims: map[uint32]*rms.HostClaim{},
 		nextFID:    3,
 	}
 }

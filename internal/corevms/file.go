@@ -54,14 +54,36 @@ func shimExeOpen(env *Environment, argv []uint32) (uint32, error) {
 		return 0, err
 	}
 
-	f, err := os.OpenFile(name, posixFlagsToGo(argv[1]), 0o644)
+	flags := posixFlagsToGo(argv[1])
+
+	// The open shares the file with other processes' opens by RMS's rule
+	// (rms/hostshare.go), as the access its flags ask for: a read-only
+	// open is FAB$M_GET (sharing reading, the default), any other a
+	// writer's (sharing nothing, the default). A refused open fails
+	// before the file is touched.
+	fac := fabFACGet
+	if flags&(os.O_WRONLY|os.O_RDWR) != 0 {
+		fac = fabFACPut
+	}
+
+	claim, err := env.HostOpeners.Claim(name, fac, 0)
 	if err != nil {
 		return 0xFFFFFFFF, nil // -1, matching a failed open()
 	}
 
+	f, err := os.OpenFile(name, flags, 0o644)
+	if err != nil {
+		claim.Release()
+
+		return 0xFFFFFFFF, nil
+	}
+
+	claim.Attach(f)
+
 	fid := env.nextFID
 	env.nextFID++
 	env.openFiles[fid] = f
+	env.hostClaims[fid] = claim
 
 	return fid, nil
 }
@@ -69,12 +91,21 @@ func shimExeOpen(env *Environment, argv []uint32) (uint32, error) {
 // shimExeClose is EXE$CLOSE.
 func shimExeClose(env *Environment, argv []uint32) (uint32, error) {
 	fid := argv[0]
+	env.closeHostFile(fid)
+
+	return fid, nil
+}
+
+// closeHostFile closes the host file open as descriptor fid, if it is,
+// and gives up its place among the file's openers.
+func (env *Environment) closeHostFile(fid uint32) {
 	if f, ok := env.openFiles[fid]; ok {
-		f.Close()
+		_ = f.Close()
 		delete(env.openFiles, fid)
 	}
 
-	return fid, nil
+	env.hostClaims[fid].Release()
+	delete(env.hostClaims, fid)
 }
 
 // shimExeRead is EXE$READ. fid 0 reads a line from the console input

@@ -109,3 +109,72 @@ func TestShimExeWriteToConsole(t *testing.T) {
 		t.Errorf("console output = %q, want \"console text\"", out.String())
 	}
 }
+
+// TestShimExeOpenSharing: host files opened by EXE$OPEN are shared by
+// RMS's rule (docs/PHASE-49.md, subtask 11): two processes may read a
+// file together, but a writer and a reader may not have it open at once
+// either way round; a refused truncating open leaves the file alone; a
+// close, or the process's rundown, lets the next open in.
+func TestShimExeOpenSharing(t *testing.T) {
+	env, _ := fixture()
+	other := newProcess(t, env)
+
+	fn := t.TempDir() + "/shared.txt"
+	if err := os.WriteFile(fn, []byte(testGreeting), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	const nameAddr = uint32(0x1000)
+
+	putString(t, env, nameAddr, fn)
+
+	open := func(p *Environment, flags uint32) uint32 {
+		t.Helper()
+
+		fid, err := shimExeOpen(p, []uint32{nameAddr, flags})
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		return fid
+	}
+
+	const failed = 0xFFFFFFFF
+
+	// Two readers share.
+	r1 := open(env, 0)
+	r2 := open(other, 0)
+
+	if r1 == failed || r2 == failed {
+		t.Fatalf("two readers: %#x, %#x; want both open", r1, r2)
+	}
+
+	// A writer can't join them, and its truncation doesn't happen.
+	if fid := open(other, posixOWronly|posixOTrunc); fid != failed {
+		t.Errorf("a writer joined two readers: %#x", fid)
+	}
+
+	if got, _ := os.ReadFile(fn); string(got) != testGreeting {
+		t.Errorf("after the refused open, the file holds %q", got)
+	}
+
+	// With the readers gone, the writer gets it, and then a reader can't.
+	_, _ = shimExeClose(env, []uint32{r1})
+	_, _ = shimExeClose(other, []uint32{r2})
+
+	w := open(other, posixOWronly|posixOAppend)
+	if w == failed {
+		t.Fatal("the writer was refused with no other opener")
+	}
+
+	if fid := open(env, 0); fid != failed {
+		t.Errorf("a reader joined a writer: %#x", fid)
+	}
+
+	// The writer's image rundown (which closes its files) releases it.
+	other.ImageRundown()
+
+	if fid := open(env, 0); fid == failed || env.HostOpeners.Count() != 1 {
+		t.Errorf("after the writer's rundown: %#x, %d files; want the reader open", fid, env.HostOpeners.Count())
+	}
+}

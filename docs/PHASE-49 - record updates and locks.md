@@ -404,3 +404,17 @@ stream's record locks.
   isn't counted (paging I/O, as on VMS). Tests: `TestIOCount_terminal`,
   `TestIOCount_disk`, `TestIOCount_volume`; the subprocess CLI's LOGOUT
   report now shows its buffered count.
+- 2026-10-09: Subtask 11, part 2: host-file arbitration
+  (`rms/hostshare.go`). A running program reaches host files only
+  through the console's EXE$OPEN shim (RMS opens volume files only), so
+  that's what is arbitrated: `rms.HostOpeners` (`System.HostOpeners`)
+  keeps each host file's openers, known by the host's file identity
+  (`os.SameFile`), and applies sharing.go's rule (the guide's per
+  operation one, the same `opener.compatible`). EXE$OPEN's flags map to
+  an access: read-only is FAB$M_GET (sharing reading, RMS's default),
+  anything else a writer's (sharing nothing); the claim is made before
+  the host open, so a refused open (-1) doesn't truncate the file; a
+  file the open creates is attached once it's open. EXE$CLOSE and image
+  rundown (`CloseFiles`) release it. Not arbitrated: the console's own
+  commands' host files (they run while no program does) and other host
+  programs. Test: `TestShimExeOpenSharing`.

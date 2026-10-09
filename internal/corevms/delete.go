@@ -322,10 +322,8 @@ func (env *Environment) CloseFiles() {
 			env.Process.PID, n, err)
 	}
 
-	for fd, f := range env.openFiles {
-		_ = f.Close()
-
-		delete(env.openFiles, fd)
+	for fd := range env.openFiles {
+		env.closeHostFile(fd)
 	}
 }
 

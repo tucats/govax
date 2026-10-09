@@ -52,6 +52,10 @@ type System struct {
 	// after a later VMInit/Zero rebuilds this System from scratch).
 	Mounts *rms.MountTable
 
+	// HostOpeners arbitrates programs' opens of host files (EXE$OPEN) by
+	// RMS's sharing rule, as Mounts does a volume's (rms/hostshare.go).
+	HostOpeners rms.HostOpeners
+
 	// EventFlagClusters is the system-wide table of common event flag
 	// clusters $ASCEFC creates and associates (eventflags.go). A process's
 	// own event flags and associations are in its Process.
