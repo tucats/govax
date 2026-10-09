@@ -66,7 +66,8 @@ never had.
   (`run46`, `run48`, `final`); `vax/` directories hold VMS's output.
 - `testdata/dcl50/` — Phase 50's VMS probe of DCL (README.md): symbol
   substitution, expressions, `@`, and statuses, as a command procedure
-  run with SET VERIFY; `vax/` holds VMS's log once it's run.
+  run with SET VERIFY; `vax/probe50.log` is VMS 7.3's log, which
+  `TestProbe50Oracle` replays.
 - `testdata/probe49/` — Phase 49's VMS probe in three rounds (`probe6`,
   `probe6b`, `probe6c`; README.md has each round's answers), run by
   `TestProbe6*`; `testdata/rms49/` and `testdata/sec49/` are the phase's
@@ -251,16 +252,16 @@ expect adjustment as phases land):
   (`RunDebuggerProcedure`).
   **Symbol substitution and expressions** (Phase 50): `DispatchConsole`
   replaces `'SYMBOL'` (and `''SYMBOL'` in quotes) first
-  (`dclsubst.go`), then `dispatchCommand` does the rest: the verb as a
-  symbol, `&SYMBOL` (after uppercasing, so its value keeps its case:
-  the grammar's `ParseUpcased`, or `dclText`/`dclWord`), the grammar.
-  Aliases and IF's THEN re-enter `dispatchCommand`, not
-  `DispatchConsole`. `=` evaluates DCL's expressions (`dclexpr.go`:
-  integers and strings, the User's Manual's operators, precedence, and
-  conversions); lexical functions are a table (`dcllexical.go`). The
-  messages are DCL's CLI$_ texts from `vmsdef.Messages`, with a
-  ` \TEXT\` segment line. `testdata/dcl50` is the VMS probe of the
-  rules the manual leaves open.
+  (`dclsubst.go`), then `dispatchCommand` does the rest: NOCOMD, the
+  verb as a symbol (an alias's value isn't looked up again), `&SYMBOL`
+  (its value one quoted token, so its case and blanks are kept; none in
+  `:=` or `@`), the grammar, and IVVERB for an unknown verb. `=`
+  evaluates DCL's expressions (`dclexpr.go`); lexical functions are a
+  table (`dcllexical.go`). The messages are DCL's CLI$_ texts from
+  `vmsdef.Messages`, shown as `%DCL-` (the CLI facility's display name),
+  some with a segment line (`vmserrors.NewSegment`). `testdata/dcl50` is
+  the VMS probe, and `TestProbe50Oracle` replays it against VMS 7.3's
+  log.
   `internal/console/consoletest` is its test support.
 - `internal/io` — device abstraction (Phase 09).
 - `internal/vmsdef` — VMS's own definitions, shared by the assembler, RTL, RMS,

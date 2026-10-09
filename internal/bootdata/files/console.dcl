@@ -847,7 +847,6 @@ grammar console
     verb help/id=1630
         parameter   topic/id=1631               -
                     /type=$rest_of_line
-    verb ?/alias=help
 
     ! IF expression [THEN] command: the handler drops THEN.
     verb if/id=1640

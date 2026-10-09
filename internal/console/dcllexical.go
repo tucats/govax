@@ -12,14 +12,30 @@ import (
 // in lexicalFunctions, the table the expression evaluator calls through,
 // with how many arguments it takes. The arguments are expressions,
 // separated by commas; an optional one may be left out, keeping its
-// comma, and a function with none still takes "()".
+// comma, and a function with none still takes "()". A name starting with
+// F$ is a function only when "(" follows it; otherwise it's a symbol.
 //
-// A function's name may be abbreviated to any prefix that names only it
-// (an ambiguous one is CLI_ABFNAM, one naming none CLI_IVFNAM), as DCL's
-// messages for the two imply. Unconfirmed against VMS: whether there is
-// a shortest abbreviation, and that too many arguments are CLI_MAXPARM.
+// A function's name may be abbreviated to any prefix that names only one
+// of VMS's lexical functions (lexicalNames): F$LEN is F$LENGTH, and F$L
+// is CLI_ABFNAM, as VMS 7.3 answered in testdata/dcl50. A name that
+// matches none is CLI_IVFNAM. Both show the name and its "(" as their
+// segment. A required argument left out is CLI_ARGREQ, an argument too
+// many or a missing ")" CLI_SYMDEL.
 //
 // Subtask 9 brings the syntax and three functions; subtask 14 the rest.
+// Until then a call of one of the others is CLI_LEXNOTIMPL.
+
+// lexicalNames are VMS 7.3's lexical functions (the User's Manual's
+// chapter 15 and the DCL Dictionary), for abbreviations.
+var lexicalNames = []string{
+	"F$CONTEXT", "F$CSID", "F$CVSI", "F$CVTIME", "F$CVUI", "F$DEVICE",
+	"F$DIRECTORY", "F$EDIT", "F$ELEMENT", "F$ENVIRONMENT", "F$EXTRACT",
+	"F$FAO", "F$FILE_ATTRIBUTES", "F$GETDVI", "F$GETJPI", "F$GETQUI",
+	"F$GETSYI", "F$IDENTIFIER", "F$INTEGER", "F$LENGTH", "F$LICENSE",
+	"F$LOCATE", "F$LOGICAL", "F$MESSAGE", "F$MODE", "F$PARSE", "F$PID",
+	"F$PRIVILEGE", "F$PROCESS", "F$SEARCH", "F$SETPRV", "F$STRING",
+	"F$TIME", "F$TRNLNM", "F$TYPE", "F$USER", "F$VERIFY",
+}
 
 // lexicalFunction is one lexical function.
 type lexicalFunction struct {
@@ -61,28 +77,37 @@ var lexicalFunctions = map[string]lexicalFunction{
 // findLexicalFunction returns the lexical function name (in any case)
 // names, or abbreviates.
 func findLexicalFunction(name string) (lexicalFunction, error) {
-	name = strings.ToUpper(name)
-
-	if f, ok := lexicalFunctions[name]; ok {
-		return f, nil
-	}
+	upper := strings.ToUpper(name)
+	segment := name + "("
 
 	var matches []string
 
-	for full := range lexicalFunctions {
-		if strings.HasPrefix(full, name) {
+	for _, full := range lexicalNames {
+		if full == upper {
+			matches = []string{full}
+
+			break
+		}
+
+		if strings.HasPrefix(full, upper) {
 			matches = append(matches, full)
 		}
 	}
 
 	switch len(matches) {
 	case 0:
-		return lexicalFunction{}, vmserrors.New(vmserrors.CLI_IVFNAM, name)
+		return lexicalFunction{}, vmserrors.NewSegment(vmserrors.CLI_IVFNAM, segment)
 	case 1:
-		return lexicalFunctions[matches[0]], nil
+	default:
+		return lexicalFunction{}, vmserrors.NewSegment(vmserrors.CLI_ABFNAM, segment)
 	}
 
-	return lexicalFunction{}, vmserrors.New(vmserrors.CLI_ABFNAM, name)
+	f, ok := lexicalFunctions[matches[0]]
+	if !ok {
+		return lexicalFunction{}, vmserrors.New(vmserrors.CLI_LEXNOTIMPL, matches[0])
+	}
+
+	return f, nil
 }
 
 // lexicalCall evaluates a call of the lexical function name, whose name
@@ -93,62 +118,46 @@ func (e *dclExpression) lexicalCall(name string) (dclValue, error) {
 		return dclValue{}, err
 	}
 
-	if e.skipBlanks(); e.atEnd() || e.text[e.pos] != '(' {
-		return dclValue{}, vmserrors.New(vmserrors.CLI_NOPAREN, strings.ToUpper(name))
-	}
+	e.skipBlanks()
+	e.pos++ // the "(", which parenNext found
 
-	e.pos++
-
-	args, err := e.lexicalArguments()
+	args, err := e.lexicalArguments(f)
 	if err != nil {
 		return dclValue{}, err
-	}
-
-	if len(args) > f.maxArgs {
-		return dclValue{}, vmserrors.New(vmserrors.CLI_MAXPARM)
-	}
-
-	for len(args) < f.maxArgs {
-		args = append(args, lexicalArg{})
-	}
-
-	for _, arg := range args[:f.minArgs] {
-		if !arg.present {
-			return dclValue{}, vmserrors.New(vmserrors.CLI_ARGREQ, strings.ToUpper(name))
-		}
 	}
 
 	return f.call(e, args)
 }
 
-// lexicalArguments reads a lexical function's arguments, after its "(",
-// through the closing ")". "()" is no arguments; otherwise each comma
-// separates two, either of which may be empty (absent).
-func (e *dclExpression) lexicalArguments() ([]lexicalArg, error) {
-	if e.skipBlanks(); e.pos < len(e.text) && e.text[e.pos] == ')' {
-		e.pos++
+// lexicalArguments reads the arguments of a call of f, after its "(",
+// through the closing ")". Each comma separates two, and either may be
+// empty (absent); a required one that is absent is CLI_ARGREQ, found as
+// it's read, and one more than f takes, or no ")", is CLI_SYMDEL. The
+// result has an entry for each of f's arguments.
+func (e *dclExpression) lexicalArguments(f lexicalFunction) ([]lexicalArg, error) {
+	args := make([]lexicalArg, f.maxArgs)
 
-		return nil, nil
-	}
+	for n := 0; ; n++ {
+		e.skipBlanks()
 
-	var args []lexicalArg
+		present := e.pos < len(e.text) && e.text[e.pos] != ',' && e.text[e.pos] != ')'
 
-	for {
-		var arg lexicalArg
-
-		if e.skipBlanks(); e.pos < len(e.text) && e.text[e.pos] != ',' && e.text[e.pos] != ')' {
+		switch {
+		case n >= f.maxArgs && (present || (e.pos < len(e.text) && e.text[e.pos] == ',')):
+			return nil, vmserrors.New(vmserrors.CLI_SYMDEL)
+		case present:
 			v, err := e.binary(precOr)
 			if err != nil {
 				return nil, err
 			}
 
-			arg = lexicalArg{present: true, value: v}
+			args[n] = lexicalArg{present: true, value: v}
+		case n < f.minArgs:
+			return nil, vmserrors.New(vmserrors.CLI_ARGREQ)
 		}
 
-		args = append(args, arg)
-
 		if e.skipBlanks(); e.pos >= len(e.text) {
-			return nil, vmserrors.New(vmserrors.CLI_NOPAREN, e.rest())
+			return nil, vmserrors.New(vmserrors.CLI_SYMDEL)
 		}
 
 		switch e.text[e.pos] {
@@ -157,9 +166,13 @@ func (e *dclExpression) lexicalArguments() ([]lexicalArg, error) {
 		case ')':
 			e.pos++
 
+			if n+1 < f.minArgs {
+				return nil, vmserrors.New(vmserrors.CLI_ARGREQ)
+			}
+
 			return args, nil
 		default:
-			return nil, e.syntaxError()
+			return nil, vmserrors.New(vmserrors.CLI_SYMDEL)
 		}
 	}
 }

@@ -24,11 +24,11 @@ func TestDCLText(t *testing.T) {
 		{`"! not a comment"`, `"! not a comment"`, "! not a comment"},
 		{"", "", ""},
 	} {
-		if got := dclText(tc.text, true, nil); got != tc.foreign {
+		if got := dclText(tc.text, true); got != tc.foreign {
 			t.Errorf("dclText(%q, true) = %q, want %q", tc.text, got, tc.foreign)
 		}
 
-		if got := dclText(tc.text, false, nil); got != tc.value {
+		if got := dclText(tc.text, false); got != tc.value {
 			t.Errorf("dclText(%q, false) = %q, want %q", tc.text, got, tc.value)
 		}
 	}
@@ -96,7 +96,6 @@ func TestAssignSymbol(t *testing.T) {
 		code           uint32
 	}{
 		{"X", "=", " 12x", vmserrors.CLI_IVCHAR},
-		{"X", "==", ` "open`, vmserrors.CLI_UNTERMSTR},
 		{"X", "=", ` "a" b`, vmserrors.CLI_EXPSYN},
 		{"A*B*C", ":=", "x", vmserrors.CLI_EXPSYN},
 	} {
@@ -108,8 +107,9 @@ func TestAssignSymbol(t *testing.T) {
 }
 
 // TestDispatch_dclSymbols assigns, uses, and deletes symbols through the
-// dispatcher: an alias stands for its value, an alias of itself is
-// refused, and DELETE/SYMBOL removes one.
+// dispatcher: an alias stands for its value, its value's first word isn't
+// looked up again (so an alias of itself is an unknown verb, as VMS 7.3
+// treats an alias of an alias), and DELETE/SYMBOL removes one.
 func TestDispatch_dclSymbols(t *testing.T) {
 	c := newBootableConsole(t)
 	d := NewDispatcher(c, loadEvaxGrammar(t), nil)
@@ -120,8 +120,8 @@ func TestDispatch_dclSymbols(t *testing.T) {
 		}
 	}
 
-	if err := d.Dispatch("LOOP"); !hasStatus(err, vmserrors.CLI_SYMDEPTH) {
-		t.Errorf("LOOP = %v, want CLI_SYMDEPTH", err)
+	if err := d.Dispatch("LOOP"); !hasStatus(err, vmserrors.CLI_IVVERB) {
+		t.Errorf("LOOP = %v, want CLI_IVVERB", err)
 	}
 
 	if err := d.Dispatch("delete/symbol/global sd"); err != nil {
@@ -132,8 +132,8 @@ func TestDispatch_dclSymbols(t *testing.T) {
 		t.Error("SD is still defined")
 	}
 
-	if err := d.Dispatch("DELETE/SYMBOL SD"); !hasStatus(err, vmserrors.CLI_UNDEFSYM) {
-		t.Errorf("deleting SD again = %v, want CLI_UNDEFSYM", err)
+	if err := d.Dispatch("DELETE/SYMBOL SD"); !hasStatus(err, vmserrors.CLI_UNDSYM) {
+		t.Errorf("deleting SD again = %v, want CLI_UNDSYM", err)
 	}
 }
 
@@ -208,10 +208,10 @@ func TestShowDCLSymbols(t *testing.T) {
 	}
 
 	for line, code := range map[string]uint32{
-		"SHOW SYMBOL NOSUCH":        vmserrors.CLI_UNDEFSYM,
-		"SHOW SYMBOL NOSUCH*":       vmserrors.CLI_UNDEFSYM,
-		"SHOW SYMBOL/LOCAL N":       vmserrors.CLI_UNDEFSYM,
-		"SHOW SYMBOL/GLOBAL SAY":    vmserrors.CLI_UNDEFSYM,
+		"SHOW SYMBOL NOSUCH":        vmserrors.CLI_UNDSYM,
+		"SHOW SYMBOL NOSUCH*":       vmserrors.CLI_UNDSYM,
+		"SHOW SYMBOL/LOCAL N":       vmserrors.CLI_UNDSYM,
+		"SHOW SYMBOL/GLOBAL SAY":    vmserrors.CLI_UNDSYM,
 		"SHOW SYMBOL":               vmserrors.CLI_MISSINGPARAMETER,
 		"SHOW SYMBOL/LOCAL/GLOBAL N": 0,
 	} {
@@ -286,14 +286,14 @@ func TestDCLSymbols_localAndGlobal(t *testing.T) {
 		t.Errorf("after DELETE/SYMBOL X: %q, want %q", got, want)
 	}
 
-	if err := d.Dispatch("DELETE/SYMBOL X"); !hasStatus(err, vmserrors.CLI_UNDEFSYM) {
-		t.Errorf("DELETE/SYMBOL X with only a global X: %v, want CLI_UNDEFSYM", err)
+	if err := d.Dispatch("DELETE/SYMBOL X"); !hasStatus(err, vmserrors.CLI_UNDSYM) {
+		t.Errorf("DELETE/SYMBOL X with only a global X: %v, want CLI_UNDSYM", err)
 	}
 
 	show("DELETE/SYMBOL/GLOBAL/ALL")
 
-	if err := d.Dispatch("SHOW SYMBOL *"); !hasStatus(err, vmserrors.CLI_UNDEFSYM) {
-		t.Errorf("SHOW SYMBOL * after DELETE/SYMBOL/GLOBAL/ALL: %v, want CLI_UNDEFSYM", err)
+	if err := d.Dispatch("SHOW SYMBOL *"); !hasStatus(err, vmserrors.CLI_UNDSYM) {
+		t.Errorf("SHOW SYMBOL * after DELETE/SYMBOL/GLOBAL/ALL: %v, want CLI_UNDSYM", err)
 	}
 
 	for line, code := range map[string]uint32{

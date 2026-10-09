@@ -27,7 +27,6 @@ grammar debugger
     verb help/id=3
         parameter   topic/id=4                  -
                     /type=$rest_of_line
-    verb ?/alias=help
 
     ! @file runs the debugger commands in a command file.
     verb include/id=5

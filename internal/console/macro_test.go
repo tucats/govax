@@ -210,7 +210,7 @@ func TestMacro_errorsWriteNothing(t *testing.T) {
 	}
 
 	out := buf.String()
-	if strings.Count(out, "%CLI-E-ASSEMBLING") != 2 || !strings.Contains(out, "line 2:") || !strings.Contains(out, "line 4:") {
+	if strings.Count(out, "%DCL-E-ASSEMBLING") != 2 || !strings.Contains(out, "line 2:") || !strings.Contains(out, "line 4:") {
 		t.Errorf("output = %q, want both errors reported", out)
 	}
 
@@ -231,7 +231,7 @@ func TestMacro_warningsStillWrite(t *testing.T) {
 		t.Fatalf("Macro: %v", err)
 	}
 
-	if !strings.Contains(buf.String(), "%CLI-W-ASMWARNING") {
+	if !strings.Contains(buf.String(), "%DCL-W-ASMWARNING") {
 		t.Errorf("output = %q, want a warning", buf.String())
 	}
 

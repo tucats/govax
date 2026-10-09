@@ -85,6 +85,7 @@
 //              10/09/26    Added SYMBOL EXPRESSIONS, SYMBOL SUBSTITUTION,
 //                          and LEXICAL: DCL's expressions, 'SYMBOL' and
 //                          &SYMBOL, and the lexical functions so far
+//              10/09/26    Removed "?" for HELP
 
 This is the help documentation for the govax VAX emulator.  Topic sections are
 marked by a "$" delimiter.  This is followed by as many tokens of the help
@@ -1066,15 +1067,20 @@ $SYM ,SUBS
 
     Inside quotes, the name takes two apostrophes before it and one after:
     "Creating ''NAME'.DAT".  A lexical function can be between apostrophes
-    too: 'F$LENGTH(X)'.  An undefined symbol is replaced by nothing.  Outside
-    quotes, a value that itself has a symbol between apostrophes is replaced
-    in turn.  This happens before anything else reads the command, so the
-    value can be any part of it, the verb included.
+    too: 'F$LENGTH(X)'.  Outside quotes, the closing apostrophe may be left
+    out at the end of a word ('NAME), and a value that itself has a symbol
+    between apostrophes is replaced in turn.  An undefined symbol is
+    replaced by nothing.  This happens before anything else reads the
+    command, so the value can be any part of it, the verb included.  The
+    value is then made uppercase with the rest of the command, unless it's
+    inside quotes.
 
     &NAME is also replaced by the symbol's value, later: after the command's
     first word is looked up as a symbol, and after the command is made
-    uppercase, so the value keeps its case.  It must follow a blank or a
-    special character, and does nothing inside quotes.
+    uppercase, so the value keeps its case, and it stays one parameter even
+    with blanks in it.  It must follow a blank or a special character, and
+    does nothing inside quotes, in a ":=" assignment, or in an @ command's
+    parameters.
 
         $ COUNT = 1
         $ TYPE &P'COUNT'          ! 'COUNT' first, giving &P1
@@ -1086,7 +1092,8 @@ $LEXI
     (see HELP SYMBOL EXPRESSIONS) or between apostrophes.  Its arguments are
     expressions, in parentheses and separated by commas; a function with no
     arguments still takes "()".  Its name may be shortened while it names
-    only one function.
+    only one of VMS's lexical functions (F$LEN is F$LENGTH; F$L is
+    ambiguous).  The others are not here yet.
 
         F$INTEGER(expression)    the value as an integer
         F$LENGTH(string)         the string's length

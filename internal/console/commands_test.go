@@ -65,7 +65,7 @@ func TestCommands_print(t *testing.T) {
 func TestCommands_helpAliases(t *testing.T) {
 	d, _, buf := newCommandDispatcher(t)
 
-	for _, line := range []string{"HELP", "?", "HEL"} {
+	for _, line := range []string{"HELP", "HEL"} {
 		buf.Reset()
 
 		if err := d.Dispatch(line); err != nil {
@@ -184,8 +184,8 @@ func TestCommands_asmOnlyBeforeKernel(t *testing.T) {
 	}
 
 	err := d.Dispatch(`ASM "` + asmFixturePath(t, "xor.asm") + `"`)
-	if !errors.Is(err, vmserrors.New(vmserrors.CLI_UNRECOGNIZED)) {
-		t.Errorf("ASM after the microkernel = %v, want UNRECOGNIZED", err)
+	if !errors.Is(err, vmserrors.New(vmserrors.CLI_IVVERB)) {
+		t.Errorf("ASM after the microkernel = %v, want IVVERB", err)
 	}
 
 	if err := d.Dispatch("ASM"); err == nil || c.InAssemblerMode() {
@@ -263,8 +263,8 @@ func TestCommands_at(t *testing.T) {
 	}
 
 	for _, line := range []string{`INCLUDE "` + path + `"`, "INCLUDE/COMMAND_LINE"} {
-		if err := d.Dispatch(line); !errors.Is(err, vmserrors.New(vmserrors.CLI_UNRECOGNIZED)) {
-			t.Errorf("%s: %v, want CLI_UNRECOGNIZED", line, err)
+		if err := d.Dispatch(line); !errors.Is(err, vmserrors.New(vmserrors.CLI_IVVERB)) {
+			t.Errorf("%s: %v, want CLI_IVVERB", line, err)
 		}
 	}
 

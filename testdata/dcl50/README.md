@@ -14,7 +14,7 @@ two of the phase's open questions about `@`.
 | `probe50r.com` | Runs itself one level deeper, to level 35 (section C) |
 | `probe50e.com` | `EXIT 'P1'` (section D) |
 | `exchange.cmd`, `copyout.cmd` | Make the exchange volume and copy the log back |
-| `vax/` | The VMS run's log, `probe50.log` (once it's run) |
+| `vax/` | The VMS run's log, `probe50.log` (2026-10-09) |
 
 `probe50.com` runs with SET NOON and SET VERIFY, so every line is echoed
 and no failure ends it. Each case sets X to "-", runs one command, and
@@ -69,30 +69,47 @@ shows `$STATUS` and X:
 
    The log goes to `vax/probe50.log`.
 
-## govax's answers (2026-10-09)
+## What VMS answered (2026-10-09)
 
-What govax does now, to set beside VMS's:
+`TestProbe50Oracle` (`internal/console/probe50_test.go`) replays sections
+A and B under govax and compares each case's messages and value with the
+log; every case matches. The answers that changed govax:
 
-- Messages are DCL's CLI$_ texts (from `vmsdef.Messages`), each with a
-  segment line, shown as `%CLI-W-...`, as govax shows its other DCL
-  messages. UNDSYM, EXPSYN, IVOPER, IVFNAM, ABFNAM, ARGREQ, NOPAREN,
-  IVCHAR, and MAXPARM (too many lexical arguments) are warnings, so a
-  procedure goes on. Division by zero is govax's CLI_DIVZERO (an error),
-  an unterminated string CLI_UNTERMSTR (an error), and a symbol whose
-  value names itself CLI_SYMDEPTH (an error).
-- Strings convert to integers with blanks around the number ignored,
-  with a sign, and with `%X`, `%O`, or `%D`: `" 12"`, `"12 "`, and `"+5"`
-  are numbers, and `"%X10"` is 16.
-- `1.5` is IVOPER (a `.` that starts no operator); `.NOT.` after a
-  comparison operator (`1 .EQ. .NOT. 0`) is EXPSYN.
-- An apostrophe with no closing one after the name, or with no name
-  after it, is kept as it is. A comment isn't scanned.
-- `&` substitution keeps the value's case everywhere; in an `@`
-  parameter, a value with blanks stays one parameter.
-- An alias of an alias works (the second is looked up again), to 16
-  levels.
-- Section C: nine parameters are CLI_MAXPARM, a 33rd level govax's
-  CLI_MAXDEPTH; `/OUTPUT=.LOG` is refused (CLI_BADFILESPEC: a new file
-  needs a name).
-- Section D needs subtask 10 (`$STATUS`, SET NOON, SET VERIFY, WRITE,
-  DCL's IF); until then govax can't run the probe whole.
+- **Messages:** DCL's, shown as `%DCL-`. A segment line follows UNDSYM,
+  IVCHAR, IVOPER, IVFNAM, ABFNAM, IVVERB, and EXPSYN for a symbol that
+  names itself (`\'SELF\`); not EXPSYN otherwise, SYMDEL, ARGREQ, NOCOMD,
+  DEFOVF, STKOVF, or UNDSYM from SHOW SYMBOL and DELETE/SYMBOL. All are
+  warnings. IVFNAM's and ABFNAM's segment is the name and its `(`.
+- **Expressions:** `7 / 0` is 2147483647, with no message. A quoted string
+  with no closing quote runs to the end of the line. `""quoted""` is the
+  string QUOTED: a string token goes on through quotes and letters. An
+  operator's closing dot may be left out (`1 .EQ 1`), but not shortened
+  (`.E.` is IVOPER). `.NOT.` may follow another operator (`1 .EQ. .NOT. 0`
+  is 0). `1 + 2)` assigns 3 and then gives SYMDEL. `F$LENGTH` without
+  parentheses is an undefined symbol; `F$L(` is ambiguous (VMS's full set
+  of names counts); `F$LENGTH(,)` is ARGREQ and `F$LENGTH("a","b")`
+  SYMDEL. Strings convert to numbers with blanks, signs, and `%X`
+  prefixes, as govax already did.
+- **Substitution:** the closing apostrophe may be left out (`'NAME`), and
+  blanks may follow the opening one (`' NAME'`). A symbol whose value
+  names itself is EXPSYN. `&` isn't substituted in a `:=` assignment or
+  an `@` parameter; in DEFINE, `&TWO` ("a b") is one value, its case kept.
+  An alias's value isn't looked up as a symbol again (an alias of an
+  alias is IVVERB), and one that starts with an apostrophe is NOCOMD.
+- **`@`:** a ninth parameter is DEFOVF; the @ that would make the 32nd
+  level, the terminal's among them, is STKOVF; each level goes on after
+  either (both warnings). `/OUTPUT=.LOG` makes a file named `.LOG` in the
+  default directory, which govax still refuses (open).
+- **Statuses** (section D, and `$STATUS` throughout): for subtask 10.
+  `$STATUS` is a string, `"%X00030001"` after success; IVVERB's is
+  `%X00038090`; a status a message was already shown for has bit 28 set
+  (`%X10951238` after TYPE's failure); EXIT's status is shown as a
+  message unless it's odd (success or informational) or has bit 28 set,
+  and `EXIT` with no status keeps the last one.
+
+Also seen: SET VERIFY shows a command after apostrophe substitution
+(for subtask 15), and before `@PROBE50`'s SET VERIFY nothing is echoed.
+
+Still open, for a later round: the quotient of a negative number divided
+by zero; whether `''NAME` inside quotes needs its closing apostrophe; a
+foreign command's `&`; and `/OUTPUT=` with no name.

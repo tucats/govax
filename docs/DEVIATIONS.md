@@ -2938,13 +2938,12 @@ widened."
 ### [Phase 50] Command procedure rules chosen without a manual or probe
 
 - **Where**: `internal/console/procedure.go`; `internal/vmserrors/codes_cli.go`
-  (CLI_MAXPARM, CLI_MAXDEPTH, CLI_SKPDAT).
+  (CLI_DEFOVF, CLI_STKOVF, CLI_SKPDAT).
 - **What**: `@` follows the OpenVMS User's Manual (7.3), chapters 12 to
   14. Chosen without it or a VMS run:
-  - MAXPARM's text (`too many parameters - reenter command with fewer
-    parameters`) and warning severity; MAXDEPTH's text and error severity,
-    and refusing the 33rd level rather than the 32nd (the glossary allows
-    "up to 32 nested command levels" above level 0).
+  - (Settled, see the status.) A ninth parameter's message and the
+    deepest level allowed: govax first gave MAXPARM and its own MAXDEPTH,
+    an error, refusing the 33rd level above the terminal.
   - One SKPDAT warning for each run of skipped data lines. A `$` must be
     the record's first character (an indented `$` makes a data line).
   - `/OUTPUT=` with no file type gets `.LIS` (the manual says so for
@@ -2964,41 +2963,41 @@ widened."
 - **Status**: unconfirmed; candidates for Phase 50's VMS probe
   (subtask 20). DCL's message file has CLI$_DEFOVF ("too many command
   procedure parameters - limit to eight") and CLI$_STKOVF ("command
-  procedures too deeply nested - limit to 32 levels"), likely the
-  messages for a ninth parameter and a 33rd level; `testdata/dcl50`'s
-  round 1 asks.
+  procedures too deeply nested - limit to 32 levels"), and VMS 7.3 gave
+  them for a ninth parameter and for the @ that would make the 32nd
+  level, the terminal's among them, both as warnings (`testdata/dcl50`);
+  govax now does the same. VMS made `/OUTPUT=.LOG` a file named `.LOG`;
+  govax refuses it (open).
 
-### [Phase 50] Substitution and expression rules chosen without a probe
+### [Phase 50] Substitution and expression rules, settled by a probe
 
-- **Where**: `internal/console/dclsubst.go`, `dclexpr.go`, `dcllexical.go`;
-  `internal/vmserrors/codes_cli.go` (CLI_UNDSYM, CLI_IVOPER, CLI_IVFNAM,
-  CLI_ABFNAM, CLI_ARGREQ, CLI_NOPAREN, CLI_IVCHAR; CLI_EXPSYN is now
-  DCL's text and a warning).
+- **Where**: `internal/console/dclsubst.go`, `dclexpr.go`, `dcllexical.go`,
+  `dispatch.go`; `internal/vmserrors/codes_cli.go`.
 - **What**: symbol substitution and expressions follow the OpenVMS
-  User's Manual (7.3), 12.4 to 12.13, and the messages are the texts and
-  severities of DCL's CLI$_ messages of the same names
-  (`vmsdef.Messages`). Chosen without a VMS run:
-  - Each expression message has a segment line, ` \TEXT\` (the manual
-    shows one only for IVVERB and PARMDEL), and which text it shows.
-  - Division by zero is govax's CLI_DIVZERO, an error; an unterminated
-    quoted string CLI_UNTERMSTR, an error; a symbol whose value names
-    itself CLI_SYMDEPTH, an error, after 256 substitutions in one line.
-    Too many lexical function arguments are CLI_MAXPARM.
-  - A string converts to an integer with blanks around the number
-    ignored, a sign, and a `%X`/`%O`/`%D` prefix allowed.
-  - A name starting with `F$` is always a lexical function, and a lexical
-    function name may be any unique prefix (ABFNAM's existence suggests
-    abbreviations; whether there's a shortest one isn't known).
-  - `.NOT.` can't follow a comparison operator (`1 .EQ. .NOT. 0` is
-    EXPSYN), as 12.8.5's precedence implies.
-  - An apostrophe with no closing one after the name is kept as it is;
-    a comment isn't scanned for substitutions; an alias's value is
-    looked up again as a verb (an alias of an alias), to 16 levels.
-  - An `&NAME` in an `@` parameter is part of that parameter, even when
-    its value has blanks.
-  - SHOW SYMBOL now shows a quote in a value as it is, not doubled, as
-    the manual's 12.6.1 example does (fixed: Phase 34 doubled it).
-- **Status**: unconfirmed; asked by `testdata/dcl50`'s probe (round 1).
+  User's Manual (7.3), 12.4 to 12.13. Where it was silent, govax first
+  chose, and `testdata/dcl50`'s probe then asked VMS 7.3 (2026-10-09);
+  govax now does what VMS did (the README lists each answer, and
+  `TestProbe50Oracle` replays the expression and substitution cases
+  against VMS's log). The choices the probe overturned: division by zero
+  (2147483647, not an error), an unclosed quote (runs to the end of the
+  line, not an error), a missing closing apostrophe (substitutes), `&` in
+  `:=` and `@` (not substituted), an alias of an alias (IVVERB, not
+  followed), `.EQ` with no closing dot (accepted), `.NOT.` after an
+  operator (accepted), `1 + 2)` (assigned, then SYMDEL), too many
+  lexical arguments (SYMDEL, not MAXPARM), a self-naming symbol (EXPSYN),
+  segment lines (only on some messages), lexical abbreviations (against
+  VMS's whole set of names), and the message prefix (`%DCL-`, for every
+  message of govax's CLI facility).
+  Still chosen without VMS: the quotient of a negative number divided by
+  zero (2147483647 too); that `''NAME` inside quotes needs its closing
+  apostrophe; that a comment isn't scanned; that a foreign command's text
+  gets no `&` substitution; that an `&` value in a command is one quoted
+  token, never read again for qualifiers; that a command line not
+  starting with a letter, `$`, or `_` is NOCOMD.
+  SHOW SYMBOL shows a quote in a value as it is, not doubled, as the
+  manual's 12.6.1 example and VMS's log do (Phase 34 doubled it).
+- **Status**: fixed to VMS 7.3's behavior where the probe answered; the
+  rest unconfirmed, for a later round.
 
 <!--
 Entry template:

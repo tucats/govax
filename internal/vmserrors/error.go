@@ -149,6 +149,15 @@ func toInt64(a any) (int64, bool) {
 }
 
 func (e VMSError) Error() string {
+	if e.Segment == "" {
+		return e.message()
+	}
+
+	return e.message() + "\n \\" + e.Segment + "\\"
+}
+
+// message is the error's message, without its segment line.
+func (e VMSError) message() string {
 	msg, ok := Messages[e.Status]
 	if !ok {
 		msg = "SYSTEM-F-UNKNOWNERR, Unknown error " + fmt.Sprintf("%08X", e.Status)

@@ -42,9 +42,10 @@ import (
 // cursor (Seek, Rewind) and the level's loop reads on from there.
 
 // maxCommandLevels is how many command levels may be active above level
-// 0, the terminal: DCL's limit of 32 nested levels (the User's Manual's
-// glossary, "command level").
-const maxCommandLevels = 32
+// 0, the terminal: DCL's limit is 32 levels, the terminal's among them
+// (CLI$_STKOVF's "limit to 32 levels"; VMS 7.3 refused the @ that would
+// have made a 32nd, in testdata/dcl50's probe).
+const maxCommandLevels = 31
 
 // maxProcedureParameters is how many parameters a command procedure takes:
 // P1 to P8 (User's Manual, 14.2).
@@ -223,10 +224,10 @@ type procedureCommand struct {
 // only where they follow it directly: DCL takes a qualifier after a blank
 // for a parameter (User's Manual, 13.6.4). The rest are the parameters,
 // read by DCL's rules (dclWord).
-func parseProcedureCommand(text string, symbols *dclSymbolTable) (procedureCommand, error) {
+func parseProcedureCommand(text string) (procedureCommand, error) {
 	var cmd procedureCommand
 
-	file, i, _ := dclWord(text, 0, true, symbols)
+	file, i, _ := dclWord(text, 0, true)
 	if file == "" {
 		return cmd, vmserrors.New(vmserrors.CLI_MISSINGPARAMETER, "file")
 	}
@@ -253,7 +254,7 @@ func parseProcedureCommand(text string, symbols *dclSymbolTable) (procedureComma
 		}
 
 		if i < len(text) && text[i] == '=' {
-			cmd.output, i, _ = dclWord(text, i+1, true, symbols)
+			cmd.output, i, _ = dclWord(text, i+1, true)
 		}
 
 		if cmd.output == "" {
@@ -262,7 +263,7 @@ func parseProcedureCommand(text string, symbols *dclSymbolTable) (procedureComma
 	}
 
 	for {
-		word, next, present := dclWord(text, i, false, symbols)
+		word, next, present := dclWord(text, i, false)
 		if !present {
 			break
 		}
@@ -272,7 +273,7 @@ func parseProcedureCommand(text string, symbols *dclSymbolTable) (procedureComma
 	}
 
 	if len(cmd.params) > maxProcedureParameters {
-		return cmd, vmserrors.New(vmserrors.CLI_MAXPARM)
+		return cmd, vmserrors.New(vmserrors.CLI_DEFOVF)
 	}
 
 	return cmd, nil
@@ -285,9 +286,8 @@ func parseProcedureCommand(text string, symbols *dclSymbolTable) (procedureComma
 // case and blanks, the quotes are removed, and "" inside quotes is one
 // quote. So "" alone is an empty word, which is still present. It
 // returns the word, where the text after it starts, and whether there
-// was a word at all. With symbols, an &NAME outside quotes is replaced by
-// the symbol's value, as it is (dclText).
-func dclWord(text string, i int, stopAtSlash bool, symbols *dclSymbolTable) (string, int, bool) {
+// was a word at all.
+func dclWord(text string, i int, stopAtSlash bool) (string, int, bool) {
 	for i < len(text) && (text[i] == ' ' || text[i] == '\t') {
 		i++
 	}
@@ -318,14 +318,6 @@ func dclWord(text string, i int, stopAtSlash bool, symbols *dclSymbolTable) (str
 			continue
 		}
 
-		if value, end, ok := symbols.ampersandAt(text, i); ok {
-			b.WriteString(value)
-
-			i = end - 1
-
-			continue
-		}
-
 		switch {
 		case ch == '"':
 			quoted = true
@@ -343,7 +335,7 @@ func dclWord(text string, i int, stopAtSlash bool, symbols *dclSymbolTable) (str
 
 // atCommand is the @ command: text is what follows the "@".
 func (d *Dispatcher) atCommand(text string) error {
-	cmd, err := parseProcedureCommand(text, &d.Console.dclSymbols)
+	cmd, err := parseProcedureCommand(text)
 	if err != nil {
 		return err
 	}
@@ -383,7 +375,7 @@ func (c *Console) RunDebuggerProcedure(file string, dispatch func(string) error)
 // the procedure goes on.
 func (c *Console) runProcedure(cmd procedureCommand, dispatch func(string) error) (err error) {
 	if len(c.levels) >= maxCommandLevels {
-		return vmserrors.New(vmserrors.CLI_MAXDEPTH, maxCommandLevels)
+		return vmserrors.New(vmserrors.CLI_STKOVF)
 	}
 
 	source, err := c.openProcedure(cmd.file, cmd.host)

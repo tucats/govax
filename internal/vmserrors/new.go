@@ -19,3 +19,13 @@ func Wrap(status uint32, cause error, args ...any) VMSError {
 		Cause:     cause,
 	}
 }
+
+// NewSegment creates an error for status, a DCL message, whose text is
+// followed by the part of the command it's about, segment, on a line of
+// its own between backslashes, as DCL shows it:
+//
+//	%DCL-W-UNDSYM, undefined symbol - check validity and spelling
+//	 \NOSUCH\
+func NewSegment(status uint32, segment string) VMSError {
+	return VMSError{Status: status, Segment: segment}
+}

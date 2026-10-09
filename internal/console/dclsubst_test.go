@@ -27,6 +27,7 @@ func substSymbols(t *testing.T) *dclSymbolTable {
 		{"SELF", "=", `"'SELF'"`},
 		{"LC", "=", `"string"`},
 		{"B", "=", `"MYFILE.DAT"`},
+		{"Q", "=", `"say ""hi"""`},
 	} {
 		if err := symbols.assign(a.name, a.op, a.text); err != nil {
 			t.Fatalf("%s %s %s: %v", a.name, a.op, a.text, err)
@@ -61,10 +62,14 @@ func TestSubstituteApostrophes(t *testing.T) {
 		// A lexical function between apostrophes.
 		{`X := L'F$LENGTH("abc")'`, "X := L3"},
 		{`X = "L''F$LENGTH(NAME)'"`, `X = "L6"`},
-		// What isn't a substitution stays as it is: no closing
-		// apostrophe, no name, a comment.
-		{"X := 'NAME", "X := 'NAME"},
-		{"X := ' NAME'", "X := ' NAME'"},
+		// VMS 7.3: the closing apostrophe may be left out, and blanks
+		// may follow the opening one (testdata/dcl50).
+		{"X := 'NAME", "X := MYFILE"},
+		{"X := A'NAME", "X := AMYFILE"},
+		{"X := ' NAME'", "X := MYFILE"},
+		// What isn't a substitution stays as it is: no name, a comment,
+		// one apostrophe inside quotes.
+		{"X := ' 1", "X := ' 1"},
 		{"X := A ! it's 'NAME'", "X := A ! it's 'NAME'"},
 		// The case of the value is kept (the grammar uppercases it
 		// later, outside quotes).
@@ -82,8 +87,8 @@ func TestSubstituteApostrophes(t *testing.T) {
 		}
 	}
 
-	if _, err := substituteApostrophes("X = 'SELF'", symbols, nil); !hasStatus(err, vmserrors.CLI_SYMDEPTH) {
-		t.Errorf("a symbol whose value names itself: %v, want CLI_SYMDEPTH", err)
+	if _, err := substituteApostrophes("X = 'SELF'", symbols, nil); !hasStatus(err, vmserrors.CLI_EXPSYN) {
+		t.Errorf("a symbol whose value names itself: %v, want CLI_EXPSYN", err)
 	}
 
 	if _, err := substituteApostrophes("X := 'F$NOSUCH(1)'", symbols, nil); !hasStatus(err, vmserrors.CLI_IVFNAM) {
@@ -92,26 +97,27 @@ func TestSubstituteApostrophes(t *testing.T) {
 }
 
 // TestSubstituteAmpersands: phase 2's substitution, once, after a
-// delimiter, not in quotes, and with the value's case kept while the rest
-// of the line is uppercased.
+// delimiter, not in quotes; in a command, the value is one quoted token.
 func TestSubstituteAmpersands(t *testing.T) {
 	symbols := substSymbols(t)
 
 	for _, tc := range []struct {
 		line, want string
-		upcased    bool
+		quote      bool
 	}{
-		{"TYPE &B", "TYPE MYFILE.DAT", true},
-		{"define y &lc", "DEFINE Y string", true},
-		{"type &P1 x", "TYPE  X", true},
-		{"X = &A", "X = 'MAC'", true},
-		{`A = "&B"`, `A = "&B"`, false},
-		{"X := A&B", "X := A&B", false},
-		{`type "a b" &b ! &b`, `TYPE "a b" MYFILE.DAT ! &B`, true},
+		{"TYPE &B", `TYPE "MYFILE.DAT"`, true},
+		{"DEFINE Y &LC", `DEFINE Y "string"`, true},
+		{"TYPE &P1 X", `TYPE "" X`, true},
+		{"X = &LC", "X = string", false},
+		{"X = &A", "X = 'MAC'", false},
+		{`A = "&B"`, `A = "&B"`, true},
+		{"X := A&B", "X := A&B", true},
+		{`TYPE "a b" &B ! &B`, `TYPE "a b" "MYFILE.DAT" ! &B`, true},
+		{"X = &Q", `X = say "hi"`, false},
+		{"DEFINE Y &Q", `DEFINE Y "say ""hi"""`, true},
 	} {
-		got, upcased := symbols.substituteAmpersands(tc.line)
-		if got != tc.want || upcased != tc.upcased {
-			t.Errorf("%s = %q, %v; want %q, %v", tc.line, got, upcased, tc.want, tc.upcased)
+		if got := symbols.substituteAmpersands(tc.line, tc.quote); got != tc.want {
+			t.Errorf("%s = %q, want %q", tc.line, got, tc.want)
 		}
 	}
 }
@@ -160,13 +166,14 @@ func TestDispatch_substitution(t *testing.T) {
 		t.Errorf(`@proc "''NAME'": %q`, got)
 	}
 
-	// An &SYMBOL in a parameter keeps its case.
-	if got := show("@" + proc + " &NAME"); got != "  P1 = \"Mixed\"\n" {
+	// VMS 7.3 doesn't substitute an &SYMBOL in an @ command's parameters
+	// or a string assignment (testdata/dcl50).
+	if got := show("@" + proc + " &NAME"); got != "  P1 = \"&NAME\"\n" {
 		t.Errorf("@proc &NAME: %q", got)
 	}
 
-	// In a string assignment: 'NAME' is uppercased with the text around
-	// it, &NAME isn't (13.18.3).
+	// In a string assignment, 'NAME' is uppercased with the text around
+	// it.
 	show("X := a'NAME'b")
 
 	if got := show("SHOW SYMBOL X"); got != "  X = \"AMIXEDB\"\n" {
@@ -175,14 +182,15 @@ func TestDispatch_substitution(t *testing.T) {
 
 	show("X := a &NAME b")
 
-	if got := show("SHOW SYMBOL X"); got != "  X = \"A Mixed B\"\n" {
+	if got := show("SHOW SYMBOL X"); got != "  X = \"A &NAME B\"\n" {
 		t.Errorf("X := a &NAME b: %q", got)
 	}
 
 	// 12.13.4's EXEC example: an alias's value isn't scanned for
-	// apostrophes, unless the alias itself is between them.
-	if err := d.Dispatch("EXEC"); err == nil {
-		t.Error("EXEC: no error, want the unrecognized 'MAC2'")
+	// apostrophes, unless the alias itself is between them. VMS 7.3 gave
+	// NOCOMD: the value doesn't start with a letter.
+	if err := d.Dispatch("EXEC"); !hasStatus(err, vmserrors.CLI_NOCOMD) {
+		t.Errorf("EXEC: %v, want CLI_NOCOMD", err)
 	}
 
 	if got := show("'EXEC'"); got != "  MAC2 = \"SHOW SYMBOL MAC2\"\n" {

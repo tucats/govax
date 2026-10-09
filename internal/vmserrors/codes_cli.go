@@ -160,6 +160,12 @@ const (
 	cliNoParen
 	cliIvChar
 	cliAbFnam
+	cliSymDel
+	cliNoComd
+	cliDefOvf
+	cliIvVerb
+	cliAbVerb
+	cliLexNotImpl
 )
 
 // CLI facility status codes -- CLI_ prefix, matching real VMS's CLI$_
@@ -329,14 +335,8 @@ const (
 
 	// CLI_EXPSYN reports a DCL expression that doesn't parse (an operand
 	// or operator missing or out of place), and other malformed symbol
-	// commands; DCL's CLI$_EXPSYN, a warning. The argument is the text
-	// in question, which DCL shows on a line of its own between
-	// backslashes.
+	// commands; DCL's CLI$_EXPSYN, a warning.
 	CLI_EXPSYN = CLIFacility<<FacilityPosition | cliExpSyn<<MessagePosition | StatusWarning
-
-	// CLI_SYMDEPTH reports symbols that substitute for one another too
-	// many times, as an alias defined in terms of itself does.
-	CLI_SYMDEPTH = CLIFacility<<FacilityPosition | cliSymDepth<<MessagePosition | StatusError
 
 	// CLI_ANALYZE reports an ANALYZE command that couldn't read its input
 	// or write its output.
@@ -350,34 +350,39 @@ const (
 	// would list no versions at all.
 	CLI_BADVERSIONS = CLIFacility<<FacilityPosition | cliBadVersions<<MessagePosition | StatusError
 
-	// CLI_MAXPARM reports an @ command with more than the eight
-	// parameters a command procedure can take (P1 to P8), in DCL's words
-	// for DCL$_MAXPARM (unconfirmed against VMS).
+	// CLI_MAXPARM reports a command with more parameters than it takes,
+	// in DCL's words for CLI$_MAXPARM. (An @ command's ninth parameter is
+	// CLI_DEFOVF.)
 	CLI_MAXPARM = CLIFacility<<FacilityPosition | cliMaxParm<<MessagePosition | StatusWarning
 
-	// CLI_MAXDEPTH reports an @ command that would nest command
-	// procedures deeper than DCL's 32 command levels (govax's words).
-	CLI_MAXDEPTH = CLIFacility<<FacilityPosition | cliMaxDepth<<MessagePosition | StatusError
+	// CLI_STKOVF reports an @ command that would nest command
+	// procedures deeper than DCL's 32 command levels, the terminal's
+	// among them, in DCL's words for CLI$_STKOVF (VMS 7.3's run of
+	// testdata/dcl50: a warning).
+	CLI_STKOVF = CLIFacility<<FacilityPosition | cliMaxDepth<<MessagePosition | StatusWarning
 
 	// CLI_SKPDAT reports data lines (records not starting with "$") in a
 	// command procedure that nothing read, in DCL's words for
 	// DCL-W-SKPDAT (the User's Manual, 13.8).
 	CLI_SKPDAT = CLIFacility<<FacilityPosition | cliSkpDat<<MessagePosition | StatusWarning
 
-	// The DCL expression evaluator's messages (internal/console/
-	// dclexpr.go), in the words and severities of DCL's CLI$_ messages
-	// of the same names. Each argument is the part of the command in
-	// question, shown on a line of its own between backslashes, as DCL
-	// shows it (unconfirmed for these messages: the User's Manual shows
-	// it only for IVVERB and PARMDEL).
+	// DCL's messages for expressions and command lines, in the words and
+	// severities of DCL's CLI$_ messages of the same names (all
+	// warnings), as VMS 7.3 shows them (testdata/dcl50's probe). Some
+	// are followed by the part of the command in question, on a line of
+	// its own between backslashes: those made with vmserrors.NewSegment.
 	//
-	// CLI_UNDSYM is an undefined symbol in an expression; CLI_IVOPER an
-	// operator DCL doesn't have (".FOO."); CLI_IVFNAM a lexical function
-	// DCL doesn't have, and CLI_ABFNAM an abbreviation of more than one;
-	// CLI_ARGREQ a lexical function's required
-	// argument left out; CLI_NOPAREN a lexical function's argument list
-	// not in parentheses; CLI_IVCHAR a number with a digit its radix
-	// doesn't have.
+	// CLI_UNDSYM is an undefined symbol; CLI_IVOPER an operator DCL
+	// doesn't have (".FOO."); CLI_IVFNAM a lexical function DCL doesn't
+	// have, and CLI_ABFNAM an abbreviation of more than one; CLI_ARGREQ
+	// a lexical function's required argument left out; CLI_NOPAREN a
+	// value not closed by its parenthesis; CLI_IVCHAR a number with a
+	// digit its radix doesn't have; CLI_SYMDEL a delimiter out of place
+	// (a ")" too many, a lexical function's argument too many);
+	// CLI_NOCOMD a command line that doesn't start with a letter;
+	// CLI_DEFOVF an @ command with more than eight parameters;
+	// CLI_IVVERB a command whose verb DCL doesn't know, and CLI_ABVERB
+	// one that abbreviates more than one verb.
 	CLI_UNDSYM  = CLIFacility<<FacilityPosition | cliUndSym<<MessagePosition | StatusWarning
 	CLI_IVOPER  = CLIFacility<<FacilityPosition | cliIvOper<<MessagePosition | StatusWarning
 	CLI_IVFNAM  = CLIFacility<<FacilityPosition | cliIvFnam<<MessagePosition | StatusWarning
@@ -385,6 +390,15 @@ const (
 	CLI_NOPAREN = CLIFacility<<FacilityPosition | cliNoParen<<MessagePosition | StatusWarning
 	CLI_IVCHAR  = CLIFacility<<FacilityPosition | cliIvChar<<MessagePosition | StatusWarning
 	CLI_ABFNAM  = CLIFacility<<FacilityPosition | cliAbFnam<<MessagePosition | StatusWarning
+	CLI_SYMDEL  = CLIFacility<<FacilityPosition | cliSymDel<<MessagePosition | StatusWarning
+	CLI_NOCOMD  = CLIFacility<<FacilityPosition | cliNoComd<<MessagePosition | StatusWarning
+	CLI_DEFOVF  = CLIFacility<<FacilityPosition | cliDefOvf<<MessagePosition | StatusWarning
+	CLI_IVVERB  = CLIFacility<<FacilityPosition | cliIvVerb<<MessagePosition | StatusWarning
+	CLI_ABVERB  = CLIFacility<<FacilityPosition | cliAbVerb<<MessagePosition | StatusWarning
+
+	// CLI_LEXNOTIMPL reports a call of one of VMS's lexical functions
+	// govax doesn't have yet (govax's words).
+	CLI_LEXNOTIMPL = CLIFacility<<FacilityPosition | cliLexNotImpl<<MessagePosition | StatusWarning
 )
 
 func init() {
@@ -403,8 +417,7 @@ func init() {
 	DefineMessage(CLI_BADCOUNT, CLIFacility, "BADCOUNT", "Invalid count !Q")
 	DefineMessage(CLI_NOFRAMES, CLIFacility, "NOFRAMES", "No call frames (FP/AP not established)")
 	DefineMessage(CLI_UNDEFSYM, CLIFacility, "UNDEFSYM", "Undefined symbol !Q")
-	DefineMessage(CLI_EXPSYN, CLIFacility, "EXPSYN", "invalid expression syntax - check operators and operands\n \\!S\\")
-	DefineMessage(CLI_SYMDEPTH, CLIFacility, "SYMDEPTH", "Symbol !Q substitutes for itself")
+	DefineMessage(CLI_EXPSYN, CLIFacility, "EXPSYN", "invalid expression syntax - check operators and operands")
 	DefineMessage(CLI_ANALYZE, CLIFacility, "ANALYZE", "Analyzing !S")
 	DefineMessage(CLI_ANALYZEERRORS, CLIFacility, "ANALYZEERRORS", "The analysis of !S uncovered errors")
 	DefineMessage(CLI_NOPROFILE, CLIFacility, "NOPROFILE", "SHOW INSTRUCTIONS/PROFILE is not implemented (no per-opcode execution counters in this port)")
@@ -500,13 +513,19 @@ func init() {
 	DefineMessage(CLI_BADVERSIONS, CLIFacility, "BADVERSIONS", "Invalid /VERSIONS value !D (must be at least 1)")
 	DefineMessage(CLI_MAXPARM, CLIFacility, "MAXPARM", "too many parameters - reenter command with fewer parameters")
 	DefineMessage(CLI_SKPDAT, CLIFacility, "SKPDAT", `image data (records not beginning with "$") ignored`)
-	DefineMessage(CLI_UNDSYM, CLIFacility, "UNDSYM", "undefined symbol - check validity and spelling\n \\!S\\")
-	DefineMessage(CLI_IVOPER, CLIFacility, "IVOPER", "unrecognized operator in expression - check spelling and syntax\n \\!S\\")
-	DefineMessage(CLI_IVFNAM, CLIFacility, "IVFNAM", "invalid lexical function name - check validity and spelling\n \\!S\\")
-	DefineMessage(CLI_ARGREQ, CLIFacility, "ARGREQ", "missing argument - supply all required arguments\n \\!S\\")
-	DefineMessage(CLI_NOPAREN, CLIFacility, "NOPAREN", "value improperly delimited - supply parenthesis\n \\!S\\")
-	DefineMessage(CLI_ABFNAM, CLIFacility, "ABFNAM", "ambiguous lexical function name - supply more characters\n \\!S\\")
-	DefineMessage(CLI_IVCHAR, CLIFacility, "IVCHAR", "invalid numeric value - check for invalid digits\n \\!S\\")
-	DefineMessage(CLI_MAXDEPTH, CLIFacility, "MAXDEPTH", "Command procedures nested more than !D levels deep")
+	DefineMessage(CLI_UNDSYM, CLIFacility, "UNDSYM", "undefined symbol - check validity and spelling")
+	DefineMessage(CLI_IVOPER, CLIFacility, "IVOPER", "unrecognized operator in expression - check spelling and syntax")
+	DefineMessage(CLI_IVFNAM, CLIFacility, "IVFNAM", "invalid lexical function name - check validity and spelling")
+	DefineMessage(CLI_ARGREQ, CLIFacility, "ARGREQ", "missing argument - supply all required arguments")
+	DefineMessage(CLI_NOPAREN, CLIFacility, "NOPAREN", "value improperly delimited - supply parenthesis")
+	DefineMessage(CLI_ABFNAM, CLIFacility, "ABFNAM", "ambiguous lexical function name - supply more characters")
+	DefineMessage(CLI_SYMDEL, CLIFacility, "SYMDEL", "invalid symbol or value delimiter - check command syntax")
+	DefineMessage(CLI_NOCOMD, CLIFacility, "NOCOMD", "no command on line - reenter with alphabetic first character")
+	DefineMessage(CLI_DEFOVF, CLIFacility, "DEFOVF", "too many command procedure parameters - limit to eight")
+	DefineMessage(CLI_IVVERB, CLIFacility, "IVVERB", "unrecognized command verb - check validity and spelling")
+	DefineMessage(CLI_ABVERB, CLIFacility, "ABVERB", "ambiguous command verb - supply more characters")
+	DefineMessage(CLI_LEXNOTIMPL, CLIFacility, "LEXNOTIMPL", "lexical function !S is not implemented yet")
+	DefineMessage(CLI_IVCHAR, CLIFacility, "IVCHAR", "invalid numeric value - check for invalid digits")
+	DefineMessage(CLI_STKOVF, CLIFacility, "STKOVF", "command procedures too deeply nested - limit to 32 levels")
 	DefineMessage(CLI_BADLIMIT, CLIFacility, "BADLIMIT", "Invalid /LIMIT value !D (must be at least 1; DELETE NAME;* removes every version)")
 }

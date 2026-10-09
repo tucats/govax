@@ -1,6 +1,7 @@
 package console
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 
@@ -23,10 +24,6 @@ type Dispatcher struct {
 	// line is the command line being dispatched, for a handler that
 	// records it (MACRO's SRC header).
 	line string
-
-	// symbolDepth is how many DCL symbol substitutions the command being
-	// dispatched has been through (dclsym.go).
-	symbolDepth int
 }
 
 // NewDispatcher returns a Dispatcher wired to c and g, with every DCL
@@ -98,10 +95,18 @@ func (d *Dispatcher) DispatchConsole(line string) error {
 
 // dispatchCommand executes a console command line that has been through
 // apostrophe substitution: DCL's second phase (the first word as a
-// symbol, then ampersand substitution) and then the console's grammar. A
-// command that runs another command line (an alias's value, IF's THEN
-// command) comes back here, so its apostrophes aren't substituted again.
+// symbol, then ampersand substitution) and then the console's grammar.
+// IF's THEN command comes back here, so its apostrophes aren't
+// substituted again.
 func (d *Dispatcher) dispatchCommand(line string) error {
+	return d.dispatchParsed(line, true)
+}
+
+// dispatchParsed is dispatchCommand, with verbSymbol saying whether the
+// first word may be a symbol: not in an alias's value, which DCL doesn't
+// look up again (VMS 7.3 gave IVVERB for an alias of an alias,
+// testdata/dcl50).
+func (d *Dispatcher) dispatchParsed(line string, verbSymbol bool) error {
 	line = strings.TrimSpace(line)
 	if line == "" || strings.HasPrefix(line, "!") {
 		return nil
@@ -115,27 +120,28 @@ func (d *Dispatcher) dispatchCommand(line string) error {
 		return d.atCommand(text)
 	}
 
+	// A command starts with a letter (or "$" or "_", which can start a
+	// symbol's name).
+	if !isDCLSymbolStart(line[0]) {
+		return vmserrors.New(vmserrors.CLI_NOCOMD)
+	}
+
 	// A symbol assignment, DELETE/SYMBOL, or a command whose first word
 	// is a DCL symbol (a foreign command or an alias): DCL looks for a
 	// symbol before a verb (dclsym.go).
-	if handled, err := d.dclSymbolLine(line); handled {
+	if handled, err := d.dclSymbolLine(line, verbSymbol); handled {
 		return err
 	}
 
-	line, upcased := d.Console.dclSymbols.substituteAmpersands(line)
+	line = d.Console.dclSymbols.substituteAmpersands(line, true)
 
 	if d.Console.CPU != nil && d.Console.CPU.DebugEnabled(vax.DebugDCL) {
 		fmt.Fprintf(d.Console.CPU.DebugWriter(), "DEBUG(DCL): parsing %q\n", line)
 	}
 
-	parse := d.Grammar.Parse
-	if upcased {
-		parse = d.Grammar.ParseUpcased
-	}
-
-	r, err := parse(line)
+	r, err := d.Grammar.Parse(line)
 	if err != nil {
-		return err
+		return verbError(err)
 	}
 
 	d.line = line
@@ -158,6 +164,28 @@ func (d *Dispatcher) dispatchCommand(line string) error {
 	}
 
 	return d.Grammar.Dispatch(r)
+}
+
+// verbError is DCL's message for a command whose verb the grammar
+// doesn't know (CLI_IVVERB) or can't choose (CLI_ABVERB), with the verb
+// as its segment, as VMS shows them; any other error is returned as it
+// is.
+func verbError(err error) error {
+	var ve vmserrors.VMSError
+	if !errors.As(err, &ve) || len(ve.Arguments) != 2 || ve.Arguments[0] != "verb" {
+		return err
+	}
+
+	verb, _ := ve.Arguments[1].(string)
+
+	switch ve.Status {
+	case vmserrors.CLI_UNRECOGNIZED:
+		return vmserrors.NewSegment(vmserrors.CLI_IVVERB, verb)
+	case vmserrors.CLI_AMBIGUOUS:
+		return vmserrors.NewSegment(vmserrors.CLI_ABVERB, verb)
+	}
+
+	return err
 }
 
 // readCommandVerb reads the leading command word (up to whitespace, '/',

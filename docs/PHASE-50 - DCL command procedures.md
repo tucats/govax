@@ -6,7 +6,8 @@ command levels: `@file` with
 parameters and `/OUTPUT`, a local symbol table per level, VMS's default
 error action, and EXIT that ends a procedure. Later rounds (subtasks 8
 onward) make the console more fully a DCL command interpreter. Subtasks
-8 and 9, symbol substitution and expressions, are done (2026-10-09);
+8 and 9, symbol substitution and expressions, are done and checked
+against VMS 7.3 (2026-10-09);
 labels and GOTO, IF/THEN/ELSE, `$STATUS`, ON, and the other lexical
 functions are next.
 
@@ -149,7 +150,7 @@ input. One is the debugger, during a session started by `$ DEBUG` or
 which is how a VMS procedure gives the debugger its commands.
 `vax.init` does that: `$ debug`, then the data lines
 `go exe$initialize` and `exit`. When nothing is reading, DCL skips the
-data lines, with one `%CLI-W-SKPDAT` for each run of them (13.8's
+data lines, with one `%DCL-W-SKPDAT` for each run of them (13.8's
 example). A command line reached while the debugger or assembler is
 still reading ends its input, as a VMS image reading SYS$INPUT gets end
 of file at the next `$` line. The debugger EXITs, and the assembler
@@ -189,27 +190,32 @@ at its last line, so the effect is the same as before.
 ### Symbol substitution (subtask 8)
 
 `internal/console/dclsubst.go` follows the User's Manual's three phases
-of command processing (12.12, 12.13):
+of command processing (12.12, 12.13), with the details VMS 7.3 showed in
+`testdata/dcl50`:
 
-1. `DispatchConsole` first replaces each symbol between apostrophes
+1. `DispatchConsole` first replaces each symbol after an apostrophe
    (`substituteApostrophes`), before anything else reads the line:
-   `'NAME'` outside quotes, its value scanned again (iterative), and
-   `''NAME'` inside quotes, not scanned again. A lexical function call
-   can stand in for the name. An undefined symbol becomes nothing.
-2. `dispatchCommand` then looks up the first word as a symbol (an alias
-   or a foreign command), and replaces each `&NAME` (after a blank or a
-   special character, outside quotes) once. DCL does this after it
-   uppercases the line, so the value keeps its case: for the grammar's
-   commands, `substituteAmpersands` uppercases the rest of the line
-   itself and the grammar's `ParseUpcased` leaves it; where the console
-   reads the text itself (`:=`, a foreign command's text, `@`'s
-   parameters), `dclText` and `dclWord` make the substitution as they
-   uppercase.
+   `'NAME'` outside quotes (blanks may follow the apostrophe, and the
+   closing one may be left out), its value scanned again (iterative),
+   and `''NAME'` inside quotes, not scanned again. A lexical function
+   call can stand in for the name. An undefined symbol becomes nothing,
+   and a symbol whose value names itself is EXPSYN.
+2. `dispatchCommand` then checks that the command starts with a letter
+   (NOCOMD), looks up the first word as a symbol (an alias or a foreign
+   command; an alias's value isn't looked up again), and replaces each
+   `&NAME` (after a blank or a special character, outside quotes) once.
+   DCL does this after it uppercases the line, and in VMS's DEFINE the
+   value was one token with its case and blanks, so for the grammar's
+   commands the value goes in quoted. In an expression (`=`) it goes in
+   as it is, after the text is uppercased. A `:=` assignment, `@`'s
+   parameters, and a foreign command's text get no `&` substitution.
 3. Expressions replace their symbols as they're evaluated.
 
-An alias's value, and IF's THEN command, come back to `dispatchCommand`,
-so their apostrophes aren't substituted a second time (12.13.4's EXEC
-example). Data lines and debugger commands are never substituted.
+An alias's value, and IF's THEN command, don't come back through phase
+1, so their apostrophes aren't substituted a second time (12.13.4's EXEC
+example). Data lines and debugger commands are never substituted. An
+unknown or ambiguous verb is DCL's IVVERB or ABVERB, with the verb as
+the segment (`verbError`).
 
 ### Expressions (subtask 9)
 
@@ -217,14 +223,23 @@ example). Data lines and debugger commands are never substituted.
 12.9): integers (with `%X`, `%O`, `%D`), quoted strings, symbols, and
 lexical function calls; the operators in 12.8.5's precedence; integer
 and string values with 12.8.6's typing and 12.9's conversions; longword
-arithmetic that wraps. `=` and `==` use it, and IF will (subtask 12). The
-messages are DCL's own CLI$_ texts and severities (most are warnings),
-each with the segment line ` \TEXT\`.
+arithmetic that wraps. `=` and `==` use it, and IF will (subtask 12).
+What the manual doesn't say came from VMS (DEVIATIONS.md's "[Phase 50]
+Substitution and expression rules, settled by a probe"): division by
+zero, unclosed quotes, string tokens, optional closing dots, `.NOT.`
+after an operator, a stray `)`.
+
+The messages are DCL's own CLI$_ texts and severities (all warnings),
+shown as `%DCL-`, as VMS shows its command interpreter's (the CLI
+facility's display name is now DCL for every message). Some have a
+segment line, ` \TEXT\`: a `VMSError` made with `vmserrors.NewSegment`.
 
 `dcllexical.go` is the lexical function call syntax and a table of
 functions (`lexicalFunctions`), each with how many arguments it takes. A
-name may be any unique prefix. Subtask 9 gives it F$INTEGER, F$LENGTH,
-and F$STRING; subtask 14 adds the rest.
+name may be any prefix that names one of VMS's lexical functions
+(`lexicalNames`; a call of one govax doesn't have yet is
+CLI_LEXNOTIMPL). Subtask 9 gives it F$INTEGER, F$LENGTH, and F$STRING;
+subtask 14 adds the rest.
 
 ## Subtasks
 
@@ -286,21 +301,18 @@ Later rounds of this phase, in a likely order:
 
 ## Open questions
 
-- MAXPARM's exact text and severity (govax:
-  `too many parameters - reenter command with fewer parameters`, a
-  warning), and the message for the 33rd level. Neither is in the 7.3
-  manuals here. DCL's message file (`vmsdef.Messages`) has CLI$_DEFOVF,
-  "too many command procedure parameters - limit to eight", and
-  CLI$_STKOVF, "command procedures too deeply nested - limit to 32
-  levels", the likely answers; `testdata/dcl50` asks.
-- Expression and substitution details: see DEVIATIONS.md's "[Phase 50]
-  Substitution and expression rules chosen without a probe", each asked
-  by `testdata/dcl50`.
-- Whether `/OUTPUT=` with no name part takes the procedure's name, and
-  where a bare `/OUTPUT` file name goes (govax: the default directory).
+- `/OUTPUT=` with no name part: VMS 7.3 made a file named `.LOG` (no
+  name) in the default directory; govax refuses it.
 - Whether qualifiers after a blank but before the first parameter are
   qualifiers or parameters. The manual says parameters (13.6.4), and so
   does govax.
+- The rest of what `testdata/dcl50`'s round 1 left open (its README):
+  a negative number divided by zero, `''NAME` without its closing
+  apostrophe, a foreign command's `&`.
+
+(Answered by `testdata/dcl50`: a ninth parameter is CLI$_DEFOVF, the
+32nd level CLI$_STKOVF, both warnings; the expression and substitution
+details are in DEVIATIONS.md.)
 
 ## Progress log
 
@@ -357,3 +369,18 @@ Later rounds of this phase, in a likely order:
   simh VAX: `testdata/dcl50` is round 1 (substitution, expressions, the
   `@` open questions, and statuses for subtask 10). The rules chosen
   without it are in DEVIATIONS.md.
+- 2026-10-09: The probe's round 1 ran on the simh VAX (the author ran it;
+  `testdata/dcl50/vax/probe50.log`), and govax now does what VMS did:
+  `TestProbe50Oracle` replays sections A and B against the log, and every
+  case matches. Changes: the CLI facility's messages show as `%DCL-` (the
+  author's choice: VMS's standard); `VMSError.Segment` and `NewSegment`
+  for the ` \TEXT\` line, only on the messages VMS gives one; new
+  CLI_SYMDEL, CLI_NOCOMD, CLI_DEFOVF, CLI_IVVERB, CLI_ABVERB,
+  CLI_LEXNOTIMPL; CLI_MAXDEPTH became DCL's CLI_STKOVF, a warning, at 31
+  levels above the terminal; CLI_SYMDEPTH is gone. The expression and
+  substitution answers are listed in DEVIATIONS.md, and the statuses
+  (section D) are saved for subtask 10. SHOW SYMBOL and DELETE/SYMBOL of
+  an undefined symbol are CLI_UNDSYM. The grammar's `ParseUpcased` from
+  the first pass is gone again (an `&` value now goes in quoted). At the
+  author's request, `?` is no longer an alias of HELP, in the console or
+  the debugger.

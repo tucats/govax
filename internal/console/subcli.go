@@ -428,7 +428,7 @@ func (c *Console) cliExecute(cli *subprocessCLI, line string) uint32 {
 
 	if sym, ok := cli.symbols.lookup(verb); ok {
 		if image, foreign := strings.CutPrefix(sym.value, "$"); foreign {
-			return c.cliRunImage(cli, strings.Trim(strings.TrimSpace(image), `"`), dclText(rest, true, nil))
+			return c.cliRunImage(cli, strings.Trim(strings.TrimSpace(image), `"`), dclText(rest, true))
 		}
 
 		if cli.depth >= maxSymbolDepth {
@@ -456,7 +456,7 @@ func (c *Console) cliExecute(cli *subprocessCLI, line string) uint32 {
 			return 0
 		}
 
-		return c.cliRunImage(cli, image, dclText(text, true, nil))
+		return c.cliRunImage(cli, image, dclText(text, true))
 
 	case isVerb(word, "SHOW", 2):
 		cli.show(rest)
@@ -466,7 +466,7 @@ func (c *Console) cliExecute(cli *subprocessCLI, line string) uint32 {
 		cli.logoutCommand = true
 
 	case isVerb(word, "EXIT", 3):
-		if v := strings.TrimSpace(dclText(rest, false, nil)); v != "" {
+		if v := strings.TrimSpace(dclText(rest, false)); v != "" {
 			if status, err := parseStatus(v); err == nil {
 				cli.status = status
 			}

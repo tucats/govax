@@ -284,14 +284,8 @@ func (r *Result) ParamKeyword(paramName, qualName string) string {
 // terminal prompt, leaving any such prompting to the console layer that
 // calls Parse.
 func (g *Grammar) Parse(line string) (*Result, error) {
-	return g.ParseUpcased(UpcaseOutsideQuotes(line))
-}
+	line = upcaseOutsideQuotes(line)
 
-// ParseUpcased is Parse for a line that is already uppercased outside
-// quotes, as DCL uppercases a command line, but may hold lowercase text
-// that must stay as it is: the value of an &SYMBOL, which DCL puts into
-// the line after uppercasing it (internal/console/dclsubst.go).
-func (g *Grammar) ParseUpcased(line string) (*Result, error) {
 	pos := strings.TrimSpace(line)
 	if pos == "" {
 		return nil, vmserrors.New(vmserrors.CLI_EMPTYCOMMAND)
@@ -788,7 +782,7 @@ func parseDCLInteger(token string) (int64, error) {
 	return v * mult, nil
 }
 
-// UpcaseOutsideQuotes upcases every character not inside a double-quoted
+// upcaseOutsideQuotes upcases every character not inside a double-quoted
 // substring. A prior version of this function also truncated the
 // line at an unquoted ';', but the real DCLupcase does no such thing (it
 // only tracks quote state and upcases outside it) -- that truncation was a
@@ -799,7 +793,7 @@ func parseDCLInteger(token string) (int64, error) {
 // per CLAUDE.md's bug-fixing policy (a clear, obvious logic error
 // contradicting this function's own "direct port" doc comment, not an ISA/
 // hardware fidelity question).
-func UpcaseOutsideQuotes(s string) string {
+func upcaseOutsideQuotes(s string) string {
 	var b strings.Builder
 
 	inQuote := false
@@ -927,7 +921,7 @@ func readBareToken(s string) (token, rest string) {
 
 // readValueToken reads one parameter/qualifier value: a double-quoted
 // string (returned with quotes stripped, case preserved by
-// UpcaseOutsideQuotes having skipped it) or a bare token running up to the
+// upcaseOutsideQuotes having skipped it) or a bare token running up to the
 // next '/', whitespace, or end of string.
 func readValueToken(s string) (token, rest string, err error) {
 	s = strings.TrimLeft(s, " \t")

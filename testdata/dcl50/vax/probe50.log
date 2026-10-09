@@ -1,0 +1,1114 @@
+
+$ ! Section A: expressions.
+$ S = "5"
+$ LONGN*AME = 5
+$ X = "-"
+$ X = 1 + 2 * 3
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00030001"
+$ SHOW SYMBOL X
+  X = 7   Hex = 00000007  Octal = 00000000007
+$ X = "-"
+$ X = (1 + 2) * 3
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00030001"
+$ SHOW SYMBOL X
+  X = 9   Hex = 00000009  Octal = 00000000011
+$ X = "-"
+$ X = 8 / 3
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00030001"
+$ SHOW SYMBOL X
+  X = 2   Hex = 00000002  Octal = 00000000002
+$ X = "-"
+$ X = -8 / 3
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00030001"
+$ SHOW SYMBOL X
+  X = -2   Hex = FFFFFFFE  Octal = 37777777776
+$ X = "-"
+$ X = 7 / 0
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00030001"
+$ SHOW SYMBOL X
+  X = 2147483647   Hex = 7FFFFFFF  Octal = 17777777777
+$ X = "-"
+$ X = %X10 + %O10 + %D10
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00030001"
+$ SHOW SYMBOL X
+  X = 34   Hex = 00000022  Octal = 00000000042
+$ X = "-"
+$ X = -%X3B85
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00030001"
+$ SHOW SYMBOL X
+  X = -15237   Hex = FFFFC47B  Octal = 37777742173
+$ X = "-"
+$ X = 2147483647 + 1
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00030001"
+$ SHOW SYMBOL X
+  X = -2147483648   Hex = 80000000  Octal = 20000000000
+$ X = "-"
+$ X = 4294967297
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00030001"
+$ SHOW SYMBOL X
+  X = 1   Hex = 00000001  Octal = 00000000001
+$ X = "-"
+$ X = 12AB
+%DCL-W-IVCHAR, invalid numeric value - check for invalid digits
+ \12AB\
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00038050"
+$ SHOW SYMBOL X
+  X = "-"
+$ X = "-"
+$ X = %XG
+%DCL-W-IVCHAR, invalid numeric value - check for invalid digits
+ \%XG\
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00038050"
+$ SHOW SYMBOL X
+  X = "-"
+$ X = "-"
+$ X = %Q1
+%DCL-W-IVCHAR, invalid numeric value - check for invalid digits
+ \%Q1\
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00038050"
+$ SHOW SYMBOL X
+  X = "-"
+$ X = "-"
+$ X = "abc" + "def"
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00030001"
+$ SHOW SYMBOL X
+  X = "abcdef"
+$ X = "-"
+$ X = "abcabc" - "b"
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00030001"
+$ SHOW SYMBOL X
+  X = "acabc"
+$ X = "-"
+$ X = "abc" - "z"
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00030001"
+$ SHOW SYMBOL X
+  X = "abc"
+$ X = "-"
+$ X = "abc" + 1
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00030001"
+$ SHOW SYMBOL X
+  X = 1   Hex = 00000001  Octal = 00000000001
+$ X = "-"
+$ X = 1 + "abc"
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00030001"
+$ SHOW SYMBOL X
+  X = 1   Hex = 00000001  Octal = 00000000001
+$ X = "-"
+$ X = "12" + "3"
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00030001"
+$ SHOW SYMBOL X
+  X = "123"
+$ X = "-"
+$ X = "12" * "3"
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00030001"
+$ SHOW SYMBOL X
+  X = 36   Hex = 00000024  Octal = 00000000044
+$ X = "-"
+$ X = "-9" + 23
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00030001"
+$ SHOW SYMBOL X
+  X = 14   Hex = 0000000E  Octal = 00000000016
+$ X = "-"
+$ X = " 12" + 0
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00030001"
+$ SHOW SYMBOL X
+  X = 12   Hex = 0000000C  Octal = 00000000014
+$ X = "-"
+$ X = "12 " + 0
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00030001"
+$ SHOW SYMBOL X
+  X = 12   Hex = 0000000C  Octal = 00000000014
+$ X = "-"
+$ X = "%X10" + 0
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00030001"
+$ SHOW SYMBOL X
+  X = 16   Hex = 00000010  Octal = 00000000020
+$ X = "-"
+$ X = "" + 2
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00030001"
+$ SHOW SYMBOL X
+  X = 2   Hex = 00000002  Octal = 00000000002
+$ X = "-"
+$ X = "Yes" + 0
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00030001"
+$ SHOW SYMBOL X
+  X = 1   Hex = 00000001  Octal = 00000000001
+$ X = "-"
+$ X = "true" * 1
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00030001"
+$ SHOW SYMBOL X
+  X = 1   Hex = 00000001  Octal = 00000000001
+$ X = "-"
+$ X = "12XY" + 0
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00030001"
+$ SHOW SYMBOL X
+  X = 0   Hex = 00000000  Octal = 00000000000
+$ X = "-"
+$ X = "+5" + 0
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00030001"
+$ SHOW SYMBOL X
+  X = 5   Hex = 00000005  Octal = 00000000005
+$ X = "-"
+$ X = "abc" * 2
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00030001"
+$ SHOW SYMBOL X
+  X = 0   Hex = 00000000  Octal = 00000000000
+$ X = "-"
+$ X = "ABC" .EQ. 0
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00030001"
+$ SHOW SYMBOL X
+  X = 1   Hex = 00000001  Octal = 00000000001
+$ X = "-"
+$ X = "abc" .EQS. "ABC"
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00030001"
+$ SHOW SYMBOL X
+  X = 0   Hex = 00000000  Octal = 00000000000
+$ X = "-"
+$ X = 10 .EQS. "10"
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00030001"
+$ SHOW SYMBOL X
+  X = 1   Hex = 00000001  Octal = 00000000001
+$ X = "-"
+$ X = "dogs" .GTS. "dog"
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00030001"
+$ SHOW SYMBOL X
+  X = 1   Hex = 00000001  Octal = 00000000001
+$ X = "-"
+$ X = "10" .LT. 9
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00030001"
+$ SHOW SYMBOL X
+  X = 0   Hex = 00000000  Octal = 00000000000
+$ X = "-"
+$ X = 5 .GT. 3 .AND. 2 .LT. 1
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00030001"
+$ SHOW SYMBOL X
+  X = 0   Hex = 00000000  Octal = 00000000000
+$ X = "-"
+$ X = .NOT. 1
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00030001"
+$ SHOW SYMBOL X
+  X = -2   Hex = FFFFFFFE  Octal = 37777777776
+$ X = "-"
+$ X = .NOT. 1 .EQ. 0
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00030001"
+$ SHOW SYMBOL X
+  X = -1   Hex = FFFFFFFF  Octal = 37777777777
+$ X = "-"
+$ X = 3 .AND. 5
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00030001"
+$ SHOW SYMBOL X
+  X = 1   Hex = 00000001  Octal = 00000000001
+$ X = "-"
+$ X = 3 .OR. 4
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00030001"
+$ SHOW SYMBOL X
+  X = 7   Hex = 00000007  Octal = 00000000007
+$ X = "-"
+$ X = "T" .AND. "Y"
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00030001"
+$ SHOW SYMBOL X
+  X = 1   Hex = 00000001  Octal = 00000000001
+$ X = "-"
+$ X = 1 .eq. 1
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00030001"
+$ SHOW SYMBOL X
+  X = 1   Hex = 00000001  Octal = 00000000001
+$ X = "-"
+$ X = 1 .EQUAL. 1
+%DCL-W-IVOPER, unrecognized operator in expression - check spelling and syntax
+ \.EQUAL.\
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00038068"
+$ SHOW SYMBOL X
+  X = "-"
+$ X = "-"
+$ X = 1 .EQ 1
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00030001"
+$ SHOW SYMBOL X
+  X = 1   Hex = 00000001  Octal = 00000000001
+$ X = "-"
+$ X = 1 .FOO. 2
+%DCL-W-IVOPER, unrecognized operator in expression - check spelling and syntax
+ \.FOO.\
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00038068"
+$ SHOW SYMBOL X
+  X = "-"
+$ X = "-"
+$ X = 1 .E. 1
+%DCL-W-IVOPER, unrecognized operator in expression - check spelling and syntax
+ \.E.\
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00038068"
+$ SHOW SYMBOL X
+  X = "-"
+$ X = "-"
+$ X = 1 .NOT. 2
+%DCL-W-EXPSYN, invalid expression syntax - check operators and operands
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00038038"
+$ SHOW SYMBOL X
+  X = "-"
+$ X = "-"
+$ X = 1 .EQ. .NOT. 0
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00030001"
+$ SHOW SYMBOL X
+  X = 0   Hex = 00000000  Octal = 00000000000
+$ X = "-"
+$ X = 1 +
+%DCL-W-EXPSYN, invalid expression syntax - check operators and operands
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00038038"
+$ SHOW SYMBOL X
+  X = "-"
+$ X = "-"
+$ X = (1 + 2
+%DCL-W-EXPSYN, invalid expression syntax - check operators and operands
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00038038"
+$ SHOW SYMBOL X
+  X = "-"
+$ X = "-"
+$ X = 1 + 2)
+%DCL-W-SYMDEL, invalid symbol or value delimiter - check command syntax
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00038130"
+$ SHOW SYMBOL X
+  X = 3   Hex = 00000003  Octal = 00000000003
+$ X = "-"
+$ X =
+%DCL-W-EXPSYN, invalid expression syntax - check operators and operands
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00038038"
+$ SHOW SYMBOL X
+  X = "-"
+$ X = "-"
+$ X = 1 2
+%DCL-W-EXPSYN, invalid expression syntax - check operators and operands
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00038038"
+$ SHOW SYMBOL X
+  X = "-"
+$ X = "-"
+$ X = "abc
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00030001"
+$ SHOW SYMBOL X
+  X = "abc"
+$ X = "-"
+$ X = NOSUCH + 1
+%DCL-W-UNDSYM, undefined symbol - check validity and spelling
+ \NOSUCH\
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00038140"
+$ SHOW SYMBOL X
+  X = "-"
+$ X = "-"
+$ X = - - 3
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00030001"
+$ SHOW SYMBOL X
+  X = 3   Hex = 00000003  Octal = 00000000003
+$ X = "-"
+$ X = +"abc"
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00030001"
+$ SHOW SYMBOL X
+  X = 0   Hex = 00000000  Octal = 00000000000
+$ X = "-"
+$ X = -"5"
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00030001"
+$ SHOW SYMBOL X
+  X = -5   Hex = FFFFFFFB  Octal = 37777777773
+$ X = "-"
+$ X = 1 ! a comment
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00030001"
+$ SHOW SYMBOL X
+  X = 1   Hex = 00000001  Octal = 00000000001
+$ X = "-"
+$ X = "a""b"
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00030001"
+$ SHOW SYMBOL X
+  X = "a"b"
+$ X = "-"
+$ X = "abc" .EQS. "ab" + "c"
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00030001"
+$ SHOW SYMBOL X
+  X = 1   Hex = 00000001  Octal = 00000000001
+$ X = "-"
+$ X = 1.5
+%DCL-W-IVOPER, unrecognized operator in expression - check spelling and syntax
+ \.5\
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00038068"
+$ SHOW SYMBOL X
+  X = "-"
+$ X = "-"
+$ X = 1+-2
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00030001"
+$ SHOW SYMBOL X
+  X = -1   Hex = FFFFFFFF  Octal = 37777777777
+$ X = "-"
+$ X = S + 1
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00030001"
+$ SHOW SYMBOL X
+  X = 6   Hex = 00000006  Octal = 00000000006
+$ X = "-"
+$ X = S + "1"
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00030001"
+$ SHOW SYMBOL X
+  X = "51"
+$ X = "-"
+$ X = LONGN + 1
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00030001"
+$ SHOW SYMBOL X
+  X = 6   Hex = 00000006  Octal = 00000000006
+$ X = "-"
+$ X = LON + 1
+%DCL-W-UNDSYM, undefined symbol - check validity and spelling
+ \LON\
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00038140"
+$ SHOW SYMBOL X
+  X = "-"
+$ X = "-"
+$ X = F$LENGTH("abc")
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00030001"
+$ SHOW SYMBOL X
+  X = 3   Hex = 00000003  Octal = 00000000003
+$ X = "-"
+$ X = F$LENGTH ("abc")
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00030001"
+$ SHOW SYMBOL X
+  X = 3   Hex = 00000003  Octal = 00000000003
+$ X = "-"
+$ X = f$length("abc")
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00030001"
+$ SHOW SYMBOL X
+  X = 3   Hex = 00000003  Octal = 00000000003
+$ X = "-"
+$ X = F$LENGTH()
+%DCL-W-ARGREQ, missing argument - supply all required arguments
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00038268"
+$ SHOW SYMBOL X
+  X = "-"
+$ X = "-"
+$ X = F$LENGTH("a","b")
+%DCL-W-SYMDEL, invalid symbol or value delimiter - check command syntax
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00038130"
+$ SHOW SYMBOL X
+  X = "-"
+$ X = "-"
+$ X = F$LENGTH(,)
+%DCL-W-ARGREQ, missing argument - supply all required arguments
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00038268"
+$ SHOW SYMBOL X
+  X = "-"
+$ X = "-"
+$ X = F$NOSUCH(1)
+%DCL-W-IVFNAM, invalid lexical function name - check validity and spelling
+ \F$NOSUCH(\
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X000381C0"
+$ SHOW SYMBOL X
+  X = "-"
+$ X = "-"
+$ X = F$LEN("abc")
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00030001"
+$ SHOW SYMBOL X
+  X = 3   Hex = 00000003  Octal = 00000000003
+$ X = "-"
+$ X = F$L("abc")
+%DCL-W-ABFNAM, ambiguous lexical function name - supply more characters
+ \F$L(\
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X000381B8"
+$ SHOW SYMBOL X
+  X = "-"
+$ X = "-"
+$ X = F$LENGTH
+%DCL-W-UNDSYM, undefined symbol - check validity and spelling
+ \F$LENGTH\
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00038140"
+$ SHOW SYMBOL X
+  X = "-"
+$ X = "-"
+$ X = F$LENGTH("abc"
+%DCL-W-SYMDEL, invalid symbol or value delimiter - check command syntax
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00038130"
+$ SHOW SYMBOL X
+  X = "-"
+$ X = "-"
+$ X = F$STRING(65)
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00030001"
+$ SHOW SYMBOL X
+  X = "65"
+$ X = "-"
+$ X = F$STRING(-1)
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00030001"
+$ SHOW SYMBOL X
+  X = "-1"
+$ X = "-"
+$ X = F$INTEGER("-9" + 23)
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00030001"
+$ SHOW SYMBOL X
+  X = 14   Hex = 0000000E  Octal = 00000000016
+$ X = "-"
+$ X = F$INTEGER("abc")
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00030001"
+$ SHOW SYMBOL X
+  X = 0   Hex = 00000000  Octal = 00000000000
+$ X = "-"
+$ X = F$LENGTH(12345)
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00030001"
+$ SHOW SYMBOL X
+  X = 5   Hex = 00000005  Octal = 00000000005
+$ X = "-"
+$ X = F$LENGTH(NOSUCH)
+%DCL-W-UNDSYM, undefined symbol - check validity and spelling
+ \NOSUCH\
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00038140"
+$ SHOW SYMBOL X
+  X = "-"
+$ X = "-"
+$ X = F$LENGTH(S + 1)
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00030001"
+$ SHOW SYMBOL X
+  X = 1   Hex = 00000001  Octal = 00000000001
+$ ! Section B: substitution.
+$ NAME = "MYFILE"
+$ FTYPE = ".DAT"
+$ LC = "lower"
+$ COUNT = 1
+$ MAC = "5"
+$ A = "'MAC'"
+$ Q1 = "FRED.DAT"
+$ Q = """quoted"""
+$ SELF = "'SELF'"
+$ X = "-"
+$ X := MYFILE.DAT
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00030001"
+$ SHOW SYMBOL X
+  X = "MYFILE.DAT"
+$ X = "-"
+$ X := AB
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00030001"
+$ SHOW SYMBOL X
+  X = "AB"
+$ X = "-"
+$ X := AMYFILE
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00030001"
+$ SHOW SYMBOL X
+  X = "AMYFILE"
+$ X = "-"
+$ X := MYFILE
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00030001"
+$ SHOW SYMBOL X
+  X = "MYFILE"
+$ X = "-"
+$ X := MYFILE
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00030001"
+$ SHOW SYMBOL X
+  X = "MYFILE"
+$ X = "-"
+$ X = "it's 'NAME'"
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00030001"
+$ SHOW SYMBOL X
+  X = "it's 'NAME'"
+$ X = "-"
+$ X = "file MYFILE.dat"
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00030001"
+$ SHOW SYMBOL X
+  X = "file MYFILE.dat"
+$ X = "-"
+$ X = 5
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00030001"
+$ SHOW SYMBOL X
+  X = 5   Hex = 00000005  Octal = 00000000005
+$ X = "-"
+$ X = "'MAC'"
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00030001"
+$ SHOW SYMBOL X
+  X = "'MAC'"
+$ X = "-"
+$ X := V1
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00030001"
+$ SHOW SYMBOL X
+  X = "V1"
+$ X = "-"
+$ X := L3
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00030001"
+$ SHOW SYMBOL X
+  X = "L3"
+$ X = "-"
+$ X = "L6"
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00030001"
+$ SHOW SYMBOL X
+  X = "L6"
+$ X = "-"
+$ X := lower
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00030001"
+$ SHOW SYMBOL X
+  X = "LOWER"
+$ X = "-"
+$ X = lower
+%DCL-W-UNDSYM, undefined symbol - check validity and spelling
+ \LOWER\
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00038140"
+$ SHOW SYMBOL X
+  X = "-"
+$ X = "-"
+$ X := &LC
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00030001"
+$ SHOW SYMBOL X
+  X = "&LC"
+$ X = "-"
+$ X = &LC
+%DCL-W-UNDSYM, undefined symbol - check validity and spelling
+ \lower\
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00038140"
+$ SHOW SYMBOL X
+  X = "-"
+$ X = "-"
+$ X := &Q1
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00030001"
+$ SHOW SYMBOL X
+  X = "&Q1"
+$ X = "-"
+$ X := A&LC
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00030001"
+$ SHOW SYMBOL X
+  X = "A&LC"
+$ X = "-"
+$ X := Z &NOSUCH Y
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00030001"
+$ SHOW SYMBOL X
+  X = "Z &NOSUCH Y"
+$ X = "-"
+$ X = "&LC"
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00030001"
+$ SHOW SYMBOL X
+  X = "&LC"
+$ X = "-"
+$ X := ABC ! it's 'NOSUCH'
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00030001"
+$ SHOW SYMBOL X
+  X = "ABC"
+$ X = "-"
+$ X := 1
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00030001"
+$ SHOW SYMBOL X
+  X = "1"
+$ X = "-"
+%DCL-W-EXPSYN, invalid expression syntax - check operators and operands
+ \'SELF\
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00038038"
+$ SHOW SYMBOL X
+  X = "-"
+$ X = "-"
+$ X = "quoted"
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00030001"
+$ SHOW SYMBOL X
+  X = "quoted"
+$ X = "-"
+$ X = ""quoted""
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00030001"
+$ SHOW SYMBOL X
+  X = "QUOTED"
+$ ! DEFINE keeps an &SYMBOL's case (the User's Manual, 13.18.3).
+$ DEFINE/PROCESS PROBE_LNM lower
+$ SHOW LOGICAL PROBE_LNM
+   "PROBE_LNM" = "LOWER" (LNM$PROCESS_TABLE)
+$ DEFINE/PROCESS PROBE_LNM &LC
+%DCL-I-SUPERSEDE, previous value of PROBE_LNM has been superseded
+$ SHOW LOGICAL PROBE_LNM
+   "PROBE_LNM" = "lower" (LNM$PROCESS_TABLE)
+$ TWO = "a b"
+$ DEFINE/PROCESS PROBE_LNM &TWO
+%DCL-I-SUPERSEDE, previous value of PROBE_LNM has been superseded
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00030001"
+$ SHOW LOGICAL PROBE_LNM
+   "PROBE_LNM" = "a b" (LNM$PROCESS_TABLE)
+$ DEASSIGN/PROCESS PROBE_LNM
+$ ! A substituted verb, an alias whose value has apostrophes, an alias of
+$ ! an alias.
+$ V = "SHOW"
+$ SHOW SYMBOL V
+  V = "SHOW"
+$ MAC2 = "SHOW SYMBOL MAC2"
+$ EXEC = "'MAC2'"
+$ EXEC
+%DCL-W-NOCOMD, no command on line - reenter with alphabetic first character
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X000380B0"
+$ SHOW SYMBOL MAC2
+  MAC2 = "SHOW SYMBOL MAC2"
+$ AL1 = "SHOW SYMBOL AL1"
+$ AL2 = "AL1"
+$ AL2
+%DCL-W-IVVERB, unrecognized command verb - check validity and spelling
+ \AL1\
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00038090"
+$ ! Section C: procedures.
+$ @PROBE50S MYFILE
+$ ! PROBE50S.COM - PROBE50's procedure that shows its first parameter.
+$ SHOW SYMBOL P1
+  P1 = "MYFILE"
+$ EXIT
+$ @PROBE50S "MYFILE"
+$ ! PROBE50S.COM - PROBE50's procedure that shows its first parameter.
+$ SHOW SYMBOL P1
+  P1 = "MYFILE"
+$ EXIT
+$ @PROBE50S &LC
+$ ! PROBE50S.COM - PROBE50's procedure that shows its first parameter.
+$ SHOW SYMBOL P1
+  P1 = "&LC"
+$ EXIT
+$ @PROBE50S 1 2 3 4 5 6 7 8 9
+%DCL-W-DEFOVF, too many command procedure parameters - limit to eight
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00038028"
+$ @PROBE50S/OUTPUT=.LOG OUTPUT
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X10038028"
+$ DIRECTORY *.LOG
+
+Directory DUA1:[000000]
+
+.LOG;1              PROBE50.LOG;1       
+
+Total of 2 files.
+$ @PROBE50R 1
+$ ! PROBE50R.COM - PROBE50's procedure that runs itself one level deeper,
+$ ! until DCL refuses the level past 32.
+$ WRITE SYS$OUTPUT "LEVEL ", P1
+LEVEL 1
+$ N = P1 + 1
+$ IF N .LE. 35 THEN @PROBE50R 2
+$ ! PROBE50R.COM - PROBE50's procedure that runs itself one level deeper,
+$ ! until DCL refuses the level past 32.
+$ WRITE SYS$OUTPUT "LEVEL ", P1
+LEVEL 2
+$ N = P1 + 1
+$ IF N .LE. 35 THEN @PROBE50R 3
+$ ! PROBE50R.COM - PROBE50's procedure that runs itself one level deeper,
+$ ! until DCL refuses the level past 32.
+$ WRITE SYS$OUTPUT "LEVEL ", P1
+LEVEL 3
+$ N = P1 + 1
+$ IF N .LE. 35 THEN @PROBE50R 4
+$ ! PROBE50R.COM - PROBE50's procedure that runs itself one level deeper,
+$ ! until DCL refuses the level past 32.
+$ WRITE SYS$OUTPUT "LEVEL ", P1
+LEVEL 4
+$ N = P1 + 1
+$ IF N .LE. 35 THEN @PROBE50R 5
+$ ! PROBE50R.COM - PROBE50's procedure that runs itself one level deeper,
+$ ! until DCL refuses the level past 32.
+$ WRITE SYS$OUTPUT "LEVEL ", P1
+LEVEL 5
+$ N = P1 + 1
+$ IF N .LE. 35 THEN @PROBE50R 6
+$ ! PROBE50R.COM - PROBE50's procedure that runs itself one level deeper,
+$ ! until DCL refuses the level past 32.
+$ WRITE SYS$OUTPUT "LEVEL ", P1
+LEVEL 6
+$ N = P1 + 1
+$ IF N .LE. 35 THEN @PROBE50R 7
+$ ! PROBE50R.COM - PROBE50's procedure that runs itself one level deeper,
+$ ! until DCL refuses the level past 32.
+$ WRITE SYS$OUTPUT "LEVEL ", P1
+LEVEL 7
+$ N = P1 + 1
+$ IF N .LE. 35 THEN @PROBE50R 8
+$ ! PROBE50R.COM - PROBE50's procedure that runs itself one level deeper,
+$ ! until DCL refuses the level past 32.
+$ WRITE SYS$OUTPUT "LEVEL ", P1
+LEVEL 8
+$ N = P1 + 1
+$ IF N .LE. 35 THEN @PROBE50R 9
+$ ! PROBE50R.COM - PROBE50's procedure that runs itself one level deeper,
+$ ! until DCL refuses the level past 32.
+$ WRITE SYS$OUTPUT "LEVEL ", P1
+LEVEL 9
+$ N = P1 + 1
+$ IF N .LE. 35 THEN @PROBE50R 10
+$ ! PROBE50R.COM - PROBE50's procedure that runs itself one level deeper,
+$ ! until DCL refuses the level past 32.
+$ WRITE SYS$OUTPUT "LEVEL ", P1
+LEVEL 10
+$ N = P1 + 1
+$ IF N .LE. 35 THEN @PROBE50R 11
+$ ! PROBE50R.COM - PROBE50's procedure that runs itself one level deeper,
+$ ! until DCL refuses the level past 32.
+$ WRITE SYS$OUTPUT "LEVEL ", P1
+LEVEL 11
+$ N = P1 + 1
+$ IF N .LE. 35 THEN @PROBE50R 12
+$ ! PROBE50R.COM - PROBE50's procedure that runs itself one level deeper,
+$ ! until DCL refuses the level past 32.
+$ WRITE SYS$OUTPUT "LEVEL ", P1
+LEVEL 12
+$ N = P1 + 1
+$ IF N .LE. 35 THEN @PROBE50R 13
+$ ! PROBE50R.COM - PROBE50's procedure that runs itself one level deeper,
+$ ! until DCL refuses the level past 32.
+$ WRITE SYS$OUTPUT "LEVEL ", P1
+LEVEL 13
+$ N = P1 + 1
+$ IF N .LE. 35 THEN @PROBE50R 14
+$ ! PROBE50R.COM - PROBE50's procedure that runs itself one level deeper,
+$ ! until DCL refuses the level past 32.
+$ WRITE SYS$OUTPUT "LEVEL ", P1
+LEVEL 14
+$ N = P1 + 1
+$ IF N .LE. 35 THEN @PROBE50R 15
+$ ! PROBE50R.COM - PROBE50's procedure that runs itself one level deeper,
+$ ! until DCL refuses the level past 32.
+$ WRITE SYS$OUTPUT "LEVEL ", P1
+LEVEL 15
+$ N = P1 + 1
+$ IF N .LE. 35 THEN @PROBE50R 16
+$ ! PROBE50R.COM - PROBE50's procedure that runs itself one level deeper,
+$ ! until DCL refuses the level past 32.
+$ WRITE SYS$OUTPUT "LEVEL ", P1
+LEVEL 16
+$ N = P1 + 1
+$ IF N .LE. 35 THEN @PROBE50R 17
+$ ! PROBE50R.COM - PROBE50's procedure that runs itself one level deeper,
+$ ! until DCL refuses the level past 32.
+$ WRITE SYS$OUTPUT "LEVEL ", P1
+LEVEL 17
+$ N = P1 + 1
+$ IF N .LE. 35 THEN @PROBE50R 18
+$ ! PROBE50R.COM - PROBE50's procedure that runs itself one level deeper,
+$ ! until DCL refuses the level past 32.
+$ WRITE SYS$OUTPUT "LEVEL ", P1
+LEVEL 18
+$ N = P1 + 1
+$ IF N .LE. 35 THEN @PROBE50R 19
+$ ! PROBE50R.COM - PROBE50's procedure that runs itself one level deeper,
+$ ! until DCL refuses the level past 32.
+$ WRITE SYS$OUTPUT "LEVEL ", P1
+LEVEL 19
+$ N = P1 + 1
+$ IF N .LE. 35 THEN @PROBE50R 20
+$ ! PROBE50R.COM - PROBE50's procedure that runs itself one level deeper,
+$ ! until DCL refuses the level past 32.
+$ WRITE SYS$OUTPUT "LEVEL ", P1
+LEVEL 20
+$ N = P1 + 1
+$ IF N .LE. 35 THEN @PROBE50R 21
+$ ! PROBE50R.COM - PROBE50's procedure that runs itself one level deeper,
+$ ! until DCL refuses the level past 32.
+$ WRITE SYS$OUTPUT "LEVEL ", P1
+LEVEL 21
+$ N = P1 + 1
+$ IF N .LE. 35 THEN @PROBE50R 22
+$ ! PROBE50R.COM - PROBE50's procedure that runs itself one level deeper,
+$ ! until DCL refuses the level past 32.
+$ WRITE SYS$OUTPUT "LEVEL ", P1
+LEVEL 22
+$ N = P1 + 1
+$ IF N .LE. 35 THEN @PROBE50R 23
+$ ! PROBE50R.COM - PROBE50's procedure that runs itself one level deeper,
+$ ! until DCL refuses the level past 32.
+$ WRITE SYS$OUTPUT "LEVEL ", P1
+LEVEL 23
+$ N = P1 + 1
+$ IF N .LE. 35 THEN @PROBE50R 24
+$ ! PROBE50R.COM - PROBE50's procedure that runs itself one level deeper,
+$ ! until DCL refuses the level past 32.
+$ WRITE SYS$OUTPUT "LEVEL ", P1
+LEVEL 24
+$ N = P1 + 1
+$ IF N .LE. 35 THEN @PROBE50R 25
+$ ! PROBE50R.COM - PROBE50's procedure that runs itself one level deeper,
+$ ! until DCL refuses the level past 32.
+$ WRITE SYS$OUTPUT "LEVEL ", P1
+LEVEL 25
+$ N = P1 + 1
+$ IF N .LE. 35 THEN @PROBE50R 26
+$ ! PROBE50R.COM - PROBE50's procedure that runs itself one level deeper,
+$ ! until DCL refuses the level past 32.
+$ WRITE SYS$OUTPUT "LEVEL ", P1
+LEVEL 26
+$ N = P1 + 1
+$ IF N .LE. 35 THEN @PROBE50R 27
+$ ! PROBE50R.COM - PROBE50's procedure that runs itself one level deeper,
+$ ! until DCL refuses the level past 32.
+$ WRITE SYS$OUTPUT "LEVEL ", P1
+LEVEL 27
+$ N = P1 + 1
+$ IF N .LE. 35 THEN @PROBE50R 28
+$ ! PROBE50R.COM - PROBE50's procedure that runs itself one level deeper,
+$ ! until DCL refuses the level past 32.
+$ WRITE SYS$OUTPUT "LEVEL ", P1
+LEVEL 28
+$ N = P1 + 1
+$ IF N .LE. 35 THEN @PROBE50R 29
+$ ! PROBE50R.COM - PROBE50's procedure that runs itself one level deeper,
+$ ! until DCL refuses the level past 32.
+$ WRITE SYS$OUTPUT "LEVEL ", P1
+LEVEL 29
+$ N = P1 + 1
+$ IF N .LE. 35 THEN @PROBE50R 30
+$ ! PROBE50R.COM - PROBE50's procedure that runs itself one level deeper,
+$ ! until DCL refuses the level past 32.
+$ WRITE SYS$OUTPUT "LEVEL ", P1
+LEVEL 30
+$ N = P1 + 1
+$ IF N .LE. 35 THEN @PROBE50R 31
+%DCL-W-STKOVF, command procedures too deeply nested - limit to 32 levels
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00038128"
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00038128"
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00038128"
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00038128"
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00038128"
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00038128"
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00038128"
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00038128"
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00038128"
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00038128"
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00038128"
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00038128"
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00038128"
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00038128"
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00038128"
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00038128"
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00038128"
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00038128"
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00038128"
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00038128"
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00038128"
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00038128"
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00038128"
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00038128"
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00038128"
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00038128"
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00038128"
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00038128"
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00038128"
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00038128"
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00038128"
+$ ! Section D: statuses.
+$ FOOBAR
+%DCL-W-IVVERB, unrecognized command verb - check validity and spelling
+ \FOOBAR\
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00038090"
+$ SHOW SYMBOL $SEVERITY
+  $SEVERITY == "0"
+$ SHOW SYMBOL NOSUCH
+%DCL-W-UNDSYM, undefined symbol - check validity and spelling
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00038140"
+$ SHOW SYMBOL $SEVERITY
+  $SEVERITY == "0"
+$ DELETE/SYMBOL NOSUCH
+%DCL-W-UNDSYM, undefined symbol - check validity and spelling
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00038140"
+$ SHOW SYMBOL $SEVERITY
+  $SEVERITY == "0"
+$ TYPE NOSUCH.TXT
+%TYPE-W-SEARCHFAIL, error searching for DUA1:[000000]NOSUCH.TXT;
+-RMS-E-FNF, file not found
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X10951238"
+$ SHOW SYMBOL $SEVERITY
+  $SEVERITY == "0"
+$ @NOSUCH
+%DCL-E-OPENIN, error opening DUA1:[000000]NOSUCH.COM; as input
+-RMS-E-FNF, file not found
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X10018292"
+$ SHOW SYMBOL $SEVERITY
+  $SEVERITY == "2"
+$ @PROBE50E 1
+$ ! PROBE50E.COM - PROBE50's procedure that exits with the status P1.
+$ EXIT 1
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ SHOW SYMBOL $SEVERITY
+  $SEVERITY == "1"
+$ @PROBE50E 3
+$ ! PROBE50E.COM - PROBE50's procedure that exits with the status P1.
+$ EXIT 3
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00000003"
+$ SHOW SYMBOL $SEVERITY
+  $SEVERITY == "3"
+$ @PROBE50E 2
+$ ! PROBE50E.COM - PROBE50's procedure that exits with the status P1.
+$ EXIT 2
+%NONAME-E-NOMSG, Message number 00000002
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00000002"
+$ SHOW SYMBOL $SEVERITY
+  $SEVERITY == "2"
+$ @PROBE50E 0
+$ ! PROBE50E.COM - PROBE50's procedure that exits with the status P1.
+$ EXIT 0
+%NONAME-W-NOMSG, Message number 00000000
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00000000"
+$ SHOW SYMBOL $SEVERITY
+  $SEVERITY == "0"
+$ @PROBE50E 4
+$ ! PROBE50E.COM - PROBE50's procedure that exits with the status P1.
+$ EXIT 4
+%NONAME-F-NOMSG, Message number 00000004
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00000004"
+$ SHOW SYMBOL $SEVERITY
+  $SEVERITY == "4"
+$ @PROBE50E 44
+$ ! PROBE50E.COM - PROBE50's procedure that exits with the status P1.
+$ EXIT 44
+%SYSTEM-F-ABORT, abort
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X0000002C"
+$ SHOW SYMBOL $SEVERITY
+  $SEVERITY == "4"
+$ @PROBE50E %X10000002
+$ ! PROBE50E.COM - PROBE50's procedure that exits with the status P1.
+$ EXIT %X10000002
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X10000002"
+$ SHOW SYMBOL $SEVERITY
+  $SEVERITY == "2"
+$ @PROBE50E ""
+$ ! PROBE50E.COM - PROBE50's procedure that exits with the status P1.
+$ EXIT 
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X10000002"
+$ SHOW SYMBOL $SEVERITY
+  $SEVERITY == "2"
+$ SET NOVERIFY

@@ -49,7 +49,7 @@ func TestParseProcedureCommand(t *testing.T) {
 		{`data "!" x`, "DATA", "", []string{"!", "X"}},
 		{"sum 1 2 3 4 5 6 7 8", "SUM", "", []string{"1", "2", "3", "4", "5", "6", "7", "8"}},
 	} {
-		cmd, err := parseProcedureCommand(tc.text, nil)
+		cmd, err := parseProcedureCommand(tc.text)
 		if err != nil {
 			t.Errorf("parseProcedureCommand(%q): %v", tc.text, err)
 
@@ -69,11 +69,11 @@ func TestParseProcedureCommand(t *testing.T) {
 	}{
 		{"", vmserrors.CLI_MISSINGPARAMETER},
 		{"  ! just a comment", vmserrors.CLI_MISSINGPARAMETER},
-		{"sum 1 2 3 4 5 6 7 8 9", vmserrors.CLI_MAXPARM},
+		{"sum 1 2 3 4 5 6 7 8 9", vmserrors.CLI_DEFOVF},
 		{"setd/log", vmserrors.CLI_UNRECOGNIZED},
 		{"setd/output", vmserrors.CLI_NEEDQUALIFIERVALUE},
 	} {
-		if _, err := parseProcedureCommand(tc.text, nil); !errors.Is(err, vmserrors.New(tc.status)) {
+		if _, err := parseProcedureCommand(tc.text); !errors.Is(err, vmserrors.New(tc.status)) {
 			t.Errorf("parseProcedureCommand(%q): %v, want %v", tc.text, err, vmserrors.New(tc.status))
 		}
 	}
@@ -290,16 +290,16 @@ func TestProcedure_errorEndsProcedure(t *testing.T) {
 	d, c, buf := newCommandDispatcher(t)
 	dir := t.TempDir()
 
-	inner := writeProcedure(t, dir, "inner.com", `$ PRINT "one"`, "$ BOGUS", `$ PRINT "two"`)
+	inner := writeProcedure(t, dir, "inner.com", `$ PRINT "one"`, "$ SET BOGUS", `$ PRINT "two"`)
 	outer := writeProcedure(t, dir, "outer.com", "$ @"+inner, `$ PRINT "outer after"`)
 
 	err := d.Dispatch("@" + outer)
-	if !errors.Is(err, vmserrors.New(vmserrors.CLI_UNRECOGNIZED)) || !vmserrors.MessageInhibited(err) {
-		t.Errorf("@outer: %v, want CLI_UNRECOGNIZED with its message shown", err)
+	if !errors.Is(err, vmserrors.New(vmserrors.CLI_BADPARAMETER)) || !vmserrors.MessageInhibited(err) {
+		t.Errorf("@outer: %v, want CLI_BADPARAMETER with its message shown", err)
 	}
 
 	out := buf.String()
-	if !strings.HasPrefix(out, "one\n%CLI-E-UNRECOGNIZED") || strings.Count(out, "UNRECOGNIZED") != 1 ||
+	if !strings.HasPrefix(out, "one\n%DCL-E-BADPARAMETER") || strings.Count(out, "BADPARAMETER") != 1 ||
 		strings.Contains(out, "two") || strings.Contains(out, "outer after") {
 		t.Errorf("output:\n%s\nwant one, then the message once, then nothing", out)
 	}
@@ -316,8 +316,8 @@ func TestProcedure_errorEndsProcedure(t *testing.T) {
 		t.Errorf("a procedure with a warning: %v", err)
 	}
 
-	if out := buf.String(); !strings.Contains(out, "%CLI-W-MAXPARM") || !strings.HasSuffix(out, "still here\n") {
-		t.Errorf("output:\n%s\nwant MAXPARM's warning, then still here", out)
+	if out := buf.String(); !strings.Contains(out, "%DCL-W-DEFOVF") || !strings.HasSuffix(out, "still here\n") {
+		t.Errorf("output:\n%s\nwant DEFOVF's warning, then still here", out)
 	}
 }
 
@@ -333,7 +333,7 @@ func TestProcedure_dataLines(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	skpdat := `%CLI-W-SKPDAT, image data (records not beginning with "$") ignored` + "\n"
+	skpdat := `%DCL-W-SKPDAT, image data (records not beginning with "$") ignored` + "\n"
 	if want := "a\n" + skpdat + "b\n" + skpdat; buf.String() != want {
 		t.Errorf("output:\n%s\nwant:\n%s", buf.String(), want)
 	}
@@ -348,7 +348,7 @@ func TestProcedure_output(t *testing.T) {
 	dir := t.TempDir()
 
 	inner := writeProcedure(t, dir, "inner.com", `$ PRINT "from inner"`)
-	proc := writeProcedure(t, dir, "proc.com", `$ PRINT "to the file"`, "$ @"+inner, "$ BOGUS")
+	proc := writeProcedure(t, dir, "proc.com", `$ PRINT "to the file"`, "$ @"+inner, "$ SET BOGUS")
 	result := filepath.Join(dir, "result")
 
 	if err := d.Dispatch("@" + proc + `/OUTPUT="` + result + `"`); err == nil {
@@ -356,7 +356,7 @@ func TestProcedure_output(t *testing.T) {
 	}
 
 	terminal := buf.String()
-	if !strings.HasPrefix(terminal, "%CLI-E-UNRECOGNIZED") || strings.Contains(terminal, "to the file") {
+	if !strings.HasPrefix(terminal, "%DCL-E-BADPARAMETER") || strings.Contains(terminal, "to the file") {
 		t.Errorf("terminal:\n%s\nwant only the error message", terminal)
 	}
 
@@ -438,19 +438,21 @@ func TestProcedure_hostNames(t *testing.T) {
 	}
 }
 
-// TestProcedure_depth: procedures nest at most 32 command levels deep; the
-// 33rd @ fails, which ends every level.
+// TestProcedure_depth: procedures nest at most 32 command levels deep,
+// the terminal's among them; the @ that would make the 32nd fails with
+// a warning, CLI_STKOVF, and each level goes on (VMS 7.3's run of
+// testdata/dcl50).
 func TestProcedure_depth(t *testing.T) {
 	d, c, buf := newCommandDispatcher(t)
 	dir := t.TempDir()
 	path := filepath.Join(dir, "self.com")
-	writeFile(t, path, `$ @"`+path+`"`+"\n"+`$ PRINT "unreached"`+"\n")
+	writeFile(t, path, `$ @"`+path+`"`+"\n"+`$ PRINT "after"`+"\n")
 
-	if err := d.Dispatch(`@"` + path + `"`); !errors.Is(err, vmserrors.New(vmserrors.CLI_MAXDEPTH)) {
-		t.Errorf("a procedure that runs itself: %v, want CLI_MAXDEPTH", err)
+	if err := d.Dispatch(`@"` + path + `"`); err != nil {
+		t.Errorf("a procedure that runs itself: %v", err)
 	}
 
-	if out := buf.String(); strings.Count(out, "MAXDEPTH") != 1 || strings.Contains(out, "unreached") {
+	if out := buf.String(); strings.Count(out, "STKOVF") != 1 || strings.Count(out, "after") != maxCommandLevels {
 		t.Errorf("output:\n%s", out)
 	}
 

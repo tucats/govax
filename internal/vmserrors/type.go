@@ -90,6 +90,11 @@ type VMSError struct {
 	Status    uint32
 	Arguments []any
 	Cause     error
+
+	// Segment is the part of a command a DCL message is about, which
+	// DCL shows on a line of its own after the message, between
+	// backslashes (" \\SEGMENT\\"); "" for none (NewSegment).
+	Segment string
 }
 
 // The following table maps the faiclity names to strings. This will
@@ -99,7 +104,7 @@ type VMSError struct {
 var FacilityNames = map[uint32]string{
 	SYSFacility:   "SYSTEM",
 	RMSFacility:   "RMS",
-	CLIFacility:   "CLI",
+	CLIFacility:   "DCL",   // as VMS shows the messages of its command interpreter
 	DBGFacility:   "DEBUG", // as the VMS debugger's messages print it
 	LIBFacility:   "LIB",
 	CREFacility:   "CREATE",

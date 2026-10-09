@@ -151,7 +151,8 @@ func TestDCLExpression(t *testing.T) {
 	}
 }
 
-// TestDCLExpression_errors: each malformed expression's message.
+// TestDCLExpression_errors: each malformed expression's message (the
+// probe in testdata/dcl50 checks them against VMS 7.3, TestProbe50Oracle).
 func TestDCLExpression_errors(t *testing.T) {
 	symbols := exprSymbols(t)
 
@@ -162,23 +163,24 @@ func TestDCLExpression_errors(t *testing.T) {
 		{"", vmserrors.CLI_EXPSYN},
 		{"1 +", vmserrors.CLI_EXPSYN},
 		{"(1 + 2", vmserrors.CLI_EXPSYN},
-		{"1 + 2)", vmserrors.CLI_EXPSYN},
+		{"1 + 2)", vmserrors.CLI_SYMDEL},
 		{"1 2", vmserrors.CLI_EXPSYN},
 		{"1 .NOT. 2", vmserrors.CLI_EXPSYN},
-		{`"abc`, vmserrors.CLI_UNTERMSTR},
 		{"NOSUCH + 1", vmserrors.CLI_UNDSYM},
 		{"1 .FOO. 2", vmserrors.CLI_IVOPER},
-		{"1 .EQ 2", vmserrors.CLI_IVOPER},
-		{"7 / 0", vmserrors.CLI_DIVZERO},
+		{"1 .E. 2", vmserrors.CLI_IVOPER},
+		{"1.5", vmserrors.CLI_IVOPER},
 		{"12AB", vmserrors.CLI_IVCHAR},
 		{"%XG", vmserrors.CLI_IVCHAR},
 		{"%Q1", vmserrors.CLI_IVCHAR},
 		{"F$NOSUCH(1)", vmserrors.CLI_IVFNAM},
-		{"F$LENGTH", vmserrors.CLI_NOPAREN},
-		{`F$LENGTH("a"`, vmserrors.CLI_NOPAREN},
+		{`F$L("abc")`, vmserrors.CLI_ABFNAM},
+		{`F$TIME()`, vmserrors.CLI_LEXNOTIMPL},
+		{"F$LENGTH", vmserrors.CLI_UNDSYM},
+		{`F$LENGTH("a"`, vmserrors.CLI_SYMDEL},
 		{"F$LENGTH()", vmserrors.CLI_ARGREQ},
-		{`F$LENGTH(,)`, vmserrors.CLI_MAXPARM},
-		{`F$LENGTH("a", "b")`, vmserrors.CLI_MAXPARM},
+		{`F$LENGTH(,)`, vmserrors.CLI_ARGREQ},
+		{`F$LENGTH("a", "b")`, vmserrors.CLI_SYMDEL},
 		{`F$LENGTH(NOSUCH)`, vmserrors.CLI_UNDSYM},
 	} {
 		if _, err := evaluateDCLExpression(tc.text, symbols, nil); !hasStatus(err, tc.code) {
@@ -187,29 +189,68 @@ func TestDCLExpression_errors(t *testing.T) {
 	}
 }
 
-// TestLexicalAbbreviation: a lexical function's name may be shortened to
-// any prefix that names only it.
-func TestLexicalAbbreviation(t *testing.T) {
-	lexicalFunctions["F$LENGTHY"] = lexicalFunctions["F$LENGTH"]
-	defer delete(lexicalFunctions, "F$LENGTHY")
+// TestDCLExpression_vms: what VMS 7.3 answered where the manual is
+// silent (testdata/dcl50).
+func TestDCLExpression_vms(t *testing.T) {
+	symbols := exprSymbols(t)
 
-	if _, err := findLexicalFunction("F$LEN"); !hasStatus(err, vmserrors.CLI_ABFNAM) {
-		t.Errorf("F$LEN: %v, want CLI_ABFNAM", err)
-	}
+	for _, tc := range []struct {
+		text    string
+		integer bool
+		want    string
+	}{
+		{"7 / 0", true, "2147483647"},
+		{`"abc`, false, "abc"},
+		{`""quoted""`, false, "QUOTED"},
+		{"1 .EQ 1", true, "1"},
+		{"1 .EQ. .NOT. 0", true, "0"},
+		{`" 12" + 0`, true, "12"},
+		{`"%X10" + 0`, true, "16"},
+	} {
+		v, err := evaluateDCLExpression(tc.text, symbols, nil)
+		if err != nil {
+			t.Errorf("%s: %v", tc.text, err)
 
-	for _, name := range []string{"F$LENGTH", "f$lengthy", "F$S"} {
-		if _, err := findLexicalFunction(name); err != nil {
-			t.Errorf("%s: %v", name, err)
+			continue
+		}
+
+		if v.integer != tc.integer || v.String() != tc.want {
+			t.Errorf("%s = %q (integer %v), want %q (integer %v)", tc.text, v.String(), v.integer, tc.want, tc.integer)
 		}
 	}
 }
 
-// TestDCLExpression_message: a message shows the part of the expression
-// in question on its own line, between backslashes, as DCL does.
-func TestDCLExpression_message(t *testing.T) {
-	_, err := evaluateDCLExpression("1 + nosuch", exprSymbols(t), nil)
+// TestLexicalAbbreviation: a lexical function's name may be shortened to
+// any prefix that names only one of VMS's lexical functions.
+func TestLexicalAbbreviation(t *testing.T) {
+	for _, tc := range []struct {
+		name string
+		code uint32
+	}{
+		{"F$LEN", 0},
+		{"f$length", 0},
+		{"F$STR", 0},
+		{"F$IN", 0},
+		{"F$I", vmserrors.CLI_ABFNAM},
+		{"F$L", vmserrors.CLI_ABFNAM},
+		{"F$S", vmserrors.CLI_ABFNAM},
+		{"F$LENGTHY", vmserrors.CLI_IVFNAM},
+		{"F$TRNLNM", vmserrors.CLI_LEXNOTIMPL},
+	} {
+		_, err := findLexicalFunction(tc.name)
+		if (tc.code == 0 && err != nil) || (tc.code != 0 && !hasStatus(err, tc.code)) {
+			t.Errorf("%s: %v, want %v", tc.name, err, vmserrors.New(tc.code))
+		}
+	}
+}
 
-	want := "CLI-W-UNDSYM, undefined symbol - check validity and spelling\n \\NOSUCH\\"
+// TestDCLExpression_message: an assignment's message shows the part of
+// the expression in question, uppercased as the command line is, on its
+// own line between backslashes, as DCL does.
+func TestDCLExpression_message(t *testing.T) {
+	err := exprSymbols(t).assign("X", "=", "1 + nosuch")
+
+	want := "DCL-W-UNDSYM, undefined symbol - check validity and spelling\n \\NOSUCH\\"
 	if err == nil || err.Error() != want {
 		t.Errorf("message = %v, want %q", err, want)
 	}

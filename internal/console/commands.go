@@ -81,7 +81,7 @@ func (d *Dispatcher) bindConsoleCommands() {
 func (d *Dispatcher) asmCommand(id int64, r *dcl.Result) error {
 	// Once the microkernel is in place ASM is the debugger's command.
 	if d.Console.kernelPlaced {
-		return vmserrors.New(vmserrors.CLI_UNRECOGNIZED, "verb", "ASM")
+		return vmserrors.NewSegment(vmserrors.CLI_IVVERB, "ASM")
 	}
 
 	if !r.Present("FILE") {

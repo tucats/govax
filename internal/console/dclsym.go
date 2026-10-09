@@ -1,6 +1,7 @@
 package console
 
 import (
+	"errors"
 	"fmt"
 	"sort"
 	"strconv"
@@ -54,8 +55,10 @@ import (
 //   - Symbol substitution ('SYMBOL', ''SYMBOL' in quotes, and &SYMBOL)
 //     is in dclsubst.go.
 
-// maxSymbolDepth is how many times symbol substitution may rewrite one
-// command: enough for an alias of an alias, short of an alias of itself.
+// maxSymbolDepth is how many times a subprocess's CLI (subcli.go) lets
+// symbol substitution rewrite one command: enough for an alias of an
+// alias, short of an alias of itself. (The console's DCL looks an
+// alias's value up only once, as VMS does.)
 const maxSymbolDepth = 16
 
 // dclSymbol is one DCL symbol.
@@ -211,9 +214,12 @@ func (c *Console) DCLSymbol(name string) (string, bool) {
 }
 
 // dclSymbolLine handles line if it's a symbol assignment, a DELETE/SYMBOL,
-// or a command whose first word is a DCL symbol, reporting whether it
-// was one of those.
-func (d *Dispatcher) dclSymbolLine(line string) (bool, error) {
+// or (with verbSymbol) a command whose first word is a DCL symbol,
+// reporting whether it was one of those. An alias's value takes the
+// symbol's place, and the line goes on through the second phase, its
+// first word not looked up again and its apostrophes not substituted
+// (the User's Manual's EXEC example, 12.13.4).
+func (d *Dispatcher) dclSymbolLine(line string, verbSymbol bool) (bool, error) {
 	if name, op, value, ok := splitAssignment(line); ok {
 		return true, d.Console.assignSymbol(name, op, value)
 	}
@@ -224,26 +230,20 @@ func (d *Dispatcher) dclSymbolLine(line string) (bool, error) {
 		return true, d.Console.deleteSymbols(rest)
 	}
 
-	sym, ok := d.Console.dclSymbols.lookup(verb)
-	if !ok {
+	if !verbSymbol {
 		return false, nil
 	}
 
-	if d.symbolDepth >= maxSymbolDepth {
-		return true, vmserrors.New(vmserrors.CLI_SYMDEPTH, sym.name)
+	sym, ok := d.Console.dclSymbols.lookup(verb)
+	if !ok {
+		return false, nil
 	}
 
 	if image, foreign := strings.CutPrefix(sym.value, "$"); foreign {
 		return true, d.runForeign(image, rest)
 	}
 
-	d.symbolDepth++
-	defer func() { d.symbolDepth-- }()
-
-	// The value takes the symbol's place, and the line goes on through
-	// the second phase; its apostrophes aren't substituted (the User's
-	// Manual's EXEC example, 12.13.4).
-	return true, d.dispatchCommand(sym.value + rest)
+	return true, d.dispatchParsed(sym.value+rest, false)
 }
 
 // runForeign runs a foreign command: the image named by spec (a symbol's
@@ -255,7 +255,7 @@ func (d *Dispatcher) runForeign(spec, rest string) error {
 		return vmserrors.New(vmserrors.CLI_NOFILE)
 	}
 
-	opts := RunOptions{RunInits: d.Console.DefaultRunInits(), CommandLine: dclText(rest, true, &d.Console.dclSymbols)}
+	opts := RunOptions{RunInits: d.Console.DefaultRunInits(), CommandLine: dclText(rest, true)}
 
 	return d.Console.Run(spec, opts)
 }
@@ -329,17 +329,28 @@ func (t *dclSymbolTable) assignIn(c *Console, name, op, text string) error {
 		minLength = star
 	}
 
-	var value dclValue
+	var (
+		value dclValue
+		after error
+	)
 
-	// An &NAME is replaced in either: by dclText in a string, and
-	// before the expression is read in an expression.
+	// In an expression, an &NAME is replaced by its value, after the
+	// text is uppercased (dclsubst.go); in a string, it isn't (VMS
+	// 7.3's run of testdata/dcl50). An expression followed by a stray
+	// ")" is assigned, and then reported (trailingDelimiter).
 	if strings.HasPrefix(op, ":") {
-		value = dclString(dclText(text, false, t))
+		value = dclString(dclText(text, false))
 	} else {
-		text, _ = t.substituteAmpersands(text)
+		text = t.substituteAmpersands(upcaseOutsideQuotes(text), false)
 
 		v, err := evaluateDCLExpression(text, t, c)
-		if err != nil {
+
+		var trailing trailingDelimiter
+
+		switch {
+		case errors.As(err, &trailing):
+			v, after = trailing.value, err
+		case err != nil:
 			return err
 		}
 
@@ -355,7 +366,7 @@ func (t *dclSymbolTable) assignIn(c *Console, name, op, text string) error {
 
 	table[full] = dclSymbol{name: full, minLength: minLength, value: value.String(), global: global, integer: value.integer}
 
-	return nil
+	return after
 }
 
 // quotedString reads the quoted string text starts with, returning its
@@ -394,13 +405,9 @@ func quotedString(text string) (string, int, bool) {
 // removed, and a doubled quote inside them is one quote (a string
 // assignment's value).
 //
-// With symbols, each &NAME outside quotes is replaced by the symbol's
-// value, as it is: DCL makes this substitution after it uppercases the
-// line, so the value keeps its case (dclsubst.go).
-//
 // Unconfirmed against VMS: that a foreign command's text keeps its quotes
 // and its quoted text's case, as LIB$GET_FOREIGN returns it.
-func dclText(text string, keepQuotes bool, symbols *dclSymbolTable) string {
+func dclText(text string, keepQuotes bool) string {
 	var b strings.Builder
 
 	quoted, blank := false, false
@@ -424,14 +431,6 @@ func dclText(text string, keepQuotes bool, symbols *dclSymbolTable) string {
 			}
 
 			blank = false
-
-			if value, end, ok := symbols.ampersandAt(text, i); ok {
-				b.WriteString(value)
-
-				i = end - 1
-
-				continue
-			}
 		}
 
 		switch {
@@ -570,7 +569,7 @@ func (t *dclSymbolTable) delete(rest string) error {
 
 	sym, ok := table.lookup(cmd.name)
 	if !ok {
-		return vmserrors.New(vmserrors.CLI_UNDEFSYM, cmd.name)
+		return vmserrors.New(vmserrors.CLI_UNDSYM)
 	}
 
 	delete(table, sym.name)
@@ -635,7 +634,7 @@ func (c *Console) showDCLSymbols(cmd symbolCommand) error {
 //     current level's local table with neither; a name given too limits
 //     it to the symbols the name matches.
 //
-// A name that finds nothing is CLI_UNDEFSYM; no name and no /ALL is
+// A name that finds nothing is CLI_UNDSYM; no name and no /ALL is
 // CLI_MISSINGPARAMETER. /ALL of an empty table shows nothing.
 // Unconfirmed against VMS: which tables a wildcard name searches with
 // neither qualifier (the outer levels' local tables aren't searched),
@@ -680,7 +679,7 @@ func (t *dclSymbolTable) show(cmd symbolCommand) ([]dclSymbol, error) {
 	}
 
 	if len(shown) == 0 && cmd.name != "" {
-		return nil, vmserrors.New(vmserrors.CLI_UNDEFSYM, cmd.name)
+		return nil, vmserrors.New(vmserrors.CLI_UNDSYM)
 	}
 
 	return shown, nil
