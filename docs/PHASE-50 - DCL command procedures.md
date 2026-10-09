@@ -157,6 +157,9 @@ takes it as `.END`, each as it does for Ctrl/Z.
 The debugger's own `@` reads the VMS debugger's format instead: every
 line is a command, with no `$` (`RunDebuggerProcedure`). If the file
 ends the session, its remaining lines go to the console, as before.
+The debugger keeps INCLUDE as another name for its `@` (the author's
+choice, 2026-10-09): a debugger command file is a different thing from
+a DCL procedure, and the name shows it.
 
 Data lines for an image a procedure runs (LIB$GET_INPUT, an RMS read of
 SYS$INPUT) are still a later subtask (16). Such an image reads the
