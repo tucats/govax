@@ -712,6 +712,84 @@ func TestSharing_searchWhileChanged(t *testing.T) {
 	checkVolume(t, mounts)
 }
 
+// startSearch sets s's FAB and NAM up for a wildcard search of spec and
+// runs $PARSE, making the search's context.
+func (s *sharer) startSearch(spec string) {
+	s.t.Helper()
+
+	ctx := s.ctx
+	newFAB(s.t, ctx, spec)
+	putByte(s.t, ctx, testFabAddr+fabBID, fabBIDValue)
+	putByte(s.t, ctx, testFabAddr+fabBLN, fabBLNValue)
+	putLongwordAt(s.t, ctx, testFabAddr+fabNAM, testNamAddr)
+	putByte(s.t, ctx, testNamAddr+namBID, namBIDValue)
+	putByte(s.t, ctx, testNamAddr+namBLN, namBLNValue)
+	putLongwordAt(s.t, ctx, testNamAddr+namESA, testESAAddr)
+	putByte(s.t, ctx, testNamAddr+namESS, 255)
+	putLongwordAt(s.t, ctx, testNamAddr+namRSA, testRSAAddr)
+	putByte(s.t, ctx, testNamAddr+namRSS, 255)
+
+	if r0, err := SysParse(ctx, []uint32{testFabAddr}); err != nil || r0&1 == 0 {
+		s.t.Fatalf("$PARSE: %#x, %v", r0, err)
+	}
+}
+
+// TestSharing_searchNewSubdirectory (docs/PHASE-49.md, subtask 11): a
+// wildcard directory search sees a subdirectory made after it began, if
+// the subdirectory comes later in its walk, and not one made behind its
+// place; no directory is searched twice.
+func TestSharing_searchNewSubdirectory(t *testing.T) {
+	p, mounts := newSharers(t, 1)
+	a := p[0]
+
+	s := NewSession(mounts)
+	for _, dir := range []string{"DUA0:[B]", "DUA0:[B.M]", "DUA0:[D]"} {
+		if _, err := s.CreateDirectory(dir, CreateDirectoryOptions{}); err != nil {
+			t.Fatal(err)
+		}
+
+		writeFile(t, mounts, strings.TrimPrefix(dir, "DUA0:")+"F.DAT", "x")
+	}
+
+	a.startSearch("DUA0:[000000...]F.DAT")
+
+	first, sts := a.search()
+	if first != "DUA0:[B]F.DAT;1" {
+		t.Fatalf("first $SEARCH: %q, %#x; want [B]'s", first, sts)
+	}
+
+	// Made now: [A] is behind the search, [B.C] and [C] ahead of it.
+	for _, dir := range []string{"DUA0:[A]", "DUA0:[B.C]", "DUA0:[C]"} {
+		if _, err := s.CreateDirectory(dir, CreateDirectoryOptions{}); err != nil {
+			t.Fatal(err)
+		}
+
+		writeFile(t, mounts, strings.TrimPrefix(dir, "DUA0:")+"F.DAT", "x")
+	}
+
+	got := []string{first}
+
+	for {
+		name, sts := a.search()
+		if sts == rmsNoMoreFiles {
+			break
+		}
+
+		if sts&1 == 0 || len(got) > 10 {
+			t.Fatalf("$SEARCH: %#x after %q", sts, got)
+		}
+
+		got = append(got, name)
+	}
+
+	want := []string{"DUA0:[B]F.DAT;1", "DUA0:[B.C]F.DAT;1", "DUA0:[B.M]F.DAT;1", "DUA0:[C]F.DAT;1", "DUA0:[D]F.DAT;1"}
+	if strings.Join(got, " ") != strings.Join(want, " ") {
+		t.Errorf("found %q, want %q", got, want)
+	}
+
+	checkVolume(t, mounts)
+}
+
 // TestSharing_dismountWithOpenFiles: DISMOUNT refuses a volume with a
 // file open; once it's closed, the volume dismounts.
 func TestSharing_dismountWithOpenFiles(t *testing.T) {

@@ -418,3 +418,16 @@ stream's record locks.
   rundown (`CloseFiles`) release it. Not arbitrated: the console's own
   commands' host files (they run while no program does) and other host
   programs. Test: `TestShimExeOpenSharing`.
+- 2026-10-09: Subtask 11, part 3: `$SEARCH` and new subdirectories
+  (`rms/search.go`). A wildcard directory search's list of directories
+  was walked once, when the search (or its search list element) began.
+  Now, as each directory is finished (`nextDir`), the tree is walked
+  again (`searchDirs`) and the search goes on with the first directory
+  after the current one that it hasn't searched (`searchState.Visited`,
+  by path): a subdirectory made meanwhile is searched if it comes later
+  in the walk, and one made behind the search's place isn't, as a walk
+  that reads each directory when it reaches it would behave. If the
+  current directory has been deleted, the search goes on through the
+  walk it had. Unconfirmed (for a probe): that VMS's search sees a
+  directory made ahead of it and not one made behind it. Test:
+  `TestSharing_searchNewSubdirectory`. Subtask 11 is done.

@@ -57,6 +57,13 @@ type searchState struct {
 	Last     ondisk.DirEntry
 	HaveLast bool
 
+	// Visited is the directories (by path) the current element's search
+	// has finished. The walk is made again as each directory is
+	// finished (nextDir), so that a subdirectory made meanwhile, ahead
+	// of the search's place, is searched too, as VMS's walk, which
+	// reads each directory as it reaches it, would find it.
+	Visited map[string]bool
+
 	// Found is whether any file has been returned.
 	Found bool
 }
@@ -459,7 +466,7 @@ func (ctx *Context) searchContext(nam uint32, st *searchState) (sts, stv uint32,
 				st.Dirs = []searchDir{}
 			}
 
-			st.Dir, st.HaveLast = 0, false
+			st.Dir, st.HaveLast, st.Visited = 0, false, map[string]bool{}
 
 			// A later search list element's expanded string replaces
 			// the first's (the oracle's SEARCH case 6).
@@ -502,8 +509,8 @@ func (ctx *Context) searchContext(nam uint32, st *searchState) (sts, stv uint32,
 				return ctx.reportMatch(nam, p.Dev+dirSpec{Elems: d.Path}.String(), entries[i], d.Dir.Header.Fid)
 			}
 
-			st.Dir++
 			st.HaveLast = false
+			ctx.nextDir(st, p)
 		}
 
 		st.Elem++
@@ -544,6 +551,37 @@ func (ctx *Context) searchContext(nam uint32, st *searchState) (sts, stv uint32,
 
 	return rmsNoMoreFiles, stv, nil
 }
+
+// nextDir moves st's search to its next directory once the current one
+// is finished: the first not yet searched after the current one in the
+// walk as the tree is now (searchDirs again), so a directory made since
+// the search began is searched if it comes later in the walk, and one
+// made behind the search's place isn't. If the current directory has
+// gone from the tree, the search goes on through the walk it had.
+func (ctx *Context) nextDir(st *searchState, p parsedName) {
+	cur := st.Dirs[st.Dir].key()
+	st.Visited[cur] = true
+	st.Dir++
+
+	if vol, ok := ctx.Mounts.Lookup(p.Lookup); ok {
+		fresh := searchDirs(vol, p.DirSpec)
+
+		for i, d := range fresh {
+			if d.key() == cur {
+				st.Dirs, st.Dir = fresh, i+1
+
+				break
+			}
+		}
+	}
+
+	for st.Dir < len(st.Dirs) && st.Visited[st.Dirs[st.Dir].key()] {
+		st.Dir++
+	}
+}
+
+// key names d for a search's list of directories visited: its path.
+func (d *searchDir) key() string { return strings.Join(d.Path, ".") }
 
 // matchFNB is FNB for a file found in d: the parse's bits with the
 // directory's level count, and the wildcard bit of each level a
