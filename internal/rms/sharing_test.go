@@ -132,11 +132,17 @@ func (s *sharer) get() (string, uint32) {
 		return "", r0
 	}
 
+	// The record is where RAB$L_RBF points: the user buffer.
 	n := readWord(s.t, s.ctx, testRabAddr+rabRSZ)
+	rbf := readLongword(s.t, s.ctx, testRabAddr+rabRBF)
 	buf := make([]byte, n)
 
+	if rbf != testRecordAddr {
+		s.t.Errorf("%s: RAB$L_RBF %#x after $GET, want the user buffer %#x", s.name, rbf, testRecordAddr)
+	}
+
 	for i := range buf {
-		buf[i] = readByte(s.t, s.ctx, testRecordAddr+uint32(i))
+		buf[i] = readByte(s.t, s.ctx, rbf+uint32(i))
 	}
 
 	return string(buf), r0

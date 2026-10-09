@@ -496,3 +496,9 @@ stream's record locks.
     asks these.
   Tests: `TestFind_byRFA`, `TestGetlki_access`, `TestUFO_device`,
   `TestIOCount_null`, `rms`'s `TestIOCount_model`.
+- 2026-10-09: A fix found by the probe's second round: `$GET` didn't
+  set RAB$L_RBF. The RMS manual (section 7.16) says the Get service sets
+  it to the record's address, in move mode the user buffer
+  (`storeRecordStatus`); a program printing RBF after `$GET` printed
+  whatever it last pointed RBF at. The RMS tests' `$GET` helper now
+  reads the record through RBF.

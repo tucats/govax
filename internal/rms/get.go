@@ -161,8 +161,9 @@ func getTerminal(ctx *Context, rabAddr uint32) (uint32, error) {
 // RAB$L_RBF buffer, which has no size of its own: RAB$W_RSZ's limit.
 const maxTerminalRecord = 65535
 
-// storeRecord copies a record SYS$GET has read into the caller's buffer
-// and sets RAB$W_RSZ to its length (see SysGet's doc comment).
+// storeRecord copies a record SYS$GET has read into the caller's buffer,
+// sets RAB$W_RSZ to its length, and points RAB$L_RBF at it (see SysGet's
+// doc comment).
 func storeRecord(ctx *Context, rabAddr uint32, record []byte) (uint32, error) {
 	return storeRecordStatus(ctx, rabAddr, record, rmsNormal)
 }
@@ -208,6 +209,12 @@ func storeRecordStatus(ctx *Context, rabAddr uint32, record []byte, sts uint32) 
 	}
 
 	if err := ctx.storeWord(rabAddr+rabRSZ, uint16(len(record))); err != nil {
+		return 0, err
+	}
+
+	// RAB$L_RBF is the address of the record just read: in move mode,
+	// the user buffer (RMS manual, section 7.16).
+	if err := ctx.storeLongword(rabAddr+rabRBF, destAddr); err != nil {
 		return 0, err
 	}
 
