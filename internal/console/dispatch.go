@@ -169,17 +169,21 @@ func (d *Dispatcher) bindGrammar() {
 		)
 	})
 
-	g.Bind("CLEAR_SYM_ALL", func(id int64, r *dcl.Result) error { return d.Console.ClearSymbol("", true) })
-	g.Bind("CLEAR_SYMBOLS", func(id int64, r *dcl.Result) error { return d.Console.ClearSymbol(r.String("P1"), false) })
-
-	g.Bind("CLEAR_SYM_TEMP", func(id int64, r *dcl.Result) error { return d.Console.ClearSymbolTemporary() })
 	g.Bind("CLEAR_STRINGS", func(id int64, r *dcl.Result) error { return d.Console.ClearString() })
 	g.Bind("CLEAR_MEMORY", func(id int64, r *dcl.Result) error { return d.Console.ClearMemory() })
 
-	g.Bind("SHOW_SYM", func(id int64, r *dcl.Result) error { return d.Console.ShowSymbol(r.String("SYMBOL")) })
-	g.Bind("SHOW_SYM_ALL", func(id int64, r *dcl.Result) error { return d.Console.ShowSymbols(r.String("SYMBOL")) })
-	g.Bind("SHOW_SYM_SYS", func(id int64, r *dcl.Result) error { return d.Console.ShowSymbolsSystem(r.String("SYMBOL")) })
-	g.Bind("SHOW_SYM_DCL", func(id int64, r *dcl.Result) error { return d.Console.ShowDCLSymbols(r.String("SYMBOL")) })
+	g.Bind("SHOW_SYM", func(id int64, r *dcl.Result) error {
+		cmd := symbolCommand{all: r.Present("ALL"), name: strings.ToUpper(strings.TrimSpace(r.String("SYMBOL")))}
+
+		switch {
+		case r.Present("LOCAL"):
+			cmd.scope = scopeLocal
+		case r.Present("GLOBAL"):
+			cmd.scope = scopeGlobal
+		}
+
+		return d.Console.showDCLSymbols(cmd)
+	})
 	g.Bind("SHOW_RADIX", func(id int64, r *dcl.Result) error { return d.Console.ShowRadix() })
 	// SHOW VERSION has no bind of its own: its grammar syntax carries
 	// /entry=exe$about (console.dcl's own "syntax show_version/entry=exe$about"

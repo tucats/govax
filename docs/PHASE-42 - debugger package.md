@@ -1890,3 +1890,37 @@ without a check on VMS).
   `internal/console` package-internal tests use `plainDebugger`
   (`plaindebugger_test.go`); the CALL/ASM dispatch tests moved to
   `internal/debugger/asmcall_test.go`; `TestGrammarSplit` updated.
+
+## 2026-10-09: DCL symbols and the machine's symbol table separated
+
+- The console's SHOW SYMBOL is DCL's now: `SHOW SYMBOL [/LOCAL | /GLOBAL]
+  [/ALL] [name]` (`showDCLSymbols`, `dclSymbolTable.show` in
+  `internal/console/dclsym.go`), with `*`/`%` wildcards, laid out as VMS's
+  DCL lays it out (checked against a simh VAX session's `SHOW SYMBOL *`
+  and `SHOW SYMBOL/LOCAL`, `TestShowDCLSymbols_simh`). `/DCL` is gone.
+- DCL symbols live in a `dclSymbolTable`: one global table and a local
+  table per command level (`levels`; only the interactive level exists
+  until command procedures arrive). `:=`/`=` assign locally, `:==`/`==`
+  globally; a name is looked up in the current level, the outer levels,
+  then the global table. `DELETE/SYMBOL [/LOCAL | /GLOBAL] [/ALL] [name]`
+  defaults to the local table, as DCL's does. A spawned subprocess's CLI
+  gets a copy of both tables (`clone`), and its SHOW SYMBOL takes the
+  same qualifiers.
+- The console's CLEAR SYMBOL is gone (DCL's verb is DELETE/SYMBOL). The
+  machine's symbol table (ASM's symbols and the predefined system
+  symbols) is the debugger's: `SHOW SYMBOL/ALL [pattern]` and
+  `SHOW SYMBOL/SYSTEM [pattern]` (govax's own, the console's old forms),
+  the existing fallback of a plain SHOW SYMBOL (which now also finds
+  predefined symbols, `Console.HasSymbol`), and `CANCEL SYMBOL [/ALL |
+  /TEMPORARY] [name]` (so CLEAR SYMBOL too). `debug.dcl`'s keyword is
+  `symbols` alone, so SYM stays unambiguous.
+- `vax.init` no longer runs `clear sym/all` after assembling the
+  microkernel.
+- Unconfirmed against VMS: which tables a wildcard SHOW SYMBOL searches
+  with neither /LOCAL nor /GLOBAL (the current level's local table, then
+  the global one); that SHOW SYMBOL/ALL takes a name as a filter; that
+  DELETE/SYMBOL/ALL with a name is an error; and `/ALL` of an empty table
+  printing nothing.
+- Tests: the machine-table SHOW SYMBOL tests and CLEAR SYMBOL/TEMPORARY
+  moved to `internal/debugger/symtable_test.go`; `TestGrammarSplit`
+  updated.

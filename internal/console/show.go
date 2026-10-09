@@ -126,7 +126,7 @@ func (c *Console) ShowMemory() error {
 }
 
 // ShowSymbols prints every defined symbol whose name matches pattern,
-// matching SHOW SYMBOL/ALL [pattern]: VMS wildcards, "*" for any run of
+// for the debugger's SHOW SYMBOL/ALL [pattern]: VMS wildcards, "*" for any run of
 // characters and "%" for exactly one; an empty pattern matches every
 // name. The assembler's predefined system symbols are listed too, as the
 // C source's one shared symbol table listed them.
@@ -1183,7 +1183,9 @@ func debugKind(icb *ICB) string {
 	return "  TRACEBACK"
 }
 
-// ShowSymbol prints one symbol's value. A name with VMS wildcards ("*", "%")
+// ShowSymbol prints one symbol's value, for the debugger's SHOW SYMBOL
+// when the program's debug symbols don't have the name. A name with VMS
+// wildcards ("*", "%")
 // lists every symbol it matches instead, as ShowSymbols does; a name the
 // console's table lacks may still be a predefined system symbol
 // (asm.BuiltinSymbol).
@@ -1214,8 +1216,8 @@ func (c *Console) ShowSymbol(name string) error {
 }
 
 // ShowSymbolsSystem prints every system (as opposed to user-defined)
-// symbol whose name matches pattern (see ShowSymbols), matching SHOW
-// SYMBOL/SYSTEM [pattern] (dump_system_symbols).
+// symbol whose name matches pattern (see ShowSymbols), for the
+// debugger's SHOW SYMBOL/SYSTEM [pattern].
 func (c *Console) ShowSymbolsSystem(pattern string) error {
 	return c.showSymbolList(pattern, true)
 }

@@ -225,28 +225,18 @@ grammar console
     
     ! CLEAR (docs/PHASE-42.md): what is left of it at the console. The
     ! debugger's CANCEL took breakpoints, interrupts, the translation
-    ! buffer, and memory statistics; CLEAR ERROR and CLEAR PROFILES had no
-    ! handler and are gone.
+    ! buffer, memory statistics, and the machine's symbol table (CLEAR
+    ! SYMBOL); CLEAR ERROR and CLEAR PROFILES had no handler and are gone.
+    ! A DCL symbol is deleted with DELETE/SYMBOL, as in DCL.
     type clear_types
         keyword     memory              /syntax=clear_memory
-        keyword     symbol              /syntax=clear_symbols
         keyword     strings             /syntax=clear_strings
 
     verb clear
 
         parameter   CLEAR_TYPE/type=clear_types/prompt="What"
 
-        syntax clear_sym_temp/id=115
-        syntax clear_sym_all/id=111
         syntax clear_strings/id=105
-        syntax clear_symbols/id=106
-            qualifier   temporary                   -
-                        /syntax=clear_sym_temp
-            qualifier   all                         -
-                        /syntax=clear_sym_all
-            parameter   p1 /id=1003                 -
-                        /type=$name                 -
-                        /prompt="Symbol"
         syntax clear_memory/id=103
 
 
@@ -315,7 +305,8 @@ grammar console
     ! SHOW (docs/PHASE-42.md): the console's keywords. The machine's
     ! (registers, memory, breakpoints, the stack, ...) are the debugger's.
     ! SHOW ASSEMBLER_FLAGS, COMMAND_ARGS, ERROR, and SHOW SYMBOL/TEMPORARY and
-    ! /UNRESOLVED had no handler, and are gone.
+    ! /UNRESOLVED had no handler, and are gone; SHOW SYMBOL/SYSTEM and the
+    ! machine's SHOW SYMBOL/ALL are the debugger's now.
     verb show/id=120
 
         parameter       SHOW_TYPE/id=160            -
@@ -329,25 +320,16 @@ grammar console
 
         syntax          show_expand/id=188
         syntax          show_rom/id=154
-        syntax          show_sym_all/id=150
-            parameter   symbol          /id=1021    -
-                        /type=$name
-        syntax          show_sym_sys/id=151
-            parameter   symbol          /id=1021    -
-                        /type=$name
-        syntax          show_sym_dcl/id=157
-            parameter   symbol          /id=1021    -
-                        /type=$name
+        ! SHOW SYMBOL [/LOCAL | /GLOBAL] [/ALL] [name]: DCL's symbols, as
+        ! DCL shows them (dclsym.go). The machine's symbol table is the
+        ! debugger's SHOW SYMBOL.
         syntax          show_sym/id=149
-            qualifier   system                      -
-                        /syntax=show_sym_sys
-            qualifier   all                         -
-                        /syntax=show_sym_all
-            qualifier   dcl                         -
-                        /syntax=show_sym_dcl
+            qualifier   all             /id=150
+            qualifier   local           /id=151
+            qualifier   global          /id=157
             parameter   symbol          /id=1021    -
-                        /type=$name                 -
-                        /prompt="Symbol name"
+                        /type=$name
+            disallow    local and global
         syntax          show_radix/id=146
         syntax          show_string/id=121
         syntax          show_nvram/id=122

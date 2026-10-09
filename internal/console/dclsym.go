@@ -27,28 +27,29 @@ import (
 // with LIB$GET_FOREIGN. Any other value is the start of a command, so a
 // symbol is also an abbreviation or an alias for a command.
 //
-// These are not the console's VAX symbols (symbols.go, which ASM, CALL,
-// and EXAMINE use, and SHOW SYMBOL lists): they're a separate table, as
-// DCL's symbols are separate from an image's.
+// These are not the machine's symbol table (symbols.go, which ASM and
+// EXAMINE use, and the debugger's SHOW SYMBOL and CANCEL SYMBOL show and
+// remove): they're a separate table, as DCL's symbols are separate from
+// an image's.
 //
 // What's here, and what isn't:
 //
 //   - ":=" and ":==" assign a string: the rest of the line, with DCL's
 //     usual treatment (dclText). "=" and "==" assign an expression's value;
 //     the console evaluates only a quoted string or a decimal integer.
-//   - DCL has local (":=", "=") and global (":==", "==") symbols. The
-//     console has no command procedures for local symbols to be local to,
-//     so it keeps one table, which every form assigns.
+//   - DCL has local (":=", "=") and global (":==", "==") symbols, kept in
+//     separate tables (dclSymbolTable): one global table, and a local
+//     table for each command level. Today there is only the interactive
+//     level; command procedures will add the others.
 //   - An "*" in the name, as in "DIR*ECTORY", marks how short an
 //     abbreviation of the name still means the symbol.
-//   - DELETE/SYMBOL name removes one (/GLOBAL and /LOCAL are accepted and
-//     mean nothing more).
+//   - DELETE/SYMBOL [/LOCAL | /GLOBAL] [/ALL] [name] removes one, or all
+//     of a table's.
 //   - DCL defaults a foreign command's image to SYS$SYSTEM:; the console
 //     finds it as RUN finds an image instead (unconfirmed nuance: govax
 //     has no SYS$SYSTEM to default to).
-//   - SHOW SYMBOL/DCL [name] shows them (ShowDCLSymbols), as DCL's SHOW
-//     SYMBOL does; the console's own SHOW SYMBOL, without /DCL, shows
-//     its VAX symbols.
+//   - SHOW SYMBOL [/LOCAL | /GLOBAL] [/ALL] [name] shows them
+//     (ShowDCLSymbols), as DCL's SHOW SYMBOL does.
 //   - Not here: apostrophe substitution ('SYMBOL') inside a command.
 
 // maxSymbolDepth is how many times symbol substitution may rewrite one
@@ -67,18 +68,93 @@ type dclSymbol struct {
 	// value is the string the symbol stands for.
 	value string
 
-	// global says it was assigned with ":==" or "==" (a global symbol,
-	// to DCL), not ":=" or "=" (a local one); the console keeps them in
-	// one table, but SHOW SYMBOL/DCL shows which.
+	// global says it was assigned with ":==" or "==", so it's in the
+	// global table, not a local one (":=" or "="); SHOW SYMBOL shows
+	// which by its "==" or "=".
 	global bool
 
 	// integer says "=" or "==" gave it an integer value, which SHOW
-	// SYMBOL/DCL shows as a number, not a string.
+	// SYMBOL shows as a number, not a string.
 	integer bool
 }
 
-// dclSymbols is the console's table of DCL symbols, by full name.
+// dclSymbols is one table of DCL symbols, by full name.
 type dclSymbols map[string]dclSymbol
+
+// dclSymbolTable is a command interpreter's DCL symbols: the global
+// table, and the local table of each command level. levels[0] is the
+// interactive level (the terminal's); a command procedure will run one
+// level deeper, and its local symbols go when it ends. A name is looked
+// up in the current level's local table, then the levels outside it, and
+// then the global table (DCL User's Guide, "Symbol Tables"). The zero
+// value is an empty table, ready to use.
+type dclSymbolTable struct {
+	// global is the global symbol table.
+	global dclSymbols
+
+	// levels are the local symbol tables, outermost (the interactive
+	// level) first; the last is the current command level's.
+	levels []dclSymbols
+}
+
+// symbolScope is which of a dclSymbolTable's tables a SHOW SYMBOL or
+// DELETE/SYMBOL is about: /LOCAL's, /GLOBAL's, or (neither qualifier)
+// the command's default.
+type symbolScope int
+
+const (
+	// scopeDefault is neither /LOCAL nor /GLOBAL.
+	scopeDefault symbolScope = iota
+
+	// scopeLocal is /LOCAL: the current command level's local table.
+	scopeLocal
+
+	// scopeGlobal is /GLOBAL: the global table.
+	scopeGlobal
+)
+
+// local returns the current command level's local table, making the
+// interactive level's if there's none yet.
+func (t *dclSymbolTable) local() dclSymbols {
+	if len(t.levels) == 0 {
+		t.levels = []dclSymbols{{}}
+	}
+
+	return t.levels[len(t.levels)-1]
+}
+
+// globals returns the global table, making it if there's none yet.
+func (t *dclSymbolTable) globals() dclSymbols {
+	if t.global == nil {
+		t.global = dclSymbols{}
+	}
+
+	return t.global
+}
+
+// searchOrder returns the tables a name is looked up in, in order: the
+// local tables from the current level out, then the global table.
+func (t *dclSymbolTable) searchOrder() []dclSymbols {
+	tables := make([]dclSymbols, 0, len(t.levels)+1)
+
+	for i := len(t.levels) - 1; i >= 0; i-- {
+		tables = append(tables, t.levels[i])
+	}
+
+	return append(tables, t.global)
+}
+
+// lookup returns the symbol word means, searching the tables in DCL's
+// order (searchOrder).
+func (t *dclSymbolTable) lookup(word string) (dclSymbol, bool) {
+	for _, table := range t.searchOrder() {
+		if sym, ok := table.lookup(word); ok {
+			return sym, true
+		}
+	}
+
+	return dclSymbol{}, false
+}
 
 // lookup returns the symbol word names: the one whose full name it is, or
 // else the one it's an allowed abbreviation of.
@@ -207,8 +283,11 @@ func (c *Console) assignSymbol(name, op, text string) error {
 }
 
 // assign defines (or redefines) the symbol written as name in t, with
-// operator op and the text after it (see splitAssignment).
-func (t *dclSymbols) assign(name, op, text string) error {
+// operator op and the text after it (see splitAssignment): in the global
+// table for ":==" or "==", otherwise in the current level's local table.
+// A local and a global symbol may have the same name; the local one is
+// found first.
+func (t *dclSymbolTable) assign(name, op, text string) error {
 	full := strings.ToUpper(strings.Replace(name, "*", "", 1))
 	if strings.Contains(full, "*") {
 		return vmserrors.New(vmserrors.CLI_EXPSYN, name)
@@ -235,14 +314,14 @@ func (t *dclSymbols) assign(name, op, text string) error {
 		value, integer = v, isInt
 	}
 
-	if *t == nil {
-		*t = dclSymbols{}
+	global := strings.HasSuffix(op, "==")
+
+	table := t.local()
+	if global {
+		table = t.globals()
 	}
 
-	(*t)[full] = dclSymbol{
-		name: full, minLength: minLength, value: value,
-		global: strings.HasSuffix(op, "=="), integer: integer,
-	}
+	table[full] = dclSymbol{name: full, minLength: minLength, value: value, global: global, integer: integer}
 
 	return nil
 }
@@ -387,65 +466,135 @@ func isDeleteSymbol(verb, rest string) bool {
 	return len(word) >= 2 && strings.HasPrefix("SYMBOL", word)
 }
 
-// deleteSymbols is DELETE/SYMBOL: rest is its qualifiers, then the name
-// of the symbol to delete (all of it, or an allowed abbreviation).
+// deleteSymbols is DELETE/SYMBOL: rest is its qualifiers and the name of
+// the symbol to delete.
 func (c *Console) deleteSymbols(rest string) error {
 	return c.dclSymbols.delete(rest)
 }
 
-// delete is DELETE/SYMBOL on t (deleteSymbols).
-func (t dclSymbols) delete(rest string) error {
-	name := ""
+// symbolCommand is what SHOW SYMBOL's and DELETE/SYMBOL's qualifiers and
+// parameter say: the table (/LOCAL or /GLOBAL), /ALL, and the name.
+type symbolCommand struct {
+	scope symbolScope
+	all   bool
+	name  string
+}
+
+// parseSymbolCommand reads the qualifiers and the symbol name of a SHOW
+// SYMBOL or DELETE/SYMBOL command line (its text after the verb), as
+// DCL does: each qualifier may be abbreviated to its first letter,
+// /SYMBOL (DELETE's) to two. A qualifier it doesn't know, a second name,
+// or /LOCAL with /GLOBAL is CLI_EXPSYN.
+func parseSymbolCommand(rest string) (symbolCommand, error) {
+	var cmd symbolCommand
+
+	local, global := false, false
 
 	for _, field := range strings.Fields(strings.ReplaceAll(rest, "/", " /")) {
-		if !strings.HasPrefix(field, "/") {
-			name = field
+		word, isQualifier := strings.CutPrefix(strings.ToUpper(field), "/")
+
+		switch {
+		case !isQualifier && cmd.name == "":
+			cmd.name = strings.ToUpper(field)
+		case !isQualifier:
+			return cmd, vmserrors.New(vmserrors.CLI_EXPSYN, field)
+		case word != "" && strings.HasPrefix("LOCAL", word):
+			local = true
+		case word != "" && strings.HasPrefix("GLOBAL", word):
+			global = true
+		case word != "" && strings.HasPrefix("ALL", word):
+			cmd.all = true
+		case len(word) >= 2 && strings.HasPrefix("SYMBOL", word):
+			// DELETE's /SYMBOL.
+		default:
+			return cmd, vmserrors.New(vmserrors.CLI_EXPSYN, field)
 		}
 	}
 
-	sym, ok := t.lookup(name)
-	if name == "" || !ok {
-		return vmserrors.New(vmserrors.CLI_UNDEFSYM, name)
+	switch {
+	case local && global:
+		return cmd, vmserrors.New(vmserrors.CLI_EXPSYN, "/LOCAL/GLOBAL")
+	case local:
+		cmd.scope = scopeLocal
+	case global:
+		cmd.scope = scopeGlobal
 	}
 
-	delete(t, sym.name)
+	return cmd, nil
+}
+
+// delete is DELETE/SYMBOL on t, given the command's text after the verb
+// (rest). The table is the current level's local one unless /GLOBAL says
+// the global one (DCL's default is /LOCAL). The name may be any
+// abbreviation the symbol allows; /ALL, with no name, deletes every
+// symbol in the table. Unconfirmed against VMS: that a name given with
+// /ALL is an error (CLI_EXPSYN).
+func (t *dclSymbolTable) delete(rest string) error {
+	cmd, err := parseSymbolCommand(rest)
+	if err != nil {
+		return err
+	}
+
+	table := t.local()
+	if cmd.scope == scopeGlobal {
+		table = t.globals()
+	}
+
+	switch {
+	case cmd.all && cmd.name != "":
+		return vmserrors.New(vmserrors.CLI_EXPSYN, cmd.name)
+	case cmd.all:
+		clear(table)
+
+		return nil
+	case cmd.name == "":
+		return vmserrors.New(vmserrors.CLI_MISSINGPARAMETER, "symbol")
+	}
+
+	sym, ok := table.lookup(cmd.name)
+	if !ok {
+		return vmserrors.New(vmserrors.CLI_UNDEFSYM, cmd.name)
+	}
+
+	delete(table, sym.name)
 
 	return nil
 }
 
-// clone returns a copy of t: what a spawned subprocess's CLI starts with
-// (subcli.go).
-func (t dclSymbols) clone() dclSymbols {
-	c := make(dclSymbols, len(t))
-	for name, sym := range t {
-		c[name] = sym
+// clone returns a copy of t, every table of it: what a spawned
+// subprocess's CLI starts with (subcli.go), as LIB$SPAWN copies both
+// the local and the global symbols. The subprocess starts at its own
+// interactive level, so the local symbols of every level are copied
+// into its one level, an inner level's replacing an outer one's.
+func (t *dclSymbolTable) clone() dclSymbolTable {
+	c := dclSymbolTable{global: dclSymbols{}, levels: []dclSymbols{{}}}
+
+	for name, sym := range t.global {
+		c.global[name] = sym
+	}
+
+	for _, level := range t.levels {
+		for name, sym := range level {
+			c.levels[0][name] = sym
+		}
 	}
 
 	return c
 }
 
-// ShowDCLSymbols is SHOW SYMBOL/DCL [name]: the DCL symbol name means (an
-// abbreviation it allows will do), the ones a wildcard name matches, or
-// with no name every one, in name order, as DCL's SHOW SYMBOL shows them:
+// showDCLSymbols is the console's SHOW SYMBOL, as DCL's: cmd is the
+// command's qualifiers and symbol name (see show). Each symbol is a line
 //
 //	FO*RTH == "$DUA0:[TOOLS]FORTH.EXE"
 //	COUNT = 42   Hex = 0000002A  Octal = 00000000052
 //
-// "==" is a global symbol's, "=" a local one's (see assignSymbol), and an
-// "*" marks the shortest abbreviation. A quote in a string value is
-// doubled. Unconfirmed against VMS: the integer line's spacing.
-func (c *Console) ShowDCLSymbols(name string) error {
-	name = strings.ToUpper(strings.TrimSpace(name))
-
-	shown := c.dclSymbols.matching(name)
-	if len(shown) == 0 {
-		if name == "" {
-			c.Printf("No DCL symbols are defined\n")
-
-			return nil
-		}
-
-		return vmserrors.New(vmserrors.CLI_UNDEFSYM, name)
+// "==" is a global symbol's, "=" a local one's, and an "*" marks the
+// shortest abbreviation. A quote in a string value is doubled.
+// Unconfirmed against VMS: the integer line's spacing.
+func (c *Console) showDCLSymbols(cmd symbolCommand) error {
+	shown, err := c.dclSymbols.show(cmd)
+	if err != nil {
+		return err
 	}
 
 	for _, sym := range shown {
@@ -455,22 +604,78 @@ func (c *Console) ShowDCLSymbols(name string) error {
 	return nil
 }
 
-// matching returns the symbols SHOW SYMBOL shows for name (in upper
-// case): the one it means (an abbreviation it allows will do), the ones
-// a wildcard name matches, or with no name every one, in name order.
-func (t dclSymbols) matching(name string) []dclSymbol {
-	if name != "" && !lnm.HasWildcards(name) {
-		if sym, ok := t.lookup(name); ok {
-			return []dclSymbol{sym}
-		}
+// show returns the symbols SHOW SYMBOL shows for cmd, by DCL's rules:
+//
+//   - A name (or an abbreviation the symbol allows) is looked up in the
+//     table /LOCAL or /GLOBAL names, or, with neither, in DCL's search
+//     order (the local tables from the current level out, then the
+//     global table); the first symbol found is shown.
+//   - A name with the wildcards "*" and "%" shows every symbol it
+//     matches in that table, or, with neither qualifier, in the current
+//     level's local table and then the global table, each in name order.
+//   - /ALL shows every symbol in the table /LOCAL or /GLOBAL names, the
+//     current level's local table with neither; a name given too limits
+//     it to the symbols the name matches.
+//
+// A name that finds nothing is CLI_UNDEFSYM; no name and no /ALL is
+// CLI_MISSINGPARAMETER. /ALL of an empty table shows nothing.
+// Unconfirmed against VMS: which tables a wildcard name searches with
+// neither qualifier (the outer levels' local tables aren't searched),
+// and that a name may be given with /ALL.
+func (t *dclSymbolTable) show(cmd symbolCommand) ([]dclSymbol, error) {
+	var tables []dclSymbols
 
-		return nil
+	switch cmd.scope {
+	case scopeLocal:
+		tables = []dclSymbols{t.local()}
+	case scopeGlobal:
+		tables = []dclSymbols{t.global}
+	case scopeDefault:
+		switch {
+		case cmd.all:
+			tables = []dclSymbols{t.local()}
+		case lnm.HasWildcards(cmd.name):
+			tables = []dclSymbols{t.local(), t.global}
+		default:
+			tables = t.searchOrder()
+		}
+	}
+
+	if cmd.name == "" && !cmd.all {
+		return nil, vmserrors.New(vmserrors.CLI_MISSINGPARAMETER, "symbol")
 	}
 
 	var shown []dclSymbol
 
+	if cmd.all || lnm.HasWildcards(cmd.name) {
+		for _, table := range tables {
+			shown = append(shown, table.matching(cmd.name)...)
+		}
+	} else {
+		for _, table := range tables {
+			if sym, ok := table.lookup(cmd.name); ok {
+				shown = []dclSymbol{sym}
+
+				break
+			}
+		}
+	}
+
+	if len(shown) == 0 && cmd.name != "" {
+		return nil, vmserrors.New(vmserrors.CLI_UNDEFSYM, cmd.name)
+	}
+
+	return shown, nil
+}
+
+// matching returns the symbols in t whose names pattern (in upper case,
+// with VMS wildcards) matches, every one for an empty pattern, in name
+// order.
+func (t dclSymbols) matching(pattern string) []dclSymbol {
+	var shown []dclSymbol
+
 	for _, sym := range t {
-		if name == "" || lnm.Match(name, sym.name) {
+		if pattern == "" || lnm.Match(pattern, sym.name) {
 			shown = append(shown, sym)
 		}
 	}
@@ -480,7 +685,7 @@ func (t dclSymbols) matching(name string) []dclSymbol {
 	return shown
 }
 
-// showLine is sym's line in SHOW SYMBOL/DCL.
+// showLine is sym's line in SHOW SYMBOL.
 func (sym dclSymbol) showLine() string {
 	name := sym.name
 	if sym.minLength < len(name) {

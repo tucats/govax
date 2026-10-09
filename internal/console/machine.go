@@ -266,8 +266,9 @@ type Console struct {
 	runHost bool
 
 	// dclSymbols are the DCL symbols assignments at the prompt define
-	// (dclsym.go): foreign commands and command abbreviations.
-	dclSymbols dclSymbols
+	// (dclsym.go): foreign commands and command abbreviations, global
+	// and local.
+	dclSymbols dclSymbolTable
 
 	// clis are the command interpreters of the processes that run one
 	// (subcli.go: LIB$SPAWN's, and $CREPRC's of LOGINOUT), by process.

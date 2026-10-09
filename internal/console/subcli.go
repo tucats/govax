@@ -112,8 +112,8 @@ var (
 type subprocessCLI struct {
 	env *corevms.Environment
 
-	// symbols are its DCL symbols.
-	symbols dclSymbols
+	// symbols are its DCL symbols, global and local.
+	symbols dclSymbolTable
 
 	// command is the one command LIB$SPAWN gave it to run before it
 	// logs out, if hasCommand; commandDone is set once it has been read.
@@ -182,12 +182,14 @@ type cliHost struct{ c *Console }
 // InheritSymbols gives child a copy of parent's DCL symbols: the
 // console's own for process 1, otherwise parent's CLI's.
 func (h cliHost) InheritSymbols(parent, child *corevms.Environment) {
-	var from dclSymbols
+	var from *dclSymbolTable
 
 	if parent == h.c.RTL {
-		from = h.c.dclSymbols
+		from = &h.c.dclSymbols
 	} else if cli := h.c.clis[parent]; cli != nil {
-		from = cli.symbols
+		from = &cli.symbols
+	} else {
+		from = &dclSymbolTable{}
 	}
 
 	h.c.cliOf(child).symbols = from.clone()
@@ -656,29 +658,26 @@ func (cli *subprocessCLI) show(rest string) {
 	}
 }
 
-// showSymbol is SHOW SYMBOL name: the symbol's line, as the console's
-// SHOW SYMBOL/DCL shows it, or (as VMS's DCL did in testdata/mp/probe4)
-// %DCL-W-UNDSYM with no second line. A wildcard name shows each symbol
-// it matches. Qualifiers (/LOCAL, /GLOBAL) are accepted and ignored.
+// showSymbol is SHOW SYMBOL [/LOCAL | /GLOBAL] [/ALL] [name]: each
+// symbol's line, as the console's SHOW SYMBOL shows it (dclSymbolTable's
+// show), or (as VMS's DCL did in testdata/mp/probe4) %DCL-W-UNDSYM with
+// no second line.
 func (cli *subprocessCLI) showSymbol(fields []string) {
-	name := ""
+	cmd, err := parseSymbolCommand(strings.Join(fields, " "))
+	if err != nil {
+		cli.complete(err)
 
-	for _, f := range fields {
-		if !strings.HasPrefix(f, "/") {
-			name = strings.ToUpper(f)
-
-			break
-		}
+		return
 	}
 
-	if name == "" {
+	if cmd.name == "" && !cmd.all {
 		cli.fail(cliStatusInsfprm, "%DCL-W-INSFPRM, missing command parameters - supply all required parameters", "")
 
 		return
 	}
 
-	shown := cli.symbols.matching(name)
-	if len(shown) == 0 {
+	shown, err := cli.symbols.show(cmd)
+	if err != nil {
 		cli.fail(cliStatusUndsym, "%DCL-W-UNDSYM, undefined symbol - check validity and spelling", "")
 
 		return

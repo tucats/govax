@@ -101,16 +101,18 @@ func TestParse_showInstructionsRestOfLine(t *testing.T) {
 	}
 }
 
-func TestParse_clearSymbolAll(t *testing.T) {
+// TestParse_qualifierSyntax: a qualifier with /syntax= switches the
+// command to that syntax.
+func TestParse_qualifierSyntax(t *testing.T) {
 	g := loadEvaxGrammar(t)
 
-	r, err := g.Parse("CLEAR SYMBOL/ALL")
+	r, err := g.Parse("ANALYZE/IMAGE X.EXE")
 	if err != nil {
 		t.Fatalf("Parse: %v", err)
 	}
 
-	if r.Active != "CLEAR_SYM_ALL" {
-		t.Errorf("Active=%s, want CLEAR_SYM_ALL", r.Active)
+	if r.Active != "ANALYZE_IMAGE" {
+		t.Errorf("Active=%s, want ANALYZE_IMAGE", r.Active)
 	}
 }
 

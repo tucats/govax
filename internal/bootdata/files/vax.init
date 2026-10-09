@@ -39,7 +39,6 @@ print " "
 ; it is a debugger command.
 
 asm  "kernel.asm"
-clear sym/all
 
 
 set quantum 1

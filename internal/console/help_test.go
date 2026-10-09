@@ -188,8 +188,8 @@ func TestLoadHelpFile_everyKeyResolves(t *testing.T) {
 }
 
 // TestCmdHelp_qualifierWithoutSpace checks that HELP splits a qualifier
-// off the word it's attached to, as DCL does: HELP SHOW SYMBOL/SYSTEM is
-// HELP SHOW SYMBOL /SYSTEM, not SHOW SYMB(OL/SYSTEM).
+// off the word it's attached to, as DCL does: HELP DELETE/SYMBOL is
+// HELP DELETE /SYMBOL, not DELE(TE/SYMBOL).
 func TestCmdHelp_qualifierWithoutSpace(t *testing.T) {
 	h, err := LoadHelpFile(vaxHelpPath(t))
 	if err != nil {
@@ -199,15 +199,15 @@ func TestCmdHelp_qualifierWithoutSpace(t *testing.T) {
 	c, buf := newTestConsole(t)
 	d := NewDispatcher(c, loadEvaxGrammar(t), h)
 
-	for _, arg := range []string{"SHOW SYMBOL/SYSTEM", "SHOW SYMBOL /SYSTEM", "SHOW SYMBOL/ALL"} {
+	for _, arg := range []string{"DELETE/SYMBOL", "DELETE /SYMBOL", "DEL/SYM"} {
 		buf.Reset()
 
 		if err := d.Dispatch("HELP " + arg); err != nil {
 			t.Fatalf("HELP %s: %v", arg, err)
 		}
 
-		if !strings.Contains(buf.String(), "SHOW SYMBOLS/SYSTEM [<name>]") {
-			t.Errorf("HELP %s = %q, want the /ALL and /SYSTEM topic", arg, buf.String())
+		if !strings.Contains(buf.String(), "DELETE/SYMBOL [/LOCAL | /GLOBAL] /ALL") {
+			t.Errorf("HELP %s = %q, want the DELETE/SYMBOL topic", arg, buf.String())
 		}
 	}
 }

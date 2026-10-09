@@ -219,7 +219,12 @@ expect adjustment as phases land):
   the console and the debugger each have their own radix. `SET PROCESS
   [pid|name]` (`process.go`) moves the CPU to another process so the
   debugger shows its context (STEP and breakpoints stay with process 1),
-  and the debugger's `SHOW PROCESS` lists the processes.
+  and the debugger's `SHOW PROCESS` lists the processes. **Symbols are
+  split the same way:** the console's SHOW SYMBOL and DELETE/SYMBOL are
+  DCL's (`internal/console/dclsym.go`'s `dclSymbolTable`: a global table
+  and a local table per command level), and the machine's symbol table
+  (`Console.Symbols`, ASM's symbols and the predefined ones) is the
+  debugger's SHOW SYMBOL (`/ALL`, `/SYSTEM`) and CANCEL/CLEAR SYMBOL.
   `internal/console/consoletest` is its test support.
 - `internal/io` — device abstraction (Phase 09).
 - `internal/vmsdef` — VMS's own definitions, shared by the assembler, RTL, RMS,

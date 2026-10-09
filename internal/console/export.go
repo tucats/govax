@@ -7,6 +7,7 @@ import (
 	"github.com/tucats/govax/internal/cpu"
 	"github.com/tucats/govax/internal/dbgsym"
 	"github.com/tucats/govax/internal/disasm"
+	"github.com/tucats/govax/internal/asm"
 	"github.com/tucats/govax/internal/lnm"
 	"github.com/tucats/govax/internal/vax"
 	"github.com/tucats/govax/internal/vmserrors"
@@ -409,21 +410,20 @@ func (c *Console) ScopeFrames() (paths []string, ok bool, err error) {
 // written in, as the debugger shows it (MACRO).
 func LanguageName(code uint32) string { return languageName(code) }
 
-// HasSymbol reports whether the console's own symbol table (not the
+// HasSymbol reports whether the machine's symbol table (not the
 // program's debug symbols) has a symbol matching name, which may contain
-// the VMS wildcards.
+// the VMS wildcards; the assembler's predefined system symbols count, as
+// they do in SHOW SYMBOL's listings.
 func (c *Console) HasSymbol(name string) bool {
 	if lnm.HasWildcards(name) {
-		for _, s := range c.Symbols.All() {
-			if lnm.Match(strings.ToUpper(name), strings.ToUpper(s.Name)) {
-				return true
-			}
-		}
-
-		return false
+		return len(c.listSymbols(name, false)) > 0
 	}
 
-	_, ok := c.Symbols.Find(name)
+	if _, ok := c.Symbols.Find(name); ok {
+		return true
+	}
+
+	_, ok := asm.BuiltinSymbol(name)
 
 	return ok
 }

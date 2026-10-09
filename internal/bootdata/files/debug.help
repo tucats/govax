@@ -138,7 +138,7 @@ $CLEA
 
   Additional information available:
 
-  BREAK  INTERRUPT  MEMORY  MODE  RADIX  SOURCE  TB  TRACE  WATCH
+  BREAK  INTERRUPT  MEMORY  MODE  RADIX  SOURCE  SYMBOL  TB  TRACE  WATCH
 
 $CANC,BREA
 $CLEA,BREA
@@ -240,6 +240,22 @@ $CLEA,MEMO
   Format:
 
     CANCEL MEMORY/STATISTICS
+
+$CANC,SYMB
+$CLEA,SYMB
+  Removes symbols from the machine's symbol table (govax's own): the table
+  ASM and SET SYMBOL define symbols in, and SHOW SYMBOL/ALL lists. System
+  symbols are never removed. (At the console, DELETE/SYMBOL deletes DCL
+  symbols, which are a different table.)
+
+  Format:
+
+    CANCEL SYMBOL name
+    CANCEL SYMBOL/ALL
+    CANCEL SYMBOL/TEMPORARY
+
+  /ALL removes every user symbol, and /TEMPORARY every user symbol not
+  defined with SET/PERMANENT.
 
 $DEPO
 $D
@@ -928,7 +944,19 @@ $SH,SYMB
   by name. /ADDRESS shows each one's address, and /TYPE its data type.
 
   A pattern that matches no symbol of the program is tried against the
-  console's symbol table, and then is %DEBUG-E-NOSYMBOL.
+  machine's symbol table (the symbols ASM defines, and the predefined
+  system symbols such as PTE$K_UR and VAX$PR_SBR), and then is
+  %DEBUG-E-NOSYMBOL.
+
+  SHOW SYMBOL/ALL and SHOW SYMBOL/SYSTEM (govax's own) list the machine's
+  symbol table alone: every symbol, or only the system symbols. The pattern
+  is then optional.
+
+    SHOW SYMBOL/ALL [pattern]
+    SHOW SYMBOL/SYSTEM [pattern]
+
+  For example, SHOW SYMBOL/SYSTEM CONSOLE$*. (At the console, SHOW SYMBOL
+  shows DCL symbols, a different table.)
 
 $SHOW,SCOP
 $SH,SCOP

@@ -105,7 +105,11 @@ func TestGrammarSplit(t *testing.T) {
 		{"SHOW ROM", consoleOnly},
 		{"SHOW NVRAM", consoleOnly},
 		{"SHOW STRING_POOL", consoleOnly},
-		{"SHOW SYMBOLS A", consoleOnly},
+		{"SHOW SYMBOLS A", both},           // the console's are DCL's symbols; the debugger's the program's and the machine's
+		{"SHOW SYMBOL/GLOBAL A", consoleOnly}, // DCL's
+		{"SHOW SYMBOL/LOCAL/ALL", consoleOnly},
+		{"SHOW SYMBOL/SYSTEM", debuggerOnly}, // the machine's symbol table
+		{"SHOW SYMBOL/ADDRESS A", debuggerOnly},
 
 		// SHOW: the debugger's.
 		{"SHOW REGISTERS", debuggerOnly},
@@ -136,7 +140,7 @@ func TestGrammarSplit(t *testing.T) {
 		{"SHOW IMAGE", debuggerOnly},
 		{"SHOW MODULE", debuggerOnly},
 		{"SHOW PROCESS", both},
-		{"SHOW SYMBOL A", both}, // the console abbreviates SYMBOLS; the debugger's is VMS's SHOW SYMBOL
+		{"SHOW SYMBOL A", both}, // DCL's symbols at the console; the debugger's is VMS's SHOW SYMBOL
 		{"SHOW SCOPE", debuggerOnly},
 		{"SHOW LANGUAGE", debuggerOnly},
 		{"SHOW SOURCE", debuggerOnly},
@@ -178,7 +182,10 @@ func TestGrammarSplit(t *testing.T) {
 		// CLEAR and CANCEL: the console clears its own data; the debugger
 		// cancels (and takes CLEAR as a synonym for the keywords it has).
 		{"CLEAR STRINGS", consoleOnly},
-		{"CLEAR SYMBOL/ALL", consoleOnly},
+		{"CLEAR SYMBOL/ALL", debuggerOnly}, // the machine's symbol table; DCL's is DELETE/SYMBOL
+		{"CANCEL SYMBOL A", debuggerOnly},
+		{"CLEAR SYM/ALL", debuggerOnly},
+		{"SHOW SYM A", both},
 		{"CLEAR MEMORY", both}, // the console's wipes memory; the debugger's has /STATISTICS
 		{"CANCEL BREAK/ALL", debuggerOnly},
 		{"CANCEL TRACE/ALL", debuggerOnly},

@@ -204,8 +204,9 @@ func (c *Console) Include(path string, dispatch func(string) error) error {
 	return nil
 }
 
-// ClearSymbol implements CLEAR SYMBOL: a specific name, or every user
-// symbol (CLEAR SYMBOL/ALL) — Its /TEMPORARY distinction is ClearSymbolTemporary, below.
+// ClearSymbol implements the debugger's CANCEL (or CLEAR) SYMBOL: a
+// specific name, or every user symbol (/ALL). Its /TEMPORARY distinction
+// is ClearSymbolTemporary, below.
 func (c *Console) ClearSymbol(name string, all bool) error {
 	if err := c.requireInit(); err != nil {
 		return err
@@ -222,7 +223,7 @@ func (c *Console) ClearSymbol(name string, all bool) error {
 	return nil
 }
 
-// ClearSymbolTemporary implements CLEAR SYMBOL/TEMPORARY.
+// ClearSymbolTemporary implements the debugger's CANCEL SYMBOL/TEMPORARY.
 func (c *Console) ClearSymbolTemporary() error {
 	if err := c.requireInit(); err != nil {
 		return err

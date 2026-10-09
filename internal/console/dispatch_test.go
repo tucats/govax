@@ -374,24 +374,6 @@ func TestDispatch_clearStringsAndInterrupt(t *testing.T) {
 	}
 }
 
-func TestDispatch_clearSymbolTemporary(t *testing.T) {
-	d, c := newTestDispatcher(t)
-	c.Symbols.SetQualified("PERM", 1, true, false, false)
-	c.Symbols.SetQualified("TEMP", 2, false, false, false)
-
-	if err := d.Dispatch("CLEAR SYMBOL/TEMPORARY"); err != nil {
-		t.Fatalf("Dispatch(CLEAR SYMBOL/TEMPORARY): %v", err)
-	}
-
-	if _, ok := c.Symbols.Get("PERM"); !ok {
-		t.Error("expected PERM to survive")
-	}
-
-	if _, ok := c.Symbols.Get("TEMP"); ok {
-		t.Error("expected TEMP to be cleared")
-	}
-}
-
 // TestDispatch_notImplementedCommand checks BOOT, still gated behind
 // notImplemented (commands.go; device/RTL support) -- ASM used to be this test's own
 // example (its bare, no-filename form returned CLI_NOASMREPL) until

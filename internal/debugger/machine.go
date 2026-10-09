@@ -130,6 +130,18 @@ func (d *Dispatcher) bindMachine() {
 
 	g.Bind("CANCEL_MODE", func(id int64, r *dcl.Result) error { return d.Debugger.cancelMode() })
 	g.Bind("CANCEL_TB", func(id int64, r *dcl.Result) error { return c.ClearTB() })
+	g.Bind("CANCEL_SYMBOL", func(id int64, r *dcl.Result) error {
+		switch {
+		case r.Present("ALL"):
+			return c.ClearSymbol("", true)
+		case r.Present("TEMPORARY"):
+			return c.ClearSymbolTemporary()
+		case r.String("NAME") == "":
+			return vmserrors.New(vmserrors.CLI_MISSINGPARAMETER, "symbol")
+		}
+
+		return c.ClearSymbol(r.String("NAME"), false)
+	})
 	g.Bind("CANCEL_MEMORY", func(id int64, r *dcl.Result) error {
 		return vmserrors.New(vmserrors.DBG_SYNTAX, "MEMORY")
 	})

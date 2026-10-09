@@ -47,6 +47,13 @@ func (d *Dispatcher) bindProgram() {
 	g.Bind("SHOW_LANGUAGE", func(id int64, r *dcl.Result) error { return dbg.showLanguage() })
 	g.Bind("SHOW_SCOPE", func(id int64, r *dcl.Result) error { return dbg.showScope() })
 	g.Bind("SHOW_SYMBOL", func(id int64, r *dcl.Result) error {
+		switch {
+		case r.Present("ALL"):
+			return dbg.Console.ShowSymbols(r.String("PATTERN"))
+		case r.Present("SYSTEM"):
+			return dbg.Console.ShowSymbolsSystem(r.String("PATTERN"))
+		}
+
 		return dbg.showSymbol(r.String("PATTERN"), r.Present("ADDRESS"), r.Present("TYPE"))
 	})
 	g.Bind("SET_MODULE", func(id int64, r *dcl.Result) error {
@@ -363,7 +370,10 @@ func (d *Debugger) showScope() error {
 // VMS wildcards "*" (any run of characters) and "%" (one character). With
 // IN the search is those modules; without it, the modules whose symbols
 // are set (SET MODULE), and, when none of them has a match, the console's
-// own symbol table (the symbols DEFINE and SET SYMBOL make).
+// own symbol table (the symbols ASM and SET SYMBOL make, and the
+// assembler's predefined system symbols). SHOW SYMBOL/ALL and
+// SHOW SYMBOL/SYSTEM, govax's own, list that table alone (the console's
+// ShowSymbols and ShowSymbolsSystem), with or without a pattern.
 //
 // Each symbol is a line "kind PATH" and, below it, what the qualifier
 // asks for: /ADDRESS (the default) gives its address, size, or constant

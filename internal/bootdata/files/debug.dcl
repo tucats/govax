@@ -290,7 +290,9 @@ grammar debugger
         keyword     images              /syntax=show_image
         keyword     module              /syntax=show_module
         keyword     modules             /syntax=show_module
-        keyword     symbol              /syntax=show_symbol
+        ! SYMBOL is an abbreviation of SYMBOLS; a keyword of each would make
+        ! SYM ambiguous.
+        keyword     symbols             /syntax=show_symbol
         keyword     scope               /syntax=show_scope
         keyword     language            /syntax=show_language
         keyword     r0
@@ -362,7 +364,10 @@ grammar debugger
         ! What the debugger knows about the program (VMS's own commands).
         ! SHOW IMAGE lists the loaded images, SHOW MODULE the modules of
         ! the program's debug symbols, SHOW SYMBOL the symbols matching a
-        ! pattern ("pattern [IN module[,module...]]", read by the handler),
+        ! pattern ("pattern [IN module[,module...]]", read by the handler;
+        ! /ALL and /SYSTEM, govax's own, list the machine's symbol table
+        ! instead, every symbol or the system symbols, the pattern then
+        ! optional),
         ! SHOW SCOPE the call levels names are looked up in, and SHOW
         ! LANGUAGE the language of the current module.
         syntax show_image/id=270
@@ -372,9 +377,11 @@ grammar debugger
         syntax show_symbol/id=273
             qualifier   address/id=274
             qualifier   type/id=275
+            qualifier   all/id=330/nonegatable
+            qualifier   system/id=331/nonegatable
             parameter   pattern/id=276          -
-                        /type=$rest_of_line     -
-                        /prompt="Symbol"
+                        /type=$rest_of_line
+            disallow    all and system
         syntax show_scope/id=277
         syntax show_language/id=278
 
@@ -461,6 +468,7 @@ grammar debugger
         keyword     tb                  /syntax=cancel_tb
         keyword     translation_buffer  /syntax=cancel_tb
         keyword     memory              /syntax=cancel_memory
+        keyword     symbols             /syntax=cancel_symbol
 
     verb cancel/id=50
         parameter   what/id=51                  -
@@ -519,6 +527,17 @@ grammar debugger
         syntax cancel_tb/id=264
         syntax cancel_memory/id=265
             qualifier   statistics/id=266
+
+        ! CANCEL SYMBOL name removes a symbol from the machine's symbol
+        ! table (the one ASM and DEPOSIT use); /ALL removes every user
+        ! symbol, and /TEMPORARY every one not made /PERMANENT; system
+        ! symbols stay (govax's own).
+        syntax cancel_symbol/id=332
+            qualifier   all/id=333/nonegatable
+            qualifier   temporary/id=334/nonegatable
+            parameter   name/id=335             -
+                        /type=$name
+            disallow    all and temporary
 
     ! CLEAR is a govax synonym for CANCEL (the console's old verb).
     verb clear/alias=cancel
