@@ -449,9 +449,12 @@ changed as a result.
 
 - **Where**: `internal/corevms/qio.go`, `internal/corevms/ttdriver.go`.
 - **What**:
-  - Every terminal request completes before `$QIO` returns. A read with
+  - ~~Every terminal request completes before `$QIO` returns. A read with
     no input typed yet blocks the whole emulator until the host delivers
-    a line. (Mailbox requests can wait, since subtask 29.)
+    a line.~~ (Mailbox requests can wait, since subtask 29.) Fixed
+    2026-10-09 (Phase 49, subtask 10): with the scheduler on, a read
+    whose line isn't there stays pending and completes when it's typed;
+    with the scheduler off a read still blocks.
   - Only terminals and mailboxes have drivers. A `$QIO` to any other
     device (a disk, say) is `SS$_ILLIOFUNC`, where VMS would perform the
     I/O.

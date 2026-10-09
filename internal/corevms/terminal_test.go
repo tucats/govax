@@ -184,3 +184,144 @@ func TestTerminal_inputShims(t *testing.T) {
 		t.Errorf("the terminal's queue has %d reads, want none", len(env.terminalQueue))
 	}
 }
+
+// pendingFixture is an Environment with the scheduler on, its console a
+// scriptedTerminal, a terminal TTA0 and a user-mode channel to it.
+func pendingFixture(t *testing.T) (*Environment, *scriptedTerminal, *bytes.Buffer, *arena, uint32) {
+	t.Helper()
+
+	env, out, a, ch := qioFixture(t, "")
+	withScheduler(env)
+
+	term := &scriptedTerminal{}
+	env.consoleIn = term
+
+	return env, term, out, a, ch
+}
+
+// TestTerminal_pendingQIO: a $QIO read with nothing typed returns
+// SS$_NORMAL at once, the read pending (its event flag clear, its IOSB
+// untouched), and the process goes on; its prompt is written once; a
+// partial line completes nothing; the whole line completes the read at
+// the scheduler's next look: the buffer, the IOSB, the event flag, the
+// AST.
+func TestTerminal_pendingQIO(t *testing.T) {
+	env, term, out, a, ch := pendingFixture(t)
+	iosb, buf := a.alloc(8), a.alloc(20)
+
+	wantR0(t, callQIO(t, env, qioArgs{
+		efn: 5, channel: ch, function: fnReadPrompt, iosb: iosb, astadr: 0x4000, astprm: 9,
+		p: [6]uint32{buf, 20, 0, 0, a.str("> "), 2},
+	}), ssNormal)
+
+	if env.PendingIO() != 1 || flagSet(env, 5) || a.readLong(iosb) != 0 {
+		t.Fatalf("after $QIO: pending %d, flag %v, IOSB %08X; want the read pending", env.PendingIO(), flagSet(env, 5), a.readLong(iosb))
+	}
+
+	term.typeIn("ab")
+	env.pollEvents()
+
+	if env.PendingIO() != 1 {
+		t.Fatal("a partial line completed the read")
+	}
+
+	term.typeIn("c\r")
+	env.pollEvents()
+
+	if st, n, info := readIOSB(a, iosb); st != ssNormal || n != 3 || info != 0x1000D {
+		t.Errorf("IOSB = %d, %d, %#x; want SS$_NORMAL, 3, 0x1000D", st, n, info)
+	}
+
+	if got := a.readString(buf, 3); got != "abc" {
+		t.Errorf("buffer %q, want abc", got)
+	}
+
+	if !flagSet(env, 5) || len(env.Process.ast.queue) != 1 || env.PendingIO() != 0 || len(env.terminalQueue) != 0 {
+		t.Errorf("flag %v, ASTs %d, pending %d, queue %d; want set, 1, 0, 0",
+			flagSet(env, 5), len(env.Process.ast.queue), env.PendingIO(), len(env.terminalQueue))
+	}
+
+	if out.String() != "> " {
+		t.Errorf("output %q, want the prompt once", out.String())
+	}
+}
+
+// TestTerminal_typedAhead: a $QIO read whose line is already typed, with
+// no read ahead of it, completes during the $QIO.
+func TestTerminal_typedAhead(t *testing.T) {
+	env, term, _, a, ch := pendingFixture(t)
+	iosb, buf := a.alloc(8), a.alloc(20)
+
+	term.typeIn("now\r")
+
+	wantR0(t, callQIO(t, env, qioArgs{efn: 1, channel: ch, function: fnReadVBlk, iosb: iosb, p: [6]uint32{buf, 20}}), ssNormal)
+
+	if st, n, _ := readIOSB(a, iosb); st != ssNormal || n != 3 || env.PendingIO() != 0 || len(env.terminalQueue) != 0 {
+		t.Errorf("IOSB %d, %d; pending %d, queue %d; want completed at once", st, n, env.PendingIO(), len(env.terminalQueue))
+	}
+}
+
+// TestTerminal_pendingOrder: reads complete in the order they were made.
+// A synchronous read made after a pending $QIO read waits behind it,
+// though a line is there, and gets the second line; a second $QIO read
+// gets the third.
+func TestTerminal_pendingOrder(t *testing.T) {
+	env, term, _, a, ch := pendingFixture(t)
+	other := newProcess(t, env)
+	other.consoleIn = term
+
+	iosb1, buf1 := a.alloc(8), a.alloc(20)
+	iosb2, buf2 := a.alloc(8), a.alloc(20)
+
+	wantR0(t, callQIO(t, env, qioArgs{efn: 1, channel: ch, function: fnReadVBlk, iosb: iosb1, p: [6]uint32{buf1, 20}}), ssNormal)
+
+	term.typeIn("one\rtwo\rthree\r")
+
+	if _, _, err := other.ReadInputLine("", 80); !errors.Is(err, ErrWait) {
+		t.Fatalf("the read behind the $QIO's: %v, want ErrWait", err)
+	}
+
+	other.enterWait(true)
+
+	wantR0(t, callQIO(t, env, qioArgs{efn: 2, channel: ch, function: fnReadVBlk, iosb: iosb2, p: [6]uint32{buf2, 20}}), ssNormal)
+
+	// The scheduler's look completes the first $QIO read and ends the
+	// synchronous read's wait; the second $QIO read is behind it.
+	env.pollEvents()
+
+	if got := a.readString(buf1, 3); got != "one" || !flagSet(env, 1) || flagSet(env, 2) {
+		t.Fatalf("first read %q, flags 1 %v, 2 %v; want one, set, clear", got, flagSet(env, 1), flagSet(env, 2))
+	}
+
+	wantState(t, other, sched.StateCOM, sched.ResourceNone)
+
+	if line, _, err := other.ReadInputLine("", 80); err != nil || line != "two" {
+		t.Fatalf("synchronous read %q, %v; want two", line, err)
+	}
+
+	// Its turn over, the second $QIO read completes with the line there.
+	if st, n, _ := readIOSB(a, iosb2); st != ssNormal || n != 5 || a.readString(buf2, 5) != "three" || len(env.terminalQueue) != 0 {
+		t.Errorf("second read %d, %d, %q, queue %d; want SS$_NORMAL, 5, three, empty", st, n, a.readString(buf2, 5), len(env.terminalQueue))
+	}
+}
+
+// TestTerminal_cancelPending: $CANCEL completes a pending read with
+// SS$_CANCEL and takes it out of the terminal's queue, so what is typed
+// next goes to the next read.
+func TestTerminal_cancelPending(t *testing.T) {
+	env, term, _, a, ch := pendingFixture(t)
+	iosb, buf := a.alloc(8), a.alloc(20)
+
+	wantR0(t, callQIO(t, env, qioArgs{efn: 1, channel: ch, function: fnReadVBlk, iosb: iosb, p: [6]uint32{buf, 20}}), ssNormal)
+	wantR0(t, callLNM(t, env, serviceSysCancel, ch), ssNormal)
+
+	if st, _, _ := readIOSB(a, iosb); st != uint16(ssCancel) || !flagSet(env, 1) || len(env.terminalQueue) != 0 {
+		t.Fatalf("IOSB %d, flag %v, queue %d; want SS$_CANCEL, set, empty", st, flagSet(env, 1), len(env.terminalQueue))
+	}
+
+	term.typeIn("later\r")
+
+	if line, _, err := env.ReadInputLine("", 80); err != nil || line != "later" {
+		t.Errorf("next read %q, %v; want later", line, err)
+	}
+}

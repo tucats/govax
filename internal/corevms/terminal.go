@@ -35,11 +35,16 @@ import (
 // input stream that is a TerminalSource. Otherwise a read blocks, as it
 // always has: with one process there is nobody else to run.
 //
-// A $QIO read that must wait makes the $QIO itself wait (the request is
-// made again when the line has come), rather than completing later: a
-// program that issues a read and then waits for its event flag waits the
-// same, but one that goes on to do other work before waiting can't.
-// *Unconfirmed simplification.*
+// A $QIO read that must wait doesn't make the $QIO wait (docs/PHASE-49.md,
+// subtask 10): as on VMS, the $QIO returns SS$_NORMAL with the read
+// queued, its request in the terminal's queue among the other reads, and
+// the program goes on. When the read's turn comes and its line is there,
+// the scheduler's look at the terminal before each choice
+// (serviceTerminal) reads it into the program's buffer and completes the
+// request: IOSB, event flag, AST. A $QIOW waits for that completion as
+// it waits for any pending request. The other readers (RMS's $GET of the
+// terminal, LIB$GET_INPUT, the input shims) are synchronous calls, so
+// they still wait in their service until their line has come.
 
 // TerminalSource is an input stream that can say whether a read would
 // get something at once: a byte, or the end of the input.
@@ -47,11 +52,20 @@ type TerminalSource interface {
 	Ready() bool
 }
 
-// terminalRead is one process's read in the terminal's queue.
+// terminalRead is one read in the terminal's queue: a process's
+// synchronous read (req nil), or a $QIO read left pending.
 type terminalRead struct {
 	env      *Environment
 	prompt   string
 	prompted bool
+
+	// For a pending $QIO read: its request; the most characters it
+	// takes and which end its line (for lineReady); and read, which
+	// reads the line and returns the request's completion status.
+	req    *ioRequest
+	maxLen int
+	ends   func(byte) bool
+	read   func(r *bufio.Reader) ioStatus
 }
 
 // terminalReader returns the buffer every process reading src shares,
@@ -87,15 +101,17 @@ func (env *Environment) awaitTerminal(maxLen int, prompt string, ends func(byte)
 
 	sys := env.System
 
-	i := slices.IndexFunc(sys.terminalQueue, func(t *terminalRead) bool { return t.env == env })
+	i := slices.IndexFunc(sys.terminalQueue, env.isSynchronousRead)
 	if i < 0 {
 		sys.terminalQueue = append(sys.terminalQueue, &terminalRead{env: env, prompt: prompt})
 		sys.promptTerminal()
+		i = len(sys.terminalQueue) - 1
 	}
 
+	entry := sys.terminalQueue[i]
 	r := env.consoleReader()
 	ready := func() bool {
-		return sys.terminalQueue[0].env == env && lineReady(r, src, maxLen, ends)
+		return sys.terminalQueue[0] == entry && lineReady(r, src, maxLen, ends)
 	}
 
 	if ready() {
@@ -121,27 +137,108 @@ func (sys *System) promptTerminal() {
 	}
 }
 
-// terminalDone takes env's read out of the terminal's queue: it has its
-// line, or the process is going. The next read's turn comes.
+// isSynchronousRead reports whether t is env's synchronous read (not a
+// pending $QIO read).
+func (env *Environment) isSynchronousRead(t *terminalRead) bool {
+	return t.env == env && t.req == nil
+}
+
+// terminalDone takes env's synchronous read out of the terminal's queue:
+// it has its line, or the process is going. The next read's turn comes.
 func (env *Environment) terminalDone() {
 	sys := env.System
 
-	i := slices.IndexFunc(sys.terminalQueue, func(t *terminalRead) bool { return t.env == env })
+	i := slices.IndexFunc(sys.terminalQueue, env.isSynchronousRead)
 	if i < 0 {
 		return
 	}
 
+	sys.dropTerminalRead(i)
+}
+
+// dropTerminalRead takes the i'th read out of the terminal's queue. If
+// it was the head, the next read's turn comes: its prompt is written,
+// and a pending $QIO read whose line is already there completes.
+func (sys *System) dropTerminalRead(i int) {
 	sys.terminalQueue = slices.Delete(sys.terminalQueue, i, i+1)
 
 	if i == 0 {
 		sys.promptTerminal()
+		sys.serviceTerminal()
 	}
 }
 
-// inTerminalQueue reports whether env has a read in the terminal's
-// queue: a read made again after waiting.
-func (env *Environment) inTerminalQueue() bool {
-	return slices.ContainsFunc(env.terminalQueue, func(t *terminalRead) bool { return t.env == env })
+// queueTerminalRead is a $QIO read's step before reading (ttdriver.go):
+// it reports whether the read must be left pending, in the terminal's
+// queue, because another read is ahead of it or its line (up to maxLen
+// characters, ending at a character for which ends is true) isn't there
+// yet. read is how the read finishes, now or later. A read that may go
+// ahead has had its prompt written when this returns. Without the
+// scheduler or a TerminalSource no read is ever pending.
+func (env *Environment) queueTerminalRead(req *ioRequest, maxLen int, prompt string, ends func(byte) bool,
+	read func(*bufio.Reader) ioStatus) bool {
+	src, ok := env.consoleIn.(TerminalSource)
+	if env.engine == nil || !ok {
+		env.writeConsole(prompt)
+
+		return false
+	}
+
+	sys := env.System
+	t := &terminalRead{env: env, prompt: prompt, req: req, maxLen: maxLen, ends: ends, read: read}
+
+	sys.terminalQueue = append(sys.terminalQueue, t)
+	sys.promptTerminal()
+
+	if sys.terminalQueue[0] == t && lineReady(env.consoleReader(), src, maxLen, ends) {
+		sys.terminalQueue = sys.terminalQueue[1:]
+
+		return false
+	}
+
+	return true
+}
+
+// serviceTerminal completes the pending $QIO reads at the head of the
+// terminal's queue whose lines are there, in order, stopping at the
+// first that must still wait or at a synchronous read (whose process
+// reads its own line when its service is made again). A request
+// completed meanwhile (cancelled) just leaves the queue. The scheduler
+// calls it before each choice (pollEvents), so a read completes, and its
+// process's wait for it ends, as soon as the line has been typed.
+func (sys *System) serviceTerminal() {
+	for len(sys.terminalQueue) > 0 {
+		t := sys.terminalQueue[0]
+		if t.req == nil {
+			return
+		}
+
+		if !t.req.done {
+			src, ok := t.env.consoleIn.(TerminalSource)
+			if ok && !lineReady(t.env.consoleReader(), src, t.maxLen, t.ends) {
+				return
+			}
+		}
+
+		sys.terminalQueue = sys.terminalQueue[1:]
+
+		if !t.req.done {
+			t.env.completeIO(t.req, t.read(t.env.consoleReader()))
+		}
+
+		sys.promptTerminal()
+	}
+}
+
+// pruneTerminalQueue takes the $QIO reads that have completed without
+// being read (cancelled: $CANCEL, $DASSGN, rundown) out of the
+// terminal's queue.
+func (sys *System) pruneTerminalQueue() {
+	for i := len(sys.terminalQueue) - 1; i >= 0; i-- {
+		if t := sys.terminalQueue[i]; t.req != nil && t.req.done {
+			sys.dropTerminalRead(i)
+		}
+	}
 }
 
 // terminalPoll is how often waitForTerminalInput looks at the terminal.

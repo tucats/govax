@@ -182,8 +182,9 @@ func (env *Environment) reportEvent(class sched.Class) {
 // pollEvents is what the scheduler does before each choice: every
 // process's due timers expire (so a timer's event flag, wakeup, or AST
 // happens on time whichever process it belongs to, not only when that
-// process next runs), and then every waiting process is tested
-// (wakeWaiters).
+// process next runs), pending terminal reads whose lines have been
+// typed complete (serviceTerminal), and then every waiting process is
+// tested (wakeWaiters).
 func (sys *System) pollEvents() {
 	for _, env := range sys.procs.slots {
 		if env != nil {
@@ -192,6 +193,7 @@ func (sys *System) pollEvents() {
 	}
 
 	sys.checkDeadlocks()
+	sys.serviceTerminal()
 
 	if sys.wakeWaiters() {
 		sys.idleSpinning = false

@@ -150,3 +150,55 @@ ttnam:	.ascid	"TTA0:"
 
 	p.iosb(p.one, 16, "read", 1, 5, 0x1000D) // ended by RETURN, a 1-byte terminator
 }
+
+// TestPendingTerminalRead (docs/PHASE-49.md, subtask 10): a $QIO read
+// with nothing typed returns SS$_NORMAL at once and the program goes on
+// working, counting until its IOSB is written; the line typed then
+// completes the read, and the program sees it.
+func TestPendingTerminalRead(t *testing.T) {
+	one, _ := assembleAt(t, mbxSymbols()+ttAssign+`
+	movl	#4, r1			; efn
+	movl	#IO$_READVBLK, r2
+	moval	@#data+16, r3		; iosb
+	moval	@#data+32, r4		; buffer
+	movl	#20, r5			; size
+	jsb	@#qio
+	movl	r0, @#data+12
+work:	incl	@#data+60
+	tstw	@#data+16
+	beql	work
+	brw	fin
+ttnam:	.ascid	"TTA0:"
+`+mbxCommon)
+
+	c, _ := scheduledConsole(t, "200", one)
+	term := &typedInput{}
+	c.In = term
+
+	p := &mbxPair{t: t, c: c, one: c.RTL}
+
+	for range 3000 {
+		step(t, c, 1)
+	}
+
+	if p.at(p.one, 12) != 1 || p.at(p.one, 16) != 0 || p.at(p.one, 60) < 100 {
+		t.Fatalf("$QIO %08X, IOSB %08X, count %d; want SS$_NORMAL, the read pending, the program working",
+			p.at(p.one, 12), p.at(p.one, 16), p.at(p.one, 60))
+	}
+
+	term.typeIn("typed\r")
+
+	for range 3000 {
+		if p.at(p.one, 0) == 1 {
+			break
+		}
+
+		step(t, c, 1)
+	}
+
+	if p.at(p.one, 0) != 1 || p.text(p.one, 32, 5) != "typed" {
+		t.Fatalf("finished %d, buffer %q; want the read completed with typed", p.at(p.one, 0), p.text(p.one, 32, 5))
+	}
+
+	p.iosb(p.one, 16, "read", 1, 5, 0x1000D)
+}

@@ -244,31 +244,45 @@ func (env *Environment) terminalRead(req *ioRequest, prompt string) (ioStatus, u
 
 	// A purge throws away what was typed before the read was made: not
 	// what is typed while it waits.
-	if req.modified(ioModPurge) && !env.inTerminalQueue() {
+	if req.modified(ioModPurge) {
 		_, _ = r.Discard(r.Buffered())
 	}
 
-	// The read waits its turn and for its line (terminal.go): the request
-	// is made again then.
 	if pollOnly {
 		env.writeConsole(prompt)
-	} else {
-		ends := func(b byte) bool { return set.has(b) || b == '\n' && set.has(ttCarriageReturn) }
 
-		if err := env.awaitTerminal(int(size), prompt, ends); err != nil {
-			return ioStatus{}, ioResourceWait
-		}
-
-		defer env.terminalDone()
+		return env.readTerminalLine(r, req, &set, true), 0
 	}
 
+	// The read waits its turn and for its line (terminal.go): the request
+	// stays pending, and completes when the terminal's queue reads it.
+	ends := func(b byte) bool { return set.has(b) || b == '\n' && set.has(ttCarriageReturn) }
+	read := func(r *bufio.Reader) ioStatus { return env.readTerminalLine(r, req, &set, false) }
+
+	if env.queueTerminalRead(req, int(size), prompt, ends, read) {
+		return ioStatus{}, ioPending
+	}
+
+	return read(r), 0
+}
+
+// readTerminalLine reads req's line from r into its buffer (p1, p2
+// characters; checked when the request was made), ending at a
+// terminator in set, and returns the request's completion status. With
+// pollOnly it reads only what r already holds (SS$_TIMEOUT if that runs
+// out first). env is the process that made the request, which needn't
+// be the one the CPU is running when a pending read completes: the
+// characters are stored through its address space.
+func (env *Environment) readTerminalLine(r *bufio.Reader, req *ioRequest, set *terminatorSet, pollOnly bool) ioStatus {
+	buf, size := req.p[0], req.p[1]&0xFFFF
+
 	var (
-		count      uint32
+		data       []byte
 		terminator byte
 		status     = uint32(ssNormal)
 	)
 
-	for count < size {
+	for uint32(len(data)) < size {
 		if pollOnly && r.Buffered() == 0 {
 			status = ssTimeout
 
@@ -292,10 +306,10 @@ func (env *Environment) terminalRead(req *ioRequest, prompt string) (ioStatus, u
 			b -= 'a' - 'A'
 		}
 
-		// The buffer was checked above, so a failure here can't happen.
-		_ = env.mem.StoreByte(env.cpu, buf+count, b)
-		count++
+		data = append(data, b)
 	}
+
+	count := uint32(len(data))
 
 	var terminatorSize uint32
 
@@ -303,11 +317,16 @@ func (env *Environment) terminalRead(req *ioRequest, prompt string) (ioStatus, u
 		terminatorSize = 1
 
 		if count < size {
-			_ = env.mem.StoreByte(env.cpu, buf+count, terminator)
+			data = append(data, terminator)
 		}
 	}
 
-	return ioStatus{status: status, count: uint16(count), info: uint32(terminator) | terminatorSize<<16}, 0
+	// The buffer was checked when the request was made, so a failure
+	// here is a program that unmapped it meanwhile, and VMS would lose
+	// the data too.
+	_ = env.storeOwn(buf, data)
+
+	return ioStatus{status: status, count: uint16(count), info: uint32(terminator) | terminatorSize<<16}
 }
 
 // readTerminalByte reads one character as a terminal would deliver it:

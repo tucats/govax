@@ -54,12 +54,13 @@ import (
 // the event flag set, and the AST queued before $QIO returns — the same
 // shortcut $GETJPI takes. VMS allows this (a request may finish before
 // $QIO returns), and a correctly written program can't tell the
-// difference. Every terminal request does.
+// difference. Most terminal requests do.
 //
 // A request can also stay *pending*: a mailbox read with no message to
-// read waits for a write (mbxdriver.go, docs/PHASE-26.md subtask 29). The
-// driver keeps the request and completes it later with completeIO, which
-// does what completion always does: IOSB, event flag, AST. $QIOW then
+// read waits for a write (mbxdriver.go, docs/PHASE-26.md subtask 29),
+// and a terminal read waits for its line (terminal.go, docs/PHASE-49.md
+// subtask 10). The driver keeps the request and completes it later with
+// completeIO, which does what completion always does: IOSB, event flag, AST. $QIOW then
 // waits for that, $CANCEL completes a channel's pending requests with
 // SS$_CANCEL, and so does $DASSGN.
 //
@@ -219,8 +220,7 @@ type qiowWait struct {
 
 // serviceSysQiow is SYS$QIOW, $QIO and wait: the same arguments, but it
 // returns only when the request has completed. A request that completes
-// during the call (every terminal request) returns at once. One left
-// pending waits, re-executing the service's XFC (ErrWait) until the
+// during the call returns at once. One left pending waits, re-executing the service's XFC (ErrWait) until the
 // driver completes it; ASTs and interrupts are delivered meanwhile. The
 // waits are a stack (Environment.qiowWaits), since an AST routine may
 // issue a $QIOW of its own while one is waiting.
@@ -455,6 +455,8 @@ func (env *Environment) cancelIO(c *channel) {
 			env.completeIO(r, ioStatus{status: ssCancel})
 		}
 	}
+
+	env.pruneTerminalQueue()
 }
 
 // PendingIO reports how many $QIO requests are waiting to complete.

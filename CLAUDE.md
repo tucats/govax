@@ -264,7 +264,8 @@ expect adjustment as phases land):
   (`recdevice.go`; `LIB$PUT_OUTPUT` writes to a mailbox SYS$OUTPUT); and
   the shared terminal (`terminal.go`: one buffer, reads in FIFO order,
   a read with no whole line waits in LEF, with the scheduler on and a
-  `TerminalSource` input). CPU time
+  `TerminalSource` input; since Phase 49 a `$QIO` read stays pending
+  instead, completed by `serviceTerminal` at each scheduling call). CPU time
   and SHOW SYSTEM/SHOW PROCESS's reports are in `showsys.go`. Phase 47:
   `System.Locks` is the one lock database (`internal/lck`); `$ENQ`,
   `$ENQW`, `$DEQ` are `enq.go` (each request's `enqRequest` is its

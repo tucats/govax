@@ -357,3 +357,30 @@ stream's record locks.
     file section shared by two processes, under two quanta);
     `TestFileSectionRundown` (`rundown.mar`: image rundown writes a
     private section back, and not a copy-on-reference one).
+- 2026-10-09: Subtask 10, pending terminal reads (`corevms/terminal.go`,
+  `ttdriver.go`). A terminal `$QIO` read that can't finish at once (a
+  read ahead of it in the terminal's queue, or its line not typed yet)
+  now returns SS$_NORMAL with the request pending (`queueTerminalRead`),
+  in the terminal's queue beside the synchronous readers (RMS's $GET,
+  LIB$GET_INPUT, the input shims, which still wait in their service).
+  Before each scheduling choice `pollEvents` calls `serviceTerminal`,
+  which reads the line of each pending read at the head of the queue
+  whose line is there (`readTerminalLine`, storing through the owner's
+  address space, since another process may be current) and completes
+  it: IOSB, event flag, AST, and the owner's wait ended, boosted as
+  terminal input. A synchronous read finishing services the next read at
+  once (`dropTerminalRead`). `$CANCEL`/`$DASSGN`/rundown complete a
+  pending read with SS$_CANCEL and take it out of the queue
+  (`pruneTerminalQueue`). The queue's entries are now per read, not per
+  process, so a process may have a pending `$QIO` read and a synchronous
+  one. `$QIOW` of the terminal now waits as for any pending request
+  (no more retrying the `$QIO`). Unchanged: with the scheduler off, or a
+  console input that isn't a `TerminalSource`, a read blocks as before;
+  IO$M_TIMED with a nonzero limit still waits without a limit (now
+  implementable through the pending request, not done); IO$M_PURGE
+  discards what's typed ahead when the read is made, even if reads ahead
+  of it would have read it (unconfirmed). Tests: `TestTerminal_pendingQIO`,
+  `TestTerminal_typedAhead`, `TestTerminal_pendingOrder`,
+  `TestTerminal_cancelPending`; the console's `TestPendingTerminalRead`
+  (a MACRO program working while its read is pending), and
+  `TestSharedTerminal` ($QIOW) unchanged.
