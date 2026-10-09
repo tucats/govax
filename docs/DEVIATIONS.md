@@ -2935,6 +2935,35 @@ widened."
     any other as a writer, with RMS's default sharing.
 - **Status**: unconfirmed; candidates for a later probe.
 
+### [Phase 50] Command procedure rules chosen without a manual or probe
+
+- **Where**: `internal/console/procedure.go`; `internal/vmserrors/codes_cli.go`
+  (CLI_MAXPARM, CLI_MAXDEPTH, CLI_SKPDAT).
+- **What**: `@` follows the OpenVMS User's Manual (7.3), chapters 12 to
+  14. Chosen without it or a VMS run:
+  - MAXPARM's text (`too many parameters - reenter command with fewer
+    parameters`) and warning severity; MAXDEPTH's text and error severity,
+    and refusing the 33rd level rather than the 32nd (the glossary allows
+    "up to 32 nested command levels" above level 0).
+  - One SKPDAT warning for each run of skipped data lines. A `$` must be
+    the record's first character (an indented `$` makes a data line).
+  - `/OUTPUT=` with no file type gets `.LIS` (the manual says so for
+    `@`). A bare name is in the default directory, not beside the
+    procedure. NL: (or NLA0:) discards the output, and no other device
+    is recognized. `/OUTPUT` may be abbreviated to `/O`, blanks are
+    allowed around its `=`, and it can't be given without a value.
+  - A blank before a qualifier makes it a parameter (13.6.4), even
+    between the file name and the first parameter.
+  - An unquoted host file name, which DCL uppercases, is also tried in
+    lowercase. A host procedure is found through govax's search path.
+  - A command line reached while the debugger reads the procedure's data
+    ends its session (EXIT), and in the interactive assembler is `.END`,
+    each as end of file on its input.
+  - A failure that isn't a VMS status counts as an error, so it ends the
+    procedure.
+- **Status**: unconfirmed; candidates for Phase 50's VMS probe
+  (subtask 20).
+
 <!--
 Entry template:
 

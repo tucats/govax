@@ -79,6 +79,9 @@
 //                          local and global symbols; the machine's symbol
 //                          table (SHOW SYMBOL/ALL, /SYSTEM, CLEAR SYMBOL) is
 //                          the debugger's
+//              10/09/26    Added @ (command procedures, P1 to P8, /OUTPUT);
+//                          removed INCLUDE; EXIT ends a procedure, QUIT
+//                          govax (docs/PHASE-50 - DCL command procedures.md)
 
 This is the help documentation for the govax VAX emulator.  Topic sections are
 marked by a "$" delimiter.  This is followed by as many tokens of the help
@@ -620,13 +623,23 @@ $INIT,/CON
     See also the help for INITIALIZE, INITIALIZE/VAX, and MOUNT.
 
 $EXIT
+
+    The EXIT command ends the command procedure it is in, and the
+    command level that ran the procedure goes on.  At the terminal
+    (command level 0), EXIT ends govax, as QUIT does.
+
+    Syntax:
+
+        EXIT
+
 $QUIT
 
-    The QUIT command terminates the console processor.  As long as there are
-    no pending errors or signals to be processed, the emulator application
-    quits.  If there are pending errors, etc. to be displayed, these are
-    displayed on the console and the user must manually select the "Quit"
-    menu item from the "File" menu.
+    The QUIT command ends govax, from the terminal or from inside a
+    command procedure.
+
+    Syntax:
+
+        QUIT
 
 $LOAD
 
@@ -813,33 +826,65 @@ $SAVE,/NVR
 
 
 $@   
-$INCL
 
-    The INCLUDE command (which can be abbreviated to "@") is used to read 
-    an external text file as a set of commands, as if they were typed by 
-    the user at the console.  It can be used to store a set of often-
-    repeated commands, for example.  It can also be used to retrieve a 
-    stored VAX state created by the SAVE TEXT command, since the saved 
-    state can be expressed as a series of commands that will re-create 
-    the virtual VAX.
-    
+    The @ command (the execute procedure command) runs a command
+    procedure: a file of DCL commands.  The procedure runs at a new
+    command level, one deeper than the level that ran it; the terminal is
+    command level 0, and procedures may nest 32 levels deep.
+
     Syntax:
-    
-        INCLUDE <file-path>
-    
-    
-    Parameter:
-    
-        <file-path>     This is the name of the text file to read.  It must
-                        already exist or an error occurs.
-    
+
+        @file-spec[/OUTPUT=file-spec] [p1 [p2 ... p8]]
+
+    Parameters:
+
+        file-spec       The command procedure: a file on a mounted volume
+                        or on the host, by the same rules as every
+                        console command's file names.  The file type
+                        defaults to .COM.  A host file name with
+                        lowercase letters or a "/" must be quoted.
+
+        p1 ... p8       Up to eight parameters, separated by blanks.  The
+                        procedure sees them as the local symbols P1 to
+                        P8; the ones not given are "".  Letters are
+                        uppercased unless quoted; quotes keep blanks and
+                        case, and "" passes an empty parameter.
+
+    Qualifier:
+
+        /OUTPUT=file    Sends the procedure's output to the file instead
+                        of the terminal (.LIS by default; NL: discards
+                        it).  Error messages go to the terminal too.  The
+                        qualifier must follow the file name with no blank
+                        between them; otherwise it is a parameter.
+
+    In the procedure, each command line starts with "$", and "$!" starts
+    a comment line.  A line ending in "-" continues on the next line,
+    which has no "$".  A line without a "$" is data, for whatever reads
+    the procedure's input: the debugger, once a DEBUG or RUN/DEBUG in the
+    procedure has started it, or the interactive assembler.  Data that
+    nothing reads is skipped, with a SKPDAT warning.
+
+    Each command level has its own local symbols (assigned with "=" or
+    ":="), which go when the procedure ends; global symbols ("==" and
+    ":==") stay.  A procedure sees the local symbols of the levels that
+    ran it.
+
+    The procedure ends at its last line, at an EXIT, or when a command
+    fails with an error or a fatal error (a warning doesn't end it).  An
+    error ends the procedures that ran it too.
+
     Example:
-    
-        INCLUDE "myvax.status"
 
-    As in every DCL command, a host file name with lowercase letters or
-    a "/" must be in quotes; DCL uppercases unquoted text.
+        @"setup.com" "Test Run" fast
 
+        where setup.com is:
+
+        $! Show the parameters this procedure was given.
+        $ SHOW SYMBOL P1
+        $ SHOW SYMBOL P2
+
+        shows P1 = "Test Run" and P2 = "FAST".
 
 $RUN 
 $RUN ,/DEB
@@ -1194,10 +1239,9 @@ $SET ,SYMB
 $SET ,VERI
 $SET ,NOVE
 
-    The SET VERIFY command determines whether the text file(s) read with the
-    INCLUDE command are displayed on the console as they are processed.  For
-    small text files this can be a useful debugging tool.  However, for large
-    files (particularly large SAVE files) this may be too slow.
+    The SET VERIFY command is meant to show each command of a command
+    procedure (@) as it runs.  It is not yet implemented: the setting is
+    kept, but nothing is shown.
     
     Syntax:
     
@@ -1656,6 +1700,7 @@ $HELP
 
     For additional information, see the help on the following command topics:
 
+    @               Run a command procedure (a file of DCL commands)
     ANALYZE         Describe object and image files, as VMS's ANALYZE does
     ASSIGN          Create a logical name (equivalence first)
     CLEAR           Clear memory, symbols, strings
@@ -1667,8 +1712,8 @@ $HELP
     DIRECTORY       List the files on a mounted volume
     DEBUG           Start the debugger on the virtual VAX
     DISMOUNT        Detach a device's mounted disk-image container
+    EXIT            End a command procedure, or govax at the terminal
     IF              Run a command when an expression is true
-    INCLUDE         Execute a text file of console commands
     INITIALIZE      Initialize the virtual VAX, or a disk-image container
     LIBRARY         Create, change, or list a macro or object library
     LINK            Link object modules into an executable image
@@ -1677,7 +1722,7 @@ $HELP
     MOUNT           Attach a disk-image container file to a device
     PRINT           Print messages or expressions
     PURGE           Delete old versions of files on a mounted volume
-    QUIT            Quit the virtual VAX
+    QUIT            Quit govax
     RENAME          Rename or move files on a mounted volume
     RUN             Load and run a VAX/VMS image
     SAVE            Save the machine state
@@ -1864,7 +1909,7 @@ $TIME
 $IF
 
     The IF command runs a command only when an expression is true (nonzero).
-    It is used in command files (see INCLUDE).
+    It is used in command procedures (see @).
 
     Syntax:
 

@@ -86,6 +86,14 @@ func (d *Dispatcher) DispatchConsole(line string) error {
 		return d.assembleInteractiveLine(line)
 	}
 
+	// "@file" runs a command procedure (procedure.go). DCL reads it
+	// before any verb: its /OUTPUT qualifier must touch the file name,
+	// and anything after a blank is a parameter, which the grammar's
+	// qualifiers don't model.
+	if text, ok := strings.CutPrefix(line, "@"); ok {
+		return d.atCommand(text)
+	}
+
 	// A symbol assignment, DELETE/SYMBOL, or a command whose first word
 	// is a DCL symbol (a foreign command or an alias): DCL looks for a
 	// symbol before a verb (dclsym.go).
@@ -126,7 +134,7 @@ func (d *Dispatcher) DispatchConsole(line string) error {
 
 // readCommandVerb reads the leading command word (up to whitespace, '/',
 // ',', or '='), matching read_verb — including its "a leading '@' is a
-// token by itself" special case (the INCLUDE-file shorthand). DCL symbol
+// token by itself" special case (a command procedure). DCL symbol
 // lookup (dclsym.go) uses it, and IF and SET PTE use it for their THEN
 // and TO words.
 func readCommandVerb(s string) (verb, rest string) {
@@ -158,7 +166,10 @@ func (d *Dispatcher) bindGrammar() {
 	// docs/PHASE-37.md: the former fixed commands (commands.go).
 	d.bindConsoleCommands()
 
-	g.Bind("EXIT", func(id int64, r *dcl.Result) error { return d.Console.Quit() })
+	// EXIT ends the command procedure it's in, or govax at the terminal;
+	// QUIT ends govax wherever it is (procedure.go).
+	g.Bind("EXIT", func(id int64, r *dcl.Result) error { return d.Console.Exit() })
+	g.Bind("QUIT", func(id int64, r *dcl.Result) error { return d.Console.Quit() })
 	g.Bind("DEBUG", func(id int64, r *dcl.Result) error { return d.Console.StartDebugger() })
 
 	g.Bind("VMINIT", func(id int64, r *dcl.Result) error {

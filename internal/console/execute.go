@@ -189,13 +189,13 @@ func (c *Console) ReportStop(err error) error {
 
 	case errors.Is(err, cpu.ErrInstructionLimitExceeded):
 		c.Printf("%%VAX-I-INSTRLIMIT, instruction limit reached at PC = %08X%s\n", c.CPU.GPR(vax.PC), c.ProcessNote())
-		c.limitStop = err // a one-shot command fails on it (IncludeCommandLine)
+		c.limitStop = err // a one-shot command fails on it (RunCommandLine)
 
 		return nil
 
 	case errors.Is(err, cpu.ErrTimeLimitExceeded):
 		c.Printf("%%VAX-I-TIMELIMIT, time limit reached at PC = %08X%s\n", c.CPU.GPR(vax.PC), c.ProcessNote())
-		c.limitStop = err // a one-shot command fails on it (IncludeCommandLine)
+		c.limitStop = err // a one-shot command fails on it (RunCommandLine)
 
 		return nil
 	}

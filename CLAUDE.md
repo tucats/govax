@@ -11,14 +11,17 @@ never had.
 
 - `docs/PLAN.md` — high-level plan, locked-in architecture decisions, and the phase
   index.
-- `docs/PHASE-00.md` … `PHASE-49.md` — one doc per phase: goal, C-source file
+- `docs/PHASE-00.md` … `PHASE-50.md` — one doc per phase: goal, C-source file
   mapping, deliverables, open questions, and a dated progress log (all
   done through 49; 40 follows 38 directly: there is no Phase
   39). Phases 43–48 are the multiprocessing program (subprocesses, a
   scheduler, interprocess mailboxes and shared memory, RMS file sharing
   and the lock manager, LIB$SPAWN; done 2026-10-08; PLAN.md summarizes
   it), and Phase 49 the work it left for later (done 2026-10-09);
-  `PHASE-43.md`'s Part A describes the whole program. Read the relevant phase doc
+  `PHASE-43.md`'s Part A describes the whole program. Phase 50 (in
+  progress) makes the console a DCL command interpreter: command
+  procedures and command levels first, then labels, IF, substitution,
+  `$STATUS`/ON, and lexical functions. Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
 - `docs/DEVIATIONS.md` — running log of suspected ISA/behavior fidelity issues found in
   the C source during porting (see "Bug-fixing policy" below).
@@ -199,7 +202,8 @@ expect adjustment as phases land):
   GO, CALL, and ASM are debugger commands (live code): the console has
   no GO or CALL, and accepts ASM only until the microkernel is in place
   (`Console.kernelPlaced`, set when ASM defines EXE$INITIALIZE), which is
-  how `vax.init` loads it before `DEBUG` / `GO EXE$INITIALIZE` / `EXIT`.
+  how `vax.init` loads it before `$ DEBUG` and the data lines
+  `GO EXE$INITIALIZE` / `EXIT`.
   Tests that need them install the debugger and enter its mode with
   `consoletest.InstallDebugger` and `consoletest.DebugMode`. A session
   starts at the console's `DEBUG`, when a `GO`/`CALL` stops, and for `RUN`
@@ -225,6 +229,23 @@ expect adjustment as phases land):
   and a local table per command level), and the machine's symbol table
   (`Console.Symbols`, ASM's symbols and the predefined ones) is the
   debugger's SHOW SYMBOL (`/ALL`, `/SYSTEM`) and CANCEL/CLEAR SYMBOL.
+  **Command procedures** (Phase 50, `internal/console/procedure.go`):
+  `@file[/OUTPUT=file] [p1 ... p8]` is read before the grammar (the
+  console has no INCLUDE) and runs the file at a new command level on
+  `Console.levels`, the input stack, with its own local symbol table
+  (`dclSymbolTable.push`/`pop`) holding P1 to P8. Its lines follow VMS:
+  `$` starts a command, `$!` a comment, `-` continues; a line without
+  `$` is data, given to the debugger or interactive assembler when one
+  is reading, else skipped (SKPDAT), and a `$` line ends that reader's
+  input. An error or severe status ends the procedure (DCL's default
+  ON ERROR THEN EXIT), EXIT ends it (at level 0, govax), QUIT always
+  ends govax. A level's `procedureSource` keeps the whole file and a
+  cursor (`Position`/`Seek`/`Rewind`) for the coming GOTO and labels.
+  `vax.init` is a DCL procedure, run like a login command procedure
+  (`RunHostProcedure`); the one-shot command on govax's command line
+  is then level 0's input (`RunCommandLine`). The debugger's `@` reads
+  the VMS debugger's format, every line a command
+  (`RunDebuggerProcedure`).
   `internal/console/consoletest` is its test support.
 - `internal/io` — device abstraction (Phase 09).
 - `internal/vmsdef` — VMS's own definitions, shared by the assembler, RTL, RMS,

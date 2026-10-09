@@ -70,8 +70,13 @@ func TestGrammarSplit(t *testing.T) {
 		{"EXIT", both},
 		{"QUIT", both},
 		{"HELP", both},
-		{"INCLUDE A", both},
-		{"@A", both},
+
+		// Command files: the debugger's @ is in its grammar (INCLUDE is
+		// its name there). The console's "@file" is DCL's, read before
+		// the grammar (internal/console/procedure.go), and the console
+		// has no INCLUDE (docs/PHASE-50 - DCL command procedures.md).
+		{"INCLUDE A", debuggerOnly},
+		{"@A", debuggerOnly},
 
 		// Verbs the debugger took from the console.
 		{"GO", debuggerOnly},

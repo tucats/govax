@@ -110,7 +110,7 @@ func (d *Dispatcher) bind() {
 			dispatch = c.Dispatcher.Dispatch
 		}
 
-		return c.Include(r.String("FILE"), dispatch)
+		return c.RunDebuggerProcedure(r.String("FILE"), dispatch)
 	})
 }
 

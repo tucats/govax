@@ -170,7 +170,7 @@ func TestRun_limitsStopAOneShotRun(t *testing.T) {
 // a full replacement set isn't required to override one file.
 func TestRun_pathOverridesEmbeddedForThatFileOnly(t *testing.T) {
 	dir := t.TempDir()
-	custom := `print "custom-vax-init-ran"` + "\n"
+	custom := `$ print "custom-vax-init-ran"` + "\n"
 
 	if err := os.WriteFile(filepath.Join(dir, "vax.init"), []byte(custom), 0o644); err != nil {
 		t.Fatal(err)
@@ -197,14 +197,14 @@ func TestRun_asGivenPathWinsOverPathFlag(t *testing.T) {
 	}
 
 	asGiven := filepath.Join(wd, "vax.init")
-	if err := os.WriteFile(asGiven, []byte(`print "as-given-vax-init-ran"`+"\n"), 0o644); err != nil {
+	if err := os.WriteFile(asGiven, []byte(`$ print "as-given-vax-init-ran"`+"\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
 	t.Cleanup(func() { os.Remove(asGiven) })
 
 	pathDir := t.TempDir()
-	if err := os.WriteFile(filepath.Join(pathDir, "vax.init"), []byte(`print "path-flag-vax-init-ran"`+"\n"), 0o644); err != nil {
+	if err := os.WriteFile(filepath.Join(pathDir, "vax.init"), []byte(`$ print "path-flag-vax-init-ran"`+"\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 

@@ -242,20 +242,21 @@ func TestDebuggerHelp(t *testing.T) {
 	}
 }
 
-// TestCommandFileSwitchesGrammars: the lines of a command file go to the
-// grammar current as each is read. The first is a console command; DEBUG
-// starts the session, so the debugger's HELP EXIT reads the next; EXIT
-// ends it, so the console's PRINT reads the last.
+// TestCommandFileSwitchesGrammars: a DCL procedure's command lines ("$")
+// are the console's, and its data lines are the debugger's input once DEBUG
+// has started a session, as a VMS procedure gives the debugger its
+// commands. The debugger's EXIT ends the session, and the console's PRINT
+// reads the last line.
 func TestCommandFileSwitchesGrammars(t *testing.T) {
 	s := newSession(t)
 
 	path := filepath.Join(t.TempDir(), "session.com")
 	script := strings.Join([]string{
-		`PRINT "one: console"`,
-		`DEBUG`,
+		`$ PRINT "one: console"`,
+		`$ DEBUG`,
 		`HELP EXIT`,
 		`EXIT`,
-		`PRINT "two: console again"`,
+		`$ PRINT "two: console again"`,
 	}, "\n")
 
 	if err := os.WriteFile(path, []byte(script), 0o644); err != nil {
@@ -275,6 +276,34 @@ func TestCommandFileSwitchesGrammars(t *testing.T) {
 
 	if s.c.InDebugger() {
 		t.Error("the file's EXIT left the session active")
+	}
+}
+
+// TestCommandLineEndsDebuggerInput: a DCL command line ("$") reached while
+// the debugger reads the procedure's data lines is the end of its input,
+// as a VMS image reading a procedure's data gets end of file there: the
+// session ends, and the command is the console's.
+func TestCommandLineEndsDebuggerInput(t *testing.T) {
+	s := newSession(t)
+
+	path := filepath.Join(t.TempDir(), "noexit.com")
+	script := "$ DEBUG\nHELP EXIT\n$ PRINT \"console again\"\n"
+
+	if err := os.WriteFile(path, []byte(script), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	out, err := s.do(t, `@"`+path+`"`)
+	if err != nil {
+		t.Fatalf("@file: %v", err)
+	}
+
+	if !strings.Contains(out, "Ends the debugger session") || !strings.Contains(out, "console again") {
+		t.Errorf("unexpected output:\n%s", out)
+	}
+
+	if s.c.InDebugger() {
+		t.Error("the session outlived the debugger's input")
 	}
 }
 

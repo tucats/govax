@@ -1,79 +1,72 @@
-;  Copyright (c) 1997-2026 Forest Edge Software
-;                See LICENSE for applicable MIT license information.
-;
-;  Initialization file for eVAX
-;
-
-;
-;  Initialize memory with 8mb of physical RAM
-;  (the parameter is count of 512b pages)
-;
-
-init/vax ^d16384
-
-if defined("console$arg_file" ) then set noverbose
-
-;
-;   Create page tables for the VAX phaysical memory. 
-;   You can allocate more tables than will fit in
-;   physical memory; virtual memory support sparse
-;   memory maps. There is no support for paged 
-;   backing store, though, so you can exhaust the
-;   physical memory by allocaint too many physical
-;   pages.
-
-vminit /p0=16384 /p1=8192 /s0=8192 /ksp=20
-
-;	Load the console ROM into ROM storage, if there is one found.
-;	Also allocate the NVRAM storage area.
-;
-
-load/rom/noerror
-load/nvram/noerror
-
-;	Assemble the microkernel
-
-print " "
-
-; ASM is the console's only until the microkernel is in place; after this,
-; it is a debugger command.
-
-asm  "kernel.asm"
-
-
-set quantum 1
-
-; GO is a debugger command: start the debugger, run the microkernel's
-; initialization, and return to the console.
-
-debug
+$!  Copyright (c) 1997-2026 Forest Edge Software
+$!                See LICENSE for applicable MIT license information.
+$!
+$!  Initialization file for govax: its login command procedure, run at
+$!  command level 1 when govax starts. It is a DCL command procedure, so
+$!  each command line starts with "$", and "$!" starts a comment. A line
+$!  without a "$" is data, for whatever reads the procedure's input (here,
+$!  the debugger).
+$!
+$!  Initialize memory with 8mb of physical RAM
+$!  (the parameter is count of 512b pages)
+$!
+$ init/vax ^d16384
+$!
+$ if defined("console$arg_file" ) then set noverbose
+$!
+$!   Create page tables for the VAX physical memory.
+$!   You can allocate more tables than will fit in
+$!   physical memory; virtual memory support sparse
+$!   memory maps. There is no support for paged
+$!   backing store, though, so you can exhaust the
+$!   physical memory by allocating too many physical
+$!   pages.
+$!
+$ vminit /p0=16384 /p1=8192 /s0=8192 /ksp=20
+$!
+$!	Load the console ROM into ROM storage, if there is one found.
+$!	Also allocate the NVRAM storage area.
+$!
+$ load/rom/noerror
+$ load/nvram/noerror
+$!
+$!	Assemble the microkernel
+$!
+$ print " "
+$!
+$! ASM is the console's only until the microkernel is in place; after this,
+$! it is a debugger command.
+$!
+$ asm  "kernel.asm"
+$!
+$ set quantum 1
+$!
+$! GO is a debugger command: start the debugger, and give it, as data
+$! lines, the commands that run the microkernel's initialization and
+$! return to the console.
+$!
+$ debug
 go exe$initialize
 exit
-
-set debug nouserhalt
-set debug process
-
-print " "
-
-; Create devices
-
-; (201588743 is 0C040007 hex: REC, CCL, TRM, AVL, IDV, ODV, a terminal's
-; DEVCHAR; 65540 is [1,4], SYSTEM's UIC, the owner VMS 7.1 showed TTA0:.)
-define/device tta0/devclass=term/devtype=vt100/devbufsiz=80/devchar=201588743/ownuic=65540
-
-; The null device: writes are discarded and reads are at end of file.
-
-; (202702849 is 0C150001 hex, the DEVCHAR VMS 7.1 gives NLA0:.)
-define/device nla0/devclass=mailbox/devtype=null/devchar=202702849/ownuic=65537/devbufsiz=512
-
-; TT and SYS$INPUT/OUTPUT/ERROR/COMMAND are predefined as _TTA0:.
-
-; If there was a command line argument, assume it is the full text of the
-; command to run, and do it.  Alternatively, a command could be put on
-; the INCLUDE/COMMAND which would be run, and use substitution operators
-; to get parts of the command.  Note that if there is a command line arg,
-; then this command exits the emulator when it's done.  If you just want
-; to process the command and not exit the emulator, then just use a
-; substition operator like &&CONSOLE$ARG_CMD to run the command.
-
-include/command_line
+$!
+$ set debug nouserhalt
+$ set debug process
+$!
+$ print " "
+$!
+$! Create devices
+$!
+$! (201588743 is 0C040007 hex: REC, CCL, TRM, AVL, IDV, ODV, a terminal's
+$! DEVCHAR; 65540 is [1,4], SYSTEM's UIC, the owner VMS 7.1 showed TTA0:.)
+$ define/device tta0/devclass=term/devtype=vt100/devbufsiz=80/devchar=201588743/ownuic=65540
+$!
+$! The null device: writes are discarded and reads are at end of file.
+$!
+$! (202702849 is 0C150001 hex, the DEVCHAR VMS 7.1 gives NLA0:.)
+$ define/device nla0/devclass=mailbox/devtype=null/devchar=202702849/ownuic=65537/devbufsiz=512
+$!
+$! TT and SYS$INPUT/OUTPUT/ERROR/COMMAND are predefined as _TTA0:.
+$!
+$! A command left on govax's own command line (the one-shot command) is
+$! run once this file is done, as the command interpreter's input after a
+$! login command procedure; govax then exits.

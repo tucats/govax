@@ -39,8 +39,9 @@ import (
 //     the console evaluates only a quoted string or a decimal integer.
 //   - DCL has local (":=", "=") and global (":==", "==") symbols, kept in
 //     separate tables (dclSymbolTable): one global table, and a local
-//     table for each command level. Today there is only the interactive
-//     level; command procedures will add the others.
+//     table for each command level. The terminal is level 0, and each
+//     command procedure (@file, procedure.go) runs a level deeper, its
+//     local symbols, P1 to P8 among them, gone when it ends.
 //   - An "*" in the name, as in "DIR*ECTORY", marks how short an
 //     abbreviation of the name still means the symbol.
 //   - DELETE/SYMBOL [/LOCAL | /GLOBAL] [/ALL] [name] removes one, or all
@@ -83,8 +84,8 @@ type dclSymbols map[string]dclSymbol
 
 // dclSymbolTable is a command interpreter's DCL symbols: the global
 // table, and the local table of each command level. levels[0] is the
-// interactive level (the terminal's); a command procedure will run one
-// level deeper, and its local symbols go when it ends. A name is looked
+// interactive level (the terminal's); a command procedure runs one
+// level deeper (push and pop), and its local symbols go when it ends. A name is looked
 // up in the current level's local table, then the levels outside it, and
 // then the global table (DCL User's Guide, "Symbol Tables"). The zero
 // value is an empty table, ready to use.
@@ -112,6 +113,22 @@ const (
 	// scopeGlobal is /GLOBAL: the global table.
 	scopeGlobal
 )
+
+// push starts a new command level's local table, empty, for a command
+// procedure (procedure.go); pop ends it. Only the input stack pushes and
+// pops, so the symbol levels above level 0 are its levels, one for one.
+func (t *dclSymbolTable) push() {
+	t.local()
+	t.levels = append(t.levels, dclSymbols{})
+}
+
+// pop discards the current command level's local table, and every
+// symbol in it. Level 0's, the terminal's, is never popped.
+func (t *dclSymbolTable) pop() {
+	if len(t.levels) > 1 {
+		t.levels = t.levels[:len(t.levels)-1]
+	}
+}
 
 // local returns the current command level's local table, making the
 // interactive level's if there's none yet.

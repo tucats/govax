@@ -65,21 +65,21 @@ func TestTime_runsCommandAndReportsElapsed(t *testing.T) {
 	}
 }
 
-func TestInclude_dispatchesEachLine(t *testing.T) {
+func TestRunProcedure_dispatchesEachLine(t *testing.T) {
 	c, _ := newTestConsole(t)
 	path := filepath.Join(t.TempDir(), "script.com")
-	writeFile(t, path, "; a comment\nSHOW REG\n\nSHOW PSL\n")
+	writeFile(t, path, "$! a comment\n$ SHOW REG\n$\n$ SHOW PSL\n")
 
 	var got []string
 
-	err := c.Include(path, func(cmd string) error {
+	err := c.RunProcedure(path, func(cmd string) error {
 		got = append(got, cmd)
 
 		return nil
 	})
 
 	if err != nil {
-		t.Fatalf("Include: %v", err)
+		t.Fatalf("RunProcedure: %v", err)
 	}
 
 	want := []string{"SHOW REG", "SHOW PSL"}

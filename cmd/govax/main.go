@@ -97,7 +97,7 @@ func main() {
 const limitExitStatus = 124
 
 // isLimitStop reports whether err is a run stopped by --instruction-limit
-// or --time-limit (the console's IncludeCommandLine returns one, wrapped).
+// or --time-limit (the console's RunCommandLine returns one, wrapped).
 func isLimitStop(err error) bool {
 	return errors.Is(err, cpu.ErrInstructionLimitExceeded) || errors.Is(err, cpu.ErrTimeLimitExceeded)
 }
@@ -252,12 +252,22 @@ func run(paths []string, instructionLimit int, timeLimit time.Duration, out io.W
 	})
 
 	// The limits are recorded now but applied only to the user's commands:
-	// the one-shot command (INCLUDE/COMMAND_LINE, at the end of vax.init)
-	// and the interactive prompt below. See this function's doc comment.
+	// the one-shot command and the interactive prompt below. See this
+	// function's doc comment.
 	c.SetRunLimits(instructionLimit, timeLimit)
 
-	if err := c.Include("vax.init", d.Dispatch); err != nil {
-		fmt.Fprintln(out, "vax.init:", err)
+	// vax.init is govax's login command procedure, run at command level 1
+	// (docs/PHASE-50 - DCL command procedures.md). A command in it that
+	// fails has shown its message, which ends it.
+	if err := c.RunHostProcedure("vax.init", d.Dispatch); err != nil && !vmserrors.MessageInhibited(err) {
+		fmt.Fprintln(out, "%"+err.Error())
+	}
+
+	// Then the command interpreter reads level 0's input: the one-shot
+	// command left on govax's command line, if there is one, after which
+	// the session ends, or else the terminal.
+	if c.Running() {
+		c.RunCommandLine(d.Dispatch)
 	}
 
 	// After that, if we're still running, do a console loop.

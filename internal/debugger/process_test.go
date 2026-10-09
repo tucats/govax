@@ -133,7 +133,7 @@ func bootedSession(t *testing.T) *session {
 
 	db := debugger.Install(c, consoletest.DebugGrammar(t), consoletest.ParseHelp(t, "debug.help"))
 
-	if err := c.Include("vax.init", d.Dispatch); err != nil {
+	if err := c.RunHostProcedure("vax.init", d.Dispatch); err != nil {
 		t.Fatalf("vax.init: %v\n%s", err, out.String())
 	}
 

@@ -239,17 +239,18 @@ func TestCommands_saveLoad(t *testing.T) {
 	}
 }
 
-// TestCommands_include checks INCLUDE's spellings and
-// INCLUDE/COMMAND_LINE, now a qualifier rather than a file name.
-func TestCommands_include(t *testing.T) {
+// TestCommands_at checks @'s spellings, that the console has no INCLUDE
+// (docs/PHASE-50 - DCL command procedures.md), and RunCommandLine, which
+// took over INCLUDE/COMMAND_LINE.
+func TestCommands_at(t *testing.T) {
 	d, c, _ := newCommandDispatcher(t)
 
 	path := filepath.Join(t.TempDir(), "cmds.com")
-	if err := os.WriteFile(path, []byte("SET R6=6\n"), 0o644); err != nil {
+	if err := os.WriteFile(path, []byte("$ SET R6=6\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
-	for _, line := range []string{`INCLUDE "` + path + `"`, `INC "` + path + `"`, `@"` + path + `"`, `@ "` + path + `"`} {
+	for _, line := range []string{`@"` + path + `"`, `@ "` + path + `"`} {
 		c.CPU.SetGPR(vax.R6, 0)
 
 		if err := d.Dispatch(line); err != nil {
@@ -261,24 +262,33 @@ func TestCommands_include(t *testing.T) {
 		}
 	}
 
+	for _, line := range []string{`INCLUDE "` + path + `"`, "INCLUDE/COMMAND_LINE"} {
+		if err := d.Dispatch(line); !errors.Is(err, vmserrors.New(vmserrors.CLI_UNRECOGNIZED)) {
+			t.Errorf("%s: %v, want CLI_UNRECOGNIZED", line, err)
+		}
+	}
+
 	saved := CommandLineString
 	defer func() { CommandLineString = saved }()
 
 	CommandLineString = ""
 
-	if err := d.Dispatch("INCLUDE/COMMAND_LINE"); err != nil {
-		t.Errorf("INCLUDE/COMMAND_LINE with no command: %v", err)
+	if c.RunCommandLine(d.Dispatch) || !c.Running() {
+		t.Error("RunCommandLine with no command ran one, or ended the session")
 	}
 
 	CommandLineString = "SET R7=7"
 
-	err := d.Dispatch("INCLUDE/COMMAND_LINE")
-	if !errors.Is(err, vmserrors.New(vmserrors.VAX_QUIT)) {
-		t.Errorf("INCLUDE/COMMAND_LINE: %v, want VAX_QUIT", err)
+	if !c.RunCommandLine(d.Dispatch) {
+		t.Error("RunCommandLine didn't run the command")
 	}
 
 	if got := c.CPU.GPR(vax.R7); got != 7 {
 		t.Errorf("R7 = %#x, want 7", got)
+	}
+
+	if c.Running() || c.CommandLineErr() != nil {
+		t.Errorf("after the one-shot command: running %v, error %v; want ended, no error", c.Running(), c.CommandLineErr())
 	}
 }
 

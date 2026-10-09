@@ -8,11 +8,9 @@ import (
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
-// This string contains any "left over" text from the CLI invocation. It is put
-// here by the main() function when it parses the CLI. It exists so you can issue
-// the command "include/command_line" (IncludeCommandLine) and it implies that the command line text
-// should be treated as a command that is read and dispatched. If the string is
-// empty there is no effect.
+// CommandLineString is any "left over" text from govax's own command line,
+// put here by cmd/govax when it parses its options: the one-shot command,
+// which RunCommandLine runs once vax.init is done. Empty, there is none.
 var CommandLineString string
 
 // RunCommandLine is the text after the image's file name in govax's own
@@ -123,21 +121,24 @@ func (c *Console) SetRunLimits(instructions int, duration time.Duration) {
 
 // ApplyRunLimits puts the limits SetRunLimits recorded onto the Engine,
 // so every run from now on is held to them. govax calls it once the boot
-// script is done, before the interactive prompt; IncludeCommandLine calls
-// it before the one-shot command, which runs from inside the boot script.
+// script is done, before the interactive prompt; RunCommandLine calls
+// it before the one-shot command.
 func (c *Console) ApplyRunLimits() {
 	if c.Engine != nil {
 		c.Engine.SetLimits(c.instructionLimit, c.timeLimit)
 	}
 }
 
-// IncludeCommandLine implements INCLUDE/COMMAND_LINE: the text left on
-// govax's own command line once its options are parsed
-// (CommandLineString) is dispatched as one command, after which the
-// session ends (VAX_QUIT). With no such text it does nothing.
-func (c *Console) IncludeCommandLine(dispatch func(string) error) error {
+// RunCommandLine runs the one-shot command: the text left on govax's own
+// command line once its options are parsed (CommandLineString). cmd/govax
+// calls it once vax.init has run, as a login command procedure runs before
+// the command interpreter reads its input (docs/PHASE-50 - DCL command
+// procedures.md): the command is level 0's input, in place of the
+// terminal, and the session ends when it's done. It reports whether there
+// was a command to run; its failure is CommandLineErr's.
+func (c *Console) RunCommandLine(dispatch func(string) error) bool {
 	if CommandLineString == "" {
-		return nil
+		return false
 	}
 
 	text := CommandLineString
@@ -153,6 +154,8 @@ func (c *Console) IncludeCommandLine(dispatch func(string) error) error {
 	// failure and exits nonzero.
 	c.limitStop = nil
 
+	defer func() { c.quit = true }()
+
 	if status := dispatch(text); status != nil {
 		c.commandLineErr = status
 	} else if c.limitStop != nil {
@@ -164,44 +167,7 @@ func (c *Console) IncludeCommandLine(dispatch func(string) error) error {
 		c.commandLineErr = vmserrors.InhibitMessage(c.limitStop)
 	}
 
-	return vmserrors.Wrap(vmserrors.VAX_QUIT, nil)
-}
-
-// Include reads path line by line, calling dispatch for each non-blank,
-// non-comment ("!"-prefixed) line - run straight through one file, recursively,
-// since INCLUDE's only in-scope consumer right now is loading a startup
-// script like vax.init (see main.go). path is resolved through
-// c.Paths (docs/PHASE-15.md), so an unqualified name like "vax.init" is
-// found via the configured search path / embedded fallback, not just a
-// literal relative-to-cwd read.
-func (c *Console) Include(path string, dispatch func(string) error) error {
-	b, err := c.Paths.ReadFile(path)
-	if err != nil {
-		return err
-	}
-
-	for _, line := range strings.Split(string(b), "\n") {
-		line = strings.TrimSpace(line)
-		if line == "" || strings.HasPrefix(line, ";") || strings.HasPrefix(line, "!") {
-			continue
-		}
-
-		if err := dispatch(line); err != nil {
-			if ve, ok := err.(vmserrors.VMSError); ok {
-				if ve.Status == vmserrors.VAX_QUIT {
-					c.quit = true
-
-					return nil
-				}
-			}
-
-			if !vmserrors.MessageInhibited(err) {
-				c.Printf("%s: %v\n", path, err)
-			}
-		}
-	}
-
-	return nil
+	return true
 }
 
 // ClearSymbol implements the debugger's CANCEL (or CLEAR) SYMBOL: a

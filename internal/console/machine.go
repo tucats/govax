@@ -136,7 +136,7 @@ type Console struct {
 	quit bool // set by Quit (misc.go); read via Running
 
 	// commandLineErr is the failure of the one-shot command given on
-	// govax's command line (IncludeCommandLine), which ends the
+	// govax's command line (RunCommandLine), which ends the
 	// session; read via CommandLineErr.
 	commandLineErr error
 
@@ -146,14 +146,14 @@ type Console struct {
 	// runs the microkernel's own initialization, which the limits mustn't
 	// cut short. They go onto the Engine (cpu.Engine.SetLimits) just
 	// before the command given on govax's command line runs
-	// (IncludeCommandLine), and before the interactive prompt starts.
+	// (RunCommandLine), and before the interactive prompt starts.
 	instructionLimit int
 	timeLimit        time.Duration
 
 	// limitStop is the limit error (cpu.ErrInstructionLimitExceeded or
 	// ErrTimeLimitExceeded) that most recently stopped a run, recorded by
 	// ReportStop (execute.go), which shows the message and otherwise treats
-	// the stop as benign. IncludeCommandLine clears it before the one-shot
+	// the stop as benign. RunCommandLine clears it before the one-shot
 	// command and reads it after, so a one-shot run cut short by a limit
 	// fails, and govax exits nonzero.
 	limitStop error
@@ -269,6 +269,11 @@ type Console struct {
 	// (dclsym.go): foreign commands and command abbreviations, global
 	// and local.
 	dclSymbols dclSymbolTable
+
+	// levels is the input stack (procedure.go): the command levels above
+	// the terminal, one for each command procedure being run, innermost
+	// last. Each has its own local symbol table in dclSymbols.
+	levels []*commandLevel
 
 	// clis are the command interpreters of the processes that run one
 	// (subcli.go: LIB$SPAWN's, and $CREPRC's of LOGINOUT), by process.

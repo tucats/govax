@@ -19,7 +19,6 @@ const (
 	helpTOKEN    = "HELP"
 	ifTOKEN      = "IF"
 	asmTOKEN     = "ASM"
-	includeTOKEN = "INCLUDE"
 	runTOKEN     = "RUN"
 )
 
@@ -70,12 +69,6 @@ func (d *Dispatcher) bindConsoleCommands() {
 	})
 
 	g.Bind(asmTOKEN, d.asmCommand)
-	g.Bind(includeTOKEN, func(id int64, r *dcl.Result) error {
-		return d.Console.Include(r.String("FILE"), d.Dispatch)
-	})
-	g.Bind("INCLUDE_COMMAND_LINE", func(id int64, r *dcl.Result) error {
-		return d.Console.IncludeCommandLine(d.Dispatch)
-	})
 	g.Bind("SAVE", d.saveCommand)
 	g.Bind("LOAD", d.loadCommand)
 
@@ -185,21 +178,6 @@ func symbolicDefault() bool {
 	}
 
 	return settings.GetBool(symbolicSetting)
-}
-
-// optionalAddress evaluates the $expression parameter name, or returns nil
-// if the command line didn't give it.
-func (d *Dispatcher) optionalAddress(r *dcl.Result, name string) (*uint32, error) {
-	if !r.Present(name) {
-		return nil, nil
-	}
-
-	v, err := d.evalWhole(r.String(name))
-	if err != nil {
-		return nil, err
-	}
-
-	return &v, nil
 }
 
 // evalWhole evaluates one $expression parameter's text, which must be

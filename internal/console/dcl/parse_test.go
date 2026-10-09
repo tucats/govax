@@ -180,7 +180,10 @@ func TestParse_vminitQualifiers(t *testing.T) {
 	}
 }
 
-func TestParse_quitAliasesExit(t *testing.T) {
+// TestParse_quitIsItsOwnVerb: QUIT isn't EXIT's alias, since EXIT ends a
+// command procedure and QUIT ends govax (docs/PHASE-50 - DCL command
+// procedures.md).
+func TestParse_quitIsItsOwnVerb(t *testing.T) {
 	g := loadEvaxGrammar(t)
 
 	r, err := g.Parse("QUIT")
@@ -188,8 +191,8 @@ func TestParse_quitAliasesExit(t *testing.T) {
 		t.Fatalf("Parse: %v", err)
 	}
 
-	if r.Verb != "EXIT" {
-		t.Errorf("Verb=%s, want EXIT (QUIT is an alias)", r.Verb)
+	if r.Verb != "QUIT" {
+		t.Errorf("Verb=%s, want QUIT", r.Verb)
 	}
 }
 

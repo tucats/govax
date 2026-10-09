@@ -145,6 +145,11 @@ const (
 
 	// DIRECTORY's /VERSIONS value.
 	cliBadVersions
+
+	// docs/PHASE-50 - DCL command procedures.md: @ and command levels.
+	cliMaxParm
+	cliMaxDepth
+	cliSkpDat
 )
 
 // CLI facility status codes -- CLI_ prefix, matching real VMS's CLI$_
@@ -332,6 +337,20 @@ const (
 	// CLI_BADVERSIONS reports a DIRECTORY/VERSIONS value below 1, which
 	// would list no versions at all.
 	CLI_BADVERSIONS = CLIFacility<<FacilityPosition | cliBadVersions<<MessagePosition | StatusError
+
+	// CLI_MAXPARM reports an @ command with more than the eight
+	// parameters a command procedure can take (P1 to P8), in DCL's words
+	// for DCL$_MAXPARM (unconfirmed against VMS).
+	CLI_MAXPARM = CLIFacility<<FacilityPosition | cliMaxParm<<MessagePosition | StatusWarning
+
+	// CLI_MAXDEPTH reports an @ command that would nest command
+	// procedures deeper than DCL's 32 command levels (govax's words).
+	CLI_MAXDEPTH = CLIFacility<<FacilityPosition | cliMaxDepth<<MessagePosition | StatusError
+
+	// CLI_SKPDAT reports data lines (records not starting with "$") in a
+	// command procedure that nothing read, in DCL's words for
+	// DCL-W-SKPDAT (the User's Manual, 13.8).
+	CLI_SKPDAT = CLIFacility<<FacilityPosition | cliSkpDat<<MessagePosition | StatusWarning
 )
 
 func init() {
@@ -445,5 +464,8 @@ func init() {
 	DefineMessage(CLI_LIBREPLACED, CLIFacility, "REPLACED", "module !S replaced in !S")
 	DefineMessage(CLI_LIBDELETED, CLIFacility, "DELETED", "module !S deleted from !S")
 	DefineMessage(CLI_BADVERSIONS, CLIFacility, "BADVERSIONS", "Invalid /VERSIONS value !D (must be at least 1)")
+	DefineMessage(CLI_MAXPARM, CLIFacility, "MAXPARM", "too many parameters - reenter command with fewer parameters")
+	DefineMessage(CLI_SKPDAT, CLIFacility, "SKPDAT", `image data (records not beginning with "$") ignored`)
+	DefineMessage(CLI_MAXDEPTH, CLIFacility, "MAXDEPTH", "Command procedures nested more than !D levels deep")
 	DefineMessage(CLI_BADLIMIT, CLIFacility, "BADLIMIT", "Invalid /LIMIT value !D (must be at least 1; DELETE NAME;* removes every version)")
 }

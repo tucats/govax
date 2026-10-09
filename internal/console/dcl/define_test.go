@@ -54,9 +54,10 @@ func TestLoadConsoleGrammar(t *testing.T) {
 		}
 	}
 
-	quit := g.entries["QUIT"]
-	if quit.aliasRef == nil || quit.aliasRef.Name != "EXIT" {
-		t.Errorf("QUIT alias not resolved to EXIT: %+v", quit)
+	// QUIT is its own verb (docs/PHASE-50 - DCL command procedures.md):
+	// EXIT ends a command procedure, QUIT ends govax.
+	if quit := g.entries["QUIT"]; quit.aliasRef != nil {
+		t.Errorf("QUIT is an alias of %s, want its own verb", quit.aliasRef.Name)
 	}
 
 	show := g.entries["SHOW"]
@@ -110,9 +111,10 @@ func TestLoadEvaxGrammar_verbCount(t *testing.T) {
 	// adds debug, which starts a debugger session, and takes step,
 	// examine, deposit, and disassemble (with their aliases, ten verbs)
 	// back out for the debugger's grammar. Phase 45 adds stop, and Phase
-	// 48 spawn.
-	if len(g.verbOrder) != 45 {
-		t.Errorf("got %d verbs, want 45: %v", len(g.verbOrder), verbNames(g))
+	// 48 spawn. Phase 50 removes include and its alias @: the console
+	// reads "@file" before the grammar.
+	if len(g.verbOrder) != 43 {
+		t.Errorf("got %d verbs, want 43: %v", len(g.verbOrder), verbNames(g))
 	}
 }
 

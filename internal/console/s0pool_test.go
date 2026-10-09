@@ -18,7 +18,7 @@ func TestS0PoolAfterVaxInit(t *testing.T) {
 	d := NewDispatcher(c, loadEvaxGrammar(t), nil)
 	installPlainDebugger(c)
 
-	if err := c.Include("vax.init", d.Dispatch); err != nil {
+	if err := c.RunHostProcedure("vax.init", d.Dispatch); err != nil {
 		t.Fatalf("vax.init: %v", err)
 	}
 

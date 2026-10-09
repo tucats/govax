@@ -204,9 +204,11 @@ grammar console
 
     verb about /entry=exe$about
 
+    ! EXIT ends the command procedure it's in, or govax at the terminal;
+    ! QUIT ends govax wherever it is.
     verb exit
-    
-    verb quit/alias=exit
+
+    verb quit
 
     ! DEBUG starts a debugger session on the machine as it stands, with
     ! nothing running (docs/PHASE-42.md). It is how to look at memory and
@@ -902,16 +904,10 @@ grammar console
                     /type=$string
     verb assemble/alias=asm
 
-    ! INCLUDE file (@file) runs a file of console commands;
-    ! INCLUDE/COMMAND_LINE runs the text left on govax's command line.
-    verb include/id=1730
-        qualifier   command_line/syntax=include_command_line
-        parameter   file/id=1731                -
-                    /type=$string               -
-                    /prompt="File"
-    verb @/alias=include
-
-    syntax include_command_line/id=1732
+    ! "@file [p1 ... p8]" runs a command procedure. DCL reads it before
+    ! any verb, as the console's dispatcher does (internal/console/
+    ! procedure.go): it has no verb here. INCLUDE, eVAX's version of it, is
+    ! gone (docs/PHASE-50 - DCL command procedures.md).
 
     ! SAVE/ROM file and SAVE/NVRAM file write the ROM or NVRAM; LOAD
     ! reads one back. With LOAD's /NOERROR, a file that can't be opened
