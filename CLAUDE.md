@@ -13,11 +13,11 @@ never had.
   index.
 - `docs/PHASE-00.md` … `PHASE-49.md` — one doc per phase: goal, C-source file
   mapping, deliverables, open questions, and a dated progress log (all
-  done through 48, 49 planned; 40 follows 38 directly: there is no Phase
+  done through 49; 40 follows 38 directly: there is no Phase
   39). Phases 43–48 are the multiprocessing program (subprocesses, a
   scheduler, interprocess mailboxes and shared memory, RMS file sharing
   and the lock manager, LIB$SPAWN; done 2026-10-08; PLAN.md summarizes
-  it), and Phase 49 the work it left for later;
+  it), and Phase 49 the work it left for later (done 2026-10-09);
   `PHASE-43.md`'s Part A describes the whole program. Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
 - `docs/DEVIATIONS.md` — running log of suspected ISA/behavior fidelity issues found in
@@ -61,6 +61,10 @@ never had.
   5, the definition probes (`defs`), the system service macro probes
   (`macros`, rounds 1 to 7), and each VAX run's exchange scripts
   (`run46`, `run48`, `final`); `vax/` directories hold VMS's output.
+- `testdata/probe49/` — Phase 49's VMS probe in three rounds (`probe6`,
+  `probe6b`, `probe6c`; README.md has each round's answers), run by
+  `TestProbe6*`; `testdata/rms49/` and `testdata/sec49/` are the phase's
+  record-operation and file-section programs.
 - `testdata/mar/` — Phase 27's MACRO-32 fixtures, with real VAX MACRO's objects,
   listings, and analyses in `vax/` (see its README for the simh round trip).
   `testdata/disks/` holds local-only ODS-2 containers (gitignored).
@@ -296,6 +300,10 @@ expect adjustment as phases land):
   section keeps its file accessed after its channel goes
   (`sectionFiles`); P1 expansion (`expandP1`, below the user stack's
   reserve, `userStackPages`) for `SEC$M_EXPREG` and `$EXPREG` region 1.
+  A section ends at the file's end of file. Per-process I/O counts
+  (`iocount.go`: JPI$_BUFIO/DIRIO, counted as each `$QIO` completes; a
+  disk's and NL:'s are direct I/O); EXE$OPEN's host files are shared by
+  RMS's rule (`System.HostOpeners`, `rms/hostshare.go`).
 - `internal/librtl` — LIBRTL.EXE's routines (Phase 34): the LIB$ and STR$
   shims a program reaches through `SHIM$LIBRTL_<offset>` stubs. `Routines`
   lists each with its transfer-vector offset (checked against
@@ -446,7 +454,12 @@ expect adjustment as phases land):
   both read and write. User file open (`ufo.go`, FAB$V_UFO): `$OPEN`/
   `$CREATE` hand the file, as an `ACPFile`, to a channel
   (`Context.AssignFileChannel`), its number in FAB$L_STV; `ACPFile`'s
-  `ReadPage`/`WritePage` are a section's page I/O.
+  `ReadPage`/`WritePage` are a section's page I/O. A write-shared UFO
+  needs FAB$V_UPI (RMS$_SHR), a UFO `$CREATE` ends the file at block
+  ALQ, and a UFO of a device that holds no files is a plain channel to
+  it. A stream file's `$UPDATE` may change a record's length (written
+  over the bytes there, as VMS does). RMS's share of the I/O counts is
+  a model fitted to VMS's (`iocount.go`, `Context.CountIO`).
 - `internal/link` — the VAX linker (Phase 30): builds a VMS executable image from
   `internal/obj` modules, laid out as real LINK lays images out (byte for byte on
   the fixtures). The console's `LINK` command (`internal/console/link.go`) drives it.

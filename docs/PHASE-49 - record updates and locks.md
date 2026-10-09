@@ -1,6 +1,9 @@
 # Phase 49 — Record updates, lock services, and file sections
 
-**Status:** planned (2026-10-08). Needs Phases 43–48.
+**Status:** done (2026-10-09). Needs Phases 43–48. Every subtask is
+done; a VMS 7.3 probe in three rounds (`testdata/probe49`) settled what
+the manuals left open, and what is still govax's choice is listed in
+DEVIATIONS.md ("[Phase 49] Rules chosen without a manual or probe").
 
 Phases 43–48 (the multiprocessing program; PHASE-43.md, Part A) left
 some work for later, and their carry-forward sections pointed at it. On
@@ -162,10 +165,10 @@ stream's record locks.
 
 ## Open questions
 
-- Which of these the author wants first, or at all; the order above is
-  a suggestion (RMS first, as programs are likelier to need it).
+- ~~Which of these the author wants first~~ (the suggested order, RMS
+  first; all done).
 - Whether relative or indexed files belong in a later phase of their own
-  (out of scope here: govax has sequential files only).
+  (out of scope here: govax has sequential files only). Still open.
 
 ## Progress log
 
@@ -548,3 +551,16 @@ stream's record locks.
   volume of 3-block clusters, as VMS's was, and checks the 7c and 7d
   lines whole. Subtask 12 is done: every difference left between the
   probe's three reports and VMS's is the environment's.
+- 2026-10-09: Subtask 13, the close-out. DEVIATIONS.md has the rules
+  still chosen without a manual or probe ("[Phase 49] Rules chosen
+  without a manual or probe"), and Phase 46's entry marks the terminal
+  `$QIO` read fixed; PLAN.md's index and CLAUDE.md say the phase is
+  done. Along the way the phase fixed bugs outside its own scope:
+  `$OPEN` refusing DEL- or TRN-only access, `$GET` not setting
+  RAB$L_RBF, and ods2's STREAM reader (CR LF only; ods2 v0.1.20 ends
+  records at LF, VT, and FF too). Left for later: relative and indexed
+  files; IO$M_TIMED's time limit on a terminal read (now possible
+  through the pending request); a page file and working set manager
+  behind `vm.Pager`; keeping the user stack out of P1's expansion
+  region; the page fault cluster; SHOW PAGE decoding the invalid PTE
+  forms.

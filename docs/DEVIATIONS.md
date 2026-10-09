@@ -2836,7 +2836,8 @@ widened."
     `$DGBLSC` not checking protection; no logical-name translation of a
     section name; which rule makes a file section with no channel
     SS$_IVSECFLG; FAB$W_MRS after `$OPEN` of a mailbox; a terminal read
-    that must wait making the `$QIO` itself wait.
+    that must wait making the `$QIO` itself wait (fixed 2026-10-09,
+    Phase 49: the read is left pending, as on VMS).
   - **Phase 48:** `testdata/mp/probe4`'s VMS run (2026-10-08) confirmed
     the default process name, the event flag's clearing, which process
     logical names and symbols a subprocess gets, the CLI's statuses
@@ -2890,6 +2891,49 @@ widened."
 - **Status**: unconfirmed but for what the VMS runs settled (probes 1
   to 5, the ping-pong pair, the milestone, macro rounds 1 to 7); the
   rest are candidates for later probes.
+
+### [Phase 49] Rules chosen without a manual or probe
+
+- **Where**: `internal/rms` (`stream.go`, `recordops.go`, `recordlock.go`,
+  `ufo.go`, `iocount.go`, `hostshare.go`, `search.go`); `internal/lck`
+  (`deadlock.go`, `info.go`); `internal/corevms` (`getlki.go`,
+  `lockquota.go`, `filesec.go`, `gblsec.go`, `terminal.go`,
+  `iocount.go`, `file.go`).
+- **What**: Phase 49 followed the RMS Reference Manual, the File
+  Applications guide, the System Services manual, and the Internals
+  book, and its probe's three VMS 7.3 runs (`testdata/probe49`, every
+  answer adopted; govax's reports now differ from VMS's only in the
+  environment). Still chosen without either:
+  - **RMS:** DEL access letting a stream `$GET` (UPD's and TRN's
+    confirmed); `$FIND` on the terminal or a mailbox reading a record
+    and dropping it, `$REWIND` there doing nothing; a stream `$UPDATE`
+    that would run past the end of the file being RMS$_RSZ; a failed
+    `$GET` for RMS$_RLK leaving RAB$W_RFA (RMS$_TMO's clears it, as
+    VMS's did); RAB$V_NODLCKWT and NODLCKBLK ignored.
+  - **Locks:** an ASTLM shortage on `$ENQ` being SS$_EXQUOTA (not
+    SS$_EXASTLM), an armed blocking AST not counting against ASTLM, and
+    only the lock services enforcing ASTLM; the deadlock victim being
+    the request the search started from (every govax process's deadlock
+    priority is 0); no deadlock search with the scheduler off;
+    DEADLOCK_WAIT fixed at 10 seconds.
+  - **Sections:** `$UPDSEC` passing over pages a more privileged mode
+    owns, and its IOSB's second longword when every page was written
+    (the page past the range); the `$UPDSEC` macros' argument pairing
+    (not checked against real MACRO); the page fault cluster ignored;
+    page-file sections taking their frames at creation; P1's expansion
+    region below a fixed 1,024-page user stack reserve, which a deeper
+    stack would run into.
+  - **Terminal:** IO$M_TIMED with a nonzero limit waits without one;
+    IO$M_PURGE discards what is typed ahead even when reads queued
+    before it would have read it.
+  - **I/O counts:** RMS's are a model fitted to two VMS totals
+    (`rms/iocount.go`: the file system's calls buffered, one direct I/O
+    per 16-block buffer, `$CREATE` 2 and 5); how VMS's grow with file
+    size, buffer counts, and other services is unknown.
+  - **Host files:** EXE$OPEN's arbitration is govax's own (VMS has no
+    such shim); it uses RMS's rule, a read-only open as FAB$M_GET and
+    any other as a writer, with RMS's default sharing.
+- **Status**: unconfirmed; candidates for a later probe.
 
 <!--
 Entry template:
