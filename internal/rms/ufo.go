@@ -50,22 +50,15 @@ func ufoSharing(fop uint32, shr byte) uint32 {
 
 // ufoEndOfFile is a user file open's $CREATE's end of file: the RMS
 // manual (FAB$V_UFO) sets it "to the end of the block specified in the
-// FAB$L_ALQ field on input", so a section of the new file maps every
-// block asked for.
-func (ctx *Context) ufoEndOfFile(fabAddr uint32, ifi uint16) error {
-	h, ok := ctx.Files.Lookup(ifi)
-	if !ok || h.File == nil {
-		return nil
+// FAB$L_ALQ field on input" (alq, as the FAB had it before $CREATE
+// wrote back the allocation rounded to whole clusters), so a section of
+// the new file maps every block asked for. VMS 7.3 so: ALQ=10 on a
+// volume of 3-block clusters, 12 blocks allocated, the end of file at
+// block 10's end (testdata/probe49, round 3, step 7c).
+func (ctx *Context) ufoEndOfFile(ifi uint16, alq uint32) {
+	if h, ok := ctx.Files.Lookup(ifi); ok && h.File != nil && alq != 0 {
+		h.File.SetEndOfFile(alq+1, 0)
 	}
-
-	alq, err := ctx.loadLongword(fabAddr + fabOffset("ALQ"))
-	if err != nil || alq == 0 {
-		return err
-	}
-
-	h.File.SetEndOfFile(alq+1, 0)
-
-	return nil
 }
 
 // userFileOpen finishes a $OPEN or $CREATE with FAB$V_UFO: the file just

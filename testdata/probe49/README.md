@@ -13,7 +13,7 @@ asked about, and a process's lock on itself stands in for a deadlock.
 | `exchange.cmd`, `copyout.cmd` | Make the exchange volume and copy the logs back |
 | `probe6b.mar`, `probe6b.com`, `exchange2.cmd`, `copyout2.cmd` | Round 2: what round 1 left open |
 | `probe6c.mar`, `probe6c.com`, `exchange3.cmd`, `copyout3.cmd` | Round 3: round 2's step 7 with FAB$V_UPI |
-| `vax/` | The VMS runs' logs: `probe6.log`, `probe6b.log` (2026-10-09), and round 3's once it has run |
+| `vax/` | The VMS runs' logs: `probe6.log`, `probe6b.log`, `probe6c.log` (2026-10-09), and their MACRO logs (audited: empty) |
 
 `TestProbe6`, `TestProbe6b`, and `TestProbe6c` (`internal/console`) run the programs under govax;
 `go test ./internal/console -run TestProbe6 -v` prints govax's report,
@@ -191,3 +191,17 @@ read-only file's section (govax: SS$_NOWRT).
     govax console < testdata/probe49/copyout3.cmd
 
 The report goes to `vax/probe6c.log`; audit MACRO's log as before.
+
+### What VMS answered (round 3, 2026-10-09)
+
+| Step | VMS 7.3 | govax now |
+| ---- | ------- | --------- |
+| 7a, 7b | UFO with SHR=GET,PUT,UPD,UPI: a channel; the private section SS$_CREATED, 10 pages | the same |
+| 7c | after a section write: EBK 11, FFB 0 (the end of block ALQ), HBK 12 (ALQ=10 rounded to 3-block clusters) | the same, on a volume of 3-block clusters (the end of file from ALQ as the program set it) |
+| 7d | a file of ten blocks with three written maps 3 pages: a section ends at the end of file | the same |
+| 7e | `$UPDSEC` with nothing modified: SS$_NOTMODIFIED, IOSB 0 in its second longword, no AST; with a page modified: SS$_NORMAL, the IOSB's second longword the next page's address (the manual: "the first page that was not written"), the AST | the same |
+| 7f | `$MGBLSC` writable of a read-only file's section: SS$_NOPRIV | the same |
+
+Every difference left between govax's reports and VMS's is the
+environment's: channel numbers, addresses, the locks VMS's process holds,
+the device name, and timing.

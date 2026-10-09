@@ -533,3 +533,18 @@ stream's record locks.
   `$UPDSEC`, `$MGBLSC` writable of a read-only file's section.
   Tests: `TestUpdate_stream`, `TestRecordLock_timeout`, `TestUFO_create`,
   `TestProbe6b`, `TestProbe6c`; ods2's `TestReaderStreamCRLFTerminators`.
+- 2026-10-09: The probe's third round on VMS (`vax/probe6c.log`; MACRO
+  log audited). Settled, and govax now does: a file section ends at the
+  file's end of file, not its allocation (`fileSectionSize`; a UFO
+  `$CREATE`'s file ends at block ALQ, so it maps every block asked for);
+  the end of file a UFO `$CREATE` sets comes from FAB$L_ALQ as the
+  program set it, not the cluster-rounded allocation `$CREATE` writes
+  back (`ufoEndOfFile`); `$UPDSEC`'s IOSB second longword is the first
+  page of the range not written (the manual's words; when every page
+  was written, the page past the range, unconfirmed); `$MGBLSC`
+  writable of a read-only file section is SS$_NOPRIV. Confirmed as
+  govax had them: SS$_NOTMODIFIED's IOSB (0 in the second longword) and
+  no AST; the AST and SS$_NORMAL after a write. `TestProbe6c` runs on a
+  volume of 3-block clusters, as VMS's was, and checks the 7c and 7d
+  lines whole. Subtask 12 is done: every difference left between the
+  probe's three reports and VMS's is the environment's.

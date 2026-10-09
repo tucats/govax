@@ -72,6 +72,13 @@ func SysCreate(ctx *Context, argv []uint32) (uint32, error) {
 		return 0, err
 	}
 
+	// FAB$L_ALQ as the program set it: a user file open's end of file
+	// (ufoEndOfFile), before the create writes back the allocation.
+	alqInput, err := ctx.loadLongword(fabAddr + fabOffset("ALQ"))
+	if err != nil {
+		return 0, err
+	}
+
 	if shr, err := ctx.loadByte(fabAddr + fabSHR); err != nil {
 		return 0, err
 	} else if sts := ufoSharing(fop, shr); sts != 0 {
@@ -211,9 +218,7 @@ func SysCreate(ctx *Context, argv []uint32) (uint32, error) {
 	// one ending where FAB$L_ALQ does.
 	if fop&fopUFO != 0 {
 		if created {
-			if err := ctx.ufoEndOfFile(fabAddr, ifi); err != nil {
-				return 0, err
-			}
+			ctx.ufoEndOfFile(ifi, alqInput)
 		}
 
 		return ctx.userFileOpen(fabAddr, ifi, device, status)

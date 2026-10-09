@@ -539,24 +539,24 @@ func (env *Environment) fileSectionChannel(chanNumber, flags uint32) (*rms.ACPFi
 }
 
 // fileSectionSize is how many pages a section of f from block vbn (0
-// meaning 1) has: the blocks the file has allocated from vbn on, or
-// pagcnt if that's fewer (and not 0). A vbn past the allocation is
+// meaning 1) has: the file's blocks up to its end of file from vbn on,
+// or pagcnt if that's fewer (and not 0). A vbn past the end of file is
 // SS$_ENDOFFILE. (The manual: "The specified page count is compared with
 // the number of pages in the section file; if they are different, the
-// lower value is used". govax counts the file's allocated blocks, not its
-// end of file, so that a file just created with an allocation can be
-// mapped: unconfirmed.)
+// lower value is used". VMS 7.3 counts to the end of file: a file of ten
+// blocks with three written maps three pages; testdata/probe49, round 3,
+// step 7d. A file a user file open created ends at its allocation.)
 func fileSectionSize(f *rms.ACPFile, vbn, pagcnt uint32) (uint32, uint32, uint32) {
 	if vbn == 0 {
 		vbn = 1
 	}
 
-	alloc := f.AllocatedBlocks()
-	if vbn > alloc {
+	used := f.EndOfFileBlock()
+	if vbn > used {
 		return 0, 0, ssEndOfFile
 	}
 
-	pages := alloc - vbn + 1
+	pages := used - vbn + 1
 	if pagcnt != 0 && pagcnt < pages {
 		pages = pagcnt
 	}
@@ -583,8 +583,8 @@ func fileSectionSize(f *rms.ACPFile, vbn, pagcnt uint32) (uint32, uint32, uint32
 //
 // It completes at once, as $GETLKI does: the event flag (efn, default 0)
 // is cleared, then set; the IOSB's first word gets the status and its
-// second longword the address of the first page not written (0 when every
-// page was: unconfirmed), and the AST is queued. retadr receives the
+// second longword the address of the first page not written (see below),
+// and the AST is queued. retadr receives the
 // first and last pages of the first run of contiguous pages written (what
 // VMS's first $QIO would have covered). It returns SS$_NORMAL if any page
 // was written, SS$_NOTMODIFIED if none was (the event flag is set and the
@@ -650,6 +650,16 @@ func serviceSysUpdsec(env *Environment, argv []uint32) (uint32, error) {
 		status, ioStatus = ssNotModified, ssNotModified
 	}
 
+	// The IOSB's second longword is "the virtual address of the first
+	// page that was not written" (the manual): a failed page's, or after
+	// a successful update the first page of the range (in the order it
+	// was scanned) not written, as VMS 7.3 reported it (testdata/probe49,
+	// round 3, step 7e). When every page was written, the page past the
+	// range (unconfirmed); when none needed writing, 0 (VMS's).
+	if failedAt == 0 && len(written) > 0 {
+		failedAt = firstUnwritten(pages, written)
+	}
+
 	if iosb != 0 {
 		_ = env.mem.StoreLongword(env.cpu, iosb, ioStatus&0xFFFF)
 		_ = env.mem.StoreLongword(env.cpu, iosb+4, failedAt)
@@ -662,6 +672,24 @@ func serviceSysUpdsec(env *Environment, argv []uint32) (uint32, error) {
 	}
 
 	return status, nil
+}
+
+// firstUnwritten is the first of pages, a range in the order $UPDSEC
+// scanned it, that isn't one of written; or, if all are, the page after
+// the range's last in that order.
+func firstUnwritten(pages, written []uint32) uint32 {
+	for _, p := range pages {
+		if !slices.Contains(written, p) {
+			return p
+		}
+	}
+
+	last := pages[len(pages)-1]
+	if len(pages) > 1 && pages[0] > last {
+		return last - pageSize
+	}
+
+	return last + pageSize
 }
 
 // updateSections is $UPDSEC's work over pages: it writes each page that

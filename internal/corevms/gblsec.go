@@ -904,10 +904,12 @@ func (env *Environment) mapSection(s *GlobalSection, a sectionArgs, r pageRange)
 		return ssNoPriv
 	}
 
+	// A writable mapping of a read-only file section is SS$_NOPRIV, as
+	// VMS 7.3's was (testdata/probe49, round 3, step 7f).
 	if write && s.File != nil && !s.Writable && !s.CopyOnRef {
 		_ = env.storeRetadr(a.retadr, nil)
 
-		return ssNoWrt
+		return ssNoPriv
 	}
 
 	if a.relpag >= uint32(len(s.Frames)) {
