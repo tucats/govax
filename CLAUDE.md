@@ -20,8 +20,8 @@ never had.
   it), and Phase 49 the work it left for later (done 2026-10-09);
   `PHASE-43.md`'s Part A describes the whole program. Phase 50 (in
   progress) makes the console a DCL command interpreter: command
-  procedures and command levels first, then labels, IF, substitution,
-  `$STATUS`/ON, and lexical functions. Read the relevant phase doc
+  procedures and command levels, symbol substitution, and expressions
+  are done; then `$STATUS`/ON, labels, IF, and the lexical functions. Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
 - `docs/DEVIATIONS.md` — running log of suspected ISA/behavior fidelity issues found in
   the C source during porting (see "Bug-fixing policy" below).
@@ -64,6 +64,9 @@ never had.
   5, the definition probes (`defs`), the system service macro probes
   (`macros`, rounds 1 to 7), and each VAX run's exchange scripts
   (`run46`, `run48`, `final`); `vax/` directories hold VMS's output.
+- `testdata/dcl50/` — Phase 50's VMS probe of DCL (README.md): symbol
+  substitution, expressions, `@`, and statuses, as a command procedure
+  run with SET VERIFY; `vax/` holds VMS's log once it's run.
 - `testdata/probe49/` — Phase 49's VMS probe in three rounds (`probe6`,
   `probe6b`, `probe6c`; README.md has each round's answers), run by
   `TestProbe6*`; `testdata/rms49/` and `testdata/sec49/` are the phase's
@@ -246,6 +249,18 @@ expect adjustment as phases land):
   is then level 0's input (`RunCommandLine`). The debugger's `@` reads
   the VMS debugger's format, every line a command
   (`RunDebuggerProcedure`).
+  **Symbol substitution and expressions** (Phase 50): `DispatchConsole`
+  replaces `'SYMBOL'` (and `''SYMBOL'` in quotes) first
+  (`dclsubst.go`), then `dispatchCommand` does the rest: the verb as a
+  symbol, `&SYMBOL` (after uppercasing, so its value keeps its case:
+  the grammar's `ParseUpcased`, or `dclText`/`dclWord`), the grammar.
+  Aliases and IF's THEN re-enter `dispatchCommand`, not
+  `DispatchConsole`. `=` evaluates DCL's expressions (`dclexpr.go`:
+  integers and strings, the User's Manual's operators, precedence, and
+  conversions); lexical functions are a table (`dcllexical.go`). The
+  messages are DCL's CLI$_ texts from `vmsdef.Messages`, with a
+  ` \TEXT\` segment line. `testdata/dcl50` is the VMS probe of the
+  rules the manual leaves open.
   `internal/console/consoletest` is its test support.
 - `internal/io` — device abstraction (Phase 09).
 - `internal/vmsdef` — VMS's own definitions, shared by the assembler, RTL, RMS,

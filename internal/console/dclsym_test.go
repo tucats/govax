@@ -24,11 +24,11 @@ func TestDCLText(t *testing.T) {
 		{`"! not a comment"`, `"! not a comment"`, "! not a comment"},
 		{"", "", ""},
 	} {
-		if got := dclText(tc.text, true); got != tc.foreign {
+		if got := dclText(tc.text, true, nil); got != tc.foreign {
 			t.Errorf("dclText(%q, true) = %q, want %q", tc.text, got, tc.foreign)
 		}
 
-		if got := dclText(tc.text, false); got != tc.value {
+		if got := dclText(tc.text, false, nil); got != tc.value {
 			t.Errorf("dclText(%q, false) = %q, want %q", tc.text, got, tc.value)
 		}
 	}
@@ -95,7 +95,7 @@ func TestAssignSymbol(t *testing.T) {
 		name, op, text string
 		code           uint32
 	}{
-		{"X", "=", " 12x", vmserrors.CLI_EXPSYN},
+		{"X", "=", " 12x", vmserrors.CLI_IVCHAR},
 		{"X", "==", ` "open`, vmserrors.CLI_UNTERMSTR},
 		{"X", "=", ` "a" b`, vmserrors.CLI_EXPSYN},
 		{"A*B*C", ":=", "x", vmserrors.CLI_EXPSYN},
@@ -183,7 +183,7 @@ func TestShowDCLSymbols(t *testing.T) {
 	}
 
 	all := `  NEG = -1   Hex = FFFFFFFF  Octal = 37777777777
-  SAY = "a ""b"" c"
+  SAY = "a "b" c"
   FO*RTH == "$FORTH"
   N == 42   Hex = 0000002A  Octal = 00000000052
 `
@@ -199,7 +199,7 @@ func TestShowDCLSymbols(t *testing.T) {
 		t.Errorf("wildcard: %q", got)
 	}
 
-	if got, want := show("SHOW SYMBOL/ALL"), "  NEG = -1   Hex = FFFFFFFF  Octal = 37777777777\n  SAY = \"a \"\"b\"\" c\"\n"; got != want {
+	if got, want := show("SHOW SYMBOL/ALL"), "  NEG = -1   Hex = FFFFFFFF  Octal = 37777777777\n  SAY = \"a \"b\" c\"\n"; got != want {
 		t.Errorf("/ALL (the local table): %q, want %q", got, want)
 	}
 

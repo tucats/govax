@@ -150,6 +150,16 @@ const (
 	cliMaxParm
 	cliMaxDepth
 	cliSkpDat
+
+	// docs/PHASE-50 - DCL command procedures.md: symbol substitution and
+	// expressions.
+	cliUndSym
+	cliIvOper
+	cliIvFnam
+	cliArgReq
+	cliNoParen
+	cliIvChar
+	cliAbFnam
 )
 
 // CLI facility status codes -- CLI_ prefix, matching real VMS's CLI$_
@@ -317,10 +327,12 @@ const (
 	CLI_LIBREPLACED = CLIFacility<<FacilityPosition | cliLibReplaced<<MessagePosition | StatusSuccess
 	CLI_LIBDELETED  = CLIFacility<<FacilityPosition | cliLibDeleted<<MessagePosition | StatusSuccess
 
-	// CLI_EXPSYN reports a symbol assignment whose value isn't a quoted
-	// string or an integer, the only expressions the console evaluates
-	// for "=" and "==".
-	CLI_EXPSYN = CLIFacility<<FacilityPosition | cliExpSyn<<MessagePosition | StatusError
+	// CLI_EXPSYN reports a DCL expression that doesn't parse (an operand
+	// or operator missing or out of place), and other malformed symbol
+	// commands; DCL's CLI$_EXPSYN, a warning. The argument is the text
+	// in question, which DCL shows on a line of its own between
+	// backslashes.
+	CLI_EXPSYN = CLIFacility<<FacilityPosition | cliExpSyn<<MessagePosition | StatusWarning
 
 	// CLI_SYMDEPTH reports symbols that substitute for one another too
 	// many times, as an alias defined in terms of itself does.
@@ -351,6 +363,28 @@ const (
 	// command procedure that nothing read, in DCL's words for
 	// DCL-W-SKPDAT (the User's Manual, 13.8).
 	CLI_SKPDAT = CLIFacility<<FacilityPosition | cliSkpDat<<MessagePosition | StatusWarning
+
+	// The DCL expression evaluator's messages (internal/console/
+	// dclexpr.go), in the words and severities of DCL's CLI$_ messages
+	// of the same names. Each argument is the part of the command in
+	// question, shown on a line of its own between backslashes, as DCL
+	// shows it (unconfirmed for these messages: the User's Manual shows
+	// it only for IVVERB and PARMDEL).
+	//
+	// CLI_UNDSYM is an undefined symbol in an expression; CLI_IVOPER an
+	// operator DCL doesn't have (".FOO."); CLI_IVFNAM a lexical function
+	// DCL doesn't have, and CLI_ABFNAM an abbreviation of more than one;
+	// CLI_ARGREQ a lexical function's required
+	// argument left out; CLI_NOPAREN a lexical function's argument list
+	// not in parentheses; CLI_IVCHAR a number with a digit its radix
+	// doesn't have.
+	CLI_UNDSYM  = CLIFacility<<FacilityPosition | cliUndSym<<MessagePosition | StatusWarning
+	CLI_IVOPER  = CLIFacility<<FacilityPosition | cliIvOper<<MessagePosition | StatusWarning
+	CLI_IVFNAM  = CLIFacility<<FacilityPosition | cliIvFnam<<MessagePosition | StatusWarning
+	CLI_ARGREQ  = CLIFacility<<FacilityPosition | cliArgReq<<MessagePosition | StatusWarning
+	CLI_NOPAREN = CLIFacility<<FacilityPosition | cliNoParen<<MessagePosition | StatusWarning
+	CLI_IVCHAR  = CLIFacility<<FacilityPosition | cliIvChar<<MessagePosition | StatusWarning
+	CLI_ABFNAM  = CLIFacility<<FacilityPosition | cliAbFnam<<MessagePosition | StatusWarning
 )
 
 func init() {
@@ -369,7 +403,7 @@ func init() {
 	DefineMessage(CLI_BADCOUNT, CLIFacility, "BADCOUNT", "Invalid count !Q")
 	DefineMessage(CLI_NOFRAMES, CLIFacility, "NOFRAMES", "No call frames (FP/AP not established)")
 	DefineMessage(CLI_UNDEFSYM, CLIFacility, "UNDEFSYM", "Undefined symbol !Q")
-	DefineMessage(CLI_EXPSYN, CLIFacility, "EXPSYN", "Invalid expression syntax: !Q")
+	DefineMessage(CLI_EXPSYN, CLIFacility, "EXPSYN", "invalid expression syntax - check operators and operands\n \\!S\\")
 	DefineMessage(CLI_SYMDEPTH, CLIFacility, "SYMDEPTH", "Symbol !Q substitutes for itself")
 	DefineMessage(CLI_ANALYZE, CLIFacility, "ANALYZE", "Analyzing !S")
 	DefineMessage(CLI_ANALYZEERRORS, CLIFacility, "ANALYZEERRORS", "The analysis of !S uncovered errors")
@@ -466,6 +500,13 @@ func init() {
 	DefineMessage(CLI_BADVERSIONS, CLIFacility, "BADVERSIONS", "Invalid /VERSIONS value !D (must be at least 1)")
 	DefineMessage(CLI_MAXPARM, CLIFacility, "MAXPARM", "too many parameters - reenter command with fewer parameters")
 	DefineMessage(CLI_SKPDAT, CLIFacility, "SKPDAT", `image data (records not beginning with "$") ignored`)
+	DefineMessage(CLI_UNDSYM, CLIFacility, "UNDSYM", "undefined symbol - check validity and spelling\n \\!S\\")
+	DefineMessage(CLI_IVOPER, CLIFacility, "IVOPER", "unrecognized operator in expression - check spelling and syntax\n \\!S\\")
+	DefineMessage(CLI_IVFNAM, CLIFacility, "IVFNAM", "invalid lexical function name - check validity and spelling\n \\!S\\")
+	DefineMessage(CLI_ARGREQ, CLIFacility, "ARGREQ", "missing argument - supply all required arguments\n \\!S\\")
+	DefineMessage(CLI_NOPAREN, CLIFacility, "NOPAREN", "value improperly delimited - supply parenthesis\n \\!S\\")
+	DefineMessage(CLI_ABFNAM, CLIFacility, "ABFNAM", "ambiguous lexical function name - supply more characters\n \\!S\\")
+	DefineMessage(CLI_IVCHAR, CLIFacility, "IVCHAR", "invalid numeric value - check for invalid digits\n \\!S\\")
 	DefineMessage(CLI_MAXDEPTH, CLIFacility, "MAXDEPTH", "Command procedures nested more than !D levels deep")
 	DefineMessage(CLI_BADLIMIT, CLIFacility, "BADLIMIT", "Invalid /LIMIT value !D (must be at least 1; DELETE NAME;* removes every version)")
 }

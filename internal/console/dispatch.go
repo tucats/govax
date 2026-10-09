@@ -86,6 +86,27 @@ func (d *Dispatcher) DispatchConsole(line string) error {
 		return d.assembleInteractiveLine(line)
 	}
 
+	// DCL's first phase: symbols between apostrophes are replaced
+	// before anything reads the line (dclsubst.go).
+	line, err := d.Console.substituteApostrophes(line)
+	if err != nil {
+		return err
+	}
+
+	return d.dispatchCommand(line)
+}
+
+// dispatchCommand executes a console command line that has been through
+// apostrophe substitution: DCL's second phase (the first word as a
+// symbol, then ampersand substitution) and then the console's grammar. A
+// command that runs another command line (an alias's value, IF's THEN
+// command) comes back here, so its apostrophes aren't substituted again.
+func (d *Dispatcher) dispatchCommand(line string) error {
+	line = strings.TrimSpace(line)
+	if line == "" || strings.HasPrefix(line, "!") {
+		return nil
+	}
+
 	// "@file" runs a command procedure (procedure.go). DCL reads it
 	// before any verb: its /OUTPUT qualifier must touch the file name,
 	// and anything after a blank is a parameter, which the grammar's
@@ -101,11 +122,18 @@ func (d *Dispatcher) DispatchConsole(line string) error {
 		return err
 	}
 
+	line, upcased := d.Console.dclSymbols.substituteAmpersands(line)
+
 	if d.Console.CPU != nil && d.Console.CPU.DebugEnabled(vax.DebugDCL) {
 		fmt.Fprintf(d.Console.CPU.DebugWriter(), "DEBUG(DCL): parsing %q\n", line)
 	}
 
-	r, err := d.Grammar.Parse(line)
+	parse := d.Grammar.Parse
+	if upcased {
+		parse = d.Grammar.ParseUpcased
+	}
+
+	r, err := parse(line)
 	if err != nil {
 		return err
 	}

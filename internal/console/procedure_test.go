@@ -49,7 +49,7 @@ func TestParseProcedureCommand(t *testing.T) {
 		{`data "!" x`, "DATA", "", []string{"!", "X"}},
 		{"sum 1 2 3 4 5 6 7 8", "SUM", "", []string{"1", "2", "3", "4", "5", "6", "7", "8"}},
 	} {
-		cmd, err := parseProcedureCommand(tc.text)
+		cmd, err := parseProcedureCommand(tc.text, nil)
 		if err != nil {
 			t.Errorf("parseProcedureCommand(%q): %v", tc.text, err)
 
@@ -73,7 +73,7 @@ func TestParseProcedureCommand(t *testing.T) {
 		{"setd/log", vmserrors.CLI_UNRECOGNIZED},
 		{"setd/output", vmserrors.CLI_NEEDQUALIFIERVALUE},
 	} {
-		if _, err := parseProcedureCommand(tc.text); !errors.Is(err, vmserrors.New(tc.status)) {
+		if _, err := parseProcedureCommand(tc.text, nil); !errors.Is(err, vmserrors.New(tc.status)) {
 			t.Errorf("parseProcedureCommand(%q): %v, want %v", tc.text, err, vmserrors.New(tc.status))
 		}
 	}

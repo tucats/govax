@@ -223,10 +223,10 @@ type procedureCommand struct {
 // only where they follow it directly: DCL takes a qualifier after a blank
 // for a parameter (User's Manual, 13.6.4). The rest are the parameters,
 // read by DCL's rules (dclWord).
-func parseProcedureCommand(text string) (procedureCommand, error) {
+func parseProcedureCommand(text string, symbols *dclSymbolTable) (procedureCommand, error) {
 	var cmd procedureCommand
 
-	file, i, _ := dclWord(text, 0, true)
+	file, i, _ := dclWord(text, 0, true, symbols)
 	if file == "" {
 		return cmd, vmserrors.New(vmserrors.CLI_MISSINGPARAMETER, "file")
 	}
@@ -253,7 +253,7 @@ func parseProcedureCommand(text string) (procedureCommand, error) {
 		}
 
 		if i < len(text) && text[i] == '=' {
-			cmd.output, i, _ = dclWord(text, i+1, true)
+			cmd.output, i, _ = dclWord(text, i+1, true, symbols)
 		}
 
 		if cmd.output == "" {
@@ -262,7 +262,7 @@ func parseProcedureCommand(text string) (procedureCommand, error) {
 	}
 
 	for {
-		word, next, present := dclWord(text, i, false)
+		word, next, present := dclWord(text, i, false, symbols)
 		if !present {
 			break
 		}
@@ -285,8 +285,9 @@ func parseProcedureCommand(text string) (procedureCommand, error) {
 // case and blanks, the quotes are removed, and "" inside quotes is one
 // quote. So "" alone is an empty word, which is still present. It
 // returns the word, where the text after it starts, and whether there
-// was a word at all.
-func dclWord(text string, i int, stopAtSlash bool) (string, int, bool) {
+// was a word at all. With symbols, an &NAME outside quotes is replaced by
+// the symbol's value, as it is (dclText).
+func dclWord(text string, i int, stopAtSlash bool, symbols *dclSymbolTable) (string, int, bool) {
 	for i < len(text) && (text[i] == ' ' || text[i] == '\t') {
 		i++
 	}
@@ -317,6 +318,14 @@ func dclWord(text string, i int, stopAtSlash bool) (string, int, bool) {
 			continue
 		}
 
+		if value, end, ok := symbols.ampersandAt(text, i); ok {
+			b.WriteString(value)
+
+			i = end - 1
+
+			continue
+		}
+
 		switch {
 		case ch == '"':
 			quoted = true
@@ -334,7 +343,7 @@ func dclWord(text string, i int, stopAtSlash bool) (string, int, bool) {
 
 // atCommand is the @ command: text is what follows the "@".
 func (d *Dispatcher) atCommand(text string) error {
-	cmd, err := parseProcedureCommand(text)
+	cmd, err := parseProcedureCommand(text, &d.Console.dclSymbols)
 	if err != nil {
 		return err
 	}

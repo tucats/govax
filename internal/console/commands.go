@@ -252,7 +252,7 @@ func (d *Dispatcher) ifCommand(id int64, r *dcl.Result) error {
 		return nil
 	}
 
-	return d.Dispatch(command)
+	return d.dispatchCommand(command)
 }
 
 // SymbolicDefault is whether the debugger's instruction display names

@@ -35,8 +35,8 @@ import (
 // What's here, and what isn't:
 //
 //   - ":=" and ":==" assign a string: the rest of the line, with DCL's
-//     usual treatment (dclText). "=" and "==" assign an expression's value;
-//     the console evaluates only a quoted string or a decimal integer.
+//     usual treatment (dclText). "=" and "==" assign an expression's
+//     value, an integer or a string (dclexpr.go).
 //   - DCL has local (":=", "=") and global (":==", "==") symbols, kept in
 //     separate tables (dclSymbolTable): one global table, and a local
 //     table for each command level. The terminal is level 0, and each
@@ -51,7 +51,8 @@ import (
 //     has no SYS$SYSTEM to default to).
 //   - SHOW SYMBOL [/LOCAL | /GLOBAL] [/ALL] [name] shows them
 //     (ShowDCLSymbols), as DCL's SHOW SYMBOL does.
-//   - Not here: apostrophe substitution ('SYMBOL') inside a command.
+//   - Symbol substitution ('SYMBOL', ''SYMBOL' in quotes, and &SYMBOL)
+//     is in dclsubst.go.
 
 // maxSymbolDepth is how many times symbol substitution may rewrite one
 // command: enough for an alias of an alias, short of an alias of itself.
@@ -239,7 +240,10 @@ func (d *Dispatcher) dclSymbolLine(line string) (bool, error) {
 	d.symbolDepth++
 	defer func() { d.symbolDepth-- }()
 
-	return true, d.Dispatch(sym.value + rest)
+	// The value takes the symbol's place, and the line goes on through
+	// the second phase; its apostrophes aren't substituted (the User's
+	// Manual's EXEC example, 12.13.4).
+	return true, d.dispatchCommand(sym.value + rest)
 }
 
 // runForeign runs a foreign command: the image named by spec (a symbol's
@@ -251,7 +255,7 @@ func (d *Dispatcher) runForeign(spec, rest string) error {
 		return vmserrors.New(vmserrors.CLI_NOFILE)
 	}
 
-	opts := RunOptions{RunInits: d.Console.DefaultRunInits(), CommandLine: dclText(rest, true)}
+	opts := RunOptions{RunInits: d.Console.DefaultRunInits(), CommandLine: dclText(rest, true, &d.Console.dclSymbols)}
 
 	return d.Console.Run(spec, opts)
 }
@@ -296,15 +300,25 @@ func isDCLSymbolChar(ch byte) bool {
 // assignSymbol defines (or redefines) the symbol written as name in the
 // console's table.
 func (c *Console) assignSymbol(name, op, text string) error {
-	return c.dclSymbols.assign(name, op, text)
+	return c.dclSymbols.assignIn(c, name, op, text)
 }
 
 // assign defines (or redefines) the symbol written as name in t, with
+// operator op and the text after it (see splitAssignment), for a command
+// interpreter with no console (a subprocess's): see assignIn.
+func (t *dclSymbolTable) assign(name, op, text string) error {
+	return t.assignIn(nil, name, op, text)
+}
+
+// assignIn defines (or redefines) the symbol written as name in t, with
 // operator op and the text after it (see splitAssignment): in the global
 // table for ":==" or "==", otherwise in the current level's local table.
 // A local and a global symbol may have the same name; the local one is
-// found first.
-func (t *dclSymbolTable) assign(name, op, text string) error {
+// found first. ":=" and ":==" assign the text as a string, by DCL's rules
+// (dclText); "=" and "==" assign the value of the text as an expression
+// (dclexpr.go), with c, if not nil, as the console its lexical functions
+// ask about the system.
+func (t *dclSymbolTable) assignIn(c *Console, name, op, text string) error {
 	full := strings.ToUpper(strings.Replace(name, "*", "", 1))
 	if strings.Contains(full, "*") {
 		return vmserrors.New(vmserrors.CLI_EXPSYN, name)
@@ -315,20 +329,21 @@ func (t *dclSymbolTable) assign(name, op, text string) error {
 		minLength = star
 	}
 
-	var (
-		value   string
-		integer bool
-	)
+	var value dclValue
 
+	// An &NAME is replaced in either: by dclText in a string, and
+	// before the expression is read in an expression.
 	if strings.HasPrefix(op, ":") {
-		value = dclText(text, false)
+		value = dclString(dclText(text, false, t))
 	} else {
-		v, isInt, err := symbolExpression(text)
+		text, _ = t.substituteAmpersands(text)
+
+		v, err := evaluateDCLExpression(text, t, c)
 		if err != nil {
 			return err
 		}
 
-		value, integer = v, isInt
+		value = v
 	}
 
 	global := strings.HasSuffix(op, "==")
@@ -338,36 +353,9 @@ func (t *dclSymbolTable) assign(name, op, text string) error {
 		table = t.globals()
 	}
 
-	table[full] = dclSymbol{name: full, minLength: minLength, value: value, global: global, integer: integer}
+	table[full] = dclSymbol{name: full, minLength: minLength, value: value.String(), global: global, integer: value.integer}
 
 	return nil
-}
-
-// symbolExpression evaluates the expression an "=" or "==" assignment
-// gives: a quoted string (with "" for a quote inside it) or a decimal
-// integer, whose value is its decimal string (integer is then true).
-func symbolExpression(text string) (value string, integer bool, err error) {
-	text = strings.TrimSpace(text)
-
-	if strings.HasPrefix(text, `"`) {
-		s, n, ok := quotedString(text)
-		if !ok {
-			return "", false, vmserrors.New(vmserrors.CLI_UNTERMSTR)
-		}
-
-		if strings.TrimSpace(text[n:]) != "" {
-			return "", false, vmserrors.New(vmserrors.CLI_EXPSYN, text)
-		}
-
-		return s, false, nil
-	}
-
-	v, err := strconv.ParseInt(text, 10, 32)
-	if err != nil {
-		return "", false, vmserrors.New(vmserrors.CLI_EXPSYN, text)
-	}
-
-	return strconv.FormatInt(v, 10), true, nil
 }
 
 // quotedString reads the quoted string text starts with, returning its
@@ -406,9 +394,13 @@ func quotedString(text string) (string, int, bool) {
 // removed, and a doubled quote inside them is one quote (a string
 // assignment's value).
 //
+// With symbols, each &NAME outside quotes is replaced by the symbol's
+// value, as it is: DCL makes this substitution after it uppercases the
+// line, so the value keeps its case (dclsubst.go).
+//
 // Unconfirmed against VMS: that a foreign command's text keeps its quotes
 // and its quoted text's case, as LIB$GET_FOREIGN returns it.
-func dclText(text string, keepQuotes bool) string {
+func dclText(text string, keepQuotes bool, symbols *dclSymbolTable) string {
 	var b strings.Builder
 
 	quoted, blank := false, false
@@ -432,6 +424,14 @@ func dclText(text string, keepQuotes bool) string {
 			}
 
 			blank = false
+
+			if value, end, ok := symbols.ampersandAt(text, i); ok {
+				b.WriteString(value)
+
+				i = end - 1
+
+				continue
+			}
 		}
 
 		switch {
@@ -606,7 +606,8 @@ func (t *dclSymbolTable) clone() dclSymbolTable {
 //	COUNT = 42   Hex = 0000002A  Octal = 00000000052
 //
 // "==" is a global symbol's, "=" a local one's, and an "*" marks the
-// shortest abbreviation. A quote in a string value is doubled.
+// shortest abbreviation. A quote in a string value is shown as it is, not
+// doubled (the User's Manual's PROMPT example, 12.6.1).
 // Unconfirmed against VMS: the integer line's spacing.
 func (c *Console) showDCLSymbols(cmd symbolCommand) error {
 	shown, err := c.dclSymbols.show(cmd)
@@ -720,5 +721,5 @@ func (sym dclSymbol) showLine() string {
 		return fmt.Sprintf("  %s %s %d   Hex = %08X  Octal = %011o", name, op, v, uint32(v), uint32(v))
 	}
 
-	return fmt.Sprintf("  %s %s \"%s\"", name, op, strings.ReplaceAll(sym.value, `"`, `""`))
+	return fmt.Sprintf("  %s %s \"%s\"", name, op, sym.value)
 }

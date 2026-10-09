@@ -1,0 +1,535 @@
+$ ! PROBE50.COM - Phase 50's probe of DCL symbol substitution and
+$ ! expressions (testdata/dcl50/README.md). Run it from SYSTEM with the
+$ ! exchange volume as the default directory:
+$ !
+$ !     @PROBE50/OUTPUT=PROBE50.LOG
+$ !
+$ ! Each case sets X to "-", runs one command, and shows $STATUS and X,
+$ ! with SET VERIFY echoing every line.
+$ SET NOON
+$ SET VERIFY
+$ ! Section A: expressions.
+$ S = "5"
+$ LONGN*AME = 5
+$ X = "-"
+$ X = 1 + 2 * 3
+$ SHOW SYMBOL $STATUS
+$ SHOW SYMBOL X
+$ X = "-"
+$ X = (1 + 2) * 3
+$ SHOW SYMBOL $STATUS
+$ SHOW SYMBOL X
+$ X = "-"
+$ X = 8 / 3
+$ SHOW SYMBOL $STATUS
+$ SHOW SYMBOL X
+$ X = "-"
+$ X = -8 / 3
+$ SHOW SYMBOL $STATUS
+$ SHOW SYMBOL X
+$ X = "-"
+$ X = 7 / 0
+$ SHOW SYMBOL $STATUS
+$ SHOW SYMBOL X
+$ X = "-"
+$ X = %X10 + %O10 + %D10
+$ SHOW SYMBOL $STATUS
+$ SHOW SYMBOL X
+$ X = "-"
+$ X = -%X3B85
+$ SHOW SYMBOL $STATUS
+$ SHOW SYMBOL X
+$ X = "-"
+$ X = 2147483647 + 1
+$ SHOW SYMBOL $STATUS
+$ SHOW SYMBOL X
+$ X = "-"
+$ X = 4294967297
+$ SHOW SYMBOL $STATUS
+$ SHOW SYMBOL X
+$ X = "-"
+$ X = 12AB
+$ SHOW SYMBOL $STATUS
+$ SHOW SYMBOL X
+$ X = "-"
+$ X = %XG
+$ SHOW SYMBOL $STATUS
+$ SHOW SYMBOL X
+$ X = "-"
+$ X = %Q1
+$ SHOW SYMBOL $STATUS
+$ SHOW SYMBOL X
+$ X = "-"
+$ X = "abc" + "def"
+$ SHOW SYMBOL $STATUS
+$ SHOW SYMBOL X
+$ X = "-"
+$ X = "abcabc" - "b"
+$ SHOW SYMBOL $STATUS
+$ SHOW SYMBOL X
+$ X = "-"
+$ X = "abc" - "z"
+$ SHOW SYMBOL $STATUS
+$ SHOW SYMBOL X
+$ X = "-"
+$ X = "abc" + 1
+$ SHOW SYMBOL $STATUS
+$ SHOW SYMBOL X
+$ X = "-"
+$ X = 1 + "abc"
+$ SHOW SYMBOL $STATUS
+$ SHOW SYMBOL X
+$ X = "-"
+$ X = "12" + "3"
+$ SHOW SYMBOL $STATUS
+$ SHOW SYMBOL X
+$ X = "-"
+$ X = "12" * "3"
+$ SHOW SYMBOL $STATUS
+$ SHOW SYMBOL X
+$ X = "-"
+$ X = "-9" + 23
+$ SHOW SYMBOL $STATUS
+$ SHOW SYMBOL X
+$ X = "-"
+$ X = " 12" + 0
+$ SHOW SYMBOL $STATUS
+$ SHOW SYMBOL X
+$ X = "-"
+$ X = "12 " + 0
+$ SHOW SYMBOL $STATUS
+$ SHOW SYMBOL X
+$ X = "-"
+$ X = "%X10" + 0
+$ SHOW SYMBOL $STATUS
+$ SHOW SYMBOL X
+$ X = "-"
+$ X = "" + 2
+$ SHOW SYMBOL $STATUS
+$ SHOW SYMBOL X
+$ X = "-"
+$ X = "Yes" + 0
+$ SHOW SYMBOL $STATUS
+$ SHOW SYMBOL X
+$ X = "-"
+$ X = "true" * 1
+$ SHOW SYMBOL $STATUS
+$ SHOW SYMBOL X
+$ X = "-"
+$ X = "12XY" + 0
+$ SHOW SYMBOL $STATUS
+$ SHOW SYMBOL X
+$ X = "-"
+$ X = "+5" + 0
+$ SHOW SYMBOL $STATUS
+$ SHOW SYMBOL X
+$ X = "-"
+$ X = "abc" * 2
+$ SHOW SYMBOL $STATUS
+$ SHOW SYMBOL X
+$ X = "-"
+$ X = "ABC" .EQ. 0
+$ SHOW SYMBOL $STATUS
+$ SHOW SYMBOL X
+$ X = "-"
+$ X = "abc" .EQS. "ABC"
+$ SHOW SYMBOL $STATUS
+$ SHOW SYMBOL X
+$ X = "-"
+$ X = 10 .EQS. "10"
+$ SHOW SYMBOL $STATUS
+$ SHOW SYMBOL X
+$ X = "-"
+$ X = "dogs" .GTS. "dog"
+$ SHOW SYMBOL $STATUS
+$ SHOW SYMBOL X
+$ X = "-"
+$ X = "10" .LT. 9
+$ SHOW SYMBOL $STATUS
+$ SHOW SYMBOL X
+$ X = "-"
+$ X = 5 .GT. 3 .AND. 2 .LT. 1
+$ SHOW SYMBOL $STATUS
+$ SHOW SYMBOL X
+$ X = "-"
+$ X = .NOT. 1
+$ SHOW SYMBOL $STATUS
+$ SHOW SYMBOL X
+$ X = "-"
+$ X = .NOT. 1 .EQ. 0
+$ SHOW SYMBOL $STATUS
+$ SHOW SYMBOL X
+$ X = "-"
+$ X = 3 .AND. 5
+$ SHOW SYMBOL $STATUS
+$ SHOW SYMBOL X
+$ X = "-"
+$ X = 3 .OR. 4
+$ SHOW SYMBOL $STATUS
+$ SHOW SYMBOL X
+$ X = "-"
+$ X = "T" .AND. "Y"
+$ SHOW SYMBOL $STATUS
+$ SHOW SYMBOL X
+$ X = "-"
+$ X = 1 .eq. 1
+$ SHOW SYMBOL $STATUS
+$ SHOW SYMBOL X
+$ X = "-"
+$ X = 1 .EQUAL. 1
+$ SHOW SYMBOL $STATUS
+$ SHOW SYMBOL X
+$ X = "-"
+$ X = 1 .EQ 1
+$ SHOW SYMBOL $STATUS
+$ SHOW SYMBOL X
+$ X = "-"
+$ X = 1 .FOO. 2
+$ SHOW SYMBOL $STATUS
+$ SHOW SYMBOL X
+$ X = "-"
+$ X = 1 .E. 1
+$ SHOW SYMBOL $STATUS
+$ SHOW SYMBOL X
+$ X = "-"
+$ X = 1 .NOT. 2
+$ SHOW SYMBOL $STATUS
+$ SHOW SYMBOL X
+$ X = "-"
+$ X = 1 .EQ. .NOT. 0
+$ SHOW SYMBOL $STATUS
+$ SHOW SYMBOL X
+$ X = "-"
+$ X = 1 +
+$ SHOW SYMBOL $STATUS
+$ SHOW SYMBOL X
+$ X = "-"
+$ X = (1 + 2
+$ SHOW SYMBOL $STATUS
+$ SHOW SYMBOL X
+$ X = "-"
+$ X = 1 + 2)
+$ SHOW SYMBOL $STATUS
+$ SHOW SYMBOL X
+$ X = "-"
+$ X =
+$ SHOW SYMBOL $STATUS
+$ SHOW SYMBOL X
+$ X = "-"
+$ X = 1 2
+$ SHOW SYMBOL $STATUS
+$ SHOW SYMBOL X
+$ X = "-"
+$ X = "abc
+$ SHOW SYMBOL $STATUS
+$ SHOW SYMBOL X
+$ X = "-"
+$ X = NOSUCH + 1
+$ SHOW SYMBOL $STATUS
+$ SHOW SYMBOL X
+$ X = "-"
+$ X = - - 3
+$ SHOW SYMBOL $STATUS
+$ SHOW SYMBOL X
+$ X = "-"
+$ X = +"abc"
+$ SHOW SYMBOL $STATUS
+$ SHOW SYMBOL X
+$ X = "-"
+$ X = -"5"
+$ SHOW SYMBOL $STATUS
+$ SHOW SYMBOL X
+$ X = "-"
+$ X = 1 ! a comment
+$ SHOW SYMBOL $STATUS
+$ SHOW SYMBOL X
+$ X = "-"
+$ X = "a""b"
+$ SHOW SYMBOL $STATUS
+$ SHOW SYMBOL X
+$ X = "-"
+$ X = "abc" .EQS. "ab" + "c"
+$ SHOW SYMBOL $STATUS
+$ SHOW SYMBOL X
+$ X = "-"
+$ X = 1.5
+$ SHOW SYMBOL $STATUS
+$ SHOW SYMBOL X
+$ X = "-"
+$ X = 1+-2
+$ SHOW SYMBOL $STATUS
+$ SHOW SYMBOL X
+$ X = "-"
+$ X = S + 1
+$ SHOW SYMBOL $STATUS
+$ SHOW SYMBOL X
+$ X = "-"
+$ X = S + "1"
+$ SHOW SYMBOL $STATUS
+$ SHOW SYMBOL X
+$ X = "-"
+$ X = LONGN + 1
+$ SHOW SYMBOL $STATUS
+$ SHOW SYMBOL X
+$ X = "-"
+$ X = LON + 1
+$ SHOW SYMBOL $STATUS
+$ SHOW SYMBOL X
+$ X = "-"
+$ X = F$LENGTH("abc")
+$ SHOW SYMBOL $STATUS
+$ SHOW SYMBOL X
+$ X = "-"
+$ X = F$LENGTH ("abc")
+$ SHOW SYMBOL $STATUS
+$ SHOW SYMBOL X
+$ X = "-"
+$ X = f$length("abc")
+$ SHOW SYMBOL $STATUS
+$ SHOW SYMBOL X
+$ X = "-"
+$ X = F$LENGTH()
+$ SHOW SYMBOL $STATUS
+$ SHOW SYMBOL X
+$ X = "-"
+$ X = F$LENGTH("a","b")
+$ SHOW SYMBOL $STATUS
+$ SHOW SYMBOL X
+$ X = "-"
+$ X = F$LENGTH(,)
+$ SHOW SYMBOL $STATUS
+$ SHOW SYMBOL X
+$ X = "-"
+$ X = F$NOSUCH(1)
+$ SHOW SYMBOL $STATUS
+$ SHOW SYMBOL X
+$ X = "-"
+$ X = F$LEN("abc")
+$ SHOW SYMBOL $STATUS
+$ SHOW SYMBOL X
+$ X = "-"
+$ X = F$L("abc")
+$ SHOW SYMBOL $STATUS
+$ SHOW SYMBOL X
+$ X = "-"
+$ X = F$LENGTH
+$ SHOW SYMBOL $STATUS
+$ SHOW SYMBOL X
+$ X = "-"
+$ X = F$LENGTH("abc"
+$ SHOW SYMBOL $STATUS
+$ SHOW SYMBOL X
+$ X = "-"
+$ X = F$STRING(65)
+$ SHOW SYMBOL $STATUS
+$ SHOW SYMBOL X
+$ X = "-"
+$ X = F$STRING(-1)
+$ SHOW SYMBOL $STATUS
+$ SHOW SYMBOL X
+$ X = "-"
+$ X = F$INTEGER("-9" + 23)
+$ SHOW SYMBOL $STATUS
+$ SHOW SYMBOL X
+$ X = "-"
+$ X = F$INTEGER("abc")
+$ SHOW SYMBOL $STATUS
+$ SHOW SYMBOL X
+$ X = "-"
+$ X = F$LENGTH(12345)
+$ SHOW SYMBOL $STATUS
+$ SHOW SYMBOL X
+$ X = "-"
+$ X = F$LENGTH(NOSUCH)
+$ SHOW SYMBOL $STATUS
+$ SHOW SYMBOL X
+$ X = "-"
+$ X = F$LENGTH(S + 1)
+$ SHOW SYMBOL $STATUS
+$ SHOW SYMBOL X
+$ ! Section B: substitution.
+$ NAME = "MYFILE"
+$ FTYPE = ".DAT"
+$ LC = "lower"
+$ COUNT = 1
+$ MAC = "5"
+$ A = "'MAC'"
+$ Q1 = "FRED.DAT"
+$ Q = """quoted"""
+$ SELF = "'SELF'"
+$ X = "-"
+$ X := 'NAME''FTYPE'
+$ SHOW SYMBOL $STATUS
+$ SHOW SYMBOL X
+$ X = "-"
+$ X := A'NOSUCH'B
+$ SHOW SYMBOL $STATUS
+$ SHOW SYMBOL X
+$ X = "-"
+$ X := A'NAME
+$ SHOW SYMBOL $STATUS
+$ SHOW SYMBOL X
+$ X = "-"
+$ X := 'NAME
+$ SHOW SYMBOL $STATUS
+$ SHOW SYMBOL X
+$ X = "-"
+$ X := ' NAME'
+$ SHOW SYMBOL $STATUS
+$ SHOW SYMBOL X
+$ X = "-"
+$ X = "it's 'NAME'"
+$ SHOW SYMBOL $STATUS
+$ SHOW SYMBOL X
+$ X = "-"
+$ X = "file ''NAME'.dat"
+$ SHOW SYMBOL $STATUS
+$ SHOW SYMBOL X
+$ X = "-"
+$ X = 'A'
+$ SHOW SYMBOL $STATUS
+$ SHOW SYMBOL X
+$ X = "-"
+$ X = "''A'"
+$ SHOW SYMBOL $STATUS
+$ SHOW SYMBOL X
+$ X = "-"
+$ X := V'COUNT'
+$ SHOW SYMBOL $STATUS
+$ SHOW SYMBOL X
+$ X = "-"
+$ X := L'F$LENGTH("abc")'
+$ SHOW SYMBOL $STATUS
+$ SHOW SYMBOL X
+$ X = "-"
+$ X = "L''F$LENGTH(NAME)'"
+$ SHOW SYMBOL $STATUS
+$ SHOW SYMBOL X
+$ X = "-"
+$ X := 'LC'
+$ SHOW SYMBOL $STATUS
+$ SHOW SYMBOL X
+$ X = "-"
+$ X = 'LC'
+$ SHOW SYMBOL $STATUS
+$ SHOW SYMBOL X
+$ X = "-"
+$ X := &LC
+$ SHOW SYMBOL $STATUS
+$ SHOW SYMBOL X
+$ X = "-"
+$ X = &LC
+$ SHOW SYMBOL $STATUS
+$ SHOW SYMBOL X
+$ X = "-"
+$ X := &Q'COUNT'
+$ SHOW SYMBOL $STATUS
+$ SHOW SYMBOL X
+$ X = "-"
+$ X := A&LC
+$ SHOW SYMBOL $STATUS
+$ SHOW SYMBOL X
+$ X = "-"
+$ X := Z &NOSUCH Y
+$ SHOW SYMBOL $STATUS
+$ SHOW SYMBOL X
+$ X = "-"
+$ X = "&LC"
+$ SHOW SYMBOL $STATUS
+$ SHOW SYMBOL X
+$ X = "-"
+$ X := ABC ! it's 'NOSUCH'
+$ SHOW SYMBOL $STATUS
+$ SHOW SYMBOL X
+$ X = "-"
+$ X := 'P''COUNT'
+$ SHOW SYMBOL $STATUS
+$ SHOW SYMBOL X
+$ X = "-"
+$ X := 'SELF'
+$ SHOW SYMBOL $STATUS
+$ SHOW SYMBOL X
+$ X = "-"
+$ X = 'Q'
+$ SHOW SYMBOL $STATUS
+$ SHOW SYMBOL X
+$ X = "-"
+$ X = "''Q'"
+$ SHOW SYMBOL $STATUS
+$ SHOW SYMBOL X
+$ ! DEFINE keeps an &SYMBOL's case (the User's Manual, 13.18.3).
+$ DEFINE/PROCESS PROBE_LNM 'LC'
+$ SHOW LOGICAL PROBE_LNM
+$ DEFINE/PROCESS PROBE_LNM &LC
+$ SHOW LOGICAL PROBE_LNM
+$ TWO = "a b"
+$ DEFINE/PROCESS PROBE_LNM &TWO
+$ SHOW SYMBOL $STATUS
+$ SHOW LOGICAL PROBE_LNM
+$ DEASSIGN/PROCESS PROBE_LNM
+$ ! A substituted verb, an alias whose value has apostrophes, an alias of
+$ ! an alias.
+$ V = "SHOW"
+$ 'V' SYMBOL V
+$ MAC2 = "SHOW SYMBOL MAC2"
+$ EXEC = "'MAC2'"
+$ EXEC
+$ SHOW SYMBOL $STATUS
+$ 'EXEC'
+$ AL1 = "SHOW SYMBOL AL1"
+$ AL2 = "AL1"
+$ AL2
+$ SHOW SYMBOL $STATUS
+$ ! Section C: procedures.
+$ @PROBE50S 'NAME'
+$ @PROBE50S "''NAME'"
+$ @PROBE50S &LC
+$ @PROBE50S 1 2 3 4 5 6 7 8 9
+$ SHOW SYMBOL $STATUS
+$ @PROBE50S/OUTPUT=.LOG OUTPUT
+$ SHOW SYMBOL $STATUS
+$ DIRECTORY *.LOG
+$ @PROBE50R 1
+$ SHOW SYMBOL $STATUS
+$ ! Section D: statuses.
+$ FOOBAR
+$ SHOW SYMBOL $STATUS
+$ SHOW SYMBOL $SEVERITY
+$ SHOW SYMBOL NOSUCH
+$ SHOW SYMBOL $STATUS
+$ SHOW SYMBOL $SEVERITY
+$ DELETE/SYMBOL NOSUCH
+$ SHOW SYMBOL $STATUS
+$ SHOW SYMBOL $SEVERITY
+$ TYPE NOSUCH.TXT
+$ SHOW SYMBOL $STATUS
+$ SHOW SYMBOL $SEVERITY
+$ @NOSUCH
+$ SHOW SYMBOL $STATUS
+$ SHOW SYMBOL $SEVERITY
+$ @PROBE50E 1
+$ SHOW SYMBOL $STATUS
+$ SHOW SYMBOL $SEVERITY
+$ @PROBE50E 3
+$ SHOW SYMBOL $STATUS
+$ SHOW SYMBOL $SEVERITY
+$ @PROBE50E 2
+$ SHOW SYMBOL $STATUS
+$ SHOW SYMBOL $SEVERITY
+$ @PROBE50E 0
+$ SHOW SYMBOL $STATUS
+$ SHOW SYMBOL $SEVERITY
+$ @PROBE50E 4
+$ SHOW SYMBOL $STATUS
+$ SHOW SYMBOL $SEVERITY
+$ @PROBE50E 44
+$ SHOW SYMBOL $STATUS
+$ SHOW SYMBOL $SEVERITY
+$ @PROBE50E %X10000002
+$ SHOW SYMBOL $STATUS
+$ SHOW SYMBOL $SEVERITY
+$ @PROBE50E ""
+$ SHOW SYMBOL $STATUS
+$ SHOW SYMBOL $SEVERITY
+$ SET NOVERIFY
+$ EXIT

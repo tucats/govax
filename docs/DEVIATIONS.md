@@ -2962,7 +2962,43 @@ widened."
   - A failure that isn't a VMS status counts as an error, so it ends the
     procedure.
 - **Status**: unconfirmed; candidates for Phase 50's VMS probe
-  (subtask 20).
+  (subtask 20). DCL's message file has CLI$_DEFOVF ("too many command
+  procedure parameters - limit to eight") and CLI$_STKOVF ("command
+  procedures too deeply nested - limit to 32 levels"), likely the
+  messages for a ninth parameter and a 33rd level; `testdata/dcl50`'s
+  round 1 asks.
+
+### [Phase 50] Substitution and expression rules chosen without a probe
+
+- **Where**: `internal/console/dclsubst.go`, `dclexpr.go`, `dcllexical.go`;
+  `internal/vmserrors/codes_cli.go` (CLI_UNDSYM, CLI_IVOPER, CLI_IVFNAM,
+  CLI_ABFNAM, CLI_ARGREQ, CLI_NOPAREN, CLI_IVCHAR; CLI_EXPSYN is now
+  DCL's text and a warning).
+- **What**: symbol substitution and expressions follow the OpenVMS
+  User's Manual (7.3), 12.4 to 12.13, and the messages are the texts and
+  severities of DCL's CLI$_ messages of the same names
+  (`vmsdef.Messages`). Chosen without a VMS run:
+  - Each expression message has a segment line, ` \TEXT\` (the manual
+    shows one only for IVVERB and PARMDEL), and which text it shows.
+  - Division by zero is govax's CLI_DIVZERO, an error; an unterminated
+    quoted string CLI_UNTERMSTR, an error; a symbol whose value names
+    itself CLI_SYMDEPTH, an error, after 256 substitutions in one line.
+    Too many lexical function arguments are CLI_MAXPARM.
+  - A string converts to an integer with blanks around the number
+    ignored, a sign, and a `%X`/`%O`/`%D` prefix allowed.
+  - A name starting with `F$` is always a lexical function, and a lexical
+    function name may be any unique prefix (ABFNAM's existence suggests
+    abbreviations; whether there's a shortest one isn't known).
+  - `.NOT.` can't follow a comparison operator (`1 .EQ. .NOT. 0` is
+    EXPSYN), as 12.8.5's precedence implies.
+  - An apostrophe with no closing one after the name is kept as it is;
+    a comment isn't scanned for substitutions; an alias's value is
+    looked up again as a verb (an alias of an alias), to 16 levels.
+  - An `&NAME` in an `@` parameter is part of that parameter, even when
+    its value has blanks.
+  - SHOW SYMBOL now shows a quote in a value as it is, not doubled, as
+    the manual's 12.6.1 example does (fixed: Phase 34 doubled it).
+- **Status**: unconfirmed; asked by `testdata/dcl50`'s probe (round 1).
 
 <!--
 Entry template:

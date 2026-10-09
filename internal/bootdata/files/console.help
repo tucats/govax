@@ -82,6 +82,9 @@
 //              10/09/26    Added @ (command procedures, P1 to P8, /OUTPUT);
 //                          removed INCLUDE; EXIT ends a procedure, QUIT
 //                          govax (docs/PHASE-50 - DCL command procedures.md)
+//              10/09/26    Added SYMBOL EXPRESSIONS, SYMBOL SUBSTITUTION,
+//                          and LEXICAL: DCL's expressions, 'SYMBOL' and
+//                          &SYMBOL, and the lexical functions so far
 
 This is the help documentation for the govax VAX emulator.  Topic sections are
 marked by a "$" delimiter.  This is followed by as many tokens of the help
@@ -993,23 +996,105 @@ $SYMB
     The string is the rest of the line: outside quotes, letters are made
     uppercase, runs of blanks become one, and a "!" begins a comment; quotes
     keep text as written, and are removed ("" inside them is a quote).  The
-    expression is a quoted string or a decimal integer.
+    expression is DCL's: integers, quoted strings, symbols, and lexical
+    functions, with arithmetic, string, comparison, and logical operators
+    (see HELP SYMBOL EXPRESSIONS).  Its value, an integer or a string, is
+    the symbol's.  To use a symbol's value elsewhere in a command, put it
+    between apostrophes (see HELP SYMBOL SUBSTITUTION).
 
     An "*" in the name says how short an abbreviation still means the symbol:
     after "FO*RTH :== $FORTH", FO, FOR, FORT, and FORTH all do.
 
     ":=" and "=" make a local symbol, ":==" and "==" a global one.  Local
-    symbols belong to the current command level (today only the console's
-    interactive level), and a local symbol is found before a global one of
-    the same name.  SHOW SYMBOL displays them, and DELETE/SYMBOL deletes
-    them.  These are DCL symbols, not the machine's symbol table that ASM
-    and the debugger use (see the debugger's HELP SHOW SYMBOL).
+    symbols belong to the current command level: the terminal's, or the
+    command procedure's (see HELP @), and go when it ends.  A local symbol
+    is found before a global one of the same name.  SHOW SYMBOL displays
+    them, and DELETE/SYMBOL deletes them.  These are DCL symbols, not the
+    machine's symbol table that ASM and the debugger use (see the
+    debugger's HELP SHOW SYMBOL).
 
     Examples:
 
         SD :== SET DEFAULT
         FORTH :== $DUA0:[TOOLS]FORTH.EXE
         GREETING == "Hello, ""World"""
+        TOTAL = COUNT + 1
+        LEN = F$LENGTH(GREETING)
+
+$SYMB,EXPR
+$SYM ,EXPR
+    The value of an "=" or "==" assignment is an expression, as in DCL.  Its
+    operands are:
+
+        integers       13, -5, %X1F (hexadecimal), %O17 (octal), %D10
+        strings        "in quotes", with "" for a quote inside
+        symbols        a name, replaced by the symbol's value
+        functions      F$LENGTH(...) and the other lexical functions
+                       (see HELP LEXICAL)
+
+    The operators, from the first done to the last; parentheses group:
+
+        + -            unary plus and minus
+        * /            multiplication and division (integers; no fraction)
+        + -            addition and subtraction; on two strings,
+                       concatenation and removing the first occurrence
+        .EQ. .NE. .LT. .LE. .GT. .GE.         compare numbers
+        .EQS. .NES. .LTS. .LES. .GTS. .GES.   compare strings
+        .NOT.          inverts every bit
+        .AND.          bitwise and
+        .OR.           bitwise or
+
+    A comparison is 1 when true and 0 when false.  Where an integer is
+    needed, a string that holds a number is that number, one beginning with
+    T or Y (either case) is 1, and any other is 0.  Where a string is needed,
+    an integer is its decimal digits.  Integers are 32 bits and wrap around.
+    In a test, odd is true and even false.
+
+    Examples:
+
+        $ BALANCE = 142 * 14
+        $ WEEKEND = "Saturday, " + "Sunday"
+        $ BIG = COUNT .GT. 10 .AND. NAME .EQS. "TOTAL"
+
+$SYMB,SUBS
+$SYM ,SUBS
+    A symbol's value takes the place of its name in a command when the name
+    is between apostrophes:
+
+        $ TYPE 'FILE'
+        $ @NEXT 'P1' 'P2'
+
+    Inside quotes, the name takes two apostrophes before it and one after:
+    "Creating ''NAME'.DAT".  A lexical function can be between apostrophes
+    too: 'F$LENGTH(X)'.  An undefined symbol is replaced by nothing.  Outside
+    quotes, a value that itself has a symbol between apostrophes is replaced
+    in turn.  This happens before anything else reads the command, so the
+    value can be any part of it, the verb included.
+
+    &NAME is also replaced by the symbol's value, later: after the command's
+    first word is looked up as a symbol, and after the command is made
+    uppercase, so the value keeps its case.  It must follow a blank or a
+    special character, and does nothing inside quotes.
+
+        $ COUNT = 1
+        $ TYPE &P'COUNT'          ! 'COUNT' first, giving &P1
+
+    Data lines in a procedure, and debugger commands, are not substituted.
+
+$LEXI
+    A lexical function returns an integer or a string, in an expression
+    (see HELP SYMBOL EXPRESSIONS) or between apostrophes.  Its arguments are
+    expressions, in parentheses and separated by commas; a function with no
+    arguments still takes "()".  Its name may be shortened while it names
+    only one function.
+
+        F$INTEGER(expression)    the value as an integer
+        F$LENGTH(string)         the string's length
+        F$STRING(expression)     the value as a string
+
+    Example:
+
+        $ LEN = F$LENGTH(NAME) + 1
 
 $FORE
     A foreign command runs an image with the rest of the command line as its

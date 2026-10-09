@@ -5,9 +5,10 @@
 command levels: `@file` with
 parameters and `/OUTPUT`, a local symbol table per level, VMS's default
 error action, and EXIT that ends a procedure. Later rounds (subtasks 8
-onward) make the console more fully a DCL command interpreter: labels and
-GOTO, IF/THEN/ELSE, symbol substitution, `$STATUS`, ON, lexical
-functions.
+onward) make the console more fully a DCL command interpreter. Subtasks
+8 and 9, symbol substitution and expressions, are done (2026-10-09);
+labels and GOTO, IF/THEN/ELSE, `$STATUS`, ON, and the other lexical
+functions are next.
 
 The console should act like a VMS DCL command processor. Until now it
 had INCLUDE (and `@` as its alias), which runs a file of console
@@ -185,6 +186,46 @@ user's search path that still has the old line gets
 CLI_UNRECOGNIZED on it. The default action then ends `vax.init` there,
 at its last line, so the effect is the same as before.
 
+### Symbol substitution (subtask 8)
+
+`internal/console/dclsubst.go` follows the User's Manual's three phases
+of command processing (12.12, 12.13):
+
+1. `DispatchConsole` first replaces each symbol between apostrophes
+   (`substituteApostrophes`), before anything else reads the line:
+   `'NAME'` outside quotes, its value scanned again (iterative), and
+   `''NAME'` inside quotes, not scanned again. A lexical function call
+   can stand in for the name. An undefined symbol becomes nothing.
+2. `dispatchCommand` then looks up the first word as a symbol (an alias
+   or a foreign command), and replaces each `&NAME` (after a blank or a
+   special character, outside quotes) once. DCL does this after it
+   uppercases the line, so the value keeps its case: for the grammar's
+   commands, `substituteAmpersands` uppercases the rest of the line
+   itself and the grammar's `ParseUpcased` leaves it; where the console
+   reads the text itself (`:=`, a foreign command's text, `@`'s
+   parameters), `dclText` and `dclWord` make the substitution as they
+   uppercase.
+3. Expressions replace their symbols as they're evaluated.
+
+An alias's value, and IF's THEN command, come back to `dispatchCommand`,
+so their apostrophes aren't substituted a second time (12.13.4's EXEC
+example). Data lines and debugger commands are never substituted.
+
+### Expressions (subtask 9)
+
+`internal/console/dclexpr.go` evaluates DCL's expressions (12.5 to
+12.9): integers (with `%X`, `%O`, `%D`), quoted strings, symbols, and
+lexical function calls; the operators in 12.8.5's precedence; integer
+and string values with 12.8.6's typing and 12.9's conversions; longword
+arithmetic that wraps. `=` and `==` use it, and IF will (subtask 12). The
+messages are DCL's own CLI$_ texts and severities (most are warnings),
+each with the segment line ` \TEXT\`.
+
+`dcllexical.go` is the lexical function call syntax and a table of
+functions (`lexicalFunctions`), each with how many arguments it takes. A
+name may be any unique prefix. Subtask 9 gives it F$INTEGER, F$LENGTH,
+and F$STRING; subtask 14 adds the rest.
+
 ## Subtasks
 
 1. **Survey**: the User's Manual's rules for `@`, parameters, command
@@ -240,14 +281,21 @@ Later rounds of this phase, in a likely order:
 18. **STOP** returning to level 0, and Ctrl/Y within procedures.
 19. **The subprocess CLI** (`subcli.go`) gets `@`, on the same stack.
 20. **A VMS probe**: run a set of procedures on VMS 7.3 for the details
-    the manual leaves open (see "Open questions").
+    the manual leaves open (see "Open questions"). Round 1,
+    `testdata/dcl50`, came with subtasks 8 and 9.
 
 ## Open questions
 
 - MAXPARM's exact text and severity (govax:
   `too many parameters - reenter command with fewer parameters`, a
   warning), and the message for the 33rd level. Neither is in the 7.3
-  manuals here.
+  manuals here. DCL's message file (`vmsdef.Messages`) has CLI$_DEFOVF,
+  "too many command procedure parameters - limit to eight", and
+  CLI$_STKOVF, "command procedures too deeply nested - limit to 32
+  levels", the likely answers; `testdata/dcl50` asks.
+- Expression and substitution details: see DEVIATIONS.md's "[Phase 50]
+  Substitution and expression rules chosen without a probe", each asked
+  by `testdata/dcl50`.
 - Whether `/OUTPUT=` with no name part takes the procedure's name, and
   where a bare `/OUTPUT` file name goes (govax: the default directory).
 - Whether qualifiers after a blank but before the first parameter are
@@ -289,3 +337,23 @@ Later rounds of this phase, in a likely order:
   without the manual are in DEVIATIONS.md ("[Phase 50] Command procedure
   rules chosen without a manual or probe"). Removed the console's unused
   `optionalAddress`, left over from GO and CALL's move to the debugger.
+- 2026-10-09: Subtasks 8 and 9. Symbol substitution
+  (`internal/console/dclsubst.go`: apostrophes in phase 1, `&` in phase
+  2, see "Symbol substitution") and DCL's expressions
+  (`dclexpr.go`, with lexical function calls and a function table in
+  `dcllexical.go`), replacing `symbolExpression`'s quoted string or
+  decimal integer. `DispatchConsole` substitutes, then
+  `dispatchCommand` does the rest; aliases and IF's THEN re-enter there.
+  The grammar gains `ParseUpcased` (and exports `UpcaseOutsideQuotes`)
+  so an `&` value keeps its case. New messages, in DCL's words from
+  `vmsdef.Messages`: CLI_UNDSYM, CLI_IVOPER, CLI_IVFNAM, CLI_ABFNAM,
+  CLI_ARGREQ, CLI_NOPAREN, CLI_IVCHAR; CLI_EXPSYN takes DCL's text and
+  becomes a warning. SHOW SYMBOL no longer doubles a quote in a value
+  (the manual's 12.6.1 example). HELP: SYMBOL EXPRESSIONS, SYMBOL
+  SUBSTITUTION, LEXICAL. Tests: `dclexpr_test.go` (the manual's examples
+  from 12.4 to 12.9, every message), `dclsubst_test.go` (12.12 and
+  12.13's examples, `&`, and through the dispatcher: parameters, the
+  EXEC alias, DEFINE's case). The author offered to run probes on the
+  simh VAX: `testdata/dcl50` is round 1 (substitution, expressions, the
+  `@` open questions, and statuses for subtask 10). The rules chosen
+  without it are in DEVIATIONS.md.
