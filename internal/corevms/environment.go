@@ -104,6 +104,12 @@ type Environment struct {
 	// to global sections (gblsec.go), which image rundown unmaps.
 	sectionPages map[uint32]bool
 
+	// procSections is the process section table: the private file
+	// sections the process has mapped (filesec.go), indexed by the
+	// process section table index their pages' PTEs hold. A nil entry is
+	// free.
+	procSections []*processSection
+
 	// Process is the emulated VMS process this Environment runs images in:
 	// its PID, username, UIC and quota state (process.go,
 	// docs/PHASE-26.md). Built fresh by NewEnvironment.
@@ -283,6 +289,8 @@ func (env *Environment) rmsContext() *rms.Context {
 		Waker:     lockWaker{env},
 		Clock:     env.Clock,
 		CanLock:   func() bool { return env.remainingLocks() > 0 },
+
+		AssignFileChannel: env.assignFileChannel,
 	}
 }
 

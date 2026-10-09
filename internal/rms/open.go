@@ -185,6 +185,11 @@ func SysOpen(ctx *Context, argv []uint32) (uint32, error) {
 		}
 	}
 
+	// FAB$V_UFO: the file goes to a channel instead (ufo.go).
+	if fop&fopUFO != 0 {
+		return ctx.userFileOpen(fabAddr, ifi, found.Device, rmsNormal)
+	}
+
 	if err := ctx.storeWord(fabAddr+fabIFI, ifi); err != nil {
 		return 0, err
 	}

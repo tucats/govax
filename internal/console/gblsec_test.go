@@ -38,7 +38,6 @@ var (
 	ssGsdFull    = vmsdef.Symbols["SS$_GSDFULL"]
 	ssGptFull    = vmsdef.Symbols["SS$_GPTFULL"]
 	ssIvLogNam   = vmsdef.Symbols["SS$_IVLOGNAM"]
-	ssUnsupport  = vmsdef.Symbols["SS$_UNSUPPORTED"]
 	ssEndOfFile  = vmsdef.Symbols["SS$_ENDOFFILE"]
 )
 
@@ -208,11 +207,12 @@ func TestCrmpsc_errors(t *testing.T) {
 		}
 	}
 
-	// A file section on a channel isn't supported.
+	// A file section on a channel that isn't assigned (filesec_test.go
+	// has the rest).
 	putRange(t, c, vaInadr, secPages, secPages)
 
-	if got := callService(t, c, "SYS$CRMPSC", vaInadr, vaRetadr, 0, secGBL, putName(t, c, "X"), 0, 0, 5, 1, 0, 0, 0); got != ssUnsupport {
-		t.Errorf("a file section on a channel: %#x, want SS$_UNSUPPORTED", got)
+	if got := callService(t, c, "SYS$CRMPSC", vaInadr, vaRetadr, 0, secGBL, putName(t, c, "X"), 0, 0, 5, 1, 0, 0, 0); got != ssNoPriv {
+		t.Errorf("a file section on no channel: %#x, want SS$_NOPRIV", got)
 	}
 
 	putRange(t, c, vaRetadr, 0, 0)

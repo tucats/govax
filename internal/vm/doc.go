@@ -65,4 +65,10 @@
 // system computes rather than *how fast*, translate.go and pte.go are the
 // files that matter; tb.go only matters once you care about speed or about
 // exactly reproducing the reference emulator's cache statistics.
+//
+// A page whose PTE isn't valid has no physical page behind it yet. When a
+// program touches it, pager.go's pageIn gives it one: through the Pager
+// the operating system layer installs (SetPager), which reads the page
+// from wherever its invalid PTE says it is (a section of a file, say), or
+// as a page of zeros when none is installed.
 package vm

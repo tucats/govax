@@ -73,7 +73,7 @@ func (m *Memory) TranslateIn(cpu *vax.CPU, as AddressSpace, addr uint32, access 
 		return 0, err
 	}
 
-	return m.resolvePTE(pteAddr, addr, access)
+	return m.resolvePTE(as, pteAddr, addr, access)
 }
 
 // spacePTEAddress finds the physical address of the PTE that maps addr in
@@ -123,10 +123,10 @@ func (m *Memory) spacePTEAddress(cpu *vax.CPU, as AddressSpace, addr uint32) (ui
 }
 
 // resolvePTE finishes a translation once the PTE's physical address is
-// known: the protection check (as kernel mode), demand-zero allocation for
-// an invalid page, and the modify bit for a write; translate's last steps,
+// known: the protection check (as kernel mode), paging in an invalid page
+// (pageIn: the pager's, or demand-zero), and the modify bit for a write; translate's last steps,
 // without its caches.
-func (m *Memory) resolvePTE(pteAddr, addr uint32, access AccessType) (uint32, error) {
+func (m *Memory) resolvePTE(as AddressSpace, pteAddr, addr uint32, access AccessType) (uint32, error) {
 	raw, err := m.readPhysLongword(pteAddr)
 	if err != nil {
 		return 0, err
@@ -138,7 +138,7 @@ func (m *Memory) resolvePTE(pteAddr, addr uint32, access AccessType) (uint32, er
 		return 0, protectionViolation(addr, byte(access))
 	}
 
-	if !pte.Valid() && !m.validatePage(pteAddr, &pte) {
+	if !pte.Valid() && !m.pageIn(PageFault{Space: as, Addr: addr, PTEAddr: pteAddr, Write: access == AccessWrite}, &pte) {
 		return 0, translationNotValid(addr)
 	}
 

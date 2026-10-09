@@ -82,6 +82,9 @@ type Memory struct {
 	// zero value (every cache slot empty, every counter zero) the moment
 	// the Memory itself is created.
 	tb tb
+
+	// pager, if set, resolves faults on invalid pages (pager.go).
+	pager Pager
 }
 
 // NewMemory returns a Memory with size bytes of zeroed RAM and every

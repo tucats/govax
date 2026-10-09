@@ -276,8 +276,10 @@ func (sys *System) TeardownAddressSpace(s *ProcessSpace) error {
 		for i := range t.n {
 			pte := vm.PTE(binary.LittleEndian.Uint32(buf[i*4:]))
 
-			if pte.Valid() && !s.shared[pte.PFN()] {
-				sys.releaseFrame(pte.PFN())
+			if gi, ok := pte.GlobalIndex(); ok {
+				sys.unrefGlobalPage(gi)
+			} else if pte.Valid() && !s.shared[pte.PFN()] {
+				sys.releaseFrame(pte.PFN(), pte.Modified())
 			}
 		}
 

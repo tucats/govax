@@ -116,3 +116,26 @@ func TestRun_recordUpdates(t *testing.T) {
 		t.Errorf("R0 = %d, want 999 (another value is the step that failed)", got)
 	}
 }
+
+// TestRun_fileSections runs testdata/sec49/mapfile.mar (Phase 49,
+// subtask 9): a file opened with FOP=UFO, mapped as private and global
+// sections, written through memory and back to the file.
+func TestRun_fileSections(t *testing.T) {
+	c := newBootableConsole(t)
+	mountFreshContainer(t, c, "DUA0")
+
+	if err := c.Macro(MacroOptions{
+		Source: filepath.Join("..", "..", "testdata", "sec49", "mapfile.mar"), Object: "DUA0:[000000]MAPFILE.OBJ",
+	}); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := c.Link(LinkOptions{Objects: []string{"DUA0:[000000]MAPFILE"}}); err != nil {
+		t.Fatal(err)
+	}
+
+	if got := runImageBounded(t, c, "DUA0:[000000]MAPFILE.EXE", 1_000_000); got != 999 {
+		t.Errorf("R0 = %d, want 999 (another value is the step that failed)", got)
+	}
+}
+

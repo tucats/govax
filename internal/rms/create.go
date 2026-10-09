@@ -116,6 +116,7 @@ func SysCreate(ctx *Context, argv []uint32) (uint32, error) {
 	var (
 		ifi     uint16
 		created bool
+		device  string
 	)
 
 	devIFI, isDevice, devStatus, devSTV, err := ctx.openRecordDevice(fabAddr, p.Lookup, fac)
@@ -182,6 +183,7 @@ func SysCreate(ctx *Context, argv []uint32) (uint32, error) {
 
 		ifi = newIFI
 		created = !opened
+		device = found.Device
 	}
 
 	if err := ctx.storeWord(fabAddr+fabIFI, ifi); err != nil {
@@ -193,6 +195,11 @@ func SysCreate(ctx *Context, argv []uint32) (uint32, error) {
 	status := uint32(rmsNormal)
 	if created && fop&fopCIF != 0 {
 		status = rmsCreated
+	}
+
+	// FAB$V_UFO: the file goes to a channel instead (ufo.go).
+	if fop&fopUFO != 0 {
+		return ctx.userFileOpen(fabAddr, ifi, device, status)
 	}
 
 	return storeStatus(ctx, fabAddr, fabSTS, fabSTV, status)

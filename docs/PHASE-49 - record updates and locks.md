@@ -273,3 +273,87 @@ stream's record locks.
   the scheduler; RAB$V_NODLCKWT/NODLCKBLK are ignored; DEADLOCK_WAIT is
   fixed, not a setting. Tests: `lck`'s `TestDeadlock_*`,
   `TestEnq_deadlock`, `TestRecordLock_deadlock`.
+- 2026-10-09: Subtask 9, file-backed sections, from the System Services
+  manual ($CRMPSC, $UPDSEC, $EXPREG; VMS 5.0's) and the Internals book's
+  chapter 14 (the PTE forms, the process section table, the global page
+  table). Two design decisions, the author's: pages come in lazily, on
+  the first touch, through a pager hook in internal/vm, so that a
+  working set manager and a page file can come later behind the same
+  seam; and the channel comes from RMS's user file open, which govax's
+  RMS gained here, for files on mounted volumes.
+  - **internal/vm** (`pager.go`): the invalid PTE forms (TYP0, bit 26: a
+    process section table index in bits 21-0; TYP1, bit 22: a global
+    page table index), and `Pager`, installed with `SetPager`: every
+    fault on an invalid page whose access is allowed goes to it (with
+    the address space, the address, the PTE and its address), and the
+    valid PTE it returns is written back; without a pager every invalid
+    page is demand-zero, as before. `DemandZero` is the helper a pager
+    uses for an ordinary page.
+  - **RMS** (`rms/ufo.go`): FAB$V_UFO on `$OPEN`, `$CREATE`, and the NAM
+    open. The open runs as usual (sharing, NAM, XABs), then its file
+    access becomes an `ACPFile` (keeping the open's place among the
+    file's openers) on a new channel (`Context.AssignFileChannel`,
+    corevms's `assignFileChannel`, at the caller's mode), whose number
+    goes to FAB$L_STV; FAB$W_IFI stays 0. `ACPFile.ReadPage`/`WritePage`
+    are page I/O: any allocated block, the end of file untouched.
+  - **corevms** (`filesec.go`, `gblsec.go`): `$CRMPSC` of a file on a
+    channel, private (no SEC$M_GBL; an entry in the process section
+    table, `Environment.procSections`; status SS$_NORMAL) or global (an
+    entry per page in the system's global page table,
+    `GlobalSections.pageTable`). Each mapped page gets the invalid form;
+    `System.PageIn` reads the block into a new page on the first touch
+    (a global section's page once, then shared; a copy-on-reference
+    page into a private copy for each process). A private section's
+    modified pages (the PTE's modify bit) are written back when they're
+    unmapped ($DELTVA, $CRETVA over them, image rundown, process
+    deletion: all through `releasePTE`); a global section gathers its
+    mappers' modify bits as their PTEs go (`Dirty`) and writes its pages
+    back when it's deleted. `$UPDSEC`/`$UPDSECW` write pages back on
+    request (updflg 0: every page of a global section in memory; 1: the
+    caller's modified ones), completing at once as `$GETLKI` does. A
+    section keeps its file accessed after its channel is deassigned or
+    deaccessed (`sectionFiles`); the last section deaccesses it.
+    Page-file sections are unchanged (frames at creation, valid PTEs).
+    SEC$M_PFNMAP stays SS$_UNSUPPORTED.
+  - **P1 expansion**: P1's tables are built at full size, so P1 can't
+    grow down past its table as VMS's does; govax keeps the top
+    `userStackPages` (1,024) pages below the user stack's top for the
+    stack and expands P1 downwards below them (`expandP1`), to P1LR's
+    page (then SS$_VASFULL). SEC$M_EXPREG in P1 maps there, low to high
+    as the manual says; `$EXPREG` of region 1, which counted up from
+    address 0 (a leftover of the port), now takes its pages there too,
+    creates them as $CRETVA does, and returns the range high page
+    first, as the manual describes.
+  - A global section created with no inadr (and no SEC$M_EXPREG) is
+    created but not mapped (the manual's case for a permanent one).
+  - Statuses: SS$_NOPRIV for a channel not assigned or assigned from a
+    more privileged mode, SS$_NOTFILEDEV for one not to a disk,
+    SS$_NOWRT for SEC$M_WRT (without SEC$M_CRF) on a read-only access,
+    SS$_ENDOFFILE for vbn past the file (the manual's).
+  - Macros: `$UPDSEC`, `$UPDSECW` (_S, list, _G) in govax's STARLET.
+  - Unconfirmed (for a probe): the section's size counts the file's
+    allocated blocks, not its end of file (so a file just created with
+    ALQ maps); a disk channel with no file accessed is SS$_FILNOTACC;
+    `$MGBLSC` with SEC$M_WRT of a file section created read-only is
+    SS$_NOWRT; a private section's status is SS$_NORMAL; section page
+    writes leave the end of file alone; `$UPDSEC` passes over pages a
+    more privileged mode owns, returns 0 in the IOSB's second longword
+    when every page was written, and with SS$_NOTMODIFIED sets the event
+    flag and writes the IOSB but queues no AST; the `$UPDSEC` macros'
+    argument pairing and required INADR; a UFO open of a non-disk device
+    is RMS$_SUPPORT (VMS gives a channel); the user stack's reserve.
+  - Not done: the user stack isn't kept out of P1's expansion region
+    (a stack deeper than 1,024 pages would run into it); the page fault
+    cluster (pfc) is ignored; SHOW PAGE doesn't decode the invalid
+    forms; page-file sections still take their frames at creation.
+  - Tests: `vm`'s `TestPTEForms`, `TestPagerPageIn`, `TestPagerRefuses`,
+    `TestPagerThroughSpace`, `TestDemandZero`; `rms`'s `TestUFO_create`,
+    `TestUFO_open`, `TestUFO_refused`; `TestRun_fileSections`
+    (`testdata/sec49/mapfile.mar`, 44 steps: private sections in P0 and
+    P1, $UPDSEC, $DELTVA's write-back, SS$_NOWRT, a global section
+    mapped twice, a section outliving its channel, $EXPREG of P1,
+    $UPDSEC's updflg, a global copy-on-reference section);
+    `TestFileSectionPair` (`secparent.mar`, `secchild.mar`: a global
+    file section shared by two processes, under two quanta);
+    `TestFileSectionRundown` (`rundown.mar`: image rundown writes a
+    private section back, and not a copy-on-reference one).

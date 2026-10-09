@@ -1,0 +1,33 @@
+	.TITLE	SECCHILD	The other process of SECPARENT (govax Phase 49)
+;
+; Maps the global section FILESEC that SECPARENT made of a file, checks
+; the parent's longword in its first page, writes its own in the
+; second, then a 1 after it, the parent's signal, and exits. Its
+; status: 1 if it saw the parent's longword, 4 if the mapping failed,
+; 6 if the longword wasn't there.
+;
+	$SECDEF
+
+	.PSECT	DATA,WRT,NOEXE,LONG
+P0ADR:	.LONG	^X200,^X200
+RANGE:	.BLKL	2
+NAME:	.ASCID	/FILESEC/
+
+	.PSECT	CODE,NOWRT,EXE
+	.ENTRY	START,^M<R2>
+	$MGBLSC_S INADR=P0ADR,RETADR=RANGE,GSDNAM=NAME,-
+		FLAGS=#<SEC$M_WRT!SEC$M_EXPREG>
+	BLBS	R0,10$
+	MOVL	#4,R0
+	RET
+10$:	MOVL	RANGE,R2
+	CMPL	(R2),#^X11111111
+	BEQL	20$
+	MOVL	#6,R0
+	RET
+20$:	MOVL	#^X22222222,512(R2)
+	MOVL	#1,516(R2)
+	MOVL	#1,R0
+	RET
+
+	.END	START

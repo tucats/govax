@@ -28,7 +28,11 @@ func serviceSysExpreg(env *Environment, argv []uint32) (uint32, error) {
 
 	curMod := uint32(env.cpu.PSL().CurMod())
 	if mode < curMod {
-		mode = curMod //nolint:ineffassign // leftover from C port to Go
+		mode = curMod
+	}
+
+	if region == regionP1 {
+		return env.expandP1Pages(pageCount, retAddr, vax.AccessMode(mode&3)), nil
 	}
 
 	size := pageCount * 512
@@ -49,6 +53,47 @@ func serviceSysExpreg(env *Environment, argv []uint32) (uint32, error) {
 	env.cpu.SetGPR(vax.R1, start) // "expected side effect", matching sys_expreg's own comment
 
 	return ssNormal, nil
+}
+
+// expandP1Pages is $EXPREG of region 1, P1: pageCount new demand-zero
+// pages below P1's low end (expandP1), owned by mode and read/write for
+// it and the more privileged modes, as $CRETVA makes them. P1 grows
+// down, so retadr receives the highest new page's address first and the
+// lowest page's last, as the manual describes ("the ending address is
+// smaller than the starting address when the control region is
+// expanded"); R1 is the starting address. SS$_VASFULL, with -1 in
+// retadr, when P1's page table can't hold them.
+func (env *Environment) expandP1Pages(pageCount, retAddr uint32, mode vax.AccessMode) uint32 {
+	first, st := env.expandP1(pageCount)
+	if st != 0 {
+		_ = env.storeRetadr(retAddr, nil)
+
+		return st
+	}
+
+	done := make([]uint32, 0, pageCount)
+	status := uint32(ssNormal)
+
+	for i := pageCount; i > 0; i-- {
+		addr := first + (i-1)*pageSize
+		if st := env.createPage(addr, mode); st != ssNormal {
+			status = st
+
+			break
+		}
+
+		done = append(done, addr)
+	}
+
+	if !env.storeRetadr(retAddr, done) {
+		return ssAccVio
+	}
+
+	if len(done) > 0 {
+		env.cpu.SetGPR(vax.R1, done[0]|pageMask)
+	}
+
+	return status
 }
 
 func registerCoreServices(t *ServiceTable) {

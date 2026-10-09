@@ -1,0 +1,96 @@
+	.TITLE	SECPARENT	A file's global section, two processes (govax Phase 49)
+;
+; Creates a two-block file (FOP=UFO), makes a writable global section
+; of it, FILESEC, writes a longword in its first page, and starts
+; SECCHILD.EXE, which maps the section by name, checks it sees that
+; longword, writes one in the second page, and then a 1 after it as its
+; signal. The parent waits for the signal, checks the child's longword,
+; lets its mapping go, and waits for the child to be gone: whichever
+; mapping goes last, its going writes both pages to the file, which the
+; test then reads. Returns 999 in R0, or the number of the step that
+; failed.
+;
+	$JPIDEF
+	$SECDEF
+	$SSDEF
+	$FABDEF
+
+	.MACRO	OK,?L
+	BLBS	R0,L
+	BRW	FAIL
+L:
+	.ENDM	OK
+
+	.MACRO	EXPECT,STS,?L
+	CMPL	R0,#STS
+	BEQL	L
+	BRW	FAIL
+L:
+	.ENDM	EXPECT
+
+	.PSECT	DATA,WRT,NOEXE,LONG
+FAB:	$FAB	FNM=<DUA0:[000000]SHARED.SEC>,FAC=<GET,PUT,UPD>,FOP=UFO,-
+		ALQ=2,RFM=FIX,MRS=512
+P0ADR:	.LONG	^X200,^X200
+RANGE:	.BLKL	2
+CHAN:	.BLKW	1
+PID:	.BLKL	1
+NAME:	.ASCID	/FILESEC/
+IMAGE:	.ASCID	/DUA0:[000000]SECCHILD.EXE/
+CHILD:	.ASCID	/SEC_CHILD/
+JPI:	.WORD	4,JPI$_PID		; any item: the call says if it lives
+	.ADDRESS JPIPID
+	.LONG	0,0
+JPIPID:	.BLKL	1
+NAP:	.LONG	-100000,-1		; 10 milliseconds, a delta time
+
+	.PSECT	CODE,NOWRT,EXE
+	.ENTRY	START,^M<R2,R6>
+	CLRL	R6
+	INCL	R6			; 1
+	$CREATE	FAB=FAB
+	OK
+	MOVW	FAB+FAB$L_STV,CHAN
+	INCL	R6			; 2
+	$CRMPSC_S INADR=P0ADR,RETADR=RANGE,GSDNAM=NAME,CHAN=CHAN,-
+		FLAGS=#<SEC$M_GBL!SEC$M_WRT!SEC$M_EXPREG>
+	EXPECT	SS$_CREATED
+	MOVL	RANGE,R2
+	MOVL	#^X11111111,(R2)
+	INCL	R6			; 3: the section keeps the file
+	$DASSGN_S CHAN=CHAN
+	OK
+	INCL	R6			; 4
+	$CREPRC_S PIDADR=PID,IMAGE=IMAGE,PRCNAM=CHILD
+	OK
+	INCL	R6			; 5: wait for the child's signal,
+10$:	TSTL	516(R2)			; napping (the child runs at a
+	BNEQ	15$			; lower priority)
+	BSBW	SLEEP
+	BRB	10$
+15$:	CMPL	512(R2),#^X22222222
+	BEQL	20$
+	BRW	FAIL
+20$:	INCL	R6			; 6: the child's own longword
+	CMPL	516(R2),#1
+	BEQL	30$
+	BRW	FAIL
+30$:	INCL	R6			; 7
+	$DELTVA_S INADR=RANGE
+	OK
+	INCL	R6			; 8: wait for the child to go
+40$:	$GETJPIW_S PIDADR=PID,ITMLST=JPI
+	BLBC	R0,50$
+	BSBW	SLEEP
+	BRB	40$
+50$:	EXPECT	SS$_NONEXPR
+	MOVL	#999,R6
+FAIL:	MOVL	R6,R0
+	RET
+
+; SLEEP naps for NAP.
+SLEEP:	$SCHDWK_S DAYTIM=NAP
+	$HIBER_S
+	RSB
+
+	.END	START

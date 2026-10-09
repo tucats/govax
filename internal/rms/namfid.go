@@ -149,6 +149,17 @@ func (ctx *Context) openByNAM(fab, nam uint32, fac byte, chain []xabEntry, xabSt
 		return fail(sts)
 	}
 
+	fop, err := ctx.loadLongword(fab + fabFOP)
+	if err != nil {
+		return 0, true, err
+	}
+
+	if fop&fopUFO != 0 {
+		sts, err := ctx.userFileOpen(fab, ifi, device, rmsNormal)
+
+		return sts, true, err
+	}
+
 	if err := ctx.storeWord(fab+fabIFI, ifi); err != nil {
 		return 0, true, err
 	}

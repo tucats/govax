@@ -1,0 +1,216 @@
+	.TITLE	MAPFILE	File-backed sections (govax Phase 49)
+;
+; Creates a four-block file with a user file open (FOP=UFO), maps it as
+; a private writable section, writes through memory, and writes the
+; pages back ($UPDSEC, $DELTVA). Maps the file again read-only, in P1,
+; to see what reached it; then makes a global section of it, maps it
+; twice, writes through one mapping and reads through the other, and
+; checks the section's pages reach the file when it goes. Returns 999 in
+; R0 if every step did what the manuals say, or the number of the step
+; that didn't.
+;
+	$FABDEF
+	$SECDEF
+	$SSDEF
+
+; OK goes on if R0 is a success, and to FAIL if not; EXPECT if R0 is
+; the status STS; SAME if the longword at A is V. (FAIL is too far for
+; a byte branch.)
+	.MACRO	OK,?L
+	BLBS	R0,L
+	BRW	FAIL
+L:
+	.ENDM	OK
+
+	.MACRO	EXPECT,STS,?L
+	CMPL	R0,#STS
+	BEQL	L
+	BRW	FAIL
+L:
+	.ENDM	EXPECT
+
+	.MACRO	SAME,A,V,?L
+	CMPL	A,V
+	BEQL	L
+	BRW	FAIL
+L:
+	.ENDM	SAME
+
+	.PSECT	DATA,WRT,NOEXE,LONG
+; Both opens let others read and write, so the file can be open on both
+; channels at once.
+FAB:	$FAB	FNM=<DUA0:[000000]MAP.DAT>,FAC=<GET,PUT,UPD>,FOP=UFO,-
+		ALQ=4,RFM=FIX,MRS=512,SHR=<GET,PUT,UPD>
+RFAB:	$FAB	FNM=<DUA0:[000000]MAP.DAT>,FAC=GET,FOP=UFO,SHR=<GET,PUT,UPD>
+P0ADR:	.LONG	^X200,^X200		; "somewhere in P0"
+P1ADR:	.LONG	^X7FFFFFFF,^X7FFFFFFF	; "somewhere in P1"
+RANGE:	.BLKL	2
+RANGE2:	.BLKL	2
+RANGE3:	.BLKL	2
+IOSB:	.BLKQ	1
+CHAN:	.BLKW	1
+RCHAN:	.BLKW	1
+NAME:	.ASCID	/MAPSEC/
+COPY:	.ASCID	/COPYSEC/
+
+	.PSECT	CODE,NOWRT,EXE
+	.ENTRY	START,^M<R2,R3,R4,R6>
+	CLRL	R6
+	INCL	R6			; 1: create the file, on a channel
+	$CREATE	FAB=FAB
+	OK
+	INCL	R6			; 2: no IFI, the channel in STV
+	TSTW	FAB+FAB$W_IFI
+	BEQL	2$
+	BRW	FAIL
+2$:	MOVW	FAB+FAB$L_STV,CHAN
+	INCL	R6			; 3: map it all, writable, in P0
+	$CRMPSC_S INADR=P0ADR,RETADR=RANGE,-
+		FLAGS=#<SEC$M_WRT!SEC$M_EXPREG>,CHAN=CHAN
+	EXPECT	SS$_NORMAL
+	INCL	R6			; 4: four pages
+	SUBL3	RANGE,RANGE+4,R0
+	SAME	R0,#2047
+	MOVL	RANGE,R2
+	MOVL	#^X11111111,(R2)
+	MOVL	#^X44444444,1536(R2)
+	INCL	R6			; 5: write the two pages back
+	$UPDSEC_S INADR=RANGE,IOSB=IOSB
+	EXPECT	SS$_NORMAL
+	INCL	R6			; 6: and they went
+	SAME	IOSB,#SS$_NORMAL
+	INCL	R6			; 7: nothing more to write
+	$UPDSEC_S INADR=RANGE
+	EXPECT	SS$_NOTMODIFIED
+	INCL	R6			; 8: deleting a modified page writes it
+	MOVL	#^X22222222,512(R2)
+	$DELTVA_S INADR=RANGE
+	OK
+	INCL	R6			; 9
+	$DASSGN_S CHAN=CHAN
+	OK
+	INCL	R6			; 10: open it read-only
+	$OPEN	FAB=RFAB
+	OK
+	MOVW	RFAB+FAB$L_STV,RCHAN
+	INCL	R6			; 11: not writable on that channel
+	$CRMPSC_S INADR=P0ADR,RETADR=RANGE,-
+		FLAGS=#<SEC$M_WRT!SEC$M_EXPREG>,CHAN=RCHAN
+	EXPECT	SS$_NOWRT
+	INCL	R6			; 12: read-only, in P1
+	$CRMPSC_S INADR=P1ADR,RETADR=RANGE2,FLAGS=#SEC$M_EXPREG,CHAN=RCHAN
+	EXPECT	SS$_NORMAL
+	INCL	R6			; 13: in P1, mapped low to high
+	CMPL	RANGE2,#^X40000000
+	BGEQU	13$
+	BRW	FAIL
+13$:	SUBL3	RANGE2,RANGE2+4,R0
+	SAME	R0,#2047
+	INCL	R6			; 14: what was written is in the file
+	MOVL	RANGE2,R3
+	SAME	(R3),#^X11111111
+	INCL	R6			; 15
+	SAME	512(R3),#^X22222222
+	INCL	R6			; 16
+	SAME	1024(R3),#0
+	INCL	R6			; 17
+	SAME	1536(R3),#^X44444444
+	INCL	R6			; 18
+	$DELTVA_S INADR=RANGE2
+	OK
+	INCL	R6			; 19: a global section of the file
+	$OPEN	FAB=FAB
+	OK
+	MOVW	FAB+FAB$L_STV,CHAN
+	INCL	R6			; 20
+	$CRMPSC_S INADR=P0ADR,RETADR=RANGE,GSDNAM=NAME,CHAN=CHAN,-
+		FLAGS=#<SEC$M_GBL!SEC$M_WRT!SEC$M_EXPREG>
+	EXPECT	SS$_CREATED
+	INCL	R6			; 21: mapped again
+	$MGBLSC_S INADR=P0ADR,RETADR=RANGE3,GSDNAM=NAME,-
+		FLAGS=#<SEC$M_WRT!SEC$M_EXPREG>
+	EXPECT	SS$_NORMAL
+	INCL	R6			; 22: both mappings see the file
+	MOVL	RANGE,R2
+	MOVL	RANGE3,R4
+	SAME	(R4),#^X11111111
+	INCL	R6			; 23: and each other's writes
+	MOVL	#^X33333333,1024(R2)
+	SAME	1024(R4),#^X33333333
+	INCL	R6			; 24: the section keeps the file
+	$DASSGN_S CHAN=CHAN
+	OK
+	INCL	R6			; 25: the last mapping goes
+	$DELTVA_S INADR=RANGE
+	OK
+	INCL	R6			; 26
+	$DELTVA_S INADR=RANGE3
+	OK
+	INCL	R6			; 27: the section's pages are in the file
+	$CRMPSC_S INADR=P0ADR,RETADR=RANGE,FLAGS=#SEC$M_EXPREG,CHAN=RCHAN
+	EXPECT	SS$_NORMAL
+	MOVL	RANGE,R2
+	SAME	1024(R2),#^X33333333
+	INCL	R6			; 28
+	SAME	512(R2),#^X22222222
+	INCL	R6			; 29
+	$DASSGN_S CHAN=RCHAN
+	OK
+	INCL	R6			; 30: P1 grows down, by $EXPREG too
+	$EXPREG_S PAGCNT=#2,RETADR=RANGE,REGION=#1
+	OK
+	INCL	R6			; 31: high page first
+	SUBL3	RANGE+4,RANGE,R0
+	SAME	R0,#1023
+	INCL	R6			; 32: below what the section had
+	CMPL	RANGE,RANGE2
+	BLSSU	32$
+	BRW	FAIL
+32$:	MOVL	#1,@RANGE+4		; the new pages exist
+	BICL3	#511,RANGE,R0
+	MOVL	#1,(R0)
+	INCL	R6			; 33: a global section to update
+	$OPEN	FAB=FAB
+	OK
+	MOVW	FAB+FAB$L_STV,CHAN
+	INCL	R6			; 34
+	$CRMPSC_S INADR=P0ADR,RETADR=RANGE3,GSDNAM=NAME,CHAN=CHAN,-
+		FLAGS=#<SEC$M_GBL!SEC$M_WRT!SEC$M_EXPREG>
+	EXPECT	SS$_CREATED
+	MOVL	RANGE3,R4
+	MOVL	#^X77777777,4(R4)
+	INCL	R6			; 35: the page this process modified
+	$UPDSEC_S INADR=RANGE3,RETADR=RANGE,UPDFLG=#1
+	EXPECT	SS$_NORMAL
+	INCL	R6			; 36: only that page
+	SAME	RANGE,R4
+	INCL	R6			; 37
+	ADDL3	#511,R4,R0
+	SAME	RANGE+4,R0
+	INCL	R6			; 38: no longer modified
+	$UPDSEC_S INADR=RANGE3,UPDFLG=#1
+	EXPECT	SS$_NOTMODIFIED
+	INCL	R6			; 39: updflg 0 writes it anyway
+	$UPDSEC_S INADR=RANGE3
+	EXPECT	SS$_NORMAL
+	INCL	R6			; 40: a copy-on-reference global section
+	$CRMPSC_S INADR=P0ADR,RETADR=RANGE2,GSDNAM=COPY,CHAN=CHAN,-
+		FLAGS=#<SEC$M_GBL!SEC$M_WRT!SEC$M_CRF!SEC$M_EXPREG>
+	EXPECT	SS$_CREATED
+	INCL	R6			; 41: its pages are the file's
+	MOVL	RANGE2,R3
+	SAME	4(R3),#^X77777777
+	INCL	R6			; 42: but never go back to it
+	MOVL	#^X88888888,4(R3)
+	$UPDSEC_S INADR=RANGE2
+	EXPECT	SS$_NOTMODIFIED
+	INCL	R6			; 43: the other section doesn't see it
+	SAME	4(R4),#^X77777777
+	INCL	R6			; 44
+	$DASSGN_S CHAN=CHAN
+	OK
+	MOVL	#999,R6
+FAIL:	MOVL	R6,R0
+	RET
+
+	.END	START

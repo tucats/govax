@@ -164,6 +164,11 @@ type ACPFile struct {
 	// acpdelete.go), and released reports that Deaccess has ended it.
 	mount    *mountedVolume
 	released bool
+
+	// claim is the RMS open's place in the file's list of openers, for
+	// a file opened by RMS for the user (FAB$V_UFO, ufo.go): the access
+	// keeps the open's sharing until it ends. nil for IO$_ACCESS.
+	claim *openerClaim
 }
 
 // ACPAccessMode is how an IO$_ACCESS uses the file: FIB$L_ACCTL's
@@ -299,6 +304,35 @@ func (a *ACPFile) WriteVirtual(vbn uint32, data []byte) error {
 	return nil
 }
 
+// ReadPage reads virtual block vbn into buf (at least a block long) for
+// a section of the file (the pager's page I/O, not a transfer): any block
+// the file has allocated can be read, its end of file notwithstanding (a
+// block never written reads as zeros). Past the allocation it's
+// ErrACPEndOfFile.
+func (a *ACPFile) ReadPage(vbn uint32, buf []byte) error {
+	if vbn == 0 || vbn > a.file.Blocks() {
+		return ErrACPEndOfFile
+	}
+
+	return a.file.ReadBlock(vbn, buf)
+}
+
+// WritePage writes data, one block, to virtual block vbn: a section's
+// modified page going back to its file. Like ReadPage it may write any
+// allocated block and leaves the end of file alone (a section's pages
+// aren't records). It needs write access (ErrACPReadOnly).
+func (a *ACPFile) WritePage(vbn uint32, data []byte) error {
+	if !a.writable {
+		return ErrACPReadOnly
+	}
+
+	if vbn == 0 || vbn > a.file.Blocks() {
+		return ErrACPEndOfFile
+	}
+
+	return a.file.WriteBlock(vbn, data)
+}
+
 // Extend allocates blocks more virtual blocks at the end of the file,
 // returning the first new block's number. It needs write access.
 func (a *ACPFile) Extend(blocks uint32) (uint32, error) {
@@ -373,6 +407,8 @@ func (a *ACPFile) DeaccessWithAttributes(change func(*ACPAttributes)) error {
 			err = ferr
 		}
 	}
+
+	a.claim.release()
 
 	if a.mount != nil {
 		if rerr := a.mount.release(a.fid); err == nil {

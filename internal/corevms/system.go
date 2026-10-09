@@ -66,6 +66,9 @@ type System struct {
 	// system state like the mailboxes.
 	Sections *GlobalSections
 
+	// sectionFiles counts the sections using each file (filesec.go).
+	sectionFiles map[*rms.ACPFile]*sectionFile
+
 	// Locks is the lock database (internal/lck, Phase 47): every
 	// resource and lock $ENQ and RMS have made, system state too.
 	Locks *lck.Manager
@@ -189,6 +192,10 @@ func NewSystem(cpu *vax.CPU, mem *vm.Memory, devices *iodev.DeviceTable, mounts 
 	// by the system clock, which tests may replace.
 	sys.Locks.Now = func() uint64 { return sys.Clock() }
 	sys.Locks.DeadlockWait = lck.DefaultDeadlockWait
+
+	// The pager (filesec.go) brings in the pages of file sections, and
+	// every demand-zero page.
+	mem.SetPager(sys)
 
 	sys.BootTime = sys.Clock()
 	sys.removeStaleMailboxes()

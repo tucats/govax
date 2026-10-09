@@ -426,15 +426,15 @@ func (m *Memory) translate(cpu *vax.CPU, addr uint32, access AccessType, signal 
 
 	// The access is permitted in principle, but the PTE's Valid bit might
 	// still be clear, meaning no physical page is actually behind this
-	// virtual page right now. validatePage (below) is this emulator's
-	// simplified stand-in for real demand-paging: rather than reading the
-	// missing page back in from a disk (which this emulator doesn't
-	// model), it just grabs any free physical page and marks the PTE
-	// valid, as if the page had always been full of zeros. If even that
-	// fails (no VMINIT has run yet, or physical memory is exhausted), the
-	// access becomes a genuine TranslationNotValid fault.
+	// virtual page right now. pageIn (pager.go) brings it in: the
+	// installed Pager decides where its contents come from (a section's
+	// file, or zeros), or, with none installed, validatePage (below)
+	// grabs any free physical page and marks the PTE valid, as if the
+	// page had always been full of zeros. If that fails (no VMINIT has
+	// run yet, physical memory is exhausted, or the pager can't read the
+	// page), the access becomes a genuine TranslationNotValid fault.
 	if !pte.Valid() {
-		ok := m.validatePage(pteAddr, &pte)
+		ok := m.pageIn(PageFault{Space: CurrentAddressSpace(cpu), Addr: addr, PTEAddr: pteAddr, Write: access == AccessWrite}, &pte)
 
 		// Matching vm.c's own `tbp->page = -1L; STC_FLUSH;` immediately
 		// around its validate_page() call: the current slot is

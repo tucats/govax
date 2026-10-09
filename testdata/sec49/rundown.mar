@@ -1,0 +1,50 @@
+	.TITLE	RUNDOWN	Sections left mapped at image exit (govax Phase 49)
+;
+; Creates a two-block file (FOP=UFO) and maps it twice, as a writable
+; private section and as a writable copy-on-reference one, writes a
+; longword into each mapping's first page, and returns without
+; unmapping or deassigning anything. Image rundown writes the first
+; mapping's page to the file and drops the copy's. Returns 999 in R0,
+; or the number of the step that failed.
+;
+	$SECDEF
+	$SSDEF
+	$FABDEF
+
+	.MACRO	EXPECT,STS,?L
+	CMPL	R0,#STS
+	BEQL	L
+	BRW	FAIL
+L:
+	.ENDM	EXPECT
+
+	.PSECT	DATA,WRT,NOEXE,LONG
+FAB:	$FAB	FNM=<DUA0:[000000]RUNDOWN.SEC>,FAC=<GET,PUT,UPD>,FOP=UFO,-
+		ALQ=2,RFM=FIX,MRS=512
+P0ADR:	.LONG	^X200,^X200
+RANGE:	.BLKL	2
+COPY:	.BLKL	2
+CHAN:	.BLKW	1
+
+	.PSECT	CODE,NOWRT,EXE
+	.ENTRY	START,^M<R6>
+	MOVL	#1,R6			; 1
+	$CREATE	FAB=FAB
+	BLBS	R0,10$
+	BRW	FAIL
+10$:	MOVW	FAB+FAB$L_STV,CHAN
+	INCL	R6			; 2
+	$CRMPSC_S INADR=P0ADR,RETADR=RANGE,CHAN=CHAN,-
+		FLAGS=#<SEC$M_WRT!SEC$M_EXPREG>
+	EXPECT	SS$_NORMAL
+	INCL	R6			; 3
+	$CRMPSC_S INADR=P0ADR,RETADR=COPY,CHAN=CHAN,-
+		FLAGS=#<SEC$M_WRT!SEC$M_CRF!SEC$M_EXPREG>
+	EXPECT	SS$_NORMAL
+	MOVL	#^X55555555,@RANGE
+	MOVL	#^X66666666,@COPY
+	MOVL	#999,R6
+FAIL:	MOVL	R6,R0
+	RET
+
+	.END	START

@@ -479,3 +479,20 @@ func (env *Environment) deviceName(name string) (string, uint32) {
 
 	return device, 0
 }
+
+// assignFileChannel is RMS's user file open (FAB$V_UFO, rms/ufo.go): it
+// assigns a channel to device, at the caller's access mode, with the file
+// f accessed on it, as though the program had assigned it and done an
+// IO$_ACCESS. It returns the channel's number, or SS$_IVDEVNAM if there's
+// no such device.
+func (env *Environment) assignFileChannel(device string, f *rms.ACPFile) (uint16, uint32) {
+	dp, found := env.Devices.Find(device)
+	if !found {
+		return 0, ssIvDevNam
+	}
+
+	c := env.newChannel(device, dp, uint32(env.cpu.PSL().CurMod()))
+	c.acp = f
+
+	return c.Number, ssNormal
+}

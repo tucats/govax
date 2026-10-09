@@ -94,6 +94,8 @@ var serviceMinArgs = map[string]int{
 	"SYS$SETAST":  1,
 	"SYS$SETPRI":  3,
 	"SYS$SETPRV":  1,
+	"SYS$UPDSEC":  1,
+	"SYS$UPDSECW": 1,
 	"SYS$WAITFR":  1,
 	"SYS$WFLAND":  2,
 	"SYS$WFLOR":   2,

@@ -363,7 +363,8 @@ type ioResult struct {
 // diskDeaccess is IO$_DEACCESS: the channel's file is closed, after
 // which the attributes in p5's list are written to it (how RMS records
 // the end of file). Writing attributes needs write access (SS$_NOPRIV);
-// the file is closed even then.
+// the file is closed even then. A file that sections are made of stays
+// accessed for them, though the channel no longer has it.
 func diskDeaccess(env *Environment, req *ioRequest) (ioStatus, uint32) {
 	c := req.channel
 	if c.acp == nil {
@@ -375,7 +376,17 @@ func diskDeaccess(env *Environment, req *ioRequest) (ioStatus, uint32) {
 		return fail.iosb, fail.r0
 	}
 
-	err := c.acp.DeaccessWithAttributes(change)
+	// A file sections are made of stays accessed for them (filesec.go):
+	// only the attributes are written now.
+	var err error
+
+	switch {
+	case !env.orphanFile(c.acp):
+		err = c.acp.DeaccessWithAttributes(change)
+	case change != nil:
+		err = c.acp.WriteAttributes(change)
+	}
+
 	c.acp = nil
 
 	if err != nil {
@@ -511,10 +522,14 @@ func diskWriteVirtual(env *Environment, req *ioRequest) (ioStatus, uint32) {
 }
 
 // deaccessChannel closes the file accessed on channel c, if any: $DASSGN
-// and image rundown's deassignments do this.
+// and image rundown's deassignments do this. A file that sections are
+// made of stays accessed for them (filesec.go); the last one closes it.
 func (env *Environment) deaccessChannel(c *channel) {
 	if c.acp != nil {
-		_ = c.acp.Deaccess()
+		if !env.orphanFile(c.acp) {
+			_ = c.acp.Deaccess()
+		}
+
 		c.acp = nil
 	}
 }

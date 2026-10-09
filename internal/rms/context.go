@@ -113,6 +113,12 @@ type Context struct {
 	// is RMS$_EXENQLM. nil: no limit.
 	CanLock func() bool
 
+	// AssignFileChannel, if set, assigns the process a channel to device
+	// with the file f accessed on it, for a user file open (FAB$V_UFO,
+	// ufo.go), returning the channel's number and a system service
+	// status. nil: UFO is RMS$_SUPPORT.
+	AssignFileChannel func(device string, f *ACPFile) (uint16, uint32)
+
 	// Clock, if set, is the system time, in VMS's 100-nanosecond units:
 	// what a record lock wait's time limit (RAB$V_TMO) is measured by.
 	// nil: no time limits.

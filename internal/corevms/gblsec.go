@@ -4,6 +4,7 @@ import (
 	"maps"
 	"slices"
 
+	"github.com/tucats/govax/internal/rms"
 	"github.com/tucats/govax/internal/vax"
 	"github.com/tucats/govax/internal/vm"
 	"github.com/tucats/govax/internal/vmsdef"
@@ -46,18 +47,19 @@ import (
 //
 // # How govax does it
 //
-// A section's physical pages are allocated, zeroed, when it's created,
-// and stay with it until it's deleted: the section owns them, not the
-// processes mapping it. A mapping process's PTEs are valid from the
-// start, pointing at the section's pages (VMS's point at global page
-// table entries and fault the pages in; there's no paging here). So the
-// code that gives back a page's physical page when its PTE is replaced
-// (replacePTE, TeardownAddressSpace) asks the System first
+// A section's physical pages belong to the section, not to the processes
+// mapping it. A page-file section's are allocated, zeroed, when it's
+// created, and a mapping process's PTEs are valid from the start,
+// pointing at them. A file section's (filesec.go) come in when first
+// touched: each has an entry in the global page table (globalPage), and
+// a mapping process's PTEs hold its index until the pager reads the page
+// in. Either way the code that gives back a page when its PTE is replaced
+// (releasePTE, TeardownAddressSpace) asks the System first
 // (releaseFrame): a page of a section only drops the section's
 // reference count.
 //
-// File-backed sections (a $CRMPSC of a file's blocks, private or
-// global) and sections mapped by PFN aren't supported: SS$_UNSUPPORTED.
+// Sections mapped by PFN (SEC$M_PFNMAP) aren't supported:
+// SS$_UNSUPPORTED.
 
 // Status values the section services return.
 var (
@@ -137,11 +139,38 @@ type GlobalSection struct {
 	// it goes when its last mapping does.
 	DeletePending bool
 
-	// Frames are the section's physical pages, in order.
+	// Frames are the section's physical pages, in order. A file
+	// section's page not read in yet is 0.
 	Frames []uint32
 
 	// Refs is how many process page table entries map the section.
 	Refs int
+
+	// File is the file a file section's pages are blocks of, from block
+	// VBN; nil for a page-file section. CopyOnRef is set for one created
+	// with SEC$M_CRF: each process gets its own copy of a page when it
+	// touches it. Dirty marks the pages modified since they were last
+	// written back. gpt is the global page table index of the section's
+	// first page.
+	File      *rms.ACPFile
+	VBN       uint32
+	CopyOnRef bool
+	Dirty     []bool
+	gpt       uint32
+}
+
+// writesBack reports whether s's modified pages go back to its file: a
+// writable file section that isn't copy on reference.
+func (s *GlobalSection) writesBack() bool {
+	return s.File != nil && s.Writable && !s.CopyOnRef
+}
+
+// sectionPage is one page of a global section: the section and the
+// page's number in it. It's what a physical page of a section, and a
+// global page table entry, stand for.
+type sectionPage struct {
+	s    *GlobalSection
+	page int
 }
 
 // GlobalSections is the system's table of global sections.
@@ -151,8 +180,13 @@ type GlobalSections struct {
 	// mappings.
 	sections, deleted []*GlobalSection
 
-	// byFrame finds the section a physical page belongs to.
-	byFrame map[uint32]*GlobalSection
+	// byFrame finds the section page a physical page is.
+	byFrame map[uint32]sectionPage
+
+	// pageTable is the global page table: an entry for each page of each
+	// file section, which a mapping process's invalid PTE holds the
+	// index of (vm.GlobalPTE). An entry whose section is nil is free.
+	pageTable []sectionPage
 
 	// SectionLimit and PageLimit are GBLSECTIONS and GBLPAGES.
 	SectionLimit, PageLimit int
@@ -164,7 +198,7 @@ type GlobalSections struct {
 // NewGlobalSections returns an empty table with the default limits.
 func NewGlobalSections() *GlobalSections {
 	return &GlobalSections{
-		byFrame:      map[uint32]*GlobalSection{},
+		byFrame:      map[uint32]sectionPage{},
 		SectionLimit: DefaultGlobalSectionLimit,
 		PageLimit:    DefaultGlobalPageLimit,
 	}
@@ -216,34 +250,103 @@ func (g *GlobalSections) find(name string, system bool, group uint32, ident sect
 	return nil
 }
 
+// globalPage returns the section and page number global page table
+// entry gi stands for.
+func (g *GlobalSections) globalPage(gi uint32) (*GlobalSection, int, bool) {
+	if gi >= uint32(len(g.pageTable)) || g.pageTable[gi].s == nil {
+		return nil, 0, false
+	}
+
+	e := g.pageTable[gi]
+
+	return e.s, e.page, true
+}
+
+// allocPageTable gives s's pages global page table entries, a run of
+// them, the first free run long enough or new ones at the end; it reports
+// false if the table would pass the largest index a PTE can hold.
+func (g *GlobalSections) allocPageTable(s *GlobalSection, pages int) bool {
+	first, run := -1, 0
+
+	for i, e := range g.pageTable {
+		if e.s != nil {
+			run = 0
+
+			continue
+		}
+
+		if run++; run == pages {
+			first = i - pages + 1
+
+			break
+		}
+	}
+
+	if first < 0 {
+		first = len(g.pageTable)
+		if first+pages > vm.MaxPTEIndex+1 {
+			return false
+		}
+
+		g.pageTable = append(g.pageTable, make([]sectionPage, pages)...)
+	}
+
+	for i := range pages {
+		g.pageTable[first+i] = sectionPage{s, i}
+	}
+
+	s.gpt = uint32(first)
+
+	return true
+}
+
 // releaseFrame gives back the physical page pfn, which a page table
 // entry no longer points at: to the free list, unless it's a global
 // section's page, when the section loses a reference instead (and is
-// deleted if that was its last, unless it's permanent).
-func (sys *System) releaseFrame(pfn uint32) {
-	s := sys.Sections.byFrame[pfn]
-	if s == nil {
+// deleted if that was its last, unless it's permanent), and, if the PTE
+// had modified the page, the page is marked modified in the section.
+func (sys *System) releaseFrame(pfn uint32, modified bool) {
+	sp, ok := sys.Sections.byFrame[pfn]
+	if !ok {
 		sys.mem.FreePage(pfn)
 
 		return
 	}
 
-	s.Refs--
-	sys.maybeDeleteSection(s)
+	if modified && sp.s.Dirty != nil {
+		sp.s.Dirty[sp.page] = true
+	}
+
+	sp.s.Refs--
+	sys.maybeDeleteSection(sp.s)
 }
 
 // maybeDeleteSection deletes s if nothing maps it and nothing keeps it:
-// a temporary section, or one $DGBLSC has deleted. Its physical pages
-// go back to the free list (cleared).
+// a temporary section, or one $DGBLSC has deleted. A file section's
+// modified pages are written back to its file first, and the file is let
+// go. Its physical pages go back to the free list (cleared).
 func (sys *System) maybeDeleteSection(s *GlobalSection) {
 	g := sys.Sections
 	if s.Refs > 0 || s.Permanent {
 		return
 	}
 
+	sys.writeBackSection(s)
+
 	for _, pfn := range s.Frames {
-		delete(g.byFrame, pfn)
-		sys.mem.FreePage(pfn)
+		if pfn != 0 {
+			delete(g.byFrame, pfn)
+			sys.mem.FreePage(pfn)
+		}
+	}
+
+	if s.File != nil {
+		for i := range s.Frames {
+			g.pageTable[s.gpt+uint32(i)] = sectionPage{}
+		}
+
+		sys.dropFile(s.File)
+		s.File = nil
 	}
 
 	g.pages -= len(s.Frames)
@@ -287,14 +390,39 @@ func (sys *System) createSection(s *GlobalSection, pages int) (*GlobalSection, u
 		s.Frames = append(s.Frames, pfn)
 	}
 
-	for _, pfn := range s.Frames {
-		g.byFrame[pfn] = s
+	for i, pfn := range s.Frames {
+		g.byFrame[pfn] = sectionPage{s, i}
 	}
 
 	g.pages += pages
 	g.sections = append(g.sections, s)
 
 	return s, ssNormal
+}
+
+// createFileSection makes a new section of pages pages of s.File, from
+// block s.VBN, none read in yet (filesec.go), returning the status that
+// stops it: SS$_GSDFULL or SS$_GPTFULL past the limits (or the global
+// page table's largest index).
+func (sys *System) createFileSection(s *GlobalSection, pages int) uint32 {
+	g := sys.Sections
+
+	if g.count() >= g.SectionLimit {
+		return ssGsdFull
+	}
+
+	if g.pages+pages > g.PageLimit || !g.allocPageTable(s, pages) {
+		return ssGptFull
+	}
+
+	s.Frames = make([]uint32, pages)
+	s.Dirty = make([]bool, pages)
+
+	g.pages += pages
+	g.sections = append(g.sections, s)
+	sys.holdFile(s.File)
+
+	return ssNormal
 }
 
 // sectionArgs are the arguments $CRMPSC and $MGBLSC share.
@@ -382,23 +510,39 @@ func (env *Environment) readIdent(addr uint32) (sectionIdent, uint32) {
 //	SYS$CRMPSC [inadr] ,[retadr] ,[acmode] ,[flags] ,[gsdnam] ,[ident]
 //	           ,[relpag] ,[chan] ,[pagcnt] ,[vbn] ,[prot] ,[pfc]
 //
-// govax supports page-file global sections: flags SEC$M_GBL and
-// SEC$M_PAGFIL (with SEC$M_DZRO, implied anyway), and optionally
-// SEC$M_WRT, SEC$M_SYSGBL (needs SYSGBL), SEC$M_PERM (needs PRMGBL), and
-// SEC$M_EXPREG. If a section named gsdnam whose ident matches already
+// It makes three kinds of section:
+//
+//   - A *page-file* global section: flags SEC$M_GBL and SEC$M_PAGFIL
+//     (with SEC$M_DZRO, implied anyway), of pagcnt pages (SS$_ENDOFFILE
+//     for 0, as VMS 7.3 says), zeroed.
+//   - A *file* global section: SEC$M_GBL without SEC$M_PAGFIL, of the
+//     file accessed on channel chan (filesec.go), from block vbn, pagcnt
+//     pages or the rest of the file.
+//   - A *private* file section: no SEC$M_GBL; the same, mapped by this
+//     process only, with no name. It returns SS$_NORMAL.
+//
+// Optional flags: SEC$M_WRT (writable pages; a file section's modified
+// pages are written back), SEC$M_CRF (copy on reference, file sections
+// only: each page a private copy, never written back), SEC$M_SYSGBL
+// (needs SYSGBL), SEC$M_PERM (needs PRMGBL), SEC$M_EXPREG.
+//
+// For a global section, if one named gsdnam whose ident matches already
 // exists in the scope, it's mapped (as by $MGBLSC, SEC$M_WRT asking for
-// write access) and the service returns SS$_NORMAL; if not, a section of
-// pagcnt pages (SS$_ENDOFFILE for 0, as VMS 7.3 says) is created, with ident's version
-// and protection mask prot, mapped, and the service returns SS$_CREATED.
-// The mapping is mapSection's. If it fails, a section just created goes
-// again (unless permanent).
+// write access) and the service returns SS$_NORMAL; if not, it's created
+// with ident's version and protection mask prot, mapped, and the service
+// returns SS$_CREATED. The mapping is mapSection's; with no inadr (and
+// no SEC$M_EXPREG) a global section is created but not mapped (the
+// manual's case for a permanent one). If the mapping fails, a section
+// just created goes again (unless permanent).
 //
 // Other statuses: SS$_IVSECFLG for an unknown flag, SEC$M_PERM or
 // SEC$M_SYSGBL without SEC$M_GBL, SEC$M_CRF with SEC$M_PAGFIL, or a
-// section of a file (no SEC$M_PAGFIL) with no channel; SS$_UNSUPPORTED for
-// a section of a file on a channel, or by PFN; SS$_NOPRIV; SS$_GSDFULL,
-// SS$_GPTFULL, SS$_INSFMEM; readSectionArgs's. Any failure before a page
-// is mapped writes -1 to both longwords of retadr (failRetadr).
+// file section with no channel; SS$_UNSUPPORTED for a section mapped by
+// PFN; fileSectionChannel's and fileSectionSize's (SS$_NOPRIV,
+// SS$_NOTFILEDEV, SS$_NOWRT, SS$_ENDOFFILE); SS$_NOPRIV; SS$_GSDFULL,
+// SS$_GPTFULL, SS$_INSFMEM; readSectionArgs's and mapRange's. Any
+// failure before a page is mapped writes -1 to both longwords of retadr
+// (failRetadr).
 //
 // The statuses for pagcnt 0 and for a file section with no channel are
 // VMS 7.3's (testdata/mp/probe3). *Unconfirmed:* which rule gives the
@@ -407,6 +551,7 @@ func (env *Environment) readIdent(addr uint32) (sectionIdent, uint32) {
 func serviceSysCrmpsc(env *Environment, argv []uint32) (uint32, error) {
 	known := secGBL | secCRF | secDZRO | secWRT | secPERM | secSYSGBL | secPFNMAP | secEXPREG | secPAGFIL
 	flags := optArg(argv, 3)
+	chanNumber := optArg(argv, 7) & 0xFFFF
 
 	switch {
 	case flags&^known != 0:
@@ -415,18 +560,17 @@ func serviceSysCrmpsc(env *Environment, argv []uint32) (uint32, error) {
 		return env.failRetadr(argv, ssIvSecFlg)
 	case flags&secPAGFIL != 0 && flags&secCRF != 0:
 		return env.failRetadr(argv, ssIvSecFlg)
-	case flags&secPAGFIL == 0 && optArg(argv, 7)&0xFFFF == 0:
+	case flags&secPAGFIL == 0 && chanNumber == 0:
 		return env.failRetadr(argv, ssIvSecFlg)
-	case flags&secPFNMAP != 0, flags&secPAGFIL == 0:
+	case flags&secPFNMAP != 0:
 		return env.failRetadr(argv, ssUnsupport)
 	}
 
-	a, st := env.readSectionArgs(argv)
-	if st != 0 {
-		return env.failRetadr(argv, st)
+	if flags&secGBL == 0 {
+		return env.createPrivateSection(argv)
 	}
 
-	r, st := env.mapRange(a)
+	a, st := env.readSectionArgs(argv)
 	if st != 0 {
 		return env.failRetadr(argv, st)
 	}
@@ -435,19 +579,23 @@ func serviceSysCrmpsc(env *Environment, argv []uint32) (uint32, error) {
 	system := flags&secSYSGBL != 0
 
 	if s := env.Sections.find(a.name, system, p.UICGroup(), a.ident); s != nil {
-		return env.mapSection(s, a, r), nil
-	}
+		r, none, st := env.mapRange(a, uint32(max(len(s.Frames)-int(a.relpag), 1)))
+		if st != 0 {
+			return env.failRetadr(argv, st)
+		}
 
-	pagcnt := optArg(argv, 8)
-	if pagcnt == 0 {
-		return env.failRetadr(argv, ssEndOfFile)
+		if none {
+			return env.failRetadr(argv, ssNormal)
+		}
+
+		return env.mapSection(s, a, r), nil
 	}
 
 	if system && !p.hasPrivilege(privSYSGBL) || flags&secPERM != 0 && !p.hasPrivilege(privPRMGBL) {
 		return env.failRetadr(argv, ssNoPriv)
 	}
 
-	s, st := env.createSection(&GlobalSection{
+	s := &GlobalSection{
 		Name:       a.name,
 		System:     system,
 		Group:      p.UICGroup(),
@@ -456,18 +604,91 @@ func serviceSysCrmpsc(env *Environment, argv []uint32) (uint32, error) {
 		Ident:      a.ident.version,
 		Writable:   flags&secWRT != 0,
 		Permanent:  flags&secPERM != 0,
-	}, int(pagcnt))
-	if st != ssNormal {
-		return env.failRetadr(argv, st)
 	}
 
-	if st := env.mapSection(s, a, r); st != ssNormal {
+	pagcnt := optArg(argv, 8)
+
+	if flags&secPAGFIL != 0 {
+		if pagcnt == 0 {
+			return env.failRetadr(argv, ssEndOfFile)
+		}
+
+		if s, st = env.createSection(s, int(pagcnt)); st != ssNormal {
+			return env.failRetadr(argv, st)
+		}
+	} else {
+		f, st := env.fileSectionChannel(chanNumber, flags)
+		if st != ssNormal {
+			return env.failRetadr(argv, st)
+		}
+
+		vbn, pages, st := fileSectionSize(f, optArg(argv, 9), pagcnt)
+		if st != ssNormal {
+			return env.failRetadr(argv, st)
+		}
+
+		s.File, s.VBN, s.CopyOnRef = f, vbn, flags&secCRF != 0
+
+		if st := env.createFileSection(s, int(pages)); st != ssNormal {
+			return env.failRetadr(argv, st)
+		}
+	}
+
+	r, none, st := env.mapRange(a, uint32(max(len(s.Frames)-int(a.relpag), 1)))
+	if st == 0 && none {
+		_ = env.storeRetadr(a.retadr, nil)
+		env.maybeDeleteSection(s)
+
+		return ssCreated, nil
+	}
+
+	if st == 0 {
+		st = env.mapSection(s, a, r)
+	}
+
+	if st != ssNormal {
 		env.maybeDeleteSection(s)
 
 		return st, nil
 	}
 
 	return ssCreated, nil
+}
+
+// createPrivateSection is $CRMPSC of a private section: the file
+// accessed on argv's channel, from block vbn, pagcnt pages (or the rest
+// of the file), mapped at inadr's pages or, with SEC$M_EXPREG, at the
+// end of the region inadr names (mapProcessSection). The name, ident,
+// relpag, and prot arguments aren't used.
+func (env *Environment) createPrivateSection(argv []uint32) (uint32, error) {
+	a := sectionArgs{
+		inadr:  optArg(argv, 0),
+		retadr: optArg(argv, 1),
+		mode:   max(vax.AccessMode(optArg(argv, 2)&3), env.cpu.PSL().CurMod()),
+		flags:  optArg(argv, 3),
+	}
+
+	f, st := env.fileSectionChannel(optArg(argv, 7)&0xFFFF, a.flags)
+	if st != ssNormal {
+		return env.failRetadr(argv, st)
+	}
+
+	vbn, pages, st := fileSectionSize(f, optArg(argv, 9), optArg(argv, 8))
+	if st != ssNormal {
+		return env.failRetadr(argv, st)
+	}
+
+	// A private section has to be mapped: no inadr is an unreadable one.
+	if a.inadr == 0 && a.flags&secEXPREG == 0 {
+		return env.failRetadr(argv, ssAccVio)
+	}
+
+	r, _, st := env.mapRange(a, pages)
+	if st != 0 {
+		return env.failRetadr(argv, st)
+	}
+
+	return env.mapProcessSection(f, vbn, pages, a, r), nil
 }
 
 // serviceSysMgblsc is SYS$MGBLSC, map global section:
@@ -489,14 +710,18 @@ func serviceSysMgblsc(env *Environment, argv []uint32) (uint32, error) {
 		return env.failRetadr(argv, st)
 	}
 
-	r, st := env.mapRange(a)
+	s := env.Sections.find(a.name, a.flags&secSYSGBL != 0, env.Process.UICGroup(), a.ident)
+	if s == nil {
+		return env.failRetadr(argv, ssNoSuchSec)
+	}
+
+	r, none, st := env.mapRange(a, uint32(max(len(s.Frames)-int(a.relpag), 1)))
 	if st != 0 {
 		return env.failRetadr(argv, st)
 	}
 
-	s := env.Sections.find(a.name, a.flags&secSYSGBL != 0, env.Process.UICGroup(), a.ident)
-	if s == nil {
-		return env.failRetadr(argv, ssNoSuchSec)
+	if none {
+		return env.failRetadr(argv, ssAccVio)
 	}
 
 	return env.mapSection(s, a, r), nil
@@ -558,22 +783,26 @@ func (env *Environment) failRetadr(argv []uint32, status uint32) (uint32, error)
 	return status, nil
 }
 
-// mapRange is the pages a mapping may use, lowest first, before the
-// section's size limits them: with SEC$M_EXPREG, every page from the
-// first page above P0's high-water mark (Environment.RegionSize[0]) up
-// (inadr, if given, must name P0: expanding P1 isn't supported); else
-// the pages inadr names, whichever order its addresses are in. An
+// mapRange is the pages a mapping of count pages may use, lowest first,
+// before the section's size limits them. With SEC$M_EXPREG they're new
+// pages at the end of the region inadr's first address names (P0 if
+// there's no inadr): in P0, from the first page above its high-water
+// mark (Environment.RegionSize[0]) up; in P1, count pages below its low
+// end (expandP1). Otherwise they're the pages inadr names, whichever
+// order its addresses are in; none (no inadr) reports none. An
 // unreadable inadr is SS$_ACCVIO.
-func (env *Environment) mapRange(a sectionArgs) (pageRange, uint32) {
+func (env *Environment) mapRange(a sectionArgs, count uint32) (pageRange, bool, uint32) {
 	if a.flags&secEXPREG != 0 {
 		if a.inadr != 0 {
 			start, err := env.mem.LoadLongword(env.cpu, a.inadr)
 			if err != nil {
-				return pageRange{}, ssAccVio
+				return pageRange{}, false, ssAccVio
 			}
 
 			if start >= p1Base {
-				return pageRange{}, ssUnsupport
+				first, st := env.expandP1(count)
+
+				return pageRange{first: first, last: first + (count-1)*pageSize}, false, st
 			}
 		}
 
@@ -581,37 +810,79 @@ func (env *Environment) mapRange(a sectionArgs) (pageRange, uint32) {
 		// high-water mark hasn't moved.
 		base := max((env.RegionSize[0]+pageMask)&^pageMask, pageSize)
 
-		return pageRange{first: base, last: p1Base - pageSize}, 0
+		return pageRange{first: base, last: p1Base - pageSize}, false, 0
+	}
+
+	if a.inadr == 0 {
+		return pageRange{}, true, 0
 	}
 
 	r, ok := env.readRange(a.inadr, true)
 	if !ok {
-		return pageRange{}, ssAccVio
+		return pageRange{}, false, ssAccVio
 	}
 
 	if r.last < r.first {
 		r.first, r.last = r.last, r.first
 	}
 
-	return r, 0
+	return r, false, 0
+}
+
+// userStackPages is how much of P1, below the user stack's top
+// (UserStackTop), is kept for the stack: P1 expansion ($EXPREG of region
+// 1, SEC$M_EXPREG) begins below it.
+const userStackPages = 1024
+
+// p1Low is P1's low end: the lowest P1 address in use, below which P1
+// grows. Until the process expands P1 it's userStackPages below the user
+// stack's top.
+func (env *Environment) p1Low() uint32 {
+	if env.RegionSize[1] == 0 {
+		env.RegionSize[1] = UserStackTop - userStackPages*pageSize
+	}
+
+	return env.RegionSize[1]
+}
+
+// expandP1 adds count pages to P1, below its low end, returning the
+// first (lowest) one. On VMS P1 grows down by lengthening its page table;
+// govax's tables are built at their full size, so P1 can grow only as
+// far down as its table reaches (the page P1LR names): beyond that it's
+// SS$_VASFULL, and no pages are added.
+func (env *Environment) expandP1(count uint32) (uint32, uint32) {
+	low := env.p1Low()
+	bottom := p1Base + env.cpu.PR(vax.P1LR)*pageSize
+
+	if count == 0 || low < bottom || (low-bottom)/pageSize < count {
+		return 0, ssVasFull
+	}
+
+	env.RegionSize[1] = low - count*pageSize
+
+	return env.RegionSize[1], 0
 }
 
 // mapSection maps section s into the pages of r, from the lowest up,
 // starting at its page a.relpag (SS$_BADPARAM if it hasn't that many
 // pages): as many pages as both have, so a range larger than what's left
 // of the section maps only that, and a smaller one only part of the
-// section. Each page becomes a valid page pointing at the section's
-// physical page, owned by a.mode, read/write for a.mode and the more
-// privileged modes with SEC$M_WRT, read-only for them without. A page
-// already there is replaced as by $CRETVA (SS$_PAGOWNVIO if a more
-// privileged mode owns it; SS$_NOPRIV for a system page, SS$_VASFULL
-// beyond the page table). Mapping without the access the section's
-// protection gives the process is SS$_NOPRIV; a section may be mapped
-// writable whether or not it was created so (VMS 7.3,
-// testdata/mp/probe3). relpag at or past the section's end is
-// SS$_ENDOFFILE (the same). Mapping past P0's high-water mark moves it, as $CRETVA
-// does. retadr receives the range mapped (from storeRetadr; on an error,
-// what was mapped before it).
+// section. Each page is owned by a.mode, read/write for a.mode and the
+// more privileged modes with SEC$M_WRT, read-only for them without. A
+// page-file section's page becomes a valid page pointing at the
+// section's physical page; a file section's an invalid one holding its
+// global page table index, which the pager resolves when it's touched
+// (filesec.go). A page already there is replaced as by $CRETVA
+// (SS$_PAGOWNVIO if a more privileged mode owns it; SS$_NOPRIV for a
+// system page, SS$_VASFULL beyond the page table). Mapping without the
+// access the section's protection gives the process is SS$_NOPRIV; a
+// page-file section may be mapped writable whether or not it was created
+// so (VMS 7.3, testdata/mp/probe3); a file section created read-only
+// can't be, unless it's copy on reference (SS$_NOWRT; unconfirmed).
+// relpag at or past the section's end is SS$_ENDOFFILE (the same).
+// Mapping past P0's high-water mark moves it, as $CRETVA does. retadr
+// receives the range mapped (from storeRetadr; on an error, what was
+// mapped before it).
 func (env *Environment) mapSection(s *GlobalSection, a sectionArgs, r pageRange) uint32 {
 	write := a.flags&secWRT != 0
 
@@ -626,13 +897,17 @@ func (env *Environment) mapSection(s *GlobalSection, a sectionArgs, r pageRange)
 		return ssNoPriv
 	}
 
+	if write && s.File != nil && !s.Writable && !s.CopyOnRef {
+		_ = env.storeRetadr(a.retadr, nil)
+
+		return ssNoWrt
+	}
+
 	if a.relpag >= uint32(len(s.Frames)) {
 		_ = env.storeRetadr(a.retadr, nil)
 
 		return ssEndOfFile
 	}
-
-	frames := s.Frames[a.relpag:]
 
 	prot := readOnlyProtections[a.mode]
 	if write {
@@ -640,20 +915,22 @@ func (env *Environment) mapSection(s *GlobalSection, a sectionArgs, r pageRange)
 	}
 
 	status := uint32(ssNormal)
-	done := make([]uint32, 0, len(frames))
+	done := make([]uint32, 0, len(s.Frames)-int(a.relpag))
 
-	for i, addr := 0, r.first; i < len(frames) && addr >= r.first && addr <= r.last; i, addr = i+1, addr+pageSize {
-		if st := env.mapSectionPage(s, addr, frames[i], prot, a.mode); st != ssNormal {
+	for i, addr := a.relpag, r.first; i < uint32(len(s.Frames)) && addr >= r.first && addr <= r.last; i, addr = i+1, addr+pageSize {
+		pte := vm.GlobalPTE(s.gpt+i, prot, uint8(a.mode))
+		if s.File == nil {
+			pte = vm.ValidPTE(s.Frames[i], prot, uint8(a.mode))
+		}
+
+		if st := env.mapSectionPage(s, addr, pte, a.mode); st != ssNormal {
 			status = st
 
 			break
 		}
 
 		done = append(done, addr)
-
-		if addr < p1Base && addr+pageSize > env.RegionSize[0] {
-			env.RegionSize[0] = addr + pageSize
-		}
+		env.raiseP0Mark(addr)
 	}
 
 	if !env.storeRetadr(a.retadr, done) {
@@ -668,36 +945,17 @@ func (env *Environment) mapSection(s *GlobalSection, a sectionArgs, r pageRange)
 // nothing for the rest (KR, ER, SR, UR).
 var readOnlyProtections = [4]vm.Protection{vm.ProtKR, vm.ProtER, vm.ProtSR, vm.ProtUR}
 
-// mapSectionPage maps the page at addr onto s's physical page pfn.
-func (env *Environment) mapSectionPage(s *GlobalSection, addr, pfn uint32, prot vm.Protection, mode vax.AccessMode) uint32 {
-	if addr >= s0Base {
-		return ssNoPriv
-	}
-
-	_, _, old, err := env.mem.LookupPTE(env.cpu, addr)
-	if err != nil {
-		return ssVasFull
-	}
-
-	if pageExists(old) && vax.AccessMode(old.Owner()) < mode {
-		return ssPagOwnVio
-	}
-
-	var pte vm.PTE
-
-	pte.SetValid(true)
-	pte.SetPFN(pfn)
-	pte.SetProtection(prot)
-	pte.SetOwner(uint8(mode))
-
+// mapSectionPage maps the page at addr to one of s's pages, giving it
+// pte (mapPage).
+func (env *Environment) mapSectionPage(s *GlobalSection, addr uint32, pte vm.PTE, mode vax.AccessMode) uint32 {
 	// The reference is counted before the old page is given back, so
 	// that mapping a page over itself doesn't delete the section.
 	s.Refs++
 
-	if !env.replacePTE(addr, old, pte) {
+	if st := env.mapPage(addr, pte, mode); st != ssNormal {
 		s.Refs--
 
-		return ssVasFull
+		return st
 	}
 
 	if env.sectionPages == nil {
@@ -709,13 +967,29 @@ func (env *Environment) mapSectionPage(s *GlobalSection, addr, pfn uint32, prot 
 	return ssNormal
 }
 
-// unmapSections is image rundown's step for global sections: VMS
-// deletes the image's address space when it exits, and with it every
-// mapping of a section; govax keeps the rest of P0, but each page mapped
-// to a section becomes again the demand-zero page a process starts with
-// (ProcessPTE), and the section loses the reference.
+// unmapSections is image rundown's step for sections: VMS deletes the
+// image's address space when it exits, and with it every mapping of a
+// section; govax keeps the rest of P0, but each page mapped to a section,
+// global or private, becomes again the demand-zero page a process starts
+// with (ProcessPTE), and the section loses it (releasePTE: a private
+// section's modified page is written back, a global section loses the
+// reference).
 func (env *Environment) unmapSections() {
-	if len(env.sectionPages) == 0 {
+	pages := slices.Collect(maps.Keys(env.sectionPages))
+
+	for _, ps := range env.procSections {
+		if ps == nil {
+			continue
+		}
+
+		for i, present := range ps.present {
+			if present {
+				pages = append(pages, ps.first+uint32(i)*pageSize)
+			}
+		}
+	}
+
+	if len(pages) == 0 {
 		return
 	}
 
@@ -724,7 +998,9 @@ func (env *Environment) unmapSections() {
 		as = env.Space.AddressSpace
 	}
 
-	for _, addr := range slices.Sorted(maps.Keys(env.sectionPages)) {
+	slices.Sort(pages)
+
+	for _, addr := range slices.Compact(pages) {
 		pte, err := env.mem.LookupPTEIn(env.cpu, as, addr)
 		if err != nil {
 			continue
@@ -737,8 +1013,8 @@ func (env *Environment) unmapSections() {
 			page = (addr - p1Base) / pageSize
 		}
 
-		if env.mem.StorePTEIn(env.cpu, as, addr, ProcessPTE(p1, page)) == nil && pte.Valid() {
-			env.releaseFrame(pte.PFN())
+		if env.mem.StorePTEIn(env.cpu, as, addr, ProcessPTE(p1, page)) == nil {
+			env.releasePTE(addr, pte)
 		}
 	}
 
