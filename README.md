@@ -59,26 +59,23 @@ the artifacts from once having run on a MacOS 7 in the 1990's...
 
 ## Current status
 
-The port covers the full stack the original objectives called for: CPU
-instruction set (including both VAX floating-point formats), virtual
-memory, an interactive console with a DCL-style command language, RTL/
-system-service simulation, a MACRO-32-style assembler/disassembler, a
-`MACRO` command that writes VAX object modules (`.OBJ`) a real VMS linker
-accepts, and
-real VMS image activation (`RUN` loads and executes the project's own
-`.exe` test fixtures end to end, resolving sharable-image dependencies and
-applying load-time fixups). Every phase in [PLAN](docs/PLAN.md)'s table is
-built and covered by its own unit tests; Phase 12 added a fixture-driven
-regression suite that assembles and runs every `testdata/asm/*.asm`
-program and every real `testdata/exe/*.exe` binary the project ships,
-alongside the ROM/NVRAM save-and-load round trip.
+This isn't a complete set of featurees, but generally covers what's
+been do so far with `govax`:
 
-Recent updates include a MACRO console command that assembles .MAR
-files (either from the host system or a Files-11 disk container) and
-creates .OBJ object files, and a LINK console command that links
-.OBJ files into an .EXE file. This can be used to create a simple
-hello world program that assembles, links, and runs identically on
-a real VAX as it does on govax.
+- CPU instruction fidelity (including VAX floating point, packed decimal,
+  and octaword instructions).
+- Virtual memory support (including $CRMPSC sections). There is currently
+  no pager support outside mapped sections.
+- Support for RMS services and ODS2 Files-11 container disks, as well as
+  limited RMS support for accessing native files.
+- Support for VMS-style processes, and system servcies for managing
+  processes and inter-process communication.
+- MACRO32 and LINK command support, allowing first-class VAX macro programs
+  to be compiled, linked, and run.
+- Clean-room implementation of STARLET.MLB and related files, so VAX macro
+  programs can be run using VMS-style macro invocations.
+- Debugger support for GST/TBT records in images, so debugging is familiar
+  to a VAX/VMS user.
 
 ## Optional VMS files
 
@@ -108,19 +105,16 @@ does.
 | `LIBRTL.EXE` (and other shareable images) | `LINK`: routine offsets. `RUN`: the routines themselves | Linking works for every LIBRTL routine. Running one needs the image, or a govax shim. |
 | `STARLET.OLB` | `LINK`: the system library's modules | govax's tables of STARLET's status codes and other definitions (SS$_, RMS$_, IO$_, ...), and its system-service vector. Routines STARLET holds as code (BAS$, MTH$, ...) need the real library. |
 
-
-
 ## What's next?
 
-With the assembler, skelatal RTL, and image loader all in place, the
-natural next steps are:
+Here's a general list of next tasks:
 
-- Use TBT and DST records in loaded images to support symbolication
-  of disassembler output.
-- flesh out the skeletal RTL support so more actual images could be
-  loaded and run.
-- Running programs that use RMS name blocks and XABs: `$PARSE` and
-  `$SEARCH` filling a NAM, and `$OPEN`/`$DISPLAY` filling the XABs.
+- Addition of a virtual-memory pager, so processes support working sets properly.
+- Support for supervisor-mode console command handling, to mimic how VAX/VMS
+  maintains a DCL shell in P1 space.
+- More accurate device operations and reference counting
+- More complete DCL support (IF statement, lexicals)
+- ANALYZE/DISK/REPAIR for ODS2 container volumes
 
 Beyond that, this project was never aiming to emulate real hardware
 (disk controllers, network controllers, etc.) or boot an unmodified
