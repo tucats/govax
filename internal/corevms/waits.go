@@ -191,6 +191,8 @@ func (sys *System) pollEvents() {
 		}
 	}
 
+	sys.checkDeadlocks()
+
 	if sys.wakeWaiters() {
 		sys.idleSpinning = false
 	}

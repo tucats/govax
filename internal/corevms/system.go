@@ -185,6 +185,11 @@ func NewSystem(cpu *vax.CPU, mem *vm.Memory, devices *iodev.DeviceTable, mounts 
 		sched:             sched.New(DefaultProcessQuantum),
 	}
 
+	// Deadlock detection (internal/lck's deadlock.go) measures its waits
+	// by the system clock, which tests may replace.
+	sys.Locks.Now = func() uint64 { return sys.Clock() }
+	sys.Locks.DeadlockWait = lck.DefaultDeadlockWait
+
 	sys.BootTime = sys.Clock()
 	sys.removeStaleMailboxes()
 

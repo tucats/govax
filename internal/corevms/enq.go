@@ -39,6 +39,7 @@ var (
 	ssValNotValid = vmsdef.Symbols["SS$_VALNOTVALID"]
 	ssIvBufLen    = vmsdef.Symbols["SS$_IVBUFLEN"]
 	ssNoSysLck    = vmsdef.Symbols["SS$_NOSYSLCK"]
+	ssDeadlock    = vmsdef.Symbols["SS$_DEADLOCK"]
 )
 
 // The $ENQ and $DEQ flags.
@@ -84,6 +85,8 @@ func (r *enqRequest) Notify(ev lck.Event) {
 		r.complete(ev.Lock, ssAbort)
 	case lck.EventCanceled:
 		r.complete(ev.Lock, ssCancel)
+	case lck.EventDeadlock:
+		r.complete(ev.Lock, ssDeadlock)
 	case lck.EventBlocking:
 		if r.blkast != 0 {
 			r.env.queueAST(r.blkast, r.astprm, r.mode)
@@ -130,7 +133,7 @@ func (r *enqRequest) writeLKSB(l *lck.Lock, status uint32) {
 	binary.LittleEndian.PutUint32(b[4:], uint32(l.ID))
 	_ = r.env.storeOwn(r.lksb, b[:])
 
-	if r.valblk && l.State == lck.Granted && status != ssAbort {
+	if r.valblk && l.State == lck.Granted && status != ssAbort && status != ssDeadlock {
 		_ = r.env.storeOwn(r.lksb+8, l.Value[:])
 	}
 }

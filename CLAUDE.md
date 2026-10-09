@@ -161,10 +161,12 @@ expect adjustment as phases land):
   conversion, and waiting queues (FIFO), the six modes' compatibility
   table, NOQUEUE, conversions, sublocks, CANCEL, DEQALL, value blocks,
   blocking notices; `info.go` (Phase 49) answers `$GETLKI`'s questions
-  and defines which lock blocks which (`Blocks`). Operations return `Event`s for any owner, and
+  and defines which lock blocks which (`Blocks`); `deadlock.go` is
+  the book's deadlock detection (a search from a request that has
+  waited DEADLOCK_WAIT; the victim gets SS$_DEADLOCK). Operations return `Event`s for any owner, and
   `lck.Deliver` hands each to its lock's `Data` if that's a `Notifier`
   (how `$ENQ` completes in the owner's process and an RMS record-lock
-  wait is woken). No deadlock detection. A leaf package; owners are PIDs.
+  wait is woken). A leaf package; owners are PIDs.
 - `internal/console` — interactive monitor + DCL grammar interpreter (Phase 08).
   Every console command is parsed by the DCL grammar
   (`internal/bootdata/files/console.dcl`); Phase 37 moved the last

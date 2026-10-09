@@ -1,6 +1,10 @@
 package rms
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/tucats/govax/internal/lck"
+)
 
 // Tests of the record operations past $GET and $PUT and the stream
 // context they share (stream.go, recordops.go; docs/PHASE-49.md).
@@ -410,4 +414,56 @@ func TestRecordLock_quota(t *testing.T) {
 	a.ctx.CanLock = func() bool { return true }
 	a.wantGet("R0", rmsNormal)
 	a.close()
+}
+
+// TestRecordLock_deadlock: two streams each waiting (RAB$V_WAT) for the
+// record the other holds; when the lock manager's search refuses one's
+// wait, its $GET is RMS$_DEADLOCK.
+func TestRecordLock_deadlock(t *testing.T) {
+	p, mounts, _ := newLockingSharers(t, 2)
+	a, b := p[0], p[1]
+
+	now := uint64(1_000)
+	locks := a.ctx.Locks
+	locks.Now = func() uint64 { return now }
+	locks.DeadlockWait = 100
+
+	writeFile(t, mounts, "DL.DAT", "R0", "R1")
+	a.mustOpen("DL.DAT", facGet|facUpd, shrAll, false, ropULK)
+	b.mustOpen("DL.DAT", facGet|facUpd, shrAll, false, ropULK)
+
+	a.wantGet("R0", rmsNormal)
+	b.call(SysFind, ropULK) // B: R0 is A's
+	b.byRFA(rfa{1, 4})
+	b.wantGet("R1", rmsNormal)
+
+	// A waits for R1 (B's), B for R0 (A's).
+	a.byRFA(rfa{1, 4})
+	b.byRFA(rfa{1, 0})
+
+	for _, s := range []*sharer{a, b} {
+		putLongwordAt(t, s.ctx, testRabAddr+rabROP, ropWAT|ropULK)
+		putLongwordAt(t, s.ctx, testRabAddr+rabUBF, testRecordAddr)
+		putWord(t, s.ctx, testRabAddr+rabUSZ, 1024)
+
+		if _, err := SysGet(s.ctx, []uint32{testRabAddr}); err != errTestWait {
+			t.Fatalf("%s's $GET: %v, want a wait", s.name, err)
+		}
+	}
+
+	now += 100
+	lck.Deliver(locks.CheckDeadlocks(now))
+
+	if r0, err := SysGet(a.ctx, []uint32{testRabAddr}); err != nil || r0 != rmsDeadlock {
+		t.Errorf("A's $GET after the search: %#x, %v; want RMS$_DEADLOCK", r0, err)
+	}
+
+	if _, err := SysGet(b.ctx, []uint32{testRabAddr}); err != errTestWait {
+		t.Errorf("B's $GET: %v, still a wait (A holds R0)", err)
+	}
+
+	a.close()
+
+	b.wantGet("R0", rmsOKWaited)
+	b.close()
 }

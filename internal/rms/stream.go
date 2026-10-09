@@ -281,7 +281,8 @@ func (ctx *Context) locate(rabAddr uint32, h *FileHandle, find bool) (located, u
 // says, and drops the stream's other record locks unless RAB$V_ULK keeps
 // them. It returns the success status for the record (RMS$_NORMAL,
 // RMS$_OK_RLK, RMS$_OK_ALK, RMS$_OK_WAT), an error status (RMS$_RLK, or
-// RMS$_TMO when a wait's time limit ran out), or 0 with err the
+// RMS$_TMO when a wait's time limit ran out, RMS$_DEADLOCK when the lock
+// manager refused the wait to break a deadlock), or 0 with err the
 // process's wait for the lock.
 func (ctx *Context) lockFound(rabAddr uint32, h *FileHandle, r rfa, rop uint32) (uint32, error) {
 	ls := &h.locks
@@ -291,6 +292,17 @@ func (ctx *Context) lockFound(rabAddr uint32, h *FileHandle, r rfa, rop uint32) 
 	case ls.waiting != nil && ls.pendingAt == r:
 		// A lock waited for: granted now, or still not, or not in the
 		// time RAB$B_TMO allows (RMS$_TMO, and the wait is given up).
+		if ls.waiting.Deadlocked() {
+			// Refused to break a deadlock (the lock manager removed it).
+			ls.waiting, ls.deadline = nil, 0
+
+			if rop&ropULK == 0 {
+				ctx.unlockRecords(h, nil)
+			}
+
+			return rmsDeadlock, nil
+		}
+
 		if ls.waiting.State != lck.Granted {
 			if ls.deadline == 0 || ctx.Clock() < ls.deadline {
 				return 0, ctx.awaitLock(h, ls.waiting)

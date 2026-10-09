@@ -55,7 +55,18 @@ func (env *Environment) awaitLock(over func() bool, deadline uint64) error {
 type lockWaker struct{ env *Environment }
 
 func (w lockWaker) Notify(ev lck.Event) {
-	if ev.Kind == lck.EventGranted {
+	if ev.Kind == lck.EventGranted || ev.Kind == lck.EventDeadlock {
 		w.env.reportEvent(resourceBoost)
+	}
+}
+
+// checkDeadlocks runs the lock manager's deadlock search for every
+// request that has waited DEADLOCK_WAIT (internal/lck's deadlock.go),
+// telling the refused requests' owners: the scheduler's step before each
+// choice (pollEvents), and idling moves time to the next due search
+// (nextTimer), since in a deadlock every process in it waits.
+func (sys *System) checkDeadlocks() {
+	if due, ok := sys.Locks.NextDeadlockCheck(); ok && due <= sys.Clock() {
+		lck.Deliver(sys.Locks.CheckDeadlocks(sys.Clock()))
 	}
 }

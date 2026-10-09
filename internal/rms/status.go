@@ -111,6 +111,10 @@ var (
 	// quota.
 	rmsExEnqLm = vmsConst("RMS$_EXENQLM")
 
+	// rmsDeadlock is RMS$_DEADLOCK: a record lock wait refused to break
+	// a deadlock.
+	rmsDeadlock = vmsConst("RMS$_DEADLOCK")
+
 	// rmsFileNotFound is RMS$_FNF: SYS$OPEN's target file spec doesn't
 	// exist. Also the natural error for looking a name up in an
 	// ods2 volume.Directory and not finding it.

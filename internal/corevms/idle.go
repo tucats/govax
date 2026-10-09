@@ -57,6 +57,10 @@ func (sys *System) nextTimer() (uint64, bool) {
 		}
 	}
 
+	if d, ok := sys.Locks.NextDeadlockCheck(); ok && d < next {
+		next, found = d, true
+	}
+
 	return next, found
 }
 

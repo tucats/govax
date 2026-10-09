@@ -209,3 +209,37 @@ func TestEnq_quotas(t *testing.T) {
 
 	wantR0(t, callLNM(t, a.env, serviceSysEnq, 5, uint32(lck.EX), other.lksb, 0, other.a.desc("FIVE"), 0, 0, 0, 0, 0), ssNormal)
 }
+
+// TestEnq_deadlock: two processes each waiting for the other's lock are
+// deadlocked; once DEADLOCK_WAIT has passed (idling moves time to it),
+// the search refuses one request with SS$_DEADLOCK in its LKSB.
+func TestEnq_deadlock(t *testing.T) {
+	a, b := newLockPair(t)
+	now := fakeClock(a.env)
+
+	wantR0(t, a.enq("R1", lck.EX, 0), ssNormal)
+	wantR0(t, b.enq("R2", lck.EX, 0), ssNormal)
+
+	a2 := newLockCaller(t, a.env, 0x30000)
+	b2 := newLockCaller(t, b.env, 0x40000)
+
+	wantR0(t, a2.enq("R2", lck.EX, 0), ssNormal) // waits for B
+	wantR0(t, b2.enq("R1", lck.EX, 0), ssNormal) // waits for A
+
+	if next, ok := a.env.nextTimer(); !ok || next != *now+lck.DefaultDeadlockWait {
+		t.Fatalf("nextTimer %d, %v; want the deadlock search's due time", next, ok)
+	}
+
+	a.env.checkDeadlocks()
+
+	if a2.status() != 0 || b2.status() != 0 {
+		t.Fatal("a request was refused before DEADLOCK_WAIT")
+	}
+
+	*now += lck.DefaultDeadlockWait
+	a.env.checkDeadlocks()
+
+	if a2.status() != ssDeadlock || b2.status() != 0 {
+		t.Errorf("LKSB statuses %#x, %#x; want SS$_DEADLOCK for A's request, B's still waiting", a2.status(), b2.status())
+	}
+}

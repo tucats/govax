@@ -252,3 +252,24 @@ stream's record locks.
   counted (unconfirmed). Only the lock services enforce ASTLM; the
   other AST services still don't. Tests: `TestEnq_quotas`,
   `TestRecordLock_quota`.
+- 2026-10-09: Subtask 8, deadlock detection (`internal/lck/deadlock.go`),
+  from the Internals book, section 13.3. Each queued request gets a due
+  time DEADLOCK_WAIT (SYSGEN's default, 10 seconds) after it queues
+  (`Manager.Now`, `DeadlockWait`); `CheckDeadlocks` searches from each
+  request past due, following `Blocks` and then the blocking owners'
+  queued requests, a process searched only once (the book's bitmap); a
+  search back to the starting process is a deadlock. Conversion
+  deadlocks fall out of the same search (`Blocks` counts a queued lock
+  ahead). The victim's request is refused (`EventDeadlock`): a new lock
+  removed (`Lock.Deadlocked`), a conversion back to its granted mode;
+  `$ENQ` completes with SS$_DEADLOCK, an RMS record lock wait with
+  RMS$_DEADLOCK. A search that finds nothing sets a new due time.
+  corevms runs it before each scheduling choice (`pollEvents`,
+  `System.checkDeadlocks`), and `nextTimer` includes the next due
+  search, so an idle machine (all waiting) jumps to it. Unconfirmed:
+  the victim is the request the search started from (every govax
+  process's deadlock priority is 0, and the book doesn't say which of
+  several zero-priority participants VMS refuses); no search without
+  the scheduler; RAB$V_NODLCKWT/NODLCKBLK are ignored; DEADLOCK_WAIT is
+  fixed, not a setting. Tests: `lck`'s `TestDeadlock_*`,
+  `TestEnq_deadlock`, `TestRecordLock_deadlock`.

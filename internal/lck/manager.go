@@ -92,6 +92,12 @@ type Lock struct {
 	// is.
 	notified bool
 	sublocks int
+
+	// due is when a queued request is due for a deadlock search (0:
+	// none); deadlocked is set on a new lock's request refused to break
+	// a deadlock (deadlock.go).
+	due        uint64
+	deadlocked bool
 }
 
 // Resource is a named resource, existing while any lock names it.
@@ -135,6 +141,12 @@ type Manager struct {
 	locks     map[ID]*Lock
 	resources map[resourceKey]*Resource
 	lastID    ID
+
+	// Now, if set, is the system time (VMS's 100-nanosecond units), and
+	// DeadlockWait how long a request waits before a deadlock search
+	// starts from it (deadlock.go). Either unset: no deadlock detection.
+	Now          func() uint64
+	DeadlockWait uint64
 }
 
 // NewManager returns an empty lock database.
@@ -163,6 +175,11 @@ const (
 	// LCK$M_CANCEL); the lock stays granted at its old mode, and the
 	// conversion's $ENQ completes with SS$_CANCEL.
 	EventCanceled
+
+	// EventDeadlock: the request was refused to break a deadlock
+	// (deadlock.go): a new lock's is removed, a conversion's lock stays
+	// granted at its old mode; its $ENQ completes with SS$_DEADLOCK.
+	EventDeadlock
 )
 
 // Event is one thing an operation did to a lock: possibly one owned by a
@@ -272,6 +289,7 @@ func (m *Manager) Enqueue(req Request) (*Lock, []Event, error) {
 		res.granted = append(res.granted, l)
 	} else {
 		res.waiting = append(res.waiting, l)
+		m.queue(l)
 	}
 
 	return l, m.blockingNotices(res), nil
@@ -354,6 +372,7 @@ func (m *Manager) Convert(owner Owner, id ID, mode Mode, opts ConvertOptions) (*
 		l.State = Converting
 		res.granted = remove(res.granted, l)
 		res.converting = append(res.converting, l)
+		m.queue(l)
 
 		return l, m.blockingNotices(res), nil
 	}

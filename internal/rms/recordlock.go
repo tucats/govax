@@ -327,7 +327,7 @@ func (ctx *Context) awaitLock(h *FileHandle, l *lck.Lock) error {
 		return errors.New("rms: a record lock wait with no way to wait")
 	}
 
-	return ctx.AwaitLock(func() bool { return l.State == lck.Granted }, h.locks.deadline)
+	return ctx.AwaitLock(func() bool { return l.State == lck.Granted || l.Deadlocked() }, h.locks.deadline)
 }
 
 // The RAB fields of a record lock wait's time limit: RAB$V_TMO asks for
