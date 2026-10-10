@@ -85,8 +85,19 @@ func (d *Dispatcher) DispatchConsole(line string) error {
 
 	// The lines of an IF block's branch that doesn't run are passed
 	// over, unread (dclif.go).
+	// One that ends the passing over (its ENDIF, or the ELSE where the
+	// branch that runs starts) is shown with verification on; the rest
+	// aren't (dclverify.go).
+	skipping, whole := d.Console.flow().skip.active, line
+
 	line, run := d.Console.skipLine(line)
 	if !run {
+		if skipping && !d.Console.flow().skip.active {
+			d.Console.echoLine("", whole, whole)
+		} else {
+			d.Console.dropEcho()
+		}
+
 		return nil
 	}
 
@@ -95,21 +106,41 @@ func (d *Dispatcher) DispatchConsole(line string) error {
 	return d.Console.statusOf(func() error {
 		// A label marks the line (dcllabel.go), and the command after a
 		// block's IF must be THEN (dclif.go).
+		whole := line
+
 		line, err := d.Console.takeLabel(line)
 		if err != nil || line == "" {
+			d.Console.echoLine("", whole, whole)
+
 			return err
 		}
 
 		if err := d.Console.awaitThen(line); err != nil {
+			d.Console.echoLine("", whole, whole)
+
 			return err
 		}
 
 		// DCL's first phase: symbols between apostrophes are replaced
-		// before anything reads the line (dclsubst.go).
-		line, err = d.Console.substituteApostrophes(line)
+		// before anything reads the line (dclsubst.go). A procedure's
+		// line is shown then, with procedure verification on
+		// (dclverify.go).
+		// A line whose scan fails isn't shown: its message is (VMS 7.3,
+		// testdata/dcl50).
+		scanned, err := d.Console.substituteApostrophes(line)
 		if err != nil {
+			d.Console.dropEcho()
+
 			return err
 		}
+
+		label := ""
+		if strings.HasSuffix(whole, line) {
+			label = whole[:len(whole)-len(line)]
+		}
+
+		d.Console.echoLine(label, line, scanned)
+		line = scanned
 
 		return d.dispatchCommand(line)
 	})

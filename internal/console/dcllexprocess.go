@@ -94,6 +94,7 @@ var environmentItems = map[string]func(c *Console) dclValue{
 	"VERB_SCOPE":   func(c *Console) dclValue { return dclString("LOCAL,GLOBAL") },
 
 	"VERIFY_IMAGE":     func(c *Console) dclValue { return dclTrueFalse(c.verifyImage) },
+	"VERIFY_PREFIX":    func(c *Console) dclValue { return dclString(c.verifyPrefix) },
 	"VERIFY_PROCEDURE": func(c *Console) dclValue { return dclTrueFalse(c.Verify) },
 }
 
@@ -120,8 +121,7 @@ func lexEnvironment(e *dclExpression, args []lexicalArg) (dclValue, error) {
 // procedure verification was on (1) or off (0), and then, with an
 // argument, a change: procedure-value (odd for on) sets procedure
 // verification, and image verification too unless image-value is given
-// to set it (15.2.1). Echoing the lines is SET VERIFY's subtask (15);
-// until then the settings are only kept.
+// to set it (15.2.1). Verification itself is dclverify.go's.
 func lexVerify(e *dclExpression, args []lexicalArg) (dclValue, error) {
 	c := e.console
 	was := dclBool(c.Verify)

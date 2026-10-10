@@ -91,6 +91,8 @@
 //              10/09/26    LEXICAL: the lexical functions (F$EXTRACT,
 //                          F$ENVIRONMENT, F$GETJPI, F$PARSE, F$SEARCH,
 //                          F$TRNLNM, F$CVTIME, ...)
+//              10/10/26    SET VERIFY shows a procedure's lines (with
+//                          [NO]PROCEDURE and [NO]IMAGE); added SET PREFIX
 
 This is the help documentation for the govax VAX emulator.  Topic sections are
 marked by a "$" delimiter.  This is followed by as many tokens of the help
@@ -1297,6 +1299,7 @@ $SET
         SET DEBUG
         SET DEFAULT
         SET ON
+        SET PREFIX
         SET PROMPT
         SET QUANTUM
         SET RADIX
@@ -1486,19 +1489,63 @@ $SET ,SYMB
 $SET ,VERI
 $SET ,NOVE
 
-    The SET VERIFY command is meant to show each command of a command
-    procedure (@) as it runs.  It is not yet implemented: the setting is
-    kept, but nothing is shown.
-    
+    The SET VERIFY command shows each line of a command procedure (@) as it
+    runs: procedure verification shows its command lines, and image
+    verification the data lines it gives the debugger or the assembler.
+    SET VERIFY and SET NOVERIFY turn both on or off; a keyword changes only
+    its own.  A change lasts after the procedure that made it ends.
+
+    A command line is shown as it is in the file, its "$", indentation,
+    label, and comment included, after 'SYMBOL' substitution (&SYMBOL and
+    the symbols of an expression are not shown replaced).  Comment lines
+    are shown too, and a continued command a line at a time.  The lines of
+    an IF branch that doesn't run are not shown, nor are commands typed at
+    the terminal.
+
+    F$VERIFY (see HELP LEXICAL) reads and sets both settings, and DCL
+    performs it even in a comment, between apostrophes: a procedure that
+    starts with
+
+        $ ! 'F$VERIFY(0)'
+
+    turns verification off without that line being shown.
+
     Syntax:
-    
-        SET [NO]VERIFY
-    
-    Examples:
-    
-        SET VERIFY
-        
+
+        SET VERIFY [=([NO]PROCEDURE, [NO]IMAGE)]
         SET NOVERIFY
+
+    Examples:
+
+        SET VERIFY
+
+        SET VERIFY=PROCEDURE
+
+        SET VERIFY=(NOPROCEDURE, IMAGE)
+
+        SET NOVERIFY
+
+$SET ,PREF
+$SET ,NOPR
+
+    The SET PREFIX command puts a prefix before each verified command line
+    (see HELP SET VERIFY), made from a $FAO control string: the time each
+    command runs, with "(!5%T) ".  The lines that continue a command get
+    blanks as long as the prefix, and data lines get none.  A directive
+    that takes an argument gets 0.  F$ENVIRONMENT("VERIFY_PREFIX") returns
+    the control string; SET NOPREFIX takes it away.
+
+    Syntax:
+
+        SET PREFIX "control-string"
+        SET NOPREFIX
+
+    Example:
+
+        $ SET PREFIX "(!5%T) "
+        $ SET VERIFY
+        $ @TEST
+        (17:52) $ SET DEFAULT SYS$LOGIN
 
 $SET ,ON  
 $SET ,NOON

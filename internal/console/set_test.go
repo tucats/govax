@@ -257,7 +257,7 @@ func TestSetVerboseVerifyNoVerbose(t *testing.T) {
 		t.Fatal("expected Verbose true by default (initialization.c's own CONSOLE_VERBOSE default)")
 	}
 
-	if err := c.SetVerify(); err != nil {
+	if err := c.SetVerify(false, nil); err != nil {
 		t.Fatalf("SetVerify: %v", err)
 	}
 
@@ -269,12 +269,13 @@ func TestSetVerboseVerifyNoVerbose(t *testing.T) {
 		t.Error("SetVerify must not touch Verbose")
 	}
 
+	// DCL's verification is separate from the console's verbosity.
 	if err := c.SetNoVerbose(); err != nil {
 		t.Fatalf("SetNoVerbose: %v", err)
 	}
 
-	if c.Verbose || c.Verify {
-		t.Errorf("Verbose=%v Verify=%v, want both false after SET NOVERBOSE", c.Verbose, c.Verify)
+	if c.Verbose || !c.Verify {
+		t.Errorf("Verbose=%v Verify=%v, want Verbose alone cleared by SET NOVERBOSE", c.Verbose, c.Verify)
 	}
 
 	if err := c.SetVerbose(); err != nil {

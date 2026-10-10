@@ -43,12 +43,16 @@ type Console struct {
 	Radix       int // 8, 10, or 16
 	DepositAddr uint32
 	Verbose     bool
-	Verify      bool
 
-	// verifyImage is DCL's image verification: whether data lines are
-	// shown as they're read (F$VERIFY's second setting; Verify is
-	// procedure verification, its first).
-	verifyImage bool
+	// Verify is DCL's procedure verification, SET VERIFY's: whether a
+	// command procedure's lines are shown as they're read; verifyImage
+	// is image verification, whether its data lines are (dclverify.go).
+	// verifyPrefix is SET PREFIX's control string, and echo the line a
+	// procedure is about to run, until it is shown.
+	Verify       bool
+	verifyImage  bool
+	verifyPrefix string
+	echo         *pendingEcho
 
 	// Trace matches vax.console.disasm (SET TRACE/NOTRACE, SHOW TRACE):
 	// whether EXEC/GO/CALL/RUN disassemble each instruction as they execute

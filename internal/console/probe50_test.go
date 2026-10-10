@@ -288,3 +288,51 @@ func TestProbe50Statuses(t *testing.T) {
 		}
 	}
 }
+
+// TestProbe50Verify runs probe50.com's sections A and B as a procedure,
+// with the SET VERIFY it starts with, and compares everything it writes
+// with VMS 7.3's log line for line: each command echoed after its
+// apostrophe substitution, comments included, then its messages and
+// output.
+func TestProbe50Verify(t *testing.T) {
+	procedure, err := os.ReadFile(probe50Procedure)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	logText, err := os.ReadFile(probe50Log)
+	if err != nil {
+		t.Skipf("no VMS log: %v", err)
+	}
+
+	head, _, _ := strings.Cut(string(procedure), "$ ! DEFINE keeps")
+	// The log's records are written LF, text, CR, so it starts with a
+	// line feed.
+	want, _, _ := strings.Cut(strings.ReplaceAll(string(logText), "\r", ""), "$ ! DEFINE keeps")
+	want = strings.TrimPrefix(want, "\n")
+
+	d, _, buf := newCommandDispatcher(t)
+	path := writeProcedure(t, t.TempDir(), "probe50.com", strings.TrimSuffix(head, "\n"))
+
+	if err := d.Dispatch("@" + path); err != nil && !vmserrors.MessageInhibited(err) {
+		t.Fatalf("@probe50: %v", err)
+	}
+
+	got := strings.Split(strings.TrimSuffix(buf.String(), "\n"), "\n")
+	wantLines := strings.Split(strings.TrimSuffix(want, "\n"), "\n")
+
+	for i := 0; i < max(len(got), len(wantLines)); i++ {
+		var g, w string
+		if i < len(got) {
+			g = got[i]
+		}
+
+		if i < len(wantLines) {
+			w = wantLines[i]
+		}
+
+		if g != w {
+			t.Fatalf("line %d:\n got %q\nwant %q", i+1, g, w)
+		}
+	}
+}

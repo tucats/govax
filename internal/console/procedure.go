@@ -122,6 +122,10 @@ type procedureSource struct {
 	// are all commands, rather than a DCL one, whose commands start with
 	// "$".
 	plain bool
+
+	// passed are the comment and blank lines' records the last Read
+	// passed over, before its line, for verification (dclverify.go).
+	passed []string
 }
 
 // newProcedureSource returns the source for a procedure whose text is
@@ -156,6 +160,11 @@ func (p *procedureSource) Read() (line string, data bool, ok bool) {
 	line, data, start, next, ok := p.lineAt(p.next)
 	if ok {
 		p.lineStart = start
+	}
+
+	p.passed = p.records[p.next:start]
+	if !ok {
+		p.passed = p.records[p.next:p.end]
 	}
 
 	p.next = next
@@ -525,7 +534,21 @@ func (c *Console) runLevel(source *procedureSource, cmd procedureCommand, dispat
 
 	for !level.exiting && c.Running() {
 		line, data, ok := source.Read()
+
+		// The comments passed over are shown, with verification on,
+		// unless they're in an IF branch that doesn't run.
+		if !source.plain && !level.flow.skip.active {
+			c.comments(source.passed)
+		}
+
 		if !ok {
+			// A CALL level ends at its ENDSUBROUTINE, which is run, and
+			// so shown, as the command that ends it (unconfirmed
+			// against VMS).
+			if source.end < len(source.records) && !source.plain && c.Verify {
+				c.showVerified(source.records[source.end : source.end+1])
+			}
+
 			break
 		}
 
@@ -557,6 +580,8 @@ func (c *Console) runLevel(source *procedureSource, cmd procedureCommand, dispat
 		case data:
 			skipping = false
 
+			c.showData(line)
+
 		default:
 			skipping = false
 
@@ -568,7 +593,22 @@ func (c *Console) runLevel(source *procedureSource, cmd procedureCommand, dispat
 			}
 		}
 
-		if ended, stop := c.procedureLine(level, dispatch, func() error { return dispatch(line) }); stop {
+		run := func() error { return dispatch(line) }
+
+		// A command line is shown once it has been scanned
+		// (dclverify.go).
+		if !data && !source.plain {
+			records := source.records[source.lineStart:source.next]
+
+			run = func() error {
+				c.echo = &pendingEcho{records: records}
+				defer c.dropEcho()
+
+				return dispatch(line)
+			}
+		}
+
+		if ended, stop := c.procedureLine(level, dispatch, run); stop {
 			return ended, nil
 		}
 	}

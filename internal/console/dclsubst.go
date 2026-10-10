@@ -70,6 +70,12 @@ func substituteApostrophes(line string, symbols *dclSymbolTable, c *Console) (st
 			i++
 
 		case ch == '!' && !quoted:
+			// A comment isn't scanned, but for F$VERIFY between
+			// apostrophes (dclverify.go).
+			if c != nil {
+				c.verifyInComment(line[i:], symbols)
+			}
+
 			return line, nil
 
 		case ch == '\'' && quoted:

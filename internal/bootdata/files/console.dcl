@@ -989,7 +989,8 @@ grammar console
         keyword     debug               /syntax=set_debug/nonegatable
         keyword     dbg                 /syntax=set_debug/nonegatable
         keyword     verbose             /syntax=set_verbose
-        keyword     verify              /syntax=set_verify/nonegatable
+        keyword     verify              /syntax=set_verify/value
+        keyword     prefix              /syntax=set_prefix
         keyword     quantum             /syntax=set_quantum/nonegatable
         keyword     uiquantum           /syntax=set_uiquantum/nonegatable
         keyword     default             /syntax=set_default/nonegatable
@@ -1039,7 +1040,15 @@ grammar console
     ! SET ON and SET NOON: whether a command procedure acts on its
     ! commands' statuses (docs/PHASE-50, subtask 10).
     syntax set_on/id=1812
+    ! SET [NO]VERIFY [=([NO]PROCEDURE, [NO]IMAGE)] and SET [NO]PREFIX
+    ! "string": a command procedure's lines shown as they're read, and
+    ! the prefix before them (docs/PHASE-50, subtask 15).
     syntax set_verify/id=1800
+        parameter   keywords/id=1813            -
+                    /type=$any/list
+    syntax set_prefix/id=1814
+        parameter   text/id=1815                -
+                    /type=$string
 
     syntax set_quantum/id=1801
         parameter   count/id=1802               -

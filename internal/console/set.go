@@ -342,7 +342,8 @@ func (c *Console) SetBase(addr uint32) error {
 }
 
 // SetVerbose implements SET VERBOSE command, sets
-// CONSOLE_VERBOSE; unlike SET VERIFY it doesn't touch Verify).
+// CONSOLE_VERBOSE; DCL's verification (SET VERIFY, dclverify.go) is
+// separate.
 func (c *Console) SetVerbose() error {
 	if err := c.requireInit(); err != nil {
 		return err
@@ -353,28 +354,13 @@ func (c *Console) SetVerbose() error {
 	return nil
 }
 
-// SetVerify implements SET VERIFY (sets vax.console.verify; 
-// unlike SET VERBOSE it doesn't touch Verbose).
-func (c *Console) SetVerify() error {
-	if err := c.requireInit(); err != nil {
-		return err
-	}
-
-	c.Verify = true
-	c.verifyImage = true
-
-	return nil
-}
-
-// SetNoVerbose implements SET NOVERBOSE - clears *both* Verbose and Verify.
+// SetNoVerbose implements SET NOVERBOSE, clearing CONSOLE_VERBOSE.
 func (c *Console) SetNoVerbose() error {
 	if err := c.requireInit(); err != nil {
 		return err
 	}
 
 	c.Verbose = false
-	c.Verify = false
-	c.verifyImage = false
 
 	return nil
 }
