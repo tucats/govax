@@ -102,15 +102,15 @@ func TestGrammarSplit(t *testing.T) {
 		{"SHOW TRANSLATION A", consoleOnly},
 		{"SHOW DEVICES", consoleOnly},
 		{"SHOW VERSION", consoleOnly},
-		{"SHOW QUANTUM", consoleOnly},
+		{"SHOW QUANTUM", debuggerOnly},
 		{"SHOW DEBUG", consoleOnly},
-		{"SHOW INSTRUCTIONS", consoleOnly},
+		{"SHOW INSTRUCTIONS", debuggerOnly},
 		{"SHOW SHARE_PREFIX", consoleOnly},
 		{"SHOW EXPAND", consoleOnly},
 		{"SHOW ROM", consoleOnly},
 		{"SHOW NVRAM", consoleOnly},
 		{"SHOW STRING_POOL", consoleOnly},
-		{"SHOW SYMBOLS A", both},           // the console's are DCL's symbols; the debugger's the program's and the machine's
+		{"SHOW SYMBOLS A", both},              // the console's are DCL's symbols; the debugger's the program's and the machine's
 		{"SHOW SYMBOL/GLOBAL A", consoleOnly}, // DCL's
 		{"SHOW SYMBOL/LOCAL/ALL", consoleOnly},
 		{"SHOW SYMBOL/SYSTEM", debuggerOnly}, // the machine's symbol table
@@ -162,8 +162,8 @@ func TestGrammarSplit(t *testing.T) {
 
 		// SET: the console's.
 		{"SET DEFAULT A", consoleOnly},
-		{"SET QUANTUM 1", consoleOnly},
-		{"SET UIQUANTUM 1", consoleOnly},
+		{"SET QUANTUM 1", both},
+		{"SET UIQUANTUM 1", debuggerOnly},
 		{"SET DEBUG", consoleOnly},
 		{"SET VERBOSE", consoleOnly},
 		{"SET VERIFY", consoleOnly},

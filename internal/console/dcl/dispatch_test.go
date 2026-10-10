@@ -13,7 +13,7 @@ func TestDispatch(t *testing.T) {
 		gotWhat string
 	)
 
-	g := loadEvaxGrammar(t)
+	g := loadDebugGrammar(t)
 
 	g.Bind(testShowQuantumBinding, func(id int64, r *Result) error {
 		gotID = id
@@ -37,7 +37,7 @@ func TestDispatch(t *testing.T) {
 }
 
 func TestDispatch_noHandlerBound(t *testing.T) {
-	g := loadEvaxGrammar(t)
+	g := loadDebugGrammar(t)
 
 	r, err := g.Parse(testShowQuantumCommand)
 	if err != nil {

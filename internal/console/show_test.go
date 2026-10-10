@@ -390,18 +390,6 @@ func TestShowImages(t *testing.T) {
 	}
 }
 
-func TestShowQuantum(t *testing.T) {
-	d, _, buf := newShowDispatcher(t)
-
-	if err := d.Dispatch("SHOW QUANTUM"); err != nil {
-		t.Fatalf("Dispatch: %v", err)
-	}
-
-	if !strings.Contains(buf.String(), "Initial=20") {
-		t.Errorf("output = %q, want the default quantum (20)", buf.String())
-	}
-}
-
 func TestShowClock(t *testing.T) {
 	d, c, buf := newShowDispatcher(t)
 
@@ -507,57 +495,6 @@ func TestShowFault(t *testing.T) {
 	out := buf.String()
 	if !strings.Contains(out, "Pending interrupts:") || !strings.Contains(out, "CONWRITE") {
 		t.Errorf("output = %q, want the queued ExcConWrite interrupt reported", out)
-	}
-}
-
-func TestShowInstructions_grid(t *testing.T) {
-	d, _, buf := newShowDispatcher(t)
-
-	if err := d.Dispatch("SHOW INSTRUCTIONS"); err != nil {
-		t.Fatalf("Dispatch: %v", err)
-	}
-
-	out := buf.String()
-	if !strings.Contains(out, "HALT") {
-		t.Errorf("output = %q, want HALT listed among implemented instructions", out)
-	}
-
-	if !strings.Contains(out, "Instructions.") {
-		t.Errorf("output = %q, want a trailing instruction count", out)
-	}
-}
-
-func TestShowInstructions_opcodeFilter(t *testing.T) {
-	d, _, buf := newShowDispatcher(t)
-
-	// Opcode 00 is HALT (internal/cpu/instructions_table.go), a
-	// zero-operand instruction.
-	if err := d.Dispatch("SHOW INSTRUCTIONS 00"); err != nil {
-		t.Fatalf("Dispatch: %v", err)
-	}
-
-	out := buf.String()
-	if !strings.Contains(out, "HALT") {
-		t.Errorf("output = %q, want HALT for opcode filter 00", out)
-	}
-
-	if strings.Contains(out, "No implemented instruction") {
-		t.Errorf("output = %q, want opcode 00 to be found", out)
-	}
-}
-
-func TestShowInstructions_unknownOpcode(t *testing.T) {
-	d, _, buf := newShowDispatcher(t)
-
-	// FE/FD are the (reserved) extended-opcode escape prefixes themselves,
-	// not a real single-byte instruction opcode's own filter value here --
-	// use a function-byte value no CPU instruction table entry claims.
-	if err := d.Dispatch("SHOW INSTRUCTIONS FF"); err != nil {
-		t.Fatalf("Dispatch: %v", err)
-	}
-
-	if !strings.Contains(buf.String(), "No implemented instruction for opcode FF") {
-		t.Errorf("output = %q, want a not-found message for opcode FF", buf.String())
 	}
 }
 

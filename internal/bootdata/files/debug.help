@@ -404,7 +404,7 @@ $QUIT
 
 $SET
 $SE
-  Changes what the debugger does or shows.
+  Changes what the debugger does or shows, or sets machine state.
 
   Format:
 
@@ -412,8 +412,8 @@ $SE
 
   Additional information available:
 
-  BASE     BREAK    FAULT    MODE     MODULE   PSL      PTE      RADIX
-  SOURCE   STEP     TRACE    VM       WATCH
+  BASE     BREAK    FAULT    MODE     MODULE   PSL      PTE   
+  QUANTUM  RADIX    SOURCE   STEP     TRACE    VM       WATCH
 
   (SET BREAKPOINT, SET TRACEPOINT, and SET WATCHPOINT are the same as
   SET BREAK, SET TRACE, and SET WATCH.)
@@ -657,13 +657,99 @@ $SH
   Additional information available:
 
   BASE       BREAK      CALLS      CLOCK      CPU_STATUS EXCEPTIONS
-  IMAGE      LANGUAGE   MAPS       MEMORY     MODE       MODULE
-  PAGE       PSL        RADIX      REGIONS    REGISTERS  SCB
-  SCOPE      SHIM       SOURCE     STACK      STEP       SYMBOL
-  TB         TRACE      WATCH
+  IMAGE      INTRUCTION LANGUAGE   MAPS       MEMORY     MODE
+  MODULE     PAGE       PSL        QUANTUM    RADIX      REGIONS
+  REGISTERS  SCB        SCOPE      SHIM       SOURCE     STACK  
+  STEP       SYMBOL     TB         TRACE      WATCH
 
   and the register names: SHOW R0, SHOW PC, SHOW P0BR, and so on. SHOW SP,
   KSP, ESP, SSP, USP, and ISP dump the longwords on a stack.
+
+
+$SHOW,QUAN
+$SH  ,QUAN
+
+    The SHOW QUANTUM command displays the execution quantum the emulator
+    guarantees before allowing VAX interrupts to be processed. This is
+    expressed as a number of instructions; after that many instructions
+    have been executed, the processes any queued interrupts.  A quantum
+    of zero disables the quantum mechanism, and uses the realtime clock
+    instead to signal when to handle interrupts. The use of quantum is
+    largely to ensure that interrupt behavior is deterministic.
+    
+    Syntax:
+    
+        SHOW QUANTUM
+
+$SET ,QUAN
+
+    The SET QUANTUM command sets the execution quantum the emulator
+    guarantees before allowing VAX interrupts to be processed. This is
+    expressed as a number of instructions; after that many instructions
+    have been executed, the processes any queued interrupts.  A quantum
+    of zero disables the quantum mechanism, and uses the realtime clock
+    instead to signal when to handle interrupts. The use of quantum is
+    largely to ensure that interrupt behavior is deterministic.
+   
+    Syntax:
+    
+        SET QUANTUM n
+    
+    Parameter:
+    
+        n       The number of instructions to be executed before the 
+                emulator will process interrupts deterministically.
+$SHOW,INST
+$SH  ,INST
+    The SHOW INSTRUCTION command prints a reminder of the instruction
+    opcode values, for every VAX instruction (govax implements them
+    all).  The SHOW INSTRUCTIONS/ALL command
+    displays additional information about each instructions operands, if
+    any.
+
+    Syntax:
+
+        SHOW INSTRUCTIONS
+
+        SHOW INSTRUCTIONS/ALL
+
+$SHOW,INST,/UNI
+$SHOW,UNIM,INST
+$SH  ,INST,/UNI
+$SH  ,UNIM,INST
+    The SHOW INSTRUCTIONS/UNIMPLEMENTED command displays a table of the
+    VAX instructions govax doesn't implement, whose use would be a
+    reserved instruction fault.  govax implements every instruction, so
+    the table is empty ("0 Instructions.").
+
+    Syntax: 
+
+        SHOW INSTRUCTIONS/UNIMPLEMENTED
+
+$SHOW,INST,/PRO
+$SH  ,INST,/PRO
+    The SHOW INSTRUCTION/PROFILE command displays the number of times
+    each VAX instruction has been executed.  This can be used to determine
+    where a program is spending it's time, based on the cost of each type
+    of instruction.
+
+    You can reset the counters to zero with the CLEAR PROFILE command.
+
+    Syntax:
+
+         SHOW INSTRUCTION/PROFILE
+
+$SHOW,INST,/MOD
+$SH  ,INST,/MOD
+    The SHOW INSTRUCTION/MODE command displays the number of times each VAX
+    instruction mode has been executed.  This can be used to determine
+    what addressing modes are used, etc..
+
+    You can reset the counters to zero with the CLEAR PROFILE command.
+
+    Syntax:
+
+         SHOW INSTRUCTION/MODE
 
 $SHOW,BREA
 $SH,BREA

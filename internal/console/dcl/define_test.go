@@ -40,6 +40,35 @@ func loadEvaxGrammar(t *testing.T) *Grammar {
 	return g
 }
 
+// evaxGrammarPath locates internal/bootdata/files/evax.dcl relative to this
+// source file, so tests work regardless of the package under test's working
+// directory. This is the grammar govax actually parses at runtime (Phase
+// 15's embedded-fallback mechanism) -- not testdata/dcl/evax.dcl, which
+// stays a pure, untouched `git archive` import from the upstream C repo and
+// has diverged from this file since Phase 22 added MOUNT/DISMOUNT (see
+// docs/PHASE-22.md, "Grammar file" design decision).
+func debugGrammarPath(t *testing.T) string {
+	t.Helper()
+
+	_, file, _, ok := runtime.Caller(0)
+	if !ok {
+		t.Fatal("runtime.Caller failed")
+	}
+
+	return filepath.Join(filepath.Dir(file), "..", "..", "bootdata", "files", "debug.dcl")
+}
+
+func loadDebugGrammar(t *testing.T) *Grammar {
+	t.Helper()
+
+	g, err := LoadGrammarFile(debugGrammarPath(t))
+	if err != nil {
+		t.Fatalf("LoadGrammarFile: %v", err)
+	}
+
+	return g
+}
+
 func TestLoadConsoleGrammar(t *testing.T) {
 	g := loadEvaxGrammar(t)
 
@@ -71,27 +100,6 @@ func TestLoadConsoleGrammar(t *testing.T) {
 
 	if show.Parameters[0].typeRef == nil {
 		t.Error("SHOW parameter type not resolved")
-	}
-
-	showInstructions, ok := g.entries["SHOW_INSTRUCTIONS"]
-	if !ok {
-		t.Fatal("missing syntax SHOW_INSTRUCTIONS")
-	}
-
-	if _, _, err := showInstructions.qualifier("ALL"); err != nil {
-		t.Errorf("SHOW_INSTRUCTIONS should have an ALL qualifier: %v", err)
-	}
-
-	// Sanity check a keyword-driven redirect resolved during validate().
-	showTypes := g.types["SHOW_TYPES"]
-
-	kw, _, err := showTypes.lookup("INSTRUCTIONS")
-	if err != nil {
-		t.Fatalf("lookup INSTRUCTIONS keyword: %v", err)
-	}
-
-	if kw.Syntax != "SHOW_INSTRUCTIONS" { //nolint:goconst
-		t.Errorf("INSTRUCTIONS keyword syntax = %q, want SHOW_INSTRUCTIONS", kw.Syntax)
 	}
 }
 

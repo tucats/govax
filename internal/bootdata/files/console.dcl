@@ -277,9 +277,7 @@ grammar console
         keyword         xtest           /syntax=xtest
         keyword         string_pool     /syntax=show_string
         keyword         nvram           /syntax=show_nvram      
-        keyword         quantum         /syntax=show_quantum
         keyword         debug           /syntax=show_debug
-        keyword         instructions    /syntax=show_instructions
         keyword         radix           /syntax=show_radix
         keyword         symbols         /syntax=show_sym
         keyword         rom             /syntax=show_rom
@@ -357,7 +355,6 @@ grammar console
         syntax          show_radix/id=146
         syntax          show_string/id=121
         syntax          show_nvram/id=122
-        syntax          show_quantum/id=128
         syntax          show_debug/id=129
         syntax          show_instructions/id=131
             qualifier   modes/id=1009
@@ -991,11 +988,10 @@ grammar console
         keyword     verbose             /syntax=set_verbose
         keyword     verify              /syntax=set_verify/value
         keyword     prefix              /syntax=set_prefix
-        keyword     quantum             /syntax=set_quantum/nonegatable
-        keyword     uiquantum           /syntax=set_uiquantum/nonegatable
         keyword     default             /syntax=set_default/nonegatable
         keyword     prompt              /syntax=set_prompt/nonegatable/value
         keyword     on                  /syntax=set_on
+        keyword     quantum             /syntax=set_quantum/nonegatable
 
 
     verb set/id=1760/assignment=set_symbol
@@ -1008,6 +1004,12 @@ grammar console
                     /type=set_types             -
                     /prompt="What"
 
+    ! SET QUANTUM value
+    syntax set_quantum/id=1801
+           parameter   count/id=1802               -
+                       /type=$integer              -
+                       /prompt="Quantum"
+  
     ! SET [/PERMANENT] [/ENTRY] [/LABEL] name=value.
     syntax set_symbol/id=1770
         qualifier   permanent/id=1761/nonegatable
@@ -1050,14 +1052,6 @@ grammar console
         parameter   text/id=1815                -
                     /type=$string
 
-    syntax set_quantum/id=1801
-        parameter   count/id=1802               -
-                    /type=$integer              -
-                    /prompt="Quantum"
-    syntax set_uiquantum/id=1803
-        parameter   count/id=1802               -
-                    /type=$integer              -
-                    /prompt="Quantum"
 
     ! SET DEFAULT device:[directory], the default for file names
     ! (docs/PHASE-23.md).

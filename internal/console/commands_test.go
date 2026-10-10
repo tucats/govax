@@ -303,7 +303,6 @@ func TestCommands_set(t *testing.T) {
 		"SET X = 1 + 2 /PERMANENT",
 		"SET/LBL Y=X",
 		"SET NOVERBOSE",
-		"SET UIQ 7",
 		"SET DEBUG VM, NOUSERHALT",
 		"SET RADIX = 10",
 	}

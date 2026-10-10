@@ -345,7 +345,6 @@ func (d *Dispatcher) bindGrammar() {
 	// (show_map/show_tb/... above) that DEFAULT slots into the same way.
 	g.Bind("SHOW_DEFAULT", func(id int64, r *dcl.Result) error { return d.Console.ShowDefault() })
 
-	g.Bind("SHOW_QUANTUM", func(id int64, r *dcl.Result) error { return d.Console.ShowQuantum() })
 
 	// SHOW SYSTEM and SHOW PROCESS (docs/PHASE-44.md, subtask 10).
 	g.Bind("SHOW_SYSTEM", func(id int64, r *dcl.Result) error { return d.Console.ShowSystem() })
@@ -355,12 +354,6 @@ func (d *Dispatcher) bindGrammar() {
 
 	g.Bind("SHOW_DEBUG", func(id int64, r *dcl.Result) error { return d.Console.ShowDebug() })
 
-	g.Bind("SHOW_INSTRUCTIONS", func(id int64, r *dcl.Result) error {
-		return d.Console.ShowInstructions(
-			r.Present("MODES"), r.Present("PROFILE"), r.Present("UNIMPLEMENTED"), r.Present("ALL"),
-			r.String("OPCODE"),
-		)
-	})
 
 	// SHOW MEMORY is allowed in both console and debugger
 	g.Bind("SHOW_MEMORY", func(id int64, r *dcl.Result) error { return d.Console.ShowMemory() })

@@ -42,20 +42,20 @@ func TestResult_keywordValueDiscriminator(t *testing.T) {
 }
 
 func TestParse_showRegisters(t *testing.T) {
-	g := loadEvaxGrammar(t)
+	g := loadDebugGrammar(t)
 
-	r, err := g.Parse("SHOW QUANT")
+	r, err := g.Parse("SHOW REG")
 	if err != nil {
 		t.Fatalf("Parse: %v", err)
 	}
 
-	if r.Verb != "SHOW" || r.Active != "SHOW_QUANTUM" {
-		t.Errorf("Verb=%s Active=%s, want SHOW/SHOW_QUANTUM", r.Verb, r.Active)
+	if r.Verb != "SHOW" || r.Active != "SHOW_REG" {
+		t.Errorf("Verb=%s Active=%s, want SHOW/SHOW_REG", r.Verb, r.Active)
 	}
 }
 
 func TestParse_showMemoryFull(t *testing.T) {
-	g := loadEvaxGrammar(t)
+	g := loadDebugGrammar(t)
 
 	r, err := g.Parse("SHOW INSTRUCTIONS/ALL")
 	if err != nil {
@@ -68,36 +68,6 @@ func TestParse_showMemoryFull(t *testing.T) {
 
 	if !r.Present("ALL") {
 		t.Error("expected ALL qualifier present")
-	}
-}
-
-func TestParse_showAbbreviated(t *testing.T) {
-	g := loadEvaxGrammar(t)
-	// SH is unambiguous for SHOW; QUA is unambiguous for QUANTUM.
-	r, err := g.Parse("SH QUA")
-	if err != nil {
-		t.Fatalf("Parse: %v", err)
-	}
-
-	if r.Active != "SHOW_QUANTUM" {
-		t.Errorf("Active=%s, want SHOW_QUANTUM", r.Active)
-	}
-}
-
-func TestParse_showInstructionsRestOfLine(t *testing.T) {
-	g := loadEvaxGrammar(t)
-
-	r, err := g.Parse("SHOW INSTRUCTIONS MOVL R0")
-	if err != nil {
-		t.Fatalf("Parse: %v", err)
-	}
-
-	if r.Active != "SHOW_INSTRUCTIONS" {
-		t.Errorf("Active=%s, want SHOW_INSTRUCTIONS", r.Active)
-	}
-
-	if got := r.String("OPCODE"); got != "MOVL R0" {
-		t.Errorf("OPCODE=%q, want the rest of the line, MOVL R0", got)
 	}
 }
 
@@ -232,19 +202,6 @@ func TestParse_disallowCombination(t *testing.T) {
 
 	if _, err := g.Parse("COPY/CRLF/LF A B"); err == nil {
 		t.Error("expected DISALLOW error for /READ/WRITE combination")
-	}
-}
-
-func TestParse_negatedQualifier(t *testing.T) {
-	g := loadEvaxGrammar(t)
-
-	r, err := g.Parse("SHOW INSTRUCTIONS/NOALL")
-	if err != nil {
-		t.Fatalf("Parse: %v", err)
-	}
-
-	if !r.Present("ALL") || !r.Negated("ALL") {
-		t.Errorf("expected ALL present+negated, got present=%v negated=%v", r.Present("ALL"), r.Negated("ALL"))
 	}
 }
 

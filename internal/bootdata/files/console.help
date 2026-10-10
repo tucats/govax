@@ -476,58 +476,6 @@ $SH  ,DEV
             the volume since it was mounted, and the size, free space,
             label, and file count are read from the volume itself.
  
-$SHOW,INST
-$SH  ,INST
-    The SHOW INSTRUCTION command prints a reminder of the instruction
-    opcode values, for every VAX instruction (govax implements them
-    all).  The SHOW INSTRUCTIONS/ALL command
-    displays additional information about each instructions operands, if
-    any.
-
-    Syntax:
-
-        SHOW INSTRUCTIONS
-
-        SHOW INSTRUCTIONS/ALL
-
-$SHOW,INST,/UNI
-$SHOW,UNIM,INST
-$SH  ,INST,/UNI
-$SH  ,UNIM,INST
-    The SHOW INSTRUCTIONS/UNIMPLEMENTED command displays a table of the
-    VAX instructions govax doesn't implement, whose use would be a
-    reserved instruction fault.  govax implements every instruction, so
-    the table is empty ("0 Instructions.").
-
-    Syntax: 
-
-        SHOW INSTRUCTIONS/UNIMPLEMENTED
-
-$SHOW,INST,/PRO
-$SH  ,INST,/PRO
-    The SHOW INSTRUCTION/PROFILE command displays the number of times
-    each VAX instruction has been executed.  This can be used to determine
-    where a program is spending it's time, based on the cost of each type
-    of instruction.
-
-    You can reset the counters to zero with the CLEAR PROFILE command.
-
-    Syntax:
-
-         SHOW INSTRUCTION/PROFILE
-
-$SHOW,INST,/MOD
-$SH  ,INST,/MOD
-    The SHOW INSTRUCTION/MODE command displays the number of times each VAX
-    instruction mode has been executed.  This can be used to determine
-    what addressing modes are used, etc..
-
-    You can reset the counters to zero with the CLEAR PROFILE command.
-
-    Syntax:
-
-         SHOW INSTRUCTION/MODE
-
 $CLEA,MEMO
 $CLEA,MEM
 $ZERO
@@ -1295,21 +1243,19 @@ $SET
     The SET command is used to set the state of information in the virtual
     VAX or the console processor.  See the help text on:
 
-        SET ASSEMBLER
-        SET DEBUG
-        SET DEFAULT
-        SET ON
-        SET PREFIX
-        SET PROMPT
-        SET QUANTUM
-        SET RADIX
-        SET SYMBOL
-        SET VERIFY
+    DEBUG       DEFAULT     ON          PREFIX
+    PROMPT      RADIX       SYMBOL      VERIFY 
 
     The settings of the machine itself (breakpoints, stepping, the PSL, page
     table entries, the base address, the display modes) are the debugger's:
     see HELP SET in the debugger (type DEBUG, then HELP SET).
 
+$SET ,QUAN
+    The SET QUANTUM command sets the internal interrupt interval value, 
+    expressed as the number of instrutions that must pass before an
+    interrupt or process context switch can occur. Defaults to 1. Change
+    this only if you need to debug interrupt and context switching operations.
+    
 $SET ,SYMB
 $SET ,SYM 
 
@@ -1594,40 +1540,6 @@ $SH  ,DEBU
 
         SHOW DEBUG
 
-$SHOW,QUAN
-$SH  ,QUAN
-
-    The SHOW QUANTUM command displays the execution quantum the emulator
-    guarantees before allowing VAX interrupts to be processed. This is
-    expressed as a number of instructions; after that many instructions
-    have been executed, the processes any queued interrupts.  A quantum
-    of zero disables the quantum mechanism, and uses the realtime clock
-    instead to signal when to handle interrupts. The use of quantum is
-    largely to ensure that interrupt behavior is deterministic.
-    
-    Syntax:
-    
-        SHOW QUANTUM
-
-$SET ,QUAN
-
-    The SET QUANTUM command sets the execution quantum the emulator
-    guarantees before allowing VAX interrupts to be processed. This is
-    expressed as a number of instructions; after that many instructions
-    have been executed, the processes any queued interrupts.  A quantum
-    of zero disables the quantum mechanism, and uses the realtime clock
-    instead to signal when to handle interrupts. The use of quantum is
-    largely to ensure that interrupt behavior is deterministic.
-   
-    Syntax:
-    
-        SET QUANTUM n
-    
-    Parameter:
-    
-        n       The number of instructions to be executed before the 
-                emulator will process interrupts deterministically.
-
 $SHOW,RADI
 $SHOW,RAD 
 $SH  ,RADI
@@ -1695,10 +1607,6 @@ $SH
     
         SHOW DEFAULT
         SHOW DEVICE
-        SHOW INSTRUCTION
-        SHOW INSTRUCTION/PROFILE
-        SHOW INSTRUCTION/MODE
-        SHOW INSTRUCTION/UNIMPLEMENTED
         SHOW LOGICAL
         SHOW MEMORY
         SHOW PROCESS
@@ -1708,11 +1616,6 @@ $SH
         SHOW SYMBOL
         SHOW SYSTEM
         SHOW TRANSLATION
-
-    SHOW also displays the state of the machine itself (registers, memory,
-    the PSL, breakpoints, the call stack, page tables, ...), but those are
-    the debugger's commands.  Type DEBUG to enter the debugger, then
-    HELP SHOW there.
 
 $SHOW,STRI
 $SH  ,STRI

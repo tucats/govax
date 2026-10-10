@@ -34,6 +34,7 @@ func (d *Dispatcher) bindMachine() {
 
 	// The SHOW commands that take nothing: each prints one table.
 	for name, show := range map[string]func() error{
+		"SHOW_QUANTUM": c.ShowQuantum,
 		"SHOW_REG":     c.ShowRegisters,
 		"SHOW_PSL":     c.ShowPSL,
 		"SHOW_CPU":     c.ShowCPU,
@@ -49,6 +50,13 @@ func (d *Dispatcher) bindMachine() {
 	} {
 		g.Bind(name, func(id int64, r *dcl.Result) error { return show() })
 	}
+
+	g.Bind("SHOW_INSTRUCTIONS", func(id int64, r *dcl.Result) error {
+		return d.Debugger.Console.ShowInstructions(
+			r.Present("MODES"), r.Present("PROFILE"), r.Present("UNIMPLEMENTED"), r.Present("ALL"),
+			r.String("OPCODE"),
+		)
+	})
 
 	g.Bind("SHOW_PAGE", func(id int64, r *dcl.Result) error {
 		address, err := d.Debugger.evalText(r.String("ADDRESS"))
@@ -93,6 +101,9 @@ func (d *Dispatcher) bindMachine() {
 			return c.ShowStack(stack.kind, stack.current, count, r.Present("ALL"))
 		})
 	}
+
+	// SET QUANTUM
+	g.Bind("SET_QUANTUM", func(id int64, r *dcl.Result) error { return c.SetQuantum(int(r.Int("COUNT"))) })
 
 	// SHOW R0, SHOW PC, SHOW IPL, ...: a register keyword with nothing
 	// after it reaches the bare verb.

@@ -121,6 +121,8 @@ grammar debugger
         keyword     mapen               /syntax=set_vm
         keyword     base                /syntax=set_base/nonegatable
         keyword     process             /syntax=set_process/nonegatable
+        keyword     quantum             /syntax=set_quantum/nonegatable
+        keyword     uiquantum           /syntax=set_uiquantum/nonegatable
 
     verb set/id=20
         parameter   what/id=21                  -
@@ -214,6 +216,19 @@ grammar debugger
                         /type=$rest_of_line     -
                         /prompt="Radix"
 
+
+        ! SET QUANTUM value
+         syntax set_quantum/id=1801
+            parameter   count/id=1802               -
+                        /type=$integer              -
+                        /prompt="Quantum"
+        
+        ! SET UIQUANTUM value
+        syntax set_uiquantum/id=1803
+            parameter   count/id=1802               -
+                        /type=$integer              -
+                        /prompt="Quantum"
+
         ! SET PSL field=value[,field=value...] changes fields of the
         ! processor status longword (govax's own).
         syntax set_psl/id=200
@@ -249,6 +264,7 @@ grammar debugger
         keyword     breakpoint          /syntax=show_break
         keyword     breakpoints         /syntax=show_break
         keyword     trace               /syntax=show_trace
+        keyword     instructions        /syntax=show_instructions
         keyword     tracepoints         /syntax=show_trace
         keyword     watch               /syntax=show_watch
         keyword     watchpoints         /syntax=show_watch
@@ -289,6 +305,8 @@ grammar debugger
         keyword     images              /syntax=show_image
         keyword     module              /syntax=show_module
         keyword     modules             /syntax=show_module
+        keyword     quantum             /syntax=show_quantum
+
         ! SYMBOL is an abbreviation of SYMBOLS; a keyword of each would make
         ! SYM ambiguous.
         keyword     symbols             /syntax=show_symbol
@@ -390,6 +408,7 @@ grammar debugger
         syntax show_reg/id=210
         syntax show_psl/id=211
         syntax show_cpu/id=212
+        syntax show_quantum/id=128
         syntax show_clock/id=213
         syntax show_base/id=214
         syntax show_memory/id=215
@@ -412,6 +431,21 @@ grammar debugger
         syntax show_fault/id=229
         syntax show_mode/id=230
         syntax show_radix/id=231
+
+        ! SHOW INSTRUCTIONS
+        syntax show_instructions/id=131
+            qualifier   modes/id=1009
+            qualifier   profile/id=1010
+            qualifier   unimplemented/id=1011
+            qualifier   all/id=1012
+            parameter   opcode/id=1013              -
+                        /type=$rest_of_line
+            disallow    modes and profile
+            disallow    modes and unimplemented
+            disallow    modes and all
+            disallow    unimplemented and all
+            disallow    unimplemented and profile
+            disallow    profile and all
 
         ! SHOW CALLS [count] lists the call frames, a row each; SHOW STACK
         ! [count] describes each in full.
