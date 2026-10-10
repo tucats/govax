@@ -16,6 +16,7 @@ const (
 	vaxUnhandled
 	vaxImmOperand
 	vaxCallReturned
+	vaxHaltedSilent
 
 	// internal/asm diagnostics, in roughly the order the assembler's own
 	// files (register/opcode/functions/disasm/assembler/pseudo/operand/
@@ -131,7 +132,8 @@ const (
 const (
 	// VAX_HALTED reports a normal CPU halt (cpu.ErrHalted) -- not a
 	// failure, hence StatusSuccess.
-	VAX_HALTED = VAXFacility<<FacilityPosition | vaxHalted<<MessagePosition | StatusSuccess
+	VAX_HALTED        = VAXFacility<<FacilityPosition | vaxHalted<<MessagePosition | StatusSuccess
+	VAX_HALTED_SILENT = VAXFacility<<FacilityPosition | vaxHaltedSilent<<MessagePosition | StatusSuccess
 	// VAX_INSTLIM/VAX_TIMELIM report Engine.Step stopping because a
 	// configured instruction-count/wall-clock budget ran out
 	// (cpu.ErrInstructionLimitExceeded/ErrTimeLimitExceeded) -- the
@@ -269,7 +271,7 @@ const (
 	// An addressing mode that faults (or is UNPREDICTABLE) for the
 	// operand's access type, or as an indexed operand's base (the
 	// architecture manual's tables 8-5 and 8-6).
-	VAX_MODEACCESS   = VAXFacility<<FacilityPosition | vaxModeAccess<<MessagePosition | StatusError
+	VAX_MODEACCESS = VAXFacility<<FacilityPosition | vaxModeAccess<<MessagePosition | StatusError
 	// VAX_ILLEXPR is MACRO-32's "Illegal expression": for example, a
 	// parenthesis in an expression, which MACRO doesn't group with.
 	VAX_ILLEXPR = VAXFacility<<FacilityPosition | vaxIllExpr<<MessagePosition | StatusError
@@ -300,6 +302,7 @@ const (
 
 func init() {
 	DefineMessage(VAX_HALTED, VAXFacility, "HALTED", "CPU halted")
+	DefineMessage(VAX_HALTED_SILENT, VAXFacility, "HALTED", "CPU halted")
 	DefineMessage(VAX_INSTLIM, VAXFacility, "INSTLIM", "Instruction limit exceeded")
 	DefineMessage(VAX_TIMELIM, VAXFacility, "TIMELIM", "Time limit exceeded")
 	DefineMessage(VAX_ATTENTION, VAXFacility, "ATTENTION", "User requested attention (Ctrl-C)")

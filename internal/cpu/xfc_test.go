@@ -173,7 +173,7 @@ func TestEmulXfcConsoleRead(t *testing.T) {
 
 	e.cpu.SetGPR(vax.R0, 0xAABBCC11)
 	stepInstruction(t, e, 0xFC, xfcConsoleRead)
-	
+
 	if got := e.cpu.GPR(vax.R0); got != 0xAABBCC5A {
 		t.Errorf("R0 = %#x, want 0xaabbcc5a (only low byte replaced)", got)
 	}
@@ -269,18 +269,37 @@ func TestEmulXfcQuitEmulatorFaultsOutsideKernelMode(t *testing.T) {
 }
 
 func TestEmulXfcHaltAndHaltSilent(t *testing.T) {
-	for _, code := range []byte{xfcHaltSilent, xfcHalt} {
+	{
 		e, f := xfcEngine()
 
 		e.cpu.SetGPR(vax.PC, base)
-		putBytes(t, e.cpu, e.mem, base, 0xFC, code)
+		putBytes(t, e.cpu, e.mem, base, 0xFC, xfcHaltSilent)
 
-		if err := e.Step(); !errors.Is(err, ErrHalted) {
-			t.Errorf("code %#x: Step() = %v, want ErrHalted", code, err)
+		err := e.Step()
+
+		text := err.Error()
+		if text != ErrHaltedSilent.Error() {
+			t.Errorf("code %#x: Step() = %v, want ErrHaltedSilent", xfcHaltSilent, text)
 		}
 
 		if f.quitRequested {
-			t.Errorf("code %#x: RequestQuit was called, want only XFC$QUIT_EMULATION to stop the console", code)
+			t.Errorf("code %#x: RequestQuit was called, want only XFC$QUIT_EMULATION to stop the console", xfcHaltSilent)
+		}
+	}
+
+	{
+		e, f := xfcEngine()
+
+		e.cpu.SetGPR(vax.PC, base)
+		putBytes(t, e.cpu, e.mem, base, 0xFC, xfcHalt)
+
+		err := e.Step()
+		if !errors.Is(err, ErrHalted) {
+			t.Errorf("code %#x: Step() = %v, want ErrHaltedSilent", xfcHalt, err)
+		}
+
+		if f.quitRequested {
+			t.Errorf("code %#x: RequestQuit was called, want only XFC$QUIT_EMULATION to stop the console", xfcHalt)
 		}
 	}
 }
@@ -398,7 +417,7 @@ func TestEmulXfcP1VectorUnhandledFaults(t *testing.T) {
 	e := newEngine()
 	e.cpu.SetGPR(vax.SP, 0x7000)
 	e.cpu.SetPR(vax.KSP, 0x7000)
-	
+
 	f := &fakeServices{serviceHandled: false}
 	e.SetSystemServices(f)
 	putVector(t, e, ExcReservedOp, 0x300, 0)

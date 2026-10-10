@@ -30,8 +30,6 @@ $ load/nvram/noerror
 $!
 $!	Assemble the microkernel
 $!
-$ print " "
-$!
 $! ASM is the console's only until the microkernel is in place; after this,
 $! it is a debugger command.
 $!

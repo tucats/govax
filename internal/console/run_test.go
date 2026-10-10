@@ -69,7 +69,7 @@ func runKernelInitialize(t *testing.T, c *Console) {
 			continue
 		}
 
-		if errors.Is(err, cpu.ErrHalted) {
+		if err.Error() == cpu.ErrHaltedSilent.Error() {
 			return
 		}
 
@@ -114,7 +114,7 @@ func TestDefaultRunInits(t *testing.T) {
 	}
 
 	c.CPU.SetDebug(c.CPU.Debug() &^ vax.DebugLibinit)
-	
+
 	if c.DefaultRunInits() {
 		t.Error("DefaultRunInits() = true, want false once DebugLibinit is cleared")
 	}
@@ -254,7 +254,7 @@ func TestRun_everyMilestoneFixture(t *testing.T) {
 			if hitCap {
 				t.Errorf("%s: did not reach a HALT/return within %d steps", name, maxSteps)
 			}
-			
+
 			t.Logf("%s: terminating outcome: %v", name, runErr)
 		})
 	}

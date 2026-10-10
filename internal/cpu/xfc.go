@@ -109,7 +109,10 @@ func emulXfc(e *Engine, d *Decoded) error {
 	case xfcP1Vector:
 		return emulXfcP1Vector(e)
 
-	case xfcHaltSilent, xfcHalt:
+	case xfcHaltSilent:
+		return ErrHaltedSilent
+
+	case xfcHalt:
 		return ErrHalted
 
 	case xfcShim:
@@ -132,7 +135,7 @@ func emulXfcConsoleCmd(e *Engine) error {
 	if e.services == nil {
 		return &Fault{Code: ExcPrivileged}
 	}
-	
+
 	addr := e.cpu.GPR(vax.R0)
 
 	rawLen, err := e.mem.LoadWord(e.cpu, addr)

@@ -10,15 +10,19 @@ import (
 
 	"github.com/tucats/gopackages/app-cli/settings"
 	"github.com/tucats/govax/internal/vax"
-	"github.com/tucats/govax/internal/vmsdef"
 	"github.com/tucats/govax/internal/vm"
+	"github.com/tucats/govax/internal/vmsdef"
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
 // ErrHalted is returned by a Handler (starting with Phase 04's HALT) to
-// stop the machine, and by Engine.Run when that happens — the Go
-// equivalent of the C source's vax.halted flag and VAX_HALT return code.
-var ErrHalted = vmserrors.New(vmserrors.VAX_HALTED)
+// stop the machine, and by Engine.Run when that happens. The "silent"
+// variant is returned by a Handler that wants to stop the machine without
+// printing a message (e.g. when the XFC #7B silent halt is executed).
+var (
+	ErrHalted       = vmserrors.New(vmserrors.VAX_HALTED)
+	ErrHaltedSilent = vmserrors.InhibitMessage(vmserrors.New(vmserrors.VAX_HALTED_SILENT))
+)
 
 // ErrAttention is returned by Engine.Step when Attention has been called
 // since the last BeginRun — the Go equivalent of console.c's attention()
