@@ -82,7 +82,7 @@ func TestGrammarSplit(t *testing.T) {
 		{"GO", debuggerOnly},
 		{"G", debuggerOnly},
 		{"EXECUTE 200", debuggerOnly},
-		{"CALL A", debuggerOnly},
+		{"CALL A", both}, // the console's is DCL's, a procedure's subroutine
 		{"CALL/STEP A", debuggerOnly},
 		{"EXAMINE 200", debuggerOnly},
 		{"EX 200", both}, // the console's EXIT, with a status

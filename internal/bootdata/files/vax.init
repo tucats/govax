@@ -12,8 +12,6 @@ $!  (the parameter is count of 512b pages)
 $!
 $ init/vax ^d16384
 $!
-$ if defined("console$arg_file" ) then set noverbose
-$!
 $!   Create page tables for the VAX physical memory.
 $!   You can allocate more tables than will fit in
 $!   physical memory; virtual memory support sparse

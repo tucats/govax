@@ -3050,6 +3050,54 @@ widened."
 - **Status**: fixed to VMS 7.3's behavior where the probe answered; the
   rest unconfirmed, for a later round.
 
+### [Phase 50] Labels, IF blocks, GOSUB, and CALL: choices without a probe
+
+- **Where**: `internal/console/dcllabel.go`, `dclif.go`, `dclcall.go`,
+  `dispatch.go` (`DispatchConsole`).
+- **What**: labels and GOTO, IF/THEN/ELSE/ENDIF, GOSUB/RETURN, and
+  CALL/SUBROUTINE/ENDSUBROUTINE follow the OpenVMS User's Manual (7.3),
+  13.2 and 14.16 to 14.17: the duplicate-label rules (13.2.2), the 15
+  nested IF blocks, the 16 nested GOSUBs, odd values as true, no GOTO or
+  CALL into a separate block or subroutine, a CALL level reading its
+  subroutine's lines only, and line-by-line running passing over a
+  subroutine. The messages are DCL's CLI$_ messages, all warnings.
+  Chosen without VMS:
+  - A missing GOTO or GOSUB label leaves the procedure at its end of
+    file, so it ends with the warning's status (not shown again) unless
+    an ON action moves it first (the manual says GOSUB's "is forced to
+    exit"). A missing CALL target is a warning and the procedure goes on.
+  - A forward search records the labels it passes (at the GOTO's own
+    block level), so a later GOTO finds a label the procedure jumped
+    over; the manual says only that labels are entered as DCL
+    "encounters" them.
+  - A label inside a block the procedure has left can't be a target
+    again (the forward search may still find a later one); a search that
+    reaches the ELSE of an enclosing block treats that branch as a
+    separate block.
+  - `IF expr THEN` with nothing after THEN is CLI$_INSFPRM (as ON's is),
+    not a block; anything after the expression other than THEN is
+    CLI$_NOTHEN.
+  - The command after a block's IF that isn't THEN is CLI$_NOTHEN, the
+    block is dropped, and the command isn't run. THEN, ELSE, or ENDIF out
+    of place, and a 16th nested block, are CLI$_INVIFNEST.
+  - THEN, ELSE, ENDIF, GOSUB, SUBROUTINE, and a label alone on its line
+    leave `$STATUS` alone, as IF and GOTO do (13.15); RETURN with no
+    status does too. RETURN with a status sets `$STATUS` without showing
+    a message, and the level's ON action looks at it.
+  - THEN, ELSE, ENDIF, SUBROUTINE, and ENDSUBROUTINE may be shortened to
+    four characters when DCL passes over lines or scans for a label.
+  - Block IF works at the terminal (level 0) as in a procedure. There a
+    label is CLI$_NOLBLS (and the command after it runs), GOTO is
+    CLI$_USGOTO, GOSUB CLI$_INVGOSUB, RETURN CLI$_BADRET, CALL
+    CLI$_USCALL, and SUBROUTINE and ENDSUBROUTINE CLI$_INVCALL.
+  - A SUBROUTINE with no ENDSUBROUTINE, reached line by line or as a
+    CALL's target, is CLI$_MSNGENDS; a search for a label that runs into
+    one is MSNGENDS instead of USGOTO. A stray ENDSUBROUTINE is
+    CLI$_INVCALL.
+  - A CALL's target must be a label on a SUBROUTINE line; a plain label
+    is CLI$_USCALL.
+- **Status**: unconfirmed; candidates for the probe's next round.
+
 <!--
 Entry template:
 

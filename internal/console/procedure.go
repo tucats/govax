@@ -36,10 +36,10 @@ import (
 // procedure runs synchronously: whoever dispatched "@file" (the prompt,
 // another procedure, TIME, a symbol's value, the debugger's @, cmd/govax
 // running vax.init) gets control back when the procedure ends. The
-// commands that act on the current level find it there: EXIT now, and
-// later GOTO, GOSUB, block IF, ON, and F$ENVIRONMENT. A level's source
-// keeps its file's records and a cursor, so a later GOTO can move the
-// cursor (Seek, Rewind) and the level's loop reads on from there.
+// commands that act on the current level find it there: EXIT, ON, GOTO,
+// GOSUB, block IF, CALL, and later F$ENVIRONMENT. A level's source keeps
+// its file's records and a cursor, so GOTO moves the cursor (Seek) and
+// the level's loop reads on from there.
 
 // maxCommandLevels is how many command levels may be active above level
 // 0, the terminal: DCL's limit is 32 levels, the terminal's among them
@@ -65,6 +65,10 @@ type commandLevel struct {
 	// on is the level's error handling: ON's and SET [NO]ON's
 	// (dclstatus.go).
 	on onAction
+
+	// flow is the level's labels, IF blocks, and GOSUB returns
+	// (dcllabel.go, dclif.go, dclcall.go).
+	flow flowState
 
 	// output is the level's /OUTPUT file, nil without one. restoreOut is
 	// the Console.Out it replaced, put back when the level ends.
@@ -95,7 +99,9 @@ func (c *Console) CommandLevel() int { return len(c.levels) }
 
 // procedureSource is a command procedure's text: its records (lines),
 // read whole when the procedure starts, and a cursor at the next one to
-// read.
+// read. A CALL subroutine's level (dclcall.go) reads part of its
+// file's records: from the line after its SUBROUTINE to its
+// ENDSUBROUTINE, which is end, its end of file.
 type procedureSource struct {
 	// name is the file that was read, for messages.
 	name string
@@ -103,8 +109,14 @@ type procedureSource struct {
 	// records are the file's lines, as they are in the file.
 	records []string
 
-	// next is the index of the next record Read looks at.
+	// next is the index of the next record Read looks at, and end the
+	// index of the record Read stops at: len(records) for a whole file.
 	next int
+	end  int
+
+	// lineStart is the index of the first record of the line Read
+	// returned last: where a label on it is (dcllabel.go).
+	lineStart int
 
 	// plain says the file is a debugger command procedure, whose lines
 	// are all commands, rather than a DCL one, whose commands start with
@@ -124,7 +136,7 @@ func newProcedureSource(name, text string) *procedureSource {
 		records = strings.Split(text, "\n")
 	}
 
-	return &procedureSource{name: name, records: records}
+	return &procedureSource{name: name, records: records, end: len(records)}
 }
 
 // Read returns the next line of the procedure, and false at its end.
@@ -141,16 +153,34 @@ func newProcedureSource(name, text string) *procedureSource {
 // with the same continuations, and blank lines and "!" comments are
 // skipped; data is always false.
 func (p *procedureSource) Read() (line string, data bool, ok bool) {
-	for p.next < len(p.records) {
-		record := p.records[p.next]
-		p.next++
+	line, data, start, next, ok := p.lineAt(p.next)
+	if ok {
+		p.lineStart = start
+	}
+
+	p.next = next
+
+	return line, data, ok
+}
+
+// lineAt reads the line that starts at record pos or after it, as Read
+// does, without moving the cursor: the line, whether it's a data line,
+// the index of its first record, and the index of the record after it.
+// ok is false at the end of the source; next is then the end.
+func (p *procedureSource) lineAt(pos int) (line string, data bool, start, next int, ok bool) {
+	next = pos
+
+	for next < p.end {
+		start = next
+		record := p.records[next]
+		next++
 
 		if p.plain {
 			line = strings.TrimSpace(record)
 		} else if rest, isCommand := strings.CutPrefix(record, "$"); isCommand {
 			line = strings.TrimSpace(rest)
 		} else {
-			return record, true, true
+			return record, true, start, next, true
 		}
 
 		if line == "" || line[0] == '!' {
@@ -159,26 +189,27 @@ func (p *procedureSource) Read() (line string, data bool, ok bool) {
 
 		for {
 			head, more := continuation(line)
-			if !more || p.next >= len(p.records) {
+			if !more || next >= p.end {
 				break
 			}
 
-			line = head + " " + strings.TrimSpace(p.records[p.next])
-			p.next++
+			line = head + " " + strings.TrimSpace(p.records[next])
+			next++
 		}
 
-		return line, false, true
+		return line, false, start, next, true
 	}
 
-	return "", false, false
+	return "", false, p.end, p.end, false
 }
 
 // Position returns the cursor: where the next Read starts.
 func (p *procedureSource) Position() int { return p.next }
 
 // Seek moves the cursor to pos, a value Position returned (or 0, the
-// first record).
-func (p *procedureSource) Seek(pos int) { p.next = min(max(pos, 0), len(p.records)) }
+// first record). Seeking to the end, or past it, makes the next Read
+// the end of the source.
+func (p *procedureSource) Seek(pos int) { p.next = min(max(pos, 0), p.end) }
 
 // Rewind moves the cursor back to the first record.
 func (p *procedureSource) Rewind() { p.Seek(0) }
@@ -382,11 +413,17 @@ type procedureExit struct {
 }
 
 // procedureCommand runs the procedure cmd names (runProcedure) as a
-// command: @'s status is the procedure's (setCommandStatus), and a
-// failure is returned as an error, whose message is shown only when the
-// procedure ended with EXIT and a status that asks for it.
+// command, @ (finishProcedure).
 func (c *Console) procedureCommand(cmd procedureCommand, dispatch func(string) error) error {
-	exit, err := c.runProcedure(cmd, dispatch)
+	return c.finishProcedure(c.runProcedure(cmd, dispatch))
+}
+
+// finishProcedure ends @ or CALL, the command that ran a procedure or a
+// subroutine at a new level, which ended with exit (or couldn't run,
+// err): the command's status is the procedure's (setCommandStatus), and
+// a failure is returned as an error, whose message is shown only when
+// the procedure ended with EXIT and a status that asks for it.
+func (c *Console) finishProcedure(exit procedureExit, err error) error {
 	if err != nil {
 		return err
 	}
@@ -409,8 +446,26 @@ func (c *Console) procedureCommand(cmd procedureCommand, dispatch func(string) e
 	return failure
 }
 
-// runProcedure runs the procedure cmd names at a new command level, with
-// its parameters as P1 to P8, until its last command, an EXIT, or a
+// runProcedure runs the procedure cmd names at a new command level
+// (runLevel).
+func (c *Console) runProcedure(cmd procedureCommand, dispatch func(string) error) (procedureExit, error) {
+	if len(c.levels) >= maxCommandLevels {
+		return procedureExit{}, vmserrors.New(vmserrors.CLI_STKOVF)
+	}
+
+	source, err := c.openProcedure(cmd.file, cmd.host)
+	if err != nil {
+		return procedureExit{}, err
+	}
+
+	source.plain = cmd.plain
+
+	return c.runLevel(source, cmd, dispatch)
+}
+
+// runLevel runs the lines of source, a procedure or a CALL subroutine,
+// at a new command level, with cmd's parameters as P1 to P8 and its
+// /OUTPUT, until its last command, an EXIT, or a
 // command whose status the level's error handling ends it on (onAction):
 // by default an error or a severe error, DCL's ON ERROR THEN EXIT (User's
 // Manual, 13.8). Each command's message is shown as it fails. The
@@ -425,19 +480,10 @@ func (c *Console) procedureCommand(cmd procedureCommand, dispatch func(string) e
 //
 // An error is returned only when the procedure couldn't start, or its
 // /OUTPUT file couldn't be written.
-func (c *Console) runProcedure(cmd procedureCommand, dispatch func(string) error) (exit procedureExit, err error) {
-	if len(c.levels) >= maxCommandLevels {
-		return exit, vmserrors.New(vmserrors.CLI_STKOVF)
-	}
-
-	source, err := c.openProcedure(cmd.file, cmd.host)
-	if err != nil {
-		return exit, err
-	}
-
-	source.plain = cmd.plain
-
+func (c *Console) runLevel(source *procedureSource, cmd procedureCommand, dispatch func(string) error) (exit procedureExit, err error) {
 	level := &commandLevel{source: source, sysCommand: c.Out}
+	level.flow.source = source
+
 	if outer := c.currentLevel(); outer != nil {
 		level.sysCommand, level.redirected = outer.sysCommand, outer.redirected
 	}
@@ -484,6 +530,10 @@ func (c *Console) runProcedure(cmd procedureCommand, dispatch func(string) error
 		}
 
 		switch {
+		case data && level.flow.skip.active:
+			// Data in a branch of an IF block that doesn't run.
+			continue
+
 		case data && !c.readingInput():
 			// Nothing reads the procedure's input, so DCL skips the data,
 			// with one warning for each run of data lines.
@@ -710,7 +760,7 @@ func (c *Console) openProcedure(file string, host bool) (*procedureSource, error
 		lines[i] = string(r)
 	}
 
-	return &procedureSource{name: found.Name, records: lines}, nil
+	return &procedureSource{name: found.Name, records: lines, end: len(lines)}, nil
 }
 
 // procedureHostNames are the host names a procedure's file name may mean,

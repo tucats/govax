@@ -20,8 +20,9 @@ never had.
   it), and Phase 49 the work it left for later (done 2026-10-09);
   `PHASE-43.md`'s Part A describes the whole program. Phase 50 (in
   progress) makes the console a DCL command interpreter: command
-  procedures and command levels, symbol substitution, expressions, and
-  `$STATUS`/ON are done; then labels, IF, and the lexical functions. Read the relevant phase doc
+  procedures and command levels, symbol substitution, expressions,
+  `$STATUS`/ON, labels and GOTO, IF blocks, GOSUB, and CALL are done;
+  then the lexical functions and SET VERIFY. Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
 - `docs/DEVIATIONS.md` — running log of suspected ISA/behavior fidelity issues found in
   the C source during porting (see "Bug-fixing policy" below).
@@ -251,8 +252,20 @@ expect adjustment as phases land):
   status) or keep it (`keepStatus`: SHOW SYMBOL, IF, CONTINUE). Each
   level's `onAction` is ON's and SET [NO]ON's; `procedureLine` shows a
   command's message, then takes the action; a procedure ends with a
-  `procedureExit` (end of file, EXIT, `EXIT n`, or the error action). A level's `procedureSource` keeps the whole file and a
-  cursor (`Position`/`Seek`/`Rewind`) for the coming GOTO and labels.
+  `procedureExit` (end of file, EXIT, `EXIT n`, or the error action). A level's `procedureSource` keeps the whole file, a
+  cursor (`Position`/`Seek`/`Rewind`), and an `end` (a CALL level's is
+  its ENDSUBROUTINE). **Flow control** (`dcllabel.go`, `dclif.go`,
+  `dclcall.go`): each level's `flowState` (the terminal's is
+  `Console.terminalFlow`) holds its labels, open IF blocks, the lines
+  being passed over (`blockSkip`), and GOSUB's returns.
+  `DispatchConsole` passes over a branch's lines unread (`skipLine`),
+  records a label (`takeLabel`), and checks for a block's THEN
+  (`awaitThen`) before substitution. GOTO, GOSUB, and CALL find a label
+  where it was last processed or by a forward search that follows the
+  blocks it passes (`searchLabel`); a missing one leaves the procedure
+  at its end of file. CALL runs `label: SUBROUTINE`'s lines at a new
+  level (`runLevel`, as @ does); running line by line passes over a
+  subroutine.
   `vax.init` is a DCL procedure, run like a login command procedure
   (`RunHostProcedure`); the one-shot command on govax's command line
   is then level 0's input (`RunCommandLine`). The debugger's `@` reads

@@ -405,35 +405,32 @@ func TestDispatch_help(t *testing.T) {
 	}
 }
 
-// TestDispatch_if exercises the IF <expr> [THEN] <command> console verb
-// (commands.go's ifCommand) against the same pattern vax.init uses (IF DEFINED("...") THEN
-// SET ...): the conditioned command runs only when the expression is
-// nonzero, and THEN is optional either way.
+// TestDispatch_if exercises DCL's one-line IF expression THEN command
+// (dclif.go's ifCommand): the command runs only when the expression is
+// true, which is when its value is odd (the User's Manual, 14.16.4).
 func TestDispatch_if(t *testing.T) {
 	d, c := newTestDispatcher(t)
 
-	if err := d.Dispatch(`IF DEFINED("CONSOLE$ARG_FILE") THEN SET R0=1`); err != nil {
-		t.Fatalf("Dispatch(IF, false): %v", err)
-	}
+	for _, tc := range []struct {
+		line string
+		r0   uint32
+	}{
+		{`IF 0 THEN SET R0=1`, 0},
+		{`IF 2 THEN SET R0=1`, 0},
+		{`IF "NO" THEN SET R0=1`, 0},
+		{`IF 1 THEN SET R0=1`, 1},
+		{`IF 1 .EQ. 1 THEN $ SET R0=2`, 2},
+		{`IF "yes" THEN SET R0=3`, 3},
+		{`IF "27" THEN SET R0=4`, 4},
+		{`IF "28" THEN SET R0=5`, 4},
+	} {
+		if err := d.Dispatch(tc.line); err != nil {
+			t.Fatalf("%s: %v", tc.line, err)
+		}
 
-	if got := c.CPU.GPR(vax.R0); got != 0 {
-		t.Errorf("R0 = %#x, want 0 (condition should be false)", got)
-	}
-
-	if err := d.Dispatch(`IF 1 THEN SET R0=1`); err != nil {
-		t.Fatalf("Dispatch(IF, true, THEN): %v", err)
-	}
-
-	if got := c.CPU.GPR(vax.R0); got != 1 {
-		t.Errorf("R0 = %#x, want 1", got)
-	}
-
-	if err := d.Dispatch(`IF 1=1 SET R0=2`); err != nil {
-		t.Fatalf("Dispatch(IF, true, no THEN): %v", err)
-	}
-
-	if got := c.CPU.GPR(vax.R0); got != 2 {
-		t.Errorf("R0 = %#x, want 2", got)
+		if got := c.CPU.GPR(vax.R0); got != tc.r0 {
+			t.Errorf("%s: R0 = %#x, want %#x", tc.line, got, tc.r0)
+		}
 	}
 }
 

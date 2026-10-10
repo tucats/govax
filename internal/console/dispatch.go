@@ -83,12 +83,30 @@ func (d *Dispatcher) DispatchConsole(line string) error {
 		return d.assembleInteractiveLine(line)
 	}
 
+	// The lines of an IF block's branch that doesn't run are passed
+	// over, unread (dclif.go).
+	line, run := d.Console.skipLine(line)
+	if !run {
+		return nil
+	}
+
 	// The line is one command, whose status becomes $STATUS
 	// (dclstatus.go).
 	return d.Console.statusOf(func() error {
+		// A label marks the line (dcllabel.go), and the command after a
+		// block's IF must be THEN (dclif.go).
+		line, err := d.Console.takeLabel(line)
+		if err != nil || line == "" {
+			return err
+		}
+
+		if err := d.Console.awaitThen(line); err != nil {
+			return err
+		}
+
 		// DCL's first phase: symbols between apostrophes are replaced
 		// before anything reads the line (dclsubst.go).
-		line, err := d.Console.substituteApostrophes(line)
+		line, err = d.Console.substituteApostrophes(line)
 		if err != nil {
 			return err
 		}
@@ -230,6 +248,18 @@ func (d *Dispatcher) bindGrammar() {
 	// QUIT ends govax wherever it is (procedure.go).
 	g.Bind("EXIT", d.exitCommand)
 	g.Bind("ON", d.onCommand)
+
+	// Labels, IF blocks, GOSUB, and CALL (dcllabel.go, dclif.go,
+	// dclcall.go).
+	g.Bind("GOTO", d.gotoCommand)
+	g.Bind("THEN", d.thenCommand)
+	g.Bind("ELSE", d.elseCommand)
+	g.Bind("ENDIF", d.endifCommand)
+	g.Bind("GOSUB", d.gosubCommand)
+	g.Bind("RETURN", d.returnCommand)
+	g.Bind("CALL", d.callCommand)
+	g.Bind("SUBROUTINE", d.subroutineCommand)
+	g.Bind("ENDSUBROUTINE", d.endsubroutineCommand)
 	g.Bind("CONTINUE", func(id int64, r *dcl.Result) error {
 		d.Console.keepStatus()
 

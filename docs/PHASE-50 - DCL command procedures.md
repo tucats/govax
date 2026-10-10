@@ -8,8 +8,9 @@ error action, and EXIT that ends a procedure. Later rounds (subtasks 8
 onward) make the console more fully a DCL command interpreter. Subtasks
 8 and 9, symbol substitution and expressions, are done and checked
 against VMS 7.3 (2026-10-09), and so is subtask 10, `$STATUS`, EXIT's
-status, ON, and SET [NO]ON (2026-10-09); labels and GOTO, IF/THEN/ELSE,
-and the other lexical functions are next.
+status, ON, and SET [NO]ON (2026-10-09). Subtasks 11 to 13, labels and
+GOTO, IF/THEN/ELSE/ENDIF, GOSUB/RETURN, and CALL/SUBROUTINE, are done
+(2026-10-09, not yet probed); the other lexical functions are next.
 
 The console should act like a VMS DCL command processor. Until now it
 had INCLUDE (and `@` as its alias), which runs a file of console
@@ -274,6 +275,46 @@ is kept for subtask 18, which delivers Ctrl/Y to procedures; until then
 Ctrl/Y still ends govax. What was chosen without VMS is in DEVIATIONS.md
 ("[Phase 50] Statuses and ON").
 
+### Labels, IF blocks, GOSUB, and CALL (subtasks 11 to 13)
+
+The User's Manual's rules (13.2, 14.16, 14.17) and what was chosen
+without them (DEVIATIONS.md's "[Phase 50] Labels, IF blocks, GOSUB, and
+CALL"). Each command level, and the terminal, has a `flowState`
+(`dcllabel.go`): its labels, its open IF blocks, the lines being passed
+over, and GOSUB's return places. The three files share it, which is why
+the subtasks were done together.
+
+- **Labels and GOTO** (`dcllabel.go`). `DispatchConsole` takes a label
+  off the front of a line (`takeLabel`) and records where its line
+  starts (`procedureSource.lineStart`) and which IF blocks are open
+  there. GOTO uses the place recorded last, if those blocks are still
+  open, and otherwise searches forward (`searchLabel`), following the
+  THEN, ELSE, ENDIF, SUBROUTINE, and ENDSUBROUTINE lines it passes, so a
+  label inside a separate block or subroutine isn't a target; the labels
+  it passes are recorded. A missing label leaves the cursor at the end
+  of the file, so the procedure ends after USGOTO unless an ON action
+  moves it. Going to a label closes the blocks it is outside of.
+- **IF** (`dclif.go`). `IF expr THEN command` runs the command when the
+  expression's value is odd. `IF expr` alone opens a block, whose next
+  command must be THEN (`awaitThen`). THEN and ELSE start a branch; for
+  the branch that doesn't run, `skipLine` passes over the lines, before
+  any substitution, counting the blocks inside by their THEN and ENDIF
+  lines. This works line by line, so blocks work at the terminal as in
+  a procedure. The console's old IF, on the machine's expressions, is
+  gone, and so is vax.init's `IF DEFINED(...)` line (the author's
+  choice: it isn't DCL).
+- **GOSUB and RETURN** (`dclcall.go`). GOSUB finds its label as GOTO
+  does and pushes the place after itself and the open blocks; RETURN
+  [status] goes back and puts the blocks back. At most 16 deep.
+- **CALL, SUBROUTINE, ENDSUBROUTINE** (`dclcall.go`). CALL finds
+  `label: SUBROUTINE` as GOTO finds a label, then its ENDSUBROUTINE
+  (`subroutineEnd`), and runs the lines between at a new level:
+  `runLevel`, @'s own loop, with a `procedureSource` sharing the file's
+  records whose `end` is the ENDSUBROUTINE. Its parameters and /OUTPUT
+  are read as @'s are (`parseProcedureCommand`), and its status is @'s
+  (`finishProcedure`). Running line by line, SUBROUTINE passes over the
+  subroutine.
+
 ## Subtasks
 
 1. **Survey**: the User's Manual's rules for `@`, parameters, command
@@ -342,6 +383,14 @@ Later rounds of this phase, in a likely order:
 - The rest of what `testdata/dcl50`'s round 1 left open (its README):
   a negative number divided by zero, `''NAME` without its closing
   apostrophe, a foreign command's `&`.
+- For a round 2, on labels, IF, GOSUB, and CALL (DEVIATIONS.md's
+  "[Phase 50] Labels, IF blocks, GOSUB, and CALL"): whether a GOTO's
+  forward search records the labels it passes; `IF expr THEN` with
+  nothing after it; a command other than THEN after a block's IF; THEN,
+  ELSE, ENDIF, GOSUB, and RETURN's effect on `$STATUS`; RETURN n's
+  message and the ON action; a missing CALL target; labels, GOTO, block
+  IF, GOSUB, and CALL at the terminal; abbreviations of ENDIF and
+  ENDSUBROUTINE.
 - For a round 2, on statuses (DEVIATIONS.md's "[Phase 50] Statuses and
   ON"): EXIT with no status after a success (is bit 28 set?); `$STATUS`
   at an ON ERROR THEN GOTO label; whether ON's command is substituted
@@ -445,3 +494,23 @@ details are in DEVIATIONS.md.)
   and @ of a missing file, whose messages are govax's). The console's
   `EX` is EXIT's abbreviation, so `EX 200` now parses there as `EXIT
   200` (TestGrammarSplit).
+- 2026-10-09: Subtasks 11 to 13, together, since labels, IF blocks, and
+  GOSUB share each level's `flowState` (see "Labels, IF blocks, GOSUB,
+  and CALL"). New files `dcllabel.go`, `dclif.go`, `dclcall.go`;
+  `procedureSource` gains `end`, `lineStart`, and `lineAt` (a read that
+  doesn't move the cursor, for scans); `runProcedure` is split into
+  `runLevel` (shared with CALL) and `finishProcedure`. New verbs in
+  `console.dcl`: THEN, ELSE, ENDIF, GOTO, GOSUB, RETURN, CALL (now both
+  the console's, DCL's, and the debugger's, TestGrammarSplit),
+  SUBROUTINE, ENDSUBROUTINE; IF takes the rest of the line. New
+  messages, in DCL's words: CLI_NOLBLS, CLI_USGOTO, CLI_MSNGENDS,
+  CLI_INVIFNEST, CLI_INVGOSUB, CLI_GOSUBMAX, CLI_USGOSUB, CLI_BADRET,
+  CLI_USCALL, CLI_INVCALL. vax.init's `IF DEFINED("CONSOLE$ARG_FILE")
+  THEN SET NOVERBOSE` is gone (the author's choice: it isn't DCL; the
+  symbol was never defined, so it never ran; quieting a one-shot
+  command is left for later). HELP: IF/THEN/ELSE/ENDIF, GOTO (and
+  labels), GOSUB/RETURN, CALL/SUBROUTINE/ENDSUBROUTINE. Tests:
+  `dclflow_test.go` (the manual's examples: loops, 13.2.2's duplicate
+  labels, the GOTO into a block, GOSUB.COM, the BAR subroutine; the
+  label search; blocks nested, at the terminal, and with `$STATUS`;
+  every message), and `TestDispatch_if` for DCL's truth rule.

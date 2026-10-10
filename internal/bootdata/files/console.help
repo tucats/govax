@@ -1894,6 +1894,7 @@ $HELP
     @               Run a command procedure (a file of DCL commands)
     ANALYZE         Describe object and image files, as VMS's ANALYZE does
     ASSIGN          Create a logical name (equivalence first)
+    CALL            Run a command procedure's subroutine at a new level
     CLEAR           Clear memory, symbols, strings
     COPY            Copy a file between the host and a mounted volume
     CREATE          Create a directory or a logical name table
@@ -1906,6 +1907,8 @@ $HELP
     CONTINUE        Do nothing (ON ERROR THEN CONTINUE)
     EXIT            End a command procedure, or govax at the terminal
     IF              Run a command when an expression is true
+    GOSUB           Call a subroutine at a label (RETURN comes back)
+    GOTO            Go on at a label of a command procedure
     INITIALIZE      Initialize the virtual VAX, or a disk-image container
     LIBRARY         Create, change, or list a macro or object library
     LINK            Link object modules into an executable image
@@ -2100,25 +2103,131 @@ $TIME
         TIME DIRECTORY
 
 $IF
+$THEN
+$ELSE
+$ENDI
 
-    The IF command runs a command only when an expression is true (nonzero).
-    It is used in command procedures (see @).
+    The IF command runs a command, or a block of commands, only when an
+    expression is true.  An expression is true when its value is odd: an
+    odd integer, a string that holds an odd number, or a string that
+    starts with T or Y (in either case).  See HELP SYMBOL EXPRESSIONS.
 
     Syntax:
 
-        IF <expression> [THEN] <command>
+        IF expression THEN [$] command
 
-    Parameters:
+        IF expression
+        THEN [[$] command]
+            command ...
+        [ELSE [[$] command]
+            command ...]
+        ENDIF
 
-        <expression>    An expression, in the console's radix.  Functions
-                        such as DEFINED("name") may be used in it.
+    In the first form, the command after THEN runs when the expression is
+    true.  In the second, the block form, the commands from THEN to ELSE
+    (or to ENDIF, without ELSE) run when it is true, and those from ELSE
+    to ENDIF when it is false; THEN must be the command after the IF.
+    The commands of the branch that doesn't run are passed over without
+    being read, so their symbols aren't substituted.  Blocks may be
+    nested, at most 15 deep in one command level.  A GOTO out of a block
+    ends it.
 
-        <command>       Any console command, run as a line of its own when
-                        the expression is nonzero.
+    IF, THEN, ELSE, and ENDIF leave $STATUS as it was, so a block can test
+    the status of the command before it; a command after THEN or ELSE
+    sets $STATUS as it would on a line of its own.
 
     Example:
 
-        IF DEFINED("CONSOLE$ARG_FILE") THEN SET NOVERBOSE
+        $ IF P1 .EQS. "" THEN GOTO NO_FILE
+        $ COPY 'P1' SAVE.DAT
+        $ IF .NOT. $STATUS
+        $ THEN
+        $     PRINT "The copy failed"
+        $     EXIT
+        $ ENDIF
+
+$GOTO
+$LABE
+
+    The GOTO command goes on at a labeled line of the command procedure.
+    A label is a name followed by a colon at the start of a command line,
+    alone or before a command:
+
+        $ LOOP:
+        $ COUNT = COUNT + 1
+        $ IF COUNT .LT. 10 THEN GOTO LOOP
+
+    Syntax:
+
+        GOTO label
+
+    A label is known once the procedure has run past it; GOTO takes the
+    one run past last, and otherwise searches forward for the first one.
+    A label inside an IF block or a subroutine (see HELP CALL) that the
+    GOTO isn't in can't be gone to.  When the label isn't found, GOTO
+    reports it (DCL-W-USGOTO), and the procedure ends.  Labels belong to
+    their command level: a procedure, or a CALL subroutine.  At the
+    terminal a label is ignored (DCL-W-NOLBLS).  GOTO leaves $STATUS as
+    it was.
+
+$GOSU
+$RETU
+
+    The GOSUB command calls a subroutine at a label of the same command
+    procedure, and RETURN comes back to the command after the GOSUB.
+    The subroutine runs at the same command level: it sees the
+    procedure's labels and local symbols.
+
+    Syntax:
+
+        GOSUB label
+        RETURN [status]
+
+    GOSUBs may be nested 16 deep.  RETURN's status, an expression, becomes
+    $STATUS; without one, $STATUS is as the subroutine left it.  A label
+    that isn't found ends the procedure (DCL-W-USGOSUB), and a RETURN with
+    no GOSUB is DCL-W-BADRET.
+
+    Example:
+
+        $ GOSUB SHOW_COUNT
+        $ EXIT
+        $ SHOW_COUNT:
+        $ SHOW SYMBOL COUNT
+        $ RETURN
+
+$CALL
+$SUBR
+$ENDS
+
+    The CALL command runs a subroutine of the same command procedure at a
+    new command level, as @ runs a procedure in a file: with parameters
+    P1 to P8, local symbols and labels of its own, and an optional output
+    file.  The subroutine is the commands between its label's SUBROUTINE
+    and its ENDSUBROUTINE.
+
+    Syntax:
+
+        CALL[/OUTPUT=filespec] label [p1 [p2 ... p8]]
+
+        label: SUBROUTINE
+            command ...
+        ENDSUBROUTINE
+
+    The subroutine ends at its ENDSUBROUTINE or at an EXIT, and CALL's
+    status is the subroutine's, as @'s is the procedure's.  A procedure
+    run line by line passes over its subroutines: they run only when
+    called.  A subroutine inside another subroutine, or inside an IF
+    block, can be called only from within it.  A label that isn't found
+    on a SUBROUTINE line is DCL-W-USCALL.
+
+    Example:
+
+        $ CALL GREET "Hello there"
+        $ EXIT
+        $ GREET: SUBROUTINE
+        $     PRINT P1
+        $ ENDSUBROUTINE
 
 $BOOT
 $ROM

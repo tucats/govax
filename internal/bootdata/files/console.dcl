@@ -870,14 +870,43 @@ grammar console
         parameter   topic/id=1631               -
                     /type=$rest_of_line
 
-    ! IF expression [THEN] command: the handler drops THEN.
+    ! IF expression [THEN [$] command], DCL's IF (docs/PHASE-50, subtask
+    ! 12): the handler reads the expression and finds THEN. Without THEN,
+    ! the IF starts a block of THEN, ELSE, and ENDIF lines.
     verb if/id=1640
-        parameter   condition/id=1641           -
-                    /type=$expression           -
-                    /prompt="Expression"
-        parameter   command/id=1642             -
-                    /type=$rest_of_line         -
-                    /prompt="Command"
+        parameter   text/id=1641                -
+                    /type=$rest_of_line
+    verb then/id=1650
+        parameter   command/id=1651             -
+                    /type=$rest_of_line
+    verb else/id=1652
+        parameter   command/id=1653             -
+                    /type=$rest_of_line
+    verb endif/id=1654
+
+    ! GOTO and GOSUB go to a label in a command procedure, and RETURN
+    ! comes back from a GOSUB (subtasks 11 and 13).
+    verb goto/id=1655
+        parameter   label/id=1656               -
+                    /type=$rest_of_line
+    verb gosub/id=1657
+        parameter   label/id=1658               -
+                    /type=$rest_of_line
+    verb return/id=1659
+        parameter   status/id=1660              -
+                    /type=$rest_of_line
+
+    ! CALL[/OUTPUT=file] label [p1 ... p8] runs a subroutine of the same
+    ! procedure, from its "label: SUBROUTINE" to its ENDSUBROUTINE, at a
+    ! new command level. The handler reads the label and the parameters
+    ! as @ reads its file and parameters.
+    verb call/id=1661
+        qualifier   output/id=1662              -
+                    /type=$string
+        parameter   text/id=1663                -
+                    /type=$rest_of_line
+    verb subroutine/id=1664
+    verb endsubroutine/id=1665
 
     ! RUN activates a VMS image. /NOINIT and /INIT override whether each
     ! shareable image's LIB$INITIALIZE runs; /DEBUG (/STEP, /BREAK) runs

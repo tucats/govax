@@ -228,37 +228,6 @@ func notImplemented(name, dependency string) dcl.Handler {
 	}
 }
 
-// ifCommand implements IF expression [THEN] command: when the
-// expression is nonzero, the command is dispatched as a command line of
-// its own (so it can be any console command); otherwise it isn't run.
-// vax.init uses IF DEFINED("CONSOLE$ARG_FILE") THEN SET NOVERBOSE (see
-// expr.go's DEFINED()). THEN is optional, as console_if allows.
-func (d *Dispatcher) ifCommand(id int64, r *dcl.Result) error {
-	v, rest, err := d.Console.Evaluator().Eval(r.String("CONDITION"))
-	if err != nil {
-		return err
-	}
-
-	if extra := strings.TrimSpace(rest); extra != "" {
-		return vmserrors.New(vmserrors.CLI_EXTRAPARAMETER, extra)
-	}
-
-	command := r.String("COMMAND")
-	if then, tail := readCommandVerb(command); strings.EqualFold(then, "THEN") {
-		command = strings.TrimSpace(tail)
-	}
-
-	// IF leaves $STATUS alone (the User's Manual, 13.15): the THEN
-	// command's status is the line's, and a false IF doesn't change it.
-	if v == 0 {
-		d.Console.keepStatus()
-
-		return nil
-	}
-
-	return d.dispatchCommand(command)
-}
-
 // SymbolicDefault is whether the debugger's instruction display names
 // addresses from the debug symbols when nothing says otherwise: the
 // vax.disassemble.symbolic setting, true when it isn't set. It seeds the

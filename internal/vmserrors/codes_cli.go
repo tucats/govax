@@ -168,6 +168,16 @@ const (
 	cliLexNotImpl
 	cliNoThen
 	cliInsfPrm
+	cliNoLbls
+	cliUsGoto
+	cliMsngEnds
+	cliInvIfNest
+	cliInvGosub
+	cliGosubMax
+	cliUsGosub
+	cliBadRet
+	cliUsCall
+	cliInvCall
 )
 
 // CLI facility status codes -- CLI_ prefix, matching real VMS's CLI$_
@@ -407,6 +417,26 @@ const (
 	// CLI_INSFPRM nothing after THEN.
 	CLI_NOTHEN  = CLIFacility<<FacilityPosition | cliNoThen<<MessagePosition | StatusWarning
 	CLI_INSFPRM = CLIFacility<<FacilityPosition | cliInsfPrm<<MessagePosition | StatusWarning
+
+	// The messages of labels, GOTO, IF blocks, GOSUB, and CALL
+	// (docs/PHASE-50, subtasks 11 to 13), DCL's CLI$_ messages of the
+	// same names, all warnings: CLI_NOLBLS a label at the terminal;
+	// CLI_USGOTO, CLI_USGOSUB, and CLI_USCALL a target not found;
+	// CLI_MSNGENDS a SUBROUTINE with no ENDSUBROUTINE; CLI_INVIFNEST a
+	// THEN, ELSE, or ENDIF out of place; CLI_INVGOSUB a GOSUB at the
+	// terminal, CLI_GOSUBMAX one nested too deeply, and CLI_BADRET a
+	// RETURN without one; CLI_INVCALL a SUBROUTINE or ENDSUBROUTINE out
+	// of place.
+	CLI_NOLBLS    = CLIFacility<<FacilityPosition | cliNoLbls<<MessagePosition | StatusWarning
+	CLI_USGOTO    = CLIFacility<<FacilityPosition | cliUsGoto<<MessagePosition | StatusWarning
+	CLI_MSNGENDS  = CLIFacility<<FacilityPosition | cliMsngEnds<<MessagePosition | StatusWarning
+	CLI_INVIFNEST = CLIFacility<<FacilityPosition | cliInvIfNest<<MessagePosition | StatusWarning
+	CLI_INVGOSUB  = CLIFacility<<FacilityPosition | cliInvGosub<<MessagePosition | StatusWarning
+	CLI_GOSUBMAX  = CLIFacility<<FacilityPosition | cliGosubMax<<MessagePosition | StatusWarning
+	CLI_USGOSUB   = CLIFacility<<FacilityPosition | cliUsGosub<<MessagePosition | StatusWarning
+	CLI_BADRET    = CLIFacility<<FacilityPosition | cliBadRet<<MessagePosition | StatusWarning
+	CLI_USCALL    = CLIFacility<<FacilityPosition | cliUsCall<<MessagePosition | StatusWarning
+	CLI_INVCALL   = CLIFacility<<FacilityPosition | cliInvCall<<MessagePosition | StatusWarning
 )
 
 func init() {
@@ -537,5 +567,15 @@ func init() {
 	DefineMessage(CLI_INSFPRM, CLIFacility, "INSFPRM", "missing command parameters - supply all required parameters")
 	DefineMessage(CLI_IVCHAR, CLIFacility, "IVCHAR", "invalid numeric value - check for invalid digits")
 	DefineMessage(CLI_STKOVF, CLIFacility, "STKOVF", "command procedures too deeply nested - limit to 32 levels")
+	DefineMessage(CLI_NOLBLS, CLIFacility, "NOLBLS", "label ignored - use only within command procedures")
+	DefineMessage(CLI_USGOTO, CLIFacility, "USGOTO", "target of GOTO not found - check spelling and presence of label")
+	DefineMessage(CLI_MSNGENDS, CLIFacility, "MSNGENDS", "missing or misspelled ENDSUBROUTINE statement detected while scanning for label")
+	DefineMessage(CLI_INVIFNEST, CLIFacility, "INVIFNEST", "invalid IF-THEN-ELSE nesting structure or data inconsistency")
+	DefineMessage(CLI_INVGOSUB, CLIFacility, "INVGOSUB", "invalid use of the GOSUB command")
+	DefineMessage(CLI_GOSUBMAX, CLIFacility, "GOSUBMAX", "GOSUB procedures too deeply nested - limit to 16 levels")
+	DefineMessage(CLI_USGOSUB, CLIFacility, "USGOSUB", "target of GOSUB not found - check spelling and presence of label")
+	DefineMessage(CLI_BADRET, CLIFacility, "BADRET", "RETURN was issued without a subroutine")
+	DefineMessage(CLI_USCALL, CLIFacility, "USCALL", "CALL target !S either missing, misspelled, or inaccessible")
+	DefineMessage(CLI_INVCALL, CLIFacility, "INVCALL", "invalid CALL nesting structure or data inconsistency detected")
 	DefineMessage(CLI_BADLIMIT, CLIFacility, "BADLIMIT", "Invalid /LIMIT value !D (must be at least 1; DELETE NAME;* removes every version)")
 }

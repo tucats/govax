@@ -107,8 +107,8 @@ func TestCommands_time(t *testing.T) {
 func TestCommands_ifErrors(t *testing.T) {
 	d, _, _ := newCommandDispatcher(t)
 
-	if err := d.Dispatch("IF"); !errors.Is(err, vmserrors.New(vmserrors.CLI_MISSINGPARAMETER)) {
-		t.Errorf("bare IF: %v, want CLI_MISSINGPARAMETER", err)
+	if err := d.Dispatch("IF"); !errors.Is(err, vmserrors.New(vmserrors.CLI_INSFPRM)) {
+		t.Errorf("bare IF: %v, want CLI_INSFPRM", err)
 	}
 
 	if err := d.Dispatch("IF 0 THEN BOGUS"); err != nil {
@@ -146,14 +146,15 @@ func TestCommands_zero(t *testing.T) {
 	}
 }
 
-// TestCommands_goIsNotConsole checks that GO and its spellings, CALL, and
+// TestCommands_goIsNotConsole checks that GO and its spellings, and
 // (once the microkernel is in place) ASM are the debugger's commands: the
-// console's grammar has no GO or CALL (docs/PHASE-42.md's command split
-// test checks the debugger has them).
+// console's grammar has no GO (docs/PHASE-42.md's command split test
+// checks the debugger has them). The console's CALL is DCL's, which calls
+// a procedure's subroutine (dclcall.go), and has no /STEP.
 func TestCommands_goIsNotConsole(t *testing.T) {
 	g := loadEvaxGrammar(t)
 
-	for _, line := range []string{"G", "GO 200", "EXEC", "EXECUTE .", "CALL A"} {
+	for _, line := range []string{"G", "GO 200", "EXEC", "EXECUTE .", "CALL/STEP A"} {
 		if _, err := g.Parse(line); err == nil {
 			t.Errorf("%s parsed as a console command", line)
 		}

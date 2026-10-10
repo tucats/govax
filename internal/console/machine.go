@@ -275,6 +275,10 @@ type Console struct {
 	// last. Each has its own local symbol table in dclSymbols.
 	levels []*commandLevel
 
+	// terminalFlow is the terminal's IF blocks (dclif.go): command level
+	// 0's, whose lines cmd/govax's prompt reads.
+	terminalFlow flowState
+
 	// status is $STATUS, the last command's condition value, and
 	// commandStatus what the command being dispatched says about it
 	// (dclstatus.go). statusSet is set each time a command sets $STATUS,

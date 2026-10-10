@@ -735,9 +735,8 @@ func (e *Evaluator) parseQuotedString(s string) (uint32, string, error) {
 // parseDefined parses DEFINED("SYMBOL")'s parenthesized, double-quoted
 // argument and reports 1 if the named console symbol exists, 0 otherwise —
 // matching asm_function()'s DEFINED case (see internal/asm/functions.go's
-// callDefined, the assembler's own equivalent), needed here for the IF
-// console verb (ifCommand in commands.go), which vax.init uses: "IF
-// DEFINED(\"CONSOLE$ARG_FILE\") THEN SET NOVERBOSE".
+// callDefined, the assembler's own equivalent). (The console's IF was
+// its first user; IF now evaluates DCL's expressions, dclif.go.)
 func (e *Evaluator) parseDefined(s string) (uint32, string, error) {
 	s = strings.TrimLeft(s, " \t")
 	if !strings.HasPrefix(s, "(") {
