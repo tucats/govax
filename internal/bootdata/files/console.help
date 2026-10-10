@@ -88,6 +88,9 @@
 //              10/09/26    Removed "?" for HELP
 //              10/09/26    Added ON, CONTINUE, SET [NO]ON, EXIT status,
 //                          and SYMBOL STATUS: $STATUS and $SEVERITY
+//              10/09/26    LEXICAL: the lexical functions (F$EXTRACT,
+//                          F$ENVIRONMENT, F$GETJPI, F$PARSE, F$SEARCH,
+//                          F$TRNLNM, F$CVTIME, ...)
 
 This is the help documentation for the govax VAX emulator.  Topic sections are
 marked by a "$" delimiter.  This is followed by as many tokens of the help
@@ -1174,18 +1177,85 @@ $SYM ,STAT
 $LEXI
     A lexical function returns an integer or a string, in an expression
     (see HELP SYMBOL EXPRESSIONS) or between apostrophes.  Its arguments are
-    expressions, in parentheses and separated by commas; a function with no
-    arguments still takes "()".  Its name may be shortened while it names
-    only one of VMS's lexical functions (F$LEN is F$LENGTH; F$L is
-    ambiguous).  The others are not here yet.
+    expressions, in parentheses and separated by commas; an optional one may
+    be left out, keeping its comma, and a function with no arguments still
+    takes "()".  Its name may be shortened while it names only one of VMS's
+    lexical functions (F$LEN is F$LENGTH; F$L is ambiguous).  A keyword
+    argument (an item, a field) is spelled in full, in either case.
 
-        F$INTEGER(expression)    the value as an integer
-        F$LENGTH(string)         the string's length
-        F$STRING(expression)     the value as a string
+    Strings and data types:
 
-    Example:
+        F$CVSI(bit, size, string)        a bit field, signed
+        F$CVUI(bit, size, string)        a bit field, unsigned
+        F$EDIT(string, edits)            COLLAPSE, COMPRESS, LOWERCASE,
+                                         TRIM, UNCOMMENT, UPCASE (a list)
+        F$ELEMENT(n, delimiter, string)  the nth element, from 0
+        F$EXTRACT(offset, length, string)  part of a string, from 0
+        F$FAO(control, arg...)           $FAO's directives (!AS, !UL, ...)
+        F$INTEGER(expression)            the value as an integer
+        F$LENGTH(string)                 the string's length
+        F$LOCATE(substring, string)      its offset, or the length if absent
+        F$STRING(expression)             the value as a string
+        F$TYPE(symbol)                   INTEGER, STRING, or "" (undefined)
+
+    The process and its command environment:
+
+        F$DIRECTORY()                    the default directory
+        F$ENVIRONMENT(item)              DEPTH, PROCEDURE, DEFAULT, PROMPT,
+                                         ON_SEVERITY, ON_CONTROL_Y,
+                                         VERIFY_PROCEDURE, VERIFY_IMAGE,
+                                         INTERACTIVE, MAX_DEPTH, PROTECTION,
+                                         ...
+        F$GETJPI(pid, item)              $GETJPI's items ("" for this
+                                         process): PID, PRCNAM, USERNAME,
+                                         UIC, CURPRIV, STATE, MODE, ...
+        F$GETSYI(item [,node])           $GETSYI's items: NODENAME, VERSION,
+                                         BOOTTIME, SID, ...
+        F$MODE()                         INTERACTIVE
+        F$PID(context)                   each process's PID in turn, then
+                                         "" (set context to "" first)
+        F$PRIVILEGE(privileges)          TRUE if they're enabled (and those
+                                         named NOxxx aren't)
+        F$PROCESS()                      the process's name
+        F$SETPRV(privileges)             enables (NOxxx disables); returns
+                                         what they were
+        F$USER()                         the UIC, "[SYSTEM]"
+        F$VERIFY([procedure] [,image])   returns verification (1 or 0),
+                                         and sets it
+
+    Files, devices, logical names, messages, and time:
+
+        F$GETDVI(device, item)           $GETDVI's items: EXISTS, MNT,
+                                         VOLNAM, FREEBLOCKS, DEVNAM, ...
+        F$PARSE(file [,default] [,related] [,field] [,type])
+                                         the full file specification, or a
+                                         field: NODE, DEVICE, DIRECTORY,
+                                         NAME, TYPE, VERSION; type
+                                         SYNTAX_ONLY or NO_CONCEAL
+        F$SEARCH(file [,stream])         the next file that matches, then ""
+        F$LOGICAL(name)                  a logical name's translation
+        F$TRNLNM(name [,table] [,index] [,mode] [,case] [,item])
+                                         a translation, or an item:
+                                         VALUE, MAX_INDEX, TABLE_NAME,
+                                         ACCESS_MODE, CONCEALED, LENGTH, ...
+        F$MESSAGE(status)                a status's message text
+        F$TIME()                         the date and time now
+        F$CVTIME([time] [,format] [,field])
+                                         a time in COMPARISON (yyyy-mm-dd
+                                         hh:mm:ss.cc), ABSOLUTE, or DELTA
+                                         format, or a field: DATE, TIME,
+                                         YEAR, MONTH, DAY, WEEKDAY, ...
+
+    F$CONTEXT, F$CSID, F$DEVICE, F$FILE_ATTRIBUTES, F$GETQUI, F$IDENTIFIER,
+    and F$LICENSE are not here yet.
+
+    Examples:
 
         $ LEN = F$LENGTH(NAME) + 1
+        $ GROUP = F$EXTRACT(1, F$LOCATE(",", UIC) - 1, UIC)
+        $ IF F$SEARCH("TEMP.DAT") .NES. "" THEN DELETE TEMP.DAT;*
+        $ IF F$TRNLNM("NAMES") .EQS. "" THEN DEFINE NAMES EMPLOYEES.DAT
+        $ WRITE_TIME = F$CVTIME(,,"TIME")
 
 $FORE
     A foreign command runs an image with the rest of the command line as its

@@ -21,8 +21,8 @@ never had.
   `PHASE-43.md`'s Part A describes the whole program. Phase 50 (in
   progress) makes the console a DCL command interpreter: command
   procedures and command levels, symbol substitution, expressions,
-  `$STATUS`/ON, labels and GOTO, IF blocks, GOSUB, and CALL are done;
-  then the lexical functions and SET VERIFY. Read the relevant phase doc
+  `$STATUS`/ON, labels and GOTO, IF blocks, GOSUB, CALL, and the
+  lexical functions are done; then SET VERIFY. Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
 - `docs/DEVIATIONS.md` — running log of suspected ISA/behavior fidelity issues found in
   the C source during porting (see "Bug-fixing policy" below).
@@ -278,7 +278,12 @@ expect adjustment as phases land):
   (its value one quoted token, so its case and blanks are kept; none in
   `:=` or `@`), the grammar, and IVVERB for an unknown verb. `=`
   evaluates DCL's expressions (`dclexpr.go`); lexical functions are a
-  table (`dcllexical.go`). The messages are DCL's CLI$_ texts from
+  table (`dcllexical.go`'s `lexicalFunctions`, one entry per function;
+  each function's keywords are a table too, read by `lexicalKeyword`),
+  implemented by subject in `dcllexstring.go`, `dcllexprocess.go`,
+  `dcllexfile.go`, `dcllexname.go`, and `dcllextime.go`. F$GETJPI,
+  F$GETSYI, F$GETDVI, F$FAO, and F$SETPRV use the services' own code
+  (`corevms/lexical.go`), F$PARSE and F$SEARCH RMS's (`rms/lexical.go`). The messages are DCL's CLI$_ texts from
   `vmsdef.Messages`, shown as `%DCL-` (the CLI facility's display name),
   some with a segment line (`vmserrors.NewSegment`). `testdata/dcl50` is
   the VMS probe, and `TestProbe50Oracle` replays it against VMS 7.3's

@@ -3098,6 +3098,65 @@ widened."
     is CLI$_USCALL.
 - **Status**: unconfirmed; candidates for the probe's next round.
 
+### [Phase 50] Lexical functions: choices without the DCL Dictionary
+
+- **Where**: `internal/console/dcllexical.go` (the table) and
+  `dcllexstring.go`, `dcllexprocess.go`, `dcllexfile.go`,
+  `dcllexname.go`, `dcllextime.go`.
+- **What**: the lexical functions follow the OpenVMS User's Manual (7.3),
+  chapter 15, which describes them only by example (the DCL Dictionary,
+  their reference, isn't among the project's manuals). The items
+  F$GETJPI, F$GETSYI, and F$GETDVI return are those `$GETJPI`, `$GETSYI`,
+  and `$GETDVI` support. Chosen without VMS:
+  - Keyword arguments (items, fields, edits, formats) must be spelled in
+    full; one the function doesn't have is CLI$_IVKEYW with the keyword
+    as its segment. A privilege name that isn't one is IVKEYW too.
+  - An argument that should name a symbol (F$TYPE's, F$PID's) and isn't
+    a name is CLI$_IVSYMB.
+  - F$EXTRACT with a negative offset or length, F$ELEMENT with a negative
+    number, and F$CVSI/F$CVUI with a field outside the string or wider
+    than 32 bits are CLI$_INVRANGE; F$ELEMENT's delimiter of other than
+    one character is CLI$_IVVALU. F$LOCATE of an empty string is 0.
+  - F$TYPE says INTEGER for a string that is an integer, allowing blanks
+    around it, one sign, and a radix prefix.
+  - F$EDIT never edits quoted text, for any edit, and makes its edits in
+    a fixed order (UNCOMMENT, COLLAPSE, COMPRESS, TRIM, LOWERCASE,
+    UPCASE) however they're listed.
+  - F$FAO writes an integer given to a string directive in decimal, and
+    converts a string given to a numeric one; !%D and !%T take only 0
+    (the current time).
+  - F$ENVIRONMENT: CONTROL is "Y" and NOCONTROL "T"; ON_SEVERITY is
+    "NONE" at the terminal and after SET NOON, "ERROR" by default, and
+    "SEVERE" for ON SEVERE_ERROR; PROTECTION is VMS's default, written as
+    the manual's 15.6.2 example shows it.
+  - F$VERIFY with only its first argument sets image verification too.
+  - F$PID keeps a count in its context symbol and sets it back to "" at
+    the end of the list, so the next call starts again.
+  - F$GETJPI writes PIDs (PID, MASTER_PID, OWNER) as eight hexadecimal
+    digits, UICs as `$FAO`'s !%I does ("[SYSTEM]"), privileges as their
+    names in bit order (DETACH and NOACNT where two names share a bit),
+    MODE and JOBTYPE as keywords, and STATE as SHOW SYSTEM does.
+    USERNAME keeps its blank padding. F$USER is F$GETJPI's UIC.
+  - F$SEARCH searches once per stream for a new specification, and after
+    the "" that ends a search the stream starts again, so a name without
+    wildcards is found on every other call. A field the specification
+    leaves out isn't a wildcard (no default name). Host files are
+    matched without regard to case.
+  - F$PARSE returns "" for a specification RMS can't parse; with no
+    device at all (a default on the host), it returns the fields without
+    checking anything.
+  - F$CVTIME: an absolute time's missing date fields are today's and its
+    missing time fields 0 ("14:00", "9-OCT-2026" at midnight); in
+    comparison format DAYOFYEAR and the other OFYEAR fields are
+    zero-filled (3, 4, 6, and 8 digits); in absolute format the date has
+    no leading blank ("9-OCT-2026"); a delta's DATETIME is "1
+    02:03:04.50". A combination splits at the first + or - where both
+    halves read.
+  - F$MESSAGE takes one argument, as in VMS 7.3 (later releases added a
+    second), and returns the message file's text with its FAO directives
+    as they are.
+- **Status**: unconfirmed; candidates for the probe's next round.
+
 <!--
 Entry template:
 

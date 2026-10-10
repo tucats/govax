@@ -144,36 +144,48 @@ func serviceSysSetprv(env *Environment, argv []uint32) (uint32, error) {
 		}
 	}
 
-	status := uint32(ssNormal)
+	if prvadr == 0 {
+		return ssNormal, nil
+	}
 
-	switch {
-	case prvadr == 0:
-		// Nothing to change.
+	return env.setPrivileges(mask, enable, permanent, env.cpu.PSL().CurMod() <= vax.Executive), nil
+}
 
-	case enable:
-		allowed := mask
+// setPrivileges is $SETPRV's change: it enables (or, without enable,
+// disables) the privileges in mask, in the current privileges and, with
+// permanent, the process's permanent ones too. Unless inner (a caller in
+// kernel or executive mode) or the process is authorized for SETPRV, only
+// privileges it is authorized for are enabled, and the status is then
+// SS$_NOTALLPRIV if that leaves some out; otherwise SS$_NORMAL.
+func (env *Environment) setPrivileges(mask uint64, enable, permanent, inner bool) uint32 {
+	p := env.Process
 
-		if env.cpu.PSL().CurMod() > vax.Executive && p.AuthorizedPrivileges&privSETPRV == 0 {
-			allowed &= p.AuthorizedPrivileges
-
-			if allowed != mask {
-				status = ssNotAllPriv
-			}
-		}
-
-		p.CurrentPrivileges |= allowed
-		if permanent {
-			p.ProcessPrivileges |= allowed
-		}
-
-	default:
+	if !enable {
 		p.CurrentPrivileges &^= mask
 		if permanent {
 			p.ProcessPrivileges &^= mask
 		}
+
+		return ssNormal
 	}
 
-	return status, nil
+	status := uint32(ssNormal)
+	allowed := mask
+
+	if !inner && p.AuthorizedPrivileges&privSETPRV == 0 {
+		allowed &= p.AuthorizedPrivileges
+
+		if allowed != mask {
+			status = ssNotAllPriv
+		}
+	}
+
+	p.CurrentPrivileges |= allowed
+	if permanent {
+		p.ProcessPrivileges |= allowed
+	}
+
+	return status
 }
 
 func registerPrivilegeServices(t *ServiceTable) {

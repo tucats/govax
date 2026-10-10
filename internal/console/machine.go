@@ -45,6 +45,11 @@ type Console struct {
 	Verbose     bool
 	Verify      bool
 
+	// verifyImage is DCL's image verification: whether data lines are
+	// shown as they're read (F$VERIFY's second setting; Verify is
+	// procedure verification, its first).
+	verifyImage bool
+
 	// Trace matches vax.console.disasm (SET TRACE/NOTRACE, SHOW TRACE):
 	// whether EXEC/GO/CALL/RUN disassemble each instruction as they execute
 	// it. STEP's own tracing follows a different, per-mode rule instead of
@@ -288,6 +293,10 @@ type Console struct {
 	statusErr     error
 	commandStatus commandStatus
 	statusSet     bool
+
+	// searchStreams are F$SEARCH's streams (dcllexfile.go), by stream
+	// id: where each search has got to.
+	searchStreams map[int32]*searchStream
 
 	// imageStatus is the completion status of the last image RUN ran to
 	// its end, and imageEnded says one did (run.go).

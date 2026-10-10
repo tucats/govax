@@ -94,6 +94,11 @@ type faoFormatter struct {
 	// -1 when no field is open.
 	fieldStart int
 	fieldWidth int
+
+	// values, when not nil, are F$FAO's arguments (FormatFAOValues): a
+	// string directive takes its string from them rather than reading
+	// memory at an address.
+	values []FAOValue
 }
 
 // faoDirective performs one directive, once. width is the explicit output
@@ -368,6 +373,12 @@ func faoCountedString(f *faoFormatter, width int) {
 		return
 	}
 
+	if f.values != nil {
+		f.emit(f.valueString(), width)
+
+		return
+	}
+
 	n, err := f.env.mem.LoadByte(f.env.cpu, addr)
 	if err != nil {
 		f.fail(ssAccVio)
@@ -392,6 +403,13 @@ func (f *faoFormatter) lengthAddressString(width int, filter bool) {
 		return
 	}
 
+	if f.values != nil {
+		s := f.valueString()
+		f.emitFiltered(s[:min(len(s), int(n&0xFFFF))], width, filter)
+
+		return
+	}
+
 	f.stringAt(addr, int(n&0xFFFF), width, filter)
 }
 
@@ -400,6 +418,12 @@ func (f *faoFormatter) lengthAddressString(width int, filter bool) {
 func faoDescriptorString(f *faoFormatter, width int) {
 	desc, ok := f.nextParam()
 	if !ok {
+		return
+	}
+
+	if f.values != nil {
+		f.emit(f.valueString(), width)
+
 		return
 	}
 
@@ -422,6 +446,12 @@ func (f *faoFormatter) stringAt(addr uint32, n, width int, filter bool) {
 		return
 	}
 
+	f.emitFiltered(s, width, filter)
+}
+
+// emitFiltered emits s as a string directive, with each nonprintable
+// character shown as a period when filter (!AF) is set.
+func (f *faoFormatter) emitFiltered(s string, width int, filter bool) {
 	if filter {
 		b := []byte(s)
 		for i, c := range b {
@@ -434,6 +464,17 @@ func (f *faoFormatter) stringAt(addr uint32, n, width int, filter bool) {
 	}
 
 	f.emit(s, width)
+}
+
+// valueString is the string of the F$FAO argument just read: a string
+// as it is, an integer in decimal.
+func (f *faoFormatter) valueString() string {
+	v := f.values[f.next-1]
+	if v.IsString {
+		return v.Str
+	}
+
+	return fmt.Sprint(int32(v.Num))
 }
 
 // faoFieldStart is !n<: everything up to the matching !> goes in a field
@@ -483,6 +524,12 @@ func (f *faoFormatter) time(width int, timeOnly bool) {
 	}
 
 	t := f.env.Clock()
+
+	if addr != 0 && f.values != nil {
+		f.fail(ssBadParam)
+
+		return
+	}
 
 	if addr != 0 {
 		if t, ok = f.env.loadQuad(addr); !ok {
@@ -610,7 +657,9 @@ func (f *faoFormatter) numeric(radix faoRadix, size faoSize, width int) {
 
 	v := uint64(p)
 
-	if size.reference {
+	// F$FAO's quadword is the integer itself: there's no memory to
+	// point into.
+	if size.reference && f.values == nil {
 		if v, ok = f.env.loadQuad(p); !ok {
 			f.fail(ssAccVio)
 

@@ -146,6 +146,15 @@ func (c *Console) statusText(v uint32) string {
 		return strings.TrimPrefix(c.RTL.StatusText(v), "%")
 	}
 
+	return messageText(v)
+}
+
+// messageText is the system message file's text for condition value v,
+// as $GETMSG returns it (its FAO directives, if any, left as they are),
+// without the leading "%": "SYSTEM-S-NORMAL, normal successful
+// completion", or "NONAME-E-NOMSG, Message number 00000002" for a value
+// the file doesn't have.
+func messageText(v uint32) string {
 	letter := [8]string{"W", "S", "E", "I", "F", "?", "?", "?"}[v&vmserrors.Severity]
 
 	if m, ok := vmsdef.LookupMessage(v); ok {

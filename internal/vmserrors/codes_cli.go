@@ -178,6 +178,14 @@ const (
 	cliBadRet
 	cliUsCall
 	cliInvCall
+
+	// docs/PHASE-50 - DCL command procedures.md: lexical functions.
+	cliIvKeyw
+	cliIvSymb
+	cliInvRange
+	cliIvATime
+	cliIvDTime
+	cliIvValu
 )
 
 // CLI facility status codes -- CLI_ prefix, matching real VMS's CLI$_
@@ -437,6 +445,21 @@ const (
 	CLI_BADRET    = CLIFacility<<FacilityPosition | cliBadRet<<MessagePosition | StatusWarning
 	CLI_USCALL    = CLIFacility<<FacilityPosition | cliUsCall<<MessagePosition | StatusWarning
 	CLI_INVCALL   = CLIFacility<<FacilityPosition | cliInvCall<<MessagePosition | StatusWarning
+
+	// The lexical functions' messages (docs/PHASE-50, subtask 14), DCL's
+	// CLI$_ messages of the same names, all warnings: CLI_IVKEYW a
+	// keyword argument the function doesn't have (F$GETJPI's item, ...);
+	// CLI_IVSYMB an argument that should name a symbol and doesn't;
+	// CLI_INVRANGE an offset, length, or bit field out of range;
+	// CLI_IVATIME and CLI_IVDTIME an absolute or delta time that can't be
+	// read; CLI_IVVALU a value of the wrong form (F$ELEMENT's delimiter
+	// of more than one character).
+	CLI_IVKEYW   = CLIFacility<<FacilityPosition | cliIvKeyw<<MessagePosition | StatusWarning
+	CLI_IVSYMB   = CLIFacility<<FacilityPosition | cliIvSymb<<MessagePosition | StatusWarning
+	CLI_INVRANGE = CLIFacility<<FacilityPosition | cliInvRange<<MessagePosition | StatusWarning
+	CLI_IVATIME  = CLIFacility<<FacilityPosition | cliIvATime<<MessagePosition | StatusWarning
+	CLI_IVDTIME  = CLIFacility<<FacilityPosition | cliIvDTime<<MessagePosition | StatusWarning
+	CLI_IVVALU   = CLIFacility<<FacilityPosition | cliIvValu<<MessagePosition | StatusWarning
 )
 
 func init() {
@@ -577,5 +600,11 @@ func init() {
 	DefineMessage(CLI_BADRET, CLIFacility, "BADRET", "RETURN was issued without a subroutine")
 	DefineMessage(CLI_USCALL, CLIFacility, "USCALL", "CALL target !S either missing, misspelled, or inaccessible")
 	DefineMessage(CLI_INVCALL, CLIFacility, "INVCALL", "invalid CALL nesting structure or data inconsistency detected")
+	DefineMessage(CLI_IVKEYW, CLIFacility, "IVKEYW", "unrecognized keyword - check validity and spelling")
+	DefineMessage(CLI_IVSYMB, CLIFacility, "IVSYMB", "invalid symbol name - start name with an alphabetic character")
+	DefineMessage(CLI_INVRANGE, CLIFacility, "INVRANGE", "field specification is out of bounds - check sign and size")
+	DefineMessage(CLI_IVATIME, CLIFacility, "IVATIME", "invalid absolute time - use DD-MMM-YYYY:HH:MM:SS.CC format")
+	DefineMessage(CLI_IVDTIME, CLIFacility, "IVDTIME", "invalid delta time - use DDDD-HH:MM:SS.CC format")
+	DefineMessage(CLI_IVVALU, CLIFacility, "IVVALU", "invalid value syntax - see command documentation")
 	DefineMessage(CLI_BADLIMIT, CLIFacility, "BADLIMIT", "Invalid /LIMIT value !D (must be at least 1; DELETE NAME;* removes every version)")
 }

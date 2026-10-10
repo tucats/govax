@@ -10,7 +10,8 @@ onward) make the console more fully a DCL command interpreter. Subtasks
 against VMS 7.3 (2026-10-09), and so is subtask 10, `$STATUS`, EXIT's
 status, ON, and SET [NO]ON (2026-10-09). Subtasks 11 to 13, labels and
 GOTO, IF/THEN/ELSE/ENDIF, GOSUB/RETURN, and CALL/SUBROUTINE, are done
-(2026-10-09, not yet probed); the other lexical functions are next.
+(2026-10-09, not yet probed), and so is subtask 14, the lexical
+functions (2026-10-09, not yet probed); SET VERIFY is next.
 
 The console should act like a VMS DCL command processor. Until now it
 had INCLUDE (and `@` as its alias), which runs a file of console
@@ -240,7 +241,7 @@ functions (`lexicalFunctions`), each with how many arguments it takes. A
 name may be any prefix that names one of VMS's lexical functions
 (`lexicalNames`; a call of one govax doesn't have yet is
 CLI_LEXNOTIMPL). Subtask 9 gives it F$INTEGER, F$LENGTH, and F$STRING;
-subtask 14 adds the rest.
+subtask 14 adds the rest (below, "Lexical functions").
 
 ### Statuses and ON (subtask 10)
 
@@ -314,6 +315,49 @@ the subtasks were done together.
   are read as @'s are (`parseProcedureCommand`), and its status is @'s
   (`finishProcedure`). Running line by line, SUBROUTINE passes over the
   subroutine.
+
+### Lexical functions (subtask 14)
+
+The User's Manual's chapter 15 describes the lexical functions by
+example; the DCL Dictionary, their reference, isn't among the project's
+manuals, so what the examples don't show was chosen (DEVIATIONS.md's
+"[Phase 50] Lexical functions: choices without the DCL Dictionary").
+
+- **One table.** `lexicalFunctions` (`dcllexical.go`) has an entry per
+  function: its argument counts, the argument that names a symbol
+  rather than giving a value (F$TYPE's, F$PID's context: read as a
+  name, CLI_IVSYMB otherwise), whether it asks the console about the
+  system (a subprocess's CLI, with no console, gets CLI_LEXNOTIMPL for
+  those), and the Go function. Adding a function is adding an entry.
+- **Keywords are tables too.** Each function's keywords (F$ENVIRONMENT's
+  items, F$GETJPI's, F$GETSYI's, F$GETDVI's, F$TRNLNM's, F$PARSE's
+  fields and parse types, F$EDIT's edits, F$CVTIME's formats and fields)
+  are a map from the keyword to what it returns, read by one helper
+  (`lexicalKeyword`): spelled in full, in any case, and CLI_IVKEYW with
+  the keyword as its segment otherwise.
+- **The same answers as the services.** F$GETJPI, F$GETSYI, and F$GETDVI
+  read `$GETJPI`'s, `$GETSYI`'s, and `$GETDVI`'s items by name
+  (`corevms/lexical.go`: `JPIItem`, `SYIItem`, `DVIItem`); F$FAO is
+  `$FAO`'s formatter with DCL's values in place of addresses
+  (`FormatFAOValues`); F$SETPRV is `$SETPRV`'s rule
+  (`SetProcessPrivileges`); F$PARSE and F$SEARCH are RMS's name
+  processing (`rms/lexical.go`: `Session.Parse`, `Session.Search`), with
+  host files searched on the host by govax's host-or-volume rule.
+- **Files by subject**: strings and data types (`dcllexstring.go`:
+  F$CVSI, F$CVUI, F$EDIT, F$ELEMENT, F$EXTRACT, F$FAO, F$INTEGER,
+  F$LENGTH, F$LOCATE, F$STRING, F$TYPE), the process and its command
+  environment (`dcllexprocess.go`: F$DIRECTORY, F$ENVIRONMENT,
+  F$GETJPI, F$GETSYI, F$MODE, F$PID, F$PRIVILEGE, F$PROCESS, F$SETPRV,
+  F$USER, F$VERIFY), files and devices (`dcllexfile.go`: F$GETDVI,
+  F$PARSE, F$SEARCH), logical names and messages (`dcllexname.go`:
+  F$LOGICAL, F$MESSAGE, F$TRNLNM), and time (`dcllextime.go`: F$CVTIME,
+  F$TIME, with DCL's own time syntax: `dd-mmm-yyyy:hh:mm`, TODAY,
+  `dddd-hh:mm`, combinations).
+- **Not yet**: F$CONTEXT, F$CSID, F$DEVICE, F$FILE_ATTRIBUTES,
+  F$GETQUI, F$IDENTIFIER, and F$LICENSE stay CLI_LEXNOTIMPL. F$VERIFY
+  keeps procedure and image verification (`Console.Verify`,
+  `verifyImage`); echoing lines is subtask 15's, and so is F$VERIFY's
+  being evaluated in a `$!` comment, as DCL does.
 
 ## Subtasks
 
@@ -391,6 +435,10 @@ Later rounds of this phase, in a likely order:
   message and the ON action; a missing CALL target; labels, GOTO, block
   IF, GOSUB, and CALL at the terminal; abbreviations of ENDIF and
   ENDSUBROUTINE.
+- For a round 2, on the lexical functions: everything DEVIATIONS.md's
+  "[Phase 50] Lexical functions: choices without the DCL Dictionary"
+  lists, chiefly F$CVTIME's formats and defaults, F$SEARCH without
+  wildcards, keyword abbreviations, and the range errors.
 - For a round 2, on statuses (DEVIATIONS.md's "[Phase 50] Statuses and
   ON"): EXIT with no status after a success (is bit 28 set?); `$STATUS`
   at an ON ERROR THEN GOTO label; whether ON's command is substituted
@@ -514,3 +562,19 @@ details are in DEVIATIONS.md.)
   labels, the GOTO into a block, GOSUB.COM, the BAR subroutine; the
   label search; blocks nested, at the terminal, and with `$STATUS`;
   every message), and `TestDispatch_if` for DCL's truth rule.
+- 2026-10-09: Subtask 14, the lexical functions (see "Lexical
+  functions"). The author asked that they stay table-driven, so each
+  function is an entry in `lexicalFunctions` and each function's
+  keywords a table of their own. New files `dcllexstring.go`,
+  `dcllexprocess.go`, `dcllexfile.go`, `dcllexname.go`,
+  `dcllextime.go`; `corevms/lexical.go` (items by name, privilege names,
+  `FormatFAOValues`, `FormatTime`; `$SETPRV`'s change is now
+  `setPrivileges`, shared with F$SETPRV; the FAO formatter gains its DCL
+  mode) and `rms/lexical.go` (`Parse`, `Search`, `DefaultDirectory`).
+  `dclstatus.go`'s `messageText` is the message file's text, which
+  F$MESSAGE returns. New messages, DCL's CLI$_ texts: CLI_IVKEYW,
+  CLI_IVSYMB, CLI_INVRANGE, CLI_IVATIME, CLI_IVDTIME, CLI_IVVALU. HELP
+  LEXICAL lists the functions. Tests: `dcllexical_test.go` (chapter 15's
+  examples, every function and its errors, F$PARSE and F$SEARCH on the
+  host and on a volume, a fixed clock for the time functions, the
+  subprocess CLI's subset).

@@ -361,6 +361,7 @@ func (c *Console) SetVerify() error {
 	}
 
 	c.Verify = true
+	c.verifyImage = true
 
 	return nil
 }
@@ -373,6 +374,7 @@ func (c *Console) SetNoVerbose() error {
 
 	c.Verbose = false
 	c.Verify = false
+	c.verifyImage = false
 
 	return nil
 }
