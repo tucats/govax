@@ -290,6 +290,18 @@ type Console struct {
 	// DCL's own commands a data line is read as a command.
 	imageRan bool
 
+	// control is SET [NO]CONTROL's (dclcontroly.go). controlYLevelActive
+	// is set while DCL reads the Ctrl/Y level; controlYTaken says a Ctrl/Y
+	// stopped the image a procedure's line ran, for the procedure to act
+	// on. stopping is set by STOP until every command level has ended,
+	// and afterStop is the command typed at the Ctrl/Y level that runs
+	// once they have.
+	control             controlKeys
+	controlYLevelActive *controlYPrompt
+	controlYTaken       bool
+	stopping            bool
+	afterStop           func() error
+
 	// terminalFlow is the terminal's IF blocks (dclif.go): command level
 	// 0's, whose lines cmd/govax's prompt reads.
 	terminalFlow flowState

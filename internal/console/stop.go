@@ -15,8 +15,8 @@ import (
 // (hexadecimal; the PID wins if both are given). A process that isn't
 // there is %SYSTEM-W-NONEXPR. Process 1 is the console's own, so STOP
 // of it is refused (%SYSTEM-F-NOPRIV): govax has no logging out, and
-// EXIT ends the session. With neither a name nor an identification,
-// that is process 1 too.
+// EXIT ends the session. (STOP with neither a name nor an
+// identification ends command procedures instead: stopCommand.)
 //
 // The deleted process's files are closed, and its termination message
 // goes to its termination mailbox if it had one, with the final status

@@ -182,6 +182,10 @@ func (d *Dispatcher) dispatchParsed(line string, verbSymbol bool) error {
 	// and anything after a blank is a parameter, which the grammar's
 	// qualifiers don't model.
 	if text, ok := strings.CutPrefix(line, "@"); ok {
+		if err := d.Console.leaveControlY(false); err != nil {
+			return err
+		}
+
 		return d.atCommand(text)
 	}
 
@@ -209,6 +213,12 @@ func (d *Dispatcher) dispatchParsed(line string, verbSymbol bool) error {
 	r, err := d.Grammar.Parse(line)
 	if err != nil {
 		return verbError(err)
+	}
+
+	// At the Ctrl/Y level, a command that runs an image ends the
+	// interrupted procedure first (dclcontroly.go).
+	if err := d.Console.leaveControlY(dclOwnCommands[r.Active]); err != nil {
+		return err
 	}
 
 	d.line = line
@@ -324,11 +334,7 @@ func (d *Dispatcher) bindGrammar() {
 	g.Bind("READ", d.readCommand)
 	g.Bind("WRITE", d.writeCommand)
 	g.Bind("INQUIRE", d.inquireCommand)
-	g.Bind("CONTINUE", func(id int64, r *dcl.Result) error {
-		d.Console.keepStatus()
-
-		return nil
-	})
+	g.Bind("CONTINUE", func(id int64, r *dcl.Result) error { return d.Console.continueCommand() })
 	g.Bind("QUIT", func(id int64, r *dcl.Result) error { return d.Console.Quit() })
 	g.Bind("DEBUG", func(id int64, r *dcl.Result) error { return d.Console.StartDebugger() })
 

@@ -51,7 +51,6 @@ func TestStop(t *testing.T) {
 		{"STOP/IDENTIFICATION=399", "NONEXPR"},
 		{"STOP/IDENTIFICATION=XYZ", "IVIDENT"},
 		{"STOP SYSTEM", "NOPRIV"},
-		{"STOP", "NOPRIV"},
 		{"STOP/IDENTIFICATION=301", "NOPRIV"},
 	} {
 		if _, err := sayConsole(t, c, d, tt.line); err == nil || !strings.Contains(err.Error(), tt.want) {

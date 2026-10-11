@@ -16,8 +16,9 @@ PREFIX, and F$VERIFY's echo, is done and checked against VMS 7.3
 (2026-10-11), and so is subtask 16, SYS$INPUT from a procedure, with
 DECK and EOD (2026-10-11, checked against VMS 7.3), and so is subtask
 17, DCL's file I/O: OPEN, CLOSE, READ, WRITE, and INQUIRE (2026-10-11,
-checked against VMS 7.3 in round 4 of the probe). Subtask 18, STOP and
-Ctrl/Y, is next.
+checked against VMS 7.3 in round 4 of the probe), and so is subtask
+18, STOP and Ctrl/Y (2026-10-11, not yet probed). Subtask 19, `@` in
+the subprocess CLI, is next.
 
 The console should act like a VMS DCL command processor. Until now it
 had INCLUDE (and `@` as its alias), which runs a file of console
@@ -279,8 +280,7 @@ CONTROL_Y's command (13.12). The procedure loop (`procedureLine`) looks
 at each command's status after showing its message: by default an error
 or severe error ends the procedure; ON's severity or worse runs ON's
 command at the level, which is handled the same way. CONTROL_Y's command
-is kept for subtask 18, which delivers Ctrl/Y to procedures; until then
-Ctrl/Y still ends govax. What was chosen without VMS is in DEVIATIONS.md
+is subtask 18's (below, "STOP and Ctrl/Y"). What was chosen without VMS is in DEVIATIONS.md
 ("[Phase 50] Statuses and ON").
 
 ### Labels, IF blocks, GOSUB, and CALL (subtasks 11 to 13)
@@ -513,6 +513,43 @@ chosen without it, is in DEVIATIONS.md ("[Phase 50] DCL's file I/O").
   the end of the input. SHOW LOGICAL/FULL shows a name's own attributes
   (`[super,confine]`), and DEASSIGN leaves SS$_NORMAL.
 
+### STOP and Ctrl/Y (subtask 18)
+
+`internal/console/dclcontroly.go`. The rules are the User's Manual's
+(13.7.1, 13.8.1, 13.11 to 13.13) and the DCL Dictionary's (STOP,
+CONTINUE, SET CONTROL); what was chosen is in DEVIATIONS.md ("[Phase
+50] STOP and Ctrl/Y").
+
+- **STOP** with no process sets `Console.stopping`: each level's loop
+  ends after its line (`procedureLine`), its @ with SS$_ABORT (bit 28
+  set), and the levels outside it end the same way, taking no ON
+  action; `runLevel` turns it off when the last level has gone. At the
+  terminal, STOP runs down an image Ctrl/C or Ctrl/Y left stopped. With
+  a process name or /IDENTIFICATION it is Phase 45's `StopProcess`.
+- **Whose key it is.** An attention key typed while an image runs is
+  offered first to the process's Ctrl/C or Ctrl/Y AST, as before;
+  otherwise, in a DCL procedure, it is DCL's (`HandleAttention`, now in
+  this file, on the engine's Step loop). One typed while DCL runs a
+  command of its own stays pending in the engine, and the procedure
+  loop takes it after the command (`takeControlY`). Either way the key
+  is then forgotten (`Engine.ClearAttention`), so cmd/govax doesn't end
+  govax for it. Ctrl/C counts as Ctrl/Y in a procedure.
+- **The action** (`controlYAction`): ON CONTROL_Y's command, run as
+  ON's others are (the image stopped and run down first); or, below
+  level 1, the level's end with SS$_CONTROLY; or, at level 1, the
+  Ctrl/Y level (`controlYLevel`): lines read from the terminal at the
+  console's prompt, dispatched in the procedure's context. During an
+  image, the Ctrl/Y level is read inside `HandleAttention`, with the
+  image paused, so CONTINUE lets it go on; EXIT, STOP, and a command
+  that would run an image (`leaveControlY`, by `dclOwnCommands`) stop
+  it. Such a command runs at level 0 once the procedures are gone
+  (`Console.afterStop`, run by `finishProcedure`). The image's
+  `%VAX-I-ATTENTION` isn't shown.
+- **SET [NO]CONTROL[=(T,Y)]**: Ctrl/Y's switch is atomic, since
+  cmd/govax's key handling asks it (`ControlYEnabled`); with it off,
+  Ctrl/Y only echoes, and an attention key no AST takes is ignored.
+  F$ENVIRONMENT's CONTROL and NOCONTROL report the settings.
+
 ## Subtasks
 
 1. **Survey**: the User's Manual's rules for `@`, parameters, command
@@ -575,7 +612,8 @@ Later rounds of this phase, in a likely order:
     line or EOD too), and WRITE leaving `$STATUS` at RMS$_NORMAL; WAIT
     and SET SYMBOL are DCL's own commands (`dclOwnCommands`). Its I6 and
     I9 sections wait for READ and WRITE (`TestProbe50IOracle`).
-18. **STOP** returning to level 0, and Ctrl/Y within procedures.
+18. **STOP** returning to level 0, and Ctrl/Y within procedures (done,
+    see "STOP and Ctrl/Y").
 19. **The subprocess CLI** (`subcli.go`) gets `@`, on the same stack.
 20. **A VMS probe**: run a set of procedures on VMS 7.3 for the details
     the manual leaves open (see "Open questions"). Round 1,
@@ -852,3 +890,18 @@ details are in DEVIATIONS.md.)
   file's sharing (now RMS$_FLK), and the terminal's Ctrl/Z reached
   INQUIRE and READ as a character. Still open: the fixed control bytes,
   and SHOW LOGICAL's extra blank.
+- 2026-10-11: Subtask 18, STOP and Ctrl/Y (see "STOP and Ctrl/Y"). New
+  file `dclcontroly.go`; `HandleAttention` moved there from
+  `services.go`; `Engine.ClearAttention`; each `commandLevel` keeps its
+  `dispatch`. STOP with no process ends every procedure (and, at the
+  terminal, runs down a stopped image; it was NOPRIV). Ctrl/Y in a
+  procedure: ON CONTROL_Y's command, a nested procedure's end, or the
+  Ctrl/Y level with CONTINUE, EXIT, STOP, and image commands. SET
+  [NO]CONTROL[=(T,Y)] (new `console.dcl` syntax `set_control`, one of
+  DCL's own commands), and cmd/govax's Ctrl/Y does nothing but echo
+  while it's off. HELP: STOP, CONTINUE, ON, SET CONTROL, KEYS. Tests:
+  `dclcontroly_test.go` (STOP and ON ERROR THEN STOP nested, ON
+  CONTROL_Y's GOTO and continuing, a nested procedure's end, the Ctrl/Y
+  level's five ways out, SET CONTROL), `controlyimage_test.go` (an image
+  interrupted mid-run: STOP, ON CONTROL_Y, CONTINUE). The choices are in
+  DEVIATIONS.md ("[Phase 50] STOP and Ctrl/Y").

@@ -3361,6 +3361,48 @@ widened."
   character, not the end of the input.
 - **Status**: VMS's answers followed; the choices above unconfirmed.
 
+### [Phase 50] STOP and Ctrl/Y: rules from the manuals, and choices without a probe
+
+- **Where**: `internal/console/dclcontroly.go` (STOP, Ctrl/Y's actions,
+  the Ctrl/Y level, SET [NO]CONTROL), `procedure.go` (`procedureLine`,
+  `runLevel`, `finishProcedure`), `execute.go` (`ReportStop`),
+  `internal/cpu/engine.go` (`ClearAttention`), `cmd/govax/attention.go`.
+- **What**: from the User's Manual (13.7.1, 13.8.1's table, 13.11 to
+  13.13 and Figures 13-2 and 13-3) and the DCL Dictionary (STOP,
+  CONTINUE, EXIT, SET CONTROL):
+  - STOP in a procedure (or at the Ctrl/Y level) ends every command
+    level, without the outer levels' ON actions.
+  - Ctrl/Y with an ON CONTROL_Y: an image is forced to exit, a DCL
+    command completes, and the command runs at that level; it stays in
+    effect.
+  - Ctrl/Y without one, below level 1: the procedure exits to the level
+    above, which goes on (even if it has an ON CONTROL_Y, Figure 13-3).
+  - Ctrl/Y without one, at level 1: the Ctrl/Y level. Commands run in
+    the procedure's context; CONTINUE resumes (the image too); EXIT and
+    STOP end the procedure; a command that runs an image ends it and
+    then runs at level 0.
+  - SET NOCONTROL=Y: Ctrl/Y echoes *Interrupt* and does nothing; Ctrl/C
+    does nothing unless an AST takes it; the current level's ON
+    CONTROL_Y is cancelled.
+- **Chosen without VMS** (round 5 of testdata/dcl50 asks):
+  - A procedure STOP ended has SS$_ABORT with bit 28 (%X1000002C); one
+    Ctrl/Y ended (below level 1) has SS$_CONTROLY (%X00000611).
+  - EXIT at the Ctrl/Y level ends the procedure with its status, as an
+    EXIT in it would; Ctrl/Z there (or the end of the input) is EXIT.
+  - At the Ctrl/Y level, F$ENVIRONMENT("DEPTH") is the procedure's level
+    (1), symbols are the procedure's, and IF blocks are the terminal's.
+  - Which commands count as images there is `dclOwnCommands`'s rule (so
+    govax's own PRINT counts as one); @ counts as one too.
+  - Ctrl/C in a procedure, where no AST takes it, acts as Ctrl/Y (VMS
+    does this for an image with no Ctrl/C AST); at the terminal, both
+    keys keep govax's meanings (Ctrl/C interrupts, Ctrl/Y ends govax),
+    not VMS's (interrupt, with CONTINUE).
+  - Ctrl/Y typed at the Ctrl/Y level prompts again.
+  - Exit handlers: govax's image rundown runs none, so EXIT and STOP at
+    the Ctrl/Y level run down an interrupted image alike.
+  - STOP/IMAGE and STOP/[NO]EXIT are not done.
+- **Status**: the manual's rules followed; the choices above unconfirmed.
+
 <!--
 Entry template:
 

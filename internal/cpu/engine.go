@@ -287,6 +287,15 @@ func (e *Engine) AttentionRequested() bool { return e.attentionKey.Load() != 0 }
 // goroutine.
 func (e *Engine) PendingAttention() byte { return byte(e.attentionKey.Load()) }
 
+// ClearAttention forgets the attention key typed and not yet dealt
+// with, and the one that stopped the current run: the command
+// interpreter has acted on it (a command procedure's Ctrl/Y). Call it
+// on the goroutine that runs Step.
+func (e *Engine) ClearAttention() {
+	e.attentionKey.Store(0)
+	e.stoppedBy = 0
+}
+
 // StoppedBy returns the attention key that stopped the current run (the
 // last BeginRun's) with ErrAttention, or 0 if none did: a key a program's
 // CTRL/C or CTRL/Y AST took didn't stop it. Call it on the goroutine that

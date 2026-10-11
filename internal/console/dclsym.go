@@ -255,6 +255,10 @@ func (d *Dispatcher) runForeign(spec, rest string) error {
 		return vmserrors.New(vmserrors.CLI_NOFILE)
 	}
 
+	if err := d.Console.leaveControlY(false); err != nil {
+		return err
+	}
+
 	opts := RunOptions{RunInits: d.Console.DefaultRunInits(), CommandLine: dclText(rest, true)}
 
 	defer func() { d.Console.imageRan = true }()

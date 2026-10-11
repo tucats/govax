@@ -70,6 +70,10 @@ type commandLevel struct {
 	// (dcllabel.go, dclif.go, dclcall.go).
 	flow flowState
 
+	// dispatch runs a command at this level: its lines, its ON action,
+	// and what is typed at the Ctrl/Y level (dclcontroly.go).
+	dispatch func(string) error
+
 	// output is the level's /OUTPUT file, nil without one. restoreOut is
 	// the Console.Out it replaced, put back when the level ends.
 	output     *procedureOutput
@@ -464,6 +468,16 @@ func (c *Console) finishProcedure(exit procedureExit, err error) error {
 		return err
 	}
 
+	// A command typed at the Ctrl/Y level that ended every procedure
+	// runs now, at level 0, and its status is the command's
+	// (dclcontroly.go).
+	if after := c.afterStop; after != nil && len(c.levels) == 0 {
+		c.afterStop = nil
+		c.keepStatus()
+
+		return after()
+	}
+
 	c.setCommandStatus(exit.status, exit.cause)
 
 	if exit.status&1 != 0 {
@@ -517,7 +531,7 @@ func (c *Console) runProcedure(cmd procedureCommand, dispatch func(string) error
 // An error is returned only when the procedure couldn't start, or its
 // /OUTPUT file couldn't be written.
 func (c *Console) runLevel(source *procedureSource, cmd procedureCommand, dispatch func(string) error) (exit procedureExit, err error) {
-	level := &commandLevel{source: source, sysCommand: c.Out}
+	level := &commandLevel{source: source, sysCommand: c.Out, dispatch: dispatch}
 	level.flow.source = source
 
 	if outer := c.currentLevel(); outer != nil {
@@ -547,6 +561,11 @@ func (c *Console) runLevel(source *procedureSource, cmd procedureCommand, dispat
 		if closeErr := c.endLevel(level); err == nil {
 			err = closeErr
 		}
+
+		// STOP has ended every level (dclcontroly.go).
+		if len(c.levels) == 0 {
+			c.stopping = false
+		}
 	}()
 
 	locals := c.dclSymbols.local()
@@ -565,7 +584,7 @@ func (c *Console) runLevel(source *procedureSource, cmd procedureCommand, dispat
 	// skipping is set while DCL skips a run of data lines.
 	skipping := false
 
-	for !level.exiting && c.Running() {
+	for !level.exiting && !c.stopping && c.Running() {
 		line, data, ok := source.Read()
 
 		// The comments passed over are shown, with verification on,
@@ -679,8 +698,10 @@ func (c *Console) runLevel(source *procedureSource, cmd procedureCommand, dispat
 // makes the level do: its message is shown, and its status may run the
 // ON command's action (which is handled the same way, being a command
 // at this level) or end the procedure, with the status the procedure
-// ends with (stop true). QUIT ends it too, and govax with it. The action
-// goes to dispatch, as the level's lines do.
+// ends with (stop true). QUIT ends it too, and govax with it, and STOP
+// every level; a Ctrl/Y typed during the line takes its action in place
+// of the status's (dclcontroly.go). The action goes to dispatch, as the
+// level's lines do.
 func (c *Console) procedureLine(level *commandLevel, dispatch func(string) error, run func() error) (exit procedureExit, stop bool) {
 	for run != nil {
 		c.statusSet, c.statusHandled = false, false
@@ -697,6 +718,30 @@ func (c *Console) procedureLine(level *commandLevel, dispatch func(string) error
 
 		if err != nil && !vmserrors.MessageInhibited(err) {
 			c.procedureMessage(level, err)
+		}
+
+		// A Ctrl/Y typed during the line, STOP, and EXIT come before
+		// the line's status (dclcontroly.go).
+		interrupted := c.takeControlY()
+
+		switch {
+		case c.stopping:
+			return procedureExit{status: ssAbort | stsInhibitMsg}, true
+		case level.exiting:
+			return procedureExit{}, false
+		case interrupted:
+			exit, stop, next := c.controlYAction(level)
+			if stop {
+				return exit, true
+			}
+
+			if c.stopping {
+				return procedureExit{status: ssAbort | stsInhibitMsg}, true
+			}
+
+			run = next
+
+			continue
 		}
 
 		// The command's status: what it set $STATUS to, or, for a line

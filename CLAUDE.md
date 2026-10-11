@@ -23,8 +23,8 @@ never had.
   procedures and command levels, symbol substitution, expressions,
   `$STATUS`/ON, labels and GOTO, IF blocks, GOSUB, CALL, the lexical
   functions, SET VERIFY, SYS$INPUT from a procedure (DECK/EOD), and
-  DCL's file I/O (OPEN, CLOSE, READ, WRITE, INQUIRE) are done; then STOP
-  and Ctrl/Y.
+  DCL's file I/O (OPEN, CLOSE, READ, WRITE, INQUIRE), and STOP and
+  Ctrl/Y are done; then `@` in the subprocess CLI and a probe.
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
 - `docs/DEVIATIONS.md` — running log of suspected ISA/behavior fidelity issues found in
@@ -326,6 +326,16 @@ expect adjustment as phases land):
   /END_OF_FILE branch with `branchStatus`, which stops `procedureLine`'s
   ON action and leaves the procedure's own status (`endStatus`, EXIT's)
   CLI$_NORMAL.
+  **STOP and Ctrl/Y** (`dclcontroly.go`, subtask 18): STOP sets
+  `Console.stopping`, which ends every level; an attention key no AST
+  takes is DCL's in a procedure (`HandleAttention` during an image,
+  `takeControlY` after a DCL command), then forgotten
+  (`Engine.ClearAttention`) so cmd/govax doesn't end govax for it: ON
+  CONTROL_Y's command, a nested level's end, or the Ctrl/Y level
+  (`controlYLevel`: CONTINUE, EXIT, STOP; an image command,
+  `leaveControlY`, ends the procedure and runs at level 0,
+  `afterStop`). SET [NO]CONTROL (`ControlYEnabled`, asked by
+  cmd/govax's key handling).
   `internal/console/consoletest` is its test support.
 - `internal/io` — device abstraction (Phase 09).
 - `internal/vmsdef` — VMS's own definitions, shared by the assembler, RTL, RMS,

@@ -50,6 +50,7 @@ func (d *Dispatcher) bindSetCommands() {
 
 		return c.SetPrefix(r.String("TEXT"))
 	})
+	g.Bind("SET_CONTROL", func(id int64, r *dcl.Result) error { return c.setControlCommand(r) })
 	g.Bind("SET_ON", func(id int64, r *dcl.Result) error { return c.SetOn(!r.Negated("WHAT")) })
 
 	g.Bind("SET_QUANTUM", func(id int64, r *dcl.Result) error { return c.SetQuantum(int(r.Int("COUNT"))) })

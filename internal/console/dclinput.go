@@ -94,6 +94,7 @@ var dclOwnCommands = map[string]bool{
 	"QUIT":             true,
 	"READ":             true,
 	"RETURN":           true,
+	"SET_CONTROL":      true,
 	"SET_DEFAULT":      true,
 	"SET_ON":           true,
 	"SET_PREFIX":       true,

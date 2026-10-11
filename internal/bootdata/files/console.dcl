@@ -848,6 +848,8 @@ grammar console
 
     ! STOP deletes a process (and its subprocesses): by name, or by its
     ! hexadecimal PID with /IDENTIFICATION, as SHOW PROCESS names one.
+    ! With neither, it ends every command procedure (docs/PHASE-50,
+    ! subtask 18).
     verb stop/id=1605
         qualifier   identification/id=1606      -
                     /type=$string
@@ -1072,6 +1074,7 @@ grammar console
         keyword     default             /syntax=set_default/nonegatable
         keyword     prompt              /syntax=set_prompt/nonegatable/value
         keyword     on                  /syntax=set_on
+        keyword     control             /syntax=set_control/value
         keyword     quantum             /syntax=set_quantum/nonegatable
 
 
@@ -1103,6 +1106,11 @@ grammar console
     ! SET ON and SET NOON: whether a command procedure acts on its
     ! commands' statuses (docs/PHASE-50, subtask 10).
     syntax set_on/id=1812
+    ! SET [NO]CONTROL[=(T,Y)]: whether Ctrl/Y (and Ctrl/T) do anything
+    ! (docs/PHASE-50, subtask 18).
+    syntax set_control/id=1816
+        parameter   keywords/id=1817            -
+                    /type=$any/list
     ! SET [NO]VERIFY [=([NO]PROCEDURE, [NO]IMAGE)] and SET [NO]PREFIX
     ! "string": a command procedure's lines shown as they're read, and
     ! the prefix before them (docs/PHASE-50, subtask 15).

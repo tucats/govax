@@ -202,6 +202,7 @@ func run(paths []string, instructionLimit int, timeLimit time.Duration, out io.W
 		}
 
 		attn = newAttentionStdin(os.Stdin, out, vmsMode, func() *cpu.Engine { return c.Engine }, forceExit)
+		attn.controlY = c.ControlYEnabled
 		c.In = attn
 		rlStdin = attn.promptReader()
 

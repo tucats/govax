@@ -30,9 +30,7 @@ const (
 func (d *Dispatcher) bindConsoleCommands() {
 	g := d.Grammar
 
-	g.Bind("STOP", func(id int64, r *dcl.Result) error {
-		return d.Console.StopProcess(r.String("PROCESS_NAME"), r.String("IDENTIFICATION"))
-	})
+	g.Bind("STOP", d.stopCommand)
 
 	g.Bind(zeroTOKEN, func(id int64, r *dcl.Result) error { return d.Console.Zero() })
 	g.Bind(bootTOKEN, notImplemented(bootTOKEN, "device/RTL support"))

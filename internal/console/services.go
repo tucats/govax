@@ -210,20 +210,6 @@ func (c *Console) NextAST() (cpu.ASTCall, bool, error) {
 	return cpu.ASTCall{Routine: routine, ArgList: argList, ReturnPC: returnPC}, ok, err
 }
 
-// HandleAttention delegates to the running process, making Console a
-// cpu.AttentionHandler:
-// when the user types CTRL/C (or CTRL/Y) while a program runs, the
-// engine asks whether the program has an AST enabled for it before
-// stopping the machine (docs/PHASE-26.md subtask 27).
-func (c *Console) HandleAttention(key byte) bool {
-	env := c.running()
-	if env == nil {
-		return false
-	}
-
-	return env.AttentionAny(env, key)
-}
-
 // DispatchException delegates to the running process, making Console a
 // cpu.ExceptionDispatcher: an exception kernel.asm's SCB sends to
 // console$handler is offered to the running program's condition

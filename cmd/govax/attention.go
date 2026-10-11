@@ -94,6 +94,10 @@ type attentionStdin struct {
 	// ending after the first.
 	forceExit func()
 
+	// controlY reports whether CTRL/Y is enabled: SET NOCONTROL=Y turns
+	// it off (Console.ControlYEnabled). nil means always.
+	controlY func() bool
+
 	// atPrompt is true while readline has the terminal in raw mode to
 	// read a command line (rawMode). promptOn is closed when it becomes
 	// true, and promptOff when it becomes false; each is replaced by a
@@ -208,6 +212,11 @@ func (s *attentionStdin) pump(r io.Reader) {
 func (s *attentionStdin) key(b byte, prompt bool) bool {
 	switch {
 	case b == charCtrlY && prompt:
+		// After SET NOCONTROL=Y the key does nothing.
+		if !s.controlYEnabled() {
+			return true
+		}
+
 		// readline echoes *Interrupt* for the CTRL/C that ends its read
 		// (promptKeys.filter), so ctrlY doesn't.
 		s.ctrlY(false)
@@ -260,8 +269,19 @@ func (s *attentionStdin) ctrlC() {
 // ctrlY is CTRL/Y: govax is to end. The program running, if any, is asked
 // to stop, and a read waiting for a line ends; the command loop in run
 // then ends (abortRequested). A second CTRL/Y before the first was dealt
-// with exits at once.
+// with exits at once. In a command procedure the console takes the key
+// for DCL's Ctrl/Y (internal/console/dclcontroly.go), and govax goes on.
+// After SET NOCONTROL=Y the key is echoed and does nothing else, as the
+// DCL Dictionary describes (SET CONTROL).
 func (s *attentionStdin) ctrlY(echo bool) {
+	if !s.controlYEnabled() {
+		if echo {
+			s.echo(echoInterrupt)
+		}
+
+		return
+	}
+
 	e := s.getEngine()
 
 	if s.aborting.Swap(true) && (e == nil || e.PendingAttention() == cpu.AttentionCtrlY) {
@@ -279,6 +299,11 @@ func (s *attentionStdin) ctrlY(echo bool) {
 	}
 
 	s.interruptRead()
+}
+
+// controlYEnabled reports whether CTRL/Y is enabled (SET CONTROL=Y).
+func (s *attentionStdin) controlYEnabled() bool {
+	return s.controlY == nil || s.controlY()
 }
 
 // interruptRead ends the program's read that is waiting for a line, if

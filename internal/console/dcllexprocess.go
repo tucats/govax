@@ -28,9 +28,9 @@ var environmentItems = map[string]func(c *Console) dclValue{
 	"CAPTIVE": func(c *Console) dclValue { return dclTrueFalse(false) },
 
 	// CONTROL and NOCONTROL are the control characters SET CONTROL
-	// enables and disables: Ctrl/Y ends govax, Ctrl/T does nothing.
-	"CONTROL":   func(c *Console) dclValue { return dclString("Y") },
-	"NOCONTROL": func(c *Console) dclValue { return dclString("T") },
+	// enables and disables (dclcontroly.go).
+	"CONTROL":   func(c *Console) dclValue { return dclString(c.controlString(true)) },
+	"NOCONTROL": func(c *Console) dclValue { return dclString(c.controlString(false)) },
 
 	// DEFAULT is the default device and directory, as SHOW DEFAULT shows
 	// it (a search list's name, without the lines for its elements).

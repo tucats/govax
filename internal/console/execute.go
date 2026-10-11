@@ -190,6 +190,12 @@ func (c *Console) ReportStop(err error) error {
 		return nil
 
 	case errors.Is(err, cpu.ErrAttention):
+		// A Ctrl/Y a command procedure acts on stops the image quietly
+		// (dclcontroly.go).
+		if c.controlYTaken {
+			return nil
+		}
+
 		c.Printf("%%VAX-I-ATTENTION, execution interrupted at PC = %08X%s\n", c.CPU.GPR(vax.PC), c.ProcessNote())
 
 		return nil

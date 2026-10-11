@@ -98,6 +98,9 @@
 //              10/11/26    CREATE makes a file from SYS$INPUT; CREATE/DIRECTORY
 //                          and CREATE/NAME_TABLE are its other forms
 //              10/11/26    Added OPEN, CLOSE, READ, WRITE, INQUIRE
+//              10/11/26    STOP ends command procedures; Ctrl/Y in a
+//                          procedure (ON CONTROL_Y, CONTINUE, KEYS);
+//                          added SET [NO]CONTROL
 
 This is the help documentation for the govax VAX emulator.  Topic sections are
 marked by a "$" delimiter.  This is followed by as many tokens of the help
@@ -674,15 +677,20 @@ $ON
         condition   WARNING         a warning, an error, or a fatal error
                     ERROR           an error or a fatal error
                     SEVERE_ERROR    a fatal error
-                    CONTROL_Y       CTRL/Y (not delivered yet: CTRL/Y
-                                    still ends govax)
+                    CONTROL_Y       CTRL/Y pressed while the
+                                    procedure runs
 
         command     The command to run in place of the procedure's usual
                     action, such as EXIT, CONTINUE, or SHOW SYMBOL
                     $STATUS.
 
     The command runs once: after it, the usual action is back until the
-    next ON.  ON applies only to the command level it is in, so a
+    next ON.  ON CONTROL_Y is the exception: its command runs for each
+    CTRL/Y until another ON CONTROL_Y, SET NOCONTROL=Y, or the end of
+    the procedure.  If an image is running when CTRL/Y is pressed, it
+    is stopped first; a command of DCL's own completes first, and the
+    procedure goes on after it unless the command (GOTO, EXIT, STOP)
+    goes elsewhere.  ON applies only to the command level it is in, so a
     procedure the procedure runs has its own.  SET NOON turns the
     checking off, and SET ON (or an ON) back on.  At the terminal, ON
     is accepted and does nothing.
@@ -691,12 +699,15 @@ $ON
 
         $ ON WARNING THEN EXIT
         $ ON ERROR THEN CONTINUE
+        $ ON CONTROL_Y THEN GOTO CLEAN_UP
 
 $CONT
 
-    The CONTINUE command does nothing, and leaves $STATUS as it was: in
-    a command procedure, ON ERROR THEN CONTINUE makes the procedure go on
-    after an error.
+    The CONTINUE command resumes a command procedure that CTRL/Y (or
+    CTRL/C) interrupted, and the image it was running, if one was (see
+    HELP KEYS).  Anywhere else it does nothing, and leaves $STATUS as it
+    was: in a command procedure, ON ERROR THEN CONTINUE makes the
+    procedure go on after an error.
 
     Syntax:
 
@@ -1513,6 +1524,29 @@ $SET ,NOON
 
         SET [NO]ON
 
+$SET ,CONT
+$SET ,NOCONT
+
+    The SET NOCONTROL=Y command turns CTRL/Y off: pressing it echoes
+    *Interrupt* and does nothing more, and CTRL/C does nothing to a
+    program that hasn't enabled a CTRL/C AST.  It also cancels the
+    current command level's ON CONTROL_Y.  SET CONTROL=Y turns CTRL/Y
+    back on, with its default action.  The setting applies at every
+    command level.  T (CTRL/T) is accepted and remembered, as
+    F$ENVIRONMENT("CONTROL") reports it, but govax shows no statistics
+    for it.
+
+    Syntax:
+
+        SET [NO]CONTROL[=(T,Y)]
+
+    With neither T nor Y, Y is meant.
+
+    Example:
+
+        $ SET NOCONTROL=Y
+        $ SET CONTROL=Y         ! CTRL/Y's default action is back
+
 $SET ,RAD 
 $SET ,RADI
 
@@ -1881,6 +1915,18 @@ $KEY
                 AST instead, chosen among processes as for Ctrl/C.  govax
                 echoes *Interrupt*.
 
+                In a command procedure, Ctrl/Y (and Ctrl/C, when no
+                program takes it) is DCL's instead.  With an ON
+                CONTROL_Y in the procedure, its command runs.  Without
+                one, a procedure another procedure ran ends, and the one
+                that ran it goes on.  At command level 1, the procedure
+                is interrupted and the prompt appears: commands typed
+                then run in the procedure's context (its symbols), and
+                CONTINUE resumes it (and its image, if one was running),
+                EXIT or STOP ends it, and a command that runs an image
+                or a procedure ends it and then runs.  Ctrl/Z there is
+                EXIT.  SET NOCONTROL=Y turns Ctrl/Y off.
+
     Ctrl/Z      End of file.  On an empty line, the read waiting gets
                 the end of file, and govax echoes *Exit*.  Typed after
                 some text, it ends the line as RETURN does, and the next
@@ -2090,7 +2136,14 @@ $PRIN
 
 $STOP
 
-    The STOP command deletes a process, and the subprocesses it created
+    In a command procedure, or after CTRL/Y has interrupted one, STOP
+    with no process ends every command procedure, returning to the
+    terminal (command level 0); the procedures' status is %SYSTEM-F-ABORT,
+    not shown again.  ON ERROR THEN STOP in a nested procedure therefore
+    doesn't return to the procedure that ran it.  At the terminal, STOP
+    with no process ends an image CTRL/C or CTRL/Y left stopped.
+
+    With a process, the STOP command deletes it, and the subprocesses it created
     before it.  The process is named as SHOW PROCESS names one.  Its files
     are closed, its termination mailbox (if it had one) is sent the
     termination message, with the final status %SYSTEM-F-ABORT, and a
