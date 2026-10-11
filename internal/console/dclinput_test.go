@@ -47,6 +47,15 @@ func TestProcedureInput_data(t *testing.T) {
 			want:  "one\nafter\n",
 		},
 		{
+			// A logical name that translates to SYS$INPUT, directly or
+			// through another, is the input too (RMS's iterative
+			// translation).
+			name:  "logical names",
+			lines: []string{"$ DEFINE INFILE SYS$INPUT", "$ DEFINE OTHER INFILE:", "$ TYPE INFILE", "one",
+				"$ TYPE OTHER", "two", `$ PRINT "after"`},
+			want: "one\ntwo\nafter\n",
+		},
+		{
 			// An EOD line ends the input and is used up; the data
 			// after it, which TYPE doesn't read, is skipped.
 			name:  "EOD",
@@ -170,6 +179,30 @@ func TestParseDeck(t *testing.T) {
 	for record, want := range map[string]bool{"$ EOD": true, "$eod ! end": true, "$ EODX": false, "EOD": false} {
 		if got := (&procedureDeck{}).ends(record); got != want {
 			t.Errorf("ends(%q) = %v, want %v", record, got, want)
+		}
+	}
+}
+
+// TestIsInputStream: SYS$INPUT by name and through logical names, and
+// names that lead elsewhere.
+func TestIsInputStream(t *testing.T) {
+	d, c, _ := newCommandDispatcher(t)
+
+	for _, line := range []string{
+		"DEFINE INFILE SYS$INPUT", "DEFINE OTHER INFILE:", "DEFINE AFILE SYS$INPUT:[DIR]X.DAT",
+		"DEFINE LOOP1 LOOP2", "DEFINE LOOP2 LOOP1",
+	} {
+		if err := d.Dispatch(line); err != nil {
+			t.Fatalf("%s: %v", line, err)
+		}
+	}
+
+	for spec, want := range map[string]bool{
+		"SYS$INPUT": true, "sys$input:": true, "INFILE": true, "OTHER:": true,
+		"AFILE": false, "SYS$INPUT:X.DAT": false, "LOOP1": false, "NOSUCH": false, "X.DAT": false,
+	} {
+		if got := c.isInputStream(spec); got != want {
+			t.Errorf("isInputStream(%q) = %v, want %v", spec, got, want)
 		}
 	}
 }

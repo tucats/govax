@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/tucats/govax/internal/console/dcl"
+	"github.com/tucats/govax/internal/lnm"
 )
 
 // SYS$INPUT from a command procedure (docs/PHASE-50 - DCL command
@@ -20,8 +21,10 @@ import (
 // procedureInput (withProcedureInput), which reads the level's next data
 // record each time the image wants more. Every way an image reads its
 // input reads it: a terminal $QIO read, RMS's $GET of SYS$INPUT,
-// LIB$GET_INPUT, and the input shims. So does the console's TYPE
-// SYS$INPUT (typeInput).
+// LIB$GET_INPUT, and the input shims; a program that opens a logical
+// name for SYS$INPUT gets there through RMS's translation, to the
+// terminal. So does the console's TYPE SYS$INPUT (typeInput), by name or
+// through logical names (isInputStream).
 //
 // With image verification on (SET VERIFY=IMAGE), each record is shown as
 // the image reads it, before the image does anything with it: VMS 7.3
@@ -263,14 +266,57 @@ func (c *Console) withProcedureInput(source *procedureSource, fn func() error) e
 	return fn()
 }
 
-// isInputStream reports whether a file specification is SYS$INPUT (with
-// or without its colon): the process's input, which TYPE reads as lines
-// rather than as a file. A logical name that translates to it isn't
-// looked through (a limitation).
-func isInputStream(spec string) bool {
-	name := strings.TrimSuffix(strings.ToUpper(strings.TrimSpace(spec)), ":")
+// isInputStream reports whether a file specification names SYS$INPUT
+// (with or without its colon), itself or through logical names: the
+// process's input, which TYPE reads as lines rather than as a file. RMS
+// translates a file specification's logical name again and again, as far
+// as LNM$C_MAXDEPTH levels, until nothing translates or an equivalence
+// is terminal (lnm.TranslateFileSpec), and SYS$INPUT is one of those
+// names: so INFILE, defined as SYS$INPUT, is the input stream too (the
+// DCL Dictionary's DECK example 2 types a procedure's data through such
+// a name). Each step takes a name's first equivalence string; one with
+// anything after the name and its colon (a directory, a file name) is a
+// file, not the input stream.
+func (c *Console) isInputStream(spec string) bool {
+	name := strings.ToUpper(strings.TrimSpace(spec))
 
-	return name == "SYS$INPUT"
+	for range lnm.MaxDepth {
+		name = strings.TrimSuffix(name, ":")
+		if name == "SYS$INPUT" {
+			return true
+		}
+
+		if c.Logicals == nil || name == "" || !isDCLName(name) {
+			return false
+		}
+
+		e, err := c.Logicals.Translate(lnm.FileDevName, name, lnm.User, 0)
+		if err != nil || len(e.Equivalences) == 0 {
+			return false
+		}
+
+		eqv := e.Equivalences[0]
+		name = strings.ToUpper(strings.TrimSpace(eqv.Value))
+
+		if eqv.Attrs&lnm.AttrTerminal != 0 {
+			return strings.TrimSuffix(name, ":") == "SYS$INPUT"
+		}
+	}
+
+	return false
+}
+
+// isDCLName reports whether name could be a logical name: letters,
+// digits, "$", "_", and "-" only.
+func isDCLName(name string) bool {
+	for i := range len(name) {
+		ch := name[i]
+		if !(ch >= 'A' && ch <= 'Z') && !(ch >= '0' && ch <= '9') && ch != '$' && ch != '_' && ch != '-' {
+			return false
+		}
+	}
+
+	return true
 }
 
 // typeInput is TYPE SYS$INPUT: it types each line of the process's

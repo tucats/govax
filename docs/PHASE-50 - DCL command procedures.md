@@ -425,7 +425,10 @@ from a procedure").
   read stays in the procedure.
 - **TYPE SYS$INPUT** (`typeInput`) reads the same way, a line at a time
   (`Environment.ReadLine`): the data lines in a procedure, the terminal
-  up to Ctrl/Z at level 0.
+  up to Ctrl/Z at level 0. A logical name that translates to SYS$INPUT,
+  through as many names as RMS would follow, is the input too
+  (`isInputStream`); a program's RMS open of one already reached it,
+  through the translation to the terminal.
 - **Image verification** shows each record as it's read (`showData`),
   before the image uses it, so TYPE SYS$INPUT's lines come out twice,
   shown and typed, as on VMS.
@@ -700,3 +703,9 @@ details are in DEVIATIONS.md.)
   then one line of three, the rest SKPDAT); `TestProbe50VOracle` now
   compares every section of round 2, V6 and V7's TYPE SYS$INPUT
   included, and all match.
+- 2026-10-11: At the author's suggestion, TYPE follows logical names to
+  SYS$INPUT, as RMS translates a file name iteratively (`isInputStream`;
+  `TestIsInputStream`). Round 3 of the VMS probe, `testdata/dcl50`'s
+  `probe50i.com` (with `probe50j.com` and `probe50k.com`), asks about
+  each of subtask 16's unconfirmed choices, and READ SYS$INPUT for
+  subtask 17; the author is to run it.

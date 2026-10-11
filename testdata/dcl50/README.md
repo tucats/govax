@@ -15,6 +15,9 @@ two of the phase's open questions about `@`.
 | `probe50e.com` | `EXIT 'P1'` (section D) |
 | `probe50v.com` | Round 2, verification (subtask 15): sections V1 to V10 below |
 | `probe50w.com` | Round 2's nested procedure (section V9) |
+| `probe50i.com` | Round 3, SYS$INPUT, DECK, and EOD (subtask 16): sections I1 to I9 below |
+| `probe50j.com` | Round 3's nested procedure, whose first record is a data line (I1, I2) |
+| `probe50k.com` | Round 3's DECK/DOLLARS cases, one per P1 (I3, I5) |
 | `exchange.cmd`, `copyout.cmd` | Make the exchange volume and copy the log back |
 | `vax/` | The VMS run's log, `probe50.log` (2026-10-09) |
 
@@ -71,8 +74,9 @@ shows `$STATUS` and X:
 
    The log goes to `vax/probe50.log`.
 
-Round 2 is run the same way, with `@PROBE50V/OUTPUT=PROBE50V.LOG`;
-`copyout.cmd` now copies that log, to `vax/probe50v.log`.
+Round 2 is run the same way, with `@PROBE50V/OUTPUT=PROBE50V.LOG`, and
+round 3 with `@PROBE50I/OUTPUT=PROBE50I.LOG`; `copyout.cmd` now copies
+round 3's log, to `vax/probe50i.log`.
 
 ## Round 2: verification
 
@@ -180,3 +184,38 @@ V7's one TYPE SYS$INPUT, since subtask 16). The answers
 - **V10:** F$VERIFY(1,0) turns image verification off, F$VERIFY(,1)
   changes nothing, F$VERIFY("YES") is on; PROCE and IMA abbreviate
   SET VERIFY's keywords.
+
+## Round 3: SYS$INPUT, DECK, and EOD
+
+`probe50i.com` checks what subtask 16 chose without VMS (DEVIATIONS.md's
+"[Phase 50] SYS$INPUT from a procedure"). It runs with SET NOON and SET
+VERIFY, and each section starts by showing a marker symbol M. Most data
+lines are WRITE commands without a `$`: if DCL reads one as a command,
+its text is written; if DCL skips it, `%DCL-W-SKPDAT` is.
+
+- **I1:** a data line after each kind of command: assignments, SHOW
+  SYMBOL (and a failing one), SHOW DEFAULT, SHOW TRANSLATION, SHOW
+  LOGICAL, SET DEFAULT, SET PROMPT, SET [NO]ON, SET VERIFY, SET SYMBOL,
+  DEFINE, ASSIGN, DEASSIGN, IF (false, and true with SHOW SYMBOL and
+  with DIRECTORY), CONTINUE, WRITE, WAIT, DIRECTORY, a failing TYPE, an
+  unknown verb, GOTO and a label, GOSUB's RETURN, CALL, and @. Which are
+  DCL's own commands, whose data is read as a command, and which images?
+- **I2:** a data line as a procedure's first record (`probe50j.com`).
+- **I3:** DECK and EOD as commands with nothing reading: is a deck's
+  data skipped, `$` lines too? Their effect on `$STATUS`. DECK/DOLLARS
+  as a command (`probe50k.com COMMAND`).
+- **I4:** TYPE SYS$INPUT through a DECK and EOD (are they shown?), the
+  data after an EOD, and `$EOD` with no blank.
+- **I5:** DECK/DOLLARS's string unquoted and quoted (its case), a record
+  that only starts with it, `/DOLLARS` with no string, and the string
+  after blanks (`probe50k.com`, one case per P1, so a deck that never
+  ends stops at that file's end).
+- **I6:** READ SYS$INPUT (for subtask 17): the record after the READ, a
+  READ at a `$` line and at an EOD, and the record after the one READ
+  took.
+- **I7:** TYPE of a logical name that translates to SYS$INPUT, directly
+  and through another.
+- **I8:** which records end the data: `$` after blanks or a tab, `$`
+  alone, and an empty record.
+- **I9:** SET VERIFY=(PROCEDURE,NOIMAGE) with a deck, and a data line
+  read as a command with procedure verification off.

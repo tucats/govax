@@ -3232,15 +3232,18 @@ widened."
   - What an image has taken into its input buffer but not read when it
     ends is lost, not skipped with SKPDAT (an image reads a line at a
     time, so this is only part of a line).
-  - TYPE SYS$INPUT recognizes the name SYS$INPUT (with or without a
-    colon), not a logical name that translates to it. At the terminal it
-    reads to Ctrl/Z.
+  - TYPE recognizes SYS$INPUT (with or without a colon) by name or
+    through logical names that translate to it, as RMS translates a
+    name again and again (each step's first equivalence string; one with
+    a directory or file name after the device is a file). At the
+    terminal it reads to Ctrl/Z.
   - Lines the debugger or the interactive assembler read are given to
     them as before; an image they run (the debugger's GO) reads the
     procedure's data too, so the two interleave as on VMS.
   - A subprocess an image starts keeps the procedure's input only until
     the command ends; after that it reads end of file.
 - **Status**: the probe's answers followed; the choices above unconfirmed.
+  Round 3 of testdata/dcl50 (`probe50i.com`) asks VMS about each.
 
 <!--
 Entry template:
