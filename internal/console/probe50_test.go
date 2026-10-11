@@ -344,13 +344,20 @@ func TestProbe50Verify(t *testing.T) {
 // the "$ ! Vn:" comment that starts each (the lines before the first are
 // section "").
 func probe50VSections(text string) map[string][]string {
+	return probeSections(text, "V")
+}
+
+// probeSections splits a verified run's output into its sections, by
+// the "$ ! <letter>n:" comment that starts each (the lines before the
+// first are section "").
+func probeSections(text, letter string) map[string][]string {
 	sections := map[string][]string{}
 	name := ""
 
 	for _, line := range strings.Split(strings.TrimSuffix(text, "\n"), "\n") {
-		if rest, ok := strings.CutPrefix(line, "$ ! V"); ok {
-			if n, _, found := strings.Cut(rest, ":"); found {
-				name = "V" + n
+		if rest, ok := strings.CutPrefix(line, "$ ! "+letter); ok {
+			if n, _, found := strings.Cut(rest, ":"); found && n != "" && strings.Trim(n, "0123456789") == "" {
+				name = letter + n
 			}
 		}
 
@@ -418,5 +425,137 @@ func TestProbe50VOracle(t *testing.T) {
 				break
 			}
 		}
+	}
+}
+
+// probe50IExact are the sections of round 3 govax's run must match line
+// for line; the "WRITE" lines are emulated (emulateWrite). I1's output
+// has commands govax lacks or answers differently (SET SYMBOL, WAIT,
+// SHOW DEFAULT's device), so only what became of each data line is
+// compared (dataOutcomes). I6 (READ SYS$INPUT) and I9 (a WRITE not
+// echoed) wait for subtask 17's READ and WRITE.
+var probe50IExact = []string{"I2", "I3", "I4", "I5", "I7", "I8"}
+
+// probe50IAllowed are lines of VMS's log in an exact section that govax
+// writes differently for a reason outside the probe's question: WRITE
+// left RMS$_NORMAL in $STATUS, where govax, with no WRITE, has IVVERB's.
+var probe50IAllowed = map[string]string{
+	`  $STATUS == "%X00010001"`: `  $STATUS == "%X00038090"`,
+}
+
+// emulateWrite stands in for DCL's WRITE SYS$OUTPUT "text", which govax
+// doesn't have yet (subtask 17): an echoed WRITE line followed by
+// govax's IVVERB for it becomes the line and its text, as VMS wrote it.
+func emulateWrite(text string) string {
+	lines := strings.Split(text, "\n")
+
+	var out []string
+
+	for i := 0; i < len(lines); i++ {
+		out = append(out, lines[i])
+
+		rest, _ := strings.CutPrefix(lines[i], "$ ")
+		if arg, ok := strings.CutPrefix(rest, `WRITE SYS$OUTPUT "`); ok && i+2 < len(lines) &&
+			strings.HasPrefix(lines[i+1], "%DCL-W-IVVERB") && lines[i+2] == ` \WRITE\` {
+			out = append(out, strings.TrimSuffix(arg, `"`))
+			i += 2
+		}
+	}
+
+	return strings.Join(out, "\n")
+}
+
+// dataOutcomes lists, for each data line that is a WRITE in a section,
+// whether DCL read it as a command ("read": its text follows) or skipped
+// it (SKPDAT follows, or nothing).
+func dataOutcomes(lines []string) []string {
+	var out []string
+
+	for i, line := range lines {
+		arg, ok := strings.CutPrefix(line, `WRITE SYS$OUTPUT "`)
+		if !ok {
+			continue
+		}
+
+		outcome := "skipped"
+		if i+1 < len(lines) && lines[i+1] == strings.TrimSuffix(arg, `"`) {
+			outcome = "read"
+		}
+
+		out = append(out, line+": "+outcome)
+	}
+
+	return out
+}
+
+// TestProbe50IOracle runs round 3 of testdata/dcl50, probe50i.com (and
+// probe50j.com and probe50k.com, which it runs), and compares what it
+// writes with VMS 7.3's log: SYS$INPUT from a procedure, DECK, and EOD
+// (subtask 16). DIRECTORY's /NOHEADING and /NOTRAILING, which govax's
+// DIRECTORY doesn't have, are left out, so that it runs, as on VMS.
+func TestProbe50IOracle(t *testing.T) {
+	logText, err := os.ReadFile("../../testdata/dcl50/vax/probe50i.log")
+	if err != nil {
+		t.Skipf("no VMS log: %v", err)
+	}
+
+	dir := t.TempDir()
+
+	for _, name := range []string{"probe50i.com", "probe50j.com", "probe50k.com"} {
+		text, err := os.ReadFile(filepath.Join("../../testdata/dcl50", name))
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		writeFile(t, filepath.Join(dir, name), strings.ReplaceAll(string(text), "/NOHEADING/NOTRAILING", ""))
+	}
+
+	t.Chdir(dir)
+
+	d, _, buf := newCommandDispatcher(t)
+
+	if err := d.Dispatch("@PROBE50I"); err != nil && !vmserrors.MessageInhibited(err) {
+		t.Fatalf("@PROBE50I: %v", err)
+	}
+
+	want := probeSections(strings.TrimPrefix(strings.ReplaceAll(string(logText), "\r", ""), "\n"), "I")
+	got := probeSections(emulateWrite(buf.String()), "I")
+
+	if len(want) < 10 {
+		t.Fatalf("the log has %d sections, want 10", len(want))
+	}
+
+	for _, name := range probe50IExact {
+		gotLines, wantLines := got[name], want[name]
+
+		for i := 0; i < max(len(gotLines), len(wantLines)); i++ {
+			var g, w string
+			if i < len(gotLines) {
+				g = gotLines[i]
+			}
+
+			if i < len(wantLines) {
+				w = wantLines[i]
+			}
+
+			if allowed, ok := probe50IAllowed[w]; ok && g == allowed {
+				continue
+			}
+
+			if g != w {
+				t.Errorf("section %s, line %d:\n got %q\nwant %q", name, i+1, g, w)
+
+				break
+			}
+		}
+	}
+
+	gotOutcomes, wantOutcomes := dataOutcomes(got["I1"]), dataOutcomes(want["I1"])
+	if len(wantOutcomes) < 28 {
+		t.Fatalf("I1 has %d data lines in the log, want 28", len(wantOutcomes))
+	}
+
+	if strings.Join(gotOutcomes, "\n") != strings.Join(wantOutcomes, "\n") {
+		t.Errorf("I1's data lines:\ngot:\n%s\nwant:\n%s", strings.Join(gotOutcomes, "\n"), strings.Join(wantOutcomes, "\n"))
 	}
 }

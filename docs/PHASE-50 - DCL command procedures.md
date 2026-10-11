@@ -14,7 +14,8 @@ GOTO, IF/THEN/ELSE/ENDIF, GOSUB/RETURN, and CALL/SUBROUTINE, are done
 functions (2026-10-09, not yet probed). Subtask 15, SET VERIFY, SET
 PREFIX, and F$VERIFY's echo, is done and checked against VMS 7.3
 (2026-10-11), and so is subtask 16, SYS$INPUT from a procedure, with
-DECK and EOD (2026-10-11); DCL's file I/O (subtask 17) is next.
+DECK and EOD (2026-10-11, checked against VMS 7.3); DCL's file I/O
+(subtask 17) is next.
 
 The console should act like a VMS DCL command processor. Until now it
 had INCLUDE (and `@` as its alias), which runs a file of console
@@ -437,13 +438,15 @@ from a procedure").
   to its end of file indicator, `$ EOD` or a record starting with the
   string, which is used up. An EOD record outside a deck is the image's
   end of file too, and is used up, so a second read gets the data after
-  it. DECK read by DCL (a verb in `console.dcl`) starts a deck that
-  `procedureSource.Read` returns as data lines, skipped unless something
-  reads them; EOD read by DCL does nothing.
+  it. DECK and indicator records aren't shown by verification. DECK read
+  by DCL as a command (a verb in `console.dcl`) is CLI$_IVVALU and
+  starts no deck; EOD read by DCL does nothing. A deck an image started
+  and left unfinished goes on as data lines (`procedureSource.Read`).
 - **Data nothing reads.** After an image, DCL skips the data up to the
-  next command line, with one SKPDAT; after one of its own commands, it
-  reads the next record as a command, `$` or not (V6:
-  `%DCL-W-IVVERB \DATA\` after SET VERIFY). `dispatchParsed` records
+  next `$` record, a lone `$` or a comment included, with one SKPDAT;
+  after one of its own commands, it reads the next record as a command,
+  `$` or not (V6: `%DCL-W-IVVERB \DATA\` after SET VERIFY; round 3
+  checked 28 commands). `dispatchParsed` records
   whether the command it ran was an image (`Console.imageRan`), by the
   grammar's syntax name and a table of DCL's own commands
   (`dclOwnCommands`); a foreign command is an image, and an assignment,
@@ -504,7 +507,12 @@ Later rounds of this phase, in a likely order:
     TYPE SYS$INPUT reads, and read a data line after SET VERIFY (not an
     image) as a command, `%DCL-W-IVVERB \DATA\`, not SKPDAT
     (testdata/dcl50's round 2, section V6).
-17. **INQUIRE, READ, WRITE, OPEN, CLOSE** (DCL's file I/O).
+17. **INQUIRE, READ, WRITE, OPEN, CLOSE** (DCL's file I/O). Round 3 of
+    the probe (DEVIATIONS.md's "[Phase 50] SYS$INPUT from a procedure")
+    showed READ SYS$INPUT taking the next record whatever it is (a `$`
+    line or EOD too), and WRITE leaving `$STATUS` at RMS$_NORMAL; WAIT
+    and SET SYMBOL are DCL's own commands (`dclOwnCommands`). Its I6 and
+    I9 sections wait for READ and WRITE (`TestProbe50IOracle`).
 18. **STOP** returning to level 0, and Ctrl/Y within procedures.
 19. **The subprocess CLI** (`subcli.go`) gets `@`, on the same stack.
 20. **A VMS probe**: run a set of procedures on VMS 7.3 for the details
@@ -709,3 +717,14 @@ details are in DEVIATIONS.md.)
   `probe50i.com` (with `probe50j.com` and `probe50k.com`), asks about
   each of subtask 16's unconfirmed choices, and READ SYS$INPUT for
   subtask 17; the author is to run it.
+- 2026-10-11: Round 3 ran on the simh VAX (the author ran it;
+  `testdata/dcl50/vax/probe50i.log`), and `TestProbe50IOracle` replays
+  it: sections I2, I3, I4, I5, I7, and I8 line for line (WRITE, which
+  govax doesn't have yet, emulated from its IVVERB), and in I1 what
+  became of each of 28 data lines. VMS agreed with govax on which
+  commands are images, a procedure's first record, DECK/DOLLARS's
+  string, TYPE through logical names, `$` after blanks, and verification.
+  Changes: DECK read by DCL is CLI$_IVVALU (it had started a deck); a
+  lone `$` (and, unconfirmed, a comment) ends the skipping of an image's
+  data; a line starting with `%` is IVVERB, not NOCOMD. READ's and
+  WRITE's answers are kept for subtask 17.

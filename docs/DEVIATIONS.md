@@ -3198,7 +3198,7 @@ widened."
   `%DCL-W-IVVERB \DATA\`, not passed over with SKPDAT.
 - **Status**: VMS's answers followed; the choices above unconfirmed.
 
-### [Phase 50] SYS$INPUT from a procedure: the probe's V6, the manuals, and choice
+### [Phase 50] SYS$INPUT from a procedure: settled by two probes, and the rest chosen
 
 - **Where**: `internal/console/dclinput.go` (`procedureInput`,
   `readData`, DECK and EOD, `dclOwnCommands`, TYPE SYS$INPUT),
@@ -3206,44 +3206,62 @@ widened."
   `internal/corevms/input.go` (`RedirectInput`).
 - **What**: an image a procedure runs reads the procedure's data lines
   as SYS$INPUT, to the next `$` line (User's Manual, 13.1.3, 14.1); DECK
-  and EOD follow the DCL Dictionary. From VMS 7.3 (testdata/dcl50's V6):
-  image verification shows each line as it is read, before the image
-  uses it, without the prefix; a data line after one of DCL's own
-  commands is read as a command. Chosen without VMS:
-  - Which of govax's commands count as DCL's own (`dclOwnCommands`):
-    those the DCL Dictionary describes DCL performing itself (IF, GOTO,
-    ON, DEFINE, ASSIGN, SET VERIFY, SET DEFAULT, SHOW SYMBOL, SPAWN,
-    STOP, ...). Everything else, govax's machine commands (PRINT, ECHO,
-    TIME, SET RADIX, ...) included, counts as an image, so the data
-    after it is skipped with SKPDAT. Symbol assignments, DELETE/SYMBOL,
-    @, and CALL are DCL's.
-  - A data line at the very start of a procedure, or after an `@` or
-    CALL returns, is read as a command, as after DCL's other commands.
-  - DECK read by DCL as a command (with no image reading) starts a deck
-    whose lines are skipped with SKPDAT up to its indicator; EOD read by
-    DCL does nothing; neither changes `$STATUS`. At the terminal both do
-    nothing.
-  - /DOLLARS's string ends the deck at a record that starts with it; the
-    string is uppercased unless quoted, as a parameter is. DECK's other
-    forms (a parameter, another qualifier) aren't a DECK, so the record
-    ends the image's input like any `$` record.
-  - The DECK record, and the indicator that ends a deck, when an image
-    reads them, aren't shown by verification.
+  and EOD follow the DCL Dictionary. VMS 7.3 settled (testdata/dcl50's
+  V6 and round 3, `probe50i.com`, replayed by `TestProbe50IOracle`):
+  - Image verification shows each line as it is read, before the image
+    uses it, without the prefix; the DECK record and the record that
+    ends a deck aren't shown.
+  - After an image, the data up to the next `$` record is skipped with
+    one SKPDAT: SHOW LOGICAL, DIRECTORY (alone or after IF's THEN), and
+    a TYPE that failed were images. After DCL's own commands a data line
+    is read as a command: assignments, SHOW SYMBOL (failing too), SHOW
+    DEFAULT, SHOW TRANSLATION, SET DEFAULT, SET PROMPT, SET [NO]ON, SET
+    VERIFY, SET SYMBOL, DEFINE, ASSIGN, DEASSIGN, IF (false, or true
+    with one of these), CONTINUE, WRITE, WAIT, an unknown verb, GOTO and
+    a label, GOSUB's RETURN, CALL, and @; so is a procedure's first
+    record.
+  - A lone `$` ends the skipping: the data line after it was read as a
+    command.
+  - A `$` after blanks or a tab is data; an empty record is data.
+  - DECK read by DCL as a command is CLI$_IVVALU, a warning (%X00038088),
+    with or without /DOLLARS, and starts no deck. EOD read by DCL does
+    nothing and leaves `$STATUS` alone.
+  - /DOLLARS's string is uppercased unless quoted, and ends the deck at a
+    record that starts with it in column 1, case and all (`ENDING`
+    ended a deck of END; `end, lowercase` didn't). /DOLLARS with no
+    string ends at EOD. An EOD with no deck (`$EOD` too) ends the input
+    and is used up; the data after it is skipped (SKPDAT), being after
+    an image.
+  - TYPE of a logical name that translates to SYS$INPUT, directly or
+    through another, types the data.
+  - A line `%%` read as a command is IVVERB, `\%%\`, not NOCOMD: `%`
+    can start a verb (round 1 gave NOCOMD for an apostrophe).
+  - For subtask 17: READ SYS$INPUT reads the next record whatever it is,
+    a `$` line or an EOD included (so it reaches no end of file at one),
+    and the data line after the record it took is read as a command;
+    WRITE leaves `$STATUS` at RMS$_NORMAL, %X00010001.
+- **Chosen without VMS**:
+  - govax's own commands (PRINT, ECHO, TIME, SET RADIX, ...) count as
+    images. A command whose qualifiers the grammar refuses counts as one
+    of DCL's (no image would have run).
+  - A `$!` comment record ends the skipping as a lone `$` does.
+  - DECK at the terminal is IVVALU too.
+  - DECK's other forms (a parameter, another qualifier) read by an image
+    aren't a DECK, so the record ends its input like any `$` record. A
+    deck an image started and didn't read to its end goes on when DCL
+    reads again: its records are data.
   - What an image has taken into its input buffer but not read when it
     ends is lost, not skipped with SKPDAT (an image reads a line at a
     time, so this is only part of a line).
-  - TYPE recognizes SYS$INPUT (with or without a colon) by name or
-    through logical names that translate to it, as RMS translates a
-    name again and again (each step's first equivalence string; one with
-    a directory or file name after the device is a file). At the
-    terminal it reads to Ctrl/Z.
+  - TYPE follows each logical name's first equivalence string, and one
+    with a directory or file name after the device is a file. At the
+    terminal TYPE SYS$INPUT reads to Ctrl/Z.
   - Lines the debugger or the interactive assembler read are given to
     them as before; an image they run (the debugger's GO) reads the
     procedure's data too, so the two interleave as on VMS.
   - A subprocess an image starts keeps the procedure's input only until
     the command ends; after that it reads end of file.
-- **Status**: the probe's answers followed; the choices above unconfirmed.
-  Round 3 of testdata/dcl50 (`probe50i.com`) asks VMS about each.
+- **Status**: VMS's answers followed; the choices above unconfirmed.
 
 <!--
 Entry template:

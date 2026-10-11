@@ -71,7 +71,9 @@ never had.
   substitution, expressions, `@`, and statuses, as a command procedure
   run with SET VERIFY; `vax/probe50.log` is VMS 7.3's log, which
   `TestProbe50Oracle` replays. Round 2 (`probe50v.com`,
-  `vax/probe50v.log`, `TestProbe50VOracle`) is verification.
+  `vax/probe50v.log`, `TestProbe50VOracle`) is verification, and round
+  3 (`probe50i.com`, `vax/probe50i.log`, `TestProbe50IOracle`) SYS$INPUT,
+  DECK, and EOD.
 - `testdata/probe49/` — Phase 49's VMS probe in three rounds (`probe6`,
   `probe6b`, `probe6c`; README.md has each round's answers), run by
   `TestProbe6*`; `testdata/rms49/` and `testdata/sec49/` are the phase's

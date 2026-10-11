@@ -6,6 +6,7 @@ import (
 
 	"github.com/tucats/govax/internal/console/dcl"
 	"github.com/tucats/govax/internal/lnm"
+	"github.com/tucats/govax/internal/vmserrors"
 )
 
 // SYS$INPUT from a command procedure (docs/PHASE-50 - DCL command
@@ -37,12 +38,16 @@ import (
 // string; the indicator is then the default again, any "$" record. An
 // EOD record read by an image ends its input and is used up, so the next
 // read gets the data after it ("several input files ... without
-// intervening commands"). DECK can come where the image reads (the
-// manual's examples put it right after the command), or be a command of
-// its own, when the data after it is skipped unless something reads it.
+// intervening commands"). The DECK and indicator records aren't shown by
+// verification. DECK must come where the image reads (the manual's
+// examples put it right after the command): read by DCL as a command it
+// is refused (CLI$_IVVALU, VMS 7.3). A deck an image started and didn't
+// read to its end goes on when DCL reads again: its records are data
+// (procedureSource.Read; unconfirmed).
 //
 // The data lines nothing reads. After an image, DCL skips the records up
-// to the next command line, with one CLI$_SKPDAT warning. After one of
+// to the next "$" record (even a blank one), with one CLI$_SKPDAT
+// warning. After one of
 // DCL's own commands, which don't read SYS$INPUT, DCL reads the next
 // record as a command, "$" or not: VMS 7.3 read a data line after SET
 // VERIFY as a command, %DCL-W-IVVERB with \DATA\ (section V6). Which of
@@ -61,7 +66,10 @@ const maxInputRecord = 32767
 // (TYPE, DIRECTORY, RUN, ...); govax's own machine commands count as
 // images too (unconfirmed: VMS has none of them). Symbol assignments,
 // DELETE/SYMBOL, and @ are DCL's own as well, and never reach the
-// grammar.
+// grammar; nor does a command the grammar refuses, or an unknown verb,
+// which run no image. VMS 7.3 agreed for each of these govax has
+// (testdata/dcl50's round 3, section I1); WAIT and SET SYMBOL, which
+// govax doesn't have yet, were DCL's own there too.
 var dclOwnCommands = map[string]bool{
 	"ASSIGN":           true,
 	"CALL":             true,
@@ -341,24 +349,18 @@ func (c *Console) typeInput() error {
 	return nil
 }
 
-// deckCommand is DECK read by DCL as a command: the records after it are
-// data up to its end of file indicator (procedureSource.Read), skipped
-// unless something reads them. At the terminal it does nothing. Neither
-// DECK nor EOD changes $STATUS (unconfirmed against VMS).
+// deckCommand is DECK read by DCL as a command, with no image reading
+// the data after it: VMS 7.3 refused it with CLI$_IVVALU, a warning,
+// with or without /DOLLARS, and started no deck (testdata/dcl50's I3),
+// so the lines after it are what they would have been without it. At
+// the terminal it is refused the same way (unconfirmed).
 func (d *Dispatcher) deckCommand(id int64, r *dcl.Result) error {
-	c := d.Console
-
-	if level := c.currentLevel(); level != nil && !level.source.plain {
-		level.source.deck = &procedureDeck{marker: r.String("DOLLARS")}
-	}
-
-	c.keepStatus()
-
-	return nil
+	return vmserrors.New(vmserrors.CLI_IVVALU)
 }
 
 // eodCommand is EOD read by DCL as a command, with no image reading the
-// data it would end: it does nothing.
+// data it would end: it does nothing, and leaves $STATUS as it was (VMS
+// 7.3, testdata/dcl50's I3).
 func (d *Dispatcher) eodCommand(id int64, r *dcl.Result) error {
 	d.Console.keepStatus()
 

@@ -1,0 +1,330 @@
+
+$ !
+$ ! I1: a data line after each kind of command. Which does DCL read as a
+$ ! command, and which skip?
+$ M = "I1"
+$ SHOW SYMBOL M
+  M = "I1"
+$ X = 1
+WRITE SYS$OUTPUT "I1 after =: read"
+I1 after =: read
+$ X := ONE
+WRITE SYS$OUTPUT "I1 after :=: read"
+I1 after :=: read
+$ SHOW SYMBOL X
+  X = "ONE"
+WRITE SYS$OUTPUT "I1 after SHOW SYMBOL: read"
+I1 after SHOW SYMBOL: read
+$ SHOW SYMBOL NOSUCH
+%DCL-W-UNDSYM, undefined symbol - check validity and spelling
+WRITE SYS$OUTPUT "I1 after a failing SHOW SYMBOL: read"
+I1 after a failing SHOW SYMBOL: read
+$ SHOW DEFAULT
+  DUA1:[000000]
+WRITE SYS$OUTPUT "I1 after SHOW DEFAULT: read"
+I1 after SHOW DEFAULT: read
+$ SHOW TRANSLATION SYS$INPUT
+  SYS$INPUT = "_SIMVAX$DUA1:"  (LNM$PROCESS_TABLE)
+WRITE SYS$OUTPUT "I1 after SHOW TRANSLATION: read"
+I1 after SHOW TRANSLATION: read
+$ SHOW LOGICAL SYS$INPUT
+   "SYS$INPUT" = "_SIMVAX$DUA1:" (LNM$PROCESS_TABLE)
+%DCL-W-SKPDAT, image data (records not beginning with "$") ignored
+$ SET DEFAULT []
+WRITE SYS$OUTPUT "I1 after SET DEFAULT: read"
+I1 after SET DEFAULT: read
+$ SET PROMPT="$ "
+WRITE SYS$OUTPUT "I1 after SET PROMPT: read"
+I1 after SET PROMPT: read
+$ SET ON
+WRITE SYS$OUTPUT "I1 after SET ON: read"
+I1 after SET ON: read
+$ SET NOON
+WRITE SYS$OUTPUT "I1 after SET NOON: read"
+I1 after SET NOON: read
+$ SET VERIFY
+WRITE SYS$OUTPUT "I1 after SET VERIFY: read"
+I1 after SET VERIFY: read
+$ SET SYMBOL/SCOPE=NOLOCAL
+WRITE SYS$OUTPUT "I1 after SET SYMBOL: read"
+I1 after SET SYMBOL: read
+$ SET SYMBOL/SCOPE=LOCAL
+$ DEFINE PROBE_LNM X
+WRITE SYS$OUTPUT "I1 after DEFINE: read"
+I1 after DEFINE: read
+$ ASSIGN X PROBE_LNM2
+WRITE SYS$OUTPUT "I1 after ASSIGN: read"
+I1 after ASSIGN: read
+$ DEASSIGN PROBE_LNM
+WRITE SYS$OUTPUT "I1 after DEASSIGN: read"
+I1 after DEASSIGN: read
+$ DEASSIGN PROBE_LNM2
+$ IF 0 THEN SHOW SYMBOL X
+WRITE SYS$OUTPUT "I1 after a false IF: read"
+I1 after a false IF: read
+$ IF 1 THEN SHOW SYMBOL X
+  X = "ONE"
+WRITE SYS$OUTPUT "I1 after IF 1 THEN SHOW SYMBOL: read"
+I1 after IF 1 THEN SHOW SYMBOL: read
+$ IF 1 THEN DIRECTORY/NOHEADING/NOTRAILING PROBE50I.COM
+DUA1:[000000]PROBE50I.COM;1
+%DCL-W-SKPDAT, image data (records not beginning with "$") ignored
+$ CONTINUE
+WRITE SYS$OUTPUT "I1 after CONTINUE: read"
+I1 after CONTINUE: read
+$ WRITE SYS$OUTPUT "a WRITE"
+a WRITE
+WRITE SYS$OUTPUT "I1 after WRITE: read"
+I1 after WRITE: read
+$ WAIT 00:00:00.01
+WRITE SYS$OUTPUT "I1 after WAIT: read"
+I1 after WAIT: read
+$ DIRECTORY/NOHEADING/NOTRAILING PROBE50I.COM
+DUA1:[000000]PROBE50I.COM;1
+%DCL-W-SKPDAT, image data (records not beginning with "$") ignored
+$ TYPE NOSUCH.TXT
+%TYPE-W-SEARCHFAIL, error searching for DUA1:[000000]NOSUCH.TXT;
+-RMS-E-FNF, file not found
+%DCL-W-SKPDAT, image data (records not beginning with "$") ignored
+$ FOOBAR
+%DCL-W-IVVERB, unrecognized command verb - check validity and spelling
+ \FOOBAR\
+WRITE SYS$OUTPUT "I1 after an unknown verb: read"
+I1 after an unknown verb: read
+$ GOTO I1L
+$ I1L:
+WRITE SYS$OUTPUT "I1 after GOTO and a label: read"
+I1 after GOTO and a label: read
+$ GOSUB I1S
+$ I1S:
+$ RETURN
+WRITE SYS$OUTPUT "I1 after GOSUB's RETURN: read"
+I1 after GOSUB's RETURN: read
+$ CALL I1C
+$ I1C: SUBROUTINE
+$ ENDSUBROUTINE
+WRITE SYS$OUTPUT "I1 after CALL: read"
+I1 after CALL: read
+$ @PROBE50J
+WRITE SYS$OUTPUT "I2 a data line first in a procedure: read"
+I2 a data line first in a procedure: read
+$ ! PROBE50J.COM - PROBE50I's nested procedure (sections I1 and I2): its
+$ ! first record is a data line. Is it read as a command?
+$ EXIT
+WRITE SYS$OUTPUT "I1 after @: read"
+I1 after @: read
+$ SHOW SYMBOL M
+  M = "I1"
+WRITE SYS$OUTPUT "I1 two data lines, one"
+I1 two data lines, one
+WRITE SYS$OUTPUT "I1 two data lines, two"
+I1 two data lines, two
+$ !
+$ ! I2: a data line as the first record of a procedure (PROBE50J,
+$ ! run in I1) is above, after "@".
+$ !
+$ ! I3: DECK and EOD as commands, with no image reading; their effect on
+$ ! $STATUS (SHOW SYMBOL NOSUCH leaves a warning first); DECK/DOLLARS as
+$ ! a command (in PROBE50K, in case its deck never ends).
+$ M = "I3"
+$ SHOW SYMBOL M
+  M = "I3"
+$ SHOW SYMBOL NOSUCH
+%DCL-W-UNDSYM, undefined symbol - check validity and spelling
+$ DECK
+%DCL-W-IVVALU, invalid value syntax - see command documentation
+$ WRITE SYS$OUTPUT "I3 a $ line inside a deck: run"
+I3 a $ line inside a deck: run
+WRITE SYS$OUTPUT "I3 a data line inside a deck: read"
+I3 a data line inside a deck: read
+$ EOD
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00010001"
+WRITE SYS$OUTPUT "I3 after EOD: read"
+I3 after EOD: read
+$ SHOW SYMBOL NOSUCH
+%DCL-W-UNDSYM, undefined symbol - check validity and spelling
+$ EOD
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00038140"
+$ SHOW SYMBOL NOSUCH
+%DCL-W-UNDSYM, undefined symbol - check validity and spelling
+$ DECK
+%DCL-W-IVVALU, invalid value syntax - see command documentation
+$ EOD
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00038088"
+$ @PROBE50K COMMAND
+$ ! PROBE50K.COM - PROBE50I's DECK/DOLLARS cases (sections I3, I5), one per
+$ ! P1. A deck that never ends goes on to this file's end of file, which
+$ ! ends it (the DCL Dictionary), so later cases would be typed as data.
+$ GOTO COMMAND
+$ COMMAND:
+$ DECK/DOLLARS="%%"
+%DCL-W-IVVALU, invalid value syntax - see command documentation
+WRITE SYS$OUTPUT "I3 after DECK/DOLLARS: read"
+I3 after DECK/DOLLARS: read
+%%
+%DCL-W-IVVERB, unrecognized command verb - check validity and spelling
+ \%%\
+WRITE SYS$OUTPUT "I3 after %%: read"
+I3 after %%: read
+$ EXIT
+$ !
+$ ! I4: TYPE SYS$INPUT through a DECK and EOD: are they shown? What
+$ ! becomes of the data after the EOD? $EOD without a blank.
+$ M = "I4"
+$ SHOW SYMBOL M
+  M = "I4"
+$ TYPE SYS$INPUT
+I4 before the deck
+I4 before the deck
+$ WRITE SYS$OUTPUT "I4 a $ line inside a deck: typed"
+$ WRITE SYS$OUTPUT "I4 a $ line inside a deck: typed"
+%DCL-W-SKPDAT, image data (records not beginning with "$") ignored
+$ TYPE SYS$INPUT
+I4 before an EOD with no deck
+I4 before an EOD with no deck
+%DCL-W-SKPDAT, image data (records not beginning with "$") ignored
+$ !
+$ ! I5: DECK/DOLLARS's string: its case, quoted and not, and whether a
+$ ! record that starts with it ends the deck. Each case is a section of
+$ ! PROBE50K, so a deck that never ends stops at its end of file.
+$ M = "I5"
+$ SHOW SYMBOL M
+  M = "I5"
+$ @PROBE50K UNQUOTED
+$ ! PROBE50K.COM - PROBE50I's DECK/DOLLARS cases (sections I3, I5), one per
+$ ! P1. A deck that never ends goes on to this file's end of file, which
+$ ! ends it (the DCL Dictionary), so later cases would be typed as data.
+$ GOTO UNQUOTED
+$ UNQUOTED:
+$ TYPE SYS$INPUT
+$ EOD
+$ EOD
+end, lowercase
+end, lowercase
+%DCL-W-SKPDAT, image data (records not beginning with "$") ignored
+$ EXIT
+$ @PROBE50K QUOTED
+$ ! PROBE50K.COM - PROBE50I's DECK/DOLLARS cases (sections I3, I5), one per
+$ ! P1. A deck that never ends goes on to this file's end of file, which
+$ ! ends it (the DCL Dictionary), so later cases would be typed as data.
+$ GOTO QUOTED
+$ QUOTED:
+$ TYPE SYS$INPUT
+END, uppercase
+END, uppercase
+%DCL-W-SKPDAT, image data (records not beginning with "$") ignored
+$ EXIT
+$ @PROBE50K BARE
+$ ! PROBE50K.COM - PROBE50I's DECK/DOLLARS cases (sections I3, I5), one per
+$ ! P1. A deck that never ends goes on to this file's end of file, which
+$ ! ends it (the DCL Dictionary), so later cases would be typed as data.
+$ GOTO BARE
+$ BARE:
+$ TYPE SYS$INPUT
+$ WRITE SYS$OUTPUT "I5 a $ line in a bare /DOLLARS deck"
+$ WRITE SYS$OUTPUT "I5 a $ line in a bare /DOLLARS deck"
+%DCL-W-SKPDAT, image data (records not beginning with "$") ignored
+$ EXIT
+$ @PROBE50K INDENTED
+$ ! PROBE50K.COM - PROBE50I's DECK/DOLLARS cases (sections I3, I5), one per
+$ ! P1. A deck that never ends goes on to this file's end of file, which
+$ ! ends it (the DCL Dictionary), so later cases would be typed as data.
+$ GOTO INDENTED
+$ INDENTED:
+$ TYPE SYS$INPUT
+  %% indented
+  %% indented
+%DCL-W-SKPDAT, image data (records not beginning with "$") ignored
+$ EXIT
+$ !
+$ ! I6: READ SYS$INPUT (for subtask 17): the record after the READ; at a
+$ ! $ line; at an EOD; and the record after the one READ took.
+$ M = "I6"
+$ SHOW SYMBOL M
+  M = "I6"
+$ L = "-"
+$ READ/END_OF_FILE=I6E1 SYS$INPUT L
+$ I6E1:
+$ SHOW SYMBOL L
+  L = "I6 record one"
+$ L = "-"
+$ READ/END_OF_FILE=I6E2 SYS$INPUT L
+$ I6E2:
+$ SHOW SYMBOL L
+  L = "$ WRITE SYS$OUTPUT "I6 READ at a $ line didn't reach end of file""
+$ L = "-"
+$ READ/END_OF_FILE=I6E3 SYS$INPUT L
+$ WRITE SYS$OUTPUT "I6 READ at EOD didn't reach end of file"
+I6 READ at EOD didn't reach end of file
+$ I6E3:
+$ SHOW SYMBOL L
+  L = "$ EOD"
+$ L = "-"
+$ READ/END_OF_FILE=I6E4 SYS$INPUT L
+WRITE SYS$OUTPUT "I6 the record after READ's: read"
+I6 the record after READ's: read
+$ I6E4:
+$ SHOW SYMBOL L
+  L = "I6 record two"
+$ !
+$ ! I7: TYPE of a logical name that translates to SYS$INPUT, directly
+$ ! and through another.
+$ M = "I7"
+$ SHOW SYMBOL M
+  M = "I7"
+$ DEFINE INFILE SYS$INPUT
+$ TYPE INFILE
+I7 through INFILE
+I7 through INFILE
+$ DEFINE OTHER INFILE:
+$ TYPE OTHER
+I7 through OTHER
+I7 through OTHER
+$ DEASSIGN OTHER
+$ DEASSIGN INFILE
+$ !
+$ ! I8: which records end the data: a "$" after blanks or a tab, a "$"
+$ ! alone, an empty record.
+$ M = "I8"
+$ SHOW SYMBOL M
+  M = "I8"
+$ TYPE SYS$INPUT
+I8 one
+I8 one
+
+
+  $ WRITE SYS$OUTPUT "I8 a $ after blanks: run"
+  $ WRITE SYS$OUTPUT "I8 a $ after blanks: run"
+I8 after a $ after blanks
+I8 after a $ after blanks
+$ TYPE SYS$INPUT
+I8 two
+I8 two
+	$ WRITE SYS$OUTPUT "I8 a $ after a tab: run"
+	$ WRITE SYS$OUTPUT "I8 a $ after a tab: run"
+I8 after a $ after a tab
+I8 after a $ after a tab
+$ TYPE SYS$INPUT
+I8 three
+I8 three
+$
+I8 after a lone $
+%DCL-W-IVVERB, unrecognized command verb - check validity and spelling
+ \I8\
+$ !
+$ ! I9: image verification off: SET VERIFY=(PROCEDURE,NOIMAGE) with a
+$ ! deck, and data read as a command with procedure verification off.
+$ M = "I9"
+$ SHOW SYMBOL M
+  M = "I9"
+$ SET VERIFY=(PROCEDURE,NOIMAGE)
+$ TYPE SYS$INPUT
+I9 in a deck, not shown
+$ SET VERIFY=(NOPROCEDURE,IMAGE)
+I9 read as a command, procedure verification off
+$ SHOW SYMBOL M
+  M = "I9"
+$ EXIT

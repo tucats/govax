@@ -574,6 +574,14 @@ func (c *Console) runLevel(source *procedureSource, cmd procedureCommand, dispat
 			c.comments(source.passed)
 		}
 
+		// A "$" record, even a blank one or a comment, ends the run of
+		// an image's data DCL skips: VMS 7.3 read a data line after a
+		// lone "$" as a command (testdata/dcl50's I8; a comment is
+		// taken to act as the blank line does, unconfirmed).
+		if len(source.passed) > 0 {
+			c.imageRan, skipping = false, false
+		}
+
 		if !ok {
 			// A CALL level ends at its ENDSUBROUTINE, which is run, and
 			// so shown, as the command that ends it (unconfirmed

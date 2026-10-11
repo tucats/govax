@@ -219,3 +219,34 @@ its text is written; if DCL skips it, `%DCL-W-SKPDAT` is.
   alone, and an empty record.
 - **I9:** SET VERIFY=(PROCEDURE,NOIMAGE) with a deck, and a data line
   read as a command with procedure verification off.
+
+## What VMS answered in round 3 (2026-10-11)
+
+`TestProbe50IOracle` (`internal/console/probe50_test.go`) runs
+`probe50i.com` under govax and compares its output with
+`vax/probe50i.log`: sections I2, I3, I4, I5, I7, and I8 line for line
+(WRITE, which govax doesn't have until subtask 17, is emulated from its
+IVVERB), and in I1 whether each data line was read as a command or
+skipped. I6 (READ) and I9 (a WRITE not echoed) wait for subtask 17. The
+answers (DEVIATIONS.md's "[Phase 50] SYS$INPUT from a procedure"):
+
+- **I1, I2:** after SHOW LOGICAL, DIRECTORY, and a failing TYPE (images)
+  the data was skipped with SKPDAT; after DCL's own commands, an unknown
+  verb, GOTO, GOSUB's RETURN, CALL, and @, and as a procedure's first
+  record, it was read as a command.
+- **I3:** DECK read by DCL is `%DCL-W-IVVALU` (with /DOLLARS too) and
+  starts no deck; EOD leaves `$STATUS` alone; `%%` read as a command is
+  IVVERB `\%%\`. WRITE leaves `$STATUS` at `%X00010001`.
+- **I4:** DECK and EOD records aren't shown; data after an EOD is skipped;
+  `$EOD` works without a blank.
+- **I5:** /DOLLARS's string is uppercased unless quoted, and matched
+  case and all at the start of a record; bare /DOLLARS means EOD.
+- **I6:** READ SYS$INPUT takes the next record whatever it is, `$` lines
+  and EOD included.
+- **I7:** TYPE through a logical name for SYS$INPUT, and through two,
+  types the data.
+- **I8:** `$` after blanks or a tab is data, an empty record is data, and
+  a lone `$` ends the data and the skipping: the data after it was read
+  as a command.
+- **I9:** with image verification off the data isn't shown; a data line
+  read as a command with procedure verification off isn't shown either.

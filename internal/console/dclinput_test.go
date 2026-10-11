@@ -1,14 +1,19 @@
 package console
 
 import (
+	"errors"
 	"strings"
 	"testing"
 
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
-// skpdatLine is CLI$_SKPDAT's message, as a procedure shows it.
-const skpdatLine = `%DCL-W-SKPDAT, image data (records not beginning with "$") ignored` + "\n"
+// skpdatLine and ivvaluLine are CLI$_SKPDAT's and CLI$_IVVALU's
+// messages, as a procedure shows them.
+const (
+	skpdatLine = `%DCL-W-SKPDAT, image data (records not beginning with "$") ignored` + "\n"
+	ivvaluLine = "%DCL-W-IVVALU, invalid value syntax - see command documentation\n"
+)
 
 // runInputProcedure writes lines as a command procedure, runs it, and
 // returns what it wrote. A failure the procedure has already shown is
@@ -50,7 +55,7 @@ func TestProcedureInput_data(t *testing.T) {
 			// A logical name that translates to SYS$INPUT, directly or
 			// through another, is the input too (RMS's iterative
 			// translation).
-			name:  "logical names",
+			name: "logical names",
 			lines: []string{"$ DEFINE INFILE SYS$INPUT", "$ DEFINE OTHER INFILE:", "$ TYPE INFILE", "one",
 				"$ TYPE OTHER", "two", `$ PRINT "after"`},
 			want: "one\ntwo\nafter\n",
@@ -76,11 +81,26 @@ func TestProcedureInput_data(t *testing.T) {
 			want:  "$ EOD\nafter\n",
 		},
 		{
-			// DECK read by DCL itself: its data is skipped, "$" lines
-			// and all, up to EOD.
-			name:  "DECK as a command",
-			lines: []string{`$ PRINT "a"`, "$ DECK", `$ PRINT "hidden"`, "data", "$ EOD", `$ PRINT "b"`},
-			want:  "a\n" + skpdatLine + "b\n",
+			// DECK read by DCL itself is IVVALU, a warning, and starts
+			// no deck; EOD does nothing (VMS 7.3, testdata/dcl50's I3).
+			name: "DECK as a command",
+			lines: []string{`$ PRINT "a"`, "$ DECK", `$ PRINT "run"`, `PRINT "data"`, "$ EOD", `$ PRINT "b"`,
+				`$ DECK/DOLLARS="%%"`, `PRINT "read"`},
+			want: "a\n" + ivvaluLine + "run\n" + skpdatLine + "b\n" + ivvaluLine + "read\n",
+		},
+		{
+			// A lone "$" ends the run of an image's data DCL skips: the
+			// data after it is a command (VMS 7.3, I8); a comment too.
+			name: "a lone dollar",
+			lines: []string{"$ TYPE SYS$INPUT", "one", "$", `PRINT "read"`, `$ PRINT "a"`, "skipped",
+				"$ ! a comment", `PRINT "read too"`},
+			want: "one\nread\na\n" + skpdatLine + "read too\n",
+		},
+		{
+			// A "$" after blanks or a tab is data (VMS 7.3, I8).
+			name:  "indented dollars",
+			lines: []string{"$ TYPE SYS$INPUT", "  $ blanks", "\t$ tab", `$ PRINT "after"`},
+			want:  "  $ blanks\n\t$ tab\nafter\n",
 		},
 		{
 			// After one of DCL's own commands, a data line is a command
@@ -137,14 +157,29 @@ func TestProcedureInput_nested(t *testing.T) {
 }
 
 // TestProcedureInput_terminal: at the terminal, TYPE SYS$INPUT types
-// what is typed, to the end of the input; DECK and EOD do nothing.
+// what is typed, to the end of the input; DECK is IVVALU, and EOD does
+// nothing, leaving $STATUS as it was (VMS 7.3, testdata/dcl50's I3).
 func TestProcedureInput_terminal(t *testing.T) {
 	d, c, buf := newCommandDispatcher(t)
 	c.In = strings.NewReader("typed one\ntyped two\n")
 
-	for _, line := range []string{"DECK", "EOD", "TYPE SYS$INPUT"} {
+	if err := d.Dispatch("DECK"); !errors.Is(err, vmserrors.New(vmserrors.CLI_IVVALU)) {
+		t.Errorf("DECK: %v, want IVVALU", err)
+	}
+
+	deckStatus := c.status
+	// VMS 7.3 gave %X00038088, CLI$_IVVALU.
+	if deckStatus&^stsInhibitMsg != 0x00038088 {
+		t.Errorf("$STATUS after DECK: %08X, want %%X00038088", deckStatus)
+	}
+
+	for _, line := range []string{"EOD", "TYPE SYS$INPUT"} {
 		if err := d.Dispatch(line); err != nil {
 			t.Fatalf("%s: %v", line, err)
+		}
+
+		if line == "EOD" && c.status != deckStatus {
+			t.Errorf("$STATUS after EOD: %08X, want DECK's", c.status)
 		}
 	}
 

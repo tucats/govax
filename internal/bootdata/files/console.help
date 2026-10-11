@@ -886,8 +886,9 @@ $@
     it, or the interactive assembler.  An image reading the data comes to
     its end of file at the next "$" line; DECK lets data lines start with
     "$" (see HELP DECK).  Data that nothing reads is skipped after an
-    image, with a SKPDAT warning; after one of DCL's own commands (an
-    assignment, IF, SET VERIFY, ...), a data line is read as a command.
+    image, with a SKPDAT warning, up to the next "$" line (a lone "$"
+    will do); after one of DCL's own commands (an assignment, IF, SET
+    VERIFY, ...), a data line is read as a command.
 
     Each command level has its own local symbols (assigned with "=" or
     ":="), which go when the procedure ends; global symbols ("==" and
@@ -2226,10 +2227,11 @@ $EOD
         DECK [/DOLLARS[=string]]
         EOD
 
-    The string is 1 to 15 characters, uppercased unless quoted.  An image
-    reading an EOD line comes to its end of file there, and the next read
-    gets the data after it.  DECK typed at the terminal, and EOD that no
-    image reads, do nothing.
+    The string is 1 to 15 characters, uppercased unless quoted, and ends
+    the data at a line starting with it, case and all.  An image reading
+    an EOD line comes to its end of file there, and the next read gets
+    the data after it.  DECK read as a command, with no image reading,
+    is DCL-W-IVVALU, and EOD that no image reads does nothing.
 
     Example:
 
