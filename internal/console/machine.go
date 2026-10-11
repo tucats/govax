@@ -306,9 +306,18 @@ type Console struct {
 	statusSet     bool
 	statusHandled bool
 
+	// endStatus is the status a procedure that ends now (EXIT with no
+	// status, or its end of file) ends with, and endStatusErr its error:
+	// $STATUS's, except after an /ERROR or /END_OF_FILE branch, which
+	// leaves $STATUS the failure's and endStatus CLI$_NORMAL
+	// (dclstatus.go).
+	endStatus    uint32
+	endStatusErr error
+
 	// dclFiles are the files DCL's OPEN has open (dclfile.go), by
-	// logical name.
-	dclFiles map[string]*dclOpenFile
+	// logical name, and dclOrphans those whose logical names are gone.
+	dclFiles   map[string]*dclOpenFile
+	dclOrphans []*dclOpenFile
 
 	// searchStreams are F$SEARCH's streams (dcllexfile.go), by stream
 	// id: where each search has got to.

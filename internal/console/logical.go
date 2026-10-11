@@ -218,7 +218,8 @@ func (c *Console) DefineLogicalName(table, name string, values []string, mode ln
 // with all set every such name in that table. Process-permanent names
 // are executive mode, so a default (supervisor-mode) DEASSIGN leaves
 // them alone, as on VMS. A table name in a directory table deletes that
-// table (DEASSIGN/TABLE=LNM$PROCESS_DIRECTORY TAX).
+// table (DEASSIGN/TABLE=LNM$PROCESS_DIRECTORY TAX). It leaves $STATUS
+// SS$_NORMAL.
 func (c *Console) DeassignLogicalName(table, name string, mode lnm.Mode, all bool) error {
 	switch {
 	case all && name != "":
@@ -228,9 +229,15 @@ func (c *Console) DeassignLogicalName(table, name string, mode lnm.Mode, all boo
 		return vmserrors.New(vmserrors.CLI_MISSINGPARAMETER, "LOG_NAME")
 	}
 
-	_, err := c.Logicals.Delete(table, name, mode)
+	if _, err := c.Logicals.Delete(table, name, mode); err != nil {
+		return err
+	}
 
-	return err
+	// $DELLNM's status, SS$_NORMAL: VMS 7.3's DEASSIGN left %X00000001
+	// (testdata/dcl50's F11).
+	c.setCommandStatus(ssNormal, nil)
+
+	return nil
 }
 
 // CreateNameTable implements CREATE/NAME_TABLE: it creates table as a
@@ -452,7 +459,7 @@ func (d logicalDisplay) printLogicalEntry(prefix string, e *lnm.Entry, showMode,
 	fmt.Fprintf(&b, "%s%q", prefix, e.Name)
 
 	if showMode {
-		fmt.Fprintf(&b, " [%s]", e.Mode)
+		fmt.Fprintf(&b, " [%s]", strings.Join(append([]string{e.Mode.String()}, nameAttrTags(e.Attrs)...), ","))
 	}
 
 	if e.IsTable() {
@@ -475,6 +482,24 @@ func (d logicalDisplay) printLogicalEntry(prefix string, e *lnm.Entry, showMode,
 	for _, q := range e.Equivalences[min(1, len(e.Equivalences)):] {
 		d.out("        = %q%s\n", q.Value, attrTags(q.Attrs, showAttrs))
 	}
+}
+
+// nameAttrTags are SHOW LOGICAL/FULL's words for a name's own
+// attributes, after its mode: "[super,confine]" for a name DCL's OPEN
+// defined, as VMS 7.3 showed it (testdata/dcl50's F1). Where no_alias
+// goes among them is unconfirmed.
+func nameAttrTags(attrs uint32) []string {
+	var tags []string
+
+	if attrs&lnm.AttrNoAlias != 0 {
+		tags = append(tags, "no_alias")
+	}
+
+	if attrs&lnm.AttrConfine != 0 {
+		tags = append(tags, "confine")
+	}
+
+	return tags
 }
 
 // attrTags returns SHOW LOGICAL/FULL's " [concealed,terminal]" suffix for

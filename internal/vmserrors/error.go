@@ -153,7 +153,20 @@ func (e VMSError) Error() string {
 		return e.message()
 	}
 
-	return e.message() + "\n \\" + e.Segment + "\\"
+	return e.message() + "\n" + segmentLine(e.Segment)
+}
+
+// maxSegmentLine is the longest segment line VMS shows: 255 characters,
+// " \" and the closing "\" among them, which a longer one loses (VMS 7.3's
+// TKNOVF of a 300-character value, testdata/dcl50's F10).
+const maxSegmentLine = 255
+
+// segmentLine is the line under a message that shows the part of the
+// command it is about: " \SEGMENT\".
+func segmentLine(segment string) string {
+	line := " \\" + segment + "\\"
+
+	return line[:min(len(line), maxSegmentLine)]
 }
 
 // message is the error's message, without its segment line.

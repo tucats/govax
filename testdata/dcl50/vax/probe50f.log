@@ -1,0 +1,560 @@
+
+$ ! PROBE50F.COM - Phase 50's fourth probe: DCL's file I/O (OPEN, READ,
+$ ! WRITE, CLOSE), for subtask 17 (testdata/dcl50/README.md). Run it from
+$ ! SYSTEM with the exchange volume as the default directory:
+$ !
+$ !     @PROBE50F/OUTPUT=PROBE50F.LOG
+$ !
+$ ! It makes files named PROBE50F*.DAT (deleting any first). Nothing reads
+$ ! the terminal. Each section starts with a SHOW SYMBOL of a marker.
+$ SET NOON
+$ SET VERIFY
+$ DELETE PROBE50F*.DAT;*
+%DELETE-W-SEARCHFAIL, error searching for DUA1:[000000]PROBE50F*.DAT;*
+-RMS-E-FNF, file not found
+$ !
+$ ! F1: OPEN/WRITE: the file made, its logical name, $STATUS after each
+$ ! command, WRITE's items, the file's attributes and records, and the
+$ ! next OPEN/WRITE's version.
+$ M = "F1"
+$ SHOW SYMBOL M
+  M = "F1"
+$ OPEN/WRITE OUT PROBE50FA
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ SHOW LOGICAL/FULL OUT
+   "OUT" [super,confine] = "_SIMVAX$DUA1" [terminal] (LNM$PROCESS_TABLE)
+$ N = 7
+$ WRITE OUT "first: ", N, " and ", N * 3
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00010001"
+$ WRITE OUT "  Mixed  Case, ""quoted""  "
+$ WRITE OUT ""
+$ S = "a string"
+$ WRITE OUT S, "-", F$LENGTH(S)
+$ CLOSE OUT
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00010001"
+$ SHOW LOGICAL OUT
+%SHOW-S-NOTRAN, no translation for logical name OUT
+$ DIRECTORY/FULL PROBE50FA.DAT
+
+Directory DUA1:[000000]
+
+PROBE50FA.DAT;1               File ID:  (25,1,0)              
+Size:            1/3          Owner:    [SYSTEM]
+Created:   11-OCT-2026 15:36:06.18
+Revised:   11-OCT-2026 15:36:06.19 (1)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Sequential
+Shelved state:      Online 
+File attributes:    Allocation: 3, Extend: 0, Global buffer count: 0, No version limit
+Record format:      VFC, 2 byte header, maximum 0 bytes, longest 25 bytes
+Record attributes:  Print file carriage control
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+Total of 1 file, 1/3 blocks.
+$ DUMP/RECORD PROBE50FA.DAT
+
+Dump of file DUA1:[000000]PROBE50FA.DAT;1 on 11-OCT-2026 15:36:06.20
+File ID (25,1,0)   End of file block 1 / Allocated 3
+
+Record number 1 (00000001), 15 (000F) bytes, RFA(0001,0000,0000)
+
+                                       313220 646E6120 37203A74 73726966 first: 7 and 21................. 000000
+
+Record number 2 (00000002), 25 (0019) bytes, RFA(0001,0000,0014)
+
+                20 20226465 746F7571 22202C65 73614320 20646578 694D2020   Mixed  Case, "quoted"  ....... 000000
+
+Record number 3 (00000003), 0 (0000) bytes, RFA(0001,0000,0032)
+
+
+Record number 4 (00000004), 10 (000A) bytes, RFA(0001,0000,0036)
+
+                                                  382D 676E6972 74732061 a string-8...................... 000000
+$ TYPE PROBE50FA.DAT
+first: 7 and 21
+  Mixed  Case, "quoted"  
+
+a string-8
+$ OPEN/WRITE OUT PROBE50FA.DAT
+$ CLOSE OUT
+$ DIRECTORY PROBE50FA.DAT
+
+Directory DUA1:[000000]
+
+PROBE50FA.DAT;2     PROBE50FA.DAT;1     
+
+Total of 2 files.
+$ !
+$ ! F2: OPEN/READ and READ: each record, $STATUS, the symbol's table,
+$ ! and the end of the file with /END_OF_FILE, with no label, and with
+$ ! /ERROR. TYPE of the logical name while the file is open.
+$ M = "F2"
+$ SHOW SYMBOL M
+  M = "F2"
+$ OPEN IN PROBE50FA.DAT;1
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ SHOW LOGICAL/FULL IN
+   "IN" [super,confine] = "_SIMVAX$DUA1" [terminal] (LNM$PROCESS_TABLE)
+$ TYPE IN
+first: 7 and 21
+  Mixed  Case, "quoted"  
+
+a string-8
+$ R = "-"
+$ READ IN R
+%RMS-E-EOF, end of file detected
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X0001827A"
+$ SHOW SYMBOL R
+  R = "-"
+$ READ IN R
+%RMS-E-EOF, end of file detected
+$ SHOW SYMBOL R
+  R = "-"
+$ READ IN R
+%RMS-E-EOF, end of file detected
+$ SHOW SYMBOL R
+  R = "-"
+$ G2 == "global"
+$ READ IN G2
+%RMS-E-EOF, end of file detected
+$ SHOW SYMBOL/LOCAL G2
+%DCL-W-UNDSYM, undefined symbol - check validity and spelling
+$ SHOW SYMBOL/GLOBAL G2
+  G2 == "global"
+$ READ/END_OF_FILE=F2E IN R
+$ F2E:
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X0001827A"
+$ SHOW SYMBOL R
+  R = "-"
+$ READ IN R
+%RMS-E-EOF, end of file detected
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X0001827A"
+$ SHOW SYMBOL R
+  R = "-"
+$ READ/ERROR=F2X IN R
+$ F2X:
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X0001827A"
+$ CLOSE IN
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00010001"
+$ !
+$ ! F3: OPEN's failures and their $STATUS: a missing file, /ERROR,
+$ ! a missing directory, /APPEND and /READ/WRITE of a missing file, a
+$ ! wildcard, /WRITE with /APPEND, no file, a bad /SHARE keyword, and a
+$ ! logical name that already has a file (the same file, and another).
+$ M = "F3"
+$ SHOW SYMBOL M
+  M = "F3"
+$ OPEN IN NOSUCH
+%DCL-E-OPENIN, error opening DUA1:[000000]NOSUCH.DAT; as input
+-RMS-E-FNF, file not found
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X10018292"
+$ OPEN/ERROR=F3A IN NOSUCH
+$ F3A:
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X10018292"
+$ OPEN/WRITE OUT [NOSUCHDIR]PROBE50FX
+%DCL-E-OPENOUT, error opening DUA1:[NOSUCHDIR]PROBE50FX.DAT; as output
+-RMS-E-DNF, directory not found
+-SYSTEM-W-NOSUCHFILE, no such file
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X1001C04A"
+$ OPEN/APPEND OUT NOSUCH
+%DCL-E-OPENIN, error opening DUA1:[000000]NOSUCH.DAT; as input
+-RMS-E-FNF, file not found
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X10018292"
+$ OPEN/READ/WRITE IO NOSUCH
+%DCL-E-OPENIN, error opening DUA1:[000000]NOSUCH.DAT; as input
+-RMS-E-FNF, file not found
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X10018292"
+$ OPEN IN PROBE50F*.DAT
+%DCL-E-OPENIN, error opening DUA1:[000000]PROBE50F*.DAT; as input
+-RMS-F-WLD, invalid wildcard operation
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X10018744"
+$ OPEN/WRITE/APPEND OUT PROBE50FX
+%DCL-W-CONFLICT, illegal combination of command elements - check documentation
+ \WRITE\
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00038258"
+$ OPEN IN
+%DCL-W-INSFPRM, missing command parameters - supply all required parameters
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00038048"
+$ OPEN/SHARE=BOTH IN PROBE50FA.DAT
+%DCL-W-IVKEYW, unrecognized keyword - check validity and spelling
+ \BOTH\
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00038060"
+$ CLOSE IN
+%DCL-W-UNDFIL, file has not been opened by DCL - check logical name
+$ OPEN/WRITE OUT PROBE50FB
+$ WRITE OUT "from PROBE50FB"
+$ CLOSE OUT
+$ OPEN IN PROBE50FA.DAT;1
+$ OPEN IN PROBE50FA.DAT;1
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00030001"
+$ OPEN IN PROBE50FB.DAT
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00030001"
+$ READ IN R
+$ SHOW SYMBOL R
+  R = "first: 7 and 21"
+$ CLOSE IN
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00010001"
+$ CLOSE IN
+%DCL-W-UNDFIL, file has not been opened by DCL - check logical name
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00038188"
+$ !
+$ ! F4: READ, WRITE, and CLOSE failures: a name never opened (and
+$ ! CLOSE/NOLOG, CLOSE/ERROR), WRITE to a file opened to read (and
+$ ! /ERROR), READ of a file opened to write, a logical name DCL didn't
+$ ! define, a bad symbol name, WRITE with no data.
+$ M = "F4"
+$ SHOW SYMBOL M
+  M = "F4"
+$ READ NOSUCHLNM R
+%DCL-W-UNDFIL, file has not been opened by DCL - check logical name
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00038188"
+$ WRITE NOSUCHLNM "x"
+%DCL-W-UNDFIL, file has not been opened by DCL - check logical name
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00038188"
+$ CLOSE NOSUCHLNM
+%DCL-W-UNDFIL, file has not been opened by DCL - check logical name
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00038188"
+$ CLOSE/NOLOG NOSUCHLNM
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00030001"
+$ CLOSE/ERROR=F4A NOSUCHLNM
+$ F4A:
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00038188"
+$ OPEN IN PROBE50FA.DAT;1
+$ WRITE IN "x"
+%RMS-F-FAC, record operation not permitted by specified file access (FAC)
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00018514"
+$ WRITE/ERROR=F4B IN "x"
+$ F4B:
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00018514"
+$ CLOSE IN
+$ OPEN/WRITE OUT PROBE50FX
+$ READ OUT R
+%RMS-E-EOF, end of file detected
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X0001827A"
+$ CLOSE OUT
+$ DEFINE NOTDCL PROBE50FA.DAT
+$ READ NOTDCL R
+%DCL-W-UNDFIL, file has not been opened by DCL - check logical name
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00038188"
+$ DEASSIGN NOTDCL
+$ OPEN IN PROBE50FA.DAT;1
+$ READ IN 9BAD
+%DCL-W-IVSYMB, invalid symbol name - start name with an alphabetic character
+ \9BAD\
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00038080"
+$ WRITE SYS$OUTPUT
+%DCL-W-INSFPRM, missing command parameters - supply all required parameters
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00038048"
+$ CLOSE IN
+$ !
+$ ! F5: /APPEND, and /READ/WRITE: WRITE/UPDATE before any READ, of the
+$ ! same length and of another, WRITE before the end of the file and at
+$ ! it; WRITE/UPDATE of a file opened /WRITE; /READ/APPEND.
+$ M = "F5"
+$ SHOW SYMBOL M
+  M = "F5"
+$ OPEN/WRITE OUT PROBE50FC
+$ WRITE OUT "alpha"
+$ WRITE OUT "beta"
+$ WRITE/UPDATE OUT "BETA"
+%RMS-F-CUR, no current record (operation not preceded by $GET/$FIND)
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X000184B4"
+$ CLOSE OUT
+$ OPEN/APPEND OUT PROBE50FC
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ WRITE OUT "gamma"
+$ CLOSE OUT
+$ TYPE PROBE50FC.DAT
+alpha
+beta
+gamma
+$ OPEN/READ/WRITE IO PROBE50FC
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ WRITE/UPDATE IO "XXXXX"
+%RMS-F-CUR, no current record (operation not preceded by $GET/$FIND)
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X000184B4"
+$ READ IO R
+$ SHOW SYMBOL R
+  R = "alpha"
+$ WRITE/UPDATE IO "ALPHA"
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00010001"
+$ WRITE IO "too soon"
+%RMS-F-NEF, not positioned to EOF on $PUT (sequential organization only)
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X000185E4"
+$ READ IO R
+$ SHOW SYMBOL R
+  R = "beta"
+$ WRITE/UPDATE IO "longer"
+%RMS-F-RSZ, invalid record size
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X000186A4"
+$ READ IO R
+$ SHOW SYMBOL R
+  R = "gamma"
+$ READ/END_OF_FILE=F5E IO R
+$ F5E:
+$ WRITE IO "delta"
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00010001"
+$ CLOSE IO
+$ TYPE PROBE50FC.DAT
+ALPHA
+beta
+gamma
+delta
+$ OPEN/READ/APPEND IO PROBE50FC
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ R = "-"
+$ READ IO R
+%RMS-E-EOF, end of file detected
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X0001827A"
+$ SHOW SYMBOL R
+  R = "-"
+$ CLOSE IO
+$ !
+$ ! F6: WRITE to SYS$OUTPUT and SYS$ERROR (which go to this log?), an
+$ ! integer expression, a trailing comma, items with no comma, /SYMBOL
+$ ! with symbols and with a quoted string, a logical name for
+$ ! SYS$OUTPUT, a colon, and SYS$INPUT.
+$ M = "F6"
+$ SHOW SYMBOL M
+  M = "F6"
+$ WRITE SYS$OUTPUT "to SYS$OUTPUT"
+to SYS$OUTPUT
+$ WRITE SYS$ERROR "to SYS$ERROR"
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00010001"
+$ WRITE SYS$OUTPUT 12 + 3
+15
+$ WRITE SYS$OUTPUT "a", "b",
+%DCL-W-EXPSYN, invalid expression syntax - check operators and operands
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00038038"
+$ WRITE SYS$OUTPUT "a" "b"
+%DCL-W-EXPSYN, invalid expression syntax - check operators and operands
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00038038"
+$ X = "xx"
+$ WRITE/SYMBOL SYS$OUTPUT X, X
+xxxx
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00010001"
+$ WRITE/SYMBOL SYS$OUTPUT "quoted"
+quoted
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00010001"
+$ DEFINE PROBE_OUT SYS$OUTPUT
+$ WRITE PROBE_OUT "through a logical name"
+through a logical name
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00010001"
+$ DEASSIGN PROBE_OUT
+$ WRITE SYS$OUTPUT: "with a colon"
+%DCL-W-UNDFIL, file has not been opened by DCL - check logical name
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00038188"
+$ WRITE SYS$INPUT "to SYS$INPUT"
+%RMS-F-FAC, record operation not permitted by specified file access (FAC)
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00018514"
+$ !
+$ ! F7: a file a procedure leaves open stays open after it, and READ
+$ ! SYS$INPUT at a procedure's end of file (PROBE50G).
+$ M = "F7"
+$ SHOW SYMBOL M
+  M = "F7"
+$ @PROBE50G
+$ ! PROBE50G.COM - PROBE50F's nested procedure (section F7): it leaves a
+$ ! file open as it ends, and its last READ of SYS$INPUT is at its end of
+$ ! file.
+$ OPEN/WRITE KEEP PROBE50FD
+$ WRITE KEEP "from PROBE50G"
+$ L = "-"
+$ GOTO G_READ
+$ G_READ:
+$ READ/END_OF_FILE=G_EOF SYS$INPUT L
+$ G_EOF:
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X0001827A"
+$ SHOW SYMBOL L
+  L = "-"
+$ EXIT
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X10030001"
+$ SHOW LOGICAL KEEP
+   "KEEP" = "_SIMVAX$DUA1" (LNM$PROCESS_TABLE)
+$ WRITE KEEP "from PROBE50F"
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00010001"
+$ CLOSE KEEP
+$ TYPE PROBE50FD.DAT
+from PROBE50G
+from PROBE50F
+$ !
+$ ! F8: a data line after OPEN, READ, and CLOSE: read as a command, or
+$ ! skipped (SKPDAT)?
+$ M = "F8"
+$ SHOW SYMBOL M
+  M = "F8"
+$ OPEN IN PROBE50FA.DAT;1
+WRITE SYS$OUTPUT "F8 after OPEN: read"
+F8 after OPEN: read
+$ READ IN R
+WRITE SYS$OUTPUT "F8 after READ: read"
+F8 after READ: read
+$ CLOSE IN
+WRITE SYS$OUTPUT "F8 after CLOSE: read"
+F8 after CLOSE: read
+$ !
+$ ! F9: sharing: OPEN of a file DCL is writing, with and without
+$ ! /SHARE; what a reader sees of a record not yet closed; TYPE of it.
+$ M = "F9"
+$ SHOW SYMBOL M
+  M = "F9"
+$ OPEN/WRITE OUT PROBE50FE
+$ WRITE OUT "written"
+$ OPEN IN PROBE50FE
+%DCL-E-OPENIN, error opening DUA1:[000000]PROBE50FE.DAT; as input
+-RMS-E-FLK, file currently locked by another user
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X1001828A"
+$ OPEN/SHARE IN2 PROBE50FE
+%DCL-E-OPENIN, error opening DUA1:[000000]PROBE50FE.DAT; as input
+-RMS-E-FLK, file currently locked by another user
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X1001828A"
+$ R = "-"
+$ READ IN2 R
+%DCL-W-UNDFIL, file has not been opened by DCL - check logical name
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00038188"
+$ SHOW SYMBOL R
+  R = "-"
+$ TYPE PROBE50FE.DAT
+%TYPE-W-OPENIN, error opening DUA1:[000000]PROBE50FE.DAT;1 as input
+-RMS-E-FLK, file currently locked by another user
+$ CLOSE IN2
+%DCL-W-UNDFIL, file has not been opened by DCL - check logical name
+$ CLOSE IN
+%DCL-W-UNDFIL, file has not been opened by DCL - check logical name
+$ CLOSE OUT
+$ OPEN/SHARE=READ IN PROBE50FE
+$ OPEN/SHARE=READ IN2 PROBE50FE
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ OPEN/APPEND OUT PROBE50FE
+%DCL-E-OPENIN, error opening DUA1:[000000]PROBE50FE.DAT; as input
+-RMS-E-FLK, file currently locked by another user
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X1001828A"
+$ CLOSE IN2
+$ CLOSE IN
+$ CLOSE OUT
+%DCL-W-UNDFIL, file has not been opened by DCL - check logical name
+$ !
+$ ! F10: long records: a 300-character symbol (F$FAO), WRITE and
+$ ! WRITE/SYMBOL of 600 characters, and READ of them back.
+$ M = "F10"
+$ SHOW SYMBOL M
+  M = "F10"
+$ S = F$FAO("!300*X")
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00030001"
+$ WRITE SYS$OUTPUT F$LENGTH(S)
+300
+$ OPEN/WRITE OUT PROBE50FF
+$ WRITE OUT S, S
+%DCL-W-TKNOVF, command element is too long - shorten
+ \XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X000382A0"
+$ WRITE/SYMBOL OUT S, S
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00010001"
+$ CLOSE OUT
+$ OPEN IN PROBE50FF
+$ READ IN R
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00030001"
+$ WRITE SYS$OUTPUT F$LENGTH(R)
+600
+$ READ IN R
+%RMS-E-EOF, end of file detected
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X0001827A"
+$ WRITE SYS$OUTPUT F$LENGTH(R)
+600
+$ CLOSE IN
+$ !
+$ ! F11: the logical name OPEN defined, deassigned (in user mode, then
+$ ! supervisor mode) while the file is open: can READ and CLOSE still
+$ ! reach the file?
+$ M = "F11"
+$ SHOW SYMBOL M
+  M = "F11"
+$ OPEN IN PROBE50FA.DAT;1
+$ DEASSIGN IN
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ DEASSIGN/SUPERVISOR_MODE IN
+%SYSTEM-F-NOLOGNAM, no logical name match
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X000001BC"
+$ READ IN R
+%DCL-W-UNDFIL, file has not been opened by DCL - check logical name
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00038188"
+$ CLOSE IN
+%DCL-W-UNDFIL, file has not been opened by DCL - check logical name
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00038188"
+$ SHOW SYMBOL M
+  M = "F11"
+$ EXIT

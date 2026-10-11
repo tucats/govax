@@ -45,6 +45,22 @@ func (e *AmbiguousError) Error() string {
 	return fmt.Sprintf("rms: %s is ambiguous (%d files match); %s does not support wildcards", e.Spec, e.Count, e.Verb)
 }
 
+// LockedError is a file TYPE couldn't open because another opener keeps
+// readers out (RMS$_FLK): Name is its full specification.
+type LockedError struct {
+	Name string
+}
+
+func (e *LockedError) Error() string {
+	return "rms: " + e.Name + ": file currently locked by another user"
+}
+
+// typeSharing is the FAB$B_SHR TYPE opens a file with: every operation,
+// so that it types a file others are reading or writing if they let it
+// (unconfirmed; VMS 7.3's TYPE of a file DCL's OPEN/WRITE had open was
+// RMS$_FLK, testdata/dcl50's F9).
+var typeSharing = shrGet | shrPut | shrUpd | shrDel
+
 // Type renders one file's entire content as text (see records.go's
 // writeRecords for exactly how each record format is turned into readable
 // lines) and returns it as a single string for the console layer to print
@@ -77,6 +93,16 @@ func (s *Session) Type(specText string) (string, error) {
 		default:
 			return &AmbiguousError{Spec: specText, Count: len(matches), Verb: "TYPE"}
 		}
+
+		// TYPE is one of the file's RMS openers while it reads
+		// (sharing.go): a file another opener keeps readers out of is
+		// RMS$_FLK.
+		claim := s.Mounts.claimOpen(r.Spec.Device, fileIDFrom(matches[0].Fid), facGet, typeSharing)
+		if claim == nil {
+			return &LockedError{Name: fullSpec(r.Spec.Device, matches[0])}
+		}
+
+		defer claim.release()
 
 		f, err := vol.OpenFID(matches[0].Fid)
 		if err != nil {

@@ -1,6 +1,7 @@
 package rms
 
 import (
+	"bytes"
 	"io"
 
 	"github.com/tucats/ods2/ondisk"
@@ -49,10 +50,11 @@ var (
 // format: VFC records of a print file (RAT=PRN) have their carriage
 // control expanded (odsrms.FormatVFCRecord) and lineEnding is not used for
 // them at all, since a VFC record's own trailing control byte already
-// determines what follows it. Other VFC records (RAT=CR, as DCL's OPEN
-// makes them) leave their fixed control out: it is no carriage control
-// without PRN (the RMS manual's FAB$B_RAT). Every other record gets
-// lineEnding appended after it,
+// determines what follows it; but a record whose control is a line feed
+// before and a carriage return after it, as DCL's WRITE writes it, is
+// just a line. Other VFC records (RAT=CR) leave their fixed control out:
+// it is no carriage control without PRN (the RMS manual's FAB$B_RAT).
+// Every other record gets lineEnding appended after it,
 // reconstructing ordinary line-oriented text regardless of whether the
 // original framing was a length prefix (Fixed/Variable) or a stream
 // delimiter odsrms.Reader has already stripped off (Stream).
@@ -77,16 +79,22 @@ func writeRecords(w io.Writer, f *volume.File, lineEnding []byte) error {
 			return err
 		}
 
-		if isVFC && !printFile && len(rec) >= vfcSize {
-			rec = rec[vfcSize:]
-		}
+		if isVFC && len(rec) >= vfcSize {
+			control, text := rec[:vfcSize], rec[vfcSize:]
 
-		if isVFC && printFile && len(rec) >= vfcSize {
-			if _, err := w.Write(odsrms.FormatVFCRecord(rec[:vfcSize], rec[vfcSize:])); err != nil {
-				return err
+			// A print file's fixed control is carriage control, but a
+			// line feed before the record and a carriage return after it
+			// (what DCL's WRITE gives each record, dclRecordControl) is
+			// simply a line.
+			if printFile && !bytes.Equal(control, dclRecordControl) {
+				if _, err := w.Write(odsrms.FormatVFCRecord(control, text)); err != nil {
+					return err
+				}
+
+				continue
 			}
 
-			continue
+			rec = text
 		}
 
 		if _, err := w.Write(rec); err != nil {

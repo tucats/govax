@@ -3263,84 +3263,103 @@ widened."
     the command ends; after that it reads end of file.
 - **Status**: VMS's answers followed; the choices above unconfirmed.
 
-### [Phase 50] DCL's file I/O: from the DCL Dictionary, and the rest chosen
+### [Phase 50] DCL's file I/O: settled by a probe, and the rest chosen
 
 - **Where**: `internal/console/dclfile.go` (OPEN, CLOSE, READ, WRITE,
   INQUIRE), `internal/rms/dclfile.go` (`Session.OpenDCLFile`,
-  `DCLFile`), `internal/console/dclstatus.go` (`branchStatus`),
-  `procedure.go` (`procedureLine`'s ON check).
+  `DCLFile`), `internal/console/dclstatus.go` (`branchStatus`,
+  `endStatus`), `procedure.go` (`procedureLine`'s ON check),
+  `logical.go` (SHOW LOGICAL/FULL's name attributes, DEASSIGN's status),
+  `type.go` and `internal/rms/type.go` (TYPE of an open file),
+  `page.go` (`readReply`'s Ctrl/Z), `internal/vmserrors/error.go` (the
+  segment line's length).
 - **What**: the five commands as the DCL Dictionary (7.3-1) describes
-  them. From the manual: OPEN's /READ, /WRITE (a new version, or with
-  /READ an existing file at its start), /APPEND (an existing file, at its
-  end), /SHARE (others may only read without it; /SHARE=READ, and
-  /SHARE[=WRITE] read and write), /ERROR; the default type .DAT; a new
-  file's VFC record format; the logical name in the process table; files
-  left open when a procedure ends; a logical name that already has a
-  file passed over with no message. READ's local symbol, its record as
-  it is, the 2048-byte limit, /END_OF_FILE before /ERROR, the
-  process-permanent files without OPEN, the prompt "DATA:". WRITE's
-  comma-separated expressions, qualifiers before the data, /UPDATE of
-  the record last read, the same length for a sequential file. CLOSE's
-  /LOG (UNDFIL) and /ERROR. Each /ERROR and /END_OF_FILE overrides the ON
-  action, with `$STATUS` the failure's. INQUIRE reads SYS$COMMAND, prompts
-  with the prompt (or the symbol's name) and ": " (/NOPUNCTUATION), and
-  treats the reply as a string assignment's value, with substitution.
-  VMS 7.3 settled (round 3): READ SYS$INPUT takes the procedure's next
-  record whatever it is; WRITE leaves `$STATUS` RMS$_NORMAL and is one of
-  DCL's own commands.
-- **Chosen without VMS** (round 4 of testdata/dcl50, `probe50f.com` and
-  `probe50q.com`, asks about each):
-  - OPEN's failure is shown as @'s was (round 1): `%DCL-E-OPENIN, error
-    opening NAME as input` (OPENOUT `as output` for /WRITE and /APPEND
-    without /READ), then RMS's message, with `$STATUS` the RMS status
-    and bit 28 set. A READ, WRITE, or CLOSE failure is RMS's message
-    alone (`%RMS-E-EOF, end of file detected`), `$STATUS` the RMS status
-    with bit 28 set.
-  - A branch's `$STATUS` (/ERROR, /END_OF_FILE) is the status without
-    bit 28; a symbol isn't changed by a READ that fails.
-  - OPEN, READ, and CLOSE leave `$STATUS` RMS$_NORMAL; INQUIRE CLI$_NORMAL.
-    OPEN, CLOSE, READ, and INQUIRE are DCL's own commands for data lines.
-  - The logical name is supervisor mode, equated to the file's device
-    (`_DUA0:`) with no attributes; a host file's is its path. READ,
-    WRITE, and CLOSE find the file by the logical name OPEN gave it, even
-    if it was deassigned since (on VMS, by the name's translation).
-  - OPEN/WRITE with /APPEND is CLI$_CONFLICT with `\APPEND\`; a /SHARE
-    keyword other than READ or WRITE CLI$_IVKEYW; a missing parameter
-    CLI$_INSFPRM (DCL would prompt at the terminal); an invalid symbol
-    name CLI$_IVSYMB.
-  - A new file's records have two bytes of fixed control, zeros, and
-    carriage-return carriage control (RAT=CR).
-  - READ of a name OPEN didn't define that isn't a process-permanent file
-    (by itself or through logical names) is CLI$_UNDFIL, as are WRITE
-    and CLOSE of one; CLOSE/NOLOG of one shows nothing, with `$STATUS`
-    UNDFIL with bit 28 set. CLOSE of SYS$INPUT and the others is UNDFIL.
-  - WRITE SYS$ERROR writes to the procedure's output and, when that is
-    an /OUTPUT file, to the terminal too, as a message goes; WRITE
-    SYS$COMMAND writes to the terminal; WRITE SYS$INPUT in a procedure is
-    RMS$_FAC. READ of SYS$COMMAND, SYS$OUTPUT, or SYS$ERROR, or of
-    SYS$INPUT at the terminal, reads the terminal with READ's prompt
-    (exactly "DATA:", no blank after it, without /PROMPT); Ctrl/Z is
-    RMS$_EOF. INQUIRE's prompt goes to the terminal even with /OUTPUT; at
-    Ctrl/Z it assigns "".
-  - WRITE with no data is CLI$_INSFPRM; /SYMBOL changes nothing (records
-    have no 1024-byte limit, and a quoted string is allowed). A record
-    READ reads longer than 2048 bytes is cut to 2048, with RMS$_RTB.
-  - A /READ/WRITE file's WRITE before READ has reached the end of the
-    file is RMS$_NEF (as `$PUT` is, Phase 49); WRITE/UPDATE with no
-    record read RMS$_CUR, of another length RMS$_RSZ; /READ/APPEND reads
-    from the end (RMS$_EOF at once).
-  - Not done: indexed files (READ/INDEX, /KEY, /MATCH, /DELETE), record
-    locks (/NOLOCK accepted), /TIME_OUT (accepted, a read waits), OPEN of
-    a mailbox or terminal (NL: works), and an image opening a file DCL
-    has open through its logical name (VMS's process-permanent file
-    access).
+  them, checked against VMS 7.3 in round 4 of testdata/dcl50
+  (`probe50f.com`, and the interactive `probe50q.com`, replayed by
+  `TestProbe50FOracle` and `TestProbe50QOracle`; every section matches,
+  but for the layouts of DELETE, DIRECTORY, and DUMP). VMS 7.3 settled:
+  - **Statuses.** OPEN and INQUIRE leave %X00000001, an OPEN passed over
+    (the name already has a file) and READ CLI$_NORMAL, WRITE and CLOSE
+    RMS$_NORMAL, DEASSIGN %X00000001, CLOSE/NOLOG of a name never opened
+    CLI$_NORMAL (and no message). OPEN's failure is `%DCL-E-OPENIN, error
+    opening NAME as input` (OPENOUT only for a new file: /APPEND and
+    /READ/WRITE of a missing file are OPENIN), then RMS's message, and
+    under RMS$_DNF `-SYSTEM-W-NOSUCHFILE`; `$STATUS` is the RMS status
+    with bit 28 set, even at an /ERROR label. READ's and WRITE's failures
+    are RMS's message alone, their status without bit 28, at a label
+    too. A READ that fails leaves its symbol alone (no local symbol is
+    made).
+  - **A branch is success to the procedure.** After an /END_OF_FILE
+    branch `$STATUS` was RMS$_EOF, but the procedure's EXIT (no status)
+    ended it with %X10030001: DCL's own status after a branch is
+    CLI$_NORMAL (govax's `endStatus`, used by EXIT and the end of file).
+  - **Files.** A new file is VFC, 2 bytes of fixed control, print-file
+    carriage control (DIRECTORY/FULL); records as READ reads them, the
+    fixed control left out (DUMP/RECORD). An open that writes may read
+    and update: READ of a new file was RMS$_EOF, WRITE/UPDATE RMS$_CUR,
+    not RMS$_FAC; /READ/APPEND reads from the end. WRITE before
+    /READ/WRITE's end of file is RMS$_NEF, WRITE/UPDATE of another length
+    RMS$_RSZ.
+  - **Sharing.** A file OPEN/WRITE has open (no /SHARE) keeps every other
+    opener out: a reader, a /SHARE reader, and TYPE (`%TYPE-W-OPENIN`,
+    RMS$_FLK). Two /SHARE=READ readers share a file and keep /APPEND
+    out. So without /SHARE the sharing is RMS's default (GET for a
+    reader, none for a writer), not the manual's "others may read".
+  - **The logical name** is `[super,confine]`, equated to
+    `_SIMVAX$DUA1` (the node's physical device name, no colon)
+    `[terminal]`. It is the way to the file: TYPE of it typed the file,
+    using up READ's records; once deassigned, READ and CLOSE were UNDFIL.
+  - **Names.** WRITE `SYS$OUTPUT:` (with a colon) was UNDFIL; a logical
+    name for SYS$OUTPUT works. WRITE SYS$INPUT in a procedure is
+    RMS$_FAC. WRITE SYS$ERROR and SYS$COMMAND go to the terminal, even
+    under /OUTPUT (not to the log). OPEN/WRITE/APPEND is CLI$_CONFLICT
+    `\WRITE\`; a bad /SHARE keyword CLI$_IVKEYW; missing parameters
+    INSFPRM; READ's bad symbol IVSYMB; WRITE with no data INSFPRM; a
+    trailing comma or two items with no comma EXPSYN.
+  - **Long values.** Without /SYMBOL, a WRITE item longer than 255
+    characters is CLI$_TKNOVF, the segment line cut to 255 characters
+    (no closing backslash); WRITE/SYMBOL and READ handle 600.
+  - **Data lines** after OPEN, READ, and CLOSE are read as commands.
+  - **The terminal.** READ's prompt is "Data:" and a tab (the manual
+    says "DATA:"); Ctrl/Z is RMS$_EOF, shown without a label. INQUIRE's
+    prompt is its string or the symbol's name and ": "; the reply is
+    substituted, then uppercased and compressed outside quotes; Ctrl/Z
+    gives "" and %X00000001; with procedure verification on, the
+    substituted reply is shown on the procedure's output (in the /OUTPUT
+    log, not the terminal), and nothing at Ctrl/Z. INQUIRE's prompt goes
+    to the terminal under /OUTPUT.
+- **Still chosen without VMS**:
+  - The fixed control written is 01 8D (a line feed before, a carriage
+    return after): DUMP/RECORD doesn't show it, and a DUMP/BLOCK would.
+    TYPE shows such a record of a print file as a line.
+  - SHOW LOGICAL indents a process-permanent file's name one blank
+    further (`   "OUT" ...`, and SYS$INPUT's in a procedure); govax's
+    logical names have no process-permanent file behind them to show
+    this by, so it doesn't (the oracle allows it). `no_alias`'s place
+    among a name's attributes is unconfirmed.
+  - A host file's logical name is equated to its path.
+  - DEASSIGN's %X00000001 is taken as $DELLNM's SS$_NORMAL (it could be
+    DEASSIGN leaving the OPEN's); DEFINE's status is unchanged.
+  - READ SYS$INPUT's success status is CLI$_NORMAL, as a file's is.
+  - A colon after an OPEN's logical name in READ, WRITE, and CLOSE is
+    accepted (the manual's `logical-name[:]`); only the
+    process-permanent names were seen refusing it.
+  - TYPE shares a file as every operation (SHR GET, PUT, UPD, DEL).
+  - CLOSE of SYS$INPUT and the other process-permanent names is UNDFIL.
+  - A missing parameter at the terminal is INSFPRM; DCL would prompt.
+  - READ's 2048-byte limit (RMS$_RTB, the record cut) and /TIME_OUT,
+    WRITE's 1024-byte buffer, record locks, indexed files, OPEN of a
+    mailbox or terminal (NL: works), and an image's access to a file
+    DCL has open are not done or not checked.
 - **Fixed in passing**: TYPE (and COPY to the host, which share
   `rms.writeRecords`) treated every VFC file as a print file, expanding
   its fixed control as carriage control; the RMS manual makes it carriage
-  control only with RAT=PRN. A VFC file with RAT=CR (as DCL's OPEN/WRITE
-  makes) is now a line per record, its fixed control left out.
-- **Status**: the manual's rules followed; the choices above unconfirmed,
-  for round 4 of the probe.
+  control only with RAT=PRN, so a VFC file with RAT=CR is now a line per
+  record. govax's TYPE read a file other openers kept readers out of;
+  it is now one of the file's RMS openers (RMS$_FLK). The console's
+  terminal reads (`readReply`, INQUIRE's and READ's) took a Ctrl/Z as a
+  character, not the end of the input.
+- **Status**: VMS's answers followed; the choices above unconfirmed.
 
 <!--
 Entry template:

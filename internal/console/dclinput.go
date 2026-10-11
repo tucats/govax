@@ -69,9 +69,9 @@ const maxInputRecord = 32767
 // grammar; nor does a command the grammar refuses, or an unknown verb,
 // which run no image. VMS 7.3 agreed for each of these govax has
 // (testdata/dcl50's round 3, section I1), WRITE among them; WAIT and SET
-// SYMBOL, which govax doesn't have yet, were DCL's own there too. OPEN,
-// CLOSE, READ, and INQUIRE are taken to be DCL's own as well
-// (unconfirmed: testdata/dcl50's round 4 asks).
+// SYMBOL, which govax doesn't have yet, were DCL's own there too, and so
+// were OPEN, READ, and CLOSE in round 4 (F8); INQUIRE is taken to be
+// (unconfirmed).
 var dclOwnCommands = map[string]bool{
 	"ASSIGN":           true,
 	"CALL":             true,

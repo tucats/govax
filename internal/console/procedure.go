@@ -672,7 +672,7 @@ func (c *Console) runLevel(source *procedureSource, cmd procedureCommand, dispat
 		return level.exit, nil
 	}
 
-	return procedureExit{status: c.status, cause: c.statusErr}, nil
+	return procedureExit{status: c.endStatus, cause: c.endStatusErr}, nil
 }
 
 // procedureLine runs one of level's lines (run) and what its status
@@ -798,7 +798,7 @@ func (c *Console) Exit(status *uint32) error {
 	}
 
 	level.exiting = true
-	level.exit = procedureExit{status: c.status | stsInhibitMsg, cause: c.statusErr}
+	level.exit = procedureExit{status: c.endStatus | stsInhibitMsg, cause: c.endStatusErr}
 
 	if status != nil {
 		level.exit = procedureExit{status: *status, show: *status&stsInhibitMsg == 0}

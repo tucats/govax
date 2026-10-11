@@ -16,8 +16,8 @@ PREFIX, and F$VERIFY's echo, is done and checked against VMS 7.3
 (2026-10-11), and so is subtask 16, SYS$INPUT from a procedure, with
 DECK and EOD (2026-10-11, checked against VMS 7.3), and so is subtask
 17, DCL's file I/O: OPEN, CLOSE, READ, WRITE, and INQUIRE (2026-10-11,
-from the DCL Dictionary; round 4 of the probe is written, for the author
-to run). Subtask 18, STOP and Ctrl/Y, is next.
+checked against VMS 7.3 in round 4 of the probe). Subtask 18, STOP and
+Ctrl/Y, is next.
 
 The console should act like a VMS DCL command processor. Until now it
 had INCLUDE (and `@` as its alias), which runs a file of console
@@ -458,8 +458,8 @@ from a procedure").
 
 `internal/console/dclfile.go`, and `internal/rms/dclfile.go` for the
 files. The rules are the DCL Dictionary's (OPEN, CLOSE, READ, WRITE,
-INQUIRE); what was chosen without VMS is in DEVIATIONS.md ("[Phase 50]
-DCL's file I/O"), and testdata/dcl50's round 4 asks about it.
+INQUIRE); what VMS 7.3 showed in testdata/dcl50's round 4, and what was
+chosen without it, is in DEVIATIONS.md ("[Phase 50] DCL's file I/O").
 
 - **The files are RMS's.** `rms.Session.OpenDCLFile` opens a volume file
   by `$OPEN`'s and `$CREATE`'s own code, called from Go: name processing
@@ -468,36 +468,50 @@ DCL's file I/O"), and testdata/dcl50's round 4 asks about it.
   conflict with a program's opens of the same file as they would on VMS
   (RMS$_FLK), and DISMOUNT sees them open. The record stream is a
   `FileHandle`'s (stream.go): READ a sequential `$GET`, WRITE a `$PUT`
-  (RMS$_NEF away from the end), WRITE/UPDATE an `$UPDATE`. A file
-  OPEN/WRITE makes is VFC, two bytes of fixed control (zeros), RAT=CR. A
-  host file is lines of text, with the same rules.
+  (RMS$_NEF away from the end), WRITE/UPDATE an `$UPDATE`; an open that
+  writes may read and update too. Without /SHARE the sharing is RMS's
+  default: a writer keeps everyone out (VMS 7.3's F9). A file
+  OPEN/WRITE makes is VFC, two bytes of fixed control (01 8D), RAT=PRN.
+  A host file is lines of text, with the same rules.
 - **Process-permanent.** `Console.dclFiles` holds the open files by
   logical name, which OPEN defines in the process table, supervisor
-  mode, equated to the device. A file outlives the procedure that opened
-  it; `EndSession` closes what is left. SYS$INPUT, SYS$OUTPUT,
+  mode, CONFINE, equated to the node's physical device name
+  (`_GOVAX$DUA0`, TERMINAL). The name is the way to the file
+  (`openFile`): once it is deassigned the file is out of reach
+  (`dclOrphans`), and TYPE of it types the file from READ's place
+  (`typeOpenFile`). A file outlives the procedure that opened it;
+  `EndSession` closes what is left. SYS$INPUT, SYS$OUTPUT,
   SYS$ERROR, and SYS$COMMAND need no OPEN, by name or through logical
   names (`processPermanentFile`, which TYPE's `isInputStream` now uses):
   READ SYS$INPUT takes a procedure's next record, whatever it is
   (`procedureSource.readRecord`; round 3's I6), and READ SYS$COMMAND
   (and the others, and SYS$INPUT at the terminal) reads the terminal
   (`readTerminal`, through `readReply`, so a procedure's data doesn't
-  stand in for it), prompting with /PROMPT's string or "DATA:".
-- **Statuses.** Success is RMS$_NORMAL (round 3 showed WRITE's). A
-  failure is RMS's status: OPEN's shown as @'s was (`%DCL-E-OPENIN, error
-  opening NAME as input`, OPENOUT for output, then RMS's message), the
-  others RMS's message alone, each with bit 28 set in `$STATUS`. /ERROR
-  and /END_OF_FILE go to their label instead (`Console.branch`): Goto,
-  then `branchStatus`, which sets `$STATUS` and marks the status handled,
-  so `procedureLine` takes no ON action (the manual: the qualifier
-  "overrides any ON condition action"). A name OPEN didn't define is
-  CLI$_UNDFIL.
+  stand in for it), prompting with /PROMPT's string or "Data:" and a
+  tab. WRITE SYS$ERROR and SYS$COMMAND go to the terminal.
+- **Statuses.** Success is %X00000001 for OPEN and INQUIRE, CLI$_NORMAL
+  for READ, RMS$_NORMAL for WRITE and CLOSE. A failure is RMS's status:
+  OPEN's shown as @'s was (`%DCL-E-OPENIN, error opening NAME as input`,
+  OPENOUT for a new file, then RMS's message), with bit 28 set in
+  `$STATUS`; READ's and WRITE's RMS's message alone, without bit 28.
+  /ERROR and /END_OF_FILE go to their label instead (`Console.branch`):
+  Goto, then `branchStatus`, which sets `$STATUS` and marks the status
+  handled, so `procedureLine` takes no ON action (the manual: the
+  qualifier "overrides any ON condition action"), and leaves the
+  procedure's own status CLI$_NORMAL (`endStatus`, what EXIT with no
+  status and the end of file use: VMS 7.3's F7). A name OPEN didn't
+  define is CLI$_UNDFIL.
 - **INQUIRE** prompts at the terminal (`terminalOut`: the terminal even
   under /OUTPUT) with its prompt, or the symbol's name, and ": "; the
-  reply is substituted (`'X'`) and read as a `:=` value is (`dclText`).
-- **TYPE of VFC files**, fixed in passing: `rms.writeRecords` expanded
-  every VFC file's fixed control as print control; it is carriage
-  control only with RAT=PRN, so a RAT=CR file (OPEN/WRITE's) is a line
-  per record.
+  reply is substituted (`'X'`) and read as a `:=` value is (`dclText`),
+  and shown on the procedure's output with verification on.
+- **Fixed in passing**: `rms.writeRecords` expanded every VFC file's
+  fixed control as print control; it is carriage control only with
+  RAT=PRN, so a RAT=CR file is a line per record (and a PRN record with
+  OPEN's 01 8D is a line too). TYPE is one of a file's RMS openers
+  (RMS$_FLK for a file kept from readers). `readReply` takes Ctrl/Z as
+  the end of the input. SHOW LOGICAL/FULL shows a name's own attributes
+  (`[super,confine]`), and DEASSIGN leaves SS$_NORMAL.
 
 ## Subtasks
 
@@ -813,3 +827,28 @@ details are in DEVIATIONS.md.)
   Round 4 of the probe (`testdata/dcl50`'s `probe50f.com` and
   `probe50g.com`, and the interactive `probe50q.com` and `probe50p.com`)
   asks about each choice; the author is to run it.
+- 2026-10-11: Round 4 of the probe ran on the simh VAX (the author ran
+  it: `testdata/dcl50/vax/probe50f.log`, `probe50q.log`, and
+  `probe50p.log`), and govax now does what VMS did. `TestProbe50FOracle`
+  replays `probe50f.com` with /OUTPUT and matches every section (but for
+  DELETE's, DIRECTORY's, and DUMP's layouts and SHOW LOGICAL's extra
+  blank before a process-permanent name), and `TestProbe50QOracle`
+  replays the interactive `probe50q.com` with the author's replies.
+  Changes: OPEN and INQUIRE leave %X00000001, READ CLI$_NORMAL,
+  CLOSE/NOLOG of a name never opened CLI$_NORMAL, DEASSIGN SS$_NORMAL;
+  READ's and WRITE's failures have no bit 28 and OPEN's always do;
+  OPENOUT only for a new file, with SS$_NOSUCHFILE under RMS$_DNF;
+  CONFLICT names /WRITE; every open that writes may read and update, and
+  without /SHARE the sharing is RMS's default (a writer keeps everyone
+  out); a new file is RAT=PRN with 01 8D control (unconfirmed bytes);
+  the logical name is CONFINE, equated to `_NODE$DEVICE` (TERMINAL), and
+  the only way to the file (deassigned, the file is out of reach); TYPE
+  of it types the file from READ's place; `SYS$OUTPUT:` is UNDFIL;
+  SYS$ERROR and SYS$COMMAND are the terminal; a WRITE item over 255
+  characters is CLI_TKNOVF (new message), and a segment line is cut at
+  255 characters; READ's prompt is "Data:" and a tab; INQUIRE's reply is
+  shown with verification; after a branch the procedure's own status is
+  CLI$_NORMAL (`endStatus`). Fixed on the way: TYPE took no part in a
+  file's sharing (now RMS$_FLK), and the terminal's Ctrl/Z reached
+  INQUIRE and READ as a character. Still open: the fixed control bytes,
+  and SHOW LOGICAL's extra blank.

@@ -11,9 +11,9 @@ import (
 )
 
 // TestOpenDCLFile: OPEN/WRITE makes the next version of a file of VFC
-// records, two bytes of fixed control (zeros) and carriage-return
-// carriage control, which READ reads back without the fixed control; the
-// file's name has its version, and its device is the physical name.
+// records, two bytes of fixed control (01 8D) and print-file carriage
+// control (VMS 7.3's DIRECTORY/FULL, testdata/dcl50's F1), which READ
+// reads back without the fixed control; the file's name has its version.
 func TestOpenDCLFile(t *testing.T) {
 	s, vol := newTypeTestSession(t)
 
@@ -23,8 +23,8 @@ func TestOpenDCLFile(t *testing.T) {
 			t.Fatalf("OpenDCLFile(NEW, /WRITE): %v", err)
 		}
 
-		if f.Name != want || f.Device != "_DUA0:" {
-			t.Errorf("the file opened is %s on %s, want %s on _DUA0:", f.Name, f.Device, want)
+		if f.Name != want || f.Device != "DUA0" {
+			t.Errorf("the file opened is %s on %s, want %s on DUA0", f.Name, f.Device, want)
 		}
 
 		for _, record := range []string{"one", "", "three"} {
@@ -49,8 +49,8 @@ func TestOpenDCLFile(t *testing.T) {
 	}
 
 	attr := file.Header.RecordAttributes
-	if attr.Format != ondisk.RecordFormatVFC || attr.VfcSize != 2 || attr.Attributes != ondisk.AttrImpliedCC {
-		t.Errorf("NEW.DAT;1's attributes: %+v, want VFC with 2 bytes of control and CR carriage control", attr)
+	if attr.Format != ondisk.RecordFormatVFC || attr.VfcSize != 2 || attr.Attributes != ondisk.AttrPrintCC {
+		t.Errorf("NEW.DAT;1's attributes: %+v, want VFC with 2 bytes of control and print-file carriage control", attr)
 	}
 
 	// Variable records keep any fixed control (readVolumeRecords drops it
@@ -60,8 +60,13 @@ func TestOpenDCLFile(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if len(raw) != 3 || string(raw[0]) != "\x00\x00one" {
-		t.Errorf("NEW.DAT;1's records are %q, want each with two zero bytes first", raw)
+	if len(raw) != 3 || string(raw[0]) != "\x01\x8Done" {
+		t.Errorf("NEW.DAT;1's records are %q, want each with 01 8D first", raw)
+	}
+
+	// TYPE shows the records as lines.
+	if text, err := s.Type("NEW.DAT;1"); err != nil || text != "one\n\nthree\n" {
+		t.Errorf("Type(NEW.DAT;1) = %q, %v", text, err)
 	}
 
 	f, err := s.OpenDCLFile(FileLocation{Name: "NEW.DAT;1"}, DCLAccess{})
@@ -109,9 +114,39 @@ func TestOpenDCLFile_failures(t *testing.T) {
 	}
 }
 
+// TestOpenDCLFile_sharing: without /SHARE a writer keeps every other
+// opener out, a /SHARE reader too, where two /SHARE=READ readers share a
+// file and keep a writer out (VMS 7.3, testdata/dcl50's F9).
+func TestOpenDCLFile_sharing(t *testing.T) {
+	s, _ := newTypeTestSession(t)
+	foo := FileLocation{Name: "FOO.TXT"}
+
+	writer, err := s.OpenDCLFile(foo, DCLAccess{Append: true})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if _, err := s.OpenDCLFile(foo, DCLAccess{ShareWrite: true}); !isStatus(err, rmsFileLocked) {
+		t.Errorf("a /SHARE reader of a file being written: %v, want RMS$_FLK", err)
+	}
+
+	_ = writer.Close()
+
+	for range 2 {
+		if _, err := s.OpenDCLFile(foo, DCLAccess{ShareRead: true}); err != nil {
+			t.Fatalf("a /SHARE=READ reader: %v", err)
+		}
+	}
+
+	if _, err := s.OpenDCLFile(foo, DCLAccess{Append: true}); !isStatus(err, rmsFileLocked) {
+		t.Errorf("an /APPEND of a file two readers have: %v, want RMS$_FLK", err)
+	}
+}
+
 // TestOpenDCLFile_host: a host file's records are its lines. /READ/WRITE
 // updates a line in place (the same length only), and writes at the end
-// only once Get has reached it; /APPEND writes at the end.
+// only once Get has reached it; /APPEND starts at the end, where Get is
+// at the end of the file and there is no record to update.
 func TestOpenDCLFile_host(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "lines.dat")
 	if err := os.WriteFile(path, []byte("alpha\r\nbeta\n"), 0o644); err != nil {
@@ -171,8 +206,12 @@ func TestOpenDCLFile_host(t *testing.T) {
 		t.Errorf("Put after /APPEND = %08X", sts)
 	}
 
-	if sts := appender.Update([]byte("x")); sts != rmsFACNotAllowed {
-		t.Errorf("Update after /APPEND = %08X, want RMS$_FAC", sts)
+	if _, sts := appender.Get(); sts != rmsEOF {
+		t.Errorf("Get after /APPEND = %08X, want RMS$_EOF", sts)
+	}
+
+	if sts := appender.Update([]byte("x")); sts != rmsNoCurrent {
+		t.Errorf("Update after /APPEND = %08X, want RMS$_CUR", sts)
 	}
 
 	_ = appender.Close()

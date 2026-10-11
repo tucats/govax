@@ -35,13 +35,22 @@ import (
 //     new file (the next version) to write, or with /READ opens an
 //     existing one to read and write, at its start; /APPEND opens an
 //     existing file to write at its end.
-//   - Without /SHARE, others may only read the file; /SHARE=READ lets
-//     them read it, and /SHARE (or /SHARE=WRITE) read and write it.
-//   - A file OPEN makes has variable records with fixed control (VFC):
-//     VMS gives it two bytes of fixed control per record, and
-//     carriage-return carriage control (unconfirmed: the manual says
-//     VFC, and a probe is to show the rest). Its fixed control is
-//     written as zeros, and isn't part of a record READ returns.
+//   - /SHARE=READ lets others read the file, and /SHARE (or
+//     /SHARE=WRITE) read and write it. The manual says that without
+//     /SHARE others may read it, but VMS 7.3 kept every other opener out
+//     of a file OPEN/WRITE had open, a /SHARE reader and TYPE too, while
+//     two /SHARE=READ readers shared one (testdata/dcl50's F9): without
+//     /SHARE the sharing is RMS's default, SHRGET for a reader and none
+//     for a writer.
+//   - Every open that writes may read and update too: VMS 7.3's READ of
+//     a file OPEN/WRITE had just made was RMS$_EOF, not RMS$_FAC, and its
+//     WRITE/UPDATE RMS$_CUR (F4, F5).
+//   - A file OPEN makes has variable records with two bytes of fixed
+//     control (VFC) and print-file carriage control (RAT=PRN), as VMS
+//     7.3's DIRECTORY/FULL showed (F1). Each record's fixed control is
+//     "one line feed before, a carriage return after" (01 8D:
+//     unconfirmed, DUMP/RECORD didn't show it), and isn't part of a
+//     record READ returns.
 //
 // A host file is lines of text, read and written as the host's text files
 // are (recordfile.go's TextRecords): READ reads a line, WRITE adds one
@@ -61,46 +70,53 @@ type DCLAccess struct {
 func (a DCLAccess) creates() bool { return a.Write && !a.Read && !a.Append }
 
 // Output reports whether the open is for output (OPENOUT's "as
-// output"): one that makes a file, or /APPEND's. A /READ/WRITE open of
-// an existing file is input (unconfirmed).
-func (a DCLAccess) Output() bool { return a.creates() || a.Append && !a.Read }
+// output"): only one that makes a file. VMS 7.3 reported an /APPEND or
+// /READ/WRITE of a file that isn't there with OPENIN (F3).
+func (a DCLAccess) Output() bool { return a.creates() }
 
-// fac is the open's FAB$B_FAC: GET to read, PUT to write, and UPD too
-// for /READ/WRITE, whose WRITE/UPDATE changes a record.
+// fac is the open's FAB$B_FAC: GET to read, and GET, PUT, and UPD for
+// any open that writes (see the top of this file).
 func (a DCLAccess) fac() byte {
-	var fac byte
-
-	if a.Read || !a.Write && !a.Append {
-		fac |= facGet
-	}
-
 	if a.Write || a.Append {
-		fac |= facPut
+		return facGet | facPut | facUpd
 	}
 
-	if a.Read && a.Write {
-		fac |= facUpd
-	}
-
-	return fac
+	return facGet
 }
 
-// shr is the open's FAB$B_SHR: GET by default and for /SHARE=READ, and
-// GET, PUT, UPD, and DEL for /SHARE.
+// shr is the open's FAB$B_SHR: GET for /SHARE=READ, GET, PUT, UPD, and
+// DEL for /SHARE, and none without /SHARE (RMS's default).
 func (a DCLAccess) shr() byte {
-	if a.ShareWrite {
+	switch {
+	case a.ShareWrite:
 		return shrGet | shrPut | shrUpd | shrDel
+	case a.ShareRead:
+		return shrGet
 	}
 
-	return shrGet
+	return 0
 }
 
-// DCLFileError is an OPEN that failed: Status is the RMS status, and Name
-// the file as name processing expanded it ("DUA0:[WORK]NOSUCH.DAT;"), or
-// as it was given when it couldn't be expanded.
+// DCLFileError is an OPEN that failed: Status is the RMS status, and STV
+// its secondary status, if any; Name the file as name processing
+// expanded it ("DUA0:[WORK]NOSUCH.DAT;"), or as it was given when it
+// couldn't be expanded. VMS 7.3 showed SS$_NOSUCHFILE under RMS$_DNF,
+// and nothing under RMS$_FNF (F3), so only RMS$_DNF has one.
 type DCLFileError struct {
 	Name   string
 	Status uint32
+	STV    uint32
+}
+
+// newDCLFileError returns the error for an OPEN of name that failed with
+// RMS status sts.
+func newDCLFileError(name string, sts uint32) *DCLFileError {
+	e := &DCLFileError{Name: name, Status: sts}
+	if sts == rmsDirNotFound {
+		e.STV = ssNoSuchFile
+	}
+
+	return e
 }
 
 func (e *DCLFileError) Error() string {
@@ -114,8 +130,8 @@ type DCLFile struct {
 	// path.
 	Name string
 
-	// Device is the volume's physical device name, "_DUA0:", "" for a
-	// host file: the logical name OPEN defines is equated to it.
+	// Device is the volume's device name, "DUA0", "" for a host file:
+	// the logical name OPEN defines is equated to its physical name.
 	Device string
 
 	ctx    *Context
@@ -135,7 +151,7 @@ func (s *Session) OpenDCLFile(loc FileLocation, a DCLAccess) (*DCLFile, error) {
 	ctx := &Context{Mounts: s.Mounts, Logicals: s.Logicals, Session: s, Files: NewFileTable(nil)}
 
 	fail := func(name string, sts uint32) (*DCLFile, error) {
-		return nil, &DCLFileError{Name: name, Status: sts}
+		return nil, newDCLFileError(name, sts)
 	}
 
 	names, sts := ctx.expandName(nameInputs{Primary: loc.Name, Default: ".DAT"})
@@ -194,7 +210,7 @@ func (s *Session) OpenDCLFile(loc FileLocation, a DCLAccess) (*DCLFile, error) {
 		return fail(name, sts)
 	}
 
-	f := &DCLFile{Name: found.resultant().String(), Device: "_" + found.Device + ":", ctx: ctx, handle: handle, ifi: ifi}
+	f := &DCLFile{Name: found.resultant().String(), Device: found.Device, ctx: ctx, handle: handle, ifi: ifi}
 
 	if sts := f.arm(fac, a.Append); sts != 0 {
 		_ = f.Close()
@@ -249,9 +265,16 @@ func (f *DCLFile) arm(fac byte, appending bool) uint32 {
 // makes has.
 const dclVFCSize = 2
 
+// dclRecordControl is the fixed control Put gives a record of a file
+// with two bytes of it: a line feed before the record, and a carriage
+// return after it (see the top of this file).
+var dclRecordControl = []byte{0x01, 0x8D}
+
+// dclRatPrint is FAT$M_PRINTCC (RAT=PRN): print-file carriage control.
+const dclRatPrint = ondisk.AttrPrintCC
 // createDCLFile makes the new file OPEN/WRITE opens, as $CREATE makes one
 // (create.go's createOnVolume): the next version, unless p names one, a
-// sequential file of VFC records. It returns the file's handle, opened
+// sequential file of VFC records with print-file carriage control. It returns the file's handle, opened
 // for access fac with sharing shr, and the file made, or the RMS status
 // for why not.
 func createDCLFile(ctx *Context, fac, shr byte, p parsedName) (*FileHandle, foundFile, uint32) {
@@ -300,7 +323,7 @@ func createDCLFile(ctx *Context, fac, shr byte, p parsedName) (*FileHandle, foun
 		return nil, found, rmsDeviceError
 	}
 
-	attr := ondisk.RecAttr{Format: ondisk.RecordFormatVFC, Attributes: ratCarriageReturn, VfcSize: dclVFCSize}
+	attr := ondisk.RecAttr{Format: ondisk.RecordFormatVFC, Attributes: dclRatPrint, VfcSize: dclVFCSize}
 
 	file, err := vol.CreateFileVersion(dir, name, version, attr, bm, ib)
 	if errors.Is(err, volume.ErrExists) {
@@ -390,8 +413,9 @@ func (f *DCLFile) Get() ([]byte, uint32) {
 	return record, rmsNormal
 }
 
-// Put writes record at the end of f, as a $PUT does, with zeros for any
-// fixed control, and returns RMS$_NORMAL or the status for why not:
+// Put writes record at the end of f, as a $PUT does, with
+// dclRecordControl as two bytes of fixed control (zeros for any other
+// size), and returns RMS$_NORMAL or the status for why not:
 // RMS$_FAC for a file not opened to write, RMS$_NEF when the stream isn't
 // at the end of the file (a /READ/WRITE file READ hasn't read to its
 // end), RMS$_RSZ for a record the file can't hold.
@@ -417,7 +441,12 @@ func (f *DCLFile) Put(record []byte) uint32 {
 
 	h.wrote(f.ctx, h.endOfFile())
 
-	if err := h.Writer.Put(append(make([]byte, h.vfcSize()), record...)); err != nil {
+	control := make([]byte, h.vfcSize())
+	if len(control) == len(dclRecordControl) {
+		copy(control, dclRecordControl)
+	}
+
+	if err := h.Writer.Put(append(control, record...)); err != nil {
 		return rmsRecordTooBig
 	}
 
@@ -518,7 +547,8 @@ type hostDCLFile struct {
 
 // openHostDCLFile opens the host file at path as OPEN does with access a:
 // /WRITE alone makes it (or empties one that is there), /APPEND and
-// /READ/WRITE need it to exist.
+// /READ/WRITE need it to exist. Every open that writes may read, and
+// /APPEND starts at the end of the file.
 func openHostDCLFile(path string, a DCLAccess) (*DCLFile, error) {
 	var (
 		file *os.File
@@ -527,9 +557,7 @@ func openHostDCLFile(path string, a DCLAccess) (*DCLFile, error) {
 
 	switch {
 	case a.creates():
-		file, err = os.Create(path)
-	case a.Append && !a.Read:
-		file, err = os.OpenFile(path, os.O_WRONLY|os.O_APPEND, 0)
+		file, err = os.OpenFile(path, os.O_RDWR|os.O_CREATE|os.O_TRUNC, 0o644)
 	case a.Write || a.Append:
 		file, err = os.OpenFile(path, os.O_RDWR, 0)
 	default:
@@ -537,21 +565,22 @@ func openHostDCLFile(path string, a DCLAccess) (*DCLFile, error) {
 	}
 
 	if err != nil {
-		return nil, &DCLFileError{Name: path, Status: hostOpenStatus(err)}
+		return nil, newDCLFileError(path, hostOpenStatus(err))
 	}
 
 	fac := a.fac()
 	h := &hostDCLFile{file: file, readable: fac&facGet != 0, writable: fac&facPut != 0, updatable: fac&facUpd != 0}
 
-	if h.readable {
-		h.reader = bufio.NewReader(file)
-	}
+	h.reader = bufio.NewReader(file)
 
-	if a.Append && a.Read {
+	// A new file is empty: its start is its end.
+	h.atEnd = a.creates()
+
+	if a.Append {
 		if h.pos, err = file.Seek(0, io.SeekEnd); err != nil {
 			_ = file.Close()
 
-			return nil, &DCLFileError{Name: path, Status: rmsDeviceError}
+			return nil, newDCLFileError(path, rmsDeviceError)
 		}
 
 		h.reader.Reset(file)

@@ -2307,10 +2307,11 @@ $OPEN
     /READ (the default) opens an existing file to read.  /WRITE makes a
     new file (the next version) to write; /READ/WRITE opens an existing
     one to read and write, at its start.  /APPEND opens an existing file
-    to write at its end.  Without /SHARE, other users may only read the
-    file; /SHARE=READ lets them read it, and /SHARE or /SHARE=WRITE read
-    and write it.  A file OPEN makes has variable-length records with
-    two bytes of fixed control (VFC), and carriage-return carriage
+    to write at its end.  /SHARE=READ lets others read the file, and
+    /SHARE or /SHARE=WRITE read and write it.  Without /SHARE, others may
+    read a file opened to read, and nothing may open a file opened to
+    write, not even TYPE.  A file OPEN makes has variable-length records
+    with two bytes of fixed control (VFC), and print-file carriage
     control.
 
     A file that can't be opened is reported as
@@ -2318,10 +2319,12 @@ $OPEN
         %DCL-E-OPENIN, error opening DUA0:[WORK]NOSUCH.DAT; as input
         -RMS-E-FNF, file not found
 
-    (OPENOUT for a file opened to write), and $STATUS is RMS's status.
-    With /ERROR, the procedure goes to the label instead, with no message
-    and no ON action.  A logical name OPEN already has a file for gets
-    no other.
+    (OPENOUT for a new file), and $STATUS is RMS's status.  With /ERROR,
+    the procedure goes to the label instead, with no message and no ON
+    action.  A logical name OPEN already has a file for gets no other.
+    The logical name is the way to the file: TYPE of it types the file
+    from where READ has got to, and once it is deassigned, READ and
+    CLOSE can't reach the file.
 
     Example:
 
@@ -2356,12 +2359,13 @@ $READ
     or SYS$ERROR, which need no OPEN.  In a command procedure, READ
     SYS$INPUT reads the procedure's next line, whatever it is; at the
     terminal, and from SYS$COMMAND anywhere, READ prompts at the
-    terminal with /PROMPT's string, or DATA:, and reads a line.  Ctrl/Z
-    is the end of the file.
+    terminal with /PROMPT's string, or "Data:" and a tab, and reads a
+    line.  Ctrl/Z is the end of the file.
 
     At the end of the file, the procedure goes to the /END_OF_FILE label,
     or failing that the /ERROR label, with $STATUS RMS$_EOF; with
-    neither, RMS-E-EOF is an error, and the ON action is taken.  A record
+    neither, RMS-E-EOF is an error, and the ON action is taken.  A READ
+    that fails leaves its symbol as it was.  A record
     longer than 2048 bytes is cut to 2048, with RMS-W-RTB.  /NOLOCK and
     /TIME_OUT are accepted, and change nothing.
 
@@ -2386,12 +2390,13 @@ $WRIT
               expression[,...]
 
     The qualifiers come before the data.  The file is one OPEN opened to
-    write, or SYS$OUTPUT, SYS$ERROR, or SYS$COMMAND.  WRITE/UPDATE
-    replaces the record READ read last with one of the same length (the
-    file opened /READ/WRITE).  A record WRITE can't write is RMS's error
-    (RMS-E-NEF for a /READ/WRITE file READ hasn't read to its end), or
-    with /ERROR the procedure goes to the label.  /SYMBOL is accepted.
-    WRITE leaves $STATUS RMS$_NORMAL.
+    write, or SYS$OUTPUT, or SYS$ERROR or SYS$COMMAND, which are the
+    terminal even when a procedure's output goes to an /OUTPUT file.
+    WRITE/UPDATE replaces the record READ read last with one of the same
+    length.  A record WRITE can't write is RMS's error (RMS-F-NEF for a
+    /READ/WRITE file READ hasn't read to its end), or with /ERROR the
+    procedure goes to the label.  Without /SYMBOL, an item longer than
+    255 characters is DCL-W-TKNOVF.  WRITE leaves $STATUS RMS$_NORMAL.
 
     Example:
 
@@ -2410,9 +2415,10 @@ $INQU
 
     The reply has its symbols substituted ('SYMBOL'), and is then read
     as a string assignment's value is: uppercased, its blanks compressed,
-    and quoted text kept as it is.  The symbol is local unless /GLOBAL.
-    In a command procedure INQUIRE still reads the terminal, not the
-    procedure's data.
+    and quoted text kept as it is.  Ctrl/Z gives the symbol "".  The
+    symbol is local unless /GLOBAL.  In a command procedure INQUIRE
+    still reads the terminal, not the procedure's data, and with SET
+    VERIFY the reply, substituted, is shown on the procedure's output.
 
     Example:
 

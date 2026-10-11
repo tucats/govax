@@ -74,8 +74,9 @@ never had.
   `TestProbe50Oracle` replays. Round 2 (`probe50v.com`,
   `vax/probe50v.log`, `TestProbe50VOracle`) is verification, and round
   3 (`probe50i.com`, `vax/probe50i.log`, `TestProbe50IOracle`) SYS$INPUT,
-  DECK, and EOD. Round 4 (`probe50f.com`, and the interactive
-  `probe50q.com`) is DCL's file I/O, not yet run.
+  DECK, and EOD. Round 4 (`probe50f.com`, `vax/probe50f.log`,
+  `TestProbe50FOracle`; the interactive `probe50q.com`,
+  `vax/probe50q.log`, `TestProbe50QOracle`) is DCL's file I/O.
 - `testdata/probe49/` — Phase 49's VMS probe in three rounds (`probe6`,
   `probe6b`, `probe6c`; README.md has each round's answers), run by
   `TestProbe6*`; `testdata/rms49/` and `testdata/sec49/` are the phase's
@@ -320,8 +321,11 @@ expect adjustment as phases land):
   `EndSession`. READ/WRITE need no OPEN for SYS$INPUT, SYS$OUTPUT,
   SYS$ERROR, and SYS$COMMAND (`processPermanentFile`); READ SYS$INPUT
   takes the procedure's next record, SYS$COMMAND and INQUIRE read the
-  terminal (`readTerminal`). /ERROR and /END_OF_FILE branch with
-  `branchStatus`, which stops `procedureLine`'s ON action.
+  terminal (`readTerminal`). The logical name is the way to the file
+  (`openFile`; TYPE of it reads the same stream). /ERROR and
+  /END_OF_FILE branch with `branchStatus`, which stops `procedureLine`'s
+  ON action and leaves the procedure's own status (`endStatus`, EXIT's)
+  CLI$_NORMAL.
   `internal/console/consoletest` is its test support.
 - `internal/io` — device abstraction (Phase 09).
 - `internal/vmsdef` — VMS's own definitions, shared by the assembler, RTL, RMS,

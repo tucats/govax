@@ -73,8 +73,9 @@ func TestDCLFile_host(t *testing.T) {
 }
 
 // TestDCLFile_volume: OPEN/WRITE makes the next version of a file, its
-// logical name equated to the volume's device until CLOSE; TYPE shows the
-// records as lines (rms.TestOpenDCLFile checks the file's attributes).
+// logical name equated to the volume's physical device name, with the
+// node's, until CLOSE; TYPE shows the records as lines
+// (rms.TestOpenDCLFile checks the file's attributes).
 func TestDCLFile_volume(t *testing.T) {
 	out, _ := runFileProcedure(t, false, "",
 		`$ OPEN/WRITE OUT RESULTS`,
@@ -90,7 +91,7 @@ func TestDCLFile_volume(t *testing.T) {
 		`$ TYPE RESULTS.DAT`,
 	)
 
-	want := `  "OUT" = "_DUA0:" (LNM$PROCESS_TABLE)` + "\n" +
+	want := `  "OUT" = "_GOVAX$DUA0" (LNM$PROCESS_TABLE)` + "\n" +
 		"%SHOW-S-NOTRAN, no translation for logical name OUT\n" +
 		"first\nsecond\nnewer\n"
 	if out != want {
@@ -132,10 +133,11 @@ func TestDCLFile_appendAndUpdate(t *testing.T) {
 	}
 }
 
-// TestDCLFile_failures: each failure's message and $STATUS. OPEN's is
-// DCL's OPENIN or OPENOUT and RMS's status, which $STATUS holds marked
-// shown; a record operation's is RMS's message; a name OPEN didn't define
-// is CLI$_UNDFIL.
+// TestDCLFile_failures: each failure's message and $STATUS, as VMS 7.3
+// showed them (testdata/dcl50's F3 and F4). OPEN's is DCL's OPENIN (or
+// OPENOUT, for a new file) and RMS's status, which $STATUS holds marked
+// shown; a record operation's is RMS's message, its status not marked; a
+// name OPEN didn't define is CLI$_UNDFIL.
 func TestDCLFile_failures(t *testing.T) {
 	for _, tc := range []struct {
 		name    string
@@ -147,28 +149,35 @@ func TestDCLFile_failures(t *testing.T) {
 				`  $STATUS == "%X10018292"`},
 		{"missing directory", []string{`$ OPEN/WRITE OUT [NODIR]X`},
 			"%DCL-E-OPENOUT, error opening DUA0:[NODIR]X.DAT; as output\n-RMS-E-DNF, directory not found\n" +
+				"-SYSTEM-W-NOSUCHFILE, no such file\n" +
 				`  $STATUS == "%X1001C04A"`},
 		{"append to a missing file", []string{`$ OPEN/APPEND OUT NOSUCH`},
-			"%DCL-E-OPENOUT, error opening DUA0:[000000]NOSUCH.DAT; as output\n-RMS-E-FNF, file not found\n" +
+			"%DCL-E-OPENIN, error opening DUA0:[000000]NOSUCH.DAT; as input\n-RMS-E-FNF, file not found\n" +
 				`  $STATUS == "%X10018292"`},
 		{"wildcard", []string{`$ OPEN IN *.DAT`},
 			"%DCL-E-OPENIN, error opening DUA0:[000000]*.DAT; as input\n-RMS-F-WLD, invalid wildcard operation\n" +
 				`  $STATUS == "%X10018744"`},
 		{"read past the end", []string{`$ OPEN/WRITE OUT EMPTY`, `$ CLOSE OUT`, `$ OPEN IN EMPTY`, `$ READ IN X`},
-			"%RMS-E-EOF, end of file detected\n" + `  $STATUS == "%X1001827A"`},
+			"%RMS-E-EOF, end of file detected\n" + `  $STATUS == "%X0001827A"`},
 		{"write a file opened to read", []string{`$ OPEN/WRITE OUT EMPTY`, `$ CLOSE OUT`, `$ OPEN IN EMPTY`, `$ WRITE IN "x"`},
-			"%RMS-F-FAC, record operation not permitted by specified file access (FAC)\n" + `  $STATUS == "%X10018514"`},
+			"%RMS-F-FAC, record operation not permitted by specified file access (FAC)\n" + `  $STATUS == "%X00018514"`},
 		{"read a file opened to write", []string{`$ OPEN/WRITE OUT NEW`, `$ READ OUT X`},
-			"%RMS-F-FAC, record operation not permitted by specified file access (FAC)\n" + `  $STATUS == "%X10018514"`},
+			"%RMS-E-EOF, end of file detected\n" + `  $STATUS == "%X0001827A"`},
+		{"write SYS$OUTPUT with a colon", []string{`$ WRITE SYS$OUTPUT: "x"`},
+			"%DCL-W-UNDFIL, file has not been opened by DCL - check logical name\n" + `  $STATUS == "%X00038188"`},
+		// The segment line is cut to 255 characters, as VMS 7.3's was.
+		{"an item too long", []string{`$ S = F$FAO("!300*X")`, `$ WRITE SYS$OUTPUT S`},
+			"%DCL-W-TKNOVF, command element is too long - shorten\n \\" + strings.Repeat("X", 253) + "\n" +
+				`  $STATUS == "%X000382A0"`},
 		{"read a name never opened", []string{`$ READ NOSUCH X`},
 			"%DCL-W-UNDFIL, file has not been opened by DCL - check logical name\n" + `  $STATUS == "%X00038188"`},
 		{"write a name never opened", []string{`$ WRITE NOSUCH "x"`},
 			"%DCL-W-UNDFIL, file has not been opened by DCL - check logical name\n" + `  $STATUS == "%X00038188"`},
 		{"close a name never opened", []string{`$ CLOSE NOSUCH`},
 			"%DCL-W-UNDFIL, file has not been opened by DCL - check logical name\n" + `  $STATUS == "%X00038188"`},
-		{"close/nolog", []string{`$ CLOSE/NOLOG NOSUCH`}, `  $STATUS == "%X10038188"`},
+		{"close/nolog", []string{`$ CLOSE/NOLOG NOSUCH`}, `  $STATUS == "%X00030001"`},
 		{"write and append", []string{`$ OPEN/WRITE/APPEND OUT X`},
-			"%DCL-W-CONFLICT, illegal combination of command elements - check documentation\n \\APPEND\\\n" +
+			"%DCL-W-CONFLICT, illegal combination of command elements - check documentation\n \\WRITE\\\n" +
 				`  $STATUS == "%X00038258"`},
 		{"no file", []string{`$ OPEN IN`},
 			"%DCL-W-INSFPRM, missing command parameters - supply all required parameters\n" + `  $STATUS == "%X00038048"`},
@@ -190,8 +199,9 @@ func TestDCLFile_failures(t *testing.T) {
 }
 
 // TestDCLFile_branches: /ERROR and /END_OF_FILE go to their labels with
-// $STATUS the failure's and no message, and the ON action isn't taken:
-// without SET NOON, an error would otherwise end the procedure.
+// $STATUS the failure's (OPEN's marked shown, as VMS 7.3's was) and no
+// message, and the ON action isn't taken: without SET NOON, an error
+// would otherwise end the procedure.
 func TestDCLFile_branches(t *testing.T) {
 	out, _ := runFileProcedure(t, false, "",
 		`$ OPEN/ERROR=NOFILE IN NOSUCH`,
@@ -219,7 +229,7 @@ func TestDCLFile_branches(t *testing.T) {
 		`$ WRITE SYS$OUTPUT "X is ", X`,
 	)
 
-	want := `  $STATUS == "%X00018292"` + "\n" +
+	want := `  $STATUS == "%X10018292"` + "\n" +
 		`  $STATUS == "%X0001827A"` + "\n" +
 		`  $STATUS == "%X0001827A"` + "\n" +
 		`  $STATUS == "%X00038188"` + "\n" +
@@ -229,8 +239,9 @@ func TestDCLFile_branches(t *testing.T) {
 	}
 }
 
-// TestDCLFile_statuses: OPEN, READ, WRITE, and CLOSE leave $STATUS
-// RMS$_NORMAL.
+// TestDCLFile_statuses: what OPEN, WRITE, CLOSE, READ, and INQUIRE leave
+// in $STATUS, as VMS 7.3 showed it (testdata/dcl50's F1, F10, and Q1):
+// %X00000001, RMS$_NORMAL, RMS$_NORMAL, CLI$_NORMAL, %X00000001.
 func TestDCLFile_statuses(t *testing.T) {
 	out, _ := runFileProcedure(t, false, "",
 		`$ OPEN/WRITE OUT A`,
@@ -243,9 +254,13 @@ func TestDCLFile_statuses(t *testing.T) {
 		`$ READ IN X`,
 		`$ SHOW SYMBOL $STATUS`,
 		`$ CLOSE IN`,
+		`$ INQUIRE Y`,
+		`$ SHOW SYMBOL $STATUS`,
 	)
 
-	if want := strings.Repeat(`  $STATUS == "%X00010001"`+"\n", 4); out != want {
+	want := `  $STATUS == "%X00000001"` + "\n" + `  $STATUS == "%X00010001"` + "\n" + `  $STATUS == "%X00010001"` + "\n" +
+		`  $STATUS == "%X00030001"` + "\n" + "Y: " + `  $STATUS == "%X00000001"` + "\n"
+	if out != want {
 		t.Errorf("the procedure wrote:\n%s\nwant:\n%s", out, want)
 	}
 }
@@ -272,7 +287,7 @@ func TestDCLFile_processPermanent(t *testing.T) {
 	)
 
 	want := "through OUT\n" +
-		"Say: DATA:" +
+		"Say: Data:\t" +
 		`  A = "$ WRITE SYS$OUTPUT "this is a record""` + "\n" +
 		`  B = "data, as it is"` + "\n" +
 		`  C = "typed Line"` + "\n" +
@@ -342,6 +357,80 @@ func TestDCLFile_staysOpen(t *testing.T) {
 	}
 }
 
+// TestDCLFile_logicalName: the logical name is the way to the file: TYPE
+// of it types the file from where READ has got to, using its records up;
+// once the name is deassigned, READ and CLOSE can't reach the file (VMS
+// 7.3, testdata/dcl50's F2 and F11).
+func TestDCLFile_logicalName(t *testing.T) {
+	out, c := runFileProcedure(t, false, "",
+		`$ SET NOON`,
+		`$ OPEN/WRITE OUT THREE`,
+		`$ WRITE OUT "one"`,
+		`$ WRITE OUT "two"`,
+		`$ WRITE OUT "three"`,
+		`$ CLOSE OUT`,
+		`$ OPEN IN THREE`,
+		`$ READ IN X`,
+		`$ TYPE IN`,
+		`$ READ IN X`,
+		`$ DEASSIGN IN`,
+		`$ READ IN X`,
+		`$ CLOSE IN`,
+	)
+
+	want := "two\nthree\n" +
+		"%RMS-E-EOF, end of file detected\n" +
+		"%DCL-W-UNDFIL, file has not been opened by DCL - check logical name\n" +
+		"%DCL-W-UNDFIL, file has not been opened by DCL - check logical name\n"
+	if out != want {
+		t.Errorf("the procedure wrote:\n%s\nwant:\n%s", out, want)
+	}
+
+	if len(c.dclOrphans) != 1 {
+		t.Errorf("%d files out of reach, want 1 (still open)", len(c.dclOrphans))
+	}
+}
+
+// TestDCLFile_terminal: under /OUTPUT, INQUIRE's prompt and WRITE
+// SYS$ERROR and SYS$COMMAND go to the terminal, and procedure
+// verification shows INQUIRE's reply, substituted, in the log (VMS 7.3,
+// testdata/dcl50's Q11).
+func TestDCLFile_terminal(t *testing.T) {
+	d, c, buf := newCommandDispatcher(t)
+	c.In = strings.NewReader("it is 'X'\n")
+
+	dir := t.TempDir()
+	log := filepath.Join(dir, "inner.log")
+	inner := writeProcedure(t, dir, "inner.com",
+		`$ X = "here"`,
+		`$ SET VERIFY`,
+		`$ INQUIRE ANSWER "Prompt"`,
+		`$ WRITE SYS$OUTPUT "to the log"`,
+		`$ WRITE SYS$ERROR "to SYS$ERROR"`,
+		`$ WRITE SYS$COMMAND "to SYS$COMMAND"`,
+		`$ SET NOVERIFY`,
+	)
+
+	if err := d.Dispatch("@" + inner + `/OUTPUT="` + log + `"`); err != nil {
+		t.Fatal(err)
+	}
+
+	if want := "Prompt: to SYS$ERROR\nto SYS$COMMAND\n"; buf.String() != want {
+		t.Errorf("the terminal showed %q, want %q", buf.String(), want)
+	}
+
+	data, err := os.ReadFile(log)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	want := `$ INQUIRE ANSWER "Prompt"` + "\nit is here\n" + `$ WRITE SYS$OUTPUT "to the log"` + "\nto the log\n" +
+		`$ WRITE SYS$ERROR "to SYS$ERROR"` + "\n" + `$ WRITE SYS$COMMAND "to SYS$COMMAND"` + "\n" + "$ SET NOVERIFY\n"
+	if string(data) != want {
+		t.Errorf("the log holds:\n%s\nwant:\n%s", data, want)
+	}
+}
+
 // joinRecords is records as lines of text.
 func joinRecords(records [][]byte) []byte {
 	var out []byte
@@ -374,9 +463,9 @@ func TestDCLFile_sameName(t *testing.T) {
 }
 
 // TestDCLFile_sharing: DCL's files are among a volume file's RMS openers.
-// Without /SHARE a reader lets no one write, so it can't open a file
-// being written (RMS$_FLK); with /SHARE it can, and reads what was
-// written.
+// A file OPEN/WRITE has open (without /SHARE) keeps every other opener
+// out: a reader, a /SHARE reader, and TYPE (VMS 7.3, testdata/dcl50's
+// F9).
 func TestDCLFile_sharing(t *testing.T) {
 	out, _ := runFileProcedure(t, false, "",
 		`$ SET NOON`,
@@ -384,12 +473,18 @@ func TestDCLFile_sharing(t *testing.T) {
 		`$ WRITE OUT "written"`,
 		`$ OPEN IN LOG`,
 		`$ OPEN/SHARE IN LOG`,
-		`$ READ IN X`,
-		`$ WRITE SYS$OUTPUT X`,
+		`$ TYPE LOG.DAT`,
+		`$ SHOW SYMBOL $STATUS`,
+		`$ CLOSE OUT`,
+		`$ TYPE LOG.DAT`,
 	)
 
-	want := "%DCL-E-OPENIN, error opening DUA0:[000000]LOG.DAT; as input\n" +
+	locked := "%DCL-E-OPENIN, error opening DUA0:[000000]LOG.DAT; as input\n" +
+		"-RMS-E-FLK, file currently locked by another user\n"
+	want := locked + locked +
+		"%TYPE-W-OPENIN, error opening DUA0:[000000]LOG.DAT;1 as input\n" +
 		"-RMS-E-FLK, file currently locked by another user\n" +
+		`  $STATUS == "%X10951098"` + "\n" +
 		"written\n"
 	if out != want {
 		t.Errorf("the procedure wrote:\n%s\nwant:\n%s", out, want)

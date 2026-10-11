@@ -194,6 +194,7 @@ func (c *Console) Status() uint32 { return c.status }
 // fails with it, so its message is govax's, arguments and all.
 func (c *Console) setStatus(v uint32, cause error) {
 	c.status, c.statusErr = v, cause
+	c.endStatus, c.endStatusErr = v, cause
 	c.statusSet = true
 
 	g := c.dclSymbols.globals()
@@ -212,7 +213,8 @@ func (c *Console) setCommandStatus(v uint32, cause error) {
 // value v, which it has acted on already by going to its /ERROR or
 // /END_OF_FILE label: $STATUS is v, and the level's ON action isn't
 // taken, as the DCL Dictionary says of each such qualifier ("overrides
-// any ON condition action specified").
+// any ON condition action specified"). The status a procedure that ends
+// now ends with is CLI$_NORMAL (endStatus).
 func (c *Console) branchStatus(v uint32, cause error) {
 	c.commandStatus = commandStatus{set: true, value: v, cause: cause, handled: true}
 }
@@ -239,6 +241,14 @@ func (c *Console) statusOf(run func() error) error {
 	case cs.set:
 		c.setStatus(cs.value, cs.cause)
 		c.statusHandled = cs.handled
+
+		// A branch is a success to the procedure: one that ends now
+		// ends with CLI$_NORMAL, whatever $STATUS holds (VMS 7.3's EXIT
+		// after an /END_OF_FILE branch gave %X10030001, testdata/
+		// dcl50's F7).
+		if cs.handled {
+			c.endStatus, c.endStatusErr = cliNormal, nil
+		}
 	case err != nil:
 		c.setStatus(conditionValue(err), err)
 	case !cs.keep:

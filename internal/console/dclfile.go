@@ -28,52 +28,66 @@ import (
 //
 // OPEN opens a file (rms.Session.OpenDCLFile: on a mounted volume, or on
 // the host) and defines a logical name for it in the process table, in
-// supervisor mode, equated to the file's device ("_DUA0:"; a host file's
-// is its path). The file stays open until CLOSE closes it, whatever
-// command level opened it: a procedure that ends with a file open leaves
-// it open (DCL's files are process-permanent), and govax closes what is
-// left when it ends. A name OPEN already has a file for gets no other:
-// the DCL Dictionary says the OPEN is passed over, with no message.
+// supervisor mode, CONFINE, equated to the volume's physical device name
+// with the node's (TERMINAL: "_GOVAX$DUA0", as VMS 7.3's was
+// "_SIMVAX$DUA1", testdata/dcl50's F1; a host file's is its path). The
+// logical name is the way to the file: READ, WRITE, CLOSE, and TYPE reach
+// it through the name, and once the name is deassigned they can't (VMS
+// 7.3, F11), though the file stays open. A file stays open until CLOSE
+// closes it, whatever command level opened it: a procedure that ends with
+// a file open leaves it open (DCL's files are process-permanent), and
+// govax closes what is left when it ends. A name OPEN already has a file
+// for gets no other, with no message (the DCL Dictionary; VMS 7.3's
+// READ then read the first file, F3).
 //
 // READ name symbol reads the file's next record into a local symbol of
 // the current command level, as it is: no uppercasing, no compression,
 // no substitution. WRITE name item[,...] writes one record, the values
-// of DCL expressions joined. CLOSE closes the file and deassigns its
-// logical name.
+// of DCL expressions joined; without /SYMBOL, an item longer than 255
+// characters is CLI$_TKNOVF (F10). CLOSE closes the file and deassigns
+// its logical name. TYPE of the name types the file's records from where
+// READ has got to, and leaves it at the end (VMS 7.3, F2).
 //
 // The process-permanent files need no OPEN (processPermanentFile, by name
-// or through logical names): READ SYS$INPUT reads a command procedure's
-// next record, whatever it is (a "$" record, or an EOD, VMS 7.3 showed:
-// testdata/dcl50's I6), or the terminal at level 0; READ SYS$COMMAND
-// always reads the terminal, prompting with /PROMPT's string ("DATA:"
-// without one); WRITE SYS$OUTPUT writes to the procedure's output.
+// or through logical names, but not with a colon: VMS 7.3's WRITE
+// SYS$OUTPUT: was CLI$_UNDFIL, F6): READ SYS$INPUT reads a command
+// procedure's next record, whatever it is (a "$" record, or an EOD, VMS
+// 7.3 showed: testdata/dcl50's I6), or the terminal at level 0; READ
+// SYS$COMMAND always reads the terminal, prompting with /PROMPT's string
+// ("Data:" and a tab without one, Q6); WRITE SYS$OUTPUT writes to the
+// procedure's output, and WRITE SYS$ERROR and SYS$COMMAND to the terminal
+// (even under /OUTPUT, Q11).
 //
 // A failure is an RMS status. OPEN's is shown as DCL shows a procedure
-// it can't open (VMS 7.3, testdata/dcl50's D section):
+// it can't open (VMS 7.3, F3):
 //
 //	%DCL-E-OPENIN, error opening DUA0:[WORK]NOSUCH.DAT; as input
 //	-RMS-E-FNF, file not found
 //
-// with $STATUS the RMS status, its message marked shown. READ's and
-// WRITE's are the RMS message alone (unconfirmed). /ERROR=label goes to
-// the label instead, with $STATUS the status and no message, and the
-// level's ON action not taken; READ's /END_OF_FILE=label does the same
-// for RMS$_EOF. Success leaves $STATUS RMS$_NORMAL (VMS 7.3 showed it
-// for WRITE, testdata/dcl50's I3; for the others, unconfirmed). A READ,
-// WRITE, or CLOSE of a name OPEN didn't define is CLI$_UNDFIL, which
-// CLOSE/NOLOG doesn't show.
+// (OPENOUT, "as output", for a new file only), with $STATUS the RMS
+// status, its message marked shown (bit 28), even when /ERROR goes to its
+// label. READ's and WRITE's are the RMS message alone, and $STATUS the
+// RMS status without bit 28 (F2, F4, F5). /ERROR=label goes to the label
+// instead, with $STATUS the status and no message, and the level's ON
+// action not taken; READ's /END_OF_FILE=label does the same for RMS$_EOF.
+// A READ that fails leaves its symbol as it was. Success leaves $STATUS
+// %X00000001 after OPEN (and INQUIRE), CLI$_NORMAL after READ (and an
+// OPEN passed over), RMS$_NORMAL after WRITE and CLOSE. A READ, WRITE, or
+// CLOSE of a name OPEN didn't define is CLI$_UNDFIL, which CLOSE/NOLOG
+// doesn't show, its status CLI$_NORMAL then.
 //
 // INQUIRE symbol [prompt] asks the terminal (SYS$COMMAND) for a value,
 // prompting with the prompt, or the symbol's name, and ": "
 // (/NOPUNCTUATION leaves that out); the reply is substituted ('X') and
 // then treated as a string assignment's value is (dclText), and goes in
-// a local symbol, or with /GLOBAL a global one.
+// a local symbol, or with /GLOBAL a global one. With procedure
+// verification on, the substituted reply is shown on the procedure's
+// output (Q1, Q11); at Ctrl/Z the value is "", and nothing is shown.
 //
 // Not here: indexed files (READ's /INDEX, /KEY, /MATCH, and /DELETE),
 // record locking (/NOLOCK is accepted, and nothing is locked), READ's
-// /TIME_OUT (accepted; a read waits), WRITE/SYMBOL's larger buffer
-// (accepted; records are as long as they need be), and an image's access
-// to a file DCL has open through its logical name.
+// /TIME_OUT (accepted; a read waits), WRITE's 1024-byte record buffer, and
+// an image's access to a file DCL has open through its logical name.
 
 // The RMS statuses DCL's file I/O reports.
 var (
@@ -83,13 +97,22 @@ var (
 	rmsRTBStatus    = vmsdef.Symbols["RMS$_RTB"]
 )
 
+// openSuccess is the status OPEN and INQUIRE leave: %X00000001 (VMS 7.3,
+// testdata/dcl50's F1 and Q1).
+const openSuccess = 1
+
+// maxWriteItem is the longest value a WRITE item may have without
+// /SYMBOL (the DCL Dictionary; VMS 7.3's TKNOVF, F10).
+const maxWriteItem = 255
+
 // maxReadRecord is the longest record READ reads: 2048 bytes (the DCL
 // Dictionary). A longer one is cut to this length, with RMS$_RTB.
 const maxReadRecord = 2048
 
-// dclReadPrompt is READ's prompt at the terminal without /PROMPT: the DCL
-// Dictionary's "DATA:" (unconfirmed: whether a blank follows).
-const dclReadPrompt = "DATA:"
+// dclReadPrompt is READ's prompt at the terminal without /PROMPT: "Data:"
+// and a tab, as VMS 7.3 showed it (testdata/dcl50's Q6; the DCL
+// Dictionary says "DATA:").
+const dclReadPrompt = "Data:\t"
 
 // dclStream is an open DCL file's records: an rms.DCLFile, or the null
 // device (nullStream).
@@ -109,12 +132,13 @@ func (nullStream) Put([]byte) uint32     { return rmsNormalStatus }
 func (nullStream) Update([]byte) uint32  { return rmsNormalStatus }
 func (nullStream) Close() error          { return nil }
 
-// dclOpenFile is a file OPEN has open: its logical name, the file's full
-// name, and its records.
+// dclOpenFile is a file OPEN has open: its logical name and the
+// equivalence string OPEN gave it, the file's full name, and its records.
 type dclOpenFile struct {
-	logical string
-	name    string
-	stream  dclStream
+	logical     string
+	equivalence string
+	name        string
+	stream      dclStream
 }
 
 // dclFileName is a logical name as OPEN, READ, WRITE, and CLOSE take it:
@@ -123,23 +147,49 @@ func dclFileName(text string) string {
 	return strings.TrimSuffix(strings.ToUpper(strings.TrimSpace(text)), ":")
 }
 
-// openFile returns the file OPEN has open under the logical name, if any.
+// openFile returns the file OPEN has open under the logical name, if any:
+// one whose logical name is still OPEN's, in the process table in
+// supervisor mode, equated to what OPEN equated it to. A file whose name
+// was deassigned (or redefined) is out of reach, though still open
+// (orphanFile).
 func (c *Console) openFile(name string) (*dclOpenFile, bool) {
-	f, ok := c.dclFiles[dclFileName(name)]
+	key := dclFileName(name)
 
-	return f, ok
+	f, ok := c.dclFiles[key]
+	if !ok {
+		return nil, false
+	}
+
+	if c.Logicals != nil {
+		e, err := c.Logicals.Translate(lnm.ProcessTableName, key, lnm.Supervisor, 0)
+		if err != nil || e.Mode != lnm.Supervisor || len(e.Equivalences) == 0 || e.Equivalences[0].Value != f.equivalence {
+			c.orphanFile(key, f)
+
+			return nil, false
+		}
+	}
+
+	return f, true
+}
+
+// orphanFile takes f, whose logical name is gone, out of reach: it stays
+// open, as on VMS, until govax ends.
+func (c *Console) orphanFile(key string, f *dclOpenFile) {
+	delete(c.dclFiles, key)
+	c.dclOrphans = append(c.dclOrphans, f)
 }
 
 // rmsStatusFailure is the failure for a record operation that ended with
-// RMS status v: its message alone, the status marked shown (unconfirmed).
-// RMS$_RTB's message has the record's length, n.
+// RMS status v: its message alone, and v as $STATUS, without bit 28 (VMS
+// 7.3, testdata/dcl50's F2 and F4). RMS$_RTB's message has the record's
+// length, n.
 func rmsStatusFailure(v uint32, n int) error {
 	text := messageText(v)
 	if v == rmsRTBStatus {
 		text = strings.Replace(text, "!UL", strconv.Itoa(n), 1)
 	}
 
-	return statusError{status: v | stsInhibitMsg, text: text}
+	return statusError{status: v, text: text}
 }
 
 // branch is an /ERROR or /END_OF_FILE label taken for a command that
@@ -157,12 +207,11 @@ func (c *Console) branch(label string, v uint32, cause error) error {
 	return nil
 }
 
-// failOrBranch reports a record operation's failure, condition value v
-// with err its message: to the label, if there is one (branch), or as
-// err.
+// failOrBranch reports a command's failure, condition value v with err
+// its message: to the label, if there is one (branch), or as err.
 func (c *Console) failOrBranch(label string, v uint32, err error) error {
 	if label != "" {
-		return c.branch(label, v&^stsInhibitMsg, err)
+		return c.branch(label, v, err)
 	}
 
 	return err
@@ -235,8 +284,9 @@ func (d *Dispatcher) openCommand(id int64, r *dcl.Result) error {
 		Append: r.Present("APPEND") && !r.Negated("APPEND"),
 	}
 
+	// VMS 7.3 named /WRITE as the conflict (testdata/dcl50's F3).
 	if access.Write && access.Append {
-		return vmserrors.NewSegment(vmserrors.CLI_CONFLICT, "APPEND")
+		return vmserrors.NewSegment(vmserrors.CLI_CONFLICT, "WRITE")
 	}
 
 	if r.Present("SHARE") && !r.Defaulted("SHARE") {
@@ -255,7 +305,7 @@ func (d *Dispatcher) openCommand(id int64, r *dcl.Result) error {
 	// The DCL Dictionary: a logical name that already names a file OPEN
 	// opened gets no other, with no message.
 	if _, open := c.openFile(logical); open {
-		c.setCommandStatus(rmsNormalStatus, nil)
+		c.setCommandStatus(cliNormal, nil)
 
 		return nil
 	}
@@ -264,37 +314,39 @@ func (d *Dispatcher) openCommand(id int64, r *dcl.Result) error {
 	if err != nil {
 		var fe *rms.DCLFileError
 		if errors.As(err, &fe) {
-			return c.failOrBranch(label, fe.Status, openFailure(fe, access))
+			return c.failOrBranch(label, fe.Status|stsInhibitMsg, openFailure(fe, access))
 		}
 
 		return err
 	}
 
-	if _, err := c.Logicals.Define(lnm.ProcessTableName, logical, lnm.Supervisor, 0, []lnm.Equivalence{{Value: equivalence}}); err != nil {
+	eqv := []lnm.Equivalence{{Value: equivalence, Attrs: lnm.AttrTerminal}}
+	if _, err := c.Logicals.Define(lnm.ProcessTableName, logical, lnm.Supervisor, lnm.AttrConfine, eqv); err != nil {
 		_ = file.stream.Close()
 
 		return err
 	}
 
-	file.logical = logical
+	file.logical, file.equivalence = logical, equivalence
 
 	if c.dclFiles == nil {
 		c.dclFiles = map[string]*dclOpenFile{}
 	}
 
 	c.dclFiles[logical] = file
-	c.setCommandStatus(rmsNormalStatus, nil)
+	c.setCommandStatus(openSuccess, nil)
 
 	return nil
 }
 
 // openDCLFile opens the file spec names for OPEN, host being an explicit
 // /HOST on it, and returns it with the equivalence string its logical
-// name gets. A file on the host whose name has no type gets .DAT, as
-// name processing gives a volume file; NL: is the null device.
+// name gets: the device's physical name with the node's, without a
+// colon ("_GOVAX$DUA0"). A file on the host whose name has no type gets
+// .DAT, as name processing gives a volume file; NL: is the null device.
 func (c *Console) openDCLFile(spec string, host bool, access rms.DCLAccess) (*dclOpenFile, string, error) {
 	if !host && isNullDevice(spec) {
-		return &dclOpenFile{name: "_NLA0:", stream: nullStream{}}, "_NLA0:", nil
+		return &dclOpenFile{name: "_NLA0:", stream: nullStream{}}, c.physicalDevice("NLA0"), nil
 	}
 
 	loc, err := c.ContainerSession.Locate(spec, host)
@@ -311,25 +363,39 @@ func (c *Console) openDCLFile(spec string, host bool, access rms.DCLAccess) (*dc
 		return nil, "", err
 	}
 
-	equivalence := f.Device
-	if loc.Host {
-		equivalence = f.Name
+	equivalence := f.Name
+	if !loc.Host {
+		equivalence = c.physicalDevice(f.Device)
 	}
 
 	return &dclOpenFile{name: f.Name, stream: f}, equivalence, nil
 }
 
+// physicalDevice is device's physical name with the node's, as VMS 7.3
+// equated OPEN's logical name to it: "_GOVAX$DUA0".
+func (c *Console) physicalDevice(device string) string {
+	if c.RTL == nil || c.RTL.NodeName == "" {
+		return "_" + device
+	}
+
+	return "_" + c.RTL.NodeName + "$" + device
+}
+
 // openFailure is OPEN's message for a file it couldn't open, as DCL
-// shows @'s: OPENIN, or OPENOUT for a file opened to be written (a new
-// one, or /APPEND's), then the RMS status's message, the status marked
-// shown.
+// shows @'s: OPENIN, or OPENOUT for a new file, then the RMS status's
+// message and its secondary status's, the status marked shown.
 func openFailure(fe *rms.DCLFileError, access rms.DCLAccess) error {
 	head := "DCL-E-OPENIN, error opening " + fe.Name + " as input"
 	if access.Output() {
 		head = "DCL-E-OPENOUT, error opening " + fe.Name + " as output"
 	}
 
-	return statusError{status: fe.Status | stsInhibitMsg, text: head + "\n" + conditionLine(fe.Status)}
+	text := head + "\n" + conditionLine(fe.Status)
+	if fe.STV != 0 {
+		text += "\n" + conditionLine(fe.STV)
+	}
+
+	return statusError{status: fe.Status | stsInhibitMsg, text: text}
 }
 
 // closeCommand is CLOSE[/ERROR=label][/[NO]LOG] logical-name.
@@ -354,7 +420,7 @@ func (d *Dispatcher) closeCommand(id int64, r *dcl.Result) error {
 		case label != "":
 			return c.branch(label, conditionValue(undefined), undefined)
 		case r.Negated("LOG"):
-			c.setCommandStatus(conditionValue(undefined)|stsInhibitMsg, undefined)
+			c.setCommandStatus(cliNormal, nil)
 
 			return nil
 		}
@@ -403,7 +469,7 @@ func (d *Dispatcher) readCommand(id int64, r *dcl.Result) error {
 		prompt = r.String("PROMPT")
 	}
 
-	record, sts, err := c.readDCLRecord(logical, prompt)
+	record, sts, err := c.readDCLRecord(r.String("LOGICAL_NAME"), prompt)
 	if err != nil {
 		return c.failOrBranch(errorLabel, conditionValue(err), err)
 	}
@@ -420,13 +486,13 @@ func (d *Dispatcher) readCommand(id int64, r *dcl.Result) error {
 	}
 
 	c.dclSymbols.local()[symbol] = dclSymbol{name: symbol, minLength: len(symbol), value: record}
-	c.setCommandStatus(rmsNormalStatus, nil)
+	c.setCommandStatus(cliNormal, nil)
 
 	return nil
 }
 
-// readDCLRecord reads READ's record from the file logical names: one OPEN
-// opened, or a process-permanent file (see the top of this file). It
+// readDCLRecord reads READ's record from the file logical names (as
+// typed): one OPEN opened, or a process-permanent file (see the top of this file). It
 // returns the record and RMS$_NORMAL, or the RMS status for why there is
 // none (RMS$_EOF at the end of the file, RMS$_RTB with the whole record
 // for one too long), or err for a name that has no file.
@@ -440,7 +506,7 @@ func (c *Console) readDCLRecord(logical, prompt string) (string, uint32, error) 
 		data, s := f.stream.Get()
 		record, sts = string(data), s
 	} else {
-		switch ppf := c.processPermanentFile(logical); {
+		switch ppf := c.processPermanentName(logical); {
 		case ppf == "":
 			return "", 0, vmserrors.New(vmserrors.CLI_UNDFIL)
 		case ppf == "SYS$INPUT" && c.currentLevel() != nil && !c.currentLevel().source.plain:
@@ -499,7 +565,7 @@ func (d *Dispatcher) writeCommand(id int64, r *dcl.Result) error {
 		return vmserrors.New(vmserrors.CLI_INSFPRM)
 	}
 
-	record, err := c.writeRecord(data)
+	record, err := c.writeRecord(data, r.Present("SYMBOL"))
 	if err != nil {
 		return err
 	}
@@ -513,15 +579,13 @@ func (d *Dispatcher) writeCommand(id int64, r *dcl.Result) error {
 			sts = f.stream.Put([]byte(record))
 		}
 	} else {
-		switch c.processPermanentFile(logical) {
+		switch c.processPermanentName(r.String("LOGICAL_NAME")) {
 		case "":
 			undefined := vmserrors.New(vmserrors.CLI_UNDFIL)
 
 			return c.failOrBranch(label, conditionValue(undefined), undefined)
 		case "SYS$OUTPUT":
 			c.Printf("%s\n", record)
-		case "SYS$ERROR":
-			c.writeError(record)
 		case "SYS$INPUT":
 			if c.currentLevel() != nil {
 				sts = rmsFACStatus
@@ -542,20 +606,23 @@ func (d *Dispatcher) writeCommand(id int64, r *dcl.Result) error {
 	return nil
 }
 
-// writeError writes record to SYS$ERROR: the procedure's output, and the
-// terminal too when that output is an /OUTPUT file, as a message is
-// shown (procedureMessage; unconfirmed for WRITE).
-func (c *Console) writeError(record string) {
-	c.Printf("%s\n", record)
-
-	if level := c.currentLevel(); level != nil && level.redirected && level.sysCommand != nil {
-		fmt.Fprintf(level.sysCommand, "%s\n", record)
+// processPermanentName is processPermanentFile for READ and WRITE's
+// logical-name parameter, which VMS 7.3 didn't take with a colon after it
+// (WRITE SYS$OUTPUT: was CLI$_UNDFIL, testdata/dcl50's F6).
+func (c *Console) processPermanentName(name string) string {
+	if strings.HasSuffix(strings.TrimSpace(name), ":") {
+		return ""
 	}
+
+	return c.processPermanentFile(name)
 }
 
 // writeRecord is WRITE's record: the values of its data's expressions,
 // separated by commas, one after another, an integer's in decimal.
-func (c *Console) writeRecord(data string) (string, error) {
+// Without symbol (/SYMBOL), an item's value may be no longer than 255
+// characters: a longer one is CLI$_TKNOVF, with the first 255 as its
+// segment, as VMS 7.3 showed it (testdata/dcl50's F10).
+func (c *Console) writeRecord(data string, symbol bool) (string, error) {
 	var b strings.Builder
 
 	for _, item := range splitDCLList(data) {
@@ -564,7 +631,12 @@ func (c *Console) writeRecord(data string) (string, error) {
 			return "", err
 		}
 
-		b.WriteString(v.String())
+		text := v.String()
+		if !symbol && len(text) > maxWriteItem {
+			return "", vmserrors.NewSegment(vmserrors.CLI_TKNOVF, text[:maxWriteItem])
+		}
+
+		b.WriteString(text)
 	}
 
 	return b.String(), nil
@@ -621,11 +693,17 @@ func (d *Dispatcher) inquireCommand(id int64, r *dcl.Result) error {
 		prompt += ": "
 	}
 
-	reply, _ := c.readTerminal(prompt)
+	reply, ok := c.readTerminal(prompt)
 
 	reply, err := c.substituteApostrophes(reply)
 	if err != nil {
 		return err
+	}
+
+	// Procedure verification shows the reply, substituted, on the
+	// procedure's output (VMS 7.3, testdata/dcl50's Q1 and Q11).
+	if ok && c.Verify && c.currentLevel() != nil {
+		fmt.Fprintln(c.Out, reply)
 	}
 
 	table := c.dclSymbols.local()
@@ -634,16 +712,46 @@ func (d *Dispatcher) inquireCommand(id int64, r *dcl.Result) error {
 	}
 
 	table[symbol] = dclSymbol{name: symbol, minLength: len(symbol), value: dclText(reply, false), global: r.Present("GLOBAL")}
+	c.setCommandStatus(openSuccess, nil)
 
 	return nil
 }
 
-// closeDCLFiles closes every file OPEN left open, as the process's
-// rundown does on VMS: what they wrote goes to their volumes.
+// typeOpenFile is TYPE of a logical name OPEN defined: it types the
+// file's records from where READ has got to, through the same stream, so
+// a READ after it is at the end of the file, as VMS 7.3's was
+// (testdata/dcl50's F2). ok is false for a name that isn't one.
+func (c *Console) typeOpenFile(spec string) (ok bool) {
+	f, open := c.openFile(spec)
+	if !open {
+		return false
+	}
+
+	for c.Running() {
+		record, sts := f.stream.Get()
+		if sts&1 == 0 {
+			break
+		}
+
+		c.Printf("%s\n", record)
+	}
+
+	return true
+}
+
+// closeDCLFiles closes every file OPEN left open, those whose logical
+// names are gone too, as the process's rundown does on VMS: what they
+// wrote goes to their volumes.
 func (c *Console) closeDCLFiles() {
 	for logical, f := range c.dclFiles {
 		_ = f.stream.Close()
 
 		delete(c.dclFiles, logical)
 	}
+
+	for _, f := range c.dclOrphans {
+		_ = f.stream.Close()
+	}
+
+	c.dclOrphans = nil
 }

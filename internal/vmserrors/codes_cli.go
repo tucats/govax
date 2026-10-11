@@ -191,6 +191,7 @@ const (
 	cliConflict
 	cliInvPrefix
 	cliUndFil
+	cliTknOvf
 )
 
 // CLI facility status codes -- CLI_ prefix, matching real VMS's CLI$_
@@ -477,6 +478,10 @@ const (
 	// warning, for a READ, WRITE, or CLOSE of a logical name OPEN didn't
 	// define.
 	CLI_UNDFIL = CLIFacility<<FacilityPosition | cliUndFil<<MessagePosition | StatusWarning
+
+	// CLI_TKNOVF, a warning, is a WRITE item longer than 255 characters
+	// without /SYMBOL (VMS 7.3, testdata/dcl50's F10).
+	CLI_TKNOVF = CLIFacility<<FacilityPosition | cliTknOvf<<MessagePosition | StatusWarning
 )
 
 func init() {
@@ -626,5 +631,6 @@ func init() {
 	DefineMessage(CLI_CONFLICT, CLIFacility, "CONFLICT", "illegal combination of command elements - check documentation")
 	DefineMessage(CLI_INVPREFIX, CLIFacility, "INVPREFIX", "invalid prefix format string - check FAO directives")
 	DefineMessage(CLI_UNDFIL, CLIFacility, "UNDFIL", "file has not been opened by DCL - check logical name")
+	DefineMessage(CLI_TKNOVF, CLIFacility, "TKNOVF", "command element is too long - shorten")
 	DefineMessage(CLI_BADLIMIT, CLIFacility, "BADLIMIT", "Invalid /LIMIT value !D (must be at least 1; DELETE NAME;* removes every version)")
 }

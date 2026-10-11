@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/tucats/govax/internal/rms"
 	"github.com/tucats/govax/internal/vmsdef"
 	"github.com/tucats/govax/internal/vmserrors"
 )
@@ -522,5 +523,220 @@ func TestProbe50IOracle(t *testing.T) {
 
 	if strings.Join(gotOutcomes, "\n") != strings.Join(wantOutcomes, "\n") {
 		t.Errorf("I1's data lines:\ngot:\n%s\nwant:\n%s", strings.Join(gotOutcomes, "\n"), strings.Join(wantOutcomes, "\n"))
+	}
+}
+
+// probe50FSkipped are the commands of round 4 whose output is outside
+// the probe's question, and left out of the comparison: DELETE's,
+// DIRECTORY's, and DUMP's (which govax hasn't) layouts are their own.
+var probe50FSkipped = []string{"$ DELETE ", "$ DIRECTORY", "$ DUMP"}
+
+// probe50FCompared is a round 4 log as the comparison sees it: the output
+// of the probe50FSkipped commands left out, and the extra blank VMS 7.3's
+// SHOW LOGICAL puts before a process-permanent file's name ("   "OUT"")
+// taken away, govax's logical names having no process-permanent file
+// behind them to show it by (DEVIATIONS.md, "[Phase 50] DCL's file
+// I/O").
+func probe50FCompared(text string) string {
+	var (
+		out      []string
+		skipping bool
+	)
+
+	for _, line := range strings.Split(text, "\n") {
+		if strings.HasPrefix(line, "$ ") {
+			skipping = false
+
+			for _, prefix := range probe50FSkipped {
+				if strings.HasPrefix(line, prefix) {
+					skipping = true
+				}
+			}
+		} else if skipping {
+			continue
+		}
+
+		if rest, ok := strings.CutPrefix(line, `   "`); ok {
+			line = `  "` + rest
+		}
+
+		out = append(out, line)
+	}
+
+	return strings.Join(out, "\n")
+}
+
+// TestProbe50FOracle runs round 4 of testdata/dcl50, probe50f.com (and
+// probe50g.com, which it runs), on a volume mounted on DUA1, the node
+// called SIMVAX, as the VMS run's was, and compares what it writes with
+// VMS 7.3's log line for line, section by section: OPEN, READ, WRITE, and
+// CLOSE.
+func TestProbe50FOracle(t *testing.T) {
+	logText, err := os.ReadFile("../../testdata/dcl50/vax/probe50f.log")
+	if err != nil {
+		t.Skipf("no VMS log: %v", err)
+	}
+
+	d, c, buf := newCommandDispatcher(t)
+	mountFreshContainer(t, c, "DUA1")
+	c.RTL.NodeName = "SIMVAX"
+
+	dir := t.TempDir()
+
+	for _, name := range []string{"probe50f.com", "probe50g.com"} {
+		path := filepath.Join(dir, name)
+		writeFile(t, path, readTestdata(t, filepath.Join("../../testdata/dcl50", name)))
+
+		if err := d.Dispatch(`COPY "` + path + `"/HOST DUA1:[000000]` + strings.ToUpper(name)); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	if err := c.SetDefault("DUA1:[000000]"); err != nil {
+		t.Fatal(err)
+	}
+
+	buf.Reset()
+
+	if err := d.Dispatch("@PROBE50F/OUTPUT=PROBE50F.LOG"); err != nil && !vmserrors.MessageInhibited(err) {
+		t.Fatalf("@PROBE50F: %v", err)
+	}
+
+	records, _, err := c.ContainerSession.ReadRecordFile(rms.FileLocation{Name: "DUA1:[000000]PROBE50F.LOG"}, rms.TextRecords)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// What went to the terminal, not the log: WRITE SYS$ERROR's record
+	// (VMS 7.3's too, testdata/dcl50's Q11) and the messages, which go
+	// to both.
+	if !strings.Contains(buf.String(), "to SYS$ERROR\n") {
+		t.Errorf("WRITE SYS$ERROR's record didn't go to the terminal; it showed:\n%s", buf.String())
+	}
+
+	want := probeSections(probe50FCompared(strings.TrimPrefix(strings.ReplaceAll(string(logText), "\r", ""), "\n")), "F")
+	got := probeSections(probe50FCompared(string(joinRecords(records))), "F")
+
+	if len(want) < 12 {
+		t.Fatalf("the log has %d sections, want 12", len(want))
+	}
+
+	for name, wantLines := range want {
+		// Before its first section, VMS's log has the probe's opening
+		// comments, verification having been on when it ran.
+		if name == "" {
+			continue
+		}
+
+		gotLines := got[name]
+
+		for i := 0; i < max(len(gotLines), len(wantLines)); i++ {
+			var g, w string
+			if i < len(gotLines) {
+				g = gotLines[i]
+			}
+
+			if i < len(wantLines) {
+				w = wantLines[i]
+			}
+
+			if g != w {
+				t.Errorf("section %q, line %d:\n got %q\nwant %q", name, i+1, g, w)
+
+				break
+			}
+		}
+	}
+}
+
+// readTestdata returns a testdata file's text.
+func readTestdata(t *testing.T, path string) string {
+	t.Helper()
+
+	text, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	return string(text)
+}
+
+// probe50QTyped is what the author typed at round 4's interactive
+// probe's prompts (probe50q.com's comments say what): Q1 to Q3's
+// replies, Ctrl/Z (Q4), Return (Q5), Q6 and Q7's replies, Ctrl/Z twice
+// (Q8, Q9), and Q11's reply.
+const probe50QTyped = "hello 'X'\"Mixed  Case\"\nyes\nraw\n\x1a\nSome  Text 'X'\nabc\n\x1a\x1anested\n"
+
+// probe50QResults are the lines of an interactive session that say what
+// a command did: a symbol's value, $STATUS, and a message. The prompts
+// and the replies' echoes are the terminal's, which a test's input
+// doesn't make (so a message may follow a prompt on its line).
+func probe50QResults(text string) []string {
+	var out []string
+
+	for _, line := range strings.Split(text, "\n") {
+		if i := strings.Index(line, "%"); i >= 0 && !strings.HasPrefix(line, "$") && !strings.HasPrefix(line, "  ") {
+			line = line[i:]
+		}
+
+		if strings.HasPrefix(line, "  ") || strings.HasPrefix(line, "%") {
+			out = append(out, line)
+		}
+	}
+
+	return out
+}
+
+// TestProbe50QOracle runs round 4's interactive probe, probe50q.com (and
+// probe50p.com, which it runs with /OUTPUT), with what the author typed
+// on VMS, and compares what each INQUIRE and READ left with VMS 7.3's
+// session (vax/probe50q.log), and the log probe50p.com wrote with VMS's
+// (vax/probe50p.log), line for line.
+func TestProbe50QOracle(t *testing.T) {
+	session, err := os.ReadFile("../../testdata/dcl50/vax/probe50q.log")
+	if err != nil {
+		t.Skipf("no VMS session: %v", err)
+	}
+
+	vmsLog := readTestdata(t, "../../testdata/dcl50/vax/probe50p.log")
+
+	d, c, buf := newCommandDispatcher(t)
+	mountFreshContainer(t, c, "DUA1")
+	c.In = strings.NewReader(probe50QTyped)
+
+	dir := t.TempDir()
+
+	for _, name := range []string{"probe50q.com", "probe50p.com"} {
+		path := filepath.Join(dir, name)
+		writeFile(t, path, readTestdata(t, filepath.Join("../../testdata/dcl50", name)))
+
+		if err := d.Dispatch(`COPY "` + path + `"/HOST DUA1:[000000]` + strings.ToUpper(name)); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	if err := c.SetDefault("DUA1:[000000]"); err != nil {
+		t.Fatal(err)
+	}
+
+	buf.Reset()
+
+	if err := d.Dispatch("@PROBE50Q"); err != nil && !vmserrors.MessageInhibited(err) {
+		t.Fatalf("@PROBE50Q: %v", err)
+	}
+
+	got, want := probe50QResults(buf.String()), probe50QResults(strings.ReplaceAll(string(session), "\r", ""))
+	if strings.Join(got, "\n") != strings.Join(want, "\n") {
+		t.Errorf("the session's results:\n%s\nwant:\n%s", strings.Join(got, "\n"), strings.Join(want, "\n"))
+	}
+
+	records, _, err := c.ContainerSession.ReadRecordFile(rms.FileLocation{Name: "DUA1:[000000]PROBE50P.LOG"}, rms.TextRecords)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	log := string(joinRecords(records))
+	if want := strings.TrimSpace(strings.ReplaceAll(vmsLog, "\r", "")); strings.TrimSpace(log) != want {
+		t.Errorf("PROBE50P.LOG holds:\n%s\nwant:\n%s", log, want)
 	}
 }

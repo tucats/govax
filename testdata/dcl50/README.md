@@ -81,7 +81,8 @@ shows `$STATUS` and X:
 Round 2 is run the same way, with `@PROBE50V/OUTPUT=PROBE50V.LOG`, and
 round 3 with `@PROBE50I/OUTPUT=PROBE50I.LOG`. Round 4 has two parts (see
 "Round 4" below); `copyout.cmd` now copies round 4's logs, to
-`vax/probe50f.log` and `vax/probe50p.log`.
+`vax/probe50f.log` and `vax/probe50p.log` (the author kept the
+interactive session as `vax/probe50q.log`).
 
 ## Round 2: verification
 
@@ -337,3 +338,58 @@ Then, at the `$` prompt itself (command level 0), type
 
 replying `hello` to READ's prompt, and keep that too: READ SYS$INPUT at
 the terminal.
+
+## What VMS answered in round 4 (2026-10-11)
+
+`TestProbe50FOracle` (`internal/console/probe50_test.go`) runs
+`probe50f.com` under govax, with /OUTPUT as on VMS, on DUA1 of a node
+called SIMVAX, and compares its log with `vax/probe50f.log` section by
+section; every section matches, but for DELETE's, DIRECTORY's, and
+DUMP's output (their own layouts) and the extra blank SHOW LOGICAL puts
+before a process-permanent file's name. `TestProbe50QOracle` runs
+`probe50q.com` with what the author typed and compares each symbol,
+`$STATUS`, and message with `vax/probe50q.log`, and `PROBE50P.LOG` with
+`vax/probe50p.log`; all match. The answers (DEVIATIONS.md's "[Phase 50]
+DCL's file I/O"):
+
+- **F1:** OPEN leaves %X00000001; WRITE and CLOSE RMS$_NORMAL. The
+  logical name is `[super,confine] = "_SIMVAX$DUA1" [terminal]`. The new
+  file is VFC, 2 bytes of control, print-file carriage control.
+- **F2:** TYPE of the logical name typed the file and used up its
+  records: every READ after it was at the end of the file. READ at the
+  end shows `%RMS-E-EOF`, `$STATUS` %X0001827A (no bit 28), the symbol
+  unchanged, no local symbol made; /END_OF_FILE and /ERROR branch with
+  the same status.
+- **F3:** OPEN's failures are OPENIN (OPENOUT only for a new file), with
+  `-SYSTEM-W-NOSUCHFILE` under RMS$_DNF, and bit 28 in `$STATUS` even at
+  the /ERROR label. OPEN/WRITE/APPEND is CONFLICT `\WRITE\`. A name
+  already open is passed over with CLI$_NORMAL, and READ reads the first
+  file.
+- **F4:** UNDFIL for a name never opened; CLOSE/NOLOG of one is silent
+  and CLI$_NORMAL. WRITE to a file opened to read is RMS$_FAC (no bit
+  28); READ of a file opened /WRITE is RMS$_EOF.
+- **F5:** WRITE/UPDATE with no record read is RMS$_CUR (on a /WRITE file
+  too), of another length RMS$_RSZ; WRITE before the end of a
+  /READ/WRITE file RMS$_NEF; /READ/APPEND reads from the end.
+- **F6:** WRITE SYS$ERROR doesn't go to the /OUTPUT log; `SYS$OUTPUT:` is
+  UNDFIL; WRITE SYS$INPUT RMS$_FAC; a trailing comma, or items without
+  one, EXPSYN.
+- **F7:** a file a procedure leaves open stays open; after an
+  /END_OF_FILE branch the procedure's EXIT gave %X10030001.
+- **F8:** data lines after OPEN, READ, and CLOSE are read as commands.
+- **F9:** a file OPEN/WRITE has open keeps out a reader, a /SHARE reader,
+  and TYPE (RMS$_FLK); two /SHARE=READ readers share, and keep /APPEND
+  out.
+- **F10:** a WRITE item over 255 characters is TKNOVF, its segment line
+  cut at 255; /SYMBOL and READ take 600; READ leaves CLI$_NORMAL.
+- **F11:** DEASSIGN of the name (supervisor mode by default) leaves
+  %X00000001, and READ and CLOSE are then UNDFIL.
+- **Q1 to Q11:** INQUIRE leaves %X00000001, Ctrl/Z gives ""; with
+  verification, the substituted reply is shown on the procedure's output
+  (the /OUTPUT log). READ's prompt is "Data:" and a tab; Ctrl/Z is
+  RMS$_EOF. WRITE SYS$COMMAND is RMS$_NORMAL; SYS$ERROR and SYS$COMMAND,
+  and INQUIRE's prompt, go to the terminal under /OUTPUT.
+
+Still open: the fixed control bytes DCL writes (DUMP/BLOCK would show
+them; govax writes 01 8D), and why SHOW LOGICAL indents a
+process-permanent name one blank further.

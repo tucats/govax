@@ -1,0 +1,100 @@
+$ @probe50q
+$ ! PROBE50Q.COM - Phase 50's interactive probe for subtask 17: INQUIRE
+$ ! and READ at the terminal (testdata/dcl50/README.md). Run it at the
+$ ! terminal from SYSTEM, WITHOUT /OUTPUT, with the exchange volume as the
+$ ! default directory:
+$ !
+$ !     @PROBE50Q
+$ !
+$ ! and type, at each prompt, what the comment before it asks for. Keep
+$ ! the whole session (prompts, replies, output) for vax/probe50q.log.
+$ SET NOON
+$ SET VERIFY
+$ X = "there"
+$ ! Q1: INQUIRE with a prompt. Type:   hello  'X'"Mixed  Case"
+$ INQUIRE ANSWER "Your answer"
+Your answer: hello 'X'"Mixed  Case"
+hello there"Mixed  Case"
+$ SHOW SYMBOL ANSWER
+  ANSWER = "HELLO THEREMixed  Case"
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ ! Q2: INQUIRE with no prompt. Type:   yes
+$ INQUIRE FLAG
+FLAG: yes
+yes
+$ SHOW SYMBOL FLAG
+  FLAG = "YES"
+$ ! Q3: INQUIRE/NOPUNCTUATION. Type:   raw
+$ INQUIRE/NOPUNCTUATION LAST "> "
+> raw
+raw
+$ SHOW SYMBOL LAST
+  LAST = "RAW"
+$ ! Q4: INQUIRE. Type Ctrl/Z.
+$ CZ = "-"
+$ INQUIRE CZ "Type Ctrl/Z"
+Type Ctrl/Z:  Exit 
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ SHOW SYMBOL CZ
+  CZ = ""
+$ ! Q5: INQUIRE/GLOBAL. Type just Return.
+$ INQUIRE/GLOBAL EMPTY "Type Return"
+Type Return: 
+
+$ SHOW SYMBOL EMPTY
+  EMPTY == ""
+$ ! Q6: READ SYS$COMMAND, the default prompt. Type:   Some  Text 'X'
+$ READ SYS$COMMAND R
+Data:	Some  Text 'X'
+$ SHOW SYMBOL R
+  R = "Some  Text 'X'"
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00030001"
+$ ! Q7: READ/PROMPT. Type:   abc
+$ READ/PROMPT="Say: " SYS$COMMAND R
+Say: abc
+$ SHOW SYMBOL R
+  R = "abc"
+$ ! Q8: READ/END_OF_FILE of SYS$COMMAND. Type Ctrl/Z.
+$ READ/END_OF_FILE=Q8E SYS$COMMAND R
+Data:	 Exit 
+$ Q8E:
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X0001827A"
+$ ! Q9: READ SYS$COMMAND with no label. Type Ctrl/Z.
+$ READ SYS$COMMAND R
+Data:	 Exit 
+%RMS-E-EOF, end of file detected
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X0001827A"
+$ ! Q10: WRITE to SYS$COMMAND and SYS$ERROR.
+$ WRITE SYS$COMMAND "to SYS$COMMAND"
+to SYS$COMMAND
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00010001"
+$ WRITE SYS$ERROR "to SYS$ERROR"
+to SYS$ERROR
+$ ! Q11: a procedure run with /OUTPUT: where INQUIRE's prompt and
+$ ! WRITE SYS$ERROR go (the terminal, the log, or both). Type:   nested
+$ @PROBE50P/OUTPUT=PROBE50P.LOG
+Nested prompt: nested
+Q11 to SYS$ERROR
+Q11 to SYS$COMMAND
+$ TYPE PROBE50P.LOG
+$ ! PROBE50P.COM - PROBE50Q's nested procedure (section Q11), run with
+$ ! /OUTPUT=PROBE50P.LOG: where do INQUIRE's prompt, WRITE SYS$ERROR, and
+$ ! WRITE SYS$COMMAND go?
+$ SET VERIFY
+$ INQUIRE NESTED "Nested prompt"
+nested
+$ SHOW SYMBOL NESTED
+  NESTED = "NESTED"
+$ WRITE SYS$OUTPUT "Q11 to SYS$OUTPUT"
+Q11 to SYS$OUTPUT
+$ WRITE SYS$ERROR "Q11 to SYS$ERROR"
+$ WRITE SYS$COMMAND "Q11 to SYS$COMMAND"
+$ M = "Q11"
+$ EXIT
+

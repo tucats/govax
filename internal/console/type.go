@@ -4,8 +4,14 @@ import (
 	"errors"
 
 	"github.com/tucats/govax/internal/rms"
+	"github.com/tucats/govax/internal/vmsdef"
 	"github.com/tucats/govax/internal/vmserrors"
 )
+
+// typeOpenIn is TYPE's OPENIN condition value, a warning: the shared
+// message SHR$_OPENIN in TYPE's facility, 149 (VMS 7.3's TYPE gave
+// %X10951238, its SEARCHFAIL, in testdata/dcl50's round 1).
+var typeOpenIn = 149<<16 | vmsdef.LibrarySymbols["SHR$_OPENIN"]
 
 // This file implements the console TYPE command (docs/PHASE-23.md,
 // subtask 8) — the operator-facing half of "write one file's content to
@@ -53,10 +59,15 @@ import (
 //
 // SYS$INPUT, or a logical name that translates to it, is the process's
 // input, typed a line at a time (typeInput): in a command procedure, the
-// data lines after the command.
+// data lines after the command. A logical name DCL's OPEN defined types
+// the file it opened, from where READ has got to (typeOpenFile).
 func (c *Console) Type(specText string, paged bool) error {
 	if c.isInputStream(specText) {
 		return c.typeInput()
+	}
+
+	if c.typeOpenFile(specText) {
+		return nil
 	}
 
 	text, err := c.ContainerSession.Type(specText)
@@ -73,6 +84,17 @@ func (c *Console) Type(specText string, paged bool) error {
 		var notFound *rms.NotFoundError
 		if errors.As(err, &notFound) {
 			return vmserrors.Wrap(vmserrors.SS_NOSUCHFILE, err, notFound.Spec)
+		}
+
+		// The file another opener keeps readers out of: TYPE's message
+		// for it, as VMS 7.3 showed it (testdata/dcl50's F9), with the
+		// condition value TYPE's image signals, its message shown.
+		var locked *rms.LockedError
+		if errors.As(err, &locked) {
+			return statusError{
+				status: typeOpenIn | stsInhibitMsg,
+				text:   "TYPE-W-OPENIN, error opening " + locked.Name + " as input\n" + conditionLine(vmsdef.Symbols["RMS$_FLK"]),
+			}
 		}
 
 		var ambiguous *rms.AmbiguousError
