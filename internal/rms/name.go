@@ -694,3 +694,30 @@ func finishName(f fileName, concealed string, fnb uint32, noConceal bool) parsed
 
 	return p
 }
+
+// IsODSFileName reports whether s is a valid ODS-2 file name: a name and type
+// of 1..39 characters, each a letter, digit, "$", "_", or "-", and a version
+// of none or a number. If the name contains obvious indicators that it is a
+// host name instead, we bail out early (e.g., "DUA0:[000000]FILE.TXT;1" is a
+// valid ODS-2 file name, but "./foo.com" is not).
+func IsODSFileName(s string) bool {
+	// Check for obvious Unix-isms in the file name.
+	if strings.ContainsAny(s, "/") || strings.HasPrefix(s, "./") || strings.HasPrefix(s, "../") {
+		return false
+	}
+
+	// Check for obvious Windows-isms in the file name.
+	for _, part := range []string{
+		"\\",
+		".\\",
+		"..\\",
+	} {
+		if strings.Contains(s, part) {
+			return false
+		}
+	}
+
+	f, sts := scanName(s)
+
+	return sts == 0 && f.Dir == "" && f.Dev == ""
+}

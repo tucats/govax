@@ -52,6 +52,7 @@ func TestRun_milestone(t *testing.T) {
 		t.Helper()
 
 		console.RunCommandLine = commandText
+		
 		t.Cleanup(func() { console.RunCommandLine = "" })
 
 		var buf bytes.Buffer

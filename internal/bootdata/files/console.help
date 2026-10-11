@@ -1761,8 +1761,14 @@ $CONF,KEY
 
         vax.link.library              The older name for vax.library,
                                       read when vax.library isn't set.
-
+                                      
     The console
+
+        vax.startup.procedure         If specified, the name of a DCL
+                                      command procedure run automatically
+                                      during startup processing. IF the
+                                      procdedure name does not exist, or
+                                      is empty, there is no error.
 
         vax.console.prompt            The console's prompt.  Default
                                       "VAX> ".  SET PROMPT changes it.

@@ -32,6 +32,7 @@ import (
 	"github.com/tucats/govax/internal/cpu"
 	"github.com/tucats/govax/internal/debugger"
 	"github.com/tucats/govax/internal/respath"
+	"github.com/tucats/govax/internal/rms"
 	"github.com/tucats/govax/internal/vmserrors"
 	"golang.org/x/text/language"
 	"golang.org/x/text/message"
@@ -261,6 +262,32 @@ func run(paths []string, instructionLimit int, timeLimit time.Duration, out io.W
 	// fails has shown its message, which ends it.
 	if err := c.RunHostProcedure("vax.init", d.Dispatch); err != nil && !vmserrors.MessageInhibited(err) {
 		fmt.Fprintln(out, "%"+err.Error())
+	}
+
+	// IF there is a default startup procedure speciried, run that. First check to
+	// see if the named script exists on the default container vaolume. If it doe snot,
+	// there is no error. But if it does, run it as a comamand procedure, and report
+	// any errors encountere.
+	if startup := settings.Get("vax.startup.procedure"); startup != "" {
+		// Using the path string, infer if it is an ODS file name or a
+		// hos tfile name.
+		if rms.IsODSFileName(startup) {
+			if names, err := c.ContainerSession.Search(startup); len(names) > 0 && err == nil {
+				fileName := names[0]
+				// It is an ODS file name, so run it as a command procedure.
+				if err := c.RunProcedure(fileName, d.Dispatch); err != nil && !vmserrors.MessageInhibited(err) {
+					fmt.Fprintln(out, "%"+err.Error())
+				}
+			}
+		} else {
+			// See if the host file exists. If it does not, there is no error. 
+			// But if it does, run it as a host command procedure.
+			if _, err := os.Stat(startup); err == nil {
+				if err := c.RunHostProcedure(startup, d.Dispatch); err != nil && !vmserrors.MessageInhibited(err) {
+					fmt.Fprintln(out, "%"+err.Error())
+				}
+			}
+		}
 	}
 
 	// Then the command interpreter reads level 0's input: the one-shot
@@ -550,6 +577,7 @@ var validConfigs = map[string]bool{
 	"vax.default.volume.type":      true,
 	"vax.default.volume.directory": true,
 	"vax.disassemble.symbolic":     true,
+	"vax.startup.procedure":        true,
 
 	"vax.process.scheduler": true,
 	"vax.process.quantum":   true,
