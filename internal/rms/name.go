@@ -717,7 +717,7 @@ func IsODSFileName(s string) bool {
 		}
 	}
 
-	f, sts := scanName(s)
+	_, sts := scanName(s)
 
-	return sts == 0 && f.Dir == "" && f.Dev == ""
+	return sts == 0
 }
