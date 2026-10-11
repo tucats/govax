@@ -3191,12 +3191,56 @@ widened."
     line (an apostrophe pair spanning two records) is shown as one line.
   - The comment on a continued command's first record isn't scanned, so
     F$VERIFY in it isn't performed.
-- **Not yet**: section V6, image verification. VMS shows each data line
-  TYPE SYS$INPUT reads (then TYPE writes it), and a data line after a
-  DCL command that isn't an image (SET VERIFY) was shown and then read
-  as a command, `%DCL-W-IVVERB \DATA\`, not passed over with SKPDAT.
-  Both wait for subtask 16 (SYS$INPUT from a procedure).
+- **Section V6**, image verification, came with subtask 16 (below, "SYS$INPUT
+  from a procedure"): VMS shows each data line TYPE SYS$INPUT reads
+  (then TYPE writes it), and a data line after a DCL command that isn't
+  an image (SET VERIFY) was shown and then read as a command,
+  `%DCL-W-IVVERB \DATA\`, not passed over with SKPDAT.
 - **Status**: VMS's answers followed; the choices above unconfirmed.
+
+### [Phase 50] SYS$INPUT from a procedure: the probe's V6, the manuals, and choice
+
+- **Where**: `internal/console/dclinput.go` (`procedureInput`,
+  `readData`, DECK and EOD, `dclOwnCommands`, TYPE SYS$INPUT),
+  `procedure.go` (`runLevel`, `procedureSource.Read`), `dispatch.go`,
+  `internal/corevms/input.go` (`RedirectInput`).
+- **What**: an image a procedure runs reads the procedure's data lines
+  as SYS$INPUT, to the next `$` line (User's Manual, 13.1.3, 14.1); DECK
+  and EOD follow the DCL Dictionary. From VMS 7.3 (testdata/dcl50's V6):
+  image verification shows each line as it is read, before the image
+  uses it, without the prefix; a data line after one of DCL's own
+  commands is read as a command. Chosen without VMS:
+  - Which of govax's commands count as DCL's own (`dclOwnCommands`):
+    those the DCL Dictionary describes DCL performing itself (IF, GOTO,
+    ON, DEFINE, ASSIGN, SET VERIFY, SET DEFAULT, SHOW SYMBOL, SPAWN,
+    STOP, ...). Everything else, govax's machine commands (PRINT, ECHO,
+    TIME, SET RADIX, ...) included, counts as an image, so the data
+    after it is skipped with SKPDAT. Symbol assignments, DELETE/SYMBOL,
+    @, and CALL are DCL's.
+  - A data line at the very start of a procedure, or after an `@` or
+    CALL returns, is read as a command, as after DCL's other commands.
+  - DECK read by DCL as a command (with no image reading) starts a deck
+    whose lines are skipped with SKPDAT up to its indicator; EOD read by
+    DCL does nothing; neither changes `$STATUS`. At the terminal both do
+    nothing.
+  - /DOLLARS's string ends the deck at a record that starts with it; the
+    string is uppercased unless quoted, as a parameter is. DECK's other
+    forms (a parameter, another qualifier) aren't a DECK, so the record
+    ends the image's input like any `$` record.
+  - The DECK record, and the indicator that ends a deck, when an image
+    reads them, aren't shown by verification.
+  - What an image has taken into its input buffer but not read when it
+    ends is lost, not skipped with SKPDAT (an image reads a line at a
+    time, so this is only part of a line).
+  - TYPE SYS$INPUT recognizes the name SYS$INPUT (with or without a
+    colon), not a logical name that translates to it. At the terminal it
+    reads to Ctrl/Z.
+  - Lines the debugger or the interactive assembler read are given to
+    them as before; an image they run (the debugger's GO) reads the
+    procedure's data too, so the two interleave as on VMS.
+  - A subprocess an image starts keeps the procedure's input only until
+    the command ends; after that it reads end of file.
+- **Status**: the probe's answers followed; the choices above unconfirmed.
 
 <!--
 Entry template:

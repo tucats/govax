@@ -905,6 +905,15 @@ grammar console
     verb subroutine/id=1664
     verb endsubroutine/id=1665
 
+    ! DECK makes the records after it data, "$" or not, up to its end of
+    ! file indicator: an EOD command, or /DOLLARS's string. EOD ends a
+    ! run of data lines (subtask 16; internal/console/dclinput.go).
+    verb deck/id=1666
+        qualifier   dollars/id=1667             -
+                    /type=$string/nonegatable   -
+                    /default=""
+    verb eod/id=1668
+
     ! RUN activates a VMS image. /NOINIT and /INIT override whether each
     ! shareable image's LIB$INITIALIZE runs; /DEBUG (/STEP, /BREAK) runs
     ! it under the debugger, stopped at its first instruction, and /NODEBUG

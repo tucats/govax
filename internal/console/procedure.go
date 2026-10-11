@@ -126,6 +126,12 @@ type procedureSource struct {
 	// passed are the comment and blank lines' records the last Read
 	// passed over, before its line, for verification (dclverify.go).
 	passed []string
+
+	// deck is the DECK in effect, if any: until its end of file
+	// indicator every record is data (dclinput.go). deckData says the
+	// line Read returned last was one of a deck's records.
+	deck     *procedureDeck
+	deckData bool
 }
 
 // newProcedureSource returns the source for a procedure whose text is
@@ -153,10 +159,31 @@ func newProcedureSource(name, text string) *procedureSource {
 // for whatever reads the procedure's input (data is true): Read returns
 // it as it is.
 //
+// After a DECK, every record is a data line, up to the deck's end of
+// file indicator, which is passed over (dclinput.go).
+//
 // In a debugger command procedure (plain), every record is a command,
 // with the same continuations, and blank lines and "!" comments are
 // skipped; data is always false.
 func (p *procedureSource) Read() (line string, data bool, ok bool) {
+	p.deckData = false
+
+	if p.deck != nil && p.next < p.end {
+		record := p.records[p.next]
+		p.passed = nil
+
+		if !p.deck.ends(record) {
+			p.lineStart = p.next
+			p.next++
+			p.deckData = true
+
+			return record, true, true
+		}
+
+		p.deck = nil
+		p.next++
+	}
+
 	line, data, start, next, ok := p.lineAt(p.next)
 	if ok {
 		p.lineStart = start
@@ -510,7 +537,13 @@ func (c *Console) runLevel(source *procedureSource, cmd procedureCommand, dispat
 	c.levels = append(c.levels, level)
 	c.dclSymbols.push()
 
+	// The level starts, and ends, as after one of DCL's own commands
+	// (@ or CALL): a data line after it is a command (dclinput.go).
+	c.imageRan = false
+
 	defer func() {
+		c.imageRan = false
+
 		if closeErr := c.endLevel(level); err == nil {
 			err = closeErr
 		}
@@ -550,6 +583,13 @@ func (c *Console) runLevel(source *procedureSource, cmd procedureCommand, dispat
 			}
 
 			break
+		}
+
+		// A data line nothing reads is skipped after an image, or in a
+		// deck, and read as a command after one of DCL's own commands
+		// (dclinput.go).
+		if data && !level.flow.skip.active && !c.readingInput() && !skipping && !c.imageRan && !source.deckData {
+			data = false
 		}
 
 		switch {
@@ -593,10 +633,15 @@ func (c *Console) runLevel(source *procedureSource, cmd procedureCommand, dispat
 			}
 		}
 
-		run := func() error { return dispatch(line) }
+		// The line runs with the procedure's data lines as SYS$INPUT,
+		// for an image it runs (dclinput.go).
+		run := func() error {
+			return c.withProcedureInput(source, func() error { return dispatch(line) })
+		}
 
 		// A command line is shown once it has been scanned
-		// (dclverify.go).
+		// (dclverify.go). Whether it runs an image is known when it
+		// has run.
 		if !data && !source.plain {
 			records := source.records[source.lineStart:source.next]
 
@@ -604,7 +649,9 @@ func (c *Console) runLevel(source *procedureSource, cmd procedureCommand, dispat
 				c.echo = newPendingEcho(records)
 				defer c.dropEcho()
 
-				return dispatch(line)
+				c.imageRan = false
+
+				return c.withProcedureInput(source, func() error { return dispatch(line) })
 			}
 		}
 

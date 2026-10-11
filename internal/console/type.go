@@ -50,7 +50,14 @@ import (
 //
 // With paged (TYPE/PAGE), the text is shown a screenful at a time, as
 // Console.Page shows it (page.go).
+//
+// SYS$INPUT is the process's input, typed a line at a time (typeInput):
+// in a command procedure, the data lines after the command.
 func (c *Console) Type(specText string, paged bool) error {
+	if isInputStream(specText) {
+		return c.typeInput()
+	}
+
 	text, err := c.ContainerSession.Type(specText)
 	if err != nil {
 		if lnmErr := logicalNameFailure(err); lnmErr != nil {

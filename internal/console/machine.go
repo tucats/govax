@@ -284,6 +284,12 @@ type Console struct {
 	// last. Each has its own local symbol table in dclSymbols.
 	levels []*commandLevel
 
+	// imageRan says the command a procedure just ran was one VMS runs as
+	// an image, not one DCL performs itself (dclinput.go): the data lines
+	// after it that nothing read are skipped (SKPDAT), where after one of
+	// DCL's own commands a data line is read as a command.
+	imageRan bool
+
 	// terminalFlow is the terminal's IF blocks (dclif.go): command level
 	// 0's, whose lines cmd/govax's prompt reads.
 	terminalFlow flowState

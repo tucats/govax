@@ -880,9 +880,14 @@ $@
     In the procedure, each command line starts with "$", and "$!" starts
     a comment line.  A line ending in "-" continues on the next line,
     which has no "$".  A line without a "$" is data, for whatever reads
-    the procedure's input: the debugger, once a DEBUG or RUN/DEBUG in the
-    procedure has started it, or the interactive assembler.  Data that
-    nothing reads is skipped, with a SKPDAT warning.
+    the procedure's input (SYS$INPUT): an image the procedure runs (with
+    LIB$GET_INPUT, RMS's $GET, or a terminal $QIO read), TYPE SYS$INPUT,
+    the debugger, once a DEBUG or RUN/DEBUG in the procedure has started
+    it, or the interactive assembler.  An image reading the data comes to
+    its end of file at the next "$" line; DECK lets data lines start with
+    "$" (see HELP DECK).  Data that nothing reads is skipped after an
+    image, with a SKPDAT warning; after one of DCL's own commands (an
+    assignment, IF, SET VERIFY, ...), a data line is read as a command.
 
     Each command level has its own local symbols (assigned with "=" or
     ":="), which go when the procedure ends; global symbols ("==" and
@@ -1379,7 +1384,8 @@ $SET ,NOVE
 
     The SET VERIFY command shows each line of a command procedure (@) as it
     runs: procedure verification shows its command lines, and image
-    verification the data lines it gives the debugger or the assembler.
+    verification its data lines, as an image (or TYPE SYS$INPUT), the
+    debugger, or the assembler reads each one.
     SET VERIFY and SET NOVERIFY turn both on or off; a keyword, which may
     be abbreviated, changes only its own (SET NOVERIFY takes none).  A
     change lasts after the procedure that made it ends.
@@ -1878,7 +1884,9 @@ $HELP
     DIRECTORY       List the files on a mounted volume
     DEBUG           Start the debugger on the virtual VAX
     DISMOUNT        Detach a device's mounted disk-image container
+    DECK            Mark data lines that start with "$" (EOD ends them)
     CONTINUE        Do nothing (ON ERROR THEN CONTINUE)
+    EOD             End a command procedure's data lines
     EXIT            End a command procedure, or govax at the terminal
     IF              Run a command when an expression is true
     GOSUB           Call a subroutine at a label (RETURN comes back)
@@ -2202,6 +2210,33 @@ $ENDS
         $ GREET: SUBROUTINE
         $     PRINT P1
         $ ENDSUBROUTINE
+
+$DECK
+$EOD
+
+    In a command procedure, the DECK command makes the lines after it
+    data, for the image reading the procedure's input (SYS$INPUT), even
+    when they start with "$".  The data ends at an EOD command, or, with
+    /DOLLARS, at a line starting with the string given; after that, any
+    "$" line ends data again.  DECK comes after the command that runs
+    the image, where its data begins.
+
+    Syntax:
+
+        DECK [/DOLLARS[=string]]
+        EOD
+
+    The string is 1 to 15 characters, uppercased unless quoted.  An image
+    reading an EOD line comes to its end of file there, and the next read
+    gets the data after it.  DECK typed at the terminal, and EOD that no
+    image reads, do nothing.
+
+    Example:
+
+        $ TYPE SYS$INPUT
+        $ DECK
+        $ This line starts with a dollar sign, and is typed.
+        $ EOD
 
 $BOOT
 $ROM
@@ -2662,6 +2697,11 @@ $TYP
     TYPE requires its file specification to match exactly one file --
     unlike DIRECTORY, it does not accept a wildcard that could match more
     than one file.
+
+    TYPE SYS$INPUT types the process's input a line at a time: in a
+    command procedure, the data lines after the command, up to the next
+    "$" line (see HELP @ and HELP DECK); at the terminal, what is typed,
+    up to Ctrl/Z.
 
     Syntax:
 

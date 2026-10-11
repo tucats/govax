@@ -340,32 +340,14 @@ func TestProbe50Verify(t *testing.T) {
 	}
 }
 
-// probe50VSkipped are the sections of round 2 govax can't run yet: V6's
-// data lines need an image that reads SYS$INPUT from the procedure
-// (subtask 16).
-var probe50VSkipped = map[string]bool{"V6": true}
-
-// probe50VDataLine reports whether line is one of TYPE SYS$INPUT's,
-// which differ until subtask 16 elsewhere too (V7): in VMS's log, the
-// data lines (each shown, then typed); in govax's, TYPE's failure and
-// SKPDAT.
-func probe50VDataLine(line string) bool {
-	return strings.HasPrefix(line, "data line") ||
-		strings.HasPrefix(line, "%SYSTEM-F-DEVNOTMOUNT") || strings.HasPrefix(line, "%DCL-W-SKPDAT")
-}
-
 // probe50VSections splits a verified run's output into its sections, by
 // the "$ ! Vn:" comment that starts each (the lines before the first are
-// section ""), leaving out TYPE SYS$INPUT's lines (probe50VDataLine).
+// section "").
 func probe50VSections(text string) map[string][]string {
 	sections := map[string][]string{}
 	name := ""
 
 	for _, line := range strings.Split(strings.TrimSuffix(text, "\n"), "\n") {
-		if probe50VDataLine(line) {
-			continue
-		}
-
 		if rest, ok := strings.CutPrefix(line, "$ ! V"); ok {
 			if n, _, found := strings.Cut(rest, ":"); found {
 				name = "V" + n
@@ -418,10 +400,6 @@ func TestProbe50VOracle(t *testing.T) {
 	}
 
 	for name, wantLines := range want {
-		if probe50VSkipped[name] {
-			continue
-		}
-
 		gotLines := got[name]
 
 		for i := 0; i < max(len(gotLines), len(wantLines)); i++ {

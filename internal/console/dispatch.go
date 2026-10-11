@@ -211,6 +211,14 @@ func (d *Dispatcher) dispatchParsed(line string, verbSymbol bool) error {
 
 	d.line = line
 
+	// Whether the command ran an image, as VMS would run one for it,
+	// decides what a procedure does with the data lines after it
+	// (dclinput.go). It is known when the command has run, after any
+	// procedure or command it ran in turn.
+	if !dclOwnCommands[r.Active] {
+		defer func() { d.Console.imageRan = true }()
+	}
+
 	// A DCL /entry= redirect (ABOUT, XTEST, SHOW VERSION -- the C
 	// source's exe$about/exe$xtest, all real VAX routines
 	// defined in kernel.asm itself, not native C functions -- see
@@ -303,6 +311,10 @@ func (d *Dispatcher) bindGrammar() {
 	g.Bind("CALL", d.callCommand)
 	g.Bind("SUBROUTINE", d.subroutineCommand)
 	g.Bind("ENDSUBROUTINE", d.endsubroutineCommand)
+
+	// DECK and EOD: data lines for an image, "$" or not (dclinput.go).
+	g.Bind("DECK", d.deckCommand)
+	g.Bind("EOD", d.eodCommand)
 	g.Bind("CONTINUE", func(id int64, r *dcl.Result) error {
 		d.Console.keepStatus()
 

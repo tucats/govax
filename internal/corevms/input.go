@@ -2,6 +2,7 @@ package corevms
 
 import (
 	"bufio"
+	"io"
 	"strings"
 )
 
@@ -162,4 +163,30 @@ func shimExeInput(env *Environment, argv []uint32) (uint32, error) {
 func registerInputShims(t *ShimTable) {
 	t.Register(3, "EXE$INPUT", shimExeInput)
 	t.Register(14, "DECC$GETS", shimDeccGets)
+}
+
+// RedirectInput makes r the process's input stream in place of the
+// terminal, until the returned function puts the terminal back: what a
+// VMS process's SYS$INPUT is while DCL runs a command procedure (the
+// console gives an image the procedure's data lines this way). Every
+// reader of the process's input reads r then (a terminal $QIO read,
+// RMS's $GET of the terminal, LIB$GET_INPUT, the input shims), through
+// a buffer of its own, so nothing taken from r is left in the
+// terminal's shared buffer and nothing typed ahead at the terminal is
+// read in its place. r should be a TerminalSource whose Ready is true
+// when its lines are already at hand, so a read never waits for it.
+func (env *Environment) RedirectInput(r io.Reader) (restore func()) {
+	in, buf := env.consoleIn, env.consoleInBuf
+
+	env.consoleIn, env.consoleInBuf = r, bufio.NewReader(r)
+
+	return func() { env.consoleIn, env.consoleInBuf = in, buf }
+}
+
+// ReadLine reads one line from the process's input stream, as
+// readTerminalLine does, without waiting its turn among other processes'
+// terminal reads: for the console's own commands (TYPE SYS$INPUT), which
+// read while no image runs. ok is false at the end of the input.
+func (env *Environment) ReadLine(maxLen int) (line string, ok bool) {
+	return readTerminalLine(env, maxLen)
 }

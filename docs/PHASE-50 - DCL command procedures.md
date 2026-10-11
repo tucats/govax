@@ -13,7 +13,8 @@ GOTO, IF/THEN/ELSE/ENDIF, GOSUB/RETURN, and CALL/SUBROUTINE, are done
 (2026-10-09, not yet probed), and so is subtask 14, the lexical
 functions (2026-10-09, not yet probed). Subtask 15, SET VERIFY, SET
 PREFIX, and F$VERIFY's echo, is done and checked against VMS 7.3
-(2026-10-11); SYS$INPUT from a procedure (subtask 16) is next.
+(2026-10-11), and so is subtask 16, SYS$INPUT from a procedure, with
+DECK and EOD (2026-10-11); DCL's file I/O (subtask 17) is next.
 
 The console should act like a VMS DCL command processor. Until now it
 had INCLUDE (and `@` as its alias), which runs a file of console
@@ -168,8 +169,9 @@ choice, 2026-10-09): a debugger command file is a different thing from
 a DCL procedure, and the name shows it.
 
 Data lines for an image a procedure runs (LIB$GET_INPUT, an RMS read of
-SYS$INPUT) are still a later subtask (16). Such an image reads the
-terminal for now.
+SYS$INPUT) came with subtask 16 (below, "SYS$INPUT from a procedure"),
+and with them VMS's rule for data nothing reads: skipped after an image,
+read as a command after one of DCL's own commands.
 
 ### The one-shot command
 
@@ -401,6 +403,48 @@ Manual (13.5.5), checked by testdata/dcl50's round 2 (`probe50v.com`,
   sets general registers. (Nothing now sets a privileged register or the
   whole PSL from a command line; the debugger's SET PSL sets its
   fields.)
+
+### SYS$INPUT from a procedure (subtask 16)
+
+`internal/console/dclinput.go`. In VMS, an image a procedure runs reads
+the procedure as its SYS$INPUT: the records after its command, up to the
+next `$` record, its end of file (User's Manual, 13.1.3, 14.1). DECK and
+EOD come from the DCL Dictionary. What VMS 7.3 showed is testdata/dcl50's
+section V6; what was chosen is in DEVIATIONS.md ("[Phase 50] SYS$INPUT
+from a procedure").
+
+- **The image pulls its lines.** govax runs an image to its end inside
+  the command that runs it, so the procedure can't push lines to it as
+  it does to the debugger. Each line of a procedure is dispatched with
+  process 1's input redirected (`withProcedureInput`;
+  `corevms.Environment.RedirectInput`) to a `procedureInput`, a reader
+  that takes the level's next data record (`procedureSource.readData`)
+  each time the image wants more, through a buffer of its own. Every way
+  an image reads its input goes through it: a terminal `$QIO` read,
+  RMS's `$GET`, LIB$GET_INPUT, the input shims. What the image doesn't
+  read stays in the procedure.
+- **TYPE SYS$INPUT** (`typeInput`) reads the same way, a line at a time
+  (`Environment.ReadLine`): the data lines in a procedure, the terminal
+  up to Ctrl/Z at level 0.
+- **Image verification** shows each record as it's read (`showData`),
+  before the image uses it, so TYPE SYS$INPUT's lines come out twice,
+  shown and typed, as on VMS.
+- **DECK and EOD.** A `$ DECK[/DOLLARS[=string]]` record read by an
+  image starts a deck (`procedureSource.deck`): every record is data up
+  to its end of file indicator, `$ EOD` or a record starting with the
+  string, which is used up. An EOD record outside a deck is the image's
+  end of file too, and is used up, so a second read gets the data after
+  it. DECK read by DCL (a verb in `console.dcl`) starts a deck that
+  `procedureSource.Read` returns as data lines, skipped unless something
+  reads them; EOD read by DCL does nothing.
+- **Data nothing reads.** After an image, DCL skips the data up to the
+  next command line, with one SKPDAT; after one of its own commands, it
+  reads the next record as a command, `$` or not (V6:
+  `%DCL-W-IVVERB \DATA\` after SET VERIFY). `dispatchParsed` records
+  whether the command it ran was an image (`Console.imageRan`), by the
+  grammar's syntax name and a table of DCL's own commands
+  (`dclOwnCommands`); a foreign command is an image, and an assignment,
+  @, and CALL are DCL's.
 
 ## Subtasks
 
@@ -640,3 +684,19 @@ details are in DEVIATIONS.md.)
   it. Tests: `dclverify_test.go`, `TestProbe50Verify` (round 1's log)
   and `TestProbe50VOracle` (round 2's, all but V6, which waits for
   subtask 16).
+- 2026-10-11: Subtask 16, SYS$INPUT from a procedure (see "SYS$INPUT
+  from a procedure"). New file `dclinput.go`: `procedureInput`, the
+  reader an image's input is redirected to while a procedure's line runs
+  (`corevms.Environment.RedirectInput`, and `ReadLine` for the console's
+  own reads); `procedureSource.readData`; DECK and EOD (new verbs in
+  `console.dcl`, and a deck in `procedureSource.Read`); TYPE SYS$INPUT;
+  and `dclOwnCommands`, which decides whether a data line nothing reads
+  is skipped (after an image) or read as a command (after one of DCL's
+  own). HELP: DECK/EOD, and TYPE SYS$INPUT, @, and SET VERIFY updated.
+  Tests: `dclinput_test.go` (TYPE SYS$INPUT, EOD, DECK and /DOLLARS,
+  DECK as a command, data after DCL's commands and after an image, image
+  verification, nested procedures, the terminal, `parseDeck`),
+  `procinput_test.go` (an image reading with LIB$GET_INPUT: all its data,
+  then one line of three, the rest SKPDAT); `TestProbe50VOracle` now
+  compares every section of round 2, V6 and V7's TYPE SYS$INPUT
+  included, and all match.

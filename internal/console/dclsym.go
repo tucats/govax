@@ -257,6 +257,8 @@ func (d *Dispatcher) runForeign(spec, rest string) error {
 
 	opts := RunOptions{RunInits: d.Console.DefaultRunInits(), CommandLine: dclText(rest, true)}
 
+	defer func() { d.Console.imageRan = true }()
+
 	return d.Console.Run(spec, opts)
 }
 

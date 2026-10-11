@@ -153,8 +153,8 @@ foreign command's `&`; and `/OUTPUT=` with no name.
 
 `TestProbe50VOracle` (`internal/console/probe50_test.go`) runs
 `probe50v.com` under govax and compares its output with
-`vax/probe50v.log` section by section; every section but V6 matches
-(V6, and V7's one TYPE SYS$INPUT, wait for subtask 16). The answers
+`vax/probe50v.log` section by section; every section matches (V6, and
+V7's one TYPE SYS$INPUT, since subtask 16). The answers
 (DEVIATIONS.md's "[Phase 50] Verification"):
 
 - **V1:** a continued command is shown a record at a time, each record

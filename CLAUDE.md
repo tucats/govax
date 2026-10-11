@@ -22,7 +22,8 @@ never had.
   progress) makes the console a DCL command interpreter: command
   procedures and command levels, symbol substitution, expressions,
   `$STATUS`/ON, labels and GOTO, IF blocks, GOSUB, CALL, the lexical
-  functions, and SET VERIFY are done; then SYS$INPUT from a procedure.
+  functions, SET VERIFY, and SYS$INPUT from a procedure (DECK/EOD) are
+  done; then DCL's file I/O (INQUIRE, READ, WRITE, OPEN, CLOSE).
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
 - `docs/DEVIATIONS.md` — running log of suspected ISA/behavior fidelity issues found in
@@ -297,6 +298,15 @@ expect adjustment as phases land):
   comment is performed and shown as its value (round 2 of the probe,
   `TestProbe50VOracle`). The console's SET has no `name=value` form:
   DCL's assignments replaced it.
+  **SYS$INPUT** (`dclinput.go`, subtask 16): each procedure line runs
+  with process 1's input redirected (`corevms.Environment.RedirectInput`)
+  to a `procedureInput`, which pulls the level's next data record
+  (`procedureSource.readData`) as an image reads, so LIB$GET_INPUT,
+  RMS's `$GET`, and terminal `$QIO` reads get the data lines up to the
+  next `$` line; TYPE SYS$INPUT reads the same way. DECK/EOD (a deck in
+  `procedureSource`). Data nothing reads is SKPDAT after an image and a
+  command after one of DCL's own commands (`dclOwnCommands`, by the
+  grammar's syntax name; `Console.imageRan`).
   `internal/console/consoletest` is its test support.
 - `internal/io` — device abstraction (Phase 09).
 - `internal/vmsdef` — VMS's own definitions, shared by the assembler, RTL, RMS,
