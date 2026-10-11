@@ -9,6 +9,7 @@ const (
 	createDirNotCre
 	createSyntax
 	createBadValue
+	createOpenOut
 )
 
 // CREATE facility status codes, named as VMS's CREATE utility names its
@@ -30,6 +31,9 @@ const (
 	// /VERSION_LIMIT=40000. As on VMS, the qualifier is then ignored and
 	// the directory is still created.
 	CREATE_BADVALUE = CREFacility<<FacilityPosition | createBadValue<<MessagePosition | StatusError
+	// CREATE_OPENOUT reports a file CREATE couldn't make; its cause says
+	// why.
+	CREATE_OPENOUT = CREFacility<<FacilityPosition | createOpenOut<<MessagePosition | StatusError
 )
 
 func init() {
@@ -40,4 +44,5 @@ func init() {
 	DefineMessage(CREATE_DIRNOTCRE, CREFacility, "DIRNOTCRE", "!S directory file not created")
 	DefineMessage(CREATE_SYNTAX, CREFacility, "SYNTAX", "error parsing '!S'")
 	DefineMessage(CREATE_BADVALUE, CREFacility, "BADVALUE", "'!S' is an invalid keyword value")
+	DefineMessage(CREATE_OPENOUT, CREFacility, "OPENOUT", "error opening !S as output")
 }

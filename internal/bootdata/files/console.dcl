@@ -57,7 +57,15 @@ grammar console
         qualifier allocation/id=1505/type=$integer
         qualifier log/id=1506
 
+    !
+    ! CREATE with neither /NAME_TABLE nor /DIRECTORY makes a text file
+    ! from SYS$INPUT (internal/console/createfile.go): the terminal up to
+    ! Ctrl/Z, or a command procedure's data lines.
+    !
     verb create
+        parameter file/id=1511/type=$string/prompt="File"
+        qualifier host/id=1512/parameter=file
+        qualifier log/id=1513
         qualifier name_table/syntax=create_name_table
         qualifier directory/syntax=create_directory
 

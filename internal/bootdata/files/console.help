@@ -95,6 +95,8 @@
 //                          [NO]PROCEDURE and [NO]IMAGE); added SET PREFIX
 //              10/11/26    Removed SET symbol = value: DCL's assignments
 //                          (=, ==, :=) replace it
+//              10/11/26    CREATE makes a file from SYS$INPUT; CREATE/DIRECTORY
+//                          and CREATE/NAME_TABLE are its other forms
 
 This is the help documentation for the govax VAX emulator.  Topic sections are
 marked by a "$" delimiter.  This is followed by as many tokens of the help
@@ -438,13 +440,61 @@ $CREA,/DIR
     See also the help for DIRECTORY and SET DEFAULT.
 
 $CREA
-    The CREATE command creates a directory on a mounted volume
-    (CREATE/DIRECTORY) or a logical name table (CREATE/NAME_TABLE).
-    Creating a file from terminal input, CREATE's form with neither
-    qualifier on VMS, isn't supported.  For details, see:
+    The CREATE command creates a file, as VMS DCL's CREATE does, from
+    the lines of SYS$INPUT: at the terminal, the lines typed up to
+    Ctrl/Z; in a command procedure, the data lines after the CREATE
+    command, up to the next line that starts with "$" (or the end of a
+    DECK).  The file is created even when there are no lines.
+
+    Syntax:
+
+        CREATE [/LOG] <file>[/HOST]
+
+    Parameter:
+
+        <file>          The file to create.  A file on a mounted ODS-2
+                        volume, such as DUA0:[WORK]NOTES.TXT or, with
+                        SET DEFAULT on a volume, NOTES.TXT, is a
+                        variable-length record file with carriage-return
+                        carriage control, as VMS makes a text file; it
+                        is a new version if the file already exists.  A
+                        host file makes a plain host text file instead,
+                        each line ending as the host's do: LF on Unix
+                        and macOS, CR LF on Windows.  A name with a host
+                        path ("./notes.txt", quoted to keep its case) is
+                        a host file; so is a bare name when the default
+                        directory isn't on a mounted volume.
+
+    Qualifiers:
+
+        /HOST           Attached to <file>, makes it a host file name,
+                        whatever it looks like: CREATE "notes.txt"/HOST.
+
+        /LOG            Report the file created, with its version.
+
+    Examples:
+
+        CREATE NOTES.TXT
+        This is the first line.
+        This is the last.
+        ^Z
+
+        $ CREATE/LOG DUA0:[WORK]SETUP.DAT
+        ITEM ONE
+        ITEM TWO
+        $ TYPE DUA0:[WORK]SETUP.DAT
+
+    CREATE has two other forms, each its own command:
+
+        CREATE/DIRECTORY    creates a directory on a mounted volume.
+        CREATE/NAME_TABLE   creates a logical name table.
+
+    For details, see:
 
         HELP CREATE /DIRECTORY
         HELP CREATE /NAME_TABLE
+
+    See also the help for TYPE and SET DEFAULT.
 
 $SHOW,DEVI
 $SH  ,DEVI

@@ -728,3 +728,17 @@ details are in DEVIATIONS.md.)
   lone `$` (and, unconfirmed, a comment) ends the skipping of an image's
   data; a line starting with `%` is IVVERB, not NOCOMD. READ's and
   WRITE's answers are kept for subtask 17.
+- 2026-10-11: At the author's request, CREATE makes a file from
+  SYS$INPUT (`createfile.go`): the terminal up to Ctrl/Z, or a
+  procedure's data lines. CREATE's bare form in `console.dcl` takes a
+  FILE parameter (with COPY's parameter-scoped /HOST) and /LOG
+  (CREATE-I-CREATED with the version; CREATE-E-OPENOUT for a file that
+  can't be written). A volume file is RFM=VAR, RAT=CR
+  (`rms.TextRecords`); a host file is text whose lines end as the
+  host's do (`rms.hostLineEnd`: CR LF on Windows, LF elsewhere, now for
+  every host text file `CreateRecordFile` writes). Where the file goes
+  is decided before input is read. CREATE counts as an image for data
+  nothing reads, as VMS's CREATE is one. Unconfirmed against VMS: the
+  OPENOUT wording, and that no other qualifier is needed. HELP CREATE
+  describes the command and names /DIRECTORY and /NAME_TABLE as its
+  other forms. Tests: `createfile_test.go`.

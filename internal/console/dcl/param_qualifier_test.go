@@ -278,18 +278,18 @@ func TestParse_paramScopedQualifier_quotedValueThenQualifier(t *testing.T) {
 // (docs/PHASE-28.md subtask 7), whose SOURCE, OBJECTS, LIBRARY, and INPUTS
 // take COPY's /HOST, RUN (docs/PHASE-37.md), whose FILE does, and
 // ANALYZE/OBJECT and ANALYZE/IMAGE (docs/PHASE-38.md, PHASE-40.md), whose
-// FILES do.
+// FILES do, and CREATE, whose FILE does.
 func TestLoadEvaxGrammar_unaffectedByParamQualifierFeature(t *testing.T) {
 	g := loadEvaxGrammar(t)
 
 	for _, e := range g.entries {
-		if e.Name == "COPY" || e.Name == "MACRO" || e.Name == "LINK" || e.Name == "LIBRARY" || e.Name == "RUN" || e.Name == "ANALYZE_OBJECT" || e.Name == "ANALYZE_IMAGE" {
+		if e.Name == "COPY" || e.Name == "MACRO" || e.Name == "LINK" || e.Name == "LIBRARY" || e.Name == "RUN" || e.Name == "ANALYZE_OBJECT" || e.Name == "ANALYZE_IMAGE" || e.Name == "CREATE" {
 			continue
 		}
 
 		for _, p := range e.Parameters {
 			if len(p.Qualifiers) != 0 {
-				t.Errorf("%s parameter %s unexpectedly has parameter-scoped qualifiers %+v (only COPY, MACRO, LINK, LIBRARY, RUN, and ANALYZE declare any)",
+				t.Errorf("%s parameter %s unexpectedly has parameter-scoped qualifiers %+v (only COPY, MACRO, LINK, LIBRARY, RUN, ANALYZE, and CREATE declare any)",
 					e.Name, p.Name, p.Qualifiers)
 			}
 		}

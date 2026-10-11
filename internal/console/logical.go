@@ -86,10 +86,10 @@ func bindLogicalCommands(g *dcl.Grammar, c *Console) {
 		return c.DeassignLogicalName(logicalTableQualifier(r), name, logicalModeQualifier(r), r.Present("ALL"))
 	})
 
-	// A bare CREATE makes a file from terminal input on VMS, which govax
-	// doesn't do; only /NAME_TABLE and /DIRECTORY (create.go) are here.
+	// A bare CREATE makes a text file from SYS$INPUT (createfile.go);
+	// /DIRECTORY (create.go) and /NAME_TABLE are below.
 	g.Bind("CREATE", func(id int64, r *dcl.Result) error {
-		return vmserrors.New(vmserrors.CLI_MISSINGPARAMETER, "/DIRECTORY or /NAME_TABLE")
+		return c.CreateFile(r.String("FILE"), r.ParamPresent("FILE", "HOST"), r.Present("LOG") && !r.Negated("LOG"))
 	})
 
 	g.Bind("CREATE_DIRECTORY", func(id int64, r *dcl.Result) error {

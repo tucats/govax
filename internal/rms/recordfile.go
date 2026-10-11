@@ -9,6 +9,7 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"time"
 
@@ -29,8 +30,9 @@ import (
 // the caller says what kind of file it is, and that decides the host
 // layout:
 //
-//   - TextRecords: lines of text. A host file is lines ending in LF (a CR
-//     before the LF is dropped). A new volume file is what VMS makes for
+//   - TextRecords: lines of text. A host file is lines ending as the
+//     host's do, LF (CR LF on Windows); reading one, a CR before an LF is
+//     dropped. A new volume file is what VMS makes for
 //     text: variable-length records with carriage-return carriage
 //     control.
 //   - VariableRecords: records whose boundaries are part of the data, such
@@ -75,6 +77,17 @@ var recordKindAttributes = map[RecordKind]ondisk.RecAttr{
 	// RFM=FIX, 512-byte records.
 	ImageBlocks: {Format: ondisk.RecordFormatFixed, RecordSize: imageBlockSize, MaxRecordSize: imageBlockSize},
 }
+
+// hostLineEnd ends each line of a host text file as the host's own text
+// files end them: CR LF on Windows, LF elsewhere. Reading a host text
+// file drops a CR before an LF, so either reads back the same.
+var hostLineEnd = func() string {
+	if runtime.GOOS == "windows" {
+		return "\r\n"
+	}
+
+	return "\n"
+}()
 
 // ratCarriageReturn is FAT$M_IMPLIEDCC (RAT=CR): each record is a line.
 const ratCarriageReturn = 0x02
@@ -596,7 +609,7 @@ func writeHostRecords(path string, kind RecordKind, records [][]byte) error {
 	default:
 		for _, rec := range records {
 			buf.Write(rec)
-			buf.WriteByte('\n')
+			buf.WriteString(hostLineEnd)
 		}
 	}
 

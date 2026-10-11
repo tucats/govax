@@ -268,7 +268,7 @@ func TestCreateNameTable(t *testing.T) {
 	}
 
 	wantDispatchStatus(t, d, "CREATE/NAME_TABLE/USER/EXEC T", vmserrors.CLI_BADQUALIFIERCOMBO)
-	wantDispatchStatus(t, d, "CREATE X", vmserrors.CLI_EXTRAPARAMETER)
+	// A bare CREATE makes a file (createfile_test.go), and needs its name.
 	wantDispatchStatus(t, d, "CREATE", vmserrors.CLI_MISSINGPARAMETER)
 }
 
