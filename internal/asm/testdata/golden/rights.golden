@@ -663,7 +663,7 @@ sym TEXTLEN 00000308 flags=2 forward=0
 sym __ENTRY 00000200 flags=0 forward=0
 == after kernel.asm
 bytes: 319
-deposit: 0000033F  p0 end: 0000033F  s0 end: 80001500
+deposit: 0000033F  p0 end: 0000033F  s0 end: 80001300
 entry: 00000200
 p1vector: 7FFEDE00-7FFEE91D
 00000200: 04 00 DD 00 DF 9F 33 03 00 00 DF 9F B2 02 00 00

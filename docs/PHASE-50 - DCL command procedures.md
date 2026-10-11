@@ -981,4 +981,14 @@ details are in DEVIATIONS.md.)
   being looked up twice. The author asked whether a procedure's SPAWN of
   another procedure works, and with /NOWAIT whether they run in
   parallel: yes, and in turns while the machine runs (above).
+- 2026-10-11: At the author's request, ABOUT and XTEST are removed: old
+  tests of running microkernel code as console commands, whose
+  purpose HELP ABOUT serves now. With them goes the mechanism: the
+  grammar's `/entry=` (`dcl.Entry.EntryPoint`, `Result.EntryPoint`),
+  the dispatcher's CALL of it, XFC$DCL (`cpu`'s `emulXfcDCL` and
+  `SystemServices`' four DCL methods, the console's stubs, the
+  assembler's builtin name), and kernel.asm's DCL$ routines, EXE$ABOUT,
+  and EXE$XTEST. SHOW VERSION, which called EXE$ABOUT, prints the same
+  two lines from Go (`ShowVersion`). The assembler's golden fixtures are
+  regenerated: code assembled after kernel.asm moved.
 

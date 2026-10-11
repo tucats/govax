@@ -9,7 +9,6 @@ const (
 	defaultTOKEN     = "DEFAULT"
 	disallowTOKEN    = "DISALLOW"
 	endTOKEN         = "END"
-	entryTOKEN       = "ENTRY"
 	grammarTOKEN     = "GRAMMAR"
 	idTOKEN          = "ID"
 	keywordTOKEN     = "KEYWORD"

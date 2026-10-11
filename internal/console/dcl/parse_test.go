@@ -166,19 +166,6 @@ func TestParse_quitIsItsOwnVerb(t *testing.T) {
 	}
 }
 
-func TestParse_aboutHasEntryPoint(t *testing.T) {
-	g := loadEvaxGrammar(t)
-
-	r, err := g.Parse("ABOUT")
-	if err != nil {
-		t.Fatalf("Parse: %v", err)
-	}
-
-	if r.EntryPoint != "EXE$ABOUT" {
-		t.Errorf("EntryPoint=%q, want EXE$ABOUT", r.EntryPoint)
-	}
-}
-
 func TestParse_ambiguousVerb(t *testing.T) {
 	g := loadEvaxGrammar(t)
 	// C and CA... let's find a genuinely ambiguous abbreviation: "CA" could

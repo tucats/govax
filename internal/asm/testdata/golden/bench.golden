@@ -79,7 +79,7 @@ sym WRITE_EXIT 00000264 flags=12 forward=0
 sym WRITE_LOOP 00000254 flags=12 forward=0
 == after kernel.asm
 bytes: 557
-deposit: 0000042D  p0 end: 0000042D  s0 end: 80001500
+deposit: 0000042D  p0 end: 0000042D  s0 end: 80001300
 p1vector: 7FFEDE00-7FFEE91D
 print:  
 print: Performance test for eVAX.  After assembling, invoke

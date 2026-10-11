@@ -18,7 +18,6 @@ const (
 	xfcConsoleCmd   = 0x03
 	xfcConsolePut   = 0x04 // govax's own; not in eVAX (docs/PERFORMANCE.md, Study 1 R1)
 	xfcQuitEmulator = 0x78
-	xfcDCL          = 0x79
 	xfcP1Vector     = 0x7A
 	xfcHaltSilent   = 0x7B
 	xfcHalt         = 0x7C
@@ -32,15 +31,6 @@ const (
 // plain success code. (internal/cpu doesn't import internal/vmsdef, which
 // holds VMS's symbol tables, for this one value.)
 const ssNormal = 1
-
-// DCL subfunction codes for xfcDCL, selected by R0 — matching emul_xfc.c's
-// nested switch on vax.R0 within case 0x79.
-const (
-	dclPresent    = 1
-	dclGetKeyword = 2
-	dclGetString  = 3
-	dclGetInteger = 4
-)
 
 func init() {
 	instructionTable.SetHandler(instructionTable.Lookup(Opcode{Function: 0xFC}), emulXfc)
@@ -102,9 +92,6 @@ func emulXfc(e *Engine, d *Decoded) error {
 		}
 
 		return ErrHalted
-
-	case xfcDCL:
-		return emulXfcDCL(e)
 
 	case xfcP1Vector:
 		return emulXfcP1Vector(e)
@@ -204,44 +191,6 @@ func emulXfcConsolePut(e *Engine) error {
 	}
 
 	e.cpu.SetGPR(vax.R0, ssNormal)
-
-	return nil
-}
-
-// emulXfcDCL is XFC$DCL: R0 selects one of four DCL-parse-callback
-// subfunctions (R1-R3 carry that subfunction's own arguments), matching
-// emul_xfc.c's case 0x79. An unrecognized subfunction is a reserved-operand
-// fault — the C source instead prints a diagnostic and halts the machine
-// unconditionally, but a Go fault is the mechanism this port uses everywhere
-// else for "the program did something the microkernel doesn't support," so
-// that's used here too rather than the C source's own ad hoc halt.
-func emulXfcDCL(e *Engine) error {
-	if e.services == nil {
-		return &Fault{Code: ExcPrivileged}
-	}
-
-	r1, r2, r3 := e.cpu.GPR(vax.R1), e.cpu.GPR(vax.R2), e.cpu.GPR(vax.R3)
-
-	switch e.cpu.GPR(vax.R0) {
-	case dclPresent:
-		e.cpu.SetGPR(vax.R0, e.services.DCLPresent(r1, r2))
-
-	case dclGetKeyword:
-		e.cpu.SetGPR(vax.R0, e.services.DCLGetKeyword(r1, r2, r3))
-
-	case dclGetString:
-		if addr, ok := e.services.DCLGetString(r1, r2); ok {
-			e.cpu.SetGPR(vax.R0, addr)
-		} else {
-			e.cpu.SetGPR(vax.R0, 0)
-		}
-
-	case dclGetInteger:
-		e.cpu.SetGPR(vax.R0, e.services.DCLGetInteger(r1, r2))
-
-	default:
-		return &Fault{Code: ExcReservedOp}
-	}
 
 	return nil
 }

@@ -16,7 +16,7 @@ sym TWELVE 00000248 flags=2 forward=0
 sym __ENTRY 00000200 flags=0 forward=0
 == after kernel.asm
 bytes: 124
-deposit: 0000027C  p0 end: 0000027C  s0 end: 80001500
+deposit: 0000027C  p0 end: 0000027C  s0 end: 80001300
 entry: 00000200
 p1vector: 7FFEDE00-7FFEE91D
 00000200: 00 00 6E 03 9F 38 02 00 00 6E 04 9F 40 02 00 00

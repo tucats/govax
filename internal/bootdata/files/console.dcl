@@ -207,11 +207,6 @@ grammar console
         disallow any2(process, job, group, system, table)
         disallow any2(user_mode, supervisor_mode, executive_mode)
         
-    type debug_types
-        keyword     debug/id=5003
-
-    verb about /entry=exe$about
-
     ! EXIT [status] ends the command procedure it's in, or govax at the
     ! terminal; the status, a DCL expression, is the procedure's. QUIT
     ! ends govax wherever it is.
@@ -295,7 +290,6 @@ grammar console
         keyword		translation	/syntax=show_translation
         keyword		devices		/syntax=show_device
         keyword         version         /syntax=show_version
-        keyword         xtest           /syntax=xtest
         keyword         string_pool     /syntax=show_string
         keyword         nvram           /syntax=show_nvram      
         keyword         debug           /syntax=show_debug
@@ -356,11 +350,6 @@ grammar console
                         /type=show_types            -
                         /prompt="What"
 
-        syntax xtest/entry=exe$xtest /id=5001
-            parameter   debug /type=debug_types /id = 5002
-            qualifier   code/type=$integer /id=5005/nonegatable/default=101
-            parameter   name/type=$any/id=5004
-
         syntax          show_expand/id=188
         syntax          show_rom/id=154
         ! SHOW SYMBOL [/LOCAL | /GLOBAL] [/ALL] [name]: DCL's symbols, as
@@ -390,7 +379,7 @@ grammar console
             disallow    unimplemented and all
             disallow    unimplemented and profile
             disallow    profile and all
-        syntax          show_version/entry=exe$about
+        syntax          show_version/id=162
         syntax          show_share/id=161
 
         ! DEFAULT (docs/PHASE-23.md, subtask 3) has no reference/eVAX or

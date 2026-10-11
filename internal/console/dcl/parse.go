@@ -8,13 +8,11 @@ import (
 )
 
 // Result holds everything DCLdump/DCLresults would have handed back after a
-// successful Parse: which verb/syntax ended up active, its /entry= (if any),
-// and the value of every parameter/qualifier that was actually matched.
+// successful Parse: which verb/syntax ended up active, and the value of every parameter/qualifier that was actually matched.
 type Result struct {
 	Verb       string // the top-level verb name, before any /syntax= or keyword redirect
 	Active     string // the final active entry name (verb or a redirected-to syntax)
 	ActiveID   int64 // the final active entry's ID, for the handler to disambiguate what part of the grammar invoked it
-	EntryPoint string
 
 	values map[string]*matchedValue
 
@@ -463,7 +461,6 @@ func (g *Grammar) Parse(line string) (*Result, error) {
 
 	r.Active = active.Name
 	r.ActiveID = active.ID
-	r.EntryPoint = active.EntryPoint
 
 	return r, nil
 }

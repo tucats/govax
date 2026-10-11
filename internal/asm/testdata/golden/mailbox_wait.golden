@@ -683,7 +683,7 @@ sym WXYZ 000003BA flags=2 forward=0
 sym __ENTRY 00000200 flags=0 forward=0
 == after kernel.asm
 bytes: 502
-deposit: 000003F6  p0 end: 000003F6  s0 end: 80001500
+deposit: 000003F6  p0 end: 000003F6  s0 end: 80001300
 entry: 00000200
 p1vector: 7FFEDE00-7FFEE91D
 00000200: 00 00 DA 00 12 DD 00 DD 00 DD 00 DD 10 DD 10 DF

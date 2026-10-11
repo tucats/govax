@@ -222,7 +222,7 @@ func (d *Dispatcher) dispatchParsed(line string, verbSymbol bool) error {
 	}
 
 	// A subprocess's DCL doesn't work the machine itself (subcli.go).
-	if processOneCommands[r.Active] || r.EntryPoint != "" {
+	if processOneCommands[r.Active] {
 		if err := d.Console.processOneOnly(strings.ToUpper(r.Verb)); err != nil {
 			return err
 		}
@@ -242,23 +242,6 @@ func (d *Dispatcher) dispatchParsed(line string, verbSymbol bool) error {
 	// procedure or command it ran in turn.
 	if !dclOwnCommands[r.Active] {
 		defer func() { d.Console.imageRan = true }()
-	}
-
-	// A DCL /entry= redirect (ABOUT, XTEST, SHOW VERSION -- the C
-	// source's exe$about/exe$xtest, all real VAX routines
-	// defined in kernel.asm itself, not native C functions -- see
-	// docs/PHASE-16.md sub-phase 4) resolves the entry name as a VAX symbol
-	// (populated by an .ENTRY once kernel.asm has been ASMed/booted) and
-	// CALLs it with no arguments, the same primitive the CALL command
-	// itself uses. Requires a booted microkernel exactly as the C source
-	// does (exe$about etc. simply don't exist otherwise).
-	if r.EntryPoint != "" {
-		addr, _, err := d.Console.Evaluator().Eval(r.EntryPoint)
-		if err != nil {
-			return err
-		}
-
-		return d.Console.Call(addr, false)
 	}
 
 	return d.Grammar.Dispatch(r)
@@ -379,13 +362,10 @@ func (d *Dispatcher) bindGrammar() {
 		return d.Console.showDCLSymbols(cmd)
 	})
 	g.Bind("SHOW_RADIX", func(id int64, r *dcl.Result) error { return d.Console.ShowRadix() })
-	// SHOW VERSION has no bind of its own: its grammar syntax carries
-	// /entry=exe$about (console.dcl's own "syntax show_version/entry=exe$about"
-	// — it shares ABOUT's real VAX routine), so Dispatch's EntryPoint check
-	// above reaches it before Grammar.Dispatch ever would. The Go-native
-	// ShowVersion stand-in this bind used to call (docs/PHASE-08.md's own
-	// "rather than leaving ABOUT/SHOW VERSION with no output at all") is
-	// retired now that the real /entry= redirect works.
+	// SHOW VERSION names the microkernel. (It and the ABOUT command once
+	// called the microkernel's EXE$ABOUT; ABOUT is gone, HELP ABOUT
+	// taking its place, and so is the routine.)
+	g.Bind("SHOW_VERSION", func(id int64, r *dcl.Result) error { return d.Console.ShowVersion() })
 
 	g.Bind("SHOW_NVRAM", func(id int64, r *dcl.Result) error { return d.Console.ShowNVRAM() })
 	g.Bind("SHOW_ROM", func(id int64, r *dcl.Result) error { return d.Console.ShowROM() })

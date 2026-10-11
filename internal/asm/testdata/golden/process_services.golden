@@ -672,7 +672,7 @@ sym WSLIMIT 000002F9 flags=2 forward=0
 sym __ENTRY 00000200 flags=0 forward=0
 == after kernel.asm
 bytes: 316
-deposit: 0000033C  p0 end: 0000033C  s0 end: 80001500
+deposit: 0000033C  p0 end: 0000033C  s0 end: 80001300
 entry: 00000200
 p1vector: 7FFEDE00-7FFEE91D
 00000200: 00 00 DF 9F F5 02 00 00 DD 8F F8 FF 00 00 DD 03

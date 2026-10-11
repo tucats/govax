@@ -659,7 +659,7 @@ sym SYS$WRITE 7FFEE1B0 flags=2C forward=0
 sym __ENTRY 00000200 flags=0 forward=0
 == after kernel.asm
 bytes: 225
-deposit: 000002E1  p0 end: 000002E1  s0 end: 80001500
+deposit: 000002E1  p0 end: 000002E1  s0 end: 80001300
 entry: 00000200
 p1vector: 7FFEDE00-7FFEE91D
 00000200: 00 00 9E EF 78 00 00 00 6D DD 00 DF 9F C1 02 00

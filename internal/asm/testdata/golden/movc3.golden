@@ -13,7 +13,7 @@ sym SRC 00000220 flags=2 forward=0
 sym __ENTRY 00000200 flags=0 forward=0
 == after kernel.asm
 bytes: 332
-deposit: 0000034C  p0 end: 0000034C  s0 end: 80001500
+deposit: 0000034C  p0 end: 0000034C  s0 end: 80001300
 entry: 00000200
 p1vector: 7FFEDE00-7FFEE91D
 00000200: 3C 00 DE 9F 20 02 00 00 51 DE 9F 4C 02 00 00 53

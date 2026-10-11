@@ -219,6 +219,13 @@ func (c *Console) ShowRadix() error {
 	return nil
 }
 
+// ShowVersion is SHOW VERSION: which microkernel govax's console is.
+func (c *Console) ShowVersion() error {
+	c.Printf("govax Console Microkernel 2.0\nBy Tom Cole\n")
+
+	return nil
+}
+
 // ShowBase prints the console's current EXAMINE/DEPOSIT cursor.
 func (c *Console) ShowBase() error {
 	if err := c.requireInit(); err != nil {

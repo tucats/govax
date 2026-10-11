@@ -1295,7 +1295,7 @@ sym TWOSPEC 0000041D flags=2 forward=0
 sym __ENTRY 000002F0 flags=0 forward=0
 == after kernel.asm
 bytes: 553
-deposit: 00000429  p0 end: 00000429  s0 end: 80001500
+deposit: 00000429  p0 end: 00000429  s0 end: 80001300
 entry: 000002F0
 p1vector: 7FFEDE00-7FFEE91D
 00000200: 03 50

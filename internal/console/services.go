@@ -16,9 +16,7 @@ import (
 //
 // See services.go's own doc comment on Console.Dispatcher for why
 // XFC$CONSOLE_CMD can report "unavailable" even on a fully initialized
-// Console, and DCLGetString/DCLPresent/DCLGetKeyword/DCLGetInteger's own
-// comments for why the DCL-parse-callback subfunctions (XFC$DCL) are
-// deliberately minimal stubs.
+// Console.
 
 var _ cpu.SystemServices = (*Console)(nil)
 
@@ -74,31 +72,6 @@ func (c *Console) ConsoleCommand(cmdLine string) uint32 {
 
 	return 0
 }
-
-// DCLPresent/DCLGetKeyword/DCLGetString/DCLGetInteger implement XFC$DCL's
-// four subfunctions, used by compiled VAX code (chiefly the microkernel's
-// own kernel.asm bootstrap, assembled at vax_init time — see docs/PHASE-13.md) 
-// to ask the console's DCL parser whether a qualifier was present on some 
-// other, already-parsed command line and what value it carried.
-//
-// Phase 08's DCL engine (internal/console/dcl) parses one complete command
-// line against the grammar as a single pass — it has no API for "re-open
-// an already-parsed line and ask about one specific qualifier by name from
-// outside," which is what these four callbacks need. Building one with no
-// real caller yet to validate it against (nothing reaches XFC$DCL until
-// Phase 13's kernel.asm bootstrap actually runs) would be guessing at an
-// interface this port can't exercise; deliberately stubbed as "not
-// present"/zero until a concrete need shows up.
-func (c *Console) DCLPresent(r1, r2 uint32) uint32        { return 0 }
-func (c *Console) DCLGetKeyword(r1, r2, r3 uint32) uint32 { return 0 }
-func (c *Console) DCLGetInteger(r1, r2 uint32) uint32     { return 0 }
-
-// DCLGetString reports ok=false unconditionally, for the same reason as its
-// three siblings above — plus, even with real qualifier-lookup logic, this
-// port has nowhere to write the result: the real callback stores into a
-// fixed scratch buffer named by the "EXE$DCLSTRING" symbol, which only
-// exists once Phase 13's kernel.asm bootstrap defines it.
-func (c *Console) DCLGetString(r1, r2 uint32) (uint32, bool) { return 0, false }
 
 // running is the process the engine's hooks below reach: the System's
 // current process, the one whose context the CPU holds (docs/PHASE-44.md).

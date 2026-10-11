@@ -660,7 +660,7 @@ sym USERCODE 00000228 flags=2 forward=0
 sym __ENTRY 00000200 flags=0 forward=0
 == after kernel.asm
 bytes: 264
-deposit: 00000308  p0 end: 00000308  s0 end: 80001500
+deposit: 00000308  p0 end: 00000308  s0 end: 80001300
 entry: 00000200
 p1vector: 7FFEDE00-7FFEE91D
 00000200: 00 00 DD 00 DD 00 DD 00 DF 9F C6 02 00 00 DD 00

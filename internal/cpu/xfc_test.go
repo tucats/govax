@@ -18,12 +18,6 @@ type fakeServices struct {
 	consoleCmd string
 	consoleRC  uint32
 
-	dclR1, dclR2, dclR3 uint32
-	dclPresentRC        uint32
-	dclKeywordRC        uint32
-	dclIntegerRC        uint32
-	dclStringAddr       uint32
-	dclStringOK         bool
 
 	servicePC      uint32
 	serviceRC      uint32
@@ -50,30 +44,6 @@ func (f *fakeServices) ConsoleCommand(cmd string) uint32 {
 	f.consoleCmd = cmd
 
 	return f.consoleRC
-}
-
-func (f *fakeServices) DCLPresent(r1, r2 uint32) uint32 {
-	f.dclR1, f.dclR2 = r1, r2
-
-	return f.dclPresentRC
-}
-
-func (f *fakeServices) DCLGetKeyword(r1, r2, r3 uint32) uint32 {
-	f.dclR1, f.dclR2, f.dclR3 = r1, r2, r3
-
-	return f.dclKeywordRC
-}
-
-func (f *fakeServices) DCLGetString(r1, r2 uint32) (uint32, bool) {
-	f.dclR1, f.dclR2 = r1, r2
-
-	return f.dclStringAddr, f.dclStringOK
-}
-
-func (f *fakeServices) DCLGetInteger(r1, r2 uint32) uint32 {
-	f.dclR1, f.dclR2 = r1, r2
-
-	return f.dclIntegerRC
 }
 
 func (f *fakeServices) SystemService(pc uint32) (uint32, bool, error) {
@@ -301,87 +271,6 @@ func TestEmulXfcHaltAndHaltSilent(t *testing.T) {
 		if f.quitRequested {
 			t.Errorf("code %#x: RequestQuit was called, want only XFC$QUIT_EMULATION to stop the console", xfcHalt)
 		}
-	}
-}
-
-func TestEmulXfcDCL(t *testing.T) {
-	e, f := xfcEngine()
-	e.cpu.SetGPR(vax.R1, 0x11)
-	e.cpu.SetGPR(vax.R2, 0x22)
-	e.cpu.SetGPR(vax.R3, 0x33)
-
-	f.dclPresentRC = 1
-
-	e.cpu.SetGPR(vax.R0, dclPresent)
-	stepInstruction(t, e, 0xFC, xfcDCL)
-
-	if got := e.cpu.GPR(vax.R0); got != 1 {
-		t.Errorf("DCLPresent: R0 = %d, want 1", got)
-	}
-
-	if f.dclR1 != 0x11 || f.dclR2 != 0x22 {
-		t.Errorf("DCLPresent args = (%#x,%#x), want (0x11,0x22)", f.dclR1, f.dclR2)
-	}
-
-	f.dclKeywordRC = 7
-
-	e.cpu.SetGPR(vax.R0, dclGetKeyword)
-	stepInstruction(t, e, 0xFC, xfcDCL)
-
-	if got := e.cpu.GPR(vax.R0); got != 7 {
-		t.Errorf("DCLGetKeyword: R0 = %d, want 7", got)
-	}
-
-	if f.dclR3 != 0x33 {
-		t.Errorf("DCLGetKeyword r3 = %#x, want 0x33", f.dclR3)
-	}
-
-	f.dclIntegerRC = 99
-
-	e.cpu.SetGPR(vax.R0, dclGetInteger)
-	stepInstruction(t, e, 0xFC, xfcDCL)
-
-	if got := e.cpu.GPR(vax.R0); got != 99 {
-		t.Errorf("DCLGetInteger: R0 = %d, want 99", got)
-	}
-}
-
-func TestEmulXfcDCLGetString(t *testing.T) {
-	e, f := xfcEngine()
-
-	f.dclStringOK = false
-
-	e.cpu.SetGPR(vax.R0, dclGetString)
-	stepInstruction(t, e, 0xFC, xfcDCL)
-
-	if got := e.cpu.GPR(vax.R0); got != 0 {
-		t.Errorf("no buffer available: R0 = %#x, want 0", got)
-	}
-
-	f.dclStringOK = true
-	f.dclStringAddr = 0x4000
-
-	e.cpu.SetGPR(vax.R0, dclGetString)
-	stepInstruction(t, e, 0xFC, xfcDCL)
-
-	if got := e.cpu.GPR(vax.R0); got != 0x4000 {
-		t.Errorf("R0 = %#x, want 0x4000", got)
-	}
-}
-
-func TestEmulXfcDCLUnknownSubfunctionFaults(t *testing.T) {
-	e := newEngine()
-	e.cpu.SetGPR(vax.SP, 0x7000)
-	e.cpu.SetPR(vax.KSP, 0x7000)
-
-	e.SetSystemServices(&fakeServices{})
-	putVector(t, e, ExcReservedOp, 0x300, 0)
-
-	e.cpu.SetGPR(vax.R0, 99) // no such DCL subfunction
-	stepInstruction(t, e, 0xFC, xfcDCL)
-
-	if got := e.cpu.GPR(vax.PC); got != 0x300 {
-		t.Errorf("PC = %#x, want 0x300 (reserved-operand fault vector)", got)
 	}
 }
 

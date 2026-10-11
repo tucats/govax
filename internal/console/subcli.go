@@ -107,11 +107,11 @@ var (
 // (VAX_NOTSUBPROC). SPAWN is among them for now: a subprocess's own
 // subprocess would need its CLI to wait for it.
 var processOneCommands = map[string]bool{
-	"ABOUT": true, "ASM": true, "ASSEMBLE": true, "BOOT": true,
+	"ASM": true, "ASSEMBLE": true, "BOOT": true,
 	"CLEAR": true, "CLEAR_MEMORY": true, "CLEAR_STRINGS": true,
 	"DEBUG": true, "INITIALIZE_VAX": true, "LOAD": true, "ROM": true,
 	"SAVE": true, "SET_QUANTUM": true, "SPAWN": true, "TEST": true,
-	"VMINIT": true, "XTEST": true, "ZERO": true,
+	"VMINIT": true, "ZERO": true,
 }
 
 // dclState is one process's DCL state: what the console's commands read

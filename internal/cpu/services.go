@@ -40,15 +40,6 @@ type SystemServices interface { //nolint:interfacebloat
 	// command line, returning its status code.
 	ConsoleCommand(cmd string) uint32
 
-	// DCL* implement XFC$DCL's four subfunctions (selected by R0 == 1..4).
-	// DCLGetString reports ok=false when it has nowhere to write the result
-	// (matching emul_xfc.c's own "EXE$DCLSTRING buffer not set up" no-op
-	// path) rather than an address of 0, which is itself a valid VAX address.
-	DCLPresent(r1, r2 uint32) uint32
-	DCLGetKeyword(r1, r2, r3 uint32) uint32
-	DCLGetString(r1, r2 uint32) (addr uint32, ok bool)
-	DCLGetInteger(r1, r2 uint32) uint32
-
 	// SystemService implements XFC$P1VECTOR: dispatch a SYS$ system-service
 	// call whose calling instruction is at pc (vax.PC - 4, matching
 	// call_service's own addressing — the XFC handler passes the P1-vector

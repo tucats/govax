@@ -99,9 +99,6 @@ func ParseGrammar(text string) (*Grammar, error) {
 				case idTOKEN:
 					e.ID, err = parseID(v)
 
-				case entryTOKEN:
-					e.EntryPoint = upcase(v)
-
 				case aliasTOKEN:
 					e.Alias = upcase(v)
 

@@ -76,7 +76,7 @@ func TestLoadConsoleGrammar(t *testing.T) {
 		t.Errorf("grammar name = %q, want EVAX", g.Name)
 	}
 
-	wantVerbs := []string{"DEFINE", "ABOUT", "EXIT", "QUIT", "TEST", "CLEAR", "VMINIT", "SHOW", "MOUNT", "DISMOUNT", "INITIALIZE", "DIRECTORY", "DELETE", "PURGE", "TYPE"}
+	wantVerbs := []string{"DEFINE", "EXIT", "QUIT", "TEST", "CLEAR", "VMINIT", "SHOW", "MOUNT", "DISMOUNT", "INITIALIZE", "DIRECTORY", "DELETE", "PURGE", "TYPE"}
 	for _, v := range wantVerbs {
 		if _, ok := g.entries[v]; !ok {
 			t.Errorf("missing verb %s", v)
@@ -124,9 +124,9 @@ func TestLoadEvaxGrammar_verbCount(t *testing.T) {
 	// of HELP, and adds ON and CONTINUE, and then THEN, ELSE, ENDIF,
 	// GOTO, GOSUB, RETURN, CALL, SUBROUTINE, and ENDSUBROUTINE, DECK
 	// and EOD, and OPEN, CLOSE, READ, WRITE, and INQUIRE, and LOGOUT and
-	// MCR.
-	if len(g.verbOrder) != 62 {
-		t.Errorf("got %d verbs, want 62: %v", len(g.verbOrder), verbNames(g))
+	// MCR; and ABOUT goes (HELP ABOUT is its replacement).
+	if len(g.verbOrder) != 61 {
+		t.Errorf("got %d verbs, want 61: %v", len(g.verbOrder), verbNames(g))
 	}
 }
 

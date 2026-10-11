@@ -668,7 +668,7 @@ sym VA 000002F2 flags=2 forward=0
 sym __ENTRY 00000200 flags=0 forward=0
 == after kernel.asm
 bytes: 262
-deposit: 00000306  p0 end: 00000306  s0 end: 80001500
+deposit: 00000306  p0 end: 00000306  s0 end: 80001300
 entry: 00000200
 p1vector: 7FFEDE00-7FFEE91D
 00000200: 00 00 9E EF 75 00 00 00 6D FB 00 9F 29 02 00 00

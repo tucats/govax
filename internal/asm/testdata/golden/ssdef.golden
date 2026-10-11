@@ -814,5 +814,5 @@ sym SS$_WRONGSTATE 00002374 flags=28 forward=0
 sym SS$_ZEROALLOCLS 0000260C flags=28 forward=0
 == after kernel.asm
 bytes: 0
-deposit: 00000200  p0 end: 00000200  s0 end: 80001500
+deposit: 00000200  p0 end: 00000200  s0 end: 80001300
 p1vector: 7FFEDE00-7FFEE91D

@@ -200,7 +200,6 @@ type Entry struct {
 	ID         int64
 	IsVerb     bool
 	Alias      string // e.g. "quit" is an alias for "exit"
-	EntryPoint string // /entry=, a VAX microkernel routine name (Phase 10/RTL, not dispatched here)
 
 	// Assignment names the syntax a command line continues in when its
 	// first positional token is a name followed by "=" (the grammar's
