@@ -93,6 +93,8 @@
 //                          F$TRNLNM, F$CVTIME, ...)
 //              10/10/26    SET VERIFY shows a procedure's lines (with
 //                          [NO]PROCEDURE and [NO]IMAGE); added SET PREFIX
+//              10/11/26    Removed SET symbol = value: DCL's assignments
+//                          (=, ==, :=) replace it
 
 This is the help documentation for the govax VAX emulator.  Topic sections are
 marked by a "$" delimiter.  This is followed by as many tokens of the help
@@ -1244,7 +1246,9 @@ $SET
     VAX or the console processor.  See the help text on:
 
     DEBUG       DEFAULT     ON          PREFIX
-    PROMPT      RADIX       SYMBOL      VERIFY 
+    PROMPT      RADIX       VERIFY
+
+    A symbol is set with DCL's assignments (see HELP SYMBOL).
 
     The settings of the machine itself (breakpoints, stepping, the PSL, page
     table entries, the base address, the display modes) are the debugger's:
@@ -1256,41 +1260,6 @@ $SET ,QUAN
     interrupt or process context switch can occur. Defaults to 1. Change
     this only if you need to debug interrupt and context switching operations.
     
-$SET ,SYMB
-$SET ,SYM 
-
-    The SET command can be used to set a symbol value.  Optionally, 
-    you can specify attributes of the symbol to be set.  If the symbol
-    name already exists, the command updates the value.  If the symbol
-    does not already exist, it is created.
-
-    Syntax:
-
-        SET [qualifiers] <symbol> = <value>
-
-    Parameters:
-
-        <symbol>        The name of the symbol to set.  If the name
-                        contains a "$" character then it is a system
-                        symbol and goes in the system table.  Otherwise
-                        it is a user symbol.
-
-        <value>         Any expression.  The expression is evaluated and
-                        the result stored in the symbol.
-
-    Qualifiers:
-
-        /PERMANENT      The symbol is marked permanent.  If it is in
-                        the system symbol table it will not be deleted,
-                        even if all other symbols are removed.
-
-        /LABEL          The symbol is a label of a memory location, and
-                        can be used during disassembly to replace a numberic
-                        address value.
-
-        /ENTRY          The symbol is an entry point of a two-byte entry
-                        mask.
-
 $SET ,DEBU
 
     The SET DEBUG command sets various debugging switches in the console
@@ -1405,52 +1374,28 @@ $SET ,ASSE
             but less clear which entry it belongs to.
 
 
-$SET ,SYM
-$SET ,SYMB
-
-    The SET command can be used to set a symbol value.  The symbol value is
-    then usable anywhere an address can be specified, in a console command
-    or an assembler statement.
-    
-    Syntax:
-    
-        SET <symbol> = <value>
-    
-    
-    Parameters:
-    
-        <symbol>        The name of the symbol to be set.  Do not enclose the
-                        symbol name in single quotes (that is used to mean
-                        "resolve the symbol").
-        
-        <value>         Any numeric valid or a symbol value enclosed in single
-                        quotes.  This can also be any integer expression.
-
-    Examples:
-    
-        SET MAIN = 0200         ; Set MAIN to 0200 (in current RADIX)
-        
-        SET MAIN = INIT + 2     ; Set MAIN to value of INIT plus two
-
 $SET ,VERI
 $SET ,NOVE
 
     The SET VERIFY command shows each line of a command procedure (@) as it
     runs: procedure verification shows its command lines, and image
     verification the data lines it gives the debugger or the assembler.
-    SET VERIFY and SET NOVERIFY turn both on or off; a keyword changes only
-    its own.  A change lasts after the procedure that made it ends.
+    SET VERIFY and SET NOVERIFY turn both on or off; a keyword, which may
+    be abbreviated, changes only its own (SET NOVERIFY takes none).  A
+    change lasts after the procedure that made it ends.
 
     A command line is shown as it is in the file, its "$", indentation,
     label, and comment included, after 'SYMBOL' substitution (&SYMBOL and
     the symbols of an expression are not shown replaced).  Comment lines
-    are shown too, and a continued command a line at a time.  The lines of
-    an IF branch that doesn't run are not shown, nor are commands typed at
-    the terminal.
+    are shown too, and a continued command a line at a time, each line
+    substituted.  The lines of an IF branch that doesn't run are not
+    shown (its ELSE or ENDIF is), nor is the THEN of an IF that was false,
+    an ON command's action, or a command typed at the terminal.
 
     F$VERIFY (see HELP LEXICAL) reads and sets both settings, and DCL
-    performs it even in a comment, between apostrophes: a procedure that
-    starts with
+    performs it even in a comment, between apostrophes, showing the
+    comment with its value in place of the call: a procedure that starts
+    with
 
         $ ! 'F$VERIFY(0)'
 
@@ -1477,9 +1422,12 @@ $SET ,NOPR
     The SET PREFIX command puts a prefix before each verified command line
     (see HELP SET VERIFY), made from a $FAO control string: the time each
     command runs, with "(!5%T) ".  The lines that continue a command get
-    blanks as long as the prefix, and data lines get none.  A directive
-    that takes an argument gets 0.  F$ENVIRONMENT("VERIFY_PREFIX") returns
-    the control string; SET NOPREFIX takes it away.
+    blanks as long as the prefix, and data lines get none.  The only
+    directives that may take an argument are the time's and date's, !%T
+    and !%D, which show the current time; a control string with another
+    is refused (%DCL-E-INVPREFIX), and the prefix stays as it was.
+    F$ENVIRONMENT("VERIFY_PREFIX") returns the control string; SET
+    NOPREFIX takes it away.
 
     Syntax:
 

@@ -974,13 +974,11 @@ grammar console
                     /type=$string
         disallow    rom and nvram
 
-    ! SET (console_set.c). SET name=value assigns a symbol, register, or
-    ! privileged register; console_set.c looks for that form first, so a
-    ! name that abbreviates a keyword (SET R=5) is still an assignment.
-    ! (The debugger's DEPOSIT does the same for registers, with VMS's
-    ! syntax.) Otherwise the keyword picks the syntax. Docs/PHASE-42.md
+    ! SET keyword ...: the keyword picks the syntax. Docs/PHASE-42.md
     ! moved the machine's keywords (BREAK, STEP, TRACE, PSL, MODE, PTE, VM,
     ! BASE, ...) to the debugger's SET; VERBOSE takes NO, the rest don't.
+    ! (SET name=value, the console's old symbol and register assignment,
+    ! gave way to DCL's assignments, docs/PHASE-50.)
     type set_types
         keyword     radix               /syntax=set_radix/nonegatable
         keyword     debug               /syntax=set_debug/nonegatable
@@ -994,12 +992,7 @@ grammar console
         keyword     quantum             /syntax=set_quantum/nonegatable
 
 
-    verb set/id=1760/assignment=set_symbol
-        qualifier   permanent/id=1761/nonegatable
-        qualifier   prm/alias=permanent
-        qualifier   entry/id=1762/nonegatable
-        qualifier   label/id=1763/nonegatable
-        qualifier   lbl/alias=label
+    verb set/id=1760
         parameter   what/id=1764                -
                     /type=set_types             -
                     /prompt="What"
@@ -1010,21 +1003,6 @@ grammar console
                        /type=$integer              -
                        /prompt="Quantum"
   
-    ! SET [/PERMANENT] [/ENTRY] [/LABEL] name=value.
-    syntax set_symbol/id=1770
-        qualifier   permanent/id=1761/nonegatable
-        qualifier   prm/alias=permanent
-        qualifier   entry/id=1762/nonegatable
-        qualifier   label/id=1763/nonegatable
-        qualifier   lbl/alias=label
-        parameter   name/id=1771                -
-                    /type=$name                 -
-                    /separator="="              -
-                    /prompt="Name"
-        parameter   value/id=1772               -
-                    /type=$expression           -
-                    /prompt="Value"
-
     ! SET RADIX 8|10|16|HEX|DEC.
     syntax set_radix/id=1773
         parameter   radix/id=1774               -

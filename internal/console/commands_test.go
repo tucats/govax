@@ -8,7 +8,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/tucats/govax/internal/vax"
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
@@ -81,12 +80,12 @@ func TestCommands_helpAliases(t *testing.T) {
 func TestCommands_time(t *testing.T) {
 	d, c, buf := newCommandDispatcher(t)
 
-	if err := d.Dispatch("TIME SET R3=7"); err != nil {
+	if err := d.Dispatch("TIME SET RADIX 8"); err != nil {
 		t.Fatal(err)
 	}
 
-	if got := c.CPU.GPR(vax.R3); got != 7 {
-		t.Errorf("R3 = %#x, want 7", got)
+	if c.Radix != 8 {
+		t.Errorf("radix %d, want 8", c.Radix)
 	}
 
 	if !strings.Contains(buf.String(), "Elapsed time:") {
@@ -247,19 +246,19 @@ func TestCommands_at(t *testing.T) {
 	d, c, _ := newCommandDispatcher(t)
 
 	path := filepath.Join(t.TempDir(), "cmds.com")
-	if err := os.WriteFile(path, []byte("$ SET R6=6\n"), 0o644); err != nil {
+	if err := os.WriteFile(path, []byte("$ N == 6\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
 	for _, line := range []string{`@"` + path + `"`, `@ "` + path + `"`} {
-		c.CPU.SetGPR(vax.R6, 0)
+		_ = c.dclSymbols.delete("/GLOBAL N")
 
 		if err := d.Dispatch(line); err != nil {
 			t.Fatalf("%s: %v", line, err)
 		}
 
-		if got := c.CPU.GPR(vax.R6); got != 6 {
-			t.Errorf("%s: R6 = %#x, want 6", line, got)
+		if got, ok := c.dclSymbols.lookup("N"); !ok || got.value != "6" {
+			t.Errorf("%s: N = %+v, %v; want 6", line, got, ok)
 		}
 	}
 
@@ -278,14 +277,14 @@ func TestCommands_at(t *testing.T) {
 		t.Error("RunCommandLine with no command ran one, or ended the session")
 	}
 
-	CommandLineString = "SET R7=7"
+	CommandLineString = "M = 7"
 
 	if !c.RunCommandLine(d.Dispatch) {
 		t.Error("RunCommandLine didn't run the command")
 	}
 
-	if got := c.CPU.GPR(vax.R7); got != 7 {
-		t.Errorf("R7 = %#x, want 7", got)
+	if got, ok := c.dclSymbols.lookup("M"); !ok || got.value != "7" {
+		t.Errorf("M = %+v, %v; want 7", got, ok)
 	}
 
 	if c.Running() || c.CommandLineErr() != nil {
@@ -293,18 +292,16 @@ func TestCommands_at(t *testing.T) {
 	}
 }
 
-// TestCommands_set checks SET's grammar: assignments, which win over a
-// keyword they abbreviate, negated keywords, and its sub-forms' values.
+// TestCommands_set checks SET's grammar: negated keywords and its
+// sub-forms' values. SET has no name=value form: DCL's assignments
+// replaced it (docs/PHASE-50).
 func TestCommands_set(t *testing.T) {
 	d, c, _ := newCommandDispatcher(t)
 
 	steps := []string{
-		"SET R=5",
-		"SET X = 1 + 2 /PERMANENT",
-		"SET/LBL Y=X",
 		"SET NOVERBOSE",
 		"SET DEBUG VM, NOUSERHALT",
-		"SET RADIX = 10",
+		"SET RADIX 10",
 	}
 
 	for _, line := range steps {
@@ -313,21 +310,15 @@ func TestCommands_set(t *testing.T) {
 		}
 	}
 
-	for name, want := range map[string]uint32{"R": 5, "X": 3, "Y": 3, "RADIX": 0x10} {
-		if v, ok := c.Symbols.Get(name); !ok || v != want {
-			t.Errorf("symbol %s = %#x, %v; want %#x", name, v, ok, want)
-		}
-	}
-
-	if c.Radix != 16 {
-		t.Errorf("radix %d after SET RADIX = 10 (an assignment)", c.Radix)
+	if c.Radix != 10 {
+		t.Errorf("radix %d after SET RADIX 10", c.Radix)
 	}
 
 	if c.Trace || c.Verbose {
 		t.Errorf("Trace %v, Verbose %v; want both off", c.Trace, c.Verbose)
 	}
 
-	for _, line := range []string{"SET NORADIX 10", "SET RADIX", "SET BOGUS", "SET V", "SET BREAK/BOGUS 100", "SET QUANTUM X"} {
+	for _, line := range []string{"SET R=5", "SET X = 1 + 2 /PERMANENT", "SET NORADIX 10", "SET RADIX", "SET BOGUS", "SET V", "SET BREAK/BOGUS 100", "SET QUANTUM X"} {
 		if err := d.Dispatch(line); err == nil {
 			t.Errorf("%s: no error", line)
 		}

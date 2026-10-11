@@ -3,9 +3,12 @@ package console
 import (
 	"bytes"
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
+	"time"
 
+	"github.com/tucats/govax/internal/vmsdef"
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
@@ -333,6 +336,109 @@ func TestProbe50Verify(t *testing.T) {
 
 		if g != w {
 			t.Fatalf("line %d:\n got %q\nwant %q", i+1, g, w)
+		}
+	}
+}
+
+// probe50VSkipped are the sections of round 2 govax can't run yet: V6's
+// data lines need an image that reads SYS$INPUT from the procedure
+// (subtask 16).
+var probe50VSkipped = map[string]bool{"V6": true}
+
+// probe50VDataLine reports whether line is one of TYPE SYS$INPUT's,
+// which differ until subtask 16 elsewhere too (V7): in VMS's log, the
+// data lines (each shown, then typed); in govax's, TYPE's failure and
+// SKPDAT.
+func probe50VDataLine(line string) bool {
+	return strings.HasPrefix(line, "data line") ||
+		strings.HasPrefix(line, "%SYSTEM-F-DEVNOTMOUNT") || strings.HasPrefix(line, "%DCL-W-SKPDAT")
+}
+
+// probe50VSections splits a verified run's output into its sections, by
+// the "$ ! Vn:" comment that starts each (the lines before the first are
+// section ""), leaving out TYPE SYS$INPUT's lines (probe50VDataLine).
+func probe50VSections(text string) map[string][]string {
+	sections := map[string][]string{}
+	name := ""
+
+	for _, line := range strings.Split(strings.TrimSuffix(text, "\n"), "\n") {
+		if probe50VDataLine(line) {
+			continue
+		}
+
+		if rest, ok := strings.CutPrefix(line, "$ ! V"); ok {
+			if n, _, found := strings.Cut(rest, ":"); found {
+				name = "V" + n
+			}
+		}
+
+		sections[name] = append(sections[name], line)
+	}
+
+	return sections
+}
+
+// TestProbe50VOracle runs round 2 of testdata/dcl50, probe50v.com (and
+// probe50w.com, which it runs), and compares what it writes with VMS
+// 7.3's log line for line, section by section: SET VERIFY, SET PREFIX,
+// and F$VERIFY. The clock is the run's, for SET PREFIX's time.
+func TestProbe50VOracle(t *testing.T) {
+	logText, err := os.ReadFile("../../testdata/dcl50/vax/probe50v.log")
+	if err != nil {
+		t.Skipf("no VMS log: %v", err)
+	}
+
+	dir := t.TempDir()
+
+	for _, name := range []string{"probe50v.com", "probe50w.com"} {
+		text, err := os.ReadFile(filepath.Join("../../testdata/dcl50", name))
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		writeFile(t, filepath.Join(dir, name), string(text))
+	}
+
+	t.Chdir(dir)
+
+	d, c, buf := newCommandDispatcher(t)
+	now := vmsdef.Time(time.Date(2026, 10, 11, 14, 13, 0, 0, time.UTC))
+	c.RTL.Clock = func() uint64 { return now }
+
+	if err := d.Dispatch("@PROBE50V"); err != nil && !vmserrors.MessageInhibited(err) {
+		t.Fatalf("@PROBE50V: %v", err)
+	}
+
+	// The log's records are written LF, text, CR.
+	want := probe50VSections(strings.TrimPrefix(strings.ReplaceAll(string(logText), "\r", ""), "\n"))
+	got := probe50VSections(buf.String())
+
+	if len(want) < 11 {
+		t.Fatalf("the log has %d sections, want 11", len(want))
+	}
+
+	for name, wantLines := range want {
+		if probe50VSkipped[name] {
+			continue
+		}
+
+		gotLines := got[name]
+
+		for i := 0; i < max(len(gotLines), len(wantLines)); i++ {
+			var g, w string
+			if i < len(gotLines) {
+				g = gotLines[i]
+			}
+
+			if i < len(wantLines) {
+				w = wantLines[i]
+			}
+
+			if g != w {
+				t.Errorf("section %s, line %d:\n got %q\nwant %q", name, i+1, g, w)
+
+				break
+			}
 		}
 	}
 }

@@ -11,7 +11,9 @@ against VMS 7.3 (2026-10-09), and so is subtask 10, `$STATUS`, EXIT's
 status, ON, and SET [NO]ON (2026-10-09). Subtasks 11 to 13, labels and
 GOTO, IF/THEN/ELSE/ENDIF, GOSUB/RETURN, and CALL/SUBROUTINE, are done
 (2026-10-09, not yet probed), and so is subtask 14, the lexical
-functions (2026-10-09, not yet probed); SET VERIFY is next.
+functions (2026-10-09, not yet probed). Subtask 15, SET VERIFY, SET
+PREFIX, and F$VERIFY's echo, is done and checked against VMS 7.3
+(2026-10-11); SYS$INPUT from a procedure (subtask 16) is next.
 
 The console should act like a VMS DCL command processor. Until now it
 had INCLUDE (and `@` as its alias), which runs a file of console
@@ -356,8 +358,49 @@ manuals, so what the examples don't show was chosen (DEVIATIONS.md's
 - **Not yet**: F$CONTEXT, F$CSID, F$DEVICE, F$FILE_ATTRIBUTES,
   F$GETQUI, F$IDENTIFIER, and F$LICENSE stay CLI_LEXNOTIMPL. F$VERIFY
   keeps procedure and image verification (`Console.Verify`,
-  `verifyImage`); echoing lines is subtask 15's, and so is F$VERIFY's
-  being evaluated in a `$!` comment, as DCL does.
+  `verifyImage`); echoing lines is subtask 15's (below), and so is
+  F$VERIFY's being evaluated in a `$!` comment, as DCL does.
+
+### Verification (subtask 15)
+
+`dclverify.go`. Procedure verification (`Console.Verify`) shows each
+command line of a procedure; image verification (`verifyImage`) the
+data lines given to what reads the procedure's input. The rules come from
+the DCL Dictionary (SET VERIFY, SET PREFIX, F$VERIFY) and the User's
+Manual (13.5.5), checked by testdata/dcl50's round 2 (`probe50v.com`,
+`TestProbe50VOracle`; DEVIATIONS.md's "[Phase 50] Verification").
+
+- **When a line is shown.** The procedure loop (`runLevel`) makes the
+  line it is about to run the pending echo (`Console.echo`,
+  `newPendingEcho`: its records, the line they make, and where they were
+  joined). `DispatchConsole` shows it after the first phase's
+  substitutions (`echoLine`), or drops it: a line whose scan fails, an IF
+  branch's lines that don't run (but for the ELSE or ENDIF that ends the
+  passing over), the THEN of a false block IF (`thenOfFalseIf`). The
+  comment and blank lines `procedureSource.Read` passes over are shown
+  before the line (`comments`). CALL shows the SUBROUTINE line; a CALL
+  level's end shows its ENDSUBROUTINE.
+- **Continued commands, a record at a time.** VMS substitutes and shows
+  each record. govax scans the joined line once (a lexical function's
+  side effects happen once), with `joinMark` where records were joined
+  (`markJoins`), then splits the scanned line back into records
+  (`scannedRecords`): each record is shown as it is but for its part of
+  the line.
+- **F$VERIFY in comments** (`verifyInComment`): performed, and replaced
+  by its value in what is shown; called from `substituteApostrophes` at
+  a command's `!`, and from `comments` for a comment line.
+- **SET VERIFY** takes `[NO]PROCEDURE` and `[NO]IMAGE`, abbreviated;
+  SET NOVERIFY with keywords is CLI$_CONFLICT, its segment the word as
+  typed (the handler reads it from `Dispatcher.line`). **SET PREFIX**'s
+  control string is checked (`validPrefix`: only !%T and !%D take an
+  argument, 0, the current time) and formatted by `$FAO`'s code for each
+  line shown.
+- **SET name=value removed.** The console's old SET form that assigned a
+  machine symbol or a register (with /PERMANENT, /ENTRY, /LABEL) is gone:
+  DCL's `=`, `==`, and `:=` assign symbols, and the debugger's DEPOSIT
+  sets general registers. (Nothing now sets a privileged register or the
+  whole PSL from a command line; the debugger's SET PSL sets its
+  fields.)
 
 ## Subtasks
 
@@ -409,7 +452,11 @@ Later rounds of this phase, in a likely order:
 15. **SET VERIFY**: echo each command (and data line) as it is run.
 16. **SYS$INPUT from a procedure**: data lines for the image a
     procedure runs, and DECK/EOD. (SKPDAT, and data lines for the
-    debugger and the interactive assembler, came with subtask 2.)
+    debugger and the interactive assembler, came with subtask 2.) Image
+    verification of those lines comes with it: VMS 7.3 shows each line
+    TYPE SYS$INPUT reads, and read a data line after SET VERIFY (not an
+    image) as a command, `%DCL-W-IVVERB \DATA\`, not SKPDAT
+    (testdata/dcl50's round 2, section V6).
 17. **INQUIRE, READ, WRITE, OPEN, CLOSE** (DCL's file I/O).
 18. **STOP** returning to level 0, and Ctrl/Y within procedures.
 19. **The subprocess CLI** (`subcli.go`) gets `@`, on the same stack.
@@ -427,7 +474,7 @@ Later rounds of this phase, in a likely order:
 - The rest of what `testdata/dcl50`'s round 1 left open (its README):
   a negative number divided by zero, `''NAME` without its closing
   apostrophe, a foreign command's `&`.
-- For a round 2, on labels, IF, GOSUB, and CALL (DEVIATIONS.md's
+- For a later round, on labels, IF, GOSUB, and CALL (DEVIATIONS.md's
   "[Phase 50] Labels, IF blocks, GOSUB, and CALL"): whether a GOTO's
   forward search records the labels it passes; `IF expr THEN` with
   nothing after it; a command other than THEN after a block's IF; THEN,
@@ -435,11 +482,11 @@ Later rounds of this phase, in a likely order:
   message and the ON action; a missing CALL target; labels, GOTO, block
   IF, GOSUB, and CALL at the terminal; abbreviations of ENDIF and
   ENDSUBROUTINE.
-- For a round 2, on the lexical functions: everything DEVIATIONS.md's
+- For a later round, on the lexical functions: everything DEVIATIONS.md's
   "[Phase 50] Lexical functions: choices without the DCL Dictionary"
   lists, chiefly F$CVTIME's formats and defaults, F$SEARCH without
   wildcards, keyword abbreviations, and the range errors.
-- For a round 2, on statuses (DEVIATIONS.md's "[Phase 50] Statuses and
+- For a later round, on statuses (DEVIATIONS.md's "[Phase 50] Statuses and
   ON"): EXIT with no status after a success (is bit 28 set?); `$STATUS`
   at an ON ERROR THEN GOTO label; whether ON's command is substituted
   when ON is read or when it runs (`ON ERROR THEN WRITE SYS$OUTPUT
@@ -578,3 +625,18 @@ details are in DEVIATIONS.md.)
   examples, every function and its errors, F$PARSE and F$SEARCH on the
   host and on a volume, a fixed clock for the time functions, the
   subprocess CLI's subset).
+- 2026-10-11: Subtask 15, verification (see "Verification"). SET
+  [NO]VERIFY, SET [NO]PREFIX, F$ENVIRONMENT("VERIFY_PREFIX"), the echo of
+  a procedure's lines, and F$VERIFY in comments. A VMS probe, round 2
+  of testdata/dcl50 (`probe50v.com`, `probe50w.com`, `vax/probe50v.log`),
+  changed govax: continued commands shown a record at a time, the THEN
+  of a false IF hidden, CALL's SUBROUTINE line shown, a comment's
+  F$VERIFY replaced by its value (closing apostrophe optional), SET
+  VERIFY's keywords abbreviated, SET NOVERIFY=keyword CLI$_CONFLICT, SET
+  PREFIX's CLI$_INVPREFIX, and F$VERIFY(,n) changing nothing; new
+  messages CLI_CONFLICT and CLI_INVPREFIX. At the author's request, SET
+  name=value (the console's old machine-symbol and register
+  assignment, and its qualifiers) is removed: DCL's assignments replace
+  it. Tests: `dclverify_test.go`, `TestProbe50Verify` (round 1's log)
+  and `TestProbe50VOracle` (round 2's, all but V6, which waits for
+  subtask 16).

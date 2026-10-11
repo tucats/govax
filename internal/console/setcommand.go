@@ -16,15 +16,6 @@ func (d *Dispatcher) bindSetCommands() {
 	g := d.Grammar
 	c := d.Console
 
-	g.Bind("SET_SYMBOL", func(id int64, r *dcl.Result) error {
-		val, err := d.evalWhole(r.String("VALUE"))
-		if err != nil {
-			return err
-		}
-
-		return c.SetSymbolQualified(r.String("NAME"), val, r.Present("PERMANENT"), r.Present("ENTRY"), r.Present("LABEL"))
-	})
-
 	g.Bind("SET_RADIX", func(id int64, r *dcl.Result) error {
 		n, ok := parseRadixArg(r.String("RADIX"))
 		if !ok {
@@ -51,7 +42,7 @@ func (d *Dispatcher) bindSetCommands() {
 
 		return c.SetVerbose()
 	})
-	g.Bind("SET_VERIFY", func(id int64, r *dcl.Result) error { return setVerifyCommand(c, r) })
+	g.Bind("SET_VERIFY", func(id int64, r *dcl.Result) error { return setVerifyCommand(c, r, d.line) })
 	g.Bind("SET_PREFIX", func(id int64, r *dcl.Result) error {
 		if r.Negated("WHAT") {
 			return c.SetPrefix("")

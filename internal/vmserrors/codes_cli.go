@@ -186,6 +186,10 @@ const (
 	cliIvATime
 	cliIvDTime
 	cliIvValu
+
+	// docs/PHASE-50 - DCL command procedures.md: verification.
+	cliConflict
+	cliInvPrefix
 )
 
 // CLI facility status codes -- CLI_ prefix, matching real VMS's CLI$_
@@ -460,6 +464,13 @@ const (
 	CLI_IVATIME  = CLIFacility<<FacilityPosition | cliIvATime<<MessagePosition | StatusWarning
 	CLI_IVDTIME  = CLIFacility<<FacilityPosition | cliIvDTime<<MessagePosition | StatusWarning
 	CLI_IVVALU   = CLIFacility<<FacilityPosition | cliIvValu<<MessagePosition | StatusWarning
+
+	// Verification's messages (docs/PHASE-50, subtask 15), as VMS 7.3
+	// showed them (testdata/dcl50's round 2): CLI_CONFLICT, a warning,
+	// for SET NOVERIFY with keywords; CLI_INVPREFIX, an error, for a SET
+	// PREFIX control string it can't use.
+	CLI_CONFLICT  = CLIFacility<<FacilityPosition | cliConflict<<MessagePosition | StatusWarning
+	CLI_INVPREFIX = CLIFacility<<FacilityPosition | cliInvPrefix<<MessagePosition | StatusError
 )
 
 func init() {
@@ -606,5 +617,7 @@ func init() {
 	DefineMessage(CLI_IVATIME, CLIFacility, "IVATIME", "invalid absolute time - use DD-MMM-YYYY:HH:MM:SS.CC format")
 	DefineMessage(CLI_IVDTIME, CLIFacility, "IVDTIME", "invalid delta time - use DDDD-HH:MM:SS.CC format")
 	DefineMessage(CLI_IVVALU, CLIFacility, "IVVALU", "invalid value syntax - see command documentation")
+	DefineMessage(CLI_CONFLICT, CLIFacility, "CONFLICT", "illegal combination of command elements - check documentation")
+	DefineMessage(CLI_INVPREFIX, CLIFacility, "INVPREFIX", "invalid prefix format string - check FAO directives")
 	DefineMessage(CLI_BADLIMIT, CLIFacility, "BADLIMIT", "Invalid /LIMIT value !D (must be at least 1; DELETE NAME;* removes every version)")
 }

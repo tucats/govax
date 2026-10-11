@@ -14,33 +14,39 @@ import (
 // SET PREFIX, and F$VERIFY and the User's Manual's 13.5.5.
 
 // TestSetVerifyKeywords: SET VERIFY and SET NOVERIFY change both
-// settings; a keyword changes only its own (the Dictionary's example 1).
+// settings; a keyword changes only its own (the Dictionary's example 1),
+// abbreviated or not; SET NOVERIFY with keywords is CLI_CONFLICT, its
+// segment the word as typed (VMS 7.3, testdata/dcl50's round 2).
 func TestSetVerifyKeywords(t *testing.T) {
 	d, c, _ := newCommandDispatcher(t)
 
 	for _, tc := range []struct {
 		command          string
 		procedure, image bool
+		status           uint32
+		segment          string
 	}{
-		{"SET VERIFY", true, true},
-		{"SET NOVERIFY", false, false},
-		{"SET VERIFY=PROCEDURE", true, false},
-		{"SET VERIFY=IMAGE", true, true},
-		{"SET VERIFY=(NOPROCEDURE, NOIMAGE)", false, false},
-		{"SET VERIFY = (IMAGE)", false, true},
-		{"SET VERIFY=(PROC)", false, false},
+		{"SET VERIFY", true, true, 0, ""},
+		{"SET NOVERIFY", false, false, 0, ""},
+		{"SET VERIFY=PROCEDURE", true, false, 0, ""},
+		{"SET VERIFY=IMAGE", true, true, 0, ""},
+		{"SET VERIFY=(NOPROCEDURE, NOIMAGE)", false, false, 0, ""},
+		{"SET VERIFY = (IMAGE)", false, true, 0, ""},
+		{"SET VERIFY=(PROC,NOIMAG)", true, false, 0, ""},
+		{"SET VERIFY=(NOPROCE,IMA)", false, true, 0, ""},
+		{"SET VERI", true, true, 0, ""},
+		{"SET NOVERIFY=IMAGE", true, true, vmserrors.CLI_CONFLICT, "NOVERIFY"},
+		{"SET NOVERI=(PROCEDURE)", true, true, vmserrors.CLI_CONFLICT, "NOVERI"},
+		{"SET VERIFY=(NO)", true, true, vmserrors.CLI_IVKEYW, "NO"},
+		{"SET VERIFY=(BOGUS)", true, true, vmserrors.CLI_IVKEYW, "BOGUS"},
 	} {
 		err := d.Dispatch(tc.command)
 
-		if strings.Contains(tc.command, "PROC)") {
-			if !hasStatus(err, vmserrors.CLI_IVKEYW) {
-				t.Errorf("%s: %v, want IVKEYW", tc.command, err)
+		if tc.status != 0 {
+			if !hasStatus(err, tc.status) || !strings.Contains(err.Error(), `\`+tc.segment+`\`) {
+				t.Errorf("%s: %v, want %s with segment %s", tc.command, err, vmserrors.New(tc.status), tc.segment)
 			}
-
-			continue
-		}
-
-		if err != nil {
+		} else if err != nil {
 			t.Errorf("%s: %v", tc.command, err)
 		}
 
@@ -107,7 +113,7 @@ func TestVerifyProcedureLines(t *testing.T) {
 
 // TestVerifyLastsAfterProcedure: a procedure's SET VERIFY stays in
 // effect after it ends (the Dictionary's SET VERIFY), and a CALL's lines
-// are shown as any others.
+// are shown as any others, starting with its SUBROUTINE line (VMS 7.3).
 func TestVerifyLastsAfterProcedure(t *testing.T) {
 	d, c, buf := newCommandDispatcher(t)
 
@@ -123,7 +129,7 @@ func TestVerifyLastsAfterProcedure(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	want := "$ CALL SUB\n$ PRINT \"in sub\"\nin sub\n$ ENDSUBROUTINE\n$ EXIT\n"
+	want := "$ CALL SUB\n$ SUB: SUBROUTINE\n$ PRINT \"in sub\"\nin sub\n$ ENDSUBROUTINE\n$ EXIT\n"
 	if buf.String() != want || !c.Verify {
 		t.Errorf("output %q (verify %v), want %q, still on", buf.String(), c.Verify, want)
 	}
@@ -138,8 +144,9 @@ func TestVerifyLastsAfterProcedure(t *testing.T) {
 
 // TestVerifyInComment: F$VERIFY between apostrophes is performed in a
 // comment, before the line would be shown, so "'F$VERIFY(0)'" hides
-// itself and "'F$VERIFY(1)'" shows itself (the Dictionary's F$VERIFY).
-// Nothing else in a comment is substituted.
+// itself and "'F$VERIFY(1)'" shows itself (the Dictionary's F$VERIFY),
+// replaced by its value; its closing apostrophe may be missing (VMS
+// 7.3). Nothing else in a comment is substituted.
 func TestVerifyInComment(t *testing.T) {
 	out := runFlow(t,
 		"$ ! 'F$VERIFY(1)'",
@@ -148,18 +155,54 @@ func TestVerifyInComment(t *testing.T) {
 		`$ PRINT "hidden"`,
 		`$ X = 1 ! 'f$verify(1)' and 'X'`,
 		`$ PRINT "shown again"`,
+		"$ ! 'F$VERIFY(0) without its apostrophe",
+		`$ PRINT "hidden again"`,
 		"$ V = 'F$VERIFY(0)'",
 		`$ PRINT "V=''V'"`)
 
 	want := strings.Join([]string{
-		"$ ! 'F$VERIFY(1)'",
+		"$ ! 0",
 		`$ PRINT "shown"`,
 		"shown",
 		"hidden",
-		`$ X = 1 ! 'f$verify(1)' and 'X'`,
+		`$ X = 1 ! 0 and 'X'`,
 		`$ PRINT "shown again"`,
 		"shown again",
-		"V=1",
+		"hidden again",
+		"V=0",
+	}, "\n") + "\n"
+
+	if out != want {
+		t.Errorf("output:\n%s\nwant:\n%s", out, want)
+	}
+}
+
+// TestVerifyContinued: a continued command is shown a record at a time,
+// each record substituted (VMS 7.3), and the THEN of a false IF isn't
+// shown.
+func TestVerifyContinued(t *testing.T) {
+	out := runFlow(t,
+		"$ SET VERIFY",
+		`$ N = "MYFILE"`,
+		"$ A := 'N' - ! a comment",
+		"  .DAT",
+		`$ L1: A = "''N'" + -`,
+		`     ".DAT"`,
+		"$ IF 0",
+		"$ THEN",
+		`$   PRINT "no"`,
+		"$ ENDIF",
+		"$ SET NOVERIFY")
+
+	want := strings.Join([]string{
+		`$ N = "MYFILE"`,
+		"$ A := MYFILE - ! a comment",
+		"  .DAT",
+		`$ L1: A = "MYFILE" + -`,
+		`     ".DAT"`,
+		"$ IF 0",
+		"$ ENDIF",
+		"$ SET NOVERIFY",
 	}, "\n") + "\n"
 
 	if out != want {
@@ -206,6 +249,22 @@ func TestVerifyPrefix(t *testing.T) {
 
 	if err := c.SetPrefix(strings.Repeat("x", 65)); !hasStatus(err, vmserrors.CLI_IVVALU) {
 		t.Errorf("a 65-character prefix: %v, want IVVALU", err)
+	}
+
+	// A directive that takes an argument, other than the time's, or a
+	// malformed one, is INVPREFIX, and the prefix stays (VMS 7.3).
+	if err := c.SetPrefix("!8%D !/!_!^!!!3*- "); err != nil {
+		t.Errorf("a prefix of argumentless directives: %v", err)
+	}
+
+	for _, bad := range []string{"[!UL|!AS|!XL] ", "!%D !", "!#%T", "!+"} {
+		if err := c.SetPrefix(bad); !hasStatus(err, vmserrors.CLI_INVPREFIX) {
+			t.Errorf("SET PREFIX %q: %v, want INVPREFIX", bad, err)
+		}
+	}
+
+	if c.verifyPrefix != "!8%D !/!_!^!!!3*- " {
+		t.Errorf("prefix %q after refused ones", c.verifyPrefix)
 	}
 }
 

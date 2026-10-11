@@ -601,7 +601,7 @@ func (c *Console) runLevel(source *procedureSource, cmd procedureCommand, dispat
 			records := source.records[source.lineStart:source.next]
 
 			run = func() error {
-				c.echo = &pendingEcho{records: records}
+				c.echo = newPendingEcho(records)
 				defer c.dropEcho()
 
 				return dispatch(line)

@@ -189,14 +189,14 @@ func TestLexicalEnvironment(t *testing.T) {
 		{text: `F$DIRECTORY()`, want: "[000000]"},
 
 		// 15.2.1: F$VERIFY returns the old setting and sets both, or
-		// each.
+		// each; image-value alone changes nothing (VMS 7.3).
 		{text: `F$VERIFY(1)`, integer: true, want: "0"},
 		{text: `F$ENVIRONMENT("VERIFY_IMAGE")`, want: "TRUE"},
 		{text: `F$VERIFY(0, 1)`, integer: true, want: "1"},
 		{text: `F$ENVIRONMENT("VERIFY_PROCEDURE")`, want: "FALSE"},
 		{text: `F$ENVIRONMENT("VERIFY_IMAGE")`, want: "TRUE"},
 		{text: `F$VERIFY(, 0)`, integer: true, want: "0"},
-		{text: `F$ENVIRONMENT("VERIFY_IMAGE")`, want: "FALSE"},
+		{text: `F$ENVIRONMENT("VERIFY_IMAGE")`, want: "TRUE"},
 		{text: `F$VERIFY()`, integer: true, want: "0"},
 	})
 

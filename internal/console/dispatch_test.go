@@ -51,17 +51,6 @@ func newTestDispatcher(t *testing.T) (*Dispatcher, *Console) {
 	return d, c
 }
 
-func TestDispatch_setAndExamineRegister(t *testing.T) {
-	d, c := newTestDispatcher(t)
-	if err := d.Dispatch("SET R4=1234"); err != nil {
-		t.Fatalf("Dispatch(SET): %v", err)
-	}
-
-	if got := c.CPU.GPR(vax.R4); got != 0x1234 {
-		t.Errorf("R4 = %#x, want 0x1234 (radix 16 default)", got)
-	}
-}
-
 // TestDispatch_runActivatesImage checks that RUN (and its /NOEXECUTE
 // qualifier) reach Console.Run -- real VMS image activation (Phase 13),
 // not plain CPU execution (that's EXEC/GO/G, see TestDispatch_stepAndGo).
@@ -320,30 +309,6 @@ func TestDispatch_setRadixKeywords(t *testing.T) {
 	}
 }
 
-// TestDispatch_setSymbolQualifiers checks SET's own /PERMANENT and /ENTRY
-// qualifier scan ahead of the general NAME=value symbol form.
-func TestDispatch_setSymbolQualifiers(t *testing.T) {
-	d, c := newTestDispatcher(t)
-
-	if err := d.Dispatch("SET /PERMANENT PERMSYM=100"); err != nil {
-		t.Fatalf("Dispatch(SET /PERMANENT): %v", err)
-	}
-
-	sym, ok := c.Symbols.Find("PERMSYM")
-	if !ok || !sym.IsPermanent() {
-		t.Errorf("PERMSYM = %+v, ok=%v; want a permanent symbol", sym, ok)
-	}
-
-	if err := d.Dispatch("SET/ENTRY ENTRYSYM=200"); err != nil {
-		t.Fatalf("Dispatch(SET/ENTRY): %v", err)
-	}
-
-	sym, ok = c.Symbols.Find("ENTRYSYM")
-	if !ok || !sym.IsEntry() {
-		t.Errorf("ENTRYSYM = %+v, ok=%v; want an entry symbol", sym, ok)
-	}
-}
-
 func TestDispatch_clearStringsAndInterrupt(t *testing.T) {
 	d, c := newTestDispatcher(t)
 
@@ -412,24 +377,29 @@ func TestDispatch_if(t *testing.T) {
 	d, c := newTestDispatcher(t)
 
 	for _, tc := range []struct {
-		line string
-		r0   uint32
+		line, want string
 	}{
-		{`IF 0 THEN SET R0=1`, 0},
-		{`IF 2 THEN SET R0=1`, 0},
-		{`IF "NO" THEN SET R0=1`, 0},
-		{`IF 1 THEN SET R0=1`, 1},
-		{`IF 1 .EQ. 1 THEN $ SET R0=2`, 2},
-		{`IF "yes" THEN SET R0=3`, 3},
-		{`IF "27" THEN SET R0=4`, 4},
-		{`IF "28" THEN SET R0=5`, 4},
+		{`IF 0 THEN R == 1`, "0"},
+		{`IF 2 THEN R == 1`, "0"},
+		{`IF "NO" THEN R == 1`, "0"},
+		{`IF 1 THEN R == 1`, "1"},
+		{`IF 1 .EQ. 1 THEN $ R == 2`, "2"},
+		{`IF "yes" THEN R == 3`, "3"},
+		{`IF "27" THEN R == 4`, "4"},
+		{`IF "28" THEN R == 5`, "4"},
 	} {
+		if _, ok := c.dclSymbols.lookup("R"); !ok {
+			if err := d.Dispatch("R == 0"); err != nil {
+				t.Fatal(err)
+			}
+		}
+
 		if err := d.Dispatch(tc.line); err != nil {
 			t.Fatalf("%s: %v", tc.line, err)
 		}
 
-		if got := c.CPU.GPR(vax.R0); got != tc.r0 {
-			t.Errorf("%s: R0 = %#x, want %#x", tc.line, got, tc.r0)
+		if got, _ := c.dclSymbols.lookup("R"); got.value != tc.want {
+			t.Errorf("%s: R = %q, want %q", tc.line, got.value, tc.want)
 		}
 	}
 }

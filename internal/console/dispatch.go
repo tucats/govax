@@ -121,26 +121,38 @@ func (d *Dispatcher) DispatchConsole(line string) error {
 			return err
 		}
 
+		// The THEN of a block whose IF was false isn't shown (VMS 7.3).
+		quiet := d.Console.thenOfFalseIf(line)
+
 		// DCL's first phase: symbols between apostrophes are replaced
 		// before anything reads the line (dclsubst.go). A procedure's
 		// line is shown then, with procedure verification on
 		// (dclverify.go).
 		// A line whose scan fails isn't shown: its message is (VMS 7.3,
 		// testdata/dcl50).
-		scanned, err := d.Console.substituteApostrophes(line)
+		// A continued command is scanned with its records' joins
+		// marked, so it can be shown a record at a time.
+		label := ""
+		if strings.HasSuffix(whole, line) {
+			label = whole[:len(whole)-len(line)]
+		}
+
+		marked := d.Console.markJoins(whole, line)
+
+		scanned, err := d.Console.substituteApostrophes(marked)
 		if err != nil {
 			d.Console.dropEcho()
 
 			return err
 		}
 
-		label := ""
-		if strings.HasSuffix(whole, line) {
-			label = whole[:len(whole)-len(line)]
+		if quiet {
+			d.Console.dropEcho()
+		} else {
+			d.Console.echoLine(label, marked, scanned)
 		}
 
-		d.Console.echoLine(label, line, scanned)
-		line = scanned
+		line = strings.ReplaceAll(scanned, joinMark, " ")
 
 		return d.dispatchCommand(line)
 	})

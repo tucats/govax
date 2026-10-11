@@ -3130,6 +3130,8 @@ widened."
     "SEVERE" for ON SEVERE_ERROR; PROTECTION is VMS's default, written as
     the manual's 15.6.2 example shows it.
   - F$VERIFY with only its first argument sets image verification too.
+    (Its second argument without the first changes nothing: VMS 7.3,
+    testdata/dcl50's round 2.)
   - F$PID keeps a count in its context symbol and sets it back to "" at
     the end of the list, so the next call starts again.
   - F$GETJPI writes PIDs (PID, MASTER_PID, OWNER) as eight hexadecimal
@@ -3156,6 +3158,45 @@ widened."
     second), and returns the message file's text with its FAO directives
     as they are.
 - **Status**: unconfirmed; candidates for the probe's next round.
+
+### [Phase 50] Verification: settled by a probe, and the rest chosen
+
+- **Where**: `internal/console/dclverify.go` (SET VERIFY, SET PREFIX,
+  the echo), `dclsubst.go` (F$VERIFY in a comment), `dispatch.go`,
+  `procedure.go`, `dclif.go`, `dclcall.go`.
+- **What**: testdata/dcl50's round 2 (`probe50v.com`, VMS 7.3's log in
+  `vax/probe50v.log`, replayed by `TestProbe50VOracle`) settled: a line
+  is shown after its apostrophe substitutions, a continued command a
+  record at a time, each record substituted; comment and blank `$`
+  lines are shown; the THEN of a false block IF isn't, its ELSE and
+  ENDIF are, and nothing between; a CALL shows the SUBROUTINE line, then
+  the body, then ENDSUBROUTINE; an ON action isn't shown;
+  `'F$VERIFY(n)'` in a comment (or a command's trailing comment) is
+  performed, abbreviated or not, with or without its closing
+  apostrophe, and the line is shown with the call replaced by its value;
+  a nested procedure's SET NOVERIFY or `'F$VERIFY(0)'` lasts after it
+  returns; SET VERIFY's keywords may be abbreviated (IMA was taken); SET
+  NOVERIFY with keywords is CLI$_CONFLICT (`\NOVERIFY\` as typed); SET
+  PREFIX with `!UL`/`!AS`/`!XL`, or `"!%D !"`, is CLI$_INVPREFIX and the
+  prefix stays; F$VERIFY(,1) changes nothing. Chosen without VMS:
+  - Which prefix control strings are valid: only !%T and !%D may take an
+    argument (0, the current time), with a field width; !/, !_, !^, !!,
+    and !n*c are allowed; anything else, and a "!" at the end, is
+    INVPREFIX (whether `!%D` alone is valid is unconfirmed: the refused
+    `"!%D !"` ends with a lone "!"). A control string over 64 characters
+    is CLI$_IVVALU.
+  - Nothing in a comment but F$VERIFY is substituted, and a call with an
+    error is left as it is.
+  - A continued command whose records can't be matched to its scanned
+    line (an apostrophe pair spanning two records) is shown as one line.
+  - The comment on a continued command's first record isn't scanned, so
+    F$VERIFY in it isn't performed.
+- **Not yet**: section V6, image verification. VMS shows each data line
+  TYPE SYS$INPUT reads (then TYPE writes it), and a data line after a
+  DCL command that isn't an image (SET VERIFY) was shown and then read
+  as a command, `%DCL-W-IVVERB \DATA\`, not passed over with SKPDAT.
+  Both wait for subtask 16 (SYS$INPUT from a procedure).
+- **Status**: VMS's answers followed; the choices above unconfirmed.
 
 <!--
 Entry template:

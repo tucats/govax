@@ -176,7 +176,7 @@ func (c *Console) callSubroutine(cmd procedureCommand, dispatch func(string) err
 		return notFound
 	}
 
-	_, _, _, body, _ := f.source.lineAt(target.pos)
+	_, _, start, body, _ := f.source.lineAt(target.pos)
 
 	end, ok := f.source.subroutineEnd(body)
 	if !ok {
@@ -184,6 +184,12 @@ func (c *Console) callSubroutine(cmd procedureCommand, dispatch func(string) err
 	}
 
 	source := &procedureSource{name: f.source.name, records: f.source.records, next: body, end: end}
+
+	// With verification on, the subroutine's SUBROUTINE line is shown as
+	// it starts (VMS 7.3).
+	if c.Verify {
+		c.showVerified(f.source.records[start:body])
+	}
 
 	return c.finishProcedure(c.runLevel(source, cmd, dispatch))
 }

@@ -9,7 +9,6 @@ import (
 	"testing"
 
 	"github.com/tucats/govax/internal/rms"
-	"github.com/tucats/govax/internal/vax"
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
@@ -425,14 +424,14 @@ func TestProcedure_hostNames(t *testing.T) {
 	dir := t.TempDir()
 	t.Chdir(dir)
 
-	writeFile(t, filepath.Join(dir, "setr6.com"), "$ SET R6=7\n")
+	writeFile(t, filepath.Join(dir, "setr6.com"), "$ R6 == 7\n")
 
 	if err := d.Dispatch("@setr6"); err != nil {
 		t.Fatal(err)
 	}
 
-	if got := c.CPU.GPR(vax.R6); got != 7 {
-		t.Errorf("R6 = %#x, want 7", got)
+	if got, ok := c.dclSymbols.lookup("R6"); !ok || got.value != "7" {
+		t.Errorf("R6 = %+v, %v; want 7", got, ok)
 	}
 
 	if err := d.Dispatch("@NOSUCH"); !errors.Is(err, vmserrors.New(vmserrors.SS_NOSUCHFILE)) {

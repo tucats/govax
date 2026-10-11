@@ -70,9 +70,8 @@ func (t *SymbolTable) SetEntry(name string, value uint32, kind SymbolKind) {
 	t.t.Set(Symbol{Name: strings.ToUpper(name), Value: value, Flags: kindFlags(kind) | symtab.Entry})
 }
 
-// SetQualified defines or redefines a user symbol with the /PERMANENT,
-// /ENTRY, /LABEL attributes SET's qualifiers give (setcommand.go's
-// SET_SYMBOL).
+// SetQualified defines or redefines a user symbol with the permanent,
+// entry, and label attributes.
 func (t *SymbolTable) SetQualified(name string, value uint32, permanent, entry, label bool) {
 	var flags symtab.Flags
 

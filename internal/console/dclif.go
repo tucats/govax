@@ -190,6 +190,19 @@ func (c *Console) awaitThen(line string) error {
 	return vmserrors.New(vmserrors.CLI_NOTHEN)
 }
 
+// thenOfFalseIf reports whether line is the THEN after a block's IF
+// that was false, which verification doesn't show (VMS 7.3).
+func (c *Console) thenOfFalseIf(line string) bool {
+	b := c.flow().top()
+	if b == nil || b.state != awaitingThen || b.value {
+		return false
+	}
+
+	verb, _ := flowVerb(line)
+
+	return verb == "THEN"
+}
+
 // ifCommand is IF expression [THEN [$] command]. With THEN, the command
 // runs when the expression is true (it comes back to dispatchCommand,
 // so its apostrophes aren't substituted again). Without THEN, the IF

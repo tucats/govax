@@ -53,15 +53,11 @@ func TestSetPrompt(t *testing.T) {
 		t.Errorf(`Prompt() = %q after SET PROMPT="", want %q`, got, DefaultPrompt)
 	}
 
-	if err := d.Dispatch("SET PROM=3"); err != nil {
-		t.Fatalf("SET PROM=3: %v", err)
+	if err := d.Dispatch(`SET PROM="X> "`); err != nil {
+		t.Fatalf(`SET PROM="X> ": %v`, err)
 	}
 
-	if v, ok := c.Symbols.Get("PROM"); !ok || v != 3 {
-		t.Errorf("symbol PROM = %d, %v; want 3", v, ok)
-	}
-
-	if c.Prompt() != DefaultPrompt {
-		t.Errorf("SET PROM=3 changed the prompt to %q", c.Prompt())
+	if got := c.Prompt(); got != "X> " {
+		t.Errorf(`Prompt() = %q after SET PROM="X> ", want "X> "`, got)
 	}
 }

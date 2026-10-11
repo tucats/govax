@@ -21,8 +21,9 @@ never had.
   `PHASE-43.md`'s Part A describes the whole program. Phase 50 (in
   progress) makes the console a DCL command interpreter: command
   procedures and command levels, symbol substitution, expressions,
-  `$STATUS`/ON, labels and GOTO, IF blocks, GOSUB, CALL, and the
-  lexical functions are done; then SET VERIFY. Read the relevant phase doc
+  `$STATUS`/ON, labels and GOTO, IF blocks, GOSUB, CALL, the lexical
+  functions, and SET VERIFY are done; then SYS$INPUT from a procedure.
+  Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
 - `docs/DEVIATIONS.md` — running log of suspected ISA/behavior fidelity issues found in
   the C source during porting (see "Bug-fixing policy" below).
@@ -68,7 +69,8 @@ never had.
 - `testdata/dcl50/` — Phase 50's VMS probe of DCL (README.md): symbol
   substitution, expressions, `@`, and statuses, as a command procedure
   run with SET VERIFY; `vax/probe50.log` is VMS 7.3's log, which
-  `TestProbe50Oracle` replays.
+  `TestProbe50Oracle` replays. Round 2 (`probe50v.com`,
+  `vax/probe50v.log`, `TestProbe50VOracle`) is verification.
 - `testdata/probe49/` — Phase 49's VMS probe in three rounds (`probe6`,
   `probe6b`, `probe6c`; README.md has each round's answers), run by
   `TestProbe6*`; `testdata/rms49/` and `testdata/sec49/` are the phase's
@@ -288,6 +290,13 @@ expect adjustment as phases land):
   some with a segment line (`vmserrors.NewSegment`). `testdata/dcl50` is
   the VMS probe, and `TestProbe50Oracle` replays it against VMS 7.3's
   log.
+  **Verification** (`dclverify.go`): SET [NO]VERIFY and SET [NO]PREFIX;
+  the procedure loop makes each line a pending echo (`Console.echo`),
+  which `DispatchConsole` shows after substitution (a continued command
+  a record at a time, through `joinMark`) or drops; F$VERIFY in a
+  comment is performed and shown as its value (round 2 of the probe,
+  `TestProbe50VOracle`). The console's SET has no `name=value` form:
+  DCL's assignments replaced it.
   `internal/console/consoletest` is its test support.
 - `internal/io` — device abstraction (Phase 09).
 - `internal/vmsdef` — VMS's own definitions, shared by the assembler, RTL, RMS,

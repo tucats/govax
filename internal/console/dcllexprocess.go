@@ -121,15 +121,19 @@ func lexEnvironment(e *dclExpression, args []lexicalArg) (dclValue, error) {
 // procedure verification was on (1) or off (0), and then, with an
 // argument, a change: procedure-value (odd for on) sets procedure
 // verification, and image verification too unless image-value is given
-// to set it (15.2.1). Verification itself is dclverify.go's.
+// to set it (15.2.1). Without procedure-value, image-value changes
+// nothing: VMS 7.3's F$VERIFY(,1) left image verification off.
+// Verification itself is dclverify.go's.
 func lexVerify(e *dclExpression, args []lexicalArg) (dclValue, error) {
 	c := e.console
 	was := dclBool(c.Verify)
 
-	if args[0].present {
-		c.Verify = args[0].int()&1 != 0
-		c.verifyImage = c.Verify
+	if !args[0].present {
+		return was, nil
 	}
+
+	c.Verify = args[0].int()&1 != 0
+	c.verifyImage = c.Verify
 
 	if args[1].present {
 		c.verifyImage = args[1].int()&1 != 0

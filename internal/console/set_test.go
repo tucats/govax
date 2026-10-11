@@ -7,131 +7,6 @@ import (
 	"github.com/tucats/govax/internal/vax"
 )
 
-func TestSetSymbol_register(t *testing.T) {
-	c, _ := newTestConsole(t)
-	if err := c.SetSymbol("R5", 0xCAFEBABE); err != nil {
-		t.Fatalf("SetSymbol: %v", err)
-	}
-
-	if got := c.CPU.GPR(vax.R5); got != 0xCAFEBABE {
-		t.Errorf("R5 = %#x, want 0xcafebabe", got)
-	}
-}
-
-func TestSetSymbol_privilegedRegister(t *testing.T) {
-	c, _ := newTestConsole(t)
-	if err := c.SetSymbol("SIRR", 5); err != nil {
-		t.Fatalf("SetSymbol: %v", err)
-	}
-
-	if got := c.CPU.PR(vax.SIRR); got != 5 {
-		t.Errorf("SIRR = %d, want 5", got)
-	}
-}
-
-func TestSetSymbol_psl(t *testing.T) {
-	c, _ := newTestConsole(t)
-	if err := c.SetSymbol("PSL", 0x001F0000); err != nil {
-		t.Fatalf("SetSymbol: %v", err)
-	}
-
-	if got := c.CPU.PSL(); uint32(got) != 0x001F0000 {
-		t.Errorf("PSL = %#x, want 0x1f0000", uint32(got))
-	}
-}
-
-// TestSetSymbol_pslInvalidatesProtectionOnModeChange matches
-// console_set.c's own bare "SET PSL=value" case, which calls
-// read_psl_bits() right after -- invalidating cached TB protection state
-// if CurMod actually changed (docs/PHASE-21.md). Since Study 1's R3
-// (docs/PERFORMANCE.md) that empties only the one-slot sequential
-// translation cache (STC), which, unlike a TB entry, doesn't check the
-// mode on a hit. So the access after the SET PSL must not be an STC hit,
-// but the TB's cached mapping survives and serves it.
-func TestSetSymbol_pslInvalidatesProtectionOnModeChange(t *testing.T) {
-	c := newRunnableConsole(t)
-
-	if _, err := c.Mem.LoadLongword(c.CPU, 0x200); err != nil {
-		t.Fatalf("LoadLongword: %v", err)
-	}
-
-	// A second load of the same page, in the same mode, is an STC hit:
-	// the baseline the access after the mode change is compared with.
-	_, stcHitsBefore := c.Mem.STCStats()
-
-	if _, err := c.Mem.LoadLongword(c.CPU, 0x200); err != nil {
-		t.Fatalf("LoadLongword (repeat): %v", err)
-	}
-
-	if _, stcHits := c.Mem.STCStats(); stcHits != stcHitsBefore+1 {
-		t.Fatalf("STCStats() hits = %d, want %d (a repeat in the same mode hits the STC)", stcHits, stcHitsBefore+1)
-	}
-
-	// CurMod occupies PSL bits 25:24 -- switch it from Kernel (0) to User
-	// (3), leaving every other bit as Init/VMInit left it.
-	newPSL := uint32(c.CPU.PSL())&^(0x3<<24) | (3 << 24)
-
-	if err := c.SetSymbol("PSL", newPSL); err != nil {
-		t.Fatalf("SetSymbol: %v", err)
-	}
-
-	if got := c.CPU.PSL().CurMod(); got != vax.User {
-		t.Fatalf("CurMod() = %v, want User (the SET PSL should have taken effect)", got)
-	}
-
-	if len(c.Mem.TBSnapshot()) == 0 {
-		t.Fatalf("TBSnapshot() empty after SET PSL, want the mapping to survive")
-	}
-
-	_, stcHitsBefore = c.Mem.STCStats()
-	_, tbHitsBefore, _, _ := c.Mem.TBStats() //nolint:dogsled
-
-	if _, err := c.Mem.LoadLongword(c.CPU, 0x200); err != nil {
-		t.Fatalf("LoadLongword (user mode): %v", err)
-	}
-
-	if _, stcHits := c.Mem.STCStats(); stcHits != stcHitsBefore {
-		t.Errorf("STCStats() hits = %d after SET PSL changed CurMod, want %d (the STC emptied)", stcHits, stcHitsBefore)
-	}
-
-	if _, tbHits, _, _ := c.Mem.TBStats(); tbHits != tbHitsBefore+1 {
-		t.Errorf("TBStats() hits = %d after SET PSL changed CurMod, want %d (the TB mapping kept)", tbHits, tbHitsBefore+1)
-	}
-}
-
-func TestSetSymbol_userSymbol(t *testing.T) {
-	c, _ := newTestConsole(t)
-	if err := c.SetSymbol("FOOBAR", 0x1234); err != nil {
-		t.Fatalf("SetSymbol: %v", err)
-	}
-
-	v, ok := c.Symbols.Get("FOOBAR")
-	if !ok || v != 0x1234 {
-		t.Errorf("FOOBAR = %#x, ok=%v; want 0x1234, true", v, ok)
-	}
-}
-
-func TestSetSymbolQualified_permanentSurvivesClearTemporary(t *testing.T) {
-	c, _ := newTestConsole(t)
-	if err := c.SetSymbolQualified("PERMFOO", 1, true, false, false); err != nil {
-		t.Fatalf("SetSymbolQualified: %v", err)
-	}
-
-	if err := c.SetSymbolQualified("TEMPFOO", 2, false, false, false); err != nil {
-		t.Fatalf("SetSymbolQualified: %v", err)
-	}
-
-	c.Symbols.ClearTemporary()
-
-	if _, ok := c.Symbols.Get("PERMFOO"); !ok {
-		t.Error("expected PERMFOO (permanent) to survive ClearTemporary")
-	}
-
-	if _, ok := c.Symbols.Get("TEMPFOO"); ok {
-		t.Error("expected TEMPFOO (not permanent) to be removed by ClearTemporary")
-	}
-}
-
 func TestSetPSLField_bit(t *testing.T) {
 	c, _ := newTestConsole(t)
 	if err := c.SetPSLField("T", 1); err != nil {
@@ -257,7 +132,7 @@ func TestSetVerboseVerifyNoVerbose(t *testing.T) {
 		t.Fatal("expected Verbose true by default (initialization.c's own CONSOLE_VERBOSE default)")
 	}
 
-	if err := c.SetVerify(false, nil); err != nil {
+	if err := c.SetVerify(false, "VERIFY", nil); err != nil {
 		t.Fatalf("SetVerify: %v", err)
 	}
 

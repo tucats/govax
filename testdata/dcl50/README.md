@@ -13,6 +13,8 @@ two of the phase's open questions about `@`.
 | `probe50s.com` | Shows its P1 (section C) |
 | `probe50r.com` | Runs itself one level deeper, to level 35 (section C) |
 | `probe50e.com` | `EXIT 'P1'` (section D) |
+| `probe50v.com` | Round 2, verification (subtask 15): sections V1 to V10 below |
+| `probe50w.com` | Round 2's nested procedure (section V9) |
 | `exchange.cmd`, `copyout.cmd` | Make the exchange volume and copy the log back |
 | `vax/` | The VMS run's log, `probe50.log` (2026-10-09) |
 
@@ -69,6 +71,37 @@ shows `$STATUS` and X:
 
    The log goes to `vax/probe50.log`.
 
+Round 2 is run the same way, with `@PROBE50V/OUTPUT=PROBE50V.LOG`;
+`copyout.cmd` now copies that log, to `vax/probe50v.log`.
+
+## Round 2: verification
+
+`probe50v.com` runs with SET NOON and SET VERIFY. Each section starts by
+showing a marker symbol M, so the log can be split even where
+verification is off:
+
+- **V1:** a continued command with and without apostrophe substitution
+  (shown record by record, or joined?).
+- **V2:** indentation, labels, a label alone, a blank `$` line, comments.
+- **V3:** IF blocks: which lines of the branch that doesn't run are
+  shown (its comments, its ELSE and ENDIF).
+- **V4:** GOTO, GOSUB/RETURN, CALL/SUBROUTINE/ENDSUBROUTINE: the lines
+  passed over and the lines that end each.
+- **V5:** F$VERIFY in comments (alone, abbreviated, without its closing
+  apostrophe, after another apostrophe pair, in a command's comment) and
+  in commands.
+- **V6:** image verification of the data lines TYPE SYS$INPUT reads, and
+  of data lines nothing reads.
+- **V7:** SET PREFIX: the time (`!5%T`), directives that take arguments,
+  a malformed control string, a continued command, a data line,
+  F$ENVIRONMENT("VERIFY_PREFIX"), SET NOPREFIX.
+- **V8:** whether ON's action and messages are shown.
+- **V9:** SET VERIFY's keyword forms, and whether a nested procedure's
+  SET NOVERIFY (or `'F$VERIFY(0)'`) lasts after it returns
+  (`probe50w.com`).
+- **V10:** F$VERIFY's arguments and values, and keyword and verb
+  abbreviations (`PROCE`, `IMA`, `SET NOVERI=IMAGE`, `SET VERI`).
+
 ## What VMS answered (2026-10-09)
 
 `TestProbe50Oracle` (`internal/console/probe50_test.go`) replays sections
@@ -115,3 +148,35 @@ Also seen: SET VERIFY shows a command after apostrophe substitution
 Still open, for a later round: the quotient of a negative number divided
 by zero; whether `''NAME` inside quotes needs its closing apostrophe; a
 foreign command's `&`; and `/OUTPUT=` with no name.
+
+## What VMS answered in round 2 (2026-10-11)
+
+`TestProbe50VOracle` (`internal/console/probe50_test.go`) runs
+`probe50v.com` under govax and compares its output with
+`vax/probe50v.log` section by section; every section but V6 matches
+(V6, and V7's one TYPE SYS$INPUT, wait for subtask 16). The answers
+(DEVIATIONS.md's "[Phase 50] Verification"):
+
+- **V1:** a continued command is shown a record at a time, each record
+  with its own substitutions (`$ A := MYFILE -`, `  .DAT`).
+- **V2:** indentation, labels, a label alone, a blank `$`, and comments
+  are shown as they are.
+- **V3:** the THEN of a false block IF isn't shown; its ELSE and ENDIF
+  are, and nothing of the branch that doesn't run.
+- **V4:** a CALL shows `$ V4S: SUBROUTINE`, the body, and
+  `$ ENDSUBROUTINE`; GOSUB shows its label line and RETURN.
+- **V5:** `'F$VERIFY(n)'` in a comment, and in a command's comment, is
+  performed and shown replaced by its value (`$ ! 0 - this one should
+  be`); without its closing apostrophe it is still performed.
+- **V6:** with image verification, each data line TYPE SYS$INPUT reads
+  is shown, then typed; a data line after SET VERIFY was shown and read
+  as a command: `%DCL-W-IVVERB` with `\DATA\`.
+- **V7:** `"[!UL|!AS|!XL] "` and `"!%D !"` are `%DCL-E-INVPREFIX`, and the
+  prefix stays; data lines get no prefix.
+- **V8:** ON's action isn't shown.
+- **V9:** SET NOVERIFY with keywords is `%DCL-W-CONFLICT` with
+  `\NOVERIFY\`; a nested procedure's SET NOVERIFY or `'F$VERIFY(0)'`
+  lasts after it returns.
+- **V10:** F$VERIFY(1,0) turns image verification off, F$VERIFY(,1)
+  changes nothing, F$VERIFY("YES") is on; PROCE and IMA abbreviate
+  SET VERIFY's keywords.

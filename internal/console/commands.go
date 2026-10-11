@@ -180,12 +180,6 @@ func symbolicDefault() bool {
 	return settings.GetBool(symbolicSetting)
 }
 
-// evalWhole evaluates one $expression parameter's text, which must be
-// one whole expression.
-func (d *Dispatcher) evalWhole(text string) (uint32, error) {
-	return d.Console.EvalWhole(text)
-}
-
 // runOptions applies RUN's qualifiers to defaults, whose RunInits is
 // Console.DefaultRunInits, which /INIT or /NOINIT overrides.
 func runOptions(r *dcl.Result, defaultRunInits bool) RunOptions {

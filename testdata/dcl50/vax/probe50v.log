@@ -1,0 +1,221 @@
+
+$ !
+$ ! V1: continued lines, with and without substitution.
+$ M = "V1"
+$ SHOW SYMBOL M
+  M = "V1"
+$ A = "one" + -
+  " two"
+$ A := MYFILE -
+  .DAT
+$ A = "MYFILE" + -
+  ".DAT"
+$ SHOW SYMBOL A
+  A = "MYFILE.DAT"
+$ !
+$ ! V2: indentation, labels, blank and comment lines.
+$ M = "V2"
+$ SHOW SYMBOL M
+  M = "V2"
+$    SHOW SYMBOL X
+  X = 1   Hex = 00000001  Octal = 00000000001
+$LBL1: SHOW SYMBOL X
+  X = 1   Hex = 00000001  Octal = 00000000001
+$   LBL2:   SHOW SYMBOL X
+  X = 1   Hex = 00000001  Octal = 00000000001
+$ LBL3:
+$
+$!no blank after the dollar
+$   ! an indented comment
+$ !
+$ ! V3: IF blocks: the lines of the branch that doesn't run, and its
+$ ! ELSE and ENDIF.
+$ M = "V3"
+$ SHOW SYMBOL M
+  M = "V3"
+$ IF X .EQ. 0
+$ ELSE
+$   SHOW SYMBOL Y
+  Y = 2   Hex = 00000002  Octal = 00000000002
+$ ENDIF
+$ IF X .EQ. 1
+$ THEN
+$   SHOW SYMBOL X
+  X = 1   Hex = 00000001  Octal = 00000000001
+$ ELSE
+$ ENDIF
+$ IF X .EQ. 1 THEN SHOW SYMBOL MYFILE
+%DCL-W-UNDSYM, undefined symbol - check validity and spelling
+$ !
+$ ! V4: GOTO, GOSUB, and CALL: the lines passed over, SUBROUTINE,
+$ ! ENDSUBROUTINE, and RETURN.
+$ M = "V4"
+$ SHOW SYMBOL M
+  M = "V4"
+$ GOTO V4A
+$ V4A:
+$ GOSUB V4G
+$ V4G:
+$   SHOW SYMBOL Y
+  Y = 2   Hex = 00000002  Octal = 00000000002
+$ RETURN
+$ CALL V4S
+$ V4S: SUBROUTINE
+$   SHOW SYMBOL X
+  X = 1   Hex = 00000001  Octal = 00000000001
+$ ENDSUBROUTINE
+$ GOTO V4END
+$ V4END:
+$ !
+$ ! V5: F$VERIFY in comments and in commands.
+$ M = "V5"
+$ SHOW SYMBOL M
+  M = "V5"
+  X = 1   Hex = 00000001  Octal = 00000000001
+$ ! 0 - this one should be
+$ SHOW SYMBOL Y
+  Y = 2   Hex = 00000002  Octal = 00000000002
+  X = 1   Hex = 00000001  Octal = 00000000001
+$ X = 1 ! 0 abbreviated
+  V = 1   Hex = 00000001  Octal = 00000000001
+$ SHOW SYMBOL V
+  V = 0   Hex = 00000000  Octal = 00000000000
+  X = 1   Hex = 00000001  Octal = 00000000001
+  Y = 2   Hex = 00000002  Octal = 00000000002
+$ !
+$ ! V6: data lines, read by an image (TYPE SYS$INPUT) and not read.
+$ M = "V6"
+$ SHOW SYMBOL M
+  M = "V6"
+$ TYPE SYS$INPUT
+data line one
+data line one
+  data line two, indented
+  data line two, indented
+$ SET VERIFY=(PROCEDURE,NOIMAGE)
+$ TYPE SYS$INPUT
+data line three (image verification off)
+$ SET VERIFY=(NOPROCEDURE,IMAGE)
+data line four (procedure verification off)
+data line four (procedure verification off)
+data line five, which nothing reads
+%DCL-W-IVVERB, unrecognized command verb - check validity and spelling
+ \DATA\
+$ SHOW SYMBOL M
+  M = "V6"
+$ !
+$ ! V7: SET PREFIX.
+$ M = "V7"
+$ SHOW SYMBOL M
+  M = "V7"
+$ SET PREFIX "(!5%T) "
+(14:13) $ SHOW SYMBOL X
+  X = 1   Hex = 00000001  Octal = 00000000001
+(14:13) $ ! a comment with a prefix
+(14:13) $ A = "one" + -
+          " two"
+(14:13) $ TYPE SYS$INPUT
+data line with a prefix set
+data line with a prefix set
+(14:13) $ P = F$ENVIRONMENT("VERIFY_PREFIX")
+(14:13) $ SHOW SYMBOL P
+  P = "(!5%T) "
+(14:13) $ SET PREFIX "[!UL|!AS|!XL] "
+%DCL-E-INVPREFIX, invalid prefix format string - check FAO directives
+(14:13) $ SHOW SYMBOL X
+  X = 1   Hex = 00000001  Octal = 00000000001
+(14:13) $ SET PREFIX "!%D !"
+%DCL-E-INVPREFIX, invalid prefix format string - check FAO directives
+(14:13) $ SHOW SYMBOL X
+  X = 1   Hex = 00000001  Octal = 00000000001
+(14:13) $ SET NOPREFIX
+$ P = F$ENVIRONMENT("VERIFY_PREFIX")
+$ SHOW SYMBOL P
+  P = ""
+$ !
+$ ! V8: ON's action, a failing command, and messages.
+$ M = "V8"
+$ SHOW SYMBOL M
+  M = "V8"
+$ SET ON
+$ ON WARNING THEN SHOW SYMBOL Y
+$ FOOBAR
+%DCL-W-IVVERB, unrecognized command verb - check validity and spelling
+ \FOOBAR\
+  Y = 2   Hex = 00000002  Octal = 00000000002
+$ SET NOON
+$ SHOW SYMBOL NOSUCH
+%DCL-W-UNDSYM, undefined symbol - check validity and spelling
+$ !
+$ ! V9: the settings, SET VERIFY's forms, and a nested procedure's
+$ ! changes.
+$ M = "V9"
+$ SHOW SYMBOL M
+  M = "V9"
+$ SET VERIFY=PROCEDURE
+$ E = F$ENVIRONMENT("VERIFY_IMAGE")
+$ SHOW SYMBOL E
+  E = "TRUE"
+$ SET VERIFY=(PROC,IMAG)
+$ SET NOVERIFY=IMAGE
+%DCL-W-CONFLICT, illegal combination of command elements - check documentation
+ \NOVERIFY\
+$ SET VERIFY
+$ @PROBE50W
+$ ! PROBE50W.COM - PROBE50V's nested procedure (section V9): its lines
+$ ! are shown, and it turns verification off, with SET NOVERIFY or, given
+$ ! QUIET, F$VERIFY in a comment, before it ends. Is the change still in
+$ ! effect after it returns?
+$ IF P1 .EQS. "QUIET" THEN GOTO QUIET
+$ SHOW SYMBOL P1
+  P1 = ""
+$ SET NOVERIFY
+  M = "V9 after PROBE50W"
+  E = "FALSE"
+$ @PROBE50W QUIET
+$ ! PROBE50W.COM - PROBE50V's nested procedure (section V9): its lines
+$ ! are shown, and it turns verification off, with SET NOVERIFY or, given
+$ ! QUIET, F$VERIFY in a comment, before it ends. Is the change still in
+$ ! effect after it returns?
+$ IF P1 .EQS. "QUIET" THEN GOTO QUIET
+$ QUIET:
+  P1 = "QUIET"
+  M = "V9 after PROBE50W QUIET"
+  E = "FALSE"
+$ !
+$ ! V10: F$VERIFY's arguments and values, and abbreviations.
+$ M = "V10"
+$ SHOW SYMBOL M
+  M = "V10"
+$ V = F$VERIFY()
+$ SHOW SYMBOL V
+  V = 1   Hex = 00000001  Octal = 00000000001
+$ V = F$VERIFY(1,0)
+$ SHOW SYMBOL V
+  V = 1   Hex = 00000001  Octal = 00000000001
+$ E = F$ENVIRONMENT("VERIFY_IMAGE")
+$ SHOW SYMBOL E
+  E = "FALSE"
+$ V = F$VERIFY(,1)
+$ SHOW SYMBOL V
+  V = 1   Hex = 00000001  Octal = 00000000001
+$ E = F$ENVIRONMENT("VERIFY_IMAGE")
+$ SHOW SYMBOL E
+  E = "FALSE"
+$ V = F$VERIFY("YES")
+$ SHOW SYMBOL V
+  V = 1   Hex = 00000001  Octal = 00000000001
+$ SET VERIFY=(PROCE,IMA)
+$ SET NOVERI=IMAGE
+%DCL-W-CONFLICT, illegal combination of command elements - check documentation
+ \NOVERI\
+$ E = F$ENVIRONMENT("VERIFY_IMAGE")
+$ SHOW SYMBOL E
+  E = "TRUE"
+$ SET VERI
+$ !
+$ ! The end.
+$ M = "END"
+$ SHOW SYMBOL M
+  M = "END"
+$ SET NOVERIFY

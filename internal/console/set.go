@@ -8,8 +8,9 @@ import (
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
-// privRegNames table (the subset with an architected name in 
-// internal/vax/registers.go's own PrivReg constants).
+// privRegNames are the privileged registers by name (the subset with an
+// architected name in internal/vax/registers.go's own PrivReg
+// constants), for SHOW of a register.
 var privRegNames = map[string]vax.PrivReg{
 	"KSP": vax.KSP, "ESP": vax.ESP, "SSP": vax.SSP, "USP": vax.USP, "ISP": vax.ISP,
 	"P0BR": vax.P0BR, "P0LR": vax.P0LR, "P1BR": vax.P1BR, "P1LR": vax.P1LR,
@@ -19,74 +20,6 @@ var privRegNames = map[string]vax.PrivReg{
 	"RXCS": vax.RXCS, "RXDB": vax.RXDB, "TXCS": vax.TXCS, "TXDB": vax.TXDB,
 	"TBDR": vax.TBDR, "MAPEN": vax.MAPEN, "TBIA": vax.TBIA, "TBIS": vax.TBIS,
 	"PMR": vax.PMR, "SID": vax.SID, "TBCHK": vax.TBCHK,
-}
-
-// SetSymbol implements the "SET <name>=<value>" family of the SET command: 
-// a general register, a privileged register (by name), the whole PSL 
-// (SET PSL=value), or — if none of those match — a plain symbol
-// definition. Matches console_set's own dispatch order (register, then
-// privileged-register-or-PSL name, then symbol). Equivalent to
-// SetSymbolQualified with every qualifier false — see that function for the
-// /PERMANENT, /ENTRY, /LABEL qualified form.
-//
-// The remaining unimplemented SET subcommands (SET MKVALID/NOMK, SET
-// ASSEMBLER flags, SET WATCH, SET FAULT/HISTORY, SET BREAK/FAULT) each need
-// state this port doesn't model yet, or a design decision flagged in
-// docs/PHASE-16.md — see that document's own sub-phase 3 for the current
-// status of each.
-func (c *Console) SetSymbol(name string, value uint32) error {
-	return c.SetSymbolQualified(name, value, false, false, false)
-}
-
-// SetSymbolQualified is SetSymbol with /PERMANENT,
-// /ENTRY, /LABEL qualifier scan applied (its own qualifier-token loop ahead
-// of the NAME=value parse — see setcommand.go's SET_SYMBOL) — see
-// symbols.go's Symbol.Permanent/IsEntry/IsLabel.
-func (c *Console) SetSymbolQualified(name string, value uint32, permanent, entry, label bool) error {
-	if err := c.requireInit(); err != nil {
-		return err
-	}
-
-	name = strings.ToUpper(name)
-
-	if r, ok := registerNames[name]; ok {
-		c.CPU.SetGPR(r, value)
-
-		return nil
-	}
-
-	if pr, ok := privRegNames[name]; ok {
-		// TODR isn't stored in the register file; the engine computes it
-		// from its clock, and a write sets where it counts from.
-		if pr == vax.TODR {
-			c.Engine.SetTODR(value)
-
-			return nil
-		}
-
-		c.CPU.SetPR(pr, value)
-
-		return nil
-	}
-
-	if name == "PSL" {
-		oldMode := c.CPU.PSL().CurMod()
-		c.CPU.SetPSL(vax.PSL(value))
-
-		// "SET PSL=value" case: a bare
-		// register overwrite calls read_psl_bits() right after, which
-		// invalidates cached TB protection state if CurMod changed. See
-		// docs/PHASE-21.md.
-		if newMode := c.CPU.PSL().CurMod(); newMode != oldMode {
-			c.Mem.InvalidateProtection()
-		}
-
-		return nil
-	}
-
-	c.Symbols.SetQualified(name, value, permanent, entry, label)
-
-	return nil
 }
 
 // pslFieldNames are the PSL field name. CUR_MOD (handled
@@ -304,10 +237,8 @@ func (c *Console) SetRadix(radix int) error {
 }
 
 // SetVM implements SET VM/SET MAPEN (on) and SET NOVM/SET NOMAPEN (off).
-// Sets/clears the MAPEN privileged register directly (the same register
-// the generic "SET MAPEN=<value>" form already reaches via 
-// SetSymbol/privRegNames, this being only the bare on/off
-// keyword spelling acepted). Requires kernel mode.
+// Sets/clears the MAPEN privileged register directly. Requires kernel
+// mode.
 func (c *Console) SetVM(on bool) error {
 	if err := c.requireInit(); err != nil {
 		return err
