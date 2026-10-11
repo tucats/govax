@@ -297,12 +297,18 @@ type Console struct {
 	// status is $STATUS, the last command's condition value, and
 	// commandStatus what the command being dispatched says about it
 	// (dclstatus.go). statusSet is set each time a command sets $STATUS,
-	// for the procedure loop's ON check. statusErr is the error $STATUS
-	// came from, if any.
+	// for the procedure loop's ON check, and statusHandled when the
+	// command acted on it already (branchStatus). statusErr is the error
+	// $STATUS came from, if any.
 	status        uint32
 	statusErr     error
 	commandStatus commandStatus
 	statusSet     bool
+	statusHandled bool
+
+	// dclFiles are the files DCL's OPEN has open (dclfile.go), by
+	// logical name.
+	dclFiles map[string]*dclOpenFile
 
 	// searchStreams are F$SEARCH's streams (dcllexfile.go), by stream
 	// id: where each search has got to.

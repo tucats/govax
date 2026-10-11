@@ -18,6 +18,10 @@ two of the phase's open questions about `@`.
 | `probe50i.com` | Round 3, SYS$INPUT, DECK, and EOD (subtask 16): sections I1 to I9 below |
 | `probe50j.com` | Round 3's nested procedure, whose first record is a data line (I1, I2) |
 | `probe50k.com` | Round 3's DECK/DOLLARS cases, one per P1 (I3, I5) |
+| `probe50f.com` | Round 4, DCL's file I/O (subtask 17): sections F1 to F11 below |
+| `probe50g.com` | Round 4's nested procedure, which leaves a file open (F7) |
+| `probe50q.com` | Round 4's interactive part, run at the terminal: INQUIRE and READ (Q1 to Q11) |
+| `probe50p.com` | Round 4's procedure run with /OUTPUT from `probe50q.com` (Q11) |
 | `exchange.cmd`, `copyout.cmd` | Make the exchange volume and copy the log back |
 | `vax/` | The VMS run's log, `probe50.log` (2026-10-09) |
 
@@ -75,8 +79,9 @@ shows `$STATUS` and X:
    The log goes to `vax/probe50.log`.
 
 Round 2 is run the same way, with `@PROBE50V/OUTPUT=PROBE50V.LOG`, and
-round 3 with `@PROBE50I/OUTPUT=PROBE50I.LOG`; `copyout.cmd` now copies
-round 3's log, to `vax/probe50i.log`.
+round 3 with `@PROBE50I/OUTPUT=PROBE50I.LOG`. Round 4 has two parts (see
+"Round 4" below); `copyout.cmd` now copies round 4's logs, to
+`vax/probe50f.log` and `vax/probe50p.log`.
 
 ## Round 2: verification
 
@@ -225,9 +230,10 @@ its text is written; if DCL skips it, `%DCL-W-SKPDAT` is.
 `TestProbe50IOracle` (`internal/console/probe50_test.go`) runs
 `probe50i.com` under govax and compares its output with
 `vax/probe50i.log`: sections I2, I3, I4, I5, I7, and I8 line for line
-(WRITE, which govax doesn't have until subtask 17, is emulated from its
-IVVERB), and in I1 whether each data line was read as a command or
-skipped. I6 (READ) and I9 (a WRITE not echoed) wait for subtask 17. The
+and in I1 whether each data line was read as a command or skipped.
+Until subtask 17 gave govax WRITE and READ, WRITE was emulated from
+govax's IVVERB for it, and I6 (READ) and I9 (a WRITE not echoed) waited;
+since subtask 17 every section but I1 is compared line for line. The
 answers (DEVIATIONS.md's "[Phase 50] SYS$INPUT from a procedure"):
 
 - **I1, I2:** after SHOW LOGICAL, DIRECTORY, and a failing TYPE (images)
@@ -250,3 +256,84 @@ answers (DEVIATIONS.md's "[Phase 50] SYS$INPUT from a procedure"):
   as a command.
 - **I9:** with image verification off the data isn't shown; a data line
   read as a command with procedure verification off isn't shown either.
+
+## Round 4: DCL's file I/O
+
+`probe50f.com` checks what subtask 17 chose for OPEN, READ, WRITE, and
+CLOSE without VMS (DEVIATIONS.md's "[Phase 50] DCL's file I/O"). It runs
+with SET NOON and SET VERIFY, makes files named `PROBE50F*.DAT` (deleting
+any left from an earlier run), and reads nothing from the terminal. Each
+section starts by showing a marker symbol M, and most commands are
+followed by `SHOW SYMBOL $STATUS`.
+
+- **F1:** OPEN/WRITE: `$STATUS` after OPEN, WRITE, and CLOSE; the logical
+  name (SHOW LOGICAL/FULL: its mode, table, and value); WRITE's items
+  (integers, an empty string, quotes); the file's attributes
+  (DIRECTORY/FULL) and its records with their fixed control (DUMP/RECORD);
+  the next OPEN/WRITE's version.
+- **F2:** OPEN/READ and READ: each record as read, a READ into a name
+  that is a global symbol (is the local one new?), the end of the file
+  with /END_OF_FILE, with no label, and with /ERROR (the message, the
+  status, and whether the symbol changes); TYPE of the logical name while
+  the file is open.
+- **F3:** OPEN's failures: a missing file, /ERROR (the status at the
+  label), a missing directory, /APPEND and /READ/WRITE of a missing file
+  (OPENIN or OPENOUT?), a wildcard, /WRITE with /APPEND, no file, a bad
+  /SHARE keyword; OPEN of a logical name that already has a file (the
+  same file, then another: which does READ read?), and CLOSE twice.
+- **F4:** READ, WRITE, and CLOSE of a name never opened (CLI$_UNDFIL?),
+  CLOSE/NOLOG and CLOSE/ERROR of one, WRITE to a file opened to read (and
+  /ERROR), READ of a file opened to write, a logical name DCL didn't
+  define, a bad symbol name, WRITE with no data.
+- **F5:** WRITE/UPDATE of a file opened /WRITE; /APPEND; /READ/WRITE:
+  WRITE/UPDATE before any READ, of the same length and of another, WRITE
+  before the end of the file and at it; /READ/APPEND (where does READ
+  start?).
+- **F6:** WRITE to SYS$OUTPUT and SYS$ERROR (does SYS$ERROR's go to the
+  /OUTPUT log?), an integer expression, a trailing comma, two items with
+  no comma, /SYMBOL with symbols and with a quoted string, a logical name
+  for SYS$OUTPUT, `SYS$OUTPUT:`, and SYS$INPUT.
+- **F7:** a file a nested procedure (`probe50g.com`) leaves open, used
+  after it ends; READ SYS$INPUT at the nested procedure's end of file.
+- **F8:** a data line after OPEN, READ, and CLOSE: read as a command, or
+  SKPDAT?
+- **F9:** sharing: OPEN of a file DCL is writing, without /SHARE and with
+  it; what a reader sees of records the writer hasn't closed; TYPE of
+  such a file; two /SHARE=READ readers and an /APPEND.
+- **F10:** long records: WRITE and WRITE/SYMBOL of 600 characters, and
+  READ of them back.
+- **F11:** the logical name OPEN defined, deassigned while the file is
+  open (user mode, then supervisor mode): can READ and CLOSE still reach
+  the file?
+
+`probe50q.com` is interactive, for INQUIRE and READ at the terminal,
+whose prompts don't go to an /OUTPUT log. Run it at the terminal, with no
+/OUTPUT:
+
+    @PROBE50Q
+
+and at each prompt type what the comment before it asks for (the
+verification shows the comment). Keep the whole terminal session, prompts
+and replies included, as `vax/probe50q.log` (simh's `SET CONSOLE
+LOG=file`, or a copy of the screen):
+
+- **Q1 to Q5:** INQUIRE with a prompt (the reply's case, blanks, quotes,
+  and `'X'`), with none (the symbol's name as the prompt?),
+  /NOPUNCTUATION, Ctrl/Z (the symbol and `$STATUS`), and an empty reply
+  with /GLOBAL.
+- **Q6 to Q9:** READ SYS$COMMAND with the default prompt (exactly what
+  is shown: `DATA:`? a blank after it?), with /PROMPT, and Ctrl/Z with
+  /END_OF_FILE and with no label.
+- **Q10:** WRITE to SYS$COMMAND and SYS$ERROR.
+- **Q11:** `probe50p.com`, run with /OUTPUT=PROBE50P.LOG: does INQUIRE's
+  prompt go to the terminal or the log, and WRITE SYS$ERROR and
+  SYS$COMMAND? Its log is typed after, and `copyout.cmd` copies it to
+  `vax/probe50p.log`.
+
+Then, at the `$` prompt itself (command level 0), type
+
+    READ SYS$INPUT X
+    SHOW SYMBOL X
+
+replying `hello` to READ's prompt, and keep that too: READ SYS$INPUT at
+the terminal.

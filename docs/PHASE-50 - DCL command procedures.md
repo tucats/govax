@@ -14,8 +14,10 @@ GOTO, IF/THEN/ELSE/ENDIF, GOSUB/RETURN, and CALL/SUBROUTINE, are done
 functions (2026-10-09, not yet probed). Subtask 15, SET VERIFY, SET
 PREFIX, and F$VERIFY's echo, is done and checked against VMS 7.3
 (2026-10-11), and so is subtask 16, SYS$INPUT from a procedure, with
-DECK and EOD (2026-10-11, checked against VMS 7.3); DCL's file I/O
-(subtask 17) is next.
+DECK and EOD (2026-10-11, checked against VMS 7.3), and so is subtask
+17, DCL's file I/O: OPEN, CLOSE, READ, WRITE, and INQUIRE (2026-10-11,
+from the DCL Dictionary; round 4 of the probe is written, for the author
+to run). Subtask 18, STOP and Ctrl/Y, is next.
 
 The console should act like a VMS DCL command processor. Until now it
 had INCLUDE (and `@` as its alias), which runs a file of console
@@ -452,6 +454,51 @@ from a procedure").
   (`dclOwnCommands`); a foreign command is an image, and an assignment,
   @, and CALL are DCL's.
 
+### DCL's file I/O (subtask 17)
+
+`internal/console/dclfile.go`, and `internal/rms/dclfile.go` for the
+files. The rules are the DCL Dictionary's (OPEN, CLOSE, READ, WRITE,
+INQUIRE); what was chosen without VMS is in DEVIATIONS.md ("[Phase 50]
+DCL's file I/O"), and testdata/dcl50's round 4 asks about it.
+
+- **The files are RMS's.** `rms.Session.OpenDCLFile` opens a volume file
+  by `$OPEN`'s and `$CREATE`'s own code, called from Go: name processing
+  (the default type .DAT, logical names, search lists), the file's RMS
+  openers and the file system's access (sharing.go), so DCL's files
+  conflict with a program's opens of the same file as they would on VMS
+  (RMS$_FLK), and DISMOUNT sees them open. The record stream is a
+  `FileHandle`'s (stream.go): READ a sequential `$GET`, WRITE a `$PUT`
+  (RMS$_NEF away from the end), WRITE/UPDATE an `$UPDATE`. A file
+  OPEN/WRITE makes is VFC, two bytes of fixed control (zeros), RAT=CR. A
+  host file is lines of text, with the same rules.
+- **Process-permanent.** `Console.dclFiles` holds the open files by
+  logical name, which OPEN defines in the process table, supervisor
+  mode, equated to the device. A file outlives the procedure that opened
+  it; `EndSession` closes what is left. SYS$INPUT, SYS$OUTPUT,
+  SYS$ERROR, and SYS$COMMAND need no OPEN, by name or through logical
+  names (`processPermanentFile`, which TYPE's `isInputStream` now uses):
+  READ SYS$INPUT takes a procedure's next record, whatever it is
+  (`procedureSource.readRecord`; round 3's I6), and READ SYS$COMMAND
+  (and the others, and SYS$INPUT at the terminal) reads the terminal
+  (`readTerminal`, through `readReply`, so a procedure's data doesn't
+  stand in for it), prompting with /PROMPT's string or "DATA:".
+- **Statuses.** Success is RMS$_NORMAL (round 3 showed WRITE's). A
+  failure is RMS's status: OPEN's shown as @'s was (`%DCL-E-OPENIN, error
+  opening NAME as input`, OPENOUT for output, then RMS's message), the
+  others RMS's message alone, each with bit 28 set in `$STATUS`. /ERROR
+  and /END_OF_FILE go to their label instead (`Console.branch`): Goto,
+  then `branchStatus`, which sets `$STATUS` and marks the status handled,
+  so `procedureLine` takes no ON action (the manual: the qualifier
+  "overrides any ON condition action"). A name OPEN didn't define is
+  CLI$_UNDFIL.
+- **INQUIRE** prompts at the terminal (`terminalOut`: the terminal even
+  under /OUTPUT) with its prompt, or the symbol's name, and ": "; the
+  reply is substituted (`'X'`) and read as a `:=` value is (`dclText`).
+- **TYPE of VFC files**, fixed in passing: `rms.writeRecords` expanded
+  every VFC file's fixed control as print control; it is carriage
+  control only with RAT=PRN, so a RAT=CR file (OPEN/WRITE's) is a line
+  per record.
+
 ## Subtasks
 
 1. **Survey**: the User's Manual's rules for `@`, parameters, command
@@ -507,7 +554,8 @@ Later rounds of this phase, in a likely order:
     TYPE SYS$INPUT reads, and read a data line after SET VERIFY (not an
     image) as a command, `%DCL-W-IVVERB \DATA\`, not SKPDAT
     (testdata/dcl50's round 2, section V6).
-17. **INQUIRE, READ, WRITE, OPEN, CLOSE** (DCL's file I/O). Round 3 of
+17. **INQUIRE, READ, WRITE, OPEN, CLOSE** (DCL's file I/O; done, see
+    "DCL's file I/O"). Round 3 of
     the probe (DEVIATIONS.md's "[Phase 50] SYS$INPUT from a procedure")
     showed READ SYS$INPUT taking the next record whatever it is (a `$`
     line or EOD too), and WRITE leaving `$STATUS` at RMS$_NORMAL; WAIT
@@ -742,3 +790,26 @@ details are in DEVIATIONS.md.)
   OPENOUT wording, and that no other qualifier is needed. HELP CREATE
   describes the command and names /DIRECTORY and /NAME_TABLE as its
   other forms. Tests: `createfile_test.go`.
+- 2026-10-11: Subtask 17, DCL's file I/O (see "DCL's file I/O"). New
+  files `internal/console/dclfile.go` (OPEN, CLOSE, READ, WRITE, INQUIRE;
+  new verbs in `console.dcl`) and `internal/rms/dclfile.go`
+  (`Session.OpenDCLFile` and `DCLFile`: volume files through `$OPEN`'s
+  and `$CREATE`'s code and the stream context, host files as lines).
+  `dclstatus.go` gains `branchStatus`, and `procedureLine` takes no ON
+  action for a status a branch handled. `isInputStream` is now
+  `processPermanentFile`'s SYS$INPUT case. New message CLI_UNDFIL. The
+  grammar's /SHARE is present only when typed (`Defaulted`: a qualifier
+  with a /default is otherwise present). TYPE of a VFC file with RAT=CR
+  no longer treats its fixed control as print control (`rms.writeRecords`,
+  `TestSession_typeVFCCarriageReturn`). HELP: OPEN, CLOSE, READ, WRITE,
+  INQUIRE. Tests: `dclfile_test.go` (host and volume round trips,
+  versions, /APPEND, /READ/WRITE and /UPDATE, every failure's message and
+  status, the branches and ON, the process-permanent files, INQUIRE,
+  files outliving their procedure, a name opened twice, sharing, data
+  after OPEN, `splitDCLList`), `rms/dclfile_test.go` (the new file's
+  attributes and fixed control, the failures' statuses, host files);
+  `TestProbe50IOracle` now compares I6 (READ SYS$INPUT) and I9 too, and
+  every section but I1 matches line for line, WRITE no longer emulated.
+  Round 4 of the probe (`testdata/dcl50`'s `probe50f.com` and
+  `probe50g.com`, and the interactive `probe50q.com` and `probe50p.com`)
+  asks about each choice; the author is to run it.

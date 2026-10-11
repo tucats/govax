@@ -3263,6 +3263,85 @@ widened."
     the command ends; after that it reads end of file.
 - **Status**: VMS's answers followed; the choices above unconfirmed.
 
+### [Phase 50] DCL's file I/O: from the DCL Dictionary, and the rest chosen
+
+- **Where**: `internal/console/dclfile.go` (OPEN, CLOSE, READ, WRITE,
+  INQUIRE), `internal/rms/dclfile.go` (`Session.OpenDCLFile`,
+  `DCLFile`), `internal/console/dclstatus.go` (`branchStatus`),
+  `procedure.go` (`procedureLine`'s ON check).
+- **What**: the five commands as the DCL Dictionary (7.3-1) describes
+  them. From the manual: OPEN's /READ, /WRITE (a new version, or with
+  /READ an existing file at its start), /APPEND (an existing file, at its
+  end), /SHARE (others may only read without it; /SHARE=READ, and
+  /SHARE[=WRITE] read and write), /ERROR; the default type .DAT; a new
+  file's VFC record format; the logical name in the process table; files
+  left open when a procedure ends; a logical name that already has a
+  file passed over with no message. READ's local symbol, its record as
+  it is, the 2048-byte limit, /END_OF_FILE before /ERROR, the
+  process-permanent files without OPEN, the prompt "DATA:". WRITE's
+  comma-separated expressions, qualifiers before the data, /UPDATE of
+  the record last read, the same length for a sequential file. CLOSE's
+  /LOG (UNDFIL) and /ERROR. Each /ERROR and /END_OF_FILE overrides the ON
+  action, with `$STATUS` the failure's. INQUIRE reads SYS$COMMAND, prompts
+  with the prompt (or the symbol's name) and ": " (/NOPUNCTUATION), and
+  treats the reply as a string assignment's value, with substitution.
+  VMS 7.3 settled (round 3): READ SYS$INPUT takes the procedure's next
+  record whatever it is; WRITE leaves `$STATUS` RMS$_NORMAL and is one of
+  DCL's own commands.
+- **Chosen without VMS** (round 4 of testdata/dcl50, `probe50f.com` and
+  `probe50q.com`, asks about each):
+  - OPEN's failure is shown as @'s was (round 1): `%DCL-E-OPENIN, error
+    opening NAME as input` (OPENOUT `as output` for /WRITE and /APPEND
+    without /READ), then RMS's message, with `$STATUS` the RMS status
+    and bit 28 set. A READ, WRITE, or CLOSE failure is RMS's message
+    alone (`%RMS-E-EOF, end of file detected`), `$STATUS` the RMS status
+    with bit 28 set.
+  - A branch's `$STATUS` (/ERROR, /END_OF_FILE) is the status without
+    bit 28; a symbol isn't changed by a READ that fails.
+  - OPEN, READ, and CLOSE leave `$STATUS` RMS$_NORMAL; INQUIRE CLI$_NORMAL.
+    OPEN, CLOSE, READ, and INQUIRE are DCL's own commands for data lines.
+  - The logical name is supervisor mode, equated to the file's device
+    (`_DUA0:`) with no attributes; a host file's is its path. READ,
+    WRITE, and CLOSE find the file by the logical name OPEN gave it, even
+    if it was deassigned since (on VMS, by the name's translation).
+  - OPEN/WRITE with /APPEND is CLI$_CONFLICT with `\APPEND\`; a /SHARE
+    keyword other than READ or WRITE CLI$_IVKEYW; a missing parameter
+    CLI$_INSFPRM (DCL would prompt at the terminal); an invalid symbol
+    name CLI$_IVSYMB.
+  - A new file's records have two bytes of fixed control, zeros, and
+    carriage-return carriage control (RAT=CR).
+  - READ of a name OPEN didn't define that isn't a process-permanent file
+    (by itself or through logical names) is CLI$_UNDFIL, as are WRITE
+    and CLOSE of one; CLOSE/NOLOG of one shows nothing, with `$STATUS`
+    UNDFIL with bit 28 set. CLOSE of SYS$INPUT and the others is UNDFIL.
+  - WRITE SYS$ERROR writes to the procedure's output and, when that is
+    an /OUTPUT file, to the terminal too, as a message goes; WRITE
+    SYS$COMMAND writes to the terminal; WRITE SYS$INPUT in a procedure is
+    RMS$_FAC. READ of SYS$COMMAND, SYS$OUTPUT, or SYS$ERROR, or of
+    SYS$INPUT at the terminal, reads the terminal with READ's prompt
+    (exactly "DATA:", no blank after it, without /PROMPT); Ctrl/Z is
+    RMS$_EOF. INQUIRE's prompt goes to the terminal even with /OUTPUT; at
+    Ctrl/Z it assigns "".
+  - WRITE with no data is CLI$_INSFPRM; /SYMBOL changes nothing (records
+    have no 1024-byte limit, and a quoted string is allowed). A record
+    READ reads longer than 2048 bytes is cut to 2048, with RMS$_RTB.
+  - A /READ/WRITE file's WRITE before READ has reached the end of the
+    file is RMS$_NEF (as `$PUT` is, Phase 49); WRITE/UPDATE with no
+    record read RMS$_CUR, of another length RMS$_RSZ; /READ/APPEND reads
+    from the end (RMS$_EOF at once).
+  - Not done: indexed files (READ/INDEX, /KEY, /MATCH, /DELETE), record
+    locks (/NOLOCK accepted), /TIME_OUT (accepted, a read waits), OPEN of
+    a mailbox or terminal (NL: works), and an image opening a file DCL
+    has open through its logical name (VMS's process-permanent file
+    access).
+- **Fixed in passing**: TYPE (and COPY to the host, which share
+  `rms.writeRecords`) treated every VFC file as a print file, expanding
+  its fixed control as carriage control; the RMS manual makes it carriage
+  control only with RAT=PRN. A VFC file with RAT=CR (as DCL's OPEN/WRITE
+  makes) is now a line per record, its fixed control left out.
+- **Status**: the manual's rules followed; the choices above unconfirmed,
+  for round 4 of the probe.
+
 <!--
 Entry template:
 

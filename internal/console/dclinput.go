@@ -68,11 +68,14 @@ const maxInputRecord = 32767
 // DELETE/SYMBOL, and @ are DCL's own as well, and never reach the
 // grammar; nor does a command the grammar refuses, or an unknown verb,
 // which run no image. VMS 7.3 agreed for each of these govax has
-// (testdata/dcl50's round 3, section I1); WAIT and SET SYMBOL, which
-// govax doesn't have yet, were DCL's own there too.
+// (testdata/dcl50's round 3, section I1), WRITE among them; WAIT and SET
+// SYMBOL, which govax doesn't have yet, were DCL's own there too. OPEN,
+// CLOSE, READ, and INQUIRE are taken to be DCL's own as well
+// (unconfirmed: testdata/dcl50's round 4 asks).
 var dclOwnCommands = map[string]bool{
 	"ASSIGN":           true,
 	"CALL":             true,
+	"CLOSE":            true,
 	"CONTINUE":         true,
 	"DEASSIGN":         true,
 	"DECK":             true,
@@ -85,8 +88,11 @@ var dclOwnCommands = map[string]bool{
 	"GOSUB":            true,
 	"GOTO":             true,
 	"IF":               true,
+	"INQUIRE":          true,
 	"ON":               true,
+	"OPEN":             true,
 	"QUIT":             true,
+	"READ":             true,
 	"RETURN":           true,
 	"SET_DEFAULT":      true,
 	"SET_ON":           true,
@@ -100,6 +106,7 @@ var dclOwnCommands = map[string]bool{
 	"STOP":             true,
 	"SUBROUTINE":       true,
 	"THEN":             true,
+	"WRITE":            true,
 }
 
 // procedureDeck is a DECK in effect: its end of file indicator, "" for
@@ -276,42 +283,61 @@ func (c *Console) withProcedureInput(source *procedureSource, fn func() error) e
 
 // isInputStream reports whether a file specification names SYS$INPUT
 // (with or without its colon), itself or through logical names: the
-// process's input, which TYPE reads as lines rather than as a file. RMS
+// process's input, which TYPE reads as lines rather than as a file
+// (processPermanentFile).
+func (c *Console) isInputStream(spec string) bool {
+	return c.processPermanentFile(spec) == "SYS$INPUT"
+}
+
+// processPermanentNames are the process-permanent files every process
+// has, which DCL's READ and WRITE use without an OPEN (dclfile.go).
+var processPermanentNames = map[string]bool{
+	"SYS$INPUT": true, "SYS$OUTPUT": true, "SYS$ERROR": true, "SYS$COMMAND": true,
+}
+
+// processPermanentFile returns which of the process-permanent files
+// (processPermanentNames) a file specification names, with or without
+// its colon, itself or through logical names; "" for none. RMS
 // translates a file specification's logical name again and again, as far
 // as LNM$C_MAXDEPTH levels, until nothing translates or an equivalence
-// is terminal (lnm.TranslateFileSpec), and SYS$INPUT is one of those
-// names: so INFILE, defined as SYS$INPUT, is the input stream too (the
-// DCL Dictionary's DECK example 2 types a procedure's data through such
-// a name). Each step takes a name's first equivalence string; one with
-// anything after the name and its colon (a directory, a file name) is a
-// file, not the input stream.
-func (c *Console) isInputStream(spec string) bool {
+// is terminal (lnm.TranslateFileSpec), and the process-permanent names
+// are among those names: so INFILE, defined as SYS$INPUT, is the input
+// stream too (the DCL Dictionary's DECK example 2 types a procedure's
+// data through such a name). Each step takes a name's first equivalence
+// string; one with anything after the name and its colon (a directory, a
+// file name) is a file, not a process-permanent one.
+func (c *Console) processPermanentFile(spec string) string {
 	name := strings.ToUpper(strings.TrimSpace(spec))
 
 	for range lnm.MaxDepth {
 		name = strings.TrimSuffix(name, ":")
-		if name == "SYS$INPUT" {
-			return true
+		if processPermanentNames[name] {
+			return name
 		}
 
 		if c.Logicals == nil || name == "" || !isDCLName(name) {
-			return false
+			return ""
 		}
 
 		e, err := c.Logicals.Translate(lnm.FileDevName, name, lnm.User, 0)
 		if err != nil || len(e.Equivalences) == 0 {
-			return false
+			return ""
 		}
 
 		eqv := e.Equivalences[0]
 		name = strings.ToUpper(strings.TrimSpace(eqv.Value))
 
 		if eqv.Attrs&lnm.AttrTerminal != 0 {
-			return strings.TrimSuffix(name, ":") == "SYS$INPUT"
+			name = strings.TrimSuffix(name, ":")
+			if processPermanentNames[name] {
+				return name
+			}
+
+			return ""
 		}
 	}
 
-	return false
+	return ""
 }
 
 // isDCLName reports whether name could be a logical name: letters,

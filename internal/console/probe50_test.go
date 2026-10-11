@@ -429,41 +429,10 @@ func TestProbe50VOracle(t *testing.T) {
 }
 
 // probe50IExact are the sections of round 3 govax's run must match line
-// for line; the "WRITE" lines are emulated (emulateWrite). I1's output
-// has commands govax lacks or answers differently (SET SYMBOL, WAIT,
-// SHOW DEFAULT's device), so only what became of each data line is
-// compared (dataOutcomes). I6 (READ SYS$INPUT) and I9 (a WRITE not
-// echoed) wait for subtask 17's READ and WRITE.
-var probe50IExact = []string{"I2", "I3", "I4", "I5", "I7", "I8"}
-
-// probe50IAllowed are lines of VMS's log in an exact section that govax
-// writes differently for a reason outside the probe's question: WRITE
-// left RMS$_NORMAL in $STATUS, where govax, with no WRITE, has IVVERB's.
-var probe50IAllowed = map[string]string{
-	`  $STATUS == "%X00010001"`: `  $STATUS == "%X00038090"`,
-}
-
-// emulateWrite stands in for DCL's WRITE SYS$OUTPUT "text", which govax
-// doesn't have yet (subtask 17): an echoed WRITE line followed by
-// govax's IVVERB for it becomes the line and its text, as VMS wrote it.
-func emulateWrite(text string) string {
-	lines := strings.Split(text, "\n")
-
-	var out []string
-
-	for i := 0; i < len(lines); i++ {
-		out = append(out, lines[i])
-
-		rest, _ := strings.CutPrefix(lines[i], "$ ")
-		if arg, ok := strings.CutPrefix(rest, `WRITE SYS$OUTPUT "`); ok && i+2 < len(lines) &&
-			strings.HasPrefix(lines[i+1], "%DCL-W-IVVERB") && lines[i+2] == ` \WRITE\` {
-			out = append(out, strings.TrimSuffix(arg, `"`))
-			i += 2
-		}
-	}
-
-	return strings.Join(out, "\n")
-}
+// for line. I1's output has commands govax lacks or answers differently
+// (SET SYMBOL, WAIT, SHOW DEFAULT's device), so only what became of each
+// data line is compared (dataOutcomes).
+var probe50IExact = []string{"I2", "I3", "I4", "I5", "I6", "I7", "I8", "I9"}
 
 // dataOutcomes lists, for each data line that is a WRITE in a section,
 // whether DCL read it as a command ("read": its text follows) or skipped
@@ -519,7 +488,7 @@ func TestProbe50IOracle(t *testing.T) {
 	}
 
 	want := probeSections(strings.TrimPrefix(strings.ReplaceAll(string(logText), "\r", ""), "\n"), "I")
-	got := probeSections(emulateWrite(buf.String()), "I")
+	got := probeSections(buf.String(), "I")
 
 	if len(want) < 10 {
 		t.Fatalf("the log has %d sections, want 10", len(want))
@@ -536,10 +505,6 @@ func TestProbe50IOracle(t *testing.T) {
 
 			if i < len(wantLines) {
 				w = wantLines[i]
-			}
-
-			if allowed, ok := probe50IAllowed[w]; ok && g == allowed {
-				continue
 			}
 
 			if g != w {

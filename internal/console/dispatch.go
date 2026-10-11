@@ -317,6 +317,13 @@ func (d *Dispatcher) bindGrammar() {
 	// DECK and EOD: data lines for an image, "$" or not (dclinput.go).
 	g.Bind("DECK", d.deckCommand)
 	g.Bind("EOD", d.eodCommand)
+
+	// DCL's file I/O (dclfile.go).
+	g.Bind("OPEN", d.openCommand)
+	g.Bind("CLOSE", d.closeCommand)
+	g.Bind("READ", d.readCommand)
+	g.Bind("WRITE", d.writeCommand)
+	g.Bind("INQUIRE", d.inquireCommand)
 	g.Bind("CONTINUE", func(id int64, r *dcl.Result) error {
 		d.Console.keepStatus()
 

@@ -97,6 +97,7 @@
 //                          (=, ==, :=) replace it
 //              10/11/26    CREATE makes a file from SYS$INPUT; CREATE/DIRECTORY
 //                          and CREATE/NAME_TABLE are its other forms
+//              10/11/26    Added OPEN, CLOSE, READ, WRITE, INQUIRE
 
 This is the help documentation for the govax VAX emulator.  Topic sections are
 marked by a "$" delimiter.  This is followed by as many tokens of the help
@@ -2289,6 +2290,134 @@ $EOD
         $ DECK
         $ This line starts with a dollar sign, and is typed.
         $ EOD
+
+$OPEN
+
+    The OPEN command opens a file for READ and WRITE, and gives it a
+    logical name, which it defines in the process table.  The file stays
+    open until CLOSE closes it, even after the command procedure that
+    opened it ends.  The file is on a mounted volume or on the host, by
+    the usual rules, and its type is .DAT unless one is given.
+
+    Syntax:
+
+        OPEN [/READ] [/WRITE] [/APPEND] [/SHARE[=READ|WRITE]]
+             [/ERROR=label] logical-name filespec
+
+    /READ (the default) opens an existing file to read.  /WRITE makes a
+    new file (the next version) to write; /READ/WRITE opens an existing
+    one to read and write, at its start.  /APPEND opens an existing file
+    to write at its end.  Without /SHARE, other users may only read the
+    file; /SHARE=READ lets them read it, and /SHARE or /SHARE=WRITE read
+    and write it.  A file OPEN makes has variable-length records with
+    two bytes of fixed control (VFC), and carriage-return carriage
+    control.
+
+    A file that can't be opened is reported as
+
+        %DCL-E-OPENIN, error opening DUA0:[WORK]NOSUCH.DAT; as input
+        -RMS-E-FNF, file not found
+
+    (OPENOUT for a file opened to write), and $STATUS is RMS's status.
+    With /ERROR, the procedure goes to the label instead, with no message
+    and no ON action.  A logical name OPEN already has a file for gets
+    no other.
+
+    Example:
+
+        $ OPEN/WRITE OUT RESULTS.DAT
+        $ WRITE OUT "Count is ", COUNT
+        $ CLOSE OUT
+
+$CLOS
+
+    The CLOSE command closes a file OPEN opened, and deassigns its
+    logical name.
+
+    Syntax:
+
+        CLOSE [/ERROR=label] [/[NO]LOG] logical-name
+
+    A name OPEN didn't define is DCL-W-UNDFIL, unless /NOLOG; with
+    /ERROR, the procedure goes to the label instead.
+
+$READ
+
+    The READ command reads a record from a file into a symbol, local to
+    the command level, as it is: its case and blanks are kept, and no
+    symbol substitution is done.
+
+    Syntax:
+
+        READ [/END_OF_FILE=label] [/ERROR=label] [/PROMPT=string]
+             logical-name symbol-name
+
+    The file is one OPEN opened, or SYS$INPUT, SYS$COMMAND, SYS$OUTPUT,
+    or SYS$ERROR, which need no OPEN.  In a command procedure, READ
+    SYS$INPUT reads the procedure's next line, whatever it is; at the
+    terminal, and from SYS$COMMAND anywhere, READ prompts at the
+    terminal with /PROMPT's string, or DATA:, and reads a line.  Ctrl/Z
+    is the end of the file.
+
+    At the end of the file, the procedure goes to the /END_OF_FILE label,
+    or failing that the /ERROR label, with $STATUS RMS$_EOF; with
+    neither, RMS-E-EOF is an error, and the ON action is taken.  A record
+    longer than 2048 bytes is cut to 2048, with RMS-W-RTB.  /NOLOCK and
+    /TIME_OUT are accepted, and change nothing.
+
+    Example:
+
+        $ OPEN IN NAMES.DAT
+        $ LOOP:
+        $ READ/END_OF_FILE=DONE IN NAME
+        $ WRITE SYS$OUTPUT "Hello, ", NAME
+        $ GOTO LOOP
+        $ DONE:
+        $ CLOSE IN
+
+$WRIT
+
+    The WRITE command writes one record to a file: the values of its
+    expressions, one after another, an integer's in decimal.
+
+    Syntax:
+
+        WRITE [/ERROR=label] [/UPDATE] [/SYMBOL] logical-name
+              expression[,...]
+
+    The qualifiers come before the data.  The file is one OPEN opened to
+    write, or SYS$OUTPUT, SYS$ERROR, or SYS$COMMAND.  WRITE/UPDATE
+    replaces the record READ read last with one of the same length (the
+    file opened /READ/WRITE).  A record WRITE can't write is RMS's error
+    (RMS-E-NEF for a /READ/WRITE file READ hasn't read to its end), or
+    with /ERROR the procedure goes to the label.  /SYMBOL is accepted.
+    WRITE leaves $STATUS RMS$_NORMAL.
+
+    Example:
+
+        $ WRITE SYS$OUTPUT "Today is ", F$TIME()
+
+$INQU
+
+    The INQUIRE command asks the terminal for a symbol's value.  It
+    prompts with the prompt string, or the symbol's name, then ": "
+    (/NOPUNCTUATION leaves that out).
+
+    Syntax:
+
+        INQUIRE [/LOCAL|/GLOBAL] [/[NO]PUNCTUATION] symbol-name
+                [prompt-string]
+
+    The reply has its symbols substituted ('SYMBOL'), and is then read
+    as a string assignment's value is: uppercased, its blanks compressed,
+    and quoted text kept as it is.  The symbol is local unless /GLOBAL.
+    In a command procedure INQUIRE still reads the terminal, not the
+    procedure's data.
+
+    Example:
+
+        $ INQUIRE ANSWER "Continue (Y/N)"
+        $ IF .NOT. ANSWER THEN EXIT
 
 $BOOT
 $ROM

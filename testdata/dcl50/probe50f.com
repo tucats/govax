@@ -1,0 +1,318 @@
+$ ! PROBE50F.COM - Phase 50's fourth probe: DCL's file I/O (OPEN, READ,
+$ ! WRITE, CLOSE), for subtask 17 (testdata/dcl50/README.md). Run it from
+$ ! SYSTEM with the exchange volume as the default directory:
+$ !
+$ !     @PROBE50F/OUTPUT=PROBE50F.LOG
+$ !
+$ ! It makes files named PROBE50F*.DAT (deleting any first). Nothing reads
+$ ! the terminal. Each section starts with a SHOW SYMBOL of a marker.
+$ SET NOON
+$ SET VERIFY
+$ DELETE PROBE50F*.DAT;*
+$ !
+$ ! F1: OPEN/WRITE: the file made, its logical name, $STATUS after each
+$ ! command, WRITE's items, the file's attributes and records, and the
+$ ! next OPEN/WRITE's version.
+$ M = "F1"
+$ SHOW SYMBOL M
+$ OPEN/WRITE OUT PROBE50FA
+$ SHOW SYMBOL $STATUS
+$ SHOW LOGICAL/FULL OUT
+$ N = 7
+$ WRITE OUT "first: ", N, " and ", N * 3
+$ SHOW SYMBOL $STATUS
+$ WRITE OUT "  Mixed  Case, ""quoted""  "
+$ WRITE OUT ""
+$ S = "a string"
+$ WRITE OUT S, "-", F$LENGTH(S)
+$ CLOSE OUT
+$ SHOW SYMBOL $STATUS
+$ SHOW LOGICAL OUT
+$ DIRECTORY/FULL PROBE50FA.DAT
+$ DUMP/RECORD PROBE50FA.DAT
+$ TYPE PROBE50FA.DAT
+$ OPEN/WRITE OUT PROBE50FA.DAT
+$ CLOSE OUT
+$ DIRECTORY PROBE50FA.DAT
+$ !
+$ ! F2: OPEN/READ and READ: each record, $STATUS, the symbol's table,
+$ ! and the end of the file with /END_OF_FILE, with no label, and with
+$ ! /ERROR. TYPE of the logical name while the file is open.
+$ M = "F2"
+$ SHOW SYMBOL M
+$ OPEN IN PROBE50FA.DAT;1
+$ SHOW SYMBOL $STATUS
+$ SHOW LOGICAL/FULL IN
+$ TYPE IN
+$ R = "-"
+$ READ IN R
+$ SHOW SYMBOL $STATUS
+$ SHOW SYMBOL R
+$ READ IN R
+$ SHOW SYMBOL R
+$ READ IN R
+$ SHOW SYMBOL R
+$ G2 == "global"
+$ READ IN G2
+$ SHOW SYMBOL/LOCAL G2
+$ SHOW SYMBOL/GLOBAL G2
+$ READ/END_OF_FILE=F2E IN R
+$ WRITE SYS$OUTPUT "F2 READ at the end didn't branch"
+$ F2E:
+$ SHOW SYMBOL $STATUS
+$ SHOW SYMBOL R
+$ READ IN R
+$ SHOW SYMBOL $STATUS
+$ SHOW SYMBOL R
+$ READ/ERROR=F2X IN R
+$ WRITE SYS$OUTPUT "F2 READ/ERROR at the end didn't branch"
+$ F2X:
+$ SHOW SYMBOL $STATUS
+$ CLOSE IN
+$ SHOW SYMBOL $STATUS
+$ !
+$ ! F3: OPEN's failures and their $STATUS: a missing file, /ERROR,
+$ ! a missing directory, /APPEND and /READ/WRITE of a missing file, a
+$ ! wildcard, /WRITE with /APPEND, no file, a bad /SHARE keyword, and a
+$ ! logical name that already has a file (the same file, and another).
+$ M = "F3"
+$ SHOW SYMBOL M
+$ OPEN IN NOSUCH
+$ SHOW SYMBOL $STATUS
+$ OPEN/ERROR=F3A IN NOSUCH
+$ WRITE SYS$OUTPUT "F3 OPEN/ERROR didn't branch"
+$ F3A:
+$ SHOW SYMBOL $STATUS
+$ OPEN/WRITE OUT [NOSUCHDIR]PROBE50FX
+$ SHOW SYMBOL $STATUS
+$ OPEN/APPEND OUT NOSUCH
+$ SHOW SYMBOL $STATUS
+$ OPEN/READ/WRITE IO NOSUCH
+$ SHOW SYMBOL $STATUS
+$ OPEN IN PROBE50F*.DAT
+$ SHOW SYMBOL $STATUS
+$ OPEN/WRITE/APPEND OUT PROBE50FX
+$ SHOW SYMBOL $STATUS
+$ OPEN IN
+$ SHOW SYMBOL $STATUS
+$ OPEN/SHARE=BOTH IN PROBE50FA.DAT
+$ SHOW SYMBOL $STATUS
+$ CLOSE IN
+$ OPEN/WRITE OUT PROBE50FB
+$ WRITE OUT "from PROBE50FB"
+$ CLOSE OUT
+$ OPEN IN PROBE50FA.DAT;1
+$ OPEN IN PROBE50FA.DAT;1
+$ SHOW SYMBOL $STATUS
+$ OPEN IN PROBE50FB.DAT
+$ SHOW SYMBOL $STATUS
+$ READ IN R
+$ SHOW SYMBOL R
+$ CLOSE IN
+$ SHOW SYMBOL $STATUS
+$ CLOSE IN
+$ SHOW SYMBOL $STATUS
+$ !
+$ ! F4: READ, WRITE, and CLOSE failures: a name never opened (and
+$ ! CLOSE/NOLOG, CLOSE/ERROR), WRITE to a file opened to read (and
+$ ! /ERROR), READ of a file opened to write, a logical name DCL didn't
+$ ! define, a bad symbol name, WRITE with no data.
+$ M = "F4"
+$ SHOW SYMBOL M
+$ READ NOSUCHLNM R
+$ SHOW SYMBOL $STATUS
+$ WRITE NOSUCHLNM "x"
+$ SHOW SYMBOL $STATUS
+$ CLOSE NOSUCHLNM
+$ SHOW SYMBOL $STATUS
+$ CLOSE/NOLOG NOSUCHLNM
+$ SHOW SYMBOL $STATUS
+$ CLOSE/ERROR=F4A NOSUCHLNM
+$ WRITE SYS$OUTPUT "F4 CLOSE/ERROR didn't branch"
+$ F4A:
+$ SHOW SYMBOL $STATUS
+$ OPEN IN PROBE50FA.DAT;1
+$ WRITE IN "x"
+$ SHOW SYMBOL $STATUS
+$ WRITE/ERROR=F4B IN "x"
+$ WRITE SYS$OUTPUT "F4 WRITE/ERROR didn't branch"
+$ F4B:
+$ SHOW SYMBOL $STATUS
+$ CLOSE IN
+$ OPEN/WRITE OUT PROBE50FX
+$ READ OUT R
+$ SHOW SYMBOL $STATUS
+$ CLOSE OUT
+$ DEFINE NOTDCL PROBE50FA.DAT
+$ READ NOTDCL R
+$ SHOW SYMBOL $STATUS
+$ DEASSIGN NOTDCL
+$ OPEN IN PROBE50FA.DAT;1
+$ READ IN 9BAD
+$ SHOW SYMBOL $STATUS
+$ WRITE SYS$OUTPUT
+$ SHOW SYMBOL $STATUS
+$ CLOSE IN
+$ !
+$ ! F5: /APPEND, and /READ/WRITE: WRITE/UPDATE before any READ, of the
+$ ! same length and of another, WRITE before the end of the file and at
+$ ! it; WRITE/UPDATE of a file opened /WRITE; /READ/APPEND.
+$ M = "F5"
+$ SHOW SYMBOL M
+$ OPEN/WRITE OUT PROBE50FC
+$ WRITE OUT "alpha"
+$ WRITE OUT "beta"
+$ WRITE/UPDATE OUT "BETA"
+$ SHOW SYMBOL $STATUS
+$ CLOSE OUT
+$ OPEN/APPEND OUT PROBE50FC
+$ SHOW SYMBOL $STATUS
+$ WRITE OUT "gamma"
+$ CLOSE OUT
+$ TYPE PROBE50FC.DAT
+$ OPEN/READ/WRITE IO PROBE50FC
+$ SHOW SYMBOL $STATUS
+$ WRITE/UPDATE IO "XXXXX"
+$ SHOW SYMBOL $STATUS
+$ READ IO R
+$ SHOW SYMBOL R
+$ WRITE/UPDATE IO "ALPHA"
+$ SHOW SYMBOL $STATUS
+$ WRITE IO "too soon"
+$ SHOW SYMBOL $STATUS
+$ READ IO R
+$ SHOW SYMBOL R
+$ WRITE/UPDATE IO "longer"
+$ SHOW SYMBOL $STATUS
+$ READ IO R
+$ SHOW SYMBOL R
+$ READ/END_OF_FILE=F5E IO R
+$ F5E:
+$ WRITE IO "delta"
+$ SHOW SYMBOL $STATUS
+$ CLOSE IO
+$ TYPE PROBE50FC.DAT
+$ OPEN/READ/APPEND IO PROBE50FC
+$ SHOW SYMBOL $STATUS
+$ R = "-"
+$ READ IO R
+$ SHOW SYMBOL $STATUS
+$ SHOW SYMBOL R
+$ CLOSE IO
+$ !
+$ ! F6: WRITE to SYS$OUTPUT and SYS$ERROR (which go to this log?), an
+$ ! integer expression, a trailing comma, items with no comma, /SYMBOL
+$ ! with symbols and with a quoted string, a logical name for
+$ ! SYS$OUTPUT, a colon, and SYS$INPUT.
+$ M = "F6"
+$ SHOW SYMBOL M
+$ WRITE SYS$OUTPUT "to SYS$OUTPUT"
+$ WRITE SYS$ERROR "to SYS$ERROR"
+$ SHOW SYMBOL $STATUS
+$ WRITE SYS$OUTPUT 12 + 3
+$ WRITE SYS$OUTPUT "a", "b",
+$ SHOW SYMBOL $STATUS
+$ WRITE SYS$OUTPUT "a" "b"
+$ SHOW SYMBOL $STATUS
+$ X = "xx"
+$ WRITE/SYMBOL SYS$OUTPUT X, X
+$ SHOW SYMBOL $STATUS
+$ WRITE/SYMBOL SYS$OUTPUT "quoted"
+$ SHOW SYMBOL $STATUS
+$ DEFINE PROBE_OUT SYS$OUTPUT
+$ WRITE PROBE_OUT "through a logical name"
+$ SHOW SYMBOL $STATUS
+$ DEASSIGN PROBE_OUT
+$ WRITE SYS$OUTPUT: "with a colon"
+$ SHOW SYMBOL $STATUS
+$ WRITE SYS$INPUT "to SYS$INPUT"
+$ SHOW SYMBOL $STATUS
+$ !
+$ ! F7: a file a procedure leaves open stays open after it, and READ
+$ ! SYS$INPUT at a procedure's end of file (PROBE50G).
+$ M = "F7"
+$ SHOW SYMBOL M
+$ @PROBE50G
+$ SHOW SYMBOL $STATUS
+$ SHOW LOGICAL KEEP
+$ WRITE KEEP "from PROBE50F"
+$ SHOW SYMBOL $STATUS
+$ CLOSE KEEP
+$ TYPE PROBE50FD.DAT
+$ !
+$ ! F8: a data line after OPEN, READ, and CLOSE: read as a command, or
+$ ! skipped (SKPDAT)?
+$ M = "F8"
+$ SHOW SYMBOL M
+$ OPEN IN PROBE50FA.DAT;1
+WRITE SYS$OUTPUT "F8 after OPEN: read"
+$ READ IN R
+WRITE SYS$OUTPUT "F8 after READ: read"
+$ CLOSE IN
+WRITE SYS$OUTPUT "F8 after CLOSE: read"
+$ !
+$ ! F9: sharing: OPEN of a file DCL is writing, with and without
+$ ! /SHARE; what a reader sees of a record not yet closed; TYPE of it.
+$ M = "F9"
+$ SHOW SYMBOL M
+$ OPEN/WRITE OUT PROBE50FE
+$ WRITE OUT "written"
+$ OPEN IN PROBE50FE
+$ SHOW SYMBOL $STATUS
+$ OPEN/SHARE IN2 PROBE50FE
+$ SHOW SYMBOL $STATUS
+$ R = "-"
+$ READ IN2 R
+$ SHOW SYMBOL $STATUS
+$ SHOW SYMBOL R
+$ TYPE PROBE50FE.DAT
+$ CLOSE IN2
+$ CLOSE IN
+$ CLOSE OUT
+$ OPEN/SHARE=READ IN PROBE50FE
+$ OPEN/SHARE=READ IN2 PROBE50FE
+$ SHOW SYMBOL $STATUS
+$ OPEN/APPEND OUT PROBE50FE
+$ SHOW SYMBOL $STATUS
+$ CLOSE IN2
+$ CLOSE IN
+$ CLOSE OUT
+$ !
+$ ! F10: long records: a 300-character symbol (F$FAO), WRITE and
+$ ! WRITE/SYMBOL of 600 characters, and READ of them back.
+$ M = "F10"
+$ SHOW SYMBOL M
+$ S = F$FAO("!300*X")
+$ SHOW SYMBOL $STATUS
+$ WRITE SYS$OUTPUT F$LENGTH(S)
+$ OPEN/WRITE OUT PROBE50FF
+$ WRITE OUT S, S
+$ SHOW SYMBOL $STATUS
+$ WRITE/SYMBOL OUT S, S
+$ SHOW SYMBOL $STATUS
+$ CLOSE OUT
+$ OPEN IN PROBE50FF
+$ READ IN R
+$ SHOW SYMBOL $STATUS
+$ WRITE SYS$OUTPUT F$LENGTH(R)
+$ READ IN R
+$ SHOW SYMBOL $STATUS
+$ WRITE SYS$OUTPUT F$LENGTH(R)
+$ CLOSE IN
+$ !
+$ ! F11: the logical name OPEN defined, deassigned (in user mode, then
+$ ! supervisor mode) while the file is open: can READ and CLOSE still
+$ ! reach the file?
+$ M = "F11"
+$ SHOW SYMBOL M
+$ OPEN IN PROBE50FA.DAT;1
+$ DEASSIGN IN
+$ SHOW SYMBOL $STATUS
+$ DEASSIGN/SUPERVISOR_MODE IN
+$ SHOW SYMBOL $STATUS
+$ READ IN R
+$ SHOW SYMBOL $STATUS
+$ CLOSE IN
+$ SHOW SYMBOL $STATUS
+$ SHOW SYMBOL M
+$ EXIT

@@ -922,6 +922,72 @@ grammar console
                     /default=""
     verb eod/id=1668
 
+    ! DCL's file I/O (subtask 17; internal/console/dclfile.go). OPEN
+    ! opens a file and gives it a logical name, READ and WRITE read and
+    ! write its records, and CLOSE closes it; SYS$INPUT, SYS$OUTPUT,
+    ! SYS$ERROR, and SYS$COMMAND need no OPEN. /SHARE's keyword (READ or
+    ! WRITE, WRITE when there is none) and each /ERROR and /END_OF_FILE
+    ! label are read by the handlers. WRITE's data, after its qualifiers,
+    ! is the rest of the line: expressions separated by commas. INQUIRE
+    ! asks the terminal for a symbol's value; its prompt is the rest of
+    ! the line too.
+    verb open/id=2100
+        qualifier   read/id=2101
+        qualifier   write/id=2102
+        qualifier   append/id=2103
+        qualifier   share/id=2104               -
+                    /type=$string/nonegatable   -
+                    /default=""
+        qualifier   error/id=2105               -
+                    /type=$string/nonegatable
+        parameter   logical_name/id=2106        -
+                    /type=$string
+        parameter   filespec/id=2107            -
+                    /type=$string
+        qualifier   host/id=2108                -
+                    /parameter=filespec
+
+    verb close/id=2110
+        qualifier   error/id=2111               -
+                    /type=$string/nonegatable
+        qualifier   log/id=2112
+        parameter   logical_name/id=2113        -
+                    /type=$string
+
+    verb read/id=2120
+        qualifier   end_of_file/id=2121         -
+                    /type=$string/nonegatable
+        qualifier   error/id=2122               -
+                    /type=$string/nonegatable
+        qualifier   prompt/id=2123              -
+                    /type=$string/nonegatable
+        qualifier   lock/id=2124
+        qualifier   time_out/id=2125            -
+                    /type=$integer
+        parameter   logical_name/id=2126        -
+                    /type=$string
+        parameter   symbol/id=2127              -
+                    /type=$string
+
+    verb write/id=2130
+        qualifier   error/id=2131               -
+                    /type=$string/nonegatable
+        qualifier   symbol/id=2132/nonegatable
+        qualifier   update/id=2133/nonegatable
+        parameter   logical_name/id=2134        -
+                    /type=$string
+        parameter   data/id=2135                -
+                    /type=$rest_of_line
+
+    verb inquire/id=2140
+        qualifier   global/id=2141/nonegatable
+        qualifier   local/id=2142/nonegatable
+        qualifier   punctuation/id=2143
+        parameter   symbol/id=2144              -
+                    /type=$string
+        parameter   prompt/id=2145              -
+                    /type=$rest_of_line
+
     ! RUN activates a VMS image. /NOINIT and /INIT override whether each
     ! shareable image's LIB$INITIALIZE runs; /DEBUG (/STEP, /BREAK) runs
     ! it under the debugger, stopped at its first instruction, and /NODEBUG

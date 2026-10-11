@@ -22,8 +22,9 @@ never had.
   progress) makes the console a DCL command interpreter: command
   procedures and command levels, symbol substitution, expressions,
   `$STATUS`/ON, labels and GOTO, IF blocks, GOSUB, CALL, the lexical
-  functions, SET VERIFY, and SYS$INPUT from a procedure (DECK/EOD) are
-  done; then DCL's file I/O (INQUIRE, READ, WRITE, OPEN, CLOSE).
+  functions, SET VERIFY, SYS$INPUT from a procedure (DECK/EOD), and
+  DCL's file I/O (OPEN, CLOSE, READ, WRITE, INQUIRE) are done; then STOP
+  and Ctrl/Y.
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
 - `docs/DEVIATIONS.md` — running log of suspected ISA/behavior fidelity issues found in
@@ -73,7 +74,8 @@ never had.
   `TestProbe50Oracle` replays. Round 2 (`probe50v.com`,
   `vax/probe50v.log`, `TestProbe50VOracle`) is verification, and round
   3 (`probe50i.com`, `vax/probe50i.log`, `TestProbe50IOracle`) SYS$INPUT,
-  DECK, and EOD.
+  DECK, and EOD. Round 4 (`probe50f.com`, and the interactive
+  `probe50q.com`) is DCL's file I/O, not yet run.
 - `testdata/probe49/` — Phase 49's VMS probe in three rounds (`probe6`,
   `probe6b`, `probe6c`; README.md has each round's answers), run by
   `TestProbe6*`; `testdata/rms49/` and `testdata/sec49/` are the phase's
@@ -309,6 +311,17 @@ expect adjustment as phases land):
   `procedureSource`). Data nothing reads is SKPDAT after an image and a
   command after one of DCL's own commands (`dclOwnCommands`, by the
   grammar's syntax name; `Console.imageRan`).
+  **DCL's file I/O** (`dclfile.go`, subtask 17): OPEN opens a file
+  through `rms.Session.OpenDCLFile` (`internal/rms/dclfile.go`: a
+  volume file by `$OPEN`'s and `$CREATE`'s code, among the file's RMS
+  openers, with a `FileHandle`'s record stream; a host file as lines)
+  and defines its logical name (process table, supervisor mode);
+  `Console.dclFiles` keeps it open past its procedure, until CLOSE or
+  `EndSession`. READ/WRITE need no OPEN for SYS$INPUT, SYS$OUTPUT,
+  SYS$ERROR, and SYS$COMMAND (`processPermanentFile`); READ SYS$INPUT
+  takes the procedure's next record, SYS$COMMAND and INQUIRE read the
+  terminal (`readTerminal`). /ERROR and /END_OF_FILE branch with
+  `branchStatus`, which stops `procedureLine`'s ON action.
   `internal/console/consoletest` is its test support.
 - `internal/io` — device abstraction (Phase 09).
 - `internal/vmsdef` — VMS's own definitions, shared by the assembler, RTL, RMS,

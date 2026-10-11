@@ -48,9 +48,10 @@ func newTypeTestSession(t *testing.T) (*Session, *volume.Volume) {
 // it). Each record's VFC control bytes are {0, 1}: no leading control, and
 // a trailing "one newline then one carriage return" -- vfcTrailing's
 // simplest non-zero encoding (see rms/vfc.go in the sibling ods2 module) --
-// so the expected rendered text is fully predictable: each line followed
-// by "\n\r", with nothing prepended.
-func createVFCTestFile(t *testing.T, vol *volume.Volume, name string, lines []string) {
+// so the expected rendered text of a print file (rat ondisk.AttrPrintCC)
+// is fully predictable: each line followed by "\n\r", with nothing
+// prepended.
+func createVFCTestFile(t *testing.T, vol *volume.Volume, name string, rat uint8, lines []string) {
 	t.Helper()
 
 	dir, err := vol.OpenDirectory(ondisk.MasterFileDirectoryFid)
@@ -70,6 +71,7 @@ func createVFCTestFile(t *testing.T, vol *volume.Volume, name string, lines []st
 
 	f, err := vol.CreateFile(dir, name, ondisk.RecAttr{
 		Format:        ondisk.RecordFormatVFC,
+		Attributes:    rat,
 		VfcSize:       2,
 		MaxRecordSize: 132,
 	}, bm, ib)
@@ -111,13 +113,13 @@ func TestSession_typeStreamFile(t *testing.T) {
 	}
 }
 
-// TestSession_typeVFCFile confirms VFC records are rendered with their
-// carriage control expanded, not left as raw framed bytes -- the
-// "record-format-aware" half of this subtask's own requirement, which a
-// Stream_LF-only test fixture can't exercise.
+// TestSession_typeVFCFile confirms VFC records of a print file (RAT=PRN)
+// are rendered with their carriage control expanded, not left as raw
+// framed bytes -- the "record-format-aware" half of this subtask's own
+// requirement, which a Stream_LF-only test fixture can't exercise.
 func TestSession_typeVFCFile(t *testing.T) {
 	s, vol := newTypeTestSession(t)
-	createVFCTestFile(t, vol, "REPORT.LIS", []string{"LINE1", "LINE2"})
+	createVFCTestFile(t, vol, "REPORT.LIS", ondisk.AttrPrintCC, []string{"LINE1", "LINE2"})
 
 	text, err := s.Type("REPORT.LIS")
 	if err != nil {
@@ -127,6 +129,24 @@ func TestSession_typeVFCFile(t *testing.T) {
 	const want = "LINE1\n\rLINE2\n\r"
 	if text != want {
 		t.Errorf("Type(REPORT.LIS) = %q, want %q", text, want)
+	}
+}
+
+// TestSession_typeVFCCarriageReturn: the fixed control of VFC records
+// with carriage-return carriage control (RAT=CR, as DCL's OPEN/WRITE makes
+// them) is no carriage control: each record is a line.
+func TestSession_typeVFCCarriageReturn(t *testing.T) {
+	s, vol := newTypeTestSession(t)
+	createVFCTestFile(t, vol, "DATA.DAT", ondisk.AttrImpliedCC, []string{"LINE1", "LINE2"})
+
+	text, err := s.Type("DATA.DAT")
+	if err != nil {
+		t.Fatalf("Type: %v", err)
+	}
+
+	const want = "LINE1\nLINE2\n"
+	if text != want {
+		t.Errorf("Type(DATA.DAT) = %q, want %q", text, want)
 	}
 }
 

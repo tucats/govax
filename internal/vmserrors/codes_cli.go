@@ -190,6 +190,7 @@ const (
 	// docs/PHASE-50 - DCL command procedures.md: verification.
 	cliConflict
 	cliInvPrefix
+	cliUndFil
 )
 
 // CLI facility status codes -- CLI_ prefix, matching real VMS's CLI$_
@@ -471,6 +472,11 @@ const (
 	// PREFIX control string it can't use.
 	CLI_CONFLICT  = CLIFacility<<FacilityPosition | cliConflict<<MessagePosition | StatusWarning
 	CLI_INVPREFIX = CLIFacility<<FacilityPosition | cliInvPrefix<<MessagePosition | StatusError
+
+	// DCL's file I/O's message (docs/PHASE-50, subtask 17): CLI_UNDFIL, a
+	// warning, for a READ, WRITE, or CLOSE of a logical name OPEN didn't
+	// define.
+	CLI_UNDFIL = CLIFacility<<FacilityPosition | cliUndFil<<MessagePosition | StatusWarning
 )
 
 func init() {
@@ -619,5 +625,6 @@ func init() {
 	DefineMessage(CLI_IVVALU, CLIFacility, "IVVALU", "invalid value syntax - see command documentation")
 	DefineMessage(CLI_CONFLICT, CLIFacility, "CONFLICT", "illegal combination of command elements - check documentation")
 	DefineMessage(CLI_INVPREFIX, CLIFacility, "INVPREFIX", "invalid prefix format string - check FAO directives")
+	DefineMessage(CLI_UNDFIL, CLIFacility, "UNDFIL", "file has not been opened by DCL - check logical name")
 	DefineMessage(CLI_BADLIMIT, CLIFacility, "BADLIMIT", "Invalid /LIMIT value !D (must be at least 1; DELETE NAME;* removes every version)")
 }

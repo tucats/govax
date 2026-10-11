@@ -122,10 +122,10 @@ func TestLoadEvaxGrammar_verbCount(t *testing.T) {
 	// 48 spawn. Phase 50 removes include and its alias @: the console
 	// reads "@file" before the grammar. It also drops "?", an old alias
 	// of HELP, and adds ON and CONTINUE, and then THEN, ELSE, ENDIF,
-	// GOTO, GOSUB, RETURN, CALL, SUBROUTINE, and ENDSUBROUTINE, and
-	// DECK and EOD.
-	if len(g.verbOrder) != 55 {
-		t.Errorf("got %d verbs, want 55: %v", len(g.verbOrder), verbNames(g))
+	// GOTO, GOSUB, RETURN, CALL, SUBROUTINE, and ENDSUBROUTINE, DECK
+	// and EOD, and OPEN, CLOSE, READ, WRITE, and INQUIRE.
+	if len(g.verbOrder) != 60 {
+		t.Errorf("got %d verbs, want 60: %v", len(g.verbOrder), verbNames(g))
 	}
 }
 

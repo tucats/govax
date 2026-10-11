@@ -683,7 +683,7 @@ func (c *Console) runLevel(source *procedureSource, cmd procedureCommand, dispat
 // goes to dispatch, as the level's lines do.
 func (c *Console) procedureLine(level *commandLevel, dispatch func(string) error, run func() error) (exit procedureExit, stop bool) {
 	for run != nil {
-		c.statusSet = false
+		c.statusSet, c.statusHandled = false, false
 
 		err := run()
 		run = nil
@@ -707,6 +707,8 @@ func (c *Console) procedureLine(level *commandLevel, dispatch func(string) error
 		)
 
 		switch {
+		case c.statusSet && c.statusHandled:
+			continue
 		case c.statusSet:
 			status, cause = c.status, c.statusErr
 		case err != nil:

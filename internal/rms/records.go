@@ -46,10 +46,13 @@ var (
 )
 
 // writeRecords writes f's entire content to w as text, honoring its record
-// format: VFC records have their carriage control expanded (odsrms.
-// FormatVFCRecord) and lineEnding is not used for them at all, since a VFC
-// record's own trailing control byte already determines what follows it;
-// every other format gets lineEnding appended after each record,
+// format: VFC records of a print file (RAT=PRN) have their carriage
+// control expanded (odsrms.FormatVFCRecord) and lineEnding is not used for
+// them at all, since a VFC record's own trailing control byte already
+// determines what follows it. Other VFC records (RAT=CR, as DCL's OPEN
+// makes them) leave their fixed control out: it is no carriage control
+// without PRN (the RMS manual's FAB$B_RAT). Every other record gets
+// lineEnding appended after it,
 // reconstructing ordinary line-oriented text regardless of whether the
 // original framing was a length prefix (Fixed/Variable) or a stream
 // delimiter odsrms.Reader has already stripped off (Stream).
@@ -61,6 +64,7 @@ func writeRecords(w io.Writer, f *volume.File, lineEnding []byte) error {
 
 	attr := f.Header.RecordAttributes
 	isVFC := attr.Format == ondisk.RecordFormatVFC
+	printFile := attr.Attributes&ondisk.AttrPrintCC != 0
 	vfcSize := int(attr.VfcSize)
 
 	for {
@@ -73,7 +77,11 @@ func writeRecords(w io.Writer, f *volume.File, lineEnding []byte) error {
 			return err
 		}
 
-		if isVFC && len(rec) >= vfcSize {
+		if isVFC && !printFile && len(rec) >= vfcSize {
+			rec = rec[vfcSize:]
+		}
+
+		if isVFC && printFile && len(rec) >= vfcSize {
 			if _, err := w.Write(odsrms.FormatVFCRecord(rec[:vfcSize], rec[vfcSize:])); err != nil {
 				return err
 			}

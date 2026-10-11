@@ -172,12 +172,15 @@ func messageText(v uint32) string {
 // commandStatus is what the command being dispatched says about
 // $STATUS, besides its error: set when it names its status (value, and
 // cause, the error behind it, if any), keep when, succeeding, it leaves
-// $STATUS alone.
+// $STATUS alone. handled says the command has acted on its status
+// itself, by an /ERROR or /END_OF_FILE branch (dclfile.go), so the
+// level's ON action isn't taken.
 type commandStatus struct {
-	set   bool
-	value uint32
-	cause error
-	keep  bool
+	set     bool
+	value   uint32
+	cause   error
+	keep    bool
+	handled bool
 }
 
 // Status returns $STATUS: the condition value of the last command that
@@ -205,6 +208,15 @@ func (c *Console) setCommandStatus(v uint32, cause error) {
 	c.commandStatus = commandStatus{set: true, value: v, cause: cause}
 }
 
+// branchStatus says the command being dispatched ends with condition
+// value v, which it has acted on already by going to its /ERROR or
+// /END_OF_FILE label: $STATUS is v, and the level's ON action isn't
+// taken, as the DCL Dictionary says of each such qualifier ("overrides
+// any ON condition action specified").
+func (c *Console) branchStatus(v uint32, cause error) {
+	c.commandStatus = commandStatus{set: true, value: v, cause: cause, handled: true}
+}
+
 // keepStatus says the command being dispatched, if it succeeds, leaves
 // $STATUS as it was (the User's Manual's 13.15: SHOW SYMBOL, IF, ...).
 func (c *Console) keepStatus() { c.commandStatus.keep = true }
@@ -226,6 +238,7 @@ func (c *Console) statusOf(run func() error) error {
 	switch {
 	case cs.set:
 		c.setStatus(cs.value, cs.cause)
+		c.statusHandled = cs.handled
 	case err != nil:
 		c.setStatus(conditionValue(err), err)
 	case !cs.keep:
