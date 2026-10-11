@@ -101,6 +101,8 @@
 //              10/11/26    STOP ends command procedures; Ctrl/Y in a
 //                          procedure (ON CONTROL_Y, CONTINUE, KEYS);
 //                          added SET [NO]CONTROL
+//              10/11/26    SPAWN's subprocess runs the console's DCL;
+//                          added LOGOUT and MCR
 
 This is the help documentation for the govax VAX emulator.  Topic sections are
 marked by a "$" delimiter.  This is followed by as many tokens of the help
@@ -1041,13 +1043,16 @@ $SPAWN
         SPAWN [/NOWAIT] [/INPUT=file] [/OUTPUT=file] [/PROCESS=name]
               [/PROMPT=string] [/NOSYMBOLS] [/NOLOGICAL_NAMES] [command]
 
-    The subprocess runs govax's small command interpreter, which stands in
-    for DCL: it runs the command and logs out, or, with no command, reads
-    commands from its input until the end of the input or LOGOUT.  It knows
-    RUN, MCR, foreign commands and other symbols (it gets copies of the
-    console's, and of its process logical names, unless /NOSYMBOLS or
-    /NOLOGICAL_NAMES), symbol assignments, DELETE/SYMBOL, SHOW SYMBOL,
-    SHOW LOGICAL, EXIT, and LOGOUT.  SPAWN says when the subprocess has
+    The subprocess runs DCL, the same command interpreter as the console:
+    it runs the command and logs out, or, with no command, reads commands
+    from its input until the end of the input, LOGOUT, or EXIT.  Every DCL
+    command works there, command procedures (@) included, with the
+    subprocess's own symbols (copies of the console's, unless /NOSYMBOLS),
+    logical names (copies of its process logical names, unless
+    /NOLOGICAL_NAMES), default directory, $STATUS, and open files.  The
+    commands that work the machine itself (DEBUG, ASM, INITIALIZE/VAX,
+    VMINIT, ZERO, SAVE, LOAD, SPAWN, ...) are the console's own, and give
+    %VAX-E-NOTSUBPROC.  SPAWN says when the subprocess has
     been made (%DCL-S-SPAWNED, and %DCL-S-ATTACHED if it waits) and when
     control is back (%DCL-S-RETURNED), as DCL does.
 
@@ -1066,6 +1071,31 @@ $SPAWN
 
         VAX> HELLO :== $DUA0:[WORK]HELLO.EXE
         VAX> SPAWN HELLO
+        VAX> SPAWN DIRECTORY
+        VAX> SPAWN/NOWAIT @NIGHTLY
+
+$LOGOUT
+
+    In a subprocess (see HELP SPAWN), LOGOUT ends its DCL and the process,
+    which says so ("Process name logged out at ...").  The process's final
+    status is $STATUS's.  In the console's own process it is QUIT.
+
+    Syntax:
+
+        LOGOUT
+
+$MCR
+
+    MCR runs an image, as a foreign command does, with the rest of the
+    line as the text LIB$GET_FOREIGN returns.
+
+    Syntax:
+
+        MCR image [text]
+
+    Example:
+
+        VAX> MCR DUA0:[WORK]ECHO hello there
 
 $SYMB
     A symbol assignment gives a name to a string, as DCL's do.  When the first

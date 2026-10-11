@@ -160,7 +160,8 @@ func writeCommands(t *testing.T, lines ...string) string {
 // comment, an unknown verb (DCL's message, and the CLI goes on), a
 // symbol assignment and the foreign command it defines (its text, as
 // DCL treats it, reaching LIB$GET_FOREIGN), a failing image (its status's
-// message), an alias, and LOGOUT, after which nothing more runs. Its
+// message), an alias (whose value, as DCL has it, isn't looked up as a
+// symbol again), and LOGOUT, after which nothing more runs. Its
 // input being a file, it echoes each line it reads (DCL's verify), and
 // LOGOUT writes the job's report. The process ends with the last
 // command's status.
@@ -176,10 +177,10 @@ func TestCLI_commandFile(t *testing.T) {
 		`$ RUN "`+child+`"`,
 		"$ FROBNICATE",
 		`$ ECHO :== "$`+echo+`"`,
-		"$ ECHO some   text",
+		`$ SAY*IT :== WRITE SYS$OUTPUT`,
+		`$ SAY "said it again"`,
 		`$ RUN "`+abort+`"`,
-		`$ SAY*IT :== ECHO said`,
-		"$ SAY it again",
+		"$ ECHO some   text",
 		"$ LOGOUT",
 		`$ RUN "`+child+`"`,
 	)
@@ -196,13 +197,13 @@ func TestCLI_commandFile(t *testing.T) {
 		"%DCL-W-IVVERB, unrecognized command verb - check validity and spelling",
 		` \FROBNICATE\`,
 		`$ ECHO :== "$` + echo + `"`,
-		"$ ECHO some   text",
-		"SOME TEXT",
+		`$ SAY*IT :== WRITE SYS$OUTPUT`,
+		`$ SAY "said it again"`,
+		"said it again",
 		`$ RUN "` + abort + `"`,
 		"%SYSTEM-F-ABORT, abort",
-		`$ SAY*IT :== ECHO said`,
-		"$ SAY it again",
-		"SAID IT AGAIN",
+		"$ ECHO some   text",
+		"SOME TEXT",
 		"$ LOGOUT",
 	}
 

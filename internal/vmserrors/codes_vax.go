@@ -126,6 +126,9 @@ const (
 	vaxPCRegister
 	vaxOutOfPhase
 	vaxBranchRange
+
+	// internal/console: a command a subprocess's DCL doesn't have.
+	vaxNotSubproc
 )
 
 // VAX facility status codes -- VAX_ prefix.
@@ -298,6 +301,10 @@ const (
 	// VAX_DIVZEROWARN is VAX_DIVZERO as a warning: MACRO-32 leaves a
 	// division by zero to the linker and only warns of it.
 	VAX_DIVZEROWARN = VAXFacility<<FacilityPosition | vaxDivZero<<MessagePosition | StatusWarning
+
+	// VAX_NOTSUBPROC is a command that works the machine itself, or
+	// process 1's session, typed in a subprocess's DCL.
+	VAX_NOTSUBPROC = VAXFacility<<FacilityPosition | vaxNotSubproc<<MessagePosition | StatusError
 )
 
 func init() {
@@ -401,6 +408,8 @@ func init() {
 	DefineMessage(VAX_OUTOFPHASE, VAXFacility, "OUTOFPHASE", "Label !S is defined again later")
 	DefineMessage(VAX_BRANCHRANGE, VAXFacility, "BRANCHRANGE", "Branch displacement !D out of range")
 	DefineMessage(VAX_DIVZEROWARN, VAXFacility, "DIVZERO", "Division by zero")
+
+	DefineMessage(VAX_NOTSUBPROC, VAXFacility, "NOTSUBPROC", "!S is not available in a subprocess")
 
 	DefineMessage(VAX_GRAMMAR, VAXFacility, "GRAMMAR", "Loading command grammar")
 	DefineMessage(VAX_ALLOCVAX, VAXFacility, "ALLOCVAX", "Allocating initial VAX")

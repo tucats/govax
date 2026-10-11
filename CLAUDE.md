@@ -24,7 +24,8 @@ never had.
   `$STATUS`/ON, labels and GOTO, IF blocks, GOSUB, CALL, the lexical
   functions, SET VERIFY, SYS$INPUT from a procedure (DECK/EOD), and
   DCL's file I/O (OPEN, CLOSE, READ, WRITE, INQUIRE), and STOP and
-  Ctrl/Y are done; then `@` in the subprocess CLI and a probe.
+  Ctrl/Y, and the console's whole DCL in subprocesses are done; then a
+  probe.
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
 - `docs/DEVIATIONS.md` — running log of suspected ISA/behavior fidelity issues found in
@@ -443,11 +444,17 @@ expect adjustment as phases land):
   LIB$GET_INPUT (`input.go`) reads a line from the terminal with the
   terminal's rules (`Environment.ReadInputLine`). LIB$SPAWN (`spawn.go`,
   Phase 48) reads its 13 arguments and calls `Environment.Spawn`. The
-  subprocess runs govax's small CLI in place of DCL
-  (`internal/console/subcli.go`: RUN, MCR, foreign commands, symbols,
-  SHOW SYMBOL, SHOW LOGICAL, EXIT, LOGOUT; its stub's shim,
-  `EXE$CLI_COMMAND`, runs one image after another in the process), and
-  the console's SPAWN (`spawncmd.go`) calls LIB$SPAWN in process 1.
+  subprocess runs the console's own DCL (`internal/console/subcli.go`,
+  Phase 50's subtask 19): its interpreter is a goroutine that takes
+  turns with the engine (strict handoff through its stub's shim,
+  `EXE$CLI_COMMAND`: resume, then a `cliYield` to wait, call an image,
+  or log out), with the console's per-process DCL state swapped to the
+  process's (`swapDCLState`, `dclState`: RTL, Logicals,
+  ContainerSession, Out, symbols, levels, $STATUS, ...; `processOne` is
+  process 1 throughout, `subCLI` the subprocess's CLI). RUN there is
+  `subprocessRun`; `processOneCommands` (DEBUG, ASM, VMINIT, SPAWN, ...)
+  are VAX_NOTSUBPROC. The console's SPAWN (`spawncmd.go`) calls
+  LIB$SPAWN in process 1.
 - `internal/disasm` — the disassembler (Phase 11; moved out of `internal/asm` in
   Phase 41 so other packages can use it): `Disassemble` decodes one instruction
   with `internal/cpu`'s table into a `Decoded` of structured `Operand`s

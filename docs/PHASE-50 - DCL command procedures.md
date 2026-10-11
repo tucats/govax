@@ -17,8 +17,10 @@ PREFIX, and F$VERIFY's echo, is done and checked against VMS 7.3
 DECK and EOD (2026-10-11, checked against VMS 7.3), and so is subtask
 17, DCL's file I/O: OPEN, CLOSE, READ, WRITE, and INQUIRE (2026-10-11,
 checked against VMS 7.3 in round 4 of the probe), and so is subtask
-18, STOP and Ctrl/Y (2026-10-11, not yet probed). Subtask 19, `@` in
-the subprocess CLI, is next.
+18, STOP and Ctrl/Y (2026-10-11, not yet probed), and so is subtask 19,
+which, at the author's request, gives a subprocess the console's whole
+DCL rather than `@` alone (2026-10-11). Subtask 20, the VMS probe of
+what is still unconfirmed, is next.
 
 The console should act like a VMS DCL command processor. Until now it
 had INCLUDE (and `@` as its alias), which runs a file of console
@@ -550,6 +552,61 @@ CONTINUE, SET CONTROL); what was chosen is in DEVIATIONS.md ("[Phase
   Ctrl/Y only echoes, and an attention key no AST takes is ignored.
   F$ENVIRONMENT's CONTROL and NOCONTROL report the settings.
 
+### The subprocess's DCL (subtask 19)
+
+`internal/console/subcli.go`. The author asked for more than `@` in the
+small CLI Phase 48 gave subprocesses: "a fully-functional version of the
+DCL command processor", so that `SPAWN DIRECTORY` runs DIRECTORY and
+logs out, and a spawned procedure can use every command the console has.
+So the small CLI is gone, and a subprocess runs the console's own DCL.
+
+- **Two goroutines taking turns.** The console's DCL is synchronous Go:
+  a procedure is a loop (`runLevel`) that runs each line to its end. A
+  subprocess's images, though, must run on the engine, which is also
+  running the other processes. So each subprocess's interpreter runs on
+  a goroutine of its own (`runInterpreter`), which takes turns with the
+  engine through the CLI stub's shim: the shim hands it the CPU
+  (`subprocessCLI.run`), and it hands it back (`handBack`) with a
+  `cliYield`: wait (its next command line isn't there yet; the shim
+  returns ErrWait, and the process waits in the scheduler), call an
+  image (RUN, MCR, a foreign command: `subprocessRun`; the shim returns
+  the `CallRequest`, and `endCLIImage` puts the CLI back when the image
+  ends, with its status for the command), or log out. Only one of the
+  two runs at a time, so nothing is shared at once; the race detector
+  agrees.
+- **The DCL state is the process's.** While the interpreter runs, the
+  console's per-process DCL fields are the subprocess's
+  (`swapDCLState`, exchanging them with a `dclState`): its environment
+  (RTL), logical names, RMS session (its default directory), output
+  (`cliOutput`, its SYS$OUTPUT a line at a time), symbols, command
+  levels, $STATUS, verification, OPEN's files, and the rest. Process 1
+  is `Console.processOne` throughout (its images, `InheritSymbols`), and
+  the terminal is always process 1's Out (`consoleOutput`). A
+  procedure's data lines reach the subprocess's image as process 1's do
+  (`procedureInput`, now with the subprocess's verification).
+- **Process 1's commands.** Those that work the machine itself or
+  process 1's own session (`processOneCommands`: DEBUG, ASM, INITIALIZE/
+  VAX, VMINIT, ZERO, SAVE, LOAD, BOOT, ROM, CLEAR, SET QUANTUM, SPAWN,
+  ...) and the console's CALL and GO are `%VAX-E-NOTSUBPROC` in a
+  subprocess. SPAWN is among them until a subprocess's DCL can wait for
+  its own subprocess.
+- **Logging out.** LOGOUT (now a console verb; QUIT in process 1),
+  EXIT at command level 0 (its status is $STATUS, the final status), or
+  the end of the input. A deleted process's interpreter, waiting for its
+  turn, is unwound (`abort`, a panic its goroutine recovers) with its
+  state in place, so its levels and files are its own to leave.
+- **What changed for the old CLI's users.** An alias's value is no
+  longer looked up as a symbol again (VMS 7.3 doesn't, round 1 of the
+  probe); SHOW LOGICAL's status is SS$_NORMAL or SHOW$_NOTRAN with bit
+  28, in process 1 too (VMS's SHOW image, probes 4 and 5); a job that
+  isn't interactive has SET VERIFY on, so its procedures' lines show too.
+  MCR is a console verb now.
+- **Parallel only while the machine runs.** A SPAWN/NOWAIT subprocess
+  runs while the engine does (Phase 43's Decision 4): during process 1's
+  RUN, GO, a waiting SPAWN, and the like, not while process 1's DCL runs
+  its own commands or sits at the prompt. Running the other processes
+  between process 1's commands, and at the prompt, is left for later.
+
 ## Subtasks
 
 1. **Survey**: the User's Manual's rules for `@`, parameters, command
@@ -614,7 +671,9 @@ Later rounds of this phase, in a likely order:
     I9 sections wait for READ and WRITE (`TestProbe50IOracle`).
 18. **STOP** returning to level 0, and Ctrl/Y within procedures (done,
     see "STOP and Ctrl/Y").
-19. **The subprocess CLI** (`subcli.go`) gets `@`, on the same stack.
+19. **The subprocess CLI** (`subcli.go`) gets `@`, on the same stack
+    (done, and more: the console's whole DCL; see "The subprocess's
+    DCL").
 20. **A VMS probe**: run a set of procedures on VMS 7.3 for the details
     the manual leaves open (see "Open questions"). Round 1,
     `testdata/dcl50`, came with subtasks 8 and 9.
@@ -905,3 +964,21 @@ details are in DEVIATIONS.md.)
   level's five ways out, SET CONTROL), `controlyimage_test.go` (an image
   interrupted mid-run: STOP, ON CONTROL_Y, CONTINUE). The choices are in
   DEVIATIONS.md ("[Phase 50] STOP and Ctrl/Y").
+- 2026-10-11: Subtask 19, the subprocess's DCL (see "The subprocess's
+  DCL"). The author asked for the console's whole DCL in a subprocess,
+  not `@` alone. `subcli.go` is rewritten: the interpreter is a goroutine
+  taking turns with the engine, with the console's per-process DCL state
+  swapped in (`dclState`, `swapDCLState`); `Console.processOne` and
+  `subCLI`; `Run` in a subprocess is `subprocessRun`; new verbs LOGOUT
+  and MCR; new message VAX_NOTSUBPROC; `NewDispatcher` makes the first
+  dispatcher the console's; EXIT n at level 0 sets $STATUS; SHOW
+  LOGICAL's status is VMS's. The old CLI's own parser and displays are
+  gone. HELP: SPAWN, LOGOUT, MCR. Tests: `subdcl_test.go` (SPAWN of a
+  DCL command; a spawned procedure with IF, a GOTO loop, an image reading
+  its data lines, lexicals, OPEN/READ, inherited symbols, and process
+  1's DCL untouched; DEBUG refused; STOP of a subprocess mid-procedure),
+  and the Phase 48 tests unchanged but for an alias that relied on
+  being looked up twice. The author asked whether a procedure's SPAWN of
+  another procedure works, and with /NOWAIT whether they run in
+  parallel: yes, and in turns while the machine runs (above).
+

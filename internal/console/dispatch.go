@@ -32,6 +32,12 @@ func NewDispatcher(c *Console, g *dcl.Grammar, h *Help) *Dispatcher {
 	d := &Dispatcher{Console: c, Grammar: g, Help: h}
 	d.bindGrammar()
 
+	// The first dispatcher is the console's, which XFC$CONSOLE_CMD and
+	// the subprocesses' DCL (subcli.go) use.
+	if c.Dispatcher == nil {
+		c.Dispatcher = d
+	}
+
 	return d
 }
 
@@ -215,6 +221,13 @@ func (d *Dispatcher) dispatchParsed(line string, verbSymbol bool) error {
 		return verbError(err)
 	}
 
+	// A subprocess's DCL doesn't work the machine itself (subcli.go).
+	if processOneCommands[r.Active] || r.EntryPoint != "" {
+		if err := d.Console.processOneOnly(strings.ToUpper(r.Verb)); err != nil {
+			return err
+		}
+	}
+
 	// At the Ctrl/Y level, a command that runs an image ends the
 	// interrupted procedure first (dclcontroly.go).
 	if err := d.Console.leaveControlY(dclOwnCommands[r.Active]); err != nil {
@@ -336,6 +349,10 @@ func (d *Dispatcher) bindGrammar() {
 	g.Bind("INQUIRE", d.inquireCommand)
 	g.Bind("CONTINUE", func(id int64, r *dcl.Result) error { return d.Console.continueCommand() })
 	g.Bind("QUIT", func(id int64, r *dcl.Result) error { return d.Console.Quit() })
+	g.Bind("LOGOUT", func(id int64, r *dcl.Result) error { return d.Console.logoutCommand() })
+	g.Bind("MCR", func(id int64, r *dcl.Result) error {
+		return d.runForeign(r.String("IMAGE"), r.String("TEXT"))
+	})
 	g.Bind("DEBUG", func(id int64, r *dcl.Result) error { return d.Console.StartDebugger() })
 
 	g.Bind("VMINIT", func(id int64, r *dcl.Result) error {

@@ -55,12 +55,6 @@ import (
 //   - Symbol substitution ('SYMBOL', ''SYMBOL' in quotes, and &SYMBOL)
 //     is in dclsubst.go.
 
-// maxSymbolDepth is how many times a subprocess's CLI (subcli.go) lets
-// symbol substitution rewrite one command: enough for an alias of an
-// alias, short of an alias of itself. (The console's DCL looks an
-// alias's value up only once, as VMS does.)
-const maxSymbolDepth = 16
-
 // dclSymbol is one DCL symbol.
 type dclSymbol struct {
 	// name is the symbol's full name, uppercase, without any "*".

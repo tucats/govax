@@ -123,9 +123,10 @@ func TestLoadEvaxGrammar_verbCount(t *testing.T) {
 	// reads "@file" before the grammar. It also drops "?", an old alias
 	// of HELP, and adds ON and CONTINUE, and then THEN, ELSE, ENDIF,
 	// GOTO, GOSUB, RETURN, CALL, SUBROUTINE, and ENDSUBROUTINE, DECK
-	// and EOD, and OPEN, CLOSE, READ, WRITE, and INQUIRE.
-	if len(g.verbOrder) != 60 {
-		t.Errorf("got %d verbs, want 60: %v", len(g.verbOrder), verbNames(g))
+	// and EOD, and OPEN, CLOSE, READ, WRITE, and INQUIRE, and LOGOUT and
+	// MCR.
+	if len(g.verbOrder) != 62 {
+		t.Errorf("got %d verbs, want 62: %v", len(g.verbOrder), verbNames(g))
 	}
 }
 

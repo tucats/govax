@@ -57,6 +57,11 @@ func (c *Console) Run(fn string, opts RunOptions) error {
 		return err
 	}
 
+	// A subprocess's DCL runs the image in its process (subcli.go).
+	if cli := c.subCLI; cli != nil {
+		return c.subprocessRun(cli, fn, opts.CommandLine)
+	}
+
 	// A previous image that was stopped and never exited ends now.
 	c.runDownAbandonedImage()
 

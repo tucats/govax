@@ -305,15 +305,33 @@ func (d logicalDisplay) logicalTables(specs []string) ([]*lnm.Table, error) {
 //     1 "WORK4" = "$255$DUA17:" (LNM$SYSTEM_TABLE)
 //
 //     A name that isn't found prints %SHOW-S-NOTRAN.
+//
+// Its status is SS$_NORMAL, or SHOW$_NOTRAN when a name had no
+// translation, each with STS$M_INHIB_MSG set, as VMS's SHOW image
+// returned them (testdata/mp/probe4 and probe5).
 func (c *Console) ShowLogical(names, tables []string, full bool) error {
-	_, err := logicalDisplay{db: c.Logicals, out: c.Printf}.show(names, tables, full)
+	untranslated, err := logicalDisplay{db: c.Logicals, out: c.Printf}.show(names, tables, full)
+	if err != nil {
+		return err
+	}
 
-	return err
+	if untranslated {
+		c.setCommandStatus(showNotran|stsInhibitMsg, nil)
+	} else {
+		c.setCommandStatus(ssNormal|stsInhibitMsg, nil)
+	}
+
+	return nil
 }
 
+// showNotran is SHOW$_NOTRAN, SHOW LOGICAL's status for a name with no
+// translation (VMS 7.3's $STATUS, %X10788019 with STS$M_INHIB_MSG;
+// testdata/mp/probe5/vax, step 10). govax's tables have no SHOW$
+// facility, so the value is VMS's.
+const showNotran = 0x00788019
+
 // logicalDisplay is SHOW LOGICAL's display of one process's logical
-// names (db), written through out: the console's (process 1's), or a
-// subprocess CLI's on its SYS$OUTPUT.
+// names (db), written through out.
 type logicalDisplay struct {
 	db  *lnm.Database
 	out func(format string, args ...any)

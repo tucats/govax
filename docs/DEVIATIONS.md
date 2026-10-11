@@ -3403,6 +3403,28 @@ widened."
   - STOP/IMAGE and STOP/[NO]EXIT are not done.
 - **Status**: the manual's rules followed; the choices above unconfirmed.
 
+### [Phase 50] The subprocess's DCL: choices without a probe
+
+- **Where**: `internal/console/subcli.go`, `logical.go` (SHOW LOGICAL's
+  status), `procedure.go` (`Console.Exit` at level 0).
+- **What**: a subprocess runs the console's DCL (docs/PHASE-50, "The
+  subprocess's DCL"). Chosen without VMS:
+  - The commands refused in a subprocess (`processOneCommands`) are
+    govax's machine commands, and SPAWN (VMS allows a subprocess its
+    own).
+  - A job that isn't interactive (LOGINOUT with a file or mailbox
+    input) has SET VERIFY on from its start, so a procedure it runs
+    shows its lines (VMS's batch default; probe 4 showed only the
+    job's own lines).
+  - Ctrl/Y in a subprocess's procedure isn't delivered (the Ctrl/Y
+    handling is process 1's).
+  - A subprocess's procedures run, like its images, only while the
+    machine runs.
+  - SHOW LOGICAL's status in process 1 is now SS$_NORMAL (or
+    SHOW$_NOTRAN) with bit 28, as VMS gave in a subprocess (probes 4 and
+    5); it was CLI$_NORMAL.
+- **Status**: unconfirmed.
+
 <!--
 Entry template:
 

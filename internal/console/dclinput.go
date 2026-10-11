@@ -226,6 +226,12 @@ type procedureInput struct {
 	c      *Console
 	source *procedureSource
 
+	// cli is the subprocess whose procedure it is, nil for process 1's:
+	// its image reads while process 1's DCL state is the console's, so
+	// the record is shown with the subprocess's put back for the moment
+	// (subcli.go).
+	cli *subprocessCLI
+
 	// rest is what is left of the line Read last read, "\n" and all.
 	rest []byte
 
@@ -246,7 +252,13 @@ func (in *procedureInput) Read(b []byte) (int, error) {
 			return 0, io.EOF
 		}
 
-		in.c.showData(record)
+		if cli := in.cli; cli != nil && in.c.subCLI != cli {
+			in.c.swapDCLState(&cli.state)
+			in.c.showData(record)
+			in.c.swapDCLState(&cli.state)
+		} else {
+			in.c.showData(record)
+		}
 		in.rest = []byte(record + "\n")
 	}
 
@@ -270,7 +282,7 @@ func (c *Console) withProcedureInput(source *procedureSource, fn func() error) e
 		return fn()
 	}
 
-	in := &procedureInput{c: c, source: source}
+	in := &procedureInput{c: c, source: source, cli: c.subCLI}
 	restore := env.RedirectInput(in)
 
 	defer func() {

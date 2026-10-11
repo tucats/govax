@@ -221,6 +221,19 @@ grammar console
 
     verb quit
 
+    ! LOGOUT ends a subprocess's DCL, and so the process (docs/PHASE-50,
+    ! subtask 19); in process 1 it is QUIT.
+    verb logout
+
+    ! MCR image [text]: runs the image, with the text for
+    ! LIB$GET_FOREIGN, as a foreign command does.
+    verb mcr/id=1670
+        parameter   image/id=1671               -
+                    /type=$string               -
+                    /prompt="Image"
+        parameter   text/id=1672                -
+                    /type=$rest_of_line
+
     ! ON condition THEN [$] command: what a command procedure does when a
     ! command fails with the condition's severity or worse, or on Ctrl/Y
     ! (docs/PHASE-50, subtask 10). CONTINUE does nothing, and goes on.

@@ -58,7 +58,7 @@ func (c *Console) images() *imageProcess {
 // imagesOf returns env's image state: process 1's for the console's own
 // process, otherwise env's own, made empty the first time.
 func (c *Console) imagesOf(env *corevms.Environment) *imageProcess {
-	if env == nil || env == c.RTL {
+	if env == nil || env == c.processOne {
 		return c.images()
 	}
 

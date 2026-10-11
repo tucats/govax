@@ -340,6 +340,13 @@ type Console struct {
 	imageStatus uint32
 	imageEnded  bool
 
+	// processOne is process 1, the console's own: RTL, but for the
+	// while a subprocess's DCL runs, when RTL is that process
+	// (subcli.go). subCLI is that subprocess's CLI, nil in process 1's
+	// DCL.
+	processOne *corevms.Environment
+	subCLI     *subprocessCLI
+
 	// clis are the command interpreters of the processes that run one
 	// (subcli.go: LIB$SPAWN's, and $CREPRC's of LOGINOUT), by process.
 	clis map[*corevms.Environment]*subprocessCLI
@@ -414,14 +421,22 @@ func (r consoleInput) Ready() bool {
 	return true
 }
 
+// consoleOutput is the terminal, as every process's terminal output
+// reaches it: process 1's Out, which, while a subprocess's DCL runs, is
+// kept in that process's saved state (subcli.go).
 type consoleOutput struct{ c *Console }
 
 func (w consoleOutput) Write(p []byte) (int, error) {
-	if w.c.Out == nil {
+	out := w.c.Out
+	if cli := w.c.subCLI; cli != nil {
+		out = cli.state.out
+	}
+
+	if out == nil {
 		return len(p), nil
 	}
 
-	return w.c.Out.Write(p)
+	return out.Write(p)
 }
 
 // newRTL returns a fresh System for the current CPU and memory, sharing
@@ -451,9 +466,15 @@ func (c *Console) newRTL() *corevms.Environment {
 	sys.ActivateImage = c.activateCreatedImage
 
 	// A deleted process's image state goes with it (docs/PHASE-45.md,
-	// subtask 6).
+	// subtask 6), and so does its CLI, whose interpreter is unwound if
+	// it was waiting for its turn (subcli.go).
 	sys.ProcessDeleted = func(env *corevms.Environment) {
 		delete(c.otherImages, env)
+
+		if cli := c.clis[env]; cli != nil {
+			cli.abort()
+		}
+
 		delete(c.clis, env)
 	}
 
@@ -485,6 +506,7 @@ func (c *Console) newRTL() *corevms.Environment {
 	}
 
 	env.Session = c.ContainerSession
+	c.processOne = env
 
 	// The console is process 1's command interpreter: LIB$SPAWN works in
 	// it (corevms.Environment.HasCLI).

@@ -130,6 +130,10 @@ type Debugger interface {
 // EXIT, command lines go to the debugger's grammar, not the console's
 // (Dispatcher.Dispatch routes them).
 func (c *Console) StartDebugger() error {
+	if err := c.processOneOnly("DEBUG"); err != nil {
+		return err
+	}
+
 	if c.Debugger == nil {
 		return vmserrors.New(vmserrors.DBG_NOTAVAILABLE)
 	}

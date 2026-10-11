@@ -24,6 +24,10 @@ func (c *Console) Execute(startAddr *uint32) error {
 		return err
 	}
 
+	if err := c.processOneOnly("GO"); err != nil {
+		return err
+	}
+
 	if c.Debugger != nil {
 		return c.Debugger.Start(Activation{Kind: ActivateGo, Addr: startAddr})
 	}
@@ -52,6 +56,10 @@ func (c *Console) Execute(startAddr *uint32) error {
 // breakpoints, docs/PHASE-42.md bug 1); a bare Console runs it to its end.
 func (c *Console) Call(addr uint32, step bool, args ...uint32) error {
 	if err := c.requireInit(); err != nil {
+		return err
+	}
+
+	if err := c.processOneOnly("CALL"); err != nil {
 		return err
 	}
 

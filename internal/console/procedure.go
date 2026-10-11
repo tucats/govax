@@ -839,6 +839,12 @@ func (c *Console) procedureMessage(level *commandLevel, err error) {
 func (c *Console) Exit(status *uint32) error {
 	level := c.currentLevel()
 	if level == nil {
+		// At command level 0 a status is $STATUS, and so a subprocess's
+		// final status (subcli.go).
+		if status != nil {
+			c.setCommandStatus(*status, nil)
+		}
+
 		return c.Quit()
 	}
 
