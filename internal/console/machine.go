@@ -3,17 +3,12 @@ package console
 import (
 	"fmt"
 	"io"
-	"time"
 
-	"github.com/tucats/govax/internal/asm"
 	"github.com/tucats/govax/internal/corevms"
-	"github.com/tucats/govax/internal/cpu"
 	iodev "github.com/tucats/govax/internal/io"
 	"github.com/tucats/govax/internal/librtl"
-	"github.com/tucats/govax/internal/respath"
 	"github.com/tucats/govax/internal/rms"
 	"github.com/tucats/govax/internal/vax"
-	"github.com/tucats/govax/internal/vm"
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
@@ -37,65 +32,12 @@ type Console struct {
 	// exceptions to the running process (services.go).
 	corevms.EngineHooks
 
+	// Machine is the emulated system (vaxmachine.go).
+	*Machine
+
 	// Shell is the DCL whose commands run now (shell.go): process 1's
 	// (home), or a subprocess's while its interpreter runs.
 	*Shell
-
-	Engine *cpu.Engine
-	CPU    *vax.CPU
-	Mem    *vm.Memory
-
-	Symbols *SymbolTable
-
-	Radix       int // 8, 10, or 16
-	DepositAddr uint32
-	Verbose     bool
-
-	// Trace matches vax.console.disasm (SET TRACE/NOTRACE, SHOW TRACE):
-	// whether EXEC/GO/CALL/RUN disassemble each instruction as they execute
-	// it. STEP's own tracing follows a different, per-mode rule instead of
-	// this flag — see step.go's StepInto/StepOver/StepReturn doc comments
-	// and docs/PHASE-17.md sub-phases 6-7, docs/PHASE-18.md.
-	Trace bool
-
-	VMInitValid bool // set by VMINIT (vminit.go); cleared by INIT/ZERO
-
-	// Regions holds the P0/P1/S0 region bookkeeping VMInit computes (index
-	// 0/1/2, matching vax.h's own struct VMREGION array) — kept around
-	// purely so a later SHOW MEMORY can display it, matching that struct's
-	// own doc comment ("stored in the virtual machine so a SHOW VM command
-	// can display them"). Not to be confused with RTL's own RegionSize
-	// (corevms.Environment.RegionSize): that's SYS$EXPREG/image-activation
-	// high-water-mark bookkeeping for SHOW REGIONS, an unrelated concept
-	// that happens to share a name in the C source (see ShowRegions' own
-	// doc comment in show.go).
-	Regions [3]vmRegion
-
-	// Devices is Phase 09's device table (internal/io) -- separate from
-	// the vax_init-gated machine state above, matching the C source's own
-	// devices global, which exists independent of alloc_vax and is never
-	// reset by ZERO.
-	Devices *iodev.DeviceTable
-
-	// Mounts is docs/PHASE-22.md's device-name -> mounted-ODS-2-volume
-	// table (internal/rms.MountTable): which VAX device names currently
-	// have a real disk-image container mounted on them, populated by the
-	// console MOUNT/DISMOUNT commands (internal/console/device.go). Built
-	// once, here, alongside Devices/Logicals rather than by Init/Zero,
-	// since a mounted volume — like a defined device or logical name — is
-	// operator/session state that has nothing to do with the emulated
-	// VAX's own address space, and must survive an INIT/ZERO/VMINIT that
-	// wipes that address space (see RTL's own doc comment below for the
-	// contrast: RTL is recreated on every one of those, Mounts is not).
-	// Injected into each new corevms.Environment the same way Devices/Logicals
-	// already are (init.go, vminit.go).
-	Mounts *rms.MountTable
-
-	// sourceDirs is the debugger's SET SOURCE search list, and
-	// sourceCache the source files read so far, by the file name the
-	// debug symbol table gives (source.go).
-	sourceDirs  []string
-	sourceCache map[string][]string
 
 	// Dispatcher backs XFC$CONSOLE_CMD (a running VAX program asking the
 	// console to execute a command line on its behalf). Unlike Engine/RTL,
@@ -118,24 +60,6 @@ type Console struct {
 	// session; read via CommandLineErr.
 	commandLineErr error
 
-	// instructionLimit and timeLimit are govax's --instruction-limit and
-	// --time-limit options (SetRunLimits, misc.go). They are held here,
-	// not set on the Engine at once, because the boot script (vax.init)
-	// runs the microkernel's own initialization, which the limits mustn't
-	// cut short. They go onto the Engine (cpu.Engine.SetLimits) just
-	// before the command given on govax's command line runs
-	// (RunCommandLine), and before the interactive prompt starts.
-	instructionLimit int
-	timeLimit        time.Duration
-
-	// limitStop is the limit error (cpu.ErrInstructionLimitExceeded or
-	// ErrTimeLimitExceeded) that most recently stopped a run, recorded by
-	// ReportStop (execute.go), which shows the message and otherwise treats
-	// the stop as benign. RunCommandLine clears it before the one-shot
-	// command and reads it after, so a one-shot run cut short by a limit
-	// fails, and govax exits nonzero.
-	limitStop error
-
 	// In is the console's byte-level terminal input: it backs
 	// XFC$CONSOLE_READ and (shared with RTL) DECC$GETS/EXE$INPUT/
 	// EXE$READ's fid-0 case. It is optional (nil is a legal "no
@@ -149,63 +73,6 @@ type Console struct {
 	// instead of asking the terminal. Tests set it; nil asks Out.
 	ScreenSize func() (height, width int)
 
-	// shimBase/shimsReady back Phase 13's SHIM$ stub synthesis (shim.go):
-	// shimBase is the dedicated S0 page VMInit reserves for these stubs,
-	// and shimsReady guards ensureShims so the table (and the SHIM$
-	// symbols pointing into it) is only ever built once per VMInit, since
-	// a G^ fixup performed on one RUN must still resolve to the same
-	// address on a later RUN.
-	shimBase   uint32
-	shimsReady bool
-
-	// s0Free is the first S0 virtual address past every region VMInit
-	// itself reserves -- see vminit.go's own doc comment on why a live ASM
-	// session's S0 content must start here rather than at the assembler's
-	// literal default origin.
-	s0Free uint32
-
-	// asmSession is the ASM command's persistent assembler state (Phase 12,
-	// asm.go): matching the reference tool's own vax.assembler being a
-	// single session-wide object, multiple "ASM <file>" commands in a row
-	// share one location counter and one symbol table, so a later file can
-	// reference an earlier one's labels (e.g. testdata/asm/hello.asm's
-	// "@#lib$put_output" resolving to internal/bootdata/files/kernel.asm's own
-	// .ENTRY lib$put_output, once kernel.asm has been ASMed first in the
-	// same session) exactly as vax.init's own boot sequence relies on.
-	// Reset (nil, so the next ASM lazily creates a fresh one) by VMInit,
-	// since its symbol table and deposit pointer would otherwise reference
-	// a since-wiped address space.
-	asmSession *asm.Assembler
-
-	// assemblerMode is vax.console.assembler_mode (docs/PHASE-19.md): once a
-	// bare "ASM" command sets this, Dispatcher.Dispatch hands every
-	// subsequent line straight to Console.AssembleInteractiveLine instead of
-	// the normal verb table/DCL grammar. Reset alongside asmSession (see above).
-	assemblerMode bool
-
-	// kernelPlaced is set once ASM has defined EXE$INITIALIZE, the
-	// microkernel's entry; from then on the console's own ASM command
-	// refuses, and ASM is the debugger's. Reset with asmSession.
-	kernelPlaced bool
-
-	// proc1Images is process 1's image state (images.go): its loaded-image
-	// list (Phase 13's ICB list), activation symbols, and driver. Reset by
-	// RUN itself (matching reset_icb_list, called at the start of every
-	// RUN) rather than by Zero/Init, since a loaded image's memory
-	// survives independently of the ICB bookkeeping describing it.
-	// otherImages is every other process's (Phase 43), by Environment.
-	proc1Images *imageProcess
-	otherImages map[*corevms.Environment]*imageProcess
-
-	// SharePrefix is a directory/filename prefix consulted when locating a
-	// sharable image dependency that isn't found under its bare name,
-	// matching vax.console.share_prefix (SET SHARE, not yet ported --
-	// there is no console command that sets this field yet). A literal
-	// ESC (0x1B) prefix means "don't search for sharable images at all",
-	// matching find_image's own check; empty (the default) searches
-	// alongside the loading image with no prefix.
-	SharePrefix string
-
 	// HostLibrary is the host directory LINK and MACRO look in for
 	// IMAGELIB.OLB, STARLET.OLB, shareable images, and STARLET.MLB when
 	// SYS$LIBRARY and SYS$SHARE don't lead to them (internal/console/
@@ -213,39 +80,12 @@ type Console struct {
 	// vax.link.library's).
 	HostLibrary string
 
-	// Paths is the search-path policy (docs/PHASE-15.md) every file-reading
-	// method on Console (Include, Assemble, imageLoad, LoadROM, LoadNVRAM)
-	// resolves an unqualified name through: the name as given, then each of
-	// Paths' own search directories, then its embedded fallback. A nil
-	// Paths (the default for a Console built without main.go's own
-	// startup wiring, e.g. most tests) makes every one of those methods
-	// behave exactly as a plain os.ReadFile/os.Open — see
-	// internal/respath's own doc comment.
-	Paths *respath.Resolver
-
-	// OnUnhandled, when set, is told of every condition no handler
-	// continued, before VMS's catch-all acts on it. Returning true pauses
-	// the program there. The debugger sets it (docs/PHASE-42.md, subtask 5).
-	OnUnhandled func(UnhandledException) bool
-
-	// OnSignal, when set, is told of every condition as it starts being
-	// dispatched to the program's handlers, handled or not. The debugger
-	// uses it for SET BREAK/EXCEPTION.
-	OnSignal func(UnhandledException)
-
-	// DebugBuiltins, when set, resolves the debugger's built-in symbols in
-	// expressions (%CURLOC, %CURVAL, "^", "\\", ...; Evaluator.Builtins).
-	// The debugger sets it (docs/PHASE-42.md, subtask 20).
-	DebugBuiltins func(name string) (uint32, bool, error)
-
 	// control is SET [NO]CONTROL's (dclcontroly.go).
 	control controlKeys
 
-	// processOne is process 1, the console's own, and home its DCL: the
-	// Shell embedded here, but for the while a subprocess's DCL runs,
-	// when that is the subprocess's (subcli.go).
-	processOne *corevms.Environment
-	home       *Shell
+	// home is process 1's DCL: the Shell embedded here, but for the while
+	// a subprocess's DCL runs, when that is the subprocess's (subcli.go).
+	home *Shell
 
 	// clis are the command interpreters of the processes that run one
 	// (subcli.go: LIB$SPAWN's, and $CREPRC's of LOGINOUT), by process.
@@ -274,11 +114,13 @@ func New(out io.Writer) *Console {
 	mounts := rms.NewMountTable()
 
 	c := &Console{
-		Symbols: NewSymbolTable(),
-		Radix:   16,   // alloc_vax's own default
-		Verbose: true, // CONSOLE_EXPAND | CONSOLE_VERBOSE default
-		Devices: iodev.NewDeviceTable(),
-		Mounts:  mounts,
+		Machine: &Machine{
+			Symbols: NewSymbolTable(),
+			Radix:   16,   // alloc_vax's own default
+			Verbose: true, // CONSOLE_EXPAND | CONSOLE_VERBOSE default
+			Devices: iodev.NewDeviceTable(),
+			Mounts:  mounts,
+		},
 		Shell: &Shell{
 			Out:              out,
 			Logicals:         newLogicals(),
