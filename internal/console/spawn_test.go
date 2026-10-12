@@ -138,11 +138,13 @@ func TestSpawn_wait(t *testing.T) {
 // subprocess ends, the AST runs and the event flag is set. The
 // subprocess, at its parent's priority, runs as soon as it's made: a
 // process becoming computable at the current one's priority preempts it
-// (internal/sched, the book's rule), so its line comes first.
+// (internal/sched, the book's rule), so its line comes first. Its DCL
+// gives the CPU up after the command (dcllend.go), so the parent goes on
+// before the subprocess logs out, and the AST comes after.
 func TestSpawn_noWait(t *testing.T) {
 	got := runParent(t, "spawnnowait", spawnNoWaitSource)
 
-	want := []string{"FROM THE CHILD", "Parent: AST", "Parent: going on", "Parent: event flag set"}
+	want := []string{"FROM THE CHILD", "Parent: going on", "Parent: AST", "Parent: event flag set"}
 	if strings.Join(got, "\n") != strings.Join(want, "\n") {
 		t.Errorf("output:\n%s\nwant:\n%s", strings.Join(got, "\n"), strings.Join(want, "\n"))
 	}
@@ -242,8 +244,8 @@ func TestSpawn_schedulerOff(t *testing.T) {
 // TestSpawnCommand: the console's SPAWN runs a command in a subprocess
 // (here a foreign command the console defined) and waits for it, then
 // says control has come back to process 1 (SYSTEM); SPAWN/NOWAIT makes
-// one that runs only when the machine next runs, and says so; SPAWN/INPUT
-// reads a file of commands.
+// one that runs, and logs out, before the next command (dcllend.go), and
+// says so; SPAWN/INPUT reads a file of commands.
 func TestSpawnCommand(t *testing.T) {
 	c, out := scheduledConsole(t, longQuantum, brbSelf)
 	echo := buildImage(t, c, "echo", echoSource)
@@ -274,17 +276,14 @@ func TestSpawnCommand(t *testing.T) {
 		t.Errorf("SPAWN ECHO: %q", got)
 	}
 
-	if got := dispatch("SPAWN/NOWAIT/PROCESS=LATER ECHO later"); got != "%DCL-S-SPAWNED, process LATER spawned" {
+	if got := dispatch("SPAWN/NOWAIT/PROCESS=LATER ECHO later"); got != "%DCL-S-SPAWNED, process LATER spawned|LATER" {
 		t.Errorf("SPAWN/NOWAIT: %q", got)
 	}
 
-	if n := len(c.RTL.Processes()); n != 2 {
-		t.Errorf("%d processes after SPAWN/NOWAIT, want 2", n)
+	if n := len(c.RTL.Processes()); n != 1 {
+		t.Errorf("%d processes after SPAWN/NOWAIT, want only process 1", n)
 	}
 
-	// LATER runs when the machine next runs: during this RUN, if the
-	// scheduler gives it the CPU before the child's image ends the run,
-	// or else during the SPAWN after it.
 	out.Reset()
 
 	if err := c.Run(child, console.RunOptions{}); err != nil {
@@ -301,10 +300,6 @@ func TestSpawnCommand(t *testing.T) {
 
 	if !strings.HasSuffix(spawned, "ONE|TWO|"+returned) {
 		t.Errorf("SPAWN/INPUT: %q", spawned)
-	}
-
-	if n := strings.Count(ran+"|"+spawned, "LATER"); n != 1 {
-		t.Errorf("LATER's line appeared %d times in %q and %q, want once", n, ran, spawned)
 	}
 
 	if n := len(c.RTL.Processes()); n != 1 {

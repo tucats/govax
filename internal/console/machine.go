@@ -357,6 +357,13 @@ type Console struct {
 	// in (spawncmd.go), allocated on first use on each machine.
 	spawnPage uint32
 
+	// lending is set while process 1 lends the CPU to the other
+	// processes between its DCL commands, and consoleCommands counts the
+	// XFC$CONSOLE_CMD calls in progress, during which the machine is
+	// mid-instruction and can't run others (dcllend.go).
+	lending         bool
+	consoleCommands int
+
 	// runCommandLine is RunCommandLine, taken when govax's one-shot
 	// command runs, for that command's RUN to give its image.
 	runCommandLine string

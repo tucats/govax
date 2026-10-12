@@ -124,14 +124,17 @@ func checkLogoutReport(t *testing.T, report []string) {
 }
 
 // loginout creates a process running LOGINOUT (the CLI) with SYS$INPUT
-// input, runs the machine until it has been deleted, and returns it.
+// input, runs the machine until it has been deleted, and returns it. The
+// process is one priority above process 1, which only spins: its CLI
+// gives the CPU up after each command (dcllend.go), and process 1 at the
+// same priority would spin a whole quantum between them.
 func loginout(t *testing.T, c *console.Console, input string) *corevms.Environment {
 	t.Helper()
 
 	one := c.RTL
 
 	child, st := one.CreateProcess(corevms.CreateRequest{
-		Image: "SYS$SYSTEM:LOGINOUT.EXE", Input: input, BasePriority: one.Process.BasePriority,
+		Image: "SYS$SYSTEM:LOGINOUT.EXE", Input: input, BasePriority: one.Process.BasePriority + 1,
 	})
 	if st != 1 {
 		t.Fatalf("CreateProcess: status %08X", st)

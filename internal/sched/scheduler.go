@@ -287,6 +287,22 @@ func (s *Scheduler) RequestReschedule() {
 	s.reschedule = true
 }
 
+// Yield gives up the CPU for the current process of its own accord: it
+// stays computable, going to the back of its priority's queue as at a
+// quantum's end, but at once, so the next choice is made whatever the
+// preemption rules would allow (there is no current process to keep the
+// CPU), and even for a real-time process. Its quantum is left as it
+// was. With no current process it only requests a reschedule.
+func (s *Scheduler) Yield() {
+	if s.hasCurrent {
+		s.cur.state = StateCOM
+		s.queues[s.cur.priority] = append(s.queues[s.cur.priority], s.current)
+		s.hasCurrent, s.cur = false, nil
+	}
+
+	s.reschedule = true
+}
+
 // RescheduleRequested reports whether the current process should give
 // up the CPU at the next chance.
 func (s *Scheduler) RescheduleRequested() bool {

@@ -642,6 +642,47 @@ func TestRequestReschedule(t *testing.T) {
 	}
 }
 
+// TestYield: a process that yields goes to the back of its queue at
+// once, keeping the rest of its quantum, and leaves no current process,
+// so the next choice is made; a real-time process yields too.
+func TestYield(t *testing.T) {
+	s := newScheduler(t, 10, 4, 4)
+	run(s, 3) // process 1 current, 3 instructions used
+
+	s.Yield()
+
+	if _, ok := s.Current(); ok || !s.RescheduleRequested() {
+		t.Errorf("after Yield: current %v, reschedule %v; want none, true", ok, s.RescheduleRequested())
+	}
+
+	if want := []Handle{2, 1}; !slices.Equal(s.Computable(), want) {
+		t.Errorf("computable %v, want %v", s.Computable(), want)
+	}
+
+	if info := mustInfo(t, s, 1); info.QuantumLeft != 7 || info.State != StateCOM {
+		t.Errorf("yielded process 1: %+v", info)
+	}
+
+	if h, _ := s.Reschedule(); h != 2 {
+		t.Errorf("chose %d after the yield, want 2", h)
+	}
+
+	rt := newScheduler(t, 10, 16, 16)
+	run(rt, 1)
+	rt.Yield()
+
+	if h, _ := rt.Reschedule(); h != 2 {
+		t.Errorf("real time: chose %d after the yield, want 2", h)
+	}
+
+	none := New(10)
+	none.Yield()
+
+	if !none.RescheduleRequested() {
+		t.Error("Yield with no current process requests no reschedule")
+	}
+}
+
 // TestChoose: the console can make a process current by hand; the one it
 // displaces goes to the back of its queue; a waiting process stays
 // waiting, with a reschedule requested.

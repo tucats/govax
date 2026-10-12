@@ -66,6 +66,9 @@ func (c *Console) ConsoleCommand(cmdLine string) uint32 {
 		return 1
 	}
 
+	c.consoleCommands++
+	defer func() { c.consoleCommands-- }()
+
 	if err := c.Dispatcher.DispatchConsole(cmdLine); err != nil {
 		return 1
 	}

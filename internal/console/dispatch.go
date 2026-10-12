@@ -70,7 +70,16 @@ func (d *Dispatcher) Dispatch(line string) error {
 		return d.Console.Debugger.Dispatch(line)
 	}
 
-	return d.DispatchConsole(line)
+	err := d.DispatchConsole(line)
+
+	// A command of process 1's command level 0 is done: the other
+	// processes run until they're idle (dcllend.go). A procedure's lines
+	// give them their turns as the procedure runs them (runLevel).
+	if d.Console.CommandLevel() == 0 {
+		d.Console.lendWhileIdle()
+	}
+
+	return err
 }
 
 // DispatchConsole parses and executes one console command line -- DCL

@@ -57,6 +57,10 @@ type waitCondition struct {
 	// whose deletion waits for its subprocesses (delete.go) runs nothing
 	// more of its own.
 	ignoreASTs bool
+
+	// yield isn't a wait: the process gives up the CPU staying
+	// computable (Environment.Yield, lend.go).
+	yield bool
 }
 
 // The boost classes govax gives the events that end each kind of wait.
@@ -121,6 +125,13 @@ func (env *Environment) enterWait(waiting bool) {
 	env.pendingWait = nil
 
 	if !waiting || env.engine == nil {
+		return
+	}
+
+	if w != nil && w.yield {
+		env.sched.Yield()
+		env.requestReschedule()
+
 		return
 	}
 

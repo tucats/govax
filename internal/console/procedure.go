@@ -686,6 +686,12 @@ func (c *Console) runLevel(source *procedureSource, cmd procedureCommand, dispat
 		if ended, stop := c.procedureLine(level, dispatch, run); stop {
 			return ended, nil
 		}
+
+		// A command is done: the other processes have their turn
+		// (dcllend.go).
+		if !data && !level.exiting && !c.stopping {
+			c.commandBoundary()
+		}
 	}
 
 	switch {

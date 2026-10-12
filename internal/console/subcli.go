@@ -48,9 +48,11 @@ import (
 // ever runs. While the interpreter runs, the console's DCL state is the
 // process's (swapDCLState), and the engine is stopped in the shim. The
 // interpreter hands the CPU back when it must wait (for a command line
-// that hasn't come yet, from the terminal or a mailbox: the shim returns
-// corevms.ErrWait, the process waits in the scheduler, and the XFC runs
-// again later), when a command runs an image, and when it logs out.
+// that hasn't come yet, from the terminal or a mailbox, or a WAIT's
+// time: the shim returns corevms.ErrWait, the process waits in the
+// scheduler, and the XFC runs again later), when a command is done (the
+// shim yields, so the other processes have their turn; dcllend.go), when
+// a command runs an image, and when it logs out.
 //
 // An image a command runs (RUN, MCR, a foreign command; subprocessRun)
 // is activated in the process's P0, and the shim asks the engine to call
@@ -213,18 +215,22 @@ func (c *Console) processOneOnly(what string) error {
 // The ways the interpreter hands the CPU back to the shim (cliYield's
 // kind).
 const (
-	yieldWait   = iota // its input isn't there yet (err): run again later
-	yieldImage         // a command runs an image: call driver
-	yieldLogout        // it has logged out, with status
+	yieldWait    = iota // its input isn't there yet (err): run again later
+	yieldImage          // a command runs an image: call driver
+	yieldLogout         // it has logged out, with status
+	yieldCommand        // a command is done: let the others run (dcllend.go)
+	yieldTimer          // WAIT: wait until over, due by deadline (dclwait.go)
 )
 
 // cliYield is what the interpreter asks of the shim when it hands the
 // CPU back.
 type cliYield struct {
-	kind   int
-	err    error
-	driver uint32
-	status uint32
+	kind     int
+	err      error
+	driver   uint32
+	status   uint32
+	over     func() bool
+	deadline uint64
 }
 
 // errCLIAborted is the panic that unwinds an interpreter whose process
@@ -440,6 +446,16 @@ func (c *Console) cliCommand(env *corevms.Environment, _ []uint32) (uint32, erro
 
 			return 0, y.err
 
+		case yieldCommand:
+			cli.yielded = nil
+
+			return 0, cli.env.Yield()
+
+		case yieldTimer:
+			cli.yielded = nil
+
+			return 0, cli.env.WaitUntil(y.over, y.deadline)
+
 		case yieldImage:
 			cli.yielded = nil
 			cli.imageActive = true
@@ -571,6 +587,9 @@ func (cli *subprocessCLI) runInterpreter() {
 		if err != nil && !vmserrors.MessageInhibited(err) {
 			fmt.Fprintln(c.Out, "%"+err.Error())
 		}
+
+		// The command is done: the other processes have their turn.
+		c.commandBoundary()
 	}
 
 	c.closeDCLFiles()

@@ -20,12 +20,14 @@ checked against VMS 7.3 in round 4 of the probe), and so is subtask
 18, STOP and Ctrl/Y (2026-10-11, not yet probed), and so is subtask 19,
 which, at the author's request, gives a subprocess the console's whole
 DCL rather than `@` alone (2026-10-11), and so is subtask 20, round 5
-of the VMS probe, whose answers govax now follows (2026-10-11). Every
-subtask is done. Left for later: running other processes between
-process 1's DCL commands (a SPAWN/NOWAIT procedure advances only while
-the machine runs), Ctrl/Y in a subprocess's procedures, SPAWN from a
-subprocess, and the choices DEVIATIONS.md's "[Phase 50] Round 5 of the
-probe" still lists.
+of the VMS probe, whose answers govax now follows (2026-10-11), and so
+is subtask 21, added at the author's request: the other processes run
+between DCL commands, so a SPAWN/NOWAIT procedure runs beside its
+parent's, and during WAIT (2026-10-11). Every subtask is done. Left for
+later: running the other processes while the console's prompt waits for
+a line, Ctrl/Y in a subprocess's procedures, SPAWN from a subprocess,
+and the choices DEVIATIONS.md's "[Phase 50] Round 5 of the probe" still
+lists.
 
 The console should act like a VMS DCL command processor. Until now it
 had INCLUDE (and `@` as its alias), which runs a file of console
@@ -609,8 +611,78 @@ So the small CLI is gone, and a subprocess runs the console's own DCL.
 - **Parallel only while the machine runs.** A SPAWN/NOWAIT subprocess
   runs while the engine does (Phase 43's Decision 4): during process 1's
   RUN, GO, a waiting SPAWN, and the like, not while process 1's DCL runs
-  its own commands or sits at the prompt. Running the other processes
-  between process 1's commands, and at the prompt, is left for later.
+  its own commands or sits at the prompt. (Subtask 21 runs the other
+  processes between process 1's commands; see "Between commands".)
+
+### Between commands (subtask 21)
+
+`internal/console/dcllend.go`, `internal/corevms/lend.go`. The author
+asked that a SPAWN/NOWAIT subprocess run beside its parent: "SPAWN/NOWAIT
+DIRECTORY" should run the DIRECTORY, and "a SPAWN/NOWAIT @FOO.COM
+executed within @BAR.COM would allow both FOO.COM and BAR.COM to
+execute, interleaving commands"; and, later, that WAIT keep the others
+running rather than blocking them. DCL is Go, so a command runs no
+instructions, and process 1's DCL runs with the machine stopped; a
+subprocess's DCL ran a whole procedure inside one XFC. So both now give
+the CPU up after each command (`commandBoundary`, called by `runLevel`
+after each command line, and by the subprocess's level-0 loop):
+
+- **Process 1 lends the CPU** (`lendCPU`, corevms's `LendCPU`): process
+  1 yields in the scheduler (`sched.Scheduler.Yield`, new: to the back
+  of its queue at once, whatever the preemption rules, keeping its
+  quantum), and the console runs the machine, a run loop like
+  `runPlain`'s, until the scheduler chooses process 1 again, and stops
+  there, at the boundary (`BeginStep`), before process 1 runs an
+  instruction; `ReclaimCPU` makes sure process 1 has the CPU and is
+  current at the end. So a process of process 1's priority gets about a
+  turn per command. Process 1 lends the CPU only from its DCL's own
+  level: not inside a machine run (an image's XFC$CONSOLE_CMD,
+  `Console.consoleCommands`; scheduling frozen), not in the debugger or
+  the interactive assembler, only with the CPU in process 1, and only
+  with another process to run. A Ctrl/C or Ctrl/Y typed meanwhile ends
+  the lending, before the next instruction, and is left for DCL. A stop
+  in another process (HALT, a limit) is reported as a run's is. Each
+  lending is a run (`BeginRun`): the run limits apply to it.
+- **A subprocess yields** (`yieldCommand`): its shim returns corevms's
+  `Yield`, an ErrWait marked as a yield (`waitCondition.yield`), which
+  `enterWait` turns into `sched.Yield` rather than a wait. The XFC runs
+  again, with the next command, when the scheduler next chooses the
+  process.
+- **At process 1's command level 0** (`Dispatcher.Dispatch`, so the
+  terminal and the one-shot command), DCL's next step on VMS is to wait
+  for the terminal, while the others run. So process 1 lends the CPU
+  waiting (`lendWhileIdle`, LEF in the scheduler, ASTs not ending it):
+  until no other process is current or computable, or 50 ms of the
+  host's time (`promptLendLimit`), so a process that never waits can't
+  keep the prompt from coming back. SPAWN/NOWAIT DIRECTORY runs the
+  DIRECTORY and logs the subprocess out before the next prompt. (A
+  single turn wasn't enough there: process 1, boosted when an earlier
+  SPAWN's wait ended, was chosen again at once.) Running the others
+  while the prompt waits for a line would need the front end to read
+  the terminal while the machine runs; it is left for later.
+- **WAIT** (`dclwait.go`) keeps its time the host's. Process 1's lends
+  the CPU waiting until the time is up (or an attention key), sleeping
+  in the host only when nobody else can run; a subprocess's waits in
+  the scheduler (`yieldTimer`, corevms's `WaitUntil`). With the
+  hardware clock the wait also has a system-time deadline
+  (`machineDeadline`, `Environment.waitDeadline`), so the scheduler,
+  with nothing to run, sleeps until it rather than retrying; with the
+  quantum clock it has none, since system time counts instructions and
+  would jump ahead. A subprocess's WAIT isn't ended by Ctrl/Y or
+  Ctrl/C: it isn't attached to the terminal.
+
+In BAR.COM, a SPAWN/NOWAIT @FOO.COM then runs FOO's first two commands
+(it is made with a boost above process 1's), then the two take turns, a
+command each (`TestLend_interleave`). What changed for other tests: a
+LIB$SPAWN/NOWAIT subprocess gives the CPU up after its command, so its
+parent goes on before it logs out (`TestSpawn_noWait`'s order);
+LOGINOUT's CLI in `subcli_test.go` runs a priority above process 1,
+which only spins (with a 10,000,000-instruction quantum it would spin a
+quantum between commands); and SPAWN/NOWAIT's subprocess has run and
+gone by the next command (`TestSpawnCommand`). Whether VMS's DCL gives
+the CPU up so often is not the point (a DCL command takes CPU time on
+VMS, about a quantum or less); this is govax's choice, unconfirmed, as
+the author asked.
 
 ## Subtasks
 
@@ -682,6 +754,10 @@ Later rounds of this phase, in a likely order:
 20. **A VMS probe**: run a set of procedures on VMS 7.3 for the details
     the manual leaves open (see "Open questions"). Round 1,
     `testdata/dcl50`, came with subtasks 8 and 9.
+21. **Other processes between commands** (added at the author's
+    request; done, see "Between commands"): process 1 lends the CPU
+    after each DCL command, a subprocess's DCL yields after each, and
+    WAIT lets the others run.
 
 ## Open questions
 
@@ -1029,4 +1105,15 @@ details are in DEVIATIONS.md.)
   the CLI facility shown as DCL in a repeated status. New: WAIT
   (`dclwait.go`, interrupted by Ctrl/Y or Ctrl/C). HELP: KEYS, STOP,
   GOSUB/RETURN, WAIT.
-
+- 2026-10-11: Subtask 21, at the author's request: the other processes
+  run between DCL commands ("Between commands"). `sched.Scheduler.Yield`;
+  corevms's `lend.go` (`Yield`, `WaitUntil`, `LendCPU`, `ReclaimCPU`)
+  and `waitCondition.yield`; the console's `dcllend.go`
+  (`commandBoundary`, `lendCPU`, `lendWhileIdle`), called by `runLevel`,
+  `Dispatcher.Dispatch` at level 0, and the subprocess's interpreter
+  loop (`yieldCommand`); WAIT lends the CPU, or, in a subprocess, waits
+  in the scheduler (`yieldTimer`). Tests: `TestYield` (sched),
+  `TestLend_spawnNoWait`, `TestLend_interleave`, `TestLend_wait`;
+  `TestSpawn_noWait`, `TestSpawnCommand`, and `subcli_test.go`'s
+  `loginout` changed (see "Between commands"). HELP SPAWN and WAIT say
+  so.

@@ -25,7 +25,8 @@ never had.
   functions, SET VERIFY, SYS$INPUT from a procedure (DECK/EOD), and
   DCL's file I/O (OPEN, CLOSE, READ, WRITE, INQUIRE), and STOP and
   Ctrl/Y, and the console's whole DCL in subprocesses are done; then a
-  probe.
+  probe; then subtask 21, the other processes running between DCL
+  commands and during WAIT.
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
 - `docs/DEVIATIONS.md` — running log of suspected ISA/behavior fidelity issues found in
@@ -340,6 +341,18 @@ expect adjustment as phases land):
   `leaveControlY`, ends the procedure and runs at level 0,
   `afterStop`). SET [NO]CONTROL (`ControlYEnabled`, asked by
   cmd/govax's key handling).
+  **Between commands** (`dcllend.go`, subtask 21): after each DCL
+  command (`commandBoundary`: `runLevel`, and the subprocess's level-0
+  loop) process 1 lends the CPU (`lendCPU`, corevms's `lend.go`:
+  `LendCPU` yields, `sched.Scheduler.Yield`; the machine runs the others
+  until the scheduler chooses process 1, stopped before it runs an
+  instruction; `ReclaimCPU`), and a subprocess's DCL yields from its
+  shim (`yieldCommand`, `Environment.Yield`); so SPAWN/NOWAIT procedures
+  interleave with process 1's. At process 1's level 0 (`Dispatch`)
+  `lendWhileIdle` waits until the others are idle, at most
+  `promptLendLimit`. WAIT lends the CPU (a subprocess's waits in the
+  scheduler, `yieldTimer`). Not inside a machine run
+  (`consoleCommands`, frozen scheduling), the debugger, or ASM.
   `internal/console/consoletest` is its test support.
 - `internal/io` — device abstraction (Phase 09).
 - `internal/vmsdef` — VMS's own definitions, shared by the assembler, RTL, RMS,
@@ -450,8 +463,8 @@ expect adjustment as phases land):
   subprocess runs the console's own DCL (`internal/console/subcli.go`,
   Phase 50's subtask 19): its interpreter is a goroutine that takes
   turns with the engine (strict handoff through its stub's shim,
-  `EXE$CLI_COMMAND`: resume, then a `cliYield` to wait, call an image,
-  or log out), with the console's per-process DCL state swapped to the
+  `EXE$CLI_COMMAND`: resume, then a `cliYield` to wait, give the CPU up
+  after a command, call an image, or log out), with the console's per-process DCL state swapped to the
   process's (`swapDCLState`, `dclState`: RTL, Logicals,
   ContainerSession, Out, symbols, levels, $STATUS, ...; `processOne` is
   process 1 throughout, `subCLI` the subprocess's CLI). RUN there is
