@@ -67,10 +67,10 @@ This phase also brings two new kinds of transfer-vector entry:
 - ~~**The EBCDIC tables**: which mapping they are.~~ Transcribed from the
   PDF's page images (the survey's "Data entries"); DIGITAL's own mapping,
   to be compared with a VMS dump by the probe.
-- **CVT_DX_DX (author)**: the 5.0 manual's table of accepted conversions
-  is misprinted (the survey). Proposed: in this phase, integers and
-  F/D/G/H to and from text, which needs a LIBRTL2 stub area; or move the
-  routine (and the LIBRTL2 area) to a phase of its own.
+- ~~**CVT_DX_DX (author)**: the 5.0 manual's table of accepted
+  conversions is misprinted (the survey).~~ The author accepted the
+  proposal (2026-10-12): in this phase, the integer types and F/D/G/H to
+  and from text, with a LIBRTL2 stub area (subtask 10).
 
 ## The survey (subtask 1)
 
@@ -387,7 +387,7 @@ against VMS's own table, which the probe dumps.)
   description (no B, W, Q, or unsigned types) nor Table LIB-3. It reads
   like another routine's table. So which conversions VMS accepts isn't
   settled by the manual.
-- **Scope (proposed for subtask 10)**: the integer types (B, BU, W, WU,
+- **Scope (subtask 10; accepted by the author, 2026-10-12)**: the integer types (B, BU, W, WU,
   L, LU, Q) and F, D, G, H to and from an NBDS of text (T, VT; classes S,
   D, VS, A, NCA, SD), with LIB$_INVCLADTY for any other pair, and the
   packed-decimal and BU-array forms left out. An NBDS to NBDS copy is
@@ -396,8 +396,7 @@ against VMS's own table, which the probe dumps.)
   conversion. This needs a LIBRTL2 stub area: a second library in
   `librtl.Routines` (the `SHIM$LIBRTL2_00000000` symbol), whose
   missing-routine stubs (DECODE_FAULT, SIM_TRAP, the zone routines) come
-  with it. If that's more than the phase wants, CVT_DX_DX moves to its
-  own phase (Open questions, above).
+  with it.
 
 ## Subtasks (provisional)
 
@@ -413,8 +412,8 @@ against VMS's own table, which the probe dumps.)
 7. **Numeric text**: CVT_DTB, CVT_HTB, CVT_OTB.
 8. **LOOKUP_KEY**, and the `$LIB_KEY_TABLE` macro in `starlet.mar`.
 9. **Locale**: DIGIT_SEP, RADIX_POINT, CURRENCY, LP_LINES.
-10. **CVT_DX_DX** (its offset is known, LIBRTL2's 0x000), in the scope
-    the author decides, with a LIBRTL2 stub area.
+10. **CVT_DX_DX** (LIBRTL2's 0x000): integers and F/D/G/H to and from
+    text, with a LIBRTL2 stub area (the scope the author accepted).
 11. **The program** (`testdata/lib54/`) and its console test; VMS probe
     with the author if wanted.
 12. **Close-out**.
@@ -446,3 +445,6 @@ against VMS's own table, which the probe dumps.)
     needs a LIBRTL2 stub area.
 
   No code changed.
+- **2026-10-12** — The author accepted the proposed scope for
+  CVT_DX_DX: this phase, integers and F/D/G/H to and from text, with a
+  LIBRTL2 stub area (subtask 10).
