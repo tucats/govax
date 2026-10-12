@@ -629,9 +629,9 @@ The author ran both parts: `vax/probe50a.log` (part 1, with /OUTPUT) and
 its log with VMS's section by section. Every section matches, apart from
 DELETE's, DIRECTORY's, and DUMP's layouts, SHOW LOGICAL/PROCESS's list of
 the VAX's own names, and the job table's name. (Since Phase 51 DELETE's,
-DIRECTORY's, and DUMP's are VMS's and compared too, but for one word of
-R4's DUMP/BLOCK: VMS's RMS ends the block's records with FFFF, which
-ods2's writer doesn't write.) `TestProbe50ATerminal`
+DIRECTORY's, and DUMP's are VMS's and compared too, R4's DUMP/BLOCK
+byte for byte, since ods2's writer ends a block's records with FFFF as
+VMS's RMS does.) `TestProbe50ATerminal`
 replays part 2, and every line matches. The answers (DEVIATIONS.md's
 "[Phase 51] Round 6 of the probe"):
 

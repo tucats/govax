@@ -715,8 +715,8 @@ expect adjustment as phases land):
   RMS$_FNF/DNF for DCL's messages, `fileattr.go` copies a header into a
   `FileAttributes` (F$FILE_ATTRIBUTES, DIRECTORY), `dump.go` reads blocks
   and records with RFAs for DUMP, and `$PUT` and DCL's WRITE record the
-  longest record (FAT$W_RSIZE, `noteLongest`). ods2's writer doesn't
-  write VMS's FFFF end-of-records word (DEVIATIONS.md).
+  longest record (FAT$W_RSIZE, `noteLongest`). ods2's writer ends a
+  block's variable-length records with VMS's FFFF word.
 - `internal/link` — the VAX linker (Phase 30): builds a VMS executable image from
   `internal/obj` modules, laid out as real LINK lays images out (byte for byte on
   the fixtures). The console's `LINK` command (`internal/dclcmd/link.go`) drives it.

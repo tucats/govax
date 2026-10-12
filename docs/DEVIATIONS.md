@@ -3683,13 +3683,16 @@ widened."
   form feed only before the heading; RMS$_WLD for wildcards and DUMP's
   OPENIN message for a file not found; no /OUTPUT, /FORMATTED, or other
   radixes and widths; no dump of a device or a host file.
-  **Known difference**: VMS's RMS writes FFFF after the last
+  **Fixed (2026-10-12)**: VMS's RMS writes FFFF after the last
   variable-length record in a block (a record length that means "no
-  more records here"), which ods2's writer leaves zero; round 6's
-  DUMP/BLOCK shows it, and its oracle allows for that word. Readers stop
-  at the end of file either way. Fixing it means changing ods2's
-  `rms.Writer.Close` and `Flush` and tagging an ods2 release.
-- **Status**: VMS's layout followed; the FFFF word deferred to ods2.
+  more records here"), which ods2's writer left zero; round 6's
+  DUMP/BLOCK showed it. ods2's `rms.Writer` now writes it in the last,
+  partly filled block of a Variable or VFC file (`finalBlock`, on Close
+  and Flush), and its `Reader` passes over one within a file, going on
+  at the next block, as RMS does for records that don't span blocks.
+  Chosen without VMS: nothing is written when fewer than two bytes are
+  left in the block, or when the data ends on a block boundary.
+- **Status**: VMS's layout followed.
 
 <!--
 Entry template:

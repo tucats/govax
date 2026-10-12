@@ -58,12 +58,6 @@ func probe50ACompared(text string) string {
 		}
 
 		line = maskVolumeDetails(strings.ReplaceAll(line, "\x00", ""))
-
-		// VMS's RMS ends a block's variable-length records with a length
-		// of FFFF; ods2's writer leaves the bytes after them zero
-		// (DEVIATIONS.md, "[Phase 51] DUMP"), so R4's DUMP/BLOCK differs
-		// in that one word.
-		line = strings.Replace(line, " FFFF0068 67666564 ", " 00000068 67666564 ", 1)
 		out = append(out, strings.Replace(line, "@'s /OUTPUT", "@'s/OUTPUT", 1))
 	}
 

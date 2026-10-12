@@ -6,8 +6,8 @@ govax now follows VMS's answers. Subtask 2, SPAWN in a subprocess;
 subtask 3, Ctrl/Y in a subprocess's procedures; subtask 4, the other
 processes while the prompt waits; subtask 5, the known differences
 (each fixed, or, for F$CSID, F$GETQUI, and F$LICENSE, left out as
-govax's choice; one byte-level difference, ods2's missing FFFF
-end-of-records word, deferred to ods2); subtask 6, docs and help.
+govax's choice; ods2's missing FFFF end-of-records word fixed in ods2
+afterward); subtask 6, docs and help.
 
 Phase 50 made the console a DCL command interpreter and closed on
 2026-10-12 with every subtask done. Following Phase 49's example, the
@@ -450,12 +450,22 @@ di
   end a waiting subprocess's WAIT. CLAUDE.md and PLAN.md describe the
   phase as done. Phase 51 is done.
 
-  Left for later: ods2's record writer should end a block's
-  variable-length records with FFFF, as VMS's RMS does (an ods2 change
-  and release; round 6's oracle allows for it); a probe round could
+  Left for later: a probe round could
   settle the choices DEVIATIONS.md's Phase 51 entries list (F$CONTEXT's,
   F$DEVICE's, F$FILE_ATTRIBUTES's, and F$IDENTIFIER's answers,
   STOP/IMAGE's status, DELETE/LOG's and DIRECTORY's unconfirmed columns,
   the DELETE and DIRECTORY facility numbers); PURGE still shows
   %PURGE-S-PURGED for each file, where VMS's PURGE is silent without
   /LOG.
+- 2026-10-12: After the phase closed, the author asked for the FFFF
+  word. ods2's `rms.Writer` now ends the last, partly filled block of a
+  Variable or VFC file with an FFFF record length after the last record,
+  when two bytes are left, as VMS's RMS does (`finalBlock`, used by
+  Close and Flush; the end of file stays before it, and the next record
+  appended goes over it); ods2's `Reader` passes over FFFF within a file
+  and goes on at the next block (`skipEndOfRecords`, before each record,
+  so a record's offset is its own). ods2 tests:
+  `TestWriterVariableEndOfRecords`, `TestReaderSkipsEndOfRecords`. Round
+  6's oracle no longer allows for the difference: R4's DUMP/BLOCK matches
+  VMS's byte for byte. govax needs the ods2 release with the change
+  (go.mod's pin); with the local go.work it uses the sibling checkout.
