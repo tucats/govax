@@ -19,8 +19,13 @@ DECK and EOD (2026-10-11, checked against VMS 7.3), and so is subtask
 checked against VMS 7.3 in round 4 of the probe), and so is subtask
 18, STOP and Ctrl/Y (2026-10-11, not yet probed), and so is subtask 19,
 which, at the author's request, gives a subprocess the console's whole
-DCL rather than `@` alone (2026-10-11). Subtask 20, the VMS probe of
-what is still unconfirmed, is next.
+DCL rather than `@` alone (2026-10-11), and so is subtask 20, round 5
+of the VMS probe, whose answers govax now follows (2026-10-11). Every
+subtask is done. Left for later: running other processes between
+process 1's DCL commands (a SPAWN/NOWAIT procedure advances only while
+the machine runs), Ctrl/Y in a subprocess's procedures, SPAWN from a
+subprocess, and the choices DEVIATIONS.md's "[Phase 50] Round 5 of the
+probe" still lists.
 
 The console should act like a VMS DCL command processor. Until now it
 had INCLUDE (and `@` as its alias), which runs a file of console
