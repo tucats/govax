@@ -83,7 +83,7 @@ go exe$initialize
 exit
 $!
 $ set debug nouserhalt
-$ set debug process
+$! set debug process
 $!
 $ print " "
 $!
