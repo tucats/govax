@@ -128,7 +128,7 @@ func (e statusError) Error() string { return e.text }
 // statusFailure returns the error for a command that failed with
 // condition value v: a statusError, marked as shown when v has
 // STS$M_INHIB_MSG set.
-func (c *Console) statusFailure(v uint32) error {
+func (c *Interpreter) statusFailure(v uint32) error {
 	err := statusError{status: v, text: c.statusText(v)}
 	if v&stsInhibitMsg != 0 {
 		return vmserrors.InhibitMessage(err)
@@ -145,7 +145,7 @@ func (c *Console) statusFailure(v uint32) error {
 // The CLI facility's messages are shown as DCL's, as VMS shows them
 // (VMS 7.3 showed IVVERB as %DCL-W-IVVERB after a subprocess ended with
 // it, testdata/dcl50's round 5).
-func (c *Console) statusText(v uint32) string {
+func (c *Interpreter) statusText(v uint32) string {
 	text := messageText(v)
 	if c.RTL != nil {
 		text = strings.TrimPrefix(c.RTL.StatusText(v), "%")
@@ -194,14 +194,14 @@ type commandStatus struct {
 
 // Status returns $STATUS: the condition value of the last command that
 // set it.
-func (c *Console) Status() uint32 { return c.status }
+func (c *Interpreter) Status() uint32 { return c.status }
 
 // setStatus sets $STATUS to v, and $SEVERITY to its severity: reserved
 // global symbols, whose values are strings (VMS 7.3 showed
 // $STATUS == "%X00030001" and $SEVERITY == "1"). cause is the error the
 // status came from, nil for none: a procedure that ends with the status
 // fails with it, so its message is govax's, arguments and all.
-func (c *Console) setStatus(v uint32, cause error) {
+func (c *Interpreter) setStatus(v uint32, cause error) {
 	c.status, c.statusErr = v, cause
 	c.endStatus, c.endStatusErr = v, cause
 	c.statusSet = true
@@ -214,7 +214,7 @@ func (c *Console) setStatus(v uint32, cause error) {
 // setCommandStatus says the command being dispatched ends with condition
 // value v, whatever error it returns; cause is the error v came from, if
 // any (setStatus).
-func (c *Console) setCommandStatus(v uint32, cause error) {
+func (c *Interpreter) setCommandStatus(v uint32, cause error) {
 	c.commandStatus = commandStatus{set: true, value: v, cause: cause}
 }
 
@@ -224,20 +224,20 @@ func (c *Console) setCommandStatus(v uint32, cause error) {
 // taken, as the DCL Dictionary says of each such qualifier ("overrides
 // any ON condition action specified"). The status a procedure that ends
 // now ends with is CLI$_NORMAL (endStatus).
-func (c *Console) branchStatus(v uint32, cause error) {
+func (c *Interpreter) branchStatus(v uint32, cause error) {
 	c.commandStatus = commandStatus{set: true, value: v, cause: cause, handled: true}
 }
 
 // keepStatus says the command being dispatched, if it succeeds, leaves
 // $STATUS as it was (the User's Manual's 13.15: SHOW SYMBOL, IF, ...).
-func (c *Console) keepStatus() { c.commandStatus.keep = true }
+func (c *Interpreter) keepStatus() { c.commandStatus.keep = true }
 
 // statusOf runs one command line (run) and sets $STATUS from what it
 // did. Each line DispatchConsole reads goes through it, so a command
 // inside another (IF's THEN, an alias) is part of the same command, and a
 // procedure's commands, each a line of their own, set $STATUS one after
 // another, before @ sets it last.
-func (c *Console) statusOf(run func() error) error {
+func (c *Interpreter) statusOf(run func() error) error {
 	saved := c.commandStatus
 	c.commandStatus = commandStatus{}
 
@@ -402,7 +402,7 @@ func (d *Dispatcher) onCommand(id int64, r *dcl.Result) error {
 // SetOn is SET ON (on true) and SET NOON: whether the current command
 // procedure acts on the statuses of its commands (13.10). At the
 // terminal it has no meaning, and does nothing.
-func (c *Console) SetOn(on bool) error {
+func (c *Interpreter) SetOn(on bool) error {
 	if level := c.currentLevel(); level != nil {
 		level.on.off = !on
 	}
@@ -412,7 +412,7 @@ func (c *Console) SetOn(on bool) error {
 
 // ControlYAction is the current command level's ON CONTROL_Y command,
 // "" for none.
-func (c *Console) ControlYAction() string {
+func (c *Interpreter) ControlYAction() string {
 	if level := c.currentLevel(); level != nil {
 		return level.on.controlY
 	}
@@ -430,7 +430,7 @@ func (d *Dispatcher) exitCommand(id int64, r *dcl.Result) error {
 		return d.Console.Exit(nil)
 	}
 
-	v, err := evaluateDCLExpression(text, &d.Console.dclSymbols, d.Console)
+	v, err := evaluateDCLExpression(text, &d.Console.dclSymbols, d.Console.Interpreter)
 	if err != nil {
 		return err
 	}

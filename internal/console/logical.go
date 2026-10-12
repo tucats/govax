@@ -610,17 +610,6 @@ func (c *Console) ShowTranslation(table, name string) error {
 	return nil
 }
 
-// runDownAbandonedImage is Machine.runDownAbandonedImage in process 1's
-// DCL. In a subprocess's it does nothing: the abandoned image is
-// process 1's, and its own images are run down by its CLI (subcli.go).
-func (c *Console) runDownAbandonedImage() {
-	if c.inSubprocess() {
-		return
-	}
-
-	c.Machine.runDownAbandonedImage()
-}
-
 // EndSession ends the console's use of the machine as govax exits: an
 // image of process 1's that never exited is run down, the other processes
 // are deleted (their files closed), and every file process 1 and DCL's

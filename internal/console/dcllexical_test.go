@@ -35,7 +35,7 @@ func checkLexical(t *testing.T, c *Console, cases []lexCase) {
 	t.Helper()
 
 	for _, tc := range cases {
-		v, err := evaluateDCLExpression(upcaseOutsideQuotes(tc.text), &c.dclSymbols, c)
+		v, err := evaluateDCLExpression(upcaseOutsideQuotes(tc.text), &c.dclSymbols, c.Interpreter)
 
 		switch {
 		case tc.vms != "":

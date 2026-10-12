@@ -73,15 +73,15 @@ func (c *Machine) Print(items []string) error {
 
 // Running reports whether the console should keep reading commands,
 // matching vax.console.running (cleared by QUIT/EXIT.
-func (c *Console) Running() bool { return !c.quit }
+func (c *Interpreter) Running() bool { return !c.quit }
 
 // CommandLineErr returns the failure of the one-shot command given on
 // govax's command line, or nil.
 func (c *Console) CommandLineErr() error { return c.commandLineErr }
 
 // Quit implements QUIT/EXIT: stops the command loop.
-func (c *Console) Quit() error {
-	if err := c.requireInit(); err != nil {
+func (c *Interpreter) Quit() error {
+	if err := c.machine.requireInit(); err != nil {
 		return err
 	}
 
@@ -282,6 +282,11 @@ func (c *Machine) ClearAllInterrupts() error {
 	c.Printf("\tCleared %d pending interrupt%s\n", n, plural)
 
 	return nil
+}
+
+// Printf writes to the output of the DCL running now.
+func (c *Console) Printf(format string, args ...any) {
+	c.Interpreter.Printf(format, args...)
 }
 
 // Help implements the HELP console command: the topic words name in h,

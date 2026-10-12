@@ -75,7 +75,7 @@ type labelPlace struct {
 
 // flow returns the current command level's flowState: the innermost
 // procedure's, or the terminal's.
-func (c *Console) flow() *flowState {
+func (c *Interpreter) flow() *flowState {
 	if level := c.currentLevel(); level != nil {
 		return &level.flow
 	}
@@ -116,7 +116,7 @@ func isDCLLabelChar(ch byte) bool {
 // is, and at the terminal it shows CLI$_NOLBLS. It returns the rest of
 // the line, the command to run; when there is none, the line leaves
 // $STATUS alone (a label isn't a command).
-func (c *Console) takeLabel(line string) (string, error) {
+func (c *Interpreter) takeLabel(line string) (string, error) {
 	label, rest, ok := splitLabel(line)
 	if !ok {
 		return line, nil
@@ -341,7 +341,7 @@ func (d *Dispatcher) gotoCommand(id int64, r *dcl.Result) error {
 // nothing to search: GOTO shows nothing, and $STATUS is CLI$_USGOTO
 // marked as shown (VMS 7.3, testdata/dcl50's round 5). GOTO leaves
 // $STATUS alone (13.15).
-func (c *Console) Goto(label string) error {
+func (c *Interpreter) Goto(label string) error {
 	f := c.flow()
 	if f.source == nil {
 		return vmserrors.InhibitMessage(vmserrors.New(vmserrors.CLI_USGOTO))
@@ -365,7 +365,7 @@ func (c *Console) Goto(label string) error {
 // with CLI$_USGOTO's status, marked as shown, as VMS 7.3 ended one after
 // a missing GOSUB target and a missing CALL target alike (%X10038148,
 // testdata/dcl50's round 5). An ON action may still move it first.
-func (c *Console) missingTarget(f *flowState, err error) error {
+func (c *Interpreter) missingTarget(f *flowState, err error) error {
 	f.source.Seek(f.source.end)
 
 	if level := c.currentLevel(); level != nil {
@@ -380,7 +380,7 @@ func (c *Console) missingTarget(f *flowState, err error) error {
 // foundTarget shows CLI$_INVIFNEST for a target whose search passed an
 // ENDIF or ELSE with no block open (labelTarget's nesting); the GOTO,
 // GOSUB, or CALL goes on to it.
-func (c *Console) foundTarget(target labelTarget) {
+func (c *Interpreter) foundTarget(target labelTarget) {
 	if level := c.currentLevel(); level != nil && target.nesting {
 		c.procedureMessage(level, vmserrors.New(vmserrors.CLI_INVIFNEST))
 	}

@@ -104,7 +104,7 @@ func verifyKeyword(k string) (string, bool) {
 // a keyword changes only its own. A keyword SET VERIFY doesn't have is
 // CLI_IVKEYW; SET NOVERIFY with keywords is CLI_CONFLICT, with word, the
 // command's NOVERIFY as it was typed, as its segment (VMS 7.3).
-func (c *Console) SetVerify(off bool, word string, keywords []string) error {
+func (c *Interpreter) SetVerify(off bool, word string, keywords []string) error {
 	if len(keywords) == 0 {
 		c.Verify, c.verifyImage = !off, !off
 
@@ -143,7 +143,7 @@ func (c *Console) SetVerify(off bool, word string, keywords []string) error {
 // characters is CLI_IVVALU (unconfirmed against VMS); one with a
 // directive the prefix can't use is CLI_INVPREFIX, and the prefix stays
 // as it was (VMS 7.3).
-func (c *Console) SetPrefix(control string) error {
+func (c *Interpreter) SetPrefix(control string) error {
 	if len(control) > maxPrefixLength {
 		return vmserrors.New(vmserrors.CLI_IVVALU)
 	}
@@ -196,7 +196,7 @@ func validPrefix(control string) bool {
 // setVerifyCommand is SET VERIFY's and SET NOVERIFY's handler: the
 // keywords, given after "=" alone or as a list in parentheses. line is
 // the command line, from which SET's keyword is taken as it was typed.
-func setVerifyCommand(c *Console, r *dcl.Result, line string) error {
+func setVerifyCommand(c *Interpreter, r *dcl.Result, line string) error {
 	var keywords []string
 
 	for _, item := range r.List("KEYWORDS") {
@@ -226,7 +226,7 @@ func setKeywordWord(line string) string {
 // prefix is the prefix of a verified command line: the SET PREFIX
 // control string, formatted, at most 64 characters. Before there is a
 // process to format it, the control string is used as it is.
-func (c *Console) prefix() string {
+func (c *Interpreter) prefix() string {
 	if c.verifyPrefix == "" {
 		return ""
 	}
@@ -247,7 +247,7 @@ func (c *Console) prefix() string {
 
 // showVerified writes records, a verified command line's, with the
 // prefix before the first and blanks as long as it before the rest.
-func (c *Console) showVerified(records []string) {
+func (c *Interpreter) showVerified(records []string) {
 	prefix := c.prefix()
 	pad := strings.Repeat(" ", len(prefix))
 
@@ -286,7 +286,7 @@ func newPendingEcho(records []string) *pendingEcho {
 // joinMark where the pending line's records were joined, so its scan
 // keeps them apart; line itself if there is no pending line, it has
 // one record, or whole isn't the line it was made from.
-func (c *Console) markJoins(whole, line string) string {
+func (c *Interpreter) markJoins(whole, line string) string {
 	e := c.echo
 	if e == nil || len(e.joins) == 0 || whole != e.line {
 		return line
@@ -314,7 +314,7 @@ func (c *Console) markJoins(whole, line string) string {
 // records are shown as they are. Otherwise each record is shown as it
 // is but for its part of the line, which is shown scanned: VMS 7.3
 // shows a continued command a record at a time, each substituted.
-func (c *Console) echoLine(label, before, after string) {
+func (c *Interpreter) echoLine(label, before, after string) {
 	e := c.echo
 	c.echo = nil
 
@@ -379,13 +379,13 @@ func scannedRecords(records []string, label, before, after string) ([]string, bo
 
 // dropEcho forgets the pending line without showing it: a line of an IF
 // branch that doesn't run.
-func (c *Console) dropEcho() { c.echo = nil }
+func (c *Interpreter) dropEcho() { c.echo = nil }
 
 // comments handles the comment (and blank) lines a procedure passed
 // over before its next line: F$VERIFY between apostrophes is performed
 // in each, and then, with procedure verification on, the line is shown,
 // the call replaced by its value.
-func (c *Console) comments(records []string) {
+func (c *Interpreter) comments(records []string) {
 	for _, record := range records {
 		shown := c.verifyInComment(record, &c.dclSymbols)
 
@@ -397,7 +397,7 @@ func (c *Console) comments(records []string) {
 
 // showData shows a data line given to what reads the procedure's input,
 // if image verification is on.
-func (c *Console) showData(record string) {
+func (c *Interpreter) showData(record string) {
 	if c.verifyImage {
 		fmt.Fprintln(c.Out, record)
 	}
@@ -410,7 +410,7 @@ func (c *Console) showData(record string) {
 // missing (VMS 7.3 still performed the call). Nothing else in a comment
 // is processed, and a call with an error is left as it is (unconfirmed
 // against VMS).
-func (c *Console) verifyInComment(text string, symbols *dclSymbolTable) string {
+func (c *Interpreter) verifyInComment(text string, symbols *dclSymbolTable) string {
 	var out strings.Builder
 
 	for {

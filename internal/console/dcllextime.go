@@ -37,12 +37,12 @@ func lexTime(e *dclExpression, _ []lexicalArg) (dclValue, error) {
 // systemTime is the system time now, in VMS's format: the process's
 // clock, or the engine's before there is a process, or the host's before
 // there is a machine.
-func (c *Console) systemTime() uint64 {
+func (c *Interpreter) systemTime() uint64 {
 	switch {
 	case c.RTL != nil && c.RTL.Clock != nil:
 		return c.RTL.Clock()
-	case c.Engine != nil:
-		return c.Engine.SystemTime()
+	case c.machine.Engine != nil:
+		return c.machine.Engine.SystemTime()
 	default:
 		return vmsdef.Time(time.Now())
 	}

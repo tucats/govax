@@ -68,7 +68,7 @@ type controlKeys struct {
 // NOCONTROL=Y, when the key is echoed and ignored (the DCL Dictionary,
 // SET CONTROL). Safe to call from any goroutine; cmd/govax asks it for
 // each Ctrl/Y typed.
-func (c *Console) ControlYEnabled() bool { return !c.control.noY.Load() }
+func (c *Interpreter) ControlYEnabled() bool { return !c.control.noY.Load() }
 
 // isAttentionKey reports whether key is Ctrl/C or Ctrl/Y.
 func isAttentionKey(key byte) bool {
@@ -79,11 +79,11 @@ func isAttentionKey(key byte) bool {
 // is DCL's to act on now: a DCL command procedure is running (not a
 // debugger command procedure, or a debugger session), Ctrl/Y is enabled,
 // and DCL isn't already reading the Ctrl/Y level or ending every level.
-func (c *Console) dclTakesAttention(key byte) bool {
+func (c *Interpreter) dclTakesAttention(key byte) bool {
 	level := c.currentLevel()
 
 	return isAttentionKey(key) && level != nil && !level.source.plain &&
-		!c.InDebugger() && c.ControlYEnabled() && c.controlYLevelActive == nil && !c.stopping
+		!c.machine.InDebugger() && c.ControlYEnabled() && c.controlYLevelActive == nil && !c.stopping
 }
 
 // HandleAttention makes Console a cpu.AttentionHandler: an attention key
@@ -95,8 +95,8 @@ func (c *Console) dclTakesAttention(key byte) bool {
 // CONTINUE lets it go on; anything else stops the image, and the
 // procedure's loop takes the action when the command has returned
 // (takeControlY).
-func (c *Console) HandleAttention(key byte) bool {
-	if env := c.running(); env != nil && env.AttentionAny(env, key) {
+func (c *Interpreter) HandleAttention(key byte) bool {
+	if env := c.machine.running(); env != nil && env.AttentionAny(env, key) {
 		return true
 	}
 
@@ -127,9 +127,9 @@ func (c *Console) HandleAttention(key byte) bool {
 // forgetAttention forgets the attention key typed, and the one that
 // stopped the last run: DCL has dealt with it, so cmd/govax doesn't take
 // it for its own (a Ctrl/Y that ends govax).
-func (c *Console) forgetAttention() {
-	if c.Engine != nil {
-		c.Engine.ClearAttention()
+func (c *Interpreter) forgetAttention() {
+	if c.machine.Engine != nil {
+		c.machine.Engine.ClearAttention()
 	}
 }
 
@@ -137,7 +137,7 @@ func (c *Console) forgetAttention() {
 // act on after the command a procedure just ran: one that interrupted
 // an image (HandleAttention), or one typed while DCL ran a command of
 // its own, still pending.
-func (c *Console) takeControlY() bool {
+func (c *Interpreter) takeControlY() bool {
 	if c.controlYTaken {
 		c.controlYTaken = false
 		c.forgetAttention()
@@ -145,7 +145,7 @@ func (c *Console) takeControlY() bool {
 		return true
 	}
 
-	if c.Engine == nil || !c.dclTakesAttention(c.Engine.PendingAttention()) {
+	if c.machine.Engine == nil || !c.dclTakesAttention(c.machine.Engine.PendingAttention()) {
 		return false
 	}
 
@@ -156,7 +156,7 @@ func (c *Console) takeControlY() bool {
 
 // controlYHandler returns the innermost command level with an ON
 // CONTROL_Y, nil for none.
-func (c *Console) controlYHandler() *commandLevel {
+func (c *Interpreter) controlYHandler() *commandLevel {
 	for i := len(c.levels) - 1; i >= 0; i-- {
 		if c.levels[i].on.controlY != "" {
 			return c.levels[i]
@@ -175,7 +175,7 @@ func (c *Console) controlYHandler() *commandLevel {
 // User's Manual's Figure 13-3); with none at any level, DCL reads the
 // Ctrl/Y level, whatever the depth. An image the Ctrl/Y stopped is run
 // down first, as one forced to exit.
-func (c *Console) controlYAction(level *commandLevel) (exit procedureExit, stop bool, next func() error) {
+func (c *Interpreter) controlYAction(level *commandLevel) (exit procedureExit, stop bool, next func() error) {
 	switch handler := c.controlYHandler(); {
 	case handler == level:
 		c.runDownAbandonedImage()
@@ -199,7 +199,7 @@ func (c *Console) controlYAction(level *commandLevel) (exit procedureExit, stop 
 // unwindExit is how a level that a Ctrl/Y unwinds ends: with $STATUS,
 // marked as shown (VMS 7.3 gave %X10010001 after a WRITE's
 // %X00010001).
-func (c *Console) unwindExit() procedureExit {
+func (c *Interpreter) unwindExit() procedureExit {
 	return procedureExit{status: c.status | stsInhibitMsg, cause: c.statusErr}
 }
 
@@ -212,7 +212,7 @@ func (c *Console) unwindExit() procedureExit {
 // a command that would run an image or a procedure, which then runs at
 // level 0 (Console.afterStop). Ctrl/Y typed at the prompt gives a new
 // prompt; Ctrl/Z, or the end of the input, is EXIT.
-func (c *Console) controlYLevel(level *commandLevel) bool {
+func (c *Interpreter) controlYLevel(level *commandLevel) bool {
 	prompt := &controlYPrompt{}
 	c.controlYLevelActive = prompt
 
@@ -221,7 +221,7 @@ func (c *Console) controlYLevel(level *commandLevel) bool {
 	for c.Running() {
 		line, ok := c.readTerminal(c.Prompt())
 		if !ok {
-			if c.Engine != nil && isAttentionKey(c.Engine.PendingAttention()) {
+			if c.machine.Engine != nil && isAttentionKey(c.machine.Engine.PendingAttention()) {
 				c.forgetAttention()
 
 				continue
@@ -265,7 +265,7 @@ func (c *Console) controlYLevel(level *commandLevel) bool {
 // leaveControlY returns errLeaveControlY when DCL is reading the Ctrl/Y
 // level and a command that runs an image (own false) would run: the
 // interrupted procedure ends before it does.
-func (c *Console) leaveControlY(own bool) error {
+func (c *Interpreter) leaveControlY(own bool) error {
 	if c.controlYLevelActive != nil && !own {
 		return errLeaveControlY
 	}
@@ -276,7 +276,7 @@ func (c *Console) leaveControlY(own bool) error {
 // continueCommand is CONTINUE: at the Ctrl/Y level, it resumes the
 // procedure Ctrl/Y interrupted; elsewhere it does nothing (the target of
 // an ON or IF, 13.9). It leaves $STATUS as it was.
-func (c *Console) continueCommand() error {
+func (c *Interpreter) continueCommand() error {
 	if c.controlYLevelActive != nil {
 		c.controlYLevelActive.resume = true
 	}
@@ -291,7 +291,7 @@ func (c *Console) continueCommand() error {
 // exit (for STOP, $STATUS as it is: VMS 7.3 left it unchanged,
 // testdata/dcl50's round 5). runLevel turns stopping off when the last
 // level has gone.
-func (c *Console) stopProcedures(exit procedureExit) {
+func (c *Interpreter) stopProcedures(exit procedureExit) {
 	if len(c.levels) > 0 {
 		c.stopping = true
 		c.stopExit = exit
@@ -331,7 +331,7 @@ func (d *Dispatcher) stopCommand(id int64, r *dcl.Result) error {
 // which govax doesn't show. SET NOCONTROL=Y also cancels the current
 // level's ON CONTROL_Y (13.13.1). A keyword other than T or Y is
 // CLI$_IVKEYW.
-func (c *Console) setControlCommand(r *dcl.Result) error {
+func (c *Interpreter) setControlCommand(r *dcl.Result) error {
 	negated := r.Negated("WHAT")
 
 	keys := []string{"Y"}
@@ -379,7 +379,7 @@ func splitKeywordList(items []string) []string {
 
 // controlString is F$ENVIRONMENT's CONTROL (enabled true) or NOCONTROL:
 // the control keys SET CONTROL enabled or disabled, "T,Y" or one of them.
-func (c *Console) controlString(enabled bool) string {
+func (c *Interpreter) controlString(enabled bool) string {
 	var keys []string
 
 	if c.control.t == enabled {

@@ -206,7 +206,7 @@ type dclExpression struct {
 	// console is the console a lexical function asks about the system;
 	// nil for a subprocess's CLI, whose lexical functions are those that
 	// need no console.
-	console *Console
+	console *Interpreter
 }
 
 // evaluateDCLExpression evaluates text, all of it, as a DCL expression,
@@ -214,7 +214,7 @@ type dclExpression struct {
 // ends the expression. A whole expression followed by a ")" or ","
 // returns its value in a trailingDelimiter error (CLI_SYMDEL): VMS
 // assigns the value and then reports the delimiter.
-func evaluateDCLExpression(text string, symbols *dclSymbolTable, c *Console) (dclValue, error) {
+func evaluateDCLExpression(text string, symbols *dclSymbolTable, c *Interpreter) (dclValue, error) {
 	e := &dclExpression{text: text, symbols: symbols, console: c}
 
 	e.skipBlanks()

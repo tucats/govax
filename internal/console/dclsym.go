@@ -201,7 +201,7 @@ func (t dclSymbols) lookup(word string) (dclSymbol, bool) {
 
 // DCLSymbol returns the value of the DCL symbol name means, and whether
 // there is one.
-func (c *Console) DCLSymbol(name string) (string, bool) {
+func (c *Interpreter) DCLSymbol(name string) (string, bool) {
 	sym, ok := c.dclSymbols.lookup(name)
 
 	return sym.value, ok
@@ -299,7 +299,7 @@ func isDCLSymbolChar(ch byte) bool {
 
 // assignSymbol defines (or redefines) the symbol written as name in the
 // console's table.
-func (c *Console) assignSymbol(name, op, text string) error {
+func (c *Interpreter) assignSymbol(name, op, text string) error {
 	return c.dclSymbols.assignIn(c, name, op, text)
 }
 
@@ -318,7 +318,7 @@ func (t *dclSymbolTable) assign(name, op, text string) error {
 // (dclText); "=" and "==" assign the value of the text as an expression
 // (dclexpr.go), with c, if not nil, as the console its lexical functions
 // ask about the system.
-func (t *dclSymbolTable) assignIn(c *Console, name, op, text string) error {
+func (t *dclSymbolTable) assignIn(c *Interpreter, name, op, text string) error {
 	full := strings.ToUpper(strings.Replace(name, "*", "", 1))
 	if strings.Contains(full, "*") {
 		return vmserrors.New(vmserrors.CLI_EXPSYN, name)
@@ -484,7 +484,7 @@ func isDeleteSymbol(verb, rest string) bool {
 
 // deleteSymbols is DELETE/SYMBOL: rest is its qualifiers and the name of
 // the symbol to delete.
-func (c *Console) deleteSymbols(rest string) error {
+func (c *Interpreter) deleteSymbols(rest string) error {
 	return c.dclSymbols.delete(rest)
 }
 
@@ -609,7 +609,7 @@ func (t *dclSymbolTable) clone() dclSymbolTable {
 // doubled (the User's Manual's PROMPT example, 12.6.1). $STATUS and
 // $SEVERITY are global symbols too (dclstatus.go).
 // Unconfirmed against VMS: the integer line's spacing.
-func (c *Console) showDCLSymbols(cmd symbolCommand) error {
+func (c *Interpreter) showDCLSymbols(cmd symbolCommand) error {
 	shown, err := c.dclSymbols.show(cmd)
 	if err != nil {
 		return err

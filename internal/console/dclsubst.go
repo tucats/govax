@@ -51,14 +51,14 @@ const maxSubstitutions = 256
 
 // substituteApostrophes is phase 1 for the console's command line: the
 // line with every apostrophe substitution made.
-func (c *Console) substituteApostrophes(line string) (string, error) {
+func (c *Interpreter) substituteApostrophes(line string) (string, error) {
 	return substituteApostrophes(line, &c.dclSymbols, c)
 }
 
 // substituteApostrophes returns line with every apostrophe substitution
 // made, the symbols coming from symbols, and c the console a lexical
 // function asks (nil for a subprocess's CLI).
-func substituteApostrophes(line string, symbols *dclSymbolTable, c *Console) (string, error) {
+func substituteApostrophes(line string, symbols *dclSymbolTable, c *Interpreter) (string, error) {
 	quoted := false
 	count := 0
 
@@ -144,7 +144,7 @@ type apostropheTerm struct {
 // two) at start in line: blanks (not inside quotes, closing), a symbol
 // name or a lexical function call, and the closing apostrophe, which
 // may be left out.
-func substitutionTerm(line string, start int, closing bool, symbols *dclSymbolTable, c *Console) (apostropheTerm, error) {
+func substitutionTerm(line string, start int, closing bool, symbols *dclSymbolTable, c *Interpreter) (apostropheTerm, error) {
 	i := start
 	if !closing {
 		for i < len(line) && (line[i] == ' ' || line[i] == '\t') {

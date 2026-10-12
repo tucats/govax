@@ -42,7 +42,7 @@ func (d *Dispatcher) bindSetCommands() {
 
 		return c.SetVerbose()
 	})
-	g.Bind("SET_VERIFY", func(id int64, r *dcl.Result) error { return setVerifyCommand(c, r, d.line) })
+	g.Bind("SET_VERIFY", func(id int64, r *dcl.Result) error { return setVerifyCommand(c.Interpreter, r, d.line) })
 	g.Bind("SET_PREFIX", func(id int64, r *dcl.Result) error {
 		if r.Negated("WHAT") {
 			return c.SetPrefix("")

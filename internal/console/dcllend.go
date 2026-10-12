@@ -53,7 +53,7 @@ import (
 // commandBoundary is the step after each DCL command, at command level 0
 // and in a procedure: the CPU is given up for the other processes (see
 // above).
-func (c *Console) commandBoundary() {
+func (c *Interpreter) commandBoundary() {
 	if !c.Running() {
 		return
 	}
@@ -74,7 +74,7 @@ const promptLendLimit = 50 * time.Millisecond
 // lendWhileIdle is process 1's step after a command at its command level
 // 0 (see above): it lends the CPU, waiting, until no other process wants
 // it, or promptLendLimit has passed, or an attention key is typed.
-func (c *Console) lendWhileIdle() {
+func (c *Interpreter) lendWhileIdle() {
 	if !c.Running() || !c.canLend() {
 		return
 	}
@@ -91,21 +91,21 @@ func (c *Console) lendWhileIdle() {
 	}
 
 	c.lendCPU(func() bool {
-		return idle() || !time.Now().Before(limit) || isAttentionKey(c.Engine.PendingAttention())
+		return idle() || !time.Now().Before(limit) || isAttentionKey(c.machine.Engine.PendingAttention())
 	}, c.machineDeadline(promptLendLimit))
 }
 
 // canLend reports whether process 1's DCL can lend the CPU now (see
 // above).
-func (c *Console) canLend() bool {
+func (c *Interpreter) canLend() bool {
 	switch {
 	case c.lending, c.consoleCommands > 0, c.subCLI != nil:
 		return false
-	case c.Engine == nil, c.RTL == nil, c.RTL != c.processOne:
+	case c.machine.Engine == nil, c.RTL == nil, c.RTL != c.machine.processOne:
 		return false
-	case c.Engine.SchedulingFrozen(), c.InDebugger(), c.InAssemblerMode():
+	case c.machine.Engine.SchedulingFrozen(), c.machine.InDebugger(), c.machine.InAssemblerMode():
 		return false
-	case c.running() != c.RTL:
+	case c.machine.running() != c.RTL:
 		return false
 	}
 
@@ -118,8 +118,8 @@ func (c *Console) canLend() bool {
 // LendCPU's). It reports whether another process ran. A stop in another
 // process (a HALT, a limit) is reported as a run's would be, and ends
 // the lending; process 1 has the CPU back at the end, whatever happened.
-func (c *Console) lendCPU(over func() bool, deadline uint64) bool {
-	if !c.canLend() || isAttentionKey(c.Engine.PendingAttention()) {
+func (c *Interpreter) lendCPU(over func() bool, deadline uint64) bool {
+	if !c.canLend() || isAttentionKey(c.machine.Engine.PendingAttention()) {
 		return false
 	}
 
@@ -132,42 +132,42 @@ func (c *Console) lendCPU(over func() bool, deadline uint64) bool {
 	defer func() {
 		c.lending = false
 
-		if err := c.RTL.ReclaimCPU(c.Engine, c.RTL); err != nil {
+		if err := c.RTL.ReclaimCPU(c.machine.Engine, c.RTL); err != nil {
 			c.Printf("%%%s\n", err)
 		}
 	}()
 
-	c.Engine.BeginRun()
+	c.machine.Engine.BeginRun()
 
 	ran := false
 
 	for {
 		// A key typed meanwhile is process 1's: DCL acts on it after
 		// the command (dclcontroly.go).
-		if isAttentionKey(c.Engine.PendingAttention()) {
+		if isAttentionKey(c.machine.Engine.PendingAttention()) {
 			return ran
 		}
 
-		err := c.BeginStep()
+		err := c.machine.BeginStep()
 
 		// The scheduler has chosen process 1: it gets the CPU back
 		// before it runs an instruction.
-		if err == nil && c.running() == c.RTL {
+		if err == nil && c.machine.running() == c.RTL {
 			return ran
 		}
 
 		if err == nil {
 			ran = true
-			finish := c.traceStep(c.CPU.GPR(vax.PC), false)
+			finish := c.machine.traceStep(c.machine.CPU.GPR(vax.PC), false)
 
-			if err = c.StepMachine(); err == nil {
+			if err = c.machine.StepMachine(); err == nil {
 				finish()
 
 				continue
 			}
 		}
 
-		if err := c.ReportStop(err); err != nil {
+		if err := c.machine.ReportStop(err); err != nil {
 			c.Printf("%%%s\n", err)
 		}
 
@@ -180,10 +180,10 @@ func (c *Console) lendCPU(over func() bool, deadline uint64) bool {
 // the system time is the host's, and the scheduler, with nothing to run,
 // sleeps until then; otherwise 0, since the system time counts
 // instructions and would jump ahead of the host's.
-func (c *Console) machineDeadline(d time.Duration) uint64 {
-	if c.Engine == nil || !c.Engine.HardwareClock() {
+func (c *Interpreter) machineDeadline(d time.Duration) uint64 {
+	if c.machine.Engine == nil || !c.machine.Engine.HardwareClock() {
 		return 0
 	}
 
-	return c.Engine.SystemTime() + uint64(d/(time.Second/time.Duration(vmsdef.TicksPerSecond)))
+	return c.machine.Engine.SystemTime() + uint64(d/(time.Second/time.Duration(vmsdef.TicksPerSecond)))
 }

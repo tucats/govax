@@ -67,7 +67,7 @@ func (d *Dispatcher) gosubCommand(id int64, r *dcl.Result) error {
 // continue executing and is forced to exit", 14.16.6), with GOTO's
 // status (missingTarget). At the terminal GOSUB is CLI$_INVGOSUB. GOSUB
 // leaves $STATUS alone (VMS 7.3).
-func (c *Console) Gosub(label string) error {
+func (c *Interpreter) Gosub(label string) error {
 	f := c.flow()
 	if f.source == nil {
 		return vmserrors.New(vmserrors.CLI_INVGOSUB)
@@ -111,7 +111,7 @@ func (d *Dispatcher) returnCommand(id int64, r *dcl.Result) error {
 	var status *uint32
 
 	if text := strings.TrimSpace(r.String("STATUS")); text != "" {
-		v, err := evaluateDCLExpression(text, &d.Console.dclSymbols, d.Console)
+		v, err := evaluateDCLExpression(text, &d.Console.dclSymbols, d.Console.Interpreter)
 		if err != nil {
 			return err
 		}
@@ -186,7 +186,7 @@ func (d *Dispatcher) callCommand(id int64, r *dcl.Result) error {
 // for a missing GOTO target (missingTarget; VMS 7.3, testdata/dcl50's
 // round 5). A plain label, not on a SUBROUTINE line, is callPlainLabel's.
 // At the terminal CALL is CLI$_INVCALL, an error (VMS 7.3).
-func (c *Console) callSubroutine(cmd procedureCommand, dispatch func(string) error) error {
+func (c *Interpreter) callSubroutine(cmd procedureCommand, dispatch func(string) error) error {
 	label := strings.ToUpper(cmd.file)
 	notFound := vmserrors.New(vmserrors.CLI_USCALL, label)
 
@@ -235,7 +235,7 @@ func (c *Console) callSubroutine(cmd procedureCommand, dispatch func(string) err
 // (testdata/dcl50's round 6). The level ends at the procedure's end of
 // file when nothing ends it before (unconfirmed). A STOP during it ends
 // the procedures as STOP does, without the INVCALL.
-func (c *Console) callPlainLabel(f *flowState, target labelTarget, cmd procedureCommand, dispatch func(string) error) error {
+func (c *Interpreter) callPlainLabel(f *flowState, target labelTarget, cmd procedureCommand, dispatch func(string) error) error {
 	_, _, start, _, _ := f.source.lineAt(target.pos)
 
 	source := &procedureSource{name: f.source.name, records: f.source.records, next: start, end: f.source.end}

@@ -367,7 +367,7 @@ func lexFAO(e *dclExpression, args []lexicalArg) (dclValue, error) {
 
 // lexicalEnvironment is the process the lexical functions ask about: the
 // console's own (process 1's). Before INIT there is none (CLI_NOVAX).
-func (c *Console) lexicalEnvironment() (*corevms.Environment, error) {
+func (c *Interpreter) lexicalEnvironment() (*corevms.Environment, error) {
 	if c.RTL == nil {
 		return nil, vmserrors.New(vmserrors.CLI_NOVAX)
 	}

@@ -37,6 +37,7 @@ func NewDispatcher(c *Console, g *dcl.Grammar, h *help.File) *Dispatcher {
 	// the subprocesses' DCL (subcli.go) use.
 	if c.Dispatcher == nil {
 		c.Dispatcher = d
+		c.dispatchConsole = d.DispatchConsole
 	}
 
 	return d

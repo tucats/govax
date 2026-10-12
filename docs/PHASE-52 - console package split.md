@@ -356,3 +356,27 @@ package move is a plain import-path rewrite.
   `imageProcess.process()` for process 1's images, and
   `EngineHooks.Home`. The second matters only when the System has no
   current process.
+- **2026-10-12 — Stage 3, step 3: `Interpreter`.** `Console` embeds an
+  `Interpreter` (`interpreter.go`): every process's DCL, holding process
+  1's `Shell` (`home`), the subprocess CLIs, SET CONTROL, CPU lending,
+  SPAWN's page, the terminal input (`In`), and the current `Shell`,
+  embedded. The DCL files' methods (procedures, symbols, expressions,
+  flow, statuses, verification, SYS$INPUT, file I/O, Ctrl/Y, WAIT,
+  lending, the lexical functions, the subprocess CLI, SPAWN) have
+  `*Interpreter` receivers. Changing them gave 85 errors, nearly all the
+  machine itself (the engine for lending and attention keys, the CPU
+  for the CLI's image calls, LIB$SPAWN's call). Since `dclshell` will
+  sit above `machine`, the interpreter holds it directly
+  (`Interpreter.machine`) rather than through an interface, so the plan's
+  `Host` interface shrinks to one hook: `dispatchConsole`, the
+  `Dispatcher` that runs a subprocess CLI's command lines.
+  `InDebugger` moved to `Machine`, which owns the debugger.
+  `Running`/`Quit`, the DCL prompt, and `readReply` moved to
+  `Interpreter`. Each layer has its own `Printf`: the machine's goes
+  through `Hooks.Output`, and the interpreter's and the console's go
+  to the DCL's `Out`. The machine's abandoned-image rundown is
+  `endAbandonedImage`; only the interpreter's wrapper is called
+  `runDownAbandonedImage`, so nothing hides behind a promoted name of
+  the same spelling. The command handlers in the DCL files that are
+  `*Dispatcher` methods (GOTO, IF, CALL, OPEN, ...) and
+  `DispatchConsole` itself stay on `Dispatcher` until Stage 6.

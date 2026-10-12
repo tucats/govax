@@ -59,7 +59,7 @@ func (c *Machine) Run(fn string, opts RunOptions) error {
 	}
 
 	// A previous image that was stopped and never exited ends now.
-	c.runDownAbandonedImage()
+	c.endAbandonedImage()
 
 	savedMode := c.CPU.PSL().CurMod()
 	c.Engine.SetModeStack(vax.Kernel, false)
@@ -492,12 +492,12 @@ func (c *Machine) imageRundown() {
 	}
 }
 
-// runDownAbandonedImage runs down an image RUN started that never
+// endAbandonedImage runs down an image RUN started that never
 // exited: one a HALT, CTRL/C, CTRL/Y, or an instruction or time limit
 // stopped, and that nothing resumed. On VMS such an image is run down
 // when the next one starts (or the process logs out), closing the files
 // it left open; RUN and EndSession do the same here.
-func (c *Machine) runDownAbandonedImage() {
+func (c *Machine) endAbandonedImage() {
 	if c.imageActive {
 		c.imageActive = false
 		c.imageRundown()

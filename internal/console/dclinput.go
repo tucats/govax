@@ -224,7 +224,7 @@ func (p *procedureSource) readData() (record string, ok bool) {
 // doesn't read stay in the procedure. It is a corevms.TerminalSource
 // that never waits.
 type procedureInput struct {
-	c      *Console
+	c      *Interpreter
 	source *procedureSource
 
 	// shell is the DCL whose procedure it is: an image may read while
@@ -273,7 +273,7 @@ func (in *procedureInput) Ready() bool { return true }
 // the line runs reads them, and puts the terminal back afterward. A
 // debugger command procedure's lines are all commands, so it has no
 // data; its lines run with the input as it is.
-func (c *Console) withProcedureInput(source *procedureSource, fn func() error) error {
+func (c *Interpreter) withProcedureInput(source *procedureSource, fn func() error) error {
 	env := c.RTL
 	if env == nil || source.plain {
 		return fn()
@@ -295,7 +295,7 @@ func (c *Console) withProcedureInput(source *procedureSource, fn func() error) e
 // (with or without its colon), itself or through logical names: the
 // process's input, which TYPE reads as lines rather than as a file
 // (processPermanentFile).
-func (c *Console) isInputStream(spec string) bool {
+func (c *Interpreter) isInputStream(spec string) bool {
 	return c.processPermanentFile(spec) == "SYS$INPUT"
 }
 
@@ -316,7 +316,7 @@ var processPermanentNames = map[string]bool{
 // data through such a name). Each step takes a name's first equivalence
 // string; one with anything after the name and its colon (a directory, a
 // file name) is a file, not a process-permanent one.
-func (c *Console) processPermanentFile(spec string) string {
+func (c *Interpreter) processPermanentFile(spec string) string {
 	name := strings.ToUpper(strings.TrimSpace(spec))
 
 	for range lnm.MaxDepth {
@@ -368,7 +368,7 @@ func isDCLName(name string) bool {
 // records after the command (an image's SYS$INPUT, procedureInput), each
 // shown first with image verification on; at the terminal it is what is
 // typed, up to Ctrl/Z.
-func (c *Console) typeInput() error {
+func (c *Interpreter) typeInput() error {
 	if c.RTL == nil {
 		return nil
 	}

@@ -58,8 +58,8 @@ const (
 // error; when the subprocess has been made, it says so as DCL does
 // (%DCL-S-SPAWNED, and %DCL-S-ATTACHED if it waits), and when process 1
 // has waited for one, that control has come back (%DCL-S-RETURNED).
-func (c *Console) Spawn(o SpawnOptions) error {
-	if err := c.requireInit(); err != nil {
+func (c *Interpreter) Spawn(o SpawnOptions) error {
+	if err := c.machine.requireInit(); err != nil {
 		return err
 	}
 
@@ -71,11 +71,11 @@ func (c *Console) Spawn(o SpawnOptions) error {
 		return c.spawnInSubprocess(cli, o)
 	}
 
-	if err := c.ensureShims(); err != nil {
+	if err := c.machine.ensureShims(); err != nil {
 		return err
 	}
 
-	entry, ok := c.Symbols.Get("LIB$SPAWN")
+	entry, ok := c.machine.Symbols.Get("LIB$SPAWN")
 	if !ok {
 		return vmserrors.New(vmserrors.LIB_UNRESOLVED, "LIB$SPAWN")
 	}
@@ -131,7 +131,7 @@ func (c *Console) Spawn(o SpawnOptions) error {
 		put(spawnArgList+4+uint32(i)*4, a)
 	}
 
-	if err := c.images().storeBytes(page, b); err != nil {
+	if err := c.machine.images().storeBytes(page, b); err != nil {
 		return err
 	}
 
@@ -147,12 +147,12 @@ func (c *Console) Spawn(o SpawnOptions) error {
 
 	defer func() { c.RTL.SpawnNotice = nil }()
 
-	if err := c.Call(page, false); err != nil {
+	if err := c.machine.Call(page, false); err != nil {
 		return err
 	}
 
 	// A failure is LIB$SPAWN's status, $STATUS too.
-	if status := c.CPU.GPR(0); status&1 == 0 {
+	if status := c.machine.CPU.GPR(0); status&1 == 0 {
 		c.setCommandStatus(status, nil)
 
 		return c.statusFailure(status)
@@ -185,7 +185,7 @@ func spawnFlags(o SpawnOptions) uint32 {
 // before it runs: that it was, and, if SPAWN waits, that the terminal is
 // now the subprocess's. VMS's DCL wrote them so in testdata/mp/probe4's
 // run.
-func (c *Console) spawnNotice(spawned *corevms.Environment, wait bool) {
+func (c *Interpreter) spawnNotice(spawned *corevms.Environment, wait bool) {
 	c.Printf("%%DCL-S-SPAWNED, process %s spawned\n", spawned.Process.Name)
 
 	if wait {
@@ -200,7 +200,7 @@ func (c *Console) spawnNotice(spawned *corevms.Environment, wait bool) {
 // (corevms.AwaitSpawn: LEF, until the new process is deleted), so the
 // machine runs the others meanwhile. A failure to make it is LIB$SPAWN's
 // status (unconfirmed: VMS's DCL may word some of them its own way).
-func (c *Console) spawnInSubprocess(cli *subprocessCLI, o SpawnOptions) error {
+func (c *Interpreter) spawnInSubprocess(cli *subprocessCLI, o SpawnOptions) error {
 	env := c.RTL
 
 	for _, text := range []string{o.Command, o.Input, o.Output, o.Process, o.Prompt} {
@@ -240,7 +240,7 @@ func (c *Console) spawnInSubprocess(cli *subprocessCLI, o SpawnOptions) error {
 
 // spawnReturned ends a SPAWN that waited for child: DCL says control is
 // back, and SPAWN's status is the subprocess's final status.
-func (c *Console) spawnReturned(child *corevms.Environment) error {
+func (c *Interpreter) spawnReturned(child *corevms.Environment) error {
 	c.Printf("%%DCL-S-RETURNED, control returned to process %s\n", c.RTL.Process.Name)
 
 	// SPAWN's status is the subprocess's final status, its message shown
@@ -267,7 +267,7 @@ func (c *Console) spawnReturned(child *corevms.Environment) error {
 // arguments: two pages of the S0 pool, the system's own, allocated the
 // first time on each machine. (Not CONSOLE$SCRATCH, where RUN's driver
 // is: an image stopped mid-run may still return into it.)
-func (c *Console) spawnProcedurePage() (uint32, error) {
+func (c *Interpreter) spawnProcedurePage() (uint32, error) {
 	if c.spawnPage == 0 {
 		page, err := c.RTL.AllocateS0(spawnPageBytes/512, 0, "console SPAWN")
 		if err != nil {

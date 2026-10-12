@@ -137,7 +137,7 @@ func lexSearch(e *dclExpression, args []lexicalArg) (dclValue, error) {
 // searchFiles returns every file spec names, on the host or on a mounted
 // volume, as F$SEARCH returns them one by one. A name whose side can't be
 // decided (an unmounted device) names no files.
-func (c *Console) searchFiles(spec string) ([]string, error) {
+func (c *Interpreter) searchFiles(spec string) ([]string, error) {
 	loc, err := c.ContainerSession.Locate(spec, false)
 	if err != nil {
 		return nil, nil //nolint:nilerr // F$SEARCH finds nothing there

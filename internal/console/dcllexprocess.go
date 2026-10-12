@@ -24,17 +24,17 @@ import (
 // What govax has no counterpart for is answered as a VMS login with
 // DCL's defaults would answer it (unconfirmed against VMS: CONTROL,
 // NOCONTROL, and ON_SEVERITY at the terminal).
-var environmentItems = map[string]func(c *Console) dclValue{
-	"CAPTIVE": func(c *Console) dclValue { return dclTrueFalse(false) },
+var environmentItems = map[string]func(c *Interpreter) dclValue{
+	"CAPTIVE": func(c *Interpreter) dclValue { return dclTrueFalse(false) },
 
 	// CONTROL and NOCONTROL are the control characters SET CONTROL
 	// enables and disables (dclcontroly.go).
-	"CONTROL":   func(c *Console) dclValue { return dclString(c.controlString(true)) },
-	"NOCONTROL": func(c *Console) dclValue { return dclString(c.controlString(false)) },
+	"CONTROL":   func(c *Interpreter) dclValue { return dclString(c.controlString(true)) },
+	"NOCONTROL": func(c *Interpreter) dclValue { return dclString(c.controlString(false)) },
 
 	// DEFAULT is the default device and directory, as SHOW DEFAULT shows
 	// it (a search list's name, without the lines for its elements).
-	"DEFAULT": func(c *Console) dclValue {
+	"DEFAULT": func(c *Interpreter) dclValue {
 		s, _, _ := strings.Cut(c.ContainerSession.DefaultString(), "\n")
 
 		return dclString(s)
@@ -42,22 +42,22 @@ var environmentItems = map[string]func(c *Console) dclValue{
 
 	// DEPTH is the command level: 0 at the terminal (13.7). MAX_DEPTH is
 	// the limit, the terminal's level among them.
-	"DEPTH":     func(c *Console) dclValue { return dclInteger(int32(c.CommandLevel())) },
-	"MAX_DEPTH": func(c *Console) dclValue { return dclInteger(maxCommandLevels + 1) },
+	"DEPTH":     func(c *Interpreter) dclValue { return dclInteger(int32(c.CommandLevel())) },
+	"MAX_DEPTH": func(c *Interpreter) dclValue { return dclInteger(maxCommandLevels + 1) },
 
-	"INTERACTIVE": func(c *Console) dclValue { return dclTrueFalse(true) },
-	"KEY_STATE":   func(c *Console) dclValue { return dclString("DEFAULT") },
-	"MESSAGE":     func(c *Console) dclValue { return dclString("/FACILITY/SEVERITY/IDENTIFICATION/TEXT") },
+	"INTERACTIVE": func(c *Interpreter) dclValue { return dclTrueFalse(true) },
+	"KEY_STATE":   func(c *Interpreter) dclValue { return dclString("DEFAULT") },
+	"MESSAGE":     func(c *Interpreter) dclValue { return dclString("/FACILITY/SEVERITY/IDENTIFICATION/TEXT") },
 
 	// ON_CONTROL_Y says an ON CONTROL_Y is in effect at this level, and
 	// ON_SEVERITY is the severity ON acts at, NONE after SET NOON or at
 	// the terminal, where no status is acted on.
-	"ON_CONTROL_Y": func(c *Console) dclValue {
+	"ON_CONTROL_Y": func(c *Interpreter) dclValue {
 		level := c.currentLevel()
 
 		return dclTrueFalse(level != nil && level.on.controlY != "")
 	},
-	"ON_SEVERITY": func(c *Console) dclValue {
+	"ON_SEVERITY": func(c *Interpreter) dclValue {
 		level := c.currentLevel()
 		if level == nil || level.on.off {
 			return dclString("NONE")
@@ -72,7 +72,7 @@ var environmentItems = map[string]func(c *Console) dclValue{
 
 	// PROCEDURE is the file the current command procedure came from, ""
 	// at the terminal.
-	"PROCEDURE": func(c *Console) dclValue {
+	"PROCEDURE": func(c *Interpreter) dclValue {
 		if level := c.currentLevel(); level != nil {
 			return dclString(level.source.name)
 		}
@@ -80,22 +80,22 @@ var environmentItems = map[string]func(c *Console) dclValue{
 		return dclString("")
 	},
 
-	"PROMPT":         func(c *Console) dclValue { return dclString(c.Prompt()) },
-	"PROMPT_CONTROL": func(c *Console) dclValue { return dclTrueFalse(true) },
+	"PROMPT":         func(c *Interpreter) dclValue { return dclString(c.Prompt()) },
+	"PROMPT_CONTROL": func(c *Interpreter) dclValue { return dclTrueFalse(true) },
 
 	// PROTECTION is the default file protection, in SET PROTECTION's
 	// syntax (15.2.2): VMS's default, as govax has no SET
 	// PROTECTION/DEFAULT.
-	"PROTECTION": func(c *Console) dclValue { return dclString("SYSTEM=RWED, OWNER=RWED, GROUP=RE, WORLD") },
+	"PROTECTION": func(c *Interpreter) dclValue { return dclString("SYSTEM=RWED, OWNER=RWED, GROUP=RE, WORLD") },
 
 	// SYMBOL_SCOPE and VERB_SCOPE are SET SYMBOL/SCOPE's settings
 	// (12.11.1), which govax doesn't have: every symbol is seen.
-	"SYMBOL_SCOPE": func(c *Console) dclValue { return dclString("LOCAL,GLOBAL") },
-	"VERB_SCOPE":   func(c *Console) dclValue { return dclString("LOCAL,GLOBAL") },
+	"SYMBOL_SCOPE": func(c *Interpreter) dclValue { return dclString("LOCAL,GLOBAL") },
+	"VERB_SCOPE":   func(c *Interpreter) dclValue { return dclString("LOCAL,GLOBAL") },
 
-	"VERIFY_IMAGE":     func(c *Console) dclValue { return dclTrueFalse(c.verifyImage) },
-	"VERIFY_PREFIX":    func(c *Console) dclValue { return dclString(c.verifyPrefix) },
-	"VERIFY_PROCEDURE": func(c *Console) dclValue { return dclTrueFalse(c.Verify) },
+	"VERIFY_IMAGE":     func(c *Interpreter) dclValue { return dclTrueFalse(c.verifyImage) },
+	"VERIFY_PREFIX":    func(c *Interpreter) dclValue { return dclString(c.verifyPrefix) },
+	"VERIFY_PROCEDURE": func(c *Interpreter) dclValue { return dclTrueFalse(c.Verify) },
 }
 
 // severityNames are ON's severities as F$ENVIRONMENT("ON_SEVERITY")

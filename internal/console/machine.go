@@ -48,14 +48,6 @@ type Console struct {
 	// session; read via CommandLineErr.
 	commandLineErr error
 
-	// In is the console's byte-level terminal input: it backs
-	// XFC$CONSOLE_READ and (shared with RTL) DECC$GETS/EXE$INPUT/
-	// EXE$READ's fid-0 case. It is optional (nil is a legal "no
-	// interactive input source" Console, matching every Out-only
-	// caller/test) -- reads against a nil In report EOF rather than
-	// panic. (Its output is the Shell's Out.)
-	In io.Reader
-
 	// ScreenSize, when set, gives the screen's height in lines and width
 	// in columns (0 if unknown) for paged output (TYPE/PAGE, page.go),
 	// instead of asking the terminal. Tests set it; nil asks Out.
@@ -97,6 +89,7 @@ func New(out io.Writer) *Console {
 	}
 
 	c.home = c.Shell
+	c.machine = c.Machine
 	c.processOneLogicals = c.Logicals
 	c.Services = c
 	c.EngineHooks = corevms.EngineHooks{Home: func() *corevms.Environment { return c.processOne }}
@@ -257,7 +250,7 @@ func (c *Console) newProcessOne(sys *corevms.System) *corevms.Environment {
 	c.clis = nil
 	c.spawnPage = 0
 
-	sys.Interpreter = cliHost{c}
+	sys.Interpreter = cliHost{c.Interpreter}
 	sys.Shims().Register(cliShimCode, "EXE$CLI_COMMAND", c.cliCommand)
 
 	// Process 1 is the first process on a new System, whose process table

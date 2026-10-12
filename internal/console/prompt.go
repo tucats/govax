@@ -12,7 +12,7 @@ const DefaultPrompt = "VAX> "
 // Prompt returns the console's prompt: the vax.console.prompt setting, or
 // DefaultPrompt when it isn't set. The run loop (cmd/govax) asks for it
 // before each line it reads, so a SET PROMPT takes effect at once.
-func (c *Console) Prompt() string {
+func (c *Interpreter) Prompt() string {
 	if s := settings.Get(promptSetting); s != "" {
 		return s
 	}
@@ -24,7 +24,7 @@ func (c *Console) Prompt() string {
 // prompt and the vax.console.prompt setting, which govax writes back to
 // its configuration when it exits, so later sessions keep it. An empty
 // text ("") returns to the default prompt.
-func (c *Console) SetPrompt(text string) error {
+func (c *Interpreter) SetPrompt(text string) error {
 	if text == "" {
 		_ = settings.Delete(promptSetting)
 

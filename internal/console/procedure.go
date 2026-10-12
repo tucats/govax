@@ -89,7 +89,7 @@ type commandLevel struct {
 
 // currentLevel returns the innermost command level, or nil at the
 // terminal (level 0).
-func (c *Console) currentLevel() *commandLevel {
+func (c *Interpreter) currentLevel() *commandLevel {
 	if len(c.levels) == 0 {
 		return nil
 	}
@@ -99,7 +99,7 @@ func (c *Console) currentLevel() *commandLevel {
 
 // CommandLevel is the current command level: 0 at the terminal, 1 in a
 // command procedure run from it, and so on.
-func (c *Console) CommandLevel() int { return len(c.levels) }
+func (c *Interpreter) CommandLevel() int { return len(c.levels) }
 
 // procedureSource is a command procedure's text: its records (lines),
 // read whole when the procedure starts, and a cursor at the next one to
@@ -423,21 +423,21 @@ func (d *Dispatcher) atCommand(text string) error {
 // parameters, at a new command level, sending each of its lines to
 // dispatch: what "@file" does, for callers outside the console's own
 // dispatcher.
-func (c *Console) RunProcedure(file string, dispatch func(string) error) error {
+func (c *Interpreter) RunProcedure(file string, dispatch func(string) error) error {
 	return c.procedureCommand(procedureCommand{file: file}, dispatch)
 }
 
 // RunHostProcedure is RunProcedure for a host file, whatever the default
 // device: govax's own startup procedure, vax.init, found through the
 // search path (c.Paths) even when SET DEFAULT is on a volume.
-func (c *Console) RunHostProcedure(file string, dispatch func(string) error) error {
+func (c *Interpreter) RunHostProcedure(file string, dispatch func(string) error) error {
 	return c.procedureCommand(procedureCommand{file: file, host: true}, dispatch)
 }
 
 // RunDebuggerProcedure is the debugger's @: a debugger command
 // procedure, whose lines are all commands, with no "$" (the VMS
 // debugger's format). It runs at a new command level, like any other.
-func (c *Console) RunDebuggerProcedure(file string, dispatch func(string) error) error {
+func (c *Interpreter) RunDebuggerProcedure(file string, dispatch func(string) error) error {
 	return c.procedureCommand(procedureCommand{file: file, plain: true}, dispatch)
 }
 
@@ -454,7 +454,7 @@ type procedureExit struct {
 
 // procedureCommand runs the procedure cmd names (runProcedure) as a
 // command, @ (finishProcedure).
-func (c *Console) procedureCommand(cmd procedureCommand, dispatch func(string) error) error {
+func (c *Interpreter) procedureCommand(cmd procedureCommand, dispatch func(string) error) error {
 	return c.finishProcedure(c.runProcedure(cmd, dispatch))
 }
 
@@ -463,7 +463,7 @@ func (c *Console) procedureCommand(cmd procedureCommand, dispatch func(string) e
 // err): the command's status is the procedure's (setCommandStatus), and
 // a failure is returned as an error, whose message is shown only when
 // the procedure ended with EXIT and a status that asks for it.
-func (c *Console) finishProcedure(exit procedureExit, err error) error {
+func (c *Interpreter) finishProcedure(exit procedureExit, err error) error {
 	if err != nil {
 		return err
 	}
@@ -498,7 +498,7 @@ func (c *Console) finishProcedure(exit procedureExit, err error) error {
 
 // runProcedure runs the procedure cmd names at a new command level
 // (runLevel).
-func (c *Console) runProcedure(cmd procedureCommand, dispatch func(string) error) (procedureExit, error) {
+func (c *Interpreter) runProcedure(cmd procedureCommand, dispatch func(string) error) (procedureExit, error) {
 	if len(c.levels) >= maxCommandLevels {
 		return procedureExit{}, vmserrors.New(vmserrors.CLI_STKOVF)
 	}
@@ -530,7 +530,7 @@ func (c *Console) runProcedure(cmd procedureCommand, dispatch func(string) error
 //
 // An error is returned only when the procedure couldn't start, or its
 // /OUTPUT file couldn't be written.
-func (c *Console) runLevel(source *procedureSource, cmd procedureCommand, dispatch func(string) error) (exit procedureExit, err error) {
+func (c *Interpreter) runLevel(source *procedureSource, cmd procedureCommand, dispatch func(string) error) (exit procedureExit, err error) {
 	level := &commandLevel{source: source, sysCommand: c.Out, dispatch: dispatch}
 	level.flow.source = source
 
@@ -712,7 +712,7 @@ func (c *Console) runLevel(source *procedureSource, cmd procedureCommand, dispat
 // every level; a Ctrl/Y typed during the line takes its action in place
 // of the status's (dclcontroly.go). The action goes to dispatch, as the
 // level's lines do.
-func (c *Console) procedureLine(level *commandLevel, dispatch func(string) error, run func() error) (exit procedureExit, stop bool) {
+func (c *Interpreter) procedureLine(level *commandLevel, dispatch func(string) error, run func() error) (exit procedureExit, stop bool) {
 	for run != nil {
 		c.statusSet, c.statusHandled = false, false
 
@@ -799,19 +799,19 @@ func (c *Console) procedureLine(level *commandLevel, dispatch func(string) error
 // DCL procedure, its data lines are their input, as a VMS image run from
 // a procedure reads the procedure's data lines (User's Manual, 14.1): a
 // procedure that starts the debugger gives it its commands that way.
-func (c *Console) readingInput() bool {
-	return c.InDebugger() || c.InAssemblerMode()
+func (c *Interpreter) readingInput() bool {
+	return c.machine.InDebugger() || c.machine.InAssemblerMode()
 }
 
 // endInput ends the input of whatever reads it (readingInput), as a VMS
 // image reading a procedure's data lines comes to end of file at the
 // next command line: the debugger EXITs, and the interactive assembler
 // takes it as .END, as each does for Ctrl/Z at its prompt.
-func (c *Console) endInput(dispatch func(string) error) error {
+func (c *Interpreter) endInput(dispatch func(string) error) error {
 	switch {
-	case c.InAssemblerMode():
+	case c.machine.InAssemblerMode():
 		return dispatch(".END")
-	case c.InDebugger():
+	case c.machine.InDebugger():
 		return dispatch("EXIT")
 	}
 
@@ -821,7 +821,7 @@ func (c *Console) endInput(dispatch func(string) error) error {
 // endLevel pops level, the innermost command level: its local symbols
 // go, and its /OUTPUT file, if it has one, is closed and the console's
 // output put back.
-func (c *Console) endLevel(level *commandLevel) error {
+func (c *Interpreter) endLevel(level *commandLevel) error {
 	c.dclSymbols.pop()
 	c.levels = c.levels[:len(c.levels)-1]
 
@@ -837,7 +837,7 @@ func (c *Console) endLevel(level *commandLevel) error {
 // procedureMessage shows the message for a command in a procedure that
 // failed: on the procedure's output, and on the terminal too when that
 // output is an /OUTPUT file.
-func (c *Console) procedureMessage(level *commandLevel, err error) {
+func (c *Interpreter) procedureMessage(level *commandLevel, err error) {
 	text := "%" + err.Error() + "\n"
 
 	fmt.Fprint(c.Out, text)
@@ -854,7 +854,7 @@ func (c *Console) procedureMessage(level *commandLevel, err error) {
 // %X10038028 after a procedure whose last command had failed with
 // %X00038028, testdata/dcl50). At the terminal it ends govax, as QUIT
 // does.
-func (c *Console) Exit(status *uint32) error {
+func (c *Interpreter) Exit(status *uint32) error {
 	level := c.currentLevel()
 	if level == nil {
 		// At command level 0 a status is $STATUS, and so a subprocess's
@@ -886,7 +886,7 @@ func (c *Console) Exit(status *uint32) error {
 // and a name with no file type gets .COM (User's Manual, 13.1.1). A host
 // file is looked for as every console file is, through c.Paths (the
 // search path, then govax's built-in files), with .COM and then as given.
-func (c *Console) openProcedure(file string, host bool) (*procedureSource, error) {
+func (c *Interpreter) openProcedure(file string, host bool) (*procedureSource, error) {
 	loc, err := c.ContainerSession.Locate(file, host)
 	if err != nil {
 		return nil, fileFailure(err, file)
@@ -896,7 +896,7 @@ func (c *Console) openProcedure(file string, host bool) (*procedureSource, error
 		var firstErr error
 
 		for _, name := range procedureHostNames(loc.Name) {
-			data, err := c.Paths.ReadFile(name)
+			data, err := c.machine.Paths.ReadFile(name)
 			if err == nil {
 				return newProcedureSource(name, string(data)), nil
 			}
@@ -963,7 +963,7 @@ type procedureOutput struct {
 // written as the procedure writes, or a file on a mounted volume, written
 // when the procedure ends (a volume file is written whole). A name with
 // no file type gets .LIS. The null device, NL:, discards the output.
-func (c *Console) openProcedureOutput(name string) (*procedureOutput, error) {
+func (c *Interpreter) openProcedureOutput(name string) (*procedureOutput, error) {
 	if isNullDevice(name) {
 		return &procedureOutput{Writer: io.Discard, close: func() error { return nil }}, nil
 	}

@@ -58,7 +58,7 @@ func (d *Dispatcher) waitCommand(id int64, r *dcl.Result) error {
 		return nil
 	}
 
-	attention := func() bool { return c.Engine != nil && isAttentionKey(c.Engine.PendingAttention()) }
+	attention := func() bool { return c.machine.Engine != nil && isAttentionKey(c.machine.Engine.PendingAttention()) }
 
 	for {
 		left := time.Until(deadline)

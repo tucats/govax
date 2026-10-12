@@ -153,7 +153,7 @@ func (c *Console) StartDebugger() error {
 
 // InDebugger reports whether a debugger session is in progress, for the
 // front end's choice of prompt and grammar.
-func (c *Console) InDebugger() bool {
+func (c *Machine) InDebugger() bool {
 	return c.Debugger != nil && c.Debugger.Active()
 }
 

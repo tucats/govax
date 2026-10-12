@@ -116,7 +116,7 @@ var processOneCommands = map[string]bool{
 
 // useShell makes s the console's Shell, the DCL whose commands run now,
 // and returns the call that puts the one before it back.
-func (c *Console) useShell(s *Shell) (restore func()) {
+func (c *Interpreter) useShell(s *Shell) (restore func()) {
 	saved := c.Shell
 	c.Shell = s
 
@@ -124,11 +124,11 @@ func (c *Console) useShell(s *Shell) (restore func()) {
 }
 
 // inSubprocess reports whether the DCL running now is a subprocess's.
-func (c *Console) inSubprocess() bool { return c.subCLI != nil }
+func (c *Interpreter) inSubprocess() bool { return c.subCLI != nil }
 
 // processOneOnly is VAX_NOTSUBPROC for what (a command, or a way of
 // running the machine) in a subprocess's DCL, and nil in process 1's.
-func (c *Console) processOneOnly(what string) error {
+func (c *Interpreter) processOneOnly(what string) error {
 	if c.inSubprocess() {
 		return vmserrors.New(vmserrors.VAX_NOTSUBPROC, what)
 	}
@@ -163,7 +163,7 @@ var errCLIAborted = errors.New("command interpreter's process deleted")
 
 // subprocessCLI is one process's CLI.
 type subprocessCLI struct {
-	c   *Console
+	c   *Interpreter
 	env *corevms.Environment
 
 	// shell is its DCL (shell.go), the console's while its interpreter
@@ -216,7 +216,7 @@ type subprocessCLI struct {
 }
 
 // cliOf returns env's CLI, made empty the first time.
-func (c *Console) cliOf(env *corevms.Environment) *subprocessCLI {
+func (c *Interpreter) cliOf(env *corevms.Environment) *subprocessCLI {
 	if c.clis == nil {
 		c.clis = map[*corevms.Environment]*subprocessCLI{}
 	}
@@ -232,14 +232,14 @@ func (c *Console) cliOf(env *corevms.Environment) *subprocessCLI {
 }
 
 // cliHost makes the console the System's corevms.CommandInterpreter.
-type cliHost struct{ c *Console }
+type cliHost struct{ c *Interpreter }
 
 // InheritSymbols gives child a copy of parent's DCL symbols: process
 // 1's for process 1, otherwise parent's CLI's.
 func (h cliHost) InheritSymbols(parent, child *corevms.Environment) {
 	var from *dclSymbolTable
 
-	if parent == h.c.processOne {
+	if parent == h.c.machine.processOne {
 		from = &h.c.home.dclSymbols
 	} else if cli := h.c.clis[parent]; cli != nil {
 		from = &cli.shell.dclSymbols
@@ -256,7 +256,7 @@ func (h cliHost) InheritSymbols(parent, child *corevms.Environment) {
 func (h cliHost) Start(env *corevms.Environment, start *corevms.CLIStartup) (uint32, error) {
 	c := h.c
 
-	if err := c.ensureShims(); err != nil {
+	if err := c.machine.ensureShims(); err != nil {
 		return 0, err
 	}
 
@@ -276,7 +276,7 @@ func (h cliHost) Start(env *corevms.Environment, start *corevms.CLIStartup) (uin
 		cli.inheritVerify(env.Process.Owner)
 	}
 
-	p := c.imagesOf(env)
+	p := c.machine.imagesOf(env)
 
 	exit, ok := p.p1Stub("SYS$EXIT")
 	if !ok {
@@ -321,7 +321,7 @@ func (cli *subprocessCLI) inheritVerify(owner uint32) {
 	var from *Shell
 
 	switch parent := c.clis[c.findEnvironment(owner)]; {
-	case c.processOne != nil && owner == c.processOne.Process.PID:
+	case c.machine.processOne != nil && owner == c.machine.processOne.Process.PID:
 		from = c.home
 	case parent != nil:
 		from = parent.shell
@@ -334,12 +334,12 @@ func (cli *subprocessCLI) inheritVerify(owner uint32) {
 
 // findEnvironment returns the process whose PID is pid, nil if there is
 // none.
-func (c *Console) findEnvironment(pid uint32) *corevms.Environment {
-	if c.processOne == nil {
+func (c *Interpreter) findEnvironment(pid uint32) *corevms.Environment {
+	if c.machine.processOne == nil {
 		return nil
 	}
 
-	env, _ := c.processOne.FindProcess(pid)
+	env, _ := c.machine.processOne.FindProcess(pid)
 
 	return env
 }
@@ -348,7 +348,7 @@ func (c *Console) findEnvironment(pid uint32) *corevms.Environment {
 // opening comment): it lets the interpreter run until it hands the CPU
 // back, then does what it asks: wait, call an image, or end, returning
 // the CLI's final status for the stub to log out with.
-func (c *Console) cliCommand(env *corevms.Environment, _ []uint32) (uint32, error) {
+func (c *Interpreter) cliCommand(env *corevms.Environment, _ []uint32) (uint32, error) {
 	cli := c.clis[env]
 	if cli == nil || cli.stub == 0 {
 		return ssUnsupported, nil // not a CLI's process
@@ -389,7 +389,7 @@ func (c *Console) cliCommand(env *corevms.Environment, _ []uint32) (uint32, erro
 		case yieldImage:
 			cli.yielded = nil
 			cli.imageActive = true
-			cli.fp, cli.ap = c.CPU.GPR(vax.FP), c.CPU.GPR(vax.AP)
+			cli.fp, cli.ap = c.machine.CPU.GPR(vax.FP), c.machine.CPU.GPR(vax.AP)
 
 			return 0, &corevms.CallRequest{Routine: y.driver, ArgList: cli.stub + cliStubArgList, Image: true}
 		}
@@ -503,10 +503,10 @@ func (cli *subprocessCLI) runInterpreter() {
 
 		var err error
 
-		if c.Dispatcher == nil {
+		if c.dispatchConsole == nil {
 			err = vmserrors.New(vmserrors.CLI_NEEDRTL, "DCL")
 		} else {
-			err = c.Dispatcher.DispatchConsole(line)
+			err = c.dispatchConsole(line)
 		}
 
 		if err != nil && !vmserrors.MessageInhibited(err) {
@@ -626,7 +626,7 @@ func (cli *subprocessCLI) flush() error {
 // back when the image has ended (endCLIImage). The image's status is the
 // command's; a failure's message is shown unless the image showed it
 // (STS$M_INHIB_MSG).
-func (c *Console) subprocessRun(cli *subprocessCLI, image, commandLine string) error {
+func (c *Interpreter) subprocessRun(cli *subprocessCLI, image, commandLine string) error {
 	driver, status := c.cliActivate(cli, image, commandLine)
 	if driver == 0 {
 		c.setCommandStatus(status, nil)
@@ -650,10 +650,10 @@ func (c *Console) subprocessRun(cli *subprocessCLI, image, commandLine string) e
 // what LIB$GET_FOREIGN returns, and returns its IMAGE$INIT driver's
 // address; or 0 and the failure's status, its messages shown as VMS's
 // DCL shows them.
-func (c *Console) cliActivate(cli *subprocessCLI, image, commandLine string) (uint32, uint32) {
+func (c *Interpreter) cliActivate(cli *subprocessCLI, image, commandLine string) (uint32, uint32) {
 	env := cli.env
 
-	driver, err := c.activateCreatedImage(env, image, false)
+	driver, err := c.machine.activateCreatedImage(env, image, false)
 	if err != nil {
 		say := func(format string, args ...any) { fmt.Fprintf(c.Out, format+"\n", args...) }
 
@@ -692,7 +692,7 @@ func (c *Console) cliActivate(cli *subprocessCLI, image, commandLine string) (ui
 // logoutCommand is LOGOUT: in a subprocess, it logs the process out,
 // which says so (a spawned process's one line); in process 1 it is QUIT.
 // It leaves $STATUS as it was, the process's final status.
-func (c *Console) logoutCommand() error {
+func (c *Interpreter) logoutCommand() error {
 	c.keepStatus()
 
 	if cli := c.subCLI; cli != nil {
@@ -709,9 +709,9 @@ func (c *Console) logoutCommand() error {
 // opening comment): its status, in R0, is kept for the command, the
 // image is run down, and the CLI's registers are put back, at the start
 // of its loop, so the shim resumes the interpreter.
-func (c *Console) endCLIImage(cli *subprocessCLI) {
+func (c *Interpreter) endCLIImage(cli *subprocessCLI) {
 	env := cli.env
-	status := c.CPU.GPR(vax.R0)
+	status := c.machine.CPU.GPR(vax.R0)
 
 	cli.imageActive = false
 	cli.imageExit = status
@@ -724,9 +724,9 @@ func (c *Console) endCLIImage(cli *subprocessCLI) {
 	env.ImageRundown()
 	env.CommandLine = ""
 
-	c.CPU.SetGPR(vax.FP, cli.fp)
-	c.CPU.SetGPR(vax.AP, cli.ap)
-	c.CPU.SetGPR(vax.PC, cli.stub+cliStubLoop)
+	c.machine.CPU.SetGPR(vax.FP, cli.fp)
+	c.machine.CPU.SetGPR(vax.AP, cli.ap)
+	c.machine.CPU.SetGPR(vax.PC, cli.stub+cliStubLoop)
 }
 
 // rmsFNF is RMS$_FNF, the status corevms gives an image that isn't
@@ -753,7 +753,7 @@ const imgactBadHdr = 0x004D8C84
 // foundImageFile is the full name, version and all, of the volume file
 // RUN image found (with the default type .EXE), and true; or false when
 // there is none or it's a host file.
-func (c *Console) foundImageFile(env *corevms.Environment, image string) (string, bool) {
+func (c *Interpreter) foundImageFile(env *corevms.Environment, image string) (string, bool) {
 	s := env.Session
 	if s == nil {
 		return "", false
@@ -775,7 +775,7 @@ func (c *Console) foundImageFile(env *corevms.Environment, image string) (string
 // imageFileSpec is image as RMS expands it, with the default type .EXE,
 // for DCL's IMAGEFNF message ("DUA0:[000000]NOSUCH.EXE;"); as typed,
 // with .EXE;, when it doesn't name a volume file.
-func (c *Console) imageFileSpec(env *corevms.Environment, image string) string {
+func (c *Interpreter) imageFileSpec(env *corevms.Environment, image string) string {
 	name := strings.ToUpper(image)
 
 	if s := env.Session; s != nil {
@@ -795,16 +795,16 @@ func (c *Console) imageFileSpec(env *corevms.Environment, image string) string {
 
 // traceCLI writes a DEBUG(PROCESS) line about cli's process, when that
 // debug flag is on.
-func (c *Console) traceCLI(cli *subprocessCLI, format string, args ...any) {
-	if c.CPU.DebugEnabled(vax.DebugProcess) {
-		fmt.Fprintf(c.CPU.DebugWriter(), "DEBUG(PROCESS): %08X CLI %s\n", cli.env.Process.PID, fmt.Sprintf(format, args...))
+func (c *Interpreter) traceCLI(cli *subprocessCLI, format string, args ...any) {
+	if c.machine.CPU.DebugEnabled(vax.DebugProcess) {
+		fmt.Fprintf(c.machine.CPU.DebugWriter(), "DEBUG(PROCESS): %08X CLI %s\n", cli.env.Process.PID, fmt.Sprintf(format, args...))
 	}
 }
 
 // cliImageEnded is StepMachine's step when env, a process other than
 // process 1, has returned from its outermost call: if that was an image
 // its CLI ran, the CLI goes on (true); otherwise the process has ended.
-func (c *Console) cliImageEnded(env *corevms.Environment) bool {
+func (c *Interpreter) cliImageEnded(env *corevms.Environment) bool {
 	cli := c.clis[env]
 	if cli == nil || !cli.imageActive {
 		return false

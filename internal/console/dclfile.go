@@ -152,7 +152,7 @@ func dclFileName(text string) string {
 // supervisor mode, equated to what OPEN equated it to. A file whose name
 // was deassigned (or redefined) is out of reach, though still open
 // (orphanFile).
-func (c *Console) openFile(name string) (*dclOpenFile, bool) {
+func (c *Interpreter) openFile(name string) (*dclOpenFile, bool) {
 	key := dclFileName(name)
 
 	f, ok := c.dclFiles[key]
@@ -174,7 +174,7 @@ func (c *Console) openFile(name string) (*dclOpenFile, bool) {
 
 // orphanFile takes f, whose logical name is gone, out of reach: it stays
 // open, as on VMS, until govax ends.
-func (c *Console) orphanFile(key string, f *dclOpenFile) {
+func (c *Interpreter) orphanFile(key string, f *dclOpenFile) {
 	delete(c.dclFiles, key)
 	c.dclOrphans = append(c.dclOrphans, f)
 }
@@ -197,7 +197,7 @@ func rmsStatusFailure(v uint32, n int) error {
 // (Goto), with $STATUS v and no message, and the level's ON action isn't
 // taken. A label that isn't there is Goto's failure (CLI$_USGOTO), as is
 // a branch at the terminal.
-func (c *Console) branch(label string, v uint32, cause error) error {
+func (c *Interpreter) branch(label string, v uint32, cause error) error {
 	if err := c.Goto(label); err != nil {
 		return err
 	}
@@ -209,7 +209,7 @@ func (c *Console) branch(label string, v uint32, cause error) error {
 
 // failOrBranch reports a command's failure, condition value v with err
 // its message: to the label, if there is one (branch), or as err.
-func (c *Console) failOrBranch(label string, v uint32, err error) error {
+func (c *Interpreter) failOrBranch(label string, v uint32, err error) error {
 	if label != "" {
 		return c.branch(label, v, err)
 	}
@@ -230,7 +230,7 @@ func qualifierLabel(r *dcl.Result, name string) (string, error) {
 // terminalOut is where the terminal's prompts go: the terminal itself
 // (SYS$COMMAND), even while a procedure's output goes to an /OUTPUT
 // file.
-func (c *Console) terminalOut() io.Writer {
+func (c *Interpreter) terminalOut() io.Writer {
 	if level := c.currentLevel(); level != nil && level.redirected && level.sysCommand != nil {
 		return level.sysCommand
 	}
@@ -241,7 +241,7 @@ func (c *Console) terminalOut() io.Writer {
 // readTerminal shows prompt on the terminal and reads a line from it:
 // SYS$COMMAND, which a command procedure's data doesn't replace. ok is
 // false at its end of file (Ctrl/Z).
-func (c *Console) readTerminal(prompt string) (string, bool) {
+func (c *Interpreter) readTerminal(prompt string) (string, bool) {
 	if out := c.terminalOut(); out != nil && prompt != "" {
 		fmt.Fprint(out, prompt)
 	}
@@ -344,7 +344,7 @@ func (d *Dispatcher) openCommand(id int64, r *dcl.Result) error {
 // name gets: the device's physical name with the node's, without a
 // colon ("_GOVAX$DUA0"). A file on the host whose name has no type gets
 // .DAT, as name processing gives a volume file; NL: is the null device.
-func (c *Console) openDCLFile(spec string, host bool, access rms.DCLAccess) (*dclOpenFile, string, error) {
+func (c *Interpreter) openDCLFile(spec string, host bool, access rms.DCLAccess) (*dclOpenFile, string, error) {
 	if !host && isNullDevice(spec) {
 		return &dclOpenFile{name: "_NLA0:", stream: nullStream{}}, c.physicalDevice("NLA0"), nil
 	}
@@ -373,7 +373,7 @@ func (c *Console) openDCLFile(spec string, host bool, access rms.DCLAccess) (*dc
 
 // physicalDevice is device's physical name with the node's, as VMS 7.3
 // equated OPEN's logical name to it: "_GOVAX$DUA0".
-func (c *Console) physicalDevice(device string) string {
+func (c *Interpreter) physicalDevice(device string) string {
 	if c.RTL == nil || c.RTL.NodeName == "" {
 		return "_" + device
 	}
@@ -496,7 +496,7 @@ func (d *Dispatcher) readCommand(id int64, r *dcl.Result) error {
 // returns the record and RMS$_NORMAL, or the RMS status for why there is
 // none (RMS$_EOF at the end of the file, RMS$_RTB with the whole record
 // for one too long), or err for a name that has no file.
-func (c *Console) readDCLRecord(logical, prompt string) (string, uint32, error) {
+func (c *Interpreter) readDCLRecord(logical, prompt string) (string, uint32, error) {
 	var (
 		record string
 		sts    = rmsNormalStatus
@@ -609,7 +609,7 @@ func (d *Dispatcher) writeCommand(id int64, r *dcl.Result) error {
 // processPermanentName is processPermanentFile for READ and WRITE's
 // logical-name parameter, which VMS 7.3 didn't take with a colon after it
 // (WRITE SYS$OUTPUT: was CLI$_UNDFIL, testdata/dcl50's F6).
-func (c *Console) processPermanentName(name string) string {
+func (c *Interpreter) processPermanentName(name string) string {
 	if strings.HasSuffix(strings.TrimSpace(name), ":") {
 		return ""
 	}
@@ -622,7 +622,7 @@ func (c *Console) processPermanentName(name string) string {
 // Without symbol (/SYMBOL), an item's value may be no longer than 255
 // characters: a longer one is CLI$_TKNOVF, with the first 255 as its
 // segment, as VMS 7.3 showed it (testdata/dcl50's F10).
-func (c *Console) writeRecord(data string, symbol bool) (string, error) {
+func (c *Interpreter) writeRecord(data string, symbol bool) (string, error) {
 	var b strings.Builder
 
 	for _, item := range splitDCLList(data) {
@@ -721,7 +721,7 @@ func (d *Dispatcher) inquireCommand(id int64, r *dcl.Result) error {
 // file's records from where READ has got to, through the same stream, so
 // a READ after it is at the end of the file, as VMS 7.3's was
 // (testdata/dcl50's F2). ok is false for a name that isn't one.
-func (c *Console) typeOpenFile(spec string) (ok bool) {
+func (c *Interpreter) typeOpenFile(spec string) (ok bool) {
 	f, open := c.openFile(spec)
 	if !open {
 		return false
@@ -742,7 +742,7 @@ func (c *Console) typeOpenFile(spec string) (ok bool) {
 // closeDCLFiles closes every file OPEN left open, those whose logical
 // names are gone too, as the process's rundown does on VMS: what they
 // wrote goes to their volumes.
-func (c *Console) closeDCLFiles() {
+func (c *Interpreter) closeDCLFiles() {
 	for logical, f := range c.dclFiles {
 		_ = f.stream.Close()
 

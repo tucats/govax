@@ -134,7 +134,7 @@ func (f *flowState) popBlock() {
 // lines, and stops at the branch's end: the block's ENDIF, which closes
 // it, or, for a THEN branch, its ELSE, whose branch then runs. ELSE's
 // own command, if it has one, is returned to be run (run true).
-func (c *Console) skipLine(line string) (rest string, run bool) {
+func (c *Interpreter) skipLine(line string) (rest string, run bool) {
 	f := c.flow()
 	if !f.skip.active {
 		return line, true
@@ -182,7 +182,7 @@ func (c *Console) skipLine(line string) (rest string, run bool) {
 // too, but made the THEN that followed CLI$_INVIFNEST, closing the
 // block (round 6). pass reports a command passed over; THEN and ENDIF
 // go on to their own handlers.
-func (c *Console) awaitThen(line string) (pass bool) {
+func (c *Interpreter) awaitThen(line string) (pass bool) {
 	b := c.flow().top()
 	if b == nil || b.state != awaitingThen {
 		return false
@@ -201,7 +201,7 @@ func (c *Console) awaitThen(line string) (pass bool) {
 // passedBeforeThen reports whether verification shows the lines passed
 // over while a block waits for its THEN: for an IF that was true, not
 // for one that was false (VMS 7.3, testdata/dcl50's rounds 5 and 6).
-func (c *Console) passedBeforeThen() bool {
+func (c *Interpreter) passedBeforeThen() bool {
 	b := c.flow().top()
 
 	return b != nil && b.value
@@ -209,7 +209,7 @@ func (c *Console) passedBeforeThen() bool {
 
 // thenOfFalseIf reports whether line is the THEN after a block's IF
 // that was false, which verification doesn't show (VMS 7.3).
-func (c *Console) thenOfFalseIf(line string) bool {
+func (c *Interpreter) thenOfFalseIf(line string) bool {
 	b := c.flow().top()
 	if b == nil || b.state != awaitingThen || b.value {
 		return false
@@ -231,7 +231,7 @@ func (d *Dispatcher) ifCommand(id int64, r *dcl.Result) error {
 		return vmserrors.New(vmserrors.CLI_INSFPRM)
 	}
 
-	value, command, then, err := evaluateDCLCondition(text, &d.Console.dclSymbols, d.Console)
+	value, command, then, err := evaluateDCLCondition(text, &d.Console.dclSymbols, d.Console.Interpreter)
 	if err != nil {
 		return err
 	}
@@ -256,7 +256,7 @@ func (d *Dispatcher) ifCommand(id int64, r *dcl.Result) error {
 // IF's, and reports its truth (its value's low bit), the text after a
 // THEN that follows it, and whether there is one. Anything else after
 // the expression is CLI$_NOTHEN.
-func evaluateDCLCondition(text string, symbols *dclSymbolTable, c *Console) (value bool, command string, then bool, err error) {
+func evaluateDCLCondition(text string, symbols *dclSymbolTable, c *Interpreter) (value bool, command string, then bool, err error) {
 	e := &dclExpression{text: text, symbols: symbols, console: c}
 
 	if e.skipBlanks(); e.atEnd() {
@@ -290,7 +290,7 @@ func evaluateDCLCondition(text string, symbols *dclSymbolTable, c *Console) (val
 // next command must be THEN (awaitThen). A block past maxIfBlocks is
 // opened, and its THEN is CLI$_INVIFNEST: VMS 7.3 accepted a 16th IF and
 // refused its THEN (testdata/dcl50's round 6).
-func (c *Console) openBlock(value bool) error {
+func (c *Interpreter) openBlock(value bool) error {
 	f := c.flow()
 	if len(f.blocks) > maxIfBlocks {
 		return vmserrors.New(vmserrors.CLI_INVIFNEST)

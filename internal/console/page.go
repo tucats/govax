@@ -130,7 +130,7 @@ const ctrlZ = 0x1A
 // command line. ok is false at the end of the input with nothing read,
 // or at a Ctrl/Z typed first (the terminal's end of file); a Ctrl/Z
 // after text ends the line.
-func (c *Console) readReply() (line string, ok bool) {
+func (c *Interpreter) readReply() (line string, ok bool) {
 	if c.In == nil {
 		return "", false
 	}
