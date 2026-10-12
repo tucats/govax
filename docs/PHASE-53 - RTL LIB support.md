@@ -2,7 +2,7 @@
 
 **Status:** in progress (2026-10-12). Needs Phases 34 (`internal/librtl`)
 and 52. The plan (Part A) and the decisions (Part B) were reviewed and
-accepted by the author on 2026-10-12. Subtasks 2 to 11 are done.
+accepted by the author on 2026-10-12. Subtasks 2 to 12 are done; subtask 13's probe is ready to run.
 
 govax provides 15 of LIBRTL.EXE's LIB$ routines (and STR$UPCASE): the ones
 the sample programs and tests needed (Phase 34's table,
@@ -539,7 +539,7 @@ so there's one implementation of each rule.
     MOVTC, MOVTUC. **Done** 2026-10-12.
 11. **CRC, CRC_TABLE** (CALLG was done in subtask 2). **Done** 2026-10-12.
 12. **The program**: `testdata/lib53/lib53.mar`, calling every routine of
-    the phase, with a console test of its output.
+    the phase, with a console test of its output. **Done** 2026-10-12.
 13. **VMS probe** (with the author on the simh VAX): `lib53.mar`'s run,
     becoming an oracle test. In the same session, ANALYZE/IMAGE of
     SYS$SHARE:LIBRTL2.EXE (and CRFSHR.EXE, for completeness), so Phases 54,
@@ -899,3 +899,24 @@ so there's one implementation of each rule.
   CRC-16/ARC's "123456789" (^XBB3D), and an empty stream; the console's
   `TestLibrtlCrc` from a linked program. With this, every Part C
   routine but CVTDF (7.x only) is in govax.
+- **2026-10-12** — Subtask 12, the program (`testdata/lib53/`, README.md
+  there). `gen.go` writes `lib53.mar` from one table of 132 cases: every
+  routine of the phase (LIB$CALLG too), the manual's examples, the edges,
+  and each choice this doc marks unconfirmed (FFx's base, INSV's and
+  MOVC's and CRC_TABLE's R0, ADDX/SUBX lengths 0 and -1, ADAWI's third
+  argument and odd sum, EMOD's and POLY's statuses, POLY's overflow and
+  underflow, the queue routines' reserved operands, the strings' empty
+  arguments and classes, MOVTC's and MOVTUC's dynamic and varying
+  destinations). Each case runs in its own routine under a handler that
+  records the condition (an ACCVIO's mask and address too) and unwinds,
+  so the output separates a returned status from a signaled one; a queue
+  routine's remque-address is printed relative to the header, so nothing
+  depends on load addresses. It prints with $FAO and LIB$PUT_OUTPUT.
+  `TestLib53Program` (`internal/console/lib53_test.go`) runs it and
+  compares with `lib53-govax.txt`, govax's output, checked by hand
+  against the manual's examples (`-update` rewrites it). `gen.go` also
+  writes `lib53.com` (the VMS run: MACRO's messages to their own file,
+  the program's output to `LIB53.OUT`, and copies of LIBRTL2.EXE and
+  CRFSHR.EXE for subtask 13's symbols) and `exchange.cmd`. The program's
+  tables wanted MACRO-32's repetition factor, which the assembler lacked
+  (added in subtask 10's commit).
