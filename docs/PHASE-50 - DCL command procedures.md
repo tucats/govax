@@ -1,33 +1,22 @@
 # Phase 50 — DCL command procedures
 
-**Status:** in progress (started 2026-10-09). The first round
-(subtasks 1 to 7) is done (2026-10-09). It gives the console DCL's
-command levels: `@file` with
-parameters and `/OUTPUT`, a local symbol table per level, VMS's default
-error action, and EXIT that ends a procedure. Later rounds (subtasks 8
-onward) make the console more fully a DCL command interpreter. Subtasks
-8 and 9, symbol substitution and expressions, are done and checked
-against VMS 7.3 (2026-10-09), and so is subtask 10, `$STATUS`, EXIT's
-status, ON, and SET [NO]ON (2026-10-09). Subtasks 11 to 13, labels and
-GOTO, IF/THEN/ELSE/ENDIF, GOSUB/RETURN, and CALL/SUBROUTINE, are done
-(2026-10-09, not yet probed), and so is subtask 14, the lexical
-functions (2026-10-09, not yet probed). Subtask 15, SET VERIFY, SET
-PREFIX, and F$VERIFY's echo, is done and checked against VMS 7.3
-(2026-10-11), and so is subtask 16, SYS$INPUT from a procedure, with
-DECK and EOD (2026-10-11, checked against VMS 7.3), and so is subtask
-17, DCL's file I/O: OPEN, CLOSE, READ, WRITE, and INQUIRE (2026-10-11,
-checked against VMS 7.3 in round 4 of the probe), and so is subtask
-18, STOP and Ctrl/Y (2026-10-11, not yet probed), and so is subtask 19,
-which, at the author's request, gives a subprocess the console's whole
-DCL rather than `@` alone (2026-10-11), and so is subtask 20, round 5
-of the VMS probe, whose answers govax now follows (2026-10-11), and so
-is subtask 21, added at the author's request: the other processes run
-between DCL commands, so a SPAWN/NOWAIT procedure runs beside its
-parent's, and during WAIT (2026-10-11). Every subtask is done. Left for
-later: running the other processes while the console's prompt waits for
-a line, Ctrl/Y in a subprocess's procedures, SPAWN from a subprocess,
-and the choices DEVIATIONS.md's "[Phase 50] Round 5 of the probe" still
-lists.
+**Status:** done (2026-10-12). Started 2026-10-09. All 21 subtasks are
+done, and five rounds of a VMS 7.3 probe (`testdata/dcl50`) settled what
+the manuals left open. Each round has an oracle test that replays
+VMS's log. The console is a DCL command interpreter: command procedures
+and command levels, symbol substitution, expressions, `$STATUS` and ON,
+labels and GOTO, IF blocks, GOSUB, CALL, the lexical functions, SET
+VERIFY, SYS$INPUT from a procedure (DECK/EOD), DCL's file I/O (OPEN,
+CLOSE, READ, WRITE, INQUIRE), STOP and Ctrl/Y, the console's whole DCL
+in subprocesses, and the other processes running between DCL commands
+and during WAIT.
+
+What it left for later is Phase 51 (`PHASE-51 - DCL follow-ups.md`):
+SPAWN from a subprocess, Ctrl/Y in a subprocess's procedures, the other
+processes running while the prompt waits for a line, round 6 of the
+probe (written, not yet run on VMS), and the differences from VMS the
+probes found that no subtask fixed. The choices still unconfirmed are
+in DEVIATIONS.md's "[Phase 50]" entries.
 
 The console should act like a VMS DCL command processor. Until now it
 had INCLUDE (and `@` as its alias), which runs a file of console
@@ -596,7 +585,7 @@ So the small CLI is gone, and a subprocess runs the console's own DCL.
   VAX, VMINIT, ZERO, SAVE, LOAD, BOOT, ROM, CLEAR, SET QUANTUM, SPAWN,
   ...) and the console's CALL and GO are `%VAX-E-NOTSUBPROC` in a
   subprocess. SPAWN is among them until a subprocess's DCL can wait for
-  its own subprocess.
+  its own subprocess (Phase 51).
 - **Logging out.** LOGOUT (now a console verb; QUIT in process 1),
   EXIT at command level 0 (its status is $STATUS, the final status), or
   the end of the input. A deleted process's interpreter, waiting for its
@@ -659,7 +648,7 @@ after each command line, and by the subprocess's level-0 loop):
   single turn wasn't enough there: process 1, boosted when an earlier
   SPAWN's wait ended, was chosen again at once.) Running the others
   while the prompt waits for a line would need the front end to read
-  the terminal while the machine runs; it is left for later.
+  the terminal while the machine runs; it is left for Phase 51.
 - **WAIT** (`dclwait.go`) keeps its time the host's. Process 1's lends
   the CPU waiting until the time is up (or an attention key), sleeping
   in the host only when nobody else can run; a subprocess's waits in
@@ -761,37 +750,22 @@ Later rounds of this phase, in a likely order:
 
 ## Open questions
 
-- `/OUTPUT=` with no name part: VMS 7.3 made a file named `.LOG` (no
-  name) in the default directory; govax refuses it.
-- Whether qualifiers after a blank but before the first parameter are
-  qualifiers or parameters. The manual says parameters (13.6.4), and so
-  does govax.
-- The rest of what `testdata/dcl50`'s round 1 left open (its README):
-  a negative number divided by zero, `''NAME` without its closing
-  apostrophe, a foreign command's `&`.
-- For a later round, on labels, IF, GOSUB, and CALL (DEVIATIONS.md's
-  "[Phase 50] Labels, IF blocks, GOSUB, and CALL"): whether a GOTO's
-  forward search records the labels it passes; `IF expr THEN` with
-  nothing after it; a command other than THEN after a block's IF; THEN,
-  ELSE, ENDIF, GOSUB, and RETURN's effect on `$STATUS`; RETURN n's
-  message and the ON action; a missing CALL target; labels, GOTO, block
-  IF, GOSUB, and CALL at the terminal; abbreviations of ENDIF and
-  ENDSUBROUTINE.
-- For a later round, on the lexical functions: everything DEVIATIONS.md's
-  "[Phase 50] Lexical functions: choices without the DCL Dictionary"
-  lists, chiefly F$CVTIME's formats and defaults, F$SEARCH without
-  wildcards, keyword abbreviations, and the range errors.
-- For a later round, on statuses (DEVIATIONS.md's "[Phase 50] Statuses and
-  ON"): EXIT with no status after a success (is bit 28 set?); `$STATUS`
-  at an ON ERROR THEN GOTO label; whether ON's command is substituted
-  when ON is read or when it runs (`ON ERROR THEN WRITE SYS$OUTPUT
-  "''$STATUS'"`); ON CONTROL_Y and SET NOON together; SKPDAT and ON
-  WARNING; `ON FOO` (IVKEYW?) and `EXIT 3 4`; where `EXIT n`'s message
-  goes with `/OUTPUT`.
+Rounds 1 to 5 of the probe answered most of the questions this phase
+raised (`testdata/dcl50`'s README lists each round's answers). Phase 51
+takes over the rest:
 
-(Answered by `testdata/dcl50`: a ninth parameter is CLI$_DEFOVF, the
-32nd level CLI$_STKOVF, both warnings; the expression and substitution
-details are in DEVIATIONS.md.)
+- Asked by round 6 (`testdata/dcl50`'s README, "Round 6"): WAIT's
+  `$STATUS` when it runs to its end; RETURN, SUBROUTINE, ENDSUBROUTINE,
+  and ELSE at the terminal; ELSE before a block's THEN; CALL of a plain
+  label; how deep GOSUB and block IF nest; `/OUTPUT`'s default type and
+  forms; OPEN/WRITE's fixed control bytes; SHOW LOGICAL's indentation; a
+  delta time's hundredths; commands that don't start with a letter.
+- Known to differ from VMS (PHASE-51's "Known differences"): `@` and
+  TYPE of a missing file; `/OUTPUT=.LOG` with no name part.
+- Still govax's choice, with no probe planned: those DEVIATIONS.md's
+  "[Phase 50]" entries list as unconfirmed (for example, a foreign
+  command's `&`, an `&` value read as one token, Ctrl/C at the terminal,
+  F$FAO given the wrong kind of value).
 
 ## Progress log
 
@@ -1117,3 +1091,18 @@ details are in DEVIATIONS.md.)
   `TestSpawn_noWait`, `TestSpawnCommand`, and `subcli_test.go`'s
   `loginout` changed (see "Between commands"). HELP SPAWN and WAIT say
   so.
+- 2026-10-12: Closed. All 21 subtasks are done, and rounds 1 to 5 of the
+  probe ran on VMS 7.3 with oracle tests replaying them; `go test
+  ./...` passes. The author chose to move what was left for later into
+  a new phase, as Phase 49 did for Phases 43 to 48: Phase 51 (`PHASE-51
+  - DCL follow-ups.md`) takes SPAWN from a subprocess, Ctrl/Y in a
+  subprocess's procedures, the other processes running while the prompt
+  waits, and the known differences from VMS. Round 6 of the probe
+  (`testdata/dcl50`'s `probe50a.com`, `probe50b.com`, `probe50c.com`,
+  and a few lines typed at the terminal) asks what round 5 left open and
+  a few older choices. It is written and tried under govax, and is
+  Phase 51's first subtask. "Open questions" above now says where each
+  one went. In passing: spawncmd.go's header no longer says a
+  SPAWN/NOWAIT subprocess waits for the next machine run (subtask 21
+  changed that), and DEVIATIONS.md's round 5 entry no longer lists a
+  subprocess's WAIT as blocking the machine.

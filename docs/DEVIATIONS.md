@@ -3419,11 +3419,13 @@ widened."
   - Ctrl/Y in a subprocess's procedure isn't delivered (the Ctrl/Y
     handling is process 1's).
   - A subprocess's procedures run, like its images, only while the
-    machine runs.
+    machine runs (since subtask 21, that includes process 1's lending
+    the CPU between its DCL commands, during WAIT, and at the prompt).
   - SHOW LOGICAL's status in process 1 is now SS$_NORMAL (or
     SHOW$_NOTRAN) with bit 28, as VMS gave in a subprocess (probes 4 and
     5); it was CLI$_NORMAL.
-- **Status**: unconfirmed.
+- **Status**: unconfirmed. SPAWN in a subprocess and Ctrl/Y in a
+  subprocess's procedures are Phase 51's subtasks 2 and 3.
 
 ### [Phase 50] Round 5 of the probe: STOP, Ctrl/Y, flow, lexicals, subprocesses
 
@@ -3470,9 +3472,12 @@ widened."
   target); a delta's hundredths written with the digits given (one case
   seen); F$FAO given the wrong kind of value (govax converts it; VMS
   wrote garbage); SPAWN not repeating a status of govax's own, which has
-  no message in the message file; the subprocess's WAIT blocking the
-  machine.
+  no message in the message file. (A subprocess's WAIT no longer blocks
+  the machine: Phase 50's subtask 21 made it wait in the scheduler.)
 - **Status**: VMS's answers followed; the choices above unconfirmed.
+  Round 6 of the probe (Phase 51, subtask 1; testdata/dcl50's README)
+  asks about WAIT's status, RETURN at the terminal, ELSE before THEN,
+  a CALL of a plain label, and a delta's hundredths.
 
 <!--
 Entry template:

@@ -20,8 +20,9 @@ import (
 // runs, the subprocess's commands reading and writing the terminal.
 //
 // With /NOWAIT the call returns at once, and the subprocess, like any
-// process other than process 1, runs only while the machine does: at the
-// next RUN, GO, CALL, or the like (docs/PHASE-43.md, Decision 4).
+// process other than process 1, runs only while the machine does: during
+// a RUN, GO, CALL, or the like, and while process 1's DCL lends it the
+// CPU between commands, during WAIT, and at the prompt (dcllend.go).
 //
 // The qualifiers are DCL's: /INPUT and /OUTPUT (the subprocess's
 // SYS$INPUT and SYS$OUTPUT), /PROCESS (its name), /PROMPT, /NOSYMBOLS

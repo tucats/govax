@@ -1,0 +1,135 @@
+# Phase 51 — DCL follow-ups
+
+**Status:** planned (2026-10-12). Needs Phase 50. Round 6 of the VMS
+probe (subtask 1) is written and tried under govax; the author is to run
+it.
+
+Phase 50 made the console a DCL command interpreter and closed on
+2026-10-12 with every subtask done. Following Phase 49's example, the
+author chose (2026-10-12) to collect what it left for later here instead
+of keeping it open: three features it deferred on purpose, the probe
+questions its fifth round left open, and the known differences from VMS
+that its probes found but no subtask fixed.
+
+## Goal
+
+- **A subprocess's DCL can SPAWN.** At present SPAWN is
+  `%VAX-E-NOTSUBPROC` in a subprocess (`processOneCommands`), because
+  the subprocess's interpreter couldn't wait for a subprocess of its
+  own. Subtask 21's yields (`cliYield`, `corevms.Yield`, `WaitUntil`)
+  now give it a way to wait in the scheduler.
+- **Ctrl/Y in a subprocess's procedures.** On VMS, SPAWN (without
+  /NOWAIT) attaches the terminal to the subprocess, so Ctrl/Y goes to
+  the subprocess's DCL, with the same rules a procedure in process 1
+  follows (ON CONTROL_Y, the Ctrl/Y level, CONTINUE). In govax, a
+  subprocess's procedures never get Ctrl/Y (DEVIATIONS.md, "[Phase 50]
+  The subprocess's DCL").
+- **The other processes run while the prompt waits for a line.** On VMS
+  the processes keep running while DCL waits for a terminal line. In
+  govax, process 1 lends the CPU at command level 0 only until the
+  others are idle or `promptLendLimit` (50 ms) has passed
+  (`lendWhileIdle`). After that, nothing runs until a line is typed. To
+  do better, cmd/govax must read the terminal while the machine runs:
+  its line reader on a goroutine of its own, with the machine running
+  the other processes until a line (or a control key) arrives.
+- **What the probes left open**, settled by round 6 (below), and govax
+  changed to match VMS's answers.
+- **Known differences from VMS** that the probes found and no subtask
+  fixed (below, "Known differences").
+
+## What earlier phases leave in place
+
+- `internal/console/subcli.go` (Phase 50, subtask 19): each
+  subprocess's DCL runs on a goroutine that takes turns with the engine
+  through its CLI stub's shim (`EXE$CLI_COMMAND`), with the console's
+  per-process DCL state swapped in (`swapDCLState`). A `cliYield` waits,
+  yields after a command, calls an image, or logs out.
+- `internal/console/dcllend.go` and `internal/corevms/lend.go` (Phase
+  50, subtask 21): process 1 lends the CPU after each DCL command
+  (`commandBoundary`, `lendCPU`), and at command level 0 until the
+  others are idle (`lendWhileIdle`). A subprocess's DCL yields after
+  each command (`yieldCommand`), and its WAIT waits in the scheduler
+  (`yieldTimer`).
+- `internal/console/spawncmd.go` (Phase 48): the console's SPAWN calls
+  LIB$SPAWN in process 1 from a small procedure page (`spawnPage`). With
+  no /NOWAIT, process 1 waits in LIB$SPAWN while the machine runs.
+- `internal/console/dclcontroly.go` (Phase 50, subtask 18): process 1's
+  Ctrl/Y and Ctrl/C in procedures (`HandleAttention`, `takeControlY`,
+  `controlYLevel`). cmd/govax's key handling (`attention.go`,
+  `terminal_unix.go`) asks `ControlYEnabled`.
+- `cmd/govax/main.go`: the prompt loop reads a line with the readline
+  package, then dispatches it. Nothing runs while it reads.
+
+## Subtasks
+
+1. **Round 6 of the probe** (`testdata/dcl50`'s README, "Round 6";
+   prepared 2026-10-12, author to run). Part 1, `@PROBE50A/OUTPUT=
+   PROBE50A.LOG` (with `probe50b.com` and `probe50c.com`): WAIT's
+   `$STATUS`; ELSE before a block's THEN; CALL of a plain label; GOSUB's
+   and block IF's nesting limits; `/OUTPUT`'s default type, `/O=`, and
+   blanks around `=`; OPEN/WRITE's fixed control bytes (DUMP/BLOCK);
+   SHOW LOGICAL's indentation (three blanks on VMS, two in govax) and
+   its numbered levels; delta times' hundredths; `1ABC`, `.X`, `(X)`.
+   Part 2, at the terminal: RETURN, `RETURN 3`, SUBROUTINE,
+   ENDSUBROUTINE, ELSE, and WAIT at command level 0. Then a
+   `TestProbe50AOracle` that replays `vax/probe50a.log`, and govax
+   changed where VMS differs.
+2. **SPAWN in a subprocess.** Take SPAWN out of `processOneCommands`. A
+   subprocess's SPAWN calls LIB$SPAWN in its own process, as process 1's
+   does. Without /NOWAIT, its interpreter waits (a `cliYield` wait) until
+   the child's completion. The subprocess's own subprocesses go when it
+   does (Phase 45's owner deletion). Also SPAWN's status when the
+   failure is govax's own (DEVIATIONS.md: SPAWN doesn't repeat a status
+   with no message in the message file).
+3. **Ctrl/Y in a subprocess's procedures.** The terminal's attention
+   keys go to the process the terminal is attached to: process 1, or the
+   subprocess a SPAWN is waiting for (and so on down a chain of SPAWNs).
+   That process's DCL takes them by Phase 50's rules. A subprocess's WAIT
+   is interrupted, as process 1's is. Optionally ATTACH, to move the
+   terminal between processes of a job.
+4. **The other processes while the prompt waits.** cmd/govax reads the
+   terminal on a goroutine, and the console runs the machine (process 1
+   in LEF, as `lendWhileIdle` does) until a line arrives or a key stops
+   it, with no `promptLendLimit`. A subprocess's output during the wait
+   must not garble the line being typed. With no other process to run,
+   nothing changes. A one-shot command and input from a pipe stay
+   synchronous.
+5. **Known differences** (below), each fixed or confirmed as govax's
+   choice.
+6. **Docs and help**: HELP SPAWN, WAIT, and KEYS; CLAUDE.md; PLAN.md.
+
+## Known differences
+
+What Phase 50's probes showed VMS doing that govax still doesn't, and
+smaller gaps the phase left:
+
+- **@ and TYPE of a missing file.** VMS 7.3 (round 1, section D): `@NOSUCH`
+  is `%DCL-E-OPENIN, error opening DUA1:[000000]NOSUCH.COM; as input`
+  then `-RMS-E-FNF, file not found`, `$STATUS` %X10018292, an error that
+  ends a calling procedure. `TYPE NOSUCH.TXT` is `%TYPE-W-SEARCHFAIL,
+  error searching for DUA1:[000000]NOSUCH.TXT;` then `-RMS-E-FNF`,
+  `$STATUS` %X10951238. govax gives `%SYSTEM-W-NOSUCHFILE` for both.
+- **`/OUTPUT=.LOG` with no name**: VMS made a file named `.LOG`; govax
+  refuses it.
+- **Lexical functions not yet done**: F$CONTEXT, F$CSID, F$DEVICE,
+  F$FILE_ATTRIBUTES, F$GETQUI, F$IDENTIFIER, F$LICENSE (CLI$_LEXNOTIMPL).
+  F$FILE_ATTRIBUTES, F$DEVICE, and F$IDENTIFIER have something to report
+  in govax; F$GETQUI and F$LICENSE have nothing behind them.
+- **STOP/IMAGE and STOP/[NO]EXIT** are not done.
+- **DIRECTORY's, DELETE's, and DUMP's layouts** differ from VMS's in the
+  probe logs (their oracle tests skip them); govax has no DUMP.
+
+## Open questions
+
+- Subtask 4: how output from another process should appear while a line
+  is being typed (VMS redraws the line after a broadcast; readline can
+  refresh it).
+- Subtask 3: whether `ATTACH` is worth having without a way to detach
+  (VMS's Ctrl/Y then ATTACH, or SPAWN back).
+
+## Progress log
+
+- 2026-10-12: Planned, as Phase 50 closed. Round 6 of the probe
+  (`testdata/dcl50/probe50a.com`, `probe50b.com`, `probe50c.com`; the
+  README's "Round 6") is written and run under govax first. The README
+  records govax's answers. The author is to run it on the simh VAX.

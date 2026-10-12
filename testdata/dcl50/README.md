@@ -27,6 +27,9 @@ two of the phase's open questions about `@`.
 | `probe50y.com` | Round 5's interactive part, STOP and Ctrl/Y: cases Y1 to Y16 below |
 | `probe50z.com` | Round 5's interactive nested procedure, one case per P1 |
 | `probe50x.mar` | Round 5's long-running image, for Ctrl/Y (Y13, Y14) |
+| `probe50a.com` | Round 6, what round 5 and earlier rounds left open: sections R1 to R6 below |
+| `probe50b.com` | Round 6's nested cases, one per P1 |
+| `probe50c.com` | Round 6's ELSE before a block's THEN, P1 the IF's value (R2) |
 | `exchange.cmd`, `copyout.cmd` | Make the exchange volume and copy the log back |
 | `vax/` | The VMS run's log, `probe50.log` (2026-10-09) |
 
@@ -537,4 +540,79 @@ probe"):
 
 Still open: what WAIT leaves in `$STATUS` when it runs to its end;
 RETURN's status at the terminal; ELSE before a block's THEN; and a CALL
-of a plain label.
+of a plain label. Round 6 asks.
+
+## Round 6: what was left open
+
+Round 6 (Phase 51's first subtask; Phase 50 closed with it prepared)
+asks what rounds 4 and 5 left open, and a few older choices
+DEVIATIONS.md's "[Phase 50]" entries still list as unconfirmed. Build
+the exchange volume as before (`exchange.cmd` now copies round 6's
+files). It has two parts.
+
+### Part 1: `@PROBE50A/OUTPUT=PROBE50A.LOG`
+
+Run from SYSTEM with the volume's `[000000]` as the default directory.
+It runs with SET NOON and SET VERIFY, waits two seconds in R1, and
+nothing else waits. Each section starts by showing a marker symbol M.
+
+- **R1, WAIT:** `$STATUS` after a WAIT that runs to its end, after a
+  success and after a warning; `WAIT NOTATIME`.
+- **R2, flow:** ELSE before a block's THEN, with the IF true and false
+  (`probe50c.com`, with SET NOON so the lines after an error run); CALL
+  of a label that isn't on a SUBROUTINE line (does the procedure go
+  on?); how deep GOSUB nests (the global R6N is the depth reached; the
+  manual says 16) and how deep block IFs do (16 levels written; the
+  manual says 15).
+- **R3, @'s /OUTPUT:** the default type of `/OUTPUT=R6OUTA` (.LIS, as
+  the manual says, or .LOG?), `/O=` as its abbreviation, and blanks
+  around its `=` (a qualifier, or parameters?); DIRECTORY shows what was
+  made.
+- **R4, OPEN/WRITE's fixed control:** DUMP/BLOCK of a file OPEN/WRITE
+  made, with records "abc", "", and "defgh": the two control bytes
+  before each record (govax writes 01 8D).
+- **R5, SHOW LOGICAL's indentation:** VMS indented `"OUT"`, `"KEEP"`,
+  and `"PROBE_LNM"` three blanks in earlier rounds, govax two. A plain
+  name, a name whose value is a logical name (the numbered level's
+  line), a search list, /FULL, a wildcard (which tables' headers show?),
+  and SHOW LOGICAL/PROCESS's listing.
+- **R6, odds and ends:** F$CVTIME of deltas with two, one, three, and no
+  digits of hundredths, and with only days and hours; `1ABC`, `.X`, and
+  `(X)` as commands (NOCOMD or IVVERB?).
+
+### Part 2: at the terminal
+
+At the `$` prompt itself (command level 0), type each line and keep the
+whole session as `vax/probe50a-term.log`:
+
+    FROBNICATE
+    RETURN
+    SHOW SYMBOL $STATUS
+    WRITE SYS$OUTPUT "x"
+    RETURN
+    SHOW SYMBOL $STATUS
+    RETURN 3
+    SHOW SYMBOL $STATUS
+    SUBROUTINE
+    SHOW SYMBOL $STATUS
+    ENDSUBROUTINE
+    SHOW SYMBOL $STATUS
+    ELSE
+    SHOW SYMBOL $STATUS
+    WAIT 00:00:01
+    SHOW SYMBOL $STATUS
+
+RETURN, SUBROUTINE, and ENDSUBROUTINE at the terminal (round 5's Y16
+ended before them), and ELSE and WAIT there. Then run `copyout.cmd`,
+which copies PROBE50A.LOG to `vax/probe50a.log`.
+
+Under govax (2026-10-12), part 1 gives: WAIT leaves `$STATUS` alone;
+ELSE before THEN is INVIFNEST; CALL of a plain label is USCALL and ends
+the procedure with USGOTO's status; GOSUB stops at 16 (GOSUBMAX, a
+warning) and block IF at 15 (INVIFNEST); `/OUTPUT=R6OUTA` makes
+R6OUTA.LIS, and `/O=` and `/OUTPUT = ` work; no DUMP; SHOW LOGICAL
+indents two blanks, and its numbered line is `1 "R6A"`; deltas keep the
+digits of hundredths given, up to two (`.00` when none are given); the
+three commands are NOCOMD. Part 2: RETURN (and `RETURN 3`) is silent and
+leaves BADRET's status, marked as shown (%X10038198); SUBROUTINE and
+ENDSUBROUTINE are INVCALL; ELSE is INVIFNEST; WAIT leaves `$STATUS`.

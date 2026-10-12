@@ -11,22 +11,26 @@ never had.
 
 - `docs/PLAN.md` — high-level plan, locked-in architecture decisions, and the phase
   index.
-- `docs/PHASE-00.md` … `PHASE-50.md` — one doc per phase: goal, C-source file
+- `docs/PHASE-00.md` … `PHASE-51.md` — one doc per phase: goal, C-source file
   mapping, deliverables, open questions, and a dated progress log (all
-  done through 49; 40 follows 38 directly: there is no Phase
+  done through 50, but for Phase 42's Part B, the debugger's further
+  features, in progress; 40 follows 38 directly: there is no Phase
   39). Phases 43–48 are the multiprocessing program (subprocesses, a
   scheduler, interprocess mailboxes and shared memory, RMS file sharing
   and the lock manager, LIB$SPAWN; done 2026-10-08; PLAN.md summarizes
   it), and Phase 49 the work it left for later (done 2026-10-09);
-  `PHASE-43.md`'s Part A describes the whole program. Phase 50 (in
-  progress) makes the console a DCL command interpreter: command
+  `PHASE-43.md`'s Part A describes the whole program. Phase 50 (done
+  2026-10-12) made the console a DCL command interpreter: command
   procedures and command levels, symbol substitution, expressions,
   `$STATUS`/ON, labels and GOTO, IF blocks, GOSUB, CALL, the lexical
-  functions, SET VERIFY, SYS$INPUT from a procedure (DECK/EOD), and
-  DCL's file I/O (OPEN, CLOSE, READ, WRITE, INQUIRE), and STOP and
-  Ctrl/Y, and the console's whole DCL in subprocesses are done; then a
-  probe; then subtask 21, the other processes running between DCL
-  commands and during WAIT.
+  functions, SET VERIFY, SYS$INPUT from a procedure (DECK/EOD), DCL's
+  file I/O (OPEN, CLOSE, READ, WRITE, INQUIRE), STOP and Ctrl/Y, the
+  console's whole DCL in subprocesses, and the other processes running
+  between DCL commands and during WAIT. Phase 51 (planned) is what it
+  left for later: round 6 of the DCL probe (prepared, to be run on
+  VMS), SPAWN from a subprocess, Ctrl/Y in a subprocess's procedures,
+  the other processes running while the prompt waits for a line, and
+  the known differences from VMS.
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
 - `docs/DEVIATIONS.md` — running log of suspected ISA/behavior fidelity issues found in
@@ -81,7 +85,10 @@ never had.
   `vax/probe50q.log`, `TestProbe50QOracle`) is DCL's file I/O. Round 5
   (`probe50t.com`, `vax/probe50t.log`, `TestProbe50TOracle`; the
   interactive `probe50y.com`, `vax/probe50y.log`) is statuses, flow, the
-  lexical functions, subprocesses, STOP, and Ctrl/Y.
+  lexical functions, subprocesses, STOP, and Ctrl/Y. Round 6
+  (`probe50a.com`, with `probe50b.com` and `probe50c.com`, and lines
+  typed at the terminal; Phase 51's subtask 1) asks what round 5 left
+  open; it hasn't been run on VMS yet.
 - `testdata/probe49/` — Phase 49's VMS probe in three rounds (`probe6`,
   `probe6b`, `probe6c`; README.md has each round's answers), run by
   `TestProbe6*`; `testdata/rms49/` and `testdata/sec49/` are the phase's
