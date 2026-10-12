@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/tucats/govax/internal/dcl"
 	"github.com/tucats/govax/internal/vax"
 	"github.com/tucats/govax/internal/vmserrors"
 )
@@ -233,4 +234,81 @@ func readCommandVerb(s string) (verb, rest string) {
 	}
 
 	return s, ""
+}
+
+// bindDCL binds DCL's own verbs in g, the console's grammar: the flow of
+// a procedure (EXIT, ON, GOTO, IF/THEN/ELSE/ENDIF, GOSUB/RETURN,
+// CALL/SUBROUTINE), DECK/EOD, DCL's file I/O, WAIT, CONTINUE, QUIT,
+// LOGOUT, STOP, SPAWN, MCR, SHOW SYMBOL, and DCL's SET commands (VERIFY,
+// PREFIX, CONTROL, ON, PROMPT). The console binds the rest.
+func (c *Interpreter) bindDCL(g *dcl.Grammar) {
+	// EXIT ends the command procedure it's in, or govax at the terminal;
+	// QUIT ends govax wherever it is (procedure.go).
+	g.Bind("EXIT", c.exitCommand)
+	g.Bind("ON", c.onCommand)
+	// Labels, IF blocks, GOSUB, and CALL (dcllabel.go, dclif.go,
+	// dclcall.go).
+	g.Bind("GOTO", c.gotoCommand)
+	g.Bind("THEN", c.thenCommand)
+	g.Bind("ELSE", c.elseCommand)
+	g.Bind("ENDIF", c.endifCommand)
+	g.Bind("GOSUB", c.gosubCommand)
+	g.Bind("RETURN", c.returnCommand)
+	g.Bind("CALL", c.callCommand)
+	g.Bind("SUBROUTINE", c.subroutineCommand)
+	g.Bind("ENDSUBROUTINE", c.endsubroutineCommand)
+	// DECK and EOD: data lines for an image, "$" or not (dclinput.go).
+	g.Bind("DECK", c.deckCommand)
+	g.Bind("EOD", c.eodCommand)
+	// DCL's file I/O (dclfile.go).
+	g.Bind("OPEN", c.openCommand)
+	g.Bind("CLOSE", c.closeCommand)
+	g.Bind("READ", c.readCommand)
+	g.Bind("WRITE", c.writeCommand)
+	g.Bind("INQUIRE", c.inquireCommand)
+	g.Bind("WAIT", c.waitCommand)
+	g.Bind("CONTINUE", func(id int64, r *dcl.Result) error { return c.continueCommand() })
+	g.Bind("QUIT", func(id int64, r *dcl.Result) error { return c.Quit() })
+	g.Bind("LOGOUT", func(id int64, r *dcl.Result) error { return c.logoutCommand() })
+	g.Bind("MCR", func(id int64, r *dcl.Result) error {
+		return c.runForeign(r.String("IMAGE"), r.String("TEXT"))
+	})
+	g.Bind("SHOW_SYM", func(id int64, r *dcl.Result) error {
+		cmd := symbolCommand{all: r.Present("ALL"), name: strings.ToUpper(strings.TrimSpace(r.String("SYMBOL")))}
+
+		switch {
+		case r.Present("LOCAL"):
+			cmd.scope = scopeLocal
+		case r.Present("GLOBAL"):
+			cmd.scope = scopeGlobal
+		}
+
+		return c.showDCLSymbols(cmd)
+	})
+	g.Bind("STOP", c.stopCommand)
+	g.Bind("IF", c.ifCommand)
+	g.Bind("SPAWN", func(id int64, r *dcl.Result) error {
+		return c.Spawn(SpawnOptions{
+			Command:        r.String("COMMAND"),
+			Input:          r.String("INPUT"),
+			Output:         r.String("OUTPUT"),
+			Process:        r.String("PROCESS"),
+			Prompt:         r.String("PROMPT"),
+			NoWait:         r.Negated("WAIT"),
+			NoSymbols:      r.Negated("SYMBOLS"),
+			NoLogicalNames: r.Negated("LOGICAL_NAMES"),
+		})
+	})
+	g.Bind("SET_VERIFY", func(id int64, r *dcl.Result) error { return setVerifyCommand(c, r, c.line) })
+	g.Bind("SET_PREFIX", func(id int64, r *dcl.Result) error {
+		if r.Negated("WHAT") {
+			return c.SetPrefix("")
+		}
+
+		return c.SetPrefix(r.String("TEXT"))
+	})
+	g.Bind("SET_CONTROL", func(id int64, r *dcl.Result) error { return c.setControlCommand(r) })
+	g.Bind("SET_ON", func(id int64, r *dcl.Result) error { return c.SetOn(!r.Negated("WHAT")) })
+	// SET PROMPT="text" changes the console's prompt.
+	g.Bind("SET_PROMPT", func(id int64, r *dcl.Result) error { return c.SetPrompt(r.String("TEXT")) })
 }

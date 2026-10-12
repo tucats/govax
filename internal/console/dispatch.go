@@ -89,41 +89,8 @@ func (d *Dispatcher) bindGrammar() {
 
 	// docs/PHASE-37.md: the former fixed commands (commands.go).
 	d.bindConsoleCommands()
+	d.Console.bindDCL(g)
 
-	// EXIT ends the command procedure it's in, or govax at the terminal;
-	// QUIT ends govax wherever it is (procedure.go).
-	g.Bind("EXIT", d.Console.exitCommand)
-	g.Bind("ON", d.Console.onCommand)
-
-	// Labels, IF blocks, GOSUB, and CALL (dcllabel.go, dclif.go,
-	// dclcall.go).
-	g.Bind("GOTO", d.Console.gotoCommand)
-	g.Bind("THEN", d.Console.thenCommand)
-	g.Bind("ELSE", d.Console.elseCommand)
-	g.Bind("ENDIF", d.Console.endifCommand)
-	g.Bind("GOSUB", d.Console.gosubCommand)
-	g.Bind("RETURN", d.Console.returnCommand)
-	g.Bind("CALL", d.Console.callCommand)
-	g.Bind("SUBROUTINE", d.Console.subroutineCommand)
-	g.Bind("ENDSUBROUTINE", d.Console.endsubroutineCommand)
-
-	// DECK and EOD: data lines for an image, "$" or not (dclinput.go).
-	g.Bind("DECK", d.Console.deckCommand)
-	g.Bind("EOD", d.Console.eodCommand)
-
-	// DCL's file I/O (dclfile.go).
-	g.Bind("OPEN", d.Console.openCommand)
-	g.Bind("CLOSE", d.Console.closeCommand)
-	g.Bind("READ", d.Console.readCommand)
-	g.Bind("WRITE", d.Console.writeCommand)
-	g.Bind("INQUIRE", d.Console.inquireCommand)
-	g.Bind("WAIT", d.Console.waitCommand)
-	g.Bind("CONTINUE", func(id int64, r *dcl.Result) error { return d.Console.continueCommand() })
-	g.Bind("QUIT", func(id int64, r *dcl.Result) error { return d.Console.Quit() })
-	g.Bind("LOGOUT", func(id int64, r *dcl.Result) error { return d.Console.logoutCommand() })
-	g.Bind("MCR", func(id int64, r *dcl.Result) error {
-		return d.Console.runForeign(r.String("IMAGE"), r.String("TEXT"))
-	})
 	g.Bind("DEBUG", func(id int64, r *dcl.Result) error { return d.Console.StartDebugger() })
 
 	g.Bind("VMINIT", func(id int64, r *dcl.Result) error {
@@ -137,18 +104,6 @@ func (d *Dispatcher) bindGrammar() {
 	g.Bind("CLEAR_STRINGS", func(id int64, r *dcl.Result) error { return d.Console.ClearString() })
 	g.Bind("CLEAR_MEMORY", func(id int64, r *dcl.Result) error { return d.Console.ClearMemory() })
 
-	g.Bind("SHOW_SYM", func(id int64, r *dcl.Result) error {
-		cmd := symbolCommand{all: r.Present("ALL"), name: strings.ToUpper(strings.TrimSpace(r.String("SYMBOL")))}
-
-		switch {
-		case r.Present("LOCAL"):
-			cmd.scope = scopeLocal
-		case r.Present("GLOBAL"):
-			cmd.scope = scopeGlobal
-		}
-
-		return d.Console.showDCLSymbols(cmd)
-	})
 	g.Bind("SHOW_RADIX", func(id int64, r *dcl.Result) error { return d.Console.ShowRadix() })
 	// SHOW VERSION names the microkernel. (It and the ABOUT command once
 	// called the microkernel's EXE$ABOUT; ABOUT is gone, HELP ABOUT

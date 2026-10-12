@@ -25,15 +25,7 @@ func (d *Dispatcher) bindSetCommands() {
 		return c.SetRadix(n)
 	})
 
-
-
-
 	g.Bind("SET_DEBUG", func(id int64, r *dcl.Result) error { return c.SetDebug(r.List("FLAGS")) })
-
-
-
-
-
 
 	g.Bind("SET_VERBOSE", func(id int64, r *dcl.Result) error {
 		if r.Negated("WHAT") {
@@ -42,16 +34,6 @@ func (d *Dispatcher) bindSetCommands() {
 
 		return c.SetVerbose()
 	})
-	g.Bind("SET_VERIFY", func(id int64, r *dcl.Result) error { return setVerifyCommand(c.Interpreter, r, d.Console.line) })
-	g.Bind("SET_PREFIX", func(id int64, r *dcl.Result) error {
-		if r.Negated("WHAT") {
-			return c.SetPrefix("")
-		}
-
-		return c.SetPrefix(r.String("TEXT"))
-	})
-	g.Bind("SET_CONTROL", func(id int64, r *dcl.Result) error { return c.setControlCommand(r) })
-	g.Bind("SET_ON", func(id int64, r *dcl.Result) error { return c.SetOn(!r.Negated("WHAT")) })
 
 	g.Bind("SET_QUANTUM", func(id int64, r *dcl.Result) error { return c.SetQuantum(int(r.Int("COUNT"))) })
 
@@ -60,8 +42,6 @@ func (d *Dispatcher) bindSetCommands() {
 	// PURGE, COPY, and TYPE; Session.SetDefault checks its syntax.
 	g.Bind("SET_DEFAULT", func(id int64, r *dcl.Result) error { return c.cmd().SetDefault(r.String("SPEC")) })
 
-	// SET PROMPT="text" changes the console's prompt.
-	g.Bind("SET_PROMPT", func(id int64, r *dcl.Result) error { return c.SetPrompt(r.String("TEXT")) })
 }
 
 // parseRadixArg accepts either HEX/HEXA/16/DEC/DECI/10
@@ -83,4 +63,3 @@ func parseRadixArg(s string) (int, bool) {
 
 	return n, true
 }
-

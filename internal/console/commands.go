@@ -30,8 +30,6 @@ const (
 func (d *Dispatcher) bindConsoleCommands() {
 	g := d.Grammar
 
-	g.Bind("STOP", d.Console.stopCommand)
-
 	g.Bind(zeroTOKEN, func(id int64, r *dcl.Result) error { return d.Console.Zero() })
 	g.Bind(bootTOKEN, notImplemented(bootTOKEN, "device/RTL support"))
 	g.Bind(romTOKEN, notImplemented(romTOKEN, "device support"))
@@ -50,21 +48,7 @@ func (d *Dispatcher) bindConsoleCommands() {
 		return d.Console.Help(d.Help, strings.Fields(strings.ReplaceAll(r.String("TOPIC"), "/", " /")))
 	})
 
-	g.Bind(ifTOKEN, d.Console.ifCommand)
-
 	g.Bind(runTOKEN, d.runCommand)
-	g.Bind("SPAWN", func(id int64, r *dcl.Result) error {
-		return d.Console.Spawn(SpawnOptions{
-			Command:        r.String("COMMAND"),
-			Input:          r.String("INPUT"),
-			Output:         r.String("OUTPUT"),
-			Process:        r.String("PROCESS"),
-			Prompt:         r.String("PROMPT"),
-			NoWait:         r.Negated("WAIT"),
-			NoSymbols:      r.Negated("SYMBOLS"),
-			NoLogicalNames: r.Negated("LOGICAL_NAMES"),
-		})
-	})
 
 	g.Bind(asmTOKEN, d.asmCommand)
 	g.Bind("SAVE", d.saveCommand)
