@@ -15,12 +15,12 @@ func libAdawi(env *corevms.Environment, argv []uint32) (uint32, error) {
 
 	sum, err := mem.LoadLongword(cpu, sumAddr)
 	if err != nil {
-		return 0, err
+		return memoryFault(env, err)
 	}
 
 	base, err := mem.LoadLongword(cpu, baseAddr)
 	if err != nil {
-		return 0, err
+		return memoryFault(env, err)
 	}
 
 	base += sum
@@ -37,7 +37,7 @@ func libAdawi(env *corevms.Environment, argv []uint32) (uint32, error) {
 	}
 
 	if err := mem.StoreLongword(cpu, signAddr, sign); err != nil {
-		return 0, err
+		return memoryFault(env, writing(err))
 	}
 
 	return 1, nil

@@ -28,9 +28,10 @@ const maxSpawnArguments = 13
 // go on (corevms.AwaitSpawn).
 //
 // It returns SS$_NORMAL; LIB$_WRONUMARG for more than 13 arguments;
-// SS$_ACCVIO for an argument it can't read or write; LIB$_INVSTRDES for a
-// string whose descriptor's class isn't a string's; or corevms.Spawn's failures (LIB$_NOCLI,
-// LIB$_INVARG for a flag it doesn't define, $CREPRC's statuses).
+// LIB$_INVSTRDES for a string whose descriptor's class isn't a string's;
+// or corevms.Spawn's failures (LIB$_NOCLI, LIB$_INVARG for a flag it
+// doesn't define, $CREPRC's statuses). An argument it can't read or write
+// is an access violation, signaled (memoryFault).
 func libSpawn(env *corevms.Environment, argv []uint32) (uint32, error) {
 	// A call made again while it waits for its subprocess.
 	if waiting, err := env.AwaitSpawn(); waiting {
@@ -65,7 +66,7 @@ func libSpawn(env *corevms.Environment, argv []uint32) (uint32, error) {
 
 		text, err := readString(env, addr)
 		if err != nil {
-			return stringStatus(err), nil
+			return stringFailure(env, err)
 		}
 
 		if s.to != nil {
@@ -76,7 +77,7 @@ func libSpawn(env *corevms.Environment, argv []uint32) (uint32, error) {
 	if a := arg(argv, 3); a != 0 {
 		flags, err := mem.LoadLongword(cpu, a)
 		if err != nil {
-			return ssAccVio, nil
+			return memoryFault(env, err)
 		}
 
 		req.Flags = flags
@@ -85,7 +86,7 @@ func libSpawn(env *corevms.Environment, argv []uint32) (uint32, error) {
 	if a := arg(argv, 7); a != 0 {
 		efn, err := mem.LoadByte(cpu, a)
 		if err != nil {
-			return ssAccVio, nil
+			return memoryFault(env, err)
 		}
 
 		req.EventFlag, req.HasEventFlag = uint32(efn), true
@@ -103,8 +104,12 @@ func libSpawn(env *corevms.Environment, argv []uint32) (uint32, error) {
 		}
 
 		v, err := mem.LoadLongword(cpu, a)
-		if err != nil || mem.StoreLongword(cpu, a, v) != nil {
-			return ssAccVio, nil
+		if err != nil {
+			return memoryFault(env, err)
+		}
+
+		if err := mem.StoreLongword(cpu, a, v); err != nil {
+			return memoryFault(env, writing(err))
 		}
 	}
 

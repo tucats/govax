@@ -32,10 +32,19 @@ func (sys *System) Shims() *ShimTable { return sys.shims }
 // continued. See signal.go.
 func (env *Environment) Signal(argv []uint32, stop bool) (uint32, error) {
 	if stop {
-		return env.signal(kindStop, argv)
+		return env.signal(kindStop, argv, 0)
 	}
 
-	return env.signal(kindSignal, argv)
+	return env.signal(kindSignal, argv, 0)
+}
+
+// SignalFailure signals the condition argv describes, as Signal does, for
+// a routine that fails by signaling rather than by returning a status: an
+// access violation in its own code, say, which on VMS is the hardware's
+// exception. If a handler continues the condition, the routine returns
+// status (in R0) to its caller.
+func (env *Environment) SignalFailure(argv []uint32, status uint32) (uint32, error) {
+	return env.signal(kindSignal, argv, status)
 }
 
 // SetCallerHandler makes handler (0 for none) the condition handler of the

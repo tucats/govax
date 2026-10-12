@@ -44,6 +44,9 @@ const (
 	dscClassVS  = 11 // varying string
 )
 
+// dscDTypeT is DSC$K_DTYPE_T, the data type of character text.
+const dscDTypeT = 14
+
 // maxStringLength is the longest string a descriptor describes: its
 // lengths are words.
 const maxStringLength = 65535
@@ -162,7 +165,8 @@ func readString(env *corevms.Environment, addr uint32) (string, error) {
 // fewer than all of them: a routine then returns its "string truncated"
 // status (LIB$_STRTRU, or the one its manual entry names). Errors are
 // readDescriptor's, errInsVirMem when a dynamic string's storage can't be
-// allocated, and a memory error when the storage can't be written.
+// allocated, and a memory error when the storage can't be written
+// (marked as a write's, writing).
 func writeString(env *corevms.Environment, addr uint32, s string) (stored int, truncated bool, err error) {
 	d, err := readDescriptor(env, addr)
 	if err != nil {
@@ -198,12 +202,12 @@ func writeString(env *corevms.Environment, addr uint32, s string) (stored int, t
 			}
 
 			if err := mem.StoreLongword(cpu, addr+4, d.text); err != nil {
-				return 0, false, err
+				return 0, false, writing(err)
 			}
 		}
 
 		if err := mem.StoreWord(cpu, addr, uint16(n)); err != nil {
-			return 0, false, err
+			return 0, false, writing(err)
 		}
 
 		room = n
@@ -213,7 +217,7 @@ func writeString(env *corevms.Environment, addr uint32, s string) (stored int, t
 		room = n
 
 		if err := mem.StoreWord(cpu, d.text-2, uint16(n)); err != nil {
-			return 0, false, err
+			return 0, false, writing(err)
 		}
 
 	default:
@@ -227,25 +231,11 @@ func writeString(env *corevms.Environment, addr uint32, s string) (stored int, t
 		}
 
 		if err := mem.StoreByte(cpu, d.text+i, ch); err != nil {
-			return 0, false, err
+			return 0, false, writing(err)
 		}
 	}
 
 	return int(n), truncated || int(n) < len(s), nil
-}
-
-// stringStatus is the condition value a routine returns for a descriptor
-// helper's error: LIB$_INVSTRDES, LIB$_INSVIRMEM, or, for a memory
-// error, SS$_ACCVIO.
-func stringStatus(err error) uint32 {
-	switch {
-	case errors.Is(err, errInvStrDes):
-		return libInvStrDes
-	case errors.Is(err, errInsVirMem):
-		return libInsVirMem
-	default:
-		return ssAccVio
-	}
 }
 
 // tooFewArgs reports whether the call passed fewer than n arguments: a

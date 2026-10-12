@@ -9,8 +9,8 @@ import "github.com/tucats/govax/internal/corevms"
 // SYS$OUTPUT is a mailbox, the record is a message (docs/PHASE-46.md,
 // subtask 6), and a full mailbox makes the caller wait for room. It
 // returns the write's status (SS$_NORMAL on the terminal), LIB$_INVSTRDES
-// when the descriptor's class isn't a string's, or SS$_ACCVIO when the
-// descriptor or its text can't be read.
+// when the descriptor's class isn't a string's. A descriptor or text it
+// can't read is an access violation, signaled (memoryFault).
 //
 // This replaces the microkernel's own LIB$PUT_OUTPUT (kernel.asm, now
 // EXE$PUT_OUTPUT), which wrote a character at a time through the console
@@ -18,7 +18,7 @@ import "github.com/tucats/govax/internal/corevms"
 func libPutOutput(env *corevms.Environment, argv []uint32) (uint32, error) {
 	s, err := readString(env, arg(argv, 0))
 	if err != nil {
-		return stringStatus(err), nil
+		return stringFailure(env, err)
 	}
 
 	return env.PutOutput(s)

@@ -22,7 +22,8 @@ import (
 // empty line); LIB$_INVARG with no get-string, or one whose descriptor's
 // class isn't a string's or is 0 (the manual, LIB-213, says so of this
 // routine, though other routines read class Z as S); LIB$_INVSTRDES for
-// a prompt-string's; LIB$_INSVIRMEM; or SS$_ACCVIO.
+// a prompt-string's; or LIB$_INSVIRMEM. An argument it can't read or
+// write is an access violation, signaled (memoryFault).
 //
 // Unconfirmed against VMS: that at the end of the input get-string and
 // resultant-length are left as they were; and SYS$INPUT is always the
@@ -38,7 +39,7 @@ func libGetInput(env *corevms.Environment, argv []uint32) (uint32, error) {
 	case errors.Is(err, errInvStrDes), err == nil && d.class == dscClassZ:
 		return libInvArg, nil
 	case err != nil:
-		return stringStatus(err), nil
+		return stringFailure(env, err)
 	}
 
 	p := ""
@@ -47,7 +48,7 @@ func libGetInput(env *corevms.Environment, argv []uint32) (uint32, error) {
 		var err error
 
 		if p, err = readPrompt(env, prompt); err != nil {
-			return stringStatus(err), nil
+			return stringFailure(env, err)
 		}
 	}
 
@@ -62,12 +63,12 @@ func libGetInput(env *corevms.Environment, argv []uint32) (uint32, error) {
 
 	stored, truncated, err := writeString(env, result, line)
 	if err != nil {
-		return stringStatus(err), nil
+		return stringFailure(env, err)
 	}
 
 	if lenAddr != 0 {
 		if err := env.Memory().StoreWord(env.CPU(), lenAddr, uint16(stored)); err != nil {
-			return ssAccVio, nil
+			return memoryFault(env, writing(err))
 		}
 	}
 

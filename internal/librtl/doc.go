@@ -18,6 +18,15 @@
 // is VAX code in the microkernel (kernel.asm) instead: its row has code 0,
 // and its SHIM$ symbol is the routine itself (docs/PHASE-53, Decision 1).
 //
+// # Failures that are signals
+//
+// A routine that can't read or write one of its arguments signals
+// SS$_ACCVIO, as VMS's routine's own instruction would fault, rather
+// than returning it (fault.go). Every LIBRTL.EXE entry govax doesn't
+// implement has a stub too, which signals SS$_UNSUPPORTED when called
+// (missing.go), so an image naming one can still run (docs/PHASE-53,
+// Decisions 5 and 6).
+//
 // # What's here and what's in rtl
 //
 // This package holds each routine's documented interface: reading its

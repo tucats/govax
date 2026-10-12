@@ -29,7 +29,7 @@ type Message struct {
 const messageKeyMask = 0x0FFFFFF8
 
 // LookupMessage returns the message for condition value code, if the
-// system message file has one. The system facility's message 0 is
+// system message file (or govax's own, govaxMessages) has one. The system facility's message 0 is
 // SS$_NORMAL's, a success only: VMS 7.3 showed the other severities of
 // it (0, 2, and 4) as having no message (testdata/dcl50's EXIT cases).
 func LookupMessage(code uint32) (Message, bool) {
@@ -42,6 +42,10 @@ func LookupMessage(code uint32) (Message, bool) {
 		m, ok = observedMessages[code&messageKeyMask]
 	}
 
+	if !ok {
+		m, ok = govaxMessages[code&messageKeyMask]
+	}
+
 	return m, ok
 }
 
@@ -51,4 +55,24 @@ func LookupMessage(code uint32) (Message, bool) {
 // finds them after Messages.
 var observedMessages = map[uint32]Message{
 	0x009110A0: {Facility: "CREATE", Ident: "OPENOUT", Text: "error opening !AS as output", FAOCount: 1},
+}
+
+// GovaxFacility is the facility number of govax's own conditions, those
+// that describe govax rather than VMS. Facility numbers with bit 11 set
+// (STS$V_CUST_DEF, bit 27 of a condition value) are the ones DIGITAL left
+// for software other than its own; govax takes the last of them, which a
+// program's own messages are least likely to use.
+const GovaxFacility = 0xFFF
+
+// GovaxNotImplemented is GOVAX-E-NOTIMPL, the condition a routine of a
+// shareable image govax stands in for, but doesn't implement, signals
+// after SS$_UNSUPPORTED (docs/PHASE-53, Decision 6). Its one $FAO
+// parameter is the routine's name, by descriptor. Facility-specific (bit
+// 15), message 1, severity E.
+const GovaxNotImplemented = GovaxFacility<<16 | 1<<15 | 1<<3 | 2
+
+// govaxMessages are govax's own messages, in GovaxFacility. LookupMessage
+// finds them after the system's.
+var govaxMessages = map[uint32]Message{
+	GovaxNotImplemented & messageKeyMask: {Facility: "GOVAX", Ident: "NOTIMPL", Text: "routine !AS is not implemented in govax", FAOCount: 1},
 }

@@ -113,7 +113,7 @@ func TestReadString_errors(t *testing.T) {
 	putDesc(t, env, 0x1040, 5, dscClassS, unmapped)
 
 	_, err := readString(env, 0x1040)
-	if err == nil || stringStatus(err) != ssAccVio {
+	if err == nil || errors.Is(err, errInvStrDes) {
 		t.Errorf("unreadable text: err = %v, want an access violation", err)
 	}
 
@@ -221,13 +221,14 @@ func TestWriteString_errors(t *testing.T) {
 	env := fixture(t)
 
 	putDesc(t, env, 0x1000, 5, 15, 0x2000) // DSC$K_CLASS_SB
-	if _, _, err := writeString(env, 0x1000, "X"); stringStatus(err) != libInvStrDes {
+	if _, _, err := writeString(env, 0x1000, "X"); !errors.Is(err, errInvStrDes) {
 		t.Errorf("class SB: err = %v, want LIB$_INVSTRDES", err)
 	}
 
 	putDesc(t, env, 0x1020, 5, dscClassS, unmapped)
-	if _, _, err := writeString(env, 0x1020, "X"); err == nil || stringStatus(err) != ssAccVio {
-		t.Errorf("unwritable: err = %v, want SS$_ACCVIO", err)
+	var wf writeFault
+	if _, _, err := writeString(env, 0x1020, "X"); !errors.As(err, &wf) {
+		t.Errorf("unwritable: err = %v, want a write's memory error", err)
 	}
 }
 

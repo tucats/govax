@@ -33,7 +33,8 @@ const maxInputLength = maxStringLength
 // It returns SS$_NORMAL; LIB$_INPSTRTRU when the text didn't fit a
 // fixed-length resultant-string; RMS$_EOF at the end of the input when it
 // prompted; LIB$_INVARG with no resultant-string; LIB$_INVSTRDES when a
-// descriptor's class isn't a string's; LIB$_INSVIRMEM; or SS$_ACCVIO.
+// descriptor's class isn't a string's; or LIB$_INSVIRMEM. An argument it
+// can't read or write is an access violation, signaled (memoryFault).
 //
 // Unconfirmed against VMS (docs/PHASE-34.md, 2026-10-04): that flags is
 // set to 1 whether or not the routine prompted, and that a prompted line
@@ -51,7 +52,7 @@ func libGetForeign(env *corevms.Environment, argv []uint32) (uint32, error) {
 	if flagsAddr != 0 {
 		flags, err := mem.LoadLongword(cpu, flagsAddr)
 		if err != nil {
-			return ssAccVio, nil
+			return memoryFault(env, err)
 		}
 
 		force = flags&1 != 0
@@ -63,7 +64,7 @@ func libGetForeign(env *corevms.Environment, argv []uint32) (uint32, error) {
 	if (text == "" || force) && prompt != 0 {
 		p, err := readPrompt(env, prompt)
 		if err != nil {
-			return stringStatus(err), nil
+			return stringFailure(env, err)
 		}
 
 		line, ok, err := env.ReadInputLine(p, maxInputLength)
@@ -80,18 +81,18 @@ func libGetForeign(env *corevms.Environment, argv []uint32) (uint32, error) {
 
 	if flagsAddr != 0 {
 		if err := mem.StoreLongword(cpu, flagsAddr, 1); err != nil {
-			return ssAccVio, nil
+			return memoryFault(env, writing(err))
 		}
 	}
 
 	stored, truncated, err := writeString(env, result, text)
 	if err != nil {
-		return stringStatus(err), nil
+		return stringFailure(env, err)
 	}
 
 	if lenAddr != 0 {
 		if err := mem.StoreWord(cpu, lenAddr, uint16(stored)); err != nil {
-			return ssAccVio, nil
+			return memoryFault(env, writing(err))
 		}
 	}
 

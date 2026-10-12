@@ -2,6 +2,7 @@ package librtl
 
 import (
 	"bytes"
+	"strings"
 	"testing"
 
 	"github.com/tucats/govax/internal/corevms"
@@ -39,12 +40,14 @@ func TestLibPutOutput(t *testing.T) {
 	}
 }
 
-// TestLibPutOutput_badDescriptor returns SS$_ACCVIO for a descriptor
-// outside memory, writing nothing.
+// TestLibPutOutput_badDescriptor signals an access violation for a
+// descriptor outside memory, writing nothing. (This fixture has no
+// SYS$SRCHANDLER stub to signal through, so the signal fails with an
+// error; the console's TestLibrtlAccessViolation checks the signal.)
 func TestLibPutOutput_badDescriptor(t *testing.T) {
 	env := fixture(t)
 
-	if r0 := call(t, env, "LIB$PUT_OUTPUT", 0x7FFFFFF0); r0 != ssAccVio {
-		t.Errorf("LIB$PUT_OUTPUT = %#x, want SS$_ACCVIO", r0)
+	if _, err := libPutOutput(env, []uint32{0x7FFFFFF0}); err == nil || !strings.Contains(err.Error(), "signal") {
+		t.Errorf("LIB$PUT_OUTPUT: err = %v, want a signal", err)
 	}
 }

@@ -5,7 +5,7 @@ import (
 	"github.com/tucats/govax/internal/vmsdef"
 )
 
-// Statuses the virtual-memory routines return.
+// Statuses the virtual-memory routines, and others, return.
 var (
 	ssNormal   = vmsdef.Symbols["SS$_NORMAL"]
 	ssAccVio   = vmsdef.Symbols["SS$_ACCVIO"]
@@ -32,7 +32,7 @@ func libGetVM(env *corevms.Environment, argv []uint32) (uint32, error) {
 
 	size, err := mem.LoadLongword(cpu, sizeAddr)
 	if err != nil {
-		return ssAccVio, nil
+		return memoryFault(env, err)
 	}
 
 	addr, err := env.AllocateVM(size, 0)
@@ -45,7 +45,7 @@ func libGetVM(env *corevms.Environment, argv []uint32) (uint32, error) {
 	}
 
 	if err := mem.StoreLongword(cpu, retAddr, addr); err != nil {
-		return ssAccVio, nil
+		return memoryFault(env, writing(err))
 	}
 
 	return ssNormal, nil
@@ -59,7 +59,7 @@ func libGetVM(env *corevms.Environment, argv []uint32) (uint32, error) {
 func libFreeVM(env *corevms.Environment, argv []uint32) (uint32, error) {
 	addr, err := env.Memory().LoadLongword(env.CPU(), arg(argv, 1))
 	if err != nil {
-		return ssAccVio, nil
+		return memoryFault(env, err)
 	}
 
 	if !env.FreeVM(addr) {
@@ -77,7 +77,7 @@ func libFreeVM(env *corevms.Environment, argv []uint32) (uint32, error) {
 func libDeleteVMZone(env *corevms.Environment, argv []uint32) (uint32, error) {
 	zone, err := env.Memory().LoadLongword(env.CPU(), arg(argv, 0))
 	if err != nil {
-		return ssAccVio, nil
+		return memoryFault(env, err)
 	}
 
 	env.FreeVMZone(zone)

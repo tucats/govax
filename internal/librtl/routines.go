@@ -2,6 +2,8 @@ package librtl
 
 import (
 	"fmt"
+	"slices"
+	"sync"
 
 	"github.com/tucats/govax/internal/corevms"
 	"github.com/tucats/govax/internal/vmsdef"
@@ -68,21 +70,32 @@ var Routines = []Routine{
 	{"LIB$CALLG", 0, nil}, // kernel.asm
 }
 
-// Register installs every routine in Routines written in Go into t.
+// missing is Missing's list, made once.
+var missing = sync.OnceValue(Missing)
+
+// all is every routine with a stub or a home in kernel.asm: Routines,
+// then the ones govax lacks (Missing).
+func all() []Routine {
+	return slices.Concat(Routines, missing())
+}
+
+// Register installs every routine written in Go into t: Routines', and
+// the shims of the routines govax lacks.
 func Register(t *corevms.ShimTable) {
-	for _, r := range Routines {
+	for _, r := range all() {
 		if r.Fn != nil {
 			t.Register(r.Code, r.Name, r.Fn)
 		}
 	}
 }
 
-// Links are the routines' places in LIBRTL.EXE, for their stubs
-// (corevms.ShimLink).
+// Links are the places in LIBRTL.EXE of every routine Register installs,
+// and of the ones in kernel.asm, for their stubs (corevms.ShimLink).
 func Links() []corevms.ShimLink {
-	links := make([]corevms.ShimLink, 0, len(Routines))
+	routines := all()
+	links := make([]corevms.ShimLink, 0, len(routines))
 
-	for _, r := range Routines {
+	for _, r := range routines {
 		links = append(links, corevms.ShimLink{Name: r.Name, Library: Library, Offset: r.Offset(), Code: r.Code})
 	}
 

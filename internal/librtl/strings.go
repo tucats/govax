@@ -11,23 +11,23 @@ func strUpcase(env *corevms.Environment, argv []uint32) (uint32, error) {
 
 	length, err := mem.LoadWord(cpu, addr)
 	if err != nil {
-		return 0, err
+		return memoryFault(env, err)
 	}
 
 	daddr, err := mem.LoadLongword(cpu, addr+4)
 	if err != nil {
-		return 0, err
+		return memoryFault(env, err)
 	}
 
 	for n := uint16(0); n < length; n++ {
 		ch, err := mem.LoadByte(cpu, daddr+uint32(n))
 		if err != nil {
-			return 0, err
+			return memoryFault(env, err)
 		}
 
 		if ch >= 'a' && ch <= 'z' {
 			if err := mem.StoreByte(cpu, daddr+uint32(n), ch-32); err != nil {
-				return 0, err
+				return memoryFault(env, writing(err))
 			}
 		}
 	}

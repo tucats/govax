@@ -559,7 +559,12 @@ expect adjustment as phases land):
   stubs from the same table. Strings go through `descriptor.go`
   (Phase 53): `readString` takes every input class (Z, S, D, SD, A,
   NCA, VS), `writeString` writes by the output's class (fixed, VS, D),
-  and `stringStatus` maps their errors to LIB$_INVSTRDES and the rest. The process
+  and `stringFailure` maps their errors to LIB$_INVSTRDES and the rest.
+  An argument a routine can't reach is a signaled SS$_ACCVIO
+  (`fault.go`'s `memoryFault`, through `Environment.SignalFailure`), and
+  every LIBRTL CALL entry govax lacks has a stub (`missing.go`,
+  `Missing`, codes from 1000) that signals SS$_UNSUPPORTED and
+  GOVAX-E-NOTIMPL (`vmsdef.GovaxNotImplemented`) with its name. The process
   machinery they use (condition dispatch, the heap, memory) stays in
   `internal/corevms`, reached through `export.go`. Each further *RTL.EXE emulated
   gets a package like it. New routines are written from DIGITAL's manuals

@@ -3694,6 +3694,33 @@ widened."
   left in the block, or when the data ends on a block boundary.
 - **Status**: VMS's layout followed.
 
+### [Phase 53] LIB$ routines: access violations signaled, missing routines stubbed
+
+- **Where**: `internal/librtl/fault.go`, `internal/librtl/missing.go`;
+  every routine in `internal/librtl` that reads or writes its arguments;
+  `corevms.Environment.SignalFailure`; `vmsdef.GovaxNotImplemented`.
+- **What**: (1) A LIB$ routine that can't read or write an argument
+  used to return SS$_ACCVIO in R0 (or, in the eVAX ports, stop the
+  machine with a Go error). On VMS the routine's own instruction faults
+  and SS$_ACCVIO is *signaled*. govax now signals it too
+  (`memoryFault`), with the hardware's signal array: the reason mask
+  (bit 0 for an address past its region's length, bit 2 for a write)
+  and the address. With no handler, the catch-all shows the message and
+  ends the image. A handler that continues makes the routine return
+  SS$_ACCVIO; on VMS the faulting instruction would run again instead.
+  LIB$CREATE_DIR keeps the addresses its probe showed. (2) A LIBRTL
+  routine govax lacks used to keep the image from starting
+  (LIB_UNRESOLVED). Every CALL entry of LIBRTL.EXE's transfer vector now
+  has a stub. A call to a missing one signals SS$_UNSUPPORTED followed by
+  govax's own GOVAX-E-NOTIMPL ("routine !AS is not implemented in
+  govax"), in a facility govax takes for itself (0xFFF, the last customer
+  facility). The condition is an error, so with no handler the program
+  goes on and the call returns SS$_UNSUPPORTED. JSB entries and the
+  `LIB$AB_` tables get no stub yet (Phase 54), and an image naming one
+  still can't start.
+- **Status**: VMS's behavior for (1) in what a handler sees; (2) is
+  govax's own choice (docs/PHASE-53, Decisions 5 and 6).
+
 <!--
 Entry template:
 

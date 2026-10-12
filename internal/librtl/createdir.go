@@ -84,7 +84,7 @@ func libCreateDir(env *corevms.Environment, argv []uint32) (uint32, error) {
 	// is an access violation at 4, where its string pointer would be.
 	descAddr := argv[0]
 	if descAddr == 0 {
-		return accessViolation(env, 4)
+		return accessViolation(env, 4, 0)
 	}
 
 	spec, err := readString(env, descAddr)
@@ -93,7 +93,7 @@ func libCreateDir(env *corevms.Environment, argv []uint32) (uint32, error) {
 	case errors.Is(err, errInvStrDes):
 		return libInvStrDes, nil
 	case err != nil:
-		return accessViolation(env, descAddr)
+		return accessViolation(env, descAddr, 0)
 	case len(spec) > maxDirectorySpec:
 		return libInvArg, nil
 	}
@@ -101,7 +101,7 @@ func libCreateDir(env *corevms.Environment, argv []uint32) (uint32, error) {
 	opts := rms.CreateDirectoryOptions{VolumeOnly: true, RequireDirectory: true}
 
 	if bad, unreadable := readCreateDirArgs(env, argv, &opts); unreadable {
-		return accessViolation(env, bad)
+		return accessViolation(env, bad, 0)
 	}
 
 	spec, status := uicFormat(spec, &opts)
@@ -125,14 +125,6 @@ func libCreateDir(env *corevms.Environment, argv []uint32) (uint32, error) {
 	}
 
 	return ssNormal, nil
-}
-
-// accessViolation signals SS$_ACCVIO for a read at va (reason mask 0), as
-// the hardware would have had LIB$CREATE_DIR touched it on VMS. The
-// signal array is the hardware's: the condition, the reason, the address,
-// then the PC and PSL.
-func accessViolation(env *corevms.Environment, va uint32) (uint32, error) {
-	return env.Signal([]uint32{ssAccVio, 0, va}, false)
 }
 
 // readCreateDirArgs reads LIB$CREATE_DIR's optional arguments into opts.

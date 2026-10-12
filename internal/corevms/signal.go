@@ -68,9 +68,11 @@ const (
 // The signal array is the argument list plus the PC the call returns to
 // (the stub frame's saved PC) and the caller's PSL (the current PSL with
 // the PSW the call saved in the frame). The mechanism array's R1 is the
-// caller's, but its R0 is 0: the stub's MOVL #code, R0 has already
-// replaced the caller's R0 by the time the shim runs.
-func (env *Environment) signal(kind signalKind, argv []uint32) (uint32, error) {
+// caller's, and its R0 is r0: what the call returns if a handler
+// continues the condition. For LIB$SIGNAL that's 0, since the stub's
+// MOVL #code, R0 has already replaced the caller's R0 by the time the
+// shim runs; a routine that signals its own failure passes its status.
+func (env *Environment) signal(kind signalKind, argv []uint32, r0 uint32) (uint32, error) {
 	c := env.cpu
 	name := "LIB$SIGNAL"
 
@@ -108,7 +110,7 @@ func (env *Environment) signal(kind signalKind, argv []uint32) (uint32, error) {
 		resumePSL: c.PSL(),
 	}
 
-	if !env.startDispatch(d, sig, 0, c.GPR(registers.R1)) {
+	if !env.startDispatch(d, sig, r0, c.GPR(registers.R1)) {
 		return 0, fmt.Errorf("rtl: %s can't signal: no SYS$SRCHANDLER stub (the program needs .P1VECTOR), or the stack at %08X can't be written", name, c.GPR(registers.SP))
 	}
 

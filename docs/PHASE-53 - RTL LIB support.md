@@ -2,7 +2,7 @@
 
 **Status:** in progress (2026-10-12). Needs Phases 34 (`internal/librtl`)
 and 52. The plan (Part A) and the decisions (Part B) were reviewed and
-accepted by the author on 2026-10-12. Subtasks 2 and 3 are done.
+accepted by the author on 2026-10-12. Subtasks 2 to 4 are done.
 
 govax provides 15 of LIBRTL.EXE's LIB$ routines (and STR$UPCASE): the ones
 the sample programs and tests needed (Phase 34's table,
@@ -313,8 +313,8 @@ Notes for the survey:
    class, writing S, VS, and D output, LIB$_STRTRU and LIB$_INVSTRDES,
    LIB$_WRONUMARG; the existing routines moved onto them. **Done**
    2026-10-12.
-4. **Access violations and missing routines** (Decisions 5 and 6), as
-   the author decides.
+4. **Access violations and missing routines** (Decisions 5 and 6).
+   **Done** 2026-10-12.
 5. **Survey** of Part C's routines: each one's format, arguments,
    condition values, and examples, from the manual (OCR checked against
    the PDF where doubtful), recorded in this doc.
@@ -425,3 +425,67 @@ Notes for the survey:
   - **Tests** (`descriptor_test.go`): every class read, S/Z/SD/A padded
     and truncated, VS's CURLEN, D's storage kept and replaced, the error
     statuses, and the routines taking a VS string and refusing class V.
+- **2026-10-12** — Subtask 4, access violations and missing routines
+  (Decisions 5 and 6):
+  - **Signaling a routine's failure.** `corevms.Environment.SignalFailure`
+    is LIB$SIGNAL's dispatch with the mechanism array's R0 set to a
+    status, so a handler that continues the condition makes the routine
+    return it (LIB$SIGNAL's own R0 there stays 0).
+  - **Access violations** (`internal/librtl/fault.go`). `memoryFault`
+    takes the error from a routine's own load or store: a translation
+    fault (or a physical address error) is signaled as SS$_ACCVIO with
+    the hardware's signal array, the reason mask and the address; any
+    other error goes back to the XFC as before. The memory errors don't
+    say whether a read or a write failed, so a store's error is marked
+    with `writing`, which sets the reason mask's write bit (2); a
+    length violation sets bit 0, a protection violation neither. (The
+    CPU's own ACCVIO uses 1 and 2 for those, which isn't the
+    architecture's mask; left alone.) `stringFailure` replaces
+    `stringStatus`: LIB$_INVSTRDES and LIB$_INSVIRMEM stay statuses, a
+    memory error is `memoryFault`'s, and `writeString` marks its stores.
+    Every routine moved: LIB$ADAWI, STR$UPCASE, LIB$GET_VM, LIB$FREE_VM,
+    LIB$DELETE_VM_ZONE, LIB$PUT_OUTPUT, LIB$GET_FOREIGN, LIB$GET_INPUT,
+    LIB$SPAWN. LIB$CREATE_DIR's own `accessViolation` (reason 0, at the
+    addresses its probe showed) became the shared one, unchanged in
+    effect but for continuing (it now returns SS$_ACCVIO). If a handler
+    continues, the routine returns SS$_ACCVIO; on VMS the faulting
+    instruction would run again (DEVIATIONS.md).
+  - **Missing routines** (`missing.go`). `Missing` lists every entry of
+    LIBRTL.EXE's transfer vector (`vmsdef.ImageSymbols`) that `Routines`
+    doesn't provide: 229 of them, in offset order, coded from 1000. Left
+    out are the JSB entries (names ending in a register, `_R2` or
+    `CHARR8`, or the string routines' `DX6`/`DD6`), whose callers JSB
+    to them, so a CALL stub's entry mask would run as a HALT, and the
+    `LIB$AB_` data tables. Both are Phase 54's. Aliases (FOR$CNV_IN_I is
+    OTS$CVT_TI_L) share one stub, named LIB$ before STR$, OTS$, CVT$,
+    FOR$, COB$, then alphabetically. `Register` and `Links` include
+    them, so `machine.EnsureShims` writes their stubs (the S0 overflow
+    from subtask 2 takes them). Each stub's code has its own shim, a
+    closure over the name, rather than one shared code that finds the
+    name from the stub's address as Decision 6 suggested: simpler, and
+    the codes cost nothing. The shim puts the name, with a class S
+    descriptor, on the stack in the stub's frame (`stackString`) and
+    signals SS$_UNSUPPORTED followed by GOVAX-E-NOTIMPL, 1, the
+    descriptor. GOVAX-E-NOTIMPL ("routine !AS is not implemented in
+    govax") is govax's own message, in facility 0xFFF, the last
+    customer facility (`vmsdef.GovaxNotImplemented`, found by
+    `LookupMessage` after the system's). With no handler the catch-all
+    shows
+
+        %SYSTEM-E-UNSUPPORTED, unsupported operation or function
+        -GOVAX-E-NOTIMPL, routine LIB$INDEX is not implemented in govax
+
+    and, the condition being an error, the program goes on, the call
+    returning SS$_UNSUPPORTED. No setting restores the strict
+    LIB_UNRESOLVED behavior: no test wanted it.
+  - **Tests.** `TestMissing` (every non-JSB, non-data entry has exactly
+    one stub; aliases, codes distinct from every shim's),
+    `TestMissingRegistered`; the console's `TestLibrtlMissingRoutine`
+    (MACRO, LINK, and RUN of a call to LIB$INDEX), and
+    `TestLibrtlAccessViolation` (LIB$ADAWI reading beyond P0, mask 01,
+    and writing the read-only code psect, mask 04, each ending the
+    image with SS$_ACCVIO) and `TestLibrtlAccessViolationContinued` (a
+    handler continues; the call returns SS$_ACCVIO). `TestSharedName`'s
+    offset 0x940 is now a stub's (OTS$CNVOUT); a JSB entry took its
+    place as the case with none. The fixture's LIB$PUT_OUTPUT test now
+    expects a signal.
