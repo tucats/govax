@@ -117,6 +117,7 @@
 //                          SPAWN waits for
 //              10/12/26    LEXICAL: F$CONTEXT, F$DEVICE, F$FILE_ATTRIBUTES,
 //                          and F$IDENTIFIER
+//              10/12/26    STOP/IMAGE and STOP/[NO]EXIT
 
 This is the help documentation for the govax VAX emulator.  Topic sections are
 marked by a "$" delimiter.  This is followed by as many tokens of the help
@@ -2284,12 +2285,24 @@ $STOP
     process suspended is resumed first so that it can end.  Process 1, the
     console's own process, can't be stopped; EXIT ends the session.
 
+    STOP/IMAGE with a process ends the image it runs, but not the process:
+    the image exits as $FORCEX makes it, its exit handlers called, with
+    the status %SYSTEM-F-FORCEDEXIT, and a subprocess's DCL goes on with
+    its next command.  Without a process, STOP/IMAGE is STOP.
+
+    /EXIT=USER_MODE runs the process's image's exit handlers before it is
+    deleted: the image is made to exit, as with /IMAGE, and the process
+    is deleted when it has.  govax's images have exit handlers only in
+    user mode, so /EXIT's other modes (EXECUTIVE_MODE, the default) and
+    /NOEXIT delete the process at once.
+
     INITIALIZE, VMINIT, ZERO, and leaving govax delete every process but
     process 1 in the same way.
 
     Syntax:
 
-        STOP [process-name] [/IDENTIFICATION=pid]
+        STOP [process-name] [/IDENTIFICATION=pid] [/IMAGE]
+             [/EXIT[=mode] | /NOEXIT]
 
     Parameter:
 
@@ -2301,10 +2314,18 @@ $STOP
         /IDENTIFICATION=pid
                         The process ID, in hexadecimal, as SHOW SYSTEM
                         lists it.
+        /IMAGE          End the process's image, not the process.
+        /EXIT[=mode]    The exit handlers to run before the deletion:
+                        those of mode and the more privileged modes
+                        (KERNEL_MODE, EXECUTIVE_MODE, the default,
+                        SUPERVISOR_MODE, USER_MODE).
+        /NOEXIT         Run no exit handlers.
 
-    Example:
+    Examples:
 
         STOP/IDENTIFICATION=00000305
+        STOP/IMAGE LIBRA
+        STOP/EXIT=USER_MODE LIBRA
 
 $TIME
 

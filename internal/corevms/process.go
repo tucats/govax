@@ -520,21 +520,30 @@ func serviceSysForcex(env *Environment, argv []uint32) (uint32, error) {
 		return st, nil
 	}
 
+	env.ForceExit(target, optArg(argv, 2))
+
+	return ssNormal, nil
+}
+
+// ForceExit makes target's image call $EXIT with status code, as $FORCEX
+// does (without its privilege check): a user-mode AST whose routine is
+// $EXIT, queued once, so the image exits, its user-mode exit handlers
+// called, as soon as it can take a user-mode AST. DCL's STOP/IMAGE and
+// STOP/EXIT=USER_MODE use it.
+func (env *Environment) ForceExit(target *Environment, code uint32) {
 	for _, a := range target.Process.ast.queue {
 		if a.routine == exitEntryAddr && a.mode == uint32(registers.User) {
-			return ssNormal, nil
+			return
 		}
 	}
 
 	// A waiting target that can take the AST becomes computable at the
 	// scheduler's next choice (waits.go).
-	target.queueAST(exitEntryAddr, optArg(argv, 2), uint32(registers.User))
+	target.queueAST(exitEntryAddr, code, uint32(registers.User))
 
 	if target != env {
 		env.requestReschedule()
 	}
-
-	return ssNormal, nil
 }
 
 // serviceSysSetrwm is SYS$SETRWM (docs/PHASE-26.md subtask 37):

@@ -858,10 +858,15 @@ grammar console
     ! STOP deletes a process (and its subprocesses): by name, or by its
     ! hexadecimal PID with /IDENTIFICATION, as SHOW PROCESS names one.
     ! With neither, it ends every command procedure (docs/PHASE-50,
-    ! subtask 18).
+    ! subtask 18). /IMAGE ends the process's image instead, and
+    ! /EXIT[=mode] (the default) or /NOEXIT says which exit handlers run
+    ! before the deletion (docs/PHASE-51).
     verb stop/id=1605
         qualifier   identification/id=1606      -
                     /type=$string
+        qualifier   image/id=1608/nonegatable
+        qualifier   exit/id=1609                -
+                    /type=$string/default=EXECUTIVE_MODE
         parameter   process_name/id=1607        -
                     /type=$string
 

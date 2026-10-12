@@ -6,8 +6,10 @@ import (
 	"strings"
 	"sync/atomic"
 
+	"github.com/tucats/govax/internal/corevms"
 	"github.com/tucats/govax/internal/cpu"
 	"github.com/tucats/govax/internal/dcl"
+	"github.com/tucats/govax/internal/vmsdef"
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
@@ -426,8 +428,24 @@ func (c *Interpreter) stopProcedures(exit procedureExit) {
 func (c *Interpreter) stopCommand(id int64, r *dcl.Result) error {
 	name, pid := r.String("PROCESS_NAME"), r.String("IDENTIFICATION")
 
+	exit := stopExitExecutive
+	if r.Negated("EXIT") {
+		exit = stopNoExit
+	} else if r.Present("EXIT") {
+		mode, err := stopExitMode(r.String("EXIT"))
+		if err != nil {
+			return err
+		}
+
+		exit = mode
+	}
+
 	if name != "" || pid != "" {
-		return c.StopProcess(name, pid)
+		if r.Present("IMAGE") {
+			return c.StopImage(name, pid)
+		}
+
+		return c.stopProcess(name, pid, exit)
 	}
 
 	c.keepStatus()
@@ -510,6 +528,139 @@ func (c *Interpreter) controlString(enabled bool) string {
 	return strings.Join(keys, ",")
 }
 
+// stopExit is STOP's /EXIT or /NOEXIT: which exit handlers run before
+// the process is deleted.
+type stopExit int
+
+const (
+	stopNoExit         stopExit = iota // /NOEXIT
+	stopExitKernel                     // /EXIT=KERNEL_MODE
+	stopExitExecutive                  // /EXIT=EXECUTIVE_MODE, the default
+	stopExitSupervisor                 // /EXIT=SUPERVISOR_MODE
+	stopExitUser                       // /EXIT=USER_MODE
+)
+
+// stopExitModes are /EXIT's access modes, by keyword.
+var stopExitModes = map[string]stopExit{
+	"KERNEL_MODE":     stopExitKernel,
+	"EXECUTIVE_MODE":  stopExitExecutive,
+	"SUPERVISOR_MODE": stopExitSupervisor,
+	"USER_MODE":       stopExitUser,
+}
+
+// stopExitMode is /EXIT's value as a mode: a keyword or any abbreviation
+// of one (each starts with its own letter); another is CLI_IVKEYW.
+func stopExitMode(value string) (stopExit, error) {
+	key := strings.ToUpper(strings.TrimSpace(value))
+
+	for name, mode := range stopExitModes {
+		if key != "" && strings.HasPrefix(name, key) {
+			return mode, nil
+		}
+	}
+
+	return 0, vmserrors.NewSegment(vmserrors.CLI_IVKEYW, key)
+}
+
+// stopTarget is the process STOP names, by name (in process 1's UIC
+// group) or by /IDENTIFICATION (hexadecimal; the PID wins if both are
+// given): SS$_IVIDENT for a PID that can't be read, SS$_NONEXPR for a
+// process that isn't there.
+func (c *Interpreter) stopTarget(name, pid string) (*corevms.Environment, error) {
+	if pid != "" {
+		v, err := strconv.ParseUint(strings.TrimSpace(pid), 16, 32)
+		if err != nil {
+			return nil, vmserrors.New(vmserrors.SS_IVIDENT)
+		}
+
+		env, found := c.RTL.FindProcess(uint32(v))
+		if !found {
+			return nil, vmserrors.New(vmserrors.SS_NONEXPR)
+		}
+
+		return env, nil
+	}
+
+	env, found := c.RTL.FindProcessName(c.RTL.Process.UICGroup(), name)
+	if !found {
+		return nil, vmserrors.New(vmserrors.SS_NONEXPR)
+	}
+
+	return env, nil
+}
+
+// ssForcedExit is the status STOP/IMAGE's forced exit gives the image
+// (unconfirmed against VMS: the Dictionary says only that it calls
+// $FORCEX).
+var ssForcedExit = vmsdef.Symbols["SS$_FORCEDEXIT"]
+
+// StopImage is STOP/IMAGE with a process: the image the process runs is
+// made to exit ($FORCEX, corevms.Environment.ForceExit), its user-mode
+// exit handlers called, with the status SS$_FORCEDEXIT, and the process
+// isn't deleted (the DCL Dictionary). A subprocess's DCL then goes on
+// with its next command; a process that runs only an image (one $CREPRC
+// made) ends with it, as when its image ends any other way. A subprocess
+// at its DCL, running no image, has nothing to stop. Process 1's own
+// image, one Ctrl/C or Ctrl/Y left stopped, is run down, as STOP alone
+// runs it down.
+func (c *Interpreter) StopImage(name, pid string) error {
+	if err := c.machine.RequireInit(); err != nil {
+		return err
+	}
+
+	env, err := c.stopTarget(name, pid)
+	if err != nil {
+		return err
+	}
+
+	switch cli := c.clis[env]; {
+	case env == c.RTL:
+		c.RunDownAbandonedImage()
+	case cli == nil || cli.imageActive:
+		c.RTL.ForceExit(env, ssForcedExit)
+	}
+
+	return nil
+}
+
+// stopProcess is STOP of a process, with /EXIT's mode or /NOEXIT. govax
+// runs exit handlers only in the mode that calls $EXIT, and images
+// declare them only in user mode, so only /EXIT=USER_MODE has any to
+// run: the process's image is made to exit first, as STOP/IMAGE makes
+// it, its exit handlers called, with the status SS$_ABORT, and the
+// process deleted when it has ended (a subprocess's DCL then logs out,
+// its procedures ended, stopAfterImage). A process running no image is
+// deleted at once. Every other mode, and /NOEXIT, deletes the process at
+// once (StopProcess).
+func (c *Interpreter) stopProcess(name, pid string, exit stopExit) error {
+	if exit != stopExitUser {
+		return c.StopProcess(name, pid)
+	}
+
+	if err := c.machine.RequireInit(); err != nil {
+		return err
+	}
+
+	env, err := c.stopTarget(name, pid)
+	if err != nil {
+		return err
+	}
+
+	switch cli := c.clis[env]; {
+	case env == c.RTL:
+		return vmserrors.New(vmserrors.SS_NOPRIV)
+	case cli == nil:
+		c.RTL.ForceExit(env, ssAbort)
+	case cli.imageActive:
+		cli.stopAfterImage = true
+		c.RTL.ForceExit(env, ssAbort)
+	default:
+		return c.StopProcess(name, pid)
+	}
+
+	return nil
+}
+
 // StopProcess is STOP: it deletes a process and its subprocesses at once,
 // as the operator with every privilege would. The process is named, as
 // for SHOW PROCESS, by name (in process 1's UIC group) or by /IDENTIFICATION
@@ -528,25 +679,9 @@ func (c *Interpreter) StopProcess(name, pid string) error {
 		return err
 	}
 
-	env := c.RTL
-
-	switch {
-	case pid != "":
-		v, err := strconv.ParseUint(strings.TrimSpace(pid), 16, 32)
-		if err != nil {
-			return vmserrors.New(vmserrors.SS_IVIDENT)
-		}
-
-		var found bool
-		if env, found = c.RTL.FindProcess(uint32(v)); !found {
-			return vmserrors.New(vmserrors.SS_NONEXPR)
-		}
-
-	case name != "":
-		var found bool
-		if env, found = c.RTL.FindProcessName(c.RTL.Process.UICGroup(), name); !found {
-			return vmserrors.New(vmserrors.SS_NONEXPR)
-		}
+	env, err := c.stopTarget(name, pid)
+	if err != nil {
+		return err
 	}
 
 	if env == c.RTL {

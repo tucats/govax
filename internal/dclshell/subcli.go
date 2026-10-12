@@ -268,6 +268,11 @@ type subprocessCLI struct {
 	imageActive bool
 	fp, ap      uint32
 	imageExit   uint32
+
+	// stopAfterImage is set by STOP/EXIT=USER_MODE (dclcontroly.go):
+	// once the image it forced to exit has ended, the CLI logs out, its
+	// procedures ended, with the final status SS$_ABORT.
+	stopAfterImage bool
 }
 
 // cliOf returns env's CLI, made empty the first time.
@@ -779,6 +784,15 @@ func (c *Interpreter) subprocessRun(cli *subprocessCLI, image, commandLine strin
 
 	status = cli.imageExit
 	c.SetCommandStatus(status, nil)
+
+	if cli.stopAfterImage {
+		cli.stopAfterImage = false
+		cli.status = ssAbort
+		c.stopProcedures(procedureExit{status: ssAbort})
+		c.quit = true
+
+		return nil
+	}
 
 	if status&1 != 0 {
 		return nil

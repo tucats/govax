@@ -120,7 +120,7 @@ smaller gaps the phase left:
   F$FILE_ATTRIBUTES, F$GETQUI, F$IDENTIFIER, F$LICENSE (CLI$_LEXNOTIMPL).
   F$FILE_ATTRIBUTES, F$DEVICE, and F$IDENTIFIER have something to report
   in govax; F$GETQUI and F$LICENSE have nothing behind them.
-- **STOP/IMAGE and STOP/[NO]EXIT** are not done.
+- **STOP/IMAGE and STOP/[NO]EXIT** are not done (done 2026-10-12).
 - **DIRECTORY's, DELETE's, and DUMP's layouts** differ from VMS's in the
   probe logs (their oracle tests skip them); govax has no DUMP.
 
@@ -371,3 +371,17 @@ smaller gaps the phase left:
   `TestLexicalFileAttributes`, `TestLexicalContext`,
   `TestLexicalContext_subprocess` (a SPAWN/NOWAIT subprocess selected by
   OWNER and PRCNAM). HELP LEXICAL.
+- 2026-10-12: Subtask 5, STOP/IMAGE and STOP/[NO]EXIT (the DCL
+  Dictionary). STOP/IMAGE with a process makes its image exit as $FORCEX
+  does (corevms's new `ForceExit`, which `$FORCEX` now calls): a
+  user-mode AST to $EXIT, so the image's exit handlers run, with the
+  status SS$_FORCEDEXIT; the process stays, and a subprocess's DCL goes
+  on with its next command. Without a process it is STOP. /EXIT[=mode]
+  (EXECUTIVE_MODE by default) and /NOEXIT say which exit handlers run
+  before a deletion; govax's images have them only in user mode, so only
+  /EXIT=USER_MODE differs from STOP: it forces the image's exit with
+  SS$_ABORT, and the process goes when it has exited (a subprocess's DCL
+  logs out after the command, `stopAfterImage`). The choices are
+  DEVIATIONS.md's "[Phase 51] STOP/IMAGE and STOP/[NO]EXIT". Test:
+  `TestStopImage` (an image with an exit handler in a spawned procedure:
+  STOP/IMAGE, then STOP/EXIT=USER_MODE, then STOP/NOEXIT). HELP STOP.

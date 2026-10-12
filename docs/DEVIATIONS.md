@@ -3405,7 +3405,8 @@ widened."
   - Ctrl/Y typed at the Ctrl/Y level prompts again.
   - Exit handlers: govax's image rundown runs none, so EXIT and STOP at
     the Ctrl/Y level run down an interrupted image alike.
-  - STOP/IMAGE and STOP/[NO]EXIT are not done.
+  - (Done in Phase 51, "[Phase 51] STOP/IMAGE and STOP/[NO]EXIT".)
+    STOP/IMAGE and STOP/[NO]EXIT were not done.
 - **Status**: the manual's rules followed; the choices above unconfirmed.
 
 ### [Phase 50] The subprocess's DCL: choices without a probe
@@ -3616,6 +3617,29 @@ widened."
     doesn't have is "". NUMBER_TO_NAME of a UIC is the username without
     brackets, as the Dictionary's example shows.
 - **Status**: unconfirmed; candidates for a probe.
+
+### [Phase 51] STOP/IMAGE and STOP/[NO]EXIT: choices without a probe
+
+- **Where**: `internal/dclshell/dclcontroly.go` (`stopCommand`,
+  `StopImage`, `stopProcess`), `subcli.go` (`stopAfterImage`),
+  `internal/corevms/process.go` (`ForceExit`).
+- **What**: from the DCL Dictionary (STOP). STOP/IMAGE calls $FORCEX's
+  code. Chosen without VMS:
+  - The forced exit's status is SS$_FORCEDEXIT (the Dictionary doesn't
+    say what DCL passes $FORCEX); the subprocess's RUN shows its
+    message, as for any image failing.
+  - STOP/IMAGE of a subprocess at its DCL, running no image, does
+    nothing; of process 1 by name, it runs down an image Ctrl/C or
+    Ctrl/Y left stopped, as STOP alone does.
+  - govax calls exit handlers only in the mode that calls $EXIT, and
+    images have them only in user mode, so /EXIT=KERNEL_MODE,
+    EXECUTIVE_MODE (the default), SUPERVISOR_MODE, and /NOEXIT all
+    delete at once, as STOP did before. /EXIT=USER_MODE forces the
+    image's exit with SS$_ABORT, and the process is deleted once it has
+    exited (a subprocess's DCL logs out, its procedures ended, final
+    status SS$_ABORT); STOP returns before then. /EXIT's mode may be
+    abbreviated to a letter.
+- **Status**: unconfirmed.
 
 <!--
 Entry template:
