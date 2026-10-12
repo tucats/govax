@@ -164,9 +164,9 @@ func TestStrUpcase(t *testing.T) {
 		t.Errorf("r0 = %d, want 1", r0)
 	}
 
-	got, ok, err := env.StringDescriptor(0x1000, 64)
-	if err != nil || !ok || got != "HELLO, WORLD!" {
-		t.Errorf("upcased = %q, %v, %v; want HELLO, WORLD!", got, ok, err)
+	got, err := readString(env, 0x1000)
+	if err != nil || got != "HELLO, WORLD!" {
+		t.Errorf("upcased = %q, %v; want HELLO, WORLD!", got, err)
 	}
 }
 

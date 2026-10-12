@@ -1,22 +1,9 @@
 package librtl
 
-import (
-	"github.com/tucats/govax/internal/corevms"
-	"github.com/tucats/govax/internal/vmsdef"
-)
-
-// Statuses LIB$SPAWN returns of its own.
-var (
-	libWroNumArg = vmsdef.LibrarySymbols["LIB$_WRONUMARG"]
-	ssIvLogNam   = vmsdef.Symbols["SS$_IVLOGNAM"]
-)
+import "github.com/tucats/govax/internal/corevms"
 
 // maxSpawnArguments is how many arguments LIB$SPAWN takes.
 const maxSpawnArguments = 13
-
-// maxSpawnString is the longest command-string, file name, or prompt
-// LIB$SPAWN takes: what a word-length descriptor can describe.
-const maxSpawnString = 65535
 
 // libSpawn is LIB$SPAWN (RTL Library manual, docs/PHASE-48.md):
 //
@@ -41,8 +28,8 @@ const maxSpawnString = 65535
 // go on (corevms.AwaitSpawn).
 //
 // It returns SS$_NORMAL; LIB$_WRONUMARG for more than 13 arguments;
-// SS$_ACCVIO for an argument it can't read or write; SS$_IVLOGNAM for a
-// string that's too long; or corevms.Spawn's failures (LIB$_NOCLI,
+// SS$_ACCVIO for an argument it can't read or write; LIB$_INVSTRDES for a
+// string whose descriptor's class isn't a string's; or corevms.Spawn's failures (LIB$_NOCLI,
 // LIB$_INVARG for a flag it doesn't define, $CREPRC's statuses).
 func libSpawn(env *corevms.Environment, argv []uint32) (uint32, error) {
 	// A call made again while it waits for its subprocess.
@@ -76,13 +63,9 @@ func libSpawn(env *corevms.Environment, argv []uint32) (uint32, error) {
 			continue
 		}
 
-		text, ok, err := env.StringDescriptor(addr, maxSpawnString)
-
-		switch {
-		case err != nil:
-			return ssAccVio, nil
-		case !ok:
-			return ssIvLogNam, nil
+		text, err := readString(env, addr)
+		if err != nil {
+			return stringStatus(err), nil
 		}
 
 		if s.to != nil {

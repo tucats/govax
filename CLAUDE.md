@@ -556,7 +556,10 @@ expect adjustment as phases land):
   code in `kernel.asm` (LIB$CALLG; Phase 53, Decision 1). The stubs fill
   VMINIT's page, then as many S0 pages as they need (`EnsureShims`).
   The console registers them into each RTL environment and builds the
-  stubs from the same table. The process
+  stubs from the same table. Strings go through `descriptor.go`
+  (Phase 53): `readString` takes every input class (Z, S, D, SD, A,
+  NCA, VS), `writeString` writes by the output's class (fixed, VS, D),
+  and `stringStatus` maps their errors to LIB$_INVSTRDES and the rest. The process
   machinery they use (condition dispatch, the heap, memory) stays in
   `internal/corevms`, reached through `export.go`. Each further *RTL.EXE emulated
   gets a package like it. New routines are written from DIGITAL's manuals

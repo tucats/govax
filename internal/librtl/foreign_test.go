@@ -37,7 +37,7 @@ func foreignFixture(t *testing.T, command, typed string) (*corevms.Environment, 
 func descText(t *testing.T, env *corevms.Environment, addr uint32) string {
 	t.Helper()
 
-	s, _, err := env.StringDescriptor(addr, 65535)
+	s, err := readString(env, addr)
 	if err != nil {
 		t.Fatal(err)
 	}

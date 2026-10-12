@@ -87,12 +87,14 @@ func libCreateDir(env *corevms.Environment, argv []uint32) (uint32, error) {
 		return accessViolation(env, 4)
 	}
 
-	spec, ok, err := env.StringDescriptor(descAddr, maxDirectorySpec)
+	spec, err := readString(env, descAddr)
 
 	switch {
+	case errors.Is(err, errInvStrDes):
+		return libInvStrDes, nil
 	case err != nil:
 		return accessViolation(env, descAddr)
-	case !ok:
+	case len(spec) > maxDirectorySpec:
 		return libInvArg, nil
 	}
 

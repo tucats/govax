@@ -26,12 +26,6 @@ func (env *Environment) Memory() *vm.Memory { return env.mem }
 // Environment embeds *System, env.Shims() reaches it too.
 func (sys *System) Shims() *ShimTable { return sys.shims }
 
-// StringDescriptor reads the string a descriptor at addr describes. ok is
-// false when it's longer than maxLen; err when memory can't be read.
-func (env *Environment) StringDescriptor(addr uint32, maxLen int) (s string, ok bool, err error) {
-	return strGet(env, addr, maxLen)
-}
-
 // Signal signals the condition whose argument list (condition value,
 // argument count, FAO arguments) is argv, from a running shim, as LIB$SIGNAL
 // does -- or LIB$STOP, with stop, which forces SEVERE and can't be

@@ -2,7 +2,7 @@
 
 **Status:** in progress (2026-10-12). Needs Phases 34 (`internal/librtl`)
 and 52. The plan (Part A) and the decisions (Part B) were reviewed and
-accepted by the author on 2026-10-12. Subtask 2 is done.
+accepted by the author on 2026-10-12. Subtasks 2 and 3 are done.
 
 govax provides 15 of LIBRTL.EXE's LIB$ routines (and STR$UPCASE): the ones
 the sample programs and tests needed (Phase 34's table,
@@ -311,7 +311,8 @@ Notes for the survey:
    offsets, and codes. **Done** 2026-10-12.
 3. **Descriptors and arguments** (`descriptor.go`): reading every input
    class, writing S, VS, and D output, LIB$_STRTRU and LIB$_INVSTRDES,
-   LIB$_WRONUMARG; the existing routines moved onto them.
+   LIB$_WRONUMARG; the existing routines moved onto them. **Done**
+   2026-10-12.
 4. **Access violations and missing routines** (Decisions 5 and 6), as
    the author decides.
 5. **Survey** of Part C's routines: each one's format, arguments,
@@ -387,3 +388,40 @@ Notes for the survey:
     returns their sum in R0 and 7 in R1. The 8 bytes moved every later
     kernel.asm address, so `internal/asm`'s golden snapshots were
     rewritten (`-update`): only addresses changed.
+- **2026-10-12** — Subtask 3, descriptors and arguments
+  (`internal/librtl/descriptor.go`):
+  - **Reading.** `readDescriptor` decodes a string descriptor into a
+    `stringDesc` (class, length, room, text address); `readString` reads
+    the text. Z, S, D, and SD are LENGTH bytes at POINTER; A and NCA are
+    DSC$L_ARSIZE bytes (65,536 or more is LIB$_INVSTRDES); VS is CURLEN
+    bytes after the length word, at most MAXSTRLEN. The rules are the
+    manual's LIB$ANALYZE_SDESC (LIB-10). Any other class is
+    `errInvStrDes`.
+  - **Writing.** `writeString` follows LIB$SCOPY_DXDX's table (LIB-337):
+    Z, S, SD, A, and NCA are filled, padded or truncated; D keeps its
+    storage when the string fits and otherwise frees it and allocates
+    anew, setting the length (and address); VS copies up to MAXSTRLEN,
+    unpadded, and sets CURLEN. It reports what it stored and whether it
+    truncated, and each routine picks its status (LIB$_STRTRU, or
+    LIB$_INPSTRTRU for the input routines). `stringStatus` turns a
+    helper's error into LIB$_INVSTRDES, LIB$_INSVIRMEM, or SS$_ACCVIO
+    (subtask 4 makes the last a signal).
+  - **Arguments.** `tooFewArgs(argv, n)` is the LIB$_WRONUMARG test for
+    routines whose manual entry lists it. None of the routines so far
+    does (LIB$SPAWN's is for too many), so its first users are subtask
+    6's.
+  - **The routines moved.** LIB$PUT_OUTPUT, LIB$GET_FOREIGN,
+    LIB$GET_INPUT, LIB$CREATE_DIR, and LIB$SPAWN read through
+    `readString` and write through `writeString`; `storeString` and
+    `corevms.Environment.StringDescriptor` are gone. Each returns the
+    manual's status for a bad class: LIB$_INVSTRDES, except LIB$GET_INPUT,
+    whose entry (LIB-213) says LIB$_INVARG for a class "not a recognized
+    code or ... zero", so it refuses class Z output too, before reading a
+    line (unconfirmed against VMS). LIB$SPAWN's SS$_IVLOGNAM for a string
+    over 65,535 bytes went: no descriptor can describe one. A prompt
+    longer than 255 is now cut to 255 rather than dropped. STR$UPCASE
+    (eVAX's in-place form, not the manual's two-argument one) is left for
+    the STR$ work.
+  - **Tests** (`descriptor_test.go`): every class read, S/Z/SD/A padded
+    and truncated, VS's CURLEN, D's storage kept and replaced, the error
+    statuses, and the routines taking a VS string and refusing class V.
