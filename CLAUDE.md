@@ -476,9 +476,11 @@ expect adjustment as phases land):
   process's (`swapDCLState`, `dclState`: RTL, Logicals,
   ContainerSession, Out, symbols, levels, $STATUS, ...; `processOne` is
   process 1 throughout, `subCLI` the subprocess's CLI). RUN there is
-  `subprocessRun`; `processOneCommands` (DEBUG, ASM, VMINIT, SPAWN, ...)
+  `subprocessRun`; `processOneCommands` (DEBUG, ASM, VMINIT, ...)
   are VAX_NOTSUBPROC. The console's SPAWN (`spawncmd.go`) calls
-  LIB$SPAWN in process 1.
+  LIB$SPAWN in process 1; in a subprocess (Phase 51) it calls corevms's
+  `Spawn` from Go and waits with `AwaitSpawn` through a `cliYield`
+  (`spawnInSubprocess`).
 - `internal/disasm` — the disassembler (Phase 11; moved out of `internal/asm` in
   Phase 41 so other packages can use it): `Disassemble` decodes one instruction
   with `internal/cpu`'s table into a `Decoded` of structured `Operand`s

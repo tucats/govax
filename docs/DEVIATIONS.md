@@ -3410,8 +3410,8 @@ widened."
 - **What**: a subprocess runs the console's DCL (docs/PHASE-50, "The
   subprocess's DCL"). Chosen without VMS:
   - The commands refused in a subprocess (`processOneCommands`) are
-    govax's machine commands, and SPAWN (VMS allows a subprocess its
-    own).
+    govax's machine commands. (SPAWN was refused too until Phase 51's
+    subtask 2; a subprocess now SPAWNs its own, as VMS allows.)
   - A job that isn't interactive (LOGINOUT with a file or mailbox
     input) has SET VERIFY on from its start, so a procedure it runs
     shows its lines (VMS's batch default; probe 4 showed only the
@@ -3424,8 +3424,11 @@ widened."
   - SHOW LOGICAL's status in process 1 is now SS$_NORMAL (or
     SHOW$_NOTRAN) with bit 28, as VMS gave in a subprocess (probes 4 and
     5); it was CLI$_NORMAL.
-- **Status**: unconfirmed. SPAWN in a subprocess and Ctrl/Y in a
-  subprocess's procedures are Phase 51's subtasks 2 and 3.
+- **Status**: unconfirmed. SPAWN in a subprocess is done (Phase 51,
+  subtask 2: it calls LIB$SPAWN's Go and waits in the scheduler; its
+  messages and status are process 1's SPAWN's, unconfirmed for a
+  subprocess); Ctrl/Y in a subprocess's procedures is Phase 51's
+  subtask 3.
 
 ### [Phase 50] Round 5 of the probe: STOP, Ctrl/Y, flow, lexicals, subprocesses
 

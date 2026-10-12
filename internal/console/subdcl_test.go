@@ -100,6 +100,106 @@ func TestSpawnDCL(t *testing.T) {
 	}
 }
 
+// TestSpawnDCL_nested: a subprocess's DCL can SPAWN (Phase 51, subtask
+// 2). Its subprocess is a subprocess of the subprocess; without /NOWAIT
+// the spawning DCL waits for it (the machine runs it meanwhile), and
+// SPAWN's status is its final status; with /NOWAIT the spawning DCL goes
+// on at once, and the new process runs beside it.
+func TestSpawnDCL_nested(t *testing.T) {
+	c, out := scheduledConsole(t, longQuantum, brbSelf)
+	d := console.NewDispatcher(c, consoletest.ConsoleGrammar(t), nil)
+
+	dir := t.TempDir()
+
+	inner := filepath.Join(dir, "inner.com")
+	if err := os.WriteFile(inner, []byte(strings.Join([]string{
+		`$ OWNER = F$GETJPI("","OWNER")`,
+		`$ WRITE SYS$OUTPUT "inner, depth ''F$ENVIRONMENT("DEPTH")', owner ''F$GETJPI(OWNER,"PRCNAM")'"`,
+		"$ EXIT 3",
+	}, "\n")+"\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	outer := filepath.Join(dir, "outer.com")
+	if err := os.WriteFile(outer, []byte(strings.Join([]string{
+		`$ WRITE SYS$OUTPUT "outer"`,
+		`$ SPAWN @"` + inner + `"`,
+		`$ WRITE SYS$OUTPUT "outer again, ''$STATUS'"`,
+		`$ SPAWN/NOWAIT/PROCESS=SIDE WRITE SYS$OUTPUT "beside"`,
+		"$ WAIT 00:00:00.20",
+		`$ WRITE SYS$OUTPUT "outer done"`,
+	}, "\n")+"\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	dispatch := func(line string) string {
+		t.Helper()
+
+		out.Reset()
+
+		if err := d.Dispatch(line); err != nil && !vmserrors.MessageInhibited(err) {
+			out.WriteString("%" + err.Error() + "\n")
+		}
+
+		return strings.Join(programLines(out.String()), "|")
+	}
+
+	want := strings.Join([]string{
+		"%DCL-S-SPAWNED, process SYSTEM_1 spawned",
+		"%DCL-S-ATTACHED, terminal now attached to process SYSTEM_1",
+		"%DCL-S-SPAWNED, process SYSTEM_2 spawned",
+		"%DCL-S-ATTACHED, terminal now attached to process SYSTEM_2",
+		"inner, depth 1, owner SYSTEM_1",
+		"%DCL-S-RETURNED, control returned to process SYSTEM_1",
+		"%DCL-S-RETURNED, control returned to process SYSTEM",
+	}, "|")
+
+	if got := dispatch(`SPAWN SPAWN @"` + inner + `"`); got != want {
+		t.Errorf("SPAWN SPAWN:\n%q\nwant\n%q", got, want)
+	}
+
+	if status := c.Status(); status != 3 {
+		t.Errorf("SPAWN SPAWN's $STATUS %08X, want 3 (the innermost's)", status)
+	}
+
+	want = strings.Join([]string{
+		"%DCL-S-SPAWNED, process SYSTEM_1 spawned",
+		"%DCL-S-ATTACHED, terminal now attached to process SYSTEM_1",
+		"outer",
+		"%DCL-S-SPAWNED, process SYSTEM_2 spawned",
+		"%DCL-S-ATTACHED, terminal now attached to process SYSTEM_2",
+		"inner, depth 1, owner SYSTEM_1",
+		"%DCL-S-RETURNED, control returned to process SYSTEM_1",
+		"outer again, %X00000003",
+		"%DCL-S-SPAWNED, process SIDE spawned",
+		"beside",
+		"outer done",
+		"%DCL-S-RETURNED, control returned to process SYSTEM",
+	}, "|")
+
+	if got := dispatch(`SPAWN @"` + outer + `"`); got != want {
+		t.Errorf("SPAWN @outer:\n%q\nwant\n%q", got, want)
+	}
+
+	// A SPAWN that fails in the subprocess shows LIB$SPAWN's status
+	// there, and the subprocess's SPAWN fails with it.
+	want = strings.Join([]string{
+		"%DCL-S-SPAWNED, process SYSTEM_1 spawned",
+		"%DCL-S-ATTACHED, terminal now attached to process SYSTEM_1",
+		"%SYSTEM-F-DUPLNAM, duplicate name",
+		"%DCL-S-RETURNED, control returned to process SYSTEM",
+		"%SYSTEM-F-DUPLNAM, duplicate name",
+	}, "|")
+
+	if got := dispatch(`SPAWN SPAWN/PROCESS=SYSTEM_1 WRITE SYS$OUTPUT "no"`); got != want {
+		t.Errorf("SPAWN SPAWN/PROCESS=SYSTEM_1:\n%q\nwant\n%q", got, want)
+	}
+
+	if n := len(c.RTL.Processes()); n != 1 {
+		t.Errorf("%d processes at the end, want only process 1", n)
+	}
+}
+
 // TestSpawnDCL_stopWhileRunning: STOP of a subprocess whose procedure
 // is running an image deletes it, and its interpreter, waiting for the
 // image, is unwound; process 1 goes on as before.

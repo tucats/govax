@@ -2,7 +2,8 @@
 
 **Status:** in progress (planned and approved 2026-10-12). Needs Phase
 50. Subtask 1, round 6 of the VMS probe, is done (2026-10-12): the
-author ran it, and govax now follows VMS's answers.
+author ran it, and govax now follows VMS's answers. Subtask 2, SPAWN in
+a subprocess, is done (2026-10-12).
 
 Phase 50 made the console a DCL command interpreter and closed on
 2026-10-12 with every subtask done. Following Phase 49's example, the
@@ -74,7 +75,7 @@ that its probes found but no subtask fixed.
    ENDSUBROUTINE, ELSE, and WAIT at command level 0. Then a
    `TestProbe50AOracle` that replays `vax/probe50a.log`, and govax
    changed where VMS differs.
-2. **SPAWN in a subprocess.** Take SPAWN out of `processOneCommands`. A
+2. **SPAWN in a subprocess** (done 2026-10-12). Take SPAWN out of `processOneCommands`. A
    subprocess's SPAWN calls LIB$SPAWN in its own process, as process 1's
    does. Without /NOWAIT, its interpreter waits (a `cliYield` wait) until
    the child's completion. The subprocess's own subprocesses go when it
@@ -164,3 +165,32 @@ smaller gaps the phase left:
   Confirmed: WAIT's status, `/OUTPUT`'s forms, and OPEN/WRITE's 01 8D.
   Unexplained: VMS dropped the blank in one verified comment, and the
   oracle allows for it. HELP: IF, GOSUB/RETURN, CALL.
+- 2026-10-12: The author confirmed WAIT's segment on VMS: `WAIT BOB` is
+  IVDTIME with ` \0  BOB\`, a known quirk of WAIT's message.
+- 2026-10-12: Subtask 2, SPAWN in a subprocess. SPAWN is no longer in
+  `processOneCommands`. In a subprocess, the console's `Spawn` calls
+  `spawnInSubprocess`, which makes the new process with corevms's
+  `Environment.Spawn` (LIB$SPAWN's own Go) in the subprocess. Unless
+  /NOWAIT, the subprocess's DCL then waits with LIB$SPAWN's wait
+  (`AwaitSpawn`: LEF until the new process is deleted), handed to its
+  shim as a `cliYield` wait, so the machine runs the others meanwhile.
+  It takes no instructions of the subprocess's own, so no procedure page
+  is needed as in process 1 (where SPAWN calls LIB$SPAWN through the
+  machine, waiting inside the call). The messages (SPAWNED, ATTACHED,
+  RETURNED) and SPAWN's status are process 1's SPAWN's (`spawnNotice`,
+  `spawnReturned`, now shared). A process's subprocesses end with it
+  (Phase 45's owner deletion).
+
+  Fixed on the way: a SPAWN that LIB$SPAWN refused (SS$_DUPLNAM for a
+  name in use, say) left `$STATUS` SS$_ABORT, a plain Go error's. Its
+  status is now LIB$SPAWN's, in process 1 too.
+
+  SPAWN's not repeating a status of govax's own (one with no message in
+  the message file) stays as it was: the arguments its message needs
+  aren't there to show it again.
+
+  Tests: `TestSpawnDCL_nested` (SPAWN SPAWN, with the inner process's
+  owner the subprocess and the innermost status coming back; a spawned
+  procedure that SPAWNs a procedure and then SPAWN/NOWAIT a command that
+  runs beside it; a refused SPAWN in a subprocess). HELP SPAWN says a
+  subprocess can SPAWN.

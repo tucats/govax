@@ -106,13 +106,13 @@ var (
 // processOneCommands are the console commands, by the grammar's name for
 // the syntax that runs them (dcl.Result.Active), that work the machine
 // itself or process 1's own session: a subprocess's DCL refuses them
-// (VAX_NOTSUBPROC). SPAWN is among them for now: a subprocess's own
-// subprocess would need its CLI to wait for it.
+// (VAX_NOTSUBPROC). (SPAWN was among them until a subprocess's DCL
+// could wait for its own subprocess: Phase 51's subtask 2.)
 var processOneCommands = map[string]bool{
 	"ASM": true, "ASSEMBLE": true, "BOOT": true,
 	"CLEAR": true, "CLEAR_MEMORY": true, "CLEAR_STRINGS": true,
 	"DEBUG": true, "INITIALIZE_VAX": true, "LOAD": true, "ROM": true,
-	"SAVE": true, "SET_QUANTUM": true, "SPAWN": true, "TEST": true,
+	"SAVE": true, "SET_QUANTUM": true, "TEST": true,
 	"VMINIT": true, "ZERO": true,
 }
 

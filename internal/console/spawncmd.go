@@ -2,7 +2,6 @@ package console
 
 import (
 	"encoding/binary"
-	"fmt"
 
 	"github.com/tucats/govax/internal/corevms"
 	"github.com/tucats/govax/internal/vmsdef"
@@ -24,6 +23,12 @@ import (
 // a RUN, GO, CALL, or the like, and while process 1's DCL lends it the
 // CPU between commands, during WAIT, and at the prompt (dcllend.go).
 //
+// In a subprocess, SPAWN makes the new process a subprocess of the
+// subprocess, through the same Go that LIB$SPAWN uses
+// (corevms.Environment.Spawn), called from the subprocess's DCL. The
+// subprocess's DCL then waits for it in the scheduler, as LIB$SPAWN does
+// (spawnInSubprocess).
+//
 // The qualifiers are DCL's: /INPUT and /OUTPUT (the subprocess's
 // SYS$INPUT and SYS$OUTPUT), /PROCESS (its name), /PROMPT, /NOSYMBOLS
 // and /NOLOGICAL_NAMES (CLI$M_NOCLISYM, CLI$M_NOLOGNAM), and /NOWAIT.
@@ -41,7 +46,7 @@ type SpawnOptions struct {
 // the process-id and completion-status arguments are omitted.
 const (
 	spawnArgList     = 16
-	spawnFlags       = 64
+	spawnFlagsOffset = 64
 	spawnDescriptors = 80
 	spawnStrings     = 128
 	spawnPageBytes   = 2 * 512
@@ -60,6 +65,10 @@ func (c *Console) Spawn(o SpawnOptions) error {
 
 	if c.RTL == nil {
 		return vmserrors.New(vmserrors.CLI_NEEDRTL, "SPAWN")
+	}
+
+	if cli := c.subCLI; cli != nil {
+		return c.spawnInSubprocess(cli, o)
 	}
 
 	if err := c.ensureShims(); err != nil {
@@ -113,19 +122,8 @@ func (c *Console) Spawn(o SpawnOptions) error {
 		text += uint32(len(s.value))
 	}
 
-	var flags uint32
-
-	for _, f := range []struct {
-		set  bool
-		name string
-	}{{o.NoWait, "CLI$M_NOWAIT"}, {o.NoSymbols, "CLI$M_NOCLISYM"}, {o.NoLogicalNames, "CLI$M_NOLOGNAM"}} {
-		if f.set {
-			flags |= vmsdef.LibrarySymbols[f.name]
-		}
-	}
-
-	put(spawnFlags, flags)
-	args[3] = page + spawnFlags
+	put(spawnFlagsOffset, spawnFlags(o))
+	args[3] = page + spawnFlagsOffset
 
 	put(spawnArgList, spawnArguments)
 
@@ -137,20 +135,14 @@ func (c *Console) Spawn(o SpawnOptions) error {
 		return err
 	}
 
-	// DCL's messages: when the subprocess has been made, before it runs,
-	// that it was (and, if SPAWN waits, that the terminal is now its);
-	// when SPAWN has waited, that control is back. VMS's DCL wrote them
-	// so in testdata/mp/probe4's run.
+	// DCL's messages (spawnNotice), and, when SPAWN has waited, that
+	// control is back (spawnReturned).
 	var child *corevms.Environment
 
 	c.RTL.SpawnNotice = func(spawned *corevms.Environment, wait bool) {
 		child = spawned
 
-		c.Printf("%%DCL-S-SPAWNED, process %s spawned\n", spawned.Process.Name)
-
-		if wait {
-			c.Printf("%%DCL-S-ATTACHED, terminal now attached to process %s\n", spawned.Process.Name)
-		}
+		c.spawnNotice(spawned, wait)
 	}
 
 	defer func() { c.RTL.SpawnNotice = nil }()
@@ -159,14 +151,96 @@ func (c *Console) Spawn(o SpawnOptions) error {
 		return err
 	}
 
+	// A failure is LIB$SPAWN's status, $STATUS too.
 	if status := c.CPU.GPR(0); status&1 == 0 {
-		return fmt.Errorf("%s", trimPercent(c.RTL.StatusText(status)))
+		c.setCommandStatus(status, nil)
+
+		return c.statusFailure(status)
 	}
 
 	if o.NoWait || child == nil {
 		return nil
 	}
 
+	return c.spawnReturned(child)
+}
+
+// spawnFlags are the LIB$SPAWN flags SPAWN's qualifiers o ask for.
+func spawnFlags(o SpawnOptions) uint32 {
+	var flags uint32
+
+	for _, f := range []struct {
+		set  bool
+		name string
+	}{{o.NoWait, "CLI$M_NOWAIT"}, {o.NoSymbols, "CLI$M_NOCLISYM"}, {o.NoLogicalNames, "CLI$M_NOLOGNAM"}} {
+		if f.set {
+			flags |= vmsdef.LibrarySymbols[f.name]
+		}
+	}
+
+	return flags
+}
+
+// spawnNotice shows DCL's messages when SPAWN has made the subprocess,
+// before it runs: that it was, and, if SPAWN waits, that the terminal is
+// now the subprocess's. VMS's DCL wrote them so in testdata/mp/probe4's
+// run.
+func (c *Console) spawnNotice(spawned *corevms.Environment, wait bool) {
+	c.Printf("%%DCL-S-SPAWNED, process %s spawned\n", spawned.Process.Name)
+
+	if wait {
+		c.Printf("%%DCL-S-ATTACHED, terminal now attached to process %s\n", spawned.Process.Name)
+	}
+}
+
+// spawnInSubprocess is SPAWN in a subprocess's DCL (cli's): it makes the
+// new process with corevms's Spawn, LIB$SPAWN's own Go, in the
+// subprocess, and, unless /NOWAIT, waits until it has gone, handing the
+// CPU back to the subprocess's shim with LIB$SPAWN's wait
+// (corevms.AwaitSpawn: LEF, until the new process is deleted), so the
+// machine runs the others meanwhile. A failure to make it is LIB$SPAWN's
+// status (unconfirmed: VMS's DCL may word some of them its own way).
+func (c *Console) spawnInSubprocess(cli *subprocessCLI, o SpawnOptions) error {
+	env := c.RTL
+
+	for _, text := range []string{o.Command, o.Input, o.Output, o.Process, o.Prompt} {
+		if len(text) > maxSpawnText {
+			return vmserrors.New(vmserrors.CLI_EXPSYN, text)
+		}
+	}
+
+	env.SpawnNotice = c.spawnNotice
+	child, status := env.Spawn(corevms.SpawnRequest{
+		Command: o.Command, Input: o.Input, Output: o.Output, Name: o.Process, Prompt: o.Prompt,
+		Flags: spawnFlags(o),
+	})
+	env.SpawnNotice = nil
+
+	if child == nil {
+		c.setCommandStatus(status, nil)
+
+		return c.statusFailure(status)
+	}
+
+	if o.NoWait {
+		return nil
+	}
+
+	for {
+		_, err := env.AwaitSpawn()
+		if err == nil {
+			break
+		}
+
+		cli.handBack(cliYield{kind: yieldWait, err: err})
+	}
+
+	return c.spawnReturned(child)
+}
+
+// spawnReturned ends a SPAWN that waited for child: DCL says control is
+// back, and SPAWN's status is the subprocess's final status.
+func (c *Console) spawnReturned(child *corevms.Environment) error {
 	c.Printf("%%DCL-S-RETURNED, control returned to process %s\n", c.RTL.Process.Name)
 
 	// SPAWN's status is the subprocess's final status, its message shown
@@ -204,14 +278,4 @@ func (c *Console) spawnProcedurePage() (uint32, error) {
 	}
 
 	return c.spawnPage, nil
-}
-
-// trimPercent drops a message's leading "%", which the console adds back
-// when it reports an error.
-func trimPercent(s string) string {
-	if len(s) > 0 && s[0] == '%' {
-		return s[1:]
-	}
-
-	return s
 }

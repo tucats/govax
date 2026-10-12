@@ -105,6 +105,10 @@
 //                          added LOGOUT and MCR
 //              10/11/26    Round 5 of the DCL probe: STOP keeps $STATUS,
 //                          Ctrl/Y's nested rules, RETURN's status; WAIT
+//              10/12/26    Round 6 of the DCL probe: GOSUB's depth,
+//                          ELSE before THEN, CALL of a plain label,
+//                          RETURN at the terminal
+//              10/12/26    SPAWN in a subprocess
 
 This is the help documentation for the govax VAX emulator.  Topic sections are
 marked by a "$" delimiter.  This is followed by as many tokens of the help
@@ -1053,10 +1057,13 @@ $SPAWN
     logical names (copies of its process logical names, unless
     /NOLOGICAL_NAMES), default directory, $STATUS, and open files.  The
     commands that work the machine itself (DEBUG, ASM, INITIALIZE/VAX,
-    VMINIT, ZERO, SAVE, LOAD, SPAWN, ...) are the console's own, and give
-    %VAX-E-NOTSUBPROC.  SPAWN says when the subprocess has
+    VMINIT, ZERO, SAVE, LOAD, ...) are the console's own, and give
+    %VAX-E-NOTSUBPROC.  A subprocess can SPAWN a subprocess of its own,
+    which it waits for (unless /NOWAIT) as the console does; a process's
+    subprocesses end when it does.  SPAWN says when the subprocess has
     been made (%DCL-S-SPAWNED, and %DCL-S-ATTACHED if it waits) and when
-    control is back (%DCL-S-RETURNED), as DCL does.
+    control is back (%DCL-S-RETURNED), as DCL does.  SPAWN's status is
+    the subprocess's final status.
 
         /NOWAIT         Don't wait: the subprocess runs beside the console.
                         It takes turns with the console's DCL, between its
