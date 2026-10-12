@@ -2,7 +2,7 @@
 
 **Status:** in progress (2026-10-12). Needs Phases 34 (`internal/librtl`)
 and 52. The plan (Part A) and the decisions (Part B) were reviewed and
-accepted by the author on 2026-10-12. Subtasks 2 to 4 are done.
+accepted by the author on 2026-10-12. Subtasks 2 to 5 are done.
 
 govax provides 15 of LIBRTL.EXE's LIB$ routines (and STR$UPCASE): the ones
 the sample programs and tests needed (Phase 34's table,
@@ -294,12 +294,221 @@ Notes for the survey:
   (LOCC: the position, 1-based, or 0), as the manual describes each.
   MOVTC and MOVTUC take a translation table by descriptor.
 - **ADAWI** (Phase 34's eVAX port) doesn't follow the manual's argument
-  order or status (SS$_INTOVF on overflow). The survey checks it, and it's
+  order or status (LIB$_INTOVF on overflow; the survey below corrects
+  this note's first guess, SS$_INTOVF). The survey checks it, and it's
   fixed here.
 - **CVTDF** is 7.x only. Without a description it's left out (Part A's
   rule) and listed.
 - **FFC and FFS** are one manual entry, "LIB$FFx". The OCR's
   "LIB$CVT_)(TB" is CVT_xTB (Phase 54), and "LIB$CVT_ox_ox" is CVT_DX_DX.
+
+## The survey (subtask 5)
+
+Each routine's interface, from the 5.0 manual. Arguments are in the
+VMS argument notation, `name.access-type.mechanism`: access `r`, `w`,
+`m` (read, write, modify); types `l`, `w`, `b`, `q` (longword, word,
+byte, quadword; `u` unsigned), `a` an address, `t` text, `x` the
+routine's floating format, `z` unspecified; mechanism `r` by reference,
+`v` by value, `dx` by descriptor, `ra` an array by reference. `[ ]`
+marks an optional argument.
+"Returns" is the routine's R0: a condition value (cond), or a value
+(the manual's "RETURNS" names a result, not a status). Statuses listed
+under the manual's "CONDITION VALUE SIGNALED" are signaled; the rest are
+returned. Every condition value named here is in `vmsdef.Symbols` and
+`vmsdef.Messages`. **None of Part C's entries lists LIB$_WRONUMARG**, so
+a missing required argument reads as address 0 (`arg`) and is
+`memoryFault`'s signaled SS$_ACCVIO; `tooFewArgs` waits for Phase 54.
+Where the text is unclear, the choice is govax's, marked
+**unconfirmed**; each such choice is a case in the probe (subtask 13).
+
+### Bit fields
+
+| Routine (page) | Format | Returns | Conditions |
+| --- | --- | --- | --- |
+| EXTV (142) | `position.rl.r, size.rbu.r, base-address.rlu.v` | the field, sign-extended | SS$_ROPRAND signaled (size > 32) |
+| EXTZV (145) | `position.rl.r, size.rbu.r, base-address.rlu.v` | the field, zero-extended | SS$_ROPRAND signaled (size > 32) |
+| INSV (253) | `longword-integer-source.rl.r, position.rl.r, size.rbu.r, base-address.rlu.v` | nothing | SS$_ROPRAND signaled (size > 32) |
+| FFC, FFS (147) | `position.rl.r, size.rbu.r, base.ra.r, find-position.wl.r` | cond | SS$_NORMAL (found); LIB$_NOTFOU (none, or size 0); SS$_ROPRAND signaled (size > 32) |
+
+- **The base.** EXTV, EXTZV, and INSV pass base-address "by value" and
+  FFx passes base "by reference", described as "the address of an
+  unsigned longword containing the base address". The examples settle
+  EXTV and INSV: `LIB$EXTV(0, 4, VALUE)` (PL/I) and
+  `CALL LIB$INSV(4, 0, 3, COND_VALUE)` (FORTRAN) pass the variable
+  holding the field by reference, so the argument *is* the field's
+  address. govax reads FFx's argument the same way (the field starts at
+  the address in the argument list), not as a pointer to a pointer:
+  **unconfirmed**.
+- **Position** is any signed longword; a negative one reaches lower
+  bytes (the instructions' memory-field rule, `internal/cpu/bitfield.go`'s
+  `getMemoryField`/`setMemoryField`, plain functions of the CPU and
+  memory the routines can share). Size 0: EXTV and EXTZV return 0, INSV
+  stores nothing, FFx returns LIB$_NOTFOU.
+- **FFx** writes find-position in both cases: the found bit's position
+  (relative to the base, not to position), or position + size when none
+  is found.
+- **INSV** inserts bits 0 to size-1 of the source.
+
+### Integers
+
+| Routine (page) | Format | Returns | Conditions |
+| --- | --- | --- | --- |
+| ADDX (7) | `addend-array.rl.ra, augend-array.rl.ra, resultant-array.wl.ra [,array-length.rl.r]` | cond | SS$_NORMAL; SS$_INTOVF (result correct but for the sign bit) |
+| SUBX (399) | `minuend-array.rl.ra, subtrahend-array.rl.ra, difference-array.wl.ra [,array-length.rl.r]` | cond | SS$_NORMAL; SS$_INTOVF; LIB$_INVARG (length negative; output unchanged) |
+| EMUL (136) | `longword-integer-multiplier.rl.r, longword-integer-multiplicand.rl.r, addend.rl.r, product.wq.r` | cond | SS$_NORMAL |
+| EDIV (126) | `longword-integer-divisor.rl.r, quadword-integer-dividend.rq.r, longword-integer-quotient.wl.r, remainder.wl.r` | cond | SS$_NORMAL; SS$_INTOVF, SS$_INTDIV (quotient = dividend<31:0>, remainder 0) |
+| ADAWI (3) | `add.rw.r, sum.mw.r, result.mw.r` | cond | SS$_NORMAL; LIB$_INTOVF |
+
+- **ADDX and SUBX**: little-endian arrays of longwords, the
+  highest-addressed holding the sign; array-length defaults to 2 (a
+  quadword). Any of the three arrays may be the same. The ADDX entry
+  lists no LIB$_INVARG; govax gives a negative length LIB$_INVARG in both
+  (**unconfirmed** for ADDX). A length of 0 does nothing and returns
+  SS$_NORMAL (**unconfirmed**). The manual's examples are test cases:
+  `7FFF407F 00000001` + `8000BF80 FFFFFFFF` = 0;
+  `10000000 00000001` + `00000000 FFFFFFFF` = `10000001 00000000`;
+  `10000000 00000001` − `00000000 FFFFFFFF` = `0FFFFFFF 00000002`.
+- **EMUL**: product = multiplier × multiplicand + sign-extended addend;
+  2²⁸ × 2¹² gives `00000100 00000000` (the manual's example).
+- **EDIV**: 4,600,387,192 (`00000001 12345678`) ÷ 4096 is 1,123,141
+  remainder 1656 (the manual's example).
+- **ADAWI is wrong today.** The manual's operands are *words*: sum ←
+  sum + add (the instruction, with its word-alignment rule: an odd sum
+  address is the instruction's reserved operand fault, signaled as
+  SS$_ROPRAND, **unconfirmed**), returning LIB$_INTOVF (not SS$_INTOVF,
+  as Part C's note above guessed) on overflow, the truncated sum stored.
+  govax's port reads two *longwords* and never stores the sum, only a
+  sign. The third argument, "result" (word, access modify), is "the
+  result of adding add and sum"; its *value* isn't defined further.
+  govax will store the sum's sign there as a word (−1, 0, or 1), as the
+  port does (a longword there), and as DIGITAL's later documentation is
+  remembered to describe it, naming the argument `sign` (from memory:
+  no copy is at hand): **unconfirmed**, and the probe prints it.
+
+### Floating
+
+| Routine (page) | Format | Returns | Conditions |
+| --- | --- | --- | --- |
+| EMODF (130), EMODD (128) | `floating-point-multiplier.rx.r, multiplier-extension.rbu.r, floating-point-multiplicand.rx.r, integer-portion.wl.r, fractional-portion.wx.r` | cond | SS$_NORMAL; SS$_INTOVF; SS$_FLTUND; SS$_ROPRAND |
+| EMODG (132), EMODH (134) | the same, with `multiplier-extension.rwu.r` | cond | the same |
+| POLYF (302), POLYD (300), POLYG (305), POLYH (307) | `polynomial-argument.rx.r, degree.rw.r, coefficient.rx.ra, floating-point-result.wx.r` | cond | SS$_NORMAL; SS$_FLTOVF; SS$_ROPRAND |
+
+- **EMOD**: the extension adds x bits to the multiplier (F and D 8,
+  bits 7:0 of a byte; G 11, bits 15:5 of a word; H 15, bits 15:1); the
+  arithmetic is `vaxfloat.EMOD`, which the CPU's EMODx already uses.
+  SS$_INTOVF: the integer gets the true integer part's low-order 32
+  bits; a floating overflow is SS$_INTOVF too. SS$_FLTUND: integer and
+  fraction both 0. SS$_ROPRAND: neither stored. All three are returned,
+  not signaled.
+- **POLY**: Horner's rule over degree + 1 coefficients, the
+  highest-order term's first (lowest address); degree 0 to 31 (above,
+  the instruction's reserved operand: SS$_ROPRAND, returned). The
+  manual's formula `C[0]+X*(C[1]+...)` numbers them the other way; its
+  example settles the order: X = 2, degree 4, coefficients 1, 2, −1, 1,
+  −3 gives 27, and X = 1, degree 2, coefficients 1, 2, 2 gives 5. Each
+  step is `vaxfloat.POLYStep`. Underflow isn't listed: govax stores 0
+  and returns SS$_NORMAL, as the instruction does with `PSL<FU>` clear
+  (**unconfirmed**).
+- **CVTDF** (7.x only) has no description, so it stays a missing-routine
+  stub (Part A's rule).
+
+### Queues and interlocks
+
+| Routine (page) | Format | Returns | Conditions |
+| --- | --- | --- | --- |
+| INSQHI (248), INSQTI (251) | `entry.mq.ra, header.mq.r [,retry-count.rlu.r]` | cond | SS$_NORMAL (more than one entry now); LIB$_ONEENTQUE (one entry now); LIB$_SECINTFAI (severe; queue unchanged) |
+| REMQHI (315), REMQTI (317) | `header.mq.r, remque-address.wa.r [,retry-count.rlu.r]` | cond | SS$_NORMAL (entries remain); LIB$_ONEENTQUE (now empty); LIB$_QUEWASEMP (was empty; remque-address = the header's address); LIB$_SECINTFAI; SS$_ROPRAND |
+| BBSSI (21), BBCCI (19) | `position.rl.r, bit-zero-address.mz.r` | the bit's old state, 0 or 1 | none |
+
+- **Self-relative queues**: header and entry quadword aligned, each a
+  forward and a backward displacement; a zeroed header is empty. The
+  retry count defaults to 10 (1 means no retries).
+- **The secondary interlock.** Bit 0 of the header is the interlock: if
+  it's set, the instruction fails with C set and the queue unchanged,
+  and the routine tries again, up to retry-count times, before returning
+  LIB$_SECINTFAI. With one CPU and no other user of the bit nothing sets
+  it, but a program can (a header built by hand, or a test), so govax
+  models it rather than never failing.
+- **SS$_ROPRAND** (an entry or header not quadword aligned, or the
+  header the entry) is in REMQHI's and REMQTI's "returned" list but
+  described as "a reserved operand fault"; govax signals it, as the
+  instruction's fault would be (**unconfirmed**), and does the same for
+  INSQHI and INSQTI, whose entries don't mention it.
+- **internal/cpu's queue instructions** check neither the alignment nor
+  the interlock bit (`queue.go`'s comments: no interlock logic). That's
+  a fidelity gap in the CPU, the ARM's rules; subtask 9 fixes the CPU
+  too and logs it, and the routines share the fixed code.
+- **BBSSI/BBCCI**: position as for the bit fields (any signed longword
+  from the byte at bit-zero-address); the manual's examples test bit 42
+  and bit 104 of a 128-bit array.
+
+### Character strings
+
+| Routine (page) | Format | Returns | Conditions |
+| --- | --- | --- | --- |
+| LOCC (258) | `character-string.rt.dx, source-string.rt.dx` | position of the first equal character (1-based), or 0 | none |
+| SKPC (376) | `character-string.rt.dx, source-string.rt.dx` | position of the first unequal character, or 0 | none |
+| MATCHC (270) | `sub-string.rt.dx, source-string.rt.dx` | position of the substring's first character, or 0 | none |
+| SCANC (334) | `source-string.rt.dx, table-array.rbu.ra, byte-integer-mask.rbu.r` | position of the first character whose table byte AND mask is nonzero, or 0 | none |
+| SPANC (378) | `source-string.rt.dx, table-array.rbu.ra, byte-integer-mask.rbu.r` | position of the first character whose table byte AND mask is zero, or 0 | none |
+| MOVC3 (275) | `word-integer-length.rwu.r, source.rz.r, destination.wz.r` | nothing | none |
+| MOVC5 (276) | `word-integer-source-length.rwu.r, source.rz.r, fill.rb.r, word-integer-destination-length.rwu.r, destination.wz.r` | nothing | none |
+| MOVTC (278) | `source-string.rt.dx, fill-character.rt.dx, translation-table.rt.dx, destination-string.wt.dx` | cond | SS$_NORMAL; LIB$_STRTRU; LIB$_FATERRLIB; LIB$_INSVIRMEM; LIB$_INVSTRDES |
+| MOVTUC (295) | `source-string.rt.dx, stop-character.rt.dx, translation-table.rt.dx, destination-string.wt.dx [,fill-character.rt.dx]` | position of the source character translated to the stop character, 0 if none, −1 if the destination can't be allocated | none |
+
+- **Positions** are 1-based indexes into the source; 0 means not found,
+  and a zero-length source gives 0. MATCHC with an empty substring
+  returns 1. LOCC's, SKPC's, and the fill and stop characters' strings
+  give only their first byte, their length "not checked" (so a
+  zero-length one still gives the byte at its address).
+- **SCANC's description** says the scan ends when the AND "is equal to
+  1"; the instruction (and the RETURNS text) end it on nonzero, which
+  govax follows.
+- **The manual's examples**: LOCC of "DAY" in "ONE DAY AT A TIME" is 5;
+  SKPC of " " in " ABC" is 2, of "A" in "AAA" is 0; LOCC of "X" in the
+  alphabet is 24.
+- **MOVC3 and MOVC5** take lengths and addresses, not descriptors, and
+  overlap doesn't matter. "RETURNS None": govax returns what the
+  instruction leaves in R0 (MOVC3 0, MOVC5 the source bytes not moved),
+  **unconfirmed**.
+- **MOVTC's and MOVTUC's destination.** Their statuses (LIB$_STRTRU,
+  LIB$_INSVIRMEM; MOVTUC's −1) say the destination is written as any
+  output string is, so govax writes the translated text through
+  `writeString`, padded with the fill character rather than blanks.
+  The destination's length is its own for fixed classes; a D
+  destination is given the source's length and VS takes up to MAXSTRLEN
+  (**unconfirmed**). MOVTC's LIB$_STRTRU means the source was longer
+  than the destination. MOVTUC without a fill character leaves the rest
+  of the destination as it was. The table is 256 bytes from its
+  descriptor's address, its length not checked. The DIGITAL tables
+  (`LIB$AB_ASC_EBC` and the rest) are Phase 54's data symbols.
+
+### Calls and CRC
+
+| Routine (page) | Format | Returns | Conditions |
+| --- | --- | --- | --- |
+| CALLG (23) | `argument-list.rlu.ra, user-procedure.ra.v` | the called routine's R0 | none (done in subtask 2) |
+| CRC (31) | `crc-table.rl.ra, initial-crc.rl.r, stream.rt.dx` | the CRC | none |
+| CRC_TABLE (33) | `polynomial-coefficient.rlu.r, crc-table.wl.ra` | nothing | none |
+
+- **CRC_TABLE** builds the ARM's 16-longword table: entry i is i shifted
+  right four times, the polynomial XORed in after each shift that drops
+  a 1. **CRC** runs the instruction's nibble-at-a-time algorithm (the
+  CPU's `emulCrc` loop) over the stream's bytes.
+- **The manual's example** is a test case: with CRC-16's polynomial
+  (octal 120001, `A001`) and an initial CRC of 0, "DOVE" and "HOSE" both
+  give 29,915 (`74DB`), checked with a reference implementation;
+  "123456789" gives `BB3D`, CRC-16/ARC's check value.
+
+### Sharing code with the CPU
+
+The CPU's instruction handlers work on a decoded instruction's operands,
+so the routines can't call them. Where the semantics live in plain
+functions they're shared: `vaxfloat.EMOD` and `POLYStep`, the bit field
+memory functions, and the queue code once subtask 9 makes it a function
+of addresses. Each subtask moves the instruction's core into such a
+function where that's small (exported from `internal/cpu` for `librtl`),
+so there's one implementation of each rule.
 
 ## Subtasks
 
@@ -317,7 +526,7 @@ Notes for the survey:
    **Done** 2026-10-12.
 5. **Survey** of Part C's routines: each one's format, arguments,
    condition values, and examples, from the manual (OCR checked against
-   the PDF where doubtful), recorded in this doc.
+   the PDF where doubtful), recorded in this doc. **Done** 2026-10-12.
 6. **Bit fields**: EXTV, EXTZV, INSV, FFC, FFS.
 7. **Integers**: ADDX, SUBX, EMUL, EDIV; ADAWI fixed.
 8. **Floating**: EMOD and POLY in F, D, G, and H, on `vaxfloat`.
@@ -489,3 +698,16 @@ Notes for the survey:
     offset 0x940 is now a stub's (OTS$CNVOUT); a JSB entry took its
     place as the case with none. The fixture's LIB$PUT_OUTPUT test now
     expects a signal.
+- **2026-10-12** — Subtask 5, the survey ("The survey" above): read
+  every Part C entry in the 5.0 manual's OCR text (EXTV through CRC,
+  LIB-3 to LIB-399) and recorded each routine's format, result, and
+  condition values, with the manual's examples as test cases (the
+  arithmetic ones, CRC's "DOVE"/"HOSE" pair, checked by a reference
+  computation). Findings that change the plan: LIB$ADAWI works on words
+  and returns LIB$_INTOVF, and govax's port neither adds into the sum
+  nor uses words (fixed in subtask 7); no Part C routine lists
+  LIB$_WRONUMARG; the CPU's queue instructions lack the alignment check
+  and the secondary interlock (fixed with subtask 9); MOVTC and MOVTUC
+  write their destinations as output strings, filled with their fill
+  character. The choices the manual leaves open are marked
+  unconfirmed, each a case for the probe. No code changed.
