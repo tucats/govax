@@ -60,10 +60,11 @@ func (d *Dispatcher) gosubCommand(id int64, r *dcl.Result) error {
 }
 
 // Gosub is GOSUB label: the procedure goes on at the label, as for GOTO,
-// and RETURN comes back. A label that isn't there leaves the procedure
-// at its end of file, with CLI$_USGOSUB ("the procedure cannot continue
-// executing and is forced to exit", 14.16.6). At the terminal GOSUB is
-// CLI$_INVGOSUB. GOSUB leaves $STATUS alone (unconfirmed).
+// and RETURN comes back. A label that isn't there shows CLI$_USGOSUB and
+// leaves the procedure at its end of file ("the procedure cannot
+// continue executing and is forced to exit", 14.16.6), with GOTO's
+// status (missingTarget). At the terminal GOSUB is CLI$_INVGOSUB. GOSUB
+// leaves $STATUS alone (VMS 7.3).
 func (c *Console) Gosub(label string) error {
 	f := c.flow()
 	if f.source == nil {
@@ -76,11 +77,10 @@ func (c *Console) Gosub(label string) error {
 
 	target, err := f.findLabel(strings.ToUpper(label), vmserrors.New(vmserrors.CLI_USGOSUB))
 	if err != nil {
-		f.source.Seek(f.source.end)
-
-		return err
+		return c.missingTarget(f, err)
 	}
 
+	c.foundTarget(target)
 	f.gosubs = append(f.gosubs, gosubFrame{pos: f.source.Position(), blocks: slices.Clone(f.blocks)})
 	f.jump(target)
 	c.keepStatus()
@@ -90,13 +90,20 @@ func (c *Console) Gosub(label string) error {
 
 // returnCommand is RETURN [status]: the procedure goes back to the
 // command after the latest GOSUB, with the IF blocks that were open
-// there. With a status (a DCL expression), $STATUS is that status, and
-// the level's ON action looks at it as at any command's (unconfirmed);
-// without one, $STATUS is as the subroutine left it. A RETURN with no
-// GOSUB to return from is CLI$_BADRET.
+// there. With a status (a DCL expression), $STATUS is that status, its
+// message shown unless it's odd or marked as shown, as EXIT's is, and
+// the level's ON action looks at it as at any command's; without one,
+// $STATUS is SS$_NORMAL, marked as shown (%X10000001: VMS 7.3,
+// testdata/dcl50's round 5). A RETURN with no GOSUB to return from is
+// CLI$_BADRET; at the terminal, VMS 7.3 showed nothing for it, and
+// $STATUS is BADRET's, marked as shown (unconfirmed).
 func (d *Dispatcher) returnCommand(id int64, r *dcl.Result) error {
 	f := d.Console.flow()
 	if len(f.gosubs) == 0 {
+		if f.source == nil {
+			return vmserrors.InhibitMessage(vmserrors.New(vmserrors.CLI_BADRET))
+		}
+
 		return vmserrors.New(vmserrors.CLI_BADRET)
 	}
 
@@ -118,13 +125,19 @@ func (d *Dispatcher) returnCommand(id int64, r *dcl.Result) error {
 	f.source.Seek(frame.pos)
 	f.blocks, f.skip = frame.blocks, blockSkip{}
 
-	if status != nil {
-		d.Console.setCommandStatus(*status, nil)
-	} else {
-		d.Console.keepStatus()
+	if status == nil {
+		d.Console.setCommandStatus(ssNormal|stsInhibitMsg, nil)
+
+		return nil
 	}
 
-	return nil
+	d.Console.setCommandStatus(*status, nil)
+
+	if *status&1 != 0 {
+		return nil
+	}
+
+	return d.Console.statusFailure(*status)
 }
 
 // callCommand is CALL[/OUTPUT=file] label [p1 ... p8]
@@ -152,15 +165,18 @@ func (d *Dispatcher) callCommand(id int64, r *dcl.Result) error {
 // callSubroutine runs the subroutine cmd names (cmd.file is its label)
 // at a new command level, sending its lines to dispatch, and returns
 // CALL's status as @'s (finishProcedure). The label must be found as
-// GOTO's is, on a SUBROUTINE line; otherwise, and at the terminal, CALL
-// is CLI$_USCALL, and the procedure goes on after it (unconfirmed).
+// GOTO's is, on a SUBROUTINE line; otherwise CALL shows CLI$_USCALL and
+// the procedure ends, as for a missing GOTO target (missingTarget; VMS
+// 7.3, testdata/dcl50's round 5, for a label that isn't there; a plain
+// label is taken to be the same). At the terminal CALL is CLI$_INVCALL,
+// an error (VMS 7.3).
 func (c *Console) callSubroutine(cmd procedureCommand, dispatch func(string) error) error {
 	label := strings.ToUpper(cmd.file)
 	notFound := vmserrors.New(vmserrors.CLI_USCALL, label)
 
 	f := c.flow()
 	if f.source == nil {
-		return notFound
+		return vmserrors.New(vmserrors.CLI_INVCALL)
 	}
 
 	if len(c.levels) >= maxCommandLevels {
@@ -169,12 +185,14 @@ func (c *Console) callSubroutine(cmd procedureCommand, dispatch func(string) err
 
 	target, err := f.findLabel(label, notFound)
 	if err != nil {
-		return err
+		return c.missingTarget(f, err)
 	}
 
 	if verb, _ := flowVerb(target.rest); verb != "SUBROUTINE" {
-		return notFound
+		return c.missingTarget(f, notFound)
 	}
+
+	c.foundTarget(target)
 
 	_, _, start, body, _ := f.source.lineAt(target.pos)
 

@@ -138,6 +138,8 @@ type dclState struct {
 	controlYLevelActive *controlYPrompt
 	controlYTaken       bool
 	stopping            bool
+	stopExit            procedureExit
+	controlYUnwind      *commandLevel
 	afterStop           func() error
 
 	terminalFlow  flowState
@@ -177,6 +179,8 @@ func (c *Console) swapDCLState(s *dclState) {
 	c.controlYLevelActive, s.controlYLevelActive = s.controlYLevelActive, c.controlYLevelActive
 	c.controlYTaken, s.controlYTaken = s.controlYTaken, c.controlYTaken
 	c.stopping, s.stopping = s.stopping, c.stopping
+	c.stopExit, s.stopExit = s.stopExit, c.stopExit
+	c.controlYUnwind, s.controlYUnwind = s.controlYUnwind, c.controlYUnwind
 	c.afterStop, s.afterStop = s.afterStop, c.afterStop
 	c.terminalFlow, s.terminalFlow = s.terminalFlow, c.terminalFlow
 	c.status, s.status = s.status, c.status
@@ -335,6 +339,13 @@ func (h cliHost) Start(env *corevms.Environment, start *corevms.CLIStartup) (uin
 		cli.prompt = "$ "
 	}
 
+	// A spawned subprocess's DCL starts with its parent's verification
+	// (VMS 7.3 showed a spawned procedure's lines after the parent's SET
+	// VERIFY, testdata/dcl50's round 5).
+	if !cli.login {
+		cli.inheritVerify(env.Process.Owner)
+	}
+
 	p := c.imagesOf(env)
 
 	exit, ok := p.p1Stub("SYS$EXIT")
@@ -369,6 +380,32 @@ func (h cliHost) Start(env *corevms.Environment, start *corevms.CLIStartup) (uin
 	cli.stub = page
 
 	return page, nil
+}
+
+// inheritVerify gives the CLI the verification of its parent, the
+// process whose PID is owner: process 1's (the console's own) or another
+// CLI's.
+func (cli *subprocessCLI) inheritVerify(owner uint32) {
+	c := cli.c
+
+	switch parent := c.clis[c.findEnvironment(owner)]; {
+	case c.processOne != nil && owner == c.processOne.Process.PID:
+		cli.state.verify, cli.state.verifyImage, cli.state.prefix = c.Verify, c.verifyImage, c.verifyPrefix
+	case parent != nil:
+		cli.state.verify, cli.state.verifyImage, cli.state.prefix = parent.state.verify, parent.state.verifyImage, parent.state.prefix
+	}
+}
+
+// findEnvironment returns the process whose PID is pid, nil if there is
+// none.
+func (c *Console) findEnvironment(pid uint32) *corevms.Environment {
+	if c.processOne == nil {
+		return nil
+	}
+
+	env, _ := c.processOne.FindProcess(pid)
+
+	return env
 }
 
 // cliCommand is EXE$CLI_COMMAND, the CLI stub's shim (see this file's

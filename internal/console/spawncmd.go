@@ -140,11 +140,15 @@ func (c *Console) Spawn(o SpawnOptions) error {
 	// that it was (and, if SPAWN waits, that the terminal is now its);
 	// when SPAWN has waited, that control is back. VMS's DCL wrote them
 	// so in testdata/mp/probe4's run.
-	c.RTL.SpawnNotice = func(child *corevms.Environment, wait bool) {
-		c.Printf("%%DCL-S-SPAWNED, process %s spawned\n", child.Process.Name)
+	var child *corevms.Environment
+
+	c.RTL.SpawnNotice = func(spawned *corevms.Environment, wait bool) {
+		child = spawned
+
+		c.Printf("%%DCL-S-SPAWNED, process %s spawned\n", spawned.Process.Name)
 
 		if wait {
-			c.Printf("%%DCL-S-ATTACHED, terminal now attached to process %s\n", child.Process.Name)
+			c.Printf("%%DCL-S-ATTACHED, terminal now attached to process %s\n", spawned.Process.Name)
 		}
 	}
 
@@ -158,11 +162,30 @@ func (c *Console) Spawn(o SpawnOptions) error {
 		return fmt.Errorf("%s", trimPercent(c.RTL.StatusText(status)))
 	}
 
-	if !o.NoWait {
-		c.Printf("%%DCL-S-RETURNED, control returned to process %s\n", c.RTL.Process.Name)
+	if o.NoWait || child == nil {
+		return nil
 	}
 
-	return nil
+	c.Printf("%%DCL-S-RETURNED, control returned to process %s\n", c.RTL.Process.Name)
+
+	// SPAWN's status is the subprocess's final status, its message shown
+	// if it is a failure not shown already (VMS 7.3 showed IVVERB again
+	// after SPAWN FROBNICATE, testdata/dcl50's round 5).
+	status := child.Process.ExitStatus
+	c.setCommandStatus(status, nil)
+
+	if status&1 != 0 {
+		return nil
+	}
+
+	// A status of govax's own (a command the subprocess's DCL refused)
+	// isn't in the message file: the subprocess has shown its message,
+	// with its arguments, which aren't here to show it again.
+	if _, ok := vmsdef.LookupMessage(status); !ok {
+		return vmserrors.InhibitMessage(c.statusFailure(status))
+	}
+
+	return c.statusFailure(status)
 }
 
 // spawnProcedurePage is where SPAWN writes its procedure and LIB$SPAWN's

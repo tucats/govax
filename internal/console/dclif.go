@@ -171,23 +171,23 @@ func (c *Console) skipLine(line string) (rest string, run bool) {
 	return "", false
 }
 
-// awaitThen checks the command after a block's IF: it must be THEN. Any
-// other closes the block, and isn't run: CLI$_NOTHEN (unconfirmed).
-func (c *Console) awaitThen(line string) error {
-	f := c.flow()
-
-	b := f.top()
+// awaitThen checks the command after a block's IF, which should be
+// THEN: VMS 7.3 passed over any other, silently, without running it,
+// until the THEN came (testdata/dcl50's round 5), and an ENDIF (or ELSE)
+// before it was CLI$_INVIFNEST, an error. pass reports a command passed
+// over; THEN, ELSE, and ENDIF go on to their own handlers.
+func (c *Console) awaitThen(line string) (pass bool) {
+	b := c.flow().top()
 	if b == nil || b.state != awaitingThen {
-		return nil
+		return false
 	}
 
-	if verb, _ := flowVerb(line); verb == "THEN" {
-		return nil
+	switch verb, _ := flowVerb(line); verb {
+	case "THEN", "ELSE", "ENDIF":
+		return false
 	}
 
-	f.popBlock()
-
-	return vmserrors.New(vmserrors.CLI_NOTHEN)
+	return true
 }
 
 // thenOfFalseIf reports whether line is the THEN after a block's IF
@@ -223,12 +223,10 @@ func (d *Dispatcher) ifCommand(id int64, r *dcl.Result) error {
 		return d.Console.openBlock(value)
 	}
 
+	// IF expression THEN with no command does nothing, and leaves
+	// $STATUS alone (VMS 7.3, testdata/dcl50's round 5).
 	command = strings.TrimSpace(strings.TrimPrefix(strings.TrimSpace(command), "$"))
-	if command == "" {
-		return vmserrors.New(vmserrors.CLI_INSFPRM)
-	}
-
-	if !value {
+	if command == "" || !value {
 		d.Console.keepStatus()
 
 		return nil
@@ -318,12 +316,17 @@ func (d *Dispatcher) thenCommand(id int64, r *dcl.Result) error {
 // elseCommand is ELSE [[$] command], reached at the end of a THEN branch
 // that ran: DCL passes over the ELSE branch to the block's ENDIF. (When
 // the THEN branch didn't run, skipLine starts the ELSE branch instead.)
-// An ELSE outside a THEN branch is CLI$_INVIFNEST.
+// An ELSE outside a THEN branch is CLI$_INVIFNEST; one in a block still
+// waiting for its THEN closes the block (unconfirmed).
 func (d *Dispatcher) elseCommand(id int64, r *dcl.Result) error {
 	f := d.Console.flow()
 
 	b := f.top()
 	if b == nil || b.state != inThen {
+		if b != nil && b.state == awaitingThen {
+			f.popBlock()
+		}
+
 		return vmserrors.New(vmserrors.CLI_INVIFNEST)
 	}
 
@@ -335,13 +338,17 @@ func (d *Dispatcher) elseCommand(id int64, r *dcl.Result) error {
 }
 
 // endifCommand is ENDIF, which closes the innermost block. One with no
-// block open, or in a block still waiting for its THEN, is
-// CLI$_INVIFNEST.
+// block open, or in a block still waiting for its THEN (which it
+// closes), is CLI$_INVIFNEST (VMS 7.3, testdata/dcl50's round 5).
 func (d *Dispatcher) endifCommand(id int64, r *dcl.Result) error {
 	f := d.Console.flow()
 
 	b := f.top()
 	if b == nil || b.state == awaitingThen {
+		if b != nil {
+			f.popBlock()
+		}
+
 		return vmserrors.New(vmserrors.CLI_INVIFNEST)
 	}
 

@@ -3425,6 +3425,55 @@ widened."
     5); it was CLI$_NORMAL.
 - **Status**: unconfirmed.
 
+### [Phase 50] Round 5 of the probe: STOP, Ctrl/Y, flow, lexicals, subprocesses
+
+- **Where**: `internal/console/dclcontroly.go`, `dclif.go`,
+  `dcllabel.go`, `dclcall.go`, `dclstatus.go`, `dclexpr.go`,
+  `dclsubst.go`, `dcllexstring.go`, `dcllextime.go`, `dcllexfile.go`,
+  `dcllexprocess.go`, `spawncmd.go`, `subcli.go`, `dclwait.go`;
+  `internal/rms/lexical.go`, `internal/corevms/lexical.go`,
+  `internal/vmsdef/messages.go`.
+- **What**: testdata/dcl50's round 5 (`probe50t.com`, replayed by
+  `TestProbe50TOracle`; the interactive `probe50y.com`) answered most of
+  what "[Phase 50] Statuses and ON", "Labels, IF blocks, GOSUB, and
+  CALL", "Lexical functions", "STOP and Ctrl/Y", and "The subprocess's
+  DCL" chose; govax now does what VMS 7.3 did (the README's "What VMS
+  answered in round 5" lists each answer). Those entries' choices are
+  confirmed or replaced as follows:
+  - Confirmed: EXIT's bit 28 after a success; `$STATUS` at an ON ERROR
+    THEN GOTO label; ON's command substituted when ON is read; ON
+    turning SET NOON off; SKPDAT taking ON WARNING's action; a forward
+    search recording the labels it passes; THEN, ELSE, ENDIF, GOSUB,
+    and labels leaving `$STATUS`; ENDI and ENDS; full keyword spellings;
+    F$ELEMENT past the end; F$LOCATE of ""; F$TYPE's integers; F$CVTIME's
+    absolute DATE with no leading blank and its combinations; ON
+    CONTROL_Y staying in effect; SET NOCONTROL=Y cancelling it; Ctrl/C as
+    Ctrl/Y; CONTINUE resuming an image; F$ENVIRONMENT's DEPTH at the
+    Ctrl/Y level.
+  - Replaced: STOP's status (now `$STATUS` unchanged, not SS$_ABORT);
+    Ctrl/Y below level 1 (now the prompt unless some level has an ON
+    CONTROL_Y, and then the levels inside it end with `$STATUS` marked as
+    shown, not SS$_CONTROLY); EXIT at the Ctrl/Y level (every level
+    ends); `IF 1 THEN` alone (nothing, not INSFPRM); the command after a
+    block's IF (passed over, not NOTHEN); INVIFNEST and INVCALL (errors);
+    RETURN's status (%X10000001, and a failure's message); a missing
+    GOSUB or CALL target (USGOTO's status; CALL's procedure ends); GOTO,
+    RETURN, and CALL at the terminal; F$EXTRACT's and F$ELEMENT's range
+    rules; F$TYPE of a non-name (ARGREQ); JOBTYPE (an integer); ACNT;
+    F$SEARCH without wildcards; F$CVTIME's OFYEAR fields (gone);
+    DIRECTORY's and TYPE's success statuses; a subprocess's verification;
+    SPAWN's status.
+- **Still chosen without VMS**: WAIT's status when it runs to its end
+  (left alone, as when Ctrl/Y interrupts it); RETURN at the terminal
+  (BADRET's status, marked as shown); ELSE before a block's THEN
+  (INVIFNEST, closing the block); a CALL of a plain label (as a missing
+  target); a delta's hundredths written with the digits given (one case
+  seen); F$FAO given the wrong kind of value (govax converts it; VMS
+  wrote garbage); SPAWN not repeating a status of govax's own, which has
+  no message in the message file; the subprocess's WAIT blocking the
+  machine.
+- **Status**: VMS's answers followed; the choices above unconfirmed.
+
 <!--
 Entry template:
 

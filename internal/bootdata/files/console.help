@@ -103,6 +103,8 @@
 //                          added SET [NO]CONTROL
 //              10/11/26    SPAWN's subprocess runs the console's DCL;
 //                          added LOGOUT and MCR
+//              10/11/26    Round 5 of the DCL probe: STOP keeps $STATUS,
+//                          Ctrl/Y's nested rules, RETURN's status; WAIT
 
 This is the help documentation for the govax VAX emulator.  Topic sections are
 marked by a "$" delimiter.  This is followed by as many tokens of the help
@@ -1947,15 +1949,16 @@ $KEY
 
                 In a command procedure, Ctrl/Y (and Ctrl/C, when no
                 program takes it) is DCL's instead.  With an ON
-                CONTROL_Y in the procedure, its command runs.  Without
-                one, a procedure another procedure ran ends, and the one
-                that ran it goes on.  At command level 1, the procedure
-                is interrupted and the prompt appears: commands typed
-                then run in the procedure's context (its symbols), and
-                CONTINUE resumes it (and its image, if one was running),
-                EXIT or STOP ends it, and a command that runs an image
-                or a procedure ends it and then runs.  Ctrl/Z there is
-                EXIT.  SET NOCONTROL=Y turns Ctrl/Y off.
+                CONTROL_Y in the procedure, its command runs.  With one
+                only in a procedure that ran it (directly or not), the
+                procedures inside that one end, and it goes on with its
+                next command.  With none at all, the procedure is
+                interrupted and the prompt appears: commands typed then
+                run in the procedure's context (its symbols), CONTINUE
+                resumes it (and its image, if one was running), EXIT or
+                STOP ends every procedure, and a command that runs an
+                image or a procedure ends them and then runs.  Ctrl/Z
+                there is EXIT.  SET NOCONTROL=Y turns Ctrl/Y off.
 
     Ctrl/Z      End of file.  On an empty line, the read waiting gets
                 the end of file, and govax echoes *Exit*.  Typed after
@@ -2168,8 +2171,7 @@ $STOP
 
     In a command procedure, or after CTRL/Y has interrupted one, STOP
     with no process ends every command procedure, returning to the
-    terminal (command level 0); the procedures' status is %SYSTEM-F-ABORT,
-    not shown again.  ON ERROR THEN STOP in a nested procedure therefore
+    terminal (command level 0); $STATUS is left as it was.  ON ERROR THEN STOP in a nested procedure therefore
     doesn't return to the procedure that ran it.  At the terminal, STOP
     with no process ends an image CTRL/C or CTRL/Y left stopped.
 
@@ -2287,6 +2289,19 @@ $LABE
     terminal a label is ignored (DCL-W-NOLBLS).  GOTO leaves $STATUS as
     it was.
 
+$WAIT
+
+    The WAIT command waits for a time: a delta time, [dddd-]hh:mm:ss.cc.
+    CTRL/Y or CTRL/C ends the wait.  WAIT leaves $STATUS alone.
+
+    Syntax:
+
+        WAIT delta-time
+
+    Example:
+
+        $ WAIT 00:00:05
+
 $GOSU
 $RETU
 
@@ -2301,9 +2316,10 @@ $RETU
         RETURN [status]
 
     GOSUBs may be nested 16 deep.  RETURN's status, an expression, becomes
-    $STATUS; without one, $STATUS is as the subroutine left it.  A label
-    that isn't found ends the procedure (DCL-W-USGOSUB), and a RETURN with
-    no GOSUB is DCL-W-BADRET.
+    $STATUS, and its message is shown if it's a failure, as EXIT's is;
+    without one, $STATUS is %X10000001.  A label that isn't found ends
+    the procedure (DCL-W-USGOSUB), and a RETURN with no GOSUB is
+    DCL-W-BADRET.
 
     Example:
 

@@ -1,0 +1,8 @@
+$ ! PROBE50U.COM - round 5's nested cases (testdata/dcl50/README.md),
+$ ! one per P1, run by PROBE50T.COM. Each case ends with EXIT (or ends
+$ ! the procedure some other way, which is what it asks about).
+$ GOTO EXITMSG
+$ EXITMSG:
+$ WRITE SYS$OUTPUT "EXITMSG: in the log"
+EXITMSG: in the log
+$ EXIT 44

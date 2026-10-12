@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 	"time"
@@ -739,4 +740,36 @@ func TestProbe50QOracle(t *testing.T) {
 	if want := strings.TrimSpace(strings.ReplaceAll(vmsLog, "\r", "")); strings.TrimSpace(log) != want {
 		t.Errorf("PROBE50P.LOG holds:\n%s\nwant:\n%s", log, want)
 	}
+}
+
+// probe50TUnanswered are round 5's lexical cases whose VMS answer isn't
+// one govax gives: F$FAO given a string for !UL and an integer for !AS,
+// for which VMS 7.3 wrote a number from an address and an access
+// violation (testdata/dcl50's T3; govax converts the value). Each case,
+// up to the next case's `X = "-"`, is left out of the comparison.
+var probe50TUnanswered = []string{`$ X = F$FAO("!UL", "12")`, `$ X = F$FAO("!AS", 12)`}
+
+// probe50TCompared is a round 5 log as the comparison sees it: as round
+// 4's (probe50FCompared: DIRECTORY's layout left out), and without the
+// probe50TUnanswered cases.
+func probe50TCompared(text string) string {
+	var (
+		out      []string
+		skipping bool
+	)
+
+	for _, line := range strings.Split(probe50FCompared(text), "\n") {
+		switch {
+		case slices.Contains(probe50TUnanswered, line):
+			skipping = true
+		case line == `$ X = "-"`:
+			skipping = false
+		}
+
+		if !skipping {
+			out = append(out, line)
+		}
+	}
+
+	return strings.Join(out, "\n")
 }

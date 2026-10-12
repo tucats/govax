@@ -91,13 +91,14 @@ func TestLexicalStrings(t *testing.T) {
 		{text: `F$EXTRACT(1, F$LOCATE(",", UIC) - 1, UIC)`, want: "WRITERS"},
 		{text: `F$EXTRACT(4, 100, "abcdef")`, want: "ef"},
 		{text: `F$EXTRACT(10, 2, "abc")`, want: ""},
-		{text: `F$EXTRACT(-1, 2, "abc")`, code: vmserrors.CLI_INVRANGE},
+		{text: `F$EXTRACT(-1, 2, "abc")`, want: ""},
+		{text: `F$EXTRACT(1, -1, "abc")`, want: "bc"},
 		{text: `F$ELEMENT(3, ",", PROT)`, want: " WORLD"},
 		{text: `F$ELEMENT(0, "/", "A/B/C")`, want: "A"},
 		{text: `F$ELEMENT(5, "/", "A/B/C")`, want: "/"},
 		{text: `F$ELEMENT(1, "/", "A//C")`, want: ""},
 		{text: `F$ELEMENT(0, "/", "")`, want: ""},
-		{text: `F$ELEMENT(0, "//", "A")`, code: vmserrors.CLI_IVVALU},
+		{text: `F$ELEMENT(0, "//", "A")`, code: vmserrors.CLI_STRTOOLNG},
 		{text: `F$ELEMENT(-1, "/", "A")`, code: vmserrors.CLI_INVRANGE},
 
 		// 15.7: bit fields, signed and unsigned, from the string's
@@ -119,7 +120,7 @@ func TestLexicalStrings(t *testing.T) {
 		{text: "F$TYPE(WORD)", want: "STRING"},
 		{text: "F$TYPE(NOSUCH)", want: ""},
 		{text: "F$TYPE(nu)", want: ""},
-		{text: `F$TYPE("NUM")`, code: vmserrors.CLI_IVSYMB},
+		{text: `F$TYPE("NUM")`, code: vmserrors.CLI_ARGREQ},
 
 		// 15.7.2's example: F$INTEGER of an expression's text.
 		{text: `F$INTEGER("9 + 7")`, integer: true, want: "0"},
@@ -239,7 +240,7 @@ func TestLexicalProcess(t *testing.T) {
 		{text: `F$GETJPI("", "UIC")`, want: env.IdentifierText(env.Process.UIC)},
 		{text: `F$GETJPI("", "PRIB")`, integer: true, want: fmt.Sprint(env.Process.BasePriority)},
 		{text: `F$GETJPI("", "MODE")`, want: "INTERACTIVE"},
-		{text: `F$GETJPI("", "JOBTYPE")`, want: "LOCAL"},
+		{text: `F$GETJPI("", "JOBTYPE")`, integer: true, want: "3"},
 		{text: `F$GETJPI("", "STATE")`, want: env.ProcessState(env)},
 		{text: `F$GETJPI("", "USERNAME")`, want: fmt.Sprintf("%-12s", env.Process.Username)},
 		{text: `F$GETJPI("", "PRCNAMX")`, code: vmserrors.CLI_IVKEYW},
@@ -356,7 +357,7 @@ func TestLexicalTime(t *testing.T) {
 		{text: `F$CVTIME(,,"WEEKDAY")`, want: "Friday"},
 		{text: `F$CVTIME(,"ABSOLUTE","MONTH")`, want: "OCT"},
 		{text: `F$CVTIME(,,"MONTH")`, want: "10"},
-		{text: `F$CVTIME(,,"DAYOFYEAR")`, want: "282"},
+		{text: `F$CVTIME(,,"DAYOFYEAR")`, code: vmserrors.CLI_IVKEYW},
 		{text: `F$CVTIME(,,"HOUR")`, want: "14"},
 		{text: `F$CVTIME(,,"HUNDREDTH")`, want: "12"},
 		{text: `F$CVTIME("TOMORROW",,"WEEKDAY")`, want: "Saturday"},
@@ -376,7 +377,9 @@ func TestLexicalTime(t *testing.T) {
 		{text: `F$CVTIME("NEXT")`, code: vmserrors.CLI_IVATIME},
 
 		// Delta times.
-		{text: `F$CVTIME("1-2:3:4.5","DELTA")`, want: "1 02:03:04.50"},
+		{text: `F$CVTIME("1-2:3:4.5","DELTA")`, want: "1 02:03:04.5"},
+		{text: `F$CVTIME("1-2:3:4.25","DELTA")`, want: "1 02:03:04.25"},
+		{text: `F$CVTIME("1 2:3:4","DELTA")`, code: vmserrors.CLI_IVDTIME},
 		{text: `F$CVTIME("2-","DELTA","DAY")`, want: "2"},
 		{text: `F$CVTIME("10:30","DELTA","TIME")`, want: "10:30:00.00"},
 		{text: `F$CVTIME("10:30","DELTA","MONTH")`, code: vmserrors.CLI_IVKEYW},

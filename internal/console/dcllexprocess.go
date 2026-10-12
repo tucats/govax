@@ -232,9 +232,10 @@ var jpiItems = map[string]jpiItem{
 	// "LEF", ...).
 	"STATE": func(env *corevms.Environment) dclValue { return dclString(env.ProcessState(env)) },
 
-	// MODE and JOBTYPE are keywords for $GETJPI's JPI$K_ codes.
-	"MODE":    jpiKeyword("JPI$_MODE", "INTERACTIVE", "BATCH", "NETWORK", "OTHER"),
-	"JOBTYPE": jpiKeyword("JPI$_JOBTYPE", "DETACHED", "NETWORK", "BATCH", "LOCAL", "DIALUP", "REMOTE"),
+	// MODE is a keyword for $GETJPI's JPI$K_ codes. (JOBTYPE is the
+	// code itself, an integer: VMS 7.3 gave 3 for a local terminal's,
+	// testdata/dcl50's round 5.)
+	"MODE": jpiKeyword("JPI$_MODE", "INTERACTIVE", "BATCH", "NETWORK", "OTHER"),
 }
 
 // The F$GETJPI keywords of each kind: each is the name of its $GETJPI
@@ -244,7 +245,7 @@ var (
 		"ASTACT", "ASTCNT", "ASTEN", "ASTLM", "AUTHPRI", "BIOLM", "BUFIO",
 		"BYTLM", "CPULIM", "CPUTIM", "CREPRC_FLAGS", "DFWSCNT", "DIOLM",
 		"DIRIO", "EFCS", "EFCU", "ENQCNT", "ENQLM", "FILLM", "GRP",
-		"JOBPRCCNT", "MEM", "PGFLQUOTA", "PRCCNT", "PRCLM", "PRI", "PRIB",
+		"JOBPRCCNT", "JOBTYPE", "MEM", "PGFLQUOTA", "PRCCNT", "PRCLM", "PRI", "PRIB",
 		"TMBU", "TQLM", "WSAUTH", "WSAUTHEXT", "WSEXTENT", "WSQUOTA",
 		"WSSIZE",
 	}

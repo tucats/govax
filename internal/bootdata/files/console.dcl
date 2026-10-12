@@ -232,21 +232,23 @@ grammar console
     ! ON condition THEN [$] command: what a command procedure does when a
     ! command fails with the condition's severity or worse, or on Ctrl/Y
     ! (docs/PHASE-50, subtask 10). CONTINUE does nothing, and goes on.
-    type on_conditions
-        keyword     warning/id=1
-        keyword     error/id=2
-        keyword     severe_error/id=3
-        keyword     control_y/id=4
-
+    ! The handler reads the condition (WARNING, ERROR, SEVERE_ERROR, or
+    ! CONTROL_Y), so that one it doesn't have is DCL's ONERR.
     verb on/id=1646
         parameter   condition/id=1647           -
-                    /type=on_conditions         -
+                    /type=$any                  -
                     /prompt="Condition"
         parameter   command/id=1648             -
                     /type=$rest_of_line         -
                     /prompt="Command"
 
     verb continue/id=1649
+
+    ! WAIT delta-time: waits, until Ctrl/Y or Ctrl/C (docs/PHASE-50).
+    verb wait/id=1673
+        parameter   delta/id=1674               -
+                    /type=$rest_of_line         -
+                    /prompt="Time"
 
     ! DEBUG starts a debugger session on the machine as it stands, with
     ! nothing running (docs/PHASE-42.md). It is how to look at memory and

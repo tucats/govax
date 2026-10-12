@@ -38,6 +38,17 @@ func LookupMessage(code uint32) (Message, bool) {
 	}
 
 	m, ok := Messages[code&messageKeyMask]
+	if !ok {
+		m, ok = observedMessages[code&messageKeyMask]
+	}
 
 	return m, ok
+}
+
+// observedMessages are messages the system message file govax's tables
+// were made from doesn't have, as VMS 7.3 showed them (F$MESSAGE's
+// text): CREATE's OPENOUT (testdata/dcl50's round 5). LookupMessage
+// finds them after Messages.
+var observedMessages = map[uint32]Message{
+	0x009110A0: {Facility: "CREATE", Ident: "OPENOUT", Text: "error opening !AS as output", FAOCount: 1},
 }

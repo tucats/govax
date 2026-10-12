@@ -313,11 +313,11 @@ func (e *dclExpression) lexicalArguments(f lexicalFunction) ([]lexicalArg, error
 }
 
 // symbolNameArgument reads an argument that names a symbol: a name, not
-// evaluated, returned uppercase. Anything else is CLI_IVSYMB
-// (unconfirmed against VMS).
+// evaluated, returned uppercase. Anything else is CLI_ARGREQ, as VMS 7.3
+// gave for F$TYPE("abc") (testdata/dcl50's round 5).
 func (e *dclExpression) symbolNameArgument() (string, error) {
 	if !isDCLSymbolStart(e.text[e.pos]) {
-		return "", vmserrors.New(vmserrors.CLI_IVSYMB)
+		return "", vmserrors.New(vmserrors.CLI_ARGREQ)
 	}
 
 	return strings.ToUpper(e.name()), nil

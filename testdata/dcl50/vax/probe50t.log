@@ -1,0 +1,654 @@
+$ !
+$ ! T1: statuses and ON (DEVIATIONS.md's "[Phase 50] Statuses and ON").
+$ M = "T1"
+$ SHOW SYMBOL M
+  M = "T1"
+$ @PROBE50U EXITOK
+$ ! PROBE50U.COM - round 5's nested cases (testdata/dcl50/README.md),
+$ ! one per P1, run by PROBE50T.COM. Each case ends with EXIT (or ends
+$ ! the procedure some other way, which is what it asks about).
+$ GOTO EXITOK
+$ EXITOK:
+$ X = 1
+$ EXIT
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X10030001"
+$ @PROBE50U ONGOTO
+$ ! PROBE50U.COM - round 5's nested cases (testdata/dcl50/README.md),
+$ ! one per P1, run by PROBE50T.COM. Each case ends with EXIT (or ends
+$ ! the procedure some other way, which is what it asks about).
+$ GOTO ONGOTO
+$ ONGOTO:
+$ ON ERROR THEN GOTO ONGOTO_L
+$ OPEN/READ F NOSUCH.DAT
+%DCL-E-OPENIN, error opening DUA1:[000000]NOSUCH.DAT; as input
+-RMS-E-FNF, file not found
+$ ONGOTO_L:
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X10018292"
+$ EXIT
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X10018292"
+$ @PROBE50U ONSUBST
+$ ! PROBE50U.COM - round 5's nested cases (testdata/dcl50/README.md),
+$ ! one per P1, run by PROBE50T.COM. Each case ends with EXIT (or ends
+$ ! the procedure some other way, which is what it asks about).
+$ GOTO ONSUBST
+$ ONSUBST:
+$ V = "first"
+$ ON WARNING THEN WRITE SYS$OUTPUT "ONSUBST: V is first"
+$ V = "second"
+$ FROBNICATE
+%DCL-W-IVVERB, unrecognized command verb - check validity and spelling
+ \FROBNICATE\
+ONSUBST: V is first
+$ EXIT
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X10010001"
+$ @PROBE50U ONSEV
+$ ! PROBE50U.COM - round 5's nested cases (testdata/dcl50/README.md),
+$ ! one per P1, run by PROBE50T.COM. Each case ends with EXIT (or ends
+$ ! the procedure some other way, which is what it asks about).
+$ GOTO ONSEV
+$ ONSEV:
+$ WRITE SYS$OUTPUT "ONSEV default: ", F$ENVIRONMENT("ON_SEVERITY")
+ONSEV default: ERROR
+$ ON WARNING THEN CONTINUE
+$ WRITE SYS$OUTPUT "ONSEV warning: ", F$ENVIRONMENT("ON_SEVERITY")
+ONSEV warning: WARNING
+$ ON SEVERE_ERROR THEN CONTINUE
+$ WRITE SYS$OUTPUT "ONSEV severe: ", F$ENVIRONMENT("ON_SEVERITY")
+ONSEV severe: SEVERE
+$ SET NOON
+$ ON CONTROL_Y THEN EXIT
+$ WRITE SYS$OUTPUT "ONSEV noon, control_y: ", F$ENVIRONMENT("ON_SEVERITY"), " ", F$ENVIRONMENT("ON_CONTROL_Y")
+ONSEV noon, control_y: NONE TRUE
+$ OPEN/READ F NOSUCH.DAT
+%DCL-E-OPENIN, error opening DUA1:[000000]NOSUCH.DAT; as input
+-RMS-E-FNF, file not found
+$ WRITE SYS$OUTPUT "ONSEV: still here after an error"
+ONSEV: still here after an error
+$ ON ERROR THEN CONTINUE
+$ WRITE SYS$OUTPUT "ONSEV after ON ERROR: ", F$ENVIRONMENT("ON_SEVERITY")
+ONSEV after ON ERROR: ERROR
+$ EXIT
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X10010001"
+$ @PROBE50U SKPDAT
+$ ! PROBE50U.COM - round 5's nested cases (testdata/dcl50/README.md),
+$ ! one per P1, run by PROBE50T.COM. Each case ends with EXIT (or ends
+$ ! the procedure some other way, which is what it asks about).
+$ GOTO SKPDAT
+$ SKPDAT:
+$ ON WARNING THEN GOTO SKPDAT_L
+$ DIRECTORY PROBE50U.COM
+
+Directory DUA1:[000000]
+
+PROBE50U.COM;1      
+
+Total of 1 file.
+%DCL-W-SKPDAT, image data (records not beginning with "$") ignored
+$ SKPDAT_L:
+$ WRITE SYS$OUTPUT "SKPDAT: action taken"
+SKPDAT: action taken
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00010001"
+$ EXIT
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X10010001"
+$ ON FOO THEN WRITE SYS$OUTPUT "foo"
+%DCL-W-ONERR, invalid ON condition - use WARNING, SEVERE, ERROR, or CONTROL_Y
+ \ FOO\
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X000380F8"
+$ @PROBE50U EXIT34
+$ ! PROBE50U.COM - round 5's nested cases (testdata/dcl50/README.md),
+$ ! one per P1, run by PROBE50T.COM. Each case ends with EXIT (or ends
+$ ! the procedure some other way, which is what it asks about).
+$ GOTO EXIT34
+$ EXIT34:
+$ EXIT 3 4
+%DCL-W-EXPSYN, invalid expression syntax - check operators and operands
+$ WRITE SYS$OUTPUT "EXIT34: still here"
+EXIT34: still here
+$ EXIT
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X10010001"
+$ @PROBE50U/OUTPUT=PROBE50N.LOG EXITMSG
+%SYSTEM-F-ABORT, abort
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X0000002C"
+$ TYPE PROBE50N.LOG
+$ ! PROBE50U.COM - round 5's nested cases (testdata/dcl50/README.md),
+$ ! one per P1, run by PROBE50T.COM. Each case ends with EXIT (or ends
+$ ! the procedure some other way, which is what it asks about).
+$ GOTO EXITMSG
+$ EXITMSG:
+$ WRITE SYS$OUTPUT "EXITMSG: in the log"
+EXITMSG: in the log
+$ EXIT 44
+$ DIRECTORY PROBE50T.COM
+
+Directory DUA1:[000000]
+
+PROBE50T.COM;1      
+
+Total of 1 file.
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ TYPE PROBE50E.COM
+$ ! PROBE50E.COM - PROBE50's procedure that exits with the status P1.
+$ EXIT 'P1'
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X10000001"
+$ X = -7 / 0
+$ SHOW SYMBOL X
+  X = -2147483648   Hex = 80000000  Octal = 20000000000
+$ X = "a"
+$ WRITE SYS$OUTPUT "unclosed a here"
+unclosed a here
+$ !
+$ ! T2: labels, IF blocks, GOSUB, and CALL (DEVIATIONS.md's "[Phase 50]
+$ ! Labels, IF blocks, GOSUB, and CALL").
+$ M = "T2"
+$ SHOW SYMBOL M
+  M = "T2"
+$ @PROBE50U FWDREC
+$ ! PROBE50U.COM - round 5's nested cases (testdata/dcl50/README.md),
+$ ! one per P1, run by PROBE50T.COM. Each case ends with EXIT (or ends
+$ ! the procedure some other way, which is what it asks about).
+$ GOTO FWDREC
+$ FWDREC:
+$ GOTO FWD_B
+$ FWD_B:
+$ GOTO FWD_A
+$ FWD_A: WRITE SYS$OUTPUT "FWDREC: first FWD_A"
+FWDREC: first FWD_A
+$ EXIT
+$ @PROBE50U THENEMPTY
+$ ! PROBE50U.COM - round 5's nested cases (testdata/dcl50/README.md),
+$ ! one per P1, run by PROBE50T.COM. Each case ends with EXIT (or ends
+$ ! the procedure some other way, which is what it asks about).
+$ GOTO THENEMPTY
+$ THENEMPTY:
+$ IF 1 THEN
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X10010001"
+$ WRITE SYS$OUTPUT "THENEMPTY: after"
+THENEMPTY: after
+$ EXIT
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X10010001"
+$ @PROBE50U NOTTHEN
+$ ! PROBE50U.COM - round 5's nested cases (testdata/dcl50/README.md),
+$ ! one per P1, run by PROBE50T.COM. Each case ends with EXIT (or ends
+$ ! the procedure some other way, which is what it asks about).
+$ GOTO NOTTHEN
+$ NOTTHEN:
+$ IF 1
+$ WRITE SYS$OUTPUT "NOTTHEN: the command after IF"
+$ SHOW SYMBOL $STATUS
+$ WRITE SYS$OUTPUT "NOTTHEN: after"
+$ ENDIF
+%DCL-E-INVIFNEST, invalid IF-THEN-ELSE nesting structure or data inconsistency
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X1003894A"
+$ @PROBE50U FLOWSTATUS
+$ ! PROBE50U.COM - round 5's nested cases (testdata/dcl50/README.md),
+$ ! one per P1, run by PROBE50T.COM. Each case ends with EXIT (or ends
+$ ! the procedure some other way, which is what it asks about).
+$ GOTO FLOWSTATUS
+%DCL-E-INVIFNEST, invalid IF-THEN-ELSE nesting structure or data inconsistency
+$ FLOWSTATUS:
+$ FROBNICATE
+%DCL-W-IVVERB, unrecognized command verb - check validity and spelling
+ \FROBNICATE\
+$ IF 1
+$ THEN
+$   SHOW SYMBOL $STATUS
+  $STATUS == "%X00038090"
+$ ELSE
+$ ENDIF
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00038090"
+$ FS_LABEL:
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00038090"
+$ GOSUB FS_SUB
+$ FS_SUB:
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00038090"
+$ RETURN
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X10000001"
+$ EXIT
+$ @PROBE50U RETURNN
+$ ! PROBE50U.COM - round 5's nested cases (testdata/dcl50/README.md),
+$ ! one per P1, run by PROBE50T.COM. Each case ends with EXIT (or ends
+$ ! the procedure some other way, which is what it asks about).
+$ GOTO RETURNN
+%DCL-E-INVIFNEST, invalid IF-THEN-ELSE nesting structure or data inconsistency
+$ RETURNN:
+$ ON WARNING THEN WRITE SYS$OUTPUT "RETURNN: on action"
+$ GOSUB RN_SUB
+$ RN_SUB:
+$ RETURN 44
+%SYSTEM-F-ABORT, abort
+RETURNN: on action
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00010001"
+$ WRITE SYS$OUTPUT "RETURNN: after"
+RETURNN: after
+$ EXIT
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X10010001"
+$ @PROBE50U GOSUBMISS
+$ ! PROBE50U.COM - round 5's nested cases (testdata/dcl50/README.md),
+$ ! one per P1, run by PROBE50T.COM. Each case ends with EXIT (or ends
+$ ! the procedure some other way, which is what it asks about).
+$ GOTO GOSUBMISS
+%DCL-E-INVIFNEST, invalid IF-THEN-ELSE nesting structure or data inconsistency
+$ GOSUBMISS:
+$ GOSUB NOSUCH_LABEL
+%DCL-W-USGOSUB, target of GOSUB not found - check spelling and presence of label
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X10038148"
+$ @PROBE50U CALLMISS
+$ ! PROBE50U.COM - round 5's nested cases (testdata/dcl50/README.md),
+$ ! one per P1, run by PROBE50T.COM. Each case ends with EXIT (or ends
+$ ! the procedure some other way, which is what it asks about).
+$ GOTO CALLMISS
+%DCL-E-INVIFNEST, invalid IF-THEN-ELSE nesting structure or data inconsistency
+$ CALLMISS:
+$ CALL NOSUCH_SUB
+%DCL-W-USCALL, CALL target NOSUCH_SUB either missing, misspelled, or inaccessible
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X10038148"
+$ @PROBE50U ABBREV
+$ ! PROBE50U.COM - round 5's nested cases (testdata/dcl50/README.md),
+$ ! one per P1, run by PROBE50T.COM. Each case ends with EXIT (or ends
+$ ! the procedure some other way, which is what it asks about).
+$ GOTO ABBREV
+%DCL-E-INVIFNEST, invalid IF-THEN-ELSE nesting structure or data inconsistency
+$ ABBREV:
+$ IF 0
+$ ELSE
+$   WRITE SYS$OUTPUT "ABBREV: else branch"
+ABBREV: else branch
+$ ENDI
+$ WRITE SYS$OUTPUT "ABBREV: after ENDI"
+ABBREV: after ENDI
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00010001"
+$ CALL AB_SUB
+$ AB_SUB: SUBROUTINE
+$ WRITE SYS$OUTPUT "ABBREV: in the subroutine"
+ABBREV: in the subroutine
+$ ENDS
+$ WRITE SYS$OUTPUT "ABBREV: after CALL"
+ABBREV: after CALL
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00010001"
+$ EXIT
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X10010001"
+$ !
+$ ! T3: lexical functions (DEVIATIONS.md's "[Phase 50] Lexical
+$ ! functions"): keyword abbreviations, ranges, F$TYPE, F$EDIT, F$FAO,
+$ ! F$ENVIRONMENT, F$GETJPI's formats, F$SEARCH, F$PARSE, F$CVTIME.
+$ M = "T3"
+$ SHOW SYMBOL M
+  M = "T3"
+$ X = "-"
+$ X = F$EDIT("  a   b  ", "COMP")
+%DCL-W-IVKEYW, unrecognized keyword - check validity and spelling
+ \COMP\
+$ SHOW SYMBOL X
+  X = "-"
+$ X = "-"
+$ X = F$EDIT("  Abc  ", "UPCASE,TRIM")
+$ SHOW SYMBOL X
+  X = "ABC"
+$ X = "-"
+$ X = F$EDIT("x ""a  b"" y", "COLLAPSE,UPCASE")
+$ SHOW SYMBOL X
+  X = "X"a  b"Y"
+$ X = "-"
+$ X = F$EDIT("abc ! comment", "UNCOMMENT")
+$ SHOW SYMBOL X
+  X = "abc "
+$ X = "-"
+$ X = F$EDIT("ABC", "LOWERCASE,UPCASE")
+$ SHOW SYMBOL X
+  X = "ABC"
+$ X = "-"
+$ X = F$EXTRACT(-1, 2, "abc")
+$ SHOW SYMBOL X
+  X = ""
+$ X = "-"
+$ X = F$EXTRACT(1, -1, "abc")
+$ SHOW SYMBOL X
+  X = "bc"
+$ X = "-"
+$ X = F$EXTRACT(5, 2, "abc")
+$ SHOW SYMBOL X
+  X = ""
+$ X = "-"
+$ X = F$ELEMENT(-1, ",", "a,b")
+%DCL-W-INVRANGE, field specification is out of bounds - check sign and size
+$ SHOW SYMBOL X
+  X = "-"
+$ X = "-"
+$ X = F$ELEMENT(5, ",", "a,b")
+$ SHOW SYMBOL X
+  X = ","
+$ X = "-"
+$ X = F$ELEMENT(0, ",,", "a,b")
+%DCL-E-STRTOOLNG, string argument is too long - shorten
+ \,,\
+$ SHOW SYMBOL X
+  X = "-"
+$ X = "-"
+$ X = F$LOCATE("", "abc")
+$ SHOW SYMBOL X
+  X = 0   Hex = 00000000  Octal = 00000000000
+$ X = "-"
+$ X = F$CVSI(0, 40, "abcdefgh")
+%DCL-W-INVRANGE, field specification is out of bounds - check sign and size
+$ SHOW SYMBOL X
+  X = "-"
+$ X = "-"
+$ X = F$CVSI(60, 8, "ab")
+%DCL-W-INVRANGE, field specification is out of bounds - check sign and size
+$ SHOW SYMBOL X
+  X = "-"
+$ X = "-"
+$ X = F$CVUI(4, 4, "A")
+$ SHOW SYMBOL X
+  X = 4   Hex = 00000004  Octal = 00000000004
+$ Y = " 12 "
+$ X = "-"
+$ X = F$TYPE(Y)
+$ SHOW SYMBOL X
+  X = "INTEGER"
+$ Y = "%X1F"
+$ X = "-"
+$ X = F$TYPE(Y)
+$ SHOW SYMBOL X
+  X = "INTEGER"
+$ Y = "+5"
+$ X = "-"
+$ X = F$TYPE(Y)
+$ SHOW SYMBOL X
+  X = "INTEGER"
+$ Y = "1 2"
+$ X = "-"
+$ X = F$TYPE(Y)
+$ SHOW SYMBOL X
+  X = "STRING"
+$ X = "-"
+$ X = F$TYPE("abc")
+%DCL-W-ARGREQ, missing argument - supply all required arguments
+$ SHOW SYMBOL X
+  X = "-"
+$ X = "-"
+$ X = F$FAO("!UL", "12")
+$ SHOW SYMBOL X
+  X = "2147404140"
+$ X = "-"
+$ X = F$FAO("!AS", 12)
+%SYSTEM-F-ACCVIO, access violation, reason mask=00, virtual address=00038248, PC=00110001, PSL=7FFEC931
+$ SHOW SYMBOL X
+  X = "-"
+$ X = "-"
+$ X = F$FAO("!8AS|!3ZL", "ab", 7)
+$ SHOW SYMBOL X
+  X = "ab      |007"
+$ X = "-"
+$ X = F$ENVIRONMENT("DEP")
+%DCL-W-IVKEYW, unrecognized keyword - check validity and spelling
+ \DEP\
+$ SHOW SYMBOL X
+  X = "-"
+$ X = "-"
+$ X = F$ENVIRONMENT("CONTROL")
+$ SHOW SYMBOL X
+  X = "T,Y"
+$ X = "-"
+$ X = F$ENVIRONMENT("NOCONTROL")
+$ SHOW SYMBOL X
+  X = ""
+$ X = "-"
+$ X = F$ENVIRONMENT("ON_SEVERITY")
+$ SHOW SYMBOL X
+  X = "NONE"
+$ X = "-"
+$ X = F$ENVIRONMENT("PROTECTION")
+$ SHOW SYMBOL X
+  X = "SYSTEM=RWED, OWNER=RWED, GROUP=RE, WORLD"
+$ X = "-"
+$ X = F$GETSYI("NODEN")
+%DCL-W-IVKEYW, unrecognized keyword - check validity and spelling
+ \NODEN\
+$ SHOW SYMBOL X
+  X = "-"
+$ X = "-"
+$ X = F$GETJPI("", "PRCN")
+%DCL-W-IVKEYW, unrecognized keyword - check validity and spelling
+ \PRCN\
+$ SHOW SYMBOL X
+  X = "-"
+$ X = "-"
+$ X = F$GETJPI("", "USERNAME")
+$ SHOW SYMBOL X
+  X = "SYSTEM      "
+$ X = "-"
+$ X = F$GETJPI("", "UIC")
+$ SHOW SYMBOL X
+  X = "[SYSTEM]"
+$ X = "-"
+$ X = F$USER()
+$ SHOW SYMBOL X
+  X = "[SYSTEM]"
+$ X = "-"
+$ X = F$GETJPI("", "MODE")
+$ SHOW SYMBOL X
+  X = "INTERACTIVE"
+$ X = "-"
+$ X = F$GETJPI("", "JOBTYPE")
+$ SHOW SYMBOL X
+  X = 3   Hex = 00000003  Octal = 00000000003
+$ X = "-"
+$ X = F$GETJPI("", "STATE")
+$ SHOW SYMBOL X
+  X = "CUR"
+$ X = "-"
+$ X = F$GETJPI("", "CURPRIV")
+$ SHOW SYMBOL X
+  X = "CMKRNL,CMEXEC,SYSNAM,GRPNAM,ALLSPOOL,DETACH,DIAGNOSE,LOG_IO,GROUP,ACNT,PRMCEB,PRMMBX,PSWAPM,ALTPRI,SETPRV,TMPMBX,WORLD,MOUNT,OPER,EXQUOTA,NETMBX,VOLPRO,PHY_IO,BUGCHK,PRMGBL,SYSGBL,PFNMAP,SHMEM,SYSPRV,BYPASS,SYSLCK,SHARE,UPGRADE,DOWNGRADE,GRPPRV,READALL,IMPORT,AUDIT,SECURITY"
+$ X = "-"
+$ X = F$SEARCH("PROBE50T.COM")
+$ SHOW SYMBOL X
+  X = "DUA1:[000000]PROBE50T.COM;1"
+$ X = "-"
+$ X = F$SEARCH("PROBE50T.COM")
+$ SHOW SYMBOL X
+  X = "DUA1:[000000]PROBE50T.COM;1"
+$ X = "-"
+$ X = F$SEARCH("PROBE50T.COM")
+$ SHOW SYMBOL X
+  X = "DUA1:[000000]PROBE50T.COM;1"
+$ X = "-"
+$ X = F$SEARCH("PROBE50T")
+$ SHOW SYMBOL X
+  X = ""
+$ X = "-"
+$ X = F$PARSE("NOSUCH:[X]Y.Z")
+$ SHOW SYMBOL X
+  X = ""
+$ X = "-"
+$ X = F$PARSE("[.NOSUCHDIR]Y.Z")
+$ SHOW SYMBOL X
+  X = ""
+$ X = "-"
+$ X = F$PARSE("[.NOSUCHDIR]Y.Z", , , "NAME", "SYNTAX_ONLY")
+$ SHOW SYMBOL X
+  X = "Y"
+$ X = "-"
+$ X = F$PARSE("A.B", , , "NAM")
+%DCL-W-IVKEYW, unrecognized keyword - check validity and spelling
+ \NAM\
+$ SHOW SYMBOL X
+  X = "-"
+$ X = "-"
+$ X = F$PARSE("A.B;3", "C.D", , "VERSION")
+$ SHOW SYMBOL X
+  X = ";3"
+$ X = "-"
+$ X = F$MESSAGE(%X109110A2)
+$ SHOW SYMBOL X
+  X = "%CREATE-E-OPENOUT, error opening !AS as output"
+$ X = "-"
+$ X = F$MESSAGE(%X00000002)
+$ SHOW SYMBOL X
+  X = "%NONAME-E-NOMSG, Message number 00000002"
+$ X = "-"
+$ X = F$CVTIME("9-OCT-2026 14:00", "COMPARISON")
+$ SHOW SYMBOL X
+  X = "2026-10-09 14:00:00.00"
+$ X = "-"
+$ X = F$CVTIME("9-OCT-2026 14:00", "ABSOLUTE")
+$ SHOW SYMBOL X
+  X = "9-OCT-2026 14:00:00.00"
+$ X = "-"
+$ X = F$CVTIME("9-OCT-2026", "ABSOLUTE")
+$ SHOW SYMBOL X
+  X = "9-OCT-2026 00:00:00.00"
+$ X = "-"
+$ X = F$CVTIME("9-OCT-2026 14:00", , "DAYOFYEAR")
+%DCL-W-IVKEYW, unrecognized keyword - check validity and spelling
+ \DAYOFYEAR\
+$ SHOW SYMBOL X
+  X = "-"
+$ X = "-"
+$ X = F$CVTIME("9-OCT-2026 14:00", "ABSOLUTE", "DAYOFYEAR")
+%DCL-W-IVKEYW, unrecognized keyword - check validity and spelling
+ \DAYOFYEAR\
+$ SHOW SYMBOL X
+  X = "-"
+$ X = "-"
+$ X = F$CVTIME("9-OCT-2026 14:00", "ABSOLUTE", "WEEKDAY")
+$ SHOW SYMBOL X
+  X = "Friday"
+$ X = "-"
+$ X = F$CVTIME("9-OCT-2026 14:00", "ABSOLUTE", "DATE")
+$ SHOW SYMBOL X
+  X = "9-OCT-2026"
+$ X = "-"
+$ X = F$CVTIME("1-OCT-2026 14:00", "ABSOLUTE", "DATE")
+$ SHOW SYMBOL X
+  X = "1-OCT-2026"
+$ X = "-"
+$ X = F$CVTIME("9-OCT-2026 14:00", "COMPARISON", "MONTH")
+$ SHOW SYMBOL X
+  X = "10"
+$ X = "-"
+$ X = F$CVTIME("9-OCT-2026 14:00", "ABSOLUTE", "MONTH")
+$ SHOW SYMBOL X
+  X = "OCT"
+$ X = "-"
+$ X = F$CVTIME("1-02:03:04.5", "DELTA")
+$ SHOW SYMBOL X
+  X = "1 02:03:04.5"
+$ X = "-"
+$ X = F$CVTIME("1 02:03:04.5", "DELTA")
+%DCL-W-IVDTIME, invalid delta time - use DDDD-HH:MM:SS.CC format
+ \1 02:03:04.5\
+$ SHOW SYMBOL X
+  X = "-"
+$ X = "-"
+$ X = F$CVTIME("1-02:03:04.5", "DELTA", "HOUR")
+$ SHOW SYMBOL X
+  X = "02"
+$ X = "-"
+$ X = F$CVTIME("9-OCT-2026 14:00+1-02:00", "ABSOLUTE")
+$ SHOW SYMBOL X
+  X = "10-OCT-2026 16:00:00.00"
+$ X = "-"
+$ X = F$CVTIME("9-OCT-2026 14:00-0-02:00", "ABSOLUTE")
+$ SHOW SYMBOL X
+  X = "9-OCT-2026 12:00:00.00"
+$ X = "-"
+$ X = F$CVTIME("9-OCT-2026 14:00", "ABS")
+%DCL-W-IVKEYW, unrecognized keyword - check validity and spelling
+ \ABS\
+$ SHOW SYMBOL X
+  X = "-"
+$ X = "-"
+$ X = F$CVTIME("9-OCT-2026 14:00", , "WEEK")
+%DCL-W-IVKEYW, unrecognized keyword - check validity and spelling
+ \WEEK\
+$ SHOW SYMBOL X
+  X = "-"
+$ X = "-"
+$ X = F$CVTIME("9-OCT-2026:14:30:15.25", "ABSOLUTE")
+$ SHOW SYMBOL X
+  X = "9-OCT-2026 14:30:15.25"
+$ !
+$ ! T5: a subprocess's DCL (subtask 19): SPAWN of a command, STOP in a
+$ ! subprocess's procedure, and EXIT n from one: what each prints, and
+$ ! $STATUS after the SPAWN.
+$ M = "T5"
+$ SHOW SYMBOL M
+  M = "T5"
+$ SPAWN WRITE SYS$OUTPUT "T5 depth ", F$ENVIRONMENT("DEPTH")
+%DCL-S-SPAWNED, process SYSTEM_1 spawned
+%DCL-S-ATTACHED, terminal now attached to process SYSTEM_1
+T5 depth 0
+%DCL-S-RETURNED, control returned to process SYSTEM
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00010001"
+$ SPAWN @PROBE50U SUBSTOP
+%DCL-S-SPAWNED, process SYSTEM_1 spawned
+%DCL-S-ATTACHED, terminal now attached to process SYSTEM_1
+$ ! PROBE50U.COM - round 5's nested cases (testdata/dcl50/README.md),
+$ ! one per P1, run by PROBE50T.COM. Each case ends with EXIT (or ends
+$ ! the procedure some other way, which is what it asks about).
+$ GOTO SUBSTOP
+%DCL-E-INVIFNEST, invalid IF-THEN-ELSE nesting structure or data inconsistency
+$ SUBSTOP:
+$ WRITE SYS$OUTPUT "SUBSTOP: before"
+SUBSTOP: before
+$ STOP
+%DCL-S-RETURNED, control returned to process SYSTEM
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00010001"
+$ SPAWN @PROBE50U SUBEXIT
+%DCL-S-SPAWNED, process SYSTEM_1 spawned
+%DCL-S-ATTACHED, terminal now attached to process SYSTEM_1
+$ ! PROBE50U.COM - round 5's nested cases (testdata/dcl50/README.md),
+$ ! one per P1, run by PROBE50T.COM. Each case ends with EXIT (or ends
+$ ! the procedure some other way, which is what it asks about).
+$ GOTO SUBEXIT
+%DCL-E-INVIFNEST, invalid IF-THEN-ELSE nesting structure or data inconsistency
+$ SUBEXIT:
+$ WRITE SYS$OUTPUT "SUBEXIT: depth ", F$ENVIRONMENT("DEPTH")
+SUBEXIT: depth 1
+$ EXIT 3
+%DCL-S-RETURNED, control returned to process SYSTEM
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00000003"
+$ SPAWN FROBNICATE
+%DCL-S-SPAWNED, process SYSTEM_1 spawned
+%DCL-S-ATTACHED, terminal now attached to process SYSTEM_1
+%DCL-W-IVVERB, unrecognized command verb - check validity and spelling
+ \FROBNICATE\
+%DCL-S-RETURNED, control returned to process SYSTEM
+%DCL-W-IVVERB, unrecognized command verb - check validity and spelling
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00038090"
+$ M = "END"
+$ SHOW SYMBOL M
+  M = "END"
+$ EXIT

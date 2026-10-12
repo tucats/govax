@@ -7,7 +7,6 @@ import (
 
 	"github.com/tucats/govax/internal/console/dcl"
 	"github.com/tucats/govax/internal/cpu"
-	"github.com/tucats/govax/internal/vmsdef"
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
@@ -44,10 +43,6 @@ import (
 // Ctrl/C"). At the terminal, outside a procedure, the keys keep govax's
 // meanings (cmd/govax/attention.go): Ctrl/C interrupts, Ctrl/Y ends
 // govax.
-
-// ssControlY is SS$_CONTROLY, the status of a procedure Ctrl/Y ended;
-// one STOP ended has ssAbort, SS$_ABORT (both unconfirmed against VMS).
-var ssControlY = vmsdef.Symbols["SS$_CONTROLY"]
 
 // errLeaveControlY is what a command typed at the Ctrl/Y level returns
 // instead of running when it would run an image or a command procedure:
@@ -95,8 +90,8 @@ func (c *Console) dclTakesAttention(key byte) bool {
 // typed while a program runs is offered first to the running process,
 // whose Ctrl/C or Ctrl/Y AST may take it (docs/PHASE-26.md, subtask 27).
 // Otherwise, with SET NOCONTROL=Y in effect, the key is ignored; in a
-// command procedure, it is DCL's Ctrl/Y: at command level 1 with no ON
-// CONTROL_Y, the Ctrl/Y level is read now, with the image paused, and
+// command procedure, it is DCL's Ctrl/Y: with no ON CONTROL_Y at any
+// level, the Ctrl/Y level is read now, with the image paused, and
 // CONTINUE lets it go on; anything else stops the image, and the
 // procedure's loop takes the action when the command has returned
 // (takeControlY).
@@ -118,7 +113,7 @@ func (c *Console) HandleAttention(key byte) bool {
 	c.forgetAttention()
 
 	level := c.currentLevel()
-	if level.on.controlY == "" && len(c.levels) == 1 && c.controlYLevel(level) {
+	if c.controlYHandler() == nil && c.controlYLevel(level) {
 		return true
 	}
 
@@ -159,23 +154,41 @@ func (c *Console) takeControlY() bool {
 	return true
 }
 
+// controlYHandler returns the innermost command level with an ON
+// CONTROL_Y, nil for none.
+func (c *Console) controlYHandler() *commandLevel {
+	for i := len(c.levels) - 1; i >= 0; i-- {
+		if c.levels[i].on.controlY != "" {
+			return c.levels[i]
+		}
+	}
+
+	return nil
+}
+
 // controlYAction is what a Ctrl/Y does to level, the innermost command
-// level, once its command has returned: run its ON CONTROL_Y command
-// (next), end it (stop, with exit), or read the Ctrl/Y level. An image
-// the Ctrl/Y stopped is run down first, as one forced to exit.
+// level, once its command has returned, as VMS 7.3 did it
+// (testdata/dcl50's round 5): with an ON CONTROL_Y of its own, its
+// command runs (next); with one at a level outside it, the levels inside
+// that one end (stop, with $STATUS marked as shown), and that level goes
+// on at the line after its @ or CALL, its own action not taken (the
+// User's Manual's Figure 13-3); with none at any level, DCL reads the
+// Ctrl/Y level, whatever the depth. An image the Ctrl/Y stopped is run
+// down first, as one forced to exit.
 func (c *Console) controlYAction(level *commandLevel) (exit procedureExit, stop bool, next func() error) {
-	switch {
-	case level.on.controlY != "":
+	switch handler := c.controlYHandler(); {
+	case handler == level:
 		c.runDownAbandonedImage()
 
 		command := level.on.controlY
 
 		return procedureExit{}, false, func() error { return level.dispatch(command) }
 
-	case len(c.levels) > 1:
+	case handler != nil:
 		c.runDownAbandonedImage()
+		c.controlYUnwind = handler
 
-		return procedureExit{status: ssControlY}, true, nil
+		return c.unwindExit(), true, nil
 	}
 
 	c.controlYLevel(level)
@@ -183,12 +196,20 @@ func (c *Console) controlYAction(level *commandLevel) (exit procedureExit, stop 
 	return procedureExit{}, false, nil
 }
 
+// unwindExit is how a level that a Ctrl/Y unwinds ends: with $STATUS,
+// marked as shown (VMS 7.3 gave %X10010001 after a WRITE's
+// %X00010001).
+func (c *Console) unwindExit() procedureExit {
+	return procedureExit{status: c.status | stsInhibitMsg, cause: c.statusErr}
+}
+
 // controlYLevel reads commands from the terminal at the Ctrl/Y level,
 // for level, the procedure Ctrl/Y interrupted, and reports whether the
 // procedure goes on (CONTINUE). The commands are read in the
 // procedure's context (its symbols; 13.11.1's note), with the
-// terminal's IF blocks. EXIT and STOP end the procedure, as does a
-// command that would run an image or a procedure, which then runs at
+// terminal's IF blocks. EXIT and STOP end every procedure ("both the
+// EXIT and STOP command return you to the DCL level", 13.7.1), as does
+// a command that would run an image or a procedure, which then runs at
 // level 0 (Console.afterStop). Ctrl/Y typed at the prompt gives a new
 // prompt; Ctrl/Z, or the end of the input, is EXIT.
 func (c *Console) controlYLevel(level *commandLevel) bool {
@@ -214,7 +235,7 @@ func (c *Console) controlYLevel(level *commandLevel) bool {
 		switch {
 		case errors.Is(err, errLeaveControlY):
 			c.afterStop = func() error { return level.dispatch(line) }
-			c.stopProcedures()
+			c.stopProcedures(procedureExit{status: c.status, cause: c.statusErr})
 			c.runDownAbandonedImage()
 
 			return false
@@ -226,7 +247,12 @@ func (c *Console) controlYLevel(level *commandLevel) bool {
 		switch {
 		case prompt.resume:
 			return true
-		case level.exiting || c.stopping:
+		case level.exiting && !c.stopping:
+			c.stopProcedures(level.exit)
+			c.runDownAbandonedImage()
+
+			return false
+		case c.stopping:
 			c.runDownAbandonedImage()
 
 			return false
@@ -261,12 +287,14 @@ func (c *Console) continueCommand() error {
 }
 
 // stopProcedures makes every command level end (STOP): each level's loop
-// ends after its line, and the levels outside it after theirs, with
-// SS$_ABORT, its message not shown. runLevel turns stopping off when the
-// last level has gone.
-func (c *Console) stopProcedures() {
+// ends after its line, and the levels outside it after theirs, each with
+// exit (for STOP, $STATUS as it is: VMS 7.3 left it unchanged,
+// testdata/dcl50's round 5). runLevel turns stopping off when the last
+// level has gone.
+func (c *Console) stopProcedures(exit procedureExit) {
 	if len(c.levels) > 0 {
 		c.stopping = true
+		c.stopExit = exit
 	}
 }
 
@@ -285,13 +313,15 @@ func (d *Dispatcher) stopCommand(id int64, r *dcl.Result) error {
 		return c.StopProcess(name, pid)
 	}
 
+	c.keepStatus()
+
 	if len(c.levels) == 0 {
 		c.runDownAbandonedImage()
 
 		return nil
 	}
 
-	c.stopProcedures()
+	c.stopProcedures(procedureExit{status: c.status, cause: c.statusErr})
 
 	return nil
 }

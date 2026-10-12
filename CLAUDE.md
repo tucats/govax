@@ -77,7 +77,10 @@ never had.
   3 (`probe50i.com`, `vax/probe50i.log`, `TestProbe50IOracle`) SYS$INPUT,
   DECK, and EOD. Round 4 (`probe50f.com`, `vax/probe50f.log`,
   `TestProbe50FOracle`; the interactive `probe50q.com`,
-  `vax/probe50q.log`, `TestProbe50QOracle`) is DCL's file I/O.
+  `vax/probe50q.log`, `TestProbe50QOracle`) is DCL's file I/O. Round 5
+  (`probe50t.com`, `vax/probe50t.log`, `TestProbe50TOracle`; the
+  interactive `probe50y.com`, `vax/probe50y.log`) is statuses, flow, the
+  lexical functions, subprocesses, STOP, and Ctrl/Y.
 - `testdata/probe49/` — Phase 49's VMS probe in three rounds (`probe6`,
   `probe6b`, `probe6c`; README.md has each round's answers), run by
   `TestProbe6*`; `testdata/rms49/` and `testdata/sec49/` are the phase's

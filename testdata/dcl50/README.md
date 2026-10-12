@@ -481,3 +481,60 @@ step says to type commands, they are typed at the prompt Ctrl/Y gives.
 `probe50x.mar`.) Then run `copyout.cmd`, which copies PROBE50T.LOG to
 `vax/probe50t.log` and PROBE50N.LOG to `vax/probe50n.log`.
 
+## What VMS answered in round 5 (2026-10-11)
+
+`TestProbe50TOracle` (`internal/console/probe50t_test.go`) runs
+`probe50t.com` on a booted machine, with /OUTPUT, on DUA1 of a node
+called SIMVAX, with Ctrl/T enabled as SYSTEM's login had it, and
+compares its log with `vax/probe50t.log` section by section; every
+section matches, but for DIRECTORY's layout and two F$FAO cases where
+VMS's answer was garbage (a number from an address, an access
+violation). The interactive part, `vax/probe50y.log`, was run by hand;
+its answers are in govax's tests (`dclcontroly_test.go`,
+`controlyimage_test.go`). The OPCOM message in it is the VAX's own. The
+answers that changed govax (DEVIATIONS.md's "[Phase 50] Round 5 of the
+probe"):
+
+- **T1:** EXIT with no status sets bit 28 after a success too
+  (%X10030001); ON's command is substituted when ON is read; SKPDAT
+  takes ON WARNING's action; `ON FOO` is `%DCL-W-ONERR` with ` \ FOO\`;
+  `EXIT 3 4` is EXPSYN and the procedure goes on; EXIT 44's message goes
+  to the caller's output; DIRECTORY ends with %X00000001 and TYPE with
+  %X10000001; `-7 / 0` is -2147483648; `''X` in quotes needs no closing
+  apostrophe.
+- **T2:** a forward search records the labels it passes; `IF 1 THEN`
+  alone does nothing; after a block's IF, commands are passed over
+  silently until THEN, and an ENDIF before it is `%DCL-E-INVIFNEST`
+  (an error); a search that passes such a block shows INVIFNEST and goes
+  on; THEN, ELSE, ENDIF, labels, and GOSUB leave `$STATUS`, and RETURN
+  sets %X10000001; `RETURN 44` shows its message and takes the ON
+  action; a missing GOSUB or CALL target shows USGOSUB or USCALL and
+  ends the procedure with USGOTO's status (%X10038148); ENDI and ENDS
+  work.
+- **T3:** keywords aren't abbreviated (COMP, DEP, NODEN, PRCN, NAM,
+  ABS); F$EXTRACT with a negative offset is "", with a negative length
+  the rest; F$ELEMENT's long delimiter is `%DCL-E-STRTOOLNG`; F$TYPE of a
+  string is ARGREQ; JOBTYPE is 3; the privilege is ACNT; F$SEARCH
+  without wildcards finds the file every time, as `DUA1:[000000]...`;
+  F$MESSAGE knows CREATE's OPENOUT; F$CVTIME has no DAYOFYEAR, a delta
+  `1-02:03:04.5` is `1 02:03:04.5`, and a bad one is IVDTIME with the
+  time as its segment.
+- **T5:** a spawned subprocess has its parent's SET VERIFY; SPAWN's
+  `$STATUS` is the subprocess's final status, and a failure's message is
+  shown again (`%DCL-W-IVVERB`); STOP in a spawned procedure ends the
+  process with `$STATUS` as it was.
+- **Y1 to Y16:** STOP leaves `$STATUS`; Ctrl/Y's prompt reads commands
+  in the procedure's context (its symbols, DEPTH 1); CONTINUE resumes
+  (an image too); an image command at the prompt ends the procedure
+  (CONTINUE after it does nothing); Ctrl/Y at the prompt gives a new
+  one; ON CONTROL_Y stays in effect; with ON CONTROL_Y only in the
+  caller, the nested procedure ends with `$STATUS` marked as shown and
+  the caller goes on (its action not taken); with none anywhere, the
+  prompt comes at any depth (Y11); SET NOCONTROL=Y cancels ON CONTROL_Y,
+  and Ctrl/Y only echoes; Ctrl/C acts as Ctrl/Y; at the terminal a label
+  is NOLBLS (`\L:\`), GOTO is silent (%X10038148), GOSUB INVGOSUB,
+  RETURN silent, CALL `%DCL-E-INVCALL`.
+
+Still open: what WAIT leaves in `$STATUS` when it runs to its end;
+RETURN's status at the terminal; ELSE before a block's THEN; and a CALL
+of a plain label.

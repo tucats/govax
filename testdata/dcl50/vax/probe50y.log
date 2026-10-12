@@ -1,0 +1,454 @@
+
+$ ! ============= START OF LOG ====================
+$ @PROBE50Y STOP
+$ ! PROBE50Y.COM - round 5's interactive part: STOP and Ctrl/Y in command
+$ ! procedures (testdata/dcl50/README.md, "Round 5"). Run each case at the
+$ ! terminal, WITHOUT /OUTPUT, from SYSTEM, with the exchange volume as
+$ ! the default directory, as the README lists them:
+$ !
+$ !     @PROBE50Y case
+$ !     SHOW SYMBOL $STATUS
+$ !
+$ ! and do what the comment shown before each wait asks for. Keep the
+$ ! whole session for vax/probe50y.log.
+$ SET VERIFY
+$ X = "y-level"
+$ IF F$SEARCH("PROBE50X.EXE") .NES. "" THEN GOTO STOP
+$ STOP:
+$ ON WARNING THEN WRITE SYS$OUTPUT "Y1: outer action"
+$ @PROBE50Z STOP
+$ ! PROBE50Z.COM - round 5's nested procedure for PROBE50Y.COM, one case
+$ ! per P1 (testdata/dcl50/README.md, "Round 5").
+$ GOTO STOP
+$ STOP:
+$ WRITE SYS$OUTPUT "Y1: inner"
+Y1: inner
+$ STOP
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00010001"
+$ WRITE SYS$OUTPUT F$ENVIRONMENT("DEPTH")
+0
+$ @PROBE50Y ONSTOP
+$ ! PROBE50Y.COM - round 5's interactive part: STOP and Ctrl/Y in command
+$ ! procedures (testdata/dcl50/README.md, "Round 5"). Run each case at the
+$ ! terminal, WITHOUT /OUTPUT, from SYSTEM, with the exchange volume as
+$ ! the default directory, as the README lists them:
+$ !
+$ !     @PROBE50Y case
+$ !     SHOW SYMBOL $STATUS
+$ !
+$ ! and do what the comment shown before each wait asks for. Keep the
+$ ! whole session for vax/probe50y.log.
+$ SET VERIFY
+$ X = "y-level"
+$ IF F$SEARCH("PROBE50X.EXE") .NES. "" THEN GOTO ONSTOP
+$ ONSTOP:
+$ @PROBE50Z ONSTOP
+$ ! PROBE50Z.COM - round 5's nested procedure for PROBE50Y.COM, one case
+$ ! per P1 (testdata/dcl50/README.md, "Round 5").
+$ GOTO ONSTOP
+$ ONSTOP:
+$ ON ERROR THEN STOP
+$ OPEN/READ F NOSUCH.DAT
+%DCL-E-OPENIN, error opening DUA1:[000000]NOSUCH.DAT; as input
+-RMS-E-FNF, file not found
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X10018292"
+$ WRITE SYS$OUTPUT F$ENVIRONMENT("DEPTH")
+0
+$ @PROBE50Y WAIT  
+$ ! PROBE50Y.COM - round 5's interactive part: STOP and Ctrl/Y in command
+$ ! procedures (testdata/dcl50/README.md, "Round 5"). Run each case at the
+$ ! terminal, WITHOUT /OUTPUT, from SYSTEM, with the exchange volume as
+$ ! the default directory, as the README lists them:
+$ !
+$ !     @PROBE50Y case
+$ !     SHOW SYMBOL $STATUS
+$ !
+$ ! and do what the comment shown before each wait asks for. Keep the
+$ ! whole session for vax/probe50y.log.
+$ SET VERIFY
+$ X = "y-level"
+$ IF F$SEARCH("PROBE50X.EXE") .NES. "" THEN GOTO WAIT
+$ WAIT:
+$ WRITE SYS$OUTPUT "Press Ctrl/Y now, then type what the README says"
+Press Ctrl/Y now, then type what the README says
+$ WAIT 00:00:20
+ Interrupt 
+
+$ SHOW SYMBOL X      
+  X = "y-level"
+$ WRITE SYS$OUTPUT F$ENVIRONMENT("DEPTH") 
+1
+$ X = "changed"
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00030001"
+$ continue
+$ WRITE SYS$OUTPUT "after the wait: X is changed, $STATUS %X00030001"
+after the wait: X is changed, $STATUS %X00030001
+$ EXIT
+$ @PROBE50Y WAIT
+ Interrupt 
+
+$ exit
+$ @PROBE50Y WAIT
+$ ! PROBE50Y.COM - round 5's interactive part: STOP and Ctrl/Y in command
+$ ! procedures (testdata/dcl50/README.md, "Round 5"). Run each case at the
+$ ! terminal, WITHOUT /OUTPUT, from SYSTEM, with the exchange volume as
+$ ! the default directory, as the README lists them:
+$ !
+$ !     @PROBE50Y case
+$ !     SHOW SYMBOL $STATUS
+$ !
+$ ! and do what the comment shown before each wait asks for. Keep the
+$ ! whole session for vax/probe50y.log.
+$ SET VERIFY
+$ X = "y-level"
+$ IF F$SEARCH("PROBE50X.EXE") .NES. "" THEN GOTO WAIT
+$ WAIT:
+$ WRITE SYS$OUTPUT "Press Ctrl/Y now, then type what the README says"
+Press Ctrl/Y now, then type what the README says
+$ WAIT 00:00:20
+ Interrupt 
+
+$ stop
+$ @PROBE50Y WAIT
+$ ! PROBE50Y.COM - round 5's interactive part: STOP and Ctrl/Y in command
+$ ! procedures (testdata/dcl50/README.md, "Round 5"). Run each case at the
+$ ! terminal, WITHOUT /OUTPUT, from SYSTEM, with the exchange volume as
+$ ! the default directory, as the README lists them:
+$ !
+$ !     @PROBE50Y case
+$ !     SHOW SYMBOL $STATUS
+$ !
+$ ! and do what the comment shown before each wait asks for. Keep the
+$ ! whole session for vax/probe50y.log.
+$ SET VERIFY
+$ X = "y-level"
+$ IF F$SEARCH("PROBE50X.EXE") .NES. "" THEN GOTO WAIT
+$ WAIT:
+$ WRITE SYS$OUTPUT "Press Ctrl/Y now, then type what the README says"
+Press Ctrl/Y now, then type what the README says
+$ WAIT 00:00:20
+ Interrupt 
+
+$ DIRECTORY PROBE50Y.COM
+
+Directory DUA1:[000000]
+
+PROBE50Y.COM;1      
+
+Total of 1 file.
+$ continue
+$ @PROBE50Y WAIT
+$ ! PROBE50Y.COM - round 5's interactive part: STOP and Ctrl/Y in command
+$ ! procedures (testdata/dcl50/README.md, "Round 5"). Run each case at the
+$ ! terminal, WITHOUT /OUTPUT, from SYSTEM, with the exchange volume as
+$ ! the default directory, as the README lists them:
+$ !
+$ !     @PROBE50Y case
+$ !     SHOW SYMBOL $STATUS
+$ !
+$ ! and do what the comment shown before each wait asks for. Keep the
+$ ! whole session for vax/probe50y.log.
+$ SET VERIFY
+$ X = "y-level"
+$ IF F$SEARCH("PROBE50X.EXE") .NES. "" THEN GOTO WAIT
+$ WAIT:
+$ WRITE SYS$OUTPUT "Press Ctrl/Y now, then type what the README says"
+Press Ctrl/Y now, then type what the README says
+$ WAIT 00:00:20
+ Interrupt 
+
+$ 
+ Interrupt 
+
+$ continue
+$ WRITE SYS$OUTPUT "after the wait: X is y-level, $STATUS %X00010001"
+after the wait: X is y-level, $STATUS %X00010001
+$ EXIT
+$ @PROBE50Y ONGOTO
+$ ! PROBE50Y.COM - round 5's interactive part: STOP and Ctrl/Y in command
+$ ! procedures (testdata/dcl50/README.md, "Round 5"). Run each case at the
+$ ! terminal, WITHOUT /OUTPUT, from SYSTEM, with the exchange volume as
+$ ! the default directory, as the README lists them:
+$ !
+$ !     @PROBE50Y case
+$ !     SHOW SYMBOL $STATUS
+$ !
+$ ! and do what the comment shown before each wait asks for. Keep the
+$ ! whole session for vax/probe50y.log.
+$ SET VERIFY
+$ X = "y-level"
+$ IF F$SEARCH("PROBE50X.EXE") .NES. "" THEN GOTO ONGOTO
+$ ONGOTO:
+$ N = 0
+$ ON CONTROL_Y THEN GOTO ONGOTO_CLEAN
+$ WRITE SYS$OUTPUT "Press Ctrl/Y now"
+Press Ctrl/Y now
+$ WAIT 00:00:20
+ Interrupt 
+
+$ ONGOTO_CLEAN:
+$ N = N + 1
+$ WRITE SYS$OUTPUT "Y8: cleanup 1, $STATUS %X00030001, on_control_y TRUE"
+Y8: cleanup 1, $STATUS %X00030001, on_control_y TRUE
+$ IF N .GE. 2 THEN EXIT
+$ WRITE SYS$OUTPUT "Press Ctrl/Y again"
+Press Ctrl/Y again
+$ WAIT 00:00:20
+ Interrupt 
+
+$ ONGOTO_CLEAN:
+$ N = N + 1
+$ WRITE SYS$OUTPUT "Y8: cleanup 2, $STATUS %X00030001, on_control_y TRUE"
+Y8: cleanup 2, $STATUS %X00030001, on_control_y TRUE
+$ IF N .GE. 2 THEN EXIT
+$ @PROBE50Y ONCONT
+$ ! PROBE50Y.COM - round 5's interactive part: STOP and Ctrl/Y in command
+$ ! procedures (testdata/dcl50/README.md, "Round 5"). Run each case at the
+$ ! terminal, WITHOUT /OUTPUT, from SYSTEM, with the exchange volume as
+$ ! the default directory, as the README lists them:
+$ !
+$ !     @PROBE50Y case
+$ !     SHOW SYMBOL $STATUS
+$ !
+$ ! and do what the comment shown before each wait asks for. Keep the
+$ ! whole session for vax/probe50y.log.
+$ SET VERIFY
+$ X = "y-level"
+$ IF F$SEARCH("PROBE50X.EXE") .NES. "" THEN GOTO ONCONT
+$ ONCONT:
+$ ON CONTROL_Y THEN WRITE SYS$OUTPUT "Y9: interrupted"
+$ WRITE SYS$OUTPUT "Press Ctrl/Y now"
+Press Ctrl/Y now
+$ WAIT 00:00:20
+ Interrupt 
+
+Y9: interrupted
+$ WRITE SYS$OUTPUT "Y9: after the wait, $STATUS %X00010001"
+Y9: after the wait, $STATUS %X00010001
+$ EXIT
+$ @PROBE50Y NESTED
+$ ! PROBE50Y.COM - round 5's interactive part: STOP and Ctrl/Y in command
+$ ! procedures (testdata/dcl50/README.md, "Round 5"). Run each case at the
+$ ! terminal, WITHOUT /OUTPUT, from SYSTEM, with the exchange volume as
+$ ! the default directory, as the README lists them:
+$ !
+$ !     @PROBE50Y case
+$ !     SHOW SYMBOL $STATUS
+$ !
+$ ! and do what the comment shown before each wait asks for. Keep the
+$ ! whole session for vax/probe50y.log.
+$ SET VERIFY
+$ X = "y-level"
+$ IF F$SEARCH("PROBE50X.EXE") .NES. "" THEN GOTO NESTED
+$ NESTED:
+$ ON CONTROL_Y THEN GOTO NESTED_CLEAN
+$ @PROBE50Z WAIT
+$ ! PROBE50Z.COM - round 5's nested procedure for PROBE50Y.COM, one case
+$ ! per P1 (testdata/dcl50/README.md, "Round 5").
+$ GOTO WAIT
+$ WAIT:
+$ WRITE SYS$OUTPUT "Press Ctrl/Y now (in the nested procedure)"
+Press Ctrl/Y now (in the nested procedure)
+$ WAIT 00:00:20
+ Interrupt 
+
+$ WRITE SYS$OUTPUT "Y10: outer goes on, $STATUS %X10010001"
+Y10: outer goes on, $STATUS %X10010001
+$ EXIT
+$ @PROBE50Y NESTED0
+$ ! PROBE50Y.COM - round 5's interactive part: STOP and Ctrl/Y in command
+$ ! procedures (testdata/dcl50/README.md, "Round 5"). Run each case at the
+$ ! terminal, WITHOUT /OUTPUT, from SYSTEM, with the exchange volume as
+$ ! the default directory, as the README lists them:
+$ !
+$ !     @PROBE50Y case
+$ !     SHOW SYMBOL $STATUS
+$ !
+$ ! and do what the comment shown before each wait asks for. Keep the
+$ ! whole session for vax/probe50y.log.
+$ SET VERIFY
+$ X = "y-level"
+$ IF F$SEARCH("PROBE50X.EXE") .NES. "" THEN GOTO NESTED0
+$ NESTED0:
+$ @PROBE50Z WAIT
+$ ! PROBE50Z.COM - round 5's nested procedure for PROBE50Y.COM, one case
+$ ! per P1 (testdata/dcl50/README.md, "Round 5").
+$ GOTO WAIT
+$ WAIT:
+$ WRITE SYS$OUTPUT "Press Ctrl/Y now (in the nested procedure)"
+Press Ctrl/Y now (in the nested procedure)
+$ WAIT 00:00:20
+ Interrupt 
+
+$ @PROBE50Y NOCONTROL
+$ ! PROBE50Y.COM - round 5's interactive part: STOP and Ctrl/Y in command
+$ ! procedures (testdata/dcl50/README.md, "Round 5"). Run each case at the
+$ ! terminal, WITHOUT /OUTPUT, from SYSTEM, with the exchange volume as
+$ ! the default directory, as the README lists them:
+$ !
+$ !     @PROBE50Y case
+$ !     SHOW SYMBOL $STATUS
+$ !
+$ ! and do what the comment shown before each wait asks for. Keep the
+$ ! whole session for vax/probe50y.log.
+$ SET VERIFY
+$ X = "y-level"
+$ IF F$SEARCH("PROBE50X.EXE") .NES. "" THEN GOTO NOCONTROL
+$ NOCONTROL:
+$ ON CONTROL_Y THEN WRITE SYS$OUTPUT "Y12: interrupted"
+$ SET NOCONTROL=Y
+$ WRITE SYS$OUTPUT "Y12: ", F$ENVIRONMENT("CONTROL"), "/", F$ENVIRONMENT("NOCONTROL"), " ", F$ENVIRONMENT("ON_CONTROL_Y")
+Y12: T/Y FALSE
+$ WRITE SYS$OUTPUT "Press Ctrl/Y now (it should do nothing)"
+Press Ctrl/Y now (it should do nothing)
+$ WAIT 00:00:10
+ Interrupt 
+
+$ SET CONTROL=(T,Y)
+$ WRITE SYS$OUTPUT "Y12: ", F$ENVIRONMENT("CONTROL"), "/", F$ENVIRONMENT("NOCONTROL"), " ", F$ENVIRONMENT("ON_CONTROL_Y")
+Y12: T,Y/ FALSE
+$ SET NOCONTROL=T
+$ WRITE SYS$OUTPUT "Y12: ", F$ENVIRONMENT("CONTROL"), "/", F$ENVIRONMENT("NOCONTROL")
+Y12: Y/T
+$ SET CONTROL=X
+%DCL-W-IVKEYW, unrecognized keyword - check validity and spelling
+ \X\
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00038060"
+$ SET CONTROL
+$ EXIT
+$ @PROBE50Y IMAGE
+$ ! PROBE50Y.COM - round 5's interactive part: STOP and Ctrl/Y in command
+$ ! procedures (testdata/dcl50/README.md, "Round 5"). Run each case at the
+$ ! terminal, WITHOUT /OUTPUT, from SYSTEM, with the exchange volume as
+$ ! the default directory, as the README lists them:
+$ !
+$ !     @PROBE50Y case
+$ !     SHOW SYMBOL $STATUS
+$ !
+$ ! and do what the comment shown before each wait asks for. Keep the
+$ ! whole session for vax/probe50y.log.
+$ SET VERIFY
+$ X = "y-level"
+$ IF F$SEARCH("PROBE50X.EXE") .NES. "" THEN GOTO IMAGE
+$ IMAGE:
+$ WRITE SYS$OUTPUT "Press Ctrl/Y while it runs"
+Press Ctrl/Y while it runs
+$ RUN PROBE50X
+spun
+$ WRITE SYS$OUTPUT "Y13: after the image, $STATUS %X00000001"
+Y13: after the image, $STATUS %X00000001
+$ EXIT
+$ @PROBE50Y IMAGE
+$ ! PROBE50Y.COM - round 5's interactive part: STOP and Ctrl/Y in command
+$ ! procedures (testdata/dcl50/README.md, "Round 5"). Run each case at the
+$ ! terminal, WITHOUT /OUTPUT, from SYSTEM, with the exchange volume as
+$ ! the default directory, as the README lists them:
+$ !
+$ !     @PROBE50Y case
+$ !     SHOW SYMBOL $STATUS
+$ !
+$ ! and do what the comment shown before each wait asks for. Keep the
+$ ! whole session for vax/probe50y.log.
+$ SET VERIFY
+$ X = "y-level"
+$ IF F$SEARCH("PROBE50X.EXE") .NES. "" THEN GOTO IMAGE
+$ IMAGE:
+$ WRITE SYS$OUTPUT "Press Ctrl/Y while it runs"
+Press Ctrl/Y while it runs
+$ RUN PROBE50X
+ Interrupt 
+
+$ show symbol $STATUS
+  $STATUS == "%X00010001"
+$ continue
+spun
+$ WRITE SYS$OUTPUT "Y13: after the image, $STATUS %X00000001"
+Y13: after the image, $STATUS %X00000001
+$ EXIT
+$ @PROBE50Y IMAGEON
+$ ! PROBE50Y.COM - round 5's interactive part: STOP and Ctrl/Y in command
+$ ! procedures (testdata/dcl50/README.md, "Round 5"). Run each case at the
+$ ! terminal, WITHOUT /OUTPUT, from SYSTEM, with the exchange volume as
+$ ! the default directory, as the README lists them:
+$ !
+$ !     @PROBE50Y case
+$ !     SHOW SYMBOL $STATUS
+$ !
+$ ! and do what the comment shown before each wait asks for. Keep the
+$ ! whole session for vax/probe50y.log.
+$ SET VERIFY
+$ X = "y-level"
+$ IF F$SEARCH("PROBE50X.EXE") .NES. "" THEN GOTO IMAGEON
+$ IMAGEON:
+$ ON CONTROL_Y THEN WRITE SYS$OUTPUT "Y14: interrupted, $STATUS %X00030001"
+$ WRITE SYS$OUTPUT "Press Ctrl/Y while it runs"
+Press Ctrl/Y while it runs
+$ RUN PROBE50X
+ Interrupt 
+
+Y14: interrupted, $STATUS %X00030001
+$ WRITE SYS$OUTPUT "Y14: after the image, $STATUS %X00010001"
+Y14: after the image, $STATUS %X00010001
+$ EXIT
+$ @PROBE50Y WAIT
+$ ! PROBE50Y.COM - round 5's interactive part: STOP and Ctrl/Y in command
+$ ! procedures (testdata/dcl50/README.md, "Round 5"). Run each case at the
+$ ! terminal, WITHOUT /OUTPUT, from SYSTEM, with the exchange volume as
+$ ! the default directory, as the README lists them:
+$ !
+$ !     @PROBE50Y case
+$ !     SHOW SYMBOL $STATUS
+$ !
+$ ! and do what the comment shown before each wait asks for. Keep the
+$ ! whole session for vax/probe50y.log.
+$ SET VERIFY
+$ X = "y-level"
+$ IF F$SEARCH("PROBE50X.EXE") .NES. "" THEN GOTO WAIT
+$ WAIT:
+$ WRITE SYS$OUTPUT "Press Ctrl/Y now, then type what the README says"
+Press Ctrl/Y now, then type what the README says
+$ WAIT 00:00:20
+ Interrupt 
+
+$ 
+%%%%%%%%%%%  OPCOM  11-OCT-2026 20:12:28.72  %%%%%%%%%%%
+Message from user SYSTEM on SIMVAX
+Event: Too Few Servers Detected from: Node LOCAL:.SIMVAX DTSS,
+        at: 2026-10-11-20:12:28.720-04:00Iinf
+        Number Detected=0, 
+        Number Required=1
+        eventUid   1548BB00-C5B0-11F1-8007-AA0004003204
+        entityUid  55333840-C57D-11F1-8004-AA0004003204
+        streamUid  55087EC0-C57D-11F1-8003-AA0004003204
+
+
+$ continue
+$ WRITE SYS$OUTPUT "after the wait: X is y-level, $STATUS %X00010001"
+after the wait: X is y-level, $STATUS %X00010001
+$ EXIT
+$ L: SHOW SYMBOL $STATUS
+%DCL-W-NOLBLS, label ignored - use only within command procedures
+ \L:\
+  $STATUS == "%X10010001"
+$ GOTO L
+$ GOSUB l
+%DCL-W-INVGOSUB, invalid use of the GOSUB command
+$ RETURN
+$ CALL L
+%DCL-E-INVCALL, invalid CALL nesting structure or data inconsistency detected
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00038942"
+$ GOTO L
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X10038148"
+$ GOSUB L
+%DCL-W-INVGOSUB, invalid use of the GOSUB command
+$ SHOW SYMBOL STATUS
+%DCL-W-UNDSYM, undefined symbol - check validity and spelling
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00038140"
+$ 

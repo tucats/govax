@@ -300,6 +300,8 @@ type Console struct {
 	controlYLevelActive *controlYPrompt
 	controlYTaken       bool
 	stopping            bool
+	stopExit            procedureExit
+	controlYUnwind      *commandLevel
 	afterStop           func() error
 
 	// terminalFlow is the terminal's IF blocks (dclif.go): command level

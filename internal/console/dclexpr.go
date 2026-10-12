@@ -44,8 +44,8 @@ import (
 // ("A"B"C" is one token); an operator's closing dot may be left out
 // (".EQ 1"); .NOT. may follow another operator; a name starting with F$
 // is a lexical function only when "(" follows it; and a ")" after a
-// whole expression is CLI_SYMDEL, after the value is assigned.
-// Unconfirmed: the quotient of a negative number divided by zero.
+// whole expression is CLI_SYMDEL, after the value is assigned. Round 5
+// added that a negative number divided by zero is -2147483648.
 
 // dclValue is the value of a DCL expression or symbol: an integer or a
 // string.
@@ -413,7 +413,13 @@ func applyOperator(op dclOperator, name string, left, right dclValue) (dclValue,
 	case "/":
 		divisor := right.Int()
 		if divisor == 0 {
-			// VMS 7.3's answer for 7 / 0, with no message.
+			// VMS 7.3's answers, with no message: 7 / 0 is the largest
+			// longword, and -7 / 0 the smallest (testdata/dcl50's
+			// rounds 1 and 5).
+			if left.Int() < 0 {
+				return dclInteger(math.MinInt32), nil
+			}
+
 			return dclInteger(math.MaxInt32), nil
 		}
 

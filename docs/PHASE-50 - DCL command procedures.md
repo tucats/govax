@@ -999,4 +999,29 @@ details are in DEVIATIONS.md.)
   terminal for STOP and Ctrl/Y. Both were tried under govax first.
   govax has no WAIT yet, which `probe50y.com` uses (round 3 found it
   one of DCL's own commands). The author is to run it.
+- 2026-10-11: Round 5 of the probe ran on the simh VAX (the author ran
+  it: `testdata/dcl50/vax/probe50t.log`, `probe50n.log`, and the
+  interactive `probe50y.log`), and govax now does what VMS did:
+  `TestProbe50TOracle` (`probe50t_test.go`, on a booted machine, so
+  SPAWN works) matches every section but for DIRECTORY's layout and two
+  F$FAO cases where VMS wrote garbage. Changes (DEVIATIONS.md's "[Phase
+  50] Round 5 of the probe"): STOP keeps `$STATUS`; Ctrl/Y's prompt at
+  any depth when no level has an ON CONTROL_Y, else the levels inside
+  the one that has unwind to it (`controlYHandler`, `controlYUnwind`);
+  EXIT at the prompt ends every level (`stopExit`); `IF 1 THEN` alone
+  does nothing; commands between a block's IF and THEN are passed over;
+  INVIFNEST and INVCALL are errors, and a label search past a broken
+  block shows INVIFNEST and goes on; RETURN's statuses and message; a
+  missing GOSUB or CALL target ends the procedure with USGOTO's status
+  (`missingTarget`); GOTO, RETURN, and CALL at the terminal; ON's ONERR
+  (new message) and abbreviated conditions; DIRECTORY's and TYPE's
+  statuses; a negative number over zero; `''X` without its closing
+  apostrophe; F$EXTRACT, F$ELEMENT (new message STRTOOLNG), F$TYPE,
+  JOBTYPE, ACNT, F$SEARCH (the MFD's `[000000]`, and every call without
+  wildcards), F$MESSAGE of CREATE's OPENOUT (`vmsdef`'s
+  `observedMessages`), F$CVTIME (no OFYEAR fields, a delta's digits,
+  IVDTIME's segment); a subprocess's verification and SPAWN's status;
+  the CLI facility shown as DCL in a repeated status. New: WAIT
+  (`dclwait.go`, interrupted by Ctrl/Y or Ctrl/C). HELP: KEYS, STOP,
+  GOSUB/RETURN, WAIT.
 

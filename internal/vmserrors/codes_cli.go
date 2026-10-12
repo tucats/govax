@@ -192,6 +192,8 @@ const (
 	cliInvPrefix
 	cliUndFil
 	cliTknOvf
+	cliOnErr
+	cliStrTooLng
 )
 
 // CLI facility status codes -- CLI_ prefix, matching real VMS's CLI$_
@@ -434,23 +436,25 @@ const (
 
 	// The messages of labels, GOTO, IF blocks, GOSUB, and CALL
 	// (docs/PHASE-50, subtasks 11 to 13), DCL's CLI$_ messages of the
-	// same names, all warnings: CLI_NOLBLS a label at the terminal;
+	// same names, warnings but for CLI_INVIFNEST and CLI_INVCALL, which
+	// VMS 7.3 showed as errors (testdata/dcl50's round 5): CLI_NOLBLS a
+	// label at the terminal;
 	// CLI_USGOTO, CLI_USGOSUB, and CLI_USCALL a target not found;
 	// CLI_MSNGENDS a SUBROUTINE with no ENDSUBROUTINE; CLI_INVIFNEST a
 	// THEN, ELSE, or ENDIF out of place; CLI_INVGOSUB a GOSUB at the
 	// terminal, CLI_GOSUBMAX one nested too deeply, and CLI_BADRET a
 	// RETURN without one; CLI_INVCALL a SUBROUTINE or ENDSUBROUTINE out
-	// of place.
+	// of place, or a CALL at the terminal.
 	CLI_NOLBLS    = CLIFacility<<FacilityPosition | cliNoLbls<<MessagePosition | StatusWarning
 	CLI_USGOTO    = CLIFacility<<FacilityPosition | cliUsGoto<<MessagePosition | StatusWarning
 	CLI_MSNGENDS  = CLIFacility<<FacilityPosition | cliMsngEnds<<MessagePosition | StatusWarning
-	CLI_INVIFNEST = CLIFacility<<FacilityPosition | cliInvIfNest<<MessagePosition | StatusWarning
+	CLI_INVIFNEST = CLIFacility<<FacilityPosition | cliInvIfNest<<MessagePosition | StatusError
 	CLI_INVGOSUB  = CLIFacility<<FacilityPosition | cliInvGosub<<MessagePosition | StatusWarning
 	CLI_GOSUBMAX  = CLIFacility<<FacilityPosition | cliGosubMax<<MessagePosition | StatusWarning
 	CLI_USGOSUB   = CLIFacility<<FacilityPosition | cliUsGosub<<MessagePosition | StatusWarning
 	CLI_BADRET    = CLIFacility<<FacilityPosition | cliBadRet<<MessagePosition | StatusWarning
 	CLI_USCALL    = CLIFacility<<FacilityPosition | cliUsCall<<MessagePosition | StatusWarning
-	CLI_INVCALL   = CLIFacility<<FacilityPosition | cliInvCall<<MessagePosition | StatusWarning
+	CLI_INVCALL   = CLIFacility<<FacilityPosition | cliInvCall<<MessagePosition | StatusError
 
 	// The lexical functions' messages (docs/PHASE-50, subtask 14), DCL's
 	// CLI$_ messages of the same names, all warnings: CLI_IVKEYW a
@@ -482,6 +486,13 @@ const (
 	// CLI_TKNOVF, a warning, is a WRITE item longer than 255 characters
 	// without /SYMBOL (VMS 7.3, testdata/dcl50's F10).
 	CLI_TKNOVF = CLIFacility<<FacilityPosition | cliTknOvf<<MessagePosition | StatusWarning
+
+	// CLI_ONERR, a warning, is ON with a condition it doesn't have, its
+	// segment the condition as typed; CLI_STRTOOLNG, an error,
+	// F$ELEMENT's delimiter of more than one character (VMS 7.3,
+	// testdata/dcl50's round 5).
+	CLI_ONERR     = CLIFacility<<FacilityPosition | cliOnErr<<MessagePosition | StatusWarning
+	CLI_STRTOOLNG = CLIFacility<<FacilityPosition | cliStrTooLng<<MessagePosition | StatusError
 )
 
 func init() {
@@ -632,5 +643,7 @@ func init() {
 	DefineMessage(CLI_INVPREFIX, CLIFacility, "INVPREFIX", "invalid prefix format string - check FAO directives")
 	DefineMessage(CLI_UNDFIL, CLIFacility, "UNDFIL", "file has not been opened by DCL - check logical name")
 	DefineMessage(CLI_TKNOVF, CLIFacility, "TKNOVF", "command element is too long - shorten")
+	DefineMessage(CLI_ONERR, CLIFacility, "ONERR", "invalid ON condition - use WARNING, SEVERE, ERROR, or CONTROL_Y")
+	DefineMessage(CLI_STRTOOLNG, CLIFacility, "STRTOOLNG", "string argument is too long - shorten")
 	DefineMessage(CLI_BADLIMIT, CLIFacility, "BADLIMIT", "Invalid /LIMIT value !D (must be at least 1; DELETE NAME;* removes every version)")
 }

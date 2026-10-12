@@ -90,8 +90,9 @@ type searchStream struct {
 // names, "" when there are no more (15.4.2). Each stream (0 when no
 // stream-id is given) keeps its place between calls while filespec stays
 // the same; a different one starts a new search. After the "" that ends
-// a search the stream starts again, so a name with no wildcards is found
-// on every other call (unconfirmed against VMS). On a mounted volume the
+// a search the stream starts again. A name with no wildcards is found on
+// every call, as VMS 7.3 found it (testdata/dcl50's round 5). On a
+// mounted volume the
 // files are RMS's, written "DUA0:[WORK]LOGIN.COM;3"; on the host they
 // are host paths, matched without regard to case.
 func lexSearch(e *dclExpression, args []lexicalArg) (dclValue, error) {
@@ -100,6 +101,15 @@ func lexSearch(e *dclExpression, args []lexicalArg) (dclValue, error) {
 
 	if c.searchStreams == nil {
 		c.searchStreams = map[int32]*searchStream{}
+	}
+
+	if wildcard := strings.ContainsAny(spec, "*%") || strings.Contains(spec, "..."); !wildcard {
+		files, err := c.searchFiles(spec)
+		if err != nil || len(files) == 0 {
+			return dclString(""), err
+		}
+
+		return dclString(files[0]), nil
 	}
 
 	stream := c.searchStreams[id]

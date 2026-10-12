@@ -141,12 +141,21 @@ func (c *Console) statusFailure(v uint32) error {
 // "%": "SYSTEM-F-ABORT, abort", or, for a value the message file doesn't
 // have, "NONAME-E-NOMSG, Message number 00000002", as VMS 7.3 showed for
 // EXIT 2 (testdata/dcl50).
+//
+// The CLI facility's messages are shown as DCL's, as VMS shows them
+// (VMS 7.3 showed IVVERB as %DCL-W-IVVERB after a subprocess ended with
+// it, testdata/dcl50's round 5).
 func (c *Console) statusText(v uint32) string {
+	text := messageText(v)
 	if c.RTL != nil {
-		return strings.TrimPrefix(c.RTL.StatusText(v), "%")
+		text = strings.TrimPrefix(c.RTL.StatusText(v), "%")
 	}
 
-	return messageText(v)
+	if rest, ok := strings.CutPrefix(text, "CLI-"); ok {
+		return "DCL-" + rest
+	}
+
+	return text
 }
 
 // messageText is the system message file's text for condition value v,
@@ -323,8 +332,8 @@ func (a *onAction) take(v uint32) (command string, exit, act bool) {
 	return command, false, true
 }
 
-// onKeywords are ON's conditions, as console.dcl's on_conditions type
-// names them, and the rank each acts at; CONTROL_Y is rankNone.
+// onKeywords are ON's conditions, and the rank each acts at; CONTROL_Y
+// is rankNone.
 var onKeywords = map[string]int{
 	"WARNING":      rankWarning,
 	"ERROR":        rankError,
@@ -337,10 +346,32 @@ var onKeywords = map[string]int{
 // worse (and turns SET NOON's off), or, for CONTROL_Y, its Ctrl/Y
 // action; at the terminal, where no status is acted on (13.10), it is
 // accepted and does nothing. Without THEN it is CLI_NOTHEN, as DCL has
-// it, and with nothing after THEN CLI_INSFPRM. (A condition ON doesn't
-// have is the grammar's error, not DCL's IVKEYW.)
+// it, and with nothing after THEN CLI_INSFPRM. A condition may be
+// shortened to any prefix that names one; any other is CLI_ONERR, its
+// segment the condition after a blank (VMS 7.3: " \ FOO\",
+// testdata/dcl50's round 5; the prefix rule is unconfirmed).
 func (d *Dispatcher) onCommand(id int64, r *dcl.Result) error {
-	rank := onKeywords[r.Keyword("CONDITION")]
+	word := strings.ToUpper(strings.TrimSpace(r.String("CONDITION")))
+
+	condition := ""
+
+	for k := range onKeywords {
+		if word != "" && strings.HasPrefix(k, word) {
+			if condition != "" {
+				condition = ""
+
+				break
+			}
+
+			condition = k
+		}
+	}
+
+	if condition == "" {
+		return vmserrors.NewSegment(vmserrors.CLI_ONERR, " "+word)
+	}
+
+	rank := onKeywords[condition]
 
 	then, command := readCommandVerb(strings.TrimSpace(r.String("COMMAND")))
 	if !strings.EqualFold(then, "THEN") {
@@ -357,7 +388,7 @@ func (d *Dispatcher) onCommand(id int64, r *dcl.Result) error {
 		return nil
 	}
 
-	if r.Keyword("CONDITION") == "CONTROL_Y" {
+	if condition == "CONTROL_Y" {
 		level.on.controlY = command
 
 		return nil

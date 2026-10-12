@@ -37,8 +37,9 @@ import (
 // Data lines of a procedure, which go to the debugger or the assembler,
 // are never scanned (12.13.3); neither is a debugger command.
 //
-// Unconfirmed against VMS: that ''NAME inside quotes needs its closing
-// apostrophe; that a comment isn't scanned; that a foreign command's
+// VMS 7.3 substituted ''NAME inside quotes without its closing
+// apostrophe too (testdata/dcl50's round 5). Unconfirmed against VMS:
+// that a comment isn't scanned; that a foreign command's
 // text gets no ampersand substitution; and that an &NAME's value becomes
 // a quoted token (it might be read again for qualifiers).
 
@@ -140,9 +141,9 @@ type apostropheTerm struct {
 }
 
 // substitutionTerm reads what follows a substitution's apostrophe (or
-// two) at start in line: blanks, a symbol name or a lexical function
-// call, and the closing apostrophe, which only inside quotes (closing)
-// must be there.
+// two) at start in line: blanks (not inside quotes, closing), a symbol
+// name or a lexical function call, and the closing apostrophe, which
+// may be left out.
 func substitutionTerm(line string, start int, closing bool, symbols *dclSymbolTable, c *Console) (apostropheTerm, error) {
 	i := start
 	if !closing {
@@ -187,11 +188,8 @@ func substitutionTerm(line string, start int, closing bool, symbols *dclSymbolTa
 		}
 	}
 
-	switch {
-	case i < len(line) && line[i] == '\'':
+	if i < len(line) && line[i] == '\'' {
 		i++
-	case closing:
-		return apostropheTerm{}, nil
 	}
 
 	term.ok, term.end = true, i

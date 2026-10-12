@@ -87,10 +87,10 @@ func (env *Environment) IdentifierText(id uint32) string {
 
 // PrivilegeNames are the privileges' names ($PRVDEF's, without PRV$V_),
 // indexed by their bit numbers in a privilege mask. Where two names
-// share a bit, the older one is used (DETACH, not IMPERSONATE; NOACNT,
-// not ACNT; unconfirmed which VMS 7.3's DCL writes).
+// share a bit, the older one is used, as VMS 7.3's DCL wrote them (DETACH,
+// not IMPERSONATE; ACNT, not NOACNT: testdata/dcl50's round 5).
 var PrivilegeNames = func() []string {
-	preferred := map[string]bool{"DETACH": true, "NOACNT": true}
+	preferred := map[string]bool{"DETACH": true, "ACNT": true}
 
 	var names []string
 

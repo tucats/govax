@@ -151,11 +151,13 @@ func (c *Console) takeLabel(line string) (string, error) {
 // labelTarget is where a GOTO, GOSUB, or CALL goes: the first record of
 // the label's line, how many of the level's open IF blocks are still
 // open there (the rest are closed by going there), and the label's line
-// after the label.
+// after the label. nesting says the forward search that found it passed
+// an ENDIF or ELSE with no block open (badNesting).
 type labelTarget struct {
-	pos   int
-	depth int
-	rest  string
+	pos     int
+	depth   int
+	rest    string
+	nesting bool
 }
 
 // findLabel finds label for a GOTO, GOSUB, or CALL at f's level: where
@@ -185,6 +187,7 @@ func (f *flowState) findLabel(label string, notFound error) (labelTarget, error)
 	}
 
 	target, found, unended := f.source.searchLabel(label, f.source.Position(), len(open), seen)
+	target.nesting = found && target.nesting
 
 	switch {
 	case found:
@@ -218,12 +221,17 @@ func (f *flowState) jump(target labelTarget) {
 // if it isn't nil, with its line's first record and its depth.
 //
 // unended reports a search that ended inside a SUBROUTINE with no
-// ENDSUBROUTINE (DCL's CLI$_MSNGENDS).
+// ENDSUBROUTINE (DCL's CLI$_MSNGENDS). The target's nesting reports an
+// ENDIF or ELSE passed with no block open, as after an IF whose THEN
+// never came: VMS 7.3 showed CLI$_INVIFNEST for such a search and went
+// to the label all the same (testdata/dcl50's round 5).
 func (p *procedureSource) searchLabel(label string, pos, open int, seen func(name string, pos, depth int)) (target labelTarget, found, unended bool) {
 	// entered are the blocks the search went into, innermost last: 'i'
 	// for an IF block (or a branch of an open one the search isn't in),
 	// 's' for a subroutine.
 	var entered []byte
+
+	nesting := false
 
 	for {
 		line, data, start, next, ok := p.lineAt(pos)
@@ -240,7 +248,7 @@ func (p *procedureSource) searchLabel(label string, pos, open int, seen func(nam
 		name, rest, labelled := splitLabel(line)
 		if labelled && len(entered) == 0 {
 			if name == label {
-				return labelTarget{pos: start, depth: open, rest: rest}, true, false
+				return labelTarget{pos: start, depth: open, rest: rest, nesting: nesting}, true, false
 			}
 
 			if seen != nil {
@@ -258,9 +266,12 @@ func (p *procedureSource) searchLabel(label string, pos, open int, seen func(nam
 		case "ELSE":
 			// The other branch of a block that was open: the search has
 			// left the branch it was in, and is in one it isn't in.
-			if len(entered) == 0 && open > 0 {
+			switch {
+			case len(entered) == 0 && open > 0:
 				open--
 				entered = append(entered, 'i')
+			case len(entered) == 0:
+				nesting = true
 			}
 		case "ENDIF", "ENDSUBROUTINE":
 			switch {
@@ -268,6 +279,8 @@ func (p *procedureSource) searchLabel(label string, pos, open int, seen func(nam
 				entered = entered[:len(entered)-1]
 			case verb == "ENDIF" && open > 0:
 				open--
+			case verb == "ENDIF":
+				nesting = true
 			}
 		}
 	}
@@ -324,23 +337,51 @@ func (d *Dispatcher) gotoCommand(id int64, r *dcl.Result) error {
 
 // Goto is GOTO label: the current procedure goes on at the label's line
 // (findLabel). A label that isn't there leaves the procedure at its end
-// of file, with CLI$_USGOTO. At the terminal there's nothing to search,
-// and GOTO is CLI$_USGOTO. GOTO leaves $STATUS alone (13.15).
+// of file, with CLI$_USGOTO (missingTarget). At the terminal there's
+// nothing to search: GOTO shows nothing, and $STATUS is CLI$_USGOTO
+// marked as shown (VMS 7.3, testdata/dcl50's round 5). GOTO leaves
+// $STATUS alone (13.15).
 func (c *Console) Goto(label string) error {
 	f := c.flow()
 	if f.source == nil {
-		return vmserrors.New(vmserrors.CLI_USGOTO)
+		return vmserrors.InhibitMessage(vmserrors.New(vmserrors.CLI_USGOTO))
 	}
 
 	target, err := f.findLabel(strings.ToUpper(label), vmserrors.New(vmserrors.CLI_USGOTO))
 	if err != nil {
-		f.source.Seek(f.source.end)
-
-		return err
+		return c.missingTarget(f, err)
 	}
 
+	c.foundTarget(target)
 	f.jump(target)
 	c.keepStatus()
 
 	return nil
+}
+
+// missingTarget is a GOTO's, GOSUB's, or CALL's target that isn't
+// there (err, its message, CLI$_USGOTO, USGOSUB, or USCALL; or MSNGENDS):
+// the message is shown, and the procedure is left at its end of file
+// with CLI$_USGOTO's status, marked as shown, as VMS 7.3 ended one after
+// a missing GOSUB target and a missing CALL target alike (%X10038148,
+// testdata/dcl50's round 5). An ON action may still move it first.
+func (c *Console) missingTarget(f *flowState, err error) error {
+	f.source.Seek(f.source.end)
+
+	if level := c.currentLevel(); level != nil {
+		c.procedureMessage(level, err)
+	}
+
+	c.setCommandStatus(conditionValue(vmserrors.New(vmserrors.CLI_USGOTO))|stsInhibitMsg, nil)
+
+	return vmserrors.InhibitMessage(err)
+}
+
+// foundTarget shows CLI$_INVIFNEST for a target whose search passed an
+// ENDIF or ELSE with no block open (labelTarget's nesting); the GOTO,
+// GOSUB, or CALL goes on to it.
+func (c *Console) foundTarget(target labelTarget) {
+	if level := c.currentLevel(); level != nil && target.nesting {
+		c.procedureMessage(level, vmserrors.New(vmserrors.CLI_INVIFNEST))
+	}
 }

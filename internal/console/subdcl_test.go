@@ -8,6 +8,7 @@ import (
 
 	"github.com/tucats/govax/internal/console"
 	"github.com/tucats/govax/internal/console/consoletest"
+	"github.com/tucats/govax/internal/vmserrors"
 )
 
 // Phase 50, subtask 19: a subprocess runs the console's whole DCL
@@ -60,8 +61,9 @@ func TestSpawnDCL(t *testing.T) {
 
 		out.Reset()
 
-		if err := d.Dispatch(line); err != nil {
-			t.Fatalf("%s: %v\n%s", line, err, out.String())
+		// A SPAWN whose subprocess failed fails too, its message shown.
+		if err := d.Dispatch(line); err != nil && !vmserrors.MessageInhibited(err) {
+			out.WriteString("%" + err.Error() + "\n")
 		}
 
 		return strings.Join(programLines(out.String()), "|")

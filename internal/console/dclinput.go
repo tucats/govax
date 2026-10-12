@@ -107,6 +107,7 @@ var dclOwnCommands = map[string]bool{
 	"STOP":             true,
 	"SUBROUTINE":       true,
 	"THEN":             true,
+	"WAIT":             true,
 	"WRITE":            true,
 }
 

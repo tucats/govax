@@ -121,10 +121,11 @@ func (d *Dispatcher) DispatchConsole(line string) error {
 			return err
 		}
 
-		if err := d.Console.awaitThen(line); err != nil {
+		if d.Console.awaitThen(line) {
 			d.Console.echoLine("", whole, whole)
+			d.Console.keepStatus()
 
-			return err
+			return nil
 		}
 
 		// The THEN of a block whose IF was false isn't shown (VMS 7.3).
@@ -330,6 +331,7 @@ func (d *Dispatcher) bindGrammar() {
 	g.Bind("READ", d.readCommand)
 	g.Bind("WRITE", d.writeCommand)
 	g.Bind("INQUIRE", d.inquireCommand)
+	g.Bind("WAIT", d.waitCommand)
 	g.Bind("CONTINUE", func(id int64, r *dcl.Result) error { return d.Console.continueCommand() })
 	g.Bind("QUIT", func(id int64, r *dcl.Result) error { return d.Console.Quit() })
 	g.Bind("LOGOUT", func(id int64, r *dcl.Result) error { return d.Console.logoutCommand() })
@@ -529,7 +531,15 @@ func (d *Dispatcher) bindGrammar() {
 			opts.Versions = int(n)
 		}
 
-		return d.Console.Directory(r.String("SPEC"), opts)
+		// VMS's DIRECTORY image ends with SS$_NORMAL (VMS 7.3,
+		// testdata/dcl50's round 5).
+		if err := d.Console.Directory(r.String("SPEC"), opts); err != nil {
+			return err
+		}
+
+		d.Console.setCommandStatus(ssNormal, nil)
+
+		return nil
 	})
 
 	// Phase 23 (docs/PHASE-23.md, subtask 6): DELETE reclaims a file's
@@ -575,8 +585,16 @@ func (d *Dispatcher) bindGrammar() {
 	// (console.dcl's own type verb), so Grammar.Dispatch's own required-
 	// parameter machinery already guarantees it's present by the time this
 	// closure runs. /PAGE shows it a screenful at a time.
+	// VMS's TYPE image ends with SS$_NORMAL, its message marked as shown
+	// (%X10000001: VMS 7.3, testdata/dcl50's round 5).
 	g.Bind("TYPE", func(id int64, r *dcl.Result) error {
-		return d.Console.Type(r.String("SPEC"), r.Present("PAGE"))
+		if err := d.Console.Type(r.String("SPEC"), r.Present("PAGE")); err != nil {
+			return err
+		}
+
+		d.Console.setCommandStatus(ssNormal|stsInhibitMsg, nil)
+
+		return nil
 	})
 
 	// Phase 23 (docs/PHASE-23.md, subtasks 9-10): COPY moves one or more

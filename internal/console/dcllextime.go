@@ -94,19 +94,14 @@ func timeClock(t time.Time) string {
 	return clock(t.Hour(), t.Minute(), t.Second(), t.Nanosecond()/10_000_000)
 }
 
-// yearHours, yearMinutes, and yearSeconds count from the start of t's
-// year.
-func yearHours(t time.Time) int   { return (t.YearDay()-1)*24 + t.Hour() }
-func yearMinutes(t time.Time) int { return yearHours(t)*60 + t.Minute() }
-func yearSeconds(t time.Time) int { return yearMinutes(t)*60 + t.Second() }
-
 // zeros writes n zero-filled to width digits; plain writes it as it is.
 func zeros(n, width int) string { return fmt.Sprintf("%0*d", width, n) }
 func plain(n int) string        { return strconv.Itoa(n) }
 
-// cvtimeFields are F$CVTIME's output fields (unconfirmed against VMS: the
-// widths of DAYOFYEAR and the other OFYEAR fields in comparison format,
-// the absolute DAY's lack of a leading blank, and a delta's DATETIME).
+// cvtimeFields are F$CVTIME's output fields, VMS 7.3's: it has no
+// DAYOFYEAR or other OFYEAR fields (testdata/dcl50's round 5; later
+// releases added them). Unconfirmed against VMS: the absolute DAY's lack
+// of a leading blank.
 var cvtimeFields = map[string]cvtimeField{
 	"DATETIME": {
 		comparison: func(t time.Time) string { return t.Format("2006-01-02") + " " + timeClock(t) },
@@ -161,22 +156,6 @@ var cvtimeFields = map[string]cvtimeField{
 		comparison: func(t time.Time) string { return t.Weekday().String() },
 		absolute:   func(t time.Time) string { return t.Weekday().String() },
 	},
-	"DAYOFYEAR": {
-		comparison: func(t time.Time) string { return zeros(t.YearDay(), 3) },
-		absolute:   func(t time.Time) string { return plain(t.YearDay()) },
-	},
-	"HOUROFYEAR": {
-		comparison: func(t time.Time) string { return zeros(yearHours(t), 4) },
-		absolute:   func(t time.Time) string { return plain(yearHours(t)) },
-	},
-	"MINUTEOFYEAR": {
-		comparison: func(t time.Time) string { return zeros(yearMinutes(t), 6) },
-		absolute:   func(t time.Time) string { return plain(yearMinutes(t)) },
-	},
-	"SECONDOFYEAR": {
-		comparison: func(t time.Time) string { return zeros(yearSeconds(t), 8) },
-		absolute:   func(t time.Time) string { return plain(yearSeconds(t)) },
-	},
 }
 
 // monthNames are the months as VMS writes them in a time.
@@ -207,7 +186,7 @@ func lexCVTime(e *dclExpression, args []lexicalArg) (dclValue, error) {
 		format = f
 	}
 
-	field := cvtimeFields["DATETIME"]
+	field, fieldName := cvtimeFields["DATETIME"], "DATETIME"
 
 	if args[2].present {
 		f, key, err := lexicalKeyword(cvtimeFields, args[2])
@@ -219,7 +198,7 @@ func lexCVTime(e *dclExpression, args []lexicalArg) (dclValue, error) {
 			return dclValue{}, vmserrors.NewSegment(vmserrors.CLI_IVKEYW, key)
 		}
 
-		field = f
+		field, fieldName = f, key
 	}
 
 	text := strings.ToUpper(strings.TrimSpace(args[0].str()))
@@ -227,10 +206,19 @@ func lexCVTime(e *dclExpression, args []lexicalArg) (dclValue, error) {
 	if format == cvtDelta {
 		ticks, ok := parseDeltaTime(text)
 		if !ok {
-			return dclValue{}, vmserrors.New(vmserrors.CLI_IVDTIME)
+			return dclValue{}, vmserrors.NewSegment(vmserrors.CLI_IVDTIME, strings.TrimSpace(args[0].str()))
 		}
 
-		return dclString(field.delta(splitDelta(ticks))), nil
+		out := field.delta(splitDelta(ticks))
+
+		// VMS 7.3 wrote "1-02:03:04.5"'s DATETIME as "1 02:03:04.5":
+		// the hundredths with the one digit given (testdata/dcl50's
+		// round 5; the rule is unconfirmed beyond that case).
+		if (fieldName == "DATETIME" || fieldName == "TIME") && fractionDigits(text) == 1 {
+			out = out[:len(out)-1]
+		}
+
+		return dclString(out), nil
 	}
 
 	now := vmsdef.GoTime(e.console.systemTime())
@@ -245,6 +233,26 @@ func lexCVTime(e *dclExpression, args []lexicalArg) (dclValue, error) {
 	}
 
 	return dclString(field.comparison(t)), nil
+}
+
+// fractionDigits is how many digits follow the "." of a time's
+// seconds in text, 0 for none.
+func fractionDigits(text string) int {
+	i := strings.LastIndex(text, ".")
+	if i < 0 {
+		return 0
+	}
+
+	n := 0
+	for _, ch := range text[i+1:] {
+		if ch < '0' || ch > '9' {
+			break
+		}
+
+		n++
+	}
+
+	return n
 }
 
 // parseCombinationTime reads text, uppercase, as an absolute time, or a

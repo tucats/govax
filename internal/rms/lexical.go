@@ -148,7 +148,9 @@ func (s *Session) Search(spec string) ([]string, error) {
 				continue
 			}
 
-			names = append(names, r.Display+":"+m.String())
+			// The MFD is [000000], as VMS 7.3's F$SEARCH wrote it
+			// (testdata/dcl50's round 5), where the match writes "[]".
+			names = append(names, r.Display+":"+dirSpec{Elems: m.Dirs}.String()+m.ShortName(';'))
 		}
 
 		return nil

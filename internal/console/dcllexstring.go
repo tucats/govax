@@ -32,19 +32,19 @@ func lexString(_ *dclExpression, args []lexicalArg) (dclValue, error) {
 
 // lexExtract is F$EXTRACT(start, length, string): length characters of
 // string from offset start, fewer if the string ends first, and "" if
-// start is past its end. A negative start or length is CLI_INVRANGE
-// (unconfirmed against VMS).
+// start is past its end. As VMS 7.3 answered (testdata/dcl50's round 5),
+// a negative start gives "", and a negative length the rest of the
+// string.
 func lexExtract(_ *dclExpression, args []lexicalArg) (dclValue, error) {
 	start, length, s := args[0].int(), args[1].int(), args[2].str()
-	if start < 0 || length < 0 {
-		return dclValue{}, vmserrors.New(vmserrors.CLI_INVRANGE)
-	}
-
-	if int(start) >= len(s) {
+	if start < 0 || int(start) >= len(s) {
 		return dclString(""), nil
 	}
 
-	end := min(int64(start)+int64(length), int64(len(s)))
+	end := int64(len(s))
+	if length >= 0 {
+		end = min(int64(start)+int64(length), end)
+	}
 
 	return dclString(s[start:end]), nil
 }
@@ -67,12 +67,16 @@ func lexLocate(_ *dclExpression, args []lexicalArg) (dclValue, error) {
 // string, counting from 0, between the delimiters around it (15.6.2). A
 // string with no delimiters is one element. Past the last element, the
 // result is the delimiter itself. The delimiter is one character: a
-// longer or empty one is CLI_IVVALU, and a negative number CLI_INVRANGE
-// (both unconfirmed against VMS).
+// longer one is CLI_STRTOOLNG, with the delimiter as its segment, and a
+// negative number CLI_INVRANGE (VMS 7.3, testdata/dcl50's round 5); an
+// empty one is CLI_IVVALU (unconfirmed).
 func lexElement(_ *dclExpression, args []lexicalArg) (dclValue, error) {
 	n, delim, s := args[0].int(), args[1].str(), args[2].str()
 
-	if len(delim) != 1 {
+	switch {
+	case len(delim) > 1:
+		return dclValue{}, vmserrors.NewSegment(vmserrors.CLI_STRTOOLNG, delim)
+	case delim == "":
 		return dclValue{}, vmserrors.New(vmserrors.CLI_IVVALU)
 	}
 

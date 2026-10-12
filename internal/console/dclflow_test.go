@@ -78,12 +78,12 @@ func TestGotoDuplicateLabels(t *testing.T) {
 }
 
 // TestGotoMissingLabel: a label that isn't there is USGOTO, and the
-// procedure ends, at its end of file; an ON action can still take it
-// somewhere.
+// procedure ends, at its end of file, with USGOTO's status marked as
+// shown (VMS 7.3, round 5); an ON action can still take it somewhere.
 func TestGotoMissingLabel(t *testing.T) {
 	err, out, status := runStatusProcedure(t, "$ GOTO NOWHERE", `$ PRINT "after"`)
-	if !strings.Contains(out, "%DCL-W-USGOTO") || strings.Contains(out, "after") ||
-		vmsCondition(vmserrors.CLI_USGOTO) != status || !vmserrors.MessageInhibited(err) {
+	if strings.Count(out, "%DCL-W-USGOTO") != 1 || strings.Contains(out, "after") ||
+		vmsCondition(vmserrors.CLI_USGOTO)|stsInhibitMsg != status || !vmserrors.MessageInhibited(err) {
 		t.Errorf("output %q, $STATUS %08X, @ %v; want USGOTO once, and the end", out, status, err)
 	}
 
@@ -261,8 +261,10 @@ func TestIfBlocks(t *testing.T) {
 	}
 }
 
-// TestIfBlockErrors: the command after a block's IF must be THEN; THEN,
-// ELSE, and ENDIF out of place are INVIFNEST; blocks nest 15 deep.
+// TestIfBlockErrors: commands between a block's IF and its THEN are
+// passed over, and an ENDIF there is INVIFNEST, closing the block; THEN,
+// ELSE, and ENDIF out of place are INVIFNEST; IF 1 THEN alone does
+// nothing; blocks nest 15 deep (VMS 7.3, round 5).
 func TestIfBlockErrors(t *testing.T) {
 	d, _, buf := newCommandDispatcher(t)
 
@@ -276,16 +278,20 @@ func TestIfBlockErrors(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err := d.Dispatch(`PRINT "x"`); !hasStatus(err, vmserrors.CLI_NOTHEN) || buf.Len() != 0 {
-		t.Errorf("a command after IF: %v, %q; want NOTHEN, and not run", err, buf.String())
+	if err := d.Dispatch(`PRINT "x"`); err != nil || buf.Len() != 0 {
+		t.Errorf("a command after IF: %v, %q; want it passed over", err, buf.String())
+	}
+
+	if err := d.Dispatch("ENDIF"); !hasStatus(err, vmserrors.CLI_INVIFNEST) {
+		t.Errorf("ENDIF before THEN: %v, want INVIFNEST", err)
 	}
 
 	if err := d.Dispatch("IF 1 2"); !hasStatus(err, vmserrors.CLI_NOTHEN) {
 		t.Errorf("IF 1 2: %v, want NOTHEN", err)
 	}
 
-	if err := d.Dispatch("IF 1 THEN"); !hasStatus(err, vmserrors.CLI_INSFPRM) {
-		t.Errorf("IF 1 THEN: %v, want INSFPRM", err)
+	if err := d.Dispatch("IF 1 THEN"); err != nil {
+		t.Errorf("IF 1 THEN: %v, want nothing", err)
 	}
 
 	for i := range maxIfBlocks + 1 {
@@ -460,9 +466,28 @@ func TestCallErrors(t *testing.T) {
 		"$     GOTO PLAIN",
 		"$ ENDSUBROUTINE")
 
-	if strings.Count(out, "%DCL-W-USCALL, CALL target BAR") != 1 || strings.Count(out, "USCALL, CALL target PLAIN") != 1 ||
-		!strings.Contains(out, "USGOTO") || !strings.HasSuffix(out, "after\n") {
+	// A missing CALL target ends the procedure, as GOTO's does (VMS 7.3).
+	if out != "%DCL-W-USCALL, CALL target BAR either missing, misspelled, or inaccessible\n" {
 		t.Errorf("output:\n%s", out)
+	}
+
+	if out := runFlow(t, "$ CALL PLAIN", `$ PRINT "after"`, "$ PLAIN:"); !strings.Contains(out, "USCALL, CALL target PLAIN") || strings.Contains(out, "after") {
+		t.Errorf("a plain label: %q", out)
+	}
+
+	// A label outside the subroutine isn't the subroutine's: its GOTO
+	// ends the subroutine's level, and the CALL's procedure goes on.
+	out = runFlow(t,
+		"$ CALL OUTSIDE",
+		`$ PRINT "after"`,
+		"$ EXIT",
+		"$ PLAIN:",
+		"$ OUTSIDE: SUBROUTINE",
+		"$     GOTO PLAIN",
+		"$ ENDSUBROUTINE")
+
+	if !strings.Contains(out, "USGOTO") || !strings.HasSuffix(out, "after\n") {
+		t.Errorf("a GOTO out of a subroutine:\n%s", out)
 	}
 
 	if out := runFlow(t, "$ S: SUBROUTINE", `$ PRINT "no"`); !strings.Contains(out, "MSNGENDS") || strings.Contains(out, "no") {
@@ -474,8 +499,8 @@ func TestCallErrors(t *testing.T) {
 	}
 
 	d, _, _ := newCommandDispatcher(t)
-	if err := d.Dispatch("CALL X"); !hasStatus(err, vmserrors.CLI_USCALL) {
-		t.Errorf("at the terminal: %v, want USCALL", err)
+	if err := d.Dispatch("CALL X"); !hasStatus(err, vmserrors.CLI_INVCALL) {
+		t.Errorf("at the terminal: %v, want INVCALL", err)
 	}
 }
 

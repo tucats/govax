@@ -562,9 +562,10 @@ func (c *Console) runLevel(source *procedureSource, cmd procedureCommand, dispat
 			err = closeErr
 		}
 
-		// STOP has ended every level (dclcontroly.go).
+		// STOP has ended every level, or a Ctrl/Y's unwinding has
+		// (dclcontroly.go).
 		if len(c.levels) == 0 {
-			c.stopping = false
+			c.stopping, c.stopExit, c.controlYUnwind = false, procedureExit{}, nil
 		}
 	}()
 
@@ -687,7 +688,10 @@ func (c *Console) runLevel(source *procedureSource, cmd procedureCommand, dispat
 		}
 	}
 
-	if level.exiting {
+	switch {
+	case c.stopping:
+		return c.stopExit, nil
+	case level.exiting:
 		return level.exit, nil
 	}
 
@@ -726,9 +730,17 @@ func (c *Console) procedureLine(level *commandLevel, dispatch func(string) error
 
 		switch {
 		case c.stopping:
-			return procedureExit{status: ssAbort | stsInhibitMsg}, true
+			return c.stopExit, true
 		case level.exiting:
 			return procedureExit{}, false
+		case c.controlYUnwind == level:
+			// A Ctrl/Y's unwinding has come back to this level, which
+			// goes on with its next line.
+			c.controlYUnwind = nil
+
+			return procedureExit{}, false
+		case c.controlYUnwind != nil:
+			return c.unwindExit(), true
 		case interrupted:
 			exit, stop, next := c.controlYAction(level)
 			if stop {
@@ -736,7 +748,7 @@ func (c *Console) procedureLine(level *commandLevel, dispatch func(string) error
 			}
 
 			if c.stopping {
-				return procedureExit{status: ssAbort | stsInhibitMsg}, true
+				return c.stopExit, true
 			}
 
 			run = next
