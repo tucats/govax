@@ -590,6 +590,16 @@ var validConfigs = map[string]bool{
 	"vax.process.scheduler": true,
 	"vax.process.quantum":   true,
 	"vax.process.preempt":   true,
+
+	// Read by vax.init (F$CONFIG): the memory's sizes, in pages.
+	"vax.memory.size": true,
+	"vax.memory.p0":   true,
+	"vax.memory.p1":   true,
+	"vax.memory.s0":   true,
+	"vax.memory.ksp":  true,
+	"vax.memory.esp":  true,
+	"vax.memory.ssp":  true,
+	"vax.memory.isp":  true,
 }
 
 func auditConfig() {

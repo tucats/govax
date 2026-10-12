@@ -7,10 +7,46 @@ $!  each command line starts with "$", and "$!" starts a comment. A line
 $!  without a "$" is data, for whatever reads the procedure's input (here,
 $!  the debugger).
 $!
-$!  Initialize memory with 8mb of physical RAM
-$!  (the parameter is count of 512b pages)
+$!  The memory's sizes, all in 512-byte pages. Each is the default here
+$!  unless govax's configuration sets its vax.memory.* item (see HELP
+$!  CONFIG KEYS), so they can be changed without a vax.init of your own.
+$!  A configured value is read as a DCL integer: decimal, or %X for hex.
 $!
-$ init/vax ^d16384
+$!  SIZE is physical memory (16384 pages is 8MB). P0, P1, and S0 are the
+$!  virtual address regions VMINIT maps (0 shares what physical memory is
+$!  left among the regions given 0), and KSP, ESP, SSP, and ISP the
+$!  kernel, executive, supervisor, and interrupt stacks (ESP, SSP, and
+$!  ISP's defaults are VMINIT's own).
+$!
+$ memory_size = 16384
+$ if f$config("vax.memory.size", "EXISTS") then -
+     memory_size = f$integer(f$config("vax.memory.size"))
+$ memory_p0 = 16384
+$ if f$config("vax.memory.p0", "EXISTS") then -
+     memory_p0 = f$integer(f$config("vax.memory.p0"))
+$ memory_p1 = 8192
+$ if f$config("vax.memory.p1", "EXISTS") then -
+     memory_p1 = f$integer(f$config("vax.memory.p1"))
+$ memory_s0 = 8192
+$ if f$config("vax.memory.s0", "EXISTS") then -
+     memory_s0 = f$integer(f$config("vax.memory.s0"))
+$ memory_ksp = 20
+$ if f$config("vax.memory.ksp", "EXISTS") then -
+     memory_ksp = f$integer(f$config("vax.memory.ksp"))
+$ memory_esp = 8
+$ if f$config("vax.memory.esp", "EXISTS") then -
+     memory_esp = f$integer(f$config("vax.memory.esp"))
+$ memory_ssp = 8
+$ if f$config("vax.memory.ssp", "EXISTS") then -
+     memory_ssp = f$integer(f$config("vax.memory.ssp"))
+$ memory_isp = 4
+$ if f$config("vax.memory.isp", "EXISTS") then -
+     memory_isp = f$integer(f$config("vax.memory.isp"))
+$!
+$!  Initialize the physical memory. INIT/VAX's page count is an
+$!  expression in the console's radix, so ^D marks it decimal.
+$!
+$ init/vax ^d'memory_size'
 $!
 $!   Create page tables for the VAX physical memory.
 $!   You can allocate more tables than will fit in
@@ -20,7 +56,8 @@ $!   backing store, though, so you can exhaust the
 $!   physical memory by allocating too many physical
 $!   pages.
 $!
-$ vminit /p0=16384 /p1=8192 /s0=8192 /ksp=20
+$ vminit /p0='memory_p0' /p1='memory_p1' /s0='memory_s0' -
+     /ksp='memory_ksp' /esp='memory_esp' /ssp='memory_ssp' /isp='memory_isp'
 $!
 $!	Load the console ROM into ROM storage, if there is one found.
 $!	Also allocate the NVRAM storage area.

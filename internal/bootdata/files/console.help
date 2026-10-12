@@ -111,6 +111,8 @@
 //              10/12/26    SPAWN in a subprocess
 //              10/12/26    LEXICAL: F$CONFIG, govax's own, reads the
 //                          configuration
+//              10/12/26    CONFIG KEYS: vax.memory.*, read by vax.init;
+//                          VMINIT's syntax is its qualifiers
 
 This is the help documentation for the govax VAX emulator.  Topic sections are
 marked by a "$" delimiter.  This is followed by as many tokens of the help
@@ -1862,8 +1864,8 @@ $CONF,KEY
 
         vax.startup.procedure         If specified, the name of a DCL
                                       command procedure run automatically
-                                      during startup processing. IF the
-                                      procdedure name does not exist, or
+                                      during startup processing.  If the
+                                      procedure name does not exist, or
                                       is empty, there is no error.
 
         vax.console.prompt            The console's prompt.  Default
@@ -1890,6 +1892,35 @@ $CONF,KEY
         vax.quantum                   The number of instructions between
                                       clock ticks when vax.hardware.clock
                                       is false.  Default 20.
+
+    Memory
+
+        These are read by the startup procedure, vax.init (with F$CONFIG),
+        for its INITIALIZE/VAX and VMINIT commands; each is a number of
+        512-byte pages, a DCL integer (decimal, or %X for hex).  One that
+        isn't set keeps vax.init's own value.  A vax.init of your own
+        need not read them.
+
+        vax.memory.size               Physical memory (INITIALIZE/VAX).
+                                      Default 16384 (8MB).
+
+        vax.memory.p0                 VMINIT's P0 region.  Default 16384.
+
+        vax.memory.p1                 VMINIT's P1 region.  Default 8192.
+
+        vax.memory.s0                 VMINIT's S0 region.  Default 8192.
+
+        vax.memory.ksp                The kernel stack.  Default 20.
+
+        vax.memory.esp                The executive stack.  Default 8.
+
+        vax.memory.ssp                The supervisor stack.  Default 8.
+
+        vax.memory.isp                The interrupt stack.  Default 4.
+
+        A region given 0 shares, with the others given 0, the physical
+        memory the rest leave, and physical memory still left over is
+        added to S0 (see HELP VMINIT).
 
     Processes
 
@@ -2111,51 +2142,61 @@ $DEBU
 $VMIN
 $VM  
 
-    The VMINIT command creates a functional virtual memory map that uses all
-    of physical memory to create P0, P1, and S0 virtual address spaces.  It
-    also initializes the required privileged registers and stack pointers to
-    begin using it.  The command will display information about the physical
-    and virtual address ranges for each region that it creates.
-    
+    The VMINIT command creates a functional virtual memory map that uses
+    physical memory to create the P0, P1, and S0 virtual address regions
+    and the privileged modes' stacks.  It also initializes the required
+    privileged registers and stack pointers to begin using it.  The command
+    displays the physical and virtual address ranges of each region it
+    creates.  INITIALIZE/VAX must come first.  The startup procedure,
+    vax.init, runs it with sizes the configuration may set (see HELP
+    CONFIG KEYS, vax.memory.*).
+
     Syntax:
-    
-        VMINIT  <region> = <pages> [ <region> = <pages>...]
-    
-    Parameters:
-    
-        <region>    This specifies a region that is to be explicitly sized.
-                    If a region is explicitly sized, then the command is
-                    specifying the number of pages of physical memory to
-                    allocate to that region.  If a region is not explicitly
-                    sized then unused physical memory is evenly divided
-                    among the implicitly sized regions.
-                    
-                    A region can be one of P0, P1, or S0.
-        
-        <pages>     This specifies the number of pages to allocate to the
-                    region.  This is in the current base, so be careful
-                    to not assume decimal numbers, etc.
-                    
-                    Also note that the S0 space has a minimum size, based
-                    on the sizes of the other regions.  This is because the
-                    S0 region must contain the PFN database for P0 and P1
-                    space, as well as minimal room for the privileged mode
-                    stacks.  If you do not specify a large enough S0 space
-                    (or there is not enough physical memory left to allocate
-                    to it) then an error message is displayed.
+
+        VMINIT [/P0=pages] [/P1=pages] [/S0=pages]
+               [/KSP=pages] [/ESP=pages] [/SSP=pages] [/ISP=pages]
+               [/STRINGPOOL=pages]
+
+    Each value is a count of 512-byte pages, a decimal integer (the
+    console's radix doesn't apply).
 
     Qualifiers:
 
-        /KSP=<pages>    The size of the kernel stack.  Default 4.
-        /ESP=<pages>    The size of the executive stack.  Default 8.  Its
+        /P0=pages       The pages of the P0 region, the program region.
+        /P1=pages       The pages of the P1 region, the control region.
+        /S0=pages       The pages of the S0 region, system space.
+
+                        A region left out (or given 0) shares, with the
+                        others left out, whatever physical memory the
+                        regions given sizes leave, and any physical memory
+                        still left over is added to S0.  P0 and P1 are
+                        paged on demand, so they may together be larger
+                        than physical memory; a program can still exhaust
+                        physical memory by touching too many pages, since
+                        there is no paging to backing store.
+
+                        S0 has a minimum size, based on the sizes of the
+                        other regions: it holds the PFN database for P0 and
+                        P1, as well as the privileged modes' stacks.  If S0
+                        is too small (or there is not enough physical
+                        memory left for it), an error message is displayed.
+
+        /KSP=pages      The size of the kernel stack.  Default 4.
+        /ESP=pages      The size of the executive stack.  Default 8.  Its
                         pages are writable only from executive or kernel
                         mode, with a no-access guard page below them.
-        /SSP=<pages>    The size of the supervisor stack.  Default 8.  Its
+        /SSP=pages      The size of the supervisor stack.  Default 8.  Its
                         pages are writable only from supervisor mode or a
                         more privileged mode, with a guard page below them.
-        /ISP=<pages>    The size of the interrupt stack.  Default 4.
+        /ISP=pages      The size of the interrupt stack.  Default 4.
+        /STRINGPOOL=pages
+                        The size of the console's string pool.  Default 8.
 
-                    
+    Example:
+
+        VAX> INITIALIZE/VAX ^D16384
+        VAX> VMINIT /P0=16384 /P1=8192 /S0=8192 /KSP=20
+
 $TEST
 
     The TEST statement executes special debugging sequences in the emulator.

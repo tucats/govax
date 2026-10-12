@@ -205,3 +205,17 @@ smaller gaps the phase left:
   F$CON, which was F$CONTEXT (not implemented), is now ambiguous. It
   needs no console, so a subprocess's DCL has it too. Test:
   `TestLexicalConfig`; HELP LEXICAL.
+- 2026-10-12: vax.init's memory sizes come from the configuration when
+  it sets them: `vax.memory.size` (INITIALIZE/VAX's pages) and
+  `vax.memory.p0`, `.p1`, `.s0`, `.ksp`, `.esp`, `.ssp`, `.isp`
+  (VMINIT's qualifiers), each read with F$CONFIG and F$INTEGER (so
+  decimal or `%X`), else vax.init's own value as before: 16384 pages,
+  P0 16384, P1 8192, S0 8192, KSP 20, and ESP 8, SSP 8, ISP 4, which
+  were VMINIT's defaults and are now written out. The values go into
+  the commands by symbol substitution, in decimal (INITIALIZE/VAX's
+  parameter is an expression in the console's radix, hence `^d`;
+  VMINIT's qualifiers are always decimal). The keys are in
+  `validConfigs` and HELP CONFIG KEYS. HELP VMINIT was out of date (it
+  showed `region = pages` parameters): it now gives the qualifiers,
+  /STRINGPOOL, and that physical memory left over goes to S0. Test:
+  `TestVaxInitMemoryConfig` (internal/console/memconfig_test.go).
