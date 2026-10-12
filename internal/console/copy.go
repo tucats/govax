@@ -81,7 +81,7 @@ import (
 //     I/O failure reading or writing a file's content) is reported as
 //     CLI_BADFILESPEC, matching Console.Type/Console.Delete/Console.
 //     Directory's own catch-all bucket.
-func (c *cmdContext) Copy(sourceText string, sourceHost bool, destText string, destHost bool, opts rms.CopyOptions) error {
+func (c *Context) Copy(sourceText string, sourceHost bool, destText string, destHost bool, opts rms.CopyOptions) error {
 	results, err := c.ContainerSession.Copy(sourceText, sourceHost, destText, destHost, opts)
 	if err != nil {
 		if lnmErr := logicalNameFailure(err); lnmErr != nil {
@@ -121,7 +121,7 @@ func (c *cmdContext) Copy(sourceText string, sourceHost bool, destText string, d
 // printCopyResult prints whichever of the four "%COPY-..." line shapes
 // r.Kind calls for — see Console.Copy's own doc comment for each one's
 // exact wording and quiet/verbose gating.
-func (c *cmdContext) printCopyResult(r rms.CopyResult, opts rms.CopyOptions) {
+func (c *Context) printCopyResult(r rms.CopyResult, opts rms.CopyOptions) {
 	switch r.Kind {
 	case rms.CopyTested:
 		c.Printf("%%COPY-I-TEST, would copy %s to %s\n", r.Source, r.Dest)

@@ -170,7 +170,7 @@ func TestAnalyzeImage_volume(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	got := joinLines(lines) + "\n"
+	got := JoinLines(lines) + "\n"
 	if normalizeImageAnalysis(got, false) != normalizeImageAnalysis(string(want), false) {
 		t.Errorf("the analysis differs from VMS's:\n%s", got)
 	}

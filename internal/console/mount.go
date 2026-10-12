@@ -72,7 +72,7 @@ import (
 // leading "_" suppresses that (docs/PHASE-25.md). Once mounted, the
 // volume's label is defined as the logical name DISK$label in the system
 // table, as VMS's MOUNT does, so DISK$label:[DIR]FILE reaches it.
-func (c *cmdContext) Mount(device, path string, write bool) error {
+func (c *Context) Mount(device, path string, write bool) error {
 	device, err := c.mountDevice(device)
 	if err != nil {
 		return err
@@ -104,7 +104,7 @@ func (c *cmdContext) Mount(device, path string, write bool) error {
 // console is verbose, VMS's message saying what was mounted where:
 //
 //	%MOUNT-I-MOUNTED, WORK mounted on _DUA0:
-func (c *cmdContext) MountCommand(device, path string, write bool) error {
+func (c *Context) MountCommand(device, path string, write bool) error {
 	if err := c.Mount(device, path, write); err != nil {
 		return err
 	}
@@ -118,7 +118,7 @@ func (c *cmdContext) MountCommand(device, path string, write bool) error {
 // for the volume mounted on device (a name Mount accepted, so its
 // translation can't fail), preceded by WRITELOCK when writeLocked says
 // the volume could only be mounted read-only.
-func (c *cmdContext) reportMounted(device string, writeLocked bool) {
+func (c *Context) reportMounted(device string, writeLocked bool) {
 	physical, err := c.mountDevice(device)
 	if err != nil {
 		return
@@ -136,7 +136,7 @@ func (c *cmdContext) reportMounted(device string, writeLocked bool) {
 
 // mountDevice translates a MOUNT/DISMOUNT device argument into the
 // physical device it names.
-func (c *cmdContext) mountDevice(text string) (string, error) {
+func (c *Context) mountDevice(text string) (string, error) {
 	device, err := rms.PhysicalDevice(c.Logicals, text)
 	if err != nil {
 		if lnmErr := logicalNameFailure(err); lnmErr != nil {
@@ -151,7 +151,7 @@ func (c *cmdContext) mountDevice(text string) (string, error) {
 
 // volumeLogicalName returns DISK$label for the volume mounted on device,
 // or false when it has no label.
-func (c *cmdContext) volumeLogicalName(device string) (string, bool) {
+func (c *Context) volumeLogicalName(device string) (string, bool) {
 	label, ok := c.Mounts.VolumeLabel(device)
 	label = strings.TrimSpace(label)
 
@@ -179,7 +179,7 @@ func (c *cmdContext) volumeLogicalName(device string) (string, bool) {
 //
 // Like Mount, it translates device first, and it deletes the DISK$label
 // logical name Mount defined for the volume.
-func (c *cmdContext) Dismount(device string) error {
+func (c *Context) Dismount(device string) error {
 	device, err := c.mountDevice(device)
 	if err != nil {
 		return err
@@ -205,7 +205,7 @@ func (c *cmdContext) Dismount(device string) error {
 // deleteVolumeLogicalName deletes name from the system table if it still
 // names device (another volume with the same label may have replaced
 // it since).
-func (c *cmdContext) deleteVolumeLogicalName(name, device string) {
+func (c *Context) deleteVolumeLogicalName(name, device string) {
 	e, err := c.Logicals.Translate(lnm.SystemTableName, name, lnm.Executive, 0)
 	if err != nil || e.Mode != lnm.Executive || e.Equivalences[0].Value != "_"+device+":" {
 		return

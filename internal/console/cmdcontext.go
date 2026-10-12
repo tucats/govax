@@ -2,8 +2,8 @@ package console
 
 // cmd returns the context for a utility command run by the DCL running
 // now.
-func (c *Console) cmd() *cmdContext {
-	return &cmdContext{
+func (c *Console) cmd() *Context {
+	return &Context{
 		Out:              c.Out,
 		ContainerSession: c.ContainerSession,
 		Logicals:         c.Logicals,
@@ -12,6 +12,7 @@ func (c *Console) cmd() *cmdContext {
 		Devices:          c.Devices,
 		Paths:            c.Paths,
 		HostLibrary:      c.HostLibrary,
+		ShimLinks:        shimTable,
 		ScreenSize:       c.ScreenSize,
 		Verbose:          c.Verbose,
 		Running:          c.Running,
@@ -29,4 +30,4 @@ func (c *Console) cmd() *cmdContext {
 
 // Commands returns the context the utility commands work on, for the DCL
 // running now: tests call the commands through it.
-func (c *Console) Commands() *cmdContext { return c.cmd() }
+func (c *Console) Commands() *Context { return c.cmd() }

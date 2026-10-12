@@ -8,9 +8,9 @@ import (
 	"testing"
 
 	"github.com/tucats/govax/internal/link"
-	"github.com/tucats/govax/internal/vmsdef"
 	"github.com/tucats/govax/internal/lnm"
 	"github.com/tucats/govax/internal/rms"
+	"github.com/tucats/govax/internal/vmsdef"
 )
 
 // vmsLibDir is testdata/vmslib, where files copied from a VAX are kept
@@ -62,7 +62,7 @@ func TestCapturedLIBRTLMatchesImage(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	govax := govaxSymbols()
+	govax := GovaxSymbols(shimTable)
 
 	want, _ := src.Image(name)
 	if got, ok := govax.Image(name); !ok || got != want {

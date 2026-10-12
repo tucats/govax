@@ -45,7 +45,7 @@ var (
 // Rename renames the files inputs name to output (see this file's opening
 // comment). log is /LOG; newVersion is /NEW_VERSION, on unless
 // /NONEW_VERSION.
-func (c *cmdContext) Rename(inputs []string, output string, log, newVersion bool) error {
+func (c *Context) Rename(inputs []string, output string, log, newVersion bool) error {
 	results := c.ContainerSession.Rename(inputs, output, rms.RenameOptions{NewVersion: newVersion})
 
 	var failure string
@@ -98,19 +98,19 @@ func renameFailureMessage(r rms.RenamedFile) []string {
 		head = "%RENAME-E-OPENIN, error opening " + r.Old + " as input"
 	}
 
-	lines := []string{head, conditionLine(r.Status)}
+	lines := []string{head, ConditionLine(r.Status)}
 
 	if r.STV != 0 && r.STV != r.Status {
-		lines = append(lines, conditionLine(r.STV))
+		lines = append(lines, ConditionLine(r.STV))
 	}
 
 	return lines
 }
 
-// conditionLine is condition value code's message as a continuation line,
+// ConditionLine is condition value code's message as a continuation line,
 // "-RMS-E-FNF, file not found", as $PUTMSG shows a message after the
 // first.
-func conditionLine(code uint32) string {
+func ConditionLine(code uint32) string {
 	severity := [8]string{"W", "S", "E", "I", "F", "?", "?", "?"}[code&7]
 
 	m, ok := vmsdef.LookupMessage(code)

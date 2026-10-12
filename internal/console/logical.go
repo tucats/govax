@@ -15,10 +15,10 @@ import (
 // TRANSLATION, all working on the shared lnm.Database in c.Logicals.
 // The DCL bindings that call these are in dispatch.go.
 
-// consoleTerminal is the physical device name the console's own
+// ConsoleTerminal is the physical device name the console's own
 // terminal has: what SYS$INPUT, SYS$OUTPUT, SYS$ERROR, SYS$COMMAND, and
 // TT translate to.
-const consoleTerminal = "_TTA0:"
+const ConsoleTerminal = "_TTA0:"
 
 // dclLogicalName is the logical name SHOW LOGICAL and SHOW TRANSLATION
 // search by default (LNM$FILE_DEV's tables, as on VMS).
@@ -30,7 +30,7 @@ const dclLogicalName = "LNM$DCL_LOGICAL"
 // When log is set and an existing definition was replaced, it prints
 // DCL's %DCL-I-SUPERSEDE message. Removing ASSIGN's trailing colon is the
 // caller's job.
-func (c *cmdContext) DefineLogicalName(table, name string, values []string, mode lnm.Mode, attrs uint32, log bool) error {
+func (c *Context) DefineLogicalName(table, name string, values []string, mode lnm.Mode, attrs uint32, log bool) error {
 	eqv := make([]lnm.Equivalence, len(values))
 	for i, v := range values {
 		eqv[i] = lnm.Equivalence{Value: v, Attrs: attrs}
@@ -55,7 +55,7 @@ func (c *cmdContext) DefineLogicalName(table, name string, values []string, mode
 // them alone, as on VMS. A table name in a directory table deletes that
 // table (DEASSIGN/TABLE=LNM$PROCESS_DIRECTORY TAX). It leaves $STATUS
 // SS$_NORMAL.
-func (c *cmdContext) DeassignLogicalName(table, name string, mode lnm.Mode, all bool) error {
+func (c *Context) DeassignLogicalName(table, name string, mode lnm.Mode, all bool) error {
 	switch {
 	case all && name != "":
 		return vmserrors.New(vmserrors.CLI_EXTRAPARAMETER, name)
@@ -80,7 +80,7 @@ func (c *cmdContext) DeassignLogicalName(table, name string, mode lnm.Mode, all 
 // a process-private table, unless the caller says otherwise). When log
 // is set and an existing table of that name was replaced, it prints
 // %DCL-I-SUPERSEDE.
-func (c *cmdContext) CreateNameTable(table, parent string, mode lnm.Mode, log bool) error {
+func (c *Context) CreateNameTable(table, parent string, mode lnm.Mode, log bool) error {
 	_, result, err := c.Logicals.CreateTable(table, parent, mode, 0)
 	if err != nil {
 		return err
@@ -144,7 +144,7 @@ func (d logicalDisplay) logicalTables(specs []string) ([]*lnm.Table, error) {
 // Its status is SS$_NORMAL, or SHOW$_NOTRAN when a name had no
 // translation, each with STS$M_INHIB_MSG set, as VMS's SHOW image
 // returned them (testdata/mp/probe4 and probe5).
-func (c *cmdContext) ShowLogical(names, tables []string, full bool) error {
+func (c *Context) ShowLogical(names, tables []string, full bool) error {
 	untranslated, err := logicalDisplay{db: c.Logicals, out: c.Printf}.show(names, tables, full)
 	if err != nil {
 		return err
@@ -395,13 +395,13 @@ func attrTags(attrs uint32, show bool) string {
 
 // ShowLogicalStructure implements SHOW LOGICAL/STRUCTURE: each directory
 // and, indented beneath it, the tables descended from it.
-func (c *cmdContext) ShowLogicalStructure() {
+func (c *Context) ShowLogicalStructure() {
 	for _, dir := range []*lnm.Table{c.Logicals.ProcessDirectory, c.Logicals.SystemDirectory} {
 		c.printTableTree(dir, 0)
 	}
 }
 
-func (c *cmdContext) printTableTree(t *lnm.Table, depth int) {
+func (c *Context) printTableTree(t *lnm.Table, depth int) {
 	c.Printf("%s(%s)\n", strings.Repeat("    ", depth), t.Name)
 
 	for _, child := range c.Logicals.Children(t) {
@@ -418,7 +418,7 @@ func (c *cmdContext) printTableTree(t *lnm.Table, depth int) {
 //	NAME = "VALUE" (TABLE)
 //
 // A name that isn't found prints %SHOW-S-NOTRAN.
-func (c *cmdContext) ShowTranslation(table, name string) error {
+func (c *Context) ShowTranslation(table, name string) error {
 	if table == "" {
 		table = dclLogicalName
 	}

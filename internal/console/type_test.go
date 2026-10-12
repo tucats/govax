@@ -331,7 +331,7 @@ func TestConsoleType_hostPaged(t *testing.T) {
 	}
 
 	out := buf.String()
-	if !strings.Contains(out, "line 4\n"+pagePrompt) || strings.Contains(out, "line 5") {
+	if !strings.Contains(out, "line 4\n"+PagePrompt) || strings.Contains(out, "line 5") {
 		t.Errorf("Type/PAGE output = %q, want it to stop after the first screen", out)
 	}
 }

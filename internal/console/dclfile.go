@@ -351,7 +351,7 @@ func (c *Interpreter) openDCLFile(spec string, host bool, access rms.DCLAccess) 
 
 	loc, err := c.ContainerSession.Locate(spec, host)
 	if err != nil {
-		return nil, "", fileFailure(err, spec)
+		return nil, "", FileFailure(err, spec)
 	}
 
 	if loc.Host {
@@ -390,9 +390,9 @@ func openFailure(fe *rms.DCLFileError, access rms.DCLAccess) error {
 		head = "DCL-E-OPENOUT, error opening " + fe.Name + " as output"
 	}
 
-	text := head + "\n" + conditionLine(fe.Status)
+	text := head + "\n" + ConditionLine(fe.Status)
 	if fe.STV != 0 {
-		text += "\n" + conditionLine(fe.STV)
+		text += "\n" + ConditionLine(fe.STV)
 	}
 
 	return vmserrors.ConditionError{Status: fe.Status | stsInhibitMsg, Text: text}

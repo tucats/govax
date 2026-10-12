@@ -63,7 +63,7 @@ type AnalyzeOptions struct {
 // read stops the command; a file the analysis finds errors in doesn't,
 // and the command then ends with CLI_ANALYZEERRORS once every file's
 // report is written.
-func (c *cmdContext) AnalyzeObject(opts AnalyzeOptions) error {
+func (c *Context) AnalyzeObject(opts AnalyzeOptions) error {
 	return c.analyzeFiles(opts, "OBJ", "ANL", anl.TitleObject, func(loc rms.FileLocation) ([]anl.Line, int, rms.FileLocation, error) {
 		records, found, err := c.analyzeRecords(loc, opts)
 		if err != nil {
@@ -79,11 +79,11 @@ func (c *cmdContext) AnalyzeObject(opts AnalyzeOptions) error {
 // AnalyzeImage runs one ANALYZE/IMAGE command (docs/PHASE-40.md), as
 // AnalyzeObject runs ANALYZE/OBJECT: the default input type is EXE, and
 // the default output NAME.ANI.
-func (c *cmdContext) AnalyzeImage(opts AnalyzeOptions) error {
+func (c *Context) AnalyzeImage(opts AnalyzeOptions) error {
 	return c.analyzeFiles(opts, "EXE", "ANI", anl.TitleImage, func(loc rms.FileLocation) ([]anl.Line, int, rms.FileLocation, error) {
 		data, found, err := c.ContainerSession.ReadRawFile(loc)
 		if err != nil {
-			return nil, 0, found, fileFailure(err, loc.Name)
+			return nil, 0, found, FileFailure(err, loc.Name)
 		}
 
 		img, err := vmsimage.ReadImage(data)
@@ -107,7 +107,7 @@ type analyzeOne func(loc rms.FileLocation) ([]anl.Line, int, rms.FileLocation, e
 // type outputType). A file that can't be read stops the command; a file
 // the analysis finds errors in doesn't, and the command then ends with
 // CLI_ANALYZEERRORS once every report is written.
-func (c *cmdContext) analyzeFiles(opts AnalyzeOptions, inputType, outputType, title string, analyze analyzeOne) error {
+func (c *Context) analyzeFiles(opts AnalyzeOptions, inputType, outputType, title string, analyze analyzeOne) error {
 	s := c.ContainerSession
 
 	var (
@@ -130,7 +130,7 @@ func (c *cmdContext) analyzeFiles(opts AnalyzeOptions, inputType, outputType, ti
 		}
 
 		if err != nil {
-			return fileFailure(err, name)
+			return FileFailure(err, name)
 		}
 
 		loc = loc.WithDefaultType(inputType)
@@ -177,12 +177,12 @@ func (c *cmdContext) analyzeFiles(opts AnalyzeOptions, inputType, outputType, ti
 // analyzeRecords reads the object records to analyze at loc: an object
 // file's, or the records of an object library's modules, one module after
 // another (all of them in name order, or those /INCLUDE names).
-func (c *cmdContext) analyzeRecords(loc rms.FileLocation, opts AnalyzeOptions) ([][]byte, rms.FileLocation, error) {
+func (c *Context) analyzeRecords(loc rms.FileLocation, opts AnalyzeOptions) ([][]byte, rms.FileLocation, error) {
 	s := c.ContainerSession
 
 	data, found, err := s.ReadRawFile(loc)
 	if err != nil {
-		return nil, found, fileFailure(err, loc.Name)
+		return nil, found, FileFailure(err, loc.Name)
 	}
 
 	lib, libErr := lbr.Open(data)
@@ -196,7 +196,7 @@ func (c *cmdContext) analyzeRecords(loc rms.FileLocation, opts AnalyzeOptions) (
 	default:
 		records, found, err := s.ReadRecordFile(loc, rms.VariableRecords)
 		if err != nil {
-			return nil, found, fileFailure(err, loc.Name)
+			return nil, found, FileFailure(err, loc.Name)
 		}
 
 		return records, found, nil
@@ -230,12 +230,12 @@ func (c *cmdContext) analyzeRecords(loc rms.FileLocation, opts AnalyzeOptions) (
 
 // writeAnalysis writes a report to the output file name (or NAME.typ
 // beside input), one record per line.
-func (c *cmdContext) writeAnalysis(name string, input rms.FileLocation, typ string, text []byte) error {
+func (c *Context) writeAnalysis(name string, input rms.FileLocation, typ string, text []byte) error {
 	s := c.ContainerSession
 
 	out, err := outputLocation(s, name, input, typ)
 	if err != nil {
-		return fileFailure(err, name)
+		return FileFailure(err, name)
 	}
 
 	out = out.WithDefaultType(typ)
@@ -279,11 +279,11 @@ func latin1ToUTF8(b []byte) string {
 	return sb.String()
 }
 
-// analyzeRecordQualifiers are ANALYZE/OBJECT's record-type qualifiers and
+// AnalyzeRecordQualifiers are ANALYZE/OBJECT's record-type qualifiers and
 // the record types each selects. /EOM selects both end of module records,
 // and /GSD, /TIR, ... their own types; /MHD selects every header record,
 // whose first is the module header.
-var analyzeRecordQualifiers = []struct {
+var AnalyzeRecordQualifiers = []struct {
 	name  string
 	types []obj.RecordType
 }{
@@ -294,18 +294,4 @@ var analyzeRecordQualifiers = []struct {
 	{"DBG", []obj.RecordType{obj.RecDBG}},
 	{"LNK", []obj.RecordType{obj.RecLNK}},
 	{"EOM", []obj.RecordType{obj.RecEOM, obj.RecEOMW}},
-}
-
-// nonEmpty drops empty strings from a list: a list qualifier given
-// without a value (/INCLUDE) has its empty default.
-func nonEmpty(list []string) []string {
-	var out []string
-
-	for _, s := range list {
-		if s != "" {
-			out = append(out, s)
-		}
-	}
-
-	return out
 }

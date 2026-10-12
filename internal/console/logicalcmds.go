@@ -13,7 +13,7 @@ import (
 // reports for this process), plus the process-permanent terminal names.
 func newLogicals() *lnm.Database {
 	db := lnm.NewDatabase(corevms.NominalUIC)
-	if err := db.DefineProcessNames(consoleTerminal); err != nil {
+	if err := db.DefineProcessNames(ConsoleTerminal); err != nil {
 		// Only reachable if the fixed names above were invalid.
 		panic(err)
 	}

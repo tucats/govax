@@ -149,7 +149,7 @@ func (c *Interpreter) searchFiles(spec string) ([]string, error) {
 
 	files, err := c.ContainerSession.Search(spec)
 	if err != nil {
-		return nil, fileFailure(err, spec)
+		return nil, FileFailure(err, spec)
 	}
 
 	return files, nil

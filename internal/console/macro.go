@@ -165,7 +165,7 @@ const defaultSourceType = "MAR"
 
 // Macro assembles one MACRO-32 source file and, unless opts.NoObject,
 // writes its object module; with opts.List, it writes the listing too.
-func (c *cmdContext) Macro(opts MacroOptions) error {
+func (c *Context) Macro(opts MacroOptions) error {
 	// Everything before the assembler is called (finding and reading the
 	// source, opening the libraries) is the listing's command processing
 	// phase.
@@ -174,14 +174,14 @@ func (c *cmdContext) Macro(opts MacroOptions) error {
 
 	loc, err := s.Locate(opts.Source, opts.SourceHost)
 	if err != nil {
-		return fileFailure(err, opts.Source)
+		return FileFailure(err, opts.Source)
 	}
 
 	loc = loc.WithDefaultType(defaultSourceType)
 
 	lines, found, err := s.ReadRecordFile(loc, rms.TextRecords)
 	if err != nil {
-		return fileFailure(err, loc.Name)
+		return FileFailure(err, loc.Name)
 	}
 
 	a := asm.New(false)
@@ -219,7 +219,7 @@ func (c *cmdContext) Macro(opts MacroOptions) error {
 
 		text, _, err := s.ReadRecordFile(incLoc, rms.TextRecords)
 
-		return joinLines(text), err
+		return JoinLines(text), err
 	})
 	a.SetLibraryResolver(func(name string) (asm.MacroLibrary, error) {
 		return c.openMacroLibrary(name, found)
@@ -240,7 +240,7 @@ func (c *cmdContext) Macro(opts MacroOptions) error {
 
 	commandProcessing := commandStart.Elapsed()
 
-	_, asmErr := a.Assemble(joinLines(lines))
+	_, asmErr := a.Assemble(JoinLines(lines))
 
 	for _, m := range a.Messages() {
 		c.Printf("%s\n", m)
@@ -285,12 +285,12 @@ func (c *cmdContext) Macro(opts MacroOptions) error {
 
 // writeObject writes the object module of a's assembly of the source
 // found.
-func (c *cmdContext) writeObject(a *asm.Assembler, opts MacroOptions, found rms.FileLocation) error {
+func (c *Context) writeObject(a *asm.Assembler, opts MacroOptions, found rms.FileLocation) error {
 	s := c.ContainerSession
 
 	objLoc, err := outputLocation(s, opts.Object, found, "OBJ")
 	if err != nil {
-		return fileFailure(err, opts.Object)
+		return FileFailure(err, opts.Object)
 	}
 
 	module, err := a.Object(asm.ObjectOptions{
@@ -350,19 +350,19 @@ func sourceFile(s *rms.Session, found rms.FileLocation) *obj.SourceFile {
 // writeListing writes the listing of a's assembly of the source found, a
 // text file with a record for each line. commandProcessing is how long
 // the command took before the assembler was called.
-func (c *cmdContext) writeListing(a *asm.Assembler, opts MacroOptions, found rms.FileLocation, commandProcessing asm.PhaseTime) error {
+func (c *Context) writeListing(a *asm.Assembler, opts MacroOptions, found rms.FileLocation, commandProcessing asm.PhaseTime) error {
 	s := c.ContainerSession
 
 	lisLoc, err := outputLocation(s, opts.ListFile, found, "LIS")
 	if err != nil {
-		return fileFailure(err, opts.ListFile)
+		return FileFailure(err, opts.ListFile)
 	}
 
 	source := sourceSpec(found)
 
 	revised, err := s.RevisionDate(found)
 	if err != nil {
-		return fileFailure(err, found.Name)
+		return FileFailure(err, found.Name)
 	}
 
 	lines := a.Listing(asm.ListingOptions{
@@ -395,19 +395,19 @@ func macroAssemblerName() string {
 
 // openMacroLibrary reads the macro library name, a /LIBRARY= or .LIBRARY
 // file, found relative to the source file.
-func (c *cmdContext) openMacroLibrary(name string, source rms.FileLocation) (asm.MacroLibrary, error) {
+func (c *Context) openMacroLibrary(name string, source rms.FileLocation) (asm.MacroLibrary, error) {
 	s := c.ContainerSession
 
 	loc, err := s.LocateRelated(name, false, source)
 	if err != nil {
-		return nil, fileFailure(err, name)
+		return nil, FileFailure(err, name)
 	}
 
 	loc = loc.WithDefaultType("MLB")
 
 	data, found, err := s.ReadRawFile(loc)
 	if err != nil {
-		return nil, fileFailure(err, loc.Name)
+		return nil, FileFailure(err, loc.Name)
 	}
 
 	lib, err := macroLibrary(data, found.Name)
@@ -435,7 +435,7 @@ func macroLibrary(data []byte, name string) (asm.MacroLibrary, error) {
 // found and read the first time a macro is looked for in it, so a program
 // that needs no library macros never reads it.
 type starletMacros struct {
-	c   *cmdContext
+	c   *Context
 	lib asm.MacroLibrary
 	err error
 }
@@ -470,7 +470,7 @@ func (s *starletMacros) LibraryName() string {
 
 // openStarlet reads STARLET.MLB: SYS$LIBRARY's, the host library
 // directory's, or govax's own.
-func (c *cmdContext) openStarlet() (asm.MacroLibrary, error) {
+func (c *Context) openStarlet() (asm.MacroLibrary, error) {
 	data, name, err := c.readLibraryFile("SYS$LIBRARY", "STARLET.MLB")
 	if err != nil {
 		return nil, objectFailureAs(vmserrors.CLI_LIBRARY, err, name)
@@ -492,8 +492,8 @@ func (c *cmdContext) openStarlet() (asm.MacroLibrary, error) {
 	return asm.NamedMacroLibrary(lib, name), nil
 }
 
-// joinLines turns records read from a text file back into source text.
-func joinLines(lines [][]byte) string {
+// JoinLines turns records read from a text file back into source text.
+func JoinLines(lines [][]byte) string {
 	var b strings.Builder
 
 	for i, l := range lines {
@@ -519,7 +519,7 @@ func objectFailure(err error, spec string) error {
 func objectFailureAs(status uint32, err error, spec string) error {
 	var notMounted *rms.NotMountedError
 	if logicalNameFailure(err) != nil || errors.As(err, &notMounted) {
-		return fileFailure(err, spec)
+		return FileFailure(err, spec)
 	}
 
 	return vmserrors.Wrap(status, err, spec)

@@ -205,7 +205,7 @@ func TestMacro_starletSources(t *testing.T) {
 	dir := t.TempDir()
 	src := filepath.Join(dir, "prog.mar")
 	objPath := filepath.Join(dir, "prog.obj")
-	
+
 	writeHostFile(t, src, "\tWHICH\n\t.END\n")
 
 	if err := c.cmd().Macro(MacroOptions{Source: src}); err != nil {
@@ -253,7 +253,7 @@ func TestMacro_realStarlet(t *testing.T) {
 
 	c, out := newTestConsole(t)
 	c.HostLibrary = vmsLibDir
-	
+
 	defer func() {
 		if t.Failed() {
 			t.Log(out.String())
@@ -280,7 +280,7 @@ func TestMacro_realStarlet(t *testing.T) {
 // TestHostLibraryDir checks where the host library directory comes from:
 // the console's own, then vax.library, then vax.link.library.
 func TestHostLibraryDir(t *testing.T) {
-	for _, key := range []string{librarySetting, legacyLibrarySetting} {
+	for _, key := range []string{LibrarySetting, LegacyLibrarySetting} {
 		old, had := settings.Get(key), settings.Exists(key)
 
 		t.Cleanup(func() {
@@ -294,14 +294,14 @@ func TestHostLibraryDir(t *testing.T) {
 
 	c, _ := newTestConsole(t)
 
-	settings.Set(legacyLibrarySetting, "/old")
-	_ = settings.Delete(librarySetting)
+	settings.Set(LegacyLibrarySetting, "/old")
+	_ = settings.Delete(LibrarySetting)
 
 	if got := c.cmd().hostLibraryDir(); got != "/old" {
 		t.Errorf("with only vax.link.library: %q", got)
 	}
 
-	settings.Set(librarySetting, "/new")
+	settings.Set(LibrarySetting, "/new")
 
 	if got := c.cmd().hostLibraryDir(); got != "/new" {
 		t.Errorf("with vax.library too: %q", got)

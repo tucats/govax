@@ -90,7 +90,7 @@ type LibraryOptions struct {
 
 // library is one LIBRARY command in progress.
 type library struct {
-	c    *cmdContext
+	c    *Context
 	opts LibraryOptions
 	now  uint64
 
@@ -102,7 +102,7 @@ type library struct {
 }
 
 // Library runs one LIBRARY command.
-func (c *cmdContext) Library(opts LibraryOptions) error {
+func (c *Context) Library(opts LibraryOptions) error {
 	l := &library{c: c, opts: opts, now: vmsdef.Time(time.Now())}
 
 	return l.run()
@@ -119,7 +119,7 @@ func (l *library) run() error {
 
 	loc, err := s.Locate(opts.Library, opts.LibraryHost)
 	if err != nil {
-		return fileFailure(err, opts.Library)
+		return FileFailure(err, opts.Library)
 	}
 
 	loc = loc.WithDefaultType(libType)
@@ -199,7 +199,7 @@ func (l *library) log(status uint32, module string) {
 func (l *library) open(loc rms.FileLocation) error {
 	data, found, err := l.c.ContainerSession.ReadRawFile(loc)
 	if err != nil {
-		return fileFailure(err, loc.Name)
+		return FileFailure(err, loc.Name)
 	}
 
 	l.found = found
@@ -249,7 +249,7 @@ func (l *library) insert() error {
 		}
 
 		if err != nil {
-			return fileFailure(err, name)
+			return FileFailure(err, name)
 		}
 
 		entries, found, err := l.readInput(loc)
@@ -305,7 +305,7 @@ func (l *library) readInput(loc rms.FileLocation) ([]*lbr.Entry, rms.FileLocatio
 
 		records, found, err := s.ReadRecordFile(loc, rms.TextRecords)
 		if err != nil {
-			return nil, found, fileFailure(err, loc.Name)
+			return nil, found, FileFailure(err, loc.Name)
 		}
 
 		lines := make([]string, len(records))
@@ -329,7 +329,7 @@ func (l *library) readInput(loc rms.FileLocation) ([]*lbr.Entry, rms.FileLocatio
 
 		records, found, err := s.ReadRecordFile(loc, rms.VariableRecords)
 		if err != nil {
-			return nil, found, fileFailure(err, loc.Name)
+			return nil, found, FileFailure(err, loc.Name)
 		}
 
 		entries, err := l.b.ObjectModules(records, l.opts.Selective)
@@ -421,7 +421,7 @@ func (l *library) extract() error {
 
 	out, err := outputLocation(s, l.opts.Output, l.found, typ)
 	if err != nil {
-		return fileFailure(err, l.opts.Output)
+		return FileFailure(err, l.opts.Output)
 	}
 
 	out = out.WithDefaultType(typ)
@@ -463,7 +463,7 @@ func (l *library) list() error {
 
 	out, err := outputLocation(s, l.opts.ListFile, l.found, "LIS")
 	if err != nil {
-		return fileFailure(err, l.opts.ListFile)
+		return FileFailure(err, l.opts.ListFile)
 	}
 
 	out = out.WithDefaultType("LIS")

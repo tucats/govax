@@ -70,7 +70,7 @@ var typeOpenIn = 149<<16 | vmsdef.LibrarySymbols["SHR$_OPENIN"]
 // data lines after the command. A logical name DCL's OPEN defined types
 // the file it opened, from where READ has got to (typeOpenFile). Neither
 // applies with host.
-func (c *cmdContext) Type(specText string, host, paged bool) error {
+func (c *Context) Type(specText string, host, paged bool) error {
 	if !host {
 		if handled, err := c.TypeDCL(specText); handled {
 			return err
@@ -134,9 +134,9 @@ func typeFailure(err error, specText string) error {
 	if errors.As(err, &locked) {
 		return vmserrors.ConditionError{
 			Status: typeOpenIn | stsInhibitMsg,
-			Text:   "TYPE-W-OPENIN, error opening " + locked.Name + " as input\n" + conditionLine(vmsdef.Symbols["RMS$_FLK"]),
+			Text:   "TYPE-W-OPENIN, error opening " + locked.Name + " as input\n" + ConditionLine(vmsdef.Symbols["RMS$_FLK"]),
 		}
 	}
 
-	return fileFailure(err, specText)
+	return FileFailure(err, specText)
 }

@@ -11,12 +11,12 @@ import (
 	"github.com/tucats/govax/internal/rms"
 )
 
-// cmdContext is what the console's utility commands (DIRECTORY, TYPE,
+// Context is what the console's utility commands (DIRECTORY, TYPE,
 // COPY, MOUNT, DEFINE, MACRO, LINK, ...) work on: the DCL running the
 // command (its output, default directory, logical names, and process),
 // the machine's devices and mounted volumes, and where govax finds its
 // files. Console.cmd makes one for each command.
-type cmdContext struct {
+type Context struct {
 	// Out is the DCL's output.
 	Out io.Writer
 
@@ -36,6 +36,10 @@ type cmdContext struct {
 	// (syslib.go).
 	Paths       *respath.Resolver
 	HostLibrary string
+
+	// ShimLinks are the routines govax's shims stand in for, which LINK
+	// takes as symbols (GovaxSymbols).
+	ShimLinks []corevms.ShimLink
 
 	// ScreenSize, when set, gives the screen's height and width for
 	// paged output (page.go), instead of asking the terminal.
@@ -63,4 +67,4 @@ type cmdContext struct {
 }
 
 // Printf writes to the DCL's output.
-func (c *cmdContext) Printf(format string, args ...any) { fmt.Fprintf(c.Out, format, args...) }
+func (c *Context) Printf(format string, args ...any) { fmt.Fprintf(c.Out, format, args...) }

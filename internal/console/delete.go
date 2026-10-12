@@ -45,7 +45,7 @@ import (
 //     device volume set, or a genuine I/O failure freeing storage) is
 //     reported as CLI_BADFILESPEC, matching Console.Directory's own
 //     catch-all bucket.
-func (c *cmdContext) Delete(specText string) error {
+func (c *Context) Delete(specText string) error {
 	deleted, err := c.ContainerSession.Delete(specText)
 	if err != nil {
 		if lnmErr := logicalNameFailure(err); lnmErr != nil {

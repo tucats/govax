@@ -18,22 +18,22 @@ import (
 // size can't be read) the vax.console.lines setting gives the number of
 // lines, and with that unset, a VT100's 24.
 
-// consoleLinesSetting is the configuration key giving the screen's height
+// ConsoleLinesSetting is the configuration key giving the screen's height
 // when the terminal can't be asked.
-const consoleLinesSetting = "vax.console.lines"
+const ConsoleLinesSetting = "vax.console.lines"
 
-// defaultScreenLines is a VT100's height, the last resort.
-const defaultScreenLines = 24
+// DefaultScreenLines is a VT100's height, the last resort.
+const DefaultScreenLines = 24
 
-// pagePrompt is what VMS shows at the foot of each screen.
-const pagePrompt = "Press RETURN to continue"
+// PagePrompt is what VMS shows at the foot of each screen.
+const PagePrompt = "Press RETURN to continue"
 
-// screenSize returns the screen's height in lines and its width in
+// TerminalSize returns the screen's height in lines and its width in
 // columns. width is 0 when it isn't known, in which case long lines
 // aren't counted as wrapping.
 //
 // ScreenSize, when set, overrides the terminal (tests use it).
-func (c *cmdContext) screenSize() (height, width int) {
+func (c *Context) TerminalSize() (height, width int) {
 	if c.ScreenSize != nil {
 		return c.ScreenSize()
 	}
@@ -47,18 +47,18 @@ func (c *cmdContext) screenSize() (height, width int) {
 		}
 	}
 
-	if n := settings.GetInt(consoleLinesSetting); n > 1 {
+	if n := settings.GetInt(ConsoleLinesSetting); n > 1 {
 		return n, 0
 	}
 
-	return defaultScreenLines, 0
+	return DefaultScreenLines, 0
 }
 
 // Page writes text to the console's output a screenful at a time. Each
 // screen leaves its last line for the prompt. Reaching the end of the
 // input while waiting at the prompt ends the display too.
-func (c *cmdContext) Page(text string) {
-	height, width := c.screenSize()
+func (c *Context) Page(text string) {
+	height, width := c.TerminalSize()
 	perPage := height - 1
 
 	lines := strings.SplitAfter(text, "\n")
@@ -108,8 +108,8 @@ func screenRows(line string, width int) int {
 // continuePaging shows the prompt and reads the user's reply: true to show
 // another screen (RETURN alone), false to stop (any text, or no more
 // input).
-func (c *cmdContext) continuePaging() bool {
-	c.Printf("%s", pagePrompt)
+func (c *Context) continuePaging() bool {
+	c.Printf("%s", PagePrompt)
 
 	reply, ok := c.ReadReply()
 

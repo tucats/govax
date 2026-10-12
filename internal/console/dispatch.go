@@ -716,7 +716,7 @@ func (d *Dispatcher) bindGrammar() {
 	g.Bind("ANALYZE_OBJECT", func(id int64, r *dcl.Result) error {
 		var selected []obj.RecordType
 
-		for _, q := range analyzeRecordQualifiers {
+		for _, q := range AnalyzeRecordQualifiers {
 			if r.Present(q.name) && !r.Negated(q.name) {
 				selected = append(selected, q.types...)
 			}
@@ -809,4 +809,18 @@ func (d *Dispatcher) assembleInteractiveLine(line string) error {
 	}
 
 	return nil
+}
+
+// nonEmpty drops empty strings from a list: a list qualifier given
+// without a value (/INCLUDE) has its empty default.
+func nonEmpty(list []string) []string {
+	var out []string
+
+	for _, s := range list {
+		if s != "" {
+			out = append(out, s)
+		}
+	}
+
+	return out
 }

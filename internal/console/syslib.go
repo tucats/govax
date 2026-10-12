@@ -21,28 +21,28 @@ import (
 
 // Settings naming the host library directory.
 const (
-	librarySetting       = "vax.library"
-	legacyLibrarySetting = "vax.link.library"
+	LibrarySetting       = "vax.library"
+	LegacyLibrarySetting = "vax.link.library"
 )
 
 // hostLibraryDir is the host directory to look in for VMS library files,
 // or "" for none.
-func (c *cmdContext) hostLibraryDir() string {
+func (c *Context) hostLibraryDir() string {
 	if c.HostLibrary != "" {
 		return c.HostLibrary
 	}
 
-	if dir := settings.Get(librarySetting); dir != "" {
+	if dir := settings.Get(LibrarySetting); dir != "" {
 		return dir
 	}
 
-	return settings.Get(legacyLibrarySetting)
+	return settings.Get(LegacyLibrarySetting)
 }
 
 // readLibraryFile reads a VMS library file: logical:file on a mounted
 // volume, or file in the host library directory. It returns nil data, and
 // no error, when neither has it.
-func (c *cmdContext) readLibraryFile(logical, file string) ([]byte, string, error) {
+func (c *Context) readLibraryFile(logical, file string) ([]byte, string, error) {
 	spec := logical + ":" + file
 
 	data, found, err := c.ContainerSession.ReadRawFile(rms.FileLocation{Name: spec})

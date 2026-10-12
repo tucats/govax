@@ -889,7 +889,7 @@ func (c *Interpreter) Exit(status *uint32) error {
 func (c *Interpreter) openProcedure(file string, host bool) (*procedureSource, error) {
 	loc, err := c.ContainerSession.Locate(file, host)
 	if err != nil {
-		return nil, fileFailure(err, file)
+		return nil, FileFailure(err, file)
 	}
 
 	if loc.Host {
@@ -911,14 +911,14 @@ func (c *Interpreter) openProcedure(file string, host bool) (*procedureSource, e
 			return nil, vmserrors.Wrap(vmserrors.SS_NOSUCHFILE, firstErr, file)
 		}
 
-		return nil, fileFailure(firstErr, file)
+		return nil, FileFailure(firstErr, file)
 	}
 
 	loc = loc.WithDefaultType("COM")
 
 	records, found, err := c.ContainerSession.ReadRecordFile(loc, rms.TextRecords)
 	if err != nil {
-		return nil, fileFailure(err, file)
+		return nil, FileFailure(err, file)
 	}
 
 	lines := make([]string, len(records))
@@ -970,7 +970,7 @@ func (c *Interpreter) openProcedureOutput(name string) (*procedureOutput, error)
 
 	loc, err := c.ContainerSession.Locate(name, false)
 	if err != nil {
-		return nil, fileFailure(err, name)
+		return nil, FileFailure(err, name)
 	}
 
 	loc = loc.WithDefaultType("LIS")
@@ -978,7 +978,7 @@ func (c *Interpreter) openProcedureOutput(name string) (*procedureOutput, error)
 	if loc.Host {
 		f, err := os.Create(loc.Name)
 		if err != nil {
-			return nil, fileFailure(err, name)
+			return nil, FileFailure(err, name)
 		}
 
 		return &procedureOutput{Writer: f, close: f.Close}, nil
@@ -999,7 +999,7 @@ func (c *Interpreter) openProcedureOutput(name string) (*procedureOutput, error)
 		}
 
 		if _, err := session.CreateRecordFile(loc, rms.TextRecords, records); err != nil {
-			return fileFailure(err, name)
+			return FileFailure(err, name)
 		}
 
 		return nil

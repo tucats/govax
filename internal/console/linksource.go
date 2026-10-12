@@ -3,6 +3,7 @@ package console
 import (
 	"fmt"
 
+	"github.com/tucats/govax/internal/corevms"
 	"github.com/tucats/govax/internal/lbr"
 	"github.com/tucats/govax/internal/link"
 	"github.com/tucats/govax/internal/vmsdef"
@@ -36,7 +37,7 @@ import (
 // resolves that against the real image if it's there, and against the
 // shim registered for that offset otherwise.
 
-// govaxSymbols returns govax's own symbol source. The shareable images
+// GovaxSymbols returns govax's own symbol source. The shareable images
 // captured in vmsdef.SharedImages are described as their headers describe
 // them. An image the shims stand for that isn't captured (DECC$SHR, say)
 // isn't known, so an image records it by name only, with a match control
@@ -49,7 +50,7 @@ import (
 // addresses come last and take precedence: they are where govax's RUN
 // puts the system services, and they match STARLET's SYS$P1_VECTOR for
 // every service it has (TestLibrarySymbolsMatchP1Vector).
-func govaxSymbols() *link.TableSource {
+func GovaxSymbols(shims []corevms.ShimLink) *link.TableSource {
 	src := &link.TableSource{Symbols: map[string]link.Definition{}, Images: map[string]link.SharedImage{}}
 
 	for name, i := range vmsdef.SharedImages {
@@ -73,7 +74,7 @@ func govaxSymbols() *link.TableSource {
 		src.Symbols[e.Name] = link.Definition{Value: e.Addr}
 	}
 
-	for _, e := range shimTable {
+	for _, e := range shims {
 		if _, ok := src.Symbols[e.Name]; !ok {
 			src.Symbols[e.Name] = link.Definition{Image: e.Library, Value: e.Offset}
 		}
@@ -84,8 +85,8 @@ func govaxSymbols() *link.TableSource {
 
 // linkSources returns LINK's symbol sources: the system libraries, unless
 // sysLib is false, then govax's own tables.
-func (c *cmdContext) linkSources(sysLib bool) ([]link.SymbolSource, error) {
-	govax := govaxSymbols()
+func (c *Context) linkSources(sysLib bool) ([]link.SymbolSource, error) {
+	govax := GovaxSymbols(c.ShimLinks)
 
 	if !sysLib {
 		return []link.SymbolSource{govax}, nil
@@ -131,7 +132,7 @@ func (c *cmdContext) linkSources(sysLib bool) ([]link.SymbolSource, error) {
 // openSharedImage returns the symbols of the shareable image IMAGELIB
 // names: its global symbol table, from SYS$SHARE:<image>.EXE or the host
 // library directory, or else govax's own tables for it.
-func (c *cmdContext) openSharedImage(image string, govax *link.TableSource) (link.SymbolSource, error) {
+func (c *Context) openSharedImage(image string, govax *link.TableSource) (link.SymbolSource, error) {
 	file := image + ".EXE"
 
 	data, name, err := c.readLibraryFile("SYS$SHARE", file)

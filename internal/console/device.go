@@ -11,7 +11,7 @@ import (
 // DefineDevice implements the DEFINE/DEVICE console command, registering
 // a new device in c.Devices. Unlike most console commands, this doesn't
 // require INIT.
-func (c *cmdContext) DefineDevice(name string, opts iodev.DeviceOptions) *iodev.Device {
+func (c *Context) DefineDevice(name string, opts iodev.DeviceOptions) *iodev.Device {
 	return c.Devices.Define(name, opts)
 }
 
@@ -24,13 +24,13 @@ func (c *cmdContext) DefineDevice(name string, opts iodev.DeviceOptions) *iodev.
 //
 // A disk-class device's /FULL output (showDiskDeviceFull) is a from-scratch,
 // VMS-realistic reformat.
-func (c *cmdContext) ShowDevices(name string, full bool) error {
+func (c *Context) ShowDevices(name string, full bool) error {
 	prefix := strings.ToUpper(strings.TrimPrefix(strings.TrimSuffix(strings.TrimSpace(name), ":"), "_"))
 	shown := 0
 
 	defer func() {
 		if shown == 0 && prefix != "" {
-			c.Printf("%%%s\n", strings.TrimPrefix(conditionLine(ssNOSUCHDEV), "-"))
+			c.Printf("%%%s\n", strings.TrimPrefix(ConditionLine(ssNOSUCHDEV), "-"))
 		}
 	}()
 
@@ -89,7 +89,6 @@ func (c *cmdContext) ShowDevices(name string, full bool) error {
 // The brief SHOW DEVICE, as VMS 7.3 laid it out for mailboxes
 // (testdata/mp/probe5/vax, step 13):
 //
-//
 //	Device                  Device           Error
 //	 Name                   Status           Count
 //	MBA1:                   Online               0
@@ -107,7 +106,7 @@ const (
 )
 
 // showDeviceHeading prints the brief layout's heading.
-func (c *cmdContext) showDeviceHeading(disk bool) {
+func (c *Context) showDeviceHeading(disk bool) {
 	if disk {
 		c.Printf("\n%s%s\n%s%s\n", deviceHeading1, diskHeading1, deviceHeading2, diskHeading2)
 
@@ -118,7 +117,7 @@ func (c *cmdContext) showDeviceHeading(disk bool) {
 }
 
 // showDeviceLine prints d's line of the brief layout.
-func (c *cmdContext) showDeviceLine(d *iodev.Device, disk bool) {
+func (c *Context) showDeviceLine(d *iodev.Device, disk bool) {
 	if !disk {
 		c.Printf("%-24s%-12s%10d\n", d.Name+":", "Online", d.ErrCnt)
 
@@ -172,7 +171,7 @@ func (c *cmdContext) showDeviceLine(d *iodev.Device, disk bool) {
 // $ALLOC has allocated the device (docs/PHASE-26.md); "device type X" is omitted whenever
 // d.DevType doesn't map to a known name (iodev.DeviceTypeName) rather
 // than printing a placeholder — see that function's own doc comment.
-func (c *cmdContext) showDiskDeviceFull(d *iodev.Device) {
+func (c *Context) showDiskDeviceFull(d *iodev.Device) {
 	stats, mounted, statErr := c.Mounts.VolumeStats(d.Name)
 	live := mounted && statErr == nil
 
@@ -230,7 +229,7 @@ func (c *cmdContext) showDiskDeviceFull(d *iodev.Device) {
 // depending on byte-exact VMS field widths (which vary per specific
 // field on genuine VMS output, e.g. the wider value field "Volume label"
 // needs for its quoted string).
-func (c *cmdContext) statRow(label1 string, val1 any, label2 string, val2 any) {
+func (c *Context) statRow(label1 string, val1 any, label2 string, val2 any) {
 	c.Printf("    %-27s%12v    %-27s%12v\n", label1, val1, label2, val2)
 }
 
@@ -279,7 +278,7 @@ const (
 // and the protection as protectionText does: a mailbox's own (its
 // $CREMBX promsk), VMS's for a terminal or NLA0:. The counts are the
 // device's own: operations are counted as each $QIO completes.
-func (c *cmdContext) showRecordDeviceFull(d *iodev.Device) {
+func (c *Context) showRecordDeviceFull(d *iodev.Device) {
 	first := "Device"
 	if d.DevClass == iodev.DeviceClassTT {
 		first = "Terminal"
@@ -415,7 +414,7 @@ func protectionText(mask uint32) string {
 // vmsRow prints one line of SHOW DEVICE/FULL in VMS's two columns: the
 // first label and its value right-justified to 32 columns, then the
 // second to 39, with four blanks between.
-func (c *cmdContext) vmsRow(label1 string, val1 any, label2 string, val2 any) {
+func (c *Context) vmsRow(label1 string, val1 any, label2 string, val2 any) {
 	v1, v2 := fmt.Sprint(val1), fmt.Sprint(val2)
 
 	c.Printf("    %s%*s    %s%*s\n", label1, 32-len(label1), v1, label2, 39-len(label2), v2)

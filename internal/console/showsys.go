@@ -16,7 +16,7 @@ import (
 // ShowSystem is SHOW SYSTEM: a line for each process, with its state,
 // priority, and CPU time. Its title names the system as govax and its
 // version, and the node as the host (systemName, hostNode).
-func (c *cmdContext) ShowSystem() error {
+func (c *Context) ShowSystem() error {
 	if c.RTL == nil {
 		return vmserrors.New(vmserrors.CLI_NOVAX)
 	}
@@ -34,7 +34,7 @@ func (c *cmdContext) ShowSystem() error {
 // process 1's UIC group, as VMS looks up process names; pid is
 // hexadecimal, as SHOW SYSTEM shows it, and wins if both are given. A
 // process that isn't there is %SYSTEM-W-NONEXPR.
-func (c *cmdContext) ShowProcess(name, pid string) error {
+func (c *Context) ShowProcess(name, pid string) error {
 	if c.RTL == nil {
 		return vmserrors.New(vmserrors.CLI_NOVAX)
 	}

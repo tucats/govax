@@ -76,7 +76,7 @@ var (
 // a /VERSION_LIMIT out of range (CREATE-E-BADVALUE) is reported and then
 // ignored, as VMS does. Every message is shown here, so a failure is
 // returned with its message inhibited (exit status only).
-func (c *cmdContext) CreateDirectory(req CreateDirectoryRequest) error {
+func (c *Context) CreateDirectory(req CreateDirectoryRequest) error {
 	opts, failure := c.createDirectoryOptions(req)
 	if opts == nil {
 		return failure
@@ -86,7 +86,7 @@ func (c *cmdContext) CreateDirectory(req CreateDirectoryRequest) error {
 		created, err := c.ContainerSession.CreateDirectory(spec, *opts)
 		if err != nil {
 			c.Printf("%%%s\n", vmserrors.New(vmserrors.CREATE_DIRNOTCRE, spec))
-			c.Printf("%s\n", conditionLine(c.createDirectoryStatus(err)))
+			c.Printf("%s\n", ConditionLine(c.createDirectoryStatus(err)))
 
 			if failure == nil {
 				failure = vmserrors.InhibitMessage(vmserrors.Wrap(vmserrors.CREATE_DIRNOTCRE, err, spec))
@@ -110,14 +110,14 @@ func (c *cmdContext) CreateDirectory(req CreateDirectoryRequest) error {
 // rms.CreateDirectoryOptions, reporting a bad value as VMS does. A nil
 // result means the command stops there; otherwise the error, if any, is a
 // value that was reported and ignored, for the command's exit status.
-func (c *cmdContext) createDirectoryOptions(req CreateDirectoryRequest) (*rms.CreateDirectoryOptions, error) {
+func (c *Context) createDirectoryOptions(req CreateDirectoryRequest) (*rms.CreateDirectoryOptions, error) {
 	opts := &rms.CreateDirectoryOptions{}
 
 	syntax := func(value string, secondary uint32) (*rms.CreateDirectoryOptions, error) {
 		c.Printf("%%%s\n", vmserrors.New(vmserrors.CREATE_SYNTAX, value))
 
 		if secondary != 0 {
-			c.Printf("%s\n", conditionLine(secondary))
+			c.Printf("%s\n", ConditionLine(secondary))
 		}
 
 		return nil, vmserrors.InhibitMessage(vmserrors.New(vmserrors.CREATE_SYNTAX, value))
@@ -176,7 +176,7 @@ func (c *cmdContext) createDirectoryOptions(req CreateDirectoryRequest) (*rms.Cr
 
 // createDirectoryStatus is the secondary status VMS shows for err, a
 // directory CREATE/DIRECTORY couldn't make.
-func (c *cmdContext) createDirectoryStatus(err error) uint32 {
+func (c *Context) createDirectoryStatus(err error) uint32 {
 	var notMounted *rms.NotMountedError
 
 	switch {

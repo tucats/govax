@@ -78,10 +78,10 @@ func defaultOutputLocation(s *rms.Session, source rms.FileLocation, typ string) 
 	return s.LocateRelated(nameType+"."+typ, false, source)
 }
 
-// fileFailure turns an error finding, reading, or creating a file into
+// FileFailure turns an error finding, reading, or creating a file into
 // the console's status for it, as TYPE and COPY report the same
 // failures.
-func fileFailure(err error, spec string) error {
+func FileFailure(err error, spec string) error {
 	if lnmErr := logicalNameFailure(err); lnmErr != nil {
 		return lnmErr
 	}

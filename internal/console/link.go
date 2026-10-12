@@ -96,7 +96,7 @@ type linkInputs struct {
 }
 
 // Link links object modules into an executable image.
-func (c *cmdContext) Link(opts LinkOptions) error {
+func (c *Context) Link(opts LinkOptions) error {
 	s := c.ContainerSession
 
 	files := make([]link.InputFile, 0, len(opts.Objects)+len(opts.Files))
@@ -128,7 +128,7 @@ func (c *cmdContext) Link(opts LinkOptions) error {
 
 	exe, err := outputLocation(s, opts.Executable, in.first, "EXE")
 	if err != nil {
-		return fileFailure(err, opts.Executable)
+		return FileFailure(err, opts.Executable)
 	}
 
 	system, err := c.linkSources(!opts.NoSysLib)
@@ -189,7 +189,7 @@ func (c *cmdContext) Link(opts LinkOptions) error {
 
 	mapLoc, err := outputLocation(s, opts.MapFile, in.first, "MAP")
 	if err != nil {
-		return fileFailure(err, opts.MapFile)
+		return FileFailure(err, opts.MapFile)
 	}
 
 	// The map records its own name as it's about to be created: on a
@@ -244,7 +244,7 @@ func linkerID() string {
 
 // linkInput reads one input file into in. fromCommand says the command
 // line named it, rather than an options file.
-func (c *cmdContext) linkInput(in *linkInputs, f link.InputFile, host, fromCommand bool) error {
+func (c *Context) linkInput(in *linkInputs, f link.InputFile, host, fromCommand bool) error {
 	s := c.ContainerSession
 
 	typ := "OBJ"
@@ -274,7 +274,7 @@ func (c *cmdContext) linkInput(in *linkInputs, f link.InputFile, host, fromComma
 	}
 
 	if err != nil {
-		return fileFailure(err, f.Name)
+		return FileFailure(err, f.Name)
 	}
 
 	loc = loc.WithDefaultType(typ)
@@ -290,7 +290,7 @@ func (c *cmdContext) linkInput(in *linkInputs, f link.InputFile, host, fromComma
 		var records [][]byte
 
 		if records, found, err = s.ReadRecordFile(loc, rms.TextRecords); err != nil {
-			return fileFailure(err, loc.Name)
+			return FileFailure(err, loc.Name)
 		}
 
 		lines := make([]string, len(records))
@@ -320,7 +320,7 @@ func (c *cmdContext) linkInput(in *linkInputs, f link.InputFile, host, fromComma
 		var data []byte
 
 		if data, found, err = s.ReadRawFile(loc); err != nil {
-			return fileFailure(err, loc.Name)
+			return FileFailure(err, loc.Name)
 		}
 
 		src, _, err := link.ReadShareableImage(data)
@@ -340,7 +340,7 @@ func (c *cmdContext) linkInput(in *linkInputs, f link.InputFile, host, fromComma
 		var records [][]byte
 
 		if records, found, err = s.ReadRecordFile(loc, rms.VariableRecords); err != nil {
-			return fileFailure(err, loc.Name)
+			return FileFailure(err, loc.Name)
 		}
 
 		m, err := obj.Decode(records)
@@ -363,10 +363,10 @@ func (c *cmdContext) linkInput(in *linkInputs, f link.InputFile, host, fromComma
 // linkLibrary reads a library: one to search (/LIBRARY), whose modules
 // named by /INCLUDE are added to the link. A shareable image library, such
 // as IMAGELIB.OLB, can only be searched.
-func (c *cmdContext) linkLibrary(in *linkInputs, loc rms.FileLocation, f link.InputFile) (rms.FileLocation, error) {
+func (c *Context) linkLibrary(in *linkInputs, loc rms.FileLocation, f link.InputFile) (rms.FileLocation, error) {
 	data, found, err := c.ContainerSession.ReadRawFile(loc)
 	if err != nil {
-		return found, fileFailure(err, loc.Name)
+		return found, FileFailure(err, loc.Name)
 	}
 
 	lib, err := lbr.Open(data)
@@ -380,7 +380,7 @@ func (c *cmdContext) linkLibrary(in *linkInputs, loc rms.FileLocation, f link.In
 			return found, vmserrors.Wrap(vmserrors.CLI_LINKING, fmt.Errorf("%s is a shareable image library, whose modules can't be included", found.Name), found.Name)
 		}
 
-		govax := govaxSymbols()
+		govax := GovaxSymbols(c.ShimLinks)
 
 		in.libraries = append(in.libraries, &link.ImageLibrarySource{
 			File:    found.Name,

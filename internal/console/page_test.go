@@ -38,8 +38,8 @@ func TestPage_returnShowsEveryScreen(t *testing.T) {
 	c, buf := pagedConsole(t, 5, 0, "\n\n\n")
 	c.cmd().Page(numberedLines(10))
 
-	want := "line 1\nline 2\nline 3\nline 4\n" + pagePrompt + "\n" +
-		"line 5\nline 6\nline 7\nline 8\n" + pagePrompt + "\n" +
+	want := "line 1\nline 2\nline 3\nline 4\n" + PagePrompt + "\n" +
+		"line 5\nline 6\nline 7\nline 8\n" + PagePrompt + "\n" +
 		"line 9\nline 10\n"
 	if buf.String() != want {
 		t.Errorf("output =\n%q\nwant\n%q", buf.String(), want)
@@ -85,7 +85,7 @@ func TestPage_longLinesWrap(t *testing.T) {
 
 	// "short" (1 row) + the long line (3 rows) fill the 4 rows; "after"
 	// starts the next screen.
-	want := "short\n" + strings.Repeat("x", 25) + "\n" + pagePrompt + "\nafter\n"
+	want := "short\n" + strings.Repeat("x", 25) + "\n" + PagePrompt + "\nafter\n"
 	if buf.String() != want {
 		t.Errorf("output =\n%q\nwant\n%q", buf.String(), want)
 	}
@@ -94,27 +94,27 @@ func TestPage_longLinesWrap(t *testing.T) {
 // TestScreenSize_setting: with no terminal, vax.console.lines gives the
 // height, and 24 with it unset.
 func TestScreenSize_setting(t *testing.T) {
-	old, had := settings.Get(consoleLinesSetting), settings.Exists(consoleLinesSetting)
+	old, had := settings.Get(ConsoleLinesSetting), settings.Exists(ConsoleLinesSetting)
 
 	t.Cleanup(func() {
 		if had {
-			settings.Set(consoleLinesSetting, old)
+			settings.Set(ConsoleLinesSetting, old)
 		} else {
-			_ = settings.Delete(consoleLinesSetting)
+			_ = settings.Delete(ConsoleLinesSetting)
 		}
 	})
 
 	c, _ := newTestConsole(t)
 
-	_ = settings.Delete(consoleLinesSetting)
+	_ = settings.Delete(ConsoleLinesSetting)
 
-	if h, _ := c.cmd().screenSize(); h != defaultScreenLines {
-		t.Errorf("unset: height = %d, want %d", h, defaultScreenLines)
+	if h, _ := c.cmd().TerminalSize(); h != DefaultScreenLines {
+		t.Errorf("unset: height = %d, want %d", h, DefaultScreenLines)
 	}
 
-	settings.Set(consoleLinesSetting, "40")
+	settings.Set(ConsoleLinesSetting, "40")
 
-	if h, _ := c.cmd().screenSize(); h != 40 {
+	if h, _ := c.cmd().TerminalSize(); h != 40 {
 		t.Errorf("vax.console.lines=40: height = %d, want 40", h)
 	}
 }
@@ -147,7 +147,7 @@ func TestDispatch_typePage(t *testing.T) {
 	}
 
 	out := buf.String()
-	if !strings.Contains(out, pagePrompt) || strings.Contains(out, "line 5") {
+	if !strings.Contains(out, PagePrompt) || strings.Contains(out, "line 5") {
 		t.Errorf("output = %q, want one screen and the prompt", out)
 	}
 }
