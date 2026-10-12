@@ -4,8 +4,8 @@ import (
 	"maps"
 	"slices"
 
+	"github.com/tucats/govax/internal/registers"
 	"github.com/tucats/govax/internal/rms"
-	"github.com/tucats/govax/internal/vax"
 	"github.com/tucats/govax/internal/vm"
 	"github.com/tucats/govax/internal/vmsdef"
 )
@@ -428,7 +428,7 @@ func (sys *System) createFileSection(s *GlobalSection, pages int) uint32 {
 // sectionArgs are the arguments $CRMPSC and $MGBLSC share.
 type sectionArgs struct {
 	inadr, retadr uint32
-	mode          vax.AccessMode
+	mode          registers.AccessMode
 	flags         uint32
 	name          string
 	ident         sectionIdent
@@ -444,7 +444,7 @@ func (env *Environment) readSectionArgs(argv []uint32) (sectionArgs, uint32) {
 	a := sectionArgs{
 		inadr:  optArg(argv, 0),
 		retadr: optArg(argv, 1),
-		mode:   max(vax.AccessMode(optArg(argv, 2)&3), env.cpu.PSL().CurMod()),
+		mode:   max(registers.AccessMode(optArg(argv, 2)&3), env.cpu.PSL().CurMod()),
 		flags:  optArg(argv, 3),
 		relpag: optArg(argv, 6),
 	}
@@ -664,7 +664,7 @@ func (env *Environment) createPrivateSection(argv []uint32) (uint32, error) {
 	a := sectionArgs{
 		inadr:  optArg(argv, 0),
 		retadr: optArg(argv, 1),
-		mode:   max(vax.AccessMode(optArg(argv, 2)&3), env.cpu.PSL().CurMod()),
+		mode:   max(registers.AccessMode(optArg(argv, 2)&3), env.cpu.PSL().CurMod()),
 		flags:  optArg(argv, 3),
 	}
 
@@ -859,7 +859,7 @@ func (env *Environment) p1Low() uint32 {
 // SS$_VASFULL, and no pages are added.
 func (env *Environment) expandP1(count uint32) (uint32, uint32) {
 	low := env.p1Low()
-	bottom := p1Base + env.cpu.PR(vax.P1LR)*pageSize
+	bottom := p1Base + env.cpu.PR(registers.P1LR)*pageSize
 
 	if count == 0 || low < bottom || (low-bottom)/pageSize < count {
 		return 0, ssVasFull
@@ -956,7 +956,7 @@ var readOnlyProtections = [4]vm.Protection{vm.ProtKR, vm.ProtER, vm.ProtSR, vm.P
 
 // mapSectionPage maps the page at addr to one of s's pages, giving it
 // pte (mapPage).
-func (env *Environment) mapSectionPage(s *GlobalSection, addr uint32, pte vm.PTE, mode vax.AccessMode) uint32 {
+func (env *Environment) mapSectionPage(s *GlobalSection, addr uint32, pte vm.PTE, mode registers.AccessMode) uint32 {
 	// The reference is counted before the old page is given back, so
 	// that mapping a page over itself doesn't delete the section.
 	s.Refs++

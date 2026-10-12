@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/tucats/govax/internal/vax"
+	"github.com/tucats/govax/internal/registers"
 	"github.com/tucats/govax/internal/vmsdef"
 )
 
@@ -289,7 +289,7 @@ func TestEventFlagWaitTrace(t *testing.T) {
 	var buf bytes.Buffer
 
 	env.cpu.SetDebugWriter(&buf)
-	env.cpu.SetDebug(vax.DebugServices)
+	env.cpu.SetDebug(registers.DebugServices)
 
 	waitfr := uint32(0)
 

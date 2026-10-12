@@ -5,7 +5,7 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/tucats/govax/internal/vax"
+	"github.com/tucats/govax/internal/registers"
 )
 
 // Process B's page table, for the address-space tests: S0 page 2 maps it,
@@ -20,7 +20,7 @@ const (
 // newSpaceFixture extends newTranslateFixture with a second process, B,
 // whose four P0 pages map to frames of their own. It returns A's and B's
 // address spaces.
-func newSpaceFixture(t *testing.T) (*vax.CPU, *Memory, AddressSpace, AddressSpace) {
+func newSpaceFixture(t *testing.T) (*registers.CPU, *Memory, AddressSpace, AddressSpace) {
 	t.Helper()
 
 	cpu, mem := newTranslateFixture(t, 4)
@@ -205,7 +205,7 @@ func TestAddressSpaceChecksKernelProtectionAndLength(t *testing.T) {
 	// User mode on the CPU doesn't matter: B's page table (S0 page 2,
 	// ProtKW) is reachable, as it is for kernel mode.
 	psl := cpu.PSL()
-	psl.SetCurMod(vax.User)
+	psl.SetCurMod(registers.User)
 	cpu.SetPSL(psl)
 
 	if _, err := mem.TranslateIn(cpu, b, 0, AccessWrite); err != nil {
@@ -269,7 +269,7 @@ func TestAddressSpacePTEs(t *testing.T) {
 		t.Errorf("A's page 1 protection %v, want it unchanged", got.Protection())
 	}
 
-	cpu.SetPR(vax.MAPEN, 0)
+	cpu.SetPR(registers.MAPEN, 0)
 
 	if _, err := mem.LookupPTEIn(cpu, b, pageSize); err == nil {
 		t.Error("LookupPTEIn with mapping off succeeded")

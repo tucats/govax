@@ -3,7 +3,7 @@ package cpu
 import (
 	"testing"
 
-	"github.com/tucats/govax/internal/vax"
+	"github.com/tucats/govax/internal/registers"
 )
 
 // astFake is fakeServices plus a one-shot ASTSource: it hands out call
@@ -47,9 +47,9 @@ func TestDeliverASTCallsLikeCALLG(t *testing.T) {
 	putBytes(t, c, e.mem, mainPC, 0x01)              // NOP, never reached this step
 	putBytes(t, c, e.mem, routine, 0x04, 0x00, 0x04) // entry mask ^M<R2>, then RET
 
-	c.SetGPR(vax.PC, mainPC)
-	c.SetGPR(vax.SP, argList)
-	c.SetGPR(vax.R2, 0x2222)
+	c.SetGPR(registers.PC, mainPC)
+	c.SetGPR(registers.SP, argList)
+	c.SetGPR(registers.R2, 0x2222)
 
 	fake := &astFake{call: ASTCall{Routine: routine, ArgList: argList, ReturnPC: returnPC}, pending: true}
 	e.SetSystemServices(fake)
@@ -60,13 +60,13 @@ func TestDeliverASTCallsLikeCALLG(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if c.GPR(vax.PC) != routine+2 || c.GPR(vax.AP) != argList {
-		t.Errorf("in the routine: PC=%#x AP=%#x, want %#x and the argument list %#x", c.GPR(vax.PC), c.GPR(vax.AP), routine+2, argList)
+	if c.GPR(registers.PC) != routine+2 || c.GPR(registers.AP) != argList {
+		t.Errorf("in the routine: PC=%#x AP=%#x, want %#x and the argument list %#x", c.GPR(registers.PC), c.GPR(registers.AP), routine+2, argList)
 	}
 
 	// The frame's saved PC (FP+16) is the AST exit, and R2 (from the
 	// entry mask) is saved at FP+20.
-	fp := c.GPR(vax.FP)
+	fp := c.GPR(registers.FP)
 	if got, _ := e.mem.LoadLongword(c, fp+16); got != returnPC {
 		t.Errorf("frame's saved PC = %#x, want ReturnPC %#x", got, returnPC)
 	}
@@ -80,8 +80,8 @@ func TestDeliverASTCallsLikeCALLG(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if c.GPR(vax.PC) != returnPC || c.GPR(vax.SP) != argList {
-		t.Errorf("after RET: PC=%#x SP=%#x, want ReturnPC %#x, SP at the argument list %#x", c.GPR(vax.PC), c.GPR(vax.SP), returnPC, argList)
+	if c.GPR(registers.PC) != returnPC || c.GPR(registers.SP) != argList {
+		t.Errorf("after RET: PC=%#x SP=%#x, want ReturnPC %#x, SP at the argument list %#x", c.GPR(registers.PC), c.GPR(registers.SP), returnPC, argList)
 	}
 }
 
@@ -94,8 +94,8 @@ func TestStepDeliversAST(t *testing.T) {
 
 	putBytes(t, c, e.mem, 0x1000, 0x01, 0x01)       // NOP; NOP
 	putBytes(t, c, e.mem, 0x2000, 0x00, 0x00, 0x01) // entry mask ^M<>, then NOP
-	c.SetGPR(vax.PC, 0x1000)
-	c.SetGPR(vax.SP, 0x8F00)
+	c.SetGPR(registers.PC, 0x1000)
+	c.SetGPR(registers.SP, 0x8F00)
 
 	fake := &astFake{}
 	e.SetSystemServices(fake)
@@ -104,8 +104,8 @@ func TestStepDeliversAST(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if c.GPR(vax.PC) != 0x1001 || fake.asked != 1 {
-		t.Fatalf("no AST due: PC=%#x asked=%d, want 0x1001 and one question", c.GPR(vax.PC), fake.asked)
+	if c.GPR(registers.PC) != 0x1001 || fake.asked != 1 {
+		t.Fatalf("no AST due: PC=%#x asked=%d, want 0x1001 and one question", c.GPR(registers.PC), fake.asked)
 	}
 
 	fake.call = ASTCall{Routine: 0x2000, ArgList: 0x8F00, ReturnPC: 0x3000}
@@ -115,8 +115,8 @@ func TestStepDeliversAST(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if c.GPR(vax.PC) != 0x2003 {
-		t.Errorf("PC = %#x, want 0x2003: the routine's NOP executed", c.GPR(vax.PC))
+	if c.GPR(registers.PC) != 0x2003 {
+		t.Errorf("PC = %#x, want 0x2003: the routine's NOP executed", c.GPR(registers.PC))
 	}
 }
 
@@ -127,8 +127,8 @@ func TestDeliverASTBadRoutine(t *testing.T) {
 	e := newEngine()
 	c := e.cpu
 
-	c.SetGPR(vax.PC, 0x1000)
-	c.SetGPR(vax.SP, 0x8F00)
+	c.SetGPR(registers.PC, 0x1000)
+	c.SetGPR(registers.SP, 0x8F00)
 	e.SetSystemServices(&astFake{call: ASTCall{Routine: 0x7FFFFFF0, ArgList: 0x8F00, ReturnPC: 0x3000}, pending: true})
 
 	_ = e.Step() // the fault's delivery through the SCB isn't under test

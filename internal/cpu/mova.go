@@ -1,6 +1,6 @@
 package cpu
 
-import "github.com/tucats/govax/internal/vax"
+import "github.com/tucats/govax/internal/registers"
 
 // This is the Go port of emul_mova.c and emul_push.c.
 
@@ -65,7 +65,7 @@ func emulMova(e *Engine, d *Decoded) error {
 
 // setAddressCC sets the condition codes MOVA and PUSHA leave: N and Z
 // from the address, V cleared, C unaffected.
-func setAddressCC(cpu *vax.CPU, addr uint64) {
+func setAddressCC(cpu *registers.CPU, addr uint64) {
 	setNZ(cpu, addr, 4)
 
 	psl := cpu.PSL()
@@ -107,8 +107,8 @@ func emulPushl(e *Engine, d *Decoded) error {
 // push implements the "SP -= 4; store a longword at SP" pattern shared by
 // PUSHAx/PUSHL (and, later, CALLS/CALLG/BSB/JSB -- see Phase 07).
 func push(e *Engine, v uint32) error {
-	sp := e.cpu.GPR(vax.SP) - 4
-	e.cpu.SetGPR(vax.SP, sp)
+	sp := e.cpu.GPR(registers.SP) - 4
+	e.cpu.SetGPR(registers.SP, sp)
 	
 	return e.mem.StoreLongword(e.cpu, sp, v)
 }

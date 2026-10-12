@@ -1,7 +1,7 @@
 package cpu
 
 import (
-	"github.com/tucats/govax/internal/vax"
+	"github.com/tucats/govax/internal/registers"
 	"github.com/tucats/govax/internal/vm"
 )
 
@@ -124,7 +124,7 @@ func emulBitpsw(e *Engine, d *Decoded) error {
 		psl &^= longmask
 	}
 
-	e.cpu.SetPSL(vax.PSL(psl))
+	e.cpu.SetPSL(registers.PSL(psl))
 
 	return nil
 }
@@ -145,7 +145,7 @@ func emulPushr(e *Engine, d *Decoded) error {
 			continue
 		}
 
-		if err := push(e, e.cpu.GPR(vax.Reg(n))); err != nil {
+		if err := push(e, e.cpu.GPR(registers.Reg(n))); err != nil {
 			return err
 		}
 	}
@@ -168,15 +168,15 @@ func emulPopr(e *Engine, d *Decoded) error {
 			continue
 		}
 
-		sp := e.cpu.GPR(vax.SP)
+		sp := e.cpu.GPR(registers.SP)
 
 		v, err := e.mem.LoadLongword(e.cpu, sp)
 		if err != nil {
 			return err
 		}
 
-		e.cpu.SetGPR(vax.SP, sp+4)
-		e.cpu.SetGPR(vax.Reg(n), v)
+		e.cpu.SetGPR(registers.SP, sp+4)
+		e.cpu.SetGPR(registers.Reg(n), v)
 	}
 
 	return nil
@@ -225,7 +225,7 @@ func emulProbe(e *Engine, d *Decoded) error {
 	}
 
 	testPSL := savedPSL
-	testPSL.SetCurMod(vax.AccessMode(mode))
+	testPSL.SetCurMod(registers.AccessMode(mode))
 	e.cpu.SetPSL(testPSL)
 
 	_, err1 := e.mem.ProbeTranslate(e.cpu, base, access)
@@ -251,7 +251,7 @@ func emulProbe(e *Engine, d *Decoded) error {
 // emulMovpsl is MOVPSL: writes the whole PSL to the destination operand,
 // port of emul_misc.c's emul_movpsl. write_psl_bits (syncing a cached "wide"
 // bitfield copy purely for C bitfield-access speed) has no Go equivalent to
-// call -- see docs/PHASE-01.md's design notes -- since vax.PSL is already
+// call -- see docs/PHASE-01.md's design notes -- since registers.PSL is already
 // the single canonical representation.
 func emulMovpsl(e *Engine, d *Decoded) error {
 	return d.Operands[0].Store(e.cpu, e.mem, uint64(e.cpu.PSL()))

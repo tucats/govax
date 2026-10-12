@@ -2,8 +2,8 @@ package corevms
 
 import (
 	"github.com/tucats/govax/internal/lck"
+	"github.com/tucats/govax/internal/registers"
 	"github.com/tucats/govax/internal/sched"
-	"github.com/tucats/govax/internal/vax"
 )
 
 // The lock manager's rundowns (Phase 47). The lock database itself is
@@ -19,7 +19,7 @@ func (env *Environment) dequeueUserLocks() {
 		return
 	}
 
-	events, _ := env.Locks.DequeueAll(lck.Owner(env.Process.PID), uint8(vax.User), 0)
+	events, _ := env.Locks.DequeueAll(lck.Owner(env.Process.PID), uint8(registers.User), 0)
 	lck.Deliver(events)
 }
 

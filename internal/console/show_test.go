@@ -7,7 +7,7 @@ import (
 
 	"github.com/tucats/govax/internal/cpu"
 	"github.com/tucats/govax/internal/machine"
-	"github.com/tucats/govax/internal/vax"
+	"github.com/tucats/govax/internal/registers"
 )
 
 // newShowDispatcher returns a Dispatcher/Console/output-buffer trio for a
@@ -235,7 +235,7 @@ func TestShowSCB(t *testing.T) {
 
 	const scbBase = 0x4000
 
-	c.CPU.SetPR(vax.SCBB, scbBase)
+	c.CPU.SetPR(registers.SCBB, scbBase)
 
 	// Slot 0x40 (CHMK, index 16) gets a real vector; every other slot
 	// stays zero and so is skipped by the default (non-/ALL) dump.
@@ -271,8 +271,8 @@ func TestShowCallFrames(t *testing.T) {
 		ap = 0x2000
 	)
 
-	c.CPU.SetGPR(vax.FP, fp)
-	c.CPU.SetGPR(vax.AP, ap)
+	c.CPU.SetGPR(registers.FP, fp)
+	c.CPU.SetGPR(registers.AP, ap)
 
 	if err := c.Mem.StoreLongword(c.CPU, fp, 0); err != nil { // no condition handler
 		t.Fatalf("seed handler: %v", err)
@@ -402,7 +402,7 @@ func TestShowClock(t *testing.T) {
 		t.Errorf("output = %q, want the clock reported as not running (ICCS Run bit clear)", buf.String())
 	}
 
-	c.CPU.SetPR(vax.ICCS, 1)
+	c.CPU.SetPR(registers.ICCS, 1)
 	buf.Reset()
 
 	if err := d.Console.ShowClock(); err != nil {
@@ -561,7 +561,7 @@ func TestShowBase_matchesDepositCursor(t *testing.T) {
 func TestShowStack_bareDumpsLiveMemory(t *testing.T) {
 	d, c, buf := newShowDispatcher(t)
 
-	c.CPU.SetGPR(vax.SP, 0x8000)
+	c.CPU.SetGPR(registers.SP, 0x8000)
 
 	if err := c.Mem.StoreLongword(c.CPU, 0x8000, 0xCAFEBABE); err != nil {
 		t.Fatalf("seed stack word: %v", err)
@@ -589,7 +589,7 @@ func TestShowStack_bareDumpsLiveMemory(t *testing.T) {
 func TestShowP1LR(t *testing.T) {
 	d, c, buf := newShowDispatcher(t)
 
-	c.CPU.SetPR(vax.P1LR, 0x1234)
+	c.CPU.SetPR(registers.P1LR, 0x1234)
 
 	if err := d.Console.ShowRegisterOrPrivReg("P1LR"); err != nil {
 		t.Fatalf("Dispatch: %v", err)
@@ -603,7 +603,7 @@ func TestShowP1LR(t *testing.T) {
 func TestShowStack_namedModeReadsSavedPointer(t *testing.T) {
 	d, c, buf := newShowDispatcher(t)
 
-	c.CPU.SetPR(vax.ESP, 0x9000)
+	c.CPU.SetPR(registers.ESP, 0x9000)
 
 	if err := c.Mem.StoreLongword(c.CPU, 0x9000, 0x99887766); err != nil {
 		t.Fatalf("seed ESP stack word: %v", err)

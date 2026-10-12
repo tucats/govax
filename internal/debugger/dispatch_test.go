@@ -7,30 +7,30 @@ import (
 
 	"github.com/tucats/govax/internal/console"
 	"github.com/tucats/govax/internal/console/consoletest"
-	"github.com/tucats/govax/internal/vax"
+	"github.com/tucats/govax/internal/registers"
 )
 
 func TestDispatch_stepAndGo(t *testing.T) {
 	_, c := newTestDispatcher(t)
-	c.CPU.SetDebug(c.CPU.Debug() &^ vax.DebugUserStep)
+	c.CPU.SetDebug(c.CPU.Debug() &^ registers.DebugUserStep)
 	loadProgram(t, c, 0x200, opNop, opNop, opHalt)
 
-	c.CPU.SetGPR(vax.PC, 0x200)
+	c.CPU.SetGPR(registers.PC, 0x200)
 
 	if err := c.Debugger.Dispatch("STEP"); err != nil {
 		t.Fatalf("Dispatch(STEP): %v", err)
 	}
 
-	if c.CPU.GPR(vax.PC) != 0x201 {
-		t.Errorf("PC after STEP = %#x, want 0x201", c.CPU.GPR(vax.PC))
+	if c.CPU.GPR(registers.PC) != 0x201 {
+		t.Errorf("PC after STEP = %#x, want 0x201", c.CPU.GPR(registers.PC))
 	}
 
 	if err := c.Debugger.Dispatch("GO"); err != nil {
 		t.Fatalf("Dispatch(GO): %v", err)
 	}
 
-	if c.CPU.GPR(vax.PC) != 0x203 {
-		t.Errorf("PC after GO = %#x, want 0x203", c.CPU.GPR(vax.PC))
+	if c.CPU.GPR(registers.PC) != 0x203 {
+		t.Errorf("PC after GO = %#x, want 0x203", c.CPU.GPR(registers.PC))
 	}
 }
 
@@ -60,7 +60,7 @@ func TestDispatch_callStepQualifier(t *testing.T) {
 // printing "Stepped to" without ever actually stopping.
 func TestDispatch_callStepStopsAfterOneInstruction(t *testing.T) {
 	c := newRunnableConsole(t)
-	c.CPU.SetDebug(c.CPU.Debug() &^ vax.DebugUserStep)
+	c.CPU.SetDebug(c.CPU.Debug() &^ registers.DebugUserStep)
 
 	g := consoletest.ConsoleGrammar(t)
 	d := console.NewDispatcher(c, g, nil)
@@ -81,7 +81,7 @@ func TestDispatch_callStepStopsAfterOneInstruction(t *testing.T) {
 	}
 
 	// Only the MOVL has executed: R0 holds the argument, not yet doubled.
-	if got := c.CPU.GPR(vax.R0); got != 21 {
+	if got := c.CPU.GPR(registers.R0); got != 21 {
 		t.Errorf("R0 after CALL/STEP = %d, want 21 (only the first instruction should have run)", got)
 	}
 
@@ -90,7 +90,7 @@ func TestDispatch_callStepStopsAfterOneInstruction(t *testing.T) {
 		t.Fatalf("Dispatch(STEP) [ADDL2]: %v", err)
 	}
 
-	if got := c.CPU.GPR(vax.R0); got != 42 {
+	if got := c.CPU.GPR(registers.R0); got != 42 {
 		t.Errorf("R0 after STEP = %d, want 42", got)
 	}
 

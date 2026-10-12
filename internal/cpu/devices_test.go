@@ -3,7 +3,7 @@ package cpu
 import (
 	"testing"
 
-	"github.com/tucats/govax/internal/vax"
+	"github.com/tucats/govax/internal/registers"
 )
 
 // This file covers setPrivReg/emulMfpr's ICCS/RXCS/RXDB/TXCS/TXDB cases --
@@ -12,12 +12,12 @@ import (
 func TestEmulMtprIccsXfrReloadsIcrFromNicr(t *testing.T) {
 	e := kernelEngine()
 	cpu := e.cpu
-	cpu.SetPR(vax.NICR, 0xFFFFFFF0)
+	cpu.SetPR(registers.NICR, 0xFFFFFFF0)
 
-	cpu.SetGPR(vax.R1, 0x10) // ICCS<XFR>
-	stepInstruction(t, e, mtprBytes(vax.R1, uint32(vax.ICCS))...)
+	cpu.SetGPR(registers.R1, 0x10) // ICCS<XFR>
+	stepInstruction(t, e, mtprBytes(registers.R1, uint32(registers.ICCS))...)
 
-	if got := cpu.PR(vax.ICR); got != 0xFFFFFFF0 {
+	if got := cpu.PR(registers.ICR); got != 0xFFFFFFF0 {
 		t.Errorf("PR(ICR) = %#x, want 0xFFFFFFF0 (reloaded from NICR)", got)
 	}
 }
@@ -26,17 +26,17 @@ func TestEmulMtprIccsRunAndIEBits(t *testing.T) {
 	e := kernelEngine()
 	cpu := e.cpu
 
-	cpu.SetGPR(vax.R1, 0x41) // RUN | IE
-	stepInstruction(t, e, mtprBytes(vax.R1, uint32(vax.ICCS))...)
+	cpu.SetGPR(registers.R1, 0x41) // RUN | IE
+	stepInstruction(t, e, mtprBytes(registers.R1, uint32(registers.ICCS))...)
 
-	if got := cpu.PR(vax.ICCS); got&iccsRun == 0 || got&deviceIE == 0 {
+	if got := cpu.PR(registers.ICCS); got&iccsRun == 0 || got&deviceIE == 0 {
 		t.Errorf("PR(ICCS) = %#x, want RUN and IE both set", got)
 	}
 
-	cpu.SetGPR(vax.R1, 0) // clear RUN (IE bit copied as 0 too)
-	stepInstruction(t, e, mtprBytes(vax.R1, uint32(vax.ICCS))...)
+	cpu.SetGPR(registers.R1, 0) // clear RUN (IE bit copied as 0 too)
+	stepInstruction(t, e, mtprBytes(registers.R1, uint32(registers.ICCS))...)
 
-	if got := cpu.PR(vax.ICCS); got&iccsRun != 0 {
+	if got := cpu.PR(registers.ICCS); got&iccsRun != 0 {
 		t.Errorf("PR(ICCS) = %#x, want RUN cleared", got)
 	}
 }
@@ -44,12 +44,12 @@ func TestEmulMtprIccsRunAndIEBits(t *testing.T) {
 func TestEmulMtprIccsSglIncrementsClock(t *testing.T) {
 	e := kernelEngine()
 	cpu := e.cpu
-	cpu.SetPR(vax.ICR, 5)
+	cpu.SetPR(registers.ICR, 5)
 
-	cpu.SetGPR(vax.R1, 0x20) // ICCS<SGL>
-	stepInstruction(t, e, mtprBytes(vax.R1, uint32(vax.ICCS))...)
+	cpu.SetGPR(registers.R1, 0x20) // ICCS<SGL>
+	stepInstruction(t, e, mtprBytes(registers.R1, uint32(registers.ICCS))...)
 
-	if got := cpu.PR(vax.ICR); got != 6 {
+	if got := cpu.PR(registers.ICR); got != 6 {
 		t.Errorf("PR(ICR) = %d, want 6", got)
 	}
 }
@@ -58,10 +58,10 @@ func TestEmulMtprTxcsIEEnablesInterruptImmediately(t *testing.T) {
 	e := kernelEngine()
 	cpu := e.cpu
 
-	cpu.SetGPR(vax.R1, 0x40) // TXCS<IE>
-	stepInstruction(t, e, mtprBytes(vax.R1, uint32(vax.TXCS))...)
+	cpu.SetGPR(registers.R1, 0x40) // TXCS<IE>
+	stepInstruction(t, e, mtprBytes(registers.R1, uint32(registers.TXCS))...)
 
-	if got := cpu.PR(vax.TXCS); got != 0xC0 {
+	if got := cpu.PR(registers.TXCS); got != 0xC0 {
 		t.Errorf("PR(TXCS) = %#x, want 0xC0 (RDY|IE)", got)
 	}
 
@@ -79,10 +79,10 @@ func TestEmulMtprTxdbWritesByteAndInterruptsWhenIESet(t *testing.T) {
 	cpu := e.cpu
 	f := &fakeServices{}
 	e.SetSystemServices(f)
-	cpu.SetPR(vax.TXCS, 0xC0) // RDY|IE already set
+	cpu.SetPR(registers.TXCS, 0xC0) // RDY|IE already set
 
-	cpu.SetGPR(vax.R1, 'H')
-	stepInstruction(t, e, mtprBytes(vax.R1, uint32(vax.TXDB))...)
+	cpu.SetGPR(registers.R1, 'H')
+	stepInstruction(t, e, mtprBytes(registers.R1, uint32(registers.TXDB))...)
 
 	if f.writtenByte != 'H' {
 		t.Errorf("ConsoleWriteByte got %q, want 'H'", f.writtenByte)
@@ -100,16 +100,16 @@ func TestEmulMtprTxdbWritesByteAndInterruptsWhenIESet(t *testing.T) {
 func TestEmulMtprTxdbNoInterruptWhenIEClear(t *testing.T) {
 	e := kernelEngine()
 	e.SetSystemServices(&fakeServices{})
-	e.cpu.SetPR(vax.TXCS, 0x80) // RDY only
+	e.cpu.SetPR(registers.TXCS, 0x80) // RDY only
 
-	e.cpu.SetGPR(vax.R1, 'x')
-	stepInstruction(t, e, mtprBytes(vax.R1, uint32(vax.TXDB))...)
+	e.cpu.SetGPR(registers.R1, 'x')
+	stepInstruction(t, e, mtprBytes(registers.R1, uint32(registers.TXDB))...)
 
 	if e.interruptPending {
 		t.Error("expected no interrupt when TXCS<IE> is clear")
 	}
 
-	if got := e.cpu.PR(vax.TXCS); got&0x80 == 0 {
+	if got := e.cpu.PR(registers.TXCS); got&0x80 == 0 {
 		t.Errorf("PR(TXCS) = %#x, want RDY bit set", got)
 	}
 }
@@ -119,17 +119,17 @@ func TestEmulMtprTxdbNoInterruptWhenIEClear(t *testing.T) {
 // exercise MTPR/MFPR without SetSystemServices, and TXDB shouldn't panic.
 func TestEmulMtprTxdbWithNoServicesIsHarmless(t *testing.T) {
 	e := kernelEngine()
-	e.cpu.SetGPR(vax.R1, 'x')
-	stepInstruction(t, e, mtprBytes(vax.R1, uint32(vax.TXDB))...)
+	e.cpu.SetGPR(registers.R1, 'x')
+	stepInstruction(t, e, mtprBytes(registers.R1, uint32(registers.TXDB))...)
 }
 
 func TestEmulMtprRxcsReSignalsWhenIEAlreadySetAndDonPending(t *testing.T) {
 	e := kernelEngine()
 	cpu := e.cpu
-	cpu.SetPR(vax.RXCS, 0x80|deviceIE) // DON pending, IE already on
+	cpu.SetPR(registers.RXCS, 0x80|deviceIE) // DON pending, IE already on
 
-	cpu.SetGPR(vax.R1, uint32(deviceIE)) // rewrite IE (still set)
-	stepInstruction(t, e, mtprBytes(vax.R1, uint32(vax.RXCS))...)
+	cpu.SetGPR(registers.R1, uint32(deviceIE)) // rewrite IE (still set)
+	stepInstruction(t, e, mtprBytes(registers.R1, uint32(registers.RXCS))...)
 
 	if len(e.iqueue) == 0 && !e.interruptPending {
 		t.Fatal("expected re-writing RXCS with IE already set and DON pending to (re-)admit EXC$CONREAD")
@@ -139,16 +139,16 @@ func TestEmulMtprRxcsReSignalsWhenIEAlreadySetAndDonPending(t *testing.T) {
 func TestEmulMtprRxcsNoSignalWhenIEWasNotAlreadySet(t *testing.T) {
 	e := kernelEngine()
 	cpu := e.cpu
-	cpu.SetPR(vax.RXCS, 0x80) // DON pending, IE currently off
+	cpu.SetPR(registers.RXCS, 0x80) // DON pending, IE currently off
 
-	cpu.SetGPR(vax.R1, uint32(deviceIE)) // just now enabling IE
-	stepInstruction(t, e, mtprBytes(vax.R1, uint32(vax.RXCS))...)
+	cpu.SetGPR(registers.R1, uint32(deviceIE)) // just now enabling IE
+	stepInstruction(t, e, mtprBytes(registers.R1, uint32(registers.RXCS))...)
 
 	if e.interruptPending || len(e.iqueue) != 0 {
 		t.Error("expected no admission when IE was not already set before this write")
 	}
 
-	if got := cpu.PR(vax.RXCS); got != 0x80|deviceIE {
+	if got := cpu.PR(registers.RXCS); got != 0x80|deviceIE {
 		t.Errorf("PR(RXCS) = %#x, want DON|IE", got)
 	}
 }
@@ -158,32 +158,32 @@ func TestEmulMfprRxdbReadsLiveByteAndClearsDon(t *testing.T) {
 	cpu := e.cpu
 	f := &fakeServices{readByte: 'Q'}
 	e.SetSystemServices(f)
-	cpu.SetPR(vax.RXCS, 0x80|deviceIE) // DON set, IE set
-	cpu.SetGPR(vax.SP, 0x7000)
-	cpu.SetPR(vax.KSP, 0x7000)
+	cpu.SetPR(registers.RXCS, 0x80|deviceIE) // DON set, IE set
+	cpu.SetGPR(registers.SP, 0x7000)
+	cpu.SetPR(registers.KSP, 0x7000)
 
-	stepInstruction(t, e, mfprBytes(uint32(vax.RXDB), vax.R2)...)
+	stepInstruction(t, e, mfprBytes(uint32(registers.RXDB), registers.R2)...)
 
-	if got := cpu.GPR(vax.R2); got != 'Q' {
+	if got := cpu.GPR(registers.R2); got != 'Q' {
 		t.Errorf("R2 = %v, want 'Q' (live byte from ConsoleReadByte)", got)
 	}
 
-	if got := cpu.PR(vax.RXCS); got != deviceIE {
+	if got := cpu.PR(registers.RXCS); got != deviceIE {
 		t.Errorf("PR(RXCS) = %#x, want IE only (DON cleared)", got)
 	}
 }
 
 func TestDeliverConsoleByteAdmitsInterruptWhenIESet(t *testing.T) {
 	e := interruptEngine(t)
-	e.cpu.SetPR(vax.RXCS, deviceIE)
+	e.cpu.SetPR(registers.RXCS, deviceIE)
 
 	e.DeliverConsoleByte('Z')
 
-	if got := e.cpu.PR(vax.RXDB); got != 'Z' {
+	if got := e.cpu.PR(registers.RXDB); got != 'Z' {
 		t.Errorf("PR(RXDB) = %v, want 'Z'", got)
 	}
 
-	if got := e.cpu.PR(vax.RXCS); got&0x80 == 0 {
+	if got := e.cpu.PR(registers.RXCS); got&0x80 == 0 {
 		t.Errorf("PR(RXCS) = %#x, want DON bit set", got)
 	}
 
@@ -201,7 +201,7 @@ func TestDeliverConsoleByteNoInterruptWhenIEClear(t *testing.T) {
 		t.Error("expected no interrupt admission when RXCS<IE> is clear")
 	}
 
-	if got := e.cpu.PR(vax.RXDB); got != 'Z' {
+	if got := e.cpu.PR(registers.RXDB); got != 'Z' {
 		t.Errorf("PR(RXDB) = %v, want 'Z' (byte still deposited)", got)
 	}
 }

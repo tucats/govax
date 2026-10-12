@@ -2,7 +2,7 @@ package machine
 
 import (
 	"github.com/tucats/govax/internal/cpu"
-	"github.com/tucats/govax/internal/vax"
+	"github.com/tucats/govax/internal/registers"
 	"github.com/tucats/govax/internal/vm"
 )
 
@@ -18,20 +18,20 @@ func (m *Machine) Init(physBytes uint32) error {
 
 	m.EndOtherProcesses()
 
-	m.CPU = vax.New()
+	m.CPU = registers.New()
 	m.CPU.SetDebugWriter(m.Hooks.Output())
 	m.Mem = vm.NewMemory(size)
 	m.Engine = cpu.NewEngine(m.CPU, m.Mem)
 	m.newRTL()
 	m.Engine.SetSystemServices(m)
 
-	m.CPU.SetGPR(vax.SP, size-4)
-	m.CPU.SetGPR(vax.PC, 0)
-	m.CPU.SetPR(vax.KSP, size-4)
-	m.CPU.SetPR(vax.ESP, size-4)
-	m.CPU.SetPR(vax.SSP, size-4)
-	m.CPU.SetPR(vax.ISP, size-4)
-	m.CPU.SetPR(vax.USP, size-4)
+	m.CPU.SetGPR(registers.SP, size-4)
+	m.CPU.SetGPR(registers.PC, 0)
+	m.CPU.SetPR(registers.KSP, size-4)
+	m.CPU.SetPR(registers.ESP, size-4)
+	m.CPU.SetPR(registers.SSP, size-4)
+	m.CPU.SetPR(registers.ISP, size-4)
+	m.CPU.SetPR(registers.USP, size-4)
 
 	m.DepositAddr = 0x200
 	m.VMInitValid = false
@@ -61,24 +61,24 @@ func (m *Machine) Zero() error {
 
 	m.Symbols.ClearAll()
 
-	m.CPU.SetPR(vax.MAPEN, 0)
-	m.CPU.SetPR(vax.SBR, 0)
-	m.CPU.SetPR(vax.SLR, 0)
-	m.CPU.SetPR(vax.P0BR, 0)
-	m.CPU.SetPR(vax.P0LR, 0)
-	m.CPU.SetPR(vax.P1BR, 0)
-	m.CPU.SetPR(vax.P1LR, 0)
+	m.CPU.SetPR(registers.MAPEN, 0)
+	m.CPU.SetPR(registers.SBR, 0)
+	m.CPU.SetPR(registers.SLR, 0)
+	m.CPU.SetPR(registers.P0BR, 0)
+	m.CPU.SetPR(registers.P0LR, 0)
+	m.CPU.SetPR(registers.P1BR, 0)
+	m.CPU.SetPR(registers.P1LR, 0)
 
 	sp := size - 4
-	m.CPU.SetGPR(vax.SP, sp)
-	m.CPU.SetGPR(vax.PC, 0)
-	m.CPU.SetGPR(vax.FP, sp)
-	m.CPU.SetGPR(vax.AP, sp)
-	m.CPU.SetPR(vax.ISP, sp)
-	m.CPU.SetPR(vax.KSP, sp)
-	m.CPU.SetPR(vax.ESP, sp)
-	m.CPU.SetPR(vax.SSP, sp)
-	m.CPU.SetPR(vax.USP, sp)
+	m.CPU.SetGPR(registers.SP, sp)
+	m.CPU.SetGPR(registers.PC, 0)
+	m.CPU.SetGPR(registers.FP, sp)
+	m.CPU.SetGPR(registers.AP, sp)
+	m.CPU.SetPR(registers.ISP, sp)
+	m.CPU.SetPR(registers.KSP, sp)
+	m.CPU.SetPR(registers.ESP, sp)
+	m.CPU.SetPR(registers.SSP, sp)
+	m.CPU.SetPR(registers.USP, sp)
 
 	m.VMInitValid = false
 	m.asmSession = nil // matching vminit.go's own reset -- a zeroed address space invalidates any prior ASM session's state

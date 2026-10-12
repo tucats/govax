@@ -6,7 +6,7 @@ import (
 
 	"github.com/tucats/govax/internal/dbgsym"
 	"github.com/tucats/govax/internal/dcl"
-	"github.com/tucats/govax/internal/vax"
+	"github.com/tucats/govax/internal/registers"
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
@@ -46,17 +46,17 @@ type examineState struct {
 
 // registerLocations are the names of the machine's general registers, as
 // a user types them (with or without the "%"), and their numbers.
-var registerLocations = map[string]vax.Reg{
-	"R0": vax.R0, "R1": vax.R1, "R2": vax.R2, "R3": vax.R3,
-	"R4": vax.R4, "R5": vax.R5, "R6": vax.R6, "R7": vax.R7,
-	"R8": vax.R8, "R9": vax.R9, "R10": vax.R10, "R11": vax.R11,
-	"R12": vax.R12, "R13": vax.R13, "R14": vax.R14, "R15": vax.R15,
-	"AP": vax.AP, "FP": vax.FP, "SP": vax.SP, "PC": vax.PC,
+var registerLocations = map[string]registers.Reg{
+	"R0": registers.R0, "R1": registers.R1, "R2": registers.R2, "R3": registers.R3,
+	"R4": registers.R4, "R5": registers.R5, "R6": registers.R6, "R7": registers.R7,
+	"R8": registers.R8, "R9": registers.R9, "R10": registers.R10, "R11": registers.R11,
+	"R12": registers.R12, "R13": registers.R13, "R14": registers.R14, "R15": registers.R15,
+	"AP": registers.AP, "FP": registers.FP, "SP": registers.SP, "PC": registers.PC,
 }
 
 // registerOf reports which register text names, if it names one. The PSL
 // isn't a general register, so isPSL says it separately.
-func registerOf(text string) (reg vax.Reg, name string, isPSL, ok bool) {
+func registerOf(text string) (reg registers.Reg, name string, isPSL, ok bool) {
 	name = strings.ToUpper(strings.TrimPrefix(strings.TrimSpace(text), "%"))
 
 	if name == "PSL" {
@@ -124,7 +124,7 @@ func (d *Debugger) examineRadix(r *dcl.Result) int {
 // module and routine the PC is in (DBGCMD\FACT), or "" when it isn't in a
 // routine the debug symbols know.
 func (d *Debugger) registerScope() string {
-	pc := d.Machine.CPU.GPR(vax.PC)
+	pc := d.Machine.CPU.GPR(registers.PC)
 
 	prog := d.Machine.DebugProgramAt(pc)
 	if prog == nil {
@@ -358,7 +358,7 @@ func (d *Debugger) readValue(addr, size uint32) (uint64, error) {
 // SET TYPE/OVERRIDE) shows the register's contents as that type; one wider
 // than a longword takes the registers after it too (EXAMINE/D_FLOAT R0 is
 // R0 and R1, as the VAX keeps a D_floating value in a register pair).
-func (d *Debugger) examineRegister(r *dcl.Result, reg vax.Reg, name string, isPSL bool) error {
+func (d *Debugger) examineRegister(r *dcl.Result, reg registers.Reg, name string, isPSL bool) error {
 	c := d.Machine
 
 	label := "%" + name
@@ -412,21 +412,21 @@ func (d *Debugger) examineRegister(r *dcl.Result, reg vax.Reg, name string, isPS
 // no fixed size (a counted string) can't be in registers, and neither can
 // a value that would run past the PC: %DEBUG-E-OPTNOTALLOW, naming the
 // command (verb).
-func (d *Debugger) registerBytes(reg vax.Reg, t dataType, verb string) ([]byte, error) {
+func (d *Debugger) registerBytes(reg registers.Reg, t dataType, verb string) ([]byte, error) {
 	size, fixed := t.fixedSize()
 	if !fixed || size == 0 || t.kind == typeInstruction {
 		return nil, vmserrors.New(vmserrors.DBG_OPTNOTALLOW, verb)
 	}
 
 	count := (size + 3) / 4
-	if uint32(reg)+count-1 > uint32(vax.PC) {
+	if uint32(reg)+count-1 > uint32(registers.PC) {
 		return nil, vmserrors.New(vmserrors.DBG_OPTNOTALLOW, verb)
 	}
 
 	data := make([]byte, 0, count*4)
 
 	for i := range count {
-		v := d.Machine.CPU.GPR(reg + vax.Reg(i))
+		v := d.Machine.CPU.GPR(reg + registers.Reg(i))
 		data = append(data, byte(v), byte(v>>8), byte(v>>16), byte(v>>24))
 	}
 
@@ -436,14 +436,14 @@ func (d *Debugger) registerBytes(reg vax.Reg, t dataType, verb string) ([]byte, 
 // setRegisterBytes stores data in the registers from reg on, as
 // registerBytes reads them: a register that data only partly fills keeps
 // its other bytes.
-func (d *Debugger) setRegisterBytes(reg vax.Reg, data []byte) error {
+func (d *Debugger) setRegisterBytes(reg registers.Reg, data []byte) error {
 	count := (uint32(len(data)) + 3) / 4
-	if uint32(reg)+count-1 > uint32(vax.PC) {
+	if uint32(reg)+count-1 > uint32(registers.PC) {
 		return vmserrors.New(vmserrors.DBG_OPTNOTALLOW, "DEPOSIT")
 	}
 
 	for i := range count {
-		v := d.Machine.CPU.GPR(reg + vax.Reg(i))
+		v := d.Machine.CPU.GPR(reg + registers.Reg(i))
 
 		for b := range uint32(4) {
 			if at := i*4 + b; at < uint32(len(data)) {
@@ -451,7 +451,7 @@ func (d *Debugger) setRegisterBytes(reg vax.Reg, data []byte) error {
 			}
 		}
 
-		d.Machine.CPU.SetGPR(reg+vax.Reg(i), v)
+		d.Machine.CPU.SetGPR(reg+registers.Reg(i), v)
 	}
 
 	return nil

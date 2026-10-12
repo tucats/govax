@@ -4,7 +4,7 @@ import (
 	"encoding/binary"
 	"fmt"
 
-	"github.com/tucats/govax/internal/vax"
+	"github.com/tucats/govax/internal/registers"
 	"github.com/tucats/govax/internal/vmsdef"
 )
 
@@ -115,7 +115,7 @@ func (sys *System) sendTerminationMessage(env *Environment) {
 		}
 	}
 
-	if sys.cpu.DebugEnabled(vax.DebugProcess) {
+	if sys.cpu.DebugEnabled(registers.DebugProcess) {
 		fmt.Fprintf(sys.cpu.DebugWriter(), "DEBUG(PROCESS): %08X's termination message to MBA%d, status %08X\n",
 			env.Process.PID, unit, status)
 	}

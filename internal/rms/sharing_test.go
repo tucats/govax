@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/tucats/govax/internal/vax"
+	"github.com/tucats/govax/internal/registers"
 	"github.com/tucats/govax/internal/vm"
 	"github.com/tucats/ods2/volume"
 )
@@ -44,7 +44,7 @@ func newSharers(t *testing.T, n int) ([]*sharer, *MountTable) {
 			name: string(rune('A' + i)),
 			ctx: &Context{
 				Mem:      vm.NewMemory(1 << 20),
-				CPU:      vax.New(),
+				CPU:      registers.New(),
 				Mounts:   mounts,
 				Files:    NewFileTable(nil),
 				Logicals: logicals,
@@ -163,7 +163,7 @@ func records(t *testing.T, mounts *MountTable, name string) []string {
 	t.Helper()
 
 	r := &sharer{t: t, name: "reader", ctx: &Context{
-		Mem: vm.NewMemory(1 << 20), CPU: vax.New(), Mounts: mounts,
+		Mem: vm.NewMemory(1 << 20), CPU: registers.New(), Mounts: mounts,
 		Files: NewFileTable(nil), Logicals: newTestLogicals(t),
 	}}
 	r.mustOpen(name, facGet, shrGet, false, 0)
@@ -193,7 +193,7 @@ func writeFile(t *testing.T, mounts *MountTable, name string, recs ...string) {
 	t.Helper()
 
 	w := &sharer{t: t, name: "writer", ctx: &Context{
-		Mem: vm.NewMemory(1 << 20), CPU: vax.New(), Mounts: mounts,
+		Mem: vm.NewMemory(1 << 20), CPU: registers.New(), Mounts: mounts,
 		Files: NewFileTable(nil), Logicals: newTestLogicals(t),
 	}}
 	w.mustOpen(name, facPut, 0, true, 0)
@@ -583,7 +583,7 @@ func TestSharing_flush(t *testing.T) {
 	}
 
 	w := &sharer{t: t, name: "writer", ctx: &Context{
-		Mem: vm.NewMemory(1 << 20), CPU: vax.New(), Mounts: mounts,
+		Mem: vm.NewMemory(1 << 20), CPU: registers.New(), Mounts: mounts,
 		Files: NewFileTable(nil), Logicals: newTestLogicals(t),
 	}}
 	w.mustOpen("F.DAT", facPut, 0, true, 0) // no sharing: records are buffered

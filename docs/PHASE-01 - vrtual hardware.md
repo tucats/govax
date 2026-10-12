@@ -149,3 +149,10 @@ Each is one buildable, testable commit:
   they're explained.
 - Full-repo `go build ./...`, `go vet ./...`, `gofmt -l .` (no output), and
   `go test ./...` all clean; phase complete.
+
+### 2026-10-12
+
+- Renamed the package `internal/vax` to `internal/registers` (package
+  `registers`). The new name says what the package holds: the CPU's registers, PSL,
+  and debug flags, not the whole machine. Every importer's `vax.X` is now
+  `registers.X`. The rest of this document keeps the old name as history.

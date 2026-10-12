@@ -4,13 +4,13 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/tucats/govax/internal/vax"
+	"github.com/tucats/govax/internal/registers"
 )
 
 func TestEmulHaltInKernelMode(t *testing.T) {
 	cpu, mem := fixture()
 	e := NewEngine(cpu, mem)
-	cpu.SetGPR(vax.PC, base)
+	cpu.SetGPR(registers.PC, base)
 	putBytes(t, cpu, mem, base, 0x00) // HALT
 
 	err := e.Step()
@@ -34,9 +34,9 @@ func TestEmulHaltInKernelMode(t *testing.T) {
 func TestEmulHaltFaultsOutsideKernelMode(t *testing.T) {
 	cpu, mem := fixture()
 	e := NewEngine(cpu, mem)
-	cpu.SetDebug(cpu.Debug() &^ vax.DebugUserHalt)
+	cpu.SetDebug(cpu.Debug() &^ registers.DebugUserHalt)
 	psl := cpu.PSL()
-	psl.SetCurMod(vax.User)
+	psl.SetCurMod(registers.User)
 	cpu.SetPSL(psl)
 
 	err := emulHalt(e, &Decoded{})
@@ -58,7 +58,7 @@ func TestEmulHaltAllowedOutsideKernelModeWithUserHaltDebugFlag(t *testing.T) {
 	cpu, mem := fixture()
 	e := NewEngine(cpu, mem)
 	psl := cpu.PSL()
-	psl.SetCurMod(vax.User)
+	psl.SetCurMod(registers.User)
 	cpu.SetPSL(psl)
 
 	if err := emulHalt(e, &Decoded{}); !errors.Is(err, ErrHalted) {
@@ -69,7 +69,7 @@ func TestEmulHaltAllowedOutsideKernelModeWithUserHaltDebugFlag(t *testing.T) {
 func TestEmulNop(t *testing.T) {
 	cpu, mem := fixture()
 	e := NewEngine(cpu, mem)
-	cpu.SetGPR(vax.PC, base)
+	cpu.SetGPR(registers.PC, base)
 	putBytes(t, cpu, mem, base, 0x01) // NOP
 
 	if err := e.Step(); err != nil {
@@ -80,7 +80,7 @@ func TestEmulNop(t *testing.T) {
 		t.Error("Halted() = true, want false")
 	}
 
-	if cpu.GPR(vax.PC) != base+1 {
-		t.Errorf("PC = %#x, want %#x", cpu.GPR(vax.PC), base+1)
+	if cpu.GPR(registers.PC) != base+1 {
+		t.Errorf("PC = %#x, want %#x", cpu.GPR(registers.PC), base+1)
 	}
 }

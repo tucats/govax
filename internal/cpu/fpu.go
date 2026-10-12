@@ -3,7 +3,7 @@ package cpu
 import (
 	"errors"
 
-	"github.com/tucats/govax/internal/vax"
+	"github.com/tucats/govax/internal/registers"
 	"github.com/tucats/govax/internal/vaxfloat"
 	"github.com/tucats/govax/internal/vm"
 )
@@ -62,7 +62,7 @@ func operandFormat(d *Decoded, i int) vaxfloat.Format {
 
 // loadFloatBits reads operand op's raw bits: 16 bytes for H_floating, 8
 // or 4 otherwise.
-func loadFloatBits(cpu *vax.CPU, mem *vm.Memory, op Operand) (vaxfloat.Bits, error) {
+func loadFloatBits(cpu *registers.CPU, mem *vm.Memory, op Operand) (vaxfloat.Bits, error) {
 	if op.Size == 16 {
 		o, err := op.LoadOctaword(cpu, mem)
 
@@ -149,7 +149,7 @@ func (e *Engine) floatException(err error) error {
 // not this one's. A handler that continues goes on from there. (A fault,
 // by contrast, saves the instruction's own PC, so it runs again.)
 func (e *Engine) arithmeticTrap(code uint32) error {
-	e.instructionPC = e.cpu.GPR(vax.PC)
+	e.instructionPC = e.cpu.GPR(registers.PC)
 
 	return &Fault{Code: ExcArithmetic, Args: []uint32{code}}
 }
@@ -157,7 +157,7 @@ func (e *Engine) arithmeticTrap(code uint32) error {
 // setFloatCC sets N and Z from v and clears V; it clears C too unless
 // keepC (MOV and ACB leave C alone; the other floating instructions clear
 // it).
-func setFloatCC(cpu *vax.CPU, v vaxfloat.Value, keepC bool) {
+func setFloatCC(cpu *registers.CPU, v vaxfloat.Value, keepC bool) {
 	psl := cpu.PSL()
 	psl.SetN(v.Sign() < 0)
 	psl.SetZ(v.IsZero())

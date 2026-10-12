@@ -4,7 +4,7 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/tucats/govax/internal/vax"
+	"github.com/tucats/govax/internal/registers"
 )
 
 func TestFaultBreakpointsAddRemoveClear(t *testing.T) {
@@ -41,7 +41,7 @@ func TestFaultBreakpointsAddRemoveClear(t *testing.T) {
 func TestFaultBreakInterceptsRaise(t *testing.T) {
 	e := newEngine()
 	e.instructionPC = 0x4000
-	e.cpu.SetGPR(vax.PC, 0x4002) // decode already advanced PC past the faulting instruction
+	e.cpu.SetGPR(registers.PC, 0x4002) // decode already advanced PC past the faulting instruction
 	e.SetFaultBreakpoint(ExcPrivileged)
 
 	err := e.raise(&Fault{Code: ExcPrivileged, Args: []uint32{0xAAAA}})
@@ -55,7 +55,7 @@ func TestFaultBreakInterceptsRaise(t *testing.T) {
 		t.Errorf("Code = %#02x, want %#02x", fb.Code, ExcPrivileged)
 	}
 
-	if got := e.cpu.GPR(vax.PC); got != 0x4000 {
+	if got := e.cpu.GPR(registers.PC); got != 0x4000 {
 		t.Errorf("PC = %#x, want 0x4000 (delivery skipped, PC left at the fault)", got)
 	}
 
@@ -75,8 +75,8 @@ func TestFaultBreakInterceptsRaise(t *testing.T) {
 func TestFaultBreakDoesNotInterceptUnarmedCode(t *testing.T) {
 	e := newEngine()
 	e.instructionPC = 0x4000
-	e.cpu.SetGPR(vax.SP, 0x7000)
-	e.cpu.SetPR(vax.KSP, 0x7000)
+	e.cpu.SetGPR(registers.SP, 0x7000)
+	e.cpu.SetPR(registers.KSP, 0x7000)
 	putVector(t, e, ExcReservedAddr, 0x100, 0)
 	e.SetFaultBreakpoint(ExcPrivileged) // armed, but for a different code
 
@@ -85,7 +85,7 @@ func TestFaultBreakDoesNotInterceptUnarmedCode(t *testing.T) {
 		t.Fatalf("raise() = %v, want nil (real delivery, unarmed code)", err)
 	}
 
-	if got := e.cpu.GPR(vax.PC); got != 0x100 {
+	if got := e.cpu.GPR(registers.PC); got != 0x100 {
 		t.Errorf("PC = %#x, want 0x100 (the vector, meaning delivery actually ran)", got)
 	}
 }
@@ -96,7 +96,7 @@ func TestFaultBreakDoesNotInterceptUnarmedCode(t *testing.T) {
 // delivery handle_fault call).
 func TestFaultBreakInterceptsDeliverPendingInterrupt(t *testing.T) {
 	e := interruptEngine(t)
-	e.cpu.SetGPR(vax.PC, 0x5000)
+	e.cpu.SetGPR(registers.PC, 0x5000)
 	e.interruptPending = true
 	e.interruptCode = ExcConWrite
 	e.interruptIPL = 20
@@ -109,7 +109,7 @@ func TestFaultBreakInterceptsDeliverPendingInterrupt(t *testing.T) {
 		t.Fatalf("deliverPendingInterrupt() = %v, want *FaultBreak{Code: ExcConWrite}", err)
 	}
 	
-	if got := e.cpu.GPR(vax.PC); got != 0x5000 {
+	if got := e.cpu.GPR(registers.PC); got != 0x5000 {
 		t.Errorf("PC = %#x, want 0x5000 (delivery skipped)", got)
 	}
 }

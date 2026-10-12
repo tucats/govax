@@ -6,7 +6,7 @@ import (
 
 	iodev "github.com/tucats/govax/internal/io"
 	"github.com/tucats/govax/internal/lnm"
-	"github.com/tucats/govax/internal/vax"
+	"github.com/tucats/govax/internal/registers"
 	"github.com/tucats/govax/internal/vmsdef"
 )
 
@@ -92,7 +92,7 @@ func TestCrembx(t *testing.T) {
 		t.Error("the second $CREMBX didn't reach the first mailbox on a new channel")
 	}
 
-	ch3 := assignCall(t, env, a, "MYMBX", uint32(vax.User))
+	ch3 := assignCall(t, env, a, "MYMBX", uint32(registers.User))
 
 	if mailboxOn(t, env, ch3) != m || d.RefCnt != 3 {
 		t.Errorf("$ASSIGN MYMBX: refcnt %d, want 3", d.RefCnt)
@@ -141,7 +141,7 @@ func TestMailbox_deletion(t *testing.T) {
 
 	// A temporary mailbox goes with its last channel, and its name too.
 	_, ch := crembx(t, env, a, 0, 0, 0, "TEMP")
-	ch2 := assignCall(t, env, a, "TEMP", uint32(vax.User))
+	ch2 := assignCall(t, env, a, "TEMP", uint32(registers.User))
 
 	wantR0(t, callLNM(t, env, serviceSysDassgn, ch), ssNormal)
 
@@ -171,7 +171,7 @@ func TestMailbox_deletion(t *testing.T) {
 		t.Errorf("PERM not in LNM$PERMANENT_MAILBOX (LNM$SYSTEM): %v", err)
 	}
 
-	ch = assignCall(t, env, a, "PERM", uint32(vax.User))
+	ch = assignCall(t, env, a, "PERM", uint32(registers.User))
 	wantR0(t, callLNM(t, env, serviceSysDelmbx, ch), ssNormal)
 
 	if _, found := env.Devices.Find("MBA2"); !found {
@@ -186,12 +186,12 @@ func TestMailbox_deletion(t *testing.T) {
 
 	// $DELMBX's errors.
 	defineTestDevice(env, "TTA0", iodev.DeviceClassTT)
-	tt := assignCall(t, env, a, "TTA0", uint32(vax.Kernel))
+	tt := assignCall(t, env, a, "TTA0", uint32(registers.Kernel))
 	wantR0(t, callLNM(t, env, serviceSysDelmbx, tt), ssDevNotMbx)
 	wantR0(t, callLNM(t, env, serviceSysDelmbx, 0), ssIvChan)
 	wantR0(t, callLNM(t, env, serviceSysDelmbx, 0x7F0), ssNoPriv)
 
-	setMode(env, vax.User, vax.User, 0x8000)
+	setMode(env, registers.User, registers.User, 0x8000)
 	wantR0(t, callLNM(t, env, serviceSysDelmbx, tt), ssNoPriv)
 
 	// Image rundown deassigns user channels, deleting a temporary mailbox.
@@ -375,7 +375,7 @@ func TestMailboxDriver_cancel(t *testing.T) {
 	env, _ := fixture()
 	a := newArena(t, env)
 	_, ch := crembx(t, env, a, 1, 0, 0, "")
-	ch2 := assignCall(t, env, a, "MBA1", uint32(vax.User))
+	ch2 := assignCall(t, env, a, "MBA1", uint32(registers.User))
 	m := mailboxOn(t, env, ch)
 	riosb, wiosb, buf := a.alloc(8), a.alloc(8), a.alloc(8)
 
@@ -419,7 +419,7 @@ func TestQiow_waits(t *testing.T) {
 	_, ch := crembx(t, env, a, 0, 0, 0, "")
 	iosb, buf := a.alloc(8), a.alloc(8)
 
-	env.cpu.SetGPR(vax.FP, 0x7000)
+	env.cpu.SetGPR(registers.FP, 0x7000)
 
 	argv := []uint32{0, ch, fnReadVBlk, iosb, 0, 0, buf, 8}
 
@@ -434,10 +434,10 @@ func TestQiow_waits(t *testing.T) {
 	}
 
 	// An AST routine writes (a different frame).
-	env.cpu.SetGPR(vax.FP, 0x6000)
+	env.cpu.SetGPR(registers.FP, 0x6000)
 	wantR0(t, callLNM(t, env, serviceSysQiow, 0, ch, fnWriteNow, 0, 0, 0, a.str("hi"), 2), ssNormal)
 
-	env.cpu.SetGPR(vax.FP, 0x7000)
+	env.cpu.SetGPR(registers.FP, 0x7000)
 
 	r0, err := serviceSysQiow(env, argv)
 	if err != nil || r0 != ssNormal || a.readString(buf, 2) != "hi" || len(env.qiowWaits) != 0 {
@@ -519,7 +519,7 @@ func TestMailboxDriver_attention(t *testing.T) {
 	a := newArena(t, env)
 	_, ch := crembx(t, env, a, 0, 0, 0, "")
 	buf := a.alloc(16)
-	user := uint32(vax.User)
+	user := uint32(registers.User)
 
 	// Read attention: the next unsolicited message, once.
 	setAttention(t, env, ch, ioModReadAttn, 0x5000, 7, user)

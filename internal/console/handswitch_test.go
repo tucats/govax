@@ -11,8 +11,8 @@ import (
 	"github.com/tucats/govax/internal/console/consoletest"
 	"github.com/tucats/govax/internal/corevms"
 	"github.com/tucats/govax/internal/cpu"
+	"github.com/tucats/govax/internal/registers"
 	"github.com/tucats/govax/internal/respath"
-	"github.com/tucats/govax/internal/vax"
 	"github.com/tucats/govax/internal/vm"
 	"github.com/tucats/govax/internal/vmsdef"
 )
@@ -76,7 +76,7 @@ func step(t testing.TB, c *console.Console, n int) {
 
 	for range n {
 		if err := c.Engine.Step(); err != nil {
-			t.Fatalf("Step at PC %08X: %v", c.CPU.GPR(vax.PC), err)
+			t.Fatalf("Step at PC %08X: %v", c.CPU.GPR(registers.PC), err)
 		}
 	}
 }
@@ -127,22 +127,22 @@ func TestHandSwitchTwoProcesses(t *testing.T) {
 	}
 
 	// Run it in user mode, on its user stack, at IPL 0.
-	c.Engine.SetModeStack(vax.User, false)
+	c.Engine.SetModeStack(registers.User, false)
 
 	psl := vcpu.PSL()
-	psl.SetPrvMod(vax.User)
+	psl.SetPrvMod(registers.User)
 	psl.SetIPL(0)
 	vcpu.SetPSL(psl)
-	vcpu.SetPR(vax.IPL, 0)
-	vcpu.SetGPR(vax.PC, codeAddr)
+	vcpu.SetPR(registers.IPL, 0)
+	vcpu.SetGPR(registers.PC, codeAddr)
 
 	step(t, c, 4)
 
-	if vcpu.GPR(vax.PC) != oneSpin || vcpu.GPR(vax.R0) != oneValue {
-		t.Fatalf("process 1 at PC %08X with R0 %08X, want %08X and %08X", vcpu.GPR(vax.PC), vcpu.GPR(vax.R0), oneSpin, uint32(oneValue))
+	if vcpu.GPR(registers.PC) != oneSpin || vcpu.GPR(registers.R0) != oneValue {
+		t.Fatalf("process 1 at PC %08X with R0 %08X, want %08X and %08X", vcpu.GPR(registers.PC), vcpu.GPR(registers.R0), oneSpin, uint32(oneValue))
 	}
 
-	oneUSP := vcpu.GPR(vax.SP)
+	oneUSP := vcpu.GPR(registers.SP)
 
 	// Process 1's PCB. SVPCTX (and SaveContext) never write the PCB's
 	// memory-management longwords -- software keeps them there -- so
@@ -184,10 +184,10 @@ func TestHandSwitchTwoProcesses(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	var userPSL vax.PSL
+	var userPSL registers.PSL
 
-	userPSL.SetCurMod(vax.User)
-	userPSL.SetPrvMod(vax.User)
+	userPSL.SetCurMod(registers.User)
+	userPSL.SetPrvMod(registers.User)
 
 	start := corevms.InitialPCB(two.Space, two.Stacks, codeAddr, userPSL)
 	if err := cpu.WritePCB(mem, two.Stacks.PCBB, &start); err != nil {
@@ -203,7 +203,7 @@ func TestHandSwitchTwoProcesses(t *testing.T) {
 			t.Fatalf("SaveContext: %v", err)
 		}
 
-		vcpu.SetPR(vax.PCBB, pcbb)
+		vcpu.SetPR(registers.PCBB, pcbb)
 
 		if err := c.Engine.LoadContext(); err != nil {
 			t.Fatalf("LoadContext: %v", err)
@@ -212,18 +212,18 @@ func TestHandSwitchTwoProcesses(t *testing.T) {
 		sys.SetCurrent(env)
 	}
 
-	vcpu.SetPR(vax.PCBB, pcb1)
+	vcpu.SetPR(registers.PCBB, pcb1)
 	switchTo(two.Stacks.PCBB, two)
 
-	if vm.CurrentAddressSpace(vcpu) != two.Space.AddressSpace || vcpu.PSL().CurMod() != vax.User ||
-		vcpu.GPR(vax.PC) != codeAddr || vcpu.GPR(vax.SP) != corevms.UserStackTop {
+	if vm.CurrentAddressSpace(vcpu) != two.Space.AddressSpace || vcpu.PSL().CurMod() != registers.User ||
+		vcpu.GPR(registers.PC) != codeAddr || vcpu.GPR(registers.SP) != corevms.UserStackTop {
 		t.Fatalf("after the switch: space %+v, mode %d, PC %08X, SP %08X",
-			vm.CurrentAddressSpace(vcpu), vcpu.PSL().CurMod(), vcpu.GPR(vax.PC), vcpu.GPR(vax.SP))
+			vm.CurrentAddressSpace(vcpu), vcpu.PSL().CurMod(), vcpu.GPR(registers.PC), vcpu.GPR(registers.SP))
 	}
 
 	step(t, c, 6)
 
-	if got := [4]uint32{vcpu.GPR(vax.PC), vcpu.GPR(vax.R0), vcpu.GPR(vax.R1), vcpu.GPR(vax.R2)}; got != [4]uint32{twoSpin, twoValue, sharedValue, 0x7AFC} {
+	if got := [4]uint32{vcpu.GPR(registers.PC), vcpu.GPR(registers.R0), vcpu.GPR(registers.R1), vcpu.GPR(registers.R2)}; got != [4]uint32{twoSpin, twoValue, sharedValue, 0x7AFC} {
 		t.Errorf("process 2's PC, R0, R1, R2 = %08X, want %08X %08X %08X %08X", got, twoSpin, uint32(twoValue), uint32(sharedValue), 0x7AFC)
 	}
 
@@ -240,8 +240,8 @@ func TestHandSwitchTwoProcesses(t *testing.T) {
 	// The same for the user stacks: one P1 address, two pages.
 	top := uint32(corevms.UserStackTop - 4)
 
-	if vcpu.GPR(vax.SP) != top || oneUSP != top {
-		t.Errorf("user SPs: process 1 %08X, process 2 %08X; want %08X for both", oneUSP, vcpu.GPR(vax.SP), top)
+	if vcpu.GPR(registers.SP) != top || oneUSP != top {
+		t.Errorf("user SPs: process 1 %08X, process 2 %08X; want %08X for both", oneUSP, vcpu.GPR(registers.SP), top)
 	}
 
 	if v, _ := mem.LoadLongwordIn(vcpu, oneSpace, top); v != oneValue {
@@ -258,17 +258,17 @@ func TestHandSwitchTwoProcesses(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if saved.PC != oneSpin || saved.R[0] != oneValue || saved.SP[vax.User] != oneUSP || saved.PSL.CurMod() != vax.User || saved.P0BR != oneSpace.P0BR {
+	if saved.PC != oneSpin || saved.R[0] != oneValue || saved.SP[registers.User] != oneUSP || saved.PSL.CurMod() != registers.User || saved.P0BR != oneSpace.P0BR {
 		t.Errorf("process 1's PCB: %+v", saved)
 	}
 
 	// And back to process 1.
 	switchTo(pcb1, one)
 
-	if vm.CurrentAddressSpace(vcpu) != oneSpace || vcpu.GPR(vax.PC) != oneSpin || vcpu.GPR(vax.R0) != oneValue ||
-		vcpu.GPR(vax.SP) != oneUSP || vcpu.PSL().CurMod() != vax.User {
+	if vm.CurrentAddressSpace(vcpu) != oneSpace || vcpu.GPR(registers.PC) != oneSpin || vcpu.GPR(registers.R0) != oneValue ||
+		vcpu.GPR(registers.SP) != oneUSP || vcpu.PSL().CurMod() != registers.User {
 		t.Fatalf("back in process 1: space %+v, PC %08X, R0 %08X, SP %08X",
-			vm.CurrentAddressSpace(vcpu), vcpu.GPR(vax.PC), vcpu.GPR(vax.R0), vcpu.GPR(vax.SP))
+			vm.CurrentAddressSpace(vcpu), vcpu.GPR(registers.PC), vcpu.GPR(registers.R0), vcpu.GPR(registers.SP))
 	}
 
 	if v, _ := mem.LoadLongword(vcpu, dataAddr); v != oneValue {
@@ -283,15 +283,15 @@ func TestHandSwitchTwoProcesses(t *testing.T) {
 	}
 
 	if saved.PC != twoSpin || saved.R[0] != twoValue || saved.R[1] != sharedValue || saved.R[2] != 0x7AFC ||
-		saved.SP[vax.User] != top || saved.AddressSpace() != two.Space.AddressSpace {
+		saved.SP[registers.User] != top || saved.AddressSpace() != two.Space.AddressSpace {
 		t.Errorf("process 2's PCB: %+v", saved)
 	}
 
 	// Process 1 carries on.
 	step(t, c, 2)
 
-	if vcpu.GPR(vax.PC) != oneSpin {
-		t.Errorf("process 1 at %08X, want it spinning at %08X", vcpu.GPR(vax.PC), oneSpin)
+	if vcpu.GPR(registers.PC) != oneSpin {
+		t.Errorf("process 1 at %08X, want it spinning at %08X", vcpu.GPR(registers.PC), oneSpin)
 	}
 
 	// Process 2's code is in its P0 and not in process 1's: the bytes at

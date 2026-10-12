@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/tucats/govax/internal/vax"
+	"github.com/tucats/govax/internal/registers"
 	"github.com/tucats/govax/internal/vm"
 	"github.com/tucats/ods2/ondisk"
 )
@@ -122,7 +122,7 @@ func newReadOnlyFixtureWithFile(t *testing.T, writable bool, name string, record
 	return &createFixture{
 		ctx: &Context{
 			Mem:      vm.NewMemory(1 << 20),
-			CPU:      vax.New(),
+			CPU:      registers.New(),
 			Mounts:   mounts,
 			Files:    NewFileTable(nil),
 			Logicals: logicals,

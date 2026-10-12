@@ -4,7 +4,7 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/tucats/govax/internal/vax"
+	"github.com/tucats/govax/internal/registers"
 )
 
 // fakeClock makes env's clock a variable the test advances by hand.
@@ -153,7 +153,7 @@ func TestServiceSysCantim(t *testing.T) {
 	// reqidt 0 cancels everything the caller's mode may cancel: not a
 	// kernel request when called from supervisor mode.
 	set(10, 1)
-	setCurMod(env, vax.Supervisor)
+	setCurMod(env, registers.Supervisor)
 	set(11, 2)
 	wantR0(t, callLNM(t, env, serviceSysCantim), ssNormal)
 
@@ -169,7 +169,7 @@ func TestServiceSysCantim(t *testing.T) {
 		t.Fatal("supervisor mode cancelled a kernel-mode timer")
 	}
 
-	setCurMod(env, vax.Kernel)
+	setCurMod(env, registers.Kernel)
 	wantR0(t, callLNM(t, env, serviceSysCantim, 0, 0), ssNormal)
 
 	if env.PendingTimers() != 0 {

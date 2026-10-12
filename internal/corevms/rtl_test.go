@@ -7,8 +7,8 @@ import (
 
 	iodev "github.com/tucats/govax/internal/io"
 	"github.com/tucats/govax/internal/lnm"
+	"github.com/tucats/govax/internal/registers"
 	"github.com/tucats/govax/internal/rms"
-	"github.com/tucats/govax/internal/vax"
 	"github.com/tucats/govax/internal/vm"
 	"github.com/tucats/govax/internal/vmsdef"
 )
@@ -18,7 +18,7 @@ import (
 // internal/cpu's own test convention) and a buffer standing in for the
 // console's output stream (RMS internal file index 1).
 func fixture() (*Environment, *bytes.Buffer) {
-	cpu := vax.New()
+	cpu := registers.New()
 	mem := vm.NewMemory(1 << 20)
 	devices := iodev.NewDeviceTable()
 
@@ -89,7 +89,7 @@ func putArgs(t *testing.T, env *Environment, ap uint32, argv []uint32) {
 		putLongword(t, env, ap+uint32(n+1)*4, v)
 	}
 
-	env.cpu.SetGPR(vax.AP, ap)
+	env.cpu.SetGPR(registers.AP, ap)
 }
 
 func TestReadArgs(t *testing.T) {
@@ -227,7 +227,7 @@ func TestEnvironmentSystemServiceDebugServicesTrace(t *testing.T) {
 	var buf bytes.Buffer
 
 	env.cpu.SetDebugWriter(&buf)
-	env.cpu.SetDebug(vax.DebugServices)
+	env.cpu.SetDebug(registers.DebugServices)
 
 	if _, handled, err := env.SystemService(0x7FFEE000); err != nil || !handled {
 		t.Fatalf("SystemService: handled=%v err=%v", handled, err)

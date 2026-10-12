@@ -11,9 +11,9 @@ import (
 	iodev "github.com/tucats/govax/internal/io"
 	"github.com/tucats/govax/internal/librtl"
 	"github.com/tucats/govax/internal/lnm"
+	"github.com/tucats/govax/internal/registers"
 	"github.com/tucats/govax/internal/respath"
 	"github.com/tucats/govax/internal/rms"
-	"github.com/tucats/govax/internal/vax"
 	"github.com/tucats/govax/internal/vm"
 	"github.com/tucats/govax/internal/vmserrors"
 )
@@ -46,7 +46,7 @@ type Machine struct {
 	Debugger Debugger
 
 	Engine *cpu.Engine
-	CPU    *vax.CPU
+	CPU    *registers.CPU
 	Mem    *vm.Memory
 
 	Symbols *SymbolTable
@@ -425,7 +425,7 @@ func (m *Machine) requireInit() error {
 // requireKernelMode matches the handful of commands (VMINIT, INIT/ROM, ...)
 // that additionally refuse to run outside kernel mode.
 func (m *Machine) requireKernelMode() error {
-	if m.CPU.PSL().CurMod() != vax.Kernel {
+	if m.CPU.PSL().CurMod() != registers.Kernel {
 		return vmserrors.New(vmserrors.CLI_NOTKERNEL)
 	}
 
@@ -448,7 +448,7 @@ func (m *Machine) requireKernelMode() error {
 // exactly that as its normal, designed completion).
 func (m *Machine) withKernelMode(fn func() error) error {
 	saved := m.CPU.PSL().CurMod()
-	m.Engine.SetModeStack(vax.Kernel, false)
+	m.Engine.SetModeStack(registers.Kernel, false)
 
 	defer m.Engine.SetModeStack(saved, false)
 

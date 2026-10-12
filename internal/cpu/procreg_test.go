@@ -4,25 +4,25 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/tucats/govax/internal/vax"
+	"github.com/tucats/govax/internal/registers"
 	"github.com/tucats/govax/internal/vm"
 )
 
 // mtprBytes returns the byte sequence for MTPR src, #reg where src is a
 // register-mode operand and reg is a short-literal register number.
-func mtprBytes(src vax.Reg, reg uint32) []byte {
+func mtprBytes(src registers.Reg, reg uint32) []byte {
 	return []byte{0xDA, regMode(src), shortLiteral(reg)}
 }
 
 // mfprBytes returns the byte sequence for MFPR #reg, dst.
-func mfprBytes(reg uint32, dst vax.Reg) []byte {
+func mfprBytes(reg uint32, dst registers.Reg) []byte {
 	return []byte{0xDB, shortLiteral(reg), regMode(dst)}
 }
 
 func kernelEngine() *Engine {
 	e := newEngine()
 	psl := e.cpu.PSL()
-	psl.SetCurMod(vax.Kernel)
+	psl.SetCurMod(registers.Kernel)
 	e.cpu.SetPSL(psl)
 
 	return e
@@ -32,16 +32,16 @@ func TestEmulMtprMfprDefaultRegisterRoundTrip(t *testing.T) {
 	e := kernelEngine()
 	cpu := e.cpu
 
-	cpu.SetGPR(vax.R1, 0xDEADBEEF)
-	stepInstruction(t, e, mtprBytes(vax.R1, uint32(vax.P0BR))...)
+	cpu.SetGPR(registers.R1, 0xDEADBEEF)
+	stepInstruction(t, e, mtprBytes(registers.R1, uint32(registers.P0BR))...)
 
-	if got := cpu.PR(vax.P0BR); got != 0xDEADBEEF {
+	if got := cpu.PR(registers.P0BR); got != 0xDEADBEEF {
 		t.Fatalf("PR(P0BR) = %#x, want 0xDEADBEEF", got)
 	}
 
-	stepInstruction(t, e, mfprBytes(uint32(vax.P0BR), vax.R2)...)
+	stepInstruction(t, e, mfprBytes(uint32(registers.P0BR), registers.R2)...)
 
-	if got := cpu.GPR(vax.R2); got != 0xDEADBEEF {
+	if got := cpu.GPR(registers.R2); got != 0xDEADBEEF {
 		t.Errorf("R2 after MFPR = %#x, want 0xDEADBEEF", got)
 	}
 }
@@ -56,13 +56,13 @@ func TestEmulMtprMfprDefaultRegisterRoundTrip(t *testing.T) {
 func TestEmulMtprRequiresKernelMode(t *testing.T) {
 	cpu, mem := fixture()
 	psl := cpu.PSL()
-	psl.SetCurMod(vax.User)
+	psl.SetCurMod(registers.User)
 	cpu.SetPSL(psl)
-	cpu.SetGPR(vax.R1, 1)
+	cpu.SetGPR(registers.R1, 1)
 
 	d := &Decoded{Operands: [6]Operand{
-		{Kind: OperandRegister, Reg: vax.R1, Size: 4},
-		{Kind: OperandImmediate, Value: uint64(vax.P0BR), Size: 4},
+		{Kind: OperandRegister, Reg: registers.R1, Size: 4},
+		{Kind: OperandImmediate, Value: uint64(registers.P0BR), Size: 4},
 	}}
 
 	err := emulMtpr(NewEngine(cpu, mem), d)
@@ -81,16 +81,16 @@ func TestEmulMtprRequiresKernelMode(t *testing.T) {
 func TestEmulMtprOutOfRangeRegisterFaults(t *testing.T) {
 	e := kernelEngine()
 	cpu := e.cpu
-	cpu.SetGPR(vax.SP, 0x7000)
-	cpu.SetPR(vax.KSP, 0x7000)
+	cpu.SetGPR(registers.SP, 0x7000)
+	cpu.SetPR(registers.KSP, 0x7000)
 	putVector(t, e, ExcReservedOp, 0x300, 0)
 
-	cpu.SetGPR(vax.R1, 1)
+	cpu.SetGPR(registers.R1, 1)
 	// #200 doesn't fit a short literal (max 63); use an immediate longword
 	// instead: I^#200.
-	stepInstruction(t, e, 0xDA, regMode(vax.R1), 0x8F, 200, 0, 0, 0)
+	stepInstruction(t, e, 0xDA, regMode(registers.R1), 0x8F, 200, 0, 0, 0)
 
-	if got := cpu.GPR(vax.PC); got != 0x300 {
+	if got := cpu.GPR(registers.PC); got != 0x300 {
 		t.Errorf("PC = %#x, want 0x300 (reserved-operand fault vector)", got)
 	}
 }
@@ -98,15 +98,15 @@ func TestEmulMtprOutOfRangeRegisterFaults(t *testing.T) {
 func TestEmulMtprNoAccessRegisterFaults(t *testing.T) {
 	e := kernelEngine()
 	cpu := e.cpu
-	cpu.SetGPR(vax.SP, 0x7000)
-	cpu.SetPR(vax.KSP, 0x7000)
+	cpu.SetGPR(registers.SP, 0x7000)
+	cpu.SetPR(registers.KSP, 0x7000)
 	putVector(t, e, ExcReservedOp, 0x300, 0)
 
-	cpu.SetGPR(vax.R1, 1)
+	cpu.SetGPR(registers.R1, 1)
 	// Register 44 (WCSA) has no defined access at all.
-	stepInstruction(t, e, mtprBytes(vax.R1, 44)...)
+	stepInstruction(t, e, mtprBytes(registers.R1, 44)...)
 
-	if got := cpu.GPR(vax.PC); got != 0x300 {
+	if got := cpu.GPR(registers.PC); got != 0x300 {
 		t.Errorf("PC = %#x, want 0x300 (reserved-operand fault vector)", got)
 	}
 }
@@ -114,14 +114,14 @@ func TestEmulMtprNoAccessRegisterFaults(t *testing.T) {
 func TestEmulMfprWriteOnlyRegisterFaults(t *testing.T) {
 	e := kernelEngine()
 	cpu := e.cpu
-	cpu.SetGPR(vax.SP, 0x7000)
-	cpu.SetPR(vax.KSP, 0x7000)
+	cpu.SetGPR(registers.SP, 0x7000)
+	cpu.SetPR(registers.KSP, 0x7000)
 	putVector(t, e, ExcReservedOp, 0x300, 0)
 
 	// SIRR (20) is write-only.
-	stepInstruction(t, e, mfprBytes(uint32(vax.SIRR), vax.R2)...)
+	stepInstruction(t, e, mfprBytes(uint32(registers.SIRR), registers.R2)...)
 
-	if got := cpu.GPR(vax.PC); got != 0x300 {
+	if got := cpu.GPR(registers.PC); got != 0x300 {
 		t.Errorf("PC = %#x, want 0x300 (reserved-operand fault vector)", got)
 	}
 }
@@ -130,10 +130,10 @@ func TestEmulMtprIPLUpdatesPSLAndTruncates(t *testing.T) {
 	e := kernelEngine()
 	cpu := e.cpu
 
-	cpu.SetGPR(vax.R1, 0xFFFFFFFF) // masked to the low 5 bits (0x1F)
-	stepInstruction(t, e, mtprBytes(vax.R1, uint32(vax.IPL))...)
+	cpu.SetGPR(registers.R1, 0xFFFFFFFF) // masked to the low 5 bits (0x1F)
+	stepInstruction(t, e, mtprBytes(registers.R1, uint32(registers.IPL))...)
 
-	if got := cpu.PR(vax.IPL); got != 0x1F {
+	if got := cpu.PR(registers.IPL); got != 0x1F {
 		t.Errorf("PR(IPL) = %#x, want 0x1F", got)
 	}
 
@@ -153,15 +153,15 @@ func TestEmulMtprIPLAdmitsLatchedSoftwareInterruptOnceExposed(t *testing.T) {
 	psl.SetIPL(5)
 	cpu.SetPSL(psl)
 
-	cpu.SetGPR(vax.R1, 3) // latched: 3 <= current IPL (5)
-	stepInstruction(t, e, mtprBytes(vax.R1, uint32(vax.SIRR))...)
+	cpu.SetGPR(registers.R1, 3) // latched: 3 <= current IPL (5)
+	stepInstruction(t, e, mtprBytes(registers.R1, uint32(registers.SIRR))...)
 
 	if e.interruptPending {
 		t.Fatal("expected the SIRR request to be latched, not delivered, while IPL is 5")
 	}
 
-	cpu.SetGPR(vax.R1, 0) // lower IPL to 0, exposing the latched level-3 request
-	stepInstruction(t, e, mtprBytes(vax.R1, uint32(vax.IPL))...)
+	cpu.SetGPR(registers.R1, 0) // lower IPL to 0, exposing the latched level-3 request
+	stepInstruction(t, e, mtprBytes(registers.R1, uint32(registers.IPL))...)
 
 	if !e.interruptPending {
 		t.Fatal("expected lowering IPL below the latched SISR bit to admit it")
@@ -171,7 +171,7 @@ func TestEmulMtprIPLAdmitsLatchedSoftwareInterruptOnceExposed(t *testing.T) {
 		t.Errorf("interruptCode/IPL = %#x/%d, want %#x/3", e.interruptCode, e.interruptIPL, ExcSoftware1+2*4)
 	}
 
-	if got := cpu.PR(vax.SISR); got&(1<<3) != 0 {
+	if got := cpu.PR(registers.SISR); got&(1<<3) != 0 {
 		t.Errorf("PR(SISR) bit 3 still set after admission, want cleared")
 	}
 }
@@ -179,14 +179,14 @@ func TestEmulMtprIPLAdmitsLatchedSoftwareInterruptOnceExposed(t *testing.T) {
 func TestEmulMtprAstlvlBoundsCheck(t *testing.T) {
 	e := kernelEngine()
 	cpu := e.cpu
-	cpu.SetGPR(vax.SP, 0x7000)
-	cpu.SetPR(vax.KSP, 0x7000)
+	cpu.SetGPR(registers.SP, 0x7000)
+	cpu.SetPR(registers.KSP, 0x7000)
 	putVector(t, e, ExcReservedOp, 0x300, 0)
 
-	cpu.SetGPR(vax.R1, 5) // valid range is 0-4
-	stepInstruction(t, e, mtprBytes(vax.R1, uint32(vax.ASTLVL))...)
+	cpu.SetGPR(registers.R1, 5) // valid range is 0-4
+	stepInstruction(t, e, mtprBytes(registers.R1, uint32(registers.ASTLVL))...)
 
-	if got := cpu.GPR(vax.PC); got != 0x300 {
+	if got := cpu.GPR(registers.PC); got != 0x300 {
 		t.Errorf("PC = %#x, want 0x300 (reserved-operand fault vector)", got)
 	}
 }
@@ -195,10 +195,10 @@ func TestEmulMtprAstlvlValid(t *testing.T) {
 	e := kernelEngine()
 	cpu := e.cpu
 
-	cpu.SetGPR(vax.R1, 4)
-	stepInstruction(t, e, mtprBytes(vax.R1, uint32(vax.ASTLVL))...)
+	cpu.SetGPR(registers.R1, 4)
+	stepInstruction(t, e, mtprBytes(registers.R1, uint32(registers.ASTLVL))...)
 
-	if got := cpu.PR(vax.ASTLVL); got != 4 {
+	if got := cpu.PR(registers.ASTLVL); got != 4 {
 		t.Errorf("PR(ASTLVL) = %d, want 4", got)
 	}
 }
@@ -213,14 +213,14 @@ func TestEmulMtprSirrLatchesWhenAtOrAboveCurrentIPL(t *testing.T) {
 	psl.SetIPL(5)
 	cpu.SetPSL(psl)
 
-	cpu.SetGPR(vax.R1, 0xF3) // low 4 bits: 3, at/below the current IPL (5)
-	stepInstruction(t, e, mtprBytes(vax.R1, uint32(vax.SIRR))...)
+	cpu.SetGPR(registers.R1, 0xF3) // low 4 bits: 3, at/below the current IPL (5)
+	stepInstruction(t, e, mtprBytes(registers.R1, uint32(registers.SIRR))...)
 
-	if got := cpu.PR(vax.SIRR); got != 3 {
+	if got := cpu.PR(registers.SIRR); got != 3 {
 		t.Errorf("PR(SIRR) = %d, want 3", got)
 	}
 
-	if got := cpu.PR(vax.SISR); got&(1<<3) == 0 {
+	if got := cpu.PR(registers.SISR); got&(1<<3) == 0 {
 		t.Errorf("PR(SISR) = %#x, want bit 3 set", got)
 	}
 
@@ -236,8 +236,8 @@ func TestEmulMtprSirrDeliversImmediatelyWhenAboveCurrentIPL(t *testing.T) {
 	e := kernelEngine()
 	cpu := e.cpu // current IPL defaults to 0
 
-	cpu.SetGPR(vax.R1, 0xF3) // low 4 bits: 3, above the current IPL (0)
-	stepInstruction(t, e, mtprBytes(vax.R1, uint32(vax.SIRR))...)
+	cpu.SetGPR(registers.R1, 0xF3) // low 4 bits: 3, above the current IPL (0)
+	stepInstruction(t, e, mtprBytes(registers.R1, uint32(registers.SIRR))...)
 
 	if !e.interruptPending {
 		t.Fatal("expected immediate delivery when the request exceeds the current IPL")
@@ -247,7 +247,7 @@ func TestEmulMtprSirrDeliversImmediatelyWhenAboveCurrentIPL(t *testing.T) {
 		t.Errorf("interruptCode/IPL = %#x/%d, want %#x/3", e.interruptCode, e.interruptIPL, ExcSoftware1+2*4)
 	}
 
-	if got := cpu.PR(vax.SISR); got != 0 {
+	if got := cpu.PR(registers.SISR); got != 0 {
 		t.Errorf("PR(SISR) = %#x, want 0 (not latched on the immediate-delivery path)", got)
 	}
 }
@@ -264,10 +264,10 @@ func TestEmulMtprTbiaInvalidatesTB(t *testing.T) {
 
 	_, _, flushesBefore, _ := e.mem.TBStats() //nolint:dogsled
 
-	cpu.SetGPR(vax.R1, 0x12345678)
-	stepInstruction(t, e, mtprBytes(vax.R1, uint32(vax.TBIA))...)
+	cpu.SetGPR(registers.R1, 0x12345678)
+	stepInstruction(t, e, mtprBytes(registers.R1, uint32(registers.TBIA))...)
 
-	if got := cpu.PR(vax.TBIA); got != 0 {
+	if got := cpu.PR(registers.TBIA); got != 0 {
 		t.Errorf("PR(TBIA) = %#x, want 0 (not stored, same as the C source)", got)
 	}
 
@@ -291,8 +291,8 @@ func TestEmulMtprTbisInvalidatesPage(t *testing.T) {
 		pfn     = 2
 	)
 
-	cpu.SetPR(vax.SBR, sbrPhys)
-	cpu.SetPR(vax.SLR, 1)
+	cpu.SetPR(registers.SBR, sbrPhys)
+	cpu.SetPR(registers.SLR, 1)
 
 	var pte vm.PTE
 
@@ -303,7 +303,7 @@ func TestEmulMtprTbisInvalidatesPage(t *testing.T) {
 	// MAPEN is still off here, so this is a direct physical-address write.
 	putLongword(t, cpu, e.mem, sbrPhys, uint32(pte))
 
-	cpu.SetPR(vax.MAPEN, 1)
+	cpu.SetPR(registers.MAPEN, 1)
 
 	const vaddr = 0x80000000 // S0 region, page 0
 
@@ -319,12 +319,12 @@ func TestEmulMtprTbisInvalidatesPage(t *testing.T) {
 	// from a fixed physical-style test address (base, 0x1000) that has no
 	// P0 page table backing it here, and MTPR's own register-mode operand
 	// needs no translation regardless.
-	cpu.SetPR(vax.MAPEN, 0)
+	cpu.SetPR(registers.MAPEN, 0)
 
-	cpu.SetGPR(vax.R1, vaddr)
-	stepInstruction(t, e, mtprBytes(vax.R1, uint32(vax.TBIS))...)
+	cpu.SetGPR(registers.R1, vaddr)
+	stepInstruction(t, e, mtprBytes(registers.R1, uint32(registers.TBIS))...)
 
-	if got := cpu.PR(vax.TBIS); got != 0 {
+	if got := cpu.PR(registers.TBIS); got != 0 {
 		t.Errorf("PR(TBIS) = %#x, want 0 (not stored, same as the C source)", got)
 	}
 

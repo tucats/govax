@@ -6,8 +6,8 @@ import (
 	"time"
 
 	"github.com/tucats/govax/internal/cpu"
+	"github.com/tucats/govax/internal/registers"
 	"github.com/tucats/govax/internal/sched"
-	"github.com/tucats/govax/internal/vax"
 )
 
 // Idling (docs/PHASE-44.md, subtask 5). When no process is computable,
@@ -69,7 +69,7 @@ func (sys *System) nextTimer() (uint64, bool) {
 // this file's opening comment). If no timer brings one, every waiter
 // retries, and the first is returned.
 func (sys *System) idle(e *cpu.Engine) (sched.Handle, bool) {
-	trace := sys.cpu.DebugEnabled(vax.DebugProcess)
+	trace := sys.cpu.DebugEnabled(registers.DebugProcess)
 
 	for jumps := 0; e != nil && jumps < maxIdleJumps; jumps++ {
 		t, ok := sys.nextTimer()

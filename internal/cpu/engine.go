@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/tucats/gopackages/app-cli/settings"
-	"github.com/tucats/govax/internal/vax"
+	"github.com/tucats/govax/internal/registers"
 	"github.com/tucats/govax/internal/vm"
 	"github.com/tucats/govax/internal/vmsdef"
 	"github.com/tucats/govax/internal/vmserrors"
@@ -36,15 +36,15 @@ var (
 // concept from a host Ctrl-C asking the console to regain control.
 var ErrAttention = vmserrors.New(vmserrors.VAX_ATTENTION)
 
-// Engine composes a vax.CPU and vm.Memory with the decode/execute-only state
+// Engine composes a registers.CPU and vm.Memory with the decode/execute-only state
 // the C source keeps on the global vax struct but Phase 01 deliberately left
-// out of vax.CPU (registers/PSL only) and Phase 02 left out of vm.Memory
+// out of registers.CPU (registers/PSL only) and Phase 02 left out of vm.Memory
 // (owns RAM, not CPU-loop state): the PC of the instruction currently being
 // decoded/executed, and whether the machine has halted. See docs/PHASE-03.md's
-// design notes on why this is a new type rather than vax.CPU growing these
+// design notes on why this is a new type rather than registers.CPU growing these
 // fields.
 type Engine struct {
-	cpu   *vax.CPU
+	cpu   *registers.CPU
 	mem   *vm.Memory
 	table *Table
 
@@ -161,32 +161,32 @@ type Engine struct {
 	faultHistorySeq   uint64
 }
 
-var debugConfig = map[string]vax.DebugFlags{
-	"vax.debug.vm":         vax.DebugVM,
-	"vax.debug.tb":         vax.DebugTB,
-	"vax.debug.symbols":    vax.DebugSymbols,
-	"vax.debug.exceptions": vax.DebugExceptions,
-	"vax.debug.interrupts": vax.DebugInterrupts,
-	"vax.debug.chm":        vax.DebugCHM,
-	"vax.debug.registers":  vax.DebugRegisters,
-	"vax.debug.fulldisasm": vax.DebugFullDisasm,
-	"vax.debug.userhalt":   vax.DebugUserHalt,
-	"vax.debug.keyboard":   vax.DebugKeyboard,
-	"vax.debug.images":     vax.DebugImages,
-	"vax.debug.services":   vax.DebugServices,
-	"vax.debug.dcl":        vax.DebugDCL,
-	"vax.debug.command":    vax.DebugExpand,
-	"vax.debug.logicals":   vax.DebugLogicals,
-	"vax.debug.devices":    vax.DebugDevices,
-	"vax.debug.process":    vax.DebugProcess,
-	"vax.debug.libinit":    vax.DebugLibinit,
-	"vax.debug.rms":        vax.DebugRMS,
-	"vax.debug.userstep":   vax.DebugUserStep,
+var debugConfig = map[string]registers.DebugFlags{
+	"vax.debug.vm":         registers.DebugVM,
+	"vax.debug.tb":         registers.DebugTB,
+	"vax.debug.symbols":    registers.DebugSymbols,
+	"vax.debug.exceptions": registers.DebugExceptions,
+	"vax.debug.interrupts": registers.DebugInterrupts,
+	"vax.debug.chm":        registers.DebugCHM,
+	"vax.debug.registers":  registers.DebugRegisters,
+	"vax.debug.fulldisasm": registers.DebugFullDisasm,
+	"vax.debug.userhalt":   registers.DebugUserHalt,
+	"vax.debug.keyboard":   registers.DebugKeyboard,
+	"vax.debug.images":     registers.DebugImages,
+	"vax.debug.services":   registers.DebugServices,
+	"vax.debug.dcl":        registers.DebugDCL,
+	"vax.debug.command":    registers.DebugExpand,
+	"vax.debug.logicals":   registers.DebugLogicals,
+	"vax.debug.devices":    registers.DebugDevices,
+	"vax.debug.process":    registers.DebugProcess,
+	"vax.debug.libinit":    registers.DebugLibinit,
+	"vax.debug.rms":        registers.DebugRMS,
+	"vax.debug.userstep":   registers.DebugUserStep,
 }
 
 // NewEngine returns an Engine driving cpu and mem, using the built-in VAX
 // instruction table.
-func NewEngine(cpu *vax.CPU, mem *vm.Memory) *Engine {
+func NewEngine(cpu *registers.CPU, mem *vm.Memory) *Engine {
 	quantum := defaultQuantum
 
 	// If there is a defalt quantum value defined in the configuration, use it.
@@ -237,7 +237,7 @@ func (e *Engine) SetSystemServices(s SystemServices) {
 }
 
 // CPU returns the engine's CPU.
-func (e *Engine) CPU() *vax.CPU { return e.cpu }
+func (e *Engine) CPU() *registers.CPU { return e.cpu }
 
 // Memory returns the engine's memory.
 func (e *Engine) Memory() *vm.Memory { return e.mem }
@@ -339,7 +339,7 @@ func (e *Engine) PeekInstruction() (*Instruction, error) {
 	// see Step's own SyncFetchWindow call.
 	e.mem.SyncFetchWindow(e.cpu)
 
-	op, _, err := fetchOpcode(e.cpu, e.mem, e.cpu.GPR(vax.PC))
+	op, _, err := fetchOpcode(e.cpu, e.mem, e.cpu.GPR(registers.PC))
 	if err != nil {
 		return nil, err
 	}
@@ -427,7 +427,7 @@ func (e *Engine) Step() error {
 		}
 	}
 
-	e.instructionPC = e.cpu.GPR(vax.PC)
+	e.instructionPC = e.cpu.GPR(registers.PC)
 
 	// The decoder reads the instruction stream through the memory's
 	// instruction-fetch window (internal/vm/fetch.go; docs/PERFORMANCE.md,
@@ -449,10 +449,10 @@ func (e *Engine) Step() error {
 	e.current = next
 
 	// Advance PC past the instruction before dispatching, matching
-	// decode_opcode.c leaving vax.PC there on a successful decode — a
+	// decode_opcode.c leaving registers.PC there on a successful decode — a
 	// branch/jump Handler expects PC to already be "the next sequential
 	// instruction" as its starting point.
-	e.cpu.SetGPR(vax.PC, dec.NextPC)
+	e.cpu.SetGPR(registers.PC, dec.NextPC)
 
 	handler := e.table.HandlerFor(dec.Instruction)
 	if err := handler(e, dec); err != nil {
@@ -471,7 +471,7 @@ func (e *Engine) Step() error {
 // raise turns err into a *Fault (wrapping a raw *vm.TranslationFault/
 // *vm.PhysicalAddressError if needed) and runs it through HandleFault,
 // first resetting PC to the instruction's start address — matching
-// execute_vax's fault paths, which always reset vax.PC that way (via a
+// execute_vax's fault paths, which always reset registers.PC that way (via a
 // local saved_pc for a decode-time fault, or vax.instruction_PC for an
 // execute-time one — the same value in both cases here) before calling
 // handle_fault, regardless of whether the fault came from decode or from
@@ -484,14 +484,14 @@ func (e *Engine) raise(err error) error {
 		return err
 	}
 
-	e.cpu.SetGPR(vax.PC, e.instructionPC)
+	e.cpu.SetGPR(registers.PC, e.instructionPC)
 
 	// recordFault matches set_fault's own unconditional store_fault call —
 	// see faulthistory.go's own doc comment on why this runs ahead of the
 	// fault-breakpoint check below, not just ahead of HandleFault.
 	e.recordFault(f.Code, f.Args, e.instructionPC, e.cpu.PSL())
 
-	if e.cpu.DebugEnabled(vax.DebugExceptions) {
+	if e.cpu.DebugEnabled(registers.DebugExceptions) {
 		w := e.cpu.DebugWriter()
 		fmt.Fprintf(w, "DEBUG(EXCEPTION): SET, CODE=%02X  PC=%08X  PSL=%08X  ARGC=%d\n",
 			f.Code, e.instructionPC, uint32(e.cpu.PSL()), len(f.Args))

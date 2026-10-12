@@ -4,7 +4,7 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/tucats/govax/internal/vax"
+	"github.com/tucats/govax/internal/registers"
 	"github.com/tucats/govax/internal/vmsdef"
 )
 
@@ -150,7 +150,7 @@ type conditionDispatch struct {
 
 	// mode is the access mode the condition happened in, whose vectors
 	// are searched.
-	mode vax.AccessMode
+	mode registers.AccessMode
 
 	// sp is the stack pointer while the search runs: just below the
 	// argument list, which is below the mechanism array, which is below
@@ -195,7 +195,7 @@ type conditionDispatch struct {
 	// LIB$SIGNAL, the RET that ends LIB$SIGNAL's stub. resumePSL is the
 	// PSL at the time, whose mode and IPL a continue keeps.
 	resumeSP, resumeFP, resumePC uint32
-	resumePSL                    vax.PSL
+	resumePSL                    registers.PSL
 }
 
 // Status values the condition dispatcher uses.
@@ -338,7 +338,7 @@ func p1VectorAddr(name string) uint32 {
 // treats those as fatal system errors, not conditions), a program without
 // the SYS$SRCHANDLER stub (no .P1VECTOR), or a stack it can't write. The
 // engine then falls back to the console's own report.
-func (env *Environment) DispatchException(code uint32, params []uint32, pc uint32, psl vax.PSL) (bool, error) {
+func (env *Environment) DispatchException(code uint32, params []uint32, pc uint32, psl registers.PSL) (bool, error) {
 	cond, detail, ok := exceptionCondition(code, params)
 	if !ok || psl.IS() {
 		return false, nil
@@ -347,18 +347,18 @@ func (env *Environment) DispatchException(code uint32, params []uint32, pc uint3
 	c := env.cpu
 	d := &conditionDispatch{
 		kind:      kindException,
-		resumeSP:  c.GPR(vax.SP),
-		resumeFP:  c.GPR(vax.FP),
+		resumeSP:  c.GPR(registers.SP),
+		resumeFP:  c.GPR(registers.FP),
 		resumePSL: psl,
 	}
 
 	sig := append(append([]uint32{cond}, detail...), pc, uint32(psl))
 
-	if !env.startDispatch(d, sig, c.GPR(vax.R0), c.GPR(vax.R1)) {
+	if !env.startDispatch(d, sig, c.GPR(registers.R0), c.GPR(registers.R1)) {
 		return false, nil
 	}
 
-	if c.DebugEnabled(vax.DebugExceptions) {
+	if c.DebugEnabled(registers.DebugExceptions) {
 		fmt.Fprintf(c.DebugWriter(), "DEBUG(EXCEPTION): DISPATCH, CONDITION=%08X  PC=%08X  SIGNAL=%08X\n", cond, pc, d.sig)
 	}
 
@@ -386,7 +386,7 @@ func (env *Environment) startDispatch(d *conditionDispatch, sig []uint32, r0, r1
 	//	mech:     4, frame, depth, R0, R1
 	//	sig:      n, condition, detail..., PC, PSL
 	sigBytes := uint32(4 * (len(sig) + 1))
-	sp := c.GPR(vax.SP) &^ 3
+	sp := c.GPR(registers.SP) &^ 3
 	d.sig = sp - sigBytes
 	d.mech = d.sig - 20
 	d.argList = d.mech - 12
@@ -403,14 +403,14 @@ func (env *Environment) startDispatch(d *conditionDispatch, sig []uint32, r0, r1
 	}
 
 	d.mode = c.PSL().CurMod()
-	d.startFP = c.GPR(vax.FP)
+	d.startFP = c.GPR(registers.FP)
 	d.fp = d.startFP
 	d.stage = stagePrimary
 
 	env.Process.conditions = append(env.Process.conditions, d)
 
-	c.SetGPR(vax.SP, d.sp)
-	c.SetGPR(vax.PC, srchandlerAddr)
+	c.SetGPR(registers.SP, d.sp)
+	c.SetGPR(registers.PC, srchandlerAddr)
 
 	if env.OnSignal != nil {
 		env.OnSignal(env.unhandledCondition(d, sig[0]))
@@ -429,7 +429,7 @@ func (env *Environment) currentDispatch() *conditionDispatch {
 	}
 
 	d := env.Process.conditions[n-1]
-	if d.sp != env.cpu.GPR(vax.SP) {
+	if d.sp != env.cpu.GPR(registers.SP) {
 		return nil
 	}
 
@@ -453,7 +453,7 @@ func (env *Environment) endDispatch() {
 func serviceSysSrchandler(env *Environment, _ []uint32) (uint32, error) {
 	d := env.currentDispatch()
 	if d == nil {
-		return 0, fmt.Errorf("rtl: SYS$SRCHANDLER reached at SP %08X with no condition being dispatched there", env.cpu.GPR(vax.SP))
+		return 0, fmt.Errorf("rtl: SYS$SRCHANDLER reached at SP %08X with no condition being dispatched there", env.cpu.GPR(registers.SP))
 	}
 
 	if d.calling {
@@ -465,7 +465,7 @@ func serviceSysSrchandler(env *Environment, _ []uint32) (uint32, error) {
 			return env.continueUnwind(d)
 		}
 
-		if env.cpu.GPR(vax.R0)&1 != 0 {
+		if env.cpu.GPR(registers.R0)&1 != 0 {
 			return env.continueCondition(d)
 		}
 	}
@@ -542,7 +542,7 @@ func (env *Environment) callConditionHandler(d *conditionDispatch, handler, fram
 
 	d.calling = true
 
-	if c.DebugEnabled(vax.DebugExceptions) {
+	if c.DebugEnabled(registers.DebugExceptions) {
 		fmt.Fprintf(c.DebugWriter(), "DEBUG(EXCEPTION): condition handler %08X, frame %08X, depth %d\n", handler, frame, depth)
 	}
 
@@ -595,17 +595,17 @@ func (env *Environment) continueCondition(d *conditionDispatch) (uint32, error) 
 	}
 
 	env.endDispatch()
-	c.SetGPR(vax.R1, r1)
-	c.SetGPR(vax.SP, d.resumeSP)
-	c.SetGPR(vax.FP, d.resumeFP)
+	c.SetGPR(registers.R1, r1)
+	c.SetGPR(registers.SP, d.resumeSP)
+	c.SetGPR(registers.FP, d.resumeFP)
 
 	switch d.kind {
 	case kindException:
-		c.SetGPR(vax.PC, pc)
-		c.SetPSL(d.resumePSL&^0xFF | vax.PSL(psl&0xFF))
+		c.SetGPR(registers.PC, pc)
+		c.SetPSL(d.resumePSL&^0xFF | registers.PSL(psl&0xFF))
 
 	default:
-		c.SetGPR(vax.PC, d.resumePC)
+		c.SetGPR(registers.PC, d.resumePC)
 	}
 
 	return r0, nil
@@ -725,7 +725,7 @@ func (env *Environment) exitForCondition(d *conditionDispatch, cond uint32) (uin
 	}
 
 	env.endDispatch()
-	c.SetGPR(vax.SP, argList)
+	c.SetGPR(registers.SP, argList)
 
 	return 0, &CallRequest{Routine: exitEntryAddr, ArgList: argList}
 }
@@ -751,7 +751,7 @@ func (env *Environment) exitForCondition(d *conditionDispatch, cond uint32) (uin
 // is changed), or SS$_BADPARAM for a vector number other than 0-2.
 func serviceSysSetexv(env *Environment, argv []uint32) (uint32, error) {
 	vector, address, prvhnd := optArg(argv, 0), optArg(argv, 1), optArg(argv, 3)
-	mode := max(vax.AccessMode(optArg(argv, 2)&3), env.cpu.PSL().CurMod())
+	mode := max(registers.AccessMode(optArg(argv, 2)&3), env.cpu.PSL().CurMod())
 
 	if vector > vectorLastChance {
 		return ssBadParam, nil
@@ -775,7 +775,7 @@ func serviceSysSetexv(env *Environment, argv []uint32) (uint32, error) {
 // the manual says, the user-mode exception vectors are cleared.
 func (env *Environment) cancelConditions() {
 	env.Process.conditions = nil
-	env.Process.exceptionVectors[vax.User] = [3]uint32{}
+	env.Process.exceptionVectors[registers.User] = [3]uint32{}
 }
 
 func registerConditionServices(t *ServiceTable) {

@@ -8,8 +8,8 @@ import (
 	"github.com/tucats/govax/internal/corevms"
 	iodev "github.com/tucats/govax/internal/io"
 	"github.com/tucats/govax/internal/lnm"
+	"github.com/tucats/govax/internal/registers"
 	"github.com/tucats/govax/internal/rms"
-	"github.com/tucats/govax/internal/vax"
 	"github.com/tucats/govax/internal/vm"
 )
 
@@ -20,7 +20,7 @@ func foreignFixture(t *testing.T, command, typed string) (*corevms.Environment, 
 	t.Helper()
 
 	out := &bytes.Buffer{}
-	env, err := corevms.NewEnvironment(corevms.NewSystem(vax.New(), vm.NewMemory(1<<20), iodev.NewDeviceTable(),
+	env, err := corevms.NewEnvironment(corevms.NewSystem(registers.New(), vm.NewMemory(1<<20), iodev.NewDeviceTable(),
 		rms.NewMountTable()), lnm.NewDatabase(corevms.NominalUIC), strings.NewReader(typed), out)
 
 	if err != nil {

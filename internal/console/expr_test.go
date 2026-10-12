@@ -3,7 +3,7 @@ package console
 import (
 	"bytes"
 	"github.com/tucats/govax/internal/machine"
-	"github.com/tucats/govax/internal/vax"
+	"github.com/tucats/govax/internal/registers"
 	"testing"
 )
 
@@ -387,10 +387,10 @@ func TestEvaluator_quotedStringOverflow(t *testing.T) {
 // in either case and with the debugger's "%", and "." or "@" before
 // one gives the same; before anything else they read the longword there.
 func TestEvaluator_registers(t *testing.T) {
-	cpu := vax.New()
-	cpu.SetGPR(vax.R1, 0x100)
-	cpu.SetGPR(vax.SP, 0x7FF00000)
-	cpu.SetGPR(vax.PC, 0x400)
+	cpu := registers.New()
+	cpu.SetGPR(registers.R1, 0x100)
+	cpu.SetGPR(registers.SP, 0x7FF00000)
+	cpu.SetGPR(registers.PC, 0x400)
 
 	st := machine.NewSymbolTable()
 	st.Set("DATA", 0x2000, machine.SymbolUser)

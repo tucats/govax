@@ -6,7 +6,7 @@ import (
 	"testing"
 
 	"github.com/tucats/govax/internal/cpu"
-	"github.com/tucats/govax/internal/vax"
+	"github.com/tucats/govax/internal/registers"
 	"github.com/tucats/govax/internal/vm"
 )
 
@@ -31,19 +31,19 @@ func (f *fakeScheduler) Schedule(_ *cpu.Engine, ran int, preemptible bool) (int,
 func loopEngine(t *testing.T) *cpu.Engine {
 	t.Helper()
 
-	c, mem := vax.New(), vm.NewMemory(1<<16)
+	c, mem := registers.New(), vm.NewMemory(1<<16)
 
 	const origin = 0x1000
 	if err := mem.StorePhysical(origin, []byte{0x11, 0xFE}); err != nil { // BRB .
 		t.Fatal(err)
 	}
 
-	var psl vax.PSL // kernel mode, IPL 0, not on the interrupt stack
+	var psl registers.PSL // kernel mode, IPL 0, not on the interrupt stack
 
 	c.SetPSL(psl)
-	c.SetPR(vax.IPL, 0)
-	c.SetGPR(vax.PC, origin)
-	c.SetGPR(vax.SP, 0x8000)
+	c.SetPR(registers.IPL, 0)
+	c.SetGPR(registers.PC, origin)
+	c.SetGPR(registers.SP, 0x8000)
 
 	return cpu.NewEngine(c, mem)
 }
@@ -120,21 +120,21 @@ func TestSchedulerError(t *testing.T) {
 func TestPreemptible(t *testing.T) {
 	tests := []struct {
 		name  string
-		mode  vax.AccessMode
+		mode  registers.AccessMode
 		ipl   uint32
 		is    bool
 		modes cpu.PreemptModes
 		want  bool
 	}{
-		{"kernel at IPL 0", vax.Kernel, 0, false, cpu.PreemptAllModes, true},
-		{"user at IPL 2", vax.User, 2, false, cpu.PreemptAllModes, true},
-		{"IPL 3", vax.User, 3, false, cpu.PreemptAllModes, false},
-		{"IPL 31", vax.Kernel, 31, false, cpu.PreemptAllModes, false},
-		{"interrupt stack", vax.Kernel, 0, true, cpu.PreemptAllModes, false},
-		{"user only, user", vax.User, 0, false, cpu.PreemptUserMode, true},
-		{"user only, supervisor", vax.Supervisor, 0, false, cpu.PreemptUserMode, false},
-		{"user only, kernel", vax.Kernel, 0, false, cpu.PreemptUserMode, false},
-		{"none", vax.User, 0, false, cpu.PreemptNoModes, false},
+		{"kernel at IPL 0", registers.Kernel, 0, false, cpu.PreemptAllModes, true},
+		{"user at IPL 2", registers.User, 2, false, cpu.PreemptAllModes, true},
+		{"IPL 3", registers.User, 3, false, cpu.PreemptAllModes, false},
+		{"IPL 31", registers.Kernel, 31, false, cpu.PreemptAllModes, false},
+		{"interrupt stack", registers.Kernel, 0, true, cpu.PreemptAllModes, false},
+		{"user only, user", registers.User, 0, false, cpu.PreemptUserMode, true},
+		{"user only, supervisor", registers.Supervisor, 0, false, cpu.PreemptUserMode, false},
+		{"user only, kernel", registers.Kernel, 0, false, cpu.PreemptUserMode, false},
+		{"none", registers.User, 0, false, cpu.PreemptNoModes, false},
 	}
 
 	for _, tt := range tests {
@@ -142,7 +142,7 @@ func TestPreemptible(t *testing.T) {
 			e := loopEngine(t)
 			e.SetScheduler(&fakeScheduler{next: 1}, tt.modes)
 
-			var psl vax.PSL
+			var psl registers.PSL
 
 			psl.SetCurMod(tt.mode)
 			psl.SetIPL(tt.ipl)

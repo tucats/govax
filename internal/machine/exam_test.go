@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/tucats/govax/internal/vax"
+	"github.com/tucats/govax/internal/registers"
 )
 
 func TestInit_allocatesAndZeroes(t *testing.T) {
@@ -23,8 +23,8 @@ func TestInit_allocatesAndZeroes(t *testing.T) {
 	}
 
 	wantSP := c.Mem.Size() - 4
-	if c.CPU.GPR(vax.SP) != wantSP {
-		t.Errorf("SP = %#x, want %#x", c.CPU.GPR(vax.SP), wantSP)
+	if c.CPU.GPR(registers.SP) != wantSP {
+		t.Errorf("SP = %#x, want %#x", c.CPU.GPR(registers.SP), wantSP)
 	}
 }
 

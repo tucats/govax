@@ -3,23 +3,23 @@ package machine
 import (
 	"strings"
 
-	"github.com/tucats/govax/internal/vax"
+	"github.com/tucats/govax/internal/registers"
 	"github.com/tucats/govax/internal/vm"
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
 // privRegNames are the privileged registers by name (the subset with an
-// architected name in internal/vax/registers.go's own PrivReg
+// architected name in internal/registers/registers.go's own PrivReg
 // constants), for SHOW of a register.
-var privRegNames = map[string]vax.PrivReg{
-	"KSP": vax.KSP, "ESP": vax.ESP, "SSP": vax.SSP, "USP": vax.USP, "ISP": vax.ISP,
-	"P0BR": vax.P0BR, "P0LR": vax.P0LR, "P1BR": vax.P1BR, "P1LR": vax.P1LR,
-	"SBR": vax.SBR, "SLR": vax.SLR, "PCBB": vax.PCBB, "SCBB": vax.SCBB,
-	"IPL": vax.IPL, "ASTLVL": vax.ASTLVL, "SIRR": vax.SIRR, "SISR": vax.SISR,
-	"ICCS": vax.ICCS, "NICR": vax.NICR, "ICR": vax.ICR, "TODR": vax.TODR,
-	"RXCS": vax.RXCS, "RXDB": vax.RXDB, "TXCS": vax.TXCS, "TXDB": vax.TXDB,
-	"TBDR": vax.TBDR, "MAPEN": vax.MAPEN, "TBIA": vax.TBIA, "TBIS": vax.TBIS,
-	"PMR": vax.PMR, "SID": vax.SID, "TBCHK": vax.TBCHK,
+var privRegNames = map[string]registers.PrivReg{
+	"KSP": registers.KSP, "ESP": registers.ESP, "SSP": registers.SSP, "USP": registers.USP, "ISP": registers.ISP,
+	"P0BR": registers.P0BR, "P0LR": registers.P0LR, "P1BR": registers.P1BR, "P1LR": registers.P1LR,
+	"SBR": registers.SBR, "SLR": registers.SLR, "PCBB": registers.PCBB, "SCBB": registers.SCBB,
+	"IPL": registers.IPL, "ASTLVL": registers.ASTLVL, "SIRR": registers.SIRR, "SISR": registers.SISR,
+	"ICCS": registers.ICCS, "NICR": registers.NICR, "ICR": registers.ICR, "TODR": registers.TODR,
+	"RXCS": registers.RXCS, "RXDB": registers.RXDB, "TXCS": registers.TXCS, "TXDB": registers.TXDB,
+	"TBDR": registers.TBDR, "MAPEN": registers.MAPEN, "TBIA": registers.TBIA, "TBIS": registers.TBIS,
+	"PMR": registers.PMR, "SID": registers.SID, "TBCHK": registers.TBCHK,
 }
 
 // pslFieldNames are the PSL field name. CUR_MOD (handled
@@ -28,22 +28,22 @@ var privRegNames = map[string]vax.PrivReg{
 // not check for/deliver a pending AST itself. govax delivers ASTs from the
 // RTL, which checks the current mode at every instruction boundary
 // (docs/PHASE-26.md subtask 15), so the next step sees the new mode.
-var pslFieldNames = map[string]func(p *vax.PSL, v uint32) error{
-	"CM":  func(p *vax.PSL, v uint32) error { return setPSLBit(p.SetCM, v) },
-	"TP":  func(p *vax.PSL, v uint32) error { return setPSLBit(p.SetTP, v) },
-	"FPD": func(p *vax.PSL, v uint32) error { return setPSLBit(p.SetFPD, v) },
-	"IS":  func(p *vax.PSL, v uint32) error { return setPSLBit(p.SetIS, v) },
-	"DV":  func(p *vax.PSL, v uint32) error { return setPSLBit(p.SetDV, v) },
-	"FU":  func(p *vax.PSL, v uint32) error { return setPSLBit(p.SetFU, v) },
-	"IV":  func(p *vax.PSL, v uint32) error { return setPSLBit(p.SetIV, v) },
-	"T":   func(p *vax.PSL, v uint32) error { return setPSLBit(p.SetT, v) },
-	"N":   func(p *vax.PSL, v uint32) error { return setPSLBit(p.SetN, v) },
-	"Z":   func(p *vax.PSL, v uint32) error { return setPSLBit(p.SetZ, v) },
-	"V":   func(p *vax.PSL, v uint32) error { return setPSLBit(p.SetV, v) },
-	"C":   func(p *vax.PSL, v uint32) error { return setPSLBit(p.SetC, v) },
-	"IPL": func(p *vax.PSL, v uint32) error { return setPSLRange(p.SetIPL, v, 31) },
-	"PRV_MOD": func(p *vax.PSL, v uint32) error {
-		return setPSLRange(func(m uint32) { p.SetPrvMod(vax.AccessMode(m)) }, v, 3)
+var pslFieldNames = map[string]func(p *registers.PSL, v uint32) error{
+	"CM":  func(p *registers.PSL, v uint32) error { return setPSLBit(p.SetCM, v) },
+	"TP":  func(p *registers.PSL, v uint32) error { return setPSLBit(p.SetTP, v) },
+	"FPD": func(p *registers.PSL, v uint32) error { return setPSLBit(p.SetFPD, v) },
+	"IS":  func(p *registers.PSL, v uint32) error { return setPSLBit(p.SetIS, v) },
+	"DV":  func(p *registers.PSL, v uint32) error { return setPSLBit(p.SetDV, v) },
+	"FU":  func(p *registers.PSL, v uint32) error { return setPSLBit(p.SetFU, v) },
+	"IV":  func(p *registers.PSL, v uint32) error { return setPSLBit(p.SetIV, v) },
+	"T":   func(p *registers.PSL, v uint32) error { return setPSLBit(p.SetT, v) },
+	"N":   func(p *registers.PSL, v uint32) error { return setPSLBit(p.SetN, v) },
+	"Z":   func(p *registers.PSL, v uint32) error { return setPSLBit(p.SetZ, v) },
+	"V":   func(p *registers.PSL, v uint32) error { return setPSLBit(p.SetV, v) },
+	"C":   func(p *registers.PSL, v uint32) error { return setPSLBit(p.SetC, v) },
+	"IPL": func(p *registers.PSL, v uint32) error { return setPSLRange(p.SetIPL, v, 31) },
+	"PRV_MOD": func(p *registers.PSL, v uint32) error {
+		return setPSLRange(func(m uint32) { p.SetPrvMod(registers.AccessMode(m)) }, v, 3)
 	},
 }
 
@@ -99,34 +99,34 @@ func (m *Machine) SetPSLField(field string, value uint32) error {
 }
 
 // debugFlagNames (the 25 names SET DEBUG accepts) — see docs/PHASE-17.md.
-var debugFlagNames = map[string]vax.DebugFlags{
-	"RMS":        vax.DebugRMS,
-	"FULLDISASM": vax.DebugFullDisasm,
-	"DEBUG":      vax.DebugNative,
-	"KEYBOARD":   vax.DebugKeyboard,
-	"DEVICES":    vax.DebugDevices,
-	"VM":         vax.DebugVM,
-	"TB":         vax.DebugTB,
-	"MEMORY":     vax.DebugMemory,
-	"SYMBOLS":    vax.DebugSymbols,
-	"INTERRUPTS": vax.DebugInterrupts,
-	"EXCEPTIONS": vax.DebugExceptions,
-	"P1":         vax.DebugP1,
-	"P2":         vax.DebugP2,
-	"P3":         vax.DebugP3,
-	"P4":         vax.DebugP4,
-	"REGISTERS":  vax.DebugRegisters,
-	"IMAGES":     vax.DebugImages,
-	"USERHALT":   vax.DebugUserHalt,
-	"SERVICES":   vax.DebugServices,
-	"DCL":        vax.DebugDCL,
-	"CHM":        vax.DebugCHM,
-	"COMMAND":    vax.DebugExpand,
-	"LOGICALS":   vax.DebugLogicals,
-	"LIBINIT":    vax.DebugLibinit,
-	"PROCESS":    vax.DebugProcess,
-	"PROCESSES":  vax.DebugProcess,
-	"USERSTEP":   vax.DebugUserStep,
+var debugFlagNames = map[string]registers.DebugFlags{
+	"RMS":        registers.DebugRMS,
+	"FULLDISASM": registers.DebugFullDisasm,
+	"DEBUG":      registers.DebugNative,
+	"KEYBOARD":   registers.DebugKeyboard,
+	"DEVICES":    registers.DebugDevices,
+	"VM":         registers.DebugVM,
+	"TB":         registers.DebugTB,
+	"MEMORY":     registers.DebugMemory,
+	"SYMBOLS":    registers.DebugSymbols,
+	"INTERRUPTS": registers.DebugInterrupts,
+	"EXCEPTIONS": registers.DebugExceptions,
+	"P1":         registers.DebugP1,
+	"P2":         registers.DebugP2,
+	"P3":         registers.DebugP3,
+	"P4":         registers.DebugP4,
+	"REGISTERS":  registers.DebugRegisters,
+	"IMAGES":     registers.DebugImages,
+	"USERHALT":   registers.DebugUserHalt,
+	"SERVICES":   registers.DebugServices,
+	"DCL":        registers.DebugDCL,
+	"CHM":        registers.DebugCHM,
+	"COMMAND":    registers.DebugExpand,
+	"LOGICALS":   registers.DebugLogicals,
+	"LIBINIT":    registers.DebugLibinit,
+	"PROCESS":    registers.DebugProcess,
+	"PROCESSES":  registers.DebugProcess,
+	"USERSTEP":   registers.DebugUserStep,
 }
 
 // SetDebug implements SET DEBUG [name[,name...]] (alias SET DBG).
@@ -135,7 +135,7 @@ var debugFlagNames = map[string]vax.DebugFlags{
 // (native-debugger) bit alone.
 func (m *Machine) SetDebug(names []string) error {
 	if len(names) == 0 {
-		m.CPU.SetDebug(m.CPU.Debug() | vax.DebugNative)
+		m.CPU.SetDebug(m.CPU.Debug() | registers.DebugNative)
 
 		return nil
 	}
@@ -173,14 +173,14 @@ func (m *Machine) SetDebug(names []string) error {
 // has no AccessMode of its own (set_mode_stack's mode value 4 means "switch
 // to the interrupt stack", not a fourth access mode) — SetMode handles it
 // as a separate case rather than adding an entry here.
-var setModeNames = map[string]vax.AccessMode{
-	"KERNEL": vax.Kernel, "EXEC": vax.Executive, "EXECUTIVE": vax.Executive,
-	"SUPER": vax.Supervisor, "SUPERVISOR": vax.Supervisor, "USER": vax.User,
+var setModeNames = map[string]registers.AccessMode{
+	"KERNEL": registers.Kernel, "EXEC": registers.Executive, "EXECUTIVE": registers.Executive,
+	"SUPER": registers.Supervisor, "SUPERVISOR": registers.Supervisor, "USER": registers.User,
 }
 
 // SetMode implements SET MODE <KERNEL|EXEC|SUPER|USER|INTERRUPT>.
 // Like SetPSLField's CUR_MOD case, this does not check for/deliver a
-// pending AST (vax.pslw.cur_mod >= vax.ASTLVL) itself: the RTL's AST
+// pending AST (vax.pslw.cur_mod >= registers.ASTLVL) itself: the RTL's AST
 // delivery sees the new mode at the next instruction boundary (see
 // pslFieldNames' doc comment).
 func (m *Machine) SetMode(name string) error {
@@ -190,7 +190,7 @@ func (m *Machine) SetMode(name string) error {
 
 	name = strings.ToUpper(strings.TrimSpace(name))
 	if name == "INTERRUPT" {
-		m.Engine.SetModeStack(vax.Kernel, true)
+		m.Engine.SetModeStack(registers.Kernel, true)
 
 		return nil
 	}
@@ -210,11 +210,11 @@ func (m *Machine) SetMode(name string) error {
 // AccessMode's own iota values) with no "INTERRUPT" case (SET PSL has no
 // numeric encoding for the interrupt stack.
 func (m *Machine) setModeStackByValue(value uint32) error {
-	if value > uint32(vax.User) {
+	if value > uint32(registers.User) {
 		return vmserrors.New(vmserrors.CLI_INVSETPSL, value)
 	}
 
-	m.Engine.SetModeStack(vax.AccessMode(value), false)
+	m.Engine.SetModeStack(registers.AccessMode(value), false)
 
 	return nil
 }
@@ -253,7 +253,7 @@ func (m *Machine) SetVM(on bool) error {
 		v = 1
 	}
 
-	m.CPU.SetPR(vax.MAPEN, v)
+	m.CPU.SetPR(registers.MAPEN, v)
 
 	return nil
 }
@@ -368,7 +368,7 @@ func (m *Machine) SetPTE(addr uint32, field string, value uint32) error {
 		return err
 	}
 
-	if m.CPU.PR(vax.MAPEN) == 0 {
+	if m.CPU.PR(registers.MAPEN) == 0 {
 		m.Printf("Cannot SET PAGE when virtual memory is disabled.\n")
 
 		return nil

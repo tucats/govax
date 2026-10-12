@@ -6,8 +6,8 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/tucats/govax/internal/registers"
 	"github.com/tucats/govax/internal/rms"
-	"github.com/tucats/govax/internal/vax"
 )
 
 // TestDiskCreate_assembledProgram runs testdata/asm/disk_create.asm
@@ -20,7 +20,7 @@ func TestDiskCreate_assembledProgram(t *testing.T) {
 
 	runFixture(t, c, "disk_create.asm")
 
-	if got := c.CPU.GPR(vax.R0); got != 1 {
+	if got := c.CPU.GPR(registers.R0); got != 1 {
 		t.Fatalf("R0 = %#x, want 1 (a call or IOSB failed)", got)
 	}
 

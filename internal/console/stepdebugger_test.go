@@ -2,7 +2,7 @@ package console
 
 import (
 	"github.com/tucats/govax/internal/machine"
-	"github.com/tucats/govax/internal/vax"
+	"github.com/tucats/govax/internal/registers"
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
@@ -45,7 +45,7 @@ func (s *stepDebugger) Start(a machine.Activation) error {
 
 		c.Engine.BeginRun()
 
-		for c.CPU.GPR(vax.PC) != *a.StopAt {
+		for c.CPU.GPR(registers.PC) != *a.StopAt {
 			if err := c.Engine.Step(); err != nil {
 				return c.ReportStop(err)
 			}
@@ -56,7 +56,7 @@ func (s *stepDebugger) Start(a machine.Activation) error {
 
 	if a.Kind == machine.ActivateGo {
 		if a.Addr != nil {
-			c.CPU.SetGPR(vax.PC, *a.Addr)
+			c.CPU.SetGPR(registers.PC, *a.Addr)
 		}
 
 		c.Engine.BeginRun()
@@ -64,7 +64,7 @@ func (s *stepDebugger) Start(a machine.Activation) error {
 		return c.RunPlain()
 	}
 
-	userStep := c.Engine.CPU().DebugEnabled(vax.DebugUserStep)
+	userStep := c.Engine.CPU().DebugEnabled(registers.DebugUserStep)
 
 	for {
 		if err := c.Engine.Step(); err != nil {

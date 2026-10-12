@@ -1,6 +1,6 @@
 package cpu
 
-import "github.com/tucats/govax/internal/vax"
+import "github.com/tucats/govax/internal/registers"
 
 // This is the Go port of emul_locc.c's LOCC.
 
@@ -42,8 +42,8 @@ func emulLocc(e *Engine, d *Decoded) error {
 		}
 
 		if ch == match {
-			e.cpu.SetGPR(vax.R0, uint32(length))
-			e.cpu.SetGPR(vax.R1, addr)
+			e.cpu.SetGPR(registers.R0, uint32(length))
+			e.cpu.SetGPR(registers.R1, addr)
 			psl.SetZ(false)
 			e.cpu.SetPSL(psl)
 
@@ -54,8 +54,8 @@ func emulLocc(e *Engine, d *Decoded) error {
 		length--
 	}
 
-	e.cpu.SetGPR(vax.R0, 0)
-	e.cpu.SetGPR(vax.R1, addr)
+	e.cpu.SetGPR(registers.R0, 0)
+	e.cpu.SetGPR(registers.R1, addr)
 	psl.SetZ(true)
 	e.cpu.SetPSL(psl)
 	

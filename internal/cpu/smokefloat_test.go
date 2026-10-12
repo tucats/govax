@@ -4,7 +4,7 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/tucats/govax/internal/vax"
+	"github.com/tucats/govax/internal/registers"
 	"github.com/tucats/govax/internal/vaxfloat"
 )
 
@@ -60,17 +60,17 @@ func TestSmokeFloatArithmeticConversionCompare(t *testing.T) {
 
 	emit := func(b ...byte) { prog = append(prog, b...) }
 
-	emit(0x50, lit15, regMode(vax.R1))           // MOVF S^#1.5,R1
-	emit(0x40, lit25, regMode(vax.R1))           // ADDF2 S^#2.5,R1
-	emit(0x4A, regMode(vax.R1), regMode(vax.R2)) // CVTFL R1,R2
-	emit(0x6E, regMode(vax.R2), regMode(vax.R4)) // CVTLD R2,R4
-	emit(0x70, lit4, regMode(vax.R6))            // MOVD S^#4.0,R6
-	emit(0x71, regMode(vax.R4), regMode(vax.R6)) // CMPD R4,R6
+	emit(0x50, lit15, regMode(registers.R1))                 // MOVF S^#1.5,R1
+	emit(0x40, lit25, regMode(registers.R1))                 // ADDF2 S^#2.5,R1
+	emit(0x4A, regMode(registers.R1), regMode(registers.R2)) // CVTFL R1,R2
+	emit(0x6E, regMode(registers.R2), regMode(registers.R4)) // CVTLD R2,R4
+	emit(0x70, lit4, regMode(registers.R6))                  // MOVD S^#4.0,R6
+	emit(0x71, regMode(registers.R4), regMode(registers.R6)) // CMPD R4,R6
 
 	beqlAt := len(prog)
 
-	emit(0x13, 0x00) // BEQL SUCCESS (patched below)
-	emit(0xD0, 0x00, regMode(vax.R8)) // MOVL #0,R8 (not taken)
+	emit(0x13, 0x00)                        // BEQL SUCCESS (patched below)
+	emit(0xD0, 0x00, regMode(registers.R8)) // MOVL #0,R8 (not taken)
 
 	brbAt := len(prog)
 
@@ -78,36 +78,36 @@ func TestSmokeFloatArithmeticConversionCompare(t *testing.T) {
 
 	successAt := len(prog)
 
-	emit(0xD0, 0x01, regMode(vax.R8)) // SUCCESS: MOVL #1,R8
+	emit(0xD0, 0x01, regMode(registers.R8)) // SUCCESS: MOVL #1,R8
 
 	doneAt := len(prog)
-	
+
 	emit(0x00) // DONE: HALT
 
 	prog[beqlAt+1] = byte(int8(successAt - (beqlAt + 2)))
 	prog[brbAt+1] = byte(int8(doneAt - (brbAt + 2)))
 
 	putBytes(t, cpu, mem, base, prog...)
-	cpu.SetGPR(vax.PC, base)
+	cpu.SetGPR(registers.PC, base)
 
 	err := e.Run()
 	if !errors.Is(err, ErrHalted) {
 		t.Fatalf("Run() = %v, want ErrHalted", err)
 	}
 
-	if got := getFloatReg(t, cpu, 4, vax.R1); got != 4.0 {
+	if got := getFloatReg(t, cpu, 4, registers.R1); got != 4.0 {
 		t.Errorf("R1 = %v, want 4.0 (1.5 + 2.5)", got)
 	}
 
-	if got := int32(cpu.GPR(vax.R2)); got != 4 {
+	if got := int32(cpu.GPR(registers.R2)); got != 4 {
 		t.Errorf("R2 = %d, want 4", got)
 	}
 
-	if got := getFloatReg(t, cpu, 8, vax.R4); got != 4.0 {
+	if got := getFloatReg(t, cpu, 8, registers.R4); got != 4.0 {
 		t.Errorf("R4:R5 = %v, want 4.0", got)
 	}
 
-	if got := getFloatReg(t, cpu, 8, vax.R6); got != 4.0 {
+	if got := getFloatReg(t, cpu, 8, registers.R6); got != 4.0 {
 		t.Errorf("R6:R7 = %v, want 4.0", got)
 	}
 	// Z isn't checked here: it reflects CMPD's result only until the next
@@ -115,11 +115,11 @@ func TestSmokeFloatArithmeticConversionCompare(t *testing.T) {
 	// (which sets Z from the moved value, 1, i.e. false) runs after it --
 	// R8 == 1 below already confirms BEQL read CMPD's Z correctly at the
 	// time it mattered.
-	if got := cpu.GPR(vax.R8); got != 1 {
+	if got := cpu.GPR(registers.R8); got != 1 {
 		t.Errorf("R8 = %d, want 1 (BEQL taken -- every conversion/compare step agreed)", got)
 	}
-	
-	if got := cpu.GPR(vax.PC); got != base+uint32(doneAt)+1 {
+
+	if got := cpu.GPR(registers.PC); got != base+uint32(doneAt)+1 {
 		t.Errorf("PC = %#x, want %#x (address after HALT)", got, base+uint32(doneAt)+1)
 	}
 }

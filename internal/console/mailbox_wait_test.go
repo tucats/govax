@@ -3,7 +3,7 @@ package console
 import (
 	"testing"
 
-	"github.com/tucats/govax/internal/vax"
+	"github.com/tucats/govax/internal/registers"
 	"github.com/tucats/govax/internal/vmsdef"
 )
 
@@ -14,7 +14,7 @@ func TestMailboxWait_assembledProgram(t *testing.T) {
 	c := newBootableConsole(t)
 	word := runFixture(t, c, "mailbox_wait.asm")
 
-	if got := c.CPU.GPR(vax.R0); got != 1 {
+	if got := c.CPU.GPR(registers.R0); got != 1 {
 		t.Fatalf("R0 = %#x, want 1 (a service failed?)", got)
 	}
 

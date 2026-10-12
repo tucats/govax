@@ -4,7 +4,7 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/tucats/govax/internal/vax"
+	"github.com/tucats/govax/internal/registers"
 )
 
 // attentionFake is fakeServices plus an AttentionHandler that takes the
@@ -27,7 +27,7 @@ func TestAttention_handlerTakesKey(t *testing.T) {
 	c := e.cpu
 
 	putBytes(t, c, e.mem, 0x1000, 0x01, 0x01) // NOP, NOP
-	c.SetGPR(vax.PC, 0x1000)
+	c.SetGPR(registers.PC, 0x1000)
 
 	fake := &attentionFake{take: true}
 	e.SetSystemServices(fake)
@@ -43,8 +43,8 @@ func TestAttention_handlerTakesKey(t *testing.T) {
 		t.Errorf("offered %v, still requested %v; want [CTRL/Y], false", fake.keys, e.AttentionRequested())
 	}
 
-	if c.GPR(vax.PC) != 0x1001 {
-		t.Errorf("PC = %#x, want the NOP executed (0x1001)", c.GPR(vax.PC))
+	if c.GPR(registers.PC) != 0x1001 {
+		t.Errorf("PC = %#x, want the NOP executed (0x1001)", c.GPR(registers.PC))
 	}
 
 	// Without a pending key the handler isn't asked.

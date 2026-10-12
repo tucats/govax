@@ -5,7 +5,7 @@ import (
 
 	"github.com/tucats/govax/internal/cpu"
 	"github.com/tucats/govax/internal/machine"
-	"github.com/tucats/govax/internal/vax"
+	"github.com/tucats/govax/internal/registers"
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
@@ -133,7 +133,7 @@ func (d *Debugger) imageExit(err error) (ok bool) {
 		return false
 	}
 
-	status := c.CPU.GPR(vax.R0)
+	status := c.CPU.GPR(registers.R0)
 
 	// The status's own message line keeps its percent sign: VMS shows
 	// "is '%SYSTEM-S-NORMAL, normal successful completion'".
@@ -144,7 +144,7 @@ func (d *Debugger) imageExit(err error) (ok bool) {
 
 	// The program has no program counter left (the VMS debugger's .PC is 0,
 	// and EXAMINE/INSTRUCTION .PC is %DEBUG-E-NOACCESSR at address 0).
-	c.CPU.SetGPR(vax.PC, 0)
+	c.CPU.SetGPR(registers.PC, 0)
 
 	// A STEP/RETURN waiting for a frame of the image is moot now.
 	d.pendingReturn = nil

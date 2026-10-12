@@ -3,7 +3,7 @@ package cpu
 import (
 	"testing"
 
-	"github.com/tucats/govax/internal/vax"
+	"github.com/tucats/govax/internal/registers"
 )
 
 func TestEmulMovc3(t *testing.T) {
@@ -31,15 +31,15 @@ func TestEmulMovc3(t *testing.T) {
 			}
 		}
 
-		if cpu.GPR(vax.R1) != 0x3005 {
-			t.Errorf("R1 = %#x, want 0x3005 (one past source)", cpu.GPR(vax.R1))
+		if cpu.GPR(registers.R1) != 0x3005 {
+			t.Errorf("R1 = %#x, want 0x3005 (one past source)", cpu.GPR(registers.R1))
 		}
 
-		if cpu.GPR(vax.R3) != 0x2005 {
-			t.Errorf("R3 = %#x, want 0x2005 (one past destination)", cpu.GPR(vax.R3))
+		if cpu.GPR(registers.R3) != 0x2005 {
+			t.Errorf("R3 = %#x, want 0x2005 (one past destination)", cpu.GPR(registers.R3))
 		}
 
-		if cpu.GPR(vax.R0) != 0 || cpu.GPR(vax.R2) != 0 || cpu.GPR(vax.R4) != 0 || cpu.GPR(vax.R5) != 0 {
+		if cpu.GPR(registers.R0) != 0 || cpu.GPR(registers.R2) != 0 || cpu.GPR(registers.R4) != 0 || cpu.GPR(registers.R5) != 0 {
 			t.Error("R0/R2/R4/R5 = nonzero, want all 0")
 		}
 
@@ -101,8 +101,8 @@ func TestEmulMovc5(t *testing.T) {
 			}
 		}
 
-		if cpu.GPR(vax.R0) != 0 {
-			t.Errorf("R0 = %#x, want 0 (source not longer than destination)", cpu.GPR(vax.R0))
+		if cpu.GPR(registers.R0) != 0 {
+			t.Errorf("R0 = %#x, want 0 (source not longer than destination)", cpu.GPR(registers.R0))
 		}
 		
 		got := cpu.PSL()
@@ -137,12 +137,12 @@ func TestEmulMovc5(t *testing.T) {
 			}
 		}
 
-		if cpu.GPR(vax.R0) != 3 {
-			t.Errorf("R0 = %d, want 3 (unmoved source bytes)", cpu.GPR(vax.R0))
+		if cpu.GPR(registers.R0) != 3 {
+			t.Errorf("R0 = %d, want 3 (unmoved source bytes)", cpu.GPR(registers.R0))
 		}
 
-		if cpu.GPR(vax.R1) != 0x3002 {
-			t.Errorf("R1 = %#x, want 0x3002 (one past last byte moved)", cpu.GPR(vax.R1))
+		if cpu.GPR(registers.R1) != 0x3002 {
+			t.Errorf("R1 = %#x, want 0x3002 (one past last byte moved)", cpu.GPR(registers.R1))
 		}
 	})
 

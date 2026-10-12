@@ -1,6 +1,6 @@
 package cpu
 
-import "github.com/tucats/govax/internal/vax"
+import "github.com/tucats/govax/internal/registers"
 
 // This is the Go port of emul_cmpc.c's CMPC3/CMPC5. Each byte comparison's
 // N/Z/C are computed the way the manual's Condition Codes section states --
@@ -73,10 +73,10 @@ func emulCmpc3(e *Engine, d *Decoded) error {
 	psl.SetV(false)
 	e.cpu.SetPSL(psl)
 
-	e.cpu.SetGPR(vax.R0, uint32(length))
-	e.cpu.SetGPR(vax.R1, src1)
-	e.cpu.SetGPR(vax.R2, uint32(length))
-	e.cpu.SetGPR(vax.R3, src2)
+	e.cpu.SetGPR(registers.R0, uint32(length))
+	e.cpu.SetGPR(registers.R1, src1)
+	e.cpu.SetGPR(registers.R2, uint32(length))
+	e.cpu.SetGPR(registers.R3, src2)
 
 	return nil
 }
@@ -215,10 +215,10 @@ func emulCmpc5(e *Engine, d *Decoded) error {
 	psl.SetV(false)
 	e.cpu.SetPSL(psl)
 
-	e.cpu.SetGPR(vax.R0, uint32(len1))
-	e.cpu.SetGPR(vax.R1, src1)
-	e.cpu.SetGPR(vax.R2, uint32(len2))
-	e.cpu.SetGPR(vax.R3, src2)
+	e.cpu.SetGPR(registers.R0, uint32(len1))
+	e.cpu.SetGPR(registers.R1, src1)
+	e.cpu.SetGPR(registers.R2, uint32(len2))
+	e.cpu.SetGPR(registers.R3, src2)
 
 	return nil
 }

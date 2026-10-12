@@ -1,6 +1,6 @@
 package cpu
 
-import "github.com/tucats/govax/internal/vax"
+import "github.com/tucats/govax/internal/registers"
 
 // This is the Go port of emul_movc.c's emul_scanc, shared by SCANC and
 // SPANC (distinguished by opcode function, same as the C source -- see
@@ -74,10 +74,10 @@ func emulScanc(e *Engine, d *Decoded) error {
 		}
 	}
 
-	e.cpu.SetGPR(vax.R0, uint32(length-n))
-	e.cpu.SetGPR(vax.R1, addr+uint32(n))
-	e.cpu.SetGPR(vax.R2, 0)
-	e.cpu.SetGPR(vax.R3, tbl)
+	e.cpu.SetGPR(registers.R0, uint32(length-n))
+	e.cpu.SetGPR(registers.R1, addr+uint32(n))
+	e.cpu.SetGPR(registers.R2, 0)
+	e.cpu.SetGPR(registers.R3, tbl)
 
 	psl := e.cpu.PSL()
 	psl.SetN(false)

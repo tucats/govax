@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	"github.com/tucats/govax/internal/lck"
-	"github.com/tucats/govax/internal/vax"
+	"github.com/tucats/govax/internal/registers"
 	"github.com/tucats/govax/internal/vmsdef"
 )
 
@@ -108,7 +108,7 @@ func TestGetlki_access(t *testing.T) {
 	a, b := newLockPair(t)
 
 	// Unprivileged user-mode callers.
-	setMode(a.env, vax.User, vax.User, a.env.cpu.GPR(vax.SP))
+	setMode(a.env, registers.User, registers.User, a.env.cpu.GPR(registers.SP))
 	a.env.Process.CurrentPrivileges, b.env.Process.CurrentPrivileges = 0, 0
 
 	wantR0(t, a.enq("ONE", lck.EX, 0), ssNormal)

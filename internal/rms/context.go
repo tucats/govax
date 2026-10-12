@@ -6,7 +6,7 @@ import (
 
 	"github.com/tucats/govax/internal/lck"
 	"github.com/tucats/govax/internal/lnm"
-	"github.com/tucats/govax/internal/vax"
+	"github.com/tucats/govax/internal/registers"
 	"github.com/tucats/govax/internal/vm"
 )
 
@@ -19,7 +19,7 @@ import (
 // # Why not just use internal/corevms.Environment directly?
 //
 // internal/corevms.Environment already bundles almost exactly this same set
-// of things (its own *vm.Memory, *vax.CPU, console-output io.Writer,
+// of things (its own *vm.Memory, *registers.CPU, console-output io.Writer,
 // Logicals) — using it directly here would avoid a second, similar-looking
 // type. But Environment's mem/cpu/consoleOut fields are unexported,
 // reachable only from code inside package corevms itself, and this package's
@@ -32,7 +32,7 @@ import (
 // too (for example, just to spell out *corevms.Environment as a parameter
 // type), the two packages would import each other, which Go simply
 // refuses to build at all. Context is this package's own, self-contained
-// answer to the same need, built from types (internal/vm, internal/vax,
+// answer to the same need, built from types (internal/vm, internal/registers,
 // internal/io) that don't import internal/rtl either.
 type Context struct {
 	// Mem/CPU are how a handler reads and writes VAX memory directly —
@@ -41,7 +41,7 @@ type Context struct {
 	// other part of this emulator addresses it (translation, protection
 	// checking, and so on all still apply — see internal/vm/storage.go).
 	Mem *vm.Memory
-	CPU *vax.CPU
+	CPU *registers.CPU
 
 	// Mounts is which VAX device names currently have a real ODS-2 volume
 	// mounted (mount.go) — what a SYS$CREATE/SYS$OPEN targeting a disk

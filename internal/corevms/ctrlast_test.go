@@ -3,7 +3,7 @@ package corevms
 import (
 	"testing"
 
-	"github.com/tucats/govax/internal/vax"
+	"github.com/tucats/govax/internal/registers"
 	"github.com/tucats/govax/internal/vmsdef"
 )
 
@@ -34,14 +34,14 @@ func TestCtrlCAST(t *testing.T) {
 	}
 
 	// Enabled from user mode, asking for kernel mode: maximized to user.
-	setMode(env, vax.User, vax.User, 0x8000)
-	enableAST(t, env, ch, fnCtrlCAST, 0x4000, 5, uint32(vax.Kernel))
+	setMode(env, registers.User, registers.User, 0x8000)
+	enableAST(t, env, ch, fnCtrlCAST, 0x4000, 5, uint32(registers.Kernel))
 
 	if !env.Attention(AttentionCtrlC) {
 		t.Fatal("CTRL/C not taken with an AST enabled")
 	}
 
-	want := []astRequest{{routine: 0x4000, param: 5, mode: uint32(vax.User)}}
+	want := []astRequest{{routine: 0x4000, param: 5, mode: uint32(registers.User)}}
 	if got := queuedASTs(env); len(got) != 1 || got[0] != want[0] {
 		t.Errorf("queued %+v, want %+v", got, want)
 	}
@@ -93,7 +93,7 @@ func TestCtrlYAST(t *testing.T) {
 
 func TestAttentionAST_requests(t *testing.T) {
 	env, _, a, ch := qioFixture(t, "")
-	ch2 := assignCall(t, env, a, "TTA0", uint32(vax.User))
+	ch2 := assignCall(t, env, a, "TTA0", uint32(registers.User))
 
 	// A second request on a channel replaces the first; each channel's
 	// request is delivered.

@@ -1,6 +1,6 @@
 package cpu
 
-import "github.com/tucats/govax/internal/vax"
+import "github.com/tucats/govax/internal/registers"
 
 // The engine's scheduling hook (docs/PHASE-44.md, "The engine's hook").
 //
@@ -34,17 +34,17 @@ type Scheduler interface {
 	Schedule(e *Engine, ran int, preemptible bool) (next int, err error)
 }
 
-// PreemptModes is a set of access modes, one bit per mode (1<<vax.Kernel
-// through 1<<vax.User): the modes in which the scheduler may preempt a
+// PreemptModes is a set of access modes, one bit per mode (1<<registers.Kernel
+// through 1<<registers.User): the modes in which the scheduler may preempt a
 // process (the vax.process.preempt setting).
 type PreemptModes uint8
 
 const (
 	// PreemptAllModes preempts in any mode: VMS's own rule.
-	PreemptAllModes PreemptModes = 1<<vax.Kernel | 1<<vax.Executive | 1<<vax.Supervisor | 1<<vax.User
+	PreemptAllModes PreemptModes = 1<<registers.Kernel | 1<<registers.Executive | 1<<registers.Supervisor | 1<<registers.User
 
 	// PreemptUserMode preempts only user-mode code.
-	PreemptUserMode PreemptModes = 1 << vax.User
+	PreemptUserMode PreemptModes = 1 << registers.User
 
 	// PreemptNoModes never preempts: processes switch only when one waits.
 	PreemptNoModes PreemptModes = 0

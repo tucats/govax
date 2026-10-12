@@ -4,7 +4,7 @@ import (
 	"encoding/binary"
 	"errors"
 
-	"github.com/tucats/govax/internal/vax"
+	"github.com/tucats/govax/internal/registers"
 	"github.com/tucats/govax/internal/vm"
 )
 
@@ -74,7 +74,7 @@ const (
 // values software keeps there).
 type PCB struct {
 	// SP holds the four per-process stack pointers, indexed by access
-	// mode: KSP, ESP, SSP, USP (vax.Kernel..vax.User).
+	// mode: KSP, ESP, SSP, USP (registers.Kernel..registers.User).
 	SP [4]uint32
 
 	// R holds R0-R13: R0-R11, then AP (R12) and FP (R13). SP (R14) is
@@ -82,7 +82,7 @@ type PCB struct {
 	R [14]uint32
 
 	PC  uint32
-	PSL vax.PSL
+	PSL registers.PSL
 
 	// The memory-management registers that describe the process's
 	// address space, its AST level, and its performance-monitor enable.
@@ -134,7 +134,7 @@ func pcbFromWords(w pcbWords) PCB {
 	copy(p.SP[:], w[PCBKSP/4:])
 	copy(p.R[:], w[PCBR0/4:])
 	p.PC = w[PCBPC/4]
-	p.PSL = vax.PSL(w[PCBPSL/4])
+	p.PSL = registers.PSL(w[PCBPSL/4])
 	p.P0BR = w[PCBP0BR/4]
 	p.P0LR = w[PCBP0LRAS/4] & pcbLengthMask
 	p.ASTLVL = w[PCBP0LRAS/4] >> pcbASTLVLShift & pcbASTLVLMask
@@ -240,13 +240,13 @@ func init() {
 // process owns, so the scheduler has a stack that stays put while it
 // changes processes underneath it.
 func emulSvpctx(e *Engine, _ *Decoded) error {
-	if e.cpu.PSL().CurMod() != vax.Kernel {
+	if e.cpu.PSL().CurMod() != registers.Kernel {
 		return &Fault{Code: ExcPrivileged}
 	}
 
 	// Pop PC and PSL first, so that if the stack can't be read nothing has
 	// been changed yet, and the access-violation fault restarts cleanly.
-	sp := e.cpu.GPR(vax.SP)
+	sp := e.cpu.GPR(registers.SP)
 
 	pc, err := e.mem.LoadLongword(e.cpu, sp)
 	if err != nil {
@@ -262,23 +262,23 @@ func emulSvpctx(e *Engine, _ *Decoded) error {
 
 	p := e.registerContext()
 	p.PC = pc
-	p.PSL = vax.PSL(psl)
+	p.PSL = registers.PSL(psl)
 
 	cur := e.cpu.PSL()
 	if !cur.IS() {
 		// On the kernel stack (SVPCTX is privileged, so the mode is
 		// kernel): SP, past the popped PC and PSL, is the kernel stack
 		// pointer to save.
-		p.SP[vax.Kernel] = sp
+		p.SP[registers.Kernel] = sp
 	}
 
 	w := p.words()
-	if err := writePCBWords(e.mem, e.cpu.PR(vax.PCBB), &w, PCBP0BR); err != nil {
+	if err := writePCBWords(e.mem, e.cpu.PR(registers.PCBB), &w, PCBP0BR); err != nil {
 		return err
 	}
 
 	if cur.IS() {
-		e.cpu.SetGPR(vax.SP, sp)
+		e.cpu.SetGPR(registers.SP, sp)
 
 		return nil
 	}
@@ -286,12 +286,12 @@ func emulSvpctx(e *Engine, _ *Decoded) error {
 	// Move to the interrupt stack. IPL is raised to at least 1, since
 	// code on the interrupt stack must never be at IPL 0 (where a process
 	// would run).
-	e.cpu.SetPR(vax.KSP, sp)
+	e.cpu.SetPR(registers.KSP, sp)
 	cur.SetIPL(max(1, cur.IPL()))
 	cur.SetIS(true)
 	e.cpu.SetPSL(cur)
-	e.cpu.SetPR(vax.IPL, cur.IPL())
-	e.cpu.SetGPR(vax.SP, e.cpu.PR(vax.ISP))
+	e.cpu.SetPR(registers.IPL, cur.IPL())
+	e.cpu.SetGPR(registers.SP, e.cpu.PR(registers.ISP))
 
 	return nil
 }
@@ -303,11 +303,11 @@ func emulSvpctx(e *Engine, _ *Decoded) error {
 func (e *Engine) registerContext() PCB {
 	var p PCB
 
-	for m := vax.Kernel; m <= vax.User; m++ {
-		p.SP[m] = e.cpu.PR(vax.PrivReg(m))
+	for m := registers.Kernel; m <= registers.User; m++ {
+		p.SP[m] = e.cpu.PR(registers.PrivReg(m))
 	}
 
-	for r := vax.R0; r <= vax.FP; r++ {
+	for r := registers.R0; r <= registers.FP; r++ {
 		p.R[r] = e.cpu.GPR(r)
 	}
 
@@ -322,7 +322,7 @@ func (e *Engine) registerContext() PCB {
 // 3) resumes the process where it left off.
 func emulLdpctx(e *Engine, _ *Decoded) error {
 	psl := e.cpu.PSL()
-	if psl.CurMod() != vax.Kernel {
+	if psl.CurMod() != registers.Kernel {
 		return &Fault{Code: ExcPrivileged}
 	}
 
@@ -344,7 +344,7 @@ func emulLdpctx(e *Engine, _ *Decoded) error {
 
 	e.loadContext(&p)
 
-	sp := e.cpu.GPR(vax.SP) - 8
+	sp := e.cpu.GPR(registers.SP) - 8
 
 	err = e.mem.StoreLongword(e.cpu, sp+4, uint32(p.PSL))
 	if err == nil {
@@ -358,7 +358,7 @@ func emulLdpctx(e *Engine, _ *Decoded) error {
 		return &Fault{Code: ExcReservedOp}
 	}
 
-	e.cpu.SetGPR(vax.SP, sp)
+	e.cpu.SetGPR(registers.SP, sp)
 
 	return nil
 }
@@ -366,7 +366,7 @@ func emulLdpctx(e *Engine, _ *Decoded) error {
 // readLoadablePCB reads the PCB that PCBB points at, checking it as
 // LDPCTX does.
 func (e *Engine) readLoadablePCB() (PCB, error) {
-	w, err := readPCBWords(e.mem, e.cpu.PR(vax.PCBB))
+	w, err := readPCBWords(e.mem, e.cpu.PR(registers.PCBB))
 	if err != nil {
 		return PCB{}, err
 	}
@@ -391,34 +391,34 @@ func (e *Engine) loadContext(p *PCB) {
 	// process shares S0.
 	e.mem.InvalidateProcessTB()
 
-	for m := vax.Kernel; m <= vax.User; m++ {
-		e.cpu.SetPR(vax.PrivReg(m), p.SP[m])
+	for m := registers.Kernel; m <= registers.User; m++ {
+		e.cpu.SetPR(registers.PrivReg(m), p.SP[m])
 	}
 
-	for r := vax.R0; r <= vax.FP; r++ {
+	for r := registers.R0; r <= registers.FP; r++ {
 		e.cpu.SetGPR(r, p.R[r])
 	}
 
-	e.cpu.SetPR(vax.P0BR, p.P0BR)
-	e.cpu.SetPR(vax.P0LR, p.P0LR)
-	e.cpu.SetPR(vax.ASTLVL, p.ASTLVL)
-	e.cpu.SetPR(vax.P1BR, p.P1BR)
-	e.cpu.SetPR(vax.P1LR, p.P1LR)
+	e.cpu.SetPR(registers.P0BR, p.P0BR)
+	e.cpu.SetPR(registers.P0LR, p.P0LR)
+	e.cpu.SetPR(registers.ASTLVL, p.ASTLVL)
+	e.cpu.SetPR(registers.P1BR, p.P1BR)
+	e.cpu.SetPR(registers.P1LR, p.P1LR)
 
 	pme := uint32(0)
 	if p.PME {
 		pme = 1
 	}
 
-	e.cpu.SetPR(vax.PME, pme)
+	e.cpu.SetPR(registers.PME, pme)
 
 	// Leave the interrupt stack for the new process's kernel stack.
-	e.cpu.SetPR(vax.ISP, e.cpu.GPR(vax.SP))
+	e.cpu.SetPR(registers.ISP, e.cpu.GPR(registers.SP))
 
 	psl := e.cpu.PSL()
 	psl.SetIS(false)
 	e.cpu.SetPSL(psl)
-	e.cpu.SetGPR(vax.SP, p.SP[vax.Kernel])
+	e.cpu.SetGPR(registers.SP, p.SP[registers.Kernel])
 }
 
 // ErrContextOnInterruptStack is SaveContext's error when the CPU is on the
@@ -442,30 +442,30 @@ func (e *Engine) SaveContext() error {
 	}
 
 	p := e.registerContext()
-	p.SP[psl.CurMod()] = e.cpu.GPR(vax.SP)
-	p.PC = e.cpu.GPR(vax.PC)
+	p.SP[psl.CurMod()] = e.cpu.GPR(registers.SP)
+	p.PC = e.cpu.GPR(registers.PC)
 	p.PSL = psl
 
 	w := p.words()
-	if err := writePCBWords(e.mem, e.cpu.PR(vax.PCBB), &w, PCBP0BR); err != nil {
+	if err := writePCBWords(e.mem, e.cpu.PR(registers.PCBB), &w, PCBP0BR); err != nil {
 		return err
 	}
 
 	// An interrupt's new PSL: kernel mode (current and previous), on the
 	// interrupt stack, at the interrupt's IPL; every other bit clear.
-	e.cpu.SetPR(vax.PrivReg(psl.CurMod()), e.cpu.GPR(vax.SP))
+	e.cpu.SetPR(registers.PrivReg(psl.CurMod()), e.cpu.GPR(registers.SP))
 
-	var next vax.PSL
+	var next registers.PSL
 
-	next.SetCurMod(vax.Kernel)
-	next.SetPrvMod(vax.Kernel)
+	next.SetCurMod(registers.Kernel)
+	next.SetPrvMod(registers.Kernel)
 	next.SetIS(true)
 	next.SetIPL(max(3, psl.IPL()))
 	e.cpu.SetPSL(next)
-	e.cpu.SetPR(vax.IPL, next.IPL())
-	e.cpu.SetGPR(vax.SP, e.cpu.PR(vax.ISP))
+	e.cpu.SetPR(registers.IPL, next.IPL())
+	e.cpu.SetGPR(registers.SP, e.cpu.PR(registers.ISP))
 
-	if psl.CurMod() != vax.Kernel {
+	if psl.CurMod() != registers.Kernel {
 		e.mem.InvalidateProtection()
 	}
 
@@ -482,7 +482,7 @@ func (e *Engine) LoadContext() error {
 	psl := e.cpu.PSL()
 
 	switch {
-	case psl.CurMod() != vax.Kernel:
+	case psl.CurMod() != registers.Kernel:
 		return &Fault{Code: ExcPrivileged}
 	case !psl.IS():
 		return &Fault{Code: ExcReservedOp}
@@ -498,19 +498,19 @@ func (e *Engine) LoadContext() error {
 	// What REI does with the PC and PSL LDPCTX pushes: the kernel stack
 	// pointer goes back to its register, and the process resumes in its
 	// own mode, on that mode's stack.
-	e.cpu.SetPR(vax.KSP, e.cpu.GPR(vax.SP))
+	e.cpu.SetPR(registers.KSP, e.cpu.GPR(registers.SP))
 	e.cpu.SetPSL(p.PSL)
-	e.cpu.SetPR(vax.IPL, p.PSL.IPL())
+	e.cpu.SetPR(registers.IPL, p.PSL.IPL())
 
 	if p.PSL.IS() {
-		e.cpu.SetGPR(vax.SP, e.cpu.PR(vax.ISP))
+		e.cpu.SetGPR(registers.SP, e.cpu.PR(registers.ISP))
 	} else {
-		e.cpu.SetGPR(vax.SP, e.cpu.PR(vax.PrivReg(p.PSL.CurMod())))
+		e.cpu.SetGPR(registers.SP, e.cpu.PR(registers.PrivReg(p.PSL.CurMod())))
 	}
 
-	e.cpu.SetGPR(vax.PC, p.PC)
+	e.cpu.SetGPR(registers.PC, p.PC)
 
-	if p.PSL.CurMod() != vax.Kernel {
+	if p.PSL.CurMod() != registers.Kernel {
 		e.mem.InvalidateProtection()
 	}
 
@@ -526,12 +526,12 @@ func (e *Engine) LoadContext() error {
 // running, however its program regions grew while it ran.
 func (e *Engine) SaveMemoryContext() error {
 	p := PCB{
-		P0BR:   e.cpu.PR(vax.P0BR),
-		P0LR:   e.cpu.PR(vax.P0LR),
-		ASTLVL: e.cpu.PR(vax.ASTLVL),
-		P1BR:   e.cpu.PR(vax.P1BR),
-		P1LR:   e.cpu.PR(vax.P1LR),
-		PME:    e.cpu.PR(vax.PME)&1 != 0,
+		P0BR:   e.cpu.PR(registers.P0BR),
+		P0LR:   e.cpu.PR(registers.P0LR),
+		ASTLVL: e.cpu.PR(registers.ASTLVL),
+		P1BR:   e.cpu.PR(registers.P1BR),
+		P1LR:   e.cpu.PR(registers.P1LR),
+		PME:    e.cpu.PR(registers.PME)&1 != 0,
 	}
 
 	w := p.words()
@@ -542,5 +542,5 @@ func (e *Engine) SaveMemoryContext() error {
 		binary.LittleEndian.PutUint32(buf[i*4:], w[PCBP0BR/4+i])
 	}
 
-	return e.mem.StorePhysical(e.cpu.PR(vax.PCBB)+PCBP0BR, buf[:])
+	return e.mem.StorePhysical(e.cpu.PR(registers.PCBB)+PCBP0BR, buf[:])
 }

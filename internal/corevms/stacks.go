@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	"github.com/tucats/govax/internal/cpu"
-	"github.com/tucats/govax/internal/vax"
+	"github.com/tucats/govax/internal/registers"
 	"github.com/tucats/govax/internal/vm"
 )
 
@@ -62,9 +62,9 @@ type ProcessStacks struct {
 // registers describe them. Process 1 has no PCB until EnsurePCB gives it
 // one: VMINIT's layout has no room for it, and the pool's first pages
 // are the microkernel's, claimed as ASM deposits it.
-func AdoptStacks(c *vax.CPU) *ProcessStacks {
+func AdoptStacks(c *registers.CPU) *ProcessStacks {
 	return &ProcessStacks{
-		KSP: c.PR(vax.KSP), ESP: c.PR(vax.ESP), SSP: c.PR(vax.SSP), USP: c.PR(vax.USP),
+		KSP: c.PR(registers.KSP), ESP: c.PR(registers.ESP), SSP: c.PR(registers.SSP), USP: c.PR(registers.USP),
 	}
 }
 
@@ -172,7 +172,7 @@ func (sys *System) allocatePCB(pid uint32, st *ProcessStacks) error {
 // any mode" (an AST is delivered when the current mode is at or below
 // ASTLVL, and mode 4 doesn't exist). The first LDPCTX and REI for the
 // process (or the Go switcher's LoadContext) load it.
-func InitialPCB(space *ProcessSpace, st *ProcessStacks, pc uint32, psl vax.PSL) cpu.PCB {
+func InitialPCB(space *ProcessSpace, st *ProcessStacks, pc uint32, psl registers.PSL) cpu.PCB {
 	return cpu.PCB{
 		SP:   [4]uint32{st.KSP, st.ESP, st.SSP, st.USP},
 		PC:   pc,

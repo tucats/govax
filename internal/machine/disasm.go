@@ -9,7 +9,7 @@ import (
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
-// memByteReader adapts a live vax.CPU + vm.Memory pair to disasm.ByteReader,
+// memByteReader adapts a live registers.CPU + vm.Memory pair to disasm.ByteReader,
 // so the disassembler (Phase 11's, which Phase 41 moved from internal/asm
 // to internal/disasm) can read instruction bytes straight out of the
 // running VAX's memory. A translation/access fault

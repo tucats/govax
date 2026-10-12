@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	"github.com/tucats/govax/internal/console"
-	"github.com/tucats/govax/internal/vax"
+	"github.com/tucats/govax/internal/registers"
 )
 
 // dataSession is the probe's session stopped at its fourth FACT call's
@@ -28,7 +28,7 @@ func dataSession(t *testing.T) *console.Console {
 // fields land under their names.
 func TestPSLTable(t *testing.T) {
 	c := dataSession(t)
-	c.CPU.SetPSL(vax.PSL(0x03C00000))
+	c.CPU.SetPSL(registers.PSL(0x03C00000))
 
 	want := `DBGCMD\FACT\%PSL:       
         CMP TP FPD IS CURMOD PRVMOD IPL DV FU IV T N Z V C
@@ -39,7 +39,7 @@ func TestPSLTable(t *testing.T) {
 
 	// Kernel mode, IPL 1F, the interrupt stack, and every condition code:
 	// each field's text lands in the row under its name.
-	c.CPU.SetPSL(vax.PSL(0x041F000F))
+	c.CPU.SetPSL(registers.PSL(0x041F000F))
 
 	rows := strings.Split(say(t, c, "EXAMINE PSL"), "\n")
 	if len(rows) < 3 || !strings.HasSuffix(rows[2], "KERNEL KERNEL  1F  0  0  0 0 1 1 1 1") || //nolint:dupword

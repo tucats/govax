@@ -4,7 +4,7 @@ import (
 	"errors"
 
 	"github.com/tucats/govax/internal/cpu"
-	"github.com/tucats/govax/internal/vax"
+	"github.com/tucats/govax/internal/registers"
 )
 
 // EngineHooks is the process side of the engine's hooks: the parts of
@@ -70,7 +70,7 @@ func (h EngineHooks) NextAST() (cpu.ASTCall, bool, error) {
 // exception kernel.asm's SCB sends to console$handler is offered to the
 // running program's condition handlers before the console reports it
 // (docs/PHASE-26.md subtask 31).
-func (h EngineHooks) DispatchException(code uint32, params []uint32, pc uint32, psl vax.PSL) (bool, error) {
+func (h EngineHooks) DispatchException(code uint32, params []uint32, pc uint32, psl registers.PSL) (bool, error) {
 	env := h.Running()
 	if env == nil {
 		return false, nil

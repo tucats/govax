@@ -1,6 +1,6 @@
 package cpu
 
-import "github.com/tucats/govax/internal/vax"
+import "github.com/tucats/govax/internal/registers"
 
 // This is the Go port of emul_matchc.c's MATCHC: a naive substring search
 // (the source string is scanned for a contiguous run matching the object
@@ -78,10 +78,10 @@ func emulMatchc(e *Engine, d *Decoded) error {
 		remainSrc = 0
 	}
 
-	e.cpu.SetGPR(vax.R0, uint32(remainObj))
-	e.cpu.SetGPR(vax.R1, objPtr)
-	e.cpu.SetGPR(vax.R2, uint32(remainSrc))
-	e.cpu.SetGPR(vax.R3, srcPtr)
+	e.cpu.SetGPR(registers.R0, uint32(remainObj))
+	e.cpu.SetGPR(registers.R1, objPtr)
+	e.cpu.SetGPR(registers.R2, uint32(remainSrc))
+	e.cpu.SetGPR(registers.R3, srcPtr)
 
 	psl := e.cpu.PSL()
 	psl.SetN(false)

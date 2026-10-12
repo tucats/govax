@@ -10,7 +10,7 @@ import (
 	"github.com/tucats/govax/internal/dbgsym"
 	"github.com/tucats/govax/internal/disasm"
 	"github.com/tucats/govax/internal/lnm"
-	"github.com/tucats/govax/internal/vax"
+	"github.com/tucats/govax/internal/registers"
 	"github.com/tucats/govax/internal/vm"
 	"github.com/tucats/govax/internal/vmserrors"
 )
@@ -317,7 +317,7 @@ func (m *Machine) FormatPTE(v uint32) string { return m.formatOne(0, SizePTE, v)
 // supervisor, or user), which also selects that mode's stack pointer; with
 // interruptStack it switches to the interrupt stack instead, whatever the
 // mode. It is SET MODE's access-mode half, which the debugger took over.
-func (m *Machine) SetAccessMode(mode vax.AccessMode, interruptStack bool) error {
+func (m *Machine) SetAccessMode(mode registers.AccessMode, interruptStack bool) error {
 	if err := m.requireInit(); err != nil {
 		return err
 	}

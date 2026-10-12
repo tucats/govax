@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	"github.com/tucats/govax/internal/cpu"
-	"github.com/tucats/govax/internal/vax"
+	"github.com/tucats/govax/internal/registers"
 )
 
 func TestFaultBreakpoints_addRemoveClear(t *testing.T) {
@@ -110,7 +110,7 @@ func TestDispatch_setBreakpointFaultInterceptsExecution(t *testing.T) {
 	c, buf := newTestConsole(t)
 
 	loadProgram(t, c, 0x200, 0xFD, 0x00)
-	c.CPU.SetGPR(vax.PC, 0x200)
+	c.CPU.SetGPR(registers.PC, 0x200)
 
 	if err := c.Debugger.Dispatch("SET BREAK/FAULT=10"); err != nil {
 		t.Fatalf("Dispatch(SET BREAKPOINT/FAULT): %v", err)
@@ -122,7 +122,7 @@ func TestDispatch_setBreakpointFaultInterceptsExecution(t *testing.T) {
 		t.Fatalf("Dispatch(GO): %v", err)
 	}
 
-	if got := c.CPU.GPR(vax.PC); got != 0x200 {
+	if got := c.CPU.GPR(registers.PC); got != 0x200 {
 		t.Errorf("PC = %#x, want 0x200 (fault delivery skipped, not the SCB vector)", got)
 	}
 

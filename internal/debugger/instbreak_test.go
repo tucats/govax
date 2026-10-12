@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	"github.com/tucats/govax/internal/cpu"
-	"github.com/tucats/govax/internal/vax"
+	"github.com/tucats/govax/internal/registers"
 )
 
 func TestInstructionBreakpoints_addRemoveClear(t *testing.T) {
@@ -133,7 +133,7 @@ func TestExecute_stopsAtInstructionBreakpoint(t *testing.T) {
 		t.Fatalf("Execute: %v", err)
 	}
 
-	if got := c.CPU.GPR(vax.PC); got != 0x202 {
+	if got := c.CPU.GPR(registers.PC); got != 0x202 {
 		t.Errorf("PC at instruction breakpoint = %#x, want 0x202 (HALT never ran)", got)
 	}
 
@@ -168,7 +168,7 @@ func TestExecute_instructionBreakpointAtStartDoesNotStopImmediately(t *testing.T
 
 	// The NOP at 0x200 (the run's own starting point) must run; the second
 	// NOP at 0x201 is a fresh address and must stop.
-	if got := c.CPU.GPR(vax.PC); got != 0x201 {
+	if got := c.CPU.GPR(registers.PC); got != 0x201 {
 		t.Errorf("PC = %#x, want 0x201 (stopped at the second NOP, not the first)", got)
 	}
 
@@ -191,14 +191,14 @@ func TestDispatch_instructionBreakpoints(t *testing.T) {
 	}
 
 	loadProgram(t, c, 0x200, opNop, opNop, opHalt)
-	c.CPU.SetGPR(vax.PC, 0x200)
+	c.CPU.SetGPR(registers.PC, 0x200)
 	buf.Reset()
 
 	if err := c.Debugger.Dispatch("GO"); err != nil {
 		t.Fatalf("GO: %v", err)
 	}
 
-	if got := c.CPU.GPR(vax.PC); got != 0x201 {
+	if got := c.CPU.GPR(registers.PC); got != 0x201 {
 		t.Errorf("PC after GO = %#x, want 0x201 (stopped at the second NOP)", got)
 	}
 

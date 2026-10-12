@@ -4,9 +4,9 @@ import (
 	"slices"
 
 	iodev "github.com/tucats/govax/internal/io"
+	"github.com/tucats/govax/internal/registers"
 	"github.com/tucats/govax/internal/rms"
 	"github.com/tucats/govax/internal/sched"
-	"github.com/tucats/govax/internal/vax"
 	"github.com/tucats/govax/internal/vm"
 	"github.com/tucats/govax/internal/vmsdef"
 )
@@ -481,7 +481,7 @@ func (env *Environment) mapProcessSection(f *rms.ACPFile, vbn, pages uint32, a s
 // there is replaced as by $CRETVA (SS$_PAGOWNVIO if a more privileged
 // mode owns it; SS$_NOPRIV for a system page, SS$_VASFULL beyond the page
 // table).
-func (env *Environment) mapPage(addr uint32, pte vm.PTE, mode vax.AccessMode) uint32 {
+func (env *Environment) mapPage(addr uint32, pte vm.PTE, mode registers.AccessMode) uint32 {
 	if addr >= s0Base {
 		return ssNoPriv
 	}
@@ -491,7 +491,7 @@ func (env *Environment) mapPage(addr uint32, pte vm.PTE, mode vax.AccessMode) ui
 		return ssVasFull
 	}
 
-	if pageExists(old) && vax.AccessMode(old.Owner()) < mode {
+	if pageExists(old) && registers.AccessMode(old.Owner()) < mode {
 		return ssPagOwnVio
 	}
 
@@ -594,7 +594,7 @@ func fileSectionSize(f *rms.ACPFile, vbn, pagcnt uint32) (uint32, uint32, uint32
 func serviceSysUpdsec(env *Environment, argv []uint32) (uint32, error) {
 	retadr, updflg := optArg(argv, 1), optArg(argv, 3)
 	efn, iosb, astadr, astprm := optArg(argv, 4), optArg(argv, 5), optArg(argv, 6), optArg(argv, 7)
-	mode := max(vax.AccessMode(optArg(argv, 2)&3), env.cpu.PSL().CurMod())
+	mode := max(registers.AccessMode(optArg(argv, 2)&3), env.cpu.PSL().CurMod())
 
 	fail := func(st uint32) (uint32, error) {
 		_ = env.storeRetadr(retadr, nil)
@@ -696,12 +696,12 @@ func firstUnwritten(pages, written []uint32) uint32 {
 // should go back (see serviceSysUpdsec) and clears its modify bit. It
 // returns the pages written, and, if a write failed, the page's address
 // and the status (SS$_NORMAL and 0 otherwise).
-func (env *Environment) updateSections(pages []uint32, mode vax.AccessMode, callerOnly bool) ([]uint32, uint32, uint32) {
+func (env *Environment) updateSections(pages []uint32, mode registers.AccessMode, callerOnly bool) ([]uint32, uint32, uint32) {
 	var written []uint32
 
 	for _, addr := range pages {
 		_, _, pte, err := env.mem.LookupPTE(env.cpu, addr)
-		if err != nil || !pageExists(pte) || vax.AccessMode(pte.Owner()) < mode {
+		if err != nil || !pageExists(pte) || registers.AccessMode(pte.Owner()) < mode {
 			continue
 		}
 

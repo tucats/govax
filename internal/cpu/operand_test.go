@@ -4,17 +4,17 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/tucats/govax/internal/vax"
+	"github.com/tucats/govax/internal/registers"
 	"github.com/tucats/govax/internal/vm"
 )
 
 // fixture returns a CPU (virtual memory disabled, so addresses are used
 // directly) and a 1MB memory, matching internal/vm's test convention.
-func fixture() (*vax.CPU, *vm.Memory) {
-	return vax.New(), vm.NewMemory(1 << 20)
+func fixture() (*registers.CPU, *vm.Memory) {
+	return registers.New(), vm.NewMemory(1 << 20)
 }
 
-func putBytes(t *testing.T, cpu *vax.CPU, mem *vm.Memory, addr uint32, bytes ...byte) {
+func putBytes(t *testing.T, cpu *registers.CPU, mem *vm.Memory, addr uint32, bytes ...byte) {
 	t.Helper()
 
 	for i, b := range bytes {
@@ -24,7 +24,7 @@ func putBytes(t *testing.T, cpu *vax.CPU, mem *vm.Memory, addr uint32, bytes ...
 	}
 }
 
-func putLongword(t *testing.T, cpu *vax.CPU, mem *vm.Memory, addr uint32, v uint32) {
+func putLongword(t *testing.T, cpu *registers.CPU, mem *vm.Memory, addr uint32, v uint32) {
 	t.Helper()
 
 	if err := mem.StoreLongword(cpu, addr, v); err != nil {
@@ -45,7 +45,7 @@ func TestDecodeOperandRegisterDirect(t *testing.T) {
 		t.Fatalf("decodeOperand: %v", err)
 	}
 
-	if op.Kind != OperandRegister || op.Reg != vax.R3 {
+	if op.Kind != OperandRegister || op.Reg != registers.R3 {
 		t.Errorf("op = %+v, want Kind=Register Reg=R3", op)
 	}
 
@@ -56,7 +56,7 @@ func TestDecodeOperandRegisterDirect(t *testing.T) {
 
 func TestDecodeOperandRegisterDirectPCAlias(t *testing.T) {
 	cpu, mem := fixture()
-	cpu.SetGPR(vax.PC, 0xABCD1234)
+	cpu.SetGPR(registers.PC, 0xABCD1234)
 	putBytes(t, cpu, mem, base, 0x5F) // mode 5, reg 15 == PC
 
 	pc := uint32(base)
@@ -66,7 +66,7 @@ func TestDecodeOperandRegisterDirectPCAlias(t *testing.T) {
 		t.Fatalf("decodeOperand: %v", err)
 	}
 
-	if op.Kind != OperandRegister || op.Reg != vax.PC {
+	if op.Kind != OperandRegister || op.Reg != registers.PC {
 		t.Fatalf("op = %+v, want Kind=Register Reg=PC", op)
 	}
 
@@ -156,7 +156,7 @@ func TestDecodeOperandShortLiteralWriteFaults(t *testing.T) {
 
 func TestDecodeOperandRegisterDeferred(t *testing.T) {
 	cpu, mem := fixture()
-	cpu.SetGPR(vax.R2, 0x2000)
+	cpu.SetGPR(registers.R2, 0x2000)
 	putBytes(t, cpu, mem, base, 0x62) // mode 6, reg 2
 
 	pc := uint32(base)
@@ -173,7 +173,7 @@ func TestDecodeOperandRegisterDeferred(t *testing.T) {
 
 func TestDecodeOperandAutodecrement(t *testing.T) {
 	cpu, mem := fixture()
-	cpu.SetGPR(vax.R2, 0x2010)
+	cpu.SetGPR(registers.R2, 0x2010)
 	putBytes(t, cpu, mem, base, 0x72) // mode 7, reg 2
 
 	pc := uint32(base)
@@ -187,14 +187,14 @@ func TestDecodeOperandAutodecrement(t *testing.T) {
 		t.Errorf("op = %+v, want Kind=Memory Addr=0x200C", op)
 	}
 
-	if cpu.GPR(vax.R2) != 0x200C {
-		t.Errorf("R2 = %#x, want 0x200C (decremented)", cpu.GPR(vax.R2))
+	if cpu.GPR(registers.R2) != 0x200C {
+		t.Errorf("R2 = %#x, want 0x200C (decremented)", cpu.GPR(registers.R2))
 	}
 }
 
 func TestDecodeOperandAutoincrement(t *testing.T) {
 	cpu, mem := fixture()
-	cpu.SetGPR(vax.R2, 0x3000)
+	cpu.SetGPR(registers.R2, 0x3000)
 	putBytes(t, cpu, mem, base, 0x82) // mode 8, reg 2
 
 	pc := uint32(base)
@@ -208,8 +208,8 @@ func TestDecodeOperandAutoincrement(t *testing.T) {
 		t.Errorf("op = %+v, want Kind=Memory Addr=0x3000", op)
 	}
 
-	if cpu.GPR(vax.R2) != 0x3004 {
-		t.Errorf("R2 = %#x, want 0x3004 (incremented)", cpu.GPR(vax.R2))
+	if cpu.GPR(registers.R2) != 0x3004 {
+		t.Errorf("R2 = %#x, want 0x3004 (incremented)", cpu.GPR(registers.R2))
 	}
 }
 
@@ -221,7 +221,7 @@ func TestDecodeOperandAutoincrement(t *testing.T) {
 // dereferenced pointer becomes the operand's address, not its value.
 func TestDecodeOperandAutoincrementDeferred(t *testing.T) {
 	cpu, mem := fixture()
-	cpu.SetGPR(vax.R2, 0x4000)
+	cpu.SetGPR(registers.R2, 0x4000)
 	putLongword(t, cpu, mem, 0x4000, 0x5000) // *R2 == 0x5000, the operand's real address
 	putLongword(t, cpu, mem, 0x5000, 0xCAFEBABE)
 	putBytes(t, cpu, mem, base, 0x92) // mode 9, reg 2
@@ -237,14 +237,14 @@ func TestDecodeOperandAutoincrementDeferred(t *testing.T) {
 		t.Errorf("op = %+v, want Kind=Memory Addr=0x5000 (single dereference)", op)
 	}
 
-	if cpu.GPR(vax.R2) != 0x4004 {
-		t.Errorf("R2 = %#x, want 0x4004 (pointer advanced by 4)", cpu.GPR(vax.R2))
+	if cpu.GPR(registers.R2) != 0x4004 {
+		t.Errorf("R2 = %#x, want 0x4004 (pointer advanced by 4)", cpu.GPR(registers.R2))
 	}
 }
 
 func TestDecodeOperandByteDisplacement(t *testing.T) {
 	cpu, mem := fixture()
-	cpu.SetGPR(vax.R2, 0x1000)
+	cpu.SetGPR(registers.R2, 0x1000)
 	putBytes(t, cpu, mem, base, 0xA2, 0x10) // mode A, reg 2, disp +16
 
 	pc := uint32(base)
@@ -265,7 +265,7 @@ func TestDecodeOperandByteDisplacement(t *testing.T) {
 
 func TestDecodeOperandByteDisplacementNegative(t *testing.T) {
 	cpu, mem := fixture()
-	cpu.SetGPR(vax.R2, 0x1000)
+	cpu.SetGPR(registers.R2, 0x1000)
 	putBytes(t, cpu, mem, base, 0xA2, 0xF0) // disp -16
 
 	pc := uint32(base)
@@ -282,7 +282,7 @@ func TestDecodeOperandByteDisplacementNegative(t *testing.T) {
 
 func TestDecodeOperandByteDisplacementDeferred(t *testing.T) {
 	cpu, mem := fixture()
-	cpu.SetGPR(vax.R2, 0x1000)
+	cpu.SetGPR(registers.R2, 0x1000)
 	putLongword(t, cpu, mem, 0x1004, 0x9999)
 	putBytes(t, cpu, mem, base, 0xB2, 0x04) // mode B, reg 2, disp +4
 
@@ -300,7 +300,7 @@ func TestDecodeOperandByteDisplacementDeferred(t *testing.T) {
 
 func TestDecodeOperandWordDisplacement(t *testing.T) {
 	cpu, mem := fixture()
-	cpu.SetGPR(vax.R2, 0x2000)
+	cpu.SetGPR(registers.R2, 0x2000)
 	putBytes(t, cpu, mem, base, 0xC2, 0x00, 0x01) // mode C, reg 2, disp +0x0100
 
 	pc := uint32(base)
@@ -321,7 +321,7 @@ func TestDecodeOperandWordDisplacement(t *testing.T) {
 
 func TestDecodeOperandWordDisplacementDeferred(t *testing.T) {
 	cpu, mem := fixture()
-	cpu.SetGPR(vax.R2, 0x2000)
+	cpu.SetGPR(registers.R2, 0x2000)
 	putLongword(t, cpu, mem, 0x2100, 0xAAAA)
 	putBytes(t, cpu, mem, base, 0xD2, 0x00, 0x01)
 
@@ -339,7 +339,7 @@ func TestDecodeOperandWordDisplacementDeferred(t *testing.T) {
 
 func TestDecodeOperandLongDisplacement(t *testing.T) {
 	cpu, mem := fixture()
-	cpu.SetGPR(vax.R2, 0x2000)
+	cpu.SetGPR(registers.R2, 0x2000)
 	putBytes(t, cpu, mem, base, 0xE2)
 	putLongword(t, cpu, mem, base+1, 0x00010000)
 
@@ -361,7 +361,7 @@ func TestDecodeOperandLongDisplacement(t *testing.T) {
 
 func TestDecodeOperandLongDisplacementDeferred(t *testing.T) {
 	cpu, mem := fixture()
-	cpu.SetGPR(vax.R2, 0x2000)
+	cpu.SetGPR(registers.R2, 0x2000)
 	putLongword(t, cpu, mem, 0x00012000, 0x77777777)
 	putBytes(t, cpu, mem, base, 0xF2)
 	putLongword(t, cpu, mem, base+1, 0x00010000)
@@ -380,8 +380,8 @@ func TestDecodeOperandLongDisplacementDeferred(t *testing.T) {
 
 func TestDecodeOperandIndexed(t *testing.T) {
 	cpu, mem := fixture()
-	cpu.SetGPR(vax.R3, 2)                   // index register: index 2
-	cpu.SetGPR(vax.R5, 0x8000)              // base register (register deferred)
+	cpu.SetGPR(registers.R3, 2)             // index register: index 2
+	cpu.SetGPR(registers.R5, 0x8000)        // base register (register deferred)
 	putBytes(t, cpu, mem, base, 0x43, 0x65) // mode 4 reg 3 (index), then mode 6 reg 5 (base)
 
 	pc := uint32(base)
@@ -455,7 +455,6 @@ func TestDecodeOperandPCImmediateWriteFaults(t *testing.T) {
 	cpu, mem := fixture()
 	putBytes(t, cpu, mem, base, 0x8F)
 	putLongword(t, cpu, mem, base+1, 0)
-
 
 	pc := uint32(base)
 
@@ -634,7 +633,7 @@ func TestDecodeOperandAccessAddressAllowsRegisterMode(t *testing.T) {
 			t.Fatalf("access=%v: decodeOperand: %v", access, err)
 		}
 
-		if op.Kind != OperandRegister || op.Reg != vax.R3 {
+		if op.Kind != OperandRegister || op.Reg != registers.R3 {
 			t.Errorf("access=%v: op = %+v, want Kind=Register Reg=R3", access, op)
 		}
 	}
@@ -642,7 +641,7 @@ func TestDecodeOperandAccessAddressAllowsRegisterMode(t *testing.T) {
 
 func TestDecodeOperandAccessAddressAllowsMemoryModes(t *testing.T) {
 	cpu, mem := fixture()
-	cpu.SetGPR(vax.R3, 0xABCD1000)
+	cpu.SetGPR(registers.R3, 0xABCD1000)
 	putBytes(t, cpu, mem, base, 0x63) // mode 6, reg 3 -- Register deferred: (R3)
 
 	pc := uint32(base)
@@ -671,7 +670,7 @@ func TestDecodeOperandAccessImmediate(t *testing.T) {
 	if op.Kind != OperandImmediate || uint32(op.Value) != 0x11223344 {
 		t.Errorf("op = %+v, want Kind=Immediate Value=0x11223344", op)
 	}
-	
+
 	if pc != base+4 {
 		t.Errorf("pc = %#x, want %#x", pc, base+4)
 	}

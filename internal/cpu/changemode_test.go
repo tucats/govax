@@ -3,7 +3,7 @@ package cpu
 import (
 	"testing"
 
-	"github.com/tucats/govax/internal/vax"
+	"github.com/tucats/govax/internal/registers"
 )
 
 // TestEmulChmxReturnsPastTheChmxInstruction regresses the bug documented on
@@ -19,8 +19,8 @@ import (
 func TestEmulChmxReturnsPastTheChmxInstruction(t *testing.T) {
 	e := kernelEngine()
 	cpu := e.cpu
-	cpu.SetGPR(vax.SP, 0x7000)
-	cpu.SetPR(vax.KSP, 0x7000)
+	cpu.SetGPR(registers.SP, 0x7000)
+	cpu.SetPR(registers.KSP, 0x7000)
 
 	// A trivial handler: CHMK pushes its one signal argument (the change-
 	// mode code) below the PC/PSL frame REI expects -- discard it (MOVL
@@ -40,13 +40,13 @@ func TestEmulChmxReturnsPastTheChmxInstruction(t *testing.T) {
 	const base = 0x1000
 
 	putBytes(t, cpu, e.mem, base, 0xBC, 0x00, 0xBC, 0x00)
-	cpu.SetGPR(vax.PC, base)
+	cpu.SetGPR(registers.PC, base)
 
 	if err := e.Step(); err != nil { // CHMK #1: decode/fault/deliver -- lands at the handler
 		t.Fatalf("Step (first CHMK, fault delivery): %v", err)
 	}
 
-	if got := cpu.GPR(vax.PC); got != handlerAddr {
+	if got := cpu.GPR(registers.PC); got != handlerAddr {
 		t.Fatalf("PC after first CHMK's fault delivery = %#x, want handlerAddr %#x", got, uint32(handlerAddr))
 	}
 
@@ -58,7 +58,7 @@ func TestEmulChmxReturnsPastTheChmxInstruction(t *testing.T) {
 		t.Fatalf("Step (first REI): %v", err)
 	}
 
-	if got := cpu.GPR(vax.PC); got != base+2 {
+	if got := cpu.GPR(registers.PC); got != base+2 {
 		t.Fatalf("PC after first CHMK's handler returns = %#x, want %#x (the instruction after CHMK, not CHMK's own address)", got, uint32(base+2))
 	}
 
@@ -66,7 +66,7 @@ func TestEmulChmxReturnsPastTheChmxInstruction(t *testing.T) {
 		t.Fatalf("Step (second CHMK, fault delivery): %v", err)
 	}
 
-	if got := cpu.GPR(vax.PC); got != handlerAddr {
+	if got := cpu.GPR(registers.PC); got != handlerAddr {
 		t.Fatalf("PC after second CHMK's fault delivery = %#x, want handlerAddr %#x (confirms CHMK #2 actually executed, not a re-trap of CHMK #1)", got, uint32(handlerAddr))
 	}
 
@@ -78,7 +78,7 @@ func TestEmulChmxReturnsPastTheChmxInstruction(t *testing.T) {
 		t.Fatalf("Step (second REI): %v", err)
 	}
 	
-	if got := cpu.GPR(vax.PC); got != base+4 {
+	if got := cpu.GPR(registers.PC); got != base+4 {
 		t.Fatalf("PC after second CHMK's handler returns = %#x, want %#x", got, uint32(base+4))
 	}
 }

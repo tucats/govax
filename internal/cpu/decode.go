@@ -1,7 +1,7 @@
 package cpu
 
 import (
-	"github.com/tucats/govax/internal/vax"
+	"github.com/tucats/govax/internal/registers"
 	"github.com/tucats/govax/internal/vm"
 )
 
@@ -19,7 +19,7 @@ type Decoded struct {
 	// nothing may read them.
 	Operands [6]Operand
 	// NextPC is the virtual address of the byte immediately following this
-	// instruction's last operand specifier — the C source's `vax.PC` as
+	// instruction's last operand specifier — the C source's `registers.PC` as
 	// left by decode_opcode.c on success. The caller (Engine.Step, sub-
 	// phase 6) is responsible for writing this into cpu's PC register
 	// before dispatching to the instruction's Handler; decodeInstruction
@@ -37,7 +37,7 @@ type Decoded struct {
 // BREAK/INSTRUCTION, docs/PHASE-18.md) to identify the next instruction
 // without the operand-decode side effects (autoincrement/autodecrement)
 // a full decode would incur.
-func fetchOpcode(cpu *vax.CPU, mem *vm.Memory, pc uint32) (Opcode, uint32, error) {
+func fetchOpcode(cpu *registers.CPU, mem *vm.Memory, pc uint32) (Opcode, uint32, error) {
 	// TryFetchByte reads the byte with no function call when it's in the
 	// memory's instruction-fetch window (nearly always); FetchByte, the
 	// full fetch, handles the rest. See internal/vm/fetch.go.
@@ -79,8 +79,8 @@ func fetchOpcode(cpu *vax.CPU, mem *vm.Memory, pc uint32) (Opcode, uint32, error
 //
 // Unlike the C source, decodeInstruction does not write back to cpu's PC
 // register at all, on success or on fault: decode_opcode.c updates
-// vax.PC at several checkpoints purely so a fault raised mid-decode leaves
-// vax.PC in a sensible state for the caller, but execute_vax's fault path
+// registers.PC at several checkpoints purely so a fault raised mid-decode leaves
+// registers.PC in a sensible state for the caller, but execute_vax's fault path
 // resets PC to the instruction's start address regardless (the saved
 // pre-decode PC, either via a local `saved_pc` for a decode-time fault or
 // via `vax.instruction_PC` for an execute-time one) before signaling the
@@ -94,8 +94,8 @@ func fetchOpcode(cpu *vax.CPU, mem *vm.Memory, pc uint32) (Opcode, uint32, error
 // operands. On an error, d is left part-way through (Step decodes into a
 // spare buffer for that reason, so LastDecoded never shows a half-decoded
 // instruction).
-func decodeInstruction(cpu *vax.CPU, mem *vm.Memory, table *Table, d *Decoded) error {
-	pc := cpu.GPR(vax.PC)
+func decodeInstruction(cpu *registers.CPU, mem *vm.Memory, table *Table, d *Decoded) error {
+	pc := cpu.GPR(registers.PC)
 
 	opcode, pc, err := fetchOpcode(cpu, mem, pc)
 	if err != nil {

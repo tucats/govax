@@ -1,7 +1,7 @@
 package cpu
 
 import (
-	"github.com/tucats/govax/internal/vax"
+	"github.com/tucats/govax/internal/registers"
 	"github.com/tucats/govax/internal/vm"
 )
 
@@ -62,7 +62,7 @@ func signExtendBitField(value uint32, size int) uint32 {
 // sign-extended byte (the manual bounds it to 0-32; anything outside that is
 // a reserved-operand fault, checked by getRegisterField/getMemoryField/
 // setRegisterField/setMemoryField rather than here).
-func fieldOperands(cpu *vax.CPU, mem *vm.Memory, posOp, sizeOp Operand) (position int32, size int, err error) {
+func fieldOperands(cpu *registers.CPU, mem *vm.Memory, posOp, sizeOp Operand) (position int32, size int, err error) {
 	p, err := posOp.Load(cpu, mem)
 	if err != nil {
 		return 0, 0, err
@@ -108,8 +108,8 @@ func storeField(e *Engine, base Operand, position int32, size int, data uint32) 
 
 // getRegisterField reads a size-bit field starting at bit position of the
 // register pair base/base+1.
-func getRegisterField(cpu *vax.CPU, position int32, size int, base vax.Reg) (uint32, error) {
-	if size < 0 || size > 32 || position < 0 || position > 31 || (base == vax.PC && int(position)+size > 31) {
+func getRegisterField(cpu *registers.CPU, position int32, size int, base registers.Reg) (uint32, error) {
+	if size < 0 || size > 32 || position < 0 || position > 31 || (base == registers.PC && int(position)+size > 31) {
 		return 0, &Fault{Code: ExcReservedOp}
 	}
 
@@ -128,8 +128,8 @@ func getRegisterField(cpu *vax.CPU, position int32, size int, base vax.Reg) (uin
 
 // setRegisterField is getRegisterField's write-side counterpart, used by
 // INSV.
-func setRegisterField(cpu *vax.CPU, position int32, size int, base vax.Reg, data uint32) error {
-	if size < 0 || size > 32 || position < 0 || position > 31 || (base == vax.PC && int(position)+size > 31) {
+func setRegisterField(cpu *registers.CPU, position int32, size int, base registers.Reg, data uint32) error {
+	if size < 0 || size > 32 || position < 0 || position > 31 || (base == registers.PC && int(position)+size > 31) {
 		return &Fault{Code: ExcReservedOp}
 	}
 
@@ -162,7 +162,7 @@ func bitFieldByteSpan(base uint32, position int32) (addr uint32, bitOff uint) {
 // getMemoryField reads a size-bit field at bit displacement position from
 // base, byte-addressed and little-endian (bit 0 of the field is the
 // low-order bit of the byte at addr).
-func getMemoryField(cpu *vax.CPU, mem *vm.Memory, position int32, size int, base uint32) (uint32, error) {
+func getMemoryField(cpu *registers.CPU, mem *vm.Memory, position int32, size int, base uint32) (uint32, error) {
 	if size < 0 || size > 32 {
 		return 0, &Fault{Code: ExcReservedOp}
 	}
@@ -189,7 +189,7 @@ func getMemoryField(cpu *vax.CPU, mem *vm.Memory, position int32, size int, base
 }
 
 // setMemoryField is getMemoryField's write-side counterpart, used by INSV.
-func setMemoryField(cpu *vax.CPU, mem *vm.Memory, position int32, size int, base uint32, data uint32) error {
+func setMemoryField(cpu *registers.CPU, mem *vm.Memory, position int32, size int, base uint32, data uint32) error {
 	if size < 0 || size > 32 {
 		return &Fault{Code: ExcReservedOp}
 	}

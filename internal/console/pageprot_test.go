@@ -3,7 +3,7 @@ package console
 import (
 	"testing"
 
-	"github.com/tucats/govax/internal/vax"
+	"github.com/tucats/govax/internal/registers"
 	"github.com/tucats/govax/internal/vm"
 	"github.com/tucats/govax/internal/vmsdef"
 )
@@ -41,7 +41,7 @@ func TestSetprt(t *testing.T) {
 	}
 
 	pte := pteAt(t, c, vaPages+0x200)
-	if pte.Protection() != vm.ProtUR || pte.Owner() != uint8(vax.User) || !pte.Valid() {
+	if pte.Protection() != vm.ProtUR || pte.Owner() != uint8(registers.User) || !pte.Valid() {
 		t.Errorf("PTE %#x: want UR, still user-owned and valid", uint32(pte))
 	}
 
@@ -75,7 +75,7 @@ func TestSetprt_errors(t *testing.T) {
 		setup func()
 	}{
 		{"system page", 0x80000000, ssNoPriv, nil},
-		{"beyond P0", (c.CPU.PR(vax.P0LR) + 4) * 512, ssLenVio, nil},
+		{"beyond P0", (c.CPU.PR(registers.P0LR) + 4) * 512, ssLenVio, nil},
 		{"deleted page", vaPages, ssAccVio, func() {
 			putRange(t, c, vaInadr, vaPages, vaPages)
 			callService(t, c, "SYS$DELTVA", vaInadr)
@@ -101,7 +101,7 @@ func TestSetprt_errors(t *testing.T) {
 	// User mode can't change a kernel page.
 	putRange(t, c, vaInadr, vaPages+0x1000, vaPages+0x1000)
 	callService(t, c, "SYS$CRETVA", vaInadr, 0, 0)
-	c.Engine.SetModeStack(vax.User, false)
+	c.Engine.SetModeStack(registers.User, false)
 
 	if got := callService(t, c, "SYS$SETPRT", vaInadr, 0, 0, uint32(vm.ProtUR)); got != ssPagOwnVio {
 		t.Errorf("user $SETPRT of a kernel page = %#x, want SS$_PAGOWNVIO", got)
@@ -173,7 +173,7 @@ func TestPageProt_assembledProgram(t *testing.T) {
 	c := newBootableConsole(t)
 	word := runFixture(t, c, "pageprot.asm")
 
-	if got := c.CPU.GPR(vax.R0); got != 1 {
+	if got := c.CPU.GPR(registers.R0); got != 1 {
 		t.Fatalf("R0 = %#x, want 1 (a $SETPRT failed?)", got)
 	}
 

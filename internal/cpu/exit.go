@@ -1,6 +1,6 @@
 package cpu
 
-import "github.com/tucats/govax/internal/vax"
+import "github.com/tucats/govax/internal/registers"
 
 // The engine's half of image exit (docs/PHASE-26.md subtask 19).
 //
@@ -38,10 +38,10 @@ func (e *Engine) callForService(call *ServiceCall) error {
 	// CALLG's own steps (emulCall): remember SP, align it to a longword,
 	// and build the frame. calls=false: RET won't pop the argument list,
 	// which the caller owns.
-	savedSP := e.cpu.GPR(vax.SP)
-	e.cpu.SetGPR(vax.SP, savedSP&^3)
+	savedSP := e.cpu.GPR(registers.SP)
+	e.cpu.SetGPR(registers.SP, savedSP&^3)
 
-	returnPC, returnFP := e.instructionPC, e.cpu.GPR(vax.FP)
+	returnPC, returnFP := e.instructionPC, e.cpu.GPR(registers.FP)
 	if call.Image {
 		returnPC, returnFP = SentinelReturn, SentinelReturn
 	}
@@ -65,7 +65,7 @@ func (e *Engine) callForService(call *ServiceCall) error {
 // nowhere to return to, so the machine halts (ErrHalted), leaving R0 as
 // the exit status.
 func (e *Engine) exitImage() error {
-	fp := e.cpu.GPR(vax.FP)
+	fp := e.cpu.GPR(registers.FP)
 
 	for n := 0; n < maxUnwindFrames && fp != 0; n++ {
 		savedFP, err := e.mem.LoadLongword(e.cpu, fp+12)
@@ -79,7 +79,7 @@ func (e *Engine) exitImage() error {
 		}
 
 		if savedFP == SentinelReturn && savedPC == SentinelReturn {
-			e.cpu.SetGPR(vax.FP, fp)
+			e.cpu.SetGPR(registers.FP, fp)
 
 			return emulRet(e, nil)
 		}

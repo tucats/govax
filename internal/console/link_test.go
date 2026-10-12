@@ -9,8 +9,8 @@ import (
 	"testing"
 
 	"github.com/tucats/govax/internal/dclcmd"
+	"github.com/tucats/govax/internal/registers"
 	"github.com/tucats/govax/internal/rms"
-	"github.com/tucats/govax/internal/vax"
 	"github.com/tucats/govax/internal/vm"
 	"github.com/tucats/govax/internal/vmsdef"
 	"github.com/tucats/govax/internal/vmserrors"
@@ -85,13 +85,13 @@ func runImageCommand(t *testing.T, c *Console, path, command string, maxSteps in
 		t.Fatalf("BuildImageInitDriver: ok=%v err=%v", ok, err)
 	}
 
-	c.Engine.SetModeStack(vax.User, false)
+	c.Engine.SetModeStack(registers.User, false)
 
 	if runErr, hitCap := callBounded(t, c, driver, maxSteps); runErr != nil || hitCap {
 		t.Fatalf("running %s: err=%v hitCap=%v", path, runErr, hitCap)
 	}
 
-	return c.CPU.GPR(vax.R0)
+	return c.CPU.GPR(registers.R0)
 }
 
 // TestLink_macroLinkRun assembles, links, and runs the self-contained
@@ -233,7 +233,7 @@ func TestLink_helloPageProtection(t *testing.T) {
 
 	check()
 
-	if _, _, pte, _ := c.Mem.LookupPTE(c.CPU, 0x400); pte.Protection().Allows(vax.Kernel, vm.AccessWrite) {
+	if _, _, pte, _ := c.Mem.LookupPTE(c.CPU, 0x400); pte.Protection().Allows(registers.Kernel, vm.AccessWrite) {
 		t.Errorf("code page 0x400 (PROT %s) is writable", pte.Protection())
 	}
 

@@ -142,7 +142,8 @@ explicitly / receiver-bound — no package-level singleton mirroring the C sourc
 global `struct VAX vax`. Current package layout (see `docs/PLAN.md` for rationale, and
 expect adjustment as phases land):
 
-- `internal/vax` — core machine state: registers, PSL, condition codes (Phase 01).
+- `internal/registers` — core machine state: registers, PSL, condition codes (Phase 01;
+  `internal/vax` until 2026-10-12).
 - `internal/vm` — virtual memory: address translation, load/store primitives (Phase 02).
   The decoder reads the instruction stream through `fetch.go`'s
   instruction-fetch window (`FetchByte`/`TryFetchByte`/..., one page

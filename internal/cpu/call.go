@@ -3,7 +3,7 @@ package cpu
 import (
 	"fmt"
 
-	"github.com/tucats/govax/internal/vax"
+	"github.com/tucats/govax/internal/registers"
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
@@ -40,8 +40,8 @@ func emulCall(e *Engine, d *Decoded) error {
 			return err
 		}
 
-		sp := e.cpu.GPR(vax.SP) - 4
-		e.cpu.SetGPR(vax.SP, sp)
+		sp := e.cpu.GPR(registers.SP) - 4
+		e.cpu.SetGPR(registers.SP, sp)
 
 		if err := e.mem.StoreLongword(e.cpu, sp, uint32(count)); err != nil {
 			return err
@@ -57,10 +57,10 @@ func emulCall(e *Engine, d *Decoded) error {
 	newPC := d.Operands[1].Addr
 
 	// Save the SP as it stood after any CALLS count push, then coerce it to be longword aligned.
-	savedSP := e.cpu.GPR(vax.SP)
-	e.cpu.SetGPR(vax.SP, savedSP&0xFFFFFFFC)
+	savedSP := e.cpu.GPR(registers.SP)
+	e.cpu.SetGPR(registers.SP, savedSP&0xFFFFFFFC)
 
-	return e.buildCallFrame(newAP, newPC, savedSP, e.cpu.GPR(vax.PC), e.cpu.GPR(vax.FP), calls)
+	return e.buildCallFrame(newAP, newPC, savedSP, e.cpu.GPR(registers.PC), e.cpu.GPR(registers.FP), calls)
 }
 
 // buildCallFrame does the shared frame-construction work behind CALLS/CALLG
@@ -95,15 +95,15 @@ func (e *Engine) buildCallFrame(newAP, newPC, savedSP, returnPC, returnFP uint32
 			continue
 		}
 
-		sp := e.cpu.GPR(vax.SP) - 4
-		e.cpu.SetGPR(vax.SP, sp)
+		sp := e.cpu.GPR(registers.SP) - 4
+		e.cpu.SetGPR(registers.SP, sp)
 
-		if err := e.mem.StoreLongword(e.cpu, sp, e.cpu.GPR(vax.Reg(n))); err != nil {
+		if err := e.mem.StoreLongword(e.cpu, sp, e.cpu.GPR(registers.Reg(n))); err != nil {
 			return err
 		}
 	}
 
-	oldAP := e.cpu.GPR(vax.AP)
+	oldAP := e.cpu.GPR(registers.AP)
 
 	if err := push(e, returnPC); err != nil {
 		return err
@@ -148,16 +148,16 @@ func (e *Engine) buildCallFrame(newAP, newPC, savedSP, returnPC, returnFP uint32
 		return err
 	}
 
-	e.cpu.SetGPR(vax.FP, e.cpu.GPR(vax.SP))
-	e.cpu.SetGPR(vax.AP, newAP)
-	e.cpu.SetGPR(vax.PC, newPC)
+	e.cpu.SetGPR(registers.FP, e.cpu.GPR(registers.SP))
+	e.cpu.SetGPR(registers.AP, newAP)
+	e.cpu.SetGPR(registers.PC, newPC)
 
 	return nil
 }
 
 // emulRet is RET: pops and unwinds the call frame CALLS/CALLG built.
 func emulRet(e *Engine, d *Decoded) error {
-	sp := e.cpu.GPR(vax.FP) + 4
+	sp := e.cpu.GPR(registers.FP) + 4
 
 	maskWord, err := e.mem.LoadLongword(e.cpu, sp)
 	if err != nil {
@@ -207,7 +207,7 @@ func emulRet(e *Engine, d *Decoded) error {
 
 		sp += 4
 
-		e.cpu.SetGPR(vax.Reg(n), v)
+		e.cpu.SetGPR(registers.Reg(n), v)
 	}
 
 	spa := maskWord >> 30
@@ -228,12 +228,12 @@ func emulRet(e *Engine, d *Decoded) error {
 
 	psl := uint32(e.cpu.PSL())
 	psl = (psl &^ 0x0000FFFF) | (maskWord & 0x0000FFFF)
-	e.cpu.SetPSL(vax.PSL(psl))
+	e.cpu.SetPSL(registers.PSL(psl))
 
-	e.cpu.SetGPR(vax.AP, ap)
-	e.cpu.SetGPR(vax.FP, fp)
-	e.cpu.SetGPR(vax.PC, pc)
-	e.cpu.SetGPR(vax.SP, sp)
+	e.cpu.SetGPR(registers.AP, ap)
+	e.cpu.SetGPR(registers.FP, fp)
+	e.cpu.SetGPR(registers.PC, pc)
+	e.cpu.SetGPR(registers.SP, sp)
 
 	if fp == SentinelReturn && pc == SentinelReturn {
 		return ErrConsoleCallReturned
@@ -268,17 +268,17 @@ var ErrConsoleCallReturned = vmserrors.New(vmserrors.VAX_CALLRET)
 // 13's own call site (RUN's IMAGE$INIT driver) always passes none.
 func (e *Engine) CallEntry(entry uint32, args ...uint32) error {
 	for i := len(args) - 1; i >= 0; i-- {
-		sp := e.cpu.GPR(vax.SP) - 4
-		e.cpu.SetGPR(vax.SP, sp)
+		sp := e.cpu.GPR(registers.SP) - 4
+		e.cpu.SetGPR(registers.SP, sp)
 
 		if err := e.mem.StoreLongword(e.cpu, sp, args[i]); err != nil {
 			return err
 		}
 	}
 
-	sp := e.cpu.GPR(vax.SP) - 4
+	sp := e.cpu.GPR(registers.SP) - 4
 
-	e.cpu.SetGPR(vax.SP, sp)
+	e.cpu.SetGPR(registers.SP, sp)
 
 	if err := e.mem.StoreLongword(e.cpu, sp, uint32(len(args))); err != nil {
 		return err
@@ -286,8 +286,8 @@ func (e *Engine) CallEntry(entry uint32, args ...uint32) error {
 
 	newAP := sp
 
-	savedSP := e.cpu.GPR(vax.SP)
-	e.cpu.SetGPR(vax.SP, savedSP&0xFFFFFFFC)
+	savedSP := e.cpu.GPR(registers.SP)
+	e.cpu.SetGPR(registers.SP, savedSP&0xFFFFFFFC)
 
 	return e.buildCallFrame(newAP, entry, savedSP, SentinelReturn, SentinelReturn, true)
 }
@@ -295,7 +295,7 @@ func (e *Engine) CallEntry(entry uint32, args ...uint32) error {
 // emulRei is REI: return from exception or interrupt, restoring the mode the
 // machine was in before the exception/interrupt was taken.
 func emulRei(e *Engine, d *Decoded) error {
-	sp := e.cpu.GPR(vax.SP)
+	sp := e.cpu.GPR(registers.SP)
 
 	newPC, err := e.mem.LoadLongword(e.cpu, sp)
 	if err != nil {
@@ -313,21 +313,21 @@ func emulRei(e *Engine, d *Decoded) error {
 
 	oldPSL := e.cpu.PSL()
 	if oldPSL.IS() {
-		e.cpu.SetPR(vax.ISP, sp)
+		e.cpu.SetPR(registers.ISP, sp)
 	} else {
-		e.cpu.SetPR(vax.PrivReg(oldPSL.CurMod()), sp)
+		e.cpu.SetPR(registers.PrivReg(oldPSL.CurMod()), sp)
 	}
 
-	e.cpu.SetPSL(vax.PSL(newPSL))
-	e.cpu.SetPR(vax.IPL, e.cpu.PSL().IPL())
+	e.cpu.SetPSL(registers.PSL(newPSL))
+	e.cpu.SetPR(registers.IPL, e.cpu.PSL().IPL())
 
-	e.cpu.SetGPR(vax.SP, e.cpu.PR(vax.PrivReg(e.cpu.PSL().CurMod())))
-	e.cpu.SetGPR(vax.PC, newPC)
+	e.cpu.SetGPR(registers.SP, e.cpu.PR(registers.PrivReg(e.cpu.PSL().CurMod())))
+	e.cpu.SetGPR(registers.PC, newPC)
 
 	if newMode := e.cpu.PSL().CurMod(); oldPSL.CurMod() != newMode {
 		e.mem.InvalidateProtection()
 
-		if e.cpu.DebugEnabled(vax.DebugCHM) {
+		if e.cpu.DebugEnabled(registers.DebugCHM) {
 			fmt.Fprintf(e.cpu.DebugWriter(), "DEBUG(CHM): CHANGE MODE FROM %s TO %s AT %08X\n",
 				accessModeNames[oldPSL.CurMod()], accessModeNames[newMode], e.instructionPC)
 		}

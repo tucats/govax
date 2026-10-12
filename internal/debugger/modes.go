@@ -5,7 +5,7 @@ import (
 	"strings"
 
 	"github.com/tucats/govax/internal/machine"
-	"github.com/tucats/govax/internal/vax"
+	"github.com/tucats/govax/internal/registers"
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
@@ -79,7 +79,7 @@ func unavailable(d *Debugger, value string) error {
 
 // accessMode returns an apply function that switches the CPU to a mode
 // (govax's SET MODE KERNEL and the like).
-func accessMode(mode vax.AccessMode, interruptStack bool) func(*Debugger, string) error {
+func accessMode(mode registers.AccessMode, interruptStack bool) func(*Debugger, string) error {
 	return func(d *Debugger, value string) error {
 		if value != "" {
 			return vmserrors.New(vmserrors.DBG_SYNTAX, "="+value)
@@ -124,11 +124,11 @@ var modeKeywords = []modeKeyword{
 	{"NOSEPARATE", unavailable},
 
 	// govax's access modes.
-	{"KERNEL", accessMode(vax.Kernel, false)},
-	{"EXECUTIVE", accessMode(vax.Executive, false)},
-	{"SUPERVISOR", accessMode(vax.Supervisor, false)},
-	{"USER", accessMode(vax.User, false)},
-	{"ISP", accessMode(vax.Kernel, true)},
+	{"KERNEL", accessMode(registers.Kernel, false)},
+	{"EXECUTIVE", accessMode(registers.Executive, false)},
+	{"SUPERVISOR", accessMode(registers.Supervisor, false)},
+	{"USER", accessMode(registers.User, false)},
+	{"ISP", accessMode(registers.Kernel, true)},
 }
 
 // setOperands is SET MODE OPERANDS[=FULL|BRIEF].

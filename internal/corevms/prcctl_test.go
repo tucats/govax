@@ -4,7 +4,7 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/tucats/govax/internal/vax"
+	"github.com/tucats/govax/internal/registers"
 )
 
 func TestSetprn(t *testing.T) {
@@ -78,7 +78,7 @@ func TestForcex(t *testing.T) {
 	wantR0(t, callLNM(t, env, serviceSysForcex, 0, 0, 0x2C), ssNormal)
 
 	q := env.Process.ast.queue
-	if len(q) != 1 || q[0].routine != exitEntryAddr || q[0].param != 0x2C || q[0].mode != uint32(vax.User) {
+	if len(q) != 1 || q[0].routine != exitEntryAddr || q[0].param != 0x2C || q[0].mode != uint32(registers.User) {
 		t.Fatalf("queued %+v; want a user-mode AST to SYS$EXIT with parameter 0x2C", q)
 	}
 
@@ -96,7 +96,7 @@ func TestDelprc(t *testing.T) {
 	env, _ := fixture()
 	a := newArena(t, env)
 
-	setMode(env, vax.User, vax.User, 0x8000)
+	setMode(env, registers.User, registers.User, 0x8000)
 	wantR0(t, callLNM(t, env, serviceSysDclexh, a.alloc(16)+0), ssNormal)
 
 	// The image ends, with no exit handler called.
@@ -105,7 +105,7 @@ func TestDelprc(t *testing.T) {
 		t.Fatalf("$DELPRC = %#x, %v; want SS$_NORMAL, ErrExit", r0, err)
 	}
 
-	if env.ExitHandlers(vax.User) != 0 {
+	if env.ExitHandlers(registers.User) != 0 {
 		t.Error("an exit handler survived $DELPRC")
 	}
 

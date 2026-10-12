@@ -3,7 +3,7 @@ package cpu
 import (
 	"time"
 
-	"github.com/tucats/govax/internal/vax"
+	"github.com/tucats/govax/internal/registers"
 	"github.com/tucats/govax/internal/vmsdef"
 )
 
@@ -64,7 +64,7 @@ const todrUnit = 10 * time.Millisecond
 // does in quantum mode. Ticks missed between looks aren't made up: one tick
 // per look at most, as before this was batched.
 func (e *Engine) pollHostClock() {
-	if e.cpu.PR(vax.ICCS)&iccsRun == 0 && len(e.iqueue) == 0 {
+	if e.cpu.PR(registers.ICCS)&iccsRun == 0 && len(e.iqueue) == 0 {
 		return
 	}
 
@@ -116,8 +116,8 @@ func (e *Engine) SetTODR(v uint32) {
 // would see it, for callers outside this package (the console's SHOW
 // commands). Most registers are simply stored in the CPU's register file
 // and read from there; TODR is computed when it's read (see TODR).
-func (e *Engine) ReadPR(reg vax.PrivReg) uint32 {
-	if reg == vax.TODR {
+func (e *Engine) ReadPR(reg registers.PrivReg) uint32 {
+	if reg == registers.TODR {
 		return e.TODR()
 	}
 

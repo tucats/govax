@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/tucats/govax/internal/vax"
+	"github.com/tucats/govax/internal/registers"
 )
 
 // limitsEngine returns an Engine running a genuine infinite loop (NOP;
@@ -15,7 +15,7 @@ func limitsEngine(t *testing.T) *Engine {
 	t.Helper()
 
 	e := newEngine()
-	e.cpu.SetGPR(vax.PC, base)
+	e.cpu.SetGPR(registers.PC, base)
 	putBytes(t, e.cpu, e.mem, base,
 		0x01,       // NOP
 		0x11, 0xFD, // BRB base (displacement -3: back past both the NOP and this BRB)
@@ -42,13 +42,13 @@ func TestEngineInstructionLimitStopsRunButLeavesStateIntact(t *testing.T) {
 
 	// Refusing the 4th instruction must not have changed anything -- calling
 	// Step again keeps refusing, not somehow recovering or corrupting PC.
-	pc := e.cpu.GPR(vax.PC)
+	pc := e.cpu.GPR(registers.PC)
 
 	if err := e.Step(); !errors.Is(err, ErrInstructionLimitExceeded) {
 		t.Fatalf("Step 5 = %v, want ErrInstructionLimitExceeded again", err)
 	}
 
-	if got := e.cpu.GPR(vax.PC); got != pc {
+	if got := e.cpu.GPR(registers.PC); got != pc {
 		t.Errorf("PC changed from %#x to %#x across a refused Step", pc, got)
 	}
 }
@@ -149,13 +149,13 @@ func TestEngineAttentionStopsRunButLeavesStateIntact(t *testing.T) {
 	// Refusing the next instruction must not have changed anything --
 	// calling Step again keeps refusing, matching the instruction-limit
 	// case above, not somehow recovering or corrupting PC.
-	pc := e.cpu.GPR(vax.PC)
+	pc := e.cpu.GPR(registers.PC)
 
 	if err := e.Step(); !errors.Is(err, ErrAttention) {
 		t.Fatalf("second Step = %v, want ErrAttention again", err)
 	}
 
-	if got := e.cpu.GPR(vax.PC); got != pc {
+	if got := e.cpu.GPR(registers.PC); got != pc {
 		t.Errorf("PC changed from %#x to %#x across a refused Step", pc, got)
 	}
 }

@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/tucats/govax/internal/vax"
+	"github.com/tucats/govax/internal/registers"
 	"github.com/tucats/govax/internal/vm"
 	"github.com/tucats/govax/internal/vmserrors"
 )
@@ -25,12 +25,12 @@ const (
 )
 
 // registerNames R0-R15 plus the AP/FP/SP/PC aliases.
-var registerNames = map[string]vax.Reg{
-	"R0": vax.R0, "R1": vax.R1, "R2": vax.R2, "R3": vax.R3,
-	"R4": vax.R4, "R5": vax.R5, "R6": vax.R6, "R7": vax.R7,
-	"R8": vax.R8, "R9": vax.R9, "R10": vax.R10, "R11": vax.R11,
-	"R12": vax.R12, "R13": vax.R13, "R14": vax.R14, "R15": vax.R15,
-	"AP": vax.AP, "FP": vax.FP, "SP": vax.SP, "PC": vax.PC,
+var registerNames = map[string]registers.Reg{
+	"R0": registers.R0, "R1": registers.R1, "R2": registers.R2, "R3": registers.R3,
+	"R4": registers.R4, "R5": registers.R5, "R6": registers.R6, "R7": registers.R7,
+	"R8": registers.R8, "R9": registers.R9, "R10": registers.R10, "R11": registers.R11,
+	"R12": registers.R12, "R13": registers.R13, "R14": registers.R14, "R15": registers.R15,
+	"AP": registers.AP, "FP": registers.FP, "SP": registers.SP, "PC": registers.PC,
 }
 
 func sizeBytes(sz ExamSize) uint32 {

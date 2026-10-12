@@ -11,8 +11,8 @@ import (
 	"github.com/tucats/govax/internal/corevms"
 	"github.com/tucats/govax/internal/cpu"
 	"github.com/tucats/govax/internal/lnm"
+	"github.com/tucats/govax/internal/registers"
 	"github.com/tucats/govax/internal/symtab"
-	"github.com/tucats/govax/internal/vax"
 	"github.com/tucats/govax/internal/vm"
 	"github.com/tucats/govax/internal/vmserrors"
 )
@@ -39,13 +39,13 @@ func (m *Machine) ShowRegisters() error {
 func (m *Machine) dumpRegisters() {
 	m.Printf("\n\n    Registers:\n\n")
 	m.Printf("    R0:  %08X      R4:  %08X     R8:  %08X     AP:  %08X\n",
-		m.CPU.GPR(vax.R0), m.CPU.GPR(vax.R4), m.CPU.GPR(vax.R8), m.CPU.GPR(vax.AP))
+		m.CPU.GPR(registers.R0), m.CPU.GPR(registers.R4), m.CPU.GPR(registers.R8), m.CPU.GPR(registers.AP))
 	m.Printf("    R1:  %08X      R5:  %08X     R9:  %08X     FP:  %08X\n",
-		m.CPU.GPR(vax.R1), m.CPU.GPR(vax.R5), m.CPU.GPR(vax.R9), m.CPU.GPR(vax.FP))
+		m.CPU.GPR(registers.R1), m.CPU.GPR(registers.R5), m.CPU.GPR(registers.R9), m.CPU.GPR(registers.FP))
 	m.Printf("    R2:  %08X      R6:  %08X     R10: %08X     SP:  %08X\n",
-		m.CPU.GPR(vax.R2), m.CPU.GPR(vax.R6), m.CPU.GPR(vax.R10), m.CPU.GPR(vax.SP))
+		m.CPU.GPR(registers.R2), m.CPU.GPR(registers.R6), m.CPU.GPR(registers.R10), m.CPU.GPR(registers.SP))
 	m.Printf("    R3:  %08X      R7:  %08X     R11: %08X     PC:  %08X\n\n",
-		m.CPU.GPR(vax.R3), m.CPU.GPR(vax.R7), m.CPU.GPR(vax.R11), m.CPU.GPR(vax.PC))
+		m.CPU.GPR(registers.R3), m.CPU.GPR(registers.R7), m.CPU.GPR(registers.R11), m.CPU.GPR(registers.PC))
 
 	m.dumpPSL()
 }
@@ -88,7 +88,7 @@ func (m *Machine) ShowMemory() error {
 		pages, pages, size-1)
 
 	state := disabledState
-	if m.CPU.PR(vax.MAPEN) != 0 {
+	if m.CPU.PR(registers.MAPEN) != 0 {
 		state = enabledState
 	}
 
@@ -105,8 +105,8 @@ func (m *Machine) ShowMemory() error {
 	mapped := m.Mem.MappedPages()
 	m.Printf("    There are %d physical pages mapped, %d free.\n\n", mapped, int(pages)-mapped)
 
-	bases := [3]uint32{m.CPU.PR(vax.P0BR), m.CPU.PR(vax.P1BR), m.CPU.PR(vax.SBR)}
-	lens := [3]uint32{m.CPU.PR(vax.P0LR), m.CPU.PR(vax.P1LR), m.CPU.PR(vax.SLR)}
+	bases := [3]uint32{m.CPU.PR(registers.P0BR), m.CPU.PR(registers.P1BR), m.CPU.PR(registers.SBR)}
+	lens := [3]uint32{m.CPU.PR(registers.P0LR), m.CPU.PR(registers.P1LR), m.CPU.PR(registers.SLR)}
 
 	for n, r := range m.Regions {
 		plural := "s"
@@ -279,7 +279,7 @@ func (k StackKind) String() string {
 // saved into the matching privileged register the last time that mode was
 // left — the same value a real mode switch would load back into SP. See
 // internal/cpu/handlefault.go/call.go's own mode-transition code (e.g.
-// handlefault.go's `SetPR(vax.PrivReg(curMod), GPR(SP))` before a fault
+// handlefault.go's `SetPR(registers.PrivReg(curMod), GPR(SP))` before a fault
 // switches to a new mode) for where that save happens; this only reads
 // the result.
 func (m *Machine) stackPointerFor(kind StackKind) uint32 {
@@ -287,30 +287,30 @@ func (m *Machine) stackPointerFor(kind StackKind) uint32 {
 
 	if kind == StackISP {
 		if psl.IS() {
-			return m.CPU.GPR(vax.SP)
+			return m.CPU.GPR(registers.SP)
 		}
 
-		return m.CPU.PR(vax.ISP)
+		return m.CPU.PR(registers.ISP)
 	}
 
 	var (
-		mode vax.AccessMode
-		reg  vax.PrivReg
+		mode registers.AccessMode
+		reg  registers.PrivReg
 	)
 
 	switch kind {
 	case StackESP:
-		mode, reg = 1, vax.ESP
+		mode, reg = 1, registers.ESP
 	case StackSSP:
-		mode, reg = 2, vax.SSP
+		mode, reg = 2, registers.SSP
 	case StackUSP:
-		mode, reg = 3, vax.USP
+		mode, reg = 3, registers.USP
 	default:
-		mode, reg = 0, vax.KSP
+		mode, reg = 0, registers.KSP
 	}
 
 	if !psl.IS() && psl.CurMod() == mode {
-		return m.CPU.GPR(vax.SP)
+		return m.CPU.GPR(registers.SP)
 	}
 
 	return m.CPU.PR(reg)
@@ -332,7 +332,7 @@ func (m *Machine) ShowStack(kind StackKind, current bool, count uint32, all bool
 	)
 
 	if current {
-		sp = m.CPU.GPR(vax.SP)
+		sp = m.CPU.GPR(registers.SP)
 
 		modeIdx := int(psl.CurMod())
 		if psl.IS() {
@@ -351,7 +351,7 @@ func (m *Machine) ShowStack(kind StackKind, current bool, count uint32, all bool
 		count = 1
 	}
 
-	mapen := m.CPU.PR(vax.MAPEN)
+	mapen := m.CPU.PR(registers.MAPEN)
 
 	for n := uint32(0); all || n < count*4; n += 4 {
 		addr := sp + n
@@ -384,16 +384,16 @@ func (m *Machine) ShowStack(kind StackKind, current bool, count uint32, all bool
 // register block.
 var privRegDisplay = []struct {
 	name string
-	reg  vax.PrivReg
+	reg  registers.PrivReg
 }{
-	{"P0BR", vax.P0BR}, {"P0LR", vax.P0LR}, {"P1BR", vax.P1BR}, {"P1LR", vax.P1LR},
-	{"SBR", vax.SBR}, {"SLR", vax.SLR},
-	{"PCBB", vax.PCBB}, {"SCBB", vax.SCBB}, {"IPL", vax.IPL}, {"ASTLVL", vax.ASTLVL},
-	{"SIRR", vax.SIRR}, {"SISR", vax.SISR},
-	{"ICCS", vax.ICCS}, {"NICR", vax.NICR}, {"ICR", vax.ICR}, {"TODR", vax.TODR},
-	{"RXCS", vax.RXCS}, {"RXDB", vax.RXDB}, {"TXCS", vax.TXCS}, {"TXDB", vax.TXDB}, {"TBDR", vax.TBDR},
-	{"MAPEN", vax.MAPEN}, {"TBIA", vax.TBIA}, {"TBIS", vax.TBIS},
-	{"PMR", vax.PMR}, {"SID", vax.SID}, {"TBCHK", vax.TBCHK},
+	{"P0BR", registers.P0BR}, {"P0LR", registers.P0LR}, {"P1BR", registers.P1BR}, {"P1LR", registers.P1LR},
+	{"SBR", registers.SBR}, {"SLR", registers.SLR},
+	{"PCBB", registers.PCBB}, {"SCBB", registers.SCBB}, {"IPL", registers.IPL}, {"ASTLVL", registers.ASTLVL},
+	{"SIRR", registers.SIRR}, {"SISR", registers.SISR},
+	{"ICCS", registers.ICCS}, {"NICR", registers.NICR}, {"ICR", registers.ICR}, {"TODR", registers.TODR},
+	{"RXCS", registers.RXCS}, {"RXDB", registers.RXDB}, {"TXCS", registers.TXCS}, {"TXDB", registers.TXDB}, {"TBDR", registers.TBDR},
+	{"MAPEN", registers.MAPEN}, {"TBIA", registers.TBIA}, {"TBIS", registers.TBIS},
+	{"PMR", registers.PMR}, {"SID", registers.SID}, {"TBCHK", registers.TBCHK},
 }
 
 // ShowCPU prints the registers/PSL, mode stack pointers, and privileged
@@ -408,8 +408,8 @@ func (m *Machine) ShowCPU() error {
 
 	m.Printf("\n    Stack pointers:\n\n")
 	m.Printf("    USP: %08X   SSP: %08X   ESP: %08X   KSP: %08X\n    ISP: %08X\n\n",
-		m.CPU.PR(vax.USP), m.CPU.PR(vax.SSP), m.CPU.PR(vax.ESP), m.CPU.PR(vax.KSP),
-		m.CPU.PR(vax.ISP))
+		m.CPU.PR(registers.USP), m.CPU.PR(registers.SSP), m.CPU.PR(registers.ESP), m.CPU.PR(registers.KSP),
+		m.CPU.PR(registers.ISP))
 
 	m.Printf("    Privileged registers:\n\n")
 
@@ -663,7 +663,7 @@ func (m *Machine) ShowPage(addrExpr string, write bool) error {
 		return err
 	}
 
-	if m.CPU.PR(vax.MAPEN) == 0 {
+	if m.CPU.PR(registers.MAPEN) == 0 {
 		m.Printf("Virtual memory is disabled.\n")
 
 		return nil
@@ -795,7 +795,7 @@ func (m *Machine) showSCB(all bool) error {
 		return err
 	}
 
-	scbb := m.CPU.PR(vax.SCBB)
+	scbb := m.CPU.PR(registers.SCBB)
 	if scbb == 0 {
 		m.Printf("No SCB established (SCBB=0)\n")
 
@@ -804,10 +804,10 @@ func (m *Machine) showSCB(all bool) error {
 
 	m.Printf("SYSTEM CONTROL BLOCK\n    SCBB register = %08X\n", scbb)
 
-	savedMapen := m.CPU.PR(vax.MAPEN)
-	m.CPU.SetPR(vax.MAPEN, 0)
+	savedMapen := m.CPU.PR(registers.MAPEN)
+	m.CPU.SetPR(registers.MAPEN, 0)
 
-	defer m.CPU.SetPR(vax.MAPEN, savedMapen)
+	defer m.CPU.SetPR(registers.MAPEN, savedMapen)
 
 	count := 0
 
@@ -909,8 +909,8 @@ func (m *Machine) ShowCalls(countExpr string, symbolic bool) error {
 		}
 	}
 
-	fp := m.CPU.GPR(vax.FP)
-	ap := m.CPU.GPR(vax.AP)
+	fp := m.CPU.GPR(registers.FP)
+	ap := m.CPU.GPR(registers.AP)
 
 	if fp == 0 || ap == 0 {
 		return vmserrors.New(vmserrors.CLI_NOFRAMES)
@@ -1255,7 +1255,7 @@ func (m *Machine) ShowClock() error {
 	resultingTime := baseTime.Add(duration)
 	todr := resultingTime.Format("Jan-02 15:04:05")
 
-	running := m.CPU.PR(vax.ICCS)&1 != 0
+	running := m.CPU.PR(registers.ICCS)&1 != 0
 	runWord := "not "
 
 	if running {
@@ -1269,8 +1269,8 @@ func (m *Machine) ShowClock() error {
 
 	m.Printf("   CPU CLOCK STATES:\n")
 	m.Printf("      HARDWARE CLOCK=%s, clock is currently %srunning\n", hwClock, runWord)
-	m.Printf("      ICR  = %08X (%4d)  [Current clock value]\n", m.CPU.PR(vax.ICR), m.CPU.PR(vax.ICR))
-	m.Printf("      NICR = %08X (%4d)  [Reload  clock value]\n", m.CPU.PR(vax.NICR), m.CPU.PR(vax.NICR))
+	m.Printf("      ICR  = %08X (%4d)  [Current clock value]\n", m.CPU.PR(registers.ICR), m.CPU.PR(registers.ICR))
+	m.Printf("      NICR = %08X (%4d)  [Reload  clock value]\n", m.CPU.PR(registers.NICR), m.CPU.PR(registers.NICR))
 	m.Printf("      TODR = %08X (%s)\n", ticks, strings.ToUpper(todr))
 
 	// If we are using the quantum clock mechanism, report on that now.
@@ -1357,7 +1357,7 @@ func (m *Machine) ShowTB() error {
 		stcTries, stcHits, stcTries-stcHits, ratioPercent(stcTries, stcHits))
 
 	enabled := enabledState
-	if m.CPU.PR(vax.TBDR) != 0 {
+	if m.CPU.PR(registers.TBDR) != 0 {
 		enabled = disabledState
 	}
 
@@ -1586,33 +1586,33 @@ func (m *Machine) showInstructionsDetail(table *cpu.Table, opmatch int32) error 
 
 // debugShowEntry is one row of ShowDebug's display.
 type debugShowEntry struct {
-	flag vax.DebugFlags
+	flag registers.DebugFlags
 	name string
 	desc string
 }
 
 var debugShowEntries = []debugShowEntry{
-	{vax.DebugCHM, "CHM", "Debug change-mode operations"},
-	{vax.DebugExpand, "COMMAND", "Display command line expansions"},
-	{vax.DebugDCL, "DCL", "Debug DCL parsing"},
-	{vax.DebugNative, "DEBUG", "Invoke native debugger"},
-	{vax.DebugDevices, "DEVICES", "Debug device operations"},
-	{vax.DebugExceptions, "EXCEPTIONS", "Debug exception handling"},
-	{vax.DebugFullDisasm, "FULLDISASM", "Display operand values on disasm"},
-	{vax.DebugImages, "IMAGES", "Display image info on RUN command"},
-	{vax.DebugInterrupts, "INTERRUPTS", "Debug interrupt handling"},
-	{vax.DebugKeyboard, "KEYBOARD", "Debug console keyboard input"},
-	{vax.DebugLibinit, "LIBINIT", "Invoke LIB$INITIALIZE for images"},
-	{vax.DebugLogicals, "LOGICALS", "Debug logical name operations"},
-	{vax.DebugProcess, "PROCESSES", "Debug process operations"},
-	{vax.DebugRegisters, "REGISTERS", "Display changed registers on STEP"},
-	{vax.DebugRMS, "RMS", "Debug RMS operations"},
-	{vax.DebugServices, "SERVICES", "Debug P1 system service calls"},
-	{vax.DebugSymbols, "SYMBOLS", "Debug symbol table handling"},
-	{vax.DebugTB, "TB", "Debug translation buffer caching"},
-	{vax.DebugUserHalt, "USERHALT", "HALT in user mode halts CPU"},
-	{vax.DebugUserStep, "USERSTEP", "Step only affects USER mode"},
-	{vax.DebugVM, "VM", "Debug virtual memory translations"},
+	{registers.DebugCHM, "CHM", "Debug change-mode operations"},
+	{registers.DebugExpand, "COMMAND", "Display command line expansions"},
+	{registers.DebugDCL, "DCL", "Debug DCL parsing"},
+	{registers.DebugNative, "DEBUG", "Invoke native debugger"},
+	{registers.DebugDevices, "DEVICES", "Debug device operations"},
+	{registers.DebugExceptions, "EXCEPTIONS", "Debug exception handling"},
+	{registers.DebugFullDisasm, "FULLDISASM", "Display operand values on disasm"},
+	{registers.DebugImages, "IMAGES", "Display image info on RUN command"},
+	{registers.DebugInterrupts, "INTERRUPTS", "Debug interrupt handling"},
+	{registers.DebugKeyboard, "KEYBOARD", "Debug console keyboard input"},
+	{registers.DebugLibinit, "LIBINIT", "Invoke LIB$INITIALIZE for images"},
+	{registers.DebugLogicals, "LOGICALS", "Debug logical name operations"},
+	{registers.DebugProcess, "PROCESSES", "Debug process operations"},
+	{registers.DebugRegisters, "REGISTERS", "Display changed registers on STEP"},
+	{registers.DebugRMS, "RMS", "Debug RMS operations"},
+	{registers.DebugServices, "SERVICES", "Debug P1 system service calls"},
+	{registers.DebugSymbols, "SYMBOLS", "Debug symbol table handling"},
+	{registers.DebugTB, "TB", "Debug translation buffer caching"},
+	{registers.DebugUserHalt, "USERHALT", "HALT in user mode halts CPU"},
+	{registers.DebugUserStep, "USERSTEP", "Step only affects USER mode"},
+	{registers.DebugVM, "VM", "Debug virtual memory translations"},
 }
 
 // ShowDebug implements SHOW DEBUG a bit that's set prints its plain name,
@@ -1654,7 +1654,7 @@ func (m *Machine) ShowTrace() error {
 
 	if m.Trace {
 		regState := disabledState
-		if m.CPU.DebugEnabled(vax.DebugRegisters) {
+		if m.CPU.DebugEnabled(registers.DebugRegisters) {
 			regState = enabledState
 		}
 

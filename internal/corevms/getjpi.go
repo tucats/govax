@@ -3,8 +3,8 @@ package corevms
 import (
 	"fmt"
 
+	"github.com/tucats/govax/internal/registers"
 	"github.com/tucats/govax/internal/sched"
-	"github.com/tucats/govax/internal/vax"
 	"github.com/tucats/govax/internal/vmsdef"
 )
 
@@ -226,7 +226,7 @@ func serviceSysGetjpi(env *Environment, argv []uint32) (uint32, error) {
 	efn, pidadr, prcnam, itmlst, iosb := argv[0], argv[1], argv[2], argv[3], argv[4]
 	astadr, astprm := argv[5], argv[6]
 
-	if env.cpu.DebugEnabled(vax.DebugProcess) {
+	if env.cpu.DebugEnabled(registers.DebugProcess) {
 		name := ""
 
 		if prcnam != 0 {

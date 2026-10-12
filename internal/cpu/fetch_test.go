@@ -4,7 +4,7 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/tucats/govax/internal/vax"
+	"github.com/tucats/govax/internal/registers"
 	"github.com/tucats/govax/internal/vm"
 )
 
@@ -46,10 +46,10 @@ func TestDecodeAcrossPageIntoInvalidPage(t *testing.T) {
 	putBytes(t, cpu, mem, page0PA+0x1FC, 0xD0, 0x8F, 0x11, 0x22)
 	putBytes(t, cpu, mem, page1PA, 0x33, 0x44, 0x50)
 
-	cpu.SetPR(vax.SBR, sbr)
-	cpu.SetPR(vax.SLR, 2)
-	cpu.SetPR(vax.MAPEN, 1)
-	cpu.SetGPR(vax.PC, startVA)
+	cpu.SetPR(registers.SBR, sbr)
+	cpu.SetPR(registers.SLR, 2)
+	cpu.SetPR(registers.MAPEN, 1)
+	cpu.SetGPR(registers.PC, startVA)
 
 	_, err := decodeInstructionValue(cpu, mem, instructionTable)
 
@@ -60,9 +60,9 @@ func TestDecodeAcrossPageIntoInvalidPage(t *testing.T) {
 
 	// Make page 1 valid and accessible, and invalidate its translation as
 	// the operating system would (MTPR TBIS).
-	cpu.SetPR(vax.MAPEN, 0)
+	cpu.SetPR(registers.MAPEN, 0)
 	putLongword(t, cpu, mem, sbr+4, pte(page1PA))
-	cpu.SetPR(vax.MAPEN, 1)
+	cpu.SetPR(registers.MAPEN, 1)
 	mem.InvalidatePage(startVA + 4)
 
 	d, err := decodeInstructionValue(cpu, mem, instructionTable)
@@ -74,7 +74,7 @@ func TestDecodeAcrossPageIntoInvalidPage(t *testing.T) {
 		t.Errorf("immediate = %#x, want 0x44332211", d.Operands[0].Value)
 	}
 
-	if d.Operands[1].Kind != OperandRegister || d.Operands[1].Reg != vax.R0 {
+	if d.Operands[1].Kind != OperandRegister || d.Operands[1].Reg != registers.R0 {
 		t.Errorf("destination = %+v, want register R0", d.Operands[1])
 	}
 

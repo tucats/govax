@@ -6,8 +6,8 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/tucats/govax/internal/registers"
 	"github.com/tucats/govax/internal/rms"
-	"github.com/tucats/govax/internal/vax"
 )
 
 // TestDiskQIO_assembledProgram runs testdata/asm/disk_qio.asm
@@ -29,7 +29,7 @@ func TestDiskQIO_assembledProgram(t *testing.T) {
 
 	runFixture(t, c, "disk_qio.asm")
 
-	if got := c.CPU.GPR(vax.R0); got != 1 {
+	if got := c.CPU.GPR(registers.R0); got != 1 {
 		t.Fatalf("R0 = %#x, want 1 (a call or IOSB failed)", got)
 	}
 

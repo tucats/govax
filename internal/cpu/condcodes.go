@@ -1,6 +1,6 @@
 package cpu
 
-import "github.com/tucats/govax/internal/vax"
+import "github.com/tucats/govax/internal/registers"
 
 // signExtend sign-extends the low size bytes (1, 2, 4, or 8) of v -- a
 // zero-extended value as returned by Operand.Load -- to a full int64.
@@ -50,7 +50,7 @@ func minSigned(size int) int64 {
 // setNZ sets N and Z from value at the given size -- the "N <- value LSS 0;
 // Z <- value EQL 0" pattern most instructions use for their result.  It does
 // not touch V or C; callers set those per instruction.
-func setNZ(cpu *vax.CPU, value uint64, size int) {
+func setNZ(cpu *registers.CPU, value uint64, size int) {
 	psl := cpu.PSL()
 	psl.SetN(signBit(value, size))
 	psl.SetZ(isZero(value, size))
@@ -60,7 +60,7 @@ func setNZ(cpu *vax.CPU, value uint64, size int) {
 // setArithPSL sets all four condition codes from an arithmetic result and
 // its already-computed V/C -- the common "N/Z from the result, V and C as
 // the instruction defines them" shape shared by INC/DEC/ADD/SUB/ADWC/SBWC.
-func setArithPSL(cpu *vax.CPU, result uint64, v, c bool, size int) {
+func setArithPSL(cpu *registers.CPU, result uint64, v, c bool, size int) {
 	psl := cpu.PSL()
 	psl.SetN(signBit(result, size))
 	psl.SetZ(isZero(result, size))

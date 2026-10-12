@@ -7,8 +7,8 @@ import (
 	"testing"
 
 	iodev "github.com/tucats/govax/internal/io"
+	"github.com/tucats/govax/internal/registers"
 	"github.com/tucats/govax/internal/rms"
-	"github.com/tucats/govax/internal/vax"
 	"github.com/tucats/govax/internal/vmsdef"
 )
 
@@ -65,7 +65,7 @@ func diskFixture(t *testing.T, writable bool) (*Environment, *arena, uint32) {
 	defineTestDevice(env, "DUA0", iodev.DeviceClassDisk)
 	a := newArena(t, env)
 
-	return env, a, assignCall(t, env, a, "DUA0", uint32(vax.User))
+	return env, a, assignCall(t, env, a, "DUA0", uint32(registers.User))
 }
 
 // newFIB returns a FIB (and its descriptor) of size bytes, with acctl

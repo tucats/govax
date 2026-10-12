@@ -1,6 +1,6 @@
 package cpu
 
-import "github.com/tucats/govax/internal/vax"
+import "github.com/tucats/govax/internal/registers"
 
 // This is the Go port of emul_skpc.c's SKPC.
 
@@ -45,8 +45,8 @@ func emulSkpc(e *Engine, d *Decoded) error {
 		addr++
 	}
 
-	e.cpu.SetGPR(vax.R0, uint32(length))
-	e.cpu.SetGPR(vax.R1, addr)
+	e.cpu.SetGPR(registers.R0, uint32(length))
+	e.cpu.SetGPR(registers.R1, addr)
 
 	psl := e.cpu.PSL()
 	psl.SetN(false)

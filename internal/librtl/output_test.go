@@ -7,8 +7,8 @@ import (
 	"github.com/tucats/govax/internal/corevms"
 	iodev "github.com/tucats/govax/internal/io"
 	"github.com/tucats/govax/internal/lnm"
+	"github.com/tucats/govax/internal/registers"
 	"github.com/tucats/govax/internal/rms"
-	"github.com/tucats/govax/internal/vax"
 	"github.com/tucats/govax/internal/vm"
 )
 
@@ -18,7 +18,7 @@ func TestLibPutOutput(t *testing.T) {
 	out := &bytes.Buffer{}
 	logicals := lnm.NewDatabase(corevms.NominalUIC)
 
-	env, err := corevms.NewEnvironment(corevms.NewSystem(vax.New(), vm.NewMemory(1<<20), iodev.NewDeviceTable(),
+	env, err := corevms.NewEnvironment(corevms.NewSystem(registers.New(), vm.NewMemory(1<<20), iodev.NewDeviceTable(),
 		rms.NewMountTable()), logicals, bytes.NewReader(nil), out)
 	if err != nil {
 		t.Fatal(err)

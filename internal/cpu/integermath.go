@@ -1,6 +1,6 @@
 package cpu
 
-import "github.com/tucats/govax/internal/vax"
+import "github.com/tucats/govax/internal/registers"
 
 // This is the Go port of emul_integer_math.c's two handlers (the shared
 // ADD/SUB/MUL/DIV/BIS/BIC/ADWC/SBWC routine, and the separate emul_xor).
@@ -147,7 +147,7 @@ func emulDiv(e *Engine, d *Decoded) error {
 // emul_integer_math.c gets this wrong for both BIS (force-clears C) and BIC
 // (computes a meaningless arithmetic-carry value instead of leaving C
 // alone); see docs/DEVIATIONS.md.
-func setLogicalPSL(cpu *vax.CPU, result uint64, size int) {
+func setLogicalPSL(cpu *registers.CPU, result uint64, size int) {
 	psl := cpu.PSL()
 	psl.SetN(signBit(result, size))
 	psl.SetZ(isZero(result, size))

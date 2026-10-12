@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/tucats/govax/internal/vax"
+	"github.com/tucats/govax/internal/registers"
 )
 
 func TestDispatch_clearBreakpoint(t *testing.T) {
@@ -88,7 +88,7 @@ func TestExecute_stopsAtBreakpoint(t *testing.T) {
 		t.Fatalf("Execute: %v", err)
 	}
 
-	if got := c.CPU.GPR(vax.PC); got != 0x202 {
+	if got := c.CPU.GPR(registers.PC); got != 0x202 {
 		t.Errorf("PC at breakpoint = %#x, want 0x202", got)
 	}
 
@@ -109,14 +109,14 @@ func TestExecute_breakpointAtStartDoesNotStopImmediately(t *testing.T) {
 	// Should run to completion (HALT), not stop immediately at the
 	// breakpoint it started on. PC lands past both instructions (decode
 	// advances PC before a Handler, including HALT's, runs).
-	if got := c.CPU.GPR(vax.PC); got != 0x202 {
+	if got := c.CPU.GPR(registers.PC); got != 0x202 {
 		t.Errorf("PC after halt = %#x, want 0x202", got)
 	}
 }
 
 func TestStep_advancesOneInstruction(t *testing.T) {
 	c, buf := newTestConsole(t)
-	c.CPU.SetDebug(c.CPU.Debug() &^ vax.DebugUserStep)
+	c.CPU.SetDebug(c.CPU.Debug() &^ registers.DebugUserStep)
 	loadProgram(t, c, 0x200, opNop, opNop)
 
 	addr := uint32(0x200)
@@ -124,7 +124,7 @@ func TestStep_advancesOneInstruction(t *testing.T) {
 		t.Fatalf("Step: %v", err)
 	}
 
-	if got := c.CPU.GPR(vax.PC); got != 0x201 {
+	if got := c.CPU.GPR(registers.PC); got != 0x201 {
 		t.Errorf("PC after one step = %#x, want 0x201", got)
 	}
 
@@ -136,7 +136,7 @@ func TestStep_advancesOneInstruction(t *testing.T) {
 		t.Fatalf("Step: %v", err)
 	}
 
-	if got := c.CPU.GPR(vax.PC); got != 0x202 {
+	if got := c.CPU.GPR(registers.PC); got != 0x202 {
 		t.Errorf("PC after second step = %#x, want 0x202", got)
 	}
 }

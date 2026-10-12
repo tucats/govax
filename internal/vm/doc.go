@@ -13,7 +13,7 @@
 // pages of memory in and out without programs noticing.
 //
 // This package is where that translation happens. It is deliberately kept
-// separate from internal/vax (which only models CPU registers and the
+// separate from internal/registers (which only models CPU registers and the
 // processor status word) and from internal/cpu (which decodes and executes
 // instructions): vm.Memory owns the raw bytes of RAM and the logic for
 // turning a virtual address into a physical one, while everything that

@@ -4,7 +4,7 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/tucats/govax/internal/vax"
+	"github.com/tucats/govax/internal/registers"
 )
 
 // TestTranslateSTCHit exercises the one-slot sequential translation cache:
@@ -379,13 +379,13 @@ func TestTBHitChecksCurrentMode(t *testing.T) {
 	vaddr := uint32(1*pageSize) + 0x10
 	other := uint32(3*pageSize) + 0x20
 
-	setMode := func(m vax.AccessMode) {
+	setMode := func(m registers.AccessMode) {
 		psl := cpu.PSL()
 		psl.SetCurMod(m)
 		cpu.SetPSL(psl)
 	}
 
-	setMode(vax.Kernel)
+	setMode(registers.Kernel)
 
 	if _, err := mem.Translate(cpu, vaddr, AccessWrite); err != nil {
 		t.Fatalf("Translate (kernel write): %v", err)
@@ -395,7 +395,7 @@ func TestTBHitChecksCurrentMode(t *testing.T) {
 		t.Fatalf("Translate other: %v", err)
 	}
 
-	setMode(vax.User)
+	setMode(registers.User)
 
 	for _, access := range []AccessType{AccessRead, AccessWrite} {
 		_, err := mem.Translate(cpu, vaddr, access)
@@ -412,7 +412,7 @@ func TestTBHitChecksCurrentMode(t *testing.T) {
 
 		// The fault cleared the entry, as vm.c clears a slot on every
 		// fault; cache it again from kernel mode for the next round.
-		setMode(vax.Kernel)
+		setMode(registers.Kernel)
 
 		if _, err := mem.Translate(cpu, vaddr, AccessWrite); err != nil {
 			t.Fatalf("Translate (kernel write again): %v", err)
@@ -422,11 +422,11 @@ func TestTBHitChecksCurrentMode(t *testing.T) {
 			t.Fatalf("Translate other: %v", err)
 		}
 
-		setMode(vax.User)
+		setMode(registers.User)
 	}
 
 	// Back in kernel mode, the cached entry serves the kernel again.
-	setMode(vax.Kernel)
+	setMode(registers.Kernel)
 
 	_, hits, _, _ := mem.TBStats() //nolint:dogsled
 
@@ -469,7 +469,7 @@ func TestProtGrantsMatchesAllows(t *testing.T) {
 			g := protGrants[code][mode]
 
 			for _, access := range []AccessType{AccessRead, AccessWrite} {
-				want := Protection(code).allows(vax.AccessMode(mode), access)
+				want := Protection(code).allows(registers.AccessMode(mode), access)
 				if got := tbGrant(access) < g; got != want {
 					t.Errorf("code %d mode %d access %d: table says %v, allows says %v", code, mode, access, got, want)
 				}
@@ -485,16 +485,16 @@ func TestTBEntryPermits(t *testing.T) {
 	for _, tc := range []struct {
 		prot     Protection
 		modified bool
-		mode     vax.AccessMode
+		mode     registers.AccessMode
 		want     AccessType
 		ok       bool
 	}{
-		{ProtKW, true, vax.Kernel, AccessWrite, true},
-		{ProtKW, false, vax.Kernel, AccessRead, true},
-		{ProtKW, true, vax.User, AccessRead, false},
-		{ProtUR, true, vax.User, AccessRead, true},
-		{ProtURKW, true, vax.User, AccessRead, true},
-		{ProtURKW, true, vax.Kernel, AccessWrite, true},
+		{ProtKW, true, registers.Kernel, AccessWrite, true},
+		{ProtKW, false, registers.Kernel, AccessRead, true},
+		{ProtKW, true, registers.User, AccessRead, false},
+		{ProtUR, true, registers.User, AccessRead, true},
+		{ProtURKW, true, registers.User, AccessRead, true},
+		{ProtURKW, true, registers.Kernel, AccessWrite, true},
 	} {
 		got, ok := TBEntry{Prot: tc.prot, Modified: tc.modified}.Permits(tc.mode)
 		if got != tc.want || ok != tc.ok {
@@ -552,14 +552,14 @@ func TestProbeTranslateNeverHitsSTC(t *testing.T) {
 }
 
 // TestTBDRDisablesConsultationNotPopulation matches vm.c's own `if
-// (!vax.TBDR)` gate: with TBDR nonzero the TB is never consulted (no
+// (!registers.TBDR)` gate: with TBDR nonzero the TB is never consulted (no
 // try/hit increments and no early return), but a successful full walk
 // still populates the slot -- so re-enabling TBDR afterward finds it
 // already cached.
 func TestTBDRDisablesConsultationNotPopulation(t *testing.T) {
 	cpu, mem := newTranslateFixture(t, 4)
 
-	cpu.SetPR(vax.TBDR, 1) // disable TB consultation
+	cpu.SetPR(registers.TBDR, 1) // disable TB consultation
 
 	vaddr := uint32(2*pageSize) + 0x10
 
@@ -580,7 +580,7 @@ func TestTBDRDisablesConsultationNotPopulation(t *testing.T) {
 	// consultation.
 	other := uint32(3*pageSize) + 0x20
 
-	cpu.SetPR(vax.TBDR, 0) // re-enable
+	cpu.SetPR(registers.TBDR, 0) // re-enable
 
 	if _, err := mem.Translate(cpu, other, AccessRead); err != nil {
 		t.Fatalf("Translate other: %v", err)
@@ -704,7 +704,7 @@ func TestProbeTranslateChecksProbedMode(t *testing.T) {
 	}
 
 	psl := cpu.PSL()
-	psl.SetCurMod(vax.User)
+	psl.SetCurMod(registers.User)
 	cpu.SetPSL(psl)
 
 	if _, err := mem.ProbeTranslate(cpu, vaddr, AccessRead); err == nil {

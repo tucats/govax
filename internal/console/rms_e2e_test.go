@@ -4,7 +4,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/tucats/govax/internal/vax"
+	"github.com/tucats/govax/internal/registers"
 	"github.com/tucats/ods2/diskimage"
 	"github.com/tucats/ods2/volume"
 )
@@ -83,7 +83,7 @@ func TestRMSRoundTrip_assembledProgram(t *testing.T) {
 		t.Fatal("rms_roundtrip.asm did not reach a HALT/return within 100,000 steps")
 	}
 
-	if got := c.CPU.GPR(vax.R0); got != 1 {
+	if got := c.CPU.GPR(registers.R0); got != 1 {
 		t.Errorf("R0 = %d, want 1 (all three records round-tripped correctly)", got)
 	}
 }
@@ -126,7 +126,7 @@ func TestRMSRoundTrip_afterKernelAlreadyP1VectoredIsIdempotent(t *testing.T) {
 		t.Fatal("rms_roundtrip.asm did not reach a HALT/return within 100,000 steps")
 	}
 
-	if got := c.CPU.GPR(vax.R0); got != 1 {
+	if got := c.CPU.GPR(registers.R0); got != 1 {
 		t.Errorf("R0 = %d, want 1 (all three records round-tripped correctly)", got)
 	}
 }
@@ -159,7 +159,7 @@ func TestRMSRename_assembledProgram(t *testing.T) {
 		t.Fatal("rms_rename.asm did not reach a HALT/return within 100,000 steps")
 	}
 
-	if got := c.CPU.GPR(vax.R0); got != 1 {
+	if got := c.CPU.GPR(registers.R0); got != 1 {
 		t.Errorf("R0 = %d, want 1 (every rename check passed)", got)
 	}
 }

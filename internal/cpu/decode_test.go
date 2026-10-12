@@ -4,12 +4,12 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/tucats/govax/internal/vax"
+	"github.com/tucats/govax/internal/registers"
 )
 
 func TestDecodeInstructionNoOperands(t *testing.T) {
 	cpu, mem := fixture()
-	cpu.SetGPR(vax.PC, base)
+	cpu.SetGPR(registers.PC, base)
 	putBytes(t, cpu, mem, base, 0x00) // HALT
 
 	d, err := decodeInstructionValue(cpu, mem, instructionTable)
@@ -28,8 +28,8 @@ func TestDecodeInstructionNoOperands(t *testing.T) {
 
 func TestDecodeInstructionTwoOperands(t *testing.T) {
 	cpu, mem := fixture()
-	cpu.SetGPR(vax.PC, base)
-	cpu.SetGPR(vax.R1, 0x1234)
+	cpu.SetGPR(registers.PC, base)
+	cpu.SetGPR(registers.R1, 0x1234)
 	// MOVL R1,R2 : opcode 0xD0, src=Rn(1) mode 5 reg 1, dst=Rn mode 5 reg 2
 	putBytes(t, cpu, mem, base, 0xD0, 0x51, 0x52)
 
@@ -42,11 +42,11 @@ func TestDecodeInstructionTwoOperands(t *testing.T) {
 		t.Fatalf("Instruction.Name = %q, want MOVL", d.Instruction.Name)
 	}
 
-	if d.Operands[0].Kind != OperandRegister || d.Operands[0].Reg != vax.R1 {
+	if d.Operands[0].Kind != OperandRegister || d.Operands[0].Reg != registers.R1 {
 		t.Errorf("Operands[0] = %+v, want Kind=Register Reg=R1", d.Operands[0])
 	}
 
-	if d.Operands[1].Kind != OperandRegister || d.Operands[1].Reg != vax.R2 {
+	if d.Operands[1].Kind != OperandRegister || d.Operands[1].Reg != registers.R2 {
 		t.Errorf("Operands[1] = %+v, want Kind=Register Reg=R2", d.Operands[1])
 	}
 
@@ -57,7 +57,7 @@ func TestDecodeInstructionTwoOperands(t *testing.T) {
 
 func TestDecodeInstructionExtendedOpcode(t *testing.T) {
 	cpu, mem := fixture()
-	cpu.SetGPR(vax.PC, base)
+	cpu.SetGPR(registers.PC, base)
 	// BUGL #12345678 : extended opcode 0xFF,0xFD, one OP_IM longword operand
 	putBytes(t, cpu, mem, base, 0xFF, 0xFD)
 	putLongword(t, cpu, mem, base+2, 0x12345678)
@@ -86,7 +86,7 @@ func TestDecodeInstructionExtendedOpcode(t *testing.T) {
 
 func TestDecodeInstructionUndefinedExtendedOpcodeFaults(t *testing.T) {
 	cpu, mem := fixture()
-	cpu.SetGPR(vax.PC, base)
+	cpu.SetGPR(registers.PC, base)
 	putBytes(t, cpu, mem, base, 0xFD, 0x00) // 0xFD-prefixed 0x00 is undefined
 
 	_, err := decodeInstructionValue(cpu, mem, instructionTable)
@@ -112,9 +112,9 @@ func TestDecodeInstructionUndefinedExtendedOpcodeFaults(t *testing.T) {
 // starting from a real decoded MOVQ instruction, not a hand-built Operand.
 func TestDecodeInstructionQuadwordRegisterPair(t *testing.T) {
 	cpu, mem := fixture()
-	cpu.SetGPR(vax.PC, base)
-	cpu.SetGPR(vax.R2, 0xABCDEF01) // low longword of the quadword R2:R3
-	cpu.SetGPR(vax.R3, 0x12345678) // high longword
+	cpu.SetGPR(registers.PC, base)
+	cpu.SetGPR(registers.R2, 0xABCDEF01) // low longword of the quadword R2:R3
+	cpu.SetGPR(registers.R3, 0x12345678) // high longword
 	// MOVQ R2,R4 : opcode 0x7D, src mode 5 reg 2, dst mode 5 reg 4.
 	putBytes(t, cpu, mem, base, 0x7D, 0x52, 0x54)
 
@@ -144,18 +144,18 @@ func TestDecodeInstructionQuadwordRegisterPair(t *testing.T) {
 		t.Fatalf("Store: %v", err)
 	}
 
-	if cpu.GPR(vax.R4) != 0xABCDEF01 {
-		t.Errorf("R4 (low) = %#x, want 0xABCDEF01", cpu.GPR(vax.R4))
+	if cpu.GPR(registers.R4) != 0xABCDEF01 {
+		t.Errorf("R4 (low) = %#x, want 0xABCDEF01", cpu.GPR(registers.R4))
 	}
 
-	if cpu.GPR(vax.R5) != 0x12345678 {
-		t.Errorf("R5 (high) = %#x, want 0x12345678 (would be 0 under AUDIT.md's C2 bug)", cpu.GPR(vax.R5))
+	if cpu.GPR(registers.R5) != 0x12345678 {
+		t.Errorf("R5 (high) = %#x, want 0x12345678 (would be 0 under AUDIT.md's C2 bug)", cpu.GPR(registers.R5))
 	}
 }
 
 func TestDecodeInstructionOperandFaultPropagates(t *testing.T) {
 	cpu, mem := fixture()
-	cpu.SetGPR(vax.PC, base)
+	cpu.SetGPR(registers.PC, base)
 	// MOVL S^#5,S^#5 : a short literal is illegal as a write (destination)
 	// operand — decode_operand.c raises a reserved-addressing-mode fault.
 	putBytes(t, cpu, mem, base, 0xD0, 0x05, 0x05)

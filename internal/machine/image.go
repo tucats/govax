@@ -7,8 +7,8 @@ import (
 	"strings"
 
 	"github.com/tucats/govax/internal/dbgsym"
+	"github.com/tucats/govax/internal/registers"
 	"github.com/tucats/govax/internal/rms"
-	"github.com/tucats/govax/internal/vax"
 	"github.com/tucats/govax/internal/vm"
 	"github.com/tucats/govax/internal/vmserrors"
 	"github.com/tucats/govax/internal/vmsimage"
@@ -806,7 +806,7 @@ func imageProtection(isd *ISD) vm.Protection {
 // The C source never sets image page protections, so every page stayed
 // at P0's default (UW); see docs/DEVIATIONS.md.
 func (p *ImageProcess) setImageProtection(icb *ICB, protect bool) {
-	if p.m.CPU == nil || p.m.Mem == nil || p.m.CPU.PR(vax.MAPEN) == 0 {
+	if p.m.CPU == nil || p.m.Mem == nil || p.m.CPU.PR(registers.MAPEN) == 0 {
 		return
 	}
 

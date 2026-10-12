@@ -3,7 +3,7 @@ package cpu
 import (
 	"testing"
 
-	"github.com/tucats/govax/internal/vax"
+	"github.com/tucats/govax/internal/registers"
 )
 
 func TestEmulMoveFloat(t *testing.T) {
@@ -18,16 +18,16 @@ func TestEmulMoveFloat(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			cpu, mem := fixture()
 			e := NewEngine(cpu, mem)
-			setFloatReg(t, cpu, tc.size, vax.R1, -2.5)
-			dst := vax.R2
+			setFloatReg(t, cpu, tc.size, registers.R1, -2.5)
+			dst := registers.R2
 
 			if tc.size == 8 {
-				dst = vax.R3
+				dst = registers.R3
 			}
 
 			setC(cpu, true) // confirm C is left unaffected, not cleared
 
-			stepInstruction(t, e, tc.opcode, regMode(vax.R1), regMode(dst))
+			stepInstruction(t, e, tc.opcode, regMode(registers.R1), regMode(dst))
 
 			if got := getFloatReg(t, cpu, tc.size, dst); got != -2.5 {
 				t.Errorf("result = %v, want -2.5", got)
@@ -60,14 +60,14 @@ func TestEmulNegateFloat(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			cpu, mem := fixture()
 			e := NewEngine(cpu, mem)
-			setFloatReg(t, cpu, tc.size, vax.R1, tc.src)
+			setFloatReg(t, cpu, tc.size, registers.R1, tc.src)
 			
-			dst := vax.R2
+			dst := registers.R2
 			if tc.size == 8 {
-				dst = vax.R3
+				dst = registers.R3
 			}
 
-			stepInstruction(t, e, tc.opcode, regMode(vax.R1), regMode(dst))
+			stepInstruction(t, e, tc.opcode, regMode(registers.R1), regMode(dst))
 
 			if got := getFloatReg(t, cpu, tc.size, dst); got != tc.want {
 				t.Errorf("result = %v, want %v", got, tc.want)
@@ -79,9 +79,9 @@ func TestEmulNegateFloat(t *testing.T) {
 func TestEmulNegateFloatZeroSetsZ(t *testing.T) {
 	cpu, mem := fixture()
 	e := NewEngine(cpu, mem)
-	setFloatReg(t, cpu, 4, vax.R1, 0.0)
+	setFloatReg(t, cpu, 4, registers.R1, 0.0)
 
-	stepInstruction(t, e, 0x52, regMode(vax.R1), regMode(vax.R2)) // MNEGF
+	stepInstruction(t, e, 0x52, regMode(registers.R1), regMode(registers.R2)) // MNEGF
 
 	psl := cpu.PSL()
 	if !psl.Z() || psl.N() {

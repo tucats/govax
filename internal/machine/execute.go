@@ -4,7 +4,7 @@ import (
 	"errors"
 
 	"github.com/tucats/govax/internal/cpu"
-	"github.com/tucats/govax/internal/vax"
+	"github.com/tucats/govax/internal/registers"
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
@@ -37,7 +37,7 @@ func (m *Machine) Execute(startAddr *uint32) error {
 	}
 
 	if startAddr != nil {
-		m.CPU.SetGPR(vax.PC, *startAddr)
+		m.CPU.SetGPR(registers.PC, *startAddr)
 	}
 
 	m.Engine.BeginRun()
@@ -108,7 +108,7 @@ func (m *Machine) RunPlain() error {
 			return m.ReportStop(err)
 		}
 
-		finish := m.traceStep(m.CPU.GPR(vax.PC), false)
+		finish := m.traceStep(m.CPU.GPR(registers.PC), false)
 
 		if err := m.StepMachine(); err != nil {
 			return m.ReportStop(err)
@@ -190,9 +190,9 @@ func (m *Machine) ReportStop(err error) error {
 		// A HALT in a process other than process 1 is unusual enough to
 		// report whatever the verbosity, naming the process.
 		if note := m.ProcessNote(); note != "" {
-			m.Printf("%%SYSTEM-S-HALT, cpu halted at PC = %08X%s\n", m.CPU.GPR(vax.PC), note)
+			m.Printf("%%SYSTEM-S-HALT, cpu halted at PC = %08X%s\n", m.CPU.GPR(registers.PC), note)
 		} else if m.Verbose {
-			m.Printf("%%SYSTEM-S-HALT, cpu halted at PC = %08X\n", m.CPU.GPR(vax.PC))
+			m.Printf("%%SYSTEM-S-HALT, cpu halted at PC = %08X\n", m.CPU.GPR(registers.PC))
 		}
 
 		return nil
@@ -204,18 +204,18 @@ func (m *Machine) ReportStop(err error) error {
 			return nil
 		}
 
-		m.Printf("%%VAX-I-ATTENTION, execution interrupted at PC = %08X%s\n", m.CPU.GPR(vax.PC), m.ProcessNote())
+		m.Printf("%%VAX-I-ATTENTION, execution interrupted at PC = %08X%s\n", m.CPU.GPR(registers.PC), m.ProcessNote())
 
 		return nil
 
 	case errors.Is(err, cpu.ErrInstructionLimitExceeded):
-		m.Printf("%%VAX-I-INSTRLIMIT, instruction limit reached at PC = %08X%s\n", m.CPU.GPR(vax.PC), m.ProcessNote())
+		m.Printf("%%VAX-I-INSTRLIMIT, instruction limit reached at PC = %08X%s\n", m.CPU.GPR(registers.PC), m.ProcessNote())
 		m.limitStop = err // a one-shot command fails on it (RunCommandLine)
 
 		return nil
 
 	case errors.Is(err, cpu.ErrTimeLimitExceeded):
-		m.Printf("%%VAX-I-TIMELIMIT, time limit reached at PC = %08X%s\n", m.CPU.GPR(vax.PC), m.ProcessNote())
+		m.Printf("%%VAX-I-TIMELIMIT, time limit reached at PC = %08X%s\n", m.CPU.GPR(registers.PC), m.ProcessNote())
 		m.limitStop = err // a one-shot command fails on it (RunCommandLine)
 
 		return nil

@@ -4,7 +4,7 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/tucats/govax/internal/vax"
+	"github.com/tucats/govax/internal/registers"
 )
 
 // TestSmokeSumLoop is Phase 04's integration smoke test: a small hand-
@@ -35,7 +35,7 @@ func TestSmokeSumLoop(t *testing.T) {
 		0xF5, 0x51, 0xFA, // SOBGTR R1,LOOP (-6)
 		0x00, // HALT
 	)
-	cpu.SetGPR(vax.PC, base)
+	cpu.SetGPR(registers.PC, base)
 
 	err := e.Run()
 	if !errors.Is(err, ErrHalted) {
@@ -46,15 +46,15 @@ func TestSmokeSumLoop(t *testing.T) {
 		t.Error("Halted() = false, want true")
 	}
 
-	if got := cpu.GPR(vax.R0); got != 15 {
+	if got := cpu.GPR(registers.R0); got != 15 {
 		t.Errorf("R0 = %d, want 15 (5+4+3+2+1)", got)
 	}
 
-	if got := cpu.GPR(vax.R1); got != 0 {
+	if got := cpu.GPR(registers.R1); got != 0 {
 		t.Errorf("R1 = %d, want 0", got)
 	}
 	
-	if got := cpu.GPR(vax.PC); got != base+12 {
+	if got := cpu.GPR(registers.PC); got != base+12 {
 		t.Errorf("PC = %#x, want %#x (address after HALT)", got, base+12)
 	}
 }

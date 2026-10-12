@@ -3,7 +3,7 @@ package cpu
 import (
 	"time"
 
-	"github.com/tucats/govax/internal/vax"
+	"github.com/tucats/govax/internal/registers"
 )
 
 // Idling, for the scheduler (docs/PHASE-44.md, subtask 5).
@@ -41,7 +41,7 @@ func (e *Engine) IdleUntil(t uint64, limit time.Duration) bool {
 	}
 
 	if !e.hardwareClock {
-		if e.cpu.PR(vax.ICCS)&iccsRun != 0 || len(e.iqueue) > 0 {
+		if e.cpu.PR(registers.ICCS)&iccsRun != 0 || len(e.iqueue) > 0 {
 			return false
 		}
 

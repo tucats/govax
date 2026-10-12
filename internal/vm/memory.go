@@ -15,13 +15,13 @@ import (
 // writePhysLongword) never fail with a translation fault, only with
 // PhysicalAddressError if the address is simply out of bounds.
 //
-// It owns the raw storage itself (the Phase 02 open question on vm/vax.CPU
-// coupling is resolved this way: internal/vax.CPU is registers/PSL only,
-// and Memory is independent of it, taking a *vax.CPU as a parameter
+// It owns the raw storage itself (the Phase 02 open question on vm/registers.CPU
+// coupling is resolved this way: internal/registers.CPU is registers/PSL only,
+// and Memory is independent of it, taking a *registers.CPU as a parameter
 // wherever address translation needs to consult MAPEN/base-and-length
-// registers/cur_mod — see translate.go and storage.go). A *vax.CPU
+// registers/cur_mod — see translate.go and storage.go). A *registers.CPU
 // parameter, rather than a field on Memory, means this package doesn't need
-// to import (or even know about) most of internal/vax's contents beyond the
+// to import (or even know about) most of internal/registers's contents beyond the
 // handful of accessors it actually calls — a common Go pattern for keeping
 // packages loosely coupled: depend on the smallest interface/parameter you
 // actually need, not the whole object.

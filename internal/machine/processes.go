@@ -5,7 +5,7 @@ import (
 
 	"github.com/tucats/govax/internal/corevms"
 	"github.com/tucats/govax/internal/cpu"
-	"github.com/tucats/govax/internal/vax"
+	"github.com/tucats/govax/internal/registers"
 )
 
 // RunningProcess is the process the engine's hooks reach: the System's current
@@ -75,7 +75,7 @@ func (m *Machine) ShowProcessContext(env *corevms.Environment) error {
 // (0 if it has never had it).
 func (m *Machine) ProcessPC(env *corevms.Environment) uint32 {
 	if env == m.RunningProcess() {
-		return m.CPU.GPR(vax.PC)
+		return m.CPU.GPR(registers.PC)
 	}
 
 	if env.Stacks == nil || env.Stacks.PCBB == 0 {

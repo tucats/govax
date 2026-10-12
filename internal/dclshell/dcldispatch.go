@@ -6,7 +6,7 @@ import (
 	"strings"
 
 	"github.com/tucats/govax/internal/dcl"
-	"github.com/tucats/govax/internal/vax"
+	"github.com/tucats/govax/internal/registers"
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
@@ -156,7 +156,7 @@ func (c *Interpreter) dispatchParsed(line string, verbSymbol bool) error {
 
 	line = c.dclSymbols.substituteAmpersands(line, true)
 
-	if c.machine.CPU != nil && c.machine.CPU.DebugEnabled(vax.DebugDCL) {
+	if c.machine.CPU != nil && c.machine.CPU.DebugEnabled(registers.DebugDCL) {
 		fmt.Fprintf(c.machine.CPU.DebugWriter(), "DEBUG(DCL): parsing %q\n", line)
 	}
 

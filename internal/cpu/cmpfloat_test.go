@@ -3,7 +3,7 @@ package cpu
 import (
 	"testing"
 
-	"github.com/tucats/govax/internal/vax"
+	"github.com/tucats/govax/internal/registers"
 )
 
 func TestEmulCmpFloat(t *testing.T) {
@@ -25,15 +25,15 @@ func TestEmulCmpFloat(t *testing.T) {
 		t.Run(c.name, func(t *testing.T) {
 			cpu, mem := fixture()
 			e := NewEngine(cpu, mem)
-			setFloatReg(t, cpu, c.size, vax.R1, c.a)
-			r2 := vax.R2
+			setFloatReg(t, cpu, c.size, registers.R1, c.a)
+			r2 := registers.R2
 
 			if c.size == 8 {
-				r2 = vax.R3
+				r2 = registers.R3
 			}
 
 			setFloatReg(t, cpu, c.size, r2, c.b)
-			stepInstruction(t, e, c.opcode, regMode(vax.R1), regMode(r2))
+			stepInstruction(t, e, c.opcode, regMode(registers.R1), regMode(r2))
 
 			psl := cpu.PSL()
 			if psl.N() != c.wantN || psl.Z() != c.wantZ {
@@ -45,7 +45,7 @@ func TestEmulCmpFloat(t *testing.T) {
 			}
 
 			// operands unmodified
-			if got := getFloatReg(t, cpu, c.size, vax.R1); got != c.a {
+			if got := getFloatReg(t, cpu, c.size, registers.R1); got != c.a {
 				t.Errorf("src1 modified: = %v, want %v", got, c.a)
 			}
 
@@ -62,10 +62,10 @@ func TestEmulCmpFloatCUnaffectedByUnsignedNotion(t *testing.T) {
 	cpu, mem := fixture()
 	e := NewEngine(cpu, mem)
 	setC(cpu, true)
-	setFloatReg(t, cpu, 4, vax.R1, -1.0)
-	setFloatReg(t, cpu, 4, vax.R2, 1.0)
+	setFloatReg(t, cpu, 4, registers.R1, -1.0)
+	setFloatReg(t, cpu, 4, registers.R2, 1.0)
 
-	stepInstruction(t, e, 0x51, regMode(vax.R1), regMode(vax.R2)) // CMPF
+	stepInstruction(t, e, 0x51, regMode(registers.R1), regMode(registers.R2)) // CMPF
 
 	if cpu.PSL().C() {
 		t.Error("C = true, want false (CMPF always clears C)")
@@ -90,10 +90,10 @@ func TestEmulTstFloat(t *testing.T) {
 		t.Run(c.name, func(t *testing.T) {
 			cpu, mem := fixture()
 			e := NewEngine(cpu, mem)
-			setFloatReg(t, cpu, c.size, vax.R1, c.value)
+			setFloatReg(t, cpu, c.size, registers.R1, c.value)
 			setC(cpu, true) // confirm TST forces C to 0, not "unaffected"
 
-			stepInstruction(t, e, c.opcode, regMode(vax.R1))
+			stepInstruction(t, e, c.opcode, regMode(registers.R1))
 
 			psl := cpu.PSL()
 			if psl.N() != c.wantN || psl.Z() != c.wantZ {
@@ -104,7 +104,7 @@ func TestEmulTstFloat(t *testing.T) {
 				t.Errorf("V=%v C=%v, want both false", psl.V(), psl.C())
 			}
 			
-			if got := getFloatReg(t, cpu, c.size, vax.R1); got != c.value {
+			if got := getFloatReg(t, cpu, c.size, registers.R1); got != c.value {
 				t.Errorf("source modified: = %v, want %v", got, c.value)
 			}
 		})

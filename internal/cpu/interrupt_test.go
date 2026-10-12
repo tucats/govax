@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/tucats/govax/internal/vax"
+	"github.com/tucats/govax/internal/registers"
 )
 
 // interruptEngine returns a fresh Engine (via NewEngine, so it has the
@@ -15,8 +15,8 @@ func interruptEngine(t *testing.T) *Engine {
 	t.Helper()
 
 	e := newEngine()
-	e.cpu.SetGPR(vax.SP, 0x7000)
-	e.cpu.SetPR(vax.KSP, 0x7000)
+	e.cpu.SetGPR(registers.SP, 0x7000)
+	e.cpu.SetPR(registers.KSP, 0x7000)
 
 	return e
 }
@@ -25,7 +25,7 @@ func TestInterruptImmediateDeliveryWhenUnmasked(t *testing.T) {
 	e := interruptEngine(t)
 	putVector(t, e, ExcConWrite, 0x400, 0)
 	putBytes(t, e.cpu, e.mem, 0x400, 0x01) // NOP: Step delivers *and* decodes in the same call (matches vax.c's own fall-through), so the vector target needs a real, harmless instruction
-	e.cpu.SetGPR(vax.PC, 0x1000)
+	e.cpu.SetGPR(registers.PC, 0x1000)
 
 	e.Interrupt(ExcConWrite, 20, 0)
 
@@ -40,7 +40,7 @@ func TestInterruptImmediateDeliveryWhenUnmasked(t *testing.T) {
 	// decodes/executes the ISR's first instruction in the same call
 	// (matching vax.c's own fall-through) -- so by the time Step returns,
 	// PC has already advanced past that one-byte NOP.
-	if got := e.cpu.GPR(vax.PC); got != 0x401 {
+	if got := e.cpu.GPR(registers.PC); got != 0x401 {
 		t.Errorf("PC after delivery+one NOP = %#x, want 0x401", got)
 	}
 
@@ -80,7 +80,7 @@ func TestInterruptDeliverySavesCurrentPCNotStale(t *testing.T) {
 
 	putBytes(t, e.cpu, e.mem, 0x1000, 0x01)
 	putBytes(t, e.cpu, e.mem, 0x400, 0x01)
-	e.cpu.SetGPR(vax.PC, 0x1000)
+	e.cpu.SetGPR(registers.PC, 0x1000)
 
 	if err := e.Step(); err != nil { // executes the side-effecting instruction
 		t.Fatalf("Step (side-effecting instruction): %v", err)
@@ -90,11 +90,11 @@ func TestInterruptDeliverySavesCurrentPCNotStale(t *testing.T) {
 		t.Fatalf("Step (interrupt delivery): %v", err)
 	}
 
-	if got := e.cpu.GPR(vax.PC); got != 0x401 {
+	if got := e.cpu.GPR(registers.PC); got != 0x401 {
 		t.Fatalf("PC after delivery+one instruction = %#x, want 0x401", got)
 	}
 
-	savedPC, err := e.mem.LoadLongword(e.cpu, e.cpu.GPR(vax.SP))
+	savedPC, err := e.mem.LoadLongword(e.cpu, e.cpu.GPR(registers.SP))
 	if err != nil {
 		t.Fatalf("LoadLongword(saved PC): %v", err)
 	}
@@ -110,7 +110,7 @@ func TestInterruptDebugInterruptsTrace(t *testing.T) {
 	var buf bytes.Buffer
 
 	e.cpu.SetDebugWriter(&buf)
-	e.cpu.SetDebug(vax.DebugInterrupts)
+	e.cpu.SetDebug(registers.DebugInterrupts)
 
 	e.Interrupt(ExcConWrite, 20, 0) // unmasked: delivered immediately
 
@@ -160,13 +160,13 @@ func TestDeliverConsoleByteDropsAndTracesWhenAlreadyPending(t *testing.T) {
 	var buf bytes.Buffer
 
 	e.cpu.SetDebugWriter(&buf)
-	e.cpu.SetDebug(vax.DebugKeyboard)
+	e.cpu.SetDebug(registers.DebugKeyboard)
 
 	e.DeliverConsoleByte('A')
 	buf.Reset()
 	e.DeliverConsoleByte('B') // RXCS<7> still set: dropped, not overwritten
 
-	if got := e.cpu.PR(vax.RXDB); got != uint32('A') {
+	if got := e.cpu.PR(registers.RXDB); got != uint32('A') {
 		t.Errorf("RXDB = %#x, want 'A' (second byte should have been dropped)", got)
 	}
 
@@ -343,9 +343,9 @@ func TestTickIntervalClockFiresAtIPL22WhenRunAndIESet(t *testing.T) {
 	e.SetQuantum(1) // one tickQuantum call == one quantum boundary == one interval-clock tick
 	// 0xFFFFFFFF - 0xFFFFFFFB == 4: it takes exactly 4 ticks (each ICR++) to
 	// reach the 0xFFFFFFFF fire condition from this starting value.
-	e.cpu.SetPR(vax.NICR, 0xFFFFFFFB)
-	e.cpu.SetPR(vax.ICR, 0xFFFFFFFB)
-	e.cpu.SetPR(vax.ICCS, iccsRun|deviceIE)
+	e.cpu.SetPR(registers.NICR, 0xFFFFFFFB)
+	e.cpu.SetPR(registers.ICR, 0xFFFFFFFB)
+	e.cpu.SetPR(registers.ICCS, iccsRun|deviceIE)
 
 	for i := 0; i < 3; i++ {
 		e.tickQuantum()
@@ -365,17 +365,17 @@ func TestTickIntervalClockFiresAtIPL22WhenRunAndIESet(t *testing.T) {
 		t.Errorf("interruptCode/IPL = %#x/%d, want ExcInterval/22", e.interruptCode, e.interruptIPL)
 	}
 
-	if got := e.cpu.PR(vax.ICR); got != e.cpu.PR(vax.NICR) {
-		t.Errorf("ICR = %#x after firing, want reloaded from NICR (%#x)", got, e.cpu.PR(vax.NICR))
+	if got := e.cpu.PR(registers.ICR); got != e.cpu.PR(registers.NICR) {
+		t.Errorf("ICR = %#x after firing, want reloaded from NICR (%#x)", got, e.cpu.PR(registers.NICR))
 	}
 }
 
 func TestTickIntervalClockNoOpWhenNotRunning(t *testing.T) {
 	e := interruptEngine(t)
 	e.SetQuantum(1)
-	e.cpu.SetPR(vax.NICR, 0xFFFFFFFF)
-	e.cpu.SetPR(vax.ICR, 0xFFFFFFFE)
-	e.cpu.SetPR(vax.ICCS, deviceIE) // IE set, RUN clear
+	e.cpu.SetPR(registers.NICR, 0xFFFFFFFF)
+	e.cpu.SetPR(registers.ICR, 0xFFFFFFFE)
+	e.cpu.SetPR(registers.ICCS, deviceIE) // IE set, RUN clear
 
 	for i := 0; i < 10; i++ {
 		e.tickQuantum()

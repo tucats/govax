@@ -6,7 +6,7 @@ import (
 	"github.com/tucats/govax/internal/corevms"
 	"github.com/tucats/govax/internal/lnm"
 
-	"github.com/tucats/govax/internal/vax"
+	"github.com/tucats/govax/internal/registers"
 	"github.com/tucats/govax/internal/vmsdef"
 	"github.com/tucats/govax/internal/vmserrors"
 )
@@ -62,7 +62,7 @@ func (m *Machine) Run(fn string, opts RunOptions) error {
 	m.EndAbandonedImage()
 
 	savedMode := m.CPU.PSL().CurMod()
-	m.Engine.SetModeStack(vax.Kernel, false)
+	m.Engine.SetModeStack(registers.Kernel, false)
 	defer m.Engine.SetModeStack(savedMode, false) // safety net on an early-error return
 
 	m.ResetICBList()
@@ -188,7 +188,7 @@ func (p *ImageProcess) ActivateImage(fn string) (*ICB, error) {
 		return nil, vmserrors.Wrap(vmserrors.CLI_ACTIVATE, err, fn)
 	}
 
-	if c.CPU.DebugEnabled(vax.DebugImages) {
+	if c.CPU.DebugEnabled(registers.DebugImages) {
 		c.Printf("Main image is %s\n", main.Name)
 	}
 
@@ -227,11 +227,11 @@ func (m *Machine) BuildImageInitDriver(main *ICB, runInits bool) (uint32, bool, 
 
 // DefaultRunInits reports RUN's own default for whether to invoke each
 // dependency's LIB$INITIALIZE before any /INIT or /NOINIT qualifier
-// overrides it, DebugLibinit defaults on (vax.DebugDefault), so
+// overrides it, DebugLibinit defaults on (registers.DebugDefault), so
 // LIB$INITIALIZE runs by default, not only when /INIT is given explicitly.
 // See commands.go's runOptions, which applies the qualifiers.
 func (m *Machine) DefaultRunInits() bool {
-	return m.CPU != nil && m.CPU.DebugEnabled(vax.DebugLibinit)
+	return m.CPU != nil && m.CPU.DebugEnabled(registers.DebugLibinit)
 }
 
 // mainTransferAddress selects icb's own user-mode entry point, matching
@@ -304,7 +304,7 @@ func (p *ImageProcess) buildDriver(main *ICB, runInits, hibernate bool) (uint32,
 				continue
 			}
 
-			if c.CPU.DebugEnabled(vax.DebugImages) {
+			if c.CPU.DebugEnabled(registers.DebugImages) {
 				c.Printf("Preparing call to LIB$INITIALIZE entry %08X for image %s\n", initAddr, dep.Name)
 			}
 			// LIBRTL's LIB$INITIALIZE apparently wants 100 as a special
@@ -492,7 +492,7 @@ func (m *Machine) EndAbandonedImage() {
 // traceLogicals is the logical-name database's Trace hook: it writes
 // each line to the CPU's debug writer while SET DEBUG LOGICALS is on.
 func (m *Machine) traceLogicals(format string, args ...any) {
-	if m.CPU != nil && m.CPU.DebugEnabled(vax.DebugLogicals) {
+	if m.CPU != nil && m.CPU.DebugEnabled(registers.DebugLogicals) {
 		fmt.Fprintf(m.CPU.DebugWriter(), "DEBUG: LNM: "+format+"\n", args...)
 	}
 }

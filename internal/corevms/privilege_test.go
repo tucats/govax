@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	"github.com/tucats/govax/internal/lnm"
-	"github.com/tucats/govax/internal/vax"
+	"github.com/tucats/govax/internal/registers"
 )
 
 // quadAt reads the quadword at addr.
@@ -124,7 +124,7 @@ func TestSetprv_authorization(t *testing.T) {
 	p.AuthorizedPrivileges = privTMPMBX | privOPER
 	p.CurrentPrivileges, p.ProcessPrivileges = 0, 0
 
-	setMode(env, vax.User, vax.User, 0x9000)
+	setMode(env, registers.User, registers.User, 0x9000)
 
 	wantR0(t, callLNM(t, env, serviceSysSetprv, 1, quadArg(a, privTMPMBX|privCMKRNL)), ssNotAllPriv)
 
@@ -133,11 +133,11 @@ func TestSetprv_authorization(t *testing.T) {
 	}
 
 	// Executive mode may enable anything.
-	setMode(env, vax.Executive, vax.User, 0x9000)
+	setMode(env, registers.Executive, registers.User, 0x9000)
 	wantR0(t, callLNM(t, env, serviceSysSetprv, 1, quadArg(a, privCMKRNL)), ssNormal)
 
 	// So may a process authorized for SETPRV.
-	setMode(env, vax.User, vax.User, 0x9000)
+	setMode(env, registers.User, registers.User, 0x9000)
 
 	p.AuthorizedPrivileges |= privSETPRV
 
@@ -196,19 +196,19 @@ func TestPrivilegeChecks(t *testing.T) {
 	without := func(mask uint64) { p.CurrentPrivileges = allPrivileges &^ mask }
 
 	// $CMKRNL/$CMEXEC from user mode; not from executive mode.
-	setMode(env, vax.User, vax.User, 0x9000)
+	setMode(env, registers.User, registers.User, 0x9000)
 	without(privCMKRNL | privCMEXEC)
 	wantR0(t, callLNM(t, env, serviceSysCmkrnl, 0x5000, 0), ssNoPriv)
 	wantR0(t, callLNM(t, env, serviceSysCmexec, 0x5000, 0), ssNoPriv)
 
-	setMode(env, vax.Executive, vax.User, 0x9000)
+	setMode(env, registers.Executive, registers.User, 0x9000)
 
 	if _, err := serviceSysCmkrnl(env, []uint32{0x5000, 0}); err == nil {
 		t.Error("$CMKRNL from executive mode should call its routine without CMKRNL")
 	}
 
 	env.Process.cmode = nil
-	setMode(env, vax.Kernel, vax.Kernel, 0x9000)
+	setMode(env, registers.Kernel, registers.Kernel, 0x9000)
 
 	// Mailboxes.
 	without(privTMPMBX)
@@ -291,7 +291,7 @@ func TestPrivilegeChecks_logicalNames(t *testing.T) {
 	wantR0(t, crelnm("LNM$GROUP", 0), ssNormal)
 
 	// Without SYSNAM, a user-mode caller's kernel-mode name is user mode.
-	setMode(env, vax.User, vax.User, 0x9000)
+	setMode(env, registers.User, registers.User, 0x9000)
 	wantR0(t, crelnm("LNM$PROCESS", 0), ssNormal)
 
 	e, err := env.Logicals.Translate("LNM$PROCESS", "NAME", lnm.User, 0)
@@ -300,11 +300,11 @@ func TestPrivilegeChecks_logicalNames(t *testing.T) {
 	}
 
 	// With it, as given.
-	setMode(env, vax.Kernel, vax.Kernel, 0x9000)
+	setMode(env, registers.Kernel, registers.Kernel, 0x9000)
 
 	p.CurrentPrivileges = allPrivileges
 
-	setMode(env, vax.User, vax.User, 0x9000)
+	setMode(env, registers.User, registers.User, 0x9000)
 	wantR0(t, crelnm("LNM$PROCESS", 1), ssNormal) // alongside the user-mode one
 
 	if e, err := env.Logicals.Translate("LNM$PROCESS", "NAME", lnm.Executive, 0); err != nil || e.Mode != lnm.Executive {

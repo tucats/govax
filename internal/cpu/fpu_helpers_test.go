@@ -1,7 +1,7 @@
 package cpu
 
 import (
-	"github.com/tucats/govax/internal/vax"
+	"github.com/tucats/govax/internal/registers"
 	"github.com/tucats/govax/internal/vaxfloat"
 )
 
@@ -18,7 +18,7 @@ func sizeFloatFormat(size int) vaxfloat.Format {
 	return vaxfloat.F
 }
 
-func fpuStore(cpu *vax.CPU, size int, value float64) (uint64, error) {
+func fpuStore(cpu *registers.CPU, size int, value float64) (uint64, error) {
 	bits, err := vaxfloat.Pack(sizeFloatFormat(size), vaxfloat.FromFloat64(value))
 	if err != nil {
 		if err = (&Engine{cpu: cpu}).floatException(err); err != nil {

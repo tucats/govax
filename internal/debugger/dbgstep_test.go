@@ -9,7 +9,7 @@ import (
 	"github.com/tucats/govax/internal/console"
 	"github.com/tucats/govax/internal/console/consoletest"
 	"github.com/tucats/govax/internal/machine"
-	"github.com/tucats/govax/internal/vax"
+	"github.com/tucats/govax/internal/registers"
 )
 
 // stepImage loads image (testdata/dbg/vax) as RUN/STEP does, but stepping
@@ -26,7 +26,7 @@ func stepImage(t *testing.T, image string) (*console.Dispatcher, *bytes.Buffer, 
 		t.Fatalf("Assemble(kernel.asm): %v", err)
 	}
 
-	c.CPU.SetDebug(c.CPU.Debug() &^ vax.DebugUserStep)
+	c.CPU.SetDebug(c.CPU.Debug() &^ registers.DebugUserStep)
 
 	buf := c.Out.(*bytes.Buffer)
 	buf.Reset()
@@ -159,7 +159,7 @@ func TestShowCallsFault(t *testing.T) {
 		dispatchOutput(t, d, buf, "STEP")
 	}
 
-	if got := d.Console.CPU.GPR(vax.PC); got != 0x21C {
+	if got := d.Console.CPU.GPR(registers.PC); got != 0x21C {
 		t.Fatalf("PC is %08X, not the MOVL @#0 at 0000021C", got)
 	}
 

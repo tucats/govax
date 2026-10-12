@@ -5,8 +5,8 @@ import (
 	"fmt"
 
 	"github.com/tucats/govax/internal/cpu"
+	"github.com/tucats/govax/internal/registers"
 	"github.com/tucats/govax/internal/sched"
-	"github.com/tucats/govax/internal/vax"
 )
 
 // The System's scheduler (docs/PHASE-44.md). The rules of who runs next
@@ -192,7 +192,7 @@ func (sys *System) switchTo(e *cpu.Engine, cur, next *Environment) error {
 		return err
 	}
 
-	sys.cpu.SetPR(vax.PCBB, pcb)
+	sys.cpu.SetPR(registers.PCBB, pcb)
 
 	if err := e.SaveMemoryContext(); err != nil {
 		return err
@@ -202,7 +202,7 @@ func (sys *System) switchTo(e *cpu.Engine, cur, next *Environment) error {
 		return err
 	}
 
-	sys.cpu.SetPR(vax.PCBB, next.Stacks.PCBB)
+	sys.cpu.SetPR(registers.PCBB, next.Stacks.PCBB)
 
 	if err := e.LoadContext(); err != nil {
 		return fmt.Errorf("corevms: loading process %08X: %w", next.Process.PID, err)
@@ -210,9 +210,9 @@ func (sys *System) switchTo(e *cpu.Engine, cur, next *Environment) error {
 
 	sys.SetCurrent(next)
 
-	if sys.cpu.DebugEnabled(vax.DebugProcess) {
+	if sys.cpu.DebugEnabled(registers.DebugProcess) {
 		fmt.Fprintf(sys.cpu.DebugWriter(), "DEBUG(PROCESS): SWITCH %08X -> %08X, PC=%08X\n",
-			cur.Process.PID, next.Process.PID, sys.cpu.GPR(vax.PC))
+			cur.Process.PID, next.Process.PID, sys.cpu.GPR(registers.PC))
 	}
 
 	if cur.Deleted {

@@ -8,7 +8,7 @@ import (
 	"testing"
 
 	"github.com/tucats/govax/internal/cpu"
-	"github.com/tucats/govax/internal/vax"
+	"github.com/tucats/govax/internal/registers"
 )
 
 // Test helpers shared by the machine's tests: machines ready to run
@@ -79,7 +79,7 @@ func runKernelInitialize(t *testing.T, c *Machine) {
 		t.Fatal("expected kernel.asm to define EXE$INITIALIZE")
 	}
 
-	c.CPU.SetGPR(vax.PC, addr)
+	c.CPU.SetGPR(registers.PC, addr)
 	c.Engine.BeginRun()
 
 	for i := 0; i < 100_000; i++ {

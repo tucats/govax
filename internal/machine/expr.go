@@ -5,7 +5,7 @@ import (
 	"strings"
 
 	"github.com/tucats/govax/internal/asm"
-	"github.com/tucats/govax/internal/vax"
+	"github.com/tucats/govax/internal/registers"
 	"github.com/tucats/govax/internal/vm"
 	"github.com/tucats/govax/internal/vmserrors"
 )
@@ -38,7 +38,7 @@ type Evaluator struct {
 	// string pool (parseQuotedString) — nil whenever this Evaluator is
 	// used only for address/value arithmetic that never touches memory.
 	Mem *vm.Memory
-	CPU *vax.CPU
+	CPU *registers.CPU
 
 	// Load reads the longword at an address for "." and "@" (the contents
 	// of a memory operand). The console sets it to read through kernel-mode

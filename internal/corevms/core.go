@@ -3,7 +3,7 @@ package corevms
 import "github.com/tucats/govax/internal/vmsdef"
 
 import (
-	"github.com/tucats/govax/internal/vax"
+	"github.com/tucats/govax/internal/registers"
 )
 
 // serviceSysExpreg is SYS$EXPREG: expands one of the P0/P1/S0 virtual
@@ -32,7 +32,7 @@ func serviceSysExpreg(env *Environment, argv []uint32) (uint32, error) {
 	}
 
 	if region == regionP1 {
-		return env.expandP1Pages(pageCount, retAddr, vax.AccessMode(mode&3)), nil
+		return env.expandP1Pages(pageCount, retAddr, registers.AccessMode(mode&3)), nil
 	}
 
 	size := pageCount * 512
@@ -50,7 +50,7 @@ func serviceSysExpreg(env *Environment, argv []uint32) (uint32, error) {
 		}
 	}
 
-	env.cpu.SetGPR(vax.R1, start) // "expected side effect", matching sys_expreg's own comment
+	env.cpu.SetGPR(registers.R1, start) // "expected side effect", matching sys_expreg's own comment
 
 	return ssNormal, nil
 }
@@ -63,7 +63,7 @@ func serviceSysExpreg(env *Environment, argv []uint32) (uint32, error) {
 // smaller than the starting address when the control region is
 // expanded"); R1 is the starting address. SS$_VASFULL, with -1 in
 // retadr, when P1's page table can't hold them.
-func (env *Environment) expandP1Pages(pageCount, retAddr uint32, mode vax.AccessMode) uint32 {
+func (env *Environment) expandP1Pages(pageCount, retAddr uint32, mode registers.AccessMode) uint32 {
 	first, st := env.expandP1(pageCount)
 	if st != 0 {
 		_ = env.storeRetadr(retAddr, nil)
@@ -90,7 +90,7 @@ func (env *Environment) expandP1Pages(pageCount, retAddr uint32, mode vax.Access
 	}
 
 	if len(done) > 0 {
-		env.cpu.SetGPR(vax.R1, done[0]|pageMask)
+		env.cpu.SetGPR(registers.R1, done[0]|pageMask)
 	}
 
 	return status

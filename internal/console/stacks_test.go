@@ -5,7 +5,7 @@ import (
 
 	"github.com/tucats/govax/internal/corevms"
 	"github.com/tucats/govax/internal/cpu"
-	"github.com/tucats/govax/internal/vax"
+	"github.com/tucats/govax/internal/registers"
 	"github.com/tucats/govax/internal/vm"
 )
 
@@ -61,8 +61,8 @@ func TestBuildStacks(t *testing.T) {
 	}
 
 	// Executive mode may push on its stack but not past its bottom.
-	if !s0Protection(t, c, st.ESP).Allows(vax.Executive, vm.AccessWrite) ||
-		s0Protection(t, c, st.ESP-8*512).Allows(vax.Executive, vm.AccessWrite) {
+	if !s0Protection(t, c, st.ESP).Allows(registers.Executive, vm.AccessWrite) ||
+		s0Protection(t, c, st.ESP-8*512).Allows(registers.Executive, vm.AccessWrite) {
 		t.Error("the executive stack or its guard page has the wrong access")
 	}
 
@@ -101,7 +101,7 @@ func TestProcessOneStacksAndPCB(t *testing.T) {
 	c := bootedConsole(t)
 	st := c.RTL.Stacks
 
-	if st == nil || st.KSP != c.CPU.PR(vax.KSP) || st.USP != corevms.UserStackTop || st.Base != 0 || st.PCB != 0 {
+	if st == nil || st.KSP != c.CPU.PR(registers.KSP) || st.USP != corevms.UserStackTop || st.Base != 0 || st.PCB != 0 {
 		t.Fatalf("process 1's stacks %+v", st)
 	}
 
@@ -131,10 +131,10 @@ func TestInitialPCB(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	var psl vax.PSL
+	var psl registers.PSL
 
-	psl.SetCurMod(vax.User)
-	psl.SetPrvMod(vax.User)
+	psl.SetCurMod(registers.User)
+	psl.SetPrvMod(registers.User)
 
 	p := corevms.InitialPCB(space, st, 0x200, psl)
 
@@ -147,7 +147,7 @@ func TestInitialPCB(t *testing.T) {
 		t.Errorf("PCB read back %+v (%v), want %+v", back, err, p)
 	}
 
-	if p.AddressSpace() != space.AddressSpace || p.SP[vax.Kernel] != st.KSP || p.SP[vax.User] != corevms.UserStackTop || p.ASTLVL != 4 {
+	if p.AddressSpace() != space.AddressSpace || p.SP[registers.Kernel] != st.KSP || p.SP[registers.User] != corevms.UserStackTop || p.ASTLVL != 4 {
 		t.Errorf("initial PCB %+v", p)
 	}
 }

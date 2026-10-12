@@ -5,7 +5,7 @@ import (
 	"testing"
 	"unsafe"
 
-	"github.com/tucats/govax/internal/vax"
+	"github.com/tucats/govax/internal/registers"
 )
 
 func TestOperandLoadImmediate(t *testing.T) {
@@ -33,7 +33,7 @@ func TestOperandStoreImmediateFails(t *testing.T) {
 
 func TestOperandRegisterRoundTripLongword(t *testing.T) {
 	cpu, mem := fixture()
-	op := Operand{Kind: OperandRegister, Reg: vax.R3, Size: 4}
+	op := Operand{Kind: OperandRegister, Reg: registers.R3, Size: 4}
 
 	if err := op.Store(cpu, mem, 0x11223344); err != nil {
 		t.Fatalf("Store: %v", err)
@@ -51,14 +51,14 @@ func TestOperandRegisterRoundTripLongword(t *testing.T) {
 
 func TestOperandRegisterBytePreservesUpperBits(t *testing.T) {
 	cpu, mem := fixture()
-	cpu.SetGPR(vax.R2, 0xAABBCCDD)
-	op := Operand{Kind: OperandRegister, Reg: vax.R2, Size: 1}
+	cpu.SetGPR(registers.R2, 0xAABBCCDD)
+	op := Operand{Kind: OperandRegister, Reg: registers.R2, Size: 1}
 
 	if err := op.Store(cpu, mem, 0xFF); err != nil {
 		t.Fatalf("Store: %v", err)
 	}
 
-	if got := cpu.GPR(vax.R2); got != 0xAABBCCFF {
+	if got := cpu.GPR(registers.R2); got != 0xAABBCCFF {
 		t.Errorf("R2 = %#x, want 0xAABBCCFF (only the low byte replaced)", got)
 	}
 
@@ -74,31 +74,31 @@ func TestOperandRegisterBytePreservesUpperBits(t *testing.T) {
 
 func TestOperandRegisterWordPreservesUpperBits(t *testing.T) {
 	cpu, mem := fixture()
-	cpu.SetGPR(vax.R2, 0xAABBCCDD)
-	op := Operand{Kind: OperandRegister, Reg: vax.R2, Size: 2}
+	cpu.SetGPR(registers.R2, 0xAABBCCDD)
+	op := Operand{Kind: OperandRegister, Reg: registers.R2, Size: 2}
 
 	if err := op.Store(cpu, mem, 0x1234); err != nil {
 		t.Fatalf("Store: %v", err)
 	}
 
-	if got := cpu.GPR(vax.R2); got != 0xAABB1234 {
+	if got := cpu.GPR(registers.R2); got != 0xAABB1234 {
 		t.Errorf("R2 = %#x, want 0xAABB1234", got)
 	}
 }
 
 func TestOperandRegisterQuadwordPair(t *testing.T) {
 	cpu, mem := fixture()
-	op := Operand{Kind: OperandRegister, Reg: vax.R2, Size: 8}
+	op := Operand{Kind: OperandRegister, Reg: registers.R2, Size: 8}
 
 	if err := op.Store(cpu, mem, 0x1122334455667788); err != nil {
 		t.Fatalf("Store: %v", err)
 	}
 
-	if got := cpu.GPR(vax.R2); got != 0x55667788 {
+	if got := cpu.GPR(registers.R2); got != 0x55667788 {
 		t.Errorf("R2 (low longword) = %#x, want 0x55667788", got)
 	}
 
-	if got := cpu.GPR(vax.R3); got != 0x11223344 {
+	if got := cpu.GPR(registers.R3); got != 0x11223344 {
 		t.Errorf("R3 (high longword) = %#x, want 0x11223344", got)
 	}
 

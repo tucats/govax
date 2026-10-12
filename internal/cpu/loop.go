@@ -1,6 +1,6 @@
 package cpu
 
-import "github.com/tucats/govax/internal/vax"
+import "github.com/tucats/govax/internal/registers"
 
 // This is the Go port of emul_loop.c: AOBLEQ, AOBLSS, SOBGTR, SOBGEQ. All
 // four are longword-only and share the same SETCONDITIONBITS(x, 0L)-idiom
@@ -68,7 +68,7 @@ func emulAobleq(e *Engine, d *Decoded) error {
 	}
 
 	if index <= signExtend(limit, 4) {
-		e.cpu.SetGPR(vax.PC, d.Operands[2].Addr)
+		e.cpu.SetGPR(registers.PC, d.Operands[2].Addr)
 	}
 
 	return nil
@@ -87,7 +87,7 @@ func emulAoblss(e *Engine, d *Decoded) error {
 	}
 
 	if index < signExtend(limit, 4) {
-		e.cpu.SetGPR(vax.PC, d.Operands[2].Addr)
+		e.cpu.SetGPR(registers.PC, d.Operands[2].Addr)
 	}
 
 	return nil
@@ -101,7 +101,7 @@ func emulSobgtr(e *Engine, d *Decoded) error {
 	}
 
 	if index > 0 {
-		e.cpu.SetGPR(vax.PC, d.Operands[1].Addr)
+		e.cpu.SetGPR(registers.PC, d.Operands[1].Addr)
 	}
 
 	return nil
@@ -115,7 +115,7 @@ func emulSobgeq(e *Engine, d *Decoded) error {
 	}
 
 	if index >= 0 {
-		e.cpu.SetGPR(vax.PC, d.Operands[1].Addr)
+		e.cpu.SetGPR(registers.PC, d.Operands[1].Addr)
 	}
 	
 	return nil

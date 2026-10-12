@@ -11,8 +11,8 @@ import (
 	"github.com/tucats/govax/internal/cpu"
 	"github.com/tucats/govax/internal/debugger"
 	"github.com/tucats/govax/internal/machine"
+	"github.com/tucats/govax/internal/registers"
 	"github.com/tucats/govax/internal/sched"
-	"github.com/tucats/govax/internal/vax"
 )
 
 // Phase 44's subtask 7: only process 1's outcomes end the console's run.
@@ -25,12 +25,12 @@ import (
 // a RET from the program's outermost procedure, or $EXIT unwinding to
 // it, ends its image, as process 1's RET ends a CALL. mode is the mode
 // it runs in.
-func startedLikeAnImage(t *testing.T, c *console.Console, code []byte, mode vax.AccessMode) *corevms.Environment {
+func startedLikeAnImage(t *testing.T, c *console.Console, code []byte, mode registers.AccessMode) *corevms.Environment {
 	t.Helper()
 
 	env := handBuiltProcess(t, c, code)
 
-	var psl vax.PSL
+	var psl registers.PSL
 
 	psl.SetCurMod(mode)
 	psl.SetPrvMod(mode)
@@ -45,7 +45,7 @@ func startedLikeAnImage(t *testing.T, c *console.Console, code []byte, mode vax.
 	}
 
 	start.SP[mode] = frame
-	start.R[vax.FP] = frame
+	start.R[registers.FP] = frame
 
 	if err := cpu.WritePCB(c.Mem, env.Stacks.PCBB, &start); err != nil {
 		t.Fatal(err)
@@ -94,7 +94,7 @@ func TestSchedulerRun_otherImageEnds(t *testing.T) {
 
 			c, _ := scheduledConsole(t, "7", mainCode)
 			one := c.RTL
-			two := startedLikeAnImage(t, c, otherCode, vax.User)
+			two := startedLikeAnImage(t, c, otherCode, registers.User)
 
 			if tt.debugger {
 				debugger.Install(c, consoletest.DebugGrammar(t), nil)
@@ -134,7 +134,7 @@ func TestSchedulerRun_haltInOtherProcess(t *testing.T) {
 	haltCode, _ := assembleAt(t, "\thalt\n")
 
 	c, out := scheduledConsole(t, longQuantum, counter())
-	two := startedLikeAnImage(t, c, haltCode, vax.Kernel)
+	two := startedLikeAnImage(t, c, haltCode, registers.Kernel)
 
 	if err := c.Execute(nil); err != nil {
 		t.Fatalf("GO: %v", err)
@@ -195,9 +195,9 @@ func TestSchedulerDebug_breakpointsAreProcessOnes(t *testing.T) {
 			one := c.RTL
 
 			for i := range 30 {
-				if c.RTL.Current() != one || c.CPU.GPR(vax.PC) != tt.bp {
+				if c.RTL.Current() != one || c.CPU.GPR(registers.PC) != tt.bp {
 					t.Fatalf("stop %d: process %08X at %08X, want process 1 at the breakpoint",
-						i, c.RTL.Current().Process.PID, c.CPU.GPR(vax.PC))
+						i, c.RTL.Current().Process.PID, c.CPU.GPR(registers.PC))
 				}
 
 				if got, want := countOf(t, c, one), tt.first+uint32(i); got != want {
@@ -266,14 +266,14 @@ func TestSchedulerDebug_everyInstruction(t *testing.T) {
 	db.AddBreakpoint(codeAddr + 6)
 
 	one := c.RTL
-	last := c.CPU.GPR(vax.PC)
+	last := c.CPU.GPR(registers.PC)
 
 	for i := range 60 {
 		if err := db.Dispatch("GO"); err != nil {
 			t.Fatalf("GO: %v", err)
 		}
 
-		pc := c.CPU.GPR(vax.PC)
+		pc := c.CPU.GPR(registers.PC)
 		if c.RTL.Current() != one || pc == last {
 			t.Fatalf("stop %d: process %08X at %08X after %08X: want process 1, at the other breakpoint",
 				i, c.RTL.Current().Process.PID, pc, last)
@@ -323,7 +323,7 @@ func TestSchedulerStop_inProcessTwo(t *testing.T) {
 
 	stopInProcessTwo(t, c, two)
 
-	pc := c.CPU.GPR(vax.PC)
+	pc := c.CPU.GPR(registers.PC)
 	if want := fmt.Sprintf("instruction limit reached at PC = %08X in process %08X", pc, two.Process.PID); !strings.Contains(out.String(), want) {
 		t.Errorf("no %q in:\n%s", want, out.String())
 	}
@@ -356,9 +356,9 @@ func TestSchedulerStop_inProcessTwo(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if c.RTL.Current() != one || c.CPU.GPR(vax.PC) != pcb.PC {
+	if c.RTL.Current() != one || c.CPU.GPR(registers.PC) != pcb.PC {
 		t.Errorf("after returning: process %08X at %08X, want process 1 at %08X",
-			c.RTL.Current().Process.PID, c.CPU.GPR(vax.PC), pcb.PC)
+			c.RTL.Current().Process.PID, c.CPU.GPR(registers.PC), pcb.PC)
 	}
 
 	if h, _ := one.Scheduler().Current(); uint32(h) != one.Process.PID || stateOf(two) != sched.StateCOM {

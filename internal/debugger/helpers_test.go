@@ -8,7 +8,7 @@ import (
 	"github.com/tucats/govax/internal/console/consoletest"
 	"github.com/tucats/govax/internal/debugger"
 	"github.com/tucats/govax/internal/machine"
-	"github.com/tucats/govax/internal/vax"
+	"github.com/tucats/govax/internal/registers"
 )
 
 // Opcodes the run-control tests assemble by hand.
@@ -79,7 +79,7 @@ func dbgImagePath(t testing.TB, name string) string { return consoletest.DebugIm
 // noUserStep makes STEP step kernel-mode code, which these tests run in:
 // STEP's default is to step only user-mode instructions (USERSTEP).
 func noUserStep(c *console.Console) {
-	c.CPU.SetDebug(c.CPU.Debug() &^ vax.DebugUserStep)
+	c.CPU.SetDebug(c.CPU.Debug() &^ registers.DebugUserStep)
 }
 
 // newTestDispatcher returns a console dispatcher (the console grammar) and

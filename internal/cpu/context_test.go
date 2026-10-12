@@ -4,7 +4,7 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/tucats/govax/internal/vax"
+	"github.com/tucats/govax/internal/registers"
 	"github.com/tucats/govax/internal/vm"
 )
 
@@ -24,7 +24,7 @@ func validPCB() PCB {
 	p := PCB{
 		SP:     [4]uint32{ctxKSP, 0x6000, 0x5000, 0x4000},
 		PC:     0x3000,
-		PSL:    vax.PSL(0x03C00000), // user mode, previous mode user, IPL 0
+		PSL:    registers.PSL(0x03C00000), // user mode, previous mode user, IPL 0
 		P0BR:   0x80000000,
 		P0LR:   0x4000,
 		ASTLVL: 4,
@@ -106,25 +106,25 @@ func svpctxEngine(t *testing.T) *Engine {
 	t.Helper()
 
 	e := kernelEngine()
-	e.cpu.SetPR(vax.PCBB, ctxPCB)
+	e.cpu.SetPR(registers.PCBB, ctxPCB)
 
 	for off := uint32(PCBP0BR); off < PCBSize; off += 4 {
 		putLongword(t, e.cpu, e.mem, ctxPCB+off, ctxSentry)
 	}
 
-	for r := vax.R0; r <= vax.FP; r++ {
+	for r := registers.R0; r <= registers.FP; r++ {
 		e.cpu.SetGPR(r, 0x500+uint32(r))
 	}
 
-	e.cpu.SetPR(vax.KSP, 0x1111) // stale while the CPU runs on the kernel stack
-	e.cpu.SetPR(vax.ESP, 0x6000)
-	e.cpu.SetPR(vax.SSP, 0x5000)
-	e.cpu.SetPR(vax.USP, 0x4000)
-	e.cpu.SetPR(vax.ISP, ctxISP)
+	e.cpu.SetPR(registers.KSP, 0x1111) // stale while the CPU runs on the kernel stack
+	e.cpu.SetPR(registers.ESP, 0x6000)
+	e.cpu.SetPR(registers.SSP, 0x5000)
+	e.cpu.SetPR(registers.USP, 0x4000)
+	e.cpu.SetPR(registers.ISP, ctxISP)
 
 	putLongword(t, e.cpu, e.mem, ctxStack, 0x2468)       // PC
 	putLongword(t, e.cpu, e.mem, ctxStack+4, 0x03C00004) // PSL: user mode, Z set
-	e.cpu.SetGPR(vax.SP, ctxStack)
+	e.cpu.SetGPR(registers.SP, ctxStack)
 
 	return e
 }
@@ -164,16 +164,16 @@ func TestSvpctxFromKernelStack(t *testing.T) {
 	}
 
 	psl := e.cpu.PSL()
-	if !psl.IS() || psl.CurMod() != vax.Kernel || psl.IPL() != 1 || e.cpu.PR(vax.IPL) != 1 {
+	if !psl.IS() || psl.CurMod() != registers.Kernel || psl.IPL() != 1 || e.cpu.PR(registers.IPL) != 1 {
 		t.Errorf("PSL = %#x (IPL register %d), want kernel mode on the interrupt stack at IPL 1",
-			uint32(psl), e.cpu.PR(vax.IPL))
+			uint32(psl), e.cpu.PR(registers.IPL))
 	}
 
-	if got := e.cpu.GPR(vax.SP); got != ctxISP {
+	if got := e.cpu.GPR(registers.SP); got != ctxISP {
 		t.Errorf("SP = %#x, want the interrupt stack's %#x", got, ctxISP)
 	}
 
-	if got := e.cpu.PR(vax.KSP); got != ctxStack+8 {
+	if got := e.cpu.PR(registers.KSP); got != ctxStack+8 {
 		t.Errorf("KSP = %#x, want %#x", got, ctxStack+8)
 	}
 }
@@ -185,7 +185,7 @@ func TestSvpctxKeepsHigherIPL(t *testing.T) {
 	psl := e.cpu.PSL()
 	psl.SetIPL(3)
 	e.cpu.SetPSL(psl)
-	e.cpu.SetPR(vax.IPL, 3)
+	e.cpu.SetPR(registers.IPL, 3)
 
 	stepInstruction(t, e, 0x07)
 
@@ -198,13 +198,13 @@ func TestSvpctxKeepsHigherIPL(t *testing.T) {
 // the kernel stack pointer from its register and only pops the stack.
 func TestSvpctxOnInterruptStack(t *testing.T) {
 	e := svpctxEngine(t)
-	e.cpu.SetPR(vax.KSP, ctxKSP)
+	e.cpu.SetPR(registers.KSP, ctxKSP)
 
 	psl := e.cpu.PSL()
 	psl.SetIS(true)
 	psl.SetIPL(3)
 	e.cpu.SetPSL(psl)
-	e.cpu.SetPR(vax.IPL, 3)
+	e.cpu.SetPR(registers.IPL, 3)
 
 	stepInstruction(t, e, 0x07)
 
@@ -213,11 +213,11 @@ func TestSvpctxOnInterruptStack(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if p.SP[vax.Kernel] != ctxKSP {
-		t.Errorf("PCB KSP = %#x, want %#x", p.SP[vax.Kernel], ctxKSP)
+	if p.SP[registers.Kernel] != ctxKSP {
+		t.Errorf("PCB KSP = %#x, want %#x", p.SP[registers.Kernel], ctxKSP)
 	}
 
-	if got := e.cpu.GPR(vax.SP); got != ctxStack+8 {
+	if got := e.cpu.GPR(registers.SP); got != ctxStack+8 {
 		t.Errorf("SP = %#x, want %#x (the pair popped, no stack switch)", got, ctxStack+8)
 	}
 
@@ -234,7 +234,7 @@ func TestContextInstructionsArePrivileged(t *testing.T) {
 		name string
 		fn   Handler
 	}{{"LDPCTX", emulLdpctx}, {"SVPCTX", emulSvpctx}} {
-		for _, mode := range []vax.AccessMode{vax.Executive, vax.Supervisor, vax.User} {
+		for _, mode := range []registers.AccessMode{registers.Executive, registers.Supervisor, registers.User} {
 			e := newEngine()
 			psl := e.cpu.PSL()
 			psl.SetCurMod(mode)
@@ -260,14 +260,14 @@ func ldpctxEngine(t *testing.T) (*Engine, PCB) {
 		t.Fatal(err)
 	}
 
-	e.cpu.SetPR(vax.PCBB, ctxPCB)
+	e.cpu.SetPR(registers.PCBB, ctxPCB)
 
 	psl := e.cpu.PSL()
 	psl.SetIS(true)
 	psl.SetIPL(3)
 	e.cpu.SetPSL(psl)
-	e.cpu.SetPR(vax.IPL, 3)
-	e.cpu.SetGPR(vax.SP, ctxISP)
+	e.cpu.SetPR(registers.IPL, 3)
+	e.cpu.SetGPR(registers.SP, ctxISP)
 
 	return e, p
 }
@@ -287,19 +287,19 @@ func TestLdpctxLoadsContext(t *testing.T) {
 		t.Errorf("TB flushes, process flushes = %d, %d; want %d, %d", f, pf, flushes, pflushes+1)
 	}
 
-	for r := vax.R0; r <= vax.FP; r++ {
+	for r := registers.R0; r <= registers.FP; r++ {
 		if got := e.cpu.GPR(r); got != p.R[r] {
 			t.Errorf("R%d = %#x, want %#x", r, got, p.R[r])
 		}
 	}
 
 	regs := []struct {
-		r    vax.PrivReg
+		r    registers.PrivReg
 		want uint32
 	}{
-		{vax.ESP, 0x6000}, {vax.SSP, 0x5000}, {vax.USP, 0x4000}, {vax.ISP, ctxISP},
-		{vax.P0BR, p.P0BR}, {vax.P0LR, p.P0LR}, {vax.P1BR, p.P1BR}, {vax.P1LR, p.P1LR},
-		{vax.ASTLVL, 4}, {vax.PME, 1},
+		{registers.ESP, 0x6000}, {registers.SSP, 0x5000}, {registers.USP, 0x4000}, {registers.ISP, ctxISP},
+		{registers.P0BR, p.P0BR}, {registers.P0LR, p.P0LR}, {registers.P1BR, p.P1BR}, {registers.P1LR, p.P1LR},
+		{registers.ASTLVL, 4}, {registers.PME, 1},
 	}
 	for _, r := range regs {
 		if got := e.cpu.PR(r.r); got != r.want {
@@ -307,11 +307,11 @@ func TestLdpctxLoadsContext(t *testing.T) {
 		}
 	}
 
-	if psl := e.cpu.PSL(); psl.IS() || psl.CurMod() != vax.Kernel || psl.IPL() != 3 {
+	if psl := e.cpu.PSL(); psl.IS() || psl.CurMod() != registers.Kernel || psl.IPL() != 3 {
 		t.Errorf("PSL = %#x, want kernel mode on the kernel stack, IPL unchanged", uint32(psl))
 	}
 
-	if got := e.cpu.GPR(vax.SP); got != ctxKSP-8 {
+	if got := e.cpu.GPR(registers.SP); got != ctxKSP-8 {
 		t.Fatalf("SP = %#x, want %#x", got, ctxKSP-8)
 	}
 
@@ -321,7 +321,7 @@ func TestLdpctxLoadsContext(t *testing.T) {
 
 	stepInstruction(t, e, 0x02) // REI
 
-	if got := e.cpu.GPR(vax.PC); got != p.PC {
+	if got := e.cpu.GPR(registers.PC); got != p.PC {
 		t.Errorf("PC after REI = %#x, want %#x", got, p.PC)
 	}
 
@@ -329,11 +329,11 @@ func TestLdpctxLoadsContext(t *testing.T) {
 		t.Errorf("PSL after REI = %#x, want %#x", uint32(got), uint32(p.PSL))
 	}
 
-	if got := e.cpu.GPR(vax.SP); got != 0x4000 {
+	if got := e.cpu.GPR(registers.SP); got != 0x4000 {
 		t.Errorf("SP after REI = %#x, want the user stack's 0x4000", got)
 	}
 
-	if got := e.cpu.PR(vax.KSP); got != ctxKSP {
+	if got := e.cpu.PR(registers.KSP); got != ctxKSP {
 		t.Errorf("KSP after REI = %#x, want %#x", got, ctxKSP)
 	}
 }
@@ -390,7 +390,7 @@ func TestLdpctxUndefined(t *testing.T) {
 // UNDEFINED too, and the registers are restored before the fault.
 func TestLdpctxBadKernelStack(t *testing.T) {
 	e, p := ldpctxEngine(t)
-	p.SP[vax.Kernel] = e.mem.Size() + 0x1000 // past the end of memory
+	p.SP[registers.Kernel] = e.mem.Size() + 0x1000 // past the end of memory
 
 	if err := WritePCB(e.mem, ctxPCB, &p); err != nil {
 		t.Fatal(err)
@@ -413,7 +413,7 @@ func TestLdpctxBadKernelStack(t *testing.T) {
 // same PCB resumes exactly where the process was.
 func TestSaveLoadContext(t *testing.T) {
 	e := kernelEngine()
-	e.cpu.SetPR(vax.PCBB, ctxPCB)
+	e.cpu.SetPR(registers.PCBB, ctxPCB)
 
 	p := validPCB()
 	if err := WritePCB(e.mem, ctxPCB, &p); err != nil {
@@ -421,19 +421,19 @@ func TestSaveLoadContext(t *testing.T) {
 	}
 
 	// A user-mode process at IPL 0, its user stack live in SP.
-	for r := vax.R0; r <= vax.FP; r++ {
+	for r := registers.R0; r <= registers.FP; r++ {
 		e.cpu.SetGPR(r, 0x700+uint32(r))
 	}
 
-	e.cpu.SetPR(vax.KSP, ctxKSP)
-	e.cpu.SetPR(vax.ESP, 0x6000)
-	e.cpu.SetPR(vax.SSP, 0x5000)
-	e.cpu.SetPR(vax.USP, 0x1234) // stale
-	e.cpu.SetPR(vax.ISP, ctxISP)
-	e.cpu.SetGPR(vax.SP, 0x3FF0)
-	e.cpu.SetGPR(vax.PC, 0x2222)
-	e.cpu.SetPSL(vax.PSL(0x03C00008)) // user, N set
-	e.cpu.SetPR(vax.IPL, 0)
+	e.cpu.SetPR(registers.KSP, ctxKSP)
+	e.cpu.SetPR(registers.ESP, 0x6000)
+	e.cpu.SetPR(registers.SSP, 0x5000)
+	e.cpu.SetPR(registers.USP, 0x1234) // stale
+	e.cpu.SetPR(registers.ISP, ctxISP)
+	e.cpu.SetGPR(registers.SP, 0x3FF0)
+	e.cpu.SetGPR(registers.PC, 0x2222)
+	e.cpu.SetPSL(registers.PSL(0x03C00008)) // user, N set
+	e.cpu.SetPR(registers.IPL, 0)
 
 	if err := e.SaveContext(); err != nil {
 		t.Fatal(err)
@@ -448,17 +448,17 @@ func TestSaveLoadContext(t *testing.T) {
 		t.Errorf("PCB stack pointers = %#x, want %#x", saved.SP, want)
 	}
 
-	if saved.PC != 0x2222 || saved.PSL != 0x03C00008 || saved.R[vax.FP] != 0x70D {
-		t.Errorf("PCB PC/PSL/FP = %#x/%#x/%#x", saved.PC, uint32(saved.PSL), saved.R[vax.FP])
+	if saved.PC != 0x2222 || saved.PSL != 0x03C00008 || saved.R[registers.FP] != 0x70D {
+		t.Errorf("PCB PC/PSL/FP = %#x/%#x/%#x", saved.PC, uint32(saved.PSL), saved.R[registers.FP])
 	}
 
 	if saved.P0BR != p.P0BR || saved.P1LR != p.P1LR || !saved.PME {
 		t.Error("SaveContext changed the PCB's memory-management fields")
 	}
 
-	if psl := e.cpu.PSL(); !psl.IS() || psl.CurMod() != vax.Kernel || psl.IPL() != 3 || e.cpu.GPR(vax.SP) != ctxISP {
+	if psl := e.cpu.PSL(); !psl.IS() || psl.CurMod() != registers.Kernel || psl.IPL() != 3 || e.cpu.GPR(registers.SP) != ctxISP {
 		t.Errorf("after SaveContext PSL = %#x, SP = %#x; want the interrupt stack at IPL 3",
-			uint32(psl), e.cpu.GPR(vax.SP))
+			uint32(psl), e.cpu.GPR(registers.SP))
 	}
 
 	if err := e.SaveContext(); !errors.Is(err, ErrContextOnInterruptStack) {
@@ -466,7 +466,7 @@ func TestSaveLoadContext(t *testing.T) {
 	}
 
 	// Scribble on the registers, then load the process back.
-	for r := vax.R0; r <= vax.FP; r++ {
+	for r := registers.R0; r <= registers.FP; r++ {
 		e.cpu.SetGPR(r, 0)
 	}
 
@@ -474,19 +474,19 @@ func TestSaveLoadContext(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	for r := vax.R0; r <= vax.FP; r++ {
+	for r := registers.R0; r <= registers.FP; r++ {
 		if got := e.cpu.GPR(r); got != 0x700+uint32(r) {
 			t.Errorf("R%d = %#x, want %#x", r, got, 0x700+uint32(r))
 		}
 	}
 
-	if e.cpu.GPR(vax.PC) != 0x2222 || e.cpu.PSL() != 0x03C00008 || e.cpu.GPR(vax.SP) != 0x3FF0 {
+	if e.cpu.GPR(registers.PC) != 0x2222 || e.cpu.PSL() != 0x03C00008 || e.cpu.GPR(registers.SP) != 0x3FF0 {
 		t.Errorf("PC/PSL/SP = %#x/%#x/%#x, want 0x2222/0x3c00008/0x3ff0",
-			e.cpu.GPR(vax.PC), uint32(e.cpu.PSL()), e.cpu.GPR(vax.SP))
+			e.cpu.GPR(registers.PC), uint32(e.cpu.PSL()), e.cpu.GPR(registers.SP))
 	}
 
-	if e.cpu.PR(vax.KSP) != ctxKSP || e.cpu.PR(vax.ISP) != ctxISP || e.cpu.PR(vax.IPL) != 0 {
-		t.Errorf("KSP/ISP/IPL = %#x/%#x/%d", e.cpu.PR(vax.KSP), e.cpu.PR(vax.ISP), e.cpu.PR(vax.IPL))
+	if e.cpu.PR(registers.KSP) != ctxKSP || e.cpu.PR(registers.ISP) != ctxISP || e.cpu.PR(registers.IPL) != 0 {
+		t.Errorf("KSP/ISP/IPL = %#x/%#x/%d", e.cpu.PR(registers.KSP), e.cpu.PR(registers.ISP), e.cpu.PR(registers.IPL))
 	}
 
 	// Not on the interrupt stack now, so LoadContext refuses.

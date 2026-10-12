@@ -1,7 +1,7 @@
 package corevms
 
 import (
-	"github.com/tucats/govax/internal/vax"
+	"github.com/tucats/govax/internal/registers"
 	"github.com/tucats/govax/internal/vm"
 	"github.com/tucats/govax/internal/vmsdef"
 )
@@ -192,7 +192,7 @@ func serviceSysCretva(env *Environment, argv []uint32) (uint32, error) {
 	}
 
 	retadr := optArg(argv, 1)
-	mode := max(vax.AccessMode(optArg(argv, 2)&3), env.cpu.PSL().CurMod())
+	mode := max(registers.AccessMode(optArg(argv, 2)&3), env.cpu.PSL().CurMod())
 
 	done := make([]uint32, 0, len(r.pages()))
 
@@ -220,7 +220,7 @@ func serviceSysCretva(env *Environment, argv []uint32) (uint32, error) {
 }
 
 // createPage makes the page at addr a new demand-zero page of mode's.
-func (env *Environment) createPage(addr uint32, mode vax.AccessMode) uint32 {
+func (env *Environment) createPage(addr uint32, mode registers.AccessMode) uint32 {
 	if addr >= s0Base {
 		return ssNoPriv
 	}
@@ -230,7 +230,7 @@ func (env *Environment) createPage(addr uint32, mode vax.AccessMode) uint32 {
 		return ssVasFull
 	}
 
-	if pageExists(old) && vax.AccessMode(old.Owner()) < mode {
+	if pageExists(old) && registers.AccessMode(old.Owner()) < mode {
 		return ssPagOwnVio
 	}
 
@@ -266,7 +266,7 @@ func serviceSysDeltva(env *Environment, argv []uint32) (uint32, error) {
 		return ssAccVio, nil
 	}
 
-	mode := max(vax.AccessMode(optArg(argv, 2)&3), env.cpu.PSL().CurMod())
+	mode := max(registers.AccessMode(optArg(argv, 2)&3), env.cpu.PSL().CurMod())
 	status, done := env.deletePages(r.pages(), mode)
 
 	if !env.storeRetadr(optArg(argv, 1), done) {
@@ -278,7 +278,7 @@ func serviceSysDeltva(env *Environment, argv []uint32) (uint32, error) {
 
 // deletePages deletes pages, in order, on behalf of mode, stopping at the
 // first that can't be. It returns the status and the pages it did.
-func (env *Environment) deletePages(pages []uint32, mode vax.AccessMode) (uint32, []uint32) {
+func (env *Environment) deletePages(pages []uint32, mode registers.AccessMode) (uint32, []uint32) {
 	done := make([]uint32, 0, len(pages))
 
 	for _, addr := range pages {
@@ -288,7 +288,7 @@ func (env *Environment) deletePages(pages []uint32, mode vax.AccessMode) (uint32
 
 		_, _, old, err := env.mem.LookupPTE(env.cpu, addr)
 		if err == nil && pageExists(old) {
-			if vax.AccessMode(old.Owner()) < mode {
+			if registers.AccessMode(old.Owner()) < mode {
 				return ssPagOwnVio, done
 			}
 
@@ -332,7 +332,7 @@ const p1Base = 0x40000000
 // SS$_ACCVIO if retadr can't be written.
 func serviceSysCntreg(env *Environment, argv []uint32) (uint32, error) {
 	pagcnt, retadr := optArg(argv, 0), optArg(argv, 1)
-	mode := max(vax.AccessMode(optArg(argv, 2)&3), env.cpu.PSL().CurMod())
+	mode := max(registers.AccessMode(optArg(argv, 2)&3), env.cpu.PSL().CurMod())
 
 	var pages []uint32
 
@@ -348,7 +348,7 @@ func serviceSysCntreg(env *Environment, argv []uint32) (uint32, error) {
 		}
 
 	case regionP1:
-		bottom := p1Base + env.cpu.PR(vax.P1LR)*pageSize
+		bottom := p1Base + env.cpu.PR(registers.P1LR)*pageSize
 		if pagcnt == 0 || pagcnt > (s0Base-bottom)/pageSize {
 			return ssIllPagCnt, nil
 		}

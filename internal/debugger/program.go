@@ -9,8 +9,8 @@ import (
 	"github.com/tucats/govax/internal/dcl"
 	"github.com/tucats/govax/internal/lnm"
 	"github.com/tucats/govax/internal/machine"
+	"github.com/tucats/govax/internal/registers"
 	"github.com/tucats/govax/internal/symtab"
-	"github.com/tucats/govax/internal/vax"
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
@@ -81,8 +81,8 @@ func (d *Debugger) allModules() []*dbgsym.Module {
 func (d *Debugger) seedModules() {
 	d.symbolsSet = map[*dbgsym.Module]bool{}
 
-	if p := d.Machine.DebugProgramAt(d.Machine.CPU.GPR(vax.PC)); p != nil {
-		if m, ok := p.ModuleAt(d.Machine.CPU.GPR(vax.PC)); ok {
+	if p := d.Machine.DebugProgramAt(d.Machine.CPU.GPR(registers.PC)); p != nil {
+		if m, ok := p.ModuleAt(d.Machine.CPU.GPR(registers.PC)); ok {
 			d.symbolsSet[m] = true
 
 			return
@@ -293,7 +293,7 @@ func (d *Debugger) showLanguage() error {
 		return err
 	}
 
-	pc := c.CPU.GPR(vax.PC)
+	pc := c.CPU.GPR(registers.PC)
 	language := "UNKNOWN"
 
 	if p := c.DebugProgramAt(pc); p != nil {

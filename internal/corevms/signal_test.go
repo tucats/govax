@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/tucats/govax/internal/vax"
+	"github.com/tucats/govax/internal/registers"
 )
 
 // Addresses for a shim's own call frame: the stub's frame, called from
@@ -30,8 +30,8 @@ func signalFixture(t *testing.T) (*Environment, *strings.Builder) {
 	putLongword(t, env, signalFrame+frameSavedFP, condFrameA)
 	putLongword(t, env, signalFrame+frameSavedPC, signalReturn)
 
-	env.cpu.SetGPR(vax.FP, signalFrame)
-	env.cpu.SetGPR(vax.PC, signalRET)
+	env.cpu.SetGPR(registers.FP, signalFrame)
+	env.cpu.SetGPR(registers.PC, signalRET)
 
 	return env, out
 }
@@ -46,8 +46,8 @@ func TestLibSignal_continue(t *testing.T) {
 	psl := c.PSL()
 
 	r0, err := env.Signal([]uint32{userWarning, 1, 42}, false)
-	if err != nil || r0 != 0 || c.GPR(vax.PC) != condStub {
-		t.Fatalf("LIB$SIGNAL = %#x, %v, PC %#x; want the jump to SYS$SRCHANDLER", r0, err, c.GPR(vax.PC))
+	if err != nil || r0 != 0 || c.GPR(registers.PC) != condStub {
+		t.Fatalf("LIB$SIGNAL = %#x, %v, PC %#x; want the jump to SYS$SRCHANDLER", r0, err, c.GPR(registers.PC))
 	}
 
 	d := env.Process.conditions[0]
@@ -66,16 +66,16 @@ func TestLibSignal_continue(t *testing.T) {
 	expectHandlerCall(t, env, r0, err, condH1, condFrameA, 0)
 
 	putLongword(t, env, d.mech+12, 0x77)
-	c.SetGPR(vax.R0, 1)
+	c.SetGPR(registers.R0, 1)
 
 	r0, err = serviceSysSrchandler(env, nil)
 	if err != nil || r0 != 0x77 {
 		t.Fatalf("continue = %#x, %v; want R0 0x77", r0, err)
 	}
 
-	if c.GPR(vax.PC) != signalRET || c.GPR(vax.FP) != signalFrame || c.GPR(vax.SP) != condSP {
+	if c.GPR(registers.PC) != signalRET || c.GPR(registers.FP) != signalFrame || c.GPR(registers.SP) != condSP {
 		t.Errorf("resumed at PC %#x FP %#x SP %#x; want the stub's RET %#x, FP %#x, SP %#x",
-			c.GPR(vax.PC), c.GPR(vax.FP), c.GPR(vax.SP), signalRET, signalFrame, condSP)
+			c.GPR(registers.PC), c.GPR(registers.FP), c.GPR(registers.SP), signalRET, signalFrame, condSP)
 	}
 }
 
@@ -100,8 +100,8 @@ func TestLibSignal_catchAllContinues(t *testing.T) {
 		t.Errorf("output %q", out.String())
 	}
 
-	if c.GPR(vax.PC) != signalRET || len(env.Process.conditions) != 0 {
-		t.Errorf("PC %#x, %d dispatches; want LIB$SIGNAL returning", c.GPR(vax.PC), len(env.Process.conditions))
+	if c.GPR(registers.PC) != signalRET || len(env.Process.conditions) != 0 {
+		t.Errorf("PC %#x, %d dispatches; want LIB$SIGNAL returning", c.GPR(registers.PC), len(env.Process.conditions))
 	}
 }
 
@@ -122,7 +122,7 @@ func TestLibStop(t *testing.T) {
 
 	_, _ = serviceSysSrchandler(env, nil) // calls condH1
 
-	c.SetGPR(vax.R0, 1) // which tries to continue
+	c.SetGPR(registers.R0, 1) // which tries to continue
 
 	_, err := serviceSysSrchandler(env, nil)
 

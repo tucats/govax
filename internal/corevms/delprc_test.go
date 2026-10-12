@@ -4,8 +4,8 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/tucats/govax/internal/registers"
 	"github.com/tucats/govax/internal/sched"
-	"github.com/tucats/govax/internal/vax"
 )
 
 // $DELPRC of another process, and subprocesses deleted with their owner
@@ -168,7 +168,7 @@ func TestDelprc_processOne(t *testing.T) {
 	child := newSubprocess(t, one)
 	a := newArena(t, child)
 
-	one.Process.exitHandlers[vax.User] = []uint32{0x2000}
+	one.Process.exitHandlers[registers.User] = []uint32{0x2000}
 
 	wantR0(t, delprc(t, child, a, one.Process.PID), ssNormal)
 	wantR0(t, delprc(t, child, a, one.Process.PID), ssNormal)
@@ -177,12 +177,12 @@ func TestDelprc_processOne(t *testing.T) {
 		t.Error("process 1 was marked for deletion")
 	}
 
-	if one.ExitHandlers(vax.User) != 0 {
+	if one.ExitHandlers(registers.User) != 0 {
 		t.Error("process 1's exit handler survived")
 	}
 
 	q := one.Process.ast.queue
-	if len(q) != 1 || q[0].routine != exitEntryAddr || q[0].param != ssNormal || q[0].mode != uint32(vax.User) {
+	if len(q) != 1 || q[0].routine != exitEntryAddr || q[0].param != ssNormal || q[0].mode != uint32(registers.User) {
 		t.Errorf("process 1's AST queue is %+v, want one user-mode $EXIT(SS$_NORMAL)", q)
 	}
 }
@@ -221,7 +221,7 @@ func TestDeleteProcess_ownerWaits(t *testing.T) {
 	}
 
 	// An AST doesn't end the owner's wait.
-	owner.queueAST(0x1000, 0, uint32(vax.User))
+	owner.queueAST(0x1000, 0, uint32(registers.User))
 
 	if one.wakeWaiters() {
 		t.Error("the waiting owner was woken with subprocesses left")

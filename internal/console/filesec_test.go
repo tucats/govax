@@ -10,8 +10,8 @@ import (
 	"github.com/tucats/govax/internal/console"
 	"github.com/tucats/govax/internal/console/consoletest"
 	"github.com/tucats/govax/internal/machine"
+	"github.com/tucats/govax/internal/registers"
 	"github.com/tucats/govax/internal/rms"
-	"github.com/tucats/govax/internal/vax"
 )
 
 // Phase 49's subtask 9: a global section of a file shared by two
@@ -133,7 +133,7 @@ func TestFileSectionRundown(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if got := c.CPU.GPR(vax.R0); got != 999 {
+	if got := c.CPU.GPR(registers.R0); got != 999 {
 		t.Fatalf("R0 = %d, want 999 (another value is the step that failed)", got)
 	}
 

@@ -3,7 +3,7 @@ package cpu
 import (
 	"fmt"
 
-	"github.com/tucats/govax/internal/vax"
+	"github.com/tucats/govax/internal/registers"
 	"github.com/tucats/govax/internal/vm"
 	"github.com/tucats/govax/internal/vmserrors"
 )
@@ -30,7 +30,7 @@ var ErrImmutableOperand = vmserrors.New(vmserrors.VAX_IMMOPND)
 // register-operand convention, which the C source gets "for free" from
 // vax.reg[]'s contiguous layout and a raw 8-byte pointer read; this port
 // makes it explicit since Operand has no pointer to alias through.
-func (op Operand) Load(cpu *vax.CPU, mem *vm.Memory) (uint64, error) {
+func (op Operand) Load(cpu *registers.CPU, mem *vm.Memory) (uint64, error) {
 	switch op.Kind {
 	case OperandImmediate:
 		return op.Value, nil
@@ -71,7 +71,7 @@ func (op Operand) Load(cpu *vax.CPU, mem *vm.Memory) (uint64, error) {
 //
 // A 16-byte operand gets value zero-extended to 128 bits, which is what
 // CLRO needs (it stores 0); use StoreOctaword to write all 128 bits.
-func (op Operand) Store(cpu *vax.CPU, mem *vm.Memory, value uint64) error {
+func (op Operand) Store(cpu *registers.CPU, mem *vm.Memory, value uint64) error {
 	if op.Size == 16 {
 		return op.StoreOctaword(cpu, mem, Octaword{Lo: value})
 	}
@@ -120,7 +120,7 @@ func mergeLow(orig, v uint32, size int) uint32 {
 	return (orig &^ mask) | (v & mask)
 }
 
-func loadValue(cpu *vax.CPU, mem *vm.Memory, addr uint32, size int) (uint64, error) {
+func loadValue(cpu *registers.CPU, mem *vm.Memory, addr uint32, size int) (uint64, error) {
 	if size == 16 {
 		o, err := loadOctaword(cpu, mem, addr)
 
@@ -136,7 +136,7 @@ func loadValue(cpu *vax.CPU, mem *vm.Memory, addr uint32, size int) (uint64, err
 	return uint64(v), err
 }
 
-func storeValue(cpu *vax.CPU, mem *vm.Memory, addr uint32, size int, value uint64) error {
+func storeValue(cpu *registers.CPU, mem *vm.Memory, addr uint32, size int, value uint64) error {
 	switch size {
 	case 1:
 		return mem.StoreByte(cpu, addr, byte(value))

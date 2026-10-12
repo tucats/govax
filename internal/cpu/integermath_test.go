@@ -3,7 +3,7 @@ package cpu
 import (
 	"testing"
 
-	"github.com/tucats/govax/internal/vax"
+	"github.com/tucats/govax/internal/registers"
 )
 
 func TestEmulAddByte(t *testing.T) {
@@ -25,15 +25,15 @@ func TestEmulAddByte(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			cpu, mem := fixture()
 			e := NewEngine(cpu, mem)
-			cpu.SetGPR(vax.R1, tc.addend)
-			cpu.SetGPR(vax.R2, tc.sum)
+			cpu.SetGPR(registers.R1, tc.addend)
+			cpu.SetGPR(registers.R2, tc.sum)
 
-			stepInstruction(t, e, 0x80, regMode(vax.R1), regMode(vax.R2)) // ADDB2
+			stepInstruction(t, e, 0x80, regMode(registers.R1), regMode(registers.R2)) // ADDB2
 
-			if got := byte(cpu.GPR(vax.R2)); got != tc.wantResult {
+			if got := byte(cpu.GPR(registers.R2)); got != tc.wantResult {
 				t.Errorf("result = %#x, want %#x", got, tc.wantResult)
 			}
-			
+
 			psl := cpu.PSL()
 			if psl.V() != tc.wantV || psl.C() != tc.wantC {
 				t.Errorf("V=%v C=%v, want V=%v C=%v", psl.V(), psl.C(), tc.wantV, tc.wantC)
@@ -45,12 +45,12 @@ func TestEmulAddByte(t *testing.T) {
 func TestEmulAddb3(t *testing.T) {
 	cpu, mem := fixture()
 	e := NewEngine(cpu, mem)
-	cpu.SetGPR(vax.R1, 3)
-	cpu.SetGPR(vax.R2, 4)
+	cpu.SetGPR(registers.R1, 3)
+	cpu.SetGPR(registers.R2, 4)
 
-	stepInstruction(t, e, 0x81, regMode(vax.R1), regMode(vax.R2), regMode(vax.R3)) // ADDB3
+	stepInstruction(t, e, 0x81, regMode(registers.R1), regMode(registers.R2), regMode(registers.R3)) // ADDB3
 
-	if got := byte(cpu.GPR(vax.R3)); got != 7 {
+	if got := byte(cpu.GPR(registers.R3)); got != 7 {
 		t.Errorf("R3 = %#x, want 7", got)
 	}
 }
@@ -60,12 +60,12 @@ func TestEmulSubByteOperandOrder(t *testing.T) {
 	// is an easy mistake, so this pins it down explicitly.
 	cpu, mem := fixture()
 	e := NewEngine(cpu, mem)
-	cpu.SetGPR(vax.R1, 3)  // subtrahend
-	cpu.SetGPR(vax.R2, 10) // minuend / dst
+	cpu.SetGPR(registers.R1, 3)  // subtrahend
+	cpu.SetGPR(registers.R2, 10) // minuend / dst
 
-	stepInstruction(t, e, 0x82, regMode(vax.R1), regMode(vax.R2)) // SUBB2
+	stepInstruction(t, e, 0x82, regMode(registers.R1), regMode(registers.R2)) // SUBB2
 
-	if got := byte(cpu.GPR(vax.R2)); got != 7 {
+	if got := byte(cpu.GPR(registers.R2)); got != 7 {
 		t.Errorf("R2 = %#x, want 7 (10 - 3)", got)
 	}
 }
@@ -73,12 +73,12 @@ func TestEmulSubByteOperandOrder(t *testing.T) {
 func TestEmulSubb3OperandOrder(t *testing.T) {
 	cpu, mem := fixture()
 	e := NewEngine(cpu, mem)
-	cpu.SetGPR(vax.R1, 3)  // sub
-	cpu.SetGPR(vax.R2, 10) // min
+	cpu.SetGPR(registers.R1, 3)  // sub
+	cpu.SetGPR(registers.R2, 10) // min
 
-	stepInstruction(t, e, 0x83, regMode(vax.R1), regMode(vax.R2), regMode(vax.R3)) // SUBB3
+	stepInstruction(t, e, 0x83, regMode(registers.R1), regMode(registers.R2), regMode(registers.R3)) // SUBB3
 
-	if got := byte(cpu.GPR(vax.R3)); got != 7 {
+	if got := byte(cpu.GPR(registers.R3)); got != 7 {
 		t.Errorf("R3 = %#x, want 7 (10 - 3)", got)
 	}
 }
@@ -86,10 +86,10 @@ func TestEmulSubb3OperandOrder(t *testing.T) {
 func TestEmulSubByteBorrowAndOverflow(t *testing.T) {
 	cpu, mem := fixture()
 	e := NewEngine(cpu, mem)
-	cpu.SetGPR(vax.R1, 5) // subtrahend
-	cpu.SetGPR(vax.R2, 3) // minuend, smaller -> borrow
+	cpu.SetGPR(registers.R1, 5) // subtrahend
+	cpu.SetGPR(registers.R2, 3) // minuend, smaller -> borrow
 
-	stepInstruction(t, e, 0x82, regMode(vax.R1), regMode(vax.R2))
+	stepInstruction(t, e, 0x82, regMode(registers.R1), regMode(registers.R2))
 
 	if !cpu.PSL().C() {
 		t.Error("C = false, want true (3 - 5 borrows)")
@@ -98,9 +98,9 @@ func TestEmulSubByteBorrowAndOverflow(t *testing.T) {
 	// 0x80 (-128) - 1 overflows (can't represent +129 in a signed byte... wait
 	// -128 - 1 = -129, doesn't fit either): minuend at the negative boundary
 	// minus a positive subtrahend.
-	cpu.SetGPR(vax.R1, 1)
-	cpu.SetGPR(vax.R2, 0x80)
-	stepInstruction(t, e, 0x82, regMode(vax.R1), regMode(vax.R2))
+	cpu.SetGPR(registers.R1, 1)
+	cpu.SetGPR(registers.R2, 0x80)
+	stepInstruction(t, e, 0x82, regMode(registers.R1), regMode(registers.R2))
 
 	if !cpu.PSL().V() {
 		t.Error("V = false, want true (largest negative byte minus 1 overflows)")
@@ -110,11 +110,11 @@ func TestEmulSubByteBorrowAndOverflow(t *testing.T) {
 func TestEmulMulByte(t *testing.T) {
 	cpu, mem := fixture()
 	e := NewEngine(cpu, mem)
-	cpu.SetGPR(vax.R1, 5)
-	cpu.SetGPR(vax.R2, 3)
-	stepInstruction(t, e, 0x84, regMode(vax.R1), regMode(vax.R2)) // MULB2
+	cpu.SetGPR(registers.R1, 5)
+	cpu.SetGPR(registers.R2, 3)
+	stepInstruction(t, e, 0x84, regMode(registers.R1), regMode(registers.R2)) // MULB2
 
-	if got := byte(cpu.GPR(vax.R2)); got != 15 {
+	if got := byte(cpu.GPR(registers.R2)); got != 15 {
 		t.Errorf("result = %d, want 15", got)
 	}
 
@@ -123,9 +123,9 @@ func TestEmulMulByte(t *testing.T) {
 	}
 
 	// -56 * -56 = 3136, which doesn't fit in a signed byte.
-	cpu.SetGPR(vax.R1, 200)
-	cpu.SetGPR(vax.R2, 200)
-	stepInstruction(t, e, 0x84, regMode(vax.R1), regMode(vax.R2))
+	cpu.SetGPR(registers.R1, 200)
+	cpu.SetGPR(registers.R2, 200)
+	stepInstruction(t, e, 0x84, regMode(registers.R1), regMode(registers.R2))
 
 	if !cpu.PSL().V() {
 		t.Error("V = false, want true (product doesn't fit a byte)")
@@ -139,11 +139,11 @@ func TestEmulMulByte(t *testing.T) {
 func TestEmulDivByte(t *testing.T) {
 	cpu, mem := fixture()
 	e := NewEngine(cpu, mem)
-	cpu.SetGPR(vax.R1, 3) // divisor
-	cpu.SetGPR(vax.R2, 0xF7 /* -9 */)
-	stepInstruction(t, e, 0x86, regMode(vax.R1), regMode(vax.R2)) // DIVB2
+	cpu.SetGPR(registers.R1, 3) // divisor
+	cpu.SetGPR(registers.R2, 0xF7 /* -9 */)
+	stepInstruction(t, e, 0x86, regMode(registers.R1), regMode(registers.R2)) // DIVB2
 
-	if got := int8(cpu.GPR(vax.R2)); got != -3 {
+	if got := int8(cpu.GPR(registers.R2)); got != -3 {
 		t.Errorf("result = %d, want -3 (truncated toward zero)", got)
 	}
 
@@ -155,12 +155,12 @@ func TestEmulDivByte(t *testing.T) {
 func TestEmulDivByZeroGuarded(t *testing.T) {
 	cpu, mem := fixture()
 	e := NewEngine(cpu, mem)
-	cpu.SetGPR(vax.R1, 0)  // divisor: zero
-	cpu.SetGPR(vax.R2, 10) // dividend
+	cpu.SetGPR(registers.R1, 0)  // divisor: zero
+	cpu.SetGPR(registers.R2, 10) // dividend
 
-	stepInstruction(t, e, 0x86, regMode(vax.R1), regMode(vax.R2)) // must not panic
+	stepInstruction(t, e, 0x86, regMode(registers.R1), regMode(registers.R2)) // must not panic
 
-	if got := cpu.GPR(vax.R2); got != 10 {
+	if got := cpu.GPR(registers.R2); got != 10 {
 		t.Errorf("result = %d, want 10 (dividend left unchanged)", got)
 	}
 
@@ -172,12 +172,12 @@ func TestEmulDivByZeroGuarded(t *testing.T) {
 func TestEmulDivMinIntOverflowGuarded(t *testing.T) {
 	cpu, mem := fixture()
 	e := NewEngine(cpu, mem)
-	cpu.SetGPR(vax.R1, 0xFF) // divisor: -1
-	cpu.SetGPR(vax.R2, 0x80) // dividend: -128, the size's minSigned
+	cpu.SetGPR(registers.R1, 0xFF) // divisor: -1
+	cpu.SetGPR(registers.R2, 0x80) // dividend: -128, the size's minSigned
 
-	stepInstruction(t, e, 0x86, regMode(vax.R1), regMode(vax.R2)) // must not panic
+	stepInstruction(t, e, 0x86, regMode(registers.R1), regMode(registers.R2)) // must not panic
 
-	if got := byte(cpu.GPR(vax.R2)); got != 0x80 {
+	if got := byte(cpu.GPR(registers.R2)); got != 0x80 {
 		t.Errorf("result = %#x, want 0x80 (unchanged)", got)
 	}
 
@@ -203,11 +203,11 @@ func TestEmulLogicalOpsLeaveCarryUnaffected(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			cpu, mem := fixture()
 			e := NewEngine(cpu, mem)
-			cpu.SetGPR(vax.R1, 0x0F)
-			cpu.SetGPR(vax.R2, 0xFF)
+			cpu.SetGPR(registers.R1, 0x0F)
+			cpu.SetGPR(registers.R2, 0xFF)
 			setC(cpu, true)
 
-			stepInstruction(t, e, tc.opcode, regMode(vax.R1), regMode(vax.R2))
+			stepInstruction(t, e, tc.opcode, regMode(registers.R1), regMode(registers.R2))
 
 			if !cpu.PSL().C() {
 				t.Error("C = false, want unaffected (true)")
@@ -223,11 +223,11 @@ func TestEmulLogicalOpsLeaveCarryUnaffected(t *testing.T) {
 func TestEmulBis(t *testing.T) {
 	cpu, mem := fixture()
 	e := NewEngine(cpu, mem)
-	cpu.SetGPR(vax.R1, 0x0F)
-	cpu.SetGPR(vax.R2, 0xF0)
-	stepInstruction(t, e, 0x88, regMode(vax.R1), regMode(vax.R2)) // BISB2
+	cpu.SetGPR(registers.R1, 0x0F)
+	cpu.SetGPR(registers.R2, 0xF0)
+	stepInstruction(t, e, 0x88, regMode(registers.R1), regMode(registers.R2)) // BISB2
 
-	if got := byte(cpu.GPR(vax.R2)); got != 0xFF {
+	if got := byte(cpu.GPR(registers.R2)); got != 0xFF {
 		t.Errorf("result = %#x, want 0xff", got)
 	}
 }
@@ -235,11 +235,11 @@ func TestEmulBis(t *testing.T) {
 func TestEmulBic(t *testing.T) {
 	cpu, mem := fixture()
 	e := NewEngine(cpu, mem)
-	cpu.SetGPR(vax.R1, 0x0F)                                      // mask
-	cpu.SetGPR(vax.R2, 0xFF)                                      // dst
-	stepInstruction(t, e, 0x8A, regMode(vax.R1), regMode(vax.R2)) // BICB2
-	
-	if got := byte(cpu.GPR(vax.R2)); got != 0xF0 {
+	cpu.SetGPR(registers.R1, 0x0F)                                            // mask
+	cpu.SetGPR(registers.R2, 0xFF)                                            // dst
+	stepInstruction(t, e, 0x8A, regMode(registers.R1), regMode(registers.R2)) // BICB2
+
+	if got := byte(cpu.GPR(registers.R2)); got != 0xF0 {
 		t.Errorf("result = %#x, want 0xf0", got)
 	}
 }
@@ -247,11 +247,11 @@ func TestEmulBic(t *testing.T) {
 func TestEmulXor(t *testing.T) {
 	cpu, mem := fixture()
 	e := NewEngine(cpu, mem)
-	cpu.SetGPR(vax.R1, 0xFF)
-	cpu.SetGPR(vax.R2, 0x0F)
-	stepInstruction(t, e, 0x8C, regMode(vax.R1), regMode(vax.R2)) // XORB2
+	cpu.SetGPR(registers.R1, 0xFF)
+	cpu.SetGPR(registers.R2, 0x0F)
+	stepInstruction(t, e, 0x8C, regMode(registers.R1), regMode(registers.R2)) // XORB2
 
-	if got := byte(cpu.GPR(vax.R2)); got != 0xF0 {
+	if got := byte(cpu.GPR(registers.R2)); got != 0xF0 {
 		t.Errorf("result = %#x, want 0xf0", got)
 	}
 }
@@ -265,13 +265,13 @@ func TestEmulXor(t *testing.T) {
 func TestEmulBisb3DestinationScaleFixed(t *testing.T) {
 	cpu, mem := fixture()
 	e := NewEngine(cpu, mem)
-	cpu.SetGPR(vax.R1, 0x0F)
-	cpu.SetGPR(vax.R2, 0xF0)
-	cpu.SetGPR(vax.R3, 0xAAAAAAAA)
+	cpu.SetGPR(registers.R1, 0x0F)
+	cpu.SetGPR(registers.R2, 0xF0)
+	cpu.SetGPR(registers.R3, 0xAAAAAAAA)
 
-	stepInstruction(t, e, 0x89, regMode(vax.R1), regMode(vax.R2), regMode(vax.R3)) // BISB3
+	stepInstruction(t, e, 0x89, regMode(registers.R1), regMode(registers.R2), regMode(registers.R3)) // BISB3
 
-	if got := cpu.GPR(vax.R3); got != 0xAAAAAAFF {
+	if got := cpu.GPR(registers.R3); got != 0xAAAAAAFF {
 		t.Errorf("R3 = %#x, want 0xaaaaaaff (only the low byte written)", got)
 	}
 }
@@ -281,11 +281,11 @@ func TestEmulAdwcCarryPropagation(t *testing.T) {
 	e := NewEngine(cpu, mem)
 	// Simulate a multi-word add: low words overflow, high-word ADWC should
 	// see the carry.
-	cpu.SetGPR(vax.R1, 0xFFFF)
-	cpu.SetGPR(vax.R2, 1)
-	stepInstruction(t, e, 0xA0, regMode(vax.R1), regMode(vax.R2)) // ADDW2: 0xFFFF+1 -> 0, C=true
+	cpu.SetGPR(registers.R1, 0xFFFF)
+	cpu.SetGPR(registers.R2, 1)
+	stepInstruction(t, e, 0xA0, regMode(registers.R1), regMode(registers.R2)) // ADDW2: 0xFFFF+1 -> 0, C=true
 
-	if got := uint16(cpu.GPR(vax.R2)); got != 0 {
+	if got := uint16(cpu.GPR(registers.R2)); got != 0 {
 		t.Fatalf("low word = %#x, want 0", got)
 	}
 
@@ -293,11 +293,11 @@ func TestEmulAdwcCarryPropagation(t *testing.T) {
 		t.Fatal("C = false after low-word add, want true")
 	}
 
-	cpu.SetGPR(vax.R3, 0)
-	cpu.SetGPR(vax.R4, 0)
-	stepInstruction(t, e, 0xD8, regMode(vax.R3), regMode(vax.R4)) // ADWC: 0+0+C
+	cpu.SetGPR(registers.R3, 0)
+	cpu.SetGPR(registers.R4, 0)
+	stepInstruction(t, e, 0xD8, regMode(registers.R3), regMode(registers.R4)) // ADWC: 0+0+C
 
-	if got := uint16(cpu.GPR(vax.R4)); got != 1 {
+	if got := uint16(cpu.GPR(registers.R4)); got != 1 {
 		t.Errorf("high word = %#x, want 1 (carry propagated)", got)
 	}
 
@@ -317,12 +317,12 @@ func TestEmulAdwcCarryPropagation(t *testing.T) {
 func TestEmulAdwcOperatesOnLongwords(t *testing.T) {
 	cpu, mem := fixture()
 	e := NewEngine(cpu, mem)
-	cpu.SetGPR(vax.R1, 0x0001FFFF)
-	cpu.SetGPR(vax.R2, 0x00000001)
+	cpu.SetGPR(registers.R1, 0x0001FFFF)
+	cpu.SetGPR(registers.R2, 0x00000001)
 
-	stepInstruction(t, e, 0xD8, regMode(vax.R1), regMode(vax.R2)) // ADWC, no carry-in
+	stepInstruction(t, e, 0xD8, regMode(registers.R1), regMode(registers.R2)) // ADWC, no carry-in
 
-	if got := cpu.GPR(vax.R2); got != 0x00020000 {
+	if got := cpu.GPR(registers.R2); got != 0x00020000 {
 		t.Errorf("R2 = %#x, want 0x00020000 (longword add, not word)", got)
 	}
 
@@ -334,19 +334,19 @@ func TestEmulAdwcOperatesOnLongwords(t *testing.T) {
 func TestEmulSbwcBorrowPropagation(t *testing.T) {
 	cpu, mem := fixture()
 	e := NewEngine(cpu, mem)
-	cpu.SetGPR(vax.R1, 1)
-	cpu.SetGPR(vax.R2, 0)
-	stepInstruction(t, e, 0xA2, regMode(vax.R1), regMode(vax.R2)) // SUBW2: 0-1 -> borrow
+	cpu.SetGPR(registers.R1, 1)
+	cpu.SetGPR(registers.R2, 0)
+	stepInstruction(t, e, 0xA2, regMode(registers.R1), regMode(registers.R2)) // SUBW2: 0-1 -> borrow
 
 	if !cpu.PSL().C() {
 		t.Fatal("C = false after low-word sub, want true")
 	}
 
-	cpu.SetGPR(vax.R3, 0)
-	cpu.SetGPR(vax.R4, 1)
-	stepInstruction(t, e, 0xD9, regMode(vax.R3), regMode(vax.R4)) // SBWC: 1-0-C
+	cpu.SetGPR(registers.R3, 0)
+	cpu.SetGPR(registers.R4, 1)
+	stepInstruction(t, e, 0xD9, regMode(registers.R3), regMode(registers.R4)) // SBWC: 1-0-C
 
-	if got := uint16(cpu.GPR(vax.R4)); got != 0 {
+	if got := uint16(cpu.GPR(registers.R4)); got != 0 {
 		t.Errorf("high word = %#x, want 0 (borrow propagated)", got)
 	}
 }

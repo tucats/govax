@@ -3,7 +3,7 @@ package vm
 import (
 	"testing"
 
-	"github.com/tucats/govax/internal/vax"
+	"github.com/tucats/govax/internal/registers"
 )
 
 func TestPTEFieldRoundTrip(t *testing.T) {
@@ -137,32 +137,32 @@ func TestProtectionAllows(t *testing.T) {
 	cases := []struct {
 		name   string
 		prot   Protection
-		mode   vax.AccessMode
+		mode   registers.AccessMode
 		access AccessType
 		want   bool
 	}{
-		{"NA denies kernel read", ProtNA, vax.Kernel, AccessRead, false},
-		{"NA denies kernel write", ProtNA, vax.Kernel, AccessWrite, false},
+		{"NA denies kernel read", ProtNA, registers.Kernel, AccessRead, false},
+		{"NA denies kernel write", ProtNA, registers.Kernel, AccessWrite, false},
 
-		{"KW allows kernel write", ProtKW, vax.Kernel, AccessWrite, true},
-		{"KW allows kernel read", ProtKW, vax.Kernel, AccessRead, true},
-		{"KW denies exec write", ProtKW, vax.Executive, AccessWrite, false},
-		{"KW denies exec read", ProtKW, vax.Executive, AccessRead, false},
+		{"KW allows kernel write", ProtKW, registers.Kernel, AccessWrite, true},
+		{"KW allows kernel read", ProtKW, registers.Kernel, AccessRead, true},
+		{"KW denies exec write", ProtKW, registers.Executive, AccessWrite, false},
+		{"KW denies exec read", ProtKW, registers.Executive, AccessRead, false},
 
-		{"KR allows kernel read", ProtKR, vax.Kernel, AccessRead, true},
-		{"KR denies kernel write", ProtKR, vax.Kernel, AccessWrite, false},
-		{"KR denies exec read", ProtKR, vax.Executive, AccessRead, false},
+		{"KR allows kernel read", ProtKR, registers.Kernel, AccessRead, true},
+		{"KR denies kernel write", ProtKR, registers.Kernel, AccessWrite, false},
+		{"KR denies exec read", ProtKR, registers.Executive, AccessRead, false},
 
-		{"UW (ALL) allows user write", ProtUW, vax.User, AccessWrite, true},
-		{"UW (ALL) allows user read", ProtUW, vax.User, AccessRead, true},
+		{"UW (ALL) allows user write", ProtUW, registers.User, AccessWrite, true},
+		{"UW (ALL) allows user read", ProtUW, registers.User, AccessRead, true},
 
-		{"SW allows super write", ProtSW, vax.Supervisor, AccessWrite, true},
-		{"SW denies user write", ProtSW, vax.User, AccessWrite, false},
-		{"SW denies user read", ProtSW, vax.User, AccessRead, false},
+		{"SW allows super write", ProtSW, registers.Supervisor, AccessWrite, true},
+		{"SW denies user write", ProtSW, registers.User, AccessWrite, false},
+		{"SW denies user read", ProtSW, registers.User, AccessRead, false},
 
-		{"UR allows user read", ProtUR, vax.User, AccessRead, true},
-		{"UR denies user write", ProtUR, vax.User, AccessWrite, false},
-		{"UR allows kernel read", ProtUR, vax.Kernel, AccessRead, true},
+		{"UR allows user read", ProtUR, registers.User, AccessRead, true},
+		{"UR denies user write", ProtUR, registers.User, AccessWrite, false},
+		{"UR allows kernel read", ProtUR, registers.Kernel, AccessRead, true},
 	}
 
 	for _, c := range cases {

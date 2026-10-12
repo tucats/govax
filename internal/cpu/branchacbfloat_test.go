@@ -3,7 +3,7 @@ package cpu
 import (
 	"testing"
 
-	"github.com/tucats/govax/internal/vax"
+	"github.com/tucats/govax/internal/registers"
 )
 
 func TestEmulAcbFloatPositiveAddendBoundary(t *testing.T) {
@@ -12,22 +12,22 @@ func TestEmulAcbFloatPositiveAddendBoundary(t *testing.T) {
 	// specifies branching on index <= limit for a non-negative addend.
 	cpu, mem := fixture()
 	e := NewEngine(cpu, mem)
-	setFloatReg(t, cpu, 4, vax.R1, 10.0) // limit
-	setFloatReg(t, cpu, 4, vax.R2, 1.0)  // addend
-	setFloatReg(t, cpu, 4, vax.R3, 9.0)  // index -> 10.0 after add, == limit
-	cpu.SetGPR(vax.PC, base)
-	putBytes(t, cpu, mem, base, 0x4F, regMode(vax.R1), regMode(vax.R2), regMode(vax.R3), 0x10, 0x00) // ACBF limit,addend,index,+16
+	setFloatReg(t, cpu, 4, registers.R1, 10.0) // limit
+	setFloatReg(t, cpu, 4, registers.R2, 1.0)  // addend
+	setFloatReg(t, cpu, 4, registers.R3, 9.0)  // index -> 10.0 after add, == limit
+	cpu.SetGPR(registers.PC, base)
+	putBytes(t, cpu, mem, base, 0x4F, regMode(registers.R1), regMode(registers.R2), regMode(registers.R3), 0x10, 0x00) // ACBF limit,addend,index,+16
 
 	if err := e.Step(); err != nil {
 		t.Fatalf("Step: %v", err)
 	}
 	
-	if got := getFloatReg(t, cpu, 4, vax.R3); got != 10.0 {
+	if got := getFloatReg(t, cpu, 4, registers.R3); got != 10.0 {
 		t.Errorf("index = %v, want 10.0", got)
 	}
 	
 	want := uint32(base + 6 + 16) // taken
-	if got := cpu.GPR(vax.PC); got != want {
+	if got := cpu.GPR(registers.PC); got != want {
 		t.Errorf("PC = %#x, want %#x (branch taken: index reached limit exactly)", got, want)
 	}
 }
@@ -35,22 +35,22 @@ func TestEmulAcbFloatPositiveAddendBoundary(t *testing.T) {
 func TestEmulAcbFloatNotTaken(t *testing.T) {
 	cpu, mem := fixture()
 	e := NewEngine(cpu, mem)
-	setFloatReg(t, cpu, 4, vax.R1, 10.0) // limit
-	setFloatReg(t, cpu, 4, vax.R2, 1.0)  // addend
-	setFloatReg(t, cpu, 4, vax.R3, 10.0) // index -> 11.0 after add, exceeds limit
-	cpu.SetGPR(vax.PC, base)
-	putBytes(t, cpu, mem, base, 0x4F, regMode(vax.R1), regMode(vax.R2), regMode(vax.R3), 0x10, 0x00)
+	setFloatReg(t, cpu, 4, registers.R1, 10.0) // limit
+	setFloatReg(t, cpu, 4, registers.R2, 1.0)  // addend
+	setFloatReg(t, cpu, 4, registers.R3, 10.0) // index -> 11.0 after add, exceeds limit
+	cpu.SetGPR(registers.PC, base)
+	putBytes(t, cpu, mem, base, 0x4F, regMode(registers.R1), regMode(registers.R2), regMode(registers.R3), 0x10, 0x00)
 
 	if err := e.Step(); err != nil {
 		t.Fatalf("Step: %v", err)
 	}
 
-	if got := getFloatReg(t, cpu, 4, vax.R3); got != 11.0 {
+	if got := getFloatReg(t, cpu, 4, registers.R3); got != 11.0 {
 		t.Errorf("index = %v, want 11.0", got)
 	}
 
 	want := uint32(base + 6) // not taken
-	if got := cpu.GPR(vax.PC); got != want {
+	if got := cpu.GPR(registers.PC); got != want {
 		t.Errorf("PC = %#x, want %#x (loop exits)", got, want)
 	}
 }
@@ -59,18 +59,18 @@ func TestEmulAcbFloatNegativeAddend(t *testing.T) {
 	// negative addend: branch when index >= limit (a counting-down loop).
 	cpu, mem := fixture()
 	e := NewEngine(cpu, mem)
-	setFloatReg(t, cpu, 4, vax.R1, 0.0)  // limit
-	setFloatReg(t, cpu, 4, vax.R2, -1.0) // addend
-	setFloatReg(t, cpu, 4, vax.R3, 1.0)  // index -> 0.0 after add, == limit
-	cpu.SetGPR(vax.PC, base)
-	putBytes(t, cpu, mem, base, 0x4F, regMode(vax.R1), regMode(vax.R2), regMode(vax.R3), 0x10, 0x00)
+	setFloatReg(t, cpu, 4, registers.R1, 0.0)  // limit
+	setFloatReg(t, cpu, 4, registers.R2, -1.0) // addend
+	setFloatReg(t, cpu, 4, registers.R3, 1.0)  // index -> 0.0 after add, == limit
+	cpu.SetGPR(registers.PC, base)
+	putBytes(t, cpu, mem, base, 0x4F, regMode(registers.R1), regMode(registers.R2), regMode(registers.R3), 0x10, 0x00)
 
 	if err := e.Step(); err != nil {
 		t.Fatalf("Step: %v", err)
 	}
 
 	want := uint32(base + 6 + 16)
-	if got := cpu.GPR(vax.PC); got != want {
+	if got := cpu.GPR(registers.PC); got != want {
 		t.Errorf("PC = %#x, want %#x (branch taken: index still >= limit)", got, want)
 	}
 }
@@ -80,22 +80,22 @@ func TestEmulAcbDouble(t *testing.T) {
 	// implemented fresh here by direct analogy to ACBF.
 	cpu, mem := fixture()
 	e := NewEngine(cpu, mem)
-	setFloatReg(t, cpu, 8, vax.R1, 5.0) // limit (R1:R2)
-	setFloatReg(t, cpu, 8, vax.R3, 1.0) // addend (R3:R4)
-	setFloatReg(t, cpu, 8, vax.R5, 3.0) // index (R5:R6) -> 4.0 after add
-	cpu.SetGPR(vax.PC, base)
-	putBytes(t, cpu, mem, base, 0x6F, regMode(vax.R1), regMode(vax.R3), regMode(vax.R5), 0x10, 0x00) // ACBD
+	setFloatReg(t, cpu, 8, registers.R1, 5.0) // limit (R1:R2)
+	setFloatReg(t, cpu, 8, registers.R3, 1.0) // addend (R3:R4)
+	setFloatReg(t, cpu, 8, registers.R5, 3.0) // index (R5:R6) -> 4.0 after add
+	cpu.SetGPR(registers.PC, base)
+	putBytes(t, cpu, mem, base, 0x6F, regMode(registers.R1), regMode(registers.R3), regMode(registers.R5), 0x10, 0x00) // ACBD
 
 	if err := e.Step(); err != nil {
 		t.Fatalf("Step: %v", err)
 	}
 
-	if got := getFloatReg(t, cpu, 8, vax.R5); got != 4.0 {
+	if got := getFloatReg(t, cpu, 8, registers.R5); got != 4.0 {
 		t.Errorf("index = %v, want 4.0", got)
 	}
 
 	want := uint32(base + 6 + 16) // taken (4.0 < limit 5.0)
-	if got := cpu.GPR(vax.PC); got != want {
+	if got := cpu.GPR(registers.PC); got != want {
 		t.Errorf("PC = %#x, want %#x", got, want)
 	}
 }
@@ -104,11 +104,11 @@ func TestEmulAcbFloatCUnaffected(t *testing.T) {
 	cpu, mem := fixture()
 	e := NewEngine(cpu, mem)
 	setC(cpu, true)
-	setFloatReg(t, cpu, 4, vax.R1, 10.0)
-	setFloatReg(t, cpu, 4, vax.R2, 1.0)
-	setFloatReg(t, cpu, 4, vax.R3, 1.0)
-	cpu.SetGPR(vax.PC, base)
-	putBytes(t, cpu, mem, base, 0x4F, regMode(vax.R1), regMode(vax.R2), regMode(vax.R3), 0x10, 0x00)
+	setFloatReg(t, cpu, 4, registers.R1, 10.0)
+	setFloatReg(t, cpu, 4, registers.R2, 1.0)
+	setFloatReg(t, cpu, 4, registers.R3, 1.0)
+	cpu.SetGPR(registers.PC, base)
+	putBytes(t, cpu, mem, base, 0x4F, regMode(registers.R1), regMode(registers.R2), regMode(registers.R3), 0x10, 0x00)
 
 	if err := e.Step(); err != nil {
 		t.Fatalf("Step: %v", err)
@@ -131,20 +131,20 @@ func TestEmulAcbFloatCUnaffected(t *testing.T) {
 func TestEmulAcbFloatShortLiterals(t *testing.T) {
 	cpu, mem := fixture()
 	e := NewEngine(cpu, mem)
-	setFloatReg(t, cpu, 4, vax.R3, 8.0) // index -> 9.0 after adding 1.0, <= 10.0
-	cpu.SetGPR(vax.PC, base)
-	putBytes(t, cpu, mem, base, 0x4F, 0x22, 0x08, regMode(vax.R3), 0x10, 0x00) // ACBF S^#10.0,S^#1.0,R3,+16
+	setFloatReg(t, cpu, 4, registers.R3, 8.0) // index -> 9.0 after adding 1.0, <= 10.0
+	cpu.SetGPR(registers.PC, base)
+	putBytes(t, cpu, mem, base, 0x4F, 0x22, 0x08, regMode(registers.R3), 0x10, 0x00) // ACBF S^#10.0,S^#1.0,R3,+16
 
 	if err := e.Step(); err != nil {
 		t.Fatalf("Step: %v", err)
 	}
 
-	if got := getFloatReg(t, cpu, 4, vax.R3); got != 9.0 {
+	if got := getFloatReg(t, cpu, 4, registers.R3); got != 9.0 {
 		t.Errorf("index = %v, want 9.0", got)
 	}
 
 	want := uint32(base + 6 + 16) // taken: 9.0 hasn't passed 10.0
-	if got := cpu.GPR(vax.PC); got != want {
+	if got := cpu.GPR(registers.PC); got != want {
 		t.Errorf("PC = %#x, want %#x (branch taken)", got, want)
 	}
 }

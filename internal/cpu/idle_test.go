@@ -4,7 +4,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/tucats/govax/internal/vax"
+	"github.com/tucats/govax/internal/registers"
 )
 
 // TestInstructionsUntil: the count InstructionsUntil gives is exactly the
@@ -69,7 +69,7 @@ func TestIdleUntilQuantum(t *testing.T) {
 		t.Error("a time already past isn't reached")
 	}
 
-	e.cpu.SetPR(vax.ICCS, iccsRun)
+	e.cpu.SetPR(registers.ICCS, iccsRun)
 
 	now := e.SystemTime()
 	if e.IdleUntil(now+vmsTicksPerMillisecond, 0) || e.SystemTime() != now {

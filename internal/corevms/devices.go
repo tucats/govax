@@ -6,12 +6,12 @@ import (
 	"strings"
 
 	iodev "github.com/tucats/govax/internal/io"
+	"github.com/tucats/govax/internal/registers"
 	"github.com/tucats/govax/internal/rms"
-	"github.com/tucats/govax/internal/vax"
 	"github.com/tucats/govax/internal/vmsdef"
 )
 
-// channel is one SYS$ASSIGN-created channel. Channel numbers count up 
+// channel is one SYS$ASSIGN-created channel. Channel numbers count up
 // by 8 starting at 8 (nextChannel += 8 before use), matching find_device's
 // own convention.
 type channel struct {
@@ -411,7 +411,7 @@ func (env *Environment) releaseChannel(c *channel) {
 // channels an image assigned from user mode when it exits.
 func (env *Environment) deassignUserChannels() {
 	for _, c := range append([]*channel(nil), env.channels...) {
-		if c.Mode == uint32(vax.User) {
+		if c.Mode == uint32(registers.User) {
 			env.releaseChannel(c)
 		}
 	}
@@ -433,7 +433,7 @@ func (env *Environment) hasChannel(d *iodev.Device) bool {
 // same as $DALLOC with no device name at user mode, so a device the
 // process still has a (more privileged) channel to stays allocated.
 func (env *Environment) deallocateUserDevices() {
-	env.deallocateAll(uint32(vax.User))
+	env.deallocateAll(uint32(registers.User))
 }
 
 // deallocateAll releases every device the process allocated in mode or a

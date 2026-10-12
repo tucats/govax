@@ -3,7 +3,7 @@ package corevms
 import (
 	"testing"
 
-	"github.com/tucats/govax/internal/vax"
+	"github.com/tucats/govax/internal/registers"
 	"github.com/tucats/govax/internal/vmsdef"
 )
 
@@ -207,8 +207,8 @@ func TestPutmsg_actionRoutine(t *testing.T) {
 
 	const routine, actprm, fp, sp = 0x5000, 0xABCD, 0x7000, 0x8000
 
-	c.SetGPR(vax.FP, fp)
-	c.SetGPR(vax.SP, sp)
+	c.SetGPR(registers.FP, fp)
+	c.SetGPR(registers.SP, sp)
 
 	argv := []uint32{a.msgvec(0, testSSAbort, testSSDuplnam), routine, 0, actprm}
 
@@ -220,7 +220,7 @@ func TestPutmsg_actionRoutine(t *testing.T) {
 		t.Fatalf("first call = %#x, %v; want a call of %#x", r0, err, routine)
 	}
 
-	newSP := c.GPR(vax.SP)
+	newSP := c.GPR(registers.SP)
 	if call.ArgList != newSP || newSP >= sp {
 		t.Fatalf("argument list at %#x, SP %#x; want the argument list at SP, below %#x", call.ArgList, newSP, sp)
 	}
@@ -244,7 +244,7 @@ func TestPutmsg_actionRoutine(t *testing.T) {
 
 	// The routine returns 1: the line is written, and the second line's
 	// call follows, from the restored SP.
-	c.SetGPR(vax.R0, 1)
+	c.SetGPR(registers.R0, 1)
 
 	if _, err := serviceSysPutmsg(env, argv); err == nil {
 		t.Fatal("no call for the second line")
@@ -254,12 +254,12 @@ func TestPutmsg_actionRoutine(t *testing.T) {
 		t.Errorf("after R0=1, wrote %q", out.String())
 	}
 
-	if got := a.readLong(a.readLong(c.GPR(vax.SP)+4) + 4); a.readString(got, 1) != "-" {
+	if got := a.readLong(a.readLong(c.GPR(registers.SP)+4) + 4); a.readString(got, 1) != "-" {
 		t.Error("the second line doesn't start with \"-\"")
 	}
 
 	// It returns 0: that line isn't written, and $PUTMSG finishes.
-	c.SetGPR(vax.R0, 0)
+	c.SetGPR(registers.R0, 0)
 
 	r0, err = serviceSysPutmsg(env, argv)
 
@@ -271,8 +271,8 @@ func TestPutmsg_actionRoutine(t *testing.T) {
 		t.Errorf("after R0=0, wrote %q", out.String())
 	}
 
-	if c.GPR(vax.SP) != sp || len(env.Process.putmsg) != 0 {
-		t.Errorf("SP = %#x with %d calls pending; want %#x and none", c.GPR(vax.SP), len(env.Process.putmsg), sp)
+	if c.GPR(registers.SP) != sp || len(env.Process.putmsg) != 0 {
+		t.Errorf("SP = %#x with %d calls pending; want %#x and none", c.GPR(registers.SP), len(env.Process.putmsg), sp)
 	}
 
 	// Without actprm, the routine gets one argument.
@@ -281,7 +281,7 @@ func TestPutmsg_actionRoutine(t *testing.T) {
 		t.Fatal("no call")
 	}
 
-	if argc := a.readLong(c.GPR(vax.SP)); argc != 1 {
+	if argc := a.readLong(c.GPR(registers.SP)); argc != 1 {
 		t.Errorf("without actprm, %d arguments; want 1", argc)
 	}
 

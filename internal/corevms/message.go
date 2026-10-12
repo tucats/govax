@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/tucats/govax/internal/vax"
+	"github.com/tucats/govax/internal/registers"
 	"github.com/tucats/govax/internal/vmsdef"
 )
 
@@ -241,14 +241,14 @@ func serviceSysPutmsg(env *Environment, argv []uint32) (uint32, error) {
 
 	if n := len(p.putmsg); n > 0 {
 		top := p.putmsg[n-1]
-		if top.fp == c.GPR(vax.FP) && top.sp == c.GPR(vax.SP) {
+		if top.fp == c.GPR(registers.FP) && top.sp == c.GPR(registers.SP) {
 			call = top
 
-			if c.GPR(vax.R0)&1 != 0 {
+			if c.GPR(registers.R0)&1 != 0 {
 				env.writeConsole(call.lines[call.next] + "\n")
 			}
 
-			c.SetGPR(vax.SP, call.savedSP)
+			c.SetGPR(registers.SP, call.savedSP)
 
 			call.next++
 		}
@@ -268,7 +268,7 @@ func serviceSysPutmsg(env *Environment, argv []uint32) (uint32, error) {
 			return ssNormal, nil
 		}
 
-		call = &putmsgCall{fp: c.GPR(vax.FP), lines: lines}
+		call = &putmsgCall{fp: c.GPR(registers.FP), lines: lines}
 		p.putmsg = append(p.putmsg, call)
 	}
 
@@ -288,7 +288,7 @@ func serviceSysPutmsg(env *Environment, argv []uint32) (uint32, error) {
 		argc = 1
 	}
 
-	call.savedSP = c.GPR(vax.SP)
+	call.savedSP = c.GPR(registers.SP)
 	sp := call.savedSP - (12 + 8 + (uint32(len(line))+3)&^3)
 	desc, text := sp+12, sp+20
 
@@ -305,7 +305,7 @@ func serviceSysPutmsg(env *Environment, argv []uint32) (uint32, error) {
 		return ssAccVio, nil
 	}
 
-	c.SetGPR(vax.SP, sp)
+	c.SetGPR(registers.SP, sp)
 	call.sp = sp
 
 	return 0, &CallRequest{Routine: actrtn, ArgList: sp}

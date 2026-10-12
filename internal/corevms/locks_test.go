@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	"github.com/tucats/govax/internal/lck"
-	"github.com/tucats/govax/internal/vax"
+	"github.com/tucats/govax/internal/registers"
 )
 
 // lockEvents is a lck.Notifier that records the events its lock gets.
@@ -14,7 +14,7 @@ func (e *lockEvents) Notify(ev lck.Event) { *e = append(*e, ev.Kind) }
 
 // enqueueFor takes a lock on name for env's process, at access mode
 // mode, recording its events in got.
-func enqueueFor(t *testing.T, env *Environment, name string, lm lck.Mode, mode vax.AccessMode, got *lockEvents) *lck.Lock {
+func enqueueFor(t *testing.T, env *Environment, name string, lm lck.Mode, mode registers.AccessMode, got *lockEvents) *lck.Lock {
 	t.Helper()
 
 	l, events, err := env.Locks.Enqueue(lck.Request{
@@ -40,8 +40,8 @@ func TestLocks_processRundown(t *testing.T) {
 
 	var aEvents, bEvents lockEvents
 
-	enqueueFor(t, a, "RES", lck.EX, vax.Executive, &aEvents)
-	waiter := enqueueFor(t, b, "RES", lck.PR, vax.Executive, &bEvents)
+	enqueueFor(t, a, "RES", lck.EX, registers.Executive, &aEvents)
+	waiter := enqueueFor(t, b, "RES", lck.PR, registers.Executive, &bEvents)
 
 	if waiter.State != lck.Waiting {
 		t.Fatalf("the second lock is %s", waiter.State)
@@ -66,8 +66,8 @@ func TestLocks_imageRundown(t *testing.T) {
 
 	var events lockEvents
 
-	user := enqueueFor(t, a, "USER", lck.EX, vax.User, &events)
-	exec := enqueueFor(t, a, "EXEC", lck.EX, vax.Executive, &events)
+	user := enqueueFor(t, a, "USER", lck.EX, registers.User, &events)
+	exec := enqueueFor(t, a, "EXEC", lck.EX, registers.Executive, &events)
 
 	a.dequeueUserLocks()
 

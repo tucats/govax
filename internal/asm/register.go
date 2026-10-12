@@ -1,7 +1,7 @@
 package asm
 
 import (
-	"github.com/tucats/govax/internal/vax"
+	"github.com/tucats/govax/internal/registers"
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
@@ -10,7 +10,7 @@ import (
 // character already consumed by the caller that turned out to be the first
 // character of the register name (asm_reg's `ch` parameter); pass 0 to have
 // this function read it itself.
-func parseRegister(c *cursor, first byte) (vax.Reg, error) {
+func parseRegister(c *cursor, first byte) (registers.Reg, error) {
 	ch := first
 	if ch == 0 {
 		c.skipBlanks()
@@ -28,35 +28,35 @@ func parseRegister(c *cursor, first byte) (vax.Reg, error) {
 			return 0, vmserrors.New(vmserrors.VAX_BADREG)
 		}
 
-		return vax.Reg(n), nil
+		return registers.Reg(n), nil
 
 	case 'A':
 		if c.next() != 'P' || isSymbolChar(c.peek()) {
 			return 0, vmserrors.New(vmserrors.VAX_BADREG)
 		}
 
-		return vax.AP, nil
+		return registers.AP, nil
 
 	case 'F':
 		if c.next() != 'P' || isSymbolChar(c.peek()) {
 			return 0, vmserrors.New(vmserrors.VAX_BADREG)
 		}
 
-		return vax.FP, nil
+		return registers.FP, nil
 
 	case 'S':
 		if c.next() != 'P' || isSymbolChar(c.peek()) {
 			return 0, vmserrors.New(vmserrors.VAX_BADREG)
 		}
 
-		return vax.SP, nil
+		return registers.SP, nil
 
 	case 'P':
 		if c.next() != 'C' || isSymbolChar(c.peek()) {
 			return 0, vmserrors.New(vmserrors.VAX_BADREG)
 		}
 		
-		return vax.PC, nil
+		return registers.PC, nil
 	}
 
 	return 0, vmserrors.New(vmserrors.VAX_BADREG)

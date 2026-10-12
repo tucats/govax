@@ -1,6 +1,6 @@
 package cpu
 
-import "github.com/tucats/govax/internal/vax"
+import "github.com/tucats/govax/internal/registers"
 
 // Simple branch-always/conditional branches and a generic
 // RSB/BSB/JSB/BLBS/BLBC handler. ACB and CASE are a separate,
@@ -40,7 +40,7 @@ func init() {
 // general address operand -- never a register, see docs/DEVIATIONS.md's
 // OP_AD finding -- for JMP).
 func emulBranchAlways(e *Engine, d *Decoded) error {
-	e.cpu.SetGPR(vax.PC, d.Operands[0].Addr)
+	e.cpu.SetGPR(registers.PC, d.Operands[0].Addr)
 
 	return nil
 }
@@ -48,10 +48,10 @@ func emulBranchAlways(e *Engine, d *Decoded) error {
 // condBranch builds a Handler for one of the twelve simple conditional
 // branches: PC is replaced by the target operand iff test(psl) is true,
 // otherwise nothing happens.
-func condBranch(test func(vax.PSL) bool) Handler {
+func condBranch(test func(registers.PSL) bool) Handler {
 	return func(e *Engine, d *Decoded) error {
 		if test(e.cpu.PSL()) {
-			e.cpu.SetGPR(vax.PC, d.Operands[0].Addr)
+			e.cpu.SetGPR(registers.PC, d.Operands[0].Addr)
 		}
 
 		return nil
@@ -59,31 +59,31 @@ func condBranch(test func(vax.PSL) bool) Handler {
 }
 
 var (
-	emulBneq  = condBranch(func(p vax.PSL) bool { return !p.Z() })
-	emulBeql  = condBranch(func(p vax.PSL) bool { return p.Z() })
-	emulBgtr  = condBranch(func(p vax.PSL) bool { return !(p.N() || p.Z()) })
-	emulBleq  = condBranch(func(p vax.PSL) bool { return p.N() || p.Z() })
-	emulBgeq  = condBranch(func(p vax.PSL) bool { return !p.N() })
-	emulBlss  = condBranch(func(p vax.PSL) bool { return p.N() })
-	emulBgtru = condBranch(func(p vax.PSL) bool { return !(p.C() || p.Z()) })
-	emulBlequ = condBranch(func(p vax.PSL) bool { return p.C() || p.Z() })
-	emulBvc   = condBranch(func(p vax.PSL) bool { return !p.V() })
-	emulBvs   = condBranch(func(p vax.PSL) bool { return p.V() })
-	emulBgequ = condBranch(func(p vax.PSL) bool { return !p.C() })
-	emulBcs   = condBranch(func(p vax.PSL) bool { return p.C() })
+	emulBneq  = condBranch(func(p registers.PSL) bool { return !p.Z() })
+	emulBeql  = condBranch(func(p registers.PSL) bool { return p.Z() })
+	emulBgtr  = condBranch(func(p registers.PSL) bool { return !(p.N() || p.Z()) })
+	emulBleq  = condBranch(func(p registers.PSL) bool { return p.N() || p.Z() })
+	emulBgeq  = condBranch(func(p registers.PSL) bool { return !p.N() })
+	emulBlss  = condBranch(func(p registers.PSL) bool { return p.N() })
+	emulBgtru = condBranch(func(p registers.PSL) bool { return !(p.C() || p.Z()) })
+	emulBlequ = condBranch(func(p registers.PSL) bool { return p.C() || p.Z() })
+	emulBvc   = condBranch(func(p registers.PSL) bool { return !p.V() })
+	emulBvs   = condBranch(func(p registers.PSL) bool { return p.V() })
+	emulBgequ = condBranch(func(p registers.PSL) bool { return !p.C() })
+	emulBcs   = condBranch(func(p registers.PSL) bool { return p.C() })
 )
 
 // emulRsb is RSB: pop the return address off the stack into PC.
 func emulRsb(e *Engine, d *Decoded) error {
-	sp := e.cpu.GPR(vax.SP)
+	sp := e.cpu.GPR(registers.SP)
 
 	ret, err := e.mem.LoadLongword(e.cpu, sp)
 	if err != nil {
 		return err
 	}
 
-	e.cpu.SetGPR(vax.SP, sp+4)
-	e.cpu.SetGPR(vax.PC, ret)
+	e.cpu.SetGPR(registers.SP, sp+4)
+	e.cpu.SetGPR(registers.PC, ret)
 
 	return nil
 }
@@ -92,11 +92,11 @@ func emulRsb(e *Engine, d *Decoded) error {
 // this instruction by Engine.Step before the handler runs), then jump to
 // the branch-displacement target.
 func emulBsb(e *Engine, d *Decoded) error {
-	if err := push(e, e.cpu.GPR(vax.PC)); err != nil {
+	if err := push(e, e.cpu.GPR(registers.PC)); err != nil {
 		return err
 	}
 
-	e.cpu.SetGPR(vax.PC, d.Operands[0].Addr)
+	e.cpu.SetGPR(registers.PC, d.Operands[0].Addr)
 
 	return nil
 }
@@ -118,7 +118,7 @@ func emulBlbs(e *Engine, d *Decoded) error {
 	}
 
 	if v&1 != 0 {
-		e.cpu.SetGPR(vax.PC, d.Operands[1].Addr)
+		e.cpu.SetGPR(registers.PC, d.Operands[1].Addr)
 	}
 
 	return nil
@@ -133,7 +133,7 @@ func emulBlbc(e *Engine, d *Decoded) error {
 	}
 
 	if v&1 == 0 {
-		e.cpu.SetGPR(vax.PC, d.Operands[1].Addr)
+		e.cpu.SetGPR(registers.PC, d.Operands[1].Addr)
 	}
 
 	return nil

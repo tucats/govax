@@ -3,8 +3,8 @@ package machine
 import (
 	"strings"
 
+	"github.com/tucats/govax/internal/registers"
 	"github.com/tucats/govax/internal/symtab"
-	"github.com/tucats/govax/internal/vax"
 )
 
 // Names from the loaded images' debug symbol tables (docs/PHASE-41.md,
@@ -126,7 +126,7 @@ func (n imageNames) Line(scope string, line int) (uint32, bool) {
 		return 0, false
 	}
 
-	pc := n.m.CPU.GPR(vax.PC)
+	pc := n.m.CPU.GPR(registers.PC)
 
 	for _, icb := range n.m.images().ICBList {
 		if icb.Debug == nil {

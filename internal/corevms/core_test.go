@@ -3,7 +3,7 @@ package corevms
 import (
 	"testing"
 
-	"github.com/tucats/govax/internal/vax"
+	"github.com/tucats/govax/internal/registers"
 )
 
 // $SETAST, once tested here alongside $DCLEXH, is in ast_test.go, and
@@ -55,7 +55,7 @@ func TestServiceSysExpreg(t *testing.T) {
 
 	retAddr := uint32(0x1000)
 
-	r0, err := serviceSysExpreg(env, []uint32{2, retAddr, uint32(vax.Kernel), 0})
+	r0, err := serviceSysExpreg(env, []uint32{2, retAddr, uint32(registers.Kernel), 0})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -78,7 +78,7 @@ func TestServiceSysExpreg(t *testing.T) {
 		t.Errorf("region = [%d,%d], want [0,1023]", start, end)
 	}
 
-	if got := env.cpu.GPR(vax.R1); got != start {
+	if got := env.cpu.GPR(registers.R1); got != start {
 		t.Errorf("R1 = %#x, want %#x (start, the documented side effect)", got, start)
 	}
 
@@ -87,7 +87,7 @@ func TestServiceSysExpreg(t *testing.T) {
 	}
 
 	// A second call should start where the first left off.
-	r0, err = serviceSysExpreg(env, []uint32{1, 0, uint32(vax.Kernel), 0})
+	r0, err = serviceSysExpreg(env, []uint32{1, 0, uint32(registers.Kernel), 0})
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -96,7 +96,7 @@ func TestServiceSysExpreg(t *testing.T) {
 		t.Fatalf("r0 = %d, want ssNormal", r0)
 	}
 
-	if got := env.cpu.GPR(vax.R1); got != 1024 {
+	if got := env.cpu.GPR(registers.R1); got != 1024 {
 		t.Errorf("R1 = %d, want 1024 (continuing from the first call's end)", got)
 	}
 }

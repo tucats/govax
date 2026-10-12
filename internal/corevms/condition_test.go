@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/tucats/govax/internal/vax"
+	"github.com/tucats/govax/internal/registers"
 )
 
 // Addresses the condition tests lay things out at, inside the fixture's
@@ -41,10 +41,10 @@ func conditionFixture(t *testing.T) *Environment {
 	putLongword(t, env, condFrameB, condH2)
 	putLongword(t, env, condFrameB+12, consoleCallSentinel)
 
-	env.cpu.SetGPR(vax.SP, condSP)
-	env.cpu.SetGPR(vax.FP, condFrameA)
-	env.cpu.SetGPR(vax.R0, 0xAAAA)
-	env.cpu.SetGPR(vax.R1, 0xBBBB)
+	env.cpu.SetGPR(registers.SP, condSP)
+	env.cpu.SetGPR(registers.FP, condFrameA)
+	env.cpu.SetGPR(registers.R0, 0xAAAA)
+	env.cpu.SetGPR(registers.R1, 0xBBBB)
 
 	return env
 }
@@ -146,8 +146,8 @@ func TestDispatchException_layout(t *testing.T) {
 
 	d := env.Process.conditions[0]
 
-	if c.GPR(vax.PC) != condStub || c.GPR(vax.SP) != d.sp {
-		t.Errorf("PC %#x SP %#x; want SYS$SRCHANDLER %#x and SP %#x", c.GPR(vax.PC), c.GPR(vax.SP), condStub, d.sp)
+	if c.GPR(registers.PC) != condStub || c.GPR(registers.SP) != d.sp {
+		t.Errorf("PC %#x SP %#x; want SYS$SRCHANDLER %#x and SP %#x", c.GPR(registers.PC), c.GPR(registers.SP), condStub, d.sp)
 	}
 
 	// From the top of the stack: the argument list, the mechanism array,
@@ -176,22 +176,22 @@ func TestDispatchException_declines(t *testing.T) {
 	cases := []struct {
 		name  string
 		code  uint32
-		setup func(env *Environment) vax.PSL
+		setup func(env *Environment) registers.PSL
 	}{
-		{"no condition value", 0x2C, func(env *Environment) vax.PSL { return env.cpu.PSL() }},
-		{"interrupt stack", scbReservedOp, func(env *Environment) vax.PSL {
+		{"no condition value", 0x2C, func(env *Environment) registers.PSL { return env.cpu.PSL() }},
+		{"interrupt stack", scbReservedOp, func(env *Environment) registers.PSL {
 			psl := env.cpu.PSL()
 			psl.SetIS(true)
 
 			return psl
 		}},
-		{"no SYS$SRCHANDLER stub", scbReservedOp, func(env *Environment) vax.PSL {
+		{"no SYS$SRCHANDLER stub", scbReservedOp, func(env *Environment) registers.PSL {
 			putLongword(t, env, condStub, 0)
 
 			return env.cpu.PSL()
 		}},
-		{"stack not writable", scbReservedOp, func(env *Environment) vax.PSL {
-			env.cpu.SetGPR(vax.SP, 0x7FFF0000)
+		{"stack not writable", scbReservedOp, func(env *Environment) registers.PSL {
+			env.cpu.SetGPR(registers.SP, 0x7FFF0000)
 
 			return env.cpu.PSL()
 		}},
@@ -200,16 +200,16 @@ func TestDispatchException_declines(t *testing.T) {
 	for _, tc := range cases {
 		env := conditionFixture(t)
 		psl := tc.setup(env)
-		sp, pc := env.cpu.GPR(vax.SP), env.cpu.GPR(vax.PC)
+		sp, pc := env.cpu.GPR(registers.SP), env.cpu.GPR(registers.PC)
 
 		ok, err := env.DispatchException(tc.code, nil, 0x3000, psl)
 		if ok || err != nil {
 			t.Errorf("%s: DispatchException = %v, %v; want declined", tc.name, ok, err)
 		}
 
-		if env.cpu.GPR(vax.SP) != sp || env.cpu.GPR(vax.PC) != pc || len(env.Process.conditions) != 0 {
+		if env.cpu.GPR(registers.SP) != sp || env.cpu.GPR(registers.PC) != pc || len(env.Process.conditions) != 0 {
 			t.Errorf("%s: SP %#x PC %#x, %d dispatches; want nothing changed", tc.name,
-				env.cpu.GPR(vax.SP), env.cpu.GPR(vax.PC), len(env.Process.conditions))
+				env.cpu.GPR(registers.SP), env.cpu.GPR(registers.PC), len(env.Process.conditions))
 		}
 	}
 }
@@ -232,8 +232,8 @@ func TestSrchandler_resignalThenContinue(t *testing.T) {
 	expectHandlerCall(t, env, r0, err, condH1, condFrameA, 0)
 
 	// Frame A's handler returns SS$_RESIGNAL, having clobbered R1.
-	c.SetGPR(vax.R0, ssResignal)
-	c.SetGPR(vax.R1, 0xDEAD)
+	c.SetGPR(registers.R0, ssResignal)
+	c.SetGPR(registers.R1, 0xDEAD)
 
 	r0, err = serviceSysSrchandler(env, nil)
 	expectHandlerCall(t, env, r0, err, condH2, condFrameB, 1)
@@ -244,19 +244,19 @@ func TestSrchandler_resignalThenContinue(t *testing.T) {
 	putLongword(t, env, d.sig+4*2, 0x3004)
 	putLongword(t, env, d.sig+4*3, uint32(psl)|0x08)
 	putLongword(t, env, d.mech+12, 0x77)
-	c.SetGPR(vax.R0, 1)
+	c.SetGPR(registers.R0, 1)
 
 	r0, err = serviceSysSrchandler(env, nil)
 	if err != nil || r0 != 0x77 {
 		t.Fatalf("continue = %#x, %v; want R0 0x77", r0, err)
 	}
 
-	if c.GPR(vax.PC) != 0x3004 || c.GPR(vax.SP) != condSP || c.GPR(vax.FP) != condFrameA {
-		t.Errorf("PC %#x SP %#x FP %#x; want 0x3004, %#x, %#x", c.GPR(vax.PC), c.GPR(vax.SP), c.GPR(vax.FP), condSP, condFrameA)
+	if c.GPR(registers.PC) != 0x3004 || c.GPR(registers.SP) != condSP || c.GPR(registers.FP) != condFrameA {
+		t.Errorf("PC %#x SP %#x FP %#x; want 0x3004, %#x, %#x", c.GPR(registers.PC), c.GPR(registers.SP), c.GPR(registers.FP), condSP, condFrameA)
 	}
 
-	if c.GPR(vax.R1) != 0xBBBB {
-		t.Errorf("R1 = %#x, want the saved 0xBBBB", c.GPR(vax.R1))
+	if c.GPR(registers.R1) != 0xBBBB {
+		t.Errorf("R1 = %#x, want the saved 0xBBBB", c.GPR(registers.R1))
 	}
 
 	if got := c.PSL(); !got.N() || !got.Z() || got.CurMod() != psl.CurMod() {
@@ -283,7 +283,7 @@ func TestSrchandler_psl(t *testing.T) {
 	_, _ = serviceSysSrchandler(env, nil)
 
 	putLongword(t, env, d.sig+4*3, 0x03C0000F) // user mode, N Z V C
-	c.SetGPR(vax.R0, 1)
+	c.SetGPR(registers.R0, 1)
 
 	if _, err := serviceSysSrchandler(env, nil); err != nil {
 		t.Fatal(err)
@@ -305,7 +305,7 @@ func TestSrchandler_catchAll(t *testing.T) {
 	putLongword(t, env, condFrameA, 0) // no handlers at all
 	putLongword(t, env, condFrameB, 0)
 
-	psl := vax.PSL(0x0000001B)
+	psl := registers.PSL(0x0000001B)
 	if ok, _ := env.DispatchException(scbAccessViol, []uint32{0x1234, 4}, 0x3000, psl); !ok {
 		t.Fatal("not dispatched")
 	}
@@ -323,8 +323,8 @@ func TestSrchandler_catchAll(t *testing.T) {
 		t.Errorf("$EXIT's arguments %#x, want 1, 0x1000000C (ACCVIO, message inhibited)", args)
 	}
 
-	if call.ArgList >= d.sp || c.GPR(vax.SP) != call.ArgList {
-		t.Errorf("$EXIT's argument list %#x, SP %#x; want both below the dispatch's %#x", call.ArgList, c.GPR(vax.SP), d.sp)
+	if call.ArgList >= d.sp || c.GPR(registers.SP) != call.ArgList {
+		t.Errorf("$EXIT's argument list %#x, SP %#x; want both below the dispatch's %#x", call.ArgList, c.GPR(registers.SP), d.sp)
 	}
 
 	want := "%SYSTEM-F-ACCVIO, access violation, reason mask=04, virtual address=00001234, PC=00003000, PS=0000001B\n"
@@ -377,8 +377,8 @@ func TestSrchandler_nested(t *testing.T) {
 
 	putLongword(t, env, handlerFrame, 0)
 	putLongword(t, env, handlerFrame+12, condFrameB)
-	c.SetGPR(vax.FP, handlerFrame)
-	c.SetGPR(vax.SP, outer.sp-0x100)
+	c.SetGPR(registers.FP, handlerFrame)
+	c.SetGPR(registers.SP, outer.sp-0x100)
 
 	if ok, _ := env.DispatchException(scbReservedAddr, nil, 0x5010, c.PSL()); !ok {
 		t.Fatal("inner not dispatched")
@@ -387,23 +387,23 @@ func TestSrchandler_nested(t *testing.T) {
 	r0, err := serviceSysSrchandler(env, nil)
 	expectHandlerCall(t, env, r0, err, condH2, condFrameB, 1)
 
-	c.SetGPR(vax.R0, 1)
+	c.SetGPR(registers.R0, 1)
 
 	if _, err := serviceSysSrchandler(env, nil); err != nil {
 		t.Fatal(err)
 	}
 
-	if c.GPR(vax.PC) != 0x5010 || c.GPR(vax.SP) != outer.sp-0x100 || len(env.Process.conditions) != 1 {
-		t.Fatalf("after the inner continue: PC %#x SP %#x, %d dispatches", c.GPR(vax.PC), c.GPR(vax.SP), len(env.Process.conditions))
+	if c.GPR(registers.PC) != 0x5010 || c.GPR(registers.SP) != outer.sp-0x100 || len(env.Process.conditions) != 1 {
+		t.Fatalf("after the inner continue: PC %#x SP %#x, %d dispatches", c.GPR(registers.PC), c.GPR(registers.SP), len(env.Process.conditions))
 	}
 
 	// condH1 returns to the outer dispatch and continues.
-	c.SetGPR(vax.SP, outer.sp)
-	c.SetGPR(vax.FP, condFrameA)
-	c.SetGPR(vax.R0, 1)
+	c.SetGPR(registers.SP, outer.sp)
+	c.SetGPR(registers.FP, condFrameA)
+	c.SetGPR(registers.R0, 1)
 
-	if _, err := serviceSysSrchandler(env, nil); err != nil || c.GPR(vax.PC) != 0x3000 {
-		t.Errorf("outer continue: %v, PC %#x; want PC 0x3000", err, c.GPR(vax.PC))
+	if _, err := serviceSysSrchandler(env, nil); err != nil || c.GPR(registers.PC) != 0x3000 {
+		t.Errorf("outer continue: %v, PC %#x; want PC 0x3000", err, c.GPR(registers.PC))
 	}
 }
 
@@ -434,7 +434,7 @@ func TestImageRundown_conditions(t *testing.T) {
 
 func TestSetexv(t *testing.T) {
 	env := conditionFixture(t)
-	setMode(env, vax.Supervisor, vax.Supervisor, condSP)
+	setMode(env, registers.Supervisor, registers.Supervisor, condSP)
 
 	const prvhnd = 0x6000
 
@@ -444,7 +444,7 @@ func TestSetexv(t *testing.T) {
 	// the caller's supervisor), then replace it.
 	wantR0(t, callLNM(t, env, serviceSysSetexv, 1, 0x5200, 0, prvhnd), ssNormal)
 
-	if got := env.Process.exceptionVectors[vax.Supervisor][vectorSecondary]; got != 0x5200 {
+	if got := env.Process.exceptionVectors[registers.Supervisor][vectorSecondary]; got != 0x5200 {
 		t.Fatalf("supervisor secondary = %#x, want 0x5200", got)
 	}
 
@@ -462,7 +462,7 @@ func TestSetexv(t *testing.T) {
 	wantR0(t, callLNM(t, env, serviceSysSetexv, 0, 0x5400, 3), ssNormal)
 	wantR0(t, callLNM(t, env, serviceSysSetexv, 0, 0, 3, prvhnd), ssNormal)
 
-	if env.Process.exceptionVectors[vax.User][vectorPrimary] != 0 || longwordsAt(t, env, prvhnd, 1)[0] != 0x5400 {
+	if env.Process.exceptionVectors[registers.User][vectorPrimary] != 0 || longwordsAt(t, env, prvhnd, 1)[0] != 0x5400 {
 		t.Error("clearing user's primary vector")
 	}
 
@@ -470,7 +470,7 @@ func TestSetexv(t *testing.T) {
 	wantR0(t, callLNM(t, env, serviceSysSetexv, 3, 0x5500), ssBadParam)
 	wantR0(t, callLNM(t, env, serviceSysSetexv, 1, 0x5500, 2, 0x7FFF0000), ssAccVio)
 
-	if got := env.Process.exceptionVectors[vax.Supervisor][vectorSecondary]; got != 0x5300 {
+	if got := env.Process.exceptionVectors[registers.Supervisor][vectorSecondary]; got != 0x5300 {
 		t.Errorf("supervisor secondary = %#x after errors, want 0x5300", got)
 	}
 }
@@ -504,7 +504,7 @@ func TestSrchandler_vectors(t *testing.T) {
 
 	for i, st := range steps {
 		if i > 0 {
-			c.SetGPR(vax.R0, ssResignal)
+			c.SetGPR(registers.R0, ssResignal)
 		}
 
 		r0, err := serviceSysSrchandler(env, nil)
@@ -512,10 +512,10 @@ func TestSrchandler_vectors(t *testing.T) {
 	}
 
 	// The last-chance handler continues.
-	c.SetGPR(vax.R0, 1)
+	c.SetGPR(registers.R0, 1)
 
-	if _, err := serviceSysSrchandler(env, nil); err != nil || c.GPR(vax.PC) != 0x3000 {
-		t.Errorf("continue: %v, PC %#x", err, c.GPR(vax.PC))
+	if _, err := serviceSysSrchandler(env, nil); err != nil || c.GPR(registers.PC) != 0x3000 {
+		t.Errorf("continue: %v, PC %#x", err, c.GPR(registers.PC))
 	}
 }
 
@@ -523,12 +523,12 @@ func TestSrchandler_vectors(t *testing.T) {
 // user-mode vectors.
 func TestImageRundown_exceptionVectors(t *testing.T) {
 	env, _ := fixture()
-	env.Process.exceptionVectors[vax.User] = [3]uint32{1, 2, 3}
-	env.Process.exceptionVectors[vax.Supervisor] = [3]uint32{4, 5, 6}
+	env.Process.exceptionVectors[registers.User] = [3]uint32{1, 2, 3}
+	env.Process.exceptionVectors[registers.Supervisor] = [3]uint32{4, 5, 6}
 
 	env.ImageRundown()
 
-	if env.Process.exceptionVectors[vax.User] != [3]uint32{} || env.Process.exceptionVectors[vax.Supervisor] != [3]uint32{4, 5, 6} {
+	if env.Process.exceptionVectors[registers.User] != [3]uint32{} || env.Process.exceptionVectors[registers.Supervisor] != [3]uint32{4, 5, 6} {
 		t.Errorf("vectors after rundown: %v", env.Process.exceptionVectors)
 	}
 }

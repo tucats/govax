@@ -7,7 +7,7 @@ import (
 	"github.com/tucats/govax/internal/console/consoletest"
 	"github.com/tucats/govax/internal/cpu"
 	"github.com/tucats/govax/internal/debugger"
-	"github.com/tucats/govax/internal/vax"
+	"github.com/tucats/govax/internal/registers"
 )
 
 // Tests of the session's lifetime under run control (docs/PHASE-42.md,
@@ -58,7 +58,7 @@ func TestGoThatBreaksOpensSession(t *testing.T) {
 		t.Fatal("a GO that hit a breakpoint left no debugger session")
 	}
 
-	if got := c.CPU.GPR(vax.PC); got != 0x202 {
+	if got := c.CPU.GPR(registers.PC); got != 0x202 {
 		t.Fatalf("PC = %#x, want 0x202", got)
 	}
 
@@ -92,13 +92,13 @@ func TestDebuggerStepAtPrompt(t *testing.T) {
 		t.Fatalf("DEBUG: %v", err)
 	}
 
-	c.CPU.SetGPR(vax.PC, 0x200)
+	c.CPU.SetGPR(registers.PC, 0x200)
 
 	if err := d.Dispatch("STEP"); err != nil {
 		t.Fatalf("STEP: %v", err)
 	}
 
-	if got := c.CPU.GPR(vax.PC); got != 0x201 {
+	if got := c.CPU.GPR(registers.PC); got != 0x201 {
 		t.Errorf("PC after STEP = %#x, want 0x201", got)
 	}
 
@@ -108,7 +108,7 @@ func TestDebuggerStepAtPrompt(t *testing.T) {
 		t.Fatalf("STEP 1: %v", err)
 	}
 
-	if got := c.CPU.GPR(vax.PC); got != 0x202 {
+	if got := c.CPU.GPR(registers.PC); got != 0x202 {
 		t.Errorf("PC after STEP 1 = %#x, want 0x202", got)
 	}
 
@@ -142,7 +142,7 @@ func TestCallStepStopsAfterFirstInstruction(t *testing.T) {
 
 	// The entry mask isn't an instruction: the first instruction is the
 	// CALLS at 202, and it ran, so PC is inside the callee at 0x300 + 2.
-	if got := c.CPU.GPR(vax.PC); got != 0x302 {
+	if got := c.CPU.GPR(registers.PC); got != 0x302 {
 		t.Errorf("PC after CALL/STEP = %#x, want 0x302", got)
 	}
 }
@@ -238,7 +238,7 @@ func TestCtrlCReturnsToDebugger(t *testing.T) {
 		t.Fatalf("DEBUG: %v", err)
 	}
 
-	c.CPU.SetGPR(vax.PC, 0x200)
+	c.CPU.SetGPR(registers.PC, 0x200)
 
 	interruptWhile(t, c, func() error { return d.Dispatch("GO") })
 

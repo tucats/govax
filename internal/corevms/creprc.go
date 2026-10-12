@@ -6,7 +6,7 @@ import (
 
 	"github.com/tucats/govax/internal/cpu"
 	"github.com/tucats/govax/internal/lnm"
-	"github.com/tucats/govax/internal/vax"
+	"github.com/tucats/govax/internal/registers"
 	"github.com/tucats/govax/internal/vmsdef"
 	"github.com/tucats/govax/internal/vmserrors"
 )
@@ -514,10 +514,10 @@ func (env *Environment) buildProcessMemory(child *Environment) bool {
 
 	child.Stacks = stacks
 
-	var psl vax.PSL
+	var psl registers.PSL
 
-	psl.SetCurMod(vax.User)
-	psl.SetPrvMod(vax.User)
+	psl.SetCurMod(registers.User)
+	psl.SetPrvMod(registers.User)
 
 	start := InitialPCB(space, stacks, 0, psl)
 

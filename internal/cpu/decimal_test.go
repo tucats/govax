@@ -4,7 +4,7 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/tucats/govax/internal/vax"
+	"github.com/tucats/govax/internal/registers"
 )
 
 // Tests for the packed decimal core and MOVP, CMPP3, CMPP4, CVTLP, and
@@ -95,8 +95,8 @@ func TestMOVP(t *testing.T) {
 			t.Errorf("%s: PSL %+v, want N %v Z %v, V clear, C unaffected", tc.name, p, tc.n, tc.z)
 		}
 
-		if e.cpu.GPR(vax.R0) != 0 || e.cpu.GPR(vax.R1) != decSrc || e.cpu.GPR(vax.R2) != 0 || e.cpu.GPR(vax.R3) != decDst {
-			t.Errorf("%s: R0-R3 = %#x %#x %#x %#x", tc.name, e.cpu.GPR(vax.R0), e.cpu.GPR(vax.R1), e.cpu.GPR(vax.R2), e.cpu.GPR(vax.R3))
+		if e.cpu.GPR(registers.R0) != 0 || e.cpu.GPR(registers.R1) != decSrc || e.cpu.GPR(registers.R2) != 0 || e.cpu.GPR(registers.R3) != decDst {
+			t.Errorf("%s: R0-R3 = %#x %#x %#x %#x", tc.name, e.cpu.GPR(registers.R0), e.cpu.GPR(registers.R1), e.cpu.GPR(registers.R2), e.cpu.GPR(registers.R3))
 		}
 	}
 }
@@ -105,7 +105,7 @@ func TestMOVP(t *testing.T) {
 // with the registers unchanged.
 func TestDecimalLengthOver31(t *testing.T) {
 	e := decimalEngine()
-	e.cpu.SetGPR(vax.R1, 0x1111)
+	e.cpu.SetGPR(registers.R1, 0x1111)
 
 	insn := append([]byte{0x34, 32}, absolute(decSrc)...)
 	insn = append(insn, absolute(decDst)...)
@@ -117,7 +117,7 @@ func TestDecimalLengthOver31(t *testing.T) {
 		t.Errorf("MOVP #32: %v, want a reserved operand fault", err)
 	}
 
-	if e.cpu.GPR(vax.R1) != 0x1111 {
+	if e.cpu.GPR(registers.R1) != 0x1111 {
 		t.Errorf("R1 changed")
 	}
 }
@@ -180,13 +180,13 @@ func TestCVTLP(t *testing.T) {
 		{"length 0", 1, 0, []byte{0x0C}, false, true, true, false, false},
 	} {
 		e := decimalEngine()
-		e.cpu.SetGPR(vax.R6, uint32(tc.value))
+		e.cpu.SetGPR(registers.R6, uint32(tc.value))
 
 		psl := e.cpu.PSL()
 		psl.SetDV(tc.dv)
 		e.cpu.SetPSL(psl)
 
-		insn := append([]byte{0xF9, regMode(vax.R6), tc.length}, absolute(decDst)...)
+		insn := append([]byte{0xF9, regMode(registers.R6), tc.length}, absolute(decDst)...)
 		err := runFloat(t, e, insn...)
 
 		var f *Fault
@@ -202,8 +202,8 @@ func TestCVTLP(t *testing.T) {
 			t.Errorf("%s: PSL %+v, want N %v Z %v V %v", tc.name, p, tc.n, tc.z, tc.v)
 		}
 
-		if e.cpu.GPR(vax.R3) != decDst {
-			t.Errorf("%s: R3 = %#x, want the destination's address", tc.name, e.cpu.GPR(vax.R3))
+		if e.cpu.GPR(registers.R3) != decDst {
+			t.Errorf("%s: R3 = %#x, want the destination's address", tc.name, e.cpu.GPR(registers.R3))
 		}
 	}
 }
@@ -226,13 +226,13 @@ func TestCVTPL(t *testing.T) {
 		putMem(t, e, decSrc, tc.src...)
 
 		insn := append([]byte{0x36, tc.length}, absolute(decSrc)...)
-		insn = append(insn, regMode(vax.R1)) // the destination may be R0-R3
+		insn = append(insn, regMode(registers.R1)) // the destination may be R0-R3
 
 		if err := runFloat(t, e, insn...); err != nil {
 			t.Fatalf("%s: %v", tc.name, err)
 		}
 
-		if got := e.cpu.GPR(vax.R1); got != tc.want {
+		if got := e.cpu.GPR(registers.R1); got != tc.want {
 			t.Errorf("%s: R1 = %#x, want %#x", tc.name, got, tc.want)
 		}
 
@@ -299,8 +299,8 @@ func TestDecimalArithmetic(t *testing.T) {
 			t.Errorf("%s: PSL %+v, want N %v Z %v V %v C clear", tc.name, p, tc.n, tc.z, tc.v)
 		}
 
-		if e.cpu.GPR(vax.R1) != decSrc || e.cpu.GPR(vax.R3) != decSrc2 || e.cpu.GPR(vax.R5) != decDst {
-			t.Errorf("%s: R1, R3, R5 = %#x, %#x, %#x", tc.name, e.cpu.GPR(vax.R1), e.cpu.GPR(vax.R3), e.cpu.GPR(vax.R5))
+		if e.cpu.GPR(registers.R1) != decSrc || e.cpu.GPR(registers.R3) != decSrc2 || e.cpu.GPR(registers.R5) != decDst {
+			t.Errorf("%s: R1, R3, R5 = %#x, %#x, %#x", tc.name, e.cpu.GPR(registers.R1), e.cpu.GPR(registers.R3), e.cpu.GPR(registers.R5))
 		}
 	}
 }
@@ -311,7 +311,7 @@ func TestDecimalArithmetic(t *testing.T) {
 func TestDIVPByZero(t *testing.T) {
 	e := decimalEngine()
 	putMem(t, e, decDst, 0xAA, 0xAA)
-	e.cpu.SetGPR(vax.R1, 0x1111)
+	e.cpu.SetGPR(registers.R1, 0x1111)
 
 	got, err := decimal6(t, e, 0x27, 1, []byte{0x0C}, 3, []byte{0x10, 0x0C}, 3)
 
@@ -320,8 +320,8 @@ func TestDIVPByZero(t *testing.T) {
 		t.Errorf("DIVP by zero: %v, want the divide-by-zero trap", err)
 	}
 
-	if string(got) != "\xAA\xAA" || e.cpu.GPR(vax.R1) != 0x1111 {
-		t.Errorf("DIVP by zero changed the quotient (% x) or R1 (%#x)", got, e.cpu.GPR(vax.R1))
+	if string(got) != "\xAA\xAA" || e.cpu.GPR(registers.R1) != 0x1111 {
+		t.Errorf("DIVP by zero changed the quotient (% x) or R1 (%#x)", got, e.cpu.GPR(registers.R1))
 	}
 }
 
@@ -539,9 +539,9 @@ func TestEDITPC(t *testing.T) {
 			t.Errorf("%s: PSL %+v, want N %v Z %v C %v", tc.name, p, tc.n, tc.z, tc.c)
 		}
 
-		if e.cpu.GPR(vax.R0) != uint32(tc.length) || e.cpu.GPR(vax.R3) != pattern+uint32(len(tc.pat))-1 ||
-			e.cpu.GPR(vax.R5) != decDst+uint32(len(tc.want)) {
-			t.Errorf("%s: R0 %#x R3 %#x R5 %#x", tc.name, e.cpu.GPR(vax.R0), e.cpu.GPR(vax.R3), e.cpu.GPR(vax.R5))
+		if e.cpu.GPR(registers.R0) != uint32(tc.length) || e.cpu.GPR(registers.R3) != pattern+uint32(len(tc.pat))-1 ||
+			e.cpu.GPR(registers.R5) != decDst+uint32(len(tc.want)) {
+			t.Errorf("%s: R0 %#x R3 %#x R5 %#x", tc.name, e.cpu.GPR(registers.R0), e.cpu.GPR(registers.R3), e.cpu.GPR(registers.R5))
 		}
 	}
 }

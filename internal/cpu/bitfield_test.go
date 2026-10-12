@@ -3,7 +3,7 @@ package cpu
 import (
 	"testing"
 
-	"github.com/tucats/govax/internal/vax"
+	"github.com/tucats/govax/internal/registers"
 )
 
 // absoluteMode returns the addressing-mode byte for Absolute mode (@#addr),
@@ -14,11 +14,11 @@ func absoluteMode(addr uint32) []byte {
 
 func TestGetRegisterField(t *testing.T) {
 	cpu, _ := fixture()
-	cpu.SetGPR(vax.R2, 0xABCD1234)
-	cpu.SetGPR(vax.R3, 0x000000F0)
+	cpu.SetGPR(registers.R2, 0xABCD1234)
+	cpu.SetGPR(registers.R3, 0x000000F0)
 
 	t.Run("within one register", func(t *testing.T) {
-		got, err := getRegisterField(cpu, 4, 8, vax.R2)
+		got, err := getRegisterField(cpu, 4, 8, registers.R2)
 		if err != nil {
 			t.Fatalf("getRegisterField: %v", err)
 		}
@@ -31,7 +31,7 @@ func TestGetRegisterField(t *testing.T) {
 	t.Run("exactly fills the base register (position=0, size=32)", func(t *testing.T) {
 		// The C source's `position + size < 32` boundary check would wrongly
 		// take the two-register path here; getRegisterField must not.
-		got, err := getRegisterField(cpu, 0, 32, vax.R2)
+		got, err := getRegisterField(cpu, 0, 32, registers.R2)
 		if err != nil {
 			t.Fatalf("getRegisterField: %v", err)
 		}
@@ -44,7 +44,7 @@ func TestGetRegisterField(t *testing.T) {
 	t.Run("spans base and base+1", func(t *testing.T) {
 		// position=28, size=8: 4 bits from the top of R2 (0xA), 4 bits from
 		// the bottom of R3 (0x0), packed low-bits-first.
-		got, err := getRegisterField(cpu, 28, 8, vax.R2)
+		got, err := getRegisterField(cpu, 28, 8, registers.R2)
 		if err != nil {
 			t.Fatalf("getRegisterField: %v", err)
 		}
@@ -55,25 +55,25 @@ func TestGetRegisterField(t *testing.T) {
 	})
 
 	t.Run("size too large faults", func(t *testing.T) {
-		if _, err := getRegisterField(cpu, 0, 33, vax.R2); !isReservedOp(err) {
+		if _, err := getRegisterField(cpu, 0, 33, registers.R2); !isReservedOp(err) {
 			t.Errorf("err = %v, want reserved-operand fault", err)
 		}
 	})
 
 	t.Run("negative position faults", func(t *testing.T) {
-		if _, err := getRegisterField(cpu, -1, 8, vax.R2); !isReservedOp(err) {
+		if _, err := getRegisterField(cpu, -1, 8, registers.R2); !isReservedOp(err) {
 			t.Errorf("err = %v, want reserved-operand fault", err)
 		}
 	})
 
 	t.Run("position beyond 31 faults", func(t *testing.T) {
-		if _, err := getRegisterField(cpu, 32, 1, vax.R2); !isReservedOp(err) {
+		if _, err := getRegisterField(cpu, 32, 1, registers.R2); !isReservedOp(err) {
 			t.Errorf("err = %v, want reserved-operand fault", err)
 		}
 	})
 
 	t.Run("PC base cannot span into a nonexistent R16", func(t *testing.T) {
-		if _, err := getRegisterField(cpu, 30, 4, vax.PC); !isReservedOp(err) {
+		if _, err := getRegisterField(cpu, 30, 4, registers.PC); !isReservedOp(err) {
 			t.Errorf("err = %v, want reserved-operand fault", err)
 		}
 	})
@@ -82,45 +82,45 @@ func TestGetRegisterField(t *testing.T) {
 func TestSetRegisterField(t *testing.T) {
 	t.Run("within one register preserves surrounding bits", func(t *testing.T) {
 		cpu, _ := fixture()
-		cpu.SetGPR(vax.R2, 0xFFFFFFFF)
+		cpu.SetGPR(registers.R2, 0xFFFFFFFF)
 
-		if err := setRegisterField(cpu, 4, 8, vax.R2, 0x00); err != nil {
+		if err := setRegisterField(cpu, 4, 8, registers.R2, 0x00); err != nil {
 			t.Fatalf("setRegisterField: %v", err)
 		}
 
-		if want := uint32(0xFFFFF00F); cpu.GPR(vax.R2) != want {
-			t.Errorf("R2 = %#x, want %#x", cpu.GPR(vax.R2), want)
+		if want := uint32(0xFFFFF00F); cpu.GPR(registers.R2) != want {
+			t.Errorf("R2 = %#x, want %#x", cpu.GPR(registers.R2), want)
 		}
 	})
 
 	t.Run("spans base and base+1", func(t *testing.T) {
 		cpu, _ := fixture()
-		cpu.SetGPR(vax.R2, 0x00000000)
-		cpu.SetGPR(vax.R3, 0x00000000)
+		cpu.SetGPR(registers.R2, 0x00000000)
+		cpu.SetGPR(registers.R3, 0x00000000)
 
-		if err := setRegisterField(cpu, 28, 8, vax.R2, 0xFF); err != nil {
+		if err := setRegisterField(cpu, 28, 8, registers.R2, 0xFF); err != nil {
 			t.Fatalf("setRegisterField: %v", err)
 		}
 
-		if cpu.GPR(vax.R2) != 0xF0000000 {
-			t.Errorf("R2 = %#x, want 0xF0000000", cpu.GPR(vax.R2))
+		if cpu.GPR(registers.R2) != 0xF0000000 {
+			t.Errorf("R2 = %#x, want 0xF0000000", cpu.GPR(registers.R2))
 		}
 
-		if cpu.GPR(vax.R3) != 0x0000000F {
-			t.Errorf("R3 = %#x, want 0x0000000F", cpu.GPR(vax.R3))
+		if cpu.GPR(registers.R3) != 0x0000000F {
+			t.Errorf("R3 = %#x, want 0x0000000F", cpu.GPR(registers.R3))
 		}
 	})
 
 	t.Run("round-trips through getRegisterField", func(t *testing.T) {
 		cpu, _ := fixture()
-		cpu.SetGPR(vax.R2, 0)
-		cpu.SetGPR(vax.R3, 0)
+		cpu.SetGPR(registers.R2, 0)
+		cpu.SetGPR(registers.R3, 0)
 
-		if err := setRegisterField(cpu, 0, 32, vax.R2, 0xDEADBEEF); err != nil {
+		if err := setRegisterField(cpu, 0, 32, registers.R2, 0xDEADBEEF); err != nil {
 			t.Fatalf("setRegisterField: %v", err)
 		}
 
-		got, err := getRegisterField(cpu, 0, 32, vax.R2)
+		got, err := getRegisterField(cpu, 0, 32, registers.R2)
 		if err != nil {
 			t.Fatalf("getRegisterField: %v", err)
 		}
@@ -129,8 +129,8 @@ func TestSetRegisterField(t *testing.T) {
 			t.Errorf("round-trip = %#x, want 0xDEADBEEF", got)
 		}
 
-		if cpu.GPR(vax.R3) != 0 {
-			t.Errorf("R3 = %#x, want untouched 0", cpu.GPR(vax.R3))
+		if cpu.GPR(registers.R3) != 0 {
+			t.Errorf("R3 = %#x, want untouched 0", cpu.GPR(registers.R3))
 		}
 	})
 }
@@ -238,15 +238,15 @@ func TestEmulExtv(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			cpu, mem := fixture()
 			e := NewEngine(cpu, mem)
-			cpu.SetGPR(vax.R1, tc.regValue)
+			cpu.SetGPR(registers.R1, tc.regValue)
 			psl := cpu.PSL()
 			psl.SetNZVC(false, false, true, true)
 			cpu.SetPSL(psl)
 
 			// EXTx pos=4, size=8, R1, R2
-			stepInstruction(t, e, tc.opcode, 4, 8, regMode(vax.R1), regMode(vax.R2))
+			stepInstruction(t, e, tc.opcode, 4, 8, regMode(registers.R1), regMode(registers.R2))
 
-			if got := cpu.GPR(vax.R2); got != tc.wantResult {
+			if got := cpu.GPR(registers.R2); got != tc.wantResult {
 				t.Errorf("R2 = %#x, want %#x", got, tc.wantResult)
 			}
 			
@@ -269,9 +269,9 @@ func TestEmulExtv(t *testing.T) {
 func TestEmulExtvZeroResultSetsZ(t *testing.T) {
 	cpu, mem := fixture()
 	e := NewEngine(cpu, mem)
-	cpu.SetGPR(vax.R1, 0)
+	cpu.SetGPR(registers.R1, 0)
 
-	stepInstruction(t, e, 0xEF, 0, 8, regMode(vax.R1), regMode(vax.R2)) // EXTZV
+	stepInstruction(t, e, 0xEF, 0, 8, regMode(registers.R1), regMode(registers.R2)) // EXTZV
 
 	if !cpu.PSL().Z() {
 		t.Error("Z = false, want true")
@@ -285,10 +285,10 @@ func TestEmulExtvMemoryBase(t *testing.T) {
 
 	bytes := []byte{0xEF, 12, 8} // EXTZV pos=12, size=8
 	bytes = append(bytes, absoluteMode(0x2000)...)
-	bytes = append(bytes, regMode(vax.R2))
+	bytes = append(bytes, regMode(registers.R2))
 	stepInstruction(t, e, bytes...)
 
-	if got := cpu.GPR(vax.R2); got != 0xFF {
+	if got := cpu.GPR(registers.R2); got != 0xFF {
 		t.Errorf("R2 = %#x, want 0xFF", got)
 	}
 }
@@ -299,18 +299,18 @@ func TestEmulExtvMemoryBase(t *testing.T) {
 func TestEmulExtvLiteralBaseFaults(t *testing.T) {
 	e := newEngine()
 	cpu := e.cpu
-	cpu.SetGPR(vax.PC, base)
-	putBytes(t, cpu, e.mem, base, 0xEF, 4, 8, 0x00, regMode(vax.R2)) // base = short literal 0
-	cpu.SetGPR(vax.SP, 0x7000)
-	cpu.SetPR(vax.KSP, 0x7000)
+	cpu.SetGPR(registers.PC, base)
+	putBytes(t, cpu, e.mem, base, 0xEF, 4, 8, 0x00, regMode(registers.R2)) // base = short literal 0
+	cpu.SetGPR(registers.SP, 0x7000)
+	cpu.SetPR(registers.KSP, 0x7000)
 	putVector(t, e, ExcReservedAddr, 0x300, 0)
 
 	if err := e.Step(); err != nil {
 		t.Fatalf("Step: %v (fault should be handled, not propagated)", err)
 	}
 
-	if cpu.GPR(vax.PC) != 0x300 {
-		t.Errorf("PC = %#x, want 0x300 (fault vector)", cpu.GPR(vax.PC))
+	if cpu.GPR(registers.PC) != 0x300 {
+		t.Errorf("PC = %#x, want 0x300 (fault vector)", cpu.GPR(registers.PC))
 	}
 }
 
@@ -333,9 +333,9 @@ func TestEmulCmpv(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			cpu, mem := fixture()
 			e := NewEngine(cpu, mem)
-			cpu.SetGPR(vax.R1, 0x00000AB0)
+			cpu.SetGPR(registers.R1, 0x00000AB0)
 
-			stepInstruction(t, e, tc.opcode, 4, 8, regMode(vax.R1), tc.compareLit)
+			stepInstruction(t, e, tc.opcode, 4, 8, regMode(registers.R1), tc.compareLit)
 
 			got := cpu.PSL()
 			if got.N() != tc.wantN {
@@ -356,9 +356,9 @@ func TestEmulCmpv(t *testing.T) {
 func TestEmulCmpvEqualSetsZ(t *testing.T) {
 	cpu, mem := fixture()
 	e := NewEngine(cpu, mem)
-	cpu.SetGPR(vax.R1, 0x2F) // field bits 0-7 == 0x2F
+	cpu.SetGPR(registers.R1, 0x2F) // field bits 0-7 == 0x2F
 
-	stepInstruction(t, e, 0xED, 0, 8, regMode(vax.R1), 0x2F) // CMPZV vs literal 0x2F
+	stepInstruction(t, e, 0xED, 0, 8, regMode(registers.R1), 0x2F) // CMPZV vs literal 0x2F
 
 	if !cpu.PSL().Z() {
 		t.Error("Z = false, want true")
@@ -369,17 +369,17 @@ func TestEmulInsv(t *testing.T) {
 	t.Run("register base preserves surrounding bits", func(t *testing.T) {
 		cpu, mem := fixture()
 		e := NewEngine(cpu, mem)
-		cpu.SetGPR(vax.R1, 0x00)
+		cpu.SetGPR(registers.R1, 0x00)
 		psl := cpu.PSL()
 		psl.SetNZVC(true, true, true, true)
 		cpu.SetPSL(psl)
-		cpu.SetGPR(vax.R2, 0xFFFFFFFF)
+		cpu.SetGPR(registers.R2, 0xFFFFFFFF)
 
 		// INSV R1,#4,#8,R2 -- clear an 8-bit field at position 4 of R2.
-		stepInstruction(t, e, 0xF0, regMode(vax.R1), 4, 8, regMode(vax.R2))
+		stepInstruction(t, e, 0xF0, regMode(registers.R1), 4, 8, regMode(registers.R2))
 
-		if want := uint32(0xFFFFF00F); cpu.GPR(vax.R2) != want {
-			t.Errorf("R2 = %#x, want %#x", cpu.GPR(vax.R2), want)
+		if want := uint32(0xFFFFF00F); cpu.GPR(registers.R2) != want {
+			t.Errorf("R2 = %#x, want %#x", cpu.GPR(registers.R2), want)
 		}
 
 		got := cpu.PSL()
@@ -392,9 +392,9 @@ func TestEmulInsv(t *testing.T) {
 		cpu, mem := fixture()
 		e := NewEngine(cpu, mem)
 		putBytes(t, cpu, mem, 0x2000, 0x00, 0x00, 0x00, 0x00)
-		cpu.SetGPR(vax.R1, 0xFF) // 0xFF isn't representable as a short literal
+		cpu.SetGPR(registers.R1, 0xFF) // 0xFF isn't representable as a short literal
 
-		bytes := []byte{0xF0, regMode(vax.R1), 12, 8} // INSV R1,pos=12,size=8,base
+		bytes := []byte{0xF0, regMode(registers.R1), 12, 8} // INSV R1,pos=12,size=8,base
 		bytes = append(bytes, absoluteMode(0x2000)...)
 		stepInstruction(t, e, bytes...)
 
@@ -430,12 +430,12 @@ func TestEmulFf(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			cpu, mem := fixture()
 			e := NewEngine(cpu, mem)
-			cpu.SetGPR(vax.R1, tc.regValue)
+			cpu.SetGPR(registers.R1, tc.regValue)
 
 			// FFx pos=0, size=8, R1, R2
-			stepInstruction(t, e, tc.opcode, 0, 8, regMode(vax.R1), regMode(vax.R2))
+			stepInstruction(t, e, tc.opcode, 0, 8, regMode(registers.R1), regMode(registers.R2))
 
-			if got := cpu.GPR(vax.R2); got != tc.wantResult {
+			if got := cpu.GPR(registers.R2); got != tc.wantResult {
 				t.Errorf("R2 = %#x, want %#x", got, tc.wantResult)
 			}
 
@@ -449,11 +449,11 @@ func TestEmulFf(t *testing.T) {
 func TestEmulFfZeroSizeField(t *testing.T) {
 	cpu, mem := fixture()
 	e := NewEngine(cpu, mem)
-	cpu.SetGPR(vax.R1, 0xFFFFFFFF)
+	cpu.SetGPR(registers.R1, 0xFFFFFFFF)
 
-	stepInstruction(t, e, 0xEA, 9, 0, regMode(vax.R1), regMode(vax.R2)) // FFS pos=9, size=0
+	stepInstruction(t, e, 0xEA, 9, 0, regMode(registers.R1), regMode(registers.R2)) // FFS pos=9, size=0
 
-	if got := cpu.GPR(vax.R2); got != 9 {
+	if got := cpu.GPR(registers.R2); got != 9 {
 		t.Errorf("R2 = %#x, want 9 (position returned unchanged)", got)
 	}
 

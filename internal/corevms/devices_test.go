@@ -6,7 +6,7 @@ import (
 
 	iodev "github.com/tucats/govax/internal/io"
 	"github.com/tucats/govax/internal/lnm"
-	"github.com/tucats/govax/internal/vax"
+	"github.com/tucats/govax/internal/registers"
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
@@ -151,7 +151,7 @@ func TestServiceSysAlloc(t *testing.T) {
 		t.Errorf("physical name = %q, want _TTA0:", phy)
 	}
 
-	if !dp.Allocated() || dp.PID != env.Process.PID || dp.AllocMode != uint32(vax.Kernel) {
+	if !dp.Allocated() || dp.PID != env.Process.PID || dp.AllocMode != uint32(registers.Kernel) {
 		t.Errorf("device allocated=%v PID=%#x mode=%d, want allocated to %#x in kernel mode (the caller's)",
 			dp.Allocated(), dp.PID, dp.AllocMode, env.Process.PID)
 	}
@@ -181,11 +181,11 @@ func TestServiceSysAllocAccessMode(t *testing.T) {
 	kernel := defineTestDevice(env, "TTA2", iodev.DeviceClassTT)
 
 	// acmode is maximized with the caller's mode.
-	setCurMod(env, vax.Supervisor)
+	setCurMod(env, registers.Supervisor)
 	r0, _ := allocCall(t, env, a, "TTA2", 0, 0)
 	wantR0(t, r0, ssNormal)
 
-	if kernel.AllocMode != uint32(vax.Supervisor) {
+	if kernel.AllocMode != uint32(registers.Supervisor) {
 		t.Errorf("AllocMode = %d, want supervisor (kernel maximized with the caller's mode)", kernel.AllocMode)
 	}
 
@@ -324,9 +324,9 @@ func TestServiceSysDallocErrors(t *testing.T) {
 	mbx := defineTestDevice(env, "MBA1", iodev.DeviceClassNone)
 	mbx.DevChar |= devMailbox
 
-	kernel.Allocate(env.Process.PID, uint32(vax.Kernel))
-	other.Allocate(0x999, uint32(vax.User))
-	assigned.Allocate(env.Process.PID, uint32(vax.Kernel))
+	kernel.Allocate(env.Process.PID, uint32(registers.Kernel))
+	other.Allocate(0x999, uint32(registers.User))
+	assigned.Allocate(env.Process.PID, uint32(registers.Kernel))
 	wantR0(t, callLNM(t, env, serviceSysAssign, a.desc("TTA3"), a.alloc(2)), ssNormal)
 
 	cases := []struct {
@@ -349,7 +349,7 @@ func TestServiceSysDallocErrors(t *testing.T) {
 
 	// A kernel-mode allocation can't be released from supervisor mode,
 	// even when acmode asks for kernel (it's maximized).
-	setCurMod(env, vax.Supervisor)
+	setCurMod(env, registers.Supervisor)
 	wantR0(t, callLNM(t, env, serviceSysDalloc, a.desc("TTA1"), 0), ssNoPriv)
 
 	if !kernel.Allocated() || !other.Allocated() || !assigned.Allocated() {
@@ -364,14 +364,14 @@ func TestServiceSysDallocAll(t *testing.T) {
 	user := defineTestDevice(env, "TTA3", iodev.DeviceClassTT)
 	other := defineTestDevice(env, "TTA4", iodev.DeviceClassTT)
 
-	kernel.Allocate(env.Process.PID, uint32(vax.Kernel))
-	super.Allocate(env.Process.PID, uint32(vax.Supervisor))
-	user.Allocate(env.Process.PID, uint32(vax.User))
-	other.Allocate(0x999, uint32(vax.User))
+	kernel.Allocate(env.Process.PID, uint32(registers.Kernel))
+	super.Allocate(env.Process.PID, uint32(registers.Supervisor))
+	user.Allocate(env.Process.PID, uint32(registers.User))
+	other.Allocate(0x999, uint32(registers.User))
 
 	// No devnam: release everything allocated in supervisor mode or a less
 	// privileged one; kernel's and another process's stay.
-	wantR0(t, callLNM(t, env, serviceSysDalloc, 0, uint32(vax.Supervisor)), ssNormal)
+	wantR0(t, callLNM(t, env, serviceSysDalloc, 0, uint32(registers.Supervisor)), ssNormal)
 
 	if !kernel.Allocated() || super.Allocated() || user.Allocated() || !other.Allocated() {
 		t.Errorf("after $DALLOC(acmode=super): kernel=%v super=%v user=%v other=%v, want true false false true", //nolint:dupword
@@ -437,12 +437,12 @@ func TestServiceSysDassgnModes(t *testing.T) {
 	user := assignCall(t, env, a, "TTA0", 3)
 
 	// A kernel-mode channel can't be released from supervisor mode.
-	setCurMod(env, vax.Supervisor)
+	setCurMod(env, registers.Supervisor)
 	wantR0(t, callLNM(t, env, serviceSysDassgn, kernel), ssNoPriv)
 
 	// $ALLOC then $DALLOC: blocked by the channels until they're gone.
-	setCurMod(env, vax.Kernel)
-	dp.Allocate(env.Process.PID, uint32(vax.User))
+	setCurMod(env, registers.Kernel)
+	dp.Allocate(env.Process.PID, uint32(registers.User))
 	wantR0(t, callLNM(t, env, serviceSysDalloc, a.desc("TTA0")), ssDevAssign)
 
 	// Image rundown deassigns the user-mode channel, but the kernel one

@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/tucats/govax/internal/vax"
+	"github.com/tucats/govax/internal/registers"
 )
 
 // These tests are docs/PHASE-42.md's subtask 18: EXAMINE's and DEPOSIT's
@@ -131,7 +131,7 @@ func TestOtherTypes(t *testing.T) {
 	expect(t, "EVALUATE/CONDITION_VALUE 1", say(t, c, "EVALUATE/CONDITION_VALUE 1"),
 		"%SYSTEM-S-NORMAL, normal successful completion\n")
 
-	c.CPU.SetPSL(vax.PSL(0x03C0000D))
+	c.CPU.SetPSL(registers.PSL(0x03C0000D))
 	expect(t, "EXAMINE/PSW PSL", say(t, c, "EXAMINE/PSW PSL"),
 		"DBGCMD\\FACT\\%PSL:       \n        DV FU IV T N Z V C\n         0  0  0 0 1 1 0 1\n")
 }

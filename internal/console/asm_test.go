@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/tucats/govax/internal/vax"
+	"github.com/tucats/govax/internal/registers"
 )
 
 // TestAssemble_xorDepositsAndIsCallable assembles testdata/asm/xor.asm (a
@@ -35,7 +35,7 @@ func TestAssemble_xorDepositsAndIsCallable(t *testing.T) {
 	}
 
 	const want = 0xC8600 ^ 0x10
-	if got := c.CPU.GPR(vax.R4); got != want {
+	if got := c.CPU.GPR(registers.R4); got != want {
 		t.Errorf("R4 = %#x, want %#x", got, want)
 	}
 }

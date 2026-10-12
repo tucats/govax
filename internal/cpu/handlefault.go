@@ -3,7 +3,7 @@ package cpu
 import (
 	"fmt"
 
-	"github.com/tucats/govax/internal/vax"
+	"github.com/tucats/govax/internal/registers"
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
@@ -42,7 +42,7 @@ var ErrNoExceptionHandler = vmserrors.New(vmserrors.VAX_NOHANDLER)
 type ConsoleHandlerFault struct {
 	*Fault
 	PC  uint32
-	PSL vax.PSL
+	PSL registers.PSL
 	R0  uint32
 	R1  uint32
 }
@@ -65,7 +65,7 @@ func (f *ConsoleHandlerFault) Unwrap() error { return ErrNoExceptionHandler }
 // changed the machine state, stack and PC, to run the program's
 // condition-handler search; one that declines has changed nothing.
 type ExceptionDispatcher interface {
-	DispatchException(code uint32, params []uint32, pc uint32, psl vax.PSL) (dispatched bool, err error)
+	DispatchException(code uint32, params []uint32, pc uint32, psl registers.PSL) (dispatched bool, err error)
 }
 
 // ErrUnhandledVector is returned by Engine.HandleFault when the SCB vector
@@ -78,7 +78,7 @@ var ErrUnhandledVector = vmserrors.New(vmserrors.VAX_UNHANDLED)
 // HandleFault runs the VAX exception-delivery sequence for f: fetch the
 // handler vector from the System Control Block (at SCBB + f.Code, read with
 // virtual memory disabled — the SCB is addressed physically, matching
-// handle_fault's temporary vax.MAPEN = 0), switch to the appropriate stack
+// handle_fault's temporary registers.MAPEN = 0), switch to the appropriate stack
 // and access mode, push the old PSL/PC/signal-args, and set the CPU's PC to
 // the vector.
 //
@@ -88,12 +88,12 @@ var ErrUnhandledVector = vmserrors.New(vmserrors.VAX_UNHANDLED)
 // the DBG_EXCEPTIONS trace printf, format_exception's console fallback) —
 // see docs/PHASE-03.md's design notes.
 func (e *Engine) HandleFault(f *Fault) error {
-	scbb := e.cpu.PR(vax.SCBB)
+	scbb := e.cpu.PR(registers.SCBB)
 
-	savedMAPEN := e.cpu.PR(vax.MAPEN)
-	e.cpu.SetPR(vax.MAPEN, 0)
+	savedMAPEN := e.cpu.PR(registers.MAPEN)
+	e.cpu.SetPR(registers.MAPEN, 0)
 	rawVector, err := e.mem.LoadLongword(e.cpu, scbb+uint32(f.Code))
-	e.cpu.SetPR(vax.MAPEN, savedMAPEN)
+	e.cpu.SetPR(registers.MAPEN, savedMAPEN)
 
 	if err != nil {
 		return err
@@ -115,17 +115,17 @@ func (e *Engine) HandleFault(f *Fault) error {
 			Fault: f,
 			PC:    e.instructionPC,
 			PSL:   e.cpu.PSL(),
-			R0:    e.cpu.GPR(vax.R0),
-			R1:    e.cpu.GPR(vax.R1),
+			R0:    e.cpu.GPR(registers.R0),
+			R1:    e.cpu.GPR(registers.R1),
 		}
 	}
 
 	stack := rawVector & 0x3
 	vector := rawVector &^ 0x7
 
-	newMode := vax.Kernel
+	newMode := registers.Kernel
 	if f.Code >= ExcChangeModeK && f.Code <= ExcChangeModeU {
-		newMode = vax.AccessMode((f.Code & 0x0F) >> 2)
+		newMode = registers.AccessMode((f.Code & 0x0F) >> 2)
 	}
 
 	// Capture the PSL to push onto the new stack before anything below
@@ -137,19 +137,19 @@ func (e *Engine) HandleFault(f *Fault) error {
 	// pure exception/fault raised by decode or an instruction handler it's
 	// already in sync with the current PSL's IPL, making this a no-op.
 	psl := e.cpu.PSL()
-	psl.SetIPL(e.cpu.PR(vax.IPL))
+	psl.SetIPL(e.cpu.PR(registers.IPL))
 	e.cpu.SetPSL(psl)
 
 	switch stack {
 	case 0:
 		e.setModeStack(newMode, false)
 	case 1:
-		e.setModeStack(vax.Kernel, true)
+		e.setModeStack(registers.Kernel, true)
 	}
 
-	sp := e.cpu.GPR(vax.SP)
+	sp := e.cpu.GPR(registers.SP)
 
-	if e.cpu.DebugEnabled(vax.DebugExceptions) {
+	if e.cpu.DebugEnabled(registers.DebugExceptions) {
 		stackDesc := "ISP, VM=OFF"
 		if stack == 0 {
 			stackDesc = stackNames[newMode]
@@ -180,8 +180,8 @@ func (e *Engine) HandleFault(f *Fault) error {
 		}
 	}
 
-	e.cpu.SetGPR(vax.SP, sp)
-	e.cpu.SetGPR(vax.PC, vector)
+	e.cpu.SetGPR(registers.SP, sp)
+	e.cpu.SetGPR(registers.PC, vector)
 
 	if vector == 0 {
 		return ErrUnhandledVector
@@ -195,7 +195,7 @@ func (e *Engine) HandleFault(f *Fault) error {
 // own console_run.c -- must run image loading and fixups in kernel mode
 // regardless of the mode the console happened to be in, then restore it
 // afterward).
-func (e *Engine) SetModeStack(newMode vax.AccessMode, interruptStack bool) {
+func (e *Engine) SetModeStack(newMode registers.AccessMode, interruptStack bool) {
 	e.setModeStack(newMode, interruptStack)
 }
 
@@ -203,7 +203,7 @@ func (e *Engine) SetModeStack(newMode vax.AccessMode, interruptStack bool) {
 // newMode the target mode) or to the interrupt stack (interruptStack true;
 // newMode is unused in that case, matching set_mode_stack's mode-parameter
 // value of 4 meaning "interrupt stack" rather than a real access mode).
-func (e *Engine) setModeStack(newMode vax.AccessMode, interruptStack bool) {
+func (e *Engine) setModeStack(newMode registers.AccessMode, interruptStack bool) {
 	psl := e.cpu.PSL()
 	curMod := psl.CurMod()
 
@@ -219,7 +219,7 @@ func (e *Engine) setModeStack(newMode vax.AccessMode, interruptStack bool) {
 	// real transition itself. See docs/PHASE-21.md.
 	actualNewMode := newMode
 	if interruptStack {
-		actualNewMode = vax.Kernel
+		actualNewMode = registers.Kernel
 	}
 
 	if curMod != actualNewMode {
@@ -238,30 +238,30 @@ func (e *Engine) setModeStack(newMode vax.AccessMode, interruptStack bool) {
 
 	var newSP uint32
 	if interruptStack {
-		newSP = e.cpu.PR(vax.ISP)
+		newSP = e.cpu.PR(registers.ISP)
 	} else {
-		newSP = e.cpu.PR(vax.PrivReg(newMode)) // KSP/ESP/SSP/USP == 0/1/2/3, same as AccessMode
+		newSP = e.cpu.PR(registers.PrivReg(newMode)) // KSP/ESP/SSP/USP == 0/1/2/3, same as AccessMode
 	}
 
 	if psl.IS() {
-		e.cpu.SetPR(vax.ISP, e.cpu.GPR(vax.SP))
+		e.cpu.SetPR(registers.ISP, e.cpu.GPR(registers.SP))
 	} else {
-		e.cpu.SetPR(vax.PrivReg(curMod), e.cpu.GPR(vax.SP))
+		e.cpu.SetPR(registers.PrivReg(curMod), e.cpu.GPR(registers.SP))
 	}
 
 	if interruptStack {
-		e.cpu.SetGPR(vax.SP, newSP)
+		e.cpu.SetGPR(registers.SP, newSP)
 		psl.SetIS(true)
-		psl.SetCurMod(vax.Kernel)
-		e.cpu.SetPR(vax.MAPEN, 0)
+		psl.SetCurMod(registers.Kernel)
+		e.cpu.SetPR(registers.MAPEN, 0)
 	} else {
 		psl.SetCurMod(newMode)
-		e.cpu.SetGPR(vax.SP, newSP)
+		e.cpu.SetGPR(registers.SP, newSP)
 		psl.SetIS(false)
 		// set_mode_stack's own comment flags this write as uncertain
 		// ("Not sure about this!!"); replicated as-is rather than
 		// second-guessed. See docs/DEVIATIONS.md.
-		e.cpu.SetPR(vax.MAPEN, 1)
+		e.cpu.SetPR(registers.MAPEN, 1)
 	}
 
 	e.cpu.SetPSL(psl)

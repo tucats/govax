@@ -3,7 +3,7 @@ package corevms
 import (
 	"testing"
 
-	"github.com/tucats/govax/internal/vax"
+	"github.com/tucats/govax/internal/registers"
 )
 
 // condFrameC is a third frame, frame B's caller, for unwinds that need
@@ -43,7 +43,7 @@ func dispatchToH2(t *testing.T, env *Environment) *conditionDispatch {
 	}
 
 	_, _ = serviceSysSrchandler(env, nil) // H1
-	env.cpu.SetGPR(vax.R0, ssResignal)
+	env.cpu.SetGPR(registers.R0, ssResignal)
 
 	r0, err := serviceSysSrchandler(env, nil)
 	expectHandlerCall(t, env, r0, err, condH2, condFrameB, 1)
@@ -63,7 +63,7 @@ func TestUnwind_default(t *testing.T) {
 	putLongword(t, env, d.mech+12, 0x99) // what B will seem to return
 
 	// H2 returns; its answer (resignal, here) is ignored.
-	c.SetGPR(vax.R0, ssResignal)
+	c.SetGPR(registers.R0, ssResignal)
 
 	r0, err := serviceSysSrchandler(env, nil)
 	expectHandlerCall(t, env, r0, err, condH1, condFrameA, 0)
@@ -80,8 +80,8 @@ func TestUnwind_default(t *testing.T) {
 		t.Fatalf("finish = %#x, %v; want R0 0x99", r0, err)
 	}
 
-	if c.GPR(vax.PC) != condStub+2 || c.GPR(vax.FP) != condFrameA || c.GPR(vax.R1) != 0xBBBB {
-		t.Errorf("PC %#x FP %#x R1 %#x; want the RET %#x, frame A, R1 0xBBBB", c.GPR(vax.PC), c.GPR(vax.FP), c.GPR(vax.R1), condStub+2)
+	if c.GPR(registers.PC) != condStub+2 || c.GPR(registers.FP) != condFrameA || c.GPR(registers.R1) != 0xBBBB {
+		t.Errorf("PC %#x FP %#x R1 %#x; want the RET %#x, frame A, R1 0xBBBB", c.GPR(registers.PC), c.GPR(registers.FP), c.GPR(registers.R1), condStub+2)
 	}
 
 	// A returns into the RET; B returns where it always would, into C.
@@ -113,7 +113,7 @@ func TestUnwind_depthAndNewPC(t *testing.T) {
 		t.Fatalf("frames %#x, want frame A only", d.unwind.frames)
 	}
 
-	c.SetGPR(vax.R0, 1)
+	c.SetGPR(registers.R0, 1)
 
 	_, _ = serviceSysSrchandler(env, nil) // A's handler, SS$_UNWIND
 
@@ -193,7 +193,7 @@ func TestUnwind_libSignal(t *testing.T) {
 		t.Fatalf("frames %#x, want the stub's frame and frame A", f)
 	}
 
-	env.cpu.SetGPR(vax.R0, 1)
+	env.cpu.SetGPR(registers.R0, 1)
 
 	// A's handler is called with SS$_UNWIND at depth 0 (the stub's frame
 	// has no handler).
@@ -204,8 +204,8 @@ func TestUnwind_libSignal(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if env.cpu.GPR(vax.FP) != signalFrame {
-		t.Errorf("FP %#x, want the stub's frame first", env.cpu.GPR(vax.FP))
+	if env.cpu.GPR(registers.FP) != signalFrame {
+		t.Errorf("FP %#x, want the stub's frame first", env.cpu.GPR(registers.FP))
 	}
 }
 
@@ -255,7 +255,7 @@ func TestUnwind_discardsOuterDispatch(t *testing.T) {
 
 	// The stack below the frames, as it really is: SP moves down as
 	// procedures are called.
-	c.SetGPR(vax.SP, 0xF000)
+	c.SetGPR(registers.SP, 0xF000)
 
 	outer := dispatchToH2(t, env) // H2 running for the outer condition
 
@@ -267,8 +267,8 @@ func TestUnwind_discardsOuterDispatch(t *testing.T) {
 	putLongword(t, env, h2Frame, 0)
 	putLongword(t, env, h2Frame+frameSavedFP, condFrameB)
 	putLongword(t, env, h2Frame+frameSavedPC, 0x5150)
-	c.SetGPR(vax.FP, h2Frame)
-	c.SetGPR(vax.SP, outer.sp-0x100)
+	c.SetGPR(registers.FP, h2Frame)
+	c.SetGPR(registers.SP, outer.sp-0x100)
 
 	if ok, _ := env.DispatchException(scbReservedAddr, nil, 0x5140, c.PSL()); !ok {
 		t.Fatal("inner not dispatched")
@@ -279,7 +279,7 @@ func TestUnwind_discardsOuterDispatch(t *testing.T) {
 
 	wantR0(t, callLNM(t, env, serviceSysUnwind), ssNormal) // to C
 
-	c.SetGPR(vax.R0, 1)
+	c.SetGPR(registers.R0, 1)
 
 	// B's handler with SS$_UNWIND (H2's own frame has none), then the
 	// finish.

@@ -3,8 +3,8 @@ package corevms
 import (
 	"fmt"
 
+	"github.com/tucats/govax/internal/registers"
 	"github.com/tucats/govax/internal/sched"
-	"github.com/tucats/govax/internal/vax"
 )
 
 // Process deletion (docs/PHASE-45.md, subtask 6).
@@ -104,7 +104,7 @@ func (sys *System) DeleteProcess(env *Environment) {
 
 	sys.requestReschedule()
 
-	if sys.cpu.DebugEnabled(vax.DebugProcess) {
+	if sys.cpu.DebugEnabled(registers.DebugProcess) {
 		fmt.Fprintf(sys.cpu.DebugWriter(), "DEBUG(PROCESS): %08X deleted, status %08X\n",
 			env.Process.PID, env.Process.ExitStatus)
 	}
@@ -146,7 +146,7 @@ func (sys *System) markForDeletion(env *Environment) {
 
 	sys.requestReschedule()
 
-	if sys.cpu.DebugEnabled(vax.DebugProcess) {
+	if sys.cpu.DebugEnabled(registers.DebugProcess) {
 		fmt.Fprintf(sys.cpu.DebugWriter(), "DEBUG(PROCESS): %08X marked for deletion\n", env.Process.PID)
 	}
 }
@@ -211,7 +211,7 @@ func (sys *System) awaitSubprocesses(env *Environment) bool {
 
 	sys.requestReschedule()
 
-	if sys.cpu.DebugEnabled(vax.DebugProcess) {
+	if sys.cpu.DebugEnabled(registers.DebugProcess) {
 		fmt.Fprintf(sys.cpu.DebugWriter(), "DEBUG(PROCESS): %08X waits for %d subprocess(es) to be deleted\n",
 			env.Process.PID, len(subs))
 	}
@@ -231,7 +231,7 @@ func (env *Environment) processRundown() {
 		env.releaseChannel(c)
 	}
 
-	env.deallocateAll(uint32(vax.Kernel))
+	env.deallocateAll(uint32(registers.Kernel))
 	env.releaseLocks()
 
 	p := env.Process
@@ -317,7 +317,7 @@ func (sys *System) releaseMemory(env *Environment) {
 // image's, so it closes them all. Its terminal stays open. A process
 // with no files open is left as it was.
 func (env *Environment) CloseFiles() {
-	if n, err := env.files.Rundown(); n > 0 && env.cpu.DebugEnabled(vax.DebugProcess) {
+	if n, err := env.files.Rundown(); n > 0 && env.cpu.DebugEnabled(registers.DebugProcess) {
 		fmt.Fprintf(env.cpu.DebugWriter(), "DEBUG(PROCESS): %08X's rundown closed %d file(s), error %v\n",
 			env.Process.PID, n, err)
 	}

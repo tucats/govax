@@ -4,7 +4,7 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/tucats/govax/internal/vax"
+	"github.com/tucats/govax/internal/registers"
 )
 
 // exitBlock lays out an exit control block for handler with the given
@@ -31,7 +31,7 @@ func TestServiceSysDclexh(t *testing.T) {
 	// Kernel mode has no exit handlers.
 	wantR0(t, callLNM(t, env, serviceSysDclexh, first), ssIvSsRq)
 
-	setCurMod(env, vax.User)
+	setCurMod(env, registers.User)
 	wantR0(t, callLNM(t, env, serviceSysDclexh), ssNoHandler)
 	wantR0(t, callLNM(t, env, serviceSysDclexh, first), ssNormal)
 	wantR0(t, callLNM(t, env, serviceSysDclexh, second), ssNormal)
@@ -45,13 +45,13 @@ func TestServiceSysDclexh(t *testing.T) {
 		t.Errorf("second block's link = %#x, want the first block %#x", got, first)
 	}
 
-	if env.ExitHandlers(vax.User) != 2 || env.ExitHandlers(vax.Supervisor) != 0 {
-		t.Errorf("handlers: user %d, supervisor %d; want 2 and 0", env.ExitHandlers(vax.User), env.ExitHandlers(vax.Supervisor))
+	if env.ExitHandlers(registers.User) != 2 || env.ExitHandlers(registers.Supervisor) != 0 {
+		t.Errorf("handlers: user %d, supervisor %d; want 2 and 0", env.ExitHandlers(registers.User), env.ExitHandlers(registers.Supervisor))
 	}
 
 	wantR0(t, callLNM(t, env, serviceSysDclexh, badAddr), ssAccVio)
 
-	if env.ExitHandlers(vax.User) != 2 {
+	if env.ExitHandlers(registers.User) != 2 {
 		t.Error("an unwritable block was declared anyway")
 	}
 }
@@ -65,7 +65,7 @@ func TestServiceSysCanexh(t *testing.T) {
 
 	wantR0(t, callLNM(t, env, serviceSysCanexh, b1), ssIvSsRq) // kernel mode
 
-	setCurMod(env, vax.User)
+	setCurMod(env, registers.User)
 
 	for _, b := range []uint32{b1, b2, b3} {
 		wantR0(t, callLNM(t, env, serviceSysDclexh, b), ssNormal)
@@ -83,19 +83,19 @@ func TestServiceSysCanexh(t *testing.T) {
 	// The newest block has no newer one to relink.
 	wantR0(t, callLNM(t, env, serviceSysCanexh, b3), ssNormal)
 
-	if env.ExitHandlers(vax.User) != 1 {
-		t.Errorf("%d handlers left, want 1", env.ExitHandlers(vax.User))
+	if env.ExitHandlers(registers.User) != 1 {
+		t.Errorf("%d handlers left, want 1", env.ExitHandlers(registers.User))
 	}
 
 	// A newer block whose link can't be written.
-	env.Process.exitHandlers[vax.User] = []uint32{b1, badAddr}
+	env.Process.exitHandlers[registers.User] = []uint32{b1, badAddr}
 	wantR0(t, callLNM(t, env, serviceSysCanexh, b1), ssAccVio)
 
 	// No block: all of the mode's are cancelled.
 	wantR0(t, callLNM(t, env, serviceSysCanexh), ssNormal)
 
-	if env.ExitHandlers(vax.User) != 0 {
-		t.Errorf("%d handlers left after cancelling all, want 0", env.ExitHandlers(vax.User))
+	if env.ExitHandlers(registers.User) != 0 {
+		t.Errorf("%d handlers left after cancelling all, want 0", env.ExitHandlers(registers.User))
 	}
 }
 
@@ -124,7 +124,7 @@ func TestServiceSysExit(t *testing.T) {
 	b1, s1 := exitBlock(a, 0x4000, 1)
 	b2, s2 := exitBlock(a, 0x5000, 0) // no arguments: no status stored
 
-	setCurMod(env, vax.User)
+	setCurMod(env, registers.User)
 
 	for _, b := range []uint32{b1, b2} {
 		wantR0(t, callLNM(t, env, serviceSysDclexh, b), ssNormal)
@@ -170,8 +170,8 @@ func TestServiceSysExit_skipsUnreadableBlock(t *testing.T) {
 	a := newArena(t, env)
 	b1, _ := exitBlock(a, 0x4000, 1)
 
-	setCurMod(env, vax.User)
-	env.Process.exitHandlers[vax.User] = []uint32{b1, badAddr}
+	setCurMod(env, registers.User)
+	env.Process.exitHandlers[registers.User] = []uint32{b1, badAddr}
 
 	if call, _, _ := exitCall(t, env, 1); call == nil || call.Routine != 0x4000 {
 		t.Errorf("$EXIT = %+v, want the readable block's handler, the unreadable one skipped", call)
@@ -183,18 +183,18 @@ func TestServiceSysExit_onlyCallersMode(t *testing.T) {
 	a := newArena(t, env)
 	b1, _ := exitBlock(a, 0x4000, 1)
 
-	setCurMod(env, vax.User)
+	setCurMod(env, registers.User)
 	wantR0(t, callLNM(t, env, serviceSysDclexh, b1), ssNormal)
 
 	// From kernel mode there are no handlers: the image ends at once,
 	// and the user-mode handler is still declared.
-	setCurMod(env, vax.Kernel)
+	setCurMod(env, registers.Kernel)
 
 	if _, status, exited := exitCall(t, env, 3); !exited || status != 3 {
 		t.Errorf("kernel $EXIT: exited=%v status=%d, want an immediate exit with 3", exited, status)
 	}
 
-	if env.ExitHandlers(vax.User) != 1 {
+	if env.ExitHandlers(registers.User) != 1 {
 		t.Error("a kernel-mode $EXIT consumed a user-mode handler")
 	}
 }
@@ -205,14 +205,14 @@ func TestImageRundown_forgetsUserExitHandlers(t *testing.T) {
 	b1, _ := exitBlock(a, 0x4000, 1)
 	b2, _ := exitBlock(a, 0x5000, 1)
 
-	setCurMod(env, vax.User)
+	setCurMod(env, registers.User)
 	wantR0(t, callLNM(t, env, serviceSysDclexh, b1), ssNormal)
-	setCurMod(env, vax.Supervisor)
+	setCurMod(env, registers.Supervisor)
 	wantR0(t, callLNM(t, env, serviceSysDclexh, b2), ssNormal)
 
 	env.ImageRundown()
 
-	if env.ExitHandlers(vax.User) != 0 || env.ExitHandlers(vax.Supervisor) != 1 {
-		t.Errorf("after rundown: user %d, supervisor %d; want 0 and 1", env.ExitHandlers(vax.User), env.ExitHandlers(vax.Supervisor))
+	if env.ExitHandlers(registers.User) != 0 || env.ExitHandlers(registers.Supervisor) != 1 {
+		t.Errorf("after rundown: user %d, supervisor %d; want 0 and 1", env.ExitHandlers(registers.User), env.ExitHandlers(registers.Supervisor))
 	}
 }

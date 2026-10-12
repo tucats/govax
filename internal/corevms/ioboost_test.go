@@ -5,8 +5,8 @@ import (
 	"testing"
 
 	iodev "github.com/tucats/govax/internal/io"
+	"github.com/tucats/govax/internal/registers"
 	"github.com/tucats/govax/internal/sched"
-	"github.com/tucats/govax/internal/vax"
 	"github.com/tucats/govax/internal/vmsdef"
 )
 
@@ -70,7 +70,7 @@ func TestReportEvent_mailboxRead(t *testing.T) {
 	reader := newProcess(t, env)
 	rch := assignCall(t, reader, a, mailboxOn(t, env, ch).Device.Name, 0)
 
-	reader.cpu.SetGPR(vax.FP, 0x7000)
+	reader.cpu.SetGPR(registers.FP, 0x7000)
 
 	if err := callWaiting(reader, serviceSysQiow, 0, rch, fnReadVBlk, 0, 0, 0, buf, 16); !errors.Is(err, ErrWait) {
 		t.Fatalf("read of an empty mailbox: err %v, want ErrWait", err)

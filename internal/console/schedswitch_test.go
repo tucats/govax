@@ -14,9 +14,9 @@ import (
 	"github.com/tucats/govax/internal/console/consoletest"
 	"github.com/tucats/govax/internal/corevms"
 	"github.com/tucats/govax/internal/cpu"
+	"github.com/tucats/govax/internal/registers"
 	"github.com/tucats/govax/internal/respath"
 	"github.com/tucats/govax/internal/sched"
-	"github.com/tucats/govax/internal/vax"
 	"github.com/tucats/govax/internal/vmsdef"
 )
 
@@ -89,14 +89,14 @@ func scheduledConsole(t testing.TB, quantum string, code []byte) (*console.Conso
 		t.Fatal(err)
 	}
 
-	c.Engine.SetModeStack(vax.User, false)
+	c.Engine.SetModeStack(registers.User, false)
 
 	psl := c.CPU.PSL()
-	psl.SetPrvMod(vax.User)
+	psl.SetPrvMod(registers.User)
 	psl.SetIPL(0)
 	c.CPU.SetPSL(psl)
-	c.CPU.SetPR(vax.IPL, 0)
-	c.CPU.SetGPR(vax.PC, codeAddr)
+	c.CPU.SetPR(registers.IPL, 0)
+	c.CPU.SetGPR(registers.PC, codeAddr)
 
 	return c, &out
 }
@@ -128,10 +128,10 @@ func handBuiltProcess(t testing.TB, c *console.Console, code []byte) *corevms.En
 		t.Fatal(err)
 	}
 
-	var userPSL vax.PSL
+	var userPSL registers.PSL
 
-	userPSL.SetCurMod(vax.User)
-	userPSL.SetPrvMod(vax.User)
+	userPSL.SetCurMod(registers.User)
+	userPSL.SetPrvMod(registers.User)
 
 	start := corevms.InitialPCB(env.Space, env.Stacks, codeAddr, userPSL)
 	if err := cpu.WritePCB(c.Mem, env.Stacks.PCBB, &start); err != nil {
@@ -170,7 +170,7 @@ func TestScheduler_roundRobin(t *testing.T) {
 	two := handBuiltProcess(t, c, counter())
 	sys := one.System
 
-	c.CPU.SetDebug(c.CPU.Debug() | vax.DebugProcess)
+	c.CPU.SetDebug(c.CPU.Debug() | registers.DebugProcess)
 
 	// The hook's next call: process 2 preempts, and runs its first
 	// instruction.
@@ -318,7 +318,7 @@ func BenchmarkContextSwitch(b *testing.B) {
 		b.Run("quantum="+quantum, func(b *testing.B) {
 			c, _ := scheduledConsole(b, quantum, counter())
 			handBuiltProcess(b, c, counter())
-			c.CPU.SetDebug(c.CPU.Debug() &^ vax.DebugProcess)
+			c.CPU.SetDebug(c.CPU.Debug() &^ registers.DebugProcess)
 
 			b.ResetTimer()
 			step(b, c, b.N)

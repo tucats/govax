@@ -3,18 +3,18 @@ package cpu
 import (
 	"testing"
 
-	"github.com/tucats/govax/internal/vax"
+	"github.com/tucats/govax/internal/registers"
 )
 
 func TestEmulClr(t *testing.T) {
 	cases := []struct {
 		name   string
 		opcode byte
-		reg    vax.Reg
+		reg    registers.Reg
 	}{
-		{"CLRB", 0x94, vax.R1},
-		{"CLRW", 0xB4, vax.R1},
-		{"CLRL", 0xD4, vax.R1},
+		{"CLRB", 0x94, registers.R1},
+		{"CLRW", 0xB4, registers.R1},
+		{"CLRL", 0xD4, registers.R1},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -42,11 +42,11 @@ func TestEmulClr(t *testing.T) {
 func TestEmulClrbPreservesUpperBytes(t *testing.T) {
 	cpu, mem := fixture()
 	e := NewEngine(cpu, mem)
-	cpu.SetGPR(vax.R1, 0xAABBCCDD)
+	cpu.SetGPR(registers.R1, 0xAABBCCDD)
 
-	stepInstruction(t, e, 0x94, regMode(vax.R1)) // CLRB
+	stepInstruction(t, e, 0x94, regMode(registers.R1)) // CLRB
 
-	if got := cpu.GPR(vax.R1); got != 0xAABBCC00 {
+	if got := cpu.GPR(registers.R1); got != 0xAABBCC00 {
 		t.Errorf("R1 = %#x, want 0xAABBCC00 (only low byte cleared)", got)
 	}
 }
@@ -54,13 +54,13 @@ func TestEmulClrbPreservesUpperBytes(t *testing.T) {
 func TestEmulClrq(t *testing.T) {
 	cpu, mem := fixture()
 	e := NewEngine(cpu, mem)
-	cpu.SetGPR(vax.R1, 0xFFFFFFFF)
-	cpu.SetGPR(vax.R2, 0xFFFFFFFF)
+	cpu.SetGPR(registers.R1, 0xFFFFFFFF)
+	cpu.SetGPR(registers.R2, 0xFFFFFFFF)
 
-	stepInstruction(t, e, 0x7C, regMode(vax.R1)) // CLRQ
+	stepInstruction(t, e, 0x7C, regMode(registers.R1)) // CLRQ
 
-	if cpu.GPR(vax.R1) != 0 || cpu.GPR(vax.R2) != 0 {
-		t.Errorf("register pair = %#x:%#x, want 0:0", cpu.GPR(vax.R1), cpu.GPR(vax.R2))
+	if cpu.GPR(registers.R1) != 0 || cpu.GPR(registers.R2) != 0 {
+		t.Errorf("register pair = %#x:%#x, want 0:0", cpu.GPR(registers.R1), cpu.GPR(registers.R2))
 	}
 	
 	if !cpu.PSL().Z() {

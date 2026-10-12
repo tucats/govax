@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	iodev "github.com/tucats/govax/internal/io"
-	"github.com/tucats/govax/internal/vax"
+	"github.com/tucats/govax/internal/registers"
 	"github.com/tucats/govax/internal/vmsdef"
 )
 
@@ -75,7 +75,7 @@ func TestIOCount_null(t *testing.T) {
 	nla.DevType = iodev.DeviceTypeNull
 
 	a := newArena(t, env)
-	ch := assignCall(t, env, a, "NLA0", uint32(vax.User))
+	ch := assignCall(t, env, a, "NLA0", uint32(registers.User))
 
 	wantR0(t, callQIO(t, env, qioArgs{channel: ch, function: fnWriteVBlk, iosb: a.alloc(8), p: [6]uint32{a.str("abc"), 3}}), ssNormal)
 

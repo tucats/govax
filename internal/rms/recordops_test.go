@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	"github.com/tucats/govax/internal/lck"
-	"github.com/tucats/govax/internal/vax"
+	"github.com/tucats/govax/internal/registers"
 	"github.com/tucats/govax/internal/vm"
 )
 
@@ -291,7 +291,7 @@ func TestTruncate_trnOnly(t *testing.T) {
 		}
 
 		return &sharer{t: t, name: "A", ctx: &Context{
-			Mem: vm.NewMemory(1 << 20), CPU: vax.New(), Mounts: mounts,
+			Mem: vm.NewMemory(1 << 20), CPU: registers.New(), Mounts: mounts,
 			Files: NewFileTable(nil), Logicals: newTestLogicals(t),
 		}}, mounts
 	}

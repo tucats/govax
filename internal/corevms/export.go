@@ -3,7 +3,7 @@ package corevms
 import (
 	"fmt"
 
-	"github.com/tucats/govax/internal/vax"
+	"github.com/tucats/govax/internal/registers"
 	"github.com/tucats/govax/internal/vm"
 )
 
@@ -16,7 +16,7 @@ import (
 // itself.
 
 // CPU is the processor the process runs on.
-func (env *Environment) CPU() *vax.CPU { return env.cpu }
+func (env *Environment) CPU() *registers.CPU { return env.cpu }
 
 // Memory is the process's address space.
 func (env *Environment) Memory() *vm.Memory { return env.mem }

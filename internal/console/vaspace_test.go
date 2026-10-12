@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"github.com/tucats/govax/internal/vax"
+	"github.com/tucats/govax/internal/registers"
 	"github.com/tucats/govax/internal/vm"
 	"github.com/tucats/govax/internal/vmsdef"
 )
@@ -49,7 +49,7 @@ func callService(t *testing.T, c *Console, name string, args ...uint32) uint32 {
 		t.Fatalf("CALL %s: %v", name, err)
 	}
 
-	return c.CPU.GPR(vax.R0)
+	return c.CPU.GPR(registers.R0)
 }
 
 // fullArgCounts are the argument counts of the services these tests call
@@ -114,7 +114,7 @@ func TestCretvaDeltva(t *testing.T) {
 		t.Errorf("retadr %#x-%#x, want %#x-%#x (the order they were created)", a, b, vaPages+0x5FF, vaPages)
 	}
 
-	if pte := pteAt(t, c, vaPages+0x200); pte.Owner() != uint8(vax.Executive) || pte.Protection() != vm.ProtEW || pte.Valid() {
+	if pte := pteAt(t, c, vaPages+0x200); pte.Owner() != uint8(registers.Executive) || pte.Protection() != vm.ProtEW || pte.Valid() {
 		t.Errorf("created PTE %#x: want executive-owned, EW, demand-zero", uint32(pte))
 	}
 
@@ -177,7 +177,7 @@ func TestCretvaDeltva_errors(t *testing.T) {
 	}
 
 	// Beyond P0's page table.
-	beyond := (c.CPU.PR(vax.P0LR) + 4) * 512
+	beyond := (c.CPU.PR(registers.P0LR) + 4) * 512
 	putRange(t, c, vaInadr, beyond, beyond)
 
 	if got := callService(t, c, "SYS$CRETVA", vaInadr); got != ssVasFull {
@@ -205,7 +205,7 @@ func TestDeltva_owner(t *testing.T) {
 		t.Fatalf("$CRETVA = %#x", got)
 	}
 
-	c.Engine.SetModeStack(vax.User, false)
+	c.Engine.SetModeStack(registers.User, false)
 
 	if got := callService(t, c, "SYS$DELTVA", vaInadr, vaRetadr); got != ssPagOwnVio {
 		t.Errorf("user $DELTVA of kernel pages = %#x, want SS$_PAGOWNVIO", got)
@@ -244,7 +244,7 @@ func TestCntreg(t *testing.T) {
 	}
 
 	// P1: its lowest page goes.
-	low := uint32(0x40000000) + c.CPU.PR(vax.P1LR)*512
+	low := uint32(0x40000000) + c.CPU.PR(registers.P1LR)*512
 
 	if got := callService(t, c, "SYS$CNTREG", 1, vaRetadr, 0, 1); got != ssNormal {
 		t.Fatalf("$CNTREG P1 = %#x", got)
@@ -270,7 +270,7 @@ func TestVASpace_assembledProgram(t *testing.T) {
 	c := newBootableConsole(t)
 	word := runFixture(t, c, "vaspace.asm")
 
-	if got := c.CPU.GPR(vax.R0); got != 1 {
+	if got := c.CPU.GPR(registers.R0); got != 1 {
 		t.Fatalf("R0 = %#x, want 1 (a service failed?)", got)
 	}
 

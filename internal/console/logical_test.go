@@ -7,7 +7,7 @@ import (
 	"testing"
 
 	"github.com/tucats/govax/internal/lnm"
-	"github.com/tucats/govax/internal/vax"
+	"github.com/tucats/govax/internal/registers"
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
@@ -289,7 +289,7 @@ func TestLogicals_trace(t *testing.T) {
 	d, c, buf := logicalDispatcher(t)
 
 	c.CPU.SetDebugWriter(buf)
-	c.CPU.SetDebug(vax.DebugLogicals)
+	c.CPU.SetDebug(registers.DebugLogicals)
 	mustDispatch(t, d, "DEFINE FOO BAR")
 
 	if !strings.Contains(buf.String(), "DEBUG: LNM: define FOO [super] in LNM$PROCESS_TABLE") {

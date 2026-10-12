@@ -6,7 +6,7 @@ import (
 	"strings"
 
 	"github.com/tucats/govax/internal/dcl"
-	"github.com/tucats/govax/internal/vax"
+	"github.com/tucats/govax/internal/registers"
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
@@ -287,7 +287,7 @@ func (d *Debugger) reportWatch(wp *Watchpoint, item, pc uint32, before, now []by
 	c.Printf("   old value: %s\n", d.itemValue(before, item, wp.Elem))
 	c.Printf("   new value: %s\n", d.itemValue(now, item, wp.Elem))
 
-	next := c.CPU.GPR(vax.PC)
+	next := c.CPU.GPR(registers.PC)
 	c.Printf("break at %s\n", c.LocationText(next))
 	d.showSource(next)
 }

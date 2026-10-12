@@ -3,8 +3,8 @@ package corevms
 import (
 	"testing"
 
+	"github.com/tucats/govax/internal/registers"
 	"github.com/tucats/govax/internal/rms"
-	"github.com/tucats/govax/internal/vax"
 	"github.com/tucats/govax/internal/vmsdef"
 )
 
@@ -74,7 +74,7 @@ func TestDiskDelete_whileAccessed(t *testing.T) {
 		t.Fatalf("IO$_ACCESS: %#x", st)
 	}
 
-	ch2 := assignCall(t, env, a, "DUA0", uint32(vax.User))
+	ch2 := assignCall(t, env, a, "DUA0", uint32(registers.User))
 	fib2d, fib2 := newFIB(a, 64, 0)
 
 	if _, st, _ := diskQIO(t, env, a, ch2, fnDeleteFile, fib2d, a.desc("DATA.BIN")); st != ssNormal {

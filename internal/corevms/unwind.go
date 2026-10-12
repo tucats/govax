@@ -3,7 +3,7 @@ package corevms
 import (
 	"fmt"
 
-	"github.com/tucats/govax/internal/vax"
+	"github.com/tucats/govax/internal/registers"
 	"github.com/tucats/govax/internal/vmsdef"
 )
 
@@ -281,9 +281,9 @@ func (env *Environment) finishUnwind(d *conditionDispatch) (uint32, error) {
 		env.endDispatch()
 	}
 
-	c.SetGPR(vax.R1, r1)
-	c.SetGPR(vax.FP, u.frames[0])
-	c.SetGPR(vax.PC, ret)
+	c.SetGPR(registers.R1, r1)
+	c.SetGPR(registers.FP, u.frames[0])
+	c.SetGPR(registers.PC, ret)
 
 	return r0, nil
 }

@@ -7,12 +7,12 @@ import (
 
 	"github.com/tucats/govax/internal/corevms"
 	"github.com/tucats/govax/internal/cpu"
-	"github.com/tucats/govax/internal/vax"
+	"github.com/tucats/govax/internal/registers"
 )
 
 func TestEnsureShims_definesSymbolsAndIsIdempotent(t *testing.T) {
 	c := newRunnableMachine(t)
-	c.Engine.SetModeStack(vax.Kernel, false)
+	c.Engine.SetModeStack(registers.Kernel, false)
 
 	// ensureShims's code-0 entries (e.g. decc$main, below) resolve by
 	// looking up kernel.asm's own already-assembled routine by name -- see
@@ -79,7 +79,7 @@ func TestEnsureShims_definesSymbolsAndIsIdempotent(t *testing.T) {
 // R0, then RET unwinds cleanly.
 func TestEnsureShims_stubDispatchesThroughXFCShim(t *testing.T) {
 	c := newRunnableMachine(t)
-	c.Engine.SetModeStack(vax.Kernel, false)
+	c.Engine.SetModeStack(registers.Kernel, false)
 
 	if _, _, err := c.Assemble(kernelPath(t)); err != nil {
 		t.Fatalf("Assemble(kernel.asm): %v", err)
@@ -111,7 +111,7 @@ func TestEnsureShims_stubDispatchesThroughXFCShim(t *testing.T) {
 		t.Fatalf("Step: %v", err)
 	}
 
-	if got := c.CPU.GPR(vax.R0); got != 1 {
+	if got := c.CPU.GPR(registers.R0); got != 1 {
 		t.Errorf("R0 after DECC$ISASCII stub = %d, want 1", got)
 	}
 }
@@ -171,7 +171,7 @@ func TestEnsureShims_overflowPage(t *testing.T) {
 		t.Fatalf("Assemble(kernel.asm): %v", err)
 	}
 
-	scb := c.CPU.PR(vax.SCBB)
+	scb := c.CPU.PR(registers.SCBB)
 
 	before := make([]byte, 512)
 	if err := c.Mem.LoadPhysical(scb, before); err != nil {

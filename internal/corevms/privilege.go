@@ -1,7 +1,7 @@
 package corevms
 
 import (
-	"github.com/tucats/govax/internal/vax"
+	"github.com/tucats/govax/internal/registers"
 	"github.com/tucats/govax/internal/vmsdef"
 )
 
@@ -148,7 +148,7 @@ func serviceSysSetprv(env *Environment, argv []uint32) (uint32, error) {
 		return ssNormal, nil
 	}
 
-	return env.setPrivileges(mask, enable, permanent, env.cpu.PSL().CurMod() <= vax.Executive), nil
+	return env.setPrivileges(mask, enable, permanent, env.cpu.PSL().CurMod() <= registers.Executive), nil
 }
 
 // setPrivileges is $SETPRV's change: it enables (or, without enable,

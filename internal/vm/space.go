@@ -3,7 +3,7 @@ package vm
 import (
 	"encoding/binary"
 
-	"github.com/tucats/govax/internal/vax"
+	"github.com/tucats/govax/internal/registers"
 )
 
 // AddressSpace names one process's private half of the virtual address
@@ -39,12 +39,12 @@ type AddressSpace struct {
 
 // CurrentAddressSpace returns the address space the CPU's registers
 // describe now: the current process's.
-func CurrentAddressSpace(cpu *vax.CPU) AddressSpace {
+func CurrentAddressSpace(cpu *registers.CPU) AddressSpace {
 	return AddressSpace{
-		P0BR: cpu.PR(vax.P0BR),
-		P0LR: cpu.PR(vax.P0LR),
-		P1BR: cpu.PR(vax.P1BR),
-		P1LR: cpu.PR(vax.P1LR),
+		P0BR: cpu.PR(registers.P0BR),
+		P0LR: cpu.PR(registers.P0LR),
+		P1BR: cpu.PR(registers.P1BR),
+		P1LR: cpu.PR(registers.P1LR),
 	}
 }
 
@@ -63,8 +63,8 @@ func CurrentAddressSpace(cpu *vax.CPU) AddressSpace {
 // PTE that has none yet (validatePage) and sets the modify bit on a write.
 // With MAPEN off there is no translation at all, and addr is returned as
 // it is, as Translate returns it.
-func (m *Memory) TranslateIn(cpu *vax.CPU, as AddressSpace, addr uint32, access AccessType) (uint32, error) {
-	if cpu.PR(vax.MAPEN) == 0 {
+func (m *Memory) TranslateIn(cpu *registers.CPU, as AddressSpace, addr uint32, access AccessType) (uint32, error) {
+	if cpu.PR(registers.MAPEN) == 0 {
 		return addr, nil
 	}
 
@@ -79,7 +79,7 @@ func (m *Memory) TranslateIn(cpu *vax.CPU, as AddressSpace, addr uint32, access 
 // spacePTEAddress finds the physical address of the PTE that maps addr in
 // as (or in the system page table, for an S0 address), checking the
 // region's length register as translate does.
-func (m *Memory) spacePTEAddress(cpu *vax.CPU, as AddressSpace, addr uint32) (uint32, error) {
+func (m *Memory) spacePTEAddress(cpu *registers.CPU, as AddressSpace, addr uint32) (uint32, error) {
 	region := (addr >> 30) & 0x3
 	page := (addr & 0x3FFFFFFF) >> 9
 
@@ -101,11 +101,11 @@ func (m *Memory) spacePTEAddress(cpu *vax.CPU, as AddressSpace, addr uint32) (ui
 		pteVirtAddr = as.P1BR + page*4
 
 	case 2: // S0: SBR is a physical address, so the PTE's is too.
-		if page >= cpu.PR(vax.SLR) {
+		if page >= cpu.PR(registers.SLR) {
 			return 0, accessViolation(addr)
 		}
 
-		return cpu.PR(vax.SBR) + page*4, nil
+		return cpu.PR(registers.SBR) + page*4, nil
 
 	default: // S1 doesn't exist.
 		return 0, accessViolation(addr)
@@ -134,7 +134,7 @@ func (m *Memory) resolvePTE(as AddressSpace, pteAddr, addr uint32, access Access
 
 	pte := PTE(raw)
 
-	if !pte.Protection().allows(vax.Kernel, access) {
+	if !pte.Protection().allows(registers.Kernel, access) {
 		return 0, protectionViolation(addr, byte(access))
 	}
 
@@ -160,8 +160,8 @@ func (m *Memory) resolvePTE(as AddressSpace, pteAddr, addr uint32, access Access
 // space that may not be the current one. Like LookupPTE it checks neither
 // protection nor the valid bit, and changes nothing. With MAPEN off there
 // are no page tables, and it fails as LookupPTE does.
-func (m *Memory) LookupPTEIn(cpu *vax.CPU, as AddressSpace, addr uint32) (PTE, error) {
-	if cpu.PR(vax.MAPEN) == 0 {
+func (m *Memory) LookupPTEIn(cpu *registers.CPU, as AddressSpace, addr uint32) (PTE, error) {
+	if cpu.PR(registers.MAPEN) == 0 {
 		return 0, accessViolation(addr)
 	}
 
@@ -181,8 +181,8 @@ func (m *Memory) LookupPTEIn(cpu *vax.CPU, as AddressSpace, addr uint32) (PTE, e
 // current process's, the slot may hold the old entry; if it isn't, the
 // slot holds another process's page (or nothing), and emptying it costs
 // at most a page-table walk.
-func (m *Memory) StorePTEIn(cpu *vax.CPU, as AddressSpace, addr uint32, pte PTE) error {
-	if cpu.PR(vax.MAPEN) == 0 {
+func (m *Memory) StorePTEIn(cpu *registers.CPU, as AddressSpace, addr uint32, pte PTE) error {
+	if cpu.PR(registers.MAPEN) == 0 {
 		return accessViolation(addr)
 	}
 
@@ -203,7 +203,7 @@ func (m *Memory) StorePTEIn(cpu *vax.CPU, as AddressSpace, addr uint32, pte PTE)
 // LoadIn reads len(dest) bytes starting at addr in as (see TranslateIn)
 // into dest. It translates once per page the bytes touch, so it may cross
 // page boundaries freely.
-func (m *Memory) LoadIn(cpu *vax.CPU, as AddressSpace, addr uint32, dest []byte) error {
+func (m *Memory) LoadIn(cpu *registers.CPU, as AddressSpace, addr uint32, dest []byte) error {
 	for len(dest) > 0 {
 		paddr, err := m.TranslateIn(cpu, as, addr, AccessRead)
 		if err != nil {
@@ -226,7 +226,7 @@ func (m *Memory) LoadIn(cpu *vax.CPU, as AddressSpace, addr uint32, dest []byte)
 // StoreIn writes src starting at addr in as (see TranslateIn), one page's
 // worth at a time. Nothing is written past the first page that fails to
 // translate; the pages before it have been written.
-func (m *Memory) StoreIn(cpu *vax.CPU, as AddressSpace, addr uint32, src []byte) error {
+func (m *Memory) StoreIn(cpu *registers.CPU, as AddressSpace, addr uint32, src []byte) error {
 	for len(src) > 0 {
 		paddr, err := m.TranslateIn(cpu, as, addr, AccessWrite)
 		if err != nil {
@@ -247,7 +247,7 @@ func (m *Memory) StoreIn(cpu *vax.CPU, as AddressSpace, addr uint32, src []byte)
 }
 
 // LoadLongwordIn reads a longword at addr in as.
-func (m *Memory) LoadLongwordIn(cpu *vax.CPU, as AddressSpace, addr uint32) (uint32, error) {
+func (m *Memory) LoadLongwordIn(cpu *registers.CPU, as AddressSpace, addr uint32) (uint32, error) {
 	var buf [4]byte
 
 	if err := m.LoadIn(cpu, as, addr, buf[:]); err != nil {
@@ -258,7 +258,7 @@ func (m *Memory) LoadLongwordIn(cpu *vax.CPU, as AddressSpace, addr uint32) (uin
 }
 
 // StoreLongwordIn writes a longword at addr in as.
-func (m *Memory) StoreLongwordIn(cpu *vax.CPU, as AddressSpace, addr uint32, v uint32) error {
+func (m *Memory) StoreLongwordIn(cpu *registers.CPU, as AddressSpace, addr uint32, v uint32) error {
 	var buf [4]byte
 
 	binary.LittleEndian.PutUint32(buf[:], v)

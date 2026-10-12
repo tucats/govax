@@ -6,7 +6,7 @@ import (
 
 	"github.com/tucats/govax/internal/console"
 	"github.com/tucats/govax/internal/debugger"
-	"github.com/tucats/govax/internal/vax"
+	"github.com/tucats/govax/internal/registers"
 )
 
 // loadCallProgram lays out the same CALLS/RET pair execute_test.go's
@@ -27,7 +27,7 @@ func loadCallProgram(t *testing.T, c *console.Console) {
 
 func TestStepOver_runsCallToCompletion(t *testing.T) {
 	c, buf := newTestConsole(t)
-	c.CPU.SetDebug(c.CPU.Debug() &^ vax.DebugUserStep)
+	c.CPU.SetDebug(c.CPU.Debug() &^ registers.DebugUserStep)
 	loadCallProgram(t, c)
 
 	addr := uint32(0x202) // the CALLS instruction itself
@@ -35,7 +35,7 @@ func TestStepOver_runsCallToCompletion(t *testing.T) {
 		t.Fatalf("Step/OVER: %v", err)
 	}
 
-	if got := c.CPU.GPR(vax.PC); got != 0x209 {
+	if got := c.CPU.GPR(registers.PC); got != 0x209 {
 		t.Errorf("PC after STEP/OVER = %#x, want 0x209 (past the CALLS, not inside it)", got)
 	}
 
@@ -51,7 +51,7 @@ func TestStepOver_runsCallToCompletion(t *testing.T) {
 // traced exactly once.
 func TestStepOver_silentInsideCalledRoutine(t *testing.T) {
 	c, buf := newTestConsole(t)
-	c.CPU.SetDebug(c.CPU.Debug() &^ vax.DebugUserStep)
+	c.CPU.SetDebug(c.CPU.Debug() &^ registers.DebugUserStep)
 	loadCallProgram(t, c)
 	c.Trace = true
 
@@ -68,7 +68,7 @@ func TestStepOver_silentInsideCalledRoutine(t *testing.T) {
 
 func TestStepOver_ordinaryInstructionActsLikeStepInto(t *testing.T) {
 	c, buf := newTestConsole(t)
-	c.CPU.SetDebug(c.CPU.Debug() &^ vax.DebugUserStep)
+	c.CPU.SetDebug(c.CPU.Debug() &^ registers.DebugUserStep)
 	loadProgram(t, c, 0x200, opNop, opNop)
 
 	addr := uint32(0x200)
@@ -76,7 +76,7 @@ func TestStepOver_ordinaryInstructionActsLikeStepInto(t *testing.T) {
 		t.Fatalf("Step/OVER: %v", err)
 	}
 
-	if got := c.CPU.GPR(vax.PC); got != 0x201 {
+	if got := c.CPU.GPR(registers.PC); got != 0x201 {
 		t.Errorf("PC after STEP/OVER of a NOP = %#x, want 0x201", got)
 	}
 
@@ -96,14 +96,14 @@ func TestStepReturn_stopsAtTheFramesRet(t *testing.T) {
 
 	// Manually execute the CALLS instruction (bypassing Console.Step) to
 	// land inside the nested procedure with a real frame established.
-	c.CPU.SetGPR(vax.PC, 0x202)
+	c.CPU.SetGPR(registers.PC, 0x202)
 	c.Engine.BeginRun()
 
 	if err := c.Engine.Step(); err != nil {
 		t.Fatalf("Engine.Step (CALLS): %v", err)
 	}
 
-	if got := c.CPU.GPR(vax.PC); got != 0x302 {
+	if got := c.CPU.GPR(registers.PC); got != 0x302 {
 		t.Fatalf("PC after CALLS = %#x, want 0x302 (inside the nested procedure)", got)
 	}
 
@@ -111,7 +111,7 @@ func TestStepReturn_stopsAtTheFramesRet(t *testing.T) {
 		t.Fatalf("Step/RETURN: %v", err)
 	}
 
-	if got := c.CPU.GPR(vax.PC); got != 0x302 {
+	if got := c.CPU.GPR(registers.PC); got != 0x302 {
 		t.Errorf("PC after STEP/RETURN = %#x, want 0x302 (at the RET, not past it)", got)
 	}
 
@@ -125,7 +125,7 @@ func TestStepReturn_stopsAtTheFramesRet(t *testing.T) {
 		t.Fatalf("Step: %v", err)
 	}
 
-	if got := c.CPU.GPR(vax.PC); got != 0x209 {
+	if got := c.CPU.GPR(registers.PC); got != 0x209 {
 		t.Errorf("PC after the RET = %#x, want 0x209 (back in the caller)", got)
 	}
 }
@@ -148,7 +148,7 @@ func TestStepReturn_boundToItsFrame(t *testing.T) {
 	}
 
 	// The nested RET at 0x302 went by; the outer RET at 0x209 is the stop.
-	if got := c.CPU.GPR(vax.PC); got != 0x209 {
+	if got := c.CPU.GPR(registers.PC); got != 0x209 {
 		t.Errorf("PC after STEP/RETURN = %#x, want 0x209 (the outer frame's RET)", got)
 	}
 
@@ -169,7 +169,7 @@ func TestStepReturn_noFramesReportsError(t *testing.T) {
 
 func TestStep_respectsBreakpointHitDuringStepOver(t *testing.T) {
 	c, buf := newTestConsole(t)
-	c.CPU.SetDebug(c.CPU.Debug() &^ vax.DebugUserStep)
+	c.CPU.SetDebug(c.CPU.Debug() &^ registers.DebugUserStep)
 	loadCallProgram(t, c)
 	dbgOf(c).AddBreakpoint(0x302) // a real, permanent breakpoint at the callee's entry
 
@@ -183,7 +183,7 @@ func TestStep_respectsBreakpointHitDuringStepOver(t *testing.T) {
 	// "starting point" the way the very first STEP command's PC is -- see
 	// runLoop's skipFirstCheck doc comment), reporting "break at", not
 	// "Stepped to".
-	if got := c.CPU.GPR(vax.PC); got != 0x302 {
+	if got := c.CPU.GPR(registers.PC); got != 0x302 {
 		t.Errorf("PC = %#x, want 0x302 (stopped at the permanent breakpoint)", got)
 	}
 
@@ -239,7 +239,7 @@ func TestSetStepMode_andShowStepMode(t *testing.T) {
 
 func TestDispatch_stepQualifiers(t *testing.T) {
 	_, c := newTestDispatcher(t)
-	c.CPU.SetDebug(c.CPU.Debug() &^ vax.DebugUserStep)
+	c.CPU.SetDebug(c.CPU.Debug() &^ registers.DebugUserStep)
 	loadCallProgram(t, c)
 
 	if err := c.Debugger.Dispatch("SET STEP OVER"); err != nil {
@@ -264,7 +264,7 @@ func TestDispatch_stepQualifiers(t *testing.T) {
 		t.Fatalf("Dispatch(STEP): %v", err)
 	}
 
-	if got := c.CPU.GPR(vax.PC); got != 0x209 {
+	if got := c.CPU.GPR(registers.PC); got != 0x209 {
 		t.Errorf("PC after bare STEP (default OVER) = %#x, want 0x209", got)
 	}
 
@@ -277,7 +277,7 @@ func TestDispatch_stepQualifiers(t *testing.T) {
 		t.Fatalf("Dispatch(STEP/INTO): %v", err)
 	}
 
-	if got := c.CPU.GPR(vax.PC); got != 0x302 {
+	if got := c.CPU.GPR(registers.PC); got != 0x302 {
 		t.Errorf("PC after STEP/INTO = %#x, want 0x302 (stepped into the call)", got)
 	}
 }

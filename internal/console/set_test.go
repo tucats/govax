@@ -5,7 +5,7 @@ import (
 	"testing"
 
 	"github.com/tucats/govax/internal/machine"
-	"github.com/tucats/govax/internal/vax"
+	"github.com/tucats/govax/internal/registers"
 )
 
 func TestSetPSLField_bit(t *testing.T) {
@@ -44,32 +44,32 @@ func TestSetPSLField_ipl(t *testing.T) {
 
 func TestSetPSLField_curModSwitchesStack(t *testing.T) {
 	c, _ := newTestConsole(t)
-	c.CPU.SetPR(vax.KSP, 0x1000)
-	c.CPU.SetPR(vax.ESP, 0x2000)
-	c.CPU.SetGPR(vax.SP, 0x1000)
+	c.CPU.SetPR(registers.KSP, 0x1000)
+	c.CPU.SetPR(registers.ESP, 0x2000)
+	c.CPU.SetGPR(registers.SP, 0x1000)
 
-	if err := c.SetPSLField("CUR_MOD", uint32(vax.Executive)); err != nil {
+	if err := c.SetPSLField("CUR_MOD", uint32(registers.Executive)); err != nil {
 		t.Fatalf("SetPSLField: %v", err)
 	}
 
-	if got := c.CPU.PSL().CurMod(); got != vax.Executive {
+	if got := c.CPU.PSL().CurMod(); got != registers.Executive {
 		t.Errorf("CurMod() = %d, want Executive", got)
 	}
 
-	if got := c.CPU.GPR(vax.SP); got != 0x2000 {
+	if got := c.CPU.GPR(registers.SP); got != 0x2000 {
 		t.Errorf("SP = %#x, want ESP's own 0x2000 after switching to Executive", got)
 	}
 }
 
 func TestSetMode(t *testing.T) {
 	c, _ := newTestConsole(t)
-	c.CPU.SetPR(vax.USP, 0x3000)
+	c.CPU.SetPR(registers.USP, 0x3000)
 
 	if err := c.SetMode("USER"); err != nil {
 		t.Fatalf("SetMode: %v", err)
 	}
 
-	if got := c.CPU.PSL().CurMod(); got != vax.User {
+	if got := c.CPU.PSL().CurMod(); got != registers.User {
 		t.Errorf("CurMod() = %d, want User", got)
 	}
 
@@ -89,7 +89,7 @@ func TestSetMode(t *testing.T) {
 func TestSetVM_requiresKernelMode(t *testing.T) {
 	c, _ := newTestConsole(t)
 	psl := c.CPU.PSL()
-	psl.SetCurMod(vax.User)
+	psl.SetCurMod(registers.User)
 	c.CPU.SetPSL(psl)
 
 	if err := c.SetVM(true); err == nil {
@@ -103,16 +103,16 @@ func TestSetVM(t *testing.T) {
 		t.Fatalf("SetVM(true): %v", err)
 	}
 
-	if c.CPU.PR(vax.MAPEN) != 1 {
-		t.Errorf("MAPEN = %d, want 1", c.CPU.PR(vax.MAPEN))
+	if c.CPU.PR(registers.MAPEN) != 1 {
+		t.Errorf("MAPEN = %d, want 1", c.CPU.PR(registers.MAPEN))
 	}
 
 	if err := c.SetVM(false); err != nil {
 		t.Fatalf("SetVM(false): %v", err)
 	}
 
-	if c.CPU.PR(vax.MAPEN) != 0 {
-		t.Errorf("MAPEN = %d, want 0", c.CPU.PR(vax.MAPEN))
+	if c.CPU.PR(registers.MAPEN) != 0 {
+		t.Errorf("MAPEN = %d, want 0", c.CPU.PR(registers.MAPEN))
 	}
 }
 
@@ -248,8 +248,8 @@ func TestSetRadix(t *testing.T) {
 
 func TestSetDebug_defaultFlags(t *testing.T) {
 	c, _ := newTestConsole(t)
-	if got := c.CPU.Debug(); got != vax.DebugDefault {
-		t.Errorf("Debug() = %#x, want DebugDefault (%#x)", got, vax.DebugDefault)
+	if got := c.CPU.Debug(); got != registers.DebugDefault {
+		t.Errorf("Debug() = %#x, want DebugDefault (%#x)", got, registers.DebugDefault)
 	}
 }
 
@@ -259,12 +259,12 @@ func TestSetDebug_setAndClear(t *testing.T) {
 		t.Fatalf("SetDebug: %v", err)
 	}
 
-	if !c.CPU.DebugEnabled(vax.DebugVM) || !c.CPU.DebugEnabled(vax.DebugRMS) {
+	if !c.CPU.DebugEnabled(registers.DebugVM) || !c.CPU.DebugEnabled(registers.DebugRMS) {
 		t.Errorf("Debug() = %#x, want VM and RMS set", c.CPU.Debug())
 	}
 	// The default REGISTERS/USERHALT/LIBINIT bits are untouched by setting
 	// unrelated flags.
-	if !c.CPU.DebugEnabled(vax.DebugUserHalt) {
+	if !c.CPU.DebugEnabled(registers.DebugUserHalt) {
 		t.Errorf("Debug() = %#x, want USERHALT still set", c.CPU.Debug())
 	}
 
@@ -272,11 +272,11 @@ func TestSetDebug_setAndClear(t *testing.T) {
 		t.Fatalf("SetDebug: %v", err)
 	}
 
-	if c.CPU.DebugEnabled(vax.DebugUserHalt) {
+	if c.CPU.DebugEnabled(registers.DebugUserHalt) {
 		t.Errorf("Debug() = %#x, want USERHALT cleared", c.CPU.Debug())
 	}
 
-	if !c.CPU.DebugEnabled(vax.DebugVM) {
+	if !c.CPU.DebugEnabled(registers.DebugVM) {
 		t.Errorf("Debug() = %#x, want VM still set", c.CPU.Debug())
 	}
 }
@@ -287,7 +287,7 @@ func TestSetDebug_bareSetsNativeDebugger(t *testing.T) {
 		t.Fatalf("SetDebug: %v", err)
 	}
 
-	if !c.CPU.DebugEnabled(vax.DebugNative) {
+	if !c.CPU.DebugEnabled(registers.DebugNative) {
 		t.Errorf("Debug() = %#x, want DEBUG (native debugger) set", c.CPU.Debug())
 	}
 }
@@ -320,7 +320,7 @@ func TestSetTrace(t *testing.T) {
 
 func TestShowRegisters(t *testing.T) {
 	c, buf := newTestConsole(t)
-	c.CPU.SetGPR(vax.R3, 0x11223344)
+	c.CPU.SetGPR(registers.R3, 0x11223344)
 	buf.Reset()
 
 	if err := c.ShowRegisters(); err != nil {
@@ -420,7 +420,7 @@ func TestShowRadix(t *testing.T) {
 
 func TestShowStack(t *testing.T) {
 	c, buf := newTestConsole(t)
-	c.CPU.SetPR(vax.ESP, 0x99887766)
+	c.CPU.SetPR(registers.ESP, 0x99887766)
 	buf.Reset()
 
 	if err := c.ShowStack(machine.StackESP, false, 0, false); err != nil {
@@ -434,7 +434,7 @@ func TestShowStack(t *testing.T) {
 
 func TestShowCPU(t *testing.T) {
 	c, buf := newTestConsole(t)
-	c.CPU.SetPR(vax.SBR, 0x11223344)
+	c.CPU.SetPR(registers.SBR, 0x11223344)
 	c.DepositAddr = 0x00000200
 	
 	buf.Reset()

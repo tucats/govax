@@ -6,8 +6,8 @@ import (
 
 	"github.com/tucats/govax/internal/console"
 	"github.com/tucats/govax/internal/corevms"
+	"github.com/tucats/govax/internal/registers"
 	"github.com/tucats/govax/internal/rms"
-	"github.com/tucats/govax/internal/vax"
 )
 
 // Phase 45's subtask 6: a process $CREPRC created is deleted when its
@@ -74,9 +74,9 @@ func TestDeleteProcess_imageExit(t *testing.T) {
 
 	step(t, c, 1)
 
-	if c.RTL.Current() != one || c.CPU.GPR(vax.PC) != codeAddr {
+	if c.RTL.Current() != one || c.CPU.GPR(registers.PC) != codeAddr {
 		t.Errorf("process %08X runs at %08X; want process 1 at %08X",
-			c.RTL.Current().Process.PID, c.CPU.GPR(vax.PC), codeAddr)
+			c.RTL.Current().Process.PID, c.CPU.GPR(registers.PC), codeAddr)
 	}
 
 	if child.Space.Owned() {

@@ -6,7 +6,7 @@ import (
 	"testing"
 
 	"github.com/tucats/govax/internal/machine"
-	"github.com/tucats/govax/internal/vax"
+	"github.com/tucats/govax/internal/registers"
 )
 
 func TestDefaultRunInits(t *testing.T) {
@@ -15,7 +15,7 @@ func TestDefaultRunInits(t *testing.T) {
 		t.Error("DefaultRunInits() = false, want true (DebugLibinit is on by default)")
 	}
 
-	c.CPU.SetDebug(c.CPU.Debug() &^ vax.DebugLibinit)
+	c.CPU.SetDebug(c.CPU.Debug() &^ registers.DebugLibinit)
 
 	if c.DefaultRunInits() {
 		t.Error("DefaultRunInits() = true, want false once DebugLibinit is cleared")
@@ -58,7 +58,7 @@ func TestRunOptions_defaultAndOverride(t *testing.T) {
 
 func TestRun_debugImagesTrace(t *testing.T) {
 	c := newRunnableConsole(t)
-	c.CPU.SetDebug(vax.DebugImages)
+	c.CPU.SetDebug(registers.DebugImages)
 
 	if _, _, err := c.Assemble(kernelPath(t)); err != nil {
 		t.Fatalf("Assemble(kernel.asm): %v", err)

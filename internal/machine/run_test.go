@@ -3,7 +3,7 @@ package machine
 import (
 	"testing"
 
-	"github.com/tucats/govax/internal/vax"
+	"github.com/tucats/govax/internal/registers"
 )
 
 // TestRun_noExecuteLoadsAndFixesUpOnly exercises Console.Run's actual
@@ -111,13 +111,13 @@ func TestRun_driverCallsExitHandlers(t *testing.T) {
 		t.Fatalf("BuildImageInitDriver: ok=%v err=%v", ok, err)
 	}
 
-	c.Engine.SetModeStack(vax.User, false)
+	c.Engine.SetModeStack(registers.User, false)
 
 	if runErr, hitCap := callBounded(t, c, driver, 100_000); runErr != nil || hitCap {
 		t.Fatalf("running the driver: err=%v hitCap=%v", runErr, hitCap)
 	}
 
-	if got := c.CPU.GPR(vax.R0); got != 7 {
+	if got := c.CPU.GPR(registers.R0); got != 7 {
 		t.Errorf("R0 = %d, want main's status 7", got)
 	}
 

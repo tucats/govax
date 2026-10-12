@@ -1,7 +1,7 @@
 package cpu
 
 import (
-	"github.com/tucats/govax/internal/vax"
+	"github.com/tucats/govax/internal/registers"
 	"github.com/tucats/govax/internal/vaxfloat"
 )
 
@@ -54,7 +54,7 @@ func emulAcbFloat(e *Engine, d *Decoded) error {
 	cmp := index.Cmp(limit)
 
 	if (addend.Sign() >= 0 && cmp <= 0) || (addend.Sign() < 0 && cmp >= 0) {
-		e.cpu.SetGPR(vax.PC, d.Operands[3].Addr)
+		e.cpu.SetGPR(registers.PC, d.Operands[3].Addr)
 	}
 
 	return nil

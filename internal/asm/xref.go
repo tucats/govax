@@ -6,7 +6,7 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/tucats/govax/internal/vax"
+	"github.com/tucats/govax/internal/registers"
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
@@ -272,7 +272,7 @@ func (a *Assembler) xrefRegister(name, flag string) {
 
 // register parses a register at c, as parseRegister does, and records it
 // for the cross reference as an instruction's operand.
-func (a *Assembler) register(c *cursor, first byte) (reg vax.Reg, err error) {
+func (a *Assembler) register(c *cursor, first byte) (reg registers.Reg, err error) {
 	start := c.pos
 	if first != 0 {
 		start--

@@ -6,8 +6,8 @@ import (
 
 	"github.com/tucats/govax/internal/console"
 	"github.com/tucats/govax/internal/console/consoletest"
+	"github.com/tucats/govax/internal/registers"
 	"github.com/tucats/govax/internal/rms"
-	"github.com/tucats/govax/internal/vax"
 )
 
 // A process 1 image's files are closed when the image ends, as RMS's
@@ -131,7 +131,7 @@ func TestAbandonedImage_zero(t *testing.T) {
 	c, d := writerConsole(t)
 	startSpinner(t, c, d)
 
-	c.Engine.SetModeStack(vax.Kernel, false)
+	c.Engine.SetModeStack(registers.Kernel, false)
 
 	if err := c.Zero(); err != nil {
 		t.Fatal(err)

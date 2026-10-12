@@ -7,8 +7,8 @@ import (
 	"testing"
 
 	"github.com/tucats/govax/internal/dclcmd"
+	"github.com/tucats/govax/internal/registers"
 	"github.com/tucats/govax/internal/rms"
-	"github.com/tucats/govax/internal/vax"
 	"github.com/tucats/govax/internal/vmsdef"
 )
 
@@ -192,7 +192,7 @@ func TestForth_foreignCommand(t *testing.T) {
 		t.Errorf("output = %q, want %q", got, want)
 	}
 
-	if r0 := c.CPU.GPR(vax.R0); r0 != 1 {
+	if r0 := c.CPU.GPR(registers.R0); r0 != 1 {
 		t.Errorf("status = %#x, want SS$_NORMAL", r0)
 	}
 
@@ -212,7 +212,7 @@ func TestForth_foreignCommand(t *testing.T) {
 		t.Errorf("output = %q, want %q", got, want)
 	}
 
-	if r0 := c.CPU.GPR(vax.R0); r0 != vmsdef.Symbols["SS$_ABORT"] {
+	if r0 := c.CPU.GPR(registers.R0); r0 != vmsdef.Symbols["SS$_ABORT"] {
 		t.Errorf("status = %#x, want SS$_ABORT", r0)
 	}
 }

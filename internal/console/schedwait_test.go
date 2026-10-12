@@ -9,8 +9,8 @@ import (
 	"github.com/tucats/govax/internal/asm"
 	"github.com/tucats/govax/internal/console"
 	"github.com/tucats/govax/internal/corevms"
+	"github.com/tucats/govax/internal/registers"
 	"github.com/tucats/govax/internal/sched"
-	"github.com/tucats/govax/internal/vax"
 	"github.com/tucats/govax/internal/vmsdef"
 )
 
@@ -313,7 +313,7 @@ func TestSchedulerIdle_timersInOrder(t *testing.T) {
 	one := c.RTL
 	two := handBuiltProcess(t, c, timerProgram(t, 1000))
 
-	c.CPU.SetDebug(c.CPU.Debug() | vax.DebugProcess)
+	c.CPU.SetDebug(c.CPU.Debug() | registers.DebugProcess)
 
 	if n := runUntilDone(t, c, 5000, one, two); n > 200 {
 		t.Errorf("took %d instructions; idling should have skipped the waits", n)
@@ -387,7 +387,7 @@ func TestSchedulerIdle_noTimer(t *testing.T) {
 	c, out := scheduledConsole(t, longQuantum, code)
 	handBuiltProcess(t, c, code)
 
-	c.CPU.SetDebug(c.CPU.Debug() | vax.DebugProcess)
+	c.CPU.SetDebug(c.CPU.Debug() | registers.DebugProcess)
 
 	step(t, c, 500)
 

@@ -1,6 +1,6 @@
 package cpu
 
-import "github.com/tucats/govax/internal/vax"
+import "github.com/tucats/govax/internal/registers"
 
 func init() {
 	reg := func(fn byte, h Handler) {
@@ -39,7 +39,7 @@ func emulChmx(e *Engine, d *Decoded) error {
 	// CHMx is a synchronous "system call" exception, not a retry-the-faulting-
 	// instruction one: its own return address must be the instruction *after*
 	// CHMx.
-	e.instructionPC = e.cpu.GPR(vax.PC)
+	e.instructionPC = e.cpu.GPR(registers.PC)
 
 	modeIndex := d.Opcode.Function - 0xBC // 0=K, 1=E, 2=S, 3=U
 

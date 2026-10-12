@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/tucats/govax/internal/vax"
+	"github.com/tucats/govax/internal/registers"
 )
 
 func TestConsoleWriteByteAndReadByte(t *testing.T) {
@@ -63,7 +63,7 @@ func TestConsoleSystemServiceDelegatesToRTL(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	c.CPU.SetGPR(vax.AP, ap)
+	c.CPU.SetGPR(registers.AP, ap)
 
 	// SYS$SETEF's real p1Vector address, matching how Engine's XFC handler
 	// would compute and pass it.

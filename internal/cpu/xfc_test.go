@@ -4,7 +4,7 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/tucats/govax/internal/vax"
+	"github.com/tucats/govax/internal/registers"
 )
 
 // fakeServices is a test double for SystemServices, recording its inputs and
@@ -72,7 +72,7 @@ func xfcEngine() (*Engine, *fakeServices) {
 
 func TestEmulXfcConsoleWrite(t *testing.T) {
 	e, f := xfcEngine()
-	e.cpu.SetGPR(vax.R0, 0xFFFFFF41) // 'A', with garbage in the high bytes
+	e.cpu.SetGPR(registers.R0, 0xFFFFFF41) // 'A', with garbage in the high bytes
 	stepInstruction(t, e, 0xFC, xfcConsoleWrite)
 
 	if f.writtenByte != 'A' {
@@ -107,14 +107,14 @@ func TestEmulXfcConsolePut(t *testing.T) {
 	e, f := xfcEngine()
 	putDescriptor(t, e, 0x2000, 0x2100, "Hello, VAX\r\n")
 
-	e.cpu.SetGPR(vax.R0, 0x2000)
+	e.cpu.SetGPR(registers.R0, 0x2000)
 	stepInstruction(t, e, 0xFC, xfcConsolePut)
 
 	if string(f.written) != "Hello, VAX\r\n" || f.writeCalls != 1 {
 		t.Errorf("written = %q in %d calls, want %q in 1", f.written, f.writeCalls, "Hello, VAX\r\n")
 	}
 
-	if got := e.cpu.GPR(vax.R0); got != ssNormal {
+	if got := e.cpu.GPR(registers.R0); got != ssNormal {
 		t.Errorf("R0 = %#x, want SS$_NORMAL", got)
 	}
 }
@@ -125,14 +125,14 @@ func TestEmulXfcConsolePutEmpty(t *testing.T) {
 	e, f := xfcEngine()
 	putDescriptor(t, e, 0x2000, 0x2100, "")
 
-	e.cpu.SetGPR(vax.R0, 0x2000)
+	e.cpu.SetGPR(registers.R0, 0x2000)
 	stepInstruction(t, e, 0xFC, xfcConsolePut)
 
 	if f.writeCalls != 0 {
 		t.Errorf("ConsoleWrite called %d times, want 0 for an empty string", f.writeCalls)
 	}
 
-	if got := e.cpu.GPR(vax.R0); got != ssNormal {
+	if got := e.cpu.GPR(registers.R0); got != ssNormal {
 		t.Errorf("R0 = %#x, want SS$_NORMAL", got)
 	}
 }
@@ -141,10 +141,10 @@ func TestEmulXfcConsoleRead(t *testing.T) {
 	e, f := xfcEngine()
 	f.readByte = 'Z'
 
-	e.cpu.SetGPR(vax.R0, 0xAABBCC11)
+	e.cpu.SetGPR(registers.R0, 0xAABBCC11)
 	stepInstruction(t, e, 0xFC, xfcConsoleRead)
 
-	if got := e.cpu.GPR(vax.R0); got != 0xAABBCC5A {
+	if got := e.cpu.GPR(registers.R0); got != 0xAABBCC5A {
 		t.Errorf("R0 = %#x, want 0xaabbcc5a (only low byte replaced)", got)
 	}
 }
@@ -164,14 +164,14 @@ func TestEmulXfcConsoleCmd(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	e.cpu.SetGPR(vax.R0, cmdAddr)
+	e.cpu.SetGPR(registers.R0, cmdAddr)
 	stepInstruction(t, e, 0xFC, xfcConsoleCmd)
 
 	if f.consoleCmd != cmd {
 		t.Errorf("consoleCmd = %q, want %q", f.consoleCmd, cmd)
 	}
 
-	if got := e.cpu.GPR(vax.R0); got != 42 {
+	if got := e.cpu.GPR(registers.R0); got != 42 {
 		t.Errorf("R0 = %d, want 42", got)
 	}
 }
@@ -184,7 +184,7 @@ func TestEmulXfcConsoleCmdEmptyLengthIgnored(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	e.cpu.SetGPR(vax.R0, cmdAddr)
+	e.cpu.SetGPR(registers.R0, cmdAddr)
 	stepInstruction(t, e, 0xFC, xfcConsoleCmd)
 
 	if f.consoleCmd != "" {
@@ -195,10 +195,10 @@ func TestEmulXfcConsoleCmdEmptyLengthIgnored(t *testing.T) {
 func TestEmulXfcQuitEmulator(t *testing.T) {
 	e, f := xfcEngine()
 	psl := e.cpu.PSL()
-	psl.SetCurMod(vax.Kernel)
+	psl.SetCurMod(registers.Kernel)
 	e.cpu.SetPSL(psl)
 
-	e.cpu.SetGPR(vax.PC, base)
+	e.cpu.SetGPR(registers.PC, base)
 	putBytes(t, e.cpu, e.mem, base, 0xFC, xfcQuitEmulator)
 
 	if err := e.Step(); !errors.Is(err, ErrHalted) {
@@ -221,7 +221,7 @@ func TestEmulXfcQuitEmulatorFaultsOutsideKernelMode(t *testing.T) {
 
 	cpu, mem := fixture()
 	psl := cpu.PSL()
-	psl.SetCurMod(vax.User)
+	psl.SetCurMod(registers.User)
 	cpu.SetPSL(psl)
 
 	d := &Decoded{Operands: [6]Operand{
@@ -242,7 +242,7 @@ func TestEmulXfcHaltAndHaltSilent(t *testing.T) {
 	{
 		e, f := xfcEngine()
 
-		e.cpu.SetGPR(vax.PC, base)
+		e.cpu.SetGPR(registers.PC, base)
 		putBytes(t, e.cpu, e.mem, base, 0xFC, xfcHaltSilent)
 
 		err := e.Step()
@@ -260,7 +260,7 @@ func TestEmulXfcHaltAndHaltSilent(t *testing.T) {
 	{
 		e, f := xfcEngine()
 
-		e.cpu.SetGPR(vax.PC, base)
+		e.cpu.SetGPR(registers.PC, base)
 		putBytes(t, e.cpu, e.mem, base, 0xFC, xfcHalt)
 
 		err := e.Step()
@@ -286,7 +286,7 @@ func TestEmulXfcP1Vector(t *testing.T) {
 	// full dispatch (buildCallFrame), so this test starts PC just past it,
 	// at the XFC itself, since it only exercises XFC's own handler.
 	putBytes(t, e.cpu, e.mem, base, 0x00, 0x00)
-	e.cpu.SetGPR(vax.PC, base+2)
+	e.cpu.SetGPR(registers.PC, base+2)
 	putBytes(t, e.cpu, e.mem, base+2, 0xFC, xfcP1Vector)
 
 	if err := e.Step(); err != nil {
@@ -297,15 +297,15 @@ func TestEmulXfcP1Vector(t *testing.T) {
 		t.Errorf("SystemService called with pc=%#x, want %#x (the CALLS target -- the mask word's own address)", f.servicePC, base)
 	}
 
-	if got := e.cpu.GPR(vax.R0); got != 0x12345678 {
+	if got := e.cpu.GPR(registers.R0); got != 0x12345678 {
 		t.Errorf("R0 = %#x, want 0x12345678", got)
 	}
 }
 
 func TestEmulXfcP1VectorUnhandledFaults(t *testing.T) {
 	e := newEngine()
-	e.cpu.SetGPR(vax.SP, 0x7000)
-	e.cpu.SetPR(vax.KSP, 0x7000)
+	e.cpu.SetGPR(registers.SP, 0x7000)
+	e.cpu.SetPR(registers.KSP, 0x7000)
 
 	f := &fakeServices{serviceHandled: false}
 	e.SetSystemServices(f)
@@ -313,7 +313,7 @@ func TestEmulXfcP1VectorUnhandledFaults(t *testing.T) {
 
 	stepInstruction(t, e, 0xFC, xfcP1Vector)
 
-	if got := e.cpu.GPR(vax.PC); got != 0x300 {
+	if got := e.cpu.GPR(registers.PC); got != 0x300 {
 		t.Errorf("PC = %#x, want 0x300 (reserved-operand fault vector)", got)
 	}
 }
@@ -323,7 +323,7 @@ func TestEmulXfcP1VectorPropagatesError(t *testing.T) {
 	wantErr := errors.New("boom")
 	f.serviceErr = wantErr
 
-	e.cpu.SetGPR(vax.PC, base)
+	e.cpu.SetGPR(registers.PC, base)
 	putBytes(t, e.cpu, e.mem, base, 0xFC, xfcP1Vector)
 
 	if err := e.Step(); !errors.Is(err, wantErr) {
@@ -332,7 +332,7 @@ func TestEmulXfcP1VectorPropagatesError(t *testing.T) {
 }
 
 // TestEmulXfcP1VectorSetsR0EvenWhenHandledCallErrors matches call_service's
-// own "vax.R0 = rc" happening unconditionally right after the native handler
+// own "registers.R0 = rc" happening unconditionally right after the native handler
 // returns, before the caller's fetch loop next checks vax.halted -- a
 // handled call that also requests a halt (e.g. an unrecognized SYS$CLI
 // request) still leaves its status in R0.
@@ -343,14 +343,14 @@ func TestEmulXfcP1VectorSetsR0EvenWhenHandledCallErrors(t *testing.T) {
 	f.serviceRC = 0xDEAD
 	f.serviceErr = wantErr
 
-	e.cpu.SetGPR(vax.PC, base)
+	e.cpu.SetGPR(registers.PC, base)
 	putBytes(t, e.cpu, e.mem, base, 0xFC, xfcP1Vector)
 
 	if err := e.Step(); !errors.Is(err, wantErr) {
 		t.Errorf("Step() = %v, want %v", err, wantErr)
 	}
 
-	if got := e.cpu.GPR(vax.R0); got != 0xDEAD {
+	if got := e.cpu.GPR(registers.R0); got != 0xDEAD {
 		t.Errorf("R0 = %#x, want 0xdead (set before the error propagated)", got)
 	}
 }
@@ -364,8 +364,8 @@ func TestEmulXfcP1VectorWait(t *testing.T) {
 	f.serviceErr = ErrServiceWait
 	f.serviceRC = 0xBAD
 
-	e.cpu.SetGPR(vax.R0, 0x1234)
-	e.cpu.SetGPR(vax.PC, base)
+	e.cpu.SetGPR(registers.R0, 0x1234)
+	e.cpu.SetGPR(registers.PC, base)
 	putBytes(t, e.cpu, e.mem, base, 0xFC, xfcP1Vector, 0x01) // then NOP
 
 	for i := 0; i < 3; i++ {
@@ -373,11 +373,11 @@ func TestEmulXfcP1VectorWait(t *testing.T) {
 			t.Fatalf("Step %d: %v", i, err)
 		}
 
-		if got := e.cpu.GPR(vax.PC); got != base {
+		if got := e.cpu.GPR(registers.PC); got != base {
 			t.Fatalf("PC = %#x after a waiting call, want the XFC's own %#x", got, base)
 		}
 
-		if got := e.cpu.GPR(vax.R0); got != 0x1234 {
+		if got := e.cpu.GPR(registers.R0); got != 0x1234 {
 			t.Fatalf("R0 = %#x after a waiting call, want it untouched", got)
 		}
 	}
@@ -388,7 +388,7 @@ func TestEmulXfcP1VectorWait(t *testing.T) {
 		t.Fatalf("Step: %v", err)
 	}
 
-	if got, r0 := e.cpu.GPR(vax.PC), e.cpu.GPR(vax.R0); got != base+2 || r0 != 1 {
+	if got, r0 := e.cpu.GPR(registers.PC), e.cpu.GPR(registers.R0); got != base+2 || r0 != 1 {
 		t.Errorf("after completion PC = %#x, R0 = %#x, want %#x and 1", got, r0, base+2)
 	}
 }
@@ -398,14 +398,14 @@ func TestEmulXfcShim(t *testing.T) {
 	f.shimHandled = true
 	f.shimRC = 0xAB
 
-	e.cpu.SetGPR(vax.R0, 14) // decc$gets, arbitrary code
+	e.cpu.SetGPR(registers.R0, 14) // decc$gets, arbitrary code
 	stepInstruction(t, e, 0xFC, xfcShim)
 
 	if f.shimCode != 14 {
 		t.Errorf("Shim called with code=%d, want 14", f.shimCode)
 	}
 
-	if got := e.cpu.GPR(vax.R0); got != 0xAB {
+	if got := e.cpu.GPR(registers.R0); got != 0xAB {
 		t.Errorf("R0 = %#x, want 0xab", got)
 	}
 }
@@ -419,8 +419,8 @@ func TestEmulXfcShimWait(t *testing.T) {
 	f.shimErr = ErrServiceWait
 	f.shimRC = 0xBAD
 
-	e.cpu.SetGPR(vax.R0, 14)
-	e.cpu.SetGPR(vax.PC, base)
+	e.cpu.SetGPR(registers.R0, 14)
+	e.cpu.SetGPR(registers.PC, base)
 	putBytes(t, e.cpu, e.mem, base, 0xFC, xfcShim, 0x01) // then NOP
 
 	for i := 0; i < 3; i++ {
@@ -428,7 +428,7 @@ func TestEmulXfcShimWait(t *testing.T) {
 			t.Fatalf("Step %d: %v", i, err)
 		}
 
-		if pc, r0 := e.cpu.GPR(vax.PC), e.cpu.GPR(vax.R0); pc != base || r0 != 14 || f.shimCode != 14 {
+		if pc, r0 := e.cpu.GPR(registers.PC), e.cpu.GPR(registers.R0); pc != base || r0 != 14 || f.shimCode != 14 {
 			t.Fatalf("after a waiting shim: PC %#x, R0 %#x, code %d; want %#x, 14, 14", pc, r0, f.shimCode, base)
 		}
 	}
@@ -439,30 +439,30 @@ func TestEmulXfcShimWait(t *testing.T) {
 		t.Fatalf("Step: %v", err)
 	}
 
-	if pc, r0 := e.cpu.GPR(vax.PC), e.cpu.GPR(vax.R0); pc != base+2 || r0 != 1 {
+	if pc, r0 := e.cpu.GPR(registers.PC), e.cpu.GPR(registers.R0); pc != base+2 || r0 != 1 {
 		t.Errorf("after completion PC = %#x, R0 = %#x, want %#x and 1", pc, r0, base+2)
 	}
 }
 
 func TestEmulXfcShimUnhandledFaults(t *testing.T) {
 	e := newEngine()
-	e.cpu.SetGPR(vax.SP, 0x7000)
-	e.cpu.SetPR(vax.KSP, 0x7000)
+	e.cpu.SetGPR(registers.SP, 0x7000)
+	e.cpu.SetPR(registers.KSP, 0x7000)
 	e.SetSystemServices(&fakeServices{shimHandled: false})
 	putVector(t, e, ExcReservedOp, 0x300, 0)
 
-	e.cpu.SetGPR(vax.R0, 250) // no such shim code
+	e.cpu.SetGPR(registers.R0, 250) // no such shim code
 	stepInstruction(t, e, 0xFC, xfcShim)
 
-	if got := e.cpu.GPR(vax.PC); got != 0x300 {
+	if got := e.cpu.GPR(registers.PC); got != 0x300 {
 		t.Errorf("PC = %#x, want 0x300 (reserved-operand fault vector)", got)
 	}
 }
 
 func TestEmulXfcVMProbeTranslationFailureSetsV(t *testing.T) {
 	e, _ := xfcEngine()
-	e.cpu.SetPR(vax.MAPEN, 0) // starting state to verify restoration below
-	e.cpu.SetGPR(vax.R0, 0x1000)
+	e.cpu.SetPR(registers.MAPEN, 0) // starting state to verify restoration below
+	e.cpu.SetGPR(registers.R0, 0x1000)
 
 	stepInstruction(t, e, 0xFC, xfcVMR)
 
@@ -470,53 +470,53 @@ func TestEmulXfcVMProbeTranslationFailureSetsV(t *testing.T) {
 		t.Error("PSL<V> not set, want set for a failed translation (no page tables configured)")
 	}
 
-	if got := e.cpu.GPR(vax.R0); got != 0x1000 {
+	if got := e.cpu.GPR(registers.R0); got != 0x1000 {
 		t.Errorf("R0 = %#x, want unchanged (0x1000)", got)
 	}
 
-	if got := e.cpu.PR(vax.MAPEN); got != 0 {
+	if got := e.cpu.PR(registers.MAPEN); got != 0 {
 		t.Errorf("MAPEN = %d, want restored to 0", got)
 	}
 }
 
 func TestEmulXfcVMProbeWriteRestoresMapen(t *testing.T) {
 	e, _ := xfcEngine()
-	e.cpu.SetPR(vax.MAPEN, 0)
+	e.cpu.SetPR(registers.MAPEN, 0)
 	// A zero-length P0 region (P0LR=0) makes page 8 (address 0x1000) out of
 	// range, so forcing MAPEN=1 for the probe fails cleanly without needing
 	// a real page table -- this only checks MAPEN is restored either way,
 	// for the XFC$VMW selector specifically (XFC$VMR is covered above).
-	e.cpu.SetGPR(vax.R0, 0x1000)
+	e.cpu.SetGPR(registers.R0, 0x1000)
 
 	stepInstruction(t, e, 0xFC, xfcVMW)
 
-	if got := e.cpu.PR(vax.MAPEN); got != 0 {
+	if got := e.cpu.PR(registers.MAPEN); got != 0 {
 		t.Errorf("MAPEN = %d, want restored to 0", got)
 	}
 }
 
 func TestEmulXfcUnknownSelectorFaults(t *testing.T) {
 	e := newEngine()
-	e.cpu.SetGPR(vax.SP, 0x7000)
-	e.cpu.SetPR(vax.KSP, 0x7000)
+	e.cpu.SetGPR(registers.SP, 0x7000)
+	e.cpu.SetPR(registers.KSP, 0x7000)
 	putVector(t, e, ExcReservedOp, 0x300, 0)
 
 	stepInstruction(t, e, 0xFC, 0x55) // no such XFC selector
 
-	if got := e.cpu.GPR(vax.PC); got != 0x300 {
+	if got := e.cpu.GPR(registers.PC); got != 0x300 {
 		t.Errorf("PC = %#x, want 0x300 (reserved-operand fault vector)", got)
 	}
 }
 
 func TestEmulXfcFaultsWithoutServicesInstalled(t *testing.T) {
 	e := newEngine()
-	e.cpu.SetGPR(vax.SP, 0x7000)
-	e.cpu.SetPR(vax.KSP, 0x7000)
+	e.cpu.SetGPR(registers.SP, 0x7000)
+	e.cpu.SetPR(registers.KSP, 0x7000)
 	putVector(t, e, ExcPrivileged, 0x300, 0)
 
 	stepInstruction(t, e, 0xFC, xfcConsoleWrite)
 
-	if got := e.cpu.GPR(vax.PC); got != 0x300 {
+	if got := e.cpu.GPR(registers.PC); got != 0x300 {
 		t.Errorf("PC = %#x, want 0x300 (privileged-instruction fault vector, no services installed)", got)
 	}
 }

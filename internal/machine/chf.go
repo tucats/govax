@@ -2,7 +2,7 @@ package machine
 
 import (
 	"github.com/tucats/govax/internal/cpu"
-	"github.com/tucats/govax/internal/vax"
+	"github.com/tucats/govax/internal/registers"
 )
 
 // This file is Condition Handling Facility frame search and format
@@ -14,7 +14,7 @@ import (
 // itself, with none of this involved. Unlike that case, chf/format_exception
 // never touch the mode stack at all -- they operate directly on whatever
 // stack/mode was live when the fault happened, matching the C source's own
-// vax.SP-relative pushes with no set_mode_stack call anywhere in either
+// registers.SP-relative pushes with no set_mode_stack call anywhere in either
 // routine.
 //
 // This lives in internal/console, not internal/cpu, because invoking a
@@ -54,8 +54,8 @@ func (m *Machine) handleConsoleFault(f *cpu.ConsoleHandlerFault) error {
 // found (invokeHandler) and, if it declines, continuing the search from
 // that frame's own caller. Returns true once some handler continues.
 func (m *Machine) chf(f *cpu.ConsoleHandlerFault) (bool, error) {
-	fp := m.CPU.GPR(vax.FP)
-	ap := m.CPU.GPR(vax.AP)
+	fp := m.CPU.GPR(registers.FP)
+	ap := m.CPU.GPR(registers.AP)
 
 	if fp == 0 || ap == 0 {
 		return false, nil
@@ -129,7 +129,7 @@ func (m *Machine) chf(f *cpu.ConsoleHandlerFault) (bool, error) {
 // continued.
 //
 // On return, R0/R1 are always restored to their pre-call values first
-// (matching chf's own unconditional `vax.R0 = saved_r0; vax.R1 = saved_r1`
+// (matching chf's own unconditional `registers.R0 = saved_r0; registers.R1 = saved_r1`
 // right after reading the handler's return code) -- a handler that declines
 // must not leave register corruption behind for the *next* frame's handler
 // to inherit. Only if the handler's R0 return code has bit 0 set does it
@@ -140,20 +140,20 @@ func (m *Machine) chf(f *cpu.ConsoleHandlerFault) (bool, error) {
 // execution, e.g. to skip the faulting instruction) by writing directly
 // into those stack slots rather than through its own return value.
 func (m *Machine) invokeHandler(f *cpu.ConsoleHandlerFault, handler, frameFP uint32, depth int) (bool, error) {
-	savedSP := m.CPU.GPR(vax.SP)
+	savedSP := m.CPU.GPR(registers.SP)
 	savedHalted := m.Engine.Halted()
-	savedR0 := m.CPU.GPR(vax.R0)
-	savedR1 := m.CPU.GPR(vax.R1)
+	savedR0 := m.CPU.GPR(registers.R0)
+	savedR1 := m.CPU.GPR(registers.R1)
 
 	push := func(v uint32) (uint32, error) {
-		sp := m.CPU.GPR(vax.SP) - 4
-		m.CPU.SetGPR(vax.SP, sp)
+		sp := m.CPU.GPR(registers.SP) - 4
+		m.CPU.SetGPR(registers.SP, sp)
 
 		return sp, m.Mem.StoreLongword(m.CPU, sp, v)
 	}
 
 	restore := func() {
-		m.CPU.SetGPR(vax.SP, savedSP)
+		m.CPU.SetGPR(registers.SP, savedSP)
 
 		if !savedHalted {
 			// Console.Call's own step loop may have halted the machine
@@ -189,7 +189,7 @@ func (m *Machine) invokeHandler(f *cpu.ConsoleHandlerFault, handler, frameFP uin
 		return false, err
 	}
 
-	sigargs := m.CPU.GPR(vax.SP) - 4
+	sigargs := m.CPU.GPR(registers.SP) - 4
 
 	if _, err := push(uint32(3 + len(f.Args))); err != nil {
 		restore()
@@ -223,7 +223,7 @@ func (m *Machine) invokeHandler(f *cpu.ConsoleHandlerFault, handler, frameFP uin
 		return false, err
 	}
 
-	mechargs := m.CPU.GPR(vax.SP) - 4
+	mechargs := m.CPU.GPR(registers.SP) - 4
 
 	if _, err := push(4); err != nil {
 		restore()
@@ -231,7 +231,7 @@ func (m *Machine) invokeHandler(f *cpu.ConsoleHandlerFault, handler, frameFP uin
 		return false, err
 	}
 
-	if m.CPU.DebugEnabled(vax.DebugExceptions) {
+	if m.CPU.DebugEnabled(registers.DebugExceptions) {
 		m.Printf("DEBUG: condition handler executing CALL %08X ( %08X, %08X )\n", handler, sigargs, mechargs)
 	}
 
@@ -249,14 +249,14 @@ func (m *Machine) invokeHandler(f *cpu.ConsoleHandlerFault, handler, frameFP uin
 		return false, callErr
 	}
 
-	rc := m.CPU.GPR(vax.R0)
+	rc := m.CPU.GPR(registers.R0)
 
-	if m.CPU.DebugEnabled(vax.DebugExceptions) {
+	if m.CPU.DebugEnabled(registers.DebugExceptions) {
 		m.Printf("DEBUG: condition handler returns %08X\n", rc)
 	}
 
-	m.CPU.SetGPR(vax.R0, savedR0)
-	m.CPU.SetGPR(vax.R1, savedR1)
+	m.CPU.SetGPR(registers.R0, savedR0)
+	m.CPU.SetGPR(registers.R1, savedR1)
 
 	if rc&1 == 0 {
 		return false, nil
@@ -277,9 +277,9 @@ func (m *Machine) invokeHandler(f *cpu.ConsoleHandlerFault, handler, frameFP uin
 		return false, err
 	}
 
-	m.CPU.SetGPR(vax.R0, r0)
-	m.CPU.SetGPR(vax.R1, r1)
-	m.CPU.SetGPR(vax.PC, pc)
+	m.CPU.SetGPR(registers.R0, r0)
+	m.CPU.SetGPR(registers.R1, r1)
+	m.CPU.SetGPR(registers.PC, pc)
 
 	return true, nil
 }

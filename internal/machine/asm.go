@@ -5,7 +5,7 @@ import (
 	"strings"
 
 	"github.com/tucats/govax/internal/asm"
-	"github.com/tucats/govax/internal/vax"
+	"github.com/tucats/govax/internal/registers"
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
@@ -109,7 +109,7 @@ func (m *Machine) ensureAsmSession() *asm.Assembler {
 		// the CPU's own exception dispatch never actually consults,
 		// leaving every real exception vector reading whatever garbage
 		// happens to be at the live SCBB instead.
-		m.asmSession.SetSCBB(m.CPU.PR(vax.SCBB))
+		m.asmSession.SetSCBB(m.CPU.PR(registers.SCBB))
 		// A directory-less default .INCLUDE resolver for interactive mode,
 		// which has no "current file" of its own to bias the search with
 		// (unlike Assemble's own per-call WithDir override above).
@@ -154,7 +154,7 @@ func (m *Machine) depositAsmImage(a *asm.Assembler) error {
 	// and would otherwise sit forever in the assembler's own image buffer,
 	// never reaching live memory. Depositing this page on every call is
 	// harmless (idempotent) even when nothing has written a .SCB entry.
-	scbb := 0x80000000 + m.CPU.PR(vax.SCBB)
+	scbb := 0x80000000 + m.CPU.PR(registers.SCBB)
 	if scb := a.BytesRange(scbb, scbb+512); len(scb) > 0 {
 		if err := m.storeBytes(scbb, scb); err != nil {
 			return err

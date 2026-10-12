@@ -4,7 +4,7 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/tucats/govax/internal/vax"
+	"github.com/tucats/govax/internal/registers"
 )
 
 func TestEmulCvtFloatToIntTruncates(t *testing.T) {
@@ -28,16 +28,16 @@ func TestEmulCvtFloatToIntTruncates(t *testing.T) {
 		t.Run(c.name, func(t *testing.T) {
 			cpu, mem := fixture()
 			e := NewEngine(cpu, mem)
-			setFloatReg(t, cpu, c.size, vax.R1, c.value)
-			dstReg := vax.R2
+			setFloatReg(t, cpu, c.size, registers.R1, c.value)
+			dstReg := registers.R2
 
 			if c.size == 8 {
-				dstReg = vax.R3 // avoid overlapping R1:R2
+				dstReg = registers.R3 // avoid overlapping R1:R2
 			}
 
 			cpu.SetGPR(dstReg, 0xFFFFFFFF)
 
-			stepInstruction(t, e, c.opcode, regMode(vax.R1), regMode(dstReg))
+			stepInstruction(t, e, c.opcode, regMode(registers.R1), regMode(dstReg))
 
 			if got := signExtend(uint64(cpu.GPR(dstReg)), c.dstSize); got != c.want {
 				t.Errorf("result = %d, want %d", got, c.want)
@@ -58,11 +58,11 @@ func TestEmulCvtFloatToIntTruncates(t *testing.T) {
 func TestEmulCvtFloatToByteExactValue(t *testing.T) {
 	cpu, mem := fixture()
 	e := NewEngine(cpu, mem)
-	setFloatReg(t, cpu, 4, vax.R1, -4.9)
+	setFloatReg(t, cpu, 4, registers.R1, -4.9)
 
-	stepInstruction(t, e, 0x48, regMode(vax.R1), regMode(vax.R2)) // CVTFB
+	stepInstruction(t, e, 0x48, regMode(registers.R1), regMode(registers.R2)) // CVTFB
 
-	if got := int8(byte(cpu.GPR(vax.R2))); got != -4 {
+	if got := int8(byte(cpu.GPR(registers.R2))); got != -4 {
 		t.Errorf("R2 = %d, want -4 (truncated toward zero)", got)
 	}
 }
@@ -76,9 +76,9 @@ func TestEmulCvtFloatToIntOverflow(t *testing.T) {
 	for _, iv := range []bool{false, true} {
 		cpu, mem := fixture()
 		e := NewEngine(cpu, mem)
-		cpu.SetGPR(vax.PC, base)
-		setFloatReg(t, cpu, 4, vax.R1, 200.0)                               // exceeds byte range (-128..127)
-		putBytes(t, cpu, mem, base, 0x48, regMode(vax.R1), regMode(vax.R2)) // CVTFB
+		cpu.SetGPR(registers.PC, base)
+		setFloatReg(t, cpu, 4, registers.R1, 200.0)                                     // exceeds byte range (-128..127)
+		putBytes(t, cpu, mem, base, 0x48, regMode(registers.R1), regMode(registers.R2)) // CVTFB
 
 		psl := cpu.PSL()
 		psl.SetIV(iv)
@@ -90,14 +90,14 @@ func TestEmulCvtFloatToIntOverflow(t *testing.T) {
 			t.Fatalf("decodeInstruction: %v", err)
 		}
 
-		cpu.SetGPR(vax.PC, d.NextPC)
-		
+		cpu.SetGPR(registers.PC, d.NextPC)
+
 		e.instructionPC = base
 
 		err = instructionTable.HandlerFor(d.Instruction)(e, &d)
 
 		// 200 is ^XC8: as a byte, -56, so N is set.
-		if got := byte(cpu.GPR(vax.R2)); got != 0xC8 {
+		if got := byte(cpu.GPR(registers.R2)); got != 0xC8 {
 			t.Errorf("IV %v: R2's low byte = %#x, want 0xc8 (the low-order bits of 200)", iv, got)
 		}
 
@@ -139,11 +139,11 @@ func TestEmulCvtRoundVsTruncate(t *testing.T) {
 		t.Run(c.name, func(t *testing.T) {
 			cpu, mem := fixture()
 			e := NewEngine(cpu, mem)
-			setFloatReg(t, cpu, 4, vax.R1, c.value)
+			setFloatReg(t, cpu, 4, registers.R1, c.value)
 
-			stepInstruction(t, e, c.opcode, regMode(vax.R1), regMode(vax.R2))
+			stepInstruction(t, e, c.opcode, regMode(registers.R1), regMode(registers.R2))
 
-			if got := int32(cpu.GPR(vax.R2)); got != c.wantResult {
+			if got := int32(cpu.GPR(registers.R2)); got != c.wantResult {
 				t.Errorf("result = %d, want %d", got, c.wantResult)
 			}
 		})
@@ -156,11 +156,11 @@ func TestEmulCvtRoundFloatToIntOverflow(t *testing.T) {
 	// bits (PSL<IV> is clear, so there's no trap).
 	cpu, mem := fixture()
 	e := NewEngine(cpu, mem)
-	setFloatReg(t, cpu, 8, vax.R1, 2147483647.6)
+	setFloatReg(t, cpu, 8, registers.R1, 2147483647.6)
 
-	stepInstruction(t, e, 0x6B, regMode(vax.R1), regMode(vax.R3)) // CVTRDL
+	stepInstruction(t, e, 0x6B, regMode(registers.R1), regMode(registers.R3)) // CVTRDL
 
-	if got := cpu.GPR(vax.R3); got != 0x80000000 {
+	if got := cpu.GPR(registers.R3); got != 0x80000000 {
 		t.Errorf("R3 = %#x, want 0x80000000", got)
 	}
 
@@ -189,14 +189,14 @@ func TestEmulCvtIntToFloat(t *testing.T) {
 		t.Run(c.name, func(t *testing.T) {
 			cpu, mem := fixture()
 			e := NewEngine(cpu, mem)
-			cpu.SetGPR(vax.R1, c.srcVal)
-			
-			dstReg := vax.R2
+			cpu.SetGPR(registers.R1, c.srcVal)
+
+			dstReg := registers.R2
 			if c.dst == 8 {
-				dstReg = vax.R3
+				dstReg = registers.R3
 			}
 
-			stepInstruction(t, e, c.opcode, regMode(vax.R1), regMode(dstReg))
+			stepInstruction(t, e, c.opcode, regMode(registers.R1), regMode(dstReg))
 
 			if got := getFloatReg(t, cpu, c.dst, dstReg); got != c.want {
 				t.Errorf("result = %v, want %v", got, c.want)
@@ -213,15 +213,15 @@ func TestEmulCvtIntToFloat(t *testing.T) {
 func TestEmulCvtIntToFloatNegativeSetsN(t *testing.T) {
 	cpu, mem := fixture()
 	e := NewEngine(cpu, mem)
-	cpu.SetGPR(vax.R1, 0xFF) // byte -1
+	cpu.SetGPR(registers.R1, 0xFF) // byte -1
 
-	stepInstruction(t, e, 0x4C, regMode(vax.R1), regMode(vax.R2)) // CVTBF
+	stepInstruction(t, e, 0x4C, regMode(registers.R1), regMode(registers.R2)) // CVTBF
 
 	if !cpu.PSL().N() {
 		t.Error("N = false, want true")
 	}
-	
-	if got := getFloatReg(t, cpu, 4, vax.R2); got != -1.0 {
+
+	if got := getFloatReg(t, cpu, 4, registers.R2); got != -1.0 {
 		t.Errorf("result = %v, want -1.0", got)
 	}
 }

@@ -3,7 +3,7 @@ package cpu
 import (
 	"fmt"
 
-	"github.com/tucats/govax/internal/vax"
+	"github.com/tucats/govax/internal/registers"
 )
 
 // This file is the Go port of interrupt.c's interrupt() (device/software
@@ -144,7 +144,7 @@ func (e *Engine) Interrupt(code Exception, ipl uint32, quantum int) {
 	}
 
 	if !queue {
-		if e.cpu.DebugEnabled(vax.DebugInterrupts) {
+		if e.cpu.DebugEnabled(registers.DebugInterrupts) {
 			fmt.Fprintf(e.cpu.DebugWriter(), "DEBUG(INTERRUPTS): set interrupt %04X, IPL %d, quantum %d\n",
 				code, ipl, quantum)
 		}
@@ -161,7 +161,7 @@ func (e *Engine) Interrupt(code Exception, ipl uint32, quantum int) {
 		age = quantum / e.quantumInitial
 	}
 
-	if e.cpu.DebugEnabled(vax.DebugInterrupts) {
+	if e.cpu.DebugEnabled(registers.DebugInterrupts) {
 		fmt.Fprintf(e.cpu.DebugWriter(), "DEBUG(INTERRUPTS): queue interrupt %04X, IPL %d, age=%d, quantum %d\n",
 			code, ipl, age, quantum)
 	}
@@ -205,7 +205,7 @@ func (e *Engine) scanInterruptQueue() {
 	}
 
 	ipl := e.cpu.PSL().IPL()
-	debug := e.cpu.DebugEnabled(vax.DebugInterrupts)
+	debug := e.cpu.DebugEnabled(registers.DebugInterrupts)
 	remaining := e.iqueue[:0]
 
 	for _, ip := range e.iqueue {
@@ -241,7 +241,7 @@ func (e *Engine) scanInterruptQueue() {
 
 // deliverPendingInterrupt runs the VAX interrupt-delivery sequence for
 // Engine's own pending interrupt, the Go port of execute_vax's own
-// `if (vax.interrupt_pending) { set_fault(...); vax.IPL = ...; handle_fault(); }`
+// `if (vax.interrupt_pending) { set_fault(...); registers.IPL = ...; handle_fault(); }`
 // block (minus the fault-breakpoint check, a console/Phase-08 concern with
 // no interrupt-specific behavior to add here).
 //
@@ -264,8 +264,8 @@ func (e *Engine) deliverPendingInterrupt() error {
 	e.interruptIPL = 0
 	e.interruptCount++
 
-	e.cpu.SetPR(vax.IPL, ipl)
-	e.instructionPC = e.cpu.GPR(vax.PC)
+	e.cpu.SetPR(registers.IPL, ipl)
+	e.instructionPC = e.cpu.GPR(registers.PC)
 
 	// recordFault/faultBreakHit match vax.c's own execute_vax handling of
 	// this same delivery path (set_fault, then the BREAK_FAULT check, both
@@ -296,18 +296,18 @@ const (
 // see this file's own doc comment on why the two are merged into a single,
 // quantum-tick-driven step rather than kept as separate instruction-count
 // and wall-clock-driven pieces. Uses PR(ICR) directly as the live countdown
-// register (the C source keeps a separate vax.clock mirrored into vax.ICR
+// register (the C source keeps a separate vax.clock mirrored into registers.ICR
 // on every read/relevant write; nothing in this port's design needs that
 // extra mirror, since there's no real-time reader racing the CPU loop the
 // way the C source's SIGALRM handler could).
 func (e *Engine) tickIntervalClock() {
-	iccs := e.cpu.PR(vax.ICCS)
+	iccs := e.cpu.PR(registers.ICCS)
 	if iccs&iccsRun == 0 {
 		return
 	}
 
-	clock := e.cpu.PR(vax.ICR) + 1
-	nicr := e.cpu.PR(vax.NICR)
+	clock := e.cpu.PR(registers.ICR) + 1
+	nicr := e.cpu.PR(registers.NICR)
 
 	if clock == 0xFFFFFFFF || clock < nicr {
 		if iccs&iccsInt != 0 {
@@ -322,8 +322,8 @@ func (e *Engine) tickIntervalClock() {
 		clock = nicr
 	}
 
-	e.cpu.SetPR(vax.ICR, clock)
-	e.cpu.SetPR(vax.ICCS, iccs)
+	e.cpu.SetPR(registers.ICR, clock)
+	e.cpu.SetPR(registers.ICCS, iccs)
 }
 
 // DeliverConsoleByte simulates a console-terminal input interrupt: deposits
@@ -344,23 +344,23 @@ func (e *Engine) tickIntervalClock() {
 //
 // If RXCS's DON bit is already set (the previous byte hasn't been read
 // yet), the new byte is dropped rather than overwriting RXDB, matching
-// poll_keyboard's own `if (vax.RXCS & 0x80) { ...; return 0; }` guard --
+// poll_keyboard's own `if (registers.RXCS & 0x80) { ...; return 0; }` guard --
 // noticed while wiring DebugKeyboard's trace (docs/PHASE-17.md sub-phase 2)
 // and fixed here rather than left silently overwriting, since the trace
 // text itself ("not read yet, ignoring") would otherwise be a lie about
 // what this port actually does.
 func (e *Engine) DeliverConsoleByte(b byte) {
-	if e.cpu.PR(vax.RXCS)&0x80 != 0 {
-		if e.cpu.DebugEnabled(vax.DebugKeyboard) {
+	if e.cpu.PR(registers.RXCS)&0x80 != 0 {
+		if e.cpu.DebugEnabled(registers.DebugKeyboard) {
 			fmt.Fprintln(e.cpu.DebugWriter(), "KBD: hit, not read yet, ignoring")
 		}
 
 		return
 	}
 
-	e.cpu.SetPR(vax.RXDB, uint32(b))
-	rxcs := e.cpu.PR(vax.RXCS) | 0x80
-	e.cpu.SetPR(vax.RXCS, rxcs)
+	e.cpu.SetPR(registers.RXDB, uint32(b))
+	rxcs := e.cpu.PR(registers.RXCS) | 0x80
+	e.cpu.SetPR(registers.RXCS, rxcs)
 
 	if rxcs&deviceIE != 0 {
 		e.Interrupt(ExcConRead, 20, 0)

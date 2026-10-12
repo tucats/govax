@@ -3,7 +3,7 @@ package machine
 import (
 	"testing"
 
-	"github.com/tucats/govax/internal/vax"
+	"github.com/tucats/govax/internal/registers"
 )
 
 // This file is Phase 12's own named deliverable (docs/PHASE-12.md): a
@@ -59,7 +59,7 @@ func TestRegression_movq(t *testing.T) {
 		t.Fatalf("movq.asm: err=%v hitCap=%v", err, hitCap)
 	}
 
-	if got := c.CPU.GPR(vax.R0); got != 1 {
+	if got := c.CPU.GPR(registers.R0); got != 1 {
 		t.Errorf("R0 = %d, want 1", got)
 	}
 
@@ -91,7 +91,7 @@ func TestRegression_movc3(t *testing.T) {
 		t.Fatalf("movc3.asm: err=%v hitCap=%v", err, hitCap)
 	}
 
-	if got := c.CPU.GPR(vax.R0); got != 1 {
+	if got := c.CPU.GPR(registers.R0); got != 1 {
 		t.Errorf("R0 = %d, want 1", got)
 	}
 

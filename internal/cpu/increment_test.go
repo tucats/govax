@@ -3,7 +3,7 @@ package cpu
 import (
 	"testing"
 
-	"github.com/tucats/govax/internal/vax"
+	"github.com/tucats/govax/internal/registers"
 )
 
 func TestEmulIncByte(t *testing.T) {
@@ -29,11 +29,11 @@ func TestEmulIncByte(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			cpu, mem := fixture()
 			e := NewEngine(cpu, mem)
-			cpu.SetGPR(vax.R1, tc.src)
+			cpu.SetGPR(registers.R1, tc.src)
 
-			stepInstruction(t, e, 0x96, regMode(vax.R1)) // INCB
+			stepInstruction(t, e, 0x96, regMode(registers.R1)) // INCB
 
-			if got := byte(cpu.GPR(vax.R1)); got != tc.wantResult {
+			if got := byte(cpu.GPR(registers.R1)); got != tc.wantResult {
 				t.Errorf("result = %#x, want %#x", got, tc.wantResult)
 			}
 
@@ -62,11 +62,11 @@ func TestEmulDecByte(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			cpu, mem := fixture()
 			e := NewEngine(cpu, mem)
-			cpu.SetGPR(vax.R1, tc.src)
+			cpu.SetGPR(registers.R1, tc.src)
 
-			stepInstruction(t, e, 0x97, regMode(vax.R1)) // DECB
+			stepInstruction(t, e, 0x97, regMode(registers.R1)) // DECB
 
-			if got := byte(cpu.GPR(vax.R1)); got != tc.wantResult {
+			if got := byte(cpu.GPR(registers.R1)); got != tc.wantResult {
 				t.Errorf("result = %#x, want %#x", got, tc.wantResult)
 			}
 			
@@ -85,11 +85,11 @@ func TestEmulIncDecLongword(t *testing.T) {
 	// (see docs/DEVIATIONS.md); confirm the Go port actually does.
 	cpu, mem := fixture()
 	e := NewEngine(cpu, mem)
-	cpu.SetGPR(vax.R1, 0x7FFFFFFF) // INT32_MAX
+	cpu.SetGPR(registers.R1, 0x7FFFFFFF) // INT32_MAX
 
-	stepInstruction(t, e, 0xD6, regMode(vax.R1)) // INCL
+	stepInstruction(t, e, 0xD6, regMode(registers.R1)) // INCL
 
-	if got := cpu.GPR(vax.R1); got != 0x80000000 {
+	if got := cpu.GPR(registers.R1); got != 0x80000000 {
 		t.Errorf("result = %#x, want 0x80000000", got)
 	}
 	
@@ -97,10 +97,10 @@ func TestEmulIncDecLongword(t *testing.T) {
 		t.Error("V = false, want true (INT32_MAX + 1 overflows)")
 	}
 
-	cpu.SetGPR(vax.R1, 0x80000000) // INT32_MIN
-	stepInstruction(t, e, 0xD7, regMode(vax.R1))
+	cpu.SetGPR(registers.R1, 0x80000000) // INT32_MIN
+	stepInstruction(t, e, 0xD7, regMode(registers.R1))
 
-	if got := cpu.GPR(vax.R1); got != 0x7FFFFFFF {
+	if got := cpu.GPR(registers.R1); got != 0x7FFFFFFF {
 		t.Errorf("result = %#x, want 0x7fffffff", got)
 	}
 
@@ -112,11 +112,11 @@ func TestEmulIncDecLongword(t *testing.T) {
 func TestEmulIncWordPreservesUpperBytes(t *testing.T) {
 	cpu, mem := fixture()
 	e := NewEngine(cpu, mem)
-	cpu.SetGPR(vax.R1, 0xAAAA0005)
+	cpu.SetGPR(registers.R1, 0xAAAA0005)
 
-	stepInstruction(t, e, 0xB6, regMode(vax.R1)) // INCW
+	stepInstruction(t, e, 0xB6, regMode(registers.R1)) // INCW
 
-	if got := cpu.GPR(vax.R1); got != 0xAAAA0006 {
+	if got := cpu.GPR(registers.R1); got != 0xAAAA0006 {
 		t.Errorf("R1 = %#x, want 0xAAAA0006", got)
 	}
 }

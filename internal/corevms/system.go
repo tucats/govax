@@ -4,12 +4,12 @@ import (
 	"bufio"
 	"io"
 
-	iodev "github.com/tucats/govax/internal/io"
 	"github.com/tucats/govax/internal/cpu"
+	iodev "github.com/tucats/govax/internal/io"
 	"github.com/tucats/govax/internal/lck"
+	"github.com/tucats/govax/internal/registers"
 	"github.com/tucats/govax/internal/rms"
 	"github.com/tucats/govax/internal/sched"
-	"github.com/tucats/govax/internal/vax"
 	"github.com/tucats/govax/internal/vm"
 )
 
@@ -31,7 +31,7 @@ import (
 // console's own, which outlive the machine.
 type System struct {
 	mem *vm.Memory
-	cpu *vax.CPU
+	cpu *registers.CPU
 
 	// shims and services are the LIB$/CRTL shim and SYS$ service
 	// registries the XFC$SHIM and XFC$P1VECTOR selectors dispatch
@@ -171,7 +171,7 @@ type System struct {
 // mounts with whatever else (the console) also uses them. Mailbox devices
 // left in the device table by a previous System are removed: their
 // messages were in that machine's memory.
-func NewSystem(cpu *vax.CPU, mem *vm.Memory, devices *iodev.DeviceTable, mounts *rms.MountTable) *System {
+func NewSystem(cpu *registers.CPU, mem *vm.Memory, devices *iodev.DeviceTable, mounts *rms.MountTable) *System {
 	sys := &System{
 		mem:      mem,
 		cpu:      cpu,

@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/tucats/govax/internal/vax"
+	"github.com/tucats/govax/internal/registers"
 	"github.com/tucats/govax/internal/vm"
 )
 
@@ -14,7 +14,7 @@ const scbb = 0x9000
 
 func newEngine() *Engine {
 	cpu, mem := fixture()
-	cpu.SetPR(vax.SCBB, scbb)
+	cpu.SetPR(registers.SCBB, scbb)
 	
 	return NewEngine(cpu, mem)
 }
@@ -29,8 +29,8 @@ func putVector(t *testing.T, e *Engine, code Exception, addr uint32, stackBit ui
 func TestHandleFaultBasicFrame(t *testing.T) {
 	e := newEngine()
 	e.instructionPC = 0x4000
-	e.cpu.SetGPR(vax.SP, 0x7000)
-	e.cpu.SetPR(vax.KSP, 0x7000)
+	e.cpu.SetGPR(registers.SP, 0x7000)
+	e.cpu.SetPR(registers.KSP, 0x7000)
 	putVector(t, e, ExcReservedAddr, 0x100, 0)
 
 	err := e.HandleFault(&Fault{Code: ExcReservedAddr, Args: []uint32{0xAAAA, 1}})
@@ -38,11 +38,11 @@ func TestHandleFaultBasicFrame(t *testing.T) {
 		t.Fatalf("HandleFault: %v", err)
 	}
 
-	if e.cpu.GPR(vax.PC) != 0x100 {
-		t.Errorf("PC = %#x, want 0x100 (vector)", e.cpu.GPR(vax.PC))
+	if e.cpu.GPR(registers.PC) != 0x100 {
+		t.Errorf("PC = %#x, want 0x100 (vector)", e.cpu.GPR(registers.PC))
 	}
 
-	sp := e.cpu.GPR(vax.SP)
+	sp := e.cpu.GPR(registers.SP)
 	if sp != 0x7000-16 {
 		t.Fatalf("SP = %#x, want %#x (4 longwords pushed)", sp, 0x7000-16)
 	}
@@ -86,24 +86,24 @@ func TestHandleFaultReadsVectorWithVMDisabled(t *testing.T) {
 	pte.SetPFN(pfn)
 	putLongword(t, e.cpu, e.mem, sbr, uint32(pte))
 
-	e.cpu.SetPR(vax.SBR, sbr)
-	e.cpu.SetPR(vax.SLR, 1) // only page 0 (the one PTE above) is in range
-	e.cpu.SetGPR(vax.SP, stackVA)
-	e.cpu.SetPR(vax.KSP, stackVA) // matches current mode, so setModeStack no-ops
+	e.cpu.SetPR(registers.SBR, sbr)
+	e.cpu.SetPR(registers.SLR, 1) // only page 0 (the one PTE above) is in range
+	e.cpu.SetGPR(registers.SP, stackVA)
+	e.cpu.SetPR(registers.KSP, stackVA) // matches current mode, so setModeStack no-ops
 
-	e.cpu.SetPR(vax.MAPEN, 1)
+	e.cpu.SetPR(registers.MAPEN, 1)
 
 	err := e.HandleFault(&Fault{Code: ExcPrivileged})
 	if err != nil {
 		t.Fatalf("HandleFault: %v (vector fetch should bypass translation)", err)
 	}
 
-	if e.cpu.PR(vax.MAPEN) != 1 {
-		t.Errorf("MAPEN = %d, want 1 (restored after the vector fetch)", e.cpu.PR(vax.MAPEN))
+	if e.cpu.PR(registers.MAPEN) != 1 {
+		t.Errorf("MAPEN = %d, want 1 (restored after the vector fetch)", e.cpu.PR(registers.MAPEN))
 	}
 
-	if e.cpu.GPR(vax.PC) != 0x200 {
-		t.Errorf("PC = %#x, want 0x200 (the vector, proving it was read correctly)", e.cpu.GPR(vax.PC))
+	if e.cpu.GPR(registers.PC) != 0x200 {
+		t.Errorf("PC = %#x, want 0x200 (the vector, proving it was read correctly)", e.cpu.GPR(registers.PC))
 	}
 }
 
@@ -114,40 +114,40 @@ func TestHandleFaultReadsVectorWithVMDisabled(t *testing.T) {
 // push the fault frame through translation.
 func TestSetModeStackSwitchToKernel(t *testing.T) {
 	e := newEngine()
-	e.cpu.SetGPR(vax.SP, 0x8000) // current (user) stack
-	e.cpu.SetPR(vax.KSP, 0x6000)
+	e.cpu.SetGPR(registers.SP, 0x8000) // current (user) stack
+	e.cpu.SetPR(registers.KSP, 0x6000)
 	psl := e.cpu.PSL()
-	psl.SetCurMod(vax.User)
+	psl.SetCurMod(registers.User)
 	e.cpu.SetPSL(psl)
 
-	e.setModeStack(vax.Kernel, false)
+	e.setModeStack(registers.Kernel, false)
 
-	if got := e.cpu.PSL().CurMod(); got != vax.Kernel {
+	if got := e.cpu.PSL().CurMod(); got != registers.Kernel {
 		t.Errorf("CurMod = %v, want Kernel", got)
 	}
 
-	if got := e.cpu.PSL().PrvMod(); got != vax.User {
+	if got := e.cpu.PSL().PrvMod(); got != registers.User {
 		t.Errorf("PrvMod = %v, want User (the mode we switched from)", got)
 	}
 
-	if e.cpu.PR(vax.USP) != 0x8000 {
-		t.Errorf("USP = %#x, want 0x8000 (old SP saved to the mode we left)", e.cpu.PR(vax.USP))
+	if e.cpu.PR(registers.USP) != 0x8000 {
+		t.Errorf("USP = %#x, want 0x8000 (old SP saved to the mode we left)", e.cpu.PR(registers.USP))
 	}
 
-	if e.cpu.GPR(vax.SP) != 0x6000 {
-		t.Errorf("SP = %#x, want 0x6000 (KSP)", e.cpu.GPR(vax.SP))
+	if e.cpu.GPR(registers.SP) != 0x6000 {
+		t.Errorf("SP = %#x, want 0x6000 (KSP)", e.cpu.GPR(registers.SP))
 	}
 
-	if e.cpu.PR(vax.MAPEN) != 1 {
-		t.Errorf("MAPEN = %d, want 1 (see docs/DEVIATIONS.md)", e.cpu.PR(vax.MAPEN))
+	if e.cpu.PR(registers.MAPEN) != 1 {
+		t.Errorf("MAPEN = %d, want 1 (see docs/DEVIATIONS.md)", e.cpu.PR(registers.MAPEN))
 	}
 }
 
 func TestHandleFaultInterruptStack(t *testing.T) {
 	e := newEngine()
-	e.cpu.SetGPR(vax.SP, 0x8000)
-	e.cpu.SetPR(vax.KSP, 0x6000)
-	e.cpu.SetPR(vax.ISP, 0x9000)
+	e.cpu.SetGPR(registers.SP, 0x8000)
+	e.cpu.SetPR(registers.KSP, 0x6000)
+	e.cpu.SetPR(registers.ISP, 0x9000)
 	putVector(t, e, ExcMachineCheck, 0x400, 1) // stack bit 1 == interrupt stack
 
 	if err := e.HandleFault(&Fault{Code: ExcMachineCheck}); err != nil {
@@ -158,22 +158,22 @@ func TestHandleFaultInterruptStack(t *testing.T) {
 		t.Error("PSL.IS() = false, want true (on interrupt stack)")
 	}
 
-	if got := e.cpu.PSL().CurMod(); got != vax.Kernel {
+	if got := e.cpu.PSL().CurMod(); got != registers.Kernel {
 		t.Errorf("CurMod = %v, want Kernel", got)
 	}
 
-	if e.cpu.PR(vax.MAPEN) != 0 {
-		t.Errorf("MAPEN = %d, want 0 (VM off on the interrupt stack)", e.cpu.PR(vax.MAPEN))
+	if e.cpu.PR(registers.MAPEN) != 0 {
+		t.Errorf("MAPEN = %d, want 0 (VM off on the interrupt stack)", e.cpu.PR(registers.MAPEN))
 	}
 
-	if want := uint32(0x9000 - 8); e.cpu.GPR(vax.SP) != want {
-		t.Errorf("SP = %#x, want %#x (ISP minus PC+PSL)", e.cpu.GPR(vax.SP), want)
+	if want := uint32(0x9000 - 8); e.cpu.GPR(registers.SP) != want {
+		t.Errorf("SP = %#x, want %#x (ISP minus PC+PSL)", e.cpu.GPR(registers.SP), want)
 	}
 }
 
 func TestHandleFaultNoHandlerVector(t *testing.T) {
 	e := newEngine()
-	e.cpu.SetGPR(vax.SP, 0x8000)
+	e.cpu.SetGPR(registers.SP, 0x8000)
 	putLongword(t, e.cpu, e.mem, scbb+uint32(ExcAccessViol), 0xFFFFFFFF)
 
 	err := e.HandleFault(&Fault{Code: ExcAccessViol})
@@ -181,8 +181,8 @@ func TestHandleFaultNoHandlerVector(t *testing.T) {
 		t.Fatalf("err = %v, want ErrNoExceptionHandler", err)
 	}
 
-	if e.cpu.GPR(vax.SP) != 0x8000 {
-		t.Errorf("SP = %#x, want unchanged 0x8000 (no frame pushed)", e.cpu.GPR(vax.SP))
+	if e.cpu.GPR(registers.SP) != 0x8000 {
+		t.Errorf("SP = %#x, want unchanged 0x8000 (no frame pushed)", e.cpu.GPR(registers.SP))
 	}
 }
 
@@ -196,9 +196,9 @@ func TestHandleFaultNoHandlerVector(t *testing.T) {
 func TestHandleFaultNoHandlerVectorCarriesFaultContext(t *testing.T) {
 	e := newEngine()
 	e.instructionPC = 0x1234
-	e.cpu.SetGPR(vax.PC, 0x1236) // decode has already advanced past a 2-byte instruction
-	e.cpu.SetGPR(vax.R0, 0xAAAA)
-	e.cpu.SetGPR(vax.R1, 0xBBBB)
+	e.cpu.SetGPR(registers.PC, 0x1236) // decode has already advanced past a 2-byte instruction
+	e.cpu.SetGPR(registers.R0, 0xAAAA)
+	e.cpu.SetGPR(registers.R1, 0xBBBB)
 	putLongword(t, e.cpu, e.mem, scbb+uint32(ExcReservedOp), 0xFFFFFFFF)
 
 	err := e.HandleFault(&Fault{Code: ExcReservedOp, Args: []uint32{7}})
@@ -227,8 +227,8 @@ func TestHandleFaultNoHandlerVectorCarriesFaultContext(t *testing.T) {
 
 func TestHandleFaultZeroVector(t *testing.T) {
 	e := newEngine()
-	e.cpu.SetGPR(vax.SP, 0x8000)
-	e.cpu.SetPR(vax.KSP, 0x8000)
+	e.cpu.SetGPR(registers.SP, 0x8000)
+	e.cpu.SetPR(registers.KSP, 0x8000)
 	putVector(t, e, ExcTracePending, 0, 0)
 
 	err := e.HandleFault(&Fault{Code: ExcTracePending})
@@ -236,11 +236,11 @@ func TestHandleFaultZeroVector(t *testing.T) {
 		t.Fatalf("err = %v, want ErrUnhandledVector", err)
 	}
 
-	if e.cpu.GPR(vax.PC) != 0 {
-		t.Errorf("PC = %#x, want 0 (frame still pushed and PC set)", e.cpu.GPR(vax.PC))
+	if e.cpu.GPR(registers.PC) != 0 {
+		t.Errorf("PC = %#x, want 0 (frame still pushed and PC set)", e.cpu.GPR(registers.PC))
 	}
 
-	if e.cpu.GPR(vax.SP) == 0x8000 {
+	if e.cpu.GPR(registers.SP) == 0x8000 {
 		t.Error("SP unchanged, want the frame to have been pushed despite the zero vector")
 	}
 }
@@ -248,14 +248,14 @@ func TestHandleFaultZeroVector(t *testing.T) {
 func TestHandleFaultDebugExceptionsTrace(t *testing.T) {
 	e := newEngine()
 	e.instructionPC = 0x4000
-	e.cpu.SetGPR(vax.SP, 0x7000)
-	e.cpu.SetPR(vax.KSP, 0x7000)
+	e.cpu.SetGPR(registers.SP, 0x7000)
+	e.cpu.SetPR(registers.KSP, 0x7000)
 	putVector(t, e, ExcReservedAddr, 0x100, 0)
 
 	var buf bytes.Buffer
 
 	e.cpu.SetDebugWriter(&buf)
-	e.cpu.SetDebug(e.cpu.Debug() | vax.DebugExceptions)
+	e.cpu.SetDebug(e.cpu.Debug() | registers.DebugExceptions)
 
 	if err := e.HandleFault(&Fault{Code: ExcReservedAddr, Args: []uint32{0xAAAA, 1}}); err != nil {
 		t.Fatalf("HandleFault: %v", err)
@@ -270,14 +270,14 @@ func TestHandleFaultDebugExceptionsTrace(t *testing.T) {
 func TestHandleFaultNoDebugTraceWhenFlagClear(t *testing.T) {
 	e := newEngine()
 	e.instructionPC = 0x4000
-	e.cpu.SetGPR(vax.SP, 0x7000)
-	e.cpu.SetPR(vax.KSP, 0x7000)
+	e.cpu.SetGPR(registers.SP, 0x7000)
+	e.cpu.SetPR(registers.KSP, 0x7000)
 	putVector(t, e, ExcReservedAddr, 0x100, 0)
 
 	var buf bytes.Buffer
 
 	e.cpu.SetDebugWriter(&buf)
-	e.cpu.SetDebug(e.cpu.Debug() &^ vax.DebugExceptions)
+	e.cpu.SetDebug(e.cpu.Debug() &^ registers.DebugExceptions)
 
 	if err := e.HandleFault(&Fault{Code: ExcReservedAddr}); err != nil {
 		t.Fatalf("HandleFault: %v", err)
@@ -290,15 +290,15 @@ func TestHandleFaultNoDebugTraceWhenFlagClear(t *testing.T) {
 
 func TestSetModeStackSameModeNoOp(t *testing.T) {
 	e := newEngine()
-	e.cpu.SetGPR(vax.SP, 0x1234)
+	e.cpu.SetGPR(registers.SP, 0x1234)
 	psl := e.cpu.PSL()
-	psl.SetCurMod(vax.Kernel)
+	psl.SetCurMod(registers.Kernel)
 	e.cpu.SetPSL(psl)
 
-	e.setModeStack(vax.Kernel, false)
+	e.setModeStack(registers.Kernel, false)
 
-	if e.cpu.GPR(vax.SP) != 0x1234 {
-		t.Errorf("SP = %#x, want unchanged 0x1234", e.cpu.GPR(vax.SP))
+	if e.cpu.GPR(registers.SP) != 0x1234 {
+		t.Errorf("SP = %#x, want unchanged 0x1234", e.cpu.GPR(registers.SP))
 	}
 }
 
@@ -317,7 +317,7 @@ func TestSetModeStackRealModeChangeInvalidatesProtection(t *testing.T) {
 	cpu := e.cpu
 
 	psl := cpu.PSL()
-	psl.SetCurMod(vax.Kernel)
+	psl.SetCurMod(registers.Kernel)
 	cpu.SetPSL(psl)
 
 	const (
@@ -326,8 +326,8 @@ func TestSetModeStackRealModeChangeInvalidatesProtection(t *testing.T) {
 		vaddr   = 0x80000000 // S0 region, page 0
 	)
 
-	cpu.SetPR(vax.SBR, sbrPhys)
-	cpu.SetPR(vax.SLR, 1)
+	cpu.SetPR(registers.SBR, sbrPhys)
+	cpu.SetPR(registers.SLR, 1)
 
 	var pte vm.PTE
 
@@ -336,21 +336,21 @@ func TestSetModeStackRealModeChangeInvalidatesProtection(t *testing.T) {
 	pte.SetPFN(pfn)
 	putLongword(t, cpu, e.mem, sbrPhys, uint32(pte))
 
-	cpu.SetPR(vax.MAPEN, 1)
+	cpu.SetPR(registers.MAPEN, 1)
 
 	if _, err := e.mem.Translate(cpu, vaddr, vm.AccessRead); err != nil {
 		t.Fatalf("Translate (kernel): %v", err)
 	}
 
-	cpu.SetPR(vax.MAPEN, 0)
+	cpu.SetPR(registers.MAPEN, 0)
 
-	e.setModeStack(vax.User, false) // a real Kernel -> User transition
+	e.setModeStack(registers.User, false) // a real Kernel -> User transition
 
 	if len(e.mem.TBSnapshot()) == 0 {
 		t.Fatalf("TBSnapshot() empty after a mode change, want the mapping to survive")
 	}
 
-	cpu.SetPR(vax.MAPEN, 1)
+	cpu.SetPR(registers.MAPEN, 1)
 
 	_, err := e.mem.Translate(cpu, vaddr, vm.AccessRead)
 
@@ -369,10 +369,10 @@ type dispatchingServices struct {
 	offered  bool
 	code, pc uint32
 	params   []uint32
-	psl      vax.PSL
+	psl      registers.PSL
 }
 
-func (d *dispatchingServices) DispatchException(code uint32, params []uint32, pc uint32, psl vax.PSL) (bool, error) {
+func (d *dispatchingServices) DispatchException(code uint32, params []uint32, pc uint32, psl registers.PSL) (bool, error) {
 	d.offered, d.code, d.params, d.pc, d.psl = true, code, params, pc, psl
 
 	return d.accept, nil

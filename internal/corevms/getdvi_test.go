@@ -6,8 +6,8 @@ import (
 	"testing"
 
 	iodev "github.com/tucats/govax/internal/io"
+	"github.com/tucats/govax/internal/registers"
 	"github.com/tucats/govax/internal/rms"
-	"github.com/tucats/govax/internal/vax"
 	"github.com/tucats/govax/internal/vmsdef"
 )
 
@@ -68,7 +68,7 @@ func TestGetdvi_items(t *testing.T) {
 	tt.DevDepend2 = vmsdef.Symbols["TT2$M_ANSICRT"]
 	tt.DevChar = vmsdef.Symbols["DEV$M_TRM"] | vmsdef.Symbols["DEV$M_REC"]
 
-	ch := assignCall(t, env, a, "TTA0", uint32(vax.User))
+	ch := assignCall(t, env, a, "TTA0", uint32(registers.User))
 
 	cases := []struct {
 		name, want string
@@ -158,7 +158,7 @@ func TestGetdvi_completionAndErrors(t *testing.T) {
 	env, _ := fixture()
 	a := newArena(t, env)
 	defineTestDevice(env, "TTA0", iodev.DeviceClassTT)
-	ch := assignCall(t, env, a, "TTA0", uint32(vax.Kernel))
+	ch := assignCall(t, env, a, "TTA0", uint32(registers.Kernel))
 
 	good := a.items(item{code: dviCode(t, "DVI$_DEVCLASS"), buflen: 4, buf: a.alloc(4)})
 
@@ -181,7 +181,7 @@ func TestGetdvi_completionAndErrors(t *testing.T) {
 
 	// Rejected before starting: nothing completes.
 	env.Process.ast.queue = nil
-	setMode(env, vax.User, vax.User, 0x8000)
+	setMode(env, registers.User, registers.User, 0x8000)
 
 	for name, c := range map[string]struct {
 		channel, devnam uint32
@@ -218,7 +218,7 @@ func TestGetdvi_debugTrace(t *testing.T) {
 	var trace bytes.Buffer
 
 	env.cpu.SetDebugWriter(&trace)
-	env.cpu.SetDebug(vax.DebugDevices)
+	env.cpu.SetDebug(registers.DebugDevices)
 
 	dviValues(t, env, a, 0, a.desc("DKA0"), "DVI$_DEVCLASS")
 

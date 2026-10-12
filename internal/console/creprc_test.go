@@ -11,8 +11,8 @@ import (
 	"github.com/tucats/govax/internal/corevms"
 	"github.com/tucats/govax/internal/cpu"
 	"github.com/tucats/govax/internal/lnm"
+	"github.com/tucats/govax/internal/registers"
 	"github.com/tucats/govax/internal/sched"
-	"github.com/tucats/govax/internal/vax"
 	"github.com/tucats/govax/internal/vmsdef"
 )
 
@@ -130,8 +130,8 @@ func TestCreprc_subprocess(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if pcb.P0BR != child.Space.P0BR || pcb.SP[vax.Kernel] != child.Stacks.KSP || pcb.SP[vax.User] != corevms.UserStackTop ||
-		pcb.PSL.CurMod() != vax.User {
+	if pcb.P0BR != child.Space.P0BR || pcb.SP[registers.Kernel] != child.Stacks.KSP || pcb.SP[registers.User] != corevms.UserStackTop ||
+		pcb.PSL.CurMod() != registers.User {
 		t.Errorf("PCB %+v doesn't start the process in user mode on its own stacks and tables", pcb)
 	}
 
@@ -354,7 +354,7 @@ func runUntil(t *testing.T, c *console.Console, limit int, done func() bool) {
 		}
 
 		if err := c.StepMachine(); err != nil {
-			t.Fatalf("at PC %08X: %v", c.CPU.GPR(vax.PC), err)
+			t.Fatalf("at PC %08X: %v", c.CPU.GPR(registers.PC), err)
 		}
 	}
 
@@ -406,9 +406,9 @@ func TestCreprc_startup(t *testing.T) {
 	// Process 1 runs again.
 	step(t, c, 2)
 
-	if c.RTL.Current() != one || c.CPU.GPR(vax.PC) != codeAddr {
+	if c.RTL.Current() != one || c.CPU.GPR(registers.PC) != codeAddr {
 		t.Errorf("after the child: process %08X at %08X; want process 1 spinning at %08X",
-			c.RTL.Current().Process.PID, c.CPU.GPR(vax.PC), codeAddr)
+			c.RTL.Current().Process.PID, c.CPU.GPR(registers.PC), codeAddr)
 	}
 
 	e, err := child.Logicals.Translate(lnm.ProcessTableName, "SYS$OUTPUT", lnm.User, 0)
@@ -495,9 +495,9 @@ func TestCreprc_startupFails(t *testing.T) {
 				tt.image, child.Deleted, child.Process.ExitStatus, tt.want)
 		}
 
-		if c.RTL.Current() != one || c.CPU.GPR(vax.PC) != codeAddr {
+		if c.RTL.Current() != one || c.CPU.GPR(registers.PC) != codeAddr {
 			t.Errorf("%q: process %08X at %08X runs; want process 1 at %08X",
-				tt.image, c.RTL.Current().Process.PID, c.CPU.GPR(vax.PC), codeAddr)
+				tt.image, c.RTL.Current().Process.PID, c.CPU.GPR(registers.PC), codeAddr)
 		}
 	}
 }

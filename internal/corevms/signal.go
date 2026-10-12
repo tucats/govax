@@ -3,7 +3,7 @@ package corevms
 import (
 	"fmt"
 
-	"github.com/tucats/govax/internal/vax"
+	"github.com/tucats/govax/internal/registers"
 )
 
 // Software conditions (docs/PHASE-26.md subtask 33): the machinery behind
@@ -82,7 +82,7 @@ func (env *Environment) signal(kind signalKind, argv []uint32) (uint32, error) {
 		return 0, fmt.Errorf("rtl: %s called with no condition value", name)
 	}
 
-	fp := c.GPR(vax.FP)
+	fp := c.GPR(registers.FP)
 
 	callerFP, err1 := env.mem.LoadLongword(c, fp+frameSavedFP)
 	returnPC, err2 := env.mem.LoadLongword(c, fp+frameSavedPC)
@@ -97,25 +97,25 @@ func (env *Environment) signal(kind signalKind, argv []uint32) (uint32, error) {
 		sig[0] = sig[0]&^7 | severitySevere
 	}
 
-	psl := c.PSL()&^0xFFFF | vax.PSL(maskPSW&0xFFFF)
+	psl := c.PSL()&^0xFFFF | registers.PSL(maskPSW&0xFFFF)
 	sig = append(sig, returnPC, uint32(psl))
 
 	d := &conditionDispatch{
 		kind:      kind,
-		resumeSP:  c.GPR(vax.SP),
+		resumeSP:  c.GPR(registers.SP),
 		resumeFP:  fp,
-		resumePC:  c.GPR(vax.PC),
+		resumePC:  c.GPR(registers.PC),
 		resumePSL: c.PSL(),
 	}
 
-	if !env.startDispatch(d, sig, 0, c.GPR(vax.R1)) {
-		return 0, fmt.Errorf("rtl: %s can't signal: no SYS$SRCHANDLER stub (the program needs .P1VECTOR), or the stack at %08X can't be written", name, c.GPR(vax.SP))
+	if !env.startDispatch(d, sig, 0, c.GPR(registers.R1)) {
+		return 0, fmt.Errorf("rtl: %s can't signal: no SYS$SRCHANDLER stub (the program needs .P1VECTOR), or the stack at %08X can't be written", name, c.GPR(registers.SP))
 	}
 
 	// Search from the caller's frame, not LIB$SIGNAL's own.
 	d.startFP, d.fp = callerFP, callerFP
 
-	if c.DebugEnabled(vax.DebugExceptions) {
+	if c.DebugEnabled(registers.DebugExceptions) {
 		fmt.Fprintf(c.DebugWriter(), "DEBUG(EXCEPTION): %s, CONDITION=%08X  PC=%08X  SIGNAL=%08X\n", name, sig[0], returnPC, d.sig)
 	}
 
@@ -127,7 +127,7 @@ func (env *Environment) signal(kind signalKind, argv []uint32) (uint32, error) {
 func (env *Environment) setCallerHandler(name string, handler uint32) (uint32, error) {
 	c := env.cpu
 
-	callerFP, err := env.mem.LoadLongword(c, c.GPR(vax.FP)+frameSavedFP)
+	callerFP, err := env.mem.LoadLongword(c, c.GPR(registers.FP)+frameSavedFP)
 	if err != nil {
 		return 0, fmt.Errorf("rtl: %s can't read its call frame: %w", name, err)
 	}

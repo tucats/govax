@@ -4,7 +4,7 @@ import (
 	"strings"
 
 	"github.com/tucats/govax/internal/machine"
-	"github.com/tucats/govax/internal/vax"
+	"github.com/tucats/govax/internal/registers"
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
@@ -45,7 +45,7 @@ func (p *plainDebugger) Start(a machine.Activation) error {
 	switch a.Kind {
 	case machine.ActivateGo:
 		if a.Addr != nil {
-			c.CPU.SetGPR(vax.PC, *a.Addr)
+			c.CPU.SetGPR(registers.PC, *a.Addr)
 		}
 
 	case machine.ActivateCall:

@@ -3,7 +3,7 @@ package cpu
 import (
 	"testing"
 
-	"github.com/tucats/govax/internal/vax"
+	"github.com/tucats/govax/internal/registers"
 )
 
 // crc16ArcTable is the 16-longword CRC table LIB$CRC_TABLE would generate
@@ -36,16 +36,16 @@ func TestEmulCrc(t *testing.T) {
 	stepInstruction(t, e, bytes...)
 
 	// Known-good CRC-16/ARC test vector: CRC("123456789") == 0xBB3D.
-	if got := cpu.GPR(vax.R0) & 0xFFFF; got != 0xBB3D {
+	if got := cpu.GPR(registers.R0) & 0xFFFF; got != 0xBB3D {
 		t.Errorf("R0 (low 16 bits) = %#x, want 0xBB3D", got)
 	}
 
-	if cpu.GPR(vax.R1) != 0 || cpu.GPR(vax.R2) != 0 {
-		t.Errorf("R1/R2 = %#x/%#x, want both 0", cpu.GPR(vax.R1), cpu.GPR(vax.R2))
+	if cpu.GPR(registers.R1) != 0 || cpu.GPR(registers.R2) != 0 {
+		t.Errorf("R1/R2 = %#x/%#x, want both 0", cpu.GPR(registers.R1), cpu.GPR(registers.R2))
 	}
 
-	if want := streamAddr + 9; cpu.GPR(vax.R3) != want {
-		t.Errorf("R3 = %#x, want %#x (one past the stream)", cpu.GPR(vax.R3), want)
+	if want := streamAddr + 9; cpu.GPR(registers.R3) != want {
+		t.Errorf("R3 = %#x, want %#x (one past the stream)", cpu.GPR(registers.R3), want)
 	}
 
 	if cpu.PSL().Z() {
@@ -71,11 +71,11 @@ func TestEmulCrcZeroLengthReturnsInitialCrc(t *testing.T) {
 	bytes = append(bytes, absoluteMode(0x2000)...)
 	stepInstruction(t, e, bytes...)
 
-	if cpu.GPR(vax.R0) != 0x1234 {
-		t.Errorf("R0 = %#x, want 0x1234 (initial CRC unchanged)", cpu.GPR(vax.R0))
+	if cpu.GPR(registers.R0) != 0x1234 {
+		t.Errorf("R0 = %#x, want 0x1234 (initial CRC unchanged)", cpu.GPR(registers.R0))
 	}
 	
-	if cpu.GPR(vax.R3) != 0x2000 {
-		t.Errorf("R3 = %#x, want 0x2000 (stream address unchanged)", cpu.GPR(vax.R3))
+	if cpu.GPR(registers.R3) != 0x2000 {
+		t.Errorf("R3 = %#x, want 0x2000 (stream address unchanged)", cpu.GPR(registers.R3))
 	}
 }

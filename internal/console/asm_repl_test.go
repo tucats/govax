@@ -3,7 +3,7 @@ package console
 import (
 	"testing"
 
-	"github.com/tucats/govax/internal/vax"
+	"github.com/tucats/govax/internal/registers"
 )
 
 // newRunnableDispatcher wires a Dispatcher around a freshly VMINIT'd
@@ -86,7 +86,7 @@ func TestDispatchASM_depositsAndAutoCallsEntry(t *testing.T) {
 		t.Fatal("expected InAssemblerMode() false after END START")
 	}
 
-	if got := c.CPU.GPR(vax.R0); got != 10 {
+	if got := c.CPU.GPR(registers.R0); got != 10 {
 		t.Errorf("R0 = %d, want 10 (END START should auto-CALL the routine)", got)
 	}
 
@@ -143,7 +143,7 @@ func TestDispatchASM_depositAddrIntegration(t *testing.T) {
 		t.Fatalf("Call: %v", err)
 	}
 
-	if got := c.CPU.GPR(vax.R0); got != 9 {
+	if got := c.CPU.GPR(registers.R0); got != 9 {
 		t.Errorf("R0 = %d, want 9", got)
 	}
 }

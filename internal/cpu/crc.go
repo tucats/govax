@@ -1,6 +1,6 @@
 package cpu
 
-import "github.com/tucats/govax/internal/vax"
+import "github.com/tucats/govax/internal/registers"
 
 // CRC has no working C reference to port: emul_crc.c's `emul_crc` is a
 // complete no-op stub (`return VAX_OK;`, no computation at all), and its
@@ -69,10 +69,10 @@ func emulCrc(e *Engine, d *Decoded) error {
 		stream++
 	}
 
-	e.cpu.SetGPR(vax.R0, crc)
-	e.cpu.SetGPR(vax.R1, 0)
-	e.cpu.SetGPR(vax.R2, 0)
-	e.cpu.SetGPR(vax.R3, stream)
+	e.cpu.SetGPR(registers.R0, crc)
+	e.cpu.SetGPR(registers.R1, 0)
+	e.cpu.SetGPR(registers.R2, 0)
+	e.cpu.SetGPR(registers.R3, stream)
 
 	psl := e.cpu.PSL()
 	psl.SetN(int32(crc) < 0)

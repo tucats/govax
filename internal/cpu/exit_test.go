@@ -4,7 +4,7 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/tucats/govax/internal/vax"
+	"github.com/tucats/govax/internal/registers"
 )
 
 // p1Stub writes a P1-vector-style service stub at addr: an empty entry
@@ -31,9 +31,9 @@ func TestXfcServiceCallCallsProcedure(t *testing.T) {
 	p1Stub(t, e, stub)
 	putBytes(t, c, e.mem, routine, 0x00, 0x00, 0x04) // entry mask, RET
 
-	c.SetGPR(vax.PC, stub+2) // at the XFC, as after CALLS to the stub
-	c.SetGPR(vax.SP, 0x9000)
-	c.SetGPR(vax.R0, 0x55)
+	c.SetGPR(registers.PC, stub+2) // at the XFC, as after CALLS to the stub
+	c.SetGPR(registers.SP, 0x9000)
+	c.SetGPR(registers.R0, 0x55)
 
 	e.SetSystemServices(&fakeServices{serviceHandled: true, serviceErr: &ServiceCall{Routine: routine, ArgList: argList}})
 
@@ -41,21 +41,21 @@ func TestXfcServiceCallCallsProcedure(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if c.GPR(vax.PC) != routine+2 || c.GPR(vax.AP) != argList {
+	if c.GPR(registers.PC) != routine+2 || c.GPR(registers.AP) != argList {
 		t.Errorf("after the XFC: PC=%#x AP=%#x, want the routine (%#x) with AP at the argument list (%#x)",
-			c.GPR(vax.PC), c.GPR(vax.AP), routine+2, argList)
+			c.GPR(registers.PC), c.GPR(registers.AP), routine+2, argList)
 	}
 
-	if c.GPR(vax.R0) != 0x55 {
-		t.Errorf("R0 = %#x, want it untouched (0x55)", c.GPR(vax.R0))
+	if c.GPR(registers.R0) != 0x55 {
+		t.Errorf("R0 = %#x, want it untouched (0x55)", c.GPR(registers.R0))
 	}
 
 	if err := e.Step(); err != nil { // the routine's RET
 		t.Fatal(err)
 	}
 
-	if c.GPR(vax.PC) != stub+2 {
-		t.Errorf("after the routine's RET: PC=%#x, want the XFC at %#x again", c.GPR(vax.PC), stub+2)
+	if c.GPR(registers.PC) != stub+2 {
+		t.Errorf("after the routine's RET: PC=%#x, want the XFC at %#x again", c.GPR(registers.PC), stub+2)
 	}
 }
 
@@ -76,7 +76,7 @@ func TestXfcImageExitUnwindsToConsoleCall(t *testing.T) {
 	putBytes(t, c, e.mem, main, 0x00, 0x00, 0xFB, 0x00, 0x9F, 0x00, 0x11, 0x00, 0x00)
 	p1Stub(t, e, stub)
 
-	c.SetGPR(vax.SP, 0x9000)
+	c.SetGPR(registers.SP, 0x9000)
 
 	if err := e.CallEntry(main); err != nil {
 		t.Fatal(err)
@@ -92,12 +92,12 @@ func TestXfcImageExitUnwindsToConsoleCall(t *testing.T) {
 		t.Fatalf("Step at the XFC = %v, want ErrConsoleCallReturned", err)
 	}
 
-	if c.GPR(vax.R0) != 0x2A {
-		t.Errorf("R0 = %#x, want the exit status 0x2A", c.GPR(vax.R0))
+	if c.GPR(registers.R0) != 0x2A {
+		t.Errorf("R0 = %#x, want the exit status 0x2A", c.GPR(registers.R0))
 	}
 
-	if c.GPR(vax.SP) != 0x9000 {
-		t.Errorf("SP = %#x, want 0x9000, as before the console's call", c.GPR(vax.SP))
+	if c.GPR(registers.SP) != 0x9000 {
+		t.Errorf("SP = %#x, want 0x9000, as before the console's call", c.GPR(registers.SP))
 	}
 }
 
@@ -108,9 +108,9 @@ func TestXfcImageExitWithoutConsoleCallHalts(t *testing.T) {
 	c := e.cpu
 
 	p1Stub(t, e, 0x1000)
-	c.SetGPR(vax.PC, 0x1002)
-	c.SetGPR(vax.SP, 0x9000)
-	c.SetGPR(vax.FP, 0)
+	c.SetGPR(registers.PC, 0x1002)
+	c.SetGPR(registers.SP, 0x9000)
+	c.SetGPR(registers.FP, 0)
 
 	e.SetSystemServices(&fakeServices{serviceHandled: true, serviceRC: 0x2A, serviceErr: ErrImageExit})
 
@@ -118,8 +118,8 @@ func TestXfcImageExitWithoutConsoleCallHalts(t *testing.T) {
 		t.Fatalf("Step = %v, want ErrHalted", err)
 	}
 
-	if c.GPR(vax.R0) != 0x2A {
-		t.Errorf("R0 = %#x, want the exit status 0x2A", c.GPR(vax.R0))
+	if c.GPR(registers.R0) != 0x2A {
+		t.Errorf("R0 = %#x, want the exit status 0x2A", c.GPR(registers.R0))
 	}
 }
 
@@ -146,13 +146,13 @@ func TestXfcShimImageCall(t *testing.T) {
 	putBytes(t, c, e.mem, image, 0x00, 0x00, 0xFB, 0x00, 0x9F, 0x00, 0x12, 0x00, 0x00)
 	p1Stub(t, e, stub)
 
-	c.SetGPR(vax.SP, 0x9000)
+	c.SetGPR(registers.SP, 0x9000)
 
 	if err := e.CallEntry(cli); err != nil {
 		t.Fatal(err)
 	}
 
-	cliFP, cliSP := c.GPR(vax.FP), c.GPR(vax.SP)
+	cliFP, cliSP := c.GPR(registers.FP), c.GPR(registers.SP)
 
 	fake := &fakeServices{shimHandled: true, shimErr: &ServiceCall{Routine: image, ArgList: argList, Image: true}}
 	e.SetSystemServices(fake)
@@ -161,8 +161,8 @@ func TestXfcShimImageCall(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if c.GPR(vax.PC) != image+2 || c.GPR(vax.AP) != argList {
-		t.Fatalf("after the shim: PC=%#x AP=%#x, want the image (%#x), AP %#x", c.GPR(vax.PC), c.GPR(vax.AP), image+2, argList)
+	if c.GPR(registers.PC) != image+2 || c.GPR(registers.AP) != argList {
+		t.Fatalf("after the shim: PC=%#x AP=%#x, want the image (%#x), AP %#x", c.GPR(registers.PC), c.GPR(registers.AP), image+2, argList)
 	}
 
 	fake.serviceHandled, fake.serviceRC, fake.serviceErr = true, 0x2A, ErrImageExit
@@ -175,8 +175,8 @@ func TestXfcShimImageCall(t *testing.T) {
 		t.Fatalf("Step at the service = %v, want ErrConsoleCallReturned", err)
 	}
 
-	if c.GPR(vax.SP) != cliSP || c.GPR(vax.R0) != 0x2A {
-		t.Errorf("SP=%#x R0=%#x, want the CLI's SP %#x and the status 0x2A", c.GPR(vax.SP), c.GPR(vax.R0), cliSP)
+	if c.GPR(registers.SP) != cliSP || c.GPR(registers.R0) != 0x2A {
+		t.Errorf("SP=%#x R0=%#x, want the CLI's SP %#x and the status 0x2A", c.GPR(registers.SP), c.GPR(registers.R0), cliSP)
 	}
 
 	// The CLI's frame is intact: its saved PC and FP are CallEntry's.

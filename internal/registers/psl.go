@@ -1,4 +1,4 @@
-package vax
+package registers
 
 // PSL is the VAX Processor Status Longword. Bit layout matches the VAX
 // architecture manual's PSL diagram (and the non-BIGENDIAN branch of the C

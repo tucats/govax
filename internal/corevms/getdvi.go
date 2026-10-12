@@ -6,8 +6,8 @@ import (
 	"strings"
 
 	iodev "github.com/tucats/govax/internal/io"
+	"github.com/tucats/govax/internal/registers"
 	"github.com/tucats/govax/internal/sched"
-	"github.com/tucats/govax/internal/vax"
 	"github.com/tucats/govax/internal/vmsdef"
 )
 
@@ -319,7 +319,7 @@ func serviceSysGetdvi(env *Environment, argv []uint32) (uint32, error) {
 		return st, nil
 	}
 
-	if env.cpu.DebugEnabled(vax.DebugDevices) {
+	if env.cpu.DebugEnabled(registers.DebugDevices) {
 		fmt.Fprintf(env.cpu.DebugWriter(), "DEBUG: SYS$GETDVI looks up device %s\n", d.Name)
 	}
 

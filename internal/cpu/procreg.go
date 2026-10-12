@@ -1,6 +1,6 @@
 package cpu
 
-import "github.com/tucats/govax/internal/vax"
+import "github.com/tucats/govax/internal/registers"
 
 // This is the Go port of emul_procreg.c: MTPR/MFPR and the privileged-
 // register access-kind table (init_reg_access/set_priv_reg). LDPCTX/SVPCTX,
@@ -22,8 +22,8 @@ const (
 // defaults to privNone (no access), matching the C source's initial fill.
 var privRegAccessTable = buildPrivRegAccessTable()
 
-func buildPrivRegAccessTable() [vax.MaxPrivReg + 1]privAccess {
-	var t [vax.MaxPrivReg + 1]privAccess
+func buildPrivRegAccessTable() [registers.MaxPrivReg + 1]privAccess {
+	var t [registers.MaxPrivReg + 1]privAccess
 
 	t[0] = privModify  // KSP
 	t[1] = privModify  // ESP
@@ -114,11 +114,11 @@ func emulMtpr(e *Engine, d *Decoded) error {
 // up as of Phase 21 to the real translation-buffer cache internal/vm now
 // maintains -- see docs/PHASE-21.md.
 func setPrivReg(e *Engine, reg int, value uint32) error {
-	if reg < 0 || reg > vax.MaxPrivReg {
+	if reg < 0 || reg > registers.MaxPrivReg {
 		return &Fault{Code: ExcReservedOp}
 	}
 
-	if e.cpu.PSL().CurMod() != vax.Kernel {
+	if e.cpu.PSL().CurMod() != registers.Kernel {
 		return &Fault{Code: ExcPrivileged}
 	}
 
@@ -127,50 +127,50 @@ func setPrivReg(e *Engine, reg int, value uint32) error {
 		return &Fault{Code: ExcReservedOp}
 	}
 
-	switch vax.PrivReg(reg) {
-	case vax.IPL:
+	switch registers.PrivReg(reg) {
+	case registers.IPL:
 		value &= 0x1F
 		psl := e.cpu.PSL()
 		psl.SetIPL(value)
 		e.cpu.SetPSL(psl)
-		e.cpu.SetPR(vax.IPL, value)
+		e.cpu.SetPR(registers.IPL, value)
 
 		// Lowering the IPL can expose a software interrupt already latched
 		// in SISR at a level now above the new IPL; admit each one, highest
 		// level first, matching set_priv_reg's own `for (n = 15; n > value;
 		// n--)` scan.
 		for n := uint32(15); n > value; n-- {
-			sisr := e.cpu.PR(vax.SISR)
+			sisr := e.cpu.PR(registers.SISR)
 			if sisr&(1<<n) != 0 {
-				e.cpu.SetPR(vax.SISR, sisr&^(1<<n))
+				e.cpu.SetPR(registers.SISR, sisr&^(1<<n))
 				e.Interrupt(ExcSoftware1+Exception((n-1)*4), n, 0)
 			}
 		}
 
-	case vax.ASTLVL:
+	case registers.ASTLVL:
 		if value > 4 {
 			return &Fault{Code: ExcReservedOp}
 		}
 
-		e.cpu.SetPR(vax.ASTLVL, value)
+		e.cpu.SetPR(registers.ASTLVL, value)
 
-	case vax.SIRR:
+	case registers.SIRR:
 		value &= 0x0F
 		if value > e.cpu.PSL().IPL() {
 			// Higher priority than the current IPL: take it now rather than
 			// merely latching SISR, matching set_priv_reg's own case 20.
 			e.Interrupt(ExcSoftware1+Exception((value-1)*4), value, 0)
 		} else {
-			e.cpu.SetPR(vax.SISR, e.cpu.PR(vax.SISR)|(1<<value))
-			e.cpu.SetPR(vax.SIRR, value)
+			e.cpu.SetPR(registers.SISR, e.cpu.PR(registers.SISR)|(1<<value))
+			e.cpu.SetPR(registers.SIRR, value)
 		}
 
-	case vax.ICCS:
+	case registers.ICCS:
 		// Only these bits are settable via MTPR, matching set_priv_reg's own
 		// mask; RUN/DON reflect current status rather than being freely
 		// writable.
 		value &= 0x800000F1
-		iccs := e.cpu.PR(vax.ICCS)
+		iccs := e.cpu.PR(registers.ICCS)
 
 		if value&iccsInt != 0 { // write to ICCS<INT>: clear it
 			iccs &^= iccsInt
@@ -183,11 +183,11 @@ func setPrivReg(e *Engine, reg int, value uint32) error {
 		}
 
 		if value&iccsXFR != 0 { // write to ICCS<XFR>: reload ICR from NICR
-			e.cpu.SetPR(vax.ICR, e.cpu.PR(vax.NICR))
+			e.cpu.SetPR(registers.ICR, e.cpu.PR(registers.NICR))
 		}
 
 		if value&iccsSGL != 0 { // write to ICCS<SGL>: increment the clock
-			e.cpu.SetPR(vax.ICR, e.cpu.PR(vax.ICR)+1)
+			e.cpu.SetPR(registers.ICR, e.cpu.PR(registers.ICR)+1)
 		}
 
 		iccs = (iccs &^ deviceIE) | (value & deviceIE) // write to ICCS<IE>
@@ -195,15 +195,15 @@ func setPrivReg(e *Engine, reg int, value uint32) error {
 			iccs &^= iccsErr
 		}
 
-		e.cpu.SetPR(vax.ICCS, iccs)
+		e.cpu.SetPR(registers.ICCS, iccs)
 
-	case vax.RXCS:
+	case registers.RXCS:
 		// Only the IE bit is writable; DON is status-only.
 		value &= deviceIE
-		old := e.cpu.PR(vax.RXCS)
+		old := e.cpu.PR(registers.RXCS)
 		wasIE := old & deviceIE
 		rxcs := (old & 0x80) | value
-		e.cpu.SetPR(vax.RXCS, rxcs)
+		e.cpu.SetPR(registers.RXCS, rxcs)
 
 		// If IE was already set and a byte is (still) waiting, (re-)signal
 		// the interrupt -- matching set_priv_reg's own case 32, including
@@ -212,12 +212,12 @@ func setPrivReg(e *Engine, reg int, value uint32) error {
 			e.Interrupt(ExcConRead, 20, 1)
 		}
 
-	case vax.TXCS:
+	case registers.TXCS:
 		// Only the IE bit is writable; RDY is always set (a real console
 		// transmitter completes instantly in this emulator).
 		value &= deviceIE
 		if value != 0 {
-			e.cpu.SetPR(vax.TXCS, 0xC0)
+			e.cpu.SetPR(registers.TXCS, 0xC0)
 			// Real VAX IPL for the console terminal is 20 (0x14); the C
 			// reference's own two TXCS/TXDB call sites use the literal
 			// 0x20 (32 decimal) here despite this same case's own comment
@@ -228,37 +228,37 @@ func setPrivReg(e *Engine, reg int, value uint32) error {
 			// directly rather than replicated; see docs/DEVIATIONS.md.
 			e.Interrupt(ExcConWrite, 20, 0)
 		} else {
-			e.cpu.SetPR(vax.TXCS, 0x80)
+			e.cpu.SetPR(registers.TXCS, 0x80)
 		}
 
-	case vax.TXDB:
+	case registers.TXDB:
 		value &= 0x7F
 		if e.services != nil {
 			e.services.ConsoleWriteByte(byte(value))
 		}
 
-		txcs := e.cpu.PR(vax.TXCS)
+		txcs := e.cpu.PR(registers.TXCS)
 		wasIE := txcs & 0x60 // matches set_priv_reg's own (unusual) mask
 		txcs |= 0x80
-		e.cpu.SetPR(vax.TXCS, txcs)
+		e.cpu.SetPR(registers.TXCS, txcs)
 
 		if wasIE != 0 {
 			e.Interrupt(ExcConWrite, 20, 0) // see the IPL note on case TXCS above
 		}
 
-	case vax.TODR:
+	case registers.TODR:
 		// TODR isn't stored: it's computed from the engine's clock when
 		// read, and a write sets where it counts from (clock.go).
 		e.SetTODR(value)
 
-	case vax.TBIA:
+	case registers.TBIA:
 		e.mem.InvalidateTB()
 
-	case vax.TBIS:
+	case registers.TBIS:
 		e.mem.InvalidatePage(value)
 
 	default:
-		e.cpu.SetPR(vax.PrivReg(reg), value)
+		e.cpu.SetPR(registers.PrivReg(reg), value)
 	}
 
 	return nil
@@ -272,11 +272,11 @@ func emulMfpr(e *Engine, d *Decoded) error {
 	}
 
 	reg := int(int32(uint32(regRaw)))
-	if reg < 0 || reg > vax.MaxPrivReg {
+	if reg < 0 || reg > registers.MaxPrivReg {
 		return &Fault{Code: ExcReservedOp}
 	}
 
-	if e.cpu.PSL().CurMod() != vax.Kernel {
+	if e.cpu.PSL().CurMod() != registers.Kernel {
 		return &Fault{Code: ExcPrivileged}
 	}
 
@@ -285,7 +285,7 @@ func emulMfpr(e *Engine, d *Decoded) error {
 		return &Fault{Code: ExcReservedOp}
 	}
 
-	if vax.PrivReg(reg) == vax.RXDB {
+	if registers.PrivReg(reg) == registers.RXDB {
 		// Pull a real byte from the console's own input source (the same
 		// one XFC$CONSOLE_READ uses) as this read's side effect, rather
 		// than returning whatever stale value happens to be sitting in the
@@ -293,16 +293,16 @@ func emulMfpr(e *Engine, d *Decoded) error {
 		// the C reference's own RXDB was never reliably populated on its
 		// target (Linux) platform.
 		if e.services != nil {
-			e.cpu.SetPR(vax.RXDB, uint32(e.services.ConsoleReadByte()))
+			e.cpu.SetPR(registers.RXDB, uint32(e.services.ConsoleReadByte()))
 		}
-		// emul_mfpr.c's own "clear DON bit" side effect (`vax.RXCS &= 0x40`
+		// emul_mfpr.c's own "clear DON bit" side effect (`registers.RXCS &= 0x40`
 		// -- clears every bit except IE, not just DON).
-		e.cpu.SetPR(vax.RXCS, e.cpu.PR(vax.RXCS)&deviceIE)
+		e.cpu.SetPR(registers.RXCS, e.cpu.PR(registers.RXCS)&deviceIE)
 	}
 
 	// ReadPR is the register file, except for registers computed when
 	// they're read (TODR; see clock.go).
-	value := e.ReadPR(vax.PrivReg(reg))
+	value := e.ReadPR(registers.PrivReg(reg))
 
 	return d.Operands[1].Store(e.cpu, e.mem, uint64(value))
 }

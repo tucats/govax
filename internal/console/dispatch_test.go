@@ -9,7 +9,7 @@ import (
 	"github.com/tucats/govax/internal/dcl"
 	"github.com/tucats/govax/internal/help"
 	"github.com/tucats/govax/internal/machine"
-	"github.com/tucats/govax/internal/vax"
+	"github.com/tucats/govax/internal/registers"
 )
 
 // evaxGrammarPathForConsole locates internal/bootdata/files/evax.dcl, the
@@ -95,7 +95,7 @@ func TestDispatch_showViaDCL(t *testing.T) {
 
 func TestDispatch_showRegisterShortcut(t *testing.T) {
 	d, c := newTestDispatcher(t)
-	c.CPU.SetGPR(vax.R2, 0x55)
+	c.CPU.SetGPR(registers.R2, 0x55)
 
 	if err := d.Console.ShowRegisterOrPrivReg("R2"); err != nil {
 		t.Fatalf("Dispatch(SHOW R2): %v", err)
@@ -140,7 +140,7 @@ func TestDispatch_debugDCLTrace(t *testing.T) {
 	c, buf := newTestConsole(t)
 	g := loadEvaxGrammar(t)
 	d := NewDispatcher(c, g, nil)
-	c.CPU.SetDebug(vax.DebugDCL)
+	c.CPU.SetDebug(registers.DebugDCL)
 
 	if err := d.Dispatch("SHOW RADIX"); err != nil {
 		t.Fatalf("Dispatch: %v", err)
@@ -178,7 +178,7 @@ func TestDispatch_setDebugAndShowDebug(t *testing.T) {
 		t.Fatalf("Dispatch(SET DEBUG): %v", err)
 	}
 
-	if !c.CPU.DebugEnabled(vax.DebugVM) || c.CPU.DebugEnabled(vax.DebugUserHalt) {
+	if !c.CPU.DebugEnabled(registers.DebugVM) || c.CPU.DebugEnabled(registers.DebugUserHalt) {
 		t.Errorf("Debug() = %#x, want VM set and USERHALT cleared", c.CPU.Debug())
 	}
 

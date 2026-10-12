@@ -5,7 +5,7 @@ import (
 
 	iodev "github.com/tucats/govax/internal/io"
 	"github.com/tucats/govax/internal/lnm"
-	"github.com/tucats/govax/internal/vax"
+	"github.com/tucats/govax/internal/registers"
 )
 
 // Process deletion (docs/PHASE-45.md, subtask 6). The fixture has no
@@ -29,12 +29,12 @@ func TestDeleteProcess_rundown(t *testing.T) {
 
 	// The fixture runs in kernel mode: image rundown alone would keep
 	// all of this.
-	tt := assignCall(t, child, a, "TTA0", uint32(vax.Kernel))
+	tt := assignCall(t, child, a, "TTA0", uint32(registers.Kernel))
 	r0, _ := crembx(t, child, a, 0, 0, 0, "CHILD_MBX")
 	wantR0(t, r0, ssNormal)
 
-	child.queueAST(0x1000, 0, uint32(vax.Kernel))
-	child.Process.exitHandlers[vax.Executive] = []uint32{0x2000}
+	child.queueAST(0x1000, 0, uint32(registers.Kernel))
+	child.Process.exitHandlers[registers.Executive] = []uint32{0x2000}
 
 	// The child took 400 of its owner's 1000 (10ms units) and used 100.
 	parent.Process.CPULimit = 600
@@ -72,7 +72,7 @@ func TestDeleteProcess_rundown(t *testing.T) {
 		t.Errorf("TTA0's reference count is %d", d.RefCnt)
 	}
 
-	if len(child.Process.ast.queue) != 0 || child.Process.exitHandlers[vax.Executive] != nil {
+	if len(child.Process.ast.queue) != 0 || child.Process.exitHandlers[registers.Executive] != nil {
 		t.Error("the child's kernel AST or executive exit handler survived")
 	}
 

@@ -1,6 +1,6 @@
 package cpu
 
-import "github.com/tucats/govax/internal/vax"
+import "github.com/tucats/govax/internal/registers"
 
 // BBS/BBC and BBSS/BBCS/BBSC/BBCC/BBSSI/BBCCI. 
 //
@@ -62,7 +62,7 @@ func emulBb(e *Engine, d *Decoded) error {
 	}
 
 	if bit == test {
-		e.cpu.SetGPR(vax.PC, d.Operands[2].Addr)
+		e.cpu.SetGPR(registers.PC, d.Operands[2].Addr)
 	}
 
 	return nil
@@ -111,7 +111,7 @@ func emulBbState(e *Engine, d *Decoded) error {
 	}
 
 	if original == test {
-		e.cpu.SetGPR(vax.PC, d.Operands[2].Addr)
+		e.cpu.SetGPR(registers.PC, d.Operands[2].Addr)
 	}
 
 	return nil

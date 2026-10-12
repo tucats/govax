@@ -5,7 +5,7 @@ import (
 
 	"github.com/tucats/govax/internal/dcl"
 	"github.com/tucats/govax/internal/machine"
-	"github.com/tucats/govax/internal/vax"
+	"github.com/tucats/govax/internal/registers"
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
@@ -296,7 +296,7 @@ func (d *Debugger) stepRun(startAddr *uint32, req stepRequest) (runOutcome, erro
 	c := d.Machine
 
 	if startAddr != nil {
-		c.CPU.SetGPR(vax.PC, *startAddr)
+		c.CPU.SetGPR(registers.PC, *startAddr)
 	} else if err := d.requireProgram(); err != nil {
 		return runEnded, err
 	}
@@ -369,7 +369,7 @@ func (d *Debugger) stepUnit(req stepRequest) (runOutcome, bool, error) {
 	// the step leaves such code (into a routine of the run-time library,
 	// or off the end of the program into the image driver) it carries on
 	// until it is back in some, or the program ends.
-	hadLines := c.HasLineInfo(c.CPU.GPR(vax.PC))
+	hadLines := c.HasLineInfo(c.CPU.GPR(registers.PC))
 
 	for {
 		if outcome, done, err := d.stepOne(); done {
@@ -393,7 +393,7 @@ func (d *Debugger) stepUnit(req stepRequest) (runOutcome, bool, error) {
 			}
 		}
 
-		pc := c.CPU.GPR(vax.PC)
+		pc := c.CPU.GPR(registers.PC)
 		hasLines := c.HasLineInfo(pc)
 
 		if !req.byInstruction && hadLines && !hasLines {
@@ -424,9 +424,9 @@ func (d *Debugger) stepOne() (outcome runOutcome, done bool, err error) {
 
 	d.snapshotWatches()
 
-	startPC := c.CPU.GPR(vax.PC)
+	startPC := c.CPU.GPR(registers.PC)
 	finish := c.TraceStep(startPC, false)
-	userStep := c.Engine.CPU().DebugEnabled(vax.DebugUserStep)
+	userStep := c.Engine.CPU().DebugEnabled(registers.DebugUserStep)
 
 	for {
 		if stepErr := c.StepMachine(); stepErr != nil {
@@ -480,7 +480,7 @@ func (d *Debugger) stepToClass(req stepRequest) (runOutcome, bool, error) {
 	// A class step always shows the instruction it stopped at, since
 	// that is what the user asked about.
 	req.byInstruction = true
-	d.reportStep(req, c.CPU.GPR(vax.PC))
+	d.reportStep(req, c.CPU.GPR(registers.PC))
 
 	return runStopped, true, nil
 }
@@ -499,18 +499,18 @@ func (d *Debugger) stepToClass(req stepRequest) (runOutcome, bool, error) {
 func (d *Debugger) stepReturn(req stepRequest) (runOutcome, bool, error) {
 	c := d.Machine
 
-	if c.CPU.GPR(vax.FP) == 0 || c.CPU.GPR(vax.AP) == 0 {
+	if c.CPU.GPR(registers.FP) == 0 || c.CPU.GPR(registers.AP) == 0 {
 		return runEnded, false, vmserrors.New(vmserrors.CLI_NOFRAMES)
 	}
 
 	// The frame must be readable: its saved PC is the word at FP+16.
-	if _, err := c.Mem.LoadLongword(c.CPU, c.CPU.GPR(vax.FP)+16); err != nil {
+	if _, err := c.Mem.LoadLongword(c.CPU, c.CPU.GPR(registers.FP)+16); err != nil {
 		return runEnded, false, err
 	}
 
 	d.pendingReturn = &pendingReturn{
-		frame:  c.CPU.GPR(vax.FP),
-		from:   c.LocationText(c.CPU.GPR(vax.PC)),
+		frame:  c.CPU.GPR(registers.FP),
+		from:   c.LocationText(c.CPU.GPR(registers.PC)),
 		silent: req.silent,
 
 		noSource: req.noSource,
@@ -534,7 +534,7 @@ func (d *Debugger) returnDue() bool {
 	}
 
 	c := d.Machine
-	fp := c.CPU.GPR(vax.FP)
+	fp := c.CPU.GPR(registers.FP)
 
 	// The stack grows toward lower addresses, so a frame above the current
 	// one is gone.
@@ -552,7 +552,7 @@ func (d *Debugger) returnDue() bool {
 	d.pendingReturn = nil
 
 	if !p.silent {
-		pc := c.CPU.GPR(vax.PC)
+		pc := c.CPU.GPR(registers.PC)
 		c.Printf("stepped on return from %s to %s: %s\n", p.from, c.LocationText(pc), c.InstructionText(pc))
 
 		if !p.noSource {

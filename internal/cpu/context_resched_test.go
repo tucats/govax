@@ -6,7 +6,7 @@ import (
 
 	"github.com/tucats/govax/internal/asm"
 	"github.com/tucats/govax/internal/cpu"
-	"github.com/tucats/govax/internal/vax"
+	"github.com/tucats/govax/internal/registers"
 	"github.com/tucats/govax/internal/vm"
 )
 
@@ -77,7 +77,7 @@ func TestReschedProgram(t *testing.T) {
 		return s.Value
 	}
 
-	c, mem := vax.New(), vm.NewMemory(1<<20)
+	c, mem := registers.New(), vm.NewMemory(1<<20)
 	if err := mem.StorePhysical(origin, code); err != nil {
 		t.Fatal(err)
 	}
@@ -90,7 +90,7 @@ func TestReschedProgram(t *testing.T) {
 
 	// The IPL 3 software interrupt's SCB vector: RESCHED, on the kernel
 	// stack (bit 0 clear).
-	c.SetPR(vax.SCBB, scbb)
+	c.SetPR(registers.SCBB, scbb)
 	store(scbb+uint32(cpu.ExcSoftware1)+2*4, sym("RESCHED"))
 	store(sym("OTHER"), pcbB)
 
@@ -102,7 +102,7 @@ func TestReschedProgram(t *testing.T) {
 		pcb := cpu.PCB{
 			PC: p.pc, P0BR: 0x80000000, P1BR: 0x80000000 - 1<<23, P1LR: 0x200000, ASTLVL: 4,
 		}
-		pcb.SP[vax.Kernel] = p.ksp
+		pcb.SP[registers.Kernel] = p.ksp
 
 		if err := cpu.WritePCB(mem, p.addr, &pcb); err != nil {
 			t.Fatal(err)
@@ -110,10 +110,10 @@ func TestReschedProgram(t *testing.T) {
 	}
 
 	// Process A is running, in kernel mode at IPL 0.
-	c.SetPR(vax.PCBB, pcbA)
-	c.SetPR(vax.ISP, isp)
-	c.SetGPR(vax.SP, kspA)
-	c.SetGPR(vax.PC, sym("PROCA"))
+	c.SetPR(registers.PCBB, pcbA)
+	c.SetPR(registers.ISP, isp)
+	c.SetGPR(registers.SP, kspA)
+	c.SetGPR(registers.PC, sym("PROCA"))
 
 	e := cpu.NewEngine(c, mem)
 
@@ -127,16 +127,16 @@ func TestReschedProgram(t *testing.T) {
 	}
 
 	// A is running: its registers, its kernel stack back where it began.
-	if c.GPR(vax.R2) != 0xA1 || c.GPR(vax.R3) != 0xA2 {
-		t.Errorf("A's R2, R3 = %#x, %#x; want 0xA1, 0xA2", c.GPR(vax.R2), c.GPR(vax.R3))
+	if c.GPR(registers.R2) != 0xA1 || c.GPR(registers.R3) != 0xA2 {
+		t.Errorf("A's R2, R3 = %#x, %#x; want 0xA1, 0xA2", c.GPR(registers.R2), c.GPR(registers.R3))
 	}
 
-	if c.GPR(vax.SP) != kspA || c.PR(vax.ISP) != isp || c.PSL().IS() || c.PSL().IPL() != 0 {
+	if c.GPR(registers.SP) != kspA || c.PR(registers.ISP) != isp || c.PSL().IS() || c.PSL().IPL() != 0 {
 		t.Errorf("SP %#x, ISP %#x, PSL %#x; want A's kernel stack at IPL 0",
-			c.GPR(vax.SP), c.PR(vax.ISP), uint32(c.PSL()))
+			c.GPR(registers.SP), c.PR(registers.ISP), uint32(c.PSL()))
 	}
 
-	if got := c.PR(vax.PCBB); got != pcbA {
+	if got := c.PR(registers.PCBB); got != pcbA {
 		t.Errorf("PCBB = %#x, want A's", got)
 	}
 
@@ -155,7 +155,7 @@ func TestReschedProgram(t *testing.T) {
 		t.Errorf("B's PC = %#x, want %#x (its BRB)", b.PC, want)
 	}
 
-	if b.SP[vax.Kernel] != kspB || b.PSL != 0 {
-		t.Errorf("B's KSP, PSL = %#x, %#x; want %#x, 0", b.SP[vax.Kernel], uint32(b.PSL), kspB)
+	if b.SP[registers.Kernel] != kspB || b.PSL != 0 {
+		t.Errorf("B's KSP, PSL = %#x, %#x; want %#x, 0", b.SP[registers.Kernel], uint32(b.PSL), kspB)
 	}
 }

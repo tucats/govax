@@ -3,7 +3,7 @@ package cpu
 import (
 	"testing"
 
-	"github.com/tucats/govax/internal/vax"
+	"github.com/tucats/govax/internal/registers"
 )
 
 // instructionLen4NextPC computes the NextPC (and, for a taken branch, the
@@ -33,9 +33,9 @@ func TestEmulBb(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			cpu, mem := fixture()
 			e := NewEngine(cpu, mem)
-			cpu.SetGPR(vax.R1, tc.regValue)
+			cpu.SetGPR(registers.R1, tc.regValue)
 
-			stepInstruction(t, e, tc.opcode, tc.position, regMode(vax.R1), 0x10)
+			stepInstruction(t, e, tc.opcode, tc.position, regMode(registers.R1), 0x10)
 
 			nextPC, taken := bitBranchTargets(0x10)
 			want := nextPC
@@ -44,12 +44,12 @@ func TestEmulBb(t *testing.T) {
 				want = taken
 			}
 
-			if got := cpu.GPR(vax.PC); got != want {
+			if got := cpu.GPR(registers.PC); got != want {
 				t.Errorf("PC = %#x, want %#x", got, want)
 			}
 
 			// BBS/BBC never modify the tested operand.
-			if got := cpu.GPR(vax.R1); got != tc.regValue {
+			if got := cpu.GPR(registers.R1); got != tc.regValue {
 				t.Errorf("R1 = %#x, want unchanged %#x", got, tc.regValue)
 			}
 		})
@@ -69,7 +69,7 @@ func TestEmulBbMemoryBase(t *testing.T) {
 	nextPC := uint32(base) + uint32(len(bytes))
 
 	want := nextPC + 0x10
-	if got := cpu.GPR(vax.PC); got != want {
+	if got := cpu.GPR(registers.PC); got != want {
 		t.Errorf("PC = %#x, want %#x", got, want)
 	}
 }
@@ -80,18 +80,18 @@ func TestEmulBbMemoryBase(t *testing.T) {
 func TestEmulBbLiteralBaseFaults(t *testing.T) {
 	e := newEngine()
 	cpu := e.cpu
-	cpu.SetGPR(vax.PC, base)
+	cpu.SetGPR(registers.PC, base)
 	putBytes(t, cpu, e.mem, base, 0xE0, 4, 0x00, 0x10) // base = short literal 0
-	cpu.SetGPR(vax.SP, 0x7000)
-	cpu.SetPR(vax.KSP, 0x7000)
+	cpu.SetGPR(registers.SP, 0x7000)
+	cpu.SetPR(registers.KSP, 0x7000)
 	putVector(t, e, ExcReservedAddr, 0x300, 0)
 
 	if err := e.Step(); err != nil {
 		t.Fatalf("Step: %v (fault should be handled, not propagated)", err)
 	}
 
-	if cpu.GPR(vax.PC) != 0x300 {
-		t.Errorf("PC = %#x, want 0x300 (fault vector)", cpu.GPR(vax.PC))
+	if cpu.GPR(registers.PC) != 0x300 {
+		t.Errorf("PC = %#x, want 0x300 (fault vector)", cpu.GPR(registers.PC))
 	}
 }
 
@@ -119,9 +119,9 @@ func TestEmulBbState(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			cpu, mem := fixture()
 			e := NewEngine(cpu, mem)
-			cpu.SetGPR(vax.R1, tc.initialBit) // field is bit 0 of R1
+			cpu.SetGPR(registers.R1, tc.initialBit) // field is bit 0 of R1
 
-			stepInstruction(t, e, tc.opcode, 0, regMode(vax.R1), 0x10)
+			stepInstruction(t, e, tc.opcode, 0, regMode(registers.R1), 0x10)
 
 			nextPC, taken := bitBranchTargets(0x10)
 			
@@ -130,11 +130,11 @@ func TestEmulBbState(t *testing.T) {
 				want = taken
 			}
 
-			if got := cpu.GPR(vax.PC); got != want {
+			if got := cpu.GPR(registers.PC); got != want {
 				t.Errorf("PC = %#x, want %#x", got, want)
 			}
 
-			gotBit, err := getRegisterField(cpu, 0, 1, vax.R1)
+			gotBit, err := getRegisterField(cpu, 0, 1, registers.R1)
 			if err != nil {
 				t.Fatalf("getRegisterField: %v", err)
 			}
@@ -157,7 +157,7 @@ func TestEmulBbStateMemoryBase(t *testing.T) {
 	stepInstruction(t, e, bytes...)
 
 	nextPC := uint32(base) + uint32(len(bytes))
-	if got := cpu.GPR(vax.PC); got != nextPC {
+	if got := cpu.GPR(registers.PC); got != nextPC {
 		t.Errorf("PC = %#x, want %#x (not taken)", got, nextPC)
 	}
 	

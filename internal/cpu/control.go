@@ -1,6 +1,6 @@
 package cpu
 
-import "github.com/tucats/govax/internal/vax"
+import "github.com/tucats/govax/internal/registers"
 
 func init() {
 	instructionTable.SetHandler(instructionTable.Lookup(Opcode{Function: 0x00}), emulHalt) // HALT
@@ -14,7 +14,7 @@ func init() {
 // `!(vax.debug & DBG_USERHALT) && vax.pslw.cur_mod > 0` check), which lets
 // HALT stop the machine from any mode. See docs/PHASE-17.md sub-phase 2.
 func emulHalt(e *Engine, d *Decoded) error {
-	if !e.cpu.DebugEnabled(vax.DebugUserHalt) && e.cpu.PSL().CurMod() != vax.Kernel {
+	if !e.cpu.DebugEnabled(registers.DebugUserHalt) && e.cpu.PSL().CurMod() != registers.Kernel {
 		return &Fault{Code: ExcPrivileged}
 	}
 	

@@ -5,8 +5,8 @@ import (
 	"math"
 
 	"github.com/tucats/govax/internal/lck"
+	"github.com/tucats/govax/internal/registers"
 	"github.com/tucats/govax/internal/sched"
-	"github.com/tucats/govax/internal/vax"
 	"github.com/tucats/govax/internal/vmsdef"
 )
 
@@ -205,7 +205,7 @@ func (env *Environment) lockAccess(l *lck.Lock) uint32 {
 		return ssIvMode
 	}
 
-	if l.Resource.Group == 0 && caller > uint32(vax.Executive) && !p.hasPrivilege(privSYSLCK) {
+	if l.Resource.Group == 0 && caller > uint32(registers.Executive) && !p.hasPrivilege(privSYSLCK) {
 		return ssNoSysLck
 	}
 

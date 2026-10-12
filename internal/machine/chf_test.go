@@ -6,7 +6,7 @@ import (
 	"testing"
 
 	"github.com/tucats/govax/internal/cpu"
-	"github.com/tucats/govax/internal/vax"
+	"github.com/tucats/govax/internal/registers"
 )
 
 // newCHFConsole returns a runnable console with FP/AP left at zero (no call
@@ -66,8 +66,8 @@ func writeFrame(t *testing.T, c *Machine, addr, handler, nextFP uint32) {
 
 func TestHandleConsoleFault_noFramesFormatsAndHalts(t *testing.T) {
 	c, _ := newCHFConsole(t)
-	c.CPU.SetGPR(vax.FP, 0)
-	c.CPU.SetGPR(vax.AP, 0)
+	c.CPU.SetGPR(registers.FP, 0)
+	c.CPU.SetGPR(registers.AP, 0)
 
 	fault := &cpu.ConsoleHandlerFault{
 		Fault: &cpu.Fault{Code: cpu.ExcReservedOp, Args: []uint32{0xAAAA}},
@@ -100,8 +100,8 @@ func TestHandleConsoleFault_frameChainNoHandlerFormatsAndHalts(t *testing.T) {
 	// zero -- chf's own "fp == 0" stop condition, walked once and giving up,
 	// same observable outcome as no frames at all but exercising the walk.
 	writeFrame(t, c, base, 0, 0)
-	c.CPU.SetGPR(vax.FP, base)
-	c.CPU.SetGPR(vax.AP, base)
+	c.CPU.SetGPR(registers.FP, base)
+	c.CPU.SetGPR(registers.AP, base)
 
 	fault := &cpu.ConsoleHandlerFault{
 		Fault: &cpu.Fault{Code: cpu.ExcAccessViol},
@@ -141,10 +141,10 @@ func TestChf_handlerContinuesResumesAtOriginalFaultPC(t *testing.T) {
 	}
 
 	writeFrame(t, c, base, handlerAddr, 0)
-	c.CPU.SetGPR(vax.FP, base)
-	c.CPU.SetGPR(vax.AP, base)
-	c.CPU.SetGPR(vax.R0, 0x1111)
-	c.CPU.SetGPR(vax.R1, 0x2222)
+	c.CPU.SetGPR(registers.FP, base)
+	c.CPU.SetGPR(registers.AP, base)
+	c.CPU.SetGPR(registers.R0, 0x1111)
+	c.CPU.SetGPR(registers.R1, 0x2222)
 
 	fault := &cpu.ConsoleHandlerFault{
 		Fault: &cpu.Fault{Code: cpu.ExcReservedOp},
@@ -162,15 +162,15 @@ func TestChf_handlerContinuesResumesAtOriginalFaultPC(t *testing.T) {
 		t.Error("expected the machine NOT to be halted -- the handler continued")
 	}
 
-	if got := c.CPU.GPR(vax.PC); got != 0x9000 {
+	if got := c.CPU.GPR(registers.PC); got != 0x9000 {
 		t.Errorf("PC = %#x, want the original fault PC 0x9000 restored", got)
 	}
 
-	if got := c.CPU.GPR(vax.R0); got != 0x1111 {
+	if got := c.CPU.GPR(registers.R0); got != 0x1111 {
 		t.Errorf("R0 = %#x, want the original 0x1111 restored", got)
 	}
 
-	if got := c.CPU.GPR(vax.R1); got != 0x2222 {
+	if got := c.CPU.GPR(registers.R1); got != 0x2222 {
 		t.Errorf("R1 = %#x, want the original 0x2222 restored", got)
 	}
 }
@@ -190,9 +190,9 @@ func TestChf_handlerDeclinesRestoresRegistersAndKeepsSearching(t *testing.T) {
 	}
 
 	writeFrame(t, c, base, handlerAddr, 0) // declines, then fp=0 ends the search
-	c.CPU.SetGPR(vax.FP, base)
-	c.CPU.SetGPR(vax.AP, base)
-	c.CPU.SetGPR(vax.R0, 0x3333)
+	c.CPU.SetGPR(registers.FP, base)
+	c.CPU.SetGPR(registers.AP, base)
+	c.CPU.SetGPR(registers.R0, 0x3333)
 
 	fault := &cpu.ConsoleHandlerFault{
 		Fault: &cpu.Fault{Code: cpu.ExcReservedOp},
@@ -209,7 +209,7 @@ func TestChf_handlerDeclinesRestoresRegistersAndKeepsSearching(t *testing.T) {
 		t.Error("expected the machine to be halted -- the only handler declined")
 	}
 
-	if got := c.CPU.GPR(vax.R0); got != 0x3333 {
+	if got := c.CPU.GPR(registers.R0); got != 0x3333 {
 		t.Errorf("R0 = %#x, want the pre-call 0x3333 restored after the handler declined", got)
 	}
 }

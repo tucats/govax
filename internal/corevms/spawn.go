@@ -6,8 +6,8 @@ import (
 	"strings"
 
 	"github.com/tucats/govax/internal/lnm"
+	"github.com/tucats/govax/internal/registers"
 	"github.com/tucats/govax/internal/sched"
-	"github.com/tucats/govax/internal/vax"
 	"github.com/tucats/govax/internal/vmsdef"
 )
 
@@ -185,7 +185,7 @@ func (env *Environment) Spawn(req SpawnRequest) (*Environment, uint32) {
 		env.spawnWait = child
 	}
 
-	if env.cpu.DebugEnabled(vax.DebugProcess) {
+	if env.cpu.DebugEnabled(registers.DebugProcess) {
 		fmt.Fprintf(env.cpu.DebugWriter(), "DEBUG(PROCESS): %08X spawns %08X (%s), command %q\n",
 			p.PID, child.Process.PID, name, req.Command)
 	}

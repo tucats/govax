@@ -8,7 +8,7 @@ import (
 
 	"github.com/tucats/govax/internal/console"
 	"github.com/tucats/govax/internal/console/consoletest"
-	"github.com/tucats/govax/internal/vax"
+	"github.com/tucats/govax/internal/registers"
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
@@ -41,7 +41,7 @@ func TestASMThenCall(t *testing.T) {
 
 	const want = 0xC8600 ^ 0x10
 
-	if got := c.CPU.GPR(vax.R4); got != want {
+	if got := c.CPU.GPR(registers.R4); got != want {
 		t.Errorf("R4 = %#x, want %#x", got, want)
 	}
 }
@@ -66,7 +66,7 @@ func TestCallWithArgumentList(t *testing.T) {
 		t.Fatalf("CALL: %v", err)
 	}
 
-	if got := c.CPU.GPR(vax.R0); got != 42 {
+	if got := c.CPU.GPR(registers.R0); got != 42 {
 		t.Errorf("R0 = %d, want 42", got)
 	}
 
@@ -75,7 +75,7 @@ func TestCallWithArgumentList(t *testing.T) {
 		t.Fatalf("CALL, blank before the list: %v", err)
 	}
 
-	if got := c.CPU.GPR(vax.R0); got != 8 {
+	if got := c.CPU.GPR(registers.R0); got != 8 {
 		t.Errorf("R0 = %d, want 8", got)
 	}
 
@@ -91,7 +91,7 @@ func TestCallWithArgumentList(t *testing.T) {
 			t.Errorf("%s = %v, want EXTRAPARAMETER", cmd, err)
 		}
 
-		if got := c.CPU.GPR(vax.R0); got != 42 {
+		if got := c.CPU.GPR(registers.R0); got != 42 {
 			t.Errorf("after %s, R0 = %d, want 42 (not called)", cmd, got)
 		}
 	}
@@ -116,7 +116,7 @@ func TestASMInteractive(t *testing.T) {
 		t.Fatalf("GO: %v", err)
 	}
 
-	if got := c.CPU.GPR(vax.R0); got != 42 {
+	if got := c.CPU.GPR(registers.R0); got != 42 {
 		t.Errorf("R0 = %d, want 42", got)
 	}
 }

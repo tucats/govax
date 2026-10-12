@@ -4,14 +4,14 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/tucats/govax/internal/vax"
+	"github.com/tucats/govax/internal/registers"
 )
 
 // setFloatReg stores value as size-byte VAX F/D-floating bits into cpu's
 // register r (and r+1 for size 8), via the already-verified fpuStore
 // (fpu_test.go) -- this file's tests focus on operand order/condition
 // codes/opcode wiring, not re-deriving raw bit patterns by hand.
-func setFloatReg(t *testing.T, cpu *vax.CPU, size int, r vax.Reg, value float64) {
+func setFloatReg(t *testing.T, cpu *registers.CPU, size int, r registers.Reg, value float64) {
 	t.Helper()
 
 	raw, err := fpuStore(cpu, size, value)
@@ -27,7 +27,7 @@ func setFloatReg(t *testing.T, cpu *vax.CPU, size int, r vax.Reg, value float64)
 }
 
 // getFloatReg is setFloatReg's inverse, via the already-verified fpuLoad.
-func getFloatReg(t *testing.T, cpu *vax.CPU, size int, r vax.Reg) float64 {
+func getFloatReg(t *testing.T, cpu *registers.CPU, size int, r registers.Reg) float64 {
 	t.Helper()
 	
 	raw := uint64(cpu.GPR(r))
@@ -55,12 +55,12 @@ func TestEmulFAdd(t *testing.T) {
 		// R1:R2 and R3:R4 -- non-overlapping register pairs, needed for the
 		// size-8 (D_floating) case since a register operand there occupies
 		// two consecutive registers.
-		setFloatReg(t, cpu, size, vax.R1, 2.5)
-		setFloatReg(t, cpu, size, vax.R3, 4.0)
+		setFloatReg(t, cpu, size, registers.R1, 2.5)
+		setFloatReg(t, cpu, size, registers.R3, 4.0)
 
-		stepInstruction(t, e, opcode, regMode(vax.R1), regMode(vax.R3))
+		stepInstruction(t, e, opcode, regMode(registers.R1), regMode(registers.R3))
 
-		if got := getFloatReg(t, cpu, size, vax.R3); got != 6.5 {
+		if got := getFloatReg(t, cpu, size, registers.R3); got != 6.5 {
 			t.Errorf("size %d: R3 = %v, want 6.5", size, got)
 		}
 
@@ -75,12 +75,12 @@ func TestEmulFAdd3(t *testing.T) {
 	cpu, mem := fixture()
 	e := NewEngine(cpu, mem)
 
-	setFloatReg(t, cpu, 4, vax.R1, 2.5)
-	setFloatReg(t, cpu, 4, vax.R2, 4.0)
+	setFloatReg(t, cpu, 4, registers.R1, 2.5)
+	setFloatReg(t, cpu, 4, registers.R2, 4.0)
 
-	stepInstruction(t, e, 0x41, regMode(vax.R1), regMode(vax.R2), regMode(vax.R3)) // ADDF3
+	stepInstruction(t, e, 0x41, regMode(registers.R1), regMode(registers.R2), regMode(registers.R3)) // ADDF3
 
-	if got := getFloatReg(t, cpu, 4, vax.R3); got != 6.5 {
+	if got := getFloatReg(t, cpu, 4, registers.R3); got != 6.5 {
 		t.Errorf("R3 = %v, want 6.5", got)
 	}
 }
@@ -92,12 +92,12 @@ func TestEmulFSubOperandOrder(t *testing.T) {
 	cpu, mem := fixture()
 	e := NewEngine(cpu, mem)
 
-	setFloatReg(t, cpu, 4, vax.R1, 1.5) // subtrahend
-	setFloatReg(t, cpu, 4, vax.R2, 4.0) // minuend
+	setFloatReg(t, cpu, 4, registers.R1, 1.5) // subtrahend
+	setFloatReg(t, cpu, 4, registers.R2, 4.0) // minuend
 
-	stepInstruction(t, e, 0x42, regMode(vax.R1), regMode(vax.R2)) // SUBF2
+	stepInstruction(t, e, 0x42, regMode(registers.R1), regMode(registers.R2)) // SUBF2
 
-	if got := getFloatReg(t, cpu, 4, vax.R2); got != 2.5 {
+	if got := getFloatReg(t, cpu, 4, registers.R2); got != 2.5 {
 		t.Errorf("R2 = %v, want 2.5 (4.0 - 1.5)", got)
 	}
 }
@@ -106,12 +106,12 @@ func TestEmulFMul(t *testing.T) {
 	cpu, mem := fixture()
 	e := NewEngine(cpu, mem)
 
-	setFloatReg(t, cpu, 8, vax.R1, 2.5)
-	setFloatReg(t, cpu, 8, vax.R3, -2.0) // R3:R4 pair (avoid overlapping R1:R2)
+	setFloatReg(t, cpu, 8, registers.R1, 2.5)
+	setFloatReg(t, cpu, 8, registers.R3, -2.0) // R3:R4 pair (avoid overlapping R1:R2)
 
-	stepInstruction(t, e, 0x64, regMode(vax.R1), regMode(vax.R3)) // MULD2
+	stepInstruction(t, e, 0x64, regMode(registers.R1), regMode(registers.R3)) // MULD2
 
-	if got := getFloatReg(t, cpu, 8, vax.R3); got != -5.0 {
+	if got := getFloatReg(t, cpu, 8, registers.R3); got != -5.0 {
 		t.Errorf("R3:R4 = %v, want -5.0", got)
 	}
 
@@ -126,12 +126,12 @@ func TestEmulFDivOperandOrder(t *testing.T) {
 	cpu, mem := fixture()
 	e := NewEngine(cpu, mem)
 
-	setFloatReg(t, cpu, 4, vax.R1, 2.0)  // divisor
-	setFloatReg(t, cpu, 4, vax.R2, 10.0) // dividend
+	setFloatReg(t, cpu, 4, registers.R1, 2.0)  // divisor
+	setFloatReg(t, cpu, 4, registers.R2, 10.0) // dividend
 
-	stepInstruction(t, e, 0x46, regMode(vax.R1), regMode(vax.R2)) // DIVF2
+	stepInstruction(t, e, 0x46, regMode(registers.R1), regMode(registers.R2)) // DIVF2
 
-	if got := getFloatReg(t, cpu, 4, vax.R2); got != 5.0 {
+	if got := getFloatReg(t, cpu, 4, registers.R2); got != 5.0 {
 		t.Errorf("R2 = %v, want 5.0 (10.0 / 2.0)", got)
 	}
 }
@@ -140,13 +140,13 @@ func TestEmulFAddZeroSetsZ(t *testing.T) {
 	cpu, mem := fixture()
 	e := NewEngine(cpu, mem)
 
-	setFloatReg(t, cpu, 4, vax.R1, 3.0)
-	setFloatReg(t, cpu, 4, vax.R2, -3.0)
+	setFloatReg(t, cpu, 4, registers.R1, 3.0)
+	setFloatReg(t, cpu, 4, registers.R2, -3.0)
 	setC(cpu, true) // confirm C is cleared, not left stale
 
-	stepInstruction(t, e, 0x40, regMode(vax.R1), regMode(vax.R2)) // ADDF2
+	stepInstruction(t, e, 0x40, regMode(registers.R1), regMode(registers.R2)) // ADDF2
 
-	if got := getFloatReg(t, cpu, 4, vax.R2); got != 0.0 {
+	if got := getFloatReg(t, cpu, 4, registers.R2); got != 0.0 {
 		t.Errorf("R2 = %v, want 0.0", got)
 	}
 
@@ -165,10 +165,10 @@ func TestEmulFAddOverflowFaults(t *testing.T) {
 	cpu, mem := fixture()
 	e := NewEngine(cpu, mem)
 
-	setFloatReg(t, cpu, 4, vax.R1, 1.6e38)
-	setFloatReg(t, cpu, 4, vax.R2, 1.6e38)
-	cpu.SetGPR(vax.PC, base)
-	putBytes(t, cpu, mem, base, 0x40, regMode(vax.R1), regMode(vax.R2)) // ADDF2
+	setFloatReg(t, cpu, 4, registers.R1, 1.6e38)
+	setFloatReg(t, cpu, 4, registers.R2, 1.6e38)
+	cpu.SetGPR(registers.PC, base)
+	putBytes(t, cpu, mem, base, 0x40, regMode(registers.R1), regMode(registers.R2)) // ADDF2
 
 	d, err := decodeInstructionValue(cpu, mem, instructionTable)
 	if err != nil {
@@ -190,11 +190,11 @@ func TestEmulFAddShortLiteralSource(t *testing.T) {
 	cpu, mem := fixture()
 	e := NewEngine(cpu, mem)
 	
-	setFloatReg(t, cpu, 4, vax.R2, 1.0)
+	setFloatReg(t, cpu, 4, registers.R2, 1.0)
 
-	stepInstruction(t, e, 0x40, 0x00, regMode(vax.R2)) // ADDF2 S^#0.5, R2
+	stepInstruction(t, e, 0x40, 0x00, regMode(registers.R2)) // ADDF2 S^#0.5, R2
 
-	if got := getFloatReg(t, cpu, 4, vax.R2); got != 1.5 {
+	if got := getFloatReg(t, cpu, 4, registers.R2); got != 1.5 {
 		t.Errorf("R2 = %v, want 1.5 (1.0 + short-literal 0.5)", got)
 	}
 }

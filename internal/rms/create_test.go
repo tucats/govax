@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"testing"
 
-	"github.com/tucats/govax/internal/vax"
+	"github.com/tucats/govax/internal/registers"
 	"github.com/tucats/govax/internal/vm"
 	"github.com/tucats/ods2/ondisk"
 )
@@ -22,7 +22,7 @@ type createFixture struct {
 func newCreateFixture(t *testing.T, writable bool) *createFixture {
 	t.Helper()
 
-	cpu := vax.New()
+	cpu := registers.New()
 	mem := vm.NewMemory(1 << 20)
 
 	logicals := newTestLogicals(t)

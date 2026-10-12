@@ -1,7 +1,7 @@
 package corevms
 
 import (
-	"github.com/tucats/govax/internal/vax"
+	"github.com/tucats/govax/internal/registers"
 	"github.com/tucats/govax/internal/vmsdef"
 )
 
@@ -312,7 +312,7 @@ func serviceSysAdjstk(env *Environment, argv []uint32) (uint32, error) {
 	}
 
 	if value == 0 {
-		value = env.cpu.PR(vax.PrivReg(mode)) // KSP/ESP/SSP/USP == mode 0/1/2/3
+		value = env.cpu.PR(registers.PrivReg(mode)) // KSP/ESP/SSP/USP == mode 0/1/2/3
 	}
 
 	value += uint32(int32(adjust))
@@ -321,7 +321,7 @@ func serviceSysAdjstk(env *Environment, argv []uint32) (uint32, error) {
 		return ssAccVio, nil
 	}
 
-	env.cpu.SetPR(vax.PrivReg(mode), value)
+	env.cpu.SetPR(registers.PrivReg(mode), value)
 
 	return ssNormal, nil
 }
@@ -521,14 +521,14 @@ func serviceSysForcex(env *Environment, argv []uint32) (uint32, error) {
 	}
 
 	for _, a := range target.Process.ast.queue {
-		if a.routine == exitEntryAddr && a.mode == uint32(vax.User) {
+		if a.routine == exitEntryAddr && a.mode == uint32(registers.User) {
 			return ssNormal, nil
 		}
 	}
 
 	// A waiting target that can take the AST becomes computable at the
 	// scheduler's next choice (waits.go).
-	target.queueAST(exitEntryAddr, optArg(argv, 2), uint32(vax.User))
+	target.queueAST(exitEntryAddr, optArg(argv, 2), uint32(registers.User))
 
 	if target != env {
 		env.requestReschedule()
@@ -629,14 +629,14 @@ func (env *Environment) forceDeletedExit() {
 	p.exitHandlers = [4][]uint32{}
 
 	for _, a := range p.ast.queue {
-		if a.routine == exitEntryAddr && a.mode == uint32(vax.User) {
+		if a.routine == exitEntryAddr && a.mode == uint32(registers.User) {
 			return
 		}
 	}
 
 	// A waiting process 1 that can take the AST becomes computable at
 	// the scheduler's next choice (waits.go).
-	env.queueAST(exitEntryAddr, ssNormal, uint32(vax.User))
+	env.queueAST(exitEntryAddr, ssNormal, uint32(registers.User))
 	env.requestReschedule()
 }
 

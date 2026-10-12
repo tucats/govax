@@ -6,7 +6,7 @@ import (
 
 	"github.com/tucats/govax/internal/cpu"
 	"github.com/tucats/govax/internal/disasm"
-	"github.com/tucats/govax/internal/vax"
+	"github.com/tucats/govax/internal/registers"
 )
 
 // OperandsMode is how much of an instruction's operands EXAMINE/INSTRUCTION
@@ -82,11 +82,11 @@ func (m *Machine) printOperands(dec disasm.Decoded, format disasm.Options, names
 func (m *Machine) describeOperand(op disasm.Operand, names consoleSymbolizer) (string, bool) {
 	if op.Mode == disasm.ModeRegister && !op.Indexed() {
 		name := cpu.RegisterName(op.Register)
-		value := uint64(m.CPU.GPR(vax.Reg(op.Register)))
+		value := uint64(m.CPU.GPR(registers.Reg(op.Register)))
 
 		// A quadword (or D or G floating) operand is a pair of registers.
-		if op.Size == 8 && op.Register < int(vax.R15) {
-			value |= uint64(m.CPU.GPR(vax.Reg(op.Register+1))) << 32
+		if op.Size == 8 && op.Register < int(registers.R15) {
+			value |= uint64(m.CPU.GPR(registers.Reg(op.Register+1))) << 32
 		}
 
 		return fmt.Sprintf("%s contains %s", name, hexValue(value, op.Size)), true
@@ -117,7 +117,7 @@ func (m *Machine) operandAddress(op disasm.Operand) (uint32, bool) {
 	)
 
 	if op.Register >= 0 {
-		reg = m.CPU.GPR(vax.Reg(op.Register))
+		reg = m.CPU.GPR(registers.Reg(op.Register))
 	}
 
 	switch op.Mode {
@@ -158,7 +158,7 @@ func (m *Machine) operandAddress(op disasm.Operand) (uint32, bool) {
 
 	// An index register scales by the operand's size and is added last.
 	if op.Indexed() {
-		addr += m.CPU.GPR(vax.Reg(op.Index)) * uint32(max(op.Size, 1))
+		addr += m.CPU.GPR(registers.Reg(op.Index)) * uint32(max(op.Size, 1))
 	}
 
 	return addr, true

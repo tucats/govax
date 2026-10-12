@@ -5,7 +5,7 @@ import (
 	"fmt"
 
 	"github.com/tucats/govax/internal/lnm"
-	"github.com/tucats/govax/internal/vax"
+	"github.com/tucats/govax/internal/registers"
 	"github.com/tucats/govax/internal/vmsdef"
 	"github.com/tucats/govax/internal/vmserrors"
 )
@@ -208,7 +208,7 @@ func storeDescriptor(env *Environment, desc uint32, s string) (uint16, bool, err
 }
 
 func (env *Environment) traceLogicals(format string, args ...any) {
-	if env.cpu.DebugEnabled(vax.DebugLogicals) {
+	if env.cpu.DebugEnabled(registers.DebugLogicals) {
 		fmt.Fprintf(env.cpu.DebugWriter(), "DEBUG: "+format+"\n", args...)
 	}
 }

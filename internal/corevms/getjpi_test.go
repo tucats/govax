@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/tucats/govax/internal/vax"
+	"github.com/tucats/govax/internal/registers"
 	"github.com/tucats/govax/internal/vmsdef"
 )
 
@@ -224,7 +224,7 @@ func TestServiceSysGetjpiDebugProcessTrace(t *testing.T) {
 	a := newArena(t, env)
 
 	env.cpu.SetDebugWriter(&buf)
-	env.cpu.SetDebug(vax.DebugProcess)
+	env.cpu.SetDebug(registers.DebugProcess)
 
 	getjpi(t, env, 5, 0, a.desc("MYPROC"), a.items(), 0)
 
@@ -245,8 +245,8 @@ func TestServiceSysGetjpiASTItems(t *testing.T) {
 	a := newArena(t, env)
 	p := env.Process
 
-	env.queueAST(0x4000, 1, uint32(vax.User))
-	env.queueAST(0x4000, 2, uint32(vax.User))
+	env.queueAST(0x4000, 1, uint32(registers.User))
+	env.queueAST(0x4000, 2, uint32(registers.User))
 	env.timers = append(env.timers,
 		&timerRequest{expiry: ^uint64(0), astadr: 0x5000}, // will queue an AST
 		&timerRequest{expiry: ^uint64(0)},                 // won't

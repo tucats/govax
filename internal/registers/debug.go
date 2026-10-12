@@ -1,4 +1,4 @@
-package vax
+package registers
 
 import "io"
 

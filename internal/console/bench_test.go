@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	"github.com/tucats/govax/internal/cpu"
-	"github.com/tucats/govax/internal/vax"
+	"github.com/tucats/govax/internal/registers"
 )
 
 // BenchmarkSieve is Phase 12's own named performance-pass target
@@ -51,7 +51,7 @@ func benchmarkSieve(b *testing.B, scheduled bool) {
 		}
 	}
 
-	if got := c.CPU.GPR(vax.R0); got != 9973 {
+	if got := c.CPU.GPR(registers.R0); got != 9973 {
 		b.Fatalf("R0 = %d, want 9973 (the largest prime below 10000)", got)
 	}
 }

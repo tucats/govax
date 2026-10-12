@@ -4,7 +4,7 @@ import (
 	"fmt"
 
 	"github.com/tucats/govax/internal/cpu"
-	"github.com/tucats/govax/internal/vax"
+	"github.com/tucats/govax/internal/registers"
 )
 
 // SHOW CALLS as the VMS debugger shows it (docs/PHASE-41.md, subtask 12,
@@ -97,7 +97,7 @@ func (m *Machine) debugCallRow(pc uint32, caller bool) (callRow, bool) {
 // in a module of a loaded image's debug symbol table. ok is false when
 // the PC itself isn't in one. count bounds the rows; 0 is every frame.
 func (m *Machine) debugFrames(count uint32) (rows []callRow, ok bool, err error) {
-	pc := m.CPU.GPR(vax.PC)
+	pc := m.CPU.GPR(registers.PC)
 
 	row, ok := m.debugCallRow(pc, false)
 	if !ok {
@@ -110,7 +110,7 @@ func (m *Machine) debugFrames(count uint32) (rows []callRow, ok bool, err error)
 
 	rows = append(rows, row)
 
-	fp := m.CPU.GPR(vax.FP)
+	fp := m.CPU.GPR(registers.FP)
 
 	for n := uint32(1); n < count && fp != 0 && fp != cpu.SentinelReturn; n++ {
 		savedFP, err := m.Mem.LoadLongword(m.CPU, fp+12)

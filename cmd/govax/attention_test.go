@@ -11,12 +11,12 @@ import (
 
 	"github.com/chzyer/readline"
 	"github.com/tucats/govax/internal/cpu"
-	"github.com/tucats/govax/internal/vax"
+	"github.com/tucats/govax/internal/registers"
 	"github.com/tucats/govax/internal/vm"
 )
 
 func testAttentionEngine() *cpu.Engine {
-	return cpu.NewEngine(vax.New(), vm.NewMemory(4096))
+	return cpu.NewEngine(registers.New(), vm.NewMemory(4096))
 }
 
 // lockedBuffer is a bytes.Buffer that the pump's goroutine and the test's

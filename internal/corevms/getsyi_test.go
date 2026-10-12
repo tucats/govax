@@ -3,7 +3,7 @@ package corevms
 import (
 	"testing"
 
-	"github.com/tucats/govax/internal/vax"
+	"github.com/tucats/govax/internal/registers"
 	"github.com/tucats/govax/internal/vmsdef"
 )
 
@@ -28,7 +28,7 @@ func getsyi(t *testing.T, env *Environment, efn, csidadr, nodename, itmlst, iosb
 func TestServiceSysGetsyiItems(t *testing.T) {
 	env, _ := fixture()
 	a := newArena(t, env)
-	env.cpu.SetPR(vax.SID, 0x01234567)
+	env.cpu.SetPR(registers.SID, 0x01234567)
 	env.BootTime = 0x0123456789ABCDEF
 
 	wants := []struct {
@@ -118,7 +118,7 @@ func TestServiceSysGetsyiCompletion(t *testing.T) {
 
 	// Success: the flag is set, the IOSB written, and the AST queued in
 	// the caller's mode with astprm.
-	setCurMod(env, vax.Supervisor)
+	setCurMod(env, registers.Supervisor)
 	env.Process.LocalEventFlags[0] = 0
 	wantR0(t, callLNM(t, env, serviceSysGetsyi, 6, 0, 0, itmlst, iosb, 0x4000, 99), ssNormal)
 
@@ -127,7 +127,7 @@ func TestServiceSysGetsyiCompletion(t *testing.T) {
 	}
 
 	q := env.Process.ast.queue
-	if len(q) != 1 || q[0].routine != 0x4000 || q[0].param != 99 || q[0].mode != uint32(vax.Supervisor) {
+	if len(q) != 1 || q[0].routine != 0x4000 || q[0].param != 99 || q[0].mode != uint32(registers.Supervisor) {
 		t.Errorf("AST queue = %+v, want one supervisor-mode AST at 0x4000 with 99", q)
 	}
 

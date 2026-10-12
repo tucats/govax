@@ -6,7 +6,7 @@ import (
 	"testing"
 
 	iodev "github.com/tucats/govax/internal/io"
-	"github.com/tucats/govax/internal/vax"
+	"github.com/tucats/govax/internal/registers"
 	"github.com/tucats/govax/internal/vmsdef"
 )
 
@@ -34,7 +34,7 @@ func qioFixture(t *testing.T, input string) (*Environment, *bytes.Buffer, *arena
 
 	a := newArena(t, env)
 
-	return env, out, a, assignCall(t, env, a, "TTA0", uint32(vax.User))
+	return env, out, a, assignCall(t, env, a, "TTA0", uint32(registers.User))
 }
 
 // qioArgs is one $QIO call's arguments.
@@ -82,7 +82,7 @@ func TestQIO_write(t *testing.T) {
 	}
 
 	q := env.Process.ast.queue
-	if len(q) != 1 || q[0].routine != 0x4000 || q[0].param != 77 || q[0].mode != uint32(vax.Kernel) {
+	if len(q) != 1 || q[0].routine != 0x4000 || q[0].param != 77 || q[0].mode != uint32(registers.Kernel) {
 		t.Errorf("AST queue = %+v, want one kernel-mode AST at 0x4000 with parameter 77", q)
 	}
 }
@@ -410,7 +410,7 @@ func TestQIO_rejected(t *testing.T) {
 	wantR0(t, callQIO(t, env, qioArgs{efn: 200, channel: ch, function: fnWriteVBlk, p: [6]uint32{data, 1}}), ssIllEfc)
 
 	// A channel assigned from a more privileged mode than the caller's.
-	setCurMod(env, vax.User)
+	setCurMod(env, registers.User)
 	wantR0(t, callQIO(t, env, qioArgs{channel: diskChan, function: fnWriteVBlk}), ssNoPriv)
 
 	// The user-mode channel is fine from user mode.
@@ -437,7 +437,7 @@ func TestServiceSysCancel(t *testing.T) {
 	wantR0(t, callLNM(t, env, serviceSysCancel, 0), ssIvChan)
 	wantR0(t, callLNM(t, env, serviceSysCancel, 999), ssNoPriv)
 
-	setCurMod(env, vax.User)
+	setCurMod(env, registers.User)
 	wantR0(t, callLNM(t, env, serviceSysCancel, kernelChan), ssNoPriv)
 	wantR0(t, callLNM(t, env, serviceSysCancel, ch), ssNormal)
 }

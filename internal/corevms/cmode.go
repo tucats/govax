@@ -1,7 +1,7 @@
 package corevms
 
 import (
-	"github.com/tucats/govax/internal/vax"
+	"github.com/tucats/govax/internal/registers"
 )
 
 // $CMKRNL and $CMEXEC (docs/PHASE-26.md subtask 26): call a routine in
@@ -63,7 +63,7 @@ type cmodeCall struct {
 	// caller is the mode to switch back to, and callerPrv the caller's
 	// PSL<PRV_MOD>, restored with it. target is the mode the routine
 	// runs in.
-	caller, callerPrv, target vax.AccessMode
+	caller, callerPrv, target registers.AccessMode
 }
 
 // serviceSysCmkrnl is SYS$CMKRNL:
@@ -74,7 +74,7 @@ type cmodeCall struct {
 // 0 if arglst is omitted), and returns the routine's R0. See this file's
 // opening comment.
 func serviceSysCmkrnl(env *Environment, argv []uint32) (uint32, error) {
-	return env.changeMode(vax.Kernel, argv)
+	return env.changeMode(registers.Kernel, argv)
 }
 
 // serviceSysCmexec is SYS$CMEXEC:
@@ -85,12 +85,12 @@ func serviceSysCmkrnl(env *Environment, argv []uint32) (uint32, error) {
 // kernel mode it runs the routine in kernel mode: a change-mode service
 // never makes the process less privileged.
 func serviceSysCmexec(env *Environment, argv []uint32) (uint32, error) {
-	return env.changeMode(vax.Executive, argv)
+	return env.changeMode(registers.Executive, argv)
 }
 
 // changeMode is the body of both services: mode is the one the service
 // asks for.
-func (env *Environment) changeMode(mode vax.AccessMode, argv []uint32) (uint32, error) {
+func (env *Environment) changeMode(mode registers.AccessMode, argv []uint32) (uint32, error) {
 	c := env.cpu
 	p := env.Process
 	psl := c.PSL()
@@ -99,7 +99,7 @@ func (env *Environment) changeMode(mode vax.AccessMode, argv []uint32) (uint32, 
 	if n := len(p.cmode); n > 0 {
 		call := p.cmode[n-1]
 
-		if call.fp == c.GPR(vax.FP) && call.sp == c.GPR(vax.SP) && call.target == psl.CurMod() {
+		if call.fp == c.GPR(registers.FP) && call.sp == c.GPR(registers.SP) && call.target == psl.CurMod() {
 			p.cmode = p.cmode[:n-1]
 
 			if call.caller != call.target {
@@ -110,18 +110,18 @@ func (env *Environment) changeMode(mode vax.AccessMode, argv []uint32) (uint32, 
 			psl.SetPrvMod(call.callerPrv)
 			c.SetPSL(psl)
 
-			return c.GPR(vax.R0), nil
+			return c.GPR(registers.R0), nil
 		}
 	}
 
 	// A new call (step 1). The caller needs the privilege, unless it's
 	// in executive or kernel mode already.
 	priv := privCMKRNL
-	if mode == vax.Executive {
+	if mode == registers.Executive {
 		priv = privCMEXEC
 	}
 
-	if psl.CurMod() > vax.Executive && !p.hasPrivilege(priv) {
+	if psl.CurMod() > registers.Executive && !p.hasPrivilege(priv) {
 		return ssNoPriv, nil
 	}
 
@@ -129,7 +129,7 @@ func (env *Environment) changeMode(mode vax.AccessMode, argv []uint32) (uint32, 
 	// and the caller's.
 	routin, arglst := optArg(argv, 0), optArg(argv, 1)
 	call := &cmodeCall{
-		fp:        c.GPR(vax.FP),
+		fp:        c.GPR(registers.FP),
 		caller:    psl.CurMod(),
 		callerPrv: psl.PrvMod(),
 		target:    min(mode, psl.CurMod()),
@@ -143,7 +143,7 @@ func (env *Environment) changeMode(mode vax.AccessMode, argv []uint32) (uint32, 
 		c.SetPSL(psl)
 	}
 
-	call.sp = c.GPR(vax.SP)
+	call.sp = c.GPR(registers.SP)
 	p.cmode = append(p.cmode, call)
 
 	return 0, &CallRequest{Routine: routin, ArgList: arglst}

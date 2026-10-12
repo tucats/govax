@@ -3,7 +3,7 @@ package machine
 import (
 	"github.com/tucats/govax/internal/corevms"
 	"github.com/tucats/govax/internal/cpu"
-	"github.com/tucats/govax/internal/vax"
+	"github.com/tucats/govax/internal/registers"
 	"github.com/tucats/govax/internal/vm"
 	"github.com/tucats/govax/internal/vmserrors"
 )
@@ -108,7 +108,7 @@ func (m *Machine) VMInit(p0Pages, p1Pages, s0Pages, kspPages, espPages, sspPages
 	m.newRTL()
 
 	m.Engine.SetSystemServices(m)
-	m.CPU.SetPR(vax.MAPEN, 0)
+	m.CPU.SetPR(registers.MAPEN, 0)
 
 	paddr := uint32(0)
 	page = 0
@@ -117,8 +117,8 @@ func (m *Machine) VMInit(p0Pages, p1Pages, s0Pages, kspPages, espPages, sspPages
 	// always eagerly mapped regardless of DYNVM (see the C source's own S0
 	// PTE-creation loop, which has no #ifdef DYNVM branch at all — only
 	// P0/P1 below start out demand-paged).
-	m.CPU.SetPR(vax.SBR, 0)
-	m.CPU.SetPR(vax.SLR, size[2])
+	m.CPU.SetPR(registers.SBR, 0)
+	m.CPU.SetPR(registers.SLR, size[2])
 
 	for i := uint32(0); i < size[2]; i++ {
 		var pte vm.PTE
@@ -155,7 +155,7 @@ func (m *Machine) VMInit(p0Pages, p1Pages, s0Pages, kspPages, espPages, sspPages
 	p0br := paddr
 	p0PStart := page
 
-	m.CPU.SetPR(vax.P0LR, size[0])
+	m.CPU.SetPR(registers.P0LR, size[0])
 
 	for i := uint32(0); i < size[0]; i++ {
 		pte := corevms.ProcessPTE(false, i)
@@ -169,7 +169,7 @@ func (m *Machine) VMInit(p0Pages, p1Pages, s0Pages, kspPages, espPages, sspPages
 		paddr += 4
 	}
 
-	m.CPU.SetPR(vax.P0BR, p0br+0x80000000)
+	m.CPU.SetPR(registers.P0BR, p0br+0x80000000)
 
 	m.Regions[0] = vmRegion{
 		name: "P0", size: size[0], pteCount: pageTablePages(size[0]),
@@ -184,8 +184,8 @@ func (m *Machine) VMInit(p0Pages, p1Pages, s0Pages, kspPages, espPages, sspPages
 	p1Base := maxP1 - size[1]*512
 	p1PStart := page
 
-	m.CPU.SetPR(vax.P1LR, p1lr)
-	m.CPU.SetPR(vax.P1BR, (paddr+0x80000000)-p1lr*4)
+	m.CPU.SetPR(registers.P1LR, p1lr)
+	m.CPU.SetPR(registers.P1BR, (paddr+0x80000000)-p1lr*4)
 
 	for i := uint32(0); i < size[1]; i++ {
 		pte := corevms.ProcessPTE(true, p1lr+i)
@@ -232,7 +232,7 @@ func (m *Machine) VMInit(p0Pages, p1Pages, s0Pages, kspPages, espPages, sspPages
 		sspPages = defaultModeStackPages
 	}
 
-	m.CPU.SetGPR(vax.SP, spP1) // USP, set below via SetPR too
+	m.CPU.SetGPR(registers.SP, spP1) // USP, set below via SetPR too
 
 	ksp := 0x80000000 + paddr + kspPages*512 - 4
 	paddr += kspPages * 512
@@ -250,19 +250,19 @@ func (m *Machine) VMInit(p0Pages, p1Pages, s0Pages, kspPages, espPages, sspPages
 	isp := paddr + ispPages*512 - 4 // physical: no translation at interrupt time
 	paddr += ispPages * 512
 
-	m.CPU.SetPR(vax.KSP, ksp)
-	m.CPU.SetPR(vax.ESP, esp)
-	m.CPU.SetPR(vax.SSP, ssp)
-	m.CPU.SetPR(vax.ISP, isp)
-	m.CPU.SetPR(vax.USP, spP1)
+	m.CPU.SetPR(registers.KSP, ksp)
+	m.CPU.SetPR(registers.ESP, esp)
+	m.CPU.SetPR(registers.SSP, ssp)
+	m.CPU.SetPR(registers.ISP, isp)
+	m.CPU.SetPR(registers.USP, spP1)
 
-	m.CPU.SetGPR(vax.SP, ksp)
-	m.CPU.SetGPR(vax.FP, 0)
-	m.CPU.SetGPR(vax.AP, 0)
+	m.CPU.SetGPR(registers.SP, ksp)
+	m.CPU.SetGPR(registers.FP, 0)
+	m.CPU.SetGPR(registers.AP, 0)
 
 	psl := m.CPU.PSL()
-	psl.SetCurMod(vax.Kernel)
-	psl.SetPrvMod(vax.User)
+	psl.SetCurMod(registers.Kernel)
+	psl.SetPrvMod(registers.User)
 	m.CPU.SetPSL(psl)
 
 	// The console scratch page: a single S0 page reserved for synthesizing
@@ -290,7 +290,7 @@ func (m *Machine) VMInit(p0Pages, p1Pages, s0Pages, kspPages, espPages, sspPages
 	m.shimsReady = false
 	paddr += shimPageBytes
 
-	m.CPU.SetPR(vax.SCBB, paddr)
+	m.CPU.SetPR(registers.SCBB, paddr)
 
 	// Reserve a dedicated page for the SCB itself -- matching
 	// console_vminit_dcl's own treatment (a full page, mirrored by its
@@ -379,7 +379,7 @@ func (m *Machine) VMInit(p0Pages, p1Pages, s0Pages, kspPages, espPages, sspPages
 	m.processOne.Stacks = corevms.AdoptStacks(m.CPU)
 
 	m.DepositAddr = 0x200
-	m.CPU.SetPR(vax.MAPEN, 1)
+	m.CPU.SetPR(registers.MAPEN, 1)
 	m.VMInitValid = true
 	m.Mem.SetVMValid(true) // let Translate demand-page invalid P0/P1 PTEs from here on
 

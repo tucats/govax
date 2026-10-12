@@ -3,13 +3,13 @@ package cpu
 import (
 	"testing"
 
-	"github.com/tucats/govax/internal/vax"
+	"github.com/tucats/govax/internal/registers"
 	"github.com/tucats/govax/internal/vm"
 )
 
 // selfRelForward resolves node's forward link (stored at node) to the
 // absolute address it points to.
-func selfRelForward(t *testing.T, cpu *vax.CPU, mem *vm.Memory, node uint32) uint32 {
+func selfRelForward(t *testing.T, cpu *registers.CPU, mem *vm.Memory, node uint32) uint32 {
 	t.Helper()
 
 	off, err := mem.LoadLongword(cpu, node)
@@ -23,7 +23,7 @@ func selfRelForward(t *testing.T, cpu *vax.CPU, mem *vm.Memory, node uint32) uin
 // selfRelBackward resolves node's backward link (stored at node+4, but
 // -- like every self-relative link -- relative to node itself, not node+4)
 // to the absolute address it points to.
-func selfRelBackward(t *testing.T, cpu *vax.CPU, mem *vm.Memory, node uint32) uint32 {
+func selfRelBackward(t *testing.T, cpu *registers.CPU, mem *vm.Memory, node uint32) uint32 {
 	t.Helper()
 
 	off, err := mem.LoadLongword(cpu, node+4)
@@ -170,11 +170,11 @@ func TestEmulRemqhi(t *testing.T) {
 
 		bytes := []byte{0x5E}
 		bytes = append(bytes, absoluteMode(header)...)
-		bytes = append(bytes, regMode(vax.R0))
+		bytes = append(bytes, regMode(registers.R0))
 
 		stepInstruction(t, e, bytes...)
 
-		return cpu.GPR(vax.R0)
+		return cpu.GPR(registers.R0)
 	}
 
 	if got := remove(); got != 0x7000 {
@@ -213,10 +213,10 @@ func TestEmulRemqti(t *testing.T) {
 
 	bytes := []byte{0x5F}
 	bytes = append(bytes, absoluteMode(header)...)
-	bytes = append(bytes, regMode(vax.R0))
+	bytes = append(bytes, regMode(registers.R0))
 	stepInstruction(t, e, bytes...)
 
-	if got := cpu.GPR(vax.R0); got != 0x7000 {
+	if got := cpu.GPR(registers.R0); got != 0x7000 {
 		t.Errorf("removal = %#x, want 0x7000 (the tail entry)", got)
 	}
 	
@@ -269,11 +269,11 @@ func TestEmulInsqueRemque(t *testing.T) {
 
 	bytes := []byte{0x0F}
 	bytes = append(bytes, absoluteMode(0x6000)...)
-	bytes = append(bytes, regMode(vax.R1))
+	bytes = append(bytes, regMode(registers.R1))
 	stepInstruction(t, e, bytes...)
 
-	if cpu.GPR(vax.R1) != 0x6000 {
-		t.Errorf("R1 = %#x, want 0x6000 (the removed entry's own address)", cpu.GPR(vax.R1))
+	if cpu.GPR(registers.R1) != 0x6000 {
+		t.Errorf("R1 = %#x, want 0x6000 (the removed entry's own address)", cpu.GPR(registers.R1))
 	}
 
 	if got, err := mem.LoadLongword(cpu, header); err != nil || got != 0x7000 {

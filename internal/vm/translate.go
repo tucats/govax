@@ -3,7 +3,7 @@ package vm
 import (
 	"fmt"
 
-	"github.com/tucats/govax/internal/vax"
+	"github.com/tucats/govax/internal/registers"
 )
 
 // AccessType distinguishes a read access from a write access during address
@@ -139,7 +139,7 @@ func translationNotValid(addr uint32) error {
 // signaling access -- see ProbeTranslate for the VM_NOSIGNAL counterpart,
 // and docs/PHASE-21.md for the translation-buffer/sequential-translation-
 // cache design this and ProbeTranslate share via translate.
-func (m *Memory) Translate(cpu *vax.CPU, addr uint32, access AccessType) (uint32, error) {
+func (m *Memory) Translate(cpu *registers.CPU, addr uint32, access AccessType) (uint32, error) {
 	return m.translate(cpu, addr, access, true)
 }
 
@@ -165,7 +165,7 @@ func (m *Memory) Translate(cpu *vax.CPU, addr uint32, access AccessType) (uint32
 // worst an extra miss. A TB entry checks the mode on every hit, so a probe
 // gets the probed mode's answer from it, not the answer cached for the
 // mode that last touched the page (Study 1, R3 in docs/PERFORMANCE.md).
-func (m *Memory) ProbeTranslate(cpu *vax.CPU, addr uint32, access AccessType) (uint32, error) {
+func (m *Memory) ProbeTranslate(cpu *registers.CPU, addr uint32, access AccessType) (uint32, error) {
 	return m.translate(cpu, addr, access, false)
 }
 
@@ -180,12 +180,12 @@ func (m *Memory) ProbeTranslate(cpu *vax.CPU, addr uint32, access AccessType) (u
 // table entry always faults TNV here, which is also exactly what
 // validate_page() itself does whenever VMVALID is false (the normal case
 // until a real OS or VMINIT has run).
-func (m *Memory) translate(cpu *vax.CPU, addr uint32, access AccessType, signal bool) (uint32, error) {
-	// cpu.PR(vax.MAPEN) reads the MAPEN processor register's current
+func (m *Memory) translate(cpu *registers.CPU, addr uint32, access AccessType, signal bool) (uint32, error) {
+	// cpu.PR(registers.MAPEN) reads the MAPEN processor register's current
 	// value; a machine that hasn't enabled virtual memory yet (MAPEN==0)
 	// uses every address as a physical address directly, with no
 	// translation step at all.
-	if cpu.PR(vax.MAPEN) == 0 {
+	if cpu.PR(registers.MAPEN) == 0 {
 		return addr, nil
 	}
 
@@ -246,7 +246,7 @@ func (m *Memory) translate(cpu *vax.CPU, addr uint32, access AccessType, signal 
 	mode := cpu.PSL().CurMod()
 
 	// The 128-entry translation buffer, consulted only when TBDR == 0
-	// ("TB caching enabled") -- matching vm.c's `if (!vax.TBDR)`. Note
+	// ("TB caching enabled") -- matching vm.c's `if (!registers.TBDR)`. Note
 	// this gates consultation only: a successful full walk below still
 	// populates entry regardless of TBDR, exactly as vm.c does.
 	//
@@ -257,7 +257,7 @@ func (m *Memory) translate(cpu *vax.CPU, addr uint32, access AccessType, signal 
 	// page whose modify bit isn't set yet (the walk sets it), and an
 	// access the protection code denies, which the walk then reports as
 	// the same fault, with the same parameters, it always has.
-	if cpu.PR(vax.TBDR) == 0 {
+	if cpu.PR(registers.TBDR) == 0 {
 		m.tb.tries++
 
 		if entry.page == page && tbGrant(access) < entry.grants[mode] {
@@ -267,7 +267,7 @@ func (m *Memory) translate(cpu *vax.CPU, addr uint32, access AccessType, signal 
 
 			m.tb.stcFill(vpage, entry, mode)
 
-			if cpu.DebugEnabled(vax.DebugTB) {
+			if cpu.DebugEnabled(registers.DebugTB) {
 				ratio := 0.0
 				if m.tb.tries > 0 {
 					ratio = float64(m.tb.hits) / float64(m.tb.tries) * 100.0
@@ -314,7 +314,7 @@ func (m *Memory) translate(cpu *vax.CPU, addr uint32, access AccessType, signal 
 		// P0LR is the number of pages the table describes, growing
 		// upward from page 0 — a P0 address is in range only if its page
 		// number is less than that count (pages 0 through P0LR-1).
-		if page >= cpu.PR(vax.P0LR) {
+		if page >= cpu.PR(registers.P0LR) {
 			*entry = tbEntry{}
 
 			m.tb.stcFlush()
@@ -327,7 +327,7 @@ func (m *Memory) translate(cpu *vax.CPU, addr uint32, access AccessType, signal 
 		// which is why pteRecursive is true below: finding *this* page's
 		// mapping first requires translating the address of the page
 		// table itself).
-		pteVirtAddr = cpu.PR(vax.P0BR) + page*4
+		pteVirtAddr = cpu.PR(registers.P0BR) + page*4
 		pteRecursive = true
 
 	case 1: // P1: process control region. P1BR/P1LR list invalid pages, so
@@ -337,7 +337,7 @@ func (m *Memory) translate(cpu *vax.CPU, addr uint32, access AccessType, signal 
 		// so P1LR instead marks the *lowest* page number still considered
 		// part of the region — anything below P1LR is out of bounds, the
 		// mirror image of P0's check.
-		if page < cpu.PR(vax.P1LR) {
+		if page < cpu.PR(registers.P1LR) {
 			*entry = tbEntry{}
 
 			m.tb.stcFlush()
@@ -345,7 +345,7 @@ func (m *Memory) translate(cpu *vax.CPU, addr uint32, access AccessType, signal 
 			return 0, accessViolation(addr)
 		}
 
-		pteVirtAddr = cpu.PR(vax.P1BR) + page*4
+		pteVirtAddr = cpu.PR(registers.P1BR) + page*4
 		pteRecursive = true
 
 	case 2: // S0: system region. SBR is already a physical address, and
@@ -355,7 +355,7 @@ func (m *Memory) translate(cpu *vax.CPU, addr uint32, access AccessType, signal 
 		// need translating to be found, since the kernel that owns it is
 		// mapped in a fixed, always-resident location. That's exactly why
 		// pteRecursive is false here but true for P0/P1 above.
-		if page >= cpu.PR(vax.SLR) {
+		if page >= cpu.PR(registers.SLR) {
 			*entry = tbEntry{}
 
 			m.tb.stcFlush()
@@ -363,7 +363,7 @@ func (m *Memory) translate(cpu *vax.CPU, addr uint32, access AccessType, signal 
 			return 0, accessViolation(addr)
 		}
 
-		pteVirtAddr = cpu.PR(vax.SBR) + page*4
+		pteVirtAddr = cpu.PR(registers.SBR) + page*4
 		pteRecursive = false
 
 	default: // S1: unsupported by this implementation, same as the C source.
@@ -404,7 +404,7 @@ func (m *Memory) translate(cpu *vax.CPU, addr uint32, access AccessType, signal 
 
 	pte := PTE(raw)
 
-	if cpu.DebugEnabled(vax.DebugVM) {
+	if cpu.DebugEnabled(registers.DebugVM) {
 		pa := pte.PFN()<<9 + byteOffset
 
 		fmt.Fprintf(cpu.DebugWriter(), "DEBUG(VM): VA=%08X  R=%02d PTEA=%08X PTE=%08X P=%02X M=%02X PA=%08X\n",
@@ -564,8 +564,8 @@ func (m *Memory) validatePage(pteAddr uint32, pte *PTE) bool {
 // function signature, what each position in the result means — handy
 // here since a plain `(int, uint32, PTE, error)` signature alone wouldn't
 // tell a caller which uint32 is which.
-func (m *Memory) LookupPTE(cpu *vax.CPU, addr uint32) (region int, pteAddr uint32, pte PTE, err error) {
-	if cpu.PR(vax.MAPEN) == 0 {
+func (m *Memory) LookupPTE(cpu *registers.CPU, addr uint32) (region int, pteAddr uint32, pte PTE, err error) {
+	if cpu.PR(registers.MAPEN) == 0 {
 		return 0, 0, 0, accessViolation(addr)
 	}
 
@@ -579,27 +579,27 @@ func (m *Memory) LookupPTE(cpu *vax.CPU, addr uint32) (region int, pteAddr uint3
 
 	switch region {
 	case 0:
-		if page >= cpu.PR(vax.P0LR) {
+		if page >= cpu.PR(registers.P0LR) {
 			return region, 0, 0, accessViolation(addr)
 		}
 
-		pteVirtAddr = cpu.PR(vax.P0BR) + page*4
+		pteVirtAddr = cpu.PR(registers.P0BR) + page*4
 		pteRecursive = true
 
 	case 1:
-		if page < cpu.PR(vax.P1LR) {
+		if page < cpu.PR(registers.P1LR) {
 			return region, 0, 0, accessViolation(addr)
 		}
 
-		pteVirtAddr = cpu.PR(vax.P1BR) + page*4
+		pteVirtAddr = cpu.PR(registers.P1BR) + page*4
 		pteRecursive = true
 
 	case 2:
-		if page >= cpu.PR(vax.SLR) {
+		if page >= cpu.PR(registers.SLR) {
 			return region, 0, 0, accessViolation(addr)
 		}
 
-		pteVirtAddr = cpu.PR(vax.SBR) + page*4
+		pteVirtAddr = cpu.PR(registers.SBR) + page*4
 		pteRecursive = false
 
 	default:
@@ -633,8 +633,8 @@ func (m *Memory) LookupPTE(cpu *vax.CPU, addr uint32) (region int, pteAddr uint3
 // actually be stored. Invalidates addr's own translation-buffer slot on a
 // successful write, matching setpte's own invalidate_page(addr) call — the
 // PFN database entry just changed, so any cached mapping for it is stale.
-func (m *Memory) StorePTE(cpu *vax.CPU, addr uint32, pte PTE) error {
-	if cpu.PR(vax.MAPEN) == 0 {
+func (m *Memory) StorePTE(cpu *registers.CPU, addr uint32, pte PTE) error {
+	if cpu.PR(registers.MAPEN) == 0 {
 		return accessViolation(addr)
 	}
 
@@ -648,27 +648,27 @@ func (m *Memory) StorePTE(cpu *vax.CPU, addr uint32, pte PTE) error {
 
 	switch region {
 	case 0:
-		if page >= cpu.PR(vax.P0LR) {
+		if page >= cpu.PR(registers.P0LR) {
 			return accessViolation(addr)
 		}
 
-		pteVirtAddr = cpu.PR(vax.P0BR) + page*4
+		pteVirtAddr = cpu.PR(registers.P0BR) + page*4
 		pteRecursive = true
 
 	case 1:
-		if page < cpu.PR(vax.P1LR) {
+		if page < cpu.PR(registers.P1LR) {
 			return accessViolation(addr)
 		}
 
-		pteVirtAddr = cpu.PR(vax.P1BR) + page*4
+		pteVirtAddr = cpu.PR(registers.P1BR) + page*4
 		pteRecursive = true
 
 	case 2:
-		if page >= cpu.PR(vax.SLR) {
+		if page >= cpu.PR(registers.SLR) {
 			return accessViolation(addr)
 		}
 
-		pteVirtAddr = cpu.PR(vax.SBR) + page*4
+		pteVirtAddr = cpu.PR(registers.SBR) + page*4
 		pteRecursive = false
 
 	default:

@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"testing"
 
-	"github.com/tucats/govax/internal/vax"
+	"github.com/tucats/govax/internal/registers"
 	"github.com/tucats/govax/internal/vm"
 )
 
@@ -18,7 +18,7 @@ func TestVMInit_enablesTranslation(t *testing.T) {
 		t.Fatalf("VMInit: %v", err)
 	}
 
-	if c.CPU.PR(vax.MAPEN) != 1 {
+	if c.CPU.PR(registers.MAPEN) != 1 {
 		t.Fatal("expected MAPEN enabled after VMInit")
 	}
 
@@ -91,17 +91,17 @@ func TestVMInit_stackPointersAreDistinctAndInS0(t *testing.T) {
 		t.Fatalf("VMInit: %v", err)
 	}
 
-	ksp := c.CPU.PR(vax.KSP)
-	esp := c.CPU.PR(vax.ESP)
-	ssp := c.CPU.PR(vax.SSP)
-	isp := c.CPU.PR(vax.ISP)
+	ksp := c.CPU.PR(registers.KSP)
+	esp := c.CPU.PR(registers.ESP)
+	ssp := c.CPU.PR(registers.SSP)
+	isp := c.CPU.PR(registers.ISP)
 
 	if ksp == esp || esp == ssp || ssp == isp || ksp == 0 {
 		t.Errorf("expected distinct nonzero stacks: KSP=%#x ESP=%#x SSP=%#x ISP=%#x", ksp, esp, ssp, isp)
 	}
 
-	if c.CPU.GPR(vax.SP) != ksp {
-		t.Errorf("SP = %#x, want KSP %#x", c.CPU.GPR(vax.SP), ksp)
+	if c.CPU.GPR(registers.SP) != ksp {
+		t.Errorf("SP = %#x, want KSP %#x", c.CPU.GPR(registers.SP), ksp)
 	}
 }
 
@@ -161,7 +161,7 @@ func TestVMInit_stringPoolWritableFromUserMode(t *testing.T) {
 	}
 
 	psl := c.CPU.PSL()
-	psl.SetCurMod(vax.User)
+	psl.SetCurMod(registers.User)
 	c.CPU.SetPSL(psl)
 
 	if err := c.Mem.StoreLongword(c.CPU, base+4, 0xCAFEF00D); err != nil {
@@ -210,7 +210,7 @@ func TestVMInit_modeStacks(t *testing.T) {
 		t.Fatalf("VMInit: %v", err)
 	}
 
-	ksp, esp, ssp := c.CPU.PR(vax.KSP), c.CPU.PR(vax.ESP), c.CPU.PR(vax.SSP)
+	ksp, esp, ssp := c.CPU.PR(registers.KSP), c.CPU.PR(registers.ESP), c.CPU.PR(registers.SSP)
 
 	// Each stack's pages, lowest first: from its pointer's page down
 	// eight pages, and the guard page below them.
@@ -258,7 +258,7 @@ func TestVMInit_modeStacks(t *testing.T) {
 
 	// Each mode can push on its own stack but not on a more privileged
 	// one's; user mode can't touch either.
-	write := func(mode vax.AccessMode, addr uint32) error {
+	write := func(mode registers.AccessMode, addr uint32) error {
 		psl := c.CPU.PSL()
 		psl.SetCurMod(mode)
 		c.CPU.SetPSL(psl)
@@ -268,18 +268,18 @@ func TestVMInit_modeStacks(t *testing.T) {
 	}
 
 	for _, tc := range []struct {
-		mode vax.AccessMode
+		mode registers.AccessMode
 		addr uint32
 		ok   bool
 	}{
-		{vax.Executive, esp, true},
-		{vax.Kernel, esp, true},
-		{vax.Supervisor, esp, false},
-		{vax.Supervisor, ssp, true},
-		{vax.Executive, ssp, true},
-		{vax.User, ssp, false},
-		{vax.Executive, eGuard, false},
-		{vax.Kernel, sGuard, false},
+		{registers.Executive, esp, true},
+		{registers.Kernel, esp, true},
+		{registers.Supervisor, esp, false},
+		{registers.Supervisor, ssp, true},
+		{registers.Executive, ssp, true},
+		{registers.User, ssp, false},
+		{registers.Executive, eGuard, false},
+		{registers.Kernel, sGuard, false},
 	} {
 		if err := write(tc.mode, tc.addr); (err == nil) != tc.ok {
 			t.Errorf("mode %d writing %#x: err %v, want ok=%v", tc.mode, tc.addr, err, tc.ok)
@@ -299,7 +299,7 @@ func TestVMInit_modeStackSizes(t *testing.T) {
 	}
 
 	// Past KSP's page: a guard page, then 3 executive pages.
-	ksp, esp, ssp := c.CPU.PR(vax.KSP), c.CPU.PR(vax.ESP), c.CPU.PR(vax.SSP)
+	ksp, esp, ssp := c.CPU.PR(registers.KSP), c.CPU.PR(registers.ESP), c.CPU.PR(registers.SSP)
 
 	if esp-ksp != (1+3)*512 || ssp-esp != (1+5)*512 {
 		t.Errorf("KSP %#x, ESP %#x, SSP %#x: want ESP 4 pages above KSP, SSP 6 above ESP", ksp, esp, ssp)
@@ -322,19 +322,19 @@ func TestVMInit_pageTablesPacked(t *testing.T) {
 		t.Fatalf("VMInit: %v", err)
 	}
 
-	if got, want := c.CPU.PR(vax.P0BR), uint32(0x80000000+64*512); got != want {
+	if got, want := c.CPU.PR(registers.P0BR), uint32(0x80000000+64*512); got != want {
 		t.Errorf("P0BR = %#x, want %#x (right after S0's 64-page table)", got, want)
 	}
 
 	// P1BR points 2**21 entries before the end of P1's table; P1's table
 	// starts right after P0's 128 pages.
-	p1Table := c.CPU.PR(vax.P1BR) + c.CPU.PR(vax.P1LR)*4
+	p1Table := c.CPU.PR(registers.P1BR) + c.CPU.PR(registers.P1LR)*4
 	if want := uint32(0x80000000 + (64+128)*512); p1Table != want {
 		t.Errorf("P1's table at %#x, want %#x (right after P0's 128-page table)", p1Table, want)
 	}
 
 	// The kernel stack follows P1's table, padded to its one page.
-	ksp := c.CPU.PR(vax.KSP)
+	ksp := c.CPU.PR(registers.KSP)
 	if want := uint32(0x80000000 + (64+128+1+20)*512 - 4); ksp != want {
 		t.Errorf("KSP = %#x, want %#x (a 20-page stack after P1's one-page table)", ksp, want)
 	}

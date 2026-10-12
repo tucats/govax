@@ -3,7 +3,7 @@ package cpu
 import (
 	"testing"
 
-	"github.com/tucats/govax/internal/vax"
+	"github.com/tucats/govax/internal/registers"
 )
 
 func TestEmulAobleq(t *testing.T) {
@@ -19,16 +19,16 @@ func TestEmulAobleq(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			cpu, mem := fixture()
 			e := NewEngine(cpu, mem)
-			cpu.SetGPR(vax.R1, tc.limit)
-			cpu.SetGPR(vax.R2, tc.idx)
-			cpu.SetGPR(vax.PC, base)
-			putBytes(t, cpu, mem, base, 0xF3, regMode(vax.R1), regMode(vax.R2), 0x10) // AOBLEQ +16
+			cpu.SetGPR(registers.R1, tc.limit)
+			cpu.SetGPR(registers.R2, tc.idx)
+			cpu.SetGPR(registers.PC, base)
+			putBytes(t, cpu, mem, base, 0xF3, regMode(registers.R1), regMode(registers.R2), 0x10) // AOBLEQ +16
 
 			if err := e.Step(); err != nil {
 				t.Fatalf("Step: %v", err)
 			}
 
-			if got := cpu.GPR(vax.R2); got != tc.idx+1 {
+			if got := cpu.GPR(registers.R2); got != tc.idx+1 {
 				t.Errorf("index = %d, want %d", got, tc.idx+1)
 			}
 
@@ -37,7 +37,7 @@ func TestEmulAobleq(t *testing.T) {
 				want += 16
 			}
 
-			if got := cpu.GPR(vax.PC); got != want {
+			if got := cpu.GPR(registers.PC); got != want {
 				t.Errorf("PC = %#x, want %#x (taken=%v)", got, want, tc.wantTaken)
 			}
 		})
@@ -58,10 +58,10 @@ func TestEmulAoblss(t *testing.T) {
 			cpu, mem := fixture()
 			e := NewEngine(cpu, mem)
 
-			cpu.SetGPR(vax.R1, tc.limit)
-			cpu.SetGPR(vax.R2, tc.idx)
-			cpu.SetGPR(vax.PC, base)
-			putBytes(t, cpu, mem, base, 0xF2, regMode(vax.R1), regMode(vax.R2), 0x10) // AOBLSS +16
+			cpu.SetGPR(registers.R1, tc.limit)
+			cpu.SetGPR(registers.R2, tc.idx)
+			cpu.SetGPR(registers.PC, base)
+			putBytes(t, cpu, mem, base, 0xF2, regMode(registers.R1), regMode(registers.R2), 0x10) // AOBLSS +16
 
 			if err := e.Step(); err != nil {
 				t.Fatalf("Step: %v", err)
@@ -72,7 +72,7 @@ func TestEmulAoblss(t *testing.T) {
 				want += 16
 			}
 
-			if got := cpu.GPR(vax.PC); got != want {
+			if got := cpu.GPR(registers.PC); got != want {
 				t.Errorf("PC = %#x, want %#x (taken=%v)", got, want, tc.wantTaken)
 			}
 		})
@@ -93,9 +93,9 @@ func TestEmulSobgtr(t *testing.T) {
 			cpu, mem := fixture()
 			e := NewEngine(cpu, mem)
 
-			cpu.SetGPR(vax.R1, tc.idx)
-			cpu.SetGPR(vax.PC, base)
-			putBytes(t, cpu, mem, base, 0xF5, regMode(vax.R1), 0x10) // SOBGTR +16
+			cpu.SetGPR(registers.R1, tc.idx)
+			cpu.SetGPR(registers.PC, base)
+			putBytes(t, cpu, mem, base, 0xF5, regMode(registers.R1), 0x10) // SOBGTR +16
 
 			if err := e.Step(); err != nil {
 				t.Fatalf("Step: %v", err)
@@ -106,7 +106,7 @@ func TestEmulSobgtr(t *testing.T) {
 				want += 16
 			}
 
-			if got := cpu.GPR(vax.PC); got != want {
+			if got := cpu.GPR(registers.PC); got != want {
 				t.Errorf("PC = %#x, want %#x (taken=%v)", got, want, tc.wantTaken)
 			}
 		})
@@ -127,9 +127,9 @@ func TestEmulSobgeq(t *testing.T) {
 			cpu, mem := fixture()
 			e := NewEngine(cpu, mem)
 
-			cpu.SetGPR(vax.R1, tc.idx)
-			cpu.SetGPR(vax.PC, base)
-			putBytes(t, cpu, mem, base, 0xF4, regMode(vax.R1), 0x10) // SOBGEQ +16
+			cpu.SetGPR(registers.R1, tc.idx)
+			cpu.SetGPR(registers.PC, base)
+			putBytes(t, cpu, mem, base, 0xF4, regMode(registers.R1), 0x10) // SOBGEQ +16
 
 			if err := e.Step(); err != nil {
 				t.Fatalf("Step: %v", err)
@@ -140,7 +140,7 @@ func TestEmulSobgeq(t *testing.T) {
 				want += 16
 			}
 
-			if got := cpu.GPR(vax.PC); got != want {
+			if got := cpu.GPR(registers.PC); got != want {
 				t.Errorf("PC = %#x, want %#x (taken=%v)", got, want, tc.wantTaken)
 			}
 		})
@@ -153,11 +153,11 @@ func TestEmulLoopOverflowAndCarryUnaffected(t *testing.T) {
 	// unlike INC/DEC, C is unaffected here rather than a real carry/borrow.
 	cpu, mem := fixture()
 	e := NewEngine(cpu, mem)
-	cpu.SetGPR(vax.R1, 0x7FFFFFFF) // limit, irrelevant to overflow here
-	cpu.SetGPR(vax.R2, 0x7FFFFFFF) // index: INT32_MAX
+	cpu.SetGPR(registers.R1, 0x7FFFFFFF) // limit, irrelevant to overflow here
+	cpu.SetGPR(registers.R2, 0x7FFFFFFF) // index: INT32_MAX
 	setC(cpu, true)
-	cpu.SetGPR(vax.PC, base)
-	putBytes(t, cpu, mem, base, 0xF3, regMode(vax.R1), regMode(vax.R2), 0x10) // AOBLEQ
+	cpu.SetGPR(registers.PC, base)
+	putBytes(t, cpu, mem, base, 0xF3, regMode(registers.R1), regMode(registers.R2), 0x10) // AOBLEQ
 
 	if err := e.Step(); err != nil {
 		t.Fatalf("Step: %v", err)

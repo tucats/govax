@@ -3,7 +3,7 @@ package corevms
 import (
 	"testing"
 
-	"github.com/tucats/govax/internal/vax"
+	"github.com/tucats/govax/internal/registers"
 	"github.com/tucats/govax/internal/vmsdef"
 )
 
@@ -47,7 +47,7 @@ func TestOptArg(t *testing.T) {
 }
 
 // setCurMod puts the emulated CPU in mode, as the caller of a service.
-func setCurMod(env *Environment, mode vax.AccessMode) {
+func setCurMod(env *Environment, mode registers.AccessMode) {
 	psl := env.cpu.PSL()
 	psl.SetCurMod(mode)
 	env.cpu.SetPSL(psl)
@@ -59,13 +59,13 @@ func TestServiceSysAdjstk(t *testing.T) {
 
 	// From kernel mode, load user mode's stack pointer from newadr, then
 	// adjust it by a negative word.
-	env.cpu.SetPR(vax.USP, 0x7000)
+	env.cpu.SetPR(registers.USP, 0x7000)
 
 	newadr := a.long(0x5000)
 
 	wantR0(t, callLNM(t, env, serviceSysAdjstk, 3, uint32(0xFFF8), newadr), ssNormal)
 
-	if got := env.cpu.PR(vax.USP); got != 0x4FF8 {
+	if got := env.cpu.PR(registers.USP); got != 0x4FF8 {
 		t.Errorf("USP = %#x, want 0x4FF8 (0x5000 - 8)", got)
 	}
 
@@ -75,13 +75,13 @@ func TestServiceSysAdjstk(t *testing.T) {
 
 	// newadr holding 0 adjusts the mode's current stack pointer. Only the
 	// low word of adjust counts, so 0x10010 adds 0x10.
-	env.cpu.SetPR(vax.SSP, 0x9000)
+	env.cpu.SetPR(registers.SSP, 0x9000)
 
 	newadr = a.long(0)
 
 	wantR0(t, callLNM(t, env, serviceSysAdjstk, 2, 0x10010, newadr), ssNormal)
 
-	if got := env.cpu.PR(vax.SSP); got != 0x9010 {
+	if got := env.cpu.PR(registers.SSP); got != 0x9010 {
 		t.Errorf("SSP = %#x, want 0x9010", got)
 	}
 
@@ -91,13 +91,13 @@ func TestServiceSysAdjstk(t *testing.T) {
 
 	// adjust 0 and newadr holding 0 leave the stack pointer alone, but
 	// still report it through newadr.
-	env.cpu.SetPR(vax.ESP, 0x8000)
+	env.cpu.SetPR(registers.ESP, 0x8000)
 
 	newadr = a.long(0)
 
 	wantR0(t, callLNM(t, env, serviceSysAdjstk, 1, 0, newadr), ssNormal)
 
-	if got, gotAdr := env.cpu.PR(vax.ESP), a.readLong(newadr); got != 0x8000 || gotAdr != 0x8000 {
+	if got, gotAdr := env.cpu.PR(registers.ESP), a.readLong(newadr); got != 0x8000 || gotAdr != 0x8000 {
 		t.Errorf("ESP = %#x, newadr = %#x, want both 0x8000", got, gotAdr)
 	}
 
@@ -105,7 +105,7 @@ func TestServiceSysAdjstk(t *testing.T) {
 	newadr = a.long(0x6000)
 	wantR0(t, callLNM(t, env, serviceSysAdjstk, 3, 0, newadr), ssNormal)
 
-	if got := env.cpu.PR(vax.USP); got != 0x6000 {
+	if got := env.cpu.PR(registers.USP); got != 0x6000 {
 		t.Errorf("USP = %#x, want 0x6000", got)
 	}
 }
@@ -121,7 +121,7 @@ func TestServiceSysAdjstkErrors(t *testing.T) {
 
 	// From user mode there is no less privileged mode; a more privileged
 	// acmode is maximized to user.
-	setCurMod(env, vax.User)
+	setCurMod(env, registers.User)
 	wantR0(t, callLNM(t, env, serviceSysAdjstk, 1, 0, newadr), ssNoPriv)
 	wantR0(t, callLNM(t, env, serviceSysAdjstk, 3, 0, newadr), ssNoPriv)
 
@@ -131,7 +131,7 @@ func TestServiceSysAdjstkErrors(t *testing.T) {
 
 	// From supervisor mode, adjusting user mode works, but a missing
 	// newadr is an access violation.
-	setCurMod(env, vax.Supervisor)
+	setCurMod(env, registers.Supervisor)
 	wantR0(t, callLNM(t, env, serviceSysAdjstk, 3, 0, 0), ssAccVio)
 	wantR0(t, callLNM(t, env, serviceSysAdjstk, 3, 0, newadr), ssNormal)
 }

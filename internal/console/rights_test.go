@@ -3,7 +3,7 @@ package console
 import (
 	"testing"
 
-	"github.com/tucats/govax/internal/vax"
+	"github.com/tucats/govax/internal/registers"
 )
 
 // TestRights_assembledProgram runs testdata/asm/rights.asm
@@ -13,7 +13,7 @@ func TestRights_assembledProgram(t *testing.T) {
 	c := newBootableConsole(t)
 	word := runFixture(t, c, "rights.asm")
 
-	if got := c.CPU.GPR(vax.R0); got != 1 {
+	if got := c.CPU.GPR(registers.R0); got != 1 {
 		t.Fatalf("R0 = %#x, want 1 (a call failed?)", got)
 	}
 

@@ -1,7 +1,7 @@
 package cpu
 
 import (
-	"github.com/tucats/govax/internal/vax"
+	"github.com/tucats/govax/internal/registers"
 	"github.com/tucats/govax/internal/vaxfloat"
 )
 
@@ -72,7 +72,7 @@ func emulPoly(e *Engine, d *Decoded) error {
 
 	if f == vaxfloat.H {
 		bits, _ := vaxfloat.Pack(f, arg)
-		sp := e.cpu.GPR(vax.SP)
+		sp := e.cpu.GPR(registers.SP)
 
 		if err := e.mem.StoreQuadword(e.cpu, sp-16, bits.Lo); err != nil {
 			return err
@@ -116,7 +116,7 @@ func emulPoly(e *Engine, d *Decoded) error {
 	}
 
 	for i, v := range results {
-		e.cpu.SetGPR(vax.R0+vax.Reg(i), v)
+		e.cpu.SetGPR(registers.R0+registers.Reg(i), v)
 	}
 
 	setFloatCC(e.cpu, acc, false)

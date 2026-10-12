@@ -6,8 +6,8 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/tucats/govax/internal/registers"
 	"github.com/tucats/govax/internal/rms"
-	"github.com/tucats/govax/internal/vax"
 )
 
 // TestDiskDelete_assembledProgram runs testdata/asm/disk_delete.asm
@@ -33,7 +33,7 @@ func TestDiskDelete_assembledProgram(t *testing.T) {
 
 	runFixture(t, c, "disk_delete.asm")
 
-	if got := c.CPU.GPR(vax.R0); got != 1 {
+	if got := c.CPU.GPR(registers.R0); got != 1 {
 		t.Fatalf("R0 = %#x, want 1 (a call or IOSB failed)", got)
 	}
 

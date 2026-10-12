@@ -4,7 +4,7 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/tucats/govax/internal/vax"
+	"github.com/tucats/govax/internal/registers"
 	"github.com/tucats/govax/internal/vmsdef"
 )
 
@@ -104,7 +104,7 @@ func serviceSysDclexh(env *Environment, argv []uint32) (uint32, error) {
 	desblk := optArg(argv, 0)
 	mode := env.cpu.PSL().CurMod()
 
-	if mode == vax.Kernel {
+	if mode == registers.Kernel {
 		return ssIvSsRq, nil
 	}
 
@@ -142,7 +142,7 @@ func serviceSysCanexh(env *Environment, argv []uint32) (uint32, error) {
 	desblk := optArg(argv, 0)
 	mode := env.cpu.PSL().CurMod()
 
-	if mode == vax.Kernel {
+	if mode == registers.Kernel {
 		return ssIvSsRq, nil
 	}
 
@@ -237,7 +237,7 @@ func serviceSysExit(env *Environment, argv []uint32) (uint32, error) {
 }
 
 // ExitHandlers reports how many exit handlers mode has declared.
-func (env *Environment) ExitHandlers(mode vax.AccessMode) int {
+func (env *Environment) ExitHandlers(mode registers.AccessMode) int {
 	return len(env.Process.exitHandlers[mode])
 }
 
@@ -246,7 +246,7 @@ func (env *Environment) ExitHandlers(mode vax.AccessMode) int {
 // declared (it ended without $EXIT, or they were declared after it
 // began) are forgotten.
 func (env *Environment) cancelUserExitHandlers() {
-	env.Process.exitHandlers[vax.User] = nil
+	env.Process.exitHandlers[registers.User] = nil
 }
 
 func registerExitServices(t *ServiceTable) {

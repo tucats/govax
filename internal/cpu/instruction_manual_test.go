@@ -4,7 +4,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/tucats/govax/internal/vax"
+	"github.com/tucats/govax/internal/registers"
 )
 
 // manualForm renders an instruction's operands in the VAX Architecture
@@ -213,7 +213,7 @@ func TestNewInstructionsDecode(t *testing.T) {
 			code := instructionBytes(inst)
 
 			cpu, mem := fixture()
-			cpu.SetGPR(vax.PC, base)
+			cpu.SetGPR(registers.PC, base)
 			putBytes(t, cpu, mem, base, code...)
 
 			d, err := decodeInstructionValue(cpu, mem, instructionTable)

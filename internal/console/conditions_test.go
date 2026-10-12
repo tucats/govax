@@ -5,7 +5,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/tucats/govax/internal/vax"
+	"github.com/tucats/govax/internal/registers"
 )
 
 // runFixture assembles and runs one of testdata/asm's programs to
@@ -73,7 +73,7 @@ func TestConditions_assembledProgram(t *testing.T) {
 		}
 	}
 
-	if got := c.CPU.GPR(vax.R0); got != 1 {
+	if got := c.CPU.GPR(registers.R0); got != 1 {
 		t.Errorf("R0 = %#x, want main's 1", got)
 	}
 
@@ -99,7 +99,7 @@ func TestConditionExit_assembledProgram(t *testing.T) {
 		t.Error("the code after the access violation ran")
 	}
 
-	if got := c.CPU.GPR(vax.R0); got != status {
+	if got := c.CPU.GPR(registers.R0); got != status {
 		t.Errorf("R0 = %#x, want %#x", got, status)
 	}
 
@@ -118,7 +118,7 @@ func TestExceptionVectors_assembledProgram(t *testing.T) {
 	c := newBootableConsole(t)
 	word := runFixture(t, c, "exception_vectors.asm")
 
-	if got := c.CPU.GPR(vax.R0); got != 1 {
+	if got := c.CPU.GPR(registers.R0); got != 1 {
 		t.Fatalf("R0 = %#x, want 1 (a $SETEXV failed?)", got)
 	}
 
@@ -176,7 +176,7 @@ func TestSignals_assembledProgram(t *testing.T) {
 		}
 	}
 
-	if got := c.CPU.GPR(vax.R0); got != 0x18018004 {
+	if got := c.CPU.GPR(registers.R0); got != 0x18018004 {
 		t.Errorf("R0 = %#x, want the exit status 0x18018004", got)
 	}
 
@@ -212,7 +212,7 @@ func TestUnwind_assembledProgram(t *testing.T) {
 		}
 	}
 
-	if got := c.CPU.GPR(vax.R0); got != 1 {
+	if got := c.CPU.GPR(registers.R0); got != 1 {
 		t.Errorf("R0 = %#x, want main's 1", got)
 	}
 

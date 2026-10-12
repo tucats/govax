@@ -1,7 +1,7 @@
 package corevms
 
 import (
-	"github.com/tucats/govax/internal/vax"
+	"github.com/tucats/govax/internal/registers"
 	"github.com/tucats/govax/internal/vm"
 	"github.com/tucats/govax/internal/vmsdef"
 )
@@ -80,7 +80,7 @@ func serviceSysSetprt(env *Environment, argv []uint32) (uint32, error) {
 		prot = prtKR
 	}
 
-	mode := max(vax.AccessMode(optArg(argv, 2)&3), env.cpu.PSL().CurMod())
+	mode := max(registers.AccessMode(optArg(argv, 2)&3), env.cpu.PSL().CurMod())
 	status := uint32(ssNormal)
 	previous := vm.Protection(0)
 
@@ -126,7 +126,7 @@ func serviceSysSetprt(env *Environment, argv []uint32) (uint32, error) {
 // service: SS$_NOPRIV for a system page, beyond for a page beyond the
 // page table, SS$_ACCVIO for a page that doesn't exist, SS$_PAGOWNVIO for
 // a page a more privileged mode owns.
-func (env *Environment) pageForChange(addr uint32, mode vax.AccessMode, beyond uint32) (vm.PTE, uint32) {
+func (env *Environment) pageForChange(addr uint32, mode registers.AccessMode, beyond uint32) (vm.PTE, uint32) {
 	if addr >= s0Base {
 		return 0, ssNoPriv
 	}
@@ -138,7 +138,7 @@ func (env *Environment) pageForChange(addr uint32, mode vax.AccessMode, beyond u
 		return 0, beyond
 	case !pageExists(pte):
 		return 0, ssAccVio
-	case vax.AccessMode(pte.Owner()) < mode:
+	case registers.AccessMode(pte.Owner()) < mode:
 		return 0, ssPagOwnVio
 	}
 
@@ -202,7 +202,7 @@ func (env *Environment) lockPages(argv []uint32, locks *pageLocks, lock bool) (u
 		*locks = pageLocks{}
 	}
 
-	mode := max(vax.AccessMode(optArg(argv, 2)&3), env.cpu.PSL().CurMod())
+	mode := max(registers.AccessMode(optArg(argv, 2)&3), env.cpu.PSL().CurMod())
 	status := uint32(ssWasClr)
 
 	done := make([]uint32, 0, len(r.pages()))

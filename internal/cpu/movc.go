@@ -1,6 +1,6 @@
 package cpu
 
-import "github.com/tucats/govax/internal/vax"
+import "github.com/tucats/govax/internal/registers"
 
 // This is the Go port of emul_movc.c's MOVC3/MOVC5 (the file's namesake
 // instructions; its MOVTC/MOVTUC and SCANC/SPANC are movtc.go's and
@@ -84,12 +84,12 @@ func emulMovc3(e *Engine, d *Decoded) error {
 		dst = uint32(int32(dst) + n)
 	}
 
-	e.cpu.SetGPR(vax.R0, 0)
-	e.cpu.SetGPR(vax.R1, src)
-	e.cpu.SetGPR(vax.R2, 0)
-	e.cpu.SetGPR(vax.R3, dst)
-	e.cpu.SetGPR(vax.R4, 0)
-	e.cpu.SetGPR(vax.R5, 0)
+	e.cpu.SetGPR(registers.R0, 0)
+	e.cpu.SetGPR(registers.R1, src)
+	e.cpu.SetGPR(registers.R2, 0)
+	e.cpu.SetGPR(registers.R3, dst)
+	e.cpu.SetGPR(registers.R4, 0)
+	e.cpu.SetGPR(registers.R5, 0)
 
 	psl := e.cpu.PSL()
 	psl.SetN(false)
@@ -199,12 +199,12 @@ func emulMovc5(e *Engine, d *Decoded) error {
 		dst = uint32(int32(dst) + len2Saved)
 	}
 
-	e.cpu.SetGPR(vax.R0, uint32(len1))
-	e.cpu.SetGPR(vax.R1, src)
-	e.cpu.SetGPR(vax.R2, 0)
-	e.cpu.SetGPR(vax.R3, dst)
-	e.cpu.SetGPR(vax.R4, 0)
-	e.cpu.SetGPR(vax.R5, 0)
+	e.cpu.SetGPR(registers.R0, uint32(len1))
+	e.cpu.SetGPR(registers.R1, src)
+	e.cpu.SetGPR(registers.R2, 0)
+	e.cpu.SetGPR(registers.R3, dst)
+	e.cpu.SetGPR(registers.R4, 0)
+	e.cpu.SetGPR(registers.R5, 0)
 
 	result, _, c := subResult(uint64(uint16(srcLen)), uint64(uint16(dstLen)), 2)
 	psl := e.cpu.PSL()

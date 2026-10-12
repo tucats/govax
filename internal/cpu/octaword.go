@@ -1,7 +1,7 @@
 package cpu
 
 import (
-	"github.com/tucats/govax/internal/vax"
+	"github.com/tucats/govax/internal/registers"
 	"github.com/tucats/govax/internal/vm"
 )
 
@@ -32,7 +32,7 @@ func (o Octaword) Negative() bool { return o.Hi>>63 != 0 }
 // run into the PC. The manual calls R12 and above UNPREDICTABLE; govax
 // raises a reserved-addressing-mode fault, as decided in Phase 35
 // (docs/PHASE-35.md, Decision 4).
-const octawordRegisterLimit = vax.R11
+const octawordRegisterLimit = registers.R11
 
 // LoadOctaword reads op's full 16-byte value. Use it for an operand whose
 // Size is 16; Load, which returns a uint64, would see only the low half.
@@ -40,7 +40,7 @@ const octawordRegisterLimit = vax.R11
 // A register operand reads four consecutive registers, low-order longword
 // first: Rn holds bits 0-31, Rn+1 bits 32-63, Rn+2 bits 64-95, and Rn+3
 // bits 96-127 (as a quadword uses Rn and Rn+1).
-func (op Operand) LoadOctaword(cpu *vax.CPU, mem *vm.Memory) (Octaword, error) {
+func (op Operand) LoadOctaword(cpu *registers.CPU, mem *vm.Memory) (Octaword, error) {
 	switch op.Kind {
 	case OperandImmediate:
 		return Octaword{Lo: op.Value, Hi: op.High}, nil
@@ -58,7 +58,7 @@ func (op Operand) LoadOctaword(cpu *vax.CPU, mem *vm.Memory) (Octaword, error) {
 
 // StoreOctaword writes v to op, a 16-byte operand: to four consecutive
 // registers, or 16 bytes of memory.
-func (op Operand) StoreOctaword(cpu *vax.CPU, mem *vm.Memory, v Octaword) error {
+func (op Operand) StoreOctaword(cpu *registers.CPU, mem *vm.Memory, v Octaword) error {
 	switch op.Kind {
 	case OperandImmediate:
 		return ErrImmutableOperand
@@ -77,7 +77,7 @@ func (op Operand) StoreOctaword(cpu *vax.CPU, mem *vm.Memory, v Octaword) error 
 }
 
 // loadOctaword reads the 16 bytes at addr as two quadwords.
-func loadOctaword(cpu *vax.CPU, mem *vm.Memory, addr uint32) (Octaword, error) {
+func loadOctaword(cpu *registers.CPU, mem *vm.Memory, addr uint32) (Octaword, error) {
 	lo, err := mem.LoadQuadword(cpu, addr)
 	if err != nil {
 		return Octaword{}, err
@@ -98,7 +98,7 @@ func loadOctaword(cpu *vax.CPU, mem *vm.Memory, addr uint32) (Octaword, error) {
 // and an instruction that faults must leave memory as it found it, so that
 // the operating system can fix the fault (page the memory in, say) and run
 // the instruction again from the start.
-func storeOctaword(cpu *vax.CPU, mem *vm.Memory, addr uint32, v Octaword) error {
+func storeOctaword(cpu *registers.CPU, mem *vm.Memory, addr uint32, v Octaword) error {
 	for _, a := range []uint32{addr, addr + 15} {
 		if _, err := mem.Translate(cpu, a, vm.AccessWrite); err != nil {
 			return err

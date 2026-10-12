@@ -3,7 +3,7 @@ package dclshell
 import (
 	"time"
 
-	"github.com/tucats/govax/internal/vax"
+	"github.com/tucats/govax/internal/registers"
 	"github.com/tucats/govax/internal/vmsdef"
 )
 
@@ -158,7 +158,7 @@ func (c *Interpreter) lendCPU(over func() bool, deadline uint64) bool {
 
 		if err == nil {
 			ran = true
-			finish := c.machine.TraceStep(c.machine.CPU.GPR(vax.PC), false)
+			finish := c.machine.TraceStep(c.machine.CPU.GPR(registers.PC), false)
 
 			if err = c.machine.StepMachine(); err == nil {
 				finish()

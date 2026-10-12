@@ -4,14 +4,14 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/tucats/govax/internal/vax"
+	"github.com/tucats/govax/internal/registers"
 )
 
 // identityCPU returns a CPU with virtual memory disabled, so Translate is
 // the identity function and these tests can address physical memory
 // directly by virtual address.
-func identityCPU() *vax.CPU {
-	return vax.New() // MAPEN == 0
+func identityCPU() *registers.CPU {
+	return registers.New() // MAPEN == 0
 }
 
 func TestByteRoundTrip(t *testing.T) {
@@ -192,17 +192,17 @@ func TestLoadRegisterArchitectedPreservesUpperBytes(t *testing.T) {
 	cpu := identityCPU()
 	mem := NewMemory(1 << 12)
 
-	cpu.SetGPR(vax.R2, 0xFFFFFFFF)
+	cpu.SetGPR(registers.R2, 0xFFFFFFFF)
 
 	if err := mem.StoreWord(cpu, 0x100, 0xBEEF); err != nil {
 		t.Fatalf("StoreWord: %v", err)
 	}
 
-	if err := mem.LoadRegister(cpu, vax.R2, 0x100, 2); err != nil {
+	if err := mem.LoadRegister(cpu, registers.R2, 0x100, 2); err != nil {
 		t.Fatalf("LoadRegister: %v", err)
 	}
 
-	if got, want := cpu.GPR(vax.R2), uint32(0xFFFF0000)|0xBEEF; got != want {
+	if got, want := cpu.GPR(registers.R2), uint32(0xFFFF0000)|0xBEEF; got != want {
 		t.Errorf("R2 = %#08x, want %#08x (upper bytes preserved)", got, want)
 	}
 }
@@ -211,7 +211,7 @@ func TestLoadRegisterScratchZeroesFirst(t *testing.T) {
 	cpu := identityCPU()
 	mem := NewMemory(1 << 12)
 
-	const scratch = vax.Reg(20) // > R15, a reusable temporary
+	const scratch = registers.Reg(20) // > R15, a reusable temporary
 
 	cpu.SetGPR(scratch, 0xFFFFFFFF)
 
@@ -236,11 +236,11 @@ func TestLoadRegisterFullLongword(t *testing.T) {
 		t.Fatalf("StoreLongword: %v", err)
 	}
 
-	if err := mem.LoadRegister(cpu, vax.R3, 0x100, 4); err != nil {
+	if err := mem.LoadRegister(cpu, registers.R3, 0x100, 4); err != nil {
 		t.Fatalf("LoadRegister: %v", err)
 	}
 
-	if got := cpu.GPR(vax.R3); got != 0x12345678 {
+	if got := cpu.GPR(registers.R3); got != 0x12345678 {
 		t.Errorf("R3 = %#08x, want 0x12345678", got)
 	}
 }
@@ -316,7 +316,7 @@ func TestOutOfRangeErrorPropagates(t *testing.T) {
 			}},
 		{"LoadRegister",
 			func() error {
-				return mem.LoadRegister(cpu, vax.R1, 2, 4)
+				return mem.LoadRegister(cpu, registers.R1, 2, 4)
 			}},
 	}
 

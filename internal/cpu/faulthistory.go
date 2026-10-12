@@ -1,6 +1,6 @@
 package cpu
 
-import "github.com/tucats/govax/internal/vax"
+import "github.com/tucats/govax/internal/registers"
 
 // This file implements the fault/exception event history ring buffer (SET
 // FAULT/HISTORY, and the history half of SHOW FAULT — docs/PHASE-16.md
@@ -15,7 +15,7 @@ import "github.com/tucats/govax/internal/vax"
 // fault a breakpoint intercepts is still recorded).
 //
 // Not ported: struct FAULT's r0/r1 fields. interrupt.c's set_fault captures
-// them (`vax.fault.r0 = vax.R0; vax.fault.r1 = vax.R1;`), but show_faults —
+// them (`vax.fault.r0 = registers.R0; vax.fault.r1 = registers.R1;`), but show_faults —
 // the only reader of a stored FAULT — never prints them; dead state as far
 // as this feature's own observable behavior goes, so FaultRecord omits them
 // rather than carrying values nothing displays.
@@ -30,7 +30,7 @@ const defaultFaultHistory = 8
 type FaultRecord struct {
 	Code Exception
 	PC   uint32
-	PSL  vax.PSL
+	PSL  registers.PSL
 	Args []uint32
 	// Seq is store_fault's own history_id: a count of every fault ever
 	// recorded by this Engine, not reset when the ring buffer itself is
@@ -80,7 +80,7 @@ func (e *Engine) FaultHistorySize() int { return e.faultHistoryMax }
 // set_fault's own unconditional store_fault call — see this file's own top
 // comment on why this runs before, not after, the fault-breakpoint check.
 // A no-op when history is disabled (FaultHistorySize() == 0).
-func (e *Engine) recordFault(code Exception, args []uint32, pc uint32, psl vax.PSL) {
+func (e *Engine) recordFault(code Exception, args []uint32, pc uint32, psl registers.PSL) {
 	if e.faultHistoryMax <= 0 {
 		return
 	}

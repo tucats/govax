@@ -3,7 +3,7 @@ package cpu
 import (
 	"testing"
 
-	"github.com/tucats/govax/internal/vax"
+	"github.com/tucats/govax/internal/registers"
 )
 
 // quantumEngine returns a kernel-mode Engine in quantum (deterministic)
@@ -50,8 +50,8 @@ func TestTODRWithinYear(t *testing.T) {
 func TestMtprMfprTODR(t *testing.T) {
 	e := quantumEngine()
 
-	e.cpu.SetGPR(vax.R1, 12345)
-	stepInstruction(t, e, mtprBytes(vax.R1, uint32(vax.TODR))...)
+	e.cpu.SetGPR(registers.R1, 12345)
+	stepInstruction(t, e, mtprBytes(registers.R1, uint32(registers.TODR))...)
 
 	// Step counts an instruction's tick before running it, so the MFPR's
 	// own Step adds one more tick before it reads: 49 here make 50 ms in
@@ -60,9 +60,9 @@ func TestMtprMfprTODR(t *testing.T) {
 		e.tickQuantum()
 	}
 
-	stepInstruction(t, e, mfprBytes(uint32(vax.TODR), vax.R2)...)
+	stepInstruction(t, e, mfprBytes(uint32(registers.TODR), registers.R2)...)
 
-	if got := e.cpu.GPR(vax.R2); got != 12350 {
+	if got := e.cpu.GPR(registers.R2); got != 12350 {
 		t.Errorf("MFPR TODR = %d, want 12350 (12345 written, then 50 ms)", got)
 	}
 }
@@ -71,14 +71,14 @@ func TestMtprMfprTODR(t *testing.T) {
 // computed value for TODR.
 func TestReadPR(t *testing.T) {
 	e := quantumEngine()
-	e.cpu.SetPR(vax.P0BR, 0x80001000)
+	e.cpu.SetPR(registers.P0BR, 0x80001000)
 	e.SetTODR(777)
 
-	if got := e.ReadPR(vax.P0BR); got != 0x80001000 {
+	if got := e.ReadPR(registers.P0BR); got != 0x80001000 {
 		t.Errorf("ReadPR(P0BR) = %#x, want 0x80001000", got)
 	}
 
-	if got := e.ReadPR(vax.TODR); got != 777 {
+	if got := e.ReadPR(registers.TODR); got != 777 {
 		t.Errorf("ReadPR(TODR) = %d, want 777", got)
 	}
 }
@@ -104,9 +104,9 @@ func TestPollHostClockTicksWhenRunning(t *testing.T) {
 	e := kernelEngine()
 	e.hardwareClock = true
 	e.lastClock = 0
-	e.cpu.SetPR(vax.NICR, 0xFFFFFF00) // a long count, so no interrupt yet
-	e.cpu.SetPR(vax.ICR, 0xFFFFFF00)
-	e.cpu.SetPR(vax.ICCS, iccsRun)
+	e.cpu.SetPR(registers.NICR, 0xFFFFFF00) // a long count, so no interrupt yet
+	e.cpu.SetPR(registers.ICR, 0xFFFFFF00)
+	e.cpu.SetPR(registers.ICCS, iccsRun)
 
 	e.pollHostClock()
 
@@ -114,7 +114,7 @@ func TestPollHostClockTicksWhenRunning(t *testing.T) {
 		t.Fatal("lastClock = 0, want the host clock read")
 	}
 
-	if got := e.cpu.PR(vax.ICR); got != 0xFFFFFF01 {
+	if got := e.cpu.PR(registers.ICR); got != 0xFFFFFF01 {
 		t.Errorf("ICR = %#x, want 0xFFFFFF01 (one tick)", got)
 	}
 }
@@ -124,9 +124,9 @@ func TestPollHostClockTicksWhenRunning(t *testing.T) {
 func TestHardwareClockPollsEveryInterval(t *testing.T) {
 	e := kernelEngine()
 	e.hardwareClock = true
-	e.cpu.SetPR(vax.NICR, 0xFFFFFF00)
-	e.cpu.SetPR(vax.ICR, 0xFFFFFF00)
-	e.cpu.SetPR(vax.ICCS, iccsRun)
+	e.cpu.SetPR(registers.NICR, 0xFFFFFF00)
+	e.cpu.SetPR(registers.ICR, 0xFFFFFF00)
+	e.cpu.SetPR(registers.ICCS, iccsRun)
 
 	e.lastClock = 0
 	e.instrCount = 1 // Step makes it 2: no poll

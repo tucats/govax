@@ -5,8 +5,8 @@ import (
 	"testing"
 
 	"github.com/tucats/govax/internal/cpu"
+	"github.com/tucats/govax/internal/registers"
 	"github.com/tucats/govax/internal/sched"
-	"github.com/tucats/govax/internal/vax"
 )
 
 // withScheduler installs env's System as the scheduling hook of an
@@ -118,7 +118,7 @@ func TestWaits_mailbox(t *testing.T) {
 	wantState(t, env, sched.StateCOM, sched.ResourceNone)
 
 	// A $QIOW read of the now empty mailbox.
-	env.cpu.SetGPR(vax.FP, 0x7000)
+	env.cpu.SetGPR(registers.FP, 0x7000)
 
 	if err := callWaiting(env, serviceSysQiow, 0, ch, fnReadVBlk, 0, 0, 0, buf, 16); !errors.Is(err, ErrWait) {
 		t.Fatalf("read of an empty mailbox: err %v, want ErrWait", err)
@@ -126,7 +126,7 @@ func TestWaits_mailbox(t *testing.T) {
 
 	wantState(t, env, sched.StateLEF, sched.ResourceNone)
 
-	env.cpu.SetGPR(vax.FP, 0x6000)
+	env.cpu.SetGPR(registers.FP, 0x6000)
 	wantR0(t, callLNM(t, env, serviceSysQiow, 0, ch, fnWriteNow, 0, 0, 0, a.str("hi"), 2), ssNormal)
 
 	env.wakeWaiters()

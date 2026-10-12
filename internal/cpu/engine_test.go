@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/tucats/govax/internal/vax"
+	"github.com/tucats/govax/internal/registers"
 )
 
 // testEngine builds an Engine around a private Table (not the shared
@@ -14,7 +14,7 @@ import (
 // Handlers don't leak state into other tests.
 func testEngine(instructions []*Instruction) *Engine {
 	cpu, mem := fixture()
-	cpu.SetPR(vax.SCBB, scbb)
+	cpu.SetPR(registers.SCBB, scbb)
 
 	return &Engine{cpu: cpu, mem: mem, table: newTable(instructions)}
 }
@@ -39,7 +39,7 @@ func TestEngineAccessors(t *testing.T) {
 func TestEngineLastDecoded(t *testing.T) {
 	e := testEngine([]*Instruction{{Name: "TESTNOP", Opcode: Opcode{Function: 0x01}}})
 	e.table.SetHandler(e.table.Lookup(Opcode{Function: 0x01}), func(e *Engine, d *Decoded) error { return nil })
-	e.cpu.SetGPR(vax.PC, base)
+	e.cpu.SetGPR(registers.PC, base)
 	putBytes(t, e.cpu, e.mem, base, 0x01)
 
 	if err := e.Step(); err != nil {
@@ -54,7 +54,7 @@ func TestEngineLastDecoded(t *testing.T) {
 func TestEngineStepDispatchesHandler(t *testing.T) {
 	inst := &Instruction{Name: "TESTNOP", Opcode: Opcode{Function: 0x01}}
 	e := testEngine([]*Instruction{inst})
-	e.cpu.SetGPR(vax.PC, base)
+	e.cpu.SetGPR(registers.PC, base)
 	putBytes(t, e.cpu, e.mem, base, 0x01)
 
 	var (
@@ -63,7 +63,7 @@ func TestEngineStepDispatchesHandler(t *testing.T) {
 	)
 
 	e.table.SetHandler(inst, func(eng *Engine, d *Decoded) error {
-		gotPC = eng.cpu.GPR(vax.PC)
+		gotPC = eng.cpu.GPR(registers.PC)
 		gotInst = d.Instruction
 
 		return nil
@@ -85,34 +85,34 @@ func TestEngineStepDispatchesHandler(t *testing.T) {
 func TestEngineStepUnimplementedFaultsAndContinues(t *testing.T) {
 	inst := &Instruction{Name: "TESTUNIMP", Opcode: Opcode{Function: 0x01}}
 	e := testEngine([]*Instruction{inst}) // no handler registered
-	e.cpu.SetGPR(vax.PC, base)
+	e.cpu.SetGPR(registers.PC, base)
 	putBytes(t, e.cpu, e.mem, base, 0x01)
-	e.cpu.SetGPR(vax.SP, 0x7000)
-	e.cpu.SetPR(vax.KSP, 0x7000)
+	e.cpu.SetGPR(registers.SP, 0x7000)
+	e.cpu.SetPR(registers.KSP, 0x7000)
 	putVector(t, e, ExcPrivileged, 0x200, 0)
 
 	if err := e.Step(); err != nil {
 		t.Fatalf("Step: %v (fault should be handled, not propagated)", err)
 	}
 
-	if e.cpu.GPR(vax.PC) != 0x200 {
-		t.Errorf("PC = %#x, want 0x200 (fault vector)", e.cpu.GPR(vax.PC))
+	if e.cpu.GPR(registers.PC) != 0x200 {
+		t.Errorf("PC = %#x, want 0x200 (fault vector)", e.cpu.GPR(registers.PC))
 	}
 }
 
 func TestEngineStepRaiseDebugExceptionsSetTrace(t *testing.T) {
 	inst := &Instruction{Name: "TESTUNIMP", Opcode: Opcode{Function: 0x01}}
 	e := testEngine([]*Instruction{inst}) // no handler registered
-	e.cpu.SetGPR(vax.PC, base)
+	e.cpu.SetGPR(registers.PC, base)
 	putBytes(t, e.cpu, e.mem, base, 0x01)
-	e.cpu.SetGPR(vax.SP, 0x7000)
-	e.cpu.SetPR(vax.KSP, 0x7000)
+	e.cpu.SetGPR(registers.SP, 0x7000)
+	e.cpu.SetPR(registers.KSP, 0x7000)
 	putVector(t, e, ExcPrivileged, 0x200, 0)
 
 	var buf bytes.Buffer
 
 	e.cpu.SetDebugWriter(&buf)
-	e.cpu.SetDebug(vax.DebugExceptions)
+	e.cpu.SetDebug(registers.DebugExceptions)
 
 	if err := e.Step(); err != nil {
 		t.Fatalf("Step: %v", err)
@@ -131,7 +131,7 @@ func TestEngineStepRaiseDebugExceptionsSetTrace(t *testing.T) {
 func TestEngineStepHandlerReturnsErrHalted(t *testing.T) {
 	inst := &Instruction{Name: "TESTHALT", Opcode: Opcode{Function: 0x00}}
 	e := testEngine([]*Instruction{inst})
-	e.cpu.SetGPR(vax.PC, base)
+	e.cpu.SetGPR(registers.PC, base)
 	putBytes(t, e.cpu, e.mem, base, 0x00)
 	e.table.SetHandler(inst, func(eng *Engine, d *Decoded) error { return ErrHalted })
 
@@ -148,7 +148,7 @@ func TestEngineStepHandlerReturnsErrHalted(t *testing.T) {
 func TestEngineRunStopsOnHalt(t *testing.T) {
 	inst := &Instruction{Name: "TESTHALT", Opcode: Opcode{Function: 0x00}}
 	e := testEngine([]*Instruction{inst})
-	e.cpu.SetGPR(vax.PC, base)
+	e.cpu.SetGPR(registers.PC, base)
 	putBytes(t, e.cpu, e.mem, base, 0x00)
 	e.table.SetHandler(inst, func(eng *Engine, d *Decoded) error { return ErrHalted })
 
@@ -161,7 +161,7 @@ func TestEngineRunStopsOnHalt(t *testing.T) {
 func TestEngineRunPropagatesOtherHandlerError(t *testing.T) {
 	inst := &Instruction{Name: "TESTBAD", Opcode: Opcode{Function: 0x00}}
 	e := testEngine([]*Instruction{inst})
-	e.cpu.SetGPR(vax.PC, base)
+	e.cpu.SetGPR(registers.PC, base)
 	putBytes(t, e.cpu, e.mem, base, 0x00)
 	
 	wantErr := errors.New("boom")
@@ -176,21 +176,21 @@ func TestEngineRunPropagatesOtherHandlerError(t *testing.T) {
 
 func TestEngineStepDecodeFaultHandled(t *testing.T) {
 	cpu, mem := fixture()
-	cpu.SetPR(vax.SCBB, scbb)
+	cpu.SetPR(registers.SCBB, scbb)
 	e := NewEngine(cpu, mem) // uses the real, shared instruction table
-	cpu.SetGPR(vax.PC, base)
+	cpu.SetGPR(registers.PC, base)
 	// MOVL S^#5,S^#5 : illegal write to a short literal -> reserved
 	// addressing mode fault at decode time.
 	putBytes(t, cpu, mem, base, 0xD0, 0x05, 0x05)
-	cpu.SetGPR(vax.SP, 0x7000)
-	cpu.SetPR(vax.KSP, 0x7000)
+	cpu.SetGPR(registers.SP, 0x7000)
+	cpu.SetPR(registers.KSP, 0x7000)
 	putVector(t, e, ExcReservedAddr, 0x300, 0)
 
 	if err := e.Step(); err != nil {
 		t.Fatalf("Step: %v", err)
 	}
 
-	if cpu.GPR(vax.PC) != 0x300 {
-		t.Errorf("PC = %#x, want 0x300 (fault vector)", cpu.GPR(vax.PC))
+	if cpu.GPR(registers.PC) != 0x300 {
+		t.Errorf("PC = %#x, want 0x300 (fault vector)", cpu.GPR(registers.PC))
 	}
 }

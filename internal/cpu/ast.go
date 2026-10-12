@@ -1,6 +1,6 @@
 package cpu
 
-import "github.com/tucats/govax/internal/vax"
+import "github.com/tucats/govax/internal/registers"
 
 // AST delivery: the engine's half (docs/PHASE-26.md subtask 15).
 //
@@ -96,8 +96,8 @@ func (e *Engine) deliverAST() error {
 	// CALLG's own steps (emulCall): remember SP as it is, align it to a
 	// longword, and build the frame. calls=false: RET won't pop the
 	// argument list, which the RTL's AST exit reads and removes itself.
-	savedSP := e.cpu.GPR(vax.SP)
-	e.cpu.SetGPR(vax.SP, savedSP&^3)
+	savedSP := e.cpu.GPR(registers.SP)
+	e.cpu.SetGPR(registers.SP, savedSP&^3)
 
-	return e.buildCallFrame(call.ArgList, call.Routine, savedSP, call.ReturnPC, e.cpu.GPR(vax.FP), false)
+	return e.buildCallFrame(call.ArgList, call.Routine, savedSP, call.ReturnPC, e.cpu.GPR(registers.FP), false)
 }

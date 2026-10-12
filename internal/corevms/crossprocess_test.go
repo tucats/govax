@@ -4,8 +4,8 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/tucats/govax/internal/registers"
 	"github.com/tucats/govax/internal/sched"
-	"github.com/tucats/govax/internal/vax"
 )
 
 // The process-control services on other processes (docs/PHASE-45.md,
@@ -80,7 +80,7 @@ func TestCross_forcex(t *testing.T) {
 	wantR0(t, byPID(t, parent, serviceSysForcex, a, child, 0x2C), ssNormal) // not queued twice
 
 	q := child.Process.ast.queue
-	if len(q) != 1 || q[0].routine != exitEntryAddr || q[0].param != 0x2C || q[0].mode != uint32(vax.User) {
+	if len(q) != 1 || q[0].routine != exitEntryAddr || q[0].param != 0x2C || q[0].mode != uint32(registers.User) {
 		t.Fatalf("child's AST queue = %+v", q)
 	}
 

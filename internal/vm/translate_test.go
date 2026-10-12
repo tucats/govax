@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/tucats/govax/internal/vax"
+	"github.com/tucats/govax/internal/registers"
 )
 
 // Fixture layout for the P0/S0 translation tests below:
@@ -28,16 +28,16 @@ const (
 	sysBase   = 0x80000000 // virtual base of S0 space (region bits == 2)
 )
 
-func newTranslateFixture(t *testing.T, npages int) (*vax.CPU, *Memory) {
+func newTranslateFixture(t *testing.T, npages int) (*registers.CPU, *Memory) {
 	t.Helper()
 
-	cpu := vax.New()
+	cpu := registers.New()
 	mem := NewMemory(1 << 20) // 1MB of RAM
 
-	cpu.SetPR(vax.MAPEN, 1)
+	cpu.SetPR(registers.MAPEN, 1)
 
-	cpu.SetPR(vax.SBR, sysPTBase)
-	cpu.SetPR(vax.SLR, uint32(npages))
+	cpu.SetPR(registers.SBR, sysPTBase)
+	cpu.SetPR(registers.SLR, uint32(npages))
 
 	var s0pte PTE
 
@@ -49,8 +49,8 @@ func newTranslateFixture(t *testing.T, npages int) (*vax.CPU, *Memory) {
 		t.Fatalf("seed S0 PTE: %v", err)
 	}
 
-	cpu.SetPR(vax.P0BR, sysBase+pageSize) // system virtual page 1
-	cpu.SetPR(vax.P0LR, uint32(npages))
+	cpu.SetPR(registers.P0BR, sysBase+pageSize) // system virtual page 1
+	cpu.SetPR(registers.P0LR, uint32(npages))
 
 	for i := 0; i < npages; i++ {
 		var pte PTE
@@ -68,7 +68,7 @@ func newTranslateFixture(t *testing.T, npages int) (*vax.CPU, *Memory) {
 }
 
 func TestTranslateMAPENDisabledIsIdentity(t *testing.T) {
-	cpu := vax.New() // MAPEN == 0
+	cpu := registers.New() // MAPEN == 0
 	mem := NewMemory(1 << 16)
 
 	got, err := mem.Translate(cpu, 0xDEADBE00, AccessRead)
@@ -109,7 +109,7 @@ func TestTranslateDebugVMAndTBTrace(t *testing.T) {
 	var buf bytes.Buffer
 
 	cpu.SetDebugWriter(&buf)
-	cpu.SetDebug(vax.DebugVM | vax.DebugTB)
+	cpu.SetDebug(registers.DebugVM | registers.DebugTB)
 
 	addrA := uint32(2*pageSize) + 0x10 // VA=00000410
 	addrB := uint32(3*pageSize) + 0x20 // VA=00000620, a different TB slot
@@ -197,7 +197,7 @@ func TestLookupPTEP0RoundTrip(t *testing.T) {
 		t.Errorf("region = %d, want 0 (P0)", region)
 	}
 
-	wantPTEAddr := cpu.PR(vax.P0BR) + 2*4
+	wantPTEAddr := cpu.PR(registers.P0BR) + 2*4
 	if pteAddr != wantPTEAddr {
 		t.Errorf("pteAddr = %#08x, want %#08x", pteAddr, wantPTEAddr)
 	}
@@ -306,7 +306,7 @@ func TestStorePTES0RoundTrip(t *testing.T) {
 
 func TestStorePTEMAPENDisabledFaults(t *testing.T) {
 	cpu, mem := newTranslateFixture(t, 4)
-	cpu.SetPR(vax.MAPEN, 0)
+	cpu.SetPR(registers.MAPEN, 0)
 
 	err := mem.StorePTE(cpu, 0x1000, PTE(0))
 	assertAccessViolation(t, err, 0x1000)
@@ -322,7 +322,7 @@ func TestStorePTELengthViolation(t *testing.T) {
 
 func TestLookupPTEMAPENDisabledFaults(t *testing.T) {
 	cpu, mem := newTranslateFixture(t, 4)
-	cpu.SetPR(vax.MAPEN, 0)
+	cpu.SetPR(registers.MAPEN, 0)
 
 	_, _, _, err := mem.LookupPTE(cpu, 0x1000) //nolint:dogsled
 	assertAccessViolation(t, err, 0x1000)
@@ -342,7 +342,7 @@ func TestTranslateP1LengthViolation(t *testing.T) {
 	// P1 space is region 1 (top bits 01); P1LR semantics are inverted: a
 	// page exists only if page >= P1LR (P1 grows down from its top). With
 	// P1LR at 2, pages 0 and 1 must fault.
-	cpu.SetPR(vax.P1LR, 2)
+	cpu.SetPR(registers.P1LR, 2)
 
 	for _, page := range []uint32{0, 1} {
 		vaddr := uint32(1)<<30 | page*pageSize // region 1
@@ -375,8 +375,8 @@ func TestTranslateLengthBoundaries(t *testing.T) {
 	// P1: with P1LR = 5, page 5's PTE is P1BR+5*4. Point P1BR so that PTE
 	// is P0's page-table entry 0 (a valid page), and page 5 translates,
 	// while page 4 is a length violation.
-	cpu.SetPR(vax.P1LR, 5)
-	cpu.SetPR(vax.P1BR, sysBase+pageSize-5*4)
+	cpu.SetPR(registers.P1LR, 5)
+	cpu.SetPR(registers.P1BR, sysBase+pageSize-5*4)
 
 	p1 := uint32(1)<<30 | 5*pageSize
 
@@ -419,7 +419,7 @@ func TestTranslateProtectionViolation(t *testing.T) {
 	}
 
 	psl := cpu.PSL()
-	psl.SetCurMod(vax.User)
+	psl.SetCurMod(registers.User)
 	cpu.SetPSL(psl)
 
 	vaddr := uint32(1 * pageSize)
@@ -626,7 +626,7 @@ func TestTranslateP0PTEItselfFaults(t *testing.T) {
 
 	// Point P0BR at a system virtual page number beyond SLR (4 pages), so the
 	// recursive S0 translation of the PTE address itself faults.
-	cpu.SetPR(vax.P0BR, sysBase+10*pageSize)
+	cpu.SetPR(registers.P0BR, sysBase+10*pageSize)
 
 	vaddr := uint32(0)
 	_, err := mem.Translate(cpu, vaddr, AccessRead)

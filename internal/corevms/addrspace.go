@@ -4,7 +4,7 @@ import (
 	"encoding/binary"
 	"fmt"
 
-	"github.com/tucats/govax/internal/vax"
+	"github.com/tucats/govax/internal/registers"
 	"github.com/tucats/govax/internal/vm"
 )
 
@@ -42,13 +42,13 @@ func ProcessPTE(p1 bool, page uint32) vm.PTE {
 
 	if !p1 && page == 0 {
 		pte.SetProtection(vm.ProtNA)
-		pte.SetOwner(uint8(vax.Kernel))
+		pte.SetOwner(uint8(registers.Kernel))
 
 		return pte
 	}
 
 	pte.SetProtection(vm.ProtUW)
-	pte.SetOwner(uint8(vax.User))
+	pte.SetOwner(uint8(registers.User))
 
 	return pte
 }
@@ -82,7 +82,7 @@ func (s *ProcessSpace) Owned() bool { return s.P0Table != 0 }
 
 // AdoptAddressSpace returns process 1's address space: the tables VMINIT
 // built, as the CPU's registers describe them, p0Pages and p1Pages long.
-func AdoptAddressSpace(cpu *vax.CPU, p0Pages, p1Pages uint32) *ProcessSpace {
+func AdoptAddressSpace(cpu *registers.CPU, p0Pages, p1Pages uint32) *ProcessSpace {
 	return &ProcessSpace{AddressSpace: vm.CurrentAddressSpace(cpu), P0Pages: p0Pages, P1Pages: p1Pages}
 }
 
@@ -110,7 +110,7 @@ func (sys *System) ShareP1(base, end uint32) error {
 
 	// Before VMINIT there are no page tables, and no processes to share
 	// pages with.
-	if sys.cpu.PR(vax.MAPEN) == 0 {
+	if sys.cpu.PR(registers.MAPEN) == 0 {
 		return nil
 	}
 
@@ -237,7 +237,7 @@ func (sys *System) mapShared(s *ProcessSpace) error {
 		pte.SetValid(true)
 		pte.SetPFN(sp.pfn)
 		pte.SetProtection(vm.ProtUR)
-		pte.SetOwner(uint8(vax.Kernel))
+		pte.SetOwner(uint8(registers.Kernel))
 
 		if err := sys.mem.StorePTEIn(sys.cpu, s.AddressSpace, sp.va, pte); err != nil {
 			return err

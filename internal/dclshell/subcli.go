@@ -8,7 +8,7 @@ import (
 	"github.com/tucats/govax/internal/corevms"
 	"github.com/tucats/govax/internal/lnm"
 	"github.com/tucats/govax/internal/machine"
-	"github.com/tucats/govax/internal/vax"
+	"github.com/tucats/govax/internal/registers"
 	"github.com/tucats/govax/internal/vmsdef"
 	"github.com/tucats/govax/internal/vmserrors"
 )
@@ -388,7 +388,7 @@ func (c *Interpreter) cliCommand(env *corevms.Environment, _ []uint32) (uint32, 
 		case yieldImage:
 			cli.yielded = nil
 			cli.imageActive = true
-			cli.fp, cli.ap = c.machine.CPU.GPR(vax.FP), c.machine.CPU.GPR(vax.AP)
+			cli.fp, cli.ap = c.machine.CPU.GPR(registers.FP), c.machine.CPU.GPR(registers.AP)
 
 			return 0, &corevms.CallRequest{Routine: y.driver, ArgList: cli.stub + cliStubArgList, Image: true}
 		}
@@ -710,7 +710,7 @@ func (c *Interpreter) logoutCommand() error {
 // of its loop, so the shim resumes the interpreter.
 func (c *Interpreter) endCLIImage(cli *subprocessCLI) {
 	env := cli.env
-	status := c.machine.CPU.GPR(vax.R0)
+	status := c.machine.CPU.GPR(registers.R0)
 
 	cli.imageActive = false
 	cli.imageExit = status
@@ -723,9 +723,9 @@ func (c *Interpreter) endCLIImage(cli *subprocessCLI) {
 	env.ImageRundown()
 	env.CommandLine = ""
 
-	c.machine.CPU.SetGPR(vax.FP, cli.fp)
-	c.machine.CPU.SetGPR(vax.AP, cli.ap)
-	c.machine.CPU.SetGPR(vax.PC, cli.stub+cliStubLoop)
+	c.machine.CPU.SetGPR(registers.FP, cli.fp)
+	c.machine.CPU.SetGPR(registers.AP, cli.ap)
+	c.machine.CPU.SetGPR(registers.PC, cli.stub+cliStubLoop)
 }
 
 // rmsFNF is RMS$_FNF, the status corevms gives an image that isn't
@@ -795,7 +795,7 @@ func (c *Interpreter) imageFileSpec(env *corevms.Environment, image string) stri
 // traceCLI writes a DEBUG(PROCESS) line about cli's process, when that
 // debug flag is on.
 func (c *Interpreter) traceCLI(cli *subprocessCLI, format string, args ...any) {
-	if c.machine.CPU.DebugEnabled(vax.DebugProcess) {
+	if c.machine.CPU.DebugEnabled(registers.DebugProcess) {
 		fmt.Fprintf(c.machine.CPU.DebugWriter(), "DEBUG(PROCESS): %08X CLI %s\n", cli.env.Process.PID, fmt.Sprintf(format, args...))
 	}
 }

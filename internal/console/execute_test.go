@@ -7,7 +7,7 @@ import (
 
 	"github.com/tucats/govax/internal/cpu"
 	"github.com/tucats/govax/internal/machine"
-	"github.com/tucats/govax/internal/vax"
+	"github.com/tucats/govax/internal/registers"
 )
 
 const (
@@ -62,7 +62,7 @@ func TestExecute_runsUntilHalt(t *testing.T) {
 		t.Errorf("output = %q, want a HALT message", buf.String())
 	}
 
-	if got := c.CPU.GPR(vax.PC); got != 0x204 {
+	if got := c.CPU.GPR(registers.PC); got != 0x204 {
 		t.Errorf("PC after halt = %#x, want 0x204", got)
 	}
 }
@@ -112,7 +112,7 @@ func TestExecute_debugRegistersChangeDump(t *testing.T) {
 	c, buf := newTestConsole(t)
 	movR0Program(t, c, 0x200)
 	c.Trace = true
-	c.CPU.SetDebug(c.CPU.Debug() | vax.DebugRegisters)
+	c.CPU.SetDebug(c.CPU.Debug() | registers.DebugRegisters)
 
 	addr := uint32(0x200)
 	if err := c.Execute(&addr); err != nil {
@@ -128,7 +128,7 @@ func TestExecute_noRegisterDumpWhenDebugRegistersClear(t *testing.T) {
 	c, buf := newTestConsole(t)
 	movR0Program(t, c, 0x200)
 	c.Trace = true
-	c.CPU.SetDebug(c.CPU.Debug() &^ vax.DebugRegisters)
+	c.CPU.SetDebug(c.CPU.Debug() &^ registers.DebugRegisters)
 
 	addr := uint32(0x200)
 	if err := c.Execute(&addr); err != nil {
@@ -144,7 +144,7 @@ func TestExecute_debugFullDisasmOperandDump(t *testing.T) {
 	c, buf := newTestConsole(t)
 	movR0Program(t, c, 0x200)
 	c.Trace = true
-	c.CPU.SetDebug(c.CPU.Debug() | vax.DebugFullDisasm)
+	c.CPU.SetDebug(c.CPU.Debug() | registers.DebugFullDisasm)
 
 	addr := uint32(0x200)
 	if err := c.Execute(&addr); err != nil {

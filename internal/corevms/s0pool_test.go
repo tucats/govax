@@ -4,7 +4,7 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/tucats/govax/internal/vax"
+	"github.com/tucats/govax/internal/registers"
 	"github.com/tucats/govax/internal/vm"
 )
 
@@ -216,9 +216,9 @@ func newMappedEnvironment(t *testing.T) *Environment {
 		putLongword(t, env, i*4, uint32(pte)) // mapping is still off: physical
 	}
 
-	env.cpu.SetPR(vax.SBR, 0)
-	env.cpu.SetPR(vax.SLR, s0TestPages)
-	env.cpu.SetPR(vax.MAPEN, 1)
+	env.cpu.SetPR(registers.SBR, 0)
+	env.cpu.SetPR(registers.SLR, s0TestPages)
+	env.cpu.SetPR(registers.MAPEN, 1)
 
 	return env
 }

@@ -2,8 +2,8 @@ package corevms
 
 import (
 	"github.com/tucats/govax/internal/cpu"
+	"github.com/tucats/govax/internal/registers"
 	"github.com/tucats/govax/internal/sched"
-	"github.com/tucats/govax/internal/vax"
 )
 
 // Waiting with the scheduler (docs/PHASE-44.md, subtask 4).
@@ -252,7 +252,7 @@ func (sys *System) retryWaiters() {
 // savedPSL is the PSL env's process will run with: the CPU's, if it is
 // the process the CPU holds, or else the one saved in its hardware PCB.
 // ok is false if there is no PCB to read.
-func (env *Environment) savedPSL() (vax.PSL, bool) {
+func (env *Environment) savedPSL() (registers.PSL, bool) {
 	if env == env.Current() {
 		return env.cpu.PSL(), true
 	}

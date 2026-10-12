@@ -3,7 +3,7 @@ package vm
 import (
 	"encoding/binary"
 
-	"github.com/tucats/govax/internal/vax"
+	"github.com/tucats/govax/internal/registers"
 )
 
 // This is the mask for an address that converts the address to the
@@ -54,7 +54,7 @@ const PageMask = 0xFFFFFE00
 // does. When err is non-nil, the other return value (here, the byte) should
 // be treated as meaningless — by convention it's usually the type's zero
 // value (0 for byte), as it is throughout this file.
-func (m *Memory) LoadByte(cpu *vax.CPU, addr uint32) (byte, error) {
+func (m *Memory) LoadByte(cpu *registers.CPU, addr uint32) (byte, error) {
 	paddr, err := m.Translate(cpu, addr, AccessRead)
 	if err != nil {
 		return 0, err
@@ -72,7 +72,7 @@ func (m *Memory) LoadByte(cpu *vax.CPU, addr uint32) (byte, error) {
 
 // StoreByte writes one byte at a virtual address, translating and
 // fault-checking through cpu.
-func (m *Memory) StoreByte(cpu *vax.CPU, addr uint32, v byte) error {
+func (m *Memory) StoreByte(cpu *registers.CPU, addr uint32, v byte) error {
 	paddr, err := m.Translate(cpu, addr, AccessWrite)
 	if err != nil {
 		return err
@@ -99,7 +99,7 @@ func (m *Memory) StoreByte(cpu *vax.CPU, addr uint32, v byte) error {
 // with no accompanying data value. `for i := range dest` iterates over
 // every valid index of dest (0 to len(dest)-1) without needing to know its
 // length up front.
-func (m *Memory) Load(cpu *vax.CPU, addr uint32, dest []byte) error {
+func (m *Memory) Load(cpu *registers.CPU, addr uint32, dest []byte) error {
 	for i := range dest {
 		b, err := m.LoadByte(cpu, addr+uint32(i))
 		if err != nil {
@@ -118,7 +118,7 @@ func (m *Memory) Load(cpu *vax.CPU, addr uint32, dest []byte) error {
 // `for i, b := range src` is Go's usual two-value form of range over a
 // slice: i is the index, b is a copy of src[i] — equivalent to writing
 // `for i := range src { b := src[i]; ... }`, just more idiomatic.
-func (m *Memory) Store(cpu *vax.CPU, addr uint32, src []byte) error {
+func (m *Memory) Store(cpu *registers.CPU, addr uint32, src []byte) error {
 	for i, b := range src {
 		if err := m.StoreByte(cpu, addr+uint32(i), b); err != nil {
 			return err
@@ -143,7 +143,7 @@ func (m *Memory) Store(cpu *vax.CPU, addr uint32, src []byte) error {
 // storage, so writes through that slice are writes to buf itself.
 
 // LoadWord reads a 16-bit word at a virtual address.
-func (m *Memory) LoadWord(cpu *vax.CPU, addr uint32) (uint16, error) {
+func (m *Memory) LoadWord(cpu *registers.CPU, addr uint32) (uint16, error) {
 	var buf [2]byte
 
 	// If the value doesn't cross a page boundary, short-cut the read operation
@@ -173,7 +173,7 @@ func (m *Memory) LoadWord(cpu *vax.CPU, addr uint32) (uint16, error) {
 }
 
 // StoreWord writes a 16-bit word at a virtual address.
-func (m *Memory) StoreWord(cpu *vax.CPU, addr uint32, v uint16) error {
+func (m *Memory) StoreWord(cpu *registers.CPU, addr uint32, v uint16) error {
 	var buf [2]byte
 
 	// If the value doesn't cross a page boundary, short-cut the write operation
@@ -203,7 +203,7 @@ func (m *Memory) StoreWord(cpu *vax.CPU, addr uint32, v uint16) error {
 }
 
 // LoadLongword reads a 32-bit longword at a virtual address.
-func (m *Memory) LoadLongword(cpu *vax.CPU, addr uint32) (uint32, error) {
+func (m *Memory) LoadLongword(cpu *registers.CPU, addr uint32) (uint32, error) {
 	var buf [4]byte
 
 	// If the value doesn't cross a page boundary, short-cut the read operation
@@ -235,7 +235,7 @@ func (m *Memory) LoadLongword(cpu *vax.CPU, addr uint32) (uint32, error) {
 }
 
 // StoreLongword writes a 32-bit longword at a virtual address.
-func (m *Memory) StoreLongword(cpu *vax.CPU, addr uint32, v uint32) error {
+func (m *Memory) StoreLongword(cpu *registers.CPU, addr uint32, v uint32) error {
 	var buf [4]byte
 
 	// If the value doesn't cross a page boundary, short-cut the write operation
@@ -271,7 +271,7 @@ func (m *Memory) StoreLongword(cpu *vax.CPU, addr uint32, v uint32) error {
 // little-endian-only host this Go port targets that split has no observable
 // effect (see docs/PLAN.md's LONGWORD/typedef discussion), so it isn't
 // ported — a straight little-endian 8-byte decode is equivalent.
-func (m *Memory) LoadQuadword(cpu *vax.CPU, addr uint32) (uint64, error) {
+func (m *Memory) LoadQuadword(cpu *registers.CPU, addr uint32) (uint64, error) {
 	var buf [8]byte
 
 	// If the value doesn't cross a page boundary, short-cut the read operation
@@ -301,7 +301,7 @@ func (m *Memory) LoadQuadword(cpu *vax.CPU, addr uint32) (uint64, error) {
 }
 
 // StoreQuadword writes a 64-bit quadword at a virtual address.
-func (m *Memory) StoreQuadword(cpu *vax.CPU, addr uint32, v uint64) error {
+func (m *Memory) StoreQuadword(cpu *registers.CPU, addr uint32, v uint64) error {
 	var buf [8]byte
 
 	// If the value doesn't cross a page boundary, short-cut the write operation
@@ -332,8 +332,8 @@ func (m *Memory) StoreQuadword(cpu *vax.CPU, addr uint32, v uint64) error {
 
 // LoadRegister loads count bytes (1, 2 or 4) from a virtual address into the
 // low-order bytes of reg, leaving the remaining bytes of an architected
-// register (reg <= vax.R15) undisturbed, or zeroing a scratch/temporary
-// register (reg > vax.R15) first — matching load_register's distinction
+// register (reg <= registers.R15) undisturbed, or zeroing a scratch/temporary
+// register (reg > registers.R15) first — matching load_register's distinction
 // between "you asked for a word, only the low word changes" for real
 // registers and "scratch registers always start from zero" for decode-time
 // temporaries (sign/zero-extension of the loaded value is the caller's
@@ -345,10 +345,10 @@ func (m *Memory) StoreQuadword(cpu *vax.CPU, addr uint32, v uint64) error {
 // low-order bytes of that register are supposed to change — e.g. loading a
 // byte into R3 must not disturb the upper three bytes already sitting in
 // R3. R0-R15 are the 16 architected general-purpose registers (see
-// vax.R15); some of the decode engine's own scratch registers reuse this
+// registers.R15); some of the decode engine's own scratch registers reuse this
 // same LoadRegister helper for temporary values that have no such
 // "preserve the rest" requirement and should simply start from zero
-// instead, which is what the `reg > vax.R15` check distinguishes.
+// instead, which is what the `reg > registers.R15` check distinguishes.
 //
 // buf[:count] slices the local 4-byte array down to just the first count
 // bytes (1, 2, or 4) — the same no-copy slicing idea used throughout this
@@ -362,7 +362,7 @@ func (m *Memory) StoreQuadword(cpu *vax.CPU, addr uint32, v uint64) error {
 // falls back to the byte-at-a-time mechanism which does a translation
 // for each byte position (more costly, but detects ACCVIO when a page
 // boundary is crossed).
-func (m *Memory) LoadRegister(cpu *vax.CPU, reg vax.Reg, addr uint32, count int) error {
+func (m *Memory) LoadRegister(cpu *registers.CPU, reg registers.Reg, addr uint32, count int) error {
 	var buf [4]byte
 
 	// IF the address we're loading from fits on a page, we can do this with a simpler
@@ -395,7 +395,7 @@ func (m *Memory) LoadRegister(cpu *vax.CPU, reg vax.Reg, addr uint32, count int)
 	// as opposed to a general-purpose-register, assume it starts as zero.
 	var v uint32
 
-	if reg <= vax.R15 {
+	if reg <= registers.R15 {
 		v = cpu.GPR(reg)
 	}
 

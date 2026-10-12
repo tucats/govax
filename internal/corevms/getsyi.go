@@ -1,8 +1,8 @@
 package corevms
 
 import (
+	"github.com/tucats/govax/internal/registers"
 	"github.com/tucats/govax/internal/sched"
-	"github.com/tucats/govax/internal/vax"
 	"github.com/tucats/govax/internal/vmsdef"
 )
 
@@ -68,8 +68,8 @@ var syiItemsByName = map[string]func(env *Environment) itemValue{
 	"SYI$_NODE_SWVERS":    func(env *Environment) itemValue { return itemPadded(VersionString, 4) },
 	"SYI$_NODE_SWTYPE":    func(env *Environment) itemValue { return itemPadded(vmsSoftwareType, 4) },
 	"SYI$_NODENAME":       func(env *Environment) itemValue { return itemString(env.NodeName) },
-	"SYI$_SID":            func(env *Environment) itemValue { return itemLong(env.cpu.PR(vax.SID)) },
-	"SYI$_CPU":            func(env *Environment) itemValue { return itemLong(env.cpu.PR(vax.SID) >> 24) },
+	"SYI$_SID":            func(env *Environment) itemValue { return itemLong(env.cpu.PR(registers.SID)) },
+	"SYI$_CPU":            func(env *Environment) itemValue { return itemLong(env.cpu.PR(registers.SID) >> 24) },
 	"SYI$_BOOTTIME":       func(env *Environment) itemValue { return itemQuad(env.BootTime) },
 	"SYI$_CLUSTER_MEMBER": func(env *Environment) itemValue { return itemByte(0) },
 	"SYI$_NODE_CSID":      func(env *Environment) itemValue { return itemLong(localCSID) },

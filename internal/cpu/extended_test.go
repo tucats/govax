@@ -3,19 +3,19 @@ package cpu
 import (
 	"testing"
 
-	"github.com/tucats/govax/internal/vax"
+	"github.com/tucats/govax/internal/registers"
 )
 
 func TestEmulEmulPositive(t *testing.T) {
 	cpu, mem := fixture()
 	e := NewEngine(cpu, mem)
 
-	cpu.SetGPR(vax.R1, 1000000)
-	cpu.SetGPR(vax.R2, 1000000)
-	cpu.SetGPR(vax.R3, 500)
+	cpu.SetGPR(registers.R1, 1000000)
+	cpu.SetGPR(registers.R2, 1000000)
+	cpu.SetGPR(registers.R3, 500)
 
 	// EMUL R1, R2, R3, @#0x4000
-	bytes := []byte{0x7A, regMode(vax.R1), regMode(vax.R2), regMode(vax.R3)}
+	bytes := []byte{0x7A, regMode(registers.R1), regMode(registers.R2), regMode(registers.R3)}
 	bytes = append(bytes, absoluteMode(0x4000)...)
 	stepInstruction(t, e, bytes...)
 
@@ -41,11 +41,11 @@ func TestEmulEmulNegative(t *testing.T) {
 	e := NewEngine(cpu, mem)
 
 	mulr := int32(-1000)
-	cpu.SetGPR(vax.R1, uint32(mulr))
-	cpu.SetGPR(vax.R2, 2000)
-	cpu.SetGPR(vax.R3, 0)
+	cpu.SetGPR(registers.R1, uint32(mulr))
+	cpu.SetGPR(registers.R2, 2000)
+	cpu.SetGPR(registers.R3, 0)
 
-	bytes := []byte{0x7A, regMode(vax.R1), regMode(vax.R2), regMode(vax.R3)}
+	bytes := []byte{0x7A, regMode(registers.R1), regMode(registers.R2), regMode(registers.R3)}
 	bytes = append(bytes, absoluteMode(0x4000)...)
 	stepInstruction(t, e, bytes...)
 
@@ -68,11 +68,11 @@ func TestEmulEmulZeroSetsZ(t *testing.T) {
 	cpu, mem := fixture()
 	e := NewEngine(cpu, mem)
 
-	cpu.SetGPR(vax.R1, 0)
-	cpu.SetGPR(vax.R2, 12345)
-	cpu.SetGPR(vax.R3, 0)
+	cpu.SetGPR(registers.R1, 0)
+	cpu.SetGPR(registers.R2, 12345)
+	cpu.SetGPR(registers.R3, 0)
 
-	bytes := []byte{0x7A, regMode(vax.R1), regMode(vax.R2), regMode(vax.R3)}
+	bytes := []byte{0x7A, regMode(registers.R1), regMode(registers.R2), regMode(registers.R3)}
 	bytes = append(bytes, absoluteMode(0x4000)...)
 	stepInstruction(t, e, bytes...)
 
@@ -89,19 +89,19 @@ func TestEmulEdivNormal(t *testing.T) {
 		t.Fatalf("StoreQuadword: %v", err)
 	}
 
-	cpu.SetGPR(vax.R1, 7) // divisor
+	cpu.SetGPR(registers.R1, 7) // divisor
 
 	// EDIV R1, @#0x4000, R2, R3
-	bytes := []byte{0x7B, regMode(vax.R1)}
+	bytes := []byte{0x7B, regMode(registers.R1)}
 	bytes = append(bytes, absoluteMode(0x4000)...)
-	bytes = append(bytes, regMode(vax.R2), regMode(vax.R3))
+	bytes = append(bytes, regMode(registers.R2), regMode(registers.R3))
 	stepInstruction(t, e, bytes...)
 
-	if got := int32(cpu.GPR(vax.R2)); got != 14 {
+	if got := int32(cpu.GPR(registers.R2)); got != 14 {
 		t.Errorf("quotient = %d, want 14", got)
 	}
 
-	if got := int32(cpu.GPR(vax.R3)); got != 2 {
+	if got := int32(cpu.GPR(registers.R3)); got != 2 {
 		t.Errorf("remainder = %d, want 2", got)
 	}
 
@@ -122,18 +122,18 @@ func TestEmulEdivNegativeDividendRemainderSign(t *testing.T) {
 		t.Fatalf("StoreQuadword: %v", err)
 	}
 
-	cpu.SetGPR(vax.R1, 7)
+	cpu.SetGPR(registers.R1, 7)
 
-	bytes := []byte{0x7B, regMode(vax.R1)}
+	bytes := []byte{0x7B, regMode(registers.R1)}
 	bytes = append(bytes, absoluteMode(0x4000)...)
-	bytes = append(bytes, regMode(vax.R2), regMode(vax.R3))
+	bytes = append(bytes, regMode(registers.R2), regMode(registers.R3))
 	stepInstruction(t, e, bytes...)
 
-	if got := int32(cpu.GPR(vax.R2)); got != -14 {
+	if got := int32(cpu.GPR(registers.R2)); got != -14 {
 		t.Errorf("quotient = %d, want -14", got)
 	}
 
-	if got := int32(cpu.GPR(vax.R3)); got != -2 {
+	if got := int32(cpu.GPR(registers.R3)); got != -2 {
 		t.Errorf("remainder = %d, want -2 (same sign as the dividend)", got)
 	}
 
@@ -153,18 +153,18 @@ func TestEmulEdivDivideByZero(t *testing.T) {
 		t.Fatalf("StoreQuadword: %v", err)
 	}
 
-	cpu.SetGPR(vax.R1, 0) // divisor
+	cpu.SetGPR(registers.R1, 0) // divisor
 
-	bytes := []byte{0x7B, regMode(vax.R1)}
+	bytes := []byte{0x7B, regMode(registers.R1)}
 	bytes = append(bytes, absoluteMode(0x4000)...)
-	bytes = append(bytes, regMode(vax.R2), regMode(vax.R3))
+	bytes = append(bytes, regMode(registers.R2), regMode(registers.R3))
 	stepInstruction(t, e, bytes...)
 
-	if got := cpu.GPR(vax.R2); got != 0x23456789 {
+	if got := cpu.GPR(registers.R2); got != 0x23456789 {
 		t.Errorf("quotient = %#x, want 0x23456789 (bits 31:0 of the dividend)", got)
 	}
 
-	if got := cpu.GPR(vax.R3); got != 0 {
+	if got := cpu.GPR(registers.R3); got != 0 {
 		t.Errorf("remainder = %#x, want 0", got)
 	}
 
@@ -187,18 +187,18 @@ func TestEmulEdivQuotientOverflow(t *testing.T) {
 		t.Fatalf("StoreQuadword: %v", err)
 	}
 	
-	cpu.SetGPR(vax.R1, 1) // divisor: true quotient is 0x200000000, doesn't fit in 32 bits
+	cpu.SetGPR(registers.R1, 1) // divisor: true quotient is 0x200000000, doesn't fit in 32 bits
 
-	bytes := []byte{0x7B, regMode(vax.R1)}
+	bytes := []byte{0x7B, regMode(registers.R1)}
 	bytes = append(bytes, absoluteMode(0x4000)...)
-	bytes = append(bytes, regMode(vax.R2), regMode(vax.R3))
+	bytes = append(bytes, regMode(registers.R2), regMode(registers.R3))
 	stepInstruction(t, e, bytes...)
 
-	if got := cpu.GPR(vax.R2); got != 0 {
+	if got := cpu.GPR(registers.R2); got != 0 {
 		t.Errorf("quotient = %#x, want 0 (bits 31:0 of the dividend)", got)
 	}
 
-	if got := cpu.GPR(vax.R3); got != 0 {
+	if got := cpu.GPR(registers.R3); got != 0 {
 		t.Errorf("remainder = %#x, want 0", got)
 	}
 	

@@ -4,7 +4,7 @@ import (
 	"testing"
 
 	iodev "github.com/tucats/govax/internal/io"
-	"github.com/tucats/govax/internal/vax"
+	"github.com/tucats/govax/internal/registers"
 )
 
 // The null device (docs/PHASE-45.md, subtask 11).
@@ -19,9 +19,9 @@ func TestNull_qio(t *testing.T) {
 
 	// NL: and NLA0: both name it, and a second process may assign it at
 	// the same time.
-	ch := assignCall(t, env, a, "NL:", uint32(vax.User))
+	ch := assignCall(t, env, a, "NL:", uint32(registers.User))
 	other := newProcess(t, env)
-	assignCall(t, other, newArena(t, other), "NLA0", uint32(vax.User))
+	assignCall(t, other, newArena(t, other), "NLA0", uint32(registers.User))
 
 	// A write is discarded, and its transfer count is 0, as on VMS 7.1.
 	wantR0(t, callQIO(t, env, qioArgs{channel: ch, function: fnWriteVBlk, iosb: iosb, p: [6]uint32{a.str("gone"), 4}}), ssNormal)

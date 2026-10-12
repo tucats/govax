@@ -3,7 +3,7 @@ package corevms
 import (
 	"fmt"
 
-	"github.com/tucats/govax/internal/vax"
+	"github.com/tucats/govax/internal/registers"
 	"github.com/tucats/govax/internal/vmsdef"
 )
 
@@ -201,7 +201,7 @@ func (env *Environment) NextAST() (routine, argList, returnPC uint32, ok bool, e
 
 	a := p.ast.queue[i]
 
-	sp, err := env.enterASTMode(vax.AccessMode(mode), a.param)
+	sp, err := env.enterASTMode(registers.AccessMode(mode), a.param)
 	if err != nil {
 		return 0, 0, 0, false, err
 	}
@@ -217,7 +217,7 @@ func (env *Environment) NextAST() (routine, argList, returnPC uint32, ok bool, e
 // were at psl (see this file's opening comment for the conditions): its
 // mode, and its index in the queue, or -1 if none can run. It changes
 // nothing, so it can be asked about a process that isn't running.
-func (p *Process) deliverableAST(psl vax.PSL) (mode uint32, index int) {
+func (p *Process) deliverableAST(psl registers.PSL) (mode uint32, index int) {
 	if psl.IPL() >= astDeliveryIPL || psl.IS() {
 		return 0, -1
 	}
@@ -254,10 +254,10 @@ func (p *Process) deliverableAST(psl vax.PSL) (mode uint32, index int) {
 //
 // If the frame can't be pushed, everything is put back as it was and the
 // error is returned.
-func (env *Environment) enterASTMode(mode vax.AccessMode, param uint32) (uint32, error) {
+func (env *Environment) enterASTMode(mode registers.AccessMode, param uint32) (uint32, error) {
 	c := env.cpu
-	old, oldSP := c.PSL(), c.GPR(vax.SP)
-	frame := [6]uint32{astArgCount, param, c.GPR(vax.R0), c.GPR(vax.R1), c.GPR(vax.PC), uint32(old)}
+	old, oldSP := c.PSL(), c.GPR(registers.SP)
+	frame := [6]uint32{astArgCount, param, c.GPR(registers.R0), c.GPR(registers.R1), c.GPR(registers.PC), uint32(old)}
 
 	if mode != old.CurMod() {
 		env.switchMode(old.CurMod(), mode)
@@ -267,24 +267,24 @@ func (env *Environment) enterASTMode(mode vax.AccessMode, param uint32) (uint32,
 		c.SetPSL(psl)
 	}
 
-	sp := c.GPR(vax.SP) - astFrameSize
+	sp := c.GPR(registers.SP) - astFrameSize
 
 	for i, v := range frame {
 		if err := env.mem.StoreLongword(c, sp+uint32(i)*4, v); err != nil {
-			stackSP := c.GPR(vax.SP)
+			stackSP := c.GPR(registers.SP)
 
 			if mode != old.CurMod() {
 				env.switchMode(mode, old.CurMod())
 			}
 
 			c.SetPSL(old)
-			c.SetGPR(vax.SP, oldSP)
+			c.SetGPR(registers.SP, oldSP)
 
 			return 0, fmt.Errorf("rtl: can't deliver an AST: its frame can't be pushed at SP=%08X: %w", stackSP, err)
 		}
 	}
 
-	c.SetGPR(vax.SP, sp)
+	c.SetGPR(registers.SP, sp)
 
 	return sp, nil
 }
@@ -295,11 +295,11 @@ func (env *Environment) enterASTMode(mode vax.AccessMode, param uint32) (uint32,
 // processor registers 0-3, numbered like the modes), and PSL<CUR_MOD>
 // changes. The memory system's cached access checks are discarded, since
 // they were for the old mode. Nothing else in the PSL changes.
-func (env *Environment) switchMode(from, to vax.AccessMode) {
+func (env *Environment) switchMode(from, to registers.AccessMode) {
 	c := env.cpu
 
-	c.SetPR(vax.PrivReg(from), c.GPR(vax.SP))
-	c.SetGPR(vax.SP, c.PR(vax.PrivReg(to)))
+	c.SetPR(registers.PrivReg(from), c.GPR(registers.SP))
+	c.SetGPR(registers.SP, c.PR(registers.PrivReg(to)))
 
 	psl := c.PSL()
 	psl.SetCurMod(to)
@@ -331,7 +331,7 @@ func serviceSysClrast(env *Environment, _ []uint32) (uint32, error) {
 	p := env.Process
 	cur := c.PSL()
 	mode := uint32(cur.CurMod())
-	sp := c.GPR(vax.SP)
+	sp := c.GPR(registers.SP)
 
 	if !p.ast.active[mode] || sp != p.ast.frame[mode] {
 		return ssNormal, nil
@@ -352,12 +352,12 @@ func serviceSysClrast(env *Environment, _ []uint32) (uint32, error) {
 		return ssNormal, nil
 	}
 
-	psl := vax.PSL(frame[5])
+	psl := registers.PSL(frame[5])
 	back := max(psl.CurMod(), cur.CurMod()) // never more privileged than the AST
 
-	c.SetGPR(vax.R1, frame[3])
-	c.SetGPR(vax.PC, frame[4])
-	c.SetGPR(vax.SP, sp+astFrameSize)
+	c.SetGPR(registers.R1, frame[3])
+	c.SetGPR(registers.PC, frame[4])
+	c.SetGPR(registers.SP, sp+astFrameSize)
 
 	if back != cur.CurMod() {
 		env.switchMode(cur.CurMod(), back)
@@ -426,14 +426,14 @@ func (env *Environment) flushUserASTs() {
 	remaining := p.ast.queue[:0]
 
 	for _, a := range p.ast.queue {
-		if a.mode != uint32(vax.User) {
+		if a.mode != uint32(registers.User) {
 			remaining = append(remaining, a)
 		}
 	}
 
 	p.ast.queue = remaining
-	p.ast.enabled[vax.User] = true
-	p.ast.active[vax.User] = false
+	p.ast.enabled[registers.User] = true
+	p.ast.active[registers.User] = false
 }
 
 func registerASTServices(t *ServiceTable) {

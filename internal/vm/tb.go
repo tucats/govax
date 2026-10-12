@@ -1,6 +1,6 @@
 package vm
 
-import "github.com/tucats/govax/internal/vax"
+import "github.com/tucats/govax/internal/registers"
 
 // This is the Go port of vm.c's translation buffer cache (struct TB
 // tb[128]) and its "sequential translation cache" (STC, the one-slot
@@ -93,7 +93,7 @@ const (
 var protGrants = func() (t [16][4]tbGrant) {
 	for code := range t {
 		for mode := range t[code] {
-			switch pr, m := Protection(code), vax.AccessMode(mode); {
+			switch pr, m := Protection(code), registers.AccessMode(mode); {
 			case pr.allows(m, AccessWrite):
 				t[code][mode] = grantWrite
 			case pr.allows(m, AccessRead):
@@ -245,7 +245,7 @@ func (t *tb) stcFlush() {
 // stcFill makes the STC remember entry's translation for the virtual page
 // starting at vpage, letting through what entry grants the access mode
 // mode.
-func (t *tb) stcFill(vpage uint32, entry *tbEntry, mode vax.AccessMode) {
+func (t *tb) stcFill(vpage uint32, entry *tbEntry, mode registers.AccessMode) {
 	t.stcVPage = vpage
 	t.stcPPage = entry.paddr
 	t.stcGrant = entry.grants[mode&0x3]
@@ -387,7 +387,7 @@ type TBEntry struct {
 // really denies it). It replaces vm.c's per-entry "mode last verified",
 // which SHOW TB used to show, now that an entry serves every mode (see
 // tbEntry).
-func (e TBEntry) Permits(mode vax.AccessMode) (access AccessType, ok bool) {
+func (e TBEntry) Permits(mode registers.AccessMode) (access AccessType, ok bool) {
 	switch newTBEntry(0, 0, e.Prot, e.Modified).grants[mode&0x3] {
 	case grantWrite:
 		return AccessWrite, true

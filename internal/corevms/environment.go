@@ -9,8 +9,8 @@ import (
 	"strings"
 
 	"github.com/tucats/govax/internal/lnm"
+	"github.com/tucats/govax/internal/registers"
 	"github.com/tucats/govax/internal/rms"
-	"github.com/tucats/govax/internal/vax"
 	"github.com/tucats/govax/internal/vm"
 	"github.com/tucats/govax/internal/vmserrors"
 )
@@ -307,8 +307,8 @@ func (env *Environment) rmsContext() *rms.Context {
 // readArgs reads a VAX argument list off ap: a leading argument-count
 // longword, then that many longword arguments — the calling convention
 // CALLS/CALLG build and shim()/call_service() both read verbatim (their own
-// argc/argv loop over vax.AP).
-func readArgs(cpu *vax.CPU, mem *vm.Memory, ap uint32) ([]uint32, error) {
+// argc/argv loop over registers.AP).
+func readArgs(cpu *registers.CPU, mem *vm.Memory, ap uint32) ([]uint32, error) {
 	argc, err := mem.LoadLongword(cpu, ap)
 	if err != nil {
 		return nil, err
@@ -350,14 +350,14 @@ func callHandler(fn func(*Environment, []uint32) (uint32, error), env *Environme
 
 // Shim implements cpu.SystemServices' RTL half (XFC$SHIM): dispatch a LIB$/
 // CRTL shim call by numeric code, with its argument list read from AP —
-// matching shim()'s own argc/argv-from-vax.AP marshaling.
+// matching shim()'s own argc/argv-from-registers.AP marshaling.
 func (env *Environment) Shim(code uint32) (uint32, bool, error) {
 	fn, ok := env.shims.Lookup(code)
 	if !ok {
 		return 0, false, nil
 	}
 
-	argv, err := readArgs(env.cpu, env.mem, env.cpu.GPR(vax.AP))
+	argv, err := readArgs(env.cpu, env.mem, env.cpu.GPR(registers.AP))
 	if err != nil {
 		return 0, true, err
 	}
@@ -380,7 +380,7 @@ func (env *Environment) HasShim(code uint32) bool {
 // SystemService implements cpu.SystemServices' RTL half (XFC$P1VECTOR):
 // dispatch a SYS$ system-service call whose calling instruction is at pc,
 // with its argument list read from AP — matching call_service's own
-// pc-to-name lookup (p1vector.go) and argc/argv-from-vax.AP marshaling.
+// pc-to-name lookup (p1vector.go) and argc/argv-from-registers.AP marshaling.
 func (env *Environment) SystemService(pc uint32) (uint32, bool, error) {
 	entry, ok := lookupP1Vector(pc)
 	if !ok {
@@ -406,7 +406,7 @@ func (env *Environment) SystemService(pc uint32) (uint32, bool, error) {
 	)
 
 	if env.services.ReadsArgs(entry.Name) {
-		if argv, err = readArgs(env.cpu, env.mem, env.cpu.GPR(vax.AP)); err != nil {
+		if argv, err = readArgs(env.cpu, env.mem, env.cpu.GPR(registers.AP)); err != nil {
 			return 0, true, err
 		}
 	}
@@ -437,7 +437,7 @@ func (env *Environment) SystemService(pc uint32) (uint32, bool, error) {
 	// DBG_SERVICES: this port's table-driven service dispatch (see
 	// docs/PHASE-17.md sub-phase 4) gives every SYS$ call a single choke
 	// point, unlike the C source's switch-based call_service.
-	if env.cpu.DebugEnabled(vax.DebugServices) && !retry {
+	if env.cpu.DebugEnabled(registers.DebugServices) && !retry {
 		args := make([]string, len(argv))
 		for i, a := range argv {
 			args[i] = fmt.Sprintf("%08X", a)

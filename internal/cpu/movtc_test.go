@@ -3,7 +3,7 @@ package cpu
 import (
 	"testing"
 
-	"github.com/tucats/govax/internal/vax"
+	"github.com/tucats/govax/internal/registers"
 )
 
 func TestEmulMovtc(t *testing.T) {
@@ -42,8 +42,8 @@ func TestEmulMovtc(t *testing.T) {
 		}
 	}
 
-	if cpu.GPR(vax.R3) != 0x4000 {
-		t.Errorf("R3 = %#x, want 0x4000 (table address)", cpu.GPR(vax.R3))
+	if cpu.GPR(registers.R3) != 0x4000 {
+		t.Errorf("R3 = %#x, want 0x4000 (table address)", cpu.GPR(registers.R3))
 	}
 }
 
@@ -127,12 +127,12 @@ func TestEmulMovtuc(t *testing.T) {
 			t.Error("V = false, want true (terminated by escape)")
 		}
 
-		if cpu.GPR(vax.R2) != 0 {
-			t.Errorf("R2 = %d, want 0", cpu.GPR(vax.R2))
+		if cpu.GPR(registers.R2) != 0 {
+			t.Errorf("R2 = %d, want 0", cpu.GPR(registers.R2))
 		}
 
-		if cpu.GPR(vax.R0) != 2 {
-			t.Errorf("R0 = %d, want 2 (including the escaping byte)", cpu.GPR(vax.R0))
+		if cpu.GPR(registers.R0) != 2 {
+			t.Errorf("R0 = %d, want 2 (including the escaping byte)", cpu.GPR(registers.R0))
 		}
 	})
 
@@ -177,8 +177,8 @@ func TestEmulMovtuc(t *testing.T) {
 			t.Error("V = true, want false (not terminated by escape)")
 		}
 
-		if cpu.GPR(vax.R0) != 0 {
-			t.Errorf("R0 = %d, want 0", cpu.GPR(vax.R0))
+		if cpu.GPR(registers.R0) != 0 {
+			t.Errorf("R0 = %d, want 0", cpu.GPR(registers.R0))
 		}
 	})
 

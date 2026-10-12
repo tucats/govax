@@ -8,7 +8,7 @@ import (
 	"github.com/tucats/govax/internal/console"
 	"github.com/tucats/govax/internal/console/consoletest"
 	"github.com/tucats/govax/internal/machine"
-	"github.com/tucats/govax/internal/vax"
+	"github.com/tucats/govax/internal/registers"
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
@@ -77,7 +77,7 @@ func TestRunDebugStopsAtMain(t *testing.T) {
 		t.Error("no debugger session after RUN/DEBUG")
 	}
 
-	if pc := c.CPU.GPR(vax.PC); pc != 0x402 {
+	if pc := c.CPU.GPR(registers.PC); pc != 0x402 {
 		t.Errorf("PC = %08X, want 00000402 (START's first instruction)", pc)
 	}
 

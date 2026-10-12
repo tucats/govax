@@ -1,6 +1,6 @@
 package cpu
 
-import "github.com/tucats/govax/internal/vax"
+import "github.com/tucats/govax/internal/registers"
 
 func init() {
 	reg := func(fn byte, h Handler) {
@@ -62,7 +62,7 @@ func emulAcb(size int) Handler {
 		}
 
 		if branch {
-			e.cpu.SetGPR(vax.PC, d.Operands[3].Addr)
+			e.cpu.SetGPR(registers.PC, d.Operands[3].Addr)
 		}
 
 		return nil
@@ -106,13 +106,13 @@ func emulCase(size int) Handler {
 		// and CASE's branch-displacement table isn't decoded as an operand
 		// at all (walked directly here instead), so NextPC lands exactly
 		// where the manual's own note says PC should be.
-		tableBase := e.cpu.GPR(vax.PC)
+		tableBase := e.cpu.GPR(registers.PC)
 
 		if idx > limit {
 			psl.SetZ(false)
 			psl.SetC(false)
 			e.cpu.SetPSL(psl)
-			e.cpu.SetGPR(vax.PC, tableBase+2+limit*2)
+			e.cpu.SetGPR(registers.PC, tableBase+2+limit*2)
 
 			return nil
 		}
@@ -126,7 +126,7 @@ func emulCase(size int) Handler {
 			return err
 		}
 
-		e.cpu.SetGPR(vax.PC, uint32(int32(tableBase)+int32(int16(branchword))))
+		e.cpu.SetGPR(registers.PC, uint32(int32(tableBase)+int32(int16(branchword))))
 
 		return nil
 	}

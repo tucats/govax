@@ -5,7 +5,7 @@ import (
 	"strings"
 
 	"github.com/tucats/govax/internal/cpu"
-	"github.com/tucats/govax/internal/vax"
+	"github.com/tucats/govax/internal/registers"
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
@@ -77,8 +77,8 @@ func (d *Debugger) showStack(countText string) error {
 		limit = min(max(n, 1), maxStackFrames)
 	}
 
-	fp := c.CPU.GPR(vax.FP)
-	ap := c.CPU.GPR(vax.AP)
+	fp := c.CPU.GPR(registers.FP)
+	ap := c.CPU.GPR(registers.AP)
 
 	if d.imageExited || fp == 0 || fp == cpu.SentinelReturn {
 		return vmserrors.New(vmserrors.DBG_NOCALLS)

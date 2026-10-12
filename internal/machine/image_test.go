@@ -3,7 +3,7 @@ package machine
 import (
 	"testing"
 
-	"github.com/tucats/govax/internal/vax"
+	"github.com/tucats/govax/internal/registers"
 )
 
 // TestImageLoad_simpleExe checks imageLoad against the real testdata/exe/
@@ -18,7 +18,7 @@ import (
 // transfer[0]-then-transfer[1] fallback).
 func TestImageLoad_simpleExe(t *testing.T) {
 	c := newRunnableMachine(t)
-	c.Engine.SetModeStack(vax.Kernel, false)
+	c.Engine.SetModeStack(registers.Kernel, false)
 
 	icb, err := c.imageLoad(exeFixturePath(t, "simple.exe"), icbMain)
 	if err != nil {
@@ -91,7 +91,7 @@ func TestImageLoad_simpleExe(t *testing.T) {
 // ICB without re-parsing the file or growing the P0 high-water mark.
 func TestImageLoad_alreadyLoadedIsNoOp(t *testing.T) {
 	c := newRunnableMachine(t)
-	c.Engine.SetModeStack(vax.Kernel, false)
+	c.Engine.SetModeStack(registers.Kernel, false)
 
 	path := exeFixturePath(t, "put.exe")
 
@@ -123,7 +123,7 @@ func TestImageLoad_alreadyLoadedIsNoOp(t *testing.T) {
 // none of DECC$SHR/MTHRTL/LIBRTL/CMA$TIS_SHR is an actually-loaded ICB.
 func TestImageFixup_simpleExe(t *testing.T) {
 	c := newRunnableMachine(t)
-	c.Engine.SetModeStack(vax.Kernel, false)
+	c.Engine.SetModeStack(registers.Kernel, false)
 
 	if _, _, err := c.Assemble(kernelPath(t)); err != nil {
 		t.Fatalf("Assemble(kernel.asm): %v", err)
@@ -162,7 +162,7 @@ func TestImageFixup_everyRealFixtureFixesUp(t *testing.T) {
 	for _, name := range []string{"cli.exe", "dbl.exe", "getvm.exe", "put.exe", "putc.exe", "sieve.exe", "simple.exe"} {
 		t.Run(name, func(t *testing.T) {
 			c := newRunnableMachine(t)
-			c.Engine.SetModeStack(vax.Kernel, false)
+			c.Engine.SetModeStack(registers.Kernel, false)
 
 			if _, _, err := c.Assemble(kernelPath(t)); err != nil {
 				t.Fatalf("Assemble(kernel.asm): %v", err)
@@ -193,7 +193,7 @@ func TestImageLoad_everyRealFixtureLoads(t *testing.T) {
 	for _, name := range []string{"cli.exe", "dbl.exe", "getvm.exe", "put.exe", "putc.exe", "sieve.exe", "simple.exe"} {
 		t.Run(name, func(t *testing.T) {
 			c := newRunnableMachine(t)
-			c.Engine.SetModeStack(vax.Kernel, false)
+			c.Engine.SetModeStack(registers.Kernel, false)
 
 			icb, err := c.imageLoad(exeFixturePath(t, name), icbMain)
 			if err != nil {
@@ -216,7 +216,7 @@ func TestImageLoad_everyRealFixtureLoads(t *testing.T) {
 // exercised inside TestImageLoad_simpleExe).
 func TestImageLoad_missingFileReportsError(t *testing.T) {
 	c := newRunnableMachine(t)
-	c.Engine.SetModeStack(vax.Kernel, false)
+	c.Engine.SetModeStack(registers.Kernel, false)
 
 	if _, err := c.imageLoad("no-such-image", icbMain); err == nil {
 		t.Error("expected an error for a nonexistent image file")

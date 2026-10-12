@@ -2,7 +2,7 @@ package machine
 
 import (
 	"github.com/tucats/govax/internal/cpu"
-	"github.com/tucats/govax/internal/vax"
+	"github.com/tucats/govax/internal/registers"
 )
 
 const numTraceRegs = 14
@@ -12,9 +12,9 @@ var traceRegNames = [numTraceRegs]string{
 }
 
 // snapshotTraceRegs captures R0-R11/AP/FP and the PSL.
-func (m *Machine) snapshotTraceRegs() (regs [numTraceRegs]uint32, psl vax.PSL) {
+func (m *Machine) snapshotTraceRegs() (regs [numTraceRegs]uint32, psl registers.PSL) {
 	for i := range regs {
-		regs[i] = m.CPU.GPR(vax.Reg(i))
+		regs[i] = m.CPU.GPR(registers.Reg(i))
 	}
 
 	return regs, m.CPU.PSL()
@@ -24,9 +24,9 @@ func (m *Machine) snapshotTraceRegs() (regs [numTraceRegs]uint32, psl vax.PSL) {
 // state and prints every register that changed: R0-R11 get their value printed in both hex
 // and decimal, AP/FP in hex only, and the PSL is reported last if it
 // changed.
-func (m *Machine) printRegisterChanges(before [numTraceRegs]uint32, beforePSL vax.PSL) {
+func (m *Machine) printRegisterChanges(before [numTraceRegs]uint32, beforePSL registers.PSL) {
 	for i, name := range traceRegNames {
-		after := m.CPU.GPR(vax.Reg(i))
+		after := m.CPU.GPR(registers.Reg(i))
 		if after == before[i] {
 			continue
 		}
@@ -85,7 +85,7 @@ var traceStackNames = [4]string{"KSP", "ESP", "SSP", "USP"}
 
 // traceStackName reports which stack pc's instruction will run on, matching
 // execute_vax's own `vax.pslw.is ? "ISP" : mode_name[vax.pslw.cur_mod]`.
-func traceStackName(psl vax.PSL) string {
+func traceStackName(psl registers.PSL) string {
 	if psl.IS() {
 		return "ISP"
 	}
@@ -110,7 +110,7 @@ func (m *Machine) traceStep(pc uint32, force bool) (finish func()) {
 	}
 
 	modep := traceStackName(m.CPU.PSL())
-	sp := m.CPU.GPR(vax.SP)
+	sp := m.CPU.GPR(registers.SP)
 
 	// Inside an image with a debug symbol table, the instruction is shown
 	// as DISASSEMBLE/SYMBOLIC shows it (Phase 41); elsewhere, in the
@@ -127,11 +127,11 @@ func (m *Machine) traceStep(pc uint32, force bool) (finish func()) {
 		m.Printf("[%s %08X] %08X: <disassembly error: %s>\n", modep, sp, pc, err)
 	}
 
-	trackRegs := m.CPU.DebugEnabled(vax.DebugRegisters)
+	trackRegs := m.CPU.DebugEnabled(registers.DebugRegisters)
 
 	var (
 		before    [numTraceRegs]uint32
-		beforePSL vax.PSL
+		beforePSL registers.PSL
 	)
 
 	if trackRegs {
@@ -143,7 +143,7 @@ func (m *Machine) traceStep(pc uint32, force bool) (finish func()) {
 			m.printRegisterChanges(before, beforePSL)
 		}
 
-		if m.CPU.DebugEnabled(vax.DebugFullDisasm) {
+		if m.CPU.DebugEnabled(registers.DebugFullDisasm) {
 			m.printOperandDump()
 		}
 	}

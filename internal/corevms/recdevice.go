@@ -4,9 +4,9 @@ import (
 	"slices"
 
 	iodev "github.com/tucats/govax/internal/io"
+	"github.com/tucats/govax/internal/registers"
 	"github.com/tucats/govax/internal/rms"
 	"github.com/tucats/govax/internal/sched"
-	"github.com/tucats/govax/internal/vax"
 	"github.com/tucats/govax/internal/vmsdef"
 )
 
@@ -80,7 +80,7 @@ func (env *Environment) OpenRecordDevice(device string, fac byte) (rms.RecordDev
 		}
 	}
 
-	c := env.newChannel(device, d, uint32(vax.Executive))
+	c := env.newChannel(device, d, uint32(registers.Executive))
 
 	return &recordDevice{env: env, ch: c, mbx: mbx}, true, ssNormal
 }
@@ -317,4 +317,3 @@ func (env *Environment) isFileDevice(device string) bool {
 
 	return !found || d.DevClass == iodev.DeviceClassDisk
 }
-

@@ -4,7 +4,7 @@ import (
 	"errors"
 
 	"github.com/tucats/govax/internal/cpu"
-	"github.com/tucats/govax/internal/vax"
+	"github.com/tucats/govax/internal/registers"
 )
 
 // This file is the debugger's run control: the list of address
@@ -276,7 +276,7 @@ func (d *Debugger) runLoop(skipFirstCheck bool, trace func(pc uint32) func()) (r
 			return d.reportStop(err)
 		}
 
-		pc := c.CPU.GPR(vax.PC)
+		pc := c.CPU.GPR(registers.PC)
 		d.shown.ok = false
 
 		// The eventpoints are process 1's (Console.RunningProcessOne):
@@ -358,7 +358,7 @@ func (d *Debugger) reportStop(err error) (runOutcome, error) {
 	var fb *cpu.FaultBreak
 	if errors.As(err, &fb) {
 		d.Machine.Printf("Break on fault %02X %s at PC = %08X%s\n",
-			uint8(fb.Code), d.Machine.ExceptionName(fb.Code), d.Machine.CPU.GPR(vax.PC), d.Machine.ProcessNote())
+			uint8(fb.Code), d.Machine.ExceptionName(fb.Code), d.Machine.CPU.GPR(registers.PC), d.Machine.ProcessNote())
 
 		return runStopped, nil
 	}
@@ -396,7 +396,7 @@ func (d *Debugger) goRun(startAddr *uint32) (runOutcome, error) {
 	c := d.Machine
 
 	if startAddr != nil {
-		c.CPU.SetGPR(vax.PC, *startAddr)
+		c.CPU.SetGPR(registers.PC, *startAddr)
 	} else if err := d.requireProgram(); err != nil {
 		return runEnded, err
 	}

@@ -1,6 +1,6 @@
 package vm
 
-import "github.com/tucats/govax/internal/vax"
+import "github.com/tucats/govax/internal/registers"
 
 // PTE is a VAX page table entry: a single 32-bit value that describes
 // everything the hardware (and this emulator) needs to know about one
@@ -198,7 +198,7 @@ func (p *PTE) SetValid(v bool) {
 // and String can be attached to it.
 //
 // The VAX architecture defines four privilege levels, from most to least
-// trusted: Kernel, Executive, Supervisor, and User (see vax.AccessMode).
+// trusted: Kernel, Executive, Supervisor, and User (see registers.AccessMode).
 // Every one of the 16 protection codes below is a *combination* of "which
 // of those four levels, and every level more privileged than it, may
 // read this page" and "which level, and every level more privileged than
@@ -241,7 +241,7 @@ const (
 // unpack it:
 //
 //   - rm (read mode) and wm (write mode) are each a 2-bit privilege level
-//     (0=Kernel, 1=Executive, 2=Supervisor, 3=User — see vax.AccessMode)
+//     (0=Kernel, 1=Executive, 2=Supervisor, 3=User — see registers.AccessMode)
 //     extracted from the 4-bit code: the top two bits give the least-
 //     privileged mode allowed to *read*, and the bottom two bits, bitwise
 //     inverted, give the least-privileged mode allowed to *write*.
@@ -263,7 +263,7 @@ const (
 // code and is not ported; spot-checking it against this algorithm by hand
 // shows they agree on every architecturally-defined protection code, and
 // diverge only on the reserved code 1, which no valid PTE should carry).
-func (pr Protection) allows(mode vax.AccessMode, access AccessType) bool {
+func (pr Protection) allows(mode registers.AccessMode, access AccessType) bool {
 	code := uint32(pr)
 	if code == 0 {
 		return false
@@ -292,7 +292,7 @@ func (pr Protection) allows(mode vax.AccessMode, access AccessType) bool {
 // (SHOW PAGE, internal/console) that need to report whether a page's
 // protection code would permit a given access without actually performing
 // it.
-func (pr Protection) Allows(mode vax.AccessMode, access AccessType) bool {
+func (pr Protection) Allows(mode registers.AccessMode, access AccessType) bool {
 	return pr.allows(mode, access)
 }
 

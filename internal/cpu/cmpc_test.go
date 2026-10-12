@@ -3,7 +3,7 @@ package cpu
 import (
 	"testing"
 
-	"github.com/tucats/govax/internal/vax"
+	"github.com/tucats/govax/internal/registers"
 )
 
 func TestEmulCmpc3(t *testing.T) {
@@ -23,16 +23,16 @@ func TestEmulCmpc3(t *testing.T) {
 			t.Errorf("PSL = %+v, want N=0 Z=1 V=0 C=0", got)
 		}
 		
-		if cpu.GPR(vax.R0) != 0 {
-			t.Errorf("R0 = %d, want 0 (strings equal)", cpu.GPR(vax.R0))
+		if cpu.GPR(registers.R0) != 0 {
+			t.Errorf("R0 = %d, want 0 (strings equal)", cpu.GPR(registers.R0))
 		}
 
-		if cpu.GPR(vax.R1) != 0x2003 || cpu.GPR(vax.R3) != 0x3003 {
-			t.Errorf("R1/R3 = %#x/%#x, want one past each string (0x2003/0x3003)", cpu.GPR(vax.R1), cpu.GPR(vax.R3))
+		if cpu.GPR(registers.R1) != 0x2003 || cpu.GPR(registers.R3) != 0x3003 {
+			t.Errorf("R1/R3 = %#x/%#x, want one past each string (0x2003/0x3003)", cpu.GPR(registers.R1), cpu.GPR(registers.R3))
 		}
 
-		if cpu.GPR(vax.R2) != cpu.GPR(vax.R0) {
-			t.Errorf("R2 = %d, want equal to R0 (%d)", cpu.GPR(vax.R2), cpu.GPR(vax.R0))
+		if cpu.GPR(registers.R2) != cpu.GPR(registers.R0) {
+			t.Errorf("R2 = %d, want equal to R0 (%d)", cpu.GPR(registers.R2), cpu.GPR(registers.R0))
 		}
 	})
 
@@ -47,12 +47,12 @@ func TestEmulCmpc3(t *testing.T) {
 		bytes = append(bytes, absoluteMode(0x3000)...)
 		stepInstruction(t, e, bytes...)
 
-		if cpu.GPR(vax.R0) != 2 {
-			t.Errorf("R0 = %d, want 2 (bytes remaining including the mismatch)", cpu.GPR(vax.R0))
+		if cpu.GPR(registers.R0) != 2 {
+			t.Errorf("R0 = %d, want 2 (bytes remaining including the mismatch)", cpu.GPR(registers.R0))
 		}
 
-		if cpu.GPR(vax.R1) != 0x2001 || cpu.GPR(vax.R3) != 0x3001 {
-			t.Errorf("R1/R3 = %#x/%#x, want the mismatching bytes' addresses (0x2001/0x3001)", cpu.GPR(vax.R1), cpu.GPR(vax.R3))
+		if cpu.GPR(registers.R1) != 0x2001 || cpu.GPR(registers.R3) != 0x3001 {
+			t.Errorf("R1/R3 = %#x/%#x, want the mismatching bytes' addresses (0x2001/0x3001)", cpu.GPR(registers.R1), cpu.GPR(registers.R3))
 		}
 
 		got := cpu.PSL()
@@ -97,8 +97,8 @@ func TestEmulCmpc5(t *testing.T) {
 			t.Errorf("PSL = %+v, want N=0 Z=1 C=0 (string1 padded with fill equals string2)", got)
 		}
 
-		if cpu.GPR(vax.R0) != 0 || cpu.GPR(vax.R2) != 0 {
-			t.Errorf("R0/R2 = %d/%d, want both 0 (fully consumed)", cpu.GPR(vax.R0), cpu.GPR(vax.R2))
+		if cpu.GPR(registers.R0) != 0 || cpu.GPR(registers.R2) != 0 {
+			t.Errorf("R0/R2 = %d/%d, want both 0 (fully consumed)", cpu.GPR(registers.R0), cpu.GPR(registers.R2))
 		}
 	})
 
@@ -122,8 +122,8 @@ func TestEmulCmpc5(t *testing.T) {
 			t.Error("Z = false, want true (empty string1 padded with fill equals string2)")
 		}
 
-		if cpu.GPR(vax.R2) != 0 {
-			t.Errorf("R2 = %d, want 0 (string2 fully consumed against fill)", cpu.GPR(vax.R2))
+		if cpu.GPR(registers.R2) != 0 {
+			t.Errorf("R2 = %d, want 0 (string2 fully consumed against fill)", cpu.GPR(registers.R2))
 		}
 	})
 
@@ -154,12 +154,12 @@ func TestEmulCmpc5(t *testing.T) {
 			t.Errorf("PSL = %+v, want N=0 Z=0 C=0 ('Z' vs 'B', not 'Z' vs fill)", got)
 		}
 
-		if cpu.GPR(vax.R0) != 1 || cpu.GPR(vax.R2) != 1 {
-			t.Errorf("R0/R2 = %d/%d, want both 1 (the mismatching byte still counted as remaining)", cpu.GPR(vax.R0), cpu.GPR(vax.R2))
+		if cpu.GPR(registers.R0) != 1 || cpu.GPR(registers.R2) != 1 {
+			t.Errorf("R0/R2 = %d/%d, want both 1 (the mismatching byte still counted as remaining)", cpu.GPR(registers.R0), cpu.GPR(registers.R2))
 		}
 
-		if cpu.GPR(vax.R1) != 0x2001 || cpu.GPR(vax.R3) != 0x3001 {
-			t.Errorf("R1/R3 = %#x/%#x, want 0x2001/0x3001 (pointing at the mismatching bytes)", cpu.GPR(vax.R1), cpu.GPR(vax.R3))
+		if cpu.GPR(registers.R1) != 0x2001 || cpu.GPR(registers.R3) != 0x3001 {
+			t.Errorf("R1/R3 = %#x/%#x, want 0x2001/0x3001 (pointing at the mismatching bytes)", cpu.GPR(registers.R1), cpu.GPR(registers.R3))
 		}
 	})
 

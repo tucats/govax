@@ -10,7 +10,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/tucats/govax/internal/vax"
+	"github.com/tucats/govax/internal/registers"
 	"github.com/tucats/govax/internal/vm"
 	"github.com/tucats/ods2/diskimage"
 	"github.com/tucats/ods2/ondisk"
@@ -406,7 +406,7 @@ func TestSimhInterop_writeThenRereadEmptyDsk(t *testing.T) {
 
 	writeCtx := &Context{
 		Mem:      vm.NewMemory(1 << 20),
-		CPU:      vax.New(),
+		CPU:      registers.New(),
 		Mounts:   writeMounts,
 		Files:    NewFileTable(nil),
 		Logicals: writeLogicals,
@@ -442,7 +442,7 @@ func TestSimhInterop_writeThenRereadEmptyDsk(t *testing.T) {
 
 	readCtx := &Context{
 		Mem:      vm.NewMemory(1 << 20),
-		CPU:      vax.New(),
+		CPU:      registers.New(),
 		Mounts:   readMounts,
 		Files:    NewFileTable(nil),
 		Logicals: readLogicals,

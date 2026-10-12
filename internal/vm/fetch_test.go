@@ -4,7 +4,7 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/tucats/govax/internal/vax"
+	"github.com/tucats/govax/internal/registers"
 )
 
 // The tests in this file cover the instruction-fetch window (fetch.go).
@@ -306,7 +306,7 @@ func TestSyncFetchWindow(t *testing.T) {
 	// A change of mode. (The CPU engine also calls InvalidateProtection
 	// at every real mode change; SyncFetchWindow doesn't depend on it.)
 	psl := cpu.PSL()
-	psl.SetCurMod(vax.User)
+	psl.SetCurMod(registers.User)
 	cpu.SetPSL(psl)
 	mem.SyncFetchWindow(cpu)
 
@@ -317,7 +317,7 @@ func TestSyncFetchWindow(t *testing.T) {
 	// A change of MAPEN: mapping off, so addr is now a physical address,
 	// in a different page of RAM from the one the window held.
 	fill()
-	cpu.SetPR(vax.MAPEN, 0)
+	cpu.SetPR(registers.MAPEN, 0)
 	mem.SyncFetchWindow(cpu)
 
 	if _, ok := mem.TryFetchByte(addr); ok {
@@ -377,7 +377,7 @@ func TestFetchFaultsLikeLoad(t *testing.T) {
 // with mapping off) is fetched correctly through the slow path but never
 // put in the window, whose fast path reads only RAM.
 func TestFetchWindowSkipsROM(t *testing.T) {
-	cpu := vax.New()
+	cpu := registers.New()
 	mem := NewMemory(1 << 20)
 
 	mem.ROM = make([]byte, 1024)

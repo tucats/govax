@@ -6,7 +6,7 @@ import (
 
 	"github.com/tucats/govax/internal/cpu"
 	"github.com/tucats/govax/internal/lnm"
-	"github.com/tucats/govax/internal/vax"
+	"github.com/tucats/govax/internal/registers"
 	"github.com/tucats/govax/internal/vmsdef"
 	"github.com/tucats/govax/internal/vmserrors"
 )
@@ -69,7 +69,7 @@ func (sys *System) startProcess(e *cpu.Engine, env *Environment) error {
 	if err != nil {
 		status := startupStatus(err)
 
-		if sys.cpu.DebugEnabled(vax.DebugProcess) {
+		if sys.cpu.DebugEnabled(registers.DebugProcess) {
 			fmt.Fprintf(sys.cpu.DebugWriter(), "DEBUG(PROCESS): %08X can't start %s: %v (status %08X)\n",
 				env.Process.PID, st.Image, err, status)
 		}
@@ -80,7 +80,7 @@ func (sys *System) startProcess(e *cpu.Engine, env *Environment) error {
 		return nil
 	}
 
-	if sys.cpu.DebugEnabled(vax.DebugProcess) {
+	if sys.cpu.DebugEnabled(registers.DebugProcess) {
 		fmt.Fprintf(sys.cpu.DebugWriter(), "DEBUG(PROCESS): %08X starts %s at %08X\n",
 			env.Process.PID, st.Image, driver)
 	}

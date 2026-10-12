@@ -3,7 +3,7 @@ package cpu
 import (
 	"math/big"
 
-	"github.com/tucats/govax/internal/vax"
+	"github.com/tucats/govax/internal/registers"
 )
 
 // Packed decimal strings, and the CPU's helpers for the decimal string
@@ -188,7 +188,7 @@ func decimalDigits(v *big.Int, length int) (digits []byte, neg, overflow bool) {
 // negative and not all zeros (-0 isn't less than zero), Z if its digits
 // are all zero, V as given (decimal or integer overflow), and C cleared
 // unless keepC.
-func setDecimalCC(cpu *vax.CPU, digits []byte, neg, overflow, keepC bool) {
+func setDecimalCC(cpu *registers.CPU, digits []byte, neg, overflow, keepC bool) {
 	zero := allZero(digits)
 
 	psl := cpu.PSL()
@@ -216,7 +216,7 @@ func (e *Engine) decimalOverflowTrap(overflow bool) error {
 // setRegisters sets R0, R1, ... to values, in order.
 func (e *Engine) setRegisters(values ...uint32) {
 	for i, v := range values {
-		e.cpu.SetGPR(vax.R0+vax.Reg(i), v)
+		e.cpu.SetGPR(registers.R0+registers.Reg(i), v)
 	}
 }
 

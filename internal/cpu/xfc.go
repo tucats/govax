@@ -3,7 +3,7 @@ package cpu
 import (
 	"errors"
 
-	"github.com/tucats/govax/internal/vax"
+	"github.com/tucats/govax/internal/registers"
 	"github.com/tucats/govax/internal/vm"
 )
 
@@ -52,7 +52,7 @@ func emulXfc(e *Engine, d *Decoded) error {
 			return &Fault{Code: ExcPrivileged}
 		}
 
-		e.services.ConsoleWriteByte(byte(e.cpu.GPR(vax.R0)))
+		e.services.ConsoleWriteByte(byte(e.cpu.GPR(registers.R0)))
 
 		return nil
 
@@ -62,7 +62,7 @@ func emulXfc(e *Engine, d *Decoded) error {
 		}
 
 		ch := e.services.ConsoleReadByte()
-		e.cpu.SetGPR(vax.R0, (e.cpu.GPR(vax.R0)&0xFFFFFF00)|uint32(ch))
+		e.cpu.SetGPR(registers.R0, (e.cpu.GPR(registers.R0)&0xFFFFFF00)|uint32(ch))
 
 		return nil
 
@@ -73,7 +73,7 @@ func emulXfc(e *Engine, d *Decoded) error {
 		return emulXfcConsolePut(e)
 
 	case xfcQuitEmulator:
-		if e.cpu.PSL().CurMod() != vax.Kernel {
+		if e.cpu.PSL().CurMod() != registers.Kernel {
 			return &Fault{Code: ExcPrivileged}
 		}
 
@@ -123,7 +123,7 @@ func emulXfcConsoleCmd(e *Engine) error {
 		return &Fault{Code: ExcPrivileged}
 	}
 
-	addr := e.cpu.GPR(vax.R0)
+	addr := e.cpu.GPR(registers.R0)
 
 	rawLen, err := e.mem.LoadWord(e.cpu, addr)
 	if err != nil {
@@ -140,7 +140,7 @@ func emulXfcConsoleCmd(e *Engine) error {
 		return err
 	}
 
-	e.cpu.SetGPR(vax.R0, e.services.ConsoleCommand(string(buf)))
+	e.cpu.SetGPR(registers.R0, e.services.ConsoleCommand(string(buf)))
 
 	return nil
 }
@@ -169,7 +169,7 @@ func emulXfcConsolePut(e *Engine) error {
 		return &Fault{Code: ExcPrivileged}
 	}
 
-	dsc := e.cpu.GPR(vax.R0)
+	dsc := e.cpu.GPR(registers.R0)
 
 	length, err := e.mem.LoadWord(e.cpu, dsc)
 	if err != nil {
@@ -190,13 +190,13 @@ func emulXfcConsolePut(e *Engine) error {
 		e.services.ConsoleWrite(buf)
 	}
 
-	e.cpu.SetGPR(vax.R0, ssNormal)
+	e.cpu.SetGPR(registers.R0, ssNormal)
 
 	return nil
 }
 
 // emulXfcP1Vector is XFC$P1VECTOR: invokes a SYS$ system service, matching
-// emul_xfc.c's `return call_service(vax.PC - 4)`. A real P1-vector entry
+// emul_xfc.c's `return call_service(registers.PC - 4)`. A real P1-vector entry
 // reached via CALLS (p1_vector.c's p1_init: every entry except the one
 // Jmp-style SYS$SRCHANDLER) is a genuine tiny procedure at its well-known
 // address: a 2-byte zero procedure-entry mask (which CALLS's own frame-build
@@ -214,14 +214,14 @@ func emulXfcConsolePut(e *Engine) error {
 // which re-executes the XFC instead of completing, and a *ServiceCall,
 // which calls a procedure that returns to the XFC (see exit.go); an
 // ErrImageExit sets R0 and then ends the image — matching call_service's
-// own "vax.R0 = rc" happening unconditionally after the native handler
+// own "registers.R0 = rc" happening unconditionally after the native handler
 // returns, before the caller's fetch loop next checks vax.halted.
 func emulXfcP1Vector(e *Engine) error {
 	if e.services == nil {
 		return &Fault{Code: ExcPrivileged}
 	}
 
-	pc := e.cpu.GPR(vax.PC) - 4
+	pc := e.cpu.GPR(registers.PC) - 4
 
 	r0, handled, err := e.services.SystemService(pc)
 	if !handled {
@@ -233,7 +233,7 @@ func emulXfcP1Vector(e *Engine) error {
 	}
 
 	if errors.Is(err, ErrServiceWait) {
-		e.cpu.SetGPR(vax.PC, e.instructionPC) // run this XFC again next Step
+		e.cpu.SetGPR(registers.PC, e.instructionPC) // run this XFC again next Step
 
 		return nil
 	}
@@ -245,7 +245,7 @@ func emulXfcP1Vector(e *Engine) error {
 		return e.callForService(call)
 	}
 
-	e.cpu.SetGPR(vax.R0, r0)
+	e.cpu.SetGPR(registers.R0, r0)
 
 	// The image has exited ($EXIT): r0 is its exit status.
 	if errors.Is(err, ErrImageExit) {
@@ -269,7 +269,7 @@ func emulXfcShim(e *Engine) error {
 		return &Fault{Code: ExcPrivileged}
 	}
 
-	r0, handled, err := e.services.Shim(e.cpu.GPR(vax.R0))
+	r0, handled, err := e.services.Shim(e.cpu.GPR(registers.R0))
 	if !handled {
 		if err != nil {
 			return err
@@ -279,7 +279,7 @@ func emulXfcShim(e *Engine) error {
 	}
 
 	if errors.Is(err, ErrServiceWait) {
-		e.cpu.SetGPR(vax.PC, e.instructionPC) // run this XFC again next Step
+		e.cpu.SetGPR(registers.PC, e.instructionPC) // run this XFC again next Step
 
 		return nil
 	}
@@ -289,14 +289,14 @@ func emulXfcShim(e *Engine) error {
 		return e.callForService(call)
 	}
 
-	e.cpu.SetGPR(vax.R0, r0)
+	e.cpu.SetGPR(registers.R0, r0)
 
 	return err
 }
 
 // emulXfcVM is XFC$VMW/XFC$VMR: translates the virtual address in R0 to a
 // physical address (forcing MAPEN on regardless of its current state,
-// matching emul_xfc.c's saved/restored vax.MAPEN dance), leaving the result
+// matching emul_xfc.c's saved/restored registers.MAPEN dance), leaving the result
 // in R0 on success or setting PSL<V> on a translation failure — no real
 // fault either way, matching the C source's own VM_NOSIGNAL-style handling
 // (see emulProbe's doc comment in misc.go for the same pattern).
@@ -306,18 +306,18 @@ func emulXfcVM(e *Engine, code uint32) error {
 		access = vm.AccessWrite
 	}
 
-	addr := e.cpu.GPR(vax.R0)
-	savedMapen := e.cpu.PR(vax.MAPEN)
-	e.cpu.SetPR(vax.MAPEN, 1)
+	addr := e.cpu.GPR(registers.R0)
+	savedMapen := e.cpu.PR(registers.MAPEN)
+	e.cpu.SetPR(registers.MAPEN, 1)
 	paddr, err := e.mem.Translate(e.cpu, addr, access)
-	e.cpu.SetPR(vax.MAPEN, savedMapen)
+	e.cpu.SetPR(registers.MAPEN, savedMapen)
 
 	psl := e.cpu.PSL()
 
 	if err != nil {
 		psl.SetV(true)
 	} else {
-		e.cpu.SetGPR(vax.R0, paddr)
+		e.cpu.SetGPR(registers.R0, paddr)
 	}
 
 	e.cpu.SetPSL(psl)

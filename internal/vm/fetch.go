@@ -3,7 +3,7 @@ package vm
 import (
 	"encoding/binary"
 
-	"github.com/tucats/govax/internal/vax"
+	"github.com/tucats/govax/internal/registers"
 )
 
 // This file is the instruction-fetch window (Study 1, R4 in
@@ -105,7 +105,7 @@ type fetchWindow struct {
 	// when the window was filled; SyncFetchWindow empties the window if
 	// either has changed since.
 	mapen uint32
-	mode  vax.AccessMode
+	mode  registers.AccessMode
 
 	// hits counts fetches the window served, and fills counts the times
 	// the slow path refilled it; reported by FetchStats.
@@ -121,8 +121,8 @@ func (w *fetchWindow) flush() { w.limit = 0 }
 // calls it once before fetching each instruction, which is cheaper than
 // checking both on every byte fetched. It is small enough for the Go
 // compiler to inline into its caller.
-func (m *Memory) SyncFetchWindow(cpu *vax.CPU) {
-	if cpu.PR(vax.MAPEN) != m.tb.fetch.mapen || cpu.PSL().CurMod() != m.tb.fetch.mode {
+func (m *Memory) SyncFetchWindow(cpu *registers.CPU) {
+	if cpu.PR(registers.MAPEN) != m.tb.fetch.mapen || cpu.PSL().CurMod() != m.tb.fetch.mode {
 		m.tb.fetch.flush()
 	}
 }
@@ -140,7 +140,7 @@ func (m *Memory) SyncFetchWindow(cpu *vax.CPU) {
 // The fast path is kept this short so that the Go compiler inlines it
 // into the decoder: the common case then costs no function call at all.
 // Everything else is in fetchByteSlow.
-func (m *Memory) FetchByte(cpu *vax.CPU, addr uint32) (byte, error) {
+func (m *Memory) FetchByte(cpu *registers.CPU, addr uint32) (byte, error) {
 	if off := addr - m.tb.fetch.vbase; off < m.tb.fetch.limit {
 		m.tb.fetch.hits++
 
@@ -173,7 +173,7 @@ func (m *Memory) TryFetchByte(addr uint32) (b byte, ok bool) {
 // fetchByteSlow is FetchByte's slow path: an ordinary LoadByte, which
 // translates addr (faulting exactly as any read would), followed by
 // pointing the window at addr's page so that the following fetches hit.
-func (m *Memory) fetchByteSlow(cpu *vax.CPU, addr uint32) (byte, error) {
+func (m *Memory) fetchByteSlow(cpu *registers.CPU, addr uint32) (byte, error) {
 	b, err := m.LoadByte(cpu, addr)
 	if err != nil {
 		return 0, err
@@ -197,7 +197,7 @@ func (m *Memory) fetchByteSlow(cpu *vax.CPU, addr uint32) (byte, error) {
 //
 // binary.LittleEndian.Uint16 assembles the two bytes low byte first, the
 // VAX's byte order (see memory.go's readPhysLongword).
-func (m *Memory) FetchWord(cpu *vax.CPU, addr uint32) (uint16, error) {
+func (m *Memory) FetchWord(cpu *registers.CPU, addr uint32) (uint16, error) {
 	if off := addr - m.tb.fetch.vbase; off < m.tb.fetch.limit && off+2 <= m.tb.fetch.limit {
 		m.tb.fetch.hits++
 
@@ -209,7 +209,7 @@ func (m *Memory) FetchWord(cpu *vax.CPU, addr uint32) (uint16, error) {
 
 // fetchWordSlow is FetchWord's slow path: LoadWord, which handles a word
 // that crosses a page boundary, then a window refill for addr's page.
-func (m *Memory) fetchWordSlow(cpu *vax.CPU, addr uint32) (uint16, error) {
+func (m *Memory) fetchWordSlow(cpu *registers.CPU, addr uint32) (uint16, error) {
 	w, err := m.LoadWord(cpu, addr)
 	if err != nil {
 		return 0, err
@@ -224,7 +224,7 @@ func (m *Memory) fetchWordSlow(cpu *vax.CPU, addr uint32) (uint16, error) {
 // stream at addr, as LoadLongword would: a longword displacement, an
 // absolute address, or an immediate. See FetchWord for the page-boundary
 // test.
-func (m *Memory) FetchLongword(cpu *vax.CPU, addr uint32) (uint32, error) {
+func (m *Memory) FetchLongword(cpu *registers.CPU, addr uint32) (uint32, error) {
 	if off := addr - m.tb.fetch.vbase; off < m.tb.fetch.limit && off+4 <= m.tb.fetch.limit {
 		m.tb.fetch.hits++
 
@@ -236,7 +236,7 @@ func (m *Memory) FetchLongword(cpu *vax.CPU, addr uint32) (uint32, error) {
 
 // fetchLongwordSlow is FetchLongword's slow path: LoadLongword, then a
 // window refill for addr's page.
-func (m *Memory) fetchLongwordSlow(cpu *vax.CPU, addr uint32) (uint32, error) {
+func (m *Memory) fetchLongwordSlow(cpu *registers.CPU, addr uint32) (uint32, error) {
 	v, err := m.LoadLongword(cpu, addr)
 	if err != nil {
 		return 0, err
@@ -255,7 +255,7 @@ func (m *Memory) fetchLongwordSlow(cpu *vax.CPU, addr uint32) (uint32, error) {
 //
 // A page that isn't wholly in main RAM (one in ROM or NVRAM) isn't put in
 // the window: the fast path reads only Memory.ram.
-func (m *Memory) fillFetchWindow(cpu *vax.CPU, addr uint32) {
+func (m *Memory) fillFetchWindow(cpu *registers.CPU, addr uint32) {
 	m.tb.fetch.flush()
 
 	paddr, err := m.Translate(cpu, addr, AccessRead)
@@ -272,7 +272,7 @@ func (m *Memory) fillFetchWindow(cpu *vax.CPU, addr uint32) {
 
 	m.tb.fetch.vbase = addr &^ uint32(pageSize-1)
 	m.tb.fetch.pbase = pbase
-	m.tb.fetch.mapen = cpu.PR(vax.MAPEN)
+	m.tb.fetch.mapen = cpu.PR(registers.MAPEN)
 	m.tb.fetch.mode = cpu.PSL().CurMod()
 	m.tb.fetch.limit = pageSize
 	m.tb.fetch.fills++

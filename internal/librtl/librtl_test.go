@@ -7,8 +7,8 @@ import (
 	"github.com/tucats/govax/internal/corevms"
 	iodev "github.com/tucats/govax/internal/io"
 	"github.com/tucats/govax/internal/lnm"
+	"github.com/tucats/govax/internal/registers"
 	"github.com/tucats/govax/internal/rms"
-	"github.com/tucats/govax/internal/vax"
 	"github.com/tucats/govax/internal/vm"
 	"github.com/tucats/govax/internal/vmsdef"
 )
@@ -23,7 +23,7 @@ func fixture(t *testing.T) *corevms.Environment {
 		t.Fatal(err)
 	}
 
-	env, err := corevms.NewEnvironment(corevms.NewSystem(vax.New(), vm.NewMemory(1<<20), iodev.NewDeviceTable(),
+	env, err := corevms.NewEnvironment(corevms.NewSystem(registers.New(), vm.NewMemory(1<<20), iodev.NewDeviceTable(),
 		rms.NewMountTable()), logicals, bytes.NewReader(nil), &bytes.Buffer{})
 	if err != nil {
 		t.Fatal(err)
@@ -232,7 +232,7 @@ func TestLibEstablishRevert(t *testing.T) {
 
 	const shimFP, callerFP = 0x2000, 0x3000
 
-	env.CPU().SetGPR(vax.FP, shimFP)
+	env.CPU().SetGPR(registers.FP, shimFP)
 	putLongword(t, env, shimFP+12, callerFP)
 	putLongword(t, env, callerFP, 0x1111)
 

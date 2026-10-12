@@ -6,7 +6,7 @@ import (
 	"testing"
 
 	"github.com/tucats/govax/internal/lnm"
-	"github.com/tucats/govax/internal/vax"
+	"github.com/tucats/govax/internal/registers"
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
@@ -282,7 +282,7 @@ func TestSysTrnlnm_debugTrace(t *testing.T) {
 	var buf bytes.Buffer
 
 	env.cpu.SetDebugWriter(&buf)
-	env.cpu.SetDebug(vax.DebugLogicals)
+	env.cpu.SetDebug(registers.DebugLogicals)
 	callLNM(t, env, serviceSysTrnlnm, 0, a.desc("LNM$FILE_DEV"), a.desc("SYS$OUTPUT"), 0, 0)
 
 	if !strings.Contains(buf.String(), `DEBUG: $TRNLNM(LNM$FILE_DEV,SYS$OUTPUT), value="_TTA0:"`) {
@@ -456,7 +456,7 @@ func TestOldStyleServices(t *testing.T) {
 
 	// acmode 0 is maximized with the caller's mode.
 	psl := env.cpu.PSL()
-	psl.SetCurMod(vax.User)
+	psl.SetCurMod(registers.User)
 	env.cpu.SetPSL(psl)
 	wantR0(t, callLNM(t, env, serviceSysCrelog, 2, a.desc("MAXED"), a.desc("V"), 0), ssNormal)
 

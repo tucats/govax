@@ -3,20 +3,20 @@ package cpu
 import (
 	"testing"
 
-	"github.com/tucats/govax/internal/vax"
+	"github.com/tucats/govax/internal/registers"
 	"github.com/tucats/govax/internal/vm"
 )
 
 func TestEmulBpt(t *testing.T) {
 	e := newEngine()
 	cpu := e.cpu
-	cpu.SetGPR(vax.SP, 0x7000)
-	cpu.SetPR(vax.KSP, 0x7000)
+	cpu.SetGPR(registers.SP, 0x7000)
+	cpu.SetPR(registers.KSP, 0x7000)
 	putVector(t, e, ExcBreakpoint, 0x300, 0)
 
 	stepInstruction(t, e, 0x03) // BPT
 
-	if got := cpu.GPR(vax.PC); got != 0x300 {
+	if got := cpu.GPR(registers.PC); got != 0x300 {
 		t.Errorf("PC = %#x, want 0x300 (breakpoint fault vector)", got)
 	}
 }
@@ -24,14 +24,14 @@ func TestEmulBpt(t *testing.T) {
 func TestEmulBugl(t *testing.T) {
 	e := newEngine()
 	cpu := e.cpu
-	cpu.SetGPR(vax.SP, 0x7000)
-	cpu.SetPR(vax.KSP, 0x7000)
+	cpu.SetGPR(registers.SP, 0x7000)
+	cpu.SetPR(registers.KSP, 0x7000)
 	putVector(t, e, ExcPrivileged, 0x300, 0)
 
 	// BUGL #0x1234 -- extended opcode 0xFF 0xFD, 4-byte implicit immediate.
 	stepInstruction(t, e, 0xFF, 0xFD, 0x34, 0x12, 0x00, 0x00)
 
-	if got := cpu.GPR(vax.PC); got != 0x300 {
+	if got := cpu.GPR(registers.PC); got != 0x300 {
 		t.Errorf("PC = %#x, want 0x300 (privileged-instruction fault vector)", got)
 	}
 }
@@ -40,17 +40,17 @@ func TestEmulIndexInRange(t *testing.T) {
 	cpu, mem := fixture()
 	e := NewEngine(cpu, mem)
 
-	cpu.SetGPR(vax.R0, 3) // subscript
-	cpu.SetGPR(vax.R1, 0) // low
-	cpu.SetGPR(vax.R2, 9) // high
-	cpu.SetGPR(vax.R3, 4) // size
-	cpu.SetGPR(vax.R4, 0) // in
+	cpu.SetGPR(registers.R0, 3) // subscript
+	cpu.SetGPR(registers.R1, 0) // low
+	cpu.SetGPR(registers.R2, 9) // high
+	cpu.SetGPR(registers.R3, 4) // size
+	cpu.SetGPR(registers.R4, 0) // in
 
 	stepInstruction(t, e, 0x0A,
-		regMode(vax.R0), regMode(vax.R1), regMode(vax.R2),
-		regMode(vax.R3), regMode(vax.R4), regMode(vax.R5))
+		regMode(registers.R0), regMode(registers.R1), regMode(registers.R2),
+		regMode(registers.R3), regMode(registers.R4), regMode(registers.R5))
 
-	if got := cpu.GPR(vax.R5); got != 12 { // (0+3)*4
+	if got := cpu.GPR(registers.R5); got != 12 { // (0+3)*4
 		t.Errorf("out = %d, want 12", got)
 	}
 
@@ -62,26 +62,26 @@ func TestEmulIndexInRange(t *testing.T) {
 func TestEmulIndexOutOfRangeFaults(t *testing.T) {
 	e := newEngine()
 	cpu := e.cpu
-	cpu.SetGPR(vax.SP, 0x7000)
-	cpu.SetPR(vax.KSP, 0x7000)
+	cpu.SetGPR(registers.SP, 0x7000)
+	cpu.SetPR(registers.KSP, 0x7000)
 	putVector(t, e, ExcArithmetic, 0x300, 0)
 
-	cpu.SetGPR(vax.R0, 20) // subscript, out of [0,9]
-	cpu.SetGPR(vax.R1, 0)
-	cpu.SetGPR(vax.R2, 9)
-	cpu.SetGPR(vax.R3, 4)
-	cpu.SetGPR(vax.R4, 0)
-	cpu.SetGPR(vax.R5, 0xDEADBEEF)
+	cpu.SetGPR(registers.R0, 20) // subscript, out of [0,9]
+	cpu.SetGPR(registers.R1, 0)
+	cpu.SetGPR(registers.R2, 9)
+	cpu.SetGPR(registers.R3, 4)
+	cpu.SetGPR(registers.R4, 0)
+	cpu.SetGPR(registers.R5, 0xDEADBEEF)
 
 	stepInstruction(t, e, 0x0A,
-		regMode(vax.R0), regMode(vax.R1), regMode(vax.R2),
-		regMode(vax.R3), regMode(vax.R4), regMode(vax.R5))
+		regMode(registers.R0), regMode(registers.R1), regMode(registers.R2),
+		regMode(registers.R3), regMode(registers.R4), regMode(registers.R5))
 
-	if got := cpu.GPR(vax.PC); got != 0x300 {
+	if got := cpu.GPR(registers.PC); got != 0x300 {
 		t.Errorf("PC = %#x, want 0x300 (arithmetic fault vector)", got)
 	}
 
-	if got := cpu.GPR(vax.R5); got != 0xDEADBEEF {
+	if got := cpu.GPR(registers.R5); got != 0xDEADBEEF {
 		t.Errorf("R5 = %#x, want unchanged 0xDEADBEEF (not stored on fault)", got)
 	}
 }
@@ -108,14 +108,14 @@ func TestEmulBispswBicpsw(t *testing.T) {
 func TestEmulBitpswReservedBitsFault(t *testing.T) {
 	e := newEngine()
 	cpu := e.cpu
-	cpu.SetGPR(vax.SP, 0x7000)
-	cpu.SetPR(vax.KSP, 0x7000)
+	cpu.SetGPR(registers.SP, 0x7000)
+	cpu.SetPR(registers.KSP, 0x7000)
 	putVector(t, e, ExcReservedOp, 0x300, 0)
 
 	// I^#0x0100: bit 8 set, which must be zero.
 	stepInstruction(t, e, 0xB8, 0x8F, 0x00, 0x01, 0x00, 0x00)
 
-	if got := cpu.GPR(vax.PC); got != 0x300 {
+	if got := cpu.GPR(registers.PC); got != 0x300 {
 		t.Errorf("PC = %#x, want 0x300 (reserved-operand fault vector)", got)
 	}
 }
@@ -124,39 +124,39 @@ func TestEmulPushrPoprRoundTrip(t *testing.T) {
 	cpu, mem := fixture()
 	e := NewEngine(cpu, mem)
 
-	cpu.SetGPR(vax.SP, 0x9000)
-	cpu.SetGPR(vax.R0, 0x11111111)
-	cpu.SetGPR(vax.R2, 0x22222222)
-	cpu.SetGPR(vax.R5, 0x55555555)
+	cpu.SetGPR(registers.SP, 0x9000)
+	cpu.SetGPR(registers.R0, 0x11111111)
+	cpu.SetGPR(registers.R2, 0x22222222)
+	cpu.SetGPR(registers.R5, 0x55555555)
 
 	// PUSHR^M #^M<R0,R2,R5>: mask bits 0, 2, 5.
 	const mask = 1<<0 | 1<<2 | 1<<5
 
 	stepInstruction(t, e, 0xBB, shortLiteral(mask))
 
-	if got := cpu.GPR(vax.SP); got != 0x9000-12 {
+	if got := cpu.GPR(registers.SP); got != 0x9000-12 {
 		t.Fatalf("SP after PUSHR = %#x, want %#x", got, uint32(0x9000-12))
 	}
 
-	cpu.SetGPR(vax.R0, 0)
-	cpu.SetGPR(vax.R2, 0)
-	cpu.SetGPR(vax.R5, 0)
+	cpu.SetGPR(registers.R0, 0)
+	cpu.SetGPR(registers.R2, 0)
+	cpu.SetGPR(registers.R5, 0)
 
 	stepInstruction(t, e, 0xBA, shortLiteral(mask))
 
-	if got := cpu.GPR(vax.SP); got != 0x9000 {
+	if got := cpu.GPR(registers.SP); got != 0x9000 {
 		t.Errorf("SP after POPR = %#x, want 0x9000", got)
 	}
 
-	if got := cpu.GPR(vax.R0); got != 0x11111111 {
+	if got := cpu.GPR(registers.R0); got != 0x11111111 {
 		t.Errorf("R0 = %#x, want 0x11111111", got)
 	}
 
-	if got := cpu.GPR(vax.R2); got != 0x22222222 {
+	if got := cpu.GPR(registers.R2); got != 0x22222222 {
 		t.Errorf("R2 = %#x, want 0x22222222", got)
 	}
 
-	if got := cpu.GPR(vax.R5); got != 0x55555555 {
+	if got := cpu.GPR(registers.R5); got != 0x55555555 {
 		t.Errorf("R5 = %#x, want 0x55555555", got)
 	}
 }
@@ -165,7 +165,7 @@ func TestEmulProberAccessibleWithVMDisabled(t *testing.T) {
 	cpu, mem := fixture()
 	e := NewEngine(cpu, mem)
 
-	cpu.SetGPR(vax.SP, 0)
+	cpu.SetGPR(registers.SP, 0)
 	psl := cpu.PSL()
 	psl.SetC(true) // PROBEx must leave C unaffected
 	cpu.SetPSL(psl)
@@ -219,10 +219,10 @@ func TestEmulProberNotAccessibleSetsZWithoutFaulting(t *testing.T) {
 	bytes = append(bytes, absoluteMode(probeTargetVA)...)
 	putBytes(t, cpu, mem, codePhys, bytes...)
 
-	cpu.SetPR(vax.SBR, sbr)
-	cpu.SetPR(vax.SLR, 1) // pages 0 and 1 in range
-	cpu.SetGPR(vax.PC, codeVA)
-	cpu.SetPR(vax.MAPEN, 1)
+	cpu.SetPR(registers.SBR, sbr)
+	cpu.SetPR(registers.SLR, 1) // pages 0 and 1 in range
+	cpu.SetGPR(registers.PC, codeVA)
+	cpu.SetPR(registers.MAPEN, 1)
 
 	if err := e.Step(); err != nil {
 		t.Fatalf("Step: %v", err)
@@ -232,7 +232,7 @@ func TestEmulProberNotAccessibleSetsZWithoutFaulting(t *testing.T) {
 		t.Error("Z = false, want true (not accessible)")
 	}
 
-	if got := cpu.GPR(vax.PC); got != codeVA+uint32(len(bytes)) {
+	if got := cpu.GPR(registers.PC); got != codeVA+uint32(len(bytes)) {
 		t.Errorf("PC = %#x, want the next instruction (PROBEx never signals a real fault)", got)
 	}
 }
@@ -246,9 +246,9 @@ func TestEmulMovpsl(t *testing.T) {
 	psl.SetIPL(5)
 	cpu.SetPSL(psl)
 
-	stepInstruction(t, e, 0xDC, regMode(vax.R1))
+	stepInstruction(t, e, 0xDC, regMode(registers.R1))
 
-	if got := cpu.GPR(vax.R1); got != uint32(psl) {
+	if got := cpu.GPR(registers.R1); got != uint32(psl) {
 		t.Errorf("R1 = %#x, want %#x (the whole PSL)", got, uint32(psl))
 	}
 }

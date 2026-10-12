@@ -10,7 +10,7 @@ import (
 	"github.com/tucats/govax/internal/cpu"
 
 	iodev "github.com/tucats/govax/internal/io"
-	"github.com/tucats/govax/internal/vax"
+	"github.com/tucats/govax/internal/registers"
 )
 
 // TestProcessServices_assembledProgram is docs/PHASE-26.md's acceptance
@@ -42,11 +42,11 @@ func TestProcessServices_assembledProgram(t *testing.T) {
 		t.Fatal("process_services.asm didn't finish within 100,000 steps")
 	}
 
-	if got := c.CPU.GPR(vax.R0); got != 1 {
+	if got := c.CPU.GPR(registers.R0); got != 1 {
 		t.Errorf("R0 = %d, want 1 (every service call worked)", got)
 	}
 
-	if got := c.CPU.PR(vax.USP); got != 0x4FF8 {
+	if got := c.CPU.PR(registers.USP); got != 0x4FF8 {
 		t.Errorf("USP = %#x, want 0x4FF8 from $ADJSTK", got)
 	}
 
@@ -91,7 +91,7 @@ func TestEventFlagWait_timerInterrupt(t *testing.T) {
 		t.Fatal("wait_timer.asm didn't finish within 100,000 steps (the wait never ended)")
 	}
 
-	if got := c.CPU.GPR(vax.R0); got != 1 {
+	if got := c.CPU.GPR(registers.R0); got != 1 {
 		t.Errorf("R0 = %d, want 1 (the timer interrupt ended the wait)", got)
 	}
 }
@@ -120,15 +120,15 @@ func TestEventFlagWait_blocksUntilSet(t *testing.T) {
 			t.Fatalf("step %d: %v", i, err)
 		}
 
-		c.CPU.SetPR(vax.ICCS, 0)
+		c.CPU.SetPR(registers.ICCS, 0)
 
-		if pc := c.CPU.GPR(vax.PC); pc >= 0x7FFE0000 {
+		if pc := c.CPU.GPR(registers.PC); pc >= 0x7FFE0000 {
 			waitfr = pc
 		}
 	}
 
-	if waitfr == 0 || c.CPU.GPR(vax.PC) != waitfr {
-		t.Fatalf("PC = %#x after 5,000 steps, want the program parked in $WAITFR's P1-vector stub", c.CPU.GPR(vax.PC))
+	if waitfr == 0 || c.CPU.GPR(registers.PC) != waitfr {
+		t.Fatalf("PC = %#x after 5,000 steps, want the program parked in $WAITFR's P1-vector stub", c.CPU.GPR(registers.PC))
 	}
 
 	c.RTL.Process.LocalEventFlags[0] |= 1 << 3
@@ -140,7 +140,7 @@ func TestEventFlagWait_blocksUntilSet(t *testing.T) {
 
 	// The program notices no tick ran, so it reports failure -- which
 	// confirms the wait really was ended from outside.
-	if got := c.CPU.GPR(vax.R0); got != 0 {
+	if got := c.CPU.GPR(registers.R0); got != 0 {
 		t.Errorf("R0 = %d, want 0 (no timer tick ended this wait)", got)
 	}
 }
@@ -192,7 +192,7 @@ func TestTimerServices_assembledProgram(t *testing.T) {
 		t.Fatal("timer_services.asm didn't finish within 100,000 steps (the timer never fired)")
 	}
 
-	if got := c.CPU.GPR(vax.R0); got != 1 {
+	if got := c.CPU.GPR(registers.R0); got != 1 {
 		t.Errorf("R0 = %d, want 1 (the timer ended the wait; the cancelled one never fired)", got)
 	}
 
@@ -229,7 +229,7 @@ func TestHibernate_assembledProgram(t *testing.T) {
 		t.Fatal("hibernate.asm didn't finish within 100,000 steps (a $HIBER never woke)")
 	}
 
-	if got := c.CPU.GPR(vax.R0); got != 1 {
+	if got := c.CPU.GPR(registers.R0); got != 1 {
 		t.Errorf("R0 = %d, want 1 (every service call worked)", got)
 	}
 
@@ -268,7 +268,7 @@ func TestASTDelivery_assembledProgram(t *testing.T) {
 		t.Fatal("ast_delivery.asm didn't finish within 100,000 steps")
 	}
 
-	if got := c.CPU.GPR(vax.R0); got != 1 {
+	if got := c.CPU.GPR(registers.R0); got != 1 {
 		t.Errorf("R0 = %d, want 1 (every AST ran when it should, registers intact)", got)
 	}
 
@@ -313,7 +313,7 @@ func TestTimerAST_assembledProgram(t *testing.T) {
 		t.Fatal("timer_ast.asm didn't finish within 100,000 steps (an AST never arrived)")
 	}
 
-	if got := c.CPU.GPR(vax.R0); got != 1 {
+	if got := c.CPU.GPR(registers.R0); got != 1 {
 		t.Errorf("R0 = %d, want 1 (every AST arrived as it should)", got)
 	}
 
@@ -377,7 +377,7 @@ func TestTerminalQIO_assembledProgram(t *testing.T) {
 		t.Fatal("terminal_qio.asm didn't finish within 100,000 steps")
 	}
 
-	if got := c.CPU.GPR(vax.R0); got != 1 {
+	if got := c.CPU.GPR(registers.R0); got != 1 {
 		t.Errorf("R0 = %d, want 1 (every $QIO did what it should)", got)
 	}
 
@@ -417,7 +417,7 @@ func TestSynch_assembledProgram(t *testing.T) {
 		t.Fatal("synch.asm didn't finish within 100,000 steps")
 	}
 
-	if got := c.CPU.GPR(vax.R0); got != 1 {
+	if got := c.CPU.GPR(registers.R0); got != 1 {
 		t.Errorf("R0 = %d, want 1 (every $SYNCH returned when it should)", got)
 	}
 
@@ -449,7 +449,7 @@ func TestExitHandlers_assembledProgram(t *testing.T) {
 	}
 
 	// Run it as a user-mode image, on the user stack VMInit set up.
-	c.Engine.SetModeStack(vax.User, false)
+	c.Engine.SetModeStack(registers.User, false)
 
 	runErr, hitCap := callBounded(t, c, addr, 100_000)
 	if runErr != nil {
@@ -460,7 +460,7 @@ func TestExitHandlers_assembledProgram(t *testing.T) {
 		t.Fatal("exit_handlers.asm didn't finish within 100,000 steps")
 	}
 
-	if got := c.CPU.GPR(vax.R0); got != 0x2C {
+	if got := c.CPU.GPR(registers.R0); got != 0x2C {
 		t.Errorf("R0 = %#x, want the exit status 0x2C", got)
 	}
 
@@ -496,7 +496,7 @@ func TestExitHandlers_assembledProgram(t *testing.T) {
 		t.Error("$EXIT returned to its caller")
 	}
 
-	if n := c.RTL.ExitHandlers(vax.User); n != 0 || c.RTL.Process.ExitStatus != 0x2C {
+	if n := c.RTL.ExitHandlers(registers.User); n != 0 || c.RTL.Process.ExitStatus != 0x2C {
 		t.Errorf("%d user handlers left, ExitStatus %#x; want none and 0x2C", n, c.RTL.Process.ExitStatus)
 	}
 }
@@ -520,7 +520,7 @@ func TestNumtim_assembledProgram(t *testing.T) {
 		t.Fatalf("running numtim.asm: err=%v hitCap=%v", runErr, hitCap)
 	}
 
-	if got := c.CPU.GPR(vax.R0); got != 1 {
+	if got := c.CPU.GPR(registers.R0); got != 1 {
 		t.Fatalf("R0 = %d, want 1 (every conversion succeeded)", got)
 	}
 
@@ -575,7 +575,7 @@ func TestJPIASTState_assembledProgram(t *testing.T) {
 		t.Fatalf("running jpi_ast_state.asm: err=%v hitCap=%v", runErr, hitCap)
 	}
 
-	if got := c.CPU.GPR(vax.R0); got != 1 {
+	if got := c.CPU.GPR(registers.R0); got != 1 {
 		t.Fatalf("R0 = %d, want 1 (every call succeeded)", got)
 	}
 
@@ -644,7 +644,7 @@ func TestModeSwitchAST_assembledProgram(t *testing.T) {
 		t.Fatal("mode_switch_ast.asm didn't finish within 100,000 steps (the kernel AST never ended the user-mode $HIBER)")
 	}
 
-	if got := c.CPU.GPR(vax.R0); got != 1 {
+	if got := c.CPU.GPR(registers.R0); got != 1 {
 		t.Errorf("R0 = %d, want 1", got)
 	}
 
@@ -664,7 +664,7 @@ func TestModeSwitchAST_assembledProgram(t *testing.T) {
 		return v
 	}
 
-	if m, p := word("KMODE"), word("KPRV"); m != uint32(vax.Kernel) || p != uint32(vax.User) {
+	if m, p := word("KMODE"), word("KPRV"); m != uint32(registers.Kernel) || p != uint32(registers.User) {
 		t.Errorf("the AST ran in mode %d with previous mode %d; want kernel (0), user (3)", m, p)
 	}
 
@@ -672,7 +672,7 @@ func TestModeSwitchAST_assembledProgram(t *testing.T) {
 		t.Errorf("AST parameter = %d, want 7", got)
 	}
 
-	if got := word("UMODE"); got != uint32(vax.User) {
+	if got := word("UMODE"); got != uint32(registers.User) {
 		t.Errorf("mode after the AST = %d, want user (3)", got)
 	}
 
@@ -705,7 +705,7 @@ func TestGetsyi_assembledProgram(t *testing.T) {
 		t.Fatalf("running getsyi.asm: err=%v hitCap=%v", runErr, hitCap)
 	}
 
-	if got := c.CPU.GPR(vax.R0); got != 1 {
+	if got := c.CPU.GPR(registers.R0); got != 1 {
 		t.Fatalf("R0 = %d, want 1 (every call behaved)", got)
 	}
 
@@ -775,7 +775,7 @@ func TestFAO_assembledProgram(t *testing.T) {
 		t.Fatalf("running fao.asm: err=%v hitCap=%v", runErr, hitCap)
 	}
 
-	if got := c.CPU.GPR(vax.R0); got != 1 {
+	if got := c.CPU.GPR(registers.R0); got != 1 {
 		t.Errorf("R0 = %d, want 1 (every call behaved)", got)
 	}
 
@@ -816,7 +816,7 @@ func TestPutmsg_assembledProgram(t *testing.T) {
 		t.Fatalf("running putmsg.asm: err=%v hitCap=%v", runErr, hitCap)
 	}
 
-	if got := c.CPU.GPR(vax.R0); got != 1 {
+	if got := c.CPU.GPR(registers.R0); got != 1 {
 		t.Errorf("R0 = %d, want 1 (every call behaved)", got)
 	}
 
@@ -857,7 +857,7 @@ func TestCmkrnl_assembledProgram(t *testing.T) {
 		t.Fatalf("running cmkrnl.asm: err=%v hitCap=%v", runErr, hitCap)
 	}
 
-	if got := c.CPU.GPR(vax.R0); got != 1 {
+	if got := c.CPU.GPR(registers.R0); got != 1 {
 		t.Errorf("R0 = %d, want 1 (both services returned their routine's status)", got)
 	}
 
@@ -877,7 +877,7 @@ func TestCmkrnl_assembledProgram(t *testing.T) {
 		return v
 	}
 
-	if m, p := word("KMODE"), word("KPRV"); m != uint32(vax.Kernel) || p != uint32(vax.User) {
+	if m, p := word("KMODE"), word("KPRV"); m != uint32(registers.Kernel) || p != uint32(registers.User) {
 		t.Errorf("KRNL ran in mode %d with previous mode %d; want kernel (0), user (3)", m, p)
 	}
 
@@ -885,11 +885,11 @@ func TestCmkrnl_assembledProgram(t *testing.T) {
 		t.Errorf("KRNL's MFPR read IPL %d, want 0", got)
 	}
 
-	if got := word("EMODE"); got != uint32(vax.Executive) {
+	if got := word("EMODE"); got != uint32(registers.Executive) {
 		t.Errorf("EXEC ran in mode %d, want executive (1)", got)
 	}
 
-	if got := word("UMODE"); got != uint32(vax.User) {
+	if got := word("UMODE"); got != uint32(registers.User) {
 		t.Errorf("mode afterwards = %d, want user (3)", got)
 	}
 }
@@ -935,7 +935,7 @@ func TestCtrlCAST_assembledProgram(t *testing.T) {
 
 	for i := 0; i < 100_000 && !done; i++ {
 		// Type CTRL/C the first time the program reaches each spin loop.
-		if typed < len(spins) && c.CPU.GPR(vax.PC) == spins[typed] {
+		if typed < len(spins) && c.CPU.GPR(registers.PC) == spins[typed] {
 			c.Engine.Attention()
 
 			typed++
@@ -954,7 +954,7 @@ func TestCtrlCAST_assembledProgram(t *testing.T) {
 		t.Fatal("ctrlc_ast.asm didn't finish within 100,000 steps")
 	}
 
-	if got := c.CPU.GPR(vax.R0); got != 1 {
+	if got := c.CPU.GPR(registers.R0); got != 1 {
 		t.Errorf("R0 = %d, want 1", got)
 	}
 
@@ -1005,7 +1005,7 @@ func TestGetdvi_assembledProgram(t *testing.T) {
 		t.Fatalf("running getdvi.asm: err=%v hitCap=%v", runErr, hitCap)
 	}
 
-	if got := c.CPU.GPR(vax.R0); got != 1 {
+	if got := c.CPU.GPR(registers.R0); got != 1 {
 		t.Fatalf("R0 = %d, want 1 (every call behaved)", got)
 	}
 
@@ -1074,7 +1074,7 @@ func TestMailbox_assembledProgram(t *testing.T) {
 		t.Fatalf("running mailbox.asm: err=%v hitCap=%v", runErr, hitCap)
 	}
 
-	if got := c.CPU.GPR(vax.R0); got != 1 {
+	if got := c.CPU.GPR(registers.R0); got != 1 {
 		t.Fatalf("R0 = %d, want 1 (every call behaved)", got)
 	}
 
@@ -1170,7 +1170,7 @@ func TestProcessControl_assembledProgram(t *testing.T) {
 		t.Error("the code after $FORCEX ran")
 	}
 
-	if got := c.CPU.GPR(vax.R0); got != 0x2C || p.ExitStatus != 0x2C {
+	if got := c.CPU.GPR(registers.R0); got != 0x2C || p.ExitStatus != 0x2C {
 		t.Errorf("R0 = %#x, exit status %#x; want 0x2C", got, p.ExitStatus)
 	}
 }

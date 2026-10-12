@@ -4,7 +4,7 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/tucats/govax/internal/vax"
+	"github.com/tucats/govax/internal/registers"
 	"github.com/tucats/govax/internal/vm"
 )
 
@@ -35,7 +35,7 @@ func octaBytes(o Octaword) []byte {
 }
 
 // readOcta reads 16 bytes of memory at addr, failing the test on a fault.
-func readOcta(t *testing.T, cpu *vax.CPU, mem *vm.Memory, addr uint32) Octaword {
+func readOcta(t *testing.T, cpu *registers.CPU, mem *vm.Memory, addr uint32) Octaword {
 	t.Helper()
 
 	o, err := loadOctaword(cpu, mem, addr)
@@ -47,7 +47,7 @@ func readOcta(t *testing.T, cpu *vax.CPU, mem *vm.Memory, addr uint32) Octaword 
 }
 
 // setOctaRegs puts o in Rn..Rn+3, low-order longword in Rn.
-func setOctaRegs(cpu *vax.CPU, r vax.Reg, o Octaword) {
+func setOctaRegs(cpu *registers.CPU, r registers.Reg, o Octaword) {
 	cpu.SetGPR(r, uint32(o.Lo))
 	cpu.SetGPR(r+1, uint32(o.Lo>>32))
 	cpu.SetGPR(r+2, uint32(o.Hi))
@@ -55,7 +55,7 @@ func setOctaRegs(cpu *vax.CPU, r vax.Reg, o Octaword) {
 }
 
 // octaRegs reads Rn..Rn+3 back as an octaword.
-func octaRegs(cpu *vax.CPU, r vax.Reg) Octaword {
+func octaRegs(cpu *registers.CPU, r registers.Reg) Octaword {
 	return Octaword{
 		Lo: uint64(cpu.GPR(r)) | uint64(cpu.GPR(r+1))<<32,
 		Hi: uint64(cpu.GPR(r+2)) | uint64(cpu.GPR(r+3))<<32,
@@ -64,7 +64,7 @@ func octaRegs(cpu *vax.CPU, r vax.Reg) Octaword {
 
 // checkMovePSL checks a move's condition codes: N and Z as given, V clear,
 // and C left as the test set it (true).
-func checkMovePSL(t *testing.T, cpu *vax.CPU, n, z bool) {
+func checkMovePSL(t *testing.T, cpu *registers.CPU, n, z bool) {
 	t.Helper()
 
 	psl := cpu.PSL()
@@ -77,13 +77,13 @@ func checkMovePSL(t *testing.T, cpu *vax.CPU, n, z bool) {
 func TestMovoRegisterToRegister(t *testing.T) {
 	cpu, mem := fixture()
 	e := NewEngine(cpu, mem)
-	setOctaRegs(cpu, vax.R0, testOcta)
+	setOctaRegs(cpu, registers.R0, testOcta)
 	setC(cpu, true) // so the test can check the instruction leaves C alone
 
 	// MOVO R0,R4: R0-R3 to R4-R7.
-	stepInstruction(t, e, opEscapeFD, opMOVO, regMode(vax.R0), regMode(vax.R4))
+	stepInstruction(t, e, opEscapeFD, opMOVO, regMode(registers.R0), regMode(registers.R4))
 
-	if got := octaRegs(cpu, vax.R4); got != testOcta {
+	if got := octaRegs(cpu, registers.R4); got != testOcta {
 		t.Errorf("R4-R7 = %#x, want %#x", got, testOcta)
 	}
 
@@ -107,7 +107,7 @@ func TestMovoImmediateToMemory(t *testing.T) {
 		t.Errorf("memory = %#x, want %#x", got, testOcta)
 	}
 
-	if got, want := cpu.GPR(vax.PC), uint32(base+len(bytes)); got != want {
+	if got, want := cpu.GPR(registers.PC), uint32(base+len(bytes)); got != want {
 		t.Errorf("PC = %#x, want %#x (past all 16 immediate bytes)", got, want)
 	}
 }
@@ -115,14 +115,14 @@ func TestMovoImmediateToMemory(t *testing.T) {
 func TestMovoShortLiteralZeroExtends(t *testing.T) {
 	cpu, mem := fixture()
 	e := NewEngine(cpu, mem)
-	setOctaRegs(cpu, vax.R4, testOcta)
+	setOctaRegs(cpu, registers.R4, testOcta)
 	setC(cpu, true) // so the test can check the instruction leaves C alone
 
 	// MOVO S^#5,R4: a short literal is a 6-bit integer in the specifier
 	// byte itself; as an octaword it's 5 with 120 zero bits above it.
-	stepInstruction(t, e, opEscapeFD, opMOVO, shortLiteral(5), regMode(vax.R4))
+	stepInstruction(t, e, opEscapeFD, opMOVO, shortLiteral(5), regMode(registers.R4))
 
-	if got, want := octaRegs(cpu, vax.R4), (Octaword{Lo: 5}); got != want {
+	if got, want := octaRegs(cpu, registers.R4), (Octaword{Lo: 5}); got != want {
 		t.Errorf("R4-R7 = %#x, want %#x", got, want)
 	}
 
@@ -136,8 +136,8 @@ func TestMovoAutoincrementAndDecrement(t *testing.T) {
 	const src, dst = 0x2000, 0x3000
 
 	putBytes(t, cpu, mem, src, octaBytes(testOcta)...)
-	cpu.SetGPR(vax.R1, src)
-	cpu.SetGPR(vax.R2, dst+16)
+	cpu.SetGPR(registers.R1, src)
+	cpu.SetGPR(registers.R2, dst+16)
 
 	// MOVO (R1)+,-(R2): R1 advances by 16 after the read, and R2 drops by
 	// 16 before the write.
@@ -147,8 +147,8 @@ func TestMovoAutoincrementAndDecrement(t *testing.T) {
 		t.Errorf("memory = %#x, want %#x", got, testOcta)
 	}
 
-	if cpu.GPR(vax.R1) != src+16 || cpu.GPR(vax.R2) != dst {
-		t.Errorf("R1, R2 = %#x, %#x, want %#x, %#x", cpu.GPR(vax.R1), cpu.GPR(vax.R2), src+16, dst)
+	if cpu.GPR(registers.R1) != src+16 || cpu.GPR(registers.R2) != dst {
+		t.Errorf("R1, R2 = %#x, %#x, want %#x, %#x", cpu.GPR(registers.R1), cpu.GPR(registers.R2), src+16, dst)
 	}
 }
 
@@ -159,14 +159,14 @@ func TestMovoIndexedScalesBy16(t *testing.T) {
 	const table = 0x2000
 
 	putBytes(t, cpu, mem, table+3*16, octaBytes(testOcta)...)
-	cpu.SetGPR(vax.R1, table)
-	cpu.SetGPR(vax.R2, 3)
+	cpu.SetGPR(registers.R1, table)
+	cpu.SetGPR(registers.R2, 3)
 
 	// MOVO (R1)[R2],R4: indexed mode (0x42 is "[R2]") adds R2 times the
 	// operand size, 16, to the base operand's address (0x61 is "(R1)").
-	stepInstruction(t, e, opEscapeFD, opMOVO, 0x42, 0x61, regMode(vax.R4))
+	stepInstruction(t, e, opEscapeFD, opMOVO, 0x42, 0x61, regMode(registers.R4))
 
-	if got := octaRegs(cpu, vax.R4); got != testOcta {
+	if got := octaRegs(cpu, registers.R4); got != testOcta {
 		t.Errorf("R4-R7 = %#x, want %#x (element 3, at table+48)", got, testOcta)
 	}
 }
@@ -174,13 +174,13 @@ func TestMovoIndexedScalesBy16(t *testing.T) {
 func TestMovoZero(t *testing.T) {
 	cpu, mem := fixture()
 	e := NewEngine(cpu, mem)
-	setOctaRegs(cpu, vax.R4, testOcta)
+	setOctaRegs(cpu, registers.R4, testOcta)
 	setC(cpu, true) // so the test can check the instruction leaves C alone
 
 	// MOVO R0,R4 with R0-R3 all zero.
-	stepInstruction(t, e, opEscapeFD, opMOVO, regMode(vax.R0), regMode(vax.R4))
+	stepInstruction(t, e, opEscapeFD, opMOVO, regMode(registers.R0), regMode(registers.R4))
 
-	if got := octaRegs(cpu, vax.R4); !got.IsZero() {
+	if got := octaRegs(cpu, registers.R4); !got.IsZero() {
 		t.Errorf("R4-R7 = %#x, want 0", got)
 	}
 
@@ -197,16 +197,16 @@ func TestOctawordRegisterLimit(t *testing.T) {
 		bytes []byte
 		fault bool
 	}{
-		{"source R11", []byte{opEscapeFD, opMOVO, regMode(vax.R11), regMode(vax.R0)}, false},
-		{"source R12", []byte{opEscapeFD, opMOVO, regMode(vax.R12), regMode(vax.R0)}, true},
-		{"destination SP", []byte{opEscapeFD, opMOVO, regMode(vax.R0), regMode(vax.SP)}, true},
-		{"CLRO PC", []byte{opEscapeFD, opCLRO, regMode(vax.PC)}, true},
+		{"source R11", []byte{opEscapeFD, opMOVO, regMode(registers.R11), regMode(registers.R0)}, false},
+		{"source R12", []byte{opEscapeFD, opMOVO, regMode(registers.R12), regMode(registers.R0)}, true},
+		{"destination SP", []byte{opEscapeFD, opMOVO, regMode(registers.R0), regMode(registers.SP)}, true},
+		{"CLRO PC", []byte{opEscapeFD, opCLRO, regMode(registers.PC)}, true},
 	}
 
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
 			cpu, mem := fixture()
-			cpu.SetGPR(vax.PC, base)
+			cpu.SetGPR(registers.PC, base)
 			putBytes(t, cpu, mem, base, c.bytes...)
 
 			_, err := decodeInstructionValue(cpu, mem, instructionTable)
@@ -228,13 +228,13 @@ func TestClro(t *testing.T) {
 	const dst = 0x2000
 
 	putBytes(t, cpu, mem, dst, octaBytes(testOcta)...)
-	setOctaRegs(cpu, vax.R4, testOcta)
+	setOctaRegs(cpu, registers.R4, testOcta)
 	setC(cpu, true) // so the test can check the instruction leaves C alone
 
 	// CLRO R4: all four registers.
-	stepInstruction(t, e, opEscapeFD, opCLRO, regMode(vax.R4))
+	stepInstruction(t, e, opEscapeFD, opCLRO, regMode(registers.R4))
 
-	if got := octaRegs(cpu, vax.R4); !got.IsZero() {
+	if got := octaRegs(cpu, registers.R4); !got.IsZero() {
 		t.Errorf("R4-R7 = %#x, want 0", got)
 	}
 
@@ -254,14 +254,14 @@ func TestMovaoAndPushao(t *testing.T) {
 
 	const table, stack = 0x2000, 0x4000
 
-	cpu.SetGPR(vax.R1, table)
-	cpu.SetGPR(vax.R2, 3)
-	cpu.SetGPR(vax.SP, stack)
+	cpu.SetGPR(registers.R1, table)
+	cpu.SetGPR(registers.R2, 3)
+	cpu.SetGPR(registers.SP, stack)
 
 	// MOVAO (R1)[R2],R0: the address of element 3 of an octaword array.
-	stepInstruction(t, e, opEscapeFD, opMOVAO, 0x42, 0x61, regMode(vax.R0))
+	stepInstruction(t, e, opEscapeFD, opMOVAO, 0x42, 0x61, regMode(registers.R0))
 
-	if got, want := cpu.GPR(vax.R0), uint32(table+3*16); got != want {
+	if got, want := cpu.GPR(registers.R0), uint32(table+3*16); got != want {
 		t.Errorf("MOVAO: R0 = %#x, want %#x", got, want)
 	}
 
@@ -272,8 +272,8 @@ func TestMovaoAndPushao(t *testing.T) {
 		t.Errorf("PUSHAO pushed %#x, want %#x", got, table)
 	}
 
-	if cpu.GPR(vax.R1) != table+16 || cpu.GPR(vax.SP) != stack-4 {
-		t.Errorf("R1, SP = %#x, %#x, want %#x, %#x", cpu.GPR(vax.R1), cpu.GPR(vax.SP), table+16, stack-4)
+	if cpu.GPR(registers.R1) != table+16 || cpu.GPR(registers.SP) != stack-4 {
+		t.Errorf("R1, SP = %#x, %#x, want %#x, %#x", cpu.GPR(registers.R1), cpu.GPR(registers.SP), table+16, stack-4)
 	}
 }
 
@@ -303,9 +303,9 @@ func TestStoreOctawordAcrossInvalidPage(t *testing.T) {
 	original := []byte{1, 2, 3, 4, 5, 6, 7, 8}
 	putBytes(t, cpu, mem, pagePhys+0x1F8, original...)
 
-	cpu.SetPR(vax.SBR, sbr)
-	cpu.SetPR(vax.SLR, 2)
-	cpu.SetPR(vax.MAPEN, 1)
+	cpu.SetPR(registers.SBR, sbr)
+	cpu.SetPR(registers.SLR, 2)
+	cpu.SetPR(registers.MAPEN, 1)
 
 	err := storeOctaword(cpu, mem, dstVA, testOcta)
 
@@ -314,7 +314,7 @@ func TestStoreOctawordAcrossInvalidPage(t *testing.T) {
 		t.Fatalf("storeOctaword = %v, want a translation fault", err)
 	}
 
-	cpu.SetPR(vax.MAPEN, 0) // read the page back physically
+	cpu.SetPR(registers.MAPEN, 0) // read the page back physically
 
 	for i, want := range original {
 		if got, _ := mem.LoadByte(cpu, pagePhys+0x1F8+uint32(i)); got != want {

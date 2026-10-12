@@ -5,8 +5,8 @@ import (
 	"errors"
 
 	"github.com/tucats/govax/internal/lck"
+	"github.com/tucats/govax/internal/registers"
 	"github.com/tucats/govax/internal/sched"
-	"github.com/tucats/govax/internal/vax"
 	"github.com/tucats/govax/internal/vmsdef"
 )
 
@@ -241,7 +241,7 @@ func (env *Environment) enqueue(argv []uint32) (uint32, *enqRequest) {
 
 		group := uint16(env.Process.UICGroup())
 		if flags&lckSystem != 0 {
-			if caller > uint32(vax.Executive) && !env.Process.hasPrivilege(privSYSLCK) {
+			if caller > uint32(registers.Executive) && !env.Process.hasPrivilege(privSYSLCK) {
 				return ssNoSysLck, nil
 			}
 
@@ -307,7 +307,7 @@ type enqWait struct {
 // since an AST routine may issue its own. Its R0 is $ENQ's; the final
 // status is in the LKSB.
 func serviceSysEnqw(env *Environment, argv []uint32) (uint32, error) {
-	fp := env.cpu.GPR(vax.FP)
+	fp := env.cpu.GPR(registers.FP)
 
 	if n := len(env.enqWaits); n > 0 && env.enqWaits[n-1].fp == fp {
 		req := env.enqWaits[n-1].req

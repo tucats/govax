@@ -11,7 +11,7 @@ import (
 	"github.com/tucats/govax/internal/cpu"
 	"github.com/tucats/govax/internal/lnm"
 	"github.com/tucats/govax/internal/machine"
-	"github.com/tucats/govax/internal/vax"
+	"github.com/tucats/govax/internal/registers"
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
@@ -140,7 +140,7 @@ func TestLNMRoundTrip_assembledProgram(t *testing.T) {
 		t.Fatal("lnm_roundtrip.asm didn't finish within 100,000 steps")
 	}
 
-	if got := c.CPU.GPR(vax.R0); got != 1 {
+	if got := c.CPU.GPR(registers.R0); got != 1 {
 		t.Errorf("R0 = %d, want 1 (every logical-name step worked)", got)
 	}
 

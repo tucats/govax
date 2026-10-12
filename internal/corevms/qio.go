@@ -5,8 +5,8 @@ import (
 	"fmt"
 
 	iodev "github.com/tucats/govax/internal/io"
+	"github.com/tucats/govax/internal/registers"
 	"github.com/tucats/govax/internal/sched"
-	"github.com/tucats/govax/internal/vax"
 	"github.com/tucats/govax/internal/vm"
 	"github.com/tucats/govax/internal/vmsdef"
 )
@@ -228,7 +228,7 @@ type qiowWait struct {
 // Like $QIO, it returns SS$_NORMAL once the request is queued, whatever
 // the I/O's own status (which is in the IOSB).
 func serviceSysQiow(env *Environment, argv []uint32) (uint32, error) {
-	fp := env.cpu.GPR(vax.FP)
+	fp := env.cpu.GPR(registers.FP)
 
 	if n := len(env.qiowWaits); n > 0 && env.qiowWaits[n-1].fp == fp {
 		if req := env.qiowWaits[n-1].req; !req.done {
@@ -337,7 +337,7 @@ func (env *Environment) queueIO(argv []uint32) (uint32, *ioRequest) {
 		req.p[i] = optArg(argv, 6+i)
 	}
 
-	if env.cpu.DebugEnabled(vax.DebugDevices) {
+	if env.cpu.DebugEnabled(registers.DebugDevices) {
 		fmt.Fprintf(env.cpu.DebugWriter(), "DEBUG: SYS$QIO channel %d (%s) function %02X modifiers %04X\n",
 			number, c.Device.Name, req.function, req.modifiers)
 	}
