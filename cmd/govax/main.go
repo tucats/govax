@@ -57,6 +57,11 @@ func main() {
 	// Register the application specific localizations.
 	i18n.Register(nil)
 
+	// Store the version string where it can be accessed by the $GETSYI service.
+	if BuildVersion != "0.0-0" {
+		corevms.VersionString = BuildVersion
+	}
+
 	// Disable subcommands and options we don't use.
 	app.MakePrivate("logon")
 	app.MakePrivate("format")
@@ -281,7 +286,7 @@ func run(paths []string, instructionLimit int, timeLimit time.Duration, out io.W
 				}
 			}
 		} else {
-			// See if the host file exists. If it does not, there is no error. 
+			// See if the host file exists. If it does not, there is no error.
 			// But if it does, run it as a host command procedure.
 			if _, err := os.Stat(startup); err == nil {
 				if err := c.RunHostProcedure(startup, d.Dispatch); err != nil && !vmserrors.MessageInhibited(err) {

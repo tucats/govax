@@ -18,8 +18,9 @@ import (
 
 // Status codes $GETSYI returns.
 var (
-	ssNoMoreNode = vmsdef.Symbols["SS$_NOMORENODE"]
-	ssNoSuchNode = vmsdef.Symbols["SS$_NOSUCHNODE"]
+	ssNoMoreNode  = vmsdef.Symbols["SS$_NOMORENODE"]
+	ssNoSuchNode  = vmsdef.Symbols["SS$_NOSUCHNODE"]
+	VersionString = "V7.3" // Default value, main injects govax build version
 )
 
 // The system's identity. The node name is govax's own. The version is
@@ -29,7 +30,6 @@ var (
 // definitions describe.
 const (
 	nominalNodeName = "GOVAX"
-	vmsVersion      = "V7.3"
 	vmsSoftwareType = "VMS"
 
 	// localCSID is the node's cluster system ID. A node outside a
@@ -64,8 +64,8 @@ const maxNodeNameLength = 15
 //     member, cluster system ID 0.
 //   - SYI$_MINWSCNT is the SYSGEN parameter that bounds $ADJWSL.
 var syiItemsByName = map[string]func(env *Environment) itemValue{
-	"SYI$_VERSION":        func(env *Environment) itemValue { return itemPadded(vmsVersion, 8) },
-	"SYI$_NODE_SWVERS":    func(env *Environment) itemValue { return itemPadded(vmsVersion, 4) },
+	"SYI$_VERSION":        func(env *Environment) itemValue { return itemPadded(VersionString, 8) },
+	"SYI$_NODE_SWVERS":    func(env *Environment) itemValue { return itemPadded(VersionString, 4) },
 	"SYI$_NODE_SWTYPE":    func(env *Environment) itemValue { return itemPadded(vmsSoftwareType, 4) },
 	"SYI$_NODENAME":       func(env *Environment) itemValue { return itemString(env.NodeName) },
 	"SYI$_SID":            func(env *Environment) itemValue { return itemLong(env.cpu.PR(vax.SID)) },
