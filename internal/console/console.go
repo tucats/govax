@@ -3,6 +3,7 @@ package console
 import (
 	"io"
 
+	"github.com/tucats/govax/internal/dclshell"
 	"github.com/tucats/govax/internal/machine"
 )
 
@@ -18,7 +19,7 @@ type Console struct {
 	*machine.Machine
 
 	// Interpreter is the DCL (interpreter.go).
-	*Interpreter
+	*dclshell.Interpreter
 
 	// Dispatcher backs XFC$CONSOLE_CMD (a running VAX program asking the
 	// console to execute a command line on its behalf). Unlike Engine/RTL,
@@ -57,5 +58,5 @@ type Console struct {
 func New(out io.Writer) *Console {
 	m := machine.NewMachine(out)
 
-	return &Console{Machine: m, Interpreter: NewInterpreter(m, out)}
+	return &Console{Machine: m, Interpreter: dclshell.NewInterpreter(m, out)}
 }

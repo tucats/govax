@@ -6,6 +6,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/tucats/govax/internal/dclshell"
 	"github.com/tucats/govax/internal/rms"
 	"github.com/tucats/govax/internal/vmserrors"
 )
@@ -298,7 +299,7 @@ func TestDCLFile_processPermanent(t *testing.T) {
 
 	// The last READ reached the procedure's end of file, and went to a
 	// label that isn't there.
-	if got := c.Status() &^ stsInhibitMsg; got != conditionValue(vmserrors.New(vmserrors.CLI_USGOTO)) {
+	if got := c.Status() &^ stsInhibitMsg; got != dclshell.ConditionValue(vmserrors.New(vmserrors.CLI_USGOTO)) {
 		t.Errorf("$STATUS %08X, want CLI$_USGOTO's", got)
 	}
 }
@@ -341,7 +342,7 @@ func TestDCLFile_staysOpen(t *testing.T) {
 		`$ WRITE KEEP "from outer"`,
 	)
 
-	if _, open := c.openFile("KEEP"); !open {
+	if !c.DCLFileOpen("KEEP") {
 		t.Fatal("KEEP was closed when inner.com ended")
 	}
 
@@ -386,8 +387,8 @@ func TestDCLFile_logicalName(t *testing.T) {
 		t.Errorf("the procedure wrote:\n%s\nwant:\n%s", out, want)
 	}
 
-	if len(c.dclOrphans) != 1 {
-		t.Errorf("%d files out of reach, want 1 (still open)", len(c.dclOrphans))
+	if c.OrphanedDCLFiles() != 1 {
+		t.Errorf("%d files out of reach, want 1 (still open)", c.OrphanedDCLFiles())
 	}
 }
 
@@ -507,13 +508,3 @@ func TestDCLFile_ownCommand(t *testing.T) {
 	}
 }
 
-// TestSplitDCLList: WRITE's items are split at commas outside quotes and
-// parentheses.
-func TestSplitDCLList(t *testing.T) {
-	got := splitDCLList(`"a,b", F$EXTRACT(0, 1, X) , 3`)
-	want := []string{`"a,b"`, `F$EXTRACT(0, 1, X)`, `3`}
-
-	if strings.Join(got, "|") != strings.Join(want, "|") {
-		t.Errorf("splitDCLList = %q, want %q", got, want)
-	}
-}

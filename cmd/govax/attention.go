@@ -270,7 +270,7 @@ func (s *attentionStdin) ctrlC() {
 // to stop, and a read waiting for a line ends; the command loop in run
 // then ends (abortRequested). A second CTRL/Y before the first was dealt
 // with exits at once. In a command procedure the console takes the key
-// for DCL's Ctrl/Y (internal/console/dclcontroly.go), and govax goes on.
+// for DCL's Ctrl/Y (internal/dclshell/dclcontroly.go), and govax goes on.
 // After SET NOCONTROL=Y the key is echoed and does nothing else, as the
 // DCL Dictionary describes (SET CONTROL).
 func (s *attentionStdin) ctrlY(echo bool) {

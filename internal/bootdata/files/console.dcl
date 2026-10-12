@@ -926,14 +926,14 @@ grammar console
 
     ! DECK makes the records after it data, "$" or not, up to its end of
     ! file indicator: an EOD command, or /DOLLARS's string. EOD ends a
-    ! run of data lines (subtask 16; internal/console/dclinput.go).
+    ! run of data lines (subtask 16; internal/dclshell/dclinput.go).
     verb deck/id=1666
         qualifier   dollars/id=1667             -
                     /type=$string/nonegatable   -
                     /default=""
     verb eod/id=1668
 
-    ! DCL's file I/O (subtask 17; internal/console/dclfile.go). OPEN
+    ! DCL's file I/O (subtask 17; internal/dclshell/dclfile.go). OPEN
     ! opens a file and gives it a logical name, READ and WRITE read and
     ! write its records, and CLOSE closes it; SYS$INPUT, SYS$OUTPUT,
     ! SYS$ERROR, and SYS$COMMAND need no OPEN. /SHARE's keyword (READ or

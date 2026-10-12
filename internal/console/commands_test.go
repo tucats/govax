@@ -253,13 +253,13 @@ func TestCommands_at(t *testing.T) {
 	}
 
 	for _, line := range []string{`@"` + path + `"`, `@ "` + path + `"`} {
-		_ = c.dclSymbols.delete("/GLOBAL N")
+		_ = c.DeleteSymbol("/GLOBAL N")
 
 		if err := d.Dispatch(line); err != nil {
 			t.Fatalf("%s: %v", line, err)
 		}
 
-		if got, ok := c.dclSymbols.lookup("N"); !ok || got.value != "6" {
+		if got, ok := c.Symbol("N"); !ok || got != "6" {
 			t.Errorf("%s: N = %+v, %v; want 6", line, got, ok)
 		}
 	}
@@ -285,7 +285,7 @@ func TestCommands_at(t *testing.T) {
 		t.Error("RunCommandLine didn't run the command")
 	}
 
-	if got, ok := c.dclSymbols.lookup("M"); !ok || got.value != "7" {
+	if got, ok := c.Symbol("M"); !ok || got != "7" {
 		t.Errorf("M = %+v, %v; want 7", got, ok)
 	}
 

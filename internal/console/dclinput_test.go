@@ -167,7 +167,7 @@ func TestProcedureInput_terminal(t *testing.T) {
 		t.Errorf("DECK: %v, want IVVALU", err)
 	}
 
-	deckStatus := c.status
+	deckStatus := c.Status()
 	// VMS 7.3 gave %X00038088, CLI$_IVVALU.
 	if deckStatus&^stsInhibitMsg != 0x00038088 {
 		t.Errorf("$STATUS after DECK: %08X, want %%X00038088", deckStatus)
@@ -178,8 +178,8 @@ func TestProcedureInput_terminal(t *testing.T) {
 			t.Fatalf("%s: %v", line, err)
 		}
 
-		if line == "EOD" && c.status != deckStatus {
-			t.Errorf("$STATUS after EOD: %08X, want DECK's", c.status)
+		if line == "EOD" && c.Status() != deckStatus {
+			t.Errorf("$STATUS after EOD: %08X, want DECK's", c.Status())
 		}
 	}
 
@@ -188,35 +188,6 @@ func TestProcedureInput_terminal(t *testing.T) {
 	}
 }
 
-// TestParseDeck: DECK's record, with and without /DOLLARS.
-func TestParseDeck(t *testing.T) {
-	for _, tc := range []struct {
-		command string
-		marker  string
-		ok      bool
-	}{
-		{" DECK", "", true},
-		{"deck ! comment", "", true},
-		{"DECK/DOLLARS", "", true},
-		{"DECK/D=xx", "XX", true},
-		{`DECK /DOLLARS="%x"`, "%x", true},
-		{"DECK/NOPE", "", false},
-		{"DECK foo", "", false},
-		{"DECKS", "", false},
-		{"EOD", "", false},
-	} {
-		marker, ok := parseDeck(tc.command)
-		if marker != tc.marker || ok != tc.ok {
-			t.Errorf("parseDeck(%q) = %q, %v; want %q, %v", tc.command, marker, ok, tc.marker, tc.ok)
-		}
-	}
-
-	for record, want := range map[string]bool{"$ EOD": true, "$eod ! end": true, "$ EODX": false, "EOD": false} {
-		if got := (&procedureDeck{}).ends(record); got != want {
-			t.Errorf("ends(%q) = %v, want %v", record, got, want)
-		}
-	}
-}
 
 // TestIsInputStream: SYS$INPUT by name and through logical names, and
 // names that lead elsewhere.
@@ -236,8 +207,8 @@ func TestIsInputStream(t *testing.T) {
 		"SYS$INPUT": true, "sys$input:": true, "INFILE": true, "OTHER:": true,
 		"AFILE": false, "SYS$INPUT:X.DAT": false, "LOOP1": false, "NOSUCH": false, "X.DAT": false,
 	} {
-		if got := c.isInputStream(spec); got != want {
-			t.Errorf("isInputStream(%q) = %v, want %v", spec, got, want)
+		if got := c.IsInputStream(spec); got != want {
+			t.Errorf("IsInputStream(%q) = %v, want %v", spec, got, want)
 		}
 	}
 }

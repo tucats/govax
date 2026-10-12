@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"github.com/tucats/govax/internal/cpu"
+	"github.com/tucats/govax/internal/dclshell"
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
@@ -78,7 +79,7 @@ func TestStopProcedures(t *testing.T) {
 		inner  []string
 		status uint32
 	}{
-		{"STOP", []string{`$ PRINT "inner"`, "$ STOP", `$ PRINT "inner after"`}, cliNormal},
+		{"STOP", []string{`$ PRINT "inner"`, "$ STOP", `$ PRINT "inner after"`}, dclshell.CLINormal},
 		{"ON ERROR", []string{`$ PRINT "inner"`, "$ ON ERROR THEN STOP", "$ OPEN/READ X NOSUCH.FILE", `$ PRINT "inner after"`}, 0x10018292},
 	} {
 		d, c, buf := newCommandDispatcher(t)
@@ -186,10 +187,10 @@ func TestControlY_level(t *testing.T) {
 		name, typed, want string
 		status            uint32
 	}{
-		{"CONTINUE", "y\nX = 2\nWRITE SYS$OUTPUT \"at Ctrl/Y ''X' ''F$ENVIRONMENT(\"DEPTH\")'\"\nCONTINUE\n", "at Ctrl/Y 2 1\nafter 2\n", cliNormal},
+		{"CONTINUE", "y\nX = 2\nWRITE SYS$OUTPUT \"at Ctrl/Y ''X' ''F$ENVIRONMENT(\"DEPTH\")'\"\nCONTINUE\n", "at Ctrl/Y 2 1\nafter 2\n", dclshell.CLINormal},
 		{"EXIT", "y\nEXIT 3\n", "", 3},
 		{"STOP", "y\nSTOP\n", "", 1},
-		{"image", "y\nPRINT \"later ''F$ENVIRONMENT(\"DEPTH\")'\"\n", "later 0\n", cliNormal},
+		{"image", "y\nPRINT \"later ''F$ENVIRONMENT(\"DEPTH\")'\"\n", "later 0\n", dclshell.CLINormal},
 		{"end of input", "y\n", "", 1 | stsInhibitMsg},
 	} {
 		out, c, _ := runControlY(t, tc.typed, lines)
@@ -224,8 +225,8 @@ func TestSetControl(t *testing.T) {
 		t.Errorf("%v, output %q", err, out)
 	}
 
-	if !c.ControlYEnabled() || c.control.t {
-		t.Errorf("Ctrl/Y enabled %v, Ctrl/T %v; want true, false", c.ControlYEnabled(), c.control.t)
+	if !c.ControlYEnabled() || c.ControlTEnabled() {
+		t.Errorf("Ctrl/Y enabled %v, Ctrl/T %v; want true, false", c.ControlYEnabled(), c.ControlTEnabled())
 	}
 
 	d, _, _ := newCommandDispatcher(t)

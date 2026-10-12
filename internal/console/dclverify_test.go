@@ -50,8 +50,8 @@ func TestSetVerifyKeywords(t *testing.T) {
 			t.Errorf("%s: %v", tc.command, err)
 		}
 
-		if c.Verify != tc.procedure || c.verifyImage != tc.image {
-			t.Errorf("%s: procedure %v image %v, want %v %v", tc.command, c.Verify, c.verifyImage, tc.procedure, tc.image)
+		if c.Verify != tc.procedure || c.VerifyImage() != tc.image {
+			t.Errorf("%s: procedure %v image %v, want %v %v", tc.command, c.Verify, c.VerifyImage(), tc.procedure, tc.image)
 		}
 	}
 }
@@ -263,8 +263,8 @@ func TestVerifyPrefix(t *testing.T) {
 		}
 	}
 
-	if c.verifyPrefix != "!8%D !/!_!^!!!3*- " {
-		t.Errorf("prefix %q after refused ones", c.verifyPrefix)
+	if c.VerifyPrefix() != "!8%D !/!_!^!!!3*- " {
+		t.Errorf("prefix %q after refused ones", c.VerifyPrefix())
 	}
 }
 

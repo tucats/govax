@@ -4,6 +4,8 @@ import (
 	"testing"
 
 	"github.com/tucats/gopackages/app-cli/settings"
+
+	"github.com/tucats/govax/internal/dclshell"
 )
 
 // TestSetPrompt checks SET PROMPT="text": the prompt and the
@@ -11,26 +13,26 @@ import (
 // the default; and a name that only abbreviates PROMPT is still a symbol
 // assignment.
 func TestSetPrompt(t *testing.T) {
-	saved, had := settings.Get(promptSetting), settings.Exists(promptSetting)
+	saved, had := settings.Get(dclshell.PromptSetting), settings.Exists(dclshell.PromptSetting)
 
 	t.Cleanup(func() {
 		if had {
-			settings.Set(promptSetting, saved)
+			settings.Set(dclshell.PromptSetting, saved)
 		} else {
-			_ = settings.Delete(promptSetting)
+			_ = settings.Delete(dclshell.PromptSetting)
 		}
 	})
 
 	d, c, _ := newCommandDispatcher(t)
 
-	_ = settings.Delete(promptSetting)
+	_ = settings.Delete(dclshell.PromptSetting)
 
-	if got := c.Prompt(); got != DefaultPrompt {
-		t.Fatalf("Prompt() = %q unset, want %q", got, DefaultPrompt)
+	if got := c.Prompt(); got != dclshell.DefaultPrompt {
+		t.Fatalf("Prompt() = %q unset, want %q", got, dclshell.DefaultPrompt)
 	}
 
 	for _, line := range []string{`SET PROMPT="vax$ "`, `set prompt = "vax$ "`, `SET PROMPT "vax$ "`} {
-		_ = settings.Delete(promptSetting)
+		_ = settings.Delete(dclshell.PromptSetting)
 
 		if err := d.Dispatch(line); err != nil {
 			t.Fatalf("%s: %v", line, err)
@@ -40,8 +42,8 @@ func TestSetPrompt(t *testing.T) {
 			t.Errorf("%s: Prompt() = %q, want %q", line, got, "vax$ ")
 		}
 
-		if got := settings.Get(promptSetting); got != "vax$ " {
-			t.Errorf("%s: %s = %q", line, promptSetting, got)
+		if got := settings.Get(dclshell.PromptSetting); got != "vax$ " {
+			t.Errorf("%s: %s = %q", line, dclshell.PromptSetting, got)
 		}
 	}
 
@@ -49,8 +51,8 @@ func TestSetPrompt(t *testing.T) {
 		t.Fatalf(`SET PROMPT="": %v`, err)
 	}
 
-	if got := c.Prompt(); got != DefaultPrompt {
-		t.Errorf(`Prompt() = %q after SET PROMPT="", want %q`, got, DefaultPrompt)
+	if got := c.Prompt(); got != dclshell.DefaultPrompt {
+		t.Errorf(`Prompt() = %q after SET PROMPT="", want %q`, got, dclshell.DefaultPrompt)
 	}
 
 	if err := d.Dispatch(`SET PROM="X> "`); err != nil {
