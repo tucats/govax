@@ -2,7 +2,7 @@
 
 **Status:** in progress (2026-10-12). Needs Phases 34 (`internal/librtl`)
 and 52. The plan (Part A) and the decisions (Part B) were reviewed and
-accepted by the author on 2026-10-12. Subtasks 2 to 8 are done.
+accepted by the author on 2026-10-12. Subtasks 2 to 9 are done.
 
 govax provides 15 of LIBRTL.EXE's LIB$ routines (and STR$UPCASE): the ones
 the sample programs and tests needed (Phase 34's table,
@@ -534,6 +534,7 @@ so there's one implementation of each rule.
 8. **Floating**: EMOD and POLY in F, D, G, and H, on `vaxfloat`.
    **Done** 2026-10-12.
 9. **Queues and interlocks**: INSQHI, INSQTI, REMQHI, REMQTI, BBSSI, BBCCI.
+   **Done** 2026-10-12.
 10. **Character strings**: LOCC, MATCHC, SCANC, SKPC, SPANC, MOVC3, MOVC5,
     MOVTC, MOVTUC.
 11. **CRC, CRC_TABLE** (CALLG was done in subtask 2).
@@ -804,3 +805,37 @@ so there's one implementation of each rule.
     coefficient. The console's `TestLibrtlFloating` runs all eight from
     a linked program (the manual's FORTRAN polynomial, 27, in each
     format) and LIB$POLYF of degree 32.
+- **2026-10-12** — Subtask 9, the queue and interlock routines
+  (`internal/librtl/queue.go`): LIB$INSQHI, LIB$INSQTI, LIB$REMQHI,
+  LIB$REMQTI, LIB$BBSSI, and LIB$BBCCI, codes 61 to 63 and 65 to 67.
+  Code 64 is DCL's `EXE$CLI_COMMAND` shim (`internal/dclshell/subcli.go`),
+  which shares the system's shim table; LIB$REMQTI first took it and lost
+  its registration to DCL's, so `TestCLIShimCodeFree` now checks that no
+  LIBRTL routine uses it.
+  - **The CPU first.** `internal/cpu/queue.go`'s self-relative half is now
+    two functions of addresses, `cpu.InsertInterlocked` and
+    `cpu.RemoveInterlocked`, returning a `QueueResult` (Z, V, C, and the
+    entry removed), which the instruction handlers turn into condition
+    codes and the routines into statuses. They follow the ARM: alignment
+    of the header, entry, and linked entries; a header link with bits
+    2:1 set; an entry that is its header, or an addr operand at the
+    header, is a reserved operand fault; bit 0 of the header is the
+    secondary interlock (C, and V for a removal, nothing changed); every
+    location to be written is read first. REMQTI of an empty queue now
+    stores the header's address, as REMQHI did. Logged in DEVIATIONS.md.
+  - **The routines** try up to retry-count times (10 if omitted; 0 is
+    taken as 1, unconfirmed) while the interlock is set, then return
+    LIB$_SECINTFAI. Insertions return LIB$_ONEENTQUE or SS$_NORMAL;
+    removals store the entry (or the header) at remque-address and return
+    LIB$_QUEWASEMP, LIB$_ONEENTQUE, or SS$_NORMAL. A reserved operand is
+    signaled as SS$_ROPRAND for all four (unconfirmed for the
+    insertions). LIB$BBSSI and LIB$BBCCI read and change one bit through
+    `cpu.MemoryField`/`SetMemoryField` and return its old state.
+  - **Tests.** `internal/cpu/queue_test.go`: the interlock, each reserved
+    operand case, REMQTI of an empty queue, and a queue built and emptied
+    from both ends. `internal/librtl/queue_test.go`: every status in a
+    sequence, the interlock with and without a retry count, the reserved
+    operands, and the manual's bits 42 and 104 with a negative position.
+    The console's `TestLibrtlQueues` runs all six from a linked program,
+    and `TestLibrtlQueueReservedOperand` shows `%SYSTEM-F-ROPRAND` ending
+    the image.

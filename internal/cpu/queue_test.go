@@ -280,3 +280,118 @@ func TestEmulInsqueRemque(t *testing.T) {
 		t.Errorf("header forward link after removal = %#x, want 0x7000", got)
 	}
 }
+
+// TestInterlockedQueueSecondaryInterlock: with bit 0 of the header set,
+// each instruction changes nothing and sets C (and V for a removal).
+func TestInterlockedQueueSecondaryInterlock(t *testing.T) {
+	cpu, mem := fixture()
+	header := uint32(0x5000)
+	putLongword(t, cpu, mem, header, 1)
+	putLongword(t, cpu, mem, header+4, 0)
+
+	for _, tail := range []bool{false, true} {
+		r, err := InsertInterlocked(cpu, mem, 0x6000, header, tail)
+		if err != nil || r != (QueueResult{C: true}) {
+			t.Errorf("insert (tail %v) = %+v, %v; want C alone", tail, r, err)
+		}
+
+		r, err = RemoveInterlocked(cpu, mem, header, 0, tail)
+		if err != nil || r != (QueueResult{V: true, C: true}) {
+			t.Errorf("remove (tail %v) = %+v, %v; want V and C", tail, r, err)
+		}
+	}
+
+	if got, _ := mem.LoadLongword(cpu, header); got != 1 {
+		t.Errorf("header = %#x, want 1 (unchanged)", got)
+	}
+}
+
+// TestInterlockedQueueReservedOperand: misaligned headers and entries, an
+// entry that is its header, a header link with bits 2:1 set, and a
+// removal whose addr is its header are reserved operand faults.
+func TestInterlockedQueueReservedOperand(t *testing.T) {
+	cpu, mem := fixture()
+	header := uint32(0x5000)
+	putLongword(t, cpu, mem, header, 0)
+	putLongword(t, cpu, mem, header+4, 0)
+
+	for _, c := range []struct {
+		name string
+		err  error
+	}{
+		{"entry misaligned", func() error { _, err := InsertInterlocked(cpu, mem, 0x6004, header, false); return err }()},
+		{"header misaligned", func() error { _, err := InsertInterlocked(cpu, mem, 0x6000, header+2, true); return err }()},
+		{"entry is header", func() error { _, err := InsertInterlocked(cpu, mem, header, header, false); return err }()},
+		{"remove misaligned", func() error { _, err := RemoveInterlocked(cpu, mem, header+4, 0, false); return err }()},
+		{"addr is header", func() error { _, err := RemoveInterlocked(cpu, mem, header, header, true); return err }()},
+	} {
+		if !isReservedOp(c.err) {
+			t.Errorf("%s: %v, want a reserved operand fault", c.name, c.err)
+		}
+	}
+
+	putLongword(t, cpu, mem, header, 4) // bits 2:1 set
+
+	if _, err := RemoveInterlocked(cpu, mem, header, 0, false); !isReservedOp(err) {
+		t.Errorf("header link 4: %v, want a reserved operand fault", err)
+	}
+}
+
+// TestRemqtiEmpty: REMQTI of an empty queue stores the header's address,
+// as REMQHI does.
+func TestRemqtiEmpty(t *testing.T) {
+	cpu, mem := fixture()
+	e := NewEngine(cpu, mem)
+	header := uint32(0x5000)
+	putBytes(t, cpu, mem, header, 0, 0, 0, 0, 0, 0, 0, 0)
+	cpu.SetGPR(registers.R0, 0xDEAD)
+
+	bytes := []byte{0x5F}
+	bytes = append(bytes, absoluteMode(header)...)
+	bytes = append(bytes, regMode(registers.R0))
+	stepInstruction(t, e, bytes...)
+
+	if got := cpu.GPR(registers.R0); got != header {
+		t.Errorf("R0 = %#x, want the header, %#x", got, header)
+	}
+
+	if psl := cpu.PSL(); !psl.Z() || !psl.V() || psl.C() {
+		t.Errorf("Z=%v V=%v C=%v, want Z and V", psl.Z(), psl.V(), psl.C())
+	}
+}
+
+// TestInterlockedQueueMixed: entries inserted at both ends come out in
+// order from both ends, the links staying consistent.
+func TestInterlockedQueueMixed(t *testing.T) {
+	cpu, mem := fixture()
+	header := uint32(0x5000)
+	putLongword(t, cpu, mem, header, 0)
+	putLongword(t, cpu, mem, header+4, 0)
+
+	// 0x7000 0x6000 0x8000
+	for _, step := range []struct {
+		entry uint32
+		tail  bool
+		z     bool
+	}{{0x6000, false, true}, {0x7000, false, false}, {0x8000, true, false}} {
+		r, err := InsertInterlocked(cpu, mem, step.entry, header, step.tail)
+		if err != nil || r.Z != step.z {
+			t.Fatalf("insert %#x: %+v, %v", step.entry, r, err)
+		}
+	}
+
+	for _, step := range []struct {
+		tail bool
+		want uint32
+		z    bool
+	}{{true, 0x8000, false}, {false, 0x7000, false}, {true, 0x6000, true}, {false, header, true}} {
+		r, err := RemoveInterlocked(cpu, mem, header, 0, step.tail)
+		if err != nil || r.Removed != step.want || r.Z != step.z {
+			t.Errorf("remove (tail %v) = %+v, %v; want %#x, Z %v", step.tail, r, err, step.want, step.z)
+		}
+	}
+
+	if f, b := selfRelForward(t, cpu, mem, header), selfRelBackward(t, cpu, mem, header); f != header || b != header {
+		t.Errorf("empty header links to %#x, %#x; want itself", f, b)
+	}
+}

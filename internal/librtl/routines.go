@@ -85,6 +85,13 @@ var Routines = []Routine{
 	{"LIB$POLYD", 58, libPolyd},
 	{"LIB$POLYG", 59, libPolyg},
 	{"LIB$POLYH", 60, libPolyh},
+	{"LIB$INSQHI", 61, libInsqhi},
+	{"LIB$INSQTI", 62, libInsqti},
+	{"LIB$REMQHI", 63, libRemqhi},
+	// Code 64 is DCL's EXE$CLI_COMMAND (internal/dclshell/subcli.go).
+	{"LIB$REMQTI", 65, libRemqti},
+	{"LIB$BBSSI", 66, libBbssi},
+	{"LIB$BBCCI", 67, libBbcci},
 }
 
 // missing is Missing's list, made once.

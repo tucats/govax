@@ -3738,6 +3738,26 @@ widened."
   for Phase 53's probe (subtask 13).
 - **Status**: fixed in Go (docs/PHASE-53, subtask 7).
 
+### [Phase 53] The interlocked queue instructions skipped their checks
+
+- **Where**: `internal/cpu/queue.go` (INSQHI, INSQTI, REMQHI, REMQTI),
+  first ported from eVAX's queue instructions in Phase 06.
+- **What**: The VAX Architecture Reference Manual has each instruction
+  check its operands before changing anything: a header or entry not
+  quadword aligned, a header link with bits 2:1 set, an entry that is its
+  header, or (REMQHI, REMQTI) an addr operand at the header's address is
+  a reserved operand fault. And bit 0 of the header is the secondary
+  interlock: when it's set the instruction changes nothing and sets C
+  (and V for a removal). The port did neither, and REMQTI of an empty
+  queue left its addr operand unwritten where REMQHI (and the
+  architecture's rule, addr <- header + link) stores the header's
+  address. All three now follow the manual, in
+  `cpu.InsertInterlocked`/`cpu.RemoveInterlocked`, which LIB$INSQHI and
+  its kind share. Every location an instruction writes is read first, so
+  a memory fault leaves the queue as it was. The secondary interlock is
+  still never set by govax itself (one processor).
+- **Status**: fixed in Go (docs/PHASE-53, subtask 9).
+
 <!--
 Entry template:
 
