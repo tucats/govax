@@ -30,8 +30,9 @@ const waitPoll = 20 * time.Millisecond
 // waitCommand is WAIT delta-time. A time that can't be read is
 // CLI$_IVDTIME, its segment the time as VMS 7.3 showed it for WAIT
 // NOTATIME: "0  NOTATIME", as though the time were made a delta of 0
-// days (testdata/dcl50's round 6; one case seen, whose segment VMS ended
-// with a NUL byte, left out here as its buffer's garbage). WAIT
+// days (testdata/dcl50's round 6, where VMS ended the segment with a NUL
+// byte, left out here as its buffer's garbage; the author saw "\0  BOB\"
+// for WAIT BOB on VMS too, a known quirk of WAIT's message). WAIT
 // leaves $STATUS alone, interrupted and resumed or run to its end
 // (rounds 5 and 6).
 func (d *Dispatcher) waitCommand(id int64, r *dcl.Result) error {

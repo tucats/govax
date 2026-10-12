@@ -3507,7 +3507,8 @@ widened."
     list's further values, and no blank line after an empty table's
     header; F$CVTIME's delta fields written as typed; a digit starting
     a verb (IVVERB, not NOCOMD); WAIT's IVDTIME segment (`0  ` before
-    the time).
+    the time; the author saw `\0  BOB\` for WAIT BOB too, a known quirk
+    of WAIT's message).
 - **Still chosen without VMS**: what ends a plain label's CALL level
   when no EXIT does (the end of the file); an even RETURN status's
   message at the terminal (shown, as in a procedure); whether lines
