@@ -16,7 +16,8 @@ import (
 
 	"github.com/tucats/govax/internal/bootdata"
 	"github.com/tucats/govax/internal/console"
-	"github.com/tucats/govax/internal/console/dcl"
+	"github.com/tucats/govax/internal/dcl"
+	"github.com/tucats/govax/internal/help"
 	"github.com/tucats/govax/internal/respath"
 )
 
@@ -94,10 +95,10 @@ func loadGrammar(t testing.TB, name string) *dcl.Grammar {
 }
 
 // ParseHelp reads one of the help files (vax.help, debug.help).
-func ParseHelp(t testing.TB, name string) *console.Help {
+func ParseHelp(t testing.TB, name string) *help.File {
 	t.Helper()
 
-	h, err := console.LoadHelpFile(BootFile(t, name))
+	h, err := help.Load(BootFile(t, name))
 	if err != nil {
 		t.Fatalf("loading %s: %v", name, err)
 	}

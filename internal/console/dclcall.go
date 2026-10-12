@@ -4,7 +4,7 @@ import (
 	"slices"
 	"strings"
 
-	"github.com/tucats/govax/internal/console/dcl"
+	"github.com/tucats/govax/internal/dcl"
 	"github.com/tucats/govax/internal/vmserrors"
 )
 

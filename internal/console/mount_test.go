@@ -395,7 +395,7 @@ func TestShowDevices_liveStatsReflectARealFile(t *testing.T) {
 // correctly.
 //
 // The container path is double-quoted in the command line: DCL upcases an
-// unquoted token (TestParse_mount's own doc comment, internal/console/dcl/
+// unquoted token (TestParse_mount's own doc comment, internal/dcl/
 // parse_test.go), and t.TempDir() paths are mixed-case, so an unquoted
 // path here would fail to open under its now-upcased spelling on any
 // case-sensitive filesystem.

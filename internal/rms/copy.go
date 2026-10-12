@@ -42,7 +42,7 @@ import (
 // PHASE-23.md's "COPY direction and the /HOST qualifier" design section --
 // SOURCE and SOURCE alone decides whether *it* is a host path (via its own
 // /HOST qualifier, attached to the SOURCE parameter specifically -- see
-// internal/console/dcl's parameter-scoped-qualifier feature), and
+// internal/dcl's parameter-scoped-qualifier feature), and
 // DESTINATION decides the same for itself, completely independently. With
 // neither /HOST present, both sides are VMS syntax naming a mounted
 // volume. That gives four combinations, each handled by its own function
@@ -283,7 +283,7 @@ func (e *MultipleMatchesError) Error() string {
 // tools are for, matching ods2's own cmdCopyFromHost doc comment's
 // reasoning for the same restriction. Given its own type so the console
 // layer can report it as CLI_BADQUALIFIERCOMBO (the existing "two
-// qualifiers can't both be set" status internal/console/dcl's own
+// qualifiers can't both be set" status internal/dcl's own
 // DISALLOW checking already uses) rather than falling back to a generic
 // bad-file-specification error that would misdescribe what's actually
 // wrong.

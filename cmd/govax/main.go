@@ -27,10 +27,11 @@ import (
 	"github.com/tucats/gopackages/i18n"
 	"github.com/tucats/govax/internal/bootdata"
 	"github.com/tucats/govax/internal/console"
-	"github.com/tucats/govax/internal/console/dcl"
 	"github.com/tucats/govax/internal/corevms"
 	"github.com/tucats/govax/internal/cpu"
+	"github.com/tucats/govax/internal/dcl"
 	"github.com/tucats/govax/internal/debugger"
+	"github.com/tucats/govax/internal/help"
 	"github.com/tucats/govax/internal/respath"
 	"github.com/tucats/govax/internal/rms"
 	"github.com/tucats/govax/internal/vmserrors"
@@ -117,7 +118,7 @@ func isLimitStop(err error) bool {
 // meant to catch a runaway *user* program shouldn't also cut short the
 // emulator's own boot sequence.
 func run(paths []string, instructionLimit int, timeLimit time.Duration, out io.Writer, in io.ReadCloser, args []string) error {
-	var help *console.Help
+	var consoleHelp *help.File
 
 	// Squirrel away the command line arguments.
 	argText := strings.Builder{}
@@ -152,7 +153,7 @@ func run(paths []string, instructionLimit int, timeLimit time.Duration, out io.W
 	if helpSrc, err := resolver.ReadFile("console.help"); err != nil {
 		fmt.Fprintln(out, "Warning: no help file available:", err)
 	} else {
-		help = console.ParseHelp(string(helpSrc))
+		consoleHelp = help.Parse(string(helpSrc))
 	}
 
 	// The debugger has its own grammar and help file (docs/PHASE-42.md).
@@ -168,12 +169,12 @@ func run(paths []string, instructionLimit int, timeLimit time.Duration, out io.W
 		return vmserrors.Wrap(vmserrors.VAX_GRAMMAR, err)
 	}
 
-	var debugHelp *console.Help
+	var debugHelp *help.File
 
 	if helpSrc, err := resolver.ReadFile("debug.help"); err != nil {
 		fmt.Fprintln(out, "Warning: no debugger help file available:", err)
 	} else {
-		debugHelp = console.ParseHelp(string(helpSrc))
+		debugHelp = help.Parse(string(helpSrc))
 	}
 
 	c := console.New(out)
@@ -230,7 +231,7 @@ func run(paths []string, instructionLimit int, timeLimit time.Duration, out io.W
 		}
 	}()
 
-	d := console.NewDispatcher(c, grammar, help)
+	d := console.NewDispatcher(c, grammar, consoleHelp)
 	c.Dispatcher = d
 
 	// The debugger works on this console's machine. It is idle until the

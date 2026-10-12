@@ -48,7 +48,7 @@ var typeOpenIn = 149<<16 | vmsdef.LibrarySymbols["SHR$_OPENIN"]
 //     Console.Delete's own translation for the same underlying condition.
 //   - specText matching more than one file surfaces as an
 //     *rms.AmbiguousError and is reported as CLI_AMBIGUOUS, the same
-//     status internal/console/dcl's own verb/qualifier ambiguity already
+//     status internal/dcl's own verb/qualifier ambiguity already
 //     uses.
 //   - Anything else (a malformed file specification, or a genuine failure
 //     reading the file's own record data) is reported as CLI_BADFILESPEC,

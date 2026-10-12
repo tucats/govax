@@ -1,7 +1,7 @@
 // Package console implements the govax interactive monitor front end: the
 // VMS-style command line (RUN, MACRO, LINK, MOUNT, DIRECTORY, DEFINE, SET
 // DEFAULT, SAVE/LOAD, ...) and the DCL grammar-driven verb/qualifier dispatch
-// built on internal/console/dcl, against an internal/cpu.Engine and its
+// built on internal/dcl, against an internal/cpu.Engine and its
 // internal/vax.CPU/internal/vm.Memory (see docs/PHASE-08.md).
 //
 // The machine debugger is not here. Phase 42 moved EXAMINE, DEPOSIT, STEP,

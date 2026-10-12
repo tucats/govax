@@ -1,7 +1,7 @@
 package vmserrors
 
 // CLI facility message IDs -- internal/console's command-line/monitor
-// diagnostics, plus internal/console/dcl's grammar-parsing diagnostics.
+// diagnostics, plus internal/dcl's grammar-parsing diagnostics.
 // Private: only the composite CLI_* codes below are part of this package's
 // public API.
 const (
@@ -67,7 +67,7 @@ const (
 	cliBadPTEField
 	cliBadQualPrefix
 
-	// internal/console/dcl (the DCL command-grammar interpreter).
+	// internal/dcl (the DCL command-grammar interpreter).
 	cliUnrecognized
 	cliAmbiguous
 	cliLineErr
@@ -110,7 +110,7 @@ const (
 	// internal/rms.InvalidLimitError.
 	cliBadLimit
 
-	// docs/PHASE-25.md subtask 5: internal/console/dcl's list values.
+	// docs/PHASE-25.md subtask 5: internal/dcl's list values.
 	cliEmptyElement
 
 	// docs/PHASE-25.md subtask 6: INITIALIZE/CONTAINER's failure, which
@@ -260,7 +260,7 @@ const (
 	CLI_BADPTEFIELD     = CLIFacility<<FacilityPosition | cliBadPTEField<<MessagePosition | StatusError
 	CLI_BADQUALPREFIX   = CLIFacility<<FacilityPosition | cliBadQualPrefix<<MessagePosition | StatusError
 
-	// internal/console/dcl.
+	// internal/dcl.
 	CLI_UNRECOGNIZED          = CLIFacility<<FacilityPosition | cliUnrecognized<<MessagePosition | StatusError
 	CLI_AMBIGUOUS             = CLIFacility<<FacilityPosition | cliAmbiguous<<MessagePosition | StatusError
 	CLI_LINEERR               = CLIFacility<<FacilityPosition | cliLineErr<<MessagePosition | StatusError

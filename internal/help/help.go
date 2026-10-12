@@ -1,24 +1,29 @@
-package console
+// Package help reads govax's help files (vax.help, the console's, and
+// debug.help, the debugger's) and finds a HELP command's topic in them.
+// The console and the debugger each have one.
+package help
 
 import (
 	"bufio"
+	"fmt"
+	"io"
 	"os"
 	"strings"
 )
 
-// Help holds parsed HELP text: a "$"-prefixed line marks a topic key
+// File holds parsed HELP text: a "$"-prefixed line marks a topic key
 // (comma-separated 4-character, space-padded/truncated tokens, one per
 // HELP argument word); several consecutive "$" lines with no text
 // between them share the following body text (letting synonyms like
 // SHOW/SH point at the same section); body text runs until the next
 // "$" line or end of file.
-type Help struct {
+type File struct {
 	sections map[string]string // key (no leading '$', trimmed) -> body text
 }
 
-// ParseHelp parses HELP text in the format above.
-func ParseHelp(text string) *Help {
-	h := &Help{sections: map[string]string{}}
+// Parse parses HELP text in the format above.
+func Parse(text string) *File {
+	h := &File{sections: map[string]string{}}
 
 	var (
 		pendingKeys []string
@@ -67,14 +72,14 @@ func ParseHelp(text string) *Help {
 	return h
 }
 
-// LoadHelpFile reads and parses a HELP text file.
-func LoadHelpFile(path string) (*Help, error) {
+// Load reads and parses a HELP text file.
+func Load(path string) (*File, error) {
 	b, err := os.ReadFile(path)
 	if err != nil {
 		return nil, err
 	}
 
-	return ParseHelp(string(b)), nil
+	return Parse(string(b)), nil
 }
 
 // normalizeHelpToken upcases and pads/truncates a single key component --
@@ -130,29 +135,25 @@ func normalizeHelpKey(raw string) string {
 	return strings.Join(toks, ",")
 }
 
-// Help implements the HELP console command against h (a nil Help, or a
-// topic with no matching section, prints a "no help available" message
-// rather than erroring — VAX_NOHELPFILE/VAX_NOHELP being non-fatal 
-// console messages, not something that aborts the command loop).
-func (c *Console) Help(h *Help, words []string) error {
+// Show writes the topic a HELP command's words name to w. A nil File,
+// or a topic with no section, writes a "no help available" message
+// rather than failing: VAX_NOHELPFILE and VAX_NOHELP are messages, not
+// errors that end the command loop.
+func (h *File) Show(w io.Writer, words []string) {
 	if h == nil {
-		c.Printf("No help file available\n")
+		fmt.Fprintf(w, "No help file available\n")
 
-		return nil
+		return
 	}
 
-	key := helpKey(words)
+	fmt.Fprintf(w, "\n")
 
-	c.Printf("\n")
-
-	body, ok := h.sections[key]
+	body, ok := h.sections[helpKey(words)]
 	if !ok {
-		c.Printf("No help available for that topic\n")
+		fmt.Fprintf(w, "No help available for that topic\n")
 
-		return nil
+		return
 	}
 
-	c.Printf("%s", body)
-
-	return nil
+	fmt.Fprintf(w, "%s", body)
 }

@@ -10,9 +10,9 @@ import (
 // Result holds everything DCLdump/DCLresults would have handed back after a
 // successful Parse: which verb/syntax ended up active, and the value of every parameter/qualifier that was actually matched.
 type Result struct {
-	Verb       string // the top-level verb name, before any /syntax= or keyword redirect
-	Active     string // the final active entry name (verb or a redirected-to syntax)
-	ActiveID   int64 // the final active entry's ID, for the handler to disambiguate what part of the grammar invoked it
+	Verb     string // the top-level verb name, before any /syntax= or keyword redirect
+	Active   string // the final active entry name (verb or a redirected-to syntax)
+	ActiveID int64  // the final active entry's ID, for the handler to disambiguate what part of the grammar invoked it
 
 	values map[string]*matchedValue
 

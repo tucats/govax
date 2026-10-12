@@ -7,10 +7,11 @@ import (
 
 	"github.com/tucats/govax/internal/console"
 	"github.com/tucats/govax/internal/console/consoletest"
+	"github.com/tucats/govax/internal/help"
 )
 
 // helpText returns what HELP prints for the words, from the help file h.
-func helpText(t *testing.T, h *console.Help, words ...string) string {
+func helpText(t *testing.T, h *help.File, words ...string) string {
 	t.Helper()
 
 	var out strings.Builder

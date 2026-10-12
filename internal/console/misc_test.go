@@ -5,6 +5,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/tucats/govax/internal/help"
 )
 
 func TestPrint_quotedAndExpression(t *testing.T) {
@@ -250,7 +252,7 @@ func TestClearInterruptAndClearAllInterrupts(t *testing.T) {
 	}
 
 	c.Engine.Interrupt(0x24, 20, 0)
-	
+
 	if err := c.ClearAllInterrupts(); err != nil {
 		t.Fatalf("ClearAllInterrupts: %v", err)
 	}
@@ -261,7 +263,7 @@ func TestClearInterruptAndClearAllInterrupts(t *testing.T) {
 }
 
 func TestHelp_lookupAndMissingTopic(t *testing.T) {
-	h := ParseHelp("$SHOW,LOGI\n$SH  ,LOGI\nShows logical names.\nMore text.\n$OTHER\nOther text.\n")
+	h := help.Parse("$SHOW,LOGI\n$SH  ,LOGI\nShows logical names.\nMore text.\n$OTHER\nOther text.\n")
 	c, buf := newTestConsole(t)
 
 	buf.Reset()
@@ -289,7 +291,7 @@ func TestHelp_lookupAndMissingTopic(t *testing.T) {
 	if err := c.Help(h, []string{"NOSUCHTOPIC"}); err != nil {
 		t.Fatalf("Help: %v", err)
 	}
-	
+
 	if !strings.Contains(buf.String(), "No help available") {
 		t.Errorf("output = %q, want a no-help message", buf.String())
 	}

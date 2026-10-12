@@ -5,7 +5,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/tucats/govax/internal/console/dcl"
+	"github.com/tucats/govax/internal/dcl"
+	"github.com/tucats/govax/internal/help"
 	iodev "github.com/tucats/govax/internal/io"
 	"github.com/tucats/govax/internal/link"
 	"github.com/tucats/govax/internal/obj"
@@ -19,7 +20,7 @@ import (
 type Dispatcher struct {
 	Console *Console
 	Grammar *dcl.Grammar
-	Help    *Help
+	Help    *help.File
 
 	// line is the command line being dispatched, for a handler that
 	// records it (MACRO's SRC header).
@@ -28,7 +29,7 @@ type Dispatcher struct {
 
 // NewDispatcher returns a Dispatcher wired to c and g, with every DCL
 // verb/syntax this port implements bound to its handler.
-func NewDispatcher(c *Console, g *dcl.Grammar, h *Help) *Dispatcher {
+func NewDispatcher(c *Console, g *dcl.Grammar, h *help.File) *Dispatcher {
 	d := &Dispatcher{Console: c, Grammar: g, Help: h}
 	d.bindGrammar()
 
@@ -398,7 +399,6 @@ func (d *Dispatcher) bindGrammar() {
 	// (show_map/show_tb/... above) that DEFAULT slots into the same way.
 	g.Bind("SHOW_DEFAULT", func(id int64, r *dcl.Result) error { return d.Console.ShowDefault() })
 
-
 	// SHOW SYSTEM and SHOW PROCESS (docs/PHASE-44.md, subtask 10).
 	g.Bind("SHOW_SYSTEM", func(id int64, r *dcl.Result) error { return d.Console.ShowSystem() })
 	g.Bind("SHOW_PROCESS", func(id int64, r *dcl.Result) error {
@@ -406,7 +406,6 @@ func (d *Dispatcher) bindGrammar() {
 	})
 
 	g.Bind("SHOW_DEBUG", func(id int64, r *dcl.Result) error { return d.Console.ShowDebug() })
-
 
 	// SHOW MEMORY is allowed in both console and debugger
 	g.Bind("SHOW_MEMORY", func(id int64, r *dcl.Result) error { return d.Console.ShowMemory() })
@@ -463,7 +462,7 @@ func (d *Dispatcher) bindGrammar() {
 		// VMS's /NOWRITE reaches WRITE this same way, as the grammar's
 		// automatic "NO"-prefix negation of the one declared WRITE
 		// qualifier (this file's own DCL grammar comment, and
-		// TestParse_mountNowrite in internal/console/dcl/parse_test.go).
+		// TestParse_mountNowrite in internal/dcl/parse_test.go).
 		write := !r.Negated("WRITE")
 
 		return d.Console.MountCommand(r.String("DEVICE"), r.String("FILE"), write)

@@ -7,18 +7,19 @@ import (
 	"unicode"
 
 	"github.com/tucats/govax/internal/console"
-	"github.com/tucats/govax/internal/console/dcl"
+	"github.com/tucats/govax/internal/dcl"
+	"github.com/tucats/govax/internal/help"
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
 // Dispatcher parses one debugger command line with the debugger's DCL
 // grammar (debug.dcl) and runs the handler bound to the verb it names.
 // It is to the debugger what console.Dispatcher is to the console: the
-// same grammar interpreter (internal/console/dcl), a different grammar.
+// same grammar interpreter (internal/dcl), a different grammar.
 type Dispatcher struct {
 	Debugger *Debugger
 	Grammar  *dcl.Grammar
-	Help     *console.Help
+	Help     *help.File
 
 	// line is the command line being run, which a handler may need for
 	// what the grammar's result doesn't keep (the order of qualifiers).
@@ -27,7 +28,7 @@ type Dispatcher struct {
 
 // newDispatcher returns a Dispatcher for d with every command this
 // subtask implements bound to its handler.
-func newDispatcher(d *Debugger, g *dcl.Grammar, help *console.Help) *Dispatcher {
+func newDispatcher(d *Debugger, g *dcl.Grammar, help *help.File) *Dispatcher {
 	disp := &Dispatcher{Debugger: d, Grammar: g, Help: help}
 	disp.bind()
 

@@ -26,7 +26,7 @@ func evaxGrammarPath(t *testing.T) string {
 		t.Fatal("runtime.Caller failed")
 	}
 
-	return filepath.Join(filepath.Dir(file), "..", "..", "bootdata", "files", "console.dcl")
+	return filepath.Join(filepath.Dir(file), "..", "bootdata", "files", "console.dcl")
 }
 
 func loadEvaxGrammar(t *testing.T) *Grammar {
@@ -55,7 +55,7 @@ func debugGrammarPath(t *testing.T) string {
 		t.Fatal("runtime.Caller failed")
 	}
 
-	return filepath.Join(filepath.Dir(file), "..", "..", "bootdata", "files", "debug.dcl")
+	return filepath.Join(filepath.Dir(file), "..", "bootdata", "files", "debug.dcl")
 }
 
 func loadDebugGrammar(t *testing.T) *Grammar {
@@ -340,7 +340,7 @@ func TestLoadEvaxGrammar_type(t *testing.T) {
 // grammar additions: two formally required parameters, SOURCE and
 // DESTINATION (/prompt= on both -- there is no sensible default for either
 // half of a copy), each carrying its own private HOST qualifier attached
-// via /parameter= (internal/console/dcl's parameter-scoped-qualifier
+// via /parameter= (internal/dcl's parameter-scoped-qualifier
 // feature, subtask 2) rather than one qualifier shared at the entry level,
 // plus subtask 10's eleven entry-level qualifiers (BINARY, QUIET, VERBOSE,
 // TEST, TIME, IGNORE, DIRS, STREAM, VFC, CRLF, LF).

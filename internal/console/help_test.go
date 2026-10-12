@@ -7,6 +7,8 @@ import (
 	"runtime"
 	"strings"
 	"testing"
+
+	"github.com/tucats/govax/internal/help"
 )
 
 // vaxHelpPath returns the one true copy of vax.help --
@@ -29,14 +31,14 @@ func vaxHelpPath(t *testing.T) string {
 }
 
 func TestLoadHelpFile_realFixture(t *testing.T) {
-	h, err := LoadHelpFile(vaxHelpPath(t))
+	h, err := help.Load(vaxHelpPath(t))
 	if err != nil {
 		t.Fatalf("LoadHelpFile: %v", err)
 	}
 
 	c, buf := newTestConsole(t)
 	buf.Reset()
-	
+
 	if err := c.Help(h, []string{"SHOW", "LOGICAL"}); err != nil {
 		t.Fatalf("Help: %v", err)
 	}
@@ -44,14 +46,6 @@ func TestLoadHelpFile_realFixture(t *testing.T) {
 	got := buf.String()
 	if !strings.Contains(got, "logical") && !strings.Contains(got, "Logical") {
 		t.Errorf("output = %q, want it to mention logical names", got)
-	}
-}
-
-func TestHelpKey_matchesDocumentedExample(t *testing.T) {
-	// The file's own preamble: "HELP SET TRACE" resolves to "$SET ,TRAC".
-	got := helpKey([]string{"SET", "TRACE"})
-	if got != "SET ,TRAC" {
-		t.Errorf("helpKey = %q, want \"SET ,TRAC\"", got)
 	}
 }
 
@@ -64,7 +58,7 @@ func TestHelpKey_matchesDocumentedExample(t *testing.T) {
 // the easy failure mode for this file's own hand-maintained, exact-4-
 // character-padded "$"-key format (see help.go's own helpKey doc comment).
 func TestLoadHelpFile_phase23Topics(t *testing.T) {
-	h, err := LoadHelpFile(vaxHelpPath(t))
+	h, err := help.Load(vaxHelpPath(t))
 	if err != nil {
 		t.Fatalf("LoadHelpFile: %v", err)
 	}
@@ -135,7 +129,7 @@ func TestLoadHelpFile_phase23Topics(t *testing.T) {
 // would go undetected) so it keeps checking real, independently-derived
 // queries against whatever normalizeHelpKey and helpKey resolve to.
 func TestLoadHelpFile_everyKeyResolves(t *testing.T) {
-	h, err := LoadHelpFile(vaxHelpPath(t))
+	h, err := help.Load(vaxHelpPath(t))
 	if err != nil {
 		t.Fatalf("LoadHelpFile: %v", err)
 	}
@@ -191,7 +185,7 @@ func TestLoadHelpFile_everyKeyResolves(t *testing.T) {
 // off the word it's attached to, as DCL does: HELP DELETE/SYMBOL is
 // HELP DELETE /SYMBOL, not DELE(TE/SYMBOL).
 func TestCmdHelp_qualifierWithoutSpace(t *testing.T) {
-	h, err := LoadHelpFile(vaxHelpPath(t))
+	h, err := help.Load(vaxHelpPath(t))
 	if err != nil {
 		t.Fatalf("LoadHelpFile: %v", err)
 	}

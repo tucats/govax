@@ -567,12 +567,12 @@ grammar console
         qualifier   host/id=1203
 
     !
-    ! govax-native extension (Phase 23, internal/console/dcl + internal/rms
+    ! govax-native extension (Phase 23, internal/dcl + internal/rms
     ! + internal/console): COPY has no reference/eVAX or testdata/dcl/
     ! console.dcl counterpart at all -- see this file's own "govax-native
     ! extension" comment at MOUNT's own definition above. Unlike every
     ! other verb in this block, SOURCE and DESTINATION each carry their
-    ! own private HOST qualifier (via /parameter=, internal/console/dcl's
+    ! own private HOST qualifier (via /parameter=, internal/dcl's
     ! new parameter-scoped-qualifier feature added for exactly this --
     ! docs/PHASE-23.md's subtask 2) rather than one qualifier shared
     ! across the whole command line -- see docs/PHASE-23.md's "COPY

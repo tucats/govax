@@ -8,6 +8,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/tucats/govax/internal/help"
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
@@ -17,7 +18,7 @@ func newCommandDispatcher(t *testing.T) (*Dispatcher, *Console, *bytes.Buffer) {
 	t.Helper()
 
 	c, buf := newTestConsole(t)
-	d := NewDispatcher(c, loadEvaxGrammar(t), ParseHelp("$HELP\nTop-level help.\n"))
+	d := NewDispatcher(c, loadEvaxGrammar(t), help.Parse("$HELP\nTop-level help.\n"))
 
 	buf.Reset()
 

@@ -186,7 +186,7 @@ func (d *Device) Deallocate() {
 // define_device.c's GET_INT_FIELD/GET_STR_FIELD macros read from a DCL
 // qualifier, each defaulting to zero/empty when the qualifier is absent
 // (matching those macros' own else-branch). A plain data struct so this
-// package doesn't need to know anything about internal/console/dcl —
+// package doesn't need to know anything about internal/dcl —
 // internal/console/device.go (this phase's console wiring) builds one from
 // a dcl.Result.
 type DeviceOptions struct {

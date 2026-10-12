@@ -4,7 +4,7 @@
 // logical_names.c here; Phase 25 replaced that with internal/lnm.
 //
 // Both C files are RTL/emulator-tooling support, not emulated VAX ISA
-// behavior — like internal/console/dcl (Phase 08), so docs/DEVIATIONS.md's
+// behavior — like internal/dcl (Phase 08), so docs/DEVIATIONS.md's
 // ISA-fidelity bug-fixing policy doesn't apply here; findings in the C
 // source are just fixed or documented in this phase's own progress log.
 //

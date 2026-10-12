@@ -4,9 +4,10 @@ import (
 	"strings"
 
 	"github.com/tucats/govax/internal/console"
-	"github.com/tucats/govax/internal/console/dcl"
 	"github.com/tucats/govax/internal/cpu"
 	"github.com/tucats/govax/internal/dbgsym"
+	"github.com/tucats/govax/internal/dcl"
+	"github.com/tucats/govax/internal/help"
 )
 
 // Prompt is what the front end shows while a debugger session is active,
@@ -149,7 +150,7 @@ type Debugger struct {
 // New returns a debugger for c, with its commands bound to grammar g
 // (parsed from debug.dcl) and its HELP command reading help (parsed from
 // debug.help; nil is allowed, and HELP then says there is none).
-func New(c *console.Console, g *dcl.Grammar, help *console.Help) *Debugger {
+func New(c *console.Console, g *dcl.Grammar, help *help.File) *Debugger {
 	d := &Debugger{
 		Console: c, StepMode: StepOver,
 		symbolic: console.SymbolicDefault(), inputRadix: 16, outputRadix: 16,
@@ -166,7 +167,7 @@ func New(c *console.Console, g *dcl.Grammar, help *console.Help) *Debugger {
 // Install creates a debugger for c, as New does, and makes it the one
 // the console starts. cmd/govax calls it once at start-up. The debugger
 // is returned for the caller that wants it (a test).
-func Install(c *console.Console, g *dcl.Grammar, help *console.Help) *Debugger {
+func Install(c *console.Console, g *dcl.Grammar, help *help.File) *Debugger {
 	d := New(c, g, help)
 	c.Debugger = d
 

@@ -5,8 +5,8 @@ import (
 	"strings"
 	"sync/atomic"
 
-	"github.com/tucats/govax/internal/console/dcl"
 	"github.com/tucats/govax/internal/cpu"
+	"github.com/tucats/govax/internal/dcl"
 	"github.com/tucats/govax/internal/vmserrors"
 )
 

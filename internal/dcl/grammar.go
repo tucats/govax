@@ -192,14 +192,14 @@ type Disallow struct {
 	Negated2 bool
 }
 
-// Entry is a verb or a syntax — a verb is a grammar-top-level "verb" statement; 
-// a syntax is a "syntax" statement, reachable only via a Qualifier's or Keyword's 
+// Entry is a verb or a syntax — a verb is a grammar-top-level "verb" statement;
+// a syntax is a "syntax" statement, reachable only via a Qualifier's or Keyword's
 // Syntax redirect.
 type Entry struct {
-	Name       string
-	ID         int64
-	IsVerb     bool
-	Alias      string // e.g. "quit" is an alias for "exit"
+	Name   string
+	ID     int64
+	IsVerb bool
+	Alias  string // e.g. "quit" is an alias for "exit"
 
 	// Assignment names the syntax a command line continues in when its
 	// first positional token is a name followed by "=" (the grammar's

@@ -25,7 +25,7 @@ import (
 // with no wildcard-expanding behavior of its own at all. Given its own type
 // (matching NotMountedError/NotFoundError's own reasoning elsewhere in this
 // package), the console layer can report this as a distinct VMS status
-// (CLI_AMBIGUOUS, the same status internal/console/dcl's own verb/qualifier
+// (CLI_AMBIGUOUS, the same status internal/dcl's own verb/qualifier
 // ambiguity already uses) rather than lumping it in with an ordinary
 // malformed file specification.
 //

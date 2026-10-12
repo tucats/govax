@@ -5,7 +5,7 @@ import (
 
 	"github.com/tucats/gopackages/app-cli/settings"
 
-	"github.com/tucats/govax/internal/console/dcl"
+	"github.com/tucats/govax/internal/dcl"
 	"github.com/tucats/govax/internal/vmserrors"
 )
 

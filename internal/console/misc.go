@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/tucats/govax/internal/cpu"
+	"github.com/tucats/govax/internal/help"
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
@@ -245,7 +246,7 @@ func (c *Console) ClearMemory() error {
 	return c.Zero()
 }
 
-// ClearInterrupt implements CLEAR INTERRUPT <id>. It removes every 
+// ClearInterrupt implements CLEAR INTERRUPT <id>. It removes every
 // queued interrupt whose code matches id.
 func (c *Console) ClearInterrupt(code uint32) error {
 	if err := c.requireInit(); err != nil {
@@ -264,7 +265,7 @@ func (c *Console) ClearInterrupt(code uint32) error {
 	return nil
 }
 
-// ClearAllInterrupts implements CLEAR INTERRUPT/ALL: empties the 
+// ClearAllInterrupts implements CLEAR INTERRUPT/ALL: empties the
 // interrupt queue and cancels any immediately-pending interrupt.
 func (c *Console) ClearAllInterrupts() error {
 	if err := c.requireInit(); err != nil {
@@ -279,6 +280,14 @@ func (c *Console) ClearAllInterrupts() error {
 	}
 
 	c.Printf("\tCleared %d pending interrupt%s\n", n, plural)
+
+	return nil
+}
+
+// Help implements the HELP console command: the topic words name in h,
+// written to the console (help.File.Show).
+func (c *Console) Help(h *help.File, words []string) error {
+	h.Show(c.Out, words)
 
 	return nil
 }

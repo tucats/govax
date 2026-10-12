@@ -6,7 +6,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/tucats/govax/internal/console/dcl"
+	"github.com/tucats/govax/internal/dcl"
+	"github.com/tucats/govax/internal/help"
 	"github.com/tucats/govax/internal/vax"
 )
 
@@ -17,7 +18,7 @@ import (
 // from the bootdata copy since Phase 22 added MOUNT/DISMOUNT (see
 // docs/PHASE-22.md's "Grammar file" design decision). Dispatch tests exist
 // to exercise the same grammar/handler wiring cmd/govax uses, so they track
-// the bootdata copy exactly like internal/console/dcl's own grammar-parser
+// the bootdata copy exactly like internal/dcl's own grammar-parser
 // tests do.
 func evaxGrammarPathForConsole(t *testing.T) string {
 	t.Helper()
@@ -291,7 +292,7 @@ func TestDispatch_saveLoadROMRequiresQualifier(t *testing.T) {
 func TestDispatch_help(t *testing.T) {
 	c, _ := newTestConsole(t)
 	g := loadEvaxGrammar(t)
-	h := ParseHelp("$HELP\nTop-level help.\n")
+	h := help.Parse("$HELP\nTop-level help.\n")
 
 	d := NewDispatcher(c, g, h)
 	if err := d.Dispatch("HELP"); err != nil {

@@ -5,9 +5,9 @@ import (
 	"math/big"
 	"strings"
 
-	"github.com/tucats/govax/internal/console/dcl"
 	"github.com/tucats/govax/internal/corevms"
 	"github.com/tucats/govax/internal/dbgsym"
+	"github.com/tucats/govax/internal/dcl"
 	"github.com/tucats/govax/internal/vaxfloat"
 	"github.com/tucats/govax/internal/vmserrors"
 )
