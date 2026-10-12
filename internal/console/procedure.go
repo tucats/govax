@@ -479,7 +479,7 @@ func (c *Interpreter) finishProcedure(exit procedureExit, err error) error {
 		return after()
 	}
 
-	c.setCommandStatus(exit.status, exit.cause)
+	c.SetCommandStatus(exit.status, exit.cause)
 
 	if exit.status&1 != 0 {
 		return nil
@@ -861,7 +861,7 @@ func (c *Interpreter) Exit(status *uint32) error {
 		// At command level 0 a status is $STATUS, and so a subprocess's
 		// final status (subcli.go).
 		if status != nil {
-			c.setCommandStatus(*status, nil)
+			c.SetCommandStatus(*status, nil)
 		}
 
 		return c.Quit()

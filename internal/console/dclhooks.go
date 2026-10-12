@@ -8,13 +8,13 @@ import (
 	"github.com/tucats/govax/internal/rms"
 )
 
-// newInterpreter returns the DCL of a console running on m, whose
+// NewInterpreter returns the DCL of a console running on m, whose
 // terminal output is out: process 1's Shell, on process 1's logical names
 // and a default directory of its own, and the machine's Hooks for what
 // it asks of DCL (its output and default directory, $STATUS, Ctrl/Y, the
 // subprocess CLIs, process 1's creation, the terminal input,
 // XFC$CONSOLE_CMD, and QUIT).
-func newInterpreter(m *machine.Machine, out io.Writer) *Interpreter {
+func NewInterpreter(m *machine.Machine, out io.Writer) *Interpreter {
 	session := rms.NewSession(m.Mounts)
 	session.Logicals = m.ProcessOneLogicals()
 
@@ -32,9 +32,9 @@ func newInterpreter(m *machine.Machine, out io.Writer) *Interpreter {
 	m.Hooks = machine.Hooks{
 		Output:         func() io.Writer { return c.Out },
 		Session:        func() *rms.Session { return c.ContainerSession },
-		ProcessOneOnly: c.processOneOnly,
+		ProcessOneOnly: c.ProcessOneOnly,
 		CommandStatus: func(status uint32) error {
-			c.setCommandStatus(status, nil)
+			c.SetCommandStatus(status, nil)
 
 			if status&1 != 0 {
 				return nil

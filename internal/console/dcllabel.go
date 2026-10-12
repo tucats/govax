@@ -372,7 +372,7 @@ func (c *Interpreter) missingTarget(f *flowState, err error) error {
 		c.procedureMessage(level, err)
 	}
 
-	c.setCommandStatus(conditionValue(vmserrors.New(vmserrors.CLI_USGOTO))|stsInhibitMsg, nil)
+	c.SetCommandStatus(conditionValue(vmserrors.New(vmserrors.CLI_USGOTO))|stsInhibitMsg, nil)
 
 	return vmserrors.InhibitMessage(err)
 }

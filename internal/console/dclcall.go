@@ -122,12 +122,12 @@ func (c *Interpreter) returnCommand(id int64, r *dcl.Result) error {
 
 	if len(f.gosubs) == 0 {
 		if status == nil {
-			c.setCommandStatus(c.status|stsInhibitMsg, c.statusErr)
+			c.SetCommandStatus(c.status|stsInhibitMsg, c.statusErr)
 
 			return nil
 		}
 
-		c.setCommandStatus(*status, nil)
+		c.SetCommandStatus(*status, nil)
 
 		if *status&1 != 0 {
 			return nil
@@ -143,12 +143,12 @@ func (c *Interpreter) returnCommand(id int64, r *dcl.Result) error {
 	f.blocks, f.skip = frame.blocks, blockSkip{}
 
 	if status == nil {
-		c.setCommandStatus(ssNormal|stsInhibitMsg, nil)
+		c.SetCommandStatus(ssNormal|stsInhibitMsg, nil)
 
 		return nil
 	}
 
-	c.setCommandStatus(*status, nil)
+	c.SetCommandStatus(*status, nil)
 
 	if *status&1 != 0 {
 		return nil

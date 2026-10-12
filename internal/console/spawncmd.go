@@ -153,7 +153,7 @@ func (c *Interpreter) Spawn(o SpawnOptions) error {
 
 	// A failure is LIB$SPAWN's status, $STATUS too.
 	if status := c.machine.CPU.GPR(0); status&1 == 0 {
-		c.setCommandStatus(status, nil)
+		c.SetCommandStatus(status, nil)
 
 		return c.statusFailure(status)
 	}
@@ -217,7 +217,7 @@ func (c *Interpreter) spawnInSubprocess(cli *subprocessCLI, o SpawnOptions) erro
 	env.SpawnNotice = nil
 
 	if child == nil {
-		c.setCommandStatus(status, nil)
+		c.SetCommandStatus(status, nil)
 
 		return c.statusFailure(status)
 	}
@@ -247,7 +247,7 @@ func (c *Interpreter) spawnReturned(child *corevms.Environment) error {
 	// if it is a failure not shown already (VMS 7.3 showed IVVERB again
 	// after SPAWN FROBNICATE, testdata/dcl50's round 5).
 	status := child.Process.ExitStatus
-	c.setCommandStatus(status, nil)
+	c.SetCommandStatus(status, nil)
 
 	if status&1 != 0 {
 		return nil

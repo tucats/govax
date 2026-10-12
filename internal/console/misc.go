@@ -70,7 +70,7 @@ func (c *Console) RunCommandLine(dispatch func(string) error) bool {
 	// failure and exits nonzero.
 	_ = c.TakeLimitStop()
 
-	defer func() { c.quit = true }()
+	defer c.Finish()
 
 	status := dispatch(text)
 	limit := c.TakeLimitStop()
@@ -108,9 +108,9 @@ func (c *Console) Help(h *help.File, words []string) error {
 // OPEN have open is closed, so that what they wrote reaches the volumes
 // before they're dismounted.
 func (c *Console) EndSession() {
-	c.runDownAbandonedImage()
+	c.RunDownAbandonedImage()
 	c.EndOtherProcesses()
-	c.closeDCLFiles()
+	c.CloseDCLFiles()
 
 	if c.RTL != nil {
 		c.RTL.CloseFiles()

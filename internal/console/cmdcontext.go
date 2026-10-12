@@ -21,15 +21,9 @@ func (c *Console) cmd() *dclcmd.Context {
 		ScreenSize:       c.ScreenSize,
 		Verbose:          c.Verbose,
 		Running:          c.Running,
-		SetStatus:        func(status uint32) { c.setCommandStatus(status, nil) },
-		ReadReply:        c.readReply,
-		TypeDCL: func(spec string) (bool, error) {
-			if c.isInputStream(spec) {
-				return true, c.typeInput()
-			}
-
-			return c.typeOpenFile(spec), nil
-		},
+		SetStatus:        func(status uint32) { c.SetCommandStatus(status, nil) },
+		ReadReply:        c.ReadReply,
+		TypeDCL:          c.TypeDCL,
 	}
 }
 

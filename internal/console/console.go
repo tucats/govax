@@ -57,5 +57,5 @@ type Console struct {
 func New(out io.Writer) *Console {
 	m := machine.NewMachine(out)
 
-	return &Console{Machine: m, Interpreter: newInterpreter(m, out)}
+	return &Console{Machine: m, Interpreter: NewInterpreter(m, out)}
 }

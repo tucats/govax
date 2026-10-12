@@ -202,7 +202,7 @@ func (c *Console) ShowRegions() error {
 // EXIT, command lines go to the debugger's grammar, not the console's
 // (Dispatcher.Dispatch routes them).
 func (c *Console) StartDebugger() error {
-	if err := c.processOneOnly("DEBUG"); err != nil {
+	if err := c.ProcessOneOnly("DEBUG"); err != nil {
 		return err
 	}
 

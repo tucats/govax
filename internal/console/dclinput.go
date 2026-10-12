@@ -402,3 +402,15 @@ func (c *Interpreter) eodCommand(id int64, r *dcl.Result) error {
 
 	return nil
 }
+
+// TypeDCL is TYPE of spec when it names something only DCL has: SYS$INPUT
+// (or a logical name for it), typed a line at a time (typeInput), or a
+// logical name DCL's OPEN defined, typed from where READ has got to
+// (typeOpenFile). handled is false for anything else.
+func (c *Interpreter) TypeDCL(spec string) (handled bool, err error) {
+	if c.isInputStream(spec) {
+		return true, c.typeInput()
+	}
+
+	return c.typeOpenFile(spec), nil
+}

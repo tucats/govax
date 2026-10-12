@@ -32,7 +32,7 @@ func NewDispatcher(c *Console, g *dcl.Grammar, h *help.File) *Dispatcher {
 	if c.Dispatcher == nil {
 		c.Dispatcher = d
 		c.Grammar = g
-		c.route = d.Dispatch
+		c.SetRoute(d.Dispatch)
 	}
 
 	return d
@@ -73,7 +73,7 @@ func (d *Dispatcher) Dispatch(line string) error {
 	// processes run until they're idle (dcllend.go). A procedure's lines
 	// give them their turns as the procedure runs them (runLevel).
 	if d.Console.CommandLevel() == 0 {
-		d.Console.lendWhileIdle()
+		d.Console.LendWhileIdle()
 	}
 
 	return err
@@ -89,7 +89,7 @@ func (d *Dispatcher) bindGrammar() {
 
 	// docs/PHASE-37.md: the former fixed commands (commands.go).
 	d.bindConsoleCommands()
-	d.Console.bindDCL(g)
+	d.Console.BindDCL(g)
 
 	g.Bind("DEBUG", func(id int64, r *dcl.Result) error { return d.Console.StartDebugger() })
 
@@ -276,7 +276,7 @@ func (d *Dispatcher) bindGrammar() {
 			return err
 		}
 
-		d.Console.setCommandStatus(ssNormal, nil)
+		d.Console.SetCommandStatus(ssNormal, nil)
 
 		return nil
 	})
@@ -332,7 +332,7 @@ func (d *Dispatcher) bindGrammar() {
 			return err
 		}
 
-		d.Console.setCommandStatus(ssNormal|stsInhibitMsg, nil)
+		d.Console.SetCommandStatus(ssNormal|stsInhibitMsg, nil)
 
 		return nil
 	})
@@ -433,7 +433,7 @@ func (d *Dispatcher) bindGrammar() {
 			OutputFile:  r.String("OUTPUT"),
 			Header:      r.Present("HEADER") && !r.Negated("HEADER"),
 			Fixups:      r.Present("FIXUP_SECTION") && !r.Negated("FIXUP_SECTION"),
-			CommandLine: d.Console.line,
+			CommandLine: d.Console.Line(),
 		})
 	})
 
@@ -448,7 +448,7 @@ func (d *Dispatcher) bindGrammar() {
 			Include:     r.Present("INCLUDE") && !r.Negated("INCLUDE") && !r.Defaulted("INCLUDE"),
 			Modules:     nonEmpty(r.List("INCLUDE")),
 			Select:      selected,
-			CommandLine: d.Console.line,
+			CommandLine: d.Console.Line(),
 		})
 	})
 
@@ -507,7 +507,7 @@ func (d *Dispatcher) bindGrammar() {
 			DebugKinds:  r.List("DEBUG"),
 			NoDebug:     r.Present("DEBUG") && r.Negated("DEBUG"),
 			Libraries:   r.List("LIBRARY"),
-			CommandLine: d.Console.line,
+			CommandLine: d.Console.Line(),
 		})
 	})
 }
@@ -525,9 +525,6 @@ func nonEmpty(list []string) []string {
 
 	return out
 }
-
-// isDecimalDigit reports whether ch is a decimal digit.
-func isDecimalDigit(ch byte) bool { return ch >= '0' && ch <= '9' }
 
 // DispatchConsole parses and executes one console command line -- DCL
 // symbols and the console grammar -- whatever mode the front end is in

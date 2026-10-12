@@ -179,14 +179,14 @@ func (c *Interpreter) controlYHandler() *commandLevel {
 func (c *Interpreter) controlYAction(level *commandLevel) (exit procedureExit, stop bool, next func() error) {
 	switch handler := c.controlYHandler(); {
 	case handler == level:
-		c.runDownAbandonedImage()
+		c.RunDownAbandonedImage()
 
 		command := level.on.controlY
 
 		return procedureExit{}, false, func() error { return level.dispatch(command) }
 
 	case handler != nil:
-		c.runDownAbandonedImage()
+		c.RunDownAbandonedImage()
 		c.controlYUnwind = handler
 
 		return c.unwindExit(), true, nil
@@ -237,7 +237,7 @@ func (c *Interpreter) controlYLevel(level *commandLevel) bool {
 		case errors.Is(err, errLeaveControlY):
 			c.afterStop = func() error { return level.dispatch(line) }
 			c.stopProcedures(procedureExit{status: c.status, cause: c.statusErr})
-			c.runDownAbandonedImage()
+			c.RunDownAbandonedImage()
 
 			return false
 
@@ -250,11 +250,11 @@ func (c *Interpreter) controlYLevel(level *commandLevel) bool {
 			return true
 		case level.exiting && !c.stopping:
 			c.stopProcedures(level.exit)
-			c.runDownAbandonedImage()
+			c.RunDownAbandonedImage()
 
 			return false
 		case c.stopping:
-			c.runDownAbandonedImage()
+			c.RunDownAbandonedImage()
 
 			return false
 		}
@@ -316,7 +316,7 @@ func (c *Interpreter) stopCommand(id int64, r *dcl.Result) error {
 	c.keepStatus()
 
 	if len(c.levels) == 0 {
-		c.runDownAbandonedImage()
+		c.RunDownAbandonedImage()
 
 		return nil
 	}

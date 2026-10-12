@@ -167,7 +167,7 @@ func (c *Interpreter) dispatchParsed(line string, verbSymbol bool) error {
 
 	// A subprocess's DCL doesn't work the machine itself (subcli.go).
 	if processOneCommands[r.Active] {
-		if err := c.processOneOnly(strings.ToUpper(r.Verb)); err != nil {
+		if err := c.ProcessOneOnly(strings.ToUpper(r.Verb)); err != nil {
 			return err
 		}
 	}
@@ -236,12 +236,12 @@ func readCommandVerb(s string) (verb, rest string) {
 	return s, ""
 }
 
-// bindDCL binds DCL's own verbs in g, the console's grammar: the flow of
+// BindDCL binds DCL's own verbs in g, the console's grammar: the flow of
 // a procedure (EXIT, ON, GOTO, IF/THEN/ELSE/ENDIF, GOSUB/RETURN,
 // CALL/SUBROUTINE), DECK/EOD, DCL's file I/O, WAIT, CONTINUE, QUIT,
 // LOGOUT, STOP, SPAWN, MCR, SHOW SYMBOL, and DCL's SET commands (VERIFY,
 // PREFIX, CONTROL, ON, PROMPT). The console binds the rest.
-func (c *Interpreter) bindDCL(g *dcl.Grammar) {
+func (c *Interpreter) BindDCL(g *dcl.Grammar) {
 	// EXIT ends the command procedure it's in, or govax at the terminal;
 	// QUIT ends govax wherever it is (procedure.go).
 	g.Bind("EXIT", c.exitCommand)
@@ -312,3 +312,6 @@ func (c *Interpreter) bindDCL(g *dcl.Grammar) {
 	// SET PROMPT="text" changes the console's prompt.
 	g.Bind("SET_PROMPT", func(id int64, r *dcl.Result) error { return c.SetPrompt(r.String("TEXT")) })
 }
+
+// isDecimalDigit reports whether ch is a decimal digit.
+func isDecimalDigit(ch byte) bool { return ch >= '0' && ch <= '9' }

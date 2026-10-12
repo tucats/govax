@@ -201,10 +201,10 @@ func (c *Interpreter) setStatus(v uint32, cause error) {
 	g["$SEVERITY"] = dclSymbol{name: "$SEVERITY", minLength: len("$SEVERITY"), value: strconv.Itoa(int(v & vmserrors.Severity)), global: true}
 }
 
-// setCommandStatus says the command being dispatched ends with condition
+// SetCommandStatus says the command being dispatched ends with condition
 // value v, whatever error it returns; cause is the error v came from, if
 // any (setStatus).
-func (c *Interpreter) setCommandStatus(v uint32, cause error) {
+func (c *Interpreter) SetCommandStatus(v uint32, cause error) {
 	c.commandStatus = commandStatus{set: true, value: v, cause: cause}
 }
 

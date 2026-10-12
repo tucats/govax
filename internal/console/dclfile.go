@@ -247,7 +247,7 @@ func (c *Interpreter) readTerminal(prompt string) (string, bool) {
 		fmt.Fprint(out, prompt)
 	}
 
-	return c.readReply()
+	return c.ReadReply()
 }
 
 // readRecord reads the procedure's next record, whatever it is: READ
@@ -304,7 +304,7 @@ func (c *Interpreter) openCommand(id int64, r *dcl.Result) error {
 	// The DCL Dictionary: a logical name that already names a file OPEN
 	// opened gets no other, with no message.
 	if _, open := c.openFile(logical); open {
-		c.setCommandStatus(cliNormal, nil)
+		c.SetCommandStatus(cliNormal, nil)
 
 		return nil
 	}
@@ -333,7 +333,7 @@ func (c *Interpreter) openCommand(id int64, r *dcl.Result) error {
 	}
 
 	c.dclFiles[logical] = file
-	c.setCommandStatus(openSuccess, nil)
+	c.SetCommandStatus(openSuccess, nil)
 
 	return nil
 }
@@ -417,7 +417,7 @@ func (c *Interpreter) closeCommand(id int64, r *dcl.Result) error {
 		case label != "":
 			return c.branch(label, conditionValue(undefined), undefined)
 		case r.Negated("LOG"):
-			c.setCommandStatus(cliNormal, nil)
+			c.SetCommandStatus(cliNormal, nil)
 
 			return nil
 		}
@@ -432,7 +432,7 @@ func (c *Interpreter) closeCommand(id int64, r *dcl.Result) error {
 		return c.failOrBranch(label, vmsdef.Symbols["RMS$_DEV"], vmserrors.Wrap(vmserrors.CLI_BADFILESPEC, err, f.name))
 	}
 
-	c.setCommandStatus(rmsNormalStatus, nil)
+	c.SetCommandStatus(rmsNormalStatus, nil)
 
 	return nil
 }
@@ -481,7 +481,7 @@ func (c *Interpreter) readCommand(id int64, r *dcl.Result) error {
 	}
 
 	c.dclSymbols.local()[symbol] = dclSymbol{name: symbol, minLength: len(symbol), value: record}
-	c.setCommandStatus(cliNormal, nil)
+	c.SetCommandStatus(cliNormal, nil)
 
 	return nil
 }
@@ -594,7 +594,7 @@ func (c *Interpreter) writeCommand(id int64, r *dcl.Result) error {
 		return c.failOrBranch(label, sts, rmsStatusFailure(sts, 0))
 	}
 
-	c.setCommandStatus(rmsNormalStatus, nil)
+	c.SetCommandStatus(rmsNormalStatus, nil)
 
 	return nil
 }
@@ -703,7 +703,7 @@ func (c *Interpreter) inquireCommand(id int64, r *dcl.Result) error {
 	}
 
 	table[symbol] = dclSymbol{name: symbol, minLength: len(symbol), value: dclText(reply, false), global: r.Present("GLOBAL")}
-	c.setCommandStatus(openSuccess, nil)
+	c.SetCommandStatus(openSuccess, nil)
 
 	return nil
 }
@@ -730,10 +730,10 @@ func (c *Interpreter) typeOpenFile(spec string) (ok bool) {
 	return true
 }
 
-// closeDCLFiles closes every file OPEN left open, those whose logical
+// CloseDCLFiles closes every file OPEN left open, those whose logical
 // names are gone too, as the process's rundown does on VMS: what they
 // wrote goes to their volumes.
-func (c *Interpreter) closeDCLFiles() {
+func (c *Interpreter) CloseDCLFiles() {
 	for logical, f := range c.dclFiles {
 		_ = f.stream.Close()
 

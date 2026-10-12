@@ -77,10 +77,10 @@ func (c *Interpreter) Printf(format string, args ...any) {
 	fmt.Fprintf(c.Out, format, args...)
 }
 
-// runDownAbandonedImage is Machine.endAbandonedImage in process 1's
+// RunDownAbandonedImage is Machine.endAbandonedImage in process 1's
 // DCL. In a subprocess's it does nothing: the abandoned image is
 // process 1's, and its own images are run down by its CLI (subcli.go).
-func (c *Interpreter) runDownAbandonedImage() {
+func (c *Interpreter) RunDownAbandonedImage() {
 	if c.inSubprocess() {
 		return
 	}
@@ -88,12 +88,12 @@ func (c *Interpreter) runDownAbandonedImage() {
 	c.machine.EndAbandonedImage()
 }
 
-// readReply reads one line from the console's input, a byte at a time so
+// ReadReply reads one line from the console's input, a byte at a time so
 // that nothing past the line is taken from a reader shared with the
 // command line. ok is false at the end of the input with nothing read,
 // or at a Ctrl/Z typed first (the terminal's end of file); a Ctrl/Z
 // after text ends the line.
-func (c *Interpreter) readReply() (line string, ok bool) {
+func (c *Interpreter) ReadReply() (line string, ok bool) {
 	if c.In == nil {
 		return "", false
 	}
@@ -154,3 +154,16 @@ func (c *Interpreter) Quit() error {
 
 	return nil
 }
+
+// Line is the command line being dispatched, for a handler that records
+// it (MACRO's SRC header).
+func (c *Interpreter) Line() string { return c.line }
+
+// SetRoute makes route where a procedure's lines and a CALL's are sent:
+// the console's routing, to the debugger or the interactive assembler
+// when one is reading, else to DCL (DispatchConsole).
+func (c *Interpreter) SetRoute(route func(line string) error) { c.route = route }
+
+// Finish ends the session after the command running now: Running
+// reports false from then on.
+func (c *Interpreter) Finish() { c.quit = true }

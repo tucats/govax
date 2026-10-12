@@ -127,9 +127,9 @@ func (c *Interpreter) useShell(s *Shell) (restore func()) {
 // inSubprocess reports whether the DCL running now is a subprocess's.
 func (c *Interpreter) inSubprocess() bool { return c.subCLI != nil }
 
-// processOneOnly is VAX_NOTSUBPROC for what (a command, or a way of
+// ProcessOneOnly is VAX_NOTSUBPROC for what (a command, or a way of
 // running the machine) in a subprocess's DCL, and nil in process 1's.
-func (c *Interpreter) processOneOnly(what string) error {
+func (c *Interpreter) ProcessOneOnly(what string) error {
 	if c.inSubprocess() {
 		return vmserrors.New(vmserrors.VAX_NOTSUBPROC, what)
 	}
@@ -516,7 +516,7 @@ func (cli *subprocessCLI) runInterpreter() {
 		c.commandBoundary()
 	}
 
-	c.closeDCLFiles()
+	c.CloseDCLFiles()
 
 	if cli.status == 0 {
 		cli.status = c.status
@@ -628,7 +628,7 @@ func (cli *subprocessCLI) flush() error {
 func (c *Interpreter) subprocessRun(cli *subprocessCLI, image, commandLine string) error {
 	driver, status := c.cliActivate(cli, image, commandLine)
 	if driver == 0 {
-		c.setCommandStatus(status, nil)
+		c.SetCommandStatus(status, nil)
 
 		return vmserrors.InhibitMessage(c.statusFailure(status))
 	}
@@ -636,7 +636,7 @@ func (c *Interpreter) subprocessRun(cli *subprocessCLI, image, commandLine strin
 	cli.handBack(cliYield{kind: yieldImage, driver: driver})
 
 	status = cli.imageExit
-	c.setCommandStatus(status, nil)
+	c.SetCommandStatus(status, nil)
 
 	if status&1 != 0 {
 		return nil

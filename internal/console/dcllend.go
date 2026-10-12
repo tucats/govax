@@ -71,10 +71,10 @@ func (c *Interpreter) commandBoundary() {
 // at its command level 0 (lendWhileIdle).
 const promptLendLimit = 50 * time.Millisecond
 
-// lendWhileIdle is process 1's step after a command at its command level
+// LendWhileIdle is process 1's step after a command at its command level
 // 0 (see above): it lends the CPU, waiting, until no other process wants
 // it, or promptLendLimit has passed, or an attention key is typed.
-func (c *Interpreter) lendWhileIdle() {
+func (c *Interpreter) LendWhileIdle() {
 	if !c.Running() || !c.canLend() {
 		return
 	}
