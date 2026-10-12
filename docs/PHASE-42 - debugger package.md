@@ -2055,3 +2055,44 @@ manual's command dictionary is the source for each subtask's syntax.
 - Tests: `depositinsn_test.go`: the bytes of each operand form, the input
   radix, a branch's displacement, SET TYPE INSTRUCTION, the errors, and an
   instruction deposited at the PC that the next STEP runs.
+
+### 2026-10-12 — Subtask 20: built-in symbols
+
+- **`internal/debugger/builtins.go`**: the debugger answers the console
+  evaluator's new hook (`Evaluator.Builtins`, set through
+  `Console.DebugBuiltins`) for `%CURLOC` and `.`, `%NEXTLOC`, `%PREVLOC`
+  and `^`, `%CURVAL` and `\`, `%DECWINDOWS` (0), and the exception symbols
+  `%EXC_NUMBER` and `%EXC_SEVERITY`. `%EXC_NAME` and `%EXC_FACILITY` are
+  strings: EVALUATE shows them in quotes, and a WHEN clause may compare
+  one with a quoted string by EQL or NEQ (the manual's `WHEN (%EXC_NAME =
+  "FLTDIV_F")`, in MACRO's operators); used as a number they're an error.
+- **The evaluator** (`internal/console/expr.go`) does the rest of appendix
+  D itself: `%NAME 'string'`, the radix operators `%BIN`, `%DEC`, `%HEX`,
+  `%OCT` (the manual's examples are the tests), and `\name`.
+- **The current location.** `.` in a debugger expression is now the
+  current location, the one EXAMINE, DEPOSIT, or EVALUATE/ADDRESS last
+  referred to, as the manual defines `%CURLOC`; before, it was the
+  console's current address, which EXAMINE leaves *past* what it shows.
+  EVALUATE/ADDRESS now sets the current location. EXAMINE's own `.` and
+  `^` items already worked this way. The session oracle is unchanged by
+  it.
+- **The current value** is recorded by EXAMINE (of a number, a register,
+  or any fixed-size type: its first longword), EVALUATE (not /ADDRESS),
+  and DEPOSIT.
+- **The current exception** is the one SET BREAK/EXCEPTION or an
+  unhandled condition last stopped the program for; a run forgets it. A
+  SET BREAK/EXCEPTION's WHEN clause sees the condition being judged.
+- **Not done here:** `%PARCNT` needs DECLARE, which isn't on the list;
+  the scope entries (`%CURRENT_SCOPE_ENTRY`, ...) come with subtask 24, and
+  `%ADDR`, `%REF`, `%VAL`, `%DESCR` with subtask 27. `%LABEL` is for
+  languages with numeric labels, and the bit-field operator `<p,s,e>`
+  wasn't asked for. The manual's "Return key" is EXAMINE with no location,
+  which already showed the next one.
+- **Unconfirmed:** `\name` looks the name up as any name is (the
+  program's symbols, then the global symbol table), not the global table
+  alone; the messages for no current value (`DBG_NOCURVAL`), no current
+  exception (`DBG_NOEXC`), and a string used as a number
+  (`DBG_NOTNUMERIC`) are govax's text; `%EXC_SEVERITY` is the condition
+  value's low three bits, as a number.
+- Tests: `builtins_test.go`; `debug.help`'s EXPRESSIONS topic lists the
+  symbols and the operators.

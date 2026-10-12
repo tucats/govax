@@ -107,6 +107,7 @@ func (d *Debugger) unhandledBreak() bool {
 	}
 
 	d.unhandled = nil
+	d.setException(u)
 
 	where := "at"
 	if u.Preceding {

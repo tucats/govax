@@ -308,7 +308,15 @@ func (d *Debugger) signalBreak() bool {
 		}
 	}
 
+	// The condition is the current exception while its WHEN clause is
+	// judged (WHEN (%EXC_NAME EQL "ACCVIO")), and stays so if the program
+	// stops for it.
+	previous := d.exception
+	d.setException(u)
+
 	if bp.When != "" && !d.whenHolds(bp) {
+		d.exception = previous
+
 		return false
 	}
 

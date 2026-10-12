@@ -394,6 +394,8 @@ func (d *Debugger) examineRegister(r *dcl.Result, reg vax.Reg, name string, isPS
 		return err
 	}
 
+	d.setCurrentValue(data)
+
 	text, multiline := d.fixedText(t, data, d.examineRadix(r))
 	if multiline {
 		c.Printf("%s\n%s", label, text)
@@ -633,6 +635,8 @@ func (d *Debugger) examineTyped(addr uint32, t dataType, datum *dbgsym.Datum, ra
 	d.examined = examineState{addr: addr, size: size, set: true}
 	c.DepositAddr = addr + size
 
+	d.setCurrentValue(data)
+
 	text, multiline := d.fixedText(t, data, radix)
 	if multiline {
 		c.Printf("%s\n%s", name, text)
@@ -862,9 +866,26 @@ func (d *Dispatcher) evaluate(r *dcl.Result) error {
 
 	text := strings.TrimSpace(r.String("EXPRESSION"))
 
+	// %EXC_NAME and %EXC_FACILITY are strings, shown in quotes.
+	if s, isString, err := dbg.exceptionString(text); isString || err != nil {
+		if err == nil {
+			dbg.Console.Printf("%s\n", quotedString(s))
+		}
+
+		return err
+	}
+
 	value, err := dbg.Console.EvalWholeMode(dbg.inputRadix, text, !r.Present("ADDRESS"))
 	if err != nil {
 		return err
+	}
+
+	// EVALUATE/ADDRESS makes the address the current location (%CURLOC);
+	// EVALUATE's value is the current value (%CURVAL).
+	if r.Present("ADDRESS") {
+		dbg.examined = examineState{addr: value, size: defaultSize, set: true}
+	} else {
+		dbg.curval = currentValue{v: value, set: true}
 	}
 
 	if r.Present("CONDITION_VALUE") {
@@ -967,6 +988,7 @@ func (d *Dispatcher) deposit(r *dcl.Result) error {
 			}
 
 			c.CPU.SetGPR(reg, v)
+			dbg.curval = currentValue{v: v, set: true}
 
 			return nil
 		}
@@ -979,6 +1001,8 @@ func (d *Dispatcher) deposit(r *dcl.Result) error {
 		if err != nil {
 			return err
 		}
+
+		dbg.setCurrentValue(data)
 
 		return dbg.setRegisterBytes(reg, data)
 	}
@@ -1006,6 +1030,7 @@ func (d *Dispatcher) deposit(r *dcl.Result) error {
 	}
 
 	dbg.examined = examineState{addr: addr, size: max(uint32(len(data)), 1), set: true}
+	dbg.setCurrentValue(data)
 
 	return c.WriteBytes(at, data)
 }

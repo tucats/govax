@@ -25,6 +25,9 @@ const (
 	dbgInvTime
 	dbgNeedQuote
 	dbgAsmError
+	dbgNoCurVal
+	dbgNoExc
+	dbgNotNumeric
 )
 
 // DBG facility status codes.
@@ -104,6 +107,15 @@ const (
 	// DBG_ASMERROR reports an instruction DEPOSIT/INSTRUCTION couldn't
 	// assemble; the assembler's own message follows it (govax's text).
 	DBG_ASMERROR = DBGFacility<<FacilityPosition | dbgAsmError<<MessagePosition | StatusError
+	// DBG_NOCURVAL reports %CURVAL (or "\") before anything has been
+	// shown or stored (govax's own text).
+	DBG_NOCURVAL = DBGFacility<<FacilityPosition | dbgNoCurVal<<MessagePosition | StatusError
+	// DBG_NOEXC reports an %EXC_ symbol when the program hasn't stopped
+	// for an exception (govax's own text).
+	DBG_NOEXC = DBGFacility<<FacilityPosition | dbgNoExc<<MessagePosition | StatusError
+	// DBG_NOTNUMERIC reports a string built-in symbol (%EXC_NAME) used
+	// where a number is needed (govax's own text).
+	DBG_NOTNUMERIC = DBGFacility<<FacilityPosition | dbgNotNumeric<<MessagePosition | StatusError
 )
 
 func init() {
@@ -126,5 +138,8 @@ func init() {
 	DefineMessage(DBG_INVTIME, DBGFacility, "INVTIME", "invalid date or time at or near '!S'")
 	DefineMessage(DBG_NEEDQUOTE, DBGFacility, "NEEDQUOTE", "an instruction must be in quotes at or near '!S'")
 	DefineMessage(DBG_ASMERROR, DBGFacility, "ASMERROR", "cannot assemble '!S'")
+	DefineMessage(DBG_NOCURVAL, DBGFacility, "NOCURVAL", "no value has been examined, evaluated, or deposited")
+	DefineMessage(DBG_NOEXC, DBGFacility, "NOEXC", "there is no current exception")
+	DefineMessage(DBG_NOTNUMERIC, DBGFacility, "NOTNUMERIC", "'!S' is a string, not a number")
 	DefineMessage(DBG_NOSOURCEDIR, DBGFacility, "NOSOURCEDIR", "no source directory search list is in effect")
 }

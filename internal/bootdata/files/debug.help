@@ -19,6 +19,7 @@
 //              10/11/26    EXAMINE and DEPOSIT types; SET, SHOW, and
 //                          CANCEL TYPE (subtask 18).
 //              10/11/26    DEPOSIT/INSTRUCTION (subtask 19).
+//              10/12/26    Built-in symbols (subtask 20).
 //
 
 $HELP
@@ -57,10 +58,31 @@ $EXPRESSIONS
     lines            %LINE n, or MODULE\%LINE n, the code of a source line
     registers        R0 to R11, AP, FP, SP, PC, PSL (also %R0 and so on),
                      as their values; PC alone is the program counter
-    .                the current location: the address EXAMINE, DEPOSIT, or
-                     SET BASE last used
     .name            the contents at an address: .PC, .R1+4
-    operators        + - * / (and parentheses)
+    operators        + - * / MOD, unary + and -, @ (a shift), the
+                     comparisons EQL NEQ LSS LEQ GTR GEQ, AND OR XOR NOT
+                     (and parentheses)
+
+  and the built-in symbols:
+
+    . or %CURLOC     the current location: the one EXAMINE, DEPOSIT, or
+                     EVALUATE/ADDRESS last referred to
+    %NEXTLOC         the location after it (EXAMINE alone shows it too)
+    ^ or %PREVLOC    the location before it
+    \ or %CURVAL     the value EXAMINE or EVALUATE last showed, or DEPOSIT
+                     last stored
+    %HEX %DEC %OCT %BIN
+                     read the numbers of the operand that follows in that
+                     radix: %HEX 10 is 16, %DEC (10+10) is 20 decimal
+    %NAME 'string'   the symbol named by the string, which may hold
+                     characters a name can't (%NAME 'P.AAA')
+    \name            the global symbol name
+    %EXC_NUMBER      the condition value of the exception the program last
+                     stopped for, and %EXC_SEVERITY its severity
+    %EXC_NAME        that exception's message name ("ACCVIO") and facility
+    %EXC_FACILITY    ("SYSTEM"): strings, which EVALUATE shows and a WHEN
+                     clause may compare: WHEN (%EXC_NAME EQL "ACCVIO")
+    %DECWINDOWS      0: govax has only the command interface
 
   An address range is start:end (EXAMINE A:B), and a list is separated by
   commas (EXAMINE A,B). A routine's name stands for the address after its

@@ -58,6 +58,17 @@ type Evaluator struct {
 	// label's contents in Value mode. Nil reads a longword with Load.
 	LoadSized func(addr, size uint32) (uint32, error)
 
+	// Builtins resolves the debugger's built-in symbols (docs/PHASE-42.md,
+	// subtask 20): a name with a "%" (%CURLOC, %NEXTLOC, %PREVLOC,
+	// %CURVAL, %DECWINDOWS, %EXC_NUMBER, ...), which it is asked about
+	// before the registers, and the debugger's one-character symbols "."
+	// (the current location, asked about before Here), "^" (the location
+	// before it), and "\\" (the value last shown). ok is false for a name
+	// that isn't one, which the evaluator then treats as it would without
+	// the hook. Nil for none: the console's own expressions have no
+	// built-in symbols.
+	Builtins func(name string) (v uint32, ok bool, err error)
+
 	// Debug resolves the names the console's table doesn't have from the
 	// loaded images' debug symbol tables (Phase 41): a symbol, a
 	// debugger path name (FORTH\NEXT, DBGDIS\START\LOOP), or a line
@@ -392,13 +403,49 @@ func (e *Evaluator) parseAtom(s string) (uint32, string, error) {
 	}
 
 	if s[0] == '.' && !isDigit(peekByte(s, 1)) {
+		if v, ok, err := e.builtin("."); ok || err != nil {
+			return v, s[1:], err
+		}
+
 		return e.Here, s[1:], nil
+	}
+
+	// "^" alone (not a radix prefix such as ^X) is the location before
+	// the current one; "\\" alone is the value last shown, and "\\NAME"
+	// is the global symbol NAME.
+	if s[0] == '^' && !isRadixLetter(peekByte(s, 1)) {
+		if v, ok, err := e.builtin("^"); ok || err != nil {
+			return v, s[1:], err
+		}
+	}
+
+	if s[0] == '\\' {
+		if isSymbolStart(peekByte(s, 1)) {
+			return e.parseAtom(s[1:])
+		}
+
+		if v, ok, err := e.builtin("\\"); ok || err != nil {
+			return v, s[1:], err
+		}
 	}
 
 	if s[0] == '%' && lineKeyword(s) == 0 {
 		i := 1
 		for i < len(s) && isSymbolChar(s[i]) {
 			i++
+		}
+
+		name := strings.ToUpper(s[1:i])
+
+		switch name {
+		case "NAME":
+			return e.parseName(s[i:])
+		case "BIN", "DEC", "HEX", "OCT":
+			return e.parseRadixed(name, s[i:])
+		}
+
+		if v, ok, err := e.builtin("%" + name); ok || err != nil {
+			return v, s[i:], err
 		}
 
 		if v, ok := registerValue(e, s[1:i]); ok {
@@ -470,6 +517,55 @@ func (e *Evaluator) parseAtom(s string) (uint32, string, error) {
 	}
 
 	return e.parseNumber(s)
+}
+
+// builtin asks the Builtins hook about name, if there is one.
+func (e *Evaluator) builtin(name string) (uint32, bool, error) {
+	if e.Builtins == nil {
+		return 0, false, nil
+	}
+
+	return e.Builtins(name)
+}
+
+// isRadixLetter reports whether ch makes "^" a radix prefix (^X, ^D, ^O,
+// ^B).
+func isRadixLetter(ch byte) bool { return strings.IndexByte("XxDdOoBb", ch) >= 0 }
+
+// parseName evaluates the debugger's %NAME 'string', s being what follows
+// %NAME: the symbol whose name is the string, which may hold characters a
+// name can't otherwise (%NAME 'P.AAA').
+func (e *Evaluator) parseName(s string) (uint32, string, error) {
+	s = strings.TrimLeft(s, " \t")
+	if s == "" || (s[0] != '\'' && s[0] != '"') {
+		return 0, "", vmserrors.New(vmserrors.CLI_NEEDEXPR)
+	}
+
+	end := strings.IndexByte(s[1:], s[0])
+	if end < 0 {
+		return 0, "", vmserrors.New(vmserrors.CLI_UNTERMSTR)
+	}
+
+	name := s[1 : 1+end]
+
+	v, ok := e.lookupSymbol(name)
+	if !ok {
+		return 0, "", vmserrors.New(vmserrors.CLI_UNDEFSYM, name)
+	}
+
+	return v, s[end+2:], nil
+}
+
+// parseRadixed evaluates the debugger's %BIN, %DEC, %HEX, or %OCT and the
+// operand after it (s), whose numbers without a prefix are read in that
+// radix: %HEX 10 is 16, and %HEX (10+10) reads both tens in hexadecimal.
+func (e *Evaluator) parseRadixed(name, s string) (uint32, string, error) {
+	saved := e.Radix
+	defer func() { e.Radix = saved }()
+
+	e.Radix = map[string]int{"BIN": 2, "DEC": 10, "HEX": 16, "OCT": 8}[name]
+
+	return e.parseAtom(s)
 }
 
 // parseElement evaluates the subscript of NAME[subscript], s being what

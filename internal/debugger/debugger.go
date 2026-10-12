@@ -122,6 +122,12 @@ type Debugger struct {
 	defaultType  *dataType
 	overrideType *dataType
 
+	// curval is %CURVAL, the value last shown or stored, and exception the
+	// current exception, the one the program last stopped for, which the
+	// %EXC_ symbols describe (builtins.go). A run clears exception.
+	curval    currentValue
+	exception *console.UnhandledException
+
 	// numericNames is set while an EXAMINE/NOSYMBOLIC runs: its
 	// locations are named by their addresses (data.go).
 	numericNames bool
@@ -152,6 +158,7 @@ func New(c *console.Console, g *dcl.Grammar, help *console.Help) *Debugger {
 	d.Dispatcher = newDispatcher(d, g, help)
 	c.OnUnhandled = d.onUnhandled
 	c.OnSignal = d.onSignal
+	c.DebugBuiltins = d.builtinSymbol
 
 	return d
 }
@@ -205,6 +212,10 @@ func (d *Debugger) Start(a console.Activation) error {
 
 	if !nested {
 		d.interrupted = false
+
+		// The current exception is the last one the program stopped for,
+		// until it runs again.
+		d.exception = nil
 	}
 
 	defer func() { d.running-- }()

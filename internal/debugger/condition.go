@@ -67,6 +67,11 @@ func (d *Debugger) evalCondition(text string) (bool, error) {
 			continue
 		}
 
+		// %EXC_NAME EQL "ACCVIO" compares strings.
+		if result, isString, err := d.stringComparison(op, left, right); isString || err != nil {
+			return result, err
+		}
+
 		l, err := d.operand(left)
 		if err != nil {
 			return false, err

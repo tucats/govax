@@ -271,6 +271,11 @@ type Console struct {
 	// uses it for SET BREAK/EXCEPTION.
 	OnSignal func(UnhandledException)
 
+	// DebugBuiltins, when set, resolves the debugger's built-in symbols in
+	// expressions (%CURLOC, %CURVAL, "^", "\\", ...; Evaluator.Builtins).
+	// The debugger sets it (docs/PHASE-42.md, subtask 20).
+	DebugBuiltins func(name string) (uint32, bool, error)
+
 	// runHost is RUN's /HOST: the main image is a host file (readImage).
 	runHost bool
 
@@ -590,7 +595,8 @@ func (c *Console) withKernelMode(fn func() error) error {
 func (c *Console) Evaluator() *Evaluator {
 	return &Evaluator{
 		Symbols: c.Symbols, Radix: c.Radix, Here: c.DepositAddr, Mem: c.Mem, CPU: c.CPU,
-		Debug: imageNames{c: c},
+		Debug:    imageNames{c: c},
+		Builtins: c.DebugBuiltins,
 		Load: func(addr uint32) (uint32, error) {
 			v, err := c.loadSized(addr, SizeLongword)
 			if err != nil {
