@@ -105,24 +105,24 @@ func call(t *testing.T, env *corevms.Environment, name string, argv ...uint32) u
 	return 0
 }
 
-// TestRoutinesMatchLIBRTL: every routine's offset is its entry in VMS
-// 7.3's LIBRTL.EXE transfer vector, as LINK knows it, and codes and names
-// are distinct.
+// TestRoutinesMatchLIBRTL: every routine is an entry in VMS 7.3's
+// LIBRTL.EXE transfer vector, as LINK knows it (so Offset has one), names
+// and Go routines' codes are distinct, and a routine has Go code exactly
+// when it has a code (code 0 is the microkernel's).
 func TestRoutinesMatchLIBRTL(t *testing.T) {
 	codes := map[uint32]string{}
 	names := map[string]bool{}
 
 	for _, r := range Routines {
-		sym, ok := vmsdef.ImageSymbols[r.Name]
-
-		switch {
-		case !ok:
-			t.Errorf("%s: not in vmsdef.ImageSymbols", r.Name)
-		case sym.Image != Library || sym.Value != r.Offset:
-			t.Errorf("%s: offset %s+%#x, but LINK has %s+%#x", r.Name, Library, r.Offset, sym.Image, sym.Value)
+		if sym, ok := vmsdef.ImageSymbols[r.Name]; !ok || sym.Image != Library {
+			t.Errorf("%s: not in %s's transfer vector (vmsdef.ImageSymbols)", r.Name, Library)
 		}
 
-		if other, dup := codes[r.Code]; dup {
+		if (r.Code == 0) != (r.Fn == nil) {
+			t.Errorf("%s: code %d with Fn nil %v; want Go code exactly when the code isn't 0", r.Name, r.Code, r.Fn == nil)
+		}
+
+		if other, dup := codes[r.Code]; dup && r.Code != 0 {
 			t.Errorf("%s and %s share code %d", r.Name, other, r.Code)
 		}
 

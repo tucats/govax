@@ -116,6 +116,72 @@ func TestEnsureShims_stubDispatchesThroughXFCShim(t *testing.T) {
 	}
 }
 
+// TestLibCallg: LIB$CALLG, a LIBRTL routine in VAX code (kernel.asm, a
+// code-0 row in librtl.Routines), is reached at its SHIM$ symbol, calls
+// the routine it's given with the argument list it's given, and returns
+// with that routine's R0 and R1.
+func TestLibCallg(t *testing.T) {
+	c := newRunnableMachine(t)
+	c.Engine.SetModeStack(registers.Kernel, false)
+
+	if _, _, err := c.Assemble(kernelPath(t)); err != nil {
+		t.Fatalf("Assemble(kernel.asm): %v", err)
+	}
+
+	if err := c.EnsureShims(); err != nil {
+		t.Fatalf("ensureShims: %v", err)
+	}
+
+	callg, ok := c.Symbols.Get("SHIM$LIBRTL_00000810")
+	if !ok {
+		t.Fatal("expected SHIM$LIBRTL_00000810 (LIB$CALLG) to be defined")
+	}
+
+	if entry, _ := c.Symbols.Get("LIB$CALLG"); entry != callg {
+		t.Errorf("SHIM$LIBRTL_00000810 = %08X, want kernel.asm's LIB$CALLG, %08X", callg, entry)
+	}
+
+	scratch, ok := c.Symbols.Get("CONSOLE$SCRATCH")
+	if !ok {
+		t.Fatal("expected CONSOLE$SCRATCH to be defined")
+	}
+
+	// The routine called: .ENTRY ^M<>; ADDL3 4(AP),8(AP),R0; MOVL #7,R1; RET.
+	routine, argList := scratch, scratch+0x40
+	code := []byte{0x00, 0x00, 0xC1, 0xAC, 0x04, 0xAC, 0x08, 0x50, 0xD0, 0x07, 0x51, 0x04}
+
+	if err := c.storeBytes(routine, code); err != nil {
+		t.Fatal(err)
+	}
+
+	for i, v := range []uint32{2, 30, 12} {
+		if err := c.Mem.StoreLongword(c.CPU, argList+uint32(4*i), v); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	if err := c.Engine.CallEntry(callg, argList, routine); err != nil {
+		t.Fatalf("CallEntry: %v", err)
+	}
+
+	for {
+		err := c.Engine.Step()
+		if err == nil {
+			continue
+		}
+
+		if errors.Is(err, cpu.ErrConsoleCallReturned) {
+			break
+		}
+
+		t.Fatalf("Step: %v", err)
+	}
+
+	if r0, r1 := c.CPU.GPR(registers.R0), c.CPU.GPR(registers.R1); r0 != 42 || r1 != 7 {
+		t.Errorf("after LIB$CALLG: R0 = %d, R1 = %d; want 42 and 7, the called routine's", r0, r1)
+	}
+}
+
 // TestShimTable_codesDistinctAndRegistered: every stub's code belongs to
 // one routine only, across rtl's shims and internal/librtl's, and each is
 // registered in the RTL environment the console builds.
@@ -140,26 +206,18 @@ func TestShimTable_codesDistinctAndRegistered(t *testing.T) {
 	}
 }
 
-// TestEnsureShims_overflowPage: the stubs that don't fit in the page
-// VMInit reserves go to an overflow page from the S0 pool, so nothing is
-// written over the SCB that follows the reserved page, and each stub's
-// symbol names it where it is; more than the overflow page holds is an
-// error.
-func TestEnsureShims_overflowPage(t *testing.T) {
+// TestEnsureShims_overflowPages: the stubs that don't fit in the page
+// VMInit reserves go to overflow pages from the S0 pool, as many as they
+// need (here, every LIBRTL entry's worth and more), so nothing is written
+// over the SCB that follows the reserved page; each stub's symbol names it
+// where it is, every stub is a whole one at its own address, and the
+// stubs in VMInit's page stay where they were.
+func TestEnsureShims_overflowPages(t *testing.T) {
 	saved := ShimTable
 
 	t.Cleanup(func() { ShimTable = saved })
 
-	perPage := shimPageBytes / corevms.ShimStubSize
-
-	// Fill both pages exactly.
-	fillers := 2 * perPage
-
-	for _, e := range saved {
-		if e.Code != 0 {
-			fillers--
-		}
-	}
+	const fillers = 400
 
 	ShimTable = append([]corevms.ShimLink{}, saved...)
 	for i := 0; i < fillers; i++ {
@@ -191,24 +249,47 @@ func TestEnsureShims_overflowPage(t *testing.T) {
 		t.Error("ensureShims wrote over the SCB")
 	}
 
+	if addr, ok := c.Symbols.Get("SHIM$LIBRTL_00000A70"); !ok || addr != c.shimBase {
+		t.Errorf("LIB$ADAWI's stub at %08X (%v); want VMInit's page's first, %08X", addr, ok, c.shimBase)
+	}
+
+	seen := map[uint32]string{}
+
+	for _, e := range ShimTable {
+		if e.Code == 0 {
+			continue
+		}
+
+		addr, ok := c.Symbols.Get(fmt.Sprintf("SHIM$%s_%08X", e.Library, e.Offset))
+		if !ok {
+			t.Fatalf("%s: no SHIM$ symbol", e.Name)
+		}
+
+		if other, dup := seen[addr]; dup {
+			t.Fatalf("%s and %s share stub address %08X", e.Name, other, addr)
+		}
+
+		seen[addr] = e.Name
+
+		got := make([]byte, corevms.ShimStubSize)
+		for i := range got {
+			b, err := c.Mem.LoadByte(c.CPU, addr+uint32(i))
+			if err != nil {
+				t.Fatalf("%s: reading its stub at %08X: %v", e.Name, addr, err)
+			}
+
+			got[i] = b
+		}
+
+		if string(got) != string(corevms.ShimStub(e.Code)) {
+			t.Fatalf("%s: stub at %08X is % X, want % X", e.Name, addr, got, corevms.ShimStub(e.Code))
+		}
+	}
+
 	last := fmt.Sprintf("TEST$FILLER%d", fillers-1)
 
 	addr, ok := c.Symbols.Get(last)
 	if !ok || (addr >= c.shimBase && addr < c.shimBase+shimPageBytes) {
 		t.Errorf("%s at %08X (%v); want it in an overflow page, not VMInit's at %08X", last, addr, ok, c.shimBase)
-	}
-
-	// One more doesn't fit.
-	for i := fillers; i < fillers+1; i++ {
-		ShimTable = append(ShimTable, corevms.ShimLink{Name: fmt.Sprintf("TEST$FILLER%d", i), Library: "TEST", Offset: uint32(i), Code: uint32(1000 + i)})
-	}
-
-	c = newRunnableMachine(t)
-	if _, _, err := c.Assemble(kernelPath(t)); err != nil {
-		t.Fatalf("Assemble(kernel.asm): %v", err)
-	}
-
-	if err := c.EnsureShims(); err == nil {
-		t.Error("ensureShims with one stub too many for two pages: no error")
 	}
 }

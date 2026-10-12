@@ -1,8 +1,8 @@
 # Phase 53 — LIB$ routines: the plan, the groundwork, and the instruction routines
 
-**Status:** planned (2026-10-12). Needs Phases 34 (`internal/librtl`)
-and 52. The plan below was laid out first and is waiting for the author's
-review. Implementation (subtask 2 on) hasn't started.
+**Status:** in progress (2026-10-12). Needs Phases 34 (`internal/librtl`)
+and 52. The plan (Part A) and the decisions (Part B) were reviewed and
+accepted by the author on 2026-10-12. Subtask 2 is done.
 
 govax provides 15 of LIBRTL.EXE's LIB$ routines (and STR$UPCASE): the ones
 the sample programs and tests needed (Phase 34's table,
@@ -152,6 +152,15 @@ exception: it could return the node name govax already reports (SYI$_NODENAME).
 It's listed here because the 5.0 manual doesn't describe it, and it can
 move into Phase 55 if its interface is settled.
 
+## Working rule for every phase of the program
+
+Unless the author says otherwise, each subtask is finished and testable
+before it's committed: its code, its tests passing (`go build`,
+`go vet`, `go test ./...`), and its progress-log entry. After each
+subtask's commit, work stops so the author can review and push. The
+next subtask starts only when the author asks for it (the author,
+2026-10-12).
+
 ## Phase sizing
 
 Each phase is sized like the RMS and multiprocessing phases (24, 33, 47,
@@ -193,8 +202,8 @@ docs don't need to carry that detail now.
 
 ## Decisions
 
-These are proposed. The ones marked **(author)** are for the author's
-review before subtask 2.
+The author accepted all of these on 2026-10-12, including the proposed
+answers to the two marked **(author)**.
 
 1. **Go shims by default.** Each routine is a Go function behind an XFC
    stub, as now. The manual's instruction routines return condition
@@ -204,9 +213,10 @@ review before subtask 2.
    routine whose whole job is to transfer control: **LIB$CALLG** is VAX
    code (`.ENTRY`, `CALLG @4(AP),@8(AP)`, `RET`), so the called routine's
    frame, handler, and R0/R1 are exactly a CALLG's. Native rows are
-   code-0 links (`kernelLinks`), placed in a small native-code source
-   assembled at boot (subtask 2 decides: a section of `kernel.asm`, or a
-   `librtl.asm` of its own).
+   code-0 rows, as `kernelLinks` are. They're in a section of
+   `kernel.asm` of their own, "LIBRTL routines written in VAX code"
+   (subtask 2), each with a `.SHIM` line in its native table and a row
+   in `librtl.Routines` with code 0 and no Go function.
 2. **Room for every stub.** The stub area grows by S0 pages as the table
    needs them, rather than one overflow page. VMINIT's page stays first,
    so no existing stub moves. A routine's offset comes from
@@ -237,7 +247,7 @@ review before subtask 2.
    exception would, through the dispatcher LIB$SIGNAL uses. The existing
    routines change too, and the change is logged in DEVIATIONS.md.
    Alternatively, keep returning the status (simpler, but programs that
-   rely on a handler see a difference).
+   rely on a handler see a difference). **Accepted: signal.**
 6. **A routine govax lacks (author).** Today an image naming any
    unimplemented LIBRTL routine can't be activated (LIB_UNRESOLVED), even
    if it never calls it. Proposed: every LIBRTL transfer-vector entry
@@ -246,7 +256,8 @@ review before subtask 2.
    program runs up to the call and its handlers can see the failure. This
    needs no stub per missing routine: they can share one code, and the
    XFC finds the name from the stub's address. A setting could restore
-   the strict behavior for tests that want it.
+   the strict behavior for tests that want it. **Accepted: a stub for
+   every entry, signaling when called.**
 7. **Testing.** Each routine has Go unit tests on `librtl`'s fixture,
    cases taken from the manual's argument and condition-value
    descriptions. Each group also has a MACRO-32 program
@@ -296,7 +307,8 @@ Notes for the survey:
    2026-10-12, for review.
 2. **The stub area and the table**: stubs on as many S0 pages as needed;
    offsets from `vmsdef.ImageSymbols`; the native-code home for code-0
-   LIB$ routines (Decision 1); tests for addresses, offsets, and codes.
+   LIB$ routines (Decision 1), proved with LIB$CALLG; tests for addresses,
+   offsets, and codes. **Done** 2026-10-12.
 3. **Descriptors and arguments** (`descriptor.go`): reading every input
    class, writing S, VS, and D output, LIB$_STRTRU and LIB$_INVSTRDES,
    LIB$_WRONUMARG; the existing routines moved onto them.
@@ -311,7 +323,7 @@ Notes for the survey:
 9. **Queues and interlocks**: INSQHI, INSQTI, REMQHI, REMQTI, BBSSI, BBCCI.
 10. **Character strings**: LOCC, MATCHC, SCANC, SKPC, SPANC, MOVC3, MOVC5,
     MOVTC, MOVTUC.
-11. **CALLG, CRC, CRC_TABLE.**
+11. **CRC, CRC_TABLE** (CALLG was done in subtask 2).
 12. **The program**: `testdata/lib53/lib53.mar`, calling every routine of
     the phase, with a console test of its output.
 13. **VMS probe** (with the author on the simh VAX): `lib53.mar`'s run,
@@ -326,7 +338,8 @@ Notes for the survey:
 
 ## Open questions
 
-- Decisions 5 and 6 (above) are the author's.
+- ~~Decisions 5 and 6 (above) are the author's.~~ Accepted as proposed
+  (2026-10-12).
 - Is a list of the supported LIB$ routines wanted in HELP (a `HELP RTL`
   topic, say), or only in the docs?
 - Which 7.x-only routines matter enough to probe for their interfaces
@@ -346,3 +359,31 @@ Notes for the survey:
   (Phase 54), and calling back into VAX code (Phase 58, from
   `CallRequest`). Wrote planning docs for Phases 54–61. Implementation
   waits for the author's review.
+- **2026-10-12** — Plan reviewed; the author accepted Part B's decisions
+  as proposed, and set the working rule (each subtask complete and
+  tested before its commit, then a stop for review). Subtask 2:
+  - **The table.** `librtl.Routine` no longer carries an offset:
+    `Routine.Offset` looks the name up in `vmsdef.ImageSymbols` (and
+    panics for a name LIBRTL.EXE doesn't have, which
+    `TestRoutinesMatchLIBRTL` reports first). A row with code 0 has no Go
+    function and isn't registered as a shim; the test checks that a row
+    has Go code exactly when its code isn't 0.
+  - **The stub area.** `machine.EnsureShims` fills VMINIT's page (42
+    stubs) as before, then puts the rest in one block of contiguous S0
+    pages, as many as they need (`shimOverflow(pages)`), in place of a
+    single overflow page and an error past it. The stubs in VMINIT's page
+    keep their addresses. `TestEnsureShims_overflowPages` (in place of
+    `_overflowPage`) adds 400 stubs and checks that the SCB is untouched,
+    every stub is whole at its own address, and LIB$ADAWI's is still
+    VMINIT's first.
+  - **The native-code home** is a new section of `kernel.asm`, "LIBRTL
+    routines written in VAX code", before the XFC shim table, with a
+    `.SHIM` line in the native table. LIB$CALLG is its first routine:
+    `.ENTRY LIB$CALLG ^M<>`, `CALLG @B^4(AP),@B^8(AP)`, `RET`. The
+    manual (LIB-23) passes user-procedure by value, so the operand is
+    deferred once. The empty entry mask leaves the called routine's R0
+    and R1 as they were. `TestLibCallg` calls it at
+    `SHIM$LIBRTL_00000810` with a two-argument list and a routine that
+    returns their sum in R0 and 7 in R1. The 8 bytes moved every later
+    kernel.asm address, so `internal/asm`'s golden snapshots were
+    rewritten (`-update`): only addresses changed.

@@ -938,6 +938,27 @@ _loop:          tstb    (r2)
 _done:          ret
 
 ;--------------------------------------------------------------------
+;   LIBRTL ROUTINES WRITTEN IN VAX CODE
+;
+;   Most LIB$ routines are Go code behind an XFC stub (internal/librtl).
+;   The few whose whole job is a transfer of control are VAX code here,
+;   so the call they make is exactly the instruction's (docs/PHASE-53,
+;   Decision 1).  Each has a code-0 row in librtl.Routines and a .SHIM
+;   line in the native table below.
+;
+;   LIB$CALLG argument-list, user-procedure
+;
+;       Calls user-procedure (by value) with the argument list at
+;       argument-list, and returns with the called routine's R0 and R1
+;       as they were left: the empty entry mask saves nothing, so RET
+;       restores neither.
+;--------------------------------------------------------------------
+
+                .entry  lib$callg, ^m<>
+                callg   @b^4(ap), @b^8(ap)
+                ret
+
+;--------------------------------------------------------------------
 ;   SOFTWARE SHIM DEFINITIONS FOR XFC EXITS
 ;
 ;   The first parameter is the local entry point name, that can be
@@ -1370,6 +1391,7 @@ exe$dclstring:  .blkb           ^X100
                 .shim   decc$calloc,            0, DECC$SHR,    ^X0520
 		.shim   decc$$gl___ctypea       0, DECC$SHR,    ^X03098
 		.shim   decc$$ga___ctypet       0, DECC$SHR,    ^X0309C
+                .shim   lib$callg,              0, LIBRTL,      ^X0810
 
 ;--------------------------------------------------------------------
 ;   RESET STATE FOR CONSOLE ASSEMBLER

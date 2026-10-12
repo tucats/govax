@@ -551,9 +551,12 @@ expect adjustment as phases land):
   RMS's rule (`System.HostOpeners`, `rms/hostshare.go`).
 - `internal/librtl` — LIBRTL.EXE's routines (Phase 34): the LIB$ and STR$
   shims a program reaches through `SHIM$LIBRTL_<offset>` stubs. `Routines`
-  lists each with its transfer-vector offset (checked against
-  `vmsdef.ImageSymbols`) and XFC$SHIM code; the console registers them into
-  each RTL environment and builds the stubs from the same table. The process
+  lists each with its XFC$SHIM code (its transfer-vector offset is
+  `vmsdef.ImageSymbols`'s, `Routine.Offset`); code 0 is a routine in VAX
+  code in `kernel.asm` (LIB$CALLG; Phase 53, Decision 1). The stubs fill
+  VMINIT's page, then as many S0 pages as they need (`EnsureShims`).
+  The console registers them into each RTL environment and builds the
+  stubs from the same table. The process
   machinery they use (condition dispatch, the heap, memory) stays in
   `internal/corevms`, reached through `export.go`. Each further *RTL.EXE emulated
   gets a package like it. New routines are written from DIGITAL's manuals

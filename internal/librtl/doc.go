@@ -11,8 +11,12 @@
 // MOVL #code, R0; XFC; RET) and points SHIM$LIBRTL_<offset> at it, so the
 // fixup lands on the stub. The XFC runs the Go function registered under
 // code in the process's corevms.ShimTable, with the call's argument list.
-// Routines lists every routine with its offset and code; Register installs
-// them.
+// Routines lists every routine with its code (its offset is VMS 7.3's,
+// from vmsdef.ImageSymbols); Register installs them.
+//
+// A routine whose whole job is a transfer of control, such as LIB$CALLG,
+// is VAX code in the microkernel (kernel.asm) instead: its row has code 0,
+// and its SHIM$ symbol is the routine itself (docs/PHASE-53, Decision 1).
 //
 // # What's here and what's in rtl
 //
