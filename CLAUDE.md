@@ -13,7 +13,7 @@ never had.
   index.
 - `docs/PHASE-00.md` … `PHASE-52.md` — one doc per phase: goal, C-source file
   mapping, deliverables, open questions, and a dated progress log (all
-  done through 50, but for Phase 42's Part B, the debugger's further
+  done through 52, but for Phase 42's Part B, the debugger's further
   features, in progress; 40 follows 38 directly: there is no Phase
   39). Phases 43–48 are the multiprocessing program (subprocesses, a
   scheduler, interprocess mailboxes and shared memory, RMS file sharing
@@ -26,11 +26,13 @@ never had.
   functions, SET VERIFY, SYS$INPUT from a procedure (DECK/EOD), DCL's
   file I/O (OPEN, CLOSE, READ, WRITE, INQUIRE), STOP and Ctrl/Y, the
   console's whole DCL in subprocesses, and the other processes running
-  between DCL commands and during WAIT. Phase 51 (in progress) is what
-  it left for later: round 6 of the DCL probe (done), SPAWN from a
-  subprocess (done), Ctrl/Y in a subprocess's procedures (done),
-  the other processes running while the prompt waits for a line
-  (done), and the known differences from VMS. Phase 52 (done 2026-10-12, paused
+  between DCL commands and during WAIT. Phase 51 (done 2026-10-12) is
+  what it left for later: round 6 of the DCL probe, SPAWN from a
+  subprocess, Ctrl/Y in a subprocess's procedures, the other processes
+  running while the prompt waits for a line, and the known differences
+  from VMS (missing files' messages, F$CONTEXT, F$DEVICE,
+  F$FILE_ATTRIBUTES, F$IDENTIFIER, STOP/IMAGE and /[NO]EXIT, DELETE's and
+  DIRECTORY's layouts, DUMP). Phase 52 (done 2026-10-12, paused
   Phase 51) split `internal/console` into `internal/machine`,
   `internal/dclshell`, `internal/dclcmd`, `internal/dcl`, and
   `internal/help`, leaving `internal/console` the front end; its doc
@@ -93,7 +95,10 @@ never had.
   (`probe50a.com`, with `probe50b.com` and `probe50c.com`,
   `vax/probe50a.log`, `TestProbe50AOracle`; the lines typed at the
   terminal, `vax/probe50a-term.log`, `TestProbe50ATerminal`; Phase 51's
-  subtask 1) is what round 5 left open.
+  subtask 1) is what round 5 left open. Since Phase 51 the round 4 and 6
+  oracles compare DELETE's, DIRECTORY's, and DUMP's output too, on a
+  volume with VMS's 3-block clusters (`mountClusteredContainer`), file
+  IDs and times masked (`maskVolumeDetails`).
 - `testdata/probe49/` — Phase 49's VMS probe in three rounds (`probe6`,
   `probe6b`, `probe6c`; README.md has each round's answers), run by
   `TestProbe6*`; `testdata/rms49/` and `testdata/sec49/` are the phase's
@@ -246,6 +251,7 @@ expect adjustment as phases land):
   `newTestMachine`, `newBootableMachine`). Imports only lower packages.
 - `internal/dclcmd` — the utility commands (Phase 52; earlier in
   `internal/console`): DIRECTORY, TYPE, COPY, DELETE, PURGE, RENAME,
+  DUMP (`dump.go`, Phase 51),
   CREATE, SET/SHOW DEFAULT, MOUNT/DISMOUNT, INITIALIZE/CONTAINER, the
   default volume, DEFINE/ASSIGN/DEASSIGN and SHOW LOGICAL/TRANSLATION,
   DEFINE/DEVICE and SHOW DEVICES, SHOW SYSTEM/PROCESS, MACRO, LINK
@@ -324,11 +330,16 @@ expect adjustment as phases land):
   evaluates DCL's expressions (`dclexpr.go`); lexical functions are a
   table (`dcllexical.go`'s `lexicalFunctions`, one entry per function;
   each function's keywords are a table too, read by `lexicalKeyword`),
-  implemented by subject in `dcllexstring.go`, `dcllexprocess.go`,
-  `dcllexfile.go`, `dcllexname.go`, and `dcllextime.go`; F$CONFIG,
+  implemented by subject in `dcllexstring.go`, `dcllexprocess.go`
+  (F$CONTEXT's selections for F$PID in `dcllexcontext.go`: a
+  PROCESS_CONTEXT symbol, `dclSymbol.context`, naming a context the
+  Shell keeps), `dcllexfile.go`, `dcllexname.go`, and `dcllextime.go`;
+  F$CSID, F$GETQUI, and F$LICENSE are LEXNOTIMPL by choice; F$CONFIG,
   govax's own (not VMS's), reads the configuration (`dcllexconfig.go`). F$GETJPI,
-  F$GETSYI, F$GETDVI, F$FAO, and F$SETPRV use the services' own code
-  (`corevms/lexical.go`), F$PARSE and F$SEARCH RMS's (`rms/lexical.go`). The messages are DCL's CLI$_ texts from
+  F$GETSYI, F$GETDVI, F$DEVICE (`DeviceScan`), F$IDENTIFIER, F$FAO, and
+  F$SETPRV use the services' own code (`corevms/lexical.go`), F$PARSE
+  and F$SEARCH RMS's (`rms/lexical.go`), F$FILE_ATTRIBUTES the file
+  header (`rms/fileattr.go`, `Session.FileAttributes`). The messages are DCL's CLI$_ texts from
   `vmsdef.Messages`, shown as `%DCL-` (the CLI facility's display name),
   some with a segment line (`vmserrors.NewSegment`). `testdata/dcl50` is
   the VMS probe, and `TestProbe50Oracle` replays it against VMS 7.3's
@@ -698,6 +709,14 @@ expect adjustment as phases land):
   it. A stream file's `$UPDATE` may change a record's length (written
   over the bytes there, as VMS does). RMS's share of the I/O counts is
   a model fitted to VMS's (`iocount.go`, `Context.CountIO`).
+  Phase 51: `Session.Directory` lays out DIRECTORY as VMS 7.3 does
+  (brief columns, /SIZE, /DATE, /FULL, totals; every version when none is
+  given), `Session.NotFound` is a missing file's expanded name and
+  RMS$_FNF/DNF for DCL's messages, `fileattr.go` copies a header into a
+  `FileAttributes` (F$FILE_ATTRIBUTES, DIRECTORY), `dump.go` reads blocks
+  and records with RFAs for DUMP, and `$PUT` and DCL's WRITE record the
+  longest record (FAT$W_RSIZE, `noteLongest`). ods2's writer doesn't
+  write VMS's FFFF end-of-records word (DEVIATIONS.md).
 - `internal/link` — the VAX linker (Phase 30): builds a VMS executable image from
   `internal/obj` modules, laid out as real LINK lays images out (byte for byte on
   the fixtures). The console's `LINK` command (`internal/dclcmd/link.go`) drives it.

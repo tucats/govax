@@ -763,7 +763,7 @@ func TestProbe50QOracle(t *testing.T) {
 var probe50TUnanswered = []string{`$ X = F$FAO("!UL", "12")`, `$ X = F$FAO("!AS", 12)`}
 
 // probe50TCompared is a round 5 log as the comparison sees it: as round
-// 4's (probe50FCompared: DIRECTORY's layout left out), and without the
+// 4's (probe50FCompared: file IDs and times masked), and without the
 // probe50TUnanswered cases.
 func probe50TCompared(text string) string {
 	var (

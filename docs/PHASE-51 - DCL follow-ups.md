@@ -1,11 +1,13 @@
 # Phase 51 — DCL follow-ups
 
-**Status:** in progress (planned and approved 2026-10-12). Needs Phase
-50. Subtask 1, round 6 of the VMS probe, is done (2026-10-12): the
-author ran it, and govax now follows VMS's answers. Subtask 2, SPAWN in
-a subprocess, is done (2026-10-12), and so are subtask 3, Ctrl/Y in a
-subprocess's procedures (2026-10-12), and subtask 4, the other
-processes while the prompt waits (2026-10-12).
+**Status:** done (2026-10-12; planned and approved 2026-10-12). Needs
+Phase 50. Subtask 1, round 6 of the VMS probe: the author ran it, and
+govax now follows VMS's answers. Subtask 2, SPAWN in a subprocess;
+subtask 3, Ctrl/Y in a subprocess's procedures; subtask 4, the other
+processes while the prompt waits; subtask 5, the known differences
+(each fixed, or, for F$CSID, F$GETQUI, and F$LICENSE, left out as
+govax's choice; one byte-level difference, ods2's missing FFFF
+end-of-records word, deferred to ods2); subtask 6, docs and help.
 
 Phase 50 made the console a DCL command interpreter and closed on
 2026-10-12 with every subtask done. Following Phase 49's example, the
@@ -443,3 +445,17 @@ di
   write, so DUMP/BLOCK shows 0000 there. The fix belongs in ods2, and
   needs a tagged ods2 release before govax can use it (DEVIATIONS.md,
   "[Phase 51] DUMP"). Test: `TestDump`. HELP DUMP.
+- 2026-10-12: Subtask 6, docs and help. HELP SPAWN, KEYS, and LEXICAL
+  were brought up to date by subtasks 2 to 5; HELP WAIT now says the keys
+  end a waiting subprocess's WAIT. CLAUDE.md and PLAN.md describe the
+  phase as done. Phase 51 is done.
+
+  Left for later: ods2's record writer should end a block's
+  variable-length records with FFFF, as VMS's RMS does (an ods2 change
+  and release; round 6's oracle allows for it); a probe round could
+  settle the choices DEVIATIONS.md's Phase 51 entries list (F$CONTEXT's,
+  F$DEVICE's, F$FILE_ATTRIBUTES's, and F$IDENTIFIER's answers,
+  STOP/IMAGE's status, DELETE/LOG's and DIRECTORY's unconfirmed columns,
+  the DELETE and DIRECTORY facility numbers); PURGE still shows
+  %PURGE-S-PURGED for each file, where VMS's PURGE is silent without
+  /LOG.

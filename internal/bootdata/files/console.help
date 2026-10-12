@@ -2422,7 +2422,9 @@ $WAIT
 
     The WAIT command waits for a time: a delta time, [dddd-]hh:mm:ss.cc.
     CTRL/Y or CTRL/C ends the wait.  WAIT leaves $STATUS alone.  Other
-    processes (see HELP SPAWN) run while it waits.
+    processes (see HELP SPAWN) run while it waits.  In a subprocess SPAWN
+    is waiting for, the keys go to the subprocess, so they end its WAIT
+    (see HELP KEYS).
 
     Syntax:
 

@@ -354,7 +354,9 @@ the terminal.
 called SIMVAX, and compares its log with `vax/probe50f.log` section by
 section; every section matches, but for DELETE's, DIRECTORY's, and
 DUMP's output (their own layouts) and the extra blank SHOW LOGICAL puts
-before a process-permanent file's name. `TestProbe50QOracle` runs
+before a process-permanent file's name. (Since Phase 51 DELETE,
+DIRECTORY, and DUMP are VMS's, and every line is compared, file IDs and
+times masked.) `TestProbe50QOracle` runs
 `probe50q.com` with what the author typed and compares each symbol,
 `$STATUS`, and message with `vax/probe50q.log`, and `PROBE50P.LOG` with
 `vax/probe50p.log`; all match. The answers (DEVIATIONS.md's "[Phase 50]
@@ -490,7 +492,8 @@ step says to type commands, they are typed at the prompt Ctrl/Y gives.
 `probe50t.com` on a booted machine, with /OUTPUT, on DUA1 of a node
 called SIMVAX, with Ctrl/T enabled as SYSTEM's login had it, and
 compares its log with `vax/probe50t.log` section by section; every
-section matches, but for DIRECTORY's layout and two F$FAO cases where
+section matches, but for DIRECTORY's layout (VMS's since Phase 51, and
+compared) and two F$FAO cases where
 VMS's answer was garbage (a number from an address, an access
 violation). The interactive part, `vax/probe50y.log`, was run by hand;
 its answers are in govax's tests (`dclcontroly_test.go`,
@@ -625,7 +628,10 @@ The author ran both parts: `vax/probe50a.log` (part 1, with /OUTPUT) and
 `probe50a.com` with /OUTPUT on DUA1 of a node called SIMVAX and compares
 its log with VMS's section by section. Every section matches, apart from
 DELETE's, DIRECTORY's, and DUMP's layouts, SHOW LOGICAL/PROCESS's list of
-the VAX's own names, and the job table's name. `TestProbe50ATerminal`
+the VAX's own names, and the job table's name. (Since Phase 51 DELETE's,
+DIRECTORY's, and DUMP's are VMS's and compared too, but for one word of
+R4's DUMP/BLOCK: VMS's RMS ends the block's records with FFFF, which
+ods2's writer doesn't write.) `TestProbe50ATerminal`
 replays part 2, and every line matches. The answers (DEVIATIONS.md's
 "[Phase 51] Round 6 of the probe"):
 
