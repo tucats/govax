@@ -139,3 +139,18 @@ func (c *Interpreter) Run(fn string, opts machine.RunOptions) error {
 
 	return c.machine.Run(fn, opts)
 }
+
+// Running reports whether the console should keep reading commands,
+// matching vax.console.running (cleared by QUIT/EXIT.
+func (c *Interpreter) Running() bool { return !c.quit }
+
+// Quit implements QUIT/EXIT: stops the command loop.
+func (c *Interpreter) Quit() error {
+	if err := c.machine.RequireInit(); err != nil {
+		return err
+	}
+
+	c.quit = true
+
+	return nil
+}

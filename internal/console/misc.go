@@ -20,24 +20,9 @@ var CommandLineString string
 // so it's passed as it is, without DCL's uppercasing.
 var RunCommandLine string
 
-// Running reports whether the console should keep reading commands,
-// matching vax.console.running (cleared by QUIT/EXIT.
-func (c *Interpreter) Running() bool { return !c.quit }
-
 // CommandLineErr returns the failure of the one-shot command given on
 // govax's command line, or nil.
 func (c *Console) CommandLineErr() error { return c.commandLineErr }
-
-// Quit implements QUIT/EXIT: stops the command loop.
-func (c *Interpreter) Quit() error {
-	if err := c.machine.RequireInit(); err != nil {
-		return err
-	}
-
-	c.quit = true
-
-	return nil
-}
 
 // Time runs one command (via dispatch) and prints how long it took.
 func (c *Console) Time(cmd string, dispatch func(string) error) error {
