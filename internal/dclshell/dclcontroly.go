@@ -44,6 +44,17 @@ import (
 // Ctrl/C"). At the terminal, outside a procedure, the keys keep govax's
 // meanings (cmd/govax/attention.go): Ctrl/C interrupts, Ctrl/Y ends
 // govax.
+//
+// The keys go to the process the terminal is attached to (Phase 51,
+// subtask 3): process 1, or the subprocess a SPAWN without /NOWAIT
+// waits for, and so on down a chain of SPAWNs (corevms's Attached; the
+// DCL Dictionary, SPAWN). A subprocess's DCL follows the same rules in
+// its procedures. An image it runs is interrupted by an AST of DCL's
+// (subcli.go's "Ctrl/Y"), with the image paused while DCL acts:
+// CONTINUE at the Ctrl/Y level lets it go on. Outside a procedure, a
+// subprocess's Ctrl/Y or Ctrl/C ends the image it runs (SS$_CONTROLY),
+// and its DCL goes on with its next command; it doesn't end govax
+// (govax's choice: VMS's DCL would prompt, with the image paused).
 
 // errLeaveControlY is what a command typed at the Ctrl/Y level returns
 // instead of running when it would run an image or a command procedure:
@@ -77,14 +88,36 @@ func isAttentionKey(key byte) bool {
 }
 
 // dclTakesAttention reports whether an attention key, which no AST took,
-// is DCL's to act on now: a DCL command procedure is running (not a
-// debugger command procedure, or a debugger session), Ctrl/Y is enabled,
-// and DCL isn't already reading the Ctrl/Y level or ending every level.
+// is the DCL running now's to act on (dclTakesControlY).
 func (c *Interpreter) dclTakesAttention(key byte) bool {
+	return isAttentionKey(key) && c.dclTakesControlY()
+}
+
+// dclTakesControlY reports whether a Ctrl/Y is the DCL running now's to
+// act on: the terminal is attached to its process, a DCL command
+// procedure is running (not a debugger command procedure, or a debugger
+// session), Ctrl/Y is enabled, and DCL isn't already reading the Ctrl/Y
+// level or ending every level.
+func (c *Interpreter) dclTakesControlY() bool {
 	level := c.currentLevel()
 
-	return isAttentionKey(key) && level != nil && !level.source.plain &&
+	return level != nil && !level.source.plain && c.attachedCLI() == c.subCLI &&
 		!c.machine.InDebugger() && c.ControlYEnabled() && c.controlYLevelActive == nil && !c.stopping
+}
+
+// attachedCLI is the CLI of the subprocess the terminal is attached to,
+// or nil when that is process 1 (corevms's Attached).
+func (c *Interpreter) attachedCLI() *subprocessCLI {
+	one := c.machine.ProcessOne()
+	if one == nil {
+		return nil
+	}
+
+	if env := one.Attached(); env != one {
+		return c.clis[env]
+	}
+
+	return nil
 }
 
 // HandleAttention makes Console a cpu.AttentionHandler: an attention key
@@ -107,6 +140,10 @@ func (c *Interpreter) HandleAttention(key byte) bool {
 		return true
 	}
 
+	if cli := c.attachedCLI(); cli != nil && isAttentionKey(key) {
+		return c.subprocessAttention(cli)
+	}
+
 	if !c.dclTakesAttention(key) {
 		return false
 	}
@@ -123,6 +160,56 @@ func (c *Interpreter) HandleAttention(key byte) bool {
 	c.controlYTaken = true
 
 	return false
+}
+
+// subprocessAttention is HandleAttention for cli, the subprocess the
+// terminal is attached to: its DCL takes the key, however deep its
+// command level. An image it runs is interrupted by its Ctrl/Y AST
+// (subcli.go), which its DCL acts on (imageInterrupted); otherwise its
+// DCL is in a command of its own, which it notes (interrupted) and acts
+// on when the command is done. A second key while the AST is still
+// queued, not taken (the image runs with ASTs disabled, say), isn't
+// taken: the machine stops, as it would for a key no DCL takes.
+func (c *Interpreter) subprocessAttention(cli *subprocessCLI) bool {
+	switch {
+	case cli.controlYAST == astQueued:
+		return false
+
+	case cli.imageActive && cli.controlYAST == astNone:
+		cli.controlYAST = astQueued
+		cli.env.QueueCLIAST(cli.stub + cliStubControlY)
+
+	default:
+		cli.interrupted = true
+	}
+
+	c.forgetAttention()
+
+	return true
+}
+
+// imageInterrupted acts on a Ctrl/Y in cli's DCL that its AST
+// interrupted an image for (subcli.go), and returns how the AST ends: in
+// a procedure, by the rules HandleAttention follows in process 1, with
+// the Ctrl/Y level read while the image is paused, and CONTINUE letting
+// it go on (yieldContinue); otherwise the image ends (yieldEndImage),
+// and the procedure acts when the command that ran it has returned
+// (takeControlY). Outside a procedure, the image ends. Called on the
+// interpreter's goroutine, with its Shell the console's.
+func (c *Interpreter) imageInterrupted(cli *subprocessCLI) cliYield {
+	ended := cliYield{kind: yieldEndImage, status: ssControlY}
+
+	if !c.dclTakesControlY() {
+		return ended
+	}
+
+	if c.controlYHandler() == nil && c.controlYLevel(c.currentLevel()) {
+		return cliYield{kind: yieldContinue}
+	}
+
+	c.controlYTaken = true
+
+	return ended
 }
 
 // forgetAttention forgets the attention key typed, and the one that
@@ -144,6 +231,14 @@ func (c *Interpreter) takeControlY() bool {
 		c.forgetAttention()
 
 		return true
+	}
+
+	// A subprocess's Ctrl/Y, noted while one of DCL's own commands ran
+	// (subprocessAttention).
+	if cli := c.subCLI; cli != nil && cli.interrupted {
+		cli.interrupted = false
+
+		return c.dclTakesControlY()
 	}
 
 	if c.machine.Engine == nil || !c.dclTakesAttention(c.machine.Engine.PendingAttention()) {
@@ -220,7 +315,7 @@ func (c *Interpreter) controlYLevel(level *commandLevel) bool {
 	defer func() { c.controlYLevelActive = nil }()
 
 	for c.Running() {
-		line, ok := c.readTerminal(c.Prompt())
+		line, ok := c.readTerminal(c.commandPrompt())
 		if !ok {
 			if c.machine.Engine != nil && isAttentionKey(c.machine.Engine.PendingAttention()) {
 				c.forgetAttention()
@@ -231,7 +326,19 @@ func (c *Interpreter) controlYLevel(level *commandLevel) bool {
 			line = "EXIT"
 		}
 
+		// A subprocess's Ctrl/Y typed at this level does nothing more
+		// than end a WAIT typed here (subprocessAttention): one typed
+		// before the command, or during it, is forgotten.
+		cli := c.subCLI
+		if cli != nil {
+			cli.interrupted = false
+		}
+
 		err := level.dispatch(line)
+
+		if cli != nil {
+			cli.interrupted = false
+		}
 
 		switch {
 		case errors.Is(err, errLeaveControlY):
@@ -261,6 +368,16 @@ func (c *Interpreter) controlYLevel(level *commandLevel) bool {
 	}
 
 	return false
+}
+
+// commandPrompt is the prompt of the DCL running now: a subprocess's own
+// (SPAWN/PROMPT), or the console's.
+func (c *Interpreter) commandPrompt() string {
+	if cli := c.subCLI; cli != nil {
+		return cli.prompt
+	}
+
+	return c.Prompt()
 }
 
 // leaveControlY returns errLeaveControlY when DCL is reading the Ctrl/Y

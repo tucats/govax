@@ -113,6 +113,8 @@
 //                          configuration
 //              10/12/26    CONFIG KEYS: vax.memory.*, read by vax.init;
 //                          VMINIT's syntax is its qualifiers
+//              10/12/26    KEYS: Ctrl/Y and Ctrl/C go to the subprocess a
+//                          SPAWN waits for
 
 This is the help documentation for the govax VAX emulator.  Topic sections are
 marked by a "$" delimiter.  This is followed by as many tokens of the help
@@ -2014,6 +2016,15 @@ $KEY
                 STOP ends every procedure, and a command that runs an
                 image or a procedure ends them and then runs.  Ctrl/Z
                 there is EXIT.  SET NOCONTROL=Y turns Ctrl/Y off.
+
+                While SPAWN (without /NOWAIT) waits for a subprocess,
+                the terminal is attached to the subprocess, and Ctrl/Y
+                and Ctrl/C are its DCL's, by the same rules in its
+                command procedures (its own prompt at the Ctrl/Y level).
+                Outside a procedure, they end the image the subprocess
+                is running, and its DCL goes on with its next command;
+                they don't end govax.  Down a chain of SPAWNs, the keys
+                go to the last subprocess.
 
     Ctrl/Z      End of file.  On an empty line, the read waiting gets
                 the end of file, and govax echoes *Exit*.  Typed after

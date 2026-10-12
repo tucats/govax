@@ -19,10 +19,10 @@ import (
 // machine's clock. The other processes run meanwhile (dcllend.go):
 // process 1's WAIT lends them the CPU, waiting in the scheduler, and a
 // subprocess's WAIT waits there, its shim's XFC run again when the time
-// is up. A Ctrl/Y or Ctrl/C typed during process 1's WAIT ends it at
-// once, as one typed during any of DCL's own commands is acted on when
-// the command is done (dclcontroly.go); a subprocess's isn't attached to
-// the terminal, and waits its whole time.
+// is up. A Ctrl/Y or Ctrl/C typed during WAIT ends it at once, in the
+// process the terminal is attached to, as one typed during any of DCL's
+// own commands is acted on when the command is done (dclcontroly.go); in
+// another process, WAIT waits its whole time.
 
 // waitPoll is how often WAIT looks for an attention key.
 const waitPoll = 20 * time.Millisecond
@@ -49,9 +49,13 @@ func (c *Interpreter) waitCommand(id int64, r *dcl.Result) error {
 
 	done := func() bool { return !time.Now().Before(deadline) }
 
+	// A subprocess's WAIT ends at a Ctrl/Y too, when the terminal is
+	// attached to it (subprocessAttention).
 	if cli := c.subCLI; cli != nil {
-		for !done() {
-			cli.handBack(cliYield{kind: yieldTimer, over: done, deadline: c.machineDeadline(time.Until(deadline))})
+		over := func() bool { return done() || cli.interrupted }
+
+		for !over() {
+			cli.handBack(cliYield{kind: yieldTimer, over: over, deadline: c.machineDeadline(time.Until(deadline))})
 		}
 
 		return nil

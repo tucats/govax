@@ -125,6 +125,10 @@ type Environment struct {
 	consoleInBuf *bufio.Reader
 	consoleOut   io.Writer
 
+	// terminalIn is the terminal's input stream while RedirectInput has
+	// replaced it (nil otherwise), for ReadCommandLine.
+	terminalIn *inputStream
+
 	// memAllocated/memFreed back the LIB$GET_VM/malloc allocator (memory.go).
 	memAllocated, memFreed []*memBlock
 

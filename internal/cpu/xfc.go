@@ -263,7 +263,9 @@ func emulXfcP1Vector(e *Engine) error {
 // selecting it. A shim may also ask for a procedure to be called (a
 // *ServiceCall), as a service may; since R0 selects the shim, that's
 // only of use for an image's call, after which the shim's caller puts
-// its own registers back (the subprocess CLI, docs/PHASE-48.md).
+// its own registers back (the subprocess CLI, docs/PHASE-48.md). And a
+// shim may end the image, as $EXIT does (ErrImageExit, with r0 its
+// status): the subprocess CLI's Ctrl/Y AST does (docs/PHASE-51).
 func emulXfcShim(e *Engine) error {
 	if e.services == nil {
 		return &Fault{Code: ExcPrivileged}
@@ -290,6 +292,10 @@ func emulXfcShim(e *Engine) error {
 	}
 
 	e.cpu.SetGPR(registers.R0, r0)
+
+	if errors.Is(err, ErrImageExit) {
+		return e.exitImage()
+	}
 
 	return err
 }

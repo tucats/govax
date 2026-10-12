@@ -217,6 +217,21 @@ func (env *Environment) AwaitSpawn() (waiting bool, err error) {
 	return true, env.waitOn(sched.StateLEF, sched.ResourceNone, eventFlagBoost, func() bool { return child.Deleted })
 }
 
+// Attached is the process the terminal is attached to, of those in env's
+// job below env: env itself, or, while a LIB$SPAWN of env's waits for its
+// subprocess (SPAWN without /NOWAIT), the process that subprocess's
+// terminal is attached to, and so on down a chain of SPAWNs. On VMS, the
+// terminal's control keys (Ctrl/Y, Ctrl/C) go to that process (the DCL
+// Dictionary, SPAWN and ATTACH). A subprocess made with CLI$M_NOWAIT
+// shares the terminal but isn't attached to it.
+func (env *Environment) Attached() *Environment {
+	for env.spawnWait != nil && !env.spawnWait.Deleted {
+		env = env.spawnWait
+	}
+
+	return env
+}
+
 // completeSpawn tells the parent of env, a subprocess LIB$SPAWN created,
 // that env has ended (DeleteProcess): its final status goes to the
 // completion-status-address, through the parent's address space, the

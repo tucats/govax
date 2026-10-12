@@ -241,8 +241,14 @@ func (c *Interpreter) terminalOut() io.Writer {
 
 // readTerminal shows prompt on the terminal and reads a line from it:
 // SYS$COMMAND, which a command procedure's data doesn't replace. ok is
-// false at its end of file (Ctrl/Z).
+// false at its end of file (Ctrl/Z). A subprocess's DCL reads its
+// process's terminal, as it reads its commands (subcli.go's
+// readTerminal).
 func (c *Interpreter) readTerminal(prompt string) (string, bool) {
+	if cli := c.subCLI; cli != nil {
+		return cli.readTerminal(prompt)
+	}
+
 	if out := c.terminalOut(); out != nil && prompt != "" {
 		fmt.Fprint(out, prompt)
 	}

@@ -28,7 +28,7 @@ never had.
   console's whole DCL in subprocesses, and the other processes running
   between DCL commands and during WAIT. Phase 51 (in progress) is what
   it left for later: round 6 of the DCL probe (done), SPAWN from a
-  subprocess (done), Ctrl/Y in a subprocess's procedures,
+  subprocess (done), Ctrl/Y in a subprocess's procedures (done),
   the other processes running while the prompt waits for a line, and
   the known differences from VMS. Phase 52 (done 2026-10-12, paused
   Phase 51) split `internal/console` into `internal/machine`,
@@ -372,7 +372,11 @@ expect adjustment as phases land):
   (`controlYLevel`: CONTINUE, EXIT, STOP; an image command,
   `leaveControlY`, ends the procedure and runs at level 0,
   `afterStop`). SET [NO]CONTROL (`ControlYEnabled`, asked by
-  cmd/govax's key handling).
+  cmd/govax's key handling). The keys go to the process the terminal
+  is attached to (`corevms.Environment.Attached`, down the chain of
+  waiting SPAWNs; Phase 51): a subprocess's DCL takes them
+  (`subprocessAttention`), interrupting its image with an AST to its
+  CLI stub (`imageInterrupted`, subcli.go's "Ctrl/Y").
   **Between commands** (`dcllend.go`, subtask 21): after each DCL
   command (`commandBoundary`: `runLevel`, and the subprocess's level-0
   loop) process 1 lends the CPU (`lendCPU`, corevms's `lend.go`:

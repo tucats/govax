@@ -23,8 +23,8 @@ import (
 // and GOTO, OPEN and READ, and so on, each process with its own DCL
 // state (its symbols, $STATUS, command levels, default directory,
 // logical names, open files). Only the commands that work the machine
-// itself (DEBUG, ASM, INITIALIZE/VAX, VMINIT, SPAWN, ...) are process
-// 1's (processOneCommands). A line may start with "$"; with LOGOUT, EXIT
+// itself (DEBUG, ASM, INITIALIZE/VAX, VMINIT, ...) are process 1's
+// (processOneCommands). A line may start with "$"; with LOGOUT, EXIT
 // at its command level 0, or the end of its input, the process logs out.
 //
 // # How it runs
@@ -40,6 +40,10 @@ import (
 //	        CALLS   #1, @#SYS$EXIT      ; logs out: deletes the process
 //	        RET
 //	args:   .LONG   0                   ; an empty argument list
+//	ctrly:  .WORD   0                   ; the Ctrl/Y AST's entry mask
+//	        MOVL    #cliShimCode, R0
+//	        XFC     #XFC$SHIM           ; EXE$CLI_COMMAND, in the AST
+//	        RET                         ; to the AST exit
 //
 // The interpreter itself runs on a goroutine of its own (runInterpreter),
 // which takes turns with the engine: the shim hands it the CPU (resume),
@@ -66,6 +70,26 @@ import (
 // (or command procedure) that ran it. When the interpreter has logged
 // out, the shim returns its final status, and the stub logs out with it.
 //
+// # Ctrl/Y
+//
+// The terminal's Ctrl/Y (or Ctrl/C) goes to the process the terminal is
+// attached to (corevms's Attached; dclcontroly.go). When that is a
+// subprocess running an image, DCL interrupts the image as VMS's DCL
+// does, with an AST of its own: HandleAttention queues a user-mode AST
+// to the stub's ctrly routine (corevms.QueueCLIAST), and when the
+// process takes it, the shim hands the interpreter the CPU with
+// resumeControlY, in the middle of the command that ran the image
+// (handBack). The interpreter acts on the Ctrl/Y there, by the rules a
+// procedure in process 1 follows (imageInterrupted), the image paused
+// beneath the AST meanwhile; it may hand the CPU back to wait, as at any
+// other time. CONTINUE returns from the AST, and the image goes on
+// (yieldContinue); otherwise the shim ends the image at once
+// (yieldEndImage: ErrExit, as $EXIT ends one, but with no exit handlers
+// called), and the command that ran it goes on as for any image that
+// ended. A Ctrl/Y typed while the interpreter runs one of DCL's own
+// commands (WAIT, say) is noted (interrupted), and acted on when the
+// command is done.
+//
 // What the interpreter writes goes to the process's SYS$OUTPUT (the
 // terminal, a mailbox, NL:, a file), a line at a time (cliOutput); a
 // line a full mailbox can't take yet is kept, and written before the
@@ -87,18 +111,22 @@ import (
 // shim uses.
 const cliShimCode = 64
 
-// The CLI stub's layout (see above): the MOVL that starts the loop, and
-// the empty argument list each image's driver is called with.
+// The CLI stub's layout (see above): the MOVL that starts the loop, the
+// empty argument list each image's driver is called with, and the
+// Ctrl/Y AST's routine.
 const (
-	cliStubLoop    = 2
-	cliStubArgList = 24
+	cliStubLoop     = 2
+	cliStubArgList  = 24
+	cliStubControlY = 28
 )
 
 // ssUnsupported is SS$_UNSUPPORTED, the shim's status in a process that
-// has no CLI; cliStatusImageFNF is CLI$_IMAGEFNF, RUN's for an image
+// has no CLI; ssControlY is SS$_CONTROLY, the status of an image a
+// Ctrl/Y ended at command level 0 (dclcontroly.go); cliStatusImageFNF is CLI$_IMAGEFNF, RUN's for an image
 // that isn't there.
 var (
 	ssUnsupported     = vmsdef.Symbols["SS$_UNSUPPORTED"]
+	ssControlY        = vmsdef.Symbols["SS$_CONTROLY"]
 	cliStatusImageFNF = vmsdef.LibrarySymbols["CLI$_IMAGEFNF"]
 )
 
@@ -145,6 +173,24 @@ const (
 	yieldLogout         // it has logged out, with status
 	yieldCommand        // a command is done: let the others run (dcllend.go)
 	yieldTimer          // WAIT: wait until over, due by deadline (dclwait.go)
+	yieldContinue       // the Ctrl/Y AST returns: the image goes on
+	yieldEndImage       // the Ctrl/Y AST ends the image, with status
+)
+
+// The ways the shim hands the interpreter the CPU (its resume's kind).
+type resumeKind int
+
+const (
+	resumeGo       resumeKind = iota // go on from where it handed the CPU back
+	resumeAbort                      // its process has been deleted: unwind
+	resumeControlY                   // the Ctrl/Y AST: act on a Ctrl/Y
+)
+
+// The states of a CLI's Ctrl/Y AST (subprocessCLI.controlYAST).
+const (
+	astNone    = iota // none queued
+	astQueued         // queued, not yet taken by the process
+	astRunning        // the process is in it
 )
 
 // cliYield is what the interpreter asks of the shim when it hands the
@@ -200,12 +246,20 @@ type subprocessCLI struct {
 
 	// started is set once its interpreter's goroutine has started, and
 	// finished once it has logged out. resume hands the goroutine the
-	// CPU (true: its process has been deleted, and it is to unwind), and
-	// yield hands it back; yielded is the last request, not yet acted on.
+	// CPU, and yield hands it back; yielded is the last request, not yet
+	// acted on.
 	started, finished bool
-	resume            chan bool
+	resume            chan resumeKind
 	yield             chan cliYield
 	yielded           *cliYield
+
+	// controlYAST is the state of its Ctrl/Y AST (astNone, astQueued,
+	// astRunning); abandoned is set when the AST has ended the image.
+	// interrupted says a Ctrl/Y came while one of DCL's own commands
+	// ran, not yet acted on (dclcontroly.go).
+	controlYAST int
+	abandoned   bool
+	interrupted bool
 
 	// imageActive is set while an image a command started runs; fp and
 	// ap are the CLI's registers at the shim's XFC, put back when it
@@ -302,6 +356,15 @@ func (h cliHost) Start(env *corevms.Environment, start *corevms.CLIStartup) (uin
 		code = append(code, 0) // ... and the empty argument list
 	}
 
+	// The Ctrl/Y AST's routine: an entry mask, the shim, and RET.
+	code = append(code,
+		0x00, 0x00,
+		0xD0, 0x8F,
+		byte(cliShimCode), byte(cliShimCode>>8), byte(cliShimCode>>16), byte(cliShimCode>>24),
+		0x50,
+		0xFC, 0x7D,
+		0x04)
+
 	if err := c.machine.StoreBytesIn(env, page, code); err != nil {
 		return 0, err
 	}
@@ -363,7 +426,14 @@ func (c *Interpreter) cliCommand(env *corevms.Environment, _ []uint32) (uint32, 
 
 		y := cli.yielded
 		if y == nil {
-			y = cli.run()
+			// The Ctrl/Y AST, taken: the interpreter acts on it
+			// (handBack). Its XFC run again after a wait goes on.
+			kind := resumeGo
+			if cli.controlYAST == astQueued && cli.imageActive {
+				kind, cli.controlYAST = resumeControlY, astRunning
+			}
+
+			y = cli.run(kind)
 			cli.yielded = y
 
 			continue
@@ -391,6 +461,22 @@ func (c *Interpreter) cliCommand(env *corevms.Environment, _ []uint32) (uint32, 
 			cli.fp, cli.ap = c.machine.CPU.GPR(registers.FP), c.machine.CPU.GPR(registers.AP)
 
 			return 0, &corevms.CallRequest{Routine: y.driver, ArgList: cli.stub + cliStubArgList, Image: true}
+
+		case yieldContinue:
+			cli.yielded = nil
+			cli.controlYAST = astNone
+
+			return ssNormal, nil
+
+		case yieldEndImage:
+			// The image ends here, in the AST (corevms.ErrExit unwinds
+			// to the image's outermost frame); StepMachine then hands
+			// the process back to the CLI (endCLIImage).
+			cli.yielded = nil
+			cli.controlYAST = astNone
+			cli.abandoned = true
+
+			return y.status, corevms.ErrExit
 		}
 
 		// Logged out: LOGINOUT's report, or a spawned process's one line
@@ -414,10 +500,10 @@ func (c *Interpreter) cliCommand(env *corevms.Environment, _ []uint32) (uint32, 
 	}
 }
 
-// run hands the interpreter the CPU, starting it the first time, with
-// the process's Shell the console's, and returns what it asks for when it
-// hands the CPU back.
-func (cli *subprocessCLI) run() *cliYield {
+// run hands the interpreter the CPU (kind says why), starting it the
+// first time, with the process's Shell the console's, and returns what it
+// asks for when it hands the CPU back.
+func (cli *subprocessCLI) run(kind resumeKind) *cliYield {
 	c := cli.c
 
 	if cli.finished {
@@ -428,13 +514,13 @@ func (cli *subprocessCLI) run() *cliYield {
 
 	if !cli.started {
 		cli.started = true
-		cli.resume = make(chan bool)
+		cli.resume = make(chan resumeKind)
 		cli.yield = make(chan cliYield)
 
 		go cli.runInterpreter()
 	}
 
-	cli.resume <- false
+	cli.resume <- kind
 	y := <-cli.yield
 
 	return &y
@@ -442,12 +528,26 @@ func (cli *subprocessCLI) run() *cliYield {
 
 // handBack hands the CPU back to the shim with y, and waits for its next
 // turn; it unwinds the interpreter (errCLIAborted) if the process has
-// been deleted meanwhile. Called on the interpreter's goroutine.
+// been deleted meanwhile. A turn that is the Ctrl/Y AST, which comes
+// only while an image runs (y is yieldImage), is the interpreter's to
+// act on here (imageInterrupted), after which the AST ends, and handBack
+// waits again, for the image's end. Called on the interpreter's
+// goroutine.
 func (cli *subprocessCLI) handBack(y cliYield) {
-	cli.yield <- y
+	for {
+		cli.yield <- y
 
-	if abort := <-cli.resume; abort {
-		panic(errCLIAborted)
+		switch <-cli.resume {
+		case resumeAbort:
+			panic(errCLIAborted)
+
+		case resumeControlY:
+			y = cli.c.imageInterrupted(cli)
+
+			continue
+		}
+
+		return
 	}
 }
 
@@ -461,7 +561,7 @@ func (cli *subprocessCLI) abort() {
 
 	defer cli.c.useShell(cli.shell)()
 
-	cli.resume <- true
+	cli.resume <- resumeAbort
 	<-cli.yield
 }
 
@@ -511,6 +611,10 @@ func (cli *subprocessCLI) runInterpreter() {
 		if err != nil && !vmserrors.MessageInhibited(err) {
 			fmt.Fprintln(c.Out, "%"+err.Error())
 		}
+
+		// A Ctrl/Y during one of DCL's own commands at level 0 has
+		// done what it does: ended a WAIT (dclwait.go).
+		cli.interrupted = false
 
 		// The command is done: the other processes have their turn.
 		c.commandBoundary()
@@ -570,6 +674,29 @@ func (cli *subprocessCLI) nextLine() (string, bool, error) {
 
 	return cli.input.ReadLine(prompt)
 }
+
+// readTerminal is the CLI's read of a line from its terminal
+// (SYS$COMMAND: INQUIRE, READ SYS$COMMAND, the Ctrl/Y level), not a
+// procedure's data lines, read as its commands are read from the
+// terminal, handing the CPU back while no line has come; prompt is
+// written first. ok is false at its end of file.
+func (cli *subprocessCLI) readTerminal(prompt string) (string, bool) {
+	// What the CLI wrote before goes out first, where it can.
+	_ = cli.flush()
+
+	for {
+		line, ok, err := cli.env.ReadCommandLine(prompt, maxTerminalLine)
+		if err == nil {
+			return line, ok
+		}
+
+		cli.handBack(cliYield{kind: yieldWait, err: err})
+	}
+}
+
+// maxTerminalLine is the longest line the CLI reads from its terminal,
+// as for a command line.
+const maxTerminalLine = 1024
 
 // cliOutput is a subprocess's DCL output (its Shell's Out): its
 // SYS$OUTPUT, a line at a time.
@@ -634,6 +761,21 @@ func (c *Interpreter) subprocessRun(cli *subprocessCLI, image, commandLine strin
 	}
 
 	cli.handBack(cliYield{kind: yieldImage, driver: driver})
+
+	// A Ctrl/Y ended the image (imageInterrupted): in a procedure, the
+	// procedure acts on it, $STATUS as it was, as for process 1's
+	// images; at level 0 the command's status is SS$_CONTROLY.
+	if cli.abandoned {
+		cli.abandoned = false
+
+		if c.currentLevel() != nil {
+			c.keepStatus()
+		} else {
+			c.SetCommandStatus(ssControlY, nil)
+		}
+
+		return nil
+	}
 
 	status = cli.imageExit
 	c.SetCommandStatus(status, nil)
@@ -714,6 +856,15 @@ func (c *Interpreter) endCLIImage(cli *subprocessCLI) {
 
 	cli.imageActive = false
 	cli.imageExit = status
+
+	// A Ctrl/Y AST the image ended before it took (image rundown
+	// discards it) is a Ctrl/Y typed after the command, which the
+	// procedure acts on (takeControlY).
+	if cli.controlYAST == astQueued {
+		cli.controlYAST = astNone
+		cli.interrupted = true
+	}
+
 	c.traceCLI(cli, "image ends, status %08X", status)
 
 	// Image rundown, as for process 1's images (ImageRundown): the

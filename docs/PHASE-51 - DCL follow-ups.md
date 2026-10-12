@@ -3,7 +3,8 @@
 **Status:** in progress (planned and approved 2026-10-12). Needs Phase
 50. Subtask 1, round 6 of the VMS probe, is done (2026-10-12): the
 author ran it, and govax now follows VMS's answers. Subtask 2, SPAWN in
-a subprocess, is done (2026-10-12).
+a subprocess, is done (2026-10-12), and so is subtask 3, Ctrl/Y in a
+subprocess's procedures (2026-10-12).
 
 Phase 50 made the console a DCL command interpreter and closed on
 2026-10-12 with every subtask done. Following Phase 49's example, the
@@ -82,7 +83,7 @@ that its probes found but no subtask fixed.
    does (Phase 45's owner deletion). Also SPAWN's status when the
    failure is govax's own (DEVIATIONS.md: SPAWN doesn't repeat a status
    with no message in the message file).
-3. **Ctrl/Y in a subprocess's procedures.** The terminal's attention
+3. **Ctrl/Y in a subprocess's procedures** (done 2026-10-12). The terminal's attention
    keys go to the process the terminal is attached to: process 1, or the
    subprocess a SPAWN is waiting for (and so on down a chain of SPAWNs).
    That process's DCL takes them by Phase 50's rules. A subprocess's WAIT
@@ -126,7 +127,9 @@ smaller gaps the phase left:
   is being typed (VMS redraws the line after a broadcast; readline can
   refresh it).
 - Subtask 3: whether `ATTACH` is worth having without a way to detach
-  (VMS's Ctrl/Y then ATTACH, or SPAWN back).
+  (VMS's Ctrl/Y then ATTACH, or SPAWN back). Left out (2026-10-12):
+  attaching to a parent would have to end its LIB$SPAWN's wait without
+  the subprocess's end, and nothing yet asks for it.
 
 ## Progress log
 
@@ -219,3 +222,45 @@ smaller gaps the phase left:
   showed `region = pages` parameters): it now gives the qualifiers,
   /STRINGPOOL, and that physical memory left over goes to S0. Test:
   `TestVaxInitMemoryConfig` (internal/console/memconfig_test.go).
+- 2026-10-12: Subtask 3, Ctrl/Y in a subprocess's procedures. The keys
+  go to the process the terminal is attached to: corevms's
+  `Environment.Attached` follows the `spawnWait` chain from process 1
+  (a SPAWN's, or a program's LIB$SPAWN's, without /NOWAIT), and
+  `HandleAttention` hands a key for a subprocess to its DCL
+  (`subprocessAttention`), however deep its command level:
+  - An image the subprocess runs is interrupted as VMS's DCL interrupts
+    one, with an AST: a user-mode AST (`corevms.QueueCLIAST`) to a
+    second routine in the CLI stub, which calls the CLI's shim. The shim
+    hands the interpreter the CPU with `resumeControlY`, in the
+    middle of the command that ran the image (`handBack`), and the
+    interpreter acts there by process 1's rules (`imageInterrupted`):
+    the Ctrl/Y level read with the image paused, CONTINUE returning
+    from the AST (`yieldContinue`); otherwise the shim ends the image
+    at once (`yieldEndImage`: ErrExit from the AST, unwinding to the
+    image's outermost frame; no exit handlers), and the procedure acts
+    after RUN, as for process 1. The engine's shim XFC now ends an
+    image as the service XFC does (`ErrImageExit`). An AST the image
+    ended before it took becomes a Ctrl/Y after the command.
+  - During one of DCL's own commands the key is noted
+    (`subprocessCLI.interrupted`): WAIT ends, and `takeControlY` acts
+    after the command.
+  - Outside a procedure, the key ends the subprocess's image (status
+    SS$_CONTROLY), and its DCL goes on; it doesn't end govax.
+  - `dclTakesControlY` adds that the terminal is attached to the
+    DCL's process, so process 1, waiting in SPAWN, never takes a key.
+  - A subprocess's terminal reads (the Ctrl/Y level, INQUIRE, READ
+    SYS$COMMAND) read through its process's terminal, as its commands
+    are, waiting in the scheduler; during a procedure line they read
+    SYS$COMMAND (`corevms.ReadCommandLine`), not the procedure's data
+    lines that RUN's SYS$INPUT is redirected to. The Ctrl/Y level
+    prompts with the subprocess's prompt.
+
+  Choices without VMS (DEVIATIONS.md, "[Phase 51] Ctrl/Y in a
+  subprocess"): the AST's mode, level 0's behavior, /NOWAIT
+  subprocesses not interrupted, no ATTACH. Tests
+  (`internal/console/subcontroly_test.go`): STOP, ON CONTROL_Y, and
+  CONTINUE at a spawned procedure's Ctrl/Y level (CONTINUE after a
+  command run in the procedure's context, with the image paused),
+  WAIT interrupted, level 0, and a chain of two SPAWNs, where the key
+  goes to the inner one. Tried by hand at a pseudo-terminal through
+  cmd/govax's key handling, too. HELP KEYS.

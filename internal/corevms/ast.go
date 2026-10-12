@@ -165,6 +165,17 @@ func (env *Environment) queueAST(routine, param, mode uint32) {
 	p.ast.queue = append(p.ast.queue, astRequest{routine: routine, param: param, mode: mode & 3})
 }
 
+// QueueCLIAST queues a user-mode AST to routine for env's command
+// interpreter: how DCL interrupts an image its process runs when the
+// terminal's Ctrl/Y is DCL's (the console's subprocess CLI,
+// internal/dclshell's subcli.go). As for $FORCEX's AST, a process
+// waiting where it can take the AST becomes computable at the
+// scheduler's next choice (waits.go), which is asked for at once.
+func (env *Environment) QueueCLIAST(routine uint32) {
+	env.queueAST(routine, 0, uint32(registers.User))
+	env.requestReschedule()
+}
+
 // PendingASTs reports how many ASTs are queued, in every mode.
 func (env *Environment) PendingASTs() int { return len(env.Process.ast.queue) }
 

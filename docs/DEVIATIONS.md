@@ -3416,8 +3416,9 @@ widened."
     input) has SET VERIFY on from its start, so a procedure it runs
     shows its lines (VMS's batch default; probe 4 showed only the
     job's own lines).
-  - Ctrl/Y in a subprocess's procedure isn't delivered (the Ctrl/Y
-    handling is process 1's).
+  - Ctrl/Y in a subprocess's procedure wasn't delivered (the Ctrl/Y
+    handling was process 1's) until Phase 51's subtask 3 ("[Phase 51]
+    Ctrl/Y in a subprocess").
   - A subprocess's procedures run, like its images, only while the
     machine runs (since subtask 21, that includes process 1's lending
     the CPU between its DCL commands, during WAIT, and at the prompt).
@@ -3427,8 +3428,8 @@ widened."
 - **Status**: unconfirmed. SPAWN in a subprocess is done (Phase 51,
   subtask 2: it calls LIB$SPAWN's Go and waits in the scheduler; its
   messages and status are process 1's SPAWN's, unconfirmed for a
-  subprocess); Ctrl/Y in a subprocess's procedures is Phase 51's
-  subtask 3.
+  subprocess); Ctrl/Y in a subprocess's procedures is done too (Phase
+  51, subtask 3).
 
 ### [Phase 50] Round 5 of the probe: STOP, Ctrl/Y, flow, lexicals, subprocesses
 
@@ -3522,6 +3523,49 @@ widened."
   in one verified comment (`@'s /OUTPUT` shown as `@'s/OUTPUT`), which
   govax doesn't do (unexplained; the oracle allows it).
 - **Status**: VMS's answers followed; the choices above unconfirmed.
+
+### [Phase 51] Ctrl/Y in a subprocess: choices without a probe
+
+- **Where**: `internal/dclshell/dclcontroly.go` (`attachedCLI`,
+  `subprocessAttention`, `imageInterrupted`), `subcli.go` (the CLI's
+  Ctrl/Y AST), `dclwait.go`, `dclfile.go` (`readTerminal`);
+  `internal/corevms/spawn.go` (`Attached`), `ast.go` (`QueueCLIAST`),
+  `input.go` (`ReadCommandLine`); `internal/cpu/xfc.go` (a shim may end
+  the image).
+- **What**: the terminal's Ctrl/Y and Ctrl/C go to the process it is
+  attached to: process 1, or the subprocess a SPAWN (or a program's
+  LIB$SPAWN) without /NOWAIT waits for, down a chain of SPAWNs, as the
+  DCL Dictionary's SPAWN and ATTACH describe. That subprocess's DCL
+  follows Phase 50's rules in its procedures (ON CONTROL_Y, the
+  unwinding to an outer level's handler, the Ctrl/Y level, CONTINUE,
+  STOP, WAIT interrupted). Chosen without VMS:
+  - An image a subprocess runs is interrupted by a user-mode AST of
+    DCL's that calls the CLI's shim (on VMS, DCL's Ctrl/Y AST is
+    supervisor mode); the image is paused beneath it, so it can't be
+    interrupted while it runs with user-mode ASTs disabled or in an
+    inner mode for good. A second key while that AST hasn't been taken
+    stops the machine, as a key no DCL takes does (at process 1's level
+    0, Ctrl/Y then ends govax).
+  - An image the Ctrl/Y ends (ON CONTROL_Y, EXIT, STOP, a command that
+    runs an image at the Ctrl/Y level) is run down with no exit handlers
+    called, as process 1's abandoned images are.
+  - Outside a procedure, a subprocess's Ctrl/Y or Ctrl/C ends the image
+    it runs, the command's status SS$_CONTROLY, and its DCL goes on with
+    its next command (a SPAWN of one command logs out). VMS's DCL would
+    show its prompt with the image paused, for CONTINUE. Neither key
+    ends govax from a subprocess.
+  - A subprocess made with /NOWAIT shares the terminal but isn't
+    attached: the keys don't reach it (VMS's Ctrl/Y "interrupts all
+    such subprocesses").
+  - SET [NO]CONTROL is one setting for every process's DCL.
+  - A subprocess's DCL reads the terminal (INQUIRE, READ SYS$COMMAND,
+    the Ctrl/Y level) as it reads its commands, waiting in the
+    scheduler while no line has come; it was a host read that held the
+    machine. During a procedure line, that read is SYS$COMMAND, not the
+    procedure's data lines.
+  - No ATTACH: the terminal moves only with SPAWN and the subprocess's
+    end.
+- **Status**: unconfirmed.
 
 <!--
 Entry template:

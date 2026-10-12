@@ -176,11 +176,45 @@ func registerInputShims(t *ShimTable) {
 // read in its place. r should be a TerminalSource whose Ready is true
 // when its lines are already at hand, so a read never waits for it.
 func (env *Environment) RedirectInput(r io.Reader) (restore func()) {
-	in, buf := env.consoleIn, env.consoleInBuf
+	saved, outer := &inputStream{env.consoleIn, env.consoleInBuf}, env.terminalIn
+
+	// The first redirection's is the terminal's (ReadCommandLine).
+	if outer == nil {
+		env.terminalIn = saved
+	}
 
 	env.consoleIn, env.consoleInBuf = r, bufio.NewReader(r)
 
-	return func() { env.consoleIn, env.consoleInBuf = in, buf }
+	return func() {
+		env.consoleIn, env.consoleInBuf = saved.in, saved.buf
+		env.terminalIn = outer
+	}
+}
+
+// inputStream is a process's input stream: the reader, and its buffer
+// (nil until it is first read).
+type inputStream struct {
+	in  io.Reader
+	buf *bufio.Reader
+}
+
+// ReadCommandLine is ReadInputLine from the process's terminal,
+// SYS$COMMAND, even while RedirectInput has made a command procedure's
+// data lines its input (SYS$INPUT): for DCL's reads of the terminal
+// during a procedure (INQUIRE, READ SYS$COMMAND, the Ctrl/Y level) in a
+// subprocess's CLI.
+func (env *Environment) ReadCommandLine(prompt string, maxLen int) (line string, ok bool, err error) {
+	if t := env.terminalIn; t != nil {
+		in, buf := env.consoleIn, env.consoleInBuf
+		env.consoleIn, env.consoleInBuf = t.in, t.buf
+
+		defer func() {
+			t.buf = env.consoleInBuf
+			env.consoleIn, env.consoleInBuf = in, buf
+		}()
+	}
+
+	return env.ReadInputLine(prompt, maxLen)
 }
 
 // ReadLine reads one line from the process's input stream, as
