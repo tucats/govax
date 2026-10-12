@@ -2,7 +2,7 @@
 
 **Status:** in progress (2026-10-12). Needs Phases 34 (`internal/librtl`)
 and 52. The plan (Part A) and the decisions (Part B) were reviewed and
-accepted by the author on 2026-10-12. Subtasks 2 to 5 are done.
+accepted by the author on 2026-10-12. Subtasks 2 to 6 are done.
 
 govax provides 15 of LIBRTL.EXE's LIB$ routines (and STR$UPCASE): the ones
 the sample programs and tests needed (Phase 34's table,
@@ -347,7 +347,8 @@ Where the text is unclear, the choice is govax's, marked
 - **FFx** writes find-position in both cases: the found bit's position
   (relative to the base, not to position), or position + size when none
   is found.
-- **INSV** inserts bits 0 to size-1 of the source.
+- **INSV** inserts bits 0 to size-1 of the source. Its entry gives it
+  no result ("RETURNS None"); govax returns SS$_NORMAL (**unconfirmed**).
 
 ### Integers
 
@@ -527,7 +528,7 @@ so there's one implementation of each rule.
 5. **Survey** of Part C's routines: each one's format, arguments,
    condition values, and examples, from the manual (OCR checked against
    the PDF where doubtful), recorded in this doc. **Done** 2026-10-12.
-6. **Bit fields**: EXTV, EXTZV, INSV, FFC, FFS.
+6. **Bit fields**: EXTV, EXTZV, INSV, FFC, FFS. **Done** 2026-10-12.
 7. **Integers**: ADDX, SUBX, EMUL, EDIV; ADAWI fixed.
 8. **Floating**: EMOD and POLY in F, D, G, and H, on `vaxfloat`.
 9. **Queues and interlocks**: INSQHI, INSQTI, REMQHI, REMQTI, BBSSI, BBCCI.
@@ -711,3 +712,32 @@ so there's one implementation of each rule.
   write their destinations as output strings, filled with their fill
   character. The choices the manual leaves open are marked
   unconfirmed, each a case for the probe. No code changed.
+- **2026-10-12** — Subtask 6, the bit field routines
+  (`internal/librtl/bitfield.go`): LIB$EXTV, LIB$EXTZV, LIB$INSV,
+  LIB$FFC, and LIB$FFS, codes 44 to 48 (so they left `Missing`'s
+  stubs).
+  - **One set of rules.** The field is read and written by the CPU's
+    own code, now exported from `internal/cpu/bitfield.go`:
+    `MemoryField` (zero- or sign-extended) and `SetMemoryField` wrap
+    the memory-field functions EXTV and INSV use, and `FirstBit` is
+    FFS's and FFC's search, which `emulFf` now calls too.
+  - **Arguments.** The position is a longword and the size an unsigned
+    byte, both by reference; the base is the field's address (the
+    survey's reading of FFx's base, unconfirmed). A size above 32 is
+    signaled as SS$_ROPRAND with the hardware's signal array, the
+    condition alone (`reservedOperand`); a handler that continues it
+    makes the routine return SS$_ROPRAND. An argument the routine can't
+    reach is `memoryFault`'s SS$_ACCVIO; LIB$INSV marks every failure
+    to reach the field as a write's, the field being modified.
+  - **Results.** LIB$EXTV and LIB$EXTZV return the field (0 for size 0);
+    LIB$INSV returns SS$_NORMAL; LIB$FFx writes find-position, relative
+    to the base, and returns SS$_NORMAL or LIB$_NOTFOU (none found, or
+    size 0, at position + size).
+  - **Tests.** `bitfield_test.go`: extraction signed and unsigned,
+    across a longword boundary, size 0 and 32, negative positions; the
+    manual's INSV example and inserts across bytes and longwords; FFS
+    and FFC found, not found, size 0, and below the base; SS$_ROPRAND
+    from each routine. The console's `TestLibrtlBitFields` runs all
+    five from a linked program, and `TestLibrtlBitFieldReservedOperand`
+    shows the catch-all's `%SYSTEM-F-ROPRAND` and the image ending with
+    it. `librtl_test.go`'s `call` now looks routines up through `shim`.

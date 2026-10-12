@@ -333,24 +333,54 @@ func emulFf(e *Engine, d *Decoded) error {
 		return d.Operands[3].Store(e.cpu, e.mem, uint64(uint32(position)))
 	}
 
-	testBit := uint32(1)
-	if d.Opcode.Function == 0xEB { // FFC
-		testBit = 0
+	n, found := FirstBit(field, size, d.Opcode.Function == 0xEA) // FFS, else FFC
+	psl.SetZ(!found)
+	e.cpu.SetPSL(psl)
+
+	return d.Operands[3].Store(e.cpu, e.mem, uint64(uint32(position)+uint32(n)))
+}
+
+// FirstBit is FFS's and FFC's search: the offset, from bit 0, of the
+// first of field's low size bits that is set (set true) or clear (set
+// false), and true; or size and false when there's none.
+func FirstBit(field uint32, size int, set bool) (int, bool) {
+	want := uint32(0)
+	if set {
+		want = 1
 	}
 
 	for n := 0; n < size; n++ {
-		if field&1 == testBit {
-			psl.SetZ(false)
-			e.cpu.SetPSL(psl)
-
-			return d.Operands[3].Store(e.cpu, e.mem, uint64(uint32(position)+uint32(n)))
+		if field&1 == want {
+			return n, true
 		}
 
 		field >>= 1
 	}
 
-	psl.SetZ(true)
-	e.cpu.SetPSL(psl)
+	return size, false
+}
 
-	return d.Operands[3].Store(e.cpu, e.mem, uint64(uint32(position)+uint32(size)))
+// The bit field functions LIBRTL's routines share (LIB$EXTV, LIB$EXTZV,
+// LIB$INSV, LIB$FFC, LIB$FFS; internal/librtl/bitfield.go), so a field in
+// memory is read and written by one set of rules. Each takes the CPU and
+// memory the access is made with, the bit position from base (any signed
+// longword: a negative one reaches lower-addressed bytes), and the size
+// in bits, 0 to 32 (outside that, the reserved operand fault the
+// instruction would take). The errors are the memory's own.
+
+// MemoryField returns the size-bit field at bit position from base,
+// zero-extended, or sign-extended when signed is true (EXTV).
+func MemoryField(cpu *registers.CPU, mem *vm.Memory, position int32, size int, base uint32, signed bool) (uint32, error) {
+	v, err := getMemoryField(cpu, mem, position, size, base)
+	if err != nil || !signed {
+		return v, err
+	}
+
+	return signExtendBitField(v, size), nil
+}
+
+// SetMemoryField stores the low size bits of data as the field at bit
+// position from base (INSV), leaving the bits around it as they were.
+func SetMemoryField(cpu *registers.CPU, mem *vm.Memory, position int32, size int, base uint32, data uint32) error {
+	return setMemoryField(cpu, mem, position, size, base, data)
 }

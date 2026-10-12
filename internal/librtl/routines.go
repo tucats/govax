@@ -68,6 +68,11 @@ var Routines = []Routine{
 	{"LIB$GET_INPUT", 42, libGetInput},
 	{"LIB$SPAWN", 43, libSpawn},
 	{"LIB$CALLG", 0, nil}, // kernel.asm
+	{"LIB$EXTV", 44, libExtv},
+	{"LIB$EXTZV", 45, libExtzv},
+	{"LIB$INSV", 46, libInsv},
+	{"LIB$FFC", 47, libFfc},
+	{"LIB$FFS", 48, libFfs},
 }
 
 // missing is Missing's list, made once.

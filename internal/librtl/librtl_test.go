@@ -77,9 +77,9 @@ func putDescriptor(t *testing.T, env *corevms.Environment, addr, strAddr uint32,
 	}
 }
 
-// call runs the routine registered as name through the shim table, as a
-// program's call would reach it.
-func call(t *testing.T, env *corevms.Environment, name string, argv ...uint32) uint32 {
+// shim returns the routine registered as name, as a program's call
+// would reach it through the shim table.
+func shim(t *testing.T, env *corevms.Environment, name string) corevms.ShimFunc {
 	t.Helper()
 
 	for _, r := range Routines {
@@ -92,17 +92,25 @@ func call(t *testing.T, env *corevms.Environment, name string, argv ...uint32) u
 			t.Fatalf("%s (code %d) isn't registered", name, r.Code)
 		}
 
-		r0, err := fn(env, argv)
-		if err != nil {
-			t.Fatalf("%s: %v", name, err)
-		}
-
-		return r0
+		return fn
 	}
 
 	t.Fatalf("no routine %s", name)
 
-	return 0
+	return nil
+}
+
+// call runs the routine registered as name through the shim table, as a
+// program's call would reach it.
+func call(t *testing.T, env *corevms.Environment, name string, argv ...uint32) uint32 {
+	t.Helper()
+
+	r0, err := shim(t, env, name)(env, argv)
+	if err != nil {
+		t.Fatalf("%s: %v", name, err)
+	}
+
+	return r0
 }
 
 // TestRoutinesMatchLIBRTL: every routine is an entry in VMS 7.3's
