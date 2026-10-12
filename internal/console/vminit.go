@@ -101,7 +101,7 @@ func (m *Machine) VMInit(p0Pages, p1Pages, s0Pages, kspPages, espPages, sspPages
 
 	// Wipe physical memory: we're about to overwrite it all with fresh
 	// page tables, matching console_vminit_dcl's own initial zero pass.
-	m.endOtherProcesses()
+	m.EndOtherProcesses()
 
 	m.Mem = vm.NewMemory(m.Mem.Size())
 	m.Engine = cpu.NewEngine(m.CPU, m.Mem)

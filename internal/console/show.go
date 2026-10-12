@@ -547,7 +547,7 @@ func (m *Machine) ShowShim() error {
 
 	m.Printf("RTL SHIMS:\n")
 
-	for _, e := range shimTable {
+	for _, e := range ShimTable {
 		name := fmt.Sprintf("SHIM$%s_%08X", e.Library, e.Offset)
 
 		addr, _ := m.Symbols.Get(name)

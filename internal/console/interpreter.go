@@ -72,7 +72,7 @@ func (c *Interpreter) runDownAbandonedImage() {
 		return
 	}
 
-	c.machine.endAbandonedImage()
+	c.machine.EndAbandonedImage()
 }
 
 // readReply reads one line from the console's input, a byte at a time so

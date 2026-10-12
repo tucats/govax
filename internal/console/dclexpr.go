@@ -142,7 +142,7 @@ func parseDCLNumber(text string) (uint32, bool) {
 	var n uint64
 
 	for i := 0; i < len(digits); i++ {
-		d, ok := digitValue(digits[i])
+		d, ok := dclDigitValue(digits[i])
 		if !ok || uint64(d) >= base {
 			return 0, false
 		}
@@ -626,4 +626,22 @@ func (sym dclSymbol) dclValue() dclValue {
 	n, _ := strconv.ParseInt(sym.value, 10, 32)
 
 	return dclInteger(int32(n))
+}
+
+// dclDigitValue is the value of ch as a digit of a hexadecimal, decimal,
+// or octal number (case doesn't matter), and true; false if it is no
+// digit.
+func dclDigitValue(ch byte) (int, bool) {
+	switch {
+	case ch >= '0' && ch <= '9':
+		return int(ch - '0'), true
+
+	case ch >= 'A' && ch <= 'F':
+		return int(ch-'A') + 10, true
+
+	case ch >= 'a' && ch <= 'f':
+		return int(ch-'a') + 10, true
+	}
+
+	return 0, false
 }

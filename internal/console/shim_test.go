@@ -22,7 +22,7 @@ func TestEnsureShims_definesSymbolsAndIsIdempotent(t *testing.T) {
 		t.Fatalf("Assemble(kernel.asm): %v", err)
 	}
 
-	if err := c.ensureShims(); err != nil {
+	if err := c.EnsureShims(); err != nil {
 		t.Fatalf("ensureShims: %v", err)
 	}
 
@@ -57,13 +57,13 @@ func TestEnsureShims_definesSymbolsAndIsIdempotent(t *testing.T) {
 		t.Errorf("SHIM$DECC$SHR_00000000 = %#x, want kernel.asm's own DECC$MAIN (%#x)", addr2, deccMain)
 	}
 
-	if addr2 >= c.shimBase && addr2 < c.shimBase+uint32(len(shimTable))*corevms.ShimStubSize {
+	if addr2 >= c.shimBase && addr2 < c.shimBase+uint32(len(ShimTable))*corevms.ShimStubSize {
 		t.Errorf("SHIM$DECC$SHR_00000000 = %#x, want an address outside the synthesized shim page", addr2)
 	}
 
 	// Idempotent: a second call must not move any stub (a fixup performed
 	// after a later RUN must still resolve to the same address).
-	if err := c.ensureShims(); err != nil {
+	if err := c.EnsureShims(); err != nil {
 		t.Fatalf("ensureShims (again): %v", err)
 	}
 
@@ -85,7 +85,7 @@ func TestEnsureShims_stubDispatchesThroughXFCShim(t *testing.T) {
 		t.Fatalf("Assemble(kernel.asm): %v", err)
 	}
 
-	if err := c.ensureShims(); err != nil {
+	if err := c.EnsureShims(); err != nil {
 		t.Fatalf("ensureShims: %v", err)
 	}
 
@@ -123,7 +123,7 @@ func TestShimTable_codesDistinctAndRegistered(t *testing.T) {
 	c := newRunnableConsole(t)
 	seen := map[uint32]string{}
 
-	for _, e := range shimTable {
+	for _, e := range ShimTable {
 		if e.Code == 0 {
 			continue
 		}
@@ -146,9 +146,9 @@ func TestShimTable_codesDistinctAndRegistered(t *testing.T) {
 // symbol names it where it is; more than the overflow page holds is an
 // error.
 func TestEnsureShims_overflowPage(t *testing.T) {
-	saved := shimTable
+	saved := ShimTable
 
-	t.Cleanup(func() { shimTable = saved })
+	t.Cleanup(func() { ShimTable = saved })
 
 	perPage := shimPageBytes / corevms.ShimStubSize
 
@@ -161,9 +161,9 @@ func TestEnsureShims_overflowPage(t *testing.T) {
 		}
 	}
 
-	shimTable = append([]corevms.ShimLink{}, saved...)
+	ShimTable = append([]corevms.ShimLink{}, saved...)
 	for i := 0; i < fillers; i++ {
-		shimTable = append(shimTable, corevms.ShimLink{Name: fmt.Sprintf("TEST$FILLER%d", i), Library: "TEST", Offset: uint32(i), Code: uint32(1000 + i)})
+		ShimTable = append(ShimTable, corevms.ShimLink{Name: fmt.Sprintf("TEST$FILLER%d", i), Library: "TEST", Offset: uint32(i), Code: uint32(1000 + i)})
 	}
 
 	c := newRunnableConsole(t)
@@ -178,7 +178,7 @@ func TestEnsureShims_overflowPage(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err := c.ensureShims(); err != nil {
+	if err := c.EnsureShims(); err != nil {
 		t.Fatalf("ensureShims: %v", err)
 	}
 
@@ -200,7 +200,7 @@ func TestEnsureShims_overflowPage(t *testing.T) {
 
 	// One more doesn't fit.
 	for i := fillers; i < fillers+1; i++ {
-		shimTable = append(shimTable, corevms.ShimLink{Name: fmt.Sprintf("TEST$FILLER%d", i), Library: "TEST", Offset: uint32(i), Code: uint32(1000 + i)})
+		ShimTable = append(ShimTable, corevms.ShimLink{Name: fmt.Sprintf("TEST$FILLER%d", i), Library: "TEST", Offset: uint32(i), Code: uint32(1000 + i)})
 	}
 
 	c = newRunnableConsole(t)
@@ -208,7 +208,7 @@ func TestEnsureShims_overflowPage(t *testing.T) {
 		t.Fatalf("Assemble(kernel.asm): %v", err)
 	}
 
-	if err := c.ensureShims(); err == nil {
+	if err := c.EnsureShims(); err == nil {
 		t.Error("ensureShims with one stub too many for two pages: no error")
 	}
 }

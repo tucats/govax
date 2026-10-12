@@ -30,7 +30,7 @@ func (c *Console) CommandLineErr() error { return c.commandLineErr }
 
 // Quit implements QUIT/EXIT: stops the command loop.
 func (c *Interpreter) Quit() error {
-	if err := c.machine.requireInit(); err != nil {
+	if err := c.machine.RequireInit(); err != nil {
 		return err
 	}
 
@@ -41,7 +41,7 @@ func (c *Interpreter) Quit() error {
 
 // Time runs one command (via dispatch) and prints how long it took.
 func (c *Console) Time(cmd string, dispatch func(string) error) error {
-	if err := c.requireInit(); err != nil {
+	if err := c.RequireInit(); err != nil {
 		return err
 	}
 
@@ -83,19 +83,22 @@ func (c *Console) RunCommandLine(dispatch func(string) error) bool {
 	// The command ends the session either way: a failed one-shot command
 	// shouldn't leave the user at a prompt. run (cmd/govax) reports its
 	// failure and exits nonzero.
-	c.limitStop = nil
+	_ = c.TakeLimitStop()
 
 	defer func() { c.quit = true }()
 
-	if status := dispatch(text); status != nil {
+	status := dispatch(text)
+	limit := c.TakeLimitStop()
+
+	if status != nil {
 		c.commandLineErr = status
-	} else if c.limitStop != nil {
+	} else if limit != nil {
 		// The program was stopped by --instruction-limit or --time-limit.
 		// ReportStop has shown the message and let the command finish
 		// normally, as it should at the prompt; but a one-shot command
 		// that didn't run to its end has failed. The message is marked as
 		// shown already, so govax doesn't print it a second time.
-		c.commandLineErr = vmserrors.InhibitMessage(c.limitStop)
+		c.commandLineErr = vmserrors.InhibitMessage(limit)
 	}
 
 	return true
@@ -121,7 +124,7 @@ func (c *Console) Help(h *help.File, words []string) error {
 // before they're dismounted.
 func (c *Console) EndSession() {
 	c.runDownAbandonedImage()
-	c.endOtherProcesses()
+	c.EndOtherProcesses()
 	c.closeDCLFiles()
 
 	if c.RTL != nil {

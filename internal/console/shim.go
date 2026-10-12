@@ -9,11 +9,11 @@ import (
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
-// shimTable is every routine a program may link to that govax provides:
+// ShimTable is every routine a program may link to that govax provides:
 // LIBRTL.EXE's (internal/librtl), the C library's and govax's own
 // (corevms.CRTLLinks), whose stubs ensureShims writes, and the
 // microkernel's (kernelLinks), which need none.
-var shimTable = slices.Concat(librtl.Links(), corevms.CRTLLinks, kernelLinks)
+var ShimTable = slices.Concat(librtl.Links(), corevms.CRTLLinks, kernelLinks)
 
 // kernelLinks are the code-0 rows (corevms.ShimLink): routines
 // kernel.asm implements as native VAX code, transcribed from its second
@@ -44,7 +44,7 @@ var kernelLinks = []corevms.ShimLink{
 // listings and tests show.
 const shimPageBytes = 512
 
-// ensureShims writes a stub (corevms.ShimStub) for every shimTable entry
+// EnsureShims writes a stub (corevms.ShimStub) for every shimTable entry
 // that has a shim code, and resolves every code-0 entry against its
 // already-assembled kernel.asm routine by name instead (kernelLinks) --
 // either way defining that entry's SHIM$<library>_
@@ -55,7 +55,7 @@ const shimPageBytes = 512
 // resolves already being a defined symbol. Idempotent: a second call is a
 // no-op, so fixups performed across multiple RUNs keep resolving to the
 // same addresses.
-func (m *Machine) ensureShims() error {
+func (m *Machine) EnsureShims() error {
 	if m.shimsReady {
 		return nil
 	}
@@ -63,7 +63,7 @@ func (m *Machine) ensureShims() error {
 	addr, end := m.shimBase, m.shimBase+shimPageBytes
 	overflowed := false
 
-	for _, e := range shimTable {
+	for _, e := range ShimTable {
 		shimName := fmt.Sprintf("SHIM$%s_%08X", e.Library, e.Offset)
 
 		if e.Code == 0 {

@@ -5,6 +5,7 @@ import (
 	"strings"
 
 	"github.com/tucats/govax/internal/asm"
+	"github.com/tucats/govax/internal/corevms"
 	"github.com/tucats/govax/internal/cpu"
 	"github.com/tucats/govax/internal/dbgsym"
 	"github.com/tucats/govax/internal/disasm"
@@ -462,4 +463,38 @@ func (m *Machine) EntryMaskText(addr uint32) (text string, ok bool) {
 	dec := disasm.EntryMask(memByteReader{m: m}, addr, name)
 
 	return dec.Format(disasm.Options{Style: disasm.StyleDebugger}), true
+}
+
+// ProcessOne is process 1, the console's own (nil before INIT), and
+// ProcessOneLogicals its logical names, which outlive it.
+func (m *Machine) ProcessOne() *corevms.Environment { return m.processOne }
+
+// ProcessOneLogicals is process 1's logical-name database.
+func (m *Machine) ProcessOneLogicals() *lnm.Database { return m.processOneLogicals }
+
+// KernelPlaced says ASM has defined EXE$INITIALIZE, the microkernel's
+// entry: from then on the console's ASM command refuses, and ASM is the
+// debugger's.
+func (m *Machine) KernelPlaced() bool { return m.kernelPlaced }
+
+// TakeLimitStop returns the limit error (cpu.ErrInstructionLimitExceeded
+// or ErrTimeLimitExceeded) that most recently stopped a run, recorded by
+// ReportStop, and forgets it.
+func (m *Machine) TakeLimitStop() error {
+	err := m.limitStop
+	m.limitStop = nil
+
+	return err
+}
+
+// P1Stub is the address of env's stub for the P1 vector's routine name
+// (SYS$EXIT, ...), and true; false if it has none.
+func (m *Machine) P1Stub(env *corevms.Environment, name string) (uint32, bool) {
+	return m.imagesOf(env).p1Stub(name)
+}
+
+// StoreBytesIn writes data at addr in env's address space (process 1's
+// for nil), with kernel access.
+func (m *Machine) StoreBytesIn(env *corevms.Environment, addr uint32, data []byte) error {
+	return m.imagesOf(env).storeBytes(addr, data)
 }

@@ -331,7 +331,7 @@ func NewMachine(out io.Writer) *Machine {
 		},
 		Input: func() io.Reader { return nil },
 		HandleAttention: func(key byte) bool {
-			env := c.running()
+			env := c.RunningProcess()
 
 			return env != nil && env.AttentionAny(env, key)
 		},
@@ -362,7 +362,7 @@ func (m *Machine) newRTL() *corevms.Environment {
 
 	// A process $CREPRC creates activates its image with the console's
 	// image activator (docs/PHASE-45.md, subtask 5).
-	sys.ActivateImage = m.activateCreatedImage
+	sys.ActivateImage = m.ActivateCreatedImage
 
 	// A deleted process's image state goes with it (docs/PHASE-45.md,
 	// subtask 6), and so does whatever the console keeps for it.

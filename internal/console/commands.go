@@ -79,7 +79,7 @@ func (d *Dispatcher) bindConsoleCommands() {
 // (docs/PHASE-19.md) for a bare "ASM".
 func (d *Dispatcher) asmCommand(id int64, r *dcl.Result) error {
 	// Once the microkernel is in place ASM is the debugger's command.
-	if d.Console.kernelPlaced {
+	if d.Console.KernelPlaced() {
 		return vmserrors.NewSegment(vmserrors.CLI_IVVERB, "ASM")
 	}
 
@@ -128,7 +128,7 @@ func (d *Dispatcher) saveCommand(id int64, r *dcl.Result) error {
 	// check `if (!vax_init) return VAX_NOVAX;` before doing anything
 	// else -- ROM/NVRAM live on Engine.Memory(), which
 	// doesn't exist until INIT has allocated a machine.
-	if err := d.Console.requireInit(); err != nil {
+	if err := d.Console.RequireInit(); err != nil {
 		return err
 	}
 
@@ -146,7 +146,7 @@ func (d *Dispatcher) saveCommand(id int64, r *dcl.Result) error {
 
 // loadCommand implements LOAD/ROM and LOAD/NVRAM [/NOERROR] [file].
 func (d *Dispatcher) loadCommand(id int64, r *dcl.Result) error {
-	if err := d.Console.requireInit(); err != nil {
+	if err := d.Console.RequireInit(); err != nil {
 		return err
 	}
 
@@ -231,7 +231,7 @@ func SymbolicDefault() bool { return symbolicDefault() }
 // machine (Machine.Run); a subprocess's DCL runs it in its process
 // (subcli.go).
 func (c *Console) Run(fn string, opts RunOptions) error {
-	if err := c.requireInit(); err != nil {
+	if err := c.RequireInit(); err != nil {
 		return err
 	}
 
@@ -244,7 +244,7 @@ func (c *Console) Run(fn string, opts RunOptions) error {
 
 // ShowRegions prints the P0/P1/S0 image-activation region limits.
 func (c *Console) ShowRegions() error {
-	if err := c.requireInit(); err != nil {
+	if err := c.RequireInit(); err != nil {
 		return err
 	}
 
@@ -274,7 +274,7 @@ func (c *Console) StartDebugger() error {
 		return vmserrors.New(vmserrors.DBG_NOTAVAILABLE)
 	}
 
-	if err := c.requireInit(); err != nil {
+	if err := c.RequireInit(); err != nil {
 		return err
 	}
 
@@ -301,7 +301,7 @@ func (c *Console) StartDebugger() error {
 // SS$_ABORT. If the CPU was in the process (a run stopped there), it is
 // returned to process 1.
 func (c *Console) StopProcess(name, pid string) error {
-	if err := c.requireInit(); err != nil {
+	if err := c.RequireInit(); err != nil {
 		return err
 	}
 

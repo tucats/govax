@@ -16,7 +16,7 @@ import (
 func (m *Machine) Init(physBytes uint32) error {
 	size := allocPhysMemory(physBytes)
 
-	m.endOtherProcesses()
+	m.EndOtherProcesses()
 
 	m.CPU = vax.New()
 	m.CPU.SetDebugWriter(m.Hooks.Output())
@@ -51,7 +51,7 @@ func (m *Machine) Zero() error {
 		return err
 	}
 
-	m.endOtherProcesses()
+	m.EndOtherProcesses()
 
 	size := m.Mem.Size()
 	m.Mem = vm.NewMemory(size)

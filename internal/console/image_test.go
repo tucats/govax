@@ -121,7 +121,7 @@ func TestImageLoad_simpleExe(t *testing.T) {
 	for _, shr := range icb.SHRList[1:] {
 		gotNames[shr.Name] = true
 	}
-	
+
 	for _, want := range []string{"LIBRTL", "DECC$SHR", "MTHRTL", "CMA$TIS_SHR"} {
 		if !gotNames[want] {
 			t.Errorf("SHR dependency %q not found among %v", want, gotNames)
@@ -142,7 +142,7 @@ func TestImageLoad_alreadyLoadedIsNoOp(t *testing.T) {
 	if err != nil {
 		t.Fatalf("imageLoad: %v", err)
 	}
-	
+
 	highWater := c.RTL.RegionSize[0]
 
 	second, err := c.imageLoad(path, icbSecondary)
@@ -172,7 +172,7 @@ func TestImageFixup_simpleExe(t *testing.T) {
 		t.Fatalf("Assemble(kernel.asm): %v", err)
 	}
 
-	if err := c.ensureShims(); err != nil {
+	if err := c.EnsureShims(); err != nil {
 		t.Fatalf("ensureShims: %v", err)
 	}
 
@@ -211,7 +211,7 @@ func TestImageFixup_everyRealFixtureFixesUp(t *testing.T) {
 				t.Fatalf("Assemble(kernel.asm): %v", err)
 			}
 
-			if err := c.ensureShims(); err != nil {
+			if err := c.EnsureShims(); err != nil {
 				t.Fatalf("ensureShims: %v", err)
 			}
 

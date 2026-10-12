@@ -56,7 +56,7 @@ func (d *Dispatcher) Dispatch(line string) error {
 	// while interactive ASM mode (docs/PHASE-19.md) is on,
 	// every line -- including one that happens to spell a command name --
 	// is a statement for the assembler, not a console command.
-	if d.Console.assemblerMode {
+	if d.Console.InAssemblerMode() {
 		return d.assembleInteractiveLine(line)
 	}
 
@@ -96,7 +96,7 @@ func (d *Dispatcher) DispatchConsole(line string) error {
 
 	// Interactive assembler mode, as in Dispatch, for the callers that
 	// come straight here.
-	if d.Console.assemblerMode {
+	if d.Console.InAssemblerMode() {
 		return d.assembleInteractiveLine(line)
 	}
 
@@ -217,7 +217,7 @@ func (d *Dispatcher) dispatchParsed(line string, verbSymbol bool) error {
 	// concerned: VMS 7.3 gave IVVERB, \%%\ and \1ABC\, for lines "%%"
 	// and "1ABC", where a line starting with an apostrophe, ".", or "("
 	// was NOCOMD (testdata/dcl50's rounds 3, 1, and 6).
-	if !isDCLSymbolStart(line[0]) && line[0] != '%' && !isDigit(line[0]) {
+	if !isDCLSymbolStart(line[0]) && line[0] != '%' && !isDecimalDigit(line[0]) {
 		return vmserrors.New(vmserrors.CLI_NOCOMD)
 	}
 
@@ -818,3 +818,6 @@ func nonEmpty(list []string) []string {
 
 	return out
 }
+
+// isDecimalDigit reports whether ch is a decimal digit.
+func isDecimalDigit(ch byte) bool { return ch >= '0' && ch <= '9' }

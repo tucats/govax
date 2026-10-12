@@ -88,7 +88,7 @@ func (s sharedSymbolizer) Symbolize(addr uint32) (string, bool) {
 // symbol VMS's image defines at that offset (vmsdef.ImageSymbols, as LINK
 // read them from the image).
 func sharedName(image string, offset uint32) (string, bool) {
-	for _, e := range shimTable {
+	for _, e := range ShimTable {
 		if e.Library == image && e.Offset == offset {
 			return e.Name, true
 		}

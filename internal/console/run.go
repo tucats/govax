@@ -59,7 +59,7 @@ func (m *Machine) Run(fn string, opts RunOptions) error {
 	}
 
 	// A previous image that was stopped and never exited ends now.
-	m.endAbandonedImage()
+	m.EndAbandonedImage()
 
 	savedMode := m.CPU.PSL().CurMod()
 	m.Engine.SetModeStack(vax.Kernel, false)
@@ -67,7 +67,7 @@ func (m *Machine) Run(fn string, opts RunOptions) error {
 
 	m.resetICBList()
 
-	if err := m.ensureShims(); err != nil {
+	if err := m.EnsureShims(); err != nil {
 		return err
 	}
 
@@ -290,7 +290,7 @@ func (p *imageProcess) buildDriver(main *ICB, runInits, hibernate bool) (uint32,
 			return 0, false, fmt.Errorf("console: no SYS$HIBER stub for a process created to hibernate")
 		}
 
-		code = append(code, encodeCalls(0, hiber)...)
+		code = append(code, EncodeCalls(0, hiber)...)
 	}
 
 	if runInits {
@@ -317,11 +317,11 @@ func (p *imageProcess) buildDriver(main *ICB, runInits, hibernate bool) (uint32,
 			code = append(code, encodePushl(0)...)
 			code = append(code, encodePushl(0)...)
 			code = append(code, encodePushl(flag)...)
-			code = append(code, encodeCalls(3, initAddr)...)
+			code = append(code, EncodeCalls(3, initAddr)...)
 		}
 	}
 
-	code = append(code, encodeCalls(0, addr)...)
+	code = append(code, EncodeCalls(0, addr)...)
 
 	// VMS's image activator calls $EXIT with whatever main returned, so
 	// the image's exit handlers run (docs/PHASE-26.md subtask 19). $EXIT
@@ -330,7 +330,7 @@ func (p *imageProcess) buildDriver(main *ICB, runInits, hibernate bool) (uint32,
 	// memory; without one, the driver just returns main's status.
 	if exit, ok := p.p1Stub("SYS$EXIT"); ok {
 		code = append(code, 0xDD, 0x50) // PUSHL R0
-		code = append(code, encodeCalls(1, exit)...)
+		code = append(code, EncodeCalls(1, exit)...)
 	}
 
 	code = append(code, 0x04) // RET
@@ -395,9 +395,9 @@ func encodePushl(v uint32) []byte {
 	return []byte{0xDD, 0x8F, byte(v), byte(v >> 8), byte(v >> 16), byte(v >> 24)}
 }
 
-// encodeCalls returns CALLS #argc,@#target's raw opcode bytes (0xFB, an
+// EncodeCalls returns CALLS #argc,@#target's raw opcode bytes (0xFB, an
 // immediate-longword argument count, and an absolute (@#) target address).
-func encodeCalls(argc, target uint32) []byte {
+func EncodeCalls(argc, target uint32) []byte {
 	return []byte{
 		0xFB,
 		0x8F, byte(argc), byte(argc >> 8), byte(argc >> 16), byte(argc >> 24),
@@ -405,7 +405,7 @@ func encodeCalls(argc, target uint32) []byte {
 	}
 }
 
-// activateCreatedImage is the System's ActivateImage hook (newRTL): the
+// ActivateCreatedImage is the System's ActivateImage hook (newRTL): the
 // startup of a process $CREPRC created (docs/PHASE-45.md, subtask 5)
 // activates the process's image into its own P0, as RUN activates one
 // into process 1's, and builds its IMAGE$INIT driver, running
@@ -415,8 +415,8 @@ func encodeCalls(argc, target uint32) []byte {
 // directory (readImage), which is the new process's own when, as always
 // so far, process 1 created it. The name is never taken as a host file
 // by /HOST: a $CREPRC image name is a file specification.
-func (m *Machine) activateCreatedImage(env *corevms.Environment, image string, hibernate bool) (uint32, error) {
-	if err := m.ensureShims(); err != nil {
+func (m *Machine) ActivateCreatedImage(env *corevms.Environment, image string, hibernate bool) (uint32, error) {
+	if err := m.EnsureShims(); err != nil {
 		return 0, err
 	}
 
@@ -477,12 +477,12 @@ func (m *Machine) imageRundown() {
 	}
 }
 
-// endAbandonedImage runs down an image RUN started that never
+// EndAbandonedImage runs down an image RUN started that never
 // exited: one a HALT, CTRL/C, CTRL/Y, or an instruction or time limit
 // stopped, and that nothing resumed. On VMS such an image is run down
 // when the next one starts (or the process logs out), closing the files
 // it left open; RUN and EndSession do the same here.
-func (m *Machine) endAbandonedImage() {
+func (m *Machine) EndAbandonedImage() {
 	if m.imageActive {
 		m.imageActive = false
 		m.imageRundown()

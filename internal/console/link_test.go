@@ -53,7 +53,7 @@ func prepareRun(t *testing.T, c *Console) {
 
 	runKernelInitialize(t, c)
 
-	if err := c.ensureShims(); err != nil {
+	if err := c.EnsureShims(); err != nil {
 		t.Fatalf("ensureShims: %v", err)
 	}
 }
@@ -187,7 +187,7 @@ func TestLink_helloPageProtection(t *testing.T) {
 	assembleFixture(t, c, "hello", dir)
 
 	exe := filepath.Join(dir, "hello.exe")
-	
+
 	if err := c.cmd().Link(dclcmd.LinkOptions{Objects: []string{filepath.Join(dir, "hello")}}); err != nil {
 		t.Fatalf("LINK: %v", err)
 	}

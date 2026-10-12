@@ -101,11 +101,11 @@ func (c *Interpreter) canLend() bool {
 	switch {
 	case c.lending, c.consoleCommands > 0, c.subCLI != nil:
 		return false
-	case c.machine.Engine == nil, c.RTL == nil, c.RTL != c.machine.processOne:
+	case c.machine.Engine == nil, c.RTL == nil, c.RTL != c.machine.ProcessOne():
 		return false
 	case c.machine.Engine.SchedulingFrozen(), c.machine.InDebugger(), c.machine.InAssemblerMode():
 		return false
-	case c.machine.running() != c.RTL:
+	case c.machine.RunningProcess() != c.RTL:
 		return false
 	}
 
@@ -152,13 +152,13 @@ func (c *Interpreter) lendCPU(over func() bool, deadline uint64) bool {
 
 		// The scheduler has chosen process 1: it gets the CPU back
 		// before it runs an instruction.
-		if err == nil && c.machine.running() == c.RTL {
+		if err == nil && c.machine.RunningProcess() == c.RTL {
 			return ran
 		}
 
 		if err == nil {
 			ran = true
-			finish := c.machine.traceStep(c.machine.CPU.GPR(vax.PC), false)
+			finish := c.machine.TraceStep(c.machine.CPU.GPR(vax.PC), false)
 
 			if err = c.machine.StepMachine(); err == nil {
 				finish()

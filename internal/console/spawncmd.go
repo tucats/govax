@@ -59,7 +59,7 @@ const (
 // (%DCL-S-SPAWNED, and %DCL-S-ATTACHED if it waits), and when process 1
 // has waited for one, that control has come back (%DCL-S-RETURNED).
 func (c *Interpreter) Spawn(o SpawnOptions) error {
-	if err := c.machine.requireInit(); err != nil {
+	if err := c.machine.RequireInit(); err != nil {
 		return err
 	}
 
@@ -71,7 +71,7 @@ func (c *Interpreter) Spawn(o SpawnOptions) error {
 		return c.spawnInSubprocess(cli, o)
 	}
 
-	if err := c.machine.ensureShims(); err != nil {
+	if err := c.machine.EnsureShims(); err != nil {
 		return err
 	}
 
@@ -131,7 +131,7 @@ func (c *Interpreter) Spawn(o SpawnOptions) error {
 		put(spawnArgList+4+uint32(i)*4, a)
 	}
 
-	if err := c.machine.images().storeBytes(page, b); err != nil {
+	if err := c.machine.StoreBytesIn(nil, page, b); err != nil {
 		return err
 	}
 

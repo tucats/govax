@@ -117,7 +117,7 @@ func TestShowShim(t *testing.T) {
 		t.Fatalf("Assemble(kernel.asm): %v", err)
 	}
 
-	if err := c.ensureShims(); err != nil {
+	if err := c.EnsureShims(); err != nil {
 		t.Fatalf("ensureShims: %v", err)
 	}
 

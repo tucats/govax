@@ -214,7 +214,7 @@ func TestRun_everyMilestoneFixture(t *testing.T) {
 
 			runKernelInitialize(t, c)
 
-			if err := c.ensureShims(); err != nil {
+			if err := c.EnsureShims(); err != nil {
 				t.Fatalf("ensureShims: %v", err)
 			}
 

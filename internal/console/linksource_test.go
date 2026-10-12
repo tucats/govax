@@ -37,7 +37,7 @@ func vmsLibFile(t *testing.T, name string) []byte {
 func TestShimOffsetsMatchCapturedImages(t *testing.T) {
 	checked := 0
 
-	for _, e := range shimTable {
+	for _, e := range ShimTable {
 		if _, ok := vmsdef.SharedImages[e.Library]; !ok {
 			continue
 		}
@@ -63,7 +63,7 @@ func TestCapturedLIBRTLMatchesImage(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	govax := dclcmd.GovaxSymbols(shimTable)
+	govax := dclcmd.GovaxSymbols(ShimTable)
 
 	want, _ := src.Image(name)
 	if got, ok := govax.Image(name); !ok || got != want {

@@ -96,7 +96,7 @@ func (c *Interpreter) dclTakesAttention(key byte) bool {
 // procedure's loop takes the action when the command has returned
 // (takeControlY).
 func (c *Interpreter) HandleAttention(key byte) bool {
-	if env := c.machine.running(); env != nil && env.AttentionAny(env, key) {
+	if env := c.machine.RunningProcess(); env != nil && env.AttentionAny(env, key) {
 		return true
 	}
 

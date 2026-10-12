@@ -59,14 +59,14 @@ func New(out io.Writer) *Console {
 	m := NewMachine(out)
 
 	session := rms.NewSession(m.Mounts)
-	session.Logicals = m.processOneLogicals
+	session.Logicals = m.ProcessOneLogicals()
 
 	c := &Console{
 		Machine: m,
 		Interpreter: &Interpreter{
 			Shell: &Shell{
 				Out:              out,
-				Logicals:         m.processOneLogicals,
+				Logicals:         m.ProcessOneLogicals(),
 				ContainerSession: session,
 			},
 		},

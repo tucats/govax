@@ -8,12 +8,12 @@ import (
 	"github.com/tucats/govax/internal/vax"
 )
 
-// running is the process the engine's hooks reach: the System's current
+// RunningProcess is the process the engine's hooks reach: the System's current
 // process, the one whose context the CPU holds (docs/PHASE-44.md).
 // That's process 1 unless the scheduler has switched to another;
 // console commands keep using process 1 (or their own subprocess's DCL
 // its process), whichever runs. nil before the first INIT.
-func (m *Machine) running() *corevms.Environment {
+func (m *Machine) RunningProcess() *corevms.Environment {
 	return m.EngineHooks.Running()
 }
 
@@ -23,14 +23,14 @@ func (m *Machine) running() *corevms.Environment {
 // (docs/PHASE-44.md, subtask 8): a P0 address names process 1's memory,
 // and another process reaching the same address is somewhere else.
 func (m *Machine) RunningProcessOne() bool {
-	return m.running() == m.processOne
+	return m.RunningProcess() == m.processOne
 }
 
 // ProcessNote is what a stop message adds when the CPU holds a process
 // other than process 1, naming it (" in process 00000302"), and "" when
 // it holds process 1 (docs/PHASE-44.md, subtask 9).
 func (m *Machine) ProcessNote() string {
-	if env := m.running(); env != m.processOne {
+	if env := m.RunningProcess(); env != m.processOne {
 		return fmt.Sprintf(" in process %08X", env.Process.PID)
 	}
 
@@ -46,7 +46,7 @@ func (m *Machine) ProcessNote() string {
 // in the scheduler. While scheduling is frozen (a nested run, inside
 // another process's) it does nothing.
 func (m *Machine) ReturnToProcessOne() error {
-	if m.processOne == nil || m.Engine == nil || m.Engine.SchedulingFrozen() || m.running() == m.processOne {
+	if m.processOne == nil || m.Engine == nil || m.Engine.SchedulingFrozen() || m.RunningProcess() == m.processOne {
 		return nil
 	}
 
@@ -59,7 +59,7 @@ func (m *Machine) ReturnToProcessOne() error {
 // the CPU back to process 1 (ReturnToProcessOne). Not while a nested run
 // has scheduling frozen.
 func (m *Machine) ShowProcessContext(env *corevms.Environment) error {
-	if m.processOne == nil || m.Engine == nil || env == m.running() {
+	if m.processOne == nil || m.Engine == nil || env == m.RunningProcess() {
 		return nil
 	}
 
@@ -74,7 +74,7 @@ func (m *Machine) ShowProcessContext(env *corevms.Environment) error {
 // otherwise the one saved in its hardware PCB when it last lost the CPU
 // (0 if it has never had it).
 func (m *Machine) ProcessPC(env *corevms.Environment) uint32 {
-	if env == m.running() {
+	if env == m.RunningProcess() {
 		return m.CPU.GPR(vax.PC)
 	}
 

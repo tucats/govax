@@ -239,7 +239,7 @@ type cliHost struct{ c *Interpreter }
 func (h cliHost) InheritSymbols(parent, child *corevms.Environment) {
 	var from *dclSymbolTable
 
-	if parent == h.c.machine.processOne {
+	if parent == h.c.machine.ProcessOne() {
 		from = &h.c.home.dclSymbols
 	} else if cli := h.c.clis[parent]; cli != nil {
 		from = &cli.shell.dclSymbols
@@ -256,7 +256,7 @@ func (h cliHost) InheritSymbols(parent, child *corevms.Environment) {
 func (h cliHost) Start(env *corevms.Environment, start *corevms.CLIStartup) (uint32, error) {
 	c := h.c
 
-	if err := c.machine.ensureShims(); err != nil {
+	if err := c.machine.EnsureShims(); err != nil {
 		return 0, err
 	}
 
@@ -276,9 +276,7 @@ func (h cliHost) Start(env *corevms.Environment, start *corevms.CLIStartup) (uin
 		cli.inheritVerify(env.Process.Owner)
 	}
 
-	p := c.machine.imagesOf(env)
-
-	exit, ok := p.p1Stub("SYS$EXIT")
+	exit, ok := c.machine.P1Stub(env, "SYS$EXIT")
 	if !ok {
 		return 0, fmt.Errorf("console: no SYS$EXIT stub for a command interpreter")
 	}
@@ -296,14 +294,14 @@ func (h cliHost) Start(env *corevms.Environment, start *corevms.CLIStartup) (uin
 		0xFC, 0x7D, // XFC #XFC$SHIM
 		0xDD, 0x50, // PUSHL R0
 	}
-	code = append(code, encodeCalls(1, exit)...)
+	code = append(code, EncodeCalls(1, exit)...)
 	code = append(code, 0x04) // RET
 
 	for len(code) < cliStubArgList+4 {
 		code = append(code, 0) // ... and the empty argument list
 	}
 
-	if err := p.storeBytes(page, code); err != nil {
+	if err := c.machine.StoreBytesIn(env, page, code); err != nil {
 		return 0, err
 	}
 
@@ -321,7 +319,7 @@ func (cli *subprocessCLI) inheritVerify(owner uint32) {
 	var from *Shell
 
 	switch parent := c.clis[c.findEnvironment(owner)]; {
-	case c.machine.processOne != nil && owner == c.machine.processOne.Process.PID:
+	case c.machine.ProcessOne() != nil && owner == c.machine.ProcessOne().Process.PID:
 		from = c.home
 	case parent != nil:
 		from = parent.shell
@@ -335,11 +333,11 @@ func (cli *subprocessCLI) inheritVerify(owner uint32) {
 // findEnvironment returns the process whose PID is pid, nil if there is
 // none.
 func (c *Interpreter) findEnvironment(pid uint32) *corevms.Environment {
-	if c.machine.processOne == nil {
+	if c.machine.ProcessOne() == nil {
 		return nil
 	}
 
-	env, _ := c.machine.processOne.FindProcess(pid)
+	env, _ := c.machine.ProcessOne().FindProcess(pid)
 
 	return env
 }
@@ -653,7 +651,7 @@ func (c *Interpreter) subprocessRun(cli *subprocessCLI, image, commandLine strin
 func (c *Interpreter) cliActivate(cli *subprocessCLI, image, commandLine string) (uint32, uint32) {
 	env := cli.env
 
-	driver, err := c.machine.activateCreatedImage(env, image, false)
+	driver, err := c.machine.ActivateCreatedImage(env, image, false)
 	if err != nil {
 		say := func(format string, args ...any) { fmt.Fprintf(c.Out, format+"\n", args...) }
 

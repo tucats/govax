@@ -144,7 +144,7 @@ func (m *Machine) StepMachine() error {
 		return nil
 	}
 
-	if env := m.running(); env != m.processOne && errors.Is(err, cpu.ErrConsoleCallReturned) {
+	if env := m.RunningProcess(); env != m.processOne && errors.Is(err, cpu.ErrConsoleCallReturned) {
 		// An image a subprocess's CLI ran has ended, and the CLI goes on
 		// (subcli.go); otherwise the process's own run is over.
 		if !m.Hooks.CLIImageEnded(env) {

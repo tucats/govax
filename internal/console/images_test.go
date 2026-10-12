@@ -36,7 +36,7 @@ func newSecondProcess(t *testing.T, c *Console) *corevms.Environment {
 func TestActivateImageInAnotherProcess(t *testing.T) {
 	c := bootedConsole(t)
 
-	if err := c.ensureShims(); err != nil {
+	if err := c.EnsureShims(); err != nil {
 		t.Fatal(err)
 	}
 
