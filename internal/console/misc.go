@@ -27,7 +27,7 @@ var RunCommandLine string
 // SET NOVERBOSE has turned Console.Verbose off (see set.go's
 // SetVerbose/SetNoVerbose). The items are the DCL grammar's
 // list of $expression values (docs/PHASE-37.md), quotes kept.
-func (c *Console) Print(items []string) error {
+func (c *Machine) Print(items []string) error {
 	if !c.Verbose {
 		return nil
 	}
@@ -115,7 +115,7 @@ func (c *Console) Time(cmd string, dispatch func(string) error) error {
 // options, the most instructions and the longest host time one run of the
 // VAX may take (0 is no limit). They don't take effect at once: see
 // ApplyRunLimits, and the fields' comment in machine.go on why.
-func (c *Console) SetRunLimits(instructions int, duration time.Duration) {
+func (c *Machine) SetRunLimits(instructions int, duration time.Duration) {
 	c.instructionLimit = instructions
 	c.timeLimit = duration
 }
@@ -124,7 +124,7 @@ func (c *Console) SetRunLimits(instructions int, duration time.Duration) {
 // so every run from now on is held to them. govax calls it once the boot
 // script is done, before the interactive prompt; RunCommandLine calls
 // it before the one-shot command.
-func (c *Console) ApplyRunLimits() {
+func (c *Machine) ApplyRunLimits() {
 	if c.Engine != nil {
 		c.Engine.SetLimits(c.instructionLimit, c.timeLimit)
 	}
@@ -174,7 +174,7 @@ func (c *Console) RunCommandLine(dispatch func(string) error) bool {
 // ClearSymbol implements the debugger's CANCEL (or CLEAR) SYMBOL: a
 // specific name, or every user symbol (/ALL). Its /TEMPORARY distinction
 // is ClearSymbolTemporary, below.
-func (c *Console) ClearSymbol(name string, all bool) error {
+func (c *Machine) ClearSymbol(name string, all bool) error {
 	if err := c.requireInit(); err != nil {
 		return err
 	}
@@ -191,7 +191,7 @@ func (c *Console) ClearSymbol(name string, all bool) error {
 }
 
 // ClearSymbolTemporary implements the debugger's CANCEL SYMBOL/TEMPORARY.
-func (c *Console) ClearSymbolTemporary() error {
+func (c *Machine) ClearSymbolTemporary() error {
 	if err := c.requireInit(); err != nil {
 		return err
 	}
@@ -205,7 +205,7 @@ func (c *Console) ClearSymbolTemporary() error {
 // back to CONSOLE$STRINGPOOL_BASE and zeroes the pool's backing
 // storage — the write side of ShowString, requiring the
 // same booted-microkernel symbols.
-func (c *Console) ClearString() error {
+func (c *Machine) ClearString() error {
 	if err := c.requireInit(); err != nil {
 		return err
 	}
@@ -229,7 +229,7 @@ func (c *Console) ClearString() error {
 // reset of its tries/hits/pflushes counters — tb_flush itself and the
 // sequential translation cache's own try/hit counters are deliberately
 // left alone.
-func (c *Console) ClearTB() error {
+func (c *Machine) ClearTB() error {
 	if err := c.requireInit(); err != nil {
 		return err
 	}
@@ -242,13 +242,13 @@ func (c *Console) ClearTB() error {
 
 // ClearMemory implements CLEAR MEMORY,  which simply calls console_zero(),
 // the same routine the ZERO command itself runs.
-func (c *Console) ClearMemory() error {
+func (c *Machine) ClearMemory() error {
 	return c.Zero()
 }
 
 // ClearInterrupt implements CLEAR INTERRUPT <id>. It removes every
 // queued interrupt whose code matches id.
-func (c *Console) ClearInterrupt(code uint32) error {
+func (c *Machine) ClearInterrupt(code uint32) error {
 	if err := c.requireInit(); err != nil {
 		return err
 	}
@@ -267,7 +267,7 @@ func (c *Console) ClearInterrupt(code uint32) error {
 
 // ClearAllInterrupts implements CLEAR INTERRUPT/ALL: empties the
 // interrupt queue and cancels any immediately-pending interrupt.
-func (c *Console) ClearAllInterrupts() error {
+func (c *Machine) ClearAllInterrupts() error {
 	if err := c.requireInit(); err != nil {
 		return err
 	}
