@@ -5,10 +5,10 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/tucats/govax/internal/console"
 	"github.com/tucats/govax/internal/dbgsym"
 	"github.com/tucats/govax/internal/dcl"
 	"github.com/tucats/govax/internal/lnm"
+	"github.com/tucats/govax/internal/machine"
 	"github.com/tucats/govax/internal/symtab"
 	"github.com/tucats/govax/internal/vax"
 	"github.com/tucats/govax/internal/vmserrors"
@@ -209,7 +209,7 @@ func (d *Debugger) showModule() error {
 		c.Printf("%-32s%-3s%12d\n", m.Name, yesNo(set), m.DSTSize)
 
 		// The footer names the language the modules share ("MACRO").
-		lang := console.LanguageName(m.Language)
+		lang := machine.LanguageName(m.Language)
 		if len(languages) == 0 || languages[len(languages)-1] != lang {
 			languages = append(languages, lang)
 		}
@@ -298,7 +298,7 @@ func (d *Debugger) showLanguage() error {
 
 	if p := c.DebugProgramAt(pc); p != nil {
 		if m, ok := p.ModuleAt(pc); ok {
-			language = console.LanguageName(m.Language)
+			language = machine.LanguageName(m.Language)
 		}
 	}
 

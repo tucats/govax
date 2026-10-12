@@ -48,15 +48,15 @@ var pageFile = secGBL | secPAGFIL | secDZRO | secWRT
 func putName(t *testing.T, c *Console, name string) uint32 {
 	t.Helper()
 
-	if err := c.storeLong(secName, uint32(len(name))); err != nil {
+	if err := storeLong(c, secName, uint32(len(name))); err != nil {
 		t.Fatal(err)
 	}
 
-	if err := c.storeLong(secName+4, secName+8); err != nil {
+	if err := storeLong(c, secName+4, secName+8); err != nil {
 		t.Fatal(err)
 	}
 
-	if err := c.storeBytes(secName+8, []byte(name)); err != nil {
+	if err := c.WriteBytes(secName+8, []byte(name)); err != nil {
 		t.Fatal(err)
 	}
 
@@ -158,7 +158,7 @@ func TestCrmpsc_createAndMap(t *testing.T) {
 		t.Errorf("read-only PTE %#x: want PFN %#x, protection other than %d", uint32(ro), s.Frames[1], pte.Protection())
 	}
 
-	if err := c.storeLong(secPages+0x204, 0x12345678); err != nil {
+	if err := storeLong(c, secPages+0x204, 0x12345678); err != nil {
 		t.Fatal(err)
 	}
 
@@ -375,7 +375,7 @@ func TestCrmpsc_lifetime(t *testing.T) {
 	callService(t, c, "SYS$DELTVA", vaInadr, 0, 0) // nothing there
 	crmpsc(t, c, "PERM", pageFile|secPERM, secPages, secPages, 1, 0)
 
-	if err := c.storeLong(secPages, 0xFEEDF00D); err != nil {
+	if err := storeLong(c, secPages, 0xFEEDF00D); err != nil {
 		t.Fatal(err)
 	}
 

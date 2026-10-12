@@ -37,12 +37,12 @@ func TestRun_imageOnVolume(t *testing.T) {
 	// The same image, named without its type, and by its bare name once the
 	// default directory is on the volume. (A console runs its kernel's
 	// setup once, so these are read rather than run again.)
-	want, err := c.readImage("DUA0:[000000]MAIN.EXE", true)
+	want, err := c.ReadImage("DUA0:[000000]MAIN.EXE", true)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	if got, err := c.readImage("DUA0:[000000]MAIN", true); err != nil || !bytes.Equal(got, want) {
+	if got, err := c.ReadImage("DUA0:[000000]MAIN", true); err != nil || !bytes.Equal(got, want) {
 		t.Errorf("DUA0:[000000]MAIN: %d bytes, %v", len(got), err)
 	}
 
@@ -50,11 +50,11 @@ func TestRun_imageOnVolume(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if got, err := c.readImage("MAIN", true); err != nil || !bytes.Equal(got, want) {
+	if got, err := c.ReadImage("MAIN", true); err != nil || !bytes.Equal(got, want) {
 		t.Errorf("MAIN: %d bytes, %v", len(got), err)
 	}
 
-	if _, err := c.readImage("NOSUCH", true); !errors.Is(err, vmserrors.New(vmserrors.RMS_IMAGENOTFOUND)) {
+	if _, err := c.ReadImage("NOSUCH", true); !errors.Is(err, vmserrors.New(vmserrors.RMS_IMAGENOTFOUND)) {
 		t.Errorf("NOSUCH: err = %v, want IMAGENOTFOUND", err)
 	}
 }
@@ -87,7 +87,7 @@ func TestDispatch_runHost(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if _, err := c.readImage("entry", true); err == nil {
+	if _, err := c.ReadImage("entry", true); err == nil {
 		t.Fatal("a bare name was found on the host while the default is on a volume")
 	}
 

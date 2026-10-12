@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/tucats/govax/internal/console"
+	"github.com/tucats/govax/internal/machine"
 )
 
 // The run-control bugs docs/PHASE-42.md fixes in subtask 2, each on
@@ -43,7 +44,7 @@ func TestRunStopsAtBreakpoint(t *testing.T) {
 	buf := c.Out.(*bytes.Buffer)
 	buf.Reset()
 
-	if err := c.Run(dbgImagePath(t, "dbgdis.exe"), console.RunOptions{Debug: console.DebugOff}); err != nil {
+	if err := c.Run(dbgImagePath(t, "dbgdis.exe"), machine.RunOptions{Debug: machine.DebugOff}); err != nil {
 		t.Fatalf("RUN: %v", err)
 	}
 
@@ -85,7 +86,7 @@ func TestCallStopsAtBreakpoint(t *testing.T) {
 		t.Fatalf("Assemble(kernel.asm): %v", err)
 	}
 
-	if err := c.Run(dbgImagePath(t, "dbgdis.exe"), console.RunOptions{NoExecute: true}); err != nil {
+	if err := c.Run(dbgImagePath(t, "dbgdis.exe"), machine.RunOptions{NoExecute: true}); err != nil {
 		t.Fatalf("RUN/NOEXECUTE: %v", err)
 	}
 

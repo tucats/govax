@@ -2,6 +2,7 @@ package console
 
 import (
 	"github.com/tucats/govax/internal/dclcmd"
+	"github.com/tucats/govax/internal/machine"
 )
 
 // cmd returns the context for a utility command run by the DCL running
@@ -16,7 +17,7 @@ func (c *Console) cmd() *dclcmd.Context {
 		Devices:          c.Devices,
 		Paths:            c.Paths,
 		HostLibrary:      c.HostLibrary,
-		ShimLinks:        ShimTable,
+		ShimLinks:        machine.ShimTable,
 		ScreenSize:       c.ScreenSize,
 		Verbose:          c.Verbose,
 		Running:          c.Running,

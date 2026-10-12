@@ -24,7 +24,7 @@ func TestSetprt(t *testing.T) {
 	// Two ordinary P0 pages (UW since VMINIT), made user read-only.
 	putRange(t, c, vaInadr, vaPages, vaPages+0x200)
 
-	if err := c.storeLong(vaPages+0x208, 0x77); err != nil {
+	if err := storeLong(c, vaPages+0x208, 0x77); err != nil {
 		t.Fatal(err)
 	}
 

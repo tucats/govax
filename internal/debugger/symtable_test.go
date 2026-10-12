@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/tucats/govax/internal/console"
+	"github.com/tucats/govax/internal/machine"
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
@@ -30,7 +31,7 @@ func symbolSession(t *testing.T) (*console.Console, *bytes.Buffer) {
 func TestShowSymbol(t *testing.T) {
 	c, _ := symbolSession(t)
 
-	c.Symbols.Set("MYSYM", 0x1234, console.SymbolUser)
+	c.Symbols.Set("MYSYM", 0x1234, machine.SymbolUser)
 
 	if out := say(t, c, "SHOW SYMBOL MYSYM"); !strings.Contains(out, "00001234") {
 		t.Errorf("output = %q, want the symbol's value", out)
@@ -59,8 +60,8 @@ func TestShowSymbol_undefined(t *testing.T) {
 func TestShowSymbolsSystem(t *testing.T) {
 	c, _ := symbolSession(t)
 
-	c.Symbols.Set("USERSYM", 1, console.SymbolUser)
-	c.Symbols.Set("SYS$SYM", 2, console.SymbolSystem)
+	c.Symbols.Set("USERSYM", 1, machine.SymbolUser)
+	c.Symbols.Set("SYS$SYM", 2, machine.SymbolSystem)
 
 	out := say(t, c, "SHOW SYMBOL/SYSTEM")
 	if !strings.Contains(out, "SYS$SYM") {
@@ -93,10 +94,10 @@ func showSymbolNames(t *testing.T, c *console.Console, command string) []string 
 func TestShowSymbol_wildcards(t *testing.T) {
 	c, _ := symbolSession(t)
 
-	c.Symbols.Set("MYSYM", 1, console.SymbolUser)
-	c.Symbols.Set("MYSYS", 2, console.SymbolSystem)
-	c.Symbols.Set("MXSYM", 3, console.SymbolUser)
-	c.Symbols.Set("PTE$K_UR", 7, console.SymbolUser) // shadows the predefined one
+	c.Symbols.Set("MYSYM", 1, machine.SymbolUser)
+	c.Symbols.Set("MYSYS", 2, machine.SymbolSystem)
+	c.Symbols.Set("MXSYM", 3, machine.SymbolUser)
+	c.Symbols.Set("PTE$K_UR", 7, machine.SymbolUser) // shadows the predefined one
 
 	cases := []struct {
 		cmd  string
@@ -162,8 +163,8 @@ func TestCancelSymbol(t *testing.T) {
 
 	c.Symbols.SetQualified("PERM", 1, true, false, false)
 	c.Symbols.SetQualified("TEMP", 2, false, false, false)
-	c.Symbols.Set("ONE", 3, console.SymbolUser)
-	c.Symbols.Set("SYS$KEEP", 4, console.SymbolSystem)
+	c.Symbols.Set("ONE", 3, machine.SymbolUser)
+	c.Symbols.Set("SYS$KEEP", 4, machine.SymbolSystem)
 
 	defined := func(name string) bool {
 		_, ok := c.Symbols.Get(name)

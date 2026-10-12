@@ -98,7 +98,7 @@ func TestShowDevices_allocated(t *testing.T) {
 		t.Errorf("SHOW DEVICE/FULL output missing the allocated terminal: %q", out)
 	}
 
-	c.imageRundown()
+	c.ImageRundown()
 
 	if term.Allocated() {
 		t.Error("user-mode allocation survived image rundown")

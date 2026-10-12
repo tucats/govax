@@ -10,6 +10,7 @@ import (
 	"github.com/tucats/govax/internal/corevms"
 	"github.com/tucats/govax/internal/cpu"
 	"github.com/tucats/govax/internal/debugger"
+	"github.com/tucats/govax/internal/machine"
 	"github.com/tucats/govax/internal/sched"
 	"github.com/tucats/govax/internal/vax"
 )
@@ -384,7 +385,7 @@ func TestSchedulerStop_debuggerExit(t *testing.T) {
 	two := handBuiltProcess(t, c, counter())
 	db := debugger.Install(c, consoletest.DebugGrammar(t), nil)
 
-	if err := c.Debugger.Start(console.Activation{Kind: console.ActivateAttach}); err != nil {
+	if err := c.Debugger.Start(machine.Activation{Kind: machine.ActivateAttach}); err != nil {
 		t.Fatal(err)
 	}
 

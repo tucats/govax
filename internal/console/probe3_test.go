@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	. "github.com/tucats/govax/internal/console"
+	"github.com/tucats/govax/internal/machine"
 )
 
 // Phase 46's probe 3 (testdata/mp/probe3), run under govax: the program
@@ -31,7 +31,7 @@ func TestProbe3(t *testing.T) {
 
 	out.Reset()
 
-	if err := c.Run(probe, RunOptions{CommandLine: child}); err != nil {
+	if err := c.Run(probe, machine.RunOptions{CommandLine: child}); err != nil {
 		t.Fatalf("RUN: %v\n%s", err, out.String())
 	}
 

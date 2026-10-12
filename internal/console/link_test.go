@@ -75,14 +75,14 @@ func runImageCommand(t *testing.T, c *Console, path, command string, maxSteps in
 
 	c.RTL.CommandLine = command
 
-	main, err := c.activateImage(path)
+	main, err := c.ActivateImage(path)
 	if err != nil {
 		t.Fatalf("activating %s: %v", path, err)
 	}
 
-	driver, ok, err := c.buildImageInitDriver(main, false)
+	driver, ok, err := c.BuildImageInitDriver(main, false)
 	if err != nil || !ok {
-		t.Fatalf("buildImageInitDriver: ok=%v err=%v", ok, err)
+		t.Fatalf("BuildImageInitDriver: ok=%v err=%v", ok, err)
 	}
 
 	c.Engine.SetModeStack(vax.User, false)
@@ -199,7 +199,7 @@ func TestLink_helloPageProtection(t *testing.T) {
 
 		var sawWRT, sawRO bool
 
-		main := c.findMainICB()
+		main := c.FindMainICB()
 		for _, isd := range main.ISDList {
 			if isdType(isd.Flags) == isdUsrStack || isd.Flags&isdGBL != 0 {
 				continue
@@ -237,9 +237,9 @@ func TestLink_helloPageProtection(t *testing.T) {
 		t.Errorf("code page 0x400 (PROT %s) is writable", pte.Protection())
 	}
 
-	c.resetICBList()
+	c.ResetICBList()
 
-	if _, err := c.activateImage(exe); err != nil {
+	if _, err := c.ActivateImage(exe); err != nil {
 		t.Fatalf("second activation: %v", err)
 	}
 
@@ -636,3 +636,13 @@ func TestDispatch_linkDebug(t *testing.T) {
 		t.Errorf("R0 = %d, want 1", got)
 	}
 }
+
+// The image section descriptor flags and type a linked image's ISDs are
+// checked for (ISD$V_GBL, ISD$V_WRT, ISD_K_USRSTACK in the top byte).
+const (
+	isdGBL      = 1 << 0
+	isdWRT      = 1 << 3
+	isdUsrStack = 253
+)
+
+func isdType(flags uint32) uint32 { return flags >> 24 }

@@ -3,8 +3,8 @@ package debugger
 import (
 	"errors"
 
-	"github.com/tucats/govax/internal/console"
 	"github.com/tucats/govax/internal/cpu"
+	"github.com/tucats/govax/internal/machine"
 	"github.com/tucats/govax/internal/vax"
 	"github.com/tucats/govax/internal/vmserrors"
 )
@@ -39,7 +39,7 @@ import (
 // shows the debugger's start-up messages, runs the driver (and with it any
 // shareable image's initialization routines) until the program is about to
 // execute its main routine's first instruction, and stops there.
-func (d *Debugger) startImage(a console.Activation) (runOutcome, error) {
+func (d *Debugger) startImage(a machine.Activation) (runOutcome, error) {
 	c := d.Console
 
 	// VMS shows its version banner, a blank line, and then the language
@@ -81,7 +81,7 @@ func (d *Debugger) startImage(a console.Activation) (runOutcome, error) {
 // the instruction that raised it and stops. Outside that (a plain GO of
 // kernel code, an image run with /NODEBUG), the catch-all acts as it
 // always has.
-func (d *Debugger) onUnhandled(u console.UnhandledException) bool {
+func (d *Debugger) onUnhandled(u machine.UnhandledException) bool {
 	if !d.imageDebug || d.unhandled != nil {
 		return false
 	}

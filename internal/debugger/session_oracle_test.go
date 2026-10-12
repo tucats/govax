@@ -9,6 +9,7 @@ import (
 
 	"github.com/tucats/govax/internal/console"
 	"github.com/tucats/govax/internal/console/consoletest"
+	"github.com/tucats/govax/internal/machine"
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
@@ -208,7 +209,7 @@ func replaySession(t *testing.T, sc sessionCase) []sessionDiff {
 	echoes := alignScript(lines, script)
 	groups, want := expectedOutput(lines, echoes)
 
-	c, _ := runImage(t, consoletest.RepoPath(t, filepath.FromSlash(sc.image)), console.RunOptions{Debug: console.DebugOn})
+	c, _ := runImage(t, consoletest.RepoPath(t, filepath.FromSlash(sc.image)), machine.RunOptions{Debug: machine.DebugOn})
 	noUserStep(c)
 	say(t, c, `SET SOURCE "`+consoletest.RepoPath(t, filepath.FromSlash(sc.source))+`"`)
 

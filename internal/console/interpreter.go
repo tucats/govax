@@ -5,6 +5,7 @@ import (
 	"io"
 
 	"github.com/tucats/govax/internal/corevms"
+	"github.com/tucats/govax/internal/machine"
 )
 
 // Interpreter is the console's DCL, every process's: each process that
@@ -19,7 +20,7 @@ type Interpreter struct {
 
 	// machine is the machine DCL runs on: its processes, CPU, and
 	// images.
-	machine *Machine
+	machine *machine.Machine
 
 	// dispatchConsole runs one command line in the DCL running now
 	// (Dispatcher.DispatchConsole): a subprocess's CLI reads its

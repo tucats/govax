@@ -6,6 +6,7 @@ import (
 	"time"
 
 	"github.com/tucats/govax/internal/cpu"
+	"github.com/tucats/govax/internal/machine"
 	"github.com/tucats/govax/internal/vax"
 )
 
@@ -18,7 +19,7 @@ func loadProgram(t *testing.T, c *Console, addr uint32, bytes ...byte) {
 	t.Helper()
 
 	for i, b := range bytes {
-		if err := c.Deposit("", addr+uint32(i), SizeByte, uint32(b)); err != nil {
+		if err := c.Deposit("", addr+uint32(i), machine.SizeByte, uint32(b)); err != nil {
 			t.Fatalf("Deposit: %v", err)
 		}
 	}

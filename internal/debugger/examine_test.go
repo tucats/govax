@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/tucats/govax/internal/console"
+	"github.com/tucats/govax/internal/machine"
 )
 
 // stoppedAt runs the image at path under the debugger, sets a breakpoint
@@ -14,7 +15,7 @@ import (
 func stoppedAt(t *testing.T, path, where string) *console.Console {
 	t.Helper()
 
-	c, _ := runImage(t, path, console.RunOptions{Debug: console.DebugOn})
+	c, _ := runImage(t, path, machine.RunOptions{Debug: machine.DebugOn})
 	dispatch(t, c, "SET BREAK "+where)
 	dispatch(t, c, "GO")
 

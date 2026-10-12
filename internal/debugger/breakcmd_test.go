@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/tucats/govax/internal/console"
+	"github.com/tucats/govax/internal/machine"
 )
 
 // Tests of SET BREAK, SHOW BREAK, and CANCEL BREAK (docs/PHASE-42.md,
@@ -21,7 +22,7 @@ import (
 func probeSession(t *testing.T) *console.Console {
 	t.Helper()
 
-	c, _ := runImage(t, probeImage(t), console.RunOptions{Debug: console.DebugOn})
+	c, _ := runImage(t, probeImage(t), machine.RunOptions{Debug: machine.DebugOn})
 
 	return c
 }

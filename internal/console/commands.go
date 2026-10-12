@@ -4,9 +4,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/tucats/gopackages/app-cli/settings"
-
 	"github.com/tucats/govax/internal/dcl"
+	"github.com/tucats/govax/internal/machine"
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
@@ -164,35 +163,20 @@ func (d *Dispatcher) loadCommand(id int64, r *dcl.Result) error {
 	return d.Console.LoadNVRAM(file, noError)
 }
 
-// symbolicSetting is the setting that gives DISASSEMBLE's default for
-// /SYMBOLIC.
-const symbolicSetting = "vax.disassemble.symbolic"
-
-// symbolicDefault is whether DISASSEMBLE is /SYMBOLIC when the command
-// doesn't say: the vax.disassemble.symbolic setting, or true when it
-// isn't set, as the debugger's SET MODE SYMBOLIC is its default.
-func symbolicDefault() bool {
-	if settings.Get(symbolicSetting) == "" {
-		return true
-	}
-
-	return settings.GetBool(symbolicSetting)
-}
-
 // runOptions applies RUN's qualifiers to defaults, whose RunInits is
 // Console.DefaultRunInits, which /INIT or /NOINIT overrides.
-func runOptions(r *dcl.Result, defaultRunInits bool) RunOptions {
-	opts := RunOptions{RunInits: defaultRunInits}
+func runOptions(r *dcl.Result, defaultRunInits bool) machine.RunOptions {
+	opts := machine.RunOptions{RunInits: defaultRunInits}
 
 	if r.Present("INIT") {
 		opts.RunInits = !r.Negated("INIT")
 	}
 
 	if r.Present("DEBUG") {
-		opts.Debug = DebugOn
+		opts.Debug = machine.DebugOn
 
 		if r.Negated("DEBUG") {
-			opts.Debug = DebugOff
+			opts.Debug = machine.DebugOff
 		}
 	}
 
@@ -221,16 +205,10 @@ func notImplemented(name, dependency string) dcl.Handler {
 	}
 }
 
-// SymbolicDefault is whether the debugger's instruction display names
-// addresses from the debug symbols when nothing says otherwise: the
-// vax.disassemble.symbolic setting, true when it isn't set. It seeds the
-// debugger's SET MODE SYMBOLIC.
-func SymbolicDefault() bool { return symbolicDefault() }
-
 // Run is RUN in the DCL running now: process 1's runs the image on the
 // machine (Machine.Run); a subprocess's DCL runs it in its process
 // (subcli.go).
-func (c *Console) Run(fn string, opts RunOptions) error {
+func (c *Console) Run(fn string, opts machine.RunOptions) error {
 	if err := c.RequireInit(); err != nil {
 		return err
 	}
@@ -284,7 +262,7 @@ func (c *Console) StartDebugger() error {
 		return nil
 	}
 
-	return c.Debugger.Start(Activation{Kind: ActivateAttach})
+	return c.Debugger.Start(machine.Activation{Kind: machine.ActivateAttach})
 }
 
 // StopProcess is STOP: it deletes a process and its subprocesses at once,

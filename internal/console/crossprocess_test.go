@@ -8,6 +8,7 @@ import (
 	"github.com/tucats/govax/internal/console"
 	"github.com/tucats/govax/internal/console/consoletest"
 	iodev "github.com/tucats/govax/internal/io"
+	"github.com/tucats/govax/internal/machine"
 	"github.com/tucats/govax/internal/sched"
 )
 
@@ -185,7 +186,7 @@ func TestShowDeviceFull_terminalAndMailbox(t *testing.T) {
 	c, _ := scheduledConsole(t, longQuantum, brbSelf)
 	d := console.NewDispatcher(c, consoletest.ConsoleGrammar(t), nil)
 
-	if err := c.Run(buildImage(t, c, "showbox", showMailboxSource), console.RunOptions{}); err != nil {
+	if err := c.Run(buildImage(t, c, "showbox", showMailboxSource), machine.RunOptions{}); err != nil {
 		t.Fatal(err)
 	}
 

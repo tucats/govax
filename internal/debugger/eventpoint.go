@@ -5,8 +5,8 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/tucats/govax/internal/console"
 	"github.com/tucats/govax/internal/cpu"
+	"github.com/tucats/govax/internal/machine"
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
@@ -270,7 +270,7 @@ func (d *Debugger) conditionHolds(when string) bool {
 // console.Console.OnSignal hook). If SET BREAK/EXCEPTION is in effect it
 // is held for the run loop, which stops the program at the next
 // instruction boundary (signalBreak).
-func (d *Debugger) onSignal(u console.UnhandledException) {
+func (d *Debugger) onSignal(u machine.UnhandledException) {
 	for _, bp := range d.Breakpoints {
 		if bp.Kind != BreakException {
 			continue

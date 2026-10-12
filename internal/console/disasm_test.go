@@ -1,16 +1,20 @@
 package console
 
-import "testing"
+import (
+	"testing"
+
+	"github.com/tucats/govax/internal/machine"
+)
 
 func TestDisassemble_singleInstruction(t *testing.T) {
 	c, buf := newTestConsole(t)
 
 	// CLRL R3: 0xD4 0x53.
-	if err := c.Deposit("", 0x1000, SizeByte, 0xD4); err != nil {
+	if err := c.Deposit("", 0x1000, machine.SizeByte, 0xD4); err != nil {
 		t.Fatalf("Deposit: %v", err)
 	}
 	
-	if err := c.Deposit("", 0x1001, SizeByte, 0x53); err != nil {
+	if err := c.Deposit("", 0x1001, machine.SizeByte, 0x53); err != nil {
 		t.Fatalf("Deposit: %v", err)
 	}
 
@@ -34,23 +38,23 @@ func TestDisassemble_singleInstruction(t *testing.T) {
 func TestDisassemble_entryMask(t *testing.T) {
 	c, buf := newTestConsole(t)
 
-	c.Symbols.SetEntry("MAIN", 0x1000, SymbolUser)
+	c.Symbols.SetEntry("MAIN", 0x1000, machine.SymbolUser)
 
 	// Mask word: bit 2 (R2) and bit 14 (DV) set, little-endian.
-	if err := c.Deposit("", 0x1000, SizeByte, 0x04); err != nil {
+	if err := c.Deposit("", 0x1000, machine.SizeByte, 0x04); err != nil {
 		t.Fatalf("Deposit: %v", err)
 	}
 
-	if err := c.Deposit("", 0x1001, SizeByte, 0x40); err != nil {
+	if err := c.Deposit("", 0x1001, machine.SizeByte, 0x40); err != nil {
 		t.Fatalf("Deposit: %v", err)
 	}
 
 	// CLRL R3 (2 bytes) immediately after the mask word.
-	if err := c.Deposit("", 0x1002, SizeByte, 0xD4); err != nil {
+	if err := c.Deposit("", 0x1002, machine.SizeByte, 0xD4); err != nil {
 		t.Fatalf("Deposit: %v", err)
 	}
 
-	if err := c.Deposit("", 0x1003, SizeByte, 0x53); err != nil {
+	if err := c.Deposit("", 0x1003, machine.SizeByte, 0x53); err != nil {
 		t.Fatalf("Deposit: %v", err)
 	}
 
@@ -71,7 +75,7 @@ func TestDisassemble_range(t *testing.T) {
 
 	// CLRL R3 (2 bytes) followed by RET (1 byte).
 	for i, b := range []byte{0xD4, 0x53, 0x04} {
-		if err := c.Deposit("", 0x1000+uint32(i), SizeByte, uint32(b)); err != nil {
+		if err := c.Deposit("", 0x1000+uint32(i), machine.SizeByte, uint32(b)); err != nil {
 			t.Fatalf("Deposit: %v", err)
 		}
 	}

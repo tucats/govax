@@ -3,8 +3,8 @@ package debugger
 import (
 	"strings"
 
-	"github.com/tucats/govax/internal/console"
 	"github.com/tucats/govax/internal/dcl"
+	"github.com/tucats/govax/internal/machine"
 	"github.com/tucats/govax/internal/vax"
 	"github.com/tucats/govax/internal/vmserrors"
 )
@@ -218,7 +218,7 @@ func (d *Debugger) ShowStepMode() error {
 // buildStepRequest combines the defaults with what the STEP command
 // asked for. Everything in the activation is optional; an unset field
 // leaves the default.
-func (d *Debugger) buildStepRequest(a console.Activation) (stepRequest, error) {
+func (d *Debugger) buildStepRequest(a machine.Activation) (stepRequest, error) {
 	req := stepRequest{
 		mode:          d.StepMode,
 		byInstruction: d.stepDefaults.byInstruction,

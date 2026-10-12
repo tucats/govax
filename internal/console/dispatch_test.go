@@ -8,6 +8,7 @@ import (
 
 	"github.com/tucats/govax/internal/dcl"
 	"github.com/tucats/govax/internal/help"
+	"github.com/tucats/govax/internal/machine"
 	"github.com/tucats/govax/internal/vax"
 )
 
@@ -68,7 +69,7 @@ func TestDispatch_runActivatesImage(t *testing.T) {
 		t.Fatalf("Dispatch(RUN/NOEXECUTE): %v", err)
 	}
 
-	if len(c.images().ICBList) == 0 {
+	if len(c.ImageState(nil).ICBList) == 0 {
 		t.Fatal("expected RUN to have loaded at least the main image")
 	}
 
@@ -242,9 +243,9 @@ func TestDispatch_setRadixKeywords(t *testing.T) {
 func TestDispatch_clearStringsAndInterrupt(t *testing.T) {
 	d, c := newTestDispatcher(t)
 
-	c.Symbols.Set("CONSOLE$STRINGPOOL_BASE", 0x2000, SymbolSystem)
-	c.Symbols.Set("CONSOLE$STRINGPOOL_SIZE", 8, SymbolSystem)
-	c.Symbols.Set("CONSOLE$STRINGPOOL", 0x2008, SymbolSystem)
+	c.Symbols.Set("CONSOLE$STRINGPOOL_BASE", 0x2000, machine.SymbolSystem)
+	c.Symbols.Set("CONSOLE$STRINGPOOL_SIZE", 8, machine.SymbolSystem)
+	c.Symbols.Set("CONSOLE$STRINGPOOL", 0x2008, machine.SymbolSystem)
 
 	if err := d.Dispatch("CLEAR STRINGS"); err != nil {
 		t.Fatalf("Dispatch(CLEAR STRINGS): %v", err)

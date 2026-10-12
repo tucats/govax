@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/tucats/govax/internal/corevms"
+	"github.com/tucats/govax/internal/machine"
 	"github.com/tucats/govax/internal/vm"
 )
 
@@ -41,14 +42,14 @@ func TestActivateImageInAnotherProcess(t *testing.T) {
 	}
 
 	env := newSecondProcess(t, c)
-	p := c.imagesOf(env)
+	p := c.ImageState(env)
 	one := c.RTL.Space.AddressSpace
 
 	path := exeFixturePath(t, "simple.exe")
 
-	main, err := p.activateImage(path)
+	main, err := p.ActivateImage(path)
 	if err != nil {
-		t.Fatalf("activateImage: %v", err)
+		t.Fatalf("ActivateImage: %v", err)
 	}
 
 	// The image's first section is in process 2's P0, where its ISD
@@ -72,15 +73,15 @@ func TestActivateImageInAnotherProcess(t *testing.T) {
 		t.Errorf("process 1's %08X PTE %#x (%v), want it still invalid", va, uint32(pte), err)
 	}
 
-	if len(p.ICBList) == 0 || p.ICBList[0] != main || len(c.images().ICBList) != 0 {
-		t.Errorf("ICB lists: process 2 %d, process 1 %d", len(p.ICBList), len(c.images().ICBList))
+	if len(p.ICBList) == 0 || p.ICBList[0] != main || len(c.ImageState(nil).ICBList) != 0 {
+		t.Errorf("ICB lists: process 2 %d, process 1 %d", len(p.ICBList), len(c.ImageState(nil).ICBList))
 	}
 
 	if env.RegionSize[0] == 0 || c.RTL.RegionSize[0] != 0 {
 		t.Errorf("P0 high-water marks: process 2 %#x, process 1 %#x", env.RegionSize[0], c.RTL.RegionSize[0])
 	}
 
-	if _, ok := p.symbols["MAIN"]; !ok {
+	if _, ok := p.Symbol("MAIN"); !ok {
 		t.Error("process 2 has no MAIN symbol")
 	}
 
@@ -97,9 +98,9 @@ func TestActivateImageInAnotherProcess(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	driver, ok, err := p.buildImageInitDriver(main, false)
+	driver, ok, err := p.BuildImageInitDriver(main, false)
 	if err != nil || !ok {
-		t.Fatalf("buildImageInitDriver: %v, %v", ok, err)
+		t.Fatalf("BuildImageInitDriver: %v, %v", ok, err)
 	}
 
 	owned := false
@@ -131,7 +132,7 @@ func TestActivateImageInAnotherProcess(t *testing.T) {
 	}
 
 	// A second driver for the same process reuses its page.
-	if again, _, _ := p.buildImageInitDriver(main, false); again != driver {
+	if again, _, _ := p.BuildImageInitDriver(main, false); again != driver {
 		t.Errorf("second driver at %08X, want %08X", again, driver)
 	}
 
@@ -149,17 +150,17 @@ func TestActivateImageInAnotherProcess(t *testing.T) {
 // console's, so an image list survives an INIT, as it always has.
 func TestProcessOneImagesSurviveInit(t *testing.T) {
 	c := bootedConsole(t)
-	c.images().ICBList = []*ICB{{Name: "<MAIN>"}}
+	c.ImageState(nil).ICBList = []*machine.ICB{{Name: "<MAIN>"}}
 
-	if c.imagesOf(c.RTL) != c.images() || c.imagesOf(nil) != c.images() {
-		t.Error("imagesOf(process 1) isn't process 1's image state")
+	if c.ImageState(c.RTL) != c.ImageState(c.ProcessOne()) || c.ImageState(nil) != c.ImageState(c.ProcessOne()) {
+		t.Error("ImageState(process 1) isn't process 1's image state")
 	}
 
 	if err := c.Init(c.Mem.Size()); err != nil {
 		t.Fatal(err)
 	}
 
-	if len(c.images().ICBList) != 1 || c.imagesOf(c.RTL) != c.images() {
+	if len(c.ImageState(nil).ICBList) != 1 || c.ImageState(c.RTL) != c.ImageState(nil) {
 		t.Error("process 1's image list was lost at INIT")
 	}
 }
@@ -169,13 +170,13 @@ func TestProcessOneImagesSurviveInit(t *testing.T) {
 func TestOtherImagesDroppedWithSystem(t *testing.T) {
 	c := bootedConsole(t)
 	env := newSecondProcess(t, c)
-	c.imagesOf(env).ICBList = []*ICB{{Name: "<MAIN>"}}
+	c.ImageState(env).ICBList = []*machine.ICB{{Name: "<MAIN>"}}
 
 	if err := c.Init(c.Mem.Size()); err != nil {
 		t.Fatal(err)
 	}
 
-	if len(c.otherImages) != 0 {
-		t.Errorf("%d other processes' image states kept across INIT", len(c.otherImages))
+	if c.OtherImageCount() != 0 {
+		t.Errorf("%d other processes' image states kept across INIT", c.OtherImageCount())
 	}
 }

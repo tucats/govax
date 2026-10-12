@@ -8,6 +8,7 @@ import (
 
 	"github.com/tucats/govax/internal/console"
 	"github.com/tucats/govax/internal/console/consoletest"
+	"github.com/tucats/govax/internal/machine"
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
@@ -261,7 +262,7 @@ func TestSpawnDCL_stopWhileRunning(t *testing.T) {
 	}
 
 	// The machine runs: SPIN gets to its image while the child runs.
-	if err := c.Run(child, console.RunOptions{}); err != nil {
+	if err := c.Run(child, machine.RunOptions{}); err != nil {
 		t.Fatal(err)
 	}
 

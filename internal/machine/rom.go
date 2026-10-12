@@ -1,0 +1,250 @@
+package machine
+
+import (
+	"encoding/binary"
+	"io"
+	"os"
+
+	"github.com/tucats/govax/internal/vmserrors"
+)
+
+// romMagic is the exact 8-byte header a binary ROM image file starts with —
+// ";ROMIMG\r" (note the trailing CR, not LF: a holdover from the original
+// 1997-99 Mac development this project's own reference material notes
+// elsewhere, confirmed against testdata/rom/xdefault.rom's actual bytes).
+// console_rom's own reader only fgets 7 bytes of this ("read up to n-1"),
+// leaving the CR for load_rom's first read to consume — this port just
+// treats the whole 8 bytes as one fixed magic value.
+var romMagic = [8]byte{';', 'R', 'O', 'M', 'I', 'M', 'G', '\r'}
+
+// SaveROM writes the console's ROM image to path in the binary format:
+// the 8-byte magic, big-endian base/end addresses, then a sequence of
+// (big-endian ROM-relative offset, big-endian page count [always 1],
+// 512 bytes of page data) entries for every non-all-zero 512-byte page,
+// terminated by a zero-count entry — matching reference/AUDIT.md's V1
+// finding that pins these fields to a literal 4 bytes each.
+func (m *Machine) SaveROM(path string) error {
+	if len(m.Engine.Memory().ROM) == 0 {
+		return vmserrors.New(vmserrors.RMS_NOIMAGE, "ROM")
+	}
+
+	f, err := os.Create(path)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+
+	if _, err := f.Write(romMagic[:]); err != nil {
+		return err
+	}
+
+	if err := writeBE32(f, m.Engine.Memory().ROMBase); err != nil {
+		return err
+	}
+
+	if err := writeBE32(f, m.Engine.Memory().ROMEnd); err != nil {
+		return err
+	}
+
+	for base := uint32(0); base+512 <= uint32(len(m.Engine.Memory().ROM)); base += 512 {
+		page := m.Engine.Memory().ROM[base : base+512]
+		if allZero(page) {
+			continue
+		}
+
+		if err := writeBE32(f, base); err != nil {
+			return err
+		}
+
+		if err := writeBE32(f, 1); err != nil {
+			return err
+		}
+
+		if _, err := f.Write(page); err != nil {
+			return err
+		}
+	}
+
+	if err := writeBE32(f, 0); err != nil {
+		return err
+	}
+
+	return writeBE32(f, 0)
+}
+
+// LoadROM reads a binary ROM image file, matching load_rom. path is
+// resolved through c.Paths (docs/PHASE-15.md).
+//
+// With noError (LOAD/ROM/NOERROR), a file that can't be opened isn't
+// an error: nothing is loaded. Then path may be "", meaning default.rom.
+func (m *Machine) LoadROM(path string, noError bool) error {
+	if path == "" && noError {
+		path = "default.rom"
+	}
+
+	f, err := m.Paths.Open(path)
+	if err != nil {
+		if noError {
+			return nil
+		}
+
+		return err
+	}
+
+	defer f.Close()
+
+	var magic [8]byte
+
+	if _, err := io.ReadFull(f, magic[:]); err != nil {
+		return vmserrors.Wrap(vmserrors.RMS_READFIELD, err, "ROM", "magic")
+	}
+
+	if magic != romMagic {
+		return vmserrors.New(vmserrors.RMS_BADMAGIC, path)
+	}
+
+	base, err := readBE32(f)
+	if err != nil {
+		return vmserrors.Wrap(vmserrors.RMS_READFIELD, err, "ROM", "base address")
+	}
+
+	end, err := readBE32(f)
+	if err != nil {
+		return vmserrors.Wrap(vmserrors.RMS_READFIELD, err, "ROM", "end address")
+	}
+
+	size := end + 1 - base
+	rom := make([]byte, size)
+
+	for {
+		addr, err := readBE32(f)
+		if err != nil {
+			break // matches load_rom's own "short read ends the loop" behavior
+		}
+
+		count, err := readBE32(f)
+		if err != nil {
+			break
+		}
+
+		if count == 0 {
+			break
+		}
+
+		if uint64(addr)+uint64(count)*512 > uint64(size) {
+			return vmserrors.New(vmserrors.RMS_IMAGETOOLARGE, "ROM", addr)
+		}
+
+		if _, err := io.ReadFull(f, rom[addr:addr+count*512]); err != nil {
+			return vmserrors.Wrap(vmserrors.RMS_READPAGE, err, "ROM", addr)
+		}
+	}
+
+	m.Engine.Memory().ROM = rom
+	m.Engine.Memory().ROMBase = base
+	m.Engine.Memory().ROMEnd = end
+	m.Engine.Memory().ROMFile = path
+
+	return nil
+}
+
+// SaveNVRAM writes the console's NVRAM image to path, matching
+// NVRAM format: big-endian base address and size (no magic
+// header, and no per-page structure — the whole buffer is written at once).
+func (m *Machine) SaveNVRAM(path string) error {
+	if len(m.Engine.Memory().NVRAM) == 0 {
+		return vmserrors.New(vmserrors.RMS_NOIMAGE, "NVRAM")
+	}
+
+	f, err := os.Create(path)
+	if err != nil {
+		return err
+	}
+	defer f.Close()
+
+	if err := writeBE32(f, m.Engine.Memory().NVRAMBase); err != nil {
+		return err
+	}
+
+	if err := writeBE32(f, uint32(len(m.Engine.Memory().NVRAM))); err != nil {
+		return err
+	}
+
+	_, err = f.Write(m.Engine.Memory().NVRAM)
+
+	return err
+}
+
+// LoadNVRAM reads an NVRAM image file, matching load_nvram. path is
+// resolved through c.Paths (docs/PHASE-15.md).
+//
+// With noError (LOAD/NVRAM/NOERROR), a file that can't be opened isn't
+// an error: nothing is loaded. Then path may be "", meaning default.nvram.
+func (m *Machine) LoadNVRAM(path string, noError bool) error {
+	if path == "" && noError {
+		path = "default.nvram"
+	}
+
+	f, err := m.Paths.Open(path)
+	if err != nil {
+		if noError {
+			return nil
+		}
+
+		return err
+	}
+
+	defer f.Close()
+
+	base, err := readBE32(f)
+	if err != nil {
+		return vmserrors.Wrap(vmserrors.RMS_READFIELD, err, "NVRAM", "base address")
+	}
+
+	size, err := readBE32(f)
+	if err != nil {
+		return vmserrors.Wrap(vmserrors.RMS_READFIELD, err, "NVRAM", "size")
+	}
+
+	nvram := make([]byte, size)
+	if _, err := io.ReadFull(f, nvram); err != nil {
+		return vmserrors.Wrap(vmserrors.RMS_READFIELD, err, "NVRAM", "data")
+	}
+
+	m.Engine.Memory().NVRAM = nvram
+	m.Engine.Memory().NVRAMBase = base
+	m.Engine.Memory().NVRAMEnd = base + size - 1
+	m.Engine.Memory().NVRAMFile = path
+
+	return nil
+}
+
+func allZero(b []byte) bool {
+	for _, v := range b {
+		if v != 0 {
+			return false
+		}
+	}
+
+	return true
+}
+
+func writeBE32(w io.Writer, v uint32) error {
+	var buf [4]byte
+
+	binary.BigEndian.PutUint32(buf[:], v)
+
+	_, err := w.Write(buf[:])
+
+	return err
+}
+
+func readBE32(r io.Reader) (uint32, error) {
+	var buf [4]byte
+
+	if _, err := io.ReadFull(r, buf[:]); err != nil {
+		return 0, err
+	}
+
+	return binary.BigEndian.Uint32(buf[:]), nil
+}

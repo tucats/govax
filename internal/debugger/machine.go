@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/tucats/govax/internal/console"
 	"github.com/tucats/govax/internal/dcl"
+	"github.com/tucats/govax/internal/machine"
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
@@ -82,15 +82,15 @@ func (d *Dispatcher) bindMachine() {
 
 	// SHOW SP is the current stack; the others are each mode's own.
 	for name, stack := range map[string]struct {
-		kind    console.StackKind
+		kind    machine.StackKind
 		current bool
 	}{
-		"SHOW_SP":  {console.StackKSP, true},
-		"SHOW_KSP": {console.StackKSP, false},
-		"SHOW_ESP": {console.StackESP, false},
-		"SHOW_SSP": {console.StackSSP, false},
-		"SHOW_USP": {console.StackUSP, false},
-		"SHOW_ISP": {console.StackISP, false},
+		"SHOW_SP":  {machine.StackKSP, true},
+		"SHOW_KSP": {machine.StackKSP, false},
+		"SHOW_ESP": {machine.StackESP, false},
+		"SHOW_SSP": {machine.StackSSP, false},
+		"SHOW_USP": {machine.StackUSP, false},
+		"SHOW_ISP": {machine.StackISP, false},
 	} {
 		g.Bind(name, func(id int64, r *dcl.Result) error {
 			count, err := d.Debugger.optionalNumber(r.String("COUNT"))

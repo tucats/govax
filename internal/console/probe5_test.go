@@ -8,6 +8,7 @@ import (
 
 	"github.com/tucats/govax/internal/console"
 	"github.com/tucats/govax/internal/console/consoletest"
+	"github.com/tucats/govax/internal/machine"
 	"github.com/tucats/govax/internal/rms"
 )
 
@@ -58,7 +59,7 @@ func TestProbe5(t *testing.T) {
 
 	out.Reset()
 
-	if err := c.Run("DUA0:[000000]PROBE5.EXE", console.RunOptions{}); err != nil {
+	if err := c.Run("DUA0:[000000]PROBE5.EXE", machine.RunOptions{}); err != nil {
 		t.Fatalf("RUN: %v\n%s", err, out.String())
 	}
 
@@ -94,7 +95,7 @@ func TestProbe5Args(t *testing.T) {
 
 	out.Reset()
 
-	if err := c.Run(exe, console.RunOptions{}); err != nil {
+	if err := c.Run(exe, machine.RunOptions{}); err != nil {
 		t.Fatalf("RUN: %v\n%s", err, out.String())
 	}
 

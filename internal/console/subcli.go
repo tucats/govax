@@ -7,6 +7,7 @@ import (
 
 	"github.com/tucats/govax/internal/corevms"
 	"github.com/tucats/govax/internal/lnm"
+	"github.com/tucats/govax/internal/machine"
 	"github.com/tucats/govax/internal/vax"
 	"github.com/tucats/govax/internal/vmsdef"
 	"github.com/tucats/govax/internal/vmserrors"
@@ -294,7 +295,7 @@ func (h cliHost) Start(env *corevms.Environment, start *corevms.CLIStartup) (uin
 		0xFC, 0x7D, // XFC #XFC$SHIM
 		0xDD, 0x50, // PUSHL R0
 	}
-	code = append(code, EncodeCalls(1, exit)...)
+	code = append(code, machine.EncodeCalls(1, exit)...)
 	code = append(code, 0x04) // RET
 
 	for len(code) < cliStubArgList+4 {
@@ -715,7 +716,7 @@ func (c *Interpreter) endCLIImage(cli *subprocessCLI) {
 	cli.imageExit = status
 	c.traceCLI(cli, "image ends, status %08X", status)
 
-	// Image rundown, as for process 1's images (imageRundown): the
+	// Image rundown, as for process 1's images (ImageRundown): the
 	// user-mode logical names in the process table, then everything
 	// corevms keeps per image.
 	_, _ = env.Logicals.Delete(lnm.ProcessTableName, "", lnm.User)

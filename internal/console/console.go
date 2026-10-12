@@ -4,6 +4,7 @@ import (
 	"io"
 
 	"github.com/tucats/govax/internal/corevms"
+	"github.com/tucats/govax/internal/machine"
 	"github.com/tucats/govax/internal/rms"
 )
 
@@ -16,7 +17,7 @@ import (
 // validity, the assembler's own settings).
 type Console struct {
 	// Machine is the emulated system (vaxmachine.go).
-	*Machine
+	*machine.Machine
 
 	// Interpreter is the DCL (interpreter.go).
 	*Interpreter
@@ -56,7 +57,7 @@ type Console struct {
 // C source's terms) — an INIT command (see init.go) must run before most
 // other commands will accept.
 func New(out io.Writer) *Console {
-	m := NewMachine(out)
+	m := machine.NewMachine(out)
 
 	session := rms.NewSession(m.Mounts)
 	session.Logicals = m.ProcessOneLogicals()
@@ -74,7 +75,7 @@ func New(out io.Writer) *Console {
 
 	c.home = c.Shell
 	c.machine = c.Machine
-	c.Hooks = Hooks{
+	c.Hooks = machine.Hooks{
 		Output:         func() io.Writer { return c.Out },
 		Session:        func() *rms.Session { return c.ContainerSession },
 		ProcessOneOnly: c.processOneOnly,

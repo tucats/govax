@@ -8,6 +8,7 @@ import (
 
 	"github.com/tucats/govax/internal/console"
 	"github.com/tucats/govax/internal/console/consoletest"
+	"github.com/tucats/govax/internal/machine"
 )
 
 // TestProbe6 runs Phase 49's probe (testdata/probe49) under govax, as
@@ -65,7 +66,7 @@ func runProbe6(t *testing.T, name string, cluster uint16, want ...string) {
 
 	out.Reset()
 
-	if err := c.Run(exe, console.RunOptions{}); err != nil {
+	if err := c.Run(exe, machine.RunOptions{}); err != nil {
 		t.Fatalf("RUN: %v\n%s", err, out.String())
 	}
 

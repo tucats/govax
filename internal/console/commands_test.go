@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/tucats/govax/internal/help"
+	"github.com/tucats/govax/internal/machine"
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
@@ -133,7 +134,7 @@ func TestCommands_notImplemented(t *testing.T) {
 func TestCommands_zero(t *testing.T) {
 	d, c, _ := newCommandDispatcher(t)
 
-	if err := c.Deposit("", 0x1000, SizeLongword, 0x55); err != nil {
+	if err := c.Deposit("", 0x1000, machine.SizeLongword, 0x55); err != nil {
 		t.Fatal(err)
 	}
 

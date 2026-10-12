@@ -3,6 +3,8 @@ package console
 import (
 	"strings"
 	"testing"
+
+	"github.com/tucats/govax/internal/machine"
 )
 
 // TestScheduler_oneProcessRun runs the FORTH interpreter with the
@@ -20,7 +22,7 @@ func TestScheduler_oneProcessRun(t *testing.T) {
 
 	want, _ := forthSession(t, typed, nil)
 
-	withSettings(t, map[string]string{schedulerSetting: "true", quantumSetting: "997"})
+	withSettings(t, map[string]string{machine.SchedulerSetting: "true", machine.QuantumSetting: "997"})
 
 	got, c := forthSession(t, typed, nil)
 	if got != want {

@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	. "github.com/tucats/govax/internal/console"
+	"github.com/tucats/govax/internal/machine"
 )
 
 // Phase 45's subtask 13: testdata/mp/crechild.mar, a MACRO program that
@@ -35,7 +35,7 @@ func TestCreChild(t *testing.T) {
 
 	out.Reset()
 
-	if err := c.Run(parent, RunOptions{CommandLine: child}); err != nil {
+	if err := c.Run(parent, machine.RunOptions{CommandLine: child}); err != nil {
 		t.Fatalf("RUN: %v\n%s", err, out.String())
 	}
 

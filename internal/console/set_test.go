@@ -4,6 +4,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/tucats/govax/internal/machine"
 	"github.com/tucats/govax/internal/vax"
 )
 
@@ -392,7 +393,7 @@ func TestShowMemory_afterVMInit(t *testing.T) {
 
 func TestShowSymbols(t *testing.T) {
 	c, buf := newTestConsole(t)
-	c.Symbols.Set("MYSYM", 0xABCD, SymbolUser)
+	c.Symbols.Set("MYSYM", 0xABCD, machine.SymbolUser)
 	buf.Reset()
 
 	if err := c.ShowSymbols(""); err != nil {
@@ -422,7 +423,7 @@ func TestShowStack(t *testing.T) {
 	c.CPU.SetPR(vax.ESP, 0x99887766)
 	buf.Reset()
 
-	if err := c.ShowStack(StackESP, false, 0, false); err != nil {
+	if err := c.ShowStack(machine.StackESP, false, 0, false); err != nil {
 		t.Fatalf("ShowStack: %v", err)
 	}
 

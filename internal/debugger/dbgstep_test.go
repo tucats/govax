@@ -8,6 +8,7 @@ import (
 	"github.com/tucats/gopackages/app-cli/settings"
 	"github.com/tucats/govax/internal/console"
 	"github.com/tucats/govax/internal/console/consoletest"
+	"github.com/tucats/govax/internal/machine"
 	"github.com/tucats/govax/internal/vax"
 )
 
@@ -30,7 +31,7 @@ func stepImage(t *testing.T, image string) (*console.Dispatcher, *bytes.Buffer, 
 	buf := c.Out.(*bytes.Buffer)
 	buf.Reset()
 
-	if err := c.Run(dbgImagePath(t, image), console.RunOptions{Debug: console.DebugOn}); err != nil {
+	if err := c.Run(dbgImagePath(t, image), machine.RunOptions{Debug: machine.DebugOn}); err != nil {
 		t.Fatalf("RUN/STEP %s: %v", image, err)
 	}
 

@@ -48,6 +48,9 @@
 // This package imports internal/console, because the debugger works on
 // the console's machine: its engine, memory, symbols, and loaded images.
 // The console can't import this package back, so it knows the debugger
-// only through the small console.Debugger interface, which *Debugger
+// only through the small machine.Debugger interface, which *Debugger
 // implements. cmd/govax installs the debugger with Install.
 package debugger
+
+import (
+)

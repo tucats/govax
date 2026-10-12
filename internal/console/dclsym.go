@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/tucats/govax/internal/lnm"
+	"github.com/tucats/govax/internal/machine"
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
@@ -253,7 +254,7 @@ func (d *Dispatcher) runForeign(spec, rest string) error {
 		return err
 	}
 
-	opts := RunOptions{RunInits: d.Console.DefaultRunInits(), CommandLine: dclText(rest, true)}
+	opts := machine.RunOptions{RunInits: d.Console.DefaultRunInits(), CommandLine: dclText(rest, true)}
 
 	defer func() { d.Console.imageRan = true }()
 

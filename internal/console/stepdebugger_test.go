@@ -1,6 +1,7 @@
 package console
 
 import (
+	"github.com/tucats/govax/internal/machine"
 	"github.com/tucats/govax/internal/vax"
 	"github.com/tucats/govax/internal/vmserrors"
 )
@@ -20,10 +21,10 @@ func (s *stepDebugger) Active() bool { return false }
 
 func (s *stepDebugger) Dispatch(string) error { return vmserrors.New(vmserrors.DBG_NOTAVAILABLE) }
 
-func (s *stepDebugger) Start(a Activation) error {
+func (s *stepDebugger) Start(a machine.Activation) error {
 	c := s.c
 
-	if a.Kind == ActivateCall {
+	if a.Kind == machine.ActivateCall {
 		if err := c.Engine.CallEntry(*a.Addr, a.Args...); err != nil {
 			return err
 		}
@@ -31,13 +32,13 @@ func (s *stepDebugger) Start(a Activation) error {
 		c.Engine.BeginRun()
 
 		if !a.Step {
-			return c.runPlain()
+			return c.RunPlain()
 		}
 	}
 
 	// RUN under the debugger: run the image's driver up to the main
 	// routine's first instruction, as the real debugger does.
-	if a.Kind == ActivateImage {
+	if a.Kind == machine.ActivateImage {
 		if err := c.Engine.CallEntry(*a.Addr); err != nil {
 			return err
 		}
@@ -53,14 +54,14 @@ func (s *stepDebugger) Start(a Activation) error {
 		return nil
 	}
 
-	if a.Kind == ActivateGo {
+	if a.Kind == machine.ActivateGo {
 		if a.Addr != nil {
 			c.CPU.SetGPR(vax.PC, *a.Addr)
 		}
 
 		c.Engine.BeginRun()
 
-		return c.runPlain()
+		return c.RunPlain()
 	}
 
 	userStep := c.Engine.CPU().DebugEnabled(vax.DebugUserStep)

@@ -2,6 +2,7 @@ package console
 
 import (
 	"bytes"
+	"github.com/tucats/govax/internal/machine"
 	"github.com/tucats/govax/internal/vax"
 	"testing"
 )
@@ -9,13 +10,13 @@ import (
 func evalTest(t *testing.T, radix int, syms map[string]uint32, expr string) uint32 {
 	t.Helper()
 
-	st := NewSymbolTable()
+	st := machine.NewSymbolTable()
 
 	for k, v := range syms {
-		st.Set(k, v, SymbolUser)
+		st.Set(k, v, machine.SymbolUser)
 	}
 
-	e := &Evaluator{Symbols: st, Radix: radix, Here: 0x1000}
+	e := &machine.Evaluator{Symbols: st, Radix: radix, Here: 0x1000}
 
 	v, rest, err := e.Eval(expr)
 	if err != nil {
@@ -63,7 +64,7 @@ func TestEvaluator_symbol(t *testing.T) {
 }
 
 func TestEvaluator_undefinedSymbol(t *testing.T) {
-	e := &Evaluator{Symbols: NewSymbolTable(), Radix: 16}
+	e := &machine.Evaluator{Symbols: machine.NewSymbolTable(), Radix: 16}
 	if _, _, err := e.Eval("NOSUCH"); err == nil {
 		t.Error("expected an error for an undefined symbol")
 	}
@@ -142,7 +143,7 @@ func TestEvaluator_comparisons(t *testing.T) {
 }
 
 func TestEvaluator_divisionByZero(t *testing.T) {
-	e := &Evaluator{Symbols: NewSymbolTable(), Radix: 10}
+	e := &machine.Evaluator{Symbols: machine.NewSymbolTable(), Radix: 10}
 	if _, _, err := e.Eval("1/0"); err == nil {
 		t.Error("expected division-by-zero error")
 	}
@@ -171,7 +172,7 @@ func TestEvaluator_definedFunction(t *testing.T) {
 func TestEvaluator_trailingRemainder(t *testing.T) {
 	// A second address (e.g. EXAMINE's optional end-address) is left
 	// unconsumed for the caller to parse separately.
-	e := &Evaluator{Symbols: NewSymbolTable(), Radix: 16}
+	e := &machine.Evaluator{Symbols: machine.NewSymbolTable(), Radix: 16}
 
 	v, rest, err := e.Eval("200 300")
 	if err != nil {
@@ -357,7 +358,7 @@ func TestEvaluator_quotedStringUnterminated(t *testing.T) {
 // TestEvaluator_quotedStringNoPool matches asm_expr3's own get_symbol
 // failure path when CONSOLE$STRINGPOOL* isn't defined yet (no VMINIT).
 func TestEvaluator_quotedStringNoPool(t *testing.T) {
-	e := &Evaluator{Symbols: NewSymbolTable(), Radix: 16}
+	e := &machine.Evaluator{Symbols: machine.NewSymbolTable(), Radix: 16}
 	if _, _, err := e.Eval(`"Hello"`); err == nil {
 		t.Error("expected an error with no string pool defined")
 	}
@@ -391,11 +392,11 @@ func TestEvaluator_registers(t *testing.T) {
 	cpu.SetGPR(vax.SP, 0x7FF00000)
 	cpu.SetGPR(vax.PC, 0x400)
 
-	st := NewSymbolTable()
-	st.Set("DATA", 0x2000, SymbolUser)
-	st.Set("R2", 0x55, SymbolUser) // a console symbol beats a register
+	st := machine.NewSymbolTable()
+	st.Set("DATA", 0x2000, machine.SymbolUser)
+	st.Set("R2", 0x55, machine.SymbolUser) // a console symbol beats a register
 
-	e := &Evaluator{
+	e := &machine.Evaluator{
 		Symbols: st, Radix: 16, Here: 0x1000, CPU: cpu,
 		Load: func(addr uint32) (uint32, error) { return addr + 1, nil },
 	}

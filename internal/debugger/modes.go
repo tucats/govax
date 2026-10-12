@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/tucats/govax/internal/console"
+	"github.com/tucats/govax/internal/machine"
 	"github.com/tucats/govax/internal/vax"
 	"github.com/tucats/govax/internal/vmserrors"
 )
@@ -110,7 +110,7 @@ var modeKeywords = []modeKeyword{
 			return vmserrors.New(vmserrors.DBG_SYNTAX, "="+value)
 		}
 
-		d.operands = console.OperandsOff
+		d.operands = machine.OperandsOff
 
 		return nil
 	}},
@@ -135,11 +135,11 @@ var modeKeywords = []modeKeyword{
 func (d *Debugger) setOperands(value string) error {
 	switch {
 	case value == "":
-		d.operands = console.OperandsBrief
+		d.operands = machine.OperandsBrief
 	case strings.HasPrefix("FULL", value):
-		d.operands = console.OperandsFull
+		d.operands = machine.OperandsFull
 	case strings.HasPrefix("BRIEF", value):
-		d.operands = console.OperandsBrief
+		d.operands = machine.OperandsBrief
 	default:
 		return vmserrors.New(vmserrors.DBG_SYNTAX, value)
 	}
@@ -199,8 +199,8 @@ func (d *Debugger) setMode(words string) error {
 // cancelMode runs CANCEL MODE: every display mode goes back to its
 // start-up setting. The radixes and govax's access mode are left alone.
 func (d *Debugger) cancelMode() error {
-	d.symbolic = console.SymbolicDefault()
-	d.operands = console.OperandsOff
+	d.symbolic = machine.SymbolicDefault()
+	d.operands = machine.OperandsOff
 	d.modes = defaultDisplayModes()
 
 	return nil
@@ -241,9 +241,9 @@ func (d *Debugger) modesLine() string {
 	parts := []string{word(d.symbolic, "symbolic"), word(d.modes.line, "line"), float}
 
 	switch d.operands {
-	case console.OperandsBrief:
+	case machine.OperandsBrief:
 		parts = append(parts, "brief operands")
-	case console.OperandsFull:
+	case machine.OperandsFull:
 		parts = append(parts, "full operands")
 	}
 

@@ -6,9 +6,9 @@ import (
 	"strings"
 	"unicode"
 
-	"github.com/tucats/govax/internal/console"
 	"github.com/tucats/govax/internal/dcl"
 	"github.com/tucats/govax/internal/help"
+	"github.com/tucats/govax/internal/machine"
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
@@ -80,7 +80,7 @@ func (d *Dispatcher) bind() {
 			return err
 		}
 
-		return d.Debugger.Start(console.Activation{Kind: console.ActivateGo, Addr: addr})
+		return d.Debugger.Start(machine.Activation{Kind: machine.ActivateGo, Addr: addr})
 	})
 
 	g.Bind("CALL", func(id int64, r *dcl.Result) error {
@@ -89,8 +89,8 @@ func (d *Dispatcher) bind() {
 			return err
 		}
 
-		return d.Debugger.Start(console.Activation{
-			Kind: console.ActivateCall, Addr: &addr, Step: r.Present("STEP"), Args: args,
+		return d.Debugger.Start(machine.Activation{
+			Kind: machine.ActivateCall, Addr: &addr, Step: r.Present("STEP"), Args: args,
 		})
 	})
 
@@ -255,7 +255,7 @@ func (d *Dispatcher) optionalAddress(r *dcl.Result, name string) (*uint32, error
 // /SILENT and /SOURCE (each negatable) choose the report. A qualifier not
 // given leaves SET STEP's default.
 func (d *Dispatcher) step(r *dcl.Result) error {
-	a := console.Activation{Kind: console.ActivateStep}
+	a := machine.Activation{Kind: machine.ActivateStep}
 
 	switch {
 	case r.Present("INSTRUCTION"):

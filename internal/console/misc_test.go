@@ -7,6 +7,7 @@ import (
 	"testing"
 
 	"github.com/tucats/govax/internal/help"
+	"github.com/tucats/govax/internal/machine"
 )
 
 func TestPrint_quotedAndExpression(t *testing.T) {
@@ -100,8 +101,8 @@ func writeFile(t *testing.T, path, content string) {
 
 func TestClearSymbol(t *testing.T) {
 	c, _ := newTestConsole(t)
-	c.Symbols.Set("FOO", 1, SymbolUser)
-	c.Symbols.Set("BAR", 2, SymbolUser)
+	c.Symbols.Set("FOO", 1, machine.SymbolUser)
+	c.Symbols.Set("BAR", 2, machine.SymbolUser)
 
 	if err := c.ClearSymbol("FOO", false); err != nil {
 		t.Fatalf("ClearSymbol: %v", err)
@@ -128,7 +129,7 @@ func TestClearSymbolTemporary(t *testing.T) {
 	c, _ := newTestConsole(t)
 	c.Symbols.SetQualified("PERM", 1, true, false, false)
 	c.Symbols.SetQualified("TEMP", 2, false, false, false)
-	c.Symbols.Set("SYS$FOO", 3, SymbolSystem)
+	c.Symbols.Set("SYS$FOO", 3, machine.SymbolSystem)
 
 	if err := c.ClearSymbolTemporary(); err != nil {
 		t.Fatalf("ClearSymbolTemporary: %v", err)
@@ -155,9 +156,9 @@ func TestClearString(t *testing.T) {
 	}
 
 	base := uint32(0x2000)
-	c.Symbols.Set("CONSOLE$STRINGPOOL_BASE", base, SymbolSystem)
-	c.Symbols.Set("CONSOLE$STRINGPOOL_SIZE", 16, SymbolSystem)
-	c.Symbols.Set("CONSOLE$STRINGPOOL", base+8, SymbolSystem)
+	c.Symbols.Set("CONSOLE$STRINGPOOL_BASE", base, machine.SymbolSystem)
+	c.Symbols.Set("CONSOLE$STRINGPOOL_SIZE", 16, machine.SymbolSystem)
+	c.Symbols.Set("CONSOLE$STRINGPOOL", base+8, machine.SymbolSystem)
 
 	if err := c.Mem.StoreLongword(c.CPU, base, 0xDEADBEEF); err != nil {
 		t.Fatalf("seed: %v", err)
@@ -183,7 +184,7 @@ func TestClearString(t *testing.T) {
 
 func TestClearMemory_reinitializes(t *testing.T) {
 	c, _ := newTestConsole(t)
-	c.Symbols.Set("FOO", 1, SymbolUser)
+	c.Symbols.Set("FOO", 1, machine.SymbolUser)
 
 	if err := c.Mem.StoreLongword(c.CPU, 0x100, 0xCAFEBABE); err != nil {
 		t.Fatalf("seed: %v", err)

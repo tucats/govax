@@ -8,6 +8,7 @@ import (
 	"github.com/tucats/govax/internal/dbgsym"
 	"github.com/tucats/govax/internal/dcl"
 	"github.com/tucats/govax/internal/help"
+	"github.com/tucats/govax/internal/machine"
 )
 
 // Prompt is what the front end shows while a debugger session is active,
@@ -16,7 +17,7 @@ const Prompt = "DBG> "
 
 // Debugger is one debugger: the state of a session and the commands that
 // act on it. It works on a Console's machine, and implements
-// console.Debugger so that the console can start it and route command
+// machine.Debugger so that the console can start it and route command
 // lines to it.
 //
 // Subtasks of docs/PHASE-42.md move the rest of the debugging state here
@@ -93,12 +94,12 @@ type Debugger struct {
 	// unhandled is a condition no handler continued, set by onUnhandled
 	// while the machine runs and taken by the run loop at the next
 	// instruction boundary (unhandledBreak).
-	unhandled *console.UnhandledException
+	unhandled *machine.UnhandledException
 
 	// signalled is a condition just signaled that SET BREAK/EXCEPTION
 	// wants to stop at, and signalBP the breakpoint that wants it; the run
 	// loop takes them at the next instruction boundary (signalBreak).
-	signalled *console.UnhandledException
+	signalled *machine.UnhandledException
 	signalBP  *Breakpoint
 
 	// pendingDo is the DO clause of the breakpoint that just stopped the
@@ -113,7 +114,7 @@ type Debugger struct {
 	// radix is separate from the console's (Decision 8).
 	symbolic    bool
 	modes       displayModes
-	operands    console.OperandsMode
+	operands    machine.OperandsMode
 	inputRadix  int
 	outputRadix int
 
@@ -127,7 +128,7 @@ type Debugger struct {
 	// current exception, the one the program last stopped for, which the
 	// %EXC_ symbols describe (builtins.go). A run clears exception.
 	curval    currentValue
-	exception *console.UnhandledException
+	exception *machine.UnhandledException
 
 	// numericNames is set while an EXAMINE/NOSYMBOLIC runs: its
 	// locations are named by their addresses (data.go).
@@ -153,7 +154,7 @@ type Debugger struct {
 func New(c *console.Console, g *dcl.Grammar, help *help.File) *Debugger {
 	d := &Debugger{
 		Console: c, StepMode: StepOver,
-		symbolic: console.SymbolicDefault(), inputRadix: 16, outputRadix: 16,
+		symbolic: machine.SymbolicDefault(), inputRadix: 16, outputRadix: 16,
 		modes: defaultDisplayModes(),
 	}
 	d.Dispatcher = newDispatcher(d, g, help)
@@ -191,8 +192,8 @@ func (d *Debugger) Active() bool { return d.active }
 //     (RUN, GO) opens no session, as VMS's DCL takes the CTRL/C and its
 //     prompt comes back. A session that was open when the run started
 //     stays open either way, until EXIT.
-func (d *Debugger) Start(a console.Activation) error {
-	if a.Kind == console.ActivateAttach {
+func (d *Debugger) Start(a machine.Activation) error {
+	if a.Kind == machine.ActivateAttach {
 		d.active = true
 
 		return nil
@@ -227,16 +228,16 @@ func (d *Debugger) Start(a console.Activation) error {
 	)
 
 	switch a.Kind {
-	case console.ActivateGo:
+	case machine.ActivateGo:
 		outcome, err = d.goRun(a.Addr)
 
-	case console.ActivateCall:
+	case machine.ActivateCall:
 		outcome, err = d.callRun(*a.Addr, a.Step, a.Args)
 
-	case console.ActivateImage:
+	case machine.ActivateImage:
 		outcome, err = d.startImage(a)
 
-	case console.ActivateStep:
+	case machine.ActivateStep:
 		var req stepRequest
 
 		if req, err = d.buildStepRequest(a); err != nil {

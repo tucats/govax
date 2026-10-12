@@ -7,6 +7,7 @@ import (
 
 	"github.com/tucats/govax/internal/console"
 	"github.com/tucats/govax/internal/console/consoletest"
+	"github.com/tucats/govax/internal/machine"
 	"github.com/tucats/govax/internal/vax"
 	"github.com/tucats/govax/internal/vmserrors"
 )
@@ -14,7 +15,7 @@ import (
 // runImage loads the image at path with RUN's options opts on a runnable
 // console with the debugger installed, and returns the console and RUN's
 // output.
-func runImage(t *testing.T, path string, opts console.RunOptions) (*console.Console, string) {
+func runImage(t *testing.T, path string, opts machine.RunOptions) (*console.Console, string) {
 	t.Helper()
 
 	c := newRunnableConsole(t)
@@ -62,7 +63,7 @@ func probeImage(t *testing.T) string {
 // any of the program has run (dbgdis.dlg's first lines: SHOW SCOPE says
 // DBGDIS\START, and .PC is START's line 42).
 func TestRunDebugStopsAtMain(t *testing.T) {
-	c, out := runImage(t, dbgImagePath(t, "dbgdis.exe"), console.RunOptions{Debug: console.DebugOn})
+	c, out := runImage(t, dbgImagePath(t, "dbgdis.exe"), machine.RunOptions{Debug: machine.DebugOn})
 
 	if !strings.Contains(out, "%DEBUG-I-INITIAL, Language: MACRO, Module: DBGDIS\n") {
 		t.Errorf("RUN/DEBUG output:\n%s", out)
@@ -92,17 +93,17 @@ func TestRunDebugStopsAtMain(t *testing.T) {
 // the debugger even with RUN/DEBUG (docs/PHASE-42.md, subtask 1: VMS
 // ran DBGNOTB silently).
 func TestRunDefaultsFollowLinkFlag(t *testing.T) {
-	c, out := runImage(t, dbgImagePath(t, "dbgdis.exe"), console.RunOptions{})
+	c, out := runImage(t, dbgImagePath(t, "dbgdis.exe"), machine.RunOptions{})
 	if !c.InDebugger() || !strings.Contains(out, "INITIAL") {
 		t.Errorf("RUN of a /DEBUG image: session %v, output:\n%s", c.InDebugger(), out)
 	}
 
-	c, out = runImage(t, dbgImagePath(t, "dbgdis.exe"), console.RunOptions{Debug: console.DebugOff})
+	c, out = runImage(t, dbgImagePath(t, "dbgdis.exe"), machine.RunOptions{Debug: machine.DebugOff})
 	if c.InDebugger() || strings.Contains(out, "INITIAL") || !strings.Contains(out, "DBGDIS: done") {
 		t.Errorf("RUN/NODEBUG: session %v, output:\n%s", c.InDebugger(), out)
 	}
 
-	c, out = runImage(t, dbgImagePath(t, "dbgnotb.exe"), console.RunOptions{Debug: console.DebugOn})
+	c, out = runImage(t, dbgImagePath(t, "dbgnotb.exe"), machine.RunOptions{Debug: machine.DebugOn})
 	if c.InDebugger() || strings.Contains(out, "INITIAL") || strings.Contains(out, "DEBUG") {
 		t.Errorf("RUN/DEBUG of a /NOTRACEBACK image: session %v, output:\n%s", c.InDebugger(), out)
 	}
@@ -113,7 +114,7 @@ func TestRunDefaultsFollowLinkFlag(t *testing.T) {
 // lines). After that there is no program to run: GO and STEP say
 // %DEBUG-E-BADSTARTPC (except.dlg).
 func TestImageExitStatus(t *testing.T) {
-	c, _ := runImage(t, dbgImagePath(t, "dbgdis.exe"), console.RunOptions{Debug: console.DebugOn})
+	c, _ := runImage(t, dbgImagePath(t, "dbgdis.exe"), machine.RunOptions{Debug: machine.DebugOn})
 
 	out, err := goOutput(t, c)
 	if err != nil {
@@ -142,7 +143,7 @@ func TestImageExitStatus(t *testing.T) {
 // faulting instruction ("at", faillnk.dlg). GO lets the catch-all end the
 // image with the condition as its status.
 func TestUnhandledExceptionBreak(t *testing.T) {
-	c, _ := runImage(t, dbgImagePath(t, "faillnk.exe"), console.RunOptions{Debug: console.DebugOn})
+	c, _ := runImage(t, dbgImagePath(t, "faillnk.exe"), machine.RunOptions{Debug: machine.DebugOn})
 
 	out, err := goOutput(t, c)
 	if err != nil {
@@ -178,7 +179,7 @@ func TestUnhandledExceptionBreak(t *testing.T) {
 // handler, so it doesn't break; the warning is continued, as the
 // catch-all continues a non-severe condition, and the image then exits.
 func TestUnhandledSignalBreak(t *testing.T) {
-	c, _ := runImage(t, probeImage(t), console.RunOptions{Debug: console.DebugOn})
+	c, _ := runImage(t, probeImage(t), machine.RunOptions{Debug: machine.DebugOn})
 
 	out, err := goOutput(t, c)
 	if err != nil {
@@ -203,7 +204,7 @@ func TestUnhandledSignalBreak(t *testing.T) {
 // TestUnhandledOutsideImageDebug: an image run without the debugger is
 // not stopped by an unhandled condition: the catch-all ends it as always.
 func TestUnhandledOutsideImageDebug(t *testing.T) {
-	c, out := runImage(t, dbgImagePath(t, "faillnk.exe"), console.RunOptions{Debug: console.DebugOff})
+	c, out := runImage(t, dbgImagePath(t, "faillnk.exe"), machine.RunOptions{Debug: machine.DebugOff})
 
 	if c.InDebugger() || strings.Contains(out, "break on") {
 		t.Errorf("RUN/NODEBUG stopped for the condition: session %v\n%s", c.InDebugger(), out)

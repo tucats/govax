@@ -10,6 +10,7 @@ import (
 	"github.com/tucats/govax/internal/help"
 	iodev "github.com/tucats/govax/internal/io"
 	"github.com/tucats/govax/internal/link"
+	"github.com/tucats/govax/internal/machine"
 	"github.com/tucats/govax/internal/rms"
 	"github.com/tucats/govax/internal/vax"
 	"github.com/tucats/govax/internal/vmserrors"
@@ -486,7 +487,7 @@ func (d *Dispatcher) bindGrammar() {
 			return vmserrors.New(vmserrors.CLI_NEEDPAGES)
 		}
 
-		v, _, err := (&Evaluator{Symbols: d.Console.Symbols, Radix: d.Console.Radix, Mem: d.Console.Mem, CPU: d.Console.CPU}).Eval(r.String("PAGES"))
+		v, _, err := (&machine.Evaluator{Symbols: d.Console.Symbols, Radix: d.Console.Radix, Mem: d.Console.Mem, CPU: d.Console.CPU}).Eval(r.String("PAGES"))
 		if err != nil {
 			return vmserrors.Wrap(vmserrors.CLI_NEEDPAGES, err)
 		}

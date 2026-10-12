@@ -70,26 +70,13 @@ const (
 func putRange(t *testing.T, c *Console, addr, a, b uint32) {
 	t.Helper()
 
-	if err := c.storeLong(addr, a); err != nil {
+	if err := storeLong(c, addr, a); err != nil {
 		t.Fatal(err)
 	}
 
-	if err := c.storeLong(addr+4, b); err != nil {
+	if err := storeLong(c, addr+4, b); err != nil {
 		t.Fatal(err)
 	}
-}
-
-func getRange(t *testing.T, c *Console, addr uint32) (uint32, uint32) {
-	t.Helper()
-
-	a, err1 := c.Mem.LoadLongword(c.CPU, addr)
-	b, err2 := c.Mem.LoadLongword(c.CPU, addr+4)
-
-	if err1 != nil || err2 != nil {
-		t.Fatalf("reading the range at %#x: %v %v", addr, err1, err2)
-	}
-
-	return a, b
 }
 
 func pteAt(t *testing.T, c *Console, addr uint32) vm.PTE {
@@ -136,7 +123,7 @@ func TestCretvaDeltva(t *testing.T) {
 	}
 
 	// Recreating a page with data in it gives a fresh zero page.
-	if err := c.storeLong(vaPages+0x208, 0x1234); err != nil {
+	if err := storeLong(c, vaPages+0x208, 0x1234); err != nil {
 		t.Fatal(err)
 	}
 

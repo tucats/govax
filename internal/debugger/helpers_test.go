@@ -7,6 +7,7 @@ import (
 	"github.com/tucats/govax/internal/console"
 	"github.com/tucats/govax/internal/console/consoletest"
 	"github.com/tucats/govax/internal/debugger"
+	"github.com/tucats/govax/internal/machine"
 	"github.com/tucats/govax/internal/vax"
 )
 
@@ -56,7 +57,7 @@ func loadProgram(t *testing.T, c *console.Console, addr uint32, bytes ...byte) {
 	t.Helper()
 
 	for i, b := range bytes {
-		if err := c.Deposit("", addr+uint32(i), console.SizeByte, uint32(b)); err != nil {
+		if err := c.Deposit("", addr+uint32(i), machine.SizeByte, uint32(b)); err != nil {
 			t.Fatalf("Deposit: %v", err)
 		}
 	}

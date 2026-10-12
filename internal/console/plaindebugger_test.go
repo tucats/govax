@@ -3,6 +3,7 @@ package console
 import (
 	"strings"
 
+	"github.com/tucats/govax/internal/machine"
 	"github.com/tucats/govax/internal/vax"
 	"github.com/tucats/govax/internal/vmserrors"
 )
@@ -28,10 +29,10 @@ func installPlainDebugger(c *Console) *plainDebugger {
 
 func (p *plainDebugger) Active() bool { return p.active }
 
-func (p *plainDebugger) Start(a Activation) error {
+func (p *plainDebugger) Start(a machine.Activation) error {
 	c := p.c
 
-	if a.Kind == ActivateAttach {
+	if a.Kind == machine.ActivateAttach {
 		p.active = true
 
 		return nil
@@ -42,12 +43,12 @@ func (p *plainDebugger) Start(a Activation) error {
 	}
 
 	switch a.Kind {
-	case ActivateGo:
+	case machine.ActivateGo:
 		if a.Addr != nil {
 			c.CPU.SetGPR(vax.PC, *a.Addr)
 		}
 
-	case ActivateCall:
+	case machine.ActivateCall:
 		if err := c.Engine.CallEntry(*a.Addr, a.Args...); err != nil {
 			return err
 		}
@@ -58,7 +59,7 @@ func (p *plainDebugger) Start(a Activation) error {
 
 	c.Engine.BeginRun()
 
-	return c.runPlain()
+	return c.RunPlain()
 }
 
 func (p *plainDebugger) Dispatch(line string) error {
@@ -75,7 +76,7 @@ func (p *plainDebugger) Dispatch(line string) error {
 
 	case "GO":
 		if len(words) == 1 {
-			return p.Start(Activation{Kind: ActivateGo})
+			return p.Start(machine.Activation{Kind: machine.ActivateGo})
 		}
 
 		addr, err := p.c.EvalWhole(strings.Join(words[1:], " "))
@@ -83,7 +84,7 @@ func (p *plainDebugger) Dispatch(line string) error {
 			return err
 		}
 
-		return p.Start(Activation{Kind: ActivateGo, Addr: &addr})
+		return p.Start(machine.Activation{Kind: machine.ActivateGo, Addr: &addr})
 	}
 
 	return vmserrors.New(vmserrors.CLI_UNRECOGNIZED, "verb", words[0])

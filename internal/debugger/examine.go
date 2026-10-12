@@ -3,8 +3,8 @@ package debugger
 import (
 	"strings"
 
-	"github.com/tucats/govax/internal/console"
 	"github.com/tucats/govax/internal/dcl"
+	"github.com/tucats/govax/internal/machine"
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
@@ -128,11 +128,11 @@ func (d *Dispatcher) examine(r *dcl.Result) error {
 	if operandsGiven {
 		switch {
 		case r.Negated("OPERANDS"):
-			opts.Operands = console.OperandsOff
+			opts.Operands = machine.OperandsOff
 		case strings.HasPrefix("FULL", strings.ToUpper(r.String("OPERANDS"))) && r.String("OPERANDS") != "":
-			opts.Operands = console.OperandsFull
+			opts.Operands = machine.OperandsFull
 		default:
-			opts.Operands = console.OperandsBrief
+			opts.Operands = machine.OperandsBrief
 		}
 	}
 
@@ -181,8 +181,8 @@ func (d *Dispatcher) examine(r *dcl.Result) error {
 
 // instructionOptions are how EXAMINE/INSTRUCTION lays instructions out by
 // the session's modes (SET MODE [NO]SYMBOLIC, [NO]OPERANDS) and radix.
-func (d *Debugger) instructionOptions() console.DisassembleOptions {
-	return console.DisassembleOptions{
+func (d *Debugger) instructionOptions() machine.DisassembleOptions {
+	return machine.DisassembleOptions{
 		Symbolic: d.symbolic,
 		Numeric:  !d.symbolic,
 		Operands: d.operands,

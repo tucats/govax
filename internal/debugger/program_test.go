@@ -7,8 +7,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/tucats/govax/internal/console"
 	"github.com/tucats/govax/internal/console/consoletest"
+	"github.com/tucats/govax/internal/machine"
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
@@ -102,7 +102,7 @@ func TestShowSymbolOracle(t *testing.T) {
 		{"forth.dlg", "forth.exe"},
 	} {
 		t.Run(tc.session, func(t *testing.T) {
-			c, _ := runImage(t, dbgImagePath(t, tc.image), console.RunOptions{Debug: console.DebugOn})
+			c, _ := runImage(t, dbgImagePath(t, tc.image), machine.RunOptions{Debug: machine.DebugOn})
 
 			for _, e := range readRawSession(t, tc.session) {
 				switch {
@@ -177,7 +177,7 @@ func TestShowSymbolOracle(t *testing.T) {
 // the base and end addresses VMS showed for DBGDIS (the first row of
 // dbgdis.dlg's table), and the totals count the images.
 func TestShowImage(t *testing.T) {
-	c, _ := runImage(t, dbgImagePath(t, "dbgdis.exe"), console.RunOptions{Debug: console.DebugOn})
+	c, _ := runImage(t, dbgImagePath(t, "dbgdis.exe"), machine.RunOptions{Debug: machine.DebugOn})
 
 	out := say(t, c, "SHOW IMAGE")
 	lines := strings.Split(strings.TrimSuffix(out, "\n"), "\n")
@@ -210,7 +210,7 @@ func TestShowImage(t *testing.T) {
 // TestSetModule: SET MODULE sets one module's symbols, names are checked
 // before any is set, and the footer counts the set modules' sizes.
 func TestSetModule(t *testing.T) {
-	c, _ := runImage(t, dbgImagePath(t, "dbgdis.exe"), console.RunOptions{Debug: console.DebugOn})
+	c, _ := runImage(t, dbgImagePath(t, "dbgdis.exe"), machine.RunOptions{Debug: machine.DebugOn})
 
 	if out := say(t, c, "SHOW MODULE"); !strings.Contains(out, "DBGDIS                          yes         582\n") ||
 		!strings.Contains(out, "DBGSUB                          no          209\n") {
@@ -242,7 +242,7 @@ func TestSetModule(t *testing.T) {
 // TestShowSymbolForms: IN, the qualifiers, wildcards, and the
 // path-name pattern.
 func TestShowSymbolForms(t *testing.T) {
-	c, _ := runImage(t, dbgImagePath(t, "dbgdis.exe"), console.RunOptions{Debug: console.DebugOn})
+	c, _ := runImage(t, dbgImagePath(t, "dbgdis.exe"), machine.RunOptions{Debug: machine.DebugOn})
 
 	expect(t, "SHOW SYMBOL/TYPE", say(t, c, "SHOW SYMBOL/TYPE BYTES IN DBGDIS"),
 		"data DBGDIS\\BYTES\n"+

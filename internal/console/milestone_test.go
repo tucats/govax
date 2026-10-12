@@ -10,6 +10,7 @@ import (
 
 	"github.com/tucats/govax/internal/console"
 	"github.com/tucats/govax/internal/console/consoletest"
+	"github.com/tucats/govax/internal/machine"
 	"github.com/tucats/govax/internal/rms"
 	"github.com/tucats/govax/internal/vmsdef"
 )
@@ -198,7 +199,7 @@ func TestMilestone(t *testing.T) {
 			t.Run(how.name+"/"+quantum, func(t *testing.T) {
 				c, out, path := milestoneMachine(t, quantum)
 
-				opts := console.RunOptions{CommandLine: how.mode + " DUA0:[000000]MSCHILD.EXE"}
+				opts := machine.RunOptions{CommandLine: how.mode + " DUA0:[000000]MSCHILD.EXE"}
 				if err := c.Run("DUA0:[000000]MSPARENT.EXE", opts); err != nil {
 					t.Fatalf("RUN: %v\n%s", err, out.String())
 				}
@@ -232,7 +233,7 @@ func TestMilestone_schedulerOff(t *testing.T) {
 
 			// The parent's image ends with SS$_UNSUPPORTED, which RUN
 			// reports.
-			opts := console.RunOptions{CommandLine: mode + " DUA0:[000000]MSCHILD.EXE"}
+			opts := machine.RunOptions{CommandLine: mode + " DUA0:[000000]MSCHILD.EXE"}
 			if err := c.Run("DUA0:[000000]MSPARENT.EXE", opts); err == nil || !strings.Contains(err.Error(), "-UNSUPPORTED,") {
 				t.Fatalf("RUN: %v, want SS$_UNSUPPORTED\n%s", err, out.String())
 			}

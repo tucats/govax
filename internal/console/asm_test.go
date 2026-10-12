@@ -2,39 +2,11 @@ package console
 
 import (
 	"bytes"
-	"path/filepath"
-	"runtime"
 	"strings"
 	"testing"
 
 	"github.com/tucats/govax/internal/vax"
 )
-
-func asmFixturePath(t testing.TB, name string) string {
-	t.Helper()
-
-	_, file, _, ok := runtime.Caller(0)
-	if !ok {
-		t.Fatal("runtime.Caller failed")
-	}
-
-	return filepath.Join(filepath.Dir(file), "..", "..", "testdata", "asm", name)
-}
-
-// kernelPath is the microkernel tests assemble: bootdata's kernel.asm, the
-// one govax itself boots. (testdata/asm once held an older copy, without
-// the arithmetic and translation-not-valid vectors; it was removed so no
-// test can run against a kernel govax doesn't use.)
-func kernelPath(t testing.TB) string {
-	t.Helper()
-
-	_, file, _, ok := runtime.Caller(0)
-	if !ok {
-		t.Fatal("runtime.Caller failed")
-	}
-
-	return filepath.Join(filepath.Dir(file), "..", "bootdata", "files", "kernel.asm")
-}
 
 // TestAssemble_xorDepositsAndIsCallable assembles testdata/asm/xor.asm (a
 // small, dependency-free fixture: MOVL/MOVL/XORL3/RET, no RTL/kernel calls)
@@ -162,7 +134,7 @@ func TestAssemble_helloEntrySymbolAndMask(t *testing.T) {
 // world" print and its delay loop to run to completion, not hit the cap.
 func TestAssemble_kernelThenHelloRunsBounded(t *testing.T) {
 	c := newRunnableConsole(t)
-	c.asmSession = nil // start from a clean session explicitly, for clarity
+	c.ResetAsmSession() // start from a clean session explicitly, for clarity
 	out := &bytes.Buffer{}
 	c.Out = out
 

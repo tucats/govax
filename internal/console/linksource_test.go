@@ -10,6 +10,7 @@ import (
 	"github.com/tucats/govax/internal/dclcmd"
 	"github.com/tucats/govax/internal/link"
 	"github.com/tucats/govax/internal/lnm"
+	"github.com/tucats/govax/internal/machine"
 	"github.com/tucats/govax/internal/rms"
 	"github.com/tucats/govax/internal/vmsdef"
 )
@@ -37,7 +38,7 @@ func vmsLibFile(t *testing.T, name string) []byte {
 func TestShimOffsetsMatchCapturedImages(t *testing.T) {
 	checked := 0
 
-	for _, e := range ShimTable {
+	for _, e := range machine.ShimTable {
 		if _, ok := vmsdef.SharedImages[e.Library]; !ok {
 			continue
 		}
@@ -63,7 +64,7 @@ func TestCapturedLIBRTLMatchesImage(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	govax := dclcmd.GovaxSymbols(ShimTable)
+	govax := dclcmd.GovaxSymbols(machine.ShimTable)
 
 	want, _ := src.Image(name)
 	if got, ok := govax.Image(name); !ok || got != want {

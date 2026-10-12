@@ -10,6 +10,7 @@ import (
 	"github.com/tucats/govax/internal/console/consoletest"
 	"github.com/tucats/govax/internal/corevms"
 	"github.com/tucats/govax/internal/lnm"
+	"github.com/tucats/govax/internal/machine"
 	"github.com/tucats/govax/internal/vmsdef"
 )
 
@@ -110,7 +111,7 @@ func runParent(t *testing.T, name, source string) []string {
 
 	out.Reset()
 
-	if err := c.Run(parent, console.RunOptions{}); err != nil {
+	if err := c.Run(parent, machine.RunOptions{}); err != nil {
 		t.Fatalf("RUN: %v\n%s", err, out.String())
 	}
 
@@ -286,7 +287,7 @@ func TestSpawnCommand(t *testing.T) {
 
 	out.Reset()
 
-	if err := c.Run(child, console.RunOptions{}); err != nil {
+	if err := c.Run(child, machine.RunOptions{}); err != nil {
 		t.Fatal(err)
 	}
 

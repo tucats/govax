@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/tucats/govax/internal/console"
+	"github.com/tucats/govax/internal/machine"
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
@@ -177,7 +177,7 @@ func (d *Debugger) stringComparison(op, left, right string) (result, ok bool, er
 
 // setException records the exception the program has just stopped for,
 // as the current exception the %EXC_ symbols describe.
-func (d *Debugger) setException(u *console.UnhandledException) {
+func (d *Debugger) setException(u *machine.UnhandledException) {
 	copied := *u
 	d.exception = &copied
 }

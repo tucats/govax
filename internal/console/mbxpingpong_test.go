@@ -6,7 +6,7 @@ import (
 	"strings"
 	"testing"
 
-	. "github.com/tucats/govax/internal/console"
+	"github.com/tucats/govax/internal/machine"
 )
 
 // Phase 46's subtask 8: testdata/mp/mbxpingpong.mar, a MACRO program
@@ -49,7 +49,7 @@ func TestMbxPingPong(t *testing.T) {
 
 			out.Reset()
 
-			if err := c.Run(parent, RunOptions{CommandLine: child}); err != nil {
+			if err := c.Run(parent, machine.RunOptions{CommandLine: child}); err != nil {
 				t.Fatalf("RUN: %v\n%s", err, out.String())
 			}
 

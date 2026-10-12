@@ -9,6 +9,7 @@ import (
 
 	"github.com/tucats/govax/internal/console"
 	"github.com/tucats/govax/internal/console/consoletest"
+	"github.com/tucats/govax/internal/machine"
 	"github.com/tucats/govax/internal/rms"
 	"github.com/tucats/govax/internal/vax"
 )
@@ -95,7 +96,7 @@ func TestFileSectionPair(t *testing.T) {
 		t.Run(quantum, func(t *testing.T) {
 			c := sectionMachine(t, quantum, "secchild", "secparent")
 
-			if err := c.Run("DUA0:[000000]SECPARENT.EXE", console.RunOptions{}); err != nil {
+			if err := c.Run("DUA0:[000000]SECPARENT.EXE", machine.RunOptions{}); err != nil {
 				t.Fatalf("RUN: %v", err)
 			}
 
@@ -128,7 +129,7 @@ func TestFileSectionPair(t *testing.T) {
 func TestFileSectionRundown(t *testing.T) {
 	c := sectionMachine(t, longQuantum, "rundown")
 
-	if err := c.Run("DUA0:[000000]RUNDOWN.EXE", console.RunOptions{}); err != nil {
+	if err := c.Run("DUA0:[000000]RUNDOWN.EXE", machine.RunOptions{}); err != nil {
 		t.Fatal(err)
 	}
 

@@ -101,7 +101,7 @@ func TestProcessOneStacksAndPCB(t *testing.T) {
 	c := bootedConsole(t)
 	st := c.RTL.Stacks
 
-	if st == nil || st.KSP != c.CPU.PR(vax.KSP) || st.USP != spP1 || st.Base != 0 || st.PCB != 0 {
+	if st == nil || st.KSP != c.CPU.PR(vax.KSP) || st.USP != corevms.UserStackTop || st.Base != 0 || st.PCB != 0 {
 		t.Fatalf("process 1's stacks %+v", st)
 	}
 

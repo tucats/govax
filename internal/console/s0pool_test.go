@@ -29,10 +29,10 @@ func TestS0PoolAfterVaxInit(t *testing.T) {
 
 	base, limit := pool.Range()
 	t.Logf("S0 pool %08X-%08X: pages %d-%d, %d free; VMINIT's layout ends at %08X",
-		base, limit, (base-0x80000000)/512, (limit-0x80000000)/512-1, pool.FreePages(), c.s0Free)
+		base, limit, (base-0x80000000)/512, (limit-0x80000000)/512-1, pool.FreePages(), c.S0Free())
 
-	if base <= c.s0Free {
-		t.Errorf("pool base %08X, want it past the microkernel at %08X", base, c.s0Free)
+	if base <= c.S0Free() {
+		t.Errorf("pool base %08X, want it past the microkernel at %08X", base, c.S0Free())
 	}
 
 	if want := uint32(0x80000000 + 8192*512); limit != want {
@@ -40,11 +40,11 @@ func TestS0PoolAfterVaxInit(t *testing.T) {
 	}
 
 	// The pool starts at the first page past the microkernel's S0.
-	if c.asmSession == nil {
+	if c.AsmSession() == nil {
 		t.Fatal("no ASM session after vax.init")
 	}
 
-	if end := c.asmSession.S0End(); base != (end+511)&^511 {
+	if end := c.AsmSession().S0End(); base != (end+511)&^511 {
 		t.Errorf("pool base %08X, want the page after the microkernel's end, %08X", base, end)
 	}
 

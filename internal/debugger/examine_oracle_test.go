@@ -7,7 +7,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/tucats/govax/internal/console"
+	"github.com/tucats/govax/internal/machine"
 )
 
 // oracleRange is one EXAMINE/INSTRUCTION command in a debugger session
@@ -145,7 +145,7 @@ func TestExamineInstructionOracle(t *testing.T) {
 			path := b.path
 
 			t.Run(strings.TrimSuffix(im.session, ".dlg")+"/"+b.name, func(t *testing.T) {
-				c, _ := runImage(t, path, console.RunOptions{Debug: console.DebugOn})
+				c, _ := runImage(t, path, machine.RunOptions{Debug: machine.DebugOn})
 				buf := c.Out.(*bytes.Buffer)
 
 				for _, r := range ranges {

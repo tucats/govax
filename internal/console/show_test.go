@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/tucats/govax/internal/cpu"
+	"github.com/tucats/govax/internal/machine"
 	"github.com/tucats/govax/internal/vax"
 )
 
@@ -149,9 +150,9 @@ func TestShowString(t *testing.T) {
 		strOne  = 0x3000
 	)
 
-	c.Symbols.Set("CONSOLE$STRINGPOOL_BASE", base, SymbolSystem)
-	c.Symbols.Set("CONSOLE$STRINGPOOL_SIZE", 0x100, SymbolSystem)
-	c.Symbols.Set("CONSOLE$STRINGPOOL", descOne, SymbolSystem)
+	c.Symbols.Set("CONSOLE$STRINGPOOL_BASE", base, machine.SymbolSystem)
+	c.Symbols.Set("CONSOLE$STRINGPOOL_SIZE", 0x100, machine.SymbolSystem)
+	c.Symbols.Set("CONSOLE$STRINGPOOL", descOne, machine.SymbolSystem)
 
 	if err := c.Mem.StoreLongword(c.CPU, base, descOne); err != nil {
 		t.Fatalf("seed chain head: %v", err)
@@ -242,7 +243,7 @@ func TestShowSCB(t *testing.T) {
 		t.Fatalf("seed CHMK vector: %v", err)
 	}
 
-	c.Symbols.Set("EXE$CHMK_HANDLER", 0x00012340, SymbolUser)
+	c.Symbols.Set("EXE$CHMK_HANDLER", 0x00012340, machine.SymbolUser)
 
 	if err := d.Console.ShowSCB(); err != nil {
 		t.Fatalf("Dispatch: %v", err)
@@ -297,7 +298,7 @@ func TestShowCallFrames(t *testing.T) {
 		t.Fatalf("seed argc: %v", err)
 	}
 
-	if err := d.Console.ShowCalls("", symbolicDefault()); err != nil {
+	if err := d.Console.ShowCalls("", machine.SymbolicDefault()); err != nil {
 		t.Fatalf("Dispatch: %v", err)
 	}
 
@@ -318,7 +319,7 @@ func TestShowCallFrames(t *testing.T) {
 func TestShowCallFrames_noFrames(t *testing.T) {
 	d, _, _ := newShowDispatcher(t)
 
-	if err := d.Console.ShowCalls("", symbolicDefault()); err == nil {
+	if err := d.Console.ShowCalls("", machine.SymbolicDefault()); err == nil {
 		t.Error("expected an error when FP/AP are both zero (no call frames)")
 	}
 }
@@ -377,7 +378,7 @@ func TestShowImages(t *testing.T) {
 		t.Errorf("output = %q, want a \"no images\" message with an empty ICBList", buf.String())
 	}
 
-	c.images().ICBList = append(c.images().ICBList, &ICB{Name: "TEST.EXE", Base: 0x200, End: 0x400})
+	c.ImageState(nil).ICBList = append(c.ImageState(nil).ICBList, &machine.ICB{Name: "TEST.EXE", Base: 0x200, End: 0x400})
 
 	buf.Reset()
 
@@ -542,7 +543,7 @@ func TestShowTB_dumpsPopulatedEntry(t *testing.T) {
 func TestShowBase_matchesDepositCursor(t *testing.T) {
 	d, c, buf := newShowDispatcher(t)
 
-	if err := c.Deposit("", 0x5678, SizeLongword, 0x11223344); err != nil {
+	if err := c.Deposit("", 0x5678, machine.SizeLongword, 0x11223344); err != nil {
 		t.Fatalf("Deposit: %v", err)
 	}
 
@@ -566,7 +567,7 @@ func TestShowStack_bareDumpsLiveMemory(t *testing.T) {
 		t.Fatalf("seed stack word: %v", err)
 	}
 
-	if err := d.Console.ShowStack(StackKSP, true, 0, false); err != nil {
+	if err := d.Console.ShowStack(machine.StackKSP, true, 0, false); err != nil {
 		t.Fatalf("Dispatch: %v", err)
 	}
 
@@ -608,7 +609,7 @@ func TestShowStack_namedModeReadsSavedPointer(t *testing.T) {
 		t.Fatalf("seed ESP stack word: %v", err)
 	}
 
-	if err := d.Console.ShowStack(StackESP, false, 0, false); err != nil {
+	if err := d.Console.ShowStack(machine.StackESP, false, 0, false); err != nil {
 		t.Fatalf("Dispatch: %v", err)
 	}
 

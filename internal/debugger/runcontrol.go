@@ -13,7 +13,7 @@ import (
 // (docs/PHASE-42.md, subtask 4). Until that subtask this lived in
 // internal/console; the console now hands every run to the debugger
 // (Console.Execute, Console.Call, and Console.Step forward here through the
-// console.Debugger interface).
+// machine.Debugger interface).
 //
 // A few VAX/VMS terms for readers new to them:
 //

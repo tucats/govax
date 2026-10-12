@@ -5,8 +5,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/tucats/govax/internal/console"
 	"github.com/tucats/govax/internal/console/consoletest"
+	"github.com/tucats/govax/internal/machine"
 )
 
 // logEntry is one command of a debugger session log (testdata/dbgcmd/vax,
@@ -180,7 +180,7 @@ func TestSymbolizeOracle(t *testing.T) {
 		{"dbgtrc.dlg", "dbgtrc.exe"},
 	} {
 		t.Run(s.log, func(t *testing.T) {
-			c, _ := runImage(t, dbgImagePath(t, s.image), console.RunOptions{Debug: console.DebugOn})
+			c, _ := runImage(t, dbgImagePath(t, s.image), machine.RunOptions{Debug: machine.DebugOn})
 			compared := 0
 
 			for _, e := range readSessionLog(t, "dbg", s.log) {

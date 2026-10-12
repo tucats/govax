@@ -10,6 +10,7 @@ import (
 
 	"github.com/tucats/govax/internal/cpu"
 	"github.com/tucats/govax/internal/lnm"
+	"github.com/tucats/govax/internal/machine"
 	"github.com/tucats/govax/internal/vax"
 	"github.com/tucats/govax/internal/vmserrors"
 )
@@ -184,7 +185,7 @@ func TestImageRundown(t *testing.T) {
 		t.Fatal("a plain CALL's return ran down user-mode names")
 	}
 
-	c.imageActive = true
+	c.SetImageActive(true)
 
 	if err := c.ReportStop(cpu.ErrConsoleCallReturned); err != nil {
 		t.Fatal(err)
@@ -195,7 +196,7 @@ func TestImageRundown(t *testing.T) {
 			exists("USERNAME"), exists("SUPERNAME"), exists("SYS$OUTPUT"))
 	}
 
-	if c.imageActive {
+	if c.ImageActive() {
 		t.Error("imageActive still set after the image's exit")
 	}
 }
@@ -214,7 +215,7 @@ func TestImageRundown_run(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err := c.Run(exeFixturePath(t, "simple.exe"), RunOptions{}); err != nil {
+	if err := c.Run(exeFixturePath(t, "simple.exe"), machine.RunOptions{}); err != nil {
 		t.Fatalf("RUN simple.exe: %v", err)
 	}
 

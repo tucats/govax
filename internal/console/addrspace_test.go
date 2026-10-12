@@ -111,7 +111,7 @@ func TestBuildAddressSpace(t *testing.T) {
 	}
 
 	// P1's lowest and highest pages are both there (demand zero).
-	for _, va := range []uint32{0x80000000 - 8192*512, spP1 - 4} {
+	for _, va := range []uint32{0x80000000 - 8192*512, corevms.UserStackTop - 4} {
 		if err := c.Mem.StoreLongwordIn(c.CPU, s.AddressSpace, va, 1); err != nil {
 			t.Errorf("process 2's P1 %08X: %v", va, err)
 		}
