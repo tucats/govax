@@ -155,6 +155,24 @@ func subCarryResult(minuend, subtrahend uint64, borrowIn bool, size int) (result
 	return result, v, c
 }
 
+// AddWithCarry and SubtractWithBorrow are ADWC's and SBWC's arithmetic
+// on longwords, shared with LIB$ADDX and LIB$SUBX (internal/librtl),
+// which chain them across multiprecision integers: the result, V (signed
+// overflow, meaningful in the most significant longword), and C (the
+// carry or borrow into the next longword).
+func AddWithCarry(a, b uint32, carry bool) (sum uint32, v, c bool) {
+	r, v, c := addCarryResult(uint64(a), uint64(b), carry, 4)
+
+	return uint32(r), v, c
+}
+
+// SubtractWithBorrow is minuend - subtrahend - borrow; see AddWithCarry.
+func SubtractWithBorrow(minuend, subtrahend uint32, borrow bool) (difference uint32, v, c bool) {
+	r, v, c := subCarryResult(uint64(minuend), uint64(subtrahend), borrow, 4)
+
+	return uint32(r), v, c
+}
+
 // shiftOverflow32 reports whether left-shifting v by count bits (count > 0)
 // loses any bit that disagrees with the resulting sign bit -- the manual's
 // ASHL overflow definition ("integer overflow occurs on a left shift if any

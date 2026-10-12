@@ -56,7 +56,8 @@ func emulAdawi(e *Engine, d *Decoded) error {
 	// arithmetic addResult helper ADD/ADWC use, rather than the
 	// untruncated-32-bit-sum N/Z and always-false C this replaced. See
 	// docs/DEVIATIONS.md's ADAWI finding, fixed in Phase 12.
-	result, v, c := addResult(addendRaw, sumRaw, 2)
+	sum, v, c := AddWord(uint16(addendRaw), uint16(sumRaw))
+	result := uint64(sum)
 
 	psl := e.cpu.PSL()
 	psl.SetN(signBit(result, 2))
@@ -66,4 +67,12 @@ func emulAdawi(e *Engine, d *Decoded) error {
 	e.cpu.SetPSL(psl)
 
 	return d.Operands[1].Store(e.cpu, e.mem, result)
+}
+
+// AddWord is ADAWI's arithmetic, shared with LIB$ADAWI (internal/librtl):
+// the word sum, V (signed overflow), and C (a carry out of bit 15).
+func AddWord(addend, sum uint16) (result uint16, v, c bool) {
+	r, v, c := addResult(uint64(addend), uint64(sum), 2)
+
+	return uint16(r), v, c
 }

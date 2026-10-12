@@ -73,6 +73,10 @@ var Routines = []Routine{
 	{"LIB$INSV", 46, libInsv},
 	{"LIB$FFC", 47, libFfc},
 	{"LIB$FFS", 48, libFfs},
+	{"LIB$ADDX", 49, libAddx},
+	{"LIB$SUBX", 50, libSubx},
+	{"LIB$EMUL", 51, libEmul},
+	{"LIB$EDIV", 52, libEdiv},
 }
 
 // missing is Missing's list, made once.

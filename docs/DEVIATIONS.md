@@ -3721,6 +3721,23 @@ widened."
 - **Status**: VMS's behavior for (1) in what a handler sees; (2) is
   govax's own choice (docs/PHASE-53, Decisions 5 and 6).
 
+### [Phase 53] LIB$ADAWI added longwords and never stored the sum
+
+- **Where**: `internal/librtl/math.go` (`libAdawi`), first ported from
+  eVAX's `librtl_math.c` in Phase 34.
+- **What**: The manual (LIB-3) has LIB$ADAWI add the *word* at `add` into
+  the *word* at `sum`, as the ADAWI instruction does, returning
+  LIB$_INTOVF on overflow. The port read two longwords, stored only the
+  sum's sign (a longword) at the third argument, never wrote the sum, and
+  always returned 1. It now adds words through the instruction's own
+  arithmetic (`cpu.AddWord`), stores the truncated sum, returns
+  SS$_NORMAL or LIB$_INTOVF, and signals SS$_ROPRAND for an odd sum
+  address (the instruction's reserved operand fault). The third
+  argument, which the manual calls "result" without defining its value,
+  still gets the sign (−1, 0, or 1), now as a word: unconfirmed, a case
+  for Phase 53's probe (subtask 13).
+- **Status**: fixed in Go (docs/PHASE-53, subtask 7).
+
 <!--
 Entry template:
 

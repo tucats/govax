@@ -38,11 +38,7 @@ func emulEmul(e *Engine, d *Decoded) error {
 		return err
 	}
 
-	mulr := int64(int32(uint32(mulrRaw)))
-	muld := int64(int32(uint32(muldRaw)))
-	add := int64(int32(uint32(addRaw)))
-
-	product := mulr*muld + add
+	product := ExtendedMultiply(int32(uint32(mulrRaw)), int32(uint32(muldRaw)), int32(uint32(addRaw)))
 
 	psl := e.cpu.PSL()
 	psl.SetN(product < 0)
@@ -80,37 +76,12 @@ func emulEdiv(e *Engine, d *Decoded) error {
 		return err
 	}
 
-	divr := int32(uint32(divrRaw))
-	dividend := int64(dividendRaw)
-
-	var quo, rem int32
-
-	v := false
-
-	switch {
-	case divr == 0:
-		quo = int32(uint32(dividendRaw))
-		rem = 0
-		v = true
-
-	default:
-		q := dividend / int64(divr)
-		r := dividend % int64(divr)
-
-		if q < longMin || q > longMax {
-			quo = int32(uint32(dividendRaw))
-			rem = 0
-			v = true
-		} else {
-			quo = int32(q)
-			rem = int32(r)
-		}
-	}
+	quo, rem, ok := ExtendedDivide(int32(uint32(divrRaw)), int64(dividendRaw))
 
 	psl := e.cpu.PSL()
 	psl.SetN(quo < 0)
 	psl.SetZ(quo == 0)
-	psl.SetV(v)
+	psl.SetV(!ok)
 	psl.SetC(false)
 	e.cpu.SetPSL(psl)
 
@@ -119,4 +90,29 @@ func emulEdiv(e *Engine, d *Decoded) error {
 	}
 	
 	return d.Operands[3].Store(e.cpu, e.mem, uint64(uint32(rem)))
+}
+
+// ExtendedMultiply is EMUL's arithmetic, shared with LIB$EMUL
+// (internal/librtl): multiplier times multiplicand plus the
+// sign-extended addend, as a quadword. It can't overflow.
+func ExtendedMultiply(multiplier, multiplicand, addend int32) int64 {
+	return int64(multiplier)*int64(multiplicand) + int64(addend)
+}
+
+// ExtendedDivide is EDIV's arithmetic, shared with LIB$EDIV
+// (internal/librtl): the quadword dividend divided by the longword
+// divisor, the remainder taking the dividend's sign. ok is false when
+// the divisor is 0 or the quotient doesn't fit in a longword; the
+// quotient is then the dividend's low longword and the remainder 0.
+func ExtendedDivide(divisor int32, dividend int64) (quotient, remainder int32, ok bool) {
+	if divisor == 0 {
+		return int32(uint32(dividend)), 0, false
+	}
+
+	q := dividend / int64(divisor)
+	if q < longMin || q > longMax {
+		return int32(uint32(dividend)), 0, false
+	}
+
+	return int32(q), int32(dividend % int64(divisor)), true
 }

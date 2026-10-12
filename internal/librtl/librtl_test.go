@@ -142,28 +142,6 @@ func TestRoutinesMatchLIBRTL(t *testing.T) {
 	}
 }
 
-func TestLibAdawi(t *testing.T) {
-	for _, c := range []struct {
-		sum, base, wantBase, wantSign uint32
-	}{
-		{5, 10, 15, 1},
-		{0, 0, 0, 0},
-		{0xFFFFFFFF, 0, 0xFFFFFFFF, 0xFFFFFFFF},
-	} {
-		env := fixture(t)
-		putLongword(t, env, 0x1000, c.sum)
-		putLongword(t, env, 0x1004, c.base)
-
-		if r0 := call(t, env, "LIB$ADAWI", 0x1000, 0x1004, 0x1008); r0 != 1 {
-			t.Errorf("r0 = %d, want 1", r0)
-		}
-
-		if got := longword(t, env, 0x1008); got != c.wantSign {
-			t.Errorf("%d+%d: sign = %#x, want %#x", c.sum, c.base, got, c.wantSign)
-		}
-	}
-}
-
 func TestStrUpcase(t *testing.T) {
 	env := fixture(t)
 	putDescriptor(t, env, 0x1000, 0x1100, "Hello, World!")

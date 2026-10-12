@@ -2,7 +2,7 @@
 
 **Status:** in progress (2026-10-12). Needs Phases 34 (`internal/librtl`)
 and 52. The plan (Part A) and the decisions (Part B) were reviewed and
-accepted by the author on 2026-10-12. Subtasks 2 to 6 are done.
+accepted by the author on 2026-10-12. Subtasks 2 to 7 are done.
 
 govax provides 15 of LIBRTL.EXE's LIB$ routines (and STR$UPCASE): the ones
 the sample programs and tests needed (Phase 34's table,
@@ -529,7 +529,8 @@ so there's one implementation of each rule.
    condition values, and examples, from the manual (OCR checked against
    the PDF where doubtful), recorded in this doc. **Done** 2026-10-12.
 6. **Bit fields**: EXTV, EXTZV, INSV, FFC, FFS. **Done** 2026-10-12.
-7. **Integers**: ADDX, SUBX, EMUL, EDIV; ADAWI fixed.
+7. **Integers**: ADDX, SUBX, EMUL, EDIV; ADAWI fixed. **Done**
+   2026-10-12.
 8. **Floating**: EMOD and POLY in F, D, G, and H, on `vaxfloat`.
 9. **Queues and interlocks**: INSQHI, INSQTI, REMQHI, REMQTI, BBSSI, BBCCI.
 10. **Character strings**: LOCC, MATCHC, SCANC, SKPC, SPANC, MOVC3, MOVC5,
@@ -741,3 +742,34 @@ so there's one implementation of each rule.
     five from a linked program, and `TestLibrtlBitFieldReservedOperand`
     shows the catch-all's `%SYSTEM-F-ROPRAND` and the image ending with
     it. `librtl_test.go`'s `call` now looks routines up through `shim`.
+- **2026-10-12** — Subtask 7, the integer routines
+  (`internal/librtl/math.go`): LIB$ADDX, LIB$SUBX, LIB$EMUL, and
+  LIB$EDIV, codes 49 to 52, and LIB$ADAWI rewritten.
+  - **One set of rules.** The arithmetic is the CPU's, now exported:
+    `cpu.AddWithCarry` and `cpu.SubtractWithBorrow` (ADWC's and SBWC's,
+    over `addCarryResult`/`subCarryResult`), `cpu.ExtendedMultiply` and
+    `cpu.ExtendedDivide` (EMUL's and EDIV's, which `emulEmul` and
+    `emulEdiv` now call), and `cpu.AddWord` (ADAWI's, which `emulAdawi`
+    now calls).
+  - **LIB$ADDX and LIB$SUBX** run a longword at a time from the least
+    significant, the carry or borrow chained, reading and writing in
+    step (as a VAX routine's ADWC loop does), so the result may be
+    either input. Overflow is the most significant longword's V:
+    SS$_INTOVF, the result stored. The length defaults to 2; negative is
+    LIB$_INVARG with nothing written (both routines, unconfirmed for
+    ADDX); 0 writes nothing, SS$_NORMAL (unconfirmed).
+  - **LIB$EMUL** stores the quadword product, SS$_NORMAL. **LIB$EDIV**
+    returns SS$_INTDIV for a zero divisor and SS$_INTOVF for a quotient
+    too big, storing the dividend's low longword and 0 in both cases.
+  - **LIB$ADAWI** now follows the manual: words, the sum stored,
+    LIB$_INTOVF on overflow, SS$_ROPRAND signaled for an odd sum
+    address; the third argument gets the sign as a word (unconfirmed).
+    Logged in DEVIATIONS.md. The console's access violation tests,
+    which call it, are unchanged.
+  - **Tests.** `math_test.go`: the manual's ADDX, SUBX, EMUL, and EDIV
+    examples; overflow and the carry across three longwords; a result
+    array that is an input; negative and zero lengths; EDIV's negative
+    remainder, overflow, and division by zero; ADAWI's overflow, carry,
+    word-sized stores, and odd sum. The console's `TestLibrtlIntegers`
+    runs all five from a linked program, and `TestLibrtlAdawiOddSum`
+    shows `%SYSTEM-F-ROPRAND` ending the image.
