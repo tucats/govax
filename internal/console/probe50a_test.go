@@ -12,11 +12,10 @@ import (
 )
 
 // probe50ASkipped are the commands of round 6 whose output is outside
-// the probe's question, and left out of the comparison: DIRECTORY's
-// and DUMP's (which govax hasn't) layouts are their own, and
+// the probe's question, and left out of the comparison:
 // SHOW LOGICAL/PROCESS lists the process's own names, which are the
 // VAX's (its terminal, SYS$DISK in two modes).
-var probe50ASkipped = []string{"$ DUMP", "$ SHOW LOGICAL/PROCESS"}
+var probe50ASkipped = []string{"$ SHOW LOGICAL/PROCESS"}
 
 // probe50AWait is round 6's WAIT, and probe50AShortWait the one the test
 // runs instead, so the run takes hundredths of a second, not two seconds;
@@ -59,6 +58,12 @@ func probe50ACompared(text string) string {
 		}
 
 		line = maskVolumeDetails(strings.ReplaceAll(line, "\x00", ""))
+
+		// VMS's RMS ends a block's variable-length records with a length
+		// of FFFF; ods2's writer leaves the bytes after them zero
+		// (DEVIATIONS.md, "[Phase 51] DUMP"), so R4's DUMP/BLOCK differs
+		// in that one word.
+		line = strings.Replace(line, " FFFF0068 67666564 ", " 00000068 67666564 ", 1)
 		out = append(out, strings.Replace(line, "@'s /OUTPUT", "@'s/OUTPUT", 1))
 	}
 

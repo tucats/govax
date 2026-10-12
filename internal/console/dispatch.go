@@ -293,6 +293,30 @@ func (d *Dispatcher) bindGrammar() {
 		return nil
 	})
 
+	// Phase 51: DUMP shows a volume file in hexadecimal, by block or,
+	// with /RECORD, by record (internal/dclcmd/dump.go).
+	g.Bind("DUMP", func(id int64, r *dcl.Result) error {
+		records := r.Present("RECORD") && !r.Defaulted("RECORD")
+
+		which := "BLOCK"
+		if records {
+			which = "RECORD"
+		}
+
+		span := dclcmd.DumpRange{Start: 1}
+
+		if r.Present(which) && !r.Defaulted(which) {
+			parsed, err := dclcmd.ParseDumpRange(r.String(which))
+			if err != nil {
+				return err
+			}
+
+			span = parsed
+		}
+
+		return d.Console.cmd().Dump(r.String("SPEC"), records, span)
+	})
+
 	// Phase 23 (docs/PHASE-23.md, subtask 6): DELETE reclaims a file's
 	// storage via internal/rms.Session.Delete (Console.Delete, internal/
 	// console/delete.go). SPEC carries /prompt= in the grammar (console.dcl's

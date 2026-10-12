@@ -536,6 +536,19 @@ grammar console
     ! the same "keep only the single most recent version" default ods2's
     ! own cmdPurge uses -- see docs/PHASE-23.md's subtask 7.
     !
+    ! DUMP shows a volume file in hexadecimal, by block (/BLOCK, the
+    ! default) or by record (/RECORD), each with an optional range,
+    ! (START=n,END=n,COUNT=n) (docs/PHASE-51).
+    verb dump/id=1170
+
+        parameter   spec/id=1171                -
+                    /type=$string               -
+                    /prompt="File"
+        qualifier   block/id=1172/nonegatable   -
+                    /type=$string/default=ALL
+        qualifier   record/id=1173/nonegatable  -
+                    /type=$string/default=ALL
+
     verb purge/id=1150
 
         parameter   spec/id=1151                -

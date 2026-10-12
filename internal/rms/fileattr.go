@@ -81,7 +81,7 @@ type FileAttributes struct {
 
 	// Revision is the revision count; the times are VMS times (100 ns
 	// since 17-NOV-1858), 0 for one never set.
-	Revision                           uint16
+	Revision                          uint16
 	Created, Revised, Expires, Backup uint64
 }
 

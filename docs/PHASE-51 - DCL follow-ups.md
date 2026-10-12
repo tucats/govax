@@ -122,7 +122,8 @@ smaller gaps the phase left:
   in govax; F$GETQUI and F$LICENSE have nothing behind them.
 - **STOP/IMAGE and STOP/[NO]EXIT** are not done (done 2026-10-12).
 - **DIRECTORY's, DELETE's, and DUMP's layouts** differ from VMS's in the
-  probe logs (their oracle tests skip them); govax has no DUMP.
+  probe logs (their oracle tests skip them); govax has no DUMP. (Done
+  2026-10-12: all three are VMS's, and the oracles compare them.)
 
 ## Open questions
 
@@ -422,3 +423,23 @@ smaller gaps the phase left:
   column or field, /FILE_ID's, /OWNER's, and /PROTECTION's columns, the
   fixed and undefined record formats' wording, NOFILES's facility. HELP
   DIRECTORY.
+dir
+di
+- 2026-10-12: Subtask 5, DUMP (new; `internal/dclcmd/dump.go`,
+  `internal/rms/dump.go`): a volume file in hexadecimal and text, by
+  virtual block (`/BLOCK`, the default) or by record (`/RECORD`, with
+  each record's RFA, a VFC record's fixed control left out), each with a
+  range `(START=n,END=n,COUNT=n)`, laid out as VMS 7.3's DUMP laid it
+  out in rounds 4 and 6: a form feed, "Dump of file ... on ...", "File
+  ID (36,1,0)   End of file block 1 / Allocated 3", then each block or
+  record after a blank line, 32 bytes a line (longwords highest first,
+  the text, the offset; a record's last line right-aligned). Rounds 4
+  and 6's oracles now compare everything but round 6's SHOW
+  LOGICAL/PROCESS.
+
+  One difference is left, and the round 6 oracle allows for it: VMS's
+  RMS ends a block's variable-length records with a length word of FFFF,
+  which ods2's record writer (`rms.Writer`, in the ods2 module) doesn't
+  write, so DUMP/BLOCK shows 0000 there. The fix belongs in ods2, and
+  needs a tagged ods2 release before govax can use it (DEVIATIONS.md,
+  "[Phase 51] DUMP"). Test: `TestDump`. HELP DUMP.

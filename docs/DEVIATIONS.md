@@ -3672,6 +3672,25 @@ widened."
 - **Status**: VMS's layouts followed where the logs show them; the rest
   unconfirmed.
 
+### [Phase 51] DUMP: settled by the probe, and the rest chosen
+
+- **Where**: `internal/dclcmd/dump.go`, `internal/rms/dump.go`; the
+  end-of-records word in the ods2 module's `rms.Writer`.
+- **What**: DUMP/RECORD and DUMP/BLOCK follow VMS 7.3's layout in
+  testdata/dcl50's rounds 4 and 6, which their oracles compare. Chosen
+  without VMS: DUMP with no range shows the blocks up to the end-of-file
+  block (not the whole allocation); a blank line before each block; the
+  form feed only before the heading; RMS$_WLD for wildcards and DUMP's
+  OPENIN message for a file not found; no /OUTPUT, /FORMATTED, or other
+  radixes and widths; no dump of a device or a host file.
+  **Known difference**: VMS's RMS writes FFFF after the last
+  variable-length record in a block (a record length that means "no
+  more records here"), which ods2's writer leaves zero; round 6's
+  DUMP/BLOCK shows it, and its oracle allows for that word. Readers stop
+  at the end of file either way. Fixing it means changing ods2's
+  `rms.Writer.Close` and `Flush` and tagging an ods2 release.
+- **Status**: VMS's layout followed; the FFFF word deferred to ods2.
+
 <!--
 Entry template:
 
