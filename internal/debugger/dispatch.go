@@ -55,6 +55,7 @@ func (d *Dispatcher) bind() {
 	d.bindWatch()
 	d.bindSource()
 	d.bindExamine()
+	d.bindTypes()
 	d.bindMachine()
 	d.bindProgram()
 	d.bindProcess()

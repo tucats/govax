@@ -123,6 +123,7 @@ grammar debugger
         keyword     process             /syntax=set_process/nonegatable
         keyword     quantum             /syntax=set_quantum/nonegatable
         keyword     uiquantum           /syntax=set_uiquantum/nonegatable
+        keyword     type                /syntax=set_type/nonegatable
 
     verb set/id=20
         parameter   what/id=21                  -
@@ -217,6 +218,17 @@ grammar debugger
                         /prompt="Radix"
 
 
+        ! SET TYPE[/OVERRIDE] keyword: the type EXAMINE and DEPOSIT give the
+        ! locations no program symbol types, or, with /OVERRIDE, every
+        ! location. The keywords are EXAMINE's type qualifiers' names (BYTE,
+        ! FLOAT, ASCIC, PACKED:n, ASCII:n, TYPE=(name), ...) and
+        ! INSTRUCTION.
+        syntax set_type/id=441
+            qualifier   override/id=442/nonegatable
+            parameter   keyword/id=443          -
+                        /type=$rest_of_line     -
+                        /prompt="Type"
+
         ! SET QUANTUM value
          syntax set_quantum/id=1801
             parameter   count/id=1802               -
@@ -306,6 +318,7 @@ grammar debugger
         keyword     module              /syntax=show_module
         keyword     modules             /syntax=show_module
         keyword     quantum             /syntax=show_quantum
+        keyword     type                /syntax=show_type
 
         ! SYMBOL is an abbreviation of SYMBOLS; a keyword of each would make
         ! SYM ambiguous.
@@ -400,6 +413,9 @@ grammar debugger
                         /type=$rest_of_line
             disallow    all and system
         syntax show_scope/id=277
+        ! SHOW TYPE[/OVERRIDE] names SET TYPE's type, or the override type.
+        syntax show_type/id=444
+            qualifier   override/id=445/nonegatable
         syntax show_language/id=278
 
         ! The commands below show the machine's state; they are govax's own
@@ -502,6 +518,7 @@ grammar debugger
         keyword     translation_buffer  /syntax=cancel_tb
         keyword     memory              /syntax=cancel_memory
         keyword     symbols             /syntax=cancel_symbol
+        keyword     type                /syntax=cancel_type
 
     verb cancel/id=50
         parameter   what/id=51                  -
@@ -572,6 +589,10 @@ grammar debugger
                         /type=$name
             disallow    all and temporary
 
+    ! CANCEL TYPE/OVERRIDE ends SET TYPE/OVERRIDE's type.
+        syntax cancel_type/id=446
+            qualifier   override/id=447/nonegatable
+
     ! CLEAR is a govax synonym for CANCEL (the console's old verb).
     verb clear/alias=cancel
 
@@ -580,13 +601,18 @@ grammar debugger
     ! location may be a range, start:end); /OPERANDS[=FULL] explains
     ! each operand; /CONSTANTS and /SHAREABLE are govax's, naming a
     ! constant and a G^ reference's routine. Without them it is the data:
-    ! typed by the program's debug symbols, or by /BYTE, /WORD,
-    ! /LONGWORD, /QUADWORD, or /ASCII[:count] (govax's own /PTE shows a
-    ! page table entry, and /PSL a processor status longword), and shown
-    ! in the output radix, or /HEXADECIMAL, /DECIMAL, /OCTAL, or /BINARY.
-    ! /SYMBOLIC is accepted (SET MODE NOSYMBOLIC doesn't change data
-    ! names). The location is the rest of the line, which
-    ! internal/debugger takes apart.
+    ! typed by a type qualifier, else by SET TYPE/OVERRIDE, else by the
+    ! program's debug symbols, else by SET TYPE. The type qualifiers are
+    ! the integers (/BYTE, /WORD, /LONGWORD, /QUADWORD, /OCTAWORD), the
+    ! floating formats (/FLOAT, /D_FLOAT, /G_FLOAT, /H_FLOAT),
+    ! /PACKED:digits, the strings (/ASCII[:count], /ASCIC, /ASCIW,
+    ! /ASCIZ, /ASCID, with the short names /AC, /AW, /AZ, /AD),
+    ! /DATE_TIME, /CONDITION_VALUE, /PSL, /PSW, /TYPE=(name) (the type of
+    ! a datum the program defines), and govax's own /PTE (a page table
+    ! entry). An integer is shown in the output radix, or /HEXADECIMAL,
+    ! /DECIMAL, /OCTAL, /BINARY, or /DEFAULT (the output radix).
+    ! /NOSYMBOLIC names each location by its address. The location is
+    ! the rest of the line, which internal/debugger takes apart.
     verb examine/id=87
         qualifier   instruction/id=88/nonegatable
         qualifier   operands/id=89              -
@@ -603,21 +629,45 @@ grammar debugger
                     /default=""/nonegatable
         qualifier   psl/id=98/nonegatable
         qualifier   pte/id=99/nonegatable
+        qualifier   octaword/id=400/nonegatable
+        qualifier   float/id=401/nonegatable
+        qualifier   f_float/alias=float
+        qualifier   d_float/id=402/nonegatable
+        qualifier   g_float/id=403/nonegatable
+        qualifier   h_float/id=404/nonegatable
+        qualifier   packed/id=405               -
+                    /type=$integer/nonegatable
+        qualifier   ascic/id=406/nonegatable
+        qualifier   ac/alias=ascic
+        qualifier   asciw/id=407/nonegatable
+        qualifier   aw/alias=asciw
+        qualifier   asciz/id=408/nonegatable
+        qualifier   az/alias=asciz
+        qualifier   ascid/id=409/nonegatable
+        qualifier   ad/alias=ascid
+        qualifier   date_time/id=410/nonegatable
+        qualifier   condition_value/id=411/nonegatable
+        qualifier   psw/id=412/nonegatable
+        qualifier   type/id=413                 -
+                    /type=$string/list/nonegatable
         qualifier   hexadecimal/id=100/nonegatable
         qualifier   decimal/id=101/nonegatable
         qualifier   octal/id=102/nonegatable
         qualifier   binary/id=103/nonegatable
+        qualifier   default/id=414/nonegatable
         qualifier   symbolic/id=104
         parameter   location/id=92              -
                     /type=$rest_of_line
-        disallow    any2(byte, word, longword, quadword, psl, pte, instruction)
-        disallow    any2(hexadecimal, decimal, octal, binary)
+        disallow    any2(byte, word, longword, quadword, octaword, psl, psw, pte, instruction, float, d_float, g_float, h_float, packed, ascic, asciw, asciz, ascid, date_time, condition_value, type)
+        disallow    any2(hexadecimal, decimal, octal, binary, default)
     verb ex/alias=examine
 
-    ! DEPOSIT[/type] location = value stores a value (in the input radix)
-    ! or, with /ASCII[:count], a quoted string at a location: a register
-    ! or an address. The type is /BYTE, /WORD, /LONGWORD, or /QUADWORD,
-    ! else the type of the data the location labels, else a longword.
+    ! DEPOSIT[/type] location = value stores a value (a number in the
+    ! input radix, a floating literal, or a quoted string) at a location:
+    ! a register or an address. The type is a type qualifier (EXAMINE's,
+    ! but for /PSL, /PSW, and /PTE), else SET TYPE/OVERRIDE's, else the
+    ! type of the data the location labels, else SET TYPE's, else a
+    ! longword.
     verb deposit/id=105
         qualifier   byte/id=106/nonegatable
         qualifier   word/id=107/nonegatable
@@ -626,18 +676,39 @@ grammar debugger
         qualifier   ascii/id=110                -
                     /type=$string               -
                     /default=""/nonegatable
+        qualifier   octaword/id=420/nonegatable
+        qualifier   float/id=421/nonegatable
+        qualifier   f_float/alias=float
+        qualifier   d_float/id=422/nonegatable
+        qualifier   g_float/id=423/nonegatable
+        qualifier   h_float/id=424/nonegatable
+        qualifier   packed/id=425               -
+                    /type=$integer/nonegatable
+        qualifier   ascic/id=426/nonegatable
+        qualifier   ac/alias=ascic
+        qualifier   asciw/id=427/nonegatable
+        qualifier   aw/alias=asciw
+        qualifier   asciz/id=428/nonegatable
+        qualifier   az/alias=asciz
+        qualifier   ascid/id=429/nonegatable
+        qualifier   ad/alias=ascid
+        qualifier   date_time/id=430/nonegatable
+        qualifier   condition_value/id=431/nonegatable
+        qualifier   type/id=432                 -
+                    /type=$string/list/nonegatable
         parameter   assignment/id=111           -
                     /type=$rest_of_line         -
                     /prompt="Location"
-        disallow    any2(byte, word, longword, quadword)
+        disallow    any2(byte, word, longword, quadword, octaword, float, d_float, g_float, h_float, packed, ascic, asciw, asciz, ascid, date_time, condition_value, type)
     verb d/alias=deposit
 
     ! EVALUATE[/radix] expression shows an expression's value: the
     ! contents of a data label (EVALUATE/ADDRESS shows its address). The
     ! number is in the output radix, or /HEXADECIMAL, /DECIMAL, /OCTAL, or
-    ! /BINARY.
+    ! /BINARY; /CONDITION_VALUE shows the message of the status it is.
     verb evaluate/id=112
         qualifier   address/id=113/nonegatable
+        qualifier   condition_value/id=440/nonegatable
         qualifier   hexadecimal/id=114/nonegatable
         qualifier   decimal/id=115/nonegatable
         qualifier   octal/id=116/nonegatable

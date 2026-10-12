@@ -137,3 +137,11 @@ func (env *Environment) StatusText(status uint32) string {
 
 	return lines[0]
 }
+
+// ParseTime is $BINTIM's conversion of text to a VMS time, the fields an
+// absolute time leaves out taken from the process's clock. ok is false
+// for text $BINTIM would reject (SS$_IVTIME). The debugger's
+// DEPOSIT/DATE_TIME uses it.
+func (env *Environment) ParseTime(text string) (uint64, bool) {
+	return parseVMSTime(text, env.Clock())
+}

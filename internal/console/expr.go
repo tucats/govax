@@ -359,6 +359,21 @@ func (e *Evaluator) parseAtom(s string) (uint32, string, error) {
 		return v, rest[1:], nil
 	}
 
+	// A unary minus negates what follows (two's complement, so -1 is
+	// FFFFFFFF), and a unary plus leaves it alone: -5, -(A+B).
+	if s[0] == '-' || s[0] == '+' {
+		v, rest, err := e.parseAtom(s[1:])
+		if err != nil {
+			return 0, "", err
+		}
+
+		if s[0] == '-' {
+			v = -v
+		}
+
+		return v, rest, nil
+	}
+
 	// NOT is the one's complement of what follows (NOT 0 is FFFFFFFF).
 	if w := keywordAt(s, "NOT"); w != "" {
 		v, rest, err := e.parseAtom(s[len(w):])

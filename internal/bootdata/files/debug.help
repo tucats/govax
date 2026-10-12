@@ -16,6 +16,8 @@
 //              10/05/26    STEP as VMS's (subtask 7).
 //              10/05/26    Every command and qualifier the debugger has
 //                          (subtask 15).
+//              10/11/26    EXAMINE and DEPOSIT types; SET, SHOW, and
+//                          CANCEL TYPE (subtask 18).
 //
 
 $HELP
@@ -138,7 +140,8 @@ $CLEA
 
   Additional information available:
 
-  BREAK  INTERRUPT  MEMORY  MODE  RADIX  SOURCE  SYMBOL  TB  TRACE  WATCH
+  BREAK  INTERRUPT  MEMORY  MODE  RADIX  SOURCE  SYMBOL  TB  TRACE  TYPE
+  WATCH
 
 $CANC,BREA
 $CLEA,BREA
@@ -257,6 +260,17 @@ $CLEA,SYMB
   /ALL removes every user symbol, and /TEMPORARY every user symbol not
   defined with SET/PERMANENT.
 
+$CANC,TYPE
+$CLEA,TYPE
+  Ends SET TYPE/OVERRIDE: locations are typed by the program's debug
+  symbols again.
+
+  Format:
+
+    CANCEL TYPE/OVERRIDE
+
+  (SET TYPE LONGWORD restores the type of locations no symbol types.)
+
 $DEPO
 $D
   Stores a value at a location: a register, or an address.
@@ -266,10 +280,27 @@ $D
     DEPOSIT[/type] location = value
     DEPOSIT/ASCII[:count] location = "string"
 
-  The value is in the input radix. The type is /BYTE, /WORD, /LONGWORD, or
-  /QUADWORD; without one it is the type of the data the location names in
-  the program's debug symbols, else a longword. /ASCII stores a quoted
-  string, of the count given (padded with blanks) or its own length.
+  A number is in the input radix; a floating value is a literal such as
+  1.5 or -2.5E3; a string is in quotes or apostrophes. The type is a type
+  qualifier, else SET TYPE/OVERRIDE's, else the type of the data the
+  location names in the program's debug symbols, else SET TYPE's, else a
+  longword. The type qualifiers are EXAMINE's (HELP EXAMINE), but for
+  /PSL, /PSW, and /PTE:
+
+    /BYTE /WORD /LONGWORD /QUADWORD /OCTAWORD   an integer
+    /FLOAT /D_FLOAT /G_FLOAT /H_FLOAT           a floating value
+    /PACKED:n                                   n packed decimal digits
+    /ASCII[:n]                                  text, padded or cut to n
+    /ASCIC /ASCIW /ASCIZ                        counted or zero-ended text
+    /ASCID                                      text where the descriptor
+                                                at the location points,
+                                                padded or cut to its length
+    /DATE_TIME                                  a time ("11-OCT-2026 14:03")
+    /CONDITION_VALUE                            a longword
+    /TYPE=(name)                                as the datum name is typed
+
+  A value wider than a longword deposited in a register fills the
+  registers after it too (DEPOSIT/D_FLOAT R0 = 1.5 sets R0 and R1).
 
   Examples:
 
@@ -277,6 +308,8 @@ $D
     DEPOSIT PC = 200
     DEPOSIT/BYTE 2000 = 0FF
     DEPOSIT COUNT = 10
+    DEPOSIT/FLOAT RATE = 2.75
+    DEPOSIT/ASCIC NAME = 'SMITH'
 
 $EVAL
   Shows the value of an expression.
@@ -288,7 +321,8 @@ $EVAL
 
   The value is shown in the output radix, or in /HEXADECIMAL, /DECIMAL,
   /OCTAL, or /BINARY. With a data name, the value is its contents.
-  /ADDRESS shows the address instead.
+  /ADDRESS shows the address instead. /CONDITION_VALUE shows the message
+  of the status the value is (EVALUATE/CONDITION_VALUE R0).
 
 $EXAM
 $EX
@@ -303,15 +337,20 @@ $EX
   register. A range (start:end) shows each item from start through end. With
   no location, EXAMINE shows the next location after the last one shown.
 
-  Without /INSTRUCTION, EXAMINE shows data: typed by the program's debug
-  symbols where the location names a datum (arrays as TABLE[0:3], strings
-  through their descriptors), and otherwise by the type qualifier given, in
-  the output radix.
+  Without /INSTRUCTION, EXAMINE shows data, typed by the type qualifier
+  given, else by SET TYPE/OVERRIDE, else by the program's debug symbols
+  where the location names a datum (arrays as TABLE[0:3], strings through
+  their descriptors, floating values as numbers), else by SET TYPE (a
+  longword unless it says otherwise). An integer is shown in the output
+  radix. A type wider than a longword shown from a register takes the
+  registers after it too (EXAMINE/D_FLOAT R0 is R0 and R1).
 
   Additional information available:
 
-  /INSTRUCTION  /OPERANDS  /BYTE  /WORD  /LONGWORD  /QUADWORD  /ASCII
-  /HEXADECIMAL  /DECIMAL  /OCTAL  /BINARY  /PSL  /PTE  /CONSTANTS
+  /INSTRUCTION  /OPERANDS  /BYTE  /WORD  /LONGWORD  /QUADWORD  /OCTAWORD
+  /FLOAT  /D_FLOAT  /G_FLOAT  /H_FLOAT  /PACKED  /ASCII  /ASCIC  /ASCIW
+  /ASCIZ  /ASCID  /DATE_TIME  /CONDITION_VALUE  /TYPE  /HEXADECIMAL
+  /DECIMAL  /OCTAL  /BINARY  /DEFAULT  /PSL  /PSW  /PTE  /CONSTANTS
   /SHAREABLE  /SYMBOLIC
 
 $EXAM,/INS
@@ -332,37 +371,77 @@ $EXAM,/WOR
 $EXAM,/LON
 $EXAM,/QUA
   Show each item as a byte, a word (two bytes), a longword (four), or a
-  quadword (eight), when the program's debug symbols don't give the type.
+  quadword (eight), whatever the program's debug symbols say. /OCTAWORD
+  shows sixteen bytes (HELP EXAMINE /OCT).
+
+$EXAM,/FLO
+$EXAM,/F_F
+$EXAM,/D_F
+$EXAM,/G_F
+$EXAM,/H_F
+  Show each item as a floating value: F_floating (four bytes), D_floating
+  or G_floating (eight), or H_floating (sixteen). A value from 0.1 up to
+  10**7 (F) or 10**15 (D, G) is shown in fixed notation, 5350.000, and
+  others with an exponent, 1.9117807E-38. /F_FLOAT is the same as /FLOAT.
+
+$EXAM,/PAC
+  /PACKED:n shows n packed decimal digits: two digits a byte, the sign in
+  the last half byte, as the VAX's decimal instructions keep them.
 
 $EXAM,/ASC
-  Shows bytes as ASCII text. /ASCII:count shows count bytes.
+  Shows bytes as ASCII text. /ASCII:count shows count bytes. The other
+  layouts of text:
+
+    /ASCIC (/AC)   a count byte, then the text
+    /ASCIW (/AW)   a count word, then the text
+    /ASCIZ (/AZ)   the text up to a zero byte
+    /ASCID (/AD)   a string descriptor: the text where it points
+
+$EXAM,/DAT
+  Shows a quadword as a VMS date and time, 11-OCT-2026 14:03:22.17.
+
+$EXAM,/CON
+  Without /INSTRUCTION, /CONDITION_VALUE shows a longword as the message of
+  the status it is: %SYSTEM-S-NORMAL, normal successful completion.
+
+  With /INSTRUCTION, govax's own /CONSTANTS names a constant by the symbol
+  that defines it (MOVL S^#DBGDIS\LIMIT,R2), which the VMS debugger
+  doesn't. (Type /CONS or /COND.)
+
+$EXAM,/TYP
+  /TYPE=(name) shows each item typed as the datum name is: EXAMINE
+  /TYPE=(COUNT) 2000 shows the longword at 2000 if COUNT is a longword.
 
 $EXAM,/HEX
 $EXAM,/DEC
 $EXAM,/OCT
 $EXAM,/BIN
+$EXAM,/DEF
   Show the value in hexadecimal, decimal, octal, or binary, for this
-  command, instead of the output radix.
+  command, instead of the output radix. /DEFAULT is the output radix.
+
+  /OCTAWORD (type at least /OCTA, since /OCTAL starts the same) is a type,
+  not a radix: it shows each item as an octaword, sixteen bytes.
 
 $EXAM,/PSL
-  govax's own: shows a longword as a processor status longword, field by
-  field.
+$EXAM,/PSW
+  Show a longword as a processor status longword, field by field, or a
+  word as a processor status word (the PSL's trap enables and condition
+  codes).
 
 $EXAM,/PTE
   govax's own: shows a longword as a page table entry: its valid bit,
   protection, modify bit, owner, and page frame number.
-
-$EXAM,/CON
-  govax's own, with /INSTRUCTION: names a constant by the symbol that
-  defines it (MOVL S^#DBGDIS\LIMIT,R2), which the VMS debugger doesn't.
 
 $EXAM,/SHA
   govax's own, with /INSTRUCTION: names a G^ reference's routine in a
   shareable image (CALLS S^#01,G^LIB$PUT_OUTPUT).
 
 $EXAM,/SYM
-  Accepted, as VMS has it. SET MODE SYMBOLIC or NOSYMBOLIC chooses whether
-  an instruction's addresses are names.
+  /NOSYMBOLIC names a location typed as a number by its address
+  (00000200: 00000000), not by the symbol there; one typed by name keeps
+  its name. SET MODE SYMBOLIC or NOSYMBOLIC chooses whether an
+  instruction's addresses are names.
 
 $EXIT
   Ends the debugger session and returns to the console. The machine is
@@ -413,7 +492,8 @@ $SE
   Additional information available:
 
   BASE     BREAK    FAULT    MODE     MODULE   PSL      PTE   
-  QUANTUM  RADIX    SOURCE   STEP     TRACE    VM       WATCH
+  QUANTUM  RADIX    SOURCE   STEP     TRACE    TYPE     VM
+  WATCH
 
   (SET BREAKPOINT, SET TRACEPOINT, and SET WATCHPOINT are the same as
   SET BREAK, SET TRACE, and SET WATCH.)
@@ -516,6 +596,31 @@ $SE,SOUR
     SET SOURCE directory[,directory...]
 
   SHOW SOURCE lists them, and CANCEL SOURCE forgets them.
+
+$SET,TYPE
+$SE,TYPE
+  Sets the type EXAMINE and DEPOSIT give a location the program's debug
+  symbols don't type, or, with /OVERRIDE, every location.
+
+  Format:
+
+    SET TYPE[/OVERRIDE] keyword
+
+  The keywords are the names of EXAMINE's type qualifiers: BYTE, WORD,
+  LONGWORD, QUADWORD, OCTAWORD, FLOAT, D_FLOAT, G_FLOAT, H_FLOAT,
+  PACKED:n, ASCII:n (4 characters without n), ASCIC, ASCIW, ASCIZ, ASCID
+  (or AC, AW, AZ, AD), DATE_TIME, CONDITION_VALUE, PSL, PSW, and
+  TYPE=(name), the type of a datum the program defines; and INSTRUCTION,
+  a machine instruction. A qualifier on the command wins over both.
+
+  SHOW TYPE names the type; SET TYPE LONGWORD restores the default, and
+  CANCEL TYPE/OVERRIDE ends the override.
+
+  Examples:
+
+    SET TYPE BYTE
+    SET TYPE/OVERRIDE ASCII:8
+    SET TYPE TYPE=(COUNT)
 
 $SET,MODE
 $SE,MODE
@@ -660,7 +765,7 @@ $SH
   IMAGE      INTRUCTION LANGUAGE   MAPS       MEMORY     MODE
   MODULE     PAGE       PSL        QUANTUM    RADIX      REGIONS
   REGISTERS  SCB        SCOPE      SHIM       SOURCE     STACK  
-  STEP       SYMBOL     TB         TRACE      WATCH
+  STEP       SYMBOL     TB         TRACE      TYPE       WATCH
 
   and the register names: SHOW R0, SHOW PC, SHOW P0BR, and so on. SHOW SP,
   KSP, ESP, SSP, USP, and ISP dump the longwords on a stack.
@@ -1053,6 +1158,16 @@ $SH,SCOP
   Format:
 
     SHOW SCOPE
+
+$SHOW,TYPE
+$SH,TYPE
+  Names SET TYPE's type for locations no program symbol types (long
+  integer unless it says otherwise), or with /OVERRIDE the type SET
+  TYPE/OVERRIDE gives every location ("none" without one).
+
+  Format:
+
+    SHOW TYPE[/OVERRIDE]
 
 $SHOW,LANG
 $SH,LANG

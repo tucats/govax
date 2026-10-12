@@ -143,6 +143,10 @@ func (d *Debugger) registerScope() string {
 // that names it (with the offset past it), or the program's symbol for the
 // address (a routine's code), or just the address in hex.
 func (d *Debugger) locationName(addr uint32) string {
+	if d.numericNames {
+		return fmt.Sprintf("%08X", addr)
+	}
+
 	if prog := d.Console.DebugProgramAt(addr); prog != nil {
 		// A routine's start is named by the routine, which the data
 		// symbols' nearest-label rule would otherwise miss (START is
@@ -170,6 +174,8 @@ func (d *Debugger) locationName(addr uint32) string {
 func (d *Dispatcher) examineData(r *dcl.Result) error {
 	dbg := d.Debugger
 
+	noSymbolic := r.Present("SYMBOLIC") && r.Negated("SYMBOLIC")
+
 	items := []string{""}
 
 	if text := strings.TrimSpace(r.String("LOCATION")); text != "" {
@@ -181,12 +187,39 @@ func (d *Dispatcher) examineData(r *dcl.Result) error {
 	}
 
 	for _, item := range items {
-		if err := dbg.examineItem(r, item); err != nil {
+		// /NOSYMBOLIC names a location typed as a number by its address
+		// (the manual's "0000086F: 03020100"); one typed by name keeps its
+		// name, as the probe's EXAMINE/NOSYMBOLIC WATCHL shows.
+		dbg.numericNames = noSymbolic && numericItem(item)
+
+		err := dbg.examineItem(r, item)
+
+		dbg.numericNames = false
+
+		if err != nil {
 			return err
 		}
 	}
 
 	return nil
+}
+
+// numericItem reports whether an EXAMINE item is a number, or a range of
+// numbers, rather than a name: each part starts with a digit or a radix
+// prefix (^X), as a MACRO number must.
+func numericItem(item string) bool {
+	parts := []string{item}
+	if lo, hi, ok := splitRange(item); ok {
+		parts = []string{lo, hi}
+	}
+
+	for _, part := range parts {
+		if part = strings.TrimSpace(part); part == "" || !(part[0] >= '0' && part[0] <= '9' || part[0] == '^') {
+			return false
+		}
+	}
+
+	return true
 }
 
 // examineItem shows one item of EXAMINE's list: a register, a location, a
@@ -232,6 +265,14 @@ func (d *Debugger) examineItem(r *dcl.Result, item string) error {
 		// the byte-array BUFFER's elements 0 and 4, four bytes apart.
 		step := uint32(defaultSize)
 		if size, typed := d.typedSize(r); typed && size > 0 {
+			step = size
+		}
+
+		// A type the qualifier, or SET TYPE/OVERRIDE, gives steps by its
+		// own size where it has a fixed one.
+		if t, typed, err := d.commandType(r); err != nil {
+			return err
+		} else if size, fixed := t.fixedSize(); typed && fixed && size > 0 {
 			step = size
 		}
 
@@ -313,7 +354,10 @@ func (d *Debugger) readValue(addr, size uint32) (uint64, error) {
 }
 
 // examineRegister shows a register as "DBGCMD\FACT\%R2:  00000004", or the
-// processor status longword as a table of its fields.
+// processor status longword as a table of its fields. A type qualifier (or
+// SET TYPE/OVERRIDE) shows the register's contents as that type; one wider
+// than a longword takes the registers after it too (EXAMINE/D_FLOAT R0 is
+// R0 and R1, as the VAX keeps a D_floating value in a register pair).
 func (d *Debugger) examineRegister(r *dcl.Result, reg vax.Reg, name string, isPSL bool) error {
 	c := d.Console
 
@@ -324,35 +368,89 @@ func (d *Debugger) examineRegister(r *dcl.Result, reg vax.Reg, name string, isPS
 
 	label = tabPad(label + ":")
 
-	if isPSL || r.Present("PSL") {
+	t, typed, err := d.commandType(r)
+	if err != nil {
+		return err
+	}
+
+	if isPSL {
 		value := uint32(c.CPU.PSL())
-		if !isPSL {
-			value = c.CPU.GPR(reg)
+
+		if typed && t.kind == typePSW {
+			c.Printf("%s\n%s", label, pswTable(value))
+		} else {
+			c.Printf("%s\n%s", label, pslTable(value))
 		}
 
-		c.Printf("%s\n%s", label, pslTable(value))
-
 		return nil
 	}
 
-	value := uint64(c.CPU.GPR(reg))
-
-	if r.Present("PTE") {
-		c.Printf("%s%s\n", label, c.FormatPTE(uint32(value)))
-
-		return nil
+	if !typed {
+		t = longwordType
 	}
 
-	size := uint32(defaultSize)
-	if s, typed := d.typedSize(r); typed {
-		size = s
+	data, err := d.registerBytes(reg, t, "EXAMINE")
+	if err != nil {
+		return err
 	}
 
-	if size < 4 {
-		value &= 1<<(size*8) - 1
+	text, multiline := d.fixedText(t, data, d.examineRadix(r))
+	if multiline {
+		c.Printf("%s\n%s", label, text)
+	} else {
+		c.Printf("%s%s\n", label, text)
 	}
 
-	c.Printf("%s%s\n", label, formatRadix(value, size, d.examineRadix(r)))
+	return nil
+}
+
+// registerBytes returns the bytes of the registers from reg on that a
+// value of type t fills, least significant first: one register for a
+// longword or less, two for a quadword, four for an octaword. A type with
+// no fixed size (a counted string) can't be in registers, and neither can
+// a value that would run past the PC: %DEBUG-E-OPTNOTALLOW, naming the
+// command (verb).
+func (d *Debugger) registerBytes(reg vax.Reg, t dataType, verb string) ([]byte, error) {
+	size, fixed := t.fixedSize()
+	if !fixed || size == 0 || t.kind == typeInstruction {
+		return nil, vmserrors.New(vmserrors.DBG_OPTNOTALLOW, verb)
+	}
+
+	count := (size + 3) / 4
+	if uint32(reg)+count-1 > uint32(vax.PC) {
+		return nil, vmserrors.New(vmserrors.DBG_OPTNOTALLOW, verb)
+	}
+
+	data := make([]byte, 0, count*4)
+
+	for i := range count {
+		v := d.Console.CPU.GPR(reg + vax.Reg(i))
+		data = append(data, byte(v), byte(v>>8), byte(v>>16), byte(v>>24))
+	}
+
+	return data[:size], nil
+}
+
+// setRegisterBytes stores data in the registers from reg on, as
+// registerBytes reads them: a register that data only partly fills keeps
+// its other bytes.
+func (d *Debugger) setRegisterBytes(reg vax.Reg, data []byte) error {
+	count := (uint32(len(data)) + 3) / 4
+	if uint32(reg)+count-1 > uint32(vax.PC) {
+		return vmserrors.New(vmserrors.DBG_OPTNOTALLOW, "DEPOSIT")
+	}
+
+	for i := range count {
+		v := d.Console.CPU.GPR(reg + vax.Reg(i))
+
+		for b := range uint32(4) {
+			if at := i*4 + b; at < uint32(len(data)) {
+				v = v&^(0xFF<<(8*b)) | uint32(data[at])<<(8*b)
+			}
+		}
+
+		d.Console.CPU.SetGPR(reg+vax.Reg(i), v)
+	}
 
 	return nil
 }
@@ -389,8 +487,8 @@ func pslTable(psl uint32) string {
 	put(20, fmt.Sprintf("%d", bit(26)))   // IS
 	put(22+(6-len(mode(24)))/2, mode(24)) // CURMOD
 	put(29+(6-len(mode(22)))/2, mode(22)) // PRVMOD
-	
-	ipl := fmt.Sprintf("%X", psl>>16&31)  // IPL, in hex, ending under IPL's last letter
+
+	ipl := fmt.Sprintf("%X", psl>>16&31) // IPL, in hex, ending under IPL's last letter
 	put(39-len(ipl), ipl)
 	put(41, fmt.Sprintf("%d", bit(7))) // DV
 	put(44, fmt.Sprintf("%d", bit(6))) // FU
@@ -405,9 +503,10 @@ func pslTable(psl uint32) string {
 }
 
 // examineAt shows the memory at addr, by its type: the one a type
-// qualifier gives, else the debug symbols' for a label exactly at addr,
-// else a longword. inRange is true for an item of a range (start:end),
-// which shows an array's single element, not the whole array.
+// qualifier gives, else SET TYPE/OVERRIDE's, else the debug symbols' for a
+// label exactly at addr, else SET TYPE's, else a longword. inRange is true
+// for an item of a range (start:end), which shows an array's single
+// element, not the whole array.
 func (d *Debugger) examineAt(r *dcl.Result, addr uint32, inRange bool) error {
 	c := d.Console
 	prog := c.DebugProgramAt(addr)
@@ -424,17 +523,30 @@ func (d *Debugger) examineAt(r *dcl.Result, addr uint32, inRange bool) error {
 		}
 	}
 
-	// /ASCII, or a label of a string: show text.
-	if asciiGiven(r) || (datum != nil && datum.IsText() && !r.Present("BYTE") &&
-		!r.Present("WORD") && !r.Present("LONGWORD") && !r.Present("QUADWORD") && !r.Present("PTE") && !r.Present("PSL")) {
-		return d.examineText(r, addr, datum)
+	radix := d.examineRadix(r)
+
+	t, typed, err := d.commandType(r)
+	if err != nil {
+		return err
 	}
 
-	size, typed := d.typedSize(r)
+	if typed {
+		return d.examineTyped(addr, t, datum, radix)
+	}
+
+	// A label of a string: show text.
+	if datum != nil && datum.IsText() {
+		return d.examineText(addr, datum, 0, false)
+	}
+
+	// A label of a type data.go's sizes don't show (a floating value).
+	if dt, ok := datumType(datum); ok && !inRange {
+		return d.examineTyped(addr, dt, datum, radix)
+	}
 
 	// A routine's first word is its entry mask, the registers it saves
 	// (dbgdis.dlg: "DBGDIS\START:   entry mask ^M<R2,R3,R4>").
-	if !typed && datum == nil && !r.Present("PTE") && !r.Present("PSL") {
+	if datum == nil {
 		if text, ok := c.EntryMaskText(addr); ok {
 			d.examined = examineState{addr: addr, size: 2, set: true}
 			c.DepositAddr = addr + 2
@@ -443,22 +555,77 @@ func (d *Debugger) examineAt(r *dcl.Result, addr uint32, inRange bool) error {
 
 			return nil
 		}
+
+		// SET TYPE's type, for a location no symbol types.
+		if d.defaultType != nil {
+			return d.examineTyped(addr, *d.defaultType, nil, radix)
+		}
 	}
 
-	switch {
-	case typed:
-	case datum != nil && datum.ElementSize() > 0 && datum.ElementSize() <= 8:
+	size := uint32(defaultSize)
+	if datum != nil && datum.ElementSize() > 0 && datum.ElementSize() <= 8 {
 		size = datum.ElementSize()
-	default:
-		size = defaultSize
 	}
 
 	// A label of an array, named alone, shows every element.
-	if !typed && !inRange && datum != nil && datum.IsArray() && len(datum.Descriptor.Bounds) == 1 {
+	if !inRange && datum != nil && datum.IsArray() && len(datum.Descriptor.Bounds) == 1 {
 		return d.examineArray(r, addr, datum)
 	}
 
-	value, err := d.readValue(addr, size)
+	return d.examineTyped(addr, dataType{kind: typeInteger, size: size}, datum, radix)
+}
+
+// commandType is the type a command's qualifier gives its locations, else
+// SET TYPE/OVERRIDE's; typed is false when there is neither.
+func (d *Debugger) commandType(r *dcl.Result) (dataType, bool, error) {
+	t, typed, err := d.qualifierType(r)
+	if err != nil || typed {
+		return t, typed, err
+	}
+
+	if d.overrideType != nil {
+		return *d.overrideType, true, nil
+	}
+
+	return dataType{}, false, nil
+}
+
+// examineTyped shows the memory at addr as type t. datum is the debug
+// symbols' datum for addr, if any, which an /ASCII without a count takes
+// its length from.
+func (d *Debugger) examineTyped(addr uint32, t dataType, datum *dbgsym.Datum, radix int) error {
+	c := d.Console
+	name := tabPad(d.locationName(addr) + ":")
+
+	switch t.kind {
+	case typeInstruction:
+		d.examined = examineState{addr: addr, size: 1, set: true}
+
+		return c.DisassembleWith(addr, addr, d.instructionOptions())
+
+	case typeSymbol:
+		return d.examineSymbolTyped(addr, t.datum, radix)
+
+	case typeASCII:
+		return d.examineText(addr, datum, t.count, t.counted)
+
+	case typeASCIC, typeASCIW, typeASCIZ, typeASCID:
+		text, size, err := d.readCountedText(addr, t.kind)
+		if err != nil {
+			return err
+		}
+
+		d.examined = examineState{addr: addr, size: max(size, 1), set: true}
+		c.DepositAddr = addr + max(size, 1)
+
+		c.Printf("%s'%s'\n", name, printable(text))
+
+		return nil
+	}
+
+	size, _ := t.fixedSize()
+
+	data, err := c.ReadBytes(addr, size)
 	if err != nil {
 		return err
 	}
@@ -466,20 +633,134 @@ func (d *Debugger) examineAt(r *dcl.Result, addr uint32, inRange bool) error {
 	d.examined = examineState{addr: addr, size: size, set: true}
 	c.DepositAddr = addr + size
 
-	text := formatRadix(value, size, d.examineRadix(r))
-	if r.Present("PTE") {
-		text = c.FormatPTE(uint32(value))
+	text, multiline := d.fixedText(t, data, radix)
+	if multiline {
+		c.Printf("%s\n%s", name, text)
+	} else {
+		c.Printf("%s%s\n", name, text)
 	}
-
-	if r.Present("PSL") {
-		c.Printf("%s\n%s", tabPad(d.locationName(addr)+":"), pslTable(uint32(value)))
-
-		return nil
-	}
-
-	c.Printf("%s%s\n", tabPad(d.locationName(addr)+":"), text)
 
 	return nil
+}
+
+// examineSymbolTyped shows the memory at addr as EXAMINE/TYPE=(name) asks:
+// typed as the datum name labels is, which may be text or an array as
+// well as a number.
+func (d *Debugger) examineSymbolTyped(addr uint32, datum *dbgsym.Datum, radix int) error {
+	switch {
+	case datum.IsText():
+		length := uint32(1)
+		if datum.Descriptor != nil {
+			length = uint32(datum.Descriptor.Length)
+		}
+
+		return d.examineText(addr, nil, length, true)
+
+	case datum.IsArray() && len(datum.Descriptor.Bounds) == 1:
+		return d.examineArray(nil, addr, datum)
+	}
+
+	if dt, ok := datumType(datum); ok {
+		return d.examineTyped(addr, dt, nil, radix)
+	}
+
+	size := datum.ElementSize()
+	if size == 0 {
+		size = defaultSize
+	}
+
+	return d.examineTyped(addr, dataType{kind: typeInteger, size: size}, nil, radix)
+}
+
+// maxASCIZ is the longest zero-terminated string EXAMINE/ASCIZ reads
+// looking for its end (govax's own limit).
+const maxASCIZ = 512
+
+// readCountedText reads the text of a string laid out as kind says at
+// addr: after its count byte (ASCIC) or word (ASCIW), up to its zero byte
+// (ASCIZ), or where the descriptor at addr points (ASCID). size is how
+// many bytes at addr the string occupies (the descriptor's 8 for ASCID).
+func (d *Debugger) readCountedText(addr uint32, kind typeKind) (text []byte, size uint32, err error) {
+	c := d.Console
+
+	switch kind {
+	case typeASCIC:
+		count, err := c.ReadBytes(addr, 1)
+		if err != nil {
+			return nil, 0, err
+		}
+
+		text, err = c.ReadBytes(addr+1, uint32(count[0]))
+
+		return text, uint32(count[0]) + 1, err
+
+	case typeASCIW:
+		count, err := c.ReadBytes(addr, 2)
+		if err != nil {
+			return nil, 0, err
+		}
+
+		n := uint32(count[0]) | uint32(count[1])<<8
+		text, err = c.ReadBytes(addr+2, n)
+
+		return text, n + 2, err
+
+	case typeASCIZ:
+		for n := uint32(0); n < maxASCIZ; n++ {
+			b, err := c.ReadBytes(addr+n, 1)
+			if err != nil {
+				return nil, 0, err
+			}
+
+			if b[0] == 0 {
+				return text, n + 1, nil
+			}
+
+			text = append(text, b[0])
+		}
+
+		return text, maxASCIZ, nil
+	}
+
+	// ASCID: the descriptor's length word, then its pointer longword.
+	length, pointer, err := d.readDescriptor(addr)
+	if err != nil {
+		return nil, 0, err
+	}
+
+	text, err = c.ReadBytes(pointer, length)
+
+	return text, 8, err
+}
+
+// readDescriptor reads the string descriptor at addr: the length in its
+// first word, and the address of the text in its second longword.
+func (d *Debugger) readDescriptor(addr uint32) (length, pointer uint32, err error) {
+	header, err := d.Console.ReadBytes(addr, 8)
+	if err != nil {
+		return 0, 0, err
+	}
+
+	length = uint32(header[0]) | uint32(header[1])<<8
+	pointer = uint32(header[4]) | uint32(header[5])<<8 | uint32(header[6])<<16 | uint32(header[7])<<24
+
+	return length, pointer, nil
+}
+
+// printable is text with each byte that isn't a printable character shown
+// as a period, as the debugger shows strings.
+func printable(text []byte) string {
+	out := make([]byte, len(text))
+
+	for i, b := range text {
+		if b < ' ' || b > '~' {
+			b = '.'
+		}
+
+		out[i] = b
+	}
+
+	return string(out)
 }
 
 // examineArray shows an array one element to a line, under a heading of
@@ -504,7 +785,12 @@ func (d *Debugger) examineArray(r *dcl.Result, addr uint32, datum *dbgsym.Datum)
 			return err
 		}
 
-		c.Printf("%s%s\n", tabPad(fmt.Sprintf("    [%d]:", i)), formatRadix(value, size, d.examineRadix(r)))
+		radix := d.outputRadix
+		if r != nil {
+			radix = d.examineRadix(r)
+		}
+
+		c.Printf("%s%s\n", tabPad(fmt.Sprintf("    [%d]:", i)), formatRadix(value, size, radix))
 	}
 
 	d.examined = examineState{addr: addr, size: size * uint32(bounds.Upper-bounds.Lower+1), set: true}
@@ -512,19 +798,15 @@ func (d *Debugger) examineArray(r *dcl.Result, addr uint32, datum *dbgsym.Datum)
 	return nil
 }
 
-// examineText shows data as a string in quotes: the count /ASCII:n gives,
-// else the length the label's descriptor has (.ASCID's label names a
-// descriptor, whose pointer says where the text is), else one character.
-// A byte that isn't a printable character is shown as a period.
-func (d *Debugger) examineText(r *dcl.Result, addr uint32, datum *dbgsym.Datum) error {
+// examineText shows data as a string in quotes: count characters when
+// haveCount (/ASCII:n), else the length the label's descriptor has
+// (.ASCID's label names a descriptor, whose pointer says where the text
+// is), else one character. A byte that isn't a printable character is
+// shown as a period.
+func (d *Debugger) examineText(addr uint32, datum *dbgsym.Datum, count uint32, haveCount bool) error {
 	c := d.Console
 	name := d.locationName(addr)
 	start := addr
-
-	count, haveCount, err := d.asciiCount(r.String("ASCII"))
-	if err != nil {
-		return err
-	}
 
 	length := uint32(1)
 
@@ -533,13 +815,11 @@ func (d *Debugger) examineText(r *dcl.Result, addr uint32, datum *dbgsym.Datum) 
 		case datum.Kind == dbgsym.DescriptorAddress:
 			// The label is a descriptor: length in its first word, the
 			// text's address in its second longword.
-			header, err := c.ReadBytes(addr, 8)
-			if err != nil {
+			var err error
+
+			if length, start, err = d.readDescriptor(addr); err != nil {
 				return err
 			}
-
-			length = uint32(header[0]) | uint32(header[1])<<8
-			start = uint32(header[4]) | uint32(header[5])<<8 | uint32(header[6])<<16 | uint32(header[7])<<24
 		case datum.IsText() && datum.Descriptor != nil:
 			length = uint32(datum.Descriptor.Length)
 		case datum.IsArray() && len(datum.Descriptor.Bounds) == 1:
@@ -562,16 +842,10 @@ func (d *Debugger) examineText(r *dcl.Result, addr uint32, datum *dbgsym.Datum) 
 		return err
 	}
 
-	for i, b := range data {
-		if b < ' ' || b > '~' {
-			data[i] = '.'
-		}
-	}
-
 	d.examined = examineState{addr: addr, size: max(length, 1), set: true}
 	c.DepositAddr = addr + max(length, 1)
 
-	c.Printf("%s'%s'\n", tabPad(name+":"), data)
+	c.Printf("%s'%s'\n", tabPad(name+":"), printable(data))
 
 	return nil
 }
@@ -591,6 +865,12 @@ func (d *Dispatcher) evaluate(r *dcl.Result) error {
 	value, err := dbg.Console.EvalWholeMode(dbg.inputRadix, text, !r.Present("ADDRESS"))
 	if err != nil {
 		return err
+	}
+
+	if r.Present("CONDITION_VALUE") {
+		dbg.Console.Printf("%s\n", dbg.Console.StatusText(value))
+
+		return nil
 	}
 
 	radix := dbg.examineRadix(r)
@@ -648,9 +928,12 @@ func (d *Dispatcher) symbolize(r *dcl.Result) error {
 	return nil
 }
 
-// deposit runs DEPOSIT[/type] location = value: stores a number (read in
-// the input radix) of the location's type, or, with /ASCII, a string, at a
-// register or an address.
+// deposit runs DEPOSIT[/type] location = value: stores a value of the
+// location's type at a register or an address. The type is the one a
+// qualifier gives, else SET TYPE/OVERRIDE's, else the type of the data the
+// location labels (DEPOSIT WATCHB = 1 stores a byte), else SET TYPE's,
+// else a longword. A number is read in the input radix; a string is in
+// quotes.
 func (d *Dispatcher) deposit(r *dcl.Result) error {
 	dbg := d.Debugger
 	c := dbg.Console
@@ -664,16 +947,36 @@ func (d *Dispatcher) deposit(r *dcl.Result) error {
 		return vmserrors.New(vmserrors.CLI_NEEDEXPR)
 	}
 
-	// A register takes a longword.
+	value = d.asTyped(value)
+
+	t, typed, err := dbg.commandType(r)
+	if err != nil {
+		return err
+	}
+
+	// A register takes a longword, or the type given.
 	if reg, _, isPSL, isReg := registerOf(target); isReg && !isPSL {
-		v, err := dbg.Console.EvalWholeIn(dbg.inputRadix, value)
+		if !typed {
+			v, err := dbg.Console.EvalWholeIn(dbg.inputRadix, value)
+			if err != nil {
+				return err
+			}
+
+			c.CPU.SetGPR(reg, v)
+
+			return nil
+		}
+
+		if _, err := dbg.registerBytes(reg, t, "DEPOSIT"); err != nil {
+			return err
+		}
+
+		data, err := dbg.depositBytes(0, t, value)
 		if err != nil {
 			return err
 		}
 
-		c.CPU.SetGPR(reg, v)
-
-		return nil
+		return dbg.setRegisterBytes(reg, data)
 	}
 
 	addr, err := dbg.evalWhole(target)
@@ -681,49 +984,185 @@ func (d *Dispatcher) deposit(r *dcl.Result) error {
 		return err
 	}
 
-	// The type of what's being stored: from the command, else from the
-	// label at the address (DEPOSIT WATCHB = 1 stores a byte), else a
-	// longword.
-	size, typed := dbg.typedSize(r)
-
 	if !typed {
-		size = defaultSize
-
-		if prog := c.DebugProgramAt(addr); prog != nil {
-			if datum, _, found := prog.DatumAt(addr); found && datum.ElementSize() > 0 && datum.ElementSize() <= 8 {
-				size = datum.ElementSize()
-			}
-		}
+		t = dbg.locationType(addr, value)
 	}
 
-	if asciiGiven(r) {
-		text := strings.TrimSpace(value)
-		if len(text) >= 2 && (text[0] == '"' || text[0] == '\'') && text[len(text)-1] == text[0] {
-			text = text[1 : len(text)-1]
-		}
-
-		data := []byte(text)
-
-		if count, have, err := dbg.asciiCount(r.String("ASCII")); err != nil {
-			return err
-		} else if have {
-			// The count says how many characters are stored: pad with
-			// blanks, or cut short.
-			for uint32(len(data)) < count {
-				data = append(data, ' ')
-			}
-
-			data = data[:count]
-		}
-
-		dbg.examined = examineState{addr: addr, size: max(uint32(len(data)), 1), set: true}
-
-		return c.WriteBytes(addr, data)
-	}
-
-	v, err := dbg.Console.EvalWholeIn(dbg.inputRadix, value)
+	data, err := dbg.depositBytes(addr, t, value)
 	if err != nil {
 		return err
+	}
+
+	// An ASCID string goes where the descriptor points.
+	at := addr
+	if t.kind == typeASCID {
+		if _, at, err = dbg.readDescriptor(addr); err != nil {
+			return err
+		}
+	}
+
+	dbg.examined = examineState{addr: addr, size: max(uint32(len(data)), 1), set: true}
+
+	return c.WriteBytes(at, data)
+}
+
+// asTyped returns a string value in apostrophes ('abc') as it was typed.
+// The grammar makes unquoted text upper case, and to DCL an apostrophe
+// isn't a quote, but to the debugger it is, as a double quote is. The
+// value ends the command line, so the line's own text of the same length
+// is the value as typed.
+func (d *Dispatcher) asTyped(value string) string {
+	line := strings.TrimSpace(d.line)
+
+	if !strings.HasPrefix(value, "'") || len(line) < len(value) {
+		return value
+	}
+
+	if raw := line[len(line)-len(value):]; strings.EqualFold(raw, value) {
+		return raw
+	}
+
+	return value
+}
+
+// locationType is the type DEPOSIT stores at addr when the command gives
+// none: the type of the data a label there names (a string's, if the value
+// is one in quotes), else SET TYPE's, else a longword.
+func (d *Debugger) locationType(addr uint32, value string) dataType {
+	if prog := d.Console.DebugProgramAt(addr); prog != nil {
+		if datum, _, found := prog.DatumAt(addr); found {
+			if datum.IsText() && quoted(value) {
+				return dataType{kind: typeSymbol, datum: datum}
+			}
+
+			if dt, ok := datumType(datum); ok {
+				return dt
+			}
+
+			if size := datum.ElementSize(); size > 0 && size <= 8 {
+				return dataType{kind: typeInteger, size: size}
+			}
+
+			return longwordType
+		}
+	}
+
+	if d.defaultType != nil {
+		return *d.defaultType
+	}
+
+	return longwordType
+}
+
+// quoted reports whether text is a string in quotes or apostrophes.
+func quoted(text string) bool {
+	text = strings.TrimSpace(text)
+
+	return len(text) >= 2 && (text[0] == '"' || text[0] == '\'') && text[len(text)-1] == text[0]
+}
+
+// unquote removes the quotes around a string, if it has them.
+func unquote(text string) string {
+	text = strings.TrimSpace(text)
+	if quoted(text) {
+		return text[1 : len(text)-1]
+	}
+
+	return text
+}
+
+// fitText pads text with blanks to n characters, or cuts it short, as
+// DEPOSIT of a string into a fixed-length place does.
+func fitText(text string, n uint32) []byte {
+	data := []byte(text)
+
+	for uint32(len(data)) < n {
+		data = append(data, ' ')
+	}
+
+	return data[:n]
+}
+
+// depositBytes is what DEPOSIT stores for value as type t at addr: the
+// bytes, least significant first. addr matters only for the types that
+// read what is there (an ASCID descriptor's length).
+func (d *Debugger) depositBytes(addr uint32, t dataType, value string) ([]byte, error) {
+	switch t.kind {
+	case typeFloat:
+		return d.parseFloatValue(t.float, value)
+
+	case typePacked:
+		v, err := d.Console.EvalWholeIn(d.inputRadix, value)
+		if err != nil {
+			return nil, err
+		}
+
+		return packDecimal(int64(int32(v)), t.digits, value)
+
+	case typeASCII:
+		text := unquote(value)
+		if !t.counted {
+			return []byte(text), nil
+		}
+
+		return fitText(text, t.count), nil
+
+	case typeASCIC:
+		text := unquote(value)
+		if len(text) > 255 {
+			return nil, vmserrors.New(vmserrors.DBG_IVALOUTBNDS, strings.ToUpper(value))
+		}
+
+		return append([]byte{byte(len(text))}, text...), nil
+
+	case typeASCIW:
+		text := unquote(value)
+		if len(text) > 65535 {
+			return nil, vmserrors.New(vmserrors.DBG_IVALOUTBNDS, strings.ToUpper(value))
+		}
+
+		return append([]byte{byte(len(text)), byte(len(text) >> 8)}, text...), nil
+
+	case typeASCIZ:
+		return append([]byte(unquote(value)), 0), nil
+
+	case typeASCID:
+		// The string goes where the descriptor points, padded or cut to
+		// the descriptor's length (the caller writes it there).
+		length, _, err := d.readDescriptor(addr)
+		if err != nil {
+			return nil, err
+		}
+
+		return fitText(unquote(value), length), nil
+
+	case typeDateTime:
+		v, ok := d.Console.RTL.ParseTime(unquote(value))
+		if !ok {
+			return nil, vmserrors.New(vmserrors.DBG_INVTIME, strings.ToUpper(unquote(value)))
+		}
+
+		data := make([]byte, 8)
+		for i := range data {
+			data[i] = byte(v >> (8 * i))
+		}
+
+		return data, nil
+
+	case typeSymbol:
+		return d.depositSymbolTyped(addr, t.datum, value)
+
+	case typeInstruction:
+		return nil, vmserrors.New(vmserrors.DBG_OPTNOTALLOW, "DEPOSIT")
+	}
+
+	// The integer types, and the others that are integers underneath
+	// (a condition value, the PSL and PSW, a PTE).
+	size, _ := t.fixedSize()
+
+	v, err := d.Console.EvalWholeIn(d.inputRadix, value)
+	if err != nil {
+		return nil, err
 	}
 
 	data := make([]byte, size)
@@ -733,9 +1172,31 @@ func (d *Dispatcher) deposit(r *dcl.Result) error {
 		}
 	}
 
-	dbg.examined = examineState{addr: addr, size: size, set: true}
+	return data, nil
+}
 
-	return c.WriteBytes(addr, data)
+// depositSymbolTyped is depositBytes for DEPOSIT/TYPE=(name): value stored
+// as the datum name labels is typed. A string fills the datum's length.
+func (d *Debugger) depositSymbolTyped(addr uint32, datum *dbgsym.Datum, value string) ([]byte, error) {
+	if datum.IsText() {
+		length := uint32(len(unquote(value)))
+		if datum.Descriptor != nil {
+			length = uint32(datum.Descriptor.Length)
+		}
+
+		return fitText(unquote(value), length), nil
+	}
+
+	if dt, ok := datumType(datum); ok {
+		return d.depositBytes(addr, dt, value)
+	}
+
+	size := datum.ElementSize()
+	if size == 0 || size > 8 {
+		size = defaultSize
+	}
+
+	return d.depositBytes(addr, dataType{kind: typeInteger, size: size}, value)
 }
 
 // splitAssignment splits DEPOSIT's "location = value" at its equal sign,

@@ -1,8 +1,9 @@
 # Phase 42 — The debugger: its own package, grammar, and prompt
 
-**Status:** done (2026-10-05). Planned and reviewed 2026-10-05 (the author
-took every recommended decision). All 17 subtasks are done (see the
-progress log).
+**Status:** Part A done (2026-10-05). Planned and reviewed 2026-10-05 (the
+author took every recommended decision). All 17 subtasks are done (see the
+progress log). **Part B** (the Future features list, subtasks 18 to 31) is
+in progress since 2026-10-11; see "Part B" below.
 
 ## Goal
 
@@ -649,6 +650,42 @@ for a later phase:
   session.
 - **`SET WATCH` details**: `/AFTER`, `/TEMPORARY`, `/INTO`, `/OVER`,
   watching registers, and aggregates.
+
+## Part B — the future features (2026-10-11)
+
+The author asked for the commands the Future features list names to be
+implemented, as further subtasks of this phase, each complete and tested,
+and committed on its own. A review of the list against the code found
+that some of it was already done in Part A: DO clauses on tracepoints and
+watchpoints, and SET WATCH's /AFTER and /TEMPORARY. The rest is below.
+
+The reference is the *VMS 5.5 Debugger Manual*'s command dictionary (a
+text extraction of the PDF, kept outside the repository), and the Part A
+probes where they show a format. Where neither settles a format, govax
+chooses one and logs it as unconfirmed in the subtask's progress entry, as
+in Part A. No new VMS probe is planned; one can follow in a later simh
+round if the unconfirmed list grows long enough to be worth it.
+
+Each subtask adds its commands to `debug.dcl`, their handlers to
+`internal/debugger`, their topics to `debug.help`, and tests; the session
+oracle must stay green.
+
+| # | Subtask | Commands |
+|---|---|---|
+| 18 | EXAMINE and DEPOSIT types | `/ASCIC`, `/ASCID`, `/ASCIW`, `/ASCIZ`, `/PACKED:n`, `/F_FLOAT`, `/D_FLOAT`, `/G_FLOAT`, `/H_FLOAT`, `/OCTAWORD`, `/DATE_TIME`, `/CONDITION_VALUE`, `/PSW`, `/TYPE=`; `SET TYPE`, `SHOW TYPE`, `CANCEL TYPE` (and `/OVERRIDE`) |
+| 19 | DEPOSIT/INSTRUCTION | one instruction assembled in place by `internal/asm` |
+| 20 | Built-in symbols | `%CURLOC`, `%NEXTLOC`, `%PREVLOC`, `^`, `\` and `%CURVAL`, `%ADDR`, `%NAME`, and others the manual lists that govax can give |
+| 21 | Debugger symbols | `DEFINE` (`/ADDRESS`, `/COMMAND`, `/VALUE`, `/LOCAL`), `DELETE`, `SHOW DEFINE`, `SET DEFINE` |
+| 22 | Control structures | `IF`, `FOR`, `WHILE`, `REPEAT`, `EXITLOOP` |
+| 23 | Logging | `SET LOG`, `SHOW LOG`, `SET OUTPUT [NO]LOG/[NO]TERMINAL/[NO]VERIFY`, `SHOW OUTPUT`, in the probe's log format |
+| 24 | Scope | `SET SCOPE`, `CANCEL SCOPE`, `CANCEL MODULE`, `SHOW SYMBOL/DEFINED` |
+| 25 | Source commands | `TYPE`, `SEARCH`, `SET/SHOW SEARCH`, `SET/SHOW MARGINS`, `SET/SHOW MAX_SOURCE_FILES`, `EXAMINE/SOURCE` |
+| 26 | Exceptions | `SHOW EXIT_HANDLERS`; `GO` from an exception break resignaling; stepping into a handler |
+| 27 | CALL's arguments | `%VAL`, `%REF`, `%DESCR`, and "value returned is" |
+| 28 | Start-up | `DBG$INIT`, `SET PROMPT` |
+| 29 | SPAWN | one console command (or a subprocess) from `DBG>` without ending the session |
+| 30 | SET WATCH details | `/INTO`, `/OVER`, `/STATIC`, `/NOSTATIC`, watching a register |
+| 31 | Close-out | `CLAUDE.md`, `debug.help` review, `DEVIATIONS.md`, `PLAN.md` |
 
 ## References
 
@@ -1924,3 +1961,69 @@ without a check on VMS).
 - Tests: the machine-table SHOW SYMBOL tests and CLEAR SYMBOL/TEMPORARY
   moved to `internal/debugger/symtable_test.go`; `TestGrammarSplit`
   updated.
+
+## Part B progress log
+
+### 2026-10-11 — Part B planned
+
+The author asked for the Future features list to be implemented as further
+subtasks (Part B, above). The review found DO clauses on tracepoints and
+watchpoints, and SET WATCH's /AFTER and /TEMPORARY, already done in Part A.
+The text of the *VMS 5.5 Debugger Manual* was extracted for reference; the
+manual's command dictionary is the source for each subtask's syntax.
+
+### 2026-10-11 — Subtask 18: EXAMINE and DEPOSIT types
+
+- **`internal/debugger/types.go`**: a `dataType` (integer of 1 to 16 bytes,
+  floating in each format, packed decimal, the text layouts, date and time,
+  condition value, PSL, PSW, PTE, instruction, and TYPE=(name)'s datum),
+  read from a command's qualifiers (`qualifierType`) or SET TYPE's keyword
+  (`parseTypeKeyword`), displayed by `fixedText` or the text readers, and
+  stored by `depositBytes` (`data.go`).
+- **EXAMINE** takes `/OCTAWORD`, `/FLOAT` (and `/F_FLOAT`), `/D_FLOAT`,
+  `/G_FLOAT`, `/H_FLOAT`, `/PACKED:n`, `/ASCIC`, `/ASCIW`, `/ASCIZ`,
+  `/ASCID` (and the manual's `/AC`, `/AW`, `/AZ`, `/AD`), `/DATE_TIME`,
+  `/CONDITION_VALUE`, `/PSW`, `/TYPE=(name)`, and `/DEFAULT`; `/NOSYMBOLIC`
+  now names a location typed as a number by its address (one typed by name
+  keeps its name, as the probe's `EXAMINE/NOSYMBOLIC WATCHL` shows, and as
+  the manual says). The order a location's type is chosen in is the
+  manual's: the qualifier, SET TYPE/OVERRIDE, the program's symbols, SET
+  TYPE, a longword. A range steps by its type's size. A register shown or
+  deposited as a type wider than a longword takes the registers after it
+  (D_floating in R0 and R1); a type with no fixed size there is
+  `%DEBUG-E-OPTNOTALLOW` (the manual's text).
+- **DEPOSIT** takes the same type qualifiers but `/PSL`, `/PSW`, and
+  `/PTE`; a floating value is a literal (1.5, -2.5E3) or an expression
+  converted; a quoted string at a text label fills the label's length; a
+  string in apostrophes keeps its case (the grammar uppercases it, so
+  `Dispatcher.asTyped` takes the value from the raw line).
+- **Symbols' types.** A label of F, D, G, or H_floating data, an
+  octaword, or packed decimal is now shown as that type (DBGDIS's FVAL is
+  `1.500000`); before, the floats were longwords and an octaword its first
+  longword. No probe session examines one.
+- **EVALUATE/CONDITION_VALUE**, and **SET TYPE[/OVERRIDE]**, **SHOW
+  TYPE[/OVERRIDE]**, **CANCEL TYPE/OVERRIDE** (the manual's "type: long
+  integer", "type/override: none").
+- **The expression evaluator** (`internal/console/expr.go`) takes a unary
+  minus and plus (-^D123), which DEPOSIT of a negative value needed.
+- `corevms.Environment.ParseTime` exports `$BINTIM`'s conversion.
+- **Unconfirmed** (no probe; chosen from the manual's examples or by
+  analogy):
+  - Floating values follow the manual's examples: fixed notation with 7
+    (F) or 15 (D, G) significant digits from 0.1 up to 10 to that power,
+    else exponent notation with one more digit; H uses 33. Zero is
+    `0.` and that many zeros. A reserved operand is `Reserved operand`.
+  - Packed decimal is shown as a signed number without leading zeros.
+  - DATE_TIME is `$ASCTIM`'s text without its leading blank.
+  - CONDITION_VALUE is the message line alone, after the name.
+  - PSW's table is the PSL table's trap-enable and condition-code columns.
+  - SHOW TYPE's names besides "long integer" and "quadword integer".
+  - CANCEL TYPE without /OVERRIDE also ends the override.
+  - ASCIZ reads at most 512 bytes looking for the zero.
+  - DEPOSIT of a value that doesn't fit (PACKED:2 of 123) stores nothing
+    and is an error; the manual's IVALOUTBNDS is informational and stores
+    it.
+- New messages: `DBG_OPTNOTALLOW`, `DBG_IVALOUTBNDS` (the manual's texts),
+  `DBG_NOTYPE`, `DBG_INVTIME` (govax's).
+- Tests: `types_test.go` (each type both ways, registers, SET TYPE, TYPE=,
+  /NOSYMBOLIC, SET TYPE INSTRUCTION); `debug.help` has the new topics.

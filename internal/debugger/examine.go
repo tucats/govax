@@ -117,14 +117,9 @@ func (d *Dispatcher) examine(r *dcl.Result) error {
 		return d.examineData(r)
 	}
 
-	opts := console.DisassembleOptions{
-		Symbolic:  dbg.symbolic,
-		Numeric:   !dbg.symbolic,
-		Constants: r.Present("CONSTANTS"),
-		Shareable: r.Present("SHAREABLE"),
-		Operands:  dbg.operands,
-		Radix:     dbg.symbolRadix(),
-	}
+	opts := dbg.instructionOptions()
+	opts.Constants = r.Present("CONSTANTS")
+	opts.Shareable = r.Present("SHAREABLE")
 
 	// /OPERANDS[=FULL] for this command, /NOOPERANDS to turn the session's
 	// mode off for it.
@@ -182,6 +177,17 @@ func (d *Dispatcher) examine(r *dcl.Result) error {
 	}
 
 	return nil
+}
+
+// instructionOptions are how EXAMINE/INSTRUCTION lays instructions out by
+// the session's modes (SET MODE [NO]SYMBOLIC, [NO]OPERANDS) and radix.
+func (d *Debugger) instructionOptions() console.DisassembleOptions {
+	return console.DisassembleOptions{
+		Symbolic: d.symbolic,
+		Numeric:  !d.symbolic,
+		Operands: d.operands,
+		Radix:    d.symbolRadix(),
+	}
 }
 
 // splitList splits a comma-separated list of locations at the commas that

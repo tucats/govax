@@ -19,6 +19,10 @@ const (
 	dbgNoSuchModule
 	dbgNoTraces
 	dbgNoWatches
+	dbgOptNotAllow
+	dbgIValOutBnds
+	dbgNoType
+	dbgInvTime
 )
 
 // DBG facility status codes.
@@ -76,6 +80,22 @@ const (
 	// DBG_NOWATCHES is SHOW WATCH's answer when no watchpoint is set (the
 	// probe's watch.dlg). CANCEL WATCH of nothing says it too: unconfirmed.
 	DBG_NOWATCHES = DBGFacility<<FacilityPosition | dbgNoWatches<<MessagePosition | StatusInfo
+	// DBG_OPTNOTALLOW reports a command that can't act on the data type
+	// it was given (EXAMINE/ASCIC of a register); its argument is the
+	// command's verb. The text is the VMS 5.5 Debugger Manual's.
+	DBG_OPTNOTALLOW = DBGFacility<<FacilityPosition | dbgOptNotAllow<<MessagePosition | StatusError
+	// DBG_IVALOUTBNDS reports a value DEPOSIT can't store in the type it
+	// was given (a number with more digits than PACKED:n holds). The
+	// text is the manual's; VMS stores the value anyway, as an
+	// informational says, but govax stores nothing (unconfirmed), so it
+	// is an error here.
+	DBG_IVALOUTBNDS = DBGFacility<<FacilityPosition | dbgIValOutBnds<<MessagePosition | StatusError
+	// DBG_NOTYPE reports a TYPE=(name) whose name isn't a datum the
+	// program defines (govax's own text; the manual shows none).
+	DBG_NOTYPE = DBGFacility<<FacilityPosition | dbgNoType<<MessagePosition | StatusError
+	// DBG_INVTIME reports DEPOSIT/DATE_TIME text that isn't a VMS time
+	// (govax's own text).
+	DBG_INVTIME = DBGFacility<<FacilityPosition | dbgInvTime<<MessagePosition | StatusError
 )
 
 func init() {
@@ -92,5 +112,9 @@ func init() {
 	DefineMessage(DBG_NOSUCHMODULE, DBGFacility, "NOSUCHMODULE", "module '!S' is not in the module table")
 	DefineMessage(DBG_NOTRACES, DBGFacility, "NOTRACES", "no tracepoints are set, no opcode tracing")
 	DefineMessage(DBG_NOWATCHES, DBGFacility, "NOWATCHES", "no watchpoints are set")
+	DefineMessage(DBG_OPTNOTALLOW, DBGFacility, "OPTNOTALLOW", "operator \"!S\" not allowed on given data type")
+	DefineMessage(DBG_IVALOUTBNDS, DBGFacility, "IVALOUTBNDS", "value assigned is out of bounds at or near '!S'")
+	DefineMessage(DBG_NOTYPE, DBGFacility, "NOTYPE", "'!S' does not name a data type")
+	DefineMessage(DBG_INVTIME, DBGFacility, "INVTIME", "invalid date or time at or near '!S'")
 	DefineMessage(DBG_NOSOURCEDIR, DBGFacility, "NOSOURCEDIR", "no source directory search list is in effect")
 }

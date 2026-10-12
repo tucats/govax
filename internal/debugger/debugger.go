@@ -116,6 +116,16 @@ type Debugger struct {
 	inputRadix  int
 	outputRadix int
 
+	// defaultType is SET TYPE's type for locations the program's symbols
+	// don't type, nil for the default, a longword; overrideType is SET
+	// TYPE/OVERRIDE's type for every location, nil for none (types.go).
+	defaultType  *dataType
+	overrideType *dataType
+
+	// numericNames is set while an EXAMINE/NOSYMBOLIC runs: its
+	// locations are named by their addresses (data.go).
+	numericNames bool
+
 	// examined is where EXAMINE last looked (data.go): what "EXAMINE" with
 	// no location, "." and "^" are relative to.
 	examined examineState
