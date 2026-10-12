@@ -119,7 +119,7 @@ ttnam:	.ascid	"TTA0:"
 	}
 
 	// CTRL/C: process 2's AST, though process 1 is the one reading.
-	if !c.HandleAttention(corevms.AttentionCtrlC) {
+	if !c.Machine.HandleAttention(corevms.AttentionCtrlC) {
 		t.Fatal("CTRL/C wasn't taken: the machine would stop")
 	}
 

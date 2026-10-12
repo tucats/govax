@@ -1,9 +1,5 @@
 package console
 
-import (
-	"github.com/tucats/govax/internal/vmserrors"
-)
-
 // The console and the debugger are two front ends to one machine
 // (docs/PHASE-42.md). The console is the VMS command line (SET DEFAULT,
 // MACRO, LINK, RUN, ...); the debugger, in internal/debugger, is the
@@ -125,35 +121,8 @@ type Debugger interface {
 	Dispatch(line string) error
 }
 
-// StartDebugger is the console's DEBUG command: it starts a debugger
-// session on the machine as it stands. From here until the debugger's
-// EXIT, command lines go to the debugger's grammar, not the console's
-// (Dispatcher.Dispatch routes them).
-func (c *Console) StartDebugger() error {
-	if err := c.processOneOnly("DEBUG"); err != nil {
-		return err
-	}
-
-	if c.Debugger == nil {
-		return vmserrors.New(vmserrors.DBG_NOTAVAILABLE)
-	}
-
-	if err := c.requireInit(); err != nil {
-		return err
-	}
-
-	// Already in a session (DEBUG from a command file the debugger is
-	// reading): nothing to start.
-	if c.Debugger.Active() {
-		return nil
-	}
-
-	return c.Debugger.Start(Activation{Kind: ActivateAttach})
-}
-
 // InDebugger reports whether a debugger session is in progress, for the
 // front end's choice of prompt and grammar.
 func (c *Machine) InDebugger() bool {
 	return c.Debugger != nil && c.Debugger.Active()
 }
-

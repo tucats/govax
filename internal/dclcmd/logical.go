@@ -15,11 +15,6 @@ import (
 // TRANSLATION, all working on the shared lnm.Database in c.Logicals.
 // The DCL bindings that call these are in dispatch.go.
 
-// ConsoleTerminal is the physical device name the console's own
-// terminal has: what SYS$INPUT, SYS$OUTPUT, SYS$ERROR, SYS$COMMAND, and
-// TT translate to.
-const ConsoleTerminal = "_TTA0:"
-
 // dclLogicalName is the logical name SHOW LOGICAL and SHOW TRANSLATION
 // search by default (LNM$FILE_DEV's tables, as on VMS).
 const dclLogicalName = "LNM$DCL_LOGICAL"

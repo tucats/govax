@@ -139,21 +139,6 @@ func (c *Machine) Run(fn string, opts RunOptions) error {
 	return c.Debugger.Start(a)
 }
 
-// Run is RUN in the DCL running now: process 1's runs the image on the
-// machine (Machine.Run); a subprocess's DCL runs it in its process
-// (subcli.go).
-func (c *Console) Run(fn string, opts RunOptions) error {
-	if err := c.requireInit(); err != nil {
-		return err
-	}
-
-	if cli := c.subCLI; cli != nil {
-		return c.subprocessRun(cli, fn, opts.CommandLine)
-	}
-
-	return c.Machine.Run(fn, opts)
-}
-
 // runsUnderDebugger decides whether RUN starts the debugger on the image
 // main. An image with no debug symbol table (linked /NOTRACEBACK) runs
 // without it, however RUN was asked, as the VMS debugger does for such an

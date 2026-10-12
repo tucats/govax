@@ -23,7 +23,7 @@ func (c *Machine) Init(physBytes uint32) error {
 	c.Mem = vm.NewMemory(size)
 	c.Engine = cpu.NewEngine(c.CPU, c.Mem)
 	c.newRTL()
-	c.Engine.SetSystemServices(c.Services)
+	c.Engine.SetSystemServices(c)
 
 	c.CPU.SetGPR(vax.SP, size-4)
 	c.CPU.SetGPR(vax.PC, 0)
@@ -57,7 +57,7 @@ func (c *Machine) Zero() error {
 	c.Mem = vm.NewMemory(size)
 	c.Engine = cpu.NewEngine(c.CPU, c.Mem)
 	c.newRTL()
-	c.Engine.SetSystemServices(c.Services)
+	c.Engine.SetSystemServices(c)
 
 	c.Symbols.ClearAll()
 

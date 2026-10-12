@@ -107,7 +107,7 @@ func (c *Machine) VMInit(p0Pages, p1Pages, s0Pages, kspPages, espPages, sspPages
 	c.Engine = cpu.NewEngine(c.CPU, c.Mem)
 	c.newRTL()
 
-	c.Engine.SetSystemServices(c.Services)
+	c.Engine.SetSystemServices(c)
 	c.CPU.SetPR(vax.MAPEN, 0)
 
 	paddr := uint32(0)

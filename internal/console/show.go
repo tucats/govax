@@ -1060,25 +1060,6 @@ func (c *Machine) ShowCalls(countExpr string, symbolic bool) error {
 	return nil
 }
 
-// ShowRegions prints the P0/P1/S0 image-activation region limits.
-func (c *Console) ShowRegions() error {
-	if err := c.requireInit(); err != nil {
-		return err
-	}
-
-	names := [3]string{"P0", "P1", "S0"}
-
-	c.Printf("REGION LIMITS:\n")
-
-	for i, name := range names {
-		c.Printf("\t%s   %08X\n", name, c.RTL.RegionSize[i])
-	}
-
-	c.Printf("\n")
-
-	return nil
-}
-
 // ShowSharePrefix reports the sharable-image search prefix, matching SHOW
 // SHARE_PREFIX.
 func (c *Machine) ShowSharePrefix() error {

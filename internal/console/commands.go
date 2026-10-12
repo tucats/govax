@@ -1,6 +1,7 @@
 package console
 
 import (
+	"strconv"
 	"strings"
 
 	"github.com/tucats/gopackages/app-cli/settings"
@@ -10,16 +11,16 @@ import (
 )
 
 const (
-	romTOKEN     = "ROM"
-	nvramTOKEN   = "NVRAM"
-	zeroTOKEN    = "ZERO"
-	bootTOKEN    = "BOOT"
-	timeTOKEN    = "TIME"
-	printTOKEN   = "PRINT"
-	helpTOKEN    = "HELP"
-	ifTOKEN      = "IF"
-	asmTOKEN     = "ASM"
-	runTOKEN     = "RUN"
+	romTOKEN   = "ROM"
+	nvramTOKEN = "NVRAM"
+	zeroTOKEN  = "ZERO"
+	bootTOKEN  = "BOOT"
+	timeTOKEN  = "TIME"
+	printTOKEN = "PRINT"
+	helpTOKEN  = "HELP"
+	ifTOKEN    = "IF"
+	asmTOKEN   = "ASM"
+	runTOKEN   = "RUN"
 )
 
 // bindConsoleCommands binds the console's former fixed commands, which
@@ -92,7 +93,7 @@ func (d *Dispatcher) asmCommand(id int64, r *dcl.Result) error {
 	}
 
 	if hasEntry {
-		// An .END-named entry address auto-invokes "CALL __ENTRY" 
+		// An .END-named entry address auto-invokes "CALL __ENTRY"
 		// (no arguments) once the file finishes assembling.
 		return d.Console.Call(entryAddr, false)
 	}
@@ -225,3 +226,111 @@ func notImplemented(name, dependency string) dcl.Handler {
 // vax.disassemble.symbolic setting, true when it isn't set. It seeds the
 // debugger's SET MODE SYMBOLIC.
 func SymbolicDefault() bool { return symbolicDefault() }
+
+// Run is RUN in the DCL running now: process 1's runs the image on the
+// machine (Machine.Run); a subprocess's DCL runs it in its process
+// (subcli.go).
+func (c *Console) Run(fn string, opts RunOptions) error {
+	if err := c.requireInit(); err != nil {
+		return err
+	}
+
+	if cli := c.subCLI; cli != nil {
+		return c.subprocessRun(cli, fn, opts.CommandLine)
+	}
+
+	return c.Machine.Run(fn, opts)
+}
+
+// ShowRegions prints the P0/P1/S0 image-activation region limits.
+func (c *Console) ShowRegions() error {
+	if err := c.requireInit(); err != nil {
+		return err
+	}
+
+	names := [3]string{"P0", "P1", "S0"}
+
+	c.Printf("REGION LIMITS:\n")
+
+	for i, name := range names {
+		c.Printf("\t%s   %08X\n", name, c.RTL.RegionSize[i])
+	}
+
+	c.Printf("\n")
+
+	return nil
+}
+
+// StartDebugger is the console's DEBUG command: it starts a debugger
+// session on the machine as it stands. From here until the debugger's
+// EXIT, command lines go to the debugger's grammar, not the console's
+// (Dispatcher.Dispatch routes them).
+func (c *Console) StartDebugger() error {
+	if err := c.processOneOnly("DEBUG"); err != nil {
+		return err
+	}
+
+	if c.Debugger == nil {
+		return vmserrors.New(vmserrors.DBG_NOTAVAILABLE)
+	}
+
+	if err := c.requireInit(); err != nil {
+		return err
+	}
+
+	// Already in a session (DEBUG from a command file the debugger is
+	// reading): nothing to start.
+	if c.Debugger.Active() {
+		return nil
+	}
+
+	return c.Debugger.Start(Activation{Kind: ActivateAttach})
+}
+
+// StopProcess is STOP: it deletes a process and its subprocesses at once,
+// as the operator with every privilege would. The process is named, as
+// for SHOW PROCESS, by name (in process 1's UIC group) or by /IDENTIFICATION
+// (hexadecimal; the PID wins if both are given). A process that isn't
+// there is %SYSTEM-W-NONEXPR. Process 1 is the console's own, so STOP
+// of it is refused (%SYSTEM-F-NOPRIV): govax has no logging out, and
+// EXIT ends the session. (STOP with neither a name nor an
+// identification ends command procedures instead: stopCommand.)
+//
+// The deleted process's files are closed, and its termination message
+// goes to its termination mailbox if it had one, with the final status
+// SS$_ABORT. If the CPU was in the process (a run stopped there), it is
+// returned to process 1.
+func (c *Console) StopProcess(name, pid string) error {
+	if err := c.requireInit(); err != nil {
+		return err
+	}
+
+	env := c.RTL
+
+	switch {
+	case pid != "":
+		v, err := strconv.ParseUint(strings.TrimSpace(pid), 16, 32)
+		if err != nil {
+			return vmserrors.New(vmserrors.SS_IVIDENT)
+		}
+
+		var found bool
+		if env, found = c.RTL.FindProcess(uint32(v)); !found {
+			return vmserrors.New(vmserrors.SS_NONEXPR)
+		}
+
+	case name != "":
+		var found bool
+		if env, found = c.RTL.FindProcessName(c.RTL.Process.UICGroup(), name); !found {
+			return vmserrors.New(vmserrors.SS_NONEXPR)
+		}
+	}
+
+	if env == c.RTL {
+		return vmserrors.New(vmserrors.SS_NOPRIV)
+	}
+
+	c.RTL.DeleteNow(env)
+
+	return c.ReturnToProcessOne()
+}

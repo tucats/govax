@@ -3,24 +3,10 @@ package console
 import (
 	"strings"
 
-	"github.com/tucats/govax/internal/corevms"
 	"github.com/tucats/govax/internal/dcl"
 	"github.com/tucats/govax/internal/dclcmd"
 	"github.com/tucats/govax/internal/lnm"
 )
-
-// newLogicals returns the console's logical-name database: the standard
-// VMS directories and tables for corevms.NominalUIC (the same UIC the RTL
-// reports for this process), plus the process-permanent terminal names.
-func newLogicals() *lnm.Database {
-	db := lnm.NewDatabase(corevms.NominalUIC)
-	if err := db.DefineProcessNames(dclcmd.ConsoleTerminal); err != nil {
-		// Only reachable if the fixed names above were invalid.
-		panic(err)
-	}
-
-	return db
-}
 
 // bindLogicalCommands binds the logical-name commands' grammar entries
 // (internal/bootdata/files/console.dcl) to c.

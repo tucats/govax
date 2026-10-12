@@ -973,14 +973,14 @@ func TestCtrlCAST_assembledProgram(t *testing.T) {
 func TestAttentionKeys_matchRTL(t *testing.T) {
 	c := newBootableConsole(t)
 
-	var _ cpu.AttentionHandler = c
+	var _ cpu.AttentionHandler = c.Machine
 
 	if cpu.AttentionCtrlC != corevms.AttentionCtrlC || cpu.AttentionCtrlY != corevms.AttentionCtrlY {
 		t.Errorf("engine keys %#x/%#x, RTL keys %#x/%#x", cpu.AttentionCtrlC, cpu.AttentionCtrlY, corevms.AttentionCtrlC, corevms.AttentionCtrlY)
 	}
 
 	// With nothing enabled, neither key is taken.
-	if c.HandleAttention(cpu.AttentionCtrlC) || c.HandleAttention(cpu.AttentionCtrlY) {
+	if c.Machine.HandleAttention(cpu.AttentionCtrlC) || c.Machine.HandleAttention(cpu.AttentionCtrlY) {
 		t.Error("a key was taken with no AST enabled")
 	}
 }
