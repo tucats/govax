@@ -303,3 +303,22 @@ package move is a plain import-path rewrite.
   (`ReturnToProcessOne`, `ShowProcessContext`, `ProcessPC`,
   `ProcessNote`) use the engine and the debugger's view of process 1,
   so they stay with the machine and move in Stage 5.
+- **2026-10-12 — Stage 3, step 1: `Shell`.** The per-process DCL state
+  that `subcli.go`'s `dclState` listed (the process, its logical names,
+  session, and output; symbols; command levels; verification; $STATUS
+  and the end status; Ctrl/Y and STOP; IF blocks at the terminal; DCL's
+  open files; F$SEARCH's streams; the last image's status) is now a
+  `Shell` struct (`shell.go`). `Console` embeds a `*Shell`, the DCL
+  whose commands run now, so every `c.RTL`, `c.Out`, `c.levels` still
+  compiles. `Console.home` is process 1's, and each subprocess CLI has
+  its own `shell`. `swapDCLState`'s 35 field swaps became `useShell`,
+  one pointer swap that returns its restore. `consoleOutput` (the
+  terminal) is `c.home.Out`, and `procedureInput` keeps the `Shell`
+  its procedure belongs to.
+  **Bug fixed:** while a subprocess's DCL ran, its swapped-out
+  `cli.state` held *process 1's* state, so a SPAWN from a subprocess
+  (Phase 51, subtask 2) gave the new process a copy of process 1's
+  symbols instead of its parent's (`InheritSymbols` runs synchronously
+  in `env.Spawn`, in the parent's turn). With a `Shell` per process
+  each CLI's state is always its own. `TestSpawnDCL_nestedInherits`
+  (failed before, passes now).

@@ -200,6 +200,45 @@ func TestSpawnDCL_nested(t *testing.T) {
 	}
 }
 
+// TestSpawnDCL_nestedInherits: a subprocess's subprocess starts with a
+// copy of its parent's symbols and its parent's verification, not
+// process 1's (Phase 52: while a subprocess's DCL ran, its own state was
+// where process 1's was kept, and a SPAWN there copied process 1's).
+func TestSpawnDCL_nestedInherits(t *testing.T) {
+	c, out := scheduledConsole(t, longQuantum, brbSelf)
+	d := console.NewDispatcher(c, consoletest.ConsoleGrammar(t), nil)
+
+	dir := t.TempDir()
+
+	// The inner procedure's line is substituted by the inner process.
+	inner := filepath.Join(dir, "inner.com")
+	if err := os.WriteFile(inner, []byte(`$ WRITE SYS$OUTPUT "inner ''G' ''F$ENVIRONMENT("VERIFY_PROCEDURE")'"`+"\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	outer := filepath.Join(dir, "outer.com")
+	if err := os.WriteFile(outer, []byte(strings.Join([]string{
+		`$ G == "outer"`,
+		"$ SET VERIFY",
+		`$ SPAWN @"` + inner + `"`,
+	}, "\n")+"\n"), 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	for _, line := range []string{`G == "one"`, `SPAWN @"` + outer + `"`} {
+		out.Reset()
+
+		if err := d.Dispatch(line); err != nil {
+			t.Fatalf("%s: %v", line, err)
+		}
+	}
+
+	got := strings.Join(programLines(out.String()), "|")
+	if !strings.Contains(got, "|inner outer TRUE|") {
+		t.Errorf("SPAWN from a subprocess: %q; want the inner process to see its parent's G and verification", got)
+	}
+}
+
 // TestSpawnDCL_stopWhileRunning: STOP of a subprocess whose procedure
 // is running an image deletes it, and its interpreter, waiting for the
 // image, is unwound; process 1 goes on as before.

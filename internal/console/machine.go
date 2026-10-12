@@ -10,7 +10,6 @@ import (
 	"github.com/tucats/govax/internal/cpu"
 	iodev "github.com/tucats/govax/internal/io"
 	"github.com/tucats/govax/internal/librtl"
-	"github.com/tucats/govax/internal/lnm"
 	"github.com/tucats/govax/internal/respath"
 	"github.com/tucats/govax/internal/rms"
 	"github.com/tucats/govax/internal/vax"
@@ -38,6 +37,10 @@ type Console struct {
 	// exceptions to the running process (services.go).
 	corevms.EngineHooks
 
+	// Shell is the DCL whose commands run now (shell.go): process 1's
+	// (home), or a subprocess's while its interpreter runs.
+	*Shell
+
 	Engine *cpu.Engine
 	CPU    *vax.CPU
 	Mem    *vm.Memory
@@ -47,16 +50,6 @@ type Console struct {
 	Radix       int // 8, 10, or 16
 	DepositAddr uint32
 	Verbose     bool
-
-	// Verify is DCL's procedure verification, SET VERIFY's: whether a
-	// command procedure's lines are shown as they're read; verifyImage
-	// is image verification, whether its data lines are (dclverify.go).
-	// verifyPrefix is SET PREFIX's control string, and echo the line a
-	// procedure is about to run, until it is shown.
-	Verify       bool
-	verifyImage  bool
-	verifyPrefix string
-	echo         *pendingEcho
 
 	// Trace matches vax.console.disasm (SET TRACE/NOTRACE, SHOW TRACE):
 	// whether EXEC/GO/CALL/RUN disassemble each instruction as they execute
@@ -78,15 +71,11 @@ type Console struct {
 	// doc comment in show.go).
 	Regions [3]vmRegion
 
-	// Devices is Phase 09's device table (internal/io) and Logicals the
-	// process's logical-name database (internal/lnm, Phase 25) — separate
-	// from the vax_init-gated machine state above, matching the C source's
-	// own devices/tables globals, which exist independent of alloc_vax and
-	// are never reset by ZERO. Logicals is built once, in New, with the
-	// standard VMS tables and the process-permanent terminal names, the
-	// way a VMS process gets them at login rather than per-INIT.
-	Devices  *iodev.DeviceTable
-	Logicals *lnm.Database
+	// Devices is Phase 09's device table (internal/io) -- separate from
+	// the vax_init-gated machine state above, matching the C source's own
+	// devices global, which exists independent of alloc_vax and is never
+	// reset by ZERO.
+	Devices *iodev.DeviceTable
 
 	// Mounts is docs/PHASE-22.md's device-name -> mounted-ODS-2-volume
 	// table (internal/rms.MountTable): which VAX device names currently
@@ -102,33 +91,11 @@ type Console struct {
 	// already are (init.go, vminit.go).
 	Mounts *rms.MountTable
 
-	// ContainerSession is docs/PHASE-23.md's operator-console state for
-	// working with an already-mounted ODS-2 container's files: the current
-	// default device/directory (SET DEFAULT/SHOW DEFAULT) a partial file
-	// spec typed at the console resolves against, plus (via its own Mounts
-	// field, set to this same *rms.MountTable — see NewSession's own doc
-	// comment) the shared lookup helper DIRECTORY/DELETE/PURGE/COPY/TYPE
-	// all need. Named "ContainerSession" rather than "Files" specifically
-	// to avoid reading as a collision with internal/rms.Context.Files —
-	// that's a genuinely different thing, a running VAX *program*'s own
-	// open-file table (Phase 22), not this operator console's default-
-	// directory state. Built once, here, alongside Mounts rather than by
-	// Init/Zero — same "operator/session state survives an address-space
-	// wipe" reasoning as Mounts's own doc comment above.
-	ContainerSession *rms.Session
-
 	// sourceDirs is the debugger's SET SOURCE search list, and
 	// sourceCache the source files read so far, by the file name the
 	// debug symbol table gives (source.go).
 	sourceDirs  []string
 	sourceCache map[string][]string
-
-	// RTL is Phase 10's SYS$/LIB$ calling-convention environment, backing
-	// this Console's cpu.SystemServices implementation (services.go) for
-	// the XFC$P1VECTOR/XFC$SHIM selectors. Created fresh alongside the
-	// Engine on every Init/Zero (see init.go), since it's addressed
-	// through the same CPU/Memory pair.
-	RTL *corevms.Environment
 
 	// Dispatcher backs XFC$CONSOLE_CMD (a running VAX program asking the
 	// console to execute a command line on its behalf). Unlike Engine/RTL,
@@ -145,8 +112,6 @@ type Console struct {
 	// the console grammar. Nil in a console built without it, where the
 	// DEBUG command reports that it isn't available.
 	Debugger Debugger
-
-	quit bool // set by Quit (misc.go); read via Running
 
 	// commandLineErr is the failure of the one-shot command given on
 	// govax's command line (RunCommandLine), which ends the
@@ -171,14 +136,13 @@ type Console struct {
 	// fails, and govax exits nonzero.
 	limitStop error
 
-	// In/Out are the console's byte-level terminal streams: In backs
-	// XFC$CONSOLE_READ and (shared with RTL) DECC$GETS/EXE$INPUT/EXE$READ's
-	// fid-0 case; Out backs XFC$CONSOLE_WRITE and every other console
-	// output path already using it. In is optional (nil is a legal "no
-	// interactive input source" Console, matching every existing Out-only
-	// caller/test) — reads against a nil In report EOF rather than panic.
-	In  io.Reader
-	Out io.Writer
+	// In is the console's byte-level terminal input: it backs
+	// XFC$CONSOLE_READ and (shared with RTL) DECC$GETS/EXE$INPUT/
+	// EXE$READ's fid-0 case. It is optional (nil is a legal "no
+	// interactive input source" Console, matching every Out-only
+	// caller/test) -- reads against a nil In report EOF rather than
+	// panic. (Its output is the Shell's Out.)
+	In io.Reader
 
 	// ScreenSize, when set, gives the screen's height in lines and width
 	// in columns (0 if unknown) for paged output (TYPE/PAGE, page.go),
@@ -259,12 +223,6 @@ type Console struct {
 	// internal/respath's own doc comment.
 	Paths *respath.Resolver
 
-	// imageActive is set while an image started by RUN is running (or
-	// stopped at a breakpoint): the RET that ends its main routine is
-	// its image exit, when user-mode logical names are run down (see
-	// imageRundown).
-	imageActive bool
-
 	// OnUnhandled, when set, is told of every condition no handler
 	// continued, before VMS's catch-all acts on it. Returning true pauses
 	// the program there. The debugger sets it (docs/PHASE-42.md, subtask 5).
@@ -280,83 +238,14 @@ type Console struct {
 	// The debugger sets it (docs/PHASE-42.md, subtask 20).
 	DebugBuiltins func(name string) (uint32, bool, error)
 
-	// runHost is RUN's /HOST: the main image is a host file (readImage).
-	runHost bool
+	// control is SET [NO]CONTROL's (dclcontroly.go).
+	control controlKeys
 
-	// dclSymbols are the DCL symbols assignments at the prompt define
-	// (dclsym.go): foreign commands and command abbreviations, global
-	// and local.
-	dclSymbols dclSymbolTable
-
-	// levels is the input stack (procedure.go): the command levels above
-	// the terminal, one for each command procedure being run, innermost
-	// last. Each has its own local symbol table in dclSymbols.
-	levels []*commandLevel
-
-	// imageRan says the command a procedure just ran was one VMS runs as
-	// an image, not one DCL performs itself (dclinput.go): the data lines
-	// after it that nothing read are skipped (SKPDAT), where after one of
-	// DCL's own commands a data line is read as a command.
-	imageRan bool
-
-	// control is SET [NO]CONTROL's (dclcontroly.go). controlYLevelActive
-	// is set while DCL reads the Ctrl/Y level; controlYTaken says a Ctrl/Y
-	// stopped the image a procedure's line ran, for the procedure to act
-	// on. stopping is set by STOP until every command level has ended,
-	// and afterStop is the command typed at the Ctrl/Y level that runs
-	// once they have.
-	control             controlKeys
-	controlYLevelActive *controlYPrompt
-	controlYTaken       bool
-	stopping            bool
-	stopExit            procedureExit
-	controlYUnwind      *commandLevel
-	afterStop           func() error
-
-	// terminalFlow is the terminal's IF blocks (dclif.go): command level
-	// 0's, whose lines cmd/govax's prompt reads.
-	terminalFlow flowState
-
-	// status is $STATUS, the last command's condition value, and
-	// commandStatus what the command being dispatched says about it
-	// (dclstatus.go). statusSet is set each time a command sets $STATUS,
-	// for the procedure loop's ON check, and statusHandled when the
-	// command acted on it already (branchStatus). statusErr is the error
-	// $STATUS came from, if any.
-	status        uint32
-	statusErr     error
-	commandStatus commandStatus
-	statusSet     bool
-	statusHandled bool
-
-	// endStatus is the status a procedure that ends now (EXIT with no
-	// status, or its end of file) ends with, and endStatusErr its error:
-	// $STATUS's, except after an /ERROR or /END_OF_FILE branch, which
-	// leaves $STATUS the failure's and endStatus CLI$_NORMAL
-	// (dclstatus.go).
-	endStatus    uint32
-	endStatusErr error
-
-	// dclFiles are the files DCL's OPEN has open (dclfile.go), by
-	// logical name, and dclOrphans those whose logical names are gone.
-	dclFiles   map[string]*dclOpenFile
-	dclOrphans []*dclOpenFile
-
-	// searchStreams are F$SEARCH's streams (dcllexfile.go), by stream
-	// id: where each search has got to.
-	searchStreams map[int32]*searchStream
-
-	// imageStatus is the completion status of the last image RUN ran to
-	// its end, and imageEnded says one did (run.go).
-	imageStatus uint32
-	imageEnded  bool
-
-	// processOne is process 1, the console's own: RTL, but for the
-	// while a subprocess's DCL runs, when RTL is that process
-	// (subcli.go). subCLI is that subprocess's CLI, nil in process 1's
-	// DCL.
+	// processOne is process 1, the console's own, and home its DCL: the
+	// Shell embedded here, but for the while a subprocess's DCL runs,
+	// when that is the subprocess's (subcli.go).
 	processOne *corevms.Environment
-	subCLI     *subprocessCLI
+	home       *Shell
 
 	// clis are the command interpreters of the processes that run one
 	// (subcli.go: LIB$SPAWN's, and $CREPRC's of LOGINOUT), by process.
@@ -385,15 +274,19 @@ func New(out io.Writer) *Console {
 	mounts := rms.NewMountTable()
 
 	c := &Console{
-		Symbols:          NewSymbolTable(),
-		Radix:            16,   // alloc_vax's own default
-		Verbose:          true, // CONSOLE_EXPAND | CONSOLE_VERBOSE default
-		Out:              out,
-		Devices:          iodev.NewDeviceTable(),
-		Logicals:         newLogicals(),
-		Mounts:           mounts,
-		ContainerSession: rms.NewSession(mounts),
+		Symbols: NewSymbolTable(),
+		Radix:   16,   // alloc_vax's own default
+		Verbose: true, // CONSOLE_EXPAND | CONSOLE_VERBOSE default
+		Devices: iodev.NewDeviceTable(),
+		Mounts:  mounts,
+		Shell: &Shell{
+			Out:              out,
+			Logicals:         newLogicals(),
+			ContainerSession: rms.NewSession(mounts),
+		},
 	}
+
+	c.home = c.Shell
 
 	c.EngineHooks = corevms.EngineHooks{Home: func() *corevms.Environment { return c.RTL }}
 
@@ -442,15 +335,11 @@ func (r consoleInput) Ready() bool {
 }
 
 // consoleOutput is the terminal, as every process's terminal output
-// reaches it: process 1's Out, which, while a subprocess's DCL runs, is
-// kept in that process's saved state (subcli.go).
+// reaches it: process 1's Out, whichever process's DCL runs now.
 type consoleOutput struct{ c *Console }
 
 func (w consoleOutput) Write(p []byte) (int, error) {
-	out := w.c.Out
-	if cli := w.c.subCLI; cli != nil {
-		out = cli.state.out
-	}
+	out := w.c.home.Out
 
 	if out == nil {
 		return len(p), nil

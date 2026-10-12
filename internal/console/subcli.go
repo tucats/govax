@@ -3,12 +3,10 @@ package console
 import (
 	"errors"
 	"fmt"
-	"io"
 	"strings"
 
 	"github.com/tucats/govax/internal/corevms"
 	"github.com/tucats/govax/internal/lnm"
-	"github.com/tucats/govax/internal/rms"
 	"github.com/tucats/govax/internal/vax"
 	"github.com/tucats/govax/internal/vmsdef"
 	"github.com/tucats/govax/internal/vmserrors"
@@ -45,8 +43,8 @@ import (
 // The interpreter itself runs on a goroutine of its own (runInterpreter),
 // which takes turns with the engine: the shim hands it the CPU (resume),
 // and waits until it hands it back (a cliYield), so only one of the two
-// ever runs. While the interpreter runs, the console's DCL state is the
-// process's (swapDCLState), and the engine is stopped in the shim. The
+// ever runs. While the interpreter runs, the console's Shell is the
+// process's (run), and the engine is stopped in the shim. The
 // interpreter hands the CPU back when it must wait (for a command line
 // that hasn't come yet, from the terminal or a mailbox, or a WAIT's
 // time: the shim returns corevms.ErrWait, the process waits in the
@@ -116,87 +114,13 @@ var processOneCommands = map[string]bool{
 	"VMINIT": true, "ZERO": true,
 }
 
-// dclState is one process's DCL state: what the console's commands read
-// and change as "the process", which swapDCLState exchanges with the
-// console's while a subprocess's interpreter runs. Process 1's lives in
-// the Console's own fields.
-type dclState struct {
-	rtl         *corevms.Environment
-	logicals    *lnm.Database
-	session     *rms.Session
-	out         io.Writer
-	cli         *subprocessCLI
-	quit        bool
-	verify      bool
-	verifyImage bool
-	prefix      string
-	echo        *pendingEcho
-	imageActive bool
-	runHost     bool
-	symbols     dclSymbolTable
-	levels      []*commandLevel
-	imageRan    bool
+// useShell makes s the console's Shell, the DCL whose commands run now,
+// and returns the call that puts the one before it back.
+func (c *Console) useShell(s *Shell) (restore func()) {
+	saved := c.Shell
+	c.Shell = s
 
-	controlYLevelActive *controlYPrompt
-	controlYTaken       bool
-	stopping            bool
-	stopExit            procedureExit
-	controlYUnwind      *commandLevel
-	afterStop           func() error
-
-	terminalFlow  flowState
-	status        uint32
-	statusErr     error
-	commandStatus commandStatus
-	statusSet     bool
-	statusHandled bool
-	endStatus     uint32
-	endStatusErr  error
-	dclFiles      map[string]*dclOpenFile
-	dclOrphans    []*dclOpenFile
-	searchStreams map[int32]*searchStream
-	imageStatus   uint32
-	imageEnded    bool
-}
-
-// swapDCLState exchanges the console's DCL state with s: the call that
-// puts a subprocess's state in place, and, again, the one that puts
-// process 1's back.
-func (c *Console) swapDCLState(s *dclState) {
-	c.RTL, s.rtl = s.rtl, c.RTL
-	c.Logicals, s.logicals = s.logicals, c.Logicals
-	c.ContainerSession, s.session = s.session, c.ContainerSession
-	c.Out, s.out = s.out, c.Out
-	c.subCLI, s.cli = s.cli, c.subCLI
-	c.quit, s.quit = s.quit, c.quit
-	c.Verify, s.verify = s.verify, c.Verify
-	c.verifyImage, s.verifyImage = s.verifyImage, c.verifyImage
-	c.verifyPrefix, s.prefix = s.prefix, c.verifyPrefix
-	c.echo, s.echo = s.echo, c.echo
-	c.imageActive, s.imageActive = s.imageActive, c.imageActive
-	c.runHost, s.runHost = s.runHost, c.runHost
-	c.dclSymbols, s.symbols = s.symbols, c.dclSymbols
-	c.levels, s.levels = s.levels, c.levels
-	c.imageRan, s.imageRan = s.imageRan, c.imageRan
-	c.controlYLevelActive, s.controlYLevelActive = s.controlYLevelActive, c.controlYLevelActive
-	c.controlYTaken, s.controlYTaken = s.controlYTaken, c.controlYTaken
-	c.stopping, s.stopping = s.stopping, c.stopping
-	c.stopExit, s.stopExit = s.stopExit, c.stopExit
-	c.controlYUnwind, s.controlYUnwind = s.controlYUnwind, c.controlYUnwind
-	c.afterStop, s.afterStop = s.afterStop, c.afterStop
-	c.terminalFlow, s.terminalFlow = s.terminalFlow, c.terminalFlow
-	c.status, s.status = s.status, c.status
-	c.statusErr, s.statusErr = s.statusErr, c.statusErr
-	c.commandStatus, s.commandStatus = s.commandStatus, c.commandStatus
-	c.statusSet, s.statusSet = s.statusSet, c.statusSet
-	c.statusHandled, s.statusHandled = s.statusHandled, c.statusHandled
-	c.endStatus, s.endStatus = s.endStatus, c.endStatus
-	c.endStatusErr, s.endStatusErr = s.endStatusErr, c.endStatusErr
-	c.dclFiles, s.dclFiles = s.dclFiles, c.dclFiles
-	c.dclOrphans, s.dclOrphans = s.dclOrphans, c.dclOrphans
-	c.searchStreams, s.searchStreams = s.searchStreams, c.searchStreams
-	c.imageStatus, s.imageStatus = s.imageStatus, c.imageStatus
-	c.imageEnded, s.imageEnded = s.imageEnded, c.imageEnded
+	return func() { c.Shell = saved }
 }
 
 // inSubprocess reports whether the DCL running now is a subprocess's.
@@ -242,9 +166,9 @@ type subprocessCLI struct {
 	c   *Console
 	env *corevms.Environment
 
-	// state is its DCL state while process 1's is the console's
-	// (swapDCLState).
-	state dclState
+	// shell is its DCL (shell.go), the console's while its interpreter
+	// runs.
+	shell *Shell
 
 	// command is the one command LIB$SPAWN gave it to run before it
 	// logs out, if hasCommand; commandDone is set once it has been read.
@@ -300,7 +224,7 @@ func (c *Console) cliOf(env *corevms.Environment) *subprocessCLI {
 	cli := c.clis[env]
 	if cli == nil {
 		cli = &subprocessCLI{c: c, env: env}
-		cli.state = dclState{rtl: env, logicals: env.Logicals, session: env.Session, out: cliOutput{cli}, cli: cli}
+		cli.shell = &Shell{RTL: env, Logicals: env.Logicals, ContainerSession: env.Session, Out: cliOutput{cli}, subCLI: cli}
 		c.clis[env] = cli
 	}
 
@@ -310,20 +234,20 @@ func (c *Console) cliOf(env *corevms.Environment) *subprocessCLI {
 // cliHost makes the console the System's corevms.CommandInterpreter.
 type cliHost struct{ c *Console }
 
-// InheritSymbols gives child a copy of parent's DCL symbols: the
-// console's own for process 1, otherwise parent's CLI's.
+// InheritSymbols gives child a copy of parent's DCL symbols: process
+// 1's for process 1, otherwise parent's CLI's.
 func (h cliHost) InheritSymbols(parent, child *corevms.Environment) {
 	var from *dclSymbolTable
 
 	if parent == h.c.processOne {
-		from = &h.c.dclSymbols
+		from = &h.c.home.dclSymbols
 	} else if cli := h.c.clis[parent]; cli != nil {
-		from = &cli.state.symbols
+		from = &cli.shell.dclSymbols
 	} else {
 		from = &dclSymbolTable{}
 	}
 
-	h.c.cliOf(child).state.symbols = from.clone()
+	h.c.cliOf(child).shell.dclSymbols = from.clone()
 }
 
 // Start starts env's CLI (corevms.CommandInterpreter): it writes the
@@ -394,12 +318,18 @@ func (h cliHost) Start(env *corevms.Environment, start *corevms.CLIStartup) (uin
 func (cli *subprocessCLI) inheritVerify(owner uint32) {
 	c := cli.c
 
+	var from *Shell
+
 	switch parent := c.clis[c.findEnvironment(owner)]; {
 	case c.processOne != nil && owner == c.processOne.Process.PID:
-		cli.state.verify, cli.state.verifyImage, cli.state.prefix = c.Verify, c.verifyImage, c.verifyPrefix
+		from = c.home
 	case parent != nil:
-		cli.state.verify, cli.state.verifyImage, cli.state.prefix = parent.state.verify, parent.state.verifyImage, parent.state.prefix
+		from = parent.shell
+	default:
+		return
 	}
+
+	cli.shell.Verify, cli.shell.verifyImage, cli.shell.verifyPrefix = from.Verify, from.verifyImage, from.verifyPrefix
 }
 
 // findEnvironment returns the process whose PID is pid, nil if there is
@@ -486,8 +416,8 @@ func (c *Console) cliCommand(env *corevms.Environment, _ []uint32) (uint32, erro
 }
 
 // run hands the interpreter the CPU, starting it the first time, with
-// the process's DCL state the console's, and returns what it asks for
-// when it hands the CPU back.
+// the process's Shell the console's, and returns what it asks for when it
+// hands the CPU back.
 func (cli *subprocessCLI) run() *cliYield {
 	c := cli.c
 
@@ -495,8 +425,7 @@ func (cli *subprocessCLI) run() *cliYield {
 		return &cliYield{kind: yieldLogout, status: cli.status}
 	}
 
-	c.swapDCLState(&cli.state)
-	defer c.swapDCLState(&cli.state)
+	defer c.useShell(cli.shell)()
 
 	if !cli.started {
 		cli.started = true
@@ -524,18 +453,14 @@ func (cli *subprocessCLI) handBack(y cliYield) {
 }
 
 // abort ends the interpreter of a process being deleted while it waits
-// for its turn: it unwinds, with the process's DCL state the console's,
-// so that what it leaves behind (command levels, /OUTPUT files) is its
-// own.
+// for its turn: it unwinds, with the process's Shell the console's, so
+// that what it leaves behind (command levels, /OUTPUT files) is its own.
 func (cli *subprocessCLI) abort() {
 	if !cli.started || cli.finished {
 		return
 	}
 
-	c := cli.c
-
-	c.swapDCLState(&cli.state)
-	defer c.swapDCLState(&cli.state)
+	defer cli.c.useShell(cli.shell)()
 
 	cli.resume <- true
 	<-cli.yield
@@ -647,8 +572,8 @@ func (cli *subprocessCLI) nextLine() (string, bool, error) {
 	return cli.input.ReadLine(prompt)
 }
 
-// cliOutput is a subprocess's DCL output (the console's Out while its
-// interpreter runs): its SYS$OUTPUT, a line at a time.
+// cliOutput is a subprocess's DCL output (its Shell's Out): its
+// SYS$OUTPUT, a line at a time.
 type cliOutput struct{ cli *subprocessCLI }
 
 func (o cliOutput) Write(p []byte) (int, error) {

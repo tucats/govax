@@ -111,7 +111,7 @@ func TestSharedName(t *testing.T) {
 // stand-in ICB, as a real LIBRTL.EXE would be loaded) is named by the
 // image's symbol at its offset; the main image's addresses aren't.
 func TestSharedSymbolizer(t *testing.T) {
-	c := &Console{}
+	c := &Console{Shell: &Shell{}}
 	c.images().ICBList = []*ICB{
 		{Name: "MAIN", Base: 0, End: 0x1FFF, Flags: icbMain},
 		{Name: "LIBRTL", Base: 0x10000, End: 0x30FFF},
