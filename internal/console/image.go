@@ -199,7 +199,7 @@ func (c *Machine) storeLong(addr, v uint32) error {
 }
 
 // readIHDTransferOffset/readIHDIdentOffset read the two IHD fields
-// for control flow (init_ihd_maps's OFFSET_TRANSFER @2, OFFSET_IDENT @6); 
+// for control flow (init_ihd_maps's OFFSET_TRANSFER @2, OFFSET_IDENT @6);
 // HEADER_BLOCKS @16 is read directly from the host-side file buffer instead
 // (see imageLoad), since it's needed before any of the header has been written into VAX
 // memory at all. The rest of the IHD (size, offset_dst/patch, major/minor
@@ -766,7 +766,7 @@ func (c *Machine) readImage(fn string, main bool) ([]byte, error) {
 		}
 
 		if !loc.Host {
-			data, _, err := s.ReadRawFile(withDefaultType(loc, "EXE"))
+			data, _, err := s.ReadRawFile(loc.WithDefaultType("EXE"))
 
 			var notFound *rms.NotFoundError
 			if errors.As(err, &notFound) {

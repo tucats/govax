@@ -88,19 +88,19 @@ func vmsCondition(status uint32) uint32 {
 }
 
 // conditionValue returns the condition value of err, a command's
-// failure: a statusError's own, a VMSError's (vmsCondition), or SS$_ABORT
+// failure: a vmserrors.ConditionError's own, a VMSError's (vmsCondition), or SS$_ABORT
 // for any other error. One whose message has been shown
 // (vmserrors.InhibitMessage) has STS$M_INHIB_MSG set.
 func conditionValue(err error) uint32 {
 	var (
-		se statusError
+		se vmserrors.ConditionError
 		ve vmserrors.VMSError
 		v  uint32
 	)
 
 	switch {
 	case errors.As(err, &se):
-		v = se.status
+		v = se.Status
 	case errors.As(err, &ve):
 		v = vmsCondition(ve.Status)
 	default:
@@ -114,22 +114,12 @@ func conditionValue(err error) uint32 {
 	return v
 }
 
-// statusError is a command's failure given as a VMS condition value
-// rather than a govax status: an image's exit status, or a procedure's
-// EXIT status. Its message is the system message file's text for the
-// value (statusText).
-type statusError struct {
-	status uint32
-	text   string
-}
-
-func (e statusError) Error() string { return e.text }
-
 // statusFailure returns the error for a command that failed with
-// condition value v: a statusError, marked as shown when v has
+// condition value v: a vmserrors.ConditionError, whose message is the
+// system message file's text for the value (statusText), marked as shown when v has
 // STS$M_INHIB_MSG set.
 func (c *Interpreter) statusFailure(v uint32) error {
-	err := statusError{status: v, text: c.statusText(v)}
+	err := vmserrors.ConditionError{Status: v, Text: c.statusText(v)}
 	if v&stsInhibitMsg != 0 {
 		return vmserrors.InhibitMessage(err)
 	}

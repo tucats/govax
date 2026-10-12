@@ -177,7 +177,7 @@ func (c *cmdContext) Macro(opts MacroOptions) error {
 		return fileFailure(err, opts.Source)
 	}
 
-	loc = withDefaultType(loc, defaultSourceType)
+	loc = loc.WithDefaultType(defaultSourceType)
 
 	lines, found, err := s.ReadRecordFile(loc, rms.TextRecords)
 	if err != nil {
@@ -403,7 +403,7 @@ func (c *cmdContext) openMacroLibrary(name string, source rms.FileLocation) (asm
 		return nil, fileFailure(err, name)
 	}
 
-	loc = withDefaultType(loc, "MLB")
+	loc = loc.WithDefaultType("MLB")
 
 	data, found, err := s.ReadRawFile(loc)
 	if err != nil {

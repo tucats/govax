@@ -220,8 +220,8 @@ func imageName(exe rms.FileLocation) string {
 	if exe.Host {
 		name = filepath.Base(name)
 	} else {
-		name, _ = splitVersion(name)
-		name = vmsNameType(name)
+		name, _ = rms.SplitVersion(name)
+		name = rms.NameType(name)
 	}
 
 	if i := strings.IndexByte(name, '.'); i >= 0 {
@@ -277,7 +277,7 @@ func (c *cmdContext) linkInput(in *linkInputs, f link.InputFile, host, fromComma
 		return fileFailure(err, f.Name)
 	}
 
-	loc = withDefaultType(loc, typ)
+	loc = loc.WithDefaultType(typ)
 
 	failed := func(err error, name string) error {
 		return vmserrors.Wrap(vmserrors.CLI_LINKING, fmt.Errorf("%s: %w", name, err), name)
@@ -381,7 +381,7 @@ func (c *cmdContext) linkLibrary(in *linkInputs, loc rms.FileLocation, f link.In
 		}
 
 		govax := govaxSymbols()
-		
+
 		in.libraries = append(in.libraries, &link.ImageLibrarySource{
 			File:    found.Name,
 			Library: lib,

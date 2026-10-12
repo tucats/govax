@@ -75,25 +75,6 @@ func dirNames(t *testing.T, dir string) []string {
 	return names
 }
 
-func TestMatchCase(t *testing.T) {
-	cases := []struct{ model, word, whole, want string }{
-		{"mar", "OBJ", "hello.mar", "obj"},
-		{"MAR", "obj", "HELLO.MAR", "OBJ"},
-		{"Mar", "OBJ", "Hello.Mar", "Obj"},
-		{"mAR", "obj", "x.mAR", "oBJ"},
-		{"m", "OBJ", "x.m", "obj"},
-		{"M", "obj", "x.M", "OBJ"},
-		{"", "OBJ", "prog", "obj"},
-		{"", "obj", "Prog", "OBJ"},
-	}
-
-	for _, c := range cases {
-		if got := matchCase(c.model, c.word, c.whole); got != c.want {
-			t.Errorf("matchCase(%q, %q, %q) = %q, want %q", c.model, c.word, c.whole, got, c.want)
-		}
-	}
-}
-
 // TestMacro_hostDefaultObjectName checks the default object name: the
 // source's, next to it, with an OBJ extension in the case of the
 // source's.
@@ -518,7 +499,7 @@ func TestDispatch_macroTraceback(t *testing.T) {
 	d, _ := newTestDispatcher(t)
 	dir := t.TempDir()
 	src := filepath.Join(dir, "tb.mar")
-	
+
 	writeHostFile(t, src, "\t.TITLE\tTB\n\t.PSECT\tCODE\n\t.ENTRY\tGO, ^M<>\n\tRET\n\t.END\tGO\n")
 
 	again := filepath.Join(dir, "tbon.mar")
@@ -550,7 +531,7 @@ func TestDispatch_macroTraceback(t *testing.T) {
 		m := readObject(t, d.Console, rms.FileLocation{Host: true, Name: object})
 
 		tbt, dbg := 0, 0
-		
+
 		for _, r := range m.Records {
 			switch r.RecordType() {
 			case obj.RecTBT:

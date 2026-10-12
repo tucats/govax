@@ -914,7 +914,7 @@ func (c *Interpreter) openProcedure(file string, host bool) (*procedureSource, e
 		return nil, fileFailure(firstErr, file)
 	}
 
-	loc = withDefaultType(loc, "COM")
+	loc = loc.WithDefaultType("COM")
 
 	records, found, err := c.ContainerSession.ReadRecordFile(loc, rms.TextRecords)
 	if err != nil {
@@ -937,7 +937,7 @@ func (c *Interpreter) openProcedure(file string, host bool) (*procedureSource, e
 func procedureHostNames(name string) []string {
 	names := []string{name}
 	if filepath.Ext(name) == "" {
-		names = []string{name + "." + matchCase("", "com", filepath.Base(name)), name}
+		names = []string{name + "." + rms.MatchCase("", "com", filepath.Base(name)), name}
 	}
 
 	if strings.ToUpper(name) != name {
@@ -973,7 +973,7 @@ func (c *Interpreter) openProcedureOutput(name string) (*procedureOutput, error)
 		return nil, fileFailure(err, name)
 	}
 
-	loc = withDefaultType(loc, "LIS")
+	loc = loc.WithDefaultType("LIS")
 
 	if loc.Host {
 		f, err := os.Create(loc.Name)

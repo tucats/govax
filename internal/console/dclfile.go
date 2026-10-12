@@ -189,7 +189,7 @@ func rmsStatusFailure(v uint32, n int) error {
 		text = strings.Replace(text, "!UL", strconv.Itoa(n), 1)
 	}
 
-	return statusError{status: v, text: text}
+	return vmserrors.ConditionError{Status: v, Text: text}
 }
 
 // branch is an /ERROR or /END_OF_FILE label taken for a command that
@@ -355,7 +355,7 @@ func (c *Interpreter) openDCLFile(spec string, host bool, access rms.DCLAccess) 
 	}
 
 	if loc.Host {
-		loc = withDefaultType(loc, "DAT")
+		loc = loc.WithDefaultType("DAT")
 	}
 
 	f, err := c.ContainerSession.OpenDCLFile(loc, access)
@@ -395,7 +395,7 @@ func openFailure(fe *rms.DCLFileError, access rms.DCLAccess) error {
 		text += "\n" + conditionLine(fe.STV)
 	}
 
-	return statusError{status: fe.Status | stsInhibitMsg, text: text}
+	return vmserrors.ConditionError{Status: fe.Status | stsInhibitMsg, Text: text}
 }
 
 // closeCommand is CLOSE[/ERROR=label][/[NO]LOG] logical-name.

@@ -133,7 +133,7 @@ func (c *cmdContext) analyzeFiles(opts AnalyzeOptions, inputType, outputType, ti
 			return fileFailure(err, name)
 		}
 
-		loc = withDefaultType(loc, inputType)
+		loc = loc.WithDefaultType(inputType)
 
 		lines, count, found, err := analyze(loc)
 		if err != nil {
@@ -238,7 +238,7 @@ func (c *cmdContext) writeAnalysis(name string, input rms.FileLocation, typ stri
 		return fileFailure(err, name)
 	}
 
-	out = withDefaultType(out, typ)
+	out = out.WithDefaultType(typ)
 
 	lines := bytes.Split(bytes.TrimSuffix(text, []byte("\n")), []byte("\n"))
 

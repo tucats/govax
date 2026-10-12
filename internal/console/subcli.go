@@ -764,7 +764,7 @@ func (c *Interpreter) foundImageFile(env *corevms.Environment, image string) (st
 		return "", false
 	}
 
-	_, found, err := s.ReadRawFile(withDefaultType(loc, "EXE"))
+	_, found, err := s.ReadRawFile(loc.WithDefaultType("EXE"))
 	if err != nil {
 		return "", false
 	}
@@ -780,7 +780,7 @@ func (c *Interpreter) imageFileSpec(env *corevms.Environment, image string) stri
 
 	if s := env.Session; s != nil {
 		if loc, err := s.Locate(image, false); err == nil && !loc.Host {
-			if spec, err := s.ExpandName(withDefaultType(loc, "EXE").Name); err == nil {
+			if spec, err := s.ExpandName(loc.WithDefaultType("EXE").Name); err == nil {
 				return spec
 			}
 		}

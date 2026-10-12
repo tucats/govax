@@ -35,7 +35,7 @@ func TestConditionValue(t *testing.T) {
 		{"no VMS name", vmserrors.New(vmserrors.CLI_BADPARAMETER, "X", "Y"), vmserrors.CLI_BADPARAMETER},
 		{"a Go error", errors.New("boom"), vmsdef.Symbols["SS$_ABORT"]},
 		{"shown", vmserrors.InhibitMessage(vmserrors.New(vmserrors.CLI_IVVERB)), statusIvverb | stsInhibitMsg},
-		{"a statusError", statusError{status: 0x2C, text: "SYSTEM-F-ABORT, abort"}, 0x2C},
+		{"a vmserrors.ConditionError", vmserrors.ConditionError{Status: 0x2C, Text: "SYSTEM-F-ABORT, abort"}, 0x2C},
 	} {
 		if got := conditionValue(tc.err); got != tc.want {
 			t.Errorf("%s: %08X, want %08X", tc.name, got, tc.want)

@@ -6,6 +6,7 @@ import (
 
 	"github.com/tucats/govax/internal/rms"
 	"github.com/tucats/govax/internal/vmsdef"
+	"github.com/tucats/govax/internal/vmserrors"
 )
 
 // typeOpenIn is TYPE's OPENIN condition value, a warning: the shared
@@ -131,9 +132,9 @@ func typeFailure(err error, specText string) error {
 	// condition value TYPE's image signals, its message shown.
 	var locked *rms.LockedError
 	if errors.As(err, &locked) {
-		return statusError{
-			status: typeOpenIn | stsInhibitMsg,
-			text:   "TYPE-W-OPENIN, error opening " + locked.Name + " as input\n" + conditionLine(vmsdef.Symbols["RMS$_FLK"]),
+		return vmserrors.ConditionError{
+			Status: typeOpenIn | stsInhibitMsg,
+			Text:   "TYPE-W-OPENIN, error opening " + locked.Name + " as input\n" + conditionLine(vmsdef.Symbols["RMS$_FLK"]),
 		}
 	}
 

@@ -122,7 +122,7 @@ func (l *library) run() error {
 		return fileFailure(err, opts.Library)
 	}
 
-	loc = withDefaultType(loc, libType)
+	loc = loc.WithDefaultType(libType)
 
 	edit := len(opts.Inputs) > 0 || len(opts.Delete) > 0
 
@@ -301,7 +301,7 @@ func (l *library) readInput(loc rms.FileLocation) ([]*lbr.Entry, rms.FileLocatio
 
 	switch l.b.Type {
 	case lbr.TypeMacro:
-		loc = withDefaultType(loc, "MAR")
+		loc = loc.WithDefaultType("MAR")
 
 		records, found, err := s.ReadRecordFile(loc, rms.TextRecords)
 		if err != nil {
@@ -325,7 +325,7 @@ func (l *library) readInput(loc rms.FileLocation) ([]*lbr.Entry, rms.FileLocatio
 		return entries, found, nil
 
 	case lbr.TypeObject:
-		loc = withDefaultType(loc, "OBJ")
+		loc = loc.WithDefaultType("OBJ")
 
 		records, found, err := s.ReadRecordFile(loc, rms.VariableRecords)
 		if err != nil {
@@ -355,7 +355,7 @@ func (l *library) write() error {
 
 	s := l.c.ContainerSession
 	write := s.RewriteRecordFile
-	
+
 	if l.opts.Create {
 		write = s.CreateRecordFile
 	}
@@ -424,7 +424,7 @@ func (l *library) extract() error {
 		return fileFailure(err, l.opts.Output)
 	}
 
-	out = withDefaultType(out, typ)
+	out = out.WithDefaultType(typ)
 
 	if _, err := s.CreateRecordFile(out, kind, records); err != nil {
 		return objectFailureAs(vmserrors.CLI_LIBRARY, err, out.Name)
@@ -466,7 +466,7 @@ func (l *library) list() error {
 		return fileFailure(err, l.opts.ListFile)
 	}
 
-	out = withDefaultType(out, "LIS")
+	out = out.WithDefaultType("LIS")
 
 	records := make([][]byte, len(lines))
 	for i, line := range lines {
