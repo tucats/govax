@@ -126,4 +126,13 @@ type Shell struct {
 	// searchStreams are F$SEARCH's streams (dcllexfile.go), by stream
 	// id: where each search has got to.
 	searchStreams map[int32]*searchStream
+
+	// deviceStreams are F$DEVICE's streams (dcllexfile.go), by stream
+	// id, 0 for the one used without an id.
+	deviceStreams map[int32]*deviceStream
+
+	// processContexts are F$CONTEXT's contexts (dcllexcontext.go), by
+	// number, and lastContext the last number given one.
+	processContexts map[int32]*processContext
+	lastContext     int32
 }

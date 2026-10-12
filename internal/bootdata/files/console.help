@@ -115,6 +115,8 @@
 //                          VMINIT's syntax is its qualifiers
 //              10/12/26    KEYS: Ctrl/Y and Ctrl/C go to the subprocess a
 //                          SPAWN waits for
+//              10/12/26    LEXICAL: F$CONTEXT, F$DEVICE, F$FILE_ATTRIBUTES,
+//                          and F$IDENTIFIER
 
 This is the help documentation for the govax VAX emulator.  Topic sections are
 marked by a "$" delimiter.  This is followed by as many tokens of the help
@@ -1267,7 +1269,8 @@ $LEXI
         F$LENGTH(string)                 the string's length
         F$LOCATE(substring, string)      its offset, or the length if absent
         F$STRING(expression)             the value as a string
-        F$TYPE(symbol)                   INTEGER, STRING, or "" (undefined)
+        F$TYPE(symbol)                   INTEGER, STRING, PROCESS_CONTEXT,
+                                         or "" (undefined)
 
     The process and its command environment:
 
@@ -1282,9 +1285,20 @@ $LEXI
                                          UIC, CURPRIV, STATE, MODE, ...
         F$GETSYI(item [,node])           $GETSYI's items: NODENAME, VERSION,
                                          BOOTTIME, SID, ...
+        F$IDENTIFIER(identifier, type)   NAME_TO_NUMBER: an identifier's
+                                         value (0 if there's none);
+                                         NUMBER_TO_NAME: its name ("")
         F$MODE()                         INTERACTIVE
         F$PID(context)                   each process's PID in turn, then
                                          "" (set context to "" first)
+        F$CONTEXT("PROCESS", context, item [,value] [,qualifier])
+                                         makes F$PID return only the
+                                         processes whose item (PRCNAM,
+                                         USERNAME, OWNER, GRP, PRI, UIC,
+                                         CURPRIV, STATE, MODE, ...) matches
+                                         a value: EQL or NEQ, for a number
+                                         LSS, LEQ, GTR, GEQ, for CURPRIV
+                                         ALL or ANY; item CANCEL ends it
         F$PRIVILEGE(privileges)          TRUE if they're enabled (and those
                                          named NOxxx aren't)
         F$PROCESS()                      the process's name
@@ -1298,6 +1312,15 @@ $LEXI
 
         F$GETDVI(device, item)           $GETDVI's items: EXISTS, MNT,
                                          VOLNAM, FREEBLOCKS, DEVNAM, ...
+        F$DEVICE([name] [,class] [,type] [,stream])
+                                         the next device whose name matches
+                                         (with * and %), of the class (DISK,
+                                         TERM, MAILBOX, ...) and type, then
+                                         ""
+        F$FILE_ATTRIBUTES(file, item)    an attribute from the file's
+                                         header: ORG, RFM, RAT, MRS, LRL,
+                                         ALQ, EOF, FFB, CDT, RDT, PRO, UIC,
+                                         FID, DID, DIRECTORY, VERLIMIT, ...
         F$PARSE(file [,default] [,related] [,field] [,type])
                                          the full file specification, or a
                                          field: NODE, DEVICE, DIRECTORY,
@@ -1317,8 +1340,8 @@ $LEXI
                                          format, or a field: DATE, TIME,
                                          YEAR, MONTH, DAY, WEEKDAY, ...
 
-    F$CONTEXT, F$CSID, F$DEVICE, F$FILE_ATTRIBUTES, F$GETQUI, F$IDENTIFIER,
-    and F$LICENSE are not here yet.
+    F$CSID, F$GETQUI, and F$LICENSE are not here: govax has no cluster,
+    queues, or licenses for them to report.
 
     govax has one lexical function VMS doesn't, for its configuration (see
     HELP CONFIG KEYS):

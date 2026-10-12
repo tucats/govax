@@ -5,6 +5,7 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/tucats/govax/internal/lnm"
 	"github.com/tucats/govax/internal/vmsdef"
 )
 
@@ -83,6 +84,62 @@ func (env *Environment) IdentifierText(id uint32) string {
 	default:
 		return fmt.Sprintf("%%X%08X", id)
 	}
+}
+
+// DeviceScan returns the names of the devices whose names match pattern,
+// as $DEVICE_SCAN finds them for F$DEVICE: each written with the node's
+// name, "_GOVAX$DUA0:", sorted by name. pattern may have
+// "*" and "%" wildcards ("" is "*"); a leading "_", a node name before a
+// "$", and a trailing ":" are left out of it, so "DUA*" and "_DUA*:"
+// alike match DUA0. With class, only devices of that class (DC$_) are
+// found, and with devType too, only devices of that type (DT$_).
+func (env *Environment) DeviceScan(pattern string, class, devType uint32, byClass, byType bool) []string {
+	pattern = strings.ToUpper(strings.TrimSpace(pattern))
+	pattern = strings.TrimSuffix(strings.TrimPrefix(pattern, "_"), ":")
+
+	if _, device, ok := strings.Cut(pattern, "$"); ok {
+		pattern = device
+	}
+
+	if pattern == "" {
+		pattern = "*"
+	}
+
+	var names []string
+
+	for _, d := range env.Devices.All() {
+		switch {
+		case !lnm.Match(pattern, d.Name):
+		case byClass && uint32(d.DevClass) != class:
+		case byType && d.DevType != devType:
+		default:
+			names = append(names, nodeDeviceName(env, d))
+		}
+	}
+
+	sort.Strings(names)
+
+	return names
+}
+
+// IdentifierValue returns the value of the rights identifier called
+// name, as $ASCTOID looks it up (F$IDENTIFIER's NAME_TO_NUMBER): status
+// is 0, SS$_IVIDENT for a name that can't be an identifier, or
+// SS$_NOSUCHID for one the rights database doesn't have.
+func (env *Environment) IdentifierValue(name string) (value, status uint32) {
+	r, status := env.identifierByName(name)
+
+	return r.value, status
+}
+
+// IdentifierName returns the name of the rights identifier with value
+// id, as $IDTOASC gives it (F$IDENTIFIER's NUMBER_TO_NAME): a UIC
+// identifier's is the username, without brackets. ok is false for a
+// value the rights database doesn't have.
+func (env *Environment) IdentifierName(id uint32) (name string, ok bool) {
+	r, ok := env.identifierByValue(id)
+
+	return r.name, ok
 }
 
 // PrivilegeNames are the privileges' names ($PRVDEF's, without PRV$V_),

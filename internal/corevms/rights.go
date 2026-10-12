@@ -131,28 +131,39 @@ func serviceSysAsctoid(env *Environment, argv []uint32) (uint32, error) {
 		return ssIvIdent, nil
 	}
 
+	r, status := env.identifierByName(name)
+	if status != 0 {
+		return status, nil
+	}
+
+	if st := env.storeLongIfGiven(optArg(argv, 1), r.value); st != 0 {
+		return st, nil
+	}
+
+	if st := env.storeLongIfGiven(optArg(argv, 2), r.attrib); st != 0 {
+		return st, nil
+	}
+
+	return ssNormal, nil
+}
+
+// identifierByName returns the identifier called name (case and blanks
+// around it don't matter), with status 0; SS$_IVIDENT for a name that
+// can't be an identifier, or SS$_NOSUCHID for one the database doesn't
+// have.
+func (env *Environment) identifierByName(name string) (rightsIdentifier, uint32) {
 	name = strings.ToUpper(strings.TrimSpace(name))
 	if !validIdentifierName(name) {
-		return ssIvIdent, nil
+		return rightsIdentifier{}, ssIvIdent
 	}
 
 	for _, r := range env.rightsDatabase() {
-		if r.name != name {
-			continue
+		if r.name == name {
+			return r, 0
 		}
-
-		if st := env.storeLongIfGiven(optArg(argv, 1), r.value); st != 0 {
-			return st, nil
-		}
-
-		if st := env.storeLongIfGiven(optArg(argv, 2), r.attrib); st != 0 {
-			return st, nil
-		}
-
-		return ssNormal, nil
 	}
 
-	return ssNoSuchID, nil
+	return rightsIdentifier{}, ssNoSuchID
 }
 
 // storeLongIfGiven stores v at addr unless addr is 0, returning

@@ -27,7 +27,8 @@ import (
 //
 // The functions are grouped by what they work on, each group in a file
 // of its own: strings and data types (dcllexstring.go), the process and
-// its command environment (dcllexprocess.go), files (dcllexfile.go),
+// its command environment (dcllexprocess.go; F$CONTEXT's selections in
+// dcllexcontext.go), files and devices (dcllexfile.go),
 // logical names and messages (dcllexname.go), and time
 // (dcllextime.go). Many take a keyword naming what to return, such as
 // F$GETJPI's item or F$PARSE's field: each function's keywords are a
@@ -36,9 +37,9 @@ import (
 // CLI_IVKEYW, with the keyword as its segment (unconfirmed against VMS:
 // whether DCL takes abbreviations of these keywords).
 //
-// The functions VMS 7.3 has that govax doesn't (F$CONTEXT, F$CSID,
-// F$DEVICE, F$FILE_ATTRIBUTES, F$GETQUI, F$IDENTIFIER, F$LICENSE) are
-// CLI_LEXNOTIMPL. So, in a subprocess's command interpreter, which has no
+// The functions VMS 7.3 has that govax doesn't (F$CSID, F$GETQUI,
+// F$LICENSE: govax has no cluster, queues, or licenses for them to
+// report) are CLI_LEXNOTIMPL. So, in a command interpreter with no
 // console to ask, is a function that asks about the system.
 //
 // F$CONFIG is govax's own, not VMS's (dcllexconfig.go): it reads govax's
@@ -111,8 +112,10 @@ var lexicalFunctions = map[string]lexicalFunction{
 	"F$ENVIRONMENT": {minArgs: 1, maxArgs: 1, console: true, call: lexEnvironment},
 	"F$GETJPI":      {minArgs: 2, maxArgs: 2, console: true, call: lexGetJPI},
 	"F$GETSYI":      {minArgs: 1, maxArgs: 2, console: true, call: lexGetSYI},
+	"F$IDENTIFIER":  {minArgs: 2, maxArgs: 2, console: true, call: lexIdentifier},
 	"F$MODE":        {minArgs: 0, maxArgs: 0, call: lexMode},
 	"F$PID":         {minArgs: 1, maxArgs: 1, symbolArg: 1, console: true, call: lexPID},
+	"F$CONTEXT":     {minArgs: 3, maxArgs: 5, symbolArg: 2, console: true, call: lexContext},
 	"F$PRIVILEGE":   {minArgs: 1, maxArgs: 1, console: true, call: lexPrivilege},
 	"F$PROCESS":     {minArgs: 0, maxArgs: 0, console: true, call: lexProcess},
 	"F$SETPRV":      {minArgs: 1, maxArgs: 1, console: true, call: lexSetPrv},
@@ -120,6 +123,9 @@ var lexicalFunctions = map[string]lexicalFunction{
 	"F$VERIFY":      {minArgs: 0, maxArgs: 2, console: true, call: lexVerify},
 
 	// Files and devices (dcllexfile.go).
+	"F$DEVICE": {minArgs: 0, maxArgs: 4, console: true, call: lexDevice},
+
+	"F$FILE_ATTRIBUTES": {minArgs: 2, maxArgs: 2, console: true, call: lexFileAttributes},
 	"F$GETDVI": {minArgs: 2, maxArgs: 2, console: true, call: lexGetDVI},
 	"F$PARSE":  {minArgs: 1, maxArgs: 5, console: true, call: lexParse},
 	"F$SEARCH": {minArgs: 1, maxArgs: 2, console: true, call: lexSearch},

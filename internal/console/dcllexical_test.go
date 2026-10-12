@@ -311,3 +311,197 @@ func TestLexicalTime(t *testing.T) {
 		{text: `F$CVTIME(,"SOON")`, code: vmserrors.CLI_IVKEYW},
 	})
 }
+
+// TestLexicalIdentifier: F$IDENTIFIER both ways (the DCL Dictionary's
+// examples), against the rights database govax builds: the process's
+// own UIC identifier and the environmental ones.
+func TestLexicalIdentifier(t *testing.T) {
+	c := lexConsole(t)
+	env := c.RTL
+	uic := fmt.Sprint(int32(env.Process.UIC))
+
+	checkLexical(t, c, []lexCase{
+		{text: `F$IDENTIFIER("` + env.Process.Username + `", "NAME_TO_NUMBER")`, integer: true, want: uic},
+		{text: `F$IDENTIFIER("` + strings.ToLower(env.Process.Username) + `", "name_to_number")`, integer: true, want: uic},
+		{text: `F$IDENTIFIER(` + uic + `, "NUMBER_TO_NAME")`, want: env.Process.Username},
+		{text: `F$IDENTIFIER("INTERACTIVE", "NAME_TO_NUMBER")`, integer: true, want: fmt.Sprint(int32(-0x7FFFFFFD))},
+		{text: `F$IDENTIFIER(%X80000001, "NUMBER_TO_NAME")`, want: "BATCH"},
+		{text: `F$IDENTIFIER("NOSUCH", "NAME_TO_NUMBER")`, integer: true, want: "0"},
+		{text: `F$IDENTIFIER("12", "NAME_TO_NUMBER")`, integer: true, want: "0"},
+		{text: `F$IDENTIFIER(%X7FFF0001, "NUMBER_TO_NAME")`, want: ""},
+		{text: `F$IDENTIFIER("SYSTEM", "TO_NUMBER")`, code: vmserrors.CLI_IVKEYW},
+		{text: `F$IDENT("SYSTEM")`, code: vmserrors.CLI_ARGREQ},
+	})
+}
+
+// TestLexicalDevice: F$DEVICE through the devices, by name, class, and
+// type, each stream keeping its place, and "" after the last.
+func TestLexicalDevice(t *testing.T) {
+	c := lexConsole(t)
+	mountFreshContainer(t, c, "DUA0")
+	mountFreshContainer(t, c, "DUA1")
+
+	// MOUNT's disks have no device type; DUA0 is given an RD54's.
+	if d, ok := c.RTL.Devices.Find("DUA0"); ok {
+		d.DevType = vmsdef.Symbols["DT$_RD54"]
+	}
+
+	node := "_" + c.RTL.NodeName + "$"
+
+	checkLexical(t, c, []lexCase{
+		{text: `F$DEVICE("DUA*")`, want: node + "DUA0:"},
+		{text: `F$DEVICE("DUA*")`, want: node + "DUA1:"},
+		{text: `F$DEVICE("DUA*")`, want: ""},
+		{text: `F$DEVICE("DUA*")`, want: node + "DUA0:"},
+		{text: `F$DEVICE("_DUA%:",,, 2)`, want: node + "DUA0:"},
+		{text: `F$DEVICE("*1:", "DISK")`, want: node + "DUA1:"},
+		{text: `F$DEVICE("*1:", "DISK")`, want: ""},
+		{text: `F$DEVICE("DUA*", "DISK", "RD54")`, want: node + "DUA0:"},
+		{text: `F$DEVICE("DUA*", "MAILBOX")`, want: ""},
+		{text: `F$DEVICE("NOSUCH*")`, want: ""},
+		{text: `F$DEVICE(, "NOSUCHCLASS")`, code: vmserrors.CLI_IVKEYW},
+		{text: `F$DEVICE("DUA*",, "RD54")`, vms: "SS$_BADPARAM"},
+	})
+}
+
+// TestLexicalFileAttributes: F$FILE_ATTRIBUTES's items for a file on a
+// mounted volume, a directory, and a host file, and its failures.
+func TestLexicalFileAttributes(t *testing.T) {
+	c := lexConsole(t)
+	mountFreshContainer(t, c, "DUA0")
+
+	if err := c.cmd().SetDefault("DUA0:[000000]"); err != nil {
+		t.Fatal(err)
+	}
+
+	if _, err := c.ContainerSession.CreateDirectory("[WORK]", rms.CreateDirectoryOptions{}); err != nil {
+		t.Fatal(err)
+	}
+
+	records := [][]byte{[]byte("first line"), []byte("the second, longer line")}
+	for range 2 {
+		if _, err := c.ContainerSession.CreateRecordFile(rms.FileLocation{Name: "[WORK]QUEST.DAT"}, rms.TextRecords, records); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	cdt, _, err := c.EvaluateExpression(`F$FILE_ATTRIBUTES("[WORK]QUEST.DAT", "CDT")`)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if _, err := time.Parse("2-Jan-2006 15:04:05.00", cdt); err != nil {
+		t.Errorf("CDT = %q: %v", cdt, err)
+	}
+
+	host := t.TempDir() + "/notes.txt"
+	writeFile(t, host, strings.Repeat("x", 600)+"\n")
+
+	checkLexical(t, c, []lexCase{
+		{text: `F$FILE_ATTRIBUTES("[WORK]QUEST.DAT", "ORG")`, want: "SEQ"},
+		{text: `F$FILE_ATTRIBUTES("[WORK]QUEST.DAT", "RFM")`, want: "VAR"},
+		{text: `F$FILE_ATTRIBUTES("[WORK]QUEST.DAT", "RAT")`, want: "CR"},
+		{text: `F$FILE_ATTRIBUTES("[WORK]QUEST.DAT", "LRL")`, integer: true, want: "23"},
+		{text: `F$FILE_ATTRIBUTES("[WORK]QUEST.DAT", "EOF")`, integer: true, want: "1"},
+		{text: `F$FILE_ATTRIBUTES("[WORK]QUEST.DAT", "DIRECTORY")`, want: "FALSE"},
+		{text: `F$FILE_ATTRIBUTES("[WORK]QUEST.DAT", "VERLIMIT")`, integer: true, want: "32767"},
+		{text: `F$FILE_ATTRIBUTES("[WORK]QUEST.DAT", "EDT")`, want: "17-NOV-1858 00:00:00.00"},
+		{text: `F$FILE_ATTRIBUTES("[WORK]QUEST.DAT", "UIC")`, want: c.RTL.IdentifierText(0x00010004)},
+		{text: `F$FILE_ATTRIBUTES("[WORK]QUEST.DAT", "GRP")`, integer: true, want: "1"},
+		{text: `F$FILE_ATTRIBUTES("[WORK]QUEST.DAT", "MBM")`, integer: true, want: "4"},
+		{text: `F$FILE_ATTRIBUTES("[WORK]QUEST.DAT", "PRO")`, want: "SYSTEM=RWED, OWNER=RWED, GROUP=RE, WORLD="},
+		{text: `F$FILE_ATTRIBUTES("[WORK]QUEST.DAT;1", "FID")`, want: "(" + fidOf(t, c, "[WORK]QUEST.DAT;1") + ")"},
+		{text: `F$FILE_ATTRIBUTES("[WORK]QUEST.DAT", "DID")`, want: "(" + fidOf(t, c, "[000000]WORK.DIR;1") + ")"},
+		{text: `F$FILE_ATTRIBUTES("[WORK]QUEST.DAT", "DVI")`, want: "_" + c.RTL.NodeName + "$DUA0"},
+		{text: `F$FILE_ATTRIBUTES("WORK.DIR", "DIRECTORY")`, want: "TRUE"},
+		{text: `F$FILE_ATTRIBUTES("WORK.DIR", "CTG")`, want: "TRUE"},
+		{text: `F$FILE_ATTRIBUTES("[WORK]QUEST", "ORG")`, vms: "RMS$_FNF"},
+		{text: `F$FILE_ATTRIBUTES("[NODIR]QUEST.DAT", "ORG")`, vms: "RMS$_DNF"},
+		{text: `F$FILE_ATTRIBUTES("[WORK]*.DAT", "ORG")`, vms: "RMS$_WLD"},
+		{text: `F$FILE_ATTRIBUTES("[WORK]QUEST.DAT", "NOSUCH")`, code: vmserrors.CLI_IVKEYW},
+
+		{text: `F$FILE_ATTRIBUTES("` + host + `", "RFM")`, want: "STMLF"},
+		{text: `F$FILE_ATTRIBUTES("` + host + `", "EOF")`, integer: true, want: "2"},
+		{text: `F$FILE_ATTRIBUTES("` + host + `", "FFB")`, integer: true, want: "89"},
+		{text: `F$FILE_ATTRIBUTES("` + host + `x", "RFM")`, vms: "RMS$_FNF"},
+	})
+}
+
+// fidOf is the file ID of the file spec names, as DIRECTORY/FILE_ID
+// shows it, without the parentheses.
+func fidOf(t *testing.T, c *Console, spec string) string {
+	t.Helper()
+
+	text, err := c.ContainerSession.Directory(spec, rms.DirectoryOptions{File: true})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	_, after, ok := strings.Cut(text, "(")
+	fid, _, ok2 := strings.Cut(after, ")")
+
+	if !ok || !ok2 {
+		t.Fatalf("no file ID for %s in %q", spec, text)
+	}
+
+	return fid
+}
+
+// TestLexicalContext: F$CONTEXT's criteria select the processes F$PID
+// returns; the symbol is a PROCESS_CONTEXT until F$PID's "" or CANCEL;
+// a context F$PID has used is frozen.
+func TestLexicalContext(t *testing.T) {
+	c := lexConsole(t)
+	env := c.RTL
+	pid := fmt.Sprintf("%08X", env.Process.PID)
+	user := env.Process.Username
+
+	for _, name := range []string{"CTX", "CTX3", "CTX4"} {
+		if err := c.AssignSymbol(name, "=", `""`); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	if err := c.AssignSymbol("CTX5", "=", `"abc"`); err != nil {
+		t.Fatal(err)
+	}
+
+	checkLexical(t, c, []lexCase{
+		{text: `F$CONTEXT("PROCESS", CTX, "USERNAME", "` + user[:2] + `*,NOBODY", "EQL")`, want: ""},
+		{text: `F$CONTEXT("PROCESS", CTX, "GRP", 1, "EQL")`, want: ""},
+		{text: `F$CONTEXT("PROCESS", CTX, "PRI", "1", "GEQ")`, want: ""},
+		{text: `F$CONTEXT("PROCESS", CTX, "CURPRIV", "CMKRNL,TMPMBX", "ALL")`, want: ""},
+		{text: `F$CONTEXT("PROCESS", CTX, "JOBTYPE", "LOCAL", "EQL")`, want: ""},
+		{text: `F$CONTEXT("PROCESS", CTX, "MODE", "INTERACTIVE", "EQL")`, want: ""},
+		{text: `F$CONTEXT("PROCESS", CTX, "UIC", "` + env.IdentifierText(env.Process.UIC) + `", "EQL")`, want: ""},
+		{text: `F$CONTEXT("PROCESS", CTX, "NODENAME", "*", "EQL")`, want: ""},
+		{text: "F$TYPE(CTX)", want: "PROCESS_CONTEXT"},
+		{text: "F$PID(CTX)", want: pid},
+		{text: `F$CONTEXT("PROCESS", CTX, "PRI", "1", "GEQ")`, code: vmserrors.CLI_FRZNCTX},
+		{text: "F$PID(CTX)", want: ""},
+		{text: "F$TYPE(CTX)", want: "STRING"},
+		{text: "CTX", want: ""},
+
+		// A context nothing meets; CTX2 is undefined at first.
+		{text: `F$CONTEXT("PROCESS", CTX2, "PRCNAM", "NOBODY", "EQL")`, want: ""},
+		{text: "F$PID(CTX2)", want: ""},
+		{text: `F$CONTEXT("PROCESS", CTX3, "USERNAME", "` + user + `", "NEQ")`, want: ""},
+		{text: `F$CONTEXT("PROCESS", CTX3, "UIC", "[1,4]", "EQL")`, want: ""},
+		{text: "F$PID(CTX3)", want: ""},
+
+		// CANCEL.
+		{text: `F$CONTEXT("PROCESS", CTX4, "PRI", "0", "GTR")`, want: ""},
+		{text: `F$CONTEXT("PROCESS", CTX4, "CANCEL")`, want: ""},
+		{text: "F$TYPE(CTX4)", want: "STRING"},
+
+		// Failures.
+		{text: `F$CONTEXT("QUEUE", CTX6, "PRI", "0", "GTR")`, code: vmserrors.CLI_IVKEYW},
+		{text: `F$CONTEXT("PROCESS", CTX6, "NOSUCH", "0", "GTR")`, code: vmserrors.CLI_IVKEYW},
+		{text: `F$CONTEXT("PROCESS", CTX6, "PRI", "0", "ALL")`, code: vmserrors.CLI_IVKEYW},
+		{text: `F$CONTEXT("PROCESS", CTX6, "PRI", "X", "EQL")`, code: vmserrors.CLI_IVVALU},
+		{text: `F$CONTEXT("PROCESS", CTX6, "PRI")`, code: vmserrors.CLI_ARGREQ},
+		{text: `F$CONTEXT("PROCESS", CTX6, "CURPRIV", "NOSUCH", "ANY")`, code: vmserrors.CLI_IVKEYW},
+		{text: `F$CONTEXT("PROCESS", CTX5, "PRI", "0", "GTR")`, code: vmserrors.CLI_NOTCTX},
+		{text: `F$CONTEXT("PROCESS", CTX5, "CANCEL")`, code: vmserrors.CLI_NOTCTX},
+	})
+}

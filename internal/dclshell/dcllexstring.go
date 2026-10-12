@@ -313,6 +313,8 @@ func lexType(e *dclExpression, args []lexicalArg) (dclValue, error) {
 	switch {
 	case !ok:
 		return dclString(""), nil
+	case sym.context != "":
+		return dclString(sym.context), nil
 	case sym.integer || isIntegerString(sym.value):
 		return dclString("INTEGER"), nil
 	default:

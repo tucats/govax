@@ -3572,6 +3572,51 @@ widened."
     end.
 - **Status**: unconfirmed.
 
+### [Phase 51] F$CONTEXT, F$DEVICE, F$FILE_ATTRIBUTES, F$IDENTIFIER: choices without a probe
+
+- **Where**: `internal/dclshell/dcllexcontext.go` (F$CONTEXT, and
+  F$PID with a context), `dcllexfile.go` (F$DEVICE, F$FILE_ATTRIBUTES),
+  `dcllexprocess.go` (F$IDENTIFIER); `internal/rms/fileattr.go`
+  (`Session.FileAttributes`); `internal/corevms/lexical.go`
+  (`DeviceScan`, `IdentifierValue`, `IdentifierName`).
+- **What**: the four functions follow the DCL Dictionary (7.3-1).
+  F$CSID, F$GETQUI, and F$LICENSE stay CLI$_LEXNOTIMPL by choice: govax
+  has no cluster, queues, or licenses for them to report. Chosen without
+  VMS:
+  - F$CONTEXT's symbol's value is the context's number, an integer; once
+    F$PID's "" or CANCEL ends the context it is "", a string. A symbol
+    that names no live context is CLI$_NOTCTX, a criterion added after
+    F$PID has used the context CLI$_FRZNCTX (the message file's words);
+    a selection item, qualifier, keyword value, or privilege it doesn't
+    know is CLI$_IVKEYW, an integer value that isn't one CLI$_IVVALU, a
+    missing value or qualifier CLI$_ARGREQ. A list's values are split at
+    commas outside brackets, so "[1,4]" is one UIC; UIC also takes an
+    identifier's name. HW_MODEL, HW_NAME, and STS aren't supported
+    (IVKEYW). No privilege is asked for to see other processes.
+  - F$DEVICE returns names with the node's, "_GOVAX$DUA0:" (VMS 7.3
+    equated OPEN's logical name to "_SIMVAX$DUA1"), sorted by name; the
+    class and type are $DCDEF's and $DTDEF's names without their
+    prefixes, one that isn't is IVKEYW, and a type without a class
+    SS$_BADPARAM. MOUNT's disks have no device type, so a type selects
+    none of them. Streams behave as F$SEARCH's.
+  - F$FILE_ATTRIBUTES applies no default name (no type is an empty
+    type); a wildcard is RMS$_WLD, a missing file RMS$_FNF (RMS$_DNF for
+    a missing directory), each shown as its message. EOF is the blocks
+    used, as DIRECTORY/SIZE counts them; MRS is the header's maximum
+    record size and LRL its record size, which RMS keeps as the longest
+    record; a date never set is "17-NOV-1858 00:00:00.00"; PRO is
+    "SYSTEM=RWED, OWNER=RWED, GROUP=RE, WORLD="; UIC as !%I writes it;
+    DVI as OPEN's logical name is equated, "_GOVAX$DUA0" without a colon;
+    BLS 512; VERLIMIT 32767 for none; KNOWN and SHELVED FALSE, MOVE and
+    SHELVABLE TRUE, STORED_SEMANTICS "", FILE_LENGTH_HINT "(-1,-1)". A
+    host file reads as stream-LF with CR carriage control, its size in
+    blocks, its modification time as CDT and RDT, owned by [1,4].
+  - F$IDENTIFIER: a name the rights database doesn't have is 0, and so is
+    one that can't be an identifier ($ASCTOID's SS$_IVIDENT); a value it
+    doesn't have is "". NUMBER_TO_NAME of a UIC is the username without
+    brackets, as the Dictionary's example shows.
+- **Status**: unconfirmed; candidates for a probe.
+
 <!--
 Entry template:
 

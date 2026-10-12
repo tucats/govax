@@ -76,6 +76,11 @@ type dclSymbol struct {
 	// integer says "=" or "==" gave it an integer value, which SHOW
 	// SYMBOL shows as a number, not a string.
 	integer bool
+
+	// context is the type of context a context symbol stands for
+	// (F$CONTEXT's, "PROCESS_CONTEXT", dcllexcontext.go), whose number
+	// is its value; "" for any other symbol.
+	context string
 }
 
 // dclSymbols is one table of DCL symbols, by full name.
@@ -368,6 +373,29 @@ func (t *dclSymbolTable) assignIn(c *Interpreter, name, op, text string) error {
 	table[full] = dclSymbol{name: full, minLength: minLength, value: value.String(), global: global, integer: value.integer}
 
 	return after
+}
+
+// setContext makes the symbol word names a context symbol of the type
+// kind, its value the context's number id, in the table it is in, or as
+// a new local symbol when there's none (F$CONTEXT). An empty kind makes
+// it an ordinary string symbol again, "".
+func (t *dclSymbolTable) setContext(word, kind string, id int32) {
+	value := dclString("")
+	if kind != "" {
+		value = dclInteger(id)
+	}
+
+	for _, table := range t.searchOrder() {
+		if sym, ok := table.lookup(word); ok {
+			sym.value, sym.integer, sym.context = value.String(), value.integer, kind
+			table[sym.name] = sym
+
+			return
+		}
+	}
+
+	name := strings.ToUpper(word)
+	t.local()[name] = dclSymbol{name: name, minLength: len(name), value: value.String(), integer: value.integer, context: kind}
 }
 
 // quotedString reads the quoted string text starts with, returning its

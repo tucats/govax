@@ -194,6 +194,11 @@ const (
 	cliTknOvf
 	cliOnErr
 	cliStrTooLng
+
+	// docs/PHASE-51 - DCL follow-ups.md: F$CONTEXT.
+	cliFrznCtx
+	cliNotCtx
+	cliInvCtxTyp
 )
 
 // CLI facility status codes -- CLI_ prefix, matching real VMS's CLI$_
@@ -465,6 +470,14 @@ const (
 	// read; CLI_IVVALU a value of the wrong form (F$ELEMENT's delimiter
 	// of more than one character).
 	CLI_IVKEYW   = CLIFacility<<FacilityPosition | cliIvKeyw<<MessagePosition | StatusWarning
+
+	// F$CONTEXT's messages (docs/PHASE-51), DCL's CLI$_ messages of the
+	// same names, warnings: CLI_FRZNCTX a selection added to a context
+	// F$PID has begun to use; CLI_NOTCTX a context symbol that names no
+	// context; CLI_INVCTXTYP a context symbol of another type.
+	CLI_FRZNCTX   = CLIFacility<<FacilityPosition | cliFrznCtx<<MessagePosition | StatusWarning
+	CLI_NOTCTX    = CLIFacility<<FacilityPosition | cliNotCtx<<MessagePosition | StatusWarning
+	CLI_INVCTXTYP = CLIFacility<<FacilityPosition | cliInvCtxTyp<<MessagePosition | StatusWarning
 	CLI_IVSYMB   = CLIFacility<<FacilityPosition | cliIvSymb<<MessagePosition | StatusWarning
 	CLI_INVRANGE = CLIFacility<<FacilityPosition | cliInvRange<<MessagePosition | StatusWarning
 	CLI_IVATIME  = CLIFacility<<FacilityPosition | cliIvATime<<MessagePosition | StatusWarning
@@ -634,6 +647,9 @@ func init() {
 	DefineMessage(CLI_USCALL, CLIFacility, "USCALL", "CALL target !S either missing, misspelled, or inaccessible")
 	DefineMessage(CLI_INVCALL, CLIFacility, "INVCALL", "invalid CALL nesting structure or data inconsistency detected")
 	DefineMessage(CLI_IVKEYW, CLIFacility, "IVKEYW", "unrecognized keyword - check validity and spelling")
+	DefineMessage(CLI_FRZNCTX, CLIFacility, "FRZNCTX", "context is frozen - either cancel this context or use alternate")
+	DefineMessage(CLI_NOTCTX, CLIFacility, "NOTCTX", "symbol specified is not a valid context symbol")
+	DefineMessage(CLI_INVCTXTYP, CLIFacility, "INVCTXTYP", "symbol specified is defined for a different context type")
 	DefineMessage(CLI_IVSYMB, CLIFacility, "IVSYMB", "invalid symbol name - start name with an alphabetic character")
 	DefineMessage(CLI_INVRANGE, CLIFacility, "INVRANGE", "field specification is out of bounds - check sign and size")
 	DefineMessage(CLI_IVATIME, CLIFacility, "IVATIME", "invalid absolute time - use DD-MMM-YYYY:HH:MM:SS.CC format")

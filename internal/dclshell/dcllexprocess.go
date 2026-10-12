@@ -14,8 +14,8 @@ import (
 // The lexical functions about the process and its command environment
 // (docs/PHASE-50 - DCL command procedures.md, subtask 14; the User's
 // Manual, 15.2 and 15.3): F$ENVIRONMENT, F$VERIFY, F$MODE, F$DIRECTORY,
-// F$USER, F$PROCESS, F$PID, F$GETJPI, F$GETSYI, F$PRIVILEGE, and
-// F$SETPRV. The process is the console's, process 1; F$GETJPI and F$PID
+// F$USER, F$IDENTIFIER, F$PROCESS, F$PID, F$GETJPI, F$GETSYI,
+// F$PRIVILEGE, and F$SETPRV. The process is the console's, process 1; F$GETJPI and F$PID
 // reach the others. F$GETJPI and F$GETSYI read the same items $GETJPI
 // and $GETSYI return (corevms.Environment.JPIItem, SYIItem), each
 // keyword's item and how its value is written being an entry in a table.
@@ -164,6 +164,50 @@ func lexUser(e *dclExpression, _ []lexicalArg) (dclValue, error) {
 	return jpiItems["UIC"](env), nil
 }
 
+// identifierConversions are F$IDENTIFIER's conversion types: each
+// converts the identifier argument, a name or a number, to the other.
+var identifierConversions = map[string]func(env *corevms.Environment, id lexicalArg) dclValue{
+	// NAME_TO_NUMBER is the identifier's value, as $ASCTOID gives it,
+	// or 0 for a name the rights database doesn't have.
+	"NAME_TO_NUMBER": func(env *corevms.Environment, id lexicalArg) dclValue {
+		value, status := env.IdentifierValue(id.str())
+		if status != 0 {
+			return dclInteger(0)
+		}
+
+		return dclInteger(int32(value))
+	},
+
+	// NUMBER_TO_NAME is the identifier's name, as $IDTOASC gives it (a
+	// username without brackets), or "" for a value the database
+	// doesn't have.
+	"NUMBER_TO_NAME": func(env *corevms.Environment, id lexicalArg) dclValue {
+		name, _ := env.IdentifierName(uint32(id.int()))
+
+		return dclString(name)
+	},
+}
+
+// lexIdentifier is F$IDENTIFIER(identifier, conversion-type): a rights
+// identifier's name converted to its value, or its value to its name
+// (identifierConversions). An identifier the rights database doesn't
+// have is 0 or "", as the DCL Dictionary says, whether or not it could
+// be one (unconfirmed against VMS: that a name that can't be an
+// identifier, SS$_IVIDENT to $ASCTOID, is 0 rather than a message).
+func lexIdentifier(e *dclExpression, args []lexicalArg) (dclValue, error) {
+	env, err := e.console.lexicalEnvironment()
+	if err != nil {
+		return dclValue{}, err
+	}
+
+	convert, _, err := lexicalKeyword(identifierConversions, args[1])
+	if err != nil {
+		return dclValue{}, err
+	}
+
+	return convert(env, args[0]), nil
+}
+
 // lexProcess is F$PROCESS(): the process's name.
 func lexProcess(e *dclExpression, _ []lexicalArg) (dclValue, error) {
 	env, err := e.console.lexicalEnvironment()
@@ -179,7 +223,9 @@ func lexProcess(e *dclExpression, _ []lexicalArg) (dclValue, error) {
 // symbol, set to "" before the first call, keeps the place: govax keeps
 // in it how many processes have been returned, and puts "" back after
 // the last, so the next call starts again. An undefined context symbol
-// is CLI_UNDSYM.
+// is CLI_UNDSYM. A symbol F$CONTEXT made a context symbol returns only
+// the processes that meet its criteria (nextContextPID,
+// dcllexcontext.go).
 func lexPID(e *dclExpression, args []lexicalArg) (dclValue, error) {
 	env, err := e.console.lexicalEnvironment()
 	if err != nil {
@@ -191,6 +237,15 @@ func lexPID(e *dclExpression, args []lexicalArg) (dclValue, error) {
 	sym, ok := e.symbols.lookup(name)
 	if !ok {
 		return dclValue{}, vmserrors.NewSegment(vmserrors.CLI_UNDSYM, name)
+	}
+
+	if sym.context != "" {
+		id, ctx, err := e.console.contextOf(e.symbols, name, false)
+		if err != nil {
+			return dclValue{}, err
+		}
+
+		return e.console.nextContextPID(e.symbols, name, id, ctx), nil
 	}
 
 	next := int(sym.dclValue().Int())

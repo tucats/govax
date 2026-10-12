@@ -115,7 +115,8 @@ smaller gaps the phase left:
   `$STATUS` %X10951238. govax gave `%SYSTEM-W-NOSUCHFILE` for both.
 - **`/OUTPUT=.LOG` with no name** (fixed 2026-10-12): VMS made a file
   named `.LOG`; govax refused it.
-- **Lexical functions not yet done**: F$CONTEXT, F$CSID, F$DEVICE,
+- **Lexical functions not yet done** (done 2026-10-12, but for three
+  left out by choice): F$CONTEXT, F$CSID, F$DEVICE,
   F$FILE_ATTRIBUTES, F$GETQUI, F$IDENTIFIER, F$LICENSE (CLI$_LEXNOTIMPL).
   F$FILE_ATTRIBUTES, F$DEVICE, and F$IDENTIFIER have something to report
   in govax; F$GETQUI and F$LICENSE have nothing behind them.
@@ -336,3 +337,37 @@ smaller gaps the phase left:
   Tests: `TestConsoleType_notFound` (FNF and DNF),
   `TestConsoleType_hostNotFound`, `TestProcedure_hostNames`,
   `TestProcedure_volume`.
+- 2026-10-12: Subtask 5, the lexical functions. Four are done, from the
+  DCL Dictionary:
+  - F$IDENTIFIER(identifier, conversion-type): NAME_TO_NUMBER and
+    NUMBER_TO_NAME, through corevms's new `IdentifierValue` and
+    `IdentifierName` ($ASCTOID's and $IDTOASC's lookups; `$ASCTOID` now
+    shares `identifierByName`). An identifier the rights database
+    doesn't have is 0 or "".
+  - F$DEVICE([name] [,class] [,type] [,stream-id]): the devices whose
+    names match, of the class and type named ($DCDEF's and $DTDEF's
+    names), one per call, then "", with streams kept as F$SEARCH's are
+    (`Shell.deviceStreams`). corevms's `DeviceScan` is $DEVICE_SCAN's
+    search: names with the node's, "_GOVAX$DUA0:", sorted.
+  - F$FILE_ATTRIBUTES(file, item): every item of the Dictionary's table
+    but PRESHELVED (Alpha's), from the file's header through rms's new
+    `Session.FileAttributes` (`internal/rms/fileattr.go`), which copies
+    the ODS-2 header into plain values; a host file has the attributes
+    govax reads it with.
+  - F$CONTEXT("PROCESS", symbol, item, value, qualifier): selection
+    criteria for F$PID (`dcllexcontext.go`). The symbol becomes a
+    PROCESS_CONTEXT (F$TYPE says so; `dclSymbol.context`) naming a
+    context the Shell keeps; F$PID with it returns only the processes
+    that meet every criterion, and freezes it (CLI$_FRZNCTX after); its
+    "" or CANCEL ends it. Each item's value is F$GETJPI's (or
+    F$GETSYI's) item of the same name, so the two agree. New messages:
+    CLI_FRZNCTX, CLI_NOTCTX, CLI_INVCTXTYP.
+
+  F$CSID, F$GETQUI, and F$LICENSE stay LEXNOTIMPL, govax's choice: there
+  is no cluster, queue manager, or license database behind them. The
+  choices made without VMS are DEVIATIONS.md's "[Phase 51] F$CONTEXT,
+  F$DEVICE, F$FILE_ATTRIBUTES, F$IDENTIFIER". Tests:
+  `TestLexicalIdentifier`, `TestLexicalDevice`,
+  `TestLexicalFileAttributes`, `TestLexicalContext`,
+  `TestLexicalContext_subprocess` (a SPAWN/NOWAIT subprocess selected by
+  OWNER and PRCNAM). HELP LEXICAL.
