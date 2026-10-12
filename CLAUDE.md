@@ -29,8 +29,8 @@ never had.
   between DCL commands and during WAIT. Phase 51 (in progress) is what
   it left for later: round 6 of the DCL probe (done), SPAWN from a
   subprocess (done), Ctrl/Y in a subprocess's procedures (done),
-  the other processes running while the prompt waits for a line, and
-  the known differences from VMS. Phase 52 (done 2026-10-12, paused
+  the other processes running while the prompt waits for a line
+  (done), and the known differences from VMS. Phase 52 (done 2026-10-12, paused
   Phase 51) split `internal/console` into `internal/machine`,
   `internal/dclshell`, `internal/dclcmd`, `internal/dcl`, and
   `internal/help`, leaving `internal/console` the front end; its doc
@@ -386,9 +386,19 @@ expect adjustment as phases land):
   shim (`yieldCommand`, `Environment.Yield`); so SPAWN/NOWAIT procedures
   interleave with process 1's. At process 1's level 0 (`Dispatch`)
   `LendWhileIdle` waits until the others are idle, at most
-  `promptLendLimit`. WAIT lends the CPU (a subprocess's waits in the
-  scheduler, `yieldTimer`). Not inside a machine run
-  (`consoleCommands`, frozen scheduling), the debugger, or ASM.
+  `promptLendLimit`; then, while cmd/govax reads the next line at a
+  terminal on a goroutine of its own (`readCommandLine`),
+  `LendWhileReading` lends it until the line comes (Phase 51, subtask
+  4), the host waiting `promptPoll` at a time when every other process
+  waits (corevms's `HostIdle`: nobody's CPU time; in quantum-clock mode
+  the clock moves on by the host's time, no further than the next
+  timer). cmd/govax's `promptOutput` sends their output through
+  readline's writer in whole lines, which redraws the line being typed,
+  and `attentionStdin.lineRead` keeps programs' terminal reads off the
+  keys meanwhile. Input from a pipe or a test stays synchronous. WAIT
+  lends the CPU (a subprocess's waits in the scheduler, `yieldTimer`).
+  Not inside a machine run (`consoleCommands`, frozen scheduling), the
+  debugger, or ASM.
 - `internal/debugger` — the machine debugger (Phase 42), modeled on the VMS
   debugger: a `Debugger` session and its `Dispatcher` over `debug.dcl`
   (`internal/bootdata/files`), with `debug.help` and the `DBG> ` prompt.

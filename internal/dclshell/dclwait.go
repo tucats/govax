@@ -71,7 +71,7 @@ func (c *Interpreter) waitCommand(id int64, r *dcl.Result) error {
 
 		// The others run while process 1 waits; when none can, the
 		// host waits a while.
-		if !c.lendCPU(func() bool { return done() || attention() }, c.machineDeadline(left)) {
+		if ran, _ := c.lendCPU(func() bool { return done() || attention() }, c.machineDeadline(left)); !ran {
 			time.Sleep(min(time.Until(deadline), waitPoll))
 		}
 	}

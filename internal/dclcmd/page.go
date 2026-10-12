@@ -1,7 +1,7 @@
 package dclcmd
 
 import (
-	"os"
+	"io"
 	"strings"
 
 	"github.com/tucats/gopackages/app-cli/settings"
@@ -38,11 +38,12 @@ func (c *Context) TerminalSize() (height, width int) {
 		return c.ScreenSize()
 	}
 
-	// c.Out is an *os.File only when it's the process's real standard
-	// output (or another real file); term.IsTerminal then says whether
-	// it's a terminal whose size can be read.
-	if f, ok := c.Out.(*os.File); ok && term.IsTerminal(int(f.Fd())) {
-		if w, h, err := term.GetSize(int(f.Fd())); err == nil && h > 1 {
+	// c.Out has a file descriptor only when it's the process's real
+	// standard output (or another real file, or cmd/govax's writer in
+	// front of one); term.IsTerminal then says whether it's a terminal
+	// whose size can be read.
+	if fd, ok := outputTerminal(c.Out); ok {
+		if w, h, err := term.GetSize(fd); err == nil && h > 1 {
 			return h, w
 		}
 	}
@@ -115,9 +116,21 @@ func (c *Context) continuePaging() bool {
 
 	// The terminal echoed the RETURN; with no terminal (input from a
 	// script or test) nothing did, so end the prompt's line here.
-	if f, isFile := c.Out.(*os.File); !isFile || !term.IsTerminal(int(f.Fd())) {
+	if _, ok := outputTerminal(c.Out); !ok {
 		c.Printf("\n")
 	}
 
 	return ok && strings.TrimSpace(reply) == ""
+}
+
+// outputTerminal returns the file descriptor of the terminal w writes to,
+// and false if w isn't a terminal: w is one if it has a file descriptor
+// (an *os.File has) that is a terminal's.
+func outputTerminal(w io.Writer) (int, bool) {
+	f, ok := w.(interface{ Fd() uintptr })
+	if !ok || !term.IsTerminal(int(f.Fd())) {
+		return 0, false
+	}
+
+	return int(f.Fd()), true
 }

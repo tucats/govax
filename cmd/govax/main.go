@@ -178,7 +178,19 @@ func run(paths []string, instructionLimit int, timeLimit time.Duration, out io.W
 		debugHelp = help.Parse(string(helpSrc))
 	}
 
-	c := console.New(out)
+	// Read from the real terminal, the console writes through a
+	// promptOutput (promptout.go), so that what the other processes
+	// write while a command line is typed doesn't garble the line.
+	var output *promptOutput
+
+	consoleOut := out
+
+	if in == nil {
+		output = newPromptOutput(out)
+		consoleOut = output
+	}
+
+	c := console.New(consoleOut)
 
 	c.Paths = resolver
 	c.Verbose = (console.CommandLineString == "")
@@ -369,7 +381,7 @@ func run(paths []string, instructionLimit int, timeLimit time.Duration, out io.W
 				continue
 			}
 
-			line, err := rl.Readline()
+			line, err := readCommandLine(rl, c, attn, output)
 
 			if aborted() {
 				break
@@ -401,6 +413,42 @@ func run(paths []string, instructionLimit int, timeLimit time.Duration, out io.W
 	printStats(c, out, stats)
 
 	return c.CommandLineErr()
+}
+
+// readCommandLine reads a command line with rl. At a terminal, it is
+// read on a goroutine of its own while the console lets the other
+// processes run (docs/PHASE-51, subtask 4; Console.LendWhileReading),
+// their output going through the line editor (promptOutput). Otherwise
+// (input from a pipe or a test's reader), the read is all that happens,
+// as before: the other processes ran after the last command until they
+// were idle (Console.LendWhileIdle), and run again after the next.
+func readCommandLine(rl *readline.Instance, c *console.Console, attn *attentionStdin, output *promptOutput) (string, error) {
+	if attn == nil || !attn.vmsMode || output == nil {
+		return rl.Readline()
+	}
+
+	var (
+		line string
+		err  error
+	)
+
+	done := make(chan struct{})
+
+	attn.lineRead.Store(true)
+	output.begin(rl.Stdout())
+
+	go func() {
+		defer close(done)
+
+		line, err = rl.Readline()
+	}()
+
+	c.LendWhileReading(done)
+
+	output.end()
+	attn.lineRead.Store(false)
+
+	return line, err
 }
 
 // endOfFile is CTRL/Z at a prompt. In the debugger it is EXIT, ending the

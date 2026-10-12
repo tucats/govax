@@ -1073,10 +1073,13 @@ $SPAWN
 
         /NOWAIT         Don't wait: the subprocess runs beside the console.
                         It takes turns with the console's DCL, between its
-                        commands (one command each, in a procedure; at the
-                        VAX> prompt, until it waits or has run a while),
-                        during WAIT, and while the machine runs (RUN, GO,
-                        CALL).
+                        commands (one command each, in a procedure), during
+                        WAIT, while the machine runs (RUN, GO, CALL), and
+                        while the VAX> prompt waits for a line.  What it
+                        writes meanwhile appears above the line being
+                        typed, which is shown again below it.  (With input
+                        from a pipe, not a terminal, it runs at the prompt
+                        only until it waits or has run a while.)
         /INPUT=file     The subprocess's SYS$INPUT: the terminal, a mailbox,
                         or a file of commands.  Default: the console's.
         /OUTPUT=file    Its SYS$OUTPUT: a terminal, a mailbox, NL:, or a

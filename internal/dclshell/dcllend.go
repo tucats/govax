@@ -39,9 +39,16 @@ import (
 // wants it (each waits, or has gone), or for promptLendLimit of the
 // host's time at most, so that a process that never waits doesn't keep
 // the prompt from coming back: SPAWN/NOWAIT DIRECTORY has run the
-// DIRECTORY, and logged out, by the next prompt. (Only the time between
-// commands is lent; what runs while the prompt waits for a line is
-// govax's front end, not the machine.)
+// DIRECTORY, and logged out, by the next prompt.
+//
+// Then, while the prompt waits for the line (Phase 51, subtask 4),
+// process 1 goes on lending the CPU (LendWhileReading): cmd/govax reads
+// the terminal on a goroutine of its own, and the others run until the
+// line comes, with no time limit. When each of them waits, the host
+// waits a little (promptPoll, HostIdle's time, nobody's) and the
+// scheduler looks again, since a wait may end by the host's clock (a
+// subprocess's WAIT) or a timer. With no other process, the prompt just
+// waits for the line, as it always has.
 //
 // Process 1 lends the CPU only from its DCL's own level, with the CPU in
 // process 1 and the machine stopped: not inside a machine run (an image's
@@ -91,8 +98,76 @@ func (c *Interpreter) LendWhileIdle() {
 	}
 
 	c.lendCPU(func() bool {
-		return idle() || !time.Now().Before(limit) || isAttentionKey(c.machine.Engine.PendingAttention())
+		return idle() || !time.Now().Before(limit) || c.attentionPending()
 	}, c.machineDeadline(promptLendLimit))
+}
+
+// promptPoll is how long LendWhileReading waits in the host, when every
+// other process waits, before the scheduler looks at their waits again.
+const promptPoll = 10 * time.Millisecond
+
+// LendWhileReading is process 1's DCL waiting for a line at command
+// level 0 (see above): the front end reads the line meanwhile, and line
+// is closed when the read is over (a line typed, Ctrl/C, Ctrl/Z, or the
+// end of the input). Until then the other processes run. It returns
+// once line is closed; when it can't lend the CPU (no other process, the
+// debugger's prompt, the interactive assembler's), or a key has stopped
+// the machine, or a stop in another process (a HALT, a run limit)
+// ended a lending, it just waits for line.
+func (c *Interpreter) LendWhileReading(line <-chan struct{}) {
+	read := func() bool {
+		select {
+		case <-line:
+			return true
+		default:
+			return false
+		}
+	}
+
+	// Process 1 waits while it lends the CPU: the others are idle when
+	// no process is current or computable.
+	idle := func() bool {
+		s := c.RTL.Scheduler()
+		_, current := s.Current()
+
+		return !current && len(s.Computable()) == 0
+	}
+
+	for !read() {
+		if !c.Running() || !c.canLend() || c.attentionPending() {
+			break
+		}
+
+		ran, stopped := c.lendCPU(func() bool { return read() || idle() || c.attentionPending() }, 0)
+
+		switch {
+		case stopped:
+			<-line
+
+			return
+
+		case ran:
+			continue
+		}
+
+		// Nothing ran: each of the others waits, or the scheduler chose
+		// process 1 first. The host waits a little, ending at once if
+		// the line comes.
+		c.RTL.HostIdle(c.machine.Engine, func() {
+			select {
+			case <-line:
+			case <-time.After(promptPoll):
+			}
+		})
+	}
+
+	<-line
+}
+
+// attentionPending reports whether Ctrl/C or Ctrl/Y is waiting for the
+// machine's attention.
+func (c *Interpreter) attentionPending() bool {
+	return c.machine.Engine != nil && isAttentionKey(c.machine.Engine.PendingAttention())
 }
 
 // canLend reports whether process 1's DCL can lend the CPU now (see
@@ -115,16 +190,17 @@ func (c *Interpreter) canLend() bool {
 // lendCPU lends the CPU to the other processes (see above) until the
 // scheduler chooses process 1 again: process 1 yields, if over is nil,
 // or else waits until over reports true (deadline being corevms's
-// LendCPU's). It reports whether another process ran. A stop in another
-// process (a HALT, a limit) is reported as a run's would be, and ends
-// the lending; process 1 has the CPU back at the end, whatever happened.
-func (c *Interpreter) lendCPU(over func() bool, deadline uint64) bool {
-	if !c.canLend() || isAttentionKey(c.machine.Engine.PendingAttention()) {
-		return false
+// LendCPU's). It reports whether another process ran, and whether a
+// stop in another process (a HALT, a limit) ended the lending; the stop
+// is reported as a run's would be. Process 1 has the CPU back at the
+// end, whatever happened.
+func (c *Interpreter) lendCPU(over func() bool, deadline uint64) (ran, stopped bool) {
+	if !c.canLend() || c.attentionPending() {
+		return false, false
 	}
 
 	if !c.RTL.LendCPU(c.RTL, over, deadline) {
-		return false
+		return false, false
 	}
 
 	c.lending = true
@@ -139,13 +215,11 @@ func (c *Interpreter) lendCPU(over func() bool, deadline uint64) bool {
 
 	c.machine.Engine.BeginRun()
 
-	ran := false
-
 	for {
 		// A key typed meanwhile is process 1's: DCL acts on it after
 		// the command (dclcontroly.go).
-		if isAttentionKey(c.machine.Engine.PendingAttention()) {
-			return ran
+		if c.attentionPending() {
+			return ran, false
 		}
 
 		err := c.machine.BeginStep()
@@ -153,7 +227,7 @@ func (c *Interpreter) lendCPU(over func() bool, deadline uint64) bool {
 		// The scheduler has chosen process 1: it gets the CPU back
 		// before it runs an instruction.
 		if err == nil && c.machine.RunningProcess() == c.RTL {
-			return ran
+			return ran, false
 		}
 
 		if err == nil {
@@ -171,7 +245,7 @@ func (c *Interpreter) lendCPU(over func() bool, deadline uint64) bool {
 			c.Printf("%%%s\n", err)
 		}
 
-		return ran
+		return ran, true
 	}
 }
 

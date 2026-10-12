@@ -3,8 +3,9 @@
 **Status:** in progress (planned and approved 2026-10-12). Needs Phase
 50. Subtask 1, round 6 of the VMS probe, is done (2026-10-12): the
 author ran it, and govax now follows VMS's answers. Subtask 2, SPAWN in
-a subprocess, is done (2026-10-12), and so is subtask 3, Ctrl/Y in a
-subprocess's procedures (2026-10-12).
+a subprocess, is done (2026-10-12), and so are subtask 3, Ctrl/Y in a
+subprocess's procedures (2026-10-12), and subtask 4, the other
+processes while the prompt waits (2026-10-12).
 
 Phase 50 made the console a DCL command interpreter and closed on
 2026-10-12 with every subtask done. Following Phase 49's example, the
@@ -89,7 +90,7 @@ that its probes found but no subtask fixed.
    That process's DCL takes them by Phase 50's rules. A subprocess's WAIT
    is interrupted, as process 1's is. Optionally ATTACH, to move the
    terminal between processes of a job.
-4. **The other processes while the prompt waits.** cmd/govax reads the
+4. **The other processes while the prompt waits** (done 2026-10-12). cmd/govax reads the
    terminal on a goroutine, and the console runs the machine (process 1
    in LEF, as `lendWhileIdle` does) until a line arrives or a key stops
    it, with no `promptLendLimit`. A subprocess's output during the wait
@@ -125,7 +126,9 @@ smaller gaps the phase left:
 
 - Subtask 4: how output from another process should appear while a line
   is being typed (VMS redraws the line after a broadcast; readline can
-  refresh it).
+  refresh it). Settled (2026-10-12): through readline's writer, a whole
+  line at a time, the line being typed redrawn below it (see the
+  progress log).
 - Subtask 3: whether `ATTACH` is worth having without a way to detach
   (VMS's Ctrl/Y then ATTACH, or SPAWN back). Left out (2026-10-12):
   attaching to a parent would have to end its LIB$SPAWN's wait without
@@ -264,3 +267,52 @@ smaller gaps the phase left:
   WAIT interrupted, level 0, and a chain of two SPAWNs, where the key
   goes to the inner one. Tried by hand at a pseudo-terminal through
   cmd/govax's key handling, too. HELP KEYS.
+- 2026-10-12: Subtask 4, the other processes while the prompt waits.
+  At a terminal, cmd/govax's command loop reads each command line on a
+  goroutine of its own (`readCommandLine`), and meanwhile the console's
+  DCL lends the CPU (`LendWhileReading`, dcllend.go): process 1 waits in
+  LEF until the line's read is over (a line, Ctrl/C, Ctrl/Z, the end of
+  the input) or an attention key is pending, with no time limit. When
+  each of the others waits, the lending ends, and the host waits
+  `promptPoll` (10 ms, ending at once when the line comes) before the
+  scheduler looks again: a wait may end by the host's clock (a
+  subprocess's DCL WAIT) as well as by a timer. That wait is corevms's
+  `HostIdle`: no process's CPU time, and in quantum-clock mode the clock
+  moves on by the host time it took, no further than the next timer, so
+  a `$SETIMR` comes due about when it would with the host's clock. A
+  stop in another process (a HALT, a run limit) ends the lending for the
+  rest of the prompt, so its message isn't repeated (`lendCPU` now says
+  whether one did). `LendWhileIdle` still runs first, after each
+  command, so a short SPAWN/NOWAIT's output comes before the prompt.
+  With no other process, the debugger's or the interactive assembler's
+  prompt, or input from a pipe or a test, nothing changes: the read is
+  all that happens.
+
+  The other processes' output (Console.Out) goes through
+  `promptOutput` (`cmd/govax/promptout.go`) while a line is read: whole
+  lines through readline's own writer, which takes the prompt and the
+  line typed so far off the screen, writes, and draws them again below;
+  a line's start (a subprocess's prompt) is held until the line ends or
+  the read does, since the redraw would erase it. The pager now finds
+  the terminal through any writer with a file descriptor
+  (`dclcmd.outputTerminal`), as `promptOutput` has. The keys typed
+  during the read are the command line's: `attentionStdin.lineRead`
+  makes `Ready` false, so a subprocess's terminal read waits, as on VMS
+  a read queued after DCL's does, and keys typed ahead during the last
+  command aren't taken by a program first.
+
+  Left as it was: process 1 alone at the prompt is charged the time it
+  waits there with the hardware clock, as before. INQUIRE, READ
+  SYS$COMMAND, and the Ctrl/Y level read the terminal in process 1's DCL
+  without lending (only the command prompt does).
+
+  Tests: `TestHostIdle` (corevms), `TestLendWhileReading_wait` (a
+  spawned procedure's WAIT ends, and the procedure finishes and logs
+  out, while the prompt waits), `_busy` (a subprocess that never waits
+  runs, and the line ends the lending at once), `_alone`
+  (internal/console/promptlend_test.go); `TestPromptOutput` and
+  `TestAttentionStdin_readyDuringLineRead` (cmd/govax). Tried at a
+  pseudo-terminal: a spawned procedure's lines appear above a half-typed
+  line, which is redrawn; a busy subprocess's output scrolls by while a
+  command typed runs at once; Ctrl/C cancels the line and the
+  subprocess goes on; Ctrl/Y ends govax. HELP SPAWN.

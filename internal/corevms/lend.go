@@ -1,8 +1,11 @@
 package corevms
 
 import (
+	"time"
+
 	"github.com/tucats/govax/internal/cpu"
 	"github.com/tucats/govax/internal/sched"
+	"github.com/tucats/govax/internal/vmsdef"
 )
 
 // Giving the CPU up between DCL commands (docs/PHASE-50, subtask 21).
@@ -75,6 +78,31 @@ func (sys *System) LendCPU(env *Environment, over func() bool, deadline uint64) 
 	env.enterWait(true)
 
 	return true
+}
+
+// HostIdle is the console's idle time: wait blocks in the host, process
+// 1's DCL waiting for a terminal line while every other process waits
+// (docs/PHASE-51, subtask 4). As with the scheduler's own idling
+// (idle.go), the time it takes is no process's CPU time. In
+// quantum-clock mode, where emulated time counts instructions and so
+// stands still meanwhile, the clock is moved on by the host time wait
+// took, but no further than the next timer of any process, so that a
+// timer comes due about when it would have with the host's clock. With
+// no timer pending, the clock stays where it was, as it does while the
+// prompt waits with no other process.
+func (sys *System) HostIdle(e *cpu.Engine, wait func()) {
+	sys.accountTime()
+
+	start := time.Now()
+
+	wait()
+
+	if t, ok := sys.nextTimer(); ok && e != nil && !e.HardwareClock() {
+		elapsed := uint64(time.Since(start) / (time.Second / vmsdef.TicksPerSecond))
+		e.IdleUntil(min(t, e.SystemTime()+elapsed), 0)
+	}
+
+	sys.lastCharge = sys.Clock()
 }
 
 // ReclaimCPU gives env, which lent the CPU (LendCPU), the CPU back now,

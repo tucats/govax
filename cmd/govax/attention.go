@@ -106,6 +106,14 @@ type attentionStdin struct {
 	promptOn  chan struct{}
 	promptOff chan struct{}
 
+	// lineRead is true while the command loop reads a command line on a
+	// goroutine of its own, the other processes running meanwhile
+	// (readCommandLine): the keys typed are the command line's, so a
+	// program's read waits until the line has been read (Ready). It is
+	// set before readline puts the terminal in raw mode (atPrompt), so
+	// that keys typed ahead during the last command aren't taken first.
+	lineRead atomic.Bool
+
 	// aborting is true once CTRL/Y has asked govax to end.
 	aborting atomic.Bool
 
@@ -373,9 +381,15 @@ func (s *attentionStdin) Read(p []byte) (int, error) {
 // Ready reports whether a program's Read would return at once: a key is
 // waiting, or the input has ended. It makes the terminal a
 // corevms.TerminalSource, so a process reading it waits in the
-// scheduler, not in Read, until its line has been typed.
+// scheduler, not in Read, until its line has been typed. While the
+// command loop reads a command line (lineRead), the keys waiting are
+// the command line's: a program's read waits for the next.
 func (s *attentionStdin) Ready() bool {
-	if len(s.bytes) > 0 || s.pumpEnded.Load() {
+	if s.pumpEnded.Load() {
+		return true
+	}
+
+	if len(s.bytes) > 0 && !s.lineRead.Load() {
 		return true
 	}
 
@@ -433,7 +447,7 @@ func (s *attentionStdin) rawMode() (enter, exit func() error) {
 
 	exit = func() error {
 		err := rm.Exit()
-		
+
 		s.setPrompt(false)
 
 		return err
