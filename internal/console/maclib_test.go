@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/tucats/gopackages/app-cli/settings"
+	"github.com/tucats/govax/internal/dclcmd"
 	"github.com/tucats/govax/internal/lnm"
 	"github.com/tucats/govax/internal/rms"
 	"github.com/tucats/govax/internal/vmserrors"
@@ -27,7 +28,7 @@ func makeMacroLibrary(t *testing.T, c *Console, path, source string) {
 	src := strings.TrimSuffix(path, filepath.Ext(path)) + "_src.mar"
 	writeHostFile(t, src, source)
 
-	if err := c.cmd().Library(LibraryOptions{Library: path, Create: true, Macro: true, Inputs: []string{src}}); err != nil {
+	if err := c.cmd().Library(dclcmd.LibraryOptions{Library: path, Create: true, Macro: true, Inputs: []string{src}}); err != nil {
 		t.Fatalf("making %s: %v", path, err)
 	}
 }
@@ -64,7 +65,7 @@ func TestMacro_govaxStarlet(t *testing.T) {
 	src := filepath.Join(dir, "exit.mar")
 	writeHostFile(t, src, "\t.ENTRY\tSTART,^M<>\n\t$EXIT_S\tR0\n\t.END\tSTART\n")
 
-	if err := c.cmd().Macro(MacroOptions{Source: src}); err != nil {
+	if err := c.cmd().Macro(dclcmd.MacroOptions{Source: src}); err != nil {
 		t.Fatalf("Macro: %v", err)
 	}
 
@@ -105,7 +106,7 @@ func TestMacro_librarySearchOrder(t *testing.T) {
 	for _, tc := range cases {
 		writeHostFile(t, src, tc.directives+"\tWHICH\n\t.END\n")
 
-		if err := c.cmd().Macro(MacroOptions{Source: src, Libraries: tc.libraries}); err != nil {
+		if err := c.cmd().Macro(dclcmd.MacroOptions{Source: src, Libraries: tc.libraries}); err != nil {
 			t.Errorf("%s: Macro: %v", tc.name, err)
 
 			continue
@@ -118,7 +119,7 @@ func TestMacro_librarySearchOrder(t *testing.T) {
 
 	writeHostFile(t, src, "\t$EXIT_S\n\t.END\n")
 
-	if err := c.cmd().Macro(MacroOptions{Source: src, Libraries: []string{"exit"}}); err != nil {
+	if err := c.cmd().Macro(dclcmd.MacroOptions{Source: src, Libraries: []string{"exit"}}); err != nil {
 		t.Fatalf("$EXIT_S from exit.mlb: %v", err)
 	}
 
@@ -134,7 +135,7 @@ func TestMacro_libraryErrors(t *testing.T) {
 	src := filepath.Join(dir, "prog.mar")
 	writeHostFile(t, src, "\tNOP\n\t.END\n")
 
-	err := c.cmd().Macro(MacroOptions{Source: src, Libraries: []string{"none"}})
+	err := c.cmd().Macro(dclcmd.MacroOptions{Source: src, Libraries: []string{"none"}})
 	if !errors.Is(err, vmserrors.New(vmserrors.SS_NOSUCHFILE)) {
 		t.Errorf("missing /LIBRARY file: %v, want SS_NOSUCHFILE", err)
 	}
@@ -143,15 +144,15 @@ func TestMacro_libraryErrors(t *testing.T) {
 	objSrc := filepath.Join(dir, "sub.mar")
 	writeHostFile(t, objSrc, "\t.ENTRY\tSUB,^M<>\n\tRET\n\t.END\n")
 
-	if err := c.cmd().Macro(MacroOptions{Source: objSrc}); err != nil {
+	if err := c.cmd().Macro(dclcmd.MacroOptions{Source: objSrc}); err != nil {
 		t.Fatal(err)
 	}
 
-	if err := c.cmd().Library(LibraryOptions{Library: filepath.Join(dir, "objs.olb"), Create: true, Inputs: []string{filepath.Join(dir, "sub.obj")}}); err != nil {
+	if err := c.cmd().Library(dclcmd.LibraryOptions{Library: filepath.Join(dir, "objs.olb"), Create: true, Inputs: []string{filepath.Join(dir, "sub.obj")}}); err != nil {
 		t.Fatal(err)
 	}
 
-	err = c.cmd().Macro(MacroOptions{Source: src, Libraries: []string{"objs.olb"}})
+	err = c.cmd().Macro(dclcmd.MacroOptions{Source: src, Libraries: []string{"objs.olb"}})
 	if !errors.Is(err, vmserrors.New(vmserrors.CLI_LIBRARY)) {
 		t.Errorf("object library as /LIBRARY: %v, want CLI_LIBRARY", err)
 	}
@@ -159,7 +160,7 @@ func TestMacro_libraryErrors(t *testing.T) {
 	// A .LIBRARY file that isn't there is an assembly error.
 	writeHostFile(t, src, "\t.LIBRARY\t/none/\n\t.END\n")
 
-	if err := c.cmd().Macro(MacroOptions{Source: src}); !errors.Is(err, vmserrors.New(vmserrors.CLI_ASMERRORS)) {
+	if err := c.cmd().Macro(dclcmd.MacroOptions{Source: src}); !errors.Is(err, vmserrors.New(vmserrors.CLI_ASMERRORS)) {
 		t.Errorf("missing .LIBRARY file: %v, want CLI_ASMERRORS", err)
 	}
 }
@@ -176,7 +177,7 @@ func TestMacro_starletReadWhenNeeded(t *testing.T) {
 	src := filepath.Join(dir, "prog.mar")
 	writeHostFile(t, src, "\tNOP\n\t.END\n")
 
-	if err := c.cmd().Macro(MacroOptions{Source: src}); err != nil {
+	if err := c.cmd().Macro(dclcmd.MacroOptions{Source: src}); err != nil {
 		t.Fatalf("a program without library macros: %v", err)
 	}
 
@@ -185,7 +186,7 @@ func TestMacro_starletReadWhenNeeded(t *testing.T) {
 	var out strings.Builder
 	c.Out = &out
 
-	if err := c.cmd().Macro(MacroOptions{Source: src}); !errors.Is(err, vmserrors.New(vmserrors.CLI_ASMERRORS)) {
+	if err := c.cmd().Macro(dclcmd.MacroOptions{Source: src}); !errors.Is(err, vmserrors.New(vmserrors.CLI_ASMERRORS)) {
 		t.Fatalf("$EXIT_S with a bad STARLET.MLB: %v, want CLI_ASMERRORS", err)
 	}
 
@@ -208,7 +209,7 @@ func TestMacro_starletSources(t *testing.T) {
 
 	writeHostFile(t, src, "\tWHICH\n\t.END\n")
 
-	if err := c.cmd().Macro(MacroOptions{Source: src}); err != nil {
+	if err := c.cmd().Macro(dclcmd.MacroOptions{Source: src}); err != nil {
 		t.Fatalf("host STARLET.MLB: %v", err)
 	}
 
@@ -237,7 +238,7 @@ func TestMacro_starletSources(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err := c.cmd().Macro(MacroOptions{Source: src}); err != nil {
+	if err := c.cmd().Macro(dclcmd.MacroOptions{Source: src}); err != nil {
 		t.Fatalf("SYS$LIBRARY:STARLET.MLB: %v", err)
 	}
 
@@ -266,7 +267,7 @@ func TestMacro_realStarlet(t *testing.T) {
 		"\t$QIOW_S\tCHAN=#1,FUNC=#IO$_WRITEVBLK,P1=MSG,P2=#3\n"+
 		"\t$EXIT_S\tR0\nMSG:\t.ASCII\t/HI!/\n\t.END\tSTART\n")
 
-	if err := c.cmd().Macro(MacroOptions{Source: src}); err != nil {
+	if err := c.cmd().Macro(dclcmd.MacroOptions{Source: src}); err != nil {
 		t.Fatalf("Macro: %v", err)
 	}
 
@@ -280,7 +281,7 @@ func TestMacro_realStarlet(t *testing.T) {
 // TestHostLibraryDir checks where the host library directory comes from:
 // the console's own, then vax.library, then vax.link.library.
 func TestHostLibraryDir(t *testing.T) {
-	for _, key := range []string{LibrarySetting, LegacyLibrarySetting} {
+	for _, key := range []string{dclcmd.LibrarySetting, dclcmd.LegacyLibrarySetting} {
 		old, had := settings.Get(key), settings.Exists(key)
 
 		t.Cleanup(func() {
@@ -294,22 +295,22 @@ func TestHostLibraryDir(t *testing.T) {
 
 	c, _ := newTestConsole(t)
 
-	settings.Set(LegacyLibrarySetting, "/old")
-	_ = settings.Delete(LibrarySetting)
+	settings.Set(dclcmd.LegacyLibrarySetting, "/old")
+	_ = settings.Delete(dclcmd.LibrarySetting)
 
-	if got := c.cmd().hostLibraryDir(); got != "/old" {
+	if got := c.cmd().HostLibraryDir(); got != "/old" {
 		t.Errorf("with only vax.link.library: %q", got)
 	}
 
-	settings.Set(LibrarySetting, "/new")
+	settings.Set(dclcmd.LibrarySetting, "/new")
 
-	if got := c.cmd().hostLibraryDir(); got != "/new" {
+	if got := c.cmd().HostLibraryDir(); got != "/new" {
 		t.Errorf("with vax.library too: %q", got)
 	}
 
 	c.HostLibrary = "/mine"
 
-	if got := c.cmd().hostLibraryDir(); got != "/mine" {
+	if got := c.cmd().HostLibraryDir(); got != "/mine" {
 		t.Errorf("with the console's own: %q", got)
 	}
 }

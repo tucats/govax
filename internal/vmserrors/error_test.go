@@ -50,7 +50,7 @@ func TestSSMountCodesMatchRealSSDEF(t *testing.T) {
 // TestErrorMountCodesFormatDeviceName confirms the three MOUNT/DISMOUNT
 // status codes render their device-name argument into readable message
 // text, including SS_NOMOUNT's wrapped-cause case (vmserrors.Wrap, used
-// by internal/console/mount.go when the underlying internal/rms.MountTable
+// by internal/dclcmd/mount.go when the underlying internal/rms.MountTable
 // call itself fails).
 func TestErrorMountCodesFormatDeviceName(t *testing.T) {
 	if got, want := New(SS_DEVMOUNT, "DUA0").Error(), "SYSTEM-F-DEVMOUNT, Device DUA0 already mounted"; got != want {

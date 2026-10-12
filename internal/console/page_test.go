@@ -7,6 +7,8 @@ import (
 	"testing"
 
 	"github.com/tucats/gopackages/app-cli/settings"
+
+	"github.com/tucats/govax/internal/dclcmd"
 )
 
 // numberedLines is n lines of text, "line 1" through "line n".
@@ -38,8 +40,8 @@ func TestPage_returnShowsEveryScreen(t *testing.T) {
 	c, buf := pagedConsole(t, 5, 0, "\n\n\n")
 	c.cmd().Page(numberedLines(10))
 
-	want := "line 1\nline 2\nline 3\nline 4\n" + PagePrompt + "\n" +
-		"line 5\nline 6\nline 7\nline 8\n" + PagePrompt + "\n" +
+	want := "line 1\nline 2\nline 3\nline 4\n" + dclcmd.PagePrompt + "\n" +
+		"line 5\nline 6\nline 7\nline 8\n" + dclcmd.PagePrompt + "\n" +
 		"line 9\nline 10\n"
 	if buf.String() != want {
 		t.Errorf("output =\n%q\nwant\n%q", buf.String(), want)
@@ -85,7 +87,7 @@ func TestPage_longLinesWrap(t *testing.T) {
 
 	// "short" (1 row) + the long line (3 rows) fill the 4 rows; "after"
 	// starts the next screen.
-	want := "short\n" + strings.Repeat("x", 25) + "\n" + PagePrompt + "\nafter\n"
+	want := "short\n" + strings.Repeat("x", 25) + "\n" + dclcmd.PagePrompt + "\nafter\n"
 	if buf.String() != want {
 		t.Errorf("output =\n%q\nwant\n%q", buf.String(), want)
 	}
@@ -94,25 +96,25 @@ func TestPage_longLinesWrap(t *testing.T) {
 // TestScreenSize_setting: with no terminal, vax.console.lines gives the
 // height, and 24 with it unset.
 func TestScreenSize_setting(t *testing.T) {
-	old, had := settings.Get(ConsoleLinesSetting), settings.Exists(ConsoleLinesSetting)
+	old, had := settings.Get(dclcmd.ConsoleLinesSetting), settings.Exists(dclcmd.ConsoleLinesSetting)
 
 	t.Cleanup(func() {
 		if had {
-			settings.Set(ConsoleLinesSetting, old)
+			settings.Set(dclcmd.ConsoleLinesSetting, old)
 		} else {
-			_ = settings.Delete(ConsoleLinesSetting)
+			_ = settings.Delete(dclcmd.ConsoleLinesSetting)
 		}
 	})
 
 	c, _ := newTestConsole(t)
 
-	_ = settings.Delete(ConsoleLinesSetting)
+	_ = settings.Delete(dclcmd.ConsoleLinesSetting)
 
-	if h, _ := c.cmd().TerminalSize(); h != DefaultScreenLines {
-		t.Errorf("unset: height = %d, want %d", h, DefaultScreenLines)
+	if h, _ := c.cmd().TerminalSize(); h != dclcmd.DefaultScreenLines {
+		t.Errorf("unset: height = %d, want %d", h, dclcmd.DefaultScreenLines)
 	}
 
-	settings.Set(ConsoleLinesSetting, "40")
+	settings.Set(dclcmd.ConsoleLinesSetting, "40")
 
 	if h, _ := c.cmd().TerminalSize(); h != 40 {
 		t.Errorf("vax.console.lines=40: height = %d, want 40", h)
@@ -147,7 +149,7 @@ func TestDispatch_typePage(t *testing.T) {
 	}
 
 	out := buf.String()
-	if !strings.Contains(out, PagePrompt) || strings.Contains(out, "line 5") {
+	if !strings.Contains(out, dclcmd.PagePrompt) || strings.Contains(out, "line 5") {
 		t.Errorf("output = %q, want one screen and the prompt", out)
 	}
 }

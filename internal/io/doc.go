@@ -10,7 +10,7 @@
 //
 // Scope: this package owns the data structures and lookup/definition logic
 // (find_device/define_device/get_dev_class_name) that Phase 08's console
-// commands (SHOW DEVICE, DEFINE/DEVICE — see internal/console/device.go)
+// commands (SHOW DEVICE, DEFINE/DEVICE — see internal/dclcmd/device.go)
 // and Phase 10's RTL system services (SYS$GETDVIW, SYS$ASSIGN) build on. The actual system-service
 // call marshaling (SSDEF's argc/argv-from-VAX-memory convention, item-list
 // walking) belongs to Phase 10 (RTL simulators), since it needs the RTL

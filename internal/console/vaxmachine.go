@@ -77,7 +77,7 @@ type Machine struct {
 	// Mounts is docs/PHASE-22.md's device-name -> mounted-ODS-2-volume
 	// table (internal/rms.MountTable): which VAX device names currently
 	// have a real disk-image container mounted on them, populated by the
-	// console MOUNT/DISMOUNT commands (internal/console/device.go). Built
+	// console MOUNT/DISMOUNT commands (internal/dclcmd/device.go). Built
 	// once, here, alongside Devices/Logicals rather than by Init/Zero,
 	// since a mounted volume — like a defined device or logical name — is
 	// operator/session state that has nothing to do with the emulated

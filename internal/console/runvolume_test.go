@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"testing"
 
+	"github.com/tucats/govax/internal/dclcmd"
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
@@ -21,11 +22,11 @@ func TestRun_imageOnVolume(t *testing.T) {
 	writeHostFile(t, filepath.Join(dir, "main.mar"), "\t.PSECT\tCODE,NOWRT,EXE\n"+
 		"\t.ENTRY\tSTART,^M<>\n\tMOVL\t#42,R0\n\tRET\n\t.END\tSTART\n")
 
-	if err := c.cmd().Macro(MacroOptions{Source: filepath.Join(dir, "main.mar"), Object: "DUA0:[000000]MAIN.OBJ"}); err != nil {
+	if err := c.cmd().Macro(dclcmd.MacroOptions{Source: filepath.Join(dir, "main.mar"), Object: "DUA0:[000000]MAIN.OBJ"}); err != nil {
 		t.Fatal(err)
 	}
 
-	if err := c.cmd().Link(LinkOptions{Objects: []string{"DUA0:[000000]MAIN"}}); err != nil {
+	if err := c.cmd().Link(dclcmd.LinkOptions{Objects: []string{"DUA0:[000000]MAIN"}}); err != nil {
 		t.Fatal(err)
 	}
 
@@ -78,7 +79,7 @@ func TestDispatch_runHost(t *testing.T) {
 
 	exe := filepath.Join(dir, "entry.exe")
 	
-	if err := c.cmd().Link(LinkOptions{Objects: []string{filepath.Join(dir, "entry")}}); err != nil {
+	if err := c.cmd().Link(dclcmd.LinkOptions{Objects: []string{filepath.Join(dir, "entry")}}); err != nil {
 		t.Fatal(err)
 	}
 
@@ -102,13 +103,13 @@ func TestRun_recordUpdates(t *testing.T) {
 	c := newBootableConsole(t)
 	mountFreshContainer(t, c, "DUA0")
 
-	if err := c.cmd().Macro(MacroOptions{
+	if err := c.cmd().Macro(dclcmd.MacroOptions{
 		Source: filepath.Join("..", "..", "testdata", "rms49", "update.mar"), Object: "DUA0:[000000]UPDATE.OBJ",
 	}); err != nil {
 		t.Fatal(err)
 	}
 
-	if err := c.cmd().Link(LinkOptions{Objects: []string{"DUA0:[000000]UPDATE"}}); err != nil {
+	if err := c.cmd().Link(dclcmd.LinkOptions{Objects: []string{"DUA0:[000000]UPDATE"}}); err != nil {
 		t.Fatal(err)
 	}
 
@@ -124,13 +125,13 @@ func TestRun_fileSections(t *testing.T) {
 	c := newBootableConsole(t)
 	mountFreshContainer(t, c, "DUA0")
 
-	if err := c.cmd().Macro(MacroOptions{
+	if err := c.cmd().Macro(dclcmd.MacroOptions{
 		Source: filepath.Join("..", "..", "testdata", "sec49", "mapfile.mar"), Object: "DUA0:[000000]MAPFILE.OBJ",
 	}); err != nil {
 		t.Fatal(err)
 	}
 
-	if err := c.cmd().Link(LinkOptions{Objects: []string{"DUA0:[000000]MAPFILE"}}); err != nil {
+	if err := c.cmd().Link(dclcmd.LinkOptions{Objects: []string{"DUA0:[000000]MAPFILE"}}); err != nil {
 		t.Fatal(err)
 	}
 

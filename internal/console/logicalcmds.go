@@ -5,6 +5,7 @@ import (
 
 	"github.com/tucats/govax/internal/corevms"
 	"github.com/tucats/govax/internal/dcl"
+	"github.com/tucats/govax/internal/dclcmd"
 	"github.com/tucats/govax/internal/lnm"
 )
 
@@ -13,7 +14,7 @@ import (
 // reports for this process), plus the process-permanent terminal names.
 func newLogicals() *lnm.Database {
 	db := lnm.NewDatabase(corevms.NominalUIC)
-	if err := db.DefineProcessNames(ConsoleTerminal); err != nil {
+	if err := db.DefineProcessNames(dclcmd.ConsoleTerminal); err != nil {
 		// Only reachable if the fixed names above were invalid.
 		panic(err)
 	}
@@ -66,7 +67,7 @@ func bindLogicalCommands(g *dcl.Grammar, c *Console) {
 	})
 
 	g.Bind("CREATE_DIRECTORY", func(id int64, r *dcl.Result) error {
-		req := CreateDirectoryRequest{
+		req := dclcmd.CreateDirectoryRequest{
 			Directories: r.List("DIRECTORIES"),
 			OwnerUIC:    r.String("OWNER_UIC"),
 			Protection:  r.List("PROTECTION"),

@@ -10,6 +10,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/tucats/govax/internal/dclcmd"
 	"github.com/tucats/govax/internal/rms"
 )
 
@@ -104,11 +105,11 @@ func runInsn35Probe(t *testing.T, name string) []insn35Record {
 	src := filepath.Join("..", "..", "testdata", "insn35", lower+".mar")
 	dir := t.TempDir()
 
-	if err := c.cmd().Macro(MacroOptions{Source: src, Object: filepath.Join(dir, lower+".obj")}); err != nil {
+	if err := c.cmd().Macro(dclcmd.MacroOptions{Source: src, Object: filepath.Join(dir, lower+".obj")}); err != nil {
 		t.Fatalf("MACRO: %v", err)
 	}
 
-	if err := c.cmd().Link(LinkOptions{Objects: []string{filepath.Join(dir, lower)}}); err != nil {
+	if err := c.cmd().Link(dclcmd.LinkOptions{Objects: []string{filepath.Join(dir, lower)}}); err != nil {
 		t.Fatalf("LINK: %v", err)
 	}
 

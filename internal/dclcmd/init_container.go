@@ -1,4 +1,4 @@
-package console
+package dclcmd
 
 import (
 	"github.com/tucats/govax/internal/rms"
@@ -16,15 +16,15 @@ import (
 //
 // # A note for a reader new to Go
 //
-// The method below has the receiver "(c *Console)", meaning it's called as
-// c.InitializeContainer(...) on a *Console value. It doesn't need to read
-// or write any of Console's own fields (c.Mounts, c.ContainerSession, ...)
+// The method below has the receiver "(c *Context)", meaning it's called as
+// c.InitializeContainer(...) on a *Context value. It doesn't need to read
+// or write any of Context's own fields (c.Mounts, c.ContainerSession, ...)
 // — unlike Mount, INITIALIZE/CONTAINER doesn't touch the mount table or
 // the operator's current default directory at all, it just builds a new,
 // unattached container file — but it's still defined as a method (rather
 // than a free function) to match every other console command's calling
-// convention (d.Console.InitializeContainer(...) from dispatch.go, the
-// same shape as d.Console.Mount(...)).
+// convention (d.Console.cmd().InitializeContainer(...) from internal/console/dispatch.go,
+// the same shape as d.Console.cmd().Mount(...)).
 
 // InitializeContainer formats path as a brand-new, empty ODS-2 volume: a
 // zero-filled host file of blocks 512-byte blocks, with just enough

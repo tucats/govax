@@ -1,4 +1,4 @@
-package console
+package dclcmd
 
 import "github.com/tucats/govax/internal/vmserrors"
 
@@ -13,9 +13,9 @@ import "github.com/tucats/govax/internal/vmserrors"
 //
 // # A note for a reader new to Go
 //
-// Both methods below have the receiver "(c *Console)", meaning they're
-// called as c.SetDefault(...)/c.ShowDefault() on a *Console value — see
-// machine.go's own Console type for what state they read and write
+// Both methods below have the receiver "(c *Context)", meaning they're
+// called as c.SetDefault(...)/c.ShowDefault() on a *Context value — see
+// context.go's Context type for what state they read and write
 // (c.ContainerSession). Returning a plain "error" (Go's built-in error
 // interface) is this whole codebase's convention for "something went
 // wrong, describe it to the caller"; internal/vmserrors.VMSError (what

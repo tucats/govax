@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/tucats/govax/internal/asm"
+	"github.com/tucats/govax/internal/dclcmd"
 	"github.com/tucats/govax/internal/lbr"
 	"github.com/tucats/govax/internal/link"
 	"github.com/tucats/govax/internal/rms"
@@ -74,7 +75,7 @@ func TestLibrary_macroHost(t *testing.T) {
 	writeHostFile(t, src, libMacros)
 
 	lib := filepath.Join(dir, "mine")
-	if err := c.cmd().Library(LibraryOptions{Library: lib, Create: true, Macro: true, Inputs: []string{src}, Log: true}); err != nil {
+	if err := c.cmd().Library(dclcmd.LibraryOptions{Library: lib, Create: true, Macro: true, Inputs: []string{src}, Log: true}); err != nil {
 		t.Fatalf("LIBRARY/CREATE: %v", err)
 	}
 
@@ -98,7 +99,7 @@ func TestLibrary_macroHost(t *testing.T) {
 	writeHostFile(t, src, strings.ReplaceAll(libMacros, "CLRL", "CLRQ"))
 	out.Reset()
 
-	if err := c.cmd().Library(LibraryOptions{Library: libFile.Name, Insert: true, Inputs: []string{src}}); err != nil {
+	if err := c.cmd().Library(dclcmd.LibraryOptions{Library: libFile.Name, Insert: true, Inputs: []string{src}}); err != nil {
 		t.Fatal(err)
 	}
 
@@ -111,7 +112,7 @@ func TestLibrary_macroHost(t *testing.T) {
 	// the comment.
 	out.Reset()
 
-	if err := c.cmd().Library(LibraryOptions{Library: libFile.Name, Inputs: []string{src}, NoSqueeze: true, Log: true}); err != nil {
+	if err := c.cmd().Library(dclcmd.LibraryOptions{Library: libFile.Name, Inputs: []string{src}, NoSqueeze: true, Log: true}); err != nil {
 		t.Fatal(err)
 	}
 
@@ -123,7 +124,7 @@ func TestLibrary_macroHost(t *testing.T) {
 
 	// /EXTRACT, by wildcard, to the default output: the library's name
 	// with type MAR.
-	if err := c.cmd().Library(LibraryOptions{Library: libFile.Name, Extract: []string{"st*"}}); err != nil {
+	if err := c.cmd().Library(dclcmd.LibraryOptions{Library: libFile.Name, Extract: []string{"st*"}}); err != nil {
 		t.Fatal(err)
 	}
 
@@ -134,7 +135,7 @@ func TestLibrary_macroHost(t *testing.T) {
 	// /DELETE, then /LIST.
 	out.Reset()
 
-	if err := c.cmd().Library(LibraryOptions{Library: libFile.Name, Delete: []string{"STORE", "NONE%"}, List: true, Full: true}); err != nil {
+	if err := c.cmd().Library(dclcmd.LibraryOptions{Library: libFile.Name, Delete: []string{"STORE", "NONE%"}, List: true, Full: true}); err != nil {
 		t.Fatal(err)
 	}
 
@@ -189,19 +190,19 @@ func TestLibrary_objectLink(t *testing.T) {
 	for name, text := range map[string]string{"main": libMain, "sub": libSub} {
 		writeHostFile(t, filepath.Join(dir, name+".mar"), text)
 
-		if err := c.cmd().Macro(MacroOptions{Source: filepath.Join(dir, name+".mar")}); err != nil {
+		if err := c.cmd().Macro(dclcmd.MacroOptions{Source: filepath.Join(dir, name+".mar")}); err != nil {
 			t.Fatal(err)
 		}
 	}
 
 	lib := filepath.Join(dir, "subs.olb")
-	if err := c.cmd().Library(LibraryOptions{Library: lib, Create: true, Inputs: []string{filepath.Join(dir, "sub")}, Selective: true}); err != nil {
+	if err := c.cmd().Library(dclcmd.LibraryOptions{Library: lib, Create: true, Inputs: []string{filepath.Join(dir, "sub")}, Selective: true}); err != nil {
 		t.Fatalf("LIBRARY/CREATE: %v", err)
 	}
 
 	out.Reset()
 
-	if err := c.cmd().Library(LibraryOptions{Library: lib, List: true, Full: true, Names: true}); err != nil {
+	if err := c.cmd().Library(dclcmd.LibraryOptions{Library: lib, List: true, Full: true, Names: true}); err != nil {
 		t.Fatal(err)
 	}
 
@@ -219,7 +220,7 @@ func TestLibrary_objectLink(t *testing.T) {
 
 	out.Reset()
 
-	err := c.cmd().Link(LinkOptions{
+	err := c.cmd().Link(dclcmd.LinkOptions{
 		Files:      []link.InputFile{{Name: filepath.Join(dir, "main")}, {Name: lib, Library: true}},
 		Executable: exe,
 	})
@@ -232,11 +233,11 @@ func TestLibrary_objectLink(t *testing.T) {
 	}
 
 	// A macro source can't go in an object library.
-	if err := c.cmd().Library(LibraryOptions{Library: lib, Inputs: []string{filepath.Join(dir, "main.mar")}}); err == nil {
+	if err := c.cmd().Library(dclcmd.LibraryOptions{Library: lib, Inputs: []string{filepath.Join(dir, "main.mar")}}); err == nil {
 		t.Error("inserted a macro source in an object library")
 	}
 
-	if err := c.cmd().Library(LibraryOptions{Library: lib, Macro: true, List: true}); err == nil {
+	if err := c.cmd().Library(dclcmd.LibraryOptions{Library: lib, Macro: true, List: true}); err == nil {
 		t.Error("/MACRO on an object library was accepted")
 	}
 }
@@ -251,11 +252,11 @@ func TestLibrary_volume(t *testing.T) {
 	src := filepath.Join(t.TempDir(), "macros.mar")
 	writeHostFile(t, src, libMacros)
 
-	if err := c.cmd().Library(LibraryOptions{Library: "DUA0:[000000]MINE", Create: true, Macro: true, Inputs: []string{src}}); err != nil {
+	if err := c.cmd().Library(dclcmd.LibraryOptions{Library: "DUA0:[000000]MINE", Create: true, Macro: true, Inputs: []string{src}}); err != nil {
 		t.Fatalf("LIBRARY/CREATE: %v", err)
 	}
 
-	if err := c.cmd().Library(LibraryOptions{Library: "DUA0:[000000]MINE.MLB", Delete: []string{"CLEAR"}, List: true, ListFile: "MINE"}); err != nil {
+	if err := c.cmd().Library(dclcmd.LibraryOptions{Library: "DUA0:[000000]MINE.MLB", Delete: []string{"CLEAR"}, List: true, ListFile: "MINE"}); err != nil {
 		t.Fatalf("LIBRARY/DELETE: %v", err)
 	}
 
@@ -274,7 +275,7 @@ func TestLibrary_volume(t *testing.T) {
 	}
 
 	// /CREATE makes a new version, as on VMS.
-	if err := c.cmd().Library(LibraryOptions{Library: "DUA0:[000000]MINE", Create: true, Macro: true}); err != nil {
+	if err := c.cmd().Library(dclcmd.LibraryOptions{Library: "DUA0:[000000]MINE", Create: true, Macro: true}); err != nil {
 		t.Fatal(err)
 	}
 
@@ -296,7 +297,7 @@ func TestLibrary_errorsLeaveLibrary(t *testing.T) {
 	writeHostFile(t, src, libMacros)
 
 	lib := filepath.Join(dir, "mine.mlb")
-	if err := c.cmd().Library(LibraryOptions{Library: lib, Create: true, Macro: true, Inputs: []string{src}}); err != nil {
+	if err := c.cmd().Library(dclcmd.LibraryOptions{Library: lib, Create: true, Macro: true, Inputs: []string{src}}); err != nil {
 		t.Fatal(err)
 	}
 
@@ -305,7 +306,7 @@ func TestLibrary_errorsLeaveLibrary(t *testing.T) {
 	bad := filepath.Join(dir, "bad.mar")
 	writeHostFile(t, bad, "\t.MACRO\tNEW\n\tNOP\n")
 
-	for _, opts := range []LibraryOptions{
+	for _, opts := range []dclcmd.LibraryOptions{
 		{Library: lib, Inputs: []string{src, bad}},                   // an unfinished macro
 		{Library: lib, Inputs: []string{filepath.Join(dir, "none")}}, // no such file
 		{Library: lib},               // nothing to do

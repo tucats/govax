@@ -1,4 +1,4 @@
-package console
+package dclcmd
 
 import (
 	"github.com/tucats/govax/internal/rms"

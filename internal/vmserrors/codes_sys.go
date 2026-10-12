@@ -63,19 +63,19 @@ const (
 	// SS_DEVMOUNT is real VMS's SS$_DEVMOUNT (108, per
 	// reference/eVAX/eVAX/Headers/ss_def.h): docs/PHASE-22.md's MOUNT
 	// command reports this when asked to mount a device that already has
-	// a volume mounted on it (internal/console/mount.go), matching real
+	// a volume mounted on it (internal/dclcmd/mount.go), matching real
 	// MOUNT's refusal to implicitly swap an already-mounted device's
 	// volume out from under it.
 	SS_DEVMOUNT = SYSFacility<<FacilityPosition | sysDevMount<<MessagePosition | StatusSevere
 
 	// SS_DEVNOTMOUNT is real VMS's SS$_DEVNOTMOUNT (124): reported by
-	// DISMOUNT (internal/console/mount.go) when asked to dismount a
+	// DISMOUNT (internal/dclcmd/mount.go) when asked to dismount a
 	// device with nothing currently mounted on it.
 	SS_DEVNOTMOUNT = SYSFacility<<FacilityPosition | sysDevNotMount<<MessagePosition | StatusSevere
 
 	// SS_NOMOUNT is real VMS's SS$_NOMOUNT (10380): the generic "the MOUNT
 	// (or DISMOUNT) operation itself could not be completed" status
-	// (internal/console/mount.go) for every other failure — a container
+	// (internal/dclcmd/mount.go) for every other failure — a container
 	// file that doesn't exist or isn't a valid ODS-2 volume, or an I/O
 	// error while dismounting — as opposed to SS_DEVMOUNT/SS_DEVNOTMOUNT's
 	// more specific "wrong state" conditions above.
@@ -83,7 +83,7 @@ const (
 
 	// SS_NOSUCHFILE is real VMS's SS$_NOSUCHFILE (2320, per
 	// reference/eVAX/eVAX/Headers/ss_def.h): docs/PHASE-23.md's DELETE
-	// (internal/console/delete.go) reports this when a file specification's
+	// (internal/dclcmd/delete.go) reports this when a file specification's
 	// name/type/version pattern matches nothing on its resolved volume --
 	// the operator-console-facing "not found" status the design section's
 	// "Status-code / error translation" section earmarked for DELETE/TYPE/

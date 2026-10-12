@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/tucats/govax/internal/dclcmd"
 	"github.com/tucats/govax/internal/rms"
 	"github.com/tucats/govax/internal/vmserrors"
 )
@@ -59,7 +60,7 @@ func TestMacro_listHost(t *testing.T) {
 	}
 
 	command := `MACRO "` + src + `"/LIST`
-	if err := c.cmd().Macro(MacroOptions{Source: src, List: true, CommandLine: command}); err != nil {
+	if err := c.cmd().Macro(dclcmd.MacroOptions{Source: src, List: true, CommandLine: command}); err != nil {
 		t.Fatalf("Macro: %v", err)
 	}
 
@@ -73,7 +74,7 @@ func TestMacro_listHost(t *testing.T) {
 		t.Fatalf("first line = %q, want a form feed and the module's name", lines[0])
 	}
 
-	if !strings.Contains(lines[0], "govax MACRO V"+BuildVersion) {
+	if !strings.Contains(lines[0], "govax MACRO V"+dclcmd.BuildVersion) {
 		t.Errorf("heading = %q, want it to name govax MACRO", lines[0])
 	}
 
@@ -105,7 +106,7 @@ func TestMacro_listNamed(t *testing.T) {
 	src := filepath.Join(dir, "small.mar")
 	writeHostFile(t, src, macroSource)
 
-	if err := c.cmd().Macro(MacroOptions{Source: src, NoObject: true}); err != nil {
+	if err := c.cmd().Macro(dclcmd.MacroOptions{Source: src, NoObject: true}); err != nil {
 		t.Fatalf("Macro: %v", err)
 	}
 
@@ -113,7 +114,7 @@ func TestMacro_listNamed(t *testing.T) {
 		t.Errorf("no /LIST left %v", names)
 	}
 
-	if err := c.cmd().Macro(MacroOptions{Source: src, NoObject: true, List: true, ListFile: "named.lis"}); err != nil {
+	if err := c.cmd().Macro(dclcmd.MacroOptions{Source: src, NoObject: true, List: true, ListFile: "named.lis"}); err != nil {
 		t.Fatalf("Macro: %v", err)
 	}
 
@@ -125,7 +126,7 @@ func TestMacro_listNamed(t *testing.T) {
 	}
 
 	other := filepath.Join(t.TempDir(), "elsewhere.lis")
-	if err := c.cmd().Macro(MacroOptions{Source: src, NoObject: true, List: true, ListFile: other}); err != nil {
+	if err := c.cmd().Macro(dclcmd.MacroOptions{Source: src, NoObject: true, List: true, ListFile: other}); err != nil {
 		t.Fatalf("Macro: %v", err)
 	}
 
@@ -140,7 +141,7 @@ func TestMacro_listAfterErrors(t *testing.T) {
 	src := filepath.Join(dir, "bad.mar")
 	writeHostFile(t, src, "\t.PSECT\tCODE\n\tBOGUS\n\tRSB\n\t.END\n")
 
-	err := c.cmd().Macro(MacroOptions{Source: src, List: true})
+	err := c.cmd().Macro(dclcmd.MacroOptions{Source: src, List: true})
 	if !errors.Is(err, vmserrors.New(vmserrors.CLI_ASMERRORS)) {
 		t.Fatalf("Macro error = %v, want CLI_ASMERRORS", err)
 	}
@@ -178,7 +179,7 @@ func TestMacro_listVolume(t *testing.T) {
 		t.Fatalf("RevisionDate = %v, %v; want the header's date", revised, err)
 	}
 
-	if err := c.cmd().Macro(MacroOptions{Source: "DUA0:[000000]SMALL", List: true}); err != nil {
+	if err := c.cmd().Macro(dclcmd.MacroOptions{Source: "DUA0:[000000]SMALL", List: true}); err != nil {
 		t.Fatalf("Macro: %v", err)
 	}
 
@@ -189,7 +190,7 @@ func TestMacro_listVolume(t *testing.T) {
 		t.Errorf("second heading line = %q, want %s and the source's specification", lines[1], date)
 	}
 
-	if err := c.cmd().Macro(MacroOptions{Source: "DUA0:[000000]SMALL", List: true, ListFile: "OTHER"}); err != nil {
+	if err := c.cmd().Macro(dclcmd.MacroOptions{Source: "DUA0:[000000]SMALL", List: true, ListFile: "OTHER"}); err != nil {
 		t.Fatalf("Macro: %v", err)
 	}
 
@@ -207,7 +208,7 @@ func TestMacro_listLibraryNames(t *testing.T) {
 	src := filepath.Join(dir, "prog.mar")
 	writeHostFile(t, src, "\tWHICH\n\t.END\n")
 
-	if err := c.cmd().Macro(MacroOptions{Source: src, NoObject: true, List: true, Libraries: []string{"mine"}}); err != nil {
+	if err := c.cmd().Macro(dclcmd.MacroOptions{Source: src, NoObject: true, List: true, Libraries: []string{"mine"}}); err != nil {
 		t.Fatalf("Macro: %v", err)
 	}
 

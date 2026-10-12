@@ -7,6 +7,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/tucats/govax/internal/dclcmd"
 	"github.com/tucats/govax/internal/link"
 	"github.com/tucats/govax/internal/lnm"
 	"github.com/tucats/govax/internal/rms"
@@ -62,7 +63,7 @@ func TestCapturedLIBRTLMatchesImage(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	govax := GovaxSymbols(shimTable)
+	govax := dclcmd.GovaxSymbols(shimTable)
 
 	want, _ := src.Image(name)
 	if got, ok := govax.Image(name); !ok || got != want {
@@ -116,7 +117,7 @@ func TestLink_capturedRoutineWithoutLibraries(t *testing.T) {
 	writeHostFile(t, filepath.Join(dir, "getin.mar"), "\t.PSECT\tC,NOWRT,EXE\n\t.ENTRY\tGO,^M<>\n"+
 		"\tCALLS\t#0,G^LIB$GET_INPUT\n\tMOVL\t#SS$_NORMAL,R0\n\tRET\n\t.END\tGO\n")
 
-	if err := c.cmd().Macro(MacroOptions{Source: filepath.Join(dir, "getin.mar")}); err != nil {
+	if err := c.cmd().Macro(dclcmd.MacroOptions{Source: filepath.Join(dir, "getin.mar")}); err != nil {
 		t.Fatal(err)
 	}
 
@@ -125,7 +126,7 @@ func TestLink_capturedRoutineWithoutLibraries(t *testing.T) {
 
 		out.Reset()
 
-		if err := c.cmd().Link(LinkOptions{Objects: []string{filepath.Join(dir, "getin")}}); err != nil {
+		if err := c.cmd().Link(dclcmd.LinkOptions{Objects: []string{filepath.Join(dir, "getin")}}); err != nil {
 			t.Fatalf("LINK: %v", err)
 		}
 
@@ -156,7 +157,7 @@ func TestLink_capturedRoutineWithoutLibraries(t *testing.T) {
 
 // linkHello assembles and links hello with c's LINK, and returns the
 // image.
-func linkHello(t *testing.T, c *Console, opts LinkOptions) []byte {
+func linkHello(t *testing.T, c *Console, opts dclcmd.LinkOptions) []byte {
 	t.Helper()
 
 	dir := t.TempDir()
@@ -205,8 +206,8 @@ func TestLink_libraryDirectory(t *testing.T) {
 	c.Out = out
 	c.HostLibrary = vmsLibDir
 
-	withLibs := linkHello(t, c, LinkOptions{})
-	without := linkHello(t, c, LinkOptions{NoSysLib: true})
+	withLibs := linkHello(t, c, dclcmd.LinkOptions{})
+	without := linkHello(t, c, dclcmd.LinkOptions{NoSysLib: true})
 
 	if !sameImage(withLibs, without) {
 		t.Error("the image linked from the VMS libraries differs from /NOSYSLIB's")
@@ -236,19 +237,19 @@ func TestLink_libraryMissingImage(t *testing.T) {
 	c := newBootableConsole(t)
 	c.HostLibrary = dir
 
-	withLib := linkHello(t, c, LinkOptions{})
-	if !sameImage(withLib, linkHello(t, c, LinkOptions{NoSysLib: true})) {
+	withLib := linkHello(t, c, dclcmd.LinkOptions{})
+	if !sameImage(withLib, linkHello(t, c, dclcmd.LinkOptions{NoSysLib: true})) {
 		t.Error("hello linked through the shim differs from /NOSYSLIB's")
 	}
 
 	writeHostFile(t, filepath.Join(dir, "smg.mar"), "\t.PSECT\tC,NOWRT,EXE\n\t.ENTRY\tGO,^M<>\n"+
 		"\tCALLS\t#0,G^SMG$CREATE_PASTEBOARD\n\tRET\n\t.END\tGO\n")
 
-	if err := c.cmd().Macro(MacroOptions{Source: filepath.Join(dir, "smg.mar")}); err != nil {
+	if err := c.cmd().Macro(dclcmd.MacroOptions{Source: filepath.Join(dir, "smg.mar")}); err != nil {
 		t.Fatal(err)
 	}
 
-	err := c.cmd().Link(LinkOptions{Objects: []string{filepath.Join(dir, "smg")}})
+	err := c.cmd().Link(dclcmd.LinkOptions{Objects: []string{filepath.Join(dir, "smg")}})
 	if err == nil || !strings.Contains(err.Error(), "SMGSHR.EXE") {
 		t.Errorf("err = %v, want one naming SMGSHR.EXE", err)
 	}
@@ -290,7 +291,7 @@ func TestLink_libraryLogicalNames(t *testing.T) {
 	// isn't found: SMG$ routines are undefined.
 	c.HostLibrary = t.TempDir()
 
-	src, err := c.cmd().linkSources(true)
+	src, err := c.cmd().LinkSources(true)
 	if err != nil || len(src) != 1 {
 		t.Fatalf("sources %d, %v; want govax's alone", len(src), err)
 	}
@@ -301,7 +302,7 @@ func TestLink_libraryLogicalNames(t *testing.T) {
 		}
 	}
 
-	src, err = c.cmd().linkSources(true)
+	src, err = c.cmd().LinkSources(true)
 	if err != nil || len(src) != 2 {
 		t.Fatalf("sources %d, %v; want IMAGELIB's and govax's", len(src), err)
 	}

@@ -8,6 +8,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/tucats/govax/internal/dclcmd"
 	"github.com/tucats/govax/internal/obj"
 	"github.com/tucats/govax/internal/rms"
 	"github.com/tucats/govax/internal/vmserrors"
@@ -165,7 +166,7 @@ func TestAnalyze_library(t *testing.T) {
 	d, c, buf := newCommandDispatcher(t)
 	lib := filepath.Join(t.TempDir(), "mods.olb")
 
-	if err := c.cmd().Library(LibraryOptions{Library: lib, LibraryHost: true, Create: true, Object: true,
+	if err := c.cmd().Library(dclcmd.LibraryOptions{Library: lib, LibraryHost: true, Create: true, Object: true,
 		Inputs: []string{analyzeFixtureObj, "../../testdata/mar/vax/entry.obj"}, InputHost: true}); err != nil {
 		t.Fatalf("LIBRARY/CREATE: %v", err)
 	}

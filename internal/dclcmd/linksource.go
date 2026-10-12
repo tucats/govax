@@ -1,4 +1,4 @@
-package console
+package dclcmd
 
 import (
 	"fmt"
@@ -83,9 +83,9 @@ func GovaxSymbols(shims []corevms.ShimLink) *link.TableSource {
 	return src
 }
 
-// linkSources returns LINK's symbol sources: the system libraries, unless
+// LinkSources returns LINK's symbol sources: the system libraries, unless
 // sysLib is false, then govax's own tables.
-func (c *Context) linkSources(sysLib bool) ([]link.SymbolSource, error) {
+func (c *Context) LinkSources(sysLib bool) ([]link.SymbolSource, error) {
 	govax := GovaxSymbols(c.ShimLinks)
 
 	if !sysLib {

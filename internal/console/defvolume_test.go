@@ -5,6 +5,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/tucats/govax/internal/dclcmd"
 )
 
 // TestMountDefaultVolume_noFile confirms an unset container file does
@@ -13,7 +15,7 @@ func TestMountDefaultVolume_noFile(t *testing.T) {
 	c, buf := newTestConsole(t)
 	before := c.ContainerSession.DefaultString()
 
-	c.cmd().MountDefaultVolume(DefaultVolume{})
+	c.cmd().MountDefaultVolume(dclcmd.DefaultVolume{})
 
 	if buf.Len() != 0 {
 		t.Errorf("output = %q, want none", buf.String())
@@ -40,7 +42,7 @@ func TestMountDefaultVolume_creates(t *testing.T) {
 
 	path := filepath.Join(t.TempDir(), "sub", "work.dsk")
 
-	c.cmd().MountDefaultVolume(DefaultVolume{File: path, Type: "RX50"})
+	c.cmd().MountDefaultVolume(dclcmd.DefaultVolume{File: path, Type: "RX50"})
 
 	out := buf.String()
 	for _, want := range []string{
@@ -86,7 +88,7 @@ func TestMountDefaultVolume_existing(t *testing.T) {
 
 		t.Cleanup(func() { _ = c.Mounts.DismountAll() })
 
-		c.cmd().MountDefaultVolume(DefaultVolume{File: path, Label: "oldvol", Device: "DUA1:", Directory: "SRC"})
+		c.cmd().MountDefaultVolume(dclcmd.DefaultVolume{File: path, Label: "oldvol", Device: "DUA1:", Directory: "SRC"})
 
 		out := buf.String()
 		if strings.Contains(out, "CREATED") {
@@ -110,7 +112,7 @@ func TestMountDefaultVolume_existing(t *testing.T) {
 	t.Run("wrong label", func(t *testing.T) {
 		c, buf := newTestConsole(t)
 
-		c.cmd().MountDefaultVolume(DefaultVolume{File: path, Label: "WORK"})
+		c.cmd().MountDefaultVolume(dclcmd.DefaultVolume{File: path, Label: "WORK"})
 
 		if out := buf.String(); !strings.Contains(out, "%MOUNT-W-NODEFAULT, default volume "+path+" not mounted: volume label is OLDVOL, not WORK") {
 			t.Errorf("output = %q, want a NODEFAULT warning about the label", out)
@@ -145,7 +147,7 @@ func TestMountDefaultVolume_readOnly(t *testing.T) {
 
 	t.Cleanup(func() { _ = c.Mounts.DismountAll() })
 
-	c.cmd().MountDefaultVolume(DefaultVolume{File: path})
+	c.cmd().MountDefaultVolume(dclcmd.DefaultVolume{File: path})
 
 	out := buf.String()
 	if !strings.Contains(out, "%MOUNT-I-WRITELOCK, volume is write locked\n%MOUNT-I-MOUNTED, WORK mounted on _DUA0:\n") {
@@ -165,7 +167,7 @@ func TestMountDefaultVolume_quiet(t *testing.T) {
 
 	t.Cleanup(func() { _ = c.Mounts.DismountAll() })
 
-	c.cmd().MountDefaultVolume(DefaultVolume{File: filepath.Join(t.TempDir(), "q.dsk"), Type: "RX50"})
+	c.cmd().MountDefaultVolume(dclcmd.DefaultVolume{File: filepath.Join(t.TempDir(), "q.dsk"), Type: "RX50"})
 
 	if buf.Len() != 0 {
 		t.Errorf("output = %q, want none", buf.String())
@@ -182,7 +184,7 @@ func TestMountDefaultVolume_badType(t *testing.T) {
 	c, buf := newTestConsole(t)
 	path := filepath.Join(t.TempDir(), "x.dsk")
 
-	c.cmd().MountDefaultVolume(DefaultVolume{File: path, Type: "RZ99"})
+	c.cmd().MountDefaultVolume(dclcmd.DefaultVolume{File: path, Type: "RZ99"})
 
 	if !strings.Contains(buf.String(), "unknown device type RZ99") {
 		t.Errorf("output = %q, want an unknown-type warning", buf.String())

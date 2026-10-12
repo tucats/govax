@@ -1,4 +1,4 @@
-package console
+package dclcmd
 
 import (
 	"errors"
@@ -13,12 +13,12 @@ import (
 // directory/PurgeVersions loop) already lives in the sibling internal/rms
 // package's Session.Purge (internal/rms/purge.go, this same subtask); this
 // file is a thin, console-specific layer on top of it, mirroring delete.go's
-// own Console.Delete.
+// own Context.Delete.
 //
 // # A note for a reader new to Go
 //
-// The method below has the receiver "(c *Console)", meaning it's called as
-// c.Purge(...) on a *Console value. Like Console.Delete, it tells
+// The method below has the receiver "(c *Context)", meaning it's called as
+// c.Purge(...) on a *Context value. Like Context.Delete, it tells
 // Session.Purge's different failure modes apart via errors.As (rather than
 // inspecting error text) so each is reported as the specific VMS status a
 // real operator would see for that exact condition.
@@ -36,13 +36,13 @@ import (
 //
 //   - specText naming a device with nothing currently mounted on it
 //     surfaces as an *rms.NotMountedError and is reported as
-//     SS_DEVNOTMOUNT, matching Console.Delete's own translation for the
+//     SS_DEVNOTMOUNT, matching Context.Delete's own translation for the
 //     same underlying condition.
 //   - An invalid keep value (currently just zero) surfaces as an
 //     *rms.InvalidLimitError and is reported as CLI_BADLIMIT.
 //   - Anything else (a malformed file specification, an unsupported multi-
 //     device volume set, or a genuine I/O failure freeing storage) is
-//     reported as CLI_BADFILESPEC, matching Console.Delete's own catch-all
+//     reported as CLI_BADFILESPEC, matching Context.Delete's own catch-all
 //     bucket.
 func (c *Context) Purge(specText string, keep uint16) error {
 	purged, err := c.ContainerSession.Purge(specText, keep)

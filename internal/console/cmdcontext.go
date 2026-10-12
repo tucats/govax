@@ -1,9 +1,13 @@
 package console
 
+import (
+	"github.com/tucats/govax/internal/dclcmd"
+)
+
 // cmd returns the context for a utility command run by the DCL running
 // now.
-func (c *Console) cmd() *Context {
-	return &Context{
+func (c *Console) cmd() *dclcmd.Context {
+	return &dclcmd.Context{
 		Out:              c.Out,
 		ContainerSession: c.ContainerSession,
 		Logicals:         c.Logicals,
@@ -30,4 +34,4 @@ func (c *Console) cmd() *Context {
 
 // Commands returns the context the utility commands work on, for the DCL
 // running now: tests call the commands through it.
-func (c *Console) Commands() *Context { return c.cmd() }
+func (c *Console) Commands() *dclcmd.Context { return c.cmd() }

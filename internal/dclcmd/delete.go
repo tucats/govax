@@ -1,4 +1,4 @@
-package console
+package dclcmd
 
 import (
 	"errors"
@@ -13,12 +13,12 @@ import (
 // required-version check, the DeleteFile/bitmap-flush loop) already lives
 // in the sibling internal/rms package's Session.Delete (internal/rms/
 // delete.go, this same subtask); this file is a thin, console-specific
-// layer on top of it, mirroring directory.go's own Console.Directory.
+// layer on top of it, mirroring directory.go's own Context.Directory.
 //
 // # A note for a reader new to Go
 //
-// The method below has the receiver "(c *Console)", meaning it's called as
-// c.Delete(...) on a *Console value. Like Console.Directory, it tells
+// The method below has the receiver "(c *Context)", meaning it's called as
+// c.Delete(...) on a *Context value. Like Context.Directory, it tells
 // Session.Delete's different failure modes apart via errors.As (rather than
 // inspecting error text) so each is reported as the specific VMS status a
 // real operator would see for that exact condition.
@@ -35,7 +35,7 @@ import (
 //
 //   - specText naming a device with nothing currently mounted on it
 //     surfaces as an *rms.NotMountedError and is reported as
-//     SS_DEVNOTMOUNT, matching Console.Directory's own translation for the
+//     SS_DEVNOTMOUNT, matching Context.Directory's own translation for the
 //     same underlying condition.
 //   - specText with no specific version surfaces as an
 //     *rms.VersionRequiredError and is reported as CLI_NEEDVERSION.
@@ -43,7 +43,7 @@ import (
 //     *rms.NotFoundError and is reported as SS_NOSUCHFILE.
 //   - Anything else (a malformed file specification, an unsupported multi-
 //     device volume set, or a genuine I/O failure freeing storage) is
-//     reported as CLI_BADFILESPEC, matching Console.Directory's own
+//     reported as CLI_BADFILESPEC, matching Context.Directory's own
 //     catch-all bucket.
 func (c *Context) Delete(specText string) error {
 	deleted, err := c.ContainerSession.Delete(specText)

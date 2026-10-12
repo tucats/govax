@@ -7,11 +7,12 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/tucats/govax/internal/dclcmd"
 	"github.com/tucats/govax/internal/link"
 )
 
 // linkMap links with a brief map and returns the map's text.
-func linkMap(t *testing.T, c *Console, dir string, opts LinkOptions) string {
+func linkMap(t *testing.T, c *Console, dir string, opts dclcmd.LinkOptions) string {
 	t.Helper()
 
 	opts.Map, opts.Brief, opts.MapFile = true, true, filepath.Join(dir, "link.map")
@@ -45,12 +46,12 @@ func TestLink_optionsFile(t *testing.T) {
 		"NAME=PROGRAM\nSYMBOL=LIMIT,%X29\n")
 
 	for _, name := range []string{"main", "sub"} {
-		if err := c.cmd().Macro(MacroOptions{Source: filepath.Join(dir, name+".mar")}); err != nil {
+		if err := c.cmd().Macro(dclcmd.MacroOptions{Source: filepath.Join(dir, name+".mar")}); err != nil {
 			t.Fatal(err)
 		}
 	}
 
-	text := linkMap(t, c, dir, LinkOptions{Files: []link.InputFile{
+	text := linkMap(t, c, dir, dclcmd.LinkOptions{Files: []link.InputFile{
 		{Name: filepath.Join(dir, "main")},
 		{Name: "prog", Options: true},
 	}})
@@ -70,7 +71,7 @@ func TestLink_optionsFile(t *testing.T) {
 	}
 
 	// An options file named first names the image.
-	if err := c.cmd().Link(LinkOptions{Files: []link.InputFile{{Name: filepath.Join(dir, "prog"), Options: true}, {Name: "main"}}}); err != nil {
+	if err := c.cmd().Link(dclcmd.LinkOptions{Files: []link.InputFile{{Name: filepath.Join(dir, "prog"), Options: true}, {Name: "main"}}}); err != nil {
 		t.Fatal(err)
 	}
 
@@ -99,7 +100,7 @@ func TestLink_inputErrors(t *testing.T) {
 	}
 
 	for _, c2 := range cases {
-		err := c.cmd().Link(LinkOptions{Files: c2.files, NoExecutable: true})
+		err := c.cmd().Link(dclcmd.LinkOptions{Files: c2.files, NoExecutable: true})
 		if err == nil || !strings.Contains(err.Error(), c2.want) {
 			t.Errorf("%+v: err = %v, want %q", c2.files, err, c2.want)
 		}
@@ -126,14 +127,14 @@ func TestLink_userLibraries(t *testing.T) {
 	writeHostFile(t, filepath.Join(dir, "exit.mar"), "\t.PSECT\tCODE,NOWRT,EXE\n"+
 		"\t.ENTRY\tSTART,^M<>\n\tPUSHL\t#1\n\tCALLS\t#1,G^SYS$EXIT\n\tRET\n\t.END\tSTART\n")
 
-	if err := c.cmd().Macro(MacroOptions{Source: filepath.Join(dir, "exit.mar")}); err != nil {
+	if err := c.cmd().Macro(dclcmd.MacroOptions{Source: filepath.Join(dir, "exit.mar")}); err != nil {
 		t.Fatal(err)
 	}
 
 	exit := filepath.Join(dir, "exit")
 	exe := filepath.Join(dir, "exit.exe")
 
-	image := func(opts LinkOptions) []byte {
+	image := func(opts dclcmd.LinkOptions) []byte {
 		t.Helper()
 
 		if err := c.cmd().Link(opts); err != nil {
@@ -148,21 +149,21 @@ func TestLink_userLibraries(t *testing.T) {
 		return data
 	}
 
-	own := image(LinkOptions{Objects: []string{exit}, NoSysLib: true})
+	own := image(dclcmd.LinkOptions{Objects: []string{exit}, NoSysLib: true})
 
-	if lib := image(LinkOptions{Files: []link.InputFile{{Name: exit}, {Name: starlet, Library: true}}, NoSysLib: true}); !sameImage(own, lib) {
+	if lib := image(dclcmd.LinkOptions{Files: []link.InputFile{{Name: exit}, {Name: starlet, Library: true}}, NoSysLib: true}); !sameImage(own, lib) {
 		t.Error("the image linked with STARLET/LIBRARY differs from govax's tables'")
 	}
 
-	text := linkMap(t, c, dir, LinkOptions{Files: []link.InputFile{{Name: exit}, {Name: starlet, Include: []string{"SYS$SSDEF"}}}, NoSysLib: true})
+	text := linkMap(t, c, dir, dclcmd.LinkOptions{Files: []link.InputFile{{Name: exit}, {Name: starlet, Include: []string{"SYS$SSDEF"}}}, NoSysLib: true})
 	if !strings.Contains(text, "\nSYS$SSDEF ") {
 		t.Errorf("the included module isn't in the map:\n%s", text)
 	}
 
-	hello := linkHello(t, c, LinkOptions{NoSysLib: true})
+	hello := linkHello(t, c, dclcmd.LinkOptions{NoSysLib: true})
 
 	c.HostLibrary = vmsLibDir
-	withImagelib := linkHello(t, c, LinkOptions{Files: []link.InputFile{{Name: imagelib, Library: true}}, NoSysLib: true})
+	withImagelib := linkHello(t, c, dclcmd.LinkOptions{Files: []link.InputFile{{Name: imagelib, Library: true}}, NoSysLib: true})
 	c.HostLibrary = ""
 
 	if !sameImage(hello, withImagelib) {
@@ -172,7 +173,7 @@ func TestLink_userLibraries(t *testing.T) {
 	opt := filepath.Join(dir, "corevms.opt")
 	writeHostFile(t, opt, `"`+librtl+`"/SHAREABLE`+"\n") // a host path is quoted, for its slashes
 
-	if withImage := linkHello(t, c, LinkOptions{Files: []link.InputFile{{Name: opt, Options: true}}, NoSysLib: true}); !sameImage(hello, withImage) {
+	if withImage := linkHello(t, c, dclcmd.LinkOptions{Files: []link.InputFile{{Name: opt, Options: true}}, NoSysLib: true}); !sameImage(hello, withImage) {
 		t.Error("the image linked with LIBRTL/SHAREABLE differs from govax's tables'")
 	}
 }
@@ -214,13 +215,13 @@ func TestLink_warnings(t *testing.T) {
 	writeHostFile(t, filepath.Join(dir, "notfr.mar"), "\t.PSECT\tDATA,NOEXE\n\t.LONG\t1\n\t.END\n")
 
 	for _, name := range []string{"undef", "notfr"} {
-		if err := c.cmd().Macro(MacroOptions{Source: filepath.Join(dir, name+".mar")}); err != nil {
+		if err := c.cmd().Macro(dclcmd.MacroOptions{Source: filepath.Join(dir, name+".mar")}); err != nil {
 			t.Fatal(err)
 		}
 
 		out.Reset()
 
-		if err := c.cmd().Link(LinkOptions{Objects: []string{filepath.Join(dir, name)}}); err != nil {
+		if err := c.cmd().Link(dclcmd.LinkOptions{Objects: []string{filepath.Join(dir, name)}}); err != nil {
 			t.Fatalf("LINK %s: %v", name, err)
 		}
 

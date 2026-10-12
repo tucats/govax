@@ -1,4 +1,4 @@
-package console
+package dclcmd
 
 import (
 	"errors"
@@ -20,13 +20,13 @@ var typeOpenIn = 149<<16 | vmsdef.LibrarySymbols["SHR$_OPENIN"]
 // rule, record-format-aware text rendering) already lives in the sibling
 // internal/rms package's Session.Type (internal/rms/type.go, this same
 // subtask); this file is a thin, console-specific layer on top of it,
-// mirroring directory.go's own Console.Directory ("rms computes, console
+// mirroring directory.go's own Context.Directory ("rms computes, console
 // prints").
 //
 // # A note for a reader new to Go
 //
-// The method below has the receiver "(c *Console)", meaning it's called as
-// c.Type(...) on a *Console value. Like Console.Delete, it tells
+// The method below has the receiver "(c *Context)", meaning it's called as
+// c.Type(...) on a *Context value. Like Context.Delete, it tells
 // Session.Type's different failure modes apart via errors.As (rather than
 // inspecting error text) so each is reported as the specific VMS status a
 // real operator would see for that exact condition.
@@ -42,21 +42,21 @@ var typeOpenIn = 149<<16 | vmsdef.LibrarySymbols["SHR$_OPENIN"]
 //
 //   - specText naming a device with nothing currently mounted on it
 //     surfaces as an *rms.NotMountedError and is reported as
-//     SS_DEVNOTMOUNT, matching Console.Delete's own translation for the
+//     SS_DEVNOTMOUNT, matching Context.Delete's own translation for the
 //     same underlying condition.
 //   - specText matching no file at all on its volume surfaces as an
 //     *rms.NotFoundError and is reported as SS_NOSUCHFILE, matching
-//     Console.Delete's own translation for the same underlying condition.
+//     Context.Delete's own translation for the same underlying condition.
 //   - specText matching more than one file surfaces as an
 //     *rms.AmbiguousError and is reported as CLI_AMBIGUOUS, the same
 //     status internal/dcl's own verb/qualifier ambiguity already
 //     uses.
 //   - Anything else (a malformed file specification, or a genuine failure
 //     reading the file's own record data) is reported as CLI_BADFILESPEC,
-//     matching Console.Delete/Console.Directory's own catch-all bucket.
+//     matching Context.Delete/Context.Directory's own catch-all bucket.
 //
 // With paged (TYPE/PAGE), the text is shown a screenful at a time, as
-// Console.Page shows it (page.go).
+// Context.Page shows it (page.go).
 //
 // Where specText is, on the host or on a mounted volume, follows
 // rms.Session.Locate's rules (a host path, or a bare name when the default

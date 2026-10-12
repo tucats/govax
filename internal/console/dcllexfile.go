@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/tucats/govax/internal/corevms"
+	"github.com/tucats/govax/internal/dclcmd"
 	"github.com/tucats/govax/internal/rms"
 	"github.com/tucats/govax/internal/vmsdef"
 )
@@ -149,7 +150,7 @@ func (c *Interpreter) searchFiles(spec string) ([]string, error) {
 
 	files, err := c.ContainerSession.Search(spec)
 	if err != nil {
-		return nil, FileFailure(err, spec)
+		return nil, dclcmd.FileFailure(err, spec)
 	}
 
 	return files, nil

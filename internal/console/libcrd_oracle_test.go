@@ -8,6 +8,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/tucats/govax/internal/dclcmd"
 	"github.com/tucats/govax/internal/lnm"
 	"github.com/tucats/govax/internal/rms"
 )
@@ -119,11 +120,11 @@ func runLibcrdProbe(t *testing.T) *Console {
 	src := filepath.Join("..", "..", "testdata", "credir", "libcrd.mar")
 	dir := t.TempDir()
 
-	if err := c.cmd().Macro(MacroOptions{Source: src, Object: filepath.Join(dir, "libcrd.obj")}); err != nil {
+	if err := c.cmd().Macro(dclcmd.MacroOptions{Source: src, Object: filepath.Join(dir, "libcrd.obj")}); err != nil {
 		t.Fatalf("MACRO: %v", err)
 	}
 
-	if err := c.cmd().Link(LinkOptions{Objects: []string{filepath.Join(dir, "libcrd")}}); err != nil {
+	if err := c.cmd().Link(dclcmd.LinkOptions{Objects: []string{filepath.Join(dir, "libcrd")}}); err != nil {
 		t.Fatalf("LINK: %v", err)
 	}
 

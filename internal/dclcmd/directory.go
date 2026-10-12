@@ -1,4 +1,4 @@
-package console
+package dclcmd
 
 import (
 	"errors"
@@ -18,8 +18,8 @@ import (
 //
 // # A note for a reader new to Go
 //
-// The method below has the receiver "(c *Console)", meaning it's called as
-// c.Directory(...) on a *Console value — see machine.go's own Console type
+// The method below has the receiver "(c *Context)", meaning it's called as
+// c.Directory(...) on a *Context value — see context.go's Context type
 // for what state it reads (c.ContainerSession). Unlike ShowDefault (which
 // prints unconditionally, since internal/rms.Session.DefaultString never
 // fails), Directory has to check for two different kinds of failure
@@ -38,11 +38,11 @@ import (
 //   - specText naming a device with nothing currently mounted on it
 //     surfaces as an *rms.NotMountedError (recognized here via errors.As,
 //     not by inspecting error text) and is reported as SS_DEVNOTMOUNT,
-//     matching Console.Dismount's own status for the same underlying
+//     matching Context.Dismount's own status for the same underlying
 //     condition.
 //   - Anything else — a malformed file specification, or a genuine
 //     failure reading a matched file's header while gathering size/date
-//     detail — is reported as CLI_BADFILESPEC, matching Console.
+//     detail — is reported as CLI_BADFILESPEC, matching Context.
 //     SetDefault's own status for a bad file specification (the CLI
 //     facility, not SYS, since these are argument-validation problems
 //     rather than a device/volume state problem).

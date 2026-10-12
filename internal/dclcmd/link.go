@@ -1,4 +1,4 @@
-package console
+package dclcmd
 
 import (
 	"fmt"
@@ -131,7 +131,7 @@ func (c *Context) Link(opts LinkOptions) error {
 		return FileFailure(err, opts.Executable)
 	}
 
-	system, err := c.linkSources(!opts.NoSysLib)
+	system, err := c.LinkSources(!opts.NoSysLib)
 	if err != nil {
 		return vmserrors.Wrap(vmserrors.CLI_LINKING, err, exe.Name)
 	}

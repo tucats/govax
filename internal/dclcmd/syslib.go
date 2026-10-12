@@ -1,4 +1,4 @@
-package console
+package dclcmd
 
 import (
 	"errors"
@@ -15,7 +15,7 @@ import (
 // STARLET.OLB, shareable images, STARLET.MLB), as VMS finds them through
 // SYS$LIBRARY and SYS$SHARE (docs/PHASE-28.md subtask 9). Each is looked
 // for through its logical name on a mounted volume first, then in the host
-// library directory: Console.HostLibrary, or else the vax.library setting,
+// library directory: Context.HostLibrary, or else the vax.library setting,
 // or else the older vax.link.library, which named LINK's directory before
 // MACRO shared it.
 
@@ -25,9 +25,9 @@ const (
 	LegacyLibrarySetting = "vax.link.library"
 )
 
-// hostLibraryDir is the host directory to look in for VMS library files,
+// HostLibraryDir is the host directory to look in for VMS library files,
 // or "" for none.
-func (c *Context) hostLibraryDir() string {
+func (c *Context) HostLibraryDir() string {
 	if c.HostLibrary != "" {
 		return c.HostLibrary
 	}
@@ -59,7 +59,7 @@ func (c *Context) readLibraryFile(logical, file string) ([]byte, string, error) 
 		return nil, spec, err
 	}
 
-	dir := c.hostLibraryDir()
+	dir := c.HostLibraryDir()
 	if dir == "" {
 		return nil, "", nil
 	}

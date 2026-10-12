@@ -181,7 +181,7 @@ func TestMountTable_dismountNotMounted(t *testing.T) {
 // volume's real on-disk label (the same one TestMountTable_mountAndLookup
 // already reads directly off vol.Devices[0].Home.VolumeName), reports
 // "not mounted" for a device with nothing attached, and stops reporting a
-// label at all once Dismount has run — internal/console/device.go's
+// label at all once Dismount has run — internal/dclcmd/device.go's
 // ShowDevices (SHOW DEVICE/FULL) relies on that last part to stop showing
 // a mounted-volume line for a device that was just dismounted.
 func TestMountTable_volumeLabel(t *testing.T) {
@@ -217,7 +217,7 @@ func TestMountTable_volumeLabel(t *testing.T) {
 // TestMountTable_volumeStats confirms VolumeStats reports "not mounted"
 // for a device with nothing attached, and real, live volume.Stats data
 // (nonzero MaxFiles/TotalBlocks, zero FileCount on a freshly initialized
-// volume) once one is mounted — internal/console/device.go's ShowDevices
+// volume) once one is mounted — internal/dclcmd/device.go's ShowDevices
 // (SHOW DEVICE/FULL) relies on this for its "Free blocks"/"Number of
 // files"/"Maximum files allowed" fields.
 func TestMountTable_volumeStats(t *testing.T) {

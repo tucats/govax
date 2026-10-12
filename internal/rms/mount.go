@@ -230,7 +230,7 @@ func (t *MountTable) Lookup(device string) (*volume.Volume, bool) {
 // has anything mounted at all.
 //
 // This exists purely so a caller displaying mount status (SHOW DEVICE/
-// FULL, internal/console/device.go's ShowDevices) doesn't need to import
+// FULL, internal/dclcmd/device.go's ShowDevices) doesn't need to import
 // the sibling ods2 module's own volume/ondisk types just to read one
 // string field — keeping that dependency confined to this package, the
 // one place govax code is allowed to reach into ods2 directly (see

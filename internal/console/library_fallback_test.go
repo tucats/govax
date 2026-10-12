@@ -6,6 +6,7 @@ import (
 	"testing"
 
 	"github.com/tucats/govax/internal/bootdata"
+	"github.com/tucats/govax/internal/dclcmd"
 	"github.com/tucats/govax/internal/respath"
 )
 
@@ -21,7 +22,7 @@ func TestLibrary_listEmbeddedFallback(t *testing.T) {
 
 	base := strings.TrimSuffix(bootdata.StarletLibrary, ".mlb")
 
-	for _, opts := range []LibraryOptions{
+	for _, opts := range []dclcmd.LibraryOptions{
 		{Library: bootdata.StarletLibrary, List: true},
 		{Library: strings.ToUpper(base), Macro: true, List: true},
 	} {
@@ -38,7 +39,7 @@ func TestLibrary_listEmbeddedFallback(t *testing.T) {
 
 	// With no search path, a bare name is only the current directory's.
 	c.Paths = nil
-	if err := c.cmd().Library(LibraryOptions{Library: bootdata.StarletLibrary, List: true}); err == nil {
+	if err := c.cmd().Library(dclcmd.LibraryOptions{Library: bootdata.StarletLibrary, List: true}); err == nil {
 		t.Error("found the embedded library with no search path")
 	}
 }

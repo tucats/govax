@@ -1,7 +1,7 @@
 package vmserrors
 
 // MOUNT facility message IDs -- the console's MOUNT command and the
-// default volume govax mounts at startup (internal/console/defvolume.go).
+// default volume govax mounts at startup (internal/dclcmd/defvolume.go).
 // Private: only the composite MOUNT_* codes below are part of this
 // package's public API.
 const (

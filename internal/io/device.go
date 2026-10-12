@@ -187,7 +187,7 @@ func (d *Device) Deallocate() {
 // qualifier, each defaulting to zero/empty when the qualifier is absent
 // (matching those macros' own else-branch). A plain data struct so this
 // package doesn't need to know anything about internal/dcl —
-// internal/console/device.go (this phase's console wiring) builds one from
+// internal/dclcmd/device.go (this phase's console wiring) builds one from
 // a dcl.Result.
 type DeviceOptions struct {
 	Cluster, Cylinders, DevBufSize, DevChar, DevChar2 uint32

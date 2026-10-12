@@ -8,6 +8,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/tucats/govax/internal/dclcmd"
 	"github.com/tucats/govax/internal/rms"
 	"github.com/tucats/govax/internal/vmserrors"
 )
@@ -170,7 +171,7 @@ func TestAnalyzeImage_volume(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	got := JoinLines(lines) + "\n"
+	got := dclcmd.JoinLines(lines) + "\n"
 	if normalizeImageAnalysis(got, false) != normalizeImageAnalysis(string(want), false) {
 		t.Errorf("the analysis differs from VMS's:\n%s", got)
 	}

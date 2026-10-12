@@ -8,6 +8,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/tucats/govax/internal/dclcmd"
 	"github.com/tucats/govax/internal/lnm"
 	"github.com/tucats/govax/internal/rms"
 	"github.com/tucats/ods2/ondisk"
@@ -127,11 +128,11 @@ func runRMS3Probe(t *testing.T, c *Console, name string) []probeRecord {
 	src := filepath.Join("..", "..", "testdata", "mar", "rms3", name+".mar")
 	dir := t.TempDir()
 
-	if err := c.cmd().Macro(MacroOptions{Source: src, Object: filepath.Join(dir, name+".obj")}); err != nil {
+	if err := c.cmd().Macro(dclcmd.MacroOptions{Source: src, Object: filepath.Join(dir, name+".obj")}); err != nil {
 		t.Fatalf("MACRO: %v", err)
 	}
 
-	if err := c.cmd().Link(LinkOptions{Objects: []string{filepath.Join(dir, name)}}); err != nil {
+	if err := c.cmd().Link(dclcmd.LinkOptions{Objects: []string{filepath.Join(dir, name)}}); err != nil {
 		t.Fatalf("LINK: %v", err)
 	}
 

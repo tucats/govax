@@ -101,7 +101,7 @@ import (
 //
 // Quiet and Verbose are deliberately never read anywhere in this file:
 // they only affect which lines Console.Copy prints once Session.Copy
-// returns (internal/console/copy.go), not what actually gets copied, so
+// returns (internal/dclcmd/copy.go), not what actually gets copied, so
 // they're carried here purely so dispatch.go (internal/console/
 // dispatch.go) only has to build one CopyOptions value from the parsed
 // command line and thread it straight through Console.Copy into
@@ -188,7 +188,7 @@ type CopyOptions struct {
 // CopyResultKind distinguishes the four different confirmation/preview
 // message shapes Console.Copy needs to print for one CopyResult -- see
 // its own constants' doc comments for each one's exact wording, and
-// Console.Copy (internal/console/copy.go) for where they're actually
+// Console.Copy (internal/dclcmd/copy.go) for where they're actually
 // rendered. Kept as a small enum rather than, say, a pre-rendered message
 // string on CopyResult itself, so the "%COPY-..." status-line text stays
 // owned by the console layer (matching how Console.Delete/Console.Purge
@@ -224,7 +224,7 @@ const (
 
 // CopyResult reports one file (or directory entry) Copy actually acted
 // on, as ready-to-print display text, for the console layer's own
-// confirmation messages (Console.Copy, internal/console/copy.go) -- the
+// confirmation messages (Console.Copy, internal/dclcmd/copy.go) -- the
 // same "rms computes, console prints" split Session.Directory/Session.
 // Type already established, just as a list (one entry per matched file)
 // instead of a single value, matching Session.Delete's own []DeletedFile

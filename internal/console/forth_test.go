@@ -6,6 +6,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/tucats/govax/internal/dclcmd"
 	"github.com/tucats/govax/internal/rms"
 	"github.com/tucats/govax/internal/vax"
 	"github.com/tucats/govax/internal/vmsdef"
@@ -40,11 +41,11 @@ func forthConsole(t *testing.T, typed string, files map[string]string) (*Console
 	dir := t.TempDir()
 	src := filepath.Join("..", "..", "testdata", "mar", "forth.mar")
 
-	if err := c.cmd().Macro(MacroOptions{Source: src, Object: filepath.Join(dir, "forth.obj")}); err != nil {
+	if err := c.cmd().Macro(dclcmd.MacroOptions{Source: src, Object: filepath.Join(dir, "forth.obj")}); err != nil {
 		t.Fatalf("MACRO: %v", err)
 	}
 
-	if err := c.cmd().Link(LinkOptions{Objects: []string{filepath.Join(dir, "forth")}}); err != nil {
+	if err := c.cmd().Link(dclcmd.LinkOptions{Objects: []string{filepath.Join(dir, "forth")}}); err != nil {
 		t.Fatalf("LINK: %v", err)
 	}
 

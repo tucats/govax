@@ -46,7 +46,7 @@ grammar console
     !
     ! docs/PHASE-34.md: CREATE/DIRECTORY makes a directory on a mounted
     ! volume, and every missing directory above it (internal/rms.Session.
-    ! CreateDirectory, internal/console/create.go). OWNER_UIC is a UIC or
+    ! CreateDirectory, internal/dclcmd/create.go). OWNER_UIC is a UIC or
     ! PARENT; PROTECTION is a list of category:access items.
     !
     syntax create_directory
@@ -59,7 +59,7 @@ grammar console
 
     !
     ! CREATE with neither /NAME_TABLE nor /DIRECTORY makes a text file
-    ! from SYS$INPUT (internal/console/createfile.go): the terminal up to
+    ! from SYS$INPUT (internal/dclcmd/createfile.go): the terminal up to
     ! Ctrl/Z, or a command procedure's data lines.
     !
     verb create
@@ -390,7 +390,7 @@ grammar console
         syntax          show_default/id=163
 
         ! SHOW SYSTEM and SHOW PROCESS [name] [/IDENTIFICATION=pid]
-        ! (docs/PHASE-44.md, subtask 10); internal/console/showsys.go.
+        ! (docs/PHASE-44.md, subtask 10); internal/dclcmd/showsys.go.
         syntax          show_system/id=164
         syntax          show_process/id=165
             qualifier   identification/id=1940      -
@@ -552,7 +552,7 @@ grammar console
     ! see docs/PHASE-23.md's subtask 8.
     !
     ! /PAGE shows the file a screenful at a time, waiting for RETURN
-    ! between screens (internal/console/page.go).
+    ! between screens (internal/dclcmd/page.go).
     !
     ! SPEC may be a host file or a volume file, by internal/rms/location.go's
     ! rules; /HOST forces the host. TYPE has one parameter, so /HOST is the
@@ -722,7 +722,7 @@ grammar console
         qualifier   brief/id=1357
 
     !
-    ! docs/PHASE-38.md (internal/anl, internal/console/analyze.go):
+    ! docs/PHASE-38.md (internal/anl, internal/dclcmd/analyze.go):
     ! ANALYZE/OBJECT describes object files as VMS's ANALYZE does. Each
     ! kind of analysis is a qualifier that switches to its own syntax:
     ! /OBJECT here, /IMAGE below. FILES may

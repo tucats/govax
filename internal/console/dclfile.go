@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/tucats/govax/internal/dcl"
+	"github.com/tucats/govax/internal/dclcmd"
 	"github.com/tucats/govax/internal/lnm"
 	"github.com/tucats/govax/internal/rms"
 	"github.com/tucats/govax/internal/vmsdef"
@@ -351,7 +352,7 @@ func (c *Interpreter) openDCLFile(spec string, host bool, access rms.DCLAccess) 
 
 	loc, err := c.ContainerSession.Locate(spec, host)
 	if err != nil {
-		return nil, "", FileFailure(err, spec)
+		return nil, "", dclcmd.FileFailure(err, spec)
 	}
 
 	if loc.Host {
@@ -390,9 +391,9 @@ func openFailure(fe *rms.DCLFileError, access rms.DCLAccess) error {
 		head = "DCL-E-OPENOUT, error opening " + fe.Name + " as output"
 	}
 
-	text := head + "\n" + ConditionLine(fe.Status)
+	text := head + "\n" + dclcmd.ConditionLine(fe.Status)
 	if fe.STV != 0 {
-		text += "\n" + ConditionLine(fe.STV)
+		text += "\n" + dclcmd.ConditionLine(fe.STV)
 	}
 
 	return vmserrors.ConditionError{Status: fe.Status | stsInhibitMsg, Text: text}

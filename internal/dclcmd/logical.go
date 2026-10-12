@@ -1,4 +1,4 @@
-package console
+package dclcmd
 
 import (
 	"errors"
@@ -172,7 +172,7 @@ type logicalDisplay struct {
 	out func(format string, args ...any)
 }
 
-// show is SHOW LOGICAL (see Console.ShowLogical). untranslated reports
+// show is SHOW LOGICAL (see Context.ShowLogical). untranslated reports
 // that a name (not a wildcard) had no translation: %SHOW-S-NOTRAN.
 func (d logicalDisplay) show(names, tables []string, full bool) (untranslated bool, err error) {
 	if len(tables) == 0 {

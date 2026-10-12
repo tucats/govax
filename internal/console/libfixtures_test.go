@@ -5,6 +5,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/tucats/govax/internal/dclcmd"
 )
 
 // TestLibrary_fixtureExtracts extracts every module of the Phase 28
@@ -20,7 +22,7 @@ func TestLibrary_fixtureExtracts(t *testing.T) {
 			c, _ := newTestConsole(t)
 			out := filepath.Join(t.TempDir(), name+".mar")
 
-			if err := c.cmd().Library(LibraryOptions{Library: filepath.Join(vax, name+".mlb"), Extract: []string{"*"}, Output: out}); err != nil {
+			if err := c.cmd().Library(dclcmd.LibraryOptions{Library: filepath.Join(vax, name+".mlb"), Extract: []string{"*"}, Output: out}); err != nil {
 				t.Fatalf("LIBRARY/EXTRACT: %v", err)
 			}
 

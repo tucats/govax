@@ -1,4 +1,4 @@
-package console
+package dclcmd
 
 import (
 	"errors"
@@ -15,15 +15,15 @@ import (
 // copying, and every other qualifier's own behavior) already lives in the
 // sibling internal/rms package's Session.Copy (internal/rms/copy.go);
 // this file is a thin, console-specific layer on top of it, mirroring
-// Console.Type/Console.Delete's own "rms computes, console prints"
+// Context.Type/Context.Delete's own "rms computes, console prints"
 // pattern — extended here to a loop over one result per file, matching
-// Console.Delete's own []DeletedFile handling, since a wildcarded COPY
+// Context.Delete's own []DeletedFile handling, since a wildcarded COPY
 // can touch several files in one command.
 //
 // # A note for a reader new to Go
 //
-// The method below has the receiver "(c *Console)", meaning it's called as
-// c.Copy(...) on a *Console value. Like Console.Type/Console.Delete, it
+// The method below has the receiver "(c *Context)", meaning it's called as
+// c.Copy(...) on a *Context value. Like Context.Type/Context.Delete, it
 // tells Session.Copy's different failure modes apart via errors.As (rather
 // than inspecting error text) so each is reported as the specific VMS
 // status a real operator would see for that exact condition.
@@ -60,15 +60,15 @@ import (
 //
 //   - Either sourceText or destText naming a device with nothing
 //     currently mounted on it surfaces as an *rms.NotMountedError and is
-//     reported as SS_DEVNOTMOUNT, matching Console.Type/Console.Delete's
+//     reported as SS_DEVNOTMOUNT, matching Context.Type/Context.Delete's
 //     own translation for the same underlying condition.
 //   - sourceText matching no file at all on its volume surfaces as an
 //     *rms.NotFoundError and is reported as SS_NOSUCHFILE, matching
-//     Console.Type/Console.Delete's own translation for the same
+//     Context.Type/Context.Delete's own translation for the same
 //     underlying condition.
 //   - sourceText matching more than one file, against a destination that
 //     doesn't accept several, surfaces as an *rms.MultipleMatchesError
-//     and is reported as CLI_AMBIGUOUS, the same status Console.Type
+//     and is reported as CLI_AMBIGUOUS, the same status Context.Type
 //     already uses for its own single-match restriction
 //     (*rms.AmbiguousError) — a different Go type, since Session.Copy's
 //     own error text is worded for COPY rather than TYPE, but the same
@@ -79,7 +79,7 @@ import (
 //   - Anything else (a malformed file specification, a host path that
 //     doesn't exist or names a directory instead of a file, or a genuine
 //     I/O failure reading or writing a file's content) is reported as
-//     CLI_BADFILESPEC, matching Console.Type/Console.Delete/Console.
+//     CLI_BADFILESPEC, matching Context.Type/Context.Delete/Context.
 //     Directory's own catch-all bucket.
 func (c *Context) Copy(sourceText string, sourceHost bool, destText string, destHost bool, opts rms.CopyOptions) error {
 	results, err := c.ContainerSession.Copy(sourceText, sourceHost, destText, destHost, opts)
@@ -119,7 +119,7 @@ func (c *Context) Copy(sourceText string, sourceHost bool, destText string, dest
 }
 
 // printCopyResult prints whichever of the four "%COPY-..." line shapes
-// r.Kind calls for — see Console.Copy's own doc comment for each one's
+// r.Kind calls for — see Context.Copy's own doc comment for each one's
 // exact wording and quiet/verbose gating.
 func (c *Context) printCopyResult(r rms.CopyResult, opts rms.CopyOptions) {
 	switch r.Kind {

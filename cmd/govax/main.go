@@ -30,6 +30,7 @@ import (
 	"github.com/tucats/govax/internal/corevms"
 	"github.com/tucats/govax/internal/cpu"
 	"github.com/tucats/govax/internal/dcl"
+	"github.com/tucats/govax/internal/dclcmd"
 	"github.com/tucats/govax/internal/debugger"
 	"github.com/tucats/govax/internal/help"
 	"github.com/tucats/govax/internal/respath"
@@ -134,7 +135,7 @@ func run(paths []string, instructionLimit int, timeLimit time.Duration, out io.W
 	}
 
 	console.CommandLineString = argText.String()
-	console.BuildVersion = BuildVersion
+	dclcmd.BuildVersion = BuildVersion
 
 	// Set up the fall-back path resolver for including files that might need to be found in the
 	// default bootdata embedded file system.
@@ -250,8 +251,8 @@ func run(paths []string, instructionLimit int, timeLimit time.Duration, out io.W
 	}
 
 	// The configured default volume, if any, is mounted and made the
-	// default device and directory (internal/console/defvolume.go).
-	c.Commands().MountDefaultVolume(console.DefaultVolume{
+	// default device and directory (internal/dclcmd/defvolume.go).
+	c.Commands().MountDefaultVolume(dclcmd.DefaultVolume{
 		File:      settings.Get("vax.default.volume.file"),
 		Label:     settings.Get("vax.default.volume.label"),
 		Device:    settings.Get("vax.default.volume.device"),

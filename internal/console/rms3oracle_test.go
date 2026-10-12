@@ -10,6 +10,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/tucats/govax/internal/dclcmd"
 	"github.com/tucats/govax/internal/lnm"
 	"github.com/tucats/govax/internal/rms"
 )
@@ -152,11 +153,11 @@ func runOracleProbe(t *testing.T, device, node, probe string) (vms, govax []prob
 	src := filepath.Join("..", "..", "testdata", "mar", "rms3", probe+".mar")
 	dir := t.TempDir()
 
-	if err := c.cmd().Macro(MacroOptions{Source: src, Object: filepath.Join(dir, probe+".obj")}); err != nil {
+	if err := c.cmd().Macro(dclcmd.MacroOptions{Source: src, Object: filepath.Join(dir, probe+".obj")}); err != nil {
 		t.Fatalf("MACRO: %v", err)
 	}
 
-	if err := c.cmd().Link(LinkOptions{Objects: []string{filepath.Join(dir, probe)}}); err != nil {
+	if err := c.cmd().Link(dclcmd.LinkOptions{Objects: []string{filepath.Join(dir, probe)}}); err != nil {
 		t.Fatalf("LINK: %v", err)
 	}
 

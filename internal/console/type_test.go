@@ -8,6 +8,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/tucats/govax/internal/dclcmd"
 	"github.com/tucats/govax/internal/vmserrors"
 	"github.com/tucats/ods2/ondisk"
 	"github.com/tucats/ods2/volume"
@@ -331,7 +332,7 @@ func TestConsoleType_hostPaged(t *testing.T) {
 	}
 
 	out := buf.String()
-	if !strings.Contains(out, "line 4\n"+PagePrompt) || strings.Contains(out, "line 5") {
+	if !strings.Contains(out, "line 4\n"+dclcmd.PagePrompt) || strings.Contains(out, "line 5") {
 		t.Errorf("Type/PAGE output = %q, want it to stop after the first screen", out)
 	}
 }

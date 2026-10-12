@@ -6,10 +6,10 @@ import (
 	"strings"
 
 	"github.com/tucats/govax/internal/dcl"
+	"github.com/tucats/govax/internal/dclcmd"
 	"github.com/tucats/govax/internal/help"
 	iodev "github.com/tucats/govax/internal/io"
 	"github.com/tucats/govax/internal/link"
-	"github.com/tucats/govax/internal/obj"
 	"github.com/tucats/govax/internal/rms"
 	"github.com/tucats/govax/internal/vax"
 	"github.com/tucats/govax/internal/vmserrors"
@@ -450,7 +450,7 @@ func (d *Dispatcher) bindGrammar() {
 
 	// Phase 22 (internal/rms): MOUNT/DISMOUNT attach/detach a disk-image
 	// container file to a device name via internal/rms.MountTable
-	// (Console.Mount/Dismount, internal/console/mount.go). Neither verb has
+	// (Console.Mount/Dismount, internal/dclcmd/mount.go). Neither verb has
 	// a reference/eVAX or testdata/dcl/console.dcl counterpart -- see this
 	// package's own grammar file (internal/bootdata/files/console.dcl)'s
 	// "govax-native extension" comment at MOUNT's definition.
@@ -517,7 +517,7 @@ func (d *Dispatcher) bindGrammar() {
 
 	// Phase 23 (docs/PHASE-23.md, subtask 5): DIRECTORY lists the files on
 	// a mounted volume via internal/rms.Session.Directory (Console.
-	// Directory, internal/console/directory.go). SPEC carries no /prompt=
+	// Directory, internal/dclcmd/directory.go). SPEC carries no /prompt=
 	// in the grammar (console.dcl's own directory verb), so a bare DIRECTORY
 	// with nothing typed after it reaches here with r.String("SPEC") == ""
 	// -- exactly the "list the whole current default directory" case
@@ -569,7 +569,7 @@ func (d *Dispatcher) bindGrammar() {
 	})
 
 	// Phase 23 (docs/PHASE-23.md, subtask 7): PURGE trims old versions via
-	// internal/rms.Session.Purge (Console.Purge, internal/console/purge.go).
+	// internal/rms.Session.Purge (Console.Purge, internal/dclcmd/purge.go).
 	// LIMIT carries no /prompt= in the grammar (console.dcl's own purge verb),
 	// so an omitted /LIMIT reaches here as r.Present("LIMIT") == false --
 	// resolved to the default of 1 (ods2's own cmdPurge convention) here,
@@ -577,7 +577,7 @@ func (d *Dispatcher) bindGrammar() {
 	// zero value can't be told apart from an explicit, invalid /LIMIT=0
 	// (which Session.Purge does reject, as *rms.InvalidLimitError).
 	// docs/PHASE-22.md subtask 18: RENAME renames or moves files on a
-	// mounted volume (Console.Rename, internal/console/rename.go). A
+	// mounted volume (Console.Rename, internal/dclcmd/rename.go). A
 	// negated /NONEW_VERSION is the only way to turn NEW_VERSION off.
 	g.Bind("RENAME", func(id int64, r *dcl.Result) error {
 		newVersion := !(r.Present("NEW_VERSION") && r.Negated("NEW_VERSION"))
@@ -596,7 +596,7 @@ func (d *Dispatcher) bindGrammar() {
 
 	// Phase 23 (docs/PHASE-23.md, subtask 8): TYPE writes one file's
 	// content to the console via internal/rms.Session.Type (Console.Type,
-	// internal/console/type.go). SPEC carries /prompt= in the grammar
+	// internal/dclcmd/type.go). SPEC carries /prompt= in the grammar
 	// (console.dcl's own type verb), so Grammar.Dispatch's own required-
 	// parameter machinery already guarantees it's present by the time this
 	// closure runs. /PAGE shows it a screenful at a time; /HOST makes SPEC
@@ -616,7 +616,7 @@ func (d *Dispatcher) bindGrammar() {
 	// Phase 23 (docs/PHASE-23.md, subtasks 9-10): COPY moves one or more
 	// files' content between a mounted volume and the host filesystem, or
 	// between two mounted volumes, via internal/rms.Session.Copy
-	// (Console.Copy, internal/console/copy.go). SOURCE and DESTINATION
+	// (Console.Copy, internal/dclcmd/copy.go). SOURCE and DESTINATION
 	// each carry their own private HOST qualifier (console.dcl's own copy
 	// verb, using the parameter-scoped-qualifier grammar feature from
 	// subtask 2), read here via r.ParamPresent(paramName, "HOST") rather
@@ -656,11 +656,11 @@ func (d *Dispatcher) bindGrammar() {
 	})
 
 	// docs/PHASE-27.md subtask 10: MACRO assembles a MACRO-32 source into
-	// an object module (Console.Macro, internal/console/macro.go). The
+	// an object module (Console.Macro, internal/dclcmd/macro.go). The
 	// command as typed goes into the object's SRC header, as real MACRO
 	// records its command line.
 	// docs/PHASE-30.md: LINK links object modules into an executable
-	// image (Console.Link, internal/console/link.go).
+	// image (Console.Link, internal/dclcmd/link.go).
 	g.Bind("LINK", func(id int64, r *dcl.Result) error {
 		files := r.List("OBJECTS")
 		items := r.Items("OBJECTS")
@@ -676,7 +676,7 @@ func (d *Dispatcher) bindGrammar() {
 			}
 		}
 
-		return d.Console.cmd().Link(LinkOptions{
+		return d.Console.cmd().Link(dclcmd.LinkOptions{
 			Files:        inputs,
 			Host:         r.ParamPresent("OBJECTS", "HOST"),
 			Executable:   r.String("EXECUTABLE"),
@@ -692,7 +692,7 @@ func (d *Dispatcher) bindGrammar() {
 	})
 
 	// docs/PHASE-38.md: ANALYZE/OBJECT describes object files
-	// (Console.AnalyzeObject, internal/console/analyze.go). Each kind of
+	// (Console.AnalyzeObject, internal/dclcmd/analyze.go). Each kind of
 	// analysis is a qualifier with its own syntax; a bare ANALYZE names
 	// none.
 	g.Bind("ANALYZE", func(id int64, r *dcl.Result) error {
@@ -702,7 +702,7 @@ func (d *Dispatcher) bindGrammar() {
 	// docs/PHASE-40.md: ANALYZE/IMAGE describes image files
 	// (Console.AnalyzeImage).
 	g.Bind("ANALYZE_IMAGE", func(id int64, r *dcl.Result) error {
-		return d.Console.cmd().AnalyzeImage(AnalyzeOptions{
+		return d.Console.cmd().AnalyzeImage(dclcmd.AnalyzeOptions{
 			Files:       r.List("FILES"),
 			Host:        r.ParamPresent("FILES", "HOST"),
 			Output:      r.Present("OUTPUT") && !r.Negated("OUTPUT") && !r.Defaulted("OUTPUT"),
@@ -714,15 +714,9 @@ func (d *Dispatcher) bindGrammar() {
 	})
 
 	g.Bind("ANALYZE_OBJECT", func(id int64, r *dcl.Result) error {
-		var selected []obj.RecordType
+		selected := dclcmd.AnalyzeRecordTypes(func(name string) bool { return r.Present(name) && !r.Negated(name) })
 
-		for _, q := range AnalyzeRecordQualifiers {
-			if r.Present(q.name) && !r.Negated(q.name) {
-				selected = append(selected, q.types...)
-			}
-		}
-
-		return d.Console.cmd().AnalyzeObject(AnalyzeOptions{
+		return d.Console.cmd().AnalyzeObject(dclcmd.AnalyzeOptions{
 			Files:       r.List("FILES"),
 			Host:        r.ParamPresent("FILES", "HOST"),
 			Output:      r.Present("OUTPUT") && !r.Negated("OUTPUT") && !r.Defaulted("OUTPUT"),
@@ -738,7 +732,7 @@ func (d *Dispatcher) bindGrammar() {
 	// from, and lists libraries (Console.Library, internal/console/
 	// library.go).
 	g.Bind("LIBRARY", func(id int64, r *dcl.Result) error {
-		return d.Console.cmd().Library(LibraryOptions{
+		return d.Console.cmd().Library(dclcmd.LibraryOptions{
 			Library:     r.String("LIBRARY"),
 			LibraryHost: r.ParamPresent("LIBRARY", "HOST"),
 			Inputs:      r.List("INPUTS"),
@@ -772,7 +766,7 @@ func (d *Dispatcher) bindGrammar() {
 			show = r.List("SHOW")
 		}
 
-		return d.Console.cmd().Macro(MacroOptions{
+		return d.Console.cmd().Macro(dclcmd.MacroOptions{
 			Source:      r.String("SOURCE"),
 			SourceHost:  r.ParamPresent("SOURCE", "HOST"),
 			Object:      r.String("OBJECT"),

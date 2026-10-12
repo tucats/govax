@@ -6,6 +6,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/tucats/govax/internal/dclcmd"
 	"github.com/tucats/govax/internal/vmsdef"
 )
 
@@ -19,11 +20,11 @@ func piRun(t *testing.T, command string) (string, uint32) {
 	dir := t.TempDir()
 	src := filepath.Join("..", "..", "testdata", "mar", "pi.mar")
 
-	if err := c.cmd().Macro(MacroOptions{Source: src, Object: filepath.Join(dir, "pi.obj")}); err != nil {
+	if err := c.cmd().Macro(dclcmd.MacroOptions{Source: src, Object: filepath.Join(dir, "pi.obj")}); err != nil {
 		t.Fatalf("MACRO: %v", err)
 	}
 
-	if err := c.cmd().Link(LinkOptions{Objects: []string{filepath.Join(dir, "pi")}}); err != nil {
+	if err := c.cmd().Link(dclcmd.LinkOptions{Objects: []string{filepath.Join(dir, "pi")}}); err != nil {
 		t.Fatalf("LINK: %v", err)
 	}
 

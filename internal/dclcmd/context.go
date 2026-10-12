@@ -1,4 +1,4 @@
-package console
+package dclcmd
 
 import (
 	"fmt"
@@ -15,7 +15,7 @@ import (
 // COPY, MOUNT, DEFINE, MACRO, LINK, ...) work on: the DCL running the
 // command (its output, default directory, logical names, and process),
 // the machine's devices and mounted volumes, and where govax finds its
-// files. Console.cmd makes one for each command.
+// files. The console's Console.cmd makes one for each command.
 type Context struct {
 	// Out is the DCL's output.
 	Out io.Writer

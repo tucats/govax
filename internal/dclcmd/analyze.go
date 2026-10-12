@@ -1,4 +1,4 @@
-package console
+package dclcmd
 
 import (
 	"bytes"
@@ -279,11 +279,11 @@ func latin1ToUTF8(b []byte) string {
 	return sb.String()
 }
 
-// AnalyzeRecordQualifiers are ANALYZE/OBJECT's record-type qualifiers and
+// analyzeRecordQualifiers are ANALYZE/OBJECT's record-type qualifiers and
 // the record types each selects. /EOM selects both end of module records,
 // and /GSD, /TIR, ... their own types; /MHD selects every header record,
 // whose first is the module header.
-var AnalyzeRecordQualifiers = []struct {
+var analyzeRecordQualifiers = []struct {
 	name  string
 	types []obj.RecordType
 }{
@@ -294,4 +294,19 @@ var AnalyzeRecordQualifiers = []struct {
 	{"DBG", []obj.RecordType{obj.RecDBG}},
 	{"LNK", []obj.RecordType{obj.RecLNK}},
 	{"EOM", []obj.RecordType{obj.RecEOM, obj.RecEOMW}},
+}
+
+// AnalyzeRecordTypes are the record types ANALYZE/OBJECT's record-type
+// qualifiers select (/GSD, /TIR, ...; analyzeRecordQualifiers): those
+// for which selected, given a qualifier's name, is true.
+func AnalyzeRecordTypes(selected func(qualifier string) bool) []obj.RecordType {
+	var types []obj.RecordType
+
+	for _, q := range analyzeRecordQualifiers {
+		if selected(q.name) {
+			types = append(types, q.types...)
+		}
+	}
+
+	return types
 }

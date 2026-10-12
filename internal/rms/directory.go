@@ -29,7 +29,7 @@ import (
 // about internal/console.Console's own output stream (see this package's
 // other files — InitializeContainer, Session.SetDefault — none of which do
 // any printing themselves either), so it hands the finished text back to
-// its caller (internal/console/directory.go's Console.Directory) to print
+// its caller (internal/dclcmd/directory.go's Console.Directory) to print
 // via Console.Printf, the same "rms computes, console prints" split
 // Session.DefaultString/Console.ShowDefault already established.
 

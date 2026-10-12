@@ -5,6 +5,8 @@ import (
 	"path/filepath"
 	"strings"
 	"testing"
+
+	"github.com/tucats/govax/internal/dclcmd"
 )
 
 // TestRMSCopy_govaxStarlet assembles Phase 28's rmscopy.mar with govax's
@@ -23,11 +25,11 @@ func TestRMSCopy_govaxStarlet(t *testing.T) {
 	src := filepath.Join("..", "..", "testdata", "mar", "macros", "rmscopy.mar")
 	dir := t.TempDir()
 
-	if err := c.cmd().Macro(MacroOptions{Source: src, Object: filepath.Join(dir, "rmscopy.obj")}); err != nil {
+	if err := c.cmd().Macro(dclcmd.MacroOptions{Source: src, Object: filepath.Join(dir, "rmscopy.obj")}); err != nil {
 		t.Fatalf("MACRO: %v", err)
 	}
 
-	if err := c.cmd().Link(LinkOptions{Objects: []string{filepath.Join(dir, "rmscopy")}}); err != nil {
+	if err := c.cmd().Link(dclcmd.LinkOptions{Objects: []string{filepath.Join(dir, "rmscopy")}}); err != nil {
 		t.Fatalf("LINK: %v", err)
 	}
 
