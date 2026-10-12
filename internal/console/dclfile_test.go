@@ -24,7 +24,7 @@ func runFileProcedure(t *testing.T, onHost bool, typed string, lines ...string) 
 	if !onHost {
 		mountFreshContainer(t, c, "DUA0")
 
-		if err := c.SetDefault("DUA0:[000000]"); err != nil {
+		if err := c.cmd().SetDefault("DUA0:[000000]"); err != nil {
 			t.Fatalf("SET DEFAULT: %v", err)
 		}
 	}

@@ -43,7 +43,7 @@ import (
 // docs/PHASE-23.md's "Status-code / error translation" design section.
 // (Phase 23 used SS_BADPARAM with an INITIALIZE-specific message; Phase 25
 // gave SS$_BADPARAM back its real text and this command its own code.)
-func (c *Console) InitializeContainer(path string, blocks uint32, label string, clusterSize uint16, devType string) error {
+func (c *cmdContext) InitializeContainer(path string, blocks uint32, label string, clusterSize uint16, devType string) error {
 	if err := rms.InitializeContainer(path, blocks, label, clusterSize, devType); err != nil {
 		return vmserrors.Wrap(vmserrors.CLI_INITFAIL, err, path)
 	}

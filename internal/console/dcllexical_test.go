@@ -428,7 +428,7 @@ func TestLexicalVolumeFiles(t *testing.T) {
 	c := lexConsole(t)
 	mountFreshContainer(t, c, "DUA0")
 
-	if err := c.SetDefault("DUA0:[000000]"); err != nil {
+	if err := c.cmd().SetDefault("DUA0:[000000]"); err != nil {
 		t.Fatal(err)
 	}
 

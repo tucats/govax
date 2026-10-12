@@ -28,11 +28,11 @@ func TestProbe50TOracle(t *testing.T) {
 	d := c.Dispatcher
 
 	disk := filepath.Join(t.TempDir(), "dcl50.dsk")
-	if err := c.InitializeContainer(disk, 2000, "DCL50", 0, "RD53"); err != nil {
+	if err := c.Commands().InitializeContainer(disk, 2000, "DCL50", 0, "RD53"); err != nil {
 		t.Fatal(err)
 	}
 
-	if err := c.Mount("DUA1", disk, true); err != nil {
+	if err := c.Commands().Mount("DUA1", disk, true); err != nil {
 		t.Fatal(err)
 	}
 

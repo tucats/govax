@@ -398,12 +398,12 @@ func (d *Dispatcher) bindGrammar() {
 	// It was a DCL grammar entry before SET DEFAULT was (docs/PHASE-37.md),
 	// since SHOW already has a large family of "syntax show_*" entries
 	// (show_map/show_tb/... above) that DEFAULT slots into the same way.
-	g.Bind("SHOW_DEFAULT", func(id int64, r *dcl.Result) error { return d.Console.ShowDefault() })
+	g.Bind("SHOW_DEFAULT", func(id int64, r *dcl.Result) error { return d.Console.cmd().ShowDefault() })
 
 	// SHOW SYSTEM and SHOW PROCESS (docs/PHASE-44.md, subtask 10).
-	g.Bind("SHOW_SYSTEM", func(id int64, r *dcl.Result) error { return d.Console.ShowSystem() })
+	g.Bind("SHOW_SYSTEM", func(id int64, r *dcl.Result) error { return d.Console.cmd().ShowSystem() })
 	g.Bind("SHOW_PROCESS", func(id int64, r *dcl.Result) error {
-		return d.Console.ShowProcess(r.String("PROCESS_NAME"), r.String("IDENTIFICATION"))
+		return d.Console.cmd().ShowProcess(r.String("PROCESS_NAME"), r.String("IDENTIFICATION"))
 	})
 
 	g.Bind("SHOW_DEBUG", func(id int64, r *dcl.Result) error { return d.Console.ShowDebug() })
@@ -413,11 +413,11 @@ func (d *Dispatcher) bindGrammar() {
 
 	// Phase 09 (internal/io): device abstraction and logical name tables.
 	g.Bind("SHOW_DEVICE", func(id int64, r *dcl.Result) error {
-		return d.Console.ShowDevices(r.String("NAME"), r.Present("FULL"))
+		return d.Console.cmd().ShowDevices(r.String("NAME"), r.Present("FULL"))
 	})
 
 	g.Bind("DEFINE_DEVICE", func(id int64, r *dcl.Result) error {
-		d.Console.DefineDevice(r.String("NAME"), iodev.DeviceOptions{
+		d.Console.cmd().DefineDevice(r.String("NAME"), iodev.DeviceOptions{
 			Cluster:     uint32(r.Int("CLUSTER")),
 			Cylinders:   uint32(r.Int("CYLINDERS")),
 			DevBufSize:  uint32(r.Int("DEVBUFSIZE")),
@@ -466,11 +466,11 @@ func (d *Dispatcher) bindGrammar() {
 		// TestParse_mountNowrite in internal/dcl/parse_test.go).
 		write := !r.Negated("WRITE")
 
-		return d.Console.MountCommand(r.String("DEVICE"), r.String("FILE"), write)
+		return d.Console.cmd().MountCommand(r.String("DEVICE"), r.String("FILE"), write)
 	})
 
 	g.Bind("DISMOUNT", func(id int64, r *dcl.Result) error {
-		return d.Console.Dismount(r.String("DEVICE"))
+		return d.Console.cmd().Dismount(r.String("DEVICE"))
 	})
 
 	// Phase 23 (docs/PHASE-23.md, subtask 1): INITIALIZE/VAX carries
@@ -506,7 +506,7 @@ func (d *Dispatcher) bindGrammar() {
 	// "use the default" already, so no explicit r.Present check is needed
 	// for either).
 	g.Bind("INITIALIZE_CONTAINER", func(id int64, r *dcl.Result) error {
-		return d.Console.InitializeContainer(
+		return d.Console.cmd().InitializeContainer(
 			r.String("PATH"),
 			uint32(r.Int("SIZE")),
 			r.String("LABEL"),
@@ -548,7 +548,7 @@ func (d *Dispatcher) bindGrammar() {
 
 		// VMS's DIRECTORY image ends with SS$_NORMAL (VMS 7.3,
 		// testdata/dcl50's round 5).
-		if err := d.Console.Directory(r.String("SPEC"), opts); err != nil {
+		if err := d.Console.cmd().Directory(r.String("SPEC"), opts); err != nil {
 			return err
 		}
 
@@ -565,7 +565,7 @@ func (d *Dispatcher) bindGrammar() {
 	// runs -- unlike DIRECTORY's SPEC, a bare DELETE has no sensible
 	// "delete everything" default to fall back to.
 	g.Bind("DELETE", func(id int64, r *dcl.Result) error {
-		return d.Console.Delete(r.String("SPEC"))
+		return d.Console.cmd().Delete(r.String("SPEC"))
 	})
 
 	// Phase 23 (docs/PHASE-23.md, subtask 7): PURGE trims old versions via
@@ -582,7 +582,7 @@ func (d *Dispatcher) bindGrammar() {
 	g.Bind("RENAME", func(id int64, r *dcl.Result) error {
 		newVersion := !(r.Present("NEW_VERSION") && r.Negated("NEW_VERSION"))
 
-		return d.Console.Rename(r.List("INPUTS"), r.String("OUTPUT"), r.Present("LOG"), newVersion)
+		return d.Console.cmd().Rename(r.List("INPUTS"), r.String("OUTPUT"), r.Present("LOG"), newVersion)
 	})
 
 	g.Bind("PURGE", func(id int64, r *dcl.Result) error {
@@ -591,7 +591,7 @@ func (d *Dispatcher) bindGrammar() {
 			limit = uint16(r.Int("LIMIT"))
 		}
 
-		return d.Console.Purge(r.String("SPEC"), limit)
+		return d.Console.cmd().Purge(r.String("SPEC"), limit)
 	})
 
 	// Phase 23 (docs/PHASE-23.md, subtask 8): TYPE writes one file's
@@ -604,7 +604,7 @@ func (d *Dispatcher) bindGrammar() {
 	// VMS's TYPE image ends with SS$_NORMAL, its message marked as shown
 	// (%X10000001: VMS 7.3, testdata/dcl50's round 5).
 	g.Bind("TYPE", func(id int64, r *dcl.Result) error {
-		if err := d.Console.Type(r.String("SPEC"), r.Present("HOST"), r.Present("PAGE")); err != nil {
+		if err := d.Console.cmd().Type(r.String("SPEC"), r.Present("HOST"), r.Present("PAGE")); err != nil {
 			return err
 		}
 
@@ -648,7 +648,7 @@ func (d *Dispatcher) bindGrammar() {
 			CRLF:    r.Present("CRLF"),
 		}
 
-		return d.Console.Copy(
+		return d.Console.cmd().Copy(
 			r.String("SOURCE"), r.ParamPresent("SOURCE", "HOST"),
 			r.String("DESTINATION"), r.ParamPresent("DESTINATION", "HOST"),
 			opts,
@@ -676,7 +676,7 @@ func (d *Dispatcher) bindGrammar() {
 			}
 		}
 
-		return d.Console.Link(LinkOptions{
+		return d.Console.cmd().Link(LinkOptions{
 			Files:        inputs,
 			Host:         r.ParamPresent("OBJECTS", "HOST"),
 			Executable:   r.String("EXECUTABLE"),
@@ -702,7 +702,7 @@ func (d *Dispatcher) bindGrammar() {
 	// docs/PHASE-40.md: ANALYZE/IMAGE describes image files
 	// (Console.AnalyzeImage).
 	g.Bind("ANALYZE_IMAGE", func(id int64, r *dcl.Result) error {
-		return d.Console.AnalyzeImage(AnalyzeOptions{
+		return d.Console.cmd().AnalyzeImage(AnalyzeOptions{
 			Files:       r.List("FILES"),
 			Host:        r.ParamPresent("FILES", "HOST"),
 			Output:      r.Present("OUTPUT") && !r.Negated("OUTPUT") && !r.Defaulted("OUTPUT"),
@@ -722,7 +722,7 @@ func (d *Dispatcher) bindGrammar() {
 			}
 		}
 
-		return d.Console.AnalyzeObject(AnalyzeOptions{
+		return d.Console.cmd().AnalyzeObject(AnalyzeOptions{
 			Files:       r.List("FILES"),
 			Host:        r.ParamPresent("FILES", "HOST"),
 			Output:      r.Present("OUTPUT") && !r.Negated("OUTPUT") && !r.Defaulted("OUTPUT"),
@@ -738,7 +738,7 @@ func (d *Dispatcher) bindGrammar() {
 	// from, and lists libraries (Console.Library, internal/console/
 	// library.go).
 	g.Bind("LIBRARY", func(id int64, r *dcl.Result) error {
-		return d.Console.Library(LibraryOptions{
+		return d.Console.cmd().Library(LibraryOptions{
 			Library:     r.String("LIBRARY"),
 			LibraryHost: r.ParamPresent("LIBRARY", "HOST"),
 			Inputs:      r.List("INPUTS"),
@@ -772,7 +772,7 @@ func (d *Dispatcher) bindGrammar() {
 			show = r.List("SHOW")
 		}
 
-		return d.Console.Macro(MacroOptions{
+		return d.Console.cmd().Macro(MacroOptions{
 			Source:      r.String("SOURCE"),
 			SourceHost:  r.ParamPresent("SOURCE", "HOST"),
 			Object:      r.String("OBJECT"),

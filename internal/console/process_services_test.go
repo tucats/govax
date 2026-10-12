@@ -22,7 +22,7 @@ import (
 // emulated process and device state they left behind.
 func TestProcessServices_assembledProgram(t *testing.T) {
 	c := newBootableConsole(t)
-	tta0 := c.DefineDevice("TTA0", iodev.DeviceOptions{DevClass: iodev.DeviceClassTT})
+	tta0 := c.cmd().DefineDevice("TTA0", iodev.DeviceOptions{DevClass: iodev.DeviceClassTT})
 
 	addr, hasEntry, err := c.Assemble(asmFixturePath(t, "process_services.asm"))
 	if err != nil {
@@ -355,7 +355,7 @@ func TestTerminalQIO_assembledProgram(t *testing.T) {
 		t.Fatalf("VMInit: %v", err)
 	}
 
-	c.DefineDevice("TTA0", iodev.DeviceOptions{DevClass: iodev.DeviceClassTT})
+	c.cmd().DefineDevice("TTA0", iodev.DeviceOptions{DevClass: iodev.DeviceClassTT})
 
 	addr, hasEntry, err := c.Assemble(asmFixturePath(t, "terminal_qio.asm"))
 	if err != nil {
@@ -758,7 +758,7 @@ func TestFAO_assembledProgram(t *testing.T) {
 		t.Fatalf("VMInit: %v", err)
 	}
 
-	c.DefineDevice("TTA0", iodev.DeviceOptions{DevClass: iodev.DeviceClassTT})
+	c.cmd().DefineDevice("TTA0", iodev.DeviceOptions{DevClass: iodev.DeviceClassTT})
 
 	addr, hasEntry, err := c.Assemble(asmFixturePath(t, "fao.asm"))
 	if err != nil {
@@ -902,7 +902,7 @@ func TestCmkrnl_assembledProgram(t *testing.T) {
 // key is delivered as the program's AST.
 func TestCtrlCAST_assembledProgram(t *testing.T) {
 	c := newBootableConsole(t)
-	c.DefineDevice("TTA0", iodev.DeviceOptions{DevClass: iodev.DeviceClassTT})
+	c.cmd().DefineDevice("TTA0", iodev.DeviceOptions{DevClass: iodev.DeviceClassTT})
 
 	addr, hasEntry, err := c.Assemble(asmFixturePath(t, "ctrlc_ast.asm"))
 	if err != nil {
@@ -990,7 +990,7 @@ func TestAttentionKeys_matchRTL(t *testing.T) {
 // and $GETDVI (then $SYNCH) about SYS$OUTPUT.
 func TestGetdvi_assembledProgram(t *testing.T) {
 	c := newBootableConsole(t)
-	c.DefineDevice("TTA0", iodev.DeviceOptions{DevClass: iodev.DeviceClassTT})
+	c.cmd().DefineDevice("TTA0", iodev.DeviceOptions{DevClass: iodev.DeviceClassTT})
 
 	addr, hasEntry, err := c.Assemble(asmFixturePath(t, "getdvi.asm"))
 	if err != nil {

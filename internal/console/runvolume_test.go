@@ -21,11 +21,11 @@ func TestRun_imageOnVolume(t *testing.T) {
 	writeHostFile(t, filepath.Join(dir, "main.mar"), "\t.PSECT\tCODE,NOWRT,EXE\n"+
 		"\t.ENTRY\tSTART,^M<>\n\tMOVL\t#42,R0\n\tRET\n\t.END\tSTART\n")
 
-	if err := c.Macro(MacroOptions{Source: filepath.Join(dir, "main.mar"), Object: "DUA0:[000000]MAIN.OBJ"}); err != nil {
+	if err := c.cmd().Macro(MacroOptions{Source: filepath.Join(dir, "main.mar"), Object: "DUA0:[000000]MAIN.OBJ"}); err != nil {
 		t.Fatal(err)
 	}
 
-	if err := c.Link(LinkOptions{Objects: []string{"DUA0:[000000]MAIN"}}); err != nil {
+	if err := c.cmd().Link(LinkOptions{Objects: []string{"DUA0:[000000]MAIN"}}); err != nil {
 		t.Fatal(err)
 	}
 
@@ -45,7 +45,7 @@ func TestRun_imageOnVolume(t *testing.T) {
 		t.Errorf("DUA0:[000000]MAIN: %d bytes, %v", len(got), err)
 	}
 
-	if err := c.SetDefault("DUA0:[000000]"); err != nil {
+	if err := c.cmd().SetDefault("DUA0:[000000]"); err != nil {
 		t.Fatal(err)
 	}
 
@@ -78,11 +78,11 @@ func TestDispatch_runHost(t *testing.T) {
 
 	exe := filepath.Join(dir, "entry.exe")
 	
-	if err := c.Link(LinkOptions{Objects: []string{filepath.Join(dir, "entry")}}); err != nil {
+	if err := c.cmd().Link(LinkOptions{Objects: []string{filepath.Join(dir, "entry")}}); err != nil {
 		t.Fatal(err)
 	}
 
-	if err := c.SetDefault("DUA0:[000000]"); err != nil {
+	if err := c.cmd().SetDefault("DUA0:[000000]"); err != nil {
 		t.Fatal(err)
 	}
 
@@ -102,13 +102,13 @@ func TestRun_recordUpdates(t *testing.T) {
 	c := newBootableConsole(t)
 	mountFreshContainer(t, c, "DUA0")
 
-	if err := c.Macro(MacroOptions{
+	if err := c.cmd().Macro(MacroOptions{
 		Source: filepath.Join("..", "..", "testdata", "rms49", "update.mar"), Object: "DUA0:[000000]UPDATE.OBJ",
 	}); err != nil {
 		t.Fatal(err)
 	}
 
-	if err := c.Link(LinkOptions{Objects: []string{"DUA0:[000000]UPDATE"}}); err != nil {
+	if err := c.cmd().Link(LinkOptions{Objects: []string{"DUA0:[000000]UPDATE"}}); err != nil {
 		t.Fatal(err)
 	}
 
@@ -124,13 +124,13 @@ func TestRun_fileSections(t *testing.T) {
 	c := newBootableConsole(t)
 	mountFreshContainer(t, c, "DUA0")
 
-	if err := c.Macro(MacroOptions{
+	if err := c.cmd().Macro(MacroOptions{
 		Source: filepath.Join("..", "..", "testdata", "sec49", "mapfile.mar"), Object: "DUA0:[000000]MAPFILE.OBJ",
 	}); err != nil {
 		t.Fatal(err)
 	}
 
-	if err := c.Link(LinkOptions{Objects: []string{"DUA0:[000000]MAPFILE"}}); err != nil {
+	if err := c.cmd().Link(LinkOptions{Objects: []string{"DUA0:[000000]MAPFILE"}}); err != nil {
 		t.Fatal(err)
 	}
 

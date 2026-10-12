@@ -5,11 +5,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/tucats/govax/internal/corevms"
-	"github.com/tucats/govax/internal/dcl"
 	"github.com/tucats/govax/internal/lnm"
 	"github.com/tucats/govax/internal/rms"
-	"github.com/tucats/govax/internal/vax"
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
@@ -27,175 +24,13 @@ const consoleTerminal = "_TTA0:"
 // search by default (LNM$FILE_DEV's tables, as on VMS).
 const dclLogicalName = "LNM$DCL_LOGICAL"
 
-// newLogicals returns the console's logical-name database: the standard
-// VMS directories and tables for corevms.NominalUIC (the same UIC the RTL
-// reports for this process), plus the process-permanent terminal names.
-func newLogicals() *lnm.Database {
-	db := lnm.NewDatabase(corevms.NominalUIC)
-	if err := db.DefineProcessNames(consoleTerminal); err != nil {
-		// Only reachable if the fixed names above were invalid.
-		panic(err)
-	}
-
-	return db
-}
-
-// traceLogicals is the logical-name database's Trace hook: it writes
-// each line to the CPU's debug writer while SET DEBUG LOGICALS is on.
-func (c *Machine) traceLogicals(format string, args ...any) {
-	if c.CPU != nil && c.CPU.DebugEnabled(vax.DebugLogicals) {
-		fmt.Fprintf(c.CPU.DebugWriter(), "DEBUG: LNM: "+format+"\n", args...)
-	}
-}
-
-// bindLogicalCommands binds the logical-name commands' grammar entries
-// (internal/bootdata/files/console.dcl) to c.
-func bindLogicalCommands(g *dcl.Grammar, c *Console) {
-	define := func(assign bool) dcl.Handler {
-		return func(id int64, r *dcl.Result) error {
-			name := r.String("NAME")
-			if assign {
-				// ASSIGN removes one trailing colon; DEFINE keeps it.
-				name = strings.TrimSuffix(name, ":")
-			}
-
-			var attrs uint32
-
-			for _, a := range r.List("TRANSLATION_ATTRIBUTES") {
-				switch a {
-				case "CONCEALED":
-					attrs |= lnm.AttrConcealed
-
-				case "TERMINAL":
-					attrs |= lnm.AttrTerminal
-				}
-			}
-
-			return c.DefineLogicalName(logicalTableQualifier(r), name, r.List("VALUE"),
-				logicalModeQualifier(r), attrs, !r.Negated("LOG"))
-		}
-	}
-
-	g.Bind("DEFINE", define(false))
-	g.Bind("ASSIGN", define(true))
-
-	g.Bind("DEASSIGN", func(id int64, r *dcl.Result) error {
-		// Like ASSIGN, DEASSIGN removes one trailing colon.
-		name := strings.TrimSuffix(r.String("NAME"), ":")
-
-		return c.DeassignLogicalName(logicalTableQualifier(r), name, logicalModeQualifier(r), r.Present("ALL"))
-	})
-
-	// A bare CREATE makes a text file from SYS$INPUT (createfile.go);
-	// /DIRECTORY (create.go) and /NAME_TABLE are below.
-	g.Bind("CREATE", func(id int64, r *dcl.Result) error {
-		return c.CreateFile(r.String("FILE"), r.ParamPresent("FILE", "HOST"), r.Present("LOG") && !r.Negated("LOG"))
-	})
-
-	g.Bind("CREATE_DIRECTORY", func(id int64, r *dcl.Result) error {
-		req := CreateDirectoryRequest{
-			Directories: r.List("DIRECTORIES"),
-			OwnerUIC:    r.String("OWNER_UIC"),
-			Protection:  r.List("PROTECTION"),
-			Allocation:  int(r.Int("ALLOCATION")),
-			Log:         r.Present("LOG") && !r.Negated("LOG"),
-		}
-
-		if r.Present("VERSION_LIMIT") {
-			n := int(r.Int("VERSION_LIMIT"))
-			req.VersionLimit = &n
-		}
-
-		return c.CreateDirectory(req)
-	})
-
-	g.Bind("CREATE_NAME_TABLE", func(id int64, r *dcl.Result) error {
-		parent := r.String("PARENT_TABLE")
-		if parent == "" {
-			parent = lnm.ProcessDirectoryName
-		}
-
-		return c.CreateNameTable(r.String("TABLE"), parent, logicalModeQualifier(r), !r.Negated("LOG"))
-	})
-
-	g.Bind("SHOW_LOGICAL", func(id int64, r *dcl.Result) error {
-		if r.Present("STRUCTURE") {
-			c.ShowLogicalStructure()
-
-			return nil
-		}
-
-		var tables []string
-
-		switch {
-		case r.Present("PROCESS"):
-			tables = []string{"LNM$PROCESS"}
-
-		case r.Present("JOB"):
-			tables = []string{"LNM$JOB"}
-
-		case r.Present("GROUP"):
-			tables = []string{"LNM$GROUP"}
-
-		case r.Present("SYSTEM"):
-			tables = []string{"LNM$SYSTEM"}
-
-		case r.Present("TABLE"):
-			tables = r.List("TABLE")
-		}
-
-		return c.ShowLogical(r.List("NAME"), tables, r.Present("FULL"))
-	})
-
-	g.Bind("SHOW_TRANSLATION", func(id int64, r *dcl.Result) error {
-		return c.ShowTranslation(r.String("TABLE"), r.String("NAME"))
-	})
-}
-
-// logicalTableQualifier returns the table a DEFINE/ASSIGN/DEASSIGN
-// command names: /PROCESS, /JOB, /GROUP, /SYSTEM, or /TABLE= (the grammar
-// lets only one through), defaulting to the process table.
-func logicalTableQualifier(r *dcl.Result) string {
-	switch {
-	case r.Present("JOB"):
-		return "LNM$JOB"
-
-	case r.Present("GROUP"):
-		return "LNM$GROUP"
-
-	case r.Present("SYSTEM"):
-		return "LNM$SYSTEM"
-
-	case r.Present("TABLE"):
-		return r.String("TABLE")
-
-	default:
-		return "LNM$PROCESS"
-	}
-}
-
-// logicalModeQualifier returns the access mode /USER_MODE,
-// /SUPERVISOR_MODE, or /EXECUTIVE_MODE selects; supervisor by default.
-func logicalModeQualifier(r *dcl.Result) lnm.Mode {
-	switch {
-	case r.Present("USER_MODE"):
-		return lnm.User
-
-	case r.Present("EXECUTIVE_MODE"):
-		return lnm.Executive
-
-	default:
-		return lnm.Supervisor
-	}
-}
-
 // DefineLogicalName implements DEFINE and ASSIGN: it defines name in the
 // first table designated, at mode, with one equivalence string per
 // element of values, each carrying attrs (AttrConcealed, AttrTerminal).
 // When log is set and an existing definition was replaced, it prints
 // DCL's %DCL-I-SUPERSEDE message. Removing ASSIGN's trailing colon is the
 // caller's job.
-func (c *Console) DefineLogicalName(table, name string, values []string, mode lnm.Mode, attrs uint32, log bool) error {
+func (c *cmdContext) DefineLogicalName(table, name string, values []string, mode lnm.Mode, attrs uint32, log bool) error {
 	eqv := make([]lnm.Equivalence, len(values))
 	for i, v := range values {
 		eqv[i] = lnm.Equivalence{Value: v, Attrs: attrs}
@@ -220,7 +55,7 @@ func (c *Console) DefineLogicalName(table, name string, values []string, mode ln
 // them alone, as on VMS. A table name in a directory table deletes that
 // table (DEASSIGN/TABLE=LNM$PROCESS_DIRECTORY TAX). It leaves $STATUS
 // SS$_NORMAL.
-func (c *Console) DeassignLogicalName(table, name string, mode lnm.Mode, all bool) error {
+func (c *cmdContext) DeassignLogicalName(table, name string, mode lnm.Mode, all bool) error {
 	switch {
 	case all && name != "":
 		return vmserrors.New(vmserrors.CLI_EXTRAPARAMETER, name)
@@ -235,7 +70,7 @@ func (c *Console) DeassignLogicalName(table, name string, mode lnm.Mode, all boo
 
 	// $DELLNM's status, SS$_NORMAL: VMS 7.3's DEASSIGN left %X00000001
 	// (testdata/dcl50's F11).
-	c.setCommandStatus(ssNormal, nil)
+	c.SetStatus(ssNormal)
 
 	return nil
 }
@@ -245,7 +80,7 @@ func (c *Console) DeassignLogicalName(table, name string, mode lnm.Mode, all boo
 // a process-private table, unless the caller says otherwise). When log
 // is set and an existing table of that name was replaced, it prints
 // %DCL-I-SUPERSEDE.
-func (c *Console) CreateNameTable(table, parent string, mode lnm.Mode, log bool) error {
+func (c *cmdContext) CreateNameTable(table, parent string, mode lnm.Mode, log bool) error {
 	_, result, err := c.Logicals.CreateTable(table, parent, mode, 0)
 	if err != nil {
 		return err
@@ -309,16 +144,16 @@ func (d logicalDisplay) logicalTables(specs []string) ([]*lnm.Table, error) {
 // Its status is SS$_NORMAL, or SHOW$_NOTRAN when a name had no
 // translation, each with STS$M_INHIB_MSG set, as VMS's SHOW image
 // returned them (testdata/mp/probe4 and probe5).
-func (c *Console) ShowLogical(names, tables []string, full bool) error {
+func (c *cmdContext) ShowLogical(names, tables []string, full bool) error {
 	untranslated, err := logicalDisplay{db: c.Logicals, out: c.Printf}.show(names, tables, full)
 	if err != nil {
 		return err
 	}
 
 	if untranslated {
-		c.setCommandStatus(showNotran|stsInhibitMsg, nil)
+		c.SetStatus(showNotran | stsInhibitMsg)
 	} else {
-		c.setCommandStatus(ssNormal|stsInhibitMsg, nil)
+		c.SetStatus(ssNormal | stsInhibitMsg)
 	}
 
 	return nil
@@ -560,13 +395,13 @@ func attrTags(attrs uint32, show bool) string {
 
 // ShowLogicalStructure implements SHOW LOGICAL/STRUCTURE: each directory
 // and, indented beneath it, the tables descended from it.
-func (c *Console) ShowLogicalStructure() {
+func (c *cmdContext) ShowLogicalStructure() {
 	for _, dir := range []*lnm.Table{c.Logicals.ProcessDirectory, c.Logicals.SystemDirectory} {
 		c.printTableTree(dir, 0)
 	}
 }
 
-func (c *Console) printTableTree(t *lnm.Table, depth int) {
+func (c *cmdContext) printTableTree(t *lnm.Table, depth int) {
 	c.Printf("%s(%s)\n", strings.Repeat("    ", depth), t.Name)
 
 	for _, child := range c.Logicals.Children(t) {
@@ -583,7 +418,7 @@ func (c *Console) printTableTree(t *lnm.Table, depth int) {
 //	NAME = "VALUE" (TABLE)
 //
 // A name that isn't found prints %SHOW-S-NOTRAN.
-func (c *Console) ShowTranslation(table, name string) error {
+func (c *cmdContext) ShowTranslation(table, name string) error {
 	if table == "" {
 		table = dclLogicalName
 	}
@@ -608,21 +443,6 @@ func (c *Console) ShowTranslation(table, name string) error {
 	c.Printf("%s = %q (%s)\n", e.Name, value, e.Table.Name)
 
 	return nil
-}
-
-// EndSession ends the console's use of the machine as govax exits: an
-// image of process 1's that never exited is run down, the other processes
-// are deleted (their files closed), and every file process 1 and DCL's
-// OPEN have open is closed, so that what they wrote reaches the volumes
-// before they're dismounted.
-func (c *Console) EndSession() {
-	c.runDownAbandonedImage()
-	c.endOtherProcesses()
-	c.closeDCLFiles()
-
-	if c.RTL != nil {
-		c.RTL.CloseFiles()
-	}
 }
 
 // logicalNameFailure returns the status carried by err when a file

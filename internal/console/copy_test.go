@@ -19,7 +19,7 @@ func TestConsoleCopy_volumeToVolume(t *testing.T) {
 	c, buf := newTestConsole(t)
 	mountFreshContainer(t, c, "DUA0")
 
-	if err := c.SetDefault("DUA0:"); err != nil {
+	if err := c.cmd().SetDefault("DUA0:"); err != nil {
 		t.Fatalf("SetDefault: %v", err)
 	}
 
@@ -30,7 +30,7 @@ func TestConsoleCopy_volumeToVolume(t *testing.T) {
 
 	createConsoleTestFileWithContent(t, vol, "FOO.TXT", "hello, world")
 
-	if err := c.Copy("FOO.TXT", false, "BAR.TXT", false, rms.CopyOptions{}); err != nil {
+	if err := c.cmd().Copy("FOO.TXT", false, "BAR.TXT", false, rms.CopyOptions{}); err != nil {
 		t.Fatalf("Copy: %v", err)
 	}
 
@@ -40,7 +40,7 @@ func TestConsoleCopy_volumeToVolume(t *testing.T) {
 
 	buf.Reset()
 
-	if err := c.Type("BAR.TXT", false, false); err != nil {
+	if err := c.cmd().Type("BAR.TXT", false, false); err != nil {
 		t.Fatalf("Type(BAR.TXT): %v", err)
 	}
 
@@ -57,7 +57,7 @@ func TestConsoleCopy_quiet(t *testing.T) {
 	c, buf := newTestConsole(t)
 	mountFreshContainer(t, c, "DUA0")
 
-	if err := c.SetDefault("DUA0:"); err != nil {
+	if err := c.cmd().SetDefault("DUA0:"); err != nil {
 		t.Fatalf("SetDefault: %v", err)
 	}
 
@@ -68,7 +68,7 @@ func TestConsoleCopy_quiet(t *testing.T) {
 
 	createConsoleTestFileWithContent(t, vol, "FOO.TXT", "hello, world")
 
-	if err := c.Copy("FOO.TXT", false, "BAR.TXT", false, rms.CopyOptions{Quiet: true}); err != nil {
+	if err := c.cmd().Copy("FOO.TXT", false, "BAR.TXT", false, rms.CopyOptions{Quiet: true}); err != nil {
 		t.Fatalf("Copy: %v", err)
 	}
 
@@ -84,7 +84,7 @@ func TestConsoleCopy_verbose(t *testing.T) {
 	c, buf := newTestConsole(t)
 	mountFreshContainer(t, c, "DUA0")
 
-	if err := c.SetDefault("DUA0:"); err != nil {
+	if err := c.cmd().SetDefault("DUA0:"); err != nil {
 		t.Fatalf("SetDefault: %v", err)
 	}
 
@@ -95,7 +95,7 @@ func TestConsoleCopy_verbose(t *testing.T) {
 
 	createConsoleTestFileWithContent(t, vol, "FOO.TXT", "hello, world")
 
-	if err := c.Copy("FOO.TXT", false, "BAR.TXT", false, rms.CopyOptions{Verbose: true}); err != nil {
+	if err := c.cmd().Copy("FOO.TXT", false, "BAR.TXT", false, rms.CopyOptions{Verbose: true}); err != nil {
 		t.Fatalf("Copy: %v", err)
 	}
 
@@ -118,7 +118,7 @@ func TestConsoleCopy_test(t *testing.T) {
 	c, buf := newTestConsole(t)
 	mountFreshContainer(t, c, "DUA0")
 
-	if err := c.SetDefault("DUA0:"); err != nil {
+	if err := c.cmd().SetDefault("DUA0:"); err != nil {
 		t.Fatalf("SetDefault: %v", err)
 	}
 
@@ -129,7 +129,7 @@ func TestConsoleCopy_test(t *testing.T) {
 
 	createConsoleTestFileWithContent(t, vol, "FOO.TXT", "hello, world")
 
-	if err := c.Copy("FOO.TXT", false, "BAR.TXT", false, rms.CopyOptions{Test: true}); err != nil {
+	if err := c.cmd().Copy("FOO.TXT", false, "BAR.TXT", false, rms.CopyOptions{Test: true}); err != nil {
 		t.Fatalf("Copy: %v", err)
 	}
 
@@ -139,7 +139,7 @@ func TestConsoleCopy_test(t *testing.T) {
 		t.Errorf("Copy output = %q, want a %%COPY-I-TEST line", out)
 	}
 
-	if err := c.Type("BAR.TXT", false, false); err == nil {
+	if err := c.cmd().Type("BAR.TXT", false, false); err == nil {
 		t.Error("BAR.TXT exists after a /TEST copy -- /TEST must not actually write anything")
 	}
 }
@@ -151,7 +151,7 @@ func TestConsoleCopy_fromHost(t *testing.T) {
 	c, buf := newTestConsole(t)
 	mountFreshContainer(t, c, "DUA0")
 
-	if err := c.SetDefault("DUA0:"); err != nil {
+	if err := c.cmd().SetDefault("DUA0:"); err != nil {
 		t.Fatalf("SetDefault: %v", err)
 	}
 
@@ -160,7 +160,7 @@ func TestConsoleCopy_fromHost(t *testing.T) {
 		t.Fatalf("WriteFile: %v", err)
 	}
 
-	if err := c.Copy(hostPath, true, "BAZ.TXT", false, rms.CopyOptions{}); err != nil {
+	if err := c.cmd().Copy(hostPath, true, "BAZ.TXT", false, rms.CopyOptions{}); err != nil {
 		t.Fatalf("Copy: %v", err)
 	}
 
@@ -176,7 +176,7 @@ func TestConsoleCopy_toHost(t *testing.T) {
 	c, _ := newTestConsole(t)
 	mountFreshContainer(t, c, "DUA0")
 
-	if err := c.SetDefault("DUA0:"); err != nil {
+	if err := c.cmd().SetDefault("DUA0:"); err != nil {
 		t.Fatalf("SetDefault: %v", err)
 	}
 
@@ -189,7 +189,7 @@ func TestConsoleCopy_toHost(t *testing.T) {
 
 	outPath := filepath.Join(t.TempDir(), "out.txt")
 
-	if err := c.Copy("FOO.TXT", false, outPath, true, rms.CopyOptions{}); err != nil {
+	if err := c.cmd().Copy("FOO.TXT", false, outPath, true, rms.CopyOptions{}); err != nil {
 		t.Fatalf("Copy: %v", err)
 	}
 
@@ -209,7 +209,7 @@ func TestConsoleCopy_toHost(t *testing.T) {
 func TestConsoleCopy_notMounted(t *testing.T) {
 	c, _ := newTestConsole(t)
 
-	err := c.Copy("DUB0:FOO.TXT", false, "BAR.TXT", false, rms.CopyOptions{})
+	err := c.cmd().Copy("DUB0:FOO.TXT", false, "BAR.TXT", false, rms.CopyOptions{})
 	if err == nil {
 		t.Fatal("Copy from an unmounted device = nil error, want SS_DEVNOTMOUNT")
 	}
@@ -226,11 +226,11 @@ func TestConsoleCopy_notFound(t *testing.T) {
 	c, _ := newTestConsole(t)
 	mountFreshContainer(t, c, "DUA0")
 
-	if err := c.SetDefault("DUA0:"); err != nil {
+	if err := c.cmd().SetDefault("DUA0:"); err != nil {
 		t.Fatalf("SetDefault: %v", err)
 	}
 
-	err := c.Copy("NOSUCH.TXT", false, "BAR.TXT", false, rms.CopyOptions{})
+	err := c.cmd().Copy("NOSUCH.TXT", false, "BAR.TXT", false, rms.CopyOptions{})
 	if err == nil {
 		t.Fatal("Copy of a nonexistent file = nil error, want SS_NOSUCHFILE")
 	}
@@ -247,7 +247,7 @@ func TestConsoleCopy_ambiguous(t *testing.T) {
 	c, _ := newTestConsole(t)
 	mountFreshContainer(t, c, "DUA0")
 
-	if err := c.SetDefault("DUA0:"); err != nil {
+	if err := c.cmd().SetDefault("DUA0:"); err != nil {
 		t.Fatalf("SetDefault: %v", err)
 	}
 
@@ -259,7 +259,7 @@ func TestConsoleCopy_ambiguous(t *testing.T) {
 	createConsoleTestFile(t, vol, "DUP.TXT")
 	createConsoleTestFile(t, vol, "DUP.TXT")
 
-	err := c.Copy("DUP.TXT;*", false, "OUT.TXT", false, rms.CopyOptions{})
+	err := c.cmd().Copy("DUP.TXT;*", false, "OUT.TXT", false, rms.CopyOptions{})
 	if err == nil {
 		t.Fatal("Copy of a wildcarded multi-version spec = nil error, want CLI_AMBIGUOUS")
 	}
@@ -281,7 +281,7 @@ func TestConsoleCopy_hostToHostRejected(t *testing.T) {
 		t.Fatalf("WriteFile: %v", err)
 	}
 
-	err := c.Copy(src, true, filepath.Join(dir, "b.txt"), true, rms.CopyOptions{})
+	err := c.cmd().Copy(src, true, filepath.Join(dir, "b.txt"), true, rms.CopyOptions{})
 	if err == nil {
 		t.Fatal("Copy with /HOST on both sides = nil error, want CLI_BADQUALIFIERCOMBO")
 	}
@@ -299,11 +299,11 @@ func TestConsoleCopy_badFileSpec(t *testing.T) {
 	c, _ := newTestConsole(t)
 	mountFreshContainer(t, c, "DUA0")
 
-	if err := c.SetDefault("DUA0:"); err != nil {
+	if err := c.cmd().SetDefault("DUA0:"); err != nil {
 		t.Fatalf("SetDefault: %v", err)
 	}
 
-	err := c.Copy("DUA0:[UNTERMINATED", false, "BAR.TXT", false, rms.CopyOptions{})
+	err := c.cmd().Copy("DUA0:[UNTERMINATED", false, "BAR.TXT", false, rms.CopyOptions{})
 	if err == nil {
 		t.Fatal("Copy with an unterminated directory bracket = nil error, want CLI_BADFILESPEC")
 	}
@@ -325,7 +325,7 @@ func TestDispatch_copyViaDCL(t *testing.T) {
 
 	mountFreshContainer(t, c, "DUA0")
 
-	if err := c.SetDefault("DUA0:"); err != nil {
+	if err := c.cmd().SetDefault("DUA0:"); err != nil {
 		t.Fatalf("SetDefault: %v", err)
 	}
 
@@ -354,7 +354,7 @@ func TestDispatch_copyHostToContainerAttachedNoSpace(t *testing.T) {
 	d, c := newTestDispatcher(t)
 	mountFreshContainer(t, c, "DUA0")
 
-	if err := c.SetDefault("DUA0:"); err != nil {
+	if err := c.cmd().SetDefault("DUA0:"); err != nil {
 		t.Fatalf("SetDefault: %v", err)
 	}
 
@@ -379,7 +379,7 @@ func TestDispatch_copyHostToContainerAttachedNoSpace(t *testing.T) {
 		t.Fatalf("Dispatch: %v", err)
 	}
 
-	if err := c.Type("BAR.TXT", false, false); err != nil {
+	if err := c.cmd().Type("BAR.TXT", false, false); err != nil {
 		t.Fatalf("Type(BAR.TXT): %v", err)
 	}
 }
@@ -394,7 +394,7 @@ func TestDispatch_copyHostToContainerQuoted(t *testing.T) {
 	d, c := newTestDispatcher(t)
 	mountFreshContainer(t, c, "DUA0")
 
-	if err := c.SetDefault("DUA0:"); err != nil {
+	if err := c.cmd().SetDefault("DUA0:"); err != nil {
 		t.Fatalf("SetDefault: %v", err)
 	}
 
@@ -407,7 +407,7 @@ func TestDispatch_copyHostToContainerQuoted(t *testing.T) {
 		t.Fatalf("Dispatch: %v", err)
 	}
 
-	if err := c.Type("BAR.TXT", false, false); err != nil {
+	if err := c.cmd().Type("BAR.TXT", false, false); err != nil {
 		t.Fatalf("Type(BAR.TXT): %v", err)
 	}
 }
@@ -426,7 +426,7 @@ func TestDispatch_copyContainerToHostTrailingQualifier(t *testing.T) {
 	d, c := newTestDispatcher(t)
 	mountFreshContainer(t, c, "DUA0")
 
-	if err := c.SetDefault("DUA0:"); err != nil {
+	if err := c.cmd().SetDefault("DUA0:"); err != nil {
 		t.Fatalf("SetDefault: %v", err)
 	}
 
@@ -477,7 +477,7 @@ func TestDispatch_copyQuietSuppressesConfirmation(t *testing.T) {
 
 	mountFreshContainer(t, c, "DUA0")
 
-	if err := c.SetDefault("DUA0:"); err != nil {
+	if err := c.cmd().SetDefault("DUA0:"); err != nil {
 		t.Fatalf("SetDefault: %v", err)
 	}
 
@@ -498,7 +498,7 @@ func TestDispatch_copyQuietSuppressesConfirmation(t *testing.T) {
 
 	buf.Reset()
 
-	if err := c.Type("BAR.TXT", false, false); err != nil {
+	if err := c.cmd().Type("BAR.TXT", false, false); err != nil {
 		t.Errorf("Type(BAR.TXT): %v -- /QUIET must not stop the copy from actually happening", err)
 	}
 }
@@ -514,7 +514,7 @@ func TestDispatch_copyCrlfAndLfDisallowed(t *testing.T) {
 	d, c := newTestDispatcher(t)
 	mountFreshContainer(t, c, "DUA0")
 
-	if err := c.SetDefault("DUA0:"); err != nil {
+	if err := c.cmd().SetDefault("DUA0:"); err != nil {
 		t.Fatalf("SetDefault: %v", err)
 	}
 
@@ -537,7 +537,7 @@ func TestDispatch_copyVfcAcceptedButIgnored(t *testing.T) {
 	d, c := newTestDispatcher(t)
 	mountFreshContainer(t, c, "DUA0")
 
-	if err := c.SetDefault("DUA0:"); err != nil {
+	if err := c.cmd().SetDefault("DUA0:"); err != nil {
 		t.Fatalf("SetDefault: %v", err)
 	}
 
@@ -552,7 +552,7 @@ func TestDispatch_copyVfcAcceptedButIgnored(t *testing.T) {
 		t.Fatalf("Dispatch COPY/VFC: %v", err)
 	}
 
-	if err := c.Type("BAR.TXT", false, false); err != nil {
+	if err := c.cmd().Type("BAR.TXT", false, false); err != nil {
 		t.Errorf("Type(BAR.TXT): %v", err)
 	}
 }

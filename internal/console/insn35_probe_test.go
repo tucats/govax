@@ -88,7 +88,7 @@ func runInsn35Probe(t *testing.T, name string) []insn35Record {
 	c.HostLibrary = t.TempDir()
 
 	disk := filepath.Join(t.TempDir(), "insn35.dsk")
-	if err := c.InitializeContainer(disk, 0, "INSN35", 0, "RD51"); err != nil {
+	if err := c.cmd().InitializeContainer(disk, 0, "INSN35", 0, "RD51"); err != nil {
 		t.Fatal(err)
 	}
 
@@ -96,7 +96,7 @@ func runInsn35Probe(t *testing.T, name string) []insn35Record {
 		t.Fatal(err)
 	}
 
-	if err := c.SetDefault("DUA1:[000000]"); err != nil {
+	if err := c.cmd().SetDefault("DUA1:[000000]"); err != nil {
 		t.Fatal(err)
 	}
 
@@ -104,11 +104,11 @@ func runInsn35Probe(t *testing.T, name string) []insn35Record {
 	src := filepath.Join("..", "..", "testdata", "insn35", lower+".mar")
 	dir := t.TempDir()
 
-	if err := c.Macro(MacroOptions{Source: src, Object: filepath.Join(dir, lower+".obj")}); err != nil {
+	if err := c.cmd().Macro(MacroOptions{Source: src, Object: filepath.Join(dir, lower+".obj")}); err != nil {
 		t.Fatalf("MACRO: %v", err)
 	}
 
-	if err := c.Link(LinkOptions{Objects: []string{filepath.Join(dir, lower)}}); err != nil {
+	if err := c.cmd().Link(LinkOptions{Objects: []string{filepath.Join(dir, lower)}}); err != nil {
 		t.Fatalf("LINK: %v", err)
 	}
 

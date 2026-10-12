@@ -161,7 +161,7 @@ func TestImageRundown(t *testing.T) {
 	define := func(name string, mode lnm.Mode) {
 		t.Helper()
 
-		if err := c.DefineLogicalName("LNM$PROCESS", name, []string{"X"}, mode, 0, false); err != nil {
+		if err := c.cmd().DefineLogicalName("LNM$PROCESS", name, []string{"X"}, mode, 0, false); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -210,7 +210,7 @@ func TestImageRundown_run(t *testing.T) {
 
 	runKernelInitialize(t, c)
 
-	if err := c.DefineLogicalName("LNM$PROCESS", "USERNAME", []string{"X"}, lnm.User, 0, false); err != nil {
+	if err := c.cmd().DefineLogicalName("LNM$PROCESS", "USERNAME", []string{"X"}, lnm.User, 0, false); err != nil {
 		t.Fatal(err)
 	}
 

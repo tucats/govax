@@ -309,7 +309,7 @@ func TestLogicals_beforeInit(t *testing.T) {
 	c := New(&bytes.Buffer{})
 
 	// Logical names don't need INIT; the trace hook must cope with no CPU.
-	if err := c.DefineLogicalName("LNM$PROCESS", "FOO", []string{"BAR"}, lnm.Supervisor, 0, true); err != nil {
+	if err := c.cmd().DefineLogicalName("LNM$PROCESS", "FOO", []string{"BAR"}, lnm.Supervisor, 0, true); err != nil {
 		t.Fatal(err)
 	}
 }

@@ -44,11 +44,11 @@ func runProbe6(t *testing.T, name string, cluster uint16, want ...string) {
 	c, out := scheduledConsole(t, longQuantum, brbSelf)
 
 	path := filepath.Join(t.TempDir(), "work.dsk")
-	if err := c.InitializeContainer(path, 2000, "WORK", cluster, "RD54"); err != nil {
+	if err := c.Commands().InitializeContainer(path, 2000, "WORK", cluster, "RD54"); err != nil {
 		t.Fatal(err)
 	}
 
-	if err := c.Mount("DUA0", path, true); err != nil {
+	if err := c.Commands().Mount("DUA0", path, true); err != nil {
 		t.Fatal(err)
 	}
 

@@ -63,11 +63,11 @@ func stressRunWith(t *testing.T, quantum string, programs []string, fabs []stres
 	}
 
 	path := filepath.Join(t.TempDir(), "stress.dsk")
-	if err := c.InitializeContainer(path, 2000, "STRESS", 0, "RD54"); err != nil {
+	if err := c.Commands().InitializeContainer(path, 2000, "STRESS", 0, "RD54"); err != nil {
 		t.Fatal(err)
 	}
 
-	if err := c.Mount("DUA0", path, true); err != nil {
+	if err := c.Commands().Mount("DUA0", path, true); err != nil {
 		t.Fatal(err)
 	}
 
@@ -112,11 +112,11 @@ func stressRunWith(t *testing.T, quantum string, programs []string, fabs []stres
 		env.CloseFiles()
 	}
 
-	if err := c.Dismount("DUA0"); err != nil {
+	if err := c.Commands().Dismount("DUA0"); err != nil {
 		t.Fatal(err)
 	}
 
-	if err := c.Mount("DUA0", path, true); err != nil {
+	if err := c.Commands().Mount("DUA0", path, true); err != nil {
 		t.Fatal(err)
 	}
 

@@ -16,7 +16,7 @@ func linkMap(t *testing.T, c *Console, dir string, opts LinkOptions) string {
 
 	opts.Map, opts.Brief, opts.MapFile = true, true, filepath.Join(dir, "link.map")
 
-	if err := c.Link(opts); err != nil {
+	if err := c.cmd().Link(opts); err != nil {
 		t.Fatalf("LINK: %v", err)
 	}
 
@@ -45,7 +45,7 @@ func TestLink_optionsFile(t *testing.T) {
 		"NAME=PROGRAM\nSYMBOL=LIMIT,%X29\n")
 
 	for _, name := range []string{"main", "sub"} {
-		if err := c.Macro(MacroOptions{Source: filepath.Join(dir, name+".mar")}); err != nil {
+		if err := c.cmd().Macro(MacroOptions{Source: filepath.Join(dir, name+".mar")}); err != nil {
 			t.Fatal(err)
 		}
 	}
@@ -70,7 +70,7 @@ func TestLink_optionsFile(t *testing.T) {
 	}
 
 	// An options file named first names the image.
-	if err := c.Link(LinkOptions{Files: []link.InputFile{{Name: filepath.Join(dir, "prog"), Options: true}, {Name: "main"}}}); err != nil {
+	if err := c.cmd().Link(LinkOptions{Files: []link.InputFile{{Name: filepath.Join(dir, "prog"), Options: true}, {Name: "main"}}}); err != nil {
 		t.Fatal(err)
 	}
 
@@ -99,7 +99,7 @@ func TestLink_inputErrors(t *testing.T) {
 	}
 
 	for _, c2 := range cases {
-		err := c.Link(LinkOptions{Files: c2.files, NoExecutable: true})
+		err := c.cmd().Link(LinkOptions{Files: c2.files, NoExecutable: true})
 		if err == nil || !strings.Contains(err.Error(), c2.want) {
 			t.Errorf("%+v: err = %v, want %q", c2.files, err, c2.want)
 		}
@@ -126,7 +126,7 @@ func TestLink_userLibraries(t *testing.T) {
 	writeHostFile(t, filepath.Join(dir, "exit.mar"), "\t.PSECT\tCODE,NOWRT,EXE\n"+
 		"\t.ENTRY\tSTART,^M<>\n\tPUSHL\t#1\n\tCALLS\t#1,G^SYS$EXIT\n\tRET\n\t.END\tSTART\n")
 
-	if err := c.Macro(MacroOptions{Source: filepath.Join(dir, "exit.mar")}); err != nil {
+	if err := c.cmd().Macro(MacroOptions{Source: filepath.Join(dir, "exit.mar")}); err != nil {
 		t.Fatal(err)
 	}
 
@@ -136,7 +136,7 @@ func TestLink_userLibraries(t *testing.T) {
 	image := func(opts LinkOptions) []byte {
 		t.Helper()
 
-		if err := c.Link(opts); err != nil {
+		if err := c.cmd().Link(opts); err != nil {
 			t.Fatalf("LINK: %v", err)
 		}
 
@@ -214,13 +214,13 @@ func TestLink_warnings(t *testing.T) {
 	writeHostFile(t, filepath.Join(dir, "notfr.mar"), "\t.PSECT\tDATA,NOEXE\n\t.LONG\t1\n\t.END\n")
 
 	for _, name := range []string{"undef", "notfr"} {
-		if err := c.Macro(MacroOptions{Source: filepath.Join(dir, name+".mar")}); err != nil {
+		if err := c.cmd().Macro(MacroOptions{Source: filepath.Join(dir, name+".mar")}); err != nil {
 			t.Fatal(err)
 		}
 
 		out.Reset()
 
-		if err := c.Link(LinkOptions{Objects: []string{filepath.Join(dir, name)}}); err != nil {
+		if err := c.cmd().Link(LinkOptions{Objects: []string{filepath.Join(dir, name)}}); err != nil {
 			t.Fatalf("LINK %s: %v", name, err)
 		}
 

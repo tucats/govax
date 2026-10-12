@@ -585,7 +585,7 @@ func TestProbe50FOracle(t *testing.T) {
 		}
 	}
 
-	if err := c.SetDefault("DUA1:[000000]"); err != nil {
+	if err := c.cmd().SetDefault("DUA1:[000000]"); err != nil {
 		t.Fatal(err)
 	}
 
@@ -708,7 +708,7 @@ func TestProbe50QOracle(t *testing.T) {
 		}
 	}
 
-	if err := c.SetDefault("DUA1:[000000]"); err != nil {
+	if err := c.cmd().SetDefault("DUA1:[000000]"); err != nil {
 		t.Fatal(err)
 	}
 

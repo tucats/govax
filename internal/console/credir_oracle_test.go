@@ -193,15 +193,15 @@ func TestCreateDirectoryOracle(t *testing.T) {
 	c, out := newTestConsole(t)
 	d := NewDispatcher(c, loadEvaxGrammar(t), nil)
 
-	if err := c.InitializeContainer(govaxDisk, 0, "CREDIR", 0, "RD51"); err != nil {
+	if err := c.cmd().InitializeContainer(govaxDisk, 0, "CREDIR", 0, "RD51"); err != nil {
 		t.Fatal(err)
 	}
 
-	if err := c.Mount("DUA1", govaxDisk, true); err != nil {
+	if err := c.cmd().Mount("DUA1", govaxDisk, true); err != nil {
 		t.Fatal(err)
 	}
 
-	if err := c.Mount("DUA2", vaxDisk, false); err != nil {
+	if err := c.cmd().Mount("DUA2", vaxDisk, false); err != nil {
 		t.Fatal(err)
 	}
 

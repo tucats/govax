@@ -42,11 +42,11 @@ func milestoneMachine(t *testing.T, quantum string) (*console.Console, *bytes.Bu
 	d := console.NewDispatcher(c, consoletest.ConsoleGrammar(t), nil)
 
 	path := filepath.Join(t.TempDir(), "work.dsk")
-	if err := c.InitializeContainer(path, 2000, "WORK", 0, "RD54"); err != nil {
+	if err := c.Commands().InitializeContainer(path, 2000, "WORK", 0, "RD54"); err != nil {
 		t.Fatal(err)
 	}
 
-	if err := c.Mount("DUA0", path, true); err != nil {
+	if err := c.Commands().Mount("DUA0", path, true); err != nil {
 		t.Fatal(err)
 	}
 
@@ -170,11 +170,11 @@ func checkMilestoneFiles(t *testing.T, c *console.Console) int {
 func verifyMilestoneVolume(t *testing.T, c *console.Console, path string) {
 	t.Helper()
 
-	if err := c.Dismount("DUA0"); err != nil {
+	if err := c.Commands().Dismount("DUA0"); err != nil {
 		t.Fatal(err)
 	}
 
-	if err := c.Mount("DUA0", path, true); err != nil {
+	if err := c.Commands().Mount("DUA0", path, true); err != nil {
 		t.Fatal(err)
 	}
 

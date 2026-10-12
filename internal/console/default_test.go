@@ -16,11 +16,11 @@ import (
 func TestConsoleSetShowDefault_roundTrip(t *testing.T) {
 	c, buf := newTestConsole(t)
 
-	if err := c.SetDefault("DUA0:[MYDIR]"); err != nil {
+	if err := c.cmd().SetDefault("DUA0:[MYDIR]"); err != nil {
 		t.Fatalf("SetDefault: %v", err)
 	}
 
-	if err := c.ShowDefault(); err != nil {
+	if err := c.cmd().ShowDefault(); err != nil {
 		t.Fatalf("ShowDefault: %v", err)
 	}
 
@@ -36,7 +36,7 @@ func TestConsoleSetShowDefault_roundTrip(t *testing.T) {
 func TestConsoleSetDefault_badFileSpec(t *testing.T) {
 	c, _ := newTestConsole(t)
 
-	err := c.SetDefault("DUA0:[UNTERMINATED")
+	err := c.cmd().SetDefault("DUA0:[UNTERMINATED")
 	if err == nil {
 		t.Fatal("SetDefault with an unterminated directory bracket = nil error, want CLI_BADFILESPEC")
 	}
@@ -52,7 +52,7 @@ func TestConsoleSetDefault_badFileSpec(t *testing.T) {
 func TestConsoleShowDefault_initialState(t *testing.T) {
 	c, buf := newTestConsole(t)
 
-	if err := c.ShowDefault(); err != nil {
+	if err := c.cmd().ShowDefault(); err != nil {
 		t.Fatalf("ShowDefault: %v", err)
 	}
 
@@ -106,7 +106,7 @@ func TestDispatch_showDefaultViaDCL(t *testing.T) {
 	g := loadEvaxGrammar(t)
 	d := NewDispatcher(c, g, nil)
 
-	if err := c.SetDefault("DUB0:[OTHERDIR]"); err != nil {
+	if err := c.cmd().SetDefault("DUB0:[OTHERDIR]"); err != nil {
 		t.Fatalf("SetDefault: %v", err)
 	}
 

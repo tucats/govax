@@ -84,7 +84,7 @@ func govaxSymbols() *link.TableSource {
 
 // linkSources returns LINK's symbol sources: the system libraries, unless
 // sysLib is false, then govax's own tables.
-func (c *Console) linkSources(sysLib bool) ([]link.SymbolSource, error) {
+func (c *cmdContext) linkSources(sysLib bool) ([]link.SymbolSource, error) {
 	govax := govaxSymbols()
 
 	if !sysLib {
@@ -131,7 +131,7 @@ func (c *Console) linkSources(sysLib bool) ([]link.SymbolSource, error) {
 // openSharedImage returns the symbols of the shareable image IMAGELIB
 // names: its global symbol table, from SYS$SHARE:<image>.EXE or the host
 // library directory, or else govax's own tables for it.
-func (c *Console) openSharedImage(image string, govax *link.TableSource) (link.SymbolSource, error) {
+func (c *cmdContext) openSharedImage(image string, govax *link.TableSource) (link.SymbolSource, error) {
 	file := image + ".EXE"
 
 	data, name, err := c.readLibraryFile("SYS$SHARE", file)

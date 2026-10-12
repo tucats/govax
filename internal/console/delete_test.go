@@ -54,7 +54,7 @@ func createConsoleTestFile(t *testing.T, vol *volume.Volume, name string) {
 func TestConsoleDelete_notMounted(t *testing.T) {
 	c, _ := newTestConsole(t)
 
-	err := c.Delete("DUB0:FOO.TXT;1")
+	err := c.cmd().Delete("DUB0:FOO.TXT;1")
 	if err == nil {
 		t.Fatal("Delete against an unmounted device = nil error, want SS_DEVNOTMOUNT")
 	}
@@ -71,7 +71,7 @@ func TestConsoleDelete_versionRequired(t *testing.T) {
 	c, _ := newTestConsole(t)
 	mountFreshContainer(t, c, "DUA0")
 
-	err := c.Delete("DUA0:INDEXF.SYS")
+	err := c.cmd().Delete("DUA0:INDEXF.SYS")
 	if err == nil {
 		t.Fatal("Delete with no version = nil error, want CLI_NEEDVERSION")
 	}
@@ -87,7 +87,7 @@ func TestConsoleDelete_notFound(t *testing.T) {
 	c, _ := newTestConsole(t)
 	mountFreshContainer(t, c, "DUA0")
 
-	err := c.Delete("DUA0:NOSUCHFILE.TXT;1")
+	err := c.cmd().Delete("DUA0:NOSUCHFILE.TXT;1")
 	if err == nil {
 		t.Fatal("Delete of a nonexistent file = nil error, want SS_NOSUCHFILE")
 	}
@@ -104,7 +104,7 @@ func TestConsoleDelete_badFileSpec(t *testing.T) {
 	c, _ := newTestConsole(t)
 	mountFreshContainer(t, c, "DUA0")
 
-	err := c.Delete("DUA0:[UNTERMINATED")
+	err := c.cmd().Delete("DUA0:[UNTERMINATED")
 	if err == nil {
 		t.Fatal("Delete with an unterminated directory bracket = nil error, want CLI_BADFILESPEC")
 	}
@@ -123,7 +123,7 @@ func TestConsoleDelete_removesFileAndPrintsConfirmation(t *testing.T) {
 	c, buf := newTestConsole(t)
 	mountFreshContainer(t, c, "DUA0")
 
-	if err := c.SetDefault("DUA0:"); err != nil {
+	if err := c.cmd().SetDefault("DUA0:"); err != nil {
 		t.Fatalf("SetDefault: %v", err)
 	}
 
@@ -134,7 +134,7 @@ func TestConsoleDelete_removesFileAndPrintsConfirmation(t *testing.T) {
 
 	createConsoleTestFile(t, vol, "FOO.TXT")
 
-	if err := c.Delete("FOO.TXT;1"); err != nil {
+	if err := c.cmd().Delete("FOO.TXT;1"); err != nil {
 		t.Fatalf("Delete: %v", err)
 	}
 
@@ -142,7 +142,7 @@ func TestConsoleDelete_removesFileAndPrintsConfirmation(t *testing.T) {
 		t.Errorf("Delete output = %q, want a DELETE-S-DELETED confirmation", buf.String())
 	}
 
-	if err := c.Delete("FOO.TXT;1"); !errors.Is(err, vmserrors.New(vmserrors.SS_NOSUCHFILE)) {
+	if err := c.cmd().Delete("FOO.TXT;1"); !errors.Is(err, vmserrors.New(vmserrors.SS_NOSUCHFILE)) {
 		t.Errorf("Delete of the now-removed file = %v, want SS_NOSUCHFILE", err)
 	}
 }
@@ -158,7 +158,7 @@ func TestDispatch_deleteViaDCL(t *testing.T) {
 
 	mountFreshContainer(t, c, "DUA0")
 
-	if err := c.SetDefault("DUA0:"); err != nil {
+	if err := c.cmd().SetDefault("DUA0:"); err != nil {
 		t.Fatalf("SetDefault: %v", err)
 	}
 
@@ -198,7 +198,7 @@ func TestDispatch_deleteAbbreviated(t *testing.T) {
 	d, c := newTestDispatcher(t)
 	mountFreshContainer(t, c, "DUA0")
 
-	if err := c.SetDefault("DUA0:"); err != nil {
+	if err := c.cmd().SetDefault("DUA0:"); err != nil {
 		t.Fatalf("SetDefault: %v", err)
 	}
 

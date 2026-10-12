@@ -20,11 +20,11 @@ func TestConsoleInitializeContainer_buildsAMountableVolume(t *testing.T) {
 	c, _ := newTestConsole(t)
 	path := filepath.Join(t.TempDir(), "new.dsk")
 
-	if err := c.InitializeContainer(path, 400, "TESTVOL", 0, "RD54"); err != nil {
+	if err := c.cmd().InitializeContainer(path, 400, "TESTVOL", 0, "RD54"); err != nil {
 		t.Fatalf("InitializeContainer: %v", err)
 	}
 
-	if err := c.Mount("DUA0", path, true); err != nil {
+	if err := c.cmd().Mount("DUA0", path, true); err != nil {
 		t.Fatalf("Mount of a freshly initialized container: %v", err)
 	}
 
@@ -42,7 +42,7 @@ func TestConsoleInitializeContainer_badPath(t *testing.T) {
 	c, _ := newTestConsole(t)
 	path := filepath.Join(t.TempDir(), "no-such-directory", "new.dsk")
 
-	err := c.InitializeContainer(path, 400, "TESTVOL", 0, "RD54")
+	err := c.cmd().InitializeContainer(path, 400, "TESTVOL", 0, "RD54")
 	if err == nil {
 		t.Fatal("InitializeContainer with a nonexistent parent directory = nil error, want CLI_INITFAIL")
 	}
@@ -61,7 +61,7 @@ func TestConsoleInitializeContainer_zeroBlocks(t *testing.T) {
 	path := filepath.Join(t.TempDir(), "new.dsk")
 
 	// IF no device is given, then no default size is allowed.
-	err := c.InitializeContainer(path, 0, "TESTVOL", 0, "")
+	err := c.cmd().InitializeContainer(path, 0, "TESTVOL", 0, "")
 	if err == nil {
 		t.Fatal("InitializeContainer with blocks=0 = nil error, want CLI_INITFAIL")
 	}
@@ -94,7 +94,7 @@ func TestDispatch_initializeContainerViaDCL(t *testing.T) {
 		t.Fatalf("Dispatch INITIALIZE/CONTAINER: %v", err)
 	}
 
-	if err := c.Mount("DUA0", path, true); err != nil {
+	if err := c.cmd().Mount("DUA0", path, true); err != nil {
 		t.Fatalf("Mount of the result: %v", err)
 	}
 

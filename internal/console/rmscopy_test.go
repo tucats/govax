@@ -23,11 +23,11 @@ func TestRMSCopy_govaxStarlet(t *testing.T) {
 	src := filepath.Join("..", "..", "testdata", "mar", "macros", "rmscopy.mar")
 	dir := t.TempDir()
 
-	if err := c.Macro(MacroOptions{Source: src, Object: filepath.Join(dir, "rmscopy.obj")}); err != nil {
+	if err := c.cmd().Macro(MacroOptions{Source: src, Object: filepath.Join(dir, "rmscopy.obj")}); err != nil {
 		t.Fatalf("MACRO: %v", err)
 	}
 
-	if err := c.Link(LinkOptions{Objects: []string{filepath.Join(dir, "rmscopy")}}); err != nil {
+	if err := c.cmd().Link(LinkOptions{Objects: []string{filepath.Join(dir, "rmscopy")}}); err != nil {
 		t.Fatalf("LINK: %v", err)
 	}
 
@@ -35,7 +35,7 @@ func TestRMSCopy_govaxStarlet(t *testing.T) {
 		t.Fatalf("COPY to the volume: %v", err)
 	}
 
-	if err := c.SetDefault("DUA0:[000000]"); err != nil {
+	if err := c.cmd().SetDefault("DUA0:[000000]"); err != nil {
 		t.Fatal(err)
 	}
 

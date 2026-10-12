@@ -27,7 +27,7 @@ func TestLibrary_listEmbeddedFallback(t *testing.T) {
 	} {
 		out.Reset()
 
-		if err := c.Library(opts); err != nil {
+		if err := c.cmd().Library(opts); err != nil {
 			t.Fatalf("LIBRARY/LIST %s: %v", opts.Library, err)
 		}
 
@@ -38,7 +38,7 @@ func TestLibrary_listEmbeddedFallback(t *testing.T) {
 
 	// With no search path, a bare name is only the current directory's.
 	c.Paths = nil
-	if err := c.Library(LibraryOptions{Library: bootdata.StarletLibrary, List: true}); err == nil {
+	if err := c.cmd().Library(LibraryOptions{Library: bootdata.StarletLibrary, List: true}); err == nil {
 		t.Error("found the embedded library with no search path")
 	}
 }

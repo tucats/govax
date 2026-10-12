@@ -63,7 +63,7 @@ func TestConsoleMount_autoCreatesDevice(t *testing.T) {
 	c, _ := newTestConsole(t)
 	path := newTestContainer(t, "TESTVOL")
 
-	if err := c.Mount("DUA0", path, true); err != nil {
+	if err := c.cmd().Mount("DUA0", path, true); err != nil {
 		t.Fatalf("Mount: %v", err)
 	}
 
@@ -90,9 +90,9 @@ func TestConsoleMount_doesNotRedefineExistingDevice(t *testing.T) {
 	c, _ := newTestConsole(t)
 	path := newTestContainer(t, "TESTVOL")
 
-	c.DefineDevice("DUA0", iodev.DeviceOptions{DevClass: iodev.DeviceClassDisk, DevType: 42})
+	c.cmd().DefineDevice("DUA0", iodev.DeviceOptions{DevClass: iodev.DeviceClassDisk, DevType: 42})
 
-	if err := c.Mount("DUA0", path, true); err != nil {
+	if err := c.cmd().Mount("DUA0", path, true); err != nil {
 		t.Fatalf("Mount: %v", err)
 	}
 
@@ -115,11 +115,11 @@ func TestConsoleMount_alreadyMounted(t *testing.T) {
 	c, _ := newTestConsole(t)
 	path := newTestContainer(t, "TESTVOL")
 
-	if err := c.Mount("DUA0", path, true); err != nil {
+	if err := c.cmd().Mount("DUA0", path, true); err != nil {
 		t.Fatalf("first Mount: %v", err)
 	}
 
-	err := c.Mount("DUA0", path, true)
+	err := c.cmd().Mount("DUA0", path, true)
 	if err == nil {
 		t.Fatal("second Mount of an already-mounted device = nil error, want SS_DEVMOUNT")
 	}
@@ -144,7 +144,7 @@ func TestConsoleMount_badContainer(t *testing.T) {
 
 	missing := filepath.Join(t.TempDir(), "does-not-exist.dsk")
 
-	err := c.Mount("DUA0", missing, true)
+	err := c.cmd().Mount("DUA0", missing, true)
 	if err == nil {
 		t.Fatal("Mount of a nonexistent container = nil error, want SS_NOMOUNT")
 	}
@@ -166,11 +166,11 @@ func TestConsoleDismount(t *testing.T) {
 	c, _ := newTestConsole(t)
 	path := newTestContainer(t, "TESTVOL")
 
-	if err := c.Mount("DUA0", path, true); err != nil {
+	if err := c.cmd().Mount("DUA0", path, true); err != nil {
 		t.Fatalf("Mount: %v", err)
 	}
 
-	if err := c.Dismount("DUA0"); err != nil {
+	if err := c.cmd().Dismount("DUA0"); err != nil {
 		t.Fatalf("Dismount: %v", err)
 	}
 
@@ -189,7 +189,7 @@ func TestConsoleDismount(t *testing.T) {
 func TestConsoleDismount_notMounted(t *testing.T) {
 	c, _ := newTestConsole(t)
 
-	err := c.Dismount("DUA0")
+	err := c.cmd().Dismount("DUA0")
 	if err == nil {
 		t.Fatal("Dismount of an unmounted device = nil error, want SS_DEVNOTMOUNT")
 	}
@@ -206,15 +206,15 @@ func TestConsoleMountThenRemount(t *testing.T) {
 	c, _ := newTestConsole(t)
 	path := newTestContainer(t, "TESTVOL")
 
-	if err := c.Mount("DUA0", path, true); err != nil {
+	if err := c.cmd().Mount("DUA0", path, true); err != nil {
 		t.Fatalf("first Mount: %v", err)
 	}
 
-	if err := c.Dismount("DUA0"); err != nil {
+	if err := c.cmd().Dismount("DUA0"); err != nil {
 		t.Fatalf("Dismount: %v", err)
 	}
 
-	if err := c.Mount("DUA0", path, false); err != nil {
+	if err := c.cmd().Mount("DUA0", path, false); err != nil {
 		t.Fatalf("re-Mount: %v", err)
 	}
 
@@ -234,9 +234,9 @@ func TestShowDevices_mountedVolumeLine(t *testing.T) {
 	c, buf := newTestConsole(t)
 	path := newTestContainer(t, "TESTVOL")
 
-	c.DefineDevice("DUA0", iodev.DeviceOptions{DevClass: iodev.DeviceClassDisk})
+	c.cmd().DefineDevice("DUA0", iodev.DeviceOptions{DevClass: iodev.DeviceClassDisk})
 
-	if err := c.ShowDevices("DUA0", true); err != nil {
+	if err := c.cmd().ShowDevices("DUA0", true); err != nil {
 		t.Fatalf("ShowDevices (unmounted): %v", err)
 	}
 
@@ -246,11 +246,11 @@ func TestShowDevices_mountedVolumeLine(t *testing.T) {
 
 	buf.Reset()
 
-	if err := c.Mount("DUA0", path, true); err != nil {
+	if err := c.cmd().Mount("DUA0", path, true); err != nil {
 		t.Fatalf("Mount: %v", err)
 	}
 
-	if err := c.ShowDevices("DUA0", true); err != nil {
+	if err := c.cmd().ShowDevices("DUA0", true); err != nil {
 		t.Fatalf("ShowDevices (writable mount): %v", err)
 	}
 
@@ -265,15 +265,15 @@ func TestShowDevices_mountedVolumeLine(t *testing.T) {
 
 	buf.Reset()
 
-	if err := c.Dismount("DUA0"); err != nil {
+	if err := c.cmd().Dismount("DUA0"); err != nil {
 		t.Fatalf("Dismount: %v", err)
 	}
 
-	if err := c.Mount("DUA0", path, false); err != nil {
+	if err := c.cmd().Mount("DUA0", path, false); err != nil {
 		t.Fatalf("re-Mount read-only: %v", err)
 	}
 
-	if err := c.ShowDevices("DUA0", true); err != nil {
+	if err := c.cmd().ShowDevices("DUA0", true); err != nil {
 		t.Fatalf("ShowDevices (read-only mount): %v", err)
 	}
 
@@ -294,9 +294,9 @@ func TestShowDevices_mountedVolumeLine(t *testing.T) {
 func TestShowDevices_mountedVolumeLineOnlyForDisks(t *testing.T) {
 	c, buf := newTestConsole(t)
 
-	c.DefineDevice("TTA0", iodev.DeviceOptions{DevClass: iodev.DeviceClassTT})
+	c.cmd().DefineDevice("TTA0", iodev.DeviceOptions{DevClass: iodev.DeviceClassTT})
 
-	if err := c.ShowDevices("TTA0", true); err != nil {
+	if err := c.cmd().ShowDevices("TTA0", true); err != nil {
 		t.Fatalf("ShowDevices: %v", err)
 	}
 
@@ -338,11 +338,11 @@ func TestShowDevices_liveStatsReflectARealFile(t *testing.T) {
 	c, buf := newTestConsole(t)
 	mountFreshContainer(t, c, "DUA0")
 
-	if err := c.SetDefault("DUA0:"); err != nil {
+	if err := c.cmd().SetDefault("DUA0:"); err != nil {
 		t.Fatalf("SetDefault: %v", err)
 	}
 
-	if err := c.ShowDevices("DUA0", true); err != nil {
+	if err := c.cmd().ShowDevices("DUA0", true); err != nil {
 		t.Fatalf("ShowDevices (before): %v", err)
 	}
 
@@ -359,13 +359,13 @@ func TestShowDevices_liveStatsReflectARealFile(t *testing.T) {
 		t.Fatalf("WriteFile: %v", err)
 	}
 
-	if err := c.Copy(hostPath, true, "BAR.TXT", false, rms.CopyOptions{}); err != nil {
+	if err := c.cmd().Copy(hostPath, true, "BAR.TXT", false, rms.CopyOptions{}); err != nil {
 		t.Fatalf("Copy: %v", err)
 	}
 
 	buf.Reset()
 
-	if err := c.ShowDevices("DUA0", true); err != nil {
+	if err := c.cmd().ShowDevices("DUA0", true); err != nil {
 		t.Fatalf("ShowDevices (after): %v", err)
 	}
 
@@ -508,13 +508,13 @@ func TestShowDevices_operationsCompleted(t *testing.T) {
 	c, buf := newTestConsole(t)
 	path := newTestContainer(t, "TESTVOL")
 
-	c.DefineDevice("DUA0", iodev.DeviceOptions{DevClass: iodev.DeviceClassDisk})
+	c.cmd().DefineDevice("DUA0", iodev.DeviceOptions{DevClass: iodev.DeviceClassDisk})
 
 	operations := func() int {
 		t.Helper()
 		buf.Reset()
 
-		if err := c.ShowDevices("DUA0", true); err != nil {
+		if err := c.cmd().ShowDevices("DUA0", true); err != nil {
 			t.Fatalf("ShowDevices: %v", err)
 		}
 
@@ -535,7 +535,7 @@ func TestShowDevices_operationsCompleted(t *testing.T) {
 		t.Errorf("unmounted: %d operations, want 0", n)
 	}
 
-	if err := c.Mount("DUA0", path, true); err != nil {
+	if err := c.cmd().Mount("DUA0", path, true); err != nil {
 		t.Fatalf("Mount: %v", err)
 	}
 

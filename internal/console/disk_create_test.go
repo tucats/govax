@@ -46,7 +46,7 @@ func TestDiskCreate_assembledProgram(t *testing.T) {
 	// Both names are the file: exactly the text written.
 	for _, name := range []string{"NOTES.TXT", "ALIAS.TXT"} {
 		back := filepath.Join(t.TempDir(), "back.txt")
-		if err := c.Copy("DUA0:[000000]"+name, false, back, true, rms.CopyOptions{Binary: true, Quiet: true}); err != nil {
+		if err := c.cmd().Copy("DUA0:[000000]"+name, false, back, true, rms.CopyOptions{Binary: true, Quiet: true}); err != nil {
 			t.Fatalf("Copy %s: %v", name, err)
 		}
 

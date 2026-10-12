@@ -21,11 +21,11 @@ func mountFreshContainer(t *testing.T, c *Console, device string) {
 
 	path := filepath.Join(t.TempDir(), "dir.dsk")
 
-	if err := c.InitializeContainer(path, 400, "DIRVOL", 0, "RD54"); err != nil {
+	if err := c.cmd().InitializeContainer(path, 400, "DIRVOL", 0, "RD54"); err != nil {
 		t.Fatalf("InitializeContainer: %v", err)
 	}
 
-	if err := c.Mount(device, path, true); err != nil {
+	if err := c.cmd().Mount(device, path, true); err != nil {
 		t.Fatalf("Mount: %v", err)
 	}
 }
@@ -40,11 +40,11 @@ func TestConsoleDirectory_printsListing(t *testing.T) {
 	c, buf := newTestConsole(t)
 	mountFreshContainer(t, c, "DUA0")
 
-	if err := c.SetDefault("DUA0:"); err != nil {
+	if err := c.cmd().SetDefault("DUA0:"); err != nil {
 		t.Fatalf("SetDefault: %v", err)
 	}
 
-	if err := c.Directory("", rms.DirectoryOptions{}); err != nil {
+	if err := c.cmd().Directory("", rms.DirectoryOptions{}); err != nil {
 		t.Fatalf("Directory: %v", err)
 	}
 
@@ -65,7 +65,7 @@ func TestConsoleDirectory_printsListing(t *testing.T) {
 func TestConsoleDirectory_notMounted(t *testing.T) {
 	c, _ := newTestConsole(t)
 
-	err := c.Directory("DUB0:*.*;*", rms.DirectoryOptions{})
+	err := c.cmd().Directory("DUB0:*.*;*", rms.DirectoryOptions{})
 	if err == nil {
 		t.Fatal("Directory against an unmounted device = nil error, want SS_DEVNOTMOUNT")
 	}
@@ -81,7 +81,7 @@ func TestConsoleDirectory_notMounted(t *testing.T) {
 func TestConsoleDirectory_badFileSpec(t *testing.T) {
 	c, _ := newTestConsole(t)
 
-	err := c.Directory("DUA0:[UNTERMINATED", rms.DirectoryOptions{})
+	err := c.cmd().Directory("DUA0:[UNTERMINATED", rms.DirectoryOptions{})
 	if err == nil {
 		t.Fatal("Directory with an unterminated directory bracket = nil error, want CLI_BADFILESPEC")
 	}
@@ -104,7 +104,7 @@ func TestDispatch_directoryViaDCL(t *testing.T) {
 
 	mountFreshContainer(t, c, "DUA0")
 
-	if err := c.SetDefault("DUA0:"); err != nil {
+	if err := c.cmd().SetDefault("DUA0:"); err != nil {
 		t.Fatalf("SetDefault: %v", err)
 	}
 
@@ -125,7 +125,7 @@ func TestDispatch_directoryAbbreviated(t *testing.T) {
 	d, c := newTestDispatcher(t)
 	mountFreshContainer(t, c, "DUA0")
 
-	if err := c.SetDefault("DUA0:"); err != nil {
+	if err := c.cmd().SetDefault("DUA0:"); err != nil {
 		t.Fatalf("SetDefault: %v", err)
 	}
 
@@ -163,7 +163,7 @@ func TestDispatch_directoryVersions(t *testing.T) {
 
 	mountFreshContainer(t, c, "DUA0")
 
-	if err := c.SetDefault("DUA0:"); err != nil {
+	if err := c.cmd().SetDefault("DUA0:"); err != nil {
 		t.Fatalf("SetDefault: %v", err)
 	}
 

@@ -92,7 +92,7 @@ func TestProbe50AOracle(t *testing.T) {
 		}
 	}
 
-	if err := c.SetDefault("DUA1:[000000]"); err != nil {
+	if err := c.cmd().SetDefault("DUA1:[000000]"); err != nil {
 		t.Fatal(err)
 	}
 

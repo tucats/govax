@@ -69,14 +69,10 @@ var typeOpenIn = 149<<16 | vmsdef.LibrarySymbols["SHR$_OPENIN"]
 // data lines after the command. A logical name DCL's OPEN defined types
 // the file it opened, from where READ has got to (typeOpenFile). Neither
 // applies with host.
-func (c *Console) Type(specText string, host, paged bool) error {
+func (c *cmdContext) Type(specText string, host, paged bool) error {
 	if !host {
-		if c.isInputStream(specText) {
-			return c.typeInput()
-		}
-
-		if c.typeOpenFile(specText) {
-			return nil
+		if handled, err := c.TypeDCL(specText); handled {
+			return err
 		}
 	}
 

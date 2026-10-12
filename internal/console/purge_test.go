@@ -14,7 +14,7 @@ import (
 func TestConsolePurge_notMounted(t *testing.T) {
 	c, _ := newTestConsole(t)
 
-	err := c.Purge("DUB0:*.*", 1)
+	err := c.cmd().Purge("DUB0:*.*", 1)
 	if err == nil {
 		t.Fatal("Purge against an unmounted device = nil error, want SS_DEVNOTMOUNT")
 	}
@@ -29,7 +29,7 @@ func TestConsolePurge_badLimit(t *testing.T) {
 	c, _ := newTestConsole(t)
 	mountFreshContainer(t, c, "DUA0")
 
-	err := c.Purge("DUA0:INDEXF.SYS", 0)
+	err := c.cmd().Purge("DUA0:INDEXF.SYS", 0)
 	if err == nil {
 		t.Fatal("Purge with /LIMIT=0 = nil error, want CLI_BADLIMIT")
 	}
@@ -46,7 +46,7 @@ func TestConsolePurge_badFileSpec(t *testing.T) {
 	c, _ := newTestConsole(t)
 	mountFreshContainer(t, c, "DUA0")
 
-	err := c.Purge("DUA0:[UNTERMINATED", 1)
+	err := c.cmd().Purge("DUA0:[UNTERMINATED", 1)
 	if err == nil {
 		t.Fatal("Purge with an unterminated directory bracket = nil error, want CLI_BADFILESPEC")
 	}
@@ -65,7 +65,7 @@ func TestConsolePurge_trimsVersionsAndPrintsConfirmation(t *testing.T) {
 	c, buf := newTestConsole(t)
 	mountFreshContainer(t, c, "DUA0")
 
-	if err := c.SetDefault("DUA0:"); err != nil {
+	if err := c.cmd().SetDefault("DUA0:"); err != nil {
 		t.Fatalf("SetDefault: %v", err)
 	}
 
@@ -77,7 +77,7 @@ func TestConsolePurge_trimsVersionsAndPrintsConfirmation(t *testing.T) {
 	createConsoleTestFile(t, vol, "FOO.TXT")
 	createConsoleTestFile(t, vol, "FOO.TXT")
 
-	if err := c.Purge("FOO.TXT", 1); err != nil {
+	if err := c.cmd().Purge("FOO.TXT", 1); err != nil {
 		t.Fatalf("Purge: %v", err)
 	}
 
@@ -85,11 +85,11 @@ func TestConsolePurge_trimsVersionsAndPrintsConfirmation(t *testing.T) {
 		t.Errorf("Purge output = %q, want a PURGE-S-PURGED confirmation", buf.String())
 	}
 
-	if err := c.Delete("FOO.TXT;1"); !errors.Is(err, vmserrors.New(vmserrors.SS_NOSUCHFILE)) {
+	if err := c.cmd().Delete("FOO.TXT;1"); !errors.Is(err, vmserrors.New(vmserrors.SS_NOSUCHFILE)) {
 		t.Errorf("Delete of the purged-away version = %v, want SS_NOSUCHFILE", err)
 	}
 
-	if err := c.Delete("FOO.TXT;2"); err != nil {
+	if err := c.cmd().Delete("FOO.TXT;2"); err != nil {
 		t.Errorf("Delete of the surviving version = %v, want success", err)
 	}
 }
@@ -105,7 +105,7 @@ func TestDispatch_purgeViaDCL(t *testing.T) {
 
 	mountFreshContainer(t, c, "DUA0")
 
-	if err := c.SetDefault("DUA0:"); err != nil {
+	if err := c.cmd().SetDefault("DUA0:"); err != nil {
 		t.Fatalf("SetDefault: %v", err)
 	}
 
@@ -135,7 +135,7 @@ func TestDispatch_purgeExplicitLimit(t *testing.T) {
 
 	mountFreshContainer(t, c, "DUA0")
 
-	if err := c.SetDefault("DUA0:"); err != nil {
+	if err := c.cmd().SetDefault("DUA0:"); err != nil {
 		t.Fatalf("SetDefault: %v", err)
 	}
 
@@ -156,7 +156,7 @@ func TestDispatch_purgeExplicitLimit(t *testing.T) {
 		t.Errorf("Dispatch PURGE/LIMIT=2 output = %q, want a keeping-2 confirmation", buf.String())
 	}
 
-	if err := c.Delete("FOO.TXT;1"); !errors.Is(err, vmserrors.New(vmserrors.SS_NOSUCHFILE)) {
+	if err := c.cmd().Delete("FOO.TXT;1"); !errors.Is(err, vmserrors.New(vmserrors.SS_NOSUCHFILE)) {
 		t.Errorf("Delete of the purged-away version = %v, want SS_NOSUCHFILE", err)
 	}
 }
@@ -169,7 +169,7 @@ func TestDispatch_purgeBareDefaultsToStar(t *testing.T) {
 	d, c := newTestDispatcher(t)
 	mountFreshContainer(t, c, "DUA0")
 
-	if err := c.SetDefault("DUA0:"); err != nil {
+	if err := c.cmd().SetDefault("DUA0:"); err != nil {
 		t.Fatalf("SetDefault: %v", err)
 	}
 
@@ -185,7 +185,7 @@ func TestDispatch_purgeAbbreviated(t *testing.T) {
 	d, c := newTestDispatcher(t)
 	mountFreshContainer(t, c, "DUA0")
 
-	if err := c.SetDefault("DUA0:"); err != nil {
+	if err := c.cmd().SetDefault("DUA0:"); err != nil {
 		t.Fatalf("SetDefault: %v", err)
 	}
 

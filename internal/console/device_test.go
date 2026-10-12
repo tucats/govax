@@ -10,13 +10,13 @@ import (
 func TestConsoleDefineAndShowDevices(t *testing.T) {
 	c, buf := newTestConsole(t)
 
-	c.DefineDevice("DKA0", iodev.DeviceOptions{
+	c.cmd().DefineDevice("DKA0", iodev.DeviceOptions{
 		DevClass:  iodev.DeviceClassDisk,
 		Cylinders: 512,
 		VolName:   "SYSTEM",
 	})
 
-	if err := c.ShowDevices("", false); err != nil {
+	if err := c.cmd().ShowDevices("", false); err != nil {
 		t.Fatalf("ShowDevices: %v", err)
 	}
 
@@ -26,7 +26,7 @@ func TestConsoleDefineAndShowDevices(t *testing.T) {
 
 	buf.Reset()
 
-	if err := c.ShowDevices("DKA0", true); err != nil {
+	if err := c.cmd().ShowDevices("DKA0", true); err != nil {
 		t.Fatalf("ShowDevices full: %v", err)
 	}
 	
@@ -42,7 +42,7 @@ func TestConsoleDefineAndShowDevices(t *testing.T) {
 
 	buf.Reset()
 
-	if err := c.ShowDevices("NOSUCH", false); err != nil {
+	if err := c.cmd().ShowDevices("NOSUCH", false); err != nil {
 		t.Fatalf("ShowDevices NOSUCH: %v", err)
 	}
 
@@ -79,12 +79,12 @@ func TestDispatch_defineAndShowDeviceViaDCL(t *testing.T) {
 func TestShowDevices_allocated(t *testing.T) {
 	c, buf := newTestConsole(t)
 
-	disk := c.DefineDevice("DKA0", iodev.DeviceOptions{DevClass: iodev.DeviceClassDisk})
-	term := c.DefineDevice("TTA1", iodev.DeviceOptions{DevClass: iodev.DeviceClassTT})
+	disk := c.cmd().DefineDevice("DKA0", iodev.DeviceOptions{DevClass: iodev.DeviceClassDisk})
+	term := c.cmd().DefineDevice("TTA1", iodev.DeviceOptions{DevClass: iodev.DeviceClassTT})
 	disk.Allocate(c.RTL.Process.PID, 0)
 	term.Allocate(c.RTL.Process.PID, 3)
 
-	if err := c.ShowDevices("", true); err != nil {
+	if err := c.cmd().ShowDevices("", true); err != nil {
 		t.Fatalf("ShowDevices: %v", err)
 	}
 
@@ -116,10 +116,10 @@ func TestShowDevices_prefix(t *testing.T) {
 	c, buf := newTestConsole(t)
 
 	for _, name := range []string{"DUA0", "DUA1", "DKA0"} {
-		c.DefineDevice(name, iodev.DeviceOptions{DevClass: iodev.DeviceClassDisk})
+		c.cmd().DefineDevice(name, iodev.DeviceOptions{DevClass: iodev.DeviceClassDisk})
 	}
 
-	if err := c.ShowDevices("du", false); err != nil {
+	if err := c.cmd().ShowDevices("du", false); err != nil {
 		t.Fatal(err)
 	}
 
@@ -129,7 +129,7 @@ func TestShowDevices_prefix(t *testing.T) {
 
 	buf.Reset()
 
-	if err := c.ShowDevices("MUA:", false); err != nil {
+	if err := c.cmd().ShowDevices("MUA:", false); err != nil {
 		t.Fatal(err)
 	}
 
@@ -146,10 +146,10 @@ func TestShowDevices_briefLayout(t *testing.T) {
 	c, buf := newTestConsole(t)
 	path := newTestContainer(t, "TESTVOL")
 
-	c.DefineDevice("MBA1", iodev.DeviceOptions{DevClass: iodev.DeviceClassMailbox})
-	c.DefineDevice("DUA0", iodev.DeviceOptions{DevClass: iodev.DeviceClassDisk})
+	c.cmd().DefineDevice("MBA1", iodev.DeviceOptions{DevClass: iodev.DeviceClassMailbox})
+	c.cmd().DefineDevice("DUA0", iodev.DeviceOptions{DevClass: iodev.DeviceClassDisk})
 
-	if err := c.ShowDevices("MB", false); err != nil {
+	if err := c.cmd().ShowDevices("MB", false); err != nil {
 		t.Fatal(err)
 	}
 
@@ -160,13 +160,13 @@ func TestShowDevices_briefLayout(t *testing.T) {
 		t.Errorf("SHOW DEVICE MB:\n%q\nwant\n%q", buf.String(), want)
 	}
 
-	if err := c.Mount("DUA0", path, true); err != nil {
+	if err := c.cmd().Mount("DUA0", path, true); err != nil {
 		t.Fatal(err)
 	}
 
 	buf.Reset()
 
-	if err := c.ShowDevices("DUA0", false); err != nil {
+	if err := c.cmd().ShowDevices("DUA0", false); err != nil {
 		t.Fatal(err)
 	}
 

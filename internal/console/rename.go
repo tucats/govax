@@ -45,7 +45,7 @@ var (
 // Rename renames the files inputs name to output (see this file's opening
 // comment). log is /LOG; newVersion is /NEW_VERSION, on unless
 // /NONEW_VERSION.
-func (c *Console) Rename(inputs []string, output string, log, newVersion bool) error {
+func (c *cmdContext) Rename(inputs []string, output string, log, newVersion bool) error {
 	results := c.ContainerSession.Rename(inputs, output, rms.RenameOptions{NewVersion: newVersion})
 
 	var failure string

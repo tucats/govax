@@ -116,7 +116,7 @@ func TestLink_capturedRoutineWithoutLibraries(t *testing.T) {
 	writeHostFile(t, filepath.Join(dir, "getin.mar"), "\t.PSECT\tC,NOWRT,EXE\n\t.ENTRY\tGO,^M<>\n"+
 		"\tCALLS\t#0,G^LIB$GET_INPUT\n\tMOVL\t#SS$_NORMAL,R0\n\tRET\n\t.END\tGO\n")
 
-	if err := c.Macro(MacroOptions{Source: filepath.Join(dir, "getin.mar")}); err != nil {
+	if err := c.cmd().Macro(MacroOptions{Source: filepath.Join(dir, "getin.mar")}); err != nil {
 		t.Fatal(err)
 	}
 
@@ -125,7 +125,7 @@ func TestLink_capturedRoutineWithoutLibraries(t *testing.T) {
 
 		out.Reset()
 
-		if err := c.Link(LinkOptions{Objects: []string{filepath.Join(dir, "getin")}}); err != nil {
+		if err := c.cmd().Link(LinkOptions{Objects: []string{filepath.Join(dir, "getin")}}); err != nil {
 			t.Fatalf("LINK: %v", err)
 		}
 
@@ -163,7 +163,7 @@ func linkHello(t *testing.T, c *Console, opts LinkOptions) []byte {
 	assembleFixture(t, c, "hello", dir)
 
 	opts.Objects = []string{filepath.Join(dir, "hello")}
-	if err := c.Link(opts); err != nil {
+	if err := c.cmd().Link(opts); err != nil {
 		t.Fatalf("LINK: %v", err)
 	}
 
@@ -244,11 +244,11 @@ func TestLink_libraryMissingImage(t *testing.T) {
 	writeHostFile(t, filepath.Join(dir, "smg.mar"), "\t.PSECT\tC,NOWRT,EXE\n\t.ENTRY\tGO,^M<>\n"+
 		"\tCALLS\t#0,G^SMG$CREATE_PASTEBOARD\n\tRET\n\t.END\tGO\n")
 
-	if err := c.Macro(MacroOptions{Source: filepath.Join(dir, "smg.mar")}); err != nil {
+	if err := c.cmd().Macro(MacroOptions{Source: filepath.Join(dir, "smg.mar")}); err != nil {
 		t.Fatal(err)
 	}
 
-	err := c.Link(LinkOptions{Objects: []string{filepath.Join(dir, "smg")}})
+	err := c.cmd().Link(LinkOptions{Objects: []string{filepath.Join(dir, "smg")}})
 	if err == nil || !strings.Contains(err.Error(), "SMGSHR.EXE") {
 		t.Errorf("err = %v, want one naming SMGSHR.EXE", err)
 	}
@@ -263,11 +263,11 @@ func TestLink_libraryLogicalNames(t *testing.T) {
 	c, _ := newTestConsole(t)
 
 	path := filepath.Join(t.TempDir(), "lib.dsk")
-	if err := c.InitializeContainer(path, 2000, "LIBVOL", 0, "RD54"); err != nil {
+	if err := c.cmd().InitializeContainer(path, 2000, "LIBVOL", 0, "RD54"); err != nil {
 		t.Fatal(err)
 	}
 
-	if err := c.Mount("DUA1", path, true); err != nil {
+	if err := c.cmd().Mount("DUA1", path, true); err != nil {
 		t.Fatal(err)
 	}
 
@@ -290,18 +290,18 @@ func TestLink_libraryLogicalNames(t *testing.T) {
 	// isn't found: SMG$ routines are undefined.
 	c.HostLibrary = t.TempDir()
 
-	src, err := c.linkSources(true)
+	src, err := c.cmd().linkSources(true)
 	if err != nil || len(src) != 1 {
 		t.Fatalf("sources %d, %v; want govax's alone", len(src), err)
 	}
 
 	for _, name := range []string{"SYS$LIBRARY", "SYS$SHARE"} {
-		if err := c.DefineLogicalName("LNM$PROCESS", name, []string{"DUA1:[000000]"}, lnm.Supervisor, 0, false); err != nil {
+		if err := c.cmd().DefineLogicalName("LNM$PROCESS", name, []string{"DUA1:[000000]"}, lnm.Supervisor, 0, false); err != nil {
 			t.Fatal(err)
 		}
 	}
 
-	src, err = c.linkSources(true)
+	src, err = c.cmd().linkSources(true)
 	if err != nil || len(src) != 2 {
 		t.Fatalf("sources %d, %v; want IMAGELIB's and govax's", len(src), err)
 	}

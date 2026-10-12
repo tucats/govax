@@ -26,7 +26,7 @@ import (
 // Where the file goes is decided before any input is read
 // (rms.Session.Locate), so a name that can't be used reads nothing; a
 // file that can't be written is CREATE-E-OPENOUT, with its cause.
-func (c *Console) CreateFile(spec string, host, log bool) error {
+func (c *cmdContext) CreateFile(spec string, host, log bool) error {
 	s := c.ContainerSession
 
 	loc, err := s.Locate(spec, host)
@@ -48,7 +48,7 @@ func (c *Console) CreateFile(spec string, host, log bool) error {
 
 // readInputRecords reads the lines of SYS$INPUT up to its end of file,
 // as typeInput does, and returns them as records.
-func (c *Console) readInputRecords() [][]byte {
+func (c *cmdContext) readInputRecords() [][]byte {
 	var records [][]byte
 
 	if c.RTL == nil {

@@ -74,3 +74,40 @@ func (c *Interpreter) runDownAbandonedImage() {
 
 	c.machine.endAbandonedImage()
 }
+
+// readReply reads one line from the console's input, a byte at a time so
+// that nothing past the line is taken from a reader shared with the
+// command line. ok is false at the end of the input with nothing read,
+// or at a Ctrl/Z typed first (the terminal's end of file); a Ctrl/Z
+// after text ends the line.
+func (c *Interpreter) readReply() (line string, ok bool) {
+	if c.In == nil {
+		return "", false
+	}
+
+	var (
+		buf  [1]byte
+		text []byte
+	)
+
+	for {
+		n, err := c.In.Read(buf[:])
+		if n == 1 {
+			switch buf[0] {
+			case '\n', '\r':
+				return string(text), true
+			case ctrlZ:
+				return string(text), len(text) > 0
+			}
+
+			text = append(text, buf[0])
+		}
+
+		if err != nil {
+			return string(text), len(text) > 0
+		}
+	}
+}
+
+// ctrlZ is CTRL/Z, the character a terminal user types to end input.
+const ctrlZ = 0x1A

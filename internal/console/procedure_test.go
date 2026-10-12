@@ -390,7 +390,7 @@ func TestProcedure_volume(t *testing.T) {
 	d, c, buf := newCommandDispatcher(t)
 	mountFreshContainer(t, c, "DUA0")
 
-	if err := c.SetDefault("DUA0:"); err != nil {
+	if err := c.cmd().SetDefault("DUA0:"); err != nil {
 		t.Fatal(err)
 	}
 
@@ -407,7 +407,7 @@ func TestProcedure_volume(t *testing.T) {
 		t.Errorf("terminal %q, want nothing", buf.String())
 	}
 
-	if err := c.Type("RESULT.LIS", false, false); err != nil {
+	if err := c.cmd().Type("RESULT.LIS", false, false); err != nil {
 		t.Fatal(err)
 	}
 

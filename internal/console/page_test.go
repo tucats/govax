@@ -36,7 +36,7 @@ func pagedConsole(t *testing.T, height, width int, replies string) (*Console, *b
 // text, each screen holding height-1 lines and the prompt.
 func TestPage_returnShowsEveryScreen(t *testing.T) {
 	c, buf := pagedConsole(t, 5, 0, "\n\n\n")
-	c.Page(numberedLines(10))
+	c.cmd().Page(numberedLines(10))
 
 	want := "line 1\nline 2\nline 3\nline 4\n" + pagePrompt + "\n" +
 		"line 5\nline 6\nline 7\nline 8\n" + pagePrompt + "\n" +
@@ -49,7 +49,7 @@ func TestPage_returnShowsEveryScreen(t *testing.T) {
 // TestPage_textEndsDisplay: anything typed before RETURN stops the display.
 func TestPage_textEndsDisplay(t *testing.T) {
 	c, buf := pagedConsole(t, 5, 0, "q\n\n")
-	c.Page(numberedLines(10))
+	c.cmd().Page(numberedLines(10))
 
 	out := buf.String()
 	if !strings.Contains(out, "line 4\n") || strings.Contains(out, "line 5") {
@@ -60,7 +60,7 @@ func TestPage_textEndsDisplay(t *testing.T) {
 // TestPage_endOfInputEndsDisplay: no input at the prompt ends the display.
 func TestPage_endOfInputEndsDisplay(t *testing.T) {
 	c, buf := pagedConsole(t, 5, 0, "")
-	c.Page(numberedLines(10))
+	c.cmd().Page(numberedLines(10))
 
 	if strings.Contains(buf.String(), "line 5") {
 		t.Errorf("output = %q, want it to stop at the first prompt", buf.String())
@@ -70,7 +70,7 @@ func TestPage_endOfInputEndsDisplay(t *testing.T) {
 // TestPage_fitsOneScreen: text that fits on a screen gets no prompt.
 func TestPage_fitsOneScreen(t *testing.T) {
 	c, buf := pagedConsole(t, 24, 0, "")
-	c.Page("one\ntwo")
+	c.cmd().Page("one\ntwo")
 
 	if buf.String() != "one\ntwo\n" {
 		t.Errorf("output = %q, want %q", buf.String(), "one\ntwo\n")
@@ -81,7 +81,7 @@ func TestPage_fitsOneScreen(t *testing.T) {
 // screen is wide counts as the rows it wraps onto.
 func TestPage_longLinesWrap(t *testing.T) {
 	c, buf := pagedConsole(t, 5, 10, "\n")
-	c.Page("short\n" + strings.Repeat("x", 25) + "\nafter\n")
+	c.cmd().Page("short\n" + strings.Repeat("x", 25) + "\nafter\n")
 
 	// "short" (1 row) + the long line (3 rows) fill the 4 rows; "after"
 	// starts the next screen.
@@ -108,13 +108,13 @@ func TestScreenSize_setting(t *testing.T) {
 
 	_ = settings.Delete(consoleLinesSetting)
 
-	if h, _ := c.screenSize(); h != defaultScreenLines {
+	if h, _ := c.cmd().screenSize(); h != defaultScreenLines {
 		t.Errorf("unset: height = %d, want %d", h, defaultScreenLines)
 	}
 
 	settings.Set(consoleLinesSetting, "40")
 
-	if h, _ := c.screenSize(); h != 40 {
+	if h, _ := c.cmd().screenSize(); h != 40 {
 		t.Errorf("vax.console.lines=40: height = %d, want 40", h)
 	}
 }
@@ -131,7 +131,7 @@ func TestDispatch_typePage(t *testing.T) {
 
 	mountFreshContainer(t, c, "DUA0")
 
-	if err := c.SetDefault("DUA0:"); err != nil {
+	if err := c.cmd().SetDefault("DUA0:"); err != nil {
 		t.Fatalf("SetDefault: %v", err)
 	}
 

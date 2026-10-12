@@ -62,7 +62,7 @@ func TestConsoleType_printsFileContent(t *testing.T) {
 	c, buf := newTestConsole(t)
 	mountFreshContainer(t, c, "DUA0")
 
-	if err := c.SetDefault("DUA0:"); err != nil {
+	if err := c.cmd().SetDefault("DUA0:"); err != nil {
 		t.Fatalf("SetDefault: %v", err)
 	}
 
@@ -73,7 +73,7 @@ func TestConsoleType_printsFileContent(t *testing.T) {
 
 	createConsoleTestFileWithContent(t, vol, "FOO.TXT", "hello, world")
 
-	if err := c.Type("FOO.TXT", false, false); err != nil {
+	if err := c.cmd().Type("FOO.TXT", false, false); err != nil {
 		t.Fatalf("Type: %v", err)
 	}
 
@@ -88,7 +88,7 @@ func TestConsoleType_printsFileContent(t *testing.T) {
 func TestConsoleType_notMounted(t *testing.T) {
 	c, _ := newTestConsole(t)
 
-	err := c.Type("DUB0:FOO.TXT", false, false)
+	err := c.cmd().Type("DUB0:FOO.TXT", false, false)
 	if err == nil {
 		t.Fatal("Type against an unmounted device = nil error, want SS_DEVNOTMOUNT")
 	}
@@ -105,7 +105,7 @@ func TestConsoleType_notFound(t *testing.T) {
 	c, _ := newTestConsole(t)
 	mountFreshContainer(t, c, "DUA0")
 
-	err := c.Type("DUA0:NOSUCHFILE.TXT", false, false)
+	err := c.cmd().Type("DUA0:NOSUCHFILE.TXT", false, false)
 	if err == nil {
 		t.Fatal("Type of a nonexistent file = nil error, want SS_NOSUCHFILE")
 	}
@@ -121,7 +121,7 @@ func TestConsoleType_ambiguous(t *testing.T) {
 	c, _ := newTestConsole(t)
 	mountFreshContainer(t, c, "DUA0")
 
-	if err := c.SetDefault("DUA0:"); err != nil {
+	if err := c.cmd().SetDefault("DUA0:"); err != nil {
 		t.Fatalf("SetDefault: %v", err)
 	}
 
@@ -133,7 +133,7 @@ func TestConsoleType_ambiguous(t *testing.T) {
 	createConsoleTestFile(t, vol, "FOO.TXT")
 	createConsoleTestFile(t, vol, "BAR.TXT")
 
-	err := c.Type("*.TXT", false, false)
+	err := c.cmd().Type("*.TXT", false, false)
 	if err == nil {
 		t.Fatal("Type with a wildcard matching several files = nil error, want CLI_AMBIGUOUS")
 	}
@@ -150,7 +150,7 @@ func TestConsoleType_badFileSpec(t *testing.T) {
 	c, _ := newTestConsole(t)
 	mountFreshContainer(t, c, "DUA0")
 
-	err := c.Type("DUA0:[UNTERMINATED", false, false)
+	err := c.cmd().Type("DUA0:[UNTERMINATED", false, false)
 	if err == nil {
 		t.Fatal("Type with an unterminated directory bracket = nil error, want CLI_BADFILESPEC")
 	}
@@ -171,7 +171,7 @@ func TestDispatch_typeViaDCL(t *testing.T) {
 
 	mountFreshContainer(t, c, "DUA0")
 
-	if err := c.SetDefault("DUA0:"); err != nil {
+	if err := c.cmd().SetDefault("DUA0:"); err != nil {
 		t.Fatalf("SetDefault: %v", err)
 	}
 
@@ -209,7 +209,7 @@ func TestDispatch_typeAbbreviated(t *testing.T) {
 	d, c := newTestDispatcher(t)
 	mountFreshContainer(t, c, "DUA0")
 
-	if err := c.SetDefault("DUA0:"); err != nil {
+	if err := c.cmd().SetDefault("DUA0:"); err != nil {
 		t.Fatalf("SetDefault: %v", err)
 	}
 
@@ -245,7 +245,7 @@ func TestConsoleType_hostPath(t *testing.T) {
 	c, buf := newTestConsole(t)
 	path := writeHostTextFile(t, "notes.txt", "first\r\nsecond\nlast")
 
-	if err := c.Type(path, false, false); err != nil {
+	if err := c.cmd().Type(path, false, false); err != nil {
 		t.Fatalf("Type(%s): %v", path, err)
 	}
 
@@ -261,7 +261,7 @@ func TestConsoleType_hostBareName(t *testing.T) {
 	path := writeHostTextFile(t, "BARE.TXT", "bare host file\n")
 	t.Chdir(filepath.Dir(path))
 
-	if err := c.Type("BARE.TXT", false, false); err != nil {
+	if err := c.cmd().Type("BARE.TXT", false, false); err != nil {
 		t.Fatalf("Type(BARE.TXT): %v", err)
 	}
 
@@ -276,7 +276,7 @@ func TestConsoleType_hostForced(t *testing.T) {
 	c, buf := newTestConsole(t)
 	mountFreshContainer(t, c, "DUA0")
 
-	if err := c.SetDefault("DUA0:"); err != nil {
+	if err := c.cmd().SetDefault("DUA0:"); err != nil {
 		t.Fatalf("SetDefault: %v", err)
 	}
 
@@ -290,7 +290,7 @@ func TestConsoleType_hostForced(t *testing.T) {
 	path := writeHostTextFile(t, "FOO.TXT", "host file\n")
 	t.Chdir(filepath.Dir(path))
 
-	if err := c.Type("FOO.TXT", false, false); err != nil {
+	if err := c.cmd().Type("FOO.TXT", false, false); err != nil {
 		t.Fatalf("Type(FOO.TXT): %v", err)
 	}
 
@@ -300,7 +300,7 @@ func TestConsoleType_hostForced(t *testing.T) {
 
 	buf.Reset()
 
-	if err := c.Type("FOO.TXT", true, false); err != nil {
+	if err := c.cmd().Type("FOO.TXT", true, false); err != nil {
 		t.Fatalf("Type(FOO.TXT, host): %v", err)
 	}
 
@@ -314,7 +314,7 @@ func TestConsoleType_hostForced(t *testing.T) {
 func TestConsoleType_hostNotFound(t *testing.T) {
 	c, _ := newTestConsole(t)
 
-	err := c.Type(filepath.Join(t.TempDir(), "missing.txt"), true, false)
+	err := c.cmd().Type(filepath.Join(t.TempDir(), "missing.txt"), true, false)
 	if !errors.Is(err, vmserrors.New(vmserrors.SS_NOSUCHFILE)) {
 		t.Errorf("Type of a missing host file = %v, want SS_NOSUCHFILE", err)
 	}
@@ -326,7 +326,7 @@ func TestConsoleType_hostPaged(t *testing.T) {
 	c, buf := pagedConsole(t, 5, 0, "q\n")
 	path := writeHostTextFile(t, "long.txt", numberedLines(10))
 
-	if err := c.Type(path, true, true); err != nil {
+	if err := c.cmd().Type(path, true, true); err != nil {
 		t.Fatalf("Type(%s, paged): %v", path, err)
 	}
 

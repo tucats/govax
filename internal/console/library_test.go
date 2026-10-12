@@ -74,7 +74,7 @@ func TestLibrary_macroHost(t *testing.T) {
 	writeHostFile(t, src, libMacros)
 
 	lib := filepath.Join(dir, "mine")
-	if err := c.Library(LibraryOptions{Library: lib, Create: true, Macro: true, Inputs: []string{src}, Log: true}); err != nil {
+	if err := c.cmd().Library(LibraryOptions{Library: lib, Create: true, Macro: true, Inputs: []string{src}, Log: true}); err != nil {
 		t.Fatalf("LIBRARY/CREATE: %v", err)
 	}
 
@@ -98,7 +98,7 @@ func TestLibrary_macroHost(t *testing.T) {
 	writeHostFile(t, src, strings.ReplaceAll(libMacros, "CLRL", "CLRQ"))
 	out.Reset()
 
-	if err := c.Library(LibraryOptions{Library: libFile.Name, Insert: true, Inputs: []string{src}}); err != nil {
+	if err := c.cmd().Library(LibraryOptions{Library: libFile.Name, Insert: true, Inputs: []string{src}}); err != nil {
 		t.Fatal(err)
 	}
 
@@ -111,7 +111,7 @@ func TestLibrary_macroHost(t *testing.T) {
 	// the comment.
 	out.Reset()
 
-	if err := c.Library(LibraryOptions{Library: libFile.Name, Inputs: []string{src}, NoSqueeze: true, Log: true}); err != nil {
+	if err := c.cmd().Library(LibraryOptions{Library: libFile.Name, Inputs: []string{src}, NoSqueeze: true, Log: true}); err != nil {
 		t.Fatal(err)
 	}
 
@@ -123,7 +123,7 @@ func TestLibrary_macroHost(t *testing.T) {
 
 	// /EXTRACT, by wildcard, to the default output: the library's name
 	// with type MAR.
-	if err := c.Library(LibraryOptions{Library: libFile.Name, Extract: []string{"st*"}}); err != nil {
+	if err := c.cmd().Library(LibraryOptions{Library: libFile.Name, Extract: []string{"st*"}}); err != nil {
 		t.Fatal(err)
 	}
 
@@ -134,7 +134,7 @@ func TestLibrary_macroHost(t *testing.T) {
 	// /DELETE, then /LIST.
 	out.Reset()
 
-	if err := c.Library(LibraryOptions{Library: libFile.Name, Delete: []string{"STORE", "NONE%"}, List: true, Full: true}); err != nil {
+	if err := c.cmd().Library(LibraryOptions{Library: libFile.Name, Delete: []string{"STORE", "NONE%"}, List: true, Full: true}); err != nil {
 		t.Fatal(err)
 	}
 
@@ -189,19 +189,19 @@ func TestLibrary_objectLink(t *testing.T) {
 	for name, text := range map[string]string{"main": libMain, "sub": libSub} {
 		writeHostFile(t, filepath.Join(dir, name+".mar"), text)
 
-		if err := c.Macro(MacroOptions{Source: filepath.Join(dir, name+".mar")}); err != nil {
+		if err := c.cmd().Macro(MacroOptions{Source: filepath.Join(dir, name+".mar")}); err != nil {
 			t.Fatal(err)
 		}
 	}
 
 	lib := filepath.Join(dir, "subs.olb")
-	if err := c.Library(LibraryOptions{Library: lib, Create: true, Inputs: []string{filepath.Join(dir, "sub")}, Selective: true}); err != nil {
+	if err := c.cmd().Library(LibraryOptions{Library: lib, Create: true, Inputs: []string{filepath.Join(dir, "sub")}, Selective: true}); err != nil {
 		t.Fatalf("LIBRARY/CREATE: %v", err)
 	}
 
 	out.Reset()
 
-	if err := c.Library(LibraryOptions{Library: lib, List: true, Full: true, Names: true}); err != nil {
+	if err := c.cmd().Library(LibraryOptions{Library: lib, List: true, Full: true, Names: true}); err != nil {
 		t.Fatal(err)
 	}
 
@@ -219,7 +219,7 @@ func TestLibrary_objectLink(t *testing.T) {
 
 	out.Reset()
 
-	err := c.Link(LinkOptions{
+	err := c.cmd().Link(LinkOptions{
 		Files:      []link.InputFile{{Name: filepath.Join(dir, "main")}, {Name: lib, Library: true}},
 		Executable: exe,
 	})
@@ -232,11 +232,11 @@ func TestLibrary_objectLink(t *testing.T) {
 	}
 
 	// A macro source can't go in an object library.
-	if err := c.Library(LibraryOptions{Library: lib, Inputs: []string{filepath.Join(dir, "main.mar")}}); err == nil {
+	if err := c.cmd().Library(LibraryOptions{Library: lib, Inputs: []string{filepath.Join(dir, "main.mar")}}); err == nil {
 		t.Error("inserted a macro source in an object library")
 	}
 
-	if err := c.Library(LibraryOptions{Library: lib, Macro: true, List: true}); err == nil {
+	if err := c.cmd().Library(LibraryOptions{Library: lib, Macro: true, List: true}); err == nil {
 		t.Error("/MACRO on an object library was accepted")
 	}
 }
@@ -251,11 +251,11 @@ func TestLibrary_volume(t *testing.T) {
 	src := filepath.Join(t.TempDir(), "macros.mar")
 	writeHostFile(t, src, libMacros)
 
-	if err := c.Library(LibraryOptions{Library: "DUA0:[000000]MINE", Create: true, Macro: true, Inputs: []string{src}}); err != nil {
+	if err := c.cmd().Library(LibraryOptions{Library: "DUA0:[000000]MINE", Create: true, Macro: true, Inputs: []string{src}}); err != nil {
 		t.Fatalf("LIBRARY/CREATE: %v", err)
 	}
 
-	if err := c.Library(LibraryOptions{Library: "DUA0:[000000]MINE.MLB", Delete: []string{"CLEAR"}, List: true, ListFile: "MINE"}); err != nil {
+	if err := c.cmd().Library(LibraryOptions{Library: "DUA0:[000000]MINE.MLB", Delete: []string{"CLEAR"}, List: true, ListFile: "MINE"}); err != nil {
 		t.Fatalf("LIBRARY/DELETE: %v", err)
 	}
 
@@ -274,7 +274,7 @@ func TestLibrary_volume(t *testing.T) {
 	}
 
 	// /CREATE makes a new version, as on VMS.
-	if err := c.Library(LibraryOptions{Library: "DUA0:[000000]MINE", Create: true, Macro: true}); err != nil {
+	if err := c.cmd().Library(LibraryOptions{Library: "DUA0:[000000]MINE", Create: true, Macro: true}); err != nil {
 		t.Fatal(err)
 	}
 
@@ -296,7 +296,7 @@ func TestLibrary_errorsLeaveLibrary(t *testing.T) {
 	writeHostFile(t, src, libMacros)
 
 	lib := filepath.Join(dir, "mine.mlb")
-	if err := c.Library(LibraryOptions{Library: lib, Create: true, Macro: true, Inputs: []string{src}}); err != nil {
+	if err := c.cmd().Library(LibraryOptions{Library: lib, Create: true, Macro: true, Inputs: []string{src}}); err != nil {
 		t.Fatal(err)
 	}
 
@@ -312,7 +312,7 @@ func TestLibrary_errorsLeaveLibrary(t *testing.T) {
 		{Library: lib, Insert: true}, // /INSERT with no inputs
 		{Library: filepath.Join(dir, "absent.mlb"), List: true}, // no library
 	} {
-		if err := c.Library(opts); err == nil {
+		if err := c.cmd().Library(opts); err == nil {
 			t.Errorf("%+v succeeded", opts)
 		}
 	}

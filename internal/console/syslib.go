@@ -27,7 +27,7 @@ const (
 
 // hostLibraryDir is the host directory to look in for VMS library files,
 // or "" for none.
-func (c *Console) hostLibraryDir() string {
+func (c *cmdContext) hostLibraryDir() string {
 	if c.HostLibrary != "" {
 		return c.HostLibrary
 	}
@@ -42,7 +42,7 @@ func (c *Console) hostLibraryDir() string {
 // readLibraryFile reads a VMS library file: logical:file on a mounted
 // volume, or file in the host library directory. It returns nil data, and
 // no error, when neither has it.
-func (c *Console) readLibraryFile(logical, file string) ([]byte, string, error) {
+func (c *cmdContext) readLibraryFile(logical, file string) ([]byte, string, error) {
 	spec := logical + ":" + file
 
 	data, found, err := c.ContainerSession.ReadRawFile(rms.FileLocation{Name: spec})

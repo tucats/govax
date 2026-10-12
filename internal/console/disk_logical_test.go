@@ -18,11 +18,11 @@ func TestDiskLogical_assembledProgram(t *testing.T) {
 	c := newBootableConsole(t)
 
 	image := filepath.Join(t.TempDir(), "logical.dsk")
-	if err := c.InitializeContainer(image, 400, "LBNVOL", 0, "RD54"); err != nil {
+	if err := c.cmd().InitializeContainer(image, 400, "LBNVOL", 0, "RD54"); err != nil {
 		t.Fatalf("InitializeContainer: %v", err)
 	}
 
-	if err := c.Mount("DUA0", image, true); err != nil {
+	if err := c.cmd().Mount("DUA0", image, true); err != nil {
 		t.Fatalf("Mount: %v", err)
 	}
 
@@ -56,11 +56,11 @@ func TestDiskLogical_assembledProgram(t *testing.T) {
 	}
 
 	// The write reached the image: dismount, mount again, and look.
-	if err := c.Dismount("DUA0"); err != nil {
+	if err := c.cmd().Dismount("DUA0"); err != nil {
 		t.Fatal(err)
 	}
 
-	if err := c.Mount("DUA0", image, false); err != nil {
+	if err := c.cmd().Mount("DUA0", image, false); err != nil {
 		t.Fatal(err)
 	}
 

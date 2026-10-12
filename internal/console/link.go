@@ -96,7 +96,7 @@ type linkInputs struct {
 }
 
 // Link links object modules into an executable image.
-func (c *Console) Link(opts LinkOptions) error {
+func (c *cmdContext) Link(opts LinkOptions) error {
 	s := c.ContainerSession
 
 	files := make([]link.InputFile, 0, len(opts.Objects)+len(opts.Files))
@@ -244,7 +244,7 @@ func linkerID() string {
 
 // linkInput reads one input file into in. fromCommand says the command
 // line named it, rather than an options file.
-func (c *Console) linkInput(in *linkInputs, f link.InputFile, host, fromCommand bool) error {
+func (c *cmdContext) linkInput(in *linkInputs, f link.InputFile, host, fromCommand bool) error {
 	s := c.ContainerSession
 
 	typ := "OBJ"
@@ -363,7 +363,7 @@ func (c *Console) linkInput(in *linkInputs, f link.InputFile, host, fromCommand 
 // linkLibrary reads a library: one to search (/LIBRARY), whose modules
 // named by /INCLUDE are added to the link. A shareable image library, such
 // as IMAGELIB.OLB, can only be searched.
-func (c *Console) linkLibrary(in *linkInputs, loc rms.FileLocation, f link.InputFile) (rms.FileLocation, error) {
+func (c *cmdContext) linkLibrary(in *linkInputs, loc rms.FileLocation, f link.InputFile) (rms.FileLocation, error) {
 	data, found, err := c.ContainerSession.ReadRawFile(loc)
 	if err != nil {
 		return found, fileFailure(err, loc.Name)

@@ -98,7 +98,7 @@ func runLibcrdProbe(t *testing.T) *Console {
 	c.HostLibrary = t.TempDir()
 
 	disk := filepath.Join(t.TempDir(), "libcrd.dsk")
-	if err := c.InitializeContainer(disk, 0, "LIBCRD", 0, "RD51"); err != nil {
+	if err := c.cmd().InitializeContainer(disk, 0, "LIBCRD", 0, "RD51"); err != nil {
 		t.Fatal(err)
 	}
 
@@ -106,7 +106,7 @@ func runLibcrdProbe(t *testing.T) *Console {
 		t.Fatal(err)
 	}
 
-	if err := c.SetDefault("DUA1:[000000]"); err != nil {
+	if err := c.cmd().SetDefault("DUA1:[000000]"); err != nil {
 		t.Fatal(err)
 	}
 
@@ -119,11 +119,11 @@ func runLibcrdProbe(t *testing.T) *Console {
 	src := filepath.Join("..", "..", "testdata", "credir", "libcrd.mar")
 	dir := t.TempDir()
 
-	if err := c.Macro(MacroOptions{Source: src, Object: filepath.Join(dir, "libcrd.obj")}); err != nil {
+	if err := c.cmd().Macro(MacroOptions{Source: src, Object: filepath.Join(dir, "libcrd.obj")}); err != nil {
 		t.Fatalf("MACRO: %v", err)
 	}
 
-	if err := c.Link(LinkOptions{Objects: []string{filepath.Join(dir, "libcrd")}}); err != nil {
+	if err := c.cmd().Link(LinkOptions{Objects: []string{filepath.Join(dir, "libcrd")}}); err != nil {
 		t.Fatalf("LINK: %v", err)
 	}
 

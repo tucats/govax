@@ -90,7 +90,7 @@ type LibraryOptions struct {
 
 // library is one LIBRARY command in progress.
 type library struct {
-	c    *Console
+	c    *cmdContext
 	opts LibraryOptions
 	now  uint64
 
@@ -102,7 +102,7 @@ type library struct {
 }
 
 // Library runs one LIBRARY command.
-func (c *Console) Library(opts LibraryOptions) error {
+func (c *cmdContext) Library(opts LibraryOptions) error {
 	l := &library{c: c, opts: opts, now: vmsdef.Time(time.Now())}
 
 	return l.run()

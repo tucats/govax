@@ -165,7 +165,7 @@ const defaultSourceType = "MAR"
 
 // Macro assembles one MACRO-32 source file and, unless opts.NoObject,
 // writes its object module; with opts.List, it writes the listing too.
-func (c *Console) Macro(opts MacroOptions) error {
+func (c *cmdContext) Macro(opts MacroOptions) error {
 	// Everything before the assembler is called (finding and reading the
 	// source, opening the libraries) is the listing's command processing
 	// phase.
@@ -285,7 +285,7 @@ func (c *Console) Macro(opts MacroOptions) error {
 
 // writeObject writes the object module of a's assembly of the source
 // found.
-func (c *Console) writeObject(a *asm.Assembler, opts MacroOptions, found rms.FileLocation) error {
+func (c *cmdContext) writeObject(a *asm.Assembler, opts MacroOptions, found rms.FileLocation) error {
 	s := c.ContainerSession
 
 	objLoc, err := outputLocation(s, opts.Object, found, "OBJ")
@@ -350,7 +350,7 @@ func sourceFile(s *rms.Session, found rms.FileLocation) *obj.SourceFile {
 // writeListing writes the listing of a's assembly of the source found, a
 // text file with a record for each line. commandProcessing is how long
 // the command took before the assembler was called.
-func (c *Console) writeListing(a *asm.Assembler, opts MacroOptions, found rms.FileLocation, commandProcessing asm.PhaseTime) error {
+func (c *cmdContext) writeListing(a *asm.Assembler, opts MacroOptions, found rms.FileLocation, commandProcessing asm.PhaseTime) error {
 	s := c.ContainerSession
 
 	lisLoc, err := outputLocation(s, opts.ListFile, found, "LIS")
@@ -395,7 +395,7 @@ func macroAssemblerName() string {
 
 // openMacroLibrary reads the macro library name, a /LIBRARY= or .LIBRARY
 // file, found relative to the source file.
-func (c *Console) openMacroLibrary(name string, source rms.FileLocation) (asm.MacroLibrary, error) {
+func (c *cmdContext) openMacroLibrary(name string, source rms.FileLocation) (asm.MacroLibrary, error) {
 	s := c.ContainerSession
 
 	loc, err := s.LocateRelated(name, false, source)
@@ -435,7 +435,7 @@ func macroLibrary(data []byte, name string) (asm.MacroLibrary, error) {
 // found and read the first time a macro is looked for in it, so a program
 // that needs no library macros never reads it.
 type starletMacros struct {
-	c   *Console
+	c   *cmdContext
 	lib asm.MacroLibrary
 	err error
 }
@@ -470,7 +470,7 @@ func (s *starletMacros) LibraryName() string {
 
 // openStarlet reads STARLET.MLB: SYS$LIBRARY's, the host library
 // directory's, or govax's own.
-func (c *Console) openStarlet() (asm.MacroLibrary, error) {
+func (c *cmdContext) openStarlet() (asm.MacroLibrary, error) {
 	data, name, err := c.readLibraryFile("SYS$LIBRARY", "STARLET.MLB")
 	if err != nil {
 		return nil, objectFailureAs(vmserrors.CLI_LIBRARY, err, name)

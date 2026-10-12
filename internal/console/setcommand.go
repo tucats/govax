@@ -58,7 +58,7 @@ func (d *Dispatcher) bindSetCommands() {
 	// SET DEFAULT (docs/PHASE-23.md, subtask 3) establishes the
 	// operator's default device and directory for DIRECTORY, DELETE,
 	// PURGE, COPY, and TYPE; Session.SetDefault checks its syntax.
-	g.Bind("SET_DEFAULT", func(id int64, r *dcl.Result) error { return c.SetDefault(r.String("SPEC")) })
+	g.Bind("SET_DEFAULT", func(id int64, r *dcl.Result) error { return c.cmd().SetDefault(r.String("SPEC")) })
 
 	// SET PROMPT="text" changes the console's prompt.
 	g.Bind("SET_PROMPT", func(id int64, r *dcl.Result) error { return c.SetPrompt(r.String("TEXT")) })

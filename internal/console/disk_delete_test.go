@@ -26,7 +26,7 @@ func TestDiskDelete_assembledProgram(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		if err := c.Copy(host, true, "DUA0:[000000]"+name, false, rms.CopyOptions{Binary: true, Quiet: true}); err != nil {
+		if err := c.cmd().Copy(host, true, "DUA0:[000000]"+name, false, rms.CopyOptions{Binary: true, Quiet: true}); err != nil {
 			t.Fatalf("Copy %s: %v", name, err)
 		}
 	}
@@ -58,7 +58,7 @@ func TestDiskDelete_assembledProgram(t *testing.T) {
 	// What's left: RENAMED.TXT, holding KEEP.TXT's text, and none of
 	// the other three names.
 	back := filepath.Join(dir, "back.txt")
-	if err := c.Copy("DUA0:[000000]RENAMED.TXT", false, back, true, rms.CopyOptions{Binary: true, Quiet: true}); err != nil {
+	if err := c.cmd().Copy("DUA0:[000000]RENAMED.TXT", false, back, true, rms.CopyOptions{Binary: true, Quiet: true}); err != nil {
 		t.Fatalf("Copy RENAMED.TXT: %v", err)
 	}
 

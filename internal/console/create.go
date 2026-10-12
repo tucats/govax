@@ -76,7 +76,7 @@ var (
 // a /VERSION_LIMIT out of range (CREATE-E-BADVALUE) is reported and then
 // ignored, as VMS does. Every message is shown here, so a failure is
 // returned with its message inhibited (exit status only).
-func (c *Console) CreateDirectory(req CreateDirectoryRequest) error {
+func (c *cmdContext) CreateDirectory(req CreateDirectoryRequest) error {
 	opts, failure := c.createDirectoryOptions(req)
 	if opts == nil {
 		return failure
@@ -110,7 +110,7 @@ func (c *Console) CreateDirectory(req CreateDirectoryRequest) error {
 // rms.CreateDirectoryOptions, reporting a bad value as VMS does. A nil
 // result means the command stops there; otherwise the error, if any, is a
 // value that was reported and ignored, for the command's exit status.
-func (c *Console) createDirectoryOptions(req CreateDirectoryRequest) (*rms.CreateDirectoryOptions, error) {
+func (c *cmdContext) createDirectoryOptions(req CreateDirectoryRequest) (*rms.CreateDirectoryOptions, error) {
 	opts := &rms.CreateDirectoryOptions{}
 
 	syntax := func(value string, secondary uint32) (*rms.CreateDirectoryOptions, error) {
@@ -176,7 +176,7 @@ func (c *Console) createDirectoryOptions(req CreateDirectoryRequest) (*rms.Creat
 
 // createDirectoryStatus is the secondary status VMS shows for err, a
 // directory CREATE/DIRECTORY couldn't make.
-func (c *Console) createDirectoryStatus(err error) uint32 {
+func (c *cmdContext) createDirectoryStatus(err error) uint32 {
 	var notMounted *rms.NotMountedError
 
 	switch {

@@ -58,7 +58,7 @@ type DefaultVolume struct {
 // startup goes on without it. Informational messages (created, mounted)
 // are shown only when the console is verbose, so a one-shot command's
 // output isn't cluttered with them.
-func (c *Console) MountDefaultVolume(v DefaultVolume) {
+func (c *cmdContext) MountDefaultVolume(v DefaultVolume) {
 	if strings.TrimSpace(v.File) == "" {
 		return
 	}
@@ -190,12 +190,12 @@ func (c *Console) MountDefaultVolume(v DefaultVolume) {
 }
 
 // warnDefaultVolume reports a default volume that can't be used, and why.
-func (c *Console) warnDefaultVolume(path string, cause error) {
+func (c *cmdContext) warnDefaultVolume(path string, cause error) {
 	c.Printf("%%%s\n", vmserrors.Wrap(vmserrors.MOUNT_NODEFAULT, cause, path))
 }
 
 // info shows an informational message when the console is verbose.
-func (c *Console) info(msg error) {
+func (c *cmdContext) info(msg error) {
 	if c.Verbose {
 		c.Printf("%%%s\n", msg)
 	}

@@ -44,7 +44,7 @@ import (
 //     device volume set, or a genuine I/O failure freeing storage) is
 //     reported as CLI_BADFILESPEC, matching Console.Delete's own catch-all
 //     bucket.
-func (c *Console) Purge(specText string, keep uint16) error {
+func (c *cmdContext) Purge(specText string, keep uint16) error {
 	purged, err := c.ContainerSession.Purge(specText, keep)
 	if err != nil {
 		if lnmErr := logicalNameFailure(err); lnmErr != nil {

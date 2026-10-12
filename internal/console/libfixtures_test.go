@@ -20,7 +20,7 @@ func TestLibrary_fixtureExtracts(t *testing.T) {
 			c, _ := newTestConsole(t)
 			out := filepath.Join(t.TempDir(), name+".mar")
 
-			if err := c.Library(LibraryOptions{Library: filepath.Join(vax, name+".mlb"), Extract: []string{"*"}, Output: out}); err != nil {
+			if err := c.cmd().Library(LibraryOptions{Library: filepath.Join(vax, name+".mlb"), Extract: []string{"*"}, Output: out}); err != nil {
 				t.Fatalf("LIBRARY/EXTRACT: %v", err)
 			}
 

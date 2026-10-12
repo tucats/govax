@@ -244,14 +244,14 @@ func run(paths []string, instructionLimit int, timeLimit time.Duration, out io.W
 	}
 
 	for _, m := range mountRequests {
-		if err := c.Mount(m.device, m.path, m.write); err != nil {
+		if err := c.Commands().Mount(m.device, m.path, m.write); err != nil {
 			return err
 		}
 	}
 
 	// The configured default volume, if any, is mounted and made the
 	// default device and directory (internal/console/defvolume.go).
-	c.MountDefaultVolume(console.DefaultVolume{
+	c.Commands().MountDefaultVolume(console.DefaultVolume{
 		File:      settings.Get("vax.default.volume.file"),
 		Label:     settings.Get("vax.default.volume.label"),
 		Device:    settings.Get("vax.default.volume.device"),

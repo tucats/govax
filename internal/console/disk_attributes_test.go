@@ -49,7 +49,7 @@ func TestDiskAttributes_assembledProgram(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err := c.Copy(host, true, "DUA0:[000000]DATA.TXT", false, rms.CopyOptions{Binary: true, Quiet: true}); err != nil {
+	if err := c.cmd().Copy(host, true, "DUA0:[000000]DATA.TXT", false, rms.CopyOptions{Binary: true, Quiet: true}); err != nil {
 		t.Fatalf("Copy: %v", err)
 	}
 
@@ -71,7 +71,7 @@ func TestDiskAttributes_assembledProgram(t *testing.T) {
 
 	// The file on the volume is now exactly the 10 bytes written.
 	back := filepath.Join(t.TempDir(), "back.txt")
-	if err := c.Copy("DUA0:[000000]DATA.TXT", false, back, true, rms.CopyOptions{Binary: true, Quiet: true}); err != nil {
+	if err := c.cmd().Copy("DUA0:[000000]DATA.TXT", false, back, true, rms.CopyOptions{Binary: true, Quiet: true}); err != nil {
 		t.Fatalf("Copy back: %v", err)
 	}
 

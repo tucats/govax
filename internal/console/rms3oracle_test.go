@@ -131,7 +131,7 @@ func runOracleProbe(t *testing.T, device, node, probe string) (vms, govax []prob
 		t.Logf("emptying [CRE]: %v", err)
 	}
 
-	if err := c.SetDefault(device + ":[000000]"); err != nil {
+	if err := c.cmd().SetDefault(device + ":[000000]"); err != nil {
 		t.Fatal(err)
 	}
 
@@ -152,11 +152,11 @@ func runOracleProbe(t *testing.T, device, node, probe string) (vms, govax []prob
 	src := filepath.Join("..", "..", "testdata", "mar", "rms3", probe+".mar")
 	dir := t.TempDir()
 
-	if err := c.Macro(MacroOptions{Source: src, Object: filepath.Join(dir, probe+".obj")}); err != nil {
+	if err := c.cmd().Macro(MacroOptions{Source: src, Object: filepath.Join(dir, probe+".obj")}); err != nil {
 		t.Fatalf("MACRO: %v", err)
 	}
 
-	if err := c.Link(LinkOptions{Objects: []string{filepath.Join(dir, probe)}}); err != nil {
+	if err := c.cmd().Link(LinkOptions{Objects: []string{filepath.Join(dir, probe)}}); err != nil {
 		t.Fatalf("LINK: %v", err)
 	}
 

@@ -26,7 +26,7 @@ func forthConsole(t *testing.T, typed string, files map[string]string) (*Console
 
 	mountFreshContainer(t, c, "DUA0")
 
-	if err := c.SetDefault("DUA0:[000000]"); err != nil {
+	if err := c.cmd().SetDefault("DUA0:[000000]"); err != nil {
 		t.Fatal(err)
 	}
 
@@ -40,11 +40,11 @@ func forthConsole(t *testing.T, typed string, files map[string]string) (*Console
 	dir := t.TempDir()
 	src := filepath.Join("..", "..", "testdata", "mar", "forth.mar")
 
-	if err := c.Macro(MacroOptions{Source: src, Object: filepath.Join(dir, "forth.obj")}); err != nil {
+	if err := c.cmd().Macro(MacroOptions{Source: src, Object: filepath.Join(dir, "forth.obj")}); err != nil {
 		t.Fatalf("MACRO: %v", err)
 	}
 
-	if err := c.Link(LinkOptions{Objects: []string{filepath.Join(dir, "forth")}}); err != nil {
+	if err := c.cmd().Link(LinkOptions{Objects: []string{filepath.Join(dir, "forth")}}); err != nil {
 		t.Fatalf("LINK: %v", err)
 	}
 

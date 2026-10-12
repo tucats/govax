@@ -29,7 +29,7 @@ import "github.com/tucats/govax/internal/vmserrors"
 // real CLI_BADFILESPEC console status, matching every other console
 // command that reports a bad argument this way (e.g. SET RADIX's
 // CLI_BADRADIXVAL, SET MODE's CLI_BADMODE — see setcommand.go).
-func (c *Console) SetDefault(text string) error {
+func (c *cmdContext) SetDefault(text string) error {
 	if err := c.ContainerSession.SetDefault(text); err != nil {
 		if lnmErr := logicalNameFailure(err); lnmErr != nil {
 			return lnmErr
@@ -46,7 +46,7 @@ func (c *Console) SetDefault(text string) error {
 // the default device is a search list). It never fails — see
 // internal/rms.Session.DefaultString's own doc comment on why there's
 // always something displayable, even before any SET DEFAULT has run.
-func (c *Console) ShowDefault() error {
+func (c *cmdContext) ShowDefault() error {
 	c.Printf("  %s\n", c.ContainerSession.DefaultString())
 
 	return nil

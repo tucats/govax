@@ -63,7 +63,7 @@ type AnalyzeOptions struct {
 // read stops the command; a file the analysis finds errors in doesn't,
 // and the command then ends with CLI_ANALYZEERRORS once every file's
 // report is written.
-func (c *Console) AnalyzeObject(opts AnalyzeOptions) error {
+func (c *cmdContext) AnalyzeObject(opts AnalyzeOptions) error {
 	return c.analyzeFiles(opts, "OBJ", "ANL", anl.TitleObject, func(loc rms.FileLocation) ([]anl.Line, int, rms.FileLocation, error) {
 		records, found, err := c.analyzeRecords(loc, opts)
 		if err != nil {
@@ -79,7 +79,7 @@ func (c *Console) AnalyzeObject(opts AnalyzeOptions) error {
 // AnalyzeImage runs one ANALYZE/IMAGE command (docs/PHASE-40.md), as
 // AnalyzeObject runs ANALYZE/OBJECT: the default input type is EXE, and
 // the default output NAME.ANI.
-func (c *Console) AnalyzeImage(opts AnalyzeOptions) error {
+func (c *cmdContext) AnalyzeImage(opts AnalyzeOptions) error {
 	return c.analyzeFiles(opts, "EXE", "ANI", anl.TitleImage, func(loc rms.FileLocation) ([]anl.Line, int, rms.FileLocation, error) {
 		data, found, err := c.ContainerSession.ReadRawFile(loc)
 		if err != nil {
@@ -107,7 +107,7 @@ type analyzeOne func(loc rms.FileLocation) ([]anl.Line, int, rms.FileLocation, e
 // type outputType). A file that can't be read stops the command; a file
 // the analysis finds errors in doesn't, and the command then ends with
 // CLI_ANALYZEERRORS once every report is written.
-func (c *Console) analyzeFiles(opts AnalyzeOptions, inputType, outputType, title string, analyze analyzeOne) error {
+func (c *cmdContext) analyzeFiles(opts AnalyzeOptions, inputType, outputType, title string, analyze analyzeOne) error {
 	s := c.ContainerSession
 
 	var (
@@ -177,7 +177,7 @@ func (c *Console) analyzeFiles(opts AnalyzeOptions, inputType, outputType, title
 // analyzeRecords reads the object records to analyze at loc: an object
 // file's, or the records of an object library's modules, one module after
 // another (all of them in name order, or those /INCLUDE names).
-func (c *Console) analyzeRecords(loc rms.FileLocation, opts AnalyzeOptions) ([][]byte, rms.FileLocation, error) {
+func (c *cmdContext) analyzeRecords(loc rms.FileLocation, opts AnalyzeOptions) ([][]byte, rms.FileLocation, error) {
 	s := c.ContainerSession
 
 	data, found, err := s.ReadRawFile(loc)
@@ -230,7 +230,7 @@ func (c *Console) analyzeRecords(loc rms.FileLocation, opts AnalyzeOptions) ([][
 
 // writeAnalysis writes a report to the output file name (or NAME.typ
 // beside input), one record per line.
-func (c *Console) writeAnalysis(name string, input rms.FileLocation, typ string, text []byte) error {
+func (c *cmdContext) writeAnalysis(name string, input rms.FileLocation, typ string, text []byte) error {
 	s := c.ContainerSession
 
 	out, err := outputLocation(s, name, input, typ)

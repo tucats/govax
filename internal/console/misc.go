@@ -296,3 +296,18 @@ func (c *Console) Help(h *help.File, words []string) error {
 
 	return nil
 }
+
+// EndSession ends the console's use of the machine as govax exits: an
+// image of process 1's that never exited is run down, the other processes
+// are deleted (their files closed), and every file process 1 and DCL's
+// OPEN have open is closed, so that what they wrote reaches the volumes
+// before they're dismounted.
+func (c *Console) EndSession() {
+	c.runDownAbandonedImage()
+	c.endOtherProcesses()
+	c.closeDCLFiles()
+
+	if c.RTL != nil {
+		c.RTL.CloseFiles()
+	}
+}

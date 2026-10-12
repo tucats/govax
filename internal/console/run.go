@@ -503,3 +503,11 @@ func (c *Machine) endAbandonedImage() {
 		c.imageRundown()
 	}
 }
+
+// traceLogicals is the logical-name database's Trace hook: it writes
+// each line to the CPU's debug writer while SET DEBUG LOGICALS is on.
+func (c *Machine) traceLogicals(format string, args ...any) {
+	if c.CPU != nil && c.CPU.DebugEnabled(vax.DebugLogicals) {
+		fmt.Fprintf(c.CPU.DebugWriter(), "DEBUG: LNM: "+format+"\n", args...)
+	}
+}

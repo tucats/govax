@@ -46,7 +46,7 @@ import (
 //     SetDefault's own status for a bad file specification (the CLI
 //     facility, not SYS, since these are argument-validation problems
 //     rather than a device/volume state problem).
-func (c *Console) Directory(specText string, opts rms.DirectoryOptions) error {
+func (c *cmdContext) Directory(specText string, opts rms.DirectoryOptions) error {
 	text, err := c.ContainerSession.Directory(specText, opts)
 	if err != nil {
 		if lnmErr := logicalNameFailure(err); lnmErr != nil {

@@ -22,11 +22,11 @@ func TestProbe4(t *testing.T) {
 	d := console.NewDispatcher(c, consoletest.ConsoleGrammar(t), nil)
 
 	path := filepath.Join(t.TempDir(), "work.dsk")
-	if err := c.InitializeContainer(path, 2000, "WORK", 0, "RD54"); err != nil {
+	if err := c.Commands().InitializeContainer(path, 2000, "WORK", 0, "RD54"); err != nil {
 		t.Fatal(err)
 	}
 
-	if err := c.Mount("DUA0", path, true); err != nil {
+	if err := c.Commands().Mount("DUA0", path, true); err != nil {
 		t.Fatal(err)
 	}
 

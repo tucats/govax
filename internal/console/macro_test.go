@@ -112,7 +112,7 @@ func TestMacro_hostDefaultObjectName(t *testing.T) {
 		dir := t.TempDir()
 		writeHostFile(t, filepath.Join(dir, tc.source), macroSource)
 
-		if err := c.Macro(MacroOptions{Source: filepath.Join(dir, tc.typed)}); err != nil {
+		if err := c.cmd().Macro(MacroOptions{Source: filepath.Join(dir, tc.typed)}); err != nil {
 			t.Errorf("%s: Macro: %v", tc.typed, err)
 
 			continue
@@ -152,7 +152,7 @@ func TestMacro_headers(t *testing.T) {
 
 	defer func() { BuildVersion = saved }()
 
-	if err := c.Macro(MacroOptions{Source: src, CommandLine: `MACRO "small.mar"`}); err != nil {
+	if err := c.cmd().Macro(MacroOptions{Source: src, CommandLine: `MACRO "small.mar"`}); err != nil {
 		t.Fatalf("Macro: %v", err)
 	}
 
@@ -200,7 +200,7 @@ func TestMacro_errorsWriteNothing(t *testing.T) {
 	writeHostFile(t, src, "\t.PSECT\tCODE\n\tBOGUS\n\tRSB\n\tALSO_BOGUS\n")
 	writeHostFile(t, objPath, "old object")
 
-	err := c.Macro(MacroOptions{Source: src})
+	err := c.cmd().Macro(MacroOptions{Source: src})
 	if !errors.Is(err, vmserrors.New(vmserrors.CLI_ASMERRORS)) {
 		t.Fatalf("Macro error = %v, want CLI_ASMERRORS", err)
 	}
@@ -227,7 +227,7 @@ func TestMacro_warningsStillWrite(t *testing.T) {
 	src := filepath.Join(dir, "warn.mar")
 	writeHostFile(t, src, "\t.ENABLE\tTRUNCATION\n\t.PSECT\tCODE\n\tRSB\n")
 
-	if err := c.Macro(MacroOptions{Source: src}); err != nil {
+	if err := c.cmd().Macro(MacroOptions{Source: src}); err != nil {
 		t.Fatalf("Macro: %v", err)
 	}
 
@@ -246,7 +246,7 @@ func TestMacro_noObject(t *testing.T) {
 	src := filepath.Join(dir, "small.mar")
 	writeHostFile(t, src, macroSource)
 
-	if err := c.Macro(MacroOptions{Source: src, NoObject: true}); err != nil {
+	if err := c.cmd().Macro(MacroOptions{Source: src, NoObject: true}); err != nil {
 		t.Fatalf("Macro: %v", err)
 	}
 
@@ -263,14 +263,14 @@ func TestMacro_namedObject(t *testing.T) {
 	src := filepath.Join(dir, "src", "small.mar")
 	writeHostFile(t, src, macroSource)
 
-	if err := c.Macro(MacroOptions{Source: src, Object: "other.obj"}); err != nil {
+	if err := c.cmd().Macro(MacroOptions{Source: src, Object: "other.obj"}); err != nil {
 		t.Fatalf("Macro: %v", err)
 	}
 
 	readObject(t, c, rms.FileLocation{Host: true, Name: filepath.Join(dir, "src", "other.obj")})
 
 	elsewhere := filepath.Join(dir, "out.obj")
-	if err := c.Macro(MacroOptions{Source: src, Object: elsewhere}); err != nil {
+	if err := c.cmd().Macro(MacroOptions{Source: src, Object: elsewhere}); err != nil {
 		t.Fatalf("Macro: %v", err)
 	}
 
@@ -282,13 +282,13 @@ func TestMacro_namedObject(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err := c.Macro(MacroOptions{Source: src, Object: outDir}); err != nil {
+	if err := c.cmd().Macro(MacroOptions{Source: src, Object: outDir}); err != nil {
 		t.Fatalf("Macro: %v", err)
 	}
 
 	readObject(t, c, rms.FileLocation{Host: true, Name: filepath.Join(outDir, "small.obj")})
 
-	err := c.Macro(MacroOptions{Source: src, Object: filepath.Join(dir, "no", "such", "x.obj")})
+	err := c.cmd().Macro(MacroOptions{Source: src, Object: filepath.Join(dir, "no", "such", "x.obj")})
 	if !errors.Is(err, vmserrors.New(vmserrors.CLI_OBJWRITE)) {
 		t.Errorf("object in a missing directory: error = %v, want CLI_OBJWRITE", err)
 	}
@@ -297,12 +297,12 @@ func TestMacro_namedObject(t *testing.T) {
 func TestMacro_missingSource(t *testing.T) {
 	c, _ := newTestConsole(t)
 
-	err := c.Macro(MacroOptions{Source: filepath.Join(t.TempDir(), "none.mar")})
+	err := c.cmd().Macro(MacroOptions{Source: filepath.Join(t.TempDir(), "none.mar")})
 	if !errors.Is(err, vmserrors.New(vmserrors.SS_NOSUCHFILE)) {
 		t.Errorf("Macro error = %v, want SS_NOSUCHFILE", err)
 	}
 
-	if err := c.Macro(MacroOptions{Source: "DUB0:[X]NONE.MAR"}); !errors.Is(err, vmserrors.New(vmserrors.SS_DEVNOTMOUNT)) {
+	if err := c.cmd().Macro(MacroOptions{Source: "DUB0:[X]NONE.MAR"}); !errors.Is(err, vmserrors.New(vmserrors.SS_DEVNOTMOUNT)) {
 		t.Errorf("Macro error = %v, want SS_DEVNOTMOUNT", err)
 	}
 }
@@ -319,32 +319,32 @@ func TestMacro_volume(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err := c.Macro(MacroOptions{Source: "DUA0:[000000]SMALL"}); err != nil {
+	if err := c.cmd().Macro(MacroOptions{Source: "DUA0:[000000]SMALL"}); err != nil {
 		t.Fatalf("Macro: %v", err)
 	}
 
 	readObject(t, c, rms.FileLocation{Name: "DUA0:[000000]SMALL.OBJ;1"})
 
 	// A bare name, with the default on the volume.
-	if err := c.SetDefault("DUA0:[000000]"); err != nil {
+	if err := c.cmd().SetDefault("DUA0:[000000]"); err != nil {
 		t.Fatal(err)
 	}
 
-	if err := c.Macro(MacroOptions{Source: "SMALL.MAR"}); err != nil {
+	if err := c.cmd().Macro(MacroOptions{Source: "SMALL.MAR"}); err != nil {
 		t.Fatalf("Macro: %v", err)
 	}
 
 	readObject(t, c, rms.FileLocation{Name: "DUA0:[000000]SMALL.OBJ;2"})
 
 	// A directory alone gets the default name.
-	if err := c.Macro(MacroOptions{Source: "SMALL.MAR", Object: "DUA0:[000000]"}); err != nil {
+	if err := c.cmd().Macro(MacroOptions{Source: "SMALL.MAR", Object: "DUA0:[000000]"}); err != nil {
 		t.Fatalf("Macro: %v", err)
 	}
 
 	readObject(t, c, rms.FileLocation{Name: "DUA0:[000000]SMALL.OBJ;3"})
 
 	// A name without a type gets OBJ, as on VMS.
-	if err := c.Macro(MacroOptions{Source: "SMALL.MAR", Object: "OTHER"}); err != nil {
+	if err := c.cmd().Macro(MacroOptions{Source: "SMALL.MAR", Object: "OTHER"}); err != nil {
 		t.Fatalf("Macro: %v", err)
 	}
 
@@ -352,7 +352,7 @@ func TestMacro_volume(t *testing.T) {
 
 	// To the host.
 	hostObj := filepath.Join(t.TempDir(), "small.obj")
-	if err := c.Macro(MacroOptions{Source: "SMALL.MAR", Object: hostObj}); err != nil {
+	if err := c.cmd().Macro(MacroOptions{Source: "SMALL.MAR", Object: hostObj}); err != nil {
 		t.Fatalf("Macro: %v", err)
 	}
 
@@ -368,22 +368,22 @@ func TestMacro_hostSourceVolumeObject(t *testing.T) {
 	src := filepath.Join(t.TempDir(), "small.mar")
 	writeHostFile(t, src, macroSource)
 
-	if err := c.Macro(MacroOptions{Source: src, Object: "DUA0:[000000]SMALL.OBJ"}); err != nil {
+	if err := c.cmd().Macro(MacroOptions{Source: src, Object: "DUA0:[000000]SMALL.OBJ"}); err != nil {
 		t.Fatalf("Macro: %v", err)
 	}
 
 	readObject(t, c, rms.FileLocation{Name: "DUA0:[000000]SMALL.OBJ"})
 
 	path := filepath.Join(t.TempDir(), "ro.dsk")
-	if err := c.InitializeContainer(path, 400, "ROVOL", 0, "RD54"); err != nil {
+	if err := c.cmd().InitializeContainer(path, 400, "ROVOL", 0, "RD54"); err != nil {
 		t.Fatal(err)
 	}
 
-	if err := c.Mount("DUA1", path, false); err != nil {
+	if err := c.cmd().Mount("DUA1", path, false); err != nil {
 		t.Fatal(err)
 	}
 
-	err := c.Macro(MacroOptions{Source: src, Object: "DUA1:[000000]SMALL.OBJ"})
+	err := c.cmd().Macro(MacroOptions{Source: src, Object: "DUA1:[000000]SMALL.OBJ"})
 	if !errors.Is(err, vmserrors.New(vmserrors.CLI_OBJWRITE)) {
 		t.Errorf("object on a read-only volume: error = %v, want CLI_OBJWRITE", err)
 	}
@@ -405,7 +405,7 @@ func TestMacro_include(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if err := c.Macro(MacroOptions{Source: src}); err != nil {
+	if err := c.cmd().Macro(MacroOptions{Source: src}); err != nil {
 		t.Fatalf("Macro: %v", err)
 	}
 
@@ -425,7 +425,7 @@ func TestMacro_include(t *testing.T) {
 
 	_ = os.Remove(filepath.Join(dir, "main.obj"))
 
-	if err := c.Macro(MacroOptions{Source: src}); err == nil {
+	if err := c.cmd().Macro(MacroOptions{Source: src}); err == nil {
 		t.Error("Macro with a missing include succeeded")
 	}
 
@@ -446,7 +446,7 @@ func TestMacro_fixtureLadder(t *testing.T) {
 		c, _ := newTestConsole(t)
 		objPath := filepath.Join(t.TempDir(), "out.obj")
 
-		if err := c.Macro(MacroOptions{Source: src, Object: objPath}); err != nil {
+		if err := c.cmd().Macro(MacroOptions{Source: src, Object: objPath}); err != nil {
 			t.Errorf("%s: %v", src, err)
 
 			continue

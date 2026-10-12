@@ -146,11 +146,11 @@ func TestDeleteProcess_closesFiles(t *testing.T) {
 	c, _ := scheduledConsole(t, longQuantum, brbSelf)
 
 	path := filepath.Join(t.TempDir(), "work.dsk")
-	if err := c.InitializeContainer(path, 400, "WORK", 0, "RD54"); err != nil {
+	if err := c.Commands().InitializeContainer(path, 400, "WORK", 0, "RD54"); err != nil {
 		t.Fatal(err)
 	}
 
-	if err := c.Mount("DUA0", path, true); err != nil {
+	if err := c.Commands().Mount("DUA0", path, true); err != nil {
 		t.Fatal(err)
 	}
 

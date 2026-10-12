@@ -127,15 +127,15 @@ func runRMS3Probe(t *testing.T, c *Console, name string) []probeRecord {
 	src := filepath.Join("..", "..", "testdata", "mar", "rms3", name+".mar")
 	dir := t.TempDir()
 
-	if err := c.Macro(MacroOptions{Source: src, Object: filepath.Join(dir, name+".obj")}); err != nil {
+	if err := c.cmd().Macro(MacroOptions{Source: src, Object: filepath.Join(dir, name+".obj")}); err != nil {
 		t.Fatalf("MACRO: %v", err)
 	}
 
-	if err := c.Link(LinkOptions{Objects: []string{filepath.Join(dir, name)}}); err != nil {
+	if err := c.cmd().Link(LinkOptions{Objects: []string{filepath.Join(dir, name)}}); err != nil {
 		t.Fatalf("LINK: %v", err)
 	}
 
-	if err := c.SetDefault("DUA0:[000000]"); err != nil {
+	if err := c.cmd().SetDefault("DUA0:[000000]"); err != nil {
 		t.Fatal(err)
 	}
 
