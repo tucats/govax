@@ -22,6 +22,11 @@ two of the phase's open questions about `@`.
 | `probe50g.com` | Round 4's nested procedure, which leaves a file open (F7) |
 | `probe50q.com` | Round 4's interactive part, run at the terminal: INQUIRE and READ (Q1 to Q11) |
 | `probe50p.com` | Round 4's procedure run with /OUTPUT from `probe50q.com` (Q11) |
+| `probe50t.com` | Round 5, what subtasks 10 to 19 chose: sections T1 to T5 below |
+| `probe50u.com` | Round 5's nested cases, one per P1 |
+| `probe50y.com` | Round 5's interactive part, STOP and Ctrl/Y: cases Y1 to Y16 below |
+| `probe50z.com` | Round 5's interactive nested procedure, one case per P1 |
+| `probe50x.mar` | Round 5's long-running image, for Ctrl/Y (Y13, Y14) |
 | `exchange.cmd`, `copyout.cmd` | Make the exchange volume and copy the log back |
 | `vax/` | The VMS run's log, `probe50.log` (2026-10-09) |
 
@@ -393,3 +398,86 @@ DCL's file I/O"):
 Still open: the fixed control bytes DCL writes (DUMP/BLOCK would show
 them; govax writes 01 8D), and why SHOW LOGICAL indents a
 process-permanent name one blank further.
+
+## Round 5: statuses, flow, lexicals, subprocesses, STOP, and Ctrl/Y
+
+Round 5 asks about what subtasks 10 to 19 chose without VMS (DEVIATIONS.md's
+"[Phase 50]" entries: statuses and ON; labels, IF blocks, GOSUB, and CALL;
+the lexical functions; STOP and Ctrl/Y; the subprocess's DCL). It has two
+parts. Build the exchange volume as before (`exchange.cmd` now copies
+round 5's files), and run from SYSTEM with the volume's `[000000]` as the
+default directory.
+
+### Part 1: `@PROBE50T/OUTPUT=PROBE50T.LOG`
+
+Nothing waits. It runs with SET NOON and SET VERIFY; each section starts
+by showing a marker symbol M, most cases are followed by `SHOW SYMBOL
+$STATUS`, and each lexical case sets X to "-" first.
+
+- **T1, statuses and ON:** EXIT with no status after a success (bit
+  28?); `$STATUS` at an ON ERROR THEN GOTO label; whether ON's command is
+  substituted when ON is read or when it runs; F$ENVIRONMENT
+  ("ON_SEVERITY") after each ON, with SET NOON and ON CONTROL_Y; whether
+  SKPDAT takes ON WARNING's action; `ON FOO`; `EXIT 3 4`; `EXIT 44`'s
+  message from a procedure run with /OUTPUT (its log is PROBE50N.LOG);
+  DIRECTORY's and TYPE's success status; `-7 / 0`; `''X` in quotes with
+  no closing apostrophe.
+- **T2, flow:** whether a GOTO's forward search records the labels it
+  passes (FWDREC); `IF 1 THEN` with nothing after; a command other than
+  THEN after a block's IF, and the ENDIF after it; whether THEN, ELSE,
+  ENDIF, a label, GOSUB, and RETURN change `$STATUS`; `RETURN 44`'s
+  message and the ON action; a GOSUB to a missing label (does the
+  procedure go on?); CALL of a missing subroutine and of a plain label;
+  ENDI and ENDS as ENDIF and ENDSUBROUTINE.
+- **T3, lexical functions:** keyword abbreviations (F$EDIT's COMP,
+  F$ENVIRONMENT's DEP, F$GETSYI's NODEN, F$GETJPI's PRCN, F$PARSE's NAM,
+  F$CVTIME's ABS); F$EDIT's order and quoted text; the range errors of
+  F$EXTRACT, F$ELEMENT, F$CVSI, F$CVUI; F$ELEMENT past the end; F$LOCATE
+  of ""; F$TYPE of " 12 ", "%X1F", "+5", "1 2", and of a string that isn't
+  a name; F$FAO with a string for !UL and an integer for !AS;
+  F$ENVIRONMENT's CONTROL, NOCONTROL, ON_SEVERITY, PROTECTION; F$GETJPI's
+  USERNAME, UIC, MODE, JOBTYPE, STATE, CURPRIV, and F$USER; F$SEARCH of a
+  name without wildcards three times, and without its type; F$PARSE of a
+  missing device and directory, SYNTAX_ONLY, a default's version;
+  F$MESSAGE of CREATE's OPENOUT and of 2; F$CVTIME's formats, fields, a
+  delta, combinations, and DCL's `date:time` form.
+- **T5, subprocesses:** SPAWN of a command (F$ENVIRONMENT("DEPTH") in the
+  subprocess), of a procedure that STOPs, of one that EXITs 3, and of an
+  unknown verb: what each prints, and `$STATUS` after each SPAWN.
+
+### Part 2: `PROBE50Y`, at the terminal
+
+Run each case at the terminal, without /OUTPUT, and keep the whole
+session, prompts and keys included, as `vax/probe50y.log`. After each
+case (when the `$` prompt is back) type
+
+    SHOW SYMBOL $STATUS
+    WRITE SYS$OUTPUT F$ENVIRONMENT("DEPTH")
+
+The first case builds PROBE50X.EXE (MACRO and LINK). When a case says
+"Press Ctrl/Y now", press it within the 20 seconds of the WAIT; where a
+step says to type commands, they are typed at the prompt Ctrl/Y gives.
+
+| Case | Type | Then |
+| ---- | ---- | ---- |
+| Y1 | `@PROBE50Y STOP` | (nothing waits: STOP in a nested procedure) |
+| Y2 | `@PROBE50Y ONSTOP` | (nothing waits: ON ERROR THEN STOP in a nested one) |
+| Y3 | `@PROBE50Y WAIT` | Ctrl/Y, then `SHOW SYMBOL X`, `WRITE SYS$OUTPUT F$ENVIRONMENT("DEPTH")`, `X = "changed"`, `SHOW SYMBOL $STATUS`, `CONTINUE` |
+| Y4 | `@PROBE50Y WAIT` | Ctrl/Y, then `EXIT` |
+| Y5 | `@PROBE50Y WAIT` | Ctrl/Y, then `STOP` |
+| Y6 | `@PROBE50Y WAIT` | Ctrl/Y, then `DIRECTORY PROBE50Y.COM` (an image), then `CONTINUE` |
+| Y7 | `@PROBE50Y WAIT` | Ctrl/Y, then Ctrl/Y again at the prompt, then `CONTINUE` |
+| Y8 | `@PROBE50Y ONGOTO` | Ctrl/Y, and Ctrl/Y again when asked |
+| Y9 | `@PROBE50Y ONCONT` | Ctrl/Y |
+| Y10 | `@PROBE50Y NESTED` | Ctrl/Y during the nested procedure's wait (if a prompt comes, `CONTINUE`) |
+| Y11 | `@PROBE50Y NESTED0` | the same |
+| Y12 | `@PROBE50Y NOCONTROL` | Ctrl/Y during the 10-second wait (it should do nothing) |
+| Y13 | `@PROBE50Y IMAGE` | Ctrl/Y while PROBE50X runs, then `SHOW SYMBOL $STATUS`, `CONTINUE`, and wait for "spun" |
+| Y14 | `@PROBE50Y IMAGEON` | Ctrl/Y while PROBE50X runs |
+| Y15 | `@PROBE50Y WAIT` | Ctrl/C instead of Ctrl/Y, then `CONTINUE` |
+| Y16 | at the `$` prompt: `L: SHOW SYMBOL $STATUS`, `GOTO L`, `GOSUB L`, `RETURN`, `CALL L`, `SUBROUTINE`, `ENDSUBROUTINE`, each followed by `SHOW SYMBOL $STATUS` | labels and flow commands at the terminal |
+
+(If PROBE50X ends before you can press Ctrl/Y, note it: its count is in
+`probe50x.mar`.) Then run `copyout.cmd`, which copies PROBE50T.LOG to
+`vax/probe50t.log` and PROBE50N.LOG to `vax/probe50n.log`.
+

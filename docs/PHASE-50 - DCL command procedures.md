@@ -991,4 +991,12 @@ details are in DEVIATIONS.md.)
   and EXE$XTEST. SHOW VERSION, which called EXE$ABOUT, prints the same
   two lines from Go (`ShowVersion`). The assembler's golden fixtures are
   regenerated: code assembled after kernel.asm moved.
+- 2026-10-11: Subtask 20, round 5 of the VMS probe (testdata/dcl50's
+  README, "Round 5"): `probe50t.com` (with `probe50u.com`'s nested
+  cases) asks about the statuses and ON, labels and flow, the lexical
+  functions, and the subprocess's DCL; `probe50y.com` (with
+  `probe50z.com` and the long-running `probe50x.mar`) is run at the
+  terminal for STOP and Ctrl/Y. Both were tried under govax first.
+  govax has no WAIT yet, which `probe50y.com` uses (round 3 found it
+  one of DCL's own commands). The author is to run it.
 

@@ -1,0 +1,18 @@
+	.title	probe50x
+;
+; PROBE50X - round 5's long-running image (testdata/dcl50/README.md):
+; it counts down from 100,000,000, which takes a while on the simh VAX,
+; so that Ctrl/Y can interrupt it, then writes "spun" and ends with
+; SS$_NORMAL.
+;
+	.psect	data,noexe,wrt
+spun:	.ascid	/spun/
+	.psect	code,exe,nowrt
+	.entry	start,^m<r2>
+	movl	#100000000,r2
+loop:	sobgtr	r2,loop
+	pushaq	spun
+	calls	#1,g^lib$put_output
+	movl	#1,r0
+	ret
+	.end	start
