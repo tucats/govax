@@ -6,10 +6,10 @@ package console
 // files, before the machine they ran on is replaced or ends (INIT,
 // VMINIT, ZERO, and govax's exit). It must run while the old memory is
 // still the machine's, since a process's rundown reads its tables.
-func (c *Machine) endOtherProcesses() {
-	if c.processOne == nil || c.Mem == nil {
+func (m *Machine) endOtherProcesses() {
+	if m.processOne == nil || m.Mem == nil {
 		return
 	}
 
-	c.processOne.DeleteOtherProcesses()
+	m.processOne.DeleteOtherProcesses()
 }

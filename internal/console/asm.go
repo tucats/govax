@@ -9,9 +9,9 @@ import (
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
-// Assemble implements the batch form of the ASM <filename> command: 
-// reads path and assembles it into the console's persistent ASM 
-// session (c.asmSession, created fresh on first use after each VMINIT — 
+// Assemble implements the batch form of the ASM <filename> command:
+// reads path and assembles it into the console's persistent ASM
+// session (c.asmSession, created fresh on first use after each VMINIT —
 // see machine.go's doc comment on why multiple ASM commands
 // in a row must share one assembler: a later file can reference an earlier
 // one's labels, e.g. hello.asm's "@#lib$put_output" resolving to
@@ -36,17 +36,17 @@ import (
 // program whose .END named an explicit start address is invoked
 // immediately afterward, with no arguments, exactly as the reference
 // tool's own post-command hook does.
-func (c *Machine) Assemble(path string) (entryAddr uint32, hasEntry bool, err error) {
-	if err := c.requireInit(); err != nil {
+func (m *Machine) Assemble(path string) (entryAddr uint32, hasEntry bool, err error) {
+	if err := m.requireInit(); err != nil {
 		return 0, false, err
 	}
 
-	src, err := c.Paths.ReadFile(path)
+	src, err := m.Paths.ReadFile(path)
 	if err != nil {
 		return 0, false, err
 	}
 
-	a := c.ensureAsmSession()
+	a := m.ensureAsmSession()
 
 	// .INCLUDE names (e.g. kernel.asm's own "ssdef.asm") are resolved
 	// alongside path's own directory first (WithDir), falling through to
@@ -55,7 +55,7 @@ func (c *Machine) Assemble(path string) (entryAddr uint32, hasEntry bool, err er
 	// default resolver every call, so a session shared across several ASM
 	// <file> commands always resolves .INCLUDE relative to whichever file
 	// is currently being assembled.
-	includePaths := c.Paths.WithDir(filepath.Dir(path))
+	includePaths := m.Paths.WithDir(filepath.Dir(path))
 
 	a.SetIncludeResolver(func(name string) (string, error) {
 		b, err := includePaths.ReadFile(name)
@@ -67,11 +67,11 @@ func (c *Machine) Assemble(path string) (entryAddr uint32, hasEntry bool, err er
 		return 0, false, vmserrors.Wrap(vmserrors.CLI_ASSEMBLING, err, path)
 	}
 
-	if err := c.depositAsmImage(a); err != nil {
+	if err := m.depositAsmImage(a); err != nil {
 		return 0, false, vmserrors.Wrap(vmserrors.CLI_DEPOSITING, err, path)
 	}
 
-	c.mergeAsmSymbols(a)
+	m.mergeAsmSymbols(a)
 
 	addr, ok := a.TakeEntry()
 
@@ -82,10 +82,10 @@ func (c *Machine) Assemble(path string) (entryAddr uint32, hasEntry bool, err er
 // creating one on first use after each VMINIT/ZERO — see asmSession's own
 // doc comment (machine.go) for why one Assembler is shared across every
 // "ASM <file>"/interactive-mode command in a row.
-func (c *Machine) ensureAsmSession() *asm.Assembler {
-	if c.asmSession == nil {
+func (m *Machine) ensureAsmSession() *asm.Assembler {
+	if m.asmSession == nil {
 		// Pass down the console's verbose flag to the assember
-		c.asmSession = asm.New(c.Verbose)
+		m.asmSession = asm.New(m.Verbose)
 
 		// vax.console.deposit is one shared "current address" register in
 		// the reference tool -- EXAMINE/DEPOSIT/interactive-ASM all read
@@ -97,11 +97,11 @@ func (c *Machine) ensureAsmSession() *asm.Assembler {
 		// "ASM <file>" behavior is unaffected when DepositAddr is still at
 		// its post-VMINIT default, since that default already equals the
 		// assembler's own (0x200).
-		c.asmSession.SetOrigin(c.DepositAddr)
+		m.asmSession.SetOrigin(m.DepositAddr)
 		// See s0Free's doc comment: the assembler's literal default S0
 		// origin (0x80000000) collides with this live VM's own S0 page
 		// table, which is mapped starting at that exact virtual address.
-		c.asmSession.SetS0Origin(c.s0Free)
+		m.asmSession.SetS0Origin(m.s0Free)
 		// .SCB/.VECTOR compute their target address from the assembler's
 		// own configured SCBB (pseudoSCB writes to 0x80000000+scbb+code),
 		// which must match the live SCBB privileged register VMINIT set --
@@ -109,38 +109,38 @@ func (c *Machine) ensureAsmSession() *asm.Assembler {
 		// the CPU's own exception dispatch never actually consults,
 		// leaving every real exception vector reading whatever garbage
 		// happens to be at the live SCBB instead.
-		c.asmSession.SetSCBB(c.CPU.PR(vax.SCBB))
+		m.asmSession.SetSCBB(m.CPU.PR(vax.SCBB))
 		// A directory-less default .INCLUDE resolver for interactive mode,
 		// which has no "current file" of its own to bias the search with
 		// (unlike Assemble's own per-call WithDir override above).
-		c.asmSession.SetIncludeResolver(func(name string) (string, error) {
-			b, err := c.Paths.ReadFile(name)
+		m.asmSession.SetIncludeResolver(func(name string) (string, error) {
+			b, err := m.Paths.ReadFile(name)
 
 			return string(b), err
 		})
 	}
 
-	return c.asmSession
+	return m.asmSession
 }
 
 // depositAsmImage stores everything a's assembled so far into live memory:
 // the P0 program, any S0 data (.REGION), and the .SCB/.VECTOR page --
 // shared by both the batch "ASM <file>" form and interactive-mode's own
 // per-statement loop, since either can extend any of these regions.
-func (c *Machine) depositAsmImage(a *asm.Assembler) error {
+func (m *Machine) depositAsmImage(a *asm.Assembler) error {
 	if p0 := a.Bytes(); len(p0) > 0 {
-		if err := c.storeBytes(a.Origin(), p0); err != nil {
+		if err := m.storeBytes(a.Origin(), p0); err != nil {
 			return err
 		}
 	}
 
 	if s0 := a.BytesRange(a.S0Origin(), a.S0End()); len(s0) > 0 {
-		if err := c.storeBytes(a.S0Origin(), s0); err != nil {
+		if err := m.storeBytes(a.S0Origin(), s0); err != nil {
 			return err
 		}
 
 		// Those S0 pages are no longer free for new processes' structures.
-		if pool := c.processOne.S0Pool(); pool != nil {
+		if pool := m.processOne.S0Pool(); pool != nil {
 			if err := pool.Claim(a.S0End()); err != nil {
 				return err
 			}
@@ -154,9 +154,9 @@ func (c *Machine) depositAsmImage(a *asm.Assembler) error {
 	// and would otherwise sit forever in the assembler's own image buffer,
 	// never reaching live memory. Depositing this page on every call is
 	// harmless (idempotent) even when nothing has written a .SCB entry.
-	scbb := 0x80000000 + c.CPU.PR(vax.SCBB)
+	scbb := 0x80000000 + m.CPU.PR(vax.SCBB)
 	if scb := a.BytesRange(scbb, scbb+512); len(scb) > 0 {
-		if err := c.storeBytes(scbb, scb); err != nil {
+		if err := m.storeBytes(scbb, scb); err != nil {
 			return err
 		}
 	}
@@ -169,13 +169,13 @@ func (c *Machine) depositAsmImage(a *asm.Assembler) error {
 	// .P1VECTOR's range isn't known ahead of time the way .SCB/.VECTOR's is.
 	if base, end, ok := a.P1VectorRange(); ok {
 		if p1 := a.BytesRange(base, end); len(p1) > 0 {
-			if err := c.storeBytes(base, p1); err != nil {
+			if err := m.storeBytes(base, p1); err != nil {
 				return err
 			}
 
 			// Every process maps these same physical pages as its own P1
 			// vector (corevms.ShareP1), so they're written once, here.
-			if err := c.processOne.ShareP1(base, end); err != nil {
+			if err := m.processOne.ShareP1(base, end); err != nil {
 				return err
 			}
 		}
@@ -188,7 +188,7 @@ func (c *Machine) depositAsmImage(a *asm.Assembler) error {
 // Console.Symbols (the table EXAMINE/DEPOSIT/CALL's expression evaluator
 // consults), so a freshly assembled label is immediately usable by name --
 // shared by the batch and interactive-mode forms alike.
-func (c *Machine) mergeAsmSymbols(a *asm.Assembler) {
+func (m *Machine) mergeAsmSymbols(a *asm.Assembler) {
 	for _, s := range a.Symbols().All() {
 		kind := SymbolUser
 		if strings.ContainsRune(s.Name, '$') {
@@ -196,13 +196,13 @@ func (c *Machine) mergeAsmSymbols(a *asm.Assembler) {
 		}
 
 		if s.IsEntry() {
-			c.Symbols.SetEntry(s.Name, s.Value, kind)
+			m.Symbols.SetEntry(s.Name, s.Value, kind)
 		} else {
-			c.Symbols.Set(s.Name, s.Value, kind)
+			m.Symbols.Set(s.Name, s.Value, kind)
 		}
 
 		if strings.EqualFold(s.Name, "EXE$INITIALIZE") {
-			c.kernelPlaced = true
+			m.kernelPlaced = true
 		}
 	}
 }
@@ -212,20 +212,20 @@ func (c *Machine) mergeAsmSymbols(a *asm.Assembler) {
 // consults this ahead of normal verb-table lookup, and main.go's own
 // readline prompt consults it to switch to "ASM> ", both matching the
 // reference tool.
-func (c *Machine) InAssemblerMode() bool { return c.assemblerMode }
+func (m *Machine) InAssemblerMode() bool { return m.assemblerMode }
 
 // AssembleBegin implements the bare "ASM" (no filename) command: puts the
 // console into interactive assembler mode, matching console_asm's own
 // isend(*p) branch. Every subsequent line reaching Dispatcher.Dispatch is
 // handed to AssembleInteractiveLine instead of the normal command table
 // until a bare or dotted END statement ends the mode.
-func (c *Machine) AssembleBegin() error {
-	if err := c.requireInit(); err != nil {
+func (m *Machine) AssembleBegin() error {
+	if err := m.requireInit(); err != nil {
 		return err
 	}
 
-	c.ensureAsmSession().BeginInteractive()
-	c.assemblerMode = true
+	m.ensureAsmSession().BeginInteractive()
+	m.assemblerMode = true
 
 	return nil
 }
@@ -241,29 +241,29 @@ func (c *Machine) AssembleBegin() error {
 // whether an entry address was named, exactly like Assemble's own
 // TakeEntry-based return, so the caller can issue the same one-shot
 // "CALL __ENTRY" the reference tool's post-command hook does.
-func (c *Machine) AssembleInteractiveLine(line string) (done bool, entryAddr uint32, hasEntry bool, err error) {
-	a := c.ensureAsmSession()
+func (m *Machine) AssembleInteractiveLine(line string) (done bool, entryAddr uint32, hasEntry bool, err error) {
+	a := m.ensureAsmSession()
 
 	done, err = a.AssembleLine(line)
 	if err != nil {
 		return false, 0, false, vmserrors.Wrap(vmserrors.CLI_ASSEMBLING, err, "ASM")
 	}
 
-	if err := c.depositAsmImage(a); err != nil {
+	if err := m.depositAsmImage(a); err != nil {
 		return false, 0, false, vmserrors.Wrap(vmserrors.CLI_DEPOSITING, err, "ASM")
 	}
 
-	c.mergeAsmSymbols(a)
-	c.DepositAddr = a.Deposit()
+	m.mergeAsmSymbols(a)
+	m.DepositAddr = a.Deposit()
 
 	if !done {
 		return false, 0, false, nil
 	}
 
-	c.assemblerMode = false
+	m.assemblerMode = false
 
 	if a.HasUnresolvedSymbols() {
-		c.Printf("%%There are unresolved forward references\n")
+		m.Printf("%%There are unresolved forward references\n")
 	}
 
 	entryAddr, hasEntry = a.TakeEntry()

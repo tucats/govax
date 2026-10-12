@@ -23,102 +23,102 @@ const (
 
 // ShowRegisters prints R0-R11 plus the AP/FP/SP/PC aliases in the same
 // four-column grid as the PSL beneath them, matching SHOW REGISTERS.
-func (c *Machine) ShowRegisters() error {
-	if err := c.requireInit(); err != nil {
+func (m *Machine) ShowRegisters() error {
+	if err := m.requireInit(); err != nil {
 		return err
 	}
 
-	c.dumpRegisters()
+	m.dumpRegisters()
 
 	return nil
 }
 
 // dumpRegisters prints the R0-R11/AP/FP/SP/PC grid followed by the PSL
 // block, shared by SHOW REGISTERS (ShowRegisters) and SHOW CPU (ShowCPU).
-func (c *Machine) dumpRegisters() {
-	c.Printf("\n\n    Registers:\n\n")
-	c.Printf("    R0:  %08X      R4:  %08X     R8:  %08X     AP:  %08X\n",
-		c.CPU.GPR(vax.R0), c.CPU.GPR(vax.R4), c.CPU.GPR(vax.R8), c.CPU.GPR(vax.AP))
-	c.Printf("    R1:  %08X      R5:  %08X     R9:  %08X     FP:  %08X\n",
-		c.CPU.GPR(vax.R1), c.CPU.GPR(vax.R5), c.CPU.GPR(vax.R9), c.CPU.GPR(vax.FP))
-	c.Printf("    R2:  %08X      R6:  %08X     R10: %08X     SP:  %08X\n",
-		c.CPU.GPR(vax.R2), c.CPU.GPR(vax.R6), c.CPU.GPR(vax.R10), c.CPU.GPR(vax.SP))
-	c.Printf("    R3:  %08X      R7:  %08X     R11: %08X     PC:  %08X\n\n",
-		c.CPU.GPR(vax.R3), c.CPU.GPR(vax.R7), c.CPU.GPR(vax.R11), c.CPU.GPR(vax.PC))
+func (m *Machine) dumpRegisters() {
+	m.Printf("\n\n    Registers:\n\n")
+	m.Printf("    R0:  %08X      R4:  %08X     R8:  %08X     AP:  %08X\n",
+		m.CPU.GPR(vax.R0), m.CPU.GPR(vax.R4), m.CPU.GPR(vax.R8), m.CPU.GPR(vax.AP))
+	m.Printf("    R1:  %08X      R5:  %08X     R9:  %08X     FP:  %08X\n",
+		m.CPU.GPR(vax.R1), m.CPU.GPR(vax.R5), m.CPU.GPR(vax.R9), m.CPU.GPR(vax.FP))
+	m.Printf("    R2:  %08X      R6:  %08X     R10: %08X     SP:  %08X\n",
+		m.CPU.GPR(vax.R2), m.CPU.GPR(vax.R6), m.CPU.GPR(vax.R10), m.CPU.GPR(vax.SP))
+	m.Printf("    R3:  %08X      R7:  %08X     R11: %08X     PC:  %08X\n\n",
+		m.CPU.GPR(vax.R3), m.CPU.GPR(vax.R7), m.CPU.GPR(vax.R11), m.CPU.GPR(vax.PC))
 
-	c.dumpPSL()
+	m.dumpPSL()
 }
 
 // ShowPSL prints the processor status longword and its named fields.
-func (c *Machine) ShowPSL() error {
-	if err := c.requireInit(); err != nil {
+func (m *Machine) ShowPSL() error {
+	if err := m.requireInit(); err != nil {
 		return err
 	}
 
-	c.dumpPSL()
+	m.dumpPSL()
 
 	return nil
 }
 
 // dumpPSL prints the PSL longword plus its PSW and PRIV field breakdowns.
-func (c *Machine) dumpPSL() {
-	p := c.CPU.PSL()
+func (m *Machine) dumpPSL() {
+	p := m.CPU.PSL()
 
-	c.Printf("    PSL: %08X\n", uint32(p))
-	c.Printf("         PSW:  C=%s, V=%s, Z=%s, N=%s, T=%s, IV=%s, FU=%s, DV=%s\n",
+	m.Printf("    PSL: %08X\n", uint32(p))
+	m.Printf("         PSW:  C=%s, V=%s, Z=%s, N=%s, T=%s, IV=%s, FU=%s, DV=%s\n",
 		boolToDigit(p.C()), boolToDigit(p.V()), boolToDigit(p.Z()), boolToDigit(p.N()),
 		boolToDigit(p.T()), boolToDigit(p.IV()), boolToDigit(p.FU()), boolToDigit(p.DV()))
-	c.Printf("         PRIV: IPL=%d, CUR_MOD=%s, PRV_MOD=%s, FPD=%s, TP=%s, CM=%s\n",
+	m.Printf("         PRIV: IPL=%d, CUR_MOD=%s, PRV_MOD=%s, FPD=%s, TP=%s, CM=%s\n",
 		p.IPL(), modeNames[p.CurMod()], modeNames[p.PrvMod()],
 		boolToDigit(p.FPD()), boolToDigit(p.TP()), boolToDigit(p.CM()))
 }
 
 // ShowMemory prints physical memory size and, once VMINIT has established
 // page tables, per-region P0/P1/S0 accounting.
-func (c *Machine) ShowMemory() error {
-	if err := c.requireInit(); err != nil {
+func (m *Machine) ShowMemory() error {
+	if err := m.requireInit(); err != nil {
 		return err
 	}
 
-	size := c.Mem.Size()
+	size := m.Mem.Size()
 	pages := size / 512
 
-	c.Printf("\n    Physical Memory\n        %08X (%d decimal) pages\n        Addresses  00000000 - %08X\n\n",
+	m.Printf("\n    Physical Memory\n        %08X (%d decimal) pages\n        Addresses  00000000 - %08X\n\n",
 		pages, pages, size-1)
 
 	state := disabledState
-	if c.CPU.PR(vax.MAPEN) != 0 {
+	if m.CPU.PR(vax.MAPEN) != 0 {
 		state = enabledState
 	}
 
-	c.Printf("    Virtual Memory (currently %s)\n", state)
+	m.Printf("    Virtual Memory (currently %s)\n", state)
 
 	// If VMINIT has never been issued, this port has no console-specific
 	// knowledge of the memory layout, so it can't report on it.
-	if !c.VMInitValid {
-		c.Printf("        Virtual memory configuration is unknown.\n")
+	if !m.VMInitValid {
+		m.Printf("        Virtual memory configuration is unknown.\n")
 
 		return nil
 	}
 
-	mapped := c.Mem.MappedPages()
-	c.Printf("    There are %d physical pages mapped, %d free.\n\n", mapped, int(pages)-mapped)
+	mapped := m.Mem.MappedPages()
+	m.Printf("    There are %d physical pages mapped, %d free.\n\n", mapped, int(pages)-mapped)
 
-	bases := [3]uint32{c.CPU.PR(vax.P0BR), c.CPU.PR(vax.P1BR), c.CPU.PR(vax.SBR)}
-	lens := [3]uint32{c.CPU.PR(vax.P0LR), c.CPU.PR(vax.P1LR), c.CPU.PR(vax.SLR)}
+	bases := [3]uint32{m.CPU.PR(vax.P0BR), m.CPU.PR(vax.P1BR), m.CPU.PR(vax.SBR)}
+	lens := [3]uint32{m.CPU.PR(vax.P0LR), m.CPU.PR(vax.P1LR), m.CPU.PR(vax.SLR)}
 
-	for n, r := range c.Regions {
+	for n, r := range m.Regions {
 		plural := "s"
 		if r.pteCount == 1 {
 			plural = " "
 		}
 
-		c.Printf("        %s Region\n            Size = %08X (%5d decimal) pages\n            PFN database = %d page%s",
+		m.Printf("        %s Region\n            Size = %08X (%5d decimal) pages\n            PFN database = %d page%s",
 			r.name, r.size, r.size, r.pteCount, plural)
 
-		c.Printf("  %sBR = %08X    %sLR = %08X\n", r.name, bases[n], r.name, lens[n])
+		m.Printf("  %sBR = %08X    %sLR = %08X\n", r.name, bases[n], r.name, lens[n])
 
-		c.Printf("            Physical addresses = %08X-%08X\n            Virtual addresses  = %08X-%08X\n\n",
+		m.Printf("            Physical addresses = %08X-%08X\n            Virtual addresses  = %08X-%08X\n\n",
 			r.pStart, r.pEnd-1, r.vStart, r.vEnd-1)
 	}
 
@@ -130,24 +130,24 @@ func (c *Machine) ShowMemory() error {
 // characters and "%" for exactly one; an empty pattern matches every
 // name. The assembler's predefined system symbols are listed too, as the
 // C source's one shared symbol table listed them.
-func (c *Machine) ShowSymbols(pattern string) error {
-	return c.showSymbolList(pattern, false)
+func (m *Machine) ShowSymbols(pattern string) error {
+	return m.showSymbolList(pattern, false)
 }
 
 // showSymbolList prints the symbols listSymbols selects, one per line, or
 // reports CLI_UNDEFSYM when a pattern matched nothing.
-func (c *Machine) showSymbolList(pattern string, systemOnly bool) error {
-	if err := c.requireInit(); err != nil {
+func (m *Machine) showSymbolList(pattern string, systemOnly bool) error {
+	if err := m.requireInit(); err != nil {
 		return err
 	}
 
-	syms := c.listSymbols(pattern, systemOnly)
+	syms := m.listSymbols(pattern, systemOnly)
 	if len(syms) == 0 && strings.TrimSpace(pattern) != "" {
 		return vmserrors.New(vmserrors.CLI_UNDEFSYM, strings.TrimSpace(pattern))
 	}
 
 	for _, s := range syms {
-		c.Printf("%-31s = %08X  (%s)\n", s.Name, s.Value, symbolKindLabel(s))
+		m.Printf("%-31s = %08X  (%s)\n", s.Name, s.Value, symbolKindLabel(s))
 	}
 
 	return nil
@@ -157,7 +157,7 @@ func (c *Machine) showSymbolList(pattern string, systemOnly bool) error {
 // predefined symbol (asm.BuiltinSymbols) not shadowed by a console symbol
 // of the same name, whose name matches pattern (VMS wildcards; empty
 // matches all). systemOnly leaves out user symbols.
-func (c *Machine) listSymbols(pattern string, systemOnly bool) []*Symbol {
+func (m *Machine) listSymbols(pattern string, systemOnly bool) []*Symbol {
 	pattern = strings.ToUpper(strings.TrimSpace(pattern))
 	match := func(name string) bool { return pattern == "" || lnm.Match(pattern, name) }
 
@@ -165,7 +165,7 @@ func (c *Machine) listSymbols(pattern string, systemOnly bool) []*Symbol {
 
 	seen := map[string]bool{}
 
-	for _, s := range c.Symbols.All() {
+	for _, s := range m.Symbols.All() {
 		seen[s.Name] = true
 
 		if (!systemOnly || s.IsSystem()) && match(s.Name) {
@@ -213,34 +213,34 @@ func symbolKindLabel(s *Symbol) string {
 
 // ShowRadix prints the console's current default radix, matching SHOW
 // RADIX.
-func (c *Machine) ShowRadix() error {
-	c.Printf("Radix = %d\n", c.Radix)
+func (m *Machine) ShowRadix() error {
+	m.Printf("Radix = %d\n", m.Radix)
 
 	return nil
 }
 
 // ShowVersion is SHOW VERSION: which microkernel govax's console is.
-func (c *Machine) ShowVersion() error {
-	c.Printf("govax Console Microkernel 2.0\nBy Tom Cole\n")
+func (m *Machine) ShowVersion() error {
+	m.Printf("govax Console Microkernel 2.0\nBy Tom Cole\n")
 
 	return nil
 }
 
 // ShowBase prints the console's current EXAMINE/DEPOSIT cursor.
-func (c *Machine) ShowBase() error {
-	if err := c.requireInit(); err != nil {
+func (m *Machine) ShowBase() error {
+	if err := m.requireInit(); err != nil {
 		return err
 	}
 
-	c.printBase()
+	m.printBase()
 
 	return nil
 }
 
 // printBase is ShowBase's body, factored out so ShowCPU can reproduce
 // SHOW CPU followed by SHOW BASE without duplicating the format string.
-func (c *Machine) printBase() {
-	c.Printf("\n        Next storage address is %08X\n", c.DepositAddr)
+func (m *Machine) printBase() {
+	m.Printf("\n        Next storage address is %08X\n", m.DepositAddr)
 }
 
 // StackKind selects which privileged-mode stack ShowStack dumps.
@@ -281,15 +281,15 @@ func (k StackKind) String() string {
 // handlefault.go's `SetPR(vax.PrivReg(curMod), GPR(SP))` before a fault
 // switches to a new mode) for where that save happens; this only reads
 // the result.
-func (c *Machine) stackPointerFor(kind StackKind) uint32 {
-	psl := c.CPU.PSL()
+func (m *Machine) stackPointerFor(kind StackKind) uint32 {
+	psl := m.CPU.PSL()
 
 	if kind == StackISP {
 		if psl.IS() {
-			return c.CPU.GPR(vax.SP)
+			return m.CPU.GPR(vax.SP)
 		}
 
-		return c.CPU.PR(vax.ISP)
+		return m.CPU.PR(vax.ISP)
 	}
 
 	var (
@@ -309,21 +309,21 @@ func (c *Machine) stackPointerFor(kind StackKind) uint32 {
 	}
 
 	if !psl.IS() && psl.CurMod() == mode {
-		return c.CPU.GPR(vax.SP)
+		return m.CPU.GPR(vax.SP)
 	}
 
-	return c.CPU.PR(reg)
+	return m.CPU.PR(reg)
 }
 
 // ShowStack dumps live memory from a privileged mode's stack pointer
 // upward (one longword per line, formatted in the console's current
 // radix).
-func (c *Machine) ShowStack(kind StackKind, current bool, count uint32, all bool) error {
-	if err := c.requireInit(); err != nil {
+func (m *Machine) ShowStack(kind StackKind, current bool, count uint32, all bool) error {
+	if err := m.requireInit(); err != nil {
 		return err
 	}
 
-	psl := c.CPU.PSL()
+	psl := m.CPU.PSL()
 
 	var (
 		sp       uint32
@@ -331,7 +331,7 @@ func (c *Machine) ShowStack(kind StackKind, current bool, count uint32, all bool
 	)
 
 	if current {
-		sp = c.CPU.GPR(vax.SP)
+		sp = m.CPU.GPR(vax.SP)
 
 		modeIdx := int(psl.CurMod())
 		if psl.IS() {
@@ -340,39 +340,39 @@ func (c *Machine) ShowStack(kind StackKind, current bool, count uint32, all bool
 
 		modeName = modeNames[modeIdx]
 	} else {
-		sp = c.stackPointerFor(kind)
+		sp = m.stackPointerFor(kind)
 		modeName = kind.String()
 	}
 
-	c.Printf("    %s MODE SP = %08X:\n", modeName, sp)
+	m.Printf("    %s MODE SP = %08X:\n", modeName, sp)
 
 	if !all && (count < 1 || count > 255) {
 		count = 1
 	}
 
-	mapen := c.CPU.PR(vax.MAPEN)
+	mapen := m.CPU.PR(vax.MAPEN)
 
 	for n := uint32(0); all || n < count*4; n += 4 {
 		addr := sp + n
 
 		if (psl.CurMod() == 3 && mapen != 0 && addr >= 0x7FFFFFFF) ||
-			(mapen == 0 && addr >= c.Mem.Size()) {
-			c.Printf("      <end of memory>\n")
+			(mapen == 0 && addr >= m.Mem.Size()) {
+			m.Printf("      <end of memory>\n")
 
 			break
 		}
 
-		v, err := c.Mem.LoadLongword(c.CPU, addr)
+		v, err := m.Mem.LoadLongword(m.CPU, addr)
 		if err != nil {
-			c.Printf("      <end of stack>\n")
+			m.Printf("      <end of stack>\n")
 
 			break
 		}
 
-		if c.Radix == 16 {
-			c.Printf("      SP+%04X [%08X]:  %08X\n", n, addr, v)
+		if m.Radix == 16 {
+			m.Printf("      SP+%04X [%08X]:  %08X\n", n, addr, v)
 		} else {
-			c.Printf("      SP+%04d [%08X]:  %d\n", n, addr, int32(v))
+			m.Printf("      SP+%04d [%08X]:  %d\n", n, addr, int32(v))
 		}
 	}
 
@@ -398,19 +398,19 @@ var privRegDisplay = []struct {
 // ShowCPU prints the registers/PSL, mode stack pointers, and privileged
 // register block, then falls through to SHOW BASE's "next storage
 // address" line.
-func (c *Machine) ShowCPU() error {
-	if err := c.requireInit(); err != nil {
+func (m *Machine) ShowCPU() error {
+	if err := m.requireInit(); err != nil {
 		return err
 	}
 
-	c.dumpRegisters()
+	m.dumpRegisters()
 
-	c.Printf("\n    Stack pointers:\n\n")
-	c.Printf("    USP: %08X   SSP: %08X   ESP: %08X   KSP: %08X\n    ISP: %08X\n\n",
-		c.CPU.PR(vax.USP), c.CPU.PR(vax.SSP), c.CPU.PR(vax.ESP), c.CPU.PR(vax.KSP),
-		c.CPU.PR(vax.ISP))
+	m.Printf("\n    Stack pointers:\n\n")
+	m.Printf("    USP: %08X   SSP: %08X   ESP: %08X   KSP: %08X\n    ISP: %08X\n\n",
+		m.CPU.PR(vax.USP), m.CPU.PR(vax.SSP), m.CPU.PR(vax.ESP), m.CPU.PR(vax.KSP),
+		m.CPU.PR(vax.ISP))
 
-	c.Printf("    Privileged registers:\n\n")
+	m.Printf("    Privileged registers:\n\n")
 
 	// Build up a line of entries, flushing it once it gets long enough --
 	// matching the C source's own buff/strcat loop. That loop's trailing
@@ -423,41 +423,41 @@ func (c *Machine) ShowCPU() error {
 	buff := "    "
 
 	for _, e := range privRegDisplay {
-		buff += fmt.Sprintf("    %-6s:  %08X", e.name, c.Engine.ReadPR(e.reg))
+		buff += fmt.Sprintf("    %-6s:  %08X", e.name, m.Engine.ReadPR(e.reg))
 
 		if len(buff) > 60 {
-			c.Printf("%s\n", buff)
+			m.Printf("%s\n", buff)
 
 			buff = "    "
 		}
 	}
 
 	if len(buff) > 4 {
-		c.Printf("%s\n", buff)
+		m.Printf("%s\n", buff)
 	}
 
-	c.printBase()
+	m.printBase()
 
 	return nil
 }
 
 // ShowRegisterOrPrivReg implements the plain register/privileged-register
 // name shortcuts of SHOW (e.g. "SHOW R0", "SHOW PC", "SHOW P0BR").
-func (c *Machine) ShowRegisterOrPrivReg(name string) error {
-	if err := c.requireInit(); err != nil {
+func (m *Machine) ShowRegisterOrPrivReg(name string) error {
+	if err := m.requireInit(); err != nil {
 		return err
 	}
 
 	name = strings.ToUpper(name)
 	if r, ok := registerNames[name]; ok {
-		c.Printf("%-4s = %08X\n", name, c.CPU.GPR(r))
+		m.Printf("%-4s = %08X\n", name, m.CPU.GPR(r))
 
 		return nil
 	}
 
 	if pr, ok := privRegNames[name]; ok {
 		// ReadPR, not the register file: TODR is computed when read.
-		c.Printf("%-6s = %08X\n", name, c.Engine.ReadPR(pr))
+		m.Printf("%-6s = %08X\n", name, m.Engine.ReadPR(pr))
 
 		return nil
 	}
@@ -466,56 +466,56 @@ func (c *Machine) ShowRegisterOrPrivReg(name string) error {
 }
 
 // ShowMode prints the current privileged access mode, matching SHOW MODE.
-func (c *Machine) ShowMode() error {
-	if err := c.requireInit(); err != nil {
+func (m *Machine) ShowMode() error {
+	if err := m.requireInit(); err != nil {
 		return err
 	}
 
-	c.Printf("Current MODE is %s\n", modeNames[c.CPU.PSL().CurMod()])
+	m.Printf("Current MODE is %s\n", modeNames[m.CPU.PSL().CurMod()])
 
 	return nil
 }
 
 // ShowNVRAM prints the loaded NVRAM image's file name and extent, matching
 // SHOW NVRAM.
-func (c *Machine) ShowNVRAM() error {
-	if err := c.requireInit(); err != nil {
+func (m *Machine) ShowNVRAM() error {
+	if err := m.requireInit(); err != nil {
 		return err
 	}
 
-	if len(c.Engine.Memory().NVRAM) == 0 {
-		c.Printf("No NVRAM initialized\n")
+	if len(m.Engine.Memory().NVRAM) == 0 {
+		m.Printf("No NVRAM initialized\n")
 
 		return nil
 	}
 
-	size := c.Engine.Memory().NVRAMEnd + 1 - c.Engine.Memory().NVRAMBase
-	c.Printf("    NVRAM  FILE=%q\n", c.Engine.Memory().NVRAMFile)
-	c.Printf("        CONSOLE$NVRAM_BASE = %08X\n", c.Engine.Memory().NVRAMBase)
-	c.Printf("        CONSOLE$NVRAM_END  = %08X\n", c.Engine.Memory().NVRAMEnd)
-	c.Printf("        CONSOLE$NVRAM_SIZE = %08X (%dK)\n", size, size/1024)
+	size := m.Engine.Memory().NVRAMEnd + 1 - m.Engine.Memory().NVRAMBase
+	m.Printf("    NVRAM  FILE=%q\n", m.Engine.Memory().NVRAMFile)
+	m.Printf("        CONSOLE$NVRAM_BASE = %08X\n", m.Engine.Memory().NVRAMBase)
+	m.Printf("        CONSOLE$NVRAM_END  = %08X\n", m.Engine.Memory().NVRAMEnd)
+	m.Printf("        CONSOLE$NVRAM_SIZE = %08X (%dK)\n", size, size/1024)
 
 	return nil
 }
 
 // ShowROM prints the loaded ROM image's file name and extent, matching
 // SHOW ROM.
-func (c *Machine) ShowROM() error {
-	if err := c.requireInit(); err != nil {
+func (m *Machine) ShowROM() error {
+	if err := m.requireInit(); err != nil {
 		return err
 	}
 
-	if len(c.Engine.Memory().ROM) == 0 {
-		c.Printf("No ROM loaded\n")
+	if len(m.Engine.Memory().ROM) == 0 {
+		m.Printf("No ROM loaded\n")
 
 		return nil
 	}
 
-	size := c.Engine.Memory().ROMEnd + 1 - c.Engine.Memory().ROMBase
-	c.Printf("    ROM FILE=%q\n", c.Engine.Memory().ROMFile)
-	c.Printf("        CONSOLE$ROM_BASE  = %08X\n", c.Engine.Memory().ROMBase)
-	c.Printf("        CONSOLE$ROM_END   = %08X\n", c.Engine.Memory().ROMEnd)
-	c.Printf("        CONSOLE$ROM_SIZE  = %08X (%dK)\n", size, size/1024)
+	size := m.Engine.Memory().ROMEnd + 1 - m.Engine.Memory().ROMBase
+	m.Printf("    ROM FILE=%q\n", m.Engine.Memory().ROMFile)
+	m.Printf("        CONSOLE$ROM_BASE  = %08X\n", m.Engine.Memory().ROMBase)
+	m.Printf("        CONSOLE$ROM_END   = %08X\n", m.Engine.Memory().ROMEnd)
+	m.Printf("        CONSOLE$ROM_SIZE  = %08X (%dK)\n", size, size/1024)
 
 	return nil
 }
@@ -534,34 +534,34 @@ func (c *Machine) ShowROM() error {
 // from each entry's own registered symbol rather than recomputed from
 // shimBase, since a code-0 entry's address lives wherever kernel.asm
 // defined its routine, not in the synthesized-stub page at all.
-func (c *Machine) ShowShim() error {
-	if err := c.requireInit(); err != nil {
+func (m *Machine) ShowShim() error {
+	if err := m.requireInit(); err != nil {
 		return err
 	}
 
-	if !c.shimsReady {
-		c.Printf("No RTL shims defined.\n")
+	if !m.shimsReady {
+		m.Printf("No RTL shims defined.\n")
 
 		return nil
 	}
 
-	c.Printf("RTL SHIMS:\n")
+	m.Printf("RTL SHIMS:\n")
 
 	for _, e := range shimTable {
 		name := fmt.Sprintf("SHIM$%s_%08X", e.Library, e.Offset)
 
-		addr, _ := c.Symbols.Get(name)
+		addr, _ := m.Symbols.Get(name)
 
 		status := fmt.Sprintf("resolved to %s", e.Name)
 		if e.Code != 0 {
 			status = "unimplemented"
 
-			if c.processOne.HasShim(e.Code) {
+			if m.processOne.HasShim(e.Code) {
 				status = "live"
 			}
 		}
 
-		c.Printf("    %-32s = %08X  code=%-3d %s\n", name, addr, e.Code, status)
+		m.Printf("    %-32s = %08X  code=%-3d %s\n", name, addr, e.Code, status)
 	}
 
 	return nil
@@ -569,56 +569,56 @@ func (c *Machine) ShowShim() error {
 
 // ShowString walks kernel.asm's CONSOLE$STRINGPOOL linked list of VAX
 // string descriptors. Requires a booted microkernel.
-func (c *Machine) ShowString() error {
-	if err := c.requireInit(); err != nil {
+func (m *Machine) ShowString() error {
+	if err := m.requireInit(); err != nil {
 		return err
 	}
 
-	base, ok := c.Symbols.Get("CONSOLE$STRINGPOOL_BASE")
+	base, ok := m.Symbols.Get("CONSOLE$STRINGPOOL_BASE")
 	if !ok {
 		return vmserrors.New(vmserrors.CLI_NOSTRINGPOOL)
 	}
 
-	size, ok := c.Symbols.Get("CONSOLE$STRINGPOOL_SIZE")
+	size, ok := m.Symbols.Get("CONSOLE$STRINGPOOL_SIZE")
 	if !ok {
 		return vmserrors.New(vmserrors.CLI_NOPOOLSIZE)
 	}
 
-	current, ok := c.Symbols.Get("CONSOLE$STRINGPOOL")
+	current, ok := m.Symbols.Get("CONSOLE$STRINGPOOL")
 	if !ok {
 		return vmserrors.New(vmserrors.CLI_NOPOOL)
 	}
 
-	c.Printf("STRING POOL\n")
-	c.Printf("    CONSOLE$STRINGPOOL_BASE       %08X\n", base)
-	c.Printf("    CONSOLE$STRINGPOOL_SIZE       %08X\n", size)
-	c.Printf("    CONSOLE$STRINGPOOL (Current)  %08X\n", current)
+	m.Printf("STRING POOL\n")
+	m.Printf("    CONSOLE$STRINGPOOL_BASE       %08X\n", base)
+	m.Printf("    CONSOLE$STRINGPOOL_SIZE       %08X\n", size)
+	m.Printf("    CONSOLE$STRINGPOOL (Current)  %08X\n", current)
 
-	addr, err := c.Mem.LoadLongword(c.CPU, base)
+	addr, err := m.Mem.LoadLongword(m.CPU, base)
 	if err != nil {
 		return err
 	}
 
 	if addr != 0 {
-		c.Printf("\n")
+		m.Printf("\n")
 	}
 
 	for addr != 0 {
-		lenRaw, err := c.Mem.LoadLongword(c.CPU, addr)
+		lenRaw, err := m.Mem.LoadLongword(m.CPU, addr)
 		if err != nil {
 			return err
 		}
 
 		descLen := lenRaw & 0xFFFF
 
-		descAddr, err := c.Mem.LoadLongword(c.CPU, addr+4)
+		descAddr, err := m.Mem.LoadLongword(m.CPU, addr+4)
 		if err != nil {
 			return err
 		}
 
 		desc := addr
 
-		next, err := c.Mem.LoadLongword(c.CPU, addr+8)
+		next, err := m.Mem.LoadLongword(m.CPU, addr+8)
 		if err != nil {
 			return err
 		}
@@ -631,7 +631,7 @@ func (c *Machine) ShowString() error {
 		}
 
 		buf := make([]byte, n)
-		if err := c.Mem.Load(c.CPU, descAddr, buf); err != nil {
+		if err := m.Mem.Load(m.CPU, descAddr, buf); err != nil {
 			return err
 		}
 
@@ -640,12 +640,12 @@ func (c *Machine) ShowString() error {
 			text += "..."
 		}
 
-		c.Printf("    Descriptor %08X [%3d bytes]  \"%s\"\n", desc, descLen, text)
+		m.Printf("    Descriptor %08X [%3d bytes]  \"%s\"\n", desc, descLen, text)
 
 		addr = next
 	}
 
-	c.Printf("\n")
+	m.Printf("\n")
 
 	return nil
 }
@@ -657,58 +657,58 @@ func (c *Machine) ShowString() error {
 // unlike EXAMINE/DEPOSIT which go through the enforcing
 // internal/vm.Memory.Translate. The write flag selects /WRITE (the default
 // is /READ, matching tracevm's own mode==0 default).
-func (c *Machine) ShowPage(addrExpr string, write bool) error {
-	if err := c.requireInit(); err != nil {
+func (m *Machine) ShowPage(addrExpr string, write bool) error {
+	if err := m.requireInit(); err != nil {
 		return err
 	}
 
-	if c.CPU.PR(vax.MAPEN) == 0 {
-		c.Printf("Virtual memory is disabled.\n")
+	if m.CPU.PR(vax.MAPEN) == 0 {
+		m.Printf("Virtual memory is disabled.\n")
 
 		return nil
 	}
 
-	v, _, err := c.Evaluator().Eval(strings.TrimSpace(addrExpr))
+	v, _, err := m.Evaluator().Eval(strings.TrimSpace(addrExpr))
 	if err != nil {
 		return err
 	}
 
-	region, pteAddr, pte, err := c.Mem.LookupPTE(c.CPU, v)
+	region, pteAddr, pte, err := m.Mem.LookupPTE(m.CPU, v)
 	if err != nil {
-		c.Printf("ACCVIO, page table region %d length violation\n", region)
+		m.Printf("ACCVIO, page table region %d length violation\n", region)
 
 		return nil
 	}
 
 	byteOffset := v & 0x1FF
 
-	c.Printf("    Virtual address:   %08X\n", v)
-	c.Printf("    Region:            %02d\n", region)
-	c.Printf("    PTE Address:       %08X\n", pteAddr)
-	c.Printf("    PTE Longword:      %08X\n", uint32(pte))
-	c.Printf("        VALID: %s\n", boolToDigit(pte.Valid()))
-	c.Printf("        PROT:  %02X (PTE$K_%s)\n", uint8(pte.Protection()), pte.Protection())
-	c.Printf("        M:     %s\n", boolToDigit(pte.Modified()))
-	c.Printf("        OWNER: %X\n", pte.Owner())
-	c.Printf("        S:     %X\n", pte.Software())
-	c.Printf("        PFN:   %08X\n", pte.PFN())
-	c.Printf("    Physical address:  %08X\n", pte.PFN()<<9+byteOffset)
+	m.Printf("    Virtual address:   %08X\n", v)
+	m.Printf("    Region:            %02d\n", region)
+	m.Printf("    PTE Address:       %08X\n", pteAddr)
+	m.Printf("    PTE Longword:      %08X\n", uint32(pte))
+	m.Printf("        VALID: %s\n", boolToDigit(pte.Valid()))
+	m.Printf("        PROT:  %02X (PTE$K_%s)\n", uint8(pte.Protection()), pte.Protection())
+	m.Printf("        M:     %s\n", boolToDigit(pte.Modified()))
+	m.Printf("        OWNER: %X\n", pte.Owner())
+	m.Printf("        S:     %X\n", pte.Software())
+	m.Printf("        PFN:   %08X\n", pte.PFN())
+	m.Printf("    Physical address:  %08X\n", pte.PFN()<<9+byteOffset)
 
 	access, label := vm.AccessRead, "VM_READ"
 	if write {
 		access, label = vm.AccessWrite, "VM_WRITE"
 	}
 
-	c.Printf("    Access:      %s\n", label)
+	m.Printf("    Access:      %s\n", label)
 
-	if !pte.Protection().Allows(c.CPU.PSL().CurMod(), access) {
-		c.Printf("ACCVIO, protection violation\n")
+	if !pte.Protection().Allows(m.CPU.PSL().CurMod(), access) {
+		m.Printf("ACCVIO, protection violation\n")
 
 		return nil
 	}
 
 	if !pte.Valid() {
-		c.Printf("TNV, valid bit not set\n")
+		m.Printf("TNV, valid bit not set\n")
 	}
 
 	return nil
@@ -784,29 +784,29 @@ func exceptionDesc(code cpu.Exception) string {
 // SCBB. The all flag  requests every slot,
 // including empty (zero) ones; the default only prints populated slots.
 // SCBB is a physical address.
-func (c *Machine) ShowSCB() error { return c.showSCB(false) }
+func (m *Machine) ShowSCB() error { return m.showSCB(false) }
 
 // ShowSCBAll implements SHOW SCB/ALL — see ShowSCB.
-func (c *Machine) ShowSCBAll() error { return c.showSCB(true) }
+func (m *Machine) ShowSCBAll() error { return m.showSCB(true) }
 
-func (c *Machine) showSCB(all bool) error {
-	if err := c.requireInit(); err != nil {
+func (m *Machine) showSCB(all bool) error {
+	if err := m.requireInit(); err != nil {
 		return err
 	}
 
-	scbb := c.CPU.PR(vax.SCBB)
+	scbb := m.CPU.PR(vax.SCBB)
 	if scbb == 0 {
-		c.Printf("No SCB established (SCBB=0)\n")
+		m.Printf("No SCB established (SCBB=0)\n")
 
 		return nil
 	}
 
-	c.Printf("SYSTEM CONTROL BLOCK\n    SCBB register = %08X\n", scbb)
+	m.Printf("SYSTEM CONTROL BLOCK\n    SCBB register = %08X\n", scbb)
 
-	savedMapen := c.CPU.PR(vax.MAPEN)
-	c.CPU.SetPR(vax.MAPEN, 0)
+	savedMapen := m.CPU.PR(vax.MAPEN)
+	m.CPU.SetPR(vax.MAPEN, 0)
 
-	defer c.CPU.SetPR(vax.MAPEN, savedMapen)
+	defer m.CPU.SetPR(vax.MAPEN, savedMapen)
 
 	count := 0
 
@@ -814,7 +814,7 @@ func (c *Machine) showSCB(all bool) error {
 		// Calculate offset into SCB vector slot
 		offset := n << 2
 
-		vector, err := c.Mem.LoadLongword(c.CPU, scbb+offset)
+		vector, err := m.Mem.LoadLongword(m.CPU, scbb+offset)
 		if err != nil {
 			return err
 		}
@@ -824,7 +824,7 @@ func (c *Machine) showSCB(all bool) error {
 		}
 
 		if count == 0 {
-			c.Printf("    Slot  Name            Address  ISP?  Label\n")
+			m.Printf("    Slot  Name            Address  ISP?  Label\n")
 		}
 
 		count++
@@ -837,7 +837,7 @@ func (c *Machine) showSCB(all bool) error {
 		}
 
 		if vector == 0xFFFFFFFF {
-			c.Printf("     %02X   EXC$%-10s  <emul>  \n", code, name)
+			m.Printf("     %02X   EXC$%-10s  <emul>  \n", code, name)
 
 			continue
 		}
@@ -846,7 +846,7 @@ func (c *Machine) showSCB(all bool) error {
 		addr := vector &^ 0x3
 
 		label := ""
-		if name, ok := c.Symbols.FindByValue(addr); ok {
+		if name, ok := m.Symbols.FindByValue(addr); ok {
 			label = name
 		}
 
@@ -855,11 +855,11 @@ func (c *Machine) showSCB(all bool) error {
 			ispFlag = "(ISP)"
 		}
 
-		c.Printf("     %02X   EXC$%-10s  %08X %s %s\n", code, name, addr, ispFlag, label)
+		m.Printf("     %02X   EXC$%-10s  %08X %s %s\n", code, name, addr, ispFlag, label)
 	}
 
 	if count == 0 {
-		c.Printf("No exception vector entries defined.\n")
+		m.Printf("No exception vector entries defined.\n")
 	}
 
 	return nil
@@ -871,8 +871,8 @@ func (c *Machine) showSCB(all bool) error {
 // longword using this port's own real-VAX-architecture bit layout (spa
 // bits 30-31, calltype bit 29, mask bits 16-27, psw bits 0-15 — see
 // internal/cpu/call.go's emulRet, the authoritative decode this mirrors).
-func (c *Machine) ShowCallFrames(countExpr string) error {
-	return c.ShowCalls(countExpr, false)
+func (m *Machine) ShowCallFrames(countExpr string) error {
+	return m.ShowCalls(countExpr, false)
 }
 
 // ShowCalls implements SHOW CALLS[/[NO]SYMBOLIC] [count]. With symbolic,
@@ -881,8 +881,8 @@ func (c *Machine) ShowCallFrames(countExpr string) error {
 // subtask 12), every frame when no count is given, as the debugger shows
 // them. Otherwise it's the console's own dump of the frames at FP
 // (ShowCallFrames), one frame when no count is given.
-func (c *Machine) ShowCalls(countExpr string, symbolic bool) error {
-	if err := c.requireInit(); err != nil {
+func (m *Machine) ShowCalls(countExpr string, symbolic bool) error {
+	if err := m.requireInit(); err != nil {
 		return err
 	}
 
@@ -903,35 +903,35 @@ func (c *Machine) ShowCalls(countExpr string, symbolic bool) error {
 			debugCount = max(count, 1)
 		}
 
-		if shown, err := c.showDebugCalls(debugCount); shown || err != nil {
+		if shown, err := m.showDebugCalls(debugCount); shown || err != nil {
 			return err
 		}
 	}
 
-	fp := c.CPU.GPR(vax.FP)
-	ap := c.CPU.GPR(vax.AP)
+	fp := m.CPU.GPR(vax.FP)
+	ap := m.CPU.GPR(vax.AP)
 
 	if fp == 0 || ap == 0 {
 		return vmserrors.New(vmserrors.CLI_NOFRAMES)
 	}
 
 	for ; count > 0; count-- {
-		c.Printf("    FRAME: %08X", fp)
+		m.Printf("    FRAME: %08X", fp)
 
 		addr := fp
 
-		handler, err := c.Mem.LoadLongword(c.CPU, addr)
+		handler, err := m.Mem.LoadLongword(m.CPU, addr)
 		if err != nil {
 			return err
 		}
 
 		if handler != 0 {
-			c.Printf(", Handler: %08X", handler)
+			m.Printf(", Handler: %08X", handler)
 		}
 
 		addr += 4
 
-		maskWord, err := c.Mem.LoadLongword(c.CPU, addr)
+		maskWord, err := m.Mem.LoadLongword(m.CPU, addr)
 		if err != nil {
 			return err
 		}
@@ -946,41 +946,41 @@ func (c *Machine) ShowCalls(countExpr string, symbolic bool) error {
 			callType = "CALLS"
 		}
 
-		c.Printf(", SPA: %1X, %s, MASK: %04X, PSW: %04X\n", spa, callType, mask, psw)
+		m.Printf(", SPA: %1X, %s, MASK: %04X, PSW: %04X\n", spa, callType, mask, psw)
 
 		addr += 4
 
-		savedAP, err := c.Mem.LoadLongword(c.CPU, addr)
+		savedAP, err := m.Mem.LoadLongword(m.CPU, addr)
 		if err != nil {
 			return err
 		}
 
-		c.Printf("        Saved AP : %08X\n", savedAP)
+		m.Printf("        Saved AP : %08X\n", savedAP)
 
 		addr += 4
 
-		savedFP, err := c.Mem.LoadLongword(c.CPU, addr)
+		savedFP, err := m.Mem.LoadLongword(m.CPU, addr)
 		if err != nil {
 			return err
 		}
 
 		if savedFP == cpu.SentinelReturn {
-			c.Printf("        Saved FP : <console>\n")
+			m.Printf("        Saved FP : <console>\n")
 		} else {
-			c.Printf("        Saved FP : %08X\n", savedFP)
+			m.Printf("        Saved FP : %08X\n", savedFP)
 		}
 
 		addr += 4
 
-		savedPC, err := c.Mem.LoadLongword(c.CPU, addr)
+		savedPC, err := m.Mem.LoadLongword(m.CPU, addr)
 		if err != nil {
 			return err
 		}
 
 		if savedPC == cpu.SentinelReturn {
-			c.Printf("        Saved PC : <console>\n")
+			m.Printf("        Saved PC : <console>\n")
 		} else {
-			c.Printf("        Saved PC : %08X\n", savedPC)
+			m.Printf("        Saved PC : %08X\n", savedPC)
 		}
 
 		addr += 4
@@ -990,30 +990,30 @@ func (c *Machine) ShowCalls(countExpr string, symbolic bool) error {
 				continue
 			}
 
-			v, err := c.Mem.LoadLongword(c.CPU, addr)
+			v, err := m.Mem.LoadLongword(m.CPU, addr)
 			if err != nil {
 				return err
 			}
 
 			addr += 4
 
-			c.Printf("        Saved R%-2d: %08X\n", n, v)
+			m.Printf("        Saved R%-2d: %08X\n", n, v)
 		}
 
 		var argc uint32
 
 		if ap >= 0x200 && ap < 0x7FFFFFFC {
-			argc, err = c.Mem.LoadLongword(c.CPU, ap)
+			argc, err = m.Mem.LoadLongword(m.CPU, ap)
 			if err != nil {
 				return err
 			}
 		} else {
-			c.Printf("        (AP) is not an argument list\n")
+			m.Printf("        (AP) is not an argument list\n")
 		}
 
 		switch {
 		case argc > 255:
-			c.Printf("        (AP) is not an argument list\n")
+			m.Printf("        (AP) is not an argument list\n")
 
 		case argc > 0:
 			word, plural := "is", ""
@@ -1021,29 +1021,29 @@ func (c *Machine) ShowCalls(countExpr string, symbolic bool) error {
 				word, plural = "are", "s"
 			}
 
-			c.Printf("        There %s %d argument%s:\n", word, argc, plural)
+			m.Printf("        There %s %d argument%s:\n", word, argc, plural)
 
 			a := ap
 
 			for n := uint32(1); n <= argc; n++ {
 				if n > 15 {
-					c.Printf("            ...and %d more...\n", argc-n)
+					m.Printf("            ...and %d more...\n", argc-n)
 
 					break
 				}
 
 				a += 4
 
-				v, err := c.Mem.LoadLongword(c.CPU, a)
+				v, err := m.Mem.LoadLongword(m.CPU, a)
 				if err != nil {
 					return err
 				}
 
-				c.Printf("            [%2d]: %08X\n", n, v)
+				m.Printf("            [%2d]: %08X\n", n, v)
 			}
 
 			if argc > 64 {
-				c.Printf("            Note: AP is probably bogus for this call frame\n")
+				m.Printf("            Note: AP is probably bogus for this call frame\n")
 			}
 		}
 
@@ -1054,7 +1054,7 @@ func (c *Machine) ShowCalls(countExpr string, symbolic bool) error {
 			break
 		}
 
-		c.Printf("\n")
+		m.Printf("\n")
 	}
 
 	return nil
@@ -1062,20 +1062,20 @@ func (c *Machine) ShowCalls(countExpr string, symbolic bool) error {
 
 // ShowSharePrefix reports the sharable-image search prefix, matching SHOW
 // SHARE_PREFIX.
-func (c *Machine) ShowSharePrefix() error {
-	if err := c.requireInit(); err != nil {
+func (m *Machine) ShowSharePrefix() error {
+	if err := m.requireInit(); err != nil {
 		return err
 	}
 
 	switch {
-	case c.SharePrefix != "" && c.SharePrefix[0] == 0x1B:
-		c.Printf("Recursive sharable image loading disabled.\n")
+	case m.SharePrefix != "" && m.SharePrefix[0] == 0x1B:
+		m.Printf("Recursive sharable image loading disabled.\n")
 
-	case c.SharePrefix == "":
-		c.Printf("No sharable image prefix defined\n")
+	case m.SharePrefix == "":
+		m.Printf("No sharable image prefix defined\n")
 
 	default:
-		c.Printf("Sharable images loaded from \"%s\"\n", c.SharePrefix)
+		m.Printf("Sharable images loaded from \"%s\"\n", m.SharePrefix)
 	}
 
 	return nil
@@ -1083,51 +1083,51 @@ func (c *Machine) ShowSharePrefix() error {
 
 // ShowImages lists every loaded image (main and sharable dependencies).
 // The full flag adds each image's transfer address(es) and dependency list.
-func (c *Machine) ShowImages(full bool) error {
-	if err := c.requireInit(); err != nil {
+func (m *Machine) ShowImages(full bool) error {
+	if err := m.requireInit(); err != nil {
 		return err
 	}
 
-	if len(c.images().ICBList) == 0 {
-		c.Printf("No VMS images loaded in memory.\n")
+	if len(m.images().ICBList) == 0 {
+		m.Printf("No VMS images loaded in memory.\n")
 
 		return nil
 	}
 
-	c.Printf("ACTIVE IMAGES IN MEMORY:\n")
+	m.Printf("ACTIVE IMAGES IN MEMORY:\n")
 
-	for _, icb := range c.images().ICBList {
-		c.Printf("    %-39s  %08X  %08X%s\n", icb.Name, icb.Base, icb.End, debugKind(icb))
+	for _, icb := range m.images().ICBList {
+		m.Printf("    %-39s  %08X  %08X%s\n", icb.Name, icb.Base, icb.End, debugKind(icb))
 
 		if !full {
 			continue
 		}
 
 		if icb.DebugErr != nil {
-			c.Printf("        debug symbol table unreadable: %v\n", icb.DebugErr)
+			m.Printf("        debug symbol table unreadable: %v\n", icb.DebugErr)
 		}
 
 		if icb.Transfer[0] == 0 {
-			c.Printf("        no transfer addresses\n")
+			m.Printf("        no transfer addresses\n")
 		} else {
 			suffix := ""
 			if icb.Transfer[1] != 0 {
 				suffix = "es"
 			}
 
-			c.Printf("        transfer address%s ", suffix)
+			m.Printf("        transfer address%s ", suffix)
 
 			for _, t := range icb.Transfer {
 				if t != 0 {
-					c.Printf("%08X  ", t)
+					m.Printf("%08X  ", t)
 				}
 			}
 
-			c.Printf("\n")
+			m.Printf("\n")
 		}
 
 		if len(icb.SHRList) > 1 {
-			c.Printf("        depends on ")
+			m.Printf("        depends on ")
 
 			first := true
 
@@ -1137,15 +1137,15 @@ func (c *Machine) ShowImages(full bool) error {
 				}
 
 				if !first {
-					c.Printf(", ")
+					m.Printf(", ")
 				}
 
 				first = false
 
-				c.Printf("%s", shr.Name)
+				m.Printf("%s", shr.Name)
 			}
 
-			c.Printf("\n")
+			m.Printf("\n")
 		}
 	}
 
@@ -1177,18 +1177,18 @@ func debugKind(icb *ICB) string {
 // lists every symbol it matches instead, as ShowSymbols does; a name the
 // console's table lacks may still be a predefined system symbol
 // (asm.BuiltinSymbol).
-func (c *Machine) ShowSymbol(name string) error {
-	if err := c.requireInit(); err != nil {
+func (m *Machine) ShowSymbol(name string) error {
+	if err := m.requireInit(); err != nil {
 		return err
 	}
 
 	name = strings.TrimSpace(name)
 
 	if lnm.HasWildcards(name) {
-		return c.showSymbolList(name, false)
+		return m.showSymbolList(name, false)
 	}
 
-	sym, ok := c.Symbols.Find(name)
+	sym, ok := m.Symbols.Find(name)
 	if !ok {
 		v, found := asm.BuiltinSymbol(name)
 		if !found {
@@ -1198,7 +1198,7 @@ func (c *Machine) ShowSymbol(name string) error {
 		sym = &Symbol{Name: strings.ToUpper(name), Value: v, Flags: symtab.System | symtab.Builtin}
 	}
 
-	c.Printf("    %s = %08X (hex)   %12d (dec)  (%s)\n", sym.Name, sym.Value, int32(sym.Value), symbolKindLabel(sym))
+	m.Printf("    %s = %08X (hex)   %12d (dec)  (%s)\n", sym.Name, sym.Value, int32(sym.Value), symbolKindLabel(sym))
 
 	return nil
 }
@@ -1206,25 +1206,25 @@ func (c *Machine) ShowSymbol(name string) error {
 // ShowSymbolsSystem prints every system (as opposed to user-defined)
 // symbol whose name matches pattern (see ShowSymbols), for the
 // debugger's SHOW SYMBOL/SYSTEM [pattern].
-func (c *Machine) ShowSymbolsSystem(pattern string) error {
-	return c.showSymbolList(pattern, true)
+func (m *Machine) ShowSymbolsSystem(pattern string) error {
+	return m.showSymbolList(pattern, true)
 }
 
 // ShowQuantum reports the interrupt-admission quantum countdown, matching
 // SHOW QUANTUM.
-func (c *Machine) ShowQuantum() error {
-	if err := c.requireInit(); err != nil {
+func (m *Machine) ShowQuantum() error {
+	if err := m.requireInit(); err != nil {
 		return err
 	}
 
-	current, initial := c.Engine.Quantum()
+	current, initial := m.Engine.Quantum()
 
-	if c.Engine.HardwareClock() {
-		c.Printf("QUANTUM\n    INTERRUPTS      Disabled, Initial=%d\n", initial)
-		c.Printf("    HARDWARE CLOCK  Enabled\n")
+	if m.Engine.HardwareClock() {
+		m.Printf("QUANTUM\n    INTERRUPTS      Disabled, Initial=%d\n", initial)
+		m.Printf("    HARDWARE CLOCK  Enabled\n")
 	} else {
-		c.Printf("QUANTUM\n    INTERRUPTS      Initial=%d  Current=%d\n", initial, current)
-		c.Printf("    HARDWARE CLOCK  Disabled\n")
+		m.Printf("QUANTUM\n    INTERRUPTS      Initial=%d  Current=%d\n", initial, current)
+		m.Printf("    HARDWARE CLOCK  Disabled\n")
 	}
 
 	return nil
@@ -1233,14 +1233,14 @@ func (c *Machine) ShowQuantum() error {
 // ShowClock reports the interval-clock/quantum state.  "clock_running" is exactly
 // ICCS bit 0 (vax.h: "Copy of ICCS<0>"), so this reads ICCS directly rather than
 // needing a separate mirrored field.
-func (c *Machine) ShowClock() error {
-	if err := c.requireInit(); err != nil {
+func (m *Machine) ShowClock() error {
+	if err := m.requireInit(); err != nil {
 		return err
 	}
 
 	// 1. Get the number of 10 ms ticks since January 1st from the TODR
 	// register, which the engine computes from its clock when read.
-	var ticks int64 = int64(c.Engine.TODR())
+	var ticks int64 = int64(m.Engine.TODR())
 
 	// 2. Define the target year's starting point (January 1st at midnight)
 	currentYear := time.Now().Year()
@@ -1254,7 +1254,7 @@ func (c *Machine) ShowClock() error {
 	resultingTime := baseTime.Add(duration)
 	todr := resultingTime.Format("Jan-02 15:04:05")
 
-	running := c.CPU.PR(vax.ICCS)&1 != 0
+	running := m.CPU.PR(vax.ICCS)&1 != 0
 	runWord := "not "
 
 	if running {
@@ -1262,20 +1262,20 @@ func (c *Machine) ShowClock() error {
 	}
 
 	hwClock := "configured"
-	if !c.Engine.HardwareClock() {
+	if !m.Engine.HardwareClock() {
 		hwClock = "emulated"
 	}
 
-	c.Printf("   CPU CLOCK STATES:\n")
-	c.Printf("      HARDWARE CLOCK=%s, clock is currently %srunning\n", hwClock, runWord)
-	c.Printf("      ICR  = %08X (%4d)  [Current clock value]\n", c.CPU.PR(vax.ICR), c.CPU.PR(vax.ICR))
-	c.Printf("      NICR = %08X (%4d)  [Reload  clock value]\n", c.CPU.PR(vax.NICR), c.CPU.PR(vax.NICR))
-	c.Printf("      TODR = %08X (%s)\n", ticks, strings.ToUpper(todr))
+	m.Printf("   CPU CLOCK STATES:\n")
+	m.Printf("      HARDWARE CLOCK=%s, clock is currently %srunning\n", hwClock, runWord)
+	m.Printf("      ICR  = %08X (%4d)  [Current clock value]\n", m.CPU.PR(vax.ICR), m.CPU.PR(vax.ICR))
+	m.Printf("      NICR = %08X (%4d)  [Reload  clock value]\n", m.CPU.PR(vax.NICR), m.CPU.PR(vax.NICR))
+	m.Printf("      TODR = %08X (%s)\n", ticks, strings.ToUpper(todr))
 
 	// If we are using the quantum clock mechanism, report on that now.
-	if !c.Engine.HardwareClock() {
-		current, initial := c.Engine.Quantum()
-		c.Printf("  QUANTUM\n    INITIAL=%d\n    CURRENT=%d\n", initial, current)
+	if !m.Engine.HardwareClock() {
+		current, initial := m.Engine.Quantum()
+		m.Printf("  QUANTUM\n    INITIAL=%d\n    CURRENT=%d\n", initial, current)
 	}
 
 	return nil
@@ -1283,52 +1283,52 @@ func (c *Machine) ShowClock() error {
 
 // ShowFault reports the fault/exception event history and pending device/
 // software interrupts.
-func (c *Machine) ShowFault() error {
-	if err := c.requireInit(); err != nil {
+func (m *Machine) ShowFault() error {
+	if err := m.requireInit(); err != nil {
 		return err
 	}
 
-	history := c.Engine.FaultHistory()
+	history := m.Engine.FaultHistory()
 
 	if len(history) == 0 {
-		c.Printf("    No exceptions or interrupts have occurred yet\n")
+		m.Printf("    No exceptions or interrupts have occurred yet\n")
 	} else {
-		c.Printf("FAULT/EXCEPTION EVENT HISTORY:\n")
+		m.Printf("FAULT/EXCEPTION EVENT HISTORY:\n")
 
 		for _, fr := range history {
-			c.Printf("%02X %-40s SEQ(%d)  PC(%08X) PSL(%08X) ",
+			m.Printf("%02X %-40s SEQ(%d)  PC(%08X) PSL(%08X) ",
 				uint8(fr.Code), exceptionDesc(fr.Code), fr.Seq, fr.PC, uint32(fr.PSL))
 
 			if len(fr.Args) > 0 {
-				c.Printf(" ARGS(")
+				m.Printf(" ARGS(")
 
 				for i, a := range fr.Args {
 					if i > 0 {
-						c.Printf(",")
+						m.Printf(",")
 					}
 
-					c.Printf("%08X", a)
+					m.Printf("%08X", a)
 				}
 
-				c.Printf(") ")
+				m.Printf(") ")
 			}
 
-			c.Printf("\n")
+			m.Printf("\n")
 		}
 	}
 
-	pending, queued := c.Engine.PendingInterrupts()
+	pending, queued := m.Engine.PendingInterrupts()
 
 	if pending != nil {
-		c.Printf("    There is a pending interrupt code %s at ipl %02X\n", exceptionName(pending.Code), pending.IPL)
+		m.Printf("    There is a pending interrupt code %s at ipl %02X\n", exceptionName(pending.Code), pending.IPL)
 	}
 
 	if len(queued) > 0 {
-		c.Printf("Pending interrupts:\n")
-		c.Printf("    IPL  Age Code\n")
+		m.Printf("Pending interrupts:\n")
+		m.Printf("    IPL  Age Code\n")
 
 		for _, q := range queued {
-			c.Printf("    %02X   %4d  %02X %s\n", q.IPL, q.Age, uint8(q.Code), exceptionName(q.Code))
+			m.Printf("    %02X   %4d  %02X %s\n", q.IPL, q.Age, uint8(q.Code), exceptionName(q.Code))
 		}
 	}
 
@@ -1344,43 +1344,43 @@ var tbModeNames = [2]string{"READ", "WRITE"}
 // added the real cache this command reports on -- see docs/PHASE-21.md
 // (supersedes the "not applicable to this port" stub docs/PHASE-16.md sub-
 // phase 1f left behind).
-func (c *Machine) ShowTB() error {
-	if err := c.requireInit(); err != nil {
+func (m *Machine) ShowTB() error {
+	if err := m.requireInit(); err != nil {
 		return err
 	}
 
-	stcTries, stcHits := c.Mem.STCStats()
+	stcTries, stcHits := m.Mem.STCStats()
 
-	c.Printf("Sequential Translation Cache\n")
-	c.Printf("    Tries=%d    Hits=%d    Misses=%d    Ratio = %d%%\n",
+	m.Printf("Sequential Translation Cache\n")
+	m.Printf("    Tries=%d    Hits=%d    Misses=%d    Ratio = %d%%\n",
 		stcTries, stcHits, stcTries-stcHits, ratioPercent(stcTries, stcHits))
 
 	enabled := enabledState
-	if c.CPU.PR(vax.TBDR) != 0 {
+	if m.CPU.PR(vax.TBDR) != 0 {
 		enabled = disabledState
 	}
 
-	c.Printf("\nTranslation buffer caching is %s\n", enabled)
+	m.Printf("\nTranslation buffer caching is %s\n", enabled)
 
-	tries, hits, flushes, pflushes := c.Mem.TBStats()
+	tries, hits, flushes, pflushes := m.Mem.TBStats()
 
-	c.Printf("    Tries=%d    Hits=%d    Misses=%d    Ratio = %d%%\n",
+	m.Printf("    Tries=%d    Hits=%d    Misses=%d    Ratio = %d%%\n",
 		tries, hits, tries-hits, ratioPercent(tries, hits))
-	c.Printf("    Flushes=%d   PFlushes=%d\n", flushes, pflushes)
+	m.Printf("    Flushes=%d   PFlushes=%d\n", flushes, pflushes)
 
 	// Each entry's MODE= says what a hit on it lets the CPU's current
 	// access mode do: "KERNEL WRITE" (reads and writes), "KERNEL READ"
 	// (reads; a write walks the page table, to set the page's modify bit
 	// or to fault), or "-NONE-" (every access walks).
-	curMod := c.CPU.PSL().CurMod()
+	curMod := m.CPU.PSL().CurMod()
 
-	for _, e := range c.Mem.TBSnapshot() {
+	for _, e := range m.Mem.TBSnapshot() {
 		mode := "-NONE-"
 		if access, ok := e.Permits(curMod); ok {
 			mode = modeNames[curMod] + " " + tbModeNames[access]
 		}
 
-		c.Printf("    TB(%02X)  VA=%08X  PA=%08X  PROT=%-4s  MODE=%s\n",
+		m.Printf("    TB(%02X)  VA=%08X  PA=%08X  PROT=%-4s  MODE=%s\n",
 			e.Index, e.VA, e.PA, e.Prot, mode)
 	}
 
@@ -1456,8 +1456,8 @@ func sizeAbbrev(n int) string {
 // expose, the latter needs per-opcode execution counters that don't
 // exist, arguably a developer/instrumentation feature rather than
 // emulated VAX behavior worth adding here).
-func (c *Machine) ShowInstructions(modes, profile, unimplemented, all bool, opcodeExpr string) error {
-	if err := c.requireInit(); err != nil {
+func (m *Machine) ShowInstructions(modes, profile, unimplemented, all bool, opcodeExpr string) error {
+	if err := m.requireInit(); err != nil {
 		return err
 	}
 
@@ -1482,14 +1482,14 @@ func (c *Machine) ShowInstructions(modes, profile, unimplemented, all bool, opco
 	}
 
 	if !all && opmatch < 0 {
-		return c.showInstructionsGrid(table, unimplemented)
+		return m.showInstructionsGrid(table, unimplemented)
 	}
 
-	return c.showInstructionsDetail(table, opmatch)
+	return m.showInstructionsDetail(table, opmatch)
 }
 
-func (c *Machine) showInstructionsGrid(table *cpu.Table, unimplemented bool) error {
-	c.Printf("INSTRUCTION OPCODES:\n\n")
+func (m *Machine) showInstructionsGrid(table *cpu.Table, unimplemented bool) error {
+	m.Printf("INSTRUCTION OPCODES:\n\n")
 
 	count, n := 0, 0
 
@@ -1516,7 +1516,7 @@ func (c *Machine) showInstructionsGrid(table *cpu.Table, unimplemented bool) err
 		n++
 
 		if n == 4 {
-			c.Printf("%s\n", line.String())
+			m.Printf("%s\n", line.String())
 			line.Reset()
 
 			n = 0
@@ -1524,15 +1524,15 @@ func (c *Machine) showInstructionsGrid(table *cpu.Table, unimplemented bool) err
 	}
 
 	if n > 0 {
-		c.Printf("%s\n", line.String())
+		m.Printf("%s\n", line.String())
 	}
 
-	c.Printf("\n%d Instructions.\n", count)
+	m.Printf("\n%d Instructions.\n", count)
 
 	return nil
 }
 
-func (c *Machine) showInstructionsDetail(table *cpu.Table, opmatch int32) error {
+func (m *Machine) showInstructionsDetail(table *cpu.Table, opmatch int32) error {
 	count, found := 0, false
 
 	for _, inst := range table.All() {
@@ -1567,17 +1567,17 @@ func (c *Machine) showInstructionsDetail(table *cpu.Table, opmatch int32) error 
 			line.WriteString(sizeAbbrev(inst.Scale[j]))
 		}
 
-		c.Printf("    %s\n", line.String())
+		m.Printf("    %s\n", line.String())
 
 		count++
 	}
 
 	if opmatch < 0 && count > 1 {
-		c.Printf("%d instructions\n", count)
+		m.Printf("%d instructions\n", count)
 	}
 
 	if opmatch >= 0 && !found {
-		c.Printf("No implemented instruction for opcode %02X\n", opmatch)
+		m.Printf("No implemented instruction for opcode %02X\n", opmatch)
 	}
 
 	return nil
@@ -1616,14 +1616,14 @@ var debugShowEntries = []debugShowEntry{
 
 // ShowDebug implements SHOW DEBUG a bit that's set prints its plain name,
 // a clear bit prints "NO"+name, both followed by the flag's description.
-func (c *Machine) ShowDebug() error {
-	if err := c.requireInit(); err != nil {
+func (m *Machine) ShowDebug() error {
+	if err := m.requireInit(); err != nil {
 		return err
 	}
 
-	debug := c.CPU.Debug()
+	debug := m.CPU.Debug()
 
-	c.Printf("DEBUG SETTINGS:\n")
+	m.Printf("DEBUG SETTINGS:\n")
 
 	for _, e := range debugShowEntries {
 		name := e.name
@@ -1631,7 +1631,7 @@ func (c *Machine) ShowDebug() error {
 			name = "NO" + name
 		}
 
-		c.Printf("    %-20s    %s\n", name, e.desc)
+		m.Printf("    %-20s    %s\n", name, e.desc)
 	}
 
 	return nil
@@ -1639,25 +1639,25 @@ func (c *Machine) ShowDebug() error {
 
 // ShowTrace implements SHOW TRACE (also reached via the DISASSEMBLY
 // keyword).
-func (c *Machine) ShowTrace() error {
-	if err := c.requireInit(); err != nil {
+func (m *Machine) ShowTrace() error {
+	if err := m.requireInit(); err != nil {
 		return err
 	}
 
 	state := disabledState
-	if c.Trace {
+	if m.Trace {
 		state = enabledState
 	}
 
-	c.Printf("    Execution trace disassembly is %s\n", state)
+	m.Printf("    Execution trace disassembly is %s\n", state)
 
-	if c.Trace {
+	if m.Trace {
 		regState := disabledState
-		if c.CPU.DebugEnabled(vax.DebugRegisters) {
+		if m.CPU.DebugEnabled(vax.DebugRegisters) {
 			regState = enabledState
 		}
 
-		c.Printf("    Register tracking is %s\n", regState)
+		m.Printf("    Register tracking is %s\n", regState)
 	}
 
 	return nil

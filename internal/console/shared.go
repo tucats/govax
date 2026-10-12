@@ -46,8 +46,8 @@ func (icb *ICB) addCell(addr uint32, image string, offset uint32) {
 // asked for, LIB$PUT_OUTPUT. The name comes from the reference itself, not
 // from what the cell now holds, so it's the same whether a real shareable
 // image or a shim answers the call.
-func (c *Machine) Cell(addr uint32) (string, bool) {
-	for _, icb := range c.images().ICBList {
+func (m *Machine) Cell(addr uint32) (string, bool) {
+	for _, icb := range m.images().ICBList {
 		if cell, ok := icb.Cells[addr]; ok {
 			return sharedName(cell.Image, cell.Offset)
 		}
@@ -62,15 +62,15 @@ func (c *Machine) Cell(addr uint32) (string, bool) {
 // shim stubs, which the console's own symbol table already does
 // (ensureShims), or anything in the main image.
 type sharedSymbolizer struct {
-	c *Machine
+	m *Machine
 }
 
 // Symbolize returns the universal symbol at addr in a loaded shareable
 // image, if there is one.
 func (s sharedSymbolizer) Symbolize(addr uint32) (string, bool) {
-	main := s.c.findMainICB()
+	main := s.m.findMainICB()
 
-	for _, icb := range s.c.images().ICBList {
+	for _, icb := range s.m.images().ICBList {
 		if icb == main || addr < icb.Base || addr > icb.End {
 			continue
 		}

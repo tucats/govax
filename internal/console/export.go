@@ -4,10 +4,10 @@ import (
 	"errors"
 	"strings"
 
+	"github.com/tucats/govax/internal/asm"
 	"github.com/tucats/govax/internal/cpu"
 	"github.com/tucats/govax/internal/dbgsym"
 	"github.com/tucats/govax/internal/disasm"
-	"github.com/tucats/govax/internal/asm"
 	"github.com/tucats/govax/internal/lnm"
 	"github.com/tucats/govax/internal/vax"
 	"github.com/tucats/govax/internal/vm"
@@ -27,41 +27,41 @@ import (
 
 // RequireInit reports the error a command gets when the machine hasn't
 // been created yet (before INIT).
-func (c *Machine) RequireInit() error { return c.requireInit() }
+func (m *Machine) RequireInit() error { return m.requireInit() }
 
 // LocationText is pc as STEP's "Stepped to" and a breakpoint's "Break at"
 // show it: a symbolic name where the program has one, else the address
 // in 8 hex digits.
-func (c *Machine) LocationText(pc uint32) string { return c.locationText(pc) }
+func (m *Machine) LocationText(pc uint32) string { return m.locationText(pc) }
 
 // TraceStep prints the instruction about to execute at pc when tracing is
 // on (SET TRACE), or when force is true, and returns a function to call
 // once the instruction has run, to print what it changed. See traceStep.
-func (c *Machine) TraceStep(pc uint32, force bool) func() { return c.traceStep(pc, force) }
+func (m *Machine) TraceStep(pc uint32, force bool) func() { return m.traceStep(pc, force) }
 
 // ExceptionName is the name of an exception (fault, trap, or interrupt)
 // vector's code, as the console words it.
-func (c *Machine) ExceptionName(code cpu.Exception) string { return exceptionName(code) }
+func (m *Machine) ExceptionName(code cpu.Exception) string { return exceptionName(code) }
 
 // EvalWhole evaluates text, which must be one whole expression: anything
 // left over after the expression is an error. It is how a command's
 // address or value parameter becomes a number.
-func (c *Machine) EvalWhole(text string) (uint32, error) {
-	return c.EvalWholeIn(c.Radix, text)
+func (m *Machine) EvalWhole(text string) (uint32, error) {
+	return m.EvalWholeIn(m.Radix, text)
 }
 
 // EvalWholeIn is EvalWhole with the radix a number without a prefix is read
 // in: the debugger has a radix of its own (SET RADIX).
-func (c *Machine) EvalWholeIn(radix int, text string) (uint32, error) {
-	return c.EvalWholeMode(radix, text, false)
+func (m *Machine) EvalWholeIn(radix int, text string) (uint32, error) {
+	return m.EvalWholeMode(radix, text, false)
 }
 
 // EvalWholeMode is EvalWholeIn with the evaluator's Value mode chosen: true
 // gives an expression's value, as EVALUATE shows it (a data label is its
 // contents), and false its location, as EXAMINE and DEPOSIT take it (a
 // data label is its address).
-func (c *Machine) EvalWholeMode(radix int, text string, value bool) (uint32, error) {
-	ev := c.Evaluator()
+func (m *Machine) EvalWholeMode(radix int, text string, value bool) (uint32, error) {
+	ev := m.Evaluator()
 	ev.Radix = radix
 	ev.Value = value
 
@@ -99,8 +99,8 @@ func debuggerSymbolError(err error) error {
 // the routine expression, which the evaluator leaves unconsumed in its
 // remainder) or after a blank ("F (1,2)", which the grammar delivers as a
 // separate parameter, arguments).
-func (c *Machine) ParseCall(routine, arguments string) (addr uint32, args []uint32, err error) {
-	addr, list, err := c.Evaluator().Eval(routine)
+func (m *Machine) ParseCall(routine, arguments string) (addr uint32, args []uint32, err error) {
+	addr, list, err := m.Evaluator().Eval(routine)
 	if err != nil {
 		return 0, nil, err
 	}
@@ -114,7 +114,7 @@ func (c *Machine) ParseCall(routine, arguments string) (addr uint32, args []uint
 		return 0, nil, vmserrors.New(vmserrors.CLI_EXTRAPARAMETER, list)
 	}
 
-	args, list, err = c.callArguments(list[1:])
+	args, list, err = m.callArguments(list[1:])
 	if err != nil {
 		return 0, nil, err
 	}
@@ -130,10 +130,10 @@ func (c *Machine) ParseCall(routine, arguments string) (addr uint32, args []uint
 // callArguments evaluates a CALL argument list, s being what follows its
 // "(": expressions separated by commas, up to the closing ")". It returns
 // the values and what follows the ")".
-func (c *Machine) callArguments(s string) ([]uint32, string, error) {
+func (m *Machine) callArguments(s string) ([]uint32, string, error) {
 	var args []uint32
 
-	ev := c.Evaluator()
+	ev := m.Evaluator()
 
 	for {
 		s = strings.TrimSpace(s)
@@ -165,16 +165,16 @@ func (c *Machine) callArguments(s string) ([]uint32, string, error) {
 
 // ImageActive reports whether an image started by RUN is running, from its
 // start until it exits (or the machine is reset).
-func (c *Machine) ImageActive() bool { return c.imageActive }
+func (m *Machine) ImageActive() bool { return m.imageActive }
 
 // StatusText is a status value's message line, such as "%SYSTEM-S-NORMAL,
 // normal successful completion".
-func (c *Machine) StatusText(status uint32) string {
-	if c.processOne == nil {
+func (m *Machine) StatusText(status uint32) string {
+	if m.processOne == nil {
 		return ""
 	}
 
-	return c.processOne.StatusText(status)
+	return m.processOne.StatusText(status)
 }
 
 // RoutineEntry reports whether addr is the entry point of a routine in a
@@ -183,8 +183,8 @@ func (c *Machine) StatusText(status uint32) string {
 // debugger sets a breakpoint "at routine X" *after* that mask: the mask is
 // data (which registers the routine saves), not an instruction, so a stop
 // there would be somewhere no instruction starts.
-func (c *Machine) RoutineEntry(addr uint32) bool {
-	prog := c.debugImageAt(addr)
+func (m *Machine) RoutineEntry(addr uint32) bool {
+	prog := m.debugImageAt(addr)
 	if prog == nil {
 		return false
 	}
@@ -198,8 +198,8 @@ func (c *Machine) RoutineEntry(addr uint32) bool {
 // routine in a loaded image's debug symbol table that holds addr. ok is
 // false where addr is in no routine the debugger knows. SET BREAK/RETURN
 // uses it to know which RET instructions belong to a routine.
-func (c *Machine) RoutineExtent(addr uint32) (start, size uint32, ok bool) {
-	prog := c.debugImageAt(addr)
+func (m *Machine) RoutineExtent(addr uint32) (start, size uint32, ok bool) {
+	prog := m.debugImageAt(addr)
 	if prog == nil {
 		return 0, 0, false
 	}
@@ -215,8 +215,8 @@ func (c *Machine) RoutineExtent(addr uint32) (start, size uint32, ok bool) {
 // LineStart reports whether pc is the first byte of a source line's code in
 // a loaded image's line-number table. SET BREAK/LINE stops at each such
 // address: the first instruction of every line the program runs.
-func (c *Machine) LineStart(pc uint32) bool {
-	prog := c.debugImageAt(pc)
+func (m *Machine) LineStart(pc uint32) bool {
+	prog := m.debugImageAt(pc)
 	if prog == nil {
 		return false
 	}
@@ -229,14 +229,14 @@ func (c *Machine) LineStart(pc uint32) bool {
 // DebugProgramAt returns the debug symbol table of the loaded image that
 // holds addr, or nil when addr is in no image or its image has none. The
 // debugger names data and registers' scopes from it.
-func (c *Machine) DebugProgramAt(addr uint32) *dbgsym.Program { return c.debugImageAt(addr) }
+func (m *Machine) DebugProgramAt(addr uint32) *dbgsym.Program { return m.debugImageAt(addr) }
 
 // DebugPrograms returns the debug symbol table of each loaded image that
 // has one, main image first.
-func (c *Machine) DebugPrograms() []*dbgsym.Program {
+func (m *Machine) DebugPrograms() []*dbgsym.Program {
 	var out []*dbgsym.Program
 
-	for _, icb := range c.images().ICBList {
+	for _, icb := range m.images().ICBList {
 		if icb.Debug != nil {
 			out = append(out, icb.Debug)
 		}
@@ -250,15 +250,15 @@ func (c *Machine) DebugPrograms() []*dbgsym.Program {
 // translation, whatever mode the program last ran in. A page that can't
 // be read is the debugger's %DEBUG-E-NOACCESSR for the first address that
 // failed.
-func (c *Machine) ReadBytes(addr, n uint32) ([]byte, error) {
-	if err := c.requireInit(); err != nil {
+func (m *Machine) ReadBytes(addr, n uint32) ([]byte, error) {
+	if err := m.requireInit(); err != nil {
 		return nil, err
 	}
 
 	out := make([]byte, n)
 
 	for i := range out {
-		b, err := c.loadSized(addr+uint32(i), SizeByte)
+		b, err := m.loadSized(addr+uint32(i), SizeByte)
 		if err != nil {
 			return nil, vmserrors.New(vmserrors.DBG_NOACCESSR, addr+uint32(i))
 		}
@@ -279,26 +279,26 @@ func (c *Machine) ReadBytes(addr, n uint32) ([]byte, error) {
 // page it maps to. (The VMS debugger changes the page's protection for the
 // write; govax leaves the protection, and the page's modify bit, as they
 // are.) A page that isn't there at all still fails.
-func (c *Machine) WriteBytes(addr uint32, data []byte) error {
-	if err := c.requireInit(); err != nil {
+func (m *Machine) WriteBytes(addr uint32, data []byte) error {
+	if err := m.requireInit(); err != nil {
 		return err
 	}
 
-	return c.withKernelMode(func() error {
+	return m.withKernelMode(func() error {
 		for i, b := range data {
 			at := addr + uint32(i)
 
-			err := c.Mem.StoreByte(c.CPU, at, b)
+			err := m.Mem.StoreByte(m.CPU, at, b)
 			if err == nil {
 				continue
 			}
 
-			phys, readErr := c.Mem.ProbeTranslate(c.CPU, at, vm.AccessRead)
+			phys, readErr := m.Mem.ProbeTranslate(m.CPU, at, vm.AccessRead)
 			if readErr != nil {
 				return err
 			}
 
-			if err := c.Mem.StorePhysical(phys, []byte{b}); err != nil {
+			if err := m.Mem.StorePhysical(phys, []byte{b}); err != nil {
 				return err
 			}
 		}
@@ -310,30 +310,30 @@ func (c *Machine) WriteBytes(addr uint32, data []byte) error {
 // FormatPTE is a page table entry as EXAMINE/PTE shows it: the entry's
 // value and its fields (valid, protection, modified, owner, and the
 // physical address of its page frame).
-func (c *Machine) FormatPTE(v uint32) string { return c.formatOne(0, SizePTE, v) }
+func (m *Machine) FormatPTE(v uint32) string { return m.formatOne(0, SizePTE, v) }
 
 // SetAccessMode switches the CPU to an access mode (kernel, executive,
 // supervisor, or user), which also selects that mode's stack pointer; with
 // interruptStack it switches to the interrupt stack instead, whatever the
 // mode. It is SET MODE's access-mode half, which the debugger took over.
-func (c *Machine) SetAccessMode(mode vax.AccessMode, interruptStack bool) error {
-	if err := c.requireInit(); err != nil {
+func (m *Machine) SetAccessMode(mode vax.AccessMode, interruptStack bool) error {
+	if err := m.requireInit(); err != nil {
 		return err
 	}
 
-	c.Engine.SetModeStack(mode, interruptStack)
+	m.Engine.SetModeStack(mode, interruptStack)
 
 	return nil
 }
 
 // AccessModeName is the name of the CPU's current access mode (KERNEL,
 // EXEC, SUPER, or USER), or "" before INIT has created the machine.
-func (c *Machine) AccessModeName() string {
-	if c.requireInit() != nil {
+func (m *Machine) AccessModeName() string {
+	if m.requireInit() != nil {
 		return ""
 	}
 
-	return modeNames[c.CPU.PSL().CurMod()]
+	return modeNames[m.CPU.PSL().CurMod()]
 }
 
 // ImageInfo describes one loaded image for the debugger's SHOW IMAGE.
@@ -358,10 +358,10 @@ type ImageInfo struct {
 
 // Images returns the loaded images, main image first, as the debugger's
 // SHOW IMAGE lists them.
-func (c *Machine) Images() []ImageInfo {
+func (m *Machine) Images() []ImageInfo {
 	out := make([]ImageInfo, 0)
 
-	for _, icb := range c.images().ICBList {
+	for _, icb := range m.images().ICBList {
 		// The image's first address is its lowest section's: the load
 		// offset alone would include the unused page 0 below it.
 		base := icb.Base
@@ -410,8 +410,8 @@ func imageDisplayName(file string) string {
 // frame in no routine). It is what SHOW SCOPE lists: the same frames as
 // SHOW CALLS. ok is false when the PC isn't in an image with debug
 // symbols.
-func (c *Machine) ScopeFrames() (paths []string, ok bool, err error) {
-	rows, ok, err := c.debugFrames(0)
+func (m *Machine) ScopeFrames() (paths []string, ok bool, err error) {
+	rows, ok, err := m.debugFrames(0)
 
 	for _, row := range rows {
 		path := row.module
@@ -434,12 +434,12 @@ func LanguageName(code uint32) string { return languageName(code) }
 // program's debug symbols) has a symbol matching name, which may contain
 // the VMS wildcards; the assembler's predefined system symbols count, as
 // they do in SHOW SYMBOL's listings.
-func (c *Machine) HasSymbol(name string) bool {
+func (m *Machine) HasSymbol(name string) bool {
 	if lnm.HasWildcards(name) {
-		return len(c.listSymbols(name, false)) > 0
+		return len(m.listSymbols(name, false)) > 0
 	}
 
-	if _, ok := c.Symbols.Find(name); ok {
+	if _, ok := m.Symbols.Find(name); ok {
 		return true
 	}
 
@@ -453,13 +453,13 @@ func (c *Machine) HasSymbol(name string) bool {
 // when addr is the start of a routine that is called (CALLS or CALLG), and
 // so begins with one. A VAX routine starts with a 16-bit mask of the
 // registers it saves; ok is false for any other address.
-func (c *Machine) EntryMaskText(addr uint32) (text string, ok bool) {
-	name, isEntry := c.entryAt(addr)
+func (m *Machine) EntryMaskText(addr uint32) (text string, ok bool) {
+	name, isEntry := m.entryAt(addr)
 	if !isEntry {
 		return "", false
 	}
 
-	dec := disasm.EntryMask(memByteReader{c: c}, addr, name)
+	dec := disasm.EntryMask(memByteReader{m: m}, addr, name)
 
 	return dec.Format(disasm.Options{Style: disasm.StyleDebugger}), true
 }

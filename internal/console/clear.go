@@ -14,12 +14,12 @@ import (
 // SET NOVERBOSE has turned Console.Verbose off (see set.go's
 // SetVerbose/SetNoVerbose). The items are the DCL grammar's
 // list of $expression values (docs/PHASE-37.md), quotes kept.
-func (c *Machine) Print(items []string) error {
-	if !c.Verbose {
+func (m *Machine) Print(items []string) error {
+	if !m.Verbose {
 		return nil
 	}
 
-	ev := c.Evaluator()
+	ev := m.Evaluator()
 
 	for _, item := range items {
 		// A quoted string by itself is text to print; one inside a
@@ -31,7 +31,7 @@ func (c *Machine) Print(items []string) error {
 			}
 
 			if end+2 == len(item) {
-				c.Printf("%s", item[1:end+1])
+				m.Printf("%s", item[1:end+1])
 
 				continue
 			}
@@ -46,14 +46,14 @@ func (c *Machine) Print(items []string) error {
 			return vmserrors.New(vmserrors.CLI_EXTRAPARAMETER, extra)
 		}
 
-		if c.Radix == 10 {
-			c.Printf("%d", int32(v))
+		if m.Radix == 10 {
+			m.Printf("%d", int32(v))
 		} else {
-			c.Printf("%08X", v)
+			m.Printf("%08X", v)
 		}
 	}
 
-	c.Printf("\n")
+	m.Printf("\n")
 
 	return nil
 }
@@ -62,47 +62,47 @@ func (c *Machine) Print(items []string) error {
 // options, the most instructions and the longest host time one run of the
 // VAX may take (0 is no limit). They don't take effect at once: see
 // ApplyRunLimits, and the fields' comment in machine.go on why.
-func (c *Machine) SetRunLimits(instructions int, duration time.Duration) {
-	c.instructionLimit = instructions
-	c.timeLimit = duration
+func (m *Machine) SetRunLimits(instructions int, duration time.Duration) {
+	m.instructionLimit = instructions
+	m.timeLimit = duration
 }
 
 // ApplyRunLimits puts the limits SetRunLimits recorded onto the Engine,
 // so every run from now on is held to them. govax calls it once the boot
 // script is done, before the interactive prompt; RunCommandLine calls
 // it before the one-shot command.
-func (c *Machine) ApplyRunLimits() {
-	if c.Engine != nil {
-		c.Engine.SetLimits(c.instructionLimit, c.timeLimit)
+func (m *Machine) ApplyRunLimits() {
+	if m.Engine != nil {
+		m.Engine.SetLimits(m.instructionLimit, m.timeLimit)
 	}
 }
 
 // ClearSymbol implements the debugger's CANCEL (or CLEAR) SYMBOL: a
 // specific name, or every user symbol (/ALL). Its /TEMPORARY distinction
 // is ClearSymbolTemporary, below.
-func (c *Machine) ClearSymbol(name string, all bool) error {
-	if err := c.requireInit(); err != nil {
+func (m *Machine) ClearSymbol(name string, all bool) error {
+	if err := m.requireInit(); err != nil {
 		return err
 	}
 
 	if all {
-		c.Symbols.ClearAll()
+		m.Symbols.ClearAll()
 
 		return nil
 	}
 
-	c.Symbols.Delete(name)
+	m.Symbols.Delete(name)
 
 	return nil
 }
 
 // ClearSymbolTemporary implements the debugger's CANCEL SYMBOL/TEMPORARY.
-func (c *Machine) ClearSymbolTemporary() error {
-	if err := c.requireInit(); err != nil {
+func (m *Machine) ClearSymbolTemporary() error {
+	if err := m.requireInit(); err != nil {
 		return err
 	}
 
-	c.Symbols.ClearTemporary()
+	m.Symbols.ClearTemporary()
 
 	return nil
 }
@@ -111,81 +111,81 @@ func (c *Machine) ClearSymbolTemporary() error {
 // back to CONSOLE$STRINGPOOL_BASE and zeroes the pool's backing
 // storage — the write side of ShowString, requiring the
 // same booted-microkernel symbols.
-func (c *Machine) ClearString() error {
-	if err := c.requireInit(); err != nil {
+func (m *Machine) ClearString() error {
+	if err := m.requireInit(); err != nil {
 		return err
 	}
 
-	base, ok := c.Symbols.Get("CONSOLE$STRINGPOOL_BASE")
+	base, ok := m.Symbols.Get("CONSOLE$STRINGPOOL_BASE")
 	if !ok {
 		return vmserrors.New(vmserrors.CLI_NOSTRINGPOOL)
 	}
 
-	size, ok := c.Symbols.Get("CONSOLE$STRINGPOOL_SIZE")
+	size, ok := m.Symbols.Get("CONSOLE$STRINGPOOL_SIZE")
 	if !ok {
 		return vmserrors.New(vmserrors.CLI_NOPOOLSIZE)
 	}
 
-	c.Symbols.Set("CONSOLE$STRINGPOOL", base, SymbolSystem)
+	m.Symbols.Set("CONSOLE$STRINGPOOL", base, SymbolSystem)
 
-	return c.Mem.Store(c.CPU, base, make([]byte, size))
+	return m.Mem.Store(m.CPU, base, make([]byte, size))
 }
 
 // ClearTB implements CLEAR TB: a full translation-buffer flush plus a
 // reset of its tries/hits/pflushes counters — tb_flush itself and the
 // sequential translation cache's own try/hit counters are deliberately
 // left alone.
-func (c *Machine) ClearTB() error {
-	if err := c.requireInit(); err != nil {
+func (m *Machine) ClearTB() error {
+	if err := m.requireInit(); err != nil {
 		return err
 	}
 
-	c.Mem.InvalidateTB()
-	c.Mem.ResetTBCounters()
+	m.Mem.InvalidateTB()
+	m.Mem.ResetTBCounters()
 
 	return nil
 }
 
 // ClearMemory implements CLEAR MEMORY,  which simply calls console_zero(),
 // the same routine the ZERO command itself runs.
-func (c *Machine) ClearMemory() error {
-	return c.Zero()
+func (m *Machine) ClearMemory() error {
+	return m.Zero()
 }
 
 // ClearInterrupt implements CLEAR INTERRUPT <id>. It removes every
 // queued interrupt whose code matches id.
-func (c *Machine) ClearInterrupt(code uint32) error {
-	if err := c.requireInit(); err != nil {
+func (m *Machine) ClearInterrupt(code uint32) error {
+	if err := m.requireInit(); err != nil {
 		return err
 	}
 
-	n := c.Engine.ClearInterrupt(cpu.Exception(code))
+	n := m.Engine.ClearInterrupt(cpu.Exception(code))
 
 	plural := "s"
 	if n == 1 {
 		plural = ""
 	}
 
-	c.Printf("\tCleared %d pending interrupt%s\n", n, plural)
+	m.Printf("\tCleared %d pending interrupt%s\n", n, plural)
 
 	return nil
 }
 
 // ClearAllInterrupts implements CLEAR INTERRUPT/ALL: empties the
 // interrupt queue and cancels any immediately-pending interrupt.
-func (c *Machine) ClearAllInterrupts() error {
-	if err := c.requireInit(); err != nil {
+func (m *Machine) ClearAllInterrupts() error {
+	if err := m.requireInit(); err != nil {
 		return err
 	}
 
-	n := c.Engine.ClearAllInterrupts()
+	n := m.Engine.ClearAllInterrupts()
 
 	plural := "s"
 	if n == 1 {
 		plural = ""
 	}
 
-	c.Printf("\tCleared %d pending interrupt%s\n", n, plural)
+	m.Printf("\tCleared %d pending interrupt%s\n", n, plural)
 
 	return nil
 }

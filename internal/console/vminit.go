@@ -33,16 +33,16 @@ const (
 
 // VMInit implements the VMINIT command: builds P0/P1/S0 page tables and
 // turns on virtual memory.
-func (c *Machine) VMInit(p0Pages, p1Pages, s0Pages, kspPages, espPages, sspPages, ispPages, stringPoolPages uint32) error {
-	if err := c.requireInit(); err != nil {
+func (m *Machine) VMInit(p0Pages, p1Pages, s0Pages, kspPages, espPages, sspPages, ispPages, stringPoolPages uint32) error {
+	if err := m.requireInit(); err != nil {
 		return err
 	}
 
-	if err := c.requireKernelMode(); err != nil {
+	if err := m.requireKernelMode(); err != nil {
 		return err
 	}
 
-	physPages := c.Mem.Size() >> 9
+	physPages := m.Mem.Size() >> 9
 
 	size := [3]uint32{p0Pages, p1Pages, s0Pages}
 	explicitTotal := size[0] + size[1] + size[2]
@@ -101,14 +101,14 @@ func (c *Machine) VMInit(p0Pages, p1Pages, s0Pages, kspPages, espPages, sspPages
 
 	// Wipe physical memory: we're about to overwrite it all with fresh
 	// page tables, matching console_vminit_dcl's own initial zero pass.
-	c.endOtherProcesses()
+	m.endOtherProcesses()
 
-	c.Mem = vm.NewMemory(c.Mem.Size())
-	c.Engine = cpu.NewEngine(c.CPU, c.Mem)
-	c.newRTL()
+	m.Mem = vm.NewMemory(m.Mem.Size())
+	m.Engine = cpu.NewEngine(m.CPU, m.Mem)
+	m.newRTL()
 
-	c.Engine.SetSystemServices(c)
-	c.CPU.SetPR(vax.MAPEN, 0)
+	m.Engine.SetSystemServices(m)
+	m.CPU.SetPR(vax.MAPEN, 0)
 
 	paddr := uint32(0)
 	page = 0
@@ -117,8 +117,8 @@ func (c *Machine) VMInit(p0Pages, p1Pages, s0Pages, kspPages, espPages, sspPages
 	// always eagerly mapped regardless of DYNVM (see the C source's own S0
 	// PTE-creation loop, which has no #ifdef DYNVM branch at all — only
 	// P0/P1 below start out demand-paged).
-	c.CPU.SetPR(vax.SBR, 0)
-	c.CPU.SetPR(vax.SLR, size[2])
+	m.CPU.SetPR(vax.SBR, 0)
+	m.CPU.SetPR(vax.SLR, size[2])
 
 	for i := uint32(0); i < size[2]; i++ {
 		var pte vm.PTE
@@ -126,18 +126,18 @@ func (c *Machine) VMInit(p0Pages, p1Pages, s0Pages, kspPages, espPages, sspPages
 		pte.SetValid(true)
 		pte.SetProtection(vm.ProtURKW)
 		pte.SetPFN(page)
-		c.Mem.ReservePage(page)
+		m.Mem.ReservePage(page)
 
 		page++
 
-		if err := c.Mem.StoreLongword(c.CPU, paddr, uint32(pte)); err != nil {
+		if err := m.Mem.StoreLongword(m.CPU, paddr, uint32(pte)); err != nil {
 			return err
 		}
 
 		paddr += 4
 	}
 
-	c.Regions[2] = vmRegion{
+	m.Regions[2] = vmRegion{
 		name: "S0", size: size[2], pteCount: pageTablePages(size[2]),
 		vStart: 0x80000000, vEnd: 0x80000000 + size[2]<<9,
 		pStart: 0, pEnd: size[2] << 9,
@@ -155,23 +155,23 @@ func (c *Machine) VMInit(p0Pages, p1Pages, s0Pages, kspPages, espPages, sspPages
 	p0br := paddr
 	p0PStart := page
 
-	c.CPU.SetPR(vax.P0LR, size[0])
+	m.CPU.SetPR(vax.P0LR, size[0])
 
 	for i := uint32(0); i < size[0]; i++ {
 		pte := corevms.ProcessPTE(false, i)
 
 		page++
 
-		if err := c.Mem.StoreLongword(c.CPU, paddr, uint32(pte)); err != nil {
+		if err := m.Mem.StoreLongword(m.CPU, paddr, uint32(pte)); err != nil {
 			return err
 		}
 
 		paddr += 4
 	}
 
-	c.CPU.SetPR(vax.P0BR, p0br+0x80000000)
+	m.CPU.SetPR(vax.P0BR, p0br+0x80000000)
 
-	c.Regions[0] = vmRegion{
+	m.Regions[0] = vmRegion{
 		name: "P0", size: size[0], pteCount: pageTablePages(size[0]),
 		vStart: 0, vEnd: size[0] << 9,
 		pStart: p0PStart << 9, pEnd: (p0PStart + size[0]) << 9,
@@ -184,22 +184,22 @@ func (c *Machine) VMInit(p0Pages, p1Pages, s0Pages, kspPages, espPages, sspPages
 	p1Base := maxP1 - size[1]*512
 	p1PStart := page
 
-	c.CPU.SetPR(vax.P1LR, p1lr)
-	c.CPU.SetPR(vax.P1BR, (paddr+0x80000000)-p1lr*4)
+	m.CPU.SetPR(vax.P1LR, p1lr)
+	m.CPU.SetPR(vax.P1BR, (paddr+0x80000000)-p1lr*4)
 
 	for i := uint32(0); i < size[1]; i++ {
 		pte := corevms.ProcessPTE(true, p1lr+i)
 
 		page++
 
-		if err := c.Mem.StoreLongword(c.CPU, paddr, uint32(pte)); err != nil {
+		if err := m.Mem.StoreLongword(m.CPU, paddr, uint32(pte)); err != nil {
 			return err
 		}
 
 		paddr += 4
 	}
 
-	c.Regions[1] = vmRegion{
+	m.Regions[1] = vmRegion{
 		name: "P1", size: size[1], pteCount: pageTablePages(size[1]),
 		vStart: p1Base, vEnd: p1Base + size[1]<<9,
 		pStart: p1PStart << 9, pEnd: (p1PStart + size[1]) << 9,
@@ -232,17 +232,17 @@ func (c *Machine) VMInit(p0Pages, p1Pages, s0Pages, kspPages, espPages, sspPages
 		sspPages = defaultModeStackPages
 	}
 
-	c.CPU.SetGPR(vax.SP, spP1) // USP, set below via SetPR too
+	m.CPU.SetGPR(vax.SP, spP1) // USP, set below via SetPR too
 
 	ksp := 0x80000000 + paddr + kspPages*512 - 4
 	paddr += kspPages * 512
 
-	esp, err := c.modeStack(&paddr, espPages, vm.ProtEW)
+	esp, err := m.modeStack(&paddr, espPages, vm.ProtEW)
 	if err != nil {
 		return err
 	}
 
-	ssp, err := c.modeStack(&paddr, sspPages, vm.ProtSW)
+	ssp, err := m.modeStack(&paddr, sspPages, vm.ProtSW)
 	if err != nil {
 		return err
 	}
@@ -250,20 +250,20 @@ func (c *Machine) VMInit(p0Pages, p1Pages, s0Pages, kspPages, espPages, sspPages
 	isp := paddr + ispPages*512 - 4 // physical: no translation at interrupt time
 	paddr += ispPages * 512
 
-	c.CPU.SetPR(vax.KSP, ksp)
-	c.CPU.SetPR(vax.ESP, esp)
-	c.CPU.SetPR(vax.SSP, ssp)
-	c.CPU.SetPR(vax.ISP, isp)
-	c.CPU.SetPR(vax.USP, spP1)
+	m.CPU.SetPR(vax.KSP, ksp)
+	m.CPU.SetPR(vax.ESP, esp)
+	m.CPU.SetPR(vax.SSP, ssp)
+	m.CPU.SetPR(vax.ISP, isp)
+	m.CPU.SetPR(vax.USP, spP1)
 
-	c.CPU.SetGPR(vax.SP, ksp)
-	c.CPU.SetGPR(vax.FP, 0)
-	c.CPU.SetGPR(vax.AP, 0)
+	m.CPU.SetGPR(vax.SP, ksp)
+	m.CPU.SetGPR(vax.FP, 0)
+	m.CPU.SetGPR(vax.AP, 0)
 
-	psl := c.CPU.PSL()
+	psl := m.CPU.PSL()
 	psl.SetCurMod(vax.Kernel)
 	psl.SetPrvMod(vax.User)
-	c.CPU.SetPSL(psl)
+	m.CPU.SetPSL(psl)
 
 	// The console scratch page: a single S0 page reserved for synthesizing
 	// small code sequences directly (no assembler needed -- see Phase 13's
@@ -272,7 +272,7 @@ func (c *Machine) VMInit(p0Pages, p1Pages, s0Pages, kspPages, espPages, sspPages
 	// now that Phase 13 gives it a real consumer (see this file's earlier
 	// doc comment on why it wasn't ported at Phase 08).
 	scratch := 0x80000000 + paddr
-	c.Symbols.Set("CONSOLE$SCRATCH", scratch, SymbolSystem)
+	m.Symbols.Set("CONSOLE$SCRATCH", scratch, SymbolSystem)
 
 	paddr += 512
 
@@ -286,11 +286,11 @@ func (c *Machine) VMInit(p0Pages, p1Pages, s0Pages, kspPages, espPages, sspPages
 	// internally (shimBase) rather than as a named VAX symbol: nothing in
 	// the on-disk image format ever references this area directly, only
 	// the individual SHIM$<name>_<offset> symbols pointing into it.
-	c.shimBase = 0x80000000 + paddr
-	c.shimsReady = false
+	m.shimBase = 0x80000000 + paddr
+	m.shimsReady = false
 	paddr += shimPageBytes
 
-	c.CPU.SetPR(vax.SCBB, paddr)
+	m.CPU.SetPR(vax.SCBB, paddr)
 
 	// Reserve a dedicated page for the SCB itself -- matching
 	// console_vminit_dcl's own treatment (a full page, mirrored by its
@@ -320,9 +320,9 @@ func (c *Machine) VMInit(p0Pages, p1Pages, s0Pages, kspPages, espPages, sspPages
 	stringPoolSize := stringPoolPages * 512
 	stringPoolBase := 0x80000000 + paddr
 
-	c.Symbols.Set("CONSOLE$STRINGPOOL", stringPoolBase, SymbolSystem)
-	c.Symbols.Set("CONSOLE$STRINGPOOL_BASE", stringPoolBase, SymbolSystem)
-	c.Symbols.Set("CONSOLE$STRINGPOOL_SIZE", stringPoolSize, SymbolSystem)
+	m.Symbols.Set("CONSOLE$STRINGPOOL", stringPoolBase, SymbolSystem)
+	m.Symbols.Set("CONSOLE$STRINGPOOL_BASE", stringPoolBase, SymbolSystem)
+	m.Symbols.Set("CONSOLE$STRINGPOOL_SIZE", stringPoolSize, SymbolSystem)
 
 	// Widen the pool's pages from the rest of S0's default protection
 	// (ProtURKW: every mode may read, only kernel may write) to PTE$K_ALL
@@ -339,7 +339,7 @@ func (c *Machine) VMInit(p0Pages, p1Pages, s0Pages, kspPages, espPages, sspPages
 	for off := uint32(0); off < stringPoolSize; off += 512 {
 		pteAddr := ((paddr + off) >> 9) * 4
 
-		raw, err := c.Mem.LoadLongword(c.CPU, pteAddr)
+		raw, err := m.Mem.LoadLongword(m.CPU, pteAddr)
 		if err != nil {
 			return err
 		}
@@ -347,12 +347,12 @@ func (c *Machine) VMInit(p0Pages, p1Pages, s0Pages, kspPages, espPages, sspPages
 		pte := vm.PTE(raw)
 		pte.SetProtection(vm.ProtUW)
 
-		if err := c.Mem.StoreLongword(c.CPU, pteAddr, uint32(pte)); err != nil {
+		if err := m.Mem.StoreLongword(m.CPU, pteAddr, uint32(pte)); err != nil {
 			return err
 		}
 	}
 
-	if err := c.Mem.StoreLongword(c.CPU, paddr, 0); err != nil {
+	if err := m.Mem.StoreLongword(m.CPU, paddr, 0); err != nil {
 		return err
 	}
 
@@ -365,32 +365,32 @@ func (c *Machine) VMInit(p0Pages, p1Pages, s0Pages, kspPages, espPages, sspPages
 	// own default S0 origin (0x80000000) is really only valid for a
 	// standalone assembly with no live page table backing it, since that
 	// literal address is where this VM's S0 page table itself lives.
-	c.s0Free = 0x80000000 + paddr
+	m.s0Free = 0x80000000 + paddr
 
 	// The rest of S0 is the pool new processes' page tables, stacks, and
 	// PCBs come from (corevms/s0pool.go). The microkernel, which ASM puts
 	// at s0Free, claims its pages from the pool's bottom as it's
 	// deposited (depositAsmImage).
-	c.processOne.SetS0Pool(corevms.NewS0Pool(c.s0Free, 0x80000000+size[2]<<9))
+	m.processOne.SetS0Pool(corevms.NewS0Pool(m.s0Free, 0x80000000+size[2]<<9))
 
 	// These P0 and P1 tables are process 1's address space; a new
 	// process gets tables of its own from the pool (BuildAddressSpace).
-	c.processOne.Space = corevms.AdoptAddressSpace(c.CPU, size[0], size[1])
-	c.processOne.Stacks = corevms.AdoptStacks(c.CPU)
+	m.processOne.Space = corevms.AdoptAddressSpace(m.CPU, size[0], size[1])
+	m.processOne.Stacks = corevms.AdoptStacks(m.CPU)
 
-	c.DepositAddr = 0x200
-	c.CPU.SetPR(vax.MAPEN, 1)
-	c.VMInitValid = true
-	c.Mem.SetVMValid(true) // let Translate demand-page invalid P0/P1 PTEs from here on
+	m.DepositAddr = 0x200
+	m.CPU.SetPR(vax.MAPEN, 1)
+	m.VMInitValid = true
+	m.Mem.SetVMValid(true) // let Translate demand-page invalid P0/P1 PTEs from here on
 
 	// Invalidate_tb() plus a reset of its tries/hits/pflushes
 	// counters (tb_flush itself and the STC's own counters are left
 	// alone, same asymmetry as CLEAR TB — see docs/PHASE-21.md).
-	c.Mem.InvalidateTB()
-	c.Mem.ResetTBCounters()
-	c.asmSession = nil // a fresh address space invalidates any prior ASM session's state
-	c.assemblerMode = false
-	c.kernelPlaced = false
+	m.Mem.InvalidateTB()
+	m.Mem.ResetTBCounters()
+	m.asmSession = nil // a fresh address space invalidates any prior ASM session's state
+	m.assemblerMode = false
+	m.kernelPlaced = false
 
 	return nil
 }
@@ -404,14 +404,14 @@ const defaultModeStackPages = 8
 // advances *paddr past them and returns the stack's initial pointer (the
 // virtual address of its last longword). A push past the stack's bottom
 // lands on the guard page and faults.
-func (c *Machine) modeStack(paddr *uint32, pages uint32, prot vm.Protection) (uint32, error) {
-	if err := c.setS0Protection(*paddr, 1, vm.ProtNA); err != nil {
+func (m *Machine) modeStack(paddr *uint32, pages uint32, prot vm.Protection) (uint32, error) {
+	if err := m.setS0Protection(*paddr, 1, vm.ProtNA); err != nil {
 		return 0, err
 	}
 
 	*paddr += 512
 
-	if err := c.setS0Protection(*paddr, pages, prot); err != nil {
+	if err := m.setS0Protection(*paddr, pages, prot); err != nil {
 		return 0, err
 	}
 
@@ -424,11 +424,11 @@ func (c *Machine) modeStack(paddr *uint32, pages uint32, prot vm.Protection) (ui
 // physical (and S0-offset) address paddr. It edits the PTEs through their
 // physical addresses (SBR is 0, so S0 page N's PTE is at N*4), since
 // VMINIT runs this before turning MAPEN on.
-func (c *Machine) setS0Protection(paddr, pages uint32, prot vm.Protection) error {
+func (m *Machine) setS0Protection(paddr, pages uint32, prot vm.Protection) error {
 	for i := uint32(0); i < pages; i++ {
 		pteAddr := (paddr>>9 + i) * 4
 
-		raw, err := c.Mem.LoadLongword(c.CPU, pteAddr)
+		raw, err := m.Mem.LoadLongword(m.CPU, pteAddr)
 		if err != nil {
 			return err
 		}
@@ -436,7 +436,7 @@ func (c *Machine) setS0Protection(paddr, pages uint32, prot vm.Protection) error
 		pte := vm.PTE(raw)
 		pte.SetProtection(prot)
 
-		if err := c.Mem.StoreLongword(c.CPU, pteAddr, uint32(pte)); err != nil {
+		if err := m.Mem.StoreLongword(m.CPU, pteAddr, uint32(pte)); err != nil {
 			return err
 		}
 	}

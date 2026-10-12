@@ -346,62 +346,62 @@ func NewMachine(out io.Writer) *Machine {
 // (Hooks.NewProcessOne). The files the old process 1 left open are
 // closed first, so what it wrote reaches the volumes (they outlive the
 // machine).
-func (c *Machine) newRTL() *corevms.Environment {
-	if c.processOne != nil {
-		c.processOne.CloseFiles()
+func (m *Machine) newRTL() *corevms.Environment {
+	if m.processOne != nil {
+		m.processOne.CloseFiles()
 	}
 
-	sys := corevms.NewSystem(c.CPU, c.Mem, c.Devices, c.Mounts)
+	sys := corevms.NewSystem(m.CPU, m.Mem, m.Devices, m.Mounts)
 	librtl.Register(sys.Shims()) // LIBRTL.EXE's routines (docs/PHASE-34.md)
 
 	// The old System's other processes are gone with it, and so is their
 	// image state; process 1's is the console's and stays (images.go).
-	c.otherImages = nil
+	m.otherImages = nil
 
 	sys.SetProcessSettings(processSettings())
 
 	// A process $CREPRC creates activates its image with the console's
 	// image activator (docs/PHASE-45.md, subtask 5).
-	sys.ActivateImage = c.activateCreatedImage
+	sys.ActivateImage = m.activateCreatedImage
 
 	// A deleted process's image state goes with it (docs/PHASE-45.md,
 	// subtask 6), and so does whatever the console keeps for it.
 	sys.ProcessDeleted = func(env *corevms.Environment) {
-		delete(c.otherImages, env)
+		delete(m.otherImages, env)
 
-		if c.Hooks.ProcessDeleted != nil {
-			c.Hooks.ProcessDeleted(env)
+		if m.Hooks.ProcessDeleted != nil {
+			m.Hooks.ProcessDeleted(env)
 		}
 	}
 
 	// $SETIMR's timers run on the engine's system time, the same time
 	// base as the interval clock (docs/PHASE-26.md subtask 11).
-	if c.Engine != nil {
-		sys.Clock = c.Engine.SystemTime
+	if m.Engine != nil {
+		sys.Clock = m.Engine.SystemTime
 		sys.BootTime = sys.Clock() // $GETSYI's SYI$_BOOTTIME: now, on that clock
 
 		// With vax.process.scheduler on, the System is the engine's
 		// scheduling hook (docs/PHASE-44.md); off, the engine has none
 		// and never pays for one.
 		if sys.ProcessSettings.Scheduler {
-			sys.InstallScheduler(c.Engine)
+			sys.InstallScheduler(m.Engine)
 		}
 	}
 
-	env := c.Hooks.NewProcessOne(sys)
-	c.processOne = env
+	env := m.Hooks.NewProcessOne(sys)
+	m.processOne = env
 
 	// A condition nobody handled goes to the debugger first, if there is
 	// one that wants it. The hook reads c.OnUnhandled each time, so a
 	// debugger installed later still gets it.
 	env.OnSignal = func(u corevms.UnhandledCondition) {
-		if c.OnSignal != nil {
-			c.OnSignal(UnhandledException{Condition: u.Condition, PC: u.PC, Preceding: u.Preceding})
+		if m.OnSignal != nil {
+			m.OnSignal(UnhandledException{Condition: u.Condition, PC: u.PC, Preceding: u.Preceding})
 		}
 	}
 
 	env.OnUnhandled = func(u corevms.UnhandledCondition) bool {
-		return c.OnUnhandled != nil && c.OnUnhandled(UnhandledException{
+		return m.OnUnhandled != nil && m.OnUnhandled(UnhandledException{
 			Condition: u.Condition, PC: u.PC, Preceding: u.Preceding,
 		})
 	}
@@ -411,11 +411,11 @@ func (c *Machine) newRTL() *corevms.Environment {
 
 // Initialized reports whether an INIT command has allocated a machine yet
 // (matching the C source's vax_init flag).
-func (c *Machine) Initialized() bool { return c.Engine != nil }
+func (m *Machine) Initialized() bool { return m.Engine != nil }
 
 // requireInit is the common guard nearly every command runs first.
-func (c *Machine) requireInit() error {
-	if !c.Initialized() {
+func (m *Machine) requireInit() error {
+	if !m.Initialized() {
 		return vmserrors.New(vmserrors.CLI_NOVAX)
 	}
 
@@ -424,8 +424,8 @@ func (c *Machine) requireInit() error {
 
 // requireKernelMode matches the handful of commands (VMINIT, INIT/ROM, ...)
 // that additionally refuse to run outside kernel mode.
-func (c *Machine) requireKernelMode() error {
-	if c.CPU.PSL().CurMod() != vax.Kernel {
+func (m *Machine) requireKernelMode() error {
+	if m.CPU.PSL().CurMod() != vax.Kernel {
 		return vmserrors.New(vmserrors.CLI_NOTKERNEL)
 	}
 
@@ -446,24 +446,24 @@ func (c *Machine) requireKernelMode() error {
 // program has ever legitimately dropped the CPU to a non-kernel mode and
 // then halted there (see kernel.asm's own EXE$INITIALIZE, which does
 // exactly that as its normal, designed completion).
-func (c *Machine) withKernelMode(fn func() error) error {
-	saved := c.CPU.PSL().CurMod()
-	c.Engine.SetModeStack(vax.Kernel, false)
+func (m *Machine) withKernelMode(fn func() error) error {
+	saved := m.CPU.PSL().CurMod()
+	m.Engine.SetModeStack(vax.Kernel, false)
 
-	defer c.Engine.SetModeStack(saved, false)
+	defer m.Engine.SetModeStack(saved, false)
 
 	return fn()
 }
 
 // Evaluator returns an Evaluator bound to this console's symbol table,
 // radix, and current deposit address.
-func (c *Machine) Evaluator() *Evaluator {
+func (m *Machine) Evaluator() *Evaluator {
 	return &Evaluator{
-		Symbols: c.Symbols, Radix: c.Radix, Here: c.DepositAddr, Mem: c.Mem, CPU: c.CPU,
-		Debug:    imageNames{c: c},
-		Builtins: c.DebugBuiltins,
+		Symbols: m.Symbols, Radix: m.Radix, Here: m.DepositAddr, Mem: m.Mem, CPU: m.CPU,
+		Debug:    imageNames{m: m},
+		Builtins: m.DebugBuiltins,
 		Load: func(addr uint32) (uint32, error) {
-			v, err := c.loadSized(addr, SizeLongword)
+			v, err := m.loadSized(addr, SizeLongword)
 			if err != nil {
 				return 0, vmserrors.New(vmserrors.DBG_NOACCESSR, addr)
 			}
@@ -480,7 +480,7 @@ func (c *Machine) Evaluator() *Evaluator {
 				sz = SizeWord
 			}
 
-			v, err := c.loadSized(addr, sz)
+			v, err := m.loadSized(addr, sz)
 			if err != nil {
 				return 0, vmserrors.New(vmserrors.DBG_NOACCESSR, addr)
 			}
@@ -492,8 +492,8 @@ func (c *Machine) Evaluator() *Evaluator {
 
 // Printf writes to the console's output stream, matching the C source's
 // direct printf calls.
-func (c *Machine) Printf(format string, args ...any) {
-	fmt.Fprintf(c.Hooks.Output(), format, args...)
+func (m *Machine) Printf(format string, args ...any) {
+	fmt.Fprintf(m.Hooks.Output(), format, args...)
 }
 
 // allocPhysMemory returns bytes normalized to alloc_vax's own minimum-size

@@ -33,20 +33,20 @@ import (
 // directory ("testdata/dbg") or a VMS directory specification
 // ("DUA0:[SRC]"). The files read so far are forgotten, since a different
 // list may now find different files.
-func (c *Machine) SetSourceDirs(dirs []string) {
-	c.sourceDirs = dirs
-	c.sourceCache = nil
+func (m *Machine) SetSourceDirs(dirs []string) {
+	m.sourceDirs = dirs
+	m.sourceCache = nil
 }
 
 // SourceDirs returns the SET SOURCE search list.
-func (c *Machine) SourceDirs() []string { return c.sourceDirs }
+func (m *Machine) SourceDirs() []string { return m.sourceDirs }
 
 // SourceLine returns the source line that holds the instruction at pc: its
 // number in the listing and its text, with the tabs still in it. ok is
 // false when pc isn't in code the debug symbol table has lines for, or the
 // source file can't be found or doesn't have the record.
-func (c *Machine) SourceLine(pc uint32) (n int, text string, ok bool) {
-	prog := c.debugImageAt(pc)
+func (m *Machine) SourceLine(pc uint32) (n int, text string, ok bool) {
+	prog := m.debugImageAt(pc)
 	if prog == nil {
 		return 0, "", false
 	}
@@ -61,7 +61,7 @@ func (c *Machine) SourceLine(pc uint32) (n int, text string, ok bool) {
 		return 0, "", false
 	}
 
-	records := c.sourceRecords(file.Spec)
+	records := m.sourceRecords(file.Spec)
 	if record < 1 || record > len(records) {
 		return 0, "", false
 	}
@@ -76,26 +76,26 @@ func (c *Machine) SourceLine(pc uint32) (n int, text string, ok bool) {
 // is spec, finding it as the file's comment describes, or nil if it can't
 // be found. The answer, including a failure, is remembered until the
 // search list changes.
-func (c *Machine) sourceRecords(spec string) []string {
-	if records, seen := c.sourceCache[spec]; seen {
+func (m *Machine) sourceRecords(spec string) []string {
+	if records, seen := m.sourceCache[spec]; seen {
 		return records
 	}
 
-	records := c.findSource(spec)
+	records := m.findSource(spec)
 
-	if c.sourceCache == nil {
-		c.sourceCache = map[string][]string{}
+	if m.sourceCache == nil {
+		m.sourceCache = map[string][]string{}
 	}
 
-	c.sourceCache[spec] = records
+	m.sourceCache[spec] = records
 
 	return records
 }
 
 // findSource looks for the file in each place, in order, and returns the
 // lines of the first one that can be read.
-func (c *Machine) findSource(spec string) []string {
-	s := c.Hooks.Session()
+func (m *Machine) findSource(spec string) []string {
+	s := m.Hooks.Session()
 	if s == nil {
 		return nil
 	}
@@ -110,7 +110,7 @@ func (c *Machine) findSource(spec string) []string {
 		names = append(names, lower)
 	}
 
-	for _, dir := range c.sourceDirs {
+	for _, dir := range m.sourceDirs {
 		for _, name := range names {
 			candidates = append(candidates, joinDirectory(dir, name))
 		}

@@ -46,8 +46,8 @@ func sizeBytes(sz ExamSize) uint32 {
 
 // Examine implements EXAMINE: displays either a register (reg != "") or a
 // range of memory starting at addr, count units of size sz.
-func (c *Machine) Examine(reg string, addr uint32, count uint32, sz ExamSize) error {
-	if err := c.requireInit(); err != nil {
+func (m *Machine) Examine(reg string, addr uint32, count uint32, sz ExamSize) error {
+	if err := m.requireInit(); err != nil {
 		return err
 	}
 
@@ -57,7 +57,7 @@ func (c *Machine) Examine(reg string, addr uint32, count uint32, sz ExamSize) er
 			return vmserrors.New(vmserrors.CLI_BADREG, reg)
 		}
 
-		c.Printf("%-4s: %s\n", strings.ToUpper(reg), c.formatOne(0, sz, c.CPU.GPR(r)))
+		m.Printf("%-4s: %s\n", strings.ToUpper(reg), m.formatOne(0, sz, m.CPU.GPR(r)))
 
 		return nil
 	}
@@ -70,15 +70,15 @@ func (c *Machine) Examine(reg string, addr uint32, count uint32, sz ExamSize) er
 	for n := uint32(0); n < count; n++ {
 		a := addr + n*step
 
-		v, err := c.loadSized(a, sz)
+		v, err := m.loadSized(a, sz)
 		if err != nil {
 			return err
 		}
 
-		c.Printf("%08X: %s\n", a, c.formatOne(a, sz, v))
+		m.Printf("%08X: %s\n", a, m.formatOne(a, sz, v))
 	}
 
-	c.DepositAddr = addr + count*step
+	m.DepositAddr = addr + count*step
 
 	return nil
 }
@@ -89,24 +89,24 @@ func (c *Machine) Examine(reg string, addr uint32, count uint32, sz ExamSize) er
 // must not be gated by that program's own PSL (see kernel.asm's own
 // EXE$INITIALIZE, which legitimately drops to user mode and halts there as
 // its normal, designed completion).
-func (c *Machine) loadSized(addr uint32, sz ExamSize) (v uint32, err error) {
-	err = c.withKernelMode(func() error {
+func (m *Machine) loadSized(addr uint32, sz ExamSize) (v uint32, err error) {
+	err = m.withKernelMode(func() error {
 		switch sz {
 		case SizeWord:
-			w, err := c.Mem.LoadWord(c.CPU, addr)
+			w, err := m.Mem.LoadWord(m.CPU, addr)
 			v = uint32(w)
 
 			return err
 
 		case SizeByte, SizeASCII:
-			b, err := c.Mem.LoadByte(c.CPU, addr)
+			b, err := m.Mem.LoadByte(m.CPU, addr)
 			v = uint32(b)
 
 			return err
 
 		default: // SizeLongword, SizePTE
 			var err error
-			v, err = c.Mem.LoadLongword(c.CPU, addr)
+			v, err = m.Mem.LoadLongword(m.CPU, addr)
 
 			return err
 		}
@@ -115,9 +115,9 @@ func (c *Machine) loadSized(addr uint32, sz ExamSize) (v uint32, err error) {
 	return v, err
 }
 
-func (c *Machine) formatOne(addr uint32, sz ExamSize, v uint32) string {
+func (m *Machine) formatOne(addr uint32, sz ExamSize, v uint32) string {
 	_ = addr // ignored for now
-	
+
 	switch sz {
 	case SizeByte:
 		return fmt.Sprintf("%02X", v&0xFF)
@@ -162,8 +162,8 @@ func (c *Machine) formatOne(addr uint32, sz ExamSize, v uint32) string {
 // implementing the "DEPOSIT" deliverable docs/PHASE-08.md names explicitly,
 // using the same size/register/addressing rules as Examine rather than
 // inventing a different convention.
-func (c *Machine) Deposit(reg string, addr uint32, sz ExamSize, value uint32) error {
-	if err := c.requireInit(); err != nil {
+func (m *Machine) Deposit(reg string, addr uint32, sz ExamSize, value uint32) error {
+	if err := m.requireInit(); err != nil {
 		return err
 	}
 
@@ -173,30 +173,30 @@ func (c *Machine) Deposit(reg string, addr uint32, sz ExamSize, value uint32) er
 			return vmserrors.New(vmserrors.CLI_BADREG, reg)
 		}
 
-		c.CPU.SetGPR(r, value)
+		m.CPU.SetGPR(r, value)
 
 		return nil
 	}
 
 	// See loadSized's doc comment: DEPOSIT is console-driven memory access
 	// and must not be gated by whatever mode the CPU was last running in.
-	err := c.withKernelMode(func() error {
+	err := m.withKernelMode(func() error {
 		switch sz {
 		case SizeWord:
-			return c.Mem.StoreWord(c.CPU, addr, uint16(value))
+			return m.Mem.StoreWord(m.CPU, addr, uint16(value))
 
 		case SizeByte, SizeASCII:
-			return c.Mem.StoreByte(c.CPU, addr, byte(value))
+			return m.Mem.StoreByte(m.CPU, addr, byte(value))
 
 		default:
-			return c.Mem.StoreLongword(c.CPU, addr, value)
+			return m.Mem.StoreLongword(m.CPU, addr, value)
 		}
 	})
 	if err != nil {
 		return err
 	}
 
-	c.DepositAddr = addr + sizeBytes(sz)
+	m.DepositAddr = addr + sizeBytes(sz)
 
 	return nil
 }

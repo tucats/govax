@@ -19,30 +19,30 @@ import (
 // prompt then follows). A bare Console with none, as many of this
 // package's own tests use, runs the program to its end with no
 // breakpoints.
-func (c *Machine) Execute(startAddr *uint32) error {
-	if err := c.requireInit(); err != nil {
+func (m *Machine) Execute(startAddr *uint32) error {
+	if err := m.requireInit(); err != nil {
 		return err
 	}
 
-	if err := c.Hooks.ProcessOneOnly("GO"); err != nil {
+	if err := m.Hooks.ProcessOneOnly("GO"); err != nil {
 		return err
 	}
 
-	if c.Debugger != nil {
-		return c.Debugger.Start(Activation{Kind: ActivateGo, Addr: startAddr})
+	if m.Debugger != nil {
+		return m.Debugger.Start(Activation{Kind: ActivateGo, Addr: startAddr})
 	}
 
-	if err := c.ReturnToProcessOne(); err != nil {
+	if err := m.ReturnToProcessOne(); err != nil {
 		return err
 	}
 
 	if startAddr != nil {
-		c.CPU.SetGPR(vax.PC, *startAddr)
+		m.CPU.SetGPR(vax.PC, *startAddr)
 	}
 
-	c.Engine.BeginRun()
+	m.Engine.BeginRun()
 
-	return c.runPlain()
+	return m.runPlain()
 }
 
 // Call invokes the procedure at addr with the given arguments (pushed
@@ -54,64 +54,64 @@ func (c *Machine) Execute(startAddr *uint32) error {
 //
 // As with Execute, a debugger, when installed, runs it (and so honors
 // breakpoints, docs/PHASE-42.md bug 1); a bare Console runs it to its end.
-func (c *Machine) Call(addr uint32, step bool, args ...uint32) error {
-	if err := c.requireInit(); err != nil {
+func (m *Machine) Call(addr uint32, step bool, args ...uint32) error {
+	if err := m.requireInit(); err != nil {
 		return err
 	}
 
-	if err := c.Hooks.ProcessOneOnly("CALL"); err != nil {
+	if err := m.Hooks.ProcessOneOnly("CALL"); err != nil {
 		return err
 	}
 
-	if c.Debugger != nil {
-		return c.Debugger.Start(Activation{Kind: ActivateCall, Addr: &addr, Step: step, Args: args})
+	if m.Debugger != nil {
+		return m.Debugger.Start(Activation{Kind: ActivateCall, Addr: &addr, Step: step, Args: args})
 	}
 
 	if step {
 		return vmserrors.New(vmserrors.DBG_NOTAVAILABLE)
 	}
 
-	if err := c.ReturnToProcessOne(); err != nil {
+	if err := m.ReturnToProcessOne(); err != nil {
 		return err
 	}
 
-	if err := c.Engine.CallEntry(addr, args...); err != nil {
+	if err := m.Engine.CallEntry(addr, args...); err != nil {
 		return err
 	}
 
-	c.Engine.BeginRun()
+	m.Engine.BeginRun()
 
-	return c.runPlain()
+	return m.runPlain()
 }
 
 // Step is the console's STEP command: the debugger does the stepping, and
 // a STEP always leaves it stopped, so the session it starts stays open
 // for the next command. mode is "", INTO, OVER, or RETURN ("" being the
 // debugger's own default, SET STEP).
-func (c *Machine) Step(startAddr *uint32, mode string) error {
-	if err := c.requireInit(); err != nil {
+func (m *Machine) Step(startAddr *uint32, mode string) error {
+	if err := m.requireInit(); err != nil {
 		return err
 	}
 
-	if c.Debugger == nil {
+	if m.Debugger == nil {
 		return vmserrors.New(vmserrors.DBG_NOTAVAILABLE)
 	}
 
-	return c.Debugger.Start(Activation{Kind: ActivateStep, Addr: startAddr, StepMode: mode})
+	return m.Debugger.Start(Activation{Kind: ActivateStep, Addr: startAddr, StepMode: mode})
 }
 
 // runPlain runs the CPU until something ends the run, honoring SET TRACE
 // but no breakpoints: what GO and CALL do on a console without a debugger.
-func (c *Machine) runPlain() error {
+func (m *Machine) runPlain() error {
 	for {
-		if err := c.BeginStep(); err != nil {
-			return c.ReportStop(err)
+		if err := m.BeginStep(); err != nil {
+			return m.ReportStop(err)
 		}
 
-		finish := c.traceStep(c.CPU.GPR(vax.PC), false)
+		finish := m.traceStep(m.CPU.GPR(vax.PC), false)
 
-		if err := c.StepMachine(); err != nil {
-			return c.ReportStop(err)
+		if err := m.StepMachine(); err != nil {
+			return m.ReportStop(err)
 		}
 
 		finish()
@@ -123,8 +123,8 @@ func (c *Machine) runPlain() error {
 // instruction (its PC, for a breakpoint or the trace) is the process
 // that will run it (cpu.Engine.SwitchIfDue). Run loops call it before
 // those checks, then StepMachine.
-func (c *Machine) BeginStep() error {
-	return c.Engine.SwitchIfDue()
+func (m *Machine) BeginStep() error {
+	return m.Engine.SwitchIfDue()
 }
 
 // StepMachine executes one instruction of whichever process the CPU is
@@ -138,16 +138,16 @@ func (c *Machine) BeginStep() error {
 // left. Every other
 // error, a HALT in another process included (HALT stops the machine,
 // whoever runs it), is returned as Step returned it.
-func (c *Machine) StepMachine() error {
-	err := c.Engine.Step()
+func (m *Machine) StepMachine() error {
+	err := m.Engine.Step()
 	if err == nil {
 		return nil
 	}
 
-	if env := c.running(); env != c.processOne && errors.Is(err, cpu.ErrConsoleCallReturned) {
+	if env := m.running(); env != m.processOne && errors.Is(err, cpu.ErrConsoleCallReturned) {
 		// An image a subprocess's CLI ran has ended, and the CLI goes on
 		// (subcli.go); otherwise the process's own run is over.
-		if !c.Hooks.CLIImageEnded(env) {
+		if !m.Hooks.CLIImageEnded(env) {
 			env.DeleteProcess(env)
 		}
 
@@ -165,23 +165,23 @@ func (c *Machine) StepMachine() error {
 // the debugger's run loops can just call this
 // on any Step error. Any other error (an unhandled fault, a real Go error)
 // is returned unchanged for the caller to propagate.
-func (c *Machine) ReportStop(err error) error {
+func (m *Machine) ReportStop(err error) error {
 	switch {
 	// A RET popping a console-initiated CallEntry frame (Console.Call,
-	// whether or not /STEP) is clean, expected completion, not an error. 
+	// whether or not /STEP) is clean, expected completion, not an error.
 	// No message is printed here, matching Call's own pre-existing silent
 	// return on this same condition.
 	case errors.Is(err, cpu.ErrConsoleCallReturned):
-		if c.imageActive {
-			c.imageActive = false
+		if m.imageActive {
+			m.imageActive = false
 
 			// The image's completion status, for RUN to report
 			// (imageCompletion).
-			if c.processOne != nil {
-				c.imageStatus, c.imageEnded = c.processOne.Process.ExitStatus, true
+			if m.processOne != nil {
+				m.imageStatus, m.imageEnded = m.processOne.Process.ExitStatus, true
 			}
 
-			c.imageRundown()
+			m.imageRundown()
 		}
 
 		return nil
@@ -189,10 +189,10 @@ func (c *Machine) ReportStop(err error) error {
 	case errors.Is(err, cpu.ErrHalted):
 		// A HALT in a process other than process 1 is unusual enough to
 		// report whatever the verbosity, naming the process.
-		if note := c.ProcessNote(); note != "" {
-			c.Printf("%%SYSTEM-S-HALT, cpu halted at PC = %08X%s\n", c.CPU.GPR(vax.PC), note)
-		} else if c.Verbose {
-			c.Printf("%%SYSTEM-S-HALT, cpu halted at PC = %08X\n", c.CPU.GPR(vax.PC))
+		if note := m.ProcessNote(); note != "" {
+			m.Printf("%%SYSTEM-S-HALT, cpu halted at PC = %08X%s\n", m.CPU.GPR(vax.PC), note)
+		} else if m.Verbose {
+			m.Printf("%%SYSTEM-S-HALT, cpu halted at PC = %08X\n", m.CPU.GPR(vax.PC))
 		}
 
 		return nil
@@ -200,23 +200,23 @@ func (c *Machine) ReportStop(err error) error {
 	case errors.Is(err, cpu.ErrAttention):
 		// A Ctrl/Y a command procedure acts on stops the image quietly
 		// (dclcontroly.go).
-		if c.Hooks.ControlYTaken() {
+		if m.Hooks.ControlYTaken() {
 			return nil
 		}
 
-		c.Printf("%%VAX-I-ATTENTION, execution interrupted at PC = %08X%s\n", c.CPU.GPR(vax.PC), c.ProcessNote())
+		m.Printf("%%VAX-I-ATTENTION, execution interrupted at PC = %08X%s\n", m.CPU.GPR(vax.PC), m.ProcessNote())
 
 		return nil
 
 	case errors.Is(err, cpu.ErrInstructionLimitExceeded):
-		c.Printf("%%VAX-I-INSTRLIMIT, instruction limit reached at PC = %08X%s\n", c.CPU.GPR(vax.PC), c.ProcessNote())
-		c.limitStop = err // a one-shot command fails on it (RunCommandLine)
+		m.Printf("%%VAX-I-INSTRLIMIT, instruction limit reached at PC = %08X%s\n", m.CPU.GPR(vax.PC), m.ProcessNote())
+		m.limitStop = err // a one-shot command fails on it (RunCommandLine)
 
 		return nil
 
 	case errors.Is(err, cpu.ErrTimeLimitExceeded):
-		c.Printf("%%VAX-I-TIMELIMIT, time limit reached at PC = %08X%s\n", c.CPU.GPR(vax.PC), c.ProcessNote())
-		c.limitStop = err // a one-shot command fails on it (RunCommandLine)
+		m.Printf("%%VAX-I-TIMELIMIT, time limit reached at PC = %08X%s\n", m.CPU.GPR(vax.PC), m.ProcessNote())
+		m.limitStop = err // a one-shot command fails on it (RunCommandLine)
 
 		return nil
 	}
@@ -224,12 +224,12 @@ func (c *Machine) ReportStop(err error) error {
 	// A fault whose SCB vector is kernel.asm's own "console$handler"
 	// sentinel isn't a real Go-level error at all -- it's this port's cue to
 	// run the VMS Condition Handling Facility search and, failing that,
-	// report the exception natively and halt. Checked via errors.As, not 
-	// folded into the errors.Is switch above, matching the FaultBreak 
+	// report the exception natively and halt. Checked via errors.As, not
+	// folded into the errors.Is switch above, matching the FaultBreak
 	// check's own precedent just above it.
 	var chf *cpu.ConsoleHandlerFault
 	if errors.As(err, &chf) {
-		return c.handleConsoleFault(chf)
+		return m.handleConsoleFault(chf)
 	}
 
 	return err

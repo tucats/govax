@@ -36,8 +36,8 @@ const maxCHFDepth = 4096
 // the machine cleanly -- never returning an error, since both outcomes are
 // this port's own definition of "handled" (a real condition handler ran, or
 // the console's own reporting did).
-func (c *Machine) handleConsoleFault(f *cpu.ConsoleHandlerFault) error {
-	handled, err := c.chf(f)
+func (m *Machine) handleConsoleFault(f *cpu.ConsoleHandlerFault) error {
+	handled, err := m.chf(f)
 	if err != nil {
 		return err
 	}
@@ -46,29 +46,29 @@ func (c *Machine) handleConsoleFault(f *cpu.ConsoleHandlerFault) error {
 		return nil
 	}
 
-	return c.formatException(f)
+	return m.formatException(f)
 }
 
 // chf walks the call-frame chain from the live FP looking for a VMS
 // condition handler (frame offset 0, invoking the first one
 // found (invokeHandler) and, if it declines, continuing the search from
 // that frame's own caller. Returns true once some handler continues.
-func (c *Machine) chf(f *cpu.ConsoleHandlerFault) (bool, error) {
-	fp := c.CPU.GPR(vax.FP)
-	ap := c.CPU.GPR(vax.AP)
+func (m *Machine) chf(f *cpu.ConsoleHandlerFault) (bool, error) {
+	fp := m.CPU.GPR(vax.FP)
+	ap := m.CPU.GPR(vax.AP)
 
 	if fp == 0 || ap == 0 {
 		return false, nil
 	}
 
 	for count := 0; count < maxCHFDepth; count++ {
-		handler, err := c.Mem.LoadLongword(c.CPU, fp)
+		handler, err := m.Mem.LoadLongword(m.CPU, fp)
 		if err != nil {
 			return false, err
 		}
 
 		if handler != 0 {
-			handled, err := c.invokeHandler(f, handler, fp, count+1)
+			handled, err := m.invokeHandler(f, handler, fp, count+1)
 			if err != nil {
 				return false, err
 			}
@@ -80,16 +80,16 @@ func (c *Machine) chf(f *cpu.ConsoleHandlerFault) (bool, error) {
 
 		// Skip the mask longword, saved AP, and saved-register area, purely
 		// to advance addr past them and detect a corrupt frame.
-		maskWord, err := c.Mem.LoadLongword(c.CPU, fp+4)
+		maskWord, err := m.Mem.LoadLongword(m.CPU, fp+4)
 		if err != nil {
 			return false, err
 		}
 
-		if _, err := c.Mem.LoadLongword(c.CPU, fp+8); err != nil { // saved AP
+		if _, err := m.Mem.LoadLongword(m.CPU, fp+8); err != nil { // saved AP
 			return false, err
 		}
 
-		newFP, err := c.Mem.LoadLongword(c.CPU, fp+12)
+		newFP, err := m.Mem.LoadLongword(m.CPU, fp+12)
 		if err != nil {
 			return false, err
 		}
@@ -102,7 +102,7 @@ func (c *Machine) chf(f *cpu.ConsoleHandlerFault) (bool, error) {
 				continue
 			}
 
-			if _, err := c.Mem.LoadLongword(c.CPU, addr); err != nil {
+			if _, err := m.Mem.LoadLongword(m.CPU, addr); err != nil {
 				return false, err
 			}
 
@@ -139,28 +139,28 @@ func (c *Machine) chf(f *cpu.ConsoleHandlerFault) (bool, error) {
 // fault PC, but a handler may have overwritten that slot to redirect
 // execution, e.g. to skip the faulting instruction) by writing directly
 // into those stack slots rather than through its own return value.
-func (c *Machine) invokeHandler(f *cpu.ConsoleHandlerFault, handler, frameFP uint32, depth int) (bool, error) {
-	savedSP := c.CPU.GPR(vax.SP)
-	savedHalted := c.Engine.Halted()
-	savedR0 := c.CPU.GPR(vax.R0)
-	savedR1 := c.CPU.GPR(vax.R1)
+func (m *Machine) invokeHandler(f *cpu.ConsoleHandlerFault, handler, frameFP uint32, depth int) (bool, error) {
+	savedSP := m.CPU.GPR(vax.SP)
+	savedHalted := m.Engine.Halted()
+	savedR0 := m.CPU.GPR(vax.R0)
+	savedR1 := m.CPU.GPR(vax.R1)
 
 	push := func(v uint32) (uint32, error) {
-		sp := c.CPU.GPR(vax.SP) - 4
-		c.CPU.SetGPR(vax.SP, sp)
+		sp := m.CPU.GPR(vax.SP) - 4
+		m.CPU.SetGPR(vax.SP, sp)
 
-		return sp, c.Mem.StoreLongword(c.CPU, sp, v)
+		return sp, m.Mem.StoreLongword(m.CPU, sp, v)
 	}
 
 	restore := func() {
-		c.CPU.SetGPR(vax.SP, savedSP)
+		m.CPU.SetGPR(vax.SP, savedSP)
 
 		if !savedHalted {
 			// Console.Call's own step loop may have halted the machine
 			// running the handler (an explicit HALT inside it, however
 			// unusual) -- matching chf's own `vax.halted = saved_halt`
 			// unconditional restore.
-			c.Engine.ClearHalted()
+			m.Engine.ClearHalted()
 		}
 	}
 
@@ -189,7 +189,7 @@ func (c *Machine) invokeHandler(f *cpu.ConsoleHandlerFault, handler, frameFP uin
 		return false, err
 	}
 
-	sigargs := c.CPU.GPR(vax.SP) - 4
+	sigargs := m.CPU.GPR(vax.SP) - 4
 
 	if _, err := push(uint32(3 + len(f.Args))); err != nil {
 		restore()
@@ -223,7 +223,7 @@ func (c *Machine) invokeHandler(f *cpu.ConsoleHandlerFault, handler, frameFP uin
 		return false, err
 	}
 
-	mechargs := c.CPU.GPR(vax.SP) - 4
+	mechargs := m.CPU.GPR(vax.SP) - 4
 
 	if _, err := push(4); err != nil {
 		restore()
@@ -231,15 +231,15 @@ func (c *Machine) invokeHandler(f *cpu.ConsoleHandlerFault, handler, frameFP uin
 		return false, err
 	}
 
-	if c.CPU.DebugEnabled(vax.DebugExceptions) {
-		c.Printf("DEBUG: condition handler executing CALL %08X ( %08X, %08X )\n", handler, sigargs, mechargs)
+	if m.CPU.DebugEnabled(vax.DebugExceptions) {
+		m.Printf("DEBUG: condition handler executing CALL %08X ( %08X, %08X )\n", handler, sigargs, mechargs)
 	}
 
 	// The handler's run is nested inside the program's: it must run in
 	// this process and come back to it, so no other process may run
 	// meanwhile (docs/PHASE-43.md, bug 7; docs/PHASE-44.md, subtask 8).
-	unfreeze := c.Engine.FreezeScheduling()
-	callErr := c.Call(handler, false, sigargs, mechargs)
+	unfreeze := m.Engine.FreezeScheduling()
+	callErr := m.Call(handler, false, sigargs, mechargs)
 
 	unfreeze()
 
@@ -249,37 +249,37 @@ func (c *Machine) invokeHandler(f *cpu.ConsoleHandlerFault, handler, frameFP uin
 		return false, callErr
 	}
 
-	rc := c.CPU.GPR(vax.R0)
+	rc := m.CPU.GPR(vax.R0)
 
-	if c.CPU.DebugEnabled(vax.DebugExceptions) {
-		c.Printf("DEBUG: condition handler returns %08X\n", rc)
+	if m.CPU.DebugEnabled(vax.DebugExceptions) {
+		m.Printf("DEBUG: condition handler returns %08X\n", rc)
 	}
 
-	c.CPU.SetGPR(vax.R0, savedR0)
-	c.CPU.SetGPR(vax.R1, savedR1)
+	m.CPU.SetGPR(vax.R0, savedR0)
+	m.CPU.SetGPR(vax.R1, savedR1)
 
 	if rc&1 == 0 {
 		return false, nil
 	}
 
-	r0, err := c.Mem.LoadLongword(c.CPU, mechR0)
+	r0, err := m.Mem.LoadLongword(m.CPU, mechR0)
 	if err != nil {
 		return false, err
 	}
 
-	r1, err := c.Mem.LoadLongword(c.CPU, mechR1)
+	r1, err := m.Mem.LoadLongword(m.CPU, mechR1)
 	if err != nil {
 		return false, err
 	}
 
-	pc, err := c.Mem.LoadLongword(c.CPU, argPC)
+	pc, err := m.Mem.LoadLongword(m.CPU, argPC)
 	if err != nil {
 		return false, err
 	}
 
-	c.CPU.SetGPR(vax.R0, r0)
-	c.CPU.SetGPR(vax.R1, r1)
-	c.CPU.SetGPR(vax.PC, pc)
+	m.CPU.SetGPR(vax.R0, r0)
+	m.CPU.SetGPR(vax.R1, r1)
+	m.CPU.SetGPR(vax.PC, pc)
 
 	return true, nil
 }
@@ -289,24 +289,24 @@ func (c *Machine) invokeHandler(f *cpu.ConsoleHandlerFault, handler, frameFP uin
 // %VAX-E-CONHANDLER-style diagnostic naming the exception and its signal
 // arguments, then halt. Uses exceptionName's short SCB-style names (RESOP,
 // ACCVIO, ...).
-func (c *Machine) formatException(f *cpu.ConsoleHandlerFault) error {
-	c.Printf("%%VAX-E-CONHANDLER, %s, PC=%08X  PSL=%08X\n", exceptionName(f.Code), f.PC, uint32(f.PSL))
+func (m *Machine) formatException(f *cpu.ConsoleHandlerFault) error {
+	m.Printf("%%VAX-E-CONHANDLER, %s, PC=%08X  PSL=%08X\n", exceptionName(f.Code), f.PC, uint32(f.PSL))
 
 	if len(f.Args) > 0 {
-		c.Printf("-VAX-E-CONSIGARG, There are %d signal arguments,\n       ", len(f.Args))
+		m.Printf("-VAX-E-CONSIGARG, There are %d signal arguments,\n       ", len(f.Args))
 
 		for i, a := range f.Args {
 			if i > 0 {
-				c.Printf(", ")
+				m.Printf(", ")
 			}
 
-			c.Printf("%08X", a)
+			m.Printf("%08X", a)
 		}
 
-		c.Printf("\n")
+		m.Printf("\n")
 	}
 
-	c.Engine.Halt()
+	m.Engine.Halt()
 
 	return nil
 }

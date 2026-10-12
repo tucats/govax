@@ -123,6 +123,6 @@ type Debugger interface {
 
 // InDebugger reports whether a debugger session is in progress, for the
 // front end's choice of prompt and grammar.
-func (c *Machine) InDebugger() bool {
-	return c.Debugger != nil && c.Debugger.Active()
+func (m *Machine) InDebugger() bool {
+	return m.Debugger != nil && m.Debugger.Active()
 }

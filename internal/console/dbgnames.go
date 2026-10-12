@@ -15,14 +15,14 @@ import (
 // imageNames is the evaluator's DebugNames: the debug symbol tables of
 // every image RUN loaded (ICB.Debug), main image first.
 type imageNames struct {
-	c *Machine
+	m *Machine
 }
 
 // Lookup returns the value of a symbol or path name in the first image
 // whose debug symbol table has it: a routine, label, data symbol, or
 // constant in a module's DST, else a global in its GST.
 func (n imageNames) Lookup(path string) (uint32, bool) {
-	for _, icb := range n.c.images().ICBList {
+	for _, icb := range n.m.images().ICBList {
 		if icb.Debug == nil {
 			continue
 		}
@@ -47,7 +47,7 @@ func (n imageNames) Lookup(path string) (uint32, bool) {
 // string or an array of bytes reads as a byte, the type of its first
 // item. ok is false where no image's debug symbols have the name as data.
 func (n imageNames) DataSize(path string) (uint32, bool) {
-	for _, icb := range n.c.images().ICBList {
+	for _, icb := range n.m.images().ICBList {
 		d, ok := icb.Debug.DatumPath(path)
 		if !ok {
 			// A name only the image's global symbol table has (an image
@@ -83,7 +83,7 @@ func (n imageNames) DataSize(path string) (uint32, bool) {
 // element. Subscripts count from the array's lower bound, and one outside
 // the bounds is an error (ok false), as it is in the debugger.
 func (n imageNames) Element(path string, index int32) (addr, size uint32, ok bool) {
-	for _, icb := range n.c.images().ICBList {
+	for _, icb := range n.m.images().ICBList {
 		d, found := icb.Debug.DatumPath(path)
 		if !found || !d.IsArray() || len(d.Descriptor.Bounds) != 1 {
 			continue
@@ -113,7 +113,7 @@ func (n imageNames) Line(scope string, line int) (uint32, bool) {
 	if scope != "" {
 		module, _, _ := strings.Cut(scope, `\`)
 
-		for _, icb := range n.c.images().ICBList {
+		for _, icb := range n.m.images().ICBList {
 			if icb.Debug == nil {
 				continue
 			}
@@ -126,9 +126,9 @@ func (n imageNames) Line(scope string, line int) (uint32, bool) {
 		return 0, false
 	}
 
-	pc := n.c.CPU.GPR(vax.PC)
+	pc := n.m.CPU.GPR(vax.PC)
 
-	for _, icb := range n.c.images().ICBList {
+	for _, icb := range n.m.images().ICBList {
 		if icb.Debug == nil {
 			continue
 		}
@@ -140,7 +140,7 @@ func (n imageNames) Line(scope string, line int) (uint32, bool) {
 		}
 	}
 
-	for _, icb := range n.c.images().ICBList {
+	for _, icb := range n.m.images().ICBList {
 		if icb.Debug == nil {
 			continue
 		}
@@ -175,7 +175,7 @@ func (n imageNames) Line(scope string, line int) (uint32, bool) {
 // addresses name one (namesAddress), and page 0, never mapped, is never
 // named by them.
 type consoleSymbolizer struct {
-	c     *Machine
+	m     *Machine
 	radix int
 
 	// numeric turns naming off: every address is a number, as SET MODE
@@ -189,11 +189,11 @@ func (s consoleSymbolizer) Symbolize(addr uint32) (string, bool) {
 		return "", false
 	}
 
-	if p := s.c.debugImageAt(addr); p != nil {
+	if p := s.m.debugImageAt(addr); p != nil {
 		return p.Symbolize(addr, s.radix)
 	}
 
-	for _, icb := range s.c.images().ICBList {
+	for _, icb := range s.m.images().ICBList {
 		if icb.Debug == nil || icb.Debug.Globals == nil {
 			continue
 		}
@@ -204,12 +204,12 @@ func (s consoleSymbolizer) Symbolize(addr uint32) (string, bool) {
 	}
 
 	if addr >= vaxPageSize {
-		if sym, ok := s.c.Symbols.Table().At(addr, namesAddress); ok {
+		if sym, ok := s.m.Symbols.Table().At(addr, namesAddress); ok {
 			return sym.Name, true
 		}
 	}
 
-	return sharedSymbolizer{c: s.c}.Symbolize(addr)
+	return sharedSymbolizer{m: s.m}.Symbolize(addr)
 }
 
 // lineName names addr by its line alone, MOD\ROUTINE\%LINE n, when an
@@ -220,7 +220,7 @@ func (s consoleSymbolizer) lineName(addr uint32) (string, bool) {
 		return "", false
 	}
 
-	if p := s.c.debugImageAt(addr); p != nil {
+	if p := s.m.debugImageAt(addr); p != nil {
 		return p.LineName(addr, s.radix)
 	}
 

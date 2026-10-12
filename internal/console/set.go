@@ -68,19 +68,19 @@ func setPSLRange(set func(uint32), v, maxValue uint32) error {
 }
 
 // SetPSLField implements one "<field>=<value>" clause of SET PSL (setcommand.go
-// loops over a comma-separated list of these. 
-// 
+// loops over a comma-separated list of these.
+//
 // CM/TP/FPD/IS/DV/FU/IV/T/N/Z/V/C are boolean bits (0 or 1);
 // IPL is 0-31; PRV_MOD is 0-3; CUR_MOD/MODE switches the active mode/stack
 // via SetMode.
-func (c *Machine) SetPSLField(field string, value uint32) error {
-	if err := c.requireInit(); err != nil {
+func (m *Machine) SetPSLField(field string, value uint32) error {
+	if err := m.requireInit(); err != nil {
 		return err
 	}
 
 	field = strings.ToUpper(field)
 	if field == "CUR_MOD" || field == "MODE" {
-		return c.setModeStackByValue(value)
+		return m.setModeStackByValue(value)
 	}
 
 	setter, ok := pslFieldNames[field]
@@ -88,12 +88,12 @@ func (c *Machine) SetPSLField(field string, value uint32) error {
 		return vmserrors.New(vmserrors.CLI_INVSETPSL, field)
 	}
 
-	psl := c.CPU.PSL()
+	psl := m.CPU.PSL()
 	if err := setter(&psl, value); err != nil {
 		return err
 	}
 
-	c.CPU.SetPSL(psl)
+	m.CPU.SetPSL(psl)
 
 	return nil
 }
@@ -133,14 +133,14 @@ var debugFlagNames = map[string]vax.DebugFlags{
 // Each name may be prefixed NO to clear that one bit
 // instead of setting it; a bare SET DEBUG with no names sets the DEBUG
 // (native-debugger) bit alone.
-func (c *Machine) SetDebug(names []string) error {
+func (m *Machine) SetDebug(names []string) error {
 	if len(names) == 0 {
-		c.CPU.SetDebug(c.CPU.Debug() | vax.DebugNative)
+		m.CPU.SetDebug(m.CPU.Debug() | vax.DebugNative)
 
 		return nil
 	}
 
-	flags := c.CPU.Debug()
+	flags := m.CPU.Debug()
 
 	for _, name := range names {
 		name = strings.ToUpper(strings.TrimSpace(name))
@@ -163,7 +163,7 @@ func (c *Machine) SetDebug(names []string) error {
 		}
 	}
 
-	c.CPU.SetDebug(flags)
+	m.CPU.SetDebug(flags)
 
 	return nil
 }
@@ -180,17 +180,17 @@ var setModeNames = map[string]vax.AccessMode{
 
 // SetMode implements SET MODE <KERNEL|EXEC|SUPER|USER|INTERRUPT>.
 // Like SetPSLField's CUR_MOD case, this does not check for/deliver a
-// pending AST (vax.pslw.cur_mod >= vax.ASTLVL) itself: the RTL's AST 
-// delivery sees the new mode at the next instruction boundary (see 
+// pending AST (vax.pslw.cur_mod >= vax.ASTLVL) itself: the RTL's AST
+// delivery sees the new mode at the next instruction boundary (see
 // pslFieldNames' doc comment).
-func (c *Machine) SetMode(name string) error {
-	if err := c.requireInit(); err != nil {
+func (m *Machine) SetMode(name string) error {
+	if err := m.requireInit(); err != nil {
 		return err
 	}
 
 	name = strings.ToUpper(strings.TrimSpace(name))
 	if name == "INTERRUPT" {
-		c.Engine.SetModeStack(vax.Kernel, true)
+		m.Engine.SetModeStack(vax.Kernel, true)
 
 		return nil
 	}
@@ -200,7 +200,7 @@ func (c *Machine) SetMode(name string) error {
 		return vmserrors.New(vmserrors.CLI_BADMODE, name)
 	}
 
-	c.Engine.SetModeStack(mode, false)
+	m.Engine.SetModeStack(mode, false)
 
 	return nil
 }
@@ -209,29 +209,29 @@ func (c *Machine) SetMode(name string) error {
 // MODE's keyword form — takes CUR_MOD's raw 0-3 numeric encoding (matching
 // AccessMode's own iota values) with no "INTERRUPT" case (SET PSL has no
 // numeric encoding for the interrupt stack.
-func (c *Machine) setModeStackByValue(value uint32) error {
+func (m *Machine) setModeStackByValue(value uint32) error {
 	if value > uint32(vax.User) {
 		return vmserrors.New(vmserrors.CLI_INVSETPSL, value)
 	}
 
-	c.Engine.SetModeStack(vax.AccessMode(value), false)
+	m.Engine.SetModeStack(vax.AccessMode(value), false)
 
 	return nil
 }
 
 // SetTrace implements SET TRACE/SET DISASSEMBLY (enable) and SET NOTRACE/
 // SET NODISASSEMBLE (disable).
-func (c *Machine) SetTrace(on bool) {
-	c.Trace = on
+func (m *Machine) SetTrace(on bool) {
+	m.Trace = on
 }
 
 // SetRadix implements SET RADIX <8|10|16>.
-func (c *Machine) SetRadix(radix int) error {
+func (m *Machine) SetRadix(radix int) error {
 	if radix != 8 && radix != 10 && radix != 16 {
 		return vmserrors.New(vmserrors.CLI_BADRADIX, radix)
 	}
 
-	c.Radix = radix
+	m.Radix = radix
 
 	return nil
 }
@@ -239,12 +239,12 @@ func (c *Machine) SetRadix(radix int) error {
 // SetVM implements SET VM/SET MAPEN (on) and SET NOVM/SET NOMAPEN (off).
 // Sets/clears the MAPEN privileged register directly. Requires kernel
 // mode.
-func (c *Machine) SetVM(on bool) error {
-	if err := c.requireInit(); err != nil {
+func (m *Machine) SetVM(on bool) error {
+	if err := m.requireInit(); err != nil {
 		return err
 	}
 
-	if err := c.requireKernelMode(); err != nil {
+	if err := m.requireKernelMode(); err != nil {
 		return err
 	}
 
@@ -253,21 +253,21 @@ func (c *Machine) SetVM(on bool) error {
 		v = 1
 	}
 
-	c.CPU.SetPR(vax.MAPEN, v)
+	m.CPU.SetPR(vax.MAPEN, v)
 
 	return nil
 }
 
 // SetBase implements SET BASE <addr>, sets the EXAMINE/DEPOSIT cursor
-// directly (Console.DepositAddr), the same cursor SHOW BASE reports 
+// directly (Console.DepositAddr), the same cursor SHOW BASE reports
 // (see docs/PHASE-16.md sub-phase 1d's ShowBase fix) and EXAMINE/DEPOSIT
 // themselves advance after every access.
-func (c *Machine) SetBase(addr uint32) error {
-	if err := c.requireInit(); err != nil {
+func (m *Machine) SetBase(addr uint32) error {
+	if err := m.requireInit(); err != nil {
 		return err
 	}
 
-	c.DepositAddr = addr
+	m.DepositAddr = addr
 
 	return nil
 }
@@ -275,67 +275,67 @@ func (c *Machine) SetBase(addr uint32) error {
 // SetVerbose implements SET VERBOSE command, sets
 // CONSOLE_VERBOSE; DCL's verification (SET VERIFY, dclverify.go) is
 // separate.
-func (c *Machine) SetVerbose() error {
-	if err := c.requireInit(); err != nil {
+func (m *Machine) SetVerbose() error {
+	if err := m.requireInit(); err != nil {
 		return err
 	}
 
-	c.Verbose = true
+	m.Verbose = true
 
 	return nil
 }
 
 // SetNoVerbose implements SET NOVERBOSE, clearing CONSOLE_VERBOSE.
-func (c *Machine) SetNoVerbose() error {
-	if err := c.requireInit(); err != nil {
+func (m *Machine) SetNoVerbose() error {
+	if err := m.requireInit(); err != nil {
 		return err
 	}
 
-	c.Verbose = false
+	m.Verbose = false
 
 	return nil
 }
 
 // SetQuantum implements SET QUANTUM <n>, resets Engine's interrupt-admission
 // quantum counter (both its initial reload value and its current countdown).
-func (c *Machine) SetQuantum(n int) error {
-	if err := c.requireInit(); err != nil {
+func (m *Machine) SetQuantum(n int) error {
+	if err := m.requireInit(); err != nil {
 		return err
 	}
 
-	_, initial := c.Engine.Quantum()
+	_, initial := m.Engine.Quantum()
 
 	switch {
 	case initial == 0 && n > 0:
-		c.Printf("%%VAX-I-INTERRUPTS, interrupt delivery resumed (quantum>0)\n")
+		m.Printf("%%VAX-I-INTERRUPTS, interrupt delivery resumed (quantum>0)\n")
 
 	case initial > 0 && n == 0:
-		c.Printf("%%VAX-I-NOINTERRUPTS, interrupt delivery suspended (quantum=0)\n")
+		m.Printf("%%VAX-I-NOINTERRUPTS, interrupt delivery suspended (quantum=0)\n")
 	}
 
-	c.Engine.SetQuantum(n)
+	m.Engine.SetQuantum(n)
 
 	return nil
 }
 
 // SetUIQuantum implements SET UIQUANTUM <n>.
-func (c *Machine) SetUIQuantum(n int) error {
-	if err := c.requireInit(); err != nil {
+func (m *Machine) SetUIQuantum(n int) error {
+	if err := m.requireInit(); err != nil {
 		return err
 	}
 
-	c.Printf("UI time slicing is not modeled by this port (no cooperative host-UI polling loop); value accepted but has no effect.\n")
+	m.Printf("UI time slicing is not modeled by this port (no cooperative host-UI polling loop); value accepted but has no effect.\n")
 
 	return nil
 }
 
 // SetFaultHistory implements SET FAULT/SET HIST <n>.
-func (c *Machine) SetFaultHistory(n int) error {
-	if err := c.requireInit(); err != nil {
+func (m *Machine) SetFaultHistory(n int) error {
+	if err := m.requireInit(); err != nil {
 		return err
 	}
 
-	c.Engine.SetFaultHistorySize(n)
+	m.Engine.SetFaultHistorySize(n)
 
 	return nil
 }
@@ -363,13 +363,13 @@ var pteFieldNames = map[string]func(pte *vm.PTE, v uint32){
 // "Cannot SET PAGE when virtual memory is disabled" (not an error, matching
 // setpte's own VAX_OK-with-printf behavior) rather than failing if MAPEN is
 // off.
-func (c *Machine) SetPTE(addr uint32, field string, value uint32) error {
-	if err := c.requireInit(); err != nil {
+func (m *Machine) SetPTE(addr uint32, field string, value uint32) error {
+	if err := m.requireInit(); err != nil {
 		return err
 	}
 
-	if c.CPU.PR(vax.MAPEN) == 0 {
-		c.Printf("Cannot SET PAGE when virtual memory is disabled.\n")
+	if m.CPU.PR(vax.MAPEN) == 0 {
+		m.Printf("Cannot SET PAGE when virtual memory is disabled.\n")
 
 		return nil
 	}
@@ -379,14 +379,14 @@ func (c *Machine) SetPTE(addr uint32, field string, value uint32) error {
 		return vmserrors.New(vmserrors.CLI_BADPTEFIELD, field)
 	}
 
-	_, _, pte, err := c.Mem.LookupPTE(c.CPU, addr)
+	_, _, pte, err := m.Mem.LookupPTE(m.CPU, addr)
 	if err != nil {
-		c.Printf("ACCVIO, page table length violation\n")
+		m.Printf("ACCVIO, page table length violation\n")
 
 		return nil
 	}
 
 	setter(&pte, value)
 
-	return c.Mem.StorePTE(c.CPU, addr, pte)
+	return m.Mem.StorePTE(m.CPU, addr, pte)
 }

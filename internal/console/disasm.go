@@ -18,11 +18,11 @@ import (
 // which would otherwise be left inconsistent partway through decoding one
 // instruction.
 type memByteReader struct {
-	c *Machine
+	m *Machine
 }
 
 func (r memByteReader) ByteAt(addr uint32) byte {
-	b, err := r.c.Mem.LoadByte(r.c.CPU, addr)
+	b, err := r.m.Mem.LoadByte(r.m.CPU, addr)
 	if err != nil {
 		return 0
 	}
@@ -32,8 +32,8 @@ func (r memByteReader) ByteAt(addr uint32) byte {
 
 // Disassemble implements DISASSEMBLE/NOSYMBOLIC, the console's own
 // layout: DisassembleWith with no options.
-func (c *Machine) Disassemble(start, end uint32) error {
-	return c.DisassembleWith(start, end, DisassembleOptions{})
+func (m *Machine) Disassemble(start, end uint32) error {
+	return m.DisassembleWith(start, end, DisassembleOptions{})
 }
 
 // DisassembleOptions are DISASSEMBLE's qualifiers (docs/PHASE-41.md,
@@ -79,8 +79,8 @@ type DisassembleOptions struct {
 // DisassembleWith implements DISASSEMBLE: decodes and prints instructions
 // from start through end (at least one, starting at start, even if end <
 // start).
-func (c *Machine) DisassembleWith(start, end uint32, opts DisassembleOptions) error {
-	if err := c.requireInit(); err != nil {
+func (m *Machine) DisassembleWith(start, end uint32, opts DisassembleOptions) error {
+	if err := m.requireInit(); err != nil {
 		return err
 	}
 
@@ -88,28 +88,28 @@ func (c *Machine) DisassembleWith(start, end uint32, opts DisassembleOptions) er
 		end = start
 	}
 
-	r := memByteReader{c: c}
+	r := memByteReader{m: m}
 
 	radix := opts.Radix
 	if radix == 0 {
-		radix = c.symbolRadix()
+		radix = m.symbolRadix()
 	}
 
 	// The debugger's layout, with or without names; the console's own
 	// layout only when neither is asked for.
 	debuggerLayout := opts.Symbolic || opts.Numeric
 
-	names := consoleSymbolizer{c: c, radix: radix, numeric: !opts.Symbolic}
-	format := c.formatOptions(opts, names)
+	names := consoleSymbolizer{m: m, radix: radix, numeric: !opts.Symbolic}
+	format := m.formatOptions(opts, names)
 
 	for pc := start; pc <= end; {
 		if !debuggerLayout {
-			dec, err := c.decodeInstruction(r, pc)
+			dec, err := m.decodeInstruction(r, pc)
 			if err != nil {
 				return vmserrors.Wrap(vmserrors.CLI_DISASM, err, pc)
 			}
 
-			c.Printf("%08X: %s\n", pc, dec.Format(format))
+			m.Printf("%08X: %s\n", pc, dec.Format(format))
 			pc += dec.Length
 
 			continue
@@ -117,11 +117,11 @@ func (c *Machine) DisassembleWith(start, end uint32, opts DisassembleOptions) er
 
 		// An address the program can't read isn't shown as the HALT that
 		// reading zeros decodes to (the debugger: %DEBUG-E-NOACCESSR).
-		if _, err := c.ReadBytes(pc, 1); err != nil {
+		if _, err := m.ReadBytes(pc, 1); err != nil {
 			return err
 		}
 
-		dec, err := c.decodeAt(r, pc)
+		dec, err := m.decodeAt(r, pc)
 		if err != nil {
 			return vmserrors.Wrap(vmserrors.CLI_DISASM, err, pc)
 		}
@@ -139,16 +139,16 @@ func (c *Machine) DisassembleWith(start, end uint32, opts DisassembleOptions) er
 			loc = fmt.Sprintf("%08X", pc)
 		}
 
-		c.Printf("%s\n", debuggerLine(loc, dec.Format(format)))
+		m.Printf("%s\n", debuggerLine(loc, dec.Format(format)))
 
 		if opts.Operands != OperandsOff {
-			c.printOperands(dec, format, names)
+			m.printOperands(dec, format, names)
 		}
 
 		pc += dec.Length
 
 		if strings.HasPrefix(dec.Mnemonic, "CASE") {
-			pc = c.printCaseTable(r, dec, pc, names)
+			pc = m.printCaseTable(r, dec, pc, names)
 		}
 	}
 
@@ -158,7 +158,7 @@ func (c *Machine) DisassembleWith(start, end uint32, opts DisassembleOptions) er
 // formatOptions are the disassembler's options for opts: the debugger's
 // style and names for DISASSEMBLE/SYMBOLIC, and the constant and fixup
 // cell namers when asked for.
-func (c *Machine) formatOptions(opts DisassembleOptions, names consoleSymbolizer) disasm.Options {
+func (m *Machine) formatOptions(opts DisassembleOptions, names consoleSymbolizer) disasm.Options {
 	var format disasm.Options
 
 	if opts.Symbolic || opts.Numeric {
@@ -167,11 +167,11 @@ func (c *Machine) formatOptions(opts DisassembleOptions, names consoleSymbolizer
 	}
 
 	if opts.Constants {
-		format.Constants = imageConstants{c: c}
+		format.Constants = imageConstants{m: m}
 	}
 
 	if opts.Shareable {
-		format.Cells = c
+		format.Cells = m
 	}
 
 	return format
@@ -180,8 +180,8 @@ func (c *Machine) formatOptions(opts DisassembleOptions, names consoleSymbolizer
 // symbolRadix is the radix a symbolic name's offsets are written in: the
 // console's radix when it's decimal, as the debugger's SET RADIX DECIMAL
 // makes them (GLIMIT+589), and hexadecimal otherwise.
-func (c *Machine) symbolRadix() int {
-	if c.Radix == 10 {
+func (m *Machine) symbolRadix() int {
+	if m.Radix == 10 {
 		return 10
 	}
 
@@ -208,7 +208,7 @@ const maxCaseEntries = 1024
 // address after it. The table has limit+1 word entries; a limit that
 // isn't a literal or immediate can't be known, so nothing is printed and
 // the words that follow are decoded as instructions.
-func (c *Machine) printCaseTable(r disasm.ByteReader, dec disasm.Decoded, table uint32, names consoleSymbolizer) uint32 {
+func (m *Machine) printCaseTable(r disasm.ByteReader, dec disasm.Decoded, table uint32, names consoleSymbolizer) uint32 {
 	if len(dec.Operands) < 3 {
 		return table
 	}
@@ -234,7 +234,7 @@ func (c *Machine) printCaseTable(r disasm.ByteReader, dec disasm.Decoded, table 
 			text = fmt.Sprintf("%08X", dest)
 		}
 
-		c.Printf("%16s%s\n", "", text)
+		m.Printf("%16s%s\n", "", text)
 
 		pc += 2
 	}
@@ -246,12 +246,12 @@ func (c *Machine) printCaseTable(r disasm.ByteReader, dec disasm.Decoded, table 
 // constant of the module, in the loaded images' debug symbol tables, that
 // holds the instruction.
 type imageConstants struct {
-	c *Machine
+	m *Machine
 }
 
 // Constant implements disasm.ConstantNamer.
 func (n imageConstants) Constant(pc, value uint32) (string, bool) {
-	if p := n.c.debugImageAt(pc); p != nil {
+	if p := n.m.debugImageAt(pc); p != nil {
 		return p.Constant(pc, value)
 	}
 
@@ -268,8 +268,8 @@ func (n imageConstants) Constant(pc, value uint32) (string, bool) {
 // A CALLS or CALLG to an absolute address that is an entry point gets the
 // routine's name, for the console's own layout; DISASSEMBLE/SYMBOLIC uses
 // decodeAt, and names it as the debugger does.
-func (c *Machine) decodeInstruction(r disasm.ByteReader, pc uint32) (disasm.Decoded, error) {
-	instr, err := c.decodeAt(r, pc)
+func (m *Machine) decodeInstruction(r disasm.ByteReader, pc uint32) (disasm.Decoded, error) {
+	instr, err := m.decodeAt(r, pc)
 	if instr.IsMask {
 		return instr, err
 	}
@@ -278,7 +278,7 @@ func (c *Machine) decodeInstruction(r disasm.ByteReader, pc uint32) (disasm.Deco
 	// shows the routine's name.
 	if instr.Mnemonic == "CALLS" || instr.Mnemonic == "CALLG" {
 		if len(instr.Operands) > 1 && instr.Operands[1].Mode == disasm.ModeAbsolute {
-			if name, ok := c.entryAt(instr.Operands[1].Target); ok {
+			if name, ok := m.entryAt(instr.Operands[1].Target); ok {
 				instr.Operands[1].Symbol = name
 			}
 		}
@@ -289,8 +289,8 @@ func (c *Machine) decodeInstruction(r disasm.ByteReader, pc uint32) (disasm.Deco
 
 // decodeAt decodes the instruction at pc, or the register-save mask there
 // when pc is a routine's entry (entryAt), with no operand named.
-func (c *Machine) decodeAt(r disasm.ByteReader, pc uint32) (disasm.Decoded, error) {
-	if name, ok := c.entryAt(pc); ok {
+func (m *Machine) decodeAt(r disasm.ByteReader, pc uint32) (disasm.Decoded, error) {
+	if name, ok := m.entryAt(pc); ok {
 		return disasm.EntryMask(r, pc, name), nil
 	}
 
@@ -306,12 +306,12 @@ func (c *Machine) decodeAt(r disasm.ByteReader, pc uint32) (disasm.Decoded, erro
 // linked /DEBUG and those linked with only traceback name their routines
 // there. A JSB routine (dbgsym.Routine.NoCall) has no mask, so it isn't
 // one.
-func (c *Machine) entryAt(pc uint32) (string, bool) {
-	if name, ok := c.Symbols.EntryAt(pc); ok {
+func (m *Machine) entryAt(pc uint32) (string, bool) {
+	if name, ok := m.Symbols.EntryAt(pc); ok {
 		return name, true
 	}
 
-	for _, icb := range c.images().ICBList {
+	for _, icb := range m.images().ICBList {
 		if icb.Debug == nil {
 			continue
 		}

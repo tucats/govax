@@ -62,20 +62,20 @@ func (r callRow) String() string {
 // CALLG: its line is the call's, found from pc-1, while the relative PC
 // is the return address's (FAILSUB SUB1's line 7 at 00000216, which is
 // line 8's first byte).
-func (c *Machine) debugCallRow(pc uint32, caller bool) (callRow, bool) {
-	p := c.debugImageAt(pc)
+func (m *Machine) debugCallRow(pc uint32, caller bool) (callRow, bool) {
+	p := m.debugImageAt(pc)
 	if p == nil {
 		return callRow{}, false
 	}
 
-	m, ok := p.ModuleAt(pc)
+	mod, ok := p.ModuleAt(pc)
 	if !ok {
 		return callRow{}, false
 	}
 
-	row := callRow{module: m.Name, pc: pc}
+	row := callRow{module: mod.Name, pc: pc}
 
-	if r := m.RoutineAt(pc); r != nil {
+	if r := mod.RoutineAt(pc); r != nil {
 		row.routine, row.rel, row.hasRoutine = r.Name, pc-r.Address, true
 	}
 
@@ -84,7 +84,7 @@ func (c *Machine) debugCallRow(pc uint32, caller bool) (callRow, bool) {
 		at--
 	}
 
-	if l, ok := m.LineAt(at); ok {
+	if l, ok := mod.LineAt(at); ok {
 		row.line = l.Line
 	}
 
@@ -96,10 +96,10 @@ func (c *Machine) debugCallRow(pc uint32, caller bool) (callRow, bool) {
 // following the saved FPs from the current FP, for as long as that PC is
 // in a module of a loaded image's debug symbol table. ok is false when
 // the PC itself isn't in one. count bounds the rows; 0 is every frame.
-func (c *Machine) debugFrames(count uint32) (rows []callRow, ok bool, err error) {
-	pc := c.CPU.GPR(vax.PC)
+func (m *Machine) debugFrames(count uint32) (rows []callRow, ok bool, err error) {
+	pc := m.CPU.GPR(vax.PC)
 
-	row, ok := c.debugCallRow(pc, false)
+	row, ok := m.debugCallRow(pc, false)
 	if !ok {
 		return nil, false, nil
 	}
@@ -110,20 +110,20 @@ func (c *Machine) debugFrames(count uint32) (rows []callRow, ok bool, err error)
 
 	rows = append(rows, row)
 
-	fp := c.CPU.GPR(vax.FP)
+	fp := m.CPU.GPR(vax.FP)
 
 	for n := uint32(1); n < count && fp != 0 && fp != cpu.SentinelReturn; n++ {
-		savedFP, err := c.Mem.LoadLongword(c.CPU, fp+12)
+		savedFP, err := m.Mem.LoadLongword(m.CPU, fp+12)
 		if err != nil {
 			return rows, true, err
 		}
 
-		savedPC, err := c.Mem.LoadLongword(c.CPU, fp+16)
+		savedPC, err := m.Mem.LoadLongword(m.CPU, fp+16)
 		if err != nil {
 			return rows, true, err
 		}
 
-		row, ok := c.debugCallRow(savedPC, true)
+		row, ok := m.debugCallRow(savedPC, true)
 		if !ok {
 			break
 		}
@@ -154,16 +154,16 @@ func (c *Machine) debugFrames(count uint32) (rows []callRow, ok bool, err error)
 // subroutine, which builds no frame, is shown by its frame's routine
 // (LOCALR at DBGDIS's JSBRTN, though START called it). count bounds the
 // rows; 0 is every frame.
-func (c *Machine) showDebugCalls(count uint32) (bool, error) {
-	rows, ok, err := c.debugFrames(count)
+func (m *Machine) showDebugCalls(count uint32) (bool, error) {
+	rows, ok, err := m.debugFrames(count)
 	if !ok {
 		return false, nil
 	}
 
-	c.Printf("%s\n", debugCallsHeading)
+	m.Printf("%s\n", debugCallsHeading)
 
 	for _, row := range rows {
-		c.Printf("%s\n", row)
+		m.Printf("%s\n", row)
 	}
 
 	return true, err

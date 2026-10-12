@@ -53,28 +53,28 @@ type RunOptions struct {
 // transfers control to the main image's own entry point -- optionally
 // calling each dependency's LIB$INITIALIZE entry point first -- via a small
 // synthesized IMAGE$INIT driver procedure run through Console.Call.
-func (c *Machine) Run(fn string, opts RunOptions) error {
-	if err := c.requireInit(); err != nil {
+func (m *Machine) Run(fn string, opts RunOptions) error {
+	if err := m.requireInit(); err != nil {
 		return err
 	}
 
 	// A previous image that was stopped and never exited ends now.
-	c.endAbandonedImage()
+	m.endAbandonedImage()
 
-	savedMode := c.CPU.PSL().CurMod()
-	c.Engine.SetModeStack(vax.Kernel, false)
-	defer c.Engine.SetModeStack(savedMode, false) // safety net on an early-error return
+	savedMode := m.CPU.PSL().CurMod()
+	m.Engine.SetModeStack(vax.Kernel, false)
+	defer m.Engine.SetModeStack(savedMode, false) // safety net on an early-error return
 
-	c.resetICBList()
+	m.resetICBList()
 
-	if err := c.ensureShims(); err != nil {
+	if err := m.ensureShims(); err != nil {
 		return err
 	}
 
-	c.runHost = opts.Host
-	c.processOne.CommandLine = opts.CommandLine
+	m.runHost = opts.Host
+	m.processOne.CommandLine = opts.CommandLine
 
-	main, err := c.activateImage(fn)
+	main, err := m.activateImage(fn)
 	if err != nil {
 		return err
 	}
@@ -82,17 +82,17 @@ func (c *Machine) Run(fn string, opts RunOptions) error {
 	// Restores the caller's mode here -- before building and
 	// running IMAGE$INIT, not after -- so the loaded program executes in
 	// whatever mode RUN itself was invoked from.
-	c.Engine.SetModeStack(savedMode, false)
+	m.Engine.SetModeStack(savedMode, false)
 
 	entry, _ := mainTransferAddress(main)
 
-	driverAddr, ok, err := c.buildImageInitDriver(main, opts.RunInits)
+	driverAddr, ok, err := m.buildImageInitDriver(main, opts.RunInits)
 	if err != nil {
 		return err
 	}
 
 	if !ok {
-		c.Printf("No transfer address!\n")
+		m.Printf("No transfer address!\n")
 
 		return nil
 	}
@@ -101,22 +101,22 @@ func (c *Machine) Run(fn string, opts RunOptions) error {
 		return nil
 	}
 
-	c.imageActive = true
+	m.imageActive = true
 
-	if !c.runsUnderDebugger(main, opts.Debug) {
-		c.imageEnded = false
-		if c.processOne != nil {
-			c.processOne.Process.ExitStatus = ssNormal
+	if !m.runsUnderDebugger(main, opts.Debug) {
+		m.imageEnded = false
+		if m.processOne != nil {
+			m.processOne.Process.ExitStatus = ssNormal
 		}
 
-		if err := c.Call(driverAddr, false); err != nil {
+		if err := m.Call(driverAddr, false); err != nil {
 			return err
 		}
 
-		return c.imageCompletion()
+		return m.imageCompletion()
 	}
 
-	if c.Debugger == nil {
+	if m.Debugger == nil {
 		return vmserrors.New(vmserrors.DBG_NOTAVAILABLE)
 	}
 
@@ -136,7 +136,7 @@ func (c *Machine) Run(fn string, opts RunOptions) error {
 		a.Language = languageName(m.Language)
 	}
 
-	return c.Debugger.Start(a)
+	return m.Debugger.Start(a)
 }
 
 // runsUnderDebugger decides whether RUN starts the debugger on the image
@@ -145,7 +145,7 @@ func (c *Machine) Run(fn string, opts RunOptions) error {
 // image (docs/PHASE-42.md, subtask 1's probe). Otherwise /DEBUG starts it,
 // /NODEBUG doesn't, and with neither it starts for an image linked
 // /DEBUG.
-func (c *Machine) runsUnderDebugger(main *ICB, choice RunDebug) bool {
+func (m *Machine) runsUnderDebugger(main *ICB, choice RunDebug) bool {
 	if main.Debug == nil {
 		return false
 	}
@@ -156,7 +156,7 @@ func (c *Machine) runsUnderDebugger(main *ICB, choice RunDebug) bool {
 	case DebugOff:
 		return false
 	default:
-		return main.LinkDebug && c.Debugger != nil
+		return main.LinkDebug && m.Debugger != nil
 	}
 }
 
@@ -181,7 +181,7 @@ func languageName(code uint32) string {
 // image's ICB. Needs ensureShims to have run. The image goes into p's
 // process, through its address space, whichever process is current.
 func (p *imageProcess) activateImage(fn string) (*ICB, error) {
-	c := p.c
+	c := p.m
 
 	main, err := p.imageLoad(fn, icbMain)
 	if err != nil {
@@ -209,20 +209,20 @@ func (p *imageProcess) activateImage(fn string) (*ICB, error) {
 // commands that show images (SHOW IMAGES, the symbol lookups) all work
 // on process 1, the console's own; these name its imageProcess's methods.
 
-func (c *Machine) activateImage(fn string) (*ICB, error) { return c.images().activateImage(fn) }
+func (m *Machine) activateImage(fn string) (*ICB, error) { return m.images().activateImage(fn) }
 
-func (c *Machine) imageLoad(fn string, flag uint32) (*ICB, error) {
-	return c.images().imageLoad(fn, flag)
+func (m *Machine) imageLoad(fn string, flag uint32) (*ICB, error) {
+	return m.images().imageLoad(fn, flag)
 }
 
-func (c *Machine) imageFixup(icb *ICB) error { return c.images().imageFixup(icb) }
+func (m *Machine) imageFixup(icb *ICB) error { return m.images().imageFixup(icb) }
 
-func (c *Machine) resetICBList() { c.images().resetICBList() }
+func (m *Machine) resetICBList() { m.images().resetICBList() }
 
-func (c *Machine) findMainICB() *ICB { return c.images().findMainICB() }
+func (m *Machine) findMainICB() *ICB { return m.images().findMainICB() }
 
-func (c *Machine) buildImageInitDriver(main *ICB, runInits bool) (uint32, bool, error) {
-	return c.images().buildImageInitDriver(main, runInits)
+func (m *Machine) buildImageInitDriver(main *ICB, runInits bool) (uint32, bool, error) {
+	return m.images().buildImageInitDriver(main, runInits)
 }
 
 // DefaultRunInits reports RUN's own default for whether to invoke each
@@ -230,8 +230,8 @@ func (c *Machine) buildImageInitDriver(main *ICB, runInits bool) (uint32, bool, 
 // overrides it, DebugLibinit defaults on (vax.DebugDefault), so
 // LIB$INITIALIZE runs by default, not only when /INIT is given explicitly.
 // See commands.go's runOptions, which applies the qualifiers.
-func (c *Machine) DefaultRunInits() bool {
-	return c.CPU != nil && c.CPU.DebugEnabled(vax.DebugLibinit)
+func (m *Machine) DefaultRunInits() bool {
+	return m.CPU != nil && m.CPU.DebugEnabled(vax.DebugLibinit)
 }
 
 // mainTransferAddress selects icb's own user-mode entry point, matching
@@ -270,7 +270,7 @@ func (p *imageProcess) buildImageInitDriver(main *ICB, runInits bool) (uint32, b
 // hibernate is set: for a process $CREPRC created with PRC$M_HIBER, which
 // waits to be woken before its image runs (activateCreatedImage).
 func (p *imageProcess) buildDriver(main *ICB, runInits, hibernate bool) (uint32, bool, error) {
-	c := p.c
+	c := p.m
 
 	addr, ok := mainTransferAddress(main)
 	if !ok {
@@ -349,7 +349,7 @@ func (p *imageProcess) buildDriver(main *ICB, runInits, hibernate bool) (uint32,
 // (and so run) it.
 func (p *imageProcess) driverAddress() (uint32, error) {
 	if p.env == nil {
-		base, found := p.c.Symbols.Get("CONSOLE$SCRATCH")
+		base, found := p.m.Symbols.Get("CONSOLE$SCRATCH")
 		if !found {
 			return 0, vmserrors.New(vmserrors.CLI_NOSCRATCH)
 		}
@@ -415,17 +415,17 @@ func encodeCalls(argc, target uint32) []byte {
 // directory (readImage), which is the new process's own when, as always
 // so far, process 1 created it. The name is never taken as a host file
 // by /HOST: a $CREPRC image name is a file specification.
-func (c *Machine) activateCreatedImage(env *corevms.Environment, image string, hibernate bool) (uint32, error) {
-	if err := c.ensureShims(); err != nil {
+func (m *Machine) activateCreatedImage(env *corevms.Environment, image string, hibernate bool) (uint32, error) {
+	if err := m.ensureShims(); err != nil {
 		return 0, err
 	}
 
-	savedHost := c.runHost
-	c.runHost = false
+	savedHost := m.runHost
+	m.runHost = false
 
-	defer func() { c.runHost = savedHost }()
+	defer func() { m.runHost = savedHost }()
 
-	p := c.imagesOf(env)
+	p := m.imagesOf(env)
 	p.resetICBList()
 
 	main, err := p.activateImage(image)
@@ -433,7 +433,7 @@ func (c *Machine) activateCreatedImage(env *corevms.Environment, image string, h
 		return 0, err
 	}
 
-	driver, ok, err := p.buildDriver(main, c.DefaultRunInits(), hibernate)
+	driver, ok, err := p.buildDriver(main, m.DefaultRunInits(), hibernate)
 	if err != nil {
 		return 0, err
 	}
@@ -451,14 +451,14 @@ func (c *Machine) activateCreatedImage(env *corevms.Environment, image string, h
 // says it has been (STS$M_INHIB_MSG, as an unhandled condition's has).
 // When the run stopped some other way (a HALT, a limit, CTRL/C), nothing
 // is reported.
-func (c *Machine) imageCompletion() error {
-	if !c.imageEnded {
+func (m *Machine) imageCompletion() error {
+	if !m.imageEnded {
 		return nil
 	}
 
-	c.imageEnded = false
+	m.imageEnded = false
 
-	return c.Hooks.CommandStatus(c.imageStatus)
+	return m.Hooks.CommandStatus(m.imageStatus)
 }
 
 // imageRundown does what VMS does at process 1's image exit. For logical names
@@ -467,13 +467,13 @@ func (c *Machine) imageCompletion() error {
 // just ended. The RTL's own per-image state (the files the image left
 // open, user-mode device allocations, docs/PHASE-26.md) is cleaned up by
 // Environment.ImageRundown.
-func (c *Machine) imageRundown() {
-	if n, err := c.processOneLogicals.Delete(lnm.ProcessTableName, "", lnm.User); err == nil && n > 0 {
-		c.traceLogicals("image rundown deleted %d user-mode name(s)", n)
+func (m *Machine) imageRundown() {
+	if n, err := m.processOneLogicals.Delete(lnm.ProcessTableName, "", lnm.User); err == nil && n > 0 {
+		m.traceLogicals("image rundown deleted %d user-mode name(s)", n)
 	}
 
-	if c.processOne != nil {
-		c.processOne.ImageRundown()
+	if m.processOne != nil {
+		m.processOne.ImageRundown()
 	}
 }
 
@@ -482,17 +482,17 @@ func (c *Machine) imageRundown() {
 // stopped, and that nothing resumed. On VMS such an image is run down
 // when the next one starts (or the process logs out), closing the files
 // it left open; RUN and EndSession do the same here.
-func (c *Machine) endAbandonedImage() {
-	if c.imageActive {
-		c.imageActive = false
-		c.imageRundown()
+func (m *Machine) endAbandonedImage() {
+	if m.imageActive {
+		m.imageActive = false
+		m.imageRundown()
 	}
 }
 
 // traceLogicals is the logical-name database's Trace hook: it writes
 // each line to the CPU's debug writer while SET DEBUG LOGICALS is on.
-func (c *Machine) traceLogicals(format string, args ...any) {
-	if c.CPU != nil && c.CPU.DebugEnabled(vax.DebugLogicals) {
-		fmt.Fprintf(c.CPU.DebugWriter(), "DEBUG: LNM: "+format+"\n", args...)
+func (m *Machine) traceLogicals(format string, args ...any) {
+	if m.CPU != nil && m.CPU.DebugEnabled(vax.DebugLogicals) {
+		fmt.Fprintf(m.CPU.DebugWriter(), "DEBUG: LNM: "+format+"\n", args...)
 	}
 }

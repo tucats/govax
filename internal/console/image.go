@@ -156,10 +156,10 @@ func (p *imageProcess) findMainICB() *ICB {
 // program's own PSL. It goes through the current process's mapping; image
 // activation, which may be for another process, uses imageProcess's own
 // accessors (images.go) instead.
-func (c *Machine) storeBytes(addr uint32, data []byte) error {
-	return c.withKernelMode(func() error {
+func (m *Machine) storeBytes(addr uint32, data []byte) error {
+	return m.withKernelMode(func() error {
 		for i, b := range data {
-			if err := c.Mem.StoreByte(c.CPU, addr+uint32(i), b); err != nil {
+			if err := m.Mem.StoreByte(m.CPU, addr+uint32(i), b); err != nil {
 				return err
 			}
 		}
@@ -168,11 +168,11 @@ func (c *Machine) storeBytes(addr uint32, data []byte) error {
 	})
 }
 
-func (c *Machine) loadByte(addr uint32) (byte, error) {
+func (m *Machine) loadByte(addr uint32) (byte, error) {
 	var v byte
 
-	err := c.withKernelMode(func() (err error) {
-		v, err = c.Mem.LoadByte(c.CPU, addr)
+	err := m.withKernelMode(func() (err error) {
+		v, err = m.Mem.LoadByte(m.CPU, addr)
 
 		return err
 	})
@@ -180,11 +180,11 @@ func (c *Machine) loadByte(addr uint32) (byte, error) {
 	return v, err
 }
 
-func (c *Machine) loadLong(addr uint32) (uint32, error) {
+func (m *Machine) loadLong(addr uint32) (uint32, error) {
 	var v uint32
 
-	err := c.withKernelMode(func() (err error) {
-		v, err = c.Mem.LoadLongword(c.CPU, addr)
+	err := m.withKernelMode(func() (err error) {
+		v, err = m.Mem.LoadLongword(m.CPU, addr)
 
 		return err
 	})
@@ -192,9 +192,9 @@ func (c *Machine) loadLong(addr uint32) (uint32, error) {
 	return v, err
 }
 
-func (c *Machine) storeLong(addr, v uint32) error {
-	return c.withKernelMode(func() error {
-		return c.Mem.StoreLongword(c.CPU, addr, v)
+func (m *Machine) storeLong(addr, v uint32) error {
+	return m.withKernelMode(func() error {
+		return m.Mem.StoreLongword(m.CPU, addr, v)
 	})
 }
 
@@ -331,7 +331,7 @@ func (p *imageProcess) imageLoad(fn string, flag uint32) (*ICB, error) {
 		}
 	}
 
-	data, err := p.c.readImage(fn, flag == icbMain)
+	data, err := p.m.readImage(fn, flag == icbMain)
 	if err != nil {
 		return nil, err
 	}
@@ -607,7 +607,7 @@ func (p *imageProcess) resolveFixupTarget(shr *SHR, offset uint32) (uint32, erro
 
 	name := fmt.Sprintf("SHIM$%s_%08X", shr.Name, offset)
 
-	v, ok := p.c.Symbols.Get(name)
+	v, ok := p.m.Symbols.Get(name)
 	if !ok {
 		return 0, vmserrors.New(vmserrors.LIB_UNRESOLVED, name)
 	}
@@ -758,9 +758,9 @@ func (p *imageProcess) imageFixup(icb *ICB) error {
 // findImage finds it. A shareable image the main image needs is always
 // looked for on the host (findImage), and govax's shims stand in for one
 // that isn't there.
-func (c *Machine) readImage(fn string, main bool) ([]byte, error) {
-	if s := c.Hooks.Session(); main && s != nil {
-		loc, err := s.Locate(fn, c.runHost)
+func (m *Machine) readImage(fn string, main bool) ([]byte, error) {
+	if s := m.Hooks.Session(); main && s != nil {
+		loc, err := s.Locate(fn, m.runHost)
 		if err != nil {
 			return nil, err
 		}
@@ -777,12 +777,12 @@ func (c *Machine) readImage(fn string, main bool) ([]byte, error) {
 		}
 	}
 
-	path, ok := c.findImage(fn)
+	path, ok := m.findImage(fn)
 	if !ok {
 		return nil, vmserrors.New(vmserrors.RMS_IMAGENOTFOUND, fn)
 	}
 
-	return c.Paths.ReadFile(path)
+	return m.Paths.ReadFile(path)
 }
 
 // imageProtection is the page protection VMS's image activator gives a
@@ -806,7 +806,7 @@ func imageProtection(isd *ISD) vm.Protection {
 // The C source never sets image page protections, so every page stayed
 // at P0's default (UW); see docs/DEVIATIONS.md.
 func (p *imageProcess) setImageProtection(icb *ICB, protect bool) {
-	if p.c.CPU == nil || p.c.Mem == nil || p.c.CPU.PR(vax.MAPEN) == 0 {
+	if p.m.CPU == nil || p.m.Mem == nil || p.m.CPU.PR(vax.MAPEN) == 0 {
 		return
 	}
 
@@ -825,13 +825,13 @@ func (p *imageProcess) setImageProtection(icb *ICB, protect bool) {
 		for n := uint32(0); n < uint32(isd.Pages); n++ {
 			addr := icb.Base + ((n + uint32(isd.VPN)) << 9)
 
-			pte, err := p.c.Mem.LookupPTEIn(p.c.CPU, space, addr)
+			pte, err := p.m.Mem.LookupPTEIn(p.m.CPU, space, addr)
 			if err != nil || !pte.Valid() || pte.Protection() == prot {
 				continue
 			}
 
 			pte.SetProtection(prot)
-			_ = p.c.Mem.StorePTEIn(p.c.CPU, space, addr, pte)
+			_ = p.m.Mem.StorePTEIn(p.m.CPU, space, addr, pte)
 		}
 	}
 }
@@ -860,15 +860,15 @@ func imageLow(icb *ICB) uint32 {
 // with SharePrefix prepended, then lowercased -- stopping at the first
 // candidate that exists. A literal ESC (0x1B) SharePrefix disables the
 // prefixed attempt entirely, matching the C source's own check.
-func (c *Machine) findImage(fn string) (string, bool) {
+func (m *Machine) findImage(fn string) (string, bool) {
 	suffix := ""
 	if !strings.HasSuffix(strings.ToLower(fn), ".exe") {
 		suffix = ".exe"
 	}
 
 	candidates := []string{fn + suffix}
-	if c.SharePrefix != "" && c.SharePrefix[0] != 0x1B {
-		candidates = append(candidates, c.SharePrefix+fn+suffix)
+	if m.SharePrefix != "" && m.SharePrefix[0] != 0x1B {
+		candidates = append(candidates, m.SharePrefix+fn+suffix)
 	}
 
 	for _, cand := range candidates {

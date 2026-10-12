@@ -55,24 +55,24 @@ const shimPageBytes = 512
 // resolves already being a defined symbol. Idempotent: a second call is a
 // no-op, so fixups performed across multiple RUNs keep resolving to the
 // same addresses.
-func (c *Machine) ensureShims() error {
-	if c.shimsReady {
+func (m *Machine) ensureShims() error {
+	if m.shimsReady {
 		return nil
 	}
 
-	addr, end := c.shimBase, c.shimBase+shimPageBytes
+	addr, end := m.shimBase, m.shimBase+shimPageBytes
 	overflowed := false
 
 	for _, e := range shimTable {
 		shimName := fmt.Sprintf("SHIM$%s_%08X", e.Library, e.Offset)
 
 		if e.Code == 0 {
-			target, ok := c.Symbols.Get(e.Name)
+			target, ok := m.Symbols.Get(e.Name)
 			if !ok {
 				return vmserrors.New(vmserrors.LIB_UNRESOLVED, e.Name)
 			}
 
-			c.Symbols.Set(shimName, target, SymbolSystem)
+			m.Symbols.Set(shimName, target, SymbolSystem)
 
 			continue
 		}
@@ -83,7 +83,7 @@ func (c *Machine) ensureShims() error {
 				return fmt.Errorf("console: too many shim stubs for VMINIT's page and one overflow page (internal/console/shim.go)")
 			}
 
-			page, err := c.shimOverflow()
+			page, err := m.shimOverflow()
 			if err != nil {
 				return err
 			}
@@ -91,17 +91,17 @@ func (c *Machine) ensureShims() error {
 			addr, end, overflowed = page, page+512, true
 		}
 
-		if err := c.storeBytes(addr, corevms.ShimStub(e.Code)); err != nil {
+		if err := m.storeBytes(addr, corevms.ShimStub(e.Code)); err != nil {
 			return err
 		}
 
-		c.Symbols.Set(shimName, addr, SymbolSystem)
-		c.Symbols.SetEntry(e.Name, addr, SymbolSystem)
+		m.Symbols.Set(shimName, addr, SymbolSystem)
+		m.Symbols.SetEntry(e.Name, addr, SymbolSystem)
 
 		addr += corevms.ShimStubSize
 	}
 
-	c.shimsReady = true
+	m.shimsReady = true
 
 	return nil
 }
@@ -111,10 +111,10 @@ func (c *Machine) ensureShims() error {
 // for the life of the machine. S0, so every process's image reaches its
 // stubs at the same addresses, as it does the first page's; kernel mode
 // alone may write it, and every mode may read (and so run) it.
-func (c *Machine) shimOverflow() (uint32, error) {
-	if c.processOne == nil {
+func (m *Machine) shimOverflow() (uint32, error) {
+	if m.processOne == nil {
 		return 0, fmt.Errorf("console: no room for the shim stubs (VMINIT has not been run)")
 	}
 
-	return c.processOne.AllocateS0(1, 0, "shim stubs")
+	return m.processOne.AllocateS0(1, 0, "shim stubs")
 }

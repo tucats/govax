@@ -18,7 +18,7 @@ import (
 // VMINIT, as it always has. Every other process gets one when an image is
 // first activated in it (Console.imagesOf).
 type imageProcess struct {
-	c *Machine
+	m *Machine
 
 	// env is the process; nil for process 1, which is whatever
 	// Environment the console's RTL is (VMINIT builds a new one).
@@ -47,29 +47,29 @@ type imageProcess struct {
 }
 
 // images returns process 1's image state.
-func (c *Machine) images() *imageProcess {
-	if c.proc1Images == nil {
-		c.proc1Images = &imageProcess{c: c, symbols: map[string]uint32{}}
+func (m *Machine) images() *imageProcess {
+	if m.proc1Images == nil {
+		m.proc1Images = &imageProcess{m: m, symbols: map[string]uint32{}}
 	}
 
-	return c.proc1Images
+	return m.proc1Images
 }
 
 // imagesOf returns env's image state: process 1's for the console's own
 // process, otherwise env's own, made empty the first time.
-func (c *Machine) imagesOf(env *corevms.Environment) *imageProcess {
-	if env == nil || env == c.processOne {
-		return c.images()
+func (m *Machine) imagesOf(env *corevms.Environment) *imageProcess {
+	if env == nil || env == m.processOne {
+		return m.images()
 	}
 
-	if c.otherImages == nil {
-		c.otherImages = map[*corevms.Environment]*imageProcess{}
+	if m.otherImages == nil {
+		m.otherImages = map[*corevms.Environment]*imageProcess{}
 	}
 
-	p := c.otherImages[env]
+	p := m.otherImages[env]
 	if p == nil {
-		p = &imageProcess{c: c, env: env, symbols: map[string]uint32{}}
-		c.otherImages[env] = p
+		p = &imageProcess{m: m, env: env, symbols: map[string]uint32{}}
+		m.otherImages[env] = p
 	}
 
 	return p
@@ -78,7 +78,7 @@ func (c *Machine) imagesOf(env *corevms.Environment) *imageProcess {
 // process returns the Environment p belongs to.
 func (p *imageProcess) process() *corevms.Environment {
 	if p.env == nil {
-		return p.c.processOne
+		return p.m.processOne
 	}
 
 	return p.env
@@ -92,7 +92,7 @@ func (p *imageProcess) space() vm.AddressSpace {
 		return env.Space.AddressSpace
 	}
 
-	return vm.CurrentAddressSpace(p.c.CPU)
+	return vm.CurrentAddressSpace(p.m.CPU)
 }
 
 // setSymbol records an activation symbol (see symbols).
@@ -100,7 +100,7 @@ func (p *imageProcess) setSymbol(name string, v uint32) {
 	p.symbols[name] = v
 
 	if p.env == nil {
-		p.c.Symbols.Set(name, v, SymbolSystem)
+		p.m.Symbols.Set(name, v, SymbolSystem)
 	}
 }
 
@@ -109,13 +109,13 @@ func (p *imageProcess) setSymbol(name string, v uint32) {
 // the program running).
 
 func (p *imageProcess) storeBytes(addr uint32, data []byte) error {
-	return p.c.Mem.StoreIn(p.c.CPU, p.space(), addr, data)
+	return p.m.Mem.StoreIn(p.m.CPU, p.space(), addr, data)
 }
 
 func (p *imageProcess) loadBytes(addr uint32, n int) ([]byte, error) {
 	buf := make([]byte, n)
 
-	return buf, p.c.Mem.LoadIn(p.c.CPU, p.space(), addr, buf)
+	return buf, p.m.Mem.LoadIn(p.m.CPU, p.space(), addr, buf)
 }
 
 func (p *imageProcess) loadByte(addr uint32) (byte, error) {
@@ -137,9 +137,9 @@ func (p *imageProcess) loadWord(addr uint32) (uint16, error) {
 }
 
 func (p *imageProcess) loadLong(addr uint32) (uint32, error) {
-	return p.c.Mem.LoadLongwordIn(p.c.CPU, p.space(), addr)
+	return p.m.Mem.LoadLongwordIn(p.m.CPU, p.space(), addr)
 }
 
 func (p *imageProcess) storeLong(addr, v uint32) error {
-	return p.c.Mem.StoreLongwordIn(p.c.CPU, p.space(), addr, v)
+	return p.m.Mem.StoreLongwordIn(p.m.CPU, p.space(), addr, v)
 }

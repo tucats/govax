@@ -51,13 +51,13 @@ const (
 // a constant (a short literal, an immediate), a branch destination, or an
 // instruction's inline data refers to neither, and has no line
 // (unconfirmed: no probe line has one; govax's choice).
-func (c *Machine) printOperands(dec disasm.Decoded, format disasm.Options, names consoleSymbolizer) {
+func (m *Machine) printOperands(dec disasm.Decoded, format disasm.Options, names consoleSymbolizer) {
 	if dec.IsMask {
 		return
 	}
 
 	for _, op := range dec.Symbolized(format).Operands {
-		desc, ok := c.describeOperand(op, names)
+		desc, ok := m.describeOperand(op, names)
 		if !ok {
 			continue
 		}
@@ -65,13 +65,13 @@ func (c *Machine) printOperands(dec disasm.Decoded, format disasm.Options, names
 		text := op.DebuggerText()
 
 		if len(text) <= operandTextWidth {
-			c.Printf("%*s%-*s %s\n", operandIndent, "", operandTextWidth, text, desc)
+			m.Printf("%*s%-*s %s\n", operandIndent, "", operandTextWidth, text, desc)
 
 			continue
 		}
 
-		c.Printf("%*s%s\n", operandIndent, "", text)
-		c.Printf("%*s%s\n", operandIndent+operandTextWidth+1, "", desc)
+		m.Printf("%*s%s\n", operandIndent, "", text)
+		m.Printf("%*s%s\n", operandIndent+operandTextWidth+1, "", desc)
 	}
 }
 
@@ -79,20 +79,20 @@ func (c *Machine) printOperands(dec disasm.Decoded, format disasm.Options, names
 // "R0 contains 00000003", or "DBGDIS\COUNT (address 00000200) contains
 // 00000000" (just the address when nothing names it). ok is false for an
 // operand that refers to neither a register nor a memory location.
-func (c *Machine) describeOperand(op disasm.Operand, names consoleSymbolizer) (string, bool) {
+func (m *Machine) describeOperand(op disasm.Operand, names consoleSymbolizer) (string, bool) {
 	if op.Mode == disasm.ModeRegister && !op.Indexed() {
 		name := cpu.RegisterName(op.Register)
-		value := uint64(c.CPU.GPR(vax.Reg(op.Register)))
+		value := uint64(m.CPU.GPR(vax.Reg(op.Register)))
 
 		// A quadword (or D or G floating) operand is a pair of registers.
 		if op.Size == 8 && op.Register < int(vax.R15) {
-			value |= uint64(c.CPU.GPR(vax.Reg(op.Register+1))) << 32
+			value |= uint64(m.CPU.GPR(vax.Reg(op.Register+1))) << 32
 		}
 
 		return fmt.Sprintf("%s contains %s", name, hexValue(value, op.Size)), true
 	}
 
-	addr, ok := c.operandAddress(op)
+	addr, ok := m.operandAddress(op)
 	if !ok {
 		return "", false
 	}
@@ -102,14 +102,14 @@ func (c *Machine) describeOperand(op disasm.Operand, names consoleSymbolizer) (s
 		where = fmt.Sprintf("%s (address %08X)", name, addr)
 	}
 
-	return where + " contains " + c.memoryValue(addr, op.Size), true
+	return where + " contains " + m.memoryValue(addr, op.Size), true
 }
 
 // operandAddress computes the memory address an operand refers to from the
 // registers as they stand, without changing them (an autoincrement operand
 // refers to where the register points *now*; the instruction will advance
 // it afterward). ok is false for the modes that have no address.
-func (c *Machine) operandAddress(op disasm.Operand) (uint32, bool) {
+func (m *Machine) operandAddress(op disasm.Operand) (uint32, bool) {
 	var (
 		addr uint32
 		ok   = true
@@ -117,7 +117,7 @@ func (c *Machine) operandAddress(op disasm.Operand) (uint32, bool) {
 	)
 
 	if op.Register >= 0 {
-		reg = c.CPU.GPR(vax.Reg(op.Register))
+		reg = m.CPU.GPR(vax.Reg(op.Register))
 	}
 
 	switch op.Mode {
@@ -129,12 +129,12 @@ func (c *Machine) operandAddress(op disasm.Operand) (uint32, bool) {
 		addr = reg - uint32(op.Size)
 
 	case disasm.ModeAutoincrementDeferred:
-		addr, ok = c.loadAddress(reg)
+		addr, ok = m.loadAddress(reg)
 
 	case disasm.ModeDisplacement:
 		addr = reg + uint32(op.Displacement)
 		if op.Deferred {
-			addr, ok = c.loadAddress(addr)
+			addr, ok = m.loadAddress(addr)
 		}
 
 	case disasm.ModeAbsolute:
@@ -143,7 +143,7 @@ func (c *Machine) operandAddress(op disasm.Operand) (uint32, bool) {
 	case disasm.ModeRelative:
 		addr = op.Target
 		if op.Deferred {
-			addr, ok = c.loadAddress(addr)
+			addr, ok = m.loadAddress(addr)
 		}
 
 	default:
@@ -158,15 +158,15 @@ func (c *Machine) operandAddress(op disasm.Operand) (uint32, bool) {
 
 	// An index register scales by the operand's size and is added last.
 	if op.Indexed() {
-		addr += c.CPU.GPR(vax.Reg(op.Index)) * uint32(max(op.Size, 1))
+		addr += m.CPU.GPR(vax.Reg(op.Index)) * uint32(max(op.Size, 1))
 	}
 
 	return addr, true
 }
 
 // loadAddress reads the longword at addr, for a deferred operand's pointer.
-func (c *Machine) loadAddress(addr uint32) (uint32, bool) {
-	v, err := c.loadSized(addr, SizeLongword)
+func (m *Machine) loadAddress(addr uint32) (uint32, bool) {
+	v, err := m.loadSized(addr, SizeLongword)
 
 	return v, err == nil
 }
@@ -174,11 +174,11 @@ func (c *Machine) loadAddress(addr uint32) (uint32, bool) {
 // memoryValue reads size bytes at addr, as the hexadecimal digits the
 // debugger shows. A location that can't be read (unmapped, or protected)
 // shows as "<inaccessible>" (govax's wording; unconfirmed).
-func (c *Machine) memoryValue(addr uint32, size int) string {
+func (m *Machine) memoryValue(addr uint32, size int) string {
 	var value uint64
 
 	for i := 0; i < size && i < 8; i++ {
-		b, err := c.loadSized(addr+uint32(i), SizeByte)
+		b, err := m.loadSized(addr+uint32(i), SizeByte)
 		if err != nil {
 			return "<inaccessible>"
 		}

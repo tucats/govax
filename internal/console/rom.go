@@ -23,8 +23,8 @@ var romMagic = [8]byte{';', 'R', 'O', 'M', 'I', 'M', 'G', '\r'}
 // 512 bytes of page data) entries for every non-all-zero 512-byte page,
 // terminated by a zero-count entry — matching reference/AUDIT.md's V1
 // finding that pins these fields to a literal 4 bytes each.
-func (c *Machine) SaveROM(path string) error {
-	if len(c.Engine.Memory().ROM) == 0 {
+func (m *Machine) SaveROM(path string) error {
+	if len(m.Engine.Memory().ROM) == 0 {
 		return vmserrors.New(vmserrors.RMS_NOIMAGE, "ROM")
 	}
 
@@ -38,16 +38,16 @@ func (c *Machine) SaveROM(path string) error {
 		return err
 	}
 
-	if err := writeBE32(f, c.Engine.Memory().ROMBase); err != nil {
+	if err := writeBE32(f, m.Engine.Memory().ROMBase); err != nil {
 		return err
 	}
 
-	if err := writeBE32(f, c.Engine.Memory().ROMEnd); err != nil {
+	if err := writeBE32(f, m.Engine.Memory().ROMEnd); err != nil {
 		return err
 	}
 
-	for base := uint32(0); base+512 <= uint32(len(c.Engine.Memory().ROM)); base += 512 {
-		page := c.Engine.Memory().ROM[base : base+512]
+	for base := uint32(0); base+512 <= uint32(len(m.Engine.Memory().ROM)); base += 512 {
+		page := m.Engine.Memory().ROM[base : base+512]
 		if allZero(page) {
 			continue
 		}
@@ -77,12 +77,12 @@ func (c *Machine) SaveROM(path string) error {
 //
 // With noError (LOAD/ROM/NOERROR), a file that can't be opened isn't
 // an error: nothing is loaded. Then path may be "", meaning default.rom.
-func (c *Machine) LoadROM(path string, noError bool) error {
+func (m *Machine) LoadROM(path string, noError bool) error {
 	if path == "" && noError {
 		path = "default.rom"
 	}
 
-	f, err := c.Paths.Open(path)
+	f, err := m.Paths.Open(path)
 	if err != nil {
 		if noError {
 			return nil
@@ -140,10 +140,10 @@ func (c *Machine) LoadROM(path string, noError bool) error {
 		}
 	}
 
-	c.Engine.Memory().ROM = rom
-	c.Engine.Memory().ROMBase = base
-	c.Engine.Memory().ROMEnd = end
-	c.Engine.Memory().ROMFile = path
+	m.Engine.Memory().ROM = rom
+	m.Engine.Memory().ROMBase = base
+	m.Engine.Memory().ROMEnd = end
+	m.Engine.Memory().ROMFile = path
 
 	return nil
 }
@@ -151,8 +151,8 @@ func (c *Machine) LoadROM(path string, noError bool) error {
 // SaveNVRAM writes the console's NVRAM image to path, matching
 // NVRAM format: big-endian base address and size (no magic
 // header, and no per-page structure — the whole buffer is written at once).
-func (c *Machine) SaveNVRAM(path string) error {
-	if len(c.Engine.Memory().NVRAM) == 0 {
+func (m *Machine) SaveNVRAM(path string) error {
+	if len(m.Engine.Memory().NVRAM) == 0 {
 		return vmserrors.New(vmserrors.RMS_NOIMAGE, "NVRAM")
 	}
 
@@ -162,15 +162,15 @@ func (c *Machine) SaveNVRAM(path string) error {
 	}
 	defer f.Close()
 
-	if err := writeBE32(f, c.Engine.Memory().NVRAMBase); err != nil {
+	if err := writeBE32(f, m.Engine.Memory().NVRAMBase); err != nil {
 		return err
 	}
 
-	if err := writeBE32(f, uint32(len(c.Engine.Memory().NVRAM))); err != nil {
+	if err := writeBE32(f, uint32(len(m.Engine.Memory().NVRAM))); err != nil {
 		return err
 	}
 
-	_, err = f.Write(c.Engine.Memory().NVRAM)
+	_, err = f.Write(m.Engine.Memory().NVRAM)
 
 	return err
 }
@@ -180,12 +180,12 @@ func (c *Machine) SaveNVRAM(path string) error {
 //
 // With noError (LOAD/NVRAM/NOERROR), a file that can't be opened isn't
 // an error: nothing is loaded. Then path may be "", meaning default.nvram.
-func (c *Machine) LoadNVRAM(path string, noError bool) error {
+func (m *Machine) LoadNVRAM(path string, noError bool) error {
 	if path == "" && noError {
 		path = "default.nvram"
 	}
 
-	f, err := c.Paths.Open(path)
+	f, err := m.Paths.Open(path)
 	if err != nil {
 		if noError {
 			return nil
@@ -211,10 +211,10 @@ func (c *Machine) LoadNVRAM(path string, noError bool) error {
 		return vmserrors.Wrap(vmserrors.RMS_READFIELD, err, "NVRAM", "data")
 	}
 
-	c.Engine.Memory().NVRAM = nvram
-	c.Engine.Memory().NVRAMBase = base
-	c.Engine.Memory().NVRAMEnd = base + size - 1
-	c.Engine.Memory().NVRAMFile = path
+	m.Engine.Memory().NVRAM = nvram
+	m.Engine.Memory().NVRAMBase = base
+	m.Engine.Memory().NVRAMEnd = base + size - 1
+	m.Engine.Memory().NVRAMFile = path
 
 	return nil
 }

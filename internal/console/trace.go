@@ -12,34 +12,34 @@ var traceRegNames = [numTraceRegs]string{
 }
 
 // snapshotTraceRegs captures R0-R11/AP/FP and the PSL.
-func (c *Machine) snapshotTraceRegs() (regs [numTraceRegs]uint32, psl vax.PSL) {
+func (m *Machine) snapshotTraceRegs() (regs [numTraceRegs]uint32, psl vax.PSL) {
 	for i := range regs {
-		regs[i] = c.CPU.GPR(vax.Reg(i))
+		regs[i] = m.CPU.GPR(vax.Reg(i))
 	}
 
-	return regs, c.CPU.PSL()
+	return regs, m.CPU.PSL()
 }
 
 // printRegisterChanges diffs before/beforePSL against the CPU's current
 // state and prints every register that changed: R0-R11 get their value printed in both hex
 // and decimal, AP/FP in hex only, and the PSL is reported last if it
 // changed.
-func (c *Machine) printRegisterChanges(before [numTraceRegs]uint32, beforePSL vax.PSL) {
+func (m *Machine) printRegisterChanges(before [numTraceRegs]uint32, beforePSL vax.PSL) {
 	for i, name := range traceRegNames {
-		after := c.CPU.GPR(vax.Reg(i))
+		after := m.CPU.GPR(vax.Reg(i))
 		if after == before[i] {
 			continue
 		}
 
 		if i < 12 {
-			c.Printf("                    %3s:  %08X  %d\n", name, after, after)
+			m.Printf("                    %3s:  %08X  %d\n", name, after, after)
 		} else {
-			c.Printf("                    %3s:  %08X\n", name, after)
+			m.Printf("                    %3s:  %08X\n", name, after)
 		}
 	}
 
-	if after := c.CPU.PSL(); uint32(after) != uint32(beforePSL) {
-		c.Printf("                    PSL:  %08X\n", uint32(after))
+	if after := m.CPU.PSL(); uint32(after) != uint32(beforePSL) {
+		m.Printf("                    PSL:  %08X\n", uint32(after))
 	}
 }
 
@@ -53,8 +53,8 @@ var operandAccessNames = [...]string{
 // Engine.Step decodes and executes in one call with no gap to hook between
 // the two -- so a written operand shows its new value rather than its
 // pre-execution one; see docs/PHASE-17.md sub-phase 8's own note on this.
-func (c *Machine) printOperandDump() {
-	dec := c.Engine.LastDecoded()
+func (m *Machine) printOperandDump() {
+	dec := m.Engine.LastDecoded()
 
 	for i := 0; i < dec.Instruction.OperandCount; i++ {
 		op := dec.Operands[i]
@@ -67,20 +67,19 @@ func (c *Machine) printOperandDump() {
 		switch op.Kind {
 		case cpu.OperandRegister:
 			if op.Reg > 15 {
-				c.Printf("            #%d %-9s  T%d = %08X\n", i, accessName, op.Reg-15, c.CPU.GPR(op.Reg))
+				m.Printf("            #%d %-9s  T%d = %08X\n", i, accessName, op.Reg-15, m.CPU.GPR(op.Reg))
 			} else {
-				c.Printf("            #%d %-9s  R%d = %08X\n", i, accessName, op.Reg, c.CPU.GPR(op.Reg))
+				m.Printf("            #%d %-9s  R%d = %08X\n", i, accessName, op.Reg, m.CPU.GPR(op.Reg))
 			}
 
 		case cpu.OperandImmediate:
-			c.Printf("            #%d %-9s  %08X\n", i, accessName, uint32(op.Value))
+			m.Printf("            #%d %-9s  %08X\n", i, accessName, uint32(op.Value))
 
 		default: // cpu.OperandMemory
-			c.Printf("            #%d %-9s  %08X\n", i, accessName, op.Addr)
+			m.Printf("            #%d %-9s  %08X\n", i, accessName, op.Addr)
 		}
 	}
 }
-
 
 var traceStackNames = [4]string{"KSP", "ESP", "SSP", "USP"}
 
@@ -105,30 +104,30 @@ func traceStackName(psl vax.PSL) string {
 // to print DebugRegisters' changed-register dump and DebugFullDisasm's
 // operand dump (docs/PHASE-17.md sub-phase 8) -- both need the
 // instruction to have actually run.
-func (c *Machine) traceStep(pc uint32, force bool) (finish func()) {
-	if !force && !c.Trace {
+func (m *Machine) traceStep(pc uint32, force bool) (finish func()) {
+	if !force && !m.Trace {
 		return func() {}
 	}
 
-	modep := traceStackName(c.CPU.PSL())
-	sp := c.CPU.GPR(vax.SP)
+	modep := traceStackName(m.CPU.PSL())
+	sp := m.CPU.GPR(vax.SP)
 
 	// Inside an image with a debug symbol table, the instruction is shown
 	// as DISASSEMBLE/SYMBOLIC shows it (Phase 41); elsewhere, in the
 	// console's own layout.
-	if text, ok, err := c.symbolicTraceLine(pc); ok {
+	if text, ok, err := m.symbolicTraceLine(pc); ok {
 		if err == nil {
-			c.Printf("[%s %08X] %s\n", modep, sp, text)
+			m.Printf("[%s %08X] %s\n", modep, sp, text)
 		} else {
-			c.Printf("[%s %08X] %08X: <disassembly error: %s>\n", modep, sp, pc, err)
+			m.Printf("[%s %08X] %08X: <disassembly error: %s>\n", modep, sp, pc, err)
 		}
-	} else if dec, err := c.decodeInstruction(memByteReader{c: c}, pc); err == nil {
-		c.Printf("[%s %08X] %08X: %s\n", modep, sp, pc, dec.String())
+	} else if dec, err := m.decodeInstruction(memByteReader{m: m}, pc); err == nil {
+		m.Printf("[%s %08X] %08X: %s\n", modep, sp, pc, dec.String())
 	} else {
-		c.Printf("[%s %08X] %08X: <disassembly error: %s>\n", modep, sp, pc, err)
+		m.Printf("[%s %08X] %08X: <disassembly error: %s>\n", modep, sp, pc, err)
 	}
 
-	trackRegs := c.CPU.DebugEnabled(vax.DebugRegisters)
+	trackRegs := m.CPU.DebugEnabled(vax.DebugRegisters)
 
 	var (
 		before    [numTraceRegs]uint32
@@ -136,16 +135,16 @@ func (c *Machine) traceStep(pc uint32, force bool) (finish func()) {
 	)
 
 	if trackRegs {
-		before, beforePSL = c.snapshotTraceRegs()
+		before, beforePSL = m.snapshotTraceRegs()
 	}
 
 	return func() {
 		if trackRegs {
-			c.printRegisterChanges(before, beforePSL)
+			m.printRegisterChanges(before, beforePSL)
 		}
 
-		if c.CPU.DebugEnabled(vax.DebugFullDisasm) {
-			c.printOperandDump()
+		if m.CPU.DebugEnabled(vax.DebugFullDisasm) {
+			m.printOperandDump()
 		}
 	}
 }
