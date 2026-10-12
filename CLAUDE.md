@@ -37,6 +37,11 @@ never had.
   `internal/dclshell`, `internal/dclcmd`, `internal/dcl`, and
   `internal/help`, leaving `internal/console` the front end; its doc
   has the table of where each old `internal/console` file went.
+  Phases 53–61 (planned 2026-10-12) are the LIB$ program: `PHASE-53`'s
+  Part A sorts every LIBRTL routine into them (from the VMS 5.0 LIB$
+  manual, `~/Documents/Technical Doc/VMS/rtl-library-lib-manual.txt`,
+  an OCR with errors, beside its PDF), Part B is the groundwork they
+  share, and Part C its own group, the instruction routines.
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
 - `docs/DEVIATIONS.md` — running log of suspected ISA/behavior fidelity issues found in
