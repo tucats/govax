@@ -10,6 +10,7 @@ import (
 	"github.com/tucats/govax/internal/asm"
 	"github.com/tucats/govax/internal/lnm"
 	"github.com/tucats/govax/internal/vax"
+	"github.com/tucats/govax/internal/vm"
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
@@ -271,6 +272,13 @@ func (c *Console) ReadBytes(addr, n uint32) ([]byte, error) {
 // WriteBytes stores data into the machine's memory at virtual address
 // addr, as DEPOSIT does (through kernel-mode translation, a byte at a
 // time). It doesn't move the console's current deposit address.
+//
+// A page the program may read but not write (an image's code, linked
+// NOWRT) is written anyway, as the VMS debugger's DEPOSIT writes it: the
+// address is translated as a read, and the byte stored in the physical
+// page it maps to. (The VMS debugger changes the page's protection for the
+// write; govax leaves the protection, and the page's modify bit, as they
+// are.) A page that isn't there at all still fails.
 func (c *Console) WriteBytes(addr uint32, data []byte) error {
 	if err := c.requireInit(); err != nil {
 		return err
@@ -278,7 +286,19 @@ func (c *Console) WriteBytes(addr uint32, data []byte) error {
 
 	return c.withKernelMode(func() error {
 		for i, b := range data {
-			if err := c.Mem.StoreByte(c.CPU, addr+uint32(i), b); err != nil {
+			at := addr + uint32(i)
+
+			err := c.Mem.StoreByte(c.CPU, at, b)
+			if err == nil {
+				continue
+			}
+
+			phys, readErr := c.Mem.ProbeTranslate(c.CPU, at, vm.AccessRead)
+			if readErr != nil {
+				return err
+			}
+
+			if err := c.Mem.StorePhysical(phys, []byte{b}); err != nil {
 				return err
 			}
 		}

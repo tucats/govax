@@ -954,6 +954,10 @@ func (d *Dispatcher) deposit(r *dcl.Result) error {
 		return err
 	}
 
+	if r.Present("INSTRUCTION") {
+		t, typed = dataType{kind: typeInstruction}, true
+	}
+
 	// A register takes a longword, or the type given.
 	if reg, _, isPSL, isReg := registerOf(target); isReg && !isPSL {
 		if !typed {
@@ -1153,7 +1157,7 @@ func (d *Debugger) depositBytes(addr uint32, t dataType, value string) ([]byte, 
 		return d.depositSymbolTyped(addr, t.datum, value)
 
 	case typeInstruction:
-		return nil, vmserrors.New(vmserrors.DBG_OPTNOTALLOW, "DEPOSIT")
+		return d.depositInstruction(addr, value)
 	}
 
 	// The integer types, and the others that are integers underneath

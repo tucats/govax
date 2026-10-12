@@ -667,7 +667,7 @@ grammar debugger
     ! a register or an address. The type is a type qualifier (EXAMINE's,
     ! but for /PSL, /PSW, and /PTE), else SET TYPE/OVERRIDE's, else the
     ! type of the data the location labels, else SET TYPE's, else a
-    ! longword.
+    ! longword. /INSTRUCTION assembles a quoted instruction there.
     verb deposit/id=105
         qualifier   byte/id=106/nonegatable
         qualifier   word/id=107/nonegatable
@@ -696,10 +696,11 @@ grammar debugger
         qualifier   condition_value/id=431/nonegatable
         qualifier   type/id=432                 -
                     /type=$string/list/nonegatable
+        qualifier   instruction/id=433/nonegatable
         parameter   assignment/id=111           -
                     /type=$rest_of_line         -
                     /prompt="Location"
-        disallow    any2(byte, word, longword, quadword, octaword, float, d_float, g_float, h_float, packed, ascic, asciw, asciz, ascid, date_time, condition_value, type)
+        disallow    any2(byte, word, longword, quadword, octaword, float, d_float, g_float, h_float, packed, ascic, asciw, asciz, ascid, date_time, condition_value, type, instruction)
     verb d/alias=deposit
 
     ! EVALUATE[/radix] expression shows an expression's value: the

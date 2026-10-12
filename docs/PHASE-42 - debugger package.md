@@ -2027,3 +2027,31 @@ manual's command dictionary is the source for each subtask's syntax.
   `DBG_NOTYPE`, `DBG_INVTIME` (govax's).
 - Tests: `types_test.go` (each type both ways, registers, SET TYPE, TYPE=,
   /NOSYMBOLIC, SET TYPE INSTRUCTION); `debug.help` has the new topics.
+
+### 2026-10-11 — Subtask 19: DEPOSIT/INSTRUCTION
+
+- **`internal/debugger/depositinsn.go`**: `DEPOSIT/INSTRUCTION location =
+  'instruction'` (and DEPOSIT with SET TYPE INSTRUCTION or SET
+  TYPE/OVERRIDE INSTRUCTION) assembles the instruction with a fresh
+  `internal/asm` assembler whose origin is the location, so a branch's and
+  a PC-relative operand's displacement are right for where it goes, and
+  stores its bytes there.
+- **Operands are rewritten first** (`instructionText`): the debugger reads
+  a number in its input radix where the assembler reads decimal, and the
+  program's names (labels, path names, `%LINE n`) mean nothing to a fresh
+  assembler; so each number and name becomes `^X` and its value, as the
+  debugger evaluates it. Registers, the addressing-mode letters before `^`,
+  and floating literals (`#1.5`) are left as they are.
+- **Writing code.** `Console.WriteBytes` (every DEPOSIT's store) now writes
+  a page the program may read but not write, such as an image's code
+  (linked NOWRT), by translating the address as a read and storing to the
+  physical page, as the VMS debugger's DEPOSIT writes code. Before, DEPOSIT
+  to code was an access violation. Unconfirmed detail: VMS changes the
+  page's protection for the write (and so its modify bit is set); govax
+  leaves both alone.
+- Messages: `DBG_NEEDQUOTE` (the manual says the instruction must be
+  quoted) and `DBG_ASMERROR` (the assembler's message follows), both
+  govax's text.
+- Tests: `depositinsn_test.go`: the bytes of each operand form, the input
+  radix, a branch's displacement, SET TYPE INSTRUCTION, the errors, and an
+  instruction deposited at the PC that the next STEP runs.

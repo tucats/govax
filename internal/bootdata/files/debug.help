@@ -18,6 +18,7 @@
 //                          (subtask 15).
 //              10/11/26    EXAMINE and DEPOSIT types; SET, SHOW, and
 //                          CANCEL TYPE (subtask 18).
+//              10/11/26    DEPOSIT/INSTRUCTION (subtask 19).
 //
 
 $HELP
@@ -279,6 +280,7 @@ $D
 
     DEPOSIT[/type] location = value
     DEPOSIT/ASCII[:count] location = "string"
+    DEPOSIT/INSTRUCTION location = "instruction"
 
   A number is in the input radix; a floating value is a literal such as
   1.5 or -2.5E3; a string is in quotes or apostrophes. The type is a type
@@ -302,6 +304,11 @@ $D
   A value wider than a longword deposited in a register fills the
   registers after it too (DEPOSIT/D_FLOAT R0 = 1.5 sets R0 and R1).
 
+  /INSTRUCTION (or SET TYPE INSTRUCTION) assembles one machine
+  instruction, in quotes, at the location: its numbers are in the input
+  radix, its names the program's, and a branch's displacement is from the
+  location. An image's code is written although its pages are read-only.
+
   Examples:
 
     DEPOSIT R0 = 5
@@ -310,6 +317,7 @@ $D
     DEPOSIT COUNT = 10
     DEPOSIT/FLOAT RATE = 2.75
     DEPOSIT/ASCIC NAME = 'SMITH'
+    DEPOSIT/INSTRUCTION .PC = 'MOVL #20A,R0'
 
 $EVAL
   Shows the value of an expression.

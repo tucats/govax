@@ -23,6 +23,8 @@ const (
 	dbgIValOutBnds
 	dbgNoType
 	dbgInvTime
+	dbgNeedQuote
+	dbgAsmError
 )
 
 // DBG facility status codes.
@@ -96,6 +98,12 @@ const (
 	// DBG_INVTIME reports DEPOSIT/DATE_TIME text that isn't a VMS time
 	// (govax's own text).
 	DBG_INVTIME = DBGFacility<<FacilityPosition | dbgInvTime<<MessagePosition | StatusError
+	// DBG_NEEDQUOTE reports a DEPOSIT/INSTRUCTION whose instruction isn't
+	// in quotes, as the manual says it must be (govax's own text).
+	DBG_NEEDQUOTE = DBGFacility<<FacilityPosition | dbgNeedQuote<<MessagePosition | StatusError
+	// DBG_ASMERROR reports an instruction DEPOSIT/INSTRUCTION couldn't
+	// assemble; the assembler's own message follows it (govax's text).
+	DBG_ASMERROR = DBGFacility<<FacilityPosition | dbgAsmError<<MessagePosition | StatusError
 )
 
 func init() {
@@ -116,5 +124,7 @@ func init() {
 	DefineMessage(DBG_IVALOUTBNDS, DBGFacility, "IVALOUTBNDS", "value assigned is out of bounds at or near '!S'")
 	DefineMessage(DBG_NOTYPE, DBGFacility, "NOTYPE", "'!S' does not name a data type")
 	DefineMessage(DBG_INVTIME, DBGFacility, "INVTIME", "invalid date or time at or near '!S'")
+	DefineMessage(DBG_NEEDQUOTE, DBGFacility, "NEEDQUOTE", "an instruction must be in quotes at or near '!S'")
+	DefineMessage(DBG_ASMERROR, DBGFacility, "ASMERROR", "cannot assemble '!S'")
 	DefineMessage(DBG_NOSOURCEDIR, DBGFacility, "NOSOURCEDIR", "no source directory search list is in effect")
 }
