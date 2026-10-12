@@ -101,6 +101,8 @@ var Routines = []Routine{
 	{"LIB$MOVC5", 74, libMovc5},
 	{"LIB$MOVTC", 75, libMovtc},
 	{"LIB$MOVTUC", 76, libMovtuc},
+	{"LIB$CRC_TABLE", 77, libCrcTable},
+	{"LIB$CRC", 78, libCrc},
 }
 
 // missing is Missing's list, made once.

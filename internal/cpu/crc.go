@@ -1,6 +1,9 @@
 package cpu
 
-import "github.com/tucats/govax/internal/registers"
+import (
+	"github.com/tucats/govax/internal/registers"
+	"github.com/tucats/govax/internal/vm"
+)
 
 // CRC has no working C reference to port: emul_crc.c's `emul_crc` is a
 // complete no-op stub (`return VAX_OK;`, no computation at all), and its
@@ -25,54 +28,86 @@ func init() {
 	instructionTable.SetHandler(instructionTable.Lookup(Opcode{Function: 0x0B}), emulCrc)
 }
 
-// emulCrc is CRC. N <- R0 LSS 0, Z <- R0 EQL 0, V <- 0, C <- 0, per the
-// manual. A zero-length stream leaves R0 as the initial CRC unchanged (Note
-// 7), which falls out naturally here since the loop never runs.
-func emulCrc(e *Engine, d *Decoded) error {
-	tbl := d.Operands[0].Addr
+// CRC is the CRC instruction's calculation: crc run over the length
+// bytes at stream, a nibble at a time through the 16-longword table at
+// table, as Note 6 describes. It returns the CRC. LIBRTL's LIB$CRC shares
+// it.
+func CRC(cpu *registers.CPU, mem *vm.Memory, table, crc uint32, length uint16, stream uint32) (uint32, error) {
+	var t [16]uint32
 
-	inicrcV, err := d.Operands[1].Load(e.cpu, e.mem)
+	for i := range t {
+		v, err := mem.LoadLongword(cpu, table+uint32(i*4))
+		if err != nil {
+			return 0, err
+		}
+
+		t[i] = v
+	}
+
+	for i := range length {
+		b, err := mem.LoadByte(cpu, stream+uint32(i))
+		if err != nil {
+			return 0, err
+		}
+
+		crc ^= uint32(b)
+		crc = (crc >> 4) ^ t[crc&0xF]
+		crc = (crc >> 4) ^ t[crc&0xF]
+	}
+
+	return crc, nil
+}
+
+// CRCTable is the 16-longword table for the polynomial mask poly
+// (CRC-16's is octal 120001, ^XA001; the manual's Note 5): entry i is i shifted right four times, the polynomial
+// XORed in after each shift that shifts out a 1, the manual's table
+// construction. LIBRTL's LIB$CRC_TABLE is this.
+func CRCTable(poly uint32) [16]uint32 {
+	var t [16]uint32
+
+	for i := range t {
+		v := uint32(i)
+
+		for range 4 {
+			if v&1 != 0 {
+				v = (v >> 1) ^ poly
+			} else {
+				v >>= 1
+			}
+		}
+
+		t[i] = v
+	}
+
+	return t
+}
+
+// emulCrc is CRC tbl.ab, inicrc.rl, strlen.rw, stream.ab. R0 gets the
+// CRC, R1 and R2 0, and R3 the address just past the stream. N <- R0 LSS
+// 0, Z <- R0 EQL 0, V <- 0, C <- 0, per the manual. A zero-length stream
+// leaves R0 as the initial CRC unchanged (Note 7).
+func emulCrc(e *Engine, d *Decoded) error {
+	inicrc, err := d.Operands[1].Load(e.cpu, e.mem)
 	if err != nil {
 		return err
 	}
-
-	crc := uint32(inicrcV)
 
 	lenV, err := d.Operands[2].Load(e.cpu, e.mem)
 	if err != nil {
 		return err
 	}
 
-	length := uint16(lenV)
-	stream := d.Operands[3].Addr
+	length, stream := uint16(lenV), d.Operands[3].Addr
 
-	var table [16]uint32
-
-	for i := range table {
-		v, err := e.mem.LoadLongword(e.cpu, tbl+uint32(i*4))
-		if err != nil {
-			return err
-		}
-
-		table[i] = v
-	}
-
-	for ; length != 0; length-- {
-		b, err := e.mem.LoadByte(e.cpu, stream)
-		if err != nil {
-			return err
-		}
-
-		crc ^= uint32(b)
-		crc = (crc >> 4) ^ table[crc&0xF]
-		crc = (crc >> 4) ^ table[crc&0xF]
-		stream++
+	crc, err := CRC(e.cpu, e.mem, d.Operands[0].Addr, uint32(inicrc), length, stream)
+	if err != nil {
+		return err
 	}
 
 	e.cpu.SetGPR(registers.R0, crc)
 	e.cpu.SetGPR(registers.R1, 0)
 	e.cpu.SetGPR(registers.R2, 0)
-	e.cpu.SetGPR(registers.R3, stream)
+	e.cpu.SetGPR(registers.R3, stream+uint32(length))
 
 	psl := e.cpu.PSL()
 	psl.SetN(int32(crc) < 0)
@@ -80,6 +115,6 @@ func emulCrc(e *Engine, d *Decoded) error {
 	psl.SetV(false)
 	psl.SetC(false)
 	e.cpu.SetPSL(psl)
-	
+
 	return nil
 }

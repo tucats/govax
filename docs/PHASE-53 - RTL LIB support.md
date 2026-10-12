@@ -2,7 +2,7 @@
 
 **Status:** in progress (2026-10-12). Needs Phases 34 (`internal/librtl`)
 and 52. The plan (Part A) and the decisions (Part B) were reviewed and
-accepted by the author on 2026-10-12. Subtasks 2 to 10 are done.
+accepted by the author on 2026-10-12. Subtasks 2 to 11 are done.
 
 govax provides 15 of LIBRTL.EXE's LIB$ routines (and STR$UPCASE): the ones
 the sample programs and tests needed (Phase 34's table,
@@ -537,7 +537,7 @@ so there's one implementation of each rule.
    **Done** 2026-10-12.
 10. **Character strings**: LOCC, MATCHC, SCANC, SKPC, SPANC, MOVC3, MOVC5,
     MOVTC, MOVTUC. **Done** 2026-10-12.
-11. **CRC, CRC_TABLE** (CALLG was done in subtask 2).
+11. **CRC, CRC_TABLE** (CALLG was done in subtask 2). **Done** 2026-10-12.
 12. **The program**: `testdata/lib53/lib53.mar`, calling every routine of
     the phase, with a console test of its output.
 13. **VMS probe** (with the author on the simh VAX): `lib53.mar`'s run,
@@ -887,3 +887,15 @@ so there's one implementation of each rule.
     fixed and dynamic strings, and MOVTUC with and without a fill, a
     full destination, and an invalid descriptor. The console's
     `TestLibrtlChars` runs all nine from a linked program.
+- **2026-10-12** — Subtask 11, the CRC routines (`internal/librtl/crc.go`):
+  LIB$CRC_TABLE and LIB$CRC, codes 77 and 78. The CRC instruction's
+  calculation is now `cpu.CRC` (a function of addresses, which `emulCrc`
+  calls), and the manual's table construction `cpu.CRCTable`.
+  LIB$CRC_TABLE stores the 16 longwords and returns SS$_NORMAL (the
+  manual gives it no value: unconfirmed); LIB$CRC takes the stream by
+  descriptor, any class, and returns the CRC (an invalid descriptor is
+  signaled as LIB$_INVSTRDES, as for the searches). Tests: CRC-16's
+  table entry by entry; the manual's "DOVE"/"HOSE" pair (^X74DB),
+  CRC-16/ARC's "123456789" (^XBB3D), and an empty stream; the console's
+  `TestLibrtlCrc` from a linked program. With this, every Part C
+  routine but CVTDF (7.x only) is in govax.
