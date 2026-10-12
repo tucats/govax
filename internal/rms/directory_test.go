@@ -97,7 +97,7 @@ func TestSession_directoryListsFiles(t *testing.T) {
 		t.Fatalf("SetDefault: %v", err)
 	}
 
-	out, err := s.Directory("", DirectoryOptions{})
+	out, _, err := s.Directory("", DirectoryOptions{})
 	if err != nil {
 		t.Fatalf("Directory: %v", err)
 	}
@@ -128,7 +128,7 @@ func TestSession_directoryWildcardFilter(t *testing.T) {
 		t.Fatalf("SetDefault: %v", err)
 	}
 
-	out, err := s.Directory("*.TXT", DirectoryOptions{})
+	out, _, err := s.Directory("*.TXT", DirectoryOptions{})
 	if err != nil {
 		t.Fatalf("Directory: %v", err)
 	}
@@ -141,16 +141,15 @@ func TestSession_directoryWildcardFilter(t *testing.T) {
 		t.Errorf("Directory(*.TXT) output = %q, want it to NOT contain BAR.DAT", out)
 	}
 
-	if !strings.Contains(out, "Total of 1 file(s).") {
-		t.Errorf("Directory(*.TXT) output = %q, want a 1-file total", out)
+	if want := "\nDirectory DUA0:[000000]\n\nFOO.TXT;1           \n\nTotal of 1 file.\n"; out != want {
+		t.Errorf("Directory(*.TXT) output = %q, want %q", out, want)
 	}
 }
 
 // TestSession_directoryEmptyIsNotAnError confirms a DIRECTORY that matches
 // nothing at all (a name/type pattern nothing on the volume — including its
-// own reserved files — can match) is a normal, zero-length listing rather
-// than an error, matching real VMS, which prints "Total of 0 file(s)."
-// rather than failing.
+// own reserved files — can match) lists nothing and reports found false,
+// for the caller's NOFILES warning, rather than an error.
 func TestSession_directoryEmptyIsNotAnError(t *testing.T) {
 	s, _ := newDirectoryTestSession(t)
 
@@ -158,20 +157,20 @@ func TestSession_directoryEmptyIsNotAnError(t *testing.T) {
 		t.Fatalf("SetDefault: %v", err)
 	}
 
-	out, err := s.Directory("*.NOSUCHTYPE", DirectoryOptions{})
+	out, found, err := s.Directory("*.NOSUCHTYPE", DirectoryOptions{})
 	if err != nil {
 		t.Fatalf("Directory matching nothing: %v", err)
 	}
 
-	if !strings.Contains(out, "Total of 0 file(s).") {
-		t.Errorf("Directory output = %q, want a 0-file total", out)
+	if out != "" || found {
+		t.Errorf("Directory output = %q, found %v; want nothing", out, found)
 	}
 }
 
-// TestSession_directoryFullQualifier confirms /FULL turns on all three of
-// FILE/SIZE/DATE at once: the file-id, block count, and a revision date all
-// appear in the same line, plus the record format ("STREAMLF", matching
-// createTestFile's own RecordFormatStreamLF) that only /FULL itself adds.
+// TestSession_directoryFullQualifier confirms /FULL's layout, VMS 7.3's
+// (testdata/dcl50's round 4): the file ID, used/allocated size, owner,
+// dates, and the record format ("Stream_LF", matching createTestFile's
+// own RecordFormatStreamLF), then "Total of 1 file, 1/1 block."
 func TestSession_directoryFullQualifier(t *testing.T) {
 	s, vol := newDirectoryTestSession(t)
 	createTestFile(t, vol, "FOO.TXT", "hello")
@@ -180,16 +179,24 @@ func TestSession_directoryFullQualifier(t *testing.T) {
 		t.Fatalf("SetDefault: %v", err)
 	}
 
-	out, err := s.Directory("FOO.TXT", DirectoryOptions{Full: true})
+	out, _, err := s.Directory("FOO.TXT", DirectoryOptions{Full: true})
 	if err != nil {
 		t.Fatalf("Directory: %v", err)
 	}
 
-	if !strings.Contains(out, "STREAMLF") {
-		t.Errorf("Directory/FULL output = %q, want it to contain the STREAMLF record format", out)
+	for _, want := range []string{
+		"\nFOO.TXT;1                     File ID:  (",
+		"\nSize:            1/1          Owner:    [1,4]\n",
+		"\nRecord format:      Stream_LF, maximum ",
+		"\nFile protection:    System:",
+		"\nAccess Cntrl List:  None\n\nTotal of 1 file, 1/1 block.\n",
+	} {
+		if !strings.Contains(out, want) {
+			t.Errorf("Directory/FULL output = %q, want it to contain %q", out, want)
+		}
 	}
 
-	if !strings.Contains(out, "Total of 1 file(s), 1 block(s).") {
+	if !strings.Contains(out, "Total of 1 file, 1/1 block.") {
 		t.Errorf("Directory/FULL output = %q, want a 1-file, 1-block total (SIZE is implied by FULL)", out)
 	}
 
@@ -212,16 +219,25 @@ func TestSession_directorySizeQualifier(t *testing.T) {
 		t.Fatalf("SetDefault: %v", err)
 	}
 
-	out, err := s.Directory("FOO.TXT", DirectoryOptions{Size: true})
+	out, _, err := s.Directory("FOO.TXT", DirectoryOptions{Size: true})
 	if err != nil {
 		t.Fatalf("Directory: %v", err)
 	}
 
-	if !strings.Contains(out, "Total of 1 file(s), 1 block(s).") {
-		t.Errorf("Directory/SIZE output = %q, want a 1-file, 1-block total", out)
+	if want := "\nDirectory DUA0:[000000]\n\nFOO.TXT;1                  1\n\nTotal of 1 file, 1 block.\n"; out != want {
+		t.Errorf("Directory/SIZE output = %q, want %q", out, want)
 	}
 
-	if strings.Contains(out, "STREAMLF") {
+	out, _, err = s.Directory("FOO.TXT", DirectoryOptions{Size: true, SizeMode: SizeAll})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if want := "\nDirectory DUA0:[000000]\n\nFOO.TXT;1                  1/1      \n\nTotal of 1 file, 1/1 block.\n"; out != want {
+		t.Errorf("Directory/SIZE=ALL output = %q, want %q", out, want)
+	}
+
+	if strings.Contains(out, "Stream_LF") {
 		t.Errorf("Directory/SIZE output = %q, want it to NOT contain the record format (that's /FULL-only)", out)
 	}
 }
@@ -233,7 +249,7 @@ func TestSession_directorySizeQualifier(t *testing.T) {
 func TestSession_directoryNotMounted(t *testing.T) {
 	s := NewSession(NewMountTable())
 
-	_, err := s.Directory("DUB0:*.*;*", DirectoryOptions{})
+	_, _, err := s.Directory("DUB0:*.*;*", DirectoryOptions{})
 	if err == nil {
 		t.Fatal("Directory against an unmounted device = nil error, want an error")
 	}
@@ -255,7 +271,7 @@ func TestSession_directoryNotMounted(t *testing.T) {
 func TestSession_directoryBadFileSpec(t *testing.T) {
 	s, _ := newDirectoryTestSession(t)
 
-	_, err := s.Directory("DUA0:[UNTERMINATED", DirectoryOptions{})
+	_, _, err := s.Directory("DUA0:[UNTERMINATED", DirectoryOptions{})
 	if err == nil {
 		t.Fatal("Directory with an unterminated directory bracket = nil error, want an error")
 	}

@@ -492,12 +492,15 @@ grammar console
                     /type=$string
         qualifier   full/id=902
         qualifier   file/id=903
-        qualifier   size/id=904
+        qualifier   size/id=904                 -
+                    /type=$string/default=USED
         qualifier   date/id=905
         qualifier   owner/id=906
         qualifier   protection/id=907
         qualifier   versions/id=908             -
                     /type=$integer
+        qualifier   heading/id=909
+        qualifier   trailing/id=910
 
     !
     ! govax-native extension (Phase 23, internal/rms + internal/console):

@@ -3,6 +3,7 @@ package console
 import (
 	"errors"
 	"path/filepath"
+	"regexp"
 	"strings"
 	"testing"
 
@@ -19,9 +20,18 @@ import (
 func mountFreshContainer(t *testing.T, c *Console, device string) {
 	t.Helper()
 
+	mountClusteredContainer(t, c, device, 0)
+}
+
+// mountClusteredContainer is mountFreshContainer with the volume's
+// cluster size (0 for INITIALIZE's default): the probes' VAX volume
+// allocated in clusters of 3 blocks.
+func mountClusteredContainer(t *testing.T, c *Console, device string, cluster uint16) {
+	t.Helper()
+
 	path := filepath.Join(t.TempDir(), "dir.dsk")
 
-	if err := c.cmd().InitializeContainer(path, 400, "DIRVOL", 0, "RD54"); err != nil {
+	if err := c.cmd().InitializeContainer(path, 400, "DIRVOL", cluster, "RD54"); err != nil {
 		t.Fatalf("InitializeContainer: %v", err)
 	}
 
@@ -149,7 +159,7 @@ func TestDispatch_directoryWithSpecAndQualifiers(t *testing.T) {
 		t.Fatalf("Dispatch DIRECTORY DUA0:INDEXF.SYS/SIZE: %v", err)
 	}
 
-	if !strings.Contains(buf.String(), "block(s)") {
+	if !strings.Contains(buf.String(), "INDEXF.SYS;1              15\n") || !strings.Contains(buf.String(), " blocks.") {
 		t.Errorf("Dispatch DIRECTORY .../SIZE output = %q, want it to contain a block count", buf.String())
 	}
 }
@@ -219,5 +229,53 @@ func TestDispatch_directoryVersions(t *testing.T) {
 
 	if err := d.Dispatch("DIRECTORY/VERSIONS"); err == nil {
 		t.Error("DIRECTORY/VERSIONS with no value = nil error, want one")
+	}
+}
+
+// TestDirectory_layouts: DIRECTORY's brief listing in four columns of 20
+// characters, a long name taking two, /NOHEADING/NOTRAILING's full names,
+// /SIZE=ALL/DATE's columns, and NOFILES for a specification that finds
+// nothing, as VMS 7.3 laid them out (testdata/dcl50, testdata/mar's
+// logs; Phase 51).
+func TestDirectory_layouts(t *testing.T) {
+	d, c, buf := newCommandDispatcher(t)
+	mountFreshContainer(t, c, "DUA0")
+
+	if err := c.cmd().SetDefault("DUA0:[000000]"); err != nil {
+		t.Fatal(err)
+	}
+
+	for _, name := range []string{"A.TXT", "B.TXT", "C.TXT", "D.TXT", "AVERYLONGFILENAME.TXT", "E.TXT"} {
+		if _, err := c.ContainerSession.CreateRecordFile(rms.FileLocation{Name: name}, rms.TextRecords, [][]byte{[]byte("x")}); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	wantOutput(t, d, buf, "DIRECTORY *.TXT", "\nDirectory DUA0:[000000]\n\n"+
+		"A.TXT;1             AVERYLONGFILENAME.TXT;1                 B.TXT;1             \n"+
+		"C.TXT;1             D.TXT;1             E.TXT;1             \n"+
+		"\nTotal of 6 files.\n")
+
+	wantOutput(t, d, buf, "DIRECTORY/NOHEADING/NOTRAILING B.TXT", "DUA0:[000000]B.TXT;1\n")
+
+	buf.Reset()
+
+	if err := d.Dispatch("DIRECTORY/SIZE=ALL/DATE A.TXT"); err != nil {
+		t.Fatal(err)
+	}
+
+	if !regexp.MustCompile(`\nA\.TXT;1                    1/\d+ *  [ \d]\d-[A-Z]{3}-\d{4} \d\d:\d\d:\d\d\.\d\d\n\nTotal of 1 file, 1/\d+ blocks?\.\n$`).MatchString(buf.String()) {
+		t.Errorf("DIRECTORY/SIZE=ALL/DATE = %q", buf.String())
+	}
+
+	buf.Reset()
+
+	err := d.Dispatch("DIRECTORY *.NONE")
+	if err == nil || err.Error() != "DIRECT-W-NOFILES, no files found" || buf.Len() != 0 {
+		t.Errorf("DIRECTORY of nothing: %v, %q", err, buf.String())
+	}
+
+	if err := d.Dispatch("DIRECTORY/SIZE=BOGUS"); err == nil {
+		t.Error("DIRECTORY/SIZE=BOGUS succeeded")
 	}
 }

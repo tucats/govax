@@ -450,6 +450,8 @@ func (f *DCLFile) Put(record []byte) uint32 {
 		return rmsRecordTooBig
 	}
 
+	h.noteLongest(len(record))
+
 	s.lost()
 	s.atEnd = true
 

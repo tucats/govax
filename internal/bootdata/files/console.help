@@ -120,6 +120,8 @@
 //              10/12/26    STOP/IMAGE and STOP/[NO]EXIT
 //              10/12/26    DELETE is silent but for /LOG, and a missing
 //                          file is SEARCHFAIL
+//              10/12/26    DIRECTORY's layouts are VMS's; /SIZE=option,
+//                          /[NO]HEADING, /[NO]TRAILING
 
 This is the help documentation for the govax VAX emulator.  Topic sections are
 marked by a "$" delimiter.  This is followed by as many tokens of the help
@@ -2924,12 +2926,18 @@ $DISM
 $DIRE
 $DIR
 
-    The DIRECTORY command lists files on a mounted ODS-2 volume.
+    The DIRECTORY command lists files on a mounted ODS-2 volume, laid out
+    as VMS's DIRECTORY lays them out: a heading for each directory, the
+    names four to a line (or one to a line, with the columns the
+    qualifiers ask for), and "Total of n files." after each directory
+    ("Grand total" after more than one).  A specification that finds no
+    file is %DIRECT-W-NOFILES.
 
     Syntax:
 
-        DIRECTORY [/FULL] [/FILE] [/SIZE] [/DATE] [/OWNER] [/PROTECTION]
-                  [/VERSIONS=n] [file-spec]
+        DIRECTORY [/FULL] [/FILE] [/SIZE[=option]] [/DATE] [/OWNER]
+                  [/PROTECTION] [/VERSIONS=n] [/[NO]HEADING]
+                  [/[NO]TRAILING] [file-spec]
 
     Parameter:
 
@@ -2937,22 +2945,27 @@ $DIR
                         wildcards (e.g. DUA0:[MYDIR]*.TXT;*).  Any part of
                         the specification left out is filled in from the
                         current default device/directory (see SET
-                        DEFAULT).  If omitted entirely, lists "*.*;*" --
+                        DEFAULT), but a version left out is every
+                        version.  If omitted entirely, lists "*.*;*" --
                         every file, every version, in the current default
                         directory.
 
     Qualifiers:
 
-        /FULL           Includes everything the qualifiers below show,
-                        and each file's record format.
+        /FULL           Shows everything the file's header says: its
+                        file ID, used and allocated sizes, owner, dates,
+                        organization, record format and attributes, and
+                        protection.
 
         /FILE           Includes each file's file ID.
 
-        /SIZE           Includes each file's size, in blocks.
+        /SIZE[=option]  Includes each file's size, in blocks: USED (the
+                        default), ALLOCATION, or ALL (used/allocated).
 
-        /DATE           Includes each file's date.
+        /DATE           Includes each file's creation date.
 
-        /OWNER          Includes each file's owner UIC, [group,member].
+        /OWNER          Includes each file's owner, as [SYSTEM] or
+                        [group,member].
 
         /PROTECTION     Includes each file's protection: the access
                         granted to system, owner, group, and world, in
@@ -2961,6 +2974,11 @@ $DIR
         /VERSIONS=n     Lists only the n most recent versions of each
                         file: /VERSIONS=1 shows just the newest.  The
                         value is required and must be at least 1.
+
+        /NOHEADING      No "Directory" headings: each file is listed by
+                        its full name, one to a line.
+
+        /NOTRAILING     No totals.
 
     Examples:
 

@@ -432,7 +432,7 @@ func TestLexicalFileAttributes(t *testing.T) {
 func fidOf(t *testing.T, c *Console, spec string) string {
 	t.Helper()
 
-	text, err := c.ContainerSession.Directory(spec, rms.DirectoryOptions{File: true})
+	text, _, err := c.ContainerSession.Directory(spec, rms.DirectoryOptions{File: true})
 	if err != nil {
 		t.Fatal(err)
 	}

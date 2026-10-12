@@ -262,8 +262,8 @@ func TestDirectoryOwnerProtection(t *testing.T) {
 	owner := ondisk.Uic{Group: 0o200, Member: 0o201}
 	mustCreateDir(t, s, "[OWNED]", CreateDirectoryOptions{Owner: &owner, Protection: "(S:RWE,O:RWE,G:RE,W:E)"})
 
-	for _, opts := range []DirectoryOptions{{Owner: true, Protection: true}, {Full: true}} {
-		out, err := s.Directory("[000000]OWNED.DIR", opts)
+	for _, opts := range []DirectoryOptions{{Owner: true, Protection: true}} {
+		out, _, err := s.Directory("[000000]OWNED.DIR", opts)
 		if err != nil {
 			t.Fatalf("Directory(%+v): %v", opts, err)
 		}
@@ -273,7 +273,17 @@ func TestDirectoryOwnerProtection(t *testing.T) {
 		}
 	}
 
-	out, err := s.Directory("[000000]OWNED.DIR", DirectoryOptions{Protection: true})
+	// /FULL writes the protection its own way.
+	out, _, err := s.Directory("[000000]OWNED.DIR", DirectoryOptions{Full: true})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if !strings.Contains(out, "Owner:    [200,201]") || !strings.Contains(out, "System:RWE, Owner:RWE, Group:RE, World:E") {
+		t.Errorf("Directory/FULL = %q, want the owner and protection", out)
+	}
+
+	out, _, err = s.Directory("[000000]OWNED.DIR", DirectoryOptions{Protection: true})
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -53,7 +53,7 @@ func TestLogicalNames_fileCommands(t *testing.T) {
 
 	out := buf.String()
 	if !strings.Contains(out, "Directory DUA0:[000000]") || !strings.Contains(out, "Directory DUA1:[000000]") ||
-		!strings.Contains(out, "Total of 3 file(s).") {
+		!strings.Contains(out, "Grand total of 2 directories, 3 files.") {
 		t.Errorf("DIRECTORY BOTH:*.TXT =\n%s", out)
 	}
 

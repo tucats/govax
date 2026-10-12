@@ -135,6 +135,9 @@ func SysPut(ctx *Context, argv []uint32) (uint32, error) {
 
 		handle.wrote(ctx, handle.endOfFile())
 
+		// A VFC record's fixed control isn't counted in its length.
+		handle.noteLongest(max(len(record)-int(handle.File.Header.RecordAttributes.VfcSize), 0))
+
 		if err := handle.Writer.Put(record); err != nil {
 			// The sibling ods2 module's rms.Writer.Put only ever
 			// fails this way for a record whose length doesn't fit

@@ -251,11 +251,23 @@ func (d *Dispatcher) bindGrammar() {
 		opts := rms.DirectoryOptions{
 			Full: r.Present("FULL"),
 			File: r.Present("FILE"),
-			Size: r.Present("SIZE"),
+			Size: r.Present("SIZE") && !r.Defaulted("SIZE"),
 			Date: r.Present("DATE"),
 
 			Owner:      r.Present("OWNER"),
 			Protection: r.Present("PROTECTION"),
+
+			NoHeading:  r.Negated("HEADING"),
+			NoTrailing: r.Negated("TRAILING"),
+		}
+
+		if opts.Size {
+			mode, err := dclcmd.DirectorySizeMode(r.String("SIZE"))
+			if err != nil {
+				return err
+			}
+
+			opts.SizeMode = mode
 		}
 
 		// /VERSIONS=n lists only each file's n newest versions; its value

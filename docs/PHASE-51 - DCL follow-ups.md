@@ -394,3 +394,31 @@ smaller gaps the phase left:
   warning (facility 147 taken as DELETE's, unconfirmed). It was
   `%DELETE-S-DELETED` for each file and SS$_NOSUCHFILE. Rounds 4 and 6's
   oracles no longer leave DELETE out. HELP DELETE.
+- 2026-10-12: Subtask 5, DIRECTORY's layouts, as VMS 7.3 laid them out
+  (testdata/dcl50's rounds 1, 4, 5, and 6; testdata/mar's and
+  testdata/insn35's logs): the brief listing four names to a line in
+  20-character columns; /SIZE (now `/SIZE[=USED|ALLOCATION|ALL]`),
+  /DATE, and the other columns after a 19-character name field
+  ("ASM35.COM;1                1   2-OCT-2026 16:25:34.51",
+  "CELLS.LIS;1               11/11        4-OCT-..."); /FULL's block
+  ("File ID:", "Size: used/allocated", "Owner:", the dates, "File
+  attributes:", "Record format:", "File protection:", ...); "Total of 2
+  files." or "Total of 14 files, 74/90 blocks." after each directory, and
+  "Grand total of n directories, ..." after several. New: /NOHEADING
+  (full names, one to a line) and /NOTRAILING. A name without a version
+  lists every version, as VMS's DIRECTORY did. A specification that finds
+  nothing is %DIRECT-W-NOFILES (it was "Total of 0 file(s)."). The owner
+  is the identifier's name ("[SYSTEM]") through `DirectoryOptions.
+  OwnerName`.
+
+  Fixed on the way: RMS didn't record the longest record written to a
+  sequential file (FAT$W_RSIZE, XAB$W_LRL, /FULL's "longest"); `$PUT` and
+  DCL's WRITE now do (`FileHandle.noteLongest`).
+
+  Rounds 4 and 6's oracles now compare DIRECTORY too, file IDs and times
+  masked (`maskVolumeDetails`), on a volume with VMS's cluster size of 3
+  (`mountClusteredContainer`); round 3 runs with its /NOHEADING/NOTRAILING.
+  Test: `TestDirectory_layouts`. Unconfirmed: a name too long for its
+  column or field, /FILE_ID's, /OWNER's, and /PROTECTION's columns, the
+  fixed and undefined record formats' wording, NOFILES's facility. HELP
+  DIRECTORY.

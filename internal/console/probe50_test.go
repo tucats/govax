@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"os"
 	"path/filepath"
+	"regexp"
 	"slices"
 	"strings"
 	"testing"
@@ -467,8 +468,7 @@ func dataOutcomes(lines []string) []string {
 // TestProbe50IOracle runs round 3 of testdata/dcl50, probe50i.com (and
 // probe50j.com and probe50k.com, which it runs), and compares what it
 // writes with VMS 7.3's log: SYS$INPUT from a procedure, DECK, and EOD
-// (subtask 16). DIRECTORY's /NOHEADING and /NOTRAILING, which govax's
-// DIRECTORY doesn't have, are left out, so that it runs, as on VMS.
+// (subtask 16).
 func TestProbe50IOracle(t *testing.T) {
 	logText, err := os.ReadFile("../../testdata/dcl50/vax/probe50i.log")
 	if err != nil {
@@ -483,7 +483,7 @@ func TestProbe50IOracle(t *testing.T) {
 			t.Fatal(err)
 		}
 
-		writeFile(t, filepath.Join(dir, name), strings.ReplaceAll(string(text), "/NOHEADING/NOTRAILING", ""))
+		writeFile(t, filepath.Join(dir, name), string(text))
 	}
 
 	t.Chdir(dir)
@@ -536,7 +536,7 @@ func TestProbe50IOracle(t *testing.T) {
 // the probe's question, and left out of the comparison: DIRECTORY's
 // and DUMP's (which govax hasn't) layouts are their own. (DELETE's
 // matches since Phase 51.)
-var probe50FSkipped = []string{"$ DIRECTORY", "$ DUMP"}
+var probe50FSkipped = []string{"$ DUMP"}
 
 // probe50FCompared is a round 4 log as the comparison sees it: the output
 // of the probe50FSkipped commands left out.
@@ -559,10 +559,26 @@ func probe50FCompared(text string) string {
 			continue
 		}
 
-		out = append(out, line)
+		out = append(out, maskVolumeDetails(line))
 	}
 
 	return strings.Join(out, "\n")
+}
+
+// The details of a file listing that are the run's own, not its layout:
+// a file ID, "(25,1,0)", and a date and time, "11-OCT-2026 15:36:06.18".
+var (
+	fileIDPattern   = regexp.MustCompile(`\(\d+,\d+,\d+\)`)
+	timeOfDayLength = len("11-OCT-2026 15:36:06.18")
+	dateTimePattern = regexp.MustCompile(`[ \d]\d-[A-Z]{3}-\d{4} \d\d:\d\d:\d\d\.\d\d`)
+)
+
+// maskVolumeDetails replaces a line's file IDs and dates with markers of
+// the same width, so a listing compares by its layout.
+func maskVolumeDetails(line string) string {
+	line = fileIDPattern.ReplaceAllStringFunc(line, func(s string) string { return "(" + strings.Repeat("#", len(s)-2) + ")" })
+
+	return dateTimePattern.ReplaceAllString(line, strings.Repeat("T", timeOfDayLength))
 }
 
 // TestProbe50FOracle runs round 4 of testdata/dcl50, probe50f.com (and
@@ -577,7 +593,7 @@ func TestProbe50FOracle(t *testing.T) {
 	}
 
 	d, c, buf := newCommandDispatcher(t)
-	mountFreshContainer(t, c, "DUA1")
+	mountClusteredContainer(t, c, "DUA1", 3)
 	c.RTL.NodeName = "SIMVAX"
 
 	dir := t.TempDir()

@@ -3654,6 +3654,24 @@ widened."
   PURGE still shows `%PURGE-S-PURGED` for each file it deletes.
 - **Status**: VMS's answers followed; the choices unconfirmed.
 
+### [Phase 51] DIRECTORY's layouts: settled by the probes, and the rest chosen
+
+- **Where**: `internal/rms/directory.go`, `internal/dclcmd/directory.go`.
+- **What**: govax's DIRECTORY listed one file per line with columns of
+  its own and "Total of n file(s)."; it now lays out the brief listing,
+  /SIZE[=ALL], /DATE, /FULL, and the totals as VMS 7.3 did in the
+  probes' logs, and lists every version when none is given. Chosen
+  without VMS: a name longer than a brief column takes as many columns
+  as it needs, and one longer than the 19-character field is on a line
+  of its own; /FILE_ID's, /OWNER's, and /PROTECTION's columns and
+  /DATE's without /SIZE; /FULL's wording for fixed, undefined, and other
+  stream formats, for FTN and CR carriage control, and "Non-spanned";
+  "Grand total of n directories, m files."; NOFILES as
+  `%DIRECT-W-NOFILES, no files found`, in facility 146, taken as
+  DIRECTORY's.
+- **Status**: VMS's layouts followed where the logs show them; the rest
+  unconfirmed.
+
 <!--
 Entry template:
 

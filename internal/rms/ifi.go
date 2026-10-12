@@ -3,6 +3,7 @@ package rms
 import (
 	"io"
 
+	"github.com/tucats/ods2/ondisk"
 	odsrms "github.com/tucats/ods2/rms"
 	"github.com/tucats/ods2/volume"
 )
@@ -122,6 +123,22 @@ type FileHandle struct {
 func (h *FileHandle) wrote(ctx *Context, off int64) {
 	h.written = true
 	h.writeBuffer.touch(ctx, off)
+}
+
+// noteLongest records a record of n data bytes written to h's file: as
+// RMS keeps it for a sequential file, the header's record size
+// (FAT$W_RSIZE, XAB$W_LRL, DIRECTORY/FULL's "longest") is the longest
+// record written, but for a fixed-length file, whose record size is the
+// one size. The header goes to the volume when the file is closed.
+func (h *FileHandle) noteLongest(n int) {
+	if h.File == nil {
+		return
+	}
+
+	ra := &h.File.Header.RecordAttributes
+	if ra.Format != ondisk.RecordFormatFixed && n > int(ra.RecordSize) {
+		ra.RecordSize = uint16(min(n, 0xFFFF))
+	}
 }
 
 // IsConsole reports whether h is the terminal-pseudo-device case (Console

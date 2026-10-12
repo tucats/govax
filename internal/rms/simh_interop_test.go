@@ -259,7 +259,7 @@ func TestSimhInterop_directoryListsRealVMSDisk(t *testing.T) {
 		t.Fatalf("SetDefault: %v", err)
 	}
 
-	out, err := s.Directory("", DirectoryOptions{Full: true})
+	out, _, err := s.Directory("", DirectoryOptions{Full: true})
 	if err != nil {
 		t.Fatalf("Directory: %v", err)
 	}

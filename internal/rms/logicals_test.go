@@ -220,13 +220,13 @@ func TestSession_searchListCommands(t *testing.T) {
 	defineTestLogical(t, s.Logicals, "WITHGAP", "DUA7:", "DUA1:")
 
 	// DIRECTORY lists every element.
-	text, err := s.Directory("BOTH:SPEECH.TXT", DirectoryOptions{})
+	text, _, err := s.Directory("BOTH:SPEECH.TXT", DirectoryOptions{})
 	if err != nil {
 		t.Fatal(err)
 	}
 
 	if !strings.Contains(text, "Directory DUA0:[000000]") || !strings.Contains(text, "Directory DUA1:[000000]") ||
-		!strings.Contains(text, "Total of 2 file(s).") {
+		!strings.Contains(text, "Grand total of 2 directories, 2 files.") {
 		t.Errorf("DIRECTORY BOTH:SPEECH.TXT =\n%s", text)
 	}
 
@@ -270,7 +270,7 @@ func TestSession_searchListCommands(t *testing.T) {
 	}
 
 	var notMounted *NotMountedError
-	if _, err := s.Directory("DUA7:*.*", DirectoryOptions{}); !errors.As(err, &notMounted) {
+	if _, _, err := s.Directory("DUA7:*.*", DirectoryOptions{}); !errors.As(err, &notMounted) {
 		t.Errorf("DIRECTORY DUA7: err = %v, want NotMountedError", err)
 	}
 }

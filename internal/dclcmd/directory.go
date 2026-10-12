@@ -2,8 +2,10 @@ package dclcmd
 
 import (
 	"errors"
+	"strings"
 
 	"github.com/tucats/govax/internal/rms"
+	"github.com/tucats/govax/internal/vmsdef"
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
@@ -47,7 +49,11 @@ import (
 //     facility, not SYS, since these are argument-validation problems
 //     rather than a device/volume state problem).
 func (c *Context) Directory(specText string, opts rms.DirectoryOptions) error {
-	text, err := c.ContainerSession.Directory(specText, opts)
+	if opts.OwnerName == nil && c.RTL != nil {
+		opts.OwnerName = c.RTL.IdentifierText
+	}
+
+	text, found, err := c.ContainerSession.Directory(specText, opts)
 	if err != nil {
 		if lnmErr := logicalNameFailure(err); lnmErr != nil {
 			return lnmErr
@@ -63,5 +69,40 @@ func (c *Context) Directory(specText string, opts rms.DirectoryOptions) error {
 
 	c.Printf("%s", text)
 
+	if !found {
+		return vmserrors.ConditionError{Status: directNoFiles, Text: "DIRECT-W-NOFILES, no files found"}
+	}
+
 	return nil
+}
+
+// directNoFiles is DIRECTORY's NOFILES condition value, a warning: the
+// shared message SHR$_NOFILES in DIRECTORY's facility, taken to be 146
+// (unconfirmed against VMS: the facility number, and the message, which
+// no probe has shown).
+var directNoFiles = 146<<16 | vmsdef.LibrarySymbols["SHR$_NOFILES"]
+
+// DirectorySizeMode is /SIZE's value as an rms.SizeMode: USED,
+// ALLOCATION, or ALL, or an abbreviation; another is CLI_IVKEYW.
+func DirectorySizeMode(value string) (rms.SizeMode, error) {
+	key := strings.ToUpper(strings.TrimSpace(value))
+	modes := map[string]rms.SizeMode{"USED": rms.SizeUsed, "ALLOCATION": rms.SizeAllocation, "ALL": rms.SizeAll}
+
+	if mode, ok := modes[key]; ok {
+		return mode, nil
+	}
+
+	var matches []rms.SizeMode
+
+	for name, mode := range modes {
+		if key != "" && strings.HasPrefix(name, key) {
+			matches = append(matches, mode)
+		}
+	}
+
+	if len(matches) != 1 {
+		return 0, vmserrors.NewSegment(vmserrors.CLI_IVKEYW, key)
+	}
+
+	return matches[0], nil
 }

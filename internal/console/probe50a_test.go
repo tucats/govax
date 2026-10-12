@@ -16,7 +16,7 @@ import (
 // and DUMP's (which govax hasn't) layouts are their own, and
 // SHOW LOGICAL/PROCESS lists the process's own names, which are the
 // VAX's (its terminal, SYS$DISK in two modes).
-var probe50ASkipped = []string{"$ DIRECTORY", "$ DUMP", "$ SHOW LOGICAL/PROCESS"}
+var probe50ASkipped = []string{"$ DUMP", "$ SHOW LOGICAL/PROCESS"}
 
 // probe50AWait is round 6's WAIT, and probe50AShortWait the one the test
 // runs instead, so the run takes hundredths of a second, not two seconds;
@@ -58,7 +58,7 @@ func probe50ACompared(text string) string {
 			line = "(LNM$JOB)"
 		}
 
-		line = strings.ReplaceAll(line, "\x00", "")
+		line = maskVolumeDetails(strings.ReplaceAll(line, "\x00", ""))
 		out = append(out, strings.Replace(line, "@'s /OUTPUT", "@'s/OUTPUT", 1))
 	}
 
@@ -77,7 +77,7 @@ func TestProbe50AOracle(t *testing.T) {
 	}
 
 	d, c, _ := newCommandDispatcher(t)
-	mountFreshContainer(t, c, "DUA1")
+	mountClusteredContainer(t, c, "DUA1", 3)
 	c.RTL.NodeName = "SIMVAX"
 
 	dir := t.TempDir()
