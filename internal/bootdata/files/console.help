@@ -2040,7 +2040,7 @@ $HELP
     STOP            Delete a process
     TEST            Run the emulator's debugging sequences
     TIME            Run a command and report how long it took
-    TYPE            Display a file on a mounted volume
+    TYPE            Display a file on a mounted volume or the host
     VMINIT          Initialize a VM map
     ZERO            Clear the virtual VAX's memory
 
@@ -2991,16 +2991,27 @@ $TYP
 
     Syntax:
 
-        TYPE [/PAGE] <file-spec>
+        TYPE [/PAGE] [/HOST] <file-spec>
 
     Parameter:
 
-        <file-spec>     The file to display.  An omitted version defaults
-                        to the highest surviving version.  Any part left
-                        out is filled in from the current default device/
-                        directory (see SET DEFAULT).
+        <file-spec>     The file to display, on a mounted ODS-2 volume or
+                        on the host.  For a volume file, an omitted
+                        version defaults to the highest surviving
+                        version, and any part left out is filled in from
+                        the current default device/directory (see SET
+                        DEFAULT).  A name with a host path ("./notes.txt",
+                        quoted to keep its case) is a host file; so is a
+                        bare name when the default directory isn't on a
+                        mounted volume.  A host file is shown line by
+                        line as it is.
 
-    Qualifier:
+    Qualifiers:
+
+        /HOST           Makes <file-spec> a host file name, whatever it
+                        looks like.  It may follow the verb or the file:
+                        TYPE/HOST "notes.txt" and TYPE "notes.txt"/HOST
+                        are the same.
 
         /PAGE           Display the file a screenful at a time.  After
                         each screen, TYPE prompts "Press RETURN to
@@ -3015,6 +3026,10 @@ $TYP
         TYPE FOO.TXT
 
         TYPE/PAGE DUA0:[MYDIR]README.TXT;2
+
+        TYPE/PAGE "../docs/notes.txt"
+
+        TYPE "README.md"/HOST
 
     See also the help for COPY, DIRECTORY, and SET DEFAULT.
 

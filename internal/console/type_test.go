@@ -2,6 +2,9 @@ package console
 
 import (
 	"errors"
+	"fmt"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -70,7 +73,7 @@ func TestConsoleType_printsFileContent(t *testing.T) {
 
 	createConsoleTestFileWithContent(t, vol, "FOO.TXT", "hello, world")
 
-	if err := c.Type("FOO.TXT", false); err != nil {
+	if err := c.Type("FOO.TXT", false, false); err != nil {
 		t.Fatalf("Type: %v", err)
 	}
 
@@ -85,7 +88,7 @@ func TestConsoleType_printsFileContent(t *testing.T) {
 func TestConsoleType_notMounted(t *testing.T) {
 	c, _ := newTestConsole(t)
 
-	err := c.Type("DUB0:FOO.TXT", false)
+	err := c.Type("DUB0:FOO.TXT", false, false)
 	if err == nil {
 		t.Fatal("Type against an unmounted device = nil error, want SS_DEVNOTMOUNT")
 	}
@@ -102,7 +105,7 @@ func TestConsoleType_notFound(t *testing.T) {
 	c, _ := newTestConsole(t)
 	mountFreshContainer(t, c, "DUA0")
 
-	err := c.Type("DUA0:NOSUCHFILE.TXT", false)
+	err := c.Type("DUA0:NOSUCHFILE.TXT", false, false)
 	if err == nil {
 		t.Fatal("Type of a nonexistent file = nil error, want SS_NOSUCHFILE")
 	}
@@ -130,7 +133,7 @@ func TestConsoleType_ambiguous(t *testing.T) {
 	createConsoleTestFile(t, vol, "FOO.TXT")
 	createConsoleTestFile(t, vol, "BAR.TXT")
 
-	err := c.Type("*.TXT", false)
+	err := c.Type("*.TXT", false, false)
 	if err == nil {
 		t.Fatal("Type with a wildcard matching several files = nil error, want CLI_AMBIGUOUS")
 	}
@@ -147,7 +150,7 @@ func TestConsoleType_badFileSpec(t *testing.T) {
 	c, _ := newTestConsole(t)
 	mountFreshContainer(t, c, "DUA0")
 
-	err := c.Type("DUA0:[UNTERMINATED", false)
+	err := c.Type("DUA0:[UNTERMINATED", false, false)
 	if err == nil {
 		t.Fatal("Type with an unterminated directory bracket = nil error, want CLI_BADFILESPEC")
 	}
@@ -219,5 +222,135 @@ func TestDispatch_typeAbbreviated(t *testing.T) {
 
 	if err := d.Dispatch("TYP FOO.TXT"); err != nil {
 		t.Fatalf("Dispatch TYP FOO.TXT: %v", err)
+	}
+}
+
+// writeHostTextFile writes content to a new host file named name in a
+// test's temporary directory and returns its path.
+func writeHostTextFile(t *testing.T, name, content string) string {
+	t.Helper()
+
+	path := filepath.Join(t.TempDir(), name)
+	if err := os.WriteFile(path, []byte(content), 0o600); err != nil {
+		t.Fatalf("WriteFile(%s): %v", path, err)
+	}
+
+	return path
+}
+
+// TestConsoleType_hostPath: a name with a host path is a host file, typed
+// line by line, a CR before each LF dropped and a last line with no LF
+// still a line.
+func TestConsoleType_hostPath(t *testing.T) {
+	c, buf := newTestConsole(t)
+	path := writeHostTextFile(t, "notes.txt", "first\r\nsecond\nlast")
+
+	if err := c.Type(path, false, false); err != nil {
+		t.Fatalf("Type(%s): %v", path, err)
+	}
+
+	if want := "first\nsecond\nlast\n"; buf.String() != want {
+		t.Errorf("Type output = %q, want %q", buf.String(), want)
+	}
+}
+
+// TestConsoleType_hostBareName: with the default directory not on a
+// mounted volume, a bare name is a host file.
+func TestConsoleType_hostBareName(t *testing.T) {
+	c, buf := newTestConsole(t)
+	path := writeHostTextFile(t, "BARE.TXT", "bare host file\n")
+	t.Chdir(filepath.Dir(path))
+
+	if err := c.Type("BARE.TXT", false, false); err != nil {
+		t.Fatalf("Type(BARE.TXT): %v", err)
+	}
+
+	if buf.String() != "bare host file\n" {
+		t.Errorf("Type output = %q, want the host file's content", buf.String())
+	}
+}
+
+// TestConsoleType_hostForced: with SET DEFAULT on a volume, a bare name is
+// a volume file, and /HOST makes it a host file instead.
+func TestConsoleType_hostForced(t *testing.T) {
+	c, buf := newTestConsole(t)
+	mountFreshContainer(t, c, "DUA0")
+
+	if err := c.SetDefault("DUA0:"); err != nil {
+		t.Fatalf("SetDefault: %v", err)
+	}
+
+	vol, ok := c.Mounts.Lookup("DUA0")
+	if !ok {
+		t.Fatal("Lookup(DUA0) after mount = not found")
+	}
+
+	createConsoleTestFileWithContent(t, vol, "FOO.TXT", "volume file")
+
+	path := writeHostTextFile(t, "FOO.TXT", "host file\n")
+	t.Chdir(filepath.Dir(path))
+
+	if err := c.Type("FOO.TXT", false, false); err != nil {
+		t.Fatalf("Type(FOO.TXT): %v", err)
+	}
+
+	if !strings.Contains(buf.String(), "volume file") {
+		t.Errorf("Type without /HOST = %q, want the volume file", buf.String())
+	}
+
+	buf.Reset()
+
+	if err := c.Type("FOO.TXT", true, false); err != nil {
+		t.Fatalf("Type(FOO.TXT, host): %v", err)
+	}
+
+	if buf.String() != "host file\n" {
+		t.Errorf("Type with /HOST = %q, want the host file", buf.String())
+	}
+}
+
+// TestConsoleType_hostNotFound: a host file that doesn't exist is
+// SS_NOSUCHFILE, as a volume file is.
+func TestConsoleType_hostNotFound(t *testing.T) {
+	c, _ := newTestConsole(t)
+
+	err := c.Type(filepath.Join(t.TempDir(), "missing.txt"), true, false)
+	if !errors.Is(err, vmserrors.New(vmserrors.SS_NOSUCHFILE)) {
+		t.Errorf("Type of a missing host file = %v, want SS_NOSUCHFILE", err)
+	}
+}
+
+// TestConsoleType_hostPaged: TYPE/PAGE pages a host file as it does a
+// volume file.
+func TestConsoleType_hostPaged(t *testing.T) {
+	c, buf := pagedConsole(t, 5, 0, "q\n")
+	path := writeHostTextFile(t, "long.txt", numberedLines(10))
+
+	if err := c.Type(path, true, true); err != nil {
+		t.Fatalf("Type(%s, paged): %v", path, err)
+	}
+
+	out := buf.String()
+	if !strings.Contains(out, "line 4\n"+pagePrompt) || strings.Contains(out, "line 5") {
+		t.Errorf("Type/PAGE output = %q, want it to stop after the first screen", out)
+	}
+}
+
+// TestDispatch_typeHost: /HOST may follow the verb or the file name.
+func TestDispatch_typeHost(t *testing.T) {
+	for _, form := range []string{"TYPE/HOST %q", "TYPE %q/HOST", "TYPE/PAGE %q/HOST"} {
+		c, buf := newTestConsole(t)
+		d := NewDispatcher(c, loadEvaxGrammar(t), nil)
+		c.ScreenSize = func() (int, int) { return 24, 0 }
+		path := writeHostTextFile(t, "notes.txt", "host notes\n")
+
+		line := fmt.Sprintf(form, path)
+		if err := d.Dispatch(line); err != nil {
+			t.Fatalf("Dispatch %s: %v", line, err)
+		}
+
+		if buf.String() != "host notes\n" {
+			t.Errorf("Dispatch %s output = %q, want the host file's content", line, buf.String())
+		}
 	}
 }

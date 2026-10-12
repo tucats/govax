@@ -407,7 +407,7 @@ func TestProcedure_volume(t *testing.T) {
 		t.Errorf("terminal %q, want nothing", buf.String())
 	}
 
-	if err := c.Type("RESULT.LIS", false); err != nil {
+	if err := c.Type("RESULT.LIS", false, false); err != nil {
 		t.Fatal(err)
 	}
 

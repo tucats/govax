@@ -2,10 +2,10 @@ package console
 
 import (
 	"errors"
+	"strings"
 
 	"github.com/tucats/govax/internal/rms"
 	"github.com/tucats/govax/internal/vmsdef"
-	"github.com/tucats/govax/internal/vmserrors"
 )
 
 // typeOpenIn is TYPE's OPENIN condition value, a warning: the shared
@@ -57,52 +57,44 @@ var typeOpenIn = 149<<16 | vmsdef.LibrarySymbols["SHR$_OPENIN"]
 // With paged (TYPE/PAGE), the text is shown a screenful at a time, as
 // Console.Page shows it (page.go).
 //
+// Where specText is, on the host or on a mounted volume, follows
+// rms.Session.Locate's rules (a host path, or a bare name when the default
+// directory isn't on a volume, is a host file); host (/HOST) makes it a
+// host file whatever it looks like. A host file's lines are typed as they
+// are, each ending in LF (a CR before it dropped). A host file that
+// doesn't exist is SS_NOSUCHFILE, as a volume file is.
+//
 // SYS$INPUT, or a logical name that translates to it, is the process's
 // input, typed a line at a time (typeInput): in a command procedure, the
 // data lines after the command. A logical name DCL's OPEN defined types
-// the file it opened, from where READ has got to (typeOpenFile).
-func (c *Console) Type(specText string, paged bool) error {
-	if c.isInputStream(specText) {
-		return c.typeInput()
+// the file it opened, from where READ has got to (typeOpenFile). Neither
+// applies with host.
+func (c *Console) Type(specText string, host, paged bool) error {
+	if !host {
+		if c.isInputStream(specText) {
+			return c.typeInput()
+		}
+
+		if c.typeOpenFile(specText) {
+			return nil
+		}
 	}
 
-	if c.typeOpenFile(specText) {
-		return nil
-	}
-
-	text, err := c.ContainerSession.Type(specText)
+	loc, err := c.ContainerSession.Locate(specText, host)
 	if err != nil {
-		if lnmErr := logicalNameFailure(err); lnmErr != nil {
-			return lnmErr
-		}
+		return typeFailure(err, specText)
+	}
 
-		var notMounted *rms.NotMountedError
-		if errors.As(err, &notMounted) {
-			return vmserrors.Wrap(vmserrors.SS_DEVNOTMOUNT, err, notMounted.Device)
-		}
+	var text string
 
-		var notFound *rms.NotFoundError
-		if errors.As(err, &notFound) {
-			return vmserrors.Wrap(vmserrors.SS_NOSUCHFILE, err, notFound.Spec)
-		}
+	if loc.Host {
+		text, err = typeHostFile(c.ContainerSession, loc)
+	} else {
+		text, err = c.ContainerSession.Type(specText)
+	}
 
-		// The file another opener keeps readers out of: TYPE's message
-		// for it, as VMS 7.3 showed it (testdata/dcl50's F9), with the
-		// condition value TYPE's image signals, its message shown.
-		var locked *rms.LockedError
-		if errors.As(err, &locked) {
-			return statusError{
-				status: typeOpenIn | stsInhibitMsg,
-				text:   "TYPE-W-OPENIN, error opening " + locked.Name + " as input\n" + conditionLine(vmsdef.Symbols["RMS$_FLK"]),
-			}
-		}
-
-		var ambiguous *rms.AmbiguousError
-		if errors.As(err, &ambiguous) {
-			return vmserrors.Wrap(vmserrors.CLI_AMBIGUOUS, err, "file specification", specText)
-		}
-
-		return vmserrors.Wrap(vmserrors.CLI_BADFILESPEC, err, specText)
+	if err != nil {
+		return typeFailure(err, specText)
 	}
 
 	if paged {
@@ -114,4 +106,40 @@ func (c *Console) Type(specText string, paged bool) error {
 	c.Printf("%s", text)
 
 	return nil
+}
+
+// typeHostFile reads the host file at loc as text lines and returns them
+// joined, each ending in LF.
+func typeHostFile(s *rms.Session, loc rms.FileLocation) (string, error) {
+	records, _, err := s.ReadRecordFile(loc, rms.TextRecords)
+	if err != nil {
+		return "", err
+	}
+
+	var b strings.Builder
+
+	for _, r := range records {
+		b.Write(r)
+		b.WriteByte('\n')
+	}
+
+	return b.String(), nil
+}
+
+// typeFailure turns an error from finding or reading TYPE's file into the
+// VMS status a real operator would see for that specific condition (see
+// Type's doc comment); everything but a locked file is fileFailure's.
+func typeFailure(err error, specText string) error {
+	// The file another opener keeps readers out of: TYPE's message
+	// for it, as VMS 7.3 showed it (testdata/dcl50's F9), with the
+	// condition value TYPE's image signals, its message shown.
+	var locked *rms.LockedError
+	if errors.As(err, &locked) {
+		return statusError{
+			status: typeOpenIn | stsInhibitMsg,
+			text:   "TYPE-W-OPENIN, error opening " + locked.Name + " as input\n" + conditionLine(vmsdef.Symbols["RMS$_FLK"]),
+		}
+	}
+
+	return fileFailure(err, specText)
 }

@@ -1554,3 +1554,18 @@ container was never created by anything this project wrote.
 - This phase is now complete: all 12 subtasks done, `go build ./...`,
   `go vet ./...`, and `go test ./...` clean across the whole module
   including the peer `ods2` module.
+
+### 2026-10-11 — Later: `TYPE` of a host file
+
+- `TYPE` now types host files as well as volume files. Where the name
+  points is `rms.Session.Locate`'s rule, shared with CREATE, MACRO, LINK,
+  `@`, and the rest: a host path, or a bare name when SET DEFAULT isn't on
+  a mounted volume, is a host file. `/HOST` forces the host; since TYPE has
+  one parameter, it's the verb's own qualifier, so `TYPE/HOST X` and
+  `TYPE X/HOST` both work. A host file is typed line by line (a CR before
+  an LF dropped), and `/PAGE` pages it as it does a volume file. Before
+  this, a bare name with no volume default was a file-specification error.
+- `Console.Type` takes `(spec, host, paged)`; SYS$INPUT and OPEN's logical
+  names are looked at only without `/HOST`. A locked volume file is still
+  TYPE-W-OPENIN (`typeFailure`); every other failure is `fileFailure`'s,
+  so a missing host file is SS_NOSUCHFILE.

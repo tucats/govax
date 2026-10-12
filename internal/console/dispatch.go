@@ -584,11 +584,12 @@ func (d *Dispatcher) bindGrammar() {
 	// internal/console/type.go). SPEC carries /prompt= in the grammar
 	// (console.dcl's own type verb), so Grammar.Dispatch's own required-
 	// parameter machinery already guarantees it's present by the time this
-	// closure runs. /PAGE shows it a screenful at a time.
+	// closure runs. /PAGE shows it a screenful at a time; /HOST makes SPEC
+	// a host file name.
 	// VMS's TYPE image ends with SS$_NORMAL, its message marked as shown
 	// (%X10000001: VMS 7.3, testdata/dcl50's round 5).
 	g.Bind("TYPE", func(id int64, r *dcl.Result) error {
-		if err := d.Console.Type(r.String("SPEC"), r.Present("PAGE")); err != nil {
+		if err := d.Console.Type(r.String("SPEC"), r.Present("HOST"), r.Present("PAGE")); err != nil {
 			return err
 		}
 

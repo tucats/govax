@@ -554,12 +554,17 @@ grammar console
     ! /PAGE shows the file a screenful at a time, waiting for RETURN
     ! between screens (internal/console/page.go).
     !
+    ! SPEC may be a host file or a volume file, by internal/rms/location.go's
+    ! rules; /HOST forces the host. TYPE has one parameter, so /HOST is the
+    ! verb's own qualifier: TYPE/HOST X and TYPE X/HOST mean the same.
+    !
     verb type/id=1200
 
         parameter   spec/id=1201                -
                     /type=$string               -
                     /prompt="File specification"
         qualifier   page/id=1202
+        qualifier   host/id=1203
 
     !
     ! govax-native extension (Phase 23, internal/console/dcl + internal/rms
