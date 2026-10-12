@@ -1,8 +1,9 @@
 # Phase 52 — Splitting internal/console
 
-**Status:** in progress (planned and approved 2026-10-12; the author's
-answers to the review questions are at the end). Comes before Phase
-51's remaining subtasks, which will then be taught the new structure.
+**Status:** done (2026-10-12; planned and approved the same day, the
+author's answers to the review questions at the end). It came before
+Phase 51's remaining subtasks, which now work in the new layout (below,
+"Where the old files went", and CLAUDE.md's package list).
 
 ## Where things stand
 
@@ -446,3 +447,156 @@ package move is a plain import-path rewrite.
   `Machine.ShowRegionsOf(env)`: process 1's at DBG>, and the DCL's own
   process in the console's SHOW REGIONS. `machine` imports only lower
   packages.
+- **2026-10-12 — Stage 6: `internal/dclshell`.** First, in place: DCL's
+  dispatch (`DispatchConsole`, `dispatchParsed`, symbols as verbs,
+  ampersands, `@`, foreign commands) and the handlers of DCL's verbs
+  became `Interpreter` methods. The interpreter holds the console's
+  grammar (`Grammar`) and binds DCL's 32 verbs and SET commands in it
+  (`BindDCL`). Lines a procedure or CALL gives the debugger or the
+  interactive assembler go through the console's routing (`route`,
+  `SetRoute`). The `Dispatcher` keeps that routing and the machine's and
+  dclcmd's bindings. Interactive ASM lines are `Machine.AssembleLine`,
+  RUN is `Interpreter.Run`, STOP's lookup `Interpreter.StopProcess`.
+  `NewInterpreter` (`dclhooks.go`) makes process 1's Shell and installs
+  the machine's hooks, with process 1's terminal streams, its CLI
+  registration, process deletion, and XFC$CONSOLE_CMD, so `Console.New`
+  is two lines. The console's few uses were exported in place with `rf`.
+  Then 27 files moved with `git mv`. Tests: DCL's own tests run in
+  `dclshell` on a harness of its own (`helpers_test.go`: an interpreter
+  with the console's grammar and only DCL's verbs bound). A script
+  copied the DCL test files there and pruned them to what compiles and
+  passes. 24 test functions moved (23 by the script, TestOnSyntax by
+  hand), and the rest, which use the
+  console's other verbs (PRINT, RUN, TYPE, ...), its volumes, or its
+  routing, stay in `internal/console`. They reach DCL through a small
+  surface (`inspect.go`: `Symbol`, `DeleteSymbol`, `SymbolLevels`,
+  `EvaluateExpression`, `DCLFileOpen`, `OrphanedDCLFiles`,
+  `VerifyImage`, `VerifyPrefix`, `ControlTEnabled`; and `AssignSymbol`,
+  `ConditionValue`, `VMSCondition`, `PrivilegeList`, `MaxIfBlocks`,
+  `MaxCommandLevels`, `CLINormal`, `IsInputStream`, `PromptSetting`).
+  One slip, caught by the gate: a pruning round that couldn't compile
+  still deleted three lexical tests from the console. The panic one of
+  them caused in `dclshell` hid the others' results. They went back,
+  and the gate's test-name comparison showed nothing else was lost.
+- **2026-10-12 — Stage 7: done.** `internal/console`'s package doc,
+  CLAUDE.md's package list (new entries for `internal/machine`,
+  `internal/dclshell`, `internal/dclcmd`, `internal/dcl`, and
+  `internal/help`; the DCL description moved from the debugger's entry
+  to `dclshell`'s), and PLAN.md's index. Not done, deliberately:
+  converting the console's integration tests to `package console_test`.
+  An external test package can't see the internal tests' helpers
+  (`newTestConsole`, `newBootableConsole`, ...), so the move would mean
+  duplicating or exporting them all, for no change in what is tested.
+  It can be done later if wanted. Left for later, as the plan said:
+  whether the debugger-only helpers (SHOW CALLS, source lines,
+  EXAMINE/INSTRUCTION operands, now in `internal/machine`) belong in
+  `internal/debugger`, and whether VMINIT moves to corevms.
+
+## The result
+
+| Package | Files | Lines | Test files |
+|---|---|---|---|
+| `internal/console` (front end) | 9 | 1,241 | 129 |
+| `internal/machine` | 33 | 9,933 | 12 |
+| `internal/dclshell` | 29 | 10,722 | 11 |
+| `internal/dclcmd` | 26 | 4,764 | 0 (its commands are tested through the console) |
+| `internal/dcl` | 8 | 2,465 | 7 |
+| `internal/help` | 1 | 159 | 1 |
+
+Layering, each importing only those below it: `dcl`, `help`, `dclcmd`,
+`machine` (over corevms and the rest) → `dclshell` (on `machine` and
+`dclcmd`) → `console`. The debugger's own code imports `machine` and
+`dcl`, not `console`. The same 4,610 tests pass as before the phase,
+plus `TestSpawnDCL_nestedInherits` (Stage 3's fix), with 75 test functions
+now in `machine` (51) and `dclshell` (24). golangci-lint reports what it did
+before.
+
+## Where the old files went
+
+Each of the 81 files `internal/console` had before this phase. Paths are
+under `internal/`.
+
+| Old file | Now |
+|---|---|
+| `analyze.go` | `dclcmd/analyze.go` |
+| `asm.go` | `machine/asm.go` |
+| `chf.go` | `machine/chf.go` |
+| `commands.go` | stays; STOP's process lookup → `dclshell/dclcontroly.go`, DCL's verbs' bindings → `dclshell/dcldispatch.go` (`BindDCL`) |
+| `copy.go` | `dclcmd/copy.go` |
+| `create.go` | `dclcmd/create.go` |
+| `createfile.go` | `dclcmd/createfile.go` |
+| `dbgcalls.go` | `machine/dbgcalls.go` |
+| `dbgnames.go` | `machine/dbgnames.go` |
+| `dbgoperands.go` | `machine/dbgoperands.go` |
+| `dbgtrace.go` | `machine/dbgtrace.go` |
+| `dclcall.go` | `dclshell/dclcall.go` |
+| `dclcontroly.go` | `dclshell/dclcontroly.go` |
+| `dclexpr.go` | `dclshell/dclexpr.go` |
+| `dclfile.go` | `dclshell/dclfile.go` |
+| `dclif.go` | `dclshell/dclif.go` |
+| `dclinput.go` | `dclshell/dclinput.go` |
+| `dcllabel.go` | `dclshell/dcllabel.go` |
+| `dcllend.go` | `dclshell/dcllend.go` |
+| `dcllexfile.go` | `dclshell/dcllexfile.go` |
+| `dcllexical.go` | `dclshell/dcllexical.go` |
+| `dcllexname.go` | `dclshell/dcllexname.go` |
+| `dcllexprocess.go` | `dclshell/dcllexprocess.go` |
+| `dcllexstring.go` | `dclshell/dcllexstring.go` |
+| `dcllextime.go` | `dclshell/dcllextime.go` |
+| `dclstatus.go` | `dclshell/dclstatus.go` |
+| `dclsubst.go` | `dclshell/dclsubst.go` |
+| `dclsym.go` | `dclshell/dclsym.go` |
+| `dclverify.go` | `dclshell/dclverify.go` |
+| `dclwait.go` | `dclshell/dclwait.go` |
+| `debugger.go` | `machine/debugger.go`; `StartDebugger` → `console/commands.go` |
+| `default.go` | `dclcmd/default.go` |
+| `defvolume.go` | `dclcmd/defvolume.go` |
+| `delete.go` | `dclcmd/delete.go` |
+| `device.go` | `dclcmd/device.go` |
+| `directory.go` | `dclcmd/directory.go` |
+| `disasm.go` | `machine/disasm.go` |
+| `dispatch.go` | stays (routing, the machine's and dclcmd's bindings); `DispatchConsole` and DCL's parsing → `dclshell/dcldispatch.go` |
+| `doc.go` | stays |
+| `exam.go` | `machine/exam.go` |
+| `execute.go` | `machine/execute.go` |
+| `export.go` | `machine/export.go` |
+| `expr.go` | `machine/expr.go` |
+| `filenames.go` | `dclcmd/filenames.go`; `withDefaultType` and the naming rules → `rms/defaulttype.go` |
+| `help.go` | `help/help.go` |
+| `image.go` | `machine/image.go` |
+| `images.go` | `machine/images.go` |
+| `init_container.go` | `dclcmd/init_container.go` |
+| `init_vax.go` | `machine/init_vax.go` |
+| `library.go` | `dclcmd/library.go` |
+| `link.go` | `dclcmd/link.go` |
+| `linksource.go` | `dclcmd/linksource.go` |
+| `logical.go` | `dclcmd/logical.go`; the bindings → `console/logicalcmds.go`, process 1's logical names → `machine/machine.go` (`NewMachine`) |
+| `machine.go` | `console/console.go` (`Console`, `New`); the machine's fields and methods → `machine/machine.go`; process 1's construction and hooks → `dclshell/dclhooks.go` |
+| `macro.go` | `dclcmd/macro.go` |
+| `misc.go` | stays (one-shot command line, run limits, TIME, HELP, `EndSession`); CLEAR and PRINT → `machine/clear.go`; `Running`/`Quit` → `dclshell/interpreter.go` |
+| `mount.go` | `dclcmd/mount.go` |
+| `page.go` | `dclcmd/page.go`; `readReply` → `dclshell/interpreter.go` |
+| `procedure.go` | `dclshell/procedure.go` |
+| `procsettings.go` | `machine/procsettings.go` |
+| `prompt.go` | `dclshell/prompt.go` |
+| `purge.go` | `dclcmd/purge.go` |
+| `rename.go` | `dclcmd/rename.go` |
+| `rom.go` | `machine/rom.go` |
+| `run.go` | `machine/run.go`; RUN in a subprocess (`Interpreter.Run`) → `dclshell/interpreter.go` |
+| `services.go` | `machine/services.go` (the machine is the engine's services) and `machine/processes.go`; the process half → `corevms/enginehooks.go` |
+| `set.go` | `machine/set.go` |
+| `setcommand.go` | stays; DCL's SET commands' bindings → `dclshell/dcldispatch.go` |
+| `shared.go` | `machine/shared.go` |
+| `shim.go` | `machine/shim.go`; the shim link table and stub → `corevms/shimlink.go` |
+| `show.go` | `machine/show.go` (SHOW REGIONS is `ShowRegionsOf`; the console's wrapper is in `console/commands.go`) |
+| `showsys.go` | `dclcmd/showsys.go` |
+| `source.go` | `machine/source.go` |
+| `spawncmd.go` | `dclshell/spawncmd.go` |
+| `stop.go` | `machine/stop.go`; STOP's process lookup → `dclshell/dclcontroly.go` |
+| `subcli.go` | `dclshell/subcli.go` |
+| `symbols.go` | `machine/symbols.go` |
+| `syslib.go` | `dclcmd/syslib.go` |
+| `trace.go` | `machine/trace.go` |
+| `type.go` | `dclcmd/type.go` |
+| `vminit.go` | `machine/vminit.go` |
+| `dcl/*.go` | `internal/dcl` |

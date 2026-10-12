@@ -11,7 +11,7 @@ never had.
 
 - `docs/PLAN.md` — high-level plan, locked-in architecture decisions, and the phase
   index.
-- `docs/PHASE-00.md` … `PHASE-51.md` — one doc per phase: goal, C-source file
+- `docs/PHASE-00.md` … `PHASE-52.md` — one doc per phase: goal, C-source file
   mapping, deliverables, open questions, and a dated progress log (all
   done through 50, but for Phase 42's Part B, the debugger's further
   features, in progress; 40 follows 38 directly: there is no Phase
@@ -28,9 +28,13 @@ never had.
   console's whole DCL in subprocesses, and the other processes running
   between DCL commands and during WAIT. Phase 51 (in progress) is what
   it left for later: round 6 of the DCL probe (done), SPAWN from a
-  subprocess, Ctrl/Y in a subprocess's procedures,
+  subprocess (done), Ctrl/Y in a subprocess's procedures,
   the other processes running while the prompt waits for a line, and
-  the known differences from VMS.
+  the known differences from VMS. Phase 52 (done 2026-10-12, paused
+  Phase 51) split `internal/console` into `internal/machine`,
+  `internal/dclshell`, `internal/dclcmd`, `internal/dcl`, and
+  `internal/help`, leaving `internal/console` the front end; its doc
+  has the table of where each old `internal/console` file went.
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
 - `docs/DEVIATIONS.md` — running log of suspected ISA/behavior fidelity issues found in
@@ -206,59 +210,77 @@ expect adjustment as phases land):
   `lck.Deliver` hands each to its lock's `Data` if that's a `Notifier`
   (how `$ENQ` completes in the owner's process and an RMS record-lock
   wait is woken). A leaf package; owners are PIDs.
-- `internal/console` — interactive monitor + DCL grammar interpreter (Phase 08).
-  Every console command is parsed by the DCL grammar
-  (`internal/bootdata/files/console.dcl`); Phase 37 moved the last
-  hand-parsed "fixed" commands (EXAMINE, SET, STEP, RUN, ...) onto it, with
-  handlers in `commands.go` and `setcommand.go`. An address or value is an
-  `$expression` parameter, whose extent the grammar finds and whose value
-  the handler gets from the expression evaluator (`expr.go`). Unquoted
-  text is uppercased, so a case-sensitive host file name must be quoted.
-- `internal/debugger` — the machine debugger (Phase 42), modeled on the VMS
-  debugger: a `Debugger` session and its `Dispatcher` over `debug.dcl`
-  (`internal/bootdata/files`), with `debug.help` and the `DBG> ` prompt.
-  **The console and the debugger are two front ends to one machine, each
-  with its own grammar:** `console.dcl` has the VMS command line (RUN,
-  MACRO, LINK, MOUNT, DIRECTORY, DEFINE, SET DEFAULT, SAVE/LOAD, ...) and `debug.dcl` the machine's commands (EXAMINE, DEPOSIT,
-  EVALUATE, STEP, SET/SHOW/CANCEL BREAK, TRACE, WATCH, SHOW REGISTERS,
-  CALLS, IMAGE, SYMBOL, SET MODE/RADIX, ...); `TestGrammarSplit` says which
-  command is in which. The debugger imports `internal/console`, which knows
-  it only through the `console.Debugger` interface (`debugger.go`);
-  `cmd/govax` installs it, and the console works without one. A session
-  GO, CALL, and ASM are debugger commands (live code): the console has
-  no GO or CALL, and accepts ASM only until the microkernel is in place
-  (`Console.kernelPlaced`, set when ASM defines EXE$INITIALIZE), which is
-  how `vax.init` loads it before `$ DEBUG` and the data lines
-  `GO EXE$INITIALIZE` / `EXIT`.
-  Tests that need them install the debugger and enter its mode with
-  `consoletest.InstallDebugger` and `consoletest.DebugMode`. A session
-  starts at the console's `DEBUG`, when a `GO`/`CALL` stops, and for `RUN`
-  of an image linked `/DEBUG` (or `RUN/DEBUG`), stopped at the main
-  routine's first instruction; a run that ends by itself returns to
-  `VAX>`. While a session is active `Dispatcher.Dispatch` routes lines to
-  the debugger (`DispatchConsole` is the console's own, for
-  `XFC$CONSOLE_CMD`); `EXIT` returns. Run control (`runcontrol.go`,
-  `step.go`, eventpoints), EXAMINE/DEPOSIT (`data.go`, `examine.go`), the
-  display modes (`modes.go`), source lines (`source.go`), and RUN under the
-  debugger (`image.go`) are here, and the debugger reaches the machine
-  through `console/export.go`. Its output is the VMS debugger's, checked
-  against the VMS 7.3 logs of `testdata/dbg` and `testdata/dbgcmd` by
-  oracle tests; `TestDebuggerSessionOracle` replays every session and
-  keeps the list of what still differs (`expectedDifferences`).
-  `SET MODE` takes the VMS display modes and govax's access modes;
-  the console and the debugger each have their own radix. `SET PROCESS
-  [pid|name]` (`process.go`) moves the CPU to another process so the
-  debugger shows its context (STEP and breakpoints stay with process 1),
-  and the debugger's `SHOW PROCESS` lists the processes. **Symbols are
-  split the same way:** the console's SHOW SYMBOL and DELETE/SYMBOL are
-  DCL's (`internal/console/dclsym.go`'s `dclSymbolTable`: a global table
-  and a local table per command level), and the machine's symbol table
-  (`Console.Symbols`, ASM's symbols and the predefined ones) is the
-  debugger's SHOW SYMBOL (`/ALL`, `/SYSTEM`) and CANCEL/CLEAR SYMBOL.
-  **Command procedures** (Phase 50, `internal/console/procedure.go`):
+- `internal/console` — the front end (Phase 08; since Phase 52 only
+  that): a `Console` embeds a `*machine.Machine` and a
+  `*dclshell.Interpreter`, and its `Dispatcher` routes each line to the
+  interactive assembler, the debugger, or DCL, letting the other
+  processes run at command level 0. Every command is parsed by the
+  grammar (`internal/bootdata/files/console.dcl`); DCL binds its verbs,
+  and this package the machine's (`commands.go`, `setcommand.go`,
+  `dispatch.go`) and dclcmd's (`logicalcmds.go`, `dispatch.go`). An
+  address or value is an `$expression` parameter, whose extent the
+  grammar finds and whose value the handler gets from the machine's
+  expression evaluator. Unquoted text is uppercased, so a case-sensitive
+  host file name must be quoted. The one-shot command line and run
+  limits are `misc.go`. Most end-to-end and oracle tests are here;
+  `internal/console/consoletest` is test support for packages that drive
+  a console (the debugger's tests).
+- `internal/machine` — the emulated machine as the operator sees it
+  (Phase 52; earlier in `internal/console`): `Machine` holds the engine,
+  CPU, and memory, INIT/ZERO, VMINIT's layout, ROM/NVRAM, the shim stubs
+  (`shim.go`, over `corevms.ShimLink`), the image loader and each
+  process's image state (`image.go`, `images.go`, `ImageState`), RUN and
+  its IMAGE$INIT driver, the run loop and trace, the console symbol table
+  and expression evaluator (`symbols.go`, `expr.go`), ASM's session,
+  EXAMINE's sizes, disassembly, the debug-symbol helpers, CHF frames,
+  SET and SHOW of the machine's state, and `export.go`, the debugger's
+  surface. It is the engine's `cpu.SystemServices` (and `ASTSource`,
+  `ExceptionDispatcher`, `AttentionHandler`, asserted in `services.go`),
+  passing services, shims, ASTs, and exceptions to the running process
+  (`corevms.EngineHooks`); what it needs of the DCL running a command
+  (output, default directory, `$STATUS`, Ctrl/Y, the subprocess CLI,
+  process 1's terminal, XFC$CONSOLE_CMD, quit) is `Machine.Hooks`, which
+  `dclshell.NewInterpreter` sets. `NewMachine` makes one with hooks of
+  its own, so it works, and is tested, alone (`helpers_test.go`:
+  `newTestMachine`, `newBootableMachine`). Imports only lower packages.
+- `internal/dclcmd` — the utility commands (Phase 52; earlier in
+  `internal/console`): DIRECTORY, TYPE, COPY, DELETE, PURGE, RENAME,
+  CREATE, SET/SHOW DEFAULT, MOUNT/DISMOUNT, INITIALIZE/CONTAINER, the
+  default volume, DEFINE/ASSIGN/DEASSIGN and SHOW LOGICAL/TRANSLATION,
+  DEFINE/DEVICE and SHOW DEVICES, SHOW SYSTEM/PROCESS, MACRO, LINK
+  (`linksource.go`, `GovaxSymbols`), LIBRARY, ANALYZE, the VMS library
+  search (`syslib.go`), and paging (`page.go`). Each is a method of
+  `Context`, which the console builds for each command from the DCL
+  running it (`Console.cmd`; tests and cmd/govax use
+  `Console.Commands`); what a command asks of DCL is its function fields
+  (`Running`, `SetStatus`, `ReadReply`, `TypeDCL`). Knows nothing of
+  the console, DCL, or the machine.
+- `internal/dcl` — the grammar engine (Phase 08; `internal/console/dcl`
+  until Phase 52): reads a grammar file (`console.dcl`, `debug.dcl`),
+  parses a command line into a `Result`, and dispatches it to the
+  handler bound to its verb or syntax. The console and the debugger
+  each have a grammar. `internal/help` reads the help files (`help.File`:
+  `Parse`, `Load`, `Show`).
+- `internal/dclshell` — DCL, the command language interpreter (Phases 48,
+  50, 51; its own package since Phase 52). An `Interpreter` is every
+  process's DCL: each process that runs DCL has a `Shell` (its process,
+  logical names, default directory, output, symbols, command levels,
+  `$STATUS`, open files, Ctrl/Y and STOP state), and the current one is
+  embedded, so its fields read as the interpreter's; process 1's is
+  `home`, a subprocess CLI's its own (`subcli.go`, made current by
+  `useShell`). `NewInterpreter` (`dclhooks.go`) makes process 1's Shell
+  and installs the machine's `Hooks`. The interpreter holds the console's
+  grammar (`Grammar`) and binds DCL's own verbs in it (`BindDCL`);
+  `DispatchConsole` (`dcldispatch.go`) runs a line through DCL's phases,
+  and lines a procedure gives the debugger or the interactive assembler
+  go through the console's routing (`SetRoute`). `inspect.go` is what
+  the console's tests see of its state. Its tests run on a harness of
+  their own (`helpers_test.go`: the console's grammar with only DCL's
+  verbs bound).
+  **Command procedures** (Phase 50, `procedure.go`):
   `@file[/OUTPUT=file] [p1 ... p8]` is read before the grammar (the
   console has no INCLUDE) and runs the file at a new command level on
-  `Console.levels`, the input stack, with its own local symbol table
+  `Shell.levels`, the input stack, with its own local symbol table
   (`dclSymbolTable.push`/`pop`) holding P1 to P8. Its lines follow VMS:
   `$` starts a command, `$!` a comment, `-` continues; a line without
   `$` is data, given to the debugger or interactive assembler when one
@@ -268,8 +290,8 @@ expect adjustment as phases land):
   ends govax. **Statuses** (`dclstatus.go`): `$STATUS`/`$SEVERITY` are
   global string symbols set around each line `DispatchConsole` reads
   (`statusOf`); a handler's error becomes VMS's condition value for the
-  same message name (`conditionValue`, CLI_IVVERB is CLI$_IVVERB), and a
-  handler can name its status (`setCommandStatus`: @, RUN's image exit
+  same message name (`ConditionValue`, CLI_IVVERB is CLI$_IVVERB), and a
+  handler can name its status (`SetCommandStatus`: @, RUN's image exit
   status) or keep it (`keepStatus`: SHOW SYMBOL, IF, CONTINUE). Each
   level's `onAction` is ON's and SET [NO]ON's; `procedureLine` shows a
   command's message, then takes the action; a procedure ends with a
@@ -277,7 +299,7 @@ expect adjustment as phases land):
   cursor (`Position`/`Seek`/`Rewind`), and an `end` (a CALL level's is
   its ENDSUBROUTINE). **Flow control** (`dcllabel.go`, `dclif.go`,
   `dclcall.go`): each level's `flowState` (the terminal's is
-  `Console.terminalFlow`) holds its labels, open IF blocks, the lines
+  `Shell.terminalFlow`) holds its labels, open IF blocks, the lines
   being passed over (`blockSkip`), and GOSUB's returns.
   `DispatchConsole` passes over a branch's lines unread (`skipLine`),
   records a label (`takeLabel`), and checks for a block's THEN
@@ -310,7 +332,7 @@ expect adjustment as phases land):
   the VMS probe, and `TestProbe50Oracle` replays it against VMS 7.3's
   log.
   **Verification** (`dclverify.go`): SET [NO]VERIFY and SET [NO]PREFIX;
-  the procedure loop makes each line a pending echo (`Console.echo`),
+  the procedure loop makes each line a pending echo (`Shell.echo`),
   which `DispatchConsole` shows after substitution (a continued command
   a record at a time, through `joinMark`) or drops; F$VERIFY in a
   comment is performed and shown as its value (round 2 of the probe,
@@ -324,13 +346,13 @@ expect adjustment as phases land):
   next `$` line; TYPE SYS$INPUT reads the same way. DECK/EOD (a deck in
   `procedureSource`). Data nothing reads is SKPDAT after an image and a
   command after one of DCL's own commands (`dclOwnCommands`, by the
-  grammar's syntax name; `Console.imageRan`).
+  grammar's syntax name; `Shell.imageRan`).
   **DCL's file I/O** (`dclfile.go`, subtask 17): OPEN opens a file
   through `rms.Session.OpenDCLFile` (`internal/rms/dclfile.go`: a
   volume file by `$OPEN`'s and `$CREATE`'s code, among the file's RMS
   openers, with a `FileHandle`'s record stream; a host file as lines)
   and defines its logical name (process table, supervisor mode);
-  `Console.dclFiles` keeps it open past its procedure, until CLOSE or
+  `Shell.dclFiles` keeps it open past its procedure, until CLOSE or
   `EndSession`. READ/WRITE need no OPEN for SYS$INPUT, SYS$OUTPUT,
   SYS$ERROR, and SYS$COMMAND (`processPermanentFile`); READ SYS$INPUT
   takes the procedure's next record, SYS$COMMAND and INQUIRE read the
@@ -340,7 +362,7 @@ expect adjustment as phases land):
   ON action and leaves the procedure's own status (`endStatus`, EXIT's)
   CLI$_NORMAL.
   **STOP and Ctrl/Y** (`dclcontroly.go`, subtask 18): STOP sets
-  `Console.stopping`, which ends every level; an attention key no AST
+  `Shell.stopping`, which ends every level; an attention key no AST
   takes is DCL's in a procedure (`HandleAttention` during an image,
   `takeControlY` after a DCL command), then forgotten
   (`Engine.ClearAttention`) so cmd/govax doesn't end govax for it: ON
@@ -357,11 +379,55 @@ expect adjustment as phases land):
   instruction; `ReclaimCPU`), and a subprocess's DCL yields from its
   shim (`yieldCommand`, `Environment.Yield`); so SPAWN/NOWAIT procedures
   interleave with process 1's. At process 1's level 0 (`Dispatch`)
-  `lendWhileIdle` waits until the others are idle, at most
+  `LendWhileIdle` waits until the others are idle, at most
   `promptLendLimit`. WAIT lends the CPU (a subprocess's waits in the
   scheduler, `yieldTimer`). Not inside a machine run
   (`consoleCommands`, frozen scheduling), the debugger, or ASM.
-  `internal/console/consoletest` is its test support.
+- `internal/debugger` — the machine debugger (Phase 42), modeled on the VMS
+  debugger: a `Debugger` session and its `Dispatcher` over `debug.dcl`
+  (`internal/bootdata/files`), with `debug.help` and the `DBG> ` prompt.
+  **The console and the debugger are two front ends to one machine, each
+  with its own grammar:** `console.dcl` has the VMS command line (RUN,
+  MACRO, LINK, MOUNT, DIRECTORY, DEFINE, SET DEFAULT, SAVE/LOAD, ...) and `debug.dcl` the machine's commands (EXAMINE, DEPOSIT,
+  EVALUATE, STEP, SET/SHOW/CANCEL BREAK, TRACE, WATCH, SHOW REGISTERS,
+  CALLS, IMAGE, SYMBOL, SET MODE/RADIX, ...); `TestGrammarSplit` says which
+  command is in which. The debugger works on a `*machine.Machine`, which
+  knows it only through the `machine.Debugger` interface
+  (`internal/machine/debugger.go`); what it needs of the console (its
+  routing for `@file`, its verbs, debugger procedures) is the
+  `debugger.Console` interface, which `*console.Console` implements, so
+  its own code doesn't import `internal/console` (Phase 52). `cmd/govax`
+  installs it, and the console works without one. A session
+  GO, CALL, and ASM are debugger commands (live code): the console has
+  no GO or CALL, and accepts ASM only until the microkernel is in place
+  (`Machine.KernelPlaced`, set when ASM defines EXE$INITIALIZE), which is
+  how `vax.init` loads it before `$ DEBUG` and the data lines
+  `GO EXE$INITIALIZE` / `EXIT`.
+  Tests that need them install the debugger and enter its mode with
+  `consoletest.InstallDebugger` and `consoletest.DebugMode`. A session
+  starts at the console's `DEBUG`, when a `GO`/`CALL` stops, and for `RUN`
+  of an image linked `/DEBUG` (or `RUN/DEBUG`), stopped at the main
+  routine's first instruction; a run that ends by itself returns to
+  `VAX>`. While a session is active `Dispatcher.Dispatch` routes lines to
+  the debugger (`Interpreter.DispatchConsole` is DCL's, which
+  `XFC$CONSOLE_CMD` uses); `EXIT` returns. Run control (`runcontrol.go`,
+  `step.go`, eventpoints), EXAMINE/DEPOSIT (`data.go`, `examine.go`), the
+  display modes (`modes.go`), source lines (`source.go`), and RUN under the
+  debugger (`image.go`) are here, and the debugger reaches the machine
+  through `internal/machine/export.go`. Its output is the VMS debugger's, checked
+  against the VMS 7.3 logs of `testdata/dbg` and `testdata/dbgcmd` by
+  oracle tests; `TestDebuggerSessionOracle` replays every session and
+  keeps the list of what still differs (`expectedDifferences`).
+  `SET MODE` takes the VMS display modes and govax's access modes;
+  the console and the debugger each have their own radix. `SET PROCESS
+  [pid|name]` (`process.go`) moves the CPU to another process so the
+  debugger shows its context (STEP and breakpoints stay with process 1),
+  and the debugger's `SHOW PROCESS` lists the processes. **Symbols are
+  split the same way:** the console's SHOW SYMBOL and DELETE/SYMBOL are
+  DCL's (`internal/dclshell/dclsym.go`'s `dclSymbolTable`: a global table
+  and a local table per command level), and the machine's symbol table
+  (`Machine.Symbols`, ASM's symbols and the predefined ones) is the
+  debugger's SHOW SYMBOL (`/ALL`, `/SYSTEM`) and CANCEL/CLEAR SYMBOL.
 - `internal/io` — device abstraction (Phase 09).
 - `internal/vmsdef` — VMS's own definitions, shared by the assembler, RTL, RMS,
   and LINK: `Symbols` (every symbolic constant, one table; `symbols.go` says
@@ -384,11 +450,11 @@ expect adjustment as phases land):
   process is an `Environment` that embeds it, with its `Space`
   (`addrspace.go`: `BuildAddressSpace`, the shared P1 vector, teardown)
   and `Stacks` (`stacks.go`: privileged stacks and the PCB page). Process
-  1 is the console's, on VMINIT's tables and stacks; the console keeps
-  each process's image state (`internal/console/images.go`). Phase 44's
+  1 is the console's, on VMINIT's tables and stacks; the machine keeps
+  each process's image state (`internal/machine/images.go`). Phase 44's
   scheduler: the `System` owns a `sched.Scheduler` kept in step with the
   table and is the engine's hook (`schedule.go`: `Schedule`, `switchTo`,
-  `SwitchCPU`; installed by the console's `newRTL` with
+  `SwitchCPU`; installed by the machine's `newRTL` with
   `InstallScheduler` when `vax.process.scheduler` is on). Phase 45:
   `$CREPRC` (`creprc.go`, quotas in `quotas.go`), process startup in the
   new process's context (`startup.go`), and deletion (`delete.go`:
@@ -423,11 +489,12 @@ expect adjustment as phases land):
   owner's process); `$GETLKI(W)` is `getlki.go` (Phase 49); image rundown dequeues user-mode locks, process
   deletion all (`locks.go`); the RMS context carries the database, the
   PID, and a record-lock wait (`awaitLock`, `lockWaker`). The
-  console's engine hooks reach the current process (`Console.running`);
-  `Console.RTL` stays process 1, and only process 1's image ending ends
-  a console run (`Console.StepMachine`). A run that stops in another
-  process leaves the CPU there until the next run or the debugger's EXIT
-  (`Console.ReturnToProcessOne`). Phase 48: `LIB$SPAWN`'s process side
+  machine's engine hooks reach the current process
+  (`Machine.RunningProcess`, `corevms.EngineHooks`); `Machine.ProcessOne`
+  is process 1, and only process 1's image ending ends a console run
+  (`Machine.StepMachine`). A run that stops in another process leaves the
+  CPU there until the next run or the debugger's EXIT
+  (`Machine.ReturnToProcessOne`). Phase 48: `LIB$SPAWN`'s process side
   (`spawn.go`: the subprocess, its SYS$ names, copied logical names and
   symbols, the completion in Go at deletion; `Environment.SpawnNotice`);
   processes that run a CLI rather than an image (`cliprocess.go`:
@@ -463,21 +530,22 @@ expect adjustment as phases land):
   (`TestLibCreateDirOracle`). LIB$PUT_OUTPUT is here too (`output.go`); kernel.asm's
   old interrupt-driven one is now its private `EXE$PUT_OUTPUT`.
   LIB$GET_FOREIGN (`foreign.go`) returns `Environment.CommandLine`: a
-  foreign command's text (DCL symbols, `internal/console/dclsym.go`), or
+  foreign command's text (DCL symbols, `internal/dclshell/dclsym.go`), or
   what follows the image on `govax run IMAGE text...`.
   LIB$GET_INPUT (`input.go`) reads a line from the terminal with the
   terminal's rules (`Environment.ReadInputLine`). LIB$SPAWN (`spawn.go`,
   Phase 48) reads its 13 arguments and calls `Environment.Spawn`. The
-  subprocess runs the console's own DCL (`internal/console/subcli.go`,
+  subprocess runs the console's own DCL (`internal/dclshell/subcli.go`,
   Phase 50's subtask 19): its interpreter is a goroutine that takes
   turns with the engine (strict handoff through its stub's shim,
   `EXE$CLI_COMMAND`: resume, then a `cliYield` to wait, give the CPU up
-  after a command, call an image, or log out), with the console's per-process DCL state swapped to the
-  process's (`swapDCLState`, `dclState`: RTL, Logicals,
-  ContainerSession, Out, symbols, levels, $STATUS, ...; `processOne` is
-  process 1 throughout, `subCLI` the subprocess's CLI). RUN there is
+  after a command, call an image, or log out), with the process's own
+  `Shell` (its RTL, Logicals, ContainerSession, Out, symbols, levels,
+  $STATUS, ...) the interpreter's current one while it runs
+  (`useShell`; `Machine.ProcessOne` is process 1 throughout, `subCLI`
+  the subprocess's CLI). RUN there is
   `subprocessRun`; `processOneCommands` (DEBUG, ASM, VMINIT, ...)
-  are VAX_NOTSUBPROC. The console's SPAWN (`spawncmd.go`) calls
+  are VAX_NOTSUBPROC. DCL's SPAWN (`internal/dclshell/spawncmd.go`) calls
   LIB$SPAWN in process 1; in a subprocess (Phase 51) it calls corevms's
   `Spawn` from Go and waits with `AwaitSpawn` through a `cliYield`
   (`spawnInSubprocess`).
@@ -578,7 +646,7 @@ expect adjustment as phases land):
   kinds of wildcard context; Phase 33's runtime oracle (`testdata/mar/rms3`,
   `TestRMS3Oracle`) checks them against VMS 7.3 byte for byte.
   `Session.CreateDirectory` (`createdir.go`, Phase 34) is the console's
-  `CREATE/DIRECTORY` (`internal/console/create.go`): ods2 lays the directory
+  `CREATE/DIRECTORY` (`internal/dclcmd/create.go`): ods2 lays the directory
   files out (`volume.CreateDirectory`, `filespec.CreateDirectoryPath`), and
   `TestCreateDirectoryOracle` (`testdata/credir`) checks headers and
   messages against VMS 7.3's run. A RAB connected to the terminal reads lines from the
@@ -616,10 +684,10 @@ expect adjustment as phases land):
   a model fitted to VMS's (`iocount.go`, `Context.CountIO`).
 - `internal/link` — the VAX linker (Phase 30): builds a VMS executable image from
   `internal/obj` modules, laid out as real LINK lays images out (byte for byte on
-  the fixtures). The console's `LINK` command (`internal/console/link.go`) drives it.
+  the fixtures). The console's `LINK` command (`internal/dclcmd/link.go`) drives it.
   Undefined symbols come from symbol sources (`source.go`, `libsource.go`):
   IMAGELIB.OLB plus shareable images' GSTs, STARLET.OLB, then govax's own tables
-  (`internal/console/linksource.go`). With traceback (the default), pass 2
+  (`internal/dclcmd/linksource.go`). With traceback (the default), pass 2
   also runs each module's TBT records into the image's debug symbol table,
   which follows the image's other blocks and the IHS block points at
   (Phase 29); DBG records are skipped. `LINK/DEBUG` (`Options.Debug`,
@@ -637,7 +705,7 @@ expect adjustment as phases land):
   VMS's librarian does, and `MacroModules`/`ObjectModules` (`input.go`) apply
   LIBRARIAN's rules for turning macro source and object files into modules;
   `List` is LIBRARY/LIST's listing, in LIBRARIAN's own formats. The console's
-  `LIBRARY` command (`internal/console/library.go`) drives it. Imports only
+  `LIBRARY` command (`internal/dclcmd/library.go`) drives it. Imports only
   `internal/obj` and `internal/vmsdef`.
 - `internal/anl` — VMS's ANALYZE utility (Phase 38): `AnalyzeObject` turns an
   object file's records into report `Line`s exactly as VMS 7.3's ANALYZE/OBJECT
@@ -654,7 +722,7 @@ expect adjustment as phases land):
   `testdata/mar/round/vax`) byte for byte but for the time;
   `testdata/imagekinds.txt` shows the unconfirmed layouts. Debug table
   contents aren't shown (future expansion). The console's
-  `ANALYZE/OBJECT` and `ANALYZE/IMAGE` (`internal/console/analyze.go`,
+  `ANALYZE/OBJECT` and `ANALYZE/IMAGE` (`internal/dclcmd/analyze.go`,
   sharing `analyzeFiles`) find files (and object libraries' modules) and
   write the report; in `console.dcl` each kind of analysis is a qualifier
   switching to its own syntax.
@@ -687,7 +755,7 @@ expect adjustment as phases land):
   `vax.default.volume.file`/`.label`/`.device`/`.type`/`.directory` — a
   container `cmd/govax` mounts at startup (creating it, sized by the type,
   with the directory in it, if it doesn't exist) and does a SET DEFAULT
-  to (`Console.MountDefaultVolume`, `internal/console/defvolume.go`;
+  to (`dclcmd.Context.MountDefaultVolume`, `internal/dclcmd/defvolume.go`;
   defaults WORK, DUA0:, RD54, [WORK]; messages in `vmserrors/codes_mount.go`).
   Unset file: no default volume, names go to the host. Every key read must
   be in `cmd/govax/main.go`'s `validConfigs`, and documented in vax.help's
@@ -695,7 +763,7 @@ expect adjustment as phases land):
   `vax.library` (string) — the host directory LINK and MACRO look
   in for IMAGELIB.OLB, STARLET.OLB, shareable images, and STARLET.MLB when
   `SYS$LIBRARY`/`SYS$SHARE` don't lead to them (read by the console, not `NewEngine`;
-  `internal/console/syslib.go`); the older `vax.link.library` is still read when
+  `internal/dclcmd/syslib.go`); the older `vax.link.library` is still read when
   it isn't set. With no STARLET.MLB found, MACRO uses govax's own from bootdata:
   `files/starlet.mar` (system service and RMS macros, hand-written clean-room;
   the process and other service macros, in `_S`, argument-list, and `_G`

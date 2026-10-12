@@ -1,27 +1,19 @@
-// Package console implements the govax interactive monitor front end: the
-// VMS-style command line (RUN, MACRO, LINK, MOUNT, DIRECTORY, DEFINE, SET
-// DEFAULT, SAVE/LOAD, ...) and the DCL grammar-driven verb/qualifier dispatch
-// built on internal/dcl, against an internal/cpu.Engine and its
-// internal/vax.CPU/internal/vm.Memory (see docs/PHASE-08.md).
+// Package console is govax's front end (docs/PHASE-08.md, and
+// docs/PHASE-52 - console package split.md for its present shape): a
+// Console is a machine (internal/machine) and its DCL
+// (internal/dclshell), and a Dispatcher routes each command line typed
+// or read to whichever reads it now: the interactive assembler (ASM's
+// mode), the debugger (internal/debugger, through machine.Debugger), or
+// DCL (Interpreter.DispatchConsole), and at command level 0 lets the
+// other processes run until they're idle.
 //
-// The machine debugger is not here. Phase 42 moved EXAMINE, DEPOSIT, STEP,
-// breakpoints, and the SHOW/SET/CLEAR keywords for the machine's state to
-// internal/debugger, which has its own grammar (debug.dcl), help file, and
-// "DBG> " prompt, and reaches the machine through this package's exported
-// methods (export.go). The console starts a debugger session when GO, CALL,
-// or RUN stops, and with its DEBUG command; it knows the debugger only
-// through the Debugger interface (debugger.go), and works with none
-// installed (the commands that start one then say it isn't available).
-//
-// Changed as recorded in docs/PHASE-08.md's progress log:
-// device-dependent commands (SHOW DEVICE, DEFINE/DEVICE) were stubbed
-// pending Phase 09 (I/O) and are now wired up in device.go against
-// internal/io (the logical-name commands are Phase 25's logical.go, over
-// internal/lnm); the inline mini-assembler (ASM/DISASM,
-// and EXAMINE's address-expression syntax) is replaced by a small
-// standalone expression evaluator (expr.go) rather than waiting on Phase
-// 11's real assembler. (The DCL /entry= commands, ABOUT and XTEST, which
-// called microkernel routines, are gone: docs/PHASE-50.) BOOT remains
-// stubbed pending real device/RTL boot support (dispatch.go's
-// cmdNotImplemented).
+// The console's grammar (internal/bootdata/files/console.dcl, read by
+// internal/dcl) holds every command. DCL binds its own verbs
+// (Interpreter.BindDCL); this package binds the machine's (INIT, VMINIT,
+// ASM, SAVE/LOAD, SET and SHOW of the machine's state, ...) and the
+// utility commands (internal/dclcmd: DIRECTORY, TYPE, COPY, MOUNT,
+// DEFINE, MACRO, LINK, ...), each run on a dclcmd.Context built from
+// the DCL running it (Console.cmd). It is also internal/debugger's
+// debugger.Console, and runs govax's one-shot command line and its run
+// limits (misc.go).
 package console
