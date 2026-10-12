@@ -86,9 +86,12 @@ func (a *Assembler) pseudoDataSigned(c *cursor, scale int, signed bool) error {
 
 		first = false
 
-		loc := a.pc()
+		x, err := a.exprTop(c, &exprState{allowForward: true})
+		if err != nil {
+			return err
+		}
 
-		v, wasForward, err := a.exprValue(c, loc, fixup)
+		count, err := a.repetition(c)
 		if err != nil {
 			return err
 		}
@@ -96,7 +99,8 @@ func (a *Assembler) pseudoDataSigned(c *cursor, scale int, signed bool) error {
 		// A value may be written signed (.BYTE -1) or as its unsigned bit
 		// pattern (.BYTE 0FF); the reference tool rejected the former. A
 		// forward reference's fixup checks its own value.
-		if wasForward {
+		v := x.v
+		if !x.known() {
 			v = 0
 		}
 
@@ -117,10 +121,46 @@ func (a *Assembler) pseudoDataSigned(c *cursor, scale int, signed bool) error {
 			return err
 		}
 
-		if err := a.emitScaled(v, scale); err != nil {
-			return err
+		// Each copy of a value not known yet gets its own fixup.
+		for range count {
+			if !x.known() {
+				a.queueFixup(a.pc(), fixup, x.x)
+				v = x.x.placeholder()
+			}
+
+			if err := a.emitScaled(v, scale); err != nil {
+				return err
+			}
 		}
 	}
+}
+
+// repetition reads a data item's optional repetition factor, MACRO-32's
+// "expression1[expression2]" (.BYTE, .WORD, .LONG): the number of times
+// to store the value, an absolute expression with no undefined symbols,
+// in square brackets. Without one the count is 1.
+func (a *Assembler) repetition(c *cursor) (uint32, error) {
+	save := c.pos
+	if c.skipBlanks(); c.peek() != '[' {
+		c.pos = save
+
+		return 1, nil
+	}
+
+	c.next()
+
+	n, err := a.exprNoForward(c)
+	if err != nil {
+		return 0, err
+	}
+
+	if c.skipBlanks(); c.peek() != ']' {
+		return 0, vmserrors.New(vmserrors.VAX_DIRSYNX)
+	}
+
+	c.next()
+
+	return n, nil
 }
 
 // listSeparator is called before each item of a data directive's list

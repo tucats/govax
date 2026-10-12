@@ -1,90 +1,89 @@
 package cpu
 
-import "github.com/tucats/govax/internal/registers"
+import (
+	"github.com/tucats/govax/internal/registers"
+	"github.com/tucats/govax/internal/vm"
+)
 
-// This is the Go port of emul_movc.c's emul_scanc, shared by SCANC and
-// SPANC (distinguished by opcode function, same as the C source -- see
-// movc.go for MOVC3/MOVC5/MOVTC/MOVTUC, this file's other siblings in the
-// same C source file).
+// SCANC (Scan Characters) and SPANC (Span Characters).
+//
+//	SCANC len.rw, addr.ab, tbladdr.ab, mask.rb
+//	SPANC len.rw, addr.ab, tbladdr.ab, mask.rb
+//
+// Each byte of the len-byte string at addr indexes the 256-byte table at
+// tbladdr, and the table's byte is ANDed with mask. SCANC stops at the
+// first nonzero AND, SPANC at the first zero one. R0 gets the bytes left,
+// counting the one it stopped at, and R1 that byte's address; when it
+// reached the end (or the string is empty) R0 is 0 and R1 the address
+// just past the string. R2 is 0 and R3 the table's address. Z is set
+// exactly when it reached the end, as the manual's Condition Codes say
+// (docs/DEVIATIONS.md has the polarity once ported backwards); N, V, and
+// C are cleared. The length is unsigned, 0 to 65,535.
 
 func init() {
 	reg := func(fn byte, h Handler) {
 		instructionTable.SetHandler(instructionTable.Lookup(Opcode{Function: fn}), h)
 	}
 	reg(0x2A, emulScanc) // SCANC
-	reg(0x2B, emulScanc) // SPANC
+	reg(0x2B, emulSpanc) // SPANC
 }
 
-// emulScanc is SCANC/SPANC: each byte of the string is used to index a
-// 256-byte table, and the table byte selected is ANDed with mask. SCANC
-// scans while that AND is zero, stopping (a "match") the first time it's
-// nonzero; SPANC scans while it's nonzero, stopping the first time it's
-// zero. Z <- 0 if a match was found, Z <- 1 if the string was exhausted
-// without one (including a zero-length string, trivially "exhausted"); N/V/C
-// are always 0.
-//
-// Fixes a bug found while porting: emul_scanc has this Z polarity exactly
-// backwards -- `vax.pslw.z` starts 0 and is set to 1 the moment a match is
-// found (`if ((test && ch) || (!test && !ch)) { vax.pslw.z = 1; break; }`),
-// contradicting both instructions' manual entries in their Condition Codes
-// section verbatim ("If a nonzero [SCANC] / zero [SPANC] AND result is
-// detected, the condition code Z-bit is cleared; otherwise, the Z-bit is
-// set") and their own Notes ("If the string has zero length, condition code
-// Z is set just as though the entire string were scanned/spanned" -- which
-// the C source's un-fixed default of `z = 0` for an empty string, which
-// never enters the loop, directly contradicts). See docs/DEVIATIONS.md.
-func emulScanc(e *Engine, d *Decoded) error {
-	lv, err := d.Operands[0].Load(e.cpu, e.mem)
+// ScanTable is SCANC's (scan true) and SPANC's (scan false) walk of the
+// length-byte string at addr through the table at table under mask: the
+// bytes left, counting the one it stopped at, or 0 when it reached the
+// end. LIBRTL's LIB$SCANC and LIB$SPANC share it.
+func ScanTable(cpu *registers.CPU, mem *vm.Memory, length uint16, addr, table uint32, mask byte, scan bool) (uint16, error) {
+	for i := range length {
+		ch, err := mem.LoadByte(cpu, addr+uint32(i))
+		if err != nil {
+			return 0, err
+		}
+
+		entry, err := mem.LoadByte(cpu, table+uint32(ch))
+		if err != nil {
+			return 0, err
+		}
+
+		if (entry&mask != 0) == scan {
+			return length - i, nil
+		}
+	}
+
+	return 0, nil
+}
+
+func emulScanc(e *Engine, d *Decoded) error { return scanTable(e, d, true) }
+func emulSpanc(e *Engine, d *Decoded) error { return scanTable(e, d, false) }
+
+func scanTable(e *Engine, d *Decoded, scan bool) error {
+	lenv, err := d.Operands[0].Load(e.cpu, e.mem)
 	if err != nil {
 		return err
 	}
 
-	length := int32(signExtend(lv, int(d.Operands[0].Size)))
-	addr := d.Operands[1].Addr
-	tbl := d.Operands[2].Addr
+	length, addr, table := uint16(lenv), d.Operands[1].Addr, d.Operands[2].Addr
 
-	maskv, err := d.Operands[3].Load(e.cpu, e.mem)
+	mask, err := d.Operands[3].Load(e.cpu, e.mem)
 	if err != nil {
 		return err
 	}
 
-	mask := byte(maskv)
-	scanc := d.Opcode.Function == 0x2A // else SPANC
-
-	var n int32
-
-	found := false
-
-	for ; n < length; n++ {
-		ch, err := e.mem.LoadByte(e.cpu, addr+uint32(n))
-		if err != nil {
-			return err
-		}
-
-		entry, err := e.mem.LoadByte(e.cpu, tbl+uint32(ch))
-		if err != nil {
-			return err
-		}
-
-		entry &= mask
-		if (scanc && entry != 0) || (!scanc && entry == 0) {
-			found = true
-
-			break
-		}
+	left, err := ScanTable(e.cpu, e.mem, length, addr, table, byte(mask), scan)
+	if err != nil {
+		return err
 	}
 
-	e.cpu.SetGPR(registers.R0, uint32(length-n))
-	e.cpu.SetGPR(registers.R1, addr+uint32(n))
+	e.cpu.SetGPR(registers.R0, uint32(left))
+	e.cpu.SetGPR(registers.R1, addr+uint32(length-left))
 	e.cpu.SetGPR(registers.R2, 0)
-	e.cpu.SetGPR(registers.R3, tbl)
+	e.cpu.SetGPR(registers.R3, table)
 
 	psl := e.cpu.PSL()
 	psl.SetN(false)
-	psl.SetZ(!found)
+	psl.SetZ(left == 0)
 	psl.SetV(false)
 	psl.SetC(false)
 	e.cpu.SetPSL(psl)
-	
+
 	return nil
 }

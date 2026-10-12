@@ -2108,6 +2108,19 @@ faithfully rather than guessing. Given how large a string a real MACRO-32 progra
 would need to trigger this (32KB+ in one instruction), low priority to chase further
 unless it turns out to matter for a real test fixture.
 
+**Resolved (Phase 53, subtask 10):** the manual does settle it, in its data
+types chapter rather than any instruction's entry: "The length L of a string is
+in the range 0 to 65,535" (the character string data type). Every string
+instruction's length is now read as an unsigned word: CMPC3, CMPC5, LOCC, SKPC,
+MATCHC, SCANC, SPANC, MOVC3, MOVC5, MOVTC, and MOVTUC. LOCC/SKPC, SCANC/SPANC,
+MATCHC, and MOVC3/MOVC5/MOVTC now share plain functions of addresses with
+LIBRTL's routines (`cpu.LocateCharacter`, `ScanTable`, `MatchCharacters`,
+`MoveCharacters`); MOVC3, MOVC5, and MOVTC read the source before writing the
+destination, which makes overlap in either direction come out as the manual
+says, in place of the forward or backward copy. Registers and condition codes
+are unchanged (`TestInsn35Oracle`); `TestStringLengthsUnsigned` covers lengths
+of 32,768 and more.
+
 ### [Phase 04] CASE's internal arithmetic width for byte/word selector, base, and limit
 
 `emul_case.c` reads the byte/word `selector`/`base`/`limit` operands through a signed

@@ -175,3 +175,55 @@ func TestEmulMovc5(t *testing.T) {
 		}
 	})
 }
+
+// TestStringLengthsUnsigned: a length of 32,768 or more is a count, not a
+// negative number (the manual's strings are 0 to 65,535 bytes long), for
+// MOVC3, LOCC, SCANC, and CMPC3.
+func TestStringLengthsUnsigned(t *testing.T) {
+	const (
+		src    = 0x10000
+		dst    = 0x30000
+		length = 0x9000
+	)
+
+	cpu, mem := fixture()
+	e := NewEngine(cpu, mem)
+	putBytes(t, cpu, mem, src+length-1, 'X')
+
+	run := func(name string, bytes []byte) {
+		t.Helper()
+		cpu.SetGPR(registers.R0, 0xDEAD)
+		stepInstruction(t, e, bytes...)
+	}
+
+	word := immediate(byte(length&0xFF), byte(length>>8))
+
+	run("MOVC3", append(append(append([]byte{0x28}, word...), absoluteMode(src)...), absoluteMode(dst)...))
+
+	if got, _ := mem.LoadByte(cpu, dst+length-1); got != 'X' {
+		t.Errorf("MOVC3: last byte %q, want 'X'", got)
+	}
+
+	if got := cpu.GPR(registers.R3); got != dst+length {
+		t.Errorf("MOVC3: R3 = %#x, want %#x", got, dst+length)
+	}
+
+	run("LOCC", append(append(append([]byte{0x3A}, immediate('X')...), word...), absoluteMode(src)...))
+
+	if got := cpu.GPR(registers.R0); got != 1 {
+		t.Errorf("LOCC: R0 = %#x, want 1 (the last byte)", got)
+	}
+
+	run("CMPC3", append(append(append([]byte{0x29}, word...), absoluteMode(src)...), absoluteMode(dst)...))
+
+	if got, z := cpu.GPR(registers.R0), cpu.PSL().Z(); got != 0 || !z {
+		t.Errorf("CMPC3: R0 = %#x, Z %v; want 0, equal", got, z)
+	}
+
+	putBytes(t, cpu, mem, 0x50000+'X', 1) // the table: only X has bit 0
+	run("SCANC", append(append(append(append([]byte{0x2A}, word...), absoluteMode(src)...), absoluteMode(0x50000)...), immediate(1)...))
+
+	if got := cpu.GPR(registers.R0); got != 1 {
+		t.Errorf("SCANC: R0 = %#x, want 1 (the last byte)", got)
+	}
+}

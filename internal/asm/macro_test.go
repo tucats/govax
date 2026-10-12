@@ -239,3 +239,15 @@ func TestForwardDataRange(t *testing.T) {
 	requireCode(t, assembleErr(t, ".BYTE A\nA = 256"), vmserrors.VAX_FWDBYTE)   //nolint:dupword
 	requireCode(t, assembleErr(t, ".WORD A\nA = 65536"), vmserrors.VAX_FWDWORD) //nolint:dupword
 }
+
+// TestDataRepetition: MACRO-32's repetition factor, expression1[expression2],
+// stores a .BYTE, .WORD, or .LONG value that many times; a forward
+// reference is completed in every copy, and the count must be known.
+func TestDataRepetition(t *testing.T) {
+	requireBytes(t, assembleBytes(t, ".BYTE 7[3], 1\n.WORD -1[2]"), 7, 7, 7, 1, 0xFF, 0xFF, 0xFF, 0xFF)
+	requireBytes(t, assembleBytes(t, "N = 2\n.LONG 5[N]"), 5, 0, 0, 0, 5, 0, 0, 0)
+	requireBytes(t, assembleBytes(t, ".BYTE 9[0], 1"), 1)
+	requireBytes(t, assembleBytes(t, ".BYTE A[2]\nA = 4"), 4, 4)
+	requireCode(t, assembleErr(t, ".BYTE 1[3"), vmserrors.VAX_DIRSYNX)
+	requireCode(t, assembleErr(t, ".BYTE 256[2]"), vmserrors.VAX_DATARANGE)
+}

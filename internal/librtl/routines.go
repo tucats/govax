@@ -92,6 +92,15 @@ var Routines = []Routine{
 	{"LIB$REMQTI", 65, libRemqti},
 	{"LIB$BBSSI", 66, libBbssi},
 	{"LIB$BBCCI", 67, libBbcci},
+	{"LIB$LOCC", 68, libLocc},
+	{"LIB$SKPC", 69, libSkpc},
+	{"LIB$MATCHC", 70, libMatchc},
+	{"LIB$SCANC", 71, libScanc},
+	{"LIB$SPANC", 72, libSpanc},
+	{"LIB$MOVC3", 73, libMovc3},
+	{"LIB$MOVC5", 74, libMovc5},
+	{"LIB$MOVTC", 75, libMovtc},
+	{"LIB$MOVTUC", 76, libMovtuc},
 }
 
 // missing is Missing's list, made once.

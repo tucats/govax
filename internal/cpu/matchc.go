@@ -1,94 +1,103 @@
 package cpu
 
-import "github.com/tucats/govax/internal/registers"
+import (
+	"github.com/tucats/govax/internal/registers"
+	"github.com/tucats/govax/internal/vm"
+)
 
-// This is the Go port of emul_matchc.c's MATCHC: a naive substring search
-// (the source string is scanned for a contiguous run matching the object
-// string) with backtracking on mismatch. Traced by hand against
-// vax_instr_set.pdf's MATCHC entry and its three Notes (match found,
-// zero-length object, zero-length source with nonzero object) while
-// porting -- emul_matchc's arithmetic, while terse, is correct for all
-// three; nothing to fix here, unlike this phase's other C source files.
+// MATCHC (Match Characters).
+//
+//	MATCHC objlen.rw, objaddr.ab, srclen.rw, srcaddr.ab
+//
+// The source string is searched for the object string. Found: R0 is 0, R1
+// the address just past the object, R2 the source bytes after the match,
+// and R3 the address just past the match. Not found: R0 is the object's
+// length, R1 its address, R2 0, and R3 the address just past the source.
+// Z is set exactly when it was found (an empty object is found at once);
+// N, V, and C are cleared.
 
 func init() {
 	instructionTable.SetHandler(instructionTable.Lookup(Opcode{Function: 0x39}), emulMatchc)
 }
 
-// emulMatchc is MATCHC. objLen/srcLen/matched are kept as uint16 (not a
-// wider type) deliberately: emul_matchc.c declares its equivalents
-// `unsigned short`, and the backtracking arithmetic below relies on the
-// same 16-bit truncate-on-assignment behavior after an intermediate value
-// that can transiently go negative (cast to int32 for the subtraction,
-// truncated back to uint16 immediately after, mirroring C's integer
-// promotion of a uint16 operand to a signed int for the expression, then
-// implicit truncation back on assignment to the uint16 variable).
+// MatchCharacters is MATCHC's search for the objLen-byte object at obj in
+// the srcLen-byte source at src: the offset in the source of its first
+// occurrence, and true; or false when there's none. An empty object
+// matches at offset 0. LIBRTL's LIB$MATCHC shares it.
+func MatchCharacters(cpu *registers.CPU, mem *vm.Memory, objLen uint16, obj uint32, srcLen uint16, src uint32) (uint16, bool, error) {
+	object := make([]byte, objLen)
+
+	for i := range object {
+		b, err := mem.LoadByte(cpu, obj+uint32(i))
+		if err != nil {
+			return 0, false, err
+		}
+
+		object[i] = b
+	}
+
+	for start := uint32(0); start+uint32(objLen) <= uint32(srcLen); start++ {
+		matched := true
+
+		for i, want := range object {
+			b, err := mem.LoadByte(cpu, src+start+uint32(i))
+			if err != nil {
+				return 0, false, err
+			}
+
+			if b != want {
+				matched = false
+
+				break
+			}
+		}
+
+		if matched {
+			return uint16(start), true, nil
+		}
+	}
+
+	return 0, false, nil
+}
+
 func emulMatchc(e *Engine, d *Decoded) error {
 	l1v, err := d.Operands[0].Load(e.cpu, e.mem)
 	if err != nil {
 		return err
 	}
 
-	objLen := uint16(l1v)
-	objAddr := d.Operands[1].Addr
-
 	l2v, err := d.Operands[2].Load(e.cpu, e.mem)
 	if err != nil {
 		return err
 	}
 
-	srcLen := uint16(l2v)
-	srcAddr := d.Operands[3].Addr
+	objLen, obj := uint16(l1v), d.Operands[1].Addr
+	srcLen, src := uint16(l2v), d.Operands[3].Addr
 
-	remainObj, remainSrc, origObjLen := objLen, srcLen, objLen
-	objPtr, srcPtr := objAddr, srcAddr
-
-	for remainObj != 0 && remainSrc >= remainObj {
-		a, err := e.mem.LoadByte(e.cpu, objPtr)
-		if err != nil {
-			return err
-		}
-
-		b, err := e.mem.LoadByte(e.cpu, srcPtr)
-		if err != nil {
-			return err
-		}
-
-		if a == b {
-			remainObj--
-			objPtr++
-			remainSrc--
-			srcPtr++
-
-			continue
-		}
-		// Mismatch: back the object pointer up to its start, advance the
-		// source search position by one from where this attempt began, and
-		// restart the object comparison from scratch.
-		matched := int32(origObjLen) - int32(remainObj)
-		objPtr = uint32(int32(objPtr) - matched)
-		remainSrc = uint16(int32(remainSrc) + matched - 1)
-		srcPtr = uint32(int32(srcPtr) - (matched - 1))
-		remainObj = origObjLen
+	at, found, err := MatchCharacters(e.cpu, e.mem, objLen, obj, srcLen, src)
+	if err != nil {
+		return err
 	}
 
-	if remainSrc < remainObj {
-		// Ran out of source before completing a match anywhere: report "not
-		// found" (R3 = one past the whole source string, R2 = 0).
-		srcPtr += uint32(remainSrc)
-		remainSrc = 0
+	if found {
+		end := uint32(at) + uint32(objLen)
+		e.cpu.SetGPR(registers.R0, 0)
+		e.cpu.SetGPR(registers.R1, obj+uint32(objLen))
+		e.cpu.SetGPR(registers.R2, uint32(srcLen)-end)
+		e.cpu.SetGPR(registers.R3, src+end)
+	} else {
+		e.cpu.SetGPR(registers.R0, uint32(objLen))
+		e.cpu.SetGPR(registers.R1, obj)
+		e.cpu.SetGPR(registers.R2, 0)
+		e.cpu.SetGPR(registers.R3, src+uint32(srcLen))
 	}
-
-	e.cpu.SetGPR(registers.R0, uint32(remainObj))
-	e.cpu.SetGPR(registers.R1, objPtr)
-	e.cpu.SetGPR(registers.R2, uint32(remainSrc))
-	e.cpu.SetGPR(registers.R3, srcPtr)
 
 	psl := e.cpu.PSL()
 	psl.SetN(false)
-	psl.SetZ(remainObj == 0)
+	psl.SetZ(found)
 	psl.SetV(false)
 	psl.SetC(false)
 	e.cpu.SetPSL(psl)
-	
+
 	return nil
 }

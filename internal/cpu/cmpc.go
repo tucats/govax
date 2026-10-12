@@ -21,20 +21,16 @@ func init() {
 // emulCmpc3 is CMPC3: the two length-byte strings at src1/src2 are compared
 // until an inequality is found or the length is exhausted; condition codes
 // reflect the last byte comparison made. A zero length compares equal (N/Z/C
-// from comparing the length against 0); the manual and emul_cmpc3 agree a
-// negative length ("R0=0 zero only if strings are equal" describes the
-// length as an unsigned count, but the C source's own `short len` and
-// `if (tmp1 > 0)` guard leave condition codes and R0-R3 from before the
-// instruction entirely untouched for a negative length -- replicated as-is,
-// same open question as movc.go's). V <- 0 unconditionally, regardless of
-// which case applies.
+// from comparing the length against 0). A length is unsigned, 0 to 65,535
+// (the manual's character string data type; docs/DEVIATIONS.md). V <- 0
+// unconditionally, regardless of which case applies.
 func emulCmpc3(e *Engine, d *Decoded) error {
 	lv, err := d.Operands[0].Load(e.cpu, e.mem)
 	if err != nil {
 		return err
 	}
 
-	length := int32(signExtend(lv, int(d.Operands[0].Size)))
+	length := int32(uint16(lv)) // 0 to 65,535
 	src1 := d.Operands[1].Addr
 	src2 := d.Operands[2].Addr
 
@@ -109,14 +105,14 @@ func emulCmpc5(e *Engine, d *Decoded) error {
 		return err
 	}
 
-	len1 := int32(signExtend(l1v, int(d.Operands[0].Size)))
+	len1 := int32(uint16(l1v))
 
 	l2v, err := d.Operands[3].Load(e.cpu, e.mem)
 	if err != nil {
 		return err
 	}
 
-	len2 := int32(signExtend(l2v, int(d.Operands[3].Size)))
+	len2 := int32(uint16(l2v))
 
 	fillv, err := d.Operands[2].Load(e.cpu, e.mem)
 	if err != nil {

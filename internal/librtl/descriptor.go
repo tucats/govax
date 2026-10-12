@@ -168,6 +168,14 @@ func readString(env *corevms.Environment, addr uint32) (string, error) {
 // allocated, and a memory error when the storage can't be written
 // (marked as a write's, writing).
 func writeString(env *corevms.Environment, addr uint32, s string) (stored int, truncated bool, err error) {
+	return writePadded(env, addr, s, ' ', true)
+}
+
+// writePadded is writeString with fill in place of blanks for a fixed
+// string's padding (LIB$MOVTC's fill-character). With pad false, a fixed
+// string's bytes past s are left as they were (LIB$MOVTUC without a fill
+// character).
+func writePadded(env *corevms.Environment, addr uint32, s string, fill byte, pad bool) (stored int, truncated bool, err error) {
 	d, err := readDescriptor(env, addr)
 	if err != nil {
 		return 0, false, err
@@ -224,8 +232,12 @@ func writeString(env *corevms.Environment, addr uint32, s string) (stored int, t
 		n = min(n, room)
 	}
 
+	if !pad {
+		room = n
+	}
+
 	for i := uint32(0); i < room; i++ {
-		ch := byte(' ')
+		ch := fill
 		if i < n {
 			ch = s[i]
 		}

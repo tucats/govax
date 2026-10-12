@@ -2,7 +2,7 @@
 
 **Status:** in progress (2026-10-12). Needs Phases 34 (`internal/librtl`)
 and 52. The plan (Part A) and the decisions (Part B) were reviewed and
-accepted by the author on 2026-10-12. Subtasks 2 to 9 are done.
+accepted by the author on 2026-10-12. Subtasks 2 to 10 are done.
 
 govax provides 15 of LIBRTL.EXE's LIB$ routines (and STR$UPCASE): the ones
 the sample programs and tests needed (Phase 34's table,
@@ -536,7 +536,7 @@ so there's one implementation of each rule.
 9. **Queues and interlocks**: INSQHI, INSQTI, REMQHI, REMQTI, BBSSI, BBCCI.
    **Done** 2026-10-12.
 10. **Character strings**: LOCC, MATCHC, SCANC, SKPC, SPANC, MOVC3, MOVC5,
-    MOVTC, MOVTUC.
+    MOVTC, MOVTUC. **Done** 2026-10-12.
 11. **CRC, CRC_TABLE** (CALLG was done in subtask 2).
 12. **The program**: `testdata/lib53/lib53.mar`, calling every routine of
     the phase, with a console test of its output.
@@ -839,3 +839,51 @@ so there's one implementation of each rule.
     The console's `TestLibrtlQueues` runs all six from a linked program,
     and `TestLibrtlQueueReservedOperand` shows `%SYSTEM-F-ROPRAND` ending
     the image.
+- **2026-10-12** — Subtask 10, the character string routines
+  (`internal/librtl/chars.go`): LIB$LOCC, LIB$SKPC, LIB$MATCHC, LIB$SCANC,
+  LIB$SPANC, LIB$MOVC3, LIB$MOVC5, LIB$MOVTC, and LIB$MOVTUC, codes 68 to
+  76.
+  - **The CPU first.** The string instructions' work is now plain
+    functions of addresses the routines share: `cpu.LocateCharacter`
+    (LOCC and SKPC, now one file), `cpu.ScanTable` (SCANC, SPANC),
+    `cpu.MatchCharacters` (MATCHC, rewritten as a plain search), and
+    `cpu.MoveCharacters` (MOVC3, MOVC5, and MOVTC, which read the source
+    before writing, so overlap either way is as the manual says). Every
+    string instruction's length is now an unsigned word, as the manual's
+    data types chapter settles ("0 to 65,535"), closing Phase 06's open
+    question in DEVIATIONS.md; CMPC3, CMPC5, and MOVTUC changed the same
+    way. Registers and condition codes are as before
+    (`TestInsn35Oracle`).
+  - **The searches** take descriptors and return a 1-based position or
+    0, from the instruction's count. A one-character argument is its
+    string's first byte, the length not checked. An empty LIB$MATCHC
+    substring is found at 1. An invalid descriptor is signaled as
+    LIB$_INVSTRDES, there being no status to return (unconfirmed).
+  - **LIB$MOVC3 and LIB$MOVC5** take lengths and addresses and return
+    MOVC's R0 (0, or the source bytes not moved; unconfirmed). A fault in
+    the destination is marked as a write's (`faultIn`, by the address).
+  - **LIB$MOVTC and LIB$MOVTUC** translate through the table at the
+    table descriptor's address and write the destination as an output
+    string (`writePadded`: `writeString` with the fill character in place
+    of blanks, or no padding). LIB$MOVTC returns SS$_NORMAL, LIB$_STRTRU,
+    LIB$_INVSTRDES, or LIB$_INSVIRMEM; a dynamic destination gets the
+    source's length. LIB$MOVTUC stops where the destination is full (a
+    dynamic one isn't), returns the stop character's source position, 0,
+    or -1 (no memory, and an invalid descriptor: unconfirmed); without a
+    fill character the rest of a fixed destination is left as it was.
+  - **The assembler's repetition factor.** The console test's tables
+    wanted `.BYTE 0[48]`, MACRO-32's `expression1[expression2]` for
+    `.BYTE`, `.WORD`, and `.LONG` (the MACRO reference manual), which the
+    assembler rejected as extra text. `repetition` (`internal/asm/
+    pseudo.go`) reads the count (absolute, no forward references) and
+    stores the value that many times, each copy of a forward reference
+    with its own fixup (`TestDataRepetition`). Real MACRO's object may
+    encode a repeated value differently (a repeated-store TIR command);
+    govax writes the bytes.
+  - **Tests.** `internal/cpu`'s `TestStringLengthsUnsigned`;
+    `internal/librtl/chars_test.go`: the manual's LOCC, SKPC, and MATCHC
+    examples, empty strings, an empty character argument, SCANC/SPANC
+    masks, MOVC3 overlapping, MOVC5 padding and truncating, MOVTC into
+    fixed and dynamic strings, and MOVTUC with and without a fill, a
+    full destination, and an invalid descriptor. The console's
+    `TestLibrtlChars` runs all nine from a linked program.
