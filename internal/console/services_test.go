@@ -1,12 +1,9 @@
 package console
 
 import (
-	"errors"
 	"strings"
 	"testing"
 
-	"github.com/tucats/govax/internal/corevms"
-	"github.com/tucats/govax/internal/cpu"
 	"github.com/tucats/govax/internal/vax"
 )
 
@@ -111,20 +108,5 @@ func TestConsoleReInitReplacesRTLEnvironment(t *testing.T) {
 
 	if c.RTL == first {
 		t.Error("RTL environment unchanged after re-Init, want a fresh one bound to the new CPU/Memory")
-	}
-}
-
-func TestTranslateHalt(t *testing.T) {
-	if !errors.Is(translateHalt(corevms.ErrHalt), cpu.ErrHalted) {
-		t.Error("translateHalt(corevms.ErrHalt) does not unwrap to cpu.ErrHalted")
-	}
-
-	other := errors.New("boom")
-	if !errors.Is(translateHalt(other), other) {
-		t.Error("translateHalt should pass through any other error unchanged")
-	}
-
-	if translateHalt(nil) != nil {
-		t.Error("translateHalt(nil) should be nil")
 	}
 }

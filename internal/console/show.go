@@ -548,20 +548,20 @@ func (c *Console) ShowShim() error {
 	c.Printf("RTL SHIMS:\n")
 
 	for _, e := range shimTable {
-		name := fmt.Sprintf("SHIM$%s_%08X", e.library, e.offset)
+		name := fmt.Sprintf("SHIM$%s_%08X", e.Library, e.Offset)
 
 		addr, _ := c.Symbols.Get(name)
 
-		status := fmt.Sprintf("resolved to %s", e.name)
-		if e.code != 0 {
+		status := fmt.Sprintf("resolved to %s", e.Name)
+		if e.Code != 0 {
 			status = "unimplemented"
 
-			if c.RTL.HasShim(e.code) {
+			if c.RTL.HasShim(e.Code) {
 				status = "live"
 			}
 		}
 
-		c.Printf("    %-32s = %08X  code=%-3d %s\n", name, addr, e.code, status)
+		c.Printf("    %-32s = %08X  code=%-3d %s\n", name, addr, e.Code, status)
 	}
 
 	return nil

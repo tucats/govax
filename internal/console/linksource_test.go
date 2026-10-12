@@ -37,14 +37,14 @@ func TestShimOffsetsMatchCapturedImages(t *testing.T) {
 	checked := 0
 
 	for _, e := range shimTable {
-		if _, ok := vmsdef.SharedImages[e.library]; !ok {
+		if _, ok := vmsdef.SharedImages[e.Library]; !ok {
 			continue
 		}
 
 		checked++
 
-		if s, ok := vmsdef.ImageSymbols[e.name]; !ok || s.Image != e.library || s.Value != e.offset {
-			t.Errorf("%s's shim is at %s+^X%X; the captured table has %+v, %v", e.name, e.library, e.offset, s, ok)
+		if s, ok := vmsdef.ImageSymbols[e.Name]; !ok || s.Image != e.Library || s.Value != e.Offset {
+			t.Errorf("%s's shim is at %s+^X%X; the captured table has %+v, %v", e.Name, e.Library, e.Offset, s, ok)
 		}
 	}
 

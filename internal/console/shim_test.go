@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"testing"
 
+	"github.com/tucats/govax/internal/corevms"
 	"github.com/tucats/govax/internal/cpu"
 	"github.com/tucats/govax/internal/vax"
 )
@@ -56,7 +57,7 @@ func TestEnsureShims_definesSymbolsAndIsIdempotent(t *testing.T) {
 		t.Errorf("SHIM$DECC$SHR_00000000 = %#x, want kernel.asm's own DECC$MAIN (%#x)", addr2, deccMain)
 	}
 
-	if addr2 >= c.shimBase && addr2 < c.shimBase+uint32(len(shimTable))*shimStubSize {
+	if addr2 >= c.shimBase && addr2 < c.shimBase+uint32(len(shimTable))*corevms.ShimStubSize {
 		t.Errorf("SHIM$DECC$SHR_00000000 = %#x, want an address outside the synthesized shim page", addr2)
 	}
 
@@ -106,7 +107,7 @@ func TestEnsureShims_stubDispatchesThroughXFCShim(t *testing.T) {
 		if errors.Is(err, cpu.ErrConsoleCallReturned) {
 			break
 		}
-		
+
 		t.Fatalf("Step: %v", err)
 	}
 
@@ -123,18 +124,18 @@ func TestShimTable_codesDistinctAndRegistered(t *testing.T) {
 	seen := map[uint32]string{}
 
 	for _, e := range shimTable {
-		if e.code == 0 {
+		if e.Code == 0 {
 			continue
 		}
 
-		if other, dup := seen[e.code]; dup {
-			t.Errorf("%s and %s share shim code %d", e.name, other, e.code)
+		if other, dup := seen[e.Code]; dup {
+			t.Errorf("%s and %s share shim code %d", e.Name, other, e.Code)
 		}
 
-		seen[e.code] = e.name
+		seen[e.Code] = e.Name
 
-		if !c.RTL.HasShim(e.code) {
-			t.Errorf("%s: shim code %d isn't registered", e.name, e.code)
+		if !c.RTL.HasShim(e.Code) {
+			t.Errorf("%s: shim code %d isn't registered", e.Name, e.Code)
 		}
 	}
 }
@@ -149,20 +150,20 @@ func TestEnsureShims_overflowPage(t *testing.T) {
 
 	t.Cleanup(func() { shimTable = saved })
 
-	perPage := shimPageBytes / shimStubSize
+	perPage := shimPageBytes / corevms.ShimStubSize
 
 	// Fill both pages exactly.
 	fillers := 2 * perPage
 
 	for _, e := range saved {
-		if e.code != 0 {
+		if e.Code != 0 {
 			fillers--
 		}
 	}
 
-	shimTable = append([]shimEntry{}, saved...)
+	shimTable = append([]corevms.ShimLink{}, saved...)
 	for i := 0; i < fillers; i++ {
-		shimTable = append(shimTable, shimEntry{name: fmt.Sprintf("TEST$FILLER%d", i), library: "TEST", offset: uint32(i), code: uint32(1000 + i)})
+		shimTable = append(shimTable, corevms.ShimLink{Name: fmt.Sprintf("TEST$FILLER%d", i), Library: "TEST", Offset: uint32(i), Code: uint32(1000 + i)})
 	}
 
 	c := newRunnableConsole(t)
@@ -199,7 +200,7 @@ func TestEnsureShims_overflowPage(t *testing.T) {
 
 	// One more doesn't fit.
 	for i := fillers; i < fillers+1; i++ {
-		shimTable = append(shimTable, shimEntry{name: fmt.Sprintf("TEST$FILLER%d", i), library: "TEST", offset: uint32(i), code: uint32(1000 + i)})
+		shimTable = append(shimTable, corevms.ShimLink{Name: fmt.Sprintf("TEST$FILLER%d", i), Library: "TEST", Offset: uint32(i), Code: uint32(1000 + i)})
 	}
 
 	c = newRunnableConsole(t)

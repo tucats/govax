@@ -55,6 +55,18 @@ func Register(t *corevms.ShimTable) {
 	}
 }
 
+// Links are the routines' places in LIBRTL.EXE, for their stubs
+// (corevms.ShimLink).
+func Links() []corevms.ShimLink {
+	links := make([]corevms.ShimLink, 0, len(Routines))
+
+	for _, r := range Routines {
+		links = append(links, corevms.ShimLink{Name: r.Name, Library: Library, Offset: r.Offset, Code: r.Code})
+	}
+
+	return links
+}
+
 // arg returns argument i of argv, or 0 when the call passed fewer: an
 // omitted optional argument, to a routine whose arguments are addresses,
 // is the same as a 0 address.

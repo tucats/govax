@@ -1,7 +1,6 @@
 package console
 
 import (
-	"errors"
 	"fmt"
 
 	"github.com/tucats/govax/internal/corevms"
@@ -11,8 +10,9 @@ import (
 
 // This file makes Console implement cpu.SystemServices (internal/cpu/
 // services.go), the hook Engine's XFC opcode handler delegates to. SYS$/
-// LIB$ dispatch is delegated straight to RTL (Phase 10); console I/O and
-// command dispatch are handled directly since Console already owns them.
+// LIB$ dispatch, ASTs, and exceptions are the running process's, through
+// the embedded corevms.EngineHooks; console I/O and command dispatch are
+// handled here, since Console owns them.
 //
 // See services.go's own doc comment on Console.Dispatcher for why
 // XFC$CONSOLE_CMD can report "unavailable" even on a fully initialized
@@ -76,21 +76,13 @@ func (c *Console) ConsoleCommand(cmdLine string) uint32 {
 	return 0
 }
 
-// running is the process the engine's hooks below reach: the System's
-// current process, the one whose context the CPU holds (docs/PHASE-44.md).
+// running is the process the engine's hooks reach: the System's current
+// process, the one whose context the CPU holds (docs/PHASE-44.md).
 // That's process 1, c.RTL, unless the scheduler has switched to another;
 // console commands keep using c.RTL, process 1, whichever runs. nil
 // before the first INIT.
 func (c *Console) running() *corevms.Environment {
-	if c.RTL == nil {
-		return nil
-	}
-
-	if cur := c.RTL.Current(); cur != nil {
-		return cur
-	}
-
-	return c.RTL
+	return c.EngineHooks.Running()
 }
 
 // RunningProcessOne reports whether the CPU is running process 1, the
@@ -166,47 +158,6 @@ func (c *Console) ProcessPC(env *corevms.Environment) uint32 {
 	return pcb.PC
 }
 
-// SystemService delegates to the running process (Phase 10's SYS$
-// dispatch).
-func (c *Console) SystemService(pc uint32) (uint32, bool, error) {
-	r0, handled, err := c.running().SystemService(pc)
-
-	return r0, handled, translateHalt(err)
-}
-
-// NextAST delegates to the running process, making Console a
-// cpu.ASTSource as well: the
-// engine asks at every instruction boundary whether an AST is due, and
-// the RTL, which owns the AST queues, answers (docs/PHASE-26.md subtask
-// 15). This only converts between the two packages' types, keeping
-// internal/rtl free of an internal/cpu import.
-func (c *Console) NextAST() (cpu.ASTCall, bool, error) {
-	routine, argList, returnPC, ok, err := c.running().NextAST()
-
-	return cpu.ASTCall{Routine: routine, ArgList: argList, ReturnPC: returnPC}, ok, err
-}
-
-// DispatchException delegates to the running process, making Console a
-// cpu.ExceptionDispatcher: an exception kernel.asm's SCB sends to
-// console$handler is offered to the running program's condition
-// handlers before the console reports it (docs/PHASE-26.md subtask 31).
-func (c *Console) DispatchException(code uint32, params []uint32, pc uint32, psl vax.PSL) (bool, error) {
-	env := c.running()
-	if env == nil {
-		return false, nil
-	}
-
-	return env.DispatchException(code, params, pc, psl)
-}
-
-// Shim delegates to the running process (Phase 10's LIB$/CRTL shim
-// dispatch).
-func (c *Console) Shim(code uint32) (uint32, bool, error) {
-	r0, handled, err := c.running().Shim(code)
-
-	return r0, handled, translateHalt(err)
-}
-
 // RequestQuit is XFC$QUIT_EMULATION's "stop the console entirely" half
 // (see cpu.SystemServices' own doc comment): the same effect as Quit
 // (misc.go, bound to the QUIT/EXIT console commands), reached here from a
@@ -217,29 +168,4 @@ func (c *Console) Shim(code uint32) (uint32, bool, error) {
 // the SystemServices interface.
 func (c *Console) RequestQuit() {
 	c.quit = true
-}
-
-// translateHalt turns corevms.ErrHalt (a SYS$ service or shim requesting the
-// machine halt, e.g. an unrecognized SYS$CLI request) into cpu.ErrHalted,
-// corevms.ErrWait (a service waiting for an event flag, docs/PHASE-26.md)
-// into cpu.ErrServiceWait, and $EXIT's corevms.CallRequest (call an exit
-// handler) and corevms.ErrExit (the image has exited) into cpu.ServiceCall
-// and cpu.ErrImageExit — the signals Engine.Step actually recognizes,
-// kept as a translation at the boundary rather than internal/rtl
-// importing internal/cpu, so that package has no dependency on this one.
-func translateHalt(err error) error {
-	var call *corevms.CallRequest
-
-	switch {
-	case errors.Is(err, corevms.ErrHalt):
-		return cpu.ErrHalted
-	case errors.Is(err, corevms.ErrWait):
-		return cpu.ErrServiceWait
-	case errors.Is(err, corevms.ErrExit):
-		return cpu.ErrImageExit
-	case errors.As(err, &call):
-		return &cpu.ServiceCall{Routine: call.Routine, ArgList: call.ArgList, Image: call.Image}
-	}
-
-	return err
 }

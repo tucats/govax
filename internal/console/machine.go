@@ -34,6 +34,10 @@ const (
 // minus everything owned by a later phase (device state, RTL/microkernel
 // validity, the assembler's own settings).
 type Console struct {
+	// EngineHooks passes the engine's SYS$ services, shims, ASTs, and
+	// exceptions to the running process (services.go).
+	corevms.EngineHooks
+
 	Engine *cpu.Engine
 	CPU    *vax.CPU
 	Mem    *vm.Memory
@@ -390,6 +394,8 @@ func New(out io.Writer) *Console {
 		Mounts:           mounts,
 		ContainerSession: rms.NewSession(mounts),
 	}
+
+	c.EngineHooks = corevms.EngineHooks{Home: func() *corevms.Environment { return c.RTL }}
 
 	c.Logicals.Trace = c.traceLogicals
 	c.ContainerSession.Logicals = c.Logicals

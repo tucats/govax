@@ -89,8 +89,8 @@ func (s sharedSymbolizer) Symbolize(addr uint32) (string, bool) {
 // read them from the image).
 func sharedName(image string, offset uint32) (string, bool) {
 	for _, e := range shimTable {
-		if e.library == image && e.offset == offset {
-			return e.name, true
+		if e.Library == image && e.Offset == offset {
+			return e.Name, true
 		}
 	}
 

@@ -285,3 +285,21 @@ package move is a plain import-path rewrite.
   plan named for this stage (`filenames.go`, `page.go`, `dclexpr.go`)
   move with the packages they belong to, in Stages 4 and 6, rather than
   ahead of them.
+- **2026-10-12 — Stage 2.** The shim rows turned out to be *link*
+  data, not registration data: `DECC$OPEN` at DECC$SHR+4E8 is shim 4,
+  which corevms registers as `EXE$OPEN`. So rather than adding names and
+  offsets to `ShimTable.Register`, corevms has `ShimLink` and
+  `CRTLLinks` (`shimlink.go`), beside the registrations, and
+  `librtl.Links()` gives LIBRTL's rows from `librtl.Routines`. The stub
+  is `corevms.ShimStub(code)` (`ShimStubSize`). What stays in the
+  console is the microkernel's code-0 rows (`kernelLinks`, which name
+  kernel.asm's labels), placing the stubs, and the `SHIM$` symbols.
+  The process half of `cpu.SystemServices` is `corevms.EngineHooks`
+  (`enginehooks.go`): `Running`, `SystemService`, `Shim`, `NextAST`,
+  `DispatchException`, and `EngineError` (was `translateHalt`; its test
+  is now corevms's `TestEngineError`). `Console` embeds it, so it still
+  satisfies `cpu.SystemServices`, `ASTSource`, and
+  `ExceptionDispatcher`. The process-switching helpers
+  (`ReturnToProcessOne`, `ShowProcessContext`, `ProcessPC`,
+  `ProcessNote`) use the engine and the debugger's view of process 1,
+  so they stay with the machine and move in Stage 5.

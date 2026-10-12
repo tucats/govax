@@ -74,8 +74,8 @@ func govaxSymbols() *link.TableSource {
 	}
 
 	for _, e := range shimTable {
-		if _, ok := src.Symbols[e.name]; !ok {
-			src.Symbols[e.name] = link.Definition{Image: e.library, Value: e.offset}
+		if _, ok := src.Symbols[e.Name]; !ok {
+			src.Symbols[e.Name] = link.Definition{Image: e.Library, Value: e.Offset}
 		}
 	}
 
