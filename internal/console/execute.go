@@ -19,12 +19,12 @@ import (
 // prompt then follows). A bare Console with none, as many of this
 // package's own tests use, runs the program to its end with no
 // breakpoints.
-func (c *Console) Execute(startAddr *uint32) error {
+func (c *Machine) Execute(startAddr *uint32) error {
 	if err := c.requireInit(); err != nil {
 		return err
 	}
 
-	if err := c.processOneOnly("GO"); err != nil {
+	if err := c.Hooks.ProcessOneOnly("GO"); err != nil {
 		return err
 	}
 
@@ -54,12 +54,12 @@ func (c *Console) Execute(startAddr *uint32) error {
 //
 // As with Execute, a debugger, when installed, runs it (and so honors
 // breakpoints, docs/PHASE-42.md bug 1); a bare Console runs it to its end.
-func (c *Console) Call(addr uint32, step bool, args ...uint32) error {
+func (c *Machine) Call(addr uint32, step bool, args ...uint32) error {
 	if err := c.requireInit(); err != nil {
 		return err
 	}
 
-	if err := c.processOneOnly("CALL"); err != nil {
+	if err := c.Hooks.ProcessOneOnly("CALL"); err != nil {
 		return err
 	}
 
@@ -88,7 +88,7 @@ func (c *Console) Call(addr uint32, step bool, args ...uint32) error {
 // a STEP always leaves it stopped, so the session it starts stays open
 // for the next command. mode is "", INTO, OVER, or RETURN ("" being the
 // debugger's own default, SET STEP).
-func (c *Console) Step(startAddr *uint32, mode string) error {
+func (c *Machine) Step(startAddr *uint32, mode string) error {
 	if err := c.requireInit(); err != nil {
 		return err
 	}
@@ -102,7 +102,7 @@ func (c *Console) Step(startAddr *uint32, mode string) error {
 
 // runPlain runs the CPU until something ends the run, honoring SET TRACE
 // but no breakpoints: what GO and CALL do on a console without a debugger.
-func (c *Console) runPlain() error {
+func (c *Machine) runPlain() error {
 	for {
 		if err := c.BeginStep(); err != nil {
 			return c.ReportStop(err)
@@ -123,7 +123,7 @@ func (c *Console) runPlain() error {
 // instruction (its PC, for a breakpoint or the trace) is the process
 // that will run it (cpu.Engine.SwitchIfDue). Run loops call it before
 // those checks, then StepMachine.
-func (c *Console) BeginStep() error {
+func (c *Machine) BeginStep() error {
 	return c.Engine.SwitchIfDue()
 }
 
@@ -138,16 +138,16 @@ func (c *Console) BeginStep() error {
 // left. Every other
 // error, a HALT in another process included (HALT stops the machine,
 // whoever runs it), is returned as Step returned it.
-func (c *Console) StepMachine() error {
+func (c *Machine) StepMachine() error {
 	err := c.Engine.Step()
 	if err == nil {
 		return nil
 	}
 
-	if env := c.running(); env != c.RTL && errors.Is(err, cpu.ErrConsoleCallReturned) {
+	if env := c.running(); env != c.processOne && errors.Is(err, cpu.ErrConsoleCallReturned) {
 		// An image a subprocess's CLI ran has ended, and the CLI goes on
 		// (subcli.go); otherwise the process's own run is over.
-		if !c.cliImageEnded(env) {
+		if !c.Hooks.CLIImageEnded(env) {
 			env.DeleteProcess(env)
 		}
 
@@ -165,7 +165,7 @@ func (c *Console) StepMachine() error {
 // the debugger's run loops can just call this
 // on any Step error. Any other error (an unhandled fault, a real Go error)
 // is returned unchanged for the caller to propagate.
-func (c *Console) ReportStop(err error) error {
+func (c *Machine) ReportStop(err error) error {
 	switch {
 	// A RET popping a console-initiated CallEntry frame (Console.Call,
 	// whether or not /STEP) is clean, expected completion, not an error. 
@@ -177,8 +177,8 @@ func (c *Console) ReportStop(err error) error {
 
 			// The image's completion status, for RUN to report
 			// (imageCompletion).
-			if c.RTL != nil {
-				c.imageStatus, c.imageEnded = c.RTL.Process.ExitStatus, true
+			if c.processOne != nil {
+				c.imageStatus, c.imageEnded = c.processOne.Process.ExitStatus, true
 			}
 
 			c.imageRundown()
@@ -200,7 +200,7 @@ func (c *Console) ReportStop(err error) error {
 	case errors.Is(err, cpu.ErrAttention):
 		// A Ctrl/Y a command procedure acts on stops the image quietly
 		// (dclcontroly.go).
-		if c.controlYTaken {
+		if c.Hooks.ControlYTaken() {
 			return nil
 		}
 

@@ -33,7 +33,7 @@ const (
 
 // VMInit implements the VMINIT command: builds P0/P1/S0 page tables and
 // turns on virtual memory.
-func (c *Console) VMInit(p0Pages, p1Pages, s0Pages, kspPages, espPages, sspPages, ispPages, stringPoolPages uint32) error {
+func (c *Machine) VMInit(p0Pages, p1Pages, s0Pages, kspPages, espPages, sspPages, ispPages, stringPoolPages uint32) error {
 	if err := c.requireInit(); err != nil {
 		return err
 	}
@@ -105,9 +105,9 @@ func (c *Console) VMInit(p0Pages, p1Pages, s0Pages, kspPages, espPages, sspPages
 
 	c.Mem = vm.NewMemory(c.Mem.Size())
 	c.Engine = cpu.NewEngine(c.CPU, c.Mem)
-	c.RTL = c.newRTL()
+	c.newRTL()
 
-	c.Engine.SetSystemServices(c)
+	c.Engine.SetSystemServices(c.Services)
 	c.CPU.SetPR(vax.MAPEN, 0)
 
 	paddr := uint32(0)
@@ -371,12 +371,12 @@ func (c *Console) VMInit(p0Pages, p1Pages, s0Pages, kspPages, espPages, sspPages
 	// PCBs come from (corevms/s0pool.go). The microkernel, which ASM puts
 	// at s0Free, claims its pages from the pool's bottom as it's
 	// deposited (depositAsmImage).
-	c.RTL.SetS0Pool(corevms.NewS0Pool(c.s0Free, 0x80000000+size[2]<<9))
+	c.processOne.SetS0Pool(corevms.NewS0Pool(c.s0Free, 0x80000000+size[2]<<9))
 
 	// These P0 and P1 tables are process 1's address space; a new
 	// process gets tables of its own from the pool (BuildAddressSpace).
-	c.RTL.Space = corevms.AdoptAddressSpace(c.CPU, size[0], size[1])
-	c.RTL.Stacks = corevms.AdoptStacks(c.CPU)
+	c.processOne.Space = corevms.AdoptAddressSpace(c.CPU, size[0], size[1])
+	c.processOne.Stacks = corevms.AdoptStacks(c.CPU)
 
 	c.DepositAddr = 0x200
 	c.CPU.SetPR(vax.MAPEN, 1)
@@ -404,7 +404,7 @@ const defaultModeStackPages = 8
 // advances *paddr past them and returns the stack's initial pointer (the
 // virtual address of its last longword). A push past the stack's bottom
 // lands on the guard page and faults.
-func (c *Console) modeStack(paddr *uint32, pages uint32, prot vm.Protection) (uint32, error) {
+func (c *Machine) modeStack(paddr *uint32, pages uint32, prot vm.Protection) (uint32, error) {
 	if err := c.setS0Protection(*paddr, 1, vm.ProtNA); err != nil {
 		return 0, err
 	}
@@ -424,7 +424,7 @@ func (c *Console) modeStack(paddr *uint32, pages uint32, prot vm.Protection) (ui
 // physical (and S0-offset) address paddr. It edits the PTEs through their
 // physical addresses (SBR is 0, so S0 page N's PTE is at N*4), since
 // VMINIT runs this before turning MAPEN on.
-func (c *Console) setS0Protection(paddr, pages uint32, prot vm.Protection) error {
+func (c *Machine) setS0Protection(paddr, pages uint32, prot vm.Protection) error {
 	for i := uint32(0); i < pages; i++ {
 		pteAddr := (paddr>>9 + i) * 4
 

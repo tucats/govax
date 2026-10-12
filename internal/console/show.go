@@ -23,7 +23,7 @@ const (
 
 // ShowRegisters prints R0-R11 plus the AP/FP/SP/PC aliases in the same
 // four-column grid as the PSL beneath them, matching SHOW REGISTERS.
-func (c *Console) ShowRegisters() error {
+func (c *Machine) ShowRegisters() error {
 	if err := c.requireInit(); err != nil {
 		return err
 	}
@@ -35,7 +35,7 @@ func (c *Console) ShowRegisters() error {
 
 // dumpRegisters prints the R0-R11/AP/FP/SP/PC grid followed by the PSL
 // block, shared by SHOW REGISTERS (ShowRegisters) and SHOW CPU (ShowCPU).
-func (c *Console) dumpRegisters() {
+func (c *Machine) dumpRegisters() {
 	c.Printf("\n\n    Registers:\n\n")
 	c.Printf("    R0:  %08X      R4:  %08X     R8:  %08X     AP:  %08X\n",
 		c.CPU.GPR(vax.R0), c.CPU.GPR(vax.R4), c.CPU.GPR(vax.R8), c.CPU.GPR(vax.AP))
@@ -50,7 +50,7 @@ func (c *Console) dumpRegisters() {
 }
 
 // ShowPSL prints the processor status longword and its named fields.
-func (c *Console) ShowPSL() error {
+func (c *Machine) ShowPSL() error {
 	if err := c.requireInit(); err != nil {
 		return err
 	}
@@ -61,7 +61,7 @@ func (c *Console) ShowPSL() error {
 }
 
 // dumpPSL prints the PSL longword plus its PSW and PRIV field breakdowns.
-func (c *Console) dumpPSL() {
+func (c *Machine) dumpPSL() {
 	p := c.CPU.PSL()
 
 	c.Printf("    PSL: %08X\n", uint32(p))
@@ -75,7 +75,7 @@ func (c *Console) dumpPSL() {
 
 // ShowMemory prints physical memory size and, once VMINIT has established
 // page tables, per-region P0/P1/S0 accounting.
-func (c *Console) ShowMemory() error {
+func (c *Machine) ShowMemory() error {
 	if err := c.requireInit(); err != nil {
 		return err
 	}
@@ -130,13 +130,13 @@ func (c *Console) ShowMemory() error {
 // characters and "%" for exactly one; an empty pattern matches every
 // name. The assembler's predefined system symbols are listed too, as the
 // C source's one shared symbol table listed them.
-func (c *Console) ShowSymbols(pattern string) error {
+func (c *Machine) ShowSymbols(pattern string) error {
 	return c.showSymbolList(pattern, false)
 }
 
 // showSymbolList prints the symbols listSymbols selects, one per line, or
 // reports CLI_UNDEFSYM when a pattern matched nothing.
-func (c *Console) showSymbolList(pattern string, systemOnly bool) error {
+func (c *Machine) showSymbolList(pattern string, systemOnly bool) error {
 	if err := c.requireInit(); err != nil {
 		return err
 	}
@@ -157,7 +157,7 @@ func (c *Console) showSymbolList(pattern string, systemOnly bool) error {
 // predefined symbol (asm.BuiltinSymbols) not shadowed by a console symbol
 // of the same name, whose name matches pattern (VMS wildcards; empty
 // matches all). systemOnly leaves out user symbols.
-func (c *Console) listSymbols(pattern string, systemOnly bool) []*Symbol {
+func (c *Machine) listSymbols(pattern string, systemOnly bool) []*Symbol {
 	pattern = strings.ToUpper(strings.TrimSpace(pattern))
 	match := func(name string) bool { return pattern == "" || lnm.Match(pattern, name) }
 
@@ -213,21 +213,21 @@ func symbolKindLabel(s *Symbol) string {
 
 // ShowRadix prints the console's current default radix, matching SHOW
 // RADIX.
-func (c *Console) ShowRadix() error {
+func (c *Machine) ShowRadix() error {
 	c.Printf("Radix = %d\n", c.Radix)
 
 	return nil
 }
 
 // ShowVersion is SHOW VERSION: which microkernel govax's console is.
-func (c *Console) ShowVersion() error {
+func (c *Machine) ShowVersion() error {
 	c.Printf("govax Console Microkernel 2.0\nBy Tom Cole\n")
 
 	return nil
 }
 
 // ShowBase prints the console's current EXAMINE/DEPOSIT cursor.
-func (c *Console) ShowBase() error {
+func (c *Machine) ShowBase() error {
 	if err := c.requireInit(); err != nil {
 		return err
 	}
@@ -239,7 +239,7 @@ func (c *Console) ShowBase() error {
 
 // printBase is ShowBase's body, factored out so ShowCPU can reproduce
 // SHOW CPU followed by SHOW BASE without duplicating the format string.
-func (c *Console) printBase() {
+func (c *Machine) printBase() {
 	c.Printf("\n        Next storage address is %08X\n", c.DepositAddr)
 }
 
@@ -281,7 +281,7 @@ func (k StackKind) String() string {
 // handlefault.go's `SetPR(vax.PrivReg(curMod), GPR(SP))` before a fault
 // switches to a new mode) for where that save happens; this only reads
 // the result.
-func (c *Console) stackPointerFor(kind StackKind) uint32 {
+func (c *Machine) stackPointerFor(kind StackKind) uint32 {
 	psl := c.CPU.PSL()
 
 	if kind == StackISP {
@@ -318,7 +318,7 @@ func (c *Console) stackPointerFor(kind StackKind) uint32 {
 // ShowStack dumps live memory from a privileged mode's stack pointer
 // upward (one longword per line, formatted in the console's current
 // radix).
-func (c *Console) ShowStack(kind StackKind, current bool, count uint32, all bool) error {
+func (c *Machine) ShowStack(kind StackKind, current bool, count uint32, all bool) error {
 	if err := c.requireInit(); err != nil {
 		return err
 	}
@@ -398,7 +398,7 @@ var privRegDisplay = []struct {
 // ShowCPU prints the registers/PSL, mode stack pointers, and privileged
 // register block, then falls through to SHOW BASE's "next storage
 // address" line.
-func (c *Console) ShowCPU() error {
+func (c *Machine) ShowCPU() error {
 	if err := c.requireInit(); err != nil {
 		return err
 	}
@@ -443,7 +443,7 @@ func (c *Console) ShowCPU() error {
 
 // ShowRegisterOrPrivReg implements the plain register/privileged-register
 // name shortcuts of SHOW (e.g. "SHOW R0", "SHOW PC", "SHOW P0BR").
-func (c *Console) ShowRegisterOrPrivReg(name string) error {
+func (c *Machine) ShowRegisterOrPrivReg(name string) error {
 	if err := c.requireInit(); err != nil {
 		return err
 	}
@@ -466,7 +466,7 @@ func (c *Console) ShowRegisterOrPrivReg(name string) error {
 }
 
 // ShowMode prints the current privileged access mode, matching SHOW MODE.
-func (c *Console) ShowMode() error {
+func (c *Machine) ShowMode() error {
 	if err := c.requireInit(); err != nil {
 		return err
 	}
@@ -478,7 +478,7 @@ func (c *Console) ShowMode() error {
 
 // ShowNVRAM prints the loaded NVRAM image's file name and extent, matching
 // SHOW NVRAM.
-func (c *Console) ShowNVRAM() error {
+func (c *Machine) ShowNVRAM() error {
 	if err := c.requireInit(); err != nil {
 		return err
 	}
@@ -500,7 +500,7 @@ func (c *Console) ShowNVRAM() error {
 
 // ShowROM prints the loaded ROM image's file name and extent, matching
 // SHOW ROM.
-func (c *Console) ShowROM() error {
+func (c *Machine) ShowROM() error {
 	if err := c.requireInit(); err != nil {
 		return err
 	}
@@ -534,7 +534,7 @@ func (c *Console) ShowROM() error {
 // from each entry's own registered symbol rather than recomputed from
 // shimBase, since a code-0 entry's address lives wherever kernel.asm
 // defined its routine, not in the synthesized-stub page at all.
-func (c *Console) ShowShim() error {
+func (c *Machine) ShowShim() error {
 	if err := c.requireInit(); err != nil {
 		return err
 	}
@@ -556,7 +556,7 @@ func (c *Console) ShowShim() error {
 		if e.Code != 0 {
 			status = "unimplemented"
 
-			if c.RTL.HasShim(e.Code) {
+			if c.processOne.HasShim(e.Code) {
 				status = "live"
 			}
 		}
@@ -569,7 +569,7 @@ func (c *Console) ShowShim() error {
 
 // ShowString walks kernel.asm's CONSOLE$STRINGPOOL linked list of VAX
 // string descriptors. Requires a booted microkernel.
-func (c *Console) ShowString() error {
+func (c *Machine) ShowString() error {
 	if err := c.requireInit(); err != nil {
 		return err
 	}
@@ -657,7 +657,7 @@ func (c *Console) ShowString() error {
 // unlike EXAMINE/DEPOSIT which go through the enforcing
 // internal/vm.Memory.Translate. The write flag selects /WRITE (the default
 // is /READ, matching tracevm's own mode==0 default).
-func (c *Console) ShowPage(addrExpr string, write bool) error {
+func (c *Machine) ShowPage(addrExpr string, write bool) error {
 	if err := c.requireInit(); err != nil {
 		return err
 	}
@@ -784,12 +784,12 @@ func exceptionDesc(code cpu.Exception) string {
 // SCBB. The all flag  requests every slot,
 // including empty (zero) ones; the default only prints populated slots.
 // SCBB is a physical address.
-func (c *Console) ShowSCB() error { return c.showSCB(false) }
+func (c *Machine) ShowSCB() error { return c.showSCB(false) }
 
 // ShowSCBAll implements SHOW SCB/ALL — see ShowSCB.
-func (c *Console) ShowSCBAll() error { return c.showSCB(true) }
+func (c *Machine) ShowSCBAll() error { return c.showSCB(true) }
 
-func (c *Console) showSCB(all bool) error {
+func (c *Machine) showSCB(all bool) error {
 	if err := c.requireInit(); err != nil {
 		return err
 	}
@@ -871,7 +871,7 @@ func (c *Console) showSCB(all bool) error {
 // longword using this port's own real-VAX-architecture bit layout (spa
 // bits 30-31, calltype bit 29, mask bits 16-27, psw bits 0-15 — see
 // internal/cpu/call.go's emulRet, the authoritative decode this mirrors).
-func (c *Console) ShowCallFrames(countExpr string) error {
+func (c *Machine) ShowCallFrames(countExpr string) error {
 	return c.ShowCalls(countExpr, false)
 }
 
@@ -881,7 +881,7 @@ func (c *Console) ShowCallFrames(countExpr string) error {
 // subtask 12), every frame when no count is given, as the debugger shows
 // them. Otherwise it's the console's own dump of the frames at FP
 // (ShowCallFrames), one frame when no count is given.
-func (c *Console) ShowCalls(countExpr string, symbolic bool) error {
+func (c *Machine) ShowCalls(countExpr string, symbolic bool) error {
 	if err := c.requireInit(); err != nil {
 		return err
 	}
@@ -1081,7 +1081,7 @@ func (c *Console) ShowRegions() error {
 
 // ShowSharePrefix reports the sharable-image search prefix, matching SHOW
 // SHARE_PREFIX.
-func (c *Console) ShowSharePrefix() error {
+func (c *Machine) ShowSharePrefix() error {
 	if err := c.requireInit(); err != nil {
 		return err
 	}
@@ -1102,7 +1102,7 @@ func (c *Console) ShowSharePrefix() error {
 
 // ShowImages lists every loaded image (main and sharable dependencies).
 // The full flag adds each image's transfer address(es) and dependency list.
-func (c *Console) ShowImages(full bool) error {
+func (c *Machine) ShowImages(full bool) error {
 	if err := c.requireInit(); err != nil {
 		return err
 	}
@@ -1196,7 +1196,7 @@ func debugKind(icb *ICB) string {
 // lists every symbol it matches instead, as ShowSymbols does; a name the
 // console's table lacks may still be a predefined system symbol
 // (asm.BuiltinSymbol).
-func (c *Console) ShowSymbol(name string) error {
+func (c *Machine) ShowSymbol(name string) error {
 	if err := c.requireInit(); err != nil {
 		return err
 	}
@@ -1225,13 +1225,13 @@ func (c *Console) ShowSymbol(name string) error {
 // ShowSymbolsSystem prints every system (as opposed to user-defined)
 // symbol whose name matches pattern (see ShowSymbols), for the
 // debugger's SHOW SYMBOL/SYSTEM [pattern].
-func (c *Console) ShowSymbolsSystem(pattern string) error {
+func (c *Machine) ShowSymbolsSystem(pattern string) error {
 	return c.showSymbolList(pattern, true)
 }
 
 // ShowQuantum reports the interrupt-admission quantum countdown, matching
 // SHOW QUANTUM.
-func (c *Console) ShowQuantum() error {
+func (c *Machine) ShowQuantum() error {
 	if err := c.requireInit(); err != nil {
 		return err
 	}
@@ -1252,7 +1252,7 @@ func (c *Console) ShowQuantum() error {
 // ShowClock reports the interval-clock/quantum state.  "clock_running" is exactly
 // ICCS bit 0 (vax.h: "Copy of ICCS<0>"), so this reads ICCS directly rather than
 // needing a separate mirrored field.
-func (c *Console) ShowClock() error {
+func (c *Machine) ShowClock() error {
 	if err := c.requireInit(); err != nil {
 		return err
 	}
@@ -1302,7 +1302,7 @@ func (c *Console) ShowClock() error {
 
 // ShowFault reports the fault/exception event history and pending device/
 // software interrupts.
-func (c *Console) ShowFault() error {
+func (c *Machine) ShowFault() error {
 	if err := c.requireInit(); err != nil {
 		return err
 	}
@@ -1363,7 +1363,7 @@ var tbModeNames = [2]string{"READ", "WRITE"}
 // added the real cache this command reports on -- see docs/PHASE-21.md
 // (supersedes the "not applicable to this port" stub docs/PHASE-16.md sub-
 // phase 1f left behind).
-func (c *Console) ShowTB() error {
+func (c *Machine) ShowTB() error {
 	if err := c.requireInit(); err != nil {
 		return err
 	}
@@ -1475,7 +1475,7 @@ func sizeAbbrev(n int) string {
 // expose, the latter needs per-opcode execution counters that don't
 // exist, arguably a developer/instrumentation feature rather than
 // emulated VAX behavior worth adding here).
-func (c *Console) ShowInstructions(modes, profile, unimplemented, all bool, opcodeExpr string) error {
+func (c *Machine) ShowInstructions(modes, profile, unimplemented, all bool, opcodeExpr string) error {
 	if err := c.requireInit(); err != nil {
 		return err
 	}
@@ -1507,7 +1507,7 @@ func (c *Console) ShowInstructions(modes, profile, unimplemented, all bool, opco
 	return c.showInstructionsDetail(table, opmatch)
 }
 
-func (c *Console) showInstructionsGrid(table *cpu.Table, unimplemented bool) error {
+func (c *Machine) showInstructionsGrid(table *cpu.Table, unimplemented bool) error {
 	c.Printf("INSTRUCTION OPCODES:\n\n")
 
 	count, n := 0, 0
@@ -1551,7 +1551,7 @@ func (c *Console) showInstructionsGrid(table *cpu.Table, unimplemented bool) err
 	return nil
 }
 
-func (c *Console) showInstructionsDetail(table *cpu.Table, opmatch int32) error {
+func (c *Machine) showInstructionsDetail(table *cpu.Table, opmatch int32) error {
 	count, found := 0, false
 
 	for _, inst := range table.All() {
@@ -1635,7 +1635,7 @@ var debugShowEntries = []debugShowEntry{
 
 // ShowDebug implements SHOW DEBUG a bit that's set prints its plain name,
 // a clear bit prints "NO"+name, both followed by the flag's description.
-func (c *Console) ShowDebug() error {
+func (c *Machine) ShowDebug() error {
 	if err := c.requireInit(); err != nil {
 		return err
 	}
@@ -1658,7 +1658,7 @@ func (c *Console) ShowDebug() error {
 
 // ShowTrace implements SHOW TRACE (also reached via the DISASSEMBLY
 // keyword).
-func (c *Console) ShowTrace() error {
+func (c *Machine) ShowTrace() error {
 	if err := c.requireInit(); err != nil {
 		return err
 	}

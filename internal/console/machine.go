@@ -28,10 +28,6 @@ const (
 // minus everything owned by a later phase (device state, RTL/microkernel
 // validity, the assembler's own settings).
 type Console struct {
-	// EngineHooks passes the engine's SYS$ services, shims, ASTs, and
-	// exceptions to the running process (services.go).
-	corevms.EngineHooks
-
 	// Machine is the emulated system (vaxmachine.go).
 	*Machine
 
@@ -47,13 +43,6 @@ type Console struct {
 	// both (see main.go) assigns it explicitly. XFC$CONSOLE_CMD
 	// reports failure if this is still nil.
 	Dispatcher *Dispatcher
-
-	// Debugger is the machine debugger (internal/debugger), installed by
-	// cmd/govax; see debugger.go. While it has a session in progress,
-	// Dispatcher.Dispatch hands it each command line instead of parsing
-	// the console grammar. Nil in a console built without it, where the
-	// DEBUG command reports that it isn't available.
-	Debugger Debugger
 
 	// commandLineErr is the failure of the one-shot command given on
 	// govax's command line (RunCommandLine), which ends the
@@ -129,8 +118,27 @@ func New(out io.Writer) *Console {
 	}
 
 	c.home = c.Shell
+	c.processOneLogicals = c.Logicals
+	c.Services = c
+	c.EngineHooks = corevms.EngineHooks{Home: func() *corevms.Environment { return c.processOne }}
+	c.Hooks = Hooks{
+		Output:         func() io.Writer { return c.Out },
+		Session:        func() *rms.Session { return c.ContainerSession },
+		ProcessOneOnly: c.processOneOnly,
+		CommandStatus: func(status uint32) error {
+			c.setCommandStatus(status, nil)
 
-	c.EngineHooks = corevms.EngineHooks{Home: func() *corevms.Environment { return c.RTL }}
+			if status&1 != 0 {
+				return nil
+			}
+
+			return c.statusFailure(status)
+		},
+		ControlYTaken:  func() bool { return c.controlYTaken },
+		CLIImageEnded:  c.cliImageEnded,
+		NewProcessOne:  c.newProcessOne,
+		ProcessDeleted: c.processDeleted,
+	}
 
 	c.Logicals.Trace = c.traceLogicals
 	c.ContainerSession.Logicals = c.Logicals
@@ -191,14 +199,14 @@ func (w consoleOutput) Write(p []byte) (int, error) {
 }
 
 // newRTL returns a fresh System for the current CPU and memory, sharing
-// the console's devices and mounts, on the engine's system clock, and the
-// RTL environment of its first process, process 1, sharing the console's
-// logical names and session (so a program's RMS calls see SET DEFAULT's
-// default directory). The files the old process 1 left open are closed
-// first, so what it wrote reaches the volumes (they outlive the machine).
-func (c *Console) newRTL() *corevms.Environment {
-	if c.RTL != nil {
-		c.RTL.CloseFiles()
+// the machine's devices and mounts, on the engine's system clock, and the
+// RTL environment of its first process, process 1, made by the console
+// (Hooks.NewProcessOne). The files the old process 1 left open are
+// closed first, so what it wrote reaches the volumes (they outlive the
+// machine).
+func (c *Machine) newRTL() *corevms.Environment {
+	if c.processOne != nil {
+		c.processOne.CloseFiles()
 	}
 
 	sys := corevms.NewSystem(c.CPU, c.Mem, c.Devices, c.Mounts)
@@ -207,8 +215,6 @@ func (c *Console) newRTL() *corevms.Environment {
 	// The old System's other processes are gone with it, and so is their
 	// image state; process 1's is the console's and stays (images.go).
 	c.otherImages = nil
-	c.clis = nil
-	c.spawnPage = 0
 
 	sys.SetProcessSettings(processSettings())
 
@@ -217,23 +223,14 @@ func (c *Console) newRTL() *corevms.Environment {
 	sys.ActivateImage = c.activateCreatedImage
 
 	// A deleted process's image state goes with it (docs/PHASE-45.md,
-	// subtask 6), and so does its CLI, whose interpreter is unwound if
-	// it was waiting for its turn (subcli.go).
+	// subtask 6), and so does whatever the console keeps for it.
 	sys.ProcessDeleted = func(env *corevms.Environment) {
 		delete(c.otherImages, env)
 
-		if cli := c.clis[env]; cli != nil {
-			cli.abort()
+		if c.Hooks.ProcessDeleted != nil {
+			c.Hooks.ProcessDeleted(env)
 		}
-
-		delete(c.clis, env)
 	}
-
-	// A process LIB$SPAWN creates, or $CREPRC creates to run LOGINOUT,
-	// runs the subprocess CLI (subcli.go, docs/PHASE-48.md), whose shim
-	// is the console's.
-	sys.Interpreter = cliHost{c}
-	sys.Shims().Register(cliShimCode, "EXE$CLI_COMMAND", c.cliCommand)
 
 	// $SETIMR's timers run on the engine's system time, the same time
 	// base as the interval clock (docs/PHASE-26.md subtask 11).
@@ -249,19 +246,8 @@ func (c *Console) newRTL() *corevms.Environment {
 		}
 	}
 
-	// Process 1 is the first process on a new System, whose process table
-	// is empty, so adding it can't fail.
-	env, err := corevms.NewEnvironment(sys, c.Logicals, consoleInput{c}, consoleOutput{c})
-	if err != nil {
-		panic(err)
-	}
-
-	env.Session = c.ContainerSession
+	env := c.Hooks.NewProcessOne(sys)
 	c.processOne = env
-
-	// The console is process 1's command interpreter: LIB$SPAWN works in
-	// it (corevms.Environment.HasCLI).
-	env.HasCLI = true
 
 	// A condition nobody handled goes to the debugger first, if there is
 	// one that wants it. The hook reads c.OnUnhandled each time, so a
@@ -281,12 +267,54 @@ func (c *Console) newRTL() *corevms.Environment {
 	return env
 }
 
+// newProcessOne is Hooks.NewProcessOne: process 1 on sys, the console's,
+// sharing its logical names and session (so a program's RMS calls see
+// SET DEFAULT's default directory), on the console's terminal. It is
+// process 1's DCL's process (home), and its command interpreter: a
+// process LIB$SPAWN creates, or $CREPRC creates to run LOGINOUT, runs
+// the subprocess CLI (subcli.go, docs/PHASE-48.md), whose shim is the
+// console's.
+func (c *Console) newProcessOne(sys *corevms.System) *corevms.Environment {
+	c.clis = nil
+	c.spawnPage = 0
+
+	sys.Interpreter = cliHost{c}
+	sys.Shims().Register(cliShimCode, "EXE$CLI_COMMAND", c.cliCommand)
+
+	// Process 1 is the first process on a new System, whose process table
+	// is empty, so adding it can't fail.
+	env, err := corevms.NewEnvironment(sys, c.home.Logicals, consoleInput{c}, consoleOutput{c})
+	if err != nil {
+		panic(err)
+	}
+
+	env.Session = c.home.ContainerSession
+	c.home.RTL = env
+
+	// The console is process 1's command interpreter: LIB$SPAWN works in
+	// it (corevms.Environment.HasCLI).
+	env.HasCLI = true
+
+	return env
+}
+
+// processDeleted is Hooks.ProcessDeleted: a deleted process's CLI goes
+// with it, and its interpreter is unwound if it was waiting for its turn
+// (subcli.go).
+func (c *Console) processDeleted(env *corevms.Environment) {
+	if cli := c.clis[env]; cli != nil {
+		cli.abort()
+	}
+
+	delete(c.clis, env)
+}
+
 // Initialized reports whether an INIT command has allocated a machine yet
 // (matching the C source's vax_init flag).
-func (c *Console) Initialized() bool { return c.Engine != nil }
+func (c *Machine) Initialized() bool { return c.Engine != nil }
 
 // requireInit is the common guard nearly every command runs first.
-func (c *Console) requireInit() error {
+func (c *Machine) requireInit() error {
 	if !c.Initialized() {
 		return vmserrors.New(vmserrors.CLI_NOVAX)
 	}
@@ -296,7 +324,7 @@ func (c *Console) requireInit() error {
 
 // requireKernelMode matches the handful of commands (VMINIT, INIT/ROM, ...)
 // that additionally refuse to run outside kernel mode.
-func (c *Console) requireKernelMode() error {
+func (c *Machine) requireKernelMode() error {
 	if c.CPU.PSL().CurMod() != vax.Kernel {
 		return vmserrors.New(vmserrors.CLI_NOTKERNEL)
 	}
@@ -318,7 +346,7 @@ func (c *Console) requireKernelMode() error {
 // program has ever legitimately dropped the CPU to a non-kernel mode and
 // then halted there (see kernel.asm's own EXE$INITIALIZE, which does
 // exactly that as its normal, designed completion).
-func (c *Console) withKernelMode(fn func() error) error {
+func (c *Machine) withKernelMode(fn func() error) error {
 	saved := c.CPU.PSL().CurMod()
 	c.Engine.SetModeStack(vax.Kernel, false)
 
@@ -329,7 +357,7 @@ func (c *Console) withKernelMode(fn func() error) error {
 
 // Evaluator returns an Evaluator bound to this console's symbol table,
 // radix, and current deposit address.
-func (c *Console) Evaluator() *Evaluator {
+func (c *Machine) Evaluator() *Evaluator {
 	return &Evaluator{
 		Symbols: c.Symbols, Radix: c.Radix, Here: c.DepositAddr, Mem: c.Mem, CPU: c.CPU,
 		Debug:    imageNames{c: c},
@@ -364,8 +392,8 @@ func (c *Console) Evaluator() *Evaluator {
 
 // Printf writes to the console's output stream, matching the C source's
 // direct printf calls.
-func (c *Console) Printf(format string, args ...any) {
-	fmt.Fprintf(c.Out, format, args...)
+func (c *Machine) Printf(format string, args ...any) {
+	fmt.Fprintf(c.Hooks.Output(), format, args...)
 }
 
 // allocPhysMemory returns bytes normalized to alloc_vax's own minimum-size

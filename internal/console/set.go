@@ -73,7 +73,7 @@ func setPSLRange(set func(uint32), v, maxValue uint32) error {
 // CM/TP/FPD/IS/DV/FU/IV/T/N/Z/V/C are boolean bits (0 or 1);
 // IPL is 0-31; PRV_MOD is 0-3; CUR_MOD/MODE switches the active mode/stack
 // via SetMode.
-func (c *Console) SetPSLField(field string, value uint32) error {
+func (c *Machine) SetPSLField(field string, value uint32) error {
 	if err := c.requireInit(); err != nil {
 		return err
 	}
@@ -133,7 +133,7 @@ var debugFlagNames = map[string]vax.DebugFlags{
 // Each name may be prefixed NO to clear that one bit
 // instead of setting it; a bare SET DEBUG with no names sets the DEBUG
 // (native-debugger) bit alone.
-func (c *Console) SetDebug(names []string) error {
+func (c *Machine) SetDebug(names []string) error {
 	if len(names) == 0 {
 		c.CPU.SetDebug(c.CPU.Debug() | vax.DebugNative)
 
@@ -183,7 +183,7 @@ var setModeNames = map[string]vax.AccessMode{
 // pending AST (vax.pslw.cur_mod >= vax.ASTLVL) itself: the RTL's AST 
 // delivery sees the new mode at the next instruction boundary (see 
 // pslFieldNames' doc comment).
-func (c *Console) SetMode(name string) error {
+func (c *Machine) SetMode(name string) error {
 	if err := c.requireInit(); err != nil {
 		return err
 	}
@@ -209,7 +209,7 @@ func (c *Console) SetMode(name string) error {
 // MODE's keyword form — takes CUR_MOD's raw 0-3 numeric encoding (matching
 // AccessMode's own iota values) with no "INTERRUPT" case (SET PSL has no
 // numeric encoding for the interrupt stack.
-func (c *Console) setModeStackByValue(value uint32) error {
+func (c *Machine) setModeStackByValue(value uint32) error {
 	if value > uint32(vax.User) {
 		return vmserrors.New(vmserrors.CLI_INVSETPSL, value)
 	}
@@ -221,12 +221,12 @@ func (c *Console) setModeStackByValue(value uint32) error {
 
 // SetTrace implements SET TRACE/SET DISASSEMBLY (enable) and SET NOTRACE/
 // SET NODISASSEMBLE (disable).
-func (c *Console) SetTrace(on bool) {
+func (c *Machine) SetTrace(on bool) {
 	c.Trace = on
 }
 
 // SetRadix implements SET RADIX <8|10|16>.
-func (c *Console) SetRadix(radix int) error {
+func (c *Machine) SetRadix(radix int) error {
 	if radix != 8 && radix != 10 && radix != 16 {
 		return vmserrors.New(vmserrors.CLI_BADRADIX, radix)
 	}
@@ -239,7 +239,7 @@ func (c *Console) SetRadix(radix int) error {
 // SetVM implements SET VM/SET MAPEN (on) and SET NOVM/SET NOMAPEN (off).
 // Sets/clears the MAPEN privileged register directly. Requires kernel
 // mode.
-func (c *Console) SetVM(on bool) error {
+func (c *Machine) SetVM(on bool) error {
 	if err := c.requireInit(); err != nil {
 		return err
 	}
@@ -262,7 +262,7 @@ func (c *Console) SetVM(on bool) error {
 // directly (Console.DepositAddr), the same cursor SHOW BASE reports 
 // (see docs/PHASE-16.md sub-phase 1d's ShowBase fix) and EXAMINE/DEPOSIT
 // themselves advance after every access.
-func (c *Console) SetBase(addr uint32) error {
+func (c *Machine) SetBase(addr uint32) error {
 	if err := c.requireInit(); err != nil {
 		return err
 	}
@@ -275,7 +275,7 @@ func (c *Console) SetBase(addr uint32) error {
 // SetVerbose implements SET VERBOSE command, sets
 // CONSOLE_VERBOSE; DCL's verification (SET VERIFY, dclverify.go) is
 // separate.
-func (c *Console) SetVerbose() error {
+func (c *Machine) SetVerbose() error {
 	if err := c.requireInit(); err != nil {
 		return err
 	}
@@ -286,7 +286,7 @@ func (c *Console) SetVerbose() error {
 }
 
 // SetNoVerbose implements SET NOVERBOSE, clearing CONSOLE_VERBOSE.
-func (c *Console) SetNoVerbose() error {
+func (c *Machine) SetNoVerbose() error {
 	if err := c.requireInit(); err != nil {
 		return err
 	}
@@ -298,7 +298,7 @@ func (c *Console) SetNoVerbose() error {
 
 // SetQuantum implements SET QUANTUM <n>, resets Engine's interrupt-admission
 // quantum counter (both its initial reload value and its current countdown).
-func (c *Console) SetQuantum(n int) error {
+func (c *Machine) SetQuantum(n int) error {
 	if err := c.requireInit(); err != nil {
 		return err
 	}
@@ -319,7 +319,7 @@ func (c *Console) SetQuantum(n int) error {
 }
 
 // SetUIQuantum implements SET UIQUANTUM <n>.
-func (c *Console) SetUIQuantum(n int) error {
+func (c *Machine) SetUIQuantum(n int) error {
 	if err := c.requireInit(); err != nil {
 		return err
 	}
@@ -330,7 +330,7 @@ func (c *Console) SetUIQuantum(n int) error {
 }
 
 // SetFaultHistory implements SET FAULT/SET HIST <n>.
-func (c *Console) SetFaultHistory(n int) error {
+func (c *Machine) SetFaultHistory(n int) error {
 	if err := c.requireInit(); err != nil {
 		return err
 	}
@@ -363,7 +363,7 @@ var pteFieldNames = map[string]func(pte *vm.PTE, v uint32){
 // "Cannot SET PAGE when virtual memory is disabled" (not an error, matching
 // setpte's own VAX_OK-with-printf behavior) rather than failing if MAPEN is
 // off.
-func (c *Console) SetPTE(addr uint32, field string, value uint32) error {
+func (c *Machine) SetPTE(addr uint32, field string, value uint32) error {
 	if err := c.requireInit(); err != nil {
 		return err
 	}

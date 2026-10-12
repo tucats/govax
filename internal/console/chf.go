@@ -36,7 +36,7 @@ const maxCHFDepth = 4096
 // the machine cleanly -- never returning an error, since both outcomes are
 // this port's own definition of "handled" (a real condition handler ran, or
 // the console's own reporting did).
-func (c *Console) handleConsoleFault(f *cpu.ConsoleHandlerFault) error {
+func (c *Machine) handleConsoleFault(f *cpu.ConsoleHandlerFault) error {
 	handled, err := c.chf(f)
 	if err != nil {
 		return err
@@ -53,7 +53,7 @@ func (c *Console) handleConsoleFault(f *cpu.ConsoleHandlerFault) error {
 // condition handler (frame offset 0, invoking the first one
 // found (invokeHandler) and, if it declines, continuing the search from
 // that frame's own caller. Returns true once some handler continues.
-func (c *Console) chf(f *cpu.ConsoleHandlerFault) (bool, error) {
+func (c *Machine) chf(f *cpu.ConsoleHandlerFault) (bool, error) {
 	fp := c.CPU.GPR(vax.FP)
 	ap := c.CPU.GPR(vax.AP)
 
@@ -139,7 +139,7 @@ func (c *Console) chf(f *cpu.ConsoleHandlerFault) (bool, error) {
 // fault PC, but a handler may have overwritten that slot to redirect
 // execution, e.g. to skip the faulting instruction) by writing directly
 // into those stack slots rather than through its own return value.
-func (c *Console) invokeHandler(f *cpu.ConsoleHandlerFault, handler, frameFP uint32, depth int) (bool, error) {
+func (c *Machine) invokeHandler(f *cpu.ConsoleHandlerFault, handler, frameFP uint32, depth int) (bool, error) {
 	savedSP := c.CPU.GPR(vax.SP)
 	savedHalted := c.Engine.Halted()
 	savedR0 := c.CPU.GPR(vax.R0)
@@ -289,7 +289,7 @@ func (c *Console) invokeHandler(f *cpu.ConsoleHandlerFault, handler, frameFP uin
 // %VAX-E-CONHANDLER-style diagnostic naming the exception and its signal
 // arguments, then halt. Uses exceptionName's short SCB-style names (RESOP,
 // ACCVIO, ...).
-func (c *Console) formatException(f *cpu.ConsoleHandlerFault) error {
+func (c *Machine) formatException(f *cpu.ConsoleHandlerFault) error {
 	c.Printf("%%VAX-E-CONHANDLER, %s, PC=%08X  PSL=%08X\n", exceptionName(f.Code), f.PC, uint32(f.PSL))
 
 	if len(f.Args) > 0 {

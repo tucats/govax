@@ -61,10 +61,10 @@ func (c *Console) StopProcess(name, pid string) error {
 // files, before the machine they ran on is replaced or ends (INIT,
 // VMINIT, ZERO, and govax's exit). It must run while the old memory is
 // still the machine's, since a process's rundown reads its tables.
-func (c *Console) endOtherProcesses() {
-	if c.RTL == nil || c.Mem == nil {
+func (c *Machine) endOtherProcesses() {
+	if c.processOne == nil || c.Mem == nil {
 		return
 	}
 
-	c.RTL.DeleteOtherProcesses()
+	c.processOne.DeleteOtherProcesses()
 }

@@ -1,12 +1,14 @@
 package console
 
 import (
+	"io"
 	"time"
 
 	"github.com/tucats/govax/internal/asm"
 	"github.com/tucats/govax/internal/corevms"
 	"github.com/tucats/govax/internal/cpu"
 	iodev "github.com/tucats/govax/internal/io"
+	"github.com/tucats/govax/internal/lnm"
 	"github.com/tucats/govax/internal/respath"
 	"github.com/tucats/govax/internal/rms"
 	"github.com/tucats/govax/internal/vax"
@@ -19,6 +21,23 @@ import (
 // process, and the hooks the debugger sets. Console embeds it, so its
 // fields read as the console's (c.CPU, c.Symbols).
 type Machine struct {
+	// EngineHooks passes the engine's SYS$ services, shims, ASTs, and
+	// exceptions to the running process (services.go).
+	corevms.EngineHooks
+
+	// Services is the engine's cpu.SystemServices: the console, which
+	// adds its own I/O and command selectors to EngineHooks'.
+	Services cpu.SystemServices
+
+	// Hooks are what the machine asks of the console that runs it.
+	Hooks Hooks
+
+	// Debugger is the machine debugger (internal/debugger), installed by
+	// cmd/govax; see debugger.go. GO, CALL, STEP, and RUN of a debug
+	// image start a session in it. Nil in a console built without it,
+	// where the DEBUG command reports that it isn't available.
+	Debugger Debugger
+
 	Engine *cpu.Engine
 	CPU    *vax.CPU
 	Mem    *vm.Memory
@@ -175,6 +194,58 @@ type Machine struct {
 	// The debugger sets it (docs/PHASE-42.md, subtask 20).
 	DebugBuiltins func(name string) (uint32, bool, error)
 
-	// processOne is process 1, the console's own (newRTL).
-	processOne *corevms.Environment
+	// processOne is process 1, the console's own (newRTL), and
+	// processOneLogicals its logical names, which outlive it: made once,
+	// by Console.New, and shared with process 1's DCL.
+	processOne         *corevms.Environment
+	processOneLogicals *lnm.Database
+
+	// imageActive is set while an image process 1's RUN started is
+	// running (or stopped at a breakpoint): the RET that ends its main
+	// routine is its image exit, when user-mode logical names are run
+	// down (see imageRundown). imageStatus is the completion status of
+	// the last image RUN ran to its end, and imageEnded says one did
+	// (run.go). runHost is RUN's /HOST: the main image is a host file
+	// (readImage).
+	imageActive bool
+	imageStatus uint32
+	imageEnded  bool
+	runHost     bool
+}
+
+// Hooks are what the machine asks of the console that runs it, about
+// the DCL whose command is running: process 1's, or a subprocess's
+// (subcli.go). Console.New sets them all.
+type Hooks struct {
+	// Output is where the machine's messages go: the DCL's output.
+	Output func() io.Writer
+
+	// Session is the DCL's default directory, in which RUN finds a main
+	// image (readImage) and the debugger a source file (findSource).
+	Session func() *rms.Session
+
+	// ProcessOneOnly is VAX_NOTSUBPROC for what in a subprocess's DCL,
+	// and nil in process 1's.
+	ProcessOneOnly func(what string) error
+
+	// CommandStatus makes status, an image's completion status, the
+	// command's ($STATUS), returning the failure to report, or nil for a
+	// success.
+	CommandStatus func(status uint32) error
+
+	// ControlYTaken says a Ctrl/Y that stopped the run is a command
+	// procedure's to act on (dclcontroly.go), so the stop is quiet.
+	ControlYTaken func() bool
+
+	// CLIImageEnded is told when env, a process other than process 1,
+	// returns from its outermost call: if that was an image its CLI ran,
+	// the CLI goes on (true); otherwise the process has ended.
+	CLIImageEnded func(env *corevms.Environment) bool
+
+	// NewProcessOne makes process 1 on a new System (newRTL), with its
+	// terminal streams, logical names, and session.
+	NewProcessOne func(sys *corevms.System) *corevms.Environment
+
+	// ProcessDeleted is told of each process the System deletes.
+	ProcessDeleted func(env *corevms.Environment)
 }

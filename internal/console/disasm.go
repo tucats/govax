@@ -18,7 +18,7 @@ import (
 // which would otherwise be left inconsistent partway through decoding one
 // instruction.
 type memByteReader struct {
-	c *Console
+	c *Machine
 }
 
 func (r memByteReader) ByteAt(addr uint32) byte {
@@ -32,7 +32,7 @@ func (r memByteReader) ByteAt(addr uint32) byte {
 
 // Disassemble implements DISASSEMBLE/NOSYMBOLIC, the console's own
 // layout: DisassembleWith with no options.
-func (c *Console) Disassemble(start, end uint32) error {
+func (c *Machine) Disassemble(start, end uint32) error {
 	return c.DisassembleWith(start, end, DisassembleOptions{})
 }
 
@@ -79,7 +79,7 @@ type DisassembleOptions struct {
 // DisassembleWith implements DISASSEMBLE: decodes and prints instructions
 // from start through end (at least one, starting at start, even if end <
 // start).
-func (c *Console) DisassembleWith(start, end uint32, opts DisassembleOptions) error {
+func (c *Machine) DisassembleWith(start, end uint32, opts DisassembleOptions) error {
 	if err := c.requireInit(); err != nil {
 		return err
 	}
@@ -158,7 +158,7 @@ func (c *Console) DisassembleWith(start, end uint32, opts DisassembleOptions) er
 // formatOptions are the disassembler's options for opts: the debugger's
 // style and names for DISASSEMBLE/SYMBOLIC, and the constant and fixup
 // cell namers when asked for.
-func (c *Console) formatOptions(opts DisassembleOptions, names consoleSymbolizer) disasm.Options {
+func (c *Machine) formatOptions(opts DisassembleOptions, names consoleSymbolizer) disasm.Options {
 	var format disasm.Options
 
 	if opts.Symbolic || opts.Numeric {
@@ -180,7 +180,7 @@ func (c *Console) formatOptions(opts DisassembleOptions, names consoleSymbolizer
 // symbolRadix is the radix a symbolic name's offsets are written in: the
 // console's radix when it's decimal, as the debugger's SET RADIX DECIMAL
 // makes them (GLIMIT+589), and hexadecimal otherwise.
-func (c *Console) symbolRadix() int {
+func (c *Machine) symbolRadix() int {
 	if c.Radix == 10 {
 		return 10
 	}
@@ -208,7 +208,7 @@ const maxCaseEntries = 1024
 // address after it. The table has limit+1 word entries; a limit that
 // isn't a literal or immediate can't be known, so nothing is printed and
 // the words that follow are decoded as instructions.
-func (c *Console) printCaseTable(r disasm.ByteReader, dec disasm.Decoded, table uint32, names consoleSymbolizer) uint32 {
+func (c *Machine) printCaseTable(r disasm.ByteReader, dec disasm.Decoded, table uint32, names consoleSymbolizer) uint32 {
 	if len(dec.Operands) < 3 {
 		return table
 	}
@@ -246,7 +246,7 @@ func (c *Console) printCaseTable(r disasm.ByteReader, dec disasm.Decoded, table 
 // constant of the module, in the loaded images' debug symbol tables, that
 // holds the instruction.
 type imageConstants struct {
-	c *Console
+	c *Machine
 }
 
 // Constant implements disasm.ConstantNamer.
@@ -268,7 +268,7 @@ func (n imageConstants) Constant(pc, value uint32) (string, bool) {
 // A CALLS or CALLG to an absolute address that is an entry point gets the
 // routine's name, for the console's own layout; DISASSEMBLE/SYMBOLIC uses
 // decodeAt, and names it as the debugger does.
-func (c *Console) decodeInstruction(r disasm.ByteReader, pc uint32) (disasm.Decoded, error) {
+func (c *Machine) decodeInstruction(r disasm.ByteReader, pc uint32) (disasm.Decoded, error) {
 	instr, err := c.decodeAt(r, pc)
 	if instr.IsMask {
 		return instr, err
@@ -289,7 +289,7 @@ func (c *Console) decodeInstruction(r disasm.ByteReader, pc uint32) (disasm.Deco
 
 // decodeAt decodes the instruction at pc, or the register-save mask there
 // when pc is a routine's entry (entryAt), with no operand named.
-func (c *Console) decodeAt(r disasm.ByteReader, pc uint32) (disasm.Decoded, error) {
+func (c *Machine) decodeAt(r disasm.ByteReader, pc uint32) (disasm.Decoded, error) {
 	if name, ok := c.entryAt(pc); ok {
 		return disasm.EntryMask(r, pc, name), nil
 	}
@@ -306,7 +306,7 @@ func (c *Console) decodeAt(r disasm.ByteReader, pc uint32) (disasm.Decoded, erro
 // linked /DEBUG and those linked with only traceback name their routines
 // there. A JSB routine (dbgsym.Routine.NoCall) has no mask, so it isn't
 // one.
-func (c *Console) entryAt(pc uint32) (string, bool) {
+func (c *Machine) entryAt(pc uint32) (string, bool) {
 	if name, ok := c.Symbols.EntryAt(pc); ok {
 		return name, true
 	}

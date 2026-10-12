@@ -17,7 +17,7 @@ import (
 // debugImageAt returns the debug symbol table of the loaded image whose
 // address range holds addr, or nil when addr is in no image or its image
 // has none.
-func (c *Console) debugImageAt(addr uint32) *dbgsym.Program {
+func (c *Machine) debugImageAt(addr uint32) *dbgsym.Program {
 	for _, icb := range c.images().ICBList {
 		if icb.Debug != nil && addr >= imageLow(icb) && addr <= icb.End {
 			return icb.Debug
@@ -32,7 +32,7 @@ func (c *Console) debugImageAt(addr uint32) *dbgsym.Program {
 // a line, or a routine plus an offset), else its address in 8 hex digits.
 // ok is false when the console's display applies instead: symbolic display
 // is off, or pc isn't in an image with a debug symbol table.
-func (c *Console) symbolicLocation(pc uint32) (loc string, names consoleSymbolizer, ok bool) {
+func (c *Machine) symbolicLocation(pc uint32) (loc string, names consoleSymbolizer, ok bool) {
 	if c.debugImageAt(pc) == nil || !symbolicDefault() {
 		return "", consoleSymbolizer{}, false
 	}
@@ -50,7 +50,7 @@ func (c *Console) symbolicLocation(pc uint32) (loc string, names consoleSymboliz
 // locationText is pc as STEP's "Stepped to" and a breakpoint's "Break at"
 // show it: symbolicLocation's name where it applies (the debugger's
 // "stepped to DBGDIS\START\%LINE 43"), else the address in 8 hex digits.
-func (c *Console) locationText(pc uint32) string {
+func (c *Machine) locationText(pc uint32) string {
 	if loc, _, ok := c.symbolicLocation(pc); ok {
 		return loc
 	}
@@ -63,7 +63,7 @@ func (c *Console) locationText(pc uint32) string {
 // the location and the instruction as DISASSEMBLE/SYMBOLIC lays them out
 // (FAILSUB\SUB2\%LINE 12:  MOVL     @#00000000,R0). ok is false where it
 // doesn't.
-func (c *Console) symbolicTraceLine(pc uint32) (text string, ok bool, err error) {
+func (c *Machine) symbolicTraceLine(pc uint32) (text string, ok bool, err error) {
 	loc, names, ok := c.symbolicLocation(pc)
 	if !ok {
 		return "", false, nil
@@ -84,7 +84,7 @@ func (c *Console) symbolicTraceLine(pc uint32) (text string, ok bool, err error)
 // to eight columns, and symbolic names where pc is inside an image that
 // has a debug symbol table. Where it isn't, the text is the console's own
 // disassembly. An instruction that can't be decoded is "<unreadable>".
-func (c *Console) InstructionText(pc uint32) string {
+func (c *Machine) InstructionText(pc uint32) string {
 	if _, names, ok := c.symbolicLocation(pc); ok {
 		if dec, err := c.decodeAt(memByteReader{c: c}, pc); err == nil {
 			return dec.Format(c.formatOptions(DisassembleOptions{Symbolic: true}, names))
@@ -100,7 +100,7 @@ func (c *Console) InstructionText(pc uint32) string {
 // line-number table covers, which is what lets the debugger step by source
 // line there. Anywhere else (the kernel, code assembled at the console) a
 // step can only be by instruction.
-func (c *Console) HasLineInfo(pc uint32) bool {
+func (c *Machine) HasLineInfo(pc uint32) bool {
 	prog := c.debugImageAt(pc)
 	if prog == nil {
 		return false
@@ -115,7 +115,7 @@ func (c *Console) HasLineInfo(pc uint32) bool {
 // in a loaded image's debug symbol table that starts with an entry mask (one
 // called by CALLS or CALLG): the address just past the mask, where a call
 // lands. It returns the routine's path name (DBGCMD\FACT).
-func (c *Console) EnteredRoutine(pc uint32) (string, bool) {
+func (c *Machine) EnteredRoutine(pc uint32) (string, bool) {
 	prog := c.debugImageAt(pc)
 	if prog == nil || pc < 2 {
 		return "", false

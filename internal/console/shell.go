@@ -66,15 +66,6 @@ type Shell struct {
 	verifyPrefix string
 	echo         *pendingEcho
 
-	// imageActive is set while an image started by RUN is running (or
-	// stopped at a breakpoint): the RET that ends its main routine is
-	// its image exit, when user-mode logical names are run down (see
-	// imageRundown).
-	imageActive bool
-
-	// runHost is RUN's /HOST: the main image is a host file (readImage).
-	runHost bool
-
 	// dclSymbols are the DCL symbols assignments at the prompt define
 	// (dclsym.go): foreign commands and command abbreviations, global
 	// and local.
@@ -135,9 +126,4 @@ type Shell struct {
 	// searchStreams are F$SEARCH's streams (dcllexfile.go), by stream
 	// id: where each search has got to.
 	searchStreams map[int32]*searchStream
-
-	// imageStatus is the completion status of the last image RUN ran to
-	// its end, and imageEnded says one did (run.go).
-	imageStatus uint32
-	imageEnded  bool
 }

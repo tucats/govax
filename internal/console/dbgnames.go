@@ -15,7 +15,7 @@ import (
 // imageNames is the evaluator's DebugNames: the debug symbol tables of
 // every image RUN loaded (ICB.Debug), main image first.
 type imageNames struct {
-	c *Console
+	c *Machine
 }
 
 // Lookup returns the value of a symbol or path name in the first image
@@ -175,7 +175,7 @@ func (n imageNames) Line(scope string, line int) (uint32, bool) {
 // addresses name one (namesAddress), and page 0, never mapped, is never
 // named by them.
 type consoleSymbolizer struct {
-	c     *Console
+	c     *Machine
 	radix int
 
 	// numeric turns naming off: every address is a number, as SET MODE

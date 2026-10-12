@@ -46,7 +46,7 @@ func sizeBytes(sz ExamSize) uint32 {
 
 // Examine implements EXAMINE: displays either a register (reg != "") or a
 // range of memory starting at addr, count units of size sz.
-func (c *Console) Examine(reg string, addr uint32, count uint32, sz ExamSize) error {
+func (c *Machine) Examine(reg string, addr uint32, count uint32, sz ExamSize) error {
 	if err := c.requireInit(); err != nil {
 		return err
 	}
@@ -89,7 +89,7 @@ func (c *Console) Examine(reg string, addr uint32, count uint32, sz ExamSize) er
 // must not be gated by that program's own PSL (see kernel.asm's own
 // EXE$INITIALIZE, which legitimately drops to user mode and halts there as
 // its normal, designed completion).
-func (c *Console) loadSized(addr uint32, sz ExamSize) (v uint32, err error) {
+func (c *Machine) loadSized(addr uint32, sz ExamSize) (v uint32, err error) {
 	err = c.withKernelMode(func() error {
 		switch sz {
 		case SizeWord:
@@ -115,7 +115,7 @@ func (c *Console) loadSized(addr uint32, sz ExamSize) (v uint32, err error) {
 	return v, err
 }
 
-func (c *Console) formatOne(addr uint32, sz ExamSize, v uint32) string {
+func (c *Machine) formatOne(addr uint32, sz ExamSize, v uint32) string {
 	_ = addr // ignored for now
 	
 	switch sz {
@@ -162,7 +162,7 @@ func (c *Console) formatOne(addr uint32, sz ExamSize, v uint32) string {
 // implementing the "DEPOSIT" deliverable docs/PHASE-08.md names explicitly,
 // using the same size/register/addressing rules as Examine rather than
 // inventing a different convention.
-func (c *Console) Deposit(reg string, addr uint32, sz ExamSize, value uint32) error {
+func (c *Machine) Deposit(reg string, addr uint32, sz ExamSize, value uint32) error {
 	if err := c.requireInit(); err != nil {
 		return err
 	}

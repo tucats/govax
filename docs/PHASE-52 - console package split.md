@@ -322,3 +322,37 @@ package move is a plain import-path rewrite.
   in `env.Spawn`, in the parent's turn). With a `Shell` per process
   each CLI's state is always its own. `TestSpawnDCL_nestedInherits`
   (failed before, passes now).
+- **2026-10-12 — Stage 3, step 2: `Machine`.** The machine's state is a
+  `Machine` struct (`vaxmachine.go`), embedded in `Console` beside the
+  `Shell`. The methods of the machine's files (INIT/ZERO, VMINIT, ROM,
+  shims, images, RUN, execute and trace, ASM, EXAMINE support,
+  disassembly, the debug-symbol helpers, CHF, source lines, the
+  debugger's export surface, SET, and most of SHOW) now have `*Machine`
+  receivers, still named `c` until the package move. Changing the
+  receivers first and reading the compiler's errors gave the exact
+  boundary: 111 errors. Most were `c.RTL` meaning process 1, and the
+  machine now says `processOne`. What the machine needs from the DCL
+  running a command is `Machine.Hooks`, a struct of functions the
+  console fills in: `Output`, `Session`, `ProcessOneOnly`,
+  `CommandStatus` (an image's status as `$STATUS`), `ControlYTaken`,
+  `CLIImageEnded`, `NewProcessOne`, and `ProcessDeleted`. `newRTL`
+  splits in two: the System's part is the machine's, and process 1's
+  terminal streams and the CLI's registration are the console's
+  `newProcessOne`. `EngineHooks`, `Debugger`, the engine's `Services`
+  (the console), and process 1's image-run fields (`imageActive`,
+  `imageStatus`, `imageEnded`, `runHost`, which only process 1 sets)
+  moved to `Machine`. So did process 1's logical-name database
+  (`processOneLogicals`, which outlives the machine), because image
+  rundown deletes its user-mode names whether or not there is a
+  machine (`TestImageRundown`). `Console.Run` sends a subprocess's RUN
+  to `subprocessRun` and process 1's to `Machine.Run`.
+  `Console.runDownAbandonedImage` does nothing in a subprocess's DCL,
+  where `imageActive` was always false before. What stays on `Console`:
+  the XFC console selectors (`ConsoleWrite`, `ConsoleReadByte`,
+  `ConsoleCommand`, `RequestQuit`), `StopProcess` and `ShowRegions`
+  (which act on the DCL's own process), and everything DCL. Two
+  readings of `c.RTL` that meant process 1 but would have found a
+  subprocess's process during its DCL now say process 1:
+  `imageProcess.process()` for process 1's images, and
+  `EngineHooks.Home`. The second matters only when the System has no
+  current process.

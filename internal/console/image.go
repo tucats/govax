@@ -156,7 +156,7 @@ func (p *imageProcess) findMainICB() *ICB {
 // program's own PSL. It goes through the current process's mapping; image
 // activation, which may be for another process, uses imageProcess's own
 // accessors (images.go) instead.
-func (c *Console) storeBytes(addr uint32, data []byte) error {
+func (c *Machine) storeBytes(addr uint32, data []byte) error {
 	return c.withKernelMode(func() error {
 		for i, b := range data {
 			if err := c.Mem.StoreByte(c.CPU, addr+uint32(i), b); err != nil {
@@ -168,7 +168,7 @@ func (c *Console) storeBytes(addr uint32, data []byte) error {
 	})
 }
 
-func (c *Console) loadByte(addr uint32) (byte, error) {
+func (c *Machine) loadByte(addr uint32) (byte, error) {
 	var v byte
 
 	err := c.withKernelMode(func() (err error) {
@@ -180,7 +180,7 @@ func (c *Console) loadByte(addr uint32) (byte, error) {
 	return v, err
 }
 
-func (c *Console) loadLong(addr uint32) (uint32, error) {
+func (c *Machine) loadLong(addr uint32) (uint32, error) {
 	var v uint32
 
 	err := c.withKernelMode(func() (err error) {
@@ -192,7 +192,7 @@ func (c *Console) loadLong(addr uint32) (uint32, error) {
 	return v, err
 }
 
-func (c *Console) storeLong(addr, v uint32) error {
+func (c *Machine) storeLong(addr, v uint32) error {
 	return c.withKernelMode(func() error {
 		return c.Mem.StoreLongword(c.CPU, addr, v)
 	})
@@ -758,15 +758,15 @@ func (p *imageProcess) imageFixup(icb *ICB) error {
 // findImage finds it. A shareable image the main image needs is always
 // looked for on the host (findImage), and govax's shims stand in for one
 // that isn't there.
-func (c *Console) readImage(fn string, main bool) ([]byte, error) {
-	if main && c.ContainerSession != nil {
-		loc, err := c.ContainerSession.Locate(fn, c.runHost)
+func (c *Machine) readImage(fn string, main bool) ([]byte, error) {
+	if s := c.Hooks.Session(); main && s != nil {
+		loc, err := s.Locate(fn, c.runHost)
 		if err != nil {
 			return nil, err
 		}
 
 		if !loc.Host {
-			data, _, err := c.ContainerSession.ReadRawFile(withDefaultType(loc, "EXE"))
+			data, _, err := s.ReadRawFile(withDefaultType(loc, "EXE"))
 
 			var notFound *rms.NotFoundError
 			if errors.As(err, &notFound) {
@@ -860,7 +860,7 @@ func imageLow(icb *ICB) uint32 {
 // with SharePrefix prepended, then lowercased -- stopping at the first
 // candidate that exists. A literal ESC (0x1B) SharePrefix disables the
 // prefixed attempt entirely, matching the C source's own check.
-func (c *Console) findImage(fn string) (string, bool) {
+func (c *Machine) findImage(fn string) (string, bool) {
 	suffix := ""
 	if !strings.HasSuffix(strings.ToLower(fn), ".exe") {
 		suffix = ".exe"

@@ -13,17 +13,17 @@ import (
 // yet). Radix/Verbose/Verify are preserved across a re-INIT, matching
 // console_init's own save/restore of vax.console.radix/disasm/verify around
 // its free_vax+alloc_vax call.
-func (c *Console) Init(physBytes uint32) error {
+func (c *Machine) Init(physBytes uint32) error {
 	size := allocPhysMemory(physBytes)
 
 	c.endOtherProcesses()
 
 	c.CPU = vax.New()
-	c.CPU.SetDebugWriter(c.Out)
+	c.CPU.SetDebugWriter(c.Hooks.Output())
 	c.Mem = vm.NewMemory(size)
 	c.Engine = cpu.NewEngine(c.CPU, c.Mem)
-	c.RTL = c.newRTL()
-	c.Engine.SetSystemServices(c)
+	c.newRTL()
+	c.Engine.SetSystemServices(c.Services)
 
 	c.CPU.SetGPR(vax.SP, size-4)
 	c.CPU.SetGPR(vax.PC, 0)
@@ -42,7 +42,7 @@ func (c *Console) Init(physBytes uint32) error {
 // Zero clears physical memory and every symbol, and resets the region/stack
 // registers that only make sense relative to a zeroed, unmapped address
 // space — also run by Init, as console_init itself does.
-func (c *Console) Zero() error {
+func (c *Machine) Zero() error {
 	if err := c.requireInit(); err != nil {
 		return err
 	}
@@ -56,8 +56,8 @@ func (c *Console) Zero() error {
 	size := c.Mem.Size()
 	c.Mem = vm.NewMemory(size)
 	c.Engine = cpu.NewEngine(c.CPU, c.Mem)
-	c.RTL = c.newRTL()
-	c.Engine.SetSystemServices(c)
+	c.newRTL()
+	c.Engine.SetSystemServices(c.Services)
 
 	c.Symbols.ClearAll()
 

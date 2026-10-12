@@ -42,7 +42,7 @@ func newLogicals() *lnm.Database {
 
 // traceLogicals is the logical-name database's Trace hook: it writes
 // each line to the CPU's debug writer while SET DEBUG LOGICALS is on.
-func (c *Console) traceLogicals(format string, args ...any) {
+func (c *Machine) traceLogicals(format string, args ...any) {
 	if c.CPU != nil && c.CPU.DebugEnabled(vax.DebugLogicals) {
 		fmt.Fprintf(c.CPU.DebugWriter(), "DEBUG: LNM: "+format+"\n", args...)
 	}
@@ -301,7 +301,7 @@ func (d logicalDisplay) logicalTables(specs []string) ([]*lnm.Table, error) {
 //     of each equivalence string that is itself a logical name, one
 //     numbered level at a time:
 //
-//        "MYDISK" = "WORK4" (LNM$PROCESS_TABLE)
+//     "MYDISK" = "WORK4" (LNM$PROCESS_TABLE)
 //     1  "WORK4" = "$255$DUA17:" (LNM$SYSTEM_TABLE)
 //
 //     A name that isn't found prints %SHOW-S-NOTRAN.
@@ -610,32 +610,15 @@ func (c *Console) ShowTranslation(table, name string) error {
 	return nil
 }
 
-// imageRundown does what VMS does at image exit. For logical names
-// (User's Manual §11.3.5, §11.4) it deletes the user-mode names in the
-// process table, such as those DEFINE/USER_MODE made for the image that
-// just ended. The RTL's own per-image state (the files the image left
-// open, user-mode device allocations, docs/PHASE-26.md) is cleaned up by
-// Environment.ImageRundown.
-func (c *Console) imageRundown() {
-	if n, err := c.Logicals.Delete(lnm.ProcessTableName, "", lnm.User); err == nil && n > 0 {
-		c.traceLogicals("image rundown deleted %d user-mode name(s)", n)
-	}
-
-	if c.RTL != nil {
-		c.RTL.ImageRundown()
-	}
-}
-
-// runDownAbandonedImage runs down an image RUN started that never
-// exited: one a HALT, CTRL/C, CTRL/Y, or an instruction or time limit
-// stopped, and that nothing resumed. On VMS such an image is run down
-// when the next one starts (or the process logs out), closing the files
-// it left open; RUN and EndSession do the same here.
+// runDownAbandonedImage is Machine.runDownAbandonedImage in process 1's
+// DCL. In a subprocess's it does nothing: the abandoned image is
+// process 1's, and its own images are run down by its CLI (subcli.go).
 func (c *Console) runDownAbandonedImage() {
-	if c.imageActive {
-		c.imageActive = false
-		c.imageRundown()
+	if c.inSubprocess() {
+		return
 	}
+
+	c.Machine.runDownAbandonedImage()
 }
 
 // EndSession ends the console's use of the machine as govax exits: an

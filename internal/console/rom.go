@@ -23,7 +23,7 @@ var romMagic = [8]byte{';', 'R', 'O', 'M', 'I', 'M', 'G', '\r'}
 // 512 bytes of page data) entries for every non-all-zero 512-byte page,
 // terminated by a zero-count entry — matching reference/AUDIT.md's V1
 // finding that pins these fields to a literal 4 bytes each.
-func (c *Console) SaveROM(path string) error {
+func (c *Machine) SaveROM(path string) error {
 	if len(c.Engine.Memory().ROM) == 0 {
 		return vmserrors.New(vmserrors.RMS_NOIMAGE, "ROM")
 	}
@@ -77,7 +77,7 @@ func (c *Console) SaveROM(path string) error {
 //
 // With noError (LOAD/ROM/NOERROR), a file that can't be opened isn't
 // an error: nothing is loaded. Then path may be "", meaning default.rom.
-func (c *Console) LoadROM(path string, noError bool) error {
+func (c *Machine) LoadROM(path string, noError bool) error {
 	if path == "" && noError {
 		path = "default.rom"
 	}
@@ -151,7 +151,7 @@ func (c *Console) LoadROM(path string, noError bool) error {
 // SaveNVRAM writes the console's NVRAM image to path, matching
 // NVRAM format: big-endian base address and size (no magic
 // header, and no per-page structure — the whole buffer is written at once).
-func (c *Console) SaveNVRAM(path string) error {
+func (c *Machine) SaveNVRAM(path string) error {
 	if len(c.Engine.Memory().NVRAM) == 0 {
 		return vmserrors.New(vmserrors.RMS_NOIMAGE, "NVRAM")
 	}
@@ -180,7 +180,7 @@ func (c *Console) SaveNVRAM(path string) error {
 //
 // With noError (LOAD/NVRAM/NOERROR), a file that can't be opened isn't
 // an error: nothing is loaded. Then path may be "", meaning default.nvram.
-func (c *Console) LoadNVRAM(path string, noError bool) error {
+func (c *Machine) LoadNVRAM(path string, noError bool) error {
 	if path == "" && noError {
 		path = "default.nvram"
 	}

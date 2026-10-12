@@ -4,6 +4,7 @@ import (
 	"fmt"
 
 	"github.com/tucats/govax/internal/corevms"
+	"github.com/tucats/govax/internal/lnm"
 
 	"github.com/tucats/govax/internal/vax"
 	"github.com/tucats/govax/internal/vmsdef"
@@ -35,7 +36,7 @@ const (
 type RunOptions struct {
 	RunInits  bool     // /INIT (run each dependency's LIB$INITIALIZE); /NOINIT is the same as the zero value
 	Debug     RunDebug // /[NO]DEBUG: run under the debugger (see RunDebug)
-	NoExecute bool // /NOEXECUTE: load and fix up, but don't transfer control
+	NoExecute bool     // /NOEXECUTE: load and fix up, but don't transfer control
 	// Host is an explicit /HOST after the file name: the image is a host
 	// file whatever its name looks like (see readMainImage).
 	Host bool
@@ -52,14 +53,9 @@ type RunOptions struct {
 // transfers control to the main image's own entry point -- optionally
 // calling each dependency's LIB$INITIALIZE entry point first -- via a small
 // synthesized IMAGE$INIT driver procedure run through Console.Call.
-func (c *Console) Run(fn string, opts RunOptions) error {
+func (c *Machine) Run(fn string, opts RunOptions) error {
 	if err := c.requireInit(); err != nil {
 		return err
-	}
-
-	// A subprocess's DCL runs the image in its process (subcli.go).
-	if cli := c.subCLI; cli != nil {
-		return c.subprocessRun(cli, fn, opts.CommandLine)
 	}
 
 	// A previous image that was stopped and never exited ends now.
@@ -76,7 +72,7 @@ func (c *Console) Run(fn string, opts RunOptions) error {
 	}
 
 	c.runHost = opts.Host
-	c.RTL.CommandLine = opts.CommandLine
+	c.processOne.CommandLine = opts.CommandLine
 
 	main, err := c.activateImage(fn)
 	if err != nil {
@@ -109,8 +105,8 @@ func (c *Console) Run(fn string, opts RunOptions) error {
 
 	if !c.runsUnderDebugger(main, opts.Debug) {
 		c.imageEnded = false
-		if c.RTL != nil {
-			c.RTL.Process.ExitStatus = ssNormal
+		if c.processOne != nil {
+			c.processOne.Process.ExitStatus = ssNormal
 		}
 
 		if err := c.Call(driverAddr, false); err != nil {
@@ -143,13 +139,28 @@ func (c *Console) Run(fn string, opts RunOptions) error {
 	return c.Debugger.Start(a)
 }
 
+// Run is RUN in the DCL running now: process 1's runs the image on the
+// machine (Machine.Run); a subprocess's DCL runs it in its process
+// (subcli.go).
+func (c *Console) Run(fn string, opts RunOptions) error {
+	if err := c.requireInit(); err != nil {
+		return err
+	}
+
+	if cli := c.subCLI; cli != nil {
+		return c.subprocessRun(cli, fn, opts.CommandLine)
+	}
+
+	return c.Machine.Run(fn, opts)
+}
+
 // runsUnderDebugger decides whether RUN starts the debugger on the image
 // main. An image with no debug symbol table (linked /NOTRACEBACK) runs
 // without it, however RUN was asked, as the VMS debugger does for such an
 // image (docs/PHASE-42.md, subtask 1's probe). Otherwise /DEBUG starts it,
 // /NODEBUG doesn't, and with neither it starts for an image linked
 // /DEBUG.
-func (c *Console) runsUnderDebugger(main *ICB, choice RunDebug) bool {
+func (c *Machine) runsUnderDebugger(main *ICB, choice RunDebug) bool {
 	if main.Debug == nil {
 		return false
 	}
@@ -213,19 +224,19 @@ func (p *imageProcess) activateImage(fn string) (*ICB, error) {
 // commands that show images (SHOW IMAGES, the symbol lookups) all work
 // on process 1, the console's own; these name its imageProcess's methods.
 
-func (c *Console) activateImage(fn string) (*ICB, error) { return c.images().activateImage(fn) }
+func (c *Machine) activateImage(fn string) (*ICB, error) { return c.images().activateImage(fn) }
 
-func (c *Console) imageLoad(fn string, flag uint32) (*ICB, error) {
+func (c *Machine) imageLoad(fn string, flag uint32) (*ICB, error) {
 	return c.images().imageLoad(fn, flag)
 }
 
-func (c *Console) imageFixup(icb *ICB) error { return c.images().imageFixup(icb) }
+func (c *Machine) imageFixup(icb *ICB) error { return c.images().imageFixup(icb) }
 
-func (c *Console) resetICBList() { c.images().resetICBList() }
+func (c *Machine) resetICBList() { c.images().resetICBList() }
 
-func (c *Console) findMainICB() *ICB { return c.images().findMainICB() }
+func (c *Machine) findMainICB() *ICB { return c.images().findMainICB() }
 
-func (c *Console) buildImageInitDriver(main *ICB, runInits bool) (uint32, bool, error) {
+func (c *Machine) buildImageInitDriver(main *ICB, runInits bool) (uint32, bool, error) {
 	return c.images().buildImageInitDriver(main, runInits)
 }
 
@@ -234,7 +245,7 @@ func (c *Console) buildImageInitDriver(main *ICB, runInits bool) (uint32, bool, 
 // overrides it, DebugLibinit defaults on (vax.DebugDefault), so
 // LIB$INITIALIZE runs by default, not only when /INIT is given explicitly.
 // See commands.go's runOptions, which applies the qualifiers.
-func (c *Console) DefaultRunInits() bool {
+func (c *Machine) DefaultRunInits() bool {
 	return c.CPU != nil && c.CPU.DebugEnabled(vax.DebugLibinit)
 }
 
@@ -419,7 +430,7 @@ func encodeCalls(argc, target uint32) []byte {
 // directory (readImage), which is the new process's own when, as always
 // so far, process 1 created it. The name is never taken as a host file
 // by /HOST: a $CREPRC image name is a file specification.
-func (c *Console) activateCreatedImage(env *corevms.Environment, image string, hibernate bool) (uint32, error) {
+func (c *Machine) activateCreatedImage(env *corevms.Environment, image string, hibernate bool) (uint32, error) {
 	if err := c.ensureShims(); err != nil {
 		return 0, err
 	}
@@ -455,19 +466,40 @@ func (c *Console) activateCreatedImage(env *corevms.Environment, image string, h
 // says it has been (STS$M_INHIB_MSG, as an unhandled condition's has).
 // When the run stopped some other way (a HALT, a limit, CTRL/C), nothing
 // is reported.
-func (c *Console) imageCompletion() error {
+func (c *Machine) imageCompletion() error {
 	if !c.imageEnded {
 		return nil
 	}
 
 	c.imageEnded = false
-	status := c.imageStatus
 
-	c.setCommandStatus(status, nil)
+	return c.Hooks.CommandStatus(c.imageStatus)
+}
 
-	if status&1 != 0 {
-		return nil
+// imageRundown does what VMS does at process 1's image exit. For logical names
+// (User's Manual §11.3.5, §11.4) it deletes the user-mode names in the
+// process table, such as those DEFINE/USER_MODE made for the image that
+// just ended. The RTL's own per-image state (the files the image left
+// open, user-mode device allocations, docs/PHASE-26.md) is cleaned up by
+// Environment.ImageRundown.
+func (c *Machine) imageRundown() {
+	if n, err := c.processOneLogicals.Delete(lnm.ProcessTableName, "", lnm.User); err == nil && n > 0 {
+		c.traceLogicals("image rundown deleted %d user-mode name(s)", n)
 	}
 
-	return c.statusFailure(status)
+	if c.processOne != nil {
+		c.processOne.ImageRundown()
+	}
+}
+
+// runDownAbandonedImage runs down an image RUN started that never
+// exited: one a HALT, CTRL/C, CTRL/Y, or an instruction or time limit
+// stopped, and that nothing resumed. On VMS such an image is run down
+// when the next one starts (or the process logs out), closing the files
+// it left open; RUN and EndSession do the same here.
+func (c *Machine) runDownAbandonedImage() {
+	if c.imageActive {
+		c.imageActive = false
+		c.imageRundown()
+	}
 }

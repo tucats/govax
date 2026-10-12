@@ -12,7 +12,7 @@ var traceRegNames = [numTraceRegs]string{
 }
 
 // snapshotTraceRegs captures R0-R11/AP/FP and the PSL.
-func (c *Console) snapshotTraceRegs() (regs [numTraceRegs]uint32, psl vax.PSL) {
+func (c *Machine) snapshotTraceRegs() (regs [numTraceRegs]uint32, psl vax.PSL) {
 	for i := range regs {
 		regs[i] = c.CPU.GPR(vax.Reg(i))
 	}
@@ -24,7 +24,7 @@ func (c *Console) snapshotTraceRegs() (regs [numTraceRegs]uint32, psl vax.PSL) {
 // state and prints every register that changed: R0-R11 get their value printed in both hex
 // and decimal, AP/FP in hex only, and the PSL is reported last if it
 // changed.
-func (c *Console) printRegisterChanges(before [numTraceRegs]uint32, beforePSL vax.PSL) {
+func (c *Machine) printRegisterChanges(before [numTraceRegs]uint32, beforePSL vax.PSL) {
 	for i, name := range traceRegNames {
 		after := c.CPU.GPR(vax.Reg(i))
 		if after == before[i] {
@@ -53,7 +53,7 @@ var operandAccessNames = [...]string{
 // Engine.Step decodes and executes in one call with no gap to hook between
 // the two -- so a written operand shows its new value rather than its
 // pre-execution one; see docs/PHASE-17.md sub-phase 8's own note on this.
-func (c *Console) printOperandDump() {
+func (c *Machine) printOperandDump() {
 	dec := c.Engine.LastDecoded()
 
 	for i := 0; i < dec.Instruction.OperandCount; i++ {
@@ -105,7 +105,7 @@ func traceStackName(psl vax.PSL) string {
 // to print DebugRegisters' changed-register dump and DebugFullDisasm's
 // operand dump (docs/PHASE-17.md sub-phase 8) -- both need the
 // instruction to have actually run.
-func (c *Console) traceStep(pc uint32, force bool) (finish func()) {
+func (c *Machine) traceStep(pc uint32, force bool) (finish func()) {
 	if !force && !c.Trace {
 		return func() {}
 	}

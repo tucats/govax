@@ -62,7 +62,7 @@ func (r callRow) String() string {
 // CALLG: its line is the call's, found from pc-1, while the relative PC
 // is the return address's (FAILSUB SUB1's line 7 at 00000216, which is
 // line 8's first byte).
-func (c *Console) debugCallRow(pc uint32, caller bool) (callRow, bool) {
+func (c *Machine) debugCallRow(pc uint32, caller bool) (callRow, bool) {
 	p := c.debugImageAt(pc)
 	if p == nil {
 		return callRow{}, false
@@ -96,7 +96,7 @@ func (c *Console) debugCallRow(pc uint32, caller bool) (callRow, bool) {
 // following the saved FPs from the current FP, for as long as that PC is
 // in a module of a loaded image's debug symbol table. ok is false when
 // the PC itself isn't in one. count bounds the rows; 0 is every frame.
-func (c *Console) debugFrames(count uint32) (rows []callRow, ok bool, err error) {
+func (c *Machine) debugFrames(count uint32) (rows []callRow, ok bool, err error) {
 	pc := c.CPU.GPR(vax.PC)
 
 	row, ok := c.debugCallRow(pc, false)
@@ -154,7 +154,7 @@ func (c *Console) debugFrames(count uint32) (rows []callRow, ok bool, err error)
 // subroutine, which builds no frame, is shown by its frame's routine
 // (LOCALR at DBGDIS's JSBRTN, though START called it). count bounds the
 // rows; 0 is every frame.
-func (c *Console) showDebugCalls(count uint32) (bool, error) {
+func (c *Machine) showDebugCalls(count uint32) (bool, error) {
 	rows, ok, err := c.debugFrames(count)
 	if !ok {
 		return false, nil

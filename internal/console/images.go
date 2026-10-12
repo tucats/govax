@@ -18,7 +18,7 @@ import (
 // VMINIT, as it always has. Every other process gets one when an image is
 // first activated in it (Console.imagesOf).
 type imageProcess struct {
-	c *Console
+	c *Machine
 
 	// env is the process; nil for process 1, which is whatever
 	// Environment the console's RTL is (VMINIT builds a new one).
@@ -47,7 +47,7 @@ type imageProcess struct {
 }
 
 // images returns process 1's image state.
-func (c *Console) images() *imageProcess {
+func (c *Machine) images() *imageProcess {
 	if c.proc1Images == nil {
 		c.proc1Images = &imageProcess{c: c, symbols: map[string]uint32{}}
 	}
@@ -57,7 +57,7 @@ func (c *Console) images() *imageProcess {
 
 // imagesOf returns env's image state: process 1's for the console's own
 // process, otherwise env's own, made empty the first time.
-func (c *Console) imagesOf(env *corevms.Environment) *imageProcess {
+func (c *Machine) imagesOf(env *corevms.Environment) *imageProcess {
 	if env == nil || env == c.processOne {
 		return c.images()
 	}
@@ -78,7 +78,7 @@ func (c *Console) imagesOf(env *corevms.Environment) *imageProcess {
 // process returns the Environment p belongs to.
 func (p *imageProcess) process() *corevms.Environment {
 	if p.env == nil {
-		return p.c.RTL
+		return p.c.processOne
 	}
 
 	return p.env

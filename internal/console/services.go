@@ -78,10 +78,10 @@ func (c *Console) ConsoleCommand(cmdLine string) uint32 {
 
 // running is the process the engine's hooks reach: the System's current
 // process, the one whose context the CPU holds (docs/PHASE-44.md).
-// That's process 1, c.RTL, unless the scheduler has switched to another;
-// console commands keep using c.RTL, process 1, whichever runs. nil
-// before the first INIT.
-func (c *Console) running() *corevms.Environment {
+// That's process 1 unless the scheduler has switched to another;
+// console commands keep using process 1 (or their own subprocess's DCL
+// its process), whichever runs. nil before the first INIT.
+func (c *Machine) running() *corevms.Environment {
 	return c.EngineHooks.Running()
 }
 
@@ -90,15 +90,15 @@ func (c *Console) running() *corevms.Environment {
 // The debugger's breakpoints, tracepoints, and watchpoints act only then
 // (docs/PHASE-44.md, subtask 8): a P0 address names process 1's memory,
 // and another process reaching the same address is somewhere else.
-func (c *Console) RunningProcessOne() bool {
-	return c.running() == c.RTL
+func (c *Machine) RunningProcessOne() bool {
+	return c.running() == c.processOne
 }
 
 // ProcessNote is what a stop message adds when the CPU holds a process
 // other than process 1, naming it (" in process 00000302"), and "" when
 // it holds process 1 (docs/PHASE-44.md, subtask 9).
-func (c *Console) ProcessNote() string {
-	if env := c.running(); env != c.RTL {
+func (c *Machine) ProcessNote() string {
+	if env := c.running(); env != c.processOne {
 		return fmt.Sprintf(" in process %08X", env.Process.PID)
 	}
 
@@ -113,12 +113,12 @@ func (c *Console) ProcessNote() string {
 // 1's (docs/PHASE-43.md, Decision 11). The other process keeps its place
 // in the scheduler. While scheduling is frozen (a nested run, inside
 // another process's) it does nothing.
-func (c *Console) ReturnToProcessOne() error {
-	if c.RTL == nil || c.Engine == nil || c.Engine.SchedulingFrozen() || c.running() == c.RTL {
+func (c *Machine) ReturnToProcessOne() error {
+	if c.processOne == nil || c.Engine == nil || c.Engine.SchedulingFrozen() || c.running() == c.processOne {
 		return nil
 	}
 
-	return c.RTL.SwitchCPU(c.Engine, c.RTL)
+	return c.processOne.SwitchCPU(c.Engine, c.processOne)
 }
 
 // ShowProcessContext moves the CPU to env's process, for the debugger's
@@ -126,8 +126,8 @@ func (c *Console) ReturnToProcessOne() error {
 // REGISTERS see, as after a run that stopped in it. The next run gives
 // the CPU back to process 1 (ReturnToProcessOne). Not while a nested run
 // has scheduling frozen.
-func (c *Console) ShowProcessContext(env *corevms.Environment) error {
-	if c.RTL == nil || c.Engine == nil || env == c.running() {
+func (c *Machine) ShowProcessContext(env *corevms.Environment) error {
+	if c.processOne == nil || c.Engine == nil || env == c.running() {
 		return nil
 	}
 
@@ -135,13 +135,13 @@ func (c *Console) ShowProcessContext(env *corevms.Environment) error {
 		return fmt.Errorf("console: can't change process during a nested run")
 	}
 
-	return c.RTL.SwitchCPU(c.Engine, env)
+	return c.processOne.SwitchCPU(c.Engine, env)
 }
 
 // ProcessPC is env's PC: the CPU's if the CPU holds env's process, and
 // otherwise the one saved in its hardware PCB when it last lost the CPU
 // (0 if it has never had it).
-func (c *Console) ProcessPC(env *corevms.Environment) uint32 {
+func (c *Machine) ProcessPC(env *corevms.Environment) uint32 {
 	if env == c.running() {
 		return c.CPU.GPR(vax.PC)
 	}

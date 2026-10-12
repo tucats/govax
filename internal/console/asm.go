@@ -36,7 +36,7 @@ import (
 // program whose .END named an explicit start address is invoked
 // immediately afterward, with no arguments, exactly as the reference
 // tool's own post-command hook does.
-func (c *Console) Assemble(path string) (entryAddr uint32, hasEntry bool, err error) {
+func (c *Machine) Assemble(path string) (entryAddr uint32, hasEntry bool, err error) {
 	if err := c.requireInit(); err != nil {
 		return 0, false, err
 	}
@@ -82,7 +82,7 @@ func (c *Console) Assemble(path string) (entryAddr uint32, hasEntry bool, err er
 // creating one on first use after each VMINIT/ZERO — see asmSession's own
 // doc comment (machine.go) for why one Assembler is shared across every
 // "ASM <file>"/interactive-mode command in a row.
-func (c *Console) ensureAsmSession() *asm.Assembler {
+func (c *Machine) ensureAsmSession() *asm.Assembler {
 	if c.asmSession == nil {
 		// Pass down the console's verbose flag to the assember
 		c.asmSession = asm.New(c.Verbose)
@@ -127,7 +127,7 @@ func (c *Console) ensureAsmSession() *asm.Assembler {
 // the P0 program, any S0 data (.REGION), and the .SCB/.VECTOR page --
 // shared by both the batch "ASM <file>" form and interactive-mode's own
 // per-statement loop, since either can extend any of these regions.
-func (c *Console) depositAsmImage(a *asm.Assembler) error {
+func (c *Machine) depositAsmImage(a *asm.Assembler) error {
 	if p0 := a.Bytes(); len(p0) > 0 {
 		if err := c.storeBytes(a.Origin(), p0); err != nil {
 			return err
@@ -140,7 +140,7 @@ func (c *Console) depositAsmImage(a *asm.Assembler) error {
 		}
 
 		// Those S0 pages are no longer free for new processes' structures.
-		if pool := c.RTL.S0Pool(); pool != nil {
+		if pool := c.processOne.S0Pool(); pool != nil {
 			if err := pool.Claim(a.S0End()); err != nil {
 				return err
 			}
@@ -175,7 +175,7 @@ func (c *Console) depositAsmImage(a *asm.Assembler) error {
 
 			// Every process maps these same physical pages as its own P1
 			// vector (corevms.ShareP1), so they're written once, here.
-			if err := c.RTL.ShareP1(base, end); err != nil {
+			if err := c.processOne.ShareP1(base, end); err != nil {
 				return err
 			}
 		}
@@ -188,7 +188,7 @@ func (c *Console) depositAsmImage(a *asm.Assembler) error {
 // Console.Symbols (the table EXAMINE/DEPOSIT/CALL's expression evaluator
 // consults), so a freshly assembled label is immediately usable by name --
 // shared by the batch and interactive-mode forms alike.
-func (c *Console) mergeAsmSymbols(a *asm.Assembler) {
+func (c *Machine) mergeAsmSymbols(a *asm.Assembler) {
 	for _, s := range a.Symbols().All() {
 		kind := SymbolUser
 		if strings.ContainsRune(s.Name, '$') {
@@ -212,14 +212,14 @@ func (c *Console) mergeAsmSymbols(a *asm.Assembler) {
 // consults this ahead of normal verb-table lookup, and main.go's own
 // readline prompt consults it to switch to "ASM> ", both matching the
 // reference tool.
-func (c *Console) InAssemblerMode() bool { return c.assemblerMode }
+func (c *Machine) InAssemblerMode() bool { return c.assemblerMode }
 
 // AssembleBegin implements the bare "ASM" (no filename) command: puts the
 // console into interactive assembler mode, matching console_asm's own
 // isend(*p) branch. Every subsequent line reaching Dispatcher.Dispatch is
 // handed to AssembleInteractiveLine instead of the normal command table
 // until a bare or dotted END statement ends the mode.
-func (c *Console) AssembleBegin() error {
+func (c *Machine) AssembleBegin() error {
 	if err := c.requireInit(); err != nil {
 		return err
 	}
@@ -241,7 +241,7 @@ func (c *Console) AssembleBegin() error {
 // whether an entry address was named, exactly like Assemble's own
 // TakeEntry-based return, so the caller can issue the same one-shot
 // "CALL __ENTRY" the reference tool's post-command hook does.
-func (c *Console) AssembleInteractiveLine(line string) (done bool, entryAddr uint32, hasEntry bool, err error) {
+func (c *Machine) AssembleInteractiveLine(line string) (done bool, entryAddr uint32, hasEntry bool, err error) {
 	a := c.ensureAsmSession()
 
 	done, err = a.AssembleLine(line)

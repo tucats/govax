@@ -47,7 +47,7 @@ func TestSharedImageReference(t *testing.T) {
 			t.Fatalf("%s: no line 93 in DBGDIS", image)
 		}
 
-		dec, err := c.decodeInstruction(memByteReader{c: c}, addr)
+		dec, err := c.decodeInstruction(memByteReader{c: c.Machine}, addr)
 		if err != nil {
 			t.Fatalf("%s: decoding line 93: %v", image, err)
 		}
@@ -117,7 +117,7 @@ func TestSharedSymbolizer(t *testing.T) {
 		{Name: "LIBRTL", Base: 0x10000, End: 0x30FFF},
 	}
 
-	s := sharedSymbolizer{c: c}
+	s := sharedSymbolizer{c: c.Machine}
 
 	if got, ok := s.Symbolize(0x10478); !ok || got != "LIB$PUT_OUTPUT" {
 		t.Errorf("Symbolize(10478) = %q, %v; want LIB$PUT_OUTPUT", got, ok)

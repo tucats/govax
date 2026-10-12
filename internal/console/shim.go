@@ -55,7 +55,7 @@ const shimPageBytes = 512
 // resolves already being a defined symbol. Idempotent: a second call is a
 // no-op, so fixups performed across multiple RUNs keep resolving to the
 // same addresses.
-func (c *Console) ensureShims() error {
+func (c *Machine) ensureShims() error {
 	if c.shimsReady {
 		return nil
 	}
@@ -111,10 +111,10 @@ func (c *Console) ensureShims() error {
 // for the life of the machine. S0, so every process's image reaches its
 // stubs at the same addresses, as it does the first page's; kernel mode
 // alone may write it, and every mode may read (and so run) it.
-func (c *Console) shimOverflow() (uint32, error) {
-	if c.RTL == nil {
+func (c *Machine) shimOverflow() (uint32, error) {
+	if c.processOne == nil {
 		return 0, fmt.Errorf("console: no room for the shim stubs (VMINIT has not been run)")
 	}
 
-	return c.RTL.AllocateS0(1, 0, "shim stubs")
+	return c.processOne.AllocateS0(1, 0, "shim stubs")
 }

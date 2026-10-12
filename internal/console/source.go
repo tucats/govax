@@ -33,19 +33,19 @@ import (
 // directory ("testdata/dbg") or a VMS directory specification
 // ("DUA0:[SRC]"). The files read so far are forgotten, since a different
 // list may now find different files.
-func (c *Console) SetSourceDirs(dirs []string) {
+func (c *Machine) SetSourceDirs(dirs []string) {
 	c.sourceDirs = dirs
 	c.sourceCache = nil
 }
 
 // SourceDirs returns the SET SOURCE search list.
-func (c *Console) SourceDirs() []string { return c.sourceDirs }
+func (c *Machine) SourceDirs() []string { return c.sourceDirs }
 
 // SourceLine returns the source line that holds the instruction at pc: its
 // number in the listing and its text, with the tabs still in it. ok is
 // false when pc isn't in code the debug symbol table has lines for, or the
 // source file can't be found or doesn't have the record.
-func (c *Console) SourceLine(pc uint32) (n int, text string, ok bool) {
+func (c *Machine) SourceLine(pc uint32) (n int, text string, ok bool) {
 	prog := c.debugImageAt(pc)
 	if prog == nil {
 		return 0, "", false
@@ -76,7 +76,7 @@ func (c *Console) SourceLine(pc uint32) (n int, text string, ok bool) {
 // is spec, finding it as the file's comment describes, or nil if it can't
 // be found. The answer, including a failure, is remembered until the
 // search list changes.
-func (c *Console) sourceRecords(spec string) []string {
+func (c *Machine) sourceRecords(spec string) []string {
 	if records, seen := c.sourceCache[spec]; seen {
 		return records
 	}
@@ -94,8 +94,8 @@ func (c *Console) sourceRecords(spec string) []string {
 
 // findSource looks for the file in each place, in order, and returns the
 // lines of the first one that can be read.
-func (c *Console) findSource(spec string) []string {
-	s := c.ContainerSession
+func (c *Machine) findSource(spec string) []string {
+	s := c.Hooks.Session()
 	if s == nil {
 		return nil
 	}
