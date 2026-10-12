@@ -2,7 +2,7 @@
 
 **Status:** in progress (2026-10-12). Needs Phases 34 (`internal/librtl`)
 and 52. The plan (Part A) and the decisions (Part B) were reviewed and
-accepted by the author on 2026-10-12. Subtasks 2 to 7 are done.
+accepted by the author on 2026-10-12. Subtasks 2 to 8 are done.
 
 govax provides 15 of LIBRTL.EXE's LIB$ routines (and STR$UPCASE): the ones
 the sample programs and tests needed (Phase 34's table,
@@ -532,6 +532,7 @@ so there's one implementation of each rule.
 7. **Integers**: ADDX, SUBX, EMUL, EDIV; ADAWI fixed. **Done**
    2026-10-12.
 8. **Floating**: EMOD and POLY in F, D, G, and H, on `vaxfloat`.
+   **Done** 2026-10-12.
 9. **Queues and interlocks**: INSQHI, INSQTI, REMQHI, REMQTI, BBSSI, BBCCI.
 10. **Character strings**: LOCC, MATCHC, SCANC, SKPC, SPANC, MOVC3, MOVC5,
     MOVTC, MOVTUC.
@@ -773,3 +774,33 @@ so there's one implementation of each rule.
     word-sized stores, and odd sum. The console's `TestLibrtlIntegers`
     runs all five from a linked program, and `TestLibrtlAdawiOddSum`
     shows `%SYSTEM-F-ROPRAND` ending the image.
+- **2026-10-12** — Subtask 8, the floating routines
+  (`internal/librtl/float.go`): LIB$EMODF, LIB$EMODD, LIB$EMODG,
+  LIB$EMODH, LIB$POLYF, LIB$POLYD, LIB$POLYG, and LIB$POLYH, codes 53 to
+  60.
+  - **One set of rules.** EMOD's arithmetic is `cpu.ExtendedModulus`
+    (new, over `vaxfloat.EMOD`: the integer part's low longword, its
+    overflow, and the rounded fraction), which `emulEmod` now calls
+    too; each POLY step is `vaxfloat.POLYStep`, as the instruction's.
+    Operands are read and written in each format's memory layout
+    (`loadFloat`, `storeFloat`) and unpacked by `vaxfloat`.
+  - **LIB$EMODx.** The extension is a byte (F, D) or a word (G, H), by
+    reference. SS$_INTOVF stores the integer's low longword and the
+    fraction; SS$_FLTUND stores zeros; SS$_ROPRAND (a reserved
+    multiplier or multiplicand) stores nothing. All returned. The
+    fraction can't overflow, so the manual's "floating overflow is
+    SS$_INTOVF also" never arises.
+  - **LIB$POLYx.** The degree is a word, unsigned as the instruction
+    reads it, so a negative one is above 31: SS$_ROPRAND, as is a
+    reserved argument or coefficient, nothing stored. A step's overflow
+    is SS$_FLTOVF, the result not stored (unconfirmed); an underflow
+    zeroes the partial result and the evaluation goes on (unconfirmed).
+  - **Tests.** `float_test.go`: the layout (F 1.5 is `000040C0`); EMOD
+    in each format, signs and fractions; the extension (a byte for F and
+    D, the high bits of a word for G and H) matching the CPU's
+    arithmetic; integer overflow, underflow, and a reserved operand; the
+    manual's POLY examples in each format, degree 0, and degree 31; 32
+    and −1, overflow, an underflow recovered from, and a reserved
+    coefficient. The console's `TestLibrtlFloating` runs all eight from
+    a linked program (the manual's FORTRAN polynomial, 27, in each
+    format) and LIB$POLYF of degree 32.

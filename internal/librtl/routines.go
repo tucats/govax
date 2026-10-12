@@ -77,6 +77,14 @@ var Routines = []Routine{
 	{"LIB$SUBX", 50, libSubx},
 	{"LIB$EMUL", 51, libEmul},
 	{"LIB$EDIV", 52, libEdiv},
+	{"LIB$EMODF", 53, libEmodf},
+	{"LIB$EMODD", 54, libEmodd},
+	{"LIB$EMODG", 55, libEmodg},
+	{"LIB$EMODH", 56, libEmodh},
+	{"LIB$POLYF", 57, libPolyf},
+	{"LIB$POLYD", 58, libPolyd},
+	{"LIB$POLYG", 59, libPolyg},
+	{"LIB$POLYH", 60, libPolyh},
 }
 
 // missing is Missing's list, made once.

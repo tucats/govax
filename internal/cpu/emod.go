@@ -42,14 +42,12 @@ func emulEmod(e *Engine, d *Decoded) error {
 		return err
 	}
 
-	integer, fract, err := vaxfloat.EMOD(operandFormat(d, 0), mulr, uint16(ext), muld)
+	low, fract, overflow, err := ExtendedModulus(operandFormat(d, 0), mulr, uint16(ext), muld)
 	if err = e.floatException(err); err != nil {
 		return err
 	}
 
-	low, overflow := lowOrderBits(integer, 4)
-
-	if err := d.Operands[3].Store(e.cpu, e.mem, low); err != nil {
+	if err := d.Operands[3].Store(e.cpu, e.mem, uint64(low)); err != nil {
 		return err
 	}
 
@@ -68,4 +66,21 @@ func emulEmod(e *Engine, d *Decoded) error {
 	}
 
 	return nil
+}
+
+// ExtendedModulus is EMOD's arithmetic in format f, shared by the
+// instruction and LIB$EMODx: multiplier mulr extended by ext, times
+// multiplicand muld, split into the integer part's low-order longword
+// (overflow true when the true integer part doesn't fit one) and the
+// fraction, rounded to f. A fraction that underflows is
+// vaxfloat.ErrUnderflow, with integer and fraction both zero.
+func ExtendedModulus(f vaxfloat.Format, mulr vaxfloat.Value, ext uint16, muld vaxfloat.Value) (integer uint32, fraction vaxfloat.Value, overflow bool, err error) {
+	whole, fraction, err := vaxfloat.EMOD(f, mulr, ext, muld)
+	if err != nil {
+		return 0, fraction, false, err
+	}
+
+	low, overflow := lowOrderBits(whole, 4)
+
+	return uint32(low), fraction, overflow, nil
 }
