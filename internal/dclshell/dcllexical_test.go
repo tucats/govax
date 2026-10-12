@@ -6,6 +6,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/tucats/gopackages/app-cli/settings"
 	"github.com/tucats/govax/internal/lnm"
 	"github.com/tucats/govax/internal/vmsdef"
 	"github.com/tucats/govax/internal/vmserrors"
@@ -191,6 +192,32 @@ func TestLexicalMessage(t *testing.T) {
 	})
 }
 
+// TestLexicalConfig: F$CONFIG, govax's own, reads the configuration: a
+// key's value (whatever case it's given in), whether it exists, and an
+// operation it doesn't know.
+func TestLexicalConfig(t *testing.T) {
+	const key = "vax.test.lexical.config"
+
+	if settings.Exists(key) {
+		t.Fatalf("%s is already set", key)
+	}
+
+	settings.Set(key, "Some Value")
+	t.Cleanup(func() { _ = settings.Delete(key) })
+
+	checkLexical(t, lexConsole(t), []lexCase{
+		{text: `F$CONFIG("vax.test.lexical.config")`, want: "Some Value"},
+		{text: `F$CONFIG("VAX.TEST.LEXICAL.CONFIG", "VALUE")`, want: "Some Value"},
+		{text: `F$CONFIG("vax.test.lexical.config", "exists")`, integer: true, want: "1"},
+		{text: `F$CONFIG("vax.test.lexical.nosuch", "EXISTS")`, integer: true, want: "0"},
+		{text: `F$CONFIG("vax.test.lexical.nosuch")`, want: ""},
+		{text: `F$CONF("vax.test.lexical.config")`, want: "Some Value"},
+		{text: `F$CON("vax.test.lexical.config")`, code: vmserrors.CLI_ABFNAM},
+		{text: `F$CONFIG("vax.test.lexical.config", "SET")`, code: vmserrors.CLI_IVKEYW},
+		{text: `F$CONFIG()`, code: vmserrors.CLI_ARGREQ},
+	})
+}
+
 // TestLexicalHostFiles: F$SEARCH through host files, its streams, and
 // F$PARSE of a name with no device to check.
 func TestLexicalHostFiles(t *testing.T) {
@@ -243,8 +270,9 @@ func TestLexicalWithoutConsole(t *testing.T) {
 	}
 }
 
-// TestLexicalTable: every function the table has is one of VMS's, takes
-// a sensible number of arguments, and names a symbol argument it has.
+// TestLexicalTable: every function the table has is one of VMS's (or
+// govax's F$CONFIG), takes a sensible number of arguments, and names a
+// symbol argument it has.
 func TestLexicalTable(t *testing.T) {
 	for name, f := range lexicalFunctions {
 		if lexicalName(name) != name {

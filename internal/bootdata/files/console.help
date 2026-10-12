@@ -109,6 +109,8 @@
 //                          ELSE before THEN, CALL of a plain label,
 //                          RETURN at the terminal
 //              10/12/26    SPAWN in a subprocess
+//              10/12/26    LEXICAL: F$CONFIG, govax's own, reads the
+//                          configuration
 
 This is the help documentation for the govax VAX emulator.  Topic sections are
 marked by a "$" delimiter.  This is followed by as many tokens of the help
@@ -1311,6 +1313,16 @@ $LEXI
     F$CONTEXT, F$CSID, F$DEVICE, F$FILE_ATTRIBUTES, F$GETQUI, F$IDENTIFIER,
     and F$LICENSE are not here yet.
 
+    govax has one lexical function VMS doesn't, for its configuration (see
+    HELP CONFIG KEYS):
+
+        F$CONFIG(key [,operation])       VALUE (the default): the item's
+                                         value, or "" if it isn't set;
+                                         EXISTS: 1 if it's set, else 0
+
+    The key is a configuration item's name, such as "vax.startup.procedure",
+    in either case.
+
     Examples:
 
         $ LEN = F$LENGTH(NAME) + 1
@@ -1318,6 +1330,8 @@ $LEXI
         $ IF F$SEARCH("TEMP.DAT") .NES. "" THEN DELETE TEMP.DAT;*
         $ IF F$TRNLNM("NAMES") .EQS. "" THEN DEFINE NAMES EMPLOYEES.DAT
         $ WRITE_TIME = F$CVTIME(,,"TIME")
+        $ IF F$CONFIG("vax.library", "EXISTS") THEN -
+              WRITE SYS$OUTPUT F$CONFIG("vax.library")
 
 $FORE
     A foreign command runs an image with the rest of the command line as its

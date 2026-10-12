@@ -40,12 +40,17 @@ import (
 // F$DEVICE, F$FILE_ATTRIBUTES, F$GETQUI, F$IDENTIFIER, F$LICENSE) are
 // CLI_LEXNOTIMPL. So, in a subprocess's command interpreter, which has no
 // console to ask, is a function that asks about the system.
+//
+// F$CONFIG is govax's own, not VMS's (dcllexconfig.go): it reads govax's
+// configuration. It is in lexicalNames too, so it may be abbreviated by
+// the same rule (F$CONF; F$CON is now ambiguous with F$CONTEXT).
 
 // lexicalNames are VMS 7.3's lexical functions (the User's Manual's
-// chapter 15 and the DCL Dictionary), for abbreviations.
+// chapter 15 and the DCL Dictionary), and govax's own F$CONFIG, for
+// abbreviations.
 var lexicalNames = []string{
-	"F$CONTEXT", "F$CSID", "F$CVSI", "F$CVTIME", "F$CVUI", "F$DEVICE",
-	"F$DIRECTORY", "F$EDIT", "F$ELEMENT", "F$ENVIRONMENT", "F$EXTRACT",
+	"F$CONFIG", "F$CONTEXT", "F$CSID", "F$CVSI", "F$CVTIME", "F$CVUI",
+	"F$DEVICE", "F$DIRECTORY", "F$EDIT", "F$ELEMENT", "F$ENVIRONMENT", "F$EXTRACT",
 	"F$FAO", "F$FILE_ATTRIBUTES", "F$GETDVI", "F$GETJPI", "F$GETQUI",
 	"F$GETSYI", "F$IDENTIFIER", "F$INTEGER", "F$LENGTH", "F$LICENSE",
 	"F$LOCATE", "F$LOGICAL", "F$MESSAGE", "F$MODE", "F$PARSE", "F$PID",
@@ -127,6 +132,9 @@ var lexicalFunctions = map[string]lexicalFunction{
 	// Time (dcllextime.go).
 	"F$CVTIME": {minArgs: 0, maxArgs: 3, console: true, call: lexCVTime},
 	"F$TIME":   {minArgs: 0, maxArgs: 0, console: true, call: lexTime},
+
+	// govax's configuration (dcllexconfig.go; not one of VMS's).
+	"F$CONFIG": {minArgs: 1, maxArgs: 2, call: lexConfig},
 }
 
 // lexicalKeyword returns the entry of table that arg, a keyword argument,

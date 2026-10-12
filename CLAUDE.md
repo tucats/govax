@@ -325,7 +325,8 @@ expect adjustment as phases land):
   table (`dcllexical.go`'s `lexicalFunctions`, one entry per function;
   each function's keywords are a table too, read by `lexicalKeyword`),
   implemented by subject in `dcllexstring.go`, `dcllexprocess.go`,
-  `dcllexfile.go`, `dcllexname.go`, and `dcllextime.go`. F$GETJPI,
+  `dcllexfile.go`, `dcllexname.go`, and `dcllextime.go`; F$CONFIG,
+  govax's own (not VMS's), reads the configuration (`dcllexconfig.go`). F$GETJPI,
   F$GETSYI, F$GETDVI, F$FAO, and F$SETPRV use the services' own code
   (`corevms/lexical.go`), F$PARSE and F$SEARCH RMS's (`rms/lexical.go`). The messages are DCL's CLI$_ texts from
   `vmsdef.Messages`, shown as `%DCL-` (the CLI facility's display name),

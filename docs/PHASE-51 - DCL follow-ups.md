@@ -194,3 +194,14 @@ smaller gaps the phase left:
   procedure that SPAWNs a procedure and then SPAWN/NOWAIT a command that
   runs beside it; a refused SPAWN in a subprocess). HELP SPAWN says a
   subprocess can SPAWN.
+- 2026-10-12: F$CONFIG(key [,operation]), a lexical function of govax's
+  own (not VMS's; `internal/dclshell/dcllexconfig.go`): reads govax's
+  configuration. VALUE (the default) is the item's string value, "" if
+  it isn't set; EXISTS is 1 or 0. The key is lowercased first, since
+  every configuration key is lowercase and DCL users write uppercase.
+  The operation is a keyword table (`configOperations`), so another is
+  one more entry; one it doesn't have is CLI_IVKEYW. F$CONFIG is in
+  `lexicalNames`, so it abbreviates as the others do: F$CONF is it, and
+  F$CON, which was F$CONTEXT (not implemented), is now ambiguous. It
+  needs no console, so a subprocess's DCL has it too. Test:
+  `TestLexicalConfig`; HELP LEXICAL.
