@@ -31,9 +31,8 @@ type Console struct {
 	// Machine is the emulated system (vaxmachine.go).
 	*Machine
 
-	// Shell is the DCL whose commands run now (shell.go): process 1's
-	// (home), or a subprocess's while its interpreter runs.
-	*Shell
+	// Interpreter is the DCL (interpreter.go).
+	*Interpreter
 
 	// Dispatcher backs XFC$CONSOLE_CMD (a running VAX program asking the
 	// console to execute a command line on its behalf). Unlike Engine/RTL,
@@ -69,28 +68,6 @@ type Console struct {
 	// vax.link.library's).
 	HostLibrary string
 
-	// control is SET [NO]CONTROL's (dclcontroly.go).
-	control controlKeys
-
-	// home is process 1's DCL: the Shell embedded here, but for the while
-	// a subprocess's DCL runs, when that is the subprocess's (subcli.go).
-	home *Shell
-
-	// clis are the command interpreters of the processes that run one
-	// (subcli.go: LIB$SPAWN's, and $CREPRC's of LOGINOUT), by process.
-	clis map[*corevms.Environment]*subprocessCLI
-
-	// spawnPage is the S0 pool page SPAWN writes its call to LIB$SPAWN
-	// in (spawncmd.go), allocated on first use on each machine.
-	spawnPage uint32
-
-	// lending is set while process 1 lends the CPU to the other
-	// processes between its DCL commands, and consoleCommands counts the
-	// XFC$CONSOLE_CMD calls in progress, during which the machine is
-	// mid-instruction and can't run others (dcllend.go).
-	lending         bool
-	consoleCommands int
-
 	// runCommandLine is RunCommandLine, taken when govax's one-shot
 	// command runs, for that command's RUN to give its image.
 	runCommandLine string
@@ -110,10 +87,12 @@ func New(out io.Writer) *Console {
 			Devices: iodev.NewDeviceTable(),
 			Mounts:  mounts,
 		},
-		Shell: &Shell{
-			Out:              out,
-			Logicals:         newLogicals(),
-			ContainerSession: rms.NewSession(mounts),
+		Interpreter: &Interpreter{
+			Shell: &Shell{
+				Out:              out,
+				Logicals:         newLogicals(),
+				ContainerSession: rms.NewSession(mounts),
+			},
 		},
 	}
 

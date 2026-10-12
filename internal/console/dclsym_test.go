@@ -61,7 +61,7 @@ func TestSplitAssignment(t *testing.T) {
 // TestAssignSymbol defines symbols with each operator and abbreviation,
 // and rejects what it can't evaluate.
 func TestAssignSymbol(t *testing.T) {
-	c := &Console{Machine: &Machine{}, Shell: &Shell{}}
+	c := &Console{Machine: &Machine{}, Interpreter: &Interpreter{Shell: &Shell{}}}
 
 	for _, tc := range []struct{ name, op, text string }{
 		{"DIR*ECTORY", ":==", " directory/size"},
