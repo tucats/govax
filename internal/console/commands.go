@@ -30,7 +30,7 @@ const (
 func (d *Dispatcher) bindConsoleCommands() {
 	g := d.Grammar
 
-	g.Bind("STOP", d.stopCommand)
+	g.Bind("STOP", d.Console.stopCommand)
 
 	g.Bind(zeroTOKEN, func(id int64, r *dcl.Result) error { return d.Console.Zero() })
 	g.Bind(bootTOKEN, notImplemented(bootTOKEN, "device/RTL support"))
@@ -50,7 +50,7 @@ func (d *Dispatcher) bindConsoleCommands() {
 		return d.Console.Help(d.Help, strings.Fields(strings.ReplaceAll(r.String("TOPIC"), "/", " /")))
 	})
 
-	g.Bind(ifTOKEN, d.ifCommand)
+	g.Bind(ifTOKEN, d.Console.ifCommand)
 
 	g.Bind(runTOKEN, d.runCommand)
 	g.Bind("SPAWN", func(id int64, r *dcl.Result) error {
@@ -205,21 +205,6 @@ func notImplemented(name, dependency string) dcl.Handler {
 	}
 }
 
-// Run is RUN in the DCL running now: process 1's runs the image on the
-// machine (Machine.Run); a subprocess's DCL runs it in its process
-// (subcli.go).
-func (c *Console) Run(fn string, opts machine.RunOptions) error {
-	if err := c.RequireInit(); err != nil {
-		return err
-	}
-
-	if cli := c.subCLI; cli != nil {
-		return c.subprocessRun(cli, fn, opts.CommandLine)
-	}
-
-	return c.Machine.Run(fn, opts)
-}
-
 // ShowRegions prints the P0/P1/S0 image-activation region limits.
 func (c *Console) ShowRegions() error {
 	if err := c.RequireInit(); err != nil {
@@ -268,8 +253,8 @@ func (c *Console) StartDebugger() error {
 // goes to its termination mailbox if it had one, with the final status
 // SS$_ABORT. If the CPU was in the process (a run stopped there), it is
 // returned to process 1.
-func (c *Console) StopProcess(name, pid string) error {
-	if err := c.RequireInit(); err != nil {
+func (c *Interpreter) StopProcess(name, pid string) error {
+	if err := c.machine.RequireInit(); err != nil {
 		return err
 	}
 
@@ -300,7 +285,7 @@ func (c *Console) StopProcess(name, pid string) error {
 
 	c.RTL.DeleteNow(env)
 
-	return c.ReturnToProcessOne()
+	return c.machine.ReturnToProcessOne()
 }
 
 // The console is internal/debugger's Console: the machine it debugs, and
@@ -323,4 +308,10 @@ func (c *Console) ConsoleDispatch() func(line string) error {
 // IsConsoleVerb reports whether word is a verb of the console's grammar.
 func (c *Console) IsConsoleVerb(word string) bool {
 	return c.Dispatcher != nil && c.Dispatcher.Grammar.HasVerb(word)
+}
+
+// Run is RUN (Interpreter.Run): in a subprocess's DCL it runs the image
+// in that process, in process 1's on the machine.
+func (c *Console) Run(fn string, opts machine.RunOptions) error {
+	return c.Interpreter.Run(fn, opts)
 }

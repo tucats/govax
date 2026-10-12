@@ -52,13 +52,13 @@ type gosubFrame struct {
 }
 
 // gosubCommand is GOSUB label (Console.Gosub).
-func (d *Dispatcher) gosubCommand(id int64, r *dcl.Result) error {
+func (c *Interpreter) gosubCommand(id int64, r *dcl.Result) error {
 	label, err := labelParameter(r.String("LABEL"))
 	if err != nil {
 		return err
 	}
 
-	return d.Console.Gosub(label)
+	return c.Gosub(label)
 }
 
 // Gosub is GOSUB label: the procedure goes on at the label, as for GOTO,
@@ -102,8 +102,8 @@ func (c *Interpreter) Gosub(label string) error {
 // marked as shown (%X00038090 became %X10038090); with one, $STATUS is
 // that status (VMS 7.3, testdata/dcl50's round 6; an even status's
 // message is taken to be shown, as RETURN's is in a procedure).
-func (d *Dispatcher) returnCommand(id int64, r *dcl.Result) error {
-	f := d.Console.flow()
+func (c *Interpreter) returnCommand(id int64, r *dcl.Result) error {
+	f := c.flow()
 	if len(f.gosubs) == 0 && f.source != nil {
 		return vmserrors.New(vmserrors.CLI_BADRET)
 	}
@@ -111,7 +111,7 @@ func (d *Dispatcher) returnCommand(id int64, r *dcl.Result) error {
 	var status *uint32
 
 	if text := strings.TrimSpace(r.String("STATUS")); text != "" {
-		v, err := evaluateDCLExpression(text, &d.Console.dclSymbols, d.Console.Interpreter)
+		v, err := evaluateDCLExpression(text, &c.dclSymbols, c)
 		if err != nil {
 			return err
 		}
@@ -122,18 +122,18 @@ func (d *Dispatcher) returnCommand(id int64, r *dcl.Result) error {
 
 	if len(f.gosubs) == 0 {
 		if status == nil {
-			d.Console.setCommandStatus(d.Console.status|stsInhibitMsg, d.Console.statusErr)
+			c.setCommandStatus(c.status|stsInhibitMsg, c.statusErr)
 
 			return nil
 		}
 
-		d.Console.setCommandStatus(*status, nil)
+		c.setCommandStatus(*status, nil)
 
 		if *status&1 != 0 {
 			return nil
 		}
 
-		return d.Console.statusFailure(*status)
+		return c.statusFailure(*status)
 	}
 
 	frame := f.gosubs[len(f.gosubs)-1]
@@ -143,25 +143,25 @@ func (d *Dispatcher) returnCommand(id int64, r *dcl.Result) error {
 	f.blocks, f.skip = frame.blocks, blockSkip{}
 
 	if status == nil {
-		d.Console.setCommandStatus(ssNormal|stsInhibitMsg, nil)
+		c.setCommandStatus(ssNormal|stsInhibitMsg, nil)
 
 		return nil
 	}
 
-	d.Console.setCommandStatus(*status, nil)
+	c.setCommandStatus(*status, nil)
 
 	if *status&1 != 0 {
 		return nil
 	}
 
-	return d.Console.statusFailure(*status)
+	return c.statusFailure(*status)
 }
 
 // callCommand is CALL[/OUTPUT=file] label [p1 ... p8]
 // (Console.callSubroutine). The label and the parameters are read as @
 // reads a file name and its parameters, so /OUTPUT may also follow the
 // label directly.
-func (d *Dispatcher) callCommand(id int64, r *dcl.Result) error {
+func (c *Interpreter) callCommand(id int64, r *dcl.Result) error {
 	text := strings.TrimSpace(r.String("TEXT"))
 	if text == "" {
 		return vmserrors.New(vmserrors.CLI_INSFPRM)
@@ -176,7 +176,7 @@ func (d *Dispatcher) callCommand(id int64, r *dcl.Result) error {
 		cmd.output, cmd.hasOutput = r.String("OUTPUT"), true
 	}
 
-	return d.Console.callSubroutine(cmd, d.Dispatch)
+	return c.callSubroutine(cmd, c.route)
 }
 
 // callSubroutine runs the subroutine cmd names (cmd.file is its label)
@@ -288,8 +288,8 @@ func (p *procedureSource) subroutineEnd(pos int) (int, bool) {
 // ENDSUBROUTINE. With no ENDSUBROUTINE, the procedure is left at its end
 // of file, with CLI$_MSNGENDS. At the terminal it's CLI$_INVCALL
 // (unconfirmed). SUBROUTINE leaves $STATUS alone (unconfirmed).
-func (d *Dispatcher) subroutineCommand(id int64, r *dcl.Result) error {
-	f := d.Console.flow()
+func (c *Interpreter) subroutineCommand(id int64, r *dcl.Result) error {
+	f := c.flow()
 	if f.source == nil {
 		return vmserrors.New(vmserrors.CLI_INVCALL)
 	}
@@ -303,7 +303,7 @@ func (d *Dispatcher) subroutineCommand(id int64, r *dcl.Result) error {
 
 	_, _, _, next, _ := f.source.lineAt(end)
 	f.source.Seek(next)
-	d.Console.keepStatus()
+	c.keepStatus()
 
 	return nil
 }
@@ -312,6 +312,6 @@ func (d *Dispatcher) subroutineCommand(id int64, r *dcl.Result) error {
 // started: a CALL's level ends before its ENDSUBROUTINE, and passing
 // over a subroutine passes over its ENDSUBROUTINE, so one reached as a
 // command is out of place, CLI$_INVCALL (unconfirmed).
-func (d *Dispatcher) endsubroutineCommand(id int64, r *dcl.Result) error {
+func (c *Interpreter) endsubroutineCommand(id int64, r *dcl.Result) error {
 	return vmserrors.New(vmserrors.CLI_INVCALL)
 }

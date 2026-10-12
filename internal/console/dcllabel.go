@@ -326,13 +326,13 @@ func labelParameter(text string) (string, error) {
 }
 
 // gotoCommand is GOTO label (Console.Goto).
-func (d *Dispatcher) gotoCommand(id int64, r *dcl.Result) error {
+func (c *Interpreter) gotoCommand(id int64, r *dcl.Result) error {
 	label, err := labelParameter(r.String("LABEL"))
 	if err != nil {
 		return err
 	}
 
-	return d.Console.Goto(label)
+	return c.Goto(label)
 }
 
 // Goto is GOTO label: the current procedure goes on at the label's line

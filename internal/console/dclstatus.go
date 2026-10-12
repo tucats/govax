@@ -340,7 +340,7 @@ var onKeywords = map[string]int{
 // shortened to any prefix that names one; any other is CLI_ONERR, its
 // segment the condition after a blank (VMS 7.3: " \ FOO\",
 // testdata/dcl50's round 5; the prefix rule is unconfirmed).
-func (d *Dispatcher) onCommand(id int64, r *dcl.Result) error {
+func (c *Interpreter) onCommand(id int64, r *dcl.Result) error {
 	word := strings.ToUpper(strings.TrimSpace(r.String("CONDITION")))
 
 	condition := ""
@@ -373,7 +373,7 @@ func (d *Dispatcher) onCommand(id int64, r *dcl.Result) error {
 		return vmserrors.New(vmserrors.CLI_INSFPRM)
 	}
 
-	level := d.Console.currentLevel()
+	level := c.currentLevel()
 	if level == nil {
 		return nil
 	}
@@ -414,18 +414,18 @@ func (c *Interpreter) ControlYAction() string {
 // expression, whose integer value is the procedure's status. An empty
 // one, as "EXIT 'P1'" is when P1 is "", gives none (VMS 7.3 kept $STATUS
 // for it, testdata/dcl50).
-func (d *Dispatcher) exitCommand(id int64, r *dcl.Result) error {
+func (c *Interpreter) exitCommand(id int64, r *dcl.Result) error {
 	text := strings.TrimSpace(r.String("STATUS"))
 	if text == "" {
-		return d.Console.Exit(nil)
+		return c.Exit(nil)
 	}
 
-	v, err := evaluateDCLExpression(text, &d.Console.dclSymbols, d.Console.Interpreter)
+	v, err := evaluateDCLExpression(text, &c.dclSymbols, c)
 	if err != nil {
 		return err
 	}
 
 	status := uint32(v.Int())
 
-	return d.Console.Exit(&status)
+	return c.Exit(&status)
 }

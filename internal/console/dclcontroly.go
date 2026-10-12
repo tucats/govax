@@ -305,8 +305,7 @@ func (c *Interpreter) stopProcedures(exit procedureExit) {
 // Ctrl/Y interrupted is run down, without its exit handlers (govax runs
 // none). At the terminal it runs down an image Ctrl/C or Ctrl/Y left
 // stopped.
-func (d *Dispatcher) stopCommand(id int64, r *dcl.Result) error {
-	c := d.Console
+func (c *Interpreter) stopCommand(id int64, r *dcl.Result) error {
 	name, pid := r.String("PROCESS_NAME"), r.String("IDENTIFICATION")
 
 	if name != "" || pid != "" {

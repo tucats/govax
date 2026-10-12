@@ -266,9 +266,7 @@ func (p *procedureSource) readRecord() (string, bool) {
 
 // openCommand is OPEN[/READ][/WRITE][/APPEND][/SHARE[=option]]
 // [/ERROR=label] logical-name filespec.
-func (d *Dispatcher) openCommand(id int64, r *dcl.Result) error {
-	c := d.Console
-
+func (c *Interpreter) openCommand(id int64, r *dcl.Result) error {
 	label, err := qualifierLabel(r, "ERROR")
 	if err != nil {
 		return err
@@ -400,9 +398,7 @@ func openFailure(fe *rms.DCLFileError, access rms.DCLAccess) error {
 }
 
 // closeCommand is CLOSE[/ERROR=label][/[NO]LOG] logical-name.
-func (d *Dispatcher) closeCommand(id int64, r *dcl.Result) error {
-	c := d.Console
-
+func (c *Interpreter) closeCommand(id int64, r *dcl.Result) error {
 	label, err := qualifierLabel(r, "ERROR")
 	if err != nil {
 		return err
@@ -443,9 +439,7 @@ func (d *Dispatcher) closeCommand(id int64, r *dcl.Result) error {
 
 // readCommand is READ[/END_OF_FILE=label][/ERROR=label][/PROMPT=string]
 // logical-name symbol-name.
-func (d *Dispatcher) readCommand(id int64, r *dcl.Result) error {
-	c := d.Console
-
+func (c *Interpreter) readCommand(id int64, r *dcl.Result) error {
 	errorLabel, err := qualifierLabel(r, "ERROR")
 	if err != nil {
 		return err
@@ -553,9 +547,7 @@ func isDCLSymbolName(name string) bool {
 
 // writeCommand is WRITE[/ERROR=label][/SYMBOL][/UPDATE] logical-name
 // expression[,...].
-func (d *Dispatcher) writeCommand(id int64, r *dcl.Result) error {
-	c := d.Console
-
+func (c *Interpreter) writeCommand(id int64, r *dcl.Result) error {
 	label, err := qualifierLabel(r, "ERROR")
 	if err != nil {
 		return err
@@ -673,9 +665,7 @@ func splitDCLList(text string) []string {
 
 // inquireCommand is INQUIRE[/GLOBAL|/LOCAL][/[NO]PUNCTUATION] symbol
 // [prompt].
-func (d *Dispatcher) inquireCommand(id int64, r *dcl.Result) error {
-	c := d.Console
-
+func (c *Interpreter) inquireCommand(id int64, r *dcl.Result) error {
 	symbol := strings.ToUpper(strings.TrimSpace(r.String("SYMBOL")))
 	if symbol == "" {
 		return vmserrors.New(vmserrors.CLI_INSFPRM)

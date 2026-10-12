@@ -1,8 +1,6 @@
 package console
 
 import (
-	"errors"
-	"fmt"
 	"strings"
 
 	"github.com/tucats/govax/internal/dcl"
@@ -12,7 +10,6 @@ import (
 	"github.com/tucats/govax/internal/link"
 	"github.com/tucats/govax/internal/machine"
 	"github.com/tucats/govax/internal/rms"
-	"github.com/tucats/govax/internal/vax"
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
@@ -22,10 +19,6 @@ type Dispatcher struct {
 	Console *Console
 	Grammar *dcl.Grammar
 	Help    *help.File
-
-	// line is the command line being dispatched, for a handler that
-	// records it (MACRO's SRC header).
-	line string
 }
 
 // NewDispatcher returns a Dispatcher wired to c and g, with every DCL
@@ -38,7 +31,8 @@ func NewDispatcher(c *Console, g *dcl.Grammar, h *help.File) *Dispatcher {
 	// the subprocesses' DCL (subcli.go) use.
 	if c.Dispatcher == nil {
 		c.Dispatcher = d
-		c.dispatchConsole = d.DispatchConsole
+		c.Grammar = g
+		c.route = d.Dispatch
 	}
 
 	return d
@@ -58,7 +52,7 @@ func (d *Dispatcher) Dispatch(line string) error {
 	// every line -- including one that happens to spell a command name --
 	// is a statement for the assembler, not a console command.
 	if d.Console.InAssemblerMode() {
-		return d.assembleInteractiveLine(line)
+		return d.Console.AssembleLine(line)
 	}
 
 	// With a debugger session in progress, the line is a debugger
@@ -73,7 +67,7 @@ func (d *Dispatcher) Dispatch(line string) error {
 		return d.Console.Debugger.Dispatch(line)
 	}
 
-	err := d.DispatchConsole(line)
+	err := d.Console.DispatchConsole(line)
 
 	// A command of process 1's command level 0 is done: the other
 	// processes run until they're idle (dcllend.go). A procedure's lines
@@ -83,232 +77,6 @@ func (d *Dispatcher) Dispatch(line string) error {
 	}
 
 	return err
-}
-
-// DispatchConsole parses and executes one console command line -- DCL
-// symbols and the console grammar -- whatever mode the front end is in.
-// Dispatch calls it when no debugger session is active; XFC$CONSOLE_CMD
-// (Console.ConsoleCommand) calls it always.
-func (d *Dispatcher) DispatchConsole(line string) error {
-	line = strings.TrimSpace(line)
-	if line == "" || strings.HasPrefix(line, "!") {
-		return nil
-	}
-
-	// Interactive assembler mode, as in Dispatch, for the callers that
-	// come straight here.
-	if d.Console.InAssemblerMode() {
-		return d.assembleInteractiveLine(line)
-	}
-
-	// The lines of an IF block's branch that doesn't run are passed
-	// over, unread (dclif.go).
-	// One that ends the passing over (its ENDIF, or the ELSE where the
-	// branch that runs starts) is shown with verification on; the rest
-	// aren't (dclverify.go).
-	skipping, whole := d.Console.flow().skip.active, line
-
-	line, run := d.Console.skipLine(line)
-	if !run {
-		if skipping && !d.Console.flow().skip.active {
-			d.Console.echoLine("", whole, whole)
-		} else {
-			d.Console.dropEcho()
-		}
-
-		return nil
-	}
-
-	// The line is one command, whose status becomes $STATUS
-	// (dclstatus.go).
-	return d.Console.statusOf(func() error {
-		// A label marks the line (dcllabel.go), and the command after a
-		// block's IF must be THEN (dclif.go).
-		whole := line
-
-		line, err := d.Console.takeLabel(line)
-		if err != nil || line == "" {
-			d.Console.echoLine("", whole, whole)
-
-			return err
-		}
-
-		if d.Console.awaitThen(line) {
-			if d.Console.passedBeforeThen() {
-				d.Console.echoLine("", whole, whole)
-			} else {
-				d.Console.dropEcho()
-			}
-
-			d.Console.keepStatus()
-
-			return nil
-		}
-
-		// The THEN of a block whose IF was false isn't shown (VMS 7.3).
-		quiet := d.Console.thenOfFalseIf(line)
-
-		// DCL's first phase: symbols between apostrophes are replaced
-		// before anything reads the line (dclsubst.go). A procedure's
-		// line is shown then, with procedure verification on
-		// (dclverify.go).
-		// A line whose scan fails isn't shown: its message is (VMS 7.3,
-		// testdata/dcl50).
-		// A continued command is scanned with its records' joins
-		// marked, so it can be shown a record at a time.
-		label := ""
-		if strings.HasSuffix(whole, line) {
-			label = whole[:len(whole)-len(line)]
-		}
-
-		marked := d.Console.markJoins(whole, line)
-
-		scanned, err := d.Console.substituteApostrophes(marked)
-		if err != nil {
-			d.Console.dropEcho()
-
-			return err
-		}
-
-		if quiet {
-			d.Console.dropEcho()
-		} else {
-			d.Console.echoLine(label, marked, scanned)
-		}
-
-		line = strings.ReplaceAll(scanned, joinMark, " ")
-
-		return d.dispatchCommand(line)
-	})
-}
-
-// dispatchCommand executes a console command line that has been through
-// apostrophe substitution: DCL's second phase (the first word as a
-// symbol, then ampersand substitution) and then the console's grammar.
-// IF's THEN command comes back here, so its apostrophes aren't
-// substituted again.
-func (d *Dispatcher) dispatchCommand(line string) error {
-	return d.dispatchParsed(line, true)
-}
-
-// dispatchParsed is dispatchCommand, with verbSymbol saying whether the
-// first word may be a symbol: not in an alias's value, which DCL doesn't
-// look up again (VMS 7.3 gave IVVERB for an alias of an alias,
-// testdata/dcl50).
-func (d *Dispatcher) dispatchParsed(line string, verbSymbol bool) error {
-	line = strings.TrimSpace(line)
-	if line == "" || strings.HasPrefix(line, "!") {
-		return nil
-	}
-
-	// "@file" runs a command procedure (procedure.go). DCL reads it
-	// before any verb: its /OUTPUT qualifier must touch the file name,
-	// and anything after a blank is a parameter, which the grammar's
-	// qualifiers don't model.
-	if text, ok := strings.CutPrefix(line, "@"); ok {
-		if err := d.Console.leaveControlY(false); err != nil {
-			return err
-		}
-
-		return d.atCommand(text)
-	}
-
-	// A command starts with a letter (or "$" or "_", which can start a
-	// symbol's name). "%" and a digit start one too, as far as DCL is
-	// concerned: VMS 7.3 gave IVVERB, \%%\ and \1ABC\, for lines "%%"
-	// and "1ABC", where a line starting with an apostrophe, ".", or "("
-	// was NOCOMD (testdata/dcl50's rounds 3, 1, and 6).
-	if !isDCLSymbolStart(line[0]) && line[0] != '%' && !isDecimalDigit(line[0]) {
-		return vmserrors.New(vmserrors.CLI_NOCOMD)
-	}
-
-	// A symbol assignment, DELETE/SYMBOL, or a command whose first word
-	// is a DCL symbol (a foreign command or an alias): DCL looks for a
-	// symbol before a verb (dclsym.go).
-	if handled, err := d.dclSymbolLine(line, verbSymbol); handled {
-		return err
-	}
-
-	line = d.Console.dclSymbols.substituteAmpersands(line, true)
-
-	if d.Console.CPU != nil && d.Console.CPU.DebugEnabled(vax.DebugDCL) {
-		fmt.Fprintf(d.Console.CPU.DebugWriter(), "DEBUG(DCL): parsing %q\n", line)
-	}
-
-	r, err := d.Grammar.Parse(line)
-	if err != nil {
-		return verbError(err)
-	}
-
-	// A subprocess's DCL doesn't work the machine itself (subcli.go).
-	if processOneCommands[r.Active] {
-		if err := d.Console.processOneOnly(strings.ToUpper(r.Verb)); err != nil {
-			return err
-		}
-	}
-
-	// At the Ctrl/Y level, a command that runs an image ends the
-	// interrupted procedure first (dclcontroly.go).
-	if err := d.Console.leaveControlY(dclOwnCommands[r.Active]); err != nil {
-		return err
-	}
-
-	d.line = line
-
-	// Whether the command ran an image, as VMS would run one for it,
-	// decides what a procedure does with the data lines after it
-	// (dclinput.go). It is known when the command has run, after any
-	// procedure or command it ran in turn.
-	if !dclOwnCommands[r.Active] {
-		defer func() { d.Console.imageRan = true }()
-	}
-
-	return d.Grammar.Dispatch(r)
-}
-
-// verbError is DCL's message for a command whose verb the grammar
-// doesn't know (CLI_IVVERB) or can't choose (CLI_ABVERB), with the verb
-// as its segment, as VMS shows them; any other error is returned as it
-// is.
-func verbError(err error) error {
-	var ve vmserrors.VMSError
-	if !errors.As(err, &ve) || len(ve.Arguments) != 2 || ve.Arguments[0] != "verb" {
-		return err
-	}
-
-	verb, _ := ve.Arguments[1].(string)
-
-	switch ve.Status {
-	case vmserrors.CLI_UNRECOGNIZED:
-		return vmserrors.NewSegment(vmserrors.CLI_IVVERB, verb)
-	case vmserrors.CLI_AMBIGUOUS:
-		return vmserrors.NewSegment(vmserrors.CLI_ABVERB, verb)
-	}
-
-	return err
-}
-
-// readCommandVerb reads the leading command word (up to whitespace, '/',
-// ',', or '='), matching read_verb — including its "a leading '@' is a
-// token by itself" special case (a command procedure). DCL symbol
-// lookup (dclsym.go) uses it, and IF and SET PTE use it for their THEN
-// and TO words.
-func readCommandVerb(s string) (verb, rest string) {
-	if strings.HasPrefix(s, "@") {
-		return "@", s[1:]
-	}
-
-	i := 0
-	for i < len(s) {
-		switch s[i] {
-		case ' ', '\t', '/', ',', '=':
-			return s[:i], s[i:]
-		}
-
-		i++
-	}
-
-	return s, ""
 }
 
 // bindGrammar binds every DCL verb/syntax this port implements a handler
@@ -324,37 +92,37 @@ func (d *Dispatcher) bindGrammar() {
 
 	// EXIT ends the command procedure it's in, or govax at the terminal;
 	// QUIT ends govax wherever it is (procedure.go).
-	g.Bind("EXIT", d.exitCommand)
-	g.Bind("ON", d.onCommand)
+	g.Bind("EXIT", d.Console.exitCommand)
+	g.Bind("ON", d.Console.onCommand)
 
 	// Labels, IF blocks, GOSUB, and CALL (dcllabel.go, dclif.go,
 	// dclcall.go).
-	g.Bind("GOTO", d.gotoCommand)
-	g.Bind("THEN", d.thenCommand)
-	g.Bind("ELSE", d.elseCommand)
-	g.Bind("ENDIF", d.endifCommand)
-	g.Bind("GOSUB", d.gosubCommand)
-	g.Bind("RETURN", d.returnCommand)
-	g.Bind("CALL", d.callCommand)
-	g.Bind("SUBROUTINE", d.subroutineCommand)
-	g.Bind("ENDSUBROUTINE", d.endsubroutineCommand)
+	g.Bind("GOTO", d.Console.gotoCommand)
+	g.Bind("THEN", d.Console.thenCommand)
+	g.Bind("ELSE", d.Console.elseCommand)
+	g.Bind("ENDIF", d.Console.endifCommand)
+	g.Bind("GOSUB", d.Console.gosubCommand)
+	g.Bind("RETURN", d.Console.returnCommand)
+	g.Bind("CALL", d.Console.callCommand)
+	g.Bind("SUBROUTINE", d.Console.subroutineCommand)
+	g.Bind("ENDSUBROUTINE", d.Console.endsubroutineCommand)
 
 	// DECK and EOD: data lines for an image, "$" or not (dclinput.go).
-	g.Bind("DECK", d.deckCommand)
-	g.Bind("EOD", d.eodCommand)
+	g.Bind("DECK", d.Console.deckCommand)
+	g.Bind("EOD", d.Console.eodCommand)
 
 	// DCL's file I/O (dclfile.go).
-	g.Bind("OPEN", d.openCommand)
-	g.Bind("CLOSE", d.closeCommand)
-	g.Bind("READ", d.readCommand)
-	g.Bind("WRITE", d.writeCommand)
-	g.Bind("INQUIRE", d.inquireCommand)
-	g.Bind("WAIT", d.waitCommand)
+	g.Bind("OPEN", d.Console.openCommand)
+	g.Bind("CLOSE", d.Console.closeCommand)
+	g.Bind("READ", d.Console.readCommand)
+	g.Bind("WRITE", d.Console.writeCommand)
+	g.Bind("INQUIRE", d.Console.inquireCommand)
+	g.Bind("WAIT", d.Console.waitCommand)
 	g.Bind("CONTINUE", func(id int64, r *dcl.Result) error { return d.Console.continueCommand() })
 	g.Bind("QUIT", func(id int64, r *dcl.Result) error { return d.Console.Quit() })
 	g.Bind("LOGOUT", func(id int64, r *dcl.Result) error { return d.Console.logoutCommand() })
 	g.Bind("MCR", func(id int64, r *dcl.Result) error {
-		return d.runForeign(r.String("IMAGE"), r.String("TEXT"))
+		return d.Console.runForeign(r.String("IMAGE"), r.String("TEXT"))
 	})
 	g.Bind("DEBUG", func(id int64, r *dcl.Result) error { return d.Console.StartDebugger() })
 
@@ -710,7 +478,7 @@ func (d *Dispatcher) bindGrammar() {
 			OutputFile:  r.String("OUTPUT"),
 			Header:      r.Present("HEADER") && !r.Negated("HEADER"),
 			Fixups:      r.Present("FIXUP_SECTION") && !r.Negated("FIXUP_SECTION"),
-			CommandLine: d.line,
+			CommandLine: d.Console.line,
 		})
 	})
 
@@ -725,7 +493,7 @@ func (d *Dispatcher) bindGrammar() {
 			Include:     r.Present("INCLUDE") && !r.Negated("INCLUDE") && !r.Defaulted("INCLUDE"),
 			Modules:     nonEmpty(r.List("INCLUDE")),
 			Select:      selected,
-			CommandLine: d.line,
+			CommandLine: d.Console.line,
 		})
 	})
 
@@ -784,26 +552,9 @@ func (d *Dispatcher) bindGrammar() {
 			DebugKinds:  r.List("DEBUG"),
 			NoDebug:     r.Present("DEBUG") && r.Negated("DEBUG"),
 			Libraries:   r.List("LIBRARY"),
-			CommandLine: d.line,
+			CommandLine: d.Console.line,
 		})
 	})
-}
-
-// assembleInteractiveLine hands one line to Console.AssembleInteractiveLine
-// while InAssemblerMode is true, matching asmCommand's own "hasEntry ->
-// CALL __ENTRY" post-command hook for whichever statement (bare or dotted
-// END) finally stops assembly.
-func (d *Dispatcher) assembleInteractiveLine(line string) error {
-	done, entryAddr, hasEntry, err := d.Console.AssembleInteractiveLine(line)
-	if err != nil {
-		return err
-	}
-
-	if done && hasEntry {
-		return d.Console.Call(entryAddr, false)
-	}
-
-	return nil
 }
 
 // nonEmpty drops empty strings from a list: a list qualifier given
@@ -822,3 +573,10 @@ func nonEmpty(list []string) []string {
 
 // isDecimalDigit reports whether ch is a decimal digit.
 func isDecimalDigit(ch byte) bool { return ch >= '0' && ch <= '9' }
+
+// DispatchConsole parses and executes one console command line -- DCL
+// symbols and the console grammar -- whatever mode the front end is in
+// (Interpreter.DispatchConsole).
+func (d *Dispatcher) DispatchConsole(line string) error {
+	return d.Console.Interpreter.DispatchConsole(line)
+}

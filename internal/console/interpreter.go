@@ -5,6 +5,7 @@ import (
 	"io"
 
 	"github.com/tucats/govax/internal/corevms"
+	"github.com/tucats/govax/internal/dcl"
 	"github.com/tucats/govax/internal/machine"
 )
 
@@ -22,11 +23,22 @@ type Interpreter struct {
 	// images.
 	machine *machine.Machine
 
-	// dispatchConsole runs one command line in the DCL running now
-	// (Dispatcher.DispatchConsole): a subprocess's CLI reads its
-	// commands and has them run by it. Nil until the console's first
+	// Grammar is the console's command grammar (console.dcl), which DCL
+	// parses each command with (dispatchParsed): DCL's own verbs, bound
+	// by bindDCL, and the console's. Nil until the console's first
 	// Dispatcher is made.
-	dispatchConsole func(line string) error
+	Grammar *dcl.Grammar
+
+	// route sends a command line where the console sends one: to the
+	// debugger or the interactive assembler when one is reading, else to
+	// DCL (DispatchConsole). A procedure's lines and a CALL's go through
+	// it, so a procedure can drive the debugger. The console's
+	// Dispatcher sets it; until then it is DispatchConsole.
+	route func(line string) error
+
+	// line is the command line being dispatched, for a handler that
+	// records it (MACRO's SRC header, SET VERIFY).
+	line string
 
 	// In is the terminal's byte-level input, from which DCL reads a
 	// reply (readReply): INQUIRE, READ SYS$COMMAND, the Ctrl/Y level. It
@@ -112,3 +124,18 @@ func (c *Interpreter) readReply() (line string, ok bool) {
 
 // ctrlZ is CTRL/Z, the character a terminal user types to end input.
 const ctrlZ = 0x1A
+
+// Run is RUN in the DCL running now: process 1's runs the image on the
+// machine (Machine.Run); a subprocess's DCL runs it in its process
+// (subcli.go).
+func (c *Interpreter) Run(fn string, opts machine.RunOptions) error {
+	if err := c.machine.RequireInit(); err != nil {
+		return err
+	}
+
+	if cli := c.subCLI; cli != nil {
+		return c.subprocessRun(cli, fn, opts.CommandLine)
+	}
+
+	return c.machine.Run(fn, opts)
+}

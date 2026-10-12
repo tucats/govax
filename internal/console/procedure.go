@@ -411,13 +411,13 @@ func dclWord(text string, i int, stopAtSlash bool) (string, int, bool) {
 }
 
 // atCommand is the @ command: text is what follows the "@".
-func (d *Dispatcher) atCommand(text string) error {
+func (c *Interpreter) atCommand(text string) error {
 	cmd, err := parseProcedureCommand(text)
 	if err != nil {
 		return err
 	}
 
-	return d.Console.procedureCommand(cmd, d.Dispatch)
+	return c.procedureCommand(cmd, c.route)
 }
 
 // RunProcedure runs the DCL command procedure in file, with no

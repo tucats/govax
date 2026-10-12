@@ -270,3 +270,19 @@ func (m *Machine) AssembleInteractiveLine(line string) (done bool, entryAddr uin
 
 	return true, entryAddr, hasEntry, nil
 }
+
+// AssembleLine is one line of interactive ASM (AssembleBegin's mode): it
+// assembles the statement, and when a dotted or bare END ends the mode
+// with an entry address, calls it, as ASM <file> does.
+func (m *Machine) AssembleLine(line string) error {
+	done, entryAddr, hasEntry, err := m.AssembleInteractiveLine(line)
+	if err != nil {
+		return err
+	}
+
+	if done && hasEntry {
+		return m.Call(entryAddr, false)
+	}
+
+	return nil
+}

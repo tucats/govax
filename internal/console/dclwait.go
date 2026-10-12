@@ -35,8 +35,7 @@ const waitPoll = 20 * time.Millisecond
 // for WAIT BOB on VMS too, a known quirk of WAIT's message). WAIT
 // leaves $STATUS alone, interrupted and resumed or run to its end
 // (rounds 5 and 6).
-func (d *Dispatcher) waitCommand(id int64, r *dcl.Result) error {
-	c := d.Console
+func (c *Interpreter) waitCommand(id int64, r *dcl.Result) error {
 	text := strings.TrimSpace(r.String("DELTA"))
 
 	ticks, ok := parseDeltaTime(strings.ToUpper(text))

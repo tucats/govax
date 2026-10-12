@@ -390,15 +390,15 @@ func (c *Interpreter) typeInput() error {
 // with or without /DOLLARS, and started no deck (testdata/dcl50's I3),
 // so the lines after it are what they would have been without it. At
 // the terminal it is refused the same way (unconfirmed).
-func (d *Dispatcher) deckCommand(id int64, r *dcl.Result) error {
+func (c *Interpreter) deckCommand(id int64, r *dcl.Result) error {
 	return vmserrors.New(vmserrors.CLI_IVVALU)
 }
 
 // eodCommand is EOD read by DCL as a command, with no image reading the
 // data it would end: it does nothing, and leaves $STATUS as it was (VMS
 // 7.3, testdata/dcl50's I3).
-func (d *Dispatcher) eodCommand(id int64, r *dcl.Result) error {
-	d.Console.keepStatus()
+func (c *Interpreter) eodCommand(id int64, r *dcl.Result) error {
+	c.keepStatus()
 
 	return nil
 }

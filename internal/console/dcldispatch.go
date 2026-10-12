@@ -1,0 +1,236 @@
+package console
+
+import (
+	"errors"
+	"fmt"
+	"strings"
+
+	"github.com/tucats/govax/internal/vax"
+	"github.com/tucats/govax/internal/vmserrors"
+)
+
+// DispatchConsole parses and executes one console command line -- DCL
+// symbols and the console grammar -- whatever mode the front end is in.
+// Dispatch calls it when no debugger session is active; XFC$CONSOLE_CMD
+// (Console.ConsoleCommand) calls it always.
+func (c *Interpreter) DispatchConsole(line string) error {
+	line = strings.TrimSpace(line)
+	if line == "" || strings.HasPrefix(line, "!") {
+		return nil
+	}
+
+	// Interactive assembler mode, as in Dispatch, for the callers that
+	// come straight here.
+	if c.machine.InAssemblerMode() {
+		return c.machine.AssembleLine(line)
+	}
+
+	// The lines of an IF block's branch that doesn't run are passed
+	// over, unread (dclif.go).
+	// One that ends the passing over (its ENDIF, or the ELSE where the
+	// branch that runs starts) is shown with verification on; the rest
+	// aren't (dclverify.go).
+	skipping, whole := c.flow().skip.active, line
+
+	line, run := c.skipLine(line)
+	if !run {
+		if skipping && !c.flow().skip.active {
+			c.echoLine("", whole, whole)
+		} else {
+			c.dropEcho()
+		}
+
+		return nil
+	}
+
+	// The line is one command, whose status becomes $STATUS
+	// (dclstatus.go).
+	return c.statusOf(func() error {
+		// A label marks the line (dcllabel.go), and the command after a
+		// block's IF must be THEN (dclif.go).
+		whole := line
+
+		line, err := c.takeLabel(line)
+		if err != nil || line == "" {
+			c.echoLine("", whole, whole)
+
+			return err
+		}
+
+		if c.awaitThen(line) {
+			if c.passedBeforeThen() {
+				c.echoLine("", whole, whole)
+			} else {
+				c.dropEcho()
+			}
+
+			c.keepStatus()
+
+			return nil
+		}
+
+		// The THEN of a block whose IF was false isn't shown (VMS 7.3).
+		quiet := c.thenOfFalseIf(line)
+
+		// DCL's first phase: symbols between apostrophes are replaced
+		// before anything reads the line (dclsubst.go). A procedure's
+		// line is shown then, with procedure verification on
+		// (dclverify.go).
+		// A line whose scan fails isn't shown: its message is (VMS 7.3,
+		// testdata/dcl50).
+		// A continued command is scanned with its records' joins
+		// marked, so it can be shown a record at a time.
+		label := ""
+		if strings.HasSuffix(whole, line) {
+			label = whole[:len(whole)-len(line)]
+		}
+
+		marked := c.markJoins(whole, line)
+
+		scanned, err := c.substituteApostrophes(marked)
+		if err != nil {
+			c.dropEcho()
+
+			return err
+		}
+
+		if quiet {
+			c.dropEcho()
+		} else {
+			c.echoLine(label, marked, scanned)
+		}
+
+		line = strings.ReplaceAll(scanned, joinMark, " ")
+
+		return c.dispatchCommand(line)
+	})
+}
+
+// dispatchCommand executes a console command line that has been through
+// apostrophe substitution: DCL's second phase (the first word as a
+// symbol, then ampersand substitution) and then the console's grammar.
+// IF's THEN command comes back here, so its apostrophes aren't
+// substituted again.
+func (c *Interpreter) dispatchCommand(line string) error {
+	return c.dispatchParsed(line, true)
+}
+
+// dispatchParsed is dispatchCommand, with verbSymbol saying whether the
+// first word may be a symbol: not in an alias's value, which DCL doesn't
+// look up again (VMS 7.3 gave IVVERB for an alias of an alias,
+// testdata/dcl50).
+func (c *Interpreter) dispatchParsed(line string, verbSymbol bool) error {
+	line = strings.TrimSpace(line)
+	if line == "" || strings.HasPrefix(line, "!") {
+		return nil
+	}
+
+	// "@file" runs a command procedure (procedure.go). DCL reads it
+	// before any verb: its /OUTPUT qualifier must touch the file name,
+	// and anything after a blank is a parameter, which the grammar's
+	// qualifiers don't model.
+	if text, ok := strings.CutPrefix(line, "@"); ok {
+		if err := c.leaveControlY(false); err != nil {
+			return err
+		}
+
+		return c.atCommand(text)
+	}
+
+	// A command starts with a letter (or "$" or "_", which can start a
+	// symbol's name). "%" and a digit start one too, as far as DCL is
+	// concerned: VMS 7.3 gave IVVERB, \%%\ and \1ABC\, for lines "%%"
+	// and "1ABC", where a line starting with an apostrophe, ".", or "("
+	// was NOCOMD (testdata/dcl50's rounds 3, 1, and 6).
+	if !isDCLSymbolStart(line[0]) && line[0] != '%' && !isDecimalDigit(line[0]) {
+		return vmserrors.New(vmserrors.CLI_NOCOMD)
+	}
+
+	// A symbol assignment, DELETE/SYMBOL, or a command whose first word
+	// is a DCL symbol (a foreign command or an alias): DCL looks for a
+	// symbol before a verb (dclsym.go).
+	if handled, err := c.dclSymbolLine(line, verbSymbol); handled {
+		return err
+	}
+
+	line = c.dclSymbols.substituteAmpersands(line, true)
+
+	if c.machine.CPU != nil && c.machine.CPU.DebugEnabled(vax.DebugDCL) {
+		fmt.Fprintf(c.machine.CPU.DebugWriter(), "DEBUG(DCL): parsing %q\n", line)
+	}
+
+	r, err := c.Grammar.Parse(line)
+	if err != nil {
+		return verbError(err)
+	}
+
+	// A subprocess's DCL doesn't work the machine itself (subcli.go).
+	if processOneCommands[r.Active] {
+		if err := c.processOneOnly(strings.ToUpper(r.Verb)); err != nil {
+			return err
+		}
+	}
+
+	// At the Ctrl/Y level, a command that runs an image ends the
+	// interrupted procedure first (dclcontroly.go).
+	if err := c.leaveControlY(dclOwnCommands[r.Active]); err != nil {
+		return err
+	}
+
+	c.line = line
+
+	// Whether the command ran an image, as VMS would run one for it,
+	// decides what a procedure does with the data lines after it
+	// (dclinput.go). It is known when the command has run, after any
+	// procedure or command it ran in turn.
+	if !dclOwnCommands[r.Active] {
+		defer func() { c.imageRan = true }()
+	}
+
+	return c.Grammar.Dispatch(r)
+}
+
+// verbError is DCL's message for a command whose verb the grammar
+// doesn't know (CLI_IVVERB) or can't choose (CLI_ABVERB), with the verb
+// as its segment, as VMS shows them; any other error is returned as it
+// is.
+func verbError(err error) error {
+	var ve vmserrors.VMSError
+	if !errors.As(err, &ve) || len(ve.Arguments) != 2 || ve.Arguments[0] != "verb" {
+		return err
+	}
+
+	verb, _ := ve.Arguments[1].(string)
+
+	switch ve.Status {
+	case vmserrors.CLI_UNRECOGNIZED:
+		return vmserrors.NewSegment(vmserrors.CLI_IVVERB, verb)
+	case vmserrors.CLI_AMBIGUOUS:
+		return vmserrors.NewSegment(vmserrors.CLI_ABVERB, verb)
+	}
+
+	return err
+}
+
+// readCommandVerb reads the leading command word (up to whitespace, '/',
+// ',', or '='), matching read_verb — including its "a leading '@' is a
+// token by itself" special case (a command procedure). DCL symbol
+// lookup (dclsym.go) uses it, and IF and SET PTE use it for their THEN
+// and TO words.
+func readCommandVerb(s string) (verb, rest string) {
+	if strings.HasPrefix(s, "@") {
+		return "@", s[1:]
+	}
+
+	i := 0
+	for i < len(s) {
+		switch s[i] {
+		case ' ', '\t', '/', ',', '=':
+			return s[:i], s[i:]
+		}
+
+		i++
+	}
+
+	return s, ""
+}

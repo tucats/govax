@@ -225,31 +225,31 @@ func (c *Interpreter) thenOfFalseIf(line string) bool {
 // so its apostrophes aren't substituted again). Without THEN, the IF
 // starts a block (openBlock). A false IF, or one that starts a block,
 // leaves $STATUS alone (13.15); a command after THEN sets it.
-func (d *Dispatcher) ifCommand(id int64, r *dcl.Result) error {
+func (c *Interpreter) ifCommand(id int64, r *dcl.Result) error {
 	text := strings.TrimSpace(r.String("TEXT"))
 	if text == "" {
 		return vmserrors.New(vmserrors.CLI_INSFPRM)
 	}
 
-	value, command, then, err := evaluateDCLCondition(text, &d.Console.dclSymbols, d.Console.Interpreter)
+	value, command, then, err := evaluateDCLCondition(text, &c.dclSymbols, c)
 	if err != nil {
 		return err
 	}
 
 	if !then {
-		return d.Console.openBlock(value)
+		return c.openBlock(value)
 	}
 
 	// IF expression THEN with no command does nothing, and leaves
 	// $STATUS alone (VMS 7.3, testdata/dcl50's round 5).
 	command = strings.TrimSpace(strings.TrimPrefix(strings.TrimSpace(command), "$"))
 	if command == "" || !value {
-		d.Console.keepStatus()
+		c.keepStatus()
 
 		return nil
 	}
 
-	return d.dispatchCommand(command)
+	return c.dispatchCommand(command)
 }
 
 // evaluateDCLCondition evaluates the expression at the start of text, an
@@ -310,8 +310,8 @@ func (c *Interpreter) openBlock(value bool) error {
 // CLI$_INVIFNEST (unconfirmed), and so is one after an ELSE that came
 // before it, or one that would open a block past maxIfBlocks; those close
 // the block (VMS 7.3, testdata/dcl50's round 6).
-func (d *Dispatcher) thenCommand(id int64, r *dcl.Result) error {
-	f := d.Console.flow()
+func (c *Interpreter) thenCommand(id int64, r *dcl.Result) error {
+	f := c.flow()
 
 	b := f.top()
 	if b == nil || b.state != awaitingThen {
@@ -332,12 +332,12 @@ func (d *Dispatcher) thenCommand(id int64, r *dcl.Result) error {
 	}
 
 	if !b.value || command == "" {
-		d.Console.keepStatus()
+		c.keepStatus()
 
 		return nil
 	}
 
-	return d.dispatchCommand(command)
+	return c.dispatchCommand(command)
 }
 
 // elseCommand is ELSE [[$] command], reached at the end of a THEN branch
@@ -345,8 +345,8 @@ func (d *Dispatcher) thenCommand(id int64, r *dcl.Result) error {
 // the THEN branch didn't run, skipLine starts the ELSE branch instead,
 // and one in a block still waiting for its THEN is passed over by
 // awaitThen.) An ELSE outside a THEN branch is CLI$_INVIFNEST.
-func (d *Dispatcher) elseCommand(id int64, r *dcl.Result) error {
-	f := d.Console.flow()
+func (c *Interpreter) elseCommand(id int64, r *dcl.Result) error {
+	f := c.flow()
 
 	b := f.top()
 	if b == nil || b.state != inThen {
@@ -355,7 +355,7 @@ func (d *Dispatcher) elseCommand(id int64, r *dcl.Result) error {
 
 	b.state = inElse
 	f.skip = blockSkip{active: true}
-	d.Console.keepStatus()
+	c.keepStatus()
 
 	return nil
 }
@@ -363,8 +363,8 @@ func (d *Dispatcher) elseCommand(id int64, r *dcl.Result) error {
 // endifCommand is ENDIF, which closes the innermost block. One with no
 // block open, or in a block still waiting for its THEN (which it
 // closes), is CLI$_INVIFNEST (VMS 7.3, testdata/dcl50's round 5).
-func (d *Dispatcher) endifCommand(id int64, r *dcl.Result) error {
-	f := d.Console.flow()
+func (c *Interpreter) endifCommand(id int64, r *dcl.Result) error {
+	f := c.flow()
 
 	b := f.top()
 	if b == nil || b.state == awaitingThen {
@@ -376,7 +376,7 @@ func (d *Dispatcher) endifCommand(id int64, r *dcl.Result) error {
 	}
 
 	f.popBlock()
-	d.Console.keepStatus()
+	c.keepStatus()
 
 	return nil
 }

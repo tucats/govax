@@ -502,10 +502,10 @@ func (cli *subprocessCLI) runInterpreter() {
 
 		var err error
 
-		if c.dispatchConsole == nil {
+		if c.Grammar == nil {
 			err = vmserrors.New(vmserrors.CLI_NEEDRTL, "DCL")
 		} else {
-			err = c.dispatchConsole(line)
+			err = c.DispatchConsole(line)
 		}
 
 		if err != nil && !vmserrors.MessageInhibited(err) {

@@ -75,6 +75,7 @@ func New(out io.Writer) *Console {
 
 	c.home = c.Shell
 	c.machine = c.Machine
+	c.route = c.DispatchConsole
 	c.Hooks = machine.Hooks{
 		Output:         func() io.Writer { return c.Out },
 		Session:        func() *rms.Session { return c.ContainerSession },
@@ -126,7 +127,7 @@ func (c *Console) consoleCommand(line string) uint32 {
 	c.consoleCommands++
 	defer func() { c.consoleCommands-- }()
 
-	if err := c.Dispatcher.DispatchConsole(line); err != nil {
+	if err := c.DispatchConsole(line); err != nil {
 		return 1
 	}
 

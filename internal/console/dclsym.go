@@ -214,51 +214,51 @@ func (c *Interpreter) DCLSymbol(name string) (string, bool) {
 // symbol's place, and the line goes on through the second phase, its
 // first word not looked up again and its apostrophes not substituted
 // (the User's Manual's EXEC example, 12.13.4).
-func (d *Dispatcher) dclSymbolLine(line string, verbSymbol bool) (bool, error) {
+func (c *Interpreter) dclSymbolLine(line string, verbSymbol bool) (bool, error) {
 	if name, op, value, ok := splitAssignment(line); ok {
-		return true, d.Console.assignSymbol(name, op, value)
+		return true, c.assignSymbol(name, op, value)
 	}
 
 	verb, rest := readCommandVerb(line)
 
 	if isDeleteSymbol(verb, rest) {
-		return true, d.Console.deleteSymbols(rest)
+		return true, c.deleteSymbols(rest)
 	}
 
 	if !verbSymbol {
 		return false, nil
 	}
 
-	sym, ok := d.Console.dclSymbols.lookup(verb)
+	sym, ok := c.dclSymbols.lookup(verb)
 	if !ok {
 		return false, nil
 	}
 
 	if image, foreign := strings.CutPrefix(sym.value, "$"); foreign {
-		return true, d.runForeign(image, rest)
+		return true, c.runForeign(image, rest)
 	}
 
-	return true, d.dispatchParsed(sym.value+rest, false)
+	return true, c.dispatchParsed(sym.value+rest, false)
 }
 
 // runForeign runs a foreign command: the image named by spec (a symbol's
 // value after its "$"), given the rest of the command line, after DCL's
 // treatment of it, as its command text.
-func (d *Dispatcher) runForeign(spec, rest string) error {
+func (c *Interpreter) runForeign(spec, rest string) error {
 	spec = strings.Trim(strings.TrimSpace(spec), `"`)
 	if spec == "" {
 		return vmserrors.New(vmserrors.CLI_NOFILE)
 	}
 
-	if err := d.Console.leaveControlY(false); err != nil {
+	if err := c.leaveControlY(false); err != nil {
 		return err
 	}
 
-	opts := machine.RunOptions{RunInits: d.Console.DefaultRunInits(), CommandLine: dclText(rest, true)}
+	opts := machine.RunOptions{RunInits: c.machine.DefaultRunInits(), CommandLine: dclText(rest, true)}
 
-	defer func() { d.Console.imageRan = true }()
+	defer func() { c.imageRan = true }()
 
-	return d.Console.Run(spec, opts)
+	return c.Run(spec, opts)
 }
 
 // splitAssignment splits line, if it's a symbol assignment, into the
