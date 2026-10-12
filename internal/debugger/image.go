@@ -40,7 +40,7 @@ import (
 // shareable image's initialization routines) until the program is about to
 // execute its main routine's first instruction, and stops there.
 func (d *Debugger) startImage(a machine.Activation) (runOutcome, error) {
-	c := d.Console
+	c := d.Machine
 
 	// VMS shows its version banner, a blank line, and then the language
 	// and module of the main routine. govax shows its own banner, since
@@ -76,7 +76,7 @@ func (d *Debugger) startImage(a machine.Activation) (runOutcome, error) {
 
 // onUnhandled is the console's report that a condition no handler
 // continued is about to be given to VMS's catch-all handler (the
-// console.Console.OnUnhandled hook). While an image runs under the
+// machine.Machine.OnUnhandled hook). While an image runs under the
 // debugger, it takes the condition: the run loop sees it pending after
 // the instruction that raised it and stops. Outside that (a plain GO of
 // kernel code, an image run with /NODEBUG), the catch-all acts as it
@@ -114,7 +114,7 @@ func (d *Debugger) unhandledBreak() bool {
 		where = "preceding"
 	}
 
-	d.Console.Printf("break on unhandled exception %s %s\n", where, d.exceptionLocation(u.PC))
+	d.Machine.Printf("break on unhandled exception %s %s\n", where, d.exceptionLocation(u.PC))
 	d.showSource(u.PC)
 
 	return true
@@ -127,7 +127,7 @@ func (d *Debugger) unhandledBreak() bool {
 // handler's call, nested inside the image's own run, which returns the
 // same way but doesn't end the image).
 func (d *Debugger) imageExit(err error) (ok bool) {
-	c := d.Console
+	c := d.Machine
 
 	if !d.imageDebug || d.running != 1 || !c.ImageActive() || !errors.Is(err, cpu.ErrConsoleCallReturned) {
 		return false
@@ -171,10 +171,10 @@ func (d *Debugger) requireProgram() error {
 // no probe of a break at an address was, so the rule is applied to the
 // exception breaks alone (unconfirmed for the others).
 func (d *Debugger) exceptionLocation(pc uint32) string {
-	where := d.Console.LocationText(pc)
+	where := d.Machine.LocationText(pc)
 
 	if d.stepDefaults.byInstruction {
-		where += ": " + d.Console.InstructionText(pc)
+		where += ": " + d.Machine.InstructionText(pc)
 	}
 
 	return where

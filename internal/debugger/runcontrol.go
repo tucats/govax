@@ -170,7 +170,7 @@ func (d *Debugger) ClearAllBreakpoints() {
 // every breakpoint (CLEAR BREAKPOINT/ALL). The /FAULT and /INSTRUCTION
 // sub-forms are separate commands (faultbreak.go, instbreak.go).
 func (d *Debugger) ClearBreakpoint(addr uint32, all bool) error {
-	if err := d.Console.RequireInit(); err != nil {
+	if err := d.Machine.RequireInit(); err != nil {
 		return err
 	}
 
@@ -253,7 +253,7 @@ func (d *Debugger) removeBreakpointPtr(target *Breakpoint) {
 // when the program finished (HALT, the CALLed routine's return) or hit one
 // of govax's own limits; a real error is returned as err.
 func (d *Debugger) runLoop(skipFirstCheck bool, trace func(pc uint32) func()) (runOutcome, error) {
-	c := d.Console
+	c := d.Machine
 	first := skipFirstCheck
 
 	// Source lines are shown once per instruction while the loop runs
@@ -357,8 +357,8 @@ const (
 func (d *Debugger) reportStop(err error) (runOutcome, error) {
 	var fb *cpu.FaultBreak
 	if errors.As(err, &fb) {
-		d.Console.Printf("Break on fault %02X %s at PC = %08X%s\n",
-			uint8(fb.Code), d.Console.ExceptionName(fb.Code), d.Console.CPU.GPR(vax.PC), d.Console.ProcessNote())
+		d.Machine.Printf("Break on fault %02X %s at PC = %08X%s\n",
+			uint8(fb.Code), d.Machine.ExceptionName(fb.Code), d.Machine.CPU.GPR(vax.PC), d.Machine.ProcessNote())
 
 		return runStopped, nil
 	}
@@ -367,7 +367,7 @@ func (d *Debugger) reportStop(err error) (runOutcome, error) {
 	// the user may still look at the program's data.
 	exited := d.imageExit(err)
 
-	if err := d.Console.ReportStop(err); err != nil {
+	if err := d.Machine.ReportStop(err); err != nil {
 		return runEnded, err
 	}
 
@@ -393,7 +393,7 @@ func (d *Debugger) reportStop(err error) (runOutcome, error) {
 // after at least one instruction runs), matching vax.c's own initial_PC
 // tracking.
 func (d *Debugger) goRun(startAddr *uint32) (runOutcome, error) {
-	c := d.Console
+	c := d.Machine
 
 	if startAddr != nil {
 		c.CPU.SetGPR(vax.PC, *startAddr)
@@ -423,7 +423,7 @@ func (d *Debugger) goRun(startAddr *uint32) (runOutcome, error) {
 // debugger was already stopped at, so a breakpoint there fires at once, as
 // one does for STEP/OVER's callee.
 func (d *Debugger) callRun(addr uint32, step bool, args []uint32) (runOutcome, error) {
-	c := d.Console
+	c := d.Machine
 
 	if err := c.Engine.CallEntry(addr, args...); err != nil {
 		return runEnded, err

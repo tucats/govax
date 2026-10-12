@@ -106,7 +106,7 @@ func (d *Debugger) breakpointHit(pc uint32) bool {
 	stopped.fired = true
 
 	if text := d.stopMessage(stopped, pc); text != "" {
-		d.Console.Printf("%s\n", text)
+		d.Machine.Printf("%s\n", text)
 		d.showSource(pc)
 	}
 
@@ -127,7 +127,7 @@ func (d *Debugger) instructionPeeker() func() *cpu.Instruction {
 	return func() *cpu.Instruction {
 		if !peeked {
 			peeked = true
-			inst, _ = d.Console.Engine.PeekInstruction()
+			inst, _ = d.Machine.Engine.PeekInstruction()
 		}
 
 		return inst
@@ -170,7 +170,7 @@ func (d *Debugger) reached(bp *Breakpoint, pc uint32, peek func() *cpu.Instructi
 		return branchOps()[peek()]
 
 	case BreakLine:
-		return d.Console.LineStart(pc)
+		return d.Machine.LineStart(pc)
 
 	case BreakInstruction:
 		inst := peek()
@@ -205,13 +205,13 @@ func (d *Debugger) stopMessage(bp *Breakpoint, pc uint32) string {
 		return ""
 	}
 
-	where := d.Console.LocationText(pc)
+	where := d.Machine.LocationText(pc)
 
 	// A class of instruction reached at a routine's first instruction
 	// (the one after its entry mask) says "at routine NAME", as an address
 	// breakpoint at the routine's name does (the probe's trace.dlg).
-	if bp.Kind != BreakAddress && bp.Kind != BreakReturn && pc >= 2 && d.Console.RoutineEntry(pc-2) {
-		where = "routine " + d.Console.LocationText(pc-2)
+	if bp.Kind != BreakAddress && bp.Kind != BreakReturn && pc >= 2 && d.Machine.RoutineEntry(pc-2) {
+		where = "routine " + d.Machine.LocationText(pc-2)
 	}
 
 	switch bp.Kind {
@@ -257,7 +257,7 @@ func (d *Debugger) whenHolds(bp *Breakpoint) bool { return d.conditionHolds(bp.W
 func (d *Debugger) conditionHolds(when string) bool {
 	ok, err := d.evalCondition(when)
 	if err != nil {
-		d.Console.Printf("%%%s\n", err)
+		d.Machine.Printf("%%%s\n", err)
 
 		return true
 	}
@@ -267,7 +267,7 @@ func (d *Debugger) conditionHolds(when string) bool {
 
 // onSignal is the console's report that a condition has been signaled
 // and is about to be offered to the program's handlers (the
-// console.Console.OnSignal hook). If SET BREAK/EXCEPTION is in effect it
+// machine.Machine.OnSignal hook). If SET BREAK/EXCEPTION is in effect it
 // is held for the run loop, which stops the program at the next
 // instruction boundary (signalBreak).
 func (d *Debugger) onSignal(u machine.UnhandledException) {
@@ -327,11 +327,11 @@ func (d *Debugger) signalBreak() bool {
 
 	// VMS shows the condition's message before the break, as it does for
 	// an unhandled one (where the catch-all shows it).
-	if text := d.Console.StatusText(u.Condition); text != "" {
-		d.Console.Printf("%s\n", text)
+	if text := d.Machine.StatusText(u.Condition); text != "" {
+		d.Machine.Printf("%s\n", text)
 	}
 
-	d.Console.Printf("break on exception %s %s\n", where, d.exceptionLocation(u.PC))
+	d.Machine.Printf("break on exception %s %s\n", where, d.exceptionLocation(u.PC))
 	d.showSource(u.PC)
 
 	if bp.Temporary {
@@ -363,7 +363,7 @@ func (d *Debugger) runCommands(text string) {
 
 	for _, command := range splitTop(unparenthesize(text), ';') {
 		if err := d.Dispatch(command); err != nil && !vmserrors.MessageInhibited(err) {
-			d.Console.Printf("%%%s\n", err)
+			d.Machine.Printf("%%%s\n", err)
 		}
 	}
 }

@@ -51,6 +51,3 @@
 // only through the small machine.Debugger interface, which *Debugger
 // implements. cmd/govax installs the debugger with Install.
 package debugger
-
-import (
-)

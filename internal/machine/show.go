@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/tucats/govax/internal/asm"
+	"github.com/tucats/govax/internal/corevms"
 	"github.com/tucats/govax/internal/cpu"
 	"github.com/tucats/govax/internal/lnm"
 	"github.com/tucats/govax/internal/symtab"
@@ -1659,6 +1660,27 @@ func (m *Machine) ShowTrace() error {
 
 		m.Printf("    Register tracking is %s\n", regState)
 	}
+
+	return nil
+}
+
+// ShowRegionsOf implements SHOW REGIONS for env's process: the
+// high-water marks of its P0, P1, and S0 regions (corevms.Environment's
+// RegionSize: $EXPREG and image activation's bookkeeping).
+func (m *Machine) ShowRegionsOf(env *corevms.Environment) error {
+	if err := m.requireInit(); err != nil {
+		return err
+	}
+
+	names := [3]string{"P0", "P1", "S0"}
+
+	m.Printf("REGION LIMITS:\n")
+
+	for i, name := range names {
+		m.Printf("\t%s   %08X\n", name, env.RegionSize[i])
+	}
+
+	m.Printf("\n")
 
 	return nil
 }

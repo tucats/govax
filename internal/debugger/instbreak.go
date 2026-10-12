@@ -71,7 +71,7 @@ func pluralS(n int) string {
 // reporting success — a clear, obvious improvement in error signaling, not
 // an ISA-fidelity question.
 func (d *Debugger) AddInstructionBreakpoint(name string) error {
-	if err := d.Console.RequireInit(); err != nil {
+	if err := d.Machine.RequireInit(); err != nil {
 		return err
 	}
 
@@ -86,7 +86,7 @@ func (d *Debugger) AddInstructionBreakpoint(name string) error {
 
 	d.InstructionBreakpoints[inst] = true
 
-	d.Console.Printf("Breakpoint set on instruction %s %s\n", opcodeString(inst.Opcode), inst.Name)
+	d.Machine.Printf("Breakpoint set on instruction %s %s\n", opcodeString(inst.Opcode), inst.Name)
 
 	return nil
 }
@@ -104,7 +104,7 @@ func (d *Debugger) AddInstructionBreakpoint(name string) error {
 // thing: clear the flag on the Instruction actually found, once, per
 // CLAUDE.md's bug-fixing policy.
 func (d *Debugger) RemoveInstructionBreakpoint(name string) error {
-	if err := d.Console.RequireInit(); err != nil {
+	if err := d.Machine.RequireInit(); err != nil {
 		return err
 	}
 
@@ -119,7 +119,7 @@ func (d *Debugger) RemoveInstructionBreakpoint(name string) error {
 
 	delete(d.InstructionBreakpoints, inst)
 
-	d.Console.Printf("Removed breakpoint on instruction %s %s\n", opcodeString(inst.Opcode), inst.Name)
+	d.Machine.Printf("Removed breakpoint on instruction %s %s\n", opcodeString(inst.Opcode), inst.Name)
 
 	return nil
 }
@@ -128,22 +128,22 @@ func (d *Debugger) RemoveInstructionBreakpoint(name string) error {
 // BREAKPOINT/INSTRUCTION/ALL (console_clear.c's case 553), printing each
 // cleared opcode followed by a count summary, matching the C source.
 func (d *Debugger) ClearAllInstructionBreakpoints() error {
-	if err := d.Console.RequireInit(); err != nil {
+	if err := d.Machine.RequireInit(); err != nil {
 		return err
 	}
 
 	insts := d.instructionBreakpointsInOrder()
 	if len(insts) == 0 {
-		d.Console.Printf("No instruction breakpoints were set.\n")
+		d.Machine.Printf("No instruction breakpoints were set.\n")
 
 		return nil
 	}
 
 	for _, inst := range insts {
-		d.Console.Printf("    %s %s\n", opcodeString(inst.Opcode), inst.Name)
+		d.Machine.Printf("    %s %s\n", opcodeString(inst.Opcode), inst.Name)
 	}
 
-	d.Console.Printf("Cleared %d instruction breakpoint%s\n", len(insts), pluralS(len(insts)))
+	d.Machine.Printf("Cleared %d instruction breakpoint%s\n", len(insts), pluralS(len(insts)))
 
 	d.InstructionBreakpoints = nil
 
@@ -154,22 +154,22 @@ func (d *Debugger) ClearAllInstructionBreakpoints() error {
 // (console_show.c's case 412, show_break_instr), matching its per-opcode
 // listing plus count summary.
 func (d *Debugger) ShowInstructionBreakpoints() error {
-	if err := d.Console.RequireInit(); err != nil {
+	if err := d.Machine.RequireInit(); err != nil {
 		return err
 	}
 
 	insts := d.instructionBreakpointsInOrder()
 	if len(insts) == 0 {
-		d.Console.Printf("No instruction breakpoints set\n")
+		d.Machine.Printf("No instruction breakpoints set\n")
 
 		return nil
 	}
 
 	for _, inst := range insts {
-		d.Console.Printf("    %s  %s\n", opcodeString(inst.Opcode), inst.Name)
+		d.Machine.Printf("    %s  %s\n", opcodeString(inst.Opcode), inst.Name)
 	}
 
-	d.Console.Printf("%d instruction breakpoint%s set\n", len(insts), pluralS(len(insts)))
+	d.Machine.Printf("%d instruction breakpoint%s set\n", len(insts), pluralS(len(insts)))
 
 	return nil
 }
@@ -191,7 +191,7 @@ func (d *Debugger) instructionBreakpointHit() bool {
 		return false
 	}
 
-	inst, err := d.Console.Engine.PeekInstruction()
+	inst, err := d.Machine.Engine.PeekInstruction()
 	if err != nil || inst == nil {
 		return false
 	}

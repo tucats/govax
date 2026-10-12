@@ -44,8 +44,8 @@ func (d *Dispatcher) bindProcess() {
 
 // setProcess is SET PROCESS spec.
 func (d *Debugger) setProcess(spec string) error {
-	c := d.Console
-	if c.RTL == nil {
+	c := d.Machine
+	if c.ProcessOne() == nil {
 		return vmserrors.New(vmserrors.CLI_NEEDRTL, "SET PROCESS")
 	}
 
@@ -60,7 +60,7 @@ func (d *Debugger) setProcess(spec string) error {
 // findProcess is the process spec names: process 1 for "", a PID in
 // hexadecimal, or a name in process 1's group.
 func (d *Debugger) findProcess(spec string) (*corevms.Environment, error) {
-	sys := d.Console.RTL
+	sys := d.Machine.ProcessOne()
 
 	if spec == "" {
 		return sys, nil
@@ -90,12 +90,12 @@ func (d *Debugger) findProcess(spec string) (*corevms.Environment, error) {
 // The PC is the CPU's for the visible process and the one saved in its
 // hardware PCB for each of the others.
 func (d *Debugger) showProcess() error {
-	c := d.Console
-	if c.RTL == nil {
+	c := d.Machine
+	if c.ProcessOne() == nil {
 		return vmserrors.New(vmserrors.CLI_NEEDRTL, "SHOW PROCESS")
 	}
 
-	sys := c.RTL.System
+	sys := c.ProcessOne().System
 	current := sys.Current()
 
 	c.Printf("  Pid    Process Name    State  PC\n")

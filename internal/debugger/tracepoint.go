@@ -76,7 +76,7 @@ func (d *Debugger) traceHit(pc uint32) {
 	}
 
 	for _, tp := range fired {
-		d.Console.Printf("%s\n", d.traceMessage(tp, pc))
+		d.Machine.Printf("%s\n", d.traceMessage(tp, pc))
 		d.showSource(pc)
 
 		d.runCommands(tp.Do)
@@ -92,12 +92,12 @@ func (d *Debugger) traceMessage(tp *Breakpoint, pc uint32) string {
 // showTrace implements SHOW TRACE: each tracepoint in the layout of SHOW
 // BREAK, or the message that none are set.
 func (d *Debugger) showTrace() error {
-	if err := d.Console.RequireInit(); err != nil {
+	if err := d.Machine.RequireInit(); err != nil {
 		return err
 	}
 
 	if len(d.Tracepoints) == 0 {
-		d.Console.Printf("%%%s\n", vmserrors.New(vmserrors.DBG_NOTRACES))
+		d.Machine.Printf("%%%s\n", vmserrors.New(vmserrors.DBG_NOTRACES))
 
 		return nil
 	}
@@ -114,7 +114,7 @@ func (d *Debugger) showTrace() error {
 // all of them (/ALL). Cancelling nothing that was set is %DEBUG-I-NOTRACES
 // (unconfirmed: the probe cancelled only what was set).
 func (d *Debugger) cancelTrace(r *dcl.Result) error {
-	if err := d.Console.RequireInit(); err != nil {
+	if err := d.Machine.RequireInit(); err != nil {
 		return err
 	}
 
@@ -141,7 +141,7 @@ func (d *Debugger) cancelTrace(r *dcl.Result) error {
 	}
 
 	if len(d.Tracepoints) == before {
-		d.Console.Printf("%%%s\n", vmserrors.New(vmserrors.DBG_NOTRACES))
+		d.Machine.Printf("%%%s\n", vmserrors.New(vmserrors.DBG_NOTRACES))
 	}
 
 	return nil

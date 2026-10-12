@@ -49,9 +49,9 @@ func (d *Dispatcher) bindProgram() {
 	g.Bind("SHOW_SYMBOL", func(id int64, r *dcl.Result) error {
 		switch {
 		case r.Present("ALL"):
-			return dbg.Console.ShowSymbols(r.String("PATTERN"))
+			return dbg.Machine.ShowSymbols(r.String("PATTERN"))
 		case r.Present("SYSTEM"):
-			return dbg.Console.ShowSymbolsSystem(r.String("PATTERN"))
+			return dbg.Machine.ShowSymbolsSystem(r.String("PATTERN"))
 		}
 
 		return dbg.showSymbol(r.String("PATTERN"), r.Present("ADDRESS"), r.Present("TYPE"))
@@ -66,7 +66,7 @@ func (d *Dispatcher) bindProgram() {
 func (d *Debugger) allModules() []*dbgsym.Module {
 	var out []*dbgsym.Module
 
-	for _, p := range d.Console.DebugPrograms() {
+	for _, p := range d.Machine.DebugPrograms() {
 		out = append(out, p.Modules...)
 	}
 
@@ -81,8 +81,8 @@ func (d *Debugger) allModules() []*dbgsym.Module {
 func (d *Debugger) seedModules() {
 	d.symbolsSet = map[*dbgsym.Module]bool{}
 
-	if p := d.Console.DebugProgramAt(d.Console.CPU.GPR(vax.PC)); p != nil {
-		if m, ok := p.ModuleAt(d.Console.CPU.GPR(vax.PC)); ok {
+	if p := d.Machine.DebugProgramAt(d.Machine.CPU.GPR(vax.PC)); p != nil {
+		if m, ok := p.ModuleAt(d.Machine.CPU.GPR(vax.PC)); ok {
 			d.symbolsSet[m] = true
 
 			return
@@ -131,7 +131,7 @@ func yesNo(b bool) string {
 // /FULL is govax's own: it adds, below each image with symbols, how many
 // modules and routines they describe.
 func (d *Debugger) showImage(full bool) error {
-	c := d.Console
+	c := d.Machine
 
 	if err := c.RequireInit(); err != nil {
 		return err
@@ -184,7 +184,7 @@ func (d *Debugger) showImage(full bool) error {
 // As in SHOW IMAGE, "bytes allocated" is govax's figure (the size of the
 // set modules' records), since VMS's counts its own memory.
 func (d *Debugger) showModule() error {
-	c := d.Console
+	c := d.Machine
 
 	if err := c.RequireInit(); err != nil {
 		return err
@@ -229,7 +229,7 @@ func (d *Debugger) showModule() error {
 // modules as having their symbols set. A name no module has is
 // %DEBUG-E-NOSUCHMODULE (govax's wording).
 func (d *Debugger) setModule(list string, all bool) error {
-	if err := d.Console.RequireInit(); err != nil {
+	if err := d.Machine.RequireInit(); err != nil {
 		return err
 	}
 
@@ -287,7 +287,7 @@ func (d *Debugger) moduleNamed(name string) *dbgsym.Module {
 // counter is in ("language: MACRO"). With the PC in no module the answer
 // is UNKNOWN (govax's choice; the probe had no such case).
 func (d *Debugger) showLanguage() error {
-	c := d.Console
+	c := d.Machine
 
 	if err := c.RequireInit(); err != nil {
 		return err
@@ -324,7 +324,7 @@ func (d *Debugger) showLanguage() error {
 // two activations are confirmed by the probe; the numbering past that
 // is unconfirmed.
 func (d *Debugger) showScope() error {
-	c := d.Console
+	c := d.Machine
 
 	if err := c.RequireInit(); err != nil {
 		return err
@@ -385,7 +385,7 @@ func (d *Debugger) showScope() error {
 // The order is VMS's: each module's routines by name, then its data and
 // labels by name, then its program sections in address order.
 func (d *Debugger) showSymbol(text string, address, typed bool) error {
-	c := d.Console
+	c := d.Machine
 
 	if err := c.RequireInit(); err != nil {
 		return err
@@ -509,7 +509,7 @@ func symbolMatches(pattern string, m *dbgsym.Module, s *symtab.Symbol) bool {
 
 // printSymbol prints one symbol of SHOW SYMBOL's listing.
 func (d *Debugger) printSymbol(m *dbgsym.Module, s *symtab.Symbol, address, typed bool) {
-	c := d.Console
+	c := d.Machine
 	datum := m.DatumNamed(s.Name)
 
 	var kind string
@@ -555,7 +555,7 @@ func (d *Debugger) printSymbol(m *dbgsym.Module, s *symtab.Symbol, address, type
 // atomic type (one number), a string descriptor, or an array descriptor
 // and its cell type on a second line.
 func (d *Debugger) printType(datum *dbgsym.Datum, symbolSize uint32) {
-	c := d.Console
+	c := d.Machine
 
 	switch {
 	case datum.IsText():

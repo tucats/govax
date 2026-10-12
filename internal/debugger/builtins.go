@@ -63,11 +63,11 @@ func (d *Debugger) currentLocation() examineState {
 		return d.examined
 	}
 
-	return examineState{addr: d.Console.DepositAddr, size: defaultSize, set: true}
+	return examineState{addr: d.Machine.DepositAddr, size: defaultSize, set: true}
 }
 
 // builtinSymbol is the console evaluator's hook for the built-in symbols
-// (console.Console.DebugBuiltins). ok is false for a name that isn't one.
+// (machine.Machine.DebugBuiltins). ok is false for a name that isn't one.
 func (d *Debugger) builtinSymbol(name string) (uint32, bool, error) {
 	cur := d.currentLocation()
 
@@ -124,7 +124,7 @@ func (d *Debugger) exceptionString(text string) (value string, ok bool, err erro
 		return "", true, vmserrors.New(vmserrors.DBG_NOEXC)
 	}
 
-	facility, ident := messageParts(d.Console.StatusText(d.exception.Condition))
+	facility, ident := messageParts(d.Machine.StatusText(d.exception.Condition))
 	if name == "%EXC_NAME" {
 		return ident, true, nil
 	}

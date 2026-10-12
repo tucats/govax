@@ -210,7 +210,7 @@ func (d *Debugger) ShowStepMode() error {
 		calls = "to return"
 	}
 
-	d.Console.Printf("step type: %s, %s, by %s,\n           %s\n", source, silent, unit, calls)
+	d.Machine.Printf("step type: %s, %s, by %s,\n           %s\n", source, silent, unit, calls)
 
 	return nil
 }
@@ -293,7 +293,7 @@ func (d *Debugger) endStep(bp *Breakpoint) {
 // if a step ends or is interrupted by anything but its own completion
 // (a break, an exception, the program ending).
 func (d *Debugger) stepRun(startAddr *uint32, req stepRequest) (runOutcome, error) {
-	c := d.Console
+	c := d.Machine
 
 	if startAddr != nil {
 		c.CPU.SetGPR(vax.PC, *startAddr)
@@ -363,7 +363,7 @@ func (d *Debugger) stepOnce(req stepRequest) (outcome runOutcome, completed bool
 // SET DEBUG command to turn on USER mode stepping if you need to step into
 // KERNEL mode, etc.
 func (d *Debugger) stepUnit(req stepRequest) (runOutcome, bool, error) {
-	c := d.Console
+	c := d.Machine
 
 	// Stepping by line starts from code that has a line-number table; if
 	// the step leaves such code (into a routine of the run-time library,
@@ -416,7 +416,7 @@ func (d *Debugger) stepUnit(req stepRequest) (runOutcome, bool, error) {
 // outcome and err are the run's result and the caller returns them as they
 // are.
 func (d *Debugger) stepOne() (outcome runOutcome, done bool, err error) {
-	c := d.Console
+	c := d.Machine
 
 	if d.returnDue() {
 		return runStopped, true, nil
@@ -467,7 +467,7 @@ func (d *Debugger) stepToClass(req stepRequest) (runOutcome, bool, error) {
 	}
 
 	bp := d.addStepBreakpoint(&Breakpoint{Kind: kind})
-	c := d.Console
+	c := d.Machine
 
 	outcome, err := d.runLoop(true, func(pc uint32) func() { return c.TraceStep(pc, false) })
 
@@ -497,7 +497,7 @@ func (d *Debugger) stepToClass(req stepRequest) (runOutcome, bool, error) {
 // A second STEP/RETURN replaces a pending one (unconfirmed). Until it fires
 // the program runs as GO does, tracing per Console.Trace.
 func (d *Debugger) stepReturn(req stepRequest) (runOutcome, bool, error) {
-	c := d.Console
+	c := d.Machine
 
 	if c.CPU.GPR(vax.FP) == 0 || c.CPU.GPR(vax.AP) == 0 {
 		return runEnded, false, vmserrors.New(vmserrors.CLI_NOFRAMES)
@@ -533,7 +533,7 @@ func (d *Debugger) returnDue() bool {
 		return false
 	}
 
-	c := d.Console
+	c := d.Machine
 	fp := c.CPU.GPR(vax.FP)
 
 	// The stack grows toward lower addresses, so a frame above the current
@@ -577,7 +577,7 @@ func (d *Debugger) reportStep(req stepRequest, pc uint32) {
 		return
 	}
 
-	c := d.Console
+	c := d.Machine
 
 	if name, ok := c.EnteredRoutine(pc); ok {
 		c.Printf("stepped to routine %s\n", name)

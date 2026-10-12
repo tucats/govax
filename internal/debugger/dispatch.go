@@ -48,7 +48,7 @@ func (d *Dispatcher) bind() {
 
 		// The console's prompt is process 1's (docs/PHASE-44.md,
 		// subtask 9).
-		return d.Debugger.Console.ReturnToProcessOne()
+		return d.Debugger.Machine.ReturnToProcessOne()
 	}
 
 	d.bindBreak()
@@ -69,7 +69,9 @@ func (d *Dispatcher) bind() {
 	g.Bind("HELP", func(id int64, r *dcl.Result) error {
 		words := strings.Fields(strings.ReplaceAll(r.String("TOPIC"), "/", " /"))
 
-		return d.Debugger.Console.Help(d.Help, words)
+		d.Help.Show(d.Debugger.Machine.Hooks.Output(), words)
+
+		return nil
 	})
 
 	// GO, CALL, and STEP run the program. When the session is already
@@ -84,7 +86,7 @@ func (d *Dispatcher) bind() {
 	})
 
 	g.Bind("CALL", func(id int64, r *dcl.Result) error {
-		addr, args, err := d.Debugger.Console.ParseCall(r.String("ROUTINE"), r.String("ARGUMENTS"))
+		addr, args, err := d.Debugger.Machine.ParseCall(r.String("ROUTINE"), r.String("ARGUMENTS"))
 		if err != nil {
 			return err
 		}
@@ -105,14 +107,14 @@ func (d *Dispatcher) bind() {
 	// them ends the session (EXIT), the lines after it are console
 	// commands, as they are when a script is fed to the console.
 	g.Bind("INCLUDE", func(id int64, r *dcl.Result) error {
-		c := d.Debugger.Console
+		front := d.Debugger.Console
 
 		dispatch := d.Dispatch
-		if c.Dispatcher != nil {
-			dispatch = c.Dispatcher.Dispatch
+		if console := front.ConsoleDispatch(); console != nil {
+			dispatch = console
 		}
 
-		return c.RunDebuggerProcedure(r.String("FILE"), dispatch)
+		return front.RunDebuggerProcedure(r.String("FILE"), dispatch)
 	})
 }
 
@@ -182,10 +184,10 @@ func (d *Dispatcher) parseError(line string, err error) error {
 	}
 
 	syntax := vmserrors.New(vmserrors.DBG_SYNTAX, word)
-	c := d.Debugger.Console
+	c := d.Debugger.Machine
 
 	// Only an unknown *verb* can be a console command.
-	if isVerb && c.Dispatcher != nil && c.Dispatcher.Grammar.HasVerb(firstWord(line)) {
+	if isVerb && d.Debugger.Console.IsConsoleVerb(firstWord(line)) {
 		c.Printf("%%%s\n", syntax)
 		c.Printf("%%%s\n", vmserrors.New(vmserrors.DBG_CONSOLECOMMAND, strings.ToUpper(firstWord(line))))
 
@@ -329,7 +331,7 @@ func lastCallMode(line string) string {
 // grammar is current). A file that ends with an entry address (.END
 // name) is called, as the console's ASM did.
 func (d *Dispatcher) asmCommand(id int64, r *dcl.Result) error {
-	c := d.Debugger.Console
+	c := d.Debugger.Machine
 
 	if !r.Present("FILE") {
 		return c.AssembleBegin()

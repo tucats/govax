@@ -226,17 +226,7 @@ func (c *Console) ShowRegions() error {
 		return err
 	}
 
-	names := [3]string{"P0", "P1", "S0"}
-
-	c.Printf("REGION LIMITS:\n")
-
-	for i, name := range names {
-		c.Printf("\t%s   %08X\n", name, c.RTL.RegionSize[i])
-	}
-
-	c.Printf("\n")
-
-	return nil
+	return c.ShowRegionsOf(c.RTL)
 }
 
 // StartDebugger is the console's DEBUG command: it starts a debugger
@@ -311,4 +301,26 @@ func (c *Console) StopProcess(name, pid string) error {
 	c.RTL.DeleteNow(env)
 
 	return c.ReturnToProcessOne()
+}
+
+// The console is internal/debugger's Console: the machine it debugs, and
+// the console's command line.
+
+// DebugMachine is the machine the debugger works on.
+func (c *Console) DebugMachine() *machine.Machine { return c.Machine }
+
+// ConsoleDispatch is the console's Dispatcher.Dispatch, which routes a
+// line to the debugger's grammar or the console's; nil before there is a
+// Dispatcher.
+func (c *Console) ConsoleDispatch() func(line string) error {
+	if c.Dispatcher == nil {
+		return nil
+	}
+
+	return c.Dispatcher.Dispatch
+}
+
+// IsConsoleVerb reports whether word is a verb of the console's grammar.
+func (c *Console) IsConsoleVerb(word string) bool {
+	return c.Dispatcher != nil && c.Dispatcher.Grammar.HasVerb(word)
 }

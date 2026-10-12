@@ -406,3 +406,43 @@ package move is a plain import-path rewrite.
   they reach the few unexported names they used through exports
   (`PagePrompt`, `LibrarySetting`, `TerminalSize`, `LinkSources`,
   `HostLibraryDir`, `JoinLines`).
+- **2026-10-12 — Stage 5: `internal/machine`.** First, in place:
+  `NewMachine` builds a `Machine` that works on its own, with process
+  1's logical names and hooks of its own, and `Console.New` builds on
+  it. The machine became the engine's `cpu.SystemServices` itself, so
+  the `Services` field is gone. Its console selectors reach the
+  terminal input, XFC$CONSOLE_CMD, quit, and Ctrl/Y through four more
+  hooks. One slip showed why that matters: the engine finds
+  `cpu.AttentionHandler` by a type assertion, which the compiler
+  doesn't check, and Ctrl/C stopped reaching DCL until the machine had
+  a `HandleAttention` hook. `services.go` now asserts all four engine
+  interfaces at compile time. `rf` renamed all 198 receivers `c` to `m`
+  in one script (two methods had a local `m` and were done by hand
+  first). A `go/types` tool listed every unexported machine member
+  used from outside the moving files. The non-test uses were exported
+  (`ActivateCreatedImage`, `EnsureShims`, `RunningProcess`,
+  `EncodeCalls`, `ShimTable`, ...) or given accessors (`ProcessOne`,
+  `ProcessOneLogicals`, `KernelPlaced`, `TakeLimitStop`, `P1Stub`,
+  `StoreBytesIn`). The DCL and the console keep their own one-line digit
+  tests. Then 31 files moved with `git mv`. The machine's unit tests
+  moved too, with machine-level helpers (`machine/helpers_test.go`:
+  `newTestMachine`, `newBootableMachine`, ...): eight files whole, and
+  single test functions from `run_test.go` and `shared_test.go`. The
+  console's tests that boot through vax.init, dispatch commands, or
+  use the console's test fixtures stayed. They reach the machine
+  through a small exported surface: `ImageState` (with `ImageProcess`
+  and its `Symbol`), RUN's steps (`ActivateImage`,
+  `BuildImageInitDriver`, `FindMainICB`, `ResetICBList`, `ReadImage`,
+  `ImageRundown`), `OtherImageCount`, `SetImageActive`, `AsmSession`,
+  `S0Free`, `RunPlain`, and `SchedulerSetting`/`QuantumSetting`, plus
+  console-side test helpers over `ReadBytes`/`WriteBytes`. **The
+  debugger** now holds a `*machine.Machine`, not a console. What it
+  needs of the console (the console's routing for `@file`'s lines,
+  whether a word is a console verb, running a debugger procedure) is
+  the `debugger.Console` interface, which `*console.Console`
+  implements. So `debugger.Install` still takes the console, and its
+  non-test code imports `internal/console` no more. HELP writes the
+  topic to the machine's output, and SHOW REGIONS is
+  `Machine.ShowRegionsOf(env)`: process 1's at DBG>, and the DCL's own
+  process in the console's SHOW REGIONS. `machine` imports only lower
+  packages.

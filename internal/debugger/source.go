@@ -55,12 +55,12 @@ func (d *Debugger) showSource(pc uint32) {
 		d.shown.pc, d.shown.ok = pc, true
 	}
 
-	n, text, ok := d.Console.SourceLine(pc)
+	n, text, ok := d.Machine.SourceLine(pc)
 	if !ok {
 		return
 	}
 
-	d.Console.Printf("%s", formatSource(n, text))
+	d.Machine.Printf("%s", formatSource(n, text))
 }
 
 // formatSource lays out source line n, whose text is text, as the debugger
@@ -133,24 +133,24 @@ func (d *Debugger) SetSource(list string) error {
 		return vmserrors.New(vmserrors.CLI_MISSINGPARAMETER, "directories")
 	}
 
-	d.Console.SetSourceDirs(dirs)
+	d.Machine.SetSourceDirs(dirs)
 
 	return nil
 }
 
 // ShowSource implements SHOW SOURCE: the directory search list.
 func (d *Debugger) ShowSource() error {
-	dirs := d.Console.SourceDirs()
+	dirs := d.Machine.SourceDirs()
 	if len(dirs) == 0 {
-		d.Console.Printf("%%%s\n", vmserrors.New(vmserrors.DBG_NOSOURCEDIR))
+		d.Machine.Printf("%%%s\n", vmserrors.New(vmserrors.DBG_NOSOURCEDIR))
 
 		return nil
 	}
 
-	d.Console.Printf("source directory search list for all modules:\n")
+	d.Machine.Printf("source directory search list for all modules:\n")
 
 	for _, dir := range dirs {
-		d.Console.Printf("    %s\n", dir)
+		d.Machine.Printf("    %s\n", dir)
 	}
 
 	return nil
@@ -163,7 +163,7 @@ func (d *Dispatcher) bindSource() {
 	})
 	d.Grammar.Bind("SHOW_SOURCE", func(id int64, r *dcl.Result) error { return d.Debugger.ShowSource() })
 	d.Grammar.Bind("CANCEL_SOURCE", func(id int64, r *dcl.Result) error {
-		d.Debugger.Console.SetSourceDirs(nil)
+		d.Debugger.Machine.SetSourceDirs(nil)
 
 		return nil
 	})

@@ -67,7 +67,7 @@ func parseRadix(word string) int {
 // debugger's input radix. A number with no prefix (^D, ^X, ^O, ^B) is read
 // in it, so "SET RADIX DECIMAL" makes "EXAMINE 100" decimal.
 func (d *Debugger) evalWhole(text string) (uint32, error) {
-	return d.Console.EvalWholeIn(d.inputRadix, text)
+	return d.Machine.EvalWholeIn(d.inputRadix, text)
 }
 
 // symbolRadix is the radix the offsets in a symbolic name are written in
@@ -105,7 +105,7 @@ func (d *Dispatcher) bindExamine() {
 func (d *Dispatcher) examine(r *dcl.Result) error {
 	dbg := d.Debugger
 
-	if err := dbg.Console.RequireInit(); err != nil {
+	if err := dbg.Machine.RequireInit(); err != nil {
 		return err
 	}
 
@@ -139,7 +139,7 @@ func (d *Dispatcher) examine(r *dcl.Result) error {
 	locations := strings.TrimSpace(r.String("LOCATION"))
 	if locations == "" {
 		// With no location, the instruction at the current location.
-		return dbg.Console.DisassembleWith(dbg.Console.DepositAddr, dbg.Console.DepositAddr, opts)
+		return dbg.Machine.DisassembleWith(dbg.Machine.DepositAddr, dbg.Machine.DepositAddr, opts)
 	}
 
 	items, err := splitList(locations)
@@ -171,7 +171,7 @@ func (d *Dispatcher) examine(r *dcl.Result) error {
 		// instruction by that line, as the debugger does.
 		opts.StartLine = strings.Contains(strings.ToUpper(start), "%LINE")
 
-		if err := dbg.Console.DisassembleWith(first, last, opts); err != nil {
+		if err := dbg.Machine.DisassembleWith(first, last, opts); err != nil {
 			return err
 		}
 	}

@@ -3,7 +3,6 @@ package debugger
 import (
 	"strings"
 
-	"github.com/tucats/govax/internal/console"
 	"github.com/tucats/govax/internal/cpu"
 	"github.com/tucats/govax/internal/dbgsym"
 	"github.com/tucats/govax/internal/dcl"
@@ -23,9 +22,12 @@ const Prompt = "DBG> "
 // Subtasks of docs/PHASE-42.md move the rest of the debugging state here
 // (the breakpoints, the step mode, the radix) as they move the commands.
 type Debugger struct {
-	// Console is the console whose machine this debugger works on. Its
-	// output stream is the debugger's too.
-	Console *console.Console
+	// Machine is the machine this debugger works on. Its output (the
+	// console's) is the debugger's too.
+	Machine *machine.Machine
+
+	// Console is the console the debugger is installed in.
+	Console Console
 
 	// Dispatcher parses and runs the debugger's commands.
 	Dispatcher *Dispatcher
@@ -148,12 +150,34 @@ type Debugger struct {
 	active bool
 }
 
-// New returns a debugger for c, with its commands bound to grammar g
+// Console is what the debugger needs of the console it is installed in
+// (internal/console's Console): the machine it debugs, and the console's
+// command line, for @file's lines and for naming a console command typed
+// at DBG>.
+type Console interface {
+	// DebugMachine is the machine the debugger works on.
+	DebugMachine() *machine.Machine
+
+	// ConsoleDispatch is the console's routing of a command line to
+	// whichever grammar is current (the debugger's, or the console's once
+	// a line ends the session), or nil when the console has none.
+	ConsoleDispatch() func(line string) error
+
+	// IsConsoleVerb reports whether word is one of the console's verbs.
+	IsConsoleVerb(word string) bool
+
+	// RunDebuggerProcedure runs a debugger command procedure (@file),
+	// each line through dispatch.
+	RunDebuggerProcedure(file string, dispatch func(string) error) error
+}
+
+// New returns a debugger for the console c's machine, with its commands bound to grammar g
 // (parsed from debug.dcl) and its HELP command reading help (parsed from
 // debug.help; nil is allowed, and HELP then says there is none).
-func New(c *console.Console, g *dcl.Grammar, help *help.File) *Debugger {
+func New(front Console, g *dcl.Grammar, help *help.File) *Debugger {
+	c := front.DebugMachine()
 	d := &Debugger{
-		Console: c, StepMode: StepOver,
+		Machine: c, Console: front, StepMode: StepOver,
 		symbolic: machine.SymbolicDefault(), inputRadix: 16, outputRadix: 16,
 		modes: defaultDisplayModes(),
 	}
@@ -165,12 +189,12 @@ func New(c *console.Console, g *dcl.Grammar, help *help.File) *Debugger {
 	return d
 }
 
-// Install creates a debugger for c, as New does, and makes it the one
+// Install creates a debugger for front, as New does, and makes it the one
 // the console starts. cmd/govax calls it once at start-up. The debugger
 // is returned for the caller that wants it (a test).
-func Install(c *console.Console, g *dcl.Grammar, help *help.File) *Debugger {
-	d := New(c, g, help)
-	c.Debugger = d
+func Install(front Console, g *dcl.Grammar, help *help.File) *Debugger {
+	d := New(front, g, help)
+	d.Machine.Debugger = d
 
 	return d
 }
@@ -205,7 +229,7 @@ func (d *Debugger) Start(a machine.Activation) error {
 	// runs process 1 (docs/PHASE-44.md, subtask 9). A nested run is in
 	// whatever process its outer run is.
 	if !nested {
-		if err := d.Console.ReturnToProcessOne(); err != nil {
+		if err := d.Machine.ReturnToProcessOne(); err != nil {
 			return err
 		}
 	}

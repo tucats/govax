@@ -164,7 +164,7 @@ func (d *Debugger) setTrace(r *dcl.Result) error { return d.setPoint(r, true) }
 func (d *Debugger) setPoint(r *dcl.Result, trace bool) error {
 	list := d.pointList(trace)
 
-	if err := d.Console.RequireInit(); err != nil {
+	if err := d.Machine.RequireInit(); err != nil {
 		return err
 	}
 
@@ -240,9 +240,9 @@ func (d *Debugger) setAddressBreaks(list *[]*Breakpoint, proto Breakpoint, targe
 		bp.Kind = BreakAddress
 		bp.Addr = addr
 
-		if d.Console.RoutineEntry(addr) {
+		if d.Machine.RoutineEntry(addr) {
 			bp.Routine = true
-			bp.Name = d.Console.LocationText(addr)
+			bp.Name = d.Machine.LocationText(addr)
 			bp.Addr = addr + 2
 		}
 
@@ -292,14 +292,14 @@ func (d *Debugger) setReturnBreak(list *[]*Breakpoint, proto Breakpoint, target 
 		return err
 	}
 
-	start, size, ok := d.Console.RoutineExtent(addr)
+	start, size, ok := d.Machine.RoutineExtent(addr)
 	if !ok {
 		return vmserrors.New(vmserrors.DBG_SYNTAX, strings.ToUpper(target))
 	}
 
 	proto.Kind = BreakReturn
 	proto.Start, proto.Size = start, size
-	proto.Name = d.Console.LocationText(start)
+	proto.Name = d.Machine.LocationText(start)
 
 	d.replaceClassBreak(list, &proto)
 
@@ -358,11 +358,11 @@ func (d *Debugger) replaceClassBreak(list *[]*Breakpoint, bp *Breakpoint) {
 // they were set (the VMS debugger's own order isn't one the probe could
 // explain, so govax's is unconfirmed), then govax's fault breakpoints.
 func (d *Debugger) ShowBreakpoints() error {
-	if err := d.Console.RequireInit(); err != nil {
+	if err := d.Machine.RequireInit(); err != nil {
 		return err
 	}
 
-	c := d.Console
+	c := d.Machine
 	faults := c.Engine.FaultBreakpoints()
 	shown := 0
 
@@ -395,7 +395,7 @@ func (d *Debugger) ShowBreakpoints() error {
 // is "breakpoint" or "tracepoint"), the opcodes of an instruction class, and
 // the /AFTER, WHEN, and DO clauses.
 func (d *Debugger) showPoint(bp *Breakpoint, word string) {
-	c := d.Console
+	c := d.Machine
 
 	c.Printf("%s\n", d.breakDescription(bp, word))
 
@@ -450,7 +450,7 @@ func (d *Debugger) breakDescription(bp *Breakpoint, word string) string {
 		if bp.Routine {
 			text = word + " at routine " + bp.Name
 		} else {
-			text = word + " at " + d.Console.LocationText(bp.Addr)
+			text = word + " at " + d.Machine.LocationText(bp.Addr)
 		}
 	}
 
@@ -497,12 +497,12 @@ func opcodeLines(names []string) []string {
 // /EXCEPTION, /FAULT), or all of them (/ALL). Cancelling nothing that was
 // set is %DEBUG-I-NOBREAKS.
 func (d *Debugger) cancelBreak(r *dcl.Result) error {
-	if err := d.Console.RequireInit(); err != nil {
+	if err := d.Machine.RequireInit(); err != nil {
 		return err
 	}
 
 	before := len(d.Breakpoints)
-	faultsBefore := len(d.Console.Engine.FaultBreakpoints())
+	faultsBefore := len(d.Machine.Engine.FaultBreakpoints())
 	opcodesBefore := len(d.InstructionBreakpoints)
 
 	kind, err := class(r, "ALL")
@@ -515,7 +515,7 @@ func (d *Debugger) cancelBreak(r *dcl.Result) error {
 		// The debugger's own breakpoints stay: a STEP in progress needs
 		// its.
 		d.Breakpoints = slices.DeleteFunc(d.Breakpoints, func(bp *Breakpoint) bool { return !bp.Step && !bp.Quiet })
-		d.Console.Engine.ClearFaultBreakpoints()
+		d.Machine.Engine.ClearFaultBreakpoints()
 		d.InstructionBreakpoints = nil
 
 	case kind == faultTOKEN:
@@ -537,9 +537,9 @@ func (d *Debugger) cancelBreak(r *dcl.Result) error {
 	}
 
 	if len(d.Breakpoints) == before &&
-		len(d.Console.Engine.FaultBreakpoints()) == faultsBefore &&
+		len(d.Machine.Engine.FaultBreakpoints()) == faultsBefore &&
 		len(d.InstructionBreakpoints) == opcodesBefore {
-		d.Console.Printf("%%%s\n", vmserrors.New(vmserrors.DBG_NOBREAKS))
+		d.Machine.Printf("%%%s\n", vmserrors.New(vmserrors.DBG_NOBREAKS))
 	}
 
 	return nil
@@ -559,7 +559,7 @@ func (d *Debugger) cancelAddressBreaks(list *[]*Breakpoint, target string) error
 			return err
 		}
 
-		if d.Console.RoutineEntry(addr) {
+		if d.Machine.RoutineEntry(addr) {
 			addr += 2
 		}
 
@@ -617,7 +617,7 @@ func (d *Debugger) cancelReturnBreak(list *[]*Breakpoint, target string) error {
 		return err
 	}
 
-	start, _, _ := d.Console.RoutineExtent(addr)
+	start, _, _ := d.Machine.RoutineExtent(addr)
 
 	*list = slices.DeleteFunc(*list, func(bp *Breakpoint) bool {
 		return bp.Kind == BreakReturn && bp.Start == start

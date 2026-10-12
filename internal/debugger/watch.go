@@ -81,7 +81,7 @@ func (d *Dispatcher) bindWatch() {
 // Anything else (an address, a register-relative expression) is watched as a
 // longword, as EXAMINE shows it.
 func (d *Debugger) setWatch(r *dcl.Result) error {
-	if err := d.Console.RequireInit(); err != nil {
+	if err := d.Machine.RequireInit(); err != nil {
 		return err
 	}
 
@@ -138,7 +138,7 @@ func (d *Debugger) sizeWatch(wp *Watchpoint, addr uint32) {
 	wp.Addr, wp.Elem, wp.Count = addr, defaultSize, 1
 	wp.Name = d.locationName(addr)
 
-	prog := d.Console.DebugProgramAt(addr)
+	prog := d.Machine.DebugProgramAt(addr)
 	if prog == nil {
 		return
 	}
@@ -172,7 +172,7 @@ func (d *Debugger) sizeWatch(wp *Watchpoint, addr uint32) {
 
 // snapshot records what the watched memory holds now as the baseline.
 func (w *Watchpoint) snapshot(d *Debugger) {
-	if data, err := d.Console.ReadBytes(w.Addr, w.size()); err == nil {
+	if data, err := d.Machine.ReadBytes(w.Addr, w.size()); err == nil {
 		w.old = data
 	} else {
 		w.old = nil
@@ -197,7 +197,7 @@ func (d *Debugger) watchHit(pc uint32) bool {
 		return false
 	}
 
-	c := d.Console
+	c := d.Machine
 	stopped := false
 
 	// Work from a copy: a temporary watchpoint removes itself.
@@ -274,7 +274,7 @@ func (w *Watchpoint) changedItems(before, now []byte) []uint32 {
 //	break at DBGCMD\START\%LINE 44
 //	   44:         JSB     BUMP
 func (d *Debugger) reportWatch(wp *Watchpoint, item, pc uint32, before, now []byte) {
-	c := d.Console
+	c := d.Machine
 
 	name := wp.Name
 	if wp.Array {
@@ -307,12 +307,12 @@ func (d *Debugger) itemValue(data []byte, item, size uint32) string {
 // showWatch implements SHOW WATCH: each watchpoint, or the message that
 // none are set.
 func (d *Debugger) showWatch() error {
-	if err := d.Console.RequireInit(); err != nil {
+	if err := d.Machine.RequireInit(); err != nil {
 		return err
 	}
 
 	if len(d.Watchpoints) == 0 {
-		d.Console.Printf("%%%s\n", vmserrors.New(vmserrors.DBG_NOWATCHES))
+		d.Machine.Printf("%%%s\n", vmserrors.New(vmserrors.DBG_NOWATCHES))
 
 		return nil
 	}
@@ -328,18 +328,18 @@ func (d *Debugger) showWatch() error {
 			text += " [temporary]"
 		}
 
-		d.Console.Printf("%s\n", text)
+		d.Machine.Printf("%s\n", text)
 
 		if wp.After > 0 {
-			d.Console.Printf("   /after: %d\n", wp.After)
+			d.Machine.Printf("   /after: %d\n", wp.After)
 		}
 
 		if wp.When != "" {
-			d.Console.Printf("   when %s\n", wp.When)
+			d.Machine.Printf("   when %s\n", wp.When)
 		}
 
 		if wp.Do != "" {
-			d.Console.Printf("   do %s\n", wp.Do)
+			d.Machine.Printf("   do %s\n", wp.Do)
 		}
 	}
 
@@ -350,7 +350,7 @@ func (d *Debugger) showWatch() error {
 // Cancelling nothing that was set is %DEBUG-I-NOWATCHES (unconfirmed: the
 // probe cancelled only what was set).
 func (d *Debugger) cancelWatch(r *dcl.Result) error {
-	if err := d.Console.RequireInit(); err != nil {
+	if err := d.Machine.RequireInit(); err != nil {
 		return err
 	}
 
@@ -375,7 +375,7 @@ func (d *Debugger) cancelWatch(r *dcl.Result) error {
 	}
 
 	if len(d.Watchpoints) == before {
-		d.Console.Printf("%%%s\n", vmserrors.New(vmserrors.DBG_NOWATCHES))
+		d.Machine.Printf("%%%s\n", vmserrors.New(vmserrors.DBG_NOWATCHES))
 	}
 
 	return nil

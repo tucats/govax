@@ -124,9 +124,9 @@ func (d *Debugger) examineRadix(r *dcl.Result) int {
 // module and routine the PC is in (DBGCMD\FACT), or "" when it isn't in a
 // routine the debug symbols know.
 func (d *Debugger) registerScope() string {
-	pc := d.Console.CPU.GPR(vax.PC)
+	pc := d.Machine.CPU.GPR(vax.PC)
 
-	prog := d.Console.DebugProgramAt(pc)
+	prog := d.Machine.DebugProgramAt(pc)
 	if prog == nil {
 		return ""
 	}
@@ -147,11 +147,11 @@ func (d *Debugger) locationName(addr uint32) string {
 		return fmt.Sprintf("%08X", addr)
 	}
 
-	if prog := d.Console.DebugProgramAt(addr); prog != nil {
+	if prog := d.Machine.DebugProgramAt(addr); prog != nil {
 		// A routine's start is named by the routine, which the data
 		// symbols' nearest-label rule would otherwise miss (START is
 		// DBGDIS\START, not DBGDIS\NOLAB2+19C).
-		if _, isEntry := d.Console.EntryMaskText(addr); isEntry {
+		if _, isEntry := d.Machine.EntryMaskText(addr); isEntry {
 			if name, ok := prog.Symbolize(addr, d.symbolRadix()); ok {
 				return name
 			}
@@ -235,7 +235,7 @@ func (d *Debugger) examineItem(r *dcl.Result, item string) error {
 	switch item {
 	case "", ".", "^":
 		if !cur.set {
-			cur = examineState{addr: d.Console.DepositAddr, size: defaultSize, set: true}
+			cur = examineState{addr: d.Machine.DepositAddr, size: defaultSize, set: true}
 		}
 
 		switch item {
@@ -339,7 +339,7 @@ func (d *Debugger) asciiCount(text string) (n uint32, ok bool, err error) {
 // readValue reads a size-byte little-endian number (a VAX stores the
 // least significant byte first) at addr.
 func (d *Debugger) readValue(addr, size uint32) (uint64, error) {
-	data, err := d.Console.ReadBytes(addr, size)
+	data, err := d.Machine.ReadBytes(addr, size)
 	if err != nil {
 		return 0, err
 	}
@@ -359,7 +359,7 @@ func (d *Debugger) readValue(addr, size uint32) (uint64, error) {
 // than a longword takes the registers after it too (EXAMINE/D_FLOAT R0 is
 // R0 and R1, as the VAX keeps a D_floating value in a register pair).
 func (d *Debugger) examineRegister(r *dcl.Result, reg vax.Reg, name string, isPSL bool) error {
-	c := d.Console
+	c := d.Machine
 
 	label := "%" + name
 	if scope := d.registerScope(); scope != "" {
@@ -426,7 +426,7 @@ func (d *Debugger) registerBytes(reg vax.Reg, t dataType, verb string) ([]byte, 
 	data := make([]byte, 0, count*4)
 
 	for i := range count {
-		v := d.Console.CPU.GPR(reg + vax.Reg(i))
+		v := d.Machine.CPU.GPR(reg + vax.Reg(i))
 		data = append(data, byte(v), byte(v>>8), byte(v>>16), byte(v>>24))
 	}
 
@@ -443,7 +443,7 @@ func (d *Debugger) setRegisterBytes(reg vax.Reg, data []byte) error {
 	}
 
 	for i := range count {
-		v := d.Console.CPU.GPR(reg + vax.Reg(i))
+		v := d.Machine.CPU.GPR(reg + vax.Reg(i))
 
 		for b := range uint32(4) {
 			if at := i*4 + b; at < uint32(len(data)) {
@@ -451,7 +451,7 @@ func (d *Debugger) setRegisterBytes(reg vax.Reg, data []byte) error {
 			}
 		}
 
-		d.Console.CPU.SetGPR(reg+vax.Reg(i), v)
+		d.Machine.CPU.SetGPR(reg+vax.Reg(i), v)
 	}
 
 	return nil
@@ -510,7 +510,7 @@ func pslTable(psl uint32) string {
 // for an item of a range (start:end), which shows an array's single
 // element, not the whole array.
 func (d *Debugger) examineAt(r *dcl.Result, addr uint32, inRange bool) error {
-	c := d.Console
+	c := d.Machine
 	prog := c.DebugProgramAt(addr)
 
 	var datum *dbgsym.Datum
@@ -596,7 +596,7 @@ func (d *Debugger) commandType(r *dcl.Result) (dataType, bool, error) {
 // symbols' datum for addr, if any, which an /ASCII without a count takes
 // its length from.
 func (d *Debugger) examineTyped(addr uint32, t dataType, datum *dbgsym.Datum, radix int) error {
-	c := d.Console
+	c := d.Machine
 	name := tabPad(d.locationName(addr) + ":")
 
 	switch t.kind {
@@ -685,7 +685,7 @@ const maxASCIZ = 512
 // (ASCIZ), or where the descriptor at addr points (ASCID). size is how
 // many bytes at addr the string occupies (the descriptor's 8 for ASCID).
 func (d *Debugger) readCountedText(addr uint32, kind typeKind) (text []byte, size uint32, err error) {
-	c := d.Console
+	c := d.Machine
 
 	switch kind {
 	case typeASCIC:
@@ -740,7 +740,7 @@ func (d *Debugger) readCountedText(addr uint32, kind typeKind) (text []byte, siz
 // readDescriptor reads the string descriptor at addr: the length in its
 // first word, and the address of the text in its second longword.
 func (d *Debugger) readDescriptor(addr uint32) (length, pointer uint32, err error) {
-	header, err := d.Console.ReadBytes(addr, 8)
+	header, err := d.Machine.ReadBytes(addr, 8)
 	if err != nil {
 		return 0, 0, err
 	}
@@ -774,7 +774,7 @@ func printable(text []byte) string {
 //	    [0]:        00
 //	    [1]:        00
 func (d *Debugger) examineArray(r *dcl.Result, addr uint32, datum *dbgsym.Datum) error {
-	c := d.Console
+	c := d.Machine
 	bounds := datum.Descriptor.Bounds[0]
 	size := datum.ElementSize()
 	name := strings.SplitN(d.locationName(addr), "[", 2)[0]
@@ -808,7 +808,7 @@ func (d *Debugger) examineArray(r *dcl.Result, addr uint32, datum *dbgsym.Datum)
 // is), else one character. A byte that isn't a printable character is
 // shown as a period.
 func (d *Debugger) examineText(addr uint32, datum *dbgsym.Datum, count uint32, haveCount bool) error {
-	c := d.Console
+	c := d.Machine
 	name := d.locationName(addr)
 	start := addr
 
@@ -860,7 +860,7 @@ func (d *Debugger) examineText(addr uint32, datum *dbgsym.Datum, count uint32, h
 func (d *Dispatcher) evaluate(r *dcl.Result) error {
 	dbg := d.Debugger
 
-	if err := dbg.Console.RequireInit(); err != nil {
+	if err := dbg.Machine.RequireInit(); err != nil {
 		return err
 	}
 
@@ -869,13 +869,13 @@ func (d *Dispatcher) evaluate(r *dcl.Result) error {
 	// %EXC_NAME and %EXC_FACILITY are strings, shown in quotes.
 	if s, isString, err := dbg.exceptionString(text); isString || err != nil {
 		if err == nil {
-			dbg.Console.Printf("%s\n", quotedString(s))
+			dbg.Machine.Printf("%s\n", quotedString(s))
 		}
 
 		return err
 	}
 
-	value, err := dbg.Console.EvalWholeMode(dbg.inputRadix, text, !r.Present("ADDRESS"))
+	value, err := dbg.Machine.EvalWholeMode(dbg.inputRadix, text, !r.Present("ADDRESS"))
 	if err != nil {
 		return err
 	}
@@ -889,7 +889,7 @@ func (d *Dispatcher) evaluate(r *dcl.Result) error {
 	}
 
 	if r.Present("CONDITION_VALUE") {
-		dbg.Console.Printf("%s\n", dbg.Console.StatusText(value))
+		dbg.Machine.Printf("%s\n", dbg.Machine.StatusText(value))
 
 		return nil
 	}
@@ -903,7 +903,7 @@ func (d *Dispatcher) evaluate(r *dcl.Result) error {
 		out = "0" + out
 	}
 
-	dbg.Console.Printf("%s\n", out)
+	dbg.Machine.Printf("%s\n", out)
 
 	return nil
 }
@@ -923,7 +923,7 @@ func (d *Dispatcher) evaluate(r *dcl.Result) error {
 func (d *Dispatcher) symbolize(r *dcl.Result) error {
 	dbg := d.Debugger
 
-	if err := dbg.Console.RequireInit(); err != nil {
+	if err := dbg.Machine.RequireInit(); err != nil {
 		return err
 	}
 
@@ -932,18 +932,18 @@ func (d *Dispatcher) symbolize(r *dcl.Result) error {
 		return err
 	}
 
-	names, global := dbg.Console.DebugProgramAt(addr).SymbolizeNames(addr, dbg.symbolRadix())
+	names, global := dbg.Machine.DebugProgramAt(addr).SymbolizeNames(addr, dbg.symbolRadix())
 
 	// An address no module names gets only the heading, as does an
 	// address in no image (govax's choice; the probe has no such case).
-	dbg.Console.Printf("address %08X: \n", addr)
+	dbg.Machine.Printf("address %08X: \n", addr)
 
 	for _, name := range names {
-		dbg.Console.Printf("    %s\n", name)
+		dbg.Machine.Printf("    %s\n", name)
 	}
 
 	if global != "" {
-		dbg.Console.Printf("address %08X: (global)\n    %s\n", addr, global)
+		dbg.Machine.Printf("address %08X: (global)\n    %s\n", addr, global)
 	}
 
 	return nil
@@ -957,7 +957,7 @@ func (d *Dispatcher) symbolize(r *dcl.Result) error {
 // quotes.
 func (d *Dispatcher) deposit(r *dcl.Result) error {
 	dbg := d.Debugger
-	c := dbg.Console
+	c := dbg.Machine
 
 	if err := c.RequireInit(); err != nil {
 		return err
@@ -982,7 +982,7 @@ func (d *Dispatcher) deposit(r *dcl.Result) error {
 	// A register takes a longword, or the type given.
 	if reg, _, isPSL, isReg := registerOf(target); isReg && !isPSL {
 		if !typed {
-			v, err := dbg.Console.EvalWholeIn(dbg.inputRadix, value)
+			v, err := dbg.Machine.EvalWholeIn(dbg.inputRadix, value)
 			if err != nil {
 				return err
 			}
@@ -1058,7 +1058,7 @@ func (d *Dispatcher) asTyped(value string) string {
 // none: the type of the data a label there names (a string's, if the value
 // is one in quotes), else SET TYPE's, else a longword.
 func (d *Debugger) locationType(addr uint32, value string) dataType {
-	if prog := d.Console.DebugProgramAt(addr); prog != nil {
+	if prog := d.Machine.DebugProgramAt(addr); prog != nil {
 		if datum, _, found := prog.DatumAt(addr); found {
 			if datum.IsText() && quoted(value) {
 				return dataType{kind: typeSymbol, datum: datum}
@@ -1121,7 +1121,7 @@ func (d *Debugger) depositBytes(addr uint32, t dataType, value string) ([]byte, 
 		return d.parseFloatValue(t.float, value)
 
 	case typePacked:
-		v, err := d.Console.EvalWholeIn(d.inputRadix, value)
+		v, err := d.Machine.EvalWholeIn(d.inputRadix, value)
 		if err != nil {
 			return nil, err
 		}
@@ -1166,7 +1166,7 @@ func (d *Debugger) depositBytes(addr uint32, t dataType, value string) ([]byte, 
 		return fitText(unquote(value), length), nil
 
 	case typeDateTime:
-		v, ok := d.Console.RTL.ParseTime(unquote(value))
+		v, ok := d.Machine.ProcessOne().ParseTime(unquote(value))
 		if !ok {
 			return nil, vmserrors.New(vmserrors.DBG_INVTIME, strings.ToUpper(unquote(value)))
 		}
@@ -1189,7 +1189,7 @@ func (d *Debugger) depositBytes(addr uint32, t dataType, value string) ([]byte, 
 	// (a condition value, the PSL and PSW, a PTE).
 	size, _ := t.fixedSize()
 
-	v, err := d.Console.EvalWholeIn(d.inputRadix, value)
+	v, err := d.Machine.EvalWholeIn(d.inputRadix, value)
 	if err != nil {
 		return nil, err
 	}

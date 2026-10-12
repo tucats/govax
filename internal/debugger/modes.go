@@ -85,7 +85,7 @@ func accessMode(mode vax.AccessMode, interruptStack bool) func(*Debugger, string
 			return vmserrors.New(vmserrors.DBG_SYNTAX, "="+value)
 		}
 
-		return d.Console.SetAccessMode(mode, interruptStack)
+		return d.Machine.SetAccessMode(mode, interruptStack)
 	}
 }
 
@@ -258,7 +258,7 @@ func (d *Debugger) modesLine() string {
 // govax's access mode (the VMS debugger has no such line, so it comes
 // last, where a log comparison can set it aside).
 func (d *Debugger) ShowMode() error {
-	c := d.Console
+	c := d.Machine
 
 	c.Printf("%s\n", d.modesLine())
 
@@ -276,8 +276,8 @@ func (d *Debugger) ShowMode() error {
 // ShowRadix runs SHOW RADIX: the radix numbers are typed in and the one
 // they are shown in, in the VMS debugger's two lines.
 func (d *Debugger) ShowRadix() error {
-	d.Console.Printf("input radix : %s\n", radixWord(d.inputRadix))
-	d.Console.Printf("output radix: %s\n", radixWord(d.outputRadix))
+	d.Machine.Printf("input radix : %s\n", radixWord(d.inputRadix))
+	d.Machine.Printf("output radix: %s\n", radixWord(d.outputRadix))
 
 	return nil
 }

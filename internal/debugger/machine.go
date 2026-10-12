@@ -18,9 +18,8 @@ import (
 //
 // Most are govax's own (the VMS debugger has no SHOW PTE or SHOW SCB, for
 // example), and keep the syntax and output the console gave them, so each
-// handler here just asks the console, which still owns the code that
-// reads the machine (the Show*, Set*, and Clear* methods of
-// console.Console). What changes is only that numbers they take are read
+// handler here just asks the machine (the Show*, Set*, and Clear*
+// methods of machine.Machine, internal/machine). What changes is only that numbers they take are read
 // in the debugger's input radix (hexadecimal unless SET RADIX says
 // otherwise) rather than the console's.
 //
@@ -30,7 +29,7 @@ import (
 // bindMachine binds the machine-state SHOW, SET, and CANCEL commands.
 func (d *Dispatcher) bindMachine() {
 	g := d.Grammar
-	c := d.Debugger.Console
+	c := d.Debugger.Machine
 
 	// The SHOW commands that take nothing: each prints one table.
 	for name, show := range map[string]func() error{
@@ -42,7 +41,7 @@ func (d *Dispatcher) bindMachine() {
 		"SHOW_BASE":    c.ShowBase,
 		"SHOW_MEMORY":  c.ShowMemory,
 		"SHOW_TB":      c.ShowTB,
-		"SHOW_REGIONS": c.ShowRegions,
+		"SHOW_REGIONS": func() error { return c.ShowRegionsOf(c.ProcessOne()) },
 		"SHOW_SHIM":    c.ShowShim,
 		"SHOW_FAULT":   c.ShowFault,
 		"SHOW_MODE":    d.Debugger.ShowMode,
@@ -52,7 +51,7 @@ func (d *Dispatcher) bindMachine() {
 	}
 
 	g.Bind("SHOW_INSTRUCTIONS", func(id int64, r *dcl.Result) error {
-		return d.Debugger.Console.ShowInstructions(
+		return d.Debugger.Machine.ShowInstructions(
 			r.Present("MODES"), r.Present("PROFILE"), r.Present("UNIMPLEMENTED"), r.Present("ALL"),
 			r.String("OPCODE"),
 		)
@@ -191,7 +190,7 @@ func (d *Debugger) optionalNumber(text string) (uint32, error) {
 // debugger's table (the console draws it). With no frame to show, as
 // after the image has exited, it is %DEBUG-E-NOCALLS.
 func (d *Debugger) showCalls(countText string) error {
-	c := d.Console
+	c := d.Machine
 
 	if err := c.RequireInit(); err != nil {
 		return err
@@ -294,7 +293,7 @@ func (d *Dispatcher) setPTE(id int64, r *dcl.Result) error {
 				return err
 			}
 
-			if err := dbg.Console.SetPTE(a, field, v); err != nil {
+			if err := dbg.Machine.SetPTE(a, field, v); err != nil {
 				return err
 			}
 		}

@@ -18,16 +18,16 @@ import "github.com/tucats/govax/internal/cpu"
 // command-scope convenience, not an ISA-fidelity question). Setting an
 // already-armed code is a no-op, matching cpu.Engine.SetFaultBreakpoint.
 func (d *Debugger) AddFaultBreakpoint(codeExpr string) error {
-	if err := d.Console.RequireInit(); err != nil {
+	if err := d.Machine.RequireInit(); err != nil {
 		return err
 	}
 
-	code, _, err := d.Console.Evaluator().Eval(codeExpr)
+	code, _, err := d.Machine.Evaluator().Eval(codeExpr)
 	if err != nil {
 		return err
 	}
 
-	d.Console.Engine.SetFaultBreakpoint(cpu.Exception(code))
+	d.Machine.Engine.SetFaultBreakpoint(cpu.Exception(code))
 
 	return nil
 }
@@ -35,16 +35,16 @@ func (d *Debugger) AddFaultBreakpoint(codeExpr string) error {
 // RemoveFaultBreakpoint implements CLEAR BREAKPOINT/FAULT <code>, matching
 // console_clear.c's case 108.
 func (d *Debugger) RemoveFaultBreakpoint(codeExpr string) error {
-	if err := d.Console.RequireInit(); err != nil {
+	if err := d.Machine.RequireInit(); err != nil {
 		return err
 	}
 
-	code, _, err := d.Console.Evaluator().Eval(codeExpr)
+	code, _, err := d.Machine.Evaluator().Eval(codeExpr)
 	if err != nil {
 		return err
 	}
 
-	d.Console.Engine.RemoveFaultBreakpoint(cpu.Exception(code))
+	d.Machine.Engine.RemoveFaultBreakpoint(cpu.Exception(code))
 
 	return nil
 }
@@ -52,11 +52,11 @@ func (d *Debugger) RemoveFaultBreakpoint(codeExpr string) error {
 // ClearAllFaultBreakpoints implements CLEAR BREAKPOINT/FAULT/ALL, matching
 // console_clear.c's case 109.
 func (d *Debugger) ClearAllFaultBreakpoints() error {
-	if err := d.Console.RequireInit(); err != nil {
+	if err := d.Machine.RequireInit(); err != nil {
 		return err
 	}
 
-	d.Console.Engine.ClearFaultBreakpoints()
+	d.Machine.Engine.ClearFaultBreakpoints()
 
 	return nil
 }

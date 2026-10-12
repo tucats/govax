@@ -230,7 +230,7 @@ func (d *Debugger) symbolType(name string) (dataType, error) {
 		return dataType{}, err
 	}
 
-	if prog := d.Console.DebugProgramAt(addr); prog != nil {
+	if prog := d.Machine.DebugProgramAt(addr); prog != nil {
 		if datum, _, ok := prog.DatumAt(addr); ok {
 			return dataType{kind: typeSymbol, datum: datum, symbol: strings.ToUpper(name)}, nil
 		}
@@ -338,7 +338,7 @@ func (d *Debugger) parseTypeKeyword(text string) (dataType, error) {
 // typeCount reads the count of SET TYPE ASCII:n or PACKED:n, which the
 // manual says is decimal whatever the radix.
 func (d *Debugger) typeCount(text string) (uint32, error) {
-	return d.Console.EvalWholeIn(10, strings.TrimSpace(text))
+	return d.Machine.EvalWholeIn(10, strings.TrimSpace(text))
 }
 
 // uniqueKeyword finds the name word spells, or abbreviates uniquely.
@@ -597,7 +597,7 @@ func (d *Debugger) parseFloatValue(f vaxfloat.Format, text string) ([]byte, erro
 
 	v, err := vaxfloat.Parse(text)
 	if err != nil {
-		n, evalErr := d.Console.EvalWholeIn(d.inputRadix, text)
+		n, evalErr := d.Machine.EvalWholeIn(d.inputRadix, text)
 		if evalErr != nil {
 			return nil, evalErr
 		}
@@ -719,7 +719,7 @@ func (d *Debugger) fixedText(t dataType, data []byte, radix int) (text string, m
 		return strings.TrimLeft(text, " "), false
 
 	case typeCondition:
-		return d.Console.StatusText(uint32(littleEndian(data).Uint64())), false
+		return d.Machine.StatusText(uint32(littleEndian(data).Uint64())), false
 
 	case typePSL:
 		return pslTable(uint32(littleEndian(data).Uint64())), true
@@ -728,7 +728,7 @@ func (d *Debugger) fixedText(t dataType, data []byte, radix int) (text string, m
 		return pswTable(uint32(littleEndian(data).Uint64())), true
 
 	case typePTE:
-		return d.Console.FormatPTE(uint32(littleEndian(data).Uint64())), false
+		return d.Machine.FormatPTE(uint32(littleEndian(data).Uint64())), false
 	}
 
 	return formatBig(littleEndian(data), uint32(len(data)), radix), false
@@ -786,7 +786,7 @@ func (d *Debugger) showType(r *dcl.Result) error {
 			name = d.overrideType.typeName()
 		}
 
-		d.Console.Printf("type/override: %s\n", name)
+		d.Machine.Printf("type/override: %s\n", name)
 
 		return nil
 	}
@@ -796,7 +796,7 @@ func (d *Debugger) showType(r *dcl.Result) error {
 		t = *d.defaultType
 	}
 
-	d.Console.Printf("type: %s\n", t.typeName())
+	d.Machine.Printf("type: %s\n", t.typeName())
 
 	return nil
 }

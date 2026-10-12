@@ -53,14 +53,14 @@ const maxStackFrames = 1000
 // stackField prints one "label: value" line of a frame, with the value in
 // the column all of them share.
 func (d *Debugger) stackField(label, value string) {
-	d.Console.Printf("%-*s%s\n", stackValueColumn, label, value)
+	d.Machine.Printf("%-*s%s\n", stackValueColumn, label, value)
 }
 
 // showStack runs SHOW STACK [count]: the frames from the current one out,
 // count of them if a count is given, else every one. Each is preceded by a
 // blank line, and the whole listing by another, as the debugger prints it.
 func (d *Debugger) showStack(countText string) error {
-	c := d.Console
+	c := d.Machine
 
 	if err := c.RequireInit(); err != nil {
 		return err
@@ -110,7 +110,7 @@ func (d *Debugger) showStack(countText string) error {
 // routine's argument pointer is ap, and returns the caller's FP and AP
 // for the next frame.
 func (d *Debugger) showFrame(n, fp, ap uint32) (savedFP, savedAP uint32, err error) {
-	c := d.Console
+	c := d.Machine
 
 	// The frame is five longwords, then the saved registers.
 	var words [5]uint32
@@ -169,7 +169,7 @@ func (d *Debugger) framePC(pc uint32) string {
 		return "<console>"
 	}
 
-	return d.Console.LocationText(pc)
+	return d.Machine.LocationText(pc)
 }
 
 // maskText is a register save mask the way MACRO writes it: ^M<R2,R3>.
@@ -193,7 +193,7 @@ func maskText(mask uint32) string {
 // of blanks, as in the probe's logs. The layout of the lines after the
 // first is unconfirmed (every probe frame had one argument).
 func (d *Debugger) showArguments(ap uint32) {
-	c := d.Console
+	c := d.Machine
 
 	if ap < 0x200 {
 		return
