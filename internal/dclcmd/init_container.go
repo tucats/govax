@@ -23,8 +23,9 @@ import (
 // the operator's current default directory at all, it just builds a new,
 // unattached container file — but it's still defined as a method (rather
 // than a free function) to match every other console command's calling
-// convention (d.Console.cmd().InitializeContainer(...) from internal/console/dispatch.go,
-// the same shape as d.Console.cmd().Mount(...)).
+// convention (d.Console.cmd().InitializeContainer(...) from
+// internal/console/dispatch.go, the same shape as
+// d.Console.cmd().Mount(...)).
 
 // InitializeContainer formats path as a brand-new, empty ODS-2 volume: a
 // zero-filled host file of blocks 512-byte blocks, with just enough

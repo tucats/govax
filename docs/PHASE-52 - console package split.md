@@ -380,3 +380,29 @@ package move is a plain import-path rewrite.
   the same spelling. The command handlers in the DCL files that are
   `*Dispatcher` methods (GOTO, IF, CALL, OPEN, ...) and
   `DispatchConsole` itself stay on `Dispatcher` until Stage 6.
+- **2026-10-12 — Stage 4: `internal/dclcmd`.** The utility commands
+  first became methods of an in-package context, built for each command
+  from the DCL running it (`Console.cmd`; tests and cmd/govax use
+  `Console.Commands`). What they needed of DCL turned out to be four
+  hooks on it: `Running`, `SetStatus` (DEASSIGN's and SHOW LOGICAL's
+  `$STATUS`), `ReadReply` (paging), and `TypeDCL` (TYPE of SYS$INPUT,
+  or of a file DCL's OPEN opened). The shim rows LINK takes as symbols
+  come in as `ShimLinks`. The helpers that dclcmd, the DCL interpreter,
+  and the machine all use went below all three: RMS's naming rules
+  are `rms.FileLocation.WithDefaultType`, `rms.MatchCase`,
+  `rms.SplitVersion`, and `rms.NameType` (`TestMatchCase` moved with
+  them), and the failure carrying a VMS condition value (`statusError`)
+  is `vmserrors.ConditionError`. `rf` then exported, in place, what the
+  console and DCL use of the commands (`Context`, `ConditionLine`,
+  `FileFailure`, the settings' names, `GovaxSymbols`, ...). It did 13
+  renames in one script, tests included, in two seconds. Then the 23
+  files and `context.go` moved with `git mv`, which keeps their history,
+  and the compiler's "undefined" errors placed the `dclcmd.`
+  qualifiers. The ANALYZE binding's loop over the record-type table
+  became `dclcmd.AnalyzeRecordTypes`. dclcmd imports only lower
+  packages (anl, asm, bootdata, corevms, io, lbr, link, lnm, obj,
+  respath, rms, vmsdef, vmserrors, vmsimage). The commands' tests stay
+  in `internal/console`, where they run the commands through a console;
+  they reach the few unexported names they used through exports
+  (`PagePrompt`, `LibrarySetting`, `TerminalSize`, `LinkSources`,
+  `HostLibraryDir`, `JoinLines`).
