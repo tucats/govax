@@ -82,9 +82,9 @@ func TestLogicalNames_fileCommands(t *testing.T) {
 
 	// DELETE works through every element.
 	buf.Reset()
-	mustDispatch(t, d, "DELETE SPEECH.TXT;*")
+	mustDispatch(t, d, "DELETE/LOG SPEECH.TXT;*")
 
-	if n := strings.Count(buf.String(), "%DELETE-S-DELETED"); n != 2 {
+	if n := strings.Count(buf.String(), "%DELETE-I-FILDEL"); n != 2 {
 		t.Errorf("DELETE SPEECH.TXT;* deleted %d files:\n%s", n, buf.String())
 	}
 

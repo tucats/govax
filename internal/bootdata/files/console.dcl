@@ -519,6 +519,7 @@ grammar console
         parameter   spec/id=1101               -
                     /type=$string               -
                     /prompt="File specification"
+        qualifier   log/id=1102
 
     !
     ! govax-native extension (Phase 23, internal/rms + internal/console):

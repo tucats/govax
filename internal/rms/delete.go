@@ -41,6 +41,11 @@ type DeletedFile struct {
 	Name    string
 	Type    string
 	Version uint16
+
+	// Full is the file's full name, "DUA0:[WORK]X.DAT;1", its device as
+	// the user named it; Blocks the blocks it had allocated.
+	Full   string
+	Blocks uint32
 }
 
 // VersionRequiredError reports that specText named a file with no specific
@@ -96,7 +101,7 @@ func (e *NotFoundError) Error() string {
 // (User's Manual §11.7.1); it's an error only if none of them has any.
 func (s *Session) Delete(specText string) (deleted []DeletedFile, err error) {
 	err = s.eachSpec(specText, func(vol *volume.Volume, r resolvedSpec) error {
-		files, err := deleteOnVolume(vol, r.Spec, specText)
+		files, err := deleteOnVolume(vol, r, specText)
 		deleted = append(deleted, files...)
 
 		return err
@@ -110,7 +115,9 @@ func (s *Session) Delete(specText string) (deleted []DeletedFile, err error) {
 
 // deleteOnVolume is Delete for one resolved spec on one volume, returning
 // the files it removed (even when it fails partway).
-func deleteOnVolume(vol *volume.Volume, spec filespec.Spec, specText string) (deleted []DeletedFile, err error) {
+func deleteOnVolume(vol *volume.Volume, r resolvedSpec, specText string) (deleted []DeletedFile, err error) {
+	spec := r.Spec
+
 	if spec.Version == "" {
 		return nil, &VersionRequiredError{Spec: specText}
 	}
@@ -167,11 +174,20 @@ func deleteOnVolume(vol *volume.Volume, spec filespec.Spec, specText string) (de
 		for _, m := range group.matches {
 			fullName := m.Name + "." + m.Type
 
+			var blocks uint32
+			if f, openErr := vol.OpenFID(m.Fid); openErr == nil {
+				blocks = f.Header.RecordAttributes.HighestBlock
+			}
+
 			if delErr := volume.DeleteFile(dir, fullName, m.Version, bm, ib); delErr != nil {
 				return deleted, delErr
 			}
 
-			deleted = append(deleted, DeletedFile{Name: m.Name, Type: m.Type, Version: m.Version})
+			deleted = append(deleted, DeletedFile{
+				Name: m.Name, Type: m.Type, Version: m.Version,
+				Full:   r.Display + ":" + dirSpec{Elems: m.Dirs}.String() + m.ShortName(';'),
+				Blocks: blocks,
+			})
 		}
 	}
 

@@ -2,6 +2,7 @@ package console
 
 import (
 	"errors"
+	"regexp"
 	"strings"
 	"testing"
 
@@ -54,7 +55,7 @@ func createConsoleTestFile(t *testing.T, vol *volume.Volume, name string) {
 func TestConsoleDelete_notMounted(t *testing.T) {
 	c, _ := newTestConsole(t)
 
-	err := c.cmd().Delete("DUB0:FOO.TXT;1")
+	err := c.cmd().Delete("DUB0:FOO.TXT;1", false)
 	if err == nil {
 		t.Fatal("Delete against an unmounted device = nil error, want SS_DEVNOTMOUNT")
 	}
@@ -71,7 +72,7 @@ func TestConsoleDelete_versionRequired(t *testing.T) {
 	c, _ := newTestConsole(t)
 	mountFreshContainer(t, c, "DUA0")
 
-	err := c.cmd().Delete("DUA0:INDEXF.SYS")
+	err := c.cmd().Delete("DUA0:INDEXF.SYS", false)
 	if err == nil {
 		t.Fatal("Delete with no version = nil error, want CLI_NEEDVERSION")
 	}
@@ -81,19 +82,26 @@ func TestConsoleDelete_versionRequired(t *testing.T) {
 	}
 }
 
-// TestConsoleDelete_notFound confirms a file spec matching nothing on the
-// volume is reported as SS_NOSUCHFILE.
+// isDeleteSearchFail reports whether err is DELETE's SEARCHFAIL, a
+// warning, its message shown.
+func isDeleteSearchFail(err error) bool {
+	var ce vmserrors.ConditionError
+
+	return errors.As(err, &ce) && ce.Status == 0x10931238
+}
+
+// TestConsoleDelete_notFound: a file spec matching nothing on the volume
+// is DELETE's SEARCHFAIL with the name expanded, then RMS$_FNF, as VMS
+// 7.3 showed it (testdata/dcl50's rounds 4 and 6).
 func TestConsoleDelete_notFound(t *testing.T) {
 	c, _ := newTestConsole(t)
 	mountFreshContainer(t, c, "DUA0")
 
-	err := c.cmd().Delete("DUA0:NOSUCHFILE.TXT;1")
-	if err == nil {
-		t.Fatal("Delete of a nonexistent file = nil error, want SS_NOSUCHFILE")
-	}
+	err := c.cmd().Delete("DUA0:NOSUCH*.TXT;*", false)
 
-	if !errors.Is(err, vmserrors.New(vmserrors.SS_NOSUCHFILE)) {
-		t.Errorf("Delete error = %v, want SS_NOSUCHFILE", err)
+	want := "DELETE-W-SEARCHFAIL, error searching for DUA0:[000000]NOSUCH*.TXT;*\n-RMS-E-FNF, file not found"
+	if !isDeleteSearchFail(err) || err.Error() != want {
+		t.Errorf("Delete error = %v, want %q", err, want)
 	}
 }
 
@@ -104,7 +112,7 @@ func TestConsoleDelete_badFileSpec(t *testing.T) {
 	c, _ := newTestConsole(t)
 	mountFreshContainer(t, c, "DUA0")
 
-	err := c.cmd().Delete("DUA0:[UNTERMINATED")
+	err := c.cmd().Delete("DUA0:[UNTERMINATED", false)
 	if err == nil {
 		t.Fatal("Delete with an unterminated directory bracket = nil error, want CLI_BADFILESPEC")
 	}
@@ -116,9 +124,8 @@ func TestConsoleDelete_badFileSpec(t *testing.T) {
 
 // TestConsoleDelete_removesFileAndPrintsConfirmation confirms the
 // Console-level wrapper's happy path: deleting an existing, ordinary file
-// removes it from the volume and prints the same "%DELETE-S-DELETED, ..."
-// confirmation line real VMS (and ods2's own cmdDelete, this command's
-// behavioral reference) would.
+// removes it from the volume, saying so only with /LOG, as VMS's DELETE
+// does: "%DELETE-I-FILDEL, ... deleted (n blocks)".
 func TestConsoleDelete_removesFileAndPrintsConfirmation(t *testing.T) {
 	c, buf := newTestConsole(t)
 	mountFreshContainer(t, c, "DUA0")
@@ -134,16 +141,16 @@ func TestConsoleDelete_removesFileAndPrintsConfirmation(t *testing.T) {
 
 	createConsoleTestFile(t, vol, "FOO.TXT")
 
-	if err := c.cmd().Delete("FOO.TXT;1"); err != nil {
+	if err := c.cmd().Delete("FOO.TXT;1", true); err != nil {
 		t.Fatalf("Delete: %v", err)
 	}
 
-	if !strings.Contains(buf.String(), "%DELETE-S-DELETED, FOO.TXT;1 deleted") {
-		t.Errorf("Delete output = %q, want a DELETE-S-DELETED confirmation", buf.String())
+	if !regexp.MustCompile(`^%DELETE-I-FILDEL, DUA0:\[000000\]FOO\.TXT;1 deleted \(\d+ blocks?\)\n$`).MatchString(buf.String()) {
+		t.Errorf("Delete output = %q, want a DELETE-I-FILDEL line", buf.String())
 	}
 
-	if err := c.cmd().Delete("FOO.TXT;1"); !errors.Is(err, vmserrors.New(vmserrors.SS_NOSUCHFILE)) {
-		t.Errorf("Delete of the now-removed file = %v, want SS_NOSUCHFILE", err)
+	if err := c.cmd().Delete("FOO.TXT;1", false); !isDeleteSearchFail(err) {
+		t.Errorf("Delete of the now-removed file = %v, want SEARCHFAIL", err)
 	}
 }
 
@@ -169,12 +176,18 @@ func TestDispatch_deleteViaDCL(t *testing.T) {
 
 	createConsoleTestFile(t, vol, "FOO.TXT")
 
-	if err := d.Dispatch("DELETE FOO.TXT;1"); err != nil {
-		t.Fatalf("Dispatch DELETE FOO.TXT;1: %v", err)
+	if err := d.Dispatch("DELETE FOO.TXT;1"); err != nil || buf.Len() != 0 {
+		t.Fatalf("Dispatch DELETE FOO.TXT;1: %v, %q; want nothing shown", err, buf.String())
 	}
 
-	if !strings.Contains(buf.String(), "%DELETE-S-DELETED, FOO.TXT;1 deleted") {
-		t.Errorf("Dispatch DELETE output = %q, want a DELETE-S-DELETED confirmation", buf.String())
+	createConsoleTestFile(t, vol, "FOO.TXT")
+
+	if err := d.Dispatch("DELETE/LOG FOO.TXT;*"); err != nil {
+		t.Fatalf("Dispatch DELETE/LOG: %v", err)
+	}
+
+	if !strings.Contains(buf.String(), "%DELETE-I-FILDEL, DUA0:[000000]FOO.TXT;1 deleted") {
+		t.Errorf("Dispatch DELETE/LOG output = %q, want a DELETE-I-FILDEL line", buf.String())
 	}
 }
 
@@ -202,12 +215,7 @@ func TestDispatch_deleteAbbreviated(t *testing.T) {
 		t.Fatalf("SetDefault: %v", err)
 	}
 
-	err := d.Dispatch("DEL DUA0:BITMAP.SYS;7")
-	if err == nil {
-		t.Fatal("Dispatch DEL of a nonexistent version = nil error, want SS_NOSUCHFILE")
-	}
-
-	if !errors.Is(err, vmserrors.New(vmserrors.SS_NOSUCHFILE)) {
-		t.Errorf("Dispatch DEL error = %v, want SS_NOSUCHFILE", err)
+	if err := d.Dispatch("DEL DUA0:BITMAP.SYS;7"); !isDeleteSearchFail(err) {
+		t.Errorf("Dispatch DEL of a nonexistent version = %v, want SEARCHFAIL", err)
 	}
 }

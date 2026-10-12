@@ -3641,6 +3641,19 @@ widened."
     abbreviated to a letter.
 - **Status**: unconfirmed.
 
+### [Phase 51] DELETE's messages: settled by the probe, and the rest chosen
+
+- **Where**: `internal/dclcmd/delete.go`, `internal/rms/delete.go`.
+- **What**: VMS 7.3's DELETE (testdata/dcl50's rounds 4 and 6) showed
+  nothing for a file deleted and `%DELETE-W-SEARCHFAIL` with RMS$_FNF
+  for a specification that found nothing; govax now does the same (it
+  showed `%DELETE-S-DELETED` for each file, and SS$_NOSUCHFILE). Chosen
+  without VMS: /LOG's line, `%DELETE-I-FILDEL, name deleted (n blocks)`,
+  with the blocks the file had allocated; SEARCHFAIL's condition value
+  in facility 147, taken as DELETE's; a missing directory RMS$_DNF.
+  PURGE still shows `%PURGE-S-PURGED` for each file it deletes.
+- **Status**: VMS's answers followed; the choices unconfirmed.
+
 <!--
 Entry template:
 

@@ -385,3 +385,12 @@ smaller gaps the phase left:
   DEVIATIONS.md's "[Phase 51] STOP/IMAGE and STOP/[NO]EXIT". Test:
   `TestStopImage` (an image with an exit handler in a spawned procedure:
   STOP/IMAGE, then STOP/EXIT=USER_MODE, then STOP/NOEXIT). HELP STOP.
+- 2026-10-12: Subtask 5, DELETE's layout. As VMS 7.3's DELETE (rounds 4
+  and 6): it says nothing of the files it deletes unless /LOG (new), when
+  each is `%DELETE-I-FILDEL, DUA0:[WORK]X.DAT;1 deleted (3 blocks)`
+  (rms's `DeletedFile` now has the full name and allocated blocks), and
+  a specification that finds no file is `%DELETE-W-SEARCHFAIL, error
+  searching for DUA1:[000000]PROBE50F*.DAT;*` then `-RMS-E-FNF`, a
+  warning (facility 147 taken as DELETE's, unconfirmed). It was
+  `%DELETE-S-DELETED` for each file and SS$_NOSUCHFILE. Rounds 4 and 6's
+  oracles no longer leave DELETE out. HELP DELETE.

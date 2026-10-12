@@ -12,11 +12,11 @@ import (
 )
 
 // probe50ASkipped are the commands of round 6 whose output is outside
-// the probe's question, and left out of the comparison: DELETE's,
-// DIRECTORY's, and DUMP's (which govax hasn't) layouts are their own, and
+// the probe's question, and left out of the comparison: DIRECTORY's
+// and DUMP's (which govax hasn't) layouts are their own, and
 // SHOW LOGICAL/PROCESS lists the process's own names, which are the
 // VAX's (its terminal, SYS$DISK in two modes).
-var probe50ASkipped = []string{"$ DELETE ", "$ DIRECTORY", "$ DUMP", "$ SHOW LOGICAL/PROCESS"}
+var probe50ASkipped = []string{"$ DIRECTORY", "$ DUMP", "$ SHOW LOGICAL/PROCESS"}
 
 // probe50AWait is round 6's WAIT, and probe50AShortWait the one the test
 // runs instead, so the run takes hundredths of a second, not two seconds;

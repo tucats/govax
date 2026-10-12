@@ -149,12 +149,12 @@ func TestPhase23Acceptance_fullOperatorSession(t *testing.T) {
 
 	buf.Reset()
 
-	if err := d.Dispatch("DELETE FOO.TXT;1"); err != nil {
-		t.Fatalf("Dispatch DELETE FOO.TXT;1: %v", err)
+	if err := d.Dispatch("DELETE/LOG FOO.TXT;1"); err != nil {
+		t.Fatalf("Dispatch DELETE/LOG FOO.TXT;1: %v", err)
 	}
 
-	if !strings.Contains(buf.String(), "%DELETE-S-DELETED, FOO.TXT;1 deleted") {
-		t.Errorf("DELETE output = %q, want a %%DELETE-S-DELETED confirmation", buf.String())
+	if !strings.Contains(buf.String(), "%DELETE-I-FILDEL, DUA0:[000000]FOO.TXT;1 deleted") {
+		t.Errorf("DELETE output = %q, want a %%DELETE-I-FILDEL line", buf.String())
 	}
 
 	// FOO.TXT only ever had one version, so it's entirely gone now.

@@ -533,9 +533,10 @@ func TestProbe50IOracle(t *testing.T) {
 }
 
 // probe50FSkipped are the commands of round 4 whose output is outside
-// the probe's question, and left out of the comparison: DELETE's,
-// DIRECTORY's, and DUMP's (which govax hasn't) layouts are their own.
-var probe50FSkipped = []string{"$ DELETE ", "$ DIRECTORY", "$ DUMP"}
+// the probe's question, and left out of the comparison: DIRECTORY's
+// and DUMP's (which govax hasn't) layouts are their own. (DELETE's
+// matches since Phase 51.)
+var probe50FSkipped = []string{"$ DIRECTORY", "$ DUMP"}
 
 // probe50FCompared is a round 4 log as the comparison sees it: the output
 // of the probe50FSkipped commands left out.

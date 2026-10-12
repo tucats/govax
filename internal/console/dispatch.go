@@ -289,7 +289,7 @@ func (d *Dispatcher) bindGrammar() {
 	// runs -- unlike DIRECTORY's SPEC, a bare DELETE has no sensible
 	// "delete everything" default to fall back to.
 	g.Bind("DELETE", func(id int64, r *dcl.Result) error {
-		return d.Console.cmd().Delete(r.String("SPEC"))
+		return d.Console.cmd().Delete(r.String("SPEC"), r.Present("LOG") && !r.Negated("LOG"))
 	})
 
 	// Phase 23 (docs/PHASE-23.md, subtask 7): PURGE trims old versions via

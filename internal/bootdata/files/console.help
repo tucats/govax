@@ -118,6 +118,8 @@
 //              10/12/26    LEXICAL: F$CONTEXT, F$DEVICE, F$FILE_ATTRIBUTES,
 //                          and F$IDENTIFIER
 //              10/12/26    STOP/IMAGE and STOP/[NO]EXIT
+//              10/12/26    DELETE is silent but for /LOG, and a missing
+//                          file is SEARCHFAIL
 
 This is the help documentation for the govax VAX emulator.  Topic sections are
 marked by a "$" delimiter.  This is followed by as many tokens of the help
@@ -2985,9 +2987,15 @@ $DEL
     explicit version to guard against accidentally deleting the wrong
     copy of a file.
 
+    As VMS's DELETE, it says nothing of the files it deletes unless /LOG is
+    given.  A specification that finds no file is a warning:
+
+        %DELETE-W-SEARCHFAIL, error searching for DUA0:[WORK]X.TMP;*
+        -RMS-E-FNF, file not found
+
     Syntax:
 
-        DELETE <file-spec>;<version>
+        DELETE[/LOG] <file-spec>;<version>
 
     Parameter:
 
@@ -2996,6 +3004,12 @@ $DEL
                         include wildcards in its name/type; any part left
                         out is filled in from the current default device/
                         directory (see SET DEFAULT).
+
+    Qualifier:
+
+        /LOG            Show each file deleted, and the blocks it had:
+                        %DELETE-I-FILDEL, DUA0:[WORK]FOO.TXT;1 deleted
+                        (3 blocks)
 
     Examples:
 
