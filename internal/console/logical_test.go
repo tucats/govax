@@ -71,20 +71,20 @@ func TestShowLogical_manualExamples(t *testing.T) {
 	d, _, buf := logicalDispatcher(t)
 
 	wantOutput(t, d, buf, "SHOW LOGICAL SYS$INPUT",
-		"  \"SYS$INPUT\" = \"_TTA0:\" (LNM$PROCESS_TABLE)\n")
+		"   \"SYS$INPUT\" = \"_TTA0:\" (LNM$PROCESS_TABLE)\n")
 
 	mustDispatch(t, d, "DEFINE/SYSTEM WORK4 $255$DUA17:", "DEFINE MYDISK WORK4")
 	wantOutput(t, d, buf, "SHOW LOGICAL MYDISK",
-		"  \"MYDISK\" = \"WORK4\" (LNM$PROCESS_TABLE)\n"+
-			"1 \"WORK4\" = \"$255$DUA17:\" (LNM$SYSTEM_TABLE)\n")
+		"   \"MYDISK\" = \"WORK4\" (LNM$PROCESS_TABLE)\n"+
+			"1  \"WORK4\" = \"$255$DUA17:\" (LNM$SYSTEM_TABLE)\n")
 
 	mustDispatch(t, d, "DEFINE GETTYSBURG [JONES.HISTORY], [JONES.WORKFILES]")
 	wantOutput(t, d, buf, "SHOW LOGICAL GETTYSBURG",
-		"  \"GETTYSBURG\" = \"[JONES.HISTORY]\" (LNM$PROCESS_TABLE)\n"+
-			"        = \"[JONES.WORKFILES]\"\n")
+		"   \"GETTYSBURG\" = \"[JONES.HISTORY]\" (LNM$PROCESS_TABLE)\n"+
+			"\t= \"[JONES.WORKFILES]\"\n")
 
 	wantOutput(t, d, buf, "SHOW LOGICAL/FULL SYS$ERROR",
-		"  \"SYS$ERROR\" [exec] = \"_TTA0:\" [terminal] (LNM$PROCESS_TABLE)\n")
+		"   \"SYS$ERROR\" [exec] = \"_TTA0:\" [terminal] (LNM$PROCESS_TABLE)\n")
 
 	wantOutput(t, d, buf, "SHOW LOGICAL NOSUCH",
 		"%SHOW-S-NOTRAN, no translation for logical name NOSUCH\n")
@@ -98,10 +98,10 @@ func TestShowLogical_iterationStops(t *testing.T) {
 	// lookup.
 	mustDispatch(t, d, "DEFINE A B", "DEFINE B A:", "DEFINE/TRANS=TERMINAL T A")
 	wantOutput(t, d, buf, "SHOW LOGICAL A",
-		"  \"A\" = \"B\" (LNM$PROCESS_TABLE)\n"+
-			"1 \"B\" = \"A:\" (LNM$PROCESS_TABLE)\n")
+		"   \"A\" = \"B\" (LNM$PROCESS_TABLE)\n"+
+			"1  \"B\" = \"A:\" (LNM$PROCESS_TABLE)\n")
 	wantOutput(t, d, buf, "SHOW LOGICAL T",
-		"  \"T\" = \"A\" (LNM$PROCESS_TABLE)\n")
+		"   \"T\" = \"A\" (LNM$PROCESS_TABLE)\n")
 }
 
 func TestShowLogical_tableListing(t *testing.T) {
@@ -118,14 +118,15 @@ func TestShowLogical_tableListing(t *testing.T) {
 			"  \"TT\" = \"_TTA0:\"\n")
 
 	// Wildcards list the matches under every searched table's header,
-	// each between blank lines as VMS shows it.
+	// after a blank line; a header with no names under it has no blank
+	// line after it (VMS 7.3, testdata/dcl50's R5).
 	mustDispatch(t, d, "DEFINE/SYSTEM SYS$SYSDEVICE DUA0:")
 	wantOutput(t, d, buf, "SHOW LOGICAL SYS$S*",
-		"\n(LNM$PROCESS_TABLE)\n\n\n(LNM$JOB_80000100)\n\n\n(LNM$GROUP_000001)\n\n\n(LNM$SYSTEM_TABLE)\n\n"+
+		"\n(LNM$PROCESS_TABLE)\n\n(LNM$JOB_80000100)\n\n(LNM$GROUP_000001)\n\n(LNM$SYSTEM_TABLE)\n\n"+
 			"  \"SYS$SYSDEVICE\" = \"DUA0:\"\n")
 
 	// /GROUP selects just the group table.
-	wantOutput(t, d, buf, "SHOW LOGICAL/GROUP", "\n(LNM$GROUP_000001)\n\n")
+	wantOutput(t, d, buf, "SHOW LOGICAL/GROUP", "\n(LNM$GROUP_000001)\n")
 
 	// A directory lists its table names.
 	buf.Reset()
@@ -233,7 +234,7 @@ func TestCreateNameTable(t *testing.T) {
 	// User's Manual §11.10.1's TAX example.
 	mustDispatch(t, d, "CREATE/NAME_TABLE TAX", "DEFINE/TABLE=TAX CREDIT [ACCOUNTS.CURRENT]CREDIT.DAT")
 	wantOutput(t, d, buf, "SHOW LOGICAL/TABLE=TAX CREDIT",
-		"  \"CREDIT\" = \"[ACCOUNTS.CURRENT]CREDIT.DAT\" (TAX)\n")
+		"   \"CREDIT\" = \"[ACCOUNTS.CURRENT]CREDIT.DAT\" (TAX)\n")
 
 	tables, err := c.Logicals.ResolveTables("TAX", lnm.User)
 	if err != nil {
@@ -327,7 +328,7 @@ func TestLogical_jobTable(t *testing.T) {
 		"WORKAREA = \"DUA1:[WORK]\" (LNM$JOB_80000100)\n")
 
 	mustDispatch(t, d, "DEASSIGN/JOB WORKAREA")
-	wantOutput(t, d, buf, "SHOW LOGICAL/JOB", "\n(LNM$JOB_80000100)\n\n")
+	wantOutput(t, d, buf, "SHOW LOGICAL/JOB", "\n(LNM$JOB_80000100)\n")
 }
 
 // TestShowLogical_fullTableHeader: with /FULL a table's header adds its

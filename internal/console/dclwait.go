@@ -28,17 +28,19 @@ import (
 const waitPoll = 20 * time.Millisecond
 
 // waitCommand is WAIT delta-time. A time that can't be read is
-// CLI$_IVDTIME, with the time as its segment. WAIT leaves $STATUS
-// alone (VMS 7.3 showed the status before a WAIT that Ctrl/Y interrupted
-// and CONTINUE resumed, testdata/dcl50's round 5; a WAIT that runs to
-// its end is taken to do the same, unconfirmed).
+// CLI$_IVDTIME, its segment the time as VMS 7.3 showed it for WAIT
+// NOTATIME: "0  NOTATIME", as though the time were made a delta of 0
+// days (testdata/dcl50's round 6; one case seen, whose segment VMS ended
+// with a NUL byte, left out here as its buffer's garbage). WAIT
+// leaves $STATUS alone, interrupted and resumed or run to its end
+// (rounds 5 and 6).
 func (d *Dispatcher) waitCommand(id int64, r *dcl.Result) error {
 	c := d.Console
 	text := strings.TrimSpace(r.String("DELTA"))
 
 	ticks, ok := parseDeltaTime(strings.ToUpper(text))
 	if !ok {
-		return vmserrors.NewSegment(vmserrors.CLI_IVDTIME, text)
+		return vmserrors.NewSegment(vmserrors.CLI_IVDTIME, "0  "+text)
 	}
 
 	c.keepStatus()

@@ -2250,9 +2250,10 @@ $ENDI
     (or to ENDIF, without ELSE) run when it is true, and those from ELSE
     to ENDIF when it is false; THEN must be the command after the IF.
     The commands of the branch that doesn't run are passed over without
-    being read, so their symbols aren't substituted.  Blocks may be
-    nested, at most 15 deep in one command level.  A GOTO out of a block
-    ends it.
+    being read, so their symbols aren't substituted.  Commands between a
+    block's IF and its THEN are passed over; an ELSE among them makes the
+    THEN fail (DCL-E-INVIFNEST).  Blocks may be nested, at most 15 deep in
+    one command level.  A GOTO out of a block ends it.
 
     IF, THEN, ELSE, and ENDIF leave $STATUS as it was, so a block can test
     the status of the command before it; a command after THEN or ELSE
@@ -2319,11 +2320,12 @@ $RETU
         GOSUB label
         RETURN [status]
 
-    GOSUBs may be nested 16 deep.  RETURN's status, an expression, becomes
+    GOSUBs may be nested 15 deep.  RETURN's status, an expression, becomes
     $STATUS, and its message is shown if it's a failure, as EXIT's is;
     without one, $STATUS is %X10000001.  A label that isn't found ends
     the procedure (DCL-W-USGOSUB), and a RETURN with no GOSUB is
-    DCL-W-BADRET.
+    DCL-W-BADRET.  At the terminal, RETURN shows nothing: with a status,
+    $STATUS becomes it, and without one $STATUS is marked as shown.
 
     Example:
 
@@ -2356,7 +2358,8 @@ $ENDS
     run line by line passes over its subroutines: they run only when
     called.  A subroutine inside another subroutine, or inside an IF
     block, can be called only from within it.  A label that isn't found
-    on a SUBROUTINE line is DCL-W-USCALL.
+    is DCL-W-USCALL.  A label not on a SUBROUTINE line runs from there at
+    a new level, and CALL then fails with DCL-E-INVCALL.
 
     Example:
 

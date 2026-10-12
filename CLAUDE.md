@@ -26,9 +26,9 @@ never had.
   functions, SET VERIFY, SYS$INPUT from a procedure (DECK/EOD), DCL's
   file I/O (OPEN, CLOSE, READ, WRITE, INQUIRE), STOP and Ctrl/Y, the
   console's whole DCL in subprocesses, and the other processes running
-  between DCL commands and during WAIT. Phase 51 (planned) is what it
-  left for later: round 6 of the DCL probe (prepared, to be run on
-  VMS), SPAWN from a subprocess, Ctrl/Y in a subprocess's procedures,
+  between DCL commands and during WAIT. Phase 51 (in progress) is what
+  it left for later: round 6 of the DCL probe (done), SPAWN from a
+  subprocess, Ctrl/Y in a subprocess's procedures,
   the other processes running while the prompt waits for a line, and
   the known differences from VMS.
   Read the relevant phase doc
@@ -86,9 +86,10 @@ never had.
   (`probe50t.com`, `vax/probe50t.log`, `TestProbe50TOracle`; the
   interactive `probe50y.com`, `vax/probe50y.log`) is statuses, flow, the
   lexical functions, subprocesses, STOP, and Ctrl/Y. Round 6
-  (`probe50a.com`, with `probe50b.com` and `probe50c.com`, and lines
-  typed at the terminal; Phase 51's subtask 1) asks what round 5 left
-  open; it hasn't been run on VMS yet.
+  (`probe50a.com`, with `probe50b.com` and `probe50c.com`,
+  `vax/probe50a.log`, `TestProbe50AOracle`; the lines typed at the
+  terminal, `vax/probe50a-term.log`, `TestProbe50ATerminal`; Phase 51's
+  subtask 1) is what round 5 left open.
 - `testdata/probe49/` — Phase 49's VMS probe in three rounds (`probe6`,
   `probe6b`, `probe6c`; README.md has each round's answers), run by
   `TestProbe6*`; `testdata/rms49/` and `testdata/sec49/` are the phase's

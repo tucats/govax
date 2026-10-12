@@ -131,7 +131,12 @@ func (d *Dispatcher) DispatchConsole(line string) error {
 		}
 
 		if d.Console.awaitThen(line) {
-			d.Console.echoLine("", whole, whole)
+			if d.Console.passedBeforeThen() {
+				d.Console.echoLine("", whole, whole)
+			} else {
+				d.Console.dropEcho()
+			}
+
 			d.Console.keepStatus()
 
 			return nil
@@ -206,10 +211,11 @@ func (d *Dispatcher) dispatchParsed(line string, verbSymbol bool) error {
 	}
 
 	// A command starts with a letter (or "$" or "_", which can start a
-	// symbol's name). "%" starts one too, as far as DCL is concerned:
-	// VMS 7.3 gave IVVERB, \%%\, for a line "%%", where a line starting
-	// with an apostrophe was NOCOMD (testdata/dcl50's rounds 3 and 1).
-	if !isDCLSymbolStart(line[0]) && line[0] != '%' {
+	// symbol's name). "%" and a digit start one too, as far as DCL is
+	// concerned: VMS 7.3 gave IVVERB, \%%\ and \1ABC\, for lines "%%"
+	// and "1ABC", where a line starting with an apostrophe, ".", or "("
+	// was NOCOMD (testdata/dcl50's rounds 3, 1, and 6).
+	if !isDCLSymbolStart(line[0]) && line[0] != '%' && !isDigit(line[0]) {
 		return vmserrors.New(vmserrors.CLI_NOCOMD)
 	}
 

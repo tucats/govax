@@ -1,8 +1,8 @@
 # Phase 51 — DCL follow-ups
 
-**Status:** planned (2026-10-12). Needs Phase 50. Round 6 of the VMS
-probe (subtask 1) is written and tried under govax; the author is to run
-it.
+**Status:** in progress (planned and approved 2026-10-12). Needs Phase
+50. Subtask 1, round 6 of the VMS probe, is done (2026-10-12): the
+author ran it, and govax now follows VMS's answers.
 
 Phase 50 made the console a DCL command interpreter and closed on
 2026-10-12 with every subtask done. Following Phase 49's example, the
@@ -62,8 +62,8 @@ that its probes found but no subtask fixed.
 
 ## Subtasks
 
-1. **Round 6 of the probe** (`testdata/dcl50`'s README, "Round 6";
-   prepared 2026-10-12, author to run). Part 1, `@PROBE50A/OUTPUT=
+1. **Round 6 of the probe** (`testdata/dcl50`'s README, "Round 6" and
+   "What VMS answered in round 6"; done 2026-10-12). Part 1, `@PROBE50A/OUTPUT=
    PROBE50A.LOG` (with `probe50b.com` and `probe50c.com`): WAIT's
    `$STATUS`; ELSE before a block's THEN; CALL of a plain label; GOSUB's
    and block IF's nesting limits; `/OUTPUT`'s default type, `/O=`, and
@@ -133,3 +133,34 @@ smaller gaps the phase left:
   (`testdata/dcl50/probe50a.com`, `probe50b.com`, `probe50c.com`; the
   README's "Round 6") is written and run under govax first. The README
   records govax's answers. The author is to run it on the simh VAX.
+- 2026-10-12: The author reviewed and approved the plan.
+- 2026-10-12: Subtask 1, round 6 of the probe. The author ran it
+  (`testdata/dcl50/vax/probe50a.log`, and `probe50a-term.log` for the
+  lines typed at the terminal), and govax now does what VMS 7.3 did:
+  `TestProbe50AOracle` (new file `internal/console/probe50a_test.go`)
+  matches every section, apart from DELETE's, DIRECTORY's, and DUMP's
+  layouts, SHOW LOGICAL/PROCESS's list of the VAX's own names, and the
+  job table's name. `TestProbe50ATerminal` matches every line of the
+  terminal part. Changes (DEVIATIONS.md's "[Phase 51] Round 6 of the
+  probe"):
+  - An ELSE before a block's THEN is passed over, and the THEN after it
+    is INVIFNEST and closes the block. A false IF's lines before its
+    THEN aren't shown with verification.
+  - A 16th block IF is accepted, and its THEN is refused.
+  - GOSUBs nest 15 deep.
+  - CALL of a plain label runs from the label at a new level, then
+    fails with INVCALL (`callPlainLabel`).
+  - RETURN at the terminal is silent and marks `$STATUS` as shown, or
+    sets it to RETURN's status.
+  - SHOW LOGICAL indents a name it looks up three blanks, numbers an
+    iterated level `1  `, puts a tab before a search list's further
+    values, and leaves no blank line after an empty table's header.
+    Round 4's oracle no longer allows for the indent.
+  - F$CVTIME writes a delta's fields as they were typed
+    (`deltaAsTyped`).
+  - A digit starts a verb (IVVERB, not NOCOMD).
+  - WAIT's IVDTIME segment is `0  ` and the time.
+
+  Confirmed: WAIT's status, `/OUTPUT`'s forms, and OPEN/WRITE's 01 8D.
+  Unexplained: VMS dropped the blank in one verified comment, and the
+  oracle allows for it. HELP: IF, GOSUB/RETURN, CALL.

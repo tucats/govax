@@ -3329,14 +3329,14 @@ widened."
     log, not the terminal), and nothing at Ctrl/Z. INQUIRE's prompt goes
     to the terminal under /OUTPUT.
 - **Still chosen without VMS**:
-  - The fixed control written is 01 8D (a line feed before, a carriage
-    return after): DUMP/RECORD doesn't show it, and a DUMP/BLOCK would.
-    TYPE shows such a record of a print file as a line.
-  - SHOW LOGICAL indents a process-permanent file's name one blank
-    further (`   "OUT" ...`, and SYS$INPUT's in a procedure); govax's
-    logical names have no process-permanent file behind them to show
-    this by, so it doesn't (the oracle allows it). `no_alias`'s place
-    among a name's attributes is unconfirmed.
+  - (Settled by round 6, "[Phase 51] Round 6 of the probe".) The fixed
+    control written is 01 8D (a line feed before, a carriage return
+    after), as VMS's DUMP/BLOCK showed. TYPE shows such a record of a
+    print file as a line.
+  - (Settled by round 6.) SHOW LOGICAL indents every name it looks up
+    three blanks (`   "OUT" ...`), not only a process-permanent file's;
+    govax now does. `no_alias`'s place among a name's attributes is
+    unconfirmed.
   - A host file's logical name is equated to its path.
   - DEASSIGN's %X00000001 is taken as $DELLNM's SS$_NORMAL (it could be
     DEASSIGN leaving the OPEN's); DEFINE's status is unchanged.
@@ -3475,9 +3475,49 @@ widened."
   no message in the message file. (A subprocess's WAIT no longer blocks
   the machine: Phase 50's subtask 21 made it wait in the scheduler.)
 - **Status**: VMS's answers followed; the choices above unconfirmed.
-  Round 6 of the probe (Phase 51, subtask 1; testdata/dcl50's README)
-  asks about WAIT's status, RETURN at the terminal, ELSE before THEN,
-  a CALL of a plain label, and a delta's hundredths.
+  Round 6 of the probe answered WAIT's status, RETURN at the terminal,
+  ELSE before THEN, a CALL of a plain label, and a delta's hundredths
+  ("[Phase 51] Round 6 of the probe").
+
+### [Phase 51] Round 6 of the probe: WAIT, flow, SHOW LOGICAL, deltas
+
+- **Where**: `internal/console/dclif.go` (ELSE before THEN, the 16th
+  block), `dclcall.go` (GOSUB's depth, CALL of a plain label, RETURN at
+  the terminal), `dispatch.go` (a digit starts a verb), `dclwait.go`
+  (IVDTIME's segment), `dcllextime.go` (`deltaAsTyped`), `logical.go`
+  (SHOW LOGICAL's layout).
+- **What**: testdata/dcl50's round 6 (`probe50a.com` with /OUTPUT,
+  replayed by `TestProbe50AOracle`; the lines typed at the terminal,
+  `TestProbe50ATerminal`) asked what round 5 left open and a few older
+  choices. govax now does what VMS 7.3 did (the README's "What VMS
+  answered in round 6"):
+  - Confirmed: WAIT leaves `$STATUS` alone; `/OUTPUT`'s default type
+    .LIS, `/O=`, and blanks around its `=`; OPEN/WRITE's fixed control
+    01 8D; `.X` and `(X)` are NOCOMD; SUBROUTINE, ENDSUBROUTINE, and
+    ELSE at the terminal are INVCALL and INVIFNEST.
+  - Replaced: an ELSE before a block's THEN (passed over, then the THEN
+    is INVIFNEST and closes the block; it was INVIFNEST at the ELSE); a
+    false IF's lines before its THEN aren't shown with verification;
+    CALL of a plain label (runs from the label at a new level, then
+    INVCALL; it was USCALL); GOSUB's depth (15, not 16); the 16th block
+    IF (accepted, its THEN refused; the IF was refused); RETURN at the
+    terminal (silent, `$STATUS` marked as shown, or set to its status;
+    it was BADRET); SHOW LOGICAL's indentation (three blanks for a name
+    looked up, `1  ` for an iterated level), its tab before a search
+    list's further values, and no blank line after an empty table's
+    header; F$CVTIME's delta fields written as typed; a digit starting
+    a verb (IVVERB, not NOCOMD); WAIT's IVDTIME segment (`0  ` before
+    the time).
+- **Still chosen without VMS**: what ends a plain label's CALL level
+  when no EXIT does (the end of the file); an even RETURN status's
+  message at the terminal (shown, as in a procedure); whether lines
+  before a false IF's THEN, other than ELSE, are hidden (one case, with
+  an ELSE among them); the CALL level's symbol scope for a plain label
+  (a new level's, as for a SUBROUTINE). VMS wrote a NUL byte after WAIT
+  NOTATIME's segment, which govax doesn't write. VMS dropped the blank
+  in one verified comment (`@'s /OUTPUT` shown as `@'s/OUTPUT`), which
+  govax doesn't do (unexplained; the oracle allows it).
+- **Status**: VMS's answers followed; the choices above unconfirmed.
 
 <!--
 Entry template:

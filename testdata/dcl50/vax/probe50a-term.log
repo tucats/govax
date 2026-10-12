@@ -1,0 +1,32 @@
+$ ! ==== start of interactive log session =====
+$     FROBNICATE
+%DCL-W-IVVERB, unrecognized command verb - check validity and spelling
+ \FROBNICATE\
+$     RETURN
+$     SHOW SYMBOL $STATUS
+  $STATUS == "%X10038090"
+$     WRITE SYS$OUTPUT "x"
+x
+$     RETURN
+$     SHOW SYMBOL $STATUS
+  $STATUS == "%X10010001"
+$     RETURN 3
+$     SHOW SYMBOL $STATUS
+  $STATUS == "%X00000003"
+$     SUBROUTINE
+%DCL-E-INVCALL, invalid CALL nesting structure or data inconsistency detected
+$     SHOW SYMBOL $STATUS
+  $STATUS == "%X00038942"
+$     ENDSUBROUTINE
+%DCL-E-INVCALL, invalid CALL nesting structure or data inconsistency detected
+$     SHOW SYMBOL $STATUS
+  $STATUS == "%X00038942"
+$     ELSE
+%DCL-E-INVIFNEST, invalid IF-THEN-ELSE nesting structure or data inconsistency
+$     SHOW SYMBOL $STATUS
+  $STATUS == "%X0003894A"
+$     WAIT 00:00:01
+$     SHOW SYMBOL $STATUS
+  $STATUS == "%X0003894A"
+$ 
+

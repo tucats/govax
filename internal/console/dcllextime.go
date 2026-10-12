@@ -209,16 +209,17 @@ func lexCVTime(e *dclExpression, args []lexicalArg) (dclValue, error) {
 			return dclValue{}, vmserrors.NewSegment(vmserrors.CLI_IVDTIME, strings.TrimSpace(args[0].str()))
 		}
 
-		out := field.delta(splitDelta(ticks))
+		switch fieldName {
+		case "DATETIME", "TIME":
+			days, clockText := deltaAsTyped(text)
+			if fieldName == "TIME" {
+				return dclString(clockText), nil
+			}
 
-		// VMS 7.3 wrote "1-02:03:04.5"'s DATETIME as "1 02:03:04.5":
-		// the hundredths with the one digit given (testdata/dcl50's
-		// round 5; the rule is unconfirmed beyond that case).
-		if (fieldName == "DATETIME" || fieldName == "TIME") && fractionDigits(text) == 1 {
-			out = out[:len(out)-1]
+			return dclString(days + " " + clockText), nil
 		}
 
-		return dclString(out), nil
+		return dclString(field.delta(splitDelta(ticks))), nil
 	}
 
 	now := vmsdef.GoTime(e.console.systemTime())
@@ -235,24 +236,40 @@ func lexCVTime(e *dclExpression, args []lexicalArg) (dclValue, error) {
 	return dclString(field.comparison(t)), nil
 }
 
-// fractionDigits is how many digits follow the "." of a time's
-// seconds in text, 0 for none.
-func fractionDigits(text string) int {
-	i := strings.LastIndex(text, ".")
-	if i < 0 {
-		return 0
-	}
-
-	n := 0
-	for _, ch := range text[i+1:] {
-		if ch < '0' || ch > '9' {
-			break
+// deltaAsTyped is a valid delta time's days and time of day as F$CVTIME
+// writes them in DATETIME and TIME: each field as it was typed, those
+// left out written as "00", and a day count of 0 when none is given. VMS
+// 7.3 wrote "0-0:0:0.123" as "0 0:0:0.123", "3-4" as "3 4:00:00.00",
+// "1-02:03:04" as "1 02:03:04.00", and "1-02:03:04.5" as "1 02:03:04.5"
+// (testdata/dcl50's rounds 5 and 6). Unconfirmed: an empty field, and a
+// delta with no day count.
+func deltaAsTyped(text string) (days, clockText string) {
+	days, rest := "0", text
+	if d, r, ok := strings.Cut(text, "-"); ok {
+		rest = r
+		if d != "" {
+			days = d
 		}
-
-		n++
 	}
 
-	return n
+	seconds, fraction, _ := strings.Cut(rest, ".")
+	fields := strings.Split(seconds, ":")
+
+	for len(fields) < 3 {
+		fields = append(fields, "")
+	}
+
+	for i, f := range fields {
+		if f == "" {
+			fields[i] = "00"
+		}
+	}
+
+	if fraction == "" {
+		fraction = "00"
+	}
+
+	return days, strings.Join(fields, ":") + "." + fraction
 }
 
 // parseCombinationTime reads text, uppercase, as an absolute time, or a

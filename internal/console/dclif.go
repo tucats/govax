@@ -61,6 +61,10 @@ type ifBlock struct {
 
 	// state is how far the block has got.
 	state blockState
+
+	// elseBeforeThen says an ELSE came while the block waited for its
+	// THEN, which makes the THEN CLI$_INVIFNEST (awaitThen).
+	elseBeforeThen bool
 }
 
 // blockState is where an IF block is.
@@ -172,10 +176,12 @@ func (c *Console) skipLine(line string) (rest string, run bool) {
 }
 
 // awaitThen checks the command after a block's IF, which should be
-// THEN: VMS 7.3 passed over any other, silently, without running it,
-// until the THEN came (testdata/dcl50's round 5), and an ENDIF (or ELSE)
-// before it was CLI$_INVIFNEST, an error. pass reports a command passed
-// over; THEN, ELSE, and ENDIF go on to their own handlers.
+// THEN. VMS 7.3 passed over any other, silently, without running it,
+// until the THEN came, and an ENDIF before it was CLI$_INVIFNEST, an
+// error (testdata/dcl50's round 5). An ELSE before it was passed over
+// too, but made the THEN that followed CLI$_INVIFNEST, closing the
+// block (round 6). pass reports a command passed over; THEN and ENDIF
+// go on to their own handlers.
 func (c *Console) awaitThen(line string) (pass bool) {
 	b := c.flow().top()
 	if b == nil || b.state != awaitingThen {
@@ -183,11 +189,22 @@ func (c *Console) awaitThen(line string) (pass bool) {
 	}
 
 	switch verb, _ := flowVerb(line); verb {
-	case "THEN", "ELSE", "ENDIF":
+	case "THEN", "ENDIF":
 		return false
+	case "ELSE":
+		b.elseBeforeThen = true
 	}
 
 	return true
+}
+
+// passedBeforeThen reports whether verification shows the lines passed
+// over while a block waits for its THEN: for an IF that was true, not
+// for one that was false (VMS 7.3, testdata/dcl50's rounds 5 and 6).
+func (c *Console) passedBeforeThen() bool {
+	b := c.flow().top()
+
+	return b != nil && b.value
 }
 
 // thenOfFalseIf reports whether line is the THEN after a block's IF
@@ -270,10 +287,12 @@ func evaluateDCLCondition(text string, symbols *dclSymbolTable, c *Console) (val
 }
 
 // openBlock starts an IF block whose expression's truth is value: the
-// next command must be THEN (awaitThen).
+// next command must be THEN (awaitThen). A block past maxIfBlocks is
+// opened, and its THEN is CLI$_INVIFNEST: VMS 7.3 accepted a 16th IF and
+// refused its THEN (testdata/dcl50's round 6).
 func (c *Console) openBlock(value bool) error {
 	f := c.flow()
-	if len(f.blocks) >= maxIfBlocks {
+	if len(f.blocks) > maxIfBlocks {
 		return vmserrors.New(vmserrors.CLI_INVIFNEST)
 	}
 
@@ -288,12 +307,20 @@ func (c *Console) openBlock(value bool) error {
 // when the IF was true, the THEN branch runs, starting with THEN's own
 // command; when it was false, DCL passes over the branch to the block's
 // ELSE or ENDIF. A THEN that doesn't follow a block's IF is
-// CLI$_INVIFNEST (unconfirmed).
+// CLI$_INVIFNEST (unconfirmed), and so is one after an ELSE that came
+// before it, or one that would open a block past maxIfBlocks; those close
+// the block (VMS 7.3, testdata/dcl50's round 6).
 func (d *Dispatcher) thenCommand(id int64, r *dcl.Result) error {
 	f := d.Console.flow()
 
 	b := f.top()
 	if b == nil || b.state != awaitingThen {
+		return vmserrors.New(vmserrors.CLI_INVIFNEST)
+	}
+
+	if b.elseBeforeThen || len(f.blocks) > maxIfBlocks {
+		f.popBlock()
+
 		return vmserrors.New(vmserrors.CLI_INVIFNEST)
 	}
 
@@ -315,18 +342,14 @@ func (d *Dispatcher) thenCommand(id int64, r *dcl.Result) error {
 
 // elseCommand is ELSE [[$] command], reached at the end of a THEN branch
 // that ran: DCL passes over the ELSE branch to the block's ENDIF. (When
-// the THEN branch didn't run, skipLine starts the ELSE branch instead.)
-// An ELSE outside a THEN branch is CLI$_INVIFNEST; one in a block still
-// waiting for its THEN closes the block (unconfirmed).
+// the THEN branch didn't run, skipLine starts the ELSE branch instead,
+// and one in a block still waiting for its THEN is passed over by
+// awaitThen.) An ELSE outside a THEN branch is CLI$_INVIFNEST.
 func (d *Dispatcher) elseCommand(id int64, r *dcl.Result) error {
 	f := d.Console.flow()
 
 	b := f.top()
 	if b == nil || b.state != inThen {
-		if b != nil && b.state == awaitingThen {
-			f.popBlock()
-		}
-
 		return vmserrors.New(vmserrors.CLI_INVIFNEST)
 	}
 

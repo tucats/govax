@@ -377,8 +377,8 @@ func TestLexicalTime(t *testing.T) {
 		{text: `F$CVTIME("NEXT")`, code: vmserrors.CLI_IVATIME},
 
 		// Delta times.
-		{text: `F$CVTIME("1-2:3:4.5","DELTA")`, want: "1 02:03:04.5"},
-		{text: `F$CVTIME("1-2:3:4.25","DELTA")`, want: "1 02:03:04.25"},
+		{text: `F$CVTIME("1-2:3:4.5","DELTA")`, want: "1 2:3:4.5"},
+		{text: `F$CVTIME("1-2:3:4.25","DELTA")`, want: "1 2:3:4.25"},
 		{text: `F$CVTIME("1 2:3:4","DELTA")`, code: vmserrors.CLI_IVDTIME},
 		{text: `F$CVTIME("2-","DELTA","DAY")`, want: "2"},
 		{text: `F$CVTIME("10:30","DELTA","TIME")`, want: "10:30:00.00"},

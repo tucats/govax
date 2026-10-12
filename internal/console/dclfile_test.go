@@ -91,7 +91,7 @@ func TestDCLFile_volume(t *testing.T) {
 		`$ TYPE RESULTS.DAT`,
 	)
 
-	want := `  "OUT" = "_GOVAX$DUA0" (LNM$PROCESS_TABLE)` + "\n" +
+	want := `   "OUT" = "_GOVAX$DUA0" (LNM$PROCESS_TABLE)` + "\n" +
 		"%SHOW-S-NOTRAN, no translation for logical name OUT\n" +
 		"first\nsecond\nnewer\n"
 	if out != want {

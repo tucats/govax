@@ -37,7 +37,7 @@ func TestLogicalNames_fileCommands(t *testing.T) {
 		fmt.Sprintf(`MOUNT DUA1: "%s"`, newTestContainer(t, "WORKB")))
 
 	wantOutput(t, d, buf, "SHOW LOGICAL/FULL DISK$WORKB",
-		"  \"DISK$WORKB\" [exec] = \"_DUA1:\" [concealed,terminal] (LNM$SYSTEM_TABLE)\n")
+		"   \"DISK$WORKB\" [exec] = \"_DUA1:\" [concealed,terminal] (LNM$SYSTEM_TABLE)\n")
 
 	mustDispatch(t, d,
 		fmt.Sprintf(`COPY/QUIET "%s"/HOST DISK$WORKA:SPEECH.TXT`, write("a.txt", "fourscore\n")),

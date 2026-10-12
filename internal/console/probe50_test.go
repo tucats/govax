@@ -533,11 +533,7 @@ func TestProbe50IOracle(t *testing.T) {
 var probe50FSkipped = []string{"$ DELETE ", "$ DIRECTORY", "$ DUMP"}
 
 // probe50FCompared is a round 4 log as the comparison sees it: the output
-// of the probe50FSkipped commands left out, and the extra blank VMS 7.3's
-// SHOW LOGICAL puts before a process-permanent file's name ("   "OUT"")
-// taken away, govax's logical names having no process-permanent file
-// behind them to show it by (DEVIATIONS.md, "[Phase 50] DCL's file
-// I/O").
+// of the probe50FSkipped commands left out.
 func probe50FCompared(text string) string {
 	var (
 		out      []string
@@ -555,10 +551,6 @@ func probe50FCompared(text string) string {
 			}
 		} else if skipping {
 			continue
-		}
-
-		if rest, ok := strings.CutPrefix(line, `   "`); ok {
-			line = `  "` + rest
 		}
 
 		out = append(out, line)

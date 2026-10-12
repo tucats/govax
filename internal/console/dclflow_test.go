@@ -393,7 +393,8 @@ func TestGosub(t *testing.T) {
 }
 
 // TestGosubErrors: RETURN without GOSUB, a missing label (the end of the
-// procedure), GOSUBs too deep, and GOSUB at the terminal.
+// procedure), GOSUBs too deep (15 run, the 16th refused: VMS 7.3), and
+// GOSUB and RETURN at the terminal.
 func TestGosubErrors(t *testing.T) {
 	if out := runFlow(t, "$ RETURN", `$ PRINT "after"`); !strings.Contains(out, "%DCL-W-BADRET") || !strings.Contains(out, "after") {
 		t.Errorf("RETURN: %q, want BADRET, and on", out)
@@ -404,7 +405,7 @@ func TestGosubErrors(t *testing.T) {
 	}
 
 	out := runFlow(t, "$ N = 0", "$ R:", "$ N = N + 1", "$ GOSUB R", `$ PRINT "N=''N'"`)
-	if strings.Count(out, "GOSUBMAX") != 1 || !strings.HasSuffix(out, "N=17\n") {
+	if strings.Count(out, "GOSUBMAX") != 1 || !strings.HasSuffix(out, "N=16\n") {
 		t.Errorf("too deep: %q", out)
 	}
 
@@ -413,8 +414,16 @@ func TestGosubErrors(t *testing.T) {
 		t.Errorf("at the terminal: %v, want INVGOSUB", err)
 	}
 
-	if err := d.Dispatch("RETURN"); !hasStatus(err, vmserrors.CLI_BADRET) {
-		t.Errorf("RETURN at the terminal: %v, want BADRET", err)
+	// RETURN at the terminal is silent: without a status it marks
+	// $STATUS as shown, and with one it sets it (VMS 7.3, round 6).
+	_ = d.Dispatch("FROBNICATE")
+
+	if err := d.Dispatch("RETURN"); err != nil || d.Console.Status() != 0x10038090 {
+		t.Errorf("RETURN at the terminal: %v, $STATUS %08X, want %08X", err, d.Console.Status(), 0x10038090)
+	}
+
+	if err := d.Dispatch("RETURN 3"); err != nil || d.Console.Status() != 3 {
+		t.Errorf("RETURN 3 at the terminal: %v, $STATUS %08X, want 3", err, d.Console.Status())
 	}
 }
 
@@ -447,7 +456,8 @@ func TestCall(t *testing.T) {
 }
 
 // TestCallErrors: a subroutine inside another can't be called from
-// outside it (14.17.1.2's BAR), nor a label that isn't a SUBROUTINE's;
+// outside it (14.17.1.2's BAR); a label that isn't a SUBROUTINE's runs,
+// then INVCALL;
 // labels are local to the subroutine's level; a SUBROUTINE with no
 // ENDSUBROUTINE; CALL at the terminal.
 func TestCallErrors(t *testing.T) {
@@ -471,7 +481,9 @@ func TestCallErrors(t *testing.T) {
 		t.Errorf("output:\n%s", out)
 	}
 
-	if out := runFlow(t, "$ CALL PLAIN", `$ PRINT "after"`, "$ PLAIN:"); !strings.Contains(out, "USCALL, CALL target PLAIN") || strings.Contains(out, "after") {
+	// A plain label runs at a new level, and CALL then fails with
+	// INVCALL, an error that ends the procedure (VMS 7.3, round 6).
+	if out := runFlow(t, "$ CALL PLAIN", `$ PRINT "after"`, "$ EXIT", "$ PLAIN:", `$ PRINT "at plain"`, "$ EXIT"); out != "at plain\n%DCL-E-INVCALL, invalid CALL nesting structure or data inconsistency detected\n" {
 		t.Errorf("a plain label: %q", out)
 	}
 

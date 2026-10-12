@@ -616,3 +616,50 @@ digits of hundredths given, up to two (`.00` when none are given); the
 three commands are NOCOMD. Part 2: RETURN (and `RETURN 3`) is silent and
 leaves BADRET's status, marked as shown (%X10038198); SUBROUTINE and
 ENDSUBROUTINE are INVCALL; ELSE is INVIFNEST; WAIT leaves `$STATUS`.
+
+## What VMS answered in round 6 (2026-10-12)
+
+The author ran both parts: `vax/probe50a.log` (part 1, with /OUTPUT) and
+`vax/probe50a-term.log` (part 2, the lines typed at the terminal).
+`TestProbe50AOracle` (`internal/console/probe50a_test.go`) runs
+`probe50a.com` with /OUTPUT on DUA1 of a node called SIMVAX and compares
+its log with VMS's section by section. Every section matches, apart from
+DELETE's, DIRECTORY's, and DUMP's layouts, SHOW LOGICAL/PROCESS's list of
+the VAX's own names, and the job table's name. `TestProbe50ATerminal`
+replays part 2, and every line matches. The answers (DEVIATIONS.md's
+"[Phase 51] Round 6 of the probe"):
+
+- **R1:** WAIT leaves `$STATUS` alone when it runs to its end. `WAIT
+  NOTATIME` is IVDTIME with the segment `\0  NOTATIME` and a NUL byte
+  after it, which govax leaves out.
+- **R2:** an ELSE before a block's THEN is passed over like any other
+  command there: shown with verification after a true IF, not after a
+  false one. The THEN after it is `%DCL-E-INVIFNEST` and closes the
+  block, so the lines after the THEN run whatever the IF's value was.
+  CALL of a plain label runs the lines from the label at a new level,
+  with no message, and when that level ends (an EXIT) CALL fails with
+  `%DCL-E-INVCALL`. GOSUBs nest 15 deep: the 16th is GOSUBMAX, a
+  warning. A 16th block IF is accepted, and its THEN is INVIFNEST.
+- **R3:** `/OUTPUT=R6OUTA` makes R6OUTA.LIS, `/O=` works, and so do
+  blanks around `=` (govax already agreed).
+- **R4:** a file OPEN/WRITE makes has the fixed control bytes 01 8D before
+  each record, as govax writes them. The record length counts them.
+- **R5:** SHOW LOGICAL of a name indents it three blanks. An iterated
+  translation is `1  "R6A" = ...` (the level and two blanks). A search
+  list's further values follow a tab (`<tab>= "two"`), in listings too.
+  In a listing, a table header with no names under it has no blank line
+  after it. So the extra blank round 4 saw before `"OUT"` belongs to
+  every name looked up, not to process-permanent files.
+- **R6:** F$CVTIME writes a delta's fields as they were typed, with
+  the missing ones as `00`: `0-0:0:0.123` is `0 0:0:0.123`, `3-4` is
+  `3 4:00:00.00`. `1ABC` is IVVERB (`\1ABC\`); `.X` and `(X)` are NOCOMD.
+- **Part 2:** at the terminal, RETURN shows nothing. Without a status it
+  marks `$STATUS` as shown (%X00038090 became %X10038090), and `RETURN 3`
+  sets `$STATUS` to 3. SUBROUTINE and ENDSUBROUTINE are INVCALL, ELSE is
+  INVIFNEST, and WAIT leaves `$STATUS` alone (govax already agreed on
+  those four).
+- **Unexplained:** with verification, VMS showed R3's comment
+  `$ ! R3: @'s /OUTPUT: ...` as `@'s/OUTPUT`, without the blank. It kept
+  the blank after an apostrophe's word before a letter or a quote in
+  every other comment of the five rounds. The comparison allows for that
+  one line.

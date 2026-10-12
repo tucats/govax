@@ -301,8 +301,8 @@ func (d logicalDisplay) logicalTables(specs []string) ([]*lnm.Table, error) {
 //     of each equivalence string that is itself a logical name, one
 //     numbered level at a time:
 //
-//     "MYDISK" = "WORK4" (LNM$PROCESS_TABLE)
-//     1 "WORK4" = "$255$DUA17:" (LNM$SYSTEM_TABLE)
+//        "MYDISK" = "WORK4" (LNM$PROCESS_TABLE)
+//     1  "WORK4" = "$255$DUA17:" (LNM$SYSTEM_TABLE)
 //
 //     A name that isn't found prints %SHOW-S-NOTRAN.
 //
@@ -372,9 +372,11 @@ func (d logicalDisplay) show(names, tables []string, full bool) (untranslated bo
 	return untranslated, nil
 }
 
-// listLogicalTables prints each table's header, between blank lines as
+// listLogicalTables prints each table's header after a blank line, as
 // VMS's SHOW LOGICAL has it (testdata/mp/probe4/vax/probe4.log), and its
-// names that match pattern. With full, the header adds the table's
+// names that match pattern after another blank line; a table with none
+// has no second blank line (VMS 7.3, testdata/dcl50's R5). With full,
+// the header adds the table's
 // access mode and a line about its protection, as VMS 7.3's SHOW
 // LOGICAL/FULL of the process table did (testdata/mp/probe5/vax, step
 // 12): "(LNM$PROCESS_TABLE)<tab>[kernel]", then three tabs and "[no
@@ -383,16 +385,23 @@ func (d logicalDisplay) show(names, tables []string, full bool) (untranslated bo
 func (d logicalDisplay) listLogicalTables(tables []*lnm.Table, pattern string, full bool) {
 	for _, t := range tables {
 		if full {
-			d.out("\n(%s)\t[%s]\n\t\t\t[no protection information]\n\n", t.Name, t.Mode)
+			d.out("\n(%s)\t[%s]\n\t\t\t[no protection information]\n", t.Name, t.Mode)
 		} else {
-			d.out("\n(%s)\n\n", t.Name)
+			d.out("\n(%s)\n", t.Name)
 		}
 
 		entries := t.Entries()
+		shown := false
 
 		for j, e := range entries {
 			if !lnm.Match(pattern, e.Name) {
 				continue
+			}
+
+			if !shown {
+				d.out("\n")
+
+				shown = true
 			}
 
 			// A name defined at more than one mode is ambiguous without
@@ -436,9 +445,12 @@ func (d logicalDisplay) findLogical(tables []*lnm.Table, name string) *lnm.Entry
 // already printed on this path, so a circular definition stops instead
 // of repeating; levels stop at lnm.MaxDepth.
 func (d logicalDisplay) printLogicalChain(tables []*lnm.Table, e *lnm.Entry, level int, chain []string, full bool) {
-	prefix := "  "
+	// The name is indented three blanks, the room a level's number and
+	// two blanks take on the lines below it (VMS 7.3, testdata/dcl50's
+	// R5: `   "R6B" = "R6A"`, then `1  "R6A" = "plain"`).
+	prefix := "   "
 	if level > 0 {
-		prefix = fmt.Sprintf("%-2d", level)
+		prefix = fmt.Sprintf("%d  ", level)
 	}
 
 	d.printLogicalEntry(prefix, e, full, full, e.Table.Name)
@@ -466,8 +478,9 @@ func (d logicalDisplay) printLogicalChain(tables []*lnm.Table, e *lnm.Entry, lev
 // printLogicalEntry prints one name in SHOW LOGICAL's format:
 //
 //	prefix"NAME" [mode] = "VALUE" [attributes] (TABLE)
-//	        = "VALUE2" [attributes]
+//	<tab>= "VALUE2" [attributes]
 //
+// (a search list's further values follow a tab, as VMS 7.3 wrote them).
 // showMode adds the "[mode]" tag, showAttrs the equivalence attributes,
 // and table (when not "") the trailing "(TABLE)". A table-name entry,
 // which has no equivalence strings, shows as [table] = "".
@@ -498,7 +511,7 @@ func (d logicalDisplay) printLogicalEntry(prefix string, e *lnm.Entry, showMode,
 	d.out("%s\n", b.String())
 
 	for _, q := range e.Equivalences[min(1, len(e.Equivalences)):] {
-		d.out("        = %q%s\n", q.Value, attrTags(q.Attrs, showAttrs))
+		d.out("\t= %q%s\n", q.Value, attrTags(q.Attrs, showAttrs))
 	}
 }
 
