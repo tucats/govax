@@ -2,6 +2,7 @@ package librtl
 
 import (
 	"math"
+	"strings"
 	"testing"
 
 	"github.com/tucats/govax/internal/corevms"
@@ -193,13 +194,16 @@ func TestLibEmodStatuses(t *testing.T) {
 		t.Errorf("underflow: %08X, %08X; want zeros", i, f)
 	}
 
-	// A reserved multiplicand: SS$_ROPRAND, nothing stored.
+	// A reserved multiplicand: SS$_ROPRAND, signaled, as VMS does;
+	// nothing stored. (This fixture has nothing to signal through, so
+	// the signal fails with an error.)
 	putLongword(t, env, floatB, 0x00008000)
 	putLongword(t, env, floatInt, 0xEEEEEEEE)
 	fill(t, env, floatOut)
 
-	if got := call(t, env, "LIB$EMODF", floatA, floatExt, floatB, floatInt, floatOut); got != ssRopRand {
-		t.Errorf("reserved: %#x, want SS$_ROPRAND", got)
+	argv := []uint32{floatA, floatExt, floatB, floatInt, floatOut}
+	if _, err := shim(t, env, "LIB$EMODF")(env, argv); err == nil || !strings.Contains(err.Error(), "signal") {
+		t.Errorf("reserved: err = %v, want a signal", err)
 	}
 
 	if i, f := longword(t, env, floatInt), longword(t, env, floatOut); i != 0xEEEEEEEE || f != 0xEEEEEEEE {
@@ -270,8 +274,8 @@ func TestLibPolyStatuses(t *testing.T) {
 		status       uint32
 		want         float64 // when the status is SS$_NORMAL
 	}{
-		{"degree 32", 1, 32, []float64{1}, ssRopRand, 0},
-		{"degree -1", 1, 0xFFFF, []float64{1}, ssRopRand, 0},
+		// Any degree is evaluated, as VMS does: 33 ones at x = 1.
+		{"degree 32", 1, 32, ones(33), ssNormal, 33},
 		{"overflow", math.Ldexp(1, 100), 2, []float64{1, 0, 0}, ssFltOvf, 0},
 		{"underflow", math.Ldexp(1, -100), 3, []float64{1, 0, 0, 5}, ssNormal, 5},
 		{"degree 31", 1, 31, make([]float64, 32), ssNormal, 0},
@@ -305,4 +309,14 @@ func TestLibPolyStatuses(t *testing.T) {
 	if got := call(t, env, "LIB$POLYF", floatA, degreeAddr, floatTable, floatOut); got != ssRopRand {
 		t.Errorf("reserved coefficient: %#x, want SS$_ROPRAND", got)
 	}
+}
+
+// ones returns n coefficients of 1.
+func ones(n int) []float64 {
+	c := make([]float64, n)
+	for i := range c {
+		c[i] = 1
+	}
+
+	return c
 }

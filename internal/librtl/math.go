@@ -19,6 +19,7 @@ var (
 	ssIntOvf  = vmsdef.Symbols["SS$_INTOVF"]
 	ssIntDiv  = vmsdef.Symbols["SS$_INTDIV"]
 	libIntOvf = vmsdef.Symbols["LIB$_INTOVF"]
+	libNormal = vmsdef.Symbols["LIB$_NORMAL"]
 )
 
 // defaultArrayLength is LIB$ADDX's and LIB$SUBX's array length when the
@@ -170,12 +171,13 @@ func libEdiv(env *corevms.Environment, argv []uint32) (uint32, error) {
 // libAdawi is LIB$ADAWI (LIB-3): sum <- sum + add, words, as the ADAWI
 // instruction adds them; the third argument gets the new sum's sign as a
 // word (-1, 0, or 1; the manual calls it "result" and doesn't define its
-// value further: unconfirmed). On overflow the truncated sum is stored
-// and the status is LIB$_INTOVF.
+// value further; VMS stores the same, testdata/lib53). The status is
+// LIB$_NORMAL (VMS returns it, not SS$_NORMAL), or LIB$_INTOVF on
+// overflow, the truncated sum stored.
 //
 // The sum must be word aligned, as the instruction's sum operand must
 // be: an odd address is the instruction's reserved operand fault,
-// signaled as SS$_ROPRAND (unconfirmed). One CPU has no interlock to
+// signaled as SS$_ROPRAND (as VMS does). One CPU has no interlock to
 // model.
 //
 //	LIB$ADAWI add ,sum ,result
@@ -220,5 +222,5 @@ func libAdawi(env *corevms.Environment, argv []uint32) (uint32, error) {
 		return libIntOvf, nil
 	}
 
-	return ssNormal, nil
+	return libNormal, nil
 }

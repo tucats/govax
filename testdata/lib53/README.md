@@ -2,13 +2,12 @@
 
 These fixtures are `docs/PHASE-53 - RTL LIB support.md`'s subtasks 12
 and 13. One MACRO program calls every LIBRTL routine the phase adds, case
-by case, and prints what each returned, signaled, and stored. govax's
-output is checked by `TestLib53Program` (`internal/console/lib53_test.go`).
-The same program, run on VMS, is the probe that settles the choices the
-phase doc marks unconfirmed.
+by case, and prints what each returned, signaled, and stored. Run on VMS,
+it settled the choices the phase doc had marked unconfirmed, and
+`TestLib53Oracle` (`internal/console/lib53_test.go`) checks that govax's
+output matches VMS's (`vax/lib53-vax.txt`) line for line.
 
-`gen.go` writes everything here but `lib53-govax.txt` and `vax/`, from
-one table of cases:
+`gen.go` writes everything here but `vax/`, from one table of cases:
 
     go run testdata/lib53/gen.go
 
@@ -17,7 +16,8 @@ one table of cases:
 | `lib53.mar` | The program: 132 cases of the bit field, integer, floating, queue and interlock, character string, CALLG, and CRC routines, with the manual's examples, the edges, and every unconfirmed choice |
 | `lib53.com` | Assembles, links, and runs it on VMS, and copies the shareable images LIBRTL2.EXE and CRFSHR.EXE |
 | `exchange.cmd` | The govax console script that builds the exchange volume |
-| `lib53-govax.txt` | govax's output (`go test ./internal/console -run TestLib53Program -update` rewrites it) |
+| `vax/lib53-vax.txt` | The program's output on VMS (`LIB53.OUT`; `*.out` files are ignored by git) |
+| `vax/lib53.log` | `LIB53.COM`'s log on VMS |
 
 ## How the program works
 
@@ -57,8 +57,17 @@ queue's header (the header and entries are self-relative already).
 3. Dismount the volume and copy the container back as
    `testdata/disks/lib53-vax.dsk`.
 
-Then, in govax: `LIB53.OUT` (as `vax/lib53-vax.txt`: `*.out` files are ignored), `LIB53.LOG`, and `LIB53.MLG` go to `vax/`
-(after the author has looked at them); the two images' symbols are merged
-into `vmsdef` with `go run ./internal/vmsdef/gen -image FILE`; and the
-images, which are licensed, are deleted from the container and its free
-blocks zeroed before the container is kept anywhere.
+## The run
+
+2026-10-12, OpenVMS V7.1 on simh's VAX 8600. MACRO wrote no messages, so
+`LIB53.MLG` was never created. Of the 132 cases, 125 matched govax's
+output as it stood; the seven that didn't were govax's own choices, and
+govax now does what VMS did (the phase doc's progress log lists them).
+If `lib53.mar` changes, run it on VMS again and replace `vax/`.
+
+The images' symbols are in `vmsdef` (`go run ./internal/vmsdef/gen -image
+FILE`, from raw-block copies, `COPY/BINARY`). The images were then
+removed: the run's container was replaced by a fresh one,
+`testdata/disks/lib53-vax.dsk` (local only), holding just `LIB53.MAR`,
+`LIB53.COM`, `LIB53.LOG`, and `LIB53.OUT`, and checked to contain none of
+the images' symbol names.

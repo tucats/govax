@@ -41,7 +41,8 @@ never had.
   Part A sorts every LIBRTL routine into them (from the VMS 5.0 LIB$
   manual, `~/Documents/Technical Doc/VMS/rtl-library-lib-manual.txt`,
   an OCR with errors, beside its PDF), Part B is the groundwork they
-  share, and Part C its own group, the instruction routines.
+  share, and Part C its own group, the instruction routines (done
+  2026-10-12, checked against VMS by `testdata/lib53`).
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
 - `docs/DEVIATIONS.md` — running log of suspected ISA/behavior fidelity issues found in
@@ -104,6 +105,11 @@ never had.
   oracles compare DELETE's, DIRECTORY's, and DUMP's output too, on a
   volume with VMS's 3-block clusters (`mountClusteredContainer`), file
   IDs and times masked (`maskVolumeDetails`).
+- `testdata/lib53/` — Phase 53's probe of LIBRTL's instruction routines
+  (README.md): `gen.go` writes `lib53.mar` (132 cases, each under a
+  handler that tells a signaled condition from a returned status), and
+  `vax/lib53-vax.txt` is VMS V7.1's output, which `TestLib53Oracle`
+  matches line for line.
 - `testdata/probe49/` — Phase 49's VMS probe in three rounds (`probe6`,
   `probe6b`, `probe6c`; README.md has each round's answers), run by
   `TestProbe6*`; `testdata/rms49/` and `testdata/sec49/` are the phase's
@@ -570,7 +576,16 @@ expect adjustment as phases land):
   gets a package like it. New routines are written from DIGITAL's manuals
   (clean room), and checked on VMS where a probe can: LIB$CREATE_DIR
   (`createdir.go`) against `testdata/credir/libcrd.mar`'s VMS 7.3 run
-  (`TestLibCreateDirOracle`). LIB$PUT_OUTPUT is here too (`output.go`); kernel.asm's
+  (`TestLibCreateDirOracle`). The instruction routines (Phase 53: bit
+  fields, ADDX/SUBX/EMUL/EDIV/ADAWI, EMOD and POLY, the interlocked queues
+  and BBSSI/BBCCI, LOCC to MOVTUC, CRC; `bitfield.go`, `math.go`,
+  `float.go`, `queue.go`, `chars.go`, `crc.go`) do their work with the
+  CPU's own code, exported from `internal/cpu` as functions of addresses
+  (`cpu.MemoryField`, `cpu.InsertInterlocked`, `cpu.LocateCharacter`,
+  `cpu.MoveCharacters`, `cpu.CRC`, ...); `testdata/lib53`'s probe
+  (`TestLib53Oracle`) matches VMS's run of all 132 cases. XFC$SHIM code
+  64 is DCL's `EXE$CLI_COMMAND`, so no LIBRTL routine may use it
+  (`TestCLIShimCodeFree`). LIB$PUT_OUTPUT is here too (`output.go`); kernel.asm's
   old interrupt-driven one is now its private `EXE$PUT_OUTPUT`.
   LIB$GET_FOREIGN (`foreign.go`) returns `Environment.CommandLine`: a
   foreign command's text (DCL symbols, `internal/dclshell/dclsym.go`), or

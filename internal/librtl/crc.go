@@ -12,7 +12,8 @@ import (
 
 // libCrcTable is LIB$CRC_TABLE (LIB-33): the table for the polynomial
 // mask polynomial-coefficient, stored at crc-table. The manual gives it no
-// value; govax returns SS$_NORMAL (unconfirmed).
+// value; VMS's leaves 16 in R0 (testdata/lib53), the table's length,
+// which govax returns too.
 //
 //	LIB$CRC_TABLE polynomial-coefficient ,crc-table
 func libCrcTable(env *corevms.Environment, argv []uint32) (uint32, error) {
@@ -29,13 +30,17 @@ func libCrcTable(env *corevms.Environment, argv []uint32) (uint32, error) {
 		}
 	}
 
-	return ssNormal, nil
+	return crcTableLength, nil
 }
+
+// crcTableLength is the number of longwords in a CRC table, and what
+// LIB$CRC_TABLE returns.
+const crcTableLength = 16
 
 // libCrc is LIB$CRC (LIB-31): the CRC of stream, from initial-crc, through
 // the table at crc-table. A CRC-16 polynomial's result is its low word.
-// The stream is a string of any class; an invalid descriptor, there being
-// no status to return, is signaled as LIB$_INVSTRDES (unconfirmed).
+// The stream is a string of any class; an invalid descriptor reads as an
+// empty stream, as for the search routines (unconfirmed).
 //
 //	LIB$CRC crc-table ,initial-crc ,stream
 func libCrc(env *corevms.Environment, argv []uint32) (uint32, error) {
@@ -44,9 +49,9 @@ func libCrc(env *corevms.Environment, argv []uint32) (uint32, error) {
 		return memoryFault(env, err)
 	}
 
-	stream, err := readDescriptor(env, arg(argv, 2))
+	stream, err := searchDescriptor(env, arg(argv, 2))
 	if err != nil {
-		return searchFailure(env, err)
+		return memoryFault(env, err)
 	}
 
 	crc, err := cpu.CRC(env.CPU(), env.Memory(), arg(argv, 0), initial, uint16(stream.length), stream.text)

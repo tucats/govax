@@ -1,0 +1,51 @@
+$ ! LIB53.COM - the Phase 53 probe of LIBRTL's instruction routines.
+$ ! Written by testdata/lib53/gen.go. Run it with the exchange volume's
+$ ! [000000] as the default directory:
+$ !
+$ !     @LIB53/OUTPUT=LIB53.LOG
+$ !
+$ ! LIB53.OUT gets the program's output; LIB53.LOG this procedure's.
+$ SET NOON
+$ SET VERIFY
+$ WRITE SYS$OUTPUT F$GETSYI("VERSION"), " ", F$GETSYI("HW_NAME")
+V7.1     VAX 8600
+$ DEV = F$PARSE("[000000]",,,"DEVICE")
+$ SET DEFAULT DUA1:[000000]
+$ DEFINE/USER_MODE SYS$OUTPUT LIB53.MLG
+$ MACRO/NOLIST LIB53
+$ LINK/NOMAP LIB53
+$ DEFINE/USER_MODE SYS$OUTPUT LIB53.OUT
+$ RUN LIB53
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ ! The shareable images Phases 54, 59, and 61 need the symbols of.
+$ ! These are licensed files: they are erased from this volume once
+$ ! their symbols are read.
+$ IF F$SEARCH("SYS$SHARE:LIBRTL2.EXE") .NES. "" THEN COPY SYS$SHARE:LIBRTL2.EXE []
+$ IF F$SEARCH("SYS$SHARE:CRFSHR.EXE") .NES. "" THEN COPY SYS$SHARE:CRFSHR.EXE []
+$ IF F$SEARCH("SYS$LIBRARY:CRFSHR.EXE") .NES. "" .AND. F$SEARCH("CRFSHR.EXE") .EQS. "" -
+	THEN COPY SYS$LIBRARY:CRFSHR.EXE []
+$ DIRECTORY/SIZE/DATE
+
+Directory DUA1:[000000]
+
+000000.DIR;1               1  12-OCT-2026 19:29:17.85
+BACKUP.SYS;1               0  12-OCT-2026 19:29:17.85
+BADBLK.SYS;1               0  12-OCT-2026 19:29:17.85
+BADLOG.SYS;1               0  12-OCT-2026 19:29:17.85
+BITMAP.SYS;1               7  12-OCT-2026 19:29:17.85
+CONTIN.SYS;1               0  12-OCT-2026 19:29:17.85
+CORIMG.SYS;1               0  12-OCT-2026 19:29:17.85
+CRFSHR.EXE;1              12  10-DEC-1996 14:17:06.62
+INDEXF.SYS;1             829  12-OCT-2026 19:29:17.85
+LIB53.COM;1                3  12-OCT-2026 19:29:17.85
+LIB53.EXE;1               39  12-OCT-2026 19:30:01.29
+LIB53.LOG;1                0  12-OCT-2026 19:30:00.93
+LIB53.MAR;1              121  12-OCT-2026 19:29:17.85
+LIB53.OBJ;1               63  12-OCT-2026 19:30:00.93
+LIB53.OUT;1               14  12-OCT-2026 19:30:01.30
+LIBRTL2.EXE;1             71  10-DEC-1996 14:17:36.32
+SECURITY.SYS;1             1  12-OCT-2026 19:29:17.85
+VOLSET.SYS;1               0  12-OCT-2026 19:29:17.85
+
+Total of 18 files, 1161 blocks.

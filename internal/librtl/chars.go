@@ -28,10 +28,12 @@ import (
 // length "is not checked": a zero-length one still gives the byte at its
 // address.
 //
-// The searches return a position, not a status, so an invalid descriptor
-// has no status to return: govax signals LIB$_INVSTRDES for one
-// (unconfirmed). LIB$MOVTUC returns -1 instead, as it does when its
-// destination can't be allocated.
+// The searches return a position, not a status, and VMS gives an invalid
+// descriptor none either: its LIB$LOCC of a class 3 source returns 0, as
+// for an empty one (testdata/lib53). So for the searches (and LIB$CRC) an
+// invalid descriptor reads as an empty string (searchDescriptor;
+// confirmed for LIB$LOCC only). LIB$MOVTUC returns -1 instead, as it does
+// when its destination can't be allocated.
 
 var libStrTru = vmsdef.Symbols["LIB$_STRTRU"]
 
@@ -49,27 +51,33 @@ func position(length uint32, left uint16) uint32 {
 	return length - uint32(left) + 1
 }
 
-// searchFailure is what a search routine does with a descriptor helper's
-// error: an invalid descriptor is signaled as LIB$_INVSTRDES (if a
-// handler continues it, the routine returns it); a memory error is an
-// access violation (memoryFault).
-func searchFailure(env *corevms.Environment, err error) (uint32, error) {
+// searchDescriptor reads a search routine's string descriptor; an
+// invalid one reads as an empty string.
+func searchDescriptor(env *corevms.Environment, addr uint32) (stringDesc, error) {
+	d, err := readDescriptor(env, addr)
 	if errors.Is(err, errInvStrDes) {
-		return env.SignalFailure([]uint32{libInvStrDes}, libInvStrDes)
+		return stringDesc{addr: addr}, nil
 	}
 
-	return memoryFault(env, err)
+	return d, err
 }
 
 // firstChar returns the first byte of the string the descriptor at addr
-// describes, its length not checked.
+// describes, its length not checked. A descriptor of a class no string
+// has gives the byte its pointer addresses.
 func firstChar(env *corevms.Environment, addr uint32) (byte, error) {
+	mem, c := env.Memory(), env.CPU()
+
 	d, err := readDescriptor(env, addr)
-	if err != nil {
+	if errors.Is(err, errInvStrDes) {
+		if d.text, err = mem.LoadLongword(c, addr+4); err != nil {
+			return 0, err
+		}
+	} else if err != nil {
 		return 0, err
 	}
 
-	return env.Memory().LoadByte(env.CPU(), d.text)
+	return mem.LoadByte(c, d.text)
 }
 
 // libLocc is LIB$LOCC (LIB-258): the position in source-string of the
@@ -92,12 +100,12 @@ func libSkpc(env *corevms.Environment, argv []uint32) (uint32, error) {
 func locate(env *corevms.Environment, argv []uint32, equal bool) (uint32, error) {
 	ch, err := firstChar(env, arg(argv, 0))
 	if err != nil {
-		return searchFailure(env, err)
+		return memoryFault(env, err)
 	}
 
-	src, err := readDescriptor(env, arg(argv, 1))
+	src, err := searchDescriptor(env, arg(argv, 1))
 	if err != nil {
-		return searchFailure(env, err)
+		return memoryFault(env, err)
 	}
 
 	left, err := cpu.LocateCharacter(env.CPU(), env.Memory(), ch, uint16(src.length), src.text, equal)
@@ -110,19 +118,19 @@ func locate(env *corevms.Environment, argv []uint32, equal bool) (uint32, error)
 
 // libMatchc is LIB$MATCHC (LIB-270): the position in source-string of the
 // first occurrence of sub-string, or 0. An empty sub-string is found at
-// position 1, as MATCHC finds an empty object at once (unconfirmed for
-// an empty source too).
+// position 1, as MATCHC finds an empty object at once, in an empty source
+// too (as VMS does).
 //
 //	LIB$MATCHC sub-string ,source-string
 func libMatchc(env *corevms.Environment, argv []uint32) (uint32, error) {
-	sub, err := readDescriptor(env, arg(argv, 0))
+	sub, err := searchDescriptor(env, arg(argv, 0))
 	if err != nil {
-		return searchFailure(env, err)
+		return memoryFault(env, err)
 	}
 
-	src, err := readDescriptor(env, arg(argv, 1))
+	src, err := searchDescriptor(env, arg(argv, 1))
 	if err != nil {
-		return searchFailure(env, err)
+		return memoryFault(env, err)
 	}
 
 	at, found, err := cpu.MatchCharacters(env.CPU(), env.Memory(), uint16(sub.length), sub.text, uint16(src.length), src.text)
@@ -158,9 +166,9 @@ func libSpanc(env *corevms.Environment, argv []uint32) (uint32, error) {
 // scan is LIB$SCANC and LIB$SPANC. The table is 256 bytes at the
 // table-array argument; the mask is a byte by reference.
 func scan(env *corevms.Environment, argv []uint32, scanc bool) (uint32, error) {
-	src, err := readDescriptor(env, arg(argv, 0))
+	src, err := searchDescriptor(env, arg(argv, 0))
 	if err != nil {
-		return searchFailure(env, err)
+		return memoryFault(env, err)
 	}
 
 	mask, err := env.Memory().LoadByte(env.CPU(), arg(argv, 2))
@@ -178,8 +186,7 @@ func scan(env *corevms.Environment, argv []uint32, scanc bool) (uint32, error) {
 
 // libMovc3 is LIB$MOVC3 (LIB-275): length bytes from source to
 // destination, by address, not descriptor; overlap doesn't matter. The
-// manual gives it no value; govax returns what MOVC3 leaves in R0, 0
-// (unconfirmed).
+// manual gives it no value; VMS's returns SS$_NORMAL (testdata/lib53).
 //
 //	LIB$MOVC3 word-integer-length ,source ,destination
 func libMovc3(env *corevms.Environment, argv []uint32) (uint32, error) {
@@ -193,8 +200,7 @@ func libMovc3(env *corevms.Environment, argv []uint32) (uint32, error) {
 
 // libMovc5 is LIB$MOVC5 (LIB-276): the source replaces the destination,
 // padded with the fill byte or truncated, by address, not descriptor.
-// The manual gives it no value; govax returns what MOVC5 leaves in R0,
-// the source bytes not moved (unconfirmed).
+// The manual gives it no value; VMS's returns SS$_NORMAL (testdata/lib53).
 //
 //	LIB$MOVC5 word-integer-source-length ,source ,fill ,word-integer-destination-length ,destination
 func libMovc5(env *corevms.Environment, argv []uint32) (uint32, error) {
@@ -218,15 +224,14 @@ func libMovc5(env *corevms.Environment, argv []uint32) (uint32, error) {
 	return moveChars(env, srcLen, arg(argv, 1), fill, dstLen, arg(argv, 4))
 }
 
-// moveChars is LIB$MOVC3's and LIB$MOVC5's move: the source bytes not
-// moved. A fault in the destination is a write's.
+// moveChars is LIB$MOVC3's and LIB$MOVC5's move. A fault in the
+// destination is a write's.
 func moveChars(env *corevms.Environment, srcLen uint16, src uint32, fill byte, dstLen uint16, dst uint32) (uint32, error) {
-	left, err := cpu.MoveCharacters(env.CPU(), env.Memory(), srcLen, src, fill, dstLen, dst, nil)
-	if err != nil {
+	if _, err := cpu.MoveCharacters(env.CPU(), env.Memory(), srcLen, src, fill, dstLen, dst, nil); err != nil {
 		return memoryFault(env, faultIn(err, dst, uint32(dstLen)))
 	}
 
-	return uint32(left), nil
+	return ssNormal, nil
 }
 
 // faultIn marks a memory error as a write's (writing) when the address
@@ -333,9 +338,13 @@ const movtucFailed = 0xFFFFFFFF
 // in the source, or 0 when the source or the destination ran out first,
 // or -1 when the destination can't be allocated (and, in govax, when a
 // descriptor is invalid: unconfirmed). The destination is written as any
-// output string is: with fill-character, a fixed one's rest is filled
-// with its first byte; without it, left as it was. A dynamic one gets
-// the translated characters' length (unconfirmed).
+// output string is, but for the fill: with fill-character, a fixed one's
+// rest is filled with its first byte; without it, left as it was. A
+// dynamic one gets the translated characters' length, unfilled. A
+// varying one's CURLEN is the translated characters', and with
+// fill-character the bytes after them are filled up to the source's
+// length (within its MAXSTRLEN), past CURLEN. All as VMS does
+// (testdata/lib53).
 //
 //	LIB$MOVTUC source-string ,stop-character ,translation-table ,destination-string [,fill-character]
 func libMovtuc(env *corevms.Environment, argv []uint32) (uint32, error) {
@@ -386,6 +395,14 @@ func libMovtuc(env *corevms.Environment, argv []uint32) (uint32, error) {
 
 	if _, _, err := writePadded(env, arg(argv, 3), out, fill, pad); err != nil {
 		return movtucFailure(env, err)
+	}
+
+	if pad && dst.class == dscClassVS {
+		for i := len(out); i < len(src); i++ {
+			if err := env.Memory().StoreByte(env.CPU(), dst.text+uint32(i), fill); err != nil {
+				return memoryFault(env, writing(err))
+			}
+		}
 	}
 
 	return uint32(at + 1), nil

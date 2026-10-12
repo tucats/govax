@@ -18,12 +18,13 @@ func floatCheck(n int, x, operands string) string {
 // TestLibrtlFloating: LIB$EMODx and LIB$POLYx in each format through
 // their stubs. EMOD of -2.5 by 1.5 is -3 and -0.75; POLY is the manual's
 // FORTRAN example, x^4 + 2x^3 - x^2 + x - 3 at 2, which is 27. Then
-// LIB$POLYF of degree 32 returns SS$_ROPRAND. Each check that fails
+// LIB$POLYF of degree 32, 33 ones at 1, is 33: unlike the instruction,
+// the routine takes any degree, as VMS's does. Each check that fails
 // returns its own number; all passing returns 1.
 func TestLibrtlFloating(t *testing.T) {
 	var data, code strings.Builder
 
-	data.WriteString("\t.PSECT\tDATA,NOEXE,WRT,QUAD\nDEG4:\t.WORD\t4\nDEG32:\t.WORD\t32\nEXT:\t.WORD\t0\nINT:\t.LONG\t0\n")
+	data.WriteString("\t.PSECT\tDATA,NOEXE,WRT,QUAD\nDEG4:\t.WORD\t4\nDEG32:\t.WORD\t32\nONES:\n\t.REPT\t33\n\t.F_FLOATING\t1.0\n\t.ENDR\nONE:\t.F_FLOATING\t1.0\nWANT33:\t.F_FLOATING\t33.0\nEXT:\t.WORD\t0\nINT:\t.LONG\t0\n")
 	code.WriteString("\t.PSECT\tCODE,NOWRT,EXE\n\t.ENTRY\tSTART,^M<>\n")
 
 	n := 2
@@ -47,8 +48,8 @@ func TestLibrtlFloating(t *testing.T) {
 		n += 5
 	}
 
-	code.WriteString("\tPUSHAB\tFRES\n\tPUSHAB\tFCOEF\n\tPUSHAW\tDEG32\n\tPUSHAB\tFX\n" +
-		"\tCALLS\t#4,G^LIB$POLYF\n" + check(n, "R0,#^X454") +
+	code.WriteString("\tPUSHAB\tFRES\n\tPUSHAB\tONES\n\tPUSHAW\tDEG32\n\tPUSHAB\tONE\n" +
+		"\tCALLS\t#4,G^LIB$POLYF\n" + check(n, "R0,#1") + check(n+1, "FRES,WANT33") +
 		"\tMOVL\t#1,R0\n\tRET\n\t.END\tSTART\n")
 
 	r0, out := runMacroProgram(t, data.String()+code.String())

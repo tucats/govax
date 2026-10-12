@@ -3771,6 +3771,41 @@ widened."
   still never set by govax itself (one processor).
 - **Status**: fixed in Go (docs/PHASE-53, subtask 9).
 
+### [Phase 53] LIBRTL's instruction routines: settled by the probe, and the rest chosen
+
+- **Where**: `internal/librtl` (`bitfield.go`, `math.go`, `float.go`,
+  `queue.go`, `chars.go`, `crc.go`); the probe is `testdata/lib53`
+  (`TestLib53Oracle`, VMS V7.1 on simh, 2026-10-12).
+- **What the probe settled** (govax changed to match): LIB$ADAWI returns
+  LIB$_NORMAL, not SS$_NORMAL; LIB$EMODx *signals* a reserved operand
+  (SS$_ROPRAND), though the manual lists it as returned and LIB$POLYx
+  does return it; LIB$POLYx takes any degree, not POLY's 0 to 31 (32 is
+  evaluated; 65,535 runs through whatever memory follows); LIB$LOCC of a
+  source with an invalid class returns 0, no status, no signal;
+  LIB$MOVC3 and LIB$MOVC5 return SS$_NORMAL; LIB$MOVTUC into a varying
+  string with a fill character fills up to the source's length, past
+  CURLEN; LIB$CRC_TABLE leaves 16 in R0.
+- **What it confirmed** (govax's choices as they were): LIB$FFx's base is
+  the field's address; LIB$INSV returns SS$_NORMAL; LIB$ADDX and LIB$SUBX
+  of length 0 do nothing (SS$_NORMAL) and of length -1 return
+  LIB$_INVARG; LIB$ADAWI's third argument gets the sum's sign as a word,
+  and an odd sum signals SS$_ROPRAND; LIB$POLYx's overflow returns
+  SS$_FLTOVF with nothing stored, and underflow goes on with zero; the
+  queue routines signal SS$_ROPRAND for every misaligned or self-referent
+  operand; LIB$MATCHC finds an empty substring at 1, in an empty source
+  too; LIB$MOVTC's dynamic destination gets the source's length, a
+  varying one up to MAXSTRLEN; LIB$MOVTUC without a fill leaves a fixed
+  destination's rest alone and gives a dynamic one the translated length;
+  the access violations' reason masks (0 for a read of page 0, 4 for a
+  write).
+- **Still govax's choice** (no probe): a retry count of 0 makes one
+  attempt; an invalid descriptor reads as an empty string for LIB$SKPC,
+  LIB$MATCHC, LIB$SCANC, LIB$SPANC, and LIB$CRC (confirmed for LIB$LOCC
+  only); LIB$MOVTUC returns -1 for an invalid descriptor as for no
+  memory; LIB$CVTDF (7.x only, no description) stays a missing-routine
+  stub.
+- **Status**: fixed in Go where VMS differed (docs/PHASE-53, subtask 13).
+
 <!--
 Entry template:
 

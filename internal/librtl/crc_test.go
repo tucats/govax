@@ -12,8 +12,8 @@ func TestLibCrcTable(t *testing.T) {
 	env := fixture(t)
 	putLongword(t, env, 0x1800, crc16)
 
-	if got := call(t, env, "LIB$CRC_TABLE", 0x1800, crcTableAddr); got != ssNormal {
-		t.Errorf("LIB$CRC_TABLE = %#x, want SS$_NORMAL", got)
+	if got := call(t, env, "LIB$CRC_TABLE", 0x1800, crcTableAddr); got != 16 {
+		t.Errorf("LIB$CRC_TABLE = %#x, want 16, as VMS returns", got)
 	}
 
 	// CRC-16's nibble table, entry by entry.

@@ -17,10 +17,11 @@ import (
 // memory in its format's layout (4, 8, or 16 bytes) and unpacked by
 // internal/vaxfloat, as the CPU reads one; the arithmetic is the CPU's
 // own (cpu.ExtendedModulus, vaxfloat.POLYStep), so the routines and the
-// instructions follow one set of rules. Every status is returned, not
-// signaled, as the manual lists them: a reserved operand (a floating
-// operand whose sign is set and exponent zero, or a POLY degree above 31)
-// is SS$_ROPRAND, with nothing stored.
+// instructions follow one set of rules. The statuses are returned, as the
+// manual lists them, with one exception VMS's run showed (testdata/lib53):
+// LIB$EMODx's reserved operand (a floating operand whose sign is set and
+// exponent zero) is signaled as SS$_ROPRAND, the EMOD instruction's fault,
+// where LIB$POLYx's is returned. Nothing is stored either way.
 
 var (
 	ssFltOvf = vmsdef.Symbols["SS$_FLTOVF"]
@@ -99,6 +100,16 @@ func floatFailure(env *corevms.Environment, err error) (uint32, error) {
 	return memoryFault(env, err)
 }
 
+// emodFailure is LIB$EMODx's floatFailure: a reserved operand is
+// signaled, as the EMOD instruction's fault is.
+func emodFailure(env *corevms.Environment, err error) (uint32, error) {
+	if errors.Is(err, vaxfloat.ErrReserved) {
+		return reservedOperand(env)
+	}
+
+	return memoryFault(env, err)
+}
+
 // libEmodf is LIB$EMODF (LIB-130).
 //
 //	LIB$EMODF floating-point-multiplier ,multiplier-extension ,floating-point-multiplicand ,integer-portion ,fractional-portion
@@ -130,8 +141,9 @@ func libEmodh(env *corevms.Environment, argv []uint32) (uint32, error) {
 //
 // The statuses are the manual's: SS$_INTOVF when the integer part doesn't
 // fit a longword (its low-order 32 bits are stored, and the fraction);
-// SS$_FLTUND when the fraction underflows (both stored as zero);
-// SS$_ROPRAND for a reserved operand (neither stored). The manual says a
+// SS$_FLTUND when the fraction underflows (both stored as zero). A
+// reserved operand is signaled as SS$_ROPRAND, neither stored: the manual
+// lists it as returned, but VMS signals it (testdata/lib53). The manual says a
 // floating overflow is SS$_INTOVF too; the fraction, less than 1 in
 // magnitude, can't overflow, so only the integer part can.
 func emod(env *corevms.Environment, argv []uint32, f vaxfloat.Format) (uint32, error) {
@@ -139,7 +151,7 @@ func emod(env *corevms.Environment, argv []uint32, f vaxfloat.Format) (uint32, e
 
 	mulr, err := loadFloat(env, f, arg(argv, 0))
 	if err != nil {
-		return floatFailure(env, err)
+		return emodFailure(env, err)
 	}
 
 	var ext uint16
@@ -159,7 +171,7 @@ func emod(env *corevms.Environment, argv []uint32, f vaxfloat.Format) (uint32, e
 
 	muld, err := loadFloat(env, f, arg(argv, 2))
 	if err != nil {
-		return floatFailure(env, err)
+		return emodFailure(env, err)
 	}
 
 	integer, fraction, overflow, err := cpu.ExtendedModulus(f, mulr, ext, muld)
@@ -171,7 +183,7 @@ func emod(env *corevms.Environment, argv []uint32, f vaxfloat.Format) (uint32, e
 		// Both results are zero.
 		status = ssFltUnd
 	case err != nil:
-		return floatFailure(env, err)
+		return emodFailure(env, err)
 	case overflow:
 		status = ssIntOvf
 	}
@@ -209,22 +221,19 @@ func libPolyh(env *corevms.Environment, argv []uint32) (uint32, error) {
 	return poly(env, argv, vaxfloat.H)
 }
 
-// polyMaxDegree is the largest degree POLY accepts.
-const polyMaxDegree = 31
-
 // poly is LIB$POLYx in format f: the polynomial whose degree+1
 // coefficients are in the array (the highest-order term's first, at the
 // lowest address) evaluated at the argument by Horner's method, each
 // step POLY's (vaxfloat.POLYStep: multiply and add, each truncated, then
 // rounded).
 //
-// The degree is a word; above 31 (a negative one included, read as the
-// instruction reads it, unsigned) it is the instruction's reserved
-// operand, SS$_ROPRAND, as is a reserved argument or coefficient. A step
-// that overflows is SS$_FLTOVF, the result not stored (unconfirmed). A
-// step that underflows makes the partial result zero and the evaluation
-// goes on, as the instruction does with PSL<FU> clear: the manual lists
-// no underflow status (unconfirmed).
+// The degree is an unsigned word, and unlike the POLY instruction's (at
+// most 31) any degree is evaluated: VMS's LIB$POLYF of degree 32 is
+// SS$_NORMAL (testdata/lib53). A reserved argument or coefficient is
+// SS$_ROPRAND, returned. A step that overflows is SS$_FLTOVF, the result
+// not stored; a step that underflows makes the partial result zero and
+// the evaluation goes on, as the instruction does with PSL<FU> clear
+// (both as VMS does).
 func poly(env *corevms.Environment, argv []uint32, f vaxfloat.Format) (uint32, error) {
 	mem, c := env.Memory(), env.CPU()
 	size := uint32(f.Size())
@@ -237,10 +246,6 @@ func poly(env *corevms.Environment, argv []uint32, f vaxfloat.Format) (uint32, e
 	degree, err := mem.LoadWord(c, arg(argv, 1))
 	if err != nil {
 		return memoryFault(env, err)
-	}
-
-	if degree > polyMaxDegree {
-		return ssRopRand, nil
 	}
 
 	table := arg(argv, 2)

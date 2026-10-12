@@ -1,8 +1,10 @@
 # Phase 53 — LIB$ routines: the plan, the groundwork, and the instruction routines
 
-**Status:** in progress (2026-10-12). Needs Phases 34 (`internal/librtl`)
+**Status:** done (2026-10-12). Needs Phases 34 (`internal/librtl`)
 and 52. The plan (Part A) and the decisions (Part B) were reviewed and
-accepted by the author on 2026-10-12. Subtasks 2 to 12 are done; subtask 13's probe is ready to run.
+accepted by the author on 2026-10-12. Every subtask is done; VMS's run
+of the `testdata/lib53` probe settled the survey's unconfirmed choices
+(subtask 13's log entry, and DEVIATIONS.md).
 
 govax provides 15 of LIBRTL.EXE's LIB$ routines (and STR$UPCASE): the ones
 the sample programs and tests needed (Phase 34's table,
@@ -304,6 +306,10 @@ Notes for the survey:
 
 ## The survey (subtask 5)
 
+*Since subtask 13, VMS's run of the probe settles most of the choices
+marked unconfirmed below, and changed seven of them; its progress-log
+entry and DEVIATIONS.md say which. The survey is kept as written.*
+
 Each routine's interface, from the 5.0 manual. Arguments are in the
 VMS argument notation, `name.access-type.mechanism`: access `r`, `w`,
 `m` (read, write, modify); types `l`, `w`, `b`, `q` (longword, word,
@@ -541,14 +547,15 @@ so there's one implementation of each rule.
 12. **The program**: `testdata/lib53/lib53.mar`, calling every routine of
     the phase, with a console test of its output. **Done** 2026-10-12.
 13. **VMS probe** (with the author on the simh VAX): `lib53.mar`'s run,
-    becoming an oracle test. In the same session, ANALYZE/IMAGE of
+    becoming an oracle test. **Done** 2026-10-12. In the same session, ANALYZE/IMAGE of
     SYS$SHARE:LIBRTL2.EXE (and CRFSHR.EXE, for completeness), so Phases 54,
     59, and 61 have those offsets. The images' symbols go into
     `vmsdef` through `internal/vmsdef/gen -image`, and the licensed files
     are erased from the exchange container afterward.
 14. **Close-out**: DEVIATIONS.md (choices unconfirmed), CLAUDE.md,
     PLAN.md, `internal/librtl/doc.go`, and HELP if a routine list is
-    added there.
+    added there. **Done** 2026-10-12 (no HELP list: the open question
+    stays open).
 
 ## Open questions
 
@@ -920,3 +927,47 @@ so there's one implementation of each rule.
   CRFSHR.EXE for subtask 13's symbols) and `exchange.cmd`. The program's
   tables wanted MACRO-32's repetition factor, which the assembler lacked
   (added in subtask 10's commit).
+- **2026-10-12** — Subtask 13, the VMS probe. The author ran
+  `LIB53.COM` on OpenVMS V7.1 (simh's VAX 8600). MACRO wrote no messages
+  (so `LIB53.MLG` was never created) and the program exited with
+  SS$_NORMAL. Of the 132 cases, 125 matched govax's output; the seven
+  that differed were all choices govax had made, and govax now does what
+  VMS did:
+
+  | Case | VMS | govax had |
+  | --- | --- | --- |
+  | LIB$ADAWI's success | LIB$_NORMAL | SS$_NORMAL |
+  | LIB$EMODF of a reserved operand | SS$_ROPRAND signaled | returned |
+  | LIB$POLYF of degree 32 | evaluated, SS$_NORMAL | SS$_ROPRAND |
+  | LIB$POLYF of degree 65,535 | evaluated; overflowed (SS$_FLTOVF) | SS$_ROPRAND |
+  | LIB$LOCC of a class 3 source | 0, no signal | LIB$_INVSTRDES signaled |
+  | LIB$MOVC3, LIB$MOVC5 | SS$_NORMAL | MOVC's R0 |
+  | LIB$MOVTUC into a varying string, with fill | filled to the source's length, past CURLEN | not filled |
+  | LIB$CRC_TABLE | 16 in R0 | SS$_NORMAL |
+
+  The other cases confirmed govax's choices (DEVIATIONS.md lists them,
+  and what no case reached). VMS's output is `testdata/lib53/vax/
+  lib53-vax.txt` and the procedure's log `vax/lib53.log`;
+  `TestLib53Oracle` (in place of `TestLib53Program` and its govax-made
+  golden file) matches govax's output with VMS's line for line, all 132
+  cases. `TestLibrtlFloating`'s degree-32 check now expects 33 from 33
+  ones; the unit tests follow the same changes, with new ones for an
+  invalid search descriptor and MOVTUC's varying fill.
+  - **The images.** LIBRTL2.EXE and CRFSHR.EXE came back on the volume,
+    copied out with `COPY/BINARY` (a plain COPY stops at an image's
+    short last record), and merged into `vmsdef` with
+    `internal/vmsdef/gen -image`: LIBRTL2 (17 symbols: LIB$CVT_DX_DX,
+    LIB$DECODE_FAULT, LIB$SIM_TRAP, LIB$FIND_VM_ZONE, LIB$SHOW_VM_ZONE,
+    LIB$VERIFY_VM_ZONE, and eleven `LIB$AB_` tables, among them
+    LIB$AB_LOWERCASE) and CRFSHR (LIB$CRF_INS_KEY, LIB$CRF_INS_REF,
+    LIB$CRF_OUTPUT, its CRF$ routines and constants). So Phases 54, 59,
+    and 61 have those offsets. The images are licensed: the run's
+    container was replaced by a fresh one holding only the probe's own
+    files (`testdata/disks/lib53-vax.dsk`, local), checked to contain
+    none of the images' symbol names, and the host copies deleted.
+- **2026-10-12** — Subtask 14, close-out: DEVIATIONS.md's Phase 53 entry
+  (settled, confirmed, and still chosen), `internal/librtl/doc.go` (the
+  instruction routines and the CPU code they share; it still named
+  `internal/rtl`, now `internal/corevms`), PLAN.md's row, and CLAUDE.md.
+  No HELP topic lists the routines (Open questions). Phase 53 is done;
+  Phase 54 (strings and conversion) is next.

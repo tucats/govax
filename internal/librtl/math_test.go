@@ -175,11 +175,11 @@ func TestLibAdawi(t *testing.T) {
 		result, sign uint16
 		status       uint32
 	}{
-		{5, 10, 15, 1, ssNormal},
-		{0, 0, 0, 0, ssNormal},
-		{0xFFFF, 0, 0xFFFF, 0xFFFF, ssNormal},  // -1
+		{5, 10, 15, 1, libNormal}, // LIB$_NORMAL, as VMS returns
+		{0, 0, 0, 0, libNormal},
+		{0xFFFF, 0, 0xFFFF, 0xFFFF, libNormal}, // -1
 		{1, 0x7FFF, 0x8000, 0xFFFF, libIntOvf}, // overflow: truncated
-		{0xFFFF, 1, 0, 0, ssNormal},            // a carry isn't an overflow
+		{0xFFFF, 1, 0, 0, libNormal},           // a carry isn't an overflow
 	} {
 		env := fixture(t)
 		mem, cpu := env.Memory(), env.CPU()

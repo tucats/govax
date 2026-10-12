@@ -27,15 +27,30 @@
 // (missing.go), so an image naming one can still run (docs/PHASE-53,
 // Decisions 5 and 6).
 //
-// # What's here and what's in rtl
+// # The instruction routines
+//
+// Most of Phase 53's routines make a VAX instruction callable: the bit
+// fields (bitfield.go), extended integers (math.go), EMOD and POLY
+// (float.go), the interlocked queues and bits (queue.go), the character
+// string instructions (chars.go), and CRC (crc.go). Each does its work
+// with the CPU's own code, exported from internal/cpu as plain functions
+// of addresses (cpu.MemoryField, cpu.ExtendedDivide, cpu.InsertInterlocked,
+// cpu.LocateCharacter, cpu.MoveCharacters, cpu.CRC, ...), so a routine
+// and its instruction follow one set of rules. Where the routine differs
+// from the instruction -- a status in place of a trap, a position in
+// place of a count, LIB$POLYx taking any degree -- it follows the LIB$
+// manual, and where the manual is silent, VMS's own run of
+// testdata/lib53's probe (TestLib53Oracle).
+//
+// # What's here and what's in corevms
 //
 // This package holds each routine's documented interface: reading its
 // arguments, checking them, and returning its status. The process it runs
 // in -- the CPU and memory, call frames and the condition dispatcher, the
 // heap that DECC$MALLOC shares with LIB$GET_VM, the RMS session -- is
-// internal/rtl's, reached through the methods rtl exports for this
-// (internal/rtl/export.go). Other shareable images get packages of their
-// own as they're emulated.
+// internal/corevms's, reached through the methods it exports for this
+// (internal/corevms/export.go). Other shareable images get packages of
+// their own as they're emulated.
 //
 // # Clean room
 //

@@ -148,8 +148,8 @@ func TestLibMovc3Movc5(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if got := call(t, env, "LIB$MOVC3", byteA, textA, textA+2); got != 0 {
-		t.Errorf("LIB$MOVC3 = %d, want 0", got)
+	if got := call(t, env, "LIB$MOVC3", byteA, textA, textA+2); got != ssNormal {
+		t.Errorf("LIB$MOVC3 = %d, want SS$_NORMAL", got)
 	}
 
 	if got := bytesAt(t, env, textA, 8); got != "ABABCDEH" {
@@ -165,8 +165,8 @@ func TestLibMovc3Movc5(t *testing.T) {
 		want           string
 		left           uint32
 	}{
-		{3, 6, "xyz***", 0},
-		{6, 2, "xyz***", 4}, // only two bytes written
+		{3, 6, "xyz***", ssNormal},
+		{6, 2, "xyz***", ssNormal}, // only two bytes written
 	} {
 		if err := mem.StoreWord(c, byteA, step.srcLen); err != nil {
 			t.Fatal(err)
@@ -279,5 +279,42 @@ func TestLibMovtucInvalid(t *testing.T) {
 
 	if got := call(t, env, "LIB$MOVTUC", descA, descB, descC, descD); got != movtucFailed {
 		t.Errorf("LIB$MOVTUC = %#x, want -1", got)
+	}
+}
+
+// TestLibSearchInvalidDescriptor: an invalid source descriptor reads as
+// an empty string, as VMS's LIB$LOCC of a class 3 source returns 0.
+func TestLibSearchInvalidDescriptor(t *testing.T) {
+	env := fixture(t)
+	putDescriptor(t, env, descA, textA, "B")
+	putDescriptor(t, env, descB, textB, "ABC")
+	putDesc(t, env, descB, 3, 3, textB) // class 3
+
+	for _, name := range []string{"LIB$LOCC", "LIB$SKPC"} {
+		if got := call(t, env, name, descA, descB); got != 0 {
+			t.Errorf("%s = %d, want 0", name, got)
+		}
+	}
+}
+
+// TestLibMovtucVaryingFill: into a varying string with a fill
+// character, CURLEN is the characters translated and the bytes after
+// them are filled up to the source's length, as VMS does.
+func TestLibMovtucVaryingFill(t *testing.T) {
+	env := fixture(t)
+	putUpcaseTable(t, env)
+	putDescriptor(t, env, descA, textA, "abc.de")
+	putDescriptor(t, env, descB, textB, ".")
+	putDescriptor(t, env, descC, table, "")
+	putDescriptor(t, env, descE, textE, "*")
+	putDesc(t, env, descD, 8, dscClassVS, textD)
+	putBytes(t, env, textD, "\x00\x00????????")
+
+	if got := call(t, env, "LIB$MOVTUC", descA, descB, descC, descD, descE); got != 4 {
+		t.Errorf("LIB$MOVTUC = %d, want 4", got)
+	}
+
+	if got := bytesAt(t, env, textD, 10); got != "\x03\x00ABC***??" {
+		t.Errorf("destination %q, want %q", got, "\x03\x00ABC***??")
 	}
 }
