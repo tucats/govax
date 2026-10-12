@@ -2967,7 +2967,8 @@ widened."
   them for a ninth parameter and for the @ that would make the 32nd
   level, the terminal's among them, both as warnings (`testdata/dcl50`);
   govax now does the same. VMS made `/OUTPUT=.LOG` a file named `.LOG`;
-  govax refuses it (open).
+  govax does too since Phase 51 (a new volume file may have a type and
+  no name).
 
 ### [Phase 50] Substitution and expression rules, settled by a probe
 
@@ -3043,10 +3044,14 @@ widened."
     (unless bit 28 is set) and fails; one stopped another way (a HALT, a
     limit, CTRL/C) reports nothing, and a run under the debugger leaves
     `$STATUS` alone.
-  - A procedure that isn't found is govax's SS$_NOSUCHFILE, a warning;
-    VMS gave DCL-E-OPENIN with RMS-E-FNF (`$STATUS` %X10018292), an
-    error, which would end the calling procedure. TYPE of a missing file
-    differs too.
+  - (Fixed, Phase 51.) A procedure that isn't found was govax's
+    SS$_NOSUCHFILE, a warning; VMS gave DCL-E-OPENIN with RMS-E-FNF
+    (`$STATUS` %X10018292), an error, which ends the calling procedure,
+    and govax now does too (`procedureNotFound`). TYPE of a missing file
+    is now VMS's TYPE-W-SEARCHFAIL with RMS-E-FNF (%X10951238). Chosen
+    without VMS: a missing directory is RMS-E-DNF with
+    -SYSTEM-W-NOSUCHFILE under it, as OPEN's is; a host file is shown by
+    its path.
 - **Status**: fixed to VMS 7.3's behavior where the probe answered; the
   rest unconfirmed, for a later round.
 

@@ -106,14 +106,15 @@ that its probes found but no subtask fixed.
 What Phase 50's probes showed VMS doing that govax still doesn't, and
 smaller gaps the phase left:
 
-- **@ and TYPE of a missing file.** VMS 7.3 (round 1, section D): `@NOSUCH`
+- **@ and TYPE of a missing file** (fixed 2026-10-12). VMS 7.3 (round
+  1, section D): `@NOSUCH`
   is `%DCL-E-OPENIN, error opening DUA1:[000000]NOSUCH.COM; as input`
   then `-RMS-E-FNF, file not found`, `$STATUS` %X10018292, an error that
   ends a calling procedure. `TYPE NOSUCH.TXT` is `%TYPE-W-SEARCHFAIL,
   error searching for DUA1:[000000]NOSUCH.TXT;` then `-RMS-E-FNF`,
-  `$STATUS` %X10951238. govax gives `%SYSTEM-W-NOSUCHFILE` for both.
-- **`/OUTPUT=.LOG` with no name**: VMS made a file named `.LOG`; govax
-  refuses it.
+  `$STATUS` %X10951238. govax gave `%SYSTEM-W-NOSUCHFILE` for both.
+- **`/OUTPUT=.LOG` with no name** (fixed 2026-10-12): VMS made a file
+  named `.LOG`; govax refused it.
 - **Lexical functions not yet done**: F$CONTEXT, F$CSID, F$DEVICE,
   F$FILE_ATTRIBUTES, F$GETQUI, F$IDENTIFIER, F$LICENSE (CLI$_LEXNOTIMPL).
   F$FILE_ATTRIBUTES, F$DEVICE, and F$IDENTIFIER have something to report
@@ -316,3 +317,22 @@ smaller gaps the phase left:
   line, which is redrawn; a busy subprocess's output scrolls by while a
   command typed runs at once; Ctrl/C cancels the line and the
   subprocess goes on; Ctrl/Y ends govax. HELP SPAWN.
+- 2026-10-12: Subtask 5, the first two known differences. `@` of a
+  procedure that isn't there is DCL's message, as VMS 7.3 showed it:
+  `%DCL-E-OPENIN, error opening DUA1:[000000]NOSUCH.COM; as input`, then
+  `-RMS-E-FNF, file not found`, `$STATUS` RMS$_FNF marked shown, an
+  error, so it ends a calling procedure (`procedureNotFound`, which
+  shares OPEN's `openFailure`). TYPE of a missing file is
+  `%TYPE-W-SEARCHFAIL, error searching for DUA1:[000000]NOSUCH.TXT;`
+  then `-RMS-E-FNF`, `$STATUS` %X10951238 (`typeMissing`). The name is
+  rms's new `Session.NotFound`: `ExpandName`'s, with RMS$_DNF (and
+  SS$_NOSUCHFILE under it, as OPEN shows) when the directory isn't on
+  the volume. A host file is shown by its path. `TestProbe50Statuses`
+  now runs on a volume on DUA1 with the default DUA1:[000000], as the
+  VMS run did, and matches section D with nothing left out.
+
+  `@file/OUTPUT=.LOG` makes a file named `.LOG`, as VMS did: a new
+  volume file (`createVolumeRecords`) may have a type and no name.
+  Tests: `TestConsoleType_notFound` (FNF and DNF),
+  `TestConsoleType_hostNotFound`, `TestProcedure_hostNames`,
+  `TestProcedure_volume`.

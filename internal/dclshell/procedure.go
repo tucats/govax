@@ -887,6 +887,7 @@ func (c *Interpreter) Exit(status *uint32) error {
 // and a name with no file type gets .COM (User's Manual, 13.1.1). A host
 // file is looked for as every console file is, through c.Paths (the
 // search path, then govax's built-in files), with .COM and then as given.
+// A file that isn't there is DCL's OPENIN (procedureNotFound).
 func (c *Interpreter) openProcedure(file string, host bool) (*procedureSource, error) {
 	loc, err := c.ContainerSession.Locate(file, host)
 	if err != nil {
@@ -909,7 +910,7 @@ func (c *Interpreter) openProcedure(file string, host bool) (*procedureSource, e
 
 		var notFound *respath.NotFoundError
 		if errors.As(firstErr, &notFound) {
-			return nil, vmserrors.Wrap(vmserrors.SS_NOSUCHFILE, firstErr, file)
+			return nil, procedureNotFound(&rms.DCLFileError{Name: procedureHostNames(loc.Name)[0], Status: rmsFNF})
 		}
 
 		return nil, dclcmd.FileFailure(firstErr, file)
@@ -919,6 +920,11 @@ func (c *Interpreter) openProcedure(file string, host bool) (*procedureSource, e
 
 	records, found, err := c.ContainerSession.ReadRecordFile(loc, rms.TextRecords)
 	if err != nil {
+		var notFound *rms.NotFoundError
+		if errors.As(err, &notFound) {
+			return nil, procedureNotFound(c.ContainerSession.NotFound(loc.Name))
+		}
+
 		return nil, dclcmd.FileFailure(err, file)
 	}
 
@@ -928,6 +934,17 @@ func (c *Interpreter) openProcedure(file string, host bool) (*procedureSource, e
 	}
 
 	return &procedureSource{name: found.Name, records: lines, end: len(lines)}, nil
+}
+
+// procedureNotFound is @'s message for a procedure file that isn't
+// there, as VMS 7.3 showed it (testdata/dcl50's round 1): OPENIN with the
+// name expanded, then RMS's status (and its secondary status), which is
+// the command's status, an error, marked shown.
+//
+//	%DCL-E-OPENIN, error opening DUA1:[000000]NOSUCH.COM; as input
+//	-RMS-E-FNF, file not found
+func procedureNotFound(fe *rms.DCLFileError) error {
+	return openFailure(fe, rms.DCLAccess{})
 }
 
 // procedureHostNames are the host names a procedure's file name may mean,

@@ -649,7 +649,9 @@ func (s *Session) createVolumeRecords(text string, kind RecordKind, records [][]
 		return FileLocation{}, err
 	}
 
-	if spec.Name == "" || strings.ContainsAny(spec.Name+spec.Type+spec.Version, "*%") {
+	// A name may be empty when the type isn't: VMS 7.3's @/OUTPUT=.LOG
+	// made a file named .LOG;1 (testdata/dcl50's round 1).
+	if spec.Name+spec.Type == "" || strings.ContainsAny(spec.Name+spec.Type+spec.Version, "*%") {
 		return FileLocation{}, fmt.Errorf("a new file needs one name, with no wildcards")
 	}
 

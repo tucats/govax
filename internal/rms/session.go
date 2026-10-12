@@ -235,6 +235,24 @@ func (s *Session) ExpandName(specText string) (string, error) {
 	return device + ":" + text, nil
 }
 
+// NotFound is how DCL's messages report a volume file name that found no
+// file: the name as ExpandName expands it ("DUA0:[WORK]NOSUCH.COM;"),
+// with RMS$_FNF, or RMS$_DNF (and SS$_NOSUCHFILE under it, as with
+// OPEN) when the name's directory isn't on the volume. A name that can't
+// be expanded is shown as it was given.
+func (s *Session) NotFound(specText string) *DCLFileError {
+	name, err := s.ExpandName(specText)
+	if err != nil {
+		name = strings.ToUpper(specText)
+	}
+
+	if _, found, err := s.Parse(specText, "", "", false, false); err == nil && !found {
+		return newDCLFileError(name, rmsDirNotFound)
+	}
+
+	return newDCLFileError(name, rmsFileNotFound)
+}
+
 // resolveVolume resolves specText (translating its logical names and
 // applying the default device and directory) and looks up the resulting
 // device in Mounts. A search list resolves to its first element, the

@@ -1,13 +1,11 @@
 package console
 
 import (
-	"errors"
 	"os"
 	"path/filepath"
 	"strings"
 	"testing"
 
-	"github.com/tucats/govax/internal/vmserrors"
 )
 
 // TestPhase23Acceptance_fullOperatorSession is docs/PHASE-23.md subtask
@@ -160,8 +158,8 @@ func TestPhase23Acceptance_fullOperatorSession(t *testing.T) {
 	}
 
 	// FOO.TXT only ever had one version, so it's entirely gone now.
-	if err := c.cmd().Type("FOO.TXT", false, false); !errors.Is(err, vmserrors.New(vmserrors.SS_NOSUCHFILE)) {
-		t.Errorf("TYPE of the now-deleted FOO.TXT = %v, want SS_NOSUCHFILE", err)
+	if err := c.cmd().Type("FOO.TXT", false, false); !isTypeSearchFail(err) {
+		t.Errorf("TYPE of the now-deleted FOO.TXT = %v, want TYPE's SEARCHFAIL", err)
 	}
 
 	// ---- PURGE ----
@@ -178,8 +176,8 @@ func TestPhase23Acceptance_fullOperatorSession(t *testing.T) {
 
 	// The default /LIMIT=1 keeps only the newest version (;2); the older
 	// one (;1) should now be gone.
-	if err := c.cmd().Type("BAR.TXT;1", false, false); !errors.Is(err, vmserrors.New(vmserrors.SS_NOSUCHFILE)) {
-		t.Errorf("TYPE of the purged BAR.TXT;1 = %v, want SS_NOSUCHFILE", err)
+	if err := c.cmd().Type("BAR.TXT;1", false, false); !isTypeSearchFail(err) {
+		t.Errorf("TYPE of the purged BAR.TXT;1 = %v, want TYPE's SEARCHFAIL", err)
 	}
 
 	buf.Reset()

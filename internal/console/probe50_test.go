@@ -205,15 +205,14 @@ func TestProbe50Oracle(t *testing.T) {
 
 // probe50Differences are the section D commands whose results govax
 // doesn't match, with why; the SHOW SYMBOL commands after each are
-// skipped with it.
-var probe50Differences = map[string]string{
-	"TYPE NOSUCH.TXT": "govax's TYPE reports a missing file with its own message and status",
-	"@NOSUCH":         "govax reports a missing procedure with SS$_NOSUCHFILE, not DCL's OPENIN and RMS$_FNF",
-}
+// skipped with it. None now: TYPE's and @'s missing files were the last
+// (Phase 51).
+var probe50Differences = map[string]string{}
 
 // TestProbe50Statuses replays probe50.com's section D, statuses, through
-// the console: each command, and SHOW SYMBOL $STATUS and $SEVERITY after
-// it, against VMS 7.3's log. The log shows each command as SET VERIFY
+// the console, on a volume mounted on DUA1 and the default directory
+// DUA1:[000000], as the VMS run's was: each command, and SHOW SYMBOL
+// $STATUS and $SEVERITY after it, against VMS 7.3's log. The log shows each command as SET VERIFY
 // echoed it, and its procedure's lines too; those are left out, and the
 // rest of each command's lines compared.
 func TestProbe50Statuses(t *testing.T) {
@@ -270,7 +269,13 @@ func TestProbe50Statuses(t *testing.T) {
 		t.Fatalf("found %d of section D's %d commands in the log", k+1, len(commands))
 	}
 
-	d, _, buf := newCommandDispatcher(t)
+	d, c, buf := newCommandDispatcher(t)
+	mountFreshContainer(t, c, "DUA1")
+
+	if err := c.cmd().SetDefault("DUA1:[000000]"); err != nil {
+		t.Fatal(err)
+	}
+
 	run := probe50Runner(d, buf)
 	skipping := ""
 

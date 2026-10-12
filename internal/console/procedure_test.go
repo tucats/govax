@@ -283,11 +283,27 @@ func TestProcedure_volume(t *testing.T) {
 	if got := buf.String(); !strings.Contains(got, "on the volume\n") || !strings.Contains(got, `P1 = "HELLO"`) {
 		t.Errorf("RESULT.LIS:\n%s", got)
 	}
+
+	// A file type with no name is a file named .LOG, as VMS 7.3 made one
+	// (testdata/dcl50's round 1).
+	buf.Reset()
+
+	if err := d.Dispatch("@PROC/OUTPUT=.LOG"); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := c.cmd().Type(".LOG;1", false, false); err != nil {
+		t.Fatal(err)
+	}
+
+	if got := buf.String(); !strings.Contains(got, "on the volume\n") {
+		t.Errorf(".LOG:\n%s", got)
+	}
 }
 
 // TestProcedure_hostNames: a host procedure is found with .COM added, and
-// a name DCL uppercased is found in lowercase; a missing one is
-// SS$_NOSUCHFILE.
+// a name DCL uppercased is found in lowercase; a missing one is DCL's
+// OPENIN with RMS$_FNF.
 func TestProcedure_hostNames(t *testing.T) {
 	d, c, _ := newCommandDispatcher(t)
 	dir := t.TempDir()
@@ -303,8 +319,9 @@ func TestProcedure_hostNames(t *testing.T) {
 		t.Errorf("R6 = %+v, %v; want 7", got, ok)
 	}
 
-	if err := d.Dispatch("@NOSUCH"); !errors.Is(err, vmserrors.New(vmserrors.SS_NOSUCHFILE)) {
-		t.Errorf("@NOSUCH: %v, want SS_NOSUCHFILE", err)
+	want := "DCL-E-OPENIN, error opening NOSUCH.COM as input\n-RMS-E-FNF, file not found"
+	if err := d.Dispatch("@NOSUCH"); err == nil || err.Error() != want {
+		t.Errorf("@NOSUCH: %v, want %q", err, want)
 	}
 }
 

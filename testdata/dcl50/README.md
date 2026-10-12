@@ -150,7 +150,7 @@ log; every case matches. The answers that changed govax:
 - **`@`:** a ninth parameter is DEFOVF; the @ that would make the 32nd
   level, the terminal's among them, is STKOVF; each level goes on after
   either (both warnings). `/OUTPUT=.LOG` makes a file named `.LOG` in the
-  default directory, which govax still refuses (open).
+  default directory, as govax now does (Phase 51).
 - **Statuses** (section D, and `$STATUS` throughout): subtask 10 follows
   them; `TestProbe50Oracle` compares each case's `$STATUS` too, and
   `TestProbe50Statuses` replays section D.

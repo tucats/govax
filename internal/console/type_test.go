@@ -99,20 +99,35 @@ func TestConsoleType_notMounted(t *testing.T) {
 	}
 }
 
-// TestConsoleType_notFound confirms a file spec matching nothing on the
-// volume is reported as SS_NOSUCHFILE, matching Console.Delete's own
-// status for the same underlying condition.
+// isTypeSearchFail reports whether err is TYPE's SEARCHFAIL, the
+// condition value VMS 7.3's TYPE gave for a missing file (%X10951238,
+// its message shown).
+func isTypeSearchFail(err error) bool {
+	var ce vmserrors.ConditionError
+
+	return errors.As(err, &ce) && ce.Status == 0x10951238
+}
+
+// TestConsoleType_notFound: a file spec matching nothing on the volume
+// is TYPE's SEARCHFAIL with the name expanded, then RMS$_FNF, as VMS
+// 7.3's TYPE showed it (testdata/dcl50's round 1); a directory that
+// isn't there is RMS$_DNF.
 func TestConsoleType_notFound(t *testing.T) {
 	c, _ := newTestConsole(t)
 	mountFreshContainer(t, c, "DUA0")
 
-	err := c.cmd().Type("DUA0:NOSUCHFILE.TXT", false, false)
-	if err == nil {
-		t.Fatal("Type of a nonexistent file = nil error, want SS_NOSUCHFILE")
+	cases := []struct{ spec, want string }{
+		{"DUA0:NOSUCHFILE.TXT", "TYPE-W-SEARCHFAIL, error searching for DUA0:[000000]NOSUCHFILE.TXT;\n" +
+			"-RMS-E-FNF, file not found"},
+		{"DUA0:[NODIR]X.TXT;2", "TYPE-W-SEARCHFAIL, error searching for DUA0:[NODIR]X.TXT;2\n" +
+			"-RMS-E-DNF, directory not found\n-SYSTEM-W-NOSUCHFILE, no such file"},
 	}
 
-	if !errors.Is(err, vmserrors.New(vmserrors.SS_NOSUCHFILE)) {
-		t.Errorf("Type error = %v, want SS_NOSUCHFILE", err)
+	for _, tc := range cases {
+		err := c.cmd().Type(tc.spec, false, false)
+		if !isTypeSearchFail(err) || err.Error() != tc.want {
+			t.Errorf("Type(%s) = %v, want %q", tc.spec, err, tc.want)
+		}
 	}
 }
 
@@ -311,13 +326,15 @@ func TestConsoleType_hostForced(t *testing.T) {
 }
 
 // TestConsoleType_hostNotFound: a host file that doesn't exist is
-// SS_NOSUCHFILE, as a volume file is.
+// SEARCHFAIL, as a volume file is.
 func TestConsoleType_hostNotFound(t *testing.T) {
 	c, _ := newTestConsole(t)
 
-	err := c.cmd().Type(filepath.Join(t.TempDir(), "missing.txt"), true, false)
-	if !errors.Is(err, vmserrors.New(vmserrors.SS_NOSUCHFILE)) {
-		t.Errorf("Type of a missing host file = %v, want SS_NOSUCHFILE", err)
+	path := filepath.Join(t.TempDir(), "missing.txt")
+
+	err := c.cmd().Type(path, true, false)
+	if want := "TYPE-W-SEARCHFAIL, error searching for " + path + "\n-RMS-E-FNF, file not found"; !isTypeSearchFail(err) || err.Error() != want {
+		t.Errorf("Type of a missing host file = %v, want %q", err, want)
 	}
 }
 

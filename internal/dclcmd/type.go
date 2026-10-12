@@ -2,6 +2,7 @@ package dclcmd
 
 import (
 	"errors"
+	"io/fs"
 	"strings"
 
 	"github.com/tucats/govax/internal/rms"
@@ -9,10 +10,14 @@ import (
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
-// typeOpenIn is TYPE's OPENIN condition value, a warning: the shared
-// message SHR$_OPENIN in TYPE's facility, 149 (VMS 7.3's TYPE gave
+// TYPE's condition values for a file it couldn't open or find, both
+// warnings: the shared messages SHR$_OPENIN and SHR$_SEARCHFAIL in
+// TYPE's facility, 149 (VMS 7.3's TYPE of a missing file gave
 // %X10951238, its SEARCHFAIL, in testdata/dcl50's round 1).
-var typeOpenIn = 149<<16 | vmsdef.LibrarySymbols["SHR$_OPENIN"]
+var (
+	typeOpenIn     = 149<<16 | vmsdef.LibrarySymbols["SHR$_OPENIN"]
+	typeSearchFail = 149<<16 | vmsdef.LibrarySymbols["SHR$_SEARCHFAIL"]
+)
 
 // This file implements the console TYPE command (docs/PHASE-23.md,
 // subtask 8) — the operator-facing half of "write one file's content to
@@ -44,9 +49,11 @@ var typeOpenIn = 149<<16 | vmsdef.LibrarySymbols["SHR$_OPENIN"]
 //     surfaces as an *rms.NotMountedError and is reported as
 //     SS_DEVNOTMOUNT, matching Context.Delete's own translation for the
 //     same underlying condition.
-//   - specText matching no file at all on its volume surfaces as an
-//     *rms.NotFoundError and is reported as SS_NOSUCHFILE, matching
-//     Context.Delete's own translation for the same underlying condition.
+//   - specText matching no file at all surfaces as an
+//     *rms.NotFoundError (or, for a host file, fs.ErrNotExist) and is
+//     reported as VMS 7.3's TYPE reported it (testdata/dcl50's round 1):
+//     SEARCHFAIL with the name expanded, then RMS's status, RMS$_FNF
+//     (RMS$_DNF for a directory that isn't there).
 //   - specText matching more than one file surfaces as an
 //     *rms.AmbiguousError and is reported as CLI_AMBIGUOUS, the same
 //     status internal/dcl's own verb/qualifier ambiguity already
@@ -63,7 +70,7 @@ var typeOpenIn = 149<<16 | vmsdef.LibrarySymbols["SHR$_OPENIN"]
 // directory isn't on a volume, is a host file); host (/HOST) makes it a
 // host file whatever it looks like. A host file's lines are typed as they
 // are, each ending in LF (a CR before it dropped). A host file that
-// doesn't exist is SS_NOSUCHFILE, as a volume file is.
+// doesn't exist is SEARCHFAIL, as a volume file is.
 //
 // SYS$INPUT, or a logical name that translates to it, is the process's
 // input, typed a line at a time (typeInput): in a command procedure, the
@@ -79,7 +86,7 @@ func (c *Context) Type(specText string, host, paged bool) error {
 
 	loc, err := c.ContainerSession.Locate(specText, host)
 	if err != nil {
-		return typeFailure(err, specText)
+		return c.typeFailure(err, specText, loc)
 	}
 
 	var text string
@@ -91,7 +98,7 @@ func (c *Context) Type(specText string, host, paged bool) error {
 	}
 
 	if err != nil {
-		return typeFailure(err, specText)
+		return c.typeFailure(err, specText, loc)
 	}
 
 	if paged {
@@ -125,8 +132,20 @@ func typeHostFile(s *rms.Session, loc rms.FileLocation) (string, error) {
 
 // typeFailure turns an error from finding or reading TYPE's file into the
 // VMS status a real operator would see for that specific condition (see
-// Type's doc comment); everything but a locked file is fileFailure's.
-func typeFailure(err error, specText string) error {
+// Type's doc comment); everything but a locked or missing file is
+// FileFailure's. loc is where the file was looked for.
+func (c *Context) typeFailure(err error, specText string, loc rms.FileLocation) error {
+	var notFound *rms.NotFoundError
+
+	switch {
+	case loc.Host && errors.Is(err, fs.ErrNotExist):
+		return typeMissing(loc.Name, vmsdef.Symbols["RMS$_FNF"], 0)
+	case !loc.Host && errors.As(err, &notFound):
+		missing := c.ContainerSession.NotFound(specText)
+
+		return typeMissing(missing.Name, missing.Status, missing.STV)
+	}
+
 	// The file another opener keeps readers out of: TYPE's message
 	// for it, as VMS 7.3 showed it (testdata/dcl50's F9), with the
 	// condition value TYPE's image signals, its message shown.
@@ -139,4 +158,19 @@ func typeFailure(err error, specText string) error {
 	}
 
 	return FileFailure(err, specText)
+}
+
+// typeMissing is TYPE's message for a file name that found no file,
+// name, as VMS 7.3 showed it: SEARCHFAIL, then RMS's status, then its
+// secondary status, if any, the condition value marked shown.
+//
+//	%TYPE-W-SEARCHFAIL, error searching for DUA1:[000000]NOSUCH.TXT;
+//	-RMS-E-FNF, file not found
+func typeMissing(name string, status, stv uint32) error {
+	text := "TYPE-W-SEARCHFAIL, error searching for " + name + "\n" + ConditionLine(status)
+	if stv != 0 {
+		text += "\n" + ConditionLine(stv)
+	}
+
+	return vmserrors.ConditionError{Status: typeSearchFail | stsInhibitMsg, Text: text}
 }
