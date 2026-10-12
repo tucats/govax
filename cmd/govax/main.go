@@ -59,7 +59,7 @@ func main() {
 
 	// Store the version string where it can be accessed by the $GETSYI service.
 	if BuildVersion != "0.0-0" {
-		corevms.VersionString = BuildVersion
+		corevms.VersionString = "V" + BuildVersion
 	}
 
 	// Disable subcommands and options we don't use.
