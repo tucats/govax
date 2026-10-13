@@ -178,6 +178,9 @@ var Routines = []Routine{
 	{"LIB$SYS_FAOL", 108, libSysFaol},
 	{"LIB$SYS_GETMSG", 109, libSysGetmsg},
 	{"LIB$SYS_TRNLOG", 110, libSysTrnlog},
+	{"LIB$GETJPI", 111, libGetjpi},
+	{"LIB$GETDVI", 112, libGetdvi},
+	{"LIB$GETSYI", 113, libGetsyi},
 }
 
 // missing is Missing's list, and missingJSB MissingJSB's, made once.

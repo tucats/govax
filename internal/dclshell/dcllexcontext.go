@@ -7,6 +7,7 @@ import (
 
 	"github.com/tucats/govax/internal/corevms"
 	"github.com/tucats/govax/internal/lnm"
+	"github.com/tucats/govax/internal/vmsdef"
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
@@ -81,9 +82,10 @@ func jpiContext(kind contextKind, name string) contextItem {
 
 func syiContext(kind contextKind, name string) contextItem {
 	return contextItem{kind: kind, value: func(env *corevms.Environment) dclValue {
-		data, _ := env.SYIItem("SYI$_" + name)
+		item := "SYI$_" + name
+		data, _ := env.SYIItem(item)
 
-		return syiItems[name](data)
+		return lexItemValue(env, corevms.SYIItemForm(item, corevms.StyleDCL), data)
 	}}
 }
 
@@ -112,6 +114,24 @@ var contextItems = map[string]contextItem{
 
 	// JOBTYPE's keywords are the JPI$K_ job types' names.
 	"JOBTYPE": {kind: contextKeyword, value: jpiKeyword("JPI$_JOBTYPE", "DETACHED", "NETWORK", "BATCH", "LOCAL", "DIALUP", "REMOTE")},
+}
+
+// jpiKeyword returns the selection item for $GETJPI's item, whose value
+// is one of the JPI$K_ codes names lists (JPI$K_LOCAL, ...), written as
+// its name; a code not among them is written as a number.
+func jpiKeyword(item string, names ...string) jpiItem {
+	return func(env *corevms.Environment) dclValue {
+		data, _ := env.JPIItem(item)
+		code := itemLongword(data)
+
+		for _, name := range names {
+			if v, ok := vmsdef.Symbols["JPI$K_"+name]; ok && v == code {
+				return dclString(name)
+			}
+		}
+
+		return dclString(strconv.FormatUint(uint64(code), 10))
+	}
 }
 
 // syiInteger is the $GETSYI item called name, as an integer.

@@ -1,6 +1,6 @@
 # Phase 55 — LIB$ service jackets, process resources, and measurement
 
-**Status:** in progress (subtasks 1 and 2 done 2026-10-13). Needs Phases 53 and 54. Part of the
+**Status:** in progress (subtasks 1 to 3 done 2026-10-13). Needs Phases 53 and 54. Part of the
 LIB$ program laid out in `PHASE-53 - RTL LIB support.md` (Part A).
 
 ## Goal
@@ -449,7 +449,8 @@ RESERVE_EF of 1–23 at image start; SHOW_TIMER's line (blanks and field
 names), STAT_TIMER's elapsed-time sign, and a heap timer block's first
 longwords; GETJPI's text for each Table LIB-5 kind, GETDVI's for VPROT,
 ACPTYPE, OWNUIC, and a Boolean, and GETSYI's for VERSION (blanks
-removed); the item routines' INVARG and WRONUMARG cases; the jackets'
+removed) and BOOTTIME (a decimal quadword?); F$GETDVI's VPROT and
+ACPTYPE (subtask 3's DCL changes); the item routines' INVARG and WRONUMARG cases; the jackets'
 outputs to fixed, dynamic, and varying strings (lengths, STRTRU against
 BUFFEROVF, SYS_FAO past 256 bytes, SYS_ASCTIM to a dynamic string);
 SYS_TRNLOG's arguments; AST_IN_PROG in and out of an AST; LIB$WAIT's
@@ -472,6 +473,7 @@ are masked.
 2. **Jackets**: SYS_FAO, SYS_FAOL, SYS_ASCTIM, SYS_GETMSG, SYS_TRNLOG.
    **Done** 2026-10-13.
 3. **Item routines**: GETJPI, GETDVI, GETSYI, numeric and string forms.
+   **Done** 2026-10-13.
 4. **Event flags and LUNs.**
 5. **Timers.**
 6. **Miscellaneous**: AST_IN_PROG, ASN_WTH_MBX, WAIT, GET_USERS_LANGUAGE.
@@ -554,3 +556,53 @@ are masked.
     NOTRAN, SP left below the caller's), and `TestLibrtlJackets` in
     `internal/console`, a MACRO program calling LIB$SYS_FAO and
     LIB$SYS_GETMSG through their stubs with a dynamic string.
+- **2026-10-13** — Subtask 3, the item routines
+  (`internal/librtl/items.go`, shim codes 111–113):
+  - **The text forms moved down** (`corevms/itemtext.go`): an
+    `ItemForm` per item (number, string, hexadecimal, privileges, time,
+    UIC, Boolean, mode, state, ACP type, protection) in two `Style`s,
+    DCL's and LIB$'s, and `Environment.ItemText` writes one.
+    `JPIItemForm`, `SYIItemForm`, and `DVIItemForm` read the tables, which
+    hold where the styles differ: LIB$ numbers unsigned, DCL's signed;
+    JPI$_OWNER and JPI$_MASTER_PID hexadecimal in DCL only (Table LIB-5
+    names only JPI$_PID); SYI$_BOOTTIME, SYI$_CLUSTER_MEMBER, and
+    SYI$_NODE_CSID special in DCL only (LIB$GETSYI's entry names no
+    special forms: the boot time's text is the quadword in decimal,
+    **unconfirmed**); DVI$_ACPTYPE's code 0 ILLEGAL in DCL (the DCL
+    Dictionary) and NONE in LIB$. F$GETJPI, F$GETSYI, F$GETDVI, and
+    F$CONTEXT's selection items now use them (`lexItemValue`), so their
+    keyword tables are just lists of names; F$GETJPI's STATE keeps SHOW
+    SYSTEM's name (an MWAIT's resource), where LIB$GETJPI's is the state
+    code's (MWAIT). `PrivilegeList` and the item byte readers are
+    corevms's (`dclshell.PrivilegeList` stays, a wrapper).
+  - **F$GETDVI changes**: ACPTYPE (new) is F11V2 for a mounted disk,
+    ILLEGAL otherwise, and VPROT is now the protection text
+    (`SYSTEM=RWLP,...`), no longer an integer. The DCL Dictionary calls
+    VPROT a string without giving its form; that it's LIB$'s form is
+    **unconfirmed**.
+  - **`$GETDVI`'s DVI$_ACPTYPE**: DVI$C_ACP_F11V2 while a volume is
+    mounted on the device (every govax volume is ODS-2), 0 otherwise.
+  - **The lookups** (`corevms/libitems.go`): `ProcessItem`,
+    `DeviceItem`, and `SystemItem` answer one item by its code with the
+    services' own target rules and privilege check, but no item list,
+    event flag, IOSB, or AST. The process, device, and node names come
+    in as strings the routine read with `readString` (any class), so
+    `processTarget`, `dviTarget`, and `nodeTarget` gained forms that
+    take a name (`processTargetBy` reads it only when the name is
+    used, as before).
+  - **The routines**: item code by reference; WRONUMARG for no
+    arguments or more than six (VSI's seventh, LIB$GETDVI's path name,
+    postdates 7.3); a string item without resultant-string is
+    LIB$_INVARG, its trailing blanks dropped; a numeric item's value is
+    a longword, or a quadword for an 8-byte item in GETJPI and GETSYI;
+    with neither output, SS$_NORMAL and nothing written. GETDVI's
+    channel is a word by reference, and wins over device-name; GETSYI
+    reads node-name only when cluster-system-id is omitted or 0.
+  - **Tests**: `items_test.go` (numeric and special forms, the
+    quadword masks, string items and INVARG, STRTRU, the PID written
+    back, NONEXPR, BADPARAM and WRONUMARG, GETDVI by channel and by
+    name on a mailbox, IVDEVNAM and NOSUCHDEV, GETSYI's strings, boot
+    time, CSID, and NOSUCHNODE), `corevms/itemtext_test.go` (every form
+    in both styles, the tables), F$GETDVI's ACPTYPE, VPROT, and PID
+    (`TestLexicalGetDVI`), and `TestLibrtlItemRoutines`, a MACRO program
+    calling all three through their stubs.

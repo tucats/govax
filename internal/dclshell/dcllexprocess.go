@@ -1,7 +1,6 @@
 package dclshell
 
 import (
-	"encoding/binary"
 	"fmt"
 	"strconv"
 	"strings"
@@ -279,107 +278,62 @@ func (t *dclSymbolTable) replaceValue(word string, v dclValue) {
 // jpiItem returns one of F$GETJPI's items for a process.
 type jpiItem func(env *corevms.Environment) dclValue
 
-// jpiItems are F$GETJPI's keywords: each one's $GETJPI item, and how its
-// value is written (integer, string, hexadecimal PID, UIC, privilege
-// list, time, or a keyword). Built by init from the lists below.
+// jpiItems are F$GETJPI's keywords: each one's $GETJPI item, written as
+// corevms's item forms say in DCL's style (lexItemValue). Built by init
+// from jpiKeywords.
 var jpiItems = map[string]jpiItem{
-	// STATE is the scheduling state, as SHOW SYSTEM names it ("CUR",
-	// "LEF", ...).
+	// STATE is the scheduling state as SHOW SYSTEM names it ("CUR",
+	// "LEF", ..., or the resource of an MWAIT: "RWMBX").
 	"STATE": func(env *corevms.Environment) dclValue { return dclString(env.ProcessState(env)) },
-
-	// MODE is a keyword for $GETJPI's JPI$K_ codes. (JOBTYPE is the
-	// code itself, an integer: VMS 7.3 gave 3 for a local terminal's,
-	// testdata/dcl50's round 5.)
-	"MODE": jpiKeyword("JPI$_MODE", "INTERACTIVE", "BATCH", "NETWORK", "OTHER"),
 }
 
-// The F$GETJPI keywords of each kind: each is the name of its $GETJPI
-// item without JPI$_.
-var (
-	jpiIntegerItems = []string{
-		"ASTACT", "ASTCNT", "ASTEN", "ASTLM", "AUTHPRI", "BIOLM", "BUFIO",
-		"BYTLM", "CPULIM", "CPUTIM", "CREPRC_FLAGS", "DFWSCNT", "DIOLM",
-		"DIRIO", "EFCS", "EFCU", "ENQCNT", "ENQLM", "FILLM", "GRP",
-		"JOBPRCCNT", "JOBTYPE", "MEM", "PGFLQUOTA", "PRCCNT", "PRCLM", "PRI", "PRIB",
-		"TMBU", "TQLM", "WSAUTH", "WSAUTHEXT", "WSEXTENT", "WSQUOTA",
-		"WSSIZE",
-	}
-	jpiStringItems    = []string{"ACCOUNT", "CLINAME", "PRCNAM", "TERMINAL", "USERNAME"}
-	jpiPIDItems       = []string{"MASTER_PID", "OWNER", "PID"}
-	jpiPrivilegeItems = []string{"AUTHPRIV", "CURPRIV", "IMAGPRIV", "PROCPRIV"}
-	jpiTimeItems      = []string{"LOGINTIM"}
-)
+// jpiKeywords are F$GETJPI's other keywords, each the name of its
+// $GETJPI item without JPI$_. (MODE is a keyword for the JPI$K_ codes;
+// JOBTYPE is the code itself, an integer: VMS 7.3 gave 3 for a local
+// terminal's, testdata/dcl50's round 5.)
+var jpiKeywords = []string{
+	"ACCOUNT", "ASTACT", "ASTCNT", "ASTEN", "ASTLM", "AUTHPRI", "AUTHPRIV",
+	"BIOLM", "BUFIO", "BYTLM", "CLINAME", "CPULIM", "CPUTIM", "CREPRC_FLAGS",
+	"CURPRIV", "DFWSCNT", "DIOLM", "DIRIO", "EFCS", "EFCU", "ENQCNT", "ENQLM",
+	"FILLM", "GRP", "IMAGPRIV", "JOBPRCCNT", "JOBTYPE", "LOGINTIM",
+	"MASTER_PID", "MEM", "MODE", "OWNER", "PGFLQUOTA", "PID", "PRCCNT",
+	"PRCLM", "PRCNAM", "PRI", "PRIB", "PROCPRIV", "TERMINAL", "TMBU", "TQLM",
+	"UIC", "USERNAME", "WSAUTH", "WSAUTHEXT", "WSEXTENT", "WSQUOTA", "WSSIZE",
+}
 
 func init() {
-	kinds := []struct {
-		names []string
-		value func(data string, env *corevms.Environment) dclValue
-	}{
-		{jpiIntegerItems, func(data string, _ *corevms.Environment) dclValue { return dclInteger(int32(itemLongword(data))) }},
-		{jpiStringItems, func(data string, _ *corevms.Environment) dclValue { return dclString(data) }},
-		{jpiPIDItems, func(data string, _ *corevms.Environment) dclValue { return dclString(fmt.Sprintf("%08X", itemLongword(data))) }},
-		{jpiPrivilegeItems, func(data string, _ *corevms.Environment) dclValue { return dclString(PrivilegeList(itemQuadword(data))) }},
-		{jpiTimeItems, func(data string, _ *corevms.Environment) dclValue { return dclString(timeText(itemQuadword(data))) }},
-		{[]string{"UIC"}, func(data string, env *corevms.Environment) dclValue {
-			return dclString(env.IdentifierText(itemLongword(data)))
-		}},
-	}
+	for _, name := range jpiKeywords {
+		item := "JPI$_" + name
+		form := corevms.JPIItemForm(item, corevms.StyleDCL)
 
-	for _, kind := range kinds {
-		for _, name := range kind.names {
-			value, item := kind.value, "JPI$_"+name
-			jpiItems[name] = func(env *corevms.Environment) dclValue {
-				data, _ := env.JPIItem(item)
+		jpiItems[name] = func(env *corevms.Environment) dclValue {
+			data, _ := env.JPIItem(item)
 
-				return value(data, env)
-			}
+			return lexItemValue(env, form, data)
 		}
 	}
 }
 
-// jpiKeyword returns the F$GETJPI item for $GETJPI's item, whose value is
-// one of the JPI$K_ codes names lists (JPI$K_INTERACTIVE, ...), written
-// as its name; a code not among them is written as a number.
-func jpiKeyword(item string, names ...string) jpiItem {
-	return func(env *corevms.Environment) dclValue {
-		data, _ := env.JPIItem(item)
-		code := itemLongword(data)
-
-		for _, name := range names {
-			if v, ok := vmsdef.Symbols["JPI$K_"+name]; ok && v == code {
-				return dclString(name)
-			}
-		}
-
-		return dclString(strconv.FormatUint(uint64(code), 10))
-	}
-}
-
-// itemLongword and itemQuadword read an item's value: the low four or
-// eight bytes of data, little-endian, short data padded with zeros.
-func itemLongword(data string) uint32 { return uint32(itemQuadword(data)) }
-
-func itemQuadword(data string) uint64 {
-	var b [8]byte
-
-	copy(b[:], data)
-
-	return binary.LittleEndian.Uint64(b[:])
-}
-
-// PrivilegeList writes a privilege mask as F$GETJPI does: the names of
-// its privileges, in bit order, separated by commas.
-func PrivilegeList(mask uint64) string {
-	var names []string
-
-	for bit, name := range corevms.PrivilegeNames {
-		if name != "" && mask&(1<<bit) != 0 {
-			names = append(names, name)
-		}
+// lexItemValue is an item's value as a lexical function returns it: a
+// number as an integer, anything else as the text corevms writes for its
+// form in DCL's style.
+func lexItemValue(env *corevms.Environment, form corevms.ItemForm, data string) dclValue {
+	if form == corevms.FormNumber {
+		return dclInteger(int32(itemLongword(data)))
 	}
 
-	return strings.Join(names, ",")
+	return dclString(env.ItemText(form, data, corevms.StyleDCL))
 }
+
+// itemLongword and itemQuadword read an item's value (corevms's
+// ItemLongword and ItemQuadword).
+func itemLongword(data string) uint32 { return corevms.ItemLongword(data) }
+
+func itemQuadword(data string) uint64 { return corevms.ItemQuadword(data) }
+
+// PrivilegeList writes a privilege mask as F$GETJPI does
+// (corevms.PrivilegeList).
+func PrivilegeList(mask uint64) string { return corevms.PrivilegeList(mask) }
 
 // lexGetJPI is F$GETJPI(pid, item): the item (jpiItems) for the process
 // whose PID is pid, in hexadecimal, or the console's own for "". A PID
@@ -409,19 +363,12 @@ func lexGetJPI(e *dclExpression, args []lexicalArg) (dclValue, error) {
 	return item(env), nil
 }
 
-// syiItems are F$GETSYI's keywords, each the $GETSYI item of the same
-// name and how its value is written.
-var syiItems = map[string]func(data string) dclValue{
-	"BOOTTIME":       func(data string) dclValue { return dclString(timeText(itemQuadword(data))) },
-	"CLUSTER_MEMBER": func(data string) dclValue { return dclTrueFalse(itemLongword(data)&1 != 0) },
-	"CPU":            func(data string) dclValue { return dclInteger(int32(itemLongword(data))) },
-	"MINWSCNT":       func(data string) dclValue { return dclInteger(int32(itemLongword(data))) },
-	"NODE_CSID":      func(data string) dclValue { return dclString(fmt.Sprintf("%08X", itemLongword(data))) },
-	"NODE_SWTYPE":    func(data string) dclValue { return dclString(data) },
-	"NODE_SWVERS":    func(data string) dclValue { return dclString(data) },
-	"NODENAME":       func(data string) dclValue { return dclString(data) },
-	"SID":            func(data string) dclValue { return dclInteger(int32(itemLongword(data))) },
-	"VERSION":        func(data string) dclValue { return dclString(data) },
+// syiKeywords are F$GETSYI's keywords, each the $GETSYI item of the
+// same name, written as corevms's item forms say in DCL's style.
+var syiKeywords = map[string]bool{
+	"BOOTTIME": true, "CLUSTER_MEMBER": true, "CPU": true, "MINWSCNT": true,
+	"NODE_CSID": true, "NODE_SWTYPE": true, "NODE_SWVERS": true,
+	"NODENAME": true, "SID": true, "VERSION": true,
 }
 
 // lexGetSYI is F$GETSYI(item [,node]): the item (syiItems) for this
@@ -433,7 +380,7 @@ func lexGetSYI(e *dclExpression, args []lexicalArg) (dclValue, error) {
 		return dclValue{}, err
 	}
 
-	value, key, err := lexicalKeyword(syiItems, args[0])
+	_, key, err := lexicalKeyword(syiKeywords, args[0])
 	if err != nil {
 		return dclValue{}, err
 	}
@@ -442,9 +389,10 @@ func lexGetSYI(e *dclExpression, args []lexicalArg) (dclValue, error) {
 		return dclValue{}, e.console.statusFailure(vmsdef.Symbols["SS$_NOSUCHNODE"])
 	}
 
-	data, _ := env.SYIItem("SYI$_" + key)
+	item := "SYI$_" + key
+	data, _ := env.SYIItem(item)
 
-	return value(data), nil
+	return lexItemValue(env, corevms.SYIItemForm(item, corevms.StyleDCL), data), nil
 }
 
 // privilegeKeyword reads one of F$PRIVILEGE's or F$SETPRV's keywords: a

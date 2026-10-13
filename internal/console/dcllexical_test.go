@@ -129,7 +129,7 @@ func TestLexicalEnvironment(t *testing.T) {
 }
 
 // TestLexicalGetDVI: F$GETDVI of a device there is, and EXISTS of one
-// there isn't.
+// there isn't; the items written as text (corevms's item forms).
 func TestLexicalGetDVI(t *testing.T) {
 	c := lexConsole(t)
 	mountFreshContainer(t, c, "DUA0")
@@ -140,6 +140,9 @@ func TestLexicalGetDVI(t *testing.T) {
 		{text: `F$GETDVI("DUA0:", "MNT")`, want: "TRUE"},
 		{text: `F$GETDVI("DUA0:", "VOLNAM")`, want: "DIRVOL"},
 		{text: `F$GETDVI("DUA0:", "UNIT")`, integer: true, want: "0"},
+		{text: `F$GETDVI("DUA0:", "ACPTYPE")`, want: "F11V2"},
+		{text: `F$GETDVI("DUA0:", "VPROT")`, want: "SYSTEM=RWLP,OWNER=RWLP,GROUP=RWLP,WORLD=RWLP"},
+		{text: `F$GETDVI("DUA0:", "PID")`, want: "00000000"},
 		{text: `F$GETDVI("DUA9:", "UNIT")`, vms: "SS$_NOSUCHDEV"},
 		{text: `F$GETDVI("DUA0:", "NOSUCH")`, code: vmserrors.CLI_IVKEYW},
 	})

@@ -303,6 +303,31 @@ func serviceSysGetjpi(env *Environment, argv []uint32) (uint32, error) {
 // SS$_NOMOREPROC ends it (see jpiWildcard); other services treat -1 as
 // just another PID that doesn't exist.
 func (env *Environment) processTarget(pidadr, prcnam uint32, wildcard bool) (*Environment, uint32) {
+	var readName func() (string, uint32)
+
+	if prcnam != 0 {
+		readName = func() (string, uint32) {
+			name, ok, err := strGet(env, prcnam, maxProcessNameLength)
+			if err != nil {
+				return "", ssAccVio
+			}
+
+			if !ok {
+				return "", ssIvLogNam
+			}
+
+			return name, 0
+		}
+	}
+
+	return env.processTargetBy(pidadr, readName, wildcard)
+}
+
+// processTargetBy is processTarget with the process name given by
+// readName (nil for none), which returns the name or the status that it
+// can't be read; it's called only when the name is used. An empty name,
+// or one longer than 15 characters, is SS$_IVLOGNAM.
+func (env *Environment) processTargetBy(pidadr uint32, readName func() (string, uint32), wildcard bool) (*Environment, uint32) {
 	pid := uint32(0)
 
 	if pidadr != 0 {
@@ -351,13 +376,13 @@ func (env *Environment) processTarget(pidadr, prcnam uint32, wildcard bool) (*En
 
 	target := env
 
-	if prcnam != 0 {
-		name, ok, err := strGet(env, prcnam, maxProcessNameLength)
-		if err != nil {
-			return nil, ssAccVio
+	if readName != nil {
+		name, st := readName()
+		if st != 0 {
+			return nil, st
 		}
 
-		if !ok || name == "" {
+		if name == "" || len(name) > maxProcessNameLength {
 			return nil, ssIvLogNam
 		}
 

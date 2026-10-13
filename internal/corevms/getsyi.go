@@ -202,13 +202,28 @@ func (env *Environment) nodeTarget(csidadr, nodename uint32) uint32 {
 			return ssAccVio
 		}
 
-		if !ok || name == "" {
+		if !ok {
 			return ssIvLogNam
 		}
 
-		if name != env.NodeName {
-			return ssNoSuchNode
-		}
+		return env.nodeTargetName(0, name, true)
+	}
+
+	return 0
+}
+
+// nodeTargetName is nodeTarget with the node name already read: name, if
+// named.
+func (env *Environment) nodeTargetName(csidadr uint32, name string, named bool) uint32 {
+	if st := env.nodeTarget(csidadr, 0); st != 0 || !named {
+		return st
+	}
+
+	switch {
+	case name == "" || len(name) > maxNodeNameLength:
+		return ssIvLogNam
+	case name != env.NodeName:
+		return ssNoSuchNode
 	}
 
 	return 0

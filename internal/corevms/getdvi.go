@@ -64,6 +64,7 @@ var dviItemsByName = map[string]dviItemFunc{
 	"DVI$_ERRCNT":    dviLong(func(d *iodev.Device) uint32 { return d.ErrCnt }),
 	"DVI$_OPCNT":     func(env *Environment, d *iodev.Device) itemValue { return itemLong(env.operationCount(d)) },
 	"DVI$_ACPPID":    dviLong(func(d *iodev.Device) uint32 { return d.ACPPID }),
+	"DVI$_ACPTYPE":   func(env *Environment, d *iodev.Device) itemValue { return itemLong(env.acpType(d)) },
 	"DVI$_LOCKID":    dviLong(func(d *iodev.Device) uint32 { return d.LockID }),
 	"DVI$_RECSIZ":    dviLong(func(d *iodev.Device) uint32 { return d.RecSize }),
 	"DVI$_SERIALNUM": dviLong(func(d *iodev.Device) uint32 { return d.Serial }),
@@ -237,6 +238,20 @@ func (env *Environment) devDepend(d *iodev.Device) uint32 {
 	return d.DevDepend
 }
 
+// acpType is d's DVI$_ACPTYPE, the kind of ancillary control process
+// that manages its volume: Files-11 structure level 2 (DVI$C_ACP_F11V2)
+// while an ODS-2 volume is mounted on it, as every volume govax mounts
+// is, and 0 (none) otherwise.
+func (env *Environment) acpType(d *iodev.Device) uint32 {
+	if env.Mounts != nil {
+		if _, mounted := env.Mounts.Lookup(d.Name); mounted {
+			return vmsdef.Symbols["DVI$C_ACP_F11V2"]
+		}
+	}
+
+	return 0
+}
+
 // deviceProtection is d's protection mask (DVI$_VPROT): a mailbox's
 // (mailbox.go), and 0 for any other device, whose protection govax
 // doesn't model.
@@ -380,7 +395,25 @@ func (env *Environment) dviTarget(chanNum, devnam uint32) (*iodev.Device, uint32
 		return nil, ssAccVio
 	}
 
-	if !ok || name == "" {
+	if !ok {
+		return nil, ssIvLogNam
+	}
+
+	return env.dviTargetName(0, name, true)
+}
+
+// dviTargetName is dviTarget with the device name already read: name,
+// if named (longer than 63 characters is SS$_IVLOGNAM).
+func (env *Environment) dviTargetName(chanNum uint32, name string, named bool) (*iodev.Device, uint32) {
+	if chanNum != 0 {
+		return env.dviTarget(chanNum, 0)
+	}
+
+	if !named {
+		return nil, ssIvDevNam
+	}
+
+	if name == "" || len(name) > maxDeviceNameLength {
 		return nil, ssIvLogNam
 	}
 

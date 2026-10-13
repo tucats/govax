@@ -473,60 +473,17 @@ func lexFileAttributes(e *dclExpression, args []lexicalArg) (dclValue, error) {
 }
 
 // dviItems are F$GETDVI's keywords: each $GETDVI item (by its name
-// without DVI$_), and how its value is written. init fills it from
-// corevms.DVIItemNames: the items in dviStringItems, dviPIDItems, and
-// dviUICItems are strings, hexadecimal PIDs, and UICs; the device
-// characteristics and terminal characteristics are "TRUE" or "FALSE";
-// the rest are integers. EXISTS says whether there is such a device.
+// without DVI$_), written as corevms's item forms say in DCL's style
+// (lexItemValue). init fills it from corevms.DVIItemNames. EXISTS says
+// whether there is such a device.
 var dviItems = map[string]func(data string, env *corevms.Environment) dclValue{}
-
-var (
-	dviStringItems = map[string]bool{
-		"DEVNAM": true, "FULLDEVNAM": true, "ALLDEVNAM": true, "ROOTDEVNAM": true,
-		"MEDIA_NAME": true, "MEDIA_TYPE": true, "TT_PHYDEVNAM": true, "VOLNAM": true,
-	}
-	dviPIDItems   = map[string]bool{"PID": true, "ACPPID": true}
-	dviUICItems   = map[string]bool{"OWNUIC": true}
-	dviCountItems = map[string]bool{"TT_PAGE": true}
-	dviFlagItems  = map[string]bool{"REMOTE_DEVICE": true, "SERVED_DEVICE": true, "VOLSETMEM": true}
-)
-
-// dviIsFlag reports whether the item called name is a truth: one of
-// dviFlagItems, a terminal characteristic (TT_), or a device
-// characteristic bit ($DEVDEF's DEV$M_ names: MNT, DIR, ...).
-func dviIsFlag(name string) bool {
-	if dviFlagItems[name] {
-		return true
-	}
-
-	if strings.HasPrefix(name, "TT_") && !dviCountItems[name] && !dviStringItems[name] {
-		return true
-	}
-
-	_, ok := vmsdef.Symbols["DEV$M_"+name]
-
-	return ok
-}
 
 func init() {
 	for _, full := range corevms.DVIItemNames() {
-		name := strings.TrimPrefix(full, "DVI$_")
+		form := corevms.DVIItemForm(full, corevms.StyleDCL)
 
-		switch {
-		case dviStringItems[name]:
-			dviItems[name] = func(data string, _ *corevms.Environment) dclValue { return dclString(data) }
-		case dviPIDItems[name]:
-			dviItems[name] = func(data string, _ *corevms.Environment) dclValue {
-				return dclString(fmt.Sprintf("%08X", itemLongword(data)))
-			}
-		case dviUICItems[name]:
-			dviItems[name] = func(data string, env *corevms.Environment) dclValue {
-				return dclString(env.IdentifierText(itemLongword(data)))
-			}
-		case dviIsFlag(name):
-			dviItems[name] = func(data string, _ *corevms.Environment) dclValue { return dclTrueFalse(itemLongword(data)&1 != 0) }
-		default:
-			dviItems[name] = func(data string, _ *corevms.Environment) dclValue { return dclInteger(int32(itemLongword(data))) }
+		dviItems[strings.TrimPrefix(full, "DVI$_")] = func(data string, env *corevms.Environment) dclValue {
+			return lexItemValue(env, form, data)
 		}
 	}
 
