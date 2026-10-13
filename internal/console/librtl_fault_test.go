@@ -28,7 +28,7 @@ func runMacroProgram(t *testing.T, source string) (uint32, string) {
 	writeHostFile(t, path+".mar", source)
 
 	if err := c.cmd().Macro(dclcmd.MacroOptions{Source: path + ".mar"}); err != nil {
-		t.Fatalf("MACRO: %v", err)
+		t.Fatalf("MACRO: %v\n%s", err, out.String())
 	}
 
 	if err := c.cmd().Link(dclcmd.LinkOptions{Objects: []string{path}}); err != nil {

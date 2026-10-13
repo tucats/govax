@@ -194,6 +194,9 @@ var Routines = []Routine{
 	{"LIB$ASN_WTH_MBX", 124, libAsnWthMbx},
 	{"LIB$WAIT", 125, libWait},
 	{"LIB$GET_USERS_LANGUAGE", 126, libGetUsersLanguage},
+	{"LIB$FORMAT_SOGW_PROT", 127, libFormatSogwProt},
+	{"LIB$PARSE_SOGW_PROT", 128, libParseSogwProt},
+	{"LIB$PARSE_ACCESS_CODE", 129, libParseAccessCode},
 }
 
 // missing is Missing's list, and missingJSB MissingJSB's, made once.

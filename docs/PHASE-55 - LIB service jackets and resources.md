@@ -1,6 +1,6 @@
 # Phase 55 — LIB$ service jackets, process resources, and measurement
 
-**Status:** in progress (subtasks 1 to 6 done 2026-10-13). Needs Phases 53 and 54. Part of the
+**Status:** in progress (subtasks 1 to 7 done 2026-10-13). Needs Phases 53 and 54. Part of the
 LIB$ program laid out in `PHASE-53 - RTL LIB support.md` (Part A).
 
 ## Goal
@@ -483,7 +483,7 @@ are masked.
 6. **Miscellaneous**: AST_IN_PROG, ASN_WTH_MBX, WAIT, GET_USERS_LANGUAGE.
    **Done** 2026-10-13.
 7. **Protection text**: FORMAT_SOGW_PROT, PARSE_SOGW_PROT,
-   PARSE_ACCESS_CODE, from the VSI manual.
+   PARSE_ACCESS_CODE, from the VSI manual. **Done** 2026-10-13.
 8. **The program** (`testdata/lib55/`), its console test, and the VMS
    probe (SHOW_TIMER's layout, GETJPI's text forms).
 9. **Close-out**.
@@ -731,3 +731,38 @@ are masked.
   - Noticed: govax's `$GETDVI` answers SS$_NOPRIV for a channel that
     isn't assigned, where VMS's would be SS$_IVCHAN (unchanged here; a
     case for a later probe).
+- **2026-10-13** — Subtask 7, the protection-text routines
+  (`internal/librtl/protection.go`, shim codes 127–129:
+  FORMAT_SOGW_PROT, PARSE_SOGW_PROT, PARSE_ACCESS_CODE), as the
+  survey's "Protection text" describes them:
+  - **The access-name table.** Only its first four entries are read
+    (each category has four bits), so a program's table needn't have 32;
+    each name's first letter, uppercased, is the access's letter, an
+    empty name none. Omitted, it's FILE's (READ, WRITE, EXECUTE,
+    DELETE). An access letter in a parsed string matches case blind
+    (**unconfirmed**).
+  - **FORMAT_SOGW_PROT** writes each category's name, and the ownership
+    separator and its granted letters only when it has any, so a
+    category with no access is its name alone (**unconfirmed**). The
+    names (a vector of four descriptors) and separators may be the
+    program's. Truncation is STR$_TRU; LIB$_WRONUMARG for fewer than six
+    or more than seven arguments, LIB$_INVARG with no mask or output.
+  - **PARSE_SOGW_PROT** skips blanks and tabs anywhere; an ownership
+    name is any abbreviation of System, Owner, Group, or World, and the
+    error offset for a bad name is the first character that leaves no
+    name it could abbreviate (`SYX` at 2, `SYSTEMS` at 6). An empty
+    item (`S:R,,W`, a trailing comma) is an error at the comma or end; a
+    character among the access letters that's no letter (`;`, a second
+    `:`) is an error at it. An empty or blank string is SS$_NORMAL with
+    both masks 0 (**unconfirmed**). On an error neither mask is written,
+    only end-position (**unconfirmed**).
+  - **PARSE_ACCESS_CODE** reads the letters (blanks skipped, a comma an
+    error) into the category's nibble, set for granted; a category that
+    isn't one nibble's four bits is LIB$_INVARG with nothing written.
+  - **Tests**: `protection_test.go` (the default and custom names,
+    separators, and tables, empty categories, STR$_TRU, every parse
+    form and error offset, each category of PARSE_ACCESS_CODE, the
+    argument checks), and `TestLibrtlProtection` in `internal/console`, a
+    MACRO program calling all three through their stubs. The console
+    tests' `runMacroProgram` now shows MACRO's messages when assembly
+    fails.
