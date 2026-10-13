@@ -73,3 +73,34 @@ func (db *Database) newDTFormatTable() {
 		define(TimeFormatName(i+1), f)
 	}
 }
+
+// The formats VMS V7.1's system table names by default, even without
+// LIB$DT_STARTUP (testdata/lib56's log): LIB$DT_FORMAT the standard
+// output format's two names, and LIB$DT_INPUT_FORMAT the standard input
+// format, the two together $ASCTIM's text.
+var (
+	defaultOutputFormat = []string{DateFormatName(1), TimeFormatName(1)}
+	defaultInputFormat  = DateFormats[0] + " " + TimeFormats[0]
+)
+
+// defineDTFormatNames defines LIB$DT_FORMAT and LIB$DT_INPUT_FORMAT in
+// LNM$SYSTEM_TABLE as VMS V7.1 has them, so a formatting routine with
+// nothing of the user's own finds the standard format without
+// LIB$_DEFFORUSE. They are executive mode, as a startup procedure's
+// would be (unconfirmed: SHOW LOGICAL doesn't show the mode); a user's
+// DEFINE in the process table goes before them.
+func (db *Database) defineDTFormatNames() {
+	for _, t := range db.shared.tables {
+		if t.Name != SystemTableName {
+			continue
+		}
+
+		var output []Equivalence
+		for _, name := range defaultOutputFormat {
+			output = append(output, Equivalence{Value: name})
+		}
+
+		t.add(&Entry{Name: "LIB$DT_FORMAT", Mode: Executive, Equivalences: output})
+		t.add(&Entry{Name: "LIB$DT_INPUT_FORMAT", Mode: Executive, Equivalences: []Equivalence{{Value: defaultInputFormat}}})
+	}
+}

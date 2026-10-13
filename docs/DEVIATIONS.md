@@ -3928,6 +3928,58 @@ widened."
   output device's I/O counts, and a clock tick differ by system.
 - **Status**: fixed in Go where VMS differed (docs/PHASE-55, subtask 8).
 
+### [Phase 56] LIBRTL's date and time routines: what VMS 7.1 settled, and two deviations
+
+- **Where**: `internal/librtl` (`times.go`, `cvttime.go`, `days.go`,
+  `dtformat.go`, `dtcontext.go`, `dtoutput.go`, `dtinput.go`),
+  `internal/corevms/vmstime.go`, `internal/lnm/dtformat.go`; the probe is
+  `testdata/lib56` (`TestLib56Oracle`, two runs of VMS V7.1 on simh's VAX
+  8600, 2026-10-13).
+- **Changed beyond LIBRTL** (VMS's behavior, seen in the runs):
+  - `$ASCTIM` writes a year past 9999 as `****` (it refused one).
+  - CVT_VECTIM's conversion (`corevms.VectorTime`) takes years past 9999
+    and deltas of 10,000 days or more, and wraps past the quadword.
+  - LNM$SYSTEM_TABLE has LIB$DT_FORMAT (LIB$DATE_FORMAT_001,
+    LIB$TIME_FORMAT_001) and LIB$DT_INPUT_FORMAT (the standard input
+    format), executive mode, as VMS's system table had them without
+    LIB$DT_STARTUP.
+- **Matched by the oracle**: 357 of 426 cases line for line. The phase
+  doc's progress log lists what VMS settled. In short: no 10,000-day
+  limit; wrapping quadword arithmetic; LIB$_IVTIME for a zero multiplier
+  or count; MULTF's rounding up; 0-based hours, minutes, and seconds;
+  CVT_FROM's statuses; LIB$DAY's positive day-time; INIT's few checks;
+  spellings used as given; how the output format's elements, flags, and
+  empty elements behave; and a two-digit year's century.
+- **Still govax's choice** (no case settled it):
+  - CVTF_TO_INTERNAL_TIME's length is a model fitted to six results
+    (`floatTicks`), not VMS's documented method.
+  - A context reads the names once, on its first use.
+  - Which tables the user's names are translated through (LNM$FILE_DEV),
+    and the mode of the built-in system names.
+  - An input format given to INIT as its delimiter alone is
+    LIB$_ELETOOLON when used; a spelled component so given is
+    LIB$_NUMELEMENTS.
+  - CONVERT_DATE_STRING's matching rules beyond what the run converted
+    (below): contiguous runs of the format, the least punctuation left
+    out, abbreviations, the 12-hour clock, and the relative days.
+- **Left differing, deliberately** (`expectedLib56Cases`, 69 cases):
+  VMS's LIB$CONVERT_DATE_STRING returned SS$_ROPRAND, as a status, for
+  nearly every string with a letter in it or beginning with punctuation.
+  That includes the manual's own Table 3-2 ("-MAR", ":45:", ".01") and
+  YESTERDAY, TODAY, and TOMORROW. One case, after them, returned
+  LIB$_BADBLOADR. Strings of digits that begin with a digit converted
+  as govax converts them. This looks like a fault in the routine or in
+  the emulator, not a rule, so govax follows the manual. No other simh
+  model or VMS version was at hand to tell which (the author, 2026-10-13).
+- **Not built in**: VMS V7.1's LIB$DT_STARTUP defines date formats 041 to
+  047 and time formats 021 to 023 beyond the 5.0 manual's 40 and 20. 041
+  is `!Y4-!MAU-!DD`; the rest have double-byte (Asian) text. govax has
+  the manual's 60 only, until a user asks for more (the author,
+  2026-10-13); a user can define them with DEFINE/EXECUTIVE/TABLE=
+  LNM$DT_FORMAT_TABLE.
+- **Status**: fixed in Go where VMS differed, but for the two deviations
+  above (docs/PHASE-56, subtasks 8 and 9).
+
 <!--
 Entry template:
 

@@ -940,4 +940,14 @@ func TestDTFormatTable(t *testing.T) {
 	if e := mustTranslate(t, other, DTFormatTableName, "LIB$DATE_FORMAT_501"); e.Equivalences[0].Value != "!Y4" {
 		t.Errorf("a user's format: %q", e.Equivalences[0].Value)
 	}
+
+	// The system table names the standard formats, as VMS's does.
+	e := mustTranslate(t, other, SystemTableName, "LIB$DT_FORMAT")
+	if len(e.Equivalences) != 2 || e.Equivalences[0].Value != "LIB$DATE_FORMAT_001" || e.Equivalences[1].Value != "LIB$TIME_FORMAT_001" {
+		t.Errorf("LIB$DT_FORMAT = %v", e.Equivalences)
+	}
+
+	if e := mustTranslate(t, other, SystemTableName, "LIB$DT_INPUT_FORMAT"); e.Equivalences[0].Value != "!DB-!MAAU-!Y4 !H04:!M0:!S0.!C2" {
+		t.Errorf("LIB$DT_INPUT_FORMAT = %q", e.Equivalences[0].Value)
+	}
 }

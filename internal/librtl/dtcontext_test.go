@@ -44,6 +44,19 @@ func defineList(t *testing.T, env *corevms.Environment, table, name string, mode
 	}
 }
 
+// undefineDTNames deletes the system table's LIB$DT_FORMAT and
+// LIB$DT_INPUT_FORMAT, which govax defines as VMS does, so a test can
+// see the routines' fallback when neither is defined.
+func undefineDTNames(t *testing.T, env *corevms.Environment) {
+	t.Helper()
+
+	for _, name := range []string{"LIB$DT_FORMAT", "LIB$DT_INPUT_FORMAT"} {
+		if _, err := env.Logicals.Delete(lnm.SystemTableName, name, lnm.Executive); err != nil {
+			t.Fatalf("delete %s: %v", name, err)
+		}
+	}
+}
+
 // elementTexts is the texts of an output format's elements.
 func elementTexts(elements []dtElement) []string {
 	var out []string
@@ -59,6 +72,7 @@ func elementTexts(elements []dtElement) []string {
 // into it, and its settings come from them alone.
 func TestInitDateTimeContext(t *testing.T) {
 	env := fixture(t)
+	undefineDTNames(t, env)
 	defineList(t, env, lnm.ProcessTableName, "SYS$LANGUAGE", lnm.Supervisor, "ENGLISH")
 
 	if got := initContext(t, env, componentMonthAbb, "|jan|feb|mar|apr|mai|jun|jul|aug|sep|okt|nov|dez|"); got != ssNormal {
@@ -181,6 +195,7 @@ func TestInitDateTimeContextErrors(t *testing.T) {
 // warnings.
 func TestDateContextNames(t *testing.T) {
 	env := fixture(t)
+	undefineDTNames(t, env)
 
 	s := (&dateContext{}).resolve(env)
 

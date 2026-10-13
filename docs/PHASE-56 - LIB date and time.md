@@ -1,6 +1,6 @@
 # Phase 56 — LIB$ date and time
 
-**Status:** in progress (2026-10-13; subtasks 1 to 7 done). Needs Phases 53 and 54. Part of the
+**Status:** done (2026-10-13). Needs Phases 53 and 54. Part of the
 LIB$ program laid out in `PHASE-53 - RTL LIB support.md` (Part A).
 
 ## Goal
@@ -659,7 +659,7 @@ address) print on lines marked with a tilde, as in Phase 55's probe.
 8. **The program** (`testdata/lib56/`), its console test, and the VMS
    probe. **Done** 2026-10-13 (two VMS runs), but for the open
    CONVERT_DATE_STRING question in the progress log.
-9. **Close-out**.
+9. **Close-out**. **Done** 2026-10-13.
 
 ## Progress log
 
@@ -1021,3 +1021,17 @@ address) print on lines marked with a tilde, as in Phase 55's probe.
     the manual's behavior, and `TestLib56Oracle` lists the 69 cases
     (`expectedLib56Cases`, by reason). A run on another simh model, or
     another VMS version, would tell which.
+- **2026-10-13** — Subtask 9, close-out. The author's decisions on what
+  the runs left:
+  - CONVERT_DATE_STRING's ROPRAND cases can't be run on another simh
+    model or VMS version, so they are logged as a deviation, and govax
+    keeps the manual's behavior.
+  - The system table's LIB$DT_FORMAT and LIB$DT_INPUT_FORMAT are built in
+    as VMS has them (`lnm.defineDTFormatNames`, executive mode), so the
+    oracle's console no longer defines them. Tests of the fallback delete
+    them (`undefineDTNames`).
+  - VMS V7.1's extra predefined formats (date 041–047, time 021–023) are
+    not built in until a user asks; logged as a deviation.
+
+  DEVIATIONS.md has the Phase 56 entry, and librtl's package doc,
+  PLAN.md's row, and CLAUDE.md describe the phase. Phase 56 is done.

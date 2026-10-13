@@ -49,6 +49,11 @@ never had.
   2026-10-13) is the service jackets, the item routines, event flag and
   LUN pools, timers, LIB$WAIT and its neighbors, and the 7.x
   protection-text routines, checked against VMS 7.1 by `testdata/lib55`.
+  Phase 56 (done 2026-10-13) is date and time: arithmetic, conversion,
+  DATE_TIME/DAY/DAY_OF_WEEK, and the formatting routines (contexts,
+  FORMAT_DATE_TIME, CONVERT_DATE_STRING) with LNM$DT_FORMAT_TABLE and
+  the system's LIB$DT_FORMAT/LIB$DT_INPUT_FORMAT built in, checked
+  against VMS 7.1 by `testdata/lib56`.
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
 - `docs/DEVIATIONS.md` — running log of suspected ISA/behavior fidelity issues found in
@@ -131,6 +136,15 @@ never had.
   VMS V7.1's output, which `TestLib55Oracle` (a twin of the exchange
   volume on DUA1, NLA0:, SYS$LANGUAGE ENGLISH) matches line for line
   but for `expectedLib55Differences`.
+- `testdata/lib56/` — Phase 56's probe of LIBRTL's date and time
+  routines (README.md): `gen.go` writes `lib56.mar` (426 cases; times
+  shown as `$ASCTIM` writes them, the formatting names defined by the
+  program a case at a time), `lib56.com` (which runs LIB$DT_STARTUP
+  when the predefined formats are missing, its own lines not echoed:
+  they are DIGITAL's), and `exchange.cmd`. `vax/lib56-vax.txt` is VMS
+  V7.1's second run (`lib56-run1.*` the first, which hung), which
+  `TestLib56Oracle` matches line for line but for `expectedLib56Cases`
+  (CONVERT_DATE_STRING's SS$_ROPRAND on that VAX; docs/DEVIATIONS.md).
 - `testdata/probe49/` — Phase 49's VMS probe in three rounds (`probe6`,
   `probe6b`, `probe6c`; README.md has each round's answers), run by
   `TestProbe6*`; `testdata/rms49/` and `testdata/sec49/` are the phase's
@@ -642,7 +656,15 @@ expect adjustment as phases land):
   `CallRequest.Tail`), `misc.go` (AST_IN_PROG, ASN_WTH_MBX, WAIT,
   GET_USERS_LANGUAGE and the `vax.language` key), and `protection.go`
   (FORMAT/PARSE_SOGW_PROT, PARSE_ACCESS_CODE, GET_ACCNAM's FILE
-  table). LIB$PUT_OUTPUT is here too (`output.go`); kernel.asm's
+  table). Phase 56: the time arithmetic (`times.go`), conversions
+  (`cvttime.go`, the LIB$K_ operations as a table; CVT_VECTIM over
+  `corevms.VectorTime`), `days.go`, and the formatting routines: the
+  mnemonics and parser (`dtformat.go`), the context (`dtcontext.go`, a
+  tagged heap block with Go state per image; what INIT didn't give comes
+  from the logical names), output (`dtoutput.go`) and input
+  (`dtinput.go`, a format-driven matcher); the predefined formats and
+  the system's default names are `internal/lnm/dtformat.go`'s.
+  LIB$PUT_OUTPUT is here too (`output.go`); kernel.asm's
   old interrupt-driven one is now its private `EXE$PUT_OUTPUT`.
   LIB$GET_FOREIGN (`foreign.go`) returns `Environment.CommandLine`: a
   foreign command's text (DCL symbols, `internal/dclshell/dclsym.go`), or

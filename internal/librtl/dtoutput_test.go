@@ -334,6 +334,7 @@ func padded(s string, n int) string {
 // an initialized context and the flags.
 func TestLibGetMaximumDateLength(t *testing.T) {
 	env := fixture(t)
+	undefineDTNames(t, env)
 	defineList(t, env, lnm.ProcessTableName, "SYS$LANGUAGE", lnm.Supervisor, "ENGLISH")
 
 	if got := initContext(t, env, componentOutputFormat, "|!MAU !DD, !Y4|!HH2:!M0 !MIU|"); got != ssNormal {
@@ -367,6 +368,7 @@ func TestLibGetMaximumDateLength(t *testing.T) {
 // be read by.
 func TestLibGetDateFormat(t *testing.T) {
 	env := fixture(t)
+	undefineDTNames(t, env)
 	defineList(t, env, lnm.ProcessTableName, "SYS$LANGUAGE", lnm.Supervisor, "ENGLISH")
 
 	for _, c := range []struct{ format, want string }{

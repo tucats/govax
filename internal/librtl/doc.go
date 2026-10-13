@@ -78,6 +78,25 @@
 // call (corevms.CallRequest's Tail). VMS 7.1's run of testdata/lib55's
 // probe (TestLib55Oracle) settled what the manuals left open.
 //
+// # Date and time
+//
+// Phase 56's routines work on VMS's quadword times (100 ns ticks since
+// 17-Nov-1858; a delta stored negated). times.go is the arithmetic
+// (LIB$ADD_TIMES, SUB_TIMES, MULT[F]_DELTA_TIME), cvttime.go the
+// conversions by LIB$K_ operation code and LIB$CVT_VECTIM, days.go
+// LIB$DATE_TIME, DAY, and DAY_OF_WEEK. The formatting routines share a
+// table of the format mnemonics and its parser (dtformat.go) and a
+// context (dtcontext.go: LIB$INIT/FREE_DATE_TIME_CONTEXT, a tagged heap
+// block with its state in Go, which takes what INIT didn't give it from
+// SYS$LANGUAGE, LIB$DT_FORMAT, and LIB$DT_INPUT_FORMAT); dtoutput.go
+// writes by it (LIB$FORMAT_DATE_TIME, GET_MAXIMUM_DATE_LENGTH,
+// GET_DATE_FORMAT) and dtinput.go reads by it (LIB$CONVERT_DATE_STRING,
+// a format-driven matcher). The predefined formats and the system's
+// default names are internal/lnm's (dtformat.go). VMS 7.1's runs of
+// testdata/lib56 (TestLib56Oracle) settled what the manuals left open,
+// but for CONVERT_DATE_STRING's strings with letters, which failed on
+// that VAX (docs/DEVIATIONS.md).
+//
 // # What's here and what's in corevms
 //
 // This package holds each routine's documented interface: reading its

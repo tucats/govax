@@ -116,9 +116,9 @@ var expectedLib56Cases = map[string]string{
 }
 
 // runLib56 assembles, links, and runs lib56.mar as lib56.com does on
-// VMS, with the system table's names as the VAX had them
-// (vax/lib56.log): SYS$LANGUAGE ENGLISH, LIB$DT_FORMAT the standard
-// format's two names, and LIB$DT_INPUT_FORMAT the standard format.
+// VMS, with SYS$LANGUAGE ENGLISH in the system table as the VAX had it
+// (vax/lib56.log). govax's system table has LIB$DT_FORMAT and
+// LIB$DT_INPUT_FORMAT as the VAX's did, built in.
 func runLib56(t *testing.T) (uint32, string) {
 	t.Helper()
 
@@ -133,8 +133,6 @@ func runLib56(t *testing.T) (uint32, string) {
 
 	for _, line := range []string{
 		"DEFINE/SYSTEM SYS$LANGUAGE ENGLISH",
-		"DEFINE/SYSTEM LIB$DT_FORMAT LIB$DATE_FORMAT_001,LIB$TIME_FORMAT_001",
-		`DEFINE/SYSTEM LIB$DT_INPUT_FORMAT "!DB-!MAAU-!Y4 !H04:!M0:!S0.!C2"`,
 	} {
 		if err := d.Dispatch(line); err != nil {
 			t.Fatalf("%s: %v", line, err)

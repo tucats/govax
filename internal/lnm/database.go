@@ -133,8 +133,10 @@ func NewDatabase(uic uint32) *Database {
 
 	view := db.NewProcessView(uic, db.NewJobTable())
 
-	// The date and time formats LIBRTL reads (dtformat.go).
+	// The date and time formats LIBRTL reads, and the system's names
+	// for the standard ones (dtformat.go).
 	db.newDTFormatTable()
+	db.defineDTFormatNames()
 
 	return view
 }
