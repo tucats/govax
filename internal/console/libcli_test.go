@@ -140,3 +140,55 @@ func TestLibCLI_subprocessSymbols(t *testing.T) {
 		t.Error("the subprocess's image defined FROM_IMAGE in process 1's DCL")
 	}
 }
+
+// logicalsSource is an image that defines FROM_IMAGE with
+// LIB$SET_LOGICAL and deletes DOOMED with LIB$DELETE_LOGICAL, returning
+// the first failure's status, or SS$_NORMAL.
+const logicalsSource = `	.title	logicals
+	.psect	data,noexe,wrt
+name:	.ascid	/FROM_IMAGE/
+value:	.ascid	/set by the image/
+doomed:	.ascid	/DOOMED/
+	.psect	code,exe,nowrt
+	.entry	start,^m<>
+	pushaq	value
+	pushaq	name
+	calls	#2,g^lib$set_logical
+	blbc	r0,90$
+	pushaq	doomed
+	calls	#1,g^lib$delete_logical
+90$:	ret
+	.end	start
+`
+
+// TestLibCLI_logicals: the names an image defines and deletes with
+// LIB$SET_LOGICAL and LIB$DELETE_LOGICAL are supervisor-mode names in
+// LNM$PROCESS, so the changes outlast the image.
+func TestLibCLI_logicals(t *testing.T) {
+	c, out := scheduledConsole(t, longQuantum, brbSelf)
+	image := buildImage(t, c, "logicals", logicalsSource)
+
+	d := console.NewDispatcher(c, consoletest.ConsoleGrammar(t), nil)
+	if err := d.Dispatch("DEFINE DOOMED X"); err != nil {
+		t.Fatal(err)
+	}
+
+	out.Reset()
+
+	for _, line := range []string{`RUN "` + image + `"`, "SHOW LOGICAL/FULL FROM_IMAGE"} {
+		if err := d.Dispatch(line); err != nil {
+			t.Fatalf("%s: %v", line, err)
+		}
+	}
+
+	_ = d.Dispatch("SHOW LOGICAL DOOMED") // NOTRAN, a warning
+
+	want := []string{
+		`   "FROM_IMAGE" [super] = "set by the image" (LNM$PROCESS_TABLE)`,
+		`%SHOW-S-NOTRAN, no translation for logical name DOOMED`,
+	}
+
+	if got := programLines(out.String()); strings.Join(got, "\n") != strings.Join(want, "\n") {
+		t.Errorf("output:\n%s\nwant:\n%s", strings.Join(got, "\n"), strings.Join(want, "\n"))
+	}
+}

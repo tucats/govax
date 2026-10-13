@@ -219,6 +219,8 @@ var Routines = []Routine{
 	{"LIB$GET_SYMBOL", 149, libGetSymbol},
 	{"LIB$SET_SYMBOL", 150, libSetSymbol},
 	{"LIB$DELETE_SYMBOL", 151, libDeleteSymbol},
+	{"LIB$SET_LOGICAL", 152, libSetLogical},
+	{"LIB$DELETE_LOGICAL", 153, libDeleteLogical},
 }
 
 // missing is Missing's list, and missingJSB MissingJSB's, made once.

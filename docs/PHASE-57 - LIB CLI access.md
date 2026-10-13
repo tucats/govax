@@ -560,7 +560,7 @@ implementation per Shell (`libcli.go`), the chain run after an image
    its implementation per Shell; GET_SYMBOL, SET_SYMBOL, DELETE_SYMBOL
    (local and global tables; LIB$_NOSUCHSYM, LIB$_INVSYMNAM, LIB$_NOCLI).
    **Done** 2026-10-13.
-3. **Logical names**: SET_LOGICAL, DELETE_LOGICAL.
+3. **Logical names**: SET_LOGICAL, DELETE_LOGICAL. **Done** 2026-10-13.
 4. **GET_COMMAND.**
 5. **The common area**: GET_COMMON, PUT_COMMON.
 6. **Chaining**: DO_COMMAND, RUN_PROGRAM.
@@ -619,3 +619,35 @@ implementation per Shell (`libcli.go`), the chain run after an image
   (outer levels, abbreviations, the ambiguity rule), and
   `console/libcli_test.go` (a MACRO image run by process 1's DCL and by
   a LOGINOUT subprocess's, each changing its own DCL's symbols).
+- **2026-10-13** — Subtask 3, logical names. `librtl/logical.go` has
+  LIB$SET_LOGICAL and LIB$DELETE_LOGICAL (codes 152 and 153), over two
+  new corevms entries, `Environment.SetSupervisorLogical` and
+  `DeleteSupervisorLogical` (`corevms/logicals.go`), which are `$CRELNM`'s
+  and `$DELLNM`'s own code at supervisor mode: `serviceSysCrelnm`'s item
+  list walk is now `crelnmItems`, and its define `createName`;
+  `$DELLNM`'s delete is `deleteNames`. The table privileges
+  (`lnmTablePrivilege`) still apply; only the mode is the routines'
+  own. DCL isn't asked for anything: `Environment.CLI` is only checked
+  (LIB$_NOCLI first, as for the symbols). Choices, each **unconfirmed**
+  and a probe case:
+  - SS$_ACCVIO for an argument that can't be read is *returned*, since
+    both manual entries list it among the statuses, not signaled as
+    other LIB$ routines do (Phase 53's Decision 5).
+  - Names, values, and table names are taken as they are: not
+    uppercased, trailing blanks kept.
+  - Without an item list, `attributes` may hold CONFINE and NO_ALIAS for
+    the name and CONCEALED and TERMINAL for the value; with one, only the
+    name's ("only logical name attributes are permitted"); any other bit
+    is SS$_BADPARAM. The item list is `$CRELNM`'s (LNM$_STRING,
+    LNM$_ATTRIBUTES, LNM$_TABLE, LNM$_CHAIN).
+  - DELETE_LOGICAL deletes the user-mode name of the same name too, as
+    DCL's DEASSIGN at supervisor mode does (the DCL Dictionary), so a
+    name defined only at user mode is deleted, not SS$_NOLOGNAM as the
+    5.0 entry's wording ("not defined as a supervisor-mode process
+    logical name") might mean. An empty name is SS$_IVLOGNAM, not
+    `$DELLNM`'s "every name".
+  Tests: `librtl/logical_test.go` (NOCLI, supervisor mode and case,
+  SUPERSEDE, a named table, INVARG, the attributes with and without an
+  item list, ACCVIO returned, DELETE's modes and the empty name) and
+  `console/libcli_test.go`'s `TestLibCLI_logicals` (an image's changes,
+  seen by SHOW LOGICAL after it ends).

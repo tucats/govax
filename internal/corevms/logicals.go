@@ -395,17 +395,26 @@ func serviceSysCrelnm(env *Environment, argv []uint32) (uint32, error) {
 		return st, nil
 	}
 
-	if st := env.lnmTablePrivilege(tabnam); st != 0 {
+	eqv, tableItems, st := env.crelnmItems(argv[4])
+	if st != 0 {
 		return st, nil
 	}
 
+	return env.createName(tabnam, lognam, mode, attr, eqv, tableItems)
+}
+
+// crelnmItems reads $CRELNM's item list at itmlst: the equivalence
+// strings (LNM$_STRING), each with the translation attributes of the
+// most recent LNM$_ATTRIBUTES item, and the LNM$_TABLE items that ask
+// for the table's name back. A status other than 0 is the service's.
+func (env *Environment) crelnmItems(itmlst uint32) ([]lnm.Equivalence, []itemListEntry, uint32) {
 	var (
 		eqv        []lnm.Equivalence
 		tableItems []itemListEntry
 		current    uint32
 	)
 
-	status := env.walkItemListChain(argv[4], lnmChain, func(it itemListEntry) uint32 {
+	status := env.walkItemListChain(itmlst, lnmChain, func(it itemListEntry) uint32 {
 		switch it.ItemCode {
 		case lnmAttributes:
 			v, err := env.mem.LoadLongword(env.cpu, it.BuffAddr)
@@ -435,8 +444,19 @@ func serviceSysCrelnm(env *Environment, argv []uint32) (uint32, error) {
 
 		return ssBadParam
 	})
-	if status != 0 {
-		return status, nil
+
+	return eqv, tableItems, status
+}
+
+// createName is $CRELNM's work once its arguments are read: lognam is
+// defined at mode in the first table tabnam designates, if the process
+// may put names there (lnmTablePrivilege), and tableItems get that
+// table's name. It returns SS$_NORMAL, SS$_SUPERSEDE, SS$_BUFFEROVF (a
+// table name cut short), or the failure.
+func (env *Environment) createName(tabnam, lognam string, mode lnm.Mode, attr uint32,
+	eqv []lnm.Equivalence, tableItems []itemListEntry) (uint32, error) {
+	if st := env.lnmTablePrivilege(tabnam); st != 0 {
+		return st, nil
 	}
 
 	superseded, err := env.Logicals.Define(tabnam, lognam, mode, attr, eqv)
@@ -537,6 +557,13 @@ func serviceSysDellnm(env *Environment, argv []uint32) (uint32, error) {
 		return st, nil
 	}
 
+	return env.deleteNames(tabnam, lognam, mode)
+}
+
+// deleteNames is $DELLNM's work once its arguments are read: lognam (or,
+// when it's empty, every name) at mode and outer modes is deleted from
+// the tables tabnam designates, if the process may delete names there.
+func (env *Environment) deleteNames(tabnam, lognam string, mode lnm.Mode) (uint32, error) {
 	if st := env.lnmTablePrivilege(tabnam); st != 0 {
 		return st, nil
 	}
@@ -548,6 +575,54 @@ func serviceSysDellnm(env *Environment, argv []uint32) (uint32, error) {
 	}
 
 	return ssNormal, nil
+}
+
+// SetSupervisorLogical defines lognam in the first table tabnam
+// designates at supervisor mode, whatever the caller's mode and
+// privileges (LIB$SET_LOGICAL, docs/PHASE-57: "does not require the
+// caller to be executing in supervisor mode"). Its value is the item
+// list at itmlst, $CRELNM's, when itmlst isn't 0; then attr may hold
+// only the name's attributes (LNM$M_CONFINE, LNM$M_NO_ALIAS), since each
+// value's are in the list. Otherwise it is the one string value, and
+// attr may also hold that value's (LNM$M_CONCEALED, LNM$M_TERMINAL). Any
+// other bit is SS$_BADPARAM. The statuses are $CRELNM's.
+func (env *Environment) SetSupervisorLogical(tabnam, lognam string, attr uint32, value string, itmlst uint32) (uint32, error) {
+	nameAttrs := attr & (lnm.AttrConfine | lnm.AttrNoAlias)
+	valueAttrs := attr & (lnm.AttrConcealed | lnm.AttrTerminal)
+
+	if itmlst != 0 {
+		if attr != nameAttrs {
+			return ssBadParam, nil
+		}
+
+		eqv, tableItems, st := env.crelnmItems(itmlst)
+		if st != 0 {
+			return st, nil
+		}
+
+		return env.createName(tabnam, lognam, lnm.Supervisor, nameAttrs, eqv, tableItems)
+	}
+
+	if attr != nameAttrs|valueAttrs {
+		return ssBadParam, nil
+	}
+
+	eqv := []lnm.Equivalence{{Value: value, Attrs: valueAttrs}}
+
+	return env.createName(tabnam, lognam, lnm.Supervisor, nameAttrs, eqv, nil)
+}
+
+// DeleteSupervisorLogical deletes lognam's supervisor-mode definition
+// (and a user-mode one, as DCL's DEASSIGN does) from the tables tabnam
+// designates, whatever the caller's mode and privileges
+// (LIB$DELETE_LOGICAL). An empty lognam is SS$_IVLOGNAM: unlike
+// $DELLNM's, it doesn't mean every name. The statuses are $DELLNM's.
+func (env *Environment) DeleteSupervisorLogical(tabnam, lognam string) (uint32, error) {
+	if lognam == "" {
+		return ssIvLogNam, nil
+	}
+
+	return env.deleteNames(tabnam, lognam, lnm.Supervisor)
 }
 
 // serviceSysCrelnt is SYS$CRELNT(attr, resnam, reslen, quota, promsk,

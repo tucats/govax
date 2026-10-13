@@ -84,6 +84,18 @@ func memoryFault(env *corevms.Environment, err error) (uint32, error) {
 	return accessViolation(env, va, reason)
 }
 
+// isMemoryError reports whether err is a memory error (a translation
+// fault), the kind memoryFault signals: for the few routines whose
+// manual entries return SS$_ACCVIO instead.
+func isMemoryError(err error) bool {
+	var (
+		tf *vm.TranslationFault
+		pe *vm.PhysicalAddressError
+	)
+
+	return errors.As(err, &tf) || errors.As(err, &pe)
+}
+
 // accessViolation signals SS$_ACCVIO for an access at va, with the
 // reason mask reason. The signal array is the hardware's: the condition,
 // the reason mask, and the address (the PC and PSL follow, as for any

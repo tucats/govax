@@ -57,7 +57,9 @@ never had.
   Phase 57 (in progress) is the CLI routines: `corevms.CLI`
   (`Environment.CLI`, nil without a CLI) is a process's DCL as the LIB$
   routines reach it, `dclshell/libcli.go` its implementation on each
-  process's own Shell; the symbol routines are done (subtask 2).
+  process's own Shell; the symbol routines are done (subtask 2), and
+  SET_LOGICAL and DELETE_LOGICAL (subtask 3, `$CRELNM`'s and
+  `$DELLNM`'s code at supervisor mode, `librtl/logical.go`).
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
 - `docs/DEVIATIONS.md` — running log of suspected ISA/behavior fidelity issues found in
