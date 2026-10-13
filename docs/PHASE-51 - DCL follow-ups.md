@@ -469,3 +469,22 @@ di
   6's oracle no longer allows for the difference: R4's DUMP/BLOCK matches
   VMS's byte for byte. govax needs the ods2 release with the change
   (go.mod's pin); with the local go.work it uses the sibling checkout.
+- 2026-10-13: After the phase closed, the author found that a command
+  typed at the terminal without a required parameter gave
+  CLI_MISSINGPARAMETER, where VMS's DCL prompts for it ("$ SHOW",
+  "_What: MEMORY"). The grammar engine's `Parse` had always left the
+  prompt to its caller, and DCL never asked. Now `dcl.ParsePrompting`
+  asks with "_" and the parameter's `/prompt=` text and ": " (the User's
+  Manual's "$ TYPE", "_File:"), puts the reply on the end of the line
+  (a missing parameter follows every one given), and parses again, so a
+  second missing one is asked for in turn (COPY's "_Source:", then
+  "_Destination:"); an empty reply asks again, and Ctrl/Z drops the
+  command without a message (`dcl.ErrCanceled`; the User's Manual,
+  2.2.2), $STATUS kept (unconfirmed). DCL prompts only for a command
+  read from the terminal (`parseCommand`, `readingTerminal`: command
+  level 0, or the Ctrl/Y level's own depth, `controlYPrompt.depth`), on
+  SYS$COMMAND through `readTerminal`, as INQUIRE reads. A command from a
+  procedure still gives the error: the author checked that VMS doesn't
+  prompt there either. (VMS's message for it may be INSFPRM rather than
+  govax's MISSINGPARAMETER; not checked.) Tests: `TestParsePrompting`
+  (`internal/dcl`), `TestParameterPrompt` (`internal/console`).

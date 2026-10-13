@@ -171,7 +171,13 @@ func (c *Interpreter) dispatchParsed(line string, verbSymbol bool) error {
 		fmt.Fprintf(c.machine.CPU.DebugWriter(), "DEBUG(DCL): parsing %q\n", line)
 	}
 
-	r, err := c.Grammar.Parse(line)
+	r, err := c.parseCommand(line)
+	if errors.Is(err, dcl.ErrCanceled) {
+		c.keepStatus()
+
+		return nil
+	}
+
 	if err != nil {
 		return verbError(err)
 	}
@@ -200,6 +206,33 @@ func (c *Interpreter) dispatchParsed(line string, verbSymbol bool) error {
 	}
 
 	return c.Grammar.Dispatch(r)
+}
+
+// parseCommand parses a command line. One typed at the terminal asks
+// there for a required parameter it doesn't give ("$ SHOW" asks
+// "_What: "), and the reply completes the line; Ctrl/Z at the prompt
+// drops the command (dcl.ErrCanceled), and DCL keeps $STATUS
+// (unconfirmed). A command read from a command procedure isn't
+// prompted for: its missing parameter is an error, as on VMS. Nor is
+// one with no terminal input to read (a test's console).
+func (c *Interpreter) parseCommand(line string) (*dcl.Result, error) {
+	if !c.readingTerminal() || (c.subCLI == nil && c.In == nil) {
+		return c.Grammar.Parse(line)
+	}
+
+	return c.Grammar.ParsePrompting(line, c.readTerminal)
+}
+
+// readingTerminal says whether the command being run was read from the
+// terminal: at command level 0, or typed at the Ctrl/Y level (which
+// leaves the interrupted procedure's levels in place), not in a
+// procedure run from it.
+func (c *Interpreter) readingTerminal() bool {
+	if prompt := c.controlYLevelActive; prompt != nil {
+		return len(c.levels) == prompt.depth
+	}
+
+	return c.currentLevel() == nil
 }
 
 // verbError is DCL's message for a command whose verb the grammar

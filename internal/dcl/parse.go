@@ -277,16 +277,61 @@ func (r *Result) ParamKeyword(paramName, qualName string) string {
 
 // Parse parses one command line against the grammar — the Go equivalent of
 // DCLparse, minus its interactive re-prompting for a missing required
-// parameter/qualifier (see doc.go): a required item still missing once the
-// line is exhausted is reported as an error rather than triggering a
-// terminal prompt, leaving any such prompting to the console layer that
-// calls Parse.
+// parameter: a required parameter still missing once the line is
+// exhausted is reported as an error (CLI_MISSINGPARAMETER), as DCL
+// reports it for a command read from a command procedure.
+// ParsePrompting is the terminal's form, which asks for it.
 func (g *Grammar) Parse(line string) (*Result, error) {
+	r, _, err := g.parse(line)
+
+	return r, err
+}
+
+// ErrCanceled is ParsePrompting's error when the user ends a parameter
+// prompt with Ctrl/Z: DCL drops the command without a message (OpenVMS
+// User's Manual, 2.2.2).
+var ErrCanceled = errors.New("command canceled at a parameter prompt")
+
+// ParsePrompting parses a command line typed at the terminal: a required
+// parameter the line doesn't give is asked for, as DCL asks for it, with
+// "_" and the parameter's /prompt= text and ": " (TYPE's "_File: ",
+// OpenVMS User's Manual, 2.2.1). ask shows the prompt and reads a line
+// from the terminal, ok false at its end of file (Ctrl/Z), which cancels
+// the command (ErrCanceled). An empty reply asks again. The reply goes on
+// the end of the line, where the missing parameter would have been typed
+// (parameters are filled in order, so a missing one follows every one
+// given), and the line is parsed again, which may ask for the next one
+// (COPY's "_From: " and "_To: ").
+func (g *Grammar) ParsePrompting(line string, ask func(prompt string) (reply string, ok bool)) (*Result, error) {
+	for {
+		r, missing, err := g.parse(line)
+		if missing == nil || missing.Prompt == "" || ask == nil {
+			return r, err
+		}
+
+		reply := ""
+
+		for reply == "" {
+			text, ok := ask("_" + missing.Prompt + ": ")
+			if !ok {
+				return nil, ErrCanceled
+			}
+
+			reply = strings.TrimSpace(text)
+		}
+
+		line = strings.TrimRight(line, " \t") + " " + reply
+	}
+}
+
+// parse is Parse, also returning the required parameter that was
+// missing when that is its error.
+func (g *Grammar) parse(line string) (*Result, *Parameter, error) {
 	line = upcaseOutsideQuotes(line)
 
 	pos := strings.TrimSpace(line)
 	if pos == "" {
-		return nil, vmserrors.New(vmserrors.CLI_EMPTYCOMMAND)
+		return nil, nil, vmserrors.New(vmserrors.CLI_EMPTYCOMMAND)
 	}
 
 	// A leading '@' is a verb by itself, as DCL reads "@FILE".
@@ -299,7 +344,7 @@ func (g *Grammar) Parse(line string) (*Result, error) {
 
 	verb, err := g.matchVerb(verbTok)
 	if err != nil {
-		return nil, err
+		return nil, nil, err
 	}
 
 	r := newResult()
@@ -347,7 +392,7 @@ func (g *Grammar) Parse(line string) (*Result, error) {
 			}
 
 			if err != nil {
-				return nil, err
+				return nil, nil, err
 			}
 
 			active, nextParam, lastParam, pos = next, np, lp, rest
@@ -376,7 +421,7 @@ func (g *Grammar) Parse(line string) (*Result, error) {
 		}
 
 		if nextParam >= len(active.Parameters) {
-			return nil, vmserrors.New(vmserrors.CLI_EXTRAPARAMETER, pos)
+			return nil, nil, vmserrors.New(vmserrors.CLI_EXTRAPARAMETER, pos)
 		}
 
 		p := active.Parameters[nextParam]
@@ -389,7 +434,7 @@ func (g *Grammar) Parse(line string) (*Result, error) {
 
 			vals, items, pos, err = g.readItems(r, active, nextParam, p, pos)
 			if err != nil {
-				return nil, err
+				return nil, nil, err
 			}
 
 			r.setList(p.Name, p.ID, vals)
@@ -403,12 +448,12 @@ func (g *Grammar) Parse(line string) (*Result, error) {
 		if p.List {
 			tokens, rem, err := readList(pos, false, elementReader(p.Type))
 			if err != nil {
-				return nil, vmserrors.Wrap(vmserrors.CLI_BADPARAMETER, err, p.Name)
+				return nil, nil, vmserrors.Wrap(vmserrors.CLI_BADPARAMETER, err, p.Name)
 			}
 
 			vals, err := g.resolveList(p.Type, p.TypeName, tokens)
 			if err != nil {
-				return nil, vmserrors.Wrap(vmserrors.CLI_BADPARAMETER, err, p.Name)
+				return nil, nil, vmserrors.Wrap(vmserrors.CLI_BADPARAMETER, err, p.Name)
 			}
 
 			pos = skipSeparator(rem, p.Separator)
@@ -428,14 +473,14 @@ func (g *Grammar) Parse(line string) (*Result, error) {
 
 		token, rem, err := readTypedValue(pos, p.Type, sep)
 		if err != nil {
-			return nil, err
+			return nil, nil, err
 		}
 
 		pos = skipSeparator(rem, p.Separator)
 
 		val, redirect, negated, err := g.resolveValue(p.Type, p.TypeName, token)
 		if err != nil {
-			return nil, vmserrors.Wrap(vmserrors.CLI_BADPARAMETER, err, p.Name)
+			return nil, nil, vmserrors.Wrap(vmserrors.CLI_BADPARAMETER, err, p.Name)
 		}
 
 		// Its value follows the "=", for the redirected syntax.
@@ -455,14 +500,14 @@ func (g *Grammar) Parse(line string) (*Result, error) {
 		}
 	}
 
-	if err := g.checkRequirements(active, r); err != nil {
-		return nil, err
+	if missing, err := g.checkRequirements(active, r); err != nil {
+		return nil, missing, err
 	}
 
 	r.Active = active.Name
 	r.ActiveID = active.ID
 
-	return r, nil
+	return r, nil, nil
 }
 
 // parseQualifier consumes one "/name" or "/name=value" qualifier (rest
@@ -687,10 +732,10 @@ func (g *Grammar) resolveList(typ ValueType, typeName string, tokens []string) (
 // handled inline in parseQualifier; nothing left to do here beyond the
 // value-required check itself, which is also enforced inline), and no
 // DISALLOW combination may hold.
-func (g *Grammar) checkRequirements(active *Entry, r *Result) error {
+func (g *Grammar) checkRequirements(active *Entry, r *Result) (*Parameter, error) {
 	for _, p := range active.Parameters {
 		if p.required() && !r.Present(p.Name) {
-			return vmserrors.New(vmserrors.CLI_MISSINGPARAMETER, p.Name)
+			return p, vmserrors.New(vmserrors.CLI_MISSINGPARAMETER, p.Name)
 		}
 	}
 
@@ -725,11 +770,11 @@ func (g *Grammar) checkRequirements(active *Entry, r *Result) error {
 		s2 := r.Present(d.Qual2) && r.Negated(d.Qual2) == d.Negated2
 
 		if s1 && s2 {
-			return vmserrors.New(vmserrors.CLI_BADQUALIFIERCOMBO, d.Qual1, d.Qual2)
+			return nil, vmserrors.New(vmserrors.CLI_BADQUALIFIERCOMBO, d.Qual1, d.Qual2)
 		}
 	}
 
-	return nil
+	return nil, nil
 }
 
 // parseDCLInteger parses a $integer token, matching DCLatoi: decimal

@@ -70,6 +70,10 @@ var errLeaveControlY = errors.New("command ends the interrupted procedure")
 // LIB$PAUSE reads it (dclpause.go). pause is set for LIB$PAUSE's.
 type controlYPrompt struct {
 	resume, end, pause bool
+
+	// depth is the number of command levels when the Ctrl/Y level began:
+	// a command at that depth was typed at the terminal.
+	depth int
 }
 
 // controlKeys are a process's SET [NO]CONTROL settings (Shell.control):
@@ -382,7 +386,7 @@ func (c *Interpreter) controlYLevel(level *commandLevel) bool {
 // image isn't run down here: LIB$PAUSE's shim ends it, as the Ctrl/Y
 // AST's does in a subprocess.
 func (c *Interpreter) readControlYLevel(level *commandLevel, pause bool) bool {
-	prompt := &controlYPrompt{pause: pause}
+	prompt := &controlYPrompt{pause: pause, depth: len(c.levels)}
 	c.controlYLevelActive = prompt
 
 	defer func() { c.controlYLevelActive = nil }()
