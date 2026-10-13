@@ -82,3 +82,31 @@ func TestLibrtlDataTables(t *testing.T) {
 		t.Errorf("output %q, want none", out)
 	}
 }
+
+// TestLibrtlTranslate: LIB$TRA_ASC_EBC and LIB$TRA_EBC_ASC from a linked
+// program: "GOVAX" to EBCDIC (checked byte for byte) and back, shown;
+// a character with no EBCDIC equivalent gives LIB$_INVCHA. It ends with
+// 1 when all of that held.
+func TestLibrtlTranslate(t *testing.T) {
+	r0, out := runMacroProgram(t, "\t.PSECT\tDATA,NOEXE,WRT,LONG\n"+
+		"SRC:\t.ASCID\t/GOVAX/\nEBC:\t.ASCID\t/...../\nBACK:\t.ASCID\t/...../\n"+
+		"WANT:\t.BYTE\t^XC7,^XD6,^XE5,^XC1,^XE7\n"+
+		"BAD:\t.LONG\t1\n\t.ADDRESS\tBADC\nBADC:\t.BYTE\t^X80\nBADOUT:\t.ASCID\t/./\n"+
+		"\t.PSECT\tCODE,NOWRT,EXE\n"+
+		"\t.ENTRY\tSTART,^M<R2,R3>\n"+
+		"\tPUSHAQ\tEBC\n\tPUSHAQ\tSRC\n\tCALLS\t#2,G^LIB$TRA_ASC_EBC\n\tBLBC\tR0,10$\n"+
+		"\tCMPC3\t#5,@EBC+4,WANT\n\tBNEQ\t20$\n"+
+		"\tPUSHAQ\tBACK\n\tPUSHAQ\tEBC\n\tCALLS\t#2,G^LIB$TRA_EBC_ASC\n\tBLBC\tR0,10$\n"+
+		"\tPUSHAQ\tBACK\n\tCALLS\t#1,G^LIB$PUT_OUTPUT\n"+
+		"\tPUSHAQ\tBADOUT\n\tPUSHAQ\tBAD\n\tCALLS\t#2,G^LIB$TRA_ASC_EBC\n\tCMPL\tR0,#LIB$_INVCHA\n\tBNEQ\t30$\n"+
+		"\tMOVL\t#1,R0\n\tRET\n"+
+		"10$:\tRET\n20$:\tMOVL\t#20,R0\n\tRET\n30$:\tMOVL\t#30,R0\n\tRET\n\t.END\tSTART\n")
+
+	if r0 != 1 {
+		t.Errorf("R0 = %#x, want 1 (20: the EBCDIC, 30: no LIB$_INVCHA; otherwise the failing status)", r0)
+	}
+
+	if out != "GOVAX\n" {
+		t.Errorf("output %q, want %q", out, "GOVAX\n")
+	}
+}

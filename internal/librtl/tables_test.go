@@ -57,3 +57,67 @@ func TestUpcaseTable(t *testing.T) {
 		}
 	}
 }
+
+// TestTraAscEbc: LIB$TRA_ASC_EBC and LIB$TRA_EBC_ASC translate whole
+// strings, report untranslatable characters (still translated) with
+// LIB$_INVCHA, refuse a fixed destination of another length or a varying
+// one too small with LIB$_INVARG (nothing written), and size a dynamic
+// one to the source.
+func TestTraAscEbc(t *testing.T) {
+	env := fixture(t)
+	putBytes(t, env, 0x3000, "Az09")
+	putBytes(t, env, 0x3010, "A\x80\x1A")         // 80 has no EBCDIC; 1A (SUB) does
+	putBytes(t, env, 0x3020, "\xC1\xA9\xF0\xF9") // "Az09" in EBCDIC
+	putBytes(t, env, 0x3030, "\xC1\x04\xE0")     // 04 has no ASCII; E0 is backslash
+	putDesc(t, env, 0x1000, 4, dscClassS, 0x3000)
+	putDesc(t, env, 0x1008, 3, dscClassS, 0x3010)
+	putDesc(t, env, 0x1010, 4, dscClassS, 0x3020)
+	putDesc(t, env, 0x1018, 3, dscClassS, 0x3030)
+
+	putDesc(t, env, 0x1100, 4, dscClassS, 0x4000)
+	if got := call(t, env, "LIB$TRA_ASC_EBC", 0x1000, 0x1100); got != ssNormal || bytesAt(t, env, 0x4000, 4) != "\xC1\xA9\xF0\xF9" {
+		t.Errorf("Az09: %#x, % X", got, bytesAt(t, env, 0x4000, 4))
+	}
+
+	putDesc(t, env, 0x1108, 3, dscClassS, 0x4100)
+	if got := call(t, env, "LIB$TRA_ASC_EBC", 0x1008, 0x1108); got != libInvCha || bytesAt(t, env, 0x4100, 3) != "\xC1\x3F\x3F" {
+		t.Errorf("A, 80, 1A: %#x, % X; want LIB$_INVCHA, C1 3F 3F", got, bytesAt(t, env, 0x4100, 3))
+	}
+
+	putDesc(t, env, 0x1110, 4, dscClassS, 0x4200)
+	if got := call(t, env, "LIB$TRA_EBC_ASC", 0x1010, 0x1110); got != ssNormal || bytesAt(t, env, 0x4200, 4) != "Az09" {
+		t.Errorf("EBCDIC Az09: %#x, %q", got, bytesAt(t, env, 0x4200, 4))
+	}
+
+	putDesc(t, env, 0x1118, 3, dscClassS, 0x4300)
+	if got := call(t, env, "LIB$TRA_EBC_ASC", 0x1018, 0x1118); got != libInvCha || bytesAt(t, env, 0x4300, 3) != "A\\\\" {
+		t.Errorf("C1, 04, E0: %#x, %q; want LIB$_INVCHA, A\\\\", got, bytesAt(t, env, 0x4300, 3))
+	}
+
+	// A fixed destination of another length: LIB$_INVARG, untouched.
+	putBytes(t, env, 0x4400, "-----")
+	putDesc(t, env, 0x1120, 5, dscClassS, 0x4400)
+
+	if got := call(t, env, "LIB$TRA_ASC_EBC", 0x1000, 0x1120); got != libInvArg || bytesAt(t, env, 0x4400, 5) != "-----" {
+		t.Errorf("into S(5): %#x, %q; want LIB$_INVARG, untouched", got, bytesAt(t, env, 0x4400, 5))
+	}
+
+	// A varying destination too small, then big enough.
+	putDesc(t, env, 0x1128, 3, dscClassVS, 0x4500)
+	if got := call(t, env, "LIB$TRA_ASC_EBC", 0x1000, 0x1128); got != libInvArg {
+		t.Errorf("into VS(3): %#x, want LIB$_INVARG", got)
+	}
+
+	putDesc(t, env, 0x1128, 10, dscClassVS, 0x4500)
+	if got := call(t, env, "LIB$TRA_ASC_EBC", 0x1000, 0x1128); got != ssNormal || longword(t, env, 0x4500)&0xFFFF != 4 {
+		t.Errorf("into VS(10): %#x, CURLEN %d", got, longword(t, env, 0x4500)&0xFFFF)
+	}
+
+	// A dynamic destination takes the source's length.
+	putDesc(t, env, dynDesc, 0, dscClassD, 0)
+	call(t, env, "LIB$TRA_EBC_ASC", 0x1010, dynDesc)
+
+	if length, _, ptr := descriptorAt(t, env, dynDesc); length != 4 || bytesAt(t, env, ptr, 4) != "Az09" {
+		t.Errorf("into D: length %d, %q", length, bytesAt(t, env, ptr, int(length)))
+	}
+}

@@ -1,6 +1,6 @@
 # Phase 54 — LIB$ strings, descriptors, and text conversion
 
-**Status:** in progress (2026-10-12; subtasks 1 to 5 done). Needs Phase 53. Part of the LIB$
+**Status:** in progress (2026-10-12; subtasks 1 to 6 done). Needs Phase 53. Part of the LIB$
 program laid out in `PHASE-53 - RTL LIB support.md` (Part A), which also
 has the sources and the conventions (Part B) this phase follows.
 
@@ -410,6 +410,7 @@ against VMS's own table, which the probe dumps.)
    JSB forms). **Done** 2026-10-12.
 5. **Characters**: LEN, CHAR, ICHAR, INDEX. **Done** 2026-10-12.
 6. **Translation**: the three tables, TRA_ASC_EBC, TRA_EBC_ASC.
+   **Done** 2026-10-12 (the tables in subtask 2).
 7. **Numeric text**: CVT_DTB, CVT_HTB, CVT_OTB.
 8. **LOOKUP_KEY**, and the `$LIB_KEY_TABLE` macro in `starlet.mar`.
 9. **Locale**: DIGIT_SEP, RADIX_POINT, CURRENCY, LP_LINES.
@@ -550,3 +551,16 @@ against VMS's own table, which the probe dumps.)
   and INDEX examples, empty strings) and the console's
   `TestLibrtlStringFunctions`. `TestLibrtlMissingRoutine` used LIB$INDEX
   as its missing routine; it now uses LIB$GETQUI, which isn't planned.
+- **2026-10-12** — Subtask 6, translation (`internal/librtl/
+  translate.go`): LIB$TRA_ASC_EBC and LIB$TRA_EBC_ASC (codes 95, 96),
+  through subtask 2's tables. A character is untranslatable when the
+  other table doesn't turn its translation back into it (ASCII 80-FE;
+  the 127 EBCDIC codes outside the image): the string is still
+  translated whole, and the status is LIB$_INVCHA (unconfirmed which
+  characters count). A fixed destination of another length, or a
+  varying one too small (unconfirmed), is LIB$_INVARG with nothing
+  written; a dynamic one gets the source's length. Tests:
+  `TestTraAscEbc` (both directions, LIB$_INVCHA with ASCII 1A and EBCDIC
+  E0 counted translatable, LIB$_INVARG, VS and D destinations) and the
+  console's `TestLibrtlTranslate` ("GOVAX" to EBCDIC and back, and
+  LIB$_INVCHA from a linked program).

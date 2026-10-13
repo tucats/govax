@@ -136,6 +136,8 @@ var Routines = []Routine{
 	{"LIB$CHAR", 92, libChar},
 	{"LIB$ICHAR", 93, libIchar},
 	{"LIB$INDEX", 94, libIndex},
+	{"LIB$TRA_ASC_EBC", 95, libTraAscEbc},
+	{"LIB$TRA_EBC_ASC", 96, libTraEbcAsc},
 }
 
 // missing is Missing's list, and missingJSB MissingJSB's, made once.
