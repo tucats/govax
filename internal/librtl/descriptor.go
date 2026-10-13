@@ -185,9 +185,18 @@ func writeString(env *corevms.Environment, addr uint32, s string) (stored int, t
 // string's bytes past s are left as they were (LIB$MOVTUC without a fill
 // character).
 func writePadded(env *corevms.Environment, addr uint32, s string, fill byte, pad bool) (stored int, truncated bool, err error) {
+	stored, truncated, _, err = writeOut(env, addr, s, fill, pad)
+
+	return stored, truncated, err
+}
+
+// writeOut is writePadded, also returning end, the address one byte
+// beyond the destination's text as filled: where a MOVC5 into it would
+// leave R3 (the copy routines' JSB entries return it).
+func writeOut(env *corevms.Environment, addr uint32, s string, fill byte, pad bool) (stored int, truncated bool, end uint32, err error) {
 	d, err := readDescriptor(env, addr)
 	if err != nil {
-		return 0, false, err
+		return 0, false, 0, err
 	}
 
 	mem, cpu := env.Memory(), env.CPU()
@@ -205,19 +214,19 @@ func writePadded(env *corevms.Environment, addr uint32, s string, fill byte, pad
 		// big enough, else freed and allocated anew.
 		text, err := dynamicText(env, d.text, d.length, n, false)
 		if err != nil {
-			return 0, false, err
+			return 0, false, 0, err
 		}
 
 		if text != d.text {
 			d.text = text
 
 			if err := mem.StoreLongword(cpu, addr+4, d.text); err != nil {
-				return 0, false, writing(err)
+				return 0, false, 0, writing(err)
 			}
 		}
 
 		if err := mem.StoreWord(cpu, addr, uint16(n)); err != nil {
-			return 0, false, writing(err)
+			return 0, false, 0, writing(err)
 		}
 
 		room = n
@@ -227,7 +236,7 @@ func writePadded(env *corevms.Environment, addr uint32, s string, fill byte, pad
 		room = n
 
 		if err := mem.StoreWord(cpu, d.text-2, uint16(n)); err != nil {
-			return 0, false, writing(err)
+			return 0, false, 0, writing(err)
 		}
 
 	default:
@@ -245,11 +254,11 @@ func writePadded(env *corevms.Environment, addr uint32, s string, fill byte, pad
 		}
 
 		if err := mem.StoreByte(cpu, d.text+i, ch); err != nil {
-			return 0, false, writing(err)
+			return 0, false, 0, writing(err)
 		}
 	}
 
-	return int(n), truncated || int(n) < len(s), nil
+	return int(n), truncated || int(n) < len(s), d.text + room, nil
 }
 
 // tooFewArgs reports whether the call passed fewer than n arguments: a

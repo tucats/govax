@@ -66,11 +66,12 @@ func readKeyword(env *corevms.Environment, table uint32, i uint32) (keyword, err
 //
 // The outputs are the match's (the first, for LIB$_AMBKEY: unconfirmed),
 // each written when its argument is present: key-value the keyword's
-// value, keyword-string the keyword (any class; LIB$_STRTRU when it was
-// cut, unless the status is already LIB$_AMBKEY), and resultant-length
-// the characters written there. Fewer than two arguments, or a table
-// whose count is odd, is LIB$_INVARG ("invalid arguments, not enough
-// arguments, and/or bad keyword table").
+// value, keyword-string the keyword (any class; cut short with no other
+// status, as VMS does), and resultant-length the characters written
+// there. Fewer than two arguments is LIB$_INVARG ("invalid arguments, not
+// enough arguments, and/or bad keyword table"). The table isn't checked:
+// VMS reads count/2 entries whatever count is (an odd count of 3, its
+// first entry's string at 0, was an access violation there).
 func libLookupKey(env *corevms.Environment, argv []uint32) (uint32, error) {
 	if tooFewArgs(argv, 2) {
 		return libInvArg, nil
@@ -86,10 +87,6 @@ func libLookupKey(env *corevms.Environment, argv []uint32) (uint32, error) {
 	count, err := env.Memory().LoadLongword(env.CPU(), table)
 	if err != nil {
 		return memoryFault(env, err)
-	}
-
-	if count%2 != 0 {
-		return libInvArg, nil
 	}
 
 	var (
@@ -133,8 +130,7 @@ func libLookupKey(env *corevms.Environment, argv []uint32) (uint32, error) {
 }
 
 // keywordOutputs writes LIB$LOOKUP_KEY's optional outputs for match and
-// returns status, or LIB$_STRTRU in its place when the keyword was cut
-// and status is SS$_NORMAL.
+// returns status.
 func keywordOutputs(env *corevms.Environment, argv []uint32, match keyword, status uint32) (uint32, error) {
 	mem, cpu := env.Memory(), env.CPU()
 
@@ -147,14 +143,12 @@ func keywordOutputs(env *corevms.Environment, argv []uint32, match keyword, stat
 	stored := len(match.text)
 
 	if addr := arg(argv, 3); addr != 0 {
-		n, truncated, err := writeString(env, addr, match.text)
+		n, _, err := writeString(env, addr, match.text)
 		if err != nil {
 			return stringFailure(env, err)
 		}
 
-		if stored = n; truncated && status == ssNormal {
-			status = libStrTru
-		}
+		stored = n
 	}
 
 	if addr := arg(argv, 4); addr != 0 {

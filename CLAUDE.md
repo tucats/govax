@@ -44,8 +44,8 @@ never had.
   share, and Part C its own group, the instruction routines (done
   2026-10-12, checked against VMS by `testdata/lib53`). Phase 54 (done
   2026-10-12) is strings, descriptors, and conversion, with JSB entry
-  points, the `LIB$AB_` tables, and LIBRTL2's CVT_DX_DX; its
-  `testdata/lib54` probe hasn't run on VMS yet.
+  points, the `LIB$AB_` tables, and LIBRTL2's CVT_DX_DX, checked
+  against VMS by `testdata/lib54` (2026-10-13).
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
 - `docs/DEVIATIONS.md` — running log of suspected ISA/behavior fidelity issues found in
@@ -116,8 +116,9 @@ never had.
 - `testdata/lib54/` — Phase 54's probe of LIBRTL's string and conversion
   routines (README.md): `gen.go` writes `lib54.mar` (143 cases; JSB
   cases show R1 to R6, the translation tables are dumped), and
-  `TestLib54Program` matches govax's `lib54-govax.txt` until a VMS run
-  replaces it.
+  `vax/lib54-vax.txt` is VMS V7.1's output, which `TestLib54Oracle`
+  matches line for line but for `expectedLib54Differences` (the
+  dynamic-string JSB entries' heap registers, packed decimal).
 - `testdata/probe49/` — Phase 49's VMS probe in three rounds (`probe6`,
   `probe6b`, `probe6c`; README.md has each round's answers), run by
   `TestProbe6*`; `testdata/rms49/` and `testdata/sec49/` are the phase's

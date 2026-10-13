@@ -79,7 +79,9 @@ func TestScopyRDx(t *testing.T) {
 }
 
 // TestScopyJSB: the JSB entries take descriptors' addresses, and
-// SCOPY_R_DX6 its length by value in R0's low word; only R0 changes.
+// SCOPY_R_DX6 its length by value in R0's low word. They leave R1 to R5
+// as a MOVC5 of the text would (R1 past the source bytes moved, R3 past
+// the destination) and the status in R6, as VMS's do.
 func TestScopyJSB(t *testing.T) {
 	env := fixture(t)
 	putBytes(t, env, 0x3000, "ABCDEFGH")
@@ -87,18 +89,18 @@ func TestScopyJSB(t *testing.T) {
 	putDesc(t, env, 0x1100, 3, dscClassS, 0x4000)
 	putDesc(t, env, 0x1108, 2, dscClassS, 0x4100)
 
-	if regs := callJSB(t, env, "LIB$SCOPY_DXDX6", 0x1000, 0x1100, 2, 3, 4, 5, 6); regs != (corevms.JSBRegisters{ssNormal, 0x1100, 2, 3, 4, 5, 6}) || bytesAt(t, env, 0x4000, 3) != "ABC" {
+	if regs := callJSB(t, env, "LIB$SCOPY_DXDX6", 0x1000, 0x1100, 2, 3, 4, 5, 6); regs != (corevms.JSBRegisters{ssNormal, 0x3003, 0, 0x4003, 0, 0, ssNormal}) || bytesAt(t, env, 0x4000, 3) != "ABC" {
 		t.Errorf("SCOPY_DXDX6: registers %v, %q", regs, bytesAt(t, env, 0x4000, 3))
 	}
 
-	if regs := callJSB(t, env, "LIB$SCOPY_R_DX6", 0x10005, 0x3003, 0x1108); regs[0] != libStrTru || bytesAt(t, env, 0x4100, 2) != "DE" {
-		t.Errorf("SCOPY_R_DX6: R0 %#x, %q; want LIB$_STRTRU, \"DE\"", regs[0], bytesAt(t, env, 0x4100, 2))
+	if regs := callJSB(t, env, "LIB$SCOPY_R_DX6", 0x10005, 0x3003, 0x1108); regs != (corevms.JSBRegisters{libStrTru, 0x3005, 0, 0x4102, 0, 0, libStrTru}) || bytesAt(t, env, 0x4100, 2) != "DE" {
+		t.Errorf("SCOPY_R_DX6: registers %v, %q; want LIB$_STRTRU, \"DE\"", regs, bytesAt(t, env, 0x4100, 2))
 	}
 }
 
 // TestAnalyzeSdesc: LIB$ANALYZE_SDESC by class (the manual's table): S
 // as it is, A by ARSIZE, VS by CURLEN with the text after the length
-// word; an invalid class (3, V) writes nothing. The JSB entry returns R1 and R2.
+// word; an invalid class (3, V) gives length 0 and the pointer. The JSB entry returns R1 and R2.
 func TestAnalyzeSdesc(t *testing.T) {
 	env := fixture(t)
 	putDesc(t, env, 0x1000, 5, dscClassS, 0x3000)
@@ -136,11 +138,13 @@ func TestAnalyzeSdesc(t *testing.T) {
 
 	putLongword(t, env, 0x2004, 0x1234)
 
-	if got := call(t, env, "LIB$ANALYZE_SDESC", 0x1040, 0x2000, 0x2004); got != libInvStrDes || longword(t, env, 0x2004) != 0x1234 {
-		t.Errorf("class 3: %#x, address %#x; want LIB$_INVSTRDES, nothing written", got, longword(t, env, 0x2004))
+	// An invalid class: LIB$_INVSTRDES, with a length of 0 and the
+	// descriptor's pointer, as VMS returns them (R1 left alone).
+	if got := call(t, env, "LIB$ANALYZE_SDESC", 0x1040, 0x2000, 0x2004); got != libInvStrDes || longword(t, env, 0x2000) != 0xFFFF0000 || longword(t, env, 0x2004) != 0x3000 {
+		t.Errorf("class 3: %#x, length longword %#x, address %#x; want LIB$_INVSTRDES, 0, the pointer", got, longword(t, env, 0x2000), longword(t, env, 0x2004))
 	}
 
-	if regs := callJSB(t, env, "LIB$ANALYZE_SDESC_R2", 0x1040, 1, 2); regs != (corevms.JSBRegisters{libInvStrDes, 1, 2}) {
+	if regs := callJSB(t, env, "LIB$ANALYZE_SDESC_R2", 0x1040, 1, 2); regs != (corevms.JSBRegisters{libInvStrDes, 1, 0x3000}) {
 		t.Errorf("class 3: ANALYZE_SDESC_R2 left %v", regs)
 	}
 }

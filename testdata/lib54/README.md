@@ -2,13 +2,11 @@
 
 These fixtures are `docs/PHASE-54 - LIB strings and conversion.md`'s
 subtask 11. One MACRO program calls every routine the phase adds, case
-by case, and prints what each returned, signaled, and stored.
-`TestLib54Program` (`internal/console/lib54_test.go`) runs it and compares
-its output with `lib54-govax.txt`, govax's own, checked by hand against
-the manual's examples and the phase doc's survey (`-update` rewrites it).
-Run on VMS, the program settles the choices the survey marked
-unconfirmed, and VMS's output replaces govax's as the oracle, as
-`testdata/lib53`'s did.
+by case, and prints what each returned, signaled, and stored. Run on
+VMS, it settled the choices the phase doc's survey had marked
+unconfirmed, and `TestLib54Oracle` (`internal/console/lib54_test.go`)
+checks that govax's output matches VMS's (`vax/lib54-vax.txt`) line for
+line, but for the few lines it lists as expected differences.
 
 `gen.go` writes everything here but the output files, from one table of
 cases:
@@ -20,7 +18,8 @@ cases:
 | `lib54.mar` | The program: 143 cases of the dynamic-string, copy, descriptor, string-function, translation, numeric-text, keyword, locale, and LIB$CVT_DX_DX routines, with the manual's examples, the edges, and every unconfirmed choice |
 | `lib54.com` | Shows the locale logical names, then assembles, links, and runs the program on VMS |
 | `exchange.cmd` | The govax console script that builds the exchange volume |
-| `lib54-govax.txt` | govax's output |
+| `vax/lib54-vax.txt` | The program's output on VMS (`LIB54.OUT`) |
+| `vax/lib54.log` | `LIB54.COM`'s log on VMS |
 
 ## How the program works
 
@@ -73,4 +72,15 @@ What's new:
 3. Copy `LIB54.OUT` and `LIB54.LOG` back as `vax/lib54-vax.txt` and
    `vax/lib54.log`.
 
-Not yet run on VMS.
+## The run
+
+2026-10-13, OpenVMS V7.1 on simh's VAX 8600. No locale logical name was
+defined, MACRO wrote no messages, and the program exited with
+SS$_NORMAL. The output file's leading and trailing blank lines came from
+the copy to the host and were removed. VMS differed from govax's
+choices in about twenty lines; govax now does what VMS did (the phase
+doc's progress log and DEVIATIONS.md list them), but for two things
+`TestLib54Oracle` expects to differ: the registers the dynamic-string
+routines' JSB entries leave (VMS's heap internals) and LIB$CVT_DX_DX of
+packed decimal (outside the phase's scope). If `lib54.mar` changes, run
+it on VMS again and replace `vax/`.

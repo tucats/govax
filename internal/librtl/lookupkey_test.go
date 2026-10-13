@@ -76,7 +76,7 @@ func TestLookupKey(t *testing.T) {
 }
 
 // TestLookupKeyOutputs: the outputs are optional; a keyword cut short is
-// LIB$_STRTRU, its length the characters written; a dynamic keyword
+// still SS$_NORMAL, its length the characters written; a dynamic keyword
 // string gets the keyword's length.
 func TestLookupKeyOutputs(t *testing.T) {
 	env := fixture(t)
@@ -90,7 +90,8 @@ func TestLookupKeyOutputs(t *testing.T) {
 
 	putDesc(t, env, 0x1008, 3, dscClassS, 0x4000)
 
-	if got := call(t, env, "LIB$LOOKUP_KEY", 0x1000, 0x5000, 0, 0x1008, 0x2004); got != libStrTru || longword(t, env, 0x2004)&0xFFFF != 3 || bytesAt(t, env, 0x4000, 3) != "DEL" {
+	// Cut short, with no status saying so (VMS).
+	if got := call(t, env, "LIB$LOOKUP_KEY", 0x1000, 0x5000, 0, 0x1008, 0x2004); got != ssNormal || longword(t, env, 0x2004)&0xFFFF != 3 || bytesAt(t, env, 0x4000, 3) != "DEL" {
 		t.Errorf("into S(3): %#x, length %d, %q", got, longword(t, env, 0x2004)&0xFFFF, bytesAt(t, env, 0x4000, 3))
 	}
 
@@ -102,8 +103,8 @@ func TestLookupKeyOutputs(t *testing.T) {
 	}
 }
 
-// TestLookupKeyInvalid: too few arguments, and a table with an odd count,
-// are LIB$_INVARG.
+// TestLookupKeyInvalid: too few arguments are LIB$_INVARG; a table's
+// count isn't checked (VMS reads count/2 entries: 3 is one).
 func TestLookupKeyInvalid(t *testing.T) {
 	env := fixture(t)
 	putBytes(t, env, 0x3000, "A")
@@ -115,7 +116,7 @@ func TestLookupKeyInvalid(t *testing.T) {
 		t.Errorf("one argument: %#x, want LIB$_INVARG", got)
 	}
 
-	if got := call(t, env, "LIB$LOOKUP_KEY", 0x1000, 0x5000); got != libInvArg {
-		t.Errorf("an odd count: %#x, want LIB$_INVARG", got)
+	if got := call(t, env, "LIB$LOOKUP_KEY", 0x1000, 0x5000); got != ssNormal {
+		t.Errorf("an odd count, 3: %#x, want SS$_NORMAL (one entry, ADD)", got)
 	}
 }

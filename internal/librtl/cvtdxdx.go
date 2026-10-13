@@ -23,14 +23,15 @@ import (
 //     G, H), class S, or SD with a decimal scale (a value of n means the
 //     integer times 10^scale);
 //   - a numeric byte data string (NBDS), a number written as text: type
-//     T with class S, D, VS, A, NCA, or SD, or type VT with class VS.
+//     T with class S, D, VS, A, NCA, or SD, type VT with class VS, or
+//     type BU with class A or NCA (an array of bytes holding the text).
 //
 // The routine converts between any two of them, through the exact value:
 // govax doesn't lose precision on the way (the manual: "intermediate
 // values will not cause a loss of precision"), and rounds, half away from
 // zero, only into the destination. The scope is the author's (Phase 54's
-// open question): numeric byte arrays (BU with class A or NCA), packed
-// decimal, and the other types aren't converted.
+// open question): packed decimal, which VMS converts too (the probe,
+// testdata/lib54), and the other types aren't.
 
 // The DSC$K_DTYPE_ codes the routine knows.
 const (
@@ -60,6 +61,7 @@ var (
 	libInvCvt    = vmsdef.LibrarySymbols["LIB$_INVCVT"]
 	libInvNbds   = vmsdef.LibrarySymbols["LIB$_INVNBDS"]
 	libOutStrTru = vmsdef.LibrarySymbols["LIB$_OUTSTRTRU"]
+	libDesStrOvf = vmsdef.LibrarySymbols["LIB$_DESSTROVF"]
 	libFltOvf    = vmsdef.LibrarySymbols["LIB$_FLTOVF"]
 	libFltUnd    = vmsdef.LibrarySymbols["LIB$_FLTUND"]
 	libROprand   = vmsdef.LibrarySymbols["LIB$_ROPRAND"]
@@ -146,6 +148,10 @@ func classify(env *corevms.Environment, addr uint32) (cvtItem, error) {
 	_, isFloat := floatTypes[it.dtype]
 
 	switch {
+	// An array of unsigned bytes is an NBDS, not an atomic BU.
+	case it.dtype == dtypeT, it.dtype == dtypeBU && (it.class == dscClassA || it.class == dscClassNCA):
+		it.kind = cvtText
+
 	case isInt || isFloat:
 		if it.class != dscClassS && it.class != dscClassSD {
 			return it, cvtStatus(libInvClaDty)
@@ -155,9 +161,6 @@ func classify(env *corevms.Environment, addr uint32) (cvtItem, error) {
 		if isInt {
 			it.kind = cvtInteger
 		}
-
-	case it.dtype == dtypeT:
-		it.kind = cvtText
 
 	case it.dtype == dtypeVT:
 		if it.class != dscClassVS {
@@ -277,9 +280,11 @@ func roundRat(r *big.Rat) *big.Int {
 
 // writeInteger stores v in an atomic integer destination, its scale
 // applied (the stored integer is v / 10^scale, rounded). A negative value
-// for an unsigned type is LIB$_INVCVT; one out of range is overflow
-// (LIB$_INTOVF, or LIB$_INVNBDS from a numeric string).
-func writeInteger(env *corevms.Environment, it cvtItem, v *big.Rat, fromText bool) error {
+// for an unsigned type is LIB$_INVCVT, nothing stored; one out of range,
+// from any source, is LIB$_INTOVF with the integer's low-order bits
+// stored, as an integer instruction's overflow leaves them (VMS's run of
+// the probe, testdata/lib54: 70000 into a word is ^X1170).
+func writeInteger(env *corevms.Environment, it cvtItem, v *big.Rat) error {
 	t := intTypes[it.dtype]
 	n := roundRat(new(big.Rat).Mul(v, pow10(-it.scale)))
 
@@ -295,19 +300,14 @@ func writeInteger(env *corevms.Environment, it cvtItem, v *big.Rat, fromText boo
 		hi = new(big.Int).Lsh(big.NewInt(1), uint(bits-1))
 	}
 
+	var status error
 	if n.Cmp(lo) < 0 || n.Cmp(hi) >= 0 {
-		if fromText {
-			return cvtStatus(libInvNbds)
-		}
-
-		return cvtStatus(libIntOvf)
+		status = cvtStatus(libIntOvf)
 	}
 
-	if n.Sign() < 0 {
-		n.Add(n, new(big.Int).Lsh(big.NewInt(1), uint(bits)))
-	}
-
-	u := n.Uint64()
+	// The low-order bits, as two's complement.
+	mask := new(big.Int).Sub(new(big.Int).Lsh(big.NewInt(1), uint(bits)), big.NewInt(1))
+	u := new(big.Int).And(n, mask).Uint64()
 	mem, cpu := env.Memory(), env.CPU()
 
 	for i := range t.size {
@@ -316,7 +316,7 @@ func writeInteger(env *corevms.Environment, it cvtItem, v *big.Rat, fromText boo
 		}
 	}
 
-	return nil
+	return status
 }
 
 // writeFloating stores v in a floating destination, rounded to its
@@ -514,7 +514,7 @@ func convert(env *corevms.Environment, src, dst cvtItem) (int, error) {
 
 	switch dst.kind {
 	case cvtInteger:
-		return 0, writeInteger(env, dst, value, fromText)
+		return 0, writeInteger(env, dst, value)
 
 	case cvtFloat:
 		return 0, writeFloating(env, dst, value, fromText)
@@ -541,8 +541,10 @@ func convert(env *corevms.Environment, src, dst cvtItem) (int, error) {
 		return 0, err
 	}
 
+	// A number cut short is LIB$_DESSTROVF, VMS's status (the probe,
+	// testdata/lib54); the text is still written, as far as it fits.
 	if truncated {
-		return stored, cvtStatus(libOutStrTru)
+		return stored, cvtStatus(libDesStrOvf)
 	}
 
 	return stored, nil
@@ -554,12 +556,12 @@ func convert(env *corevms.Environment, src, dst cvtItem) (int, error) {
 // the destination can't hold; LIB$_INVCVT for a negative value into an
 // unsigned type; LIB$_INTOVF, LIB$_FLTOVF, LIB$_FLTUND for a value out of
 // an atomic destination's range; LIB$_ROPRAND for a reserved floating
-// source; LIB$_OUTSTRTRU when a string destination couldn't hold the text
-// (the manual has it only for a copy of one numeric string to another;
-// govax uses it for any text cut short: unconfirmed); LIB$_INVSTRDES or
+// source; LIB$_OUTSTRTRU when a copy of one numeric string to another was
+// cut short, LIB$_DESSTROVF when a number's text was; LIB$_INVSTRDES or
 // LIB$_INSVIRMEM from a string destination. word-integer-dest-length, if
 // given, gets the characters written to a string destination, without
-// padding.
+// padding, or 0 for an atomic one; it's left alone when the conversion
+// fails (but for LIB$_OUTSTRTRU), as VMS leaves it.
 func libCvtDxDx(env *corevms.Environment, argv []uint32) (uint32, error) {
 	src, err := classify(env, arg(argv, 0))
 	if err == nil {
@@ -570,7 +572,7 @@ func libCvtDxDx(env *corevms.Environment, argv []uint32) (uint32, error) {
 
 			stored, err = convert(env, src, dst)
 
-			if addr := arg(argv, 2); addr != 0 && dst.kind == cvtText && (err == nil || errors.Is(err, cvtStatus(libOutStrTru))) {
+			if addr := arg(argv, 2); addr != 0 && (err == nil || errors.Is(err, cvtStatus(libOutStrTru))) {
 				if serr := env.Memory().StoreWord(env.CPU(), addr, uint16(stored)); serr != nil {
 					return memoryFault(env, writing(serr))
 				}

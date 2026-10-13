@@ -55,7 +55,8 @@ func TestCvtTextToBinary(t *testing.T) {
 		t.Errorf("3 bytes of \"123X\": %d, %d", status, longword(t, env, 0x2000))
 	}
 
-	if status := call(t, env, "LIB$CVT_DTB", 0xFFFFFFFF, 0x3000, 0x2000); status != 0 {
-		t.Errorf("a negative count: %d, want 0", status)
+	// A negative count is no digits: 0, success (VMS).
+	if status := call(t, env, "LIB$CVT_DTB", 0xFFFFFFFF, 0x3000, 0x2000); status != 1 || longword(t, env, 0x2000) != 0 {
+		t.Errorf("a negative count: %d, %d; want 1, 0", status, longword(t, env, 0x2000))
 	}
 }

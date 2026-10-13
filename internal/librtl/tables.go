@@ -75,17 +75,17 @@ var ebcdicToASCII = [256]byte{
 	0x30, 0x31, 0x32, 0x33, 0x34, 0x35, 0x36, 0x37, 0x38, 0x39, 0x5C, 0x5C, 0x5C, 0x5C, 0x5C, 0xFF, // F0
 }
 
-// upcase is LIB$AB_UPCASE, the manual's Table LIB-19 (LIB-291), each
-// character's uppercase: the identity, but for the ASCII lowercase
-// letters (61-7A to 41-5A) and, of DEC Multinational's, E0-EF to C0-CF
-// and FA-FD to DA-DD. F0-F9, FE, and FF are left alone, as the table
-// prints them.
+// upcase is LIB$AB_UPCASE, each character's uppercase: the identity, but
+// for the ASCII lowercase letters (61-7A to 41-5A) and, of DEC
+// Multinational's, E0-EF to C0-CF and F1-FD to D1-DD; F0, FE, and FF are
+// left alone. That's VMS's own table (the probe, testdata/lib54). The 5.0
+// manual's Table LIB-19 (LIB-291) prints F1-F9 unchanged, a misprint.
 var upcase = func() (t [256]byte) {
 	for i := range t {
 		t[i] = byte(i)
 	}
 
-	for _, r := range [][2]int{{0x61, 0x7A}, {0xE0, 0xEF}, {0xFA, 0xFD}} {
+	for _, r := range [][2]int{{0x61, 0x7A}, {0xE0, 0xEF}, {0xF1, 0xFD}} {
 		for c := r[0]; c <= r[1]; c++ {
 			t[c] = byte(c - 0x20)
 		}

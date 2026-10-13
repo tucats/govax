@@ -3,7 +3,8 @@
 // gen.go writes the Phase 54 probe of LIBRTL's string, descriptor, and
 // conversion routines (docs/PHASE-54, subtask 11): lib54.mar, a MACRO
 // program that calls every routine of the phase, case by case, and
-// prints what each returned and stored; lib54.com, which builds and runs
+// prints what each returned and stored (TestLib54Oracle compares govax's
+// run with VMS's, vax/lib54-vax.txt); lib54.com, which builds and runs
 // it on VMS; and exchange.cmd, the govax console script that makes the
 // exchange volume. Run it from the repository root:
 //

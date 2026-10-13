@@ -1,6 +1,6 @@
 # Phase 54 — LIB$ strings, descriptors, and text conversion
 
-**Status:** done (2026-10-12); the `testdata/lib54` probe waits for a VMS run. Needs Phase 53. Part of the LIB$
+**Status:** done (2026-10-13); VMS's run of the `testdata/lib54` probe settled the survey's unconfirmed choices (the 2026-10-13 log entry, and DEVIATIONS.md). Needs Phase 53. Part of the LIB$
 program laid out in `PHASE-53 - RTL LIB support.md` (Part A), which also
 has the sources and the conventions (Part B) this phase follows.
 
@@ -73,6 +73,11 @@ This phase also brings two new kinds of transfer-vector entry:
   and from text, with a LIBRTL2 stub area (subtask 10).
 
 ## The survey (subtask 1)
+
+*Since VMS's run of the probe (2026-10-13), most of the choices marked
+unconfirmed below are settled, and twelve of them changed; its
+progress-log entry and DEVIATIONS.md say which. The survey is kept as
+written.*
 
 Each routine's interface, from the 5.0 LIB$ manual, in the notation of
 Phase 53's survey (`name.access-type.mechanism`; `[ ]` optional). Page
@@ -683,3 +688,37 @@ against VMS's own table, which the probe dumps.)
   entries, LIBRTL2), PLAN.md's row, and CLAUDE.md. Phase 54 is done; the
   VMS run of `testdata/lib54` is the one thing left, whenever the author
   wants it. Phase 55 (service jackets and resources) is next.
+- **2026-10-13** — The VMS probe. The author ran `LIB54.COM` on OpenVMS
+  V7.1 (simh's VAX 8600): no locale logical names defined, no MACRO
+  messages, SS$_NORMAL. Its output is `testdata/lib54/vax/lib54-vax.txt`
+  (the copy's leading and trailing blank lines removed) and the log
+  `vax/lib54.log`. `TestLib54Oracle` (in place of `TestLib54Program` and
+  `lib54-govax.txt`) matches govax's output with VMS's line for line,
+  but for `expectedLib54Differences`. What VMS did that govax didn't, now
+  changed to match:
+
+  | Case | VMS | govax had |
+  | --- | --- | --- |
+  | SGET1_DD of length 0 | no storage, the pointer 0 | storage allocated |
+  | SFREE1_DD of static storage | STR$_ERRFREDYN | LIB$_FATERRLIB |
+  | SCOPY_DXDX6, SCOPY_R_DX6 | R1 to R5 as MOVC5 leaves them, the status in R6 too | only R0 changed |
+  | ANALYZE_SDESC, invalid class | length 0 and the pointer written; R2 the pointer (JSB) | nothing written |
+  | LIB$AB_UPCASE F1-F9 | D1-D9 | unchanged (the manual's table, misprinted) |
+  | CVT_DTB, count -1 | 0, success | failure |
+  | LOOKUP_KEY, keyword cut | SS$_NORMAL | LIB$_STRTRU |
+  | LOOKUP_KEY, odd count | no check (count/2 entries; an access violation at the probe's address 0) | LIB$_INVARG |
+  | CVT_DX_DX, integer out of range | LIB$_INTOVF, low-order bits stored (from text too) | LIB$_INVNBDS from text, nothing stored |
+  | CVT_DX_DX, length output | 0 for an atomic destination; untouched on failure | untouched for atomic |
+  | CVT_DX_DX, number too long for its text | LIB$_DESSTROVF, length untouched | LIB$_OUTSTRTRU, length written |
+  | CVT_DX_DX, BU array | a numeric string | LIB$_INVCLADTY |
+
+  Two differences stay, listed in the oracle: the dynamic-string JSB
+  entries leave VMS's heap internals in R1 to R6 (govax changes only R0),
+  and LIB$CVT_DX_DX converts packed decimal on VMS, which the phase's
+  scope left out. Everything else the survey marked unconfirmed was
+  confirmed, notably the JSB argument registers, both EBCDIC tables as
+  transcribed, `$LIB_KEY_TABLE`'s layout byte for byte, and
+  LIB$CVT_DX_DX's E-format text in every floating type. Unit tests
+  follow the changes (`TestCvtByteArray` new); `writeString` gained
+  `writeOut`, which also reports where the destination's text ends (a
+  MOVC5's R3).

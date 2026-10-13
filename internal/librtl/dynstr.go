@@ -21,7 +21,7 @@ import (
 // another (dynamicText). The blocks come from the process heap
 // (Environment.AllocateVM), until Phase 59 gives the RTL its zones.
 
-var libFatErrLib = vmsdef.LibrarySymbols["LIB$_FATERRLIB"]
+var strErrFreDyn = vmsdef.LibrarySymbols["STR$_ERRFREDYN"]
 
 // dynamicText returns where n bytes of a dynamic string's text go. text is
 // the descriptor's pointer, and length its length. The block at text is
@@ -65,8 +65,9 @@ func dynamicText(env *corevms.Environment, text, length, n uint32, alloc0 bool) 
 // getDynamic is LIB$SGET1_DD's work: give the dynamic string described at
 // desc room for length bytes, setting its length, class (D), and pointer.
 // The class isn't checked first, nor the type changed. A length of 0
-// still allocates (the manual: "a small amount of space"), so the
-// pointer is never 0 after.
+// allocates nothing: a descriptor with no storage keeps a pointer of 0,
+// as VMS's does (the probe, testdata/lib54; the manual says "a small
+// amount of space is allocated").
 func getDynamic(env *corevms.Environment, desc, length uint32) (uint32, error) {
 	mem, cpu := env.Memory(), env.CPU()
 
@@ -80,7 +81,7 @@ func getDynamic(env *corevms.Environment, desc, length uint32) (uint32, error) {
 		return memoryFault(env, err)
 	}
 
-	if text, err = dynamicText(env, text, uint32(old), length, true); err != nil {
+	if text, err = dynamicText(env, text, uint32(old), length, false); err != nil {
 		return stringFailure(env, err)
 	}
 
@@ -102,8 +103,9 @@ func getDynamic(env *corevms.Environment, desc, length uint32) (uint32, error) {
 // freeDynamic is LIB$SFREE1_DD's work: free the dynamic string described
 // at desc and set its pointer and length to 0. The class isn't checked. A
 // pointer of 0 has nothing to free; one that isn't a heap block's is
-// LIB$_FATERRLIB (an internal consistency check failed), the descriptor
-// left as it was.
+// STR$_ERRFREDYN ("error freeing dynamic string", the status VMS's
+// routine returns: the probe, testdata/lib54), the descriptor left as it
+// was.
 func freeDynamic(env *corevms.Environment, desc uint32) (uint32, error) {
 	mem, cpu := env.Memory(), env.CPU()
 
@@ -113,7 +115,7 @@ func freeDynamic(env *corevms.Environment, desc uint32) (uint32, error) {
 	}
 
 	if text != 0 && !env.FreeVM(text) {
-		return libFatErrLib, nil
+		return strErrFreDyn, nil
 	}
 
 	if err := mem.StoreWord(cpu, desc, 0); err != nil {

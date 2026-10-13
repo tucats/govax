@@ -1,0 +1,51 @@
+$ ! LIB54.COM - the Phase 54 probe of LIBRTL's strings and conversion.
+$ ! Written by testdata/lib54/gen.go. Run it with the exchange volume's
+$ ! [000000] as the default directory:
+$ !
+$ !     @LIB54/OUTPUT=LIB54.LOG
+$ !
+$ ! LIB54.OUT gets the program's output; LIB54.LOG this procedure's.
+$ SET NOON
+$ SET VERIFY
+$ WRITE SYS$OUTPUT F$GETSYI("VERSION"), " ", F$GETSYI("HW_NAME")
+V7.1     VAX 8600
+$ DEV = F$PARSE("[000000]",,,"DEVICE")
+$ SET DEFAULT DUA1:[000000]
+$ SHOW LOGICAL SYS$DIGIT_SEP
+%SHOW-S-NOTRAN, no translation for logical name SYS$DIGIT_SEP
+$ SHOW LOGICAL SYS$RADIX_POINT
+%SHOW-S-NOTRAN, no translation for logical name SYS$RADIX_POINT
+$ SHOW LOGICAL SYS$CURRENCY
+%SHOW-S-NOTRAN, no translation for logical name SYS$CURRENCY
+$ SHOW LOGICAL SYS$LP_LINES
+%SHOW-S-NOTRAN, no translation for logical name SYS$LP_LINES
+$ DEFINE/USER_MODE SYS$OUTPUT LIB54.MLG
+$ MACRO/NOLIST LIB54
+$ LINK/NOMAP LIB54
+$ DEFINE/USER_MODE SYS$OUTPUT LIB54.OUT
+$ RUN LIB54
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ DIRECTORY/SIZE/DATE
+
+Directory DUA1:[000000]
+
+000000.DIR;1               1  13-OCT-2026 05:41:16.50
+BACKUP.SYS;1               0  13-OCT-2026 05:41:16.50
+BADBLK.SYS;1               0  13-OCT-2026 05:41:16.50
+BADLOG.SYS;1               0  13-OCT-2026 05:41:16.50
+BITMAP.SYS;1               7  13-OCT-2026 05:41:16.50
+CONTIN.SYS;1               0  13-OCT-2026 05:41:16.50
+CORIMG.SYS;1               0  13-OCT-2026 05:41:16.50
+INDEXF.SYS;1             829  13-OCT-2026 05:41:16.50
+LIB54.COM;1                2  13-OCT-2026 05:41:16.51
+LIB54.EXE;1               49  13-OCT-2026 05:40:15.20
+LIB54.LOG;1                0  13-OCT-2026 05:40:14.76
+LIB54.MAR;1              168  13-OCT-2026 05:41:16.50
+LIB54.OBJ;1               84  13-OCT-2026 05:40:14.78
+LIB54.OUT;1               21  13-OCT-2026 05:40:15.21
+SECURITY.SYS;1             1  13-OCT-2026 05:41:16.50
+VOLSET.SYS;1               0  13-OCT-2026 05:41:16.50
+
+Total of 16 files, 1162 blocks.
+

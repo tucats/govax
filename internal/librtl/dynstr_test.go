@@ -67,19 +67,20 @@ func TestSget1DD(t *testing.T) {
 		t.Errorf("after SGET1_DD(200): length %d, pointer %#x, a block of %d (%v); want 200 bytes' room", length, ptr, size, ok)
 	}
 
-	// Length 0, from no storage: some is allocated anyway.
+	// Length 0, from no storage: none is allocated (VMS's run; the
+	// manual says "a small amount of space").
 	putLongword(t, env, dynDesc+32, 0)
 	putLongword(t, env, dynDesc+36, 0)
 	putLongword(t, env, dynDesc+16, 0)
 	call(t, env, "LIB$SGET1_DD", dynDesc+16, dynDesc+32)
 
-	if length, class, ptr := descriptorAt(t, env, dynDesc+32); length != 0 || class != dscClassD || ptr == 0 {
-		t.Errorf("after SGET1_DD(0): length %d, class %d, pointer %#x; want 0, 2, and storage", length, class, ptr)
+	if length, class, ptr := descriptorAt(t, env, dynDesc+32); length != 0 || class != dscClassD || ptr != 0 {
+		t.Errorf("after SGET1_DD(0): length %d, class %d, pointer %#x; want 0, 2, and 0", length, class, ptr)
 	}
 }
 
 // TestSfreeDD: LIB$SFREE1_DD frees and zeroes; a pointer that isn't the
-// heap's is LIB$_FATERRLIB, the descriptor untouched; a zero pointer is
+// heap's is STR$_ERRFREDYN, the descriptor untouched; a zero pointer is
 // fine. LIB$SFREEN_DD frees a run of descriptors.
 func TestSfreeDD(t *testing.T) {
 	env := fixture(t)
@@ -109,12 +110,12 @@ func TestSfreeDD(t *testing.T) {
 	}
 
 	putDesc(t, env, dynDesc+0x40, 4, dscClassD, 0x90000) // not the heap's
-	if got := call(t, env, "LIB$SFREE1_DD", dynDesc+0x40); got != libFatErrLib {
-		t.Errorf("SFREE1_DD of static storage: %#x, want LIB$_FATERRLIB", got)
+	if got := call(t, env, "LIB$SFREE1_DD", dynDesc+0x40); got != strErrFreDyn {
+		t.Errorf("SFREE1_DD of static storage: %#x, want STR$_ERRFREDYN", got)
 	}
 
 	if length, _, ptr := descriptorAt(t, env, dynDesc+0x40); length != 4 || ptr != 0x90000 {
-		t.Errorf("after LIB$_FATERRLIB: length %d, pointer %#x; want it untouched", length, ptr)
+		t.Errorf("after STR$_ERRFREDYN: length %d, pointer %#x; want it untouched", length, ptr)
 	}
 
 	putLongword(t, env, dynDesc+0x100, 2)

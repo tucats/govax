@@ -107,8 +107,9 @@ func TestCvtIntegerToText(t *testing.T) {
 }
 
 // TestCvtTextToInteger: text to integers, blanks and tabs ignored,
-// rounded half away from zero, with an exponent; out of range or not a
-// number is LIB$_INVNBDS, negative into unsigned LIB$_INVCVT.
+// rounded half away from zero, with an exponent; not a number is
+// LIB$_INVNBDS, out of range LIB$_INTOVF (the low-order bits stored),
+// negative into unsigned LIB$_INVCVT.
 func TestCvtTextToInteger(t *testing.T) {
 	env := fixture(t)
 
@@ -126,7 +127,7 @@ func TestCvtTextToInteger(t *testing.T) {
 		{"\t+7", dtypeB, 0, ssNormal, 7},
 		{"12.34", dtypeL, -2, ssNormal, 1234},
 		{"", dtypeL, 0, ssNormal, 0},
-		{"70000", dtypeW, 0, libInvNbds, 0x5555},
+		{"70000", dtypeW, 0, libIntOvf, 0x1170}, // the low-order bits, as VMS
 		{"-1", dtypeWU, 0, libInvCvt, 0x5555},
 		{"12X", dtypeL, 0, libInvNbds, 0x5555},
 		{"1.2.3", dtypeL, 0, libInvNbds, 0x5555},
@@ -152,8 +153,15 @@ func TestCvtTextToInteger(t *testing.T) {
 			t.Errorf("%q: %#x, want %#x", c.text, got&mask, c.want&mask)
 		}
 
-		if c.status == ssNormal && longword(t, env, cvtLength) != 0xFFFF {
-			t.Errorf("%q: the length output written for a numeric destination", c.text)
+		// The length output is 0 for a numeric destination (VMS), and
+		// left alone when the conversion fails.
+		want := uint32(0)
+		if c.status != ssNormal {
+			want = 0xFFFF
+		}
+
+		if got := longword(t, env, cvtLength); got != want {
+			t.Errorf("%q: the length output %#x, want %#x", c.text, got, want)
 		}
 	}
 }
@@ -233,8 +241,8 @@ func TestCvtRange(t *testing.T) {
 	putItem(t, env, cvtSrc, 4, dtypeL, dscClassS, cvtSrcData, 0)
 	putItem(t, env, cvtDst, 1, dtypeB, dscClassS, cvtDstData, 0)
 
-	if got := cvt(t, env); got != libIntOvf {
-		t.Errorf("L 300 to B: %#x, want LIB$_INTOVF", got)
+	if got := cvt(t, env); got != libIntOvf || longword(t, env, cvtDstData)&0xFF != 0x2C {
+		t.Errorf("L 300 to B: %#x, %#x; want LIB$_INTOVF, ^X2C", got, longword(t, env, cvtDstData)&0xFF)
 	}
 
 	putLongword(t, env, cvtSrcData, 0xFFFFFFFF)
@@ -303,7 +311,7 @@ func TestCvtDescriptors(t *testing.T) {
 		{"packed decimal", 21, dscClassS, libInvDtyDsc},
 		{"L, class D", dtypeL, dscClassD, libInvClaDty},
 		{"VT, class S", dtypeVT, dscClassS, libInvClaDty},
-		{"BU array (an NBDS govax doesn't take)", dtypeBU, dscClassA, libInvClaDty},
+
 	}
 
 	for _, c := range cases {
@@ -312,5 +320,29 @@ func TestCvtDescriptors(t *testing.T) {
 		if got := cvt(t, env); got != c.want {
 			t.Errorf("%s: %#x, want %#x", c.name, got, c.want)
 		}
+	}
+}
+
+// TestCvtByteArray: an array of unsigned bytes (BU, class A) is a
+// numeric byte data string; and a number too long for its text
+// destination is LIB$_DESSTROVF, written as far as it fits, the length
+// output left alone (VMS's run).
+func TestCvtByteArray(t *testing.T) {
+	env := fixture(t)
+	putBytes(t, env, cvtSrcData, "42")
+	putItem(t, env, cvtSrc, 1, dtypeBU, dscClassA, cvtSrcData, 0)
+	putLongword(t, env, cvtSrc+12, 2) // ARSIZE
+	putItem(t, env, cvtDst, 4, dtypeL, dscClassS, cvtDstData, 0)
+
+	if got := cvt(t, env); got != ssNormal || longword(t, env, cvtDstData) != 42 {
+		t.Errorf("BU array \"42\" to L: %#x, %d", got, longword(t, env, cvtDstData))
+	}
+
+	putLongword(t, env, cvtSrcData, 123456)
+	putItem(t, env, cvtSrc, 4, dtypeL, dscClassS, cvtSrcData, 0)
+	putItem(t, env, cvtDst, 3, dtypeT, dscClassS, cvtDstData, 0)
+
+	if got := cvt(t, env); got != libDesStrOvf || bytesAt(t, env, cvtDstData, 3) != "123" || longword(t, env, cvtLength) != 0xFFFF {
+		t.Errorf("L 123456 into 3: %#x, %q, length %#x", got, bytesAt(t, env, cvtDstData, 3), longword(t, env, cvtLength))
 	}
 }

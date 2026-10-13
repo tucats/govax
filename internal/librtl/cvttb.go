@@ -25,14 +25,12 @@ const (
 // tab, a sign anywhere else, or any other character fails. So does a
 // magnitude that doesn't fit 32 bits unsigned; the result is the
 // magnitude negated for -, in two's complement, so "4294967295" is -1
-// (unconfirmed). No digits at all (a count of 0, or a sign alone) is 0
-// (unconfirmed), and a negative count fails (unconfirmed). result is
-// written only on success (unconfirmed).
+// (unconfirmed). No digits at all (a count of 0 or less, or a sign
+// alone) is 0 and success, as VMS's run showed. result is written only
+// on success (unconfirmed).
 func textToBinary(env *corevms.Environment, argv []uint32, radix uint64) (uint32, error) {
-	count := int32(arg(argv, 0))
-	if count < 0 {
-		return cvtFailure, nil
-	}
+	// A negative count is no digits at all (VMS: 0, success).
+	count := max(int32(arg(argv, 0)), 0)
 
 	text, err := readText(env, arg(argv, 1), uint32(count))
 	if err != nil {

@@ -3806,56 +3806,66 @@ widened."
   stub.
 - **Status**: fixed in Go where VMS differed (docs/PHASE-53, subtask 13).
 
-### [Phase 54] LIBRTL's strings and conversion: choices the manual leaves open
+### [Phase 54] LIBRTL's strings and conversion: settled by the probe, and the rest chosen
 
 - **Where**: `internal/librtl` (`dynstr.go`, `copy.go`, `strfuncs.go`,
   `translate.go`, `tables.go`, `cvttb.go`, `lookupkey.go`, `locale.go`,
-  `cvtdxdx.go`); the probe is `testdata/lib54` (`TestLib54Program`
-  against govax's own output until VMS runs it).
+  `cvtdxdx.go`); the probe is `testdata/lib54` (`TestLib54Oracle`, VMS
+  V7.1 on simh, 2026-10-13).
 - **Changed in passing**: a class D output string now keeps its heap
   block whenever the block holds the new text (LIB$SGET1_DD's rule, by
   the block's real size), where Phase 53's `writeString` reallocated
   whenever the text was longer than DSC$W_LENGTH. Only the pointer's
   value can tell. The assembler accepts a label plus or minus a chain of
   constants in a direct assignment (`A+1+1`), which it refused before.
-- **JSB entries** (the survey's reading of the STR$ and OTS$ manuals):
-  arguments in R0, R1, R2, scalars by value; only R0 changes, but
-  LIB$ANALYZE_SDESC_R2's R1 and R2 (the length and address); a
-  condition is raised in the caller's frame. The probe's JSB cases show
-  every register R1 to R6.
-- **Unconfirmed choices**:
-  - LIB$SGET1_DD leaves DSC$B_DTYPE alone; LIB$SFREE1_DD of storage that
-    isn't the heap's returns LIB$_FATERRLIB, untouched; LIB$SFREEN_DD
-    stops at the first failure.
-  - LIB$ANALYZE_SDESC writes nothing for an invalid class.
-  - LIB$LEN, LIB$ICHAR, and LIB$INDEX read an invalid descriptor as an
-    empty string (as LIB$LOCC does on VMS); LIB$CHAR into a fixed
-    string of length 0 is LIB$_STRTRU.
-  - The translation tables are the 5.0 manual's as printed:
-    LIB$AB_UPCASE leaves F0-F9 and FE alone but maps FA-FD to DA-DD. An
-    untranslatable character (for LIB$_INVCHA) is one whose translation
-    doesn't translate back (so ASCII 1A and EBCDIC E0 count as
-    translatable); a varying destination too small is LIB$_INVARG.
-  - LIB$CVT_xTB: no digits is 0 and success; a negative count fails; the
-    result is written only on success; lowercase hex is accepted;
-    "4294967295" is -1.
-  - LIB$LOOKUP_KEY compares exactly (no case folding); an exact match
-    anywhere in the table wins; LIB$_AMBKEY writes the first match's
-    outputs; an empty search string matches every keyword; an odd count
-    is LIB$_INVARG. govax's `$LIB_KEY_TABLE` puts the strings after the
-    vector, in order.
-  - The locale routines search the process, group, and system tables
-    (not the job table); LIB$LP_LINES converts as LIB$CVT_DTB does.
-  - LIB$CVT_DX_DX: the scope the author chose (integers and F/D/G/H to
-    and from text, and between them; no BU arrays or packed decimal,
-    LIB$_INVCLADTY or LIB$_INVDTYDSC); floating text in Table LIB-3's E
-    format with as many digits as the destination's width allows (all
-    of them into a dynamic string); LIB$_OUTSTRTRU for any text cut
-    short; LIB$_INVNBDS for text out of the destination's range,
-    underflow included. The 5.0 manual's table of accepted conversions
-    (Table LIB-2) is misprinted, so VMS's own coverage is unknown.
-- **Status**: chosen; each is a case in `testdata/lib54`, to be settled
-  if the author runs it on VMS (docs/PHASE-54, subtask 11).
+- **What the probe settled** (govax changed to match):
+  - LIB$SGET1_DD of length 0 allocates nothing (the pointer stays 0),
+    though the manual says "a small amount of space is allocated".
+  - LIB$SFREE1_DD of storage that isn't the heap's returns
+    STR$_ERRFREDYN, not LIB$_FATERRLIB.
+  - LIB$SCOPY_DXDX6 and LIB$SCOPY_R_DX6 leave R1 to R5 as a MOVC5 of the
+    text would (R1 past the source bytes moved, R2 0, R3 past the
+    destination, R4 and R5 0) and the status in R6 as well as R0.
+  - LIB$ANALYZE_SDESC of an invalid class still writes a length of 0 and
+    the descriptor's pointer; LIB$ANALYZE_SDESC_R2 then returns the
+    pointer in R2 and leaves R1 alone.
+  - LIB$AB_UPCASE maps F1-FD to D1-DD; the 5.0 manual's Table LIB-19
+    prints F1-F9 unchanged, a misprint.
+  - LIB$CVT_xTB of a negative count is 0, success.
+  - LIB$LOOKUP_KEY doesn't report a keyword cut short (SS$_NORMAL), and
+    doesn't check the table's count (an odd one reads count/2 entries).
+  - LIB$CVT_DX_DX: an integer out of range, from text too, is
+    LIB$_INTOVF with the low-order bits stored (not LIB$_INVNBDS);
+    word-integer-dest-length is 0 for an atomic destination, and left
+    alone when the conversion fails (but for LIB$_OUTSTRTRU); a number
+    too long for its text destination is LIB$_DESSTROVF (written as far
+    as it fits); a BU array is a numeric string.
+- **What it confirmed** (govax's choices as they were): the JSB argument
+  registers; LIB$SGET1_DD sets class D and leaves DSC$B_DTYPE, keeping
+  storage that fits; LIB$ANALYZE_SDESC_R2's length and address in R1 and
+  R2; every descriptor class through the copies, LIB$_INVSTRDES either
+  side; LIB$LEN, LIB$ICHAR, and LIB$INDEX of an invalid descriptor are 0;
+  LIB$CHAR into a string of length 0 is LIB$_STRTRU; LIB$AB_ASC_EBC and
+  LIB$AB_EBC_ASC as transcribed, and LIB$_INVCHA's rule (ASCII 1A and
+  EBCDIC E0 translatable); LIB$_INVARG for a fixed destination of
+  another length or a varying one too small; LIB$CVT_xTB's overflow,
+  signs, lowercase hex, and "4294967295" as -1; LIB$LOOKUP_KEY's exact
+  compare, an exact match winning anywhere, LIB$_AMBKEY's outputs, and
+  an empty search string; govax's `$LIB_KEY_TABLE` layout, byte for
+  byte; the locale defaults and LIB$LP_LINES's 66; LIB$CVT_DX_DX's text
+  forms in every type and width (Table LIB-3's E format), scales,
+  rounding, LIB$_INVCVT, LIB$_INVNBDS, LIB$_FLTOVF, LIB$_FLTUND,
+  LIB$_ROPRAND, VT sources, and the descriptor statuses.
+- **Not reproduced**: the dynamic-string routines' JSB entries leave
+  their heap code's values in R1 to R6, which govax's heap doesn't have
+  (govax changes only R0); LIB$CVT_DX_DX converts packed decimal, which
+  the author's scope left out (LIB$_INVDTYDSC). `TestLib54Oracle` lists
+  both (`expectedLib54Differences`).
+- **Still govax's choice** (no case reached it): LIB$SFREEN_DD stops at
+  the first failure; the locale routines search the process, group, and
+  system tables; LIB$LP_LINES converts as LIB$CVT_DTB does; LIB$CVT_xTB
+  writes the result only on success.
+- **Status**: fixed in Go where VMS differed (docs/PHASE-54, subtask 11).
 
 <!--
 Entry template:
