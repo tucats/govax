@@ -626,6 +626,7 @@ var validConfigs = map[string]bool{
 	"vax.quantum":          true,
 	"vax.console.prompt":   true,
 	"vax.console.lines":    true,
+	"vax.language":         true,
 
 	"vax.default.volume.file":      true,
 	"vax.default.volume.label":     true,

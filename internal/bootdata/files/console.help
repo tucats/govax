@@ -1915,6 +1915,16 @@ $CONF,KEY
                                       debugger's symbolic layout by
                                       default.  Default true.
 
+        vax.language                  The user's language, as
+                                      LIB$GET_USERS_LANGUAGE returns it
+                                      (FRENCH, GERMAN, ...) when the
+                                      SYS$LANGUAGE logical name isn't
+                                      defined.  When neither is set, the
+                                      host's locale (LC_ALL, LC_MESSAGES,
+                                      or LANG) gives it; failing that,
+                                      the routine returns ENGLISH and
+                                      LIB$_ENGLUSED.
+
     The machine
 
         vax.hardware.clock            true or false: drive the interval

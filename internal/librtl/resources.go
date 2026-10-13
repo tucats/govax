@@ -109,6 +109,18 @@ func allocate(bits *uint64, base, first, last int32) (int32, bool) {
 	return -1, false
 }
 
+// nextEF allocates in the flag set at bits the flag GET_EF would give:
+// the lowest free one of 1 to 23, else of 32 to 63; -1 and false when
+// none is free.
+func nextEF(bits *uint64) (int32, bool) {
+	ef, ok := allocate(bits, 0, firstLowEF, lastLowEF)
+	if !ok {
+		ef, ok = allocate(bits, 0, firstHighEF, lastHighEF)
+	}
+
+	return ef, ok
+}
+
 // libGetEF is LIB$GET_EF:
 //
 //	LIB$GET_EF event-flag-number.wl.r
@@ -119,11 +131,7 @@ func allocate(bits *uint64, base, first, last int32) (int32, bool) {
 func libGetEF(env *corevms.Environment, argv []uint32) (uint32, error) {
 	p := pools(env)
 	bits := p.flags
-
-	ef, ok := allocate(&bits, 0, firstLowEF, lastLowEF)
-	if !ok {
-		ef, ok = allocate(&bits, 0, firstHighEF, lastHighEF)
-	}
+	ef, ok := nextEF(&bits)
 
 	if err := writeResult(env, arg(argv, 0), ef); err != nil {
 		return memoryFault(env, writing(err)) // p.flags unchanged: it stays free

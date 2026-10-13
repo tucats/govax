@@ -1,6 +1,6 @@
 # Phase 55 — LIB$ service jackets, process resources, and measurement
 
-**Status:** in progress (subtasks 1 to 5 done 2026-10-13). Needs Phases 53 and 54. Part of the
+**Status:** in progress (subtasks 1 to 6 done 2026-10-13). Needs Phases 53 and 54. Part of the
 LIB$ program laid out in `PHASE-53 - RTL LIB support.md` (Part A).
 
 ## Goal
@@ -376,6 +376,9 @@ strings: "pass only fixed-length or dynamic input strings"; govax's
   equivalence; with none, "ENGLISH" and LIB$_ENGLUSED, a warning. A
   string failure or truncation (LIB$_STRTRU) "overrides the
   LIB$_ENGLUSED or SS$_NORMAL status".
+  **The author's addition** (2026-10-13): with no SYS$LANGUAGE, govax
+  asks a `vax.language` configuration key, then the host's locale,
+  before falling back to ENGLISH (subtask 6's log).
 
 ### Protection text (7.x only; the VSI manual)
 
@@ -478,6 +481,7 @@ are masked.
 4. **Event flags and LUNs.** **Done** 2026-10-13.
 5. **Timers.** **Done** 2026-10-13.
 6. **Miscellaneous**: AST_IN_PROG, ASN_WTH_MBX, WAIT, GET_USERS_LANGUAGE.
+   **Done** 2026-10-13.
 7. **Protection text**: FORMAT_SOGW_PROT, PARSE_SOGW_PROT,
    PARSE_ACCESS_CODE, from the VSI manual.
 8. **The program** (`testdata/lib55/`), its console test, and the VMS
@@ -676,3 +680,54 @@ are masked.
     program that times three demand-zero page touches (STAT_TIMER's
     faults grow by exactly 3) and passes SHOW_TIMER's line to an action
     routine whose status SHOW_TIMER returns.
+- **2026-10-13** — Subtask 6, the miscellaneous routines
+  (`internal/librtl/misc.go`, shim codes 123–126: AST_IN_PROG,
+  ASN_WTH_MBX, WAIT, GET_USERS_LANGUAGE):
+  - **AST_IN_PROG** asks `ProcessItem` for JPI$_ASTACT and returns the
+    bit of the PSL's current mode at the call (**unconfirmed**), 1 or 0.
+  - **ASN_WTH_MBX** runs `$CREMBX` (temporary, no logical name; size and
+    quota by reference, omitted or 0 the service's defaults), asks the
+    mailbox's DVI$_DEVNAM, and `$ASSIGN`s device-name with it, the two
+    names as class S descriptors in the routine's frame (`stackString`),
+    so any class of device-name works. A failing `$ASSIGN` deassigns
+    the mailbox's channel and is returned (**unconfirmed**). No event
+    flag, as the survey says.
+  - **WAIT** reads seconds in the float-type's format (VAX F, D, G, H by
+    `loadFloat`; IEEE S and T by Go's `math`), rounds to hundredths half
+    up, and checks 0 to 100,000 (a reserved operand, NaN or infinity, or
+    an unknown type is LIB$_INVARG; none or more than three arguments
+    LIB$_WRONUMARG). It then `$SCHDWK`s the delta (the quadword briefly
+    below SP) and `$HIBER`s, or, with LIB$K_NOWAKE, takes a flag from
+    LIB$GET_EF's pool (`nextEF`, factored out of GET_EF; LIB$_INSEF with
+    none free), `$SETIMR`s it, and `$WAITFR`s, the flag going back to the
+    pool at the end. The wait is the service's `corevms.ErrWait`, so the
+    stub's XFC runs the routine again: a call already waiting is
+    remembered per image by the stub frame's FP (an AST's own LIB$WAIT
+    has a lower one), and only waits again. A wake already pending ends
+    the wait at once, the scheduled one staying pending (**unconfirmed**).
+  - **GET_USERS_LANGUAGE** translates SYS$LANGUAGE through LNM$FILE_DEV
+    and writes its first equivalence. At the author's request it then
+    asks govax's new `vax.language` configuration key (uppercased; in
+    `validConfigs` and HELP CONFIG KEYS), then the host's locale (the
+    first of LC_ALL, LC_MESSAGES, and LANG that is set, its ISO 639 code
+    mapped to a VMS language name: `fr_FR.UTF-8` is FRENCH; C, POSIX,
+    and codes not in the table give nothing). Only when none of them
+    names a language is it ENGLISH with LIB$_ENGLUSED, so on a host with
+    an English LANG govax returns ENGLISH and SS$_NORMAL where VMS,
+    without SYS$LANGUAGE, returns LIB$_ENGLUSED (a deliberate difference;
+    the probe defines SYS$LANGUAGE or masks the status).
+  - **Tests**: `misc_test.go` (WAIT's hibernation, its retry without a
+    second wakeup, a `$WAKE` ending it, a pending wake, zero seconds,
+    NOWAKE's flag that `$WAKE` doesn't end and `$SETEF` does, INSEF,
+    the INVARG and WRONUMARG cases, rounding in all six formats;
+    AST_IN_PROG outside an AST; ASN_WTH_MBX on a mailbox by its logical
+    name, and a failing `$ASSIGN` leaving no mailbox channel; each source
+    of GET_USERS_LANGUAGE's answer in order, and STRTRU), and
+    `TestLibrtlMisc` in `internal/console`, a MACRO program in which
+    AST_IN_PROG is 0 in the main program and 1 in an AST that `$WAKE`s
+    a 10-second LIB$WAIT, a quarter-second NOWAKE wait ends by its timer,
+    ASN_WTH_MBX assigns a named mailbox, and GET_USERS_LANGUAGE with
+    nothing set is ENGLISH and LIB$_ENGLUSED.
+  - Noticed: govax's `$GETDVI` answers SS$_NOPRIV for a channel that
+    isn't assigned, where VMS's would be SS$_IVCHAN (unchanged here; a
+    case for a later probe).

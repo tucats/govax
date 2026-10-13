@@ -190,6 +190,10 @@ var Routines = []Routine{
 	{"LIB$SHOW_TIMER", 120, libShowTimer},
 	{"LIB$STAT_TIMER", 121, libStatTimer},
 	{"LIB$FREE_TIMER", 122, libFreeTimer},
+	{"LIB$AST_IN_PROG", 123, libAstInProg},
+	{"LIB$ASN_WTH_MBX", 124, libAsnWthMbx},
+	{"LIB$WAIT", 125, libWait},
+	{"LIB$GET_USERS_LANGUAGE", 126, libGetUsersLanguage},
 }
 
 // missing is Missing's list, and missingJSB MissingJSB's, made once.
