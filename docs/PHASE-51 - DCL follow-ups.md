@@ -480,7 +480,13 @@ di
   second missing one is asked for in turn (COPY's "_Source:", then
   "_Destination:"); an empty reply asks again, and Ctrl/Z drops the
   command without a message (`dcl.ErrCanceled`; the User's Manual,
-  2.2.2), $STATUS kept (unconfirmed). DCL prompts only for a command
+  2.2.2), $STATUS SS$_NORMAL marked as shown (%X10000001, the author's
+  check on VMS's console; whether VMS sets it or marks the status
+  before it as shown, as RETURN does at the terminal, wasn't settled:
+  the status before was likely %X00000001 already). VMS echoed
+  " Exit " for the Ctrl/Z, as for INQUIRE's (testdata/dcl50's Q1);
+  govax's terminal echoes "*Exit*" for every read (DEVIATIONS.md, the
+  control keys). DCL prompts only for a command
   read from the terminal (`parseCommand`, `readingTerminal`: command
   level 0, or the Ctrl/Y level's own depth, `controlYPrompt.depth`), on
   SYS$COMMAND through `readTerminal`, as INQUIRE reads. A command from a

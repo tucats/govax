@@ -47,12 +47,21 @@ func TestParameterPrompt(t *testing.T) {
 		t.Errorf("SHOW, replying MEMORY: output\n%q\nwant\n%q", got, "_What: _What: "+want)
 	}
 
-	// Ctrl/Z (the input's end) cancels the command.
+	// Ctrl/Z (the input's end) cancels the command, $STATUS SS$_NORMAL
+	// marked as shown, whatever it was (VMS's console).
+	_ = d.Dispatch("SHOW NOSUCHTHING")
+
 	out.Reset()
 	c.In = strings.NewReader("")
 
 	if err := d.Dispatch("SHOW"); err != nil || out.String() != "_What: " {
 		t.Errorf("SHOW, Ctrl/Z: err %v, output %q; want nil, \"_What: \"", err, out.String())
+	}
+
+	out.Reset()
+
+	if err := d.Dispatch("SHOW SYMBOL $STATUS"); err != nil || !strings.Contains(out.String(), `$STATUS == "%X10000001"`) {
+		t.Errorf("$STATUS after Ctrl/Z: err %v, output %q; want %%X10000001", err, out.String())
 	}
 
 	// In a command procedure, no prompt: the parameter is missing.

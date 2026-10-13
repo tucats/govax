@@ -173,7 +173,7 @@ func (c *Interpreter) dispatchParsed(line string, verbSymbol bool) error {
 
 	r, err := c.parseCommand(line)
 	if errors.Is(err, dcl.ErrCanceled) {
-		c.keepStatus()
+		c.SetCommandStatus(ssNormal|stsInhibitMsg, nil)
 
 		return nil
 	}
@@ -211,10 +211,10 @@ func (c *Interpreter) dispatchParsed(line string, verbSymbol bool) error {
 // parseCommand parses a command line. One typed at the terminal asks
 // there for a required parameter it doesn't give ("$ SHOW" asks
 // "_What: "), and the reply completes the line; Ctrl/Z at the prompt
-// drops the command (dcl.ErrCanceled), and DCL keeps $STATUS
-// (unconfirmed). A command read from a command procedure isn't
-// prompted for: its missing parameter is an error, as on VMS. Nor is
-// one with no terminal input to read (a test's console).
+// drops the command (dcl.ErrCanceled) with $STATUS SS$_NORMAL, marked as
+// shown (%X10000001, VMS's console). A command read from a command
+// procedure isn't prompted for: its missing parameter is an error, as
+// on VMS. Nor is one with no terminal input to read (a test's console).
 func (c *Interpreter) parseCommand(line string) (*dcl.Result, error) {
 	if !c.readingTerminal() || (c.subCLI == nil && c.In == nil) {
 		return c.Grammar.Parse(line)
