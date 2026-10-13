@@ -1,0 +1,23 @@
+$ ! LIB54.COM - the Phase 54 probe of LIBRTL's strings and conversion.
+$ ! Written by testdata/lib54/gen.go. Run it with the exchange volume's
+$ ! [000000] as the default directory:
+$ !
+$ !     @LIB54/OUTPUT=LIB54.LOG
+$ !
+$ ! LIB54.OUT gets the program's output; LIB54.LOG this procedure's.
+$ SET NOON
+$ SET VERIFY
+$ WRITE SYS$OUTPUT F$GETSYI("VERSION"), " ", F$GETSYI("HW_NAME")
+$ DEV = F$PARSE("[000000]",,,"DEVICE")
+$ SET DEFAULT 'DEV'[000000]
+$ SHOW LOGICAL SYS$DIGIT_SEP
+$ SHOW LOGICAL SYS$RADIX_POINT
+$ SHOW LOGICAL SYS$CURRENCY
+$ SHOW LOGICAL SYS$LP_LINES
+$ DEFINE/USER_MODE SYS$OUTPUT LIB54.MLG
+$ MACRO/NOLIST LIB54
+$ LINK/NOMAP LIB54
+$ DEFINE/USER_MODE SYS$OUTPUT LIB54.OUT
+$ RUN LIB54
+$ SHOW SYMBOL $STATUS
+$ DIRECTORY/SIZE/DATE

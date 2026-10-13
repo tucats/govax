@@ -1,6 +1,6 @@
 # Phase 54 — LIB$ strings, descriptors, and text conversion
 
-**Status:** in progress (2026-10-12; subtasks 1 to 10 done). Needs Phase 53. Part of the LIB$
+**Status:** in progress (2026-10-12; subtasks 1 to 11 done). Needs Phase 53. Part of the LIB$
 program laid out in `PHASE-53 - RTL LIB support.md` (Part A), which also
 has the sources and the conventions (Part B) this phase follows.
 
@@ -420,7 +420,8 @@ against VMS's own table, which the probe dumps.)
     text, with a LIBRTL2 stub area (the scope the author accepted). **Done**
     2026-10-12.
 11. **The program** (`testdata/lib54/`) and its console test; VMS probe
-    with the author if wanted.
+    with the author if wanted. **Done** 2026-10-12 (the program and
+    its test; the VMS run waits for the author).
 12. **Close-out**.
 
 ## Progress log
@@ -657,3 +658,22 @@ against VMS's own table, which the probe dumps.)
     console's `TestLibrtlCvtDxDx` links and runs a program calling it
     (`1234.56` from a scaled longword, `-0.2500000E+00` from F, and
     " -77 " to a longword). `TestMissing` now covers both images.
+- **2026-10-12** — Subtask 11, the program (`testdata/lib54/`, README.md
+  there). `gen.go` writes `lib54.mar` from one table of 143 cases: every
+  routine of the phase, the manual's examples, the edges, and each
+  choice this doc marks unconfirmed. It works as Phase 53's does (a
+  handler per case telling a returned status from a signaled one), and
+  adds JSB cases (arguments in R0, R1, ...; R1 to R6 preset and shown
+  after, an address argument's register relative to its label, so a
+  routine's register use is visible), instructions before a call, and
+  cases that only show values: the three translation tables, copied
+  from `G^LIB$AB_*` and dumped whole, so VMS's tables can be compared
+  with the transcription, and `$LIB_KEY_TABLE`'s layout. Nothing
+  printed depends on load addresses (a dynamic string's pointer only as
+  whether it's 0, or the same as before). `TestLib54Program`
+  (`internal/console/lib54_test.go`) runs it and compares with
+  `lib54-govax.txt`, govax's output, checked against the survey and the
+  unit tests (`-update` rewrites it). `lib54.com` shows the locale
+  logical names (the program expects none) and runs it on VMS;
+  `exchange.cmd` builds the exchange volume. The VMS run waits for the
+  author; its output would replace `lib54-govax.txt` as the oracle.
