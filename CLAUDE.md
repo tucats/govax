@@ -118,7 +118,7 @@ never had.
   cases show R1 to R6, the translation tables are dumped), and
   `vax/lib54-vax.txt` is VMS V7.1's output, which `TestLib54Oracle`
   matches line for line but for `expectedLib54Differences` (the
-  dynamic-string JSB entries' heap registers, packed decimal).
+  dynamic-string JSB entries' heap registers).
 - `testdata/probe49/` — Phase 49's VMS probe in three rounds (`probe6`,
   `probe6b`, `probe6c`; README.md has each round's answers), run by
   `TestProbe6*`; `testdata/rms49/` and `testdata/sec49/` are the phase's

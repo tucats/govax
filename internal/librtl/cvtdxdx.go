@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/tucats/govax/internal/corevms"
+	"github.com/tucats/govax/internal/cpu"
 	"github.com/tucats/govax/internal/vaxfloat"
 	"github.com/tucats/govax/internal/vmsdef"
 )
@@ -19,8 +20,9 @@ import (
 //
 // Each descriptor's data type and class say what the item is:
 //
-//   - an atomic integer (B, BU, W, WU, L, LU, Q) or floating value (F, D,
-//     G, H), class S, or SD with a decimal scale (a value of n means the
+//   - an atomic integer (B, BU, W, WU, L, LU, Q), floating value (F, D,
+//     G, H), or packed decimal string (P, DSC$W_LENGTH its digits),
+//     class S, or SD with a decimal scale (a value of n means the
 //     integer times 10^scale);
 //   - a numeric byte data string (NBDS), a number written as text: type
 //     T with class S, D, VS, A, NCA, or SD, type VT with class VS, or
@@ -29,9 +31,8 @@ import (
 // The routine converts between any two of them, through the exact value:
 // govax doesn't lose precision on the way (the manual: "intermediate
 // values will not cause a loss of precision"), and rounds, half away from
-// zero, only into the destination. The scope is the author's (Phase 54's
-// open question): packed decimal, which VMS converts too (the probe,
-// testdata/lib54), and the other types aren't.
+// zero, only into the destination. The other types (the numeric strings
+// NU, NL, and the rest, complex values, octawords) aren't converted.
 
 // The DSC$K_DTYPE_ codes the routine knows.
 const (
@@ -45,6 +46,7 @@ const (
 	dtypeF  = 10
 	dtypeD  = 11
 	dtypeT  = dscDTypeT
+	dtypeP  = 21
 	dtypeG  = 27
 	dtypeH  = 28
 	dtypeVT = 37
@@ -65,6 +67,7 @@ var (
 	libFltOvf    = vmsdef.LibrarySymbols["LIB$_FLTOVF"]
 	libFltUnd    = vmsdef.LibrarySymbols["LIB$_FLTUND"]
 	libROprand   = vmsdef.LibrarySymbols["LIB$_ROPRAND"]
+	libDecOvf    = vmsdef.LibrarySymbols["LIB$_DECOVF"]
 )
 
 // intType is an atomic integer type's size in bytes and signedness.
@@ -90,17 +93,22 @@ type cvtKind int
 const (
 	cvtInteger cvtKind = iota
 	cvtFloat
-	cvtText // a numeric byte data string
+	cvtText   // a numeric byte data string
+	cvtPacked // a packed decimal string
 )
+
+// maxPackedDigits is the longest packed decimal string, in digits.
+const maxPackedDigits = 31
 
 // cvtItem is a source or destination, from its descriptor.
 type cvtItem struct {
-	desc  uint32 // the descriptor's address
-	kind  cvtKind
-	dtype byte
-	class byte
-	scale int // DSC$B_SCALE, for class SD; else 0
-	ptr   uint32
+	desc   uint32 // the descriptor's address
+	length int    // DSC$W_LENGTH: a packed decimal string's digits
+	kind   cvtKind
+	dtype  byte
+	class  byte
+	scale  int // DSC$B_SCALE, for class SD; else 0
+	ptr    uint32
 }
 
 // cvtStatus is a condition value the routine returns.
@@ -115,7 +123,12 @@ func classify(env *corevms.Environment, addr uint32) (cvtItem, error) {
 	mem, cpu := env.Memory(), env.CPU()
 	it := cvtItem{desc: addr}
 
-	var err error
+	length, err := mem.LoadWord(cpu, addr)
+	if err != nil {
+		return it, err
+	}
+
+	it.length = int(length)
 
 	if it.dtype, err = mem.LoadByte(cpu, addr+2); err != nil {
 		return it, err
@@ -151,6 +164,13 @@ func classify(env *corevms.Environment, addr uint32) (cvtItem, error) {
 	// An array of unsigned bytes is an NBDS, not an atomic BU.
 	case it.dtype == dtypeT, it.dtype == dtypeBU && (it.class == dscClassA || it.class == dscClassNCA):
 		it.kind = cvtText
+
+	case it.dtype == dtypeP:
+		if it.class != dscClassS && it.class != dscClassSD {
+			return it, cvtStatus(libInvClaDty)
+		}
+
+		it.kind = cvtPacked
 
 	case isInt || isFloat:
 		if it.class != dscClassS && it.class != dscClassSD {
@@ -345,6 +365,53 @@ func writeFloating(env *corevms.Environment, it cvtItem, v *big.Rat, fromText bo
 	return nil
 }
 
+// readPackedItem reads a packed decimal item's value, scale applied. A
+// string the architecture calls ill-formed (a digit nibble over 9, a
+// sign nibble under ^XA) is LIB$_ROPRAND, returned, as VMS's run showed
+// (testdata/lib54: ^X1C,^X00 as three digits); a length over 31 is too
+// (unconfirmed: the decimal instructions' reserved operand).
+func readPackedItem(env *corevms.Environment, it cvtItem) (*big.Rat, error) {
+	if it.length > maxPackedDigits {
+		return nil, cvtStatus(libROprand)
+	}
+
+	n, valid, err := cpu.ReadPacked(env.CPU(), env.Memory(), it.ptr, it.length)
+	if err != nil {
+		return nil, err
+	}
+
+	if !valid {
+		return nil, cvtStatus(libROprand)
+	}
+
+	r := new(big.Rat).SetInt(n)
+
+	return r.Mul(r, pow10(it.scale)), nil
+}
+
+// writePackedItem stores v in a packed decimal destination, its scale
+// applied and rounded, as the decimal instructions write: the preferred
+// sign, and on overflow the low-order digits with LIB$_DECOVF
+// (unconfirmed, by analogy with an integer's LIB$_INTOVF).
+func writePackedItem(env *corevms.Environment, it cvtItem, v *big.Rat) error {
+	if it.length > maxPackedDigits {
+		return cvtStatus(libROprand)
+	}
+
+	n := roundRat(new(big.Rat).Mul(v, pow10(-it.scale)))
+
+	overflow, err := cpu.WritePacked(env.CPU(), env.Memory(), it.ptr, it.length, n)
+	if err != nil {
+		return writing(err)
+	}
+
+	if overflow {
+		return cvtStatus(libDecOvf)
+	}
+
+	return nil
+}
+
 // floatDigits is a floating type's significant digits in its text form,
 // and its exponent's digits (the manual's Table LIB-3).
 var floatDigits = map[vaxfloat.Format]struct{ digits, exponent int }{
@@ -484,6 +551,14 @@ func convert(env *corevms.Environment, src, dst cvtItem) (int, error) {
 
 		value = v.Rat()
 
+	case cvtPacked:
+		v, err := readPackedItem(env, src)
+		if err != nil {
+			return 0, err
+		}
+
+		value = v
+
 	case cvtText:
 		s, err := readString(env, src.desc)
 		if err != nil {
@@ -518,6 +593,9 @@ func convert(env *corevms.Environment, src, dst cvtItem) (int, error) {
 
 	case cvtFloat:
 		return 0, writeFloating(env, dst, value, fromText)
+
+	case cvtPacked:
+		return 0, writePackedItem(env, dst, value)
 	}
 
 	// To text: a floating value in E format, anything else as a (scaled)

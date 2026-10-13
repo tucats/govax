@@ -308,7 +308,8 @@ func TestCvtDescriptors(t *testing.T) {
 		want         uint32
 	}{
 		{"class V", dtypeL, 3, libInvClaDsc},
-		{"packed decimal", 21, dscClassS, libInvDtyDsc},
+		{"numeric string, unsigned", 15, dscClassS, libInvDtyDsc},
+		{"packed, class D", dtypeP, dscClassD, libInvClaDty},
 		{"L, class D", dtypeL, dscClassD, libInvClaDty},
 		{"VT, class S", dtypeVT, dscClassS, libInvClaDty},
 
@@ -344,5 +345,83 @@ func TestCvtByteArray(t *testing.T) {
 
 	if got := cvt(t, env); got != libDesStrOvf || bytesAt(t, env, cvtDstData, 3) != "123" || longword(t, env, cvtLength) != 0xFFFF {
 		t.Errorf("L 123456 into 3: %#x, %q, length %#x", got, bytesAt(t, env, cvtDstData, 3), longword(t, env, cvtLength))
+	}
+}
+
+// TestCvtPacked: packed decimal strings (P, DSC$W_LENGTH digits) to and
+// from text and integers, scaled, rounded, overflowing (LIB$_DECOVF, the
+// low-order digits stored), and ill-formed (LIB$_ROPRAND, as VMS returns
+// for the probe's ^X1C,^X00).
+func TestCvtPacked(t *testing.T) {
+	env := fixture(t)
+
+	// P -123 (^X12,^X3D) to text, then scaled by 10^-2.
+	putBytes(t, env, cvtSrcData, "\x12\x3D")
+	putItem(t, env, cvtSrc, 3, dtypeP, dscClassS, cvtSrcData, 0)
+	putItem(t, env, cvtDst, 8, dtypeT, dscClassS, cvtDstData, 0)
+
+	if got := cvt(t, env); got != ssNormal || bytesAt(t, env, cvtDstData, 8) != "-123    " {
+		t.Errorf("P -123 to text: %#x, %q", got, bytesAt(t, env, cvtDstData, 8))
+	}
+
+	putItem(t, env, cvtSrc, 3, dtypeP, dscClassSD, cvtSrcData, -2)
+
+	if got := cvt(t, env); got != ssNormal || bytesAt(t, env, cvtDstData, 8) != "-1.23   " {
+		t.Errorf("P -123 scale -2 to text: %#x, %q", got, bytesAt(t, env, cvtDstData, 8))
+	}
+
+	// P to L.
+	putItem(t, env, cvtSrc, 3, dtypeP, dscClassS, cvtSrcData, 0)
+	putItem(t, env, cvtDst, 4, dtypeL, dscClassS, cvtDstData, 0)
+
+	if got := cvt(t, env); got != ssNormal || longword(t, env, cvtDstData) != 0xFFFFFF85 {
+		t.Errorf("P -123 to L: %#x, %#x", got, longword(t, env, cvtDstData))
+	}
+
+	// Text to P (4 digits: ^X01,^X23,^X4C), rounded half away from zero.
+	putBytes(t, env, 0x3100, "1233.5")
+	putItem(t, env, cvtSrc, 6, dtypeT, dscClassS, 0x3100, 0)
+	putItem(t, env, cvtDst, 4, dtypeP, dscClassS, cvtDstData, 0)
+
+	if got := cvt(t, env); got != ssNormal || bytesAt(t, env, cvtDstData, 3) != "\x01\x23\x4C" {
+		t.Errorf("1233.5 to P(4): %#x, % X", got, bytesAt(t, env, cvtDstData, 3))
+	}
+
+	// L 12345 to P(3): overflow, the low-order digits.
+	putLongword(t, env, cvtSrcData, 12345)
+	putItem(t, env, cvtSrc, 4, dtypeL, dscClassS, cvtSrcData, 0)
+	putItem(t, env, cvtDst, 3, dtypeP, dscClassS, cvtDstData, 0)
+
+	if got := cvt(t, env); got != libDecOvf || bytesAt(t, env, cvtDstData, 2) != "\x34\x5C" {
+		t.Errorf("L 12345 to P(3): %#x, % X; want LIB$_DECOVF, 34 5C", got, bytesAt(t, env, cvtDstData, 2))
+	}
+
+	// F -2.5 to P(1): -3.
+	putDecimal(t, env, vaxfloat.F, cvtSrcData, "-2.5")
+	putItem(t, env, cvtSrc, 4, dtypeF, dscClassS, cvtSrcData, 0)
+	putItem(t, env, cvtDst, 1, dtypeP, dscClassS, cvtDstData, 0)
+
+	if got := cvt(t, env); got != ssNormal || bytesAt(t, env, cvtDstData, 1) != "\x3D" {
+		t.Errorf("F -2.5 to P(1): %#x, % X", got, bytesAt(t, env, cvtDstData, 1))
+	}
+
+	// Ill-formed, and too long: LIB$_ROPRAND, nothing stored.
+	for _, c := range []struct {
+		name   string
+		bytes  string
+		length uint16
+	}{
+		{"the probe's ^X1C,^X00", "\x1C\x00", 3},
+		{"a sign of 5", "\x12\x35", 3},
+		{"32 digits", "\x00", 32},
+	} {
+		putBytes(t, env, cvtSrcData, c.bytes)
+		putItem(t, env, cvtSrc, c.length, dtypeP, dscClassS, cvtSrcData, 0)
+		putItem(t, env, cvtDst, 4, dtypeL, dscClassS, cvtDstData, 0)
+		putLongword(t, env, cvtDstData, 0x55555555)
+
+		if got := cvt(t, env); got != libROprand || longword(t, env, cvtDstData) != 0x55555555 {
+			t.Errorf("%s: %#x, %#x; want LIB$_ROPRAND, nothing stored", c.name, got, longword(t, env, cvtDstData))
+		}
 	}
 }

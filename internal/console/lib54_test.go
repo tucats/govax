@@ -28,11 +28,6 @@ var expectedLib54Differences = map[string]string{
 	"SGET1_DD_R6 3 (JSB)/REGS:": "heap internals",
 	"SFREE1_DD6 (JSB)/REGS:":    "heap internals",
 	"SFREEN_DD6 1 (JSB)/REGS:":  "heap internals",
-
-	// LIB$CVT_DX_DX converts packed decimal on VMS (here, ^X1C as a
-	// three-digit number is a reserved operand); the author's scope
-	// for Phase 54 left packed decimal out (LIB$_INVDTYDSC).
-	"CVT packed/CVT": "packed decimal is out of scope",
 }
 
 func TestLib54Oracle(t *testing.T) {

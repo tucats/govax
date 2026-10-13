@@ -722,3 +722,20 @@ against VMS's own table, which the probe dumps.)
   follow the changes (`TestCvtByteArray` new); `writeString` gained
   `writeOut`, which also reports where the destination's text ends (a
   MOVC5's R3).
+- **2026-10-13** — Packed decimal in LIB$CVT_DX_DX, at the author's
+  request, closing the probe's other expected difference. The CPU's
+  packed decimal reading and writing are now functions of the CPU and
+  memory (`readPackedAt`, `writePackedAt`, which the instructions' Engine
+  methods call), exported for the RTL as `cpu.ReadPacked` (the value,
+  and whether the string is well formed: digits 0 to 9, a sign ^XA to
+  ^XF, an even length's unused nibble 0) and `cpu.WritePacked` (the
+  preferred sign; overflow keeps the low-order digits).
+  `TestReadPacked`, `TestWritePacked`. LIB$CVT_DX_DX takes P items with
+  class S or SD (DSC$W_LENGTH the digits, the scale applied as for
+  integers): an ill-formed one is LIB$_ROPRAND, returned, as VMS's run
+  showed (the probe's `^X1C,^X00` as three digits); a length over 31 is
+  LIB$_ROPRAND too, and an overflow into one LIB$_DECOVF with the
+  low-order digits stored (both unconfirmed); to text, a packed value is
+  written as an integer is, with its scale's decimal point.
+  `TestCvtPacked`; `TestLib54Oracle` now expects only the dynamic-string
+  JSB entries' registers to differ.

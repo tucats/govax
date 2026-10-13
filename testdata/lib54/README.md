@@ -79,8 +79,9 @@ defined, MACRO wrote no messages, and the program exited with
 SS$_NORMAL. The output file's leading and trailing blank lines came from
 the copy to the host and were removed. VMS differed from govax's
 choices in about twenty lines; govax now does what VMS did (the phase
-doc's progress log and DEVIATIONS.md list them), but for two things
+doc's progress log and DEVIATIONS.md list them), but for what
 `TestLib54Oracle` expects to differ: the registers the dynamic-string
-routines' JSB entries leave (VMS's heap internals) and LIB$CVT_DX_DX of
-packed decimal (outside the phase's scope). If `lib54.mar` changes, run
-it on VMS again and replace `vax/`.
+routines' JSB entries leave (VMS's heap internals). LIB$CVT_DX_DX's
+packed decimal, outside the phase's first scope, was added afterward
+(2026-10-13); the probe's one packed case matches. If `lib54.mar`
+changes, run it on VMS again and replace `vax/`.

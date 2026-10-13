@@ -4,6 +4,7 @@ import (
 	"math/big"
 
 	"github.com/tucats/govax/internal/registers"
+	"github.com/tucats/govax/internal/vm"
 )
 
 // Packed decimal strings, and the CPU's helpers for the decimal string
@@ -108,13 +109,23 @@ func (e *Engine) decimalLength(d *Decoded, i int) (int, error) {
 
 // readPacked reads the packed decimal string of length digits at addr.
 func (e *Engine) readPacked(addr uint32, length int) (decimal, error) {
+	p, _, err := readPackedAt(e.cpu, e.mem, addr, length)
+
+	return p, err
+}
+
+// readPackedAt is readPacked as a function of the CPU and memory (so the
+// RTL can share it: ReadPacked). valid reports whether the string is a
+// well-formed one: every digit nibble 0 to 9, the sign nibble ^XA to
+// ^XF, and an even length's unused high nibble 0.
+func readPackedAt(c *registers.CPU, m *vm.Memory, addr uint32, length int) (p decimal, valid bool, err error) {
 	size := packedSize(length)
 	raw := make([]byte, size)
 
 	for i := range raw {
-		b, err := e.mem.LoadByte(e.cpu, addr+uint32(i))
+		b, err := m.LoadByte(c, addr+uint32(i))
 		if err != nil {
-			return decimal{}, err
+			return decimal{}, false, err
 		}
 
 		raw[i] = b
@@ -129,13 +140,23 @@ func (e *Engine) readPacked(addr uint32, length int) (decimal, error) {
 	sign := nibbles[len(nibbles)-1]
 	digits := nibbles[len(nibbles)-1-length : len(nibbles)-1]
 
-	return decimal{digits: digits, neg: sign == 0xB || sign == 0xD}, nil
+	valid = sign >= 0xA && (length%2 != 0 || nibbles[0] == 0)
+	for _, n := range digits {
+		valid = valid && n <= 9
+	}
+
+	return decimal{digits: digits, neg: sign == 0xB || sign == 0xD}, valid, nil
 }
 
 // writePacked writes a packed decimal string of len(digits) digits at
 // addr, with the preferred sign (^XD if neg, else ^XC) and an even
 // length's unused high nibble zero.
 func (e *Engine) writePacked(addr uint32, digits []byte, neg bool) error {
+	return writePackedAt(e.cpu, e.mem, addr, digits, neg)
+}
+
+// writePackedAt is writePacked as a function of the CPU and memory.
+func writePackedAt(c *registers.CPU, m *vm.Memory, addr uint32, digits []byte, neg bool) error {
 	sign := byte(0xC)
 	if neg {
 		sign = 0xD
@@ -150,12 +171,37 @@ func (e *Engine) writePacked(addr uint32, digits []byte, neg bool) error {
 	nibbles = append(nibbles, sign)
 
 	for i := 0; i < len(nibbles); i += 2 {
-		if err := e.mem.StoreByte(e.cpu, addr+uint32(i/2), nibbles[i]<<4|nibbles[i+1]); err != nil {
+		if err := m.StoreByte(c, addr+uint32(i/2), nibbles[i]<<4|nibbles[i+1]); err != nil {
 			return err
 		}
 	}
 
 	return nil
+}
+
+// ReadPacked reads the packed decimal string of length digits (at most
+// 31) at addr and returns its value, for the RTL's conversions
+// (LIB$CVT_DX_DX). valid is false for a string the architecture calls
+// ill-formed: a digit nibble over 9, a sign nibble under ^XA, or an even
+// length's unused nibble not 0. The instructions use such a string's
+// nibbles as they are; a routine can refuse it. err is the memory's.
+func ReadPacked(c *registers.CPU, m *vm.Memory, addr uint32, length int) (v *big.Int, valid bool, err error) {
+	p, valid, err := readPackedAt(c, m, addr, length)
+	if err != nil {
+		return nil, false, err
+	}
+
+	return p.value(), valid, nil
+}
+
+// WritePacked writes v as a packed decimal string of length digits at
+// addr, as the decimal instructions write their results: the preferred
+// sign, and, when v has more digits than length, its low-order ones,
+// overflow reported (the sign kept). err is the memory's.
+func WritePacked(c *registers.CPU, m *vm.Memory, addr uint32, length int, v *big.Int) (overflow bool, err error) {
+	digits, neg, overflow := decimalDigits(v, length)
+
+	return overflow, writePackedAt(c, m, addr, digits, neg)
 }
 
 // decimalDigits returns v as length decimal digits, most significant

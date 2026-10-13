@@ -3858,9 +3858,18 @@ widened."
   LIB$_ROPRAND, VT sources, and the descriptor statuses.
 - **Not reproduced**: the dynamic-string routines' JSB entries leave
   their heap code's values in R1 to R6, which govax's heap doesn't have
-  (govax changes only R0); LIB$CVT_DX_DX converts packed decimal, which
-  the author's scope left out (LIB$_INVDTYDSC). `TestLib54Oracle` lists
-  both (`expectedLib54Differences`).
+  (govax changes only R0). `TestLib54Oracle` lists them
+  (`expectedLib54Differences`).
+- **Packed decimal** (added after the probe, 2026-10-13): LIB$CVT_DX_DX
+  converts P items (class S or SD) through the CPU's own packed decimal
+  code (`cpu.ReadPacked`, `cpu.WritePacked`). An ill-formed string (a
+  digit nibble over 9, a sign under ^XA, an even length's unused nibble
+  not 0) is LIB$_ROPRAND, returned, as VMS returned for the probe's
+  case, though the decimal instructions use such nibbles as they are.
+  Still chosen: which of the probe's two faults (a digit ^XC, a sign 0)
+  VMS objected to; a length over 31 is LIB$_ROPRAND; an overflow is
+  LIB$_DECOVF with the low-order digits stored, as an integer's is
+  LIB$_INTOVF.
 - **Still govax's choice** (no case reached it): LIB$SFREEN_DD stops at
   the first failure; the locale routines search the process, group, and
   system tables; LIB$LP_LINES converts as LIB$CVT_DTB does; LIB$CVT_xTB
