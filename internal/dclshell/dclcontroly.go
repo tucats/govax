@@ -2,9 +2,9 @@ package dclshell
 
 import (
 	"errors"
+	"slices"
 	"strconv"
 	"strings"
-	"sync/atomic"
 
 	"github.com/tucats/govax/internal/corevms"
 	"github.com/tucats/govax/internal/cpu"
@@ -70,19 +70,62 @@ type controlYPrompt struct {
 	resume bool
 }
 
-// controlKeys are SET [NO]CONTROL's settings: whether Ctrl/Y and Ctrl/T
-// are enabled. Ctrl/Y is read from the terminal's goroutines
-// (ControlYEnabled), so it is atomic.
+// controlKeys are a process's SET [NO]CONTROL settings (Shell.control):
+// noY is set while Ctrl/Y is disabled, t while Ctrl/T is enabled. A
+// subprocess's DCL starts with both keys as process 1's does at login,
+// not with its parent's settings (unconfirmed, a probe case).
 type controlKeys struct {
-	noY atomic.Bool
+	noY bool
 	t   bool
 }
 
+// setControl enables (on) or disables the keys SET [NO]CONTROL names: T
+// for Ctrl/T and Y for Ctrl/Y. Disabling Ctrl/Y also cancels the current
+// command level's ON CONTROL_Y (the User's Manual, 13.13.1).
+func (s *Shell) setControl(t, y, on bool) {
+	if t {
+		s.control.t = on
+	}
+
+	if y {
+		s.control.noY = !on
+
+		if level := s.currentLevel(); level != nil && !on {
+			level.on.controlY = ""
+		}
+	}
+}
+
 // ControlYEnabled reports whether Ctrl/Y does anything: false after SET
-// NOCONTROL=Y, when the key is echoed and ignored (the DCL Dictionary,
-// SET CONTROL). Safe to call from any goroutine; cmd/govax asks it for
-// each Ctrl/Y typed.
-func (c *Interpreter) ControlYEnabled() bool { return !c.control.noY.Load() }
+// NOCONTROL=Y in the DCL of the process the terminal is attached to,
+// when the key is echoed and ignored (the DCL Dictionary, SET CONTROL).
+// Safe to call from any goroutine; cmd/govax asks it for each Ctrl/Y
+// typed. It reads the copy noteControlKeys keeps.
+func (c *Interpreter) ControlYEnabled() bool { return !c.terminalNoY.Load() }
+
+// terminalShell is the DCL of the process the terminal is attached to:
+// a subprocess's (attachedCLI), or process 1's.
+func (c *Interpreter) terminalShell() *Shell {
+	if cli := c.attachedCLI(); cli != nil {
+		return cli.shell
+	}
+
+	return c.home
+}
+
+// terminalControlY reports whether Ctrl/Y is enabled in the DCL of the
+// process the terminal is attached to, as ControlYEnabled does, but
+// from the processes themselves: for the engine's goroutine.
+func (c *Interpreter) terminalControlY() bool { return !c.terminalShell().control.noY }
+
+// noteControlKeys updates ControlYEnabled's copy of the attached
+// process's Ctrl/Y setting. It is called wherever that may change: a
+// setting changed (SET CONTROL, LIB$DISABLE_CTRL and LIB$ENABLE_CTRL), a
+// subprocess's DCL starting (it may be attached by a waiting SPAWN), and
+// a process deleted (the terminal returns to the one that spawned it).
+func (c *Interpreter) noteControlKeys() {
+	c.terminalNoY.Store(!c.terminalControlY())
+}
 
 // isAttentionKey reports whether key is Ctrl/C or Ctrl/Y.
 func isAttentionKey(key byte) bool {
@@ -104,7 +147,7 @@ func (c *Interpreter) dclTakesControlY() bool {
 	level := c.currentLevel()
 
 	return level != nil && !level.source.plain && c.attachedCLI() == c.subCLI &&
-		!c.machine.InDebugger() && c.ControlYEnabled() && c.controlYLevelActive == nil && !c.stopping
+		!c.machine.InDebugger() && !c.control.noY && c.controlYLevelActive == nil && !c.stopping
 }
 
 // attachedCLI is the CLI of the subprocess the terminal is attached to,
@@ -136,7 +179,7 @@ func (c *Interpreter) HandleAttention(key byte) bool {
 		return true
 	}
 
-	if !c.ControlYEnabled() {
+	if !c.terminalControlY() {
 		c.forgetAttention()
 
 		return true
@@ -480,18 +523,8 @@ func (c *Interpreter) setControlCommand(r *dcl.Result) error {
 		}
 	}
 
-	for _, k := range keys {
-		switch k {
-		case "T":
-			c.control.t = !negated
-		case "Y":
-			c.control.noY.Store(negated)
-
-			if level := c.currentLevel(); level != nil && negated {
-				level.on.controlY = ""
-			}
-		}
-	}
+	c.setControl(slices.Contains(keys, "T"), slices.Contains(keys, "Y"), !negated)
+	c.noteControlKeys()
 
 	return nil
 }
@@ -521,7 +554,7 @@ func (c *Interpreter) controlString(enabled bool) string {
 		keys = append(keys, "T")
 	}
 
-	if c.ControlYEnabled() == enabled {
+	if !c.control.noY == enabled {
 		keys = append(keys, "Y")
 	}
 

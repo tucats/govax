@@ -40,6 +40,13 @@ type CLI interface {
 	// with program set, the file name of an image to run. A second call
 	// before the image exits replaces the first.
 	Chain(text string, program bool)
+
+	// ControlKeys enables the control keys enable names and disables
+	// those disable names (LIB$ENABLE_CTRL and LIB$DISABLE_CTRL: SET
+	// CONTROL and SET NOCONTROL), each a mask of CLICtrlT and CLICtrlY
+	// bits, and returns the keys enabled before, in the same form. The
+	// setting is the DCL's, so it outlasts the image.
+	ControlKeys(enable, disable uint32) (old uint32)
 }
 
 // The table-type-indicator values of the LIB$ symbol routines
@@ -47,6 +54,13 @@ type CLI interface {
 const (
 	CLILocalSymbol  = 1 // LIB$K_CLI_LOCAL_SYM
 	CLIGlobalSymbol = 2 // LIB$K_CLI_GLOBAL_SYM
+)
+
+// The control keys' bits in LIB$ENABLE_CTRL's and LIB$DISABLE_CTRL's
+// masks ($LIBCLIDEF): each key's bit is its control character's code.
+const (
+	CLICtrlT = 1 << 20 // LIB$M_CLI_CTRLT
+	CLICtrlY = 1 << 25 // LIB$M_CLI_CTRLY
 )
 
 const cliGetSymbol = 0x1305

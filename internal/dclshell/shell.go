@@ -98,6 +98,10 @@ type Shell struct {
 	controlYUnwind      *commandLevel
 	afterStop           func() error
 
+	// control is the process's SET [NO]CONTROL settings (dclcontroly.go),
+	// which LIB$DISABLE_CTRL and LIB$ENABLE_CTRL change too (libcli.go).
+	control controlKeys
+
 	// terminalFlow is the terminal's IF blocks (dclif.go): command level
 	// 0's, whose lines cmd/govax's prompt reads.
 	terminalFlow flowState

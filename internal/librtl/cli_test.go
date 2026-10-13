@@ -5,6 +5,7 @@ import (
 	"testing"
 
 	"github.com/tucats/govax/internal/corevms"
+	"github.com/tucats/govax/internal/vmsdef"
 )
 
 // fakeCLI is a corevms.CLI over two maps, recording the calls made.
@@ -15,6 +16,17 @@ type fakeCLI struct {
 	// chained and program are the last Chain's.
 	chained string
 	program bool
+
+	// keys are the control keys enabled, as a LIB$M_CLI_ mask.
+	keys uint32
+}
+
+func (f *fakeCLI) ControlKeys(enable, disable uint32) uint32 {
+	f.calls = append(f.calls, "control")
+	old := f.keys
+	f.keys = (f.keys | enable) &^ disable
+
+	return old
 }
 
 func (f *fakeCLI) Chain(text string, program bool) {
@@ -23,7 +35,7 @@ func (f *fakeCLI) Chain(text string, program bool) {
 }
 
 func newFakeCLI() *fakeCLI {
-	return &fakeCLI{local: map[string]string{}, global: map[string]string{}}
+	return &fakeCLI{local: map[string]string{}, global: map[string]string{}, keys: corevms.CLICtrlY}
 }
 
 func (f *fakeCLI) Symbol(name string) (string, uint32, uint32) {
@@ -93,6 +105,8 @@ func TestLibCLI_noCLI(t *testing.T) {
 		{"LIB$GET_SYMBOL", []uint32{a.desc("1X"), a.desc("          ")}},
 		{"LIB$SET_SYMBOL", []uint32{a.desc("X"), a.desc("v")}},
 		{"LIB$DELETE_SYMBOL", []uint32{a.desc("X")}},
+		{"LIB$DISABLE_CTRL", []uint32{a.long(1)}},
+		{"LIB$ENABLE_CTRL", []uint32{a.long(corevms.CLICtrlY)}},
 	} {
 		if r0 := call(t, env, c.name, c.argv...); r0 != libNoCLI {
 			t.Errorf("%s: status %#x, want LIB$_NOCLI", c.name, r0)
@@ -239,5 +253,76 @@ func TestLibSetDeleteSymbol(t *testing.T) {
 
 	if _, ok := cli.global["GLO"]; ok {
 		t.Error("GLO wasn't deleted")
+	}
+}
+
+// TestLibCLI_controlMasks: the mask bits are $LIBCLIDEF's.
+func TestLibCLI_controlMasks(t *testing.T) {
+	for name, want := range map[string]uint32{
+		"LIB$M_CLI_CTRLT": corevms.CLICtrlT,
+		"LIB$M_CLI_CTRLY": corevms.CLICtrlY,
+	} {
+		if got := vmsdef.LibrarySymbols[name]; got != want {
+			t.Errorf("%s = %#x, want %#x", name, got, want)
+		}
+	}
+}
+
+// TestLibControlKeys: DISABLE_CTRL and ENABLE_CTRL change the keys their
+// mask names and write the keys enabled before to old-mask, which
+// ENABLE_CTRL can take back; an invalid bit is LIB$_INVARG, nothing
+// changed and old-mask not written.
+func TestLibControlKeys(t *testing.T) {
+	env, cli, a := cliFixture(t)
+	old := a.long(0xFFFFFFFF)
+
+	if r0 := call(t, env, "LIB$DISABLE_CTRL", a.long(corevms.CLICtrlY), old); r0 != ssNormal {
+		t.Fatalf("DISABLE_CTRL: status %#x", r0)
+	}
+
+	if got := longword(t, env, old); got != corevms.CLICtrlY {
+		t.Errorf("DISABLE_CTRL old-mask = %#x, want Ctrl/Y", got)
+	}
+
+	if cli.keys != 0 {
+		t.Errorf("after DISABLE_CTRL keys = %#x, want 0", cli.keys)
+	}
+
+	saved := longword(t, env, old)
+
+	if r0 := call(t, env, "LIB$ENABLE_CTRL", a.long(corevms.CLICtrlT), old); r0 != ssNormal {
+		t.Fatalf("ENABLE_CTRL T: status %#x", r0)
+	}
+
+	if got := longword(t, env, old); got != 0 {
+		t.Errorf("ENABLE_CTRL old-mask = %#x, want 0", got)
+	}
+
+	// The old mask given back restores Ctrl/Y; no old-mask argument is
+	// fine.
+	if r0 := call(t, env, "LIB$ENABLE_CTRL", a.long(saved)); r0 != ssNormal {
+		t.Fatalf("ENABLE_CTRL saved: status %#x", r0)
+	}
+
+	if want := uint32(corevms.CLICtrlT | corevms.CLICtrlY); cli.keys != want {
+		t.Errorf("keys = %#x, want %#x", cli.keys, want)
+	}
+
+	// A zero mask changes nothing, but reports the keys.
+	if r0 := call(t, env, "LIB$DISABLE_CTRL", a.long(0), old); r0 != ssNormal || longword(t, env, old) != cli.keys {
+		t.Errorf("zero mask: status %#x, old-mask %#x", r0, longword(t, env, old))
+	}
+
+	for _, routine := range []string{"LIB$DISABLE_CTRL", "LIB$ENABLE_CTRL"} {
+		cli.calls = nil
+		untouched := a.long(0x12345678)
+
+		if r0 := call(t, env, routine, a.long(corevms.CLICtrlY|1<<3), untouched); r0 != libInvArg {
+			t.Errorf("%s of an invalid bit: status %#x, want LIB$_INVARG", routine, r0)
+		}
+
+		if len(cli.calls) != 0 || longword(t, env, untouched) != 0x12345678 {
+			t.Errorf("%s of an invalid bit: calls %v, old-mask %#x", routine, cli.calls, longword(t, env, untouched))
+		}
 	}
 }

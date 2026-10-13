@@ -321,7 +321,7 @@ func (h cliHost) Start(env *corevms.Environment, start *corevms.CLIStartup) (uin
 	}
 
 	cli := c.cliOf(env)
-	env.CLI = shellCLI{cli.shell}
+	env.CLI = shellCLI{c, cli.shell}
 	cli.command, cli.hasCommand = start.Command, start.Command != ""
 	cli.prompt = start.Prompt
 	cli.login = start.Login
@@ -336,6 +336,9 @@ func (h cliHost) Start(env *corevms.Environment, start *corevms.CLIStartup) (uin
 	if !cli.login {
 		cli.inheritVerify(env.Process.Owner)
 	}
+
+	// A waiting SPAWN has attached the terminal to it.
+	c.noteControlKeys()
 
 	exit, ok := c.machine.P1Stub(env, "SYS$EXIT")
 	if !ok {

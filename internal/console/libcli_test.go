@@ -563,3 +563,133 @@ func TestLibCLI_chainUnderDebugger(t *testing.T) {
 		t.Errorf("output after EXIT:\n%s", out.String())
 	}
 }
+
+// controlSource is an image that calls the control-key routine named by
+// its format argument (LIB$DISABLE_CTRL or LIB$ENABLE_CTRL) for Ctrl/Y,
+// and writes "old" and the keys old-mask says were enabled before.
+const controlSource = `	.title	control
+	.psect	data,noexe,wrt
+mask:	.long	^x02000000
+old:	.long	0
+none:	.ascid	/old/
+ymsg:	.ascid	/old Y/
+tmsg:	.ascid	/old T/
+	.psect	code,exe,nowrt
+	.entry	start,^m<>
+	pushal	old
+	pushal	mask
+	calls	#2,g^%s
+	blbc	r0,90$
+	pushaq	none
+	bbc	#25,old,10$
+	movaq	ymsg,(sp)
+10$:	calls	#1,g^lib$put_output
+	bbc	#20,old,20$
+	pushaq	tmsg
+	calls	#1,g^lib$put_output
+20$:	movl	#1,r0
+90$:	ret
+	.end	start
+`
+
+// controlConsole is a scheduled console with NOCTRLY and CTRLY, foreign
+// commands for controlSource's two images, defined; it returns their
+// files too.
+func controlConsole(t *testing.T) (*console.Console, *bytes.Buffer, *console.Dispatcher, string, string) {
+	t.Helper()
+
+	c, out := scheduledConsole(t, longQuantum, brbSelf)
+	disable := buildImage(t, c, "noctrly", fmt.Sprintf(controlSource, "lib$disable_ctrl"))
+	enable := buildImage(t, c, "ctrly", fmt.Sprintf(controlSource, "lib$enable_ctrl"))
+
+	d := console.NewDispatcher(c, consoletest.ConsoleGrammar(t), nil)
+	for _, line := range []string{"NOCTRLY :== $" + disable, "CTRLY :== $" + enable} {
+		if err := d.Dispatch(line); err != nil {
+			t.Fatalf("%s: %v", line, err)
+		}
+	}
+
+	out.Reset()
+
+	return c, out, d, disable, enable
+}
+
+// TestLibCLI_controlKeys: LIB$DISABLE_CTRL's setting is the DCL's, so
+// F$ENVIRONMENT shows it after the image and Ctrl/Y is off at the
+// terminal; old-mask names the keys enabled before; LIB$ENABLE_CTRL
+// turns Ctrl/Y back on. Disabling Ctrl/Y cancels the procedure's ON
+// CONTROL_Y, as SET NOCONTROL=Y does.
+func TestLibCLI_controlKeys(t *testing.T) {
+	c, out, d, _, _ := controlConsole(t)
+
+	for _, line := range []string{
+		"SET CONTROL=T",
+		"NOCTRLY",
+		`WRITE SYS$OUTPUT F$ENVIRONMENT("NOCONTROL")`,
+	} {
+		if err := d.Dispatch(line); err != nil {
+			t.Fatalf("%s: %v", line, err)
+		}
+	}
+
+	if c.ControlYEnabled() {
+		t.Error("Ctrl/Y is enabled after LIB$DISABLE_CTRL")
+	}
+
+	if err := d.Dispatch("CTRLY"); err != nil {
+		t.Fatalf("CTRLY: %v", err)
+	}
+
+	if !c.ControlYEnabled() {
+		t.Error("Ctrl/Y is disabled after LIB$ENABLE_CTRL")
+	}
+
+	proc := writeCommands(t,
+		`$ ON CONTROL_Y THEN EXIT`,
+		`$ NOCTRLY`,
+		`$ WRITE SYS$OUTPUT F$ENVIRONMENT("ON_CONTROL_Y")`,
+		`$ SET CONTROL=Y`,
+	)
+
+	if err := d.Dispatch(`@"` + proc + `"`); err != nil {
+		t.Fatalf("@: %v", err)
+	}
+
+	want := []string{"old Y", "old T", "Y", "old", "old T", "old Y", "old T", "FALSE"}
+	if got := programLines(out.String()); strings.Join(got, "\n") != strings.Join(want, "\n") {
+		t.Errorf("output:\n%s\nwant:\n%s", strings.Join(got, "\n"), strings.Join(want, "\n"))
+	}
+}
+
+// TestLibCLI_subprocessControlKeys: a subprocess's image changes its own
+// DCL's setting, not process 1's.
+func TestLibCLI_subprocessControlKeys(t *testing.T) {
+	c, out, _, disable, _ := controlConsole(t)
+
+	commands := writeCommands(t,
+		`$ RUN "`+disable+`"`,
+		`$ WRITE SYS$OUTPUT F$ENVIRONMENT("NOCONTROL")`,
+	)
+
+	loginout(t, c, commands)
+
+	got, _ := splitLogoutReport(programLines(out.String()))
+	want := []string{
+		`$ RUN "` + disable + `"`,
+		"old Y",
+		`$ WRITE SYS$OUTPUT F$ENVIRONMENT("NOCONTROL")`,
+		"T,Y",
+	}
+
+	if strings.Join(got, "\n") != strings.Join(want, "\n") {
+		t.Errorf("output:\n%s\nwant:\n%s", strings.Join(got, "\n"), strings.Join(want, "\n"))
+	}
+
+	if !c.ControlYEnabled() {
+		t.Error("process 1's Ctrl/Y is disabled by a subprocess's LIB$DISABLE_CTRL")
+	}
+
+	if got, _, err := c.EvaluateExpression(`F$ENVIRONMENT("CONTROL")`); err != nil || got != "Y" {
+		t.Errorf(`process 1's F$ENVIRONMENT("CONTROL") = %q (%v), want "Y"`, got, err)
+	}
+}

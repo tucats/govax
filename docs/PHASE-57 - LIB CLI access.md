@@ -573,7 +573,7 @@ implementation per Shell (`libcli.go`), the chain run after an image
 5. **The common area**: GET_COMMON, PUT_COMMON. **Done** 2026-10-13.
 6. **Chaining**: DO_COMMAND, RUN_PROGRAM. **Done** 2026-10-13.
 7. **Control keys**: SET CONTROL's settings per process; DISABLE_CTRL,
-   ENABLE_CTRL.
+   ENABLE_CTRL. **Done** 2026-10-13.
 8. **PAUSE**: the Ctrl/Y level at any command level, and in a
    subprocess.
 9. **ATTACH**: the terminal holder per job, DCL's ATTACH command, and
@@ -728,3 +728,35 @@ implementation per Shell (`libcli.go`), the chain run after an image
   defined at the procedure's level), `_runProgram` (the common area
   carried to the next image, a missing image), `_subprocessChain`, and
   `_chainUnderDebugger`.
+- **2026-10-13** — Subtask 7, the control keys. SET [NO]CONTROL's
+  settings moved from the `Interpreter` to each process's `Shell`
+  (`Shell.control`, `setControl`), so a subprocess's DCL has its own;
+  F$ENVIRONMENT's CONTROL and NOCONTROL read the current Shell's.
+  Ctrl/Y's setting is now the attached process's: the engine's goroutine
+  reads it from that Shell (`terminalControlY`, `HandleAttention`), and
+  cmd/govax's key goroutine, which may not look at the processes, reads
+  an atomic copy on the `Interpreter` (`terminalNoY`, behind
+  `ControlYEnabled`), which `noteControlKeys` refreshes wherever it may
+  change: a setting changed, a subprocess's DCL starting (a waiting
+  SPAWN has attached it), and a process deleted. `currentLevel` is now
+  the Shell's. `corevms.CLI` gained `ControlKeys(enable, disable) old`
+  (`corevms.CLICtrlT`/`CLICtrlY`, `$LIBCLIDEF`'s masks), and
+  `librtl/cli.go` has LIB$DISABLE_CTRL and LIB$ENABLE_CTRL (codes 159
+  and 160). Choices, each **unconfirmed** and a probe case:
+  - LIB$_NOCLI is checked first, then the mask: a bit other than
+    Ctrl/T's and Ctrl/Y's is LIB$_INVARG, nothing changed and old-mask
+    not written.
+  - Both routines' old-mask is the keys enabled before (the VSI
+    manual's DISABLE_CTRL), so either's can be given to ENABLE_CTRL.
+  - Disabling Ctrl/Y cancels the ON CONTROL_Y of the level that ran the
+    image, as SET NOCONTROL=Y does.
+  - A subprocess's DCL starts with the defaults (Ctrl/Y on, Ctrl/T
+    off), not its parent's settings.
+  Tests: `librtl/cli_test.go` (`TestLibControlKeys`: the masks, old-mask
+  given back, a zero mask, INVARG; `TestLibCLI_controlMasks`; NOCLI),
+  `console/libcli_test.go`'s `TestLibCLI_controlKeys` (F$ENVIRONMENT and
+  `ControlYEnabled` after each image, ON CONTROL_Y cancelled) and
+  `_subprocessControlKeys` (a subprocess's own setting), and
+  `console/subcontroly_test.go`'s `TestSubprocessControlY_noControl`
+  (a spawned procedure's SET NOCONTROL=Y turns Ctrl/Y off while it has
+  the terminal, and only then).

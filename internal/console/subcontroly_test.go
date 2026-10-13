@@ -31,6 +31,14 @@ const ssControlY = 0x611
 func subControlY(t *testing.T, typed, line string, files map[string][]string) (string, *console.Console, time.Duration) {
 	t.Helper()
 
+	return subControlYWith(t, typed, line, files, nil)
+}
+
+// subControlYWith is subControlY, calling started (if not nil) with the
+// console just before the SPAWN.
+func subControlYWith(t *testing.T, typed, line string, files map[string][]string, started func(*console.Console)) (string, *console.Console, time.Duration) {
+	t.Helper()
+
 	c, out := scheduledConsole(t, longQuantum, brbSelf)
 	d := console.NewDispatcher(c, consoletest.ConsoleGrammar(t), nil)
 
@@ -57,6 +65,10 @@ func subControlY(t *testing.T, typed, line string, files map[string][]string) (s
 		time.Sleep(100 * time.Millisecond)
 		engine.AttentionKey(cpu.AttentionCtrlY)
 	}()
+
+	if started != nil {
+		started(c)
+	}
 
 	start := time.Now()
 
@@ -160,5 +172,49 @@ func TestSubprocessControlY_nested(t *testing.T) {
 		"$ %DCL-S-RETURNED, control returned to process SYSTEM_1|outer after|" + returnedOne
 	if got != want {
 		t.Errorf("output\n%q\nwant\n%q", got, want)
+	}
+}
+
+// TestSubprocessControlY_noControl (Phase 57, subtask 7): SET CONTROL's
+// settings are each process's. A spawned procedure's SET NOCONTROL=Y
+// turns Ctrl/Y off at the terminal while the subprocess has it
+// (ControlYEnabled, as cmd/govax's key goroutine asks), so the key is
+// ignored and its image finishes; once SPAWN has returned, the terminal
+// is process 1's again, whose Ctrl/Y is on.
+func TestSubprocessControlY_noControl(t *testing.T) {
+	off := make(chan bool, 1)
+	ready := make(chan *console.Console, 1)
+
+	go func() {
+		c := <-ready
+
+		deadline := time.Now().Add(20 * time.Second)
+		for time.Now().Before(deadline) {
+			if !c.ControlYEnabled() {
+				off <- true
+
+				return
+			}
+
+			time.Sleep(time.Millisecond)
+		}
+
+		off <- false
+	}()
+
+	got, c, _ := subControlYWith(t, "", `SPAWN @"DIR/spin.com"`, map[string][]string{
+		"spin.com": {"$ SET NOCONTROL=Y", `$ RUN "FINITE"`, `$ WRITE SYS$OUTPUT "after"`},
+	}, func(c *console.Console) { ready <- c })
+
+	if want := spawnedOne + "spun|after|" + returnedOne; got != want {
+		t.Errorf("output %q; want %q", got, want)
+	}
+
+	if !<-off {
+		t.Error("Ctrl/Y stayed enabled while the subprocess that disabled it had the terminal")
+	}
+
+	if !c.ControlYEnabled() {
+		t.Error("Ctrl/Y is disabled after SPAWN returned to process 1")
 	}
 }

@@ -226,6 +226,8 @@ var Routines = []Routine{
 	{"LIB$GET_COMMON", 156, libGetCommon},
 	{"LIB$DO_COMMAND", 157, libDoCommand},
 	{"LIB$RUN_PROGRAM", 158, libRunProgram},
+	{"LIB$DISABLE_CTRL", 159, libDisableCtrl},
+	{"LIB$ENABLE_CTRL", 160, libEnableCtrl},
 }
 
 // missing is Missing's list, and missingJSB MissingJSB's, made once.

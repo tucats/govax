@@ -90,12 +90,12 @@ type commandLevel struct {
 
 // currentLevel returns the innermost command level, or nil at the
 // terminal (level 0).
-func (c *Interpreter) currentLevel() *commandLevel {
-	if len(c.levels) == 0 {
+func (s *Shell) currentLevel() *commandLevel {
+	if len(s.levels) == 0 {
 		return nil
 	}
 
-	return c.levels[len(c.levels)-1]
+	return s.levels[len(s.levels)-1]
 }
 
 // CommandLevel is the current command level: 0 at the terminal, 1 in a

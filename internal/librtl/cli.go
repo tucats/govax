@@ -223,3 +223,79 @@ func libDeleteSymbol(env *corevms.Environment, argv []uint32) (uint32, error) {
 
 	return env.CLI.DeleteSymbol(name, table), nil
 }
+
+// The control keys (docs/PHASE-57, "Control keys"; the 5.0 manual's
+// section 2.2.5): LIB$DISABLE_CTRL and LIB$ENABLE_CTRL are SET NOCONTROL
+// and SET CONTROL for Ctrl/T and Ctrl/Y, each key a bit of a mask
+// (LIB$M_CLI_CTRLT, LIB$M_CLI_CTRLY). The setting is the DCL's, so it
+// outlasts the image.
+
+// validControlKeys are the mask bits the CLI can intercept.
+const validControlKeys = corevms.CLICtrlT | corevms.CLICtrlY
+
+// controlKeys is LIB$DISABLE_CTRL (enable false) and LIB$ENABLE_CTRL:
+// it reads the mask at argv[0], changes the keys it names, and writes
+// the keys enabled before to old-mask at argv[1], if given. Both
+// routines write the keys previously *enabled*, so that DISABLE_CTRL's
+// old-mask given to ENABLE_CTRL restores them, as the VSI manual says of
+// DISABLE_CTRL (unconfirmed for ENABLE_CTRL, a probe case).
+//
+// It returns SS$_NORMAL; LIB$_NOCLI (checked first); or LIB$_INVARG for
+// a bit other than Ctrl/T's and Ctrl/Y's, when nothing is changed and
+// old-mask isn't written (unconfirmed: the manuals don't say whether the
+// valid bits are acted on). A mask or old-mask it can't reach is an
+// access violation, signaled (memoryFault).
+func controlKeys(env *corevms.Environment, argv []uint32, enable bool) (uint32, error) {
+	if env.CLI == nil {
+		return libNoCLI, nil
+	}
+
+	mem, cpu := env.Memory(), env.CPU()
+
+	mask, err := mem.LoadLongword(cpu, arg(argv, 0))
+	if err != nil {
+		return memoryFault(env, err)
+	}
+
+	if mask&^validControlKeys != 0 {
+		return libInvArg, nil
+	}
+
+	var old uint32
+	if enable {
+		old = env.CLI.ControlKeys(mask, 0)
+	} else {
+		old = env.CLI.ControlKeys(0, mask)
+	}
+
+	if a := arg(argv, 1); a != 0 {
+		if err := mem.StoreLongword(cpu, a, old); err != nil {
+			return memoryFault(env, writing(err))
+		}
+	}
+
+	return ssNormal, nil
+}
+
+// libDisableCtrl is LIB$DISABLE_CTRL (LIB-122):
+//
+//	LIB$DISABLE_CTRL disable-mask [,old-mask]
+//
+// disable-mask.rlu.r, old-mask.wlu.r. It stops DCL intercepting the
+// control keys disable-mask names, as SET NOCONTROL does: a Ctrl/Y typed
+// then is echoed and does nothing else. Disabling Ctrl/Y also cancels
+// the ON CONTROL_Y of the command level that ran the image, as SET
+// NOCONTROL=Y does (unconfirmed, a probe case). See controlKeys.
+func libDisableCtrl(env *corevms.Environment, argv []uint32) (uint32, error) {
+	return controlKeys(env, argv, false)
+}
+
+// libEnableCtrl is LIB$ENABLE_CTRL (LIB-138):
+//
+//	LIB$ENABLE_CTRL enable-mask [,old-mask]
+//
+// enable-mask.rlu.r, old-mask.wlu.r. It has DCL intercept the control
+// keys enable-mask names again, as SET CONTROL does. See controlKeys.
+func libEnableCtrl(env *corevms.Environment, argv []uint32) (uint32, error) {
+	return controlKeys(env, argv, true)
+}

@@ -66,7 +66,11 @@ never had.
   `corevms.Environment.Common`, not at SYS$GL_COMMON), and DO_COMMAND
   and RUN_PROGRAM (subtask 6, `librtl/chain.go`: `CLI.Chain`, then a
   tail call of `$EXIT`, `Environment.ExitFromShim`; DCL runs the text
-  after the line that ran the image, `dclshell/dclchain.go`).
+  after the line that ran the image, `dclshell/dclchain.go`), and
+  DISABLE_CTRL and ENABLE_CTRL (subtask 7, `CLI.ControlKeys`: SET
+  CONTROL's settings are each process's `Shell.control`, and
+  `ControlYEnabled` answers for the process the terminal is attached
+  to, from an atomic copy `noteControlKeys` keeps).
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
 - `docs/DEVIATIONS.md` — running log of suspected ISA/behavior fidelity issues found in

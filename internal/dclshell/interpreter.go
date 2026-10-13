@@ -3,6 +3,7 @@ package dclshell
 import (
 	"fmt"
 	"io"
+	"sync/atomic"
 
 	"github.com/tucats/govax/internal/corevms"
 	"github.com/tucats/govax/internal/dcl"
@@ -49,8 +50,11 @@ type Interpreter struct {
 	// panic.
 	In io.Reader
 
-	// control is SET [NO]CONTROL's (dclcontroly.go).
-	control controlKeys
+	// terminalNoY is set while Ctrl/Y is disabled (SET NOCONTROL=Y) in
+	// the DCL of the process the terminal is attached to: a copy of that
+	// Shell's setting for cmd/govax's key goroutine, which may not look
+	// at the processes (noteControlKeys, dclcontroly.go).
+	terminalNoY atomic.Bool
 
 	// home is process 1's DCL: the Shell embedded here, but for the while
 	// a subprocess's DCL runs, when that is the subprocess's (subcli.go).

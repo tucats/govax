@@ -19,8 +19,12 @@ var (
 	libAmbSymDef = vmsdef.LibrarySymbols["LIB$_AMBSYMDEF"]
 )
 
-// shellCLI is one process's DCL as corevms.CLI.
-type shellCLI struct{ shell *Shell }
+// shellCLI is one process's DCL as corevms.CLI: its Shell, and the
+// interpreter all the processes' DCL share.
+type shellCLI struct {
+	c     *Interpreter
+	shell *Shell
+}
 
 var _ corevms.CLI = shellCLI{}
 
@@ -122,4 +126,31 @@ func commonPrefix(a, b string) int {
 // (dclchain.go).
 func (s shellCLI) Chain(text string, program bool) {
 	s.shell.chained = &chainedCommand{text: text, program: program}
+}
+
+// ControlKeys is corevms.CLI's: SET CONTROL for the keys enable names,
+// then SET NOCONTROL for those disable names, each a LIB$M_CLI_CTRLT and
+// LIB$M_CLI_CTRLY mask. It returns the keys enabled before, in the same
+// form. Disabling Ctrl/Y cancels the ON CONTROL_Y of the command level
+// that ran the image, as SET NOCONTROL=Y does (unconfirmed, a probe
+// case).
+func (s shellCLI) ControlKeys(enable, disable uint32) uint32 {
+	var old uint32
+
+	if s.shell.control.t {
+		old |= corevms.CLICtrlT
+	}
+
+	if !s.shell.control.noY {
+		old |= corevms.CLICtrlY
+	}
+
+	s.shell.setControl(enable&corevms.CLICtrlT != 0, enable&corevms.CLICtrlY != 0, true)
+	s.shell.setControl(disable&corevms.CLICtrlT != 0, disable&corevms.CLICtrlY != 0, false)
+
+	if s.c != nil {
+		s.c.noteControlKeys()
+	}
+
+	return old
 }

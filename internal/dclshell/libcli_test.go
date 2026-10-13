@@ -13,7 +13,7 @@ import (
 // marking the abbreviation; DeleteSymbol deletes from the table named.
 func TestShellCLI_symbols(t *testing.T) {
 	shell := &Shell{}
-	cli := shellCLI{shell}
+	cli := shellCLI{shell: shell}
 
 	if st := cli.SetSymbol("DIR*ECTORY", "global value", corevms.CLIGlobalSymbol); st != ssNormal {
 		t.Fatalf("SetSymbol global: %#x", st)
@@ -67,7 +67,7 @@ func TestShellCLI_symbols(t *testing.T) {
 // another's in the same table is LIB$_AMBSYMDEF; one of the same full
 // name is replaced, and the other table isn't looked at.
 func TestShellCLI_ambiguous(t *testing.T) {
-	cli := shellCLI{&Shell{}}
+	cli := shellCLI{shell: &Shell{}}
 
 	if st := cli.SetSymbol("AB*CDEF", "1", corevms.CLILocalSymbol); st != ssNormal {
 		t.Fatalf("AB*CDEF: %#x", st)
