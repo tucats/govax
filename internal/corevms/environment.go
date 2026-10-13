@@ -162,6 +162,16 @@ type Environment struct {
 	// empty, as RUN takes no parameters.
 	CommandLine string
 
+	// Common is the text of the process's common area, which
+	// LIB$PUT_COMMON writes and LIB$GET_COMMON reads (internal/librtl's
+	// common.go): storage that "remains defined across multiple image
+	// activations in a process", so ImageRundown leaves it. A process
+	// starts with it empty, a subprocess too (unconfirmed: docs/PHASE-57,
+	// "The common area"). VMS keeps the area in the process's P1 space;
+	// govax keeps it here, since programs reach it only through the two
+	// routines.
+	Common string
+
 	// timers is the process's $SETIMR timer queue (timers.go).
 	timers []*timerRequest
 

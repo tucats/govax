@@ -222,6 +222,8 @@ var Routines = []Routine{
 	{"LIB$SET_LOGICAL", 152, libSetLogical},
 	{"LIB$DELETE_LOGICAL", 153, libDeleteLogical},
 	{"LIB$GET_COMMAND", 154, libGetCommand},
+	{"LIB$PUT_COMMON", 155, libPutCommon},
+	{"LIB$GET_COMMON", 156, libGetCommon},
 }
 
 // missing is Missing's list, and missingJSB MissingJSB's, made once.

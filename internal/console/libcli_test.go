@@ -253,3 +253,89 @@ func TestLibCLI_getCommand(t *testing.T) {
 		t.Errorf("output:\n%s\nwant:\n%s", strings.Join(got, "\n"), strings.Join(want, "\n"))
 	}
 }
+
+// putCommonSource is an image that leaves text in the common area with
+// LIB$PUT_COMMON, returning its status.
+const putCommonSource = `	.title	putcommon
+	.psect	data,noexe,wrt
+text:	.ascid	/left by an earlier image/
+	.psect	code,exe,nowrt
+	.entry	start,^m<>
+	pushaq	text
+	calls	#1,g^lib$put_common
+	ret
+	.end	start
+`
+
+// getCommonSource is an image that reads the common area with
+// LIB$GET_COMMON and writes "common: " and the text, returning the
+// first failure's status, or SS$_NORMAL.
+const getCommonSource = `	.title	getcommon
+	.psect	data,noexe,wrt
+buf:	.ascii	/common: /
+text:	.blkb	252
+desc:	.word	252
+	.byte	14,1
+	.address text
+len:	.word	0
+out:	.word	0
+	.byte	14,1
+	.address buf
+	.psect	code,exe,nowrt
+	.entry	start,^m<>
+	pushaw	len
+	pushaq	desc
+	calls	#2,g^lib$get_common
+	blbc	r0,90$
+	addw3	#8,len,out
+	pushaq	out
+	calls	#1,g^lib$put_output
+90$:	ret
+	.end	start
+`
+
+// TestLibCLI_common: the text one image leaves with LIB$PUT_COMMON is
+// there for a later image of the same process, DCL commands between; a
+// subprocess's common area is its own, empty when it starts.
+func TestLibCLI_common(t *testing.T) {
+	c, out := scheduledConsole(t, longQuantum, brbSelf)
+	put := buildImage(t, c, "putcommon", putCommonSource)
+	get := buildImage(t, c, "getcommon", getCommonSource)
+
+	d := console.NewDispatcher(c, consoletest.ConsoleGrammar(t), nil)
+	out.Reset()
+
+	for _, line := range []string{`RUN "` + get + `"`, `RUN "` + put + `"`, "X = 1", `RUN "` + get + `"`} {
+		if err := d.Dispatch(line); err != nil {
+			t.Fatalf("%s: %v", line, err)
+		}
+	}
+
+	want := []string{"common: ", "common: left by an earlier image"}
+	if got := programLines(out.String()); strings.Join(got, "\n") != strings.Join(want, "\n") {
+		t.Errorf("process 1's output:\n%s\nwant:\n%s", strings.Join(got, "\n"), strings.Join(want, "\n"))
+	}
+
+	commands := writeCommands(t,
+		`$ RUN "`+get+`"`,
+		`$ RUN "`+put+`"`,
+		`$ RUN "`+get+`"`,
+	)
+
+	out.Reset()
+
+	loginout(t, c, commands)
+
+	got, _ := splitLogoutReport(programLines(out.String()))
+	want = []string{
+		`$ RUN "` + get + `"`,
+		"common: ",
+		`$ RUN "` + put + `"`,
+		`$ RUN "` + get + `"`,
+		"common: left by an earlier image",
+	}
+
+	if strings.Join(got, "\n") != strings.Join(want, "\n") {
+		t.Errorf("the subprocess's output:\n%s\nwant:\n%s", strings.Join(got, "\n"), strings.Join(want, "\n"))
+	}
+}

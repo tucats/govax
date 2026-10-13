@@ -307,7 +307,13 @@ reading through it. A subprocess whose SYS$INPUT is a file or mailbox
   Go, on the process (`corevms.Environment`), where image rundown
   leaves it. If the probe shows SYS$GL_COMMON pointing to a P1 area, a
   later subtask moves it there (and SYS$CLRAST_2's trampoline out of
-  the way).
+  the way). **Settled further** (the author, 2026-10-13, subtask 5):
+  the area needn't be at VMS's address, only have its attributes
+  (per process, outliving each image, read and written by user mode
+  through the routines), so it stays in Go whatever the probe shows.
+  The one thing that gives up: a program that links to SYS$GL_COMMON
+  (STARLET.OLB defines it) and reads it directly gets govax's
+  trampoline bytes, not the area.
 - What the area holds when a process starts (zero length?), and whether
   a subprocess gets a copy of its parent's, are probe cases.
 
@@ -562,7 +568,7 @@ implementation per Shell (`libcli.go`), the chain run after an image
    **Done** 2026-10-13.
 3. **Logical names**: SET_LOGICAL, DELETE_LOGICAL. **Done** 2026-10-13.
 4. **GET_COMMAND.** **Done** 2026-10-13.
-5. **The common area**: GET_COMMON, PUT_COMMON.
+5. **The common area**: GET_COMMON, PUT_COMMON. **Done** 2026-10-13.
 6. **Chaining**: DO_COMMAND, RUN_PROGRAM.
 7. **Control keys**: SET CONTROL's settings per process; DISABLE_CTRL,
    ENABLE_CTRL.
@@ -667,3 +673,21 @@ implementation per Shell (`libcli.go`), the chain run after an image
   `console/libcli_test.go`'s `TestLibCLI_getCommand` (an image run from
   a procedure reads the terminal with GET_COMMAND and the data line
   with GET_INPUT).
+- **2026-10-13** — Subtask 5, the common area. `librtl/common.go` has
+  LIB$PUT_COMMON and LIB$GET_COMMON (codes 155 and 156), over
+  `corevms.Environment.Common`, the area's text, which `ImageRundown`
+  leaves. The author settled where it lives: in Go, not at
+  SYS$GL_COMMON, since only its attributes matter (see "The common
+  area"). Choices, each **unconfirmed** and a probe case:
+  - Neither routine needs a CLI (no LIB$_NOCLI).
+  - A process starts with the area empty, a subprocess too (no copy of
+    its parent's).
+  - PUT_COMMON of more than 252 characters keeps the first 252 and
+    returns LIB$_STRTRU, resultant-length 252; GET_COMMON into a fixed
+    string too short returns LIB$_STRTRU, resultant-length the stored
+    length.
+  Tests: `librtl/common_test.go` (`TestLibCommon`: empty to start, 0,
+  252, and 254 characters, a short fixed string, the area after image
+  rundown) and `console/libcli_test.go`'s `TestLibCLI_common` (one
+  image's text read by a later one in process 1, and in a LOGINOUT
+  subprocess whose area starts empty).
