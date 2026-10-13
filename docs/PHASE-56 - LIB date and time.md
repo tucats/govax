@@ -1,6 +1,6 @@
 # Phase 56 — LIB$ date and time
 
-**Status:** in progress (2026-10-13; subtasks 1 to 4 done). Needs Phases 53 and 54. Part of the
+**Status:** in progress (2026-10-13; subtasks 1 to 5 done). Needs Phases 53 and 54. Part of the
 LIB$ program laid out in `PHASE-53 - RTL LIB support.md` (Part A).
 
 ## Goal
@@ -624,6 +624,10 @@ What the VMS run should settle:
     NUMELEMENTS, ILLINISTR (no closing delimiter, empty), UNRFORCOD,
     a mixed output element, LIB$K_LANGUAGE, and a context missing its
     month names.
+  - The context and the names (subtask 5's choices): LIB$DT_FORMAT
+    redefined between two calls on one context (read once, or each
+    call); ENGLUSED and DEFFORUSE together; FREE of a zero cell and of a
+    stale copy; INIT of a cell holding garbage.
 - **Input** (CONVERT_DATE_STRING).
   - Table 3-2's eight strings, with flags 0x7F.
   - The default flags with "-MAR" (INCDATTIM).
@@ -648,7 +652,7 @@ address) print on lines marked with a tilde, as in Phase 55's probe.
 4. **Simple**: DATE_TIME, DAY, DAY_OF_WEEK.
    **Done** 2026-10-13.
 5. **Format context and logical names**: INIT/FREE_DATE_TIME_CONTEXT, the
-   names' definitions.
+   names' definitions. **Done** 2026-10-13.
 6. **Output**: FORMAT_DATE_TIME, GET_DATE_FORMAT, GET_MAXIMUM_DATE_LENGTH.
 7. **Input**: CONVERT_DATE_STRING.
 8. **The program** (`testdata/lib56/`), its console test, and the VMS
@@ -760,3 +764,54 @@ address) print on lines marked with a tilde, as in Phase 55's probe.
 
   Tested in `days_test.go` and, through a linked program's stubs, by
   `TestLibrtlDays` (`internal/console/librtl_times_test.go`).
+- **2026-10-13** — Subtask 5, the context and the names.
+  - **The names.** `internal/lnm/dtformat.go` holds the 60 predefined
+    formats (`DateFormats`, `TimeFormats`), and `NewDatabase` makes
+    LNM$DT_FORMAT_TABLE from them: shareable, under the system directory,
+    executive mode, with executive-mode LIB$DATE_FORMAT_nnn and
+    LIB$TIME_FORMAT_nnn names. A user can add their own with DEFINE/EXECUTIVE
+    /TABLE=. The table now shows in SHOW LOGICAL/STRUCTURE
+    (`TestCreateNameTable`).
+  - **The mnemonics** (`internal/librtl/dtformat.go`). One table holds
+    each mnemonic's field, fill, case, abbreviation, and digits.
+    `parseDateFormat` matches the longest code after each `!`, and
+    `partOf` says whether a format gives the date, the time, both, or
+    neither. Subtasks 6 and 7 build their engines on these items.
+  - **The context** (`internal/librtl/dtcontext.go`, shim codes 143 and
+    144). A heap block tagged "DTCX" (8 bytes) whose state is kept in Go
+    per image, found by the block's address; without a user-context, the
+    image's static context. The components are a table (`dtComponents`)
+    with English's spellings built in. `dateContext.settings` gives what
+    the engines will use: three cases of each spelling, the output
+    format's elements in order, the input format, and the ENGLUSED and
+    DEFFORUSE warnings (`outputWarning`, `inputWarning`).
+  - These are govax's choices, each marked unconfirmed in the code and
+    left for the probe:
+    - an uninitialized context reads the names on its first use and
+      keeps them;
+    - an undefined SYS$LANGUAGE is ENGLUSED, and an undefined
+      LIB$DT_FORMAT or LIB$DT_INPUT_FORMAT is DEFFORUSE. ENGLUSED wins
+      when both apply;
+    - a language's table supplies each spelled component as _U, _L, and
+      _C names (LIB$FORMAT_MNEMONICS as one name), and a component the
+      table lacks is English's, with ENGLUSED;
+    - INIT's spellings are given once, and the three cases are derived
+      from them;
+    - an initialized context takes the spellings it wasn't given from
+      its LIB$K_LANGUAGE (else English), and the standard format, with
+      DEFFORUSE, for a format it wasn't given;
+    - INIT checks its string before touching the context, so a failed
+      call allocates nothing;
+    - an output element that gives neither part or both, two elements of
+      one part, or an empty input format is ILLFORMAT. An empty output
+      element is a part left out;
+    - a LIB$K_LANGUAGE of blanks is ILLINISTR, and a one-character
+      init-string is too;
+    - INIT with a cell that names no context is LIB$_INVARG. FREE of one
+      is LIB$_BADBLOADR, and FREE of a zero cell does nothing;
+    - INIT without a user-context sets the static context;
+    - mnemonics are upper case only.
+
+  Tested in `dtformat_test.go`, `dtcontext_test.go`, and lnm's
+  `TestDTFormatTable`, and, through a linked program's stubs, by
+  `TestLibrtlDateContext` (`internal/console/librtl_times_test.go`).

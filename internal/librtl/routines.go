@@ -210,6 +210,8 @@ var Routines = []Routine{
 	{"LIB$DATE_TIME", 140, libDateTime},
 	{"LIB$DAY", 141, libDay},
 	{"LIB$DAY_OF_WEEK", 142, libDayOfWeek},
+	{"LIB$INIT_DATE_TIME_CONTEXT", 143, libInitDateTimeContext},
+	{"LIB$FREE_DATE_TIME_CONTEXT", 144, libFreeDateTimeContext},
 }
 
 // missing is Missing's list, and missingJSB MissingJSB's, made once.

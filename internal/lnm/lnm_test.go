@@ -113,8 +113,8 @@ func TestNewDatabase_standardTables(t *testing.T) {
 		}
 	}
 
-	if got := len(db.Tables()); got != 6 {
-		t.Errorf("%d tables, want 6", got)
+	if got := len(db.Tables()); got != 7 {
+		t.Errorf("%d tables, want 7", got)
 	}
 
 	proc := db.ProcessDirectory.lookup(ProcessTableName, User, false).Target
@@ -132,7 +132,7 @@ func TestNewDatabase_standardTables(t *testing.T) {
 		t.Errorf("job table: shareable=%v parent=%v", job.Shareable, job.Parent.Name)
 	}
 
-	if got := tableNames(db.Children(db.SystemDirectory)); got != SystemTableName+","+groupTable+","+jobTable {
+	if got := tableNames(db.Children(db.SystemDirectory)); got != SystemTableName+","+groupTable+","+jobTable+","+DTFormatTableName {
 		t.Errorf("Children(system directory) = %s", got)
 	}
 }
@@ -566,8 +566,8 @@ func TestDelete_tableDeletesSubtables(t *testing.T) {
 		t.Errorf("OTHER = %s", got)
 	}
 
-	if got := len(db.Tables()); got != 7 {
-		t.Errorf("%d tables, want the 6 standard ones plus OTHER", got)
+	if got := len(db.Tables()); got != 8 {
+		t.Errorf("%d tables, want the 7 standard ones plus OTHER", got)
 	}
 }
 
@@ -815,8 +815,8 @@ func TestProcessView_sharing(t *testing.T) {
 		t.Errorf("the parent's COMMON_TABLE = %s", got)
 	}
 
-	if got := len(parent.Tables()); got != 7 {
-		t.Errorf("the parent sees %d tables, want its 6 and COMMON_TABLE", got)
+	if got := len(parent.Tables()); got != 8 {
+		t.Errorf("the parent sees %d tables, want its 7 and COMMON_TABLE", got)
 	}
 }
 
@@ -904,5 +904,40 @@ func TestDeleteJobTable(t *testing.T) {
 
 	if first.DeleteJobTable(second.JobTableName) || first.DeleteJobTable(first.GroupTableName) {
 		t.Error("DeleteJobTable deleted a table that isn't a live job table")
+	}
+}
+
+// TestDTFormatTable: the predefined date and time formats, executive mode
+// in LNM$DT_FORMAT_TABLE, seen by a translation at any mode and by
+// another process; a user's own format goes beside them.
+func TestDTFormatTable(t *testing.T) {
+	db := NewDatabase(testUIC)
+
+	if len(DateFormats) != 40 || len(TimeFormats) != 20 {
+		t.Fatalf("%d date and %d time formats, want 40 and 20", len(DateFormats), len(TimeFormats))
+	}
+
+	for _, c := range []struct{ name, want string }{
+		{"LIB$DATE_FORMAT_001", "!DB-!MAAU-!Y4"},
+		{"LIB$DATE_FORMAT_012", "!MAU !DD, !Y4"},
+		{"LIB$DATE_FORMAT_040", "!Y4!MN0!D0"},
+		{"LIB$TIME_FORMAT_001", "!H04:!M0:!S0.!C2"},
+		{"LIB$TIME_FORMAT_020", "!HH4 h !MM min !SS s"},
+	} {
+		e := mustTranslate(t, db, DTFormatTableName, c.name)
+		if e.Mode != Executive || e.Equivalences[0].Value != c.want {
+			t.Errorf("%s = %q [%s], want %q [executive]", c.name, e.Equivalences[0].Value, e.Mode, c.want)
+		}
+	}
+
+	other := db.NewProcessView(testUIC, db.NewJobTable())
+	if _, err := other.Translate(DTFormatTableName, "LIB$TIME_FORMAT_011", Executive, 0); err != nil {
+		t.Errorf("another process: %v", err)
+	}
+
+	mustDefine(t, db, DTFormatTableName, "LIB$DATE_FORMAT_501", Executive, "!Y4")
+
+	if e := mustTranslate(t, other, DTFormatTableName, "LIB$DATE_FORMAT_501"); e.Equivalences[0].Value != "!Y4" {
+		t.Errorf("a user's format: %q", e.Equivalences[0].Value)
 	}
 }

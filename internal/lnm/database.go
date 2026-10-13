@@ -84,6 +84,7 @@ type sharedTables struct {
 //	    LNM$SYSTEM_TABLE       names the system table
 //	    LNM$GROUP_gggggg       names the group table
 //	    LNM$JOB_xxxxxxxx       names the job table
+//	    LNM$DT_FORMAT_TABLE    names the date and time formats' table
 //	    LNM$SYSTEM             = "LNM$SYSTEM_TABLE"
 //	    LNM$FILE_DEV           = "LNM$PROCESS", "LNM$JOB", "LNM$GROUP", "LNM$SYSTEM"
 //	    LNM$DCL_LOGICAL        = "LNM$FILE_DEV"
@@ -130,7 +131,12 @@ func NewDatabase(uic uint32) *Database {
 	// directory lists them in that order.
 	db.newPermanentTable(groupTableName(uic), sys)
 
-	return db.NewProcessView(uic, db.NewJobTable())
+	view := db.NewProcessView(uic, db.NewJobTable())
+
+	// The date and time formats LIBRTL reads (dtformat.go).
+	db.newDTFormatTable()
+
+	return view
 }
 
 // groupTableName is the name of the group table of a process whose UIC

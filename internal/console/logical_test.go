@@ -255,6 +255,7 @@ func TestCreateNameTable(t *testing.T) {
 			"    (LNM$SYSTEM_TABLE)\n"+
 			"    (LNM$GROUP_000001)\n"+
 			"    (LNM$JOB_80000100)\n"+
+			"    (LNM$DT_FORMAT_TABLE)\n"+
 			"    (NEWTAB)\n")
 
 	// Re-creating supersedes (and so empties) the table.

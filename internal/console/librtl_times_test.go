@@ -143,3 +143,35 @@ func TestLibrtlDays(t *testing.T) {
 		t.Errorf("output %q, want an $ASCTIM time", out)
 	}
 }
+
+// TestLibrtlDateContext: LIB$INIT_DATE_TIME_CONTEXT and
+// LIB$FREE_DATE_TIME_CONTEXT through their stubs: INIT allocates a
+// context into a zero cell, refuses a component with no name
+// (LIB$_ILLCOMPONENT, 0x15843C), and FREE zeroes the cell; FREE without
+// an argument frees the static context.
+func TestLibrtlDateContext(t *testing.T) {
+	r0, _ := runMacroProgram(t, "\t.PSECT\tDATA,NOEXE,WRT,LONG\n"+
+		"CTX:\t.LONG\t0\n"+
+		"COMP:\t.LONG\t12\n"+ // LIB$K_MERIDIEM_INDICATOR
+		"BAD:\t.LONG\t5\n"+
+		"MI:\t.ASCID\t/|AM|PM|/\n"+
+		"\t.PSECT\tCODE,NOWRT,EXE\n"+
+		"\t.ENTRY\tSTART,^M<>\n"+
+		"\tPUSHAQ\tMI\n\tPUSHAL\tCOMP\n\tPUSHAL\tCTX\n"+
+		"\tCALLS\t#3,G^LIB$INIT_DATE_TIME_CONTEXT\n\tBLBC\tR0,DONE\n"+
+		"\tTSTL\tCTX\n\tBEQL\tFAIL\n"+
+		"\tPUSHAQ\tMI\n\tPUSHAL\tBAD\n\tPUSHAL\tCTX\n"+
+		"\tCALLS\t#3,G^LIB$INIT_DATE_TIME_CONTEXT\n"+
+		"\tCMPL\tR0,#^X15843C\n\tBNEQ\tFAIL\n"+
+		"\tPUSHAL\tCTX\n\tCALLS\t#1,G^LIB$FREE_DATE_TIME_CONTEXT\n\tBLBC\tR0,DONE\n"+
+		"\tTSTL\tCTX\n\tBNEQ\tFAIL\n"+
+		"\tCALLS\t#0,G^LIB$FREE_DATE_TIME_CONTEXT\n\tBLBC\tR0,DONE\n"+
+		"\tMOVL\t#42,R0\n\tRET\n"+
+		"FAIL:\tCLRL\tR0\n"+
+		"DONE:\tRET\n"+
+		"\t.END\tSTART\n")
+
+	if r0 != 42 {
+		t.Errorf("R0 = %#x, want 42", r0)
+	}
+}
