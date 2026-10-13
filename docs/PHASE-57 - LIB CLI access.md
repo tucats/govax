@@ -311,9 +311,11 @@ reading through it. A subprocess whose SYS$INPUT is a file or mailbox
   the area needn't be at VMS's address, only have its attributes
   (per process, outliving each image, read and written by user mode
   through the routines), so it stays in Go whatever the probe shows.
-  The one thing that gives up: a program that links to SYS$GL_COMMON
-  (STARLET.OLB defines it) and reads it directly gets govax's
-  trampoline bytes, not the area.
+  A program that links to SYS$GL_COMMON (STARLET.OLB defines it) and
+  reads it directly gets govax's trampoline bytes, not the area; but
+  the author's search (2026-10-13) found that a VMS program may use the
+  area safely only through the two routines, not by its address, so
+  that isn't a case govax needs to support.
 - What the area holds when a process starts (zero length?), and whether
   a subprocess gets a copy of its parent's, are probe cases.
 
