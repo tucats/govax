@@ -162,3 +162,18 @@ func (env *Environment) StatusText(status uint32) string {
 func (env *Environment) ParseTime(text string) (uint64, bool) {
 	return parseVMSTime(text, env.Clock())
 }
+
+// CallService runs the system service called name ("SYS$FAO") with the
+// argument list argv, as a program's CALLS would reach it, and returns
+// its status: the RTL's jacket routines (LIB$SYS_FAO, ...) call the
+// service this way, as VMS's call it. The argument count isn't checked
+// first (argcount.go): a jacket passes a whole list. It panics for a
+// service govax doesn't implement, a mistake in the caller.
+func (env *Environment) CallService(name string, argv []uint32) (uint32, error) {
+	fn, ok := env.services.Lookup(name)
+	if !ok {
+		panic("corevms: CallService of unimplemented " + name)
+	}
+
+	return fn(env, argv)
+}

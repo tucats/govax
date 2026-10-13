@@ -1,6 +1,6 @@
 # Phase 55 — LIB$ service jackets, process resources, and measurement
 
-**Status:** in progress (subtask 1, the survey, done 2026-10-13). Needs Phases 53 and 54. Part of the
+**Status:** in progress (subtasks 1 and 2 done 2026-10-13). Needs Phases 53 and 54. Part of the
 LIB$ program laid out in `PHASE-53 - RTL LIB support.md` (Part A).
 
 ## Goal
@@ -470,6 +470,7 @@ are masked.
    the event flag and LUN pools; what the services and item tables
    already give. **Done** 2026-10-13.
 2. **Jackets**: SYS_FAO, SYS_FAOL, SYS_ASCTIM, SYS_GETMSG, SYS_TRNLOG.
+   **Done** 2026-10-13.
 3. **Item routines**: GETJPI, GETDVI, GETSYI, numeric and string forms.
 4. **Event flags and LUNs.**
 5. **Timers.**
@@ -521,3 +522,35 @@ are masked.
   with its blanks; and two smaller notes (AST_IN_PROG's errors go to
   LIB$STOP; ASN_WTH_MBX's size and quota are optional). FORMAT_SOGW_PROT
   truncates with STR$_TRU, not LIB$_STRTRU. No code changed.
+- **2026-10-13** — Subtask 2, the jackets (`internal/librtl/jackets.go`,
+  shim codes 106–110):
+  - **Shape.** Each jacket runs the service's own Go code through a new
+    `corevms.Environment.CallService(name, argv)`, so the statuses,
+    `$FAO`'s directives, `$GETMSG`'s lines, and `$TRNLOG`'s tables are the
+    services' exactly. The service writes into a scratch buffer the
+    jacket reserves below SP (`scratchBuffer`: a class S descriptor, a
+    length word, the buffer), in its own call frame as a VAX routine's
+    locals would be, and its RET gives the space back; then
+    `copyResult` copies it with `writeString`'s class rules and writes
+    the result length. A failing service status is returned with
+    nothing copied, and a truncated copy is LIB$_STRTRU, overriding the
+    service's success status (SS$_BUFFEROVF, SS$_MSGNOTFND,
+    SS$_NOTRAN): both **unconfirmed**, for the probe.
+  - **SYS_FAO and SYS_FAOL**: an output of class Z, S, or SD goes to
+    `$FAO` itself (unpadded, SS$_BUFFEROVF when cut); any other class
+    through a 256-byte scratch buffer, SS$_BUFFEROVF past 256 bytes.
+    Which classes count as "fixed-length" and the missing padding are
+    **unconfirmed** (the probe pre-fills a fixed buffer).
+  - **SYS_ASCTIM**: `$ASCTIM` into a 23-byte scratch buffer, so the whole
+    text, then copied (its condition list has LIB$_STRTRU but not
+    SS$_BUFFEROVF, which says it always copies): a 12-byte fixed string
+    gets the date and LIB$_STRTRU. flags by reference.
+  - **SYS_GETMSG**: message-id and flags by reference, flags omitted 15;
+    a 256-byte scratch buffer. **SYS_TRNLOG**: `$TRNLOG`'s six
+    arguments, the omitted ones 0, a 255-byte scratch buffer.
+  - **Tests**: `jackets_test.go` (dynamic, fixed, and varying outputs,
+    the 256-byte limit, failures, INVSTRDES, FAOL's array, ASCTIM's
+    forms and IVTIME, GETMSG's flags and array, TRNLOG's table byte and
+    NOTRAN, SP left below the caller's), and `TestLibrtlJackets` in
+    `internal/console`, a MACRO program calling LIB$SYS_FAO and
+    LIB$SYS_GETMSG through their stubs with a dynamic string.
