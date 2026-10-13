@@ -3,6 +3,7 @@ package console
 import (
 	"fmt"
 	"regexp"
+	"strings"
 	"testing"
 	"time"
 
@@ -227,6 +228,44 @@ func TestLibrtlDateOutput(t *testing.T) {
 	}
 
 	if want := regexp.MustCompile(`(?m)^SEPTEMBER 21, 1988 11:24 PM\n^MM-DD-YYYY2 HH:MM:SS\.CC2 +\n`); !want.MatchString(out) {
+		t.Errorf("output:\n%s", out)
+	}
+}
+
+// TestLibrtlDateInput: LIB$CONVERT_DATE_STRING through its stub, by a
+// context's input format: a 12-hour time read back, which LIB$SYS_ASCTIM
+// shows, and the fields it defaulted, the seconds and fraction (0x60).
+func TestLibrtlDateInput(t *testing.T) {
+	r0, out := runMacroProgram(t, "\t.PSECT\tDATA,NOEXE,WRT,LONG\n"+
+		"CTX:\t.LONG\t0\n"+
+		"INF:\t.LONG\t2\n"+ // LIB$K_INPUT_FORMAT
+		"IFMT:\t.ASCID\t/|!MAU !DD, !Y4 !H02:!M0:!S0.!C2 !MIU|/\n"+
+		"STR:\t.ASCID\t/feb 25, 1988 4:39 pm/\n"+
+		"TIME:\t.QUAD\t0\n"+
+		"DEFS:\t.LONG\t0\n"+
+		"BUF:\t.LONG\t^X010E0017,TEXT\n"+ // 23 bytes, fixed
+		"TEXT:\t.BLKB\t23\n"+
+		"\t.PSECT\tCODE,NOWRT,EXE\n"+
+		"\t.ENTRY\tSTART,^M<>\n"+
+		"\tBRB\tGO\n"+
+		"FAIL:\tCLRL\tR0\n"+
+		"DONE:\tRET\n"+
+		"GO:\tPUSHAQ\tIFMT\n\tPUSHAL\tINF\n\tPUSHAL\tCTX\n"+
+		"\tCALLS\t#3,G^LIB$INIT_DATE_TIME_CONTEXT\n\tBLBC\tR0,DONE\n"+
+		"\tPUSHAL\tDEFS\n\tCLRL\t-(SP)\n\tCLRL\t-(SP)\n\tPUSHAL\tCTX\n\tPUSHAQ\tTIME\n\tPUSHAQ\tSTR\n"+
+		"\tCALLS\t#6,G^LIB$CONVERT_DATE_STRING\n\tBLBC\tR0,DONE\n"+
+		"\tCMPL\tDEFS,#^X60\n\tBNEQ\tFAIL\n"+
+		"\tCLRL\t-(SP)\n\tPUSHAQ\tTIME\n\tPUSHAQ\tBUF\n\tCLRL\t-(SP)\n"+
+		"\tCALLS\t#4,G^LIB$SYS_ASCTIM\n\tBLBC\tR0,DONE\n"+
+		"\tPUSHAQ\tBUF\n\tCALLS\t#1,G^LIB$PUT_OUTPUT\n"+
+		"\tMOVL\t#42,R0\n\tRET\n"+
+		"\t.END\tSTART\n")
+
+	if r0 != 42 {
+		t.Errorf("R0 = %#x, want 42", r0)
+	}
+
+	if !strings.Contains(out, "25-FEB-1988 16:39:00.00\n") {
 		t.Errorf("output:\n%s", out)
 	}
 }

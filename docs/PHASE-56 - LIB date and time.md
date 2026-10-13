@@ -1,6 +1,6 @@
 # Phase 56 — LIB$ date and time
 
-**Status:** in progress (2026-10-13; subtasks 1 to 6 done). Needs Phases 53 and 54. Part of the
+**Status:** in progress (2026-10-13; subtasks 1 to 7 done). Needs Phases 53 and 54. Part of the
 LIB$ program laid out in `PHASE-53 - RTL LIB support.md` (Part A).
 
 ## Goal
@@ -655,7 +655,7 @@ address) print on lines marked with a tilde, as in Phase 55's probe.
    names' definitions. **Done** 2026-10-13.
 6. **Output**: FORMAT_DATE_TIME, GET_DATE_FORMAT, GET_MAXIMUM_DATE_LENGTH.
    **Done** 2026-10-13.
-7. **Input**: CONVERT_DATE_STRING.
+7. **Input**: CONVERT_DATE_STRING. **Done** 2026-10-13.
 8. **The program** (`testdata/lib56/`), its console test, and the VMS
    probe.
 9. **Close-out**.
@@ -858,3 +858,49 @@ address) print on lines marked with a tilde, as in Phase 55's probe.
 
   Tested in `dtoutput_test.go` and, through a linked program's stubs, by
   `TestLibrtlDateOutput` (`internal/console/librtl_times_test.go`).
+- **2026-10-13** — Subtask 7, the input routine
+  (`internal/librtl/dtinput.go`, shim code 148):
+  LIB$CONVERT_DATE_STRING, over subtask 5's settings and subtask 6's
+  `checkInputFormat`.
+  - **The matcher** (`dtMatcher`). The string, its outer blanks
+    trimmed, matches one contiguous run of the input format's items,
+    every field in the run read or omitted, and everything outside the
+    run omitted. A field may also be left out with the punctuation
+    before it. The reading that leaves out the least punctuation wins,
+    then the earliest run, then the longest value. This reads all of
+    Table 3-2 as the manual shows it ("23:" is an hour, "-1988" a year,
+    "::23" seconds), and "4:39 pm" by a format with seconds and a
+    fraction. Numbers take one digit up to their most (two, or a year's
+    or fraction's digits), longest first, so "!Y4!MN0!D0" reads
+    "19880113". A blank-filled field may begin with blanks. A fraction
+    is a decimal fraction of a second, as $BINTIM reads one. Month names
+    and meridiems match in full or abbreviated, case aside. An
+    abbreviation of two names ("JU") is LIB$_AMBDATTIM when nothing else
+    matches.
+  - **Defaults** (`complete`). An omitted field takes the defaults
+    vector's word, else today's date or 0. Its bit is set in
+    defaulted-fields, and a bit the flags lack is LIB$_INCDATTIM. The
+    time is made by `corevms.VectorTime` plus the fraction's ticks, so
+    31 February is LIB$_IVTIME, as is a string that matches nothing.
+  - These are govax's choices, each marked unconfirmed in the code and
+    left for the probe:
+    - the matching rules above: contiguous runs, the least punctuation
+      left out, then the earliest run;
+    - a year of fewer than four digits takes the rest of its digits from
+      the default year: "88" read in 2026 is 2088;
+    - a 12-hour hour without a meridiem is before noon, and a meridiem
+      without an hour leaves the default hour unchanged;
+    - a relative day name (YESTERDAY, TODAY, TOMORROW, abbreviated as
+      far as unique, "T" ambiguous) must be the whole string. Its time
+      fields are omitted (defaulted-fields 0x78), so flags of 0 make it
+      LIB$_INCDATTIM;
+    - flag bits past the seventh are ignored;
+    - two to six arguments, else LIB$_WRONUMARG; an omitted date-string
+      or date-time is LIB$_INVARG;
+    - nothing is written on an error;
+    - explicit punctuation matches case aside ("KL" for "kl").
+
+  Tested in `dtinput_test.go` (Table 3-2, the flags, other formats,
+  defaults, relative days, the routine's arguments) and, through a linked
+  program's stubs, by `TestLibrtlDateInput`
+  (`internal/console/librtl_times_test.go`).
