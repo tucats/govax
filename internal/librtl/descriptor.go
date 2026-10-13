@@ -192,22 +192,15 @@ func writePadded(env *corevms.Environment, addr uint32, s string, fill byte, pad
 
 	switch d.class {
 	case dscClassD:
-		if d.text == 0 || n > d.limit {
-			if d.text != 0 {
-				env.FreeVM(d.text)
-			}
+		// The storage is LIB$SGET1_DD's (dynamicText): kept when it's
+		// big enough, else freed and allocated anew.
+		text, err := dynamicText(env, d.text, d.length, n, false)
+		if err != nil {
+			return 0, false, err
+		}
 
-			d.text = 0
-
-			if n > 0 {
-				if d.text, err = env.AllocateVM(n, 0); err != nil {
-					return 0, false, err
-				}
-
-				if d.text == 0 {
-					return 0, false, errInsVirMem
-				}
-			}
+		if text != d.text {
+			d.text = text
 
 			if err := mem.StoreLongword(cpu, addr+4, d.text); err != nil {
 				return 0, false, writing(err)

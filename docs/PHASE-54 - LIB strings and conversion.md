@@ -1,6 +1,6 @@
 # Phase 54 — LIB$ strings, descriptors, and text conversion
 
-**Status:** in progress (2026-10-12; subtasks 1 and 2 done). Needs Phase 53. Part of the LIB$
+**Status:** in progress (2026-10-12; subtasks 1 to 3 done). Needs Phase 53. Part of the LIB$
 program laid out in `PHASE-53 - RTL LIB support.md` (Part A), which also
 has the sources and the conventions (Part B) this phase follows.
 
@@ -405,7 +405,7 @@ against VMS's own table, which the probe dumps.)
 2. **JSB stubs and data entries** in the stub area and the table.
    **Done** 2026-10-12.
 3. **Dynamic strings**: SGET1_DD, SFREE1_DD, SFREEN_DD (and JSB forms);
-   Phase 53's D-class output moved onto them.
+   Phase 53's D-class output moved onto them. **Done** 2026-10-12.
 4. **Copying and descriptors**: SCOPY_DXDX, SCOPY_R_DX, ANALYZE_SDESC (and
    JSB forms).
 5. **Characters**: LEN, CHAR, ICHAR, INDEX.
@@ -488,3 +488,32 @@ against VMS's own table, which the probe dumps.)
     `TestLibrtlMissingJSBEntryContinued` (the caller's handler sees it),
     and `TestLibrtlDataTables` (MOVTC through `G^LIB$AB_UPCASE`, and to
     EBCDIC and back).
+- **2026-10-12** — Subtask 3, dynamic strings (`internal/librtl/
+  dynstr.go`): LIB$SGET1_DD, LIB$SFREE1_DD, LIB$SFREEN_DD (codes 79 to
+  81) and the JSB entries LIB$SGET1_DD_R6, LIB$SFREE1_DD6,
+  LIB$SFREEN_DD6 (82 to 84), the first `JSBRoutines`.
+  - **The storage rule** is one function, `dynamicText`: the block at
+    the descriptor's pointer is kept when it holds the new length, judged
+    by the heap block's real size (`corevms.Environment.BlockSize`, new),
+    or by the descriptor's length when the pointer isn't a heap block's
+    (storage the program set up); otherwise the block is freed and a new
+    one allocated. `writeString`'s class D output now uses it, so a
+    dynamic string keeps its storage through a shorter value and a
+    longer one that still fits (it used to compare with DSC$W_LENGTH,
+    so it reallocated more often).
+  - **LIB$SGET1_DD** sets the length, class D (the type byte left), and
+    pointer; a length of 0 still allocates (the heap's smallest block).
+    **LIB$SFREE1_DD** frees and zeroes the pointer and length; a zero
+    pointer is SS$_NORMAL, and a pointer that isn't a heap block's is
+    LIB$_FATERRLIB with the descriptor untouched (unconfirmed).
+    **LIB$SFREEN_DD** stops at the first failure (unconfirmed). An
+    unreachable descriptor is `memoryFault`'s signaled SS$_ACCVIO.
+  - **The JSB entries** read R0's low word as the length (SGET1_DD_R6),
+    the count by value (SFREEN_DD6), and change only R0.
+  - **Tests.** `dynstr_test.go`: allocation, storage kept within the
+    block's size, a longer length's new block, length 0, freeing one and
+    several, LIB$_FATERRLIB, the JSB entries' registers, and
+    `writeString`'s kept block; `callJSB` (librtl_test.go) runs a JSB
+    routine as the XFC would. The console's `TestLibrtlDynamicStrings`
+    gets one string by CALL and one by JSB, writes and shows them, and
+    frees both with LIB$SFREEN_DD6.

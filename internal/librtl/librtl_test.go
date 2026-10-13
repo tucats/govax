@@ -261,3 +261,35 @@ func TestLibSignalNeedsCondition(t *testing.T) {
 		t.Error("LIB$SIGNAL with no condition value: want an error")
 	}
 }
+
+// callJSB runs the JSB routine registered as name through the shim table
+// with R0, R1, ... set to in (the rest 0), and returns the registers it
+// leaves.
+func callJSB(t *testing.T, env *corevms.Environment, name string, in ...uint32) corevms.JSBRegisters {
+	t.Helper()
+
+	for _, r := range JSBRoutines {
+		if r.Name != name {
+			continue
+		}
+
+		fn, ok := env.Shims().LookupJSB(r.Code)
+		if !ok {
+			t.Fatalf("%s (code %d) isn't registered", name, r.Code)
+		}
+
+		var regs corevms.JSBRegisters
+
+		copy(regs[:], in)
+
+		if err := fn(env, &regs); err != nil {
+			t.Fatalf("%s: %v", name, err)
+		}
+
+		return regs
+	}
+
+	t.Fatalf("no JSB routine %s", name)
+
+	return corevms.JSBRegisters{}
+}

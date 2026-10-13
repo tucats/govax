@@ -61,7 +61,11 @@ type JSBRoutine struct {
 }
 
 // JSBRoutines are the routines reached by JSB that govax provides.
-var JSBRoutines = []JSBRoutine{}
+var JSBRoutines = []JSBRoutine{
+	{"LIB$SGET1_DD_R6", 82, libSget1DDR6},
+	{"LIB$SFREE1_DD6", 83, libSfree1DD6},
+	{"LIB$SFREEN_DD6", 84, libSfreenDD6},
+}
 
 // Routines are the LIBRTL routines govax provides. The codes of the ones
 // that came from rtl are the ones they had there, so the stubs, and
@@ -119,6 +123,9 @@ var Routines = []Routine{
 	{"LIB$MOVTUC", 76, libMovtuc},
 	{"LIB$CRC_TABLE", 77, libCrcTable},
 	{"LIB$CRC", 78, libCrc},
+	{"LIB$SGET1_DD", 79, libSget1DD},
+	{"LIB$SFREE1_DD", 80, libSfree1DD},
+	{"LIB$SFREEN_DD", 81, libSfreenDD},
 }
 
 // missing is Missing's list, and missingJSB MissingJSB's, made once.
