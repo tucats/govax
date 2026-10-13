@@ -1,6 +1,6 @@
 # Phase 56 — LIB$ date and time
 
-**Status:** in progress (2026-10-13; subtask 1 done). Needs Phases 53 and 54. Part of the
+**Status:** in progress (2026-10-13; subtasks 1 and 2 done). Needs Phases 53 and 54. Part of the
 LIB$ program laid out in `PHASE-53 - RTL LIB support.md` (Part A).
 
 ## Goal
@@ -46,28 +46,30 @@ section, in two parts:
 
 ## Open questions
 
-- **The formatting logical names (author)**: VMS's startup procedure
+- ~~**The formatting logical names (author)**~~ (decided 2026-10-13): VMS's startup procedure
   defines them (in LNM$DT_FORMAT_TABLE). govax needs its own definitions,
   made from the manual's tables of mnemonics and predefined formats
   (clean room). Do they belong in `vax.init`, or are they built in?
-  **Proposed: built in.** A user may run a `vax.init` of their own
+  **Built in** (the author agreed, 2026-10-13). A user may run a `vax.init` of their own
   (vax.init's own header says so), and these names are system data, not
   boot steps. They'd be made with the shared tables when the logical-name
   database is created, beside LNM$SYSTEM_TABLE (`lnm/database.go`), from
   one Go table of the 60 predefined formats. Console DCL can already make
   them too (CREATE/NAME_TABLE, DEFINE/EXECUTIVE/TABLE=), so a user can
   add LIB$DATE_FORMAT_501 and later names, as the manual describes.
-  Subtask 5 settles it.
+  Subtask 5 makes them.
 - **Languages**: English only, or the manual's other predefined
   languages? **Proposed: English**, the routines built so others can be
   added. The manual says English spellings "are not taken from logical
   name translations, but rather are looked up in an internal table". A
   language given by a table of names (LNM$LANGUAGE_*name*, which a user
   can make with DCL) works through the same code.
-- **Which language the date routines use (author)**: Phase 55 gave
+- ~~**Which language the date routines use (author)**~~ (decided
+  2026-10-13): Phase 55 gave
   LIB$GET_USERS_LANGUAGE two fallbacks, the `vax.language` key and the
   host's locale. The date routines, by the manual, translate
-  SYS$LANGUAGE alone. **Proposed:** they read SYS$LANGUAGE only, so a
+  SYS$LANGUAGE alone. **Decided** (the author agreed, 2026-10-13):
+  they read SYS$LANGUAGE only, so a
   date's text doesn't change with the host's locale. A language with no
   table means English, with LIB$_ENGLUSED.
 - ~~**CONVERT_DATE_STRING's defaults** for missing fields (the manual's
@@ -640,6 +642,7 @@ address) print on lines marked with a tilde, as in Phase 55's probe.
 1. **Survey**: chapter 3 and each routine's entry; the operation codes;
    the format mnemonics. **Done** 2026-10-13.
 2. **Arithmetic**: ADD_TIMES, SUB_TIMES, MULT_DELTA_TIME, MULTF_DELTA_TIME.
+   **Done** 2026-10-13.
 3. **Conversion**: CVT(F)_TO/FROM_INTERNAL_TIME, CVT_VECTIM.
 4. **Simple**: DATE_TIME, DAY, DAY_OF_WEEK.
 5. **Format context and logical names**: INIT/FREE_DATE_TIME_CONTEXT, the
@@ -684,3 +687,24 @@ address) print on lines marked with a tilde, as in Phase 55's probe.
     GET_USERS_LANGUAGE's `vax.language` and host-locale fallbacks.
 
   No code changed.
+- **2026-10-13** — The author agreed to both proposals: the predefined
+  format names are built in, and the date routines read SYS$LANGUAGE
+  only (Open questions).
+- **2026-10-13** — Subtask 2, the arithmetic (`internal/librtl/times.go`,
+  shim codes 131–134). ADD_TIMES, SUB_TIMES, MULT_DELTA_TIME, and
+  MULTF_DELTA_TIME follow the survey's rules. These are govax's
+  choices, each marked unconfirmed in the code and left for the probe:
+  - every delta, given or computed, must be under 10,000 days
+    (LIB$_IVTIME), including the interval between two absolute times;
+  - equal times subtract to the one-tick delta, as VSI says;
+  - absolute − delta moves the time earlier, and a result before the
+    base date is LIB$_NEGTIM;
+  - an absolute time to multiply is IVTIME;
+  - a multiplier of 0 stores 0;
+  - MULTF's product is rounded to a tick, half away from zero, and a
+    reserved multiplier signals SS$_ROPRAND;
+  - any argument count but the format's is LIB$_WRONUMARG;
+  - nothing is stored on an error.
+
+  Tested in `times_test.go` and, through a linked program's stubs, by
+  `TestLibrtlTimeArithmetic` (`internal/console/librtl_times_test.go`).

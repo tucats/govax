@@ -198,6 +198,10 @@ var Routines = []Routine{
 	{"LIB$PARSE_SOGW_PROT", 128, libParseSogwProt},
 	{"LIB$PARSE_ACCESS_CODE", 129, libParseAccessCode},
 	{"LIB$GET_ACCNAM", 130, libGetAccnam},
+	{"LIB$ADD_TIMES", 131, libAddTimes},
+	{"LIB$SUB_TIMES", 132, libSubTimes},
+	{"LIB$MULT_DELTA_TIME", 133, libMultDeltaTime},
+	{"LIB$MULTF_DELTA_TIME", 134, libMultfDeltaTime},
 }
 
 // missing is Missing's list, and missingJSB MissingJSB's, made once.
