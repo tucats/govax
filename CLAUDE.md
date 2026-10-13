@@ -152,6 +152,11 @@ never had.
   (`~/Documents/Technical Doc/VMS/VSI OpenVMS RTL Library (LIB$)
   Manual.html`) is usable like DIGITAL's manuals; it describes current
   OpenVMS, so what it adds to a routine VMS 7.3 had is a probe case.
+  So are VSI's public system services pages (2026-10-13), extracted as
+  `VSI-system-services-1.txt` and `-2.txt` in the same folder: the
+  second place to look when the 5.0 System Services manual falls short,
+  on the same terms. Entries are headed by their descriptive names ("Get
+  Message — ..."), so search for those or the service's arguments.
 - `reference/vms/` — local-only (gitignored, Phase 31): licensed VMS 7.3
   definition files (SDL sources, C headers, BLISS and message listings) that
   `internal/vmsdef`'s tables were first generated from. Nothing in the build
