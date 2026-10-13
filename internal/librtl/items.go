@@ -1,8 +1,6 @@
 package librtl
 
 import (
-	"strings"
-
 	"github.com/tucats/govax/internal/corevms"
 )
 
@@ -17,9 +15,16 @@ import (
 // processes), which corevms keeps beside DCL's (corevms.ItemText in
 // StyleLIB): a PID in hexadecimal, privileges by name, a UIC by
 // identifier, the scheduling state and job mode by name, a device's
-// protection as "SYSTEM=RWLP,...", a truth as TRUE or FALSE, and every
-// other number as an unsigned decimal integer. A string item's trailing
-// blanks (JPI$_USERNAME's, SYI$_VERSION's) are left out.
+// protection as "SYSTEM=RWPL,...", a truth as TRUE or FALSE, and every
+// other number as an unsigned decimal integer. A string item is written
+// as the service returns it, trailing blanks and all (VMS 7.1's
+// JPI$_USERNAME was "SYSTEM      ", SYI$_VERSION "V7.1    ":
+// testdata/lib55).
+//
+// Item code 0 isn't an error: it ends the item list the routine builds,
+// so the service returns nothing and the routine its zeroed value, 0,
+// with SS$_NORMAL (VMS 7.1's LIB$GETJPI; the same is assumed of the
+// other two, unconfirmed).
 //
 // On VMS each routine allocates a local event flag with LIB$GET_EF for
 // its synchronous call, and so may return LIB$_INSEF; govax's call the
@@ -27,16 +32,30 @@ import (
 // (the survey's "No event flag of their own").
 
 // maxItemArgs is the most arguments each item routine's format has:
-// more is LIB$_WRONUMARG (unconfirmed; the survey's "Argument counts").
-// The VSI manual's LIB$GETDVI has a seventh, a multipath device's path
-// name, which VMS 7.3 predates.
+// more is LIB$_WRONUMARG (VMS 7.1 for LIB$GETJPI; testdata/lib55). The
+// VSI manual's LIB$GETDVI has a seventh, a multipath device's path name,
+// which VMS 7.3 predates.
 const maxItemArgs = 6
 
-// wrongItemArgs reports whether argv has no item code or more arguments
-// than the format allows.
-func wrongItemArgs(argv []uint32) bool {
-	return tooFewArgs(argv, 1) || len(argv) > maxItemArgs
+// The fewest arguments each routine takes: enough to reach its first
+// output, the value (VMS 7.1's LIB$GETJPI was LIB$_WRONUMARG with one or
+// two arguments and took four, and its LIB$GETSYI took two;
+// testdata/lib55). That LIB$GETJPI's three and LIB$GETDVI's fewer than
+// four are LIB$_WRONUMARG follows the rule, unconfirmed.
+const (
+	minJPIArgs = 4
+	minDVIArgs = 4
+	minSYIArgs = 2
+)
+
+// wrongItemArgs reports whether argv has fewer than least arguments or
+// more than the format allows.
+func wrongItemArgs(argv []uint32, least int) bool {
+	return tooFewArgs(argv, least) || len(argv) > maxItemArgs
 }
+
+// endOfList is the item item code 0 gives: the routine's value, still 0.
+var endOfList = corevms.Item{Form: corevms.FormNumber, Data: "\x00\x00\x00\x00"}
 
 // optionalName reads the string argument at addr, of any class, and
 // whether one was given (addr not 0).
@@ -52,8 +71,8 @@ func optionalName(env *corevms.Environment, addr uint32) (name string, named boo
 
 // itemResult writes item's value as LIB$'s item routines do: for a
 // numeric item, its value to the longword at value (a quadword if wide
-// and the item is 8 bytes) if value isn't 0; and its text (a string
-// item's without trailing blanks) to the string at text if that isn't 0,
+// and the item is 8 bytes) if value isn't 0; and its text to the string
+// at text if that isn't 0,
 // with the characters written to the word at length. A string item with
 // no text argument is LIB$_INVARG. Returns SS$_NORMAL or LIB$_STRTRU,
 // or the string statuses.
@@ -82,9 +101,6 @@ func itemResult(env *corevms.Environment, item corevms.Item, wide bool, value, t
 	}
 
 	s := env.ItemText(item.Form, item.Data, corevms.StyleLIB)
-	if item.Form == corevms.FormString {
-		s = strings.TrimRight(s, " ")
-	}
 
 	stored, truncated, err := writeString(env, text, s)
 	if err != nil {
@@ -118,13 +134,17 @@ func itemResult(env *corevms.Environment, item corevms.Item, wide bool, value, t
 // the string statuses, or $GETJPI's (SS$_BADPARAM for an item it lacks,
 // SS$_NONEXPR, SS$_NOPRIV, SS$_NOMOREPROC, ...).
 func libGetjpi(env *corevms.Environment, argv []uint32) (uint32, error) {
-	if wrongItemArgs(argv) {
+	if wrongItemArgs(argv, minJPIArgs) {
 		return libWroNumArg, nil
 	}
 
 	code, err := env.Memory().LoadLongword(env.CPU(), arg(argv, 0))
 	if err != nil {
 		return memoryFault(env, err)
+	}
+
+	if code == 0 {
+		return itemResult(env, endOfList, true, arg(argv, 3), arg(argv, 4), arg(argv, 5))
 	}
 
 	name, named, err := optionalName(env, arg(argv, 2))
@@ -155,7 +175,7 @@ func libGetjpi(env *corevms.Environment, argv []uint32) (uint32, error) {
 // as $GETDVI has it. Returns as LIB$GETJPI does, with $GETDVI's statuses
 // (SS$_NOSUCHDEV, SS$_IVDEVNAM, ...).
 func libGetdvi(env *corevms.Environment, argv []uint32) (uint32, error) {
-	if wrongItemArgs(argv) {
+	if wrongItemArgs(argv, minDVIArgs) {
 		return libWroNumArg, nil
 	}
 
@@ -164,6 +184,10 @@ func libGetdvi(env *corevms.Environment, argv []uint32) (uint32, error) {
 	code, err := mem.LoadLongword(cpu, arg(argv, 0))
 	if err != nil {
 		return memoryFault(env, err)
+	}
+
+	if code == 0 {
+		return itemResult(env, endOfList, false, arg(argv, 3), arg(argv, 4), arg(argv, 5))
 	}
 
 	var channel uint16
@@ -202,7 +226,7 @@ func libGetdvi(env *corevms.Environment, argv []uint32) (uint32, error) {
 // LIB$GETJPI does, with $GETSYI's statuses (SS$_NOSUCHNODE,
 // SS$_NOMORENODE, ...).
 func libGetsyi(env *corevms.Environment, argv []uint32) (uint32, error) {
-	if wrongItemArgs(argv) {
+	if wrongItemArgs(argv, minSYIArgs) {
 		return libWroNumArg, nil
 	}
 
@@ -211,6 +235,10 @@ func libGetsyi(env *corevms.Environment, argv []uint32) (uint32, error) {
 	code, err := mem.LoadLongword(cpu, arg(argv, 0))
 	if err != nil {
 		return memoryFault(env, err)
+	}
+
+	if code == 0 {
+		return itemResult(env, endOfList, true, arg(argv, 1), arg(argv, 2), arg(argv, 3))
 	}
 
 	csidadr := arg(argv, 4)

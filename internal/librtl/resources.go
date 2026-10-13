@@ -93,12 +93,12 @@ func writeResult(env *corevms.Environment, addr uint32, v int32) error {
 	return env.Memory().StoreLongword(env.CPU(), addr, uint32(v))
 }
 
-// allocate gives the lowest number in [first, last] whose bit in the set
-// at bits is clear (bit n-base for number n), setting the bit, or -1 and
-// false when they're all set. Which free number VMS hands out first
-// isn't documented: lowest first is unconfirmed (the survey).
+// allocate gives the highest number in [first, last] whose bit in the
+// set at bits is clear (bit n-base for number n), setting the bit, or -1
+// and false when they're all set. VMS 7.1 handed out the highest free
+// number first (flags from 63 down, LUNs from 119 down: testdata/lib55).
 func allocate(bits *uint64, base, first, last int32) (int32, bool) {
-	for n := first; n <= last; n++ {
+	for n := last; n >= first; n-- {
 		if bit := uint64(1) << (n - base); *bits&bit == 0 {
 			*bits |= bit
 
@@ -110,12 +110,12 @@ func allocate(bits *uint64, base, first, last int32) (int32, bool) {
 }
 
 // nextEF allocates in the flag set at bits the flag GET_EF would give:
-// the lowest free one of 1 to 23, else of 32 to 63; -1 and false when
-// none is free.
+// the highest free one of 32 to 63, else of 1 to 23 (freed ones; VMS
+// 7.1 gave 61 with 5, 6, and 7 free); -1 and false when none is free.
 func nextEF(bits *uint64) (int32, bool) {
-	ef, ok := allocate(bits, 0, firstLowEF, lastLowEF)
+	ef, ok := allocate(bits, 0, firstHighEF, lastHighEF)
 	if !ok {
-		ef, ok = allocate(bits, 0, firstHighEF, lastHighEF)
+		ef, ok = allocate(bits, 0, firstLowEF, lastLowEF)
 	}
 
 	return ef, ok
@@ -125,9 +125,8 @@ func nextEF(bits *uint64) (int32, bool) {
 //
 //	LIB$GET_EF event-flag-number.wl.r
 //
-// It allocates a local event flag, the lowest free one (32 at image
-// start, since 1 to 23 start reserved; unconfirmed), and writes its
-// number; with none free it writes -1 and returns LIB$_INSEF.
+// It allocates a local event flag, the highest free one (63 at image
+// start), and writes its number; with none free it writes -1 and returns LIB$_INSEF.
 func libGetEF(env *corevms.Environment, argv []uint32) (uint32, error) {
 	p := pools(env)
 	bits := p.flags
@@ -205,8 +204,8 @@ func libReserveEF(env *corevms.Environment, argv []uint32) (uint32, error) {
 //
 //	LIB$GET_LUN logical-unit-number.wl.r
 //
-// It allocates a logical unit number from 100 to 119, the lowest free
-// one (unconfirmed), and writes it; with none free it writes -1 and
+// It allocates a logical unit number from 100 to 119, the highest free
+// one (119 at image start), and writes it; with none free it writes -1 and
 // returns LIB$_INSLUN.
 func libGetLUN(env *corevms.Environment, argv []uint32) (uint32, error) {
 	p := pools(env)

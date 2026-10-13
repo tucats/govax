@@ -327,7 +327,7 @@ func TestSrchandler_catchAll(t *testing.T) {
 		t.Errorf("$EXIT's argument list %#x, SP %#x; want both below the dispatch's %#x", call.ArgList, c.GPR(registers.SP), d.sp)
 	}
 
-	want := "%SYSTEM-F-ACCVIO, access violation, reason mask=04, virtual address=00001234, PC=00003000, PS=0000001B\n"
+	want := "%SYSTEM-F-ACCVIO, access violation, reason mask=04, virtual address=00001234, PC=00003000, PSL=0000001B\n"
 	if out.String() != want {
 		t.Errorf("output %q\nwant   %q", out.String(), want)
 	}

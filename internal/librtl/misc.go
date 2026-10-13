@@ -22,6 +22,7 @@ import (
 
 var (
 	libEnglUsed = vmsdef.LibrarySymbols["LIB$_ENGLUSED"]
+	ssRoprand   = vmsdef.Symbols["SS$_ROPRAND"]
 
 	jpiAstAct = vmsdef.Symbols["JPI$_ASTACT"]
 	dviDevNam = vmsdef.Symbols["DVI$_DEVNAM"]
@@ -174,9 +175,12 @@ func waits(env *corevms.Environment) map[uint32]*pendingWait {
 // waits with $SETIMR on an event flag from LIB$GET_EF's pool instead,
 // which no $WAKE ends (LIB$_INSEF with none free). float-type (also the
 // VSI manual's) names seconds' format: VAX F (the default), D, G, or H,
-// or IEEE S or T; another is LIB$_INVARG (unconfirmed), as is a reserved
-// operand, an IEEE NaN or infinity. LIB$_WRONUMARG for no arguments or
-// more than three.
+// or IEEE S or T; VMS 7.1 took them all, and both flags (testdata/lib55).
+// Another type is read as F (VMS 7.1 took type 6 with SS$_NORMAL;
+// unconfirmed that it reads F). A VAX reserved operand signals
+// SS$_ROPRAND, as the floating-point instruction reading it would (VMS
+// 7.1); an IEEE NaN or infinity is LIB$_INVARG (unconfirmed).
+// LIB$_WRONUMARG for no arguments or more than three.
 //
 // A wait is the service's: it returns corevms.ErrWait, and the XFC runs
 // again later, so this routine is called again with the same stub frame.
@@ -204,7 +208,15 @@ func libWait(env *corevms.Environment, argv []uint32) (uint32, error) {
 		return memoryFault(env, err)
 	}
 
+	if _, known := vaxFloatTypes[floatType]; !known && floatType != floatIEEES && floatType != floatIEEET {
+		floatType = floatVAXF
+	}
+
 	hundredths, ok, err := waitHundredths(env, arg(argv, 0), floatType)
+	if errors.Is(err, vaxfloat.ErrReserved) {
+		return env.SignalFailure([]uint32{ssRoprand}, ssRoprand)
+	}
+
 	if err != nil {
 		return memoryFault(env, err)
 	}
@@ -294,8 +306,8 @@ func callWithTime(env *corevms.Environment, service string, t int64, args func(u
 // waitHundredths reads LIB$WAIT's seconds at addr, in the format
 // floatType names, and returns it in hundredths of a second, rounded to
 // the nearest (half up). ok is false, for LIB$_INVARG, for an unknown
-// float type, a value that isn't a number (a VAX reserved operand, an
-// IEEE NaN or infinity), or one outside 0 to 100,000 seconds. err is a
+// float type, an IEEE NaN or infinity, or a value outside 0 to 100,000
+// seconds. err is vaxfloat.ErrReserved for a VAX reserved operand, or a
 // memory error reading it.
 func waitHundredths(env *corevms.Environment, addr, floatType uint32) (uint64, bool, error) {
 	var seconds *big.Rat
@@ -303,9 +315,7 @@ func waitHundredths(env *corevms.Environment, addr, floatType uint32) (uint64, b
 	switch floatType {
 	case floatVAXF, floatVAXD, floatVAXG, floatVAXH:
 		v, err := loadFloat(env, vaxFloatTypes[floatType], addr)
-		if errors.Is(err, vaxfloat.ErrReserved) {
-			return 0, false, nil
-		} else if err != nil {
+		if err != nil {
 			return 0, false, err
 		}
 
@@ -414,8 +424,10 @@ func usersLanguage(env *corevms.Environment) (string, bool) {
 //
 // It writes the user's language (usersLanguage) to language by its
 // class, or "ENGLISH" with LIB$_ENGLUSED, a warning, when nothing names
-// one. A string failure or LIB$_STRTRU overrides either status, as
-// LIB$SCOPY_R_DX's would. Where VMS has only the logical name, govax
+// one. A string failure overrides either status; a truncated copy
+// doesn't (VMS 7.1 wrote "FRE" to a 3-byte string with SS$_NORMAL:
+// testdata/lib55, where the manual says LIB$_STRTRU would override it).
+// Where VMS has only the logical name, govax
 // also asks its configuration and the host (the author's choice,
 // 2026-10-13).
 func libGetUsersLanguage(env *corevms.Environment, argv []uint32) (uint32, error) {
@@ -426,13 +438,8 @@ func libGetUsersLanguage(env *corevms.Environment, argv []uint32) (uint32, error
 		lang, status = "ENGLISH", libEnglUsed
 	}
 
-	_, truncated, err := writeString(env, arg(argv, 0), lang)
-	if err != nil {
+	if _, _, err := writeString(env, arg(argv, 0), lang); err != nil {
 		return stringFailure(env, err)
-	}
-
-	if truncated {
-		return libStrTru, nil
 	}
 
 	return status, nil

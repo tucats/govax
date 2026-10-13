@@ -105,14 +105,14 @@ func TestGetjpiForms(t *testing.T) {
 	}
 }
 
-// TestGetjpiString: a string item goes to the string only, without its
-// trailing blanks; with no string argument it is LIB$_INVARG.
+// TestGetjpiString: a string item goes to the string only, trailing
+// blanks and all; with no string argument it is LIB$_INVARG.
 func TestGetjpiString(t *testing.T) {
 	env := itemFixture(t, "JPI$_USERNAME")
 	env.Process.Username = "SYSTEM"
 
 	got := call(t, env, "LIB$GETJPI", itemCode, 0, 0, itemValue, itemOut, jacketLength)
-	itemCase(t, env, "USERNAME", got, ssNormal, "SYSTEM")
+	itemCase(t, env, "USERNAME", got, ssNormal, "SYSTEM      ")
 
 	if v := longword(t, env, itemValue); v != 0xEEEEEEEE {
 		t.Errorf("a string item wrote the value: %#x", v)
@@ -188,9 +188,9 @@ func TestGetdvi(t *testing.T) {
 	}
 
 	for _, c := range []struct{ item, want string }{
-		{"DVI$_VPROT", "SYSTEM=RWLP,OWNER=RWLP,GROUP,WORLD"},
+		{"DVI$_VPROT", "SYSTEM=RWPL,OWNER=RWPL,GROUP,WORLD"},
 		{"DVI$_MBX", "TRUE"},
-		{"DVI$_ACPTYPE", "NONE"},
+		{"DVI$_ACPTYPE", "UNKNOWN"},
 	} {
 		setItem(t, env, c.item)
 
@@ -227,13 +227,13 @@ func TestGetsyi(t *testing.T) {
 	env := itemFixture(t, "SYI$_VERSION")
 
 	got := call(t, env, "LIB$GETSYI", itemCode, 0, itemOut, jacketLength)
-	itemCase(t, env, "VERSION", got, ssNormal, corevms.VersionString)
+	itemCase(t, env, "VERSION", got, ssNormal, fmt.Sprintf("%-8s", corevms.VersionString))
 
 	setItem(t, env, "SYI$_BOOTTIME")
 	env.BootTime = 0x00A1B2C3D4E5F607
 
 	got = call(t, env, "LIB$GETSYI", itemCode, itemValue, itemOut, jacketLength)
-	itemCase(t, env, "BOOTTIME", got, ssNormal, fmt.Sprint(env.BootTime))
+	itemCase(t, env, "BOOTTIME", got, ssNormal, " 8-FEB-2003 06:29:01.06")
 
 	if lo, hi := longword(t, env, itemValue), longword(t, env, itemValue+4); uint64(hi)<<32|uint64(lo) != env.BootTime {
 		t.Errorf("BOOTTIME value %#x %#x", hi, lo)
@@ -250,5 +250,44 @@ func TestGetsyi(t *testing.T) {
 
 	if got := call(t, env, "LIB$GETSYI", itemCode, 0, itemOut, 0, 0, itemName); got != vmsdef.Symbols["SS$_NOSUCHNODE"] {
 		t.Errorf("another node: %#x, want SS$_NOSUCHNODE", got)
+	}
+}
+
+// TestItemArgumentsAndItemZero: each routine needs enough arguments to
+// reach its value (LIB$GETJPI with one or two was LIB$_WRONUMARG on VMS
+// 7.1), and item code 0 ends the item list: SS$_NORMAL and a value of 0.
+func TestItemArgumentsAndItemZero(t *testing.T) {
+	env := itemFixture(t, "JPI$_STATE")
+
+	for _, c := range []struct {
+		name string
+		argv []uint32
+		want uint32
+	}{
+		{"LIB$GETJPI", []uint32{itemCode}, libWroNumArg},
+		{"LIB$GETJPI", []uint32{itemCode, 0, 0}, libWroNumArg},
+		{"LIB$GETDVI", []uint32{itemCode, 0, 0}, libWroNumArg},
+		{"LIB$GETSYI", []uint32{itemCode}, libWroNumArg},
+	} {
+		if got := call(t, env, c.name, c.argv...); got != c.want {
+			t.Errorf("%s with %d arguments = %#x, want %#x", c.name, len(c.argv), got, c.want)
+		}
+	}
+
+	putLongword(t, env, itemCode, 0)
+
+	for _, c := range []struct {
+		name string
+		argv []uint32
+	}{
+		{"LIB$GETJPI", []uint32{itemCode, 0, 0, itemValue}},
+		{"LIB$GETDVI", []uint32{itemCode, 0, 0, itemValue}},
+		{"LIB$GETSYI", []uint32{itemCode, itemValue}},
+	} {
+		putLongword(t, env, itemValue, 0x55555555)
+
+		if got := call(t, env, c.name, c.argv...); got != ssNormal || longword(t, env, itemValue) != 0 {
+			t.Errorf("%s of item 0 = %#x, value %#x; want SS$_NORMAL and 0", c.name, got, longword(t, env, itemValue))
+		}
 	}
 }

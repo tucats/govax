@@ -56,28 +56,28 @@ func TestSysFaoDynamic(t *testing.T) {
 	}
 }
 
-// TestSysFaoFixed: a fixed string is $FAO's own buffer: the text cut to
-// it is SS$_BUFFEROVF, and a shorter text leaves the rest unpadded.
+// TestSysFaoFixed: a fixed string gets a copy of the text, as VMS gives
+// it one (testdata/lib55): cut to it is LIB$_STRTRU, and a shorter text
+// is padded with blanks.
 func TestSysFaoFixed(t *testing.T) {
 	env := jacketFixture(t)
 	putDescriptor(t, env, jacketIn, jacketInText, "!UL apple!%S")
 	putDesc(t, env, jacketOut, 4, dscClassS, jacketOutText)
 
-	if got := call(t, env, "LIB$SYS_FAO", jacketIn, jacketLength, jacketOut, 5); got != ssBufferOvf || bytesAt(t, env, jacketOutText, 4) != "5 ap" || resultLength(t, env)&0xFFFF != 4 {
+	if got := call(t, env, "LIB$SYS_FAO", jacketIn, jacketLength, jacketOut, 5); got != libStrTru || bytesAt(t, env, jacketOutText, 4) != "5 ap" || resultLength(t, env)&0xFFFF != 4 {
 		t.Errorf("cut: %#x, %q, length %d", got, bytesAt(t, env, jacketOutText, 4), resultLength(t, env)&0xFFFF)
 	}
 
 	putBytes(t, env, jacketOutText, "xxxxxxxxxx")
 	putDesc(t, env, jacketOut, 10, dscClassS, jacketOutText)
 
-	if got := call(t, env, "LIB$SYS_FAO", jacketIn, 0, jacketOut, 1); got != ssNormal || bytesAt(t, env, jacketOutText, 10) != "1 applexxx" {
+	if got := call(t, env, "LIB$SYS_FAO", jacketIn, 0, jacketOut, 1); got != ssNormal || bytesAt(t, env, jacketOutText, 10) != "1 apple   " {
 		t.Errorf("short: %#x, %q", got, bytesAt(t, env, jacketOutText, 10))
 	}
 }
 
-// TestSysFaoLimits: any other class gets at most 256 bytes
-// (SS$_BUFFEROVF), and a varying string cut shorter still is
-// LIB$_STRTRU.
+// TestSysFaoLimits: the text is at most 256 bytes (SS$_BUFFEROVF), and a
+// varying string cut shorter still is LIB$_STRTRU.
 func TestSysFaoLimits(t *testing.T) {
 	env := jacketFixture(t)
 	putDescriptor(t, env, jacketIn, jacketInText, "!300*X")
@@ -107,6 +107,7 @@ func TestSysFaoFailures(t *testing.T) {
 		t.Errorf("bad directive: %#x, %q", got, descText(t, env, jacketOut))
 	}
 
+	putDescriptor(t, env, jacketIn, jacketInText, "ok")
 	putDesc(t, env, jacketOut, 5, 3, jacketOutText) // DSC$K_CLASS_V
 
 	if got := call(t, env, "LIB$SYS_FAO", jacketIn, 0, jacketOut); got != libInvStrDes {
@@ -244,6 +245,15 @@ func TestSysTrnlog(t *testing.T) {
 
 	if got := call(t, env, "LIB$SYS_TRNLOG", jacketIn, 0, jacketOut); got != vmsdef.Symbols["SS$_NOTRAN"] || descText(t, env, jacketOut) != "NOSUCH" {
 		t.Errorf("undefined: %#x, %q", got, descText(t, env, jacketOut))
+	}
+
+	// The disable mask is by reference: bit 2 passes over the process
+	// table, where JACKET is.
+	putDescriptor(t, env, jacketIn, jacketInText, "JACKET")
+	putLongword(t, env, jacketArg, 4)
+
+	if got := call(t, env, "LIB$SYS_TRNLOG", jacketIn, 0, jacketOut, 0, 0, jacketArg); got != vmsdef.Symbols["SS$_NOTRAN"] {
+		t.Errorf("process table disabled: %#x, want SS$_NOTRAN", got)
 	}
 }
 

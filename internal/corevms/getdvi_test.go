@@ -188,7 +188,7 @@ func TestGetdvi_completionAndErrors(t *testing.T) {
 		want            uint32
 	}{
 		"a more privileged channel": {ch, 0, ssNoPriv},
-		"an unassigned channel":     {0x7F0, 0, ssNoPriv},
+		"an unassigned channel":     {0x7F0, 0, ssIvChan},
 		"no device":                 {0, 0, ssIvDevNam},
 		"an empty name":             {0, a.desc(""), ssIvLogNam},
 		"a long name":               {0, a.desc(strings.Repeat("X", 64)), ssIvLogNam},

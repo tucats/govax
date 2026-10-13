@@ -3,6 +3,7 @@ package librtl
 import (
 	"errors"
 	"math"
+	"strings"
 	"testing"
 
 	"github.com/tucats/gopackages/app-cli/settings"
@@ -120,7 +121,7 @@ func TestWaitZero(t *testing.T) {
 }
 
 // TestWaitNoWake: with LIB$K_NOWAKE the wait is on an event flag from
-// LIB$GET_EF's pool (32 at image start), which a $WAKE doesn't end and
+// LIB$GET_EF's pool (63 at image start), which a $WAKE doesn't end and
 // setting the flag does; the flag goes back to the pool.
 func TestWaitNoWake(t *testing.T) {
 	env := waitFixture(t)
@@ -131,8 +132,8 @@ func TestWaitNoWake(t *testing.T) {
 		t.Fatalf("first call: %v, want ErrWait", err)
 	}
 
-	if p := waits(env)[waitFP]; p == nil || p.efn != firstHighEF {
-		t.Fatalf("pending wait %+v, want flag %d", p, firstHighEF)
+	if p := waits(env)[waitFP]; p == nil || p.efn != lastHighEF {
+		t.Fatalf("pending wait %+v, want flag %d", p, lastHighEF)
 	}
 
 	if st, err := env.CallService("SYS$WAKE", []uint32{0, 0}); err != nil || st != ssNormal {
@@ -143,7 +144,7 @@ func TestWaitNoWake(t *testing.T) {
 		t.Fatalf("after $WAKE: %v, want ErrWait", err)
 	}
 
-	if st, err := env.CallService("SYS$SETEF", []uint32{firstHighEF}); err != nil || st&1 == 0 {
+	if st, err := env.CallService("SYS$SETEF", []uint32{lastHighEF}); err != nil || st&1 == 0 {
 		t.Fatalf("$SETEF: %#x, %v", st, err)
 	}
 
@@ -151,8 +152,8 @@ func TestWaitNoWake(t *testing.T) {
 		t.Fatalf("after $SETEF: %#x, %v", st, err)
 	}
 
-	if got := call(t, env, "LIB$GET_EF", 0x1000); got != ssNormal || longword(t, env, 0x1000) != firstHighEF {
-		t.Errorf("GET_EF after the wait: %#x, flag %d, want %d", got, longword(t, env, 0x1000), firstHighEF)
+	if got := call(t, env, "LIB$GET_EF", 0x1000); got != ssNormal || longword(t, env, 0x1000) != lastHighEF {
+		t.Errorf("GET_EF after the wait: %#x, flag %d, want %d", got, longword(t, env, 0x1000), lastHighEF)
 	}
 }
 
@@ -191,13 +192,11 @@ func TestWaitInvalid(t *testing.T) {
 		{"negative", floatVAXF, func() { putSeconds(t, env, vaxfloat.F, -1) }},
 		{"too long", floatVAXF, func() { putSeconds(t, env, vaxfloat.F, 100_001) }},
 		{"G past the limit", floatVAXG, func() { putSeconds(t, env, vaxfloat.G, 100_000.01) }},
-		{"reserved", floatVAXF, func() { putLongword(t, env, waitSecs, 0x8000) }},
 		{"NaN", floatIEEET, func() {
 			q := math.Float64bits(math.NaN())
 			putLongword(t, env, waitSecs, uint32(q))
 			putLongword(t, env, waitSecs+4, uint32(q>>32))
 		}},
-		{"float type 6", 6, func() { putSeconds(t, env, vaxfloat.F, 1) }},
 	} {
 		c.set()
 		putLongword(t, env, waitType, c.ftype)
@@ -205,6 +204,28 @@ func TestWaitInvalid(t *testing.T) {
 		if st, err := tryWait(t, env, waitSecs, 0, waitType); err != nil || st != libInvArg {
 			t.Errorf("%s: %#x, %v, want LIB$_INVARG", c.name, st, err)
 		}
+	}
+
+	// A reserved operand signals SS$_ROPRAND, as VMS 7.1 did. (This
+	// fixture has no SYS$SRCHANDLER stub to signal through, so the signal
+	// fails with an error.)
+	putLongword(t, env, waitSecs, 0x8000)
+	putLongword(t, env, waitType, floatVAXF)
+
+	if _, err := tryWait(t, env, waitSecs, 0, waitType); err == nil || !strings.Contains(err.Error(), "signal") {
+		t.Errorf("reserved operand: err = %v, want a signal", err)
+	}
+}
+
+// TestWaitUnknownFloatType: a float type past IEEE T is read as F (VMS
+// 7.1 took type 6 with SS$_NORMAL).
+func TestWaitUnknownFloatType(t *testing.T) {
+	env := waitFixture(t)
+	putSeconds(t, env, vaxfloat.F, 0)
+	putLongword(t, env, waitType, 6)
+
+	if st, err := tryWait(t, env, waitSecs, 0, waitType); err != nil || st != ssNormal {
+		t.Errorf("float type 6: %#x, %v, want SS$_NORMAL", st, err)
 	}
 }
 
@@ -292,9 +313,9 @@ func TestAsnWthMbx(t *testing.T) {
 
 	putLongword(t, env, itemChannel, uint32(word(t, env, asnMbxChan)))
 
-	// $GETDVI's status for a channel that isn't assigned is SS$_NOPRIV.
-	if got := call(t, env, "LIB$GETDVI", itemCode, itemChannel, 0, 0, itemOut); got != vmsdef.Symbols["SS$_NOPRIV"] {
-		t.Errorf("the mailbox's channel after the failure: %#x, want SS$_NOPRIV", got)
+	// $GETDVI's status for a channel that isn't assigned is SS$_IVCHAN.
+	if got := call(t, env, "LIB$GETDVI", itemCode, itemChannel, 0, 0, itemOut); got != vmsdef.Symbols["SS$_IVCHAN"] {
+		t.Errorf("the mailbox's channel after the failure: %#x, want SS$_IVCHAN", got)
 	}
 }
 
@@ -351,7 +372,8 @@ func TestGetUsersLanguage(t *testing.T) {
 
 	putDescriptor(t, env, itemOut, itemOutText, "ABC")
 
-	if got := call(t, env, "LIB$GET_USERS_LANGUAGE", itemOut); got != libStrTru || descText(t, env, itemOut) != "ITA" {
-		t.Errorf("short string: %#x, %q; want LIB$_STRTRU, ITA", got, descText(t, env, itemOut))
+	// Cut short, the status is still SS$_NORMAL (VMS 7.1).
+	if got := call(t, env, "LIB$GET_USERS_LANGUAGE", itemOut); got != ssNormal || descText(t, env, itemOut) != "ITA" {
+		t.Errorf("short string: %#x, %q; want SS$_NORMAL, ITA", got, descText(t, env, itemOut))
 	}
 }

@@ -54,7 +54,7 @@ func TestGetmsg(t *testing.T) {
 		// The severity is the code's, not the definition's.
 		{testSSDuplnam &^ 7, 15, "%SYSTEM-W-DUPLNAM, duplicate name"},
 		// The text is returned unformatted.
-		{testSSAccvio, 1, "access violation, reason mask=!XB, virtual address=!XH, PC=!XH, PS=!XL"},
+		{testSSAccvio, 1, "access violation, reason mask=!XB, virtual address=!XL, PC=!XL, PSL=!XL"},
 		// Other facilities.
 		{testRMSFnf, 15, "%RMS-E-FNF, file not found"},
 		{testLIBBadccc, 15, "%LIB-W-BADCCC, illegal compilation code (!UL.) in module !AC"},
@@ -144,7 +144,7 @@ func TestPutmsg(t *testing.T) {
 		{
 			"a system exception message's $FAO parameters",
 			a.msgvec(0, testSSAccvio, 4, 0x1000, 0x2000, 0x1B), 0,
-			"%SYSTEM-F-ACCVIO, access violation, reason mask=04, virtual address=00001000, PC=00002000, PS=0000001B\n",
+			"%SYSTEM-F-ACCVIO, access violation, reason mask=04, virtual address=00001000, PC=00002000, PSL=0000001B\n",
 		},
 		{
 			"an RMS STV as a parameter, then as a secondary message",
@@ -169,7 +169,7 @@ func TestPutmsg(t *testing.T) {
 		{
 			"parameters missing from the vector leave the text unformatted",
 			a.msgvec(0, testSSAccvio, 4), 0,
-			"%SYSTEM-F-ACCVIO, access violation, reason mask=!XB, virtual address=!XH, PC=!XH, PS=!XL\n",
+			"%SYSTEM-F-ACCVIO, access violation, reason mask=!XB, virtual address=!XL, PC=!XL, PSL=!XL\n",
 		},
 		{
 			"a code with no message",
@@ -296,7 +296,7 @@ func TestPutmsg_actionRoutine(t *testing.T) {
 // TestMessages_generated pins a few generated message definitions.
 func TestMessages_generated(t *testing.T) {
 	for code, want := range map[uint32]vmsdef.Message{
-		testSSAccvio: {Facility: "SYSTEM", Ident: "ACCVIO", Text: "access violation, reason mask=!XB, virtual address=!XH, PC=!XH, PS=!XL", FAOCount: 4},
+		testSSAccvio: {Facility: "SYSTEM", Ident: "ACCVIO", Text: "access violation, reason mask=!XB, virtual address=!XL, PC=!XL, PSL=!XL", FAOCount: 4},
 		testRMSFnf:   {Facility: "RMS", Ident: "FNF", Text: "file not found"},
 		// A line the listing cut before its /FAO qualifier: counted.
 		0xC63: {Facility: "SYSTEM", Ident: "EMULATED", Text: "an instruction not implemented on this processor was emulated at PC=!XH, PS=!XL", FAOCount: 2},

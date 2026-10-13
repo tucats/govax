@@ -24,13 +24,40 @@ var lib55Dir = filepath.Join("..", "..", "testdata", "lib55")
 // expectedLib55Differences are the lines of VMS's output govax doesn't
 // reproduce, each with why: the line VMS printed, by its case's name and
 // the line's first word.
-var expectedLib55Differences = map[string]string{}
+var expectedLib55Differences = map[string]string{
+	// LIB$SYS_FAO's 300 bytes into a 400-byte varying string: VMS set
+	// CURLEN 256 but left zeros at the start of the text, where govax
+	// copies the 256 X's; unexplained (the case shows only the first
+	// longword).
+	"SYS_FAO 300 into VS 400/D_V:": "VMS's text unexplained",
+
+	// LIB$SYS_ASCTIM of a delta of 10,001 days: VMS returned SS$_IVTIME
+	// but wrote 42 characters, unseen, to the string and its length;
+	// govax writes nothing on a failure.
+	"SYS_ASCTIM 10001 days/D:": "VMS's text unseen",
+	"SYS_ASCTIM 10001 days/L:": "VMS's text unseen",
+
+	// A mounted volume's owner is the process that mounted it, whose PID
+	// differs between the systems (VMS's 00000115, govax's process 1).
+	"GETDVI PID/V:": "the mounter's PID",
+	"GETDVI PID/D:": "the mounter's PID",
+
+	// VMS's output went to a file (direct I/O), govax's to the terminal
+	// (buffered I/O), so the buffered I/O count's width differs.
+	"SHOW_TIMER/TIMDSC":        "output device",
+	"SHOW_TIMER 3/TIMDSC":      "output device",
+	"SHOW_TIMER code 0/TIMDSC": "output device",
+
+	// A wait rounded to nothing: VMS's clock moved a tick (10ms) meanwhile,
+	// govax's quantum clock didn't.
+	"WAIT 0.004/Q:": "clock granularity",
+}
 
 // runLib55 assembles, links, and runs lib55.mar as lib55.com does on
 // VMS: with LIB55_DISK naming a mounted RD51 volume labeled LIB55 (the
-// exchange volume's twin), NLA0: defined (as vax.init defines it), and
-// no host locale, so LIB$GET_USERS_LANGUAGE falls back to ENGLISH as VMS
-// does without SYS$LANGUAGE.
+// exchange volume's twin), NLA0: defined (as vax.init defines it),
+// SYS$LANGUAGE ENGLISH in the system table (as on the VAX: lib55.log),
+// and no host locale.
 func runLib55(t *testing.T) (uint32, string) {
 	t.Helper()
 
@@ -55,6 +82,7 @@ func runLib55(t *testing.T) (uint32, string) {
 
 	for _, line := range []string{
 		"DEFINE LIB55_DISK DUA1:",
+		"DEFINE/SYSTEM SYS$LANGUAGE ENGLISH", // as on the VAX the probe ran on
 		"DEFINE/DEVICE NLA0/DEVCLASS=MAILBOX/DEVTYPE=NULL/DEVCHAR=202702849/OWNUIC=65537/DEVBUFSIZ=512",
 	} {
 		if err := d.Dispatch(line); err != nil {

@@ -17,7 +17,8 @@ import (
 // item is written -- a PID as eight hexadecimal digits, a privilege mask
 // as a list of names -- and this file is where they share it. Where they
 // differ (DCL's numbers are signed, LIB$'s unsigned; F$GETDVI calls a
-// device with no ACP ILLEGAL, LIB$GETDVI NONE), the Style says which.
+// device with no ACP ILLEGAL, LIB$GETDVI UNKNOWN), the Style says which.
+// VMS 7.1's run of testdata/lib55 settled LIB$'s forms.
 
 // ItemForm is how an information item's value is written as text.
 type ItemForm int
@@ -32,6 +33,10 @@ const (
 
 	// FormHex is a longword written as eight hexadecimal digits (a PID).
 	FormHex
+
+	// FormOwner is a process's owner's PID (JPI$_OWNER): FormHex, but
+	// DCL writes no owner (0) as an empty string.
+	FormOwner
 
 	// FormPrivileges is a privilege mask, written as the names of its
 	// privileges, in bit order, separated by commas (PrivilegeList).
@@ -60,8 +65,10 @@ const (
 	// (F11V2, MTA, ...).
 	FormACP
 
-	// FormProtection is a protection mask written as
-	// "SYSTEM=RWLP,OWNER=RWLP,GROUP=RWLP,WORLD=RWLP" (DVI$_VPROT).
+	// FormProtection is a protection mask (DVI$_VPROT), written
+	// "SYSTEM=RWPL,OWNER=RWPL,GROUP=RWPL,WORLD=RWPL" in LIB$'s style and
+	// "SYSTEM=RWED, OWNER=RWED, GROUP=RWED, WORLD=RWED" in DCL's
+	// (ProtectionText).
 	FormProtection
 )
 
@@ -85,9 +92,9 @@ type forms struct{ dcl, lib ItemForm }
 func both(f ItemForm) forms { return forms{f, f} }
 
 // jpiForms are the $GETJPI items not written as FormNumber, by $JPIDEF
-// name. LIB$GETJPI writes in hexadecimal only JPI$_PID (Table LIB-5's
-// "all others" are unsigned decimal), where F$GETJPI writes the owner's
-// and the master process's PIDs that way too.
+// name. Table LIB-5 names only JPI$_PID as hexadecimal, but VMS writes
+// the owner's PID that way in LIB$GETJPI too (testdata/lib55), and so,
+// by its kind, the master process's.
 var jpiForms = map[string]forms{
 	"JPI$_ACCOUNT":    both(FormString),
 	"JPI$_CLINAME":    both(FormString),
@@ -95,8 +102,8 @@ var jpiForms = map[string]forms{
 	"JPI$_TERMINAL":   both(FormString),
 	"JPI$_USERNAME":   both(FormString),
 	"JPI$_PID":        both(FormHex),
-	"JPI$_MASTER_PID": {FormHex, FormNumber},
-	"JPI$_OWNER":      {FormHex, FormNumber},
+	"JPI$_MASTER_PID": both(FormHex),
+	"JPI$_OWNER":      both(FormOwner),
 	"JPI$_AUTHPRIV":   both(FormPrivileges),
 	"JPI$_CURPRIV":    both(FormPrivileges),
 	"JPI$_IMAGPRIV":   both(FormPrivileges),
@@ -108,18 +115,17 @@ var jpiForms = map[string]forms{
 }
 
 // syiForms are the $GETSYI items not written as FormNumber, by $SYIDEF
-// name. LIB$GETSYI's entry names no special forms: every numeric item is
-// an unsigned decimal integer, the boot time's quadword among them
-// (unconfirmed, the survey). F$GETSYI writes the boot time as a time,
-// CLUSTER_MEMBER as a truth, and the CSID in hexadecimal.
+// name. LIB$GETSYI's entry names no special forms, but VMS writes the
+// boot time as a time, CLUSTER_MEMBER as a truth, and the CSID in
+// hexadecimal in LIB$GETSYI as F$GETSYI does (testdata/lib55).
 var syiForms = map[string]forms{
 	"SYI$_VERSION":        both(FormString),
 	"SYI$_NODE_SWVERS":    both(FormString),
 	"SYI$_NODE_SWTYPE":    both(FormString),
 	"SYI$_NODENAME":       both(FormString),
-	"SYI$_BOOTTIME":       {FormTime, FormNumber},
-	"SYI$_CLUSTER_MEMBER": {FormBoolean, FormNumber},
-	"SYI$_NODE_CSID":      {FormHex, FormNumber},
+	"SYI$_BOOTTIME":       both(FormTime),
+	"SYI$_CLUSTER_MEMBER": both(FormBoolean),
+	"SYI$_NODE_CSID":      both(FormHex),
 }
 
 // dviForms are the $GETDVI items not written as FormNumber or
@@ -203,7 +209,17 @@ func (env *Environment) ItemText(form ItemForm, data string, s Style) string {
 		return data
 	case FormHex:
 		return fmt.Sprintf("%08X", ItemLongword(data))
+	case FormOwner:
+		if s == StyleDCL && ItemLongword(data) == 0 {
+			return ""
+		}
+
+		return fmt.Sprintf("%08X", ItemLongword(data))
 	case FormPrivileges:
+		if s == StyleLIB {
+			return libPrivilegeList(ItemQuadword(data))
+		}
+
 		return PrivilegeList(ItemQuadword(data))
 	case FormTime:
 		text, _ := formatVMSTime(ItemQuadword(data), false)
@@ -224,7 +240,7 @@ func (env *Environment) ItemText(form ItemForm, data string, s Style) string {
 	case FormACP:
 		return acpName(ItemLongword(data), s)
 	case FormProtection:
-		return ProtectionText(ItemLongword(data))
+		return ProtectionText(ItemLongword(data), s)
 	}
 
 	if s == StyleLIB {
@@ -251,13 +267,14 @@ func codeName(prefix string, code uint32, names ...string) string {
 var acpNames = []string{"F11V1", "F11V2", "MTA", "NET", "REM", "JNL"}
 
 // acpName is DVI$_ACPTYPE's text: the ACP type's name, and, for a
-// device with no ACP (code 0), NONE in LIB$'s style, ILLEGAL in DCL's
-// (the DCL Dictionary: "if the device is not mounted"). A code no name
-// has is written in decimal.
+// device with no ACP (code 0), UNKNOWN in LIB$'s style (VMS 7.1, for
+// NLA0:; Table LIB-4 says NONE) and ILLEGAL in DCL's (the DCL Dictionary:
+// "if the device is not mounted"; VMS 7.1 too). A code no name has is
+// written in decimal.
 func acpName(code uint32, s Style) string {
 	if code == 0 {
 		if s == StyleLIB {
-			return "NONE"
+			return "UNKNOWN"
 		}
 
 		return "ILLEGAL"
@@ -266,32 +283,42 @@ func acpName(code uint32, s Style) string {
 	return codeName("DVI$C_ACP_", code, acpNames...)
 }
 
-// ProtectionText writes a device's protection mask as Table LIB-4 shows
-// DVI$_VPROT: for System, Owner, Group, and World in turn (four bits
-// each, from bit 0), the category's name, then "=" and the letters of
-// the accesses it has (a clear bit grants one: Read, Write, Logical I/O,
-// Physical I/O) if it has any, with commas between categories and no
-// blanks: "SYSTEM=RWLP,OWNER=RWLP,GROUP=RWLP,WORLD".
-func ProtectionText(mask uint32) string {
+// ProtectionText writes a device's protection mask (DVI$_VPROT): for
+// System, Owner, Group, and World in turn (four bits each, from bit 0),
+// the category's name, then "=" and the letters of the accesses it has
+// (a clear bit grants one) if it has any. The two styles differ, as VMS
+// 7.1 wrote a mask granting everything (testdata/lib55): LIB$'s letters
+// are Read, Write, Physical, and Logical I/O, its categories separated by
+// a comma alone ("SYSTEM=RWPL,OWNER=RWPL,GROUP=RWPL,WORLD=RWPL"), and
+// DCL's are a file's Read, Write, Execute, and Delete, separated by a
+// comma and a blank ("SYSTEM=RWED, OWNER=RWED, GROUP=RWED, WORLD=RWED").
+// That the letters are in bit order is unconfirmed: the run granted
+// every access.
+func ProtectionText(mask uint32, s Style) string {
 	categories := []string{"SYSTEM", "OWNER", "GROUP", "WORLD"}
 	parts := make([]string, len(categories))
+	letters, separator := "RWPL", ","
+
+	if s == StyleDCL {
+		letters, separator = "RWED", ", "
+	}
 
 	for i, name := range categories {
-		var letters strings.Builder
+		var granted strings.Builder
 
-		for bit, letter := range "RWLP" {
+		for bit, letter := range letters {
 			if mask>>(4*i+bit)&1 == 0 {
-				letters.WriteRune(letter)
+				granted.WriteRune(letter)
 			}
 		}
 
 		parts[i] = name
-		if letters.Len() > 0 {
-			parts[i] += "=" + letters.String()
+		if granted.Len() > 0 {
+			parts[i] += "=" + granted.String()
 		}
 	}
 
-	return strings.Join(parts, ",")
+	return strings.Join(parts, separator)
 }
 
 // PrivilegeList writes a privilege mask as F$GETJPI and LIB$GETJPI do:
@@ -300,6 +327,30 @@ func PrivilegeList(mask uint64) string {
 	var names []string
 
 	for bit, name := range PrivilegeNames {
+		if name != "" && mask&(1<<bit) != 0 {
+			names = append(names, name)
+		}
+	}
+
+	return strings.Join(names, ",")
+}
+
+// libPrivilegeNames are LIB$GETJPI's names for the privilege bits that
+// have two: VMS 7.1 wrote bit 5 as both of its names, IMPERSONATE then
+// DETACH, and bits 9 and 13 by their newer names (testdata/lib55, whose
+// line ended at 132 characters, after bit 15: the names of later bits
+// are F$GETJPI's, unconfirmed).
+var libPrivilegeNames = map[int]string{5: "IMPERSONATE,DETACH", 9: "NOACNT", 13: "SETPRI"}
+
+// libPrivilegeList is PrivilegeList with LIB$GETJPI's names.
+func libPrivilegeList(mask uint64) string {
+	var names []string
+
+	for bit, name := range PrivilegeNames {
+		if lib, ok := libPrivilegeNames[bit]; ok {
+			name = lib
+		}
+
 		if name != "" && mask&(1<<bit) != 0 {
 			names = append(names, name)
 		}

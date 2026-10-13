@@ -1,6 +1,6 @@
 # Phase 55 — LIB$ service jackets, process resources, and measurement
 
-**Status:** in progress (subtasks 1 to 7 done 2026-10-13). Needs Phases 53 and 54. Part of the
+**Status:** in progress (subtasks 1 to 8 done 2026-10-13). Needs Phases 53 and 54. Part of the
 LIB$ program laid out in `PHASE-53 - RTL LIB support.md` (Part A).
 
 ## Goal
@@ -485,8 +485,8 @@ are masked.
 7. **Protection text**: FORMAT_SOGW_PROT, PARSE_SOGW_PROT,
    PARSE_ACCESS_CODE, from the VSI manual. **Done** 2026-10-13.
 8. **The program** (`testdata/lib55/`), its console test, and the VMS
-   probe (SHOW_TIMER's layout, GETJPI's text forms). Program and test
-   written 2026-10-13; the VMS run is next.
+   probe (SHOW_TIMER's layout, GETJPI's text forms). **Done**
+   2026-10-13 (VMS 7.1's run, and govax changed to match it).
 9. **Close-out**.
 
 ## Progress log
@@ -797,3 +797,70 @@ are masked.
   have no identification area and zeroed record attributes). Only a file
   fragmented enough to need one shows it; settling it needs a VMS-written
   multi-header file to compare (a later probe).
+- **2026-10-13** — Subtask 8, the VMS run: OpenVMS V7.1 on simh's VAX
+  8600 ran `lib55.com` (`testdata/lib55/vax/`; README.md's "The run").
+  The procedure showed SYS$LANGUAGE defined as ENGLISH in the system
+  table, and every routine of the phase resolved at LINK, the 7.x
+  protection routines and LIB$GET_ACCNAM included. govax now does what
+  VMS did; `TestLib55Oracle` matches all 600 lines but the nine it lists
+  in `expectedLib55Differences` (two unexplained jacket edge cases, the
+  mounter's PID, the output device's I/O counts, a clock tick). What the
+  run settled, against the survey's choices:
+  - **Jackets.** LIB$SYS_FAO and SYS_FAOL format into a 256-byte buffer
+    for every output class, a fixed string too, then copy it padded:
+    a fixed string too short is LIB$_STRTRU, not SS$_BUFFEROVF, and 300
+    bytes into a 400-byte fixed string is SS$_BUFFEROVF with 256.
+    LIB$SYS_TRNLOG's disable mask is by reference (VMS read a "2" at
+    address 2). SYS_ASCTIM of a 10,001-day delta returned SS$_IVTIME
+    but wrote 42 unseen characters; FAO's overflow into a varying
+    string left zeros in its text: both left as expected differences.
+    LIB$SYS_GETMSG showed SS$_ACCVIO's VAX text (`virtual
+    address=!XL, PC=!XL, PSL=!XL`); govax's message table had the
+    Alpha's (`!XH`, `PS=`), now overridden (`vmsdef`'s `vaxMessages`).
+  - **Item routines.** LIB$ writes JPI$_OWNER in hexadecimal, and
+    F$GETSYI's special forms (BOOTTIME a date, CLUSTER_MEMBER a truth,
+    NODE_CSID hexadecimal) in LIB$GETSYI too; a string item keeps its
+    trailing blanks ("SYSTEM      ", "V7.1    "); DVI$_VPROT's letters are
+    RWPL in LIB$ and RWED, with ", " between categories, in F$GETDVI;
+    DVI$_ACPTYPE 0 is UNKNOWN in LIB$ (ILLEGAL in DCL, confirmed);
+    F$GETJPI's OWNER is empty when there's none; LIB$GETJPI's privilege
+    names are the newer ones for bits 9 and 13 (NOACNT, SETPRI) and both
+    for bit 5 (IMPERSONATE,DETACH). Item code 0 is SS$_NORMAL with a
+    value of 0 (it ends the item list); LIB$GETJPI with one or two
+    arguments is LIB$_WRONUMARG (govax: fewer than reach the value). A
+    privately mounted volume's DVI$_PID and DVI$_OWNUIC are the
+    mounter's, which in govax is process 1 (`deviceOwner`). `$ASSIGN`
+    of an unknown device is SS$_NOSUCHDEV (was SS$_IVDEVNAM), and
+    `$GETDVI` of an unassigned channel SS$_IVCHAN (was SS$_NOPRIV).
+  - **Event flags and LUNs** go highest first: flags 63 down to 32, then
+    the freed ones of 1 to 23; LUNs 119 down.
+  - **Timers.** SHOW_TIMER's whole line is
+    ` ELAPSED:    0 00:00:00.00  CPU: 0:00:00.00  BUFIO: 0  DIRIO: 1  FAULTS: 2 `
+    (the elapsed time `$ASCTIM`'s delta form, a blank at the end); one
+    statistic's line is the manual's table's (` ELAPSED TIME = ...`,
+    ` CPU TIME = ...`, ` BUFFERED I/O COUNT = n`, ` DIRECT I/O COUNT =
+    n`, ` PAGE FAULT COUNT = n`). A heap block starts with the tag
+    "TIMR", the start time at offset 20 (govax: four counts between,
+    their order unconfirmed); the routines check the tag where the
+    handle points, so a handle of 0 is an access violation. STAT_TIMER's
+    elapsed time is a negative delta, -1 when no time passed.
+  - **Miscellaneous.** LIB$WAIT takes all six float types and NOWAKE on
+    7.1; a type past 5 is accepted (govax reads it as F); a reserved
+    operand signals SS$_ROPRAND. A `$WAKE` already pending ends a wait
+    at once (confirmed). LIB$GET_USERS_LANGUAGE's truncated copy is
+    still SS$_NORMAL. LIB$GET_ACCNAM exists on 7.1 and its FILE table is
+    READ, WRITE, EXECUTE, DELETE, CONTROL, the rest empty: govax now has
+    the routine for the FILE class (shim code 130; SS$_NOCLASS for
+    another).
+  - **Protection text.** FORMAT_SOGW_PROT: an empty access name takes
+    FILE's letter; protection-length is the whole text's length even
+    when cut; fewer arguments are LIB$_INVARG. PARSE_SOGW_PROT reads
+    names and access letters as runs of letters, so blanks are errors
+    (the VSI manual's "spacing is ignored" isn't 7.1's); a category not
+    named is denied everything; a category named twice is LIB$_INVARG;
+    an unknown name LIB$_UNRKEY at its start; other faults
+    LIB$_SYNTAXERR, bad letters reported at the start of the run; a
+    comma at the end is accepted. PARSE_ACCESS_CODE checks each
+    character (LIB$_INVARG at it), and puts the granted bits into the
+    access mask where the category's bits are, keeping its other bits,
+    at the category's lowest set bit, for any category word.

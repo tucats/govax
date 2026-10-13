@@ -2,12 +2,12 @@ package librtl
 
 import "testing"
 
-// TestGetEF: LIB$GET_EF hands out 32 to 63, lowest first, then -1 and
+// TestGetEF: LIB$GET_EF hands out 63 down to 32, highest first, then -1 and
 // LIB$_INSEF; a flag freed is handed out again.
 func TestGetEF(t *testing.T) {
 	env := fixture(t)
 
-	for want := int32(firstHighEF); want <= lastHighEF; want++ {
+	for want := int32(lastHighEF); want >= firstHighEF; want-- {
 		if got := call(t, env, "LIB$GET_EF", 0x1000); got != ssNormal || int32(longword(t, env, 0x1000)) != want {
 			t.Fatalf("GET_EF: %#x, flag %d, want %d", got, int32(longword(t, env, 0x1000)), want)
 		}
@@ -62,15 +62,21 @@ func TestFreeReserveEF(t *testing.T) {
 		}
 	}
 
-	// 1 and 23 are free now, and lower than 32.
-	for _, want := range []uint32{1, 23, 32} {
+	// 1 and 23 are free now, but 63 down to 32 come first (VMS 7.1).
+	for want := uint32(lastHighEF); want >= firstHighEF; want-- {
+		if got := call(t, env, "LIB$GET_EF", 0x1000); got != ssNormal || longword(t, env, 0x1000) != want {
+			t.Fatalf("GET_EF: %#x, flag %d, want %d", got, longword(t, env, 0x1000), want)
+		}
+	}
+
+	for _, want := range []uint32{23, 1} {
 		if got := call(t, env, "LIB$GET_EF", 0x1000); got != ssNormal || longword(t, env, 0x1000) != want {
 			t.Errorf("GET_EF: %#x, flag %d, want %d", got, longword(t, env, 0x1000), want)
 		}
 	}
 }
 
-// TestLUN: LIB$GET_LUN hands out 100 to 119, lowest first, then -1 and
+// TestLUN: LIB$GET_LUN hands out 119 down to 100, highest first, then -1 and
 // LIB$_INSLUN; FREE_LUN frees one (LUNALRFRE when free) and refuses a
 // number outside the pool (LUNRESSYS).
 func TestLUN(t *testing.T) {
@@ -81,7 +87,7 @@ func TestLUN(t *testing.T) {
 		t.Errorf("FREE_LUN(100) at start: %#x, want LIB$_LUNALRFRE", got)
 	}
 
-	for want := uint32(firstLUN); want <= lastLUN; want++ {
+	for want := uint32(lastLUN); want >= firstLUN; want-- {
 		if got := call(t, env, "LIB$GET_LUN", 0x1000); got != ssNormal || longword(t, env, 0x1000) != want {
 			t.Fatalf("GET_LUN: %#x, unit %d, want %d", got, longword(t, env, 0x1000), want)
 		}
@@ -118,7 +124,7 @@ func TestPoolsPerImage(t *testing.T) {
 		t.Errorf("RESERVE_EF(5) in the next image: %#x, want LIB$_EF_ALRRES", got)
 	}
 
-	if got := call(t, env, "LIB$GET_LUN", 0x1000); got != ssNormal || longword(t, env, 0x1000) != firstLUN {
+	if got := call(t, env, "LIB$GET_LUN", 0x1000); got != ssNormal || longword(t, env, 0x1000) != lastLUN {
 		t.Errorf("GET_LUN in the next image: %#x, unit %d", got, longword(t, env, 0x1000))
 	}
 }

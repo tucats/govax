@@ -4,10 +4,11 @@ import "testing"
 
 // TestLibrtlResources: a program allocates event flags and LUNs through
 // the routines' stubs and shows what each call wrote and returned with
-// LIB$SYS_FAO (docs/PHASE-55, subtask 4): GET_EF gives 32 first, flag 1
-// starts reserved (LIB$_EF_ALRRES) and GET_EF gives it once FREE_EF frees
-// it, and GET_LUN gives 100, which FREE_LUN frees once (LIB$_LUNALRFRE
-// the second time).
+// LIB$SYS_FAO (docs/PHASE-55, subtask 4): GET_EF gives 63 first, flag 1
+// starts reserved (LIB$_EF_ALRRES), and once FREE_EF frees it GET_EF
+// still gives the highest free flag, 62; GET_LUN gives 119, which
+// FREE_LUN frees once (LIB$_LUNALRFRE the second time). VMS 7.1's order
+// (testdata/lib55).
 func TestLibrtlResources(t *testing.T) {
 	r0, out := runMacroProgram(t, "\t.PSECT\tDATA,NOEXE,WRT,LONG\n"+
 		"OUT:\t.LONG\t^X020E0000,0\n"+
@@ -37,7 +38,7 @@ func TestLibrtlResources(t *testing.T) {
 	}
 
 	// SS$_NORMAL, LIB$_EF_ALRRES, LIB$_LUNALRFRE.
-	want := "32 00000001 001582A4 00000001 1 00000001 100 00000001 00000001 001582BC\n"
+	want := "63 00000001 001582A4 00000001 62 00000001 119 00000001 00000001 001582BC\n"
 	if out != want {
 		t.Errorf("output %q, want %q", out, want)
 	}

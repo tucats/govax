@@ -44,7 +44,7 @@ func TestLibrtlTimers(t *testing.T) {
 		t.Errorf("R0 = %#x, want 1", r0)
 	}
 
-	want := regexp.MustCompile(`^ ELAPSED: 0 00:00:\d\d\.\d\d  CPU: 0:00:\d\d\.\d\d  BUFIO: 0  DIRIO: 0  FAULTS: \d+\n` +
+	want := regexp.MustCompile(`^ ELAPSED:    0 00:00:\d\d\.\d\d  CPU: 0:00:\d\d\.\d\d  BUFIO: 0  DIRIO: 0  FAULTS: \d+ \n` +
 		`00000001 3 00000001 12345671 00000001 00000000\n$`)
 	if !want.MatchString(out) {
 		t.Errorf("output %q, want a match for %s", out, want)

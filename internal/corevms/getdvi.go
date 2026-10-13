@@ -58,8 +58,8 @@ var dviItemsByName = map[string]dviItemFunc{
 	"DVI$_UNIT":       dviLong(unitNumber),
 
 	// Ownership and use.
-	"DVI$_PID":       dviLong(func(d *iodev.Device) uint32 { return d.PID }),
-	"DVI$_OWNUIC":    dviLong(func(d *iodev.Device) uint32 { return d.OwnUIC }),
+	"DVI$_PID":       func(env *Environment, d *iodev.Device) itemValue { return itemLong(env.deviceOwner(d).pid) },
+	"DVI$_OWNUIC":    func(env *Environment, d *iodev.Device) itemValue { return itemLong(env.deviceOwner(d).uic) },
 	"DVI$_REFCNT":    dviLong(func(d *iodev.Device) uint32 { return d.RefCnt }),
 	"DVI$_ERRCNT":    dviLong(func(d *iodev.Device) uint32 { return d.ErrCnt }),
 	"DVI$_OPCNT":     func(env *Environment, d *iodev.Device) itemValue { return itemLong(env.operationCount(d)) },
@@ -252,6 +252,33 @@ func (env *Environment) acpType(d *iodev.Device) uint32 {
 	return 0
 }
 
+// owner is a device's owner: the process that has it (DVI$_PID) and the
+// owner's UIC (DVI$_OWNUIC).
+type owner struct{ pid, uic uint32 }
+
+// deviceOwner is d's owner: the device record's, unless it has none and
+// a volume is mounted on it. A volume mounted privately belongs to the
+// process that mounted it, so VMS 7.1 reported the mounting process's
+// PID and UIC for the probe's exchange volume (testdata/lib55); govax's
+// MOUNT is the console's, so the mounter is process 1, the first in the
+// table.
+func (env *Environment) deviceOwner(d *iodev.Device) owner {
+	o := owner{d.PID, d.OwnUIC}
+	if o.pid != 0 || o.uic != 0 || env.Mounts == nil {
+		return o
+	}
+
+	if _, mounted := env.Mounts.Lookup(d.Name); !mounted {
+		return o
+	}
+
+	if procs := env.Processes(); len(procs) > 0 {
+		return owner{procs[0].Process.PID, procs[0].Process.UIC}
+	}
+
+	return o
+}
+
 // deviceProtection is d's protection mask (DVI$_VPROT): a mailbox's
 // (mailbox.go), and 0 for any other device, whose protection govax
 // doesn't model.
@@ -368,9 +395,9 @@ func serviceSysGetdvi(env *Environment, argv []uint32) (uint32, error) {
 // dviTarget finds the device a $GETDVI names, or the status saying why it
 // can't (0 if it can):
 //
-//   - chan nonzero: the device the channel is assigned to; SS$_NOPRIV if
-//     the channel isn't assigned, or was assigned from a more privileged
-//     mode than the caller's.
+//   - chan nonzero: the device the channel is assigned to; SS$_IVCHAN if
+//     the channel isn't assigned (VMS 7.1: testdata/lib55), SS$_NOPRIV if
+//     it was assigned from a more privileged mode than the caller's.
 //   - otherwise devnam, a device name or a logical name for one (a
 //     leading "_" suppresses translation, and a colon and anything after
 //     it is ignored): SS$_IVLOGNAM if it is empty or longer than 63
@@ -379,7 +406,11 @@ func serviceSysGetdvi(env *Environment, argv []uint32) (uint32, error) {
 func (env *Environment) dviTarget(chanNum, devnam uint32) (*iodev.Device, uint32) {
 	if chanNum != 0 {
 		c, found := env.findChannel(chanNum)
-		if !found || c.Mode < uint32(env.cpu.PSL().CurMod()) {
+		if !found {
+			return nil, ssIvChan
+		}
+
+		if c.Mode < uint32(env.cpu.PSL().CurMod()) {
 			return nil, ssNoPriv
 		}
 

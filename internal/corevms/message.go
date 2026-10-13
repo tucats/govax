@@ -17,7 +17,7 @@ import (
 // code an exception is signaled with — has a *message*: a line of text
 // saying what it means. SS$_ACCVIO (12) is
 //
-//	%SYSTEM-F-ACCVIO, access violation, reason mask=04, virtual address=00000000, PC=00001234, PS=0000001B
+//	%SYSTEM-F-ACCVIO, access violation, reason mask=04, virtual address=00000000, PC=00001234, PSL=0000001B
 //
 // The line has four parts:
 //

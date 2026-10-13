@@ -12,7 +12,7 @@ func TestLibrtlProtection(t *testing.T) {
 		"OUT:\t.LONG\t^X020E0000,0\n"+
 		"CTRL:\t.ASCID\t/!XL !XW !XW !UW !XL !XW !UW/\n"+
 		"MASK:\t.WORD\t^XEC00\n"+
-		"PSTR:\t.ASCID\t/GROUP=RW, w/\n"+
+		"PSTR:\t.ASCID\t/GROUP=RW,w/\n"+
 		"ASTR:\t.ASCID\t/RWE/\n"+
 		"GRP:\t.WORD\t^X0F00\n"+
 		"PROT:\t.WORD\t0\nOWN:\t.WORD\t0\nPEND:\t.WORD\t0\n"+
@@ -40,7 +40,7 @@ func TestLibrtlProtection(t *testing.T) {
 	}
 
 	want := "System: RWED, Owner: RWED, Group: RW, World: R\n" +
-		"00000001 FC00 FF00 11 00000001 0700 3\n"
+		"00000001 FCFF FF00 10 00000001 0700 3\n"
 	if out != want {
 		t.Errorf("output %q, want %q", out, want)
 	}

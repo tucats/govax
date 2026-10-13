@@ -69,3 +69,15 @@ What's new:
    the access violation of a call to an undefined symbol).
 3. Copy `LIB55.OUT` and `LIB55.LOG` back as `vax/lib55-vax.txt` and
    `vax/lib55.log`.
+
+## The run
+
+2026-10-13, OpenVMS V7.1 on simh's VAX 8600 (the exchange volume needed
+ods2's contiguous-extent fix first: LIB55.MAR had been spread over
+three file headers, which VMS couldn't open). SYS$LANGUAGE was defined
+as ENGLISH in the system table, so the oracle's console defines it too;
+MACRO and LINK wrote no messages, and the program exited with
+SS$_NORMAL. VMS settled every choice the survey left open (the phase
+doc's progress log lists them), and govax now does what VMS did, but for
+the lines `TestLib55Oracle` lists as expected differences. If
+`lib55.mar` changes, run it on VMS again and replace `vax/`.

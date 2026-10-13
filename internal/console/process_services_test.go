@@ -821,7 +821,7 @@ func TestPutmsg_assembledProgram(t *testing.T) {
 	}
 
 	want := "%SYSTEM-F-ABORT, abort\n" +
-		"%SYSTEM-F-ACCVIO, access violation, reason mask=04, virtual address=00000200, PC=00000300, PS=0000001B\n"
+		"%SYSTEM-F-ACCVIO, access violation, reason mask=04, virtual address=00000200, PC=00000300, PSL=0000001B\n"
 	if out.String() != want {
 		t.Errorf("output = %q, want %q", out.String(), want)
 	}

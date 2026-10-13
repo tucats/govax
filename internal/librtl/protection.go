@@ -21,7 +21,12 @@ import (
 // use each name's first letter: R, W, E, D for a file. Only the first
 // four entries matter here, as each category has four bits.
 
-var strTru = vmsdef.LibrarySymbols["STR$_TRU"]
+var (
+	strTru        = vmsdef.LibrarySymbols["STR$_TRU"]
+	ssNoClass     = vmsdef.Symbols["SS$_NOCLASS"]
+	libSyntaxErr  = vmsdef.LibrarySymbols["LIB$_SYNTAXERR"]
+	protectionAll = uint16(0xFFFF) // every access denied to every category
+)
 
 // categories is the number of ownership categories, and categoryBits the
 // bits each has in a protection mask.
@@ -74,8 +79,9 @@ func readNameVector(env *corevms.Environment, addr uint32, fallback []string) ([
 }
 
 // accessLetters returns each access bit's letter, uppercase: the first
-// letter of its name in the table at addr (FILE's when addr is 0), or 0
-// for a bit whose name is empty.
+// letter of its name in the table at addr (FILE's when addr is 0). A
+// bit whose name is empty takes FILE's letter (VMS 7.1 wrote a table of
+// ALPHA, BETA, "", DELTA as "ABED": testdata/lib55).
 func accessLetters(env *corevms.Environment, addr uint32) ([categoryBits]byte, error) {
 	var letters [categoryBits]byte
 
@@ -85,9 +91,11 @@ func accessLetters(env *corevms.Environment, addr uint32) ([categoryBits]byte, e
 	}
 
 	for i, name := range names {
-		if name != "" {
-			letters[i] = upper(name[0])
+		if name == "" {
+			name = fileAccessNames[i]
 		}
+
+		letters[i] = upper(name[0])
 	}
 
 	return letters, nil
@@ -103,10 +111,12 @@ func upper(ch byte) byte {
 	return ch
 }
 
-// isBlank reports whether ch is a blank or a tab, which the parsers
-// ignore ("spacing is ignored").
-func isBlank(ch byte) bool {
-	return ch == ' ' || ch == '\t'
+// isLetter reports whether ch is an ASCII letter: the parsers' names
+// and access letters are runs of them. Anything else, a blank included,
+// ends one (VMS 7.1 refused "System: RWED" at its blank, though the VSI
+// manual says spacing is ignored: testdata/lib55).
+func isLetter(ch byte) bool {
+	return upper(ch) >= 'A' && upper(ch) <= 'Z'
 }
 
 // optionalText reads the string the descriptor at addr describes, or
@@ -145,11 +155,13 @@ func storeOptionalWord(env *corevms.Environment, addr uint32, v uint16) error {
 // of access names"; unconfirmed). The names and separators default to
 // the categories' full names, ": ", and ", ". The output is written by
 // writeString's class rules, truncation being STR$_TRU (the entry's
-// status, a warning); protection-length gets the length written.
-// LIB$_WRONUMARG for fewer than six arguments or more than seven;
-// LIB$_INVARG when protection-mask or protection-string is omitted.
+// status, a warning); protection-length gets the whole text's length,
+// even when it was cut (VMS 7.1). LIB$_WRONUMARG for more than seven
+// arguments (unconfirmed); LIB$_INVARG when protection-mask or
+// protection-string is omitted, fewer arguments included (VMS 7.1 with
+// five).
 func libFormatSogwProt(env *corevms.Environment, argv []uint32) (uint32, error) {
-	if tooFewArgs(argv, 6) || len(argv) > 7 {
+	if len(argv) > 7 {
 		return libWroNumArg, nil
 	}
 
@@ -185,12 +197,12 @@ func libFormatSogwProt(env *corevms.Environment, argv []uint32) (uint32, error) 
 
 	text := formatProtection(mask, letters, names, ownSep, listSep)
 
-	stored, truncated, err := writeString(env, dest, text)
+	_, truncated, err := writeString(env, dest, text)
 	if err != nil {
 		return stringFailure(env, err)
 	}
 
-	if err := storeOptionalWord(env, arg(argv, 6), uint16(stored)); err != nil {
+	if err := storeOptionalWord(env, arg(argv, 6), uint16(len(text))); err != nil {
 		return memoryFault(env, writing(err))
 	}
 
@@ -216,7 +228,7 @@ func formatProtection(mask uint16, letters [categoryBits]byte, names []string, o
 		var granted []byte
 
 		for bit := range categoryBits {
-			if mask>>(c*categoryBits+bit)&1 == 0 && letters[bit] != 0 {
+			if mask>>(c*categoryBits+bit)&1 == 0 {
 				granted = append(granted, letters[bit])
 			}
 		}
@@ -230,26 +242,36 @@ func formatProtection(mask uint16, letters [categoryBits]byte, names []string, o
 	return b.String()
 }
 
-// protectionError is a parse failure at offset pos of the string.
-type protectionError struct{ pos int }
+// protectionError is a parse failure at offset pos of the string, with
+// its status: LIB$_SYNTAXERR for a malformed string, LIB$_UNRKEY for a
+// name that's no category's, LIB$_INVARG for a category named twice or
+// a bad letter in LIB$PARSE_ACCESS_CODE (VMS 7.1's statuses:
+// testdata/lib55).
+type protectionError struct {
+	pos    int
+	status uint32
+}
 
-// parseAccess reads access letters from s starting at i, skipping
-// blanks, up to a comma or the end, and returns the access mask they
-// grant (bit n for the access whose letter is letters[n]) and where it
-// stopped. A character that isn't a blank, a comma, or some access's
-// letter (case blind; unconfirmed) is an error at its offset.
-func parseAccess(s string, i int, letters [categoryBits]byte) (uint16, int, *protectionError) {
+// letterRun returns the end of the run of letters in s starting at i.
+func letterRun(s string, i int) int {
+	for i < len(s) && isLetter(s[i]) {
+		i++
+	}
+
+	return i
+}
+
+// accessBits returns the access mask the letters of word grant (bit n
+// for the access whose letter is letters[n], case blind), and false if
+// one of them is no access's letter.
+func accessBits(word string, letters [categoryBits]byte) (uint16, bool) {
 	var granted uint16
 
-	for ; i < len(s) && s[i] != ','; i++ {
-		if isBlank(s[i]) {
-			continue
-		}
-
+	for i := range len(word) {
 		bit := -1
 
 		for n, letter := range letters {
-			if letter != 0 && upper(s[i]) == letter {
+			if upper(word[i]) == letter {
 				bit = n
 
 				break
@@ -257,84 +279,77 @@ func parseAccess(s string, i int, letters [categoryBits]byte) (uint16, int, *pro
 		}
 
 		if bit < 0 {
-			return 0, i, &protectionError{i}
+			return 0, false
 		}
 
 		granted |= 1 << bit
 	}
 
-	return granted, i, nil
+	return granted, true
 }
 
-// parseProtection is PARSE_SOGW_PROT's work on s: the protection mask
-// (bits set for the accesses not granted to a category named) and the
-// ownership mask (each named category's four bits set). A category not
-// named has 0 in both (unconfirmed), and one named twice takes its last
-// value (unconfirmed). On an error it returns the offending character's
-// offset.
+// parseProtection is PARSE_SOGW_PROT's work on s, read as VMS 7.1 read
+// it (testdata/lib55): items separated by commas, each a category's name
+// (letters, any abbreviation, case blind), then, optionally, ":" or "="
+// and a run of access letters. It returns the protection mask, a set bit
+// for each access denied, every category not named denied everything,
+// and the ownership mask, each named category's four bits set. An empty
+// string names nothing; a comma at the end is accepted.
+//
+// The errors, and where end-position puts them: a name that's no
+// category's is LIB$_UNRKEY at the name; a category named twice
+// LIB$_INVARG at the second name; access letters not all some access's
+// LIB$_SYNTAXERR at the first of them; and anything else out of place (a
+// blank, an empty item, a stray character) LIB$_SYNTAXERR at it.
 func parseProtection(s string, letters [categoryBits]byte) (protection, ownership uint16, perr *protectionError) {
-	if strings.TrimLeft(s, " \t") == "" {
-		return 0, 0, nil
-	}
-
+	protection = protectionAll
 	i := 0
 
-	for {
-		c, next, perr := parseOwnership(s, i)
-		if perr != nil {
-			return 0, 0, perr
+	for i < len(s) {
+		end := letterRun(s, i)
+		if end == i {
+			return 0, 0, &protectionError{i, libSyntaxErr}
 		}
 
-		i = next
-
-		var granted uint16
-
-		if i < len(s) && (s[i] == ':' || s[i] == '=') {
-			if granted, i, perr = parseAccess(s, i+1, letters); perr != nil {
-				return 0, 0, perr
-			}
+		c := matchOwnership(strings.ToUpper(s[i:end]))
+		if c < 0 {
+			return 0, 0, &protectionError{i, libUnrKey}
 		}
 
 		shift := c * categoryBits
 		nibble := uint16(1<<categoryBits-1) << shift
-		ownership |= nibble
-		protection = protection&^nibble | ^(granted<<shift)&nibble
 
-		if i >= len(s) {
-			return protection, ownership, nil
+		if ownership&nibble != 0 {
+			return 0, 0, &protectionError{i, libInvArg}
+		}
+
+		ownership |= nibble
+		i = end
+
+		if i < len(s) && (s[i] == ':' || s[i] == '=') {
+			start := i + 1
+			i = letterRun(s, start)
+
+			granted, ok := accessBits(s[start:i], letters)
+			if !ok {
+				return 0, 0, &protectionError{start, libSyntaxErr}
+			}
+
+			protection &^= granted << shift
+		}
+
+		if i == len(s) {
+			break
+		}
+
+		if s[i] != ',' {
+			return 0, 0, &protectionError{i, libSyntaxErr}
 		}
 
 		i++ // the comma
 	}
-}
 
-// parseOwnership reads an ownership name from s starting at i, blanks
-// skipped, up to a separator (":", "=", ","), or the end: one of the
-// four category names in full or abbreviated to any length, case blind.
-// It returns the category's number and where the name stopped. An empty
-// name is an error at the character after it; a name that's no
-// category's is an error at the first character that leaves no category
-// it could abbreviate.
-func parseOwnership(s string, i int) (int, int, *protectionError) {
-	var typed []byte
-
-	for ; i < len(s) && s[i] != ':' && s[i] != '=' && s[i] != ','; i++ {
-		if isBlank(s[i]) {
-			continue
-		}
-
-		typed = append(typed, upper(s[i]))
-
-		if matchOwnership(string(typed)) < 0 {
-			return 0, i, &protectionError{i}
-		}
-	}
-
-	if len(typed) == 0 {
-		return 0, i, &protectionError{i}
-	}
-
-	return matchOwnership(string(typed)), i, nil
+	return protection, ownership, nil
 }
 
 // matchOwnership returns the number of the category that typed (in
@@ -356,17 +371,16 @@ func matchOwnership(typed string) int {
 //	                    ,protection-mask.wwu.r ,ownership-mask.wwu.r
 //	                    [,end-position.ww.r]
 //
-// It reads "owner[:|=][letters]" items separated by commas, such as
-// "SYSTEM=RWED,OWNER:RWED,GROUP,WORLD:R" (parseProtection): a missing or
-// empty access part is no access. protection-mask gets the mask (a set
-// bit is an access denied) and ownership-mask the categories named.
-// end-position gets the characters processed, the whole string, or on
-// an error the offset of the character that made the string invalid;
-// an error is LIB$_INVARG with neither mask written (unconfirmed).
-// LIB$_WRONUMARG for fewer than four arguments or more than five;
-// LIB$_INVARG when a mask's address is omitted.
+// It reads items such as "SYSTEM=RWED,OWNER:RWED,GROUP,WORLD:R"
+// (parseProtection): protection-mask gets the mask (a set bit is an
+// access denied; a category not named is denied everything) and
+// ownership-mask the categories named. end-position gets the characters
+// processed, the whole string, or on an error the offset parseProtection
+// gives; an error writes neither mask. LIB$_WRONUMARG for more than five
+// arguments (unconfirmed); LIB$_INVARG when a mask's address is omitted,
+// fewer arguments included (VMS 7.1 with three).
 func libParseSogwProt(env *corevms.Environment, argv []uint32) (uint32, error) {
-	if tooFewArgs(argv, 4) || len(argv) > 5 {
+	if len(argv) > 5 {
 		return libWroNumArg, nil
 	}
 
@@ -391,7 +405,7 @@ func libParseSogwProt(env *corevms.Environment, argv []uint32) (uint32, error) {
 			return memoryFault(env, writing(err))
 		}
 
-		return libInvArg, nil
+		return perr.status, nil
 	}
 
 	mem, cpu := env.Memory(), env.CPU()
@@ -417,20 +431,22 @@ func libParseSogwProt(env *corevms.Environment, argv []uint32) (uint32, error) {
 //	                      ,ownership-category.rwu.r ,access-mask.wwu.r
 //	                      [,end-position.ww.r]
 //
-// It reads access letters ("RWE"; blanks ignored, as PARSE_SOGW_PROT
-// ignores them, unconfirmed) and writes to access-mask the accesses they
+// It reads access letters ("RWE", case blind) and puts the accesses they
 // grant, a set bit meaning granted ("the opposite of the standard
-// protection format"), in the nibble of the category ownership-category
-// names: RWE for Group is 0x0700 (govax's reading of "a mask for the
-// requested ownership category"; unconfirmed). ownership-category must
-// be exactly one category's four bits (0x000F, 0x00F0, 0x0F00, 0xF000),
-// else LIB$_INVARG (unconfirmed). A character that isn't an access's
-// letter is LIB$_INVARG, end-position getting its offset, else the
-// characters processed. LIB$_WRONUMARG for fewer than four arguments or
-// more than five; LIB$_INVARG when ownership-category or access-mask is
+// protection format"), into access-mask where ownership-category's bits
+// are, leaving its other bits as they were: the mask becomes
+// (mask AND NOT category) OR (granted shifted to category's lowest set
+// bit), so RWE for Group (0x0F00) puts 7 in bits 8-11. That is what VMS
+// 7.1 did (testdata/lib55), for any category word: 0x00FF clears the low
+// byte, and 0 places the bits at bit 16, past the word, which VMS wrote
+// into the word after it. A character that isn't an access's letter (a
+// blank, a comma, a letter beyond the four) is LIB$_INVARG with the mask
+// unchanged, end-position getting its offset; on success end-position is
+// the characters processed. LIB$_WRONUMARG for more than five arguments
+// (unconfirmed); LIB$_INVARG when ownership-category or access-mask is
 // omitted.
 func libParseAccessCode(env *corevms.Environment, argv []uint32) (uint32, error) {
-	if tooFewArgs(argv, 4) || len(argv) > 5 {
+	if len(argv) > 5 {
 		return libWroNumArg, nil
 	}
 
@@ -446,18 +462,6 @@ func libParseAccessCode(env *corevms.Environment, argv []uint32) (uint32, error)
 		return memoryFault(env, err)
 	}
 
-	shift := -1
-
-	for c := range categories {
-		if category == uint16(1<<categoryBits-1)<<(c*categoryBits) {
-			shift = c * categoryBits
-		}
-	}
-
-	if shift < 0 {
-		return libInvArg, nil
-	}
-
 	s, err := readString(env, arg(argv, 0))
 	if err != nil {
 		return stringFailure(env, err)
@@ -468,23 +472,44 @@ func libParseAccessCode(env *corevms.Environment, argv []uint32) (uint32, error)
 		return stringFailure(env, err)
 	}
 
-	// A comma isn't an access letter here: parseAccess stops at one, so
-	// the string must end there.
-	granted, end, perr := parseAccess(s, 0, letters)
-	if perr == nil && end < len(s) {
-		perr = &protectionError{end}
+	for i := range len(s) {
+		if _, ok := accessBits(s[i:i+1], letters); !ok {
+			if err := storeOptionalWord(env, endAddr, uint16(i)); err != nil {
+				return memoryFault(env, writing(err))
+			}
+
+			return libInvArg, nil
+		}
 	}
 
-	if perr != nil {
-		if err := storeOptionalWord(env, endAddr, uint16(perr.pos)); err != nil {
+	granted, _ := accessBits(s, letters)
+
+	old, err := mem.LoadWord(cpu, maskAddr)
+	if err != nil {
+		return memoryFault(env, err)
+	}
+
+	// The category's lowest set bit; 16 when it has none.
+	shift := 16
+
+	for bit := range 16 {
+		if category>>bit&1 != 0 {
+			shift = bit
+
+			break
+		}
+	}
+
+	result := uint32(old&^category) | uint32(granted)<<shift
+
+	if err := mem.StoreWord(cpu, maskAddr, uint16(result)); err != nil {
+		return memoryFault(env, writing(err))
+	}
+
+	if high := uint16(result >> 16); high != 0 {
+		if err := mem.StoreWord(cpu, maskAddr+2, high); err != nil {
 			return memoryFault(env, writing(err))
 		}
-
-		return libInvArg, nil
-	}
-
-	if err := mem.StoreWord(cpu, maskAddr, granted<<shift); err != nil {
-		return memoryFault(env, writing(err))
 	}
 
 	if err := storeOptionalWord(env, endAddr, uint16(len(s))); err != nil {
@@ -492,4 +517,118 @@ func libParseAccessCode(env *corevms.Environment, argv []uint32) (uint32, error)
 	}
 
 	return ssNormal, nil
+}
+
+// fileClassNames is the FILE class's whole access-name table, as VMS
+// 7.1's LIB$GET_ACCNAM returned it (testdata/lib55): bits 0 to 4 named,
+// the other 27 entries empty.
+var fileClassNames = []string{"READ", "WRITE", "EXECUTE", "DELETE", "CONTROL"}
+
+// accessNameEntries is how many descriptors an access-name table has,
+// one per bit of an access mask.
+const accessNameEntries = 32
+
+// accnamKey is the corevms.Environment.ImageData key of the image's
+// FILE access-name table's address (0 until it's made).
+type accnamKey struct{}
+
+// libGetAccnam is LIB$GET_ACCNAM:
+//
+//	LIB$GET_ACCNAM [clsnam.rt.dx] ,[objnam.rt.dx] ,accnam.wlu.r
+//
+// It writes to accnam the address of the access-name table of the
+// protected object class clsnam names (FILE when omitted): a vector of
+// 32 class S descriptors, one per bit of an access mask. govax has the
+// FILE class's only, which it lays out on the heap the first time the
+// image asks (fileClassNames); another class is SS$_NOCLASS. objnam,
+// which names an object of the class, isn't looked at (VMS checks that
+// it exists; unconfirmed how). The 7.x routine is a simplified interface
+// to $GET_SECURITY (the VSI manual), which govax lacks.
+// LIB$_WRONUMARG for fewer than three arguments; LIB$_INVARG when
+// accnam is omitted.
+func libGetAccnam(env *corevms.Environment, argv []uint32) (uint32, error) {
+	if tooFewArgs(argv, 3) || len(argv) > 3 {
+		return libWroNumArg, nil
+	}
+
+	out := arg(argv, 2)
+	if out == 0 {
+		return libInvArg, nil
+	}
+
+	class, err := optionalText(env, arg(argv, 0), "FILE")
+	if err != nil {
+		return stringFailure(env, err)
+	}
+
+	if !strings.EqualFold(strings.TrimSpace(class), "FILE") {
+		return ssNoClass, nil
+	}
+
+	table := env.ImageData(accnamKey{}, func() any { return new(uint32) }).(*uint32)
+	if *table == 0 {
+		if *table, err = buildAccessNameTable(env); err != nil {
+			return memoryFault(env, writing(err))
+		}
+
+		if *table == 0 {
+			return libInsVirMem, nil
+		}
+	}
+
+	if err := env.Memory().StoreLongword(env.CPU(), out, *table); err != nil {
+		return memoryFault(env, writing(err))
+	}
+
+	return ssNormal, nil
+}
+
+// buildAccessNameTable lays the FILE access-name table out in a heap
+// block: 32 descriptors, then the names' text. It returns 0 when the
+// heap has no room.
+func buildAccessNameTable(env *corevms.Environment) (uint32, error) {
+	size := uint32(accessNameEntries * descriptorSize)
+	for _, name := range fileClassNames {
+		size += uint32(len(name))
+	}
+
+	table, err := env.AllocateVM(size, 0)
+	if err != nil || table == 0 {
+		return 0, err
+	}
+
+	mem, cpu := env.Memory(), env.CPU()
+	text := table + accessNameEntries*descriptorSize
+
+	for i := range accessNameEntries {
+		var name string
+		if i < len(fileClassNames) {
+			name = fileClassNames[i]
+		}
+
+		desc := table + uint32(i)*descriptorSize
+		ptr := uint32(0)
+
+		if name != "" {
+			ptr = text
+		}
+
+		if err := mem.StoreLongword(cpu, desc, uint32(len(name))|dscDTypeT<<16|dscClassS<<24); err != nil {
+			return 0, err
+		}
+
+		if err := mem.StoreLongword(cpu, desc+4, ptr); err != nil {
+			return 0, err
+		}
+
+		for j := range len(name) {
+			if err := mem.StoreByte(cpu, text+uint32(j), name[j]); err != nil {
+				return 0, err
+			}
+		}
+
+		text += uint32(len(name))
+	}
+
+	return table, nil
 }

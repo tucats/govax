@@ -36,11 +36,18 @@ func TestItemText(t *testing.T) {
 		{FormMode, itemLong(jpiOther).data, StyleLIB, "OTHER"},
 		{FormState, itemLong(vmsdef.Symbols["SCH$C_HIB"]).data, StyleLIB, "HIB"},
 		{FormACP, itemLong(f11v2).data, StyleLIB, "F11V2"},
-		{FormACP, itemLong(0).data, StyleLIB, "NONE"},
+		{FormACP, itemLong(0).data, StyleLIB, "UNKNOWN"},
 		{FormACP, itemLong(0).data, StyleDCL, "ILLEGAL"},
 		{FormACP, itemLong(vmsdef.Symbols["DVI$C_ACP_JNL"]).data, StyleLIB, "JNL"},
-		{FormProtection, itemLong(0).data, StyleLIB, "SYSTEM=RWLP,OWNER=RWLP,GROUP=RWLP,WORLD=RWLP"},
-		{FormProtection, itemLong(0xFA80).data, StyleLIB, "SYSTEM=RWLP,OWNER=RWL,GROUP=RL,WORLD"},
+		{FormProtection, itemLong(0).data, StyleLIB, "SYSTEM=RWPL,OWNER=RWPL,GROUP=RWPL,WORLD=RWPL"},
+		{FormProtection, itemLong(0xFA80).data, StyleLIB, "SYSTEM=RWPL,OWNER=RWP,GROUP=RP,WORLD"},
+		{FormProtection, itemLong(0).data, StyleDCL, "SYSTEM=RWED, OWNER=RWED, GROUP=RWED, WORLD=RWED"},
+		{FormProtection, itemLong(0xFA80).data, StyleDCL, "SYSTEM=RWED, OWNER=RWE, GROUP=RE, WORLD"},
+		{FormOwner, itemLong(0).data, StyleDCL, ""},
+		{FormOwner, itemLong(0).data, StyleLIB, "00000000"},
+		{FormOwner, itemLong(0x2A).data, StyleDCL, "0000002A"},
+		{FormPrivileges, itemQuad(1 << 5 | 1 << 9 | 1 << 13).data, StyleLIB, "IMPERSONATE,DETACH,NOACNT,SETPRI"},
+		{FormPrivileges, itemQuad(1 << 5 | 1 << 9 | 1 << 13).data, StyleDCL, "DETACH,ACNT,ALTPRI"},
 	}
 
 	for _, c := range cases {
@@ -50,21 +57,22 @@ func TestItemText(t *testing.T) {
 	}
 }
 
-// TestItemForms: the item tables' forms, which the two styles share but
-// for a few: LIB$GETJPI writes only JPI$_PID in hexadecimal, and
-// LIB$GETSYI every number in decimal.
+// TestItemForms: the item tables' forms, which the two styles share
+// (testdata/lib55: VMS 7.1 writes the owner's PID and F$GETSYI's special
+// forms in LIB$'s style too).
 func TestItemForms(t *testing.T) {
 	cases := []struct {
 		got, want ItemForm
 		what      string
 	}{
 		{JPIItemForm("JPI$_PID", StyleLIB), FormHex, "PID"},
-		{JPIItemForm("JPI$_OWNER", StyleDCL), FormHex, "OWNER, DCL"},
-		{JPIItemForm("JPI$_OWNER", StyleLIB), FormNumber, "OWNER, LIB"},
+		{JPIItemForm("JPI$_OWNER", StyleDCL), FormOwner, "OWNER, DCL"},
+		{JPIItemForm("JPI$_OWNER", StyleLIB), FormOwner, "OWNER, LIB"},
 		{JPIItemForm("JPI$_USERNAME", StyleLIB), FormString, "USERNAME"},
 		{JPIItemForm("JPI$_BUFIO", StyleLIB), FormNumber, "BUFIO"},
 		{SYIItemForm("SYI$_BOOTTIME", StyleDCL), FormTime, "BOOTTIME, DCL"},
-		{SYIItemForm("SYI$_BOOTTIME", StyleLIB), FormNumber, "BOOTTIME, LIB"},
+		{SYIItemForm("SYI$_BOOTTIME", StyleLIB), FormTime, "BOOTTIME, LIB"},
+		{SYIItemForm("SYI$_NODE_CSID", StyleLIB), FormHex, "NODE_CSID, LIB"},
 		{SYIItemForm("SYI$_NODENAME", StyleLIB), FormString, "NODENAME"},
 		{DVIItemForm("DVI$_MNT", StyleLIB), FormBoolean, "MNT"},
 		{DVIItemForm("DVI$_TT_NOECHO", StyleLIB), FormBoolean, "TT_NOECHO"},

@@ -37,7 +37,11 @@ func LookupMessage(code uint32) (Message, bool) {
 		return Message{}, false
 	}
 
-	m, ok := Messages[code&messageKeyMask]
+	m, ok := vaxMessages[code&messageKeyMask]
+	if !ok {
+		m, ok = Messages[code&messageKeyMask]
+	}
+
 	if !ok {
 		m, ok = observedMessages[code&messageKeyMask]
 	}
@@ -47,6 +51,16 @@ func LookupMessage(code uint32) (Message, bool) {
 	}
 
 	return m, ok
+}
+
+// vaxMessages are messages VMS on a VAX words differently from the
+// message file govax's tables were made from, whose text is in places the
+// Alpha's (a 64-bit address shown with !XH, the PS rather than the PSL).
+// LookupMessage finds them first. SS$_ACCVIO's is VMS 7.1's on a VAX
+// (testdata/lib55, LIB$SYS_GETMSG), as every VAX log in testdata shows
+// it.
+var vaxMessages = map[uint32]Message{
+	0x00000008: {Facility: "SYSTEM", Ident: "ACCVIO", Text: "access violation, reason mask=!XB, virtual address=!XL, PC=!XL, PSL=!XL", FAOCount: 4},
 }
 
 // observedMessages are messages the system message file govax's tables

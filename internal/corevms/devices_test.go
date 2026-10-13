@@ -70,8 +70,8 @@ func TestServiceSysAssignNoSuchDevice(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if r0 != ssIvDevNam {
-		t.Errorf("r0 = %d, want ssIvDevNam", r0)
+	if r0 != ssNoSuchDev { // VMS 7.1's (testdata/lib55)
+		t.Errorf("r0 = %d, want ssNoSuchDev", r0)
 	}
 }
 
@@ -104,7 +104,7 @@ func TestServiceSysAssignAndGetdviTranslateLogicalNames(t *testing.T) {
 		{"SYS$OUTPUT", ssNormal},
 		{"TT:", ssNormal},
 		{testTerminalDevice, ssNormal},
-		{"_SYS$OUTPUT", ssIvDevNam},
+		{"_SYS$OUTPUT", ssNoSuchDev}, // not translated: no device has the name
 		{"LOOP1:", vmserrors.SS_TOOMANYLNAM},
 	} {
 		wantR0(t, callLNM(t, env, serviceSysAssign, a.desc(tt.name), a.alloc(2)), tt.want)

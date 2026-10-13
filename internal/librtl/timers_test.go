@@ -52,7 +52,7 @@ func moveOn(env *corevms.Environment, now *uint64) {
 	env.Process.PageFaults += 5
 }
 
-const wantTimerLine = " ELAPSED: 1 02:03:04.56  CPU: 26:03:04.56  BUFIO: 3  DIRIO: 2  FAULTS: 5\n"
+const wantTimerLine = " ELAPSED:    1 02:03:04.56  CPU: 26:03:04.56  BUFIO: 3  DIRIO: 2  FAULTS: 5 \n"
 
 // TestShowTimerStatic: the static block, LIB$_INVARG until INIT_TIMER
 // fills it; SHOW_TIMER's whole line and each field; codes outside 0 to 5.
@@ -77,11 +77,11 @@ func TestShowTimerStatic(t *testing.T) {
 
 	for code, want := range []string{
 		0: wantTimerLine,
-		1: " ELAPSED: 1 02:03:04.56\n",
-		2: " CPU: 26:03:04.56\n",
-		3: " BUFIO: 3\n",
-		4: " DIRIO: 2\n",
-		5: " FAULTS: 5\n",
+		1: " ELAPSED TIME =    1 02:03:04.56\n",
+		2: " CPU TIME = 26:03:04.56\n",
+		3: " BUFFERED I/O COUNT = 3\n",
+		4: " DIRECT I/O COUNT = 2\n",
+		5: " PAGE FAULT COUNT = 5\n",
 	} {
 		out.Reset()
 		putLongword(t, env, timerCode, uint32(code))
@@ -159,8 +159,9 @@ func TestStatTimer(t *testing.T) {
 // TestTimerHeapBlock: INIT_TIMER of a handle holding 0 allocates a block
 // and writes its address; the block holds the figures; a second
 // INIT_TIMER refills it; SHOW_TIMER and STAT_TIMER read it by handle;
-// FREE_TIMER frees it and zeroes the handle, after which it, and an
-// address INIT_TIMER never gave, are LIB$_INVARG.
+// FREE_TIMER frees it, clearing its tag, and zeroes the handle, after
+// which it, and an address with no tag, are LIB$_INVARG. (Address 0 is
+// readable in this fixture; in a program it's an access violation.)
 func TestTimerHeapBlock(t *testing.T) {
 	env, out, now := timerFixture(t)
 	env.Process.BufferedIO = 7
@@ -174,6 +175,10 @@ func TestTimerHeapBlock(t *testing.T) {
 	block := longword(t, env, timerHandle)
 	if block == 0 {
 		t.Fatal("INIT_TIMER wrote no block address")
+	}
+
+	if got := longword(t, env, block+timerBlockTag); got != timerTag {
+		t.Errorf("the block's tag is %#x, want \"TIMR\"", got)
 	}
 
 	if got := longword(t, env, block+timerBlockBufIO); got != 7 {

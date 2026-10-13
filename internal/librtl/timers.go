@@ -2,7 +2,6 @@ package librtl
 
 import (
 	"fmt"
-	"strings"
 
 	"github.com/tucats/govax/internal/corevms"
 	"github.com/tucats/govax/internal/registers"
@@ -20,24 +19,31 @@ import (
 // data (kept in Go per image, corevms.Environment.ImageData), or any
 // number of blocks on the heap, which the program names by a handle, a
 // longword holding the block's address. A heap block is in the program's
-// memory, laid out as timerBlock* below; that layout is govax's own
-// (VMS's isn't documented, unconfirmed). The routines remember which
-// addresses are blocks INIT_TIMER allocated, so another address is
-// LIB$_INVARG rather than garbage.
+// memory, laid out as timerBlock* below, as VMS 7.1 laid one out
+// (testdata/lib55): it starts with the tag "TIMR", which is how the
+// routines tell a block from another address (LIB$_INVARG). They read
+// the tag wherever the handle points, so a handle of 0 is an access
+// violation, as on VMS.
 
 var libBadBlockAddress = vmsdef.LibrarySymbols["LIB$_BADBLOADR"]
 
-// A heap timer block's layout: the time INIT_TIMER filled it (a VMS
-// time, quadword), then the CPU time (10ms units), buffered I/O, direct
-// I/O, and page faults, a longword each.
+// A heap timer block's layout: the tag, the CPU time (10ms units),
+// buffered I/O, direct I/O, and page faults, a longword each, then the
+// time INIT_TIMER filled it (a VMS time, quadword). VMS 7.1's block had
+// the tag, four counts, and the time at offset 20; which count is which
+// is unconfirmed (the statistic codes' order is assumed).
 const (
-	timerBlockTime   = 0
-	timerBlockCPU    = 8
-	timerBlockBufIO  = 12
-	timerBlockDirIO  = 16
-	timerBlockFaults = 20
-	timerBlockSize   = 24
+	timerBlockTag    = 0
+	timerBlockCPU    = 4
+	timerBlockBufIO  = 8
+	timerBlockDirIO  = 12
+	timerBlockFaults = 16
+	timerBlockTime   = 20
+	timerBlockSize   = 28
 )
+
+// timerTag is a heap timer block's first longword: "TIMR" in ASCII.
+const timerTag = 0x524D4954
 
 // The statistic codes SHOW_TIMER and STAT_TIMER take. SHOW_TIMER's 0 (or
 // none) is all five.
@@ -60,10 +66,9 @@ type timerSample struct {
 }
 
 // timerState is one image's timer data: the static block, nil until
-// INIT_TIMER fills it, and the heap blocks INIT_TIMER allocated.
+// INIT_TIMER fills it.
 type timerState struct {
 	static *timerSample
-	blocks map[uint32]bool
 }
 
 // timersKey is the corevms.Environment.ImageData key of the image's
@@ -73,7 +78,7 @@ type timersKey struct{}
 // timers returns the running image's timer data.
 func timers(env *corevms.Environment) *timerState {
 	return env.ImageData(timersKey{}, func() any {
-		return &timerState{blocks: map[uint32]bool{}}
+		return &timerState{}
 	}).(*timerState)
 }
 
@@ -109,6 +114,7 @@ func storeTimerBlock(env *corevms.Environment, addr uint32, s timerSample) error
 	for _, f := range []struct {
 		offset, v uint32
 	}{
+		{timerBlockTag, timerTag},
 		{timerBlockTime, uint32(s.time)},
 		{timerBlockTime + 4, uint32(s.time >> 32)},
 		{timerBlockCPU, s.cpu},
@@ -140,7 +146,7 @@ func loadTimerBlock(env *corevms.Environment, addr uint32) (timerSample, error) 
 	}
 
 	return timerSample{
-		time:   uint64(w[1])<<32 | uint64(w[0]),
+		time:   uint64(w[timerBlockTime/4+1])<<32 | uint64(w[timerBlockTime/4]),
 		cpu:    w[timerBlockCPU/4],
 		bufIO:  w[timerBlockBufIO/4],
 		dirIO:  w[timerBlockDirIO/4],
@@ -148,11 +154,20 @@ func loadTimerBlock(env *corevms.Environment, addr uint32) (timerSample, error) 
 	}, nil
 }
 
+// isTimerBlock reports whether a heap timer block is at block: whether
+// its first longword is the tag. A block that can't be read (0, say) is
+// a memory error, which the routines signal as an access violation.
+func isTimerBlock(env *corevms.Environment, block uint32) (bool, error) {
+	tag, err := env.Memory().LoadLongword(env.CPU(), block+timerBlockTag)
+
+	return tag == timerTag, err
+}
+
 // timerStart reads the block a SHOW_TIMER or STAT_TIMER handle-address
 // argument names: the static block when it's omitted (0), else the heap
 // block whose address is the longword it points to. ok is false, for
-// LIB$_INVARG, when that's not a block INIT_TIMER allocated, or the
-// static block was never filled.
+// LIB$_INVARG, when that's not a timer block, or the static block was
+// never filled.
 func timerStart(env *corevms.Environment, handle uint32) (s timerSample, ok bool, err error) {
 	t := timers(env)
 
@@ -169,8 +184,8 @@ func timerStart(env *corevms.Environment, handle uint32) (s timerSample, ok bool
 		return timerSample{}, false, err
 	}
 
-	if !t.blocks[block] {
-		return timerSample{}, false, nil
+	if ok, err := isTimerBlock(env, block); err != nil || !ok {
+		return timerSample{}, false, err
 	}
 
 	s, err = loadTimerBlock(env, block)
@@ -186,7 +201,7 @@ func timerStart(env *corevms.Environment, handle uint32) (s timerSample, ok bool
 // block: the static one when context is omitted; a new heap block when
 // the longword context points to is 0, whose address it writes there
 // (LIB$_INSVIRMEM with no room); or the heap block that longword names,
-// LIB$_INVARG if INIT_TIMER didn't allocate it.
+// LIB$_INVARG if it isn't one (isTimerBlock).
 func libInitTimer(env *corevms.Environment, argv []uint32) (uint32, error) {
 	t := timers(env)
 	context := arg(argv, 0)
@@ -206,7 +221,12 @@ func libInitTimer(env *corevms.Environment, argv []uint32) (uint32, error) {
 	}
 
 	if block != 0 {
-		if !t.blocks[block] {
+		ok, err := isTimerBlock(env, block)
+		if err != nil {
+			return memoryFault(env, err)
+		}
+
+		if !ok {
 			return libInvArg, nil
 		}
 
@@ -238,8 +258,6 @@ func libInitTimer(env *corevms.Environment, argv []uint32) (uint32, error) {
 		return memoryFault(env, writing(err))
 	}
 
-	t.blocks[block] = true
-
 	return ssNormal, nil
 }
 
@@ -249,10 +267,11 @@ func libInitTimer(env *corevms.Environment, argv []uint32) (uint32, error) {
 //
 // It frees the heap timer block whose address is the longword at
 // handle-address, and zeroes that longword. LIB$_INVARG if it isn't a
-// block INIT_TIMER allocated, and LIB$_BADBLOADR if the heap no longer
-// has it (the program freed it with LIB$FREE_VM).
+// timer block (isTimerBlock; a handle holding 0 is an access violation,
+// as on VMS 7.1), and LIB$_BADBLOADR if the heap no longer has it (the
+// program freed it with LIB$FREE_VM). The tag is cleared first, so a
+// copy of the handle no longer names a block (unconfirmed).
 func libFreeTimer(env *corevms.Environment, argv []uint32) (uint32, error) {
-	t := timers(env)
 	handle := arg(argv, 0)
 	mem, cpu := env.Memory(), env.CPU()
 
@@ -261,15 +280,22 @@ func libFreeTimer(env *corevms.Environment, argv []uint32) (uint32, error) {
 		return memoryFault(env, err)
 	}
 
-	if !t.blocks[block] {
+	ok, err := isTimerBlock(env, block)
+	if err != nil {
+		return memoryFault(env, err)
+	}
+
+	if !ok {
 		return libInvArg, nil
+	}
+
+	if err := mem.StoreLongword(cpu, block+timerBlockTag, 0); err != nil {
+		return memoryFault(env, writing(err))
 	}
 
 	if err := mem.StoreLongword(cpu, handle, 0); err != nil {
 		return memoryFault(env, writing(err))
 	}
-
-	delete(t.blocks, block)
 
 	if !env.FreeVM(block) {
 		return libBadBlockAddress, nil
@@ -283,8 +309,9 @@ func libFreeTimer(env *corevms.Environment, argv []uint32) (uint32, error) {
 //	LIB$STAT_TIMER code.rl.r, value-argument.wz.r [,handle-address.rlu.r]
 //
 // It writes one statistic since the block's INIT_TIMER: for code 1 the
-// elapsed time, a quadword "in system time format", which govax writes
-// as a delta time (negative; unconfirmed, the survey); for 2 to 5 the CPU
+// elapsed time, a quadword "in system time format": a delta time,
+// negative, and at least 100ns long (VMS 7.1 wrote -1 for no time
+// passed: testdata/lib55); for 2 to 5 the CPU
 // time in 10ms units, buffered I/O, direct I/O, or page faults, a
 // longword. LIB$_INVARG for another code, or for a handle that names no
 // timer block (timerStart).
@@ -313,7 +340,7 @@ func libStatTimer(env *corevms.Environment, argv []uint32) (uint32, error) {
 	value := arg(argv, 1)
 
 	if code == timerElapsed {
-		delta := -d.time
+		delta := -max(d.time, 1)
 
 		err = mem.StoreLongword(cpu, value, uint32(delta))
 		if err == nil {
@@ -331,27 +358,30 @@ func libStatTimer(env *corevms.Environment, argv []uint32) (uint32, error) {
 	return ssNormal, nil
 }
 
-// timerFields are SHOW_TIMER's fields for the statistics in d, by code
-// (index 0 unused), each with the blank that leads it. The layout is the
-// 5.0 manual's example's, which is real output, rather than its table's
-// (the survey):
+// timerFields are SHOW_TIMER's lines for the statistics in d, by code,
+// as VMS 7.1 wrote them (testdata/lib55). The whole line (code 0) is
 //
-//	ELAPSED: 0 00:00:00.44  CPU: 0:00:00.04  BUFIO: 1  DIRIO: 0  FAULTS: 18
+//	 ELAPSED:    0 00:00:00.00  CPU: 0:00:00.00  BUFIO: 0  DIRIO: 1  FAULTS: 2
 //
-// The elapsed time is days, a blank, and hh:mm:ss.cc; the CPU time
-// hours:mm:ss.cc. Hundredths are truncated, and the numbers aren't
-// padded (both unconfirmed).
+// with a blank at its end, and one statistic's is the manual's table's
+// form (" ELAPSED TIME =    0 00:00:00.00", " CPU TIME = 0:00:00.00",
+// " BUFFERED I/O COUNT = 0", ...). The elapsed time is written as $ASCTIM
+// writes a delta time (the days four wide), the CPU time as
+// hours:mm:ss.cc. Hundredths are truncated, and larger numbers aren't
+// padded (unconfirmed: the run's were single digits).
 func timerFields(d timerSample) [timerFaults + 1]string {
 	cs := d.time / cpuTimeUnit // the elapsed time in hundredths
+	elapsed := fmt.Sprintf("%4d %02d:%02d:%02d.%02d", cs/8_640_000, cs/360_000%24, cs/6_000%60, cs/100%60, cs%100)
+	cpu := fmt.Sprintf("%d:%02d:%02d.%02d", d.cpu/360_000, d.cpu/6_000%60, d.cpu/100%60, d.cpu%100)
 
 	return [...]string{
-		timerElapsed: fmt.Sprintf(" ELAPSED: %d %02d:%02d:%02d.%02d",
-			cs/8_640_000, cs/360_000%24, cs/6_000%60, cs/100%60, cs%100),
-		timerCPU: fmt.Sprintf(" CPU: %d:%02d:%02d.%02d",
-			d.cpu/360_000, d.cpu/6_000%60, d.cpu/100%60, d.cpu%100),
-		timerBufIO:  fmt.Sprintf(" BUFIO: %d", d.bufIO),
-		timerDirIO:  fmt.Sprintf(" DIRIO: %d", d.dirIO),
-		timerFaults: fmt.Sprintf(" FAULTS: %d", d.faults),
+		0: fmt.Sprintf(" ELAPSED: %s  CPU: %s  BUFIO: %d  DIRIO: %d  FAULTS: %d ",
+			elapsed, cpu, d.bufIO, d.dirIO, d.faults),
+		timerElapsed: " ELAPSED TIME = " + elapsed,
+		timerCPU:     " CPU TIME = " + cpu,
+		timerBufIO:   fmt.Sprintf(" BUFFERED I/O COUNT = %d", d.bufIO),
+		timerDirIO:   fmt.Sprintf(" DIRECT I/O COUNT = %d", d.dirIO),
+		timerFaults:  fmt.Sprintf(" PAGE FAULT COUNT = %d", d.faults),
 	}
 }
 
@@ -398,9 +428,6 @@ func libShowTimer(env *corevms.Environment, argv []uint32) (uint32, error) {
 	fields := timerFields(start.since(sampleNow(env)))
 
 	line := fields[code]
-	if code == 0 {
-		line = strings.Join(fields[timerElapsed:], " ")
-	}
 
 	action := arg(argv, 2)
 	if action == 0 {

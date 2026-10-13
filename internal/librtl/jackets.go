@@ -175,26 +175,17 @@ func libSysFaol(env *corevms.Environment, argv []uint32) (uint32, error) {
 	return sysFAO(env, "SYS$FAOL", argv)
 }
 
-// sysFAO is LIB$SYS_FAO's and LIB$SYS_FAOL's work. "If called with other
-// than a fixed-length string for output, the length of the resultant
-// string is limited to 256 bytes and truncation will occur": so a fixed
-// string (classes Z, S, and SD, whose DSC$W_LENGTH is the buffer's) is
-// the service's buffer itself, written as $FAO writes one (unpadded,
-// SS$_BUFFEROVF when the text doesn't fit), and any other class gets the
-// text of a 256-byte scratch buffer, SS$_BUFFEROVF past it, copied by its
-// class (LIB$_STRTRU if the copy is cut). Which classes count as fixed,
-// and the missing padding, are unconfirmed (the survey). A failing $FAO
-// (SS$_BADPARAM, SS$_ACCVIO) is returned with nothing copied.
+// sysFAO is LIB$SYS_FAO's and LIB$SYS_FAOL's work: the service writes
+// into a 256-byte scratch buffer, whose text is then copied by the
+// output's class. VMS does this for every class, a fixed string too
+// (testdata/lib55): a fixed string is padded with blanks, and one too
+// short for the text gets LIB$_STRTRU, not SS$_BUFFEROVF; text past 256
+// bytes is cut there with SS$_BUFFEROVF (a success, so the 256 bytes are
+// copied), whatever the output's size. The manual's "limited to 256
+// bytes" for other than a fixed-length string is so for all of them. A
+// failing $FAO (SS$_BADPARAM, SS$_ACCVIO) is returned with nothing
+// copied.
 func sysFAO(env *corevms.Environment, service string, argv []uint32) (uint32, error) {
-	d, err := readDescriptor(env, arg(argv, 2))
-	if err != nil {
-		return stringFailure(env, err)
-	}
-
-	if d.class == dscClassZ || d.class == dscClassS || d.class == dscClassSD {
-		return env.CallService(service, argv)
-	}
-
 	args := make([]uint32, max(len(argv), 3))
 	copy(args, argv)
 
@@ -237,11 +228,17 @@ func libSysGetmsg(env *corevms.Environment, argv []uint32) (uint32, error) {
 //
 // The 5.0 manual names it only in its table of jackets (Table 2-1), so
 // its arguments are $TRNLOG's, in order, by section 2.1's rule for
-// jackets, the disable mask by value as $TRNLOG takes it (unconfirmed;
-// the survey). Returns $TRNLOG's statuses (SS$_NORMAL, SS$_NOTRAN with
+// jackets; but the disable mask is by reference, where $TRNLOG takes it
+// by value (VMS 7.1 read a mask "2" at address 2: testdata/lib55), and
+// omitted is 0. Returns $TRNLOG's statuses (SS$_NORMAL, SS$_NOTRAN with
 // the name itself, ...), LIB$_STRTRU, or the string statuses.
 func libSysTrnlog(env *corevms.Environment, argv []uint32) (uint32, error) {
-	args := []uint32{arg(argv, 0), 0, 0, arg(argv, 3), arg(argv, 4), arg(argv, 5)}
+	dsbmsk, err := optionalLongword(env, arg(argv, 5), 0)
+	if err != nil {
+		return memoryFault(env, err)
+	}
+
+	args := []uint32{arg(argv, 0), 0, 0, arg(argv, 3), arg(argv, 4), dsbmsk}
 
 	return runJacket(env, "SYS$TRNLOG", args, 1, 2, trnlogScratch, arg(argv, 2), arg(argv, 1))
 }

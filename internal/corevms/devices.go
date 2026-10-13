@@ -72,7 +72,7 @@ func serviceSysAssign(env *Environment, argv []uint32) (uint32, error) {
 
 	dp, found := env.Devices.Find(device)
 	if !found {
-		return ssIvDevNam, nil
+		return ssNoSuchDev, nil // VMS 7.1's for XYZ7: (testdata/lib55)
 	}
 
 	if dp.Allocated() && dp.PID != env.Process.PID {
