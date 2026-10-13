@@ -213,14 +213,27 @@ func (c *Interpreter) dispatchParsed(line string, verbSymbol bool) error {
 // "_What: "), and the reply completes the line; Ctrl/Z at the prompt
 // drops the command (dcl.ErrCanceled) with $STATUS SS$_NORMAL, marked as
 // shown (%X10000001, VMS's console). A command read from a command
-// procedure isn't prompted for: its missing parameter is an error, as
-// on VMS. Nor is one with no terminal input to read (a test's console).
+// procedure isn't prompted for, nor is one with no terminal input to
+// read (a test's console): its missing parameter is DCL's warning
+// CLI$_INSFPRM, with no segment, so a procedure goes on past it under
+// DCL's default ON action (VMS's console, on simh).
 func (c *Interpreter) parseCommand(line string) (*dcl.Result, error) {
+	var (
+		r   *dcl.Result
+		err error
+	)
+
 	if !c.readingTerminal() || (c.subCLI == nil && c.In == nil) {
-		return c.Grammar.Parse(line)
+		r, err = c.Grammar.Parse(line)
+	} else {
+		r, err = c.Grammar.ParsePrompting(line, c.readTerminal)
 	}
 
-	return c.Grammar.ParsePrompting(line, c.readTerminal)
+	if errors.Is(err, vmserrors.New(vmserrors.CLI_MISSINGPARAMETER)) {
+		return nil, vmserrors.New(vmserrors.CLI_INSFPRM)
+	}
+
+	return r, err
 }
 
 // readingTerminal says whether the command being run was read from the

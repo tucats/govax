@@ -209,9 +209,9 @@ func TestCreateDirectory_errors(t *testing.T) {
 		"-LIB-F-INVFILSPE, invalid file specification",
 		"%CREATE-I-CREATED, DUA0:[OK2] created")
 
-	// A bare CREATE is still a missing qualifier.
-	if err := d.Dispatch("CREATE"); !errors.Is(err, vmserrors.New(vmserrors.CLI_MISSINGPARAMETER)) {
-		t.Errorf("CREATE: err = %v, want CLI_MISSINGPARAMETER", err)
+	// A bare CREATE is still a missing parameter.
+	if err := d.Dispatch("CREATE"); !errors.Is(err, vmserrors.New(vmserrors.CLI_INSFPRM)) {
+		t.Errorf("CREATE: err = %v, want CLI_INSFPRM", err)
 	}
 }
 

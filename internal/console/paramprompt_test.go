@@ -18,7 +18,8 @@ import (
 // 2.2.1): "$ SHOW" asks "_What: " on the terminal, and the reply is
 // parsed as if typed on the line. Ctrl/Z at the prompt drops the command
 // without a message (2.2.2). A command read from a command procedure
-// isn't prompted for: its missing parameter is an error, as on VMS.
+// isn't prompted for: its missing parameter is DCL's warning INSFPRM,
+// and the procedure goes on (VMS's console, on simh).
 func TestParameterPrompt(t *testing.T) {
 	var out bytes.Buffer
 
@@ -66,7 +67,7 @@ func TestParameterPrompt(t *testing.T) {
 
 	// In a command procedure, no prompt: the parameter is missing.
 	proc := filepath.Join(t.TempDir(), "show.com")
-	if err := os.WriteFile(proc, []byte("$ SHOW\n"), 0o644); err != nil {
+	if err := os.WriteFile(proc, []byte("$ SHOW\n$ WRITE SYS$OUTPUT \"Done\"\n"), 0o644); err != nil {
 		t.Fatal(err)
 	}
 
@@ -75,9 +76,12 @@ func TestParameterPrompt(t *testing.T) {
 	in := strings.NewReader("MEMORY\n")
 	c.In = in
 
-	err := d.Dispatch(`@"` + proc + `"`)
-	if !errors.Is(err, vmserrors.New(vmserrors.CLI_MISSINGPARAMETER)) && !strings.Contains(out.String(), "MISSINGPARAMETER") {
-		t.Errorf("@SHOW.COM: err %v, output %q; want MISSINGPARAMETER", err, out.String())
+	if err := d.Dispatch(`@"` + proc + `"`); err != nil && !errors.Is(err, vmserrors.New(vmserrors.CLI_INSFPRM)) {
+		t.Errorf("@SHOW.COM: err %v", err)
+	}
+
+	if want := "%DCL-W-INSFPRM, missing command parameters - supply all required parameters\nDone\n"; out.String() != want {
+		t.Errorf("@SHOW.COM: output %q, want %q", out.String(), want)
 	}
 
 	if strings.Contains(out.String(), "_What:") || in.Len() == 0 {

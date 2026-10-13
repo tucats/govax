@@ -486,11 +486,20 @@ di
   the status before was likely %X00000001 already). VMS echoed
   " Exit " for the Ctrl/Z, as for INQUIRE's (testdata/dcl50's Q1);
   govax's terminal echoes "*Exit*" for every read (DEVIATIONS.md, the
-  control keys). DCL prompts only for a command
+  control keys), by choice. DCL prompts only for a command
   read from the terminal (`parseCommand`, `readingTerminal`: command
   level 0, or the Ctrl/Y level's own depth, `controlYPrompt.depth`), on
   SYS$COMMAND through `readTerminal`, as INQUIRE reads. A command from a
-  procedure still gives the error: the author checked that VMS doesn't
-  prompt there either. (VMS's message for it may be INSFPRM rather than
-  govax's MISSINGPARAMETER; not checked.) Tests: `TestParsePrompting`
+  procedure isn't prompted for (the author checked VMS), and on simh VMS
+  showed `%DCL-W-INSFPRM, missing command parameters - supply all
+  required parameters` (no segment) and went on with the procedure: a
+  warning, under the default ON action. So DCL now gives CLI$_INSFPRM
+  for the grammar's missing parameter wherever it isn't prompted for
+  (`parseCommand`), where it gave the grammar's CLI_MISSINGPARAMETER, an
+  error that ended the procedure. The grammar engine keeps
+  MISSINGPARAMETER (the debugger shares it), as do the handlers that
+  find a parameter missing themselves (SHOW SYMBOL, DELETE/SYMBOL,
+  DEASSIGN, ANALYZE without /OBJECT or /IMAGE). VMS's echo of the
+  Ctrl/Z is to stay govax's "*Exit*" for every read (the author,
+  2026-10-13). Tests: `TestParsePrompting`
   (`internal/dcl`), `TestParameterPrompt` (`internal/console`).
