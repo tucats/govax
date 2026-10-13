@@ -657,7 +657,7 @@ address) print on lines marked with a tilde, as in Phase 55's probe.
    **Done** 2026-10-13.
 7. **Input**: CONVERT_DATE_STRING. **Done** 2026-10-13.
 8. **The program** (`testdata/lib56/`), its console test, and the VMS
-   probe.
+   probe. Program and test written 2026-10-13; the VMS run is pending.
 9. **Close-out**.
 
 ## Progress log
@@ -904,3 +904,38 @@ address) print on lines marked with a tilde, as in Phase 55's probe.
   defaults, relative days, the routine's arguments) and, through a linked
   program's stubs, by `TestLibrtlDateInput`
   (`internal/console/librtl_times_test.go`).
+- **2026-10-13** — Subtask 8, the program (`testdata/lib56/`, README.md)
+  and its oracle, `TestLib56Oracle` (`internal/console/lib56_test.go`),
+  which skips until VMS's output is in `vax/`.
+  - **The program.** `gen.go` writes `lib56.mar` (395 cases),
+    `lib56.com`, and `exchange.cmd`, after Phase 55's model. What's new
+    is a time shown as `$ASCTIM` writes it, and logical names the
+    program defines itself with `$CRELNM` (LIB$DT_FORMAT,
+    LIB$DT_INPUT_FORMAT, SYS$LANGUAGE in the process table), a case at a
+    time, each with a fresh context cell.
+  - **The cases** follow the survey's "For the probe":
+    - the arithmetic's edges;
+    - every CVT_FROM_INTERNAL_TIME operation on 13-Jan-1988 09:13:25.14
+      and on the first and last moments of 1988;
+    - the conversions' limits, and CVT_VECTIM's fields one past their
+      ranges;
+    - DATE_TIME into each class;
+    - DAY's zero rules, its deltas, and the INTOVF boundary;
+    - each of the 60 predefined formats at 00:05, 09:13, 12:30, and
+      23:45;
+    - the names and their fallbacks, the flags, and INIT's components
+      and errors;
+    - every mnemonic, GET_MAXIMUM_DATE_LENGTH's 27 or 28, and
+      GET_DATE_FORMAT's examples;
+    - CONVERT_DATE_STRING on Table 3-2 (its current date from a
+      defaults vector), the 12-hour format, abbreviations, ILLFORMAT's
+      formats, and the relative days (shown as their difference from
+      TODAY's result).
+  - **`lib56.com`** shows the names VMS defines: LNM$DT_FORMAT_TABLE's
+    predefined formats and any language tables.
+  - **Fixing the program.** govax's run turned up four mistakes in the
+    program before it went to VMS: Go's `time.Duration` can't span the
+    years to 9999; a case whose output was longer than the 132-byte line;
+    a VS string's CURLEN shown in a longword with text that varies; and
+    lengths and differences that depend on the date. All are fixed in
+    `gen.go`.
