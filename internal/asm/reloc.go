@@ -185,14 +185,22 @@ func (t *rexpr) simpleRelocatable() (*section, uint32, bool) {
 	case t.op != rBinary:
 		return nil, 0, false
 
-	case t.bin == '+' && t.l.op == rBase && t.r.isConstant():
-		return t.l.sect, t.l.v + t.r.placeholder(), true
+	// The relocatable side may itself be a label plus or minus a
+	// constant, so A+1+1 ((A+1)+1) and 1+A+1 are as simple as A+2.
+	case t.bin == '+' && t.r.isConstant():
+		if sect, v, ok := t.l.simpleRelocatable(); ok {
+			return sect, v + t.r.placeholder(), true
+		}
 
-	case t.bin == '+' && t.l.isConstant() && t.r.op == rBase:
-		return t.r.sect, t.l.placeholder() + t.r.v, true
+	case t.bin == '+' && t.l.isConstant():
+		if sect, v, ok := t.r.simpleRelocatable(); ok {
+			return sect, t.l.placeholder() + v, true
+		}
 
-	case t.bin == '-' && t.l.op == rBase && t.r.isConstant():
-		return t.l.sect, t.l.v - t.r.placeholder(), true
+	case t.bin == '-' && t.r.isConstant():
+		if sect, v, ok := t.l.simpleRelocatable(); ok {
+			return sect, v - t.r.placeholder(), true
+		}
 	}
 
 	return nil, 0, false

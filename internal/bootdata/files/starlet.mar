@@ -3830,3 +3830,49 @@
 	CALLG	LST,G^SYS$FAO
 	.ENDM	$FAO_G
 
+
+; $LIB_KEY_TABLE <<KEYWORD,VALUE>,...>
+;	A keyword table for LIB$LOOKUP_KEY, laid out as the VMS RTL Library
+;	(LIB$) Manual's Figure LIB-5 shows it: a longword count of the
+;	longwords that follow (two per keyword), then for each keyword the
+;	address of its counted ASCII string and its longword value, then
+;	the strings, in the keywords' order. VALUE defaults to 0. (Whether
+;	VMS's own macro puts the strings in the same place is unconfirmed.)
+;	The addresses make the table position dependent, as the manual
+;	says of its own.
+;
+;	KEYTABLE: $LIB_KEY_TABLE <<ADD,1>,<DELETE,2>,<EXIT,3>>
+;
+; $$LIB_KEY_COUNT, $$LIB_KEY_ENTRY, and $$LIB_KEY_TEXT are its helpers,
+; called once per keyword. $$$KEYS counts the keywords, and $$$KEYTEXT
+; is the address of the next keyword's string.
+
+	.MACRO	$LIB_KEY_TABLE KEYS
+	$$$KEYS = 0
+	.IRP	$$$KEY,<KEYS>
+	$$LIB_KEY_COUNT
+	.ENDR
+	.LONG	$$$KEYS*2
+	$$$KEYTEXT = .+<$$$KEYS*8>
+	.IRP	$$$KEY,<KEYS>
+	$$LIB_KEY_ENTRY	$$$KEY
+	.ENDR
+	.IRP	$$$KEY,<KEYS>
+	$$LIB_KEY_TEXT	$$$KEY
+	.ENDR
+	.ENDM	$LIB_KEY_TABLE
+
+	.MACRO	$$LIB_KEY_COUNT
+	$$$KEYS = $$$KEYS+1
+	.ENDM	$$LIB_KEY_COUNT
+
+	.MACRO	$$LIB_KEY_ENTRY NAME,VALUE=0
+	.ADDRESS	$$$KEYTEXT
+	.LONG	VALUE
+	.NCHR	$$$KEYLEN,<NAME>
+	$$$KEYTEXT = $$$KEYTEXT+$$$KEYLEN+1
+	.ENDM	$$LIB_KEY_ENTRY
+
+	.MACRO	$$LIB_KEY_TEXT NAME,VALUE
+	.ASCIC	/NAME/
+	.ENDM	$$LIB_KEY_TEXT

@@ -1,6 +1,6 @@
 # Phase 54 — LIB$ strings, descriptors, and text conversion
 
-**Status:** in progress (2026-10-12; subtasks 1 to 7 done). Needs Phase 53. Part of the LIB$
+**Status:** in progress (2026-10-12; subtasks 1 to 8 done). Needs Phase 53. Part of the LIB$
 program laid out in `PHASE-53 - RTL LIB support.md` (Part A), which also
 has the sources and the conventions (Part B) this phase follows.
 
@@ -413,6 +413,7 @@ against VMS's own table, which the probe dumps.)
    **Done** 2026-10-12 (the tables in subtask 2).
 7. **Numeric text**: CVT_DTB, CVT_HTB, CVT_OTB. **Done** 2026-10-12.
 8. **LOOKUP_KEY**, and the `$LIB_KEY_TABLE` macro in `starlet.mar`.
+   **Done** 2026-10-12.
 9. **Locale**: DIGIT_SEP, RADIX_POINT, CURRENCY, LP_LINES.
 10. **CVT_DX_DX** (LIBRTL2's 0x000): integers and F/D/G/H to and from
     text, with a LIBRTL2 stub area (the scope the author accepted).
@@ -574,3 +575,33 @@ against VMS's own table, which the probe dumps.)
   only on success (all unconfirmed). Tests: `cvttb_test.go` (each radix,
   signs, overflow at 2^32, blanks, tabs, a misplaced sign, the count
   bounding the text) and the console's `TestLibrtlCvtTextToBinary`.
+- **2026-10-12** — Subtask 8, LIB$LOOKUP_KEY (`internal/librtl/
+  lookupkey.go`, code 100) and `$LIB_KEY_TABLE`.
+  - **The routine** follows the survey: a prefix match, exact compare
+    (no case folding), an exact match anywhere in the table winning,
+    otherwise one match SS$_NORMAL, more LIB$_AMBKEY (the first match's
+    outputs written), none LIB$_UNRKEY (nothing written). The outputs
+    are optional; keyword-string is written by class (LIB$_STRTRU when
+    cut), resultant-length is the characters written. Fewer than two
+    arguments, or a table with an odd count, is LIB$_INVARG. All the
+    open choices unconfirmed.
+  - **`$LIB_KEY_TABLE`** (`internal/bootdata/files/starlet.mar`, clean
+    room, from the manual's Figure LIB-5 and its MACRO example): the
+    count, the address/value pairs, then the counted strings in order,
+    built with `.IRP` over the bracketed list and three helper macros
+    (`$$LIB_KEY_COUNT`, `$$LIB_KEY_ENTRY`, `$$LIB_KEY_TEXT`); a
+    keyword's value defaults to 0. Whether VMS's macro lays the strings
+    out the same way is unconfirmed (the probe's object can show it).
+    The macro library was regenerated (`go generate ./internal/bootdata`).
+  - **An assembler fix.** The macro's running `$$$KEYTEXT =
+    $$$KEYTEXT+$$$KEYLEN+1` was refused (VAX-E-RELEXPR,
+    `%MACRO-E-SYMNOTABS`): a direct assignment took a label plus or
+    minus *one* constant, not `A+1+1`. `simpleRelocatable`
+    (`internal/asm/reloc.go`) now follows a chain of constants on either
+    side (`TestRelocatableAssignmentChain`).
+  - **Tests.** `lookupkey_test.go` (exact, abbreviated, ambiguous, an
+    exact match that's another keyword's abbreviation, unrecognized, the
+    optional outputs, truncation, a dynamic keyword string, LIB$_INVARG)
+    and the console's `TestLibrtlLookupKey`: the manual's MACRO example
+    built with govax's `$LIB_KEY_TABLE`, "DEL" found as DELETE (value 2,
+    shown), and "XYZ" LIB$_UNRKEY.

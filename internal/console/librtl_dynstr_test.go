@@ -112,3 +112,31 @@ func TestLibrtlCvtTextToBinary(t *testing.T) {
 		t.Errorf("output %q, want none", out)
 	}
 }
+
+// TestLibrtlLookupKey: the manual's MACRO example, a table built with
+// govax's $LIB_KEY_TABLE macro (ADD 1, DELETE 2, EXIT 3), and
+// LIB$LOOKUP_KEY of "DEL" from a linked program, which shows the full
+// keyword it found and checks its value; then "XYZ", which is
+// LIB$_UNRKEY. It ends with 1 when all of that held.
+func TestLibrtlLookupKey(t *testing.T) {
+	r0, out := runMacroProgram(t, "\t.PSECT\tDATA,NOEXE,WRT,LONG\n"+
+		"KEYTABLE:\t$LIB_KEY_TABLE\t<<ADD,1>,<DELETE,2>,<EXIT,3>>\n"+
+		"SEARCH:\t.ASCID\t/DEL/\nBAD:\t.ASCID\t/XYZ/\nFULL:\t.LONG\t^X020E0000,0\nVALUE:\t.LONG\t0\n"+
+		"\t.PSECT\tCODE,NOWRT,EXE\n"+
+		"\t.ENTRY\tSTART,^M<>\n"+
+		"\tCMPL\tKEYTABLE,#6\n\tBNEQ\t20$\n"+
+		"\tPUSHAQ\tFULL\n\tPUSHAL\tVALUE\n\tPUSHAL\tKEYTABLE\n\tPUSHAQ\tSEARCH\n\tCALLS\t#4,G^LIB$LOOKUP_KEY\n\tBLBC\tR0,10$\n"+
+		"\tCMPL\tVALUE,#2\n\tBNEQ\t30$\n"+
+		"\tPUSHAQ\tFULL\n\tCALLS\t#1,G^LIB$PUT_OUTPUT\n"+
+		"\tPUSHAL\tKEYTABLE\n\tPUSHAQ\tBAD\n\tCALLS\t#2,G^LIB$LOOKUP_KEY\n\tCMPL\tR0,#LIB$_UNRKEY\n\tBNEQ\t40$\n"+
+		"\tMOVL\t#1,R0\n\tRET\n"+
+		"10$:\tRET\n20$:\tMOVL\t#20,R0\n\tRET\n30$:\tMOVL\t#30,R0\n\tRET\n40$:\tMOVL\t#40,R0\n\tRET\n\t.END\tSTART\n")
+
+	if r0 != 1 {
+		t.Errorf("R0 = %#x, want 1 (20: the table's count, 30: the value, 40: no LIB$_UNRKEY; otherwise the failing status)", r0)
+	}
+
+	if out != "DELETE\n" {
+		t.Errorf("output %q, want %q", out, "DELETE\n")
+	}
+}

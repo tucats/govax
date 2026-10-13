@@ -120,6 +120,28 @@ START:	.LONG START-ITEM`)
 	)
 }
 
+// TestRelocatableAssignmentChain: a direct assignment may add or
+// subtract several constants to a label, either side, as $LIB_KEY_TABLE's
+// running $$$KEYTEXT = $$$KEYTEXT+$$$KEYLEN+1 does; each is still a label
+// plus a constant.
+func TestRelocatableAssignmentChain(t *testing.T) {
+	a := macroAssemble(t, `.PSECT DATA
+ITEM:	.LONG 42
+N = 3
+X = ITEM+N+1
+Y = 2+ITEM+2
+Z = X-1-1
+	.LONG X
+	.LONG Y
+	.LONG Z`)
+
+	requireRelocations(t, a,
+		"DATA+4 L DATA:4",
+		"DATA+8 L DATA:4",
+		"DATA+C L DATA:2",
+	)
+}
+
 // TestRelocatableOperands checks instruction operands that refer to
 // another psect: relative mode becomes a longword displacement the linker
 // finishes (STO_LD), and an immediate a longword value. Each relocation
