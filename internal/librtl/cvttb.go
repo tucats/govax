@@ -39,6 +39,21 @@ func textToBinary(env *corevms.Environment, argv []uint32, radix uint64) (uint32
 		return memoryFault(env, err)
 	}
 
+	result, ok := parseBinary(text, radix)
+	if !ok {
+		return cvtFailure, nil
+	}
+
+	if err := env.Memory().StoreLongword(env.CPU(), arg(argv, 2), result); err != nil {
+		return memoryFault(env, writing(err))
+	}
+
+	return cvtSuccess, nil
+}
+
+// parseBinary is textToBinary's conversion of text, in radix: ok is false
+// for a character that isn't allowed or a magnitude over 32 bits.
+func parseBinary(text string, radix uint64) (uint32, bool) {
 	negative := false
 
 	if text != "" && (text[0] == '+' || text[0] == '-') {
@@ -50,11 +65,11 @@ func textToBinary(env *corevms.Environment, argv []uint32, radix uint64) (uint32
 	for i := range len(text) {
 		digit, ok := digitValue(text[i])
 		if !ok || digit >= radix {
-			return cvtFailure, nil
+			return 0, false
 		}
 
 		if value = value*radix + digit; value > 0xFFFFFFFF {
-			return cvtFailure, nil
+			return 0, false
 		}
 	}
 
@@ -63,11 +78,14 @@ func textToBinary(env *corevms.Environment, argv []uint32, radix uint64) (uint32
 		result = -result
 	}
 
-	if err := env.Memory().StoreLongword(env.CPU(), arg(argv, 2), result); err != nil {
-		return memoryFault(env, writing(err))
-	}
+	return result, true
+}
 
-	return cvtSuccess, nil
+// decimalText is LIB$CVT_DTB's conversion of text, as a signed value.
+func decimalText(text string) (int32, bool) {
+	v, ok := parseBinary(text, 10)
+
+	return int32(v), ok
 }
 
 // digitValue is the value of a digit character of radix 16 or less: 0-9,

@@ -140,3 +140,25 @@ func TestLibrtlLookupKey(t *testing.T) {
 		t.Errorf("output %q, want %q", out, "DELETE\n")
 	}
 }
+
+// TestLibrtlLocale: a linked program shows LIB$DIGIT_SEP's, LIB$RADIX_POINT's,
+// and LIB$CURRENCY's symbols (no logical names defined: the United
+// States'), and ends with LIB$LP_LINES's 66.
+func TestLibrtlLocale(t *testing.T) {
+	r0, out := runMacroProgram(t, "\t.PSECT\tDATA,NOEXE,WRT,LONG\n"+
+		"SYM:\t.LONG\t^X020E0000,0\n"+
+		"\t.PSECT\tCODE,NOWRT,EXE\n"+
+		"\t.ENTRY\tSTART,^M<>\n"+
+		"\tPUSHAQ\tSYM\n\tCALLS\t#1,G^LIB$DIGIT_SEP\n\tPUSHAQ\tSYM\n\tCALLS\t#1,G^LIB$PUT_OUTPUT\n"+
+		"\tPUSHAQ\tSYM\n\tCALLS\t#1,G^LIB$RADIX_POINT\n\tPUSHAQ\tSYM\n\tCALLS\t#1,G^LIB$PUT_OUTPUT\n"+
+		"\tPUSHAQ\tSYM\n\tCALLS\t#1,G^LIB$CURRENCY\n\tPUSHAQ\tSYM\n\tCALLS\t#1,G^LIB$PUT_OUTPUT\n"+
+		"\tCALLS\t#0,G^LIB$LP_LINES\n\tRET\n\t.END\tSTART\n")
+
+	if r0 != 66 {
+		t.Errorf("R0 = %d, want LIB$LP_LINES's 66", r0)
+	}
+
+	if out != ",\n.\n$\n" {
+		t.Errorf("output %q, want %q", out, ",\n.\n$\n")
+	}
+}

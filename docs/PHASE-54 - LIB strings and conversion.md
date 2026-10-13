@@ -1,6 +1,6 @@
 # Phase 54 — LIB$ strings, descriptors, and text conversion
 
-**Status:** in progress (2026-10-12; subtasks 1 to 8 done). Needs Phase 53. Part of the LIB$
+**Status:** in progress (2026-10-12; subtasks 1 to 9 done). Needs Phase 53. Part of the LIB$
 program laid out in `PHASE-53 - RTL LIB support.md` (Part A), which also
 has the sources and the conventions (Part B) this phase follows.
 
@@ -414,7 +414,8 @@ against VMS's own table, which the probe dumps.)
 7. **Numeric text**: CVT_DTB, CVT_HTB, CVT_OTB. **Done** 2026-10-12.
 8. **LOOKUP_KEY**, and the `$LIB_KEY_TABLE` macro in `starlet.mar`.
    **Done** 2026-10-12.
-9. **Locale**: DIGIT_SEP, RADIX_POINT, CURRENCY, LP_LINES.
+9. **Locale**: DIGIT_SEP, RADIX_POINT, CURRENCY, LP_LINES. **Done**
+   2026-10-12.
 10. **CVT_DX_DX** (LIBRTL2's 0x000): integers and F/D/G/H to and from
     text, with a LIBRTL2 stub area (the scope the author accepted).
 11. **The program** (`testdata/lib54/`) and its console test; VMS probe
@@ -605,3 +606,15 @@ against VMS's own table, which the probe dumps.)
     and the console's `TestLibrtlLookupKey`: the manual's MACRO example
     built with govax's `$LIB_KEY_TABLE`, "DEL" found as DELETE (value 2,
     shown), and "XYZ" LIB$_UNRKEY.
+- **2026-10-12** — Subtask 9, the locale routines (`internal/librtl/
+  locale.go`): LIB$DIGIT_SEP, LIB$RADIX_POINT, LIB$CURRENCY, LIB$LP_LINES
+  (codes 101 to 104). Each name is translated in the process table, the
+  group table, then the system table (the manual's order; the job table
+  isn't searched), the first equivalence string winning; the defaults
+  are `,`, `.`, `$`, and 66. The three symbol routines write the whole
+  translation by class (LIB$_STRTRU when cut) and the characters written
+  to resultant-length. LIB$LP_LINES converts with LIB$CVT_DTB's rules
+  (`parseBinary`, now shared by the CVT routines) and keeps 30 to 255.
+  Tests: `locale_test.go` (defaults, the process table over the system
+  table, a translation longer than one character, truncation, LP_LINES's
+  range and bad text) and the console's `TestLibrtlLocale`.

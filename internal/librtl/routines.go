@@ -142,6 +142,10 @@ var Routines = []Routine{
 	{"LIB$CVT_HTB", 98, libCvtHtb},
 	{"LIB$CVT_OTB", 99, libCvtOtb},
 	{"LIB$LOOKUP_KEY", 100, libLookupKey},
+	{"LIB$DIGIT_SEP", 101, libDigitSep},
+	{"LIB$RADIX_POINT", 102, libRadixPoint},
+	{"LIB$CURRENCY", 103, libCurrency},
+	{"LIB$LP_LINES", 104, libLpLines},
 }
 
 // missing is Missing's list, and missingJSB MissingJSB's, made once.
