@@ -87,3 +87,28 @@ func TestLibrtlStringFunctions(t *testing.T) {
 		t.Errorf("output %q, want %q", out, "*\n")
 	}
 }
+
+// TestLibrtlCvtTextToBinary: a linked program converts decimal,
+// hexadecimal, and octal text, the count by value and the text by
+// reference, as MACRO calls them. It ends with 1 when each gave its
+// value and a blank made LIB$CVT_DTB fail with 0.
+func TestLibrtlCvtTextToBinary(t *testing.T) {
+	r0, out := runMacroProgram(t, "\t.PSECT\tDATA,NOEXE,WRT,LONG\n"+
+		"DEC:\t.ASCII\t/-1234/\nHEX:\t.ASCII\t/7fF/\nOCT:\t.ASCII\t/777/\nBLANK:\t.ASCII\t/1 2/\nRES:\t.LONG\t0\n"+
+		"\t.PSECT\tCODE,NOWRT,EXE\n"+
+		"\t.ENTRY\tSTART,^M<>\n"+
+		"\tPUSHAL\tRES\n\tPUSHAB\tDEC\n\tPUSHL\t#5\n\tCALLS\t#3,G^LIB$CVT_DTB\n\tBLBC\tR0,10$\n\tCMPL\tRES,#-1234\n\tBNEQ\t10$\n"+
+		"\tPUSHAL\tRES\n\tPUSHAB\tHEX\n\tPUSHL\t#3\n\tCALLS\t#3,G^LIB$CVT_HTB\n\tBLBC\tR0,20$\n\tCMPL\tRES,#^X7FF\n\tBNEQ\t20$\n"+
+		"\tPUSHAL\tRES\n\tPUSHAB\tOCT\n\tPUSHL\t#3\n\tCALLS\t#3,G^LIB$CVT_OTB\n\tBLBC\tR0,30$\n\tCMPL\tRES,#^O777\n\tBNEQ\t30$\n"+
+		"\tPUSHAL\tRES\n\tPUSHAB\tBLANK\n\tPUSHL\t#3\n\tCALLS\t#3,G^LIB$CVT_DTB\n\tTSTL\tR0\n\tBNEQ\t40$\n"+
+		"\tMOVL\t#1,R0\n\tRET\n"+
+		"10$:\tMOVL\t#10,R0\n\tRET\n20$:\tMOVL\t#20,R0\n\tRET\n30$:\tMOVL\t#30,R0\n\tRET\n40$:\tMOVL\t#40,R0\n\tRET\n\t.END\tSTART\n")
+
+	if r0 != 1 {
+		t.Errorf("R0 = %d, want 1 (10 DTB, 20 HTB, 30 OTB, 40 the blank failed)", r0)
+	}
+
+	if out != "" {
+		t.Errorf("output %q, want none", out)
+	}
+}

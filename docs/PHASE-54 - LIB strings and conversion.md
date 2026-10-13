@@ -1,6 +1,6 @@
 # Phase 54 — LIB$ strings, descriptors, and text conversion
 
-**Status:** in progress (2026-10-12; subtasks 1 to 6 done). Needs Phase 53. Part of the LIB$
+**Status:** in progress (2026-10-12; subtasks 1 to 7 done). Needs Phase 53. Part of the LIB$
 program laid out in `PHASE-53 - RTL LIB support.md` (Part A), which also
 has the sources and the conventions (Part B) this phase follows.
 
@@ -411,7 +411,7 @@ against VMS's own table, which the probe dumps.)
 5. **Characters**: LEN, CHAR, ICHAR, INDEX. **Done** 2026-10-12.
 6. **Translation**: the three tables, TRA_ASC_EBC, TRA_EBC_ASC.
    **Done** 2026-10-12 (the tables in subtask 2).
-7. **Numeric text**: CVT_DTB, CVT_HTB, CVT_OTB.
+7. **Numeric text**: CVT_DTB, CVT_HTB, CVT_OTB. **Done** 2026-10-12.
 8. **LOOKUP_KEY**, and the `$LIB_KEY_TABLE` macro in `starlet.mar`.
 9. **Locale**: DIGIT_SEP, RADIX_POINT, CURRENCY, LP_LINES.
 10. **CVT_DX_DX** (LIBRTL2's 0x000): integers and F/D/G/H to and from
@@ -564,3 +564,13 @@ against VMS's own table, which the probe dumps.)
   E0 counted translatable, LIB$_INVARG, VS and D destinations) and the
   console's `TestLibrtlTranslate` ("GOVAX" to EBCDIC and back, and
   LIB$_INVCHA from a linked program).
+- **2026-10-12** — Subtask 7, numeric text (`internal/librtl/cvttb.go`):
+  LIB$CVT_DTB, LIB$CVT_HTB, LIB$CVT_OTB (codes 97 to 99), the count by
+  value and the text by reference, returning 1 or 0. One optional
+  leading sign; every other character a digit of the radix (hex in
+  either case); a magnitude over 32 bits unsigned fails; `-` negates in
+  two's complement. The survey's open choices are as it proposed: no
+  digits is 0 and success, a negative count fails, the result is written
+  only on success (all unconfirmed). Tests: `cvttb_test.go` (each radix,
+  signs, overflow at 2^32, blanks, tabs, a misplaced sign, the count
+  bounding the text) and the console's `TestLibrtlCvtTextToBinary`.
