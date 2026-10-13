@@ -123,6 +123,7 @@
 //              10/12/26    DIRECTORY's layouts are VMS's; /SIZE=option,
 //                          /[NO]HEADING, /[NO]TRAILING
 //              10/12/26    Added DUMP
+//              10/13/26    Added ATTACH
 
 This is the help documentation for the govax VAX emulator.  Topic sections are
 marked by a "$" delimiter.  This is followed by as many tokens of the help
@@ -1102,6 +1103,39 @@ $SPAWN
         VAX> SPAWN HELLO
         VAX> SPAWN DIRECTORY
         VAX> SPAWN/NOWAIT @NIGHTLY
+
+    A SPAWN that waits gives the subprocess the terminal.  ATTACH gives it
+    back, or to another process of the console's job (see HELP ATTACH).
+
+$ATTACH
+
+    ATTACH gives the terminal to another process of the console's job and
+    waits until it comes back, as DCL's ATTACH and a program's LIB$ATTACH
+    do.  The process must be waiting for the terminal itself: a process
+    that SPAWNed a subprocess and waits for it, or one that gave the
+    terminal away by ATTACH.  A SPAWN/NOWAIT subprocess, the process
+    typing ATTACH, and a process of another job are refused
+    (%LIB-F-ATTREQREF); a process that isn't there is %SYSTEM-W-NONEXPR.
+
+    Syntax:
+
+        ATTACH process-name
+        ATTACH/IDENTIFICATION=pid
+
+    The terminal comes back when another process ATTACHes to the waiting
+    one, or when the process that has it logs out (it then goes to that
+    process's parent).  DCL then says so (%DCL-S-RETURNED).  A SPAWN that
+    waits is over, its subprocess still there, when the subprocess
+    ATTACHes back to its parent.
+
+    Example:
+
+        VAX> SPAWN
+        $ ATTACH SYSTEM
+        %DCL-S-RETURNED, control returned to process SYSTEM
+        VAX> ATTACH SYSTEM_1
+        %DCL-S-RETURNED, control returned to process SYSTEM_1
+        $ LOGOUT
 
 $LOGOUT
 

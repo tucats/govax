@@ -23,6 +23,18 @@ func (env *Environment) consoleReader() *bufio.Reader {
 	return env.consoleInBuf
 }
 
+// TerminalBuffer is the buffer the processes reading env's input share,
+// or nil when none has read it yet: what is in it has been taken from the
+// input already, so a reader of the input itself (the console's DCL)
+// reads it first.
+func (env *Environment) TerminalBuffer() *bufio.Reader {
+	if env.consoleIn == nil {
+		return nil
+	}
+
+	return env.terminalBuffers[env.consoleIn]
+}
+
 // ctrlZ is CTRL/Z, the character a terminal user types to end input.
 const ctrlZ = 0x1A
 

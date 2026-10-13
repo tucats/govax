@@ -317,3 +317,47 @@ func libPause(env *corevms.Environment, _ []uint32) (uint32, error) {
 
 	return env.CLI.Pause()
 }
+
+// libAttach is LIB$ATTACH (LIB-17):
+//
+//	LIB$ATTACH process-id
+//
+// process-id.rlu.r. It gives the terminal to another process of the job
+// that has given it away and waits for it (a SPAWN's parent, a
+// subprocess hibernating after an ATTACH), as DCL's ATTACH does, and
+// hibernates until some process attaches the terminal back to it
+// (corevms's AttachTerminal, internal/corevms/attach.go): the call is
+// made again when it can go on, as LIB$SPAWN's is, and then returns
+// SS$_NORMAL. It returns LIB$_NOCLI without a CLI, SS$_NONEXPR when no
+// process has the PID, and LIB$_ATTREQREF when that process isn't one
+// the terminal may go to. An omitted or unreadable process-id is an
+// access violation, signaled.
+func libAttach(env *corevms.Environment, argv []uint32) (uint32, error) {
+	// A call made again while it waits for the terminal.
+	if waiting, err := env.AwaitAttach(); waiting {
+		if err != nil {
+			return 0, err
+		}
+
+		return ssNormal, nil
+	}
+
+	if env.CLI == nil {
+		return libNoCLI, nil
+	}
+
+	pid, err := env.Memory().LoadLongword(env.CPU(), arg(argv, 0))
+	if err != nil {
+		return memoryFault(env, err)
+	}
+
+	if status := env.CLI.Attach(pid); status != ssNormal {
+		return status, nil
+	}
+
+	if _, err := env.AwaitAttach(); err != nil {
+		return 0, err
+	}
+
+	return ssNormal, nil
+}

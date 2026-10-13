@@ -73,7 +73,10 @@ never had.
   to, from an atomic copy `noteControlKeys` keeps), and PAUSE (subtask 8,
   `CLI.Pause`, `dclshell/dclpause.go`: the Ctrl/Y level at any command
   level, read by `readControlYLevel`; in a subprocess, a tail call of
-  the CLI stub's Ctrl/Y routine).
+  the CLI stub's Ctrl/Y routine), and ATTACH (subtask 9,
+  `corevms/attach.go`: the job's terminal holder, `Job.terminal`, which
+  `Attached` returns; `AttachTerminal`/`AwaitAttach`; LIB$ATTACH and
+  DCL's ATTACH, `dclshell/attachcmd.go`).
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
 - `docs/DEVIATIONS.md` — running log of suspected ISA/behavior fidelity issues found in

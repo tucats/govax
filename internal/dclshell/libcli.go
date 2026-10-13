@@ -166,3 +166,16 @@ func (s shellCLI) Pause() (uint32, error) {
 
 	return s.c.pauseProcessOne()
 }
+
+// Attach is corevms.CLI's: the terminal goes to the process pid names
+// (corevms's AttachTerminal), and the Ctrl/Y setting that answers for the
+// terminal is now that process's DCL's (noteControlKeys).
+func (s shellCLI) Attach(pid uint32) uint32 {
+	status := s.shell.RTL.AttachTerminal(pid)
+
+	if s.c != nil {
+		s.c.noteControlKeys()
+	}
+
+	return status
+}

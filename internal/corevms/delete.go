@@ -78,6 +78,7 @@ func (sys *System) DeleteProcess(env *Environment) {
 	env.processRundown()
 	sys.returnQuotas(env)
 	sys.sendTerminationMessage(env)
+	sys.returnTerminal(env)
 	sys.completeSpawn(env)
 
 	if env.waiting != nil {

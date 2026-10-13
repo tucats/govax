@@ -55,6 +55,12 @@ type CLI interface {
 	// ends, without its exit handlers: Pause returns ErrExit, or a
 	// CallRequest the routine returns as its own, which ends it.
 	Pause() (uint32, error)
+
+	// Attach gives the terminal to the process whose PID is pid
+	// (LIB$ATTACH, DCL's ATTACH; Environment.AttachTerminal), returning
+	// SS$_NORMAL, SS$_NONEXPR, or LIB$_ATTREQREF. The caller then waits
+	// for the terminal to come back (Environment.AwaitAttach).
+	Attach(pid uint32) uint32
 }
 
 // The table-type-indicator values of the LIB$ symbol routines

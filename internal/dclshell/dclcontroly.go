@@ -49,9 +49,9 @@ import (
 // govax.
 //
 // The keys go to the process the terminal is attached to (Phase 51,
-// subtask 3): process 1, or the subprocess a SPAWN without /NOWAIT
-// waits for, and so on down a chain of SPAWNs (corevms's Attached; the
-// DCL Dictionary, SPAWN). A subprocess's DCL follows the same rules in
+// subtask 3): process 1, the subprocess a SPAWN without /NOWAIT gave it
+// to, or the process an ATTACH gave it to (corevms's Attached and
+// attach.go; the DCL Dictionary, SPAWN and ATTACH). A subprocess's DCL follows the same rules in
 // its procedures. An image it runs is interrupted by an AST of DCL's
 // (subcli.go's "Ctrl/Y"), with the image paused while DCL acts:
 // CONTINUE at the Ctrl/Y level lets it go on. Outside a procedure, a
@@ -124,7 +124,8 @@ func (c *Interpreter) terminalControlY() bool { return !c.terminalShell().contro
 // process's Ctrl/Y setting. It is called wherever that may change: a
 // setting changed (SET CONTROL, LIB$DISABLE_CTRL and LIB$ENABLE_CTRL), a
 // subprocess's DCL starting (it may be attached by a waiting SPAWN), and
-// a process deleted (the terminal returns to the one that spawned it).
+// a process deleted (the terminal returns to the one that spawned it),
+// and an ATTACH (shellCLI's Attach).
 func (c *Interpreter) noteControlKeys() {
 	c.terminalNoY.Store(!c.terminalControlY())
 }

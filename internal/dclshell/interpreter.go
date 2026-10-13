@@ -94,9 +94,11 @@ func (c *Interpreter) RunDownAbandonedImage() {
 
 // ReadReply reads one line from the console's input, a byte at a time so
 // that nothing past the line is taken from a reader shared with the
-// command line. ok is false at the end of the input with nothing read,
-// or at a Ctrl/Z typed first (the terminal's end of file); a Ctrl/Z
-// after text ends the line.
+// command line. What the processes' shared terminal buffer has already
+// taken from the input (a subprocess's read ahead, while it had the
+// terminal; corevms's TerminalBuffer) is read first. ok is false at the
+// end of the input with nothing read, or at a Ctrl/Z typed first (the
+// terminal's end of file); a Ctrl/Z after text ends the line.
 func (c *Interpreter) ReadReply() (line string, ok bool) {
 	if c.In == nil {
 		return "", false
@@ -107,8 +109,22 @@ func (c *Interpreter) ReadReply() (line string, ok bool) {
 		text []byte
 	)
 
+	read := c.In.Read
+
+	if one := c.machine.ProcessOne(); one != nil {
+		if shared := one.TerminalBuffer(); shared != nil {
+			read = func(p []byte) (int, error) {
+				if shared.Buffered() > 0 {
+					return shared.Read(p)
+				}
+
+				return c.In.Read(p)
+			}
+		}
+	}
+
 	for {
-		n, err := c.In.Read(buf[:])
+		n, err := read(buf[:])
 		if n == 1 {
 			switch buf[0] {
 			case '\n', '\r':

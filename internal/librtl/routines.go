@@ -229,6 +229,7 @@ var Routines = []Routine{
 	{"LIB$DISABLE_CTRL", 159, libDisableCtrl},
 	{"LIB$ENABLE_CTRL", 160, libEnableCtrl},
 	{"LIB$PAUSE", 161, libPause},
+	{"LIB$ATTACH", 162, libAttach},
 }
 
 // missing is Missing's list, and missingJSB MissingJSB's, made once.

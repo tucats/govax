@@ -577,7 +577,7 @@ implementation per Shell (`libcli.go`), the chain run after an image
 8. **PAUSE**: the Ctrl/Y level at any command level, and in a
    subprocess. **Done** 2026-10-13.
 9. **ATTACH**: the terminal holder per job, DCL's ATTACH command, and
-   LIB$ATTACH.
+   LIB$ATTACH. **Done** 2026-10-13.
 10. **The program** (`testdata/lib57/`, a command procedure running it,
     and an interactive script), its console test, and the VMS probe.
 11. **Close-out**.
@@ -797,3 +797,54 @@ implementation per Shell (`libcli.go`), the chain run after an image
   between, STOP, EXIT, the end of input, `@` ending the image and then
   running), in a procedure (CONTINUE, STOP), in a spawned subprocess
   (its prompt; CONTINUE, STOP), and in a LOGINOUT job (batch).
+- **2026-10-13** — Subtask 9, ATTACH. The terminal's holder is explicit
+  (`corevms/attach.go`): `Job.terminal`, the process of the job the
+  terminal is attached to (nil for the master), which `Attached` now
+  returns instead of following SPAWN waits. A SPAWN that waits gives it
+  to the subprocess when the spawner has it; a process that gave it away
+  (`awaitingTerminal`) is "detached", the only kind ATTACH may give it
+  to; deletion gives it back to the nearest owner still there
+  (`returnTerminal`, before `completeSpawn`). `AttachTerminal(pid)` gives
+  it (SS$_NONEXPR, LIB$_ATTREQREF) and `AwaitAttach` is the wait (HIB)
+  until it comes back; `AwaitSpawn`'s wait also ends when the terminal
+  comes back to the spawner, the subprocess still there. `corevms.CLI`
+  gained `Attach(pid) status` (the survey's sketch had it wait too; the
+  routine and DCL wait themselves, as for LIB$SPAWN), whose
+  implementation (`dclshell/libcli.go`) calls `AttachTerminal` and
+  `noteControlKeys`, so Ctrl/Y's setting is the new holder's.
+  `librtl/cli.go` has LIB$ATTACH (code 162), called again while it
+  waits, as LIB$SPAWN is. DCL's ATTACH (`dclshell/attachcmd.go`, the
+  grammar's `attach` verb, HELP ATTACH): `ATTACH name` (the caller's
+  group, uppercase) or `/IDENTIFICATION=pid` (hex); both is
+  CLI$_CONFLICT, neither CLI$_INSFPRM, a bad PID CLI$_IVVALU. In process
+  1 it calls LIB$ATTACH on SPAWN's procedure page (the procedure's code
+  shared as `callProcedureCode`), so process 1 waits while the machine
+  runs the holder; in a subprocess it calls the CLI's Attach and waits
+  through `handBack`. When the terminal is back DCL shows
+  %DCL-S-RETURNED (`returnedMessage`, shared with SPAWN), and SPAWN's
+  status is SS$_NORMAL when an ATTACH ended it. One fix found on the way:
+  process 1's DCL reads of the terminal (`ReadReply`: the Ctrl/Y and
+  pause levels, INQUIRE) read the processes' shared terminal buffer
+  first (`Environment.TerminalBuffer`), so lines a subprocess's read
+  took ahead aren't lost when the terminal comes back. Choices, each
+  **unconfirmed** and a probe case:
+  - ATTACH itself shows nothing (VMS may show %DCL-S-ATTACHED).
+  - The caller must have the terminal (LIB$_ATTREQREF otherwise), so
+    attaching to oneself, or from a SPAWN/NOWAIT subprocess, is refused;
+    "the same input stream" isn't checked beyond the job.
+  - A SPAWN gives the terminal only when the spawner has it.
+  - A SPAWN's wait also ends when its subprocess is deleted while
+    another process has the terminal; the spawner goes on without it.
+  - LIB$ATTACH from an image shows nothing; LIB$_NOCLI is checked
+    after the re-entry test, before process-id is read.
+  - At the Ctrl/Y level in process 1 (a Ctrl/Y's or LIB$PAUSE's, the
+    console inside the image), ATTACH ends the image first and then runs
+    (`errLeaveControlY`), as a command that runs an image does. (SPAWN
+    there isn't handled that way yet, though `dclpause.go` says it is.)
+  Tests: `librtl/cli_test.go` (`TestLibAttach`: the PID passed, the
+  refusals returned, an unreadable process-id; NOCLI) and
+  `console/libattach_test.go`: a subprocess ATTACHes to process 1 and
+  back, by name and by PID, Ctrl/Y's setting following
+  (`TestAttach_backAndForth`); the refusals (`_refused`); a
+  subprocess's subprocess (`_nested`); ATTACH at a pause in process 1
+  (`_pause`); and an image's LIB$ATTACH (`TestLibAttach_image`).

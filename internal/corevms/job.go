@@ -49,6 +49,10 @@ type Job struct {
 	// master process (delete.go's endJob); "" for a job whose table
 	// lasts as long as the System, such as process 1's.
 	LogicalTable string
+
+	// terminal is the process the job's terminal is attached to, nil for
+	// the master process (attach.go).
+	terminal *Environment
 }
 
 // PooledQuotas are the limits a job's processes share, as $CREPRC's

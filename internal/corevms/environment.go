@@ -233,6 +233,11 @@ type Environment struct {
 	spawn     *spawnCompletion
 	spawnWait *Environment
 
+	// awaitingTerminal is set while the process has given its job's
+	// terminal away (a waiting SPAWN, or ATTACH) and waits for it to come
+	// back; attachWait while that wait is an ATTACH's (attach.go).
+	awaitingTerminal, attachWait bool
+
 	// SpawnNotice, if set, is called when this process's LIB$SPAWN has
 	// made a subprocess, before it runs: the console's SPAWN says so
 	// then, as DCL's does.

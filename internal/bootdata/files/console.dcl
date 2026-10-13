@@ -1056,6 +1056,16 @@ grammar console
         parameter   command/id=1698             -
                     /type=$rest_of_line
 
+    ! ATTACH [process-name] or ATTACH/IDENTIFICATION=pid gives the
+    ! terminal to another process of the job that waits for it (a SPAWN's
+    ! parent, or a process that gave it away by ATTACH), and waits until
+    ! it comes back, as DCL's ATTACH does.
+    verb attach/id=1700
+        qualifier   identification/id=1701      -
+                    /type=$string
+        parameter   process/id=1702             -
+                    /type=$string
+
     ! ASM [file] assembles a file with the console's assembler, or with
     ! no file enters interactive assembler mode. A host file name with
     ! lowercase letters or a "/" must be quoted, as everywhere in DCL.

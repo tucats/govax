@@ -89,12 +89,7 @@ func (c *Interpreter) Spawn(o SpawnOptions) error {
 	put := func(off, v uint32) { binary.LittleEndian.PutUint32(b[off:], v) }
 
 	// The procedure: an entry mask, CALLG @#arglist, @#LIB$SPAWN, RET.
-	code := []byte{0x00, 0x00, 0xFA, 0x9F}
-	code = binary.LittleEndian.AppendUint32(code, page+spawnArgList)
-	code = append(code, 0x9F)
-	code = binary.LittleEndian.AppendUint32(code, entry)
-	code = append(code, 0x04)
-	copy(b, code)
+	copy(b, callProcedureCode(page+spawnArgList, entry))
 
 	// The strings, each with a fixed-length descriptor; an empty one is
 	// an omitted argument.
@@ -239,9 +234,17 @@ func (c *Interpreter) spawnInSubprocess(cli *subprocessCLI, o SpawnOptions) erro
 }
 
 // spawnReturned ends a SPAWN that waited for child: DCL says control is
-// back, and SPAWN's status is the subprocess's final status.
+// back, and SPAWN's status is the subprocess's final status, or
+// SS$_NORMAL when the terminal came back by an ATTACH, the subprocess
+// still there (attachcmd.go; unconfirmed).
 func (c *Interpreter) spawnReturned(child *corevms.Environment) error {
-	c.Printf("%%DCL-S-RETURNED, control returned to process %s\n", c.RTL.Process.Name)
+	c.returnedMessage()
+
+	if !child.Deleted {
+		c.SetCommandStatus(ssNormal, nil)
+
+		return nil
+	}
 
 	// SPAWN's status is the subprocess's final status, its message shown
 	// if it is a failure not shown already (VMS 7.3 showed IVVERB again

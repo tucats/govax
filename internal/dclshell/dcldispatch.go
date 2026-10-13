@@ -302,6 +302,9 @@ func (c *Interpreter) BindDCL(g *dcl.Grammar) {
 			NoLogicalNames: r.Negated("LOGICAL_NAMES"),
 		})
 	})
+	g.Bind("ATTACH", func(id int64, r *dcl.Result) error {
+		return c.Attach(r.String("PROCESS"), r.String("IDENTIFICATION"))
+	})
 	g.Bind("SET_VERIFY", func(id int64, r *dcl.Result) error { return setVerifyCommand(c, r, c.line) })
 	g.Bind("SET_PREFIX", func(id int64, r *dcl.Result) error {
 		if r.Negated("WHAT") {

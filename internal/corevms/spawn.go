@@ -181,8 +181,15 @@ func (env *Environment) Spawn(req SpawnRequest) (*Environment, uint32) {
 		*word &^= 1 << bit
 	}
 
+	// A SPAWN that waits gives the subprocess the terminal, if the
+	// spawner has it (attach.go).
 	if req.Flags&cliNoWait == 0 {
 		env.spawnWait = child
+
+		if env.holdsTerminal() {
+			env.Process.Job.terminal = child
+			env.awaitingTerminal = true
+		}
 	}
 
 	if env.cpu.DebugEnabled(registers.DebugProcess) {
@@ -201,35 +208,24 @@ func (env *Environment) Spawn(req SpawnRequest) (*Environment, uint32) {
 // CLI$M_NOWAIT: waiting is false when there's nothing to wait for (this
 // call isn't LIB$SPAWN called again during a wait). While the subprocess
 // lives, err is ErrWait, the caller waiting (LEF) for its deletion; once
-// it's gone, err is nil and the wait is over.
+// it's gone, err is nil and the wait is over. A spawner that gave the
+// subprocess the terminal also stops waiting when the terminal is
+// attached back to it (ATTACH, attach.go), the subprocess still there.
 func (env *Environment) AwaitSpawn() (waiting bool, err error) {
 	child := env.spawnWait
 	if child == nil {
 		return false, nil
 	}
 
-	if child.Deleted {
-		env.spawnWait = nil
+	over := func() bool { return child.Deleted || env.awaitingTerminal && env.holdsTerminal() }
+
+	if over() {
+		env.spawnWait, env.awaitingTerminal = nil, false
 
 		return true, nil
 	}
 
-	return true, env.waitOn(sched.StateLEF, sched.ResourceNone, eventFlagBoost, func() bool { return child.Deleted })
-}
-
-// Attached is the process the terminal is attached to, of those in env's
-// job below env: env itself, or, while a LIB$SPAWN of env's waits for its
-// subprocess (SPAWN without /NOWAIT), the process that subprocess's
-// terminal is attached to, and so on down a chain of SPAWNs. On VMS, the
-// terminal's control keys (Ctrl/Y, Ctrl/C) go to that process (the DCL
-// Dictionary, SPAWN and ATTACH). A subprocess made with CLI$M_NOWAIT
-// shares the terminal but isn't attached to it.
-func (env *Environment) Attached() *Environment {
-	for env.spawnWait != nil && !env.spawnWait.Deleted {
-		env = env.spawnWait
-	}
-
-	return env
+	return true, env.waitOn(sched.StateLEF, sched.ResourceNone, eventFlagBoost, over)
 }
 
 // completeSpawn tells the parent of env, a subprocess LIB$SPAWN created,

@@ -2,6 +2,7 @@ package librtl
 
 import (
 	"errors"
+	"fmt"
 	"strings"
 	"testing"
 
@@ -24,12 +25,21 @@ type fakeCLI struct {
 	// pauseStatus and pauseErr are what Pause returns.
 	pauseStatus uint32
 	pauseErr    error
+
+	// attachStatus is what Attach returns.
+	attachStatus uint32
 }
 
 func (f *fakeCLI) Pause() (uint32, error) {
 	f.calls = append(f.calls, "pause")
 
 	return f.pauseStatus, f.pauseErr
+}
+
+func (f *fakeCLI) Attach(pid uint32) uint32 {
+	f.calls = append(f.calls, fmt.Sprintf("attach %08X", pid))
+
+	return f.attachStatus
 }
 
 func (f *fakeCLI) ControlKeys(enable, disable uint32) uint32 {
@@ -119,6 +129,7 @@ func TestLibCLI_noCLI(t *testing.T) {
 		{"LIB$DISABLE_CTRL", []uint32{a.long(1)}},
 		{"LIB$ENABLE_CTRL", []uint32{a.long(corevms.CLICtrlY)}},
 		{"LIB$PAUSE", nil},
+		{"LIB$ATTACH", []uint32{a.long(0x10203)}},
 	} {
 		if r0 := call(t, env, c.name, c.argv...); r0 != libNoCLI {
 			t.Errorf("%s: status %#x, want LIB$_NOCLI", c.name, r0)
@@ -354,5 +365,27 @@ func TestLibPause(t *testing.T) {
 	r0, err := shim(t, env, "LIB$PAUSE")(env, nil)
 	if !errors.Is(err, corevms.ErrExit) || r0 != 0x651 {
 		t.Errorf("an ended pause: status %#x, %v; want SS$_CONTROLY, ErrExit", r0, err)
+	}
+}
+
+// TestLibAttach: LIB$ATTACH hands the PID to the CLI and returns the
+// CLI's refusal as it is; an unreadable process-id is an access violation,
+// signaled. (The terminal's moves and waits are tested with real
+// processes, in internal/console's libattach_test.go.)
+func TestLibAttach(t *testing.T) {
+	env, cli, a := cliFixture(t)
+
+	for _, st := range []uint32{vmsdef.Symbols["SS$_NONEXPR"], vmsdef.LibrarySymbols["LIB$_ATTREQREF"]} {
+		cli.attachStatus, cli.calls = st, nil
+
+		if r0 := call(t, env, "LIB$ATTACH", a.long(0x10203)); r0 != st || len(cli.calls) != 1 || cli.calls[0] != "attach 00010203" {
+			t.Errorf("status %#x, calls %v; want %#x, one attach of 00010203", r0, cli.calls, st)
+		}
+	}
+
+	cli.calls = nil
+
+	if _, err := shim(t, env, "LIB$ATTACH")(env, []uint32{unmapped}); err == nil || len(cli.calls) != 0 {
+		t.Errorf("an unreadable process-id: %v, calls %v; want an access violation, no call", err, cli.calls)
 	}
 }
