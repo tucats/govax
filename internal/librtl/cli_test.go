@@ -1,6 +1,7 @@
 package librtl
 
 import (
+	"errors"
 	"strings"
 	"testing"
 
@@ -19,6 +20,16 @@ type fakeCLI struct {
 
 	// keys are the control keys enabled, as a LIB$M_CLI_ mask.
 	keys uint32
+
+	// pauseStatus and pauseErr are what Pause returns.
+	pauseStatus uint32
+	pauseErr    error
+}
+
+func (f *fakeCLI) Pause() (uint32, error) {
+	f.calls = append(f.calls, "pause")
+
+	return f.pauseStatus, f.pauseErr
 }
 
 func (f *fakeCLI) ControlKeys(enable, disable uint32) uint32 {
@@ -92,7 +103,7 @@ func cliFixture(t *testing.T) (*corevms.Environment, *fakeCLI, *arena) {
 	return env, cli, newArena(t, env)
 }
 
-// TestLibCLI_noCLI: in a process with no CLI each symbol routine returns
+// TestLibCLI_noCLI: in a process with no CLI each CLI routine returns
 // LIB$_NOCLI, even for a name it would refuse.
 func TestLibCLI_noCLI(t *testing.T) {
 	env := fixture(t)
@@ -107,6 +118,7 @@ func TestLibCLI_noCLI(t *testing.T) {
 		{"LIB$DELETE_SYMBOL", []uint32{a.desc("X")}},
 		{"LIB$DISABLE_CTRL", []uint32{a.long(1)}},
 		{"LIB$ENABLE_CTRL", []uint32{a.long(corevms.CLICtrlY)}},
+		{"LIB$PAUSE", nil},
 	} {
 		if r0 := call(t, env, c.name, c.argv...); r0 != libNoCLI {
 			t.Errorf("%s: status %#x, want LIB$_NOCLI", c.name, r0)
@@ -324,5 +336,23 @@ func TestLibControlKeys(t *testing.T) {
 		if len(cli.calls) != 0 || longword(t, env, untouched) != 0x12345678 {
 			t.Errorf("%s of an invalid bit: calls %v, old-mask %#x", routine, cli.calls, longword(t, env, untouched))
 		}
+	}
+}
+
+// TestLibPause: LIB$PAUSE returns what the CLI's Pause does (CONTINUE's
+// SS$_NORMAL); a pause that ends the image (ErrExit) ends it.
+func TestLibPause(t *testing.T) {
+	env, cli, _ := cliFixture(t)
+	cli.pauseStatus = ssNormal
+
+	if r0 := call(t, env, "LIB$PAUSE"); r0 != ssNormal || len(cli.calls) != 1 || cli.calls[0] != "pause" {
+		t.Errorf("status %#x, calls %v; want SS$_NORMAL, one pause", r0, cli.calls)
+	}
+
+	cli.pauseStatus, cli.pauseErr = 0x651, corevms.ErrExit
+
+	r0, err := shim(t, env, "LIB$PAUSE")(env, nil)
+	if !errors.Is(err, corevms.ErrExit) || r0 != 0x651 {
+		t.Errorf("an ended pause: status %#x, %v; want SS$_CONTROLY, ErrExit", r0, err)
 	}
 }

@@ -575,7 +575,7 @@ implementation per Shell (`libcli.go`), the chain run after an image
 7. **Control keys**: SET CONTROL's settings per process; DISABLE_CTRL,
    ENABLE_CTRL. **Done** 2026-10-13.
 8. **PAUSE**: the Ctrl/Y level at any command level, and in a
-   subprocess.
+   subprocess. **Done** 2026-10-13.
 9. **ATTACH**: the terminal holder per job, DCL's ATTACH command, and
    LIB$ATTACH.
 10. **The program** (`testdata/lib57/`, a command procedure running it,
@@ -760,3 +760,40 @@ implementation per Shell (`libcli.go`), the chain run after an image
   `console/subcontroly_test.go`'s `TestSubprocessControlY_noControl`
   (a spawned procedure's SET NOCONTROL=Y turns Ctrl/Y off while it has
   the terminal, and only then).
+- **2026-10-13** — Subtask 8, PAUSE. `librtl/cli.go`'s LIB$PAUSE (code
+  161) calls a new `corevms.CLI` method, `Pause`, which returns
+  SS$_NORMAL on CONTINUE, or ends the image (`corevms.ErrExit`, or a
+  `CallRequest` the routine returns as its own). In DCL
+  (`dclshell/dclpause.go`) the Ctrl/Y level's reader is now
+  `readControlYLevel(level, pause)`, which `controlYLevel` calls: at
+  command level 0 (`level` nil, only for a pause) it dispatches through
+  `DispatchConsole`, EXIT and STOP set `controlYPrompt.end` (so `Exit`
+  and `stopCommand` don't end govax or run the image down), and a
+  command that runs an image, a procedure, or a SPAWN is left as
+  `Shell.chained`, run after the line that ran the image as
+  LIB$DO_COMMAND's text is (`dclchain.go`); in a procedure it is
+  `afterStop`, as for a Ctrl/Y. A pause never runs the image down
+  itself: the shim ends it, so the run that started it runs it down as
+  usual. In process 1 the shim is on the console's goroutine, so
+  `pauseProcessOne` reads the level there and then (`consoleCommands`
+  raised, so nothing lends the CPU), and an ended image's status is
+  SS$_CONTROLY. In a subprocess (`subprocessCLI.pause`) the shim makes
+  a tail call of the CLI stub's Ctrl/Y routine with its AST marked
+  queued and `pausing` set, so the routine's shim hands the interpreter
+  the CPU as the Ctrl/Y AST does and `imageInterrupted` reads the level
+  at any depth; CONTINUE's SS$_NORMAL is the routine's R0 at its RET.
+  `shellCLI` gained `cli`, the subprocess's CLI (nil for process 1).
+  Choices, each **unconfirmed** and a probe case:
+  - Nothing is shown before the prompt (VMS may show "Interrupt").
+  - The level reads the terminal, in a procedure too.
+  - SET NOCONTROL=Y doesn't stop a pause.
+  - An image a pause ends doesn't run its exit handlers, and its status
+    (at level 0, $STATUS) is SS$_CONTROLY.
+  - A LOGINOUT CLI reading a file or mailbox is batch: no effect.
+  - A pause while a Ctrl/Y's AST is queued returns SS$_NORMAL at once,
+    and the AST reads the Ctrl/Y level.
+  Tests: `librtl/cli_test.go` (`TestLibPause`, NOCLI) and
+  `console/libpause_test.go`: at level 0 (CONTINUE with a command
+  between, STOP, EXIT, the end of input, `@` ending the image and then
+  running), in a procedure (CONTINUE, STOP), in a spawned subprocess
+  (its prompt; CONTINUE, STOP), and in a LOGINOUT job (batch).

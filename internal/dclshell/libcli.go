@@ -19,11 +19,13 @@ var (
 	libAmbSymDef = vmsdef.LibrarySymbols["LIB$_AMBSYMDEF"]
 )
 
-// shellCLI is one process's DCL as corevms.CLI: its Shell, and the
-// interpreter all the processes' DCL share.
+// shellCLI is one process's DCL as corevms.CLI: its Shell, the
+// interpreter all the processes' DCL share, and, for a subprocess, its
+// CLI (nil for process 1).
 type shellCLI struct {
 	c     *Interpreter
 	shell *Shell
+	cli   *subprocessCLI
 }
 
 var _ corevms.CLI = shellCLI{}
@@ -153,4 +155,14 @@ func (s shellCLI) ControlKeys(enable, disable uint32) uint32 {
 	}
 
 	return old
+}
+
+// Pause is corevms.CLI's: the Ctrl/Y level, read with the image paused
+// (dclpause.go).
+func (s shellCLI) Pause() (uint32, error) {
+	if s.cli != nil {
+		return s.cli.pause()
+	}
+
+	return s.c.pauseProcessOne()
 }

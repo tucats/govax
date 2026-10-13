@@ -70,7 +70,10 @@ never had.
   DISABLE_CTRL and ENABLE_CTRL (subtask 7, `CLI.ControlKeys`: SET
   CONTROL's settings are each process's `Shell.control`, and
   `ControlYEnabled` answers for the process the terminal is attached
-  to, from an atomic copy `noteControlKeys` keeps).
+  to, from an atomic copy `noteControlKeys` keeps), and PAUSE (subtask 8,
+  `CLI.Pause`, `dclshell/dclpause.go`: the Ctrl/Y level at any command
+  level, read by `readControlYLevel`; in a subprocess, a tail call of
+  the CLI stub's Ctrl/Y routine).
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
 - `docs/DEVIATIONS.md` — running log of suspected ISA/behavior fidelity issues found in

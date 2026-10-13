@@ -864,6 +864,18 @@ func (c *Interpreter) Exit(status *uint32) error {
 			c.SetCommandStatus(*status, nil)
 		}
 
+		// At LIB$PAUSE's Ctrl/Y level, the paused image ends instead
+		// (dclpause.go).
+		if prompt := c.controlYLevelActive; prompt != nil {
+			if status == nil {
+				c.keepStatus()
+			}
+
+			prompt.end = true
+
+			return nil
+		}
+
 		return c.Quit()
 	}
 

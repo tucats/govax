@@ -254,12 +254,16 @@ type subprocessCLI struct {
 	yielded           *cliYield
 
 	// controlYAST is the state of its Ctrl/Y AST (astNone, astQueued,
-	// astRunning); abandoned is set when the AST has ended the image.
+	// astRunning; LIB$PAUSE's call of its routine too); abandoned is set when the AST has ended the image.
 	// interrupted says a Ctrl/Y came while one of DCL's own commands
 	// ran, not yet acted on (dclcontroly.go).
 	controlYAST int
 	abandoned   bool
 	interrupted bool
+
+	// pausing is set by LIB$PAUSE (dclpause.go): the Ctrl/Y routine its
+	// shim calls is a pause, not a Ctrl/Y typed.
+	pausing bool
 
 	// imageActive is set while an image a command started runs; fp and
 	// ap are the CLI's registers at the shim's XFC, put back when it
@@ -321,7 +325,7 @@ func (h cliHost) Start(env *corevms.Environment, start *corevms.CLIStartup) (uin
 	}
 
 	cli := c.cliOf(env)
-	env.CLI = shellCLI{c, cli.shell}
+	env.CLI = shellCLI{c: c, shell: cli.shell, cli: cli}
 	cli.command, cli.hasCommand = start.Command, start.Command != ""
 	cli.prompt = start.Prompt
 	cli.login = start.Login

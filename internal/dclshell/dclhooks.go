@@ -154,7 +154,7 @@ func (c *Interpreter) newProcessOne(sys *corevms.System) *corevms.Environment {
 
 	// The console is process 1's command interpreter: LIB$SPAWN and the
 	// LIB$ CLI routines work in it (libcli.go).
-	env.CLI = shellCLI{c, c.home}
+	env.CLI = shellCLI{c: c, shell: c.home}
 
 	return env
 }

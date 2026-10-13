@@ -2,6 +2,7 @@ package dclshell
 
 import (
 	"errors"
+	"fmt"
 	"slices"
 	"strconv"
 	"strings"
@@ -64,10 +65,11 @@ import (
 // (controlYLevel).
 var errLeaveControlY = errors.New("command ends the interrupted procedure")
 
-// controlYPrompt is the Ctrl/Y level while DCL reads it: resume is set by
-// CONTINUE.
+// controlYPrompt is the Ctrl/Y level while DCL reads it: resume is set
+// by CONTINUE, and end by EXIT or STOP at command level 0, where only
+// LIB$PAUSE reads it (dclpause.go). pause is set for LIB$PAUSE's.
 type controlYPrompt struct {
-	resume bool
+	resume, end, pause bool
 }
 
 // controlKeys are a process's SET [NO]CONTROL settings (Shell.control):
@@ -244,6 +246,18 @@ func (c *Interpreter) subprocessAttention(cli *subprocessCLI) bool {
 func (c *Interpreter) imageInterrupted(cli *subprocessCLI) cliYield {
 	ended := cliYield{kind: yieldEndImage, status: ssControlY}
 
+	// LIB$PAUSE's call of the AST's routine reads the Ctrl/Y level at
+	// any command level (dclpause.go).
+	if cli.pausing {
+		cli.pausing = false
+
+		if c.readControlYLevel(c.currentLevel(), true) {
+			return cliYield{kind: yieldContinue}
+		}
+
+		return ended
+	}
+
 	if !c.dclTakesControlY() {
 		return ended
 	}
@@ -354,10 +368,33 @@ func (c *Interpreter) unwindExit() procedureExit {
 // level 0 (Console.afterStop). Ctrl/Y typed at the prompt gives a new
 // prompt; Ctrl/Z, or the end of the input, is EXIT.
 func (c *Interpreter) controlYLevel(level *commandLevel) bool {
-	prompt := &controlYPrompt{}
+	return c.readControlYLevel(level, false)
+}
+
+// readControlYLevel is controlYLevel, and LIB$PAUSE's Ctrl/Y level too
+// (pause set; dclpause.go), which may be read at command level 0 (level
+// nil). There, EXIT and STOP end the image, as they end the procedure
+// above (controlYPrompt.end), and a command that would run an image or a
+// procedure runs once the image has ended, after the command that ran
+// it, as a command LIB$DO_COMMAND leaves does (dclchain.go). A pause's
+// image isn't run down here: LIB$PAUSE's shim ends it, as the Ctrl/Y
+// AST's does in a subprocess.
+func (c *Interpreter) readControlYLevel(level *commandLevel, pause bool) bool {
+	prompt := &controlYPrompt{pause: pause}
 	c.controlYLevelActive = prompt
 
 	defer func() { c.controlYLevelActive = nil }()
+
+	dispatch := c.DispatchConsole
+	if level != nil {
+		dispatch = level.dispatch
+	}
+
+	runDown := func() {
+		if !pause {
+			c.RunDownAbandonedImage()
+		}
+	}
 
 	for c.Running() {
 		line, ok := c.readTerminal(c.commandPrompt())
@@ -379,34 +416,45 @@ func (c *Interpreter) controlYLevel(level *commandLevel) bool {
 			cli.interrupted = false
 		}
 
-		err := level.dispatch(line)
+		err := dispatch(line)
 
 		if cli != nil {
 			cli.interrupted = false
 		}
 
 		switch {
+		case errors.Is(err, errLeaveControlY) && level == nil:
+			c.chained = &chainedCommand{text: line}
+
+			return false
+
 		case errors.Is(err, errLeaveControlY):
 			c.afterStop = func() error { return level.dispatch(line) }
 			c.stopProcedures(procedureExit{status: c.status, cause: c.statusErr})
-			c.RunDownAbandonedImage()
+			runDown()
 
 			return false
 
 		case err != nil && !vmserrors.MessageInhibited(err):
-			c.procedureMessage(level, err)
+			if level != nil {
+				c.procedureMessage(level, err)
+			} else {
+				fmt.Fprintln(c.Out, "%"+err.Error())
+			}
 		}
 
 		switch {
 		case prompt.resume:
 			return true
-		case level.exiting && !c.stopping:
+		case prompt.end:
+			return false
+		case level != nil && level.exiting && !c.stopping:
 			c.stopProcedures(level.exit)
-			c.RunDownAbandonedImage()
+			runDown()
 
 			return false
 		case c.stopping:
-			c.RunDownAbandonedImage()
+			runDown()
 
 			return false
 		}
@@ -494,6 +542,14 @@ func (c *Interpreter) stopCommand(id int64, r *dcl.Result) error {
 	c.keepStatus()
 
 	if len(c.levels) == 0 {
+		// At LIB$PAUSE's Ctrl/Y level, the paused image ends
+		// (dclpause.go).
+		if prompt := c.controlYLevelActive; prompt != nil {
+			prompt.end = true
+
+			return nil
+		}
+
 		c.RunDownAbandonedImage()
 
 		return nil

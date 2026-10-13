@@ -299,3 +299,21 @@ func libDisableCtrl(env *corevms.Environment, argv []uint32) (uint32, error) {
 func libEnableCtrl(env *corevms.Environment, argv []uint32) (uint32, error) {
 	return controlKeys(env, argv, true)
 }
+
+// libPause is LIB$PAUSE (LIB-299):
+//
+//	LIB$PAUSE
+//
+// It "suspends program execution and returns control to the calling
+// command level": DCL reads commands at its Ctrl/Y level with the image
+// paused (corevms.CLI's Pause; internal/dclshell/dclpause.go). CONTINUE
+// resumes the image, and the routine returns SS$_NORMAL; EXIT or STOP
+// end the image, and the routine doesn't return. In batch it does
+// nothing and returns SS$_NORMAL. Without a CLI it returns LIB$_NOCLI.
+func libPause(env *corevms.Environment, _ []uint32) (uint32, error) {
+	if env.CLI == nil {
+		return libNoCLI, nil
+	}
+
+	return env.CLI.Pause()
+}

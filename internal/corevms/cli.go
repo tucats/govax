@@ -47,6 +47,14 @@ type CLI interface {
 	// bits, and returns the keys enabled before, in the same form. The
 	// setting is the DCL's, so it outlasts the image.
 	ControlKeys(enable, disable uint32) (old uint32)
+
+	// Pause hands the terminal to DCL with the image paused, as Ctrl/Y
+	// does (LIB$PAUSE): DCL reads commands at the Ctrl/Y level until
+	// CONTINUE, when it returns SS$_NORMAL for the routine to return.
+	// Otherwise (EXIT, STOP, a command that runs an image) the image
+	// ends, without its exit handlers: Pause returns ErrExit, or a
+	// CallRequest the routine returns as its own, which ends it.
+	Pause() (uint32, error)
 }
 
 // The table-type-indicator values of the LIB$ symbol routines
