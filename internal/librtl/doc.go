@@ -62,6 +62,22 @@
 // pages hold, which a program addresses directly. Both images' entries
 // govax lacks, CALL and JSB, have missing-routine stubs.
 //
+// # Service jackets, items, resources, and timers
+//
+// Phase 55's routines sit on system services. The jackets
+// (LIB$SYS_FAO and the like, jackets.go) call a service with a scratch
+// buffer in their own frame and copy the result by the output's class;
+// the item routines (items.go: LIB$GETJPI, LIB$GETDVI, LIB$GETSYI) ask
+// one item of the services' Go code and write it as corevms's item text
+// forms in LIB$'s style; the event flag and LUN pools (resources.go) and
+// the timers' static block (timers.go) are per-image data
+// (corevms.Environment.ImageData); misc.go has LIB$AST_IN_PROG,
+// LIB$ASN_WTH_MBX, LIB$WAIT, and LIB$GET_USERS_LANGUAGE, and
+// protection.go the 7.x protection-text routines and LIB$GET_ACCNAM's
+// FILE table. SHOW_TIMER's action routine is called as the shim's tail
+// call (corevms.CallRequest's Tail). VMS 7.1's run of testdata/lib55's
+// probe (TestLib55Oracle) settled what the manuals left open.
+//
 // # What's here and what's in corevms
 //
 // This package holds each routine's documented interface: reading its

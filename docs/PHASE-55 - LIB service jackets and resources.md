@@ -1,6 +1,6 @@
 # Phase 55 — LIB$ service jackets, process resources, and measurement
 
-**Status:** in progress (subtasks 1 to 8 done 2026-10-13). Needs Phases 53 and 54. Part of the
+**Status:** done (2026-10-13). Needs Phases 53 and 54. Part of the
 LIB$ program laid out in `PHASE-53 - RTL LIB support.md` (Part A).
 
 ## Goal
@@ -487,7 +487,7 @@ are masked.
 8. **The program** (`testdata/lib55/`), its console test, and the VMS
    probe (SHOW_TIMER's layout, GETJPI's text forms). **Done**
    2026-10-13 (VMS 7.1's run, and govax changed to match it).
-9. **Close-out**.
+9. **Close-out**. **Done** 2026-10-13.
 
 ## Progress log
 
@@ -864,3 +864,7 @@ are masked.
     character (LIB$_INVARG at it), and puts the granted bits into the
     access mask where the category's bits are, keeping its other bits,
     at the category's lowest set bit, for any category word.
+- **2026-10-13** — Subtask 9, close-out: DEVIATIONS.md's Phase 55 entry
+  (the behavior changes beyond LIBRTL, and what's still govax's
+  choice), librtl's package doc, PLAN.md's row, and CLAUDE.md. Phase 55
+  is done.

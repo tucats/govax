@@ -45,7 +45,10 @@ never had.
   2026-10-12, checked against VMS by `testdata/lib53`). Phase 54 (done
   2026-10-12) is strings, descriptors, and conversion, with JSB entry
   points, the `LIB$AB_` tables, and LIBRTL2's CVT_DX_DX, checked
-  against VMS by `testdata/lib54` (2026-10-13).
+  against VMS by `testdata/lib54` (2026-10-13). Phase 55 (done
+  2026-10-13) is the service jackets, the item routines, event flag and
+  LUN pools, timers, LIB$WAIT and its neighbors, and the 7.x
+  protection-text routines, checked against VMS 7.1 by `testdata/lib55`.
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
 - `docs/DEVIATIONS.md` — running log of suspected ISA/behavior fidelity issues found in
@@ -119,6 +122,15 @@ never had.
   `vax/lib54-vax.txt` is VMS V7.1's output, which `TestLib54Oracle`
   matches line for line but for `expectedLib54Differences` (the
   dynamic-string JSB entries' heap registers).
+- `testdata/lib55/` — Phase 55's probe of LIBRTL's jackets, item
+  routines, allocators, timers, and protection text (README.md):
+  `gen.go` writes `lib55.mar` (216 cases), `lib55.com` (which defines
+  `LIB55_DISK`), and `exchange.cmd`; values that vary from run to run
+  print on `  ~` lines, whose names alone are compared, and SHOW_TIMER's
+  line is also shown with its digits made 9s. `vax/lib55-vax.txt` is
+  VMS V7.1's output, which `TestLib55Oracle` (a twin of the exchange
+  volume on DUA1, NLA0:, SYS$LANGUAGE ENGLISH) matches line for line
+  but for `expectedLib55Differences`.
 - `testdata/probe49/` — Phase 49's VMS probe in three rounds (`probe6`,
   `probe6b`, `probe6c`; README.md has each round's answers), run by
   `TestProbe6*`; `testdata/rms49/` and `testdata/sec49/` are the phase's
@@ -619,7 +631,18 @@ expect adjustment as phases land):
   `writeString`'s class D output shares the rule. Beside them `copy.go`
   (SCOPY, ANALYZE_SDESC), `strfuncs.go` (LEN, CHAR, ICHAR, INDEX),
   `translate.go`, `cvttb.go`, `lookupkey.go` (and govax's
-  `$LIB_KEY_TABLE` macro), `locale.go`. LIB$PUT_OUTPUT is here too (`output.go`); kernel.asm's
+  `$LIB_KEY_TABLE` macro), `locale.go`. Phase 55: the service jackets
+  (`jackets.go`, through `corevms.Environment.CallService` and a scratch
+  buffer in the routine's frame), the item routines (`items.go`, over
+  `corevms`'s `ProcessItem`/`DeviceItem`/`SystemItem` and the item text
+  forms in `corevms/itemtext.go`, shared with the lexical functions in
+  two `Style`s), the event flag and LUN pools (`resources.go`, highest
+  first) and the timers (`timers.go`; per-image data in
+  `Environment.ImageData`; SHOW_TIMER's action routine is a tail call,
+  `CallRequest.Tail`), `misc.go` (AST_IN_PROG, ASN_WTH_MBX, WAIT,
+  GET_USERS_LANGUAGE and the `vax.language` key), and `protection.go`
+  (FORMAT/PARSE_SOGW_PROT, PARSE_ACCESS_CODE, GET_ACCNAM's FILE
+  table). LIB$PUT_OUTPUT is here too (`output.go`); kernel.asm's
   old interrupt-driven one is now its private `EXE$PUT_OUTPUT`.
   LIB$GET_FOREIGN (`foreign.go`) returns `Environment.CommandLine`: a
   foreign command's text (DCL symbols, `internal/dclshell/dclsym.go`), or

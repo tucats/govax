@@ -3876,6 +3876,58 @@ widened."
   writes the result only on success.
 - **Status**: fixed in Go where VMS differed (docs/PHASE-54, subtask 11).
 
+### [Phase 55] LIBRTL's service jackets, items, resources, and timers: what VMS 7.1 settled
+
+- **Where**: `internal/librtl` (`jackets.go`, `items.go`, `resources.go`,
+  `timers.go`, `misc.go`, `protection.go`), `internal/corevms`
+  (`itemtext.go`, `libitems.go`, `getdvi.go`, `devices.go`),
+  `internal/vmsdef/messages.go`; the probe is `testdata/lib55`
+  (`TestLib55Oracle`, VMS 7.1's run, 2026-10-13).
+- **Changed beyond LIBRTL** (VMS's behavior, seen in the run):
+  - SS$_ACCVIO's message text is the VAX's (`virtual address=!XL,
+    PC=!XL, PSL=!XL`, `vmsdef`'s `vaxMessages`), not the Alpha's text
+    the generated table held (`!XH`, `PS=`). Other messages in that
+    table still have Alpha text (60 use `!XH`), unchecked.
+  - `$ASSIGN` of a device that doesn't exist is SS$_NOSUCHDEV (was
+    SS$_IVDEVNAM); `$GETDVI` of an unassigned channel SS$_IVCHAN (was
+    SS$_NOPRIV).
+  - A volume mounted with no owner of its own in the device record
+    reports the mounting process, process 1, as DVI$_PID and its UIC as
+    DVI$_OWNUIC.
+  - F$GETDVI's VPROT is `SYSTEM=RWED, OWNER=RWED, ...`; F$GETJPI's OWNER
+    is empty when the process has no owner.
+  - ods2 (v0.1.23): a file extended into contiguous space grows its last
+    retrieval pointer instead of adding one per allocation; a 270-block
+    file copied a block at a time had spilled into extension headers,
+    which VMS couldn't open.
+- **Matched by the oracle**: the jackets (FAO's 256-byte buffer for every
+  class, TRNLOG's mask by reference), the item routines' text forms and
+  argument rules, the allocators' highest-first order, SHOW_TIMER's
+  lines and the tagged heap block, LIB$WAIT's float types and reserved
+  operand, GET_USERS_LANGUAGE's status, the protection parsers' rules
+  and statuses, and LIB$GET_ACCNAM's FILE table. The phase doc's
+  progress log has the details.
+- **Still govax's choice** (no case settled it):
+  - A heap timer block's four counts are in the statistic codes' order
+    (CPU, BUFIO, DIRIO, faults); FREE_TIMER clears the tag; larger
+    numbers in SHOW_TIMER's lines aren't padded.
+  - LIB$GETJPI with three arguments, and LIB$GETDVI with fewer than four,
+    are LIB$_WRONUMARG; item code 0 in LIB$GETDVI and LIB$GETSYI is as
+    LIB$GETJPI's (SS$_NORMAL, a value of 0).
+  - LIB$GETJPI's privilege names after bit 15 are F$GETJPI's (the
+    probe's line ended at 132 characters).
+  - LIB$WAIT reads a float type past 5 as F; an IEEE NaN is LIB$_INVARG.
+  - The protection routines' blanks: only the cases the probe ran are
+    known; LIB$GET_ACCNAM ignores its object name and knows only FILE.
+  - ods2's extension headers (each back link to the segment before,
+    no identification area, zeroed record attributes) are likely not
+    VMS's; a fragmented file needing one would show it.
+- **Left differing** (`expectedLib55Differences`): LIB$SYS_ASCTIM of an
+  invalid delta wrote 42 unseen characters on VMS; LIB$SYS_FAO's overflow
+  into a varying string left zeros in its text; the mounter's PID, the
+  output device's I/O counts, and a clock tick differ by system.
+- **Status**: fixed in Go where VMS differed (docs/PHASE-55, subtask 8).
+
 <!--
 Entry template:
 
