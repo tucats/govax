@@ -466,6 +466,56 @@ func numericTime(v uint64) (fields [7]uint16, ok bool) {
 	return fields, true
 }
 
+// vectorTime is the inverse of numericTime: the VMS time that $NUMTIM's
+// seven numbers (year, month, day, hour, minute, second, hundredths)
+// stand for, as LIB$CVT_VECTIM converts them.
+//
+// A year and month both 0 make a delta time of fields[2] days plus the
+// time of day, stored negated; anything else is an absolute time. ok is
+// false for a field out of range: an hour past 23, a minute or second
+// past 59, hundredths past 99, a delta of 10,000 days or more, or for an
+// absolute time a month outside 1-12, a day outside its month, or a
+// year outside 1858-9999 (a year of 0 with a nonzero month included).
+// An absolute time before the base date, 17-Nov-1858, is out of range
+// too. These limits are govax's reading of the manual (unconfirmed).
+func vectorTime(fields [7]uint16) (v uint64, ok bool) {
+	year, month, day := int(fields[0]), int(fields[1]), int(fields[2])
+	hour, minute, second, hundredths := fields[3], fields[4], fields[5], fields[6]
+
+	if hour > 23 || minute > 59 || second > 59 || hundredths > 99 {
+		return 0, false
+	}
+
+	clock := (uint64(hour)*3600+uint64(minute)*60+uint64(second))*vmsdef.TicksPerSecond +
+		uint64(hundredths)*ticksPerHundredth
+
+	if year == 0 && month == 0 {
+		if day >= maxDeltaDays {
+			return 0, false
+		}
+
+		// A delta: stored negated, so its sign marks it. Its length can
+		// be zero (all seven fields 0), which stores 0.
+		return uint64(-int64(uint64(day)*ticksPerDay + clock)), true
+	}
+
+	if year < 1858 || year > 9999 || month < 1 || month > 12 || day < 1 {
+		return 0, false
+	}
+
+	// Day 0 of the next month is the last day of this one.
+	if day > time.Date(year, time.Month(month)+1, 0, 0, 0, 0, 0, time.UTC).Day() {
+		return 0, false
+	}
+
+	date := time.Date(year, time.Month(month), day, 0, 0, 0, 0, time.UTC)
+	if date.Before(vmsdef.GoTime(0)) {
+		return 0, false
+	}
+
+	return vmsdef.Time(date) + clock, true
+}
+
 // serviceSysNumtim is SYS$NUMTIM:
 //
 //	SYS$NUMTIM timbuf ,[timadr]

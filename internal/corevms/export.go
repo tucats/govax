@@ -163,6 +163,11 @@ func (env *Environment) ParseTime(text string) (uint64, bool) {
 	return parseVMSTime(text, env.Clock())
 }
 
+// VectorTime is the VMS time that $NUMTIM's seven numbers (year, month,
+// day, hour, minute, second, hundredths) stand for, ok false for a field
+// out of range: LIB$CVT_VECTIM's conversion (see vectorTime).
+func VectorTime(fields [7]uint16) (uint64, bool) { return vectorTime(fields) }
+
 // CallService runs the system service called name ("SYS$FAO") with the
 // argument list argv, as a program's CALLS would reach it, and returns
 // its status: the RTL's jacket routines (LIB$SYS_FAO, ...) call the

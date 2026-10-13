@@ -1,6 +1,6 @@
 # Phase 56 — LIB$ date and time
 
-**Status:** in progress (2026-10-13; subtasks 1 and 2 done). Needs Phases 53 and 54. Part of the
+**Status:** in progress (2026-10-13; subtasks 1 to 3 done). Needs Phases 53 and 54. Part of the
 LIB$ program laid out in `PHASE-53 - RTL LIB support.md` (Part A).
 
 ## Goal
@@ -644,6 +644,7 @@ address) print on lines marked with a tilde, as in Phase 55's probe.
 2. **Arithmetic**: ADD_TIMES, SUB_TIMES, MULT_DELTA_TIME, MULTF_DELTA_TIME.
    **Done** 2026-10-13.
 3. **Conversion**: CVT(F)_TO/FROM_INTERNAL_TIME, CVT_VECTIM.
+   **Done** 2026-10-13.
 4. **Simple**: DATE_TIME, DAY, DAY_OF_WEEK.
 5. **Format context and logical names**: INIT/FREE_DATE_TIME_CONTEXT, the
    names' definitions.
@@ -708,3 +709,34 @@ address) print on lines marked with a tilde, as in Phase 55's probe.
 
   Tested in `times_test.go` and, through a linked program's stubs, by
   `TestLibrtlTimeArithmetic` (`internal/console/librtl_times_test.go`).
+- **2026-10-13** — Subtask 3, the conversions
+  (`internal/librtl/cvttime.go`, shim codes 135–139; a file of their
+  own rather than `times.go`, which the survey planned).
+  CVT_FROM_INTERNAL_TIME, CVTF_FROM_INTERNAL_TIME, CVT_TO_INTERNAL_TIME,
+  CVTF_TO_INTERNAL_TIME, and CVT_VECTIM follow the survey's rules. The
+  operation codes are one table (`timeOperations`, by LIB$K_ value): an
+  absolute operation's field from a `calendar` of the time, a delta
+  operation's unit in ticks. CVT_VECTIM's work is `corevms.VectorTime`
+  (`vectorTime`, beside `numericTime`, whose output it takes back:
+  `TestVectorTime`). These are govax's choices, each marked unconfirmed
+  in the code and left for the probe:
+  - the year, month, and week operations count from 1 (hour 1 of the
+    year is 00:00–00:59 on 1 January), and the day, hour, and minute
+    operations from 0, as VSI says;
+  - JULIAN_DATE is days since 17-Nov-1858, LIB$DAY's number;
+  - CVT_FROM_INTERNAL_TIME takes an input-time of 0 by value as the
+    current time, and refuses the floating codes (INVOPER);
+  - CVT_TO and CVTF_TO accept 0 units, storing 0, as the 5.0 manual
+    allows (VSI asks for more than 0), and CVTF_TO rounds to a tick, half
+    away from zero, signaling SS$_ROPRAND for a reserved operand, as
+    MULTF_DELTA_TIME does;
+  - CVT_VECTIM's limits: years 1858 (from 17 November) to 9999, a year
+    of 0 with a nonzero month IVTIME, and seven zeros a zero delta,
+    stored as 0.
+
+  A note for the probe: a delta in F-floating units isn't exact unless
+  the unit divides it by a power of two (5 hours is 5/24 of a day), so a
+  round trip through CVTF_FROM and CVTF_TO can come back a fraction of a
+  millisecond short. Tested in `cvttime_test.go` and, through a linked
+  program's stubs, by `TestLibrtlTimeConversion`
+  (`internal/console/librtl_times_test.go`).

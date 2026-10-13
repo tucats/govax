@@ -202,6 +202,11 @@ var Routines = []Routine{
 	{"LIB$SUB_TIMES", 132, libSubTimes},
 	{"LIB$MULT_DELTA_TIME", 133, libMultDeltaTime},
 	{"LIB$MULTF_DELTA_TIME", 134, libMultfDeltaTime},
+	{"LIB$CVT_FROM_INTERNAL_TIME", 135, libCvtFromInternalTime},
+	{"LIB$CVTF_FROM_INTERNAL_TIME", 136, libCvtfFromInternalTime},
+	{"LIB$CVT_TO_INTERNAL_TIME", 137, libCvtToInternalTime},
+	{"LIB$CVTF_TO_INTERNAL_TIME", 138, libCvtfToInternalTime},
+	{"LIB$CVT_VECTIM", 139, libCvtVectim},
 }
 
 // missing is Missing's list, and missingJSB MissingJSB's, made once.

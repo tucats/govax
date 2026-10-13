@@ -312,3 +312,49 @@ func TestServiceSysNumtim(t *testing.T) {
 	wantR0(t, callLNM(t, env, serviceSysNumtim, 0, a.quad(0)), ssAccVio)
 	wantR0(t, callLNM(t, env, serviceSysNumtim, badAddr, a.quad(0)), ssAccVio)
 }
+
+// TestVectorTime: vectorTime undoes numericTime, for absolute and delta
+// times, and refuses each field one past its range.
+func TestVectorTime(t *testing.T) {
+	for _, text := range []string{
+		"13-JAN-1988 09:13:25.14", "29-FEB-1988 23:59:59.99", "17-NOV-1858 00:00:00.00",
+		"31-DEC-9999 23:59:59.99", "   0 00:00:00.01", "9999 23:59:59.99", "   5 03:18:32.07",
+	} {
+		v, ok := parseVMSTime(text, 0)
+		if !ok {
+			t.Fatalf("%q doesn't parse", text)
+		}
+
+		fields, _ := numericTime(v)
+		if got, ok := vectorTime(fields); !ok || got != v {
+			t.Errorf("%q: vectorTime(%v) = %#x, %v; want %#x", text, fields, got, ok, v)
+		}
+	}
+
+	// All zeros is a delta of length zero, stored as 0.
+	if got, ok := vectorTime([7]uint16{}); !ok || got != 0 {
+		t.Errorf("all zeros: %#x, %v; want 0, true", got, ok)
+	}
+
+	for _, fields := range [][7]uint16{
+		{1988, 13, 1, 0, 0, 0, 0},
+		{1988, 0, 1, 0, 0, 0, 0},
+		{1988, 1, 0, 0, 0, 0, 0},
+		{1988, 2, 30, 0, 0, 0, 0},
+		{1987, 2, 29, 0, 0, 0, 0},
+		{1988, 1, 32, 0, 0, 0, 0},
+		{1988, 1, 1, 24, 0, 0, 0},
+		{1988, 1, 1, 0, 60, 0, 0},
+		{1988, 1, 1, 0, 0, 60, 0},
+		{1988, 1, 1, 0, 0, 0, 100},
+		{0, 1, 1, 0, 0, 0, 0},
+		{1858, 11, 16, 23, 59, 59, 99},
+		{10000, 1, 1, 0, 0, 0, 0},
+		{0, 0, 10_000, 0, 0, 0, 0},
+		{0, 0, 1, 24, 0, 0, 0},
+	} {
+		if got, ok := vectorTime(fields); ok {
+			t.Errorf("%v: %#x, want out of range", fields, got)
+		}
+	}
+}
