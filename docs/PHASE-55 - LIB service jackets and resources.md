@@ -784,3 +784,16 @@ are masked.
   SS$_IVDEVNAM where `$GETDVI` says SS$_NOSUCHDEV, and LIB$GET_ACCNAM
   is a missing routine (SS$_UNSUPPORTED). The VAX is VMS 7.1, which may
   lack the 7.x protection routines; LINK's messages in the log will say.
+- **2026-10-13** — The exchange volume uncovered an ods2 bug: VMS listed
+  LIB55.MAR but DIRECTORY/SIZE said "no such file". ods2's `Extend`
+  added a retrieval pointer per allocation even for contiguous space,
+  so COPY's block-at-a-time writes gave the 270-block file 270 one-block
+  pointers, a primary header and two extension headers. Fixed in ods2
+  (`volume/writeheader.go`'s `addExtent`, commit b1ab6d0): contiguous
+  space grows the last pointer, so the file is now one format 2 pointer.
+  Left open: VMS rejected the file, so something in ods2's extension
+  headers is likely wrong by VMS's rules too (each extension header's
+  back link names the segment before it, not the primary header; they
+  have no identification area and zeroed record attributes). Only a file
+  fragmented enough to need one shows it; settling it needs a VMS-written
+  multi-header file to compare (a later probe).
