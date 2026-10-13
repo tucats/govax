@@ -60,3 +60,30 @@ func TestLibrtlCopyAndAnalyze(t *testing.T) {
 		t.Errorf("output %q, want %q", out, "GOVAX\nVMS\n")
 	}
 }
+
+// TestLibrtlStringFunctions: a linked program calls LIB$LEN, LIB$ICHAR,
+// LIB$INDEX (the manual's "DAY" in "ONE DAY AT A TIME"), and LIB$CHAR,
+// showing the character it built. It ends with 1 when each result was
+// right, or the number of the check that failed.
+func TestLibrtlStringFunctions(t *testing.T) {
+	r0, out := runMacroProgram(t, "\t.PSECT\tDATA,NOEXE,WRT,LONG\n"+
+		"SRC:\t.ASCID\t/ONE DAY AT A TIME/\nSUB:\t.ASCID\t/DAY/\n"+
+		"CODE:\t.BYTE\t^A/*/\nONE:\t.ASCID\t/?/\n"+
+		"\t.PSECT\tCODE,NOWRT,EXE\n"+
+		"\t.ENTRY\tSTART,^M<>\n"+
+		"\tPUSHAQ\tSRC\n\tCALLS\t#1,G^LIB$LEN\n\tCMPL\tR0,#17\n\tBNEQ\t10$\n"+
+		"\tPUSHAQ\tSUB\n\tCALLS\t#1,G^LIB$ICHAR\n\tCMPL\tR0,#^A/D/\n\tBNEQ\t20$\n"+
+		"\tPUSHAQ\tSUB\n\tPUSHAQ\tSRC\n\tCALLS\t#2,G^LIB$INDEX\n\tCMPL\tR0,#5\n\tBNEQ\t30$\n"+
+		"\tPUSHAB\tCODE\n\tPUSHAQ\tONE\n\tCALLS\t#2,G^LIB$CHAR\n\tBLBC\tR0,40$\n"+
+		"\tPUSHAQ\tONE\n\tCALLS\t#1,G^LIB$PUT_OUTPUT\n"+
+		"\tMOVL\t#1,R0\n\tRET\n"+
+		"10$:\tMOVL\t#10,R0\n\tRET\n20$:\tMOVL\t#20,R0\n\tRET\n30$:\tMOVL\t#30,R0\n\tRET\n40$:\tMOVL\t#40,R0\n\tRET\n\t.END\tSTART\n")
+
+	if r0 != 1 {
+		t.Errorf("R0 = %d, want 1 (10 LEN, 20 ICHAR, 30 INDEX, 40 CHAR failed)", r0)
+	}
+
+	if out != "*\n" {
+		t.Errorf("output %q, want %q", out, "*\n")
+	}
+}

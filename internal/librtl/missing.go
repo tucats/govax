@@ -17,7 +17,7 @@ import (
 // SS$_UNSUPPORTED, followed by GOVAX-E-NOTIMPL with the routine's name:
 //
 //	%SYSTEM-E-UNSUPPORTED, unsupported operation or function
-//	-GOVAX-E-NOTIMPL, routine LIB$INDEX is not implemented in govax
+//	-GOVAX-E-NOTIMPL, routine LIB$GETQUI is not implemented in govax
 //
 // The program's handlers see it as any other condition. It's an error,
 // not a severe one, so with no handler to take it the catch-all shows the

@@ -1,6 +1,6 @@
 # Phase 54 — LIB$ strings, descriptors, and text conversion
 
-**Status:** in progress (2026-10-12; subtasks 1 to 4 done). Needs Phase 53. Part of the LIB$
+**Status:** in progress (2026-10-12; subtasks 1 to 5 done). Needs Phase 53. Part of the LIB$
 program laid out in `PHASE-53 - RTL LIB support.md` (Part A), which also
 has the sources and the conventions (Part B) this phase follows.
 
@@ -408,7 +408,7 @@ against VMS's own table, which the probe dumps.)
    Phase 53's D-class output moved onto them. **Done** 2026-10-12.
 4. **Copying and descriptors**: SCOPY_DXDX, SCOPY_R_DX, ANALYZE_SDESC (and
    JSB forms). **Done** 2026-10-12.
-5. **Characters**: LEN, CHAR, ICHAR, INDEX.
+5. **Characters**: LEN, CHAR, ICHAR, INDEX. **Done** 2026-10-12.
 6. **Translation**: the three tables, TRA_ASC_EBC, TRA_EBC_ASC.
 7. **Numeric text**: CVT_DTB, CVT_HTB, CVT_OTB.
 8. **LOOKUP_KEY**, and the `$LIB_KEY_TABLE` macro in `starlet.mar`.
@@ -536,3 +536,17 @@ against VMS's own table, which the probe dumps.)
     (S, A's ARSIZE, VS's CURLEN) through both entries. The console's
     `TestLibrtlCopyAndAnalyze` copies into a dynamic string by CALL and
     by JSB and analyzes a `.ASCID` string.
+- **2026-10-12** — Subtask 5, the string functions (`internal/librtl/
+  strfuncs.go`): LIB$LEN, LIB$CHAR, LIB$ICHAR, LIB$INDEX (codes 91 to
+  94). LEN is the descriptor's length by class; ICHAR the first
+  character, unsigned, or 0 (no case change, whatever the manual's
+  example text says); INDEX is LIB$MATCHC's search with the arguments the
+  other way round (an empty substring at 1, even in an empty source). An
+  invalid descriptor reads as an empty string, as LIB$LOCC's does on VMS
+  (so 0 from LEN, ICHAR, and INDEX; unconfirmed for these). CHAR writes
+  its one character through the copy routines' `copyString`: blank-filled
+  to a fixed destination, LIB$_STRTRU into one of length 0
+  (unconfirmed). Tests: `strfuncs_test.go` (classes, the manual's ICHAR
+  and INDEX examples, empty strings) and the console's
+  `TestLibrtlStringFunctions`. `TestLibrtlMissingRoutine` used LIB$INDEX
+  as its missing routine; it now uses LIB$GETQUI, which isn't planned.

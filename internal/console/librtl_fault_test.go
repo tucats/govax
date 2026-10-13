@@ -41,20 +41,20 @@ func runMacroProgram(t *testing.T, source string) (uint32, string) {
 	return r0, after
 }
 
-// TestLibrtlMissingRoutine: an image calling LIB$INDEX, which govax
-// doesn't have yet, links and runs; the call signals SS$_UNSUPPORTED with
+// TestLibrtlMissingRoutine: an image calling LIB$GETQUI, which govax
+// doesn't have (no queue manager), links and runs; the call signals SS$_UNSUPPORTED with
 // the routine's name, which the catch-all shows, and, the condition being
 // an error rather than a severe one, returns SS$_UNSUPPORTED.
 func TestLibrtlMissingRoutine(t *testing.T) {
 	r0, out := runMacroProgram(t, "\t.PSECT\tCODE,NOWRT,EXE\n"+
-		"\t.ENTRY\tSTART,^M<>\n\tCALLS\t#0,G^LIB$INDEX\n\tRET\n\t.END\tSTART\n")
+		"\t.ENTRY\tSTART,^M<>\n\tCALLS\t#0,G^LIB$GETQUI\n\tRET\n\t.END\tSTART\n")
 
 	if r0 != 0xE4A { // SS$_UNSUPPORTED
 		t.Errorf("R0 = %#x, want SS$_UNSUPPORTED (0xE4A)", r0)
 	}
 
 	want := "%SYSTEM-E-UNSUPPORTED, unsupported operation or function\n" +
-		"-GOVAX-E-NOTIMPL, routine LIB$INDEX is not implemented in govax\n"
+		"-GOVAX-E-NOTIMPL, routine LIB$GETQUI is not implemented in govax\n"
 	if out != want {
 		t.Errorf("output %q, want %q", out, want)
 	}

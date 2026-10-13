@@ -132,6 +132,10 @@ var Routines = []Routine{
 	{"LIB$SCOPY_DXDX", 85, libScopyDxdx},
 	{"LIB$SCOPY_R_DX", 86, libScopyRDx},
 	{"LIB$ANALYZE_SDESC", 87, libAnalyzeSdesc},
+	{"LIB$LEN", 91, libLen},
+	{"LIB$CHAR", 92, libChar},
+	{"LIB$ICHAR", 93, libIchar},
+	{"LIB$INDEX", 94, libIndex},
 }
 
 // missing is Missing's list, and missingJSB MissingJSB's, made once.
