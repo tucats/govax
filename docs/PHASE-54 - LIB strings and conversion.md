@@ -1,6 +1,6 @@
 # Phase 54 — LIB$ strings, descriptors, and text conversion
 
-**Status:** in progress (2026-10-12; subtasks 1 to 11 done). Needs Phase 53. Part of the LIB$
+**Status:** done (2026-10-12); the `testdata/lib54` probe waits for a VMS run. Needs Phase 53. Part of the LIB$
 program laid out in `PHASE-53 - RTL LIB support.md` (Part A), which also
 has the sources and the conventions (Part B) this phase follows.
 
@@ -422,7 +422,7 @@ against VMS's own table, which the probe dumps.)
 11. **The program** (`testdata/lib54/`) and its console test; VMS probe
     with the author if wanted. **Done** 2026-10-12 (the program and
     its test; the VMS run waits for the author).
-12. **Close-out**.
+12. **Close-out**. **Done** 2026-10-12.
 
 ## Progress log
 
@@ -677,3 +677,9 @@ against VMS's own table, which the probe dumps.)
   logical names (the program expects none) and runs it on VMS;
   `exchange.cmd` builds the exchange volume. The VMS run waits for the
   author; its output would replace `lib54-govax.txt` as the oracle.
+- **2026-10-12** — Subtask 12, close-out: DEVIATIONS.md's Phase 54
+  entry (the behavior changes and every unconfirmed choice, each a case
+  in the probe), `internal/librtl/doc.go` (the new routines, JSB and data
+  entries, LIBRTL2), PLAN.md's row, and CLAUDE.md. Phase 54 is done; the
+  VMS run of `testdata/lib54` is the one thing left, whenever the author
+  wants it. Phase 55 (service jackets and resources) is next.

@@ -3806,6 +3806,57 @@ widened."
   stub.
 - **Status**: fixed in Go where VMS differed (docs/PHASE-53, subtask 13).
 
+### [Phase 54] LIBRTL's strings and conversion: choices the manual leaves open
+
+- **Where**: `internal/librtl` (`dynstr.go`, `copy.go`, `strfuncs.go`,
+  `translate.go`, `tables.go`, `cvttb.go`, `lookupkey.go`, `locale.go`,
+  `cvtdxdx.go`); the probe is `testdata/lib54` (`TestLib54Program`
+  against govax's own output until VMS runs it).
+- **Changed in passing**: a class D output string now keeps its heap
+  block whenever the block holds the new text (LIB$SGET1_DD's rule, by
+  the block's real size), where Phase 53's `writeString` reallocated
+  whenever the text was longer than DSC$W_LENGTH. Only the pointer's
+  value can tell. The assembler accepts a label plus or minus a chain of
+  constants in a direct assignment (`A+1+1`), which it refused before.
+- **JSB entries** (the survey's reading of the STR$ and OTS$ manuals):
+  arguments in R0, R1, R2, scalars by value; only R0 changes, but
+  LIB$ANALYZE_SDESC_R2's R1 and R2 (the length and address); a
+  condition is raised in the caller's frame. The probe's JSB cases show
+  every register R1 to R6.
+- **Unconfirmed choices**:
+  - LIB$SGET1_DD leaves DSC$B_DTYPE alone; LIB$SFREE1_DD of storage that
+    isn't the heap's returns LIB$_FATERRLIB, untouched; LIB$SFREEN_DD
+    stops at the first failure.
+  - LIB$ANALYZE_SDESC writes nothing for an invalid class.
+  - LIB$LEN, LIB$ICHAR, and LIB$INDEX read an invalid descriptor as an
+    empty string (as LIB$LOCC does on VMS); LIB$CHAR into a fixed
+    string of length 0 is LIB$_STRTRU.
+  - The translation tables are the 5.0 manual's as printed:
+    LIB$AB_UPCASE leaves F0-F9 and FE alone but maps FA-FD to DA-DD. An
+    untranslatable character (for LIB$_INVCHA) is one whose translation
+    doesn't translate back (so ASCII 1A and EBCDIC E0 count as
+    translatable); a varying destination too small is LIB$_INVARG.
+  - LIB$CVT_xTB: no digits is 0 and success; a negative count fails; the
+    result is written only on success; lowercase hex is accepted;
+    "4294967295" is -1.
+  - LIB$LOOKUP_KEY compares exactly (no case folding); an exact match
+    anywhere in the table wins; LIB$_AMBKEY writes the first match's
+    outputs; an empty search string matches every keyword; an odd count
+    is LIB$_INVARG. govax's `$LIB_KEY_TABLE` puts the strings after the
+    vector, in order.
+  - The locale routines search the process, group, and system tables
+    (not the job table); LIB$LP_LINES converts as LIB$CVT_DTB does.
+  - LIB$CVT_DX_DX: the scope the author chose (integers and F/D/G/H to
+    and from text, and between them; no BU arrays or packed decimal,
+    LIB$_INVCLADTY or LIB$_INVDTYDSC); floating text in Table LIB-3's E
+    format with as many digits as the destination's width allows (all
+    of them into a dynamic string); LIB$_OUTSTRTRU for any text cut
+    short; LIB$_INVNBDS for text out of the destination's range,
+    underflow included. The 5.0 manual's table of accepted conversions
+    (Table LIB-2) is misprinted, so VMS's own coverage is unknown.
+- **Status**: chosen; each is a case in `testdata/lib54`, to be settled
+  if the author runs it on VMS (docs/PHASE-54, subtask 11).
+
 <!--
 Entry template:
 

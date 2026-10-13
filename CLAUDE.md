@@ -42,7 +42,10 @@ never had.
   manual, `~/Documents/Technical Doc/VMS/rtl-library-lib-manual.txt`,
   an OCR with errors, beside its PDF), Part B is the groundwork they
   share, and Part C its own group, the instruction routines (done
-  2026-10-12, checked against VMS by `testdata/lib53`).
+  2026-10-12, checked against VMS by `testdata/lib53`). Phase 54 (done
+  2026-10-12) is strings, descriptors, and conversion, with JSB entry
+  points, the `LIB$AB_` tables, and LIBRTL2's CVT_DX_DX; its
+  `testdata/lib54` probe hasn't run on VMS yet.
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
 - `docs/DEVIATIONS.md` — running log of suspected ISA/behavior fidelity issues found in
@@ -110,6 +113,11 @@ never had.
   handler that tells a signaled condition from a returned status), and
   `vax/lib53-vax.txt` is VMS V7.1's output, which `TestLib53Oracle`
   matches line for line.
+- `testdata/lib54/` — Phase 54's probe of LIBRTL's string and conversion
+  routines (README.md): `gen.go` writes `lib54.mar` (143 cases; JSB
+  cases show R1 to R6, the translation tables are dumped), and
+  `TestLib54Program` matches govax's `lib54-govax.txt` until a VMS run
+  replaces it.
 - `testdata/probe49/` — Phase 49's VMS probe in three rounds (`probe6`,
   `probe6b`, `probe6c`; README.md has each round's answers), run by
   `TestProbe6*`; `testdata/rms49/` and `testdata/sec49/` are the phase's
@@ -585,7 +593,22 @@ expect adjustment as phases land):
   `cpu.MoveCharacters`, `cpu.CRC`, ...); `testdata/lib53`'s probe
   (`TestLib53Oracle`) matches VMS's run of all 132 cases. XFC$SHIM code
   64 is DCL's `EXE$CLI_COMMAND`, so no LIBRTL routine may use it
-  (`TestCLIShimCodeFree`). LIB$PUT_OUTPUT is here too (`output.go`); kernel.asm's
+  (`TestCLIShimCodeFree`). Phase 54: the table spans LIBRTL2.EXE too
+  (each name's image is `vmsdef.ImageSymbols`'s; LIB$CVT_DX_DX,
+  `cvtdxdx.go`). **JSB entries** (`JSBRoutines`, a
+  `corevms.JSBShimFunc` on R0–R6) have stubs that push their code for
+  `XFC #XFC$JSBSHIM` (selector 5, `corevms.JSBShimStub`), and a
+  condition one signals is raised in its caller's frame; **data
+  entries** (`Tables`, `tables.go`: LIB$AB_ASC_EBC, LIB$AB_EBC_ASC,
+  LIB$AB_UPCASE) are copied after the stubs (`ShimLink.Data`). Every
+  LIBRTL and LIBRTL2 entry resolves (missing JSB stubs, `MissingJSB`,
+  codes from 2000; LIBRTL2's `LIB$AB_` tables excepted). Dynamic
+  strings (`dynstr.go`, LIB$SGET1_DD and the SFREE routines) keep a
+  heap block while it holds the text (`Environment.BlockSize`), and
+  `writeString`'s class D output shares the rule. Beside them `copy.go`
+  (SCOPY, ANALYZE_SDESC), `strfuncs.go` (LEN, CHAR, ICHAR, INDEX),
+  `translate.go`, `cvttb.go`, `lookupkey.go` (and govax's
+  `$LIB_KEY_TABLE` macro), `locale.go`. LIB$PUT_OUTPUT is here too (`output.go`); kernel.asm's
   old interrupt-driven one is now its private `EXE$PUT_OUTPUT`.
   LIB$GET_FOREIGN (`foreign.go`) returns `Environment.CommandLine`: a
   foreign command's text (DCL symbols, `internal/dclshell/dclsym.go`), or

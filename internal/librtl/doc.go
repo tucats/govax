@@ -42,6 +42,26 @@
 // manual, and where the manual is silent, VMS's own run of
 // testdata/lib53's probe (TestLib53Oracle).
 //
+// # Strings, descriptors, and conversion
+//
+// Phase 54's routines work on strings by descriptor (descriptor.go reads
+// every input class and writes S, VS, and D output). Dynamic strings
+// (dynstr.go: LIB$SGET1_DD and the SFREE routines) own their heap
+// blocks, and every routine that writes a class D string shares their
+// storage rule. Beside them: copying and LIB$ANALYZE_SDESC (copy.go),
+// LEN, CHAR, ICHAR, and INDEX (strfuncs.go), ASCII and EBCDIC
+// (translate.go, over tables.go's LIB$AB_ tables), numeric text
+// (cvttb.go), LIB$LOOKUP_KEY (lookupkey.go), the locale routines
+// (locale.go), and LIBRTL2.EXE's LIB$CVT_DX_DX (cvtdxdx.go).
+//
+// Two kinds of transfer-vector entry aren't CALL routines. A JSB entry
+// (LIB$SCOPY_DXDX6, LIB$ANALYZE_SDESC_R2, ...) takes its arguments in
+// R0, R1, ...: its stub pushes its code for XFC$JSBSHIM, and its Go
+// function (JSBRoutines, a corevms.JSBShimFunc) works on the registers.
+// A data entry (LIB$AB_UPCASE and the other Tables) is a table the stubs'
+// pages hold, which a program addresses directly. Both images' entries
+// govax lacks, CALL and JSB, have missing-routine stubs.
+//
 // # What's here and what's in corevms
 //
 // This package holds each routine's documented interface: reading its
