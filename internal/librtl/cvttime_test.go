@@ -51,17 +51,17 @@ func TestCvtFromInternalTimeAbsolute(t *testing.T) {
 	}{
 		{"MONTH_OF_YEAR", jan13, 1},
 		{"DAY_OF_YEAR", jan13, 13},
-		{"HOUR_OF_YEAR", jan13, 12*24 + 9 + 1},
-		{"MINUTE_OF_YEAR", jan13, (12*24+9)*60 + 13 + 1},
-		{"SECOND_OF_YEAR", jan13, 12*86400 + 33205 + 1},
+		{"HOUR_OF_YEAR", jan13, 12*24 + 9},
+		{"MINUTE_OF_YEAR", jan13, (12*24+9)*60 + 13},
+		{"SECOND_OF_YEAR", jan13, 12*86400 + 33205},
 		{"DAY_OF_MONTH", jan13, 13},
-		{"HOUR_OF_MONTH", jan13, 12*24 + 9 + 1},
-		{"MINUTE_OF_MONTH", jan13, (12*24+9)*60 + 13 + 1},
-		{"SECOND_OF_MONTH", jan13, 12*86400 + 33205 + 1},
+		{"HOUR_OF_MONTH", jan13, 12*24 + 9},
+		{"MINUTE_OF_MONTH", jan13, (12*24+9)*60 + 13},
+		{"SECOND_OF_MONTH", jan13, 12*86400 + 33205},
 		{"DAY_OF_WEEK", jan13, 3},
-		{"HOUR_OF_WEEK", jan13, 2*24 + 9 + 1},
-		{"MINUTE_OF_WEEK", jan13, (2*24+9)*60 + 13 + 1},
-		{"SECOND_OF_WEEK", jan13, 2*86400 + 33205 + 1},
+		{"HOUR_OF_WEEK", jan13, 2*24 + 9},
+		{"MINUTE_OF_WEEK", jan13, (2*24+9)*60 + 13},
+		{"SECOND_OF_WEEK", jan13, 2*86400 + 33205},
 		{"HOUR_OF_DAY", jan13, 9},
 		{"MINUTE_OF_DAY", jan13, 9*60 + 13},
 		{"SECOND_OF_DAY", jan13, 33205},
@@ -70,11 +70,12 @@ func TestCvtFromInternalTimeAbsolute(t *testing.T) {
 		{"SECOND_OF_MINUTE", jan13, 25},
 		// The manual's LIB$DAY example: 4-Nov-1986 is day 46,738.
 		{"JULIAN_DATE", jan13, 46738 + 365 + 30 + 31 + 9},
-		// The 5.0 manual's upper limits.
+		// The 5.0 manual's upper limits, less one but for the day: VMS
+		// counts hours, minutes, and seconds from 0.
 		{"DAY_OF_YEAR", dec31, 366},
-		{"HOUR_OF_YEAR", dec31, 8784},
-		{"MINUTE_OF_YEAR", dec31, 527_040},
-		{"SECOND_OF_YEAR", dec31, 31_622_400},
+		{"HOUR_OF_YEAR", dec31, 8783},
+		{"MINUTE_OF_YEAR", dec31, 527_039},
+		{"SECOND_OF_YEAR", dec31, 31_622_399},
 		{"DAY_OF_WEEK", dec31, 6},
 		// The base date was a Wednesday, day 0.
 		{"DAY_OF_WEEK", 0, 3},
@@ -122,10 +123,13 @@ func TestCvtFromInternalTimeErrors(t *testing.T) {
 		{"absolute operation, delta", 1, delta(day), libAbsTimReq},
 		{"delta operation, absolute", 22, jan13, libDelTimReq},
 		{"delta operation, base date", 22, 0, libDelTimReq},
-		{"delta at the limit", 22, delta(10_000 * day), libIvTime},
-		{"operation 0", 0, jan13, libInvOper},
+		// An absolute time with a code that isn't absolute.
+		{"operation 0", 0, jan13, libDelTimReq},
+		{"operation 31", 31, jan13, libDelTimReq},
+		{"a floating operation, absolute", 27, jan13, libDelTimReq},
+		// A delta with a code that isn't a delta's.
 		{"a floating operation", 27, delta(day), libInvOper},
-		{"operation 31", 31, jan13, libInvOper},
+		{"operation 0, delta", 0, delta(day), libInvOper},
 	} {
 		if status, got := cvtFrom(t, env, c.op, c.v); status != c.status || got != 0xEEEEEEEE {
 			t.Errorf("%s: %#x, %#x; want %#x, unchanged", c.name, status, got, c.status)
@@ -187,7 +191,7 @@ func TestCvtfFromInternalTime(t *testing.T) {
 		{"30 seconds in minutes", "DELTA_MINUTES_F", delta(30 * second), libNormal, vaxfloat.FromFloat64(0.5)},
 		{"a quarter second", "DELTA_SECONDS_F", delta(second / 4), libNormal, vaxfloat.FromFloat64(0.25)},
 		{"an absolute time", "DELTA_DAYS_F", uint64(day), libDelTimReq, vaxfloat.Value{}},
-		{"at the limit", "DELTA_DAYS_F", delta(10_000 * day), libIvTime, vaxfloat.Value{}},
+		{"10,000 days", "DELTA_DAYS_F", delta(10_000 * day), libNormal, vaxfloat.FromFloat64(10_000)},
 		{"a whole-unit operation", "DELTA_DAYS", delta(day), libInvOper, vaxfloat.Value{}},
 	} {
 		putLongword(t, env, cvtOperation, vmsdef.LibrarySymbols["LIB$K_"+c.op])
@@ -215,13 +219,14 @@ func TestCvtToInternalTime(t *testing.T) {
 		{"2 weeks", "DELTA_WEEKS", 2, libNormal, delta(14 * day)},
 		{"90 minutes", "DELTA_MINUTES", 90, libNormal, delta(90 * minute)},
 		{"a second", "DELTA_SECONDS", 1, libNormal, delta(second)},
-		{"zero", "DELTA_DAYS", 0, libNormal, 0},
+		{"zero", "DELTA_DAYS", 0, libIvTime, unchanged},
 		{"negative", "DELTA_DAYS", -1, libIvTime, unchanged},
 		{"9999 days", "DELTA_DAYS", 9999, libNormal, delta(9999 * day)},
-		{"10,000 days", "DELTA_DAYS", 10_000, libIvTime, unchanged},
-		{"1428 weeks", "DELTA_WEEKS", 1428, libNormal, delta(1428 * 7 * day)},
-		{"1429 weeks", "DELTA_WEEKS", 1429, libIvTime, unchanged},
-		{"the most seconds", "DELTA_SECONDS", 1<<31 - 1, libIvTime, unchanged},
+		// VMS takes a delta of 10,000 days and more.
+		{"10,000 days", "DELTA_DAYS", 10_000, libNormal, delta(10_000 * day)},
+		{"1429 weeks", "DELTA_WEEKS", 1429, libNormal, delta(1429 * 7 * day)},
+		{"the most seconds", "DELTA_SECONDS", 1<<31 - 1, libNormal, delta((1<<31 - 1) * second)},
+		{"the most weeks", "DELTA_WEEKS", 1<<31 - 1, libIvTime, unchanged},
 		{"a floating operation", "DELTA_DAYS_F", 1, libInvOper, unchanged},
 		{"an absolute operation", "DAY_OF_YEAR", 1, libInvOper, unchanged},
 	} {
@@ -249,12 +254,16 @@ func TestCvtfToInternalTime(t *testing.T) {
 		{"a day and a half", "DELTA_DAYS_F", 1.5, libNormal, delta(36 * hour)},
 		{"a quarter second", "DELTA_SECONDS_F", 0.25, libNormal, delta(second / 4)},
 		{"half a week", "DELTA_WEEKS_F", 0.5, libNormal, delta(7 * day / 2)},
-		{"zero", "DELTA_HOURS_F", 0, libNormal, 0},
-		// 2^-24 seconds is 0.596 ticks, which rounds to 1.
-		{"under a tick", "DELTA_SECONDS_F", 1.0 / (1 << 24), libNormal, delta(1)},
+		{"zero", "DELTA_HOURS_F", 0, libIvTime, unchanged},
+		// 2^-24 seconds is 0.596 ticks, which truncates to 0.
+		{"under a tick", "DELTA_SECONDS_F", 1.0 / (1 << 24), libNormal, 0},
+		// F_floating's 1.5E-7 is a hair over, 1.50000005 ticks: one.
+		{"one and a half ticks", "DELTA_SECONDS_F", float64(float32(1.5e-7)), libNormal, delta(1)},
 		{"negative", "DELTA_DAYS_F", -1, libIvTime, unchanged},
-		{"10,000 days", "DELTA_DAYS_F", 10_000, libIvTime, unchanged},
-		{"huge", "DELTA_SECONDS_F", 1e38, libIvTime, unchanged},
+		{"10,000 days", "DELTA_DAYS_F", 10_000, libNormal, delta(10_000 * day)},
+		// The whole seconds are kept as a longword: 1E38, a multiple of
+		// 2^32, leaves 0, as VMS's 1E30 days does.
+		{"huge", "DELTA_SECONDS_F", 1e38, libNormal, 0},
 		{"a whole-unit operation", "DELTA_DAYS", 1, libInvOper, unchanged},
 	} {
 		putLongword(t, env, cvtOperation, vmsdef.LibrarySymbols["LIB$K_"+c.op])
@@ -295,7 +304,7 @@ func TestCvtVectim(t *testing.T) {
 		{"hour 24", [7]uint16{1988, 1, 1, 24, 0, 0, 0}, libIvTime, unchanged},
 		{"year 0, month 1", [7]uint16{0, 1, 1, 0, 0, 0, 0}, libIvTime, unchanged},
 		{"before the base date", [7]uint16{1858, 11, 16, 0, 0, 0, 0}, libIvTime, unchanged},
-		{"10,000 days", [7]uint16{0, 0, 10_000, 0, 0, 0, 0}, libIvTime, unchanged},
+		{"10,000 days", [7]uint16{0, 0, 10_000, 0, 0, 0, 0}, libNormal, delta(10_000 * day)},
 	} {
 		for i, f := range c.fields {
 			putWord(t, env, cvtVector+uint32(2*i), f)

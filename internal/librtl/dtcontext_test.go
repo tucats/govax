@@ -2,6 +2,7 @@ package librtl
 
 import (
 	"slices"
+	"strings"
 	"testing"
 
 	"github.com/tucats/govax/internal/corevms"
@@ -58,6 +59,7 @@ func elementTexts(elements []dtElement) []string {
 // into it, and its settings come from them alone.
 func TestInitDateTimeContext(t *testing.T) {
 	env := fixture(t)
+	defineList(t, env, lnm.ProcessTableName, "SYS$LANGUAGE", lnm.Supervisor, "ENGLISH")
 
 	if got := initContext(t, env, componentMonthAbb, "|jan|feb|mar|apr|mai|jun|jul|aug|sep|okt|nov|dez|"); got != ssNormal {
 		t.Fatalf("MONTH_NAME_ABB: %#x", got)
@@ -68,8 +70,9 @@ func TestInitDateTimeContext(t *testing.T) {
 		t.Fatalf("cell %#x, tag %#x", block, longword(t, env, block))
 	}
 
-	if got := initContext(t, env, componentOutputFormat, "/!H04:!M0//!D0.!MN0.!Y4/"); got != libNumElements {
-		t.Errorf("a doubled delimiter's three elements: %#x, want NUMELEMENTS", got)
+	// More elements than the component has are ignored.
+	if got := initContext(t, env, componentOutputFormat, "/!H04:!M0//!D0.!MN0.!Y4/"); got != ssNormal {
+		t.Errorf("a doubled delimiter's three elements: %#x, want SS$_NORMAL", got)
 	}
 
 	if got := initContext(t, env, componentOutputFormat, "/!H04:!M0/!D0.!MN0.!Y4/"); got != ssNormal {
@@ -91,7 +94,8 @@ func TestInitDateTimeContext(t *testing.T) {
 		t.Errorf("output %q: the time first, as given", got)
 	}
 
-	if got := s.spellings[componentMonthAbb]; got[caseUpper][4] != "MAI" || got[caseLower][9] != "okt" || got[caseCapital][11] != "Dez" {
+	// INIT's spellings are used as given, whatever the case asked for.
+	if got := s.spellings[componentMonthAbb]; got[caseUpper][4] != "mai" || got[caseLower][9] != "okt" || got[caseCapital][11] != "dez" {
 		t.Errorf("abbreviations: %q", got)
 	}
 
@@ -117,7 +121,9 @@ func TestInitDateTimeContext(t *testing.T) {
 }
 
 // TestInitDateTimeContextErrors: each status INIT returns for a bad
-// component, string, or format, with no context allocated.
+// component or string. INIT allocates the context first, so a cell
+// holding 0 gets one even when the call fails, as on VMS V7.1, and it
+// doesn't check a format's mnemonics or fields.
 func TestInitDateTimeContextErrors(t *testing.T) {
 	env := fixture(t)
 
@@ -130,28 +136,32 @@ func TestInitDateTimeContextErrors(t *testing.T) {
 		{"an unnamed code", 5, "|X|", libIllComponent},
 		{"past the last", 19, "|X|", libIllComponent},
 		{"negative", -1, "|X|", libIllComponent},
-		{"empty", componentInputFormat, "", libIllIniStr},
-		{"one delimiter", componentInputFormat, "|", libIllIniStr},
+		{"empty", componentInputFormat, "", libEleTooLon},
+		{"one delimiter, output", componentOutputFormat, "|", libEleTooLon},
+		{"one delimiter, input", componentInputFormat, "|", ssNormal},
+		{"one delimiter, spellings", componentMeridiem, "|", libNumElements},
 		{"no closing delimiter", componentMeridiem, "|AM|PM", libIllIniStr},
 		{"too few", componentMeridiem, "|AM|", libNumElements},
-		{"too many", componentWeekdayAbb, "|1|2|3|4|5|6|7|8|", libNumElements},
-		{"unknown mnemonic", componentInputFormat, "|!DB-!MAAU-!Y5|", libUnrForCod},
-		{"unknown in output", componentOutputFormat, "|!X|!H04|", libUnrForCod},
-		{"mixed element", componentOutputFormat, "|!DB-!MAAU-!Y4 !H04|!H04|", libIllFormat},
-		{"two dates", componentOutputFormat, "|!DB|!Y4|", libIllFormat},
-		{"no fields", componentOutputFormat, "|date|!H04|", libIllFormat},
-		{"both empty", componentOutputFormat, "|||", libIllFormat},
-		{"empty input", componentInputFormat, "||", libIllFormat},
-		{"empty language", componentLanguage, "| |", libIllIniStr},
+		{"too many", componentWeekdayAbb, "|1|2|3|4|5|6|7|8|", ssNormal},
+		{"255 bytes", componentLanguage, "|" + strings.Repeat("E", 255) + "|", ssNormal},
+		{"256 bytes", componentLanguage, "|" + strings.Repeat("E", 256) + "|", libEleTooLon},
+		{"unknown mnemonic", componentInputFormat, "|!DB-!MAAU-!Y5|", ssNormal},
+		{"mixed element", componentOutputFormat, "|!DB-!MAAU-!Y4 !H04|!H04|", ssNormal},
+		{"both empty", componentOutputFormat, "|||", ssNormal},
+		{"empty language", componentLanguage, "| |", ssNormal},
 	} {
+		putLongword(t, env, dtCell, 0)
+
 		if got := initContext(t, env, c.code, c.text); got != c.want {
 			t.Errorf("%s: %#x, want %#x", c.name, got, c.want)
 		}
 
-		if longword(t, env, dtCell) != 0 {
-			t.Fatalf("%s: a context was allocated", c.name)
+		if longword(t, env, dtCell) == 0 {
+			t.Errorf("%s: no context was allocated", c.name)
 		}
 	}
+
+	putLongword(t, env, dtCell, 0)
 
 	// One part alone is an output format.
 	if got := initContext(t, env, componentOutputFormat, "||!H04:!M0|"); got != ssNormal {
@@ -172,7 +182,7 @@ func TestInitDateTimeContextErrors(t *testing.T) {
 func TestDateContextNames(t *testing.T) {
 	env := fixture(t)
 
-	s := namedSettings(env)
+	s := (&dateContext{}).resolve(env)
 
 	if s.outputWarning() != libEnglUsed || s.languageStatus != libEnglUsed {
 		t.Errorf("nothing defined: %#x, want ENGLUSED", s.outputWarning())
@@ -190,7 +200,7 @@ func TestDateContextNames(t *testing.T) {
 	defineList(t, env, lnm.ProcessTableName, "LIB$DT_FORMAT", lnm.Supervisor, "LIB$TIME_FORMAT_012", "LIB$DATE_FORMAT_006")
 	defineList(t, env, lnm.ProcessTableName, "LIB$DT_INPUT_FORMAT", lnm.Supervisor, "!MAU !DD, !Y4 !H02:!M0:!S0:!C2 !MIU")
 
-	s = namedSettings(env)
+	s = (&dateContext{}).resolve(env)
 
 	if s.outputWarning() != ssNormal || s.inputWarning() != ssNormal {
 		t.Errorf("all defined: %#x, %#x", s.outputWarning(), s.inputWarning())
@@ -204,14 +214,22 @@ func TestDateContextNames(t *testing.T) {
 		t.Errorf("input %q", s.inputText)
 	}
 
-	// A name that isn't a format is left out; a user's own format, added
-	// to the table, is used.
+	// A user's own format, added to the table, is used; a name that
+	// isn't a format makes the whole format the standard one.
 	defineList(t, env, lnm.DTFormatTableName, "LIB$DATE_FORMAT_501", lnm.Executive, "!Y4.!MN0.!D0")
+	defineList(t, env, lnm.ProcessTableName, "LIB$DT_FORMAT", lnm.Supervisor, "LIB$DATE_FORMAT_501")
+
+	s = (&dateContext{}).resolve(env)
+
+	if got := elementTexts(s.output); !slices.Equal(got, []string{"!Y4.!MN0.!D0"}) || s.outputWarning() != ssNormal {
+		t.Errorf("a user's format: %q, %#x", got, s.outputWarning())
+	}
+
 	defineList(t, env, lnm.ProcessTableName, "LIB$DT_FORMAT", lnm.Supervisor, "LIB$DATE_FORMAT_501", "LIB$TIME_FORMAT_999")
 
-	s = namedSettings(env)
+	s = (&dateContext{}).resolve(env)
 
-	if got := elementTexts(s.output); !slices.Equal(got, []string{"!Y4.!MN0.!D0"}) || s.outputWarning() != libDefForUse {
+	if got := elementTexts(s.output); !slices.Equal(got, []string{"!DB-!MAAU-!Y4", "!H04:!M0:!S0.!C2"}) || s.outputWarning() != libDefForUse {
 		t.Errorf("a missing format: %q, %#x", got, s.outputWarning())
 	}
 
@@ -226,7 +244,7 @@ func TestDateContextNames(t *testing.T) {
 		defineList(t, env, "LNM$LANGUAGE_FRENCH", "LIB$MI"+c.suffix, lnm.Executive, c.v, c.v+"!")
 	}
 
-	s = namedSettings(env)
+	s = (&dateContext{}).resolve(env)
 
 	if got := s.spellings[componentMeridiem][caseCapital]; !slices.Equal(got, []string{"Matin", "Matin!"}) {
 		t.Errorf("French meridiem %q", got)

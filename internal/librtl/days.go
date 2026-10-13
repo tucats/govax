@@ -44,13 +44,19 @@ func optionalTime(env *corevms.Environment, addr uint32) (uint64, error) {
 }
 
 // dayNumber is the number of whole days in the time v, and the hundredths
-// of a second since that day's midnight. Both are divided as EDIV divides
-// (unconfirmed for a delta): truncated toward zero, so a delta's day count
-// is its whole days, negated, and its day-time the rest, negated too.
+// of a second since that day's midnight. For a delta, VMS V7.1 truncates
+// the day count toward zero (negative) but gives the rest as a positive
+// count of hundredths (testdata/lib56): two days and an hour are -2 days
+// and 360,000 hundredths.
 func dayNumber(v uint64) (days, hundredths int64) {
 	ticks := int64(v)
 
-	return ticks / ticksPerDay, ticks % ticksPerDay / ticksPerHundredth
+	rest := ticks % ticksPerDay
+	if rest < 0 {
+		rest = -rest
+	}
+
+	return ticks / ticksPerDay, rest / ticksPerHundredth
 }
 
 // libDateTime is LIB$DATE_TIME (LIB-80): the current date and time as

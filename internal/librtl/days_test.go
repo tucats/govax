@@ -63,9 +63,9 @@ func TestLibDay(t *testing.T) {
 		{"13-Jan-1988", absolute(t, env, "13-JAN-1988 09:13:25.14"), 46738 + 365 + 30 + 31 + 9, 3320514},
 		// The address of a zero quadword is the base date.
 		{"zero", 0, 0, 0},
-		// A delta's count is truncated toward zero, its day-time negative
-		// (unconfirmed).
-		{"delta", delta(2*day + hour + 5*second/2), -2, -(360000 + 250)},
+		// A delta's count is truncated toward zero, its day-time
+		// positive (VMS V7.1).
+		{"delta", delta(2*day + hour + 5*second/2), -2, 360000 + 250},
 		// The last time before the overflow, 2^31 x 10^9 - 1 ticks.
 		{"limit", uint64(1<<31)*1_000_000_000 - 1, 2485513, 4159999},
 	} {

@@ -71,10 +71,9 @@ type dtMnemonic struct {
 	digits      int
 }
 
-// dtMnemonics is every mnemonic the manual lists, in its order. Each is
-// written in upper case; whether VMS also accepts lower case is
-// unconfirmed, and govax doesn't (so "!H04H!M0m"'s "m" is punctuation
-// either way).
+// dtMnemonics is every mnemonic the manual lists, in its order. VMS
+// V7.1 also reads them in lower case ("!d0", testdata/lib56); only what
+// follows a "!" is a mnemonic, so "!H04H!M0m"'s "m" is punctuation.
 var dtMnemonics = []dtMnemonic{
 	{code: "D0", field: fieldDay, fill: fillZero},
 	{code: "DD", field: fieldDay, fill: fillNone},
@@ -191,10 +190,11 @@ func parseDateFormat(format string) (items []dtItem, ok bool) {
 	return items, true
 }
 
-// matchMnemonic is the longest mnemonic s begins with, or nil.
+// matchMnemonic is the longest mnemonic s begins with, in either case,
+// or nil.
 func matchMnemonic(s string) *dtMnemonic {
 	for _, m := range dtLongestFirst {
-		if strings.HasPrefix(s, m.code) {
+		if len(s) >= len(m.code) && strings.EqualFold(s[:len(m.code)], m.code) {
 			return m
 		}
 	}
@@ -240,15 +240,51 @@ func partOf(items []dtItem) dtPart {
 	return part
 }
 
+// slotOf is the part an output format's element stands for, by its
+// first field: the time if that is a time field, else the date (an
+// element with no fields included). VMS V7.1 doesn't refuse an element
+// that mixes the two ("!D0 !H04" is a date part, testdata/lib56).
+func slotOf(items []dtItem) dtPart {
+	for _, it := range items {
+		if it.m != nil {
+			if it.m.field.isDate() {
+				return partDate
+			}
+
+			return partTime
+		}
+	}
+
+	return partDate
+}
+
+// parseInputFormat parses an input format. Its status is LIB$_UNRFORCOD
+// for an unknown mnemonic, a weekday's included: VMS V7.1 doesn't know
+// the weekday mnemonics in an input format (testdata/lib56).
+func parseInputFormat(format string) ([]dtItem, uint32) {
+	items, ok := parseDateFormat(format)
+	if !ok {
+		return nil, libUnrForCod
+	}
+
+	for _, it := range items {
+		if it.m != nil && it.m.field == fieldWeekday {
+			return nil, libUnrForCod
+		}
+	}
+
+	return items, ssNormal
+}
+
 // checkInputFormat reports whether an input format is one
 // LIB$CONVERT_DATE_STRING can read by (the manual's section 3.3.3, and
 // LIB$_ILLFORMAT when it isn't). It must give, once each, a month
 // (spelled or numeric), the day, the year, the hour, the minute, the
 // second, and the fraction; a meridiem with a 12-hour clock, and none
 // with a 24-hour one. The date's fields and the time's must form two
-// groups, one after the other. A weekday isn't allowed (unconfirmed: the
-// manual's list doesn't name it), nor is a field given twice
-// (unconfirmed).
+// groups, one after the other. A field given twice isn't allowed
+// (unconfirmed). (A weekday, which parseInputFormat refuses, isn't
+// either.)
 func checkInputFormat(items []dtItem) bool {
 	seen := map[dtField]bool{}
 	groups := 0

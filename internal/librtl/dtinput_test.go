@@ -215,7 +215,9 @@ func TestConvertDefaults(t *testing.T) {
 	}{
 		{"", "-MAR", "15-MAR-2026 08:30:00.50"},
 		{"", ":45", "15-JUN-2026 08:45:00.50"},
-		{"!MN0/!D0/!Y2 !H04:!M0:!S0.!C2", "01/13/88", "13-JAN-2088 08:30:00.50"},
+		// A two-digit year's century is the current year's (1988's
+		// here), not the defaults vector's.
+		{"!MN0/!D0/!Y2 !H04:!M0:!S0.!C2", "01/13/88", "13-JAN-1988 08:30:00.50"},
 	} {
 		s := inputSettings(t, env, tc.format)
 		c := dtConversion{omittable: 0x7F, defaults: defaults, now: now}
@@ -329,7 +331,10 @@ func TestLibConvertDateString(t *testing.T) {
 		t.Errorf("-MAR, default flags: %#x, %#x, %#x", status, v, defaulted)
 	}
 
-	// A context's input format; one the routine can't read by.
+	// A context's input format; one the routine can't read by. An
+	// initialized context still takes its language from SYS$LANGUAGE,
+	// which the static context, read before, didn't have (ENGLUSED).
+	defineList(t, env, lnm.ProcessTableName, "SYS$LANGUAGE", lnm.Supervisor, "ENGLISH")
 	putLongword(t, env, dtCell, 0)
 
 	if got := initContext(t, env, componentInputFormat, "|!MAU !DD, !Y4 !H02:!M0:!S0:!C2 !MIU|"); got != ssNormal {

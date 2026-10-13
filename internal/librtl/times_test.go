@@ -82,11 +82,13 @@ func TestLibAddTimes(t *testing.T) {
 		// The base date (zero) is an absolute time.
 		{"base date", 0, delta(day), libNormal, uint64(day)},
 		{"base dates", 0, 0, libOneDelTim, unchanged},
-		// 10,000 days: too long, given or computed.
-		{"sum at the limit", delta(9999 * day), delta(day), libIvTime, unchanged},
-		{"sum under the limit", delta(9999 * day), delta(day - 1), libNormal, delta(10_000*day - 1)},
-		{"delta at the limit", jan13, delta(10_000 * day), libIvTime, unchanged},
-		{"absolute overflow", 1<<63 - 1, delta(1), libIvTime, unchanged},
+		// 10,000 days is a delta like any other (VMS V7.1); only the
+		// quadword limits a sum.
+		{"10,000 days", delta(9999 * day), delta(day), libNormal, delta(10_000 * day)},
+		{"a delta of 10,000 days", jan13, delta(10_000 * day), libNormal, jan13 + uint64(10_000*day)},
+		// Quadword sums wrap, as VMS's do.
+		{"delta overflow", delta(1 << 62), delta(1 << 62), libNormal, 1 << 63},
+		{"absolute overflow", 1<<63 - 1, delta(1), libNormal, 1 << 63},
 	} {
 		status, got := timeCall(t, env, "LIB$ADD_TIMES", c.t1, c.t2)
 		if status != c.status || got != c.want {
@@ -117,9 +119,9 @@ func TestLibSubTimes(t *testing.T) {
 		// Equal times: the smallest delta, one tick.
 		{"equal deltas", delta(day), delta(day), libNormal, delta(1)},
 		{"equal absolutes", jan13, jan13, libNormal, delta(1)},
-		// An interval of 10,000 days or more isn't a delta.
-		{"long interval", jan13, 0, libIvTime, unchanged},
-		{"delta at the limit", jan13, delta(10_000 * day), libIvTime, unchanged},
+		// An interval of 10,000 days or more is a delta like any other.
+		{"long interval", jan13, 0, libNormal, delta(int64(jan13))},
+		{"a delta of 10,000 days", jan13, delta(10_000 * day), libNormal, jan13 - uint64(10_000*day)},
 	} {
 		status, got := timeCall(t, env, "LIB$SUB_TIMES", c.t1, c.t2)
 		if status != c.status || got != c.want {
@@ -163,13 +165,12 @@ func TestLibMultDeltaTime(t *testing.T) {
 		{"times 3", 3, delta(hour + 1), libNormal, delta(3*hour + 3)},
 		{"negative multiplier", -3, delta(hour), libNormal, delta(3 * hour)},
 		{"most negative multiplier", -1 << 31, delta(1), libNormal, delta(1 << 31)},
-		{"times 0", 0, delta(hour), libNormal, 0},
-		{"up to the limit", 10_000, delta(day - 1), libNormal, delta(10_000 * (day - 1))},
-		{"to the limit", 10_000, delta(day), libIvTime, delta(day)},
-		{"far past the limit", 1<<31 - 1, delta(9999 * day), libIvTime, delta(9999 * day)},
+		{"times 0", 0, delta(hour), libIvTime, delta(hour)},
+		{"10,000 days", 10_000, delta(day), libNormal, delta(10_000 * day)},
+		{"overflow", 1<<31 - 1, delta(9999 * day), libIvTime, delta(9999 * day)},
 		{"an absolute time", 2, uint64(hour), libIvTime, uint64(hour)},
 		{"the base date", 2, 0, libIvTime, 0},
-		{"a delta at the limit", 1, delta(10_000 * day), libIvTime, delta(10_000 * day)},
+		{"a delta of 10,000 days", 1, delta(10_000 * day), libNormal, delta(10_000 * day)},
 	} {
 		putLongword(t, env, timeMult, uint32(c.multiplier))
 		putQuad(t, env, timeA, c.in)
@@ -195,9 +196,9 @@ func TestLibMultfDeltaTime(t *testing.T) {
 		{"negative multiplier", -0.5, delta(day), libNormal, delta(day / 2)},
 		// Half a tick rounds away from zero; less than half doesn't.
 		{"half a tick", 0.5, delta(3), libNormal, delta(2)},
-		{"a quarter tick", 0.25, delta(5), libNormal, delta(1)},
-		{"times 0", 0, delta(hour), libNormal, 0},
-		{"to the limit", 10_000, delta(day), libIvTime, delta(day)},
+		{"a quarter tick", 0.25, delta(5), libNormal, delta(2)},
+		{"times 0", 0, delta(hour), libIvTime, delta(hour)},
+		{"10,000 days", 10_000, delta(day), libNormal, delta(10_000 * day)},
 		{"huge", 1e38, delta(day), libIvTime, delta(day)},
 		{"an absolute time", 2, uint64(hour), libIvTime, uint64(hour)},
 	} {

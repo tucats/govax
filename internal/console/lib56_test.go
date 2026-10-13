@@ -21,14 +21,104 @@ import (
 // lib56Dir is the probe's directory, from this package's.
 var lib56Dir = filepath.Join("..", "..", "testdata", "lib56")
 
-// expectedLib56Differences are the lines of VMS's output govax doesn't
-// reproduce, each with why: the line VMS printed, by its case's name and
-// the line's first word.
-var expectedLib56Differences = map[string]string{}
+// Why VMS's output differs from govax's for the cases in
+// expectedLib56Cases (docs/PHASE-56's progress log, the probe's second
+// run).
+const (
+	// VMS V7.1's LIB$CONVERT_DATE_STRING returned SS$_ROPRAND (a reserved
+	// operand, as a status) for nearly every string with a letter in it or
+	// beginning with punctuation, the manual's own Table 3-2 examples
+	// among them, on simh's VAX 8600. Suspected a fault inside the routine
+	// or the emulator, not a rule to follow: govax converts them.
+	ropRand = "VMS returned SS$_ROPRAND"
+
+	// "19880113 091325.14" by "!Y4!MN0!D0 !H04!M0!S0.!C2": VMS returned
+	// LIB$_BADBLOADR, a heap error, after the ROPRAND cases before it.
+	badBlockAddress = "VMS returned LIB$_BADBLOADR"
+
+	// The difference from TODAY's result, which VMS didn't make (ROPRAND).
+	todayFailed = "TODAY failed on VMS"
+)
+
+// expectedLib56Cases are the cases whose output govax doesn't match, by
+// name, each with why. Every line of such a case may differ; each must
+// differ somewhere, or it is listed for nothing.
+var expectedLib56Cases = map[string]string{
+	"CONVERT -MAR":                 ropRand,
+	"CONVERT -SEPTEMBER":           ropRand,
+	"CONVERT -1988":                ropRand,
+	"CONVERT :45:":                 ropRand,
+	"CONVERT ::23":                 ropRand,
+	"CONVERT .01":                  ropRand,
+	"CONVERT whole":                ropRand,
+	"CONVERT whole flags 0":        ropRand,
+	"CONVERT date only":            ropRand,
+	"CONVERT no seconds":           ropRand,
+	"CONVERT no seconds colon":     ropRand,
+	"CONVERT one-digit hour":       ropRand,
+	"CONVERT one-digit fraction":   ropRand,
+	"CONVERT three-digit fraction": ropRand,
+	"CONVERT lower case":           ropRand,
+	"CONVERT full month":           ropRand,
+	"CONVERT month ja":             ropRand,
+	"CONVERT month ju":             ropRand,
+	"CONVERT month ma":             ropRand,
+	"CONVERT month jun":            ropRand,
+	"CONVERT blanks":               ropRand,
+	"CONVERT tab":                  ropRand,
+	"CONVERT two blanks":           ropRand,
+	"CONVERT no blank":             ropRand,
+	"CONVERT blank in date":        ropRand,
+	"CONVERT 29 Feb 1989":          ropRand,
+	"CONVERT hour 24":              ropRand,
+	"CONVERT minute 60":            ropRand,
+	"CONVERT year 1858":            ropRand,
+	"CONVERT year 88":              ropRand,
+	"CONVERT slashes":              ropRand,
+	"CONVERT hello":                ropRand,
+	"CONVERT trailing junk":        ropRand,
+	"CONVERT -MAR default flags":   ropRand,
+	"CONVERT no seconds flags 0":   ropRand,
+	"CONVERT high flag bits":       ropRand,
+	"CONVERT DEFV2 -MAR":           ropRand,
+	"CONVERT DEFV2 :45":            ropRand,
+	"CONVERT DEFV2 date only":      ropRand,
+	"CONVERT 12-hour am":           ropRand,
+	"CONVERT 12-hour pm":           ropRand,
+	"CONVERT 12-hour 12 am":        ropRand,
+	"CONVERT 12-hour 12 pm":        ropRand,
+	"CONVERT 12-hour p":            ropRand,
+	"CONVERT 12-hour short":        ropRand,
+	"CONVERT 12-hour no meridiem":  ropRand,
+	"CONVERT 12-hour pm only":      ropRand,
+	"CONVERT 12-hour 13 pm":        ropRand,
+	"CONVERT 12-hour 0 am":         ropRand,
+	"CONVERT 12-hour no blank":     ropRand,
+	"CONVERT packed":               badBlockAddress,
+	"CONVERT ticks":                ropRand,
+	"CONVERT ticks short":          ropRand,
+	"CONVERT ticks 8 digits":       ropRand,
+	"CONVERT names standard":       ropRand,
+	"CONVERT static nothing":       ropRand,
+	"CONVERT TODAY":                ropRand,
+	"CONVERT YESTERDAY":            ropRand,
+	"CONVERT TOMORROW":             ropRand,
+	"CONVERT today lower":          ropRand,
+	"CONVERT tom":                  ropRand,
+	"CONVERT y":                    ropRand,
+	"CONVERT T":                    ropRand,
+	"CONVERT TO":                   ropRand,
+	"CONVERT TODAY 10:00":          ropRand,
+	"CONVERT TODAY DEFV2":          ropRand,
+	"CONVERT TODAY flags 0":        ropRand,
+	"CONVERT 10:00 no defaults":    todayFailed,
+	"CONVERT -MAR no defaults":     ropRand,
+}
 
 // runLib56 assembles, links, and runs lib56.mar as lib56.com does on
-// VMS, with SYS$LANGUAGE ENGLISH in the system table (as on the VAX the
-// Phase 55 probe ran on).
+// VMS, with the system table's names as the VAX had them
+// (vax/lib56.log): SYS$LANGUAGE ENGLISH, LIB$DT_FORMAT the standard
+// format's two names, and LIB$DT_INPUT_FORMAT the standard format.
 func runLib56(t *testing.T) (uint32, string) {
 	t.Helper()
 
@@ -43,6 +133,8 @@ func runLib56(t *testing.T) (uint32, string) {
 
 	for _, line := range []string{
 		"DEFINE/SYSTEM SYS$LANGUAGE ENGLISH",
+		"DEFINE/SYSTEM LIB$DT_FORMAT LIB$DATE_FORMAT_001,LIB$TIME_FORMAT_001",
+		`DEFINE/SYSTEM LIB$DT_INPUT_FORMAT "!DB-!MAAU-!Y4 !H04:!M0:!S0.!C2"`,
 	} {
 		if err := d.Dispatch(line); err != nil {
 			t.Fatalf("%s: %v", line, err)
@@ -121,11 +213,12 @@ func TestLib56Oracle(t *testing.T) {
 			continue
 		}
 
-		key := caseName + "/" + strings.Fields(w + " ?")[0]
-		if why, ok := expectedLib56Differences[key]; ok {
-			seen[key] = true
+		if why, ok := expectedLib56Cases[caseName]; ok {
+			if !seen[caseName] {
+				t.Logf("line %d differs as expected (%s):\n\tgot  %q\n\tvax  %q", i+1, why, g, w)
+			}
 
-			t.Logf("line %d differs as expected (%s):\n\tgot  %q\n\tvax  %q", i+1, why, g, w)
+			seen[caseName] = true
 
 			continue
 		}
@@ -133,9 +226,9 @@ func TestLib56Oracle(t *testing.T) {
 		t.Errorf("line %d:\n\tgot  %q\n\twant %q", i+1, g, w)
 	}
 
-	for key := range expectedLib56Differences {
-		if !seen[key] {
-			t.Errorf("%s: expected to differ from VMS, but matches; remove it from expectedLib56Differences", key)
+	for name := range expectedLib56Cases {
+		if !seen[name] {
+			t.Errorf("%s: expected to differ from VMS, but matches; remove it from expectedLib56Cases", name)
 		}
 	}
 }

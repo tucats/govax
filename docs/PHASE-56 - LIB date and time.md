@@ -657,7 +657,8 @@ address) print on lines marked with a tilde, as in Phase 55's probe.
    **Done** 2026-10-13.
 7. **Input**: CONVERT_DATE_STRING. **Done** 2026-10-13.
 8. **The program** (`testdata/lib56/`), its console test, and the VMS
-   probe. Program and test written 2026-10-13; the VMS run is pending.
+   probe. **Done** 2026-10-13 (two VMS runs), but for the open
+   CONVERT_DATE_STRING question in the progress log.
 9. **Close-out**.
 
 ## Progress log
@@ -939,3 +940,84 @@ address) print on lines marked with a tilde, as in Phase 55's probe.
     a VS string's CURLEN shown in a longword with text that varies; and
     lengths and differences that depend on the date. All are fixed in
     `gen.go`.
+- **2026-10-13** — Subtask 8, the VMS runs (`testdata/lib56/README.md`,
+  "The runs"). Run 1 hung after 301 cases. The 302nd was an INIT of a
+  cell holding ^X200, the image's first page, which VMS took for a
+  context; that case is dropped. Run 2 ran all 426 cases of round 2,
+  after `lib56.com` ran VMS's LIB$DT_STARTUP. govax now matches run 2
+  line for line, except for the CONVERT cases below. What VMS V7.1
+  settled, and govax now does:
+  - **Arithmetic.**
+    - There is no 10,000-day limit on deltas anywhere: ADD, SUB, MULT[F],
+      CVT_FROM/TO, and CVT_VECTIM all take and make longer ones.
+    - ADD_TIMES is plain quadword arithmetic, wrapping (two deltas of
+      2^62 ticks make ^X80000000 00000000). CVT_VECTIM wraps too
+      (31-Dec-65535 comes out as 3-Aug-7080), and accepts years past
+      9999.
+    - A zero multiplier (MULT and MULTF) is LIB$_IVTIME, as is a count of
+      0 for CVT[F]_TO.
+    - MULTF rounds the length up: one tick times 0.5, 1.4, 1.5, and 2.5
+      is one, two, two, and three ticks.
+    - CVTF_TO follows `floatTicks`, a model fitted to VMS's six results
+      and marked as such. The whole seconds are kept as a longword
+      (wrapping), and the fraction of a second is multiplied by 10^7,
+      rounded to F_floating, and truncated. Real MACRO assembles the
+      probe's F_floating literals with the same bits as govax (checked
+      in the VAX's LIB56.OBJ), so the model is about the routine, not
+      the data.
+    - $ASCTIM writes a year past 9999 as `****` (corevms).
+  - **Conversion.**
+    - Days, months, and weekdays count from 1, and hours, minutes, and
+      seconds from 0, of the year, month, week, day, hour, and minute
+      alike. So 00:30 on 1 January is hour 0 of the year.
+    - JULIAN_DATE is LIB$DAY's day number.
+    - CVT_FROM with an absolute time and any code but 1–20 is
+      LIB$_DELTIMREQ (0 and 31 included). With a delta, 1–20 is
+      LIB$_ABSTIMREQ, and anything else LIB$_INVOPER.
+  - **LIB$DAY** of a delta gives a negative day count and a positive
+    day-time.
+  - **The names.** VMS defines LIB$DT_FORMAT and LIB$DT_INPUT_FORMAT in
+    the system table as the standard format, so the oracle's console
+    does too. A context INIT left a component out of takes it from the
+    names (or the language from SYS$LANGUAGE), not from defaults.
+    LIB$DT_FORMAT's first two names are the elements, a third is
+    ignored, and a name that doesn't translate makes the whole format
+    the standard one, with DEFFORUSE.
+  - **INIT** checks little:
+    - it allocates the context first, so the cell is set even when the
+      call fails;
+    - it returns LIB$_ILLCOMPONENT, LIB$_INVSTRDES (no init-string),
+      LIB$_ELETOOLON (an empty string, an element over 255 bytes, or an
+      output format of the delimiter alone), LIB$_ILLINISTR, or
+      LIB$_NUMELEMENTS (too few elements; extras are ignored);
+    - it doesn't check mnemonics or fields: those errors come when the
+      format is used;
+    - a user-context of 0 is an access violation.
+    Spellings are used as given, whatever case the mnemonic asks for,
+    and mnemonics are read in either case.
+  - **Output.**
+    - The first element is the time part if its first field is a time
+      field, else the date part, and the second element is the other
+      part, whatever its fields. An element mixing date and time fields
+      is allowed.
+    - With flags, a chosen part the format lacks is the standard one,
+      appended, with no warning. An empty first element writes nothing,
+      and an empty second element writes the standard format's part.
+    - An unknown mnemonic is LIB$_UNRFORCOD, and GET_MAXIMUM_DATE_LENGTH
+      writes 0 for it.
+    - The manual's example is 27 characters, not 28.
+  - **Input.**
+    - A weekday in an input format is LIB$_UNRFORCOD.
+    - A two-digit year takes its century from the current year, not
+      from the defaults vector.
+  - **CONVERT_DATE_STRING (open).** VMS returned SS$_ROPRAND as a status
+    in 67 cases: nearly every string with a letter in it, or beginning
+    with punctuation. That includes Table 3-2's own "-MAR", ":45:", and
+    ".01", and YESTERDAY, TODAY, and TOMORROW. One case, a packed format
+    after them, returned LIB$_BADBLOADR. Strings of digits that begin
+    with a digit ("21", "23:", "13-01-1988", "01/13/88 09:13:25.14")
+    converted as govax converts them. This looks like a fault inside the
+    routine or in simh's VAX 8600, not a rule to follow, so govax keeps
+    the manual's behavior, and `TestLib56Oracle` lists the 69 cases
+    (`expectedLib56Cases`, by reason). A run on another simh model, or
+    another VMS version, would tell which.

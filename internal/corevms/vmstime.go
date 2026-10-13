@@ -136,12 +136,16 @@ func formatVMSTime(v uint64, timeOnly bool) (s string, ok bool) {
 		return clock(v), true
 	}
 
+	// A year past 9999 is written as four asterisks, as VMS V7.1 writes
+	// it (" 3-JAN-**** 00:00:00.00", testdata/lib56).
 	t := vmsdef.GoTime(v)
+
+	year := fmt.Sprintf("%04d", t.Year())
 	if t.Year() > 9999 {
-		return "", false
+		year = "****"
 	}
 
-	return fmt.Sprintf("%2d-%s-%04d %s", t.Day(), monthNames[t.Month()-1], t.Year(), clock(v)), true
+	return fmt.Sprintf("%2d-%s-%s %s", t.Day(), monthNames[t.Month()-1], year, clock(v)), true
 }
 
 // parseVMSTime is $BINTIM's conversion: the VMS time a text string
@@ -473,11 +477,12 @@ func numericTime(v uint64) (fields [7]uint16, ok bool) {
 // A year and month both 0 make a delta time of fields[2] days plus the
 // time of day, stored negated; anything else is an absolute time. ok is
 // false for a field out of range: an hour past 23, a minute or second
-// past 59, hundredths past 99, a delta of 10,000 days or more, or for an
-// absolute time a month outside 1-12, a day outside its month, or a
-// year outside 1858-9999 (a year of 0 with a nonzero month included).
-// An absolute time before the base date, 17-Nov-1858, is out of range
-// too. These limits are govax's reading of the manual (unconfirmed).
+// past 59, hundredths past 99, or for an absolute time a month outside
+// 1-12, a day outside its month, or a date before the base date,
+// 17-Nov-1858 (a year of 0 with a nonzero month included). VMS V7.1
+// accepts a delta of 10,000 days or more and a year past 9999
+// (testdata/lib56), and a time past the quadword (about the year
+// 31000) wraps, as VMS's does: 31-Dec-65535 is 3-Aug-7080.
 func vectorTime(fields [7]uint16) (v uint64, ok bool) {
 	year, month, day := int(fields[0]), int(fields[1]), int(fields[2])
 	hour, minute, second, hundredths := fields[3], fields[4], fields[5], fields[6]
@@ -490,16 +495,13 @@ func vectorTime(fields [7]uint16) (v uint64, ok bool) {
 		uint64(hundredths)*ticksPerHundredth
 
 	if year == 0 && month == 0 {
-		if day >= maxDeltaDays {
-			return 0, false
-		}
-
 		// A delta: stored negated, so its sign marks it. Its length can
-		// be zero (all seven fields 0), which stores 0.
+		// be zero (all seven fields 0), which stores 0. At most 65,535
+		// days, it always fits.
 		return uint64(-int64(uint64(day)*ticksPerDay + clock)), true
 	}
 
-	if year < 1858 || year > 9999 || month < 1 || month > 12 || day < 1 {
+	if year < 1858 || month < 1 || month > 12 || day < 1 {
 		return 0, false
 	}
 
@@ -513,7 +515,10 @@ func vectorTime(fields [7]uint16) (v uint64, ok bool) {
 		return 0, false
 	}
 
-	return vmsdef.Time(date) + clock, true
+	// The days since the base date, in quadword arithmetic.
+	days := uint64(date.Unix()-vmsdef.GoTime(0).Unix()) / 86400
+
+	return days*ticksPerDay + clock, true
 }
 
 // serviceSysNumtim is SYS$NUMTIM:

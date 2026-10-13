@@ -59,7 +59,7 @@ func TestParseDateFormat(t *testing.T) {
 		}
 	}
 
-	for _, bad := range []string{"!X", "!D", "!Y5", "!C8", "!d0", "date !"} {
+	for _, bad := range []string{"!X", "!D", "!Y5", "!C8", "date !"} {
 		if _, ok := parseDateFormat(bad); ok {
 			t.Errorf("%q parsed", bad)
 		}
@@ -70,14 +70,14 @@ func TestParseDateFormat(t *testing.T) {
 // and gives one part, a date format the date and a time format the time.
 func TestPredefinedFormatsParse(t *testing.T) {
 	for i, f := range lnm.DateFormats {
-		if e, status := newElement(f); status != ssNormal || e.part != partDate {
-			t.Errorf("%s %q: status %#x, part %d", lnm.DateFormatName(i+1), f, status, e.part)
+		if items, ok := parseDateFormat(f); !ok || slotOf(items) != partDate || partOf(items) != partDate {
+			t.Errorf("%s %q doesn't parse as a date", lnm.DateFormatName(i+1), f)
 		}
 	}
 
 	for i, f := range lnm.TimeFormats {
-		if e, status := newElement(f); status != ssNormal || e.part != partTime {
-			t.Errorf("%s %q: status %#x, part %d", lnm.TimeFormatName(i+1), f, status, e.part)
+		if items, ok := parseDateFormat(f); !ok || slotOf(items) != partTime || partOf(items) != partTime {
+			t.Errorf("%s %q doesn't parse as a time", lnm.TimeFormatName(i+1), f)
 		}
 	}
 }

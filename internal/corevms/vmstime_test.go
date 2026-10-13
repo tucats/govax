@@ -331,6 +331,21 @@ func TestVectorTime(t *testing.T) {
 		}
 	}
 
+	// VMS V7.1 takes a year past 9999 and a delta of 10,000 days
+	// (testdata/lib56): these are its results.
+	for _, c := range []struct {
+		fields [7]uint16
+		want   uint64
+	}{
+		{[7]uint16{10000, 1, 1, 0, 0, 0, 0}, 0x23A73DE7486D0000},
+		{[7]uint16{0, 0, 10_000, 0, 0, 0, 0}, 0xFFE14DF73D240000},
+		{[7]uint16{65535, 12, 31, 0, 0, 0, 0}, 0x16DE35D1335E8000}, // wrapped
+	} {
+		if got, ok := vectorTime(c.fields); !ok || got != c.want {
+			t.Errorf("%v: %#x, %v; want %#x", c.fields, got, ok, c.want)
+		}
+	}
+
 	// All zeros is a delta of length zero, stored as 0.
 	if got, ok := vectorTime([7]uint16{}); !ok || got != 0 {
 		t.Errorf("all zeros: %#x, %v; want 0, true", got, ok)
@@ -349,8 +364,6 @@ func TestVectorTime(t *testing.T) {
 		{1988, 1, 1, 0, 0, 0, 100},
 		{0, 1, 1, 0, 0, 0, 0},
 		{1858, 11, 16, 23, 59, 59, 99},
-		{10000, 1, 1, 0, 0, 0, 0},
-		{0, 0, 10_000, 0, 0, 0, 0},
 		{0, 0, 1, 24, 0, 0, 0},
 	} {
 		if got, ok := vectorTime(fields); ok {

@@ -19,11 +19,12 @@ import (
 // delta of one second is -10,000,000, and adding it to an absolute time
 // moves that time one second later.
 //
-// The manual says "delta times must be less than 10,000 days" (the same
-// limit $ASCTIM and $NUMTIM keep), and a delta at or past it, given or
-// computed, is LIB$_IVTIME. The routines return LIB$_NORMAL, not
-// SS$_NORMAL, as their entries list it. On an error nothing is stored
-// (unconfirmed).
+// The 5.0 manual says "delta times must be less than 10,000 days" (the
+// limit $ASCTIM and $NUMTIM keep), but VMS V7.1's routines take longer
+// ones and make them (testdata/lib56): a delta's only limit is the
+// quadword's, and a result past it is LIB$_IVTIME. The routines return
+// LIB$_NORMAL, not SS$_NORMAL, as their entries list it. On an error
+// nothing is stored.
 
 var (
 	libIvTime     = vmsdef.LibrarySymbols["LIB$_IVTIME"]
@@ -31,16 +32,15 @@ var (
 	libNegTim     = vmsdef.LibrarySymbols["LIB$_NEGTIM"]
 	libInvArgOrd  = vmsdef.LibrarySymbols["LIB$_INVARGORD"]
 	ticksPerDay   = int64(86400 * vmsdef.TicksPerSecond)
-	maxDeltaTicks = 10_000 * ticksPerDay // the first delta that is too long
+	maxDeltaTicks = int64(math.MaxInt64) // the first delta too long to store
 )
 
 // isDelta reports whether the quadword time v is a delta time.
 func isDelta(v uint64) bool { return int64(v) < 0 }
 
 // deltaLength is the length in ticks of the delta time v: its magnitude.
-// ok is false for a delta of 10,000 days or more. The most negative
-// quadword has no positive twin, but it is far past the limit, so it
-// never needs one.
+// ok is false for the most negative quadword, which has no positive
+// twin.
 func deltaLength(v uint64) (ticks int64, ok bool) {
 	if int64(v) == math.MinInt64 {
 		return 0, false
@@ -58,8 +58,8 @@ func deltaTime(ticks int64) (v uint64, ok bool) {
 }
 
 // loadTimes reads the quadword times at argv[0] and argv[1], the inputs
-// of LIB$ADD_TIMES and LIB$SUB_TIMES. A delta of 10,000 days or more is
-// reported as ok false.
+// of LIB$ADD_TIMES and LIB$SUB_TIMES. ok is false for a delta with no
+// length (deltaLength).
 func loadTimes(env *corevms.Environment, argv []uint32) (t1, t2 uint64, ok bool, err error) {
 	mem, c := env.Memory(), env.CPU()
 
@@ -96,8 +96,8 @@ func storeTime(env *corevms.Environment, addr uint32, v uint64) (uint32, error) 
 // libAddTimes is LIB$ADD_TIMES (LIB-5): the sum of two times, at least
 // one of them a delta. Two deltas add to a delta. A delta added to an
 // absolute time, in either order, is the absolute time that much later.
-// Two absolute times are LIB$_ONEDELTIM. A delta sum of 10,000 days or
-// more is LIB$_IVTIME, and so is an absolute sum too big for a quadword
+// Two absolute times are LIB$_ONEDELTIM. A sum too big for a quadword
+// wraps, as on VMS V7.1
 // (an absolute time past the year 9999 is accepted; unconfirmed). Any
 // count of arguments but three is LIB$_WRONUMARG.
 //
@@ -107,41 +107,33 @@ func libAddTimes(env *corevms.Environment, argv []uint32) (uint32, error) {
 		return libWroNumArg, nil
 	}
 
-	t1, t2, ok, err := loadTimes(env, argv)
-
-	switch {
-	case err != nil:
+	t1, t2, _, err := loadTimes(env, argv)
+	if err != nil {
 		return memoryFault(env, err)
-	case !ok:
-		return libIvTime, nil
 	}
 
 	var sum uint64
 
+	// The sums are quadword arithmetic, wrapping as VMS V7.1's do (two
+	// deltas of 2^62 ticks make the most negative quadword:
+	// testdata/lib56).
 	switch {
 	case !isDelta(t1) && !isDelta(t2):
 		return libOneDelTim, nil
 
 	case isDelta(t1) && isDelta(t2):
-		// Stored negated, two deltas add as they are; the length of the
-		// sum is what must stay under the limit. Each is under 10,000
-		// days, so the sum can't overflow.
-		if sum, ok = deltaTime(-int64(t1) - int64(t2)); !ok {
-			return libIvTime, nil
-		}
+		// Stored negated, two deltas add as they are.
+		sum = t1 + t2
 
 	default:
+		// A delta, stored negated, moves an absolute time later by its
+		// length: the absolute time minus the stored delta.
 		absolute, delta := t1, t2
 		if isDelta(t1) {
 			absolute, delta = t2, t1
 		}
 
-		length, _ := deltaLength(delta)
-		if int64(absolute) > math.MaxInt64-length {
-			return libIvTime, nil
-		}
-
-		sum = absolute + uint64(length)
+		sum = absolute - delta
 	}
 
 	return storeTime(env, arg(argv, 2), sum)
@@ -159,9 +151,9 @@ func libAddTimes(env *corevms.Environment, argv []uint32) (uint32, error) {
 // result (time1 the shorter interval or the earlier time, or an absolute
 // time before the base date) is LIB$_NEGTIM. Equal times give the
 // smallest delta, one tick, as the VSI manual says ("a delta time can't
-// be zero"; the 5.0 manual leaves equal times open; unconfirmed). A delta
-// result of 10,000 days or more is LIB$_IVTIME (unconfirmed for two
-// absolute times). Any count of arguments but three is LIB$_WRONUMARG.
+// be zero"; VMS V7.1 agrees). Two absolute times any distance apart make
+// a delta, 10,000 days or more included. Any count of arguments but three
+// is LIB$_WRONUMARG.
 //
 //	LIB$SUB_TIMES time1 ,time2 ,resultant-time
 func libSubTimes(env *corevms.Environment, argv []uint32) (uint32, error) {
@@ -216,8 +208,7 @@ func libSubTimes(env *corevms.Environment, argv []uint32) (uint32, error) {
 
 // loadDelta reads the delta time LIB$MULT_DELTA_TIME and
 // LIB$MULTF_DELTA_TIME multiply, at argv[1], returning its length in
-// ticks. ok is false for an absolute time (zero included) or a delta of
-// 10,000 days or more: LIB$_IVTIME (unconfirmed for an absolute time).
+// ticks. ok is false for an absolute time (zero included): LIB$_IVTIME.
 func loadDelta(env *corevms.Environment, argv []uint32) (ticks int64, ok bool, err error) {
 	v, err := env.Memory().LoadQuadword(env.CPU(), arg(argv, 1))
 	if err != nil || !isDelta(v) {
@@ -230,10 +221,10 @@ func loadDelta(env *corevms.Environment, argv []uint32) (ticks int64, ok bool, e
 }
 
 // libMultDeltaTime is LIB$MULT_DELTA_TIME (LIB-297): the delta time
-// multiplied, in place, by the absolute value of a longword. A product of
-// 10,000 days or more is LIB$_IVTIME. A multiplier of 0 stores 0, which
-// as a time is the base date rather than a delta (unconfirmed: VMS may
-// refuse it). Any count of arguments but two is LIB$_WRONUMARG.
+// multiplied, in place, by the absolute value of a longword. A multiplier
+// of 0 is LIB$_IVTIME, as on VMS (a zero "delta" would be the base date),
+// and so is a product too big for a quadword. Any count of arguments but
+// two is LIB$_WRONUMARG.
 //
 //	LIB$MULT_DELTA_TIME multiplier ,delta-time
 func libMultDeltaTime(env *corevms.Environment, argv []uint32) (uint32, error) {
@@ -264,7 +255,7 @@ func libMultDeltaTime(env *corevms.Environment, argv []uint32) (uint32, error) {
 		multiplier = -multiplier
 	}
 
-	if multiplier != 0 && ticks > (maxDeltaTicks-1)/multiplier {
+	if multiplier == 0 || ticks > (maxDeltaTicks-1)/multiplier {
 		return libIvTime, nil
 	}
 
@@ -274,10 +265,12 @@ func libMultDeltaTime(env *corevms.Environment, argv []uint32) (uint32, error) {
 }
 
 // libMultfDeltaTime is LIB$MULTF_DELTA_TIME (LIB-298): LIB$MULT_DELTA_TIME
-// with an F-floating multiplier. The product is exact, then rounded to a
-// whole tick, half away from zero (vaxfloat's rule; unconfirmed: VMS may
-// truncate). A reserved operand signals SS$_ROPRAND, as the floating
-// multiply reading it would (LIB$WAIT's rule on VMS; unconfirmed here).
+// with an F-floating multiplier. The product is exact, then made a whole
+// number of ticks by rounding its length up, as VMS V7.1 does
+// (testdata/lib56: one tick times 0.5, 1.4, 1.5, and 2.5 is one, two,
+// two, and three ticks, and an hour times F_floating's 1/3 is
+// 12,000,000,358 ticks, not ...357.6). A multiplier of 0 is LIB$_IVTIME.
+// A reserved operand signals SS$_ROPRAND, as on VMS.
 //
 //	LIB$MULTF_DELTA_TIME multiplier ,delta-time
 func libMultfDeltaTime(env *corevms.Environment, argv []uint32) (uint32, error) {
@@ -296,11 +289,11 @@ func libMultfDeltaTime(env *corevms.Environment, argv []uint32) (uint32, error) 
 	switch {
 	case err != nil:
 		return memoryFault(env, err)
-	case !ok:
+	case !ok, m.Sign() == 0:
 		return libIvTime, nil
 	}
 
-	length, ok := roundTicks(new(big.Rat).Mul(m.Abs().Rat(), new(big.Rat).SetInt64(ticks)))
+	length, ok := ceilTicks(new(big.Rat).Mul(m.Abs().Rat(), new(big.Rat).SetInt64(ticks)))
 	if !ok {
 		return libIvTime, nil
 	}
@@ -313,14 +306,12 @@ func libMultfDeltaTime(env *corevms.Environment, argv []uint32) (uint32, error) 
 	return storeTime(env, arg(argv, 1), product)
 }
 
-// roundTicks rounds the nonnegative exact value r to a whole number of
-// ticks, half away from zero. ok is false when the result is 10,000 days
-// or more, so that a huge product is refused before it is made an int64.
-func roundTicks(r *big.Rat) (ticks int64, ok bool) {
+// ceilTicks rounds the nonnegative exact value r up to a whole number of
+// ticks. ok is false when the result is too big for a quadword, so that
+// a huge product is refused before it is made an int64.
+func ceilTicks(r *big.Rat) (ticks int64, ok bool) {
 	q, rem := new(big.Int).QuoRem(r.Num(), r.Denom(), new(big.Int))
-
-	// Half or more of the next tick rounds up.
-	if rem.Lsh(rem, 1).Cmp(r.Denom()) >= 0 {
+	if rem.Sign() > 0 {
 		q.Add(q, big.NewInt(1))
 	}
 

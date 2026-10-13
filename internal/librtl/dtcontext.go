@@ -20,19 +20,16 @@ import (
 // A context holds what the routines format and parse by: the language's
 // spellings (month and weekday names, AM and PM, ...), the output format
 // (a date part and a time part, in the order they are written), and the
-// input format. These come from one of two places, never both:
-//
-//   - LIB$INIT_DATE_TIME_CONTEXT, one component a call. A context so
-//     initialized uses only what it was given: a spelling it lacks is
-//     its language's (LIB$K_LANGUAGE's, else English), and a format it
-//     lacks is VMS's standard one (unconfirmed, both).
-//   - Otherwise, the logical names: SYS$LANGUAGE names the language,
-//     LIB$DT_FORMAT the output format's parts (names in
-//     LNM$DT_FORMAT_TABLE), and LIB$DT_INPUT_FORMAT the input format.
-//     They are read on the context's first use and kept (unconfirmed:
-//     VMS may read them on every call). A name that doesn't translate
-//     falls back to English (LIB$_ENGLUSED) or the standard format
-//     (LIB$_DEFFORUSE), as the manual's section 3.3.2.2 says.
+// input format. Each comes from LIB$INIT_DATE_TIME_CONTEXT, one
+// component a call, or, for each component it wasn't given, from the
+// logical names, as VMS V7.1 does (testdata/lib56; the 5.0 manual says
+// a context is meant to have one or the other): SYS$LANGUAGE (or
+// LIB$K_LANGUAGE) names the language, LIB$DT_FORMAT the output format's
+// elements (names in LNM$DT_FORMAT_TABLE), and LIB$DT_INPUT_FORMAT the
+// input format. They are read on the context's first use and kept
+// (unconfirmed: VMS may read them on every call). A name that doesn't
+// translate falls back to English (LIB$_ENGLUSED) or the standard
+// format (LIB$_DEFFORUSE), as the manual's section 3.3.2.2 says.
 //
 // The context's block is on the heap (LIB$GET_VM's, so it's freed with
 // the image), holding a tag that tells it from other memory; the rest of
@@ -46,6 +43,7 @@ var (
 	libUnrForCod    = vmsdef.LibrarySymbols["LIB$_UNRFORCOD"]
 	libIllFormat    = vmsdef.LibrarySymbols["LIB$_ILLFORMAT"]
 	libDefForUse    = vmsdef.LibrarySymbols["LIB$_DEFFORUSE"]
+	libEleTooLon    = vmsdef.LibrarySymbols["LIB$_ELETOOLON"]
 )
 
 // The components LIB$INIT_DATE_TIME_CONTEXT sets, by their LIB$K_ codes.
@@ -137,36 +135,55 @@ var (
 )
 
 // dtElement is one element of an output format: its text, parsed, and
-// the part it gives.
+// the part it stands for (slotOf).
 type dtElement struct {
 	text  string
 	items []dtItem
-	part  dtPart
+	slot  dtPart
 }
 
-// newElement parses an output format's element. Its status is
-// LIB$_UNRFORCOD for an unknown mnemonic, and LIB$_ILLFORMAT for an
-// element that gives no part, or both (unconfirmed: the manual gives no
-// status for either).
-func newElement(text string) (dtElement, uint32) {
-	items, ok := parseDateFormat(text)
-	if !ok {
-		return dtElement{}, libUnrForCod
+// buildOutput parses an output format's elements (at most two; more are
+// ignored, as VMS V7.1 ignores a third name in LIB$DT_FORMAT) and gives
+// each its part: the first element's by its first field, and the second
+// the other part, whatever its fields (testdata/lib56: "|!D0|!MN0|" is a
+// date part, the day, and a time part, the month). Its status is
+// LIB$_UNRFORCOD for an unknown mnemonic.
+func buildOutput(texts []string) ([]dtElement, uint32) {
+	if len(texts) > 2 {
+		texts = texts[:2]
 	}
 
-	e := dtElement{text: text, items: items, part: partOf(items)}
-	if e.part == partNone || e.part == partMixed {
-		return dtElement{}, libIllFormat
+	out := make([]dtElement, len(texts))
+
+	for i, text := range texts {
+		items, ok := parseDateFormat(text)
+		if !ok {
+			return nil, libUnrForCod
+		}
+
+		out[i] = dtElement{text: text, items: items}
 	}
 
-	return e, ssNormal
+	if len(out) > 0 {
+		out[0].slot = slotOf(out[0].items)
+	}
+
+	if len(out) > 1 {
+		out[1].slot = partDate
+		if out[0].slot == partDate {
+			out[1].slot = partTime
+		}
+	}
+
+	return out, ssNormal
 }
 
 // dtSettings is what a context formats and parses by, wherever it came
 // from: each spelled component's spellings in the three cases (indexed
 // by dtCase), the output format's elements in order, and the input
 // format. A warning status is kept for the language and for each format
-// that fell back (0 when none did).
+// that fell back (0 when none did), and an error status for a format
+// that can't be used (LIB$_UNRFORCOD, LIB$_ELETOOLON; 0 when it can).
 type dtSettings struct {
 	spellings map[int32][caseCount][]string
 	output    []dtElement
@@ -174,12 +191,13 @@ type dtSettings struct {
 	inputText string
 
 	languageStatus, outputStatus, inputStatus uint32
+	outputError, inputError                   uint32
 }
 
 // outputWarning is the status a routine that writes by these settings
 // returns: LIB$_ENGLUSED when the language fell back to English, else
-// LIB$_DEFFORUSE when the output format did, else SS$_NORMAL. Which wins
-// when both fall back is unconfirmed.
+// LIB$_DEFFORUSE when the output format did, else SS$_NORMAL. ENGLUSED
+// wins when both fall back, as on VMS V7.1.
 func (s *dtSettings) outputWarning() uint32 {
 	return s.warning(s.outputStatus)
 }
@@ -201,160 +219,169 @@ func (s *dtSettings) warning(format uint32) uint32 {
 	return ssNormal
 }
 
-// dateContext is one context's state in Go. initialized is set once
-// LIB$INIT_DATE_TIME_CONTEXT has given it a component, after which the
-// logical names aren't read. resolved caches the settings it gives.
+// dateContext is one context's state in Go: what LIB$INIT_DATE_TIME_CONTEXT
+// gave it, a component at a time. What it wasn't given comes from the
+// logical names, as an uninitialized context's all does (VMS V7.1:
+// testdata/lib56). resolved caches the settings it gives.
 type dateContext struct {
-	initialized bool
-
-	language  string             // LIB$K_LANGUAGE's, upper case
-	spelled   map[int32][]string // INIT's spellings, as given
-	output    []dtElement        // INIT's output format (nil: none given)
-	inputText string             // INIT's input format ("": none given)
-	input     []dtItem
+	language    string             // LIB$K_LANGUAGE's, upper case
+	hasLanguage bool               // LIB$K_LANGUAGE was given
+	spelled     map[int32][]string // INIT's spellings, as given
+	output      []string           // INIT's output format's elements (nil: none given)
+	hasInput    bool               // INIT gave an input format
+	inputText   string
+	malformed   map[int32]bool // an input format given as one character, LIB$_ELETOOLON when used
 
 	resolved *dtSettings
 }
 
 // settings is what the context formats and parses by, worked out on its
-// first use and kept until INIT changes it.
+// first use and kept until INIT changes it (unconfirmed: VMS may read
+// the names on every call).
 func (c *dateContext) settings(env *corevms.Environment) *dtSettings {
 	if c.resolved == nil {
-		if c.initialized {
-			c.resolved = c.initializedSettings(env)
-		} else {
-			c.resolved = namedSettings(env)
-		}
+		c.resolved = c.resolve(env)
 	}
 
 	return c.resolved
 }
 
-// initializedSettings are an initialized context's settings: INIT's
-// components, its language's spellings for the rest, and the standard
-// formats for a format it wasn't given (with LIB$_DEFFORUSE,
-// unconfirmed).
-func (c *dateContext) initializedSettings(env *corevms.Environment) *dtSettings {
-	language := c.language
-	if language == "" {
-		language = english
-	}
-
-	s := languageSettings(env, language)
-
-	for code, given := range c.spelled {
-		s.spellings[code] = casedSpellings(given)
-	}
-
-	if c.output != nil {
-		s.output = c.output
-	} else {
-		s.output, s.outputStatus = standardOutput(), libDefForUse
-	}
-
-	if c.inputText != "" {
-		s.input, s.inputText = c.input, c.inputText
-	} else {
-		s.input, s.inputText, s.inputStatus = standardInput(), standardInputFormat, libDefForUse
-	}
-
-	return s
-}
-
-// namedSettings are the settings the logical names give (the manual's
-// section 3.3.2.2): SYS$LANGUAGE's language, LIB$DT_FORMAT's output
-// format, and LIB$DT_INPUT_FORMAT's input format. The user's names are
-// translated through LNM$FILE_DEV, as LIB$GET_USERS_LANGUAGE translates
-// SYS$LANGUAGE (unconfirmed which tables VMS searches).
-func namedSettings(env *corevms.Environment) *dtSettings {
-	language, ok := userName(env, "SYS$LANGUAGE")
-
+// resolve works out the settings: the language's spellings (LIB$K_LANGUAGE's
+// language when INIT gave one, else SYS$LANGUAGE's), INIT's spellings over
+// them, used as given in every case (VMS V7.1 writes "Janvier" for !MAU,
+// !MAL, and !MAC alike), and INIT's formats, or the logical names'.
+func (c *dateContext) resolve(env *corevms.Environment) *dtSettings {
 	var s *dtSettings
 
-	if ok {
-		s = languageSettings(env, strings.ToUpper(language[0]))
+	if c.hasLanguage {
+		s = languageSettings(env, c.language)
 	} else {
-		s = languageSettings(env, english)
-		s.languageStatus = libEnglUsed
+		s = userLanguageSettings(env)
 	}
 
-	s.output, s.outputStatus = namedOutput(env)
-
-	if input, ok := userName(env, "LIB$DT_INPUT_FORMAT"); ok {
-		if items, ok := parseDateFormat(input[0]); ok {
-			s.input, s.inputText = items, input[0]
-
-			return s
+	for code, given := range c.spelled {
+		var all [caseCount][]string
+		for i := range all {
+			all[i] = given
 		}
+
+		s.spellings[code] = all
 	}
 
-	s.input, s.inputText, s.inputStatus = standardInput(), standardInputFormat, libDefForUse
+	switch {
+	case c.output != nil:
+		s.output, s.outputError = buildOutput(c.output)
+		s.outputError = errorOf(s.outputError)
+	default:
+		s.output, s.outputStatus, s.outputError = namedOutput(env)
+	}
+
+	switch {
+	case c.malformed[componentInputFormat]:
+		s.inputError = libEleTooLon
+	case c.hasInput:
+		s.inputText = c.inputText
+		s.input, s.inputError = parseInputFormat(c.inputText)
+		s.inputError = errorOf(s.inputError)
+	default:
+		s.inputText, s.input, s.inputStatus, s.inputError = namedInput(env)
+	}
 
 	return s
 }
 
-// namedOutput is the output format LIB$DT_FORMAT gives: each of its
-// equivalence strings names a format in LNM$DT_FORMAT_TABLE
-// (LIB$DATE_FORMAT_006, LIB$TIME_FORMAT_012), executive mode, whose
-// element comes out in the list's order. A name that doesn't translate,
-// or a format that doesn't parse or gives no single part, is left out
-// with LIB$_DEFFORUSE (unconfirmed for the format; the manual speaks of
-// translations), and so is a second element of a part already given
-// (unconfirmed). Without LIB$DT_FORMAT, or with nothing left, it is the
-// standard format, with LIB$_DEFFORUSE.
-func namedOutput(env *corevms.Environment) ([]dtElement, uint32) {
-	names, ok := userName(env, "LIB$DT_FORMAT")
-	if !ok {
-		return standardOutput(), libDefForUse
+// errorOf is a status as dtSettings keeps an error: 0 for SS$_NORMAL.
+func errorOf(status uint32) uint32 {
+	if status == ssNormal {
+		return 0
 	}
 
-	var (
-		out    []dtElement
-		status uint32
-	)
+	return status
+}
+
+// userLanguageSettings are the spellings of SYS$LANGUAGE's language,
+// translated through LNM$FILE_DEV as LIB$GET_USERS_LANGUAGE translates
+// it (unconfirmed which tables VMS searches); English, with
+// LIB$_ENGLUSED, when it isn't defined.
+func userLanguageSettings(env *corevms.Environment) *dtSettings {
+	language, ok := userName(env, "SYS$LANGUAGE")
+	if !ok {
+		s := languageSettings(env, english)
+		s.languageStatus = libEnglUsed
+
+		return s
+	}
+
+	return languageSettings(env, strings.ToUpper(language[0]))
+}
+
+// namedInput is the input format LIB$DT_INPUT_FORMAT gives, a format
+// string itself; the standard one, with LIB$_DEFFORUSE, when it isn't
+// defined.
+func namedInput(env *corevms.Environment) (text string, items []dtItem, status, err uint32) {
+	input, ok := userName(env, "LIB$DT_INPUT_FORMAT")
+	if !ok {
+		return standardInputFormat, standardInput(), libDefForUse, 0
+	}
+
+	items, err = parseInputFormat(input[0])
+	if err != ssNormal {
+		return input[0], nil, 0, err
+	}
+
+	return input[0], items, 0, 0
+}
+
+// namedOutput is the output format LIB$DT_FORMAT gives: its first two
+// equivalence strings each name a format in LNM$DT_FORMAT_TABLE
+// (LIB$DATE_FORMAT_006, LIB$TIME_FORMAT_012), executive mode, and those
+// formats are the elements, in the list's order (buildOutput). When
+// LIB$DT_FORMAT isn't defined, or either name doesn't translate, it is
+// the whole standard format, with LIB$_DEFFORUSE (VMS V7.1, given
+// LIB$DATE_FORMAT_999 and LIB$TIME_FORMAT_002: testdata/lib56).
+func namedOutput(env *corevms.Environment) (elements []dtElement, status, err uint32) {
+	names, ok := userName(env, "LIB$DT_FORMAT")
+	if !ok {
+		return standardOutput(), libDefForUse, 0
+	}
+
+	if len(names) > 2 {
+		names = names[:2]
+	}
+
+	var formats []string
 
 	for _, name := range names {
 		format, ok := translateIn(env, lnm.DTFormatTableName, name)
 		if !ok {
-			status = libDefForUse
-
-			continue
+			return standardOutput(), libDefForUse, 0
 		}
 
-		e, st := newElement(format[0])
-		if st != ssNormal || hasPart(out, e.part) {
-			status = libDefForUse
-
-			continue
-		}
-
-		out = append(out, e)
+		formats = append(formats, format[0])
 	}
 
-	if len(out) == 0 {
-		return standardOutput(), libDefForUse
+	elements, err = buildOutput(formats)
+	if err != ssNormal {
+		return nil, 0, err
 	}
 
-	return out, status
+	return elements, 0, 0
 }
 
-// hasPart reports whether one of elements gives part.
-func hasPart(elements []dtElement, part dtPart) bool {
-	for _, e := range elements {
-		if e.part == part {
-			return true
-		}
+// standardElement is the standard format's element for part.
+func standardElement(part dtPart) dtElement {
+	if part == partTime {
+		return standardOutput()[1]
 	}
 
-	return false
+	return standardOutput()[0]
 }
 
 // standardOutput is the standard output format's two elements.
 func standardOutput() []dtElement {
-	date, _ := newElement(standardDateFormat)
-	time, _ := newElement(standardTimeFormat)
+	elements, _ := buildOutput([]string{standardDateFormat, standardTimeFormat})
 
-	return []dtElement{date, time}
+	return elements
 }
 
 // standardInput is the standard input format, parsed.
@@ -570,18 +597,28 @@ func dateContextFor(env *corevms.Environment, cell uint32) (*dateContext, uint32
 	return c, ssNormal, nil
 }
 
+// dtElementMost is the longest element an init-string may have: longer
+// is LIB$_ELETOOLON ("element too long, maximum 255 characters").
+const dtElementMost = 255
+
 // splitInitString splits an init-string into its elements: its first
 // character is the delimiter, which must end it too, and which separates
-// the elements between ("|JAN|FEB|...|DEC|"). ok is false
-// (LIB$_ILLINISTR) for a string that doesn't end with its delimiter, or
-// is too short to have one at each end (an empty string, or one
-// character; unconfirmed).
-func splitInitString(s string) (elements []string, ok bool) {
-	if len(s) < 2 || s[len(s)-1] != s[0] {
-		return nil, false
+// the elements between ("|JAN|FEB|...|DEC|"). Its status is
+// LIB$_ILLINISTR for a string that doesn't end with its delimiter, and
+// LIB$_ELETOOLON for an element longer than 255 bytes.
+func splitInitString(s string) ([]string, uint32) {
+	if s[len(s)-1] != s[0] {
+		return nil, libIllIniStr
 	}
 
-	return strings.Split(s[1:len(s)-1], s[:1]), true
+	elements := strings.Split(s[1:len(s)-1], s[:1])
+	for _, e := range elements {
+		if len(e) > dtElementMost {
+			return nil, libEleTooLon
+		}
+	}
+
+	return elements, ssNormal
 }
 
 // libInitDateTimeContext is LIB$INIT_DATE_TIME_CONTEXT (LIB-231):
@@ -590,26 +627,44 @@ func splitInitString(s string) (elements []string, ok bool) {
 //	                           init-string.rt.dx
 //
 // It sets one component of the context user-context names
-// (dateContextFor), allocating the context if the cell holds 0, from the
-// init-string's elements (splitInitString). After it the context no
-// longer reads the logical names. Its statuses:
+// (dateContextFor), from the init-string's elements (splitInitString).
+// VMS V7.1 checks little (testdata/lib56), and govax checks what it
+// does, in its order:
 //
+//   - the context is found or allocated first, so a cell holding 0 gets
+//     a context even when the call then fails; a user-context of 0 is
+//     the access violation of reading address 0;
 //   - LIB$_ILLCOMPONENT for a component with no name (dtComponents);
-//   - LIB$_ILLINISTR for a badly formed init-string, and LIB$_NUMELEMENTS
-//     for the wrong number of elements;
-//   - LIB$_UNRFORCOD for an unknown mnemonic in a format;
-//   - LIB$_ILLFORMAT for an output format element that gives no part or
-//     both, or two of one part (unconfirmed; an empty element is a part
-//     left out);
-//   - LIB$_INVSTRDES for a bad descriptor, and LIB$_INSVIRMEM or
-//     LIB$_INVARG from finding the context.
+//   - LIB$_INVSTRDES for an omitted init-string or a bad descriptor;
+//   - LIB$_ELETOOLON for an empty init-string or an element over 255
+//     bytes, and LIB$_ILLINISTR for one that doesn't end with its
+//     delimiter;
+//   - LIB$_NUMELEMENTS for too few elements; more are ignored.
 //
-// The init-string is checked before the context is touched, so a failed
-// call allocates nothing (unconfirmed). An input format's fields are
-// checked when it's used (LIB$_ILLFORMAT there). Without a user-context
-// it sets the static context (unconfirmed: the manual requires the
-// argument).
+// A format isn't checked here: an unknown mnemonic is
+// LIB$_UNRFORCOD, and an input format without the fields it needs
+// LIB$_ILLFORMAT, when it's used. An init-string of its delimiter alone
+// is LIB$_ELETOOLON for the output format (an element of length -1, as
+// VMS seems to see it), but accepted for the input format, which is
+// LIB$_ELETOOLON when used (unconfirmed); other components so given are
+// LIB$_NUMELEMENTS (unconfirmed).
 func libInitDateTimeContext(env *corevms.Environment, argv []uint32) (uint32, error) {
+	cell := arg(argv, 0)
+	if cell == 0 {
+		if _, err := env.Memory().LoadLongword(env.CPU(), 0); err != nil {
+			return memoryFault(env, err)
+		}
+	}
+
+	c, status, err := dateContextFor(env, cell)
+	if err != nil {
+		return memoryFault(env, err)
+	}
+
+	if status != ssNormal {
+		return status, nil
+	}
+
 	code, err := readArg(env, arg(argv, 1))
 	if err != nil {
 		return memoryFault(env, err)
@@ -620,100 +675,67 @@ func libInitDateTimeContext(env *corevms.Environment, argv []uint32) (uint32, er
 		return libIllComponent, nil
 	}
 
+	if arg(argv, 2) == 0 {
+		return libInvStrDes, nil
+	}
+
 	text, err := readString(env, arg(argv, 2))
 	if err != nil {
 		return stringFailure(env, err)
 	}
 
-	elements, ok := splitInitString(text)
-	if !ok {
-		return libIllIniStr, nil
-	}
+	switch {
+	case text == "":
+		return libEleTooLon, nil
+	case len(text) == 1 && code == componentOutputFormat:
+		return libEleTooLon, nil
+	case len(text) == 1 && code == componentInputFormat:
+		if c.malformed == nil {
+			c.malformed = map[int32]bool{}
+		}
 
-	if len(elements) != component.elements {
+		c.malformed[code] = true
+		c.resolved = nil
+
+		return ssNormal, nil
+	case len(text) == 1:
 		return libNumElements, nil
 	}
 
-	apply, status := initComponent(code, elements)
+	elements, status := splitInitString(text)
 	if status != ssNormal {
 		return status, nil
 	}
 
-	c, status, err := dateContextFor(env, arg(argv, 0))
-	if err != nil {
-		return memoryFault(env, err)
+	if len(elements) < component.elements {
+		return libNumElements, nil
 	}
 
-	if status != ssNormal {
-		return status, nil
-	}
+	initComponent(c, code, elements[:component.elements])
 
-	apply(c)
-
-	c.initialized = true
 	c.resolved = nil
 
 	return ssNormal, nil
 }
 
-// initComponent checks one component's elements and returns the change
-// to make to a context, or the status of what's wrong with them.
-func initComponent(code int32, elements []string) (func(*dateContext), uint32) {
+// initComponent sets one component of c from its elements.
+func initComponent(c *dateContext, code int32, elements []string) {
+	delete(c.malformed, code)
+
 	switch code {
 	case componentOutputFormat:
-		var out []dtElement
-
-		for _, text := range elements {
-			if text == "" {
-				continue
-			}
-
-			e, status := newElement(text)
-			if status != ssNormal {
-				return nil, status
-			}
-
-			if hasPart(out, e.part) {
-				return nil, libIllFormat
-			}
-
-			out = append(out, e)
-		}
-
-		if len(out) == 0 {
-			return nil, libIllFormat
-		}
-
-		return func(c *dateContext) { c.output = out }, ssNormal
-
+		c.output = append([]string{}, elements...)
 	case componentInputFormat:
-		items, ok := parseDateFormat(elements[0])
-		if !ok {
-			return nil, libUnrForCod
-		}
-
-		if len(items) == 0 {
-			return nil, libIllFormat
-		}
-
-		return func(c *dateContext) { c.input, c.inputText = items, elements[0] }, ssNormal
-
+		c.hasInput, c.inputText = true, elements[0]
 	case componentLanguage:
-		language := strings.ToUpper(strings.TrimSpace(elements[0]))
-		if language == "" {
-			return nil, libIllIniStr
-		}
-
-		return func(c *dateContext) { c.language = language }, ssNormal
-	}
-
-	return func(c *dateContext) {
+		c.hasLanguage, c.language = true, strings.ToUpper(strings.TrimSpace(elements[0]))
+	default:
 		if c.spelled == nil {
 			c.spelled = map[int32][]string{}
 		}
 
-		c.spelled[code] = elements
-	}, ssNormal
+		c.spelled[code] = append([]string{}, elements...)
+	}
 }
 
 // libFreeDateTimeContext is LIB$FREE_DATE_TIME_CONTEXT (LIB-172):

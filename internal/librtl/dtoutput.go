@@ -17,7 +17,8 @@ import (
 //
 // An output format has a date part and a time part (each an element, in
 // the order they're written); the flags argument chooses which are
-// written, and a single blank separates the two when both are.
+// written, and a single blank separates the two when both write
+// something.
 
 // The output routines' flags (LIB$M_DATE_FIELDS, LIB$M_TIME_FIELDS).
 var (
@@ -185,56 +186,74 @@ func (s *dtSettings) itemWidth(it dtItem) int {
 	return 2
 }
 
-// outputElements is the elements a call writes, in order. Without flags
-// (given false) they are the output format's own. With flags, they are
-// the parts the flags choose (LIB$M_DATE_FIELDS, LIB$M_TIME_FIELDS; other
-// bits ignored, unconfirmed): each the format's element for that part, or
-// the standard format's when the format has none, which makes the status
-// LIB$_DEFFORUSE (unconfirmed; the manual says only that "the standard
-// VMS format is used"). A standard part goes where the standard format
-// puts it, the date before the time. Flags choosing neither part write
-// nothing (unconfirmed).
-func (s *dtSettings) outputElements(given bool, flags uint32) (elements []dtElement, defaulted bool) {
+// outputElements is the elements a call writes, in order, by VMS
+// V7.1's rules (testdata/lib56). An empty second element stands for the
+// standard format's element of its part (an output format of "|||"
+// writes the standard time); an empty first element writes nothing.
+// Without flags (given false) they are the output format's own. With
+// flags, they are its elements whose part the flags choose
+// (LIB$M_DATE_FIELDS, LIB$M_TIME_FIELDS; other bits ignored), and after
+// them the standard element of a chosen part the format has no element
+// for (LIB$DT_FORMAT naming only a time format, with both flags, writes
+// "09:13 13-JAN-1988"). Flags choosing neither part write nothing.
+func (s *dtSettings) outputElements(given bool, flags uint32) []dtElement {
+	elements := append([]dtElement{}, s.output...)
+	if len(elements) == 2 && len(elements[1].items) == 0 {
+		elements[1] = standardElement(elements[1].slot)
+	}
+
 	if !given {
-		return s.output, false
+		return elements
 	}
 
 	chosen := func(p dtPart) bool {
 		return (p == partDate && flags&flagDateFields != 0) || (p == partTime && flags&flagTimeFields != 0)
 	}
 
-	for _, e := range s.output {
-		if chosen(e.part) {
-			elements = append(elements, e)
+	var out []dtElement
+
+	for _, e := range elements {
+		if chosen(e.slot) {
+			out = append(out, e)
 		}
 	}
 
-	standard := standardOutput()
-
-	if chosen(partDate) && !hasPart(elements, partDate) {
-		elements, defaulted = append([]dtElement{standard[0]}, elements...), true
+	for _, part := range []dtPart{partDate, partTime} {
+		if chosen(part) && !hasSlot(elements, part) {
+			out = append(out, standardElement(part))
+		}
 	}
 
-	if chosen(partTime) && !hasPart(elements, partTime) {
-		elements, defaulted = append(elements, standard[1]), true
-	}
-
-	return elements, defaulted
+	return out
 }
 
-// formatTime writes the time v by elements, a blank between each two.
+// hasSlot reports whether one of elements stands for part.
+func hasSlot(elements []dtElement, part dtPart) bool {
+	for _, e := range elements {
+		if e.slot == part {
+			return true
+		}
+	}
+
+	return false
+}
+
+// formatTime writes the time v by elements, a blank between each two
+// that write something.
 func (s *dtSettings) formatTime(elements []dtElement, v uint64) string {
 	f := fieldsOf(v)
 
-	parts := make([]string, len(elements))
+	var parts []string
 
-	for i, e := range elements {
+	for _, e := range elements {
 		var b strings.Builder
 		for _, it := range e.items {
 			b.WriteString(s.formatItem(it, f))
 		}
 
-		parts[i] = b.String()
+		if b.Len() > 0 {
+			parts = append(parts, b.String())
+		}
 	}
 
 	return strings.Join(parts, " ")
@@ -244,14 +263,17 @@ func (s *dtSettings) formatTime(elements []dtElement, v uint64) string {
 func (s *dtSettings) maximumLength(elements []dtElement) int {
 	n := 0
 
-	for i, e := range elements {
-		if i > 0 {
+	for _, e := range elements {
+		width := 0
+		for _, it := range e.items {
+			width += s.itemWidth(it)
+		}
+
+		if width > 0 && n > 0 {
 			n++ // the blank between the parts
 		}
 
-		for _, it := range e.items {
-			n += s.itemWidth(it)
-		}
+		n += width
 	}
 
 	return n
@@ -352,18 +374,6 @@ func optionalFlags(env *corevms.Environment, addr uint32) (flags uint32, given b
 	return flags, true, err
 }
 
-// outputResult is an output routine's status when all went well: the
-// settings' warning (outputWarning), or LIB$_DEFFORUSE when the flags
-// asked for a part the format lacks and the language didn't fall back.
-func (s *dtSettings) outputResult(defaulted bool) uint32 {
-	status := s.outputWarning()
-	if status == ssNormal && defaulted {
-		status = libDefForUse
-	}
-
-	return status
-}
-
 // libFormatDateTime is LIB$FORMAT_DATE_TIME (LIB-169):
 //
 //	LIB$FORMAT_DATE_TIME date-string [,date] [,user-context]
@@ -372,9 +382,11 @@ func (s *dtSettings) outputResult(defaulted bool) uint32 {
 // It writes the time date (the current time when date is omitted or 0 by
 // value) by the context's output format (outputElements chooses the
 // parts) to date-string, by the output's class, and the bytes written to
-// date-length. A delta time is LIB$_ABSTIMREQ, with nothing written. Its
-// statuses after writing: LIB$_STRTRU when the text was cut, else the
-// settings' LIB$_ENGLUSED or LIB$_DEFFORUSE, else SS$_NORMAL.
+// date-length. A delta time is LIB$_ABSTIMREQ, and an output format
+// with an unknown mnemonic LIB$_UNRFORCOD (LIB$_ELETOOLON for one INIT
+// was given badly), with nothing written. Its statuses after writing:
+// LIB$_STRTRU when the text was cut, else the settings' LIB$_ENGLUSED or
+// LIB$_DEFFORUSE, else SS$_NORMAL.
 func libFormatDateTime(env *corevms.Environment, argv []uint32) (uint32, error) {
 	v, err := optionalTime(env, arg(argv, 1))
 	if err != nil {
@@ -399,9 +411,11 @@ func libFormatDateTime(env *corevms.Environment, argv []uint32) (uint32, error) 
 		return status, nil
 	}
 
-	elements, defaulted := s.outputElements(given, flags)
+	if s.outputError != 0 {
+		return s.outputError, nil
+	}
 
-	stored, truncated, err := writeString(env, arg(argv, 0), s.formatTime(elements, v))
+	stored, truncated, err := writeString(env, arg(argv, 0), s.formatTime(s.outputElements(given, flags), v))
 	if err != nil {
 		return stringFailure(env, err)
 	}
@@ -416,7 +430,7 @@ func libFormatDateTime(env *corevms.Environment, argv []uint32) (uint32, error) 
 		return libStrTru, nil
 	}
 
-	return s.outputResult(defaulted), nil
+	return s.outputWarning(), nil
 }
 
 // libGetMaximumDateLength is LIB$GET_MAXIMUM_DATE_LENGTH (LIB-216):
@@ -427,7 +441,8 @@ func libFormatDateTime(env *corevms.Environment, argv []uint32) (uint32, error) 
 // with the same context and flags (maximumLength): each field at its
 // widest in the language, and the blank between the parts. The manual's
 // example says 28 for a format whose widest text, "SEPTEMBER 21, 1988
-// 11:24 PM", is 27 bytes; govax says 27 (unconfirmed). Its statuses are
+// 11:24 PM", is 27 bytes; VMS V7.1 says 27 (testdata/lib56). A format
+// that can't be used writes 0 and returns its status. Its statuses are
 // LIB$FORMAT_DATE_TIME's warnings.
 func libGetMaximumDateLength(env *corevms.Environment, argv []uint32) (uint32, error) {
 	flags, given, err := optionalFlags(env, arg(argv, 2))
@@ -444,13 +459,21 @@ func libGetMaximumDateLength(env *corevms.Environment, argv []uint32) (uint32, e
 		return status, nil
 	}
 
-	elements, defaulted := s.outputElements(given, flags)
+	// A format that can't be used writes 0, as VMS V7.1 does.
+	n := 0
+	if s.outputError == 0 {
+		n = s.maximumLength(s.outputElements(given, flags))
+	}
 
-	if err := writeResult(env, arg(argv, 0), int32(s.maximumLength(elements))); err != nil {
+	if err := writeResult(env, arg(argv, 0), int32(n)); err != nil {
 		return memoryFault(env, writing(err))
 	}
 
-	return s.outputResult(defaulted), nil
+	if s.outputError != 0 {
+		return s.outputError, nil
+	}
+
+	return s.outputWarning(), nil
 }
 
 // libGetDateFormat is LIB$GET_DATE_FORMAT (LIB-204):
@@ -481,6 +504,10 @@ func libGetDateFormat(env *corevms.Environment, argv []uint32) (uint32, error) {
 
 	if status != ssNormal {
 		return status, nil
+	}
+
+	if s.inputError != 0 {
+		return s.inputError, nil
 	}
 
 	if !checkInputFormat(s.input) {

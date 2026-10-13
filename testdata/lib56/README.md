@@ -66,3 +66,29 @@ What's new:
    then LINK's messages.
 3. Copy `LIB56.OUT` and `LIB56.LOG` back as `vax/lib56-vax.txt` and
    `vax/lib56.log`.
+
+## The runs
+
+Both on 2026-10-13, OpenVMS V7.1 on simh's VAX 8600, MACRO and LINK with
+no messages.
+
+- **Run 1** (`vax/lib56-run1.txt`, `vax/lib56-run1.log`) ran 301 cases
+  and hung on the next, an INIT of a cell holding ^X200 (the image's own
+  first page, taken for a context), since dropped. The VAX's
+  LNM$DT_FORMAT_TABLE held only LIB$DATE_FORMAT_001 and
+  LIB$TIME_FORMAT_001, and LIB$DT_FORMAT and LIB$DT_INPUT_FORMAT were
+  defined in the system table, as the standard format.
+- **Run 2** (`vax/lib56-vax.txt`, `vax/lib56.log`) ran all 426. Round 2 of
+  the program added cases for what run 1 left open, and `lib56.com` ran
+  SYS$MANAGER:LIB$DT_STARTUP.COM, which defined the predefined formats:
+  DIGITAL's 001–040 and 001–020 are govax's, string for string, and V7.1
+  adds date formats 041–047 and time formats 021–023 (all but 041
+  double-byte). Its log has the procedure's echoed lines removed (they
+  are DIGITAL's file); `lib56.com` now turns verification off around it.
+
+govax now matches run 2 line for line but for the cases
+`TestLib56Oracle` lists in `expectedLib56Cases`: on that VAX
+LIB$CONVERT_DATE_STRING returned SS$_ROPRAND for nearly every string
+with a letter in it or beginning with punctuation (the manual's own
+examples among them), which looks like a fault in VMS or the emulator,
+not a rule (docs/PHASE-56's progress log).

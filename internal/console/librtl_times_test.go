@@ -54,7 +54,7 @@ func TestLibrtlTimeArithmetic(t *testing.T) {
 // then makes a delta of 6 hours with LIB$CVT_TO_INTERNAL_TIME, takes it
 // to F-floating days and back (LIB$CVTF_FROM_ and LIB$CVTF_TO_), and
 // writes that (a quarter day is exact in F_floating; 5 hours, 5/24 of a
-// day, would come back a fraction of a millisecond short); it ends with the date's hour of the year (298) in R0, from
+// day, would come back a fraction of a millisecond short); it ends with the date's hour of the year (297, counted from 0) in R0, from
 // LIB$CVT_FROM_INTERNAL_TIME (docs/PHASE-56, subtask 3). The operation
 // codes are LIB$K_HOUR_OF_YEAR (3), LIB$K_DELTA_HOURS (23), and
 // LIB$K_DELTA_DAYS_F (27).
@@ -99,8 +99,8 @@ func TestLibrtlTimeConversion(t *testing.T) {
 		"\tJMP\t(R2)\n"+
 		"\t.END\tSTART\n")
 
-	if r0 != 298 {
-		t.Errorf("R0 = %#x, want 298", r0)
+	if r0 != 297 {
+		t.Errorf("R0 = %#x, want 297", r0)
 	}
 
 	if want := "13-JAN-1988 09:13:25.14\n   0 06:00:00.00\n"; out != want {
@@ -192,6 +192,8 @@ func TestLibrtlDateOutput(t *testing.T) {
 	r0, out := runMacroProgram(t, "\t.PSECT\tDATA,NOEXE,WRT,LONG\n"+
 		"CTX:\t.LONG\t0\n"+
 		"OUTF:\t.LONG\t1\n"+ // LIB$K_OUTPUT_FORMAT
+		"LANG:\t.LONG\t4\n"+ // LIB$K_LANGUAGE
+		"ENGL:\t.ASCID\t/|ENGLISH|/\n"+
 		"INF:\t.LONG\t2\n"+ // LIB$K_INPUT_FORMAT
 		"OFMT:\t.ASCID\t/|!MAU !DD, !Y4|!HH2:!M0 !MIU|/\n"+
 		"IFMT:\t.ASCID\t/|!MN0-!D0-!Y2 !H04:!M0:!S0.!C2|/\n"+
@@ -205,15 +207,17 @@ func TestLibrtlDateOutput(t *testing.T) {
 		"\tBRB\tGO\n"+ // the exits, within a byte branch of every test
 		"FAIL:\tCLRL\tR0\n"+
 		"DONE:\tRET\n"+
-		"GO:\tPUSHAQ\tOFMT\n\tPUSHAL\tOUTF\n\tPUSHAL\tCTX\n"+
-		"\tCALLS\t#3,G^LIB$INIT_DATE_TIME_CONTEXT\n\tBLBC\tR0,DONE\n"+
+		"GO:\tPUSHAQ\tENGL\n\tPUSHAL\tLANG\n\tPUSHAL\tCTX\n"+
+		"\tCALLS\t#3,G^LIB$INIT_DATE_TIME_CONTEXT\n\tBLBS\tR0,1$\n\tRET\n1$:"+
+		"\tPUSHAQ\tOFMT\n\tPUSHAL\tOUTF\n\tPUSHAL\tCTX\n"+
+		"\tCALLS\t#3,G^LIB$INIT_DATE_TIME_CONTEXT\n\tBLBS\tR0,2$\n\tRET\n2$:"+
 		"\tPUSHAQ\tIFMT\n\tPUSHAL\tINF\n\tPUSHAL\tCTX\n"+
-		"\tCALLS\t#3,G^LIB$INIT_DATE_TIME_CONTEXT\n\tBLBC\tR0,DONE\n"+
+		"\tCALLS\t#3,G^LIB$INIT_DATE_TIME_CONTEXT\n\tBLBS\tR0,3$\n\tRET\n3$:"+
 		"\tPUSHAL\tCTX\n\tPUSHAL\tMAX\n"+
-		"\tCALLS\t#2,G^LIB$GET_MAXIMUM_DATE_LENGTH\n\tBLBC\tR0,DONE\n"+
+		"\tCALLS\t#2,G^LIB$GET_MAXIMUM_DATE_LENGTH\n\tBLBS\tR0,4$\n\tRET\n4$:"+
 		"\tCMPL\tMAX,#27\n\tBNEQ\tFAIL\n"+
 		"\tPUSHAL\tLEN\n\tPUSHAL\tCTX\n\tPUSHAQ\tTIME\n\tPUSHAQ\tBUF\n"+
-		"\tCALLS\t#4,G^LIB$FORMAT_DATE_TIME\n\tBLBC\tR0,DONE\n"+
+		"\tCALLS\t#4,G^LIB$FORMAT_DATE_TIME\n\tBLBS\tR0,5$\n\tRET\n5$:"+
 		"\tMOVW\tLEN,BUF\n"+
 		"\tPUSHAQ\tBUF\n\tCALLS\t#1,G^LIB$PUT_OUTPUT\n"+
 		"\tMOVW\t#40,BUF\n"+
@@ -240,6 +244,8 @@ func TestLibrtlDateInput(t *testing.T) {
 		"CTX:\t.LONG\t0\n"+
 		"INF:\t.LONG\t2\n"+ // LIB$K_INPUT_FORMAT
 		"IFMT:\t.ASCID\t/|!MAU !DD, !Y4 !H02:!M0:!S0.!C2 !MIU|/\n"+
+		"LANG:\t.LONG\t4\n"+ // LIB$K_LANGUAGE
+		"ENGL:\t.ASCID\t/|ENGLISH|/\n"+
 		"STR:\t.ASCID\t/feb 25, 1988 4:39 pm/\n"+
 		"TIME:\t.QUAD\t0\n"+
 		"DEFS:\t.LONG\t0\n"+
@@ -250,13 +256,15 @@ func TestLibrtlDateInput(t *testing.T) {
 		"\tBRB\tGO\n"+
 		"FAIL:\tCLRL\tR0\n"+
 		"DONE:\tRET\n"+
-		"GO:\tPUSHAQ\tIFMT\n\tPUSHAL\tINF\n\tPUSHAL\tCTX\n"+
-		"\tCALLS\t#3,G^LIB$INIT_DATE_TIME_CONTEXT\n\tBLBC\tR0,DONE\n"+
+		"GO:\tPUSHAQ\tENGL\n\tPUSHAL\tLANG\n\tPUSHAL\tCTX\n"+
+		"\tCALLS\t#3,G^LIB$INIT_DATE_TIME_CONTEXT\n\tBLBS\tR0,1$\n\tRET\n1$:"+
+		"\tPUSHAQ\tIFMT\n\tPUSHAL\tINF\n\tPUSHAL\tCTX\n"+
+		"\tCALLS\t#3,G^LIB$INIT_DATE_TIME_CONTEXT\n\tBLBS\tR0,2$\n\tRET\n2$:"+
 		"\tPUSHAL\tDEFS\n\tCLRL\t-(SP)\n\tCLRL\t-(SP)\n\tPUSHAL\tCTX\n\tPUSHAQ\tTIME\n\tPUSHAQ\tSTR\n"+
-		"\tCALLS\t#6,G^LIB$CONVERT_DATE_STRING\n\tBLBC\tR0,DONE\n"+
+		"\tCALLS\t#6,G^LIB$CONVERT_DATE_STRING\n\tBLBS\tR0,3$\n\tRET\n3$:"+
 		"\tCMPL\tDEFS,#^X60\n\tBNEQ\tFAIL\n"+
 		"\tCLRL\t-(SP)\n\tPUSHAQ\tTIME\n\tPUSHAQ\tBUF\n\tCLRL\t-(SP)\n"+
-		"\tCALLS\t#4,G^LIB$SYS_ASCTIM\n\tBLBC\tR0,DONE\n"+
+		"\tCALLS\t#4,G^LIB$SYS_ASCTIM\n\tBLBS\tR0,4$\n\tRET\n4$:"+
 		"\tPUSHAQ\tBUF\n\tCALLS\t#1,G^LIB$PUT_OUTPUT\n"+
 		"\tMOVL\t#42,R0\n\tRET\n"+
 		"\t.END\tSTART\n")

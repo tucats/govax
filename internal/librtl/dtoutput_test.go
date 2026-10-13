@@ -113,7 +113,7 @@ func formatWith(t *testing.T, s *dtSettings, text string, v uint64) string {
 		t.Fatalf("%q doesn't parse", text)
 	}
 
-	return s.formatTime([]dtElement{{text: text, items: items, part: partOf(items)}}, v)
+	return s.formatTime([]dtElement{{text: text, items: items, slot: slotOf(items)}}, v)
 }
 
 // TestPredefinedFormatsOutput: each of the 60 predefined formats writes
@@ -189,7 +189,7 @@ func TestMaximumLength(t *testing.T) {
 
 		for _, text := range c.formats {
 			items, _ := parseDateFormat(text)
-			elements = append(elements, dtElement{text: text, items: items, part: partOf(items)})
+			elements = append(elements, dtElement{text: text, items: items, slot: slotOf(items)})
 		}
 
 		if got := s.maximumLength(elements); got != c.want {
@@ -304,7 +304,8 @@ func TestLibFormatDateTime(t *testing.T) {
 		t.Errorf("time only: %#x, %q", got, text)
 	}
 
-	if got, text, _ := formatCall(t, env, 40, v, dtCell, 3); got != libDefForUse || text != padded("13-JAN-1988 09:13", 40) {
+	// The standard date follows, with no warning, as on VMS.
+	if got, text, _ := formatCall(t, env, 40, v, dtCell, 3); got != ssNormal || text != padded("09:13 13-JAN-1988", 40) {
 		t.Errorf("time only, both flags: %#x, %q", got, text)
 	}
 
@@ -333,6 +334,7 @@ func padded(s string, n int) string {
 // an initialized context and the flags.
 func TestLibGetMaximumDateLength(t *testing.T) {
 	env := fixture(t)
+	defineList(t, env, lnm.ProcessTableName, "SYS$LANGUAGE", lnm.Supervisor, "ENGLISH")
 
 	if got := initContext(t, env, componentOutputFormat, "|!MAU !DD, !Y4|!HH2:!M0 !MIU|"); got != ssNormal {
 		t.Fatalf("OUTPUT_FORMAT: %#x", got)
@@ -353,8 +355,9 @@ func TestLibGetMaximumDateLength(t *testing.T) {
 		}
 	}
 
-	// The static context, nothing defined: $ASCTIM's 23, English used.
-	if got := call(t, env, "LIB$GET_MAXIMUM_DATE_LENGTH", outLength); got != libEnglUsed || longword(t, env, outLength) != 23 {
+	// The static context, no LIB$DT_FORMAT: $ASCTIM's 23, the standard
+	// format used.
+	if got := call(t, env, "LIB$GET_MAXIMUM_DATE_LENGTH", outLength); got != libDefForUse || longword(t, env, outLength) != 23 {
 		t.Errorf("static: %#x, %d", got, longword(t, env, outLength))
 	}
 }
@@ -364,6 +367,7 @@ func TestLibGetMaximumDateLength(t *testing.T) {
 // be read by.
 func TestLibGetDateFormat(t *testing.T) {
 	env := fixture(t)
+	defineList(t, env, lnm.ProcessTableName, "SYS$LANGUAGE", lnm.Supervisor, "ENGLISH")
 
 	for _, c := range []struct{ format, want string }{
 		{"!MAU !DD, !Y4 !H04:!M0:!S0:!C2", "MONTH DD, YYYY4 HH:MM:SS:CC2"},
@@ -394,9 +398,9 @@ func TestLibGetDateFormat(t *testing.T) {
 		t.Errorf("no fraction: %#x, want ILLFORMAT", got)
 	}
 
-	// The static context, nothing defined: the standard format, English
-	// used (ENGLUSED wins over DEFFORUSE).
-	if got := call(t, env, "LIB$GET_DATE_FORMAT", outDesc); got != libEnglUsed || descText(t, env, outDesc) != "DD-MONTH-YYYY4 HH:MM:SS.CC2" {
+	// The static context, no LIB$DT_INPUT_FORMAT: the standard format,
+	// with DEFFORUSE.
+	if got := call(t, env, "LIB$GET_DATE_FORMAT", outDesc); got != libDefForUse || descText(t, env, outDesc) != "DD-MONTH-YYYY4 HH:MM:SS.CC2" {
 		t.Errorf("standard: %#x, %q", got, descText(t, env, outDesc))
 	}
 

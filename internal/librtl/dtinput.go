@@ -394,7 +394,9 @@ func (s *dtSettings) convertDateString(text string, c dtConversion) (v uint64, d
 // complete fills a reading's omitted fields with their defaults and makes
 // the time. An omitted field whose bit the flags don't have is
 // LIB$_INCDATTIM. A year written with fewer digits than four (!Y2's "88")
-// takes the rest from the default year: 88 in 2026 is 2088 (unconfirmed).
+// takes the rest from the current year, not the defaults vector's: 88 in
+// 2026 is 2088, and so is 8 by !Y2 with a default year of 1988 (VMS V7.1,
+// testdata/lib56).
 // A 12-hour hour must be 1 to 12; with the second meridiem indicator (PM)
 // it is 12 hours later, and 12 with the first (AM) is 0. Without a
 // meridiem, a 12-hour hour is taken as before noon, and a meridiem
@@ -438,7 +440,8 @@ func (s *dtSettings) complete(r dtReading, c dtConversion) (uint64, uint32, uint
 		case fieldYear:
 			if it.m.digits < 4 {
 				unit := tenTo(it.m.digits)
-				fields[numYear] = c.defaults[numYear] - c.defaults[numYear]%unit + r.value[numYear]
+				year := vmsdef.GoTime(c.now).Year()
+				fields[numYear] = year - year%unit + r.value[numYear]
 			}
 		case fieldHour12:
 			h := fields[numHour]
@@ -548,6 +551,10 @@ func libConvertDateString(env *corevms.Environment, argv []uint32) (uint32, erro
 
 	if status != ssNormal {
 		return status, nil
+	}
+
+	if s.inputError != 0 {
+		return s.inputError, nil
 	}
 
 	if !checkInputFormat(s.input) {
