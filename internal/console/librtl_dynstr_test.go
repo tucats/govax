@@ -32,3 +32,31 @@ func TestLibrtlDynamicStrings(t *testing.T) {
 		t.Errorf("output %q, want %q", out, "HELLO\nBYE\n")
 	}
 }
+
+// TestLibrtlCopyAndAnalyze: a linked program copies a string descriptor
+// into a dynamic string with LIB$SCOPY_DXDX, copies text by reference
+// over it with LIB$SCOPY_R_DX6 (JSB), showing each, and analyzes the
+// source with LIB$ANALYZE_SDESC_R2, which returns its length and text's
+// address in R1 and R2. It ends with 1 when all of that held.
+func TestLibrtlCopyAndAnalyze(t *testing.T) {
+	r0, out := runMacroProgram(t, "\t.PSECT\tDATA,NOEXE,WRT,LONG\n"+
+		"SRC:\t.ASCID\t/GOVAX/\nDYN:\t.LONG\t^X020E0000,0\nTEXT:\t.ASCII\t/VMS/\n"+
+		"\t.PSECT\tCODE,NOWRT,EXE\n"+
+		"\t.ENTRY\tSTART,^M<R2,R3,R4,R5,R6>\n"+
+		"\tPUSHAQ\tDYN\n\tPUSHAQ\tSRC\n\tCALLS\t#2,G^LIB$SCOPY_DXDX\n\tBLBC\tR0,10$\n"+
+		"\tPUSHAQ\tDYN\n\tCALLS\t#1,G^LIB$PUT_OUTPUT\n"+
+		"\tMOVL\t#3,R0\n\tMOVAB\tTEXT,R1\n\tMOVAQ\tDYN,R2\n\tJSB\tG^LIB$SCOPY_R_DX6\n\tBLBC\tR0,10$\n"+
+		"\tPUSHAQ\tDYN\n\tCALLS\t#1,G^LIB$PUT_OUTPUT\n"+
+		"\tMOVAQ\tSRC,R0\n\tJSB\tG^LIB$ANALYZE_SDESC_R2\n\tBLBC\tR0,10$\n"+
+		"\tCMPL\tR1,#5\n\tBNEQ\t20$\n\tCMPL\tR2,SRC+4\n\tBNEQ\t20$\n"+
+		"\tMOVL\t#1,R0\n\tRET\n"+
+		"10$:\tRET\n20$:\tMOVL\t#20,R0\n\tRET\n\t.END\tSTART\n")
+
+	if r0 != 1 {
+		t.Errorf("R0 = %#x, want 1 (20: ANALYZE_SDESC_R2's R1 or R2; otherwise the failing status)", r0)
+	}
+
+	if out != "GOVAX\nVMS\n" {
+		t.Errorf("output %q, want %q", out, "GOVAX\nVMS\n")
+	}
+}

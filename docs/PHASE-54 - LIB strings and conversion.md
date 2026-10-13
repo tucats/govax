@@ -1,6 +1,6 @@
 # Phase 54 — LIB$ strings, descriptors, and text conversion
 
-**Status:** in progress (2026-10-12; subtasks 1 to 3 done). Needs Phase 53. Part of the LIB$
+**Status:** in progress (2026-10-12; subtasks 1 to 4 done). Needs Phase 53. Part of the LIB$
 program laid out in `PHASE-53 - RTL LIB support.md` (Part A), which also
 has the sources and the conventions (Part B) this phase follows.
 
@@ -407,7 +407,7 @@ against VMS's own table, which the probe dumps.)
 3. **Dynamic strings**: SGET1_DD, SFREE1_DD, SFREEN_DD (and JSB forms);
    Phase 53's D-class output moved onto them. **Done** 2026-10-12.
 4. **Copying and descriptors**: SCOPY_DXDX, SCOPY_R_DX, ANALYZE_SDESC (and
-   JSB forms).
+   JSB forms). **Done** 2026-10-12.
 5. **Characters**: LEN, CHAR, ICHAR, INDEX.
 6. **Translation**: the three tables, TRA_ASC_EBC, TRA_EBC_ASC.
 7. **Numeric text**: CVT_DTB, CVT_HTB, CVT_OTB.
@@ -517,3 +517,22 @@ against VMS's own table, which the probe dumps.)
     routine as the XFC would. The console's `TestLibrtlDynamicStrings`
     gets one string by CALL and one by JSB, writes and shows them, and
     frees both with LIB$SFREEN_DD6.
+- **2026-10-12** — Subtask 4, copying and descriptors (`internal/librtl/
+  copy.go`): LIB$SCOPY_DXDX, LIB$SCOPY_R_DX, LIB$ANALYZE_SDESC (codes 85
+  to 87) and the JSB entries LIB$SCOPY_DXDX6, LIB$SCOPY_R_DX6,
+  LIB$ANALYZE_SDESC_R2 (88 to 90).
+  - **The copies** read the source (any input class, or length and
+    address: `readText`, now shared with `readString`) and write it with
+    `writeString`, returning SS$_NORMAL, LIB$_STRTRU, LIB$_INVSTRDES, or
+    LIB$_INSVIRMEM. SCOPY_R_DX's length is a word by reference;
+    SCOPY_R_DX6's R0's low word.
+  - **ANALYZE_SDESC** writes the length (a word) and the text's address
+    by `readDescriptor`'s rules; an invalid class is LIB$_INVSTRDES with
+    nothing written (unconfirmed). ANALYZE_SDESC_R2 returns them in R1
+    and R2, left alone on an error (unconfirmed, the survey's reading).
+  - **Tests.** `copy_test.go`: every destination class, truncation, a
+    varying source, a bad class on either side, the length word's high
+    half ignored, the JSB entries' registers, and ANALYZE_SDESC by class
+    (S, A's ARSIZE, VS's CURLEN) through both entries. The console's
+    `TestLibrtlCopyAndAnalyze` copies into a dynamic string by CALL and
+    by JSB and analyzes a `.ASCID` string.

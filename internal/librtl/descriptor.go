@@ -138,11 +138,20 @@ func readString(env *corevms.Environment, addr uint32) (string, error) {
 		return "", err
 	}
 
+	return readText(env, d.text, d.length)
+}
+
+// readText reads n bytes at addr as a string: a string passed by
+// reference, with its length beside it. A memory error is the caller's
+// to report (memoryFault).
+func readText(env *corevms.Environment, addr, n uint32) (string, error) {
 	mem, cpu := env.Memory(), env.CPU()
-	buf := make([]byte, d.length)
+	buf := make([]byte, n)
 
 	for i := range buf {
-		if buf[i], err = mem.LoadByte(cpu, d.text+uint32(i)); err != nil {
+		var err error
+
+		if buf[i], err = mem.LoadByte(cpu, addr+uint32(i)); err != nil {
 			return "", err
 		}
 	}

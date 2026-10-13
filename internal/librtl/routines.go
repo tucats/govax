@@ -65,6 +65,9 @@ var JSBRoutines = []JSBRoutine{
 	{"LIB$SGET1_DD_R6", 82, libSget1DDR6},
 	{"LIB$SFREE1_DD6", 83, libSfree1DD6},
 	{"LIB$SFREEN_DD6", 84, libSfreenDD6},
+	{"LIB$SCOPY_DXDX6", 88, libScopyDxdx6},
+	{"LIB$SCOPY_R_DX6", 89, libScopyRDx6},
+	{"LIB$ANALYZE_SDESC_R2", 90, libAnalyzeSdescR2},
 }
 
 // Routines are the LIBRTL routines govax provides. The codes of the ones
@@ -126,6 +129,9 @@ var Routines = []Routine{
 	{"LIB$SGET1_DD", 79, libSget1DD},
 	{"LIB$SFREE1_DD", 80, libSfree1DD},
 	{"LIB$SFREEN_DD", 81, libSfreenDD},
+	{"LIB$SCOPY_DXDX", 85, libScopyDxdx},
+	{"LIB$SCOPY_R_DX", 86, libScopyRDx},
+	{"LIB$ANALYZE_SDESC", 87, libAnalyzeSdesc},
 }
 
 // missing is Missing's list, and missingJSB MissingJSB's, made once.
