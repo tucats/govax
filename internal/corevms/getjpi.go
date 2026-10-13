@@ -101,6 +101,7 @@ var jpiItemsByName = map[string]func(env *Environment) itemValue{
 	"JPI$_WSSIZE":       func(env *Environment) itemValue { return itemLong(env.Process.WSLimit) },
 	"JPI$_BUFIO":        func(env *Environment) itemValue { return itemLong(env.Process.BufferedIO) },
 	"JPI$_DIRIO":        func(env *Environment) itemValue { return itemLong(env.Process.DirectIO) },
+	"JPI$_PAGEFLTS":     func(env *Environment) itemValue { return itemLong(env.Process.PageFaults) },
 	"JPI$_BIOLM":        func(env *Environment) itemValue { return itemLong(env.Process.BufferedIOLimit) },
 	"JPI$_DIOLM":        func(env *Environment) itemValue { return itemLong(env.Process.DirectIOLimit) },
 	"JPI$_CPULIM":       func(env *Environment) itemValue { return itemLong(env.Process.CPULimit) },

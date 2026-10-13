@@ -186,6 +186,10 @@ var Routines = []Routine{
 	{"LIB$RESERVE_EF", 116, libReserveEF},
 	{"LIB$GET_LUN", 117, libGetLUN},
 	{"LIB$FREE_LUN", 118, libFreeLUN},
+	{"LIB$INIT_TIMER", 119, libInitTimer},
+	{"LIB$SHOW_TIMER", 120, libShowTimer},
+	{"LIB$STAT_TIMER", 121, libStatTimer},
+	{"LIB$FREE_TIMER", 122, libFreeTimer},
 }
 
 // missing is Missing's list, and missingJSB MissingJSB's, made once.

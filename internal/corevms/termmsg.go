@@ -36,8 +36,10 @@ import (
 //	80  ACC$L_OWNER     its owner's PID (0 for a detached process)
 //
 // ACC$K_TERMLEN (84) bytes in all. The I/O counts are the process's
-// (iocount.go). govax has no paging, and mounts volumes for the whole
-// system, so page faults, the peaks, and the volume count are 0.
+// (iocount.go), and so are its page faults (the pages brought in for
+// it, filesec.go's countFault). govax has no paging file or working set,
+// and mounts volumes for the whole system, so the peaks and the volume
+// count are 0.
 //
 // VAX/VMS Internals and Data Structures (section 22.2.1, step 11, and
 // table 22-1) puts the message's sending after the process's channels
@@ -84,6 +86,7 @@ func (sys *System) terminationMessage(env *Environment) []byte {
 	long("ACC$L_CPUTIM", uint32(sys.CPUTime(env)/cpuQuotaUnit))
 	long("ACC$L_BIOCNT", p.BufferedIO)
 	long("ACC$L_DIOCNT", p.DirectIO)
+	long("ACC$L_PAGEFLTS", p.PageFaults)
 	quad("ACC$Q_LOGIN", p.LoginTime)
 	long("ACC$L_OWNER", p.Owner)
 

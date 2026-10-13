@@ -62,10 +62,18 @@ import (
 // that returns to the service: the subprocess CLI (docs/PHASE-48.md)
 // runs each command's image this way, so that the image's $EXIT ends the
 // image and not the CLI (cpu.ServiceCall).
+//
+// Tail makes it the service's last act instead: the procedure returns
+// to the instruction after the XFC, so its R0 is the service's result
+// and the service doesn't run again. A shim whose status is a
+// procedure's (LIB$SHOW_TIMER's action routine, docs/PHASE-55) calls it
+// this way; its stub's RET then takes the procedure's arguments, which
+// the shim put below SP, off the stack with the stub's frame.
 type CallRequest struct {
 	Routine uint32
 	ArgList uint32
 	Image   bool
+	Tail    bool
 }
 
 func (r *CallRequest) Error() string {

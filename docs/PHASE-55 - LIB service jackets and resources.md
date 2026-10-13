@@ -1,6 +1,6 @@
 # Phase 55 — LIB$ service jackets, process resources, and measurement
 
-**Status:** in progress (subtasks 1 to 4 done 2026-10-13). Needs Phases 53 and 54. Part of the
+**Status:** in progress (subtasks 1 to 5 done 2026-10-13). Needs Phases 53 and 54. Part of the
 LIB$ program laid out in `PHASE-53 - RTL LIB support.md` (Part A).
 
 ## Goal
@@ -79,9 +79,10 @@ manual adds.
   PARSE_ACCESS_CODE.~~ The author supplied the VSI OpenVMS LIB$ manual
   (2026-10-13), which describes all three; subtask 7 stays in the plan
   (the survey's "Protection text").
-- **Page faults**: govax counts none, and `$GETJPI` lacks
-  JPI$_PAGEFLTS, which the timers need. The survey proposes counting
-  the faults `System.PageIn` resolves (subtask 5).
+- ~~**Page faults**: govax counts none, and `$GETJPI` lacks
+  JPI$_PAGEFLTS, which the timers need.~~ Subtask 5 counts the faults
+  `System.PageIn` resolves on P0 and P1 pages, and `$GETJPI` returns
+  them.
 
 ## The survey (subtask 1)
 
@@ -475,7 +476,7 @@ are masked.
 3. **Item routines**: GETJPI, GETDVI, GETSYI, numeric and string forms.
    **Done** 2026-10-13.
 4. **Event flags and LUNs.** **Done** 2026-10-13.
-5. **Timers.**
+5. **Timers.** **Done** 2026-10-13.
 6. **Miscellaneous**: AST_IN_PROG, ASN_WTH_MBX, WAIT, GET_USERS_LANGUAGE.
 7. **Protection text**: FORMAT_SOGW_PROT, PARSE_SOGW_PROT,
    PARSE_ACCESS_CODE, from the VSI manual.
@@ -627,3 +628,51 @@ are masked.
     image rundown), and `TestLibrtlResources` in `internal/console`, a
     MACRO program calling all five through their stubs and showing the
     results with LIB$SYS_FAO.
+- **2026-10-13** — Subtask 5, the timers (`internal/librtl/timers.go`,
+  shim codes 119–122: INIT_TIMER, SHOW_TIMER, STAT_TIMER, FREE_TIMER):
+  - **Page faults** (`corevms/filesec.go`): `System.PageIn` now counts
+    each fault it resolves on a P0 or P1 page in the faulting process's
+    new `Process.PageFaults` (`countFault`, through `processForSpace`);
+    an S0 fault belongs to no process. That's demand-zero pages and
+    section page-ins only (govax has no working set, so no soft
+    faults). `$GETJPI` gains JPI$_PAGEFLTS, F$GETJPI the PAGEFLTS
+    keyword, and the termination message ACC$L_PAGEFLTS.
+  - **The blocks.** The static block is Go data per image
+    (`ImageData`, as the subtask 4 pools); a heap block is 24 bytes from
+    `AllocateVM` in the survey's layout (time, CPU in 10 ms units, BUFIO,
+    DIRIO, page faults; **unconfirmed**), and the image's set of
+    addresses INIT_TIMER allocated is the LIB$_INVARG test for every
+    handle. INIT_TIMER of a handle holding 0 allocates (LIB$_INSVIRMEM
+    with no room), of a known block refills it, of anything else is
+    INVARG. FREE_TIMER zeroes the handle and frees the block;
+    LIB$_BADBLOADR when the heap no longer has it (the program freed it
+    with LIB$FREE_VM). SHOW_TIMER and STAT_TIMER with no handle use the
+    static block, INVARG until INIT_TIMER fills it; a handle holding 0
+    is INVARG (**unconfirmed**).
+  - **The figures** are `Clock`, `CPUTime` (10 ms units, JPI$_CPUTIM's),
+    and the process's BUFIO, DIRIO, and page faults, sampled before the
+    line is written (so SHOW_TIMER's own write counts in the next
+    call's BUFIO). STAT_TIMER's elapsed time is a negative (delta)
+    quadword (**unconfirmed**), the others a longword; codes outside
+    1–5 are INVARG.
+  - **SHOW_TIMER's line** follows the manual's example:
+    ` ELAPSED: d hh:mm:ss.cc  CPU: h:mm:ss.cc  BUFIO: n  DIRIO: n  FAULTS: n`,
+    each field led by a blank and one more between fields; a single
+    code's line is that field alone, with its blank. Hundredths are
+    truncated and nothing is padded (**unconfirmed**, the probe).
+  - **The action routine** is called as the shim's *tail call*: a new
+    `Tail` flag on `corevms.CallRequest` (and `cpu.ServiceCall`) makes
+    the routine return to the instruction after the XFC, the stub's
+    RET, rather than to the XFC (a shim can't be re-entered that way:
+    R0 selects it). SHOW_TIMER puts the argument list (2, a class S
+    descriptor of the line, the user argument), descriptor, and text
+    below SP in the stub's frame; the routine's R0 is SHOW_TIMER's
+    status, and the stub's RET takes them off the stack.
+  - **Tests**: `timers_test.go` (the static block and image rundown,
+    the whole line and each code, STAT_TIMER's five forms and INVARG,
+    a heap block's contents, refill, FREE_TIMER and the INVARG cases
+    after it, BADBLOADR, the action routine's CallRequest and argument
+    list), and `TestLibrtlTimers` in `internal/console`, a MACRO
+    program that times three demand-zero page touches (STAT_TIMER's
+    faults grow by exactly 3) and passes SHOW_TIMER's line to an action
+    routine whose status SHOW_TIMER returns.

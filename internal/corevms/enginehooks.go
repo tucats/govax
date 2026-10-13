@@ -104,7 +104,7 @@ func EngineError(err error) error {
 	case errors.Is(err, ErrExit):
 		return cpu.ErrImageExit
 	case errors.As(err, &call):
-		return &cpu.ServiceCall{Routine: call.Routine, ArgList: call.ArgList, Image: call.Image}
+		return &cpu.ServiceCall{Routine: call.Routine, ArgList: call.ArgList, Image: call.Image, Tail: call.Tail}
 	}
 
 	return err

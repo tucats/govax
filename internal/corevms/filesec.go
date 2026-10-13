@@ -310,7 +310,36 @@ func (sys *System) readPage(f *rms.ACPFile, vbn uint32) (uint32, bool) {
 // for this process, which then no longer maps the section); a private
 // section's page is read from its file into a new page; any other page is
 // demand-zero.
+//
+// Each fault it resolves on a P0 or P1 page counts in the faulting
+// process's page faults (countFault).
 func (sys *System) PageIn(f vm.PageFault) (vm.PTE, bool) {
+	pte, ok := sys.resolveFault(f)
+	if ok {
+		sys.countFault(f)
+	}
+
+	return pte, ok
+}
+
+// countFault counts a resolved fault on a process's own page (P0 or P1)
+// in its Process.PageFaults: $GETJPI's JPI$_PAGEFLTS, which LIB$INIT_TIMER
+// and its kind report (docs/PHASE-55, subtask 5). A fault on a system
+// (S0) page belongs to no process. VMS counts every fault a working set
+// sees, soft ones included; govax has no working set, so it counts only
+// the pages it brings in: demand-zero pages and section pages.
+func (sys *System) countFault(f vm.PageFault) {
+	if f.Addr >= 0x80000000 { // S0 and up
+		return
+	}
+
+	if env := sys.processForSpace(f.Space); env != nil {
+		env.Process.PageFaults++
+	}
+}
+
+// resolveFault is PageIn's work: the page's new PTE by its old one's form.
+func (sys *System) resolveFault(f vm.PageFault) (vm.PTE, bool) {
 	prot, owner := f.PTE.Protection(), f.PTE.Owner()
 
 	if gi, ok := f.PTE.GlobalIndex(); ok {

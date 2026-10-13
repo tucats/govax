@@ -88,10 +88,15 @@ type SystemServices interface { //nolint:interfacebloat
 // and no further, and its return reports ErrConsoleCallReturned rather
 // than returning into the caller. Whoever asked for the call puts the
 // caller's PC, FP, and AP back then: the frame doesn't hold them.
+//
+// With Tail set, the procedure returns to the instruction after the XFC
+// rather than to the XFC: the call is the service's last act, and the
+// procedure's R0 is its result (a shim's action routine, docs/PHASE-55).
 type ServiceCall struct {
 	Routine uint32 // the procedure's entry mask address
 	ArgList uint32 // its argument list (a count longword, then arguments)
 	Image   bool   // the frame is an image's outermost one (see above)
+	Tail    bool   // the procedure returns past the XFC (see above)
 }
 
 func (c *ServiceCall) Error() string {

@@ -154,6 +154,10 @@ type Process struct {
 	// process (PHD$L_BIOCNT, PHD$L_DIOCNT; iocount.go).
 	BufferedIO, DirectIO uint32
 
+	// PageFaults counts the faults on the process's P0 and P1 pages the
+	// pager resolved (PHD$L_PAGEFLTS; filesec.go's countFault).
+	PageFaults uint32
+
 	// putmsg holds the $PUTMSG calls whose action routine is running,
 	// innermost last (an action routine may call $PUTMSG itself;
 	// message.go).

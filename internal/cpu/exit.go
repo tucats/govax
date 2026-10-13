@@ -30,7 +30,8 @@ const maxUnwindFrames = 100_000
 // as the instruction CALLG call.ArgList, call.Routine would if it were
 // the XFC now executing: the saved return address is the XFC itself
 // (instructionPC), so the routine's RET executes the XFC again. An
-// image's call (call.Image) saves SentinelReturn instead (ServiceCall).
+// image's call (call.Image) saves SentinelReturn instead, and a tail
+// call (call.Tail) the next instruction's address (ServiceCall).
 //
 // A fault building the frame (an unreadable entry mask) is returned for
 // Step to raise at the XFC.
@@ -42,8 +43,12 @@ func (e *Engine) callForService(call *ServiceCall) error {
 	e.cpu.SetGPR(registers.SP, savedSP&^3)
 
 	returnPC, returnFP := e.instructionPC, e.cpu.GPR(registers.FP)
-	if call.Image {
+
+	switch {
+	case call.Image:
 		returnPC, returnFP = SentinelReturn, SentinelReturn
+	case call.Tail:
+		returnPC = e.cpu.GPR(registers.PC) // the XFC's operand is read: PC is past it
 	}
 
 	return e.buildCallFrame(call.ArgList, call.Routine, savedSP, returnPC, returnFP, false)
