@@ -162,3 +162,36 @@ func TestLibrtlLocale(t *testing.T) {
 		t.Errorf("output %q, want %q", out, ",\n.\n$\n")
 	}
 }
+
+// TestLibrtlCvtDxDx: LIB$CVT_DX_DX, in LIBRTL2.EXE, from a linked
+// program: a longword scaled by 10^-2 to text (shown), an F_floating
+// value to text in E format (shown), and text to a longword. It ends
+// with 1 when the last gave -77.
+func TestLibrtlCvtDxDx(t *testing.T) {
+	r0, out := runMacroProgram(t, "\t.PSECT\tDATA,NOEXE,WRT,LONG\n"+
+		"LDESC:\t.WORD\t4\n\t.BYTE\t8,9\n\t.ADDRESS\tLVAL\n\t.BYTE\t-2,0,0,0\n"+ // DSC$K_DTYPE_L, DSC$K_CLASS_SD, scale -2
+		"LVAL:\t.LONG\t123456\n"+
+		"FDESC:\t.WORD\t4\n\t.BYTE\t10,1\n\t.ADDRESS\tFVAL\n"+ // DSC$K_DTYPE_F, DSC$K_CLASS_S
+		"FVAL:\t.F_FLOATING\t-0.25\n"+
+		"TEXT:\t.ASCID\t/ -77 /\n"+
+		"RDESC:\t.WORD\t4\n\t.BYTE\t8,1\n\t.ADDRESS\tRVAL\nRVAL:\t.LONG\t0\n"+
+		"OUT:\t.LONG\t^X020E0000,0\n"+
+		"\t.PSECT\tCODE,NOWRT,EXE\n"+
+		"\t.ENTRY\tSTART,^M<>\n"+
+		"\tPUSHAQ\tOUT\n\tPUSHAQ\tLDESC\n\tCALLS\t#2,G^LIB$CVT_DX_DX\n\tBLBC\tR0,10$\n"+
+		"\tPUSHAQ\tOUT\n\tCALLS\t#1,G^LIB$PUT_OUTPUT\n"+
+		"\tPUSHAQ\tOUT\n\tPUSHAQ\tFDESC\n\tCALLS\t#2,G^LIB$CVT_DX_DX\n\tBLBC\tR0,10$\n"+
+		"\tPUSHAQ\tOUT\n\tCALLS\t#1,G^LIB$PUT_OUTPUT\n"+
+		"\tPUSHAQ\tRDESC\n\tPUSHAQ\tTEXT\n\tCALLS\t#2,G^LIB$CVT_DX_DX\n\tBLBC\tR0,10$\n"+
+		"\tCMPL\tRVAL,#-77\n\tBNEQ\t20$\n"+
+		"\tMOVL\t#1,R0\n\tRET\n"+
+		"10$:\tRET\n20$:\tMOVL\t#20,R0\n\tRET\n\t.END\tSTART\n")
+
+	if r0 != 1 {
+		t.Errorf("R0 = %#x, want 1 (20: the text's value; otherwise the failing status)", r0)
+	}
+
+	if want := "1234.56\n-0.2500000E+00\n"; out != want {
+		t.Errorf("output %q, want %q", out, want)
+	}
+}

@@ -124,6 +124,24 @@ func FromBigInt(i *big.Int) Value {
 	return newValue(new(big.Float).SetPrec(uint(max(i.BitLen(), 1))).SetInt(i))
 }
 
+// FromRat returns r as a Value, rounded to parsePrecision bits (exact for
+// any r whose binary expansion ends within them: every integer and binary
+// fraction a VAX format holds). Round it to a format with Round.
+func FromRat(r *big.Rat) Value {
+	return newValue(new(big.Float).SetPrec(parsePrecision).SetRat(r))
+}
+
+// Rat returns v exactly, as a rational number.
+func (v Value) Rat() *big.Rat {
+	if v.x == nil {
+		return new(big.Rat)
+	}
+
+	r, _ := v.x.Rat(nil)
+
+	return r
+}
+
 // parsePrecision is the precision Parse reads a decimal number at, before
 // a caller rounds it to a format. It's far beyond H_floating's 113 bits,
 // so rounding twice (to this, then to the format) can't change a result

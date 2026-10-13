@@ -11,7 +11,17 @@ import (
 
 // Library is the name of the shareable image these routines stand for, as
 // a program's image names it and SHIM$<library>_<offset> spells it.
-const Library = "LIBRTL"
+// Library2 is LIBRTL2.EXE, the routines VMS moved out of LIBRTL.EXE
+// (LIB$CVT_DX_DX, the zone and fault routines): a routine's image is the
+// one vmsdef.ImageSymbols gives it.
+const (
+	Library  = "LIBRTL"
+	Library2 = "LIBRTL2"
+)
+
+// libraries are the images this package stands for, in the order their
+// missing routines are numbered.
+var libraries = []string{Library, Library2}
 
 // Routine is one LIBRTL routine govax provides.
 type Routine struct {
@@ -35,20 +45,36 @@ type Routine struct {
 	Fn corevms.ShimFunc
 }
 
-// Offset returns the routine's entry in LIBRTL.EXE's transfer vector.
-// It panics for a name LIBRTL.EXE doesn't have, a mistake in Routines
-// that TestRoutinesMatchLIBRTL reports by name.
+// Offset returns the routine's entry in its image's transfer vector.
+// It panics for a name neither LIBRTL.EXE nor LIBRTL2.EXE has, a mistake
+// in Routines that TestRoutinesMatchLIBRTL reports by name.
 func (r Routine) Offset() uint32 { return offsetOf(r.Name) }
 
-// offsetOf returns name's entry in LIBRTL.EXE's transfer vector, from
-// vmsdef.ImageSymbols, panicking for a name LIBRTL.EXE doesn't have.
+// offsetOf returns name's entry in its image's transfer vector, from
+// vmsdef.ImageSymbols.
 func offsetOf(name string) uint32 {
+	_, offset := placeOf(name)
+
+	return offset
+}
+
+// placeOf returns name's image (Library or Library2) and its entry in
+// that image's transfer vector, from vmsdef.ImageSymbols, panicking for a
+// name neither image has.
+func placeOf(name string) (string, uint32) {
 	sym, ok := vmsdef.ImageSymbols[name]
-	if !ok || sym.Image != Library {
-		panic(fmt.Sprintf("librtl: %s is not in %s's transfer vector", name, Library))
+	if !ok || !slices.Contains(libraries, sym.Image) {
+		panic(fmt.Sprintf("librtl: %s is not in %s's or %s's transfer vector", name, Library, Library2))
 	}
 
-	return sym.Value
+	return sym.Image, sym.Value
+}
+
+// link returns name's corevms.ShimLink with code.
+func link(name string, code uint32) corevms.ShimLink {
+	library, offset := placeOf(name)
+
+	return corevms.ShimLink{Name: name, Library: library, Offset: offset, Code: code}
 }
 
 // JSBRoutine is one LIBRTL routine reached by JSB, its arguments in
@@ -146,6 +172,7 @@ var Routines = []Routine{
 	{"LIB$RADIX_POINT", 102, libRadixPoint},
 	{"LIB$CURRENCY", 103, libCurrency},
 	{"LIB$LP_LINES", 104, libLpLines},
+	{"LIB$CVT_DX_DX", 105, libCvtDxDx}, // LIBRTL2
 }
 
 // missing is Missing's list, and missingJSB MissingJSB's, made once.
@@ -180,39 +207,46 @@ func Register(t *corevms.ShimTable) {
 	}
 }
 
-// provided are the places in LIBRTL.EXE of everything govax provides
-// itself: Routines, JSBRoutines, and Tables.
+// provided are the places in LIBRTL.EXE and LIBRTL2.EXE of everything
+// govax provides itself: Routines, JSBRoutines, and Tables.
 func provided() []corevms.ShimLink {
 	links := make([]corevms.ShimLink, 0, len(Routines)+len(JSBRoutines)+len(Tables))
 
 	for _, r := range Routines {
-		links = append(links, corevms.ShimLink{Name: r.Name, Library: Library, Offset: r.Offset(), Code: r.Code})
+		links = append(links, link(r.Name, r.Code))
 	}
 
 	for _, r := range JSBRoutines {
-		links = append(links, corevms.ShimLink{Name: r.Name, Library: Library, Offset: offsetOf(r.Name), Code: r.Code, JSB: true})
+		l := link(r.Name, r.Code)
+		l.JSB = true
+		links = append(links, l)
 	}
 
 	for _, t := range Tables {
-		links = append(links, corevms.ShimLink{Name: t.Name, Library: Library, Offset: offsetOf(t.Name), Data: t.Data[:]})
+		l := link(t.Name, 0)
+		l.Data = t.Data[:]
+		links = append(links, l)
 	}
 
 	return links
 }
 
-// Links are the places in LIBRTL.EXE of every routine Register installs
-// and of the ones in kernel.asm, for their stubs, and of the data tables
-// (corevms.ShimLink). Routines come first, in their table's order, so the
-// first stubs (the ones in VMINIT's page) keep their addresses.
+// Links are the places in LIBRTL.EXE and LIBRTL2.EXE of every routine
+// Register installs and of the ones in kernel.asm, for their stubs, and
+// of the data tables (corevms.ShimLink). Routines come first, in their
+// table's order, so the first stubs (the ones in VMINIT's page) keep
+// their addresses.
 func Links() []corevms.ShimLink {
 	links := provided()
 
 	for _, r := range missing() {
-		links = append(links, corevms.ShimLink{Name: r.Name, Library: Library, Offset: r.Offset(), Code: r.Code})
+		links = append(links, link(r.Name, r.Code))
 	}
 
 	for _, r := range missingJSB() {
-		links = append(links, corevms.ShimLink{Name: r.Name, Library: Library, Offset: offsetOf(r.Name), Code: r.Code, JSB: true})
+		l := link(r.Name, r.Code)
+		l.JSB = true
+		links = append(links, l)
 	}
 
 	return links

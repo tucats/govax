@@ -2,6 +2,7 @@ package librtl
 
 import (
 	"bytes"
+	"slices"
 	"testing"
 
 	"github.com/tucats/govax/internal/corevms"
@@ -122,8 +123,8 @@ func TestRoutinesMatchLIBRTL(t *testing.T) {
 	names := map[string]bool{}
 
 	for _, r := range Routines {
-		if sym, ok := vmsdef.ImageSymbols[r.Name]; !ok || sym.Image != Library {
-			t.Errorf("%s: not in %s's transfer vector (vmsdef.ImageSymbols)", r.Name, Library)
+		if sym, ok := vmsdef.ImageSymbols[r.Name]; !ok || !slices.Contains(libraries, sym.Image) {
+			t.Errorf("%s: not in %s's or %s's transfer vector (vmsdef.ImageSymbols)", r.Name, Library, Library2)
 		}
 
 		if (r.Code == 0) != (r.Fn == nil) {

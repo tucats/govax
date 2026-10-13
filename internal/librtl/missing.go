@@ -64,8 +64,8 @@ func rank(name string) int {
 	return len(facilityRank)
 }
 
-// Missing returns a Routine for each CALL entry of LIBRTL.EXE's transfer
-// vector that Routines doesn't provide, in transfer-vector order, coded
+// Missing returns a Routine for each CALL entry of LIBRTL.EXE's and
+// LIBRTL2.EXE's transfer vectors that Routines doesn't provide, in transfer-vector order, coded
 // from missingCodeBase. Its Fn signals that the routine is missing
 // (notImplemented).
 func Missing() []Routine {
@@ -97,38 +97,52 @@ func MissingJSB() []JSBRoutine {
 	return missing
 }
 
-// missingEntries returns the names of LIBRTL.EXE's transfer-vector
-// entries that keep selects and that govax doesn't provide (Routines,
-// JSBRoutines, Tables), in offset order: one name per entry, aliases
-// (FOR$CNV_IN_I is OTS$CVT_TI_L) giving way to the facility ranked first.
+// missingEntries returns the names of LIBRTL.EXE's and LIBRTL2.EXE's
+// transfer-vector entries that keep selects and that govax doesn't
+// provide (Routines, JSBRoutines, Tables), LIBRTL's first, each image's
+// in offset order: one name per entry, aliases (FOR$CNV_IN_I is
+// OTS$CVT_TI_L) giving way to the facility ranked first.
 func missingEntries(keep func(name string) bool) []string {
-	have := map[uint32]bool{}
-	for _, l := range provided() {
-		have[l.Offset] = true
+	type place struct {
+		image  string
+		offset uint32
 	}
 
-	byOffset := map[uint32]string{}
+	have := map[place]bool{}
+	for _, l := range provided() {
+		have[place{l.Library, l.Offset}] = true
+	}
+
+	byPlace := map[place]string{}
 
 	for name, sym := range vmsdef.ImageSymbols {
-		if sym.Image != Library || have[sym.Value] || dataEntry(name) || !keep(name) {
+		p := place{sym.Image, sym.Value}
+
+		if !slices.Contains(libraries, sym.Image) || have[p] || dataEntry(name) || !keep(name) {
 			continue
 		}
 
-		if other, ok := byOffset[sym.Value]; !ok || rank(name) < rank(other) || rank(name) == rank(other) && name < other {
-			byOffset[sym.Value] = name
+		if other, ok := byPlace[p]; !ok || rank(name) < rank(other) || rank(name) == rank(other) && name < other {
+			byPlace[p] = name
 		}
 	}
 
-	offsets := make([]uint32, 0, len(byOffset))
-	for off := range byOffset {
-		offsets = append(offsets, off)
+	places := make([]place, 0, len(byPlace))
+	for p := range byPlace {
+		places = append(places, p)
 	}
 
-	slices.Sort(offsets)
+	slices.SortFunc(places, func(a, b place) int {
+		if a.image != b.image {
+			return slices.Index(libraries, a.image) - slices.Index(libraries, b.image)
+		}
 
-	names := make([]string, len(offsets))
-	for i, off := range offsets {
-		names[i] = byOffset[off]
+		return int(a.offset) - int(b.offset)
+	})
+
+	names := make([]string, len(places))
+	for i, p := range places {
+		names[i] = byPlace[p]
 	}
 
 	return names

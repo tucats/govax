@@ -66,7 +66,7 @@ func TestUpcaseTable(t *testing.T) {
 func TestTraAscEbc(t *testing.T) {
 	env := fixture(t)
 	putBytes(t, env, 0x3000, "Az09")
-	putBytes(t, env, 0x3010, "A\x80\x1A")         // 80 has no EBCDIC; 1A (SUB) does
+	putBytes(t, env, 0x3010, "A\x80\x1A")        // 80 has no EBCDIC; 1A (SUB) does
 	putBytes(t, env, 0x3020, "\xC1\xA9\xF0\xF9") // "Az09" in EBCDIC
 	putBytes(t, env, 0x3030, "\xC1\x04\xE0")     // 04 has no ASCII; E0 is backslash
 	putDesc(t, env, 0x1000, 4, dscClassS, 0x3000)

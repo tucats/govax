@@ -1,6 +1,6 @@
 # Phase 54 — LIB$ strings, descriptors, and text conversion
 
-**Status:** in progress (2026-10-12; subtasks 1 to 9 done). Needs Phase 53. Part of the LIB$
+**Status:** in progress (2026-10-12; subtasks 1 to 10 done). Needs Phase 53. Part of the LIB$
 program laid out in `PHASE-53 - RTL LIB support.md` (Part A), which also
 has the sources and the conventions (Part B) this phase follows.
 
@@ -417,7 +417,8 @@ against VMS's own table, which the probe dumps.)
 9. **Locale**: DIGIT_SEP, RADIX_POINT, CURRENCY, LP_LINES. **Done**
    2026-10-12.
 10. **CVT_DX_DX** (LIBRTL2's 0x000): integers and F/D/G/H to and from
-    text, with a LIBRTL2 stub area (the scope the author accepted).
+    text, with a LIBRTL2 stub area (the scope the author accepted). **Done**
+    2026-10-12.
 11. **The program** (`testdata/lib54/`) and its console test; VMS probe
     with the author if wanted.
 12. **Close-out**.
@@ -618,3 +619,41 @@ against VMS's own table, which the probe dumps.)
   Tests: `locale_test.go` (defaults, the process table over the system
   table, a translation longer than one character, truncation, LP_LINES's
   range and bad text) and the console's `TestLibrtlLocale`.
+- **2026-10-12** — Subtask 10, LIB$CVT_DX_DX (`internal/librtl/
+  cvtdxdx.go`, code 105), LIBRTL2.EXE's first routine.
+  - **LIBRTL2.** A routine's image is now the one `vmsdef.ImageSymbols`
+    gives it (`placeOf`), LIBRTL or LIBRTL2, so `Routines` holds both;
+    `Links` names each stub's own image (`SHIM$LIBRTL2_00000000`), which
+    LINK and RUN already resolve. `missingEntries` scans both images
+    (LIBRTL's entries first, so their codes don't move), giving
+    LIB$DECODE_FAULT, LIB$SIM_TRAP, and the three zone routines
+    missing-routine stubs. LIBRTL2's eleven `LIB$AB_` tables (the
+    manual's MOVTC entry) aren't provided, and stay unresolved.
+  - **The routine**, in the scope the author accepted: atomic integers
+    (B, BU, W, WU, L, LU, Q) and floating values (F, D, G, H), class S
+    or SD (scaled), to and from numeric byte data strings (T with S, D,
+    VS, A, NCA, SD; VT with VS), and between atomic types. The value
+    goes through an exact rational (`math/big`), rounded half away from
+    zero into the destination. Text is read with blanks and tabs
+    ignored (sign, digits, a point, an exponent letter E, D, G, H, or
+    Q); integers are written as digits, with a decimal point for a
+    negative source scale; floating values in Table LIB-3's E format,
+    `s0.dddE+nn`, as many digits as the destination's width allows
+    (all of them into a dynamic string). An NBDS to an NBDS, unscaled,
+    is a copy. Statuses: LIB$_INVCLADSC, LIB$_INVDTYDSC, LIB$_INVCLADTY
+    (BU arrays, packed decimal, and the rest left out), LIB$_INVNBDS
+    (not a number, or out of the destination's range from text),
+    LIB$_INVCVT (negative into unsigned), LIB$_INTOVF, LIB$_FLTOVF,
+    LIB$_FLTUND, LIB$_ROPRAND, and LIB$_OUTSTRTRU for any text cut
+    short (unconfirmed beyond the NBDS copy). word-integer-dest-length
+    is the characters written to a string destination.
+  - **vaxfloat** gained `FromRat` and `Value.Rat`, the exact bridge.
+  - **Tests.** `cvtdxdx_test.go`: integers to text (signs, scales,
+    unsigned, a quadword into a dynamic string), text to integers
+    (blanks, rounding, exponents, scale, LIB$_INVNBDS, LIB$_INVCVT),
+    floating to and from text in each format and width, floating and
+    integer through H and back, the range statuses, a reserved operand,
+    the NBDS copy, a VT source, and the descriptor statuses. The
+    console's `TestLibrtlCvtDxDx` links and runs a program calling it
+    (`1234.56` from a scaled longword, `-0.2500000E+00` from F, and
+    " -77 " to a longword). `TestMissing` now covers both images.
