@@ -35,7 +35,7 @@ type CommandInterpreter interface {
 	// procedure that runs it: the process's first call, as an image's
 	// IMAGE$INIT driver is for a process that runs an image. The
 	// procedure ends with a $EXIT of the CLI's final status when the CLI
-	// logs out, which deletes the process.
+	// logs out, which deletes the process. It sets env.CLI.
 	Start(env *Environment, cli *CLIStartup) (uint32, error)
 
 	// InheritSymbols gives child, a process LIB$SPAWN is creating,
@@ -79,8 +79,8 @@ func isLoginout(image string) bool {
 }
 
 // startInterpreter is process startup's step for a process that runs a
-// CLI (see prepareImage): the process has a CLI from now on (HasCLI),
-// and the System's interpreter is started in it. cli nil is LOGINOUT's
+// CLI (see prepareImage): the System's interpreter is started in it,
+// and gives the process its CLI (Environment.CLI). cli nil is LOGINOUT's
 // CLI, which reads SYS$INPUT. SS$_UNSUPPORTED if the console installed
 // no interpreter.
 func (env *Environment) startInterpreter(cli *CLIStartup) (uint32, error) {
@@ -91,8 +91,6 @@ func (env *Environment) startInterpreter(cli *CLIStartup) (uint32, error) {
 	if cli == nil {
 		cli = &CLIStartup{Login: true}
 	}
-
-	env.HasCLI = true
 
 	// The CLI's SYS$OUTPUT, if it's a file, is made now (outfile.go).
 	env.openOutputFile()

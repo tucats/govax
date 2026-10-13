@@ -321,6 +321,7 @@ func (h cliHost) Start(env *corevms.Environment, start *corevms.CLIStartup) (uin
 	}
 
 	cli := c.cliOf(env)
+	env.CLI = shellCLI{cli.shell}
 	cli.command, cli.hasCommand = start.Command, start.Command != ""
 	cli.prompt = start.Prompt
 	cli.login = start.Login

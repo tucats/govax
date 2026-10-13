@@ -228,11 +228,12 @@ type Environment struct {
 	// then, as DCL's does.
 	SpawnNotice func(child *Environment, wait bool)
 
-	// HasCLI says the process has a command interpreter: process 1 (the
-	// console is its CLI), and a process LIB$SPAWN or $CREPRC of LOGINOUT
-	// created (cliprocess.go). LIB$SPAWN needs one in its caller, as
-	// VMS's does (LIB$_NOCLI).
-	HasCLI bool
+	// CLI is the process's command interpreter, nil if it has none:
+	// process 1's is the console's DCL, and a process LIB$SPAWN or
+	// $CREPRC of LOGINOUT created gets one when its CLI starts
+	// (cliprocess.go). LIB$SPAWN and the LIB$ CLI routines need one, as
+	// VMS's do (LIB$_NOCLI).
+	CLI CLI
 
 	// cpuTime is the CPU time the process has used, in VMS time units
 	// (showsys.go's accountTime).

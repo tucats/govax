@@ -216,6 +216,9 @@ var Routines = []Routine{
 	{"LIB$GET_MAXIMUM_DATE_LENGTH", 146, libGetMaximumDateLength},
 	{"LIB$GET_DATE_FORMAT", 147, libGetDateFormat},
 	{"LIB$CONVERT_DATE_STRING", 148, libConvertDateString},
+	{"LIB$GET_SYMBOL", 149, libGetSymbol},
+	{"LIB$SET_SYMBOL", 150, libSetSymbol},
+	{"LIB$DELETE_SYMBOL", 151, libDeleteSymbol},
 }
 
 // missing is Missing's list, and missingJSB MissingJSB's, made once.

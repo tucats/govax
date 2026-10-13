@@ -115,7 +115,7 @@ func (env *Environment) Spawn(req SpawnRequest) (*Environment, uint32) {
 	switch {
 	case !env.ProcessSettings.Scheduler:
 		return nil, ssUnsupported
-	case !env.HasCLI:
+	case env.CLI == nil:
 		return nil, libNoCLI
 	case req.Flags&^validSpawnSet != 0:
 		return nil, libInvArg

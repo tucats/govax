@@ -2,6 +2,47 @@ package corevms
 
 import "github.com/tucats/govax/internal/vmserrors"
 
+// CLI is a process's command language interpreter as the LIB$ CLI
+// routines reach it (docs/PHASE-57): on VMS they call the CLI through the
+// $CLI service, whose request block no manual at hand describes, so govax
+// gives them this Go interface instead. dclshell gives one to each
+// process whose DCL is govax's (Environment.CLI): process 1, and each
+// process LIB$SPAWN creates or $CREPRC creates to run LOGINOUT. A process
+// $CREPRC creates to run an image has none, and the routines return
+// LIB$_NOCLI there.
+//
+// Each method is called on the engine's goroutine while the process's
+// image runs, so its DCL is waiting for the image: it works on that
+// process's own DCL, not the one whose turn it is in the console.
+// Statuses are VMS condition values: SS$_NORMAL, or the LIB$ condition
+// the routine returns.
+type CLI interface {
+	// Symbol looks name (uppercase) up as DCL does: the local tables, from
+	// the command level that ran the image out, then the global table,
+	// taking an abbreviation a symbol allows. It returns the symbol's value
+	// as text (an integer's in decimal) and the table it was in
+	// (LIB$K_CLI_LOCAL_SYM or LIB$K_CLI_GLOBAL_SYM), or LIB$_NOSUCHSYM.
+	Symbol(name string) (value string, table uint32, status uint32)
+
+	// SetSymbol defines name as a string symbol with value, in the local
+	// table of the command level that ran the image or in the global
+	// table. An "*" in name marks the shortest abbreviation, as in a DCL
+	// assignment. LIB$_AMBSYMDEF if an abbreviation of it would also mean
+	// another symbol of that table.
+	SetSymbol(name, value string, table uint32) uint32
+
+	// DeleteSymbol deletes the symbol name (or an abbreviation of it)
+	// means in the table given: LIB$_NOSUCHSYM if there's none.
+	DeleteSymbol(name string, table uint32) uint32
+}
+
+// The table-type-indicator values of the LIB$ symbol routines
+// ($LIBCLIDEF).
+const (
+	CLILocalSymbol  = 1 // LIB$K_CLI_LOCAL_SYM
+	CLIGlobalSymbol = 2 // LIB$K_CLI_GLOBAL_SYM
+)
+
 
 const cliGetSymbol = 0x1305
 

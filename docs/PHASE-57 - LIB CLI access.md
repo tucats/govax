@@ -559,6 +559,7 @@ implementation per Shell (`libcli.go`), the chain run after an image
 2. **Symbols**: the `corevms.CLI` interface (replacing `HasCLI`) and
    its implementation per Shell; GET_SYMBOL, SET_SYMBOL, DELETE_SYMBOL
    (local and global tables; LIB$_NOSUCHSYM, LIB$_INVSYMNAM, LIB$_NOCLI).
+   **Done** 2026-10-13.
 3. **Logical names**: SET_LOGICAL, DELETE_LOGICAL.
 4. **GET_COMMAND.**
 5. **The common area**: GET_COMMON, PUT_COMMON.
@@ -588,3 +589,33 @@ implementation per Shell (`libcli.go`), the chain run after an image
   process. The routines reach DCL through a `corevms.CLI` interface, not
   `$CLI`, whose request block no manual at hand describes. ATTACH and
   PAUSE became separate subtasks (8 and 9), the probe moved to 10.
+- **2026-10-13** — Subtask 2, symbols. `corevms.CLI` (`corevms/cli.go`)
+  replaces `Environment.HasCLI`: `Environment.CLI`, nil without a CLI
+  (LIB$SPAWN's test is now `env.CLI == nil`). It has only the symbol
+  methods so far; each later subtask adds its own. One change from the
+  survey's sketch: the methods return VMS condition values (SS$_NORMAL,
+  LIB$_NOSUCHSYM, LIB$_AMBSYMDEF), not errors, since the routines return
+  them as they are. `dclshell/libcli.go`'s `shellCLI` is bound to the
+  process's own `Shell`: process 1's set by `newProcessOne`, a
+  subprocess's by `cliHost.Start` (so `startInterpreter` no longer sets
+  anything itself). `librtl/cli.go` has the three routines (codes 149
+  to 151). Choices, each **unconfirmed** and a probe case:
+  - LIB$_NOCLI is checked before any argument.
+  - The name rules are the 5.0 entries' as written: GET_SYMBOL's name
+    starts with a letter or `$`, SET's and DELETE's also `_`; only the
+    first character is checked; empty (or blank) and over 255 are
+    LIB$_INVSYMNAM.
+  - GET_SYMBOL follows DCL's own lookup (every level's local table from
+    the current one out, then the global table, abbreviations taken);
+    any local level's symbol reports table 1.
+  - SET_SYMBOL: an `*` in the name marks the abbreviation, as in an
+    assignment; a value past 255 characters is LIB$_INVARG; and
+    LIB$_AMBSYMDEF when some abbreviation the new symbol allows is one
+    another symbol of the same table allows (a symbol of the same full
+    name is replaced). DCL's own assignments don't check that.
+  - DELETE_SYMBOL takes an abbreviation, as DELETE/SYMBOL does.
+  Tests: `librtl/cli_test.go` (a fake CLI: NOCLI, the name rules,
+  STRTRU, the indicators, value length), `dclshell/libcli_test.go`
+  (outer levels, abbreviations, the ambiguity rule), and
+  `console/libcli_test.go` (a MACRO image run by process 1's DCL and by
+  a LOGINOUT subprocess's, each changing its own DCL's symbols).

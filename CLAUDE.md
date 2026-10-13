@@ -54,6 +54,10 @@ never had.
   FORMAT_DATE_TIME, CONVERT_DATE_STRING) with LNM$DT_FORMAT_TABLE and
   the system's LIB$DT_FORMAT/LIB$DT_INPUT_FORMAT built in, checked
   against VMS 7.1 by `testdata/lib56`.
+  Phase 57 (in progress) is the CLI routines: `corevms.CLI`
+  (`Environment.CLI`, nil without a CLI) is a process's DCL as the LIB$
+  routines reach it, `dclshell/libcli.go` its implementation on each
+  process's own Shell; the symbol routines are done (subtask 2).
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
 - `docs/DEVIATIONS.md` — running log of suspected ISA/behavior fidelity issues found in
