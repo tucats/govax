@@ -580,6 +580,7 @@ implementation per Shell (`libcli.go`), the chain run after an image
    LIB$ATTACH. **Done** 2026-10-13.
 10. **The program** (`testdata/lib57/`, a command procedure running it,
     and an interactive script), its console test, and the VMS probe.
+    **Prepared** 2026-10-13; the VAX run is the author's.
 11. **Close-out**.
 
 ## Progress log
@@ -848,3 +849,41 @@ implementation per Shell (`libcli.go`), the chain run after an image
   (`TestAttach_backAndForth`); the refusals (`_refused`); a
   subprocess's subprocess (`_nested`); ATTACH at a pause in process 1
   (`_pause`); and an image's LIB$ATTACH (`TestLibAttach_image`).
+- **2026-10-13** — Subtask 10, the probe (prepared; not yet run on VMS).
+  `testdata/lib57/gen.go` writes the program, `lib57.mar` (181 cases in
+  42 groups, Phase 55's case framework: a handler per case, R0 and any
+  signal printed), which runs the group its foreign command's parameter
+  names; `lib57b.mar`, the image LIB$RUN_PROGRAM runs (GET_FOREIGN and
+  GET_COMMON shown, and a chain of two); `lib57.com`, the probe, which
+  runs each group and shows DCL's state after it in sections S1 to S9
+  (symbols at levels 1 and 2, logical names, the common area, DO_COMMAND,
+  RUN_PROGRAM, the control keys, ATTACH's refusals, and no CLI: a
+  `$CREPRC` process running the image, which with no command text runs
+  the NOCLIRUN group); three small procedures it uses; `lib57i.com` and
+  the README's table of 15 interactive cases (PAUSE at level 0 and in a
+  procedure, GET_COMMAND, Ctrl/Y after DISABLE_CTRL, DO_COMMAND of an
+  incomplete command, ATTACH both ways, its refusals, LIB$ATTACH from a
+  subprocess's image); `def_libcli.mar`, `$LIBCLIDEF GLOBAL` as
+  `testdata/mp/defs`'s probes; and `exchange.cmd`. The longword at
+  SYS$GL_COMMON is left out (it would need the system's symbol table).
+  `TestLib57Oracle` (`console/lib57_test.go`) runs `@LIB57/OUTPUT=LIB57.LOG`
+  on a booted machine (scheduler on, DUA1, SIMVAX), checks that the
+  programs build and every section runs, and compares the log with
+  `vax/lib57.log` section by section once it exists (the job table's name
+  masked). govax's run gives each subtask's documented choice. Found on
+  the way:
+  - **A comment on a command line** (`SHOW SYMBOL X ! why`) was
+    EXTRAPARAMETER: only assignments, expressions, and foreign commands
+    took `!` as a comment. `dispatchParsed` now removes it (F$EDIT's
+    `uncomment`) before the grammar parses the line, as DCL does
+    (`dclshell/dispatch_test.go`'s `TestDispatch_comment`). A chained
+    command with a comment (S5's DO255) first showed it.
+  - **govax's MACRO isn't an image**, so a `DEFINE/USER_MODE` before it
+    lasts until the next real image (on VMS, MACRO's rundown deletes it).
+    The procedure no longer redirects MACRO's output; not changed in
+    govax.
+  - **A `$CREPRC` process's terminal reads** (GET_COMMAND,
+    GET_INPUT) go to the console's terminal, prompt and all, not to the
+    SYS$INPUT and SYS$OUTPUT files `$CREPRC` named (subtask 4's choice
+    for SYS$INPUT, here without a CLI). S9's GET_COMMAND case shows it;
+    VMS's answer decides what changes.

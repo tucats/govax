@@ -1,6 +1,7 @@
 package dclshell
 
 import (
+	"bytes"
 	"testing"
 )
 
@@ -34,6 +35,36 @@ func TestDispatch_if(t *testing.T) {
 
 		if got, _ := c.dclSymbols.lookup("R"); got.value != tc.want {
 			t.Errorf("%s: R = %q, want %q", tc.line, got.value, tc.want)
+		}
+	}
+}
+
+// TestDispatch_comment: a "!" outside quotes starts a comment, which the
+// grammar never sees (the DCL Dictionary), on a command line as on an
+// assignment; a "!" in quotes is text. (Found by Phase 57's probe: a
+// chained "SHOW SYMBOL X ! ..." was EXTRAPARAMETER.)
+func TestDispatch_comment(t *testing.T) {
+	d, c := newTestDispatcher(t)
+	out := &bytes.Buffer{}
+	c.Out = out
+
+	for _, tc := range []struct {
+		line, want string
+	}{
+		{`X = "one" ! a comment`, ""},
+		{`SHOW SYMBOL X ! a comment`, `  X = "one"` + "\n"},
+		{`SHOW SYMBOL X!no blank`, `  X = "one"` + "\n"},
+		{`WRITE SYS$OUTPUT "a!b" ! then a comment`, "a!b\n"},
+		{`   ! only a comment`, ""},
+	} {
+		out.Reset()
+
+		if err := d.Dispatch(tc.line); err != nil {
+			t.Fatalf("%s: %v", tc.line, err)
+		}
+
+		if out.String() != tc.want {
+			t.Errorf("%s: output %q, want %q", tc.line, out.String(), tc.want)
 		}
 	}
 }

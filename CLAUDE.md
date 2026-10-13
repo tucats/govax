@@ -76,7 +76,8 @@ never had.
   the CLI stub's Ctrl/Y routine), and ATTACH (subtask 9,
   `corevms/attach.go`: the job's terminal holder, `Job.terminal`, which
   `Attached` returns; `AttachTerminal`/`AwaitAttach`; LIB$ATTACH and
-  DCL's ATTACH, `dclshell/attachcmd.go`).
+  DCL's ATTACH, `dclshell/attachcmd.go`), and the probe (subtask 10,
+  `testdata/lib57`, prepared; the VAX run is pending).
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
 - `docs/DEVIATIONS.md` — running log of suspected ISA/behavior fidelity issues found in
@@ -168,6 +169,15 @@ never had.
   V7.1's second run (`lib56-run1.*` the first, which hung), which
   `TestLib56Oracle` matches line for line but for `expectedLib56Cases`
   (CONVERT_DATE_STRING's SS$_ROPRAND on that VAX; docs/DEVIATIONS.md).
+- `testdata/lib57/` — Phase 57's probe of LIBRTL's CLI routines
+  (README.md): `gen.go` writes `lib57.mar` (181 cases in 42 groups, a
+  group per run, named by a foreign command's parameter), `lib57b.mar`
+  (the image LIB$RUN_PROGRAM runs), `lib57.com` (runs each group and
+  shows DCL's state after it, sections S1 to S9), its small procedures,
+  `lib57i.com` (the interactive part, the README's table), and
+  `def_libcli.mar` (`$LIBCLIDEF GLOBAL`). `TestLib57Oracle` runs
+  `@LIB57` on govax and compares its log with `vax/lib57.log` section
+  by section once the VAX run is back.
 - `testdata/probe49/` — Phase 49's VMS probe in three rounds (`probe6`,
   `probe6b`, `probe6c`; README.md has each round's answers), run by
   `TestProbe6*`; `testdata/rms49/` and `testdata/sec49/` are the phase's

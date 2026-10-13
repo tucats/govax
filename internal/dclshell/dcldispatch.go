@@ -159,6 +159,14 @@ func (c *Interpreter) dispatchParsed(line string, verbSymbol bool) error {
 
 	line = c.dclSymbols.substituteAmpersands(line, true)
 
+	// A "!" outside quotes starts a comment, which runs to the end of the
+	// line ("SHOW SYMBOL X ! why"); the grammar never sees it. (An
+	// &SYMBOL's value is a quoted token by now, so a "!" in it stays.)
+	line = strings.TrimRight(uncomment(line), " \t")
+	if line == "" {
+		return nil
+	}
+
 	if c.machine.CPU != nil && c.machine.CPU.DebugEnabled(registers.DebugDCL) {
 		fmt.Fprintf(c.machine.CPU.DebugWriter(), "DEBUG(DCL): parsing %q\n", line)
 	}

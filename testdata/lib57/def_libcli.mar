@@ -1,0 +1,10 @@
+	.TITLE	DEF_LIBCLI	$LIBCLIDEF's names and values
+	.IDENT	/V1.0/
+;
+; A Phase 57 definition probe (testdata/lib57/README.md): the
+; table-type indicators and control-key masks of the LIB$ CLI routines.
+; With GLOBAL, every name the macro defines is a global symbol, so the
+; object's GSD lists each name and its value.
+;
+	$LIBCLIDEF	GLOBAL
+	.END
