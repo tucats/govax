@@ -1,6 +1,6 @@
 # Phase 55 — LIB$ service jackets, process resources, and measurement
 
-**Status:** in progress (subtasks 1 to 3 done 2026-10-13). Needs Phases 53 and 54. Part of the
+**Status:** in progress (subtasks 1 to 4 done 2026-10-13). Needs Phases 53 and 54. Part of the
 LIB$ program laid out in `PHASE-53 - RTL LIB support.md` (Part A).
 
 ## Goal
@@ -474,7 +474,7 @@ are masked.
    **Done** 2026-10-13.
 3. **Item routines**: GETJPI, GETDVI, GETSYI, numeric and string forms.
    **Done** 2026-10-13.
-4. **Event flags and LUNs.**
+4. **Event flags and LUNs.** **Done** 2026-10-13.
 5. **Timers.**
 6. **Miscellaneous**: AST_IN_PROG, ASN_WTH_MBX, WAIT, GET_USERS_LANGUAGE.
 7. **Protection text**: FORMAT_SOGW_PROT, PARSE_SOGW_PROT,
@@ -606,3 +606,24 @@ are masked.
     in both styles, the tables), F$GETDVI's ACPTYPE, VPROT, and PID
     (`TestLexicalGetDVI`), and `TestLibrtlItemRoutines`, a MACRO program
     calling all three through their stubs.
+- **2026-10-13** — Subtask 4, the event flag and LUN allocators
+  (`internal/librtl/resources.go`, shim codes 114–118: GET_EF, FREE_EF,
+  RESERVE_EF, GET_LUN, FREE_LUN):
+  - **Per-image state.** A new `corevms.Environment.ImageData(key,
+    create)` keeps an RTL package's data for the running image, made on
+    first use and forgotten by `ImageRundown`, as LIBRTL's own P0 data
+    goes with the image on VMS. The pools are its first user; the
+    timers' static block (subtask 5) will be the next.
+  - **The pools** follow the survey: flags 1–23 start reserved, 32–63
+    free; 0, 24–31, and 64 and up are LIB$_EF_RESSYS to FREE_EF and
+    RESERVE_EF; LUNs 100–119 start free, any other LIB$_LUNRESSYS.
+    GET_EF and GET_LUN give the lowest free number (so GET_EF prefers a
+    freed flag from 1–23 to 32 and up; **unconfirmed**, for the probe),
+    and write -1 with LIB$_INSEF or LIB$_INSLUN when none is free. An
+    output that can't be written signals SS$_ACCVIO with nothing
+    allocated. Flags' states aren't touched.
+  - **Tests**: `resources_test.go` (each pool's order and exhaustion,
+    every status, freed numbers handed out again, the pools reset by
+    image rundown), and `TestLibrtlResources` in `internal/console`, a
+    MACRO program calling all five through their stubs and showing the
+    results with LIB$SYS_FAO.

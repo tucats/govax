@@ -129,6 +129,11 @@ type Environment struct {
 	// replaced it (nil otherwise), for ReadCommandLine.
 	terminalIn *inputStream
 
+	// imageData is the data an RTL package keeps for the running image
+	// (ImageData): what LIBRTL.EXE keeps in the image's own P0 space on
+	// VMS, so ImageRundown forgets it.
+	imageData map[any]any
+
 	// memAllocated/memFreed back the LIB$GET_VM/malloc allocator (memory.go).
 	memAllocated, memFreed []*memBlock
 

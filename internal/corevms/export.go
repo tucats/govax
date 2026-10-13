@@ -177,3 +177,25 @@ func (env *Environment) CallService(name string, argv []uint32) (uint32, error) 
 
 	return fn(env, argv)
 }
+
+// ImageData returns the data an RTL package keeps for the running image
+// under key, made by calling create the first time it's asked for after
+// the image starts. On VMS a shareable image's own data (LIBRTL's event
+// flag and LUN pools, its static timer block) is in the image's P0
+// pages, so each image starts with it fresh; here ImageRundown forgets
+// it. key should be a value of a type private to the package, so no two
+// packages' keys collide.
+func (env *Environment) ImageData(key any, create func() any) any {
+	if v, ok := env.imageData[key]; ok {
+		return v
+	}
+
+	if env.imageData == nil {
+		env.imageData = map[any]any{}
+	}
+
+	v := create()
+	env.imageData[key] = v
+
+	return v
+}

@@ -363,7 +363,8 @@ func serviceSysAdjwsl(env *Environment, argv []uint32) (uint32, error) {
 // timers and $SCHDWK wakeups, discards its queued user-mode ASTs, and
 // forgets its user-mode exit handlers and any $PUTMSG or $CMKRNL left
 // waiting for its routine, unmaps the global sections it mapped, and
-// forgets its heap (releaseHeap). The console calls it when an
+// forgets its heap (releaseHeap) and its RTL packages' data
+// (ImageData). The console calls it when an
 // image started by RUN returns or exits (and does its own logical-name
 // rundown alongside).
 func (env *Environment) ImageRundown() {
@@ -384,6 +385,7 @@ func (env *Environment) ImageRundown() {
 	env.qiowWaits = nil
 	env.enqWaits = nil
 	env.releaseHeap()
+	env.imageData = nil
 }
 
 // releaseHeap forgets the image's heap (LIB$GET_VM's and malloc's blocks,
