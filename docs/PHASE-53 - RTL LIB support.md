@@ -42,6 +42,10 @@ This phase does three things:
   but the 5.0 manual doesn't describe is marked **7.x only**. It is
   implemented only if its interface can be settled from other DIGITAL
   documentation or a VMS probe, and otherwise left out and listed.
+  Since 2026-10-13 the author has supplied the VSI OpenVMS LIB$ manual
+  (current OpenVMS, a public web page; `PHASE-55`'s survey, "Sources"),
+  which describes most 7.x routines: it settles an interface for this
+  rule, and what it adds to a routine 7.3 already had is a probe case.
 - **VMS 7.3's LIBRTL.EXE transfer vector**: `vmsdef.ImageSymbols`
   (generated from the image's global symbol table, Phase 31) has every
   universal symbol and its offset. That is 188 LIB$ names: 184 routines,

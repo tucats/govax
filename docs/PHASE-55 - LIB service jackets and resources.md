@@ -40,7 +40,7 @@ manual adds.
 | LUNs | GET_LUN (215), FREE_LUN (175) |
 | Timers | INIT_TIMER (235), SHOW_TIMER (352), STAT_TIMER (388), FREE_TIMER (176) |
 | Miscellaneous | AST_IN_PROG (15), ASN_WTH_MBX (12), WAIT (465), GET_USERS_LANGUAGE (222) |
-| Protection text (7.x) | FORMAT_SOGW_PROT, PARSE_SOGW_PROT, PARSE_ACCESS_CODE: only if an interface can be settled (Phase 53's rule for 7.x-only routines) |
+| Protection text (7.x) | FORMAT_SOGW_PROT, PARSE_SOGW_PROT, PARSE_ACCESS_CODE: described by the VSI manual (the survey's "Sources") |
 
 ## What earlier phases leave in place
 
@@ -66,18 +66,19 @@ manual adds.
   them), 24–31 are VMS's, 32–63 are initially free; the LUN pool is
   100–119. Which number GET_EF and GET_LUN hand out first isn't said,
   a probe case.
-- **LIB$WAIT** takes F-floating seconds; 7.x added a flags argument
-  and float type. The 5.0 form is done, and the rest noted (the
-  survey: later arguments are ignored).
+- ~~**LIB$WAIT** takes F-floating seconds; 7.x added a flags argument
+  and float type.~~ The VSI manual describes both (flags bit 0
+  LIB$K_NOWAKE; float types F, D, G, H, IEEE S, IEEE T), and govax does
+  them (the survey); whether VMS 7.3 on a VAX takes them is a probe case.
 - **SHOW_TIMER's** output layout and rounding, for the probe. The
-  manual's table and its example disagree (the survey).
-- **The protection-text routines (author)**: no DIGITAL document at
+  5.0 manual's table and its example disagree; the VSI manual's copy of
+  the example keeps its blanks (two between fields), which govax follows
+  (the survey).
+- ~~**The protection-text routines (author)**: no DIGITAL document at
   hand describes FORMAT_SOGW_PROT, PARSE_SOGW_PROT, or
-  PARSE_ACCESS_CODE (searched: the 5.0 LIB$ manual, the 7.3 STR$
-  manual, the 7.3.1 Utility Routines and User's manuals, the 7.3 System
-  Messages manual, the 5.0 System Services manual). By Phase 53's rule
-  they stay missing-routine stubs and subtask 7 is dropped, unless the
-  author has a 7.x LIB$ manual's entries for them.
+  PARSE_ACCESS_CODE.~~ The author supplied the VSI OpenVMS LIB$ manual
+  (2026-10-13), which describes all three; subtask 7 stays in the plan
+  (the survey's "Protection text").
 - **Page faults**: govax counts none, and `$GETJPI` lacks
   JPI$_PAGEFLTS, which the timers need. The survey proposes counting
   the faults `System.PageIn` resolves (subtask 5).
@@ -98,6 +99,22 @@ LIBRTL.EXE transfer vector (`vmsdef.ImageSymbols`: SYS_ASCTIM 0x8F0
 0xB98–0xBA8), so each is today a missing-routine stub. Every condition
 value named here is in `vmsdef.LibrarySymbols`, and every service the
 routines sit on is registered in `internal/corevms`.
+
+### Sources
+
+- **The 5.0 LIB$ manual** (`AA-LA76A-TE`, its OCR text) is the
+  reference, as for the whole LIB$ program.
+- **The VSI OpenVMS RTL Library (LIB$) Manual** (VMS Software, Inc.'s
+  current edition, a public web page; local-only at `~/Documents/
+  Technical Doc/VMS/VSI OpenVMS RTL Library (LIB$) Manual.html`), added
+  by the author on 2026-10-13, who judged a public manual usable under
+  the clean-room rule. It describes the 7.x routines the 5.0 manual
+  lacks. It describes current OpenVMS (Alpha, Itanium, x86-64), so where
+  it adds to the 5.0 text for a routine VAX VMS 7.3 already had, the
+  addition is marked **VSI** and is a probe case: it may postdate 7.3.
+  Its entries for this phase's 5.0 routines agree with the 5.0 text
+  except where the bullets below say otherwise. It has no SYS_TRNLOG
+  entry either.
 
 ### General rules
 
@@ -296,12 +313,15 @@ strings: "pass only fixed-length or dynamic input strings"; govax's
   layout: the entry's table reads `ELAPSED= dddd hh:mm:ss.cc CPU =
   hhhh:mm:ss.cc BUFIO = nnnn DIRIO = nnnn PAGEFAULTS = nnnn`, while the
   example's output (one line, printed wrapped) reads
-  ` ELAPSED: 0 00:00:00.44 CPU: 0:00:00.04 BUFIO: 1 DIRIO: 0 FAULTS: 18`.
-  govax follows the example, which is real output, with the elapsed
-  time as `$ASCTIM` writes a delta (days right-aligned in 4, `dddd
-  hh:mm:ss.cc`) and CPU as hours:mm:ss.cc; the blanks between fields
-  are the probe's to settle (**unconfirmed**), and the probe masks the
-  values themselves, which differ from run to run.
+  ` ELAPSED: 0 00:00:00.44  CPU: 0:00:00.04  BUFIO: 1  DIRIO: 0  FAULTS: 18`,
+  blanks as the VSI manual's copy of the example keeps them (a leading
+  blank, two between fields; the 5.0 OCR collapses them). The VSI
+  manual's table repeats the 5.0 one. govax follows the example, which
+  is real output: the elapsed time as days, a blank, and hh:mm:ss.cc,
+  CPU as hours:mm:ss.cc, and no padding of the numbers (**unconfirmed**
+  whether larger values are padded, which the example can't show; the
+  probe masks the values themselves, which differ from run to run, but
+  not their widths).
 - **Page faults.** govax has no page fault count: no working set, so
   no soft faults, and `$GETJPI` lacks JPI$_PAGEFLTS. Subtask 5 adds a
   per-process count of the faults on invalid pages that
@@ -315,18 +335,19 @@ strings: "pass only fixed-length or dynamic input strings"; govax's
 | Routine (page) | Format | Returns | Conditions |
 | --- | --- | --- | --- |
 | AST_IN_PROG (15) | none | 1 if an AST is in progress, else 0 | LIB$FREE_EF's, LIB$GET_EF's, `$GETJPI`'s |
-| ASN_WTH_MBX (12) | `device-name.rt.dx, maximum-message-size.rl.r, buffer-quota.rl.r, device-channel.wwu.r, mailbox-channel.wwu.r` | cond | SS$_NORMAL; `$ASSIGN`'s, `$CREMBX`'s, `$GETDVI`'s; LIB$GET_EF's, LIB$FREE_EF's |
-| WAIT (465) | `seconds.rf.r` | cond | SS$_NORMAL; LIB$_INVARG; LIB$_WRONUMARG; `$SCHDWK`'s |
+| ASN_WTH_MBX (12) | `device-name.rt.dx, [maximum-message-size.rl.r], [buffer-quota.rl.r], device-channel.wwu.r, mailbox-channel.wwu.r` | cond | SS$_NORMAL; `$ASSIGN`'s, `$CREMBX`'s, `$GETDVI`'s; LIB$GET_EF's, LIB$FREE_EF's |
+| WAIT (465) | `seconds.rf.r [,flags.rlu.r] [,float-type.rlu.r]` | cond | SS$_NORMAL; LIB$_INVARG; LIB$_WRONUMARG; `$SCHDWK`'s |
 | GET_USERS_LANGUAGE (222) | `language.wt.dx` | cond | SS$_NORMAL; LIB$_ENGLUSED; LIB$SCOPY_R_DX's |
 
 - **AST_IN_PROG** asks `$GETJPI` (its condition values say so), so
   it's JPI$_ASTACT. Which mode's bit: govax takes the caller's mode, the
   PSL's current mode at the call (**unconfirmed**; the probe calls it
   from a user-mode AST and from the main program). It returns a value,
-  not a status, so the statuses listed can't reach the caller; govax's
-  can't fail.
+  not a status; the VSI entry says an error in it or the routines it
+  calls goes to LIB$STOP. govax's can't fail.
 - **ASN_WTH_MBX**: `$CREMBX` a temporary mailbox (maximum-message-size,
-  buffer-quota, no logical name) onto mailbox-channel, `$GETDVIW` its
+  buffer-quota, no logical name; **VSI**: those two are optional, and
+  omitted they're `$CREMBX`'s defaults) onto mailbox-channel, `$GETDVIW` its
   physical name (DVI$_DEVNAM), and `$ASSIGN` device-name onto
   device-channel with that name as mbxnam; device-name may be a logical
   name, "one level of logical name translation". If `$ASSIGN` fails
@@ -338,24 +359,88 @@ strings: "pass only fixed-length or dynamic input strings"; govax's
   Not said: a wake already pending ends `$HIBER` at once (the 5.0 entry
   describes no loop; govax returns then, **unconfirmed**, and the
   scheduled wakeup stays pending, as it would on VMS); a reserved
-  operand (an F-floating -0) is LIB$_INVARG (**unconfirmed**). 7.x's
-  flags and float-type arguments aren't described in any manual at
-  hand: later arguments are ignored (Phase 53's 7.x rule), and LIB$_WRONUMARG
-  is only for none. The F-floating value is read with `vaxfloat`.
+  operand (an F-floating -0) is LIB$_INVARG (**unconfirmed**).
+  **VSI**: flags bit 0, LIB$K_NOWAKE (1), waits with `$SETIMR` and
+  `$SYNCH` instead, so a `$WAKE` doesn't end it ("you should not use
+  ... NOWAKE ... at AST level"); float-type is LIB$K_VAX_F (0, the
+  default), VAX_D (1), VAX_G (2), VAX_H (3), IEEE_S (4), or IEEE_T (5),
+  the seconds argument's format. govax does both: the VAX formats
+  through `vaxfloat`, the IEEE ones through Go's `math`; another type
+  is LIB$_INVARG (**unconfirmed**). LIB$_WRONUMARG for none or more
+  than three. The `LIB$K_` values come from the VSI entry (none is in
+  `vmsdef`); whether VMS 7.3 on a VAX takes the two arguments at all is
+  a probe case (NOWAKE with a pending wake; D-floating seconds).
 - **GET_USERS_LANGUAGE** translates SYS$LANGUAGE (as RMS translates a
   name, `LNM$FILE_DEV`'s tables, **unconfirmed**) and writes the first
   equivalence; with none, "ENGLISH" and LIB$_ENGLUSED, a warning. A
   string failure or truncation (LIB$_STRTRU) "overrides the
   LIB$_ENGLUSED or SS$_NORMAL status".
 
-### Protection text (7.x only)
+### Protection text (7.x only; the VSI manual)
 
-FORMAT_SOGW_PROT, PARSE_SOGW_PROT, and PARSE_ACCESS_CODE aren't in the
-5.0 manual, and no document at hand describes them (Open questions).
-Their names say what they do, but not their arguments, flags, or
-access-name tables, and a probe couldn't find those without guessing
-the calls. By Phase 53's rule they stay missing-routine stubs; subtask 7
-waits on the author.
+| Routine | Format | Returns | Conditions |
+| --- | --- | --- | --- |
+| FORMAT_SOGW_PROT (0xBA0) | `protection-mask.rwu.r [,access-names.rq.ra] [,ownership-names.rq.ra] [,ownership-separator.rt.dx] [,list-separator.rt.dx], protection-string.wt.dx [,protection-length.ww.r]` | cond | SS$_NORMAL; LIB$_INVARG; LIB$_WRONUMARG; STR$_TRU |
+| PARSE_SOGW_PROT (0xB98) | `protection-string.rt.dx [,access-names.rq.ra], protection-mask.wwu.r, ownership-mask.wwu.r [,end-position.ww.r]` | cond | SS$_NORMAL; LIB$_INVARG; LIB$_WRONUMARG |
+| PARSE_ACCESS_CODE (0xBA8) | `access-string.rt.dx [,access-names.rq.ra], ownership-category.rwu.r, access-mask.wwu.r [,end-position.ww.r]` | cond | SS$_NORMAL; LIB$_INVARG; LIB$_WRONUMARG |
+
+(The offsets are the transfer vector's; the VSI manual has no page
+numbers. Its condition lists spell two names `LIB$_IVARG` and
+`LIB$_WRONGNUMARG`, which no definition file has: they're LIB$_INVARG
+and LIB$_WRONUMARG.)
+
+- **The protection mask** is the 16-bit SOGW word: four bits per
+  category, System in bits 0–3, Owner 4–7, Group 8–11, World 12–15,
+  and a set bit means **no** access. The ownership masks (an argument of
+  PARSE_ACCESS_CODE, a result of PARSE_SOGW_PROT) are the same nibbles,
+  all four bits set for a category (System 0x000F, ..., World 0xF000).
+- **The access-name table** is "a vector of 32 quadword string
+  descriptors", one per bit of an access mask, an undefined access a
+  zero-length name; the routines use each name's first letter (access
+  names "are always abbreviated to one letter"). Omitted, it's the FILE
+  class's table: READ, WRITE, EXECUTE, DELETE for bits 0–3, CONTROL
+  for bit 4, the rest empty (the DCL Dictionary's "read (R), write (W),
+  execute (E), and delete (D)", in XAB$W_PRO's bit order; the names
+  past the first letters are **unconfirmed** and don't change any
+  output). A program normally gets a table from LIB$GET_ACCNAM, which
+  is `$GET_SECURITY`'s and stays out of scope (Phase 53's Part A); a
+  table the program builds itself works the same.
+- **FORMAT_SOGW_PROT** writes, for System, Owner, Group, World in turn,
+  the ownership name, then the ownership separator and the letters of
+  the accesses granted (clear bits, in bit order) if there are any,
+  with the list separator between categories: `System: RWED, Owner:
+  RWED, Group: RW, World: R`. Defaults: the names `System`, `Owner`,
+  `Group`, `World` (a 4-descriptor vector replaces them), ": ", and
+  ", ". A category with no access is its name alone (the separator
+  "introduce[s] a nonempty set of access names"): `Group` with nothing
+  after it but the list separator (**unconfirmed**). Output by
+  `writeString`; truncation is **STR$_TRU** (the entry's status, a
+  warning, not LIB$_STRTRU); protection-length the length written.
+  LIB$_INVARG when protection-mask or protection-string is missing.
+- **PARSE_SOGW_PROT** reads `owner[:|=][letters]` items separated by
+  commas: an ownership name "in full or truncated to any number of
+  characters", case blind, blanks ignored; a missing or empty access
+  part is no access. protection-mask gets the mask (bits set for the
+  accesses not named), ownership-mask the nibbles of the categories
+  named; a category not named has its nibble 0 in both (**unconfirmed**:
+  "which ownership names were present" leaves the absent ones'
+  protection bits unsaid). A letter that isn't some table entry's first
+  letter, an unknown name, or a bad separator is LIB$_INVARG, and
+  end-position is "the offset to the character that made the protection
+  string invalid"; on success it's the characters processed (the whole
+  string). Whether an ambiguous abbreviation (none among the four names)
+  or a repeated category is an error isn't said (**unconfirmed**: a
+  repeat's later value wins).
+- **PARSE_ACCESS_CODE** reads letters only (`RWE`) into access-mask
+  for the category ownership-category names, a set bit meaning access
+  **granted** ("the opposite of the standard protection format"). That
+  the bits land in the category's own nibble (`RWE` for Group is
+  0x0700) rather than in bits 0–3 is govax's reading of "a mask for
+  the requested ownership category" (**unconfirmed**). An
+  ownership-category that isn't exactly one category's nibble is
+  LIB$_INVARG (**unconfirmed**); end-position as for PARSE_SOGW_PROT.
+- **Shape of the work.** Plain Go string and bit work over a table
+  read from memory; a small file of its own (`protection.go`).
 
 ### For the probe (subtask 8)
 
@@ -368,9 +453,16 @@ removed); the item routines' INVARG and WRONUMARG cases; the jackets'
 outputs to fixed, dynamic, and varying strings (lengths, STRTRU against
 BUFFEROVF, SYS_FAO past 256 bytes, SYS_ASCTIM to a dynamic string);
 SYS_TRNLOG's arguments; AST_IN_PROG in and out of an AST; LIB$WAIT's
-INVARG cases and whether a pending wake ends it early; and
-GET_USERS_LANGUAGE with and without SYS$LANGUAGE. Values that change
-from run to run (times, counts, PIDs, channels) are masked.
+INVARG cases, whether a pending wake ends it early, and whether 7.3
+takes the VSI flags and float-type (NOWAKE with a pending wake,
+D-floating seconds); GET_USERS_LANGUAGE with and without SYS$LANGUAGE;
+and the protection routines: FORMAT_SOGW_PROT of masks with an empty
+category and with custom names and separators, PARSE_SOGW_PROT of
+abbreviations, mixed case, blanks, `=`, a missing category, and bad
+strings (end-position), PARSE_ACCESS_CODE for each category, and
+LIB$GET_ACCNAM's FILE table dumped, to compare with govax's default.
+Values that change from run to run (times, counts, PIDs, channels)
+are masked.
 
 ## Subtasks (provisional)
 
@@ -382,7 +474,8 @@ from run to run (times, counts, PIDs, channels) are masked.
 4. **Event flags and LUNs.**
 5. **Timers.**
 6. **Miscellaneous**: AST_IN_PROG, ASN_WTH_MBX, WAIT, GET_USERS_LANGUAGE.
-7. **Protection text** (if settled).
+7. **Protection text**: FORMAT_SOGW_PROT, PARSE_SOGW_PROT,
+   PARSE_ACCESS_CODE, from the VSI manual.
 8. **The program** (`testdata/lib55/`), its console test, and the VMS
    probe (SHOW_TIMER's layout, GETJPI's text forms).
 9. **Close-out**.
@@ -416,3 +509,15 @@ from run to run (times, counts, PIDs, channels) are masked.
     they stay missing unless the author has one (Open questions).
 
   No code changed.
+- **2026-10-13** — The author supplied the VSI OpenVMS LIB$ manual (a
+  public web page, judged usable under the clean-room rule; the
+  survey's "Sources"). It describes the three protection-text routines,
+  so subtask 7 stays: the survey's "Protection text" now gives their
+  interfaces, the SOGW mask, the access-name table (FILE's by default;
+  LIB$GET_ACCNAM stays out of scope), and its unconfirmed choices. It
+  also settled or added to three other points: LIB$WAIT's flags
+  (LIB$K_NOWAKE) and float-type arguments, now in scope and a probe
+  case for 7.3; SHOW_TIMER's line, whose example the VSI copy prints
+  with its blanks; and two smaller notes (AST_IN_PROG's errors go to
+  LIB$STOP; ASN_WTH_MBX's size and quota are optional). FORMAT_SOGW_PROT
+  truncates with STR$_TRU, not LIB$_STRTRU. No code changed.

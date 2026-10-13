@@ -147,6 +147,11 @@ never had.
   Decision 6): DIGITAL's book *VAX/VMS Internals and Data Structures* is
   usable in full (descriptions, layouts, example code and listings), cited
   where used. The *VMS Internals I ... Listings* course book is not.
+  A second (2026-10-13, `PHASE-55`'s survey, "Sources"): VMS Software,
+  Inc.'s public *VSI OpenVMS RTL Library (LIB$) Manual*
+  (`~/Documents/Technical Doc/VMS/VSI OpenVMS RTL Library (LIB$)
+  Manual.html`) is usable like DIGITAL's manuals; it describes current
+  OpenVMS, so what it adds to a routine VMS 7.3 had is a probe case.
 - `reference/vms/` — local-only (gitignored, Phase 31): licensed VMS 7.3
   definition files (SDL sources, C headers, BLISS and message listings) that
   `internal/vmsdef`'s tables were first generated from. Nothing in the build
