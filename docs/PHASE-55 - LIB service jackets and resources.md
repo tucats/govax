@@ -485,7 +485,8 @@ are masked.
 7. **Protection text**: FORMAT_SOGW_PROT, PARSE_SOGW_PROT,
    PARSE_ACCESS_CODE, from the VSI manual. **Done** 2026-10-13.
 8. **The program** (`testdata/lib55/`), its console test, and the VMS
-   probe (SHOW_TIMER's layout, GETJPI's text forms).
+   probe (SHOW_TIMER's layout, GETJPI's text forms). Program and test
+   written 2026-10-13; the VMS run is next.
 9. **Close-out**.
 
 ## Progress log
@@ -766,3 +767,20 @@ are masked.
     MACRO program calling all three through their stubs. The console
     tests' `runMacroProgram` now shows MACRO's messages when assembly
     fails.
+- **2026-10-13** — Subtask 8, the probe, written (`testdata/lib55`,
+  README.md; the VMS run is next). `gen.go` writes `lib55.mar`, 216
+  cases over every routine of the phase and each choice the survey left
+  for the probe, `lib55.com`, and `exchange.cmd`. Values that change
+  from run to run go on `~` lines, whose names alone the oracle
+  compares; SHOW_TIMER's line reaches an action routine and is shown
+  with its digits made 9s, so its layout is compared; LIB$WAIT's
+  elapsed time is a bucket. The procedure also shows F$GETDVI's VPROT
+  and ACPTYPE and F$GETJPI's STATE, MODE, and OWNER. `TestLib55Oracle`
+  runs the program on a twin of the exchange volume (an RD51 labeled
+  LIB55 on DUA1, LIB55_DISK, NLA0: as vax.init defines it, the host
+  locale C) and skips the comparison until `vax/lib55-vax.txt` exists.
+  Two things govax's run already shows, for the VMS run to judge:
+  `$ASSIGN` of an unknown device (ASN_WTH_MBX's last case) is
+  SS$_IVDEVNAM where `$GETDVI` says SS$_NOSUCHDEV, and LIB$GET_ACCNAM
+  is a missing routine (SS$_UNSUPPORTED). The VAX is VMS 7.1, which may
+  lack the 7.x protection routines; LINK's messages in the log will say.
