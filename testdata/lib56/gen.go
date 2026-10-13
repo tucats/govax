@@ -180,6 +180,7 @@ var times = []struct {
 	{"DLT9999", -9999 * day},
 	{"DLT10K", -10_000 * day},
 	{"DLT1D", -day},
+	{"DLTHUGE", -(int64(1) << 62)}, // far past any calendar
 }
 
 // The data every case may use.
@@ -247,6 +248,8 @@ func arithmetic() []probeCase {
 		arith("ADD 10000 days 1 tick", "LIB$ADD_TIMES", "DLT10K", "DLT1T"),
 		arith("ADD year 9999 2 days", "LIB$ADD_TIMES", "TMAX", "DLT2D1H"),
 		arith("ADD zero delta", "LIB$ADD_TIMES", "ZEROQ", "DLT1H"),
+		arith("ADD overflow", "LIB$ADD_TIMES", "TMAX", "DLTHUGE"),
+		arith("ADD huge deltas", "LIB$ADD_TIMES", "DLTHUGE", "DLTHUGE"),
 		{name: "ADD 2 arguments", data: []string{"%R:\t" + unchanged},
 			call: "LIB$ADD_TIMES", args: []string{"DLT1H", "DLT2H"}, show: []show{mem("%R", 2)}},
 		arith("SUB abs later earlier", "LIB$SUB_TIMES", "TNOON", "T1"),
@@ -273,6 +276,9 @@ func arithmetic() []probeCase {
 		mult("MULTF 1 tick by 2.5", "LIB$MULTF_DELTA_TIME", "2.5", "DLT1T"),
 		mult("MULTF by 1/3", "LIB$MULTF_DELTA_TIME", "0.33333333", "DLT1H"),
 		mult("MULTF reserved", "LIB$MULTF_DELTA_TIME", "^X8000", "DLT1H"),
+		mult("MULT overflow", "LIB$MULT_DELTA_TIME", "2147483647", "DLT1D"),
+		mult("MULTF overflow", "LIB$MULTF_DELTA_TIME", "1.0E30", "DLT1D"),
+		mult("MULTF 1 tick by 1.4", "LIB$MULTF_DELTA_TIME", "1.4", "DLT1T"),
 		mult("MULTF abs", "LIB$MULTF_DELTA_TIME", "2.0", "T1"),
 		mult("MULTF past 10000 days", "LIB$MULTF_DELTA_TIME", "1.5", "DLT9999"),
 	}
@@ -389,6 +395,11 @@ func conversion() []probeCase {
 		cvtTo("TOF DELTA_SECONDS_F 1e-8", 30, "0.00000001", true),
 		cvtTo("TOF DELTA_SECONDS_F 1.5e-7", 30, "0.00000015", true),
 		cvtTo("TOF reserved", 27, "^X8000", true),
+		cvtTo("TOF DELTA_SECONDS_F 2.7e-7", 30, "0.00000027", true),
+		cvtTo("TOF DELTA_SECONDS_F 1.9", 30, "1.9999999", true),
+		cvtTo("TOF DELTA_DAYS_F 1e30", 27, "1.0E30", true),
+		cvtTo("TO DELTA_WEEKS max", 21, "2147483647", false),
+		cvtTo("TO DELTA_SECONDS max", 25, "2147483647", false),
 		cvtTo("TOF op 22", 22, "1.0", true),
 		vectim("VECTIM abs", 1988, 1, 13, 9, 13, 25, 14),
 		vectim("VECTIM delta", 0, 0, 3, 1, 2, 3, 4),
@@ -411,6 +422,9 @@ func conversion() []probeCase {
 		vectim("VECTIM delta 9999 days", 0, 0, 9999, 23, 59, 59, 99),
 		vectim("VECTIM delta 10000 days", 0, 0, 10000, 0, 0, 0, 0),
 		vectim("VECTIM delta hour 24", 0, 0, 1, 24, 0, 0, 0),
+		vectim("VECTIM year 30000", 30000, 1, 1, 0, 0, 0, 0),
+		vectim("VECTIM year 65535", 65535, 12, 31, 0, 0, 0, 0),
+		vectim("VECTIM delta 65535 days", 0, 0, 65535, 0, 0, 0, 0),
 		probeCase{name: "VECTIM 1 argument", data: []string{"%V:\t.WORD\t1988,1,13,9,13,25,14"},
 			call: "LIB$CVT_VECTIM", args: []string{"%V"}},
 	)
@@ -474,6 +488,7 @@ func simple() []probeCase {
 		dayCase("DAY last before overflow", "TOVF1"),
 		dayCase("DAY overflow", "TOVF2"),
 		dayCase("DAY year 9999", "TMAX"),
+		dayCase("DAY huge delta", "DLTHUGE"),
 		dayCase("DAY now", ""),
 		dayCase("DAY 0 by value", "#0"),
 		weekdayCase("DAY_OF_WEEK T1", "T1"),
@@ -887,6 +902,22 @@ func formatting() []probeCase {
 		maxCase("MAX weekday", setup{inits: []initStep{{kOutput, "|!WU !DD|!H04|"}}}, ""),
 		maxCase("MAX abbreviations", setup{inits: []initStep{{kOutput, "|!WAC !MAAU !DB|!C7 !MIL|"}}}, ""),
 		maxCase("MAX blank day", setup{inits: []initStep{{kOutput, "|!DD|!HH4|"}}}, ""),
+		formatCase("FORMAT 13 months", setup{inits: []initStep{
+			{kOutput, "|!MAU|!H04|"}, {kMonthName, "|A|B|C|D|E|F|G|H|I|J|K|L|M|"}}},
+			formatCall{"TENDYR", "D", ""}),
+		formatCase("FORMAT unknown mnemonic", setup{inits: []initStep{{kOutput, "|!DB-!XX|!H04|"}}}, formatCall{"T1", "D", ""}),
+		formatCase("FORMAT lower case mnemonic", setup{inits: []initStep{{kOutput, "|!d0|!h04|"}}}, formatCall{"T1", "D", ""}),
+		formatCase("FORMAT mixed element", setup{inits: []initStep{{kOutput, "|!D0 !H04|!M0|"}}},
+			formatCall{"T1", "D", ""}, formatCall{"T1", "D", "2"}, formatCall{"T1", "D", "1"}),
+		formatCase("FORMAT two dates", setup{inits: []initStep{{kOutput, "|!D0|!MN0|"}}},
+			formatCall{"T1", "D", ""}, formatCall{"T1", "D", "2"}, formatCall{"T1", "D", "1"}),
+		formatCase("FORMAT no fields element", setup{inits: []initStep{{kOutput, "|abc|!H04|"}}},
+			formatCall{"T1", "D", ""}, formatCall{"T1", "D", "2"}),
+		formatCase("FORMAT both empty", setup{inits: []initStep{{kOutput, "|||"}}}, formatCall{"T1", "D", ""}),
+		formatCase("FORMAT one character", setup{inits: []initStep{{kOutput, "|"}}}, formatCall{"T1", "D", ""}),
+		formatCase("FORMAT language blank", setup{inits: []initStep{{kLanguage, "| |"}, {kOutput, "|!MAC|!H04|"}}},
+			formatCall{"T1", "D", ""}),
+		maxCase("MAX unknown mnemonic", setup{inits: []initStep{{kOutput, "|!DB-!XX|!H04|"}}}, ""),
 		maxCase("MAX date 012 time 020", english([]string{dateName(12), timeName(20)}, nil), ""),
 
 		getFormatCase("GET_FORMAT manual 1", setup{inits: []initStep{{kInput, "|!MAU !DD, !Y4 !H04:!M0:!S0:!C2|"}}}, 0),
@@ -931,10 +962,10 @@ func formatting() []probeCase {
 		initCase("INIT input few fields", initStep{kInput, "|!D0|"}),
 		initCase("INIT language blank", initStep{kLanguage, "| |"}),
 		initCase("INIT empty months", initStep{kMonthName, "|||||||||||||"}),
+		initCase("INIT element 255", initStep{kLanguage, "|" + strings.Repeat("E", 255) + "|"}),
+		initCase("INIT element 256", initStep{kLanguage, "|" + strings.Repeat("E", 256) + "|"}),
 		probeCase{name: "INIT no context", data: []string{"%K:\t.LONG\t1", ascid("%J", "|!D0|!H04|")},
 			call: "LIB$INIT_DATE_TIME_CONTEXT", args: []string{"0", "%K", "%J"}},
-		probeCase{name: "INIT garbage cell", data: []string{"%X:\t.LONG\t^X00000200", "%K:\t.LONG\t1", ascid("%J", "|!D0|!H04|")},
-			call: "LIB$INIT_DATE_TIME_CONTEXT", args: []string{"%X", "%K", "%J"}, show: []show{mem("%X", 1)}},
 		probeCase{name: "INIT 2 arguments", data: []string{"%X:\t.LONG\t0", "%K:\t.LONG\t1"},
 			call: "LIB$INIT_DATE_TIME_CONTEXT", args: []string{"%X", "%K"}},
 	)
@@ -1048,6 +1079,9 @@ func input() []probeCase {
 		convertCase("CONVERT ILL 24-hour meridiem", setup{inits: []initStep{{kInput, "|!D0-!MN0-!Y4 !H04:!M0:!S0.!C2 !MIU|"}}}, "13-01-1988", "", ""),
 		convertCase("CONVERT ILL 12-hour no meridiem", setup{inits: []initStep{{kInput, "|!D0-!MN0-!Y4 !H02:!M0:!S0.!C2|"}}}, "13-01-1988", "", ""),
 		convertCase("CONVERT ILL weekday", setup{inits: []initStep{{kInput, "|!WAU !D0-!MN0-!Y4 !H04:!M0:!S0.!C2|"}}}, "WED 13-01-1988", "", ""),
+		convertCase("CONVERT ILL lower case", setup{inits: []initStep{{kInput, "|!d0-!mn0-!y4 !h04:!m0:!s0.!c2|"}}}, "13-01-1988", "", ""),
+		convertCase("CONVERT ILL unknown", setup{inits: []initStep{{kInput, "|!DB-!XX|"}}}, "13-01-1988", "", ""),
+		convertCase("CONVERT ILL empty", setup{inits: []initStep{{kInput, "||"}}}, "13-01-1988", "", ""),
 		convertCase("CONVERT ILL two months", setup{inits: []initStep{{kInput, "|!D0-!MN0-!MAAU-!Y4 !H04:!M0:!S0.!C2|"}}}, "13-01-JAN-1988", "", ""),
 
 		probeCase{name: "CONVERT 1 argument", data: []string{ascid("%I", "13-JAN-1988")},
@@ -1374,6 +1408,19 @@ $ SHOW LOGICAL LIB$DT_INPUT_FORMAT
 $ SHOW LOGICAL/TABLE=LNM$SYSTEM_DIRECTORY LNM$DT*
 $ SHOW LOGICAL/TABLE=LNM$SYSTEM_DIRECTORY LNM$LANGUAGE*
 $ SHOW LOGICAL/TABLE=LNM$DT_FORMAT_TABLE *
+$ ! The predefined formats: VMS's own startup procedure, if this system
+$ ! has it and hasn't run it. It defines names until the system reboots.
+$ IF F$TRNLNM("LIB$DATE_FORMAT_002","LNM$DT_FORMAT_TABLE") .NES. "" THEN GOTO HAVE_FORMATS
+$ STARTUP = F$SEARCH("SYS$STARTUP:LIB$DT_STARTUP.COM")
+$ IF STARTUP .EQS. "" THEN STARTUP = F$SEARCH("SYS$MANAGER:LIB$DT_STARTUP.COM")
+$ WRITE SYS$OUTPUT "LIB$DT_STARTUP: ", STARTUP
+$ IF STARTUP .NES. "" THEN @'STARTUP'
+$ HAVE_FORMATS:
+$ SHOW LOGICAL/TABLE=LNM$DT_FORMAT_TABLE *
+$ SHOW LOGICAL SYS$LANGUAGE
+$ SHOW LOGICAL LIB$DT_FORMAT
+$ SHOW LOGICAL LIB$DT_INPUT_FORMAT
+$ SHOW LOGICAL/TABLE=LNM$SYSTEM_DIRECTORY LNM$LANGUAGE*
 $ SHOW LOGICAL/TABLE=LNM$LANGUAGE_ENGLISH *
 $ SHOW LOGICAL/TABLE=LNM$LANGUAGE_FRENCH *
 $ WRITE SYS$OUTPUT F$TIME()
