@@ -1,6 +1,6 @@
 # Phase 56 — LIB$ date and time
 
-**Status:** in progress (2026-10-13; subtasks 1 to 3 done). Needs Phases 53 and 54. Part of the
+**Status:** in progress (2026-10-13; subtasks 1 to 4 done). Needs Phases 53 and 54. Part of the
 LIB$ program laid out in `PHASE-53 - RTL LIB support.md` (Part A).
 
 ## Goal
@@ -646,6 +646,7 @@ address) print on lines marked with a tilde, as in Phase 55's probe.
 3. **Conversion**: CVT(F)_TO/FROM_INTERNAL_TIME, CVT_VECTIM.
    **Done** 2026-10-13.
 4. **Simple**: DATE_TIME, DAY, DAY_OF_WEEK.
+   **Done** 2026-10-13.
 5. **Format context and logical names**: INIT/FREE_DATE_TIME_CONTEXT, the
    names' definitions.
 6. **Output**: FORMAT_DATE_TIME, GET_DATE_FORMAT, GET_MAXIMUM_DATE_LENGTH.
@@ -740,3 +741,22 @@ address) print on lines marked with a tilde, as in Phase 55's probe.
   millisecond short. Tested in `cvttime_test.go` and, through a linked
   program's stubs, by `TestLibrtlTimeConversion`
   (`internal/console/librtl_times_test.go`).
+- **2026-10-13** — Subtask 4, the simple routines
+  (`internal/librtl/days.go`, shim codes 140–142): DATE_TIME, DAY, and
+  DAY_OF_WEEK, returning SS$_NORMAL. DATE_TIME writes $ASCTIM's
+  23 characters (`corevms.FormatTime`) by the output's class, with
+  LIB$_STRTRU when they don't fit. DAY and DAY_OF_WEEK take the current
+  time when the time is omitted or 0 by value, and the base date for a
+  zero quadword. These are govax's choices, each marked unconfirmed in
+  the code and left for the probe:
+  - a delta is divided as EDIV divides, truncated toward zero: two days
+    and an hour give a day count of −2 and a day-time of −360,000
+    hundredths;
+  - DAY's SS$_INTOVF is when the time divided by 10⁹ ticks doesn't fit
+    a longword (from 25-Dec-8663, and a delta as long), with nothing
+    stored;
+  - DAY_OF_WEEK counts from the day count, day 0 a Wednesday, so a
+    delta of 3 days is a Sunday and one under a day a Wednesday.
+
+  Tested in `days_test.go` and, through a linked program's stubs, by
+  `TestLibrtlDays` (`internal/console/librtl_times_test.go`).

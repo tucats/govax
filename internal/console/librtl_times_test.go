@@ -1,6 +1,9 @@
 package console
 
-import "testing"
+import (
+	"regexp"
+	"testing"
+)
 
 // TestLibrtlTimeArithmetic: a program works a delta time through all four
 // arithmetic routines by their stubs, then writes the result with
@@ -97,5 +100,46 @@ func TestLibrtlTimeConversion(t *testing.T) {
 
 	if want := "13-JAN-1988 09:13:25.14\n   0 06:00:00.00\n"; out != want {
 		t.Errorf("output %q, want %q", out, want)
+	}
+}
+
+// TestLibrtlDays: a program reads 13-JAN-1988 09:13:25.14 with $BINTIM,
+// takes its day number and day-time with LIB$DAY and its day of the week
+// with LIB$DAY_OF_WEEK, writes the current time from LIB$DATE_TIME into
+// a dynamic string, and ends with day number x 10 + day of the week in R0
+// (47,173 and Wednesday, 3), or 0 if the day-time isn't 3,320,514
+// hundredths (docs/PHASE-56, subtask 4).
+func TestLibrtlDays(t *testing.T) {
+	r0, out := runMacroProgram(t, "\t.PSECT\tDATA,NOEXE,WRT,LONG\n"+
+		"TIME:\t.ASCID\t/13-JAN-1988 09:13:25.14/\n"+
+		"DATE:\t.QUAD\t0\n"+
+		"DAYS:\t.LONG\t0\n"+
+		"HUND:\t.LONG\t0\n"+
+		"WDAY:\t.LONG\t0\n"+
+		"NOW:\t.WORD\t0\n\t.BYTE\t14,2\n\t.LONG\t0\n"+ // a dynamic string
+		"\t.PSECT\tCODE,NOWRT,EXE\n"+
+		"\t.ENTRY\tSTART,^M<>\n"+
+		"\tPUSHAQ\tDATE\n\tPUSHAQ\tTIME\n"+
+		"\tCALLS\t#2,G^SYS$BINTIM\n\tBLBC\tR0,DONE\n"+
+		"\tPUSHAL\tHUND\n\tPUSHAQ\tDATE\n\tPUSHAL\tDAYS\n"+
+		"\tCALLS\t#3,G^LIB$DAY\n\tBLBC\tR0,DONE\n"+
+		"\tPUSHAL\tWDAY\n\tPUSHAQ\tDATE\n"+
+		"\tCALLS\t#2,G^LIB$DAY_OF_WEEK\n\tBLBC\tR0,DONE\n"+
+		"\tPUSHAQ\tNOW\n"+
+		"\tCALLS\t#1,G^LIB$DATE_TIME\n\tBLBC\tR0,DONE\n"+
+		"\tPUSHAQ\tNOW\n\tCALLS\t#1,G^LIB$PUT_OUTPUT\n"+
+		"\tCLRL\tR0\n"+
+		"\tCMPL\tHUND,#3320514\n\tBNEQ\tDONE\n"+
+		"\tMULL3\t#10,DAYS,R0\n\tADDL2\tWDAY,R0\n"+
+		"DONE:\tRET\n"+
+		"\t.END\tSTART\n")
+
+	if r0 != 471733 {
+		t.Errorf("R0 = %d, want 471733", r0)
+	}
+
+	// The current time varies, but not its form.
+	if !regexp.MustCompile(`^[ 1-3]\d-[A-Z]{3}-\d{4} \d\d:\d\d:\d\d\.\d\d\n$`).MatchString(out) {
+		t.Errorf("output %q, want an $ASCTIM time", out)
 	}
 }

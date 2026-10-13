@@ -207,6 +207,9 @@ var Routines = []Routine{
 	{"LIB$CVT_TO_INTERNAL_TIME", 137, libCvtToInternalTime},
 	{"LIB$CVTF_TO_INTERNAL_TIME", 138, libCvtfToInternalTime},
 	{"LIB$CVT_VECTIM", 139, libCvtVectim},
+	{"LIB$DATE_TIME", 140, libDateTime},
+	{"LIB$DAY", 141, libDay},
+	{"LIB$DAY_OF_WEEK", 142, libDayOfWeek},
 }
 
 // missing is Missing's list, and missingJSB MissingJSB's, made once.
