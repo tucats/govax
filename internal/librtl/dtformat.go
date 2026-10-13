@@ -239,3 +239,63 @@ func partOf(items []dtItem) dtPart {
 
 	return part
 }
+
+// checkInputFormat reports whether an input format is one
+// LIB$CONVERT_DATE_STRING can read by (the manual's section 3.3.3, and
+// LIB$_ILLFORMAT when it isn't). It must give, once each, a month
+// (spelled or numeric), the day, the year, the hour, the minute, the
+// second, and the fraction; a meridiem with a 12-hour clock, and none
+// with a 24-hour one. The date's fields and the time's must form two
+// groups, one after the other. A weekday isn't allowed (unconfirmed: the
+// manual's list doesn't name it), nor is a field given twice
+// (unconfirmed).
+func checkInputFormat(items []dtItem) bool {
+	seen := map[dtField]bool{}
+	groups := 0
+	last := partNone
+
+	for _, it := range items {
+		if it.m == nil {
+			continue
+		}
+
+		f := it.m.field
+		if f == fieldWeekday || seen[f] {
+			return false
+		}
+
+		seen[f] = true
+
+		part := partTime
+		if f.isDate() {
+			part = partDate
+		}
+
+		if part != last {
+			groups++
+			last = part
+		}
+	}
+
+	months := 0
+	if seen[fieldMonthName] {
+		months++
+	}
+
+	if seen[fieldMonthNumber] {
+		months++
+	}
+
+	hours := 0
+	if seen[fieldHour24] {
+		hours++
+	}
+
+	if seen[fieldHour12] {
+		hours++
+	}
+
+	return groups == 2 && months == 1 && hours == 1 &&
+		seen[fieldDay] && seen[fieldYear] && seen[fieldMinute] && seen[fieldSecond] && seen[fieldFraction] &&
+		seen[fieldMeridiem] == seen[fieldHour12]
+}

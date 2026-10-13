@@ -1,8 +1,12 @@
 package console
 
 import (
+	"fmt"
 	"regexp"
 	"testing"
+	"time"
+
+	"github.com/tucats/govax/internal/vmsdef"
 )
 
 // TestLibrtlTimeArithmetic: a program works a delta time through all four
@@ -173,5 +177,56 @@ func TestLibrtlDateContext(t *testing.T) {
 
 	if r0 != 42 {
 		t.Errorf("R0 = %#x, want 42", r0)
+	}
+}
+
+// TestLibrtlDateOutput: a program sets a context's output and input
+// formats, then asks LIB$GET_MAXIMUM_DATE_LENGTH for the widest text (27,
+// the manual's example), formats a time with LIB$FORMAT_DATE_TIME, and
+// writes it and LIB$GET_DATE_FORMAT's legible input format with
+// LIB$PUT_OUTPUT (docs/PHASE-56, subtask 6).
+func TestLibrtlDateOutput(t *testing.T) {
+	v := vmsdef.Time(time.Date(1988, time.September, 21, 23, 24, 0, 0, time.UTC))
+
+	r0, out := runMacroProgram(t, "\t.PSECT\tDATA,NOEXE,WRT,LONG\n"+
+		"CTX:\t.LONG\t0\n"+
+		"OUTF:\t.LONG\t1\n"+ // LIB$K_OUTPUT_FORMAT
+		"INF:\t.LONG\t2\n"+ // LIB$K_INPUT_FORMAT
+		"OFMT:\t.ASCID\t/|!MAU !DD, !Y4|!HH2:!M0 !MIU|/\n"+
+		"IFMT:\t.ASCID\t/|!MN0-!D0-!Y2 !H04:!M0:!S0.!C2|/\n"+
+		fmt.Sprintf("TIME:\t.LONG\t^X%08X,^X%08X\n", uint32(v), uint32(v>>32))+
+		"LEN:\t.LONG\t0\n"+
+		"MAX:\t.LONG\t0\n"+
+		"BUF:\t.LONG\t^X010E0028,TEXT\n"+ // 40 bytes, fixed
+		"TEXT:\t.BLKB\t40\n"+
+		"\t.PSECT\tCODE,NOWRT,EXE\n"+
+		"\t.ENTRY\tSTART,^M<>\n"+
+		"\tBRB\tGO\n"+ // the exits, within a byte branch of every test
+		"FAIL:\tCLRL\tR0\n"+
+		"DONE:\tRET\n"+
+		"GO:\tPUSHAQ\tOFMT\n\tPUSHAL\tOUTF\n\tPUSHAL\tCTX\n"+
+		"\tCALLS\t#3,G^LIB$INIT_DATE_TIME_CONTEXT\n\tBLBC\tR0,DONE\n"+
+		"\tPUSHAQ\tIFMT\n\tPUSHAL\tINF\n\tPUSHAL\tCTX\n"+
+		"\tCALLS\t#3,G^LIB$INIT_DATE_TIME_CONTEXT\n\tBLBC\tR0,DONE\n"+
+		"\tPUSHAL\tCTX\n\tPUSHAL\tMAX\n"+
+		"\tCALLS\t#2,G^LIB$GET_MAXIMUM_DATE_LENGTH\n\tBLBC\tR0,DONE\n"+
+		"\tCMPL\tMAX,#27\n\tBNEQ\tFAIL\n"+
+		"\tPUSHAL\tLEN\n\tPUSHAL\tCTX\n\tPUSHAQ\tTIME\n\tPUSHAQ\tBUF\n"+
+		"\tCALLS\t#4,G^LIB$FORMAT_DATE_TIME\n\tBLBC\tR0,DONE\n"+
+		"\tMOVW\tLEN,BUF\n"+
+		"\tPUSHAQ\tBUF\n\tCALLS\t#1,G^LIB$PUT_OUTPUT\n"+
+		"\tMOVW\t#40,BUF\n"+
+		"\tPUSHAL\tCTX\n\tPUSHAQ\tBUF\n"+
+		"\tCALLS\t#2,G^LIB$GET_DATE_FORMAT\n\tBLBS\tR0,PUT\n\tRET\n"+
+		"PUT:\tPUSHAQ\tBUF\n\tCALLS\t#1,G^LIB$PUT_OUTPUT\n"+
+		"\tMOVL\t#42,R0\n\tRET\n"+
+		"\t.END\tSTART\n")
+
+	if r0 != 42 {
+		t.Errorf("R0 = %#x, want 42", r0)
+	}
+
+	if want := regexp.MustCompile(`(?m)^SEPTEMBER 21, 1988 11:24 PM\n^MM-DD-YYYY2 HH:MM:SS\.CC2 +\n`); !want.MatchString(out) {
+		t.Errorf("output:\n%s", out)
 	}
 }

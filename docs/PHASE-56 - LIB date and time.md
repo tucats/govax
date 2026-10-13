@@ -1,6 +1,6 @@
 # Phase 56 — LIB$ date and time
 
-**Status:** in progress (2026-10-13; subtasks 1 to 5 done). Needs Phases 53 and 54. Part of the
+**Status:** in progress (2026-10-13; subtasks 1 to 6 done). Needs Phases 53 and 54. Part of the
 LIB$ program laid out in `PHASE-53 - RTL LIB support.md` (Part A).
 
 ## Goal
@@ -654,6 +654,7 @@ address) print on lines marked with a tilde, as in Phase 55's probe.
 5. **Format context and logical names**: INIT/FREE_DATE_TIME_CONTEXT, the
    names' definitions. **Done** 2026-10-13.
 6. **Output**: FORMAT_DATE_TIME, GET_DATE_FORMAT, GET_MAXIMUM_DATE_LENGTH.
+   **Done** 2026-10-13.
 7. **Input**: CONVERT_DATE_STRING.
 8. **The program** (`testdata/lib56/`), its console test, and the VMS
    probe.
@@ -815,3 +816,45 @@ address) print on lines marked with a tilde, as in Phase 55's probe.
   Tested in `dtformat_test.go`, `dtcontext_test.go`, and lnm's
   `TestDTFormatTable`, and, through a linked program's stubs, by
   `TestLibrtlDateContext` (`internal/console/librtl_times_test.go`).
+- **2026-10-13** — Subtask 6, the output routines
+  (`internal/librtl/dtoutput.go`, shim codes 145–147):
+  LIB$FORMAT_DATE_TIME, LIB$GET_MAXIMUM_DATE_LENGTH, and
+  LIB$GET_DATE_FORMAT, over subtask 5's settings and parsed formats.
+  - **The engine.** A time is broken into its fields once (`fieldsOf`:
+    $NUMTIM's, with the fraction in whole ticks for !C7, and the
+    weekday), and each item of an element is written by its mnemonic
+    (`formatItem`); the elements are joined by one blank. All 60
+    predefined formats write the manual's examples for 13-Jan-1988
+    09:13:25.14 (`TestPredefinedFormatsOutput`).
+  - **The widest text** (`maximumLength`): each number at two digits
+    whatever its fill, a year or fraction at its digits, a spelled field
+    at its longest spelling in its case, and the blank between parts.
+  - **The legible input format** (`legibleFormat`) uses the context's
+    LIB$K_FORMAT_MNEMONICS spellings; the manual's three examples come
+    out as it shows them.
+  - **The input format's rules** (`checkInputFormat`, in `dtformat.go`,
+    for subtask 7 too): the seven fields once each, one month and one
+    hour, a meridiem exactly with the 12-hour clock, and the date's and
+    time's fields in two groups. LIB$GET_DATE_FORMAT returns
+    LIB$_ILLFORMAT for a format that breaks them.
+  - These are govax's choices, each marked unconfirmed in the code and
+    left for the probe:
+    - a year shows its last n digits, zero-filled; a fraction is
+      truncated; the 12-hour clock shows 00:xx as 12; AM is before noon;
+    - with flags, the format's own parts come out in its order, and a
+      part it lacks is the standard one (the date first, the time last),
+      with LIB$_DEFFORUSE; other bits are ignored, and flags of 0 write
+      nothing;
+    - date-length is the bytes written (11 when a 23-byte text is cut to
+      11, with LIB$_STRTRU), and a delta writes nothing (LIB$_ABSTIMREQ);
+    - LIB$GET_MAXIMUM_DATE_LENGTH gives 27 for the manual's example, which
+      says 28;
+    - the legible format's runs of blanks and tabs become one blank, and
+      none is kept at the ends;
+    - LIB$GET_DATE_FORMAT takes one or two arguments (LIB$_WRONUMARG
+      otherwise), and an omitted format-string is LIB$_INVARG;
+    - an input format with a weekday, or a field twice, is
+      LIB$_ILLFORMAT.
+
+  Tested in `dtoutput_test.go` and, through a linked program's stubs, by
+  `TestLibrtlDateOutput` (`internal/console/librtl_times_test.go`).
