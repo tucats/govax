@@ -1,6 +1,6 @@
 # Phase 54 — LIB$ strings, descriptors, and text conversion
 
-**Status:** in progress (2026-10-12; subtask 1 done). Needs Phase 53. Part of the LIB$
+**Status:** in progress (2026-10-12; subtasks 1 and 2 done). Needs Phase 53. Part of the LIB$
 program laid out in `PHASE-53 - RTL LIB support.md` (Part A), which also
 has the sources and the conventions (Part B) this phase follows.
 
@@ -403,6 +403,7 @@ against VMS's own table, which the probe dumps.)
 1. **Survey**: each routine's format, arguments, and condition values;
    the JSB entries' register conventions. **Done** 2026-10-12.
 2. **JSB stubs and data entries** in the stub area and the table.
+   **Done** 2026-10-12.
 3. **Dynamic strings**: SGET1_DD, SFREE1_DD, SFREEN_DD (and JSB forms);
    Phase 53's D-class output moved onto them.
 4. **Copying and descriptors**: SCOPY_DXDX, SCOPY_R_DX, ANALYZE_SDESC (and
@@ -448,3 +449,42 @@ against VMS's own table, which the probe dumps.)
 - **2026-10-12** — The author accepted the proposed scope for
   CVT_DX_DX: this phase, integers and F/D/G/H to and from text, with a
   LIBRTL2 stub area (subtask 10).
+- **2026-10-12** — The author asked for the remaining subtasks to run
+  back to back, each committed when complete and tested, unpushed.
+- **2026-10-12** — Subtask 2, JSB stubs and data entries (Phase 53's
+  Part B, Decision 8):
+  - **The CPU.** `XFC #XFC$JSBSHIM` (selector 5) pops the shim code off
+    the stack and calls `SystemServices.JSBShim(code)`; a waiting shim
+    runs again with the code pushed back. `TestEmulXfcJSBShim` and
+    `TestEmulXfcJSBShimWait` run a stub reached by JSB.
+  - **corevms.** `JSBShimFunc` works on `JSBRegisters` (R0 to R6), which
+    `Environment.JSBShim` reads and puts back, unless the routine started
+    a condition dispatch. `ShimTable.RegisterJSB`/`LookupJSB`/`Has` (CALL
+    and JSB routines share one space of codes). While a JSB shim runs
+    (`jsbCall`, `jsbSP`), `signal` raises a condition in the caller's
+    frame, at the return address on the stack, and resumes with SP as
+    the JSB left it, so SS$_CONTINUE returns through the stub's RSB.
+    `ShimLink` gained `JSB` and `Data`; `JSBShimStub` is the stub.
+    `CRTLLinks`' literals are now keyed.
+  - **The stub area.** `machine.EnsureShims` writes a JSB stub for a JSB
+    row (its name a plain symbol, not an entry: it has no mask) and
+    copies each data row into the S0 overflow pages after the stubs,
+    quadword aligned, defining its SHIM$ symbol and its name there.
+  - **librtl.** `JSBRoutines` (empty until subtask 3), `Tables`
+    (`tables.go`: the survey's three tables), and `MissingJSB`: every
+    JSB entry govax lacks (all 43 for now, LIB$SCOPY_DXDX6 and OTS$MOVE3_R5 among them) gets a
+    stub that signals SS$_UNSUPPORTED and GOVAX-E-NOTIMPL as a missing
+    CALL entry's does. So every entry of LIBRTL.EXE's transfer vector now
+    resolves. `Links` puts Routines, JSBRoutines, and Tables first, so
+    the stubs in VMINIT's page keep their addresses.
+  - **Tests.** `TestMissing` now checks that every LIBRTL entry is
+    covered once, by a CALL stub, a JSB stub, or a table, of the right
+    kind; `TestTranslationTables` and `TestUpcaseTable` (the tables'
+    inverse property and the manual's spot values);
+    `TestEnsureShims_overflowPages` checks JSB stubs and the tables'
+    contents; the console's `TestLibrtlMissingJSBEntry` (a JSB to
+    OTS$MOVE3_R5: the catch-all's message, the JSB returning
+    SS$_UNSUPPORTED with SP and R6 as they were),
+    `TestLibrtlMissingJSBEntryContinued` (the caller's handler sees it),
+    and `TestLibrtlDataTables` (MOVTC through `G^LIB$AB_UPCASE`, and to
+    EBCDIC and back).

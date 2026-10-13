@@ -255,6 +255,8 @@ func TestEnsureShims_overflowPages(t *testing.T) {
 
 	seen := map[uint32]string{}
 
+	var err error
+
 	for _, e := range ShimTable {
 		if e.Code == 0 {
 			continue
@@ -281,8 +283,40 @@ func TestEnsureShims_overflowPages(t *testing.T) {
 			got[i] = b
 		}
 
-		if string(got) != string(corevms.ShimStub(e.Code)) {
-			t.Fatalf("%s: stub at %08X is % X, want % X", e.Name, addr, got, corevms.ShimStub(e.Code))
+		want := corevms.ShimStub(e.Code)
+		if e.JSB {
+			want = corevms.JSBShimStub(e.Code)
+		}
+
+		if string(got) != string(want) {
+			t.Fatalf("%s: stub at %08X is % X, want % X", e.Name, addr, got, want)
+		}
+	}
+
+	// The data tables follow the stubs, whole, at their symbols.
+	for _, e := range ShimTable {
+		if e.Data == nil {
+			continue
+		}
+
+		addr, ok := c.Symbols.Get(fmt.Sprintf("SHIM$%s_%08X", e.Library, e.Offset))
+		if !ok {
+			t.Fatalf("%s: no SHIM$ symbol", e.Name)
+		}
+
+		if other, dup := seen[addr]; dup {
+			t.Fatalf("%s and %s share address %08X", e.Name, other, addr)
+		}
+
+		got := make([]byte, len(e.Data))
+		for i := range got {
+			if got[i], err = c.Mem.LoadByte(c.CPU, addr+uint32(i)); err != nil {
+				t.Fatalf("%s: reading it at %08X: %v", e.Name, addr, err)
+			}
+		}
+
+		if string(got) != string(e.Data) {
+			t.Errorf("%s at %08X isn't the table", e.Name, addr)
 		}
 	}
 

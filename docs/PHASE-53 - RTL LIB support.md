@@ -268,6 +268,23 @@ answers to the two marked **(author)**.
    probe for VMS: run on the simh VAX, its log becomes an oracle, as
    `testdata/credir` and `testdata/insn35` did.
 
+8. **JSB entry points and data entries (Phase 54, subtask 2).** A
+   routine reached by JSB takes its arguments in R0, R1, R2, ... (the
+   STR$ manual: scalars by value at a JSB entry), has no frame, and
+   returns with RSB. Its stub is `PUSHL #code`, `XFC #XFC$JSBSHIM`
+   (selector 5, govax's own), `RSB`, padded to the 12 bytes of a CALL
+   stub (`corevms.JSBShimStub`). The XFC pops the code and runs a
+   `corevms.JSBShimFunc` on R0 to R6 (`JSBRegisters`), which changes
+   the ones the routine returns. A condition it signals is raised in its
+   caller's frame, at the JSB's return address, and SS$_CONTINUE resumes
+   at the stub's RSB with SP as the JSB left it (`signal`'s `jsbCall`).
+   `librtl.JSBRoutines` lists them; every other JSB entry gets a
+   missing-routine stub (`MissingJSB`, codes from 2000), as CALL entries
+   do. LIBRTL's data tables (`LIB$AB_ASC_EBC`, `LIB$AB_EBC_ASC`,
+   `LIB$AB_UPCASE`) are `librtl.Tables`, copied into the stub area's S0
+   pages after the stubs (`ShimLink.Data`). Every entry of LIBRTL.EXE's
+   transfer vector now resolves.
+
 # Part C — the instruction routines
 
 | Group | Routines (manual page) |

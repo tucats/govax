@@ -9,11 +9,18 @@ package corevms
 // Code 0 is not a shim: it names a routine the microkernel (kernel.asm)
 // implements in VAX code, and SHIM$<Library>_<Offset> is defined as
 // that routine's own address instead of a stub's.
+//
+// JSB marks a routine reached by JSB rather than CALL (its stub is
+// JSBShimStub). Data, when it isn't nil, makes the entry a table rather
+// than a routine (LIBRTL's LIB$AB_UPCASE): the symbol names a copy of
+// Data in system space, and Code is 0.
 type ShimLink struct {
 	Name    string
 	Library string
 	Offset  uint32
 	Code    uint32
+	JSB     bool
+	Data    []byte
 }
 
 // CRTLLinks are the C library's routines (DECC$SHR) and govax's own
@@ -23,33 +30,33 @@ type ShimLink struct {
 // DECC$OPEN's shim is EXE$OPEN). LIBRTL.EXE's are internal/librtl's
 // (librtl.Links). Offsets are each routine's transfer-vector entry.
 var CRTLLinks = []ShimLink{
-	{"EXE$INPUT", "EVAX", 0x0004, 3},
-	{"DECC$OPEN", "DECC$SHR", 0x04E8, 4},
-	{"DECC$CLOSE", "DECC$SHR", 0x0490, 5},
-	{"DECC$READ", "DECC$SHR", 0x04F0, 6},
-	{"DECC$WRITE", "DECC$SHR", 0x0508, 7},
-	{"DECC$PRINTF", "DECC$SHR", 0x0380, 8},
-	{"DECC$SPRINTF", "DECC$SHR", 0x03E0, 9},
-	{"DECC$STRCMP", "DECC$SHR", 0x06C0, 10},
-	{"DECC$STRNCMP", "DECC$SHR", 0x06F8, 11},
-	{"DECC$STRNCPY", "DECC$SHR", 0x0700, 12},
-	{"DECC$ATOI", "DECC$SHR", 0x0568, 13},
-	{"DECC$GETS", "DECC$SHR", 0x0370, 14},
-	{"DECC$MALLOC", "DECC$SHR", 0x0548, 15},
-	{"DECC$FREE", "DECC$SHR", 0x0538, 16},
-	{"DECC$ISALNUM", "DECC$SHR", 0x0018, 17},
-	{"DECC$ISALPHA", "DECC$SHR", 0x0020, 18},
-	{"DECC$ISCNTRL", "DECC$SHR", 0x0030, 19},
-	{"DECC$ISDIGIT", "DECC$SHR", 0x0038, 20},
-	{"DECC$ISGRAPH", "DECC$SHR", 0x0040, 21},
-	{"DECC$ISLOWER", "DECC$SHR", 0x0048, 22},
-	{"DECC$ISPRINT", "DECC$SHR", 0x0050, 23},
-	{"DECC$ISPUNCT", "DECC$SHR", 0x0058, 24},
-	{"DECC$ISSPACE", "DECC$SHR", 0x0060, 25},
-	{"DECC$ISUPPER", "DECC$SHR", 0x0068, 26},
-	{"DECC$ISXDIGIT", "DECC$SHR", 0x0070, 27},
-	{"DECC$ISASCII", "DECC$SHR", 0x0028, 28},
-	{"DECC$TIME", "DECC$SHR", 0x0768, 32},
+	{Name: "EXE$INPUT", Library: "EVAX", Offset: 0x0004, Code: 3},
+	{Name: "DECC$OPEN", Library: "DECC$SHR", Offset: 0x04E8, Code: 4},
+	{Name: "DECC$CLOSE", Library: "DECC$SHR", Offset: 0x0490, Code: 5},
+	{Name: "DECC$READ", Library: "DECC$SHR", Offset: 0x04F0, Code: 6},
+	{Name: "DECC$WRITE", Library: "DECC$SHR", Offset: 0x0508, Code: 7},
+	{Name: "DECC$PRINTF", Library: "DECC$SHR", Offset: 0x0380, Code: 8},
+	{Name: "DECC$SPRINTF", Library: "DECC$SHR", Offset: 0x03E0, Code: 9},
+	{Name: "DECC$STRCMP", Library: "DECC$SHR", Offset: 0x06C0, Code: 10},
+	{Name: "DECC$STRNCMP", Library: "DECC$SHR", Offset: 0x06F8, Code: 11},
+	{Name: "DECC$STRNCPY", Library: "DECC$SHR", Offset: 0x0700, Code: 12},
+	{Name: "DECC$ATOI", Library: "DECC$SHR", Offset: 0x0568, Code: 13},
+	{Name: "DECC$GETS", Library: "DECC$SHR", Offset: 0x0370, Code: 14},
+	{Name: "DECC$MALLOC", Library: "DECC$SHR", Offset: 0x0548, Code: 15},
+	{Name: "DECC$FREE", Library: "DECC$SHR", Offset: 0x0538, Code: 16},
+	{Name: "DECC$ISALNUM", Library: "DECC$SHR", Offset: 0x0018, Code: 17},
+	{Name: "DECC$ISALPHA", Library: "DECC$SHR", Offset: 0x0020, Code: 18},
+	{Name: "DECC$ISCNTRL", Library: "DECC$SHR", Offset: 0x0030, Code: 19},
+	{Name: "DECC$ISDIGIT", Library: "DECC$SHR", Offset: 0x0038, Code: 20},
+	{Name: "DECC$ISGRAPH", Library: "DECC$SHR", Offset: 0x0040, Code: 21},
+	{Name: "DECC$ISLOWER", Library: "DECC$SHR", Offset: 0x0048, Code: 22},
+	{Name: "DECC$ISPRINT", Library: "DECC$SHR", Offset: 0x0050, Code: 23},
+	{Name: "DECC$ISPUNCT", Library: "DECC$SHR", Offset: 0x0058, Code: 24},
+	{Name: "DECC$ISSPACE", Library: "DECC$SHR", Offset: 0x0060, Code: 25},
+	{Name: "DECC$ISUPPER", Library: "DECC$SHR", Offset: 0x0068, Code: 26},
+	{Name: "DECC$ISXDIGIT", Library: "DECC$SHR", Offset: 0x0070, Code: 27},
+	{Name: "DECC$ISASCII", Library: "DECC$SHR", Offset: 0x0028, Code: 28},
+	{Name: "DECC$TIME", Library: "DECC$SHR", Offset: 0x0768, Code: 32},
 }
 
 // ShimStubSize is the length in bytes of one stub (ShimStub).
@@ -69,5 +76,23 @@ func ShimStub(code uint32) []byte {
 		0xFC, // XFC
 		0x7D, // #XFC$SHIM
 		0x04, // RET
+	}
+}
+
+// JSBShimStub returns the stub of a routine reached by JSB (shim code
+// code, registered with RegisterJSB). Its arguments are in R0, R1, ...,
+// so the code can't go in R0 as ShimStub's does: the stub pushes it,
+// PUSHL I^#code (6 bytes), for XFC #XFC$JSBSHIM (2 bytes) to pop, then
+// returns with RSB. It has no entry mask: JSB jumps straight to its
+// first instruction. NOPs pad it to ShimStubSize, so every stub is the
+// same size.
+func JSBShimStub(code uint32) []byte {
+	return []byte{
+		0xDD, 0x8F, // PUSHL I^#...
+		byte(code), byte(code >> 8), byte(code >> 16), byte(code >> 24),
+		0xFC,             // XFC
+		0x05,             // #XFC$JSBSHIM
+		0x05,             // RSB
+		0x01, 0x01, 0x01, // NOP, never reached
 	}
 }

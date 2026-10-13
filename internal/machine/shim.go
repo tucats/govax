@@ -44,50 +44,71 @@ var kernelLinks = []corevms.ShimLink{
 // after it, which listings and tests show.
 const shimPageBytes = 512
 
-// EnsureShims writes a stub (corevms.ShimStub) for every shimTable entry
-// that has a shim code, and resolves every code-0 entry against its
-// already-assembled kernel.asm routine by name instead (kernelLinks, and
-// LIBRTL's routines written in VAX code) -- either way defining that
-// entry's SHIM$<library>_<offset> symbol, matching what kernel.asm's
-// boot-time assembly of its own `.shim` pseudo-ops actually produces.
-// The stubs fill VMInit's page first, so their addresses don't move as
-// the table grows, then contiguous S0 pages allocated together. Must run
-// after kernel.asm has been assembled (Console.Run's own call site does,
-// via vax.init's boot sequence), since the code-0 branch depends on every
-// routine name it resolves already being a defined symbol. Idempotent: a
-// second call is a no-op, so fixups performed across multiple RUNs keep
-// resolving to the same addresses.
+// EnsureShims writes a stub (corevms.ShimStub, or JSBShimStub for a
+// routine reached by JSB) for every shimTable entry that has a shim code,
+// copies every data entry (a table, as LIB$AB_UPCASE) into system space,
+// and resolves every code-0 entry against its already-assembled
+// kernel.asm routine by name instead (kernelLinks, and LIBRTL's routines
+// written in VAX code) -- either way defining that entry's
+// SHIM$<library>_<offset> symbol, matching what kernel.asm's boot-time
+// assembly of its own `.shim` pseudo-ops actually produces. The stubs
+// fill VMInit's page first, so their addresses don't move as the table
+// grows, then contiguous S0 pages allocated together, which hold the
+// tables too, after the stubs. Must run after kernel.asm has been
+// assembled (Console.Run's own call site does, via vax.init's boot
+// sequence), since the code-0 branch depends on every routine name it
+// resolves already being a defined symbol. Idempotent: a second call is a
+// no-op, so fixups performed across multiple RUNs keep resolving to the
+// same addresses.
 func (m *Machine) EnsureShims() error {
 	if m.shimsReady {
 		return nil
 	}
 
-	stubs := 0
+	stubs, dataBytes := 0, uint32(0)
 
 	for _, e := range ShimTable {
-		if e.Code != 0 {
+		switch {
+		case e.Data != nil:
+			dataBytes += shimDataSize(e.Data)
+		case e.Code != 0:
 			stubs++
 		}
 	}
 
 	addr, end := m.shimBase, m.shimBase+shimPageBytes
 
-	// The stubs that don't fit in VMInit's page go to an overflow area
-	// big enough for all of them, allocated once.
+	// The stubs that don't fit in VMInit's page, and the tables, go to an
+	// overflow area big enough for all of them, allocated once.
 	var overflow uint32
 
-	if rest := stubs - shimPageBytes/corevms.ShimStubSize; rest > 0 {
-		pages := (rest*corevms.ShimStubSize + vaxPageSize - 1) / vaxPageSize
-
+	rest := max(0, stubs-shimPageBytes/corevms.ShimStubSize)
+	if size := uint32(rest*corevms.ShimStubSize) + dataBytes; size > 0 {
 		var err error
 
-		if overflow, err = m.shimOverflow(uint32(pages)); err != nil {
+		if overflow, err = m.shimOverflow((size + vaxPageSize - 1) / vaxPageSize); err != nil {
 			return err
 		}
 	}
 
+	// The tables follow the overflow area's stubs.
+	data := overflow + uint32(rest*corevms.ShimStubSize)
+
 	for _, e := range ShimTable {
 		shimName := fmt.Sprintf("SHIM$%s_%08X", e.Library, e.Offset)
+
+		if e.Data != nil {
+			if err := m.storeBytes(data, e.Data); err != nil {
+				return err
+			}
+
+			m.Symbols.Set(shimName, data, SymbolSystem)
+			m.Symbols.Set(e.Name, data, SymbolSystem)
+
+			data += shimDataSize(e.Data)
+
+			continue
+		}
 
 		if e.Code == 0 {
 			target, ok := m.Symbols.Get(e.Name)
@@ -105,12 +126,24 @@ func (m *Machine) EnsureShims() error {
 			addr, end = overflow, ^uint32(0)
 		}
 
-		if err := m.storeBytes(addr, corevms.ShimStub(e.Code)); err != nil {
+		stub := corevms.ShimStub(e.Code)
+		if e.JSB {
+			stub = corevms.JSBShimStub(e.Code)
+		}
+
+		if err := m.storeBytes(addr, stub); err != nil {
 			return err
 		}
 
 		m.Symbols.Set(shimName, addr, SymbolSystem)
-		m.Symbols.SetEntry(e.Name, addr, SymbolSystem)
+
+		// A CALL stub is a procedure (an entry mask comes first); a JSB
+		// stub's first byte is an instruction.
+		if e.JSB {
+			m.Symbols.Set(e.Name, addr, SymbolSystem)
+		} else {
+			m.Symbols.SetEntry(e.Name, addr, SymbolSystem)
+		}
 
 		addr += corevms.ShimStubSize
 	}
@@ -118,6 +151,12 @@ func (m *Machine) EnsureShims() error {
 	m.shimsReady = true
 
 	return nil
+}
+
+// shimDataSize is the room a data entry takes in the overflow area: its
+// length, rounded up to a quadword so the next one is aligned.
+func shimDataSize(data []byte) uint32 {
+	return (uint32(len(data)) + 7) &^ 7
 }
 
 // shimOverflow returns pages contiguous pages for the shim stubs that don't

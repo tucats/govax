@@ -132,6 +132,13 @@ type Environment struct {
 	// memAllocated/memFreed back the LIB$GET_VM/malloc allocator (memory.go).
 	memAllocated, memFreed []*memBlock
 
+	// jsbCall is set while a JSB routine's shim runs (JSBShim), and
+	// jsbSP is SP as the JSB left it, the return address on top: a
+	// routine reached by JSB has no frame, so a condition it signals is
+	// raised in its caller's (signal).
+	jsbCall bool
+	jsbSP   uint32
+
 	// openFiles/nextFID back exe_open/close/read/write's raw file-descriptor
 	// shims (file.go) — a synthetic descriptor space (starting past the
 	// conventional 0/1/2 stdin/stdout/stderr numbers, matching a real
@@ -372,13 +379,58 @@ func (env *Environment) Shim(code uint32) (uint32, bool, error) {
 	return r0, true, err
 }
 
+// JSBShim implements cpu.SystemServices' XFC$JSBSHIM: run the JSB
+// routine registered under code on the registers R0 to R6, which it
+// changes in place. The XFC has popped the code, so SP is as the JSB left
+// it: the return address on top. While it runs, a signal it raises is
+// dispatched as its caller's (jsbCall). If it started a condition
+// dispatch, the registers are the dispatch's and aren't put back.
+func (env *Environment) JSBShim(code uint32) (bool, error) {
+	fn, ok := env.shims.LookupJSB(code)
+	if !ok {
+		return false, nil
+	}
+
+	var regs JSBRegisters
+
+	for i := range regs {
+		regs[i] = env.cpu.GPR(registers.Reg(i))
+	}
+
+	conditions := len(env.Process.conditions)
+	env.jsbCall, env.jsbSP = true, env.cpu.GPR(registers.SP)
+
+	err := callJSB(fn, env, &regs)
+
+	env.jsbCall = false
+
+	if len(env.Process.conditions) == conditions {
+		for i, r := range regs {
+			env.cpu.SetGPR(registers.Reg(i), r)
+		}
+	}
+
+	env.enterWait(errors.Is(err, ErrWait))
+
+	return true, err
+}
+
+// callJSB is callHandler for a JSB routine: a panic becomes an error.
+func callJSB(fn JSBShimFunc, env *Environment, regs *JSBRegisters) (err error) {
+	defer func() {
+		if p := recover(); p != nil {
+			err = vmserrors.New(vmserrors.LIB_PANIC, fmt.Sprintf("%v", p))
+		}
+	}()
+
+	return fn(env, regs)
+}
+
 // HasShim reports whether code has a registered ShimFunc, without
 // invoking it — for a diagnostic caller (SHOW SHIM, internal/console) that
 // wants to know whether a numeric dispatch code is live, not run it.
 func (env *Environment) HasShim(code uint32) bool {
-	_, ok := env.shims.Lookup(code)
-
-	return ok
+	return env.shims.Has(code)
 }
 
 // SystemService implements cpu.SystemServices' RTL half (XFC$P1VECTOR):

@@ -57,6 +57,13 @@ type SystemServices interface { //nolint:interfacebloat
 	// invocation" path.
 	Shim(code uint32) (r0 uint32, handled bool, err error)
 
+	// JSBShim implements XFC$JSBSHIM: run the shim of a routine reached
+	// by JSB, code having been popped off the stack. The shim reads its
+	// arguments from the registers and leaves its results there itself,
+	// so nothing comes back but whether code is registered and an error
+	// (ErrServiceWait to run it again).
+	JSBShim(code uint32) (handled bool, err error)
+
 	// RequestQuit implements the vax.console.running = 0 half of
 	// XFC$QUIT_EMULATION (emul_xfc.c case 0x78) -- the half that reaches
 	// past the CPU's own halt into the console's command loop, asking it

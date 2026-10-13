@@ -2,6 +2,7 @@ package cpu
 
 import (
 	"errors"
+	"fmt"
 
 	"github.com/tucats/govax/internal/registers"
 	"github.com/tucats/govax/internal/vm"
@@ -17,6 +18,7 @@ const (
 	xfcConsoleRead  = 0x02
 	xfcConsoleCmd   = 0x03
 	xfcConsolePut   = 0x04 // govax's own; not in eVAX (docs/PERFORMANCE.md, Study 1 R1)
+	xfcJSBShim      = 0x05 // govax's own: a shim reached by JSB (docs/PHASE-54)
 	xfcQuitEmulator = 0x78
 	xfcP1Vector     = 0x7A
 	xfcHaltSilent   = 0x7B
@@ -104,6 +106,9 @@ func emulXfc(e *Engine, d *Decoded) error {
 
 	case xfcShim:
 		return emulXfcShim(e)
+
+	case xfcJSBShim:
+		return emulXfcJSBShim(e)
 
 	case xfcVMW, xfcVMR:
 		return emulXfcVM(e, code)
@@ -329,4 +334,62 @@ func emulXfcVM(e *Engine, code uint32) error {
 	e.cpu.SetPSL(psl)
 
 	return nil
+}
+
+// emulXfcJSBShim is XFC$JSBSHIM: the shim of a routine reached by JSB,
+// whose arguments are in R0, R1, R2, ... rather than an argument list
+// (docs/PHASE-54, "The JSB entry points"). R0 holds the first argument,
+// so the stub can't pass the shim's code there as a CALL stub does:
+//
+//	PUSHL  #code
+//	XFC    #XFC$JSBSHIM
+//	RSB
+//
+// The code is on top of the stack, above the JSB's return address. The
+// XFC pops it, so the stack is the caller's again (a signal from the
+// routine sees the return address on top, and RSB returns), and asks
+// the services to run the shim, which reads and writes the registers
+// itself. A shim that waits runs again: the code is pushed back and the
+// XFC re-executed. A shim can't ask for a procedure call (there's no
+// frame for one to return through).
+func emulXfcJSBShim(e *Engine) error {
+	if e.services == nil {
+		return &Fault{Code: ExcPrivileged}
+	}
+
+	sp := e.cpu.GPR(registers.SP)
+
+	code, err := e.mem.LoadLongword(e.cpu, sp)
+	if err != nil {
+		return err
+	}
+
+	e.cpu.SetGPR(registers.SP, sp+4)
+
+	handled, err := e.services.JSBShim(code)
+	if !handled {
+		if err != nil {
+			return err
+		}
+
+		return &Fault{Code: ExcReservedOp}
+	}
+
+	if errors.Is(err, ErrServiceWait) {
+		e.cpu.SetGPR(registers.SP, sp) // the code is still there: run this XFC again next Step
+		e.cpu.SetGPR(registers.PC, e.instructionPC)
+
+		return nil
+	}
+
+	var call *ServiceCall
+	if errors.As(err, &call) {
+		return fmt.Errorf("cpu: a JSB shim (code %d) can't call a procedure", code)
+	}
+
+	if errors.Is(err, ErrImageExit) {
+		return e.exitImage()
+	}
+
+	return err
 }

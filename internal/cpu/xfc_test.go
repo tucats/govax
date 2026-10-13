@@ -29,6 +29,9 @@ type fakeServices struct {
 	shimHandled bool
 	shimErr     error
 
+	jsbCode uint32
+	jsbRun  func() // what a JSB shim does to the registers
+
 	quitRequested bool
 }
 
@@ -56,6 +59,16 @@ func (f *fakeServices) Shim(code uint32) (uint32, bool, error) {
 	f.shimCode = code
 
 	return f.shimRC, f.shimHandled, f.shimErr
+}
+
+func (f *fakeServices) JSBShim(code uint32) (bool, error) {
+	f.jsbCode = code
+
+	if f.jsbRun != nil && f.shimHandled {
+		f.jsbRun()
+	}
+
+	return f.shimHandled, f.shimErr
 }
 
 func (f *fakeServices) RequestQuit() { f.quitRequested = true }
@@ -441,6 +454,94 @@ func TestEmulXfcShimWait(t *testing.T) {
 
 	if pc, r0 := e.cpu.GPR(registers.PC), e.cpu.GPR(registers.R0); pc != base+2 || r0 != 1 {
 		t.Errorf("after completion PC = %#x, R0 = %#x, want %#x and 1", pc, r0, base+2)
+	}
+}
+
+// jsbStub is a JSB stub (docs/PHASE-54): PUSHL #code, XFC #XFC$JSBSHIM,
+// RSB.
+func jsbStub(code uint32) []byte {
+	return []byte{0xDD, 0x8F, byte(code), byte(code >> 8), byte(code >> 16), byte(code >> 24), 0xFC, xfcJSBShim, 0x05}
+}
+
+// runJSBStub calls a JSB stub for code at 0x2000 from base (JSB @#^X2000,
+// then NOP), stepping the JSB, the PUSHL, and the XFC.
+func runJSBStub(t *testing.T, e *Engine, code uint32) {
+	t.Helper()
+
+	e.cpu.SetGPR(registers.SP, 0x7000)
+	e.cpu.SetGPR(registers.PC, base)
+	putBytes(t, e.cpu, e.mem, base, 0x16, 0x9F, 0x00, 0x20, 0x00, 0x00, 0x01) // JSB @#^X2000; NOP
+	putBytes(t, e.cpu, e.mem, 0x2000, jsbStub(code)...)
+
+	for i := range 3 {
+		if err := e.Step(); err != nil {
+			t.Fatalf("Step %d: %v", i, err)
+		}
+	}
+}
+
+// TestEmulXfcJSBShim: a JSB stub's XFC pops the code and runs the shim,
+// which works on the registers; RSB then returns to the caller with the
+// stack as it was.
+func TestEmulXfcJSBShim(t *testing.T) {
+	e, f := xfcEngine()
+	f.shimHandled = true
+	f.jsbRun = func() {
+		// The shim sees the JSB's return address on top of the stack.
+		ret, _ := e.mem.LoadLongword(e.cpu, e.cpu.GPR(registers.SP))
+		e.cpu.SetGPR(registers.R1, ret)
+		e.cpu.SetGPR(registers.R0, e.cpu.GPR(registers.R0)+1)
+	}
+
+	e.cpu.SetGPR(registers.R0, 41)
+	runJSBStub(t, e, 1234)
+
+	if f.jsbCode != 1234 {
+		t.Errorf("JSBShim called with code %d, want 1234", f.jsbCode)
+	}
+
+	if r0, r1 := e.cpu.GPR(registers.R0), e.cpu.GPR(registers.R1); r0 != 42 || r1 != base+6 {
+		t.Errorf("R0, R1 = %d, %#x; want 42 and the return address %#x", r0, r1, base+6)
+	}
+
+	if err := e.Step(); err != nil { // RSB
+		t.Fatalf("RSB: %v", err)
+	}
+
+	if pc, sp := e.cpu.GPR(registers.PC), e.cpu.GPR(registers.SP); pc != base+6 || sp != 0x7000 {
+		t.Errorf("after RSB PC = %#x, SP = %#x; want %#x and 0x7000", pc, sp, base+6)
+	}
+}
+
+// TestEmulXfcJSBShimWait: a JSB shim that waits leaves the code on the
+// stack and PC on the XFC, so it runs again.
+func TestEmulXfcJSBShimWait(t *testing.T) {
+	e, f := xfcEngine()
+	f.shimHandled = true
+	f.shimErr = ErrServiceWait
+
+	runJSBStub(t, e, 77)
+
+	xfc := uint32(0x2006)
+
+	for i := range 2 {
+		if pc, sp := e.cpu.GPR(registers.PC), e.cpu.GPR(registers.SP); pc != xfc || sp != 0x7000-8 {
+			t.Fatalf("pass %d: PC = %#x, SP = %#x; want %#x and %#x", i, pc, sp, xfc, 0x7000-8)
+		}
+
+		if err := e.Step(); err != nil {
+			t.Fatalf("Step: %v", err)
+		}
+	}
+
+	f.shimErr = nil
+
+	if err := e.Step(); err != nil {
+		t.Fatalf("Step: %v", err)
+	}
+
+	if pc, sp := e.cpu.GPR(registers.PC), e.cpu.GPR(registers.SP); pc != xfc+2 || sp != 0x7000-4 {
+		t.Errorf("after completion PC = %#x, SP = %#x; want %#x and %#x", pc, sp, xfc+2, 0x7000-4)
 	}
 }
 

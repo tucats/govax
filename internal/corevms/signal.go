@@ -85,10 +85,22 @@ func (env *Environment) signal(kind signalKind, argv []uint32, r0 uint32) (uint3
 	}
 
 	fp := c.GPR(registers.FP)
+	resumeSP := c.GPR(registers.SP)
 
 	callerFP, err1 := env.mem.LoadLongword(c, fp+frameSavedFP)
 	returnPC, err2 := env.mem.LoadLongword(c, fp+frameSavedPC)
 	maskPSW, err3 := env.mem.LoadLongword(c, fp+frameMaskPSW)
+
+	// A routine reached by JSB has no frame: FP is its caller's, the
+	// condition is raised there, at the JSB's return address, and a
+	// handler's SS$_CONTINUE resumes with SP as the JSB left it, so the
+	// stub's RSB returns (whatever the routine put below it).
+	if env.jsbCall {
+		callerFP, err1, err3 = fp, nil, nil
+		returnPC, err2 = env.mem.LoadLongword(c, env.jsbSP)
+		maskPSW = uint32(c.PSL()) & 0xFFFF
+		resumeSP = env.jsbSP
+	}
 
 	if err1 != nil || err2 != nil || err3 != nil {
 		return 0, fmt.Errorf("rtl: %s can't read its call frame at %08X", name, fp)
@@ -104,7 +116,7 @@ func (env *Environment) signal(kind signalKind, argv []uint32, r0 uint32) (uint3
 
 	d := &conditionDispatch{
 		kind:      kind,
-		resumeSP:  c.GPR(registers.SP),
+		resumeSP:  resumeSP,
 		resumeFP:  fp,
 		resumePC:  c.GPR(registers.PC),
 		resumePSL: c.PSL(),

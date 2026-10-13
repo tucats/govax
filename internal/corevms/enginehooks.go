@@ -57,6 +57,14 @@ func (h EngineHooks) Shim(code uint32) (uint32, bool, error) {
 	return r0, handled, EngineError(err)
 }
 
+// JSBShim passes XFC$JSBSHIM (a LIB$ routine reached by JSB) to the
+// running process.
+func (h EngineHooks) JSBShim(code uint32) (bool, error) {
+	handled, err := h.Running().JSBShim(code)
+
+	return handled, EngineError(err)
+}
+
 // NextAST makes EngineHooks a cpu.ASTSource: the engine asks at every
 // instruction boundary whether an AST is due, and the running process,
 // which owns the AST queues, answers (docs/PHASE-26.md subtask 15).

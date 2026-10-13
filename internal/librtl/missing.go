@@ -28,19 +28,23 @@ import (
 // out of the way of the routines govax implements.
 const missingCodeBase = 1000
 
+// missingJSBCodeBase is the code of the first missing JSB entry's stub
+// (MissingJSB), past every missing CALL entry's.
+const missingJSBCodeBase = 2000
+
 var ssUnsupported = vmsdef.Symbols["SS$_UNSUPPORTED"]
 
 // jsbEntry matches the names of LIBRTL's JSB entry points: a routine
-// reached with JSB, its arguments in registers, which a stub (a CALL
-// entry, whose entry mask would run as a HALT) can't stand in for. Their
-// names end in the highest register they use (_R2, STR$DUPL_CHARR8), or
-// in 6 for the string routines' (LIB$SCOPY_DXDX6). Phase 54 brings JSB
-// entries.
+// reached with JSB, its arguments in registers, which a CALL stub (whose
+// entry mask would run as a HALT) can't stand in for; they get JSB stubs
+// (corevms.JSBShimStub). Their names end in the highest register they
+// use (_R2, STR$DUPL_CHARR8), or in 6 for the string routines'
+// (LIB$SCOPY_DXDX6).
 var jsbEntry = regexp.MustCompile(`(R[0-9]+|DX6|DD6)$`)
 
 // dataEntry reports whether name is one of LIBRTL's data tables rather
 // than a routine (LIB$AB_UPCASE and its kind), which a stub mustn't stand
-// in for either.
+// in for: Tables has them.
 func dataEntry(name string) bool {
 	return strings.HasPrefix(name, "LIB$AB_")
 }
@@ -65,15 +69,48 @@ func rank(name string) int {
 // from missingCodeBase. Its Fn signals that the routine is missing
 // (notImplemented).
 func Missing() []Routine {
+	names := missingEntries(func(name string) bool { return !jsbEntry.MatchString(name) })
+	missing := make([]Routine, len(names))
+
+	for i, name := range names {
+		missing[i] = Routine{Name: name, Code: missingCodeBase + uint32(i), Fn: notImplemented(name)}
+	}
+
+	return missing
+}
+
+// MissingJSB returns a JSBRoutine for each JSB entry of LIBRTL.EXE's
+// transfer vector that JSBRoutines doesn't provide (STR$COPY_DX_R8,
+// OTS$MOVE3_R5, ...), coded from missingJSBCodeBase. A program that names
+// one runs, as with Missing's, until it reaches it; the call then signals
+// as a missing CALL entry's does, raised in its caller's frame (a JSB
+// routine has none of its own), and if a handler continues it returns
+// with R0 SS$_UNSUPPORTED.
+func MissingJSB() []JSBRoutine {
+	names := missingEntries(jsbEntry.MatchString)
+	missing := make([]JSBRoutine, len(names))
+
+	for i, name := range names {
+		missing[i] = JSBRoutine{Name: name, Code: missingJSBCodeBase + uint32(i), Fn: notImplementedJSB(name)}
+	}
+
+	return missing
+}
+
+// missingEntries returns the names of LIBRTL.EXE's transfer-vector
+// entries that keep selects and that govax doesn't provide (Routines,
+// JSBRoutines, Tables), in offset order: one name per entry, aliases
+// (FOR$CNV_IN_I is OTS$CVT_TI_L) giving way to the facility ranked first.
+func missingEntries(keep func(name string) bool) []string {
 	have := map[uint32]bool{}
-	for _, r := range Routines {
-		have[r.Offset()] = true
+	for _, l := range provided() {
+		have[l.Offset] = true
 	}
 
 	byOffset := map[uint32]string{}
 
 	for name, sym := range vmsdef.ImageSymbols {
-		if sym.Image != Library || have[sym.Value] || jsbEntry.MatchString(name) || dataEntry(name) {
+		if sym.Image != Library || have[sym.Value] || dataEntry(name) || !keep(name) {
 			continue
 		}
 
@@ -89,14 +126,12 @@ func Missing() []Routine {
 
 	slices.Sort(offsets)
 
-	missing := make([]Routine, len(offsets))
-
+	names := make([]string, len(offsets))
 	for i, off := range offsets {
-		name := byOffset[off]
-		missing[i] = Routine{Name: name, Code: missingCodeBase + uint32(i), Fn: notImplemented(name)}
+		names[i] = byOffset[off]
 	}
 
-	return missing
+	return names
 }
 
 // notImplemented returns the shim of a routine govax lacks: it signals
@@ -111,5 +146,17 @@ func notImplemented(name string) corevms.ShimFunc {
 		}
 
 		return env.SignalFailure([]uint32{ssUnsupported, vmsdef.GovaxNotImplemented, 1, desc}, ssUnsupported)
+	}
+}
+
+// notImplementedJSB is notImplemented for a JSB entry. The name goes on
+// the stack below the JSB's return address; a handler that continues
+// resumes with SP as the JSB left it, so the stub's RSB returns.
+func notImplementedJSB(name string) corevms.JSBShimFunc {
+	return func(env *corevms.Environment, regs *corevms.JSBRegisters) error {
+		r0, err := notImplemented(name)(env, nil)
+		regs[0] = r0
+
+		return err
 	}
 }

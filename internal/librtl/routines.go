@@ -38,14 +38,30 @@ type Routine struct {
 // Offset returns the routine's entry in LIBRTL.EXE's transfer vector.
 // It panics for a name LIBRTL.EXE doesn't have, a mistake in Routines
 // that TestRoutinesMatchLIBRTL reports by name.
-func (r Routine) Offset() uint32 {
-	sym, ok := vmsdef.ImageSymbols[r.Name]
+func (r Routine) Offset() uint32 { return offsetOf(r.Name) }
+
+// offsetOf returns name's entry in LIBRTL.EXE's transfer vector, from
+// vmsdef.ImageSymbols, panicking for a name LIBRTL.EXE doesn't have.
+func offsetOf(name string) uint32 {
+	sym, ok := vmsdef.ImageSymbols[name]
 	if !ok || sym.Image != Library {
-		panic(fmt.Sprintf("librtl: %s is not in %s's transfer vector", r.Name, Library))
+		panic(fmt.Sprintf("librtl: %s is not in %s's transfer vector", name, Library))
 	}
 
 	return sym.Value
 }
+
+// JSBRoutine is one LIBRTL routine reached by JSB, its arguments in
+// registers (docs/PHASE-54, "The JSB entry points"). Its stub is
+// corevms.JSBShimStub, and Code is in the same space as Routine's.
+type JSBRoutine struct {
+	Name string
+	Code uint32
+	Fn   corevms.JSBShimFunc
+}
+
+// JSBRoutines are the routines reached by JSB that govax provides.
+var JSBRoutines = []JSBRoutine{}
 
 // Routines are the LIBRTL routines govax provides. The codes of the ones
 // that came from rtl are the ones they had there, so the stubs, and
@@ -105,33 +121,71 @@ var Routines = []Routine{
 	{"LIB$CRC", 78, libCrc},
 }
 
-// missing is Missing's list, made once.
-var missing = sync.OnceValue(Missing)
+// missing is Missing's list, and missingJSB MissingJSB's, made once.
+var (
+	missing    = sync.OnceValue(Missing)
+	missingJSB = sync.OnceValue(MissingJSB)
+)
 
-// all is every routine with a stub or a home in kernel.asm: Routines,
-// then the ones govax lacks (Missing).
+// all is every routine reached by CALL with a stub or a home in
+// kernel.asm: Routines, then the ones govax lacks (Missing).
 func all() []Routine {
 	return slices.Concat(Routines, missing())
 }
 
-// Register installs every routine written in Go into t: Routines', and
-// the shims of the routines govax lacks.
+// allJSB is every routine reached by JSB: JSBRoutines, then the ones
+// govax lacks (MissingJSB).
+func allJSB() []JSBRoutine {
+	return slices.Concat(JSBRoutines, missingJSB())
+}
+
+// Register installs every routine written in Go into t: Routines' and
+// JSBRoutines', and the shims of the routines govax lacks.
 func Register(t *corevms.ShimTable) {
 	for _, r := range all() {
 		if r.Fn != nil {
 			t.Register(r.Code, r.Name, r.Fn)
 		}
 	}
+
+	for _, r := range allJSB() {
+		t.RegisterJSB(r.Code, r.Name, r.Fn)
+	}
 }
 
-// Links are the places in LIBRTL.EXE of every routine Register installs,
-// and of the ones in kernel.asm, for their stubs (corevms.ShimLink).
-func Links() []corevms.ShimLink {
-	routines := all()
-	links := make([]corevms.ShimLink, 0, len(routines))
+// provided are the places in LIBRTL.EXE of everything govax provides
+// itself: Routines, JSBRoutines, and Tables.
+func provided() []corevms.ShimLink {
+	links := make([]corevms.ShimLink, 0, len(Routines)+len(JSBRoutines)+len(Tables))
 
-	for _, r := range routines {
+	for _, r := range Routines {
 		links = append(links, corevms.ShimLink{Name: r.Name, Library: Library, Offset: r.Offset(), Code: r.Code})
+	}
+
+	for _, r := range JSBRoutines {
+		links = append(links, corevms.ShimLink{Name: r.Name, Library: Library, Offset: offsetOf(r.Name), Code: r.Code, JSB: true})
+	}
+
+	for _, t := range Tables {
+		links = append(links, corevms.ShimLink{Name: t.Name, Library: Library, Offset: offsetOf(t.Name), Data: t.Data[:]})
+	}
+
+	return links
+}
+
+// Links are the places in LIBRTL.EXE of every routine Register installs
+// and of the ones in kernel.asm, for their stubs, and of the data tables
+// (corevms.ShimLink). Routines come first, in their table's order, so the
+// first stubs (the ones in VMINIT's page) keep their addresses.
+func Links() []corevms.ShimLink {
+	links := provided()
+
+	for _, r := range missing() {
+		links = append(links, corevms.ShimLink{Name: r.Name, Library: Library, Offset: r.Offset(), Code: r.Code})
+	}
+
+	for _, r := range missingJSB() {
+		links = append(links, corevms.ShimLink{Name: r.Name, Library: Library, Offset: offsetOf(r.Name), Code: r.Code, JSB: true})
 	}
 
 	return links

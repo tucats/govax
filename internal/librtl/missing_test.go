@@ -7,13 +7,14 @@ import (
 	"github.com/tucats/govax/internal/vmsdef"
 )
 
-// TestMissing: every LIBRTL.EXE entry has a stub, once: Routines', or a
-// missing routine's. JSB entries and data tables have none, aliases
-// share one, and the codes are distinct from every other shim's.
+// TestMissing: every LIBRTL.EXE entry is covered once: by a CALL stub
+// (Routines', or a missing routine's), a JSB stub (JSBRoutines', or a
+// missing JSB entry's), or a data table. Aliases share one, the kinds
+// match the names, and the codes are distinct from every other shim's.
 func TestMissing(t *testing.T) {
 	missing := Missing()
 
-	byName := map[string]Routine{}
+	byName := map[string]corevms.ShimLink{}
 	offsets := map[uint32]string{}
 	codes := map[uint32]string{}
 
@@ -21,16 +22,16 @@ func TestMissing(t *testing.T) {
 		codes[l.Code] = l.Name
 	}
 
-	for _, r := range append(append([]Routine(nil), Routines...), missing...) {
-		if other, dup := offsets[r.Offset()]; dup {
-			t.Errorf("%s and %s share offset %#x", r.Name, other, r.Offset())
+	for _, l := range Links() {
+		if other, dup := offsets[l.Offset]; dup {
+			t.Errorf("%s and %s share offset %#x", l.Name, other, l.Offset)
 		}
 
-		if other, dup := codes[r.Code]; dup && r.Code != 0 {
-			t.Errorf("%s and %s share code %d", r.Name, other, r.Code)
+		if other, dup := codes[l.Code]; dup && l.Code != 0 {
+			t.Errorf("%s and %s share code %d", l.Name, other, l.Code)
 		}
 
-		offsets[r.Offset()], codes[r.Code], byName[r.Name] = r.Name, r.Name, r
+		offsets[l.Offset], codes[l.Code], byName[l.Name] = l.Name, l.Name, l
 	}
 
 	for name, sym := range vmsdef.ImageSymbols {
@@ -38,14 +39,22 @@ func TestMissing(t *testing.T) {
 			continue
 		}
 
-		_, stub := byName[name]
-		skipped := jsbEntry.MatchString(name) || dataEntry(name)
+		if offsets[sym.Value] == "" {
+			t.Errorf("%s (offset %#x) has no stub or table", name, sym.Value)
+
+			continue
+		}
+
+		l, ok := byName[name]
+		if !ok {
+			continue // an alias
+		}
 
 		switch {
-		case skipped && stub:
-			t.Errorf("%s has a stub, but is a JSB entry or data", name)
-		case !skipped && offsets[sym.Value] == "":
-			t.Errorf("%s (offset %#x) has no stub", name, sym.Value)
+		case dataEntry(name) != (l.Data != nil):
+			t.Errorf("%s: data %v, want %v", name, l.Data != nil, dataEntry(name))
+		case jsbEntry.MatchString(name) != l.JSB:
+			t.Errorf("%s: JSB %v, want %v", name, l.JSB, jsbEntry.MatchString(name))
 		}
 	}
 
@@ -53,29 +62,26 @@ func TestMissing(t *testing.T) {
 		{"LIB$INDEX", "LIB$INDEX"},
 		{"LIB$MOVC3", "LIB$MOVC3"},       // ends in a digit, but a CALL entry
 		{"FOR$CNV_IN_I", "OTS$CVT_TI_L"}, // an alias: OTS$ ranks first
-		{"LIB$SCOPY_DXDX6", ""},          // JSB
-		{"STR$DUPL_CHARR8", ""},          // JSB
-		{"LIB$AB_UPCASE", ""},            // data
+		{"LIB$SCOPY_DXDX6", "LIB$SCOPY_DXDX6"},
+		{"COB$CVTDP_R9", "OTS$CVTDP_R9"}, // a JSB alias
+		{"LIB$AB_UPCASE", "LIB$AB_UPCASE"},
 		{"LIB$PUT_OUTPUT", "LIB$PUT_OUTPUT"},
 	}
 
 	for _, c := range checks {
-		got := offsets[vmsdef.ImageSymbols[c.name].Value]
-		if c.want == "" {
-			if _, ok := byName[c.name]; ok {
-				t.Errorf("%s has a stub; want none", c.name)
-			}
-
-			continue
-		}
-
-		if got != c.want {
+		if got := offsets[vmsdef.ImageSymbols[c.name].Value]; got != c.want {
 			t.Errorf("%s's stub is %q, want %q", c.name, got, c.want)
 		}
 	}
 
 	for _, r := range missing {
-		if r.Code < missingCodeBase || r.Fn == nil {
+		if r.Code < missingCodeBase || r.Code >= missingJSBCodeBase || r.Fn == nil {
+			t.Errorf("%s: code %d, Fn nil %v", r.Name, r.Code, r.Fn == nil)
+		}
+	}
+
+	for _, r := range MissingJSB() {
+		if r.Code < missingJSBCodeBase || r.Fn == nil {
 			t.Errorf("%s: code %d, Fn nil %v", r.Name, r.Code, r.Fn == nil)
 		}
 	}
@@ -88,6 +94,12 @@ func TestMissingRegistered(t *testing.T) {
 	for _, r := range Missing() {
 		if _, ok := env.Shims().Lookup(r.Code); !ok {
 			t.Errorf("%s (code %d) isn't registered", r.Name, r.Code)
+		}
+	}
+
+	for _, r := range MissingJSB() {
+		if _, ok := env.Shims().LookupJSB(r.Code); !ok {
+			t.Errorf("%s (code %d) isn't registered as a JSB routine", r.Name, r.Code)
 		}
 	}
 }
