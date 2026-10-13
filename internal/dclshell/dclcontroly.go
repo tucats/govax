@@ -74,8 +74,9 @@ type controlYPrompt struct {
 
 // controlKeys are a process's SET [NO]CONTROL settings (Shell.control):
 // noY is set while Ctrl/Y is disabled, t while Ctrl/T is enabled. A
-// subprocess's DCL starts with both keys as process 1's does at login,
-// not with its parent's settings (unconfirmed, a probe case).
+// spawned subprocess's DCL starts with its parent's settings (VMS V7.1,
+// testdata/lib57; cliHost.InheritSymbols), but not its ON CONTROL_Y; a
+// LOGINOUT process's starts with Ctrl/Y on and Ctrl/T off.
 type controlKeys struct {
 	noY bool
 	t   bool

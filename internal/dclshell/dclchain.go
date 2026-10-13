@@ -1,5 +1,7 @@
 package dclshell
 
+import "strings"
+
 // Chaining (docs/PHASE-57, "Chaining"): an image calls LIB$DO_COMMAND or
 // LIB$RUN_PROGRAM, which leave a command line or an image's name with
 // the process's DCL (shellCLI's Chain, which sets Shell.chained) and end
@@ -37,7 +39,7 @@ func (c *Interpreter) runChained(err error) error {
 		c.chained = nil
 
 		if next.program {
-			err = c.statusOf(func() error { return c.runForeign(next.text, "") })
+			err = c.runProgram(next.text)
 		} else {
 			err = c.DispatchConsole(next.text)
 		}
@@ -57,4 +59,17 @@ func (c *Interpreter) RunChained() error {
 	}
 
 	return c.runChained(nil)
+}
+
+// runProgram runs LIB$RUN_PROGRAM's text as a foreign command's image:
+// the name, then, past a blank, the image's command text, by DCL's rules
+// for a foreign command's (dclText). An empty name runs nothing, leaving
+// $STATUS the image's that chained it (VMS V7.1, testdata/lib57).
+func (c *Interpreter) runProgram(text string) error {
+	name, rest, _ := strings.Cut(strings.TrimSpace(text), " ")
+	if name == "" {
+		return nil
+	}
+
+	return c.statusOf(func() error { return c.runForeign(name, rest) })
 }

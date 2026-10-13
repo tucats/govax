@@ -1,0 +1,712 @@
+$ WRITE SYS$OUTPUT F$GETSYI("VERSION")
+V7.1    
+$ DEV = F$PARSE("[000000]",,,"DEVICE")
+$ SET DEFAULT DUA1:[000000]
+$ LIB57_DIR == DEV + "[000000]"
+$ LIB57 :== $DUA1:[000000]LIB57.EXE
+$ MACRO/NOLIST LIB57
+$ MACRO/NOLIST LIB57B
+$ LINK/NOMAP LIB57
+$ LINK/NOMAP LIB57B
+$ MACRO/NOLIST DEF_LIBCLI
+                                     0000       
+%MACRO-E-UNRECSTMT, Unrecognized statement             !
+                                     0000       
+%MACRO-E-UNRECSTMT, Unrecognized statement      !
+                                     0000       
+%MACRO-E-UNRECSTMT, Unrecognized statement      !
+                                     0000       
+%MACRO-E-UNRECSTMT, Unrecognized statement      !
+                                     0000       
+%MACRO-E-UNRECSTMT, Unrecognized statement      !
+                                     0000       
+%MACRO-E-UNRECSTMT, Unrecognized statement      !
+                                     0000       
+%MACRO-E-UNRECSTMT, Unrecognized statement      !
+                                     0000       
+%MACRO-E-UNRECSTMT, Unrecognized statement      !
+$ ANALYZE/OBJECT/OUTPUT=DEF_LIBCLI.ANL DEF_LIBCLI.OBJ
+%ANALYZE-I-ERRORS, DUA1:[000000]DEF_LIBCLI.OBJ;2                           0 errors
+$ !
+$ ! S1: symbols at command level 1
+$ G1 == "global one"
+$ L1 = "local one"
+$ ABBR*EV = "abbreviated"
+$ NUM = -42
+$ BOTH == "global both"
+$ BOTH = "local both"
+$ AMB*IG = "ambiguous"
+$ DEL_L = "delete me"
+$ DEL_G == "delete me too"
+$ DEL_W == "global, deleted from the local table"
+$ DEL_AB*BR = "abbreviated, deleted"
+$ LIB57 SYM
+GET G1 R0=00000001
+  B: 40 "global one                              "
+  L: 0000000A
+  T: 00000002
+GET L1 R0=00000001
+  B: 40 "local one                               "
+  L: 00000009
+  T: 00000001
+GET l1 lowercase R0=00000001
+  B: 40 "local one                               "
+  L: 00000009
+  T: 00000001
+GET trailing blank R0=00000001
+  B: 40 "local one                               "
+  L: 00000009
+  T: 00000001
+GET leading blank R0=0015838C
+  B: 40 "----------------------------------------"
+  L: 00005555
+  T: 55555555
+GET ABBR R0=00000001
+  B: 40 "abbreviated                             "
+  L: 0000000B
+  T: 00000001
+GET ABBREV R0=00000001
+  B: 40 "abbreviated                             "
+  L: 0000000B
+  T: 00000001
+GET ABBREVI R0=00158364
+  B: 40 "----------------------------------------"
+  L: 00005555
+  T: 55555555
+GET AB R0=00158364
+  B: 40 "----------------------------------------"
+  L: 00005555
+  T: 55555555
+GET NUM R0=00000001
+  B: 40 "-42                                     "
+  L: 00000003
+  T: 00000001
+GET BOTH R0=00000001
+  B: 40 "local both                              "
+  L: 0000000A
+  T: 00000001
+GET $STATUS R0=00000001
+  B: 40 "%X00030001                              "
+  L: 0000000A
+  T: 00000002
+GET $SEVERITY R0=00000001
+  B: 40 "1                                       "
+  L: 00000001
+  T: 00000002
+GET P1 R0=00000001
+  B: 40 "                                        "
+  L: 00000000
+  T: 00000001
+GET P9 R0=00158364
+  B: 40 "----------------------------------------"
+  L: 00005555
+  T: 55555555
+GET NOSUCH R0=00158364
+  B: 40 "----------------------------------------"
+  L: 00005555
+  T: 55555555
+GET empty R0=0015838C
+  B: 40 "----------------------------------------"
+  L: 00005555
+  T: 55555555
+GET 1X R0=0015838C
+  B: 40 "----------------------------------------"
+  L: 00005555
+  T: 55555555
+GET _X R0=00158364
+  B: 40 "----------------------------------------"
+  L: 00005555
+  T: 55555555
+GET -X R0=0015838C
+  B: 40 "----------------------------------------"
+  L: 00005555
+  T: 55555555
+GET $X R0=00158364
+  B: 40 "----------------------------------------"
+  L: 00005555
+  T: 55555555
+GET * R0=0015838C
+  B: 40 "----------------------------------------"
+  L: 00005555
+  T: 55555555
+GET X*Y R0=00158364
+  B: 40 "----------------------------------------"
+  L: 00005555
+  T: 55555555
+GET 255-char name R0=00158364
+  L: 00005555
+  T: 55555555
+GET 256-char name R0=0015838C
+  L: 00005555
+  T: 55555555
+GET into 5 characters R0=00158011
+  B: 5 "globa"
+  L: 00000005
+  T: 00000002
+GET 2 arguments R0=00000001
+  B: 20 "local one           "
+GET 1 argument R0=00158224
+GET into dynamic R0=00000001
+  D: 10 "global one"
+  L: 0000000A
+  T: 00000002
+SET S_LOCAL R0=00000001
+SET S_GLOBAL table 2 R0=00000001
+SET S_ONE table 1 R0=00000001
+SET S_ZERO table 0 R0=00158234
+SET S_THREE table 3 R0=00158234
+SET s_lower R0=00000001
+SET S_AB*BREV R0=00000001
+SET _UNDER R0=00000001
+SET $DOLLAR R0=00000001
+SET 1DIGIT R0=0015838C
+SET -DASH R0=0015838C
+SET empty name R0=0015838C
+SET S BLANK R0=00000001
+SET S_DASH-IN R0=00000001
+SET 255-char name R0=00000001
+SET 256-char name R0=0015838C
+SET S_V255 R0=00000001
+SET S_V256 R0=00000001
+SET S_V1024 R0=00000001
+SET S_V4097 R0=00158234
+SET $STATUS table 2 R0=00158384
+SET AM*BX R0=00158374
+SET AMBIG R0=00000001
+SET S_EMPTY R0=00000001
+SET S_CASE R0=00000001
+SET G1 local R0=00000001
+SET 1 argument R0=00158224
+DELETE DEL_L R0=00000001
+DELETE DEL_G table 2 R0=00000001
+DELETE DEL_W table 1 R0=00158364
+DELETE NOSUCH R0=00158364
+DELETE DEL_AB R0=00000001
+DELETE DEL_L again R0=00158364
+DELETE L1 table 0 R0=00158234
+DELETE L1 table 3 R0=00158234
+DELETE empty name R0=0015838C
+DELETE num lowercase R0=00000001
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ SHOW SYMBOL/LOCAL S_LOCAL
+  S_LOCAL = "set local"
+$ SHOW SYMBOL/GLOBAL S_GLOBAL
+  S_GLOBAL == "set global"
+$ SHOW SYMBOL/LOCAL S_ONE
+  S_ONE = "set in table 1"
+$ SHOW SYMBOL S_ZERO
+%DCL-W-UNDSYM, undefined symbol - check validity and spelling
+$ SHOW SYMBOL S_THREE
+%DCL-W-UNDSYM, undefined symbol - check validity and spelling
+$ SHOW SYMBOL S_LOWER
+  S_LOWER = "lowercase name"
+$ SHOW SYMBOL S_AB
+  S_AB*BREV = "abbreviated"
+$ SHOW SYMBOL S_ABBREV
+  S_AB*BREV = "abbreviated"
+$ SHOW SYMBOL _UNDER
+  _UNDER = "underscore"
+$ SHOW SYMBOL $DOLLAR
+  $DOLLAR = "dollar"
+$ SHOW SYMBOL S_DASH
+%DCL-W-UNDSYM, undefined symbol - check validity and spelling
+$ SHOW SYMBOL S_V255
+  S_V255 = "<vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv"
+$ SHOW SYMBOL S_V256
+  S_V256 = "<vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv"
+$ WRITE SYS$OUTPUT F$LENGTH(S_V1024)
+%DCL-W-BUFOVF, command buffer overflow - shorten expression or command line
+$ SHOW SYMBOL S_V4097
+%DCL-W-UNDSYM, undefined symbol - check validity and spelling
+$ SHOW SYMBOL AMBIG
+  AMBIG = "replaced"
+$ SHOW SYMBOL AM
+%DCL-W-UNDSYM, undefined symbol - check validity and spelling
+$ SHOW SYMBOL AMBX
+%DCL-W-UNDSYM, undefined symbol - check validity and spelling
+$ SHOW SYMBOL S_EMPTY
+  S_EMPTY = ""
+$ SHOW SYMBOL S_CASE
+  S_CASE = "Mixed Case value"
+$ SHOW SYMBOL/LOCAL G1
+  G1 = "local G1"
+$ SHOW SYMBOL/GLOBAL G1
+  G1 == "global one"
+$ SHOW SYMBOL S_ONEARG
+%DCL-W-UNDSYM, undefined symbol - check validity and spelling
+$ SHOW SYMBOL DEL_L
+%DCL-W-UNDSYM, undefined symbol - check validity and spelling
+$ SHOW SYMBOL DEL_G
+%DCL-W-UNDSYM, undefined symbol - check validity and spelling
+$ SHOW SYMBOL DEL_W
+  DEL_W == "global, deleted from the local table"
+$ SHOW SYMBOL DEL_ABBR
+%DCL-W-UNDSYM, undefined symbol - check validity and spelling
+$ SHOW SYMBOL L1
+  L1 = "local one"
+$ SHOW SYMBOL NUM
+%DCL-W-UNDSYM, undefined symbol - check validity and spelling
+$ !
+$ ! S2: symbols at command level 2
+$ LOCOUT = "outer local"
+$ LOCDEL = "outer, to be deleted"
+$ @LIB57S SYMOUT
+$ ! LIB57S.COM - the Phase 57 probe's nested procedure: runs LIB57's
+$ ! group P1 at command level 2, then shows what it changed there.
+$ LIB57 SYMOUT
+GET LOCOUT R0=00000001
+  B: 40 "outer local                             "
+  L: 0000000B
+  T: 00000001
+GET P1 R0=00000001
+  B: 40 "SYMOUT                                  "
+  L: 00000006
+  T: 00000001
+GET P2 R0=00000001
+  B: 40 "                                        "
+  L: 00000000
+  T: 00000001
+SET S_INNER R0=00000001
+SET S_INNERG table 2 R0=00000001
+SET LOCOUT R0=00000001
+DELETE LOCDEL R0=00158364
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ GOTO SYMOUT
+$ SYMOUT:
+$ SHOW SYMBOL S_INNER
+  S_INNER = "inner"
+$ SHOW SYMBOL S_INNERG
+  S_INNERG == "inner global"
+$ SHOW SYMBOL LOCOUT
+  LOCOUT = "set at level 2"
+$ SHOW SYMBOL LOCDEL
+  LOCDEL = "outer, to be deleted"
+$ EXIT
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X10000001"
+$ SHOW SYMBOL S_INNER
+%DCL-W-UNDSYM, undefined symbol - check validity and spelling
+$ SHOW SYMBOL S_INNERG
+  S_INNERG == "inner global"
+$ SHOW SYMBOL LOCOUT
+  LOCOUT = "outer local"
+$ SHOW SYMBOL LOCDEL
+  LOCDEL = "outer, to be deleted"
+$ !
+$ ! S3: logical names
+$ DEFINE LIB57_D "to delete"
+$ DEFINE/JOB LIB57_JD "job, to delete"
+$ DEFINE/USER_MODE LIB57_U "user mode"
+$ LIB57 LNM
+SET LIB57_A R0=00000631
+SET LIB57_A again R0=00000631
+SET lib57_lower R0=00000631
+SET trailing blank R0=00000631
+SET LIB57_B LNM$JOB R0=00000001
+SET LIB57_C LNM$GROUP R0=00000001
+SET LIB57_E no such table R0=00002294
+SET LIB57_F lowercase table R0=00002294
+SET LIB57_LIST item list R0=00000631
+SET LIB57_BOTH value and items R0=00000631
+SET LIB57_NONE neither R0=0015835C
+SET LIB57_CONF CONFINE R0=00000631
+SET LIB57_CONC CONCEALED R0=00000631
+SET LIB57_TERM TERMINAL R0=00000631
+SET LIB57_NOAL NO_ALIAS R0=00000631
+SET LIB57_BAD bad attribute R0=00000014
+SET LIB57_ZERO attributes 0 R0=00000631
+SET LIB57_ILA items CONCEALED R0=00000014
+SET LIB57_ILC items CONFINE R0=00000631
+SET empty name R0=00000154
+SET LIB57_EV empty value R0=00000154
+SET LIB57_V256 256 characters R0=00000154
+SET LIB57_V255 255 characters R0=00000631
+DELETE LIB57_D R0=00000001
+DELETE LIB57_U user mode R0=000001BC
+DELETE LIB57_NOSUCH R0=000001BC
+DELETE empty name R0=00000154
+DELETE LIB57_JD LNM$JOB R0=00000001
+DELETE lib57_a lowercase R0=000001BC
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ SHOW LOGICAL/PROCESS/FULL LIB57*
+
+(LNM$PROCESS_TABLE)	[kernel]
+			[no protection information]
+
+  "LIB57_A" [super] = "value a2"
+  "LIB57_BOTH" [super] = "item"
+  "LIB57_CONC" [super] = "CONCEALED_VALUE" [concealed]
+  "LIB57_CONF" [super,confine] = "confined"
+  "LIB57_ILC" [super,confine] = "item"
+  "LIB57_LIST" [super] = "one"
+	= "two"
+  "LIB57_NOAL" [super,no_alias] = "no alias"
+  "LIB57_TERM" [super] = "terminal" [terminal]
+  "LIB57_TRAIL " [super] = "trailing blank"
+  "LIB57_V255" [super] = "<vvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvvv"
+  "LIB57_ZERO" [super] = "zero"
+$ SHOW LOGICAL/PROCESS "lib57_lower"
+   "lib57_lower" = "lowercase" (LNM$PROCESS_TABLE)
+$ SHOW LOGICAL/PROCESS "LIB57_TRAIL "
+   "LIB57_TRAIL " = "trailing blank" (LNM$PROCESS_TABLE)
+$ SHOW LOGICAL/JOB/FULL LIB57*
+
+(LNM$JOB_81C68580)	[kernel]  [shareable]  [Quota=(3792,4096)]
+			[Protection=(RWCD,RWCD,,)]  [Owner=[SYSTEM]]
+
+  "LIB57_B" [super] = "in the job table"
+$ SHOW LOGICAL/GROUP/FULL LIB57*
+
+(LNM$GROUP_000001)	[kernel]  [shareable,group]
+			[Protection=(RWCD,R,R,)]  [Owner=[1,*]]
+
+  "LIB57_C" [super] = "in the group table"
+$ DEASSIGN/JOB LIB57_B
+$ DEASSIGN/JOB LIB57_F
+%SYSTEM-F-NOLOGNAM, no logical name match
+$ DEASSIGN/GROUP LIB57_C
+$ !
+$ ! S4: the common area
+$ LIB57 COM1
+GET first R0=00000001
+  D: 21 "after an exit handler"
+  L: 00000015
+PUT empty R0=00000001
+  L: 00000000
+GET after empty R0=00000001
+  D: 0 ""
+  L: 00000000
+PUT 252 R0=00000001
+  L: 000000FC
+GET 252 R0=00000001
+  D: 252 "<ccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc"
+  L: 000000FC
+PUT 253 R0=00158011
+  L: 000000FC
+GET after 253 R0=00000001
+  D: 252 "<ddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddddd"
+  L: 000000FC
+GET into 10 characters R0=00158011
+  B: 10 "<ddddddddd"
+  L: 0000000A
+PUT 1 argument R0=00000001
+GET 1 argument into 20 R0=00000001
+  B: 20 "short               "
+PUT for the next image R0=00000001
+  L: 00000012
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ LIB57 COM2
+GET in the next image R0=00000001
+  D: 18 "for the next image"
+  L: 00000012
+$ RUN LIB57B
+LIB57B GET_FOREIGN R0=00000001 0 ""
+LIB57B GET_COMMON R0=00000001 18 "for the next image"
+$ SPAWN/OUTPUT=LIB57SP.LOG LIB57 COM2
+%DCL-S-SPAWNED, process SYSTEM_1 spawned
+%DCL-S-ATTACHED, terminal now attached to process SYSTEM_1
+%DCL-W-SYMTOOLNG, symbol S_V1024 is too long to copy to subprocess
+%DCL-S-RETURNED, control returned to process SYSTEM
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ TYPE LIB57SP.LOG
+GET in the next image R0=00000001
+  D: 0 ""
+  L: 00000000
+$ !
+$ ! S5: LIB$DO_COMMAND
+$ CHAINED = "the chained command ran"
+$ LIB57 DOSHOW
+  CHAINED = "the chained command ran"
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ LIB57 DOAT
+$ ! LIB57C.COM - the Phase 57 probe's procedure that LIB$DO_COMMAND runs.
+$ WRITE SYS$OUTPUT "LIB57C: P1=""", P1, """ P2=""", P2, """ depth ", F$ENVIRONMENT("DEPTH")
+LIB57C: P1="ONE" P2="TWO" depth 2
+$ EXIT
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X10010001"
+$ LIB57 DOEMPTY
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ LIB57 DOBLANK
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ LIB57 DOFAIL
+%DCL-W-IVVERB, unrecognized command verb - check validity and spelling
+ \FROBNICATE\
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00038090"
+$ LIB57 DOWRITE
+chained write
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00010001"
+$ LIB57 DO255
+  CHAINED = "the chained command ran"
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ LIB57 DO256
+  CHAINED = "the chained command ran"
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ LIB57 DOEXH
+DCLEXH R0=00000001
+  exit handler: status 00000001
+  CHAINED = "the chained command ran"
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ LIB57 DOAGAIN
+  CHAINED = "the chained command ran"
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ @LIB57S DOEXIT
+$ ! LIB57S.COM - the Phase 57 probe's nested procedure: runs LIB57's
+$ ! group P1 at command level 2, then shows what it changed there.
+$ LIB57 DOEXIT
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00000003"
+$ LIB57 DOMSG
+before the chain
+PUT_OUTPUT before R0=00000001
+  CHAINED = "the chained command ran"
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ @LIB57S DOLOCAL
+$ ! LIB57S.COM - the Phase 57 probe's nested procedure: runs LIB57's
+$ ! group P1 at command level 2, then shows what it changed there.
+$ LIB57 DOLOCAL
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00030001"
+$ GOTO DOLOCAL
+$ DOLOCAL:
+$ SHOW SYMBOL CHAINED_LOCAL
+  CHAINED_LOCAL = 7   Hex = 00000007  Octal = 00000000007
+$ EXIT
+$ SHOW SYMBOL CHAINED_LOCAL
+%DCL-W-UNDSYM, undefined symbol - check validity and spelling
+$ SET NOVERIFY
+  CHAINED = "the chained command ran"
+$ LIB57 NOGROUP
+LIB57: no group "NOGROUP"
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ !
+$ ! S6: LIB$RUN_PROGRAM
+$ LIB57 RUNB
+PUT from LIB57 R0=00000001
+  L: 0000000A
+LIB57B GET_FOREIGN R0=00000001 0 ""
+LIB57B GET_COMMON R0=00000001 10 "from LIB57"
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ LIB57 RUNAGAIN
+PUT AGAIN R0=00000001
+  L: 00000005
+LIB57B GET_FOREIGN R0=00000001 0 ""
+LIB57B GET_COMMON R0=00000001 5 "AGAIN"
+LIB57B GET_FOREIGN R0=00000001 0 ""
+LIB57B GET_COMMON R0=00000001 11 "second time"
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ LIB57 RUNEXH
+PUT after DCLEXH R0=00000001
+  L: 00000015
+DCLEXH R0=00000001
+  exit handler: status 00000001
+LIB57B GET_FOREIGN R0=00000001 0 ""
+LIB57B GET_COMMON R0=00000001 21 "after an exit handler"
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ LIB57 RUNSPEC
+LIB57B GET_FOREIGN R0=00000001 0 ""
+LIB57B GET_COMMON R0=00000001 21 "after an exit handler"
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ LIB57 RUNNONE
+%DCL-W-ACTIMAGE, error activating image NOSUCH_IMAGE
+-CLI-E-IMAGEFNF, image file not found DUA1:[000000]NOSUCH_IMAGE.EXE;
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X100388B2"
+$ LIB57 RUNEMPTY
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ LIB57 RUNARGS
+LIB57B GET_FOREIGN R0=00000001 10 "TEXT AFTER"
+LIB57B GET_COMMON R0=00000001 21 "after an exit handler"
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ LIB57 RUN256
+RUN 256 characters R0=00158234
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ !
+$ ! S7: the control keys
+$ SET CONTROL=(Y,T)
+$ ON CONTROL_Y THEN GOTO NEVER
+$ CTL = "WRITE SYS$OUTPUT F$ENVIRONMENT(""CONTROL""), "" / "", F$ENVIRONMENT(""NOCONTROL""), "" / "", F$ENVIRONMENT(""ON_CONTROL_Y"")"
+$ CTL
+T,Y /  / TRUE
+$ LIB57 CTLQ
+DISABLE 0 R0=00000001
+  O: 02100000
+ENABLE 0 R0=00000001
+  O: 02100000
+$ CTL
+T,Y /  / TRUE
+$ LIB57 CTLDT
+DISABLE T R0=00000001
+  O: 02100000
+$ CTL
+Y / T / TRUE
+$ LIB57 CTLET
+ENABLE T R0=00000001
+  O: 02000000
+$ CTL
+T,Y /  / TRUE
+$ LIB57 CTLDY
+DISABLE Y R0=00000001
+  O: 02100000
+$ CTL
+T / Y / TRUE
+$ ON CONTROL_Y THEN GOTO NEVER
+$ LIB57 CTLEY
+ENABLE Y R0=00000001
+  O: 00100000
+$ CTL
+T,Y /  / TRUE
+$ LIB57 CTLBOTH
+DISABLE T and Y R0=00000001
+  O: 02100000
+ENABLE T and Y R0=00000001
+  O: 00000000
+DISABLE T, no old-mask R0=00000001
+  O: 55555555
+$ CTL
+Y / T / TRUE
+$ LIB57 CTLBAD
+DISABLE bit 0 R0=00158234
+  O: 02000000
+ENABLE bit 0 R0=00158234
+  O: 02000000
+DISABLE Y and bit 0 R0=00158234
+  O: 02000000
+ENABLE bit 30 R0=00158234
+  O: 02000000
+ENABLE Ctrl/C bit R0=00158234
+  O: 02000000
+$ CTL
+Y / T / TRUE
+$ SET CONTROL=(Y,T)
+$ SPAWN/OUTPUT=LIB57SC.LOG @LIB57P
+%DCL-S-SPAWNED, process SYSTEM_1 spawned
+%DCL-S-ATTACHED, terminal now attached to process SYSTEM_1
+%DCL-W-SYMTOOLNG, symbol S_V1024 is too long to copy to subprocess
+%DCL-S-RETURNED, control returned to process SYSTEM
+$ CTL
+T,Y /  / TRUE
+$ TYPE LIB57SC.LOG
+$ ! LIB57P.COM - the Phase 57 probe's spawned procedure: the control
+$ ! keys in a subprocess.
+$ CTL
+T,Y /  / FALSE
+$ SET NOCONTROL=Y
+$ CTL
+T / Y / FALSE
+$ LIB57 CTLEY
+ENABLE Y R0=00000001
+  O: 00100000
+$ CTL
+T,Y /  / FALSE
+$ LIB57 CTLDT
+DISABLE T R0=00000001
+  O: 02100000
+$ CTL
+Y / T / FALSE
+$ EXIT
+$ SET NOCONTROL=T
+$ !
+$ ! S8: LIB$ATTACH's refusals
+$ LIB57 ATTSELF
+ATTACH self R0=00158394
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ LIB57 ATTNONE
+ATTACH no such process R0=000008E8
+  P: 7FFFFFFF
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ LIB57 ATTZERO
+ATTACH 0 R0=00000154
+  P: 00000000
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ !
+$ ! S9: no CLI
+$ OPEN/WRITE IN LIB57N.DAT
+$ WRITE IN "the command line"
+$ CLOSE IN
+$ LIB57 NOCLI
+CREPRC LIB57 R0=00000001
+  FINALSTS: 00000001
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ TYPE LIB57N.OUT
+GET_FOREIGN R0=00000001
+GET_SYMBOL R0=0015837C
+  B: 40 "----------------------------------------"
+  L: 00005555
+  T: 55555555
+SET_SYMBOL R0=0015837C
+DELETE_SYMBOL R0=0015837C
+SET_LOGICAL R0=0015837C
+DELETE_LOGICAL R0=0015837C
+PUT_COMMON R0=00000001
+  L: 00000018
+GET_COMMON R0=00000001
+  D: 24 "in a process with no CLI"
+  L: 00000018
+DISABLE_CTRL R0=0015837C
+  O: 00000000
+ENABLE_CTRL R0=0015837C
+  O: 00000000
+ATTACH self R0=0015837C
+PAUSE R0=0015837C
+GET_COMMAND R0=00018292
+  D: 0 ""
+  L: 00005555
+DO_COMMAND R0=0015837C
+RUN_PROGRAM R0=0015837C
+GET_FOREIGN R0=00000001
+GET_SYMBOL R0=0015837C
+  B: 40 "----------------------------------------"
+  L: 00005555
+  T: 55555555
+SET_SYMBOL R0=0015837C
+DELETE_SYMBOL R0=0015837C
+SET_LOGICAL R0=0015837C
+DELETE_LOGICAL R0=0015837C
+PUT_COMMON R0=00000001
+  L: 00000018
+GET_COMMON R0=00000001
+  D: 24 "in a process with no CLI"
+  L: 00000018
+DISABLE_CTRL R0=0015837C
+  O: 00000000
+ENABLE_CTRL R0=0015837C
+  O: 00000000
+ATTACH self R0=0015837C
+PAUSE R0=0015837C
+GET_COMMAND R0=00018292
+  D: 0 ""
+  L: 00005555
+DO_COMMAND R0=0015837C
+RUN_PROGRAM R0=0015837C
+$ IF F$SEARCH("LIB57N.ERR") .NES. "" THEN TYPE LIB57N.ERR
+$ !
+$ ! The end.
+$ SET NOVERIFY

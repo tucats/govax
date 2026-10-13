@@ -71,13 +71,15 @@ func TestLibLogical_noCLI(t *testing.T) {
 }
 
 // TestLibSetLogical: the name goes into LNM$PROCESS at supervisor mode,
-// its case kept; defining it again is SS$_SUPERSEDE; a named table is
-// used; with no value nor item list it's LIB$_INVARG.
+// its case kept, the status SS$_SUPERSEDE even for a new name when no
+// table is given (VMS V7.1); a named table is used, a new name there
+// SS$_NORMAL; the name alone is LIB$_WRONUMARG, and a value and item
+// list both omitted LIB$_INVARG.
 func TestLibSetLogical(t *testing.T) {
 	env, _, a := cliFixture(t)
 
-	if r0 := call(t, env, "LIB$SET_LOGICAL", a.desc("MyName"), a.desc("Disk:[Dir]")); r0 != ssNormal {
-		t.Fatalf("status %#x, want SS$_NORMAL", r0)
+	if r0 := call(t, env, "LIB$SET_LOGICAL", a.desc("MyName"), a.desc("Disk:[Dir]")); r0 != ssSupersedeTest {
+		t.Fatalf("status %#x, want SS$_SUPERSEDE", r0)
 	}
 
 	e := lookupLogical(t, env, "LNM$PROCESS", "MyName")
@@ -100,7 +102,11 @@ func TestLibSetLogical(t *testing.T) {
 		t.Error("JOBNAME isn't in LNM$JOB")
 	}
 
-	if r0 := call(t, env, "LIB$SET_LOGICAL", a.desc("NONE")); r0 != libInvArg {
+	if r0 := call(t, env, "LIB$SET_LOGICAL", a.desc("NONE")); r0 != libWroNumArg {
+		t.Errorf("the name alone: status %#x, want LIB$_WRONUMARG", r0)
+	}
+
+	if r0 := call(t, env, "LIB$SET_LOGICAL", a.desc("NONE"), 0, a.desc("LNM$JOB")); r0 != libInvArg {
 		t.Errorf("no value: status %#x, want LIB$_INVARG", r0)
 	}
 }
@@ -112,7 +118,7 @@ func TestLibSetLogical_attributes(t *testing.T) {
 	env, _, a := cliFixture(t)
 
 	attrs := a.long(lnm.AttrConfine | lnm.AttrConcealed)
-	if r0 := call(t, env, "LIB$SET_LOGICAL", a.desc("HIDDEN"), a.desc("DUA0:"), 0, attrs); r0 != ssNormal {
+	if r0 := call(t, env, "LIB$SET_LOGICAL", a.desc("HIDDEN"), a.desc("DUA0:"), 0, attrs); r0 != ssSupersedeTest {
 		t.Fatalf("status %#x", r0)
 	}
 
@@ -122,7 +128,7 @@ func TestLibSetLogical_attributes(t *testing.T) {
 	}
 
 	list := a.itemList([]string{"ONE", "TWO"}, []uint32{0, lnm.AttrTerminal})
-	if r0 := call(t, env, "LIB$SET_LOGICAL", a.desc("LIST"), a.desc("ignored"), 0, 0, list); r0 != ssNormal {
+	if r0 := call(t, env, "LIB$SET_LOGICAL", a.desc("LIST"), a.desc("ignored"), 0, 0, list); r0 != ssSupersedeTest {
 		t.Fatalf("item list: status %#x", r0)
 	}
 
@@ -155,10 +161,9 @@ func TestLibSetLogical_accvio(t *testing.T) {
 	}
 }
 
-// TestLibDeleteLogical: the supervisor-mode name goes, and a user-mode one
-// of the same name with it (as DEASSIGN does); an executive-mode name
-// stays, so deleting it is SS$_NOLOGNAM; an empty name is SS$_IVLOGNAM,
-// not "every name".
+// TestLibDeleteLogical: the supervisor-mode name goes, but not a
+// user-mode one (VMS V7.1: SS$_NOLOGNAM, the name still there), nor an
+// executive-mode one; an empty name is SS$_IVLOGNAM, not "every name".
 func TestLibDeleteLogical(t *testing.T) {
 	env, _, a := cliFixture(t)
 
@@ -172,14 +177,20 @@ func TestLibDeleteLogical(t *testing.T) {
 		}
 	}
 
-	for _, name := range []string{"SUPER", "USER"} {
-		if r0 := call(t, env, "LIB$DELETE_LOGICAL", a.desc(name)); r0 != ssNormal {
-			t.Errorf("%s: status %#x, want SS$_NORMAL", name, r0)
-		}
+	if r0 := call(t, env, "LIB$DELETE_LOGICAL", a.desc("SUPER")); r0 != ssNormal {
+		t.Errorf("SUPER: status %#x, want SS$_NORMAL", r0)
+	}
 
-		if lookupLogical(t, env, "LNM$PROCESS", name) != nil {
-			t.Errorf("%s is still defined", name)
-		}
+	if lookupLogical(t, env, "LNM$PROCESS", "SUPER") != nil {
+		t.Error("SUPER is still defined")
+	}
+
+	if r0 := call(t, env, "LIB$DELETE_LOGICAL", a.desc("USER")); r0 != ssNoLogNamTest {
+		t.Errorf("USER: status %#x, want SS$_NOLOGNAM", r0)
+	}
+
+	if lookupLogical(t, env, "LNM$PROCESS", "USER") == nil {
+		t.Error("USER is gone")
 	}
 
 	if r0 := call(t, env, "LIB$DELETE_LOGICAL", a.desc("SUPER")); r0 != ssNoLogNamTest {

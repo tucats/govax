@@ -11,7 +11,10 @@ import "github.com/tucats/govax/internal/corevms"
 //   - CONTINUE resumes the image: LIB$PAUSE returns SS$_NORMAL.
 //   - EXIT and STOP end the image, without its exit handlers, as a
 //     Ctrl/Y's EXIT does; in a procedure they end every procedure, as at
-//     the Ctrl/Y level. The image's status is SS$_CONTROLY.
+//     the Ctrl/Y level. The image's status, $STATUS after it, is
+//     SS$_NORMAL (VMS V7.1). After CONTINUE at command level 0, the
+//     image's own status doesn't become $STATUS (VMS V7.1:
+//     pauseContinued).
 //   - A command that would run an image, a procedure, or a SPAWN ends
 //     the image first, then runs: at level 0 once the command that ran
 //     the image is done (as LIB$DO_COMMAND's text runs, dclchain.go), in
@@ -31,12 +34,13 @@ import "github.com/tucats/govax/internal/corevms"
 // which reads the level (imageInterrupted), and the routine returns
 // SS$_NORMAL to LIB$PAUSE's caller or ends the image.
 //
-// Choices, each unconfirmed and a probe case: nothing is shown before
-// the prompt (VMS may show "Interrupt", as for Ctrl/Y); the Ctrl/Y level
-// reads the terminal even in a procedure; SET NOCONTROL=Y doesn't stop
-// a pause; and a CLI reading its commands from a file or mailbox
-// (LOGINOUT's, not interactive) is batch, where LIB$PAUSE does nothing
-// (the 5.0 manual).
+// VMS V7.1 showed nothing before the prompt, read the terminal in a
+// procedure too, and paused with SET NOCONTROL=Y in effect
+// (testdata/lib57's interactive part). Unconfirmed: a CLI reading its
+// commands from a file or mailbox (LOGINOUT's, not interactive) is
+// batch, where LIB$PAUSE does nothing (the 5.0 manual). Not reproduced:
+// VMS's %DCL-W-COMPLX for a lexical function at a pause in a procedure
+// (I5's F$ENVIRONMENT("DEPTH")), which one case can't explain.
 
 // pauseProcessOne is LIB$PAUSE in process 1 (see above). The machine is
 // mid-instruction, so the other processes don't run meanwhile
@@ -45,11 +49,19 @@ func (c *Interpreter) pauseProcessOne() (uint32, error) {
 	c.consoleCommands++
 	defer func() { c.consoleCommands-- }()
 
-	if c.readControlYLevel(c.currentLevel(), true) {
+	level := c.currentLevel()
+
+	if c.readControlYLevel(level, true) {
+		// At command level 0 the image's end, once it has gone on,
+		// leaves $STATUS as it was (VMS V7.1: testdata/lib57's
+		// interactive part, I1).
+		c.pauseContinued = level == nil
+
 		return ssNormal, nil
 	}
 
-	c.RTL.Process.ExitStatus = ssControlY
+	// EXIT or STOP: $STATUS is SS$_NORMAL (VMS V7.1, I2, I3, I6).
+	c.RTL.Process.ExitStatus = ssNormal
 
 	return ssControlY, corevms.ErrExit
 }

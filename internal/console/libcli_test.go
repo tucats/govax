@@ -617,8 +617,8 @@ func controlConsole(t *testing.T) (*console.Console, *bytes.Buffer, *console.Dis
 // TestLibCLI_controlKeys: LIB$DISABLE_CTRL's setting is the DCL's, so
 // F$ENVIRONMENT shows it after the image and Ctrl/Y is off at the
 // terminal; old-mask names the keys enabled before; LIB$ENABLE_CTRL
-// turns Ctrl/Y back on. Disabling Ctrl/Y cancels the procedure's ON
-// CONTROL_Y, as SET NOCONTROL=Y does.
+// turns Ctrl/Y back on. Disabling Ctrl/Y leaves the procedure's ON
+// CONTROL_Y, unlike SET NOCONTROL=Y (VMS V7.1, testdata/lib57).
 func TestLibCLI_controlKeys(t *testing.T) {
 	c, out, d, _, _ := controlConsole(t)
 
@@ -655,7 +655,7 @@ func TestLibCLI_controlKeys(t *testing.T) {
 		t.Fatalf("@: %v", err)
 	}
 
-	want := []string{"old Y", "old T", "Y", "old", "old T", "old Y", "old T", "FALSE"}
+	want := []string{"old Y", "old T", "Y", "old", "old T", "old Y", "old T", "TRUE"}
 	if got := programLines(out.String()); strings.Join(got, "\n") != strings.Join(want, "\n") {
 		t.Errorf("output:\n%s\nwant:\n%s", strings.Join(got, "\n"), strings.Join(want, "\n"))
 	}

@@ -1,0 +1,189 @@
+$ lib57 pause
+$ show symbol $status
+  $STATUS == "%X10030001"
+$ continue
+PAUSE R0=00000001
+$ show symbol $status
+  $STATUS == "%X10030001"
+$ lib57 pause
+$ stop
+$ show symbol $status
+  $STATUS == "%X00000001"
+$ lib57 pause
+$ exit
+$ show symbol $status
+  $STATUS == "%X00000001"
+$ lib57 pause
+$ directory lib57.com
+
+Directory DUA1:[000000]
+
+LIB57.COM;1         
+
+Total of 1 file.
+$ continue
+$ @lib57i pause
+$ GOTO PAUSE
+$ PAUSE:
+$ X = "in LIB57I"
+$ LIB57 PAUSE
+$ show symbol x
+  X = "in LIB57I"
+$ WRITE SYS$OUTPUT F$ENVIRONMENT("DEPTH")
+%DCL-W-COMPLX, expression too complex - simplify
+ \ \
+$ continue
+PAUSE R0=00000001
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ WRITE SYS$OUTPUT "LIB57I goes on"
+LIB57I goes on
+$ EXIT
+$ @lib57i pause
+$ ! LIB57I.COM - the Phase 57 probe's interactive cases, one per P1
+$ ! (testdata/lib57/README.md). Run @LIB57 first: it defines LIB57.
+$ SET NOON
+$ SET VERIFY
+$ GOTO PAUSE
+$ PAUSE:
+$ X = "in LIB57I"
+$ LIB57 PAUSE
+$ stop
+$ show symbol $status
+  $STATUS == "%X00000001"
+$ set nocontrol=y
+$ lib57 pause
+$ continue
+PAUSE R0=00000001
+$ set control=y
+$ lib57 getcmd
+Command: typed line
+GET_COMMAND with a prompt R0=00000001
+  D: 10 "typed line"
+  L: 0000000A
+second line
+GET_INPUT after it R0=00000001
+  D: 11 "second line"
+  L: 0000000B
+Short: longer than five
+GET_COMMAND into 5 R0=0015821C
+  B: 5 "longe"
+  L: 00000005
+third
+GET_COMMAND no prompt R0=00000001
+  D: 5 "third"
+$ @LIB57I GETCMD
+$ ! LIB57I.COM - the Phase 57 probe's interactive cases, one per P1
+$ ! (testdata/lib57/README.md). Run @LIB57 first: it defines LIB57.
+$ SET NOON
+$ SET VERIFY
+$ GOTO GETCMD
+$ GETCMD:
+$ LIB57 GETCMD
+Command: typed line
+GET_COMMAND with a prompt R0=00000001
+  D: 10 "typed line"
+  L: 0000000A
+a data line
+GET_INPUT after it R0=00000001
+  D: 11 "a data line"
+  L: 0000000B
+Short: longer than five
+GET_COMMAND into 5 R0=0015821C
+  B: 5 "longe"
+  L: 00000005
+third
+GET_COMMAND no prompt R0=00000001
+  D: 5 "third"
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ EXIT
+$ @LIB57I CTLY
+$ ! LIB57I.COM - the Phase 57 probe's interactive cases, one per P1
+$ ! (testdata/lib57/README.md). Run @LIB57 first: it defines LIB57.
+$ SET NOON
+$ SET VERIFY
+$ GOTO CTLY
+$ CTLY:
+$ ON CONTROL_Y THEN GOTO CAUGHT
+$ LIB57 CTLDY
+DISABLE Y R0=00000001
+  O: 02000000
+$ WRITE SYS$OUTPUT "Press Ctrl/Y now (10 seconds)"
+Press Ctrl/Y now (10 seconds)
+$ WAIT 00:00:10
+ Interrupt 
+
+$ LIB57 CTLEY
+ENABLE Y R0=00000001
+  O: 00000000
+$ WRITE SYS$OUTPUT "Press Ctrl/Y now (10 seconds)"
+Press Ctrl/Y now (10 seconds)
+$ WAIT 00:00:10
+ Interrupt 
+
+$ CAUGHT:
+$ WRITE SYS$OUTPUT "ON CONTROL_Y caught it"
+ON CONTROL_Y caught it
+$ LIB57 CTLEY
+ENABLE Y R0=00000001
+  O: 02000000
+$ EXIT
+$ LIB57 DOSHORT
+_What: TIME
+  13-OCT-2026 19:05:03
+$ spawn
+%DCL-S-SPAWNED, process SYSTEM_1 spawned
+%DCL-S-ATTACHED, terminal now attached to process SYSTEM_1
+$ attach system
+%DCL-S-RETURNED, control returned to process SYSTEM
+$ attach system_1
+%DCL-S-RETURNED, control returned to process SYSTEM_1
+$ logout
+  Process SYSTEM_1 logged out at 13-OCT-2026 19:05:40.79
+%DCL-S-RETURNED, control returned to process SYSTEM
+$ ATTACH NOSUCH_PROCESS
+%SYSTEM-W-NONEXPR, nonexistent process
+$ show symbol $status
+  $STATUS == "%X000008E8"
+$ attach system
+%DCL-E-REFUSED, you cannot attach to that process
+$ show symbol $status
+  $STATUS == "%X000388C2"
+$ ATTACH/IDENTIFICATION=7FFFFFFF
+%SYSTEM-W-NONEXPR, nonexistent process
+$ show symbol $status
+  $STATUS == "%X000008E8"
+$ SPAWN/NOWAIT WAIT 00:00:30
+%DCL-S-SPAWNED, process SYSTEM_1 spawned
+$ attach system_1
+%DCL-E-REFUSED, you cannot attach to that process
+$ show symbol $status
+  $STATUS == "%X000388C2"
+$ spawn
+%DCL-S-SPAWNED, process SYSTEM_2 spawned
+%DCL-S-ATTACHED, terminal now attached to process SYSTEM_2
+$ LIB57_PID = F$GETJPI("","OWNER")
+$ LIB57 ATTACH
+%DCL-S-RETURNED, control returned to process SYSTEM
+$ attach system_1
+%SYSTEM-W-NONEXPR, nonexistent process
+$ 
+%%%%%%%%%%%  OPCOM  13-OCT-2026 19:07:35.73  %%%%%%%%%%%
+Message from user SYSTEM on SIMVAX
+Event: Too Few Servers Detected from: Node LOCAL:.SIMVAX DTSS,
+        at: 2026-10-13-19:07:35.730-04:00Iinf
+        Number Detected=0, 
+        Number Required=1
+        eventUid   59B51920-C739-11F1-8007-AA0004003204
+        entityUid  55333840-C57D-11F1-8004-AA0004003204
+        streamUid  55087EC0-C57D-11F1-8003-AA0004003204
+
+
+$ attach system_2
+ATTACH LIB57_PID R0=00000001
+  P: 00000115
+$ logout
+  Process SYSTEM_2 logged out at 13-OCT-2026 19:07:58.42
+%DCL-S-RETURNED, control returned to process SYSTEM
+$ 

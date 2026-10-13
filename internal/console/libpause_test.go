@@ -69,10 +69,11 @@ func pauseConsole(t *testing.T, typed string) (*console.Console, func() string, 
 }
 
 // TestLibPause_levelZero: at command level 0, DCL reads commands with
-// the image paused: CONTINUE resumes it (LIB$PAUSE returns SS$_NORMAL);
-// STOP and EXIT end it, without its exit handler, $STATUS SS$_CONTROLY,
-// and govax goes on; a command that runs an image (a procedure, here)
-// ends it and then runs.
+// the image paused: CONTINUE resumes it (LIB$PAUSE returns SS$_NORMAL),
+// and its end leaves $STATUS as the command before it set it; STOP and
+// EXIT end it, without its exit handler, $STATUS SS$_NORMAL, and govax
+// goes on (VMS V7.1, testdata/lib57's I1 to I3); a command that runs an
+// image (a procedure, here) ends it and then runs.
 func TestLibPause_levelZero(t *testing.T) {
 	proc := writeCommands(t, `$ WRITE SYS$OUTPUT "procedure"`)
 
@@ -80,10 +81,10 @@ func TestLibPause_levelZero(t *testing.T) {
 		name, typed, want string
 		status            uint32
 	}{
-		{"CONTINUE", "SHOW SYMBOL X\nCONTINUE\n", `before|P>   X = "paused"|P> after|exit handler`, 1},
-		{"STOP", "STOP\n", "before|P> ", ssControlY},
-		{"EXIT", "EXIT\n", "before|P> ", ssControlY},
-		{"end of input", "", "before|P> ", ssControlY},
+		{"CONTINUE", "SHOW SYMBOL X\nCONTINUE\n", `before|P>   X = "paused"|P> after|exit handler`, 0x30001}, // the assignment's
+		{"STOP", "STOP\n", "before|P> ", 1},
+		{"EXIT", "EXIT\n", "before|P> ", 1},
+		{"end of input", "", "before|P> ", 1},
 		{"procedure", `@"` + proc + "\"\n", "before|P> procedure", 0x10001}, // WRITE's status
 	} {
 		c, output, d := pauseConsole(t, tc.typed)

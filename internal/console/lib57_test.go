@@ -75,19 +75,64 @@ func runLib57(t *testing.T) string {
 	return string(console.JoinRecords(records))
 }
 
-// lib57Compared is a log as the comparison sees it: the job table's
-// name, which is the job's own, written as LNM$JOB.
+// lib57Compared is a log as the comparison sees it: SHOW LOGICAL/FULL's
+// header for the job and group tables, the table's name and the line of
+// its attributes after it, written as "(LNM$JOB)" or "(LNM$GROUP)" and
+// "[attributes]". The job table's name is the job's own, and govax shows
+// none of a shareable table's attributes, quota, protection, and owner
+// ("[no protection information]"), where VMS V7.1 did (its quota in use
+// varying from run to run).
 func lib57Compared(text string) string {
 	lines := strings.Split(text, "\n")
 
-	for i, line := range lines {
-		if strings.HasPrefix(line, "(LNM$JOB_") {
-			_, rest, _ := strings.Cut(line, ")")
-			lines[i] = "(LNM$JOB)" + rest
+	for i := 0; i < len(lines); i++ {
+		for _, table := range []string{"(LNM$JOB_", "(LNM$GROUP_"} {
+			if strings.HasPrefix(lines[i], table) && i+1 < len(lines) {
+				lines[i] = strings.TrimSuffix(table, "_") + ")"
+				lines[i+1] = "[attributes]"
+			}
 		}
 	}
 
 	return strings.Join(lines, "\n")
+}
+
+// lib57RunHistory is VMS's log as it would be in a fresh process: the
+// author ran the probe twice on the VAX, in one login, and the second
+// run's log is the one kept, so two things in it are the first run's
+// doing. The common area held the first run's last text when COM1 first
+// read it ("after an exit handler", from RUNEXH); govax's process starts
+// with it empty, as VMS's did. And LIB57N.OUT, the no-CLI child's
+// SYS$OUTPUT, has the child's lines twice: the second run's were
+// appended to the first's file (unconfirmed: LIB$PUT_OUTPUT seems to
+// open an existing SYS$OUTPUT file to append), where govax's run makes
+// it afresh. Only the first copy is compared.
+func lib57RunHistory(t *testing.T, text string) string {
+	t.Helper()
+
+	const firstGet = "GET first R0=00000001\n  D: 21 \"after an exit handler\"\n  L: 00000015\n"
+	if !strings.Contains(text, firstGet) {
+		t.Fatal("VMS's log has no first-run common area: lib57RunHistory is out of date")
+	}
+
+	text = strings.Replace(text, firstGet, "GET first R0=00000001\n  D: 0 \"\"\n  L: 00000000\n", 1)
+
+	start := strings.Index(text, "$ TYPE LIB57N.OUT\n")
+	end := strings.Index(text, "$ IF F$SEARCH(\"LIB57N.ERR\")")
+
+	if start < 0 || end < start {
+		t.Fatal("VMS's log has no LIB57N.OUT: lib57RunHistory is out of date")
+	}
+
+	child := text[start:end]
+	first := strings.Index(child, "GET_FOREIGN R0=")
+	second := strings.LastIndex(child, "GET_FOREIGN R0=")
+
+	if first < 0 || second <= first || child[first:second] != child[second:] {
+		t.Fatal("VMS's LIB57N.OUT isn't two copies: lib57RunHistory is out of date")
+	}
+
+	return text[:start] + child[:second] + text[end:]
 }
 
 // TestLib57Oracle compares govax's log of lib57.com with VMS's, section
@@ -119,7 +164,8 @@ func TestLib57Oracle(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	want := console.ProbeSections(lib57Compared(strings.TrimPrefix(strings.ReplaceAll(string(logText), "\r", ""), "\n")), "S")
+	vax := lib57RunHistory(t, strings.TrimPrefix(strings.ReplaceAll(string(logText), "\r", ""), "\n"))
+	want := console.ProbeSections(lib57Compared(vax), "S")
 	gotSections := console.ProbeSections(lib57Compared(got), "S")
 
 	if len(want) < 10 {

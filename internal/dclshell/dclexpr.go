@@ -8,6 +8,11 @@ import (
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
+// maxExpressionValue is the longest symbol value an expression takes:
+// less than DCL's 1024-byte command buffer (see the symbol case of
+// dclExpression's operand).
+const maxExpressionValue = 1023
+
 // DCL expressions (docs/PHASE-50 - DCL command procedures.md, subtask 9),
 // as the OpenVMS User's Manual (7.3) describes them in sections 12.5 to
 // 12.9: what the right side of "=" and "==" is, and (later) what IF,
@@ -525,6 +530,14 @@ func (e *dclExpression) operand() (dclValue, error) {
 		sym, ok := e.symbols.lookup(name)
 		if !ok {
 			return dclValue{}, vmserrors.NewSegment(vmserrors.CLI_UNDSYM, name)
+		}
+
+		// A value that fills DCL's command buffer (a LIB$SET_SYMBOL
+		// value of 1024 characters) can't be worked on: VMS V7.1 gave
+		// BUFOVF for F$LENGTH of one (testdata/lib57; where the limit
+		// is, below 1024, unconfirmed).
+		if len(sym.value) > maxExpressionValue {
+			return dclValue{}, vmserrors.New(vmserrors.CLI_BUFOVF)
 		}
 
 		return sym.dclValue(), nil

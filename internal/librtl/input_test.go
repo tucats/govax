@@ -3,6 +3,8 @@ package librtl
 import (
 	"strings"
 	"testing"
+
+	"github.com/tucats/govax/internal/vmsdef"
 )
 
 // TestLibGetInput reads lines from the terminal, prompting for each, into
@@ -130,6 +132,7 @@ func TestLibGetInput_noResult(t *testing.T) {
 // which LIB$GET_INPUT reads meanwhile. Each prompt is written once.
 func TestLibGetCommand(t *testing.T) {
 	env, out := foreignFixture(t, "", "typed\r\nagain\r\n")
+	env.CLI = newFakeCLI()
 	a := newArena(t, env)
 	result, length, prompt := a.desc(strings.Repeat("x", 8)), a.word(0), a.desc("Cmd: ")
 
@@ -168,9 +171,17 @@ func TestLibGetCommand(t *testing.T) {
 // TestLibGetCommand_errors: GET_INPUT's checks, LIB$_INVARG without a
 // resultant-string and LIB$_INPSTRTRU for a line too long for it.
 func TestLibGetCommand_errors(t *testing.T) {
-	env, _ := foreignFixture(t, "", "ABCDEFG\n")
+	env, out := foreignFixture(t, "", "ABCDEFG\n")
 	a := newArena(t, env)
 	result, length := a.desc("xxx"), a.word(0)
+
+	// With no CLI there's no SYS$COMMAND: RMS$_FNF, no prompt, nothing
+	// read (VMS V7.1).
+	if r0 := call(t, env, "LIB$GET_COMMAND", result, a.desc("Cmd: "), length); r0 != vmsdef.Symbols["RMS$_FNF"] || out.Len() != 0 {
+		t.Errorf("no CLI: status = %#x, output %q; want RMS$_FNF, none", r0, out.String())
+	}
+
+	env.CLI = newFakeCLI()
 
 	if r0 := call(t, env, "LIB$GET_COMMAND", 0); r0 != libInvArg {
 		t.Errorf("status = %#x without a string, want LIB$_INVARG", r0)

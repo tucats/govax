@@ -13,17 +13,23 @@ import "github.com/tucats/govax/internal/corevms"
 // which calls the exit handlers one at a time, each returning to $EXIT's
 // own entry, until none is left and the image ends.
 
-// maxChainText is the longest command or program name the chaining
-// routines take.
-const maxChainText = 255
+// maxCommandText is the longest command LIB$DO_COMMAND takes, DCL's
+// 1024-byte command buffer (the DCL Dictionary; VMS V7.1 ran a command of
+// 256 characters, where both manuals say 255: testdata/lib57; where it
+// stops is unconfirmed), and maxProgramText the longest program name
+// LIB$RUN_PROGRAM takes (VMS V7.1 refused 256 characters).
+const (
+	maxCommandText = 1024
+	maxProgramText = 255
+)
 
 // chain reads the command or program name at addr and, if the process
 // has a CLI and the text isn't too long, leaves it with the CLI and
 // exits the image with SS$_NORMAL (unconfirmed: the manuals don't say
 // which status the image ends with, and the command's own becomes
 // $STATUS anyway). It returns LIB$_NOCLI (checked first, as for the
-// other CLI routines), LIB$_INVARG for text longer than 255 characters,
-// or LIB$_INVSTRDES.
+// other CLI routines), LIB$_INVARG for text longer than maxCommandText or
+// maxProgramText, or LIB$_INVSTRDES.
 func chain(env *corevms.Environment, addr uint32, program bool) (uint32, error) {
 	if env.CLI == nil {
 		return libNoCLI, nil
@@ -34,7 +40,7 @@ func chain(env *corevms.Environment, addr uint32, program bool) (uint32, error) 
 		return stringFailure(env, err)
 	}
 
-	if len(text) > maxChainText {
+	if len(text) > maxCommandText || program && len(text) > maxProgramText {
 		return libInvArg, nil
 	}
 
@@ -53,7 +59,7 @@ func chain(env *corevms.Environment, addr uint32, program bool) (uint32, error) 
 // and in a procedure the level's ON action applies to it.
 //
 // On success it doesn't return. It returns LIB$_INVARG for a command
-// longer than 255 characters, LIB$_NOCLI, or LIB$_INVSTRDES; an argument
+// longer than 1024 characters, LIB$_NOCLI, or LIB$_INVSTRDES; an argument
 // it can't read is an access violation, signaled (memoryFault).
 func libDoCommand(env *corevms.Environment, argv []uint32) (uint32, error) {
 	return chain(env, arg(argv, 0), false)
@@ -64,9 +70,11 @@ func libDoCommand(env *corevms.Environment, argv []uint32) (uint32, error) {
 //	LIB$RUN_PROGRAM program-name
 //
 // program-name.rt.dx. It ends the image, and DCL then runs the image
-// program-name names (its file type .EXE by default), as RUN does, with
-// no command text for LIB$GET_FOREIGN. An image that can't be activated
-// is RUN's failure, shown by DCL.
+// program-name names (its file type .EXE by default), as a foreign
+// command would: text after the name, past a blank, is the new image's
+// command text for LIB$GET_FOREIGN, by DCL's rules (uppercased), and an
+// empty name runs nothing (VMS V7.1, testdata/lib57). An image that
+// can't be activated is DCL's failure, shown by DCL.
 //
 // On success it doesn't return. It returns LIB$_INVARG for a name longer
 // than 255 characters, LIB$_NOCLI, or LIB$_INVSTRDES; an argument it

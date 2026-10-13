@@ -17,6 +17,7 @@ import (
 var (
 	libNoSuchSym = vmsdef.LibrarySymbols["LIB$_NOSUCHSYM"]
 	libAmbSymDef = vmsdef.LibrarySymbols["LIB$_AMBSYMDEF"]
+	libUneCLIErr = vmsdef.LibrarySymbols["LIB$_UNECLIERR"]
 )
 
 // shellCLI is one process's DCL as corevms.CLI: its Shell, the
@@ -41,7 +42,14 @@ func (s shellCLI) Symbol(name string) (string, uint32, uint32) {
 }
 
 // SetSymbol is corevms.CLI's: a string symbol in the table given.
+// $STATUS and $SEVERITY are DCL's own, which it refuses: LIB$_UNECLIERR
+// (VMS V7.1 for $STATUS in the global table, testdata/lib57; unconfirmed
+// for $SEVERITY and the local table).
 func (s shellCLI) SetSymbol(name, value string, table uint32) uint32 {
+	if name == "$STATUS" || name == "$SEVERITY" {
+		return libUneCLIErr
+	}
+
 	return s.shell.dclSymbols.define(name, value, table == corevms.CLIGlobalSymbol)
 }
 
@@ -133,9 +141,10 @@ func (s shellCLI) Chain(text string, program bool) {
 // ControlKeys is corevms.CLI's: SET CONTROL for the keys enable names,
 // then SET NOCONTROL for those disable names, each a LIB$M_CLI_CTRLT and
 // LIB$M_CLI_CTRLY mask. It returns the keys enabled before, in the same
-// form. Disabling Ctrl/Y cancels the ON CONTROL_Y of the command level
-// that ran the image, as SET NOCONTROL=Y does (unconfirmed, a probe
-// case).
+// form. Unlike SET NOCONTROL=Y, disabling Ctrl/Y leaves the ON CONTROL_Y
+// of the command level that ran the image (VMS V7.1, testdata/lib57:
+// F$ENVIRONMENT("ON_CONTROL_Y") stayed TRUE, and the ON took a Ctrl/Y
+// once the key was enabled again).
 func (s shellCLI) ControlKeys(enable, disable uint32) uint32 {
 	var old uint32
 
@@ -147,8 +156,21 @@ func (s shellCLI) ControlKeys(enable, disable uint32) uint32 {
 		old |= corevms.CLICtrlY
 	}
 
-	s.shell.setControl(enable&corevms.CLICtrlT != 0, enable&corevms.CLICtrlY != 0, true)
-	s.shell.setControl(disable&corevms.CLICtrlT != 0, disable&corevms.CLICtrlY != 0, false)
+	if enable&corevms.CLICtrlT != 0 {
+		s.shell.control.t = true
+	}
+
+	if enable&corevms.CLICtrlY != 0 {
+		s.shell.control.noY = false
+	}
+
+	if disable&corevms.CLICtrlT != 0 {
+		s.shell.control.t = false
+	}
+
+	if disable&corevms.CLICtrlY != 0 {
+		s.shell.control.noY = true
+	}
 
 	if s.c != nil {
 		s.c.noteControlKeys()

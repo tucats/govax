@@ -34,6 +34,17 @@ func NewInterpreter(m *machine.Machine, out io.Writer) *Interpreter {
 		Session:        func() *rms.Session { return c.ContainerSession },
 		ProcessOneOnly: c.ProcessOneOnly,
 		CommandStatus: func(status uint32) error {
+			// An image LIB$PAUSE paused at level 0 and CONTINUE resumed
+			// leaves $STATUS when it succeeds (dclpause.go).
+			continued := c.pauseContinued
+			c.pauseContinued = false
+
+			if continued && status&1 != 0 {
+				c.keepStatus()
+
+				return nil
+			}
+
 			c.SetCommandStatus(status, nil)
 
 			if status&1 != 0 {

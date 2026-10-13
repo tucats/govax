@@ -28,17 +28,24 @@ import (
 // DCL calls the same Go LIB$ATTACH uses (corevms.CLI's Attach) and waits
 // for the terminal in the scheduler, as its SPAWN waits.
 //
-// Choices, each unconfirmed and a probe case: ATTACH itself shows
-// nothing (VMS may show %DCL-S-ATTACHED, as SPAWN does); its status is
-// SS$_NORMAL once the terminal is back; a process name is looked for in
-// the caller's UIC group, uppercase, as $GETJPI's prcnam is; and at the
-// Ctrl/Y level in process 1, where the console is inside an image's
+// ATTACH itself shows nothing, and the process the terminal comes back
+// to says so (%DCL-S-RETURNED), as VMS V7.1's did (testdata/lib57). Its
+// status is SS$_NORMAL once the terminal is back. Choices, each
+// unconfirmed: a process name is looked for in the caller's UIC group,
+// uppercase, as $GETJPI's prcnam is; and at the Ctrl/Y level in process 1, where the console is inside an image's
 // shim, ATTACH ends the interrupted image first (as a command that runs
 // an image does; dclcontroly.go).
 
 // ssNonExpr is SS$_NONEXPR, ATTACH's status for a process that isn't
-// there.
-var ssNonExpr = vmsdef.Symbols["SS$_NONEXPR"]
+// there; cliRefused CLI$_REFUSED, its status for one the terminal can't
+// go to (LIB$ATTACH's LIB$_ATTREQREF), shown as %DCL-E-REFUSED (VMS
+// V7.1, for the caller itself and a SPAWN/NOWAIT subprocess:
+// testdata/lib57's interactive part).
+var (
+	ssNonExpr    = vmsdef.Symbols["SS$_NONEXPR"]
+	cliRefused   = vmsdef.LibrarySymbols["CLI$_REFUSED"]
+	libAttReqRef = vmsdef.LibrarySymbols["LIB$_ATTREQREF"]
+)
 
 // Attach is ATTACH (see above): name is the process-name parameter and
 // id the /IDENTIFICATION qualifier's value, each "" when not given.
@@ -77,6 +84,10 @@ func (c *Interpreter) Attach(name, id string) error {
 		if status, err = c.callAttach(pid); err != nil {
 			return err
 		}
+	}
+
+	if status == libAttReqRef {
+		status = cliRefused
 	}
 
 	c.SetCommandStatus(status, nil)

@@ -3980,6 +3980,60 @@ widened."
 - **Status**: fixed in Go where VMS differed, but for the two deviations
   above (docs/PHASE-56, subtasks 8 and 9).
 
+### [Phase 57] LIBRTL's CLI routines: what VMS 7.1 settled
+
+- **Where**: `internal/librtl` (`cli.go`, `logical.go`, `chain.go`,
+  `input.go`), `internal/dclshell` (`libcli.go`, `dclchain.go`,
+  `dclpause.go`, `attachcmd.go`, `spawncmd.go`, `subcli.go`,
+  `dclexpr.go`, `dcldispatch.go`, `interpreter.go`), `internal/lnm`
+  (`DeleteExact`), `internal/corevms/logicals.go`; the probe is
+  `testdata/lib57` (`TestLib57Oracle`, VMS V7.1 on simh's VAX 8600,
+  2026-10-13, and an interactive session kept as `vax/lib57-term.log`).
+- **Changed to VMS's behavior**:
+  - LIB$GET_SYMBOL takes a name starting with `_`, as the other two
+    routines do; an omitted resultant-string (GET) or value-string (SET)
+    is LIB$_INVSTRDES, returned, not an access violation.
+  - LIB$SET_SYMBOL takes values up to 4096 characters (the VSI manual),
+    not 255, and refuses `$STATUS` (and, unconfirmed, `$SEVERITY`) with
+    LIB$_UNECLIERR.
+  - LIB$SET_LOGICAL returns SS$_SUPERSEDE for every success with no
+    table argument, new names too, and LIB$_WRONUMARG for the name
+    alone; LIB$DELETE_LOGICAL deletes the supervisor-mode name only, so
+    a user-mode name is SS$_NOLOGNAM.
+  - LIB$DO_COMMAND takes more than 255 characters (govax: up to DCL's
+    1024-byte buffer, unconfirmed); LIB$RUN_PROGRAM's text after the name
+    is the next image's LIB$GET_FOREIGN text, uppercased, and an empty
+    name runs nothing.
+  - LIB$DISABLE_CTRL leaves the level's ON CONTROL_Y (it takes a Ctrl/Y
+    again once the key is enabled); an invalid mask still writes
+    old-mask; without a CLI old-mask is written as 0.
+  - LIB$ATTACH of PID 0 is SS$_IVLOGNAM; LIB$GET_COMMAND without a CLI
+    is RMS$_FNF, with no prompt.
+  - DCL: a spawned subprocess starts with its parent's SET CONTROL
+    settings; SPAWN leaves out a symbol whose value is too long to copy
+    and says so (%DCL-W-SYMTOOLNG; govax: 1024 characters or more,
+    unconfirmed); an expression refuses such a value (%DCL-W-BUFOVF);
+    ATTACH's refusal is %DCL-E-REFUSED (CLI$_REFUSED); after LIB$PAUSE at
+    command level 0, CONTINUE leaves `$STATUS` as it was before the
+    image, and STOP or EXIT set SS$_NORMAL; process 1's RUN of an image
+    that isn't there shows %DCL-W-ACTIMAGE and -CLI-E-IMAGEFNF, as a
+    subprocess's did.
+  - DCL: a `!` comment on a command line is removed before the grammar
+    sees it (found by the probe's own procedure).
+- **Matched by the oracle**: every section, S1 to S9, line for line, but
+  for SHOW LOGICAL/FULL's job and group table headers (govax shows none
+  of a shared table's attributes) and two traces of the author's earlier
+  run in the same login (`lib57RunHistory`).
+- **Not reproduced**:
+  - DCL's prompt for a parameter a chained command lacks (`_What:` for
+    LIB$DO_COMMAND of `SHOW`): govax's DCL prompts for missing
+    parameters nowhere, at the terminal either.
+  - %DCL-W-COMPLX for F$ENVIRONMENT("DEPTH") typed at a LIB$PAUSE prompt
+    in a procedure: one case, unexplained.
+  - `$LIBCLIDEF` doesn't exist on VMS V7.1 (MACRO: UNRECSTMT), so
+    govax's macro library doesn't get it.
+- **Status**: fixed (docs/PHASE-57, subtask 11).
+
 <!--
 Entry template:
 

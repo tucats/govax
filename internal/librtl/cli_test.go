@@ -135,6 +135,12 @@ func TestLibCLI_noCLI(t *testing.T) {
 			t.Errorf("%s: status %#x, want LIB$_NOCLI", c.name, r0)
 		}
 	}
+
+	// The control-key routines write old-mask as 0 even so (VMS V7.1).
+	old := a.long(0x55555555)
+	if r0 := call(t, env, "LIB$DISABLE_CTRL", a.long(corevms.CLICtrlY), old); r0 != libNoCLI || longword(t, env, old) != 0 {
+		t.Errorf("DISABLE_CTRL: status %#x, old-mask %#x; want LIB$_NOCLI, 0", r0, longword(t, env, old))
+	}
 }
 
 // TestLibGetSymbol: the name is uppercased and its trailing blanks
@@ -192,7 +198,7 @@ func TestLibCLI_symbolNames(t *testing.T) {
 		{"LIB$GET_SYMBOL", "   ", false},
 		{"LIB$GET_SYMBOL", "1X", false},
 		{"LIB$GET_SYMBOL", "-X", false},
-		{"LIB$GET_SYMBOL", "_X", false},
+		{"LIB$GET_SYMBOL", "_X", true}, // VMS V7.1, testdata/lib57
 		{"LIB$GET_SYMBOL", "$X", true},
 		{"LIB$GET_SYMBOL", strings.Repeat("A", 255), true},
 		{"LIB$GET_SYMBOL", strings.Repeat("A", 256), false},
@@ -230,7 +236,7 @@ func TestLibCLI_symbolNames(t *testing.T) {
 
 // TestLibSetDeleteSymbol: SET_SYMBOL keeps the value's trailing blanks,
 // in the local table by default and the global one for indicator 2;
-// another indicator, or a value past 255 characters, is LIB$_INVARG.
+// another indicator, or a value past 4096 characters, is LIB$_INVARG.
 // DELETE_SYMBOL deletes from the table named, LIB$_NOSUCHSYM if it isn't
 // there.
 func TestLibSetDeleteSymbol(t *testing.T) {
@@ -258,12 +264,22 @@ func TestLibSetDeleteSymbol(t *testing.T) {
 		}
 	}
 
-	if r0 := call(t, env, "LIB$SET_SYMBOL", a.desc("X"), a.desc(strings.Repeat("v", 255))); r0 != ssNormal {
-		t.Errorf("255-character value: status %#x", r0)
+	if r0 := call(t, env, "LIB$SET_SYMBOL", a.desc("X"), a.desc(strings.Repeat("v", 4096))); r0 != ssNormal {
+		t.Errorf("4096-character value: status %#x", r0)
 	}
 
-	if r0 := call(t, env, "LIB$SET_SYMBOL", a.desc("X"), a.desc(strings.Repeat("v", 256))); r0 != libInvArg {
-		t.Errorf("256-character value: status %#x, want LIB$_INVARG", r0)
+	if r0 := call(t, env, "LIB$SET_SYMBOL", a.desc("X"), a.desc(strings.Repeat("v", 4097))); r0 != libInvArg {
+		t.Errorf("4097-character value: status %#x, want LIB$_INVARG", r0)
+	}
+
+	// An omitted value-string, or GET's resultant-string, is
+	// LIB$_INVSTRDES, returned (VMS V7.1).
+	if r0 := call(t, env, "LIB$SET_SYMBOL", a.desc("X")); r0 != libInvStrDes {
+		t.Errorf("SET with one argument: status %#x, want LIB$_INVSTRDES", r0)
+	}
+
+	if r0 := call(t, env, "LIB$GET_SYMBOL", a.desc("X")); r0 != libInvStrDes {
+		t.Errorf("GET with one argument: status %#x, want LIB$_INVSTRDES", r0)
 	}
 
 	if r0 := call(t, env, "LIB$DELETE_SYMBOL", a.desc("GLO")); r0 != libNoSuchSymTest {
@@ -336,16 +352,17 @@ func TestLibControlKeys(t *testing.T) {
 		t.Errorf("zero mask: status %#x, old-mask %#x", r0, longword(t, env, old))
 	}
 
+	// An invalid bit changes nothing, but old-mask is written (VMS V7.1).
 	for _, routine := range []string{"LIB$DISABLE_CTRL", "LIB$ENABLE_CTRL"} {
-		cli.calls = nil
+		keys := cli.keys
 		untouched := a.long(0x12345678)
 
 		if r0 := call(t, env, routine, a.long(corevms.CLICtrlY|1<<3), untouched); r0 != libInvArg {
 			t.Errorf("%s of an invalid bit: status %#x, want LIB$_INVARG", routine, r0)
 		}
 
-		if len(cli.calls) != 0 || longword(t, env, untouched) != 0x12345678 {
-			t.Errorf("%s of an invalid bit: calls %v, old-mask %#x", routine, cli.calls, longword(t, env, untouched))
+		if cli.keys != keys || longword(t, env, untouched) != keys {
+			t.Errorf("%s of an invalid bit: keys %#x (were %#x), old-mask %#x", routine, cli.keys, keys, longword(t, env, untouched))
 		}
 	}
 }
@@ -383,7 +400,12 @@ func TestLibAttach(t *testing.T) {
 		}
 	}
 
+	// A PID of 0 is SS$_IVLOGNAM, the CLI not asked (VMS V7.1).
 	cli.calls = nil
+
+	if r0 := call(t, env, "LIB$ATTACH", a.long(0)); r0 != vmsdef.Symbols["SS$_IVLOGNAM"] || len(cli.calls) != 0 {
+		t.Errorf("PID 0: status %#x, calls %v; want SS$_IVLOGNAM, none", r0, cli.calls)
+	}
 
 	if _, err := shim(t, env, "LIB$ATTACH")(env, []uint32{unmapped}); err == nil || len(cli.calls) != 0 {
 		t.Errorf("an unreadable process-id: %v, calls %v; want an access violation, no call", err, cli.calls)

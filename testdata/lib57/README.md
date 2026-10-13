@@ -24,7 +24,7 @@ S9.
 | `lib57c.com` | The procedure LIB$DO_COMMAND runs with `@` (S5) |
 | `lib57p.com` | The spawned subprocess's procedure: the control keys there (S7) |
 | `lib57i.com` | The interactive part's procedure, one case per P1 (below) |
-| `def_libcli.mar` | `$LIBCLIDEF GLOBAL`, for govax's macro library (as `testdata/mp/defs`'s probes) |
+| `def_libcli.mar` | `$LIBCLIDEF GLOBAL`, as `testdata/mp/defs`'s probes (VMS V7.1 has no such macro: MACRO's UNRECSTMT) |
 | `exchange.cmd` | The govax console script that builds the exchange volume |
 | `vax/lib57.log` | `LIB57.COM`'s log on VMS |
 | `vax/def_libcli.obj`, `vax/def_libcli.anl` | The `$LIBCLIDEF` probe's object and analysis |
@@ -154,3 +154,14 @@ says "at the prompt", it's the prompt LIB$PAUSE or DCL gives.
 | I15 | `SPAWN` | in the subprocess: `LIB57_PID = F$GETJPI("","OWNER")`, `LIB57 ATTACH`; back in the parent: `ATTACH SYSTEM_1` (the subprocess's image prints its R0); in the subprocess: `LOGOUT` |
 
 (The process names are SYSTEM's: use the names SPAWN's messages show.)
+
+## The run
+
+2026-10-13, OpenVMS V7.1 on simh's VAX 8600, from the SYSTEM account.
+The probe ran twice in one login; `vax/lib57.log` is the second run's,
+in which two things are the first run's doing (the common area's first
+text, and LIB57N.OUT written twice), which `TestLib57Oracle` takes out
+(`lib57RunHistory`). `$LIBCLIDEF` doesn't exist there: DEF_LIBCLI's
+object defines nothing. govax matches the log in every section, with the
+job and group tables' SHOW LOGICAL/FULL headers masked. What VMS answered
+is in `docs/PHASE-57`'s progress log (subtask 11) and docs/DEVIATIONS.md.

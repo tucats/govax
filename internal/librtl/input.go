@@ -4,6 +4,7 @@ import (
 	"errors"
 
 	"github.com/tucats/govax/internal/corevms"
+	"github.com/tucats/govax/internal/vmsdef"
 )
 
 // libGetInput is LIB$GET_INPUT (RTL Library manual):
@@ -48,7 +49,15 @@ func libGetInput(env *corevms.Environment, argv []uint32) (uint32, error) {
 // mailbox (SPAWN/INPUT, a LOGINOUT process) reads that input, its
 // SYS$COMMAND in govax; and the prompt is written whatever SYS$COMMAND
 // is (the manual: only to a terminal), as GET_INPUT's is.
+//
+// A process with no CLI (one $CREPRC made to run an image) has no
+// SYS$COMMAND: the routine returns RMS$_FNF, with no prompt and nothing
+// written (VMS V7.1, testdata/lib57).
 func libGetCommand(env *corevms.Environment, argv []uint32) (uint32, error) {
+	if env.CLI == nil {
+		return vmsdef.Symbols["RMS$_FNF"], nil
+	}
+
 	return getLine(env, argv, env.ReadCommandLine)
 }
 

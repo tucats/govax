@@ -613,16 +613,27 @@ func (env *Environment) SetSupervisorLogical(tabnam, lognam string, attr uint32,
 }
 
 // DeleteSupervisorLogical deletes lognam's supervisor-mode definition
-// (and a user-mode one, as DCL's DEASSIGN does) from the tables tabnam
-// designates, whatever the caller's mode and privileges
-// (LIB$DELETE_LOGICAL). An empty lognam is SS$_IVLOGNAM: unlike
-// $DELLNM's, it doesn't mean every name. The statuses are $DELLNM's.
+// alone from the tables tabnam designates, whatever the caller's mode
+// and privileges (LIB$DELETE_LOGICAL): a user-mode one of the same name
+// stays, and a name defined only at user mode is SS$_NOLOGNAM (VMS V7.1,
+// testdata/lib57). An empty lognam is SS$_IVLOGNAM: unlike $DELLNM's, it
+// doesn't mean every name. The statuses are $DELLNM's.
 func (env *Environment) DeleteSupervisorLogical(tabnam, lognam string) (uint32, error) {
 	if lognam == "" {
 		return ssIvLogNam, nil
 	}
 
-	return env.deleteNames(tabnam, lognam, lnm.Supervisor)
+	if st := env.lnmTablePrivilege(tabnam); st != 0 {
+		return st, nil
+	}
+
+	if _, err := env.Logicals.DeleteExact(tabnam, lognam, lnm.Supervisor); err != nil {
+		env.traceLogicals("LIB$DELETE_LOGICAL(%s,%s), %v", tabnam, lognam, err)
+
+		return lnmStatus(err)
+	}
+
+	return ssNormal, nil
 }
 
 // serviceSysCrelnt is SYS$CRELNT(attr, resnam, reslen, quota, promsk,

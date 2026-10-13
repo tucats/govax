@@ -1,0 +1,117 @@
+
+Analyze Object File                          13-OCT-2026 18:58:38.93   Page 1
+DUA1:[000000]DEF_LIBCLI.OBJ;2
+ANALYZ V07-04
+
+This is an OpenVMS VAX object file
+
+1.  MODULE HEADER (OBJ$C_HDR_MHD), 55 bytes
+
+	structure level: 0
+	maximum record size: 512
+	module name: "DEF_LIBCLI"
+	module version: "V1.0"
+	creation   date/time: 13-OCT-2026 18:58
+
+
+2.  LANGUAGE PROCESSOR HEADER (OBJ$C_HDR_LNM), 18 bytes
+
+	Textual information:
+	"VAX MACRO V5.4-3"
+
+
+3.  SOURCE FILE HEADER (OBJ$C_HDR_SRC), 25 bytes
+
+	Textual information:
+	"MACRO/NOLIST DEF_LIBCLI"
+
+
+4.  TITLE HEADER (OBJ$C_HDR_TTL), 31 bytes
+
+	Textual information:
+	"$LIBCLIDEF's names and values"
+
+
+5.  TRACEBACK INFORMATION (OBJ$C_TBT), 20 bytes
+
+	1)  Store Immediate, 18 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		 0A 00 00 00 00 00 BC 11|  0000  |.¼......|
+		 43 42 49 4C 5F 46 45 44|  0008  |DEF_LIBC|
+		                   49 4C|  0010  |LI      |
+
+
+6.  GLOBAL SYMBOL DIRECTORY (OBJ$C_GSD), 19 bytes
+
+	1)  Program Section Definition (GSD$C_PSC)
+		alignment: 1-byte boundary                       <-- psect 0
+		attribute flags:
+			(0)  GPS$V_PIC        0
+			(1)  GPS$V_LIB        0
+			(2)  GPS$V_OVR        0
+			(3)  GPS$V_REL        0
+			(4)  GPS$V_GBL        0
+			(5)  GPS$V_SHR        0
+			(6)  GPS$V_EXE        0
+			(7)  GPS$V_RD         0
+			(8)  GPS$V_WRT        0
+			(9)  GPS$V_VEC        0
+			(10) GPS$V_COM        0
+
+Analyze Object File                          13-OCT-2026 18:58:38.93   Page 2
+DUA1:[000000]DEF_LIBCLI.OBJ;2
+ANALYZ V07-04
+
+			(11) GPS$V_NOMOD      0
+		allocation: 0 (%X'00000000')
+		symbol: ".  ABS  ."
+
+
+7.  TEXT INFORMATION/RELOCATION (OBJ$C_TIR), 5 bytes
+
+	1)  TIR$C_STA_PB (4, %X'04')                            stack depth: 1
+		psect: 0
+		value: 0 (%X'00000000')
+
+	2)  TIR$C_CTL_SETRB (80, %X'50')                        stack depth: 0
+
+
+8.  TRACEBACK INFORMATION (OBJ$C_TBT), 4 bytes
+
+	1)  Store Immediate, 2 bytes:
+		  7  6  5  4  3  2  1  0          01234567
+		------------------------          --------
+		                   BD 01|  0000  |.½      |
+
+
+9.  END OF MODULE (OBJ$C_EOM), 2 bytes
+
+	severity: errors (2)
+
+
+
+Analyze Object File                          13-OCT-2026 18:58:38.93   Page 3
+DUA1:[000000]DEF_LIBCLI.OBJ;2
+ANALYZ V07-04
+
+SUMMARY STATISTICS:
+
+Record Type	Count	Total Bytes
+
+OBJ$C_HDR	    4	   129
+OBJ$C_GSD	    1	    19
+OBJ$C_TIR	    1	     5
+OBJ$C_EOM	    1	     2
+OBJ$C_DBG	    0	     0
+OBJ$C_TBT	    2	    24
+OBJ$C_LNK	    0	     0
+OBJ$C_EOMW	    0	     0
+
+Totals		    9	   179
+
+
+The analysis uncovered NO errors.
+
+
+ANALYZE/OBJECT/OUTPUT=DEF_LIBCLI.ANL DEF_LIBCLI.OBJ                             

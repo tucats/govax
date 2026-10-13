@@ -17,30 +17,29 @@ import (
 var (
 	libNoCLI     = vmsdef.LibrarySymbols["LIB$_NOCLI"]
 	libInvSymNam = vmsdef.LibrarySymbols["LIB$_INVSYMNAM"]
+	ssIvLogNam   = vmsdef.Symbols["SS$_IVLOGNAM"]
 )
 
 // maxSymbolName is the longest symbol name the symbol routines take, and
-// maxSymbolValue the longest value LIB$SET_SYMBOL does (the 5.0 manual's
-// limit; the VSI manual's is 4096).
+// maxSymbolValue the longest value LIB$SET_SYMBOL does: the VSI manual's
+// 4096 (VMS V7.1 took 1024 characters and refused 4097, testdata/lib57;
+// the 5.0 manual says 255).
 const (
 	maxSymbolName  = 255
-	maxSymbolValue = 255
+	maxSymbolValue = 4096
 )
 
-// The characters a symbol name may start with, by the 5.0 manual's
-// entries, which differ (docs/PHASE-57, "Symbols"; unconfirmed, a probe
-// case): LIB$GET_SYMBOL's "a letter or dollar sign", and LIB$SET_SYMBOL's
-// and LIB$DELETE_SYMBOL's letter, underscore, or dollar sign.
-func getSymbolStart(ch byte) bool { return isLetter(ch) || ch == '$' }
-
-func setSymbolStart(ch byte) bool { return getSymbolStart(ch) || ch == '_' }
+// symbolStart reports whether a symbol name may start with ch: a letter,
+// "$", or "_", for all three routines (VMS V7.1, testdata/lib57, though
+// the 5.0 manual's LIB$GET_SYMBOL entry leaves out "_").
+func symbolStart(ch byte) bool { return isLetter(ch) || ch == '$' || ch == '_' }
 
 // symbolName reads the symbol name at addr as the symbol routines do:
 // uppercased, its trailing blanks removed. It returns the name, or a
 // status: LIB$_INVSYMNAM for a name that is empty, longer than
 // maxSymbolName, or starts with a character start doesn't allow. Nothing
-// is said of the characters after the first, so any is taken
-// (unconfirmed). err is readString's.
+// is said of the characters after the first, so any is taken (VMS took
+// "S BLANK" and "S_DASH-IN"). err is readString's.
 func symbolName(env *corevms.Environment, addr uint32, start func(byte) bool) (string, uint32, error) {
 	text, err := readString(env, addr)
 	if err != nil {
@@ -101,11 +100,17 @@ func libGetSymbol(env *corevms.Environment, argv []uint32) (uint32, error) {
 		return libNoCLI, nil
 	}
 
-	name, status, err := symbolName(env, arg(argv, 0), getSymbolStart)
+	name, status, err := symbolName(env, arg(argv, 0), symbolStart)
 	if err != nil {
 		return stringFailure(env, err)
 	} else if status != 0 {
 		return status, nil
+	}
+
+	// An omitted resultant-string (a call with one argument) is
+	// LIB$_INVSTRDES, returned (VMS V7.1).
+	if arg(argv, 1) == 0 {
+		return libInvStrDes, nil
 	}
 
 	value, table, status := env.CLI.Symbol(name)
@@ -151,23 +156,27 @@ func libGetSymbol(env *corevms.Environment, argv []uint32) (uint32, error) {
 // (unconfirmed, a probe case).
 //
 // It returns SS$_NORMAL; LIB$_AMBSYMDEF when an abbreviation of the name
-// would also mean another symbol of the table (unconfirmed which: see
-// corevms.CLI's SetSymbol); LIB$_INVSYMNAM; LIB$_INVARG for a table
-// indicator other than 1 or 2, or a value longer than 255 characters
-// (the 5.0 manual's limit, which gives no status for passing it; the VSI
-// manual's LIB$_INVARG past its own 4096, unconfirmed); LIB$_NOCLI; or
-// LIB$_INVSTRDES. An argument it can't read is an access violation,
-// signaled (memoryFault).
+// would also mean another symbol of the table (see corevms.CLI's
+// SetSymbol); LIB$_UNECLIERR for $STATUS and $SEVERITY, which DCL keeps
+// itself (VMS V7.1, for $STATUS); LIB$_INVSYMNAM; LIB$_INVARG for a
+// table indicator other than 1 or 2, or a value longer than 4096
+// characters (the VSI manual's limit); LIB$_NOCLI; or LIB$_INVSTRDES,
+// an omitted value-string's too. An argument it can't read is an access
+// violation, signaled (memoryFault).
 func libSetSymbol(env *corevms.Environment, argv []uint32) (uint32, error) {
 	if env.CLI == nil {
 		return libNoCLI, nil
 	}
 
-	name, status, err := symbolName(env, arg(argv, 0), setSymbolStart)
+	name, status, err := symbolName(env, arg(argv, 0), symbolStart)
 	if err != nil {
 		return stringFailure(env, err)
 	} else if status != 0 {
 		return status, nil
+	}
+
+	if arg(argv, 1) == 0 {
+		return libInvStrDes, nil
 	}
 
 	value, err := readString(env, arg(argv, 1))
@@ -207,7 +216,7 @@ func libDeleteSymbol(env *corevms.Environment, argv []uint32) (uint32, error) {
 		return libNoCLI, nil
 	}
 
-	name, status, err := symbolName(env, arg(argv, 0), setSymbolStart)
+	name, status, err := symbolName(env, arg(argv, 0), symbolStart)
 	if err != nil {
 		return stringFailure(env, err)
 	} else if status != 0 {
@@ -237,44 +246,55 @@ const validControlKeys = corevms.CLICtrlT | corevms.CLICtrlY
 // it reads the mask at argv[0], changes the keys it names, and writes
 // the keys enabled before to old-mask at argv[1], if given. Both
 // routines write the keys previously *enabled*, so that DISABLE_CTRL's
-// old-mask given to ENABLE_CTRL restores them, as the VSI manual says of
-// DISABLE_CTRL (unconfirmed for ENABLE_CTRL, a probe case).
+// old-mask given to ENABLE_CTRL restores them (VMS V7.1, testdata/lib57).
 //
-// It returns SS$_NORMAL; LIB$_NOCLI (checked first); or LIB$_INVARG for
-// a bit other than Ctrl/T's and Ctrl/Y's, when nothing is changed and
-// old-mask isn't written (unconfirmed: the manuals don't say whether the
-// valid bits are acted on). A mask or old-mask it can't reach is an
-// access violation, signaled (memoryFault).
+// It returns SS$_NORMAL; LIB$_NOCLI, with old-mask written as 0; or
+// LIB$_INVARG for a bit other than Ctrl/T's and Ctrl/Y's, when nothing
+// is changed but old-mask is still written (VMS V7.1). A mask or
+// old-mask it can't reach is an access violation, signaled
+// (memoryFault).
 func controlKeys(env *corevms.Environment, argv []uint32, enable bool) (uint32, error) {
-	if env.CLI == nil {
-		return libNoCLI, nil
+	mem, cpu := env.Memory(), env.CPU()
+
+	writeOld := func(old uint32) error {
+		if a := arg(argv, 1); a != 0 {
+			return mem.StoreLongword(cpu, a, old)
+		}
+
+		return nil
 	}
 
-	mem, cpu := env.Memory(), env.CPU()
+	if env.CLI == nil {
+		if err := writeOld(0); err != nil {
+			return memoryFault(env, writing(err))
+		}
+
+		return libNoCLI, nil
+	}
 
 	mask, err := mem.LoadLongword(cpu, arg(argv, 0))
 	if err != nil {
 		return memoryFault(env, err)
 	}
 
-	if mask&^validControlKeys != 0 {
-		return libInvArg, nil
-	}
+	status := ssNormal
 
 	var old uint32
-	if enable {
+
+	switch {
+	case mask&^validControlKeys != 0:
+		old, status = env.CLI.ControlKeys(0, 0), libInvArg
+	case enable:
 		old = env.CLI.ControlKeys(mask, 0)
-	} else {
+	default:
 		old = env.CLI.ControlKeys(0, mask)
 	}
 
-	if a := arg(argv, 1); a != 0 {
-		if err := mem.StoreLongword(cpu, a, old); err != nil {
-			return memoryFault(env, writing(err))
-		}
+	if err := writeOld(old); err != nil {
+		return memoryFault(env, writing(err))
 	}
 
-	return ssNormal, nil
+	return status, nil
 }
 
 // libDisableCtrl is LIB$DISABLE_CTRL (LIB-122):
@@ -283,9 +303,10 @@ func controlKeys(env *corevms.Environment, argv []uint32, enable bool) (uint32, 
 //
 // disable-mask.rlu.r, old-mask.wlu.r. It stops DCL intercepting the
 // control keys disable-mask names, as SET NOCONTROL does: a Ctrl/Y typed
-// then is echoed and does nothing else. Disabling Ctrl/Y also cancels
-// the ON CONTROL_Y of the command level that ran the image, as SET
-// NOCONTROL=Y does (unconfirmed, a probe case). See controlKeys.
+// then is echoed and does nothing else. Unlike SET NOCONTROL=Y, it
+// leaves the ON CONTROL_Y of the command level that ran the image, which
+// takes a Ctrl/Y again once LIB$ENABLE_CTRL enables the key (VMS V7.1).
+// See controlKeys.
 func libDisableCtrl(env *corevms.Environment, argv []uint32) (uint32, error) {
 	return controlKeys(env, argv, false)
 }
@@ -328,9 +349,9 @@ func libPause(env *corevms.Environment, _ []uint32) (uint32, error) {
 // hibernates until some process attaches the terminal back to it
 // (corevms's AttachTerminal, internal/corevms/attach.go): the call is
 // made again when it can go on, as LIB$SPAWN's is, and then returns
-// SS$_NORMAL. It returns LIB$_NOCLI without a CLI, SS$_NONEXPR when no
-// process has the PID, and LIB$_ATTREQREF when that process isn't one
-// the terminal may go to. An omitted or unreadable process-id is an
+// SS$_NORMAL. It returns LIB$_NOCLI without a CLI, SS$_IVLOGNAM for a
+// PID of 0 (VMS V7.1), SS$_NONEXPR when no process has the PID, and
+// LIB$_ATTREQREF when that process isn't one the terminal may go to. An omitted or unreadable process-id is an
 // access violation, signaled.
 func libAttach(env *corevms.Environment, argv []uint32) (uint32, error) {
 	// A call made again while it waits for the terminal.
@@ -349,6 +370,10 @@ func libAttach(env *corevms.Environment, argv []uint32) (uint32, error) {
 	pid, err := env.Memory().LoadLongword(env.CPU(), arg(argv, 0))
 	if err != nil {
 		return memoryFault(env, err)
+	}
+
+	if pid == 0 {
+		return ssIvLogNam, nil
 	}
 
 	if status := env.CLI.Attach(pid); status != ssNormal {

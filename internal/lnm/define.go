@@ -152,6 +152,20 @@ func (db *Database) clearForNewName(t *Table, name string, mode Mode, noAlias bo
 // Other errors: SS$_IVLOGNAM for a lognam longer than 255 characters, and
 // those of ResolveTables.
 func (db *Database) Delete(tabnam, lognam string, mode Mode) (int, error) {
+	return db.deleteMatching(tabnam, lognam, func(m Mode) bool { return m >= mode })
+}
+
+// DeleteExact is Delete for the definitions at mode alone, not those at
+// outer modes: LIB$DELETE_LOGICAL's supervisor-mode name, which leaves a
+// user-mode name of the same name (VMS V7.1, testdata/lib57). A name
+// with no definition at mode is SS$_NOLOGNAM.
+func (db *Database) DeleteExact(tabnam, lognam string, mode Mode) (int, error) {
+	return db.deleteMatching(tabnam, lognam, func(m Mode) bool { return m == mode })
+}
+
+// deleteMatching is Delete and DeleteExact: it deletes the definitions
+// whose mode doomed accepts.
+func (db *Database) deleteMatching(tabnam, lognam string, doomedMode func(Mode) bool) (int, error) {
 	if len(lognam) > MaxNameLength {
 		return 0, status(vmserrors.SS_IVLOGNAM)
 	}
@@ -170,7 +184,7 @@ func (db *Database) Delete(tabnam, lognam string, mode Mode) (int, error) {
 			}
 
 			for _, e := range t.names[lognam] {
-				if e.Mode >= mode {
+				if doomedMode(e.Mode) {
 					doomed = append(doomed, e)
 				}
 			}
@@ -179,7 +193,7 @@ func (db *Database) Delete(tabnam, lognam string, mode Mode) (int, error) {
 		}
 	} else {
 		for _, e := range tables[0].Entries() {
-			if e.Mode >= mode {
+			if doomedMode(e.Mode) {
 				doomed = append(doomed, e)
 			}
 		}

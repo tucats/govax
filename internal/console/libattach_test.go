@@ -117,7 +117,8 @@ func TestAttach_backAndForth(t *testing.T) {
 }
 
 // TestAttach_refused: ATTACH to the process typing it, to a SPAWN/NOWAIT
-// subprocess is LIB$_ATTREQREF; to a name or
+// subprocess is CLI$_REFUSED (LIB$ATTACH's LIB$_ATTREQREF, as VMS V7.1's
+// DCL showed it: testdata/lib57); to a name or
 // PID no process has, SS$_NONEXPR; a name and /IDENTIFICATION both, or
 // neither, is the command's error. $STATUS is each status.
 func TestAttach_refused(t *testing.T) {
@@ -128,16 +129,16 @@ func TestAttach_refused(t *testing.T) {
 	}
 
 	const (
-		attReqRef = "%LIB-F-ATTREQREF, attach request refused"
-		nonExpr   = "%SYSTEM-W-NONEXPR, nonexistent process"
+		refused = "%DCL-E-REFUSED, you cannot attach to that process"
+		nonExpr = "%SYSTEM-W-NONEXPR, nonexistent process"
 	)
 
 	for _, tc := range []struct {
 		line, want string
 		status     uint32
 	}{
-		{"ATTACH SYSTEM", attReqRef, 0x158394},
-		{"ATTACH BESIDE", attReqRef, 0x158394},
+		{"ATTACH SYSTEM", refused, 0x388c2},
+		{"ATTACH BESIDE", refused, 0x388c2},
 		{"ATTACH NOSUCH", nonExpr, 0x8e8},
 		{"ATTACH/IDENTIFICATION=7F0123", nonExpr, 0x8e8},
 		{"ATTACH/IDENTIFICATION=XYZ", "%DCL-W-IVVALU", 0},

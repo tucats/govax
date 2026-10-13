@@ -3,6 +3,7 @@ package dclshell
 import (
 	"errors"
 	"fmt"
+	"slices"
 	"strings"
 
 	"github.com/tucats/govax/internal/corevms"
@@ -168,13 +169,13 @@ func (c *Interpreter) ProcessOneOnly(what string) error {
 // The ways the interpreter hands the CPU back to the shim (cliYield's
 // kind).
 const (
-	yieldWait    = iota // its input isn't there yet (err): run again later
-	yieldImage          // a command runs an image: call driver
-	yieldLogout         // it has logged out, with status
-	yieldCommand        // a command is done: let the others run (dcllend.go)
-	yieldTimer          // WAIT: wait until over, due by deadline (dclwait.go)
-	yieldContinue       // the Ctrl/Y AST returns: the image goes on
-	yieldEndImage       // the Ctrl/Y AST ends the image, with status
+	yieldWait     = iota // its input isn't there yet (err): run again later
+	yieldImage           // a command runs an image: call driver
+	yieldLogout          // it has logged out, with status
+	yieldCommand         // a command is done: let the others run (dcllend.go)
+	yieldTimer           // WAIT: wait until over, due by deadline (dclwait.go)
+	yieldContinue        // the Ctrl/Y AST returns: the image goes on
+	yieldEndImage        // the Ctrl/Y AST ends the image, with status
 )
 
 // The ways the shim hands the interpreter the CPU (its resume's kind).
@@ -253,6 +254,10 @@ type subprocessCLI struct {
 	yield             chan cliYield
 	yielded           *cliYield
 
+	// tooLong names the parent's symbols SPAWN didn't copy, their values
+	// too long (InheritSymbols), for spawnNotice to name.
+	tooLong []string
+
 	// controlYAST is the state of its Ctrl/Y AST (astNone, astQueued,
 	// astRunning; LIB$PAUSE's call of its routine too); abandoned is set when the AST has ended the image.
 	// interrupted says a Ctrl/Y came while one of DCL's own commands
@@ -298,20 +303,56 @@ func (c *Interpreter) cliOf(env *corevms.Environment) *subprocessCLI {
 // cliHost makes the console the System's corevms.CommandInterpreter.
 type cliHost struct{ c *Interpreter }
 
-// InheritSymbols gives child a copy of parent's DCL symbols: process
-// 1's for process 1, otherwise parent's CLI's.
+// maxCopiedValue is the longest symbol value SPAWN copies to a
+// subprocess: VMS V7.1 copied a value of 256 characters but not one of
+// 1024, which it named in %DCL-W-SYMTOOLNG (testdata/lib57); where
+// between it stops is unconfirmed, and govax takes DCL's 1024-byte
+// command buffer, full, as too long.
+const maxCopiedValue = 1023
+
+// InheritSymbols gives child a copy of parent's DCL symbols (process
+// 1's for process 1, otherwise parent's CLI's), but those whose values
+// are too long to copy (maxCopiedValue), which spawnNotice names; and,
+// with them, parent's SET CONTROL settings, as VMS V7.1's subprocess had
+// (testdata/lib57; not its ON CONTROL_Y).
 func (h cliHost) InheritSymbols(parent, child *corevms.Environment) {
-	var from *dclSymbolTable
+	var (
+		from    *dclSymbolTable
+		control controlKeys
+	)
 
 	if parent == h.c.machine.ProcessOne() {
-		from = &h.c.home.dclSymbols
+		from, control = &h.c.home.dclSymbols, h.c.home.control
 	} else if cli := h.c.clis[parent]; cli != nil {
-		from = &cli.shell.dclSymbols
+		from, control = &cli.shell.dclSymbols, cli.shell.control
 	} else {
 		from = &dclSymbolTable{}
 	}
 
-	h.c.cliOf(child).shell.dclSymbols = from.clone()
+	cli := h.c.cliOf(child)
+	symbols := from.clone()
+	cli.tooLong = symbols.dropLong(maxCopiedValue)
+	cli.shell.dclSymbols = symbols
+	cli.shell.control = control
+}
+
+// dropLong deletes t's symbols whose values are longer than limit, and
+// returns their names, in order.
+func (t *dclSymbolTable) dropLong(limit int) []string {
+	var names []string
+
+	for _, table := range append([]dclSymbols{t.global}, t.levels...) {
+		for name, sym := range table {
+			if len(sym.value) > limit {
+				names = append(names, name)
+				delete(table, name)
+			}
+		}
+	}
+
+	slices.Sort(names)
+
+	return names
 }
 
 // Start starts env's CLI (corevms.CommandInterpreter): it writes the
@@ -818,32 +859,9 @@ func (c *Interpreter) cliActivate(cli *subprocessCLI, image, commandLine string)
 
 	driver, err := c.machine.ActivateCreatedImage(env, image, false)
 	if err != nil {
-		say := func(format string, args ...any) { fmt.Fprintf(c.Out, format+"\n", args...) }
-
-		say("%%DCL-W-ACTIMAGE, error activating image %s", strings.ToUpper(image))
 		c.traceCLI(cli, "can't run %s: %v", image, err)
 
-		// The status has STS$M_INHIB_MSG set, its message having been
-		// shown, as VMS's DCL returned it (testdata/mp/probe4).
-		status := corevms.StartupStatus(err)
-
-		switch found, ok := c.foundImageFile(env, image); {
-		case status == rmsFNF:
-			status = cliStatusImageFNF
-			say("-CLI-E-IMAGEFNF, image file not found %s", c.imageFileSpec(env, image))
-
-		case ok && !fixupFailed(err):
-			// The file is there but isn't an image: VMS 7.3 named it and
-			// blamed its header (testdata/mp/probe5/vax, step 11).
-			status = imgactBadHdr
-			say("-CLI-E-IMGNAME, image file %s", found)
-			say("-IMGACT-F-BADHDR, an error was discovered in the image header")
-
-		default:
-			say("-%s", strings.TrimPrefix(env.StatusText(status), "%"))
-		}
-
-		return 0, status | stsInhibitMsg
+		return 0, c.activationFailure(env, image, err)
 	}
 
 	env.CommandLine = commandLine
@@ -985,4 +1003,36 @@ func (c *Interpreter) cliImageEnded(env *corevms.Environment) bool {
 	c.endCLIImage(cli)
 
 	return true
+}
+
+// activationFailure shows DCL's messages for an image of env's that
+// image activation refused (err), as VMS's DCL shows them, and returns
+// the status, STS$M_INHIB_MSG set since its message has been shown, as
+// VMS's DCL returned it (testdata/mp/probe4). A subprocess's RUN and
+// process 1's (Run) share it: VMS V7.1 showed the same messages for an
+// image process 1's LIB$RUN_PROGRAM named (testdata/lib57).
+func (c *Interpreter) activationFailure(env *corevms.Environment, image string, err error) uint32 {
+	say := func(format string, args ...any) { fmt.Fprintf(c.Out, format+"\n", args...) }
+
+	say("%%DCL-W-ACTIMAGE, error activating image %s", strings.ToUpper(image))
+
+	status := corevms.StartupStatus(err)
+
+	switch found, ok := c.foundImageFile(env, image); {
+	case status == rmsFNF:
+		status = cliStatusImageFNF
+		say("-CLI-E-IMAGEFNF, image file not found %s", c.imageFileSpec(env, image))
+
+	case ok && !fixupFailed(err):
+		// The file is there but isn't an image: VMS 7.3 named it and
+		// blamed its header (testdata/mp/probe5/vax, step 11).
+		status = imgactBadHdr
+		say("-CLI-E-IMGNAME, image file %s", found)
+		say("-IMGACT-F-BADHDR, an error was discovered in the image header")
+
+	default:
+		say("-%s", strings.TrimPrefix(env.StatusText(status), "%"))
+	}
+
+	return status | stsInhibitMsg
 }

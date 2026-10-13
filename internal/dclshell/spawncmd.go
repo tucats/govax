@@ -178,13 +178,22 @@ func spawnFlags(o SpawnOptions) uint32 {
 
 // spawnNotice shows DCL's messages when SPAWN has made the subprocess,
 // before it runs: that it was, and, if SPAWN waits, that the terminal is
-// now the subprocess's. VMS's DCL wrote them so in testdata/mp/probe4's
-// run.
+// now the subprocess's (VMS's DCL wrote them so in testdata/mp/probe4's
+// run); then each symbol it didn't copy (InheritSymbols), as VMS V7.1
+// did after them (testdata/lib57).
 func (c *Interpreter) spawnNotice(spawned *corevms.Environment, wait bool) {
 	c.Printf("%%DCL-S-SPAWNED, process %s spawned\n", spawned.Process.Name)
 
 	if wait {
 		c.Printf("%%DCL-S-ATTACHED, terminal now attached to process %s\n", spawned.Process.Name)
+	}
+
+	if cli := c.clis[spawned]; cli != nil {
+		for _, name := range cli.tooLong {
+			c.Printf("%%DCL-W-SYMTOOLNG, symbol %s is too long to copy to subprocess\n", name)
+		}
+
+		cli.tooLong = nil
 	}
 }
 

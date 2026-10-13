@@ -199,6 +199,9 @@ const (
 	cliFrznCtx
 	cliNotCtx
 	cliInvCtxTyp
+
+	// docs/PHASE-57 - LIB CLI access.md: the probe's answers.
+	cliBufOvf
 )
 
 // CLI facility status codes -- CLI_ prefix, matching real VMS's CLI$_
@@ -506,6 +509,10 @@ const (
 	// testdata/dcl50's round 5).
 	CLI_ONERR     = CLIFacility<<FacilityPosition | cliOnErr<<MessagePosition | StatusWarning
 	CLI_STRTOOLNG = CLIFacility<<FacilityPosition | cliStrTooLng<<MessagePosition | StatusError
+
+	// CLI_BUFOVF, a warning, is an expression whose symbol's value fills
+	// DCL's 1024-byte command buffer (VMS V7.1, testdata/lib57).
+	CLI_BUFOVF = CLIFacility<<FacilityPosition | cliBufOvf<<MessagePosition | StatusWarning
 )
 
 func init() {
@@ -661,5 +668,6 @@ func init() {
 	DefineMessage(CLI_TKNOVF, CLIFacility, "TKNOVF", "command element is too long - shorten")
 	DefineMessage(CLI_ONERR, CLIFacility, "ONERR", "invalid ON condition - use WARNING, SEVERE, ERROR, or CONTROL_Y")
 	DefineMessage(CLI_STRTOOLNG, CLIFacility, "STRTOOLNG", "string argument is too long - shorten")
+	DefineMessage(CLI_BUFOVF, CLIFacility, "BUFOVF", "command buffer overflow - shorten expression or command line")
 	DefineMessage(CLI_BADLIMIT, CLIFacility, "BADLIMIT", "Invalid /LIMIT value !D (must be at least 1; DELETE NAME;* removes every version)")
 }

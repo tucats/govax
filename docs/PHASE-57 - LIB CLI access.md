@@ -1,6 +1,6 @@
 # Phase 57 — LIB$ access to the command language interpreter
 
-**Status:** in progress (2026-10-13; planned 2026-10-12). Needs Phases
+**Status:** done (2026-10-13; planned 2026-10-12). Needs Phases
 53–55, and Phases 48, 50, and 51 (DCL in every process). Part of the LIB$ program laid out in
 `PHASE-53 - RTL LIB support.md` (Part A).
 
@@ -580,8 +580,8 @@ implementation per Shell (`libcli.go`), the chain run after an image
    LIB$ATTACH. **Done** 2026-10-13.
 10. **The program** (`testdata/lib57/`, a command procedure running it,
     and an interactive script), its console test, and the VMS probe.
-    **Prepared** 2026-10-13; the VAX run is the author's.
-11. **Close-out**.
+    **Done** 2026-10-13 (run on VMS V7.1 the same day).
+11. **Close-out**: govax changed to VMS's answers. **Done** 2026-10-13.
 
 ## Progress log
 
@@ -887,3 +887,52 @@ implementation per Shell (`libcli.go`), the chain run after an image
     SYS$INPUT and SYS$OUTPUT files `$CREPRC` named (subtask 4's choice
     for SYS$INPUT, here without a CLI). S9's GET_COMMAND case shows it;
     VMS's answer decides what changes.
+- **2026-10-13** — Subtask 11, the close-out. The author ran the probe on
+  VMS V7.1 (simh's VAX 8600; twice in one login, the second run's log
+  kept), and the interactive part (`vax/lib57-term.log`). `$LIBCLIDEF`
+  doesn't exist there (MACRO: UNRECSTMT), so govax's macro library gets
+  nothing; the probe's own masks stand. govax now matches the log in
+  every section, S1 to S9 (`TestLib57Oracle`), but for SHOW LOGICAL/FULL's
+  job and group table headers, which show a shared table's attributes
+  govax doesn't keep (`lib57Compared`), and two traces of the earlier run
+  (`lib57RunHistory`: the common area's text, and LIB57N.OUT appended to,
+  which suggests LIB$PUT_OUTPUT opens an existing SYS$OUTPUT file to
+  append; unconfirmed, not modeled). docs/DEVIATIONS.md's "[Phase 57]"
+  entry lists the changes; in short, where the earlier subtasks' choices
+  were wrong:
+  - Symbols: GET_SYMBOL takes a leading `_`; an omitted resultant or
+    value string is LIB$_INVSTRDES; values up to 4096 characters (VSI's
+    limit); `$STATUS` is LIB$_UNECLIERR. Confirmed: the name rules
+    otherwise, abbreviations, every level's locals, P1, AMBSYMDEF's
+    rule, the tables, DELETE's.
+  - Logical names: SS$_SUPERSEDE for every success in the default
+    table; LIB$_WRONUMARG for the name alone; DELETE_LOGICAL leaves a
+    user-mode name. Confirmed: case kept, the attributes, the item list,
+    the tables, SS$_IVLOGNAM for empty names and 256-character values.
+  - The common area: every choice confirmed (a subprocess's starts
+    empty; 252 characters; LIB$_STRTRU).
+  - Chaining: DO_COMMAND took 256 characters (govax now takes DCL's
+    1024, unconfirmed); RUN_PROGRAM's text after the name is the image's
+    foreign-command text, an empty name runs nothing, and a missing image
+    is DCL's ACTIMAGE/IMAGEFNF, which process 1's RUN now shows too.
+    Confirmed: the exit handlers first, `$STATUS` the chained command's,
+    no verify echo, a chain of two, the procedure level.
+  - Control keys: DISABLE_CTRL leaves ON CONTROL_Y; old-mask is written
+    for an invalid mask, and as 0 without a CLI; a spawned subprocess
+    starts with its parent's settings.
+  - PAUSE: nothing shown before the prompt, and it reads the terminal in
+    a procedure too, even with SET NOCONTROL=Y (confirmed); at level 0,
+    CONTINUE leaves `$STATUS` as it was before the image, STOP and EXIT
+    set SS$_NORMAL (not SS$_CONTROLY).
+  - ATTACH: nothing shown by ATTACH itself and %DCL-S-RETURNED where the
+    terminal comes back (confirmed); the refusal is %DCL-E-REFUSED
+    (CLI$_REFUSED); LIB$ATTACH of PID 0 is SS$_IVLOGNAM.
+  - SPAWN: a symbol too long to copy is left out, named by
+    %DCL-W-SYMTOOLNG after the SPAWN messages (govax: a value of 1024
+    characters or more, unconfirmed), and an expression refuses such a
+    value (%DCL-W-BUFOVF).
+  - No CLI: every routine but the common area's is LIB$_NOCLI
+    (confirmed), and GET_COMMAND is RMS$_FNF with no prompt.
+  Not reproduced: DCL's `_What:` prompt for an incomplete chained command
+  (govax's DCL prompts for missing parameters nowhere), and VMS's
+  %DCL-W-COMPLX for a lexical function typed at a pause in a procedure.

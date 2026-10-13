@@ -1,6 +1,7 @@
 package dclshell
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"sync/atomic"
@@ -8,6 +9,7 @@ import (
 	"github.com/tucats/govax/internal/corevms"
 	"github.com/tucats/govax/internal/dcl"
 	"github.com/tucats/govax/internal/machine"
+	"github.com/tucats/govax/internal/vmserrors"
 )
 
 // Interpreter is the console's DCL, every process's: each process that
@@ -161,7 +163,19 @@ func (c *Interpreter) Run(fn string, opts machine.RunOptions) error {
 		return c.subprocessRun(cli, fn, opts.CommandLine)
 	}
 
-	return c.machine.Run(fn, opts)
+	err := c.machine.Run(fn, opts)
+
+	// An image that can't be activated: DCL's messages, as a
+	// subprocess's RUN shows them (activationFailure).
+	var ve vmserrors.VMSError
+	if errors.As(err, &ve) && ve.Status == vmserrors.CLI_ACTIVATE && c.RTL != nil {
+		status := c.activationFailure(c.RTL, fn, err)
+		c.SetCommandStatus(status, nil)
+
+		return c.statusFailure(status)
+	}
+
+	return err
 }
 
 // Running reports whether the console should keep reading commands,

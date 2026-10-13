@@ -4,7 +4,11 @@ import (
 	"errors"
 
 	"github.com/tucats/govax/internal/corevms"
+	"github.com/tucats/govax/internal/vmsdef"
 )
+
+// ssSupersede is SS$_SUPERSEDE, LIB$SET_LOGICAL's success in LNM$PROCESS.
+var ssSupersede = vmsdef.Symbols["SS$_SUPERSEDE"]
 
 // The logical-name routines of the 5.0 manual's section 2.2.4
 // (docs/PHASE-57, "Logical names"): DCL's DEFINE and DEASSIGN for a
@@ -69,14 +73,22 @@ func logicalTable(env *corevms.Environment, addr uint32) (string, uint32, error)
 // LNM$M_NO_ALIAS for the name, and, without an item list, LNM$M_CONCEALED
 // and LNM$M_TERMINAL for the value.
 //
-// It returns SS$_NORMAL; SS$_SUPERSEDE when it replaced a definition;
-// LIB$_INVARG when neither value-string nor item-list is given;
+// It returns SS$_NORMAL; SS$_SUPERSEDE when it replaced a definition,
+// and whenever it succeeds with no table given (VMS V7.1 returned it for
+// every name it defined in LNM$PROCESS that way, new ones too, and
+// SS$_NORMAL for new names in a table named: testdata/lib57); LIB$_WRONUMARG
+// for a call with the name alone (VMS V7.1); LIB$_INVARG when neither
+// value-string nor item-list is given otherwise (unconfirmed);
 // LIB$_NOCLI; LIB$_INVSTRDES; SS$_ACCVIO for an argument it can't read;
 // or $CRELNM's failures (SS$_IVLOGNAM, SS$_IVLOGTAB, SS$_NOPRIV,
 // SS$_BADPARAM, ...).
 func libSetLogical(env *corevms.Environment, argv []uint32) (uint32, error) {
 	if env.CLI == nil {
 		return libNoCLI, nil
+	}
+
+	if len(argv) < 2 {
+		return libWroNumArg, nil
 	}
 
 	name, status, err := logicalString(env, arg(argv, 0))
@@ -114,7 +126,12 @@ func libSetLogical(env *corevms.Environment, argv []uint32) (uint32, error) {
 		}
 	}
 
-	return env.SetSupervisorLogical(table, name, attributes, value, itemList)
+	status, err = env.SetSupervisorLogical(table, name, attributes, value, itemList)
+	if err == nil && status&1 != 0 && arg(argv, 2) == 0 {
+		status = ssSupersede
+	}
+
+	return status, err
 }
 
 // libDeleteLogical is LIB$DELETE_LOGICAL (LIB-113):
@@ -122,10 +139,9 @@ func libSetLogical(env *corevms.Environment, argv []uint32) (uint32, error) {
 //	LIB$DELETE_LOGICAL logical-name [,table-name]
 //
 // logical-name.rt.dx, table-name.rt.dx. It deletes the supervisor-mode
-// logical name from table-name (LNM$PROCESS by default), as DCL's
-// DEASSIGN does, which deletes a user-mode name of the same name too
-// (the DCL Dictionary's DEASSIGN; so a name defined only at user mode is
-// deleted rather than SS$_NOLOGNAM, unconfirmed, a probe case).
+// logical name from table-name (LNM$PROCESS by default), and only it: a
+// name defined only at user mode is SS$_NOLOGNAM (VMS V7.1,
+// testdata/lib57), though DCL's DEASSIGN deletes the user-mode name too.
 //
 // It returns SS$_NORMAL; SS$_NOLOGNAM when there's no such name;
 // LIB$_NOCLI; LIB$_INVSTRDES; SS$_ACCVIO for an argument it can't read;

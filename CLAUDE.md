@@ -54,7 +54,7 @@ never had.
   FORMAT_DATE_TIME, CONVERT_DATE_STRING) with LNM$DT_FORMAT_TABLE and
   the system's LIB$DT_FORMAT/LIB$DT_INPUT_FORMAT built in, checked
   against VMS 7.1 by `testdata/lib56`.
-  Phase 57 (in progress) is the CLI routines: `corevms.CLI`
+  Phase 57 (done 2026-10-13) is the CLI routines: `corevms.CLI`
   (`Environment.CLI`, nil without a CLI) is a process's DCL as the LIB$
   routines reach it, `dclshell/libcli.go` its implementation on each
   process's own Shell; the symbol routines are done (subtask 2), and
@@ -77,7 +77,8 @@ never had.
   `corevms/attach.go`: the job's terminal holder, `Job.terminal`, which
   `Attached` returns; `AttachTerminal`/`AwaitAttach`; LIB$ATTACH and
   DCL's ATTACH, `dclshell/attachcmd.go`), and the probe (subtask 10,
-  `testdata/lib57`, prepared; the VAX run is pending).
+  `testdata/lib57`, checked against VMS 7.1; subtask 11 changed govax
+  to its answers).
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
 - `docs/DEVIATIONS.md` — running log of suspected ISA/behavior fidelity issues found in
@@ -175,9 +176,12 @@ never had.
   (the image LIB$RUN_PROGRAM runs), `lib57.com` (runs each group and
   shows DCL's state after it, sections S1 to S9), its small procedures,
   `lib57i.com` (the interactive part, the README's table), and
-  `def_libcli.mar` (`$LIBCLIDEF GLOBAL`). `TestLib57Oracle` runs
-  `@LIB57` on govax and compares its log with `vax/lib57.log` section
-  by section once the VAX run is back.
+  `def_libcli.mar` (`$LIBCLIDEF GLOBAL`; VMS 7.1 has no such macro).
+  `TestLib57Oracle` runs `@LIB57` on govax and matches VMS V7.1's log,
+  `vax/lib57.log`, section by section (`lib57Compared` masks the job and
+  group tables' SHOW LOGICAL/FULL headers, `lib57RunHistory` takes out
+  the traces of an earlier run); `vax/lib57-term.log` is the interactive
+  session.
 - `testdata/probe49/` — Phase 49's VMS probe in three rounds (`probe6`,
   `probe6b`, `probe6c`; README.md has each round's answers), run by
   `TestProbe6*`; `testdata/rms49/` and `testdata/sec49/` are the phase's
