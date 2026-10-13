@@ -29,6 +29,35 @@ import (
 // resultant-length are left as they were; and SYS$INPUT is always the
 // terminal (a logical name redirecting it to a file isn't followed).
 func libGetInput(env *corevms.Environment, argv []uint32) (uint32, error) {
+	return getLine(env, argv, env.ReadInputLine)
+}
+
+// libGetCommand is LIB$GET_COMMAND (RTL Library manual, LIB-199):
+//
+//	LIB$GET_COMMAND resultant-string [,prompt-string] [,resultant-length]
+//
+// It is LIB$GET_INPUT reading SYS$COMMAND rather than SYS$INPUT: "used
+// when a program needs input from some source other than the current
+// input stream". The two differ while DCL runs a command procedure,
+// whose data lines are the image's SYS$INPUT and whose terminal is its
+// SYS$COMMAND; the read goes to the terminal then
+// (corevms.Environment.ReadCommandLine). Its arguments, results, and
+// statuses are GET_INPUT's.
+//
+// Unconfirmed against VMS: a subprocess whose input is a file or a
+// mailbox (SPAWN/INPUT, a LOGINOUT process) reads that input, its
+// SYS$COMMAND in govax; and the prompt is written whatever SYS$COMMAND
+// is (the manual: only to a terminal), as GET_INPUT's is.
+func libGetCommand(env *corevms.Environment, argv []uint32) (uint32, error) {
+	return getLine(env, argv, env.ReadCommandLine)
+}
+
+// getLine is LIB$GET_INPUT's and LIB$GET_COMMAND's work: argv's
+// arguments checked, the prompt read, a line read by read (from
+// SYS$INPUT or SYS$COMMAND), and the line and its length written back.
+func getLine(env *corevms.Environment, argv []uint32,
+	read func(prompt string, maxLen int) (string, bool, error),
+) (uint32, error) {
 	result, prompt, lenAddr := arg(argv, 0), arg(argv, 1), arg(argv, 2)
 
 	if result == 0 {
@@ -52,7 +81,7 @@ func libGetInput(env *corevms.Environment, argv []uint32) (uint32, error) {
 		}
 	}
 
-	line, ok, err := env.ReadInputLine(p, maxInputLength)
+	line, ok, err := read(p, maxInputLength)
 	if err != nil {
 		return 0, err // waiting for the line: called again
 	}

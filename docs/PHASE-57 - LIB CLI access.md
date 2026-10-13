@@ -561,7 +561,7 @@ implementation per Shell (`libcli.go`), the chain run after an image
    (local and global tables; LIB$_NOSUCHSYM, LIB$_INVSYMNAM, LIB$_NOCLI).
    **Done** 2026-10-13.
 3. **Logical names**: SET_LOGICAL, DELETE_LOGICAL. **Done** 2026-10-13.
-4. **GET_COMMAND.**
+4. **GET_COMMAND.** **Done** 2026-10-13.
 5. **The common area**: GET_COMMON, PUT_COMMON.
 6. **Chaining**: DO_COMMAND, RUN_PROGRAM.
 7. **Control keys**: SET CONTROL's settings per process; DISABLE_CTRL,
@@ -651,3 +651,19 @@ implementation per Shell (`libcli.go`), the chain run after an image
   item list, ACCVIO returned, DELETE's modes and the empty name) and
   `console/libcli_test.go`'s `TestLibCLI_logicals` (an image's changes,
   seen by SHOW LOGICAL after it ends).
+- **2026-10-13** — Subtask 4, GET_COMMAND. `librtl/input.go`'s
+  LIB$GET_COMMAND (code 154) is LIB$GET_INPUT's code (now `getLine`,
+  given the read) reading through `Environment.ReadCommandLine`: the
+  terminal, even while a procedure's data lines are SYS$INPUT. No CLI is
+  needed. Choices, each **unconfirmed** and a probe case:
+  - A subprocess whose input is a file or mailbox reads that input (its
+    SYS$COMMAND in govax).
+  - The prompt is written whatever SYS$COMMAND is, as GET_INPUT's is
+    (the manual: only to a terminal).
+  - A SYS$COMMAND logical name redirecting it isn't followed, as for
+    GET_INPUT's SYS$INPUT.
+  Tests: `librtl/input_test.go` (`TestLibGetCommand`: the terminal and
+  a redirected input read in turn; INVARG, INPSTRTRU) and
+  `console/libcli_test.go`'s `TestLibCLI_getCommand` (an image run from
+  a procedure reads the terminal with GET_COMMAND and the data line
+  with GET_INPUT).

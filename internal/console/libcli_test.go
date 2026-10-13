@@ -192,3 +192,64 @@ func TestLibCLI_logicals(t *testing.T) {
 		t.Errorf("output:\n%s\nwant:\n%s", strings.Join(got, "\n"), strings.Join(want, "\n"))
 	}
 }
+
+// commandSource is an image that reads a line with LIB$GET_COMMAND,
+// prompting "Cmd: ", then one with LIB$GET_INPUT, and writes each,
+// returning the first failure's status, or SS$_NORMAL.
+const commandSource = `	.title	command
+	.psect	data,noexe,wrt
+prompt:	.ascid	/Cmd: /
+buf:	.blkb	80
+desc:	.word	80
+	.byte	14,1
+	.address buf
+len:	.word	0
+out:	.word	0
+	.byte	14,1
+	.address buf
+	.psect	code,exe,nowrt
+	.entry	start,^m<>
+	pushaw	len
+	pushaq	prompt
+	pushaq	desc
+	calls	#3,g^lib$get_command
+	blbc	r0,90$
+	movw	len,out
+	pushaq	out
+	calls	#1,g^lib$put_output
+	pushaw	len
+	clrl	-(sp)
+	pushaq	desc
+	calls	#3,g^lib$get_input
+	blbc	r0,90$
+	movw	len,out
+	pushaq	out
+	calls	#1,g^lib$put_output
+90$:	ret
+	.end	start
+`
+
+// TestLibCLI_getCommand: in a command procedure, LIB$GET_COMMAND reads
+// the terminal (SYS$COMMAND), while LIB$GET_INPUT reads the procedure's
+// data line (SYS$INPUT).
+func TestLibCLI_getCommand(t *testing.T) {
+	c, out := scheduledConsole(t, longQuantum, brbSelf)
+	image := buildImage(t, c, "command", commandSource)
+	proc := writeCommands(t,
+		`$ RUN "`+image+`"`,
+		`from the procedure`,
+	)
+
+	c.In = strings.NewReader("from the terminal\r\n")
+	out.Reset()
+
+	d := console.NewDispatcher(c, consoletest.ConsoleGrammar(t), nil)
+	if err := d.Dispatch(`@"` + proc + `"`); err != nil {
+		t.Fatalf("@: %v", err)
+	}
+
+	want := []string{"Cmd: from the terminal", "from the procedure"}
+	if got := programLines(out.String()); strings.Join(got, "\n") != strings.Join(want, "\n") {
+		t.Errorf("output:\n%s\nwant:\n%s", strings.Join(got, "\n"), strings.Join(want, "\n"))
+	}
+}

@@ -124,3 +124,63 @@ func TestLibGetInput_noResult(t *testing.T) {
 		t.Errorf("status = %#x, want LIB$_INVARG", r0)
 	}
 }
+
+// TestLibGetCommand reads SYS$COMMAND: the terminal, even while a
+// command procedure's data lines are the process's input (SYS$INPUT),
+// which LIB$GET_INPUT reads meanwhile. Each prompt is written once.
+func TestLibGetCommand(t *testing.T) {
+	env, out := foreignFixture(t, "", "typed\r\nagain\r\n")
+	a := newArena(t, env)
+	result, length, prompt := a.desc(strings.Repeat("x", 8)), a.word(0), a.desc("Cmd: ")
+
+	restore := env.RedirectInput(strings.NewReader("data one\ndata two\n"))
+
+	for _, c := range []struct{ routine, want string }{
+		{"LIB$GET_COMMAND", "typed"},
+		{"LIB$GET_INPUT", "data one"},
+		{"LIB$GET_COMMAND", "again"},
+		{"LIB$GET_INPUT", "data two"},
+	} {
+		if r0 := call(t, env, c.routine, result, prompt, length); r0 != ssNormal {
+			t.Fatalf("%s: status = %#x, want SS$_NORMAL", c.routine, r0)
+		}
+
+		if got := strings.TrimRight(descText(t, env, result), " "); got != c.want {
+			t.Errorf("%s: result = %q, want %q", c.routine, got, c.want)
+		}
+
+		if got := word(t, env, length); int(got) != len(c.want) {
+			t.Errorf("%s: length = %d, want %d", c.routine, got, len(c.want))
+		}
+	}
+
+	restore()
+
+	if r0 := call(t, env, "LIB$GET_COMMAND", result); r0 != rmsEOF {
+		t.Errorf("status = %#x at the terminal's end, want RMS$_EOF", r0)
+	}
+
+	if got := out.String(); got != strings.Repeat("Cmd: ", 4) {
+		t.Errorf("prompts = %q", got)
+	}
+}
+
+// TestLibGetCommand_errors: GET_INPUT's checks, LIB$_INVARG without a
+// resultant-string and LIB$_INPSTRTRU for a line too long for it.
+func TestLibGetCommand_errors(t *testing.T) {
+	env, _ := foreignFixture(t, "", "ABCDEFG\n")
+	a := newArena(t, env)
+	result, length := a.desc("xxx"), a.word(0)
+
+	if r0 := call(t, env, "LIB$GET_COMMAND", 0); r0 != libInvArg {
+		t.Errorf("status = %#x without a string, want LIB$_INVARG", r0)
+	}
+
+	if r0 := call(t, env, "LIB$GET_COMMAND", result, 0, length); r0 != libInpStrTru {
+		t.Errorf("status = %#x, want LIB$_INPSTRTRU", r0)
+	}
+
+	if got, n := descText(t, env, result), word(t, env, length); got != "ABC" || n != 3 {
+		t.Errorf("result = %q, length %d; want ABC, 3", got, n)
+	}
+}
