@@ -45,8 +45,9 @@ func (c *Interpreter) DispatchConsole(line string) error {
 	}
 
 	// The line is one command, whose status becomes $STATUS
-	// (dclstatus.go).
-	return c.statusOf(func() error {
+	// (dclstatus.go). An image it ran may have left a command for DCL to
+	// run next (dclchain.go), a line of its own.
+	err := c.statusOf(func() error {
 		// A label marks the line (dcllabel.go), and the command after a
 		// block's IF must be THEN (dclif.go).
 		whole := line
@@ -105,6 +106,8 @@ func (c *Interpreter) DispatchConsole(line string) error {
 
 		return c.dispatchCommand(line)
 	})
+
+	return c.runChained(err)
 }
 
 // dispatchCommand executes a console command line that has been through

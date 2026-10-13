@@ -34,6 +34,12 @@ type CLI interface {
 	// DeleteSymbol deletes the symbol name (or an abbreviation of it)
 	// means in the table given: LIB$_NOSUCHSYM if there's none.
 	DeleteSymbol(name string, table uint32) uint32
+
+	// Chain leaves text for DCL to run once the image now running has
+	// exited (LIB$DO_COMMAND and LIB$RUN_PROGRAM): a command line, or,
+	// with program set, the file name of an image to run. A second call
+	// before the image exits replaces the first.
+	Chain(text string, program bool)
 }
 
 // The table-type-indicator values of the LIB$ symbol routines
@@ -42,7 +48,6 @@ const (
 	CLILocalSymbol  = 1 // LIB$K_CLI_LOCAL_SYM
 	CLIGlobalSymbol = 2 // LIB$K_CLI_GLOBAL_SYM
 )
-
 
 const cliGetSymbol = 0x1305
 

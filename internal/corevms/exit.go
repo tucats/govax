@@ -244,6 +244,28 @@ func serviceSysExit(env *Environment, argv []uint32) (uint32, error) {
 	return status, ErrExit
 }
 
+// ExitFromShim ends the image as $EXIT with status would, from a shim
+// (LIB$DO_COMMAND's and LIB$RUN_PROGRAM's): it returns a tail call
+// (CallRequest's Tail) of the SYS$EXIT vector entry, with the argument
+// list (1, status) put below SP. A shim can't call $EXIT itself
+// (serviceSysExit): each exit handler returns to the XFC that called
+// $EXIT, and a shim's XFC chooses its routine by R0, which the handler's
+// RET leaves as the handler's status; the vector entry's XFC chooses by
+// its address. The shim returns ExitFromShim's results as its own.
+func (env *Environment) ExitFromShim(status uint32) (uint32, error) {
+	argList := env.cpu.GPR(registers.SP) - 8
+
+	for i, v := range []uint32{1, status} {
+		if err := env.mem.StoreLongword(env.cpu, argList+uint32(4*i), v); err != nil {
+			return ssAccVio, nil
+		}
+	}
+
+	env.cpu.SetGPR(registers.SP, argList)
+
+	return 0, &CallRequest{Routine: exitEntryAddr, ArgList: argList, Tail: true}
+}
+
 // ExitHandlers reports how many exit handlers mode has declared.
 func (env *Environment) ExitHandlers(mode registers.AccessMode) int {
 	return len(env.Process.exitHandlers[mode])

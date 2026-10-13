@@ -571,7 +571,7 @@ implementation per Shell (`libcli.go`), the chain run after an image
 3. **Logical names**: SET_LOGICAL, DELETE_LOGICAL. **Done** 2026-10-13.
 4. **GET_COMMAND.** **Done** 2026-10-13.
 5. **The common area**: GET_COMMON, PUT_COMMON. **Done** 2026-10-13.
-6. **Chaining**: DO_COMMAND, RUN_PROGRAM.
+6. **Chaining**: DO_COMMAND, RUN_PROGRAM. **Done** 2026-10-13.
 7. **Control keys**: SET CONTROL's settings per process; DISABLE_CTRL,
    ENABLE_CTRL.
 8. **PAUSE**: the Ctrl/Y level at any command level, and in a
@@ -693,3 +693,38 @@ implementation per Shell (`libcli.go`), the chain run after an image
   rundown) and `console/libcli_test.go`'s `TestLibCLI_common` (one
   image's text read by a later one in process 1, and in a LOGINOUT
   subprocess whose area starts empty).
+- **2026-10-13** — Subtask 6, chaining. `librtl/chain.go` has
+  LIB$DO_COMMAND and LIB$RUN_PROGRAM (codes 157 and 158): each leaves its
+  text with the process's DCL through a new `corevms.CLI` method,
+  `Chain`, and ends the image with SS$_NORMAL by a tail call of the
+  SYS$EXIT vector entry (`corevms.Environment.ExitFromShim`). A shim
+  can't call `$EXIT`'s code itself: `$EXIT` calls each exit handler with
+  the calling XFC as its return address, and a shim's XFC picks its
+  routine by R0, which the handler's RET leaves as the handler's
+  status (the first try did this and got an ACCVIO). `$EXIT`'s vector
+  entry picks by its address. In DCL (`dclshell/dclchain.go`) the
+  text is `Shell.chained`, and `DispatchConsole`, once the line that ran
+  the image is done, runs it as a line of its own at that level
+  (`runChained`): a command through `DispatchConsole`, a program as a
+  foreign command's image (`runForeign`, no command text), so the same
+  code serves process 1 and a subprocess, at level 0 and in a
+  procedure. A chained image may chain again. `Interpreter.Run` forgets
+  a chain nobody ran. An image run under the debugger leaves the session
+  open when it exits, as VMS's does; its chain runs when the
+  debugger's EXIT ends the session (`Interpreter.RunChained`, called by the
+  console's `Dispatch`). Choices, each **unconfirmed** and a probe case:
+  - The image's exit status is SS$_NORMAL; `$STATUS` is then the
+    chained command's.
+  - SET VERIFY doesn't show the chained line (no procedure read it).
+  - An empty command runs nothing; `$STATUS` stays the image's.
+  - A chain is dropped if the command that ran the image failed.
+  - A command that isn't complete isn't prompted for (the 5.0 manual's
+    "$_Show what?:"): it fails as the same line typed in a procedure
+    would.
+  Tests: `librtl/chain_test.go` (NOCLI, INVARG past 255 characters,
+  the tail call of `$EXIT` and its status) and `console/libcli_test.go`'s
+  `TestLibCLI_doCommand` (after the exit handler, a chain of two, a
+  failing command's `$STATUS`), `_doCommandLevel` (a local symbol
+  defined at the procedure's level), `_runProgram` (the common area
+  carried to the next image, a missing image), `_subprocessChain`, and
+  `_chainUnderDebugger`.

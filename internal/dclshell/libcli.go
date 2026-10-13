@@ -117,3 +117,9 @@ func commonPrefix(a, b string) int {
 
 	return n
 }
+
+// Chain is corevms.CLI's: text is run once the image has exited
+// (dclchain.go).
+func (s shellCLI) Chain(text string, program bool) {
+	s.shell.chained = &chainedCommand{text: text, program: program}
+}

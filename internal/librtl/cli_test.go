@@ -11,6 +11,15 @@ import (
 type fakeCLI struct {
 	local, global map[string]string
 	calls         []string
+
+	// chained and program are the last Chain's.
+	chained string
+	program bool
+}
+
+func (f *fakeCLI) Chain(text string, program bool) {
+	f.calls = append(f.calls, "chain "+text)
+	f.chained, f.program = text, program
 }
 
 func newFakeCLI() *fakeCLI {

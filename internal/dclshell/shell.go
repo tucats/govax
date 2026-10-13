@@ -82,6 +82,10 @@ type Shell struct {
 	// DCL's own commands a data line is read as a command.
 	imageRan bool
 
+	// chained is what the image a command ran left for DCL to run next
+	// (LIB$DO_COMMAND, LIB$RUN_PROGRAM; dclchain.go), nil for nothing.
+	chained *chainedCommand
+
 	// controlYLevelActive is set while DCL reads the Ctrl/Y level
 	// (dclcontroly.go); controlYTaken says a Ctrl/Y stopped the image a
 	// procedure's line ran, for the procedure to act on. stopping is set

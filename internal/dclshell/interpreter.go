@@ -133,6 +133,10 @@ func (c *Interpreter) Run(fn string, opts machine.RunOptions) error {
 		return err
 	}
 
+	// Whatever an earlier image left to chain and nobody ran (one run
+	// outside DCL's command loop) is forgotten (dclchain.go).
+	c.chained = nil
+
 	if cli := c.subCLI; cli != nil {
 		return c.subprocessRun(cli, fn, opts.CommandLine)
 	}

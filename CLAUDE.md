@@ -63,7 +63,10 @@ never had.
   GET_COMMAND (subtask 4, GET_INPUT's code reading SYS$COMMAND,
   `librtl/input.go`), and GET_COMMON and PUT_COMMON (subtask 5,
   `librtl/common.go`, the area kept in Go as
-  `corevms.Environment.Common`, not at SYS$GL_COMMON).
+  `corevms.Environment.Common`, not at SYS$GL_COMMON), and DO_COMMAND
+  and RUN_PROGRAM (subtask 6, `librtl/chain.go`: `CLI.Chain`, then a
+  tail call of `$EXIT`, `Environment.ExitFromShim`; DCL runs the text
+  after the line that ran the image, `dclshell/dclchain.go`).
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
 - `docs/DEVIATIONS.md` — running log of suspected ISA/behavior fidelity issues found in

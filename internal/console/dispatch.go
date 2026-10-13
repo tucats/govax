@@ -64,7 +64,15 @@ func (d *Dispatcher) Dispatch(line string) error {
 	// calls DispatchConsole instead, since a VAX program asking for a
 	// console command means the console's.)
 	if d.Console.InDebugger() {
-		return d.Console.Debugger.Dispatch(line)
+		err := d.Console.Debugger.Dispatch(line)
+
+		// An image the session ran may have chained a command, which
+		// DCL runs once the session has ended (dclshell's dclchain.go).
+		if err == nil && !d.Console.InDebugger() {
+			err = d.Console.RunChained()
+		}
+
+		return err
 	}
 
 	err := d.Console.DispatchConsole(line)

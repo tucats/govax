@@ -1,6 +1,9 @@
 package console_test
 
 import (
+	"bytes"
+	"fmt"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -337,5 +340,226 @@ func TestLibCLI_common(t *testing.T) {
 
 	if strings.Join(got, "\n") != strings.Join(want, "\n") {
 		t.Errorf("the subprocess's output:\n%s\nwant:\n%s", strings.Join(got, "\n"), strings.Join(want, "\n"))
+	}
+}
+
+// chainSource is an image that declares an exit handler, which writes
+// "exit handler", and then passes its command text (LIB$GET_FOREIGN) to
+// the chaining routine named by the %s: LIB$DO_COMMAND or
+// LIB$RUN_PROGRAM. It returns the first failure's status.
+const chainSource = `	.title	chain
+	.psect	data,noexe,wrt
+buf:	.blkb	255
+desc:	.word	255
+	.byte	14,1
+	.address buf
+len:	.word	0
+text:	.word	0
+	.byte	14,1
+	.address buf
+exh:	.long	0
+	.address handler
+	.long	1
+	.address exsts
+exsts:	.long	0
+hmsg:	.ascid	/exit handler/
+	.psect	code,exe,nowrt
+	.entry	start,^m<>
+	pushal	exh
+	calls	#1,g^sys$dclexh
+	blbc	r0,90$
+	pushaw	len
+	clrl	-(sp)
+	pushaq	desc
+	calls	#3,g^lib$get_foreign
+	blbc	r0,90$
+	movw	len,text
+	pushaq	text
+	calls	#1,g^%s
+90$:	ret
+	.entry	handler,^m<>
+	pushaq	hmsg
+	calls	#1,g^lib$put_output
+	ret
+	.end	start
+`
+
+// chainConsole is a scheduled console with DOCMD and RUNPROG, foreign
+// commands for chainSource's two images, defined.
+func chainConsole(t *testing.T) (*console.Console, *bytes.Buffer, *console.Dispatcher) {
+	t.Helper()
+
+	c, out := scheduledConsole(t, longQuantum, brbSelf)
+	docmd := buildImage(t, c, "docmd", fmt.Sprintf(chainSource, "lib$do_command"))
+	runprog := buildImage(t, c, "runprog", fmt.Sprintf(chainSource, "lib$run_program"))
+
+	d := console.NewDispatcher(c, consoletest.ConsoleGrammar(t), nil)
+	for _, line := range []string{"DOCMD :== $" + docmd, "RUNPROG :== $" + runprog, `CHAINED == "yes"`} {
+		if err := d.Dispatch(line); err != nil {
+			t.Fatalf("%s: %v", line, err)
+		}
+	}
+
+	out.Reset()
+
+	return c, out, d
+}
+
+// TestLibCLI_doCommand: LIB$DO_COMMAND's command runs once the image's
+// exit handler has, its status $STATUS; a chained image may chain again.
+func TestLibCLI_doCommand(t *testing.T) {
+	c, out, d := chainConsole(t)
+
+	for _, line := range []string{"DOCMD SHOW SYMBOL CHAINED", "DOCMD DOCMD SHOW SYMBOL CHAINED"} {
+		if err := d.Dispatch(line); err != nil {
+			t.Fatalf("%s: %v", line, err)
+		}
+	}
+
+	want := []string{
+		"exit handler",
+		`  CHAINED == "yes"`,
+		"exit handler",
+		"exit handler",
+		`  CHAINED == "yes"`,
+	}
+
+	if got := programLines(out.String()); strings.Join(got, "\n") != strings.Join(want, "\n") {
+		t.Errorf("output:\n%s\nwant:\n%s", strings.Join(got, "\n"), strings.Join(want, "\n"))
+	}
+
+	if err := d.Dispatch("DOCMD SHOW SYMBOL NOSUCH"); err == nil || !strings.Contains(err.Error(), "UNDSYM") {
+		t.Errorf("a chained command that fails: %v, want UNDSYM", err)
+	}
+
+	if status, _ := c.DCLSymbol("$STATUS"); status != `%X00038140` {
+		t.Errorf("$STATUS = %s, want the chained command's, %%X00038140", status)
+	}
+}
+
+// TestLibCLI_doCommandLevel: in a procedure, the chained command runs at
+// the procedure's level: the local symbol it defines is gone once the
+// procedure ends.
+func TestLibCLI_doCommandLevel(t *testing.T) {
+	c, out, d := chainConsole(t)
+
+	proc := writeCommands(t,
+		`$ DOCMD X = 5`,
+		`$ SHOW SYMBOL/LOCAL X`,
+	)
+
+	if err := d.Dispatch(`@"` + proc + `"`); err != nil {
+		t.Fatalf("@: %v", err)
+	}
+
+	want := []string{"exit handler", "  X = 5   Hex = 00000005  Octal = 00000000005"}
+	if got := programLines(out.String()); strings.Join(got, "\n") != strings.Join(want, "\n") {
+		t.Errorf("output:\n%s\nwant:\n%s", strings.Join(got, "\n"), strings.Join(want, "\n"))
+	}
+
+	if _, ok := c.DCLSymbol("X"); ok {
+		t.Error("X outlived the procedure whose image chained its definition")
+	}
+}
+
+// TestLibCLI_runProgram: LIB$RUN_PROGRAM's image runs next, the common
+// area carrying text to it, and with no command text of its own; one
+// that isn't there fails as RUN of it would.
+func TestLibCLI_runProgram(t *testing.T) {
+	c, out, d := chainConsole(t)
+	put := buildImage(t, c, "putcommon", putCommonSource)
+	get := buildImage(t, c, "getcommon", getCommonSource)
+
+	for _, line := range []string{`RUN "` + put + `"`, `RUNPROG "` + get + `"`} {
+		if err := d.Dispatch(line); err != nil {
+			t.Fatalf("%s: %v", line, err)
+		}
+	}
+
+	want := []string{"exit handler", "common: left by an earlier image"}
+	if got := programLines(out.String()); strings.Join(got, "\n") != strings.Join(want, "\n") {
+		t.Errorf("output:\n%s\nwant:\n%s", strings.Join(got, "\n"), strings.Join(want, "\n"))
+	}
+
+	if err := d.Dispatch(`RUNPROG "` + filepath.Join(t.TempDir(), "missing.exe") + `"`); err == nil {
+		t.Error("RUN_PROGRAM of a missing image: no error")
+	}
+}
+
+// TestLibCLI_subprocessChain: a subprocess's image chains a command to
+// its own DCL.
+func TestLibCLI_subprocessChain(t *testing.T) {
+	c, out, _ := chainConsole(t)
+	docmd, _ := c.DCLSymbol("DOCMD")
+
+	commands := writeCommands(t,
+		`$ DOCMD :== `+docmd,
+		`$ X = "in the subprocess"`,
+		`$ DOCMD SHOW SYMBOL X`,
+	)
+
+	out.Reset()
+
+	loginout(t, c, commands)
+
+	got, _ := splitLogoutReport(programLines(out.String()))
+	want := []string{
+		`$ DOCMD :== ` + docmd,
+		`$ X = "in the subprocess"`,
+		`$ DOCMD SHOW SYMBOL X`,
+		"exit handler",
+		`  X = "in the subprocess"`,
+	}
+
+	if strings.Join(got, "\n") != strings.Join(want, "\n") {
+		t.Errorf("output:\n%s\nwant:\n%s", strings.Join(got, "\n"), strings.Join(want, "\n"))
+	}
+}
+
+// fixedChainSource is an image that chains SHOW SYMBOL CHAINED with
+// LIB$DO_COMMAND.
+const fixedChainSource = `	.title	fixedchain
+	.psect	data,noexe,wrt
+text:	.ascid	/SHOW SYMBOL CHAINED/
+	.psect	code,exe,nowrt
+	.entry	start,^m<>
+	pushaq	text
+	calls	#1,g^lib$do_command
+	ret
+	.end	start
+`
+
+// TestLibCLI_chainUnderDebugger: an image run under the debugger chains
+// a command, which DCL runs once the debugger's EXIT ends the session
+// (the image's exit leaves the session open, as VMS's debugger does).
+func TestLibCLI_chainUnderDebugger(t *testing.T) {
+	c, out, d := chainConsole(t)
+	consoletest.InstallDebugger(t, c, d)
+	image := buildImage(t, c, "fixedchain", fixedChainSource)
+
+	if err := d.Dispatch(`RUN/DEBUG "` + image + `"`); err != nil {
+		t.Fatalf("RUN/DEBUG: %v", err)
+	}
+
+	if !c.InDebugger() {
+		t.Fatal("no debugger session after RUN/DEBUG")
+	}
+
+	if err := d.Dispatch("GO"); err != nil {
+		t.Fatalf("GO: %v", err)
+	}
+
+	out.Reset()
+
+	if err := d.Dispatch("EXIT"); err != nil {
+		t.Fatalf("EXIT: %v", err)
+	}
+
+	if c.InDebugger() {
+		t.Fatal("the session outlived the debugger's EXIT")
+	}
+
+	if got := programLines(out.String()); strings.Join(got, "\n") != `  CHAINED == "yes"` {
+		t.Errorf("output after EXIT:\n%s", out.String())
 	}
 }
