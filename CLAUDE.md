@@ -98,7 +98,9 @@ never had.
   RENAME's own code), subtask 7 FID_TO_NAME (`librtl/fidtoname.go`:
   the back-link walk is `rms.MountTable.ACPFileSpec`, reached through
   `corevms.Environment.FileSpecByID`) and TRIM_FILESPEC
-  (`librtl/trimfilespec.go`, the name split in Go, `splitFileSpec`).
+  (`librtl/trimfilespec.go`, the name split in Go, `splitFileSpec`),
+  subtask 8 the probe (`testdata/lib58`; written, waiting for its VMS
+  run).
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
 - `docs/DEVIATIONS.md` — running log of suspected ISA/behavior fidelity issues found in
@@ -202,6 +204,13 @@ never had.
   group tables' SHOW LOGICAL/FULL headers, `lib57RunHistory` takes out
   the traces of an earlier run); `vax/lib57-term.log` is the interactive
   session.
+- `testdata/lib58/` — Phase 58's probe of LIBRTL's file routines and
+  callbacks (README.md): `gen.go` writes `lib58.mar` (332 cases on a
+  tree under `[LIB58]` the program makes, so a fresh volume each run;
+  the program's own routines log each call and argument under the
+  case's line), `lib58.com`, and `exchange.cmd`. `TestLib58Oracle` runs
+  it on a fresh RD51 volume as DUA1 and skips until VMS's output,
+  `vax/lib58-vax.txt`, is there.
 - `testdata/probe49/` — Phase 49's VMS probe in three rounds (`probe6`,
   `probe6b`, `probe6c`; README.md has each round's answers), run by
   `TestProbe6*`; `testdata/rms49/` and `testdata/sec49/` are the phase's

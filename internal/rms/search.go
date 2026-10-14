@@ -147,6 +147,24 @@ func entriesAfter(entries []ondisk.DirEntry, last ondisk.DirEntry) int {
 	})
 }
 
+// resumeAfter is where a search of p goes on after returning last, in a
+// directory that may have changed since: the entry after it (entriesAfter),
+// and, unless p asks for every version (";*"), past the other versions of
+// its name too. Such a search returns at most one version of each name, so
+// once the version returned has been deleted, another of the same name,
+// the highest one now, isn't the next file (unconfirmed: VMS's ACP goes on
+// from the name it returned).
+func resumeAfter(entries []ondisk.DirEntry, last ondisk.DirEntry, p parsedName) int {
+	i := entriesAfter(entries, last)
+	if strings.TrimPrefix(p.Ver, ";") != "*" {
+		for i < len(entries) && entries[i].Name == last.Name {
+			i++
+		}
+	}
+
+	return i
+}
+
 // searchDirs returns the directories a search of d looks in, in the
 // order VMS looks in them: depth first, each directory's subdirectories
 // in directory order.
@@ -443,7 +461,7 @@ func (ctx *Context) searchPlain(nam, wcc uint32) (sts, stv uint32, err error) {
 
 		sel := selected(entries, p)
 
-		start, err := ctx.plainResume(nam, entries, wcc)
+		start, err := ctx.plainResume(nam, entries, wcc, p)
 		if err != nil {
 			return 0, 0, err
 		}
@@ -478,11 +496,11 @@ func (ctx *Context) searchPlain(nam, wcc uint32) (sts, stv uint32, err error) {
 // the directory has changed since (the file deleted, as LIB$DELETE_FILE
 // and DCL's DELETE do between searches, or others created before it),
 // and the search goes on with the entry after that file in directory
-// order, as a context's search does (entriesAfter). A resultant string
+// order, as a context's search does (resumeAfter). A resultant string
 // that names no entry leaves the position as it is. (Unconfirmed: VMS's
 // ACP keeps its own place; that a deletion between searches skips no
 // file is what DELETE shows.)
-func (ctx *Context) plainResume(nam uint32, entries []ondisk.DirEntry, wcc uint32) (int, error) {
+func (ctx *Context) plainResume(nam uint32, entries []ondisk.DirEntry, wcc uint32, p parsedName) (int, error) {
 	if wcc == 0 {
 		return 0, nil
 	}
@@ -511,7 +529,7 @@ func (ctx *Context) plainResume(nam uint32, entries []ondisk.DirEntry, wcc uint3
 		return int(wcc), nil
 	}
 
-	return entriesAfter(entries, last), nil
+	return resumeAfter(entries, last, p), nil
 }
 
 // resultantEntry is the directory entry a resultant string names (its
@@ -574,7 +592,7 @@ func (ctx *Context) searchContext(nam uint32, st *searchState) (sts, stv uint32,
 
 			start := 0
 			if st.HaveLast {
-				start = entriesAfter(entries, st.Last)
+				start = resumeAfter(entries, st.Last, p)
 			}
 
 			for i := start; i < len(entries); i++ {

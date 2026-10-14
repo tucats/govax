@@ -1,7 +1,8 @@
 # Phase 58 — LIB$ callbacks into the program, and file routines
 
 **Status:** in progress (subtasks 1 to 6 done 2026-10-13, 7 on
-2026-10-14). Planned
+2026-10-14; subtask 8's program written 2026-10-14, waiting for its VMS
+run). Planned
 2026-10-12. Needs Phases 53 and 54. Part of the
 LIB$ program laid out in `PHASE-53 - RTL LIB support.md` (Part A).
 
@@ -575,7 +576,8 @@ TRIM_FILESPEC.
 6. **RENAME_FILE.** **Done** 2026-10-13.
 7. **FID_TO_NAME, TRIM_FILESPEC.** **Done** 2026-10-14.
 8. **The program** (`testdata/lib58/`, on a volume), its console test,
-   and the VMS probe.
+   and the VMS probe. Program and test written 2026-10-14; the VMS run
+   and govax's changes to its answers are next.
 9. **Close-out**: Phase 53's Part B gets the callback convention.
 
 ## Progress log
@@ -788,3 +790,34 @@ TRIM_FILESPEC.
   broken back links) and `TestTrimFilespec*`/`TestSplitFileSpec` (the
   manual's example, each part's edge, width 0 and omitted, a short
   new-filespec, 255 and 256 characters, the argument counts).
+- **2026-10-14** — Subtask 8, part 1: the program and its console
+  test. `testdata/lib58/gen.go` writes `lib58.mar` (332 cases),
+  `lib58.com`, and `exchange.cmd` (README.md has the layout and the VAX
+  run). The program makes its own tree under `[LIB58]` (so it needs a
+  fresh volume), and its own routines for FILE_SCAN, DELETE_FILE, and
+  RENAME_FILE log each call and argument (descriptors, FABs and their
+  NAMs, longwords by reference, values) to a buffer printed under the
+  case's line; their answers come a bit a call from a cell, and a
+  confirm or success routine can also open its FAB, leave it open,
+  signal, or call DELETE_FILE again. LISTF shows what a delete or
+  rename left. A file with no directory entry is made with the disk
+  ACP's IO$_DELETE without IO$M_DELETE; the cases that pass junk
+  contexts, a non-FAB, or too few arguments come last, so damage they
+  might do on VMS can't spoil the rest. `TestLib58Oracle`
+  (`internal/console/lib58_test.go`) runs it on a fresh RD51 volume as
+  DUA1 with `[000000]` the default directory, and skips until
+  `vax/lib58-vax.txt` exists. An RMS defect found on the way: a search
+  that returns one version of each name (no version, or a numeric or
+  relative one) came back to the same name when the version it returned
+  was deleted before the next `$SEARCH`, since the name's highest version
+  was then another, so LIB$DELETE_FILE of `D2.TXT` deleted every version;
+  it now goes on past the name it returned (`rms/search.go`'s
+  `resumeAfter`, with and without a search context;
+  `TestSearch_versionsAfterDelete`; **unconfirmed** as to VMS's
+  mechanism, but the probe shows what DELETE_FILE does). Seen in
+  govax's run, for the VMS run to settle: `$ERASE` of a directory that
+  still has an entry is RMS$_DEV with SS$_NOSUCHDEV (ods2's
+  ErrDirectoryNotEmpty unmapped; the ACP's IO$_DELETE says
+  SS$_DIRNOTEMPTY), and NAM$T_DVI and FID_TO_NAME's device are
+  `_GOVAX$DUA1`, where VMS 7.1 on that VAX (not in a cluster) gave
+  DEVNAM `_DUA1:` in Phase 55's run.

@@ -833,6 +833,60 @@ func (s *sharer) erase(name string) uint32 {
 	return r0
 }
 
+// TestSearch_versionsAfterDelete: a search that returns one version of a
+// name (no version given: the highest) doesn't come back to the same name
+// when the version it returned is deleted before the next $SEARCH (as
+// LIB$DELETE_FILE does): the highest version is now another, but the
+// search has gone past the name. With and without a wildcard, and with a
+// search context (a wildcard directory).
+func TestSearch_versionsAfterDelete(t *testing.T) {
+	for _, tc := range []struct {
+		spec string
+		want []string
+	}{
+		{"DUA0:[000000]H2.DAT", []string{"DUA0:[000000]H2.DAT;3"}},
+		{"DUA0:[000000]H*.DAT", []string{"DUA0:[000000]H1.DAT;1", "DUA0:[000000]H2.DAT;3", "DUA0:[000000]H3.DAT;1"}},
+		{"DUA0:[000000...]H*.DAT", []string{"DUA0:[000000]H1.DAT;1", "DUA0:[000000]H2.DAT;3", "DUA0:[000000]H3.DAT;1"}},
+		{"DUA0:[000000]H2.DAT;*", []string{"DUA0:[000000]H2.DAT;3", "DUA0:[000000]H2.DAT;2", "DUA0:[000000]H2.DAT;1"}},
+	} {
+		t.Run(tc.spec, func(t *testing.T) {
+			p, mounts := newSharers(t, 2)
+			a, b := p[0], p[1]
+
+			for _, name := range []string{"H1.DAT", "H2.DAT", "H2.DAT", "H2.DAT", "H3.DAT"} {
+				writeFile(t, mounts, name, "x")
+			}
+
+			a.startSearch(tc.spec)
+
+			var got []string
+
+			for len(got) < 10 {
+				name, sts := a.search()
+				if sts == rmsNoMoreFiles {
+					break
+				}
+
+				if sts&1 == 0 {
+					t.Fatalf("$SEARCH: %#x after %q", sts, got)
+				}
+
+				got = append(got, name)
+
+				if sts := b.erase("[000000]" + strings.TrimPrefix(name, "DUA0:[000000]")); sts&1 == 0 {
+					t.Fatalf("$ERASE of %s: %#x", name, sts)
+				}
+			}
+
+			if !slices.Equal(got, tc.want) {
+				t.Errorf("searched %q, want %q", got, tc.want)
+			}
+
+			checkVolume(t, mounts)
+		})
+	}
+}
+
 // TestSharing_erase: $ERASE deletes a file; one another process reads is
 // deleted at its close; one another process writes is RMS$_FLK.
 func TestSharing_erase(t *testing.T) {
