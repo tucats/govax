@@ -89,6 +89,22 @@ func (ctx *Context) saveSearch(nam uint32, names []parsedName) error {
 	return ctx.storeLongword(nam+namWCC, wccContext|id)
 }
 
+// releaseSearch frees the context NAM$L_WCC names, if it names one: a
+// new $PARSE on the NAM starts afresh, so the context of the search
+// before it (one that hadn't run out) would otherwise never be freed.
+// A $PARSE of the null string is how a program lets one go (LIB$FIND_FILE_END,
+// LIB$FILE_SCAN_END).
+func (ctx *Context) releaseSearch(nam uint32) error {
+	wcc, err := ctx.loadLongword(nam + namWCC)
+	if err != nil || wcc&0xffff0000 != wccContext || ctx.Files == nil {
+		return err
+	}
+
+	delete(ctx.Files.searches, wcc&0xffff)
+
+	return nil
+}
+
 // searchDir is one directory a search looks in: its path, the directory,
 // and which of the path's levels came from a wildcard or an ellipsis;
 // Vol is the volume it's on.

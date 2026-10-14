@@ -1,6 +1,6 @@
 # Phase 58 — LIB$ callbacks into the program, and file routines
 
-**Status:** in progress (subtasks 1 and 2 done 2026-10-13). Planned
+**Status:** in progress (subtasks 1 to 3 done 2026-10-13). Planned
 2026-10-12. Needs Phases 53 and 54. Part of the
 LIB$ program laid out in `PHASE-53 - RTL LIB support.md` (Part A).
 
@@ -568,7 +568,7 @@ TRIM_FILESPEC.
 1. **Survey.** **Done** 2026-10-13.
 2. **Callbacks from a shim**: design, the engine's side, nesting,
    unwinding; a test routine that calls back. **Done** 2026-10-13.
-3. **FIND_FILE, FIND_FILE_END.**
+3. **FIND_FILE, FIND_FILE_END.** **Done** 2026-10-13.
 4. **FILE_SCAN, FILE_SCAN_END.**
 5. **DELETE_FILE.**
 6. **RENAME_FILE.**
@@ -626,3 +626,30 @@ TRIM_FILESPEC.
   routine); race-clean under `go test -race`. `librtl.Routine` gets its
   way to ask for `RegisterCallback` with the first routine that needs
   it (subtask 4).
+- **2026-10-13** — Subtask 3, FIND_FILE and FIND_FILE_END
+  (`internal/librtl/findfile.go`, codes 163 and 164). The context is a
+  heap block holding a FAB, a NAM, a related NAM (NAM$L_RLF, for
+  related-filespec or, with MULTIPLE, the last file found), and their
+  buffers; each call runs `$PARSE` and `$SEARCH` on it through
+  `CallService`, so default, related, and logical names, search lists,
+  and both kinds of wildcard context are RMS's own. In Go, per image, by
+  the block's address: the filespec being searched and the last file
+  found. Choices made, each **unconfirmed** and a probe case: a new
+  search starts on the first call, when filespec's text differs from the
+  last call's, and on every call with NOWILD (which, after `$PARSE`,
+  makes a wildcard LIB$_NOWILD); otherwise a call after RMS$_NMF gets
+  `$SEARCH`'s RMS$_NMF again. Success is `$SEARCH`'s RMS$_NORMAL (the
+  VSI manual's) or LIB$_STRTRU for a short resultant; status-value gets
+  FAB$L_STV only when a service fails; a name over 255 characters is
+  LIB$_INVFILSPE; flag bits past MULTIPLE are ignored; a context
+  longword that names no context is RMS$_FAB to both routines.
+  FIND_FILE_END parses the null string, frees the block, and zeroes the
+  longword (0 is RMS$_NORMAL, nothing to end). An RMS defect found on the
+  way: a `$PARSE` cleared NAM$L_WCC without freeing the wildcard context
+  it named, so a search abandoned before it ran out (and the null-string
+  parse meant to end it) left its context behind; `$PARSE` now frees it
+  first (`rms/search.go`'s `releaseSearch`). Tests: librtl's
+  `TestFindFile*` (wildcards, a wildcard directory, a search list, a new
+  filespec on the same context, NOWILD, a missing file and status-value,
+  default and related names, MULTIPLE, short and dynamic resultants, the
+  context's checks) and rms's `TestParse_releasesSearch`.

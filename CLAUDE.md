@@ -84,7 +84,9 @@ never had.
   (`corevms/callback.go`: a routine registered with
   `ShimTable.RegisterCallback` runs on a goroutine of its own, and
   `Environment.Callback` calls a VAX procedure and returns its R0;
-  the XFC its RET lands on finds the routine by the stub's FP and SP).
+  the XFC its RET lands on finds the routine by the stub's FP and SP),
+  subtask 3 FIND_FILE and FIND_FILE_END (`librtl/findfile.go`: a heap
+  block holding a FAB and NAMs, run through `$PARSE`/`$SEARCH`).
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
 - `docs/DEVIATIONS.md` — running log of suspected ISA/behavior fidelity issues found in

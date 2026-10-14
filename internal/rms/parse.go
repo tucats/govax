@@ -79,7 +79,12 @@ func (ctx *Context) parseInto(fab, nam uint32) (sts, stv uint32, err error) {
 	}
 
 	// What a $PARSE writes starts clear; a name that isn't well formed
-	// leaves it so (the oracle's PARSE case 10).
+	// leaves it so (the oracle's PARSE case 10). The search the NAM was
+	// in, if any, goes with it.
+	if err := ctx.releaseSearch(nam); err != nil {
+		return 0, 0, err
+	}
+
 	if err := ctx.clearNAMOutputs(nam); err != nil {
 		return 0, 0, err
 	}

@@ -878,3 +878,31 @@ func TestSharing_erase(t *testing.T) {
 		t.Error(p)
 	}
 }
+
+// TestParse_releasesSearch: a $PARSE on a NAM whose search hasn't run
+// out frees that search's context, so a program that parses again (or
+// parses the null string to end a search) leaves none behind.
+func TestParse_releasesSearch(t *testing.T) {
+	p, _ := newSharers(t, 1)
+	a := p[0]
+
+	for range 3 {
+		a.startSearch("DUA0:[000000...]*.*;*")
+	}
+
+	if n := len(a.ctx.Files.searches); n != 1 {
+		t.Errorf("after three $PARSEs, %d search contexts, want 1", n)
+	}
+
+	// This fixture has no SYS$DISK, so the null string is RMS$_DEV here;
+	// the search goes whatever the parse's status.
+	newFAB(t, a.ctx, "")
+
+	if _, err := SysParse(a.ctx, []uint32{testFabAddr}); err != nil {
+		t.Fatal(err)
+	}
+
+	if n := len(a.ctx.Files.searches); n != 0 {
+		t.Errorf("after a $PARSE of the null string, %d search contexts, want 0", n)
+	}
+}
