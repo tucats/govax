@@ -149,6 +149,10 @@ type Environment struct {
 	zones       map[uint32]*heapZone
 	zoneControl *vmheap.Zone
 
+	// zoneSeq is how many zones the image has made, numbering each
+	// (heapZone's seq).
+	zoneSeq uint32
+
 	// jsbCall is set while a JSB routine's shim runs (JSBShim), and
 	// jsbSP is SP as the JSB left it, the return address on top: a
 	// routine reached by JSB has no frame, so a condition it signals is

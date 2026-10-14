@@ -1,6 +1,6 @@
 # Phase 59 — LIB$ virtual memory zones
 
-**Status:** in progress (subtasks 1 to 8 done 2026-10-14).
+**Status:** in progress (subtasks 1 to 9 done 2026-10-14).
 Needs Phases 53, 54, and 58 (callbacks, for user-defined zones). Part
 of the LIB$ program laid out in `PHASE-53 - RTL LIB support.md` (Part
 A).
@@ -676,7 +676,7 @@ VERIFY), and `vmmalloc.go`. `dynstr.go` allocates in the string zone.
    VM_REALLOC on C's conventions (unconfirmed until subtask 10).
    **Done** 2026-10-14.
 9. **LIBRTL2's zone routines**: FIND_VM_ZONE, SHOW_VM_ZONE,
-   VERIFY_VM_ZONE (offsets known).
+   VERIFY_VM_ZONE (offsets known). **Done** 2026-10-14.
 10. **The program** (`testdata/lib59/`), its console test, and the VMS
     probe; govax changed to its answers.
 11. **Close-out**: DEVIATIONS.md records the heap's change from the
@@ -955,3 +955,80 @@ VERIFY), and `vmmalloc.go`. `dynstr.go` allocates in the string zone.
   overflow), `TestLibVMRealloc` (each case, and a block past MOVC3's 64K
   moved whole); and `TestLibrtlVMMalloc`, a linked program calling them
   with CALLS and by-value arguments.
+- **2026-10-14** — Subtask 9, LIBRTL2's zone routines.
+  LIB$FIND_VM_ZONE, LIB$SHOW_VM_ZONE, and LIB$VERIFY_VM_ZONE
+  (`librtl/vmshow.go`, codes 182 to 184, at LIBRTL2's 0x18, 0x20, 0x28)
+  over `corevms/vmshow.go`'s view of the zone database, and
+  `internal/vmheap`'s reports (`report.go`: `AreaReports`, an area's
+  bounds, free spans, and unallocated end; `ListReports`, each
+  lookaside list's usable size and blocks; `Quantum`, `Alignment`).
+  Since a zone's bookkeeping is in Go (Decision 2), what a program can
+  damage and a check can find is its memory: the validity longword at
+  the start of the control block, and the free fill. So the free space
+  now holds the fill throughout: LIB$FREE_VM fills a tagged block's tags
+  too (the block freed whole), and the alignment padding a block taken
+  from an area's unallocated end skips over, which becomes free space,
+  is filled as it's made (`Zone.OnPadding`). Each zone is numbered as
+  it's made (`heapZone.seq`), and the RTL's two zones are now made
+  before the program's first zone (`CreateZone` and `CreateUserZone`
+  make them), so they come first, as on VMS, where they exist before
+  the program runs (found by the linked test: a program whose first
+  call made a zone had it numbered before them). One govax test pinned
+  a zone's first area at the pool's first page: it's now after the
+  control blocks' page (0x4040 is 0x4240). No oracle moved.
+  - **LIB$FIND_VM_ZONE** returns the zones in the order made (the
+    default zone, the string zone, then the program's, user-defined
+    ones too); its context holds the number of the zone last found
+    (govax's form), so a scan goes on past zones deleted meanwhile. A
+    context of 0 verifies every zone first: LIB$_BADZONE, nothing
+    written, for a damaged one. The end is LIB$_NOTFOU with zone-id
+    and context left alone; not two arguments, LIB$_WRONUMARG.
+  - **LIB$VERIFY_VM_ZONE** checks the control block's longword,
+    vmheap's `Check`, and with a free fill every byte of the free spans
+    and the lookaside lists' blocks: LIB$_BADZONE for the first fault or
+    an ID that names no zone; a user zone's control block only. A null
+    zone-id is LIB$_INVARG (the manual's "invalid or null argument"),
+    not one argument LIB$_WRONUMARG.
+  - **LIB$SHOW_VM_ZONE** lays its report out as the VSI manual's two
+    samples (levels 1 and 3, which agree with the 5.0 manual's but for
+    spacing): level 0 the `Zone Id = ...,  Zone name = "..."` line; 1
+    the algorithm (Quick Fit's lists' range as the sample; the other
+    algorithms' wording govax's), the flags and their names, the sizes,
+    the rounding and alignment, the bytes freed, and the control blocks'
+    bytes and overhead; 2 the lookaside list summary (lists holding
+    blocks only: the samples leave out an empty first list) and the area
+    summary; 3 the scans, each area's free list counted (number, min,
+    max) and, with a free fill, each free block that doesn't hold it
+    shown as `**** ERROR -- free-fill mismatch ****` with a dump in the
+    sample's form. Each line goes to SYS$OUTPUT, or to the action
+    routine with the user argument; a failure status ends the report and
+    is returned. With an action routine the shim reruns itself on a
+    goroutine (`RunCallingBack`) rather than registering as a callback
+    routine, as Decision 4 had it, so a call without one pays nothing.
+    A bad ID is LIB$_BADZONE, a level outside 0 to 3 LIB$_INVARG, no
+    arguments or more than four LIB$_WRONUMARG; zone-id omitted is the
+    default zone.
+  - **Unconfirmed** (all probe cases): every line the samples don't
+    show; the indentation (the samples disagree, 4 or 8 spaces: govax
+    takes 4); the bytes freed (govax counts the free spans and listed
+    blocks; the samples' figures with the area's unallocated bytes make
+    the whole area, so VMS may count the area's control block with
+    them); the control blocks' bytes (govax's 128 for a zone, against
+    the samples' 72 for the default zone and 248 for a quick fit zone,
+    plus 64 an area) and the overhead as their share of themselves and
+    the zone's pages (which matches both samples' percentages and their
+    100.0% for no pages); a page limit's wording; a user zone (its first
+    line only, at every level); a NO_EXTEND zone's extend size (0, as
+    LIB$CREATE_VM_ZONE stores it); SHOW's status after a fill mismatch
+    (SS$_NORMAL); and FIND's context.
+  Tests: vmheap's `TestZoneReports`, `TestZonePadding`; librtl's
+  `TestLibFindVMZone` (the order, deletion during a scan, a zone made
+  since), `TestLibFindVMZoneDamaged`, `TestLibVerifyVMZone` (four zones
+  with fills, tags, padding, and a lookaside algorithm through frees
+  that merge, verified after each, then a freed block written in), and
+  `TestLibShowVMZoneDefault`, `TestLibShowVMZoneQuickFit` (every line at
+  level 3, then a damaged lookaside block's dump), and
+  `TestLibShowVMZoneOthers`; and `TestLibrtlVMZoneDebugging`, a linked
+  program running the manual's FIND_VM_ZONE example, both kinds of
+  action routine, and VERIFY. Leaving the tags unfilled, or the padding,
+  fails `TestLibVerifyVMZone`.

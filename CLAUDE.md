@@ -377,6 +377,12 @@ expect adjustment as phases land):
   Subtask 8: LIB$VM_MALLOC, VM_FREE, VM_CALLOC, VM_REALLOC
   (`librtl/vmmalloc.go`): C's malloc family on the default zone, by
   value with the result in R0 (unconfirmed; the `_P` forms are stubs).
+  Subtask 9: LIBRTL2's FIND_VM_ZONE, SHOW_VM_ZONE, VERIFY_VM_ZONE
+  (`librtl/vmshow.go`, over `corevms/vmshow.go` and vmheap's
+  `report.go`): zones in the order made (the RTL's two first), and the
+  checks of what a program can damage, a control block's longword and
+  the free fill (the free space holds it throughout: tags filled on
+  free, alignment padding by `Zone.OnPadding`).
 - `internal/console` — the front end (Phase 08; since Phase 52 only
   that): a `Console` embeds a `*machine.Machine` and a
   `*dclshell.Interpreter`, and its `Dispatcher` routes each line to the

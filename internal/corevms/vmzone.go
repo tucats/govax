@@ -71,8 +71,12 @@ type UserZone struct {
 // and the string zone), which the program can use but not reset or
 // delete. A user-defined zone has user and no allocator: its blocks are
 // the program's business.
+//
+// seq is the zone's place in the order the image's zones were made
+// (the first is 1), which LIB$FIND_VM_ZONE finds them in (NextZone).
 type heapZone struct {
 	id       uint32
+	seq      uint32
 	zone     *vmheap.Zone
 	settings ZoneSettings
 	system   bool
@@ -106,7 +110,15 @@ var controlZone = vmheap.Attributes{BlockSize: 8, Alignment: 8, ExtendPages: 1, 
 // is vmheap.ErrBadAttributes for attributes that break vmheap's rules,
 // or vmheap.ErrNoMemory (or ErrPageLimit) when the initial area or the
 // control block can't be had; no zone is made then.
+//
+// The RTL's own zones are made first if they aren't yet, so that they
+// come before the program's in the order the zones were made (NextZone),
+// as VMS's, which exist before a program runs, do.
 func (env *Environment) CreateZone(s ZoneSettings) (uint32, error) {
+	if err := env.systemZones(); err != nil {
+		return 0, err
+	}
+
 	z, err := env.makeZone(s, false)
 	if err != nil {
 		return 0, err
@@ -133,9 +145,25 @@ func (env *Environment) makeZone(s ZoneSettings, system bool) (*heapZone, error)
 	}
 
 	z := &heapZone{id: id, zone: zone, settings: s, system: system}
-	env.zones[id] = z
+	env.addZone(z)
+
+	// Padding the zone skips over is free space at once: it gets the
+	// free fill, as a freed block does, so that all of the zone's free
+	// space holds it (VerifyZone).
+	if s.FreeFill != NoFill {
+		zone.OnPadding(func(p vmheap.Span) {
+			_ = env.fillBlock(p.Start, p.Size(), s.FreeFill)
+		})
+	}
 
 	return z, nil
+}
+
+// addZone enters z in env.zones, the latest made.
+func (env *Environment) addZone(z *heapZone) {
+	env.zoneSeq++
+	z.seq = env.zoneSeq
+	env.zones[z.id] = z
 }
 
 // controlBlock allocates a zone's control block, whose address is the
@@ -178,8 +206,13 @@ func (env *Environment) dropControlBlock(id uint32) {
 // CreateUserZone makes a user-defined zone (LIB$CREATE_USER_VM_ZONE)
 // and returns its ID. Its control block holds the ID and, after it, the
 // user argument (UserZoneOf). The error is vmheap.ErrNoMemory when P0
-// has no room for the control block.
+// has no room for the control block. The RTL's own zones are made first,
+// as for CreateZone.
 func (env *Environment) CreateUserZone(u UserZone) (uint32, error) {
+	if err := env.systemZones(); err != nil {
+		return 0, err
+	}
+
 	id, err := env.controlBlock()
 	if err != nil {
 		return 0, err
@@ -191,7 +224,7 @@ func (env *Environment) CreateUserZone(u UserZone) (uint32, error) {
 		return 0, err
 	}
 
-	env.zones[id] = &heapZone{id: id, user: &u, settings: ZoneSettings{Name: u.Name}}
+	env.addZone(&heapZone{id: id, user: &u, settings: ZoneSettings{Name: u.Name}})
 
 	return id, nil
 }
@@ -372,7 +405,9 @@ func (env *Environment) prepareBlock(z *heapZone, addr uint32) error {
 }
 
 // ZoneFree frees the block at addr in the zone id names (0, the default
-// zone) for LIB$FREE_VM, filling it as the zone's settings ask. When
+// zone) for LIB$FREE_VM, filling it as the zone's settings ask, its
+// boundary tags too (the block is freed whole, and the free space all
+// holds the fill, as VerifyZone checks). When
 // sized, size is the caller's idea of the block's size, which must round
 // to the block's (and be no more than a fixed-size zone's size); without
 // it the zone's own record is used. The errors: ErrBadZone;
@@ -398,6 +433,12 @@ func (env *Environment) ZoneFree(id, addr, size uint32, sized bool) error {
 		}
 	}
 
+	// The bytes to fill: the block's, or with tags all it occupies.
+	start, whole, tagged := addr, uint32(0), false
+	if before, _, value, ok := z.zone.Tags(addr); ok {
+		start, whole, tagged = before, value, true
+	}
+
 	n, err := z.zone.Free(addr)
 	if errors.Is(err, vmheap.ErrFreedAgain) {
 		return nil
@@ -407,7 +448,11 @@ func (env *Environment) ZoneFree(id, addr, size uint32, sized bool) error {
 		return err
 	}
 
-	return env.fillBlock(addr, n, z.settings.FreeFill)
+	if tagged {
+		n = whole
+	}
+
+	return env.fillBlock(start, n, z.settings.FreeFill)
 }
 
 // checkTags reports ErrBadTag when either of the block at addr's

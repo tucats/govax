@@ -95,7 +95,7 @@ func (env *Environment) pagePool() *vmheap.PagePool {
 // of P0 again, over where the blocks were.
 func (env *Environment) releaseHeap() {
 	env.heapPages, env.defaultHeap, env.stringHeap = nil, nil, nil
-	env.zones, env.zoneControl = nil, nil
+	env.zones, env.zoneControl, env.zoneSeq = nil, nil, 0
 }
 
 // allocate allocates size bytes from the RTL's zone z (the default or

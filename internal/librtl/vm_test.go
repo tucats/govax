@@ -510,13 +510,14 @@ func TestLibVMPageLimit(t *testing.T) {
 func TestLibResetDeleteVMZone(t *testing.T) {
 	e := pageFixture(t)
 
-	// The zone's initial area is the pool's first two pages.
+	// The zone's initial area is the pool's two pages after the zones'
+	// control blocks' page.
 	id := mustCreateZone(t, e, 1, omit, 0, 16, 2)
 	a := mustGetVM(t, e, 100, id)
 	mustGetVM(t, e, 200, id)
 
-	if a != 0x4040 {
-		t.Errorf("the zone's first block at %#x, want 0x4040", a)
+	if a != 0x4240 {
+		t.Errorf("the zone's first block at %#x, want 0x4240", a)
 	}
 
 	end := e.RegionSize[0]
@@ -553,8 +554,8 @@ func TestLibResetDeleteVMZone(t *testing.T) {
 	}
 
 	// Its pages are the pool's again.
-	if p := mustGetPages(t, e, 2); p != 0x4000 {
-		t.Errorf("2 pages at %#x, want the deleted zone's 0x4000", p)
+	if p := mustGetPages(t, e, 2); p != 0x4200 {
+		t.Errorf("2 pages at %#x, want the deleted zone's 0x4200", p)
 	}
 
 	// The default zone can't be reset or deleted, and its blocks

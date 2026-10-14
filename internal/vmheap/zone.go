@@ -157,6 +157,10 @@ type Zone struct {
 	blocks map[uint32]*block
 	lists  []lookaside
 	inUse  uint32
+
+	// padding, when set, is told of alignment padding taken from an
+	// unallocated end (OnPadding).
+	padding func(Span)
 }
 
 // NewZone returns a zone that takes its pages from pages (a *PagePool,
@@ -383,6 +387,10 @@ func (z *Zone) carve(a *area, n uint32) (uint32, bool) {
 
 	if start > a.top {
 		a.free = append(a.free, span{a.top, start})
+
+		if z.padding != nil {
+			z.padding(Span{a.top, start})
+		}
 	}
 
 	a.top = start + n

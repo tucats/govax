@@ -249,6 +249,9 @@ var Routines = []Routine{
 	{"LIB$VM_FREE", 179, libVMFree},
 	{"LIB$VM_CALLOC", 180, libVMCalloc},
 	{"LIB$VM_REALLOC", 181, libVMRealloc},
+	{"LIB$FIND_VM_ZONE", 182, libFindVMZone},     // LIBRTL2
+	{"LIB$SHOW_VM_ZONE", 183, libShowVMZone},     // LIBRTL2
+	{"LIB$VERIFY_VM_ZONE", 184, libVerifyVMZone}, // LIBRTL2
 }
 
 // callsBack names the routines that call back into the program (a
