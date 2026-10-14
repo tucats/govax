@@ -3,6 +3,7 @@ package rms
 import (
 	"errors"
 	"fmt"
+	"slices"
 	"strings"
 	"testing"
 
@@ -905,4 +906,53 @@ func TestParse_releasesSearch(t *testing.T) {
 	if n := len(a.ctx.Files.searches); n != 0 {
 		t.Errorf("after a $PARSE of the null string, %d search contexts, want 0", n)
 	}
+}
+
+// TestSearch_plainAfterDelete: a search with no context (a wildcard
+// name in a plain directory) misses no file when the file it last
+// returned is deleted before the next $SEARCH, as LIB$DELETE_FILE and
+// DCL's DELETE delete each file found; nor when files are deleted ahead
+// of its place.
+func TestSearch_plainAfterDelete(t *testing.T) {
+	p, mounts := newSharers(t, 2)
+	a, b := p[0], p[1]
+
+	for _, name := range []string{"G1.DAT", "G2.DAT", "G3.DAT", "G4.DAT", "G5.DAT"} {
+		writeFile(t, mounts, name, "x")
+	}
+
+	a.startSearch("DUA0:[000000]G*.DAT")
+
+	var got []string
+
+	for {
+		name, sts := a.search()
+		if sts == rmsNoMoreFiles {
+			break
+		}
+
+		if sts&1 == 0 {
+			t.Fatalf("$SEARCH: %#x after %q", sts, got)
+		}
+
+		got = append(got, name)
+
+		if sts := b.erase("[000000]" + strings.TrimPrefix(name, "DUA0:[000000]")); sts&1 == 0 {
+			t.Fatalf("$ERASE of %s: %#x", name, sts)
+		}
+
+		if len(got) == 2 {
+			// G4 goes too, ahead of the search.
+			if sts := b.erase("[000000]G4.DAT;1"); sts&1 == 0 {
+				t.Fatalf("$ERASE of G4.DAT: %#x", sts)
+			}
+		}
+	}
+
+	want := []string{"DUA0:[000000]G1.DAT;1", "DUA0:[000000]G2.DAT;1", "DUA0:[000000]G3.DAT;1", "DUA0:[000000]G5.DAT;1"}
+	if !slices.Equal(got, want) {
+		t.Errorf("searched %q, want %q", got, want)
+	}
+
+	checkVolume(t, mounts)
 }

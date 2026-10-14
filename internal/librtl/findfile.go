@@ -70,6 +70,7 @@ var (
 	fabFNS = vmsdef.Symbols["FAB$B_FNS"]
 	fabDNA = vmsdef.Symbols["FAB$L_DNA"]
 	fabDNS = vmsdef.Symbols["FAB$B_DNS"]
+	fabSTS = vmsdef.Symbols["FAB$L_STS"]
 	fabSTV = vmsdef.Symbols["FAB$L_STV"]
 	namBID = vmsdef.Symbols["NAM$B_BID"]
 	namBLN = vmsdef.Symbols["NAM$B_BLN"]
@@ -281,12 +282,21 @@ func newSearchBlock(env *corevms.Environment, cell uint32) (block, status uint32
 	return block, 0, nil
 }
 
-// initSearchBlock clears a search block and sets it up as the $FAB and
+// initSearchBlock sets a search block up (layoutSearchBlock), then
+// writes its address to the longword at cell.
+func initSearchBlock(env *corevms.Environment, block, cell uint32) error {
+	if err := layoutSearchBlock(env, block); err != nil {
+		return err
+	}
+
+	return env.Memory().StoreLongword(env.CPU(), cell, block)
+}
+
+// layoutSearchBlock clears a search block and sets it up as the $FAB and
 // $NAM macros would: the FAB's NAM is the block's, whose expanded and
 // resultant strings are the block's buffers, and the related NAM's
-// resultant string is the block's third buffer. Then it writes the
-// block's address to the longword at cell.
-func initSearchBlock(env *corevms.Environment, block, cell uint32) error {
+// resultant string is the block's third buffer.
+func layoutSearchBlock(env *corevms.Environment, block uint32) error {
 	mem, cpu := env.Memory(), env.CPU()
 
 	for off := uint32(0); off < findBlockBytes; off += 4 {
@@ -320,7 +330,6 @@ func initSearchBlock(env *corevms.Environment, block, cell uint32) error {
 		{block + findNAM + namESA, block + findESA},
 		{block + findNAM + namRSA, block + findRSA},
 		{block + findRelNAM + namRSA, block + findRelRSA},
-		{cell, block},
 	}
 
 	for _, l := range longs {

@@ -10,10 +10,7 @@ import (
 	"github.com/tucats/govax/internal/vmsdef"
 )
 
-var (
-	rmsDNF = vmsdef.Symbols["RMS$_DNF"]
-	fabSTS = vmsdef.Symbols["FAB$L_STS"]
-)
+var rmsDNF = vmsdef.Symbols["RMS$_DNF"]
 
 // The stub frame callingBack runs a routine in, as the XFC would find it.
 const (

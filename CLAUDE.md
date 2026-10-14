@@ -89,7 +89,9 @@ never had.
   block holding a FAB and NAMs, run through `$PARSE`/`$SEARCH`),
   subtask 4 FILE_SCAN and FILE_SCAN_END (`librtl/filescan.go`, the
   first routine in `librtl`'s `callsBack` set, which `Register`
-  installs with `RegisterCallback`).
+  installs with `RegisterCallback`), subtask 5 DELETE_FILE
+  (`librtl/deletefile.go`: the search block and a FAB of the file's own
+  below SP, the confirm, success, and error routines).
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
 - `docs/DEVIATIONS.md` — running log of suspected ISA/behavior fidelity issues found in

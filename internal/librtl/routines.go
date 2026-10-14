@@ -234,6 +234,7 @@ var Routines = []Routine{
 	{"LIB$FIND_FILE_END", 164, libFindFileEnd},
 	{"LIB$FILE_SCAN", 165, libFileScan},
 	{"LIB$FILE_SCAN_END", 166, libFileScanEnd},
+	{"LIB$DELETE_FILE", 167, libDeleteFile},
 }
 
 // callsBack names the routines that call back into the program (a
@@ -241,7 +242,8 @@ var Routines = []Routine{
 // them with corevms.ShimTable.RegisterCallback, so each runs on a
 // goroutine of its own (docs/PHASE-58, subtask 2).
 var callsBack = map[string]bool{
-	"LIB$FILE_SCAN": true,
+	"LIB$FILE_SCAN":   true,
+	"LIB$DELETE_FILE": true,
 }
 
 // missing is Missing's list, and missingJSB MissingJSB's, made once.

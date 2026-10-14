@@ -1,6 +1,6 @@
 # Phase 58 — LIB$ callbacks into the program, and file routines
 
-**Status:** in progress (subtasks 1 to 4 done 2026-10-13). Planned
+**Status:** in progress (subtasks 1 to 5 done 2026-10-13). Planned
 2026-10-12. Needs Phases 53 and 54. Part of the
 LIB$ program laid out in `PHASE-53 - RTL LIB support.md` (Part A).
 
@@ -570,7 +570,7 @@ TRIM_FILESPEC.
    unwinding; a test routine that calls back. **Done** 2026-10-13.
 3. **FIND_FILE, FIND_FILE_END.** **Done** 2026-10-13.
 4. **FILE_SCAN, FILE_SCAN_END.** **Done** 2026-10-13.
-5. **DELETE_FILE.**
+5. **DELETE_FILE.** **Done** 2026-10-13.
 6. **RENAME_FILE.**
 7. **FID_TO_NAME, TRIM_FILESPEC.**
 8. **The program** (`testdata/lib58/`, on a volume), its console test,
@@ -682,3 +682,44 @@ TRIM_FILESPEC.
   through a context, and FILE_SCAN_END's arguments (including a
   wildcard context left part way, which it frees). The program run on
   the machine is subtask 8's.
+- **2026-10-13** — Subtask 5, DELETE_FILE
+  (`internal/librtl/deletefile.go`, code 167, in `callsBack`). A
+  `$PARSE`, then `$SEARCH` until RMS$_NMF, on a search block (FIND_FILE's
+  layout, `layoutSearchBlock`) below SP in the stub's frame; for each file
+  the confirm routine (`filespec, fab [,user]`), `$ERASE`, then the
+  success routine (`filespec [,user]`); an error searching (source 0) or
+  deleting (source 1) calls the error routine (`filespec, rms-sts,
+  rms-stv, error-source [,user]`, the three longwords by reference below
+  SP). The FAB the confirm routine gets, and the one `$ERASE` deletes, is
+  a second FAB and NAM of the file's own (its file name the resultant
+  name), so a confirm routine's `$OPEN` can't clear the search NAM's
+  wildcard context. Names go by resultant-name when given (written
+  first), else a class S descriptor below SP; SP goes back to its place
+  after each file. file-scan-context is FILE_SCAN's context (the last
+  file deleted is the next call's related name; FILE_SCAN_END frees it).
+  Choices made, each **unconfirmed** and a probe case: no arguments or
+  more than ten is LIB$_WRONUMARG; flag bits past the VSI manual's three
+  are LIB$_INVARG, those three change nothing; the user argument is
+  passed only when the program's list reaches it; the status is
+  SS$_NORMAL without errors, LIB$_ERRROUCAL after errors with an error
+  routine, the RMS status when the error routine returns failure (which
+  stops at once), and the most severe error met (the first of that
+  severity) without one; the error routine's name is the NAM's resultant
+  string, else its expanded string, else filespec; a related-filespec
+  wins over the context's name; a `$SEARCH` that can't go on (WCC
+  unchanged) ends the search, as in FILE_SCAN; a name without a version
+  deletes the highest version. An RMS defect found on the way: a search
+  with no context (`searchPlain`) went on by its entry's position alone,
+  so deleting the file just returned made it skip the next one (DCL's
+  DELETE *.TXT on VMS deletes each file found between searches); it now
+  checks that the entry at the position is still the one the NAM's
+  resultant string names, and otherwise goes on after that name in
+  directory order (`plainResume`, **unconfirmed** as to VMS's own
+  mechanism). Tests: librtl's `TestDeleteFile*` (wildcards with a
+  refusing confirm and the user argument, one file with a default name,
+  a missing file and directory with and without an error routine, an
+  error routine that stops, an `$ERASE` failure (the confirm routine
+  leaves the FAB open: RMS$_IFI, source 1), a confirm routine's
+  `$OPEN`/`$CLOSE` during a wildcard-directory search, resultant-name,
+  the context, the argument checks) and rms's
+  `TestSearch_plainAfterDelete`.

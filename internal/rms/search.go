@@ -443,7 +443,12 @@ func (ctx *Context) searchPlain(nam, wcc uint32) (sts, stv uint32, err error) {
 
 		sel := selected(entries, p)
 
-		for i := int(wcc); i < len(entries); i++ {
+		start, err := ctx.plainResume(nam, entries, wcc)
+		if err != nil {
+			return 0, 0, err
+		}
+
+		for i := start; i < len(entries); i++ {
 			if !sel[i] {
 				continue
 			}
@@ -465,6 +470,68 @@ func (ctx *Context) searchPlain(nam, wcc uint32) (sts, stv uint32, err error) {
 	}
 
 	return rmsNoMoreFiles, ssNoMoreFiles, nil
+}
+
+// plainResume is where a search with no context goes on: the entry after
+// position wcc, when the entry there is still the one the search last
+// returned (the file the NAM's resultant string names). When it isn't,
+// the directory has changed since (the file deleted, as LIB$DELETE_FILE
+// and DCL's DELETE do between searches, or others created before it),
+// and the search goes on with the entry after that file in directory
+// order, as a context's search does (entriesAfter). A resultant string
+// that names no entry leaves the position as it is. (Unconfirmed: VMS's
+// ACP keeps its own place; that a deletion between searches skips no
+// file is what DELETE shows.)
+func (ctx *Context) plainResume(nam uint32, entries []ondisk.DirEntry, wcc uint32) (int, error) {
+	if wcc == 0 {
+		return 0, nil
+	}
+
+	rsl, err := ctx.loadByte(nam + namRSL)
+	if err != nil || rsl == 0 {
+		return int(wcc), err
+	}
+
+	rsa, err := ctx.loadLongword(nam + namRSA)
+	if err != nil || rsa == 0 {
+		return int(wcc), err
+	}
+
+	text, err := ctx.loadFixedString(rsa, int(rsl))
+	if err != nil {
+		return 0, err
+	}
+
+	last, ok := resultantEntry(text)
+	if !ok {
+		return int(wcc), nil
+	}
+
+	if i := int(wcc) - 1; i < len(entries) && entries[i].Name == last.Name && entries[i].Version == last.Version {
+		return int(wcc), nil
+	}
+
+	return entriesAfter(entries, last), nil
+}
+
+// resultantEntry is the directory entry a resultant string names (its
+// name and type, and its version), ok false when it has none.
+func resultantEntry(text string) (ondisk.DirEntry, bool) {
+	if i := strings.LastIndexAny(text, "]>"); i >= 0 {
+		text = text[i+1:]
+	}
+
+	name, ver, found := strings.Cut(text, ";")
+	if !found || name == "" {
+		return ondisk.DirEntry{}, false
+	}
+
+	v, err := strconv.Atoi(ver)
+	if err != nil || v <= 0 || v > 32767 {
+		return ondisk.DirEntry{}, false
+	}
+
+	return ondisk.DirEntry{Name: name, Version: uint16(v)}, true
 }
 
 // searchContext continues a context's search.
