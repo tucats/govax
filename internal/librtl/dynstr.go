@@ -19,7 +19,8 @@ import (
 // The RTL owns the storage: a routine that writes a dynamic string reuses
 // the block when it's big enough and otherwise frees it and allocates
 // another (dynamicText). The blocks come from the process heap
-// (Environment.AllocateVM), until Phase 59 gives the RTL its zones.
+// (Environment.AllocateVM); Phase 59's subtask 5 moves them to the RTL's
+// string zone.
 
 var strErrFreDyn = vmsdef.LibrarySymbols["STR$_ERRFREDYN"]
 
@@ -50,12 +51,12 @@ func dynamicText(env *corevms.Environment, text, length, n uint32, alloc0 bool) 
 		return 0, nil
 	}
 
-	addr, err := env.AllocateVM(n, 0)
+	addr, err := env.AllocateVM(n)
 	if err != nil {
 		return 0, err
 	}
 
-	if addr == 0 || addr == 0xFFFFFFFF {
+	if addr == 0 {
 		return 0, errInsVirMem
 	}
 

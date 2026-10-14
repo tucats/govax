@@ -139,7 +139,7 @@ func scanBlockAt(env *corevms.Environment, cell, block uint32) (uint32, error) {
 		return block, nil
 	}
 
-	addr, err := env.AllocateVM(scanBlockBytes, 0)
+	addr, err := env.AllocateVM(scanBlockBytes)
 	if err != nil || addr == 0 {
 		return 0, err
 	}

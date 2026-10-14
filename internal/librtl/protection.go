@@ -592,7 +592,7 @@ func buildAccessNameTable(env *corevms.Environment) (uint32, error) {
 		size += uint32(len(name))
 	}
 
-	table, err := env.AllocateVM(size, 0)
+	table, err := env.AllocateVM(size)
 	if err != nil || table == 0 {
 		return 0, err
 	}

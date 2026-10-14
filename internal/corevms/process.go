@@ -400,15 +400,6 @@ func (env *Environment) ImageRundown() {
 	env.imageData = nil
 }
 
-// releaseHeap forgets the image's heap (LIB$GET_VM's and malloc's blocks,
-// memory.go), as VMS's image rundown deletes the P0 pages the heap was
-// in: the next image is loaded from the bottom of P0 again, over where
-// the blocks were, so a block left on the free list would hand out
-// memory inside it.
-func (env *Environment) releaseHeap() {
-	env.memAllocated, env.memFreed = nil, nil
-}
-
 // The small process-control services (docs/PHASE-26.md subtask 30):
 // $SETPRN, $SETPRI, $FORCEX, and $DELPRC. Each names its target process
 // the usual way ([pidadr] ,[prcnam], processTarget). $DELPRC reaches any

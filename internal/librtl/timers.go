@@ -237,7 +237,7 @@ func libInitTimer(env *corevms.Environment, argv []uint32) (uint32, error) {
 		return ssNormal, nil
 	}
 
-	block, err = env.AllocateVM(timerBlockSize, 0)
+	block, err = env.AllocateVM(timerBlockSize)
 	if err != nil {
 		return 0, err
 	}

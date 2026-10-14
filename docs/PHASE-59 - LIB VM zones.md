@@ -1,6 +1,6 @@
 # Phase 59 — LIB$ virtual memory zones
 
-**Status:** in progress (subtask 1, the survey, done 2026-10-14).
+**Status:** in progress (subtasks 1 and 2 done 2026-10-14).
 Needs Phases 53, 54, and 58 (callbacks, for user-defined zones). Part
 of the LIB$ program laid out in `PHASE-53 - RTL LIB support.md` (Part
 A).
@@ -539,6 +539,8 @@ subtask 3 onward is the manual's interfaces and nothing else. Proposed:
 
 ### Proposed decisions
 
+Accepted as proposed (2026-10-14).
+
 1. **A zone ID is the address of a control block in P0**, allocated
    from the page pool when the zone is made, as VMS's are; it holds a
    validity longword and the user zone's user argument (passed by
@@ -658,6 +660,7 @@ VERIFY), and `vmmalloc.go`. `dynstr.go` allocates in the string zone.
    the current heap's users (AllocateVM, FreeVM, BlockSize,
    DECC$MALLOC/FREE, GET_VM/FREE_VM) moved onto it; P0's bound for the
    heap and `$EXPREG`. Fixes the overlapping blocks and partial merges.
+   **Done** 2026-10-14.
 3. **Pages**: GET_VM_PAGE, FREE_VM_PAGE.
 4. **Zones and the algorithms**: CREATE_VM_ZONE, DELETE_VM_ZONE,
    RESET_VM_ZONE; GET_VM and FREE_VM redone, with the manual's statuses;
@@ -698,3 +701,36 @@ VERIFY), and `vmmalloc.go`. `dynstr.go` allocates in the string zone.
   bookkeeping, double frees detected, user zones as tail calls (get-page
   routines as callbacks), the default and string zones, and the heap
   per image.
+- **2026-10-14** — The decisions accepted as proposed.
+- **2026-10-14** — Subtask 2, the heap's foundation. A new leaf package,
+  `internal/vmheap`: `PagePool` (the processwide page pool: owned and
+  free pages as address-ordered spans, a freed range merged with both
+  neighbors, first fit by address, growth through a `Region`, asking
+  only for the pages the free top run lacks; partial and combined frees,
+  and anything not allocated, unaligned, or freed already refused before
+  anything changes) and `Zone` (first fit: areas from the pool, each
+  with its 64-byte control block kept at its start and an unallocated
+  end used after its free spans; free spans sorted, merged with both
+  neighbors, and given back to the unallocated end when they reach it;
+  allocated blocks in a map by exact address; the quantum the larger of
+  block size and alignment; ExtendArea appends adjoining pages). `Check`
+  verifies both (order, no touching or overlapping spans, alignment,
+  every byte of an area in exactly one block or free span, the areas'
+  pages allocated in the pool); the tests run it after every operation,
+  in unit tests, randomized workloads under four attribute sets (all
+  freed at the end, each area empty again), the page pool's random
+  partial frees, and the survey's workload as a fragmentation bound
+  (one area, within twice the peak in use). Injected faults (no merge
+  with the previous span; a fit test 8 bytes too lenient, the old
+  heap's fault) fail 8 and 2 tests. `corevms/memory.go` is now the
+  image's heap on it: the default zone's attributes (Table 5-3, with
+  EXTEND_AREA), pages from P0 by `$EXPREG`'s rule (`expandP0`, page
+  aligned, never page 0, stopping at P0's page table, `p0Limit`), made
+  at the first allocation and forgotten at rundown. `AllocateVM` lost
+  its unused zone argument; DECC$MALLOC returns 0 for no room;
+  free(NULL) does nothing; `$EXPREG` of P0 past the table is
+  SS$_VASFULL; LIB$DELETE_VM_ZONE returns LIB$_BADBLOADR (no zone can
+  exist yet, and zone 0 can't be deleted) instead of freeing the heap.
+  Blocks moved (8-byte rounding, after the area's control block): one
+  govax test pinned the first block's address (0x4000, now 0x4040);
+  no oracle moved. DEVIATIONS.md records the change from the eVAX port.

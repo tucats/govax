@@ -368,7 +368,7 @@ func readFindArgs(env *corevms.Environment, argv []uint32) (a findArgs, status u
 // LIB$_INSVIRMEM when the heap has no room; err is a memory error,
 // already signaled.
 func newSearchBlock(env *corevms.Environment, cell uint32) (block, status uint32, err error) {
-	block, err = env.AllocateVM(findBlockBytes, 0)
+	block, err = env.AllocateVM(findBlockBytes)
 	if err != nil {
 		return 0, 0, err
 	}

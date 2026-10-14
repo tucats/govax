@@ -169,8 +169,10 @@ func TestLibGetFreeVM(t *testing.T) {
 		t.Fatalf("LIB$GET_VM = %#x, want SS$_NORMAL", r0)
 	}
 
-	if addr := longword(t, env, retAddr); addr != 0x4000 {
-		t.Errorf("allocated at %#x, want 0x4000", addr)
+	// The heap's first area starts at the P0 high-water mark, its first
+	// block after the area's 64-byte control block.
+	if addr := longword(t, env, retAddr); addr != 0x4040 {
+		t.Errorf("allocated at %#x, want 0x4040", addr)
 	}
 
 	if r0 := call(t, env, "LIB$FREE_VM", sizeAddr, retAddr); r0 != ssNormal {
@@ -186,29 +188,24 @@ func TestLibDeleteVMZone(t *testing.T) {
 	env := fixture(t)
 	env.RegionSize[0] = 0x4000
 
-	blocks := make([]uint32, 0, 3)
+	addr, err := env.AllocateVM(16)
+	if err != nil || addr == 0 {
+		t.Fatalf("AllocateVM: %#x, %v", addr, err)
+	}
 
-	for _, zone := range []uint32{5, 5, 9} {
-		addr, err := env.AllocateVM(16, zone)
-		if err != nil || addr == 0 {
-			t.Fatalf("AllocateVM: %#x, %v", addr, err)
+	// No zone can be made yet, and the default zone (0) can't be
+	// deleted: every zone ID is an invalid one, and the heap's blocks
+	// survive.
+	for _, zone := range []uint32{0, 5} {
+		putLongword(t, env, 0x1000, zone)
+
+		if r0 := call(t, env, "LIB$DELETE_VM_ZONE", 0x1000); r0 != libBadBlockAddress {
+			t.Errorf("LIB$DELETE_VM_ZONE of %d = %#x, want LIB$_BADBLOADR", zone, r0)
 		}
-
-		blocks = append(blocks, addr)
 	}
 
-	putLongword(t, env, 0x1000, 5)
-
-	if r0 := call(t, env, "LIB$DELETE_VM_ZONE", 0x1000); r0 != ssNormal {
-		t.Fatalf("LIB$DELETE_VM_ZONE = %#x, want SS$_NORMAL", r0)
-	}
-
-	if env.FreeVM(blocks[0]) || env.FreeVM(blocks[1]) {
-		t.Error("a zone-5 block survived")
-	}
-
-	if !env.FreeVM(blocks[2]) {
-		t.Error("the zone-9 block was freed")
+	if !env.FreeVM(addr) {
+		t.Error("the heap's block didn't survive")
 	}
 }
 

@@ -12,6 +12,7 @@ import (
 	"github.com/tucats/govax/internal/registers"
 	"github.com/tucats/govax/internal/rms"
 	"github.com/tucats/govax/internal/vm"
+	"github.com/tucats/govax/internal/vmheap"
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
@@ -134,8 +135,10 @@ type Environment struct {
 	// VMS, so ImageRundown forgets it.
 	imageData map[any]any
 
-	// memAllocated/memFreed back the LIB$GET_VM/malloc allocator (memory.go).
-	memAllocated, memFreed []*memBlock
+	// heapZone and heapPages are the image's heap and the page pool it
+	// takes P0 pages from (memory.go), made at the first allocation.
+	heapZone  *vmheap.Zone
+	heapPages *vmheap.PagePool
 
 	// jsbCall is set while a JSB routine's shim runs (JSBShim), and
 	// jsbSP is SP as the JSB left it, the return address on top: a

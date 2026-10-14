@@ -64,16 +64,17 @@ func (env *Environment) ConditionToReturn(sig, mech uint32) (uint32, error) {
 	return env.conditionToReturn(sig, mech)
 }
 
-// AllocateVM allocates size bytes of the process's heap for LIBRTL, tagged
-// with zone (0 for none), returning the block's address, or 0 when there's
-// no room. The heap is the one DECC$MALLOC uses (memory.go).
-func (env *Environment) AllocateVM(size, zone uint32) (uint32, error) {
-	return shimDeccMalloc(env, []uint32{size, libvmLibrtl, zone})
+// AllocateVM allocates size bytes of the image's heap for LIBRTL,
+// returning the block's address, or 0 when P0 has no room. The heap is
+// the one DECC$MALLOC uses (memory.go).
+func (env *Environment) AllocateVM(size uint32) (uint32, error) {
+	return env.allocate(size), nil
 }
 
-// FreeVM frees the heap block at addr, reporting false if there's none.
+// FreeVM frees the heap block that starts at addr, reporting false if no
+// block starts there.
 func (env *Environment) FreeVM(addr uint32) bool {
-	return env.freeBlock(addr)
+	return env.release(addr)
 }
 
 // BlockSize returns the size of the heap block that starts at addr, as
@@ -81,28 +82,11 @@ func (env *Environment) FreeVM(addr uint32) bool {
 // starts there. A dynamic string's storage is kept when it's big enough
 // for a new value (LIB$SGET1_DD), so the RTL asks.
 func (env *Environment) BlockSize(addr uint32) (uint32, bool) {
-	for _, p := range env.memAllocated {
-		if p.addr == addr {
-			return p.size, true
-		}
+	if env.heapZone == nil {
+		return 0, false
 	}
 
-	return 0, false
-}
-
-// FreeVMZone frees every heap block tagged with zone.
-func (env *Environment) FreeVMZone(zone uint32) {
-	var toFree []uint32
-
-	for _, p := range env.memAllocated {
-		if p.zone == zone {
-			toFree = append(toFree, p.addr)
-		}
-	}
-
-	for _, addr := range toFree {
-		env.freeBlock(addr)
-	}
+	return env.heapZone.BlockSize(addr)
 }
 
 // WriteOutput writes s to the process's output stream (the console

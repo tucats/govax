@@ -341,6 +341,15 @@ expect adjustment as phases land):
   `lck.Deliver` hands each to its lock's `Data` if that's a `Notifier`
   (how `$ENQ` completes in the owner's process and an RMS record-lock
   wait is woken). A leaf package; owners are PIDs.
+- `internal/vmheap` — the mechanisms beneath the RTL's memory routines
+  (Phase 59, subtask 2): `PagePool` (the processwide page pool over a
+  `Region`, in govax P0 by `$EXPREG`'s rule) and `Zone` (a first-fit
+  block allocator over areas from the pool), each keeping its free
+  space as address-ordered spans merged with both neighbors, with
+  `Check` verifying them (the tests run it after every operation). The
+  bookkeeping is in Go, never in the memory managed. A leaf package;
+  `corevms/memory.go` is each image's heap on it (`AllocateVM`,
+  `FreeVM`, `BlockSize`, DECC$MALLOC/FREE).
 - `internal/console` — the front end (Phase 08; since Phase 52 only
   that): a `Console` embeds a `*machine.Machine` and a
   `*dclshell.Interpreter`, and its `Dispatcher` routes each line to the

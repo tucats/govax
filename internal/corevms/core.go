@@ -37,6 +37,14 @@ func serviceSysExpreg(env *Environment, argv []uint32) (uint32, error) {
 
 	size := pageCount * 512
 	start := env.RegionSize[region]
+
+	// P0 ends where its page table does: past it there are no pages to
+	// give, as $CRETVA finds (SS$_VASFULL). The heap's page pool grows by
+	// the same rule (expandP0).
+	if region == regionP0 && uint64(start)+uint64(pageCount)*512 > env.p0Limit() {
+		return ssVasFull, nil
+	}
+
 	end := start + size - 1
 	env.RegionSize[region] = end + 1
 

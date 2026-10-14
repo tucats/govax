@@ -4076,6 +4076,43 @@ widened."
   blocks; govax's grows only as files are made).
 - **Status**: fixed (docs/PHASE-58, subtask 8).
 
+### [Phase 59] The process heap: overlapping blocks, partial merges, no bound
+
+- **Where**: `reference/eVAX/eVAX/Source/RTL/librtl_memory.c`
+  (`decc_malloc`, `decc_free`), ported to `internal/corevms/memory.go`
+  (`shimDeccMalloc`, `freeBlock`); LIB$GET_VM, LIB$FREE_VM, and
+  LIB$DELETE_VM_ZONE (`internal/librtl/vm.go`) and the RTL's own blocks
+  shared it. Now `internal/vmheap` (a page pool and a first-fit zone)
+  under `memory.go`'s `allocate`/`release`.
+- **What**: not ISA questions, but defects the port had kept
+  (docs/PHASE-59, the survey's "The heap govax has today"):
+  - A free block was taken if it held the request, then marked with the
+    request rounded up to 16, which could be larger: a request of a
+    multiple of 16 bytes into a hole of exactly that size took 16 bytes
+    of the next block. Live blocks overlapped, with no frees needed (a
+    page's unused tail was a free block too).
+  - A freed block merged with at most one free neighbor; the free list
+    was in the order blocks were freed, so "first fit" wasn't by
+    address; fragmentation grew without limit.
+  - Every request gained at least one byte before rounding (16 took
+    32), and a size of %XFFFFFFF0 or more wrapped to a 0-byte block.
+  - The heap grew past the end of P0's page table, handing out addresses
+    that faulted when used; `$EXPREG` of P0 did the same.
+  - Any address inside a block freed it; LIB$DELETE_VM_ZONE freed every
+    block tagged with the zone, and every block was tagged 0, so
+    deleting zone 0 (an error, by the manual) freed the whole heap.
+  - A failed allocation returned %XFFFFFFFF as the block's address,
+    which DECC$MALLOC passed to C.
+- **Status**: fixed (docs/PHASE-59, subtask 2). Blocks are multiples of
+  8 bytes, quadword aligned, from 128-page areas (the manual's default
+  zone), each area's first 64 bytes kept for its control block; a freed
+  block merges with both neighbors; a block's address must be exact;
+  the heap and `$EXPREG` stop at P0's end (no block, SS$_VASFULL);
+  DECC$MALLOC returns 0 for no room, free(NULL) does nothing;
+  LIB$DELETE_VM_ZONE returns LIB$_BADBLOADR (no zone can be made yet).
+  LIB$FREE_VM's 4042 and LIB$GET_VM's ignored zone stay until subtask
+  4.
+
 <!--
 Entry template:
 

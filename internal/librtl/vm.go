@@ -18,14 +18,14 @@ var (
 // LIB$_BADBLOADR, which VMS documents); kept as ported.
 const statusFreeVMBadBlock = 4042
 
-// libGetVM is LIB$GET_VM (ported from eVAX):
+// libGetVM is LIB$GET_VM:
 //
 //	LIB$GET_VM number-of-bytes ,base-address [,zone-id]
 //
-// It allocates number-of-bytes (a longword by reference) from the process
-// heap and stores the block's address at base-address. As in eVAX, the
-// block gets no zone (0), whatever zone-id says: eVAX's lib_get_vm passed
-// the zone where its allocator never read it.
+// It allocates number-of-bytes (a longword by reference) from the image's
+// heap and stores the block's address at base-address. Until zones exist
+// (Phase 59, subtask 4) every block comes from the one heap, whatever
+// zone-id says.
 func libGetVM(env *corevms.Environment, argv []uint32) (uint32, error) {
 	mem, cpu := env.Memory(), env.CPU()
 	sizeAddr, retAddr := arg(argv, 0), arg(argv, 1)
@@ -35,7 +35,7 @@ func libGetVM(env *corevms.Environment, argv []uint32) (uint32, error) {
 		return memoryFault(env, err)
 	}
 
-	addr, err := env.AllocateVM(size, 0)
+	addr, err := env.AllocateVM(size)
 	if err != nil {
 		return 0, err
 	}
@@ -73,14 +73,15 @@ func libFreeVM(env *corevms.Environment, argv []uint32) (uint32, error) {
 //
 //	LIB$DELETE_VM_ZONE zone-id
 //
-// It frees every block tagged with the zone the longword at zone-id names.
+// It deletes the zone the longword at zone-id names. No zone can be made
+// yet (LIB$CREATE_VM_ZONE arrives in Phase 59's subtask 4), and the
+// default zone, 0, can't be deleted (5.0 LIB$ manual, section 5.3.3), so
+// every zone-id is an invalid one: LIB$_BADBLOADR, the manual's status
+// for it.
 func libDeleteVMZone(env *corevms.Environment, argv []uint32) (uint32, error) {
-	zone, err := env.Memory().LoadLongword(env.CPU(), arg(argv, 0))
-	if err != nil {
+	if _, err := env.Memory().LoadLongword(env.CPU(), arg(argv, 0)); err != nil {
 		return memoryFault(env, err)
 	}
 
-	env.FreeVMZone(zone)
-
-	return ssNormal, nil
+	return libBadBlockAddress, nil
 }

@@ -574,7 +574,7 @@ func dateContextFor(env *corevms.Environment, cell uint32) (*dateContext, uint32
 		return nil, libInvArg, nil
 	}
 
-	block, err = env.AllocateVM(dtContextSize, 0)
+	block, err = env.AllocateVM(dtContextSize)
 	if err != nil {
 		return nil, 0, err
 	}

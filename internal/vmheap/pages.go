@@ -1,0 +1,233 @@
+package vmheap
+
+import "sort"
+
+// Region is where a PagePool's pages come from: in govax, the process's
+// P0 region, through $EXPREG's code.
+type Region interface {
+	// End is the address of the page the next Expand would return.
+	End() uint32
+
+	// Expand adds pages new pages at the region's end and returns the
+	// first one's address, or false when the region can't grow that far.
+	Expand(pages uint32) (uint32, bool)
+}
+
+// maxPages bounds a single request: more pages than a VAX region holds
+// (2^30 bytes) can't be satisfied, and refusing them early keeps the
+// arithmetic below from overflowing.
+const maxPages = 0x40000000 / PageSize
+
+// PagePool is the processwide pool of pages LIB$GET_VM_PAGE and
+// LIB$FREE_VM_PAGE manage (5.0 LIB$ manual, section 5.2). Pages are
+// handed out page-aligned; a group may be freed in parts, and contiguous
+// groups from several calls may be freed together, as the manual allows.
+//
+// The pool keeps two lists of spans, each sorted by address: the pages
+// it owns (every page the region ever gave it, adjacent spans merged)
+// and, within those, the pages that are free (adjacent spans merged, so
+// each free span is as large as it can be). A page is allocated when the
+// pool owns it and it isn't free.
+type PagePool struct {
+	region Region
+	owned  []span
+	free   []span
+}
+
+// NewPagePool returns an empty pool that takes its pages from region.
+func NewPagePool(region Region) *PagePool {
+	return &PagePool{region: region}
+}
+
+// Allocate returns the address of n contiguous pages: the lowest free
+// ones that fit, or new ones from the region when none do. It returns
+// ErrBadSize for n of 0, and ErrNoMemory when the region can't grow
+// enough (nothing is allocated then).
+func (p *PagePool) Allocate(n uint32) (uint32, error) {
+	if n == 0 {
+		return 0, ErrBadSize
+	}
+
+	if n > maxPages {
+		return 0, ErrNoMemory
+	}
+
+	if addr, ok := p.take(n); ok {
+		return addr, nil
+	}
+
+	if err := p.grow(n); err != nil {
+		return 0, err
+	}
+
+	addr, _ := p.take(n)
+
+	return addr, nil
+}
+
+// take allocates n pages from the lowest free span that holds them.
+func (p *PagePool) take(n uint32) (uint32, bool) {
+	bytes := n * PageSize
+
+	for i, s := range p.free {
+		if s.size() < bytes {
+			continue
+		}
+
+		if s.size() == bytes {
+			p.free = append(p.free[:i], p.free[i+1:]...)
+		} else {
+			p.free[i].start += bytes
+		}
+
+		return s.start, true
+	}
+
+	return 0, false
+}
+
+// grow gets pages from the region so that n contiguous free pages exist.
+// When the highest free span ends where the region will grow from, only
+// the pages it lacks are asked for: the new pages join it.
+func (p *PagePool) grow(n uint32) error {
+	need := n
+
+	if k := len(p.free); k > 0 && p.free[k-1].end == p.region.End() {
+		need -= p.free[k-1].size() / PageSize
+	}
+
+	for {
+		addr, ok := p.region.Expand(need)
+		if !ok {
+			return ErrNoMemory
+		}
+
+		added := span{addr, addr + need*PageSize}
+		p.owned = insertSpan(p.owned, added)
+		p.free = insertSpan(p.free, added)
+
+		// The region normally gives exactly where End said, so the new
+		// pages complete the run. If they landed elsewhere (another
+		// caller moved the region's end in between), ask for the whole
+		// request again; the pages just added stay in the pool.
+		if p.hasRun(n) {
+			return nil
+		}
+
+		need = n
+	}
+}
+
+// hasRun reports whether some free span holds n pages.
+func (p *PagePool) hasRun(n uint32) bool {
+	for _, s := range p.free {
+		if s.size() >= n*PageSize {
+			return true
+		}
+	}
+
+	return false
+}
+
+// Free returns n pages starting at addr to the pool. Every page must be
+// allocated: ErrBadAddress is an addr that isn't page-aligned or pages
+// the pool doesn't own or that are free already, and ErrBadSize is n of
+// 0. Nothing is freed unless all of them can be.
+func (p *PagePool) Free(n, addr uint32) error {
+	if n == 0 {
+		return ErrBadSize
+	}
+
+	if addr%PageSize != 0 || n > maxPages || uint64(addr)+uint64(n)*PageSize > 1<<32 {
+		return ErrBadAddress
+	}
+
+	s := span{addr, addr + n*PageSize}
+
+	if !covered(p.owned, s) || overlapsAny(p.free, s) {
+		return ErrBadAddress
+	}
+
+	p.free = insertSpan(p.free, s)
+
+	return nil
+}
+
+// OwnedPages is how many pages the region has given the pool.
+func (p *PagePool) OwnedPages() uint32 {
+	return totalSize(p.owned) / PageSize
+}
+
+// FreePages is how many of the pool's pages are free.
+func (p *PagePool) FreePages() uint32 {
+	return totalSize(p.free) / PageSize
+}
+
+// isAllocated reports whether every page of s is the pool's and none is
+// free (used by Check, for the zones' areas).
+func (p *PagePool) isAllocated(s span) bool {
+	return covered(p.owned, s) && !overlapsAny(p.free, s)
+}
+
+// insertSpan adds s to list, which is sorted by address and has no two
+// spans touching, merging s with the span before it and the span after
+// it when they touch, and returns the list. s must overlap nothing in
+// list.
+func insertSpan(list []span, s span) []span {
+	// i is the first span that starts after s.
+	i := sort.Search(len(list), func(k int) bool { return list[k].start > s.start })
+
+	mergePrev := i > 0 && list[i-1].end == s.start
+	mergeNext := i < len(list) && list[i].start == s.end
+
+	switch {
+	case mergePrev && mergeNext:
+		list[i-1].end = list[i].end
+
+		return append(list[:i], list[i+1:]...)
+
+	case mergePrev:
+		list[i-1].end = s.end
+
+		return list
+
+	case mergeNext:
+		list[i].start = s.start
+
+		return list
+	}
+
+	list = append(list, span{})
+	copy(list[i+1:], list[i:])
+	list[i] = s
+
+	return list
+}
+
+// covered reports whether s lies entirely within one span of list
+// (sorted, touching spans merged, so a range that is all in the list is
+// in one span).
+func covered(list []span, s span) bool {
+	i := sort.Search(len(list), func(k int) bool { return list[k].end > s.start })
+
+	return i < len(list) && list[i].start <= s.start && s.end <= list[i].end
+}
+
+// overlapsAny reports whether s shares a byte with any span of list
+// (sorted).
+func overlapsAny(list []span, s span) bool {
+	i := sort.Search(len(list), func(k int) bool { return list[k].end > s.start })
+
+	return i < len(list) && list[i].start < s.end
+}
+
+// totalSize is the bytes in list's spans.
+func totalSize(list []span) uint32 {
+	var n uint32
+
+	for _, s := range list {
+		n += s.size()
+	}
+
+	return n
+}

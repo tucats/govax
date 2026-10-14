@@ -1,163 +1,132 @@
 package corevms
 
-// LIBVM_* flags.
-const (
-	libvmMalloc = 1
-	libvmLibrtl = 2
-	libvmVirgin = 4
-	libvmCarved = 8
-	libvmZeroed = 16
-)
+import "github.com/tucats/govax/internal/vmheap"
 
-// memBlock is one allocated-or-free memory block, the Go equivalent of
-// struct MEMBLK.
-type memBlock struct {
-	addr, size, reqSize, flags, zone uint32
+// The process heap: the blocks LIB$GET_VM, DECC$MALLOC, and the RTL's
+// own routines (dynamic strings, FIND_FILE's and the timers' blocks, ...)
+// allocate. Its mechanisms are internal/vmheap's: a page pool over the
+// P0 region, and a zone that divides the pool's pages into blocks
+// (docs/PHASE-59 - LIB VM zones.md, subtask 2). Both belong to the
+// running image: image rundown forgets them (releaseHeap), as VMS
+// deletes the P0 pages they were in.
+
+// defaultZone is the default zone's attributes, the 5.0 LIB$ manual's
+// Table 5-3: blocks a multiple of 8 bytes, quadword aligned, from areas
+// of 128 pages; and LIB$M_VM_EXTEND_AREA, which the manual's
+// LIB$SHOW_VM_ZONE example shows the default zone has.
+var defaultZone = vmheap.Attributes{BlockSize: 8, Alignment: 8, ExtendPages: 128, ExtendArea: true}
+
+// p0Region is the process's P0 region as the heap's page pool sees it:
+// it grows by $EXPREG's rule (expandP0).
+type p0Region struct {
+	env *Environment
 }
 
-// zeroRange stores size zero bytes starting at addr, matching decc_malloc's
-// own zero-fill loop for a LIBVM_ZEROED allocation.
-func (env *Environment) zeroRange(addr, size uint32) error {
-	for n := uint32(0); n < size; n++ {
-		if err := env.mem.StoreByte(env.cpu, addr+n, 0); err != nil {
-			return err
-		}
-	}
-
-	return nil
+func (r p0Region) End() uint32 {
+	return p0Start(r.env.RegionSize[0])
 }
 
-// shimDeccMalloc is DECC$MALLOC/LIB$GET_VM's underlying allocator.
-// Two-argument and three-argument forms come from LIB$GET_VM (flag=
-// LIBVM_LIBRTL) and plain malloc() (flag=LIBVM_MALLOC, no zone) — see
-// decc_malloc's own "kludge" comment.
-func shimDeccMalloc(env *Environment, argv []uint32) (uint32, error) {
-	size := argv[0]
-	roundedSize := (size + 16) &^ 0xF
-
-	flag := uint32(libvmMalloc)
-	if len(argv) > 1 {
-		flag = argv[1]
-	}
-
-	var zone uint32
-
-	if len(argv) > 2 {
-		zone = argv[2]
-	}
-
-	// Search the free list for a block that will do.
-	for i, p := range env.memFreed {
-		if p.size < size {
-			continue
-		}
-
-		env.memFreed = append(env.memFreed[:i], env.memFreed[i+1:]...)
-
-		if p.size > roundedSize {
-			leftover := &memBlock{
-				size:  p.size - roundedSize,
-				addr:  p.addr + roundedSize,
-				flags: libvmCarved,
-			}
-			env.memFreed = append(env.memFreed, leftover)
-		}
-
-		p.size = roundedSize
-		p.reqSize = size
-		p.flags = flag
-		p.zone = zone
-		env.memAllocated = append(env.memAllocated, p)
-
-		if flag&libvmZeroed != 0 {
-			if err := env.zeroRange(p.addr, size); err != nil {
-				return 0xFFFFFFFF, nil
-			}
-		}
-
-		return p.addr, nil
-	}
-
-	// Nothing on the free list fits; carve new space out of the P0 region.
-	region := env.RegionSize[0]
-	if region == 0 {
-		region = 0x0200
-	}
-
-	q := &memBlock{size: roundedSize, reqSize: size, addr: region, zone: zone, flags: flag}
-	env.memAllocated = append(env.memAllocated, q)
-
-	if flag&libvmZeroed != 0 {
-		if err := env.zeroRange(q.addr, size); err != nil {
-			return 0xFFFFFFFF, nil
-		}
-	}
-
-	pageRounded := (size + 512) &^ 0x1FF
-	if q.size < pageRounded {
-		env.memFreed = append(env.memFreed, &memBlock{
-			size:  pageRounded - q.size,
-			addr:  q.addr + q.size,
-			flags: libvmVirgin,
-		})
-	}
-
-	env.RegionSize[0] = region + pageRounded
-
-	return q.addr, nil
+func (r p0Region) Expand(pages uint32) (uint32, bool) {
+	return r.env.expandP0(pages)
 }
 
-// freeBlock is decc_free's core, shared by shimDeccFree and
-// shimLibDeleteVMZone (which frees several blocks by zone). Returns false
-// if addr doesn't fall inside any currently allocated block.
-func (env *Environment) freeBlock(addr uint32) bool {
-	idx := -1
+// p0Start is where pages added at P0's high-water mark begin: the
+// mark rounded up to a page, and never page 0, which is no-access so
+// that a null pointer faults.
+func p0Start(mark uint32) uint32 {
+	return max((mark+pageMask)&^pageMask, pageSize)
+}
 
-	for i, p := range env.memAllocated {
-		if addr >= p.addr && addr < p.addr+p.size {
-			idx = i
-
-			break
-		}
+// p0Limit is the address P0 ends at: the end of its page table, which
+// VMINIT (or $CREPRC) made P0Pages long, every page in it a demand-zero
+// page until it's touched. An environment without an address space of
+// its own (in tests) has the whole region.
+func (env *Environment) p0Limit() uint64 {
+	if env.Space != nil {
+		return uint64(env.Space.P0Pages) * pageSize
 	}
 
-	if idx == -1 {
+	return p1Base
+}
+
+// expandP0 adds pages pages at P0's high-water mark for the heap's page
+// pool, returning the first one's address, or false when P0 has no room.
+func (env *Environment) expandP0(pages uint32) (uint32, bool) {
+	start := p0Start(env.RegionSize[0])
+	end := uint64(start) + uint64(pages)*pageSize
+
+	if end > env.p0Limit() {
+		return 0, false
+	}
+
+	env.RegionSize[0] = uint32(end)
+
+	return start, true
+}
+
+// heap returns the image's heap zone, making it (and the page pool it
+// takes pages from) at the image's first allocation.
+func (env *Environment) heap() *vmheap.Zone {
+	if env.heapZone == nil {
+		env.heapPages = vmheap.NewPagePool(p0Region{env})
+
+		zone, err := vmheap.NewZone(env.heapPages, defaultZone)
+		if err != nil {
+			panic(err) // defaultZone's attributes are valid
+		}
+
+		env.heapZone = zone
+	}
+
+	return env.heapZone
+}
+
+// releaseHeap forgets the image's heap, as VMS's image rundown deletes
+// the P0 pages the heap was in: the next image is loaded from the bottom
+// of P0 again, over where the blocks were.
+func (env *Environment) releaseHeap() {
+	env.heapZone, env.heapPages = nil, nil
+}
+
+// allocate allocates size bytes from the heap, returning the block's
+// address, or 0 when P0 has no room. A size of 0 gets the smallest
+// block, so that each call returns a distinct address.
+func (env *Environment) allocate(size uint32) uint32 {
+	addr, err := env.heap().Allocate(max(size, 1))
+	if err != nil {
+		return 0
+	}
+
+	return addr
+}
+
+// release frees the heap block that starts at addr, reporting false when
+// no block starts there.
+func (env *Environment) release(addr uint32) bool {
+	if env.heapZone == nil {
 		return false
 	}
 
-	p := env.memAllocated[idx]
-	env.memAllocated = append(env.memAllocated[:idx], env.memAllocated[idx+1:]...)
-	p.flags = 0
+	_, err := env.heapZone.Free(addr)
 
-	// See if this joins an existing free block, either immediately before
-	// or immediately after it.
-	for _, q := range env.memFreed {
-		switch {
-		case q.addr+q.size == p.addr: // q immediately precedes p
-			q.size += p.size
-
-			return true
-
-		case p.addr+p.size == q.addr: // q immediately follows p
-			q.addr = p.addr
-			q.size += p.size
-
-			return true
-		}
-	}
-
-	env.memFreed = append(env.memFreed, p)
-
-	return true
+	return err == nil
 }
 
-// shimDeccFree is DECC$FREE.
+// shimDeccMalloc is DECC$MALLOC: malloc(size) returns a new block's
+// address, or 0 (NULL) when there's no room.
+func shimDeccMalloc(env *Environment, argv []uint32) (uint32, error) {
+	return env.allocate(optArg(argv, 0)), nil
+}
+
+// shimDeccFree is DECC$FREE: free(ptr) frees the block malloc returned.
+// free(NULL) does nothing; a pointer that isn't a block's returns -1.
 func shimDeccFree(env *Environment, argv []uint32) (uint32, error) {
-	if !env.freeBlock(argv[0]) {
-		return 0xFFFFFFFF, nil // -1
+	ptr := optArg(argv, 0)
+	if ptr == 0 || env.release(ptr) {
+		return 0, nil
 	}
 
-	return 0, nil
+	return 0xFFFFFFFF, nil
 }
 
 func registerMemoryShims(t *ShimTable) {

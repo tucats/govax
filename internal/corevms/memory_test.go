@@ -1,169 +1,221 @@
 package corevms
 
-import "testing"
+import (
+	"testing"
 
-func TestShimDeccMallocFreshAllocation(t *testing.T) {
+	"github.com/tucats/govax/internal/vmheap"
+)
+
+// heapFixture is an environment whose P0 high-water mark is at 0x1000,
+// with P0 pages pages of P0 (0 for the whole region).
+func heapFixture(t *testing.T, pages uint32) *Environment {
+	t.Helper()
+
 	env, _ := fixture()
 	env.RegionSize[0] = 0x1000
 
-	addr, err := shimDeccMalloc(env, []uint32{64})
+	if pages != 0 {
+		env.Space = &ProcessSpace{P0Pages: pages}
+	}
+
+	return env
+}
+
+func malloc(t *testing.T, env *Environment, size uint32) uint32 {
+	t.Helper()
+
+	addr, err := shimDeccMalloc(env, []uint32{size})
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	if addr != 0x1000 {
-		t.Errorf("addr = %#x, want 0x1000 (the P0 high-water mark)", addr)
+	return addr
+}
+
+func checkHeap(t *testing.T, env *Environment) {
+	t.Helper()
+
+	if env.heapZone == nil {
+		return
 	}
 
-	if len(env.memAllocated) != 1 {
-		t.Fatalf("memAllocated has %d entries, want 1", len(env.memAllocated))
-	}
-
-	if env.memAllocated[0].reqSize != 64 {
-		t.Errorf("reqSize = %d, want 64", env.memAllocated[0].reqSize)
-	}
-
-	// Region grows past the requested size, rounded up to a 512-byte page.
-	if env.RegionSize[0] != 0x1000+512 {
-		t.Errorf("RegionSize[0] = %#x, want %#x", env.RegionSize[0], 0x1000+512)
+	if err := env.heapZone.Check(); err != nil {
+		t.Fatal(err)
 	}
 }
 
-func TestShimDeccMallocReusesFreeBlock(t *testing.T) {
-	env, _ := fixture()
-	env.memFreed = []*memBlock{{addr: 0x2000, size: 128}}
+func TestMallocFirstBlock(t *testing.T) {
+	env := heapFixture(t, 0)
 
-	addr, err := shimDeccMalloc(env, []uint32{32})
-	if err != nil {
-		t.Fatal(err)
+	addr := malloc(t, env, 64)
+
+	// The first area starts at the P0 high-water mark, its first block
+	// after the area's control block.
+	if want := uint32(0x1000 + vmheap.AreaHeader); addr != want {
+		t.Errorf("malloc(64) = %#x, want %#x", addr, want)
 	}
 
-	if addr != 0x2000 {
-		t.Errorf("addr = %#x, want 0x2000 (reused from the free list)", addr)
+	// The area is the default zone's 128 pages, taken by $EXPREG's rule.
+	if want := uint32(0x1000 + 128*pageSize); env.RegionSize[0] != want {
+		t.Errorf("RegionSize[0] = %#x, want %#x", env.RegionSize[0], want)
 	}
 
-	if len(env.memFreed) != 1 {
-		t.Fatalf("memFreed has %d entries, want 1 (the leftover carved block)", len(env.memFreed))
+	if n, ok := env.BlockSize(addr); !ok || n != 64 {
+		t.Errorf("BlockSize = %d, %v; want 64, true", n, ok)
 	}
 
-	if env.memFreed[0].flags != libvmCarved {
-		t.Errorf("leftover flags = %#x, want libvmCarved", env.memFreed[0].flags)
+	checkHeap(t, env)
+}
+
+func TestMallocRoundingAndReuse(t *testing.T) {
+	env := heapFixture(t, 0)
+
+	a := malloc(t, env, 1)
+	b := malloc(t, env, 16)
+	c := malloc(t, env, 17)
+
+	// Blocks are multiples of 8 bytes, quadword aligned (the default
+	// zone's attributes), with nothing added.
+	if b-a != 8 || c-b != 16 {
+		t.Errorf("blocks at %#x, %#x, %#x; want 8 and 16 bytes apart", a, b, c)
+	}
+
+	if r0, _ := shimDeccFree(env, []uint32{b}); r0 != 0 {
+		t.Fatalf("free(%#x) = %#x, want 0", b, r0)
+	}
+
+	// The freed 16 bytes are reused, without reaching into c.
+	if d := malloc(t, env, 16); d != b {
+		t.Errorf("malloc(16) after free = %#x, want %#x", d, b)
+	}
+
+	checkHeap(t, env)
+}
+
+func TestMallocZeroSizesAreDistinct(t *testing.T) {
+	env := heapFixture(t, 0)
+
+	a, b := malloc(t, env, 0), malloc(t, env, 0)
+	if a == 0 || b == 0 || a == b {
+		t.Errorf("malloc(0) twice = %#x, %#x; want two distinct blocks", a, b)
 	}
 }
 
-func TestShimDeccFreeRoundTrip(t *testing.T) {
-	env, _ := fixture()
-	env.RegionSize[0] = 0x1000
+func TestFree(t *testing.T) {
+	env := heapFixture(t, 0)
 
-	addr, err := shimDeccMalloc(env, []uint32{64})
-	if err != nil {
-		t.Fatal(err)
+	if r0, _ := shimDeccFree(env, []uint32{0}); r0 != 0 {
+		t.Errorf("free(NULL) = %#x, want 0", r0)
 	}
 
-	r0, err := shimDeccFree(env, []uint32{addr})
-	if err != nil {
-		t.Fatal(err)
+	if r0, _ := shimDeccFree(env, []uint32{0x2000}); r0 != 0xFFFFFFFF {
+		t.Errorf("free of an address with no heap yet = %#x, want -1", r0)
 	}
 
-	if r0 != 0 {
-		t.Errorf("r0 = %d, want 0", r0)
+	a := malloc(t, env, 32)
+
+	for _, addr := range []uint32{a + 8, 0x2000} {
+		if r0, _ := shimDeccFree(env, []uint32{addr}); r0 != 0xFFFFFFFF {
+			t.Errorf("free(%#x), not a block's start = %#x, want -1", addr, r0)
+		}
 	}
 
-	if len(env.memAllocated) != 0 {
-		t.Errorf("memAllocated has %d entries, want 0", len(env.memAllocated))
+	if !env.FreeVM(a) {
+		t.Fatal("FreeVM of a block failed")
+	}
+
+	if env.FreeVM(a) {
+		t.Error("FreeVM of a freed block succeeded")
+	}
+
+	if _, ok := env.BlockSize(a); ok {
+		t.Error("BlockSize of a freed block found it")
+	}
+
+	checkHeap(t, env)
+}
+
+func TestHeapStaysInP0(t *testing.T) {
+	// 160 pages of P0, the mark at page 8: one 128-page area fits,
+	// a second doesn't.
+	env := heapFixture(t, 160)
+
+	if a := malloc(t, env, 100); a == 0 {
+		t.Fatal("malloc(100) failed")
+	}
+
+	// More than the area's free 127 pages needs a second area, of 131
+	// pages, where P0 has 24 left.
+	if a := malloc(t, env, 130*pageSize); a != 0 {
+		t.Errorf("malloc(130 pages) = %#x, want 0: P0 has no room", a)
+	}
+
+	if a, _ := env.AllocateVM(100); a == 0 {
+		t.Error("AllocateVM(100) failed after a request too large for P0")
+	}
+
+	if env.RegionSize[0] > 160*pageSize {
+		t.Errorf("RegionSize[0] = %#x, past P0's end %#x", env.RegionSize[0], 160*pageSize)
+	}
+
+	checkHeap(t, env)
+}
+
+func TestExpregStaysInP0(t *testing.T) {
+	env := heapFixture(t, 16)
+
+	if r0, _ := serviceSysExpreg(env, []uint32{9, 0, 0, regionP0}); r0 != ssVasFull {
+		t.Errorf("$EXPREG of 9 pages past P0's 16 = %#x, want SS$_VASFULL", r0)
+	}
+
+	if env.RegionSize[0] != 0x1000 {
+		t.Errorf("RegionSize[0] = %#x after a failed $EXPREG, want 0x1000", env.RegionSize[0])
+	}
+
+	if r0, _ := serviceSysExpreg(env, []uint32{8, 0, 0, regionP0}); r0 != ssNormal {
+		t.Errorf("$EXPREG of P0's last 8 pages = %#x, want SS$_NORMAL", r0)
 	}
 }
 
-func TestShimDeccFreeUnknownAddress(t *testing.T) {
-	env, _ := fixture()
+func TestHeapAndExpregShareP0(t *testing.T) {
+	env := heapFixture(t, 0)
 
-	r0, err := shimDeccFree(env, []uint32{0xDEAD})
-	if err != nil {
-		t.Fatal(err)
+	a := malloc(t, env, 64)
+	areaEnd := env.RegionSize[0]
+
+	// The program's own $EXPREG gets the pages after the heap's area...
+	if r0, _ := serviceSysExpreg(env, []uint32{1, 0, 0, regionP0}); r0 != ssNormal {
+		t.Fatalf("$EXPREG = %#x", r0)
 	}
 
-	if r0 != 0xFFFFFFFF {
-		t.Errorf("r0 = %#x, want -1", r0)
+	if got := env.cpu.GPR(1); got != areaEnd {
+		t.Errorf("$EXPREG's page at %#x, want %#x (after the heap's area)", got, areaEnd)
 	}
+
+	// ...and the heap's next area goes after that page.
+	b := malloc(t, env, 200*pageSize)
+	if b < areaEnd+pageSize {
+		t.Errorf("second area's block at %#x, inside the program's page at %#x", b, areaEnd)
+	}
+
+	if env.heapZone.Areas() != 2 || a == b {
+		t.Errorf("%d areas, want 2", env.heapZone.Areas())
+	}
+
+	checkHeap(t, env)
 }
 
-func TestShimDeccFreeCoalescesAdjacentBlocks(t *testing.T) {
-	env, _ := fixture()
-	env.RegionSize[0] = 0x1000
+func TestReleaseHeap(t *testing.T) {
+	env := heapFixture(t, 0)
 
-	a, err := shimDeccMalloc(env, []uint32{16})
-	if err != nil {
-		t.Fatal(err)
+	a := malloc(t, env, 64)
+	env.releaseHeap()
+
+	if _, ok := env.BlockSize(a); ok {
+		t.Error("a block survived the image's rundown")
 	}
 
-	b, err := shimDeccMalloc(env, []uint32{16})
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if _, err := shimDeccFree(env, []uint32{a}); err != nil {
-		t.Fatal(err)
-	}
-
-	if _, err := shimDeccFree(env, []uint32{b}); err != nil {
-		t.Fatal(err)
-	}
-
-	total := uint32(0)
-	for _, p := range env.memFreed {
-		total += p.size
-	}
-	// Both freed blocks plus the original page-rounding leftover should
-	// all have coalesced back into contiguous free space.
-	if len(env.memAllocated) != 0 {
-		t.Errorf("memAllocated has %d entries, want 0", len(env.memAllocated))
-	}
-
-	if total != 512 {
-		t.Errorf("total free space = %d, want 512 (one page, fully coalesced)", total)
-	}
-}
-
-// TestAllocateFreeVM covers the heap methods librtl's LIB$GET_VM,
-// LIB$FREE_VM, and LIB$DELETE_VM_ZONE are built on (export.go).
-func TestAllocateFreeVM(t *testing.T) {
-	env, _ := fixture()
-	env.RegionSize[0] = 0x4000
-
-	addr, err := env.AllocateVM(100, 7)
-	if err != nil {
-		t.Fatal(err)
-	}
-
-	if addr != 0x4000 {
-		t.Errorf("allocated addr = %#x, want 0x4000", addr)
-	}
-
-	if b := env.memAllocated[0]; b.zone != 7 || b.flags&libvmLibrtl == 0 {
-		t.Errorf("block zone %d, flags %#x; want zone 7, LIBVM_LIBRTL", b.zone, b.flags)
-	}
-
-	if !env.FreeVM(addr) || len(env.memAllocated) != 0 {
-		t.Errorf("FreeVM: memAllocated has %d entries, want 0", len(env.memAllocated))
-	}
-
-	if env.FreeVM(addr) {
-		t.Error("FreeVM of a block already freed: want false")
-	}
-}
-
-func TestFreeVMZone(t *testing.T) {
-	env, _ := fixture()
-	env.RegionSize[0] = 0x1000
-	env.memAllocated = []*memBlock{
-		{addr: 0x1000, size: 16, zone: 5},
-		{addr: 0x2000, size: 16, zone: 5},
-		{addr: 0x3000, size: 16, zone: 9},
-	}
-
-	env.FreeVMZone(5)
-
-	if len(env.memAllocated) != 1 || env.memAllocated[0].zone != 9 {
-		t.Errorf("remaining allocations = %+v, want only the zone-9 block", env.memAllocated)
+	if env.FreeVM(a) {
+		t.Error("FreeVM of a block from before the rundown succeeded")
 	}
 }
