@@ -374,6 +374,9 @@ expect adjustment as phases land):
   Subtask 7: LIB$STAT_VM and LIB$SHOW_VM (`librtl/vmstat.go`): the
   heap's counts per image in librtl, the pages' the pool's own
   (`PagePool.Calls`, `Environment.PageStatistics`).
+  Subtask 8: LIB$VM_MALLOC, VM_FREE, VM_CALLOC, VM_REALLOC
+  (`librtl/vmmalloc.go`): C's malloc family on the default zone, by
+  value with the result in R0 (unconfirmed; the `_P` forms are stubs).
 - `internal/console` — the front end (Phase 08; since Phase 52 only
   that): a `Console` embeds a `*machine.Machine` and a
   `*dclshell.Interpreter`, and its `Dispatcher` routes each line to the

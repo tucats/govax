@@ -1,6 +1,6 @@
 # Phase 59 — LIB$ virtual memory zones
 
-**Status:** in progress (subtasks 1 to 7 done 2026-10-14).
+**Status:** in progress (subtasks 1 to 8 done 2026-10-14).
 Needs Phases 53, 54, and 58 (callbacks, for user-defined zones). Part
 of the LIB$ program laid out in `PHASE-53 - RTL LIB support.md` (Part
 A).
@@ -672,7 +672,9 @@ VERIFY), and `vmmalloc.go`. `dynstr.go` allocates in the string zone.
 6. **User zones**: CREATE_USER_VM_ZONE (tail calls), and get-page and
    free-page routines (callbacks). **Done** 2026-10-14.
 7. **Statistics**: SHOW_VM, STAT_VM. **Done** 2026-10-14.
-8. **The C library's routines** (if settled).
+8. **The C library's routines**: VM_MALLOC, VM_FREE, VM_CALLOC,
+   VM_REALLOC on C's conventions (unconfirmed until subtask 10).
+   **Done** 2026-10-14.
 9. **LIBRTL2's zone routines**: FIND_VM_ZONE, SHOW_VM_ZONE,
    VERIFY_VM_ZONE (offsets known).
 10. **The program** (`testdata/lib59/`), its console test, and the VMS
@@ -930,3 +932,26 @@ VERIFY), and `vmmalloc.go`. `dynstr.go` allocates in the string zone.
   code's line, INVARG writing nothing), `TestLibShowVMAction`; and
   `TestLibrtlVMStatistics`, a linked program that reads the bytes still
   allocated and shows the line both ways.
+- **2026-10-14** — Subtask 8, the C library's routines. LIB$VM_MALLOC,
+  LIB$VM_FREE, LIB$VM_CALLOC, and LIB$VM_REALLOC (`librtl/vmmalloc.go`,
+  codes 178 to 181), on C's conventions as the survey proposed: every
+  argument by value, the result in R0, 0 (NULL) for no room. Their
+  blocks are the default zone's, as DECC$MALLOC's are (`AllocateVM`,
+  `FreeVM`, `BlockSize`), and like DECC$MALLOC's they don't count in
+  LIB$STAT_VM. By govax's choices (all **unconfirmed**, probe cases for
+  subtask 10, which also asks whether the C RTL has a zone of its own):
+  VM_MALLOC(0) gets the smallest block; VM_FREE(NULL) does nothing and
+  returns 0, a pointer that isn't a block's returns -1 and frees nothing
+  (DECC$FREE's answer); VM_CALLOC's product past a longword is NULL, and
+  its bytes are cleared (a block can be one freed before); VM_REALLOC of
+  NULL is VM_MALLOC, to size 0 frees and returns NULL, keeps a block
+  already large enough (as rounded) where it is, otherwise moves the
+  bytes to a new block and frees the old, and returns NULL with nothing
+  changed for no room or an address that isn't a block's. The `_P` forms
+  and VM_MALLOC_INIT_P stay missing-routine stubs. Tests: librtl's
+  `TestLibVMMalloc` (distinct aligned blocks, size 0, frees of NULL, an
+  interior address, a freed block, first-fit reuse, no room, the
+  statistics untouched), `TestLibVMCalloc` (zeros in a reused block, the
+  overflow), `TestLibVMRealloc` (each case, and a block past MOVC3's 64K
+  moved whole); and `TestLibrtlVMMalloc`, a linked program calling them
+  with CALLS and by-value arguments.
