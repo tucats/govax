@@ -62,15 +62,17 @@ func checkList(name string, list []span) error {
 
 // Check verifies the zone, and its pool (Pool.Check):
 //
-//   - each area's pages are allocated in the pool, and no two areas
-//     overlap;
+//   - each area's pages are held in the pool, and no two areas overlap;
 //   - in each area, base <= first <= top <= end, and its free spans are
 //     sorted, apart, between first and top, none touching top;
-//   - every block is aligned, lies between an area's first and top, and
-//     overlaps no other block and no free span;
+//   - every block's address (after its tag) is aligned, its size a
+//     multiple of the quantum, and it lies between an area's first and
+//     top, overlapping no other block and no free span;
 //   - in each area, the blocks and free spans add up to first..top
 //     exactly, so no byte is lost or counted twice;
-//   - the bytes in use are the blocks' sizes added up.
+//   - each lookaside list holds listed blocks of its size, and every
+//     listed block is on one list once;
+//   - the bytes in use are the program's blocks' sizes added up.
 //
 // It returns the first rule broken, or nil.
 func (z *Zone) Check() error {
@@ -91,16 +93,20 @@ func (z *Zone) Check() error {
 		}
 	}
 
+	for addr, b := range z.blocks {
+		if addr != b.start+z.offset || addr%z.align != 0 || b.n%z.round != 0 || b.n < 2*z.offset+1 {
+			return fmt.Errorf("vmheap: block %08X (%08X, %d bytes) isn't aligned or sized by the zone's rules", addr, b.start, b.n)
+		}
+	}
+
+	if err := z.checkLists(); err != nil {
+		return err
+	}
+
 	blocks := z.sortedBlocks()
 	used := make(map[*area]uint32)
 
-	var inUse uint32
-
 	for i, b := range blocks {
-		if b.start%z.quantum != 0 {
-			return fmt.Errorf("vmheap: block %08X isn't aligned to %d", b.start, z.quantum)
-		}
-
 		if i > 0 && blocks[i-1].end > b.start {
 			return fmt.Errorf("vmheap: blocks %08X and %08X overlap", blocks[i-1].start, b.start)
 		}
@@ -115,7 +121,6 @@ func (z *Zone) Check() error {
 		}
 
 		used[a] += b.size()
-		inUse += b.size()
 	}
 
 	for _, a := range areas {
@@ -125,8 +130,40 @@ func (z *Zone) Check() error {
 		}
 	}
 
+	var inUse uint32
+
+	for _, b := range z.blocks {
+		if !b.listed {
+			inUse += b.n
+		}
+	}
+
 	if inUse != z.inUse {
 		return fmt.Errorf("vmheap: %d bytes in use counted, %d in the blocks", z.inUse, inUse)
+	}
+
+	return nil
+}
+
+// checkLists verifies the lookaside lists against the blocks.
+func (z *Zone) checkLists() error {
+	seen := map[uint32]bool{}
+
+	for _, l := range z.lists {
+		for _, addr := range l.addrs {
+			b, ok := z.blocks[addr]
+			if !ok || !b.listed || b.n != l.n || seen[addr] {
+				return fmt.Errorf("vmheap: lookaside list of %d bytes holds %08X wrongly", l.n, addr)
+			}
+
+			seen[addr] = true
+		}
+	}
+
+	for addr, b := range z.blocks {
+		if b.listed && !seen[addr] {
+			return fmt.Errorf("vmheap: listed block %08X is on no lookaside list", addr)
+		}
 	}
 
 	return nil

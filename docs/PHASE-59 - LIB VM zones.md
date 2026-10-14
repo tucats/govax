@@ -1,6 +1,6 @@
 # Phase 59 — LIB$ virtual memory zones
 
-**Status:** in progress (subtasks 1 to 3 done 2026-10-14).
+**Status:** in progress (subtasks 1 to 4 done 2026-10-14).
 Needs Phases 53, 54, and 58 (callbacks, for user-defined zones). Part
 of the LIB$ program laid out in `PHASE-53 - RTL LIB support.md` (Part
 A).
@@ -665,7 +665,8 @@ VERIFY), and `vmmalloc.go`. `dynstr.go` allocates in the string zone.
 3. **Pages**: GET_VM_PAGE, FREE_VM_PAGE. **Done** 2026-10-14.
 4. **Zones and the algorithms**: CREATE_VM_ZONE, DELETE_VM_ZONE,
    RESET_VM_ZONE; GET_VM and FREE_VM redone, with the manual's statuses;
-   quick fit, frequent sizes, fixed size; tags and fills.
+   quick fit, frequent sizes, fixed size; tags and fills. **Done**
+   2026-10-14.
 5. **The default and string zones**, dynamic strings and DECC$MALLOC
    moved onto them.
 6. **User zones**: CREATE_USER_VM_ZONE (tail calls), and get-page and
@@ -755,3 +756,58 @@ VERIFY), and `vmmalloc.go`. `dynstr.go` allocates in the string zone.
   and `TestLibrtlVMPages`, a linked program that gets three pages,
   writes them in user mode, frees them in parts, and sees a double free
   refused. STAT_VM's page counts (codes 5 to 7) wait for subtask 7.
+- **2026-10-14** — Subtask 4, zones and the algorithms.
+  `internal/vmheap`'s `Zone` gained the manual's attributes
+  (`Attributes`: the algorithm and its argument, boundary tags, initial
+  size, page limit, NO_EXTEND, TAIL_LARGE; `ErrBadAttributes` for
+  broken rules) and the other three algorithms as lookaside lists
+  (`lookaside`): quick fit's lists for the sizes from smallest-block-size
+  up by block-size, frequent sizes' lists that each take the size of the
+  first block freed to them while empty, and fixed size's single list.
+  A listed block stays part of its area (never split or merged) and is
+  taken last in, first out; freed again it's `ErrFreedAgain`, the zone
+  unchanged. Boundary tags: a longword before and after each block, the
+  block's size (tags included) a multiple of the block size and its
+  first usable byte aligned (`place`); `Tags` gives their addresses and
+  value. New areas go to the head of the area list (searched first),
+  or with TAIL_LARGE an area larger than extend-size to its end (the
+  VSI manual's wording implies the head; **unconfirmed**). At the page
+  limit the last area is what the limit leaves, if the request fits
+  (**unconfirmed**); past it `ErrPageLimit`. `Reset` empties the areas;
+  `Delete` gives them back (`PagePool.Reclaim`). `Check` covers the
+  lists. Tests: each algorithm, tags, initial size and page limit,
+  NO_EXTEND, area order, reset, delete, the bad attributes, and a
+  randomized workload under six attribute sets with double frees, the
+  checker after every step, then reset and delete. Injected faults (no
+  double-free guard on lookaside lists; tags ignored in placement) fail
+  6 and 5 tests.
+  `corevms/vmzone.go` is the image's zones: `CreateZone` (a 128-byte
+  control block, `ZoneControlSize`, govax's size, from a private zone no
+  ID names, holding its own address, the ID; the state in Go,
+  `Environment.zones`), `ZoneAllocate` and `ZoneFree` (zone 0 the
+  default zone; tags written and checked, `ErrBadTag`; fills;
+  a size given must round to the block's), `ResetZone`, `DeleteZone`
+  (the control block freed and cleared), `ZoneSettingsOf`; image rundown
+  forgets them. `librtl`: LIB$CREATE_VM_ZONE (`vmzone.go`, code 173)
+  with the manual's defaults and ranges, LIB$_INVARG for anything out of
+  range and, by govax's choice (**unconfirmed**), for a flag bit VMS
+  doesn't define, both fills of a pair, a page limit or NO_EXTEND
+  without an initial size, and an initial size past the limit;
+  number-of-areas, get-page, and free-page are read as nothing until
+  subtask 6. LIB$RESET_VM_ZONE (code 174). LIB$GET_VM, LIB$FREE_VM,
+  and LIB$DELETE_VM_ZONE redone (`vm.go`) with the manual's statuses
+  (`vmFailure`, replacing subtask 3's `vmStatus`): LIB$_BADBLOSIZ for a
+  size of 0 or less, more than a fixed zone's, or a LIB$FREE_VM size that
+  doesn't round to the block's (**unconfirmed**: VMS presumably trusts
+  it); LIB$_BADBLOADR for an invalid zone ID, zone 0 to RESET and DELETE,
+  and a block not the zone's (no longer 4042, DEVIATIONS.md);
+  LIB$_PAGLIMEXC; LIB$_BADTAGVAL (**VSI**); LIB$FREE_VM's size may be
+  omitted in any zone (govax knows every block's size; **unconfirmed**);
+  a lookaside double free is SS$_NORMAL. NO_EXTEND past the initial
+  area is LIB$_INSVIRMEM (**unconfirmed**). Tests: librtl's unit tests
+  of each routine and status, fills on GET, FREE, RESET, and DELETE,
+  tags, fixed size and double frees, the page limit, and a deleted
+  zone's pages reused by LIB$GET_VM_PAGE; `TestLibrtlVMZones`, a linked
+  program that makes a fixed-size zone with a fill and runs it through
+  every routine. Dynamic strings and DECC$MALLOC still use the default
+  zone directly (subtask 5).

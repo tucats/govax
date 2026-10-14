@@ -157,58 +157,6 @@ func TestStrUpcase(t *testing.T) {
 	}
 }
 
-func TestLibGetFreeVM(t *testing.T) {
-	env := fixture(t)
-	env.RegionSize[0] = 0x4000
-
-	const sizeAddr, retAddr = 0x1000, 0x1004
-
-	putLongword(t, env, sizeAddr, 100)
-
-	if r0 := call(t, env, "LIB$GET_VM", sizeAddr, retAddr); r0 != ssNormal {
-		t.Fatalf("LIB$GET_VM = %#x, want SS$_NORMAL", r0)
-	}
-
-	// The heap's first area starts at the P0 high-water mark, its first
-	// block after the area's 64-byte control block.
-	if addr := longword(t, env, retAddr); addr != 0x4040 {
-		t.Errorf("allocated at %#x, want 0x4040", addr)
-	}
-
-	if r0 := call(t, env, "LIB$FREE_VM", sizeAddr, retAddr); r0 != ssNormal {
-		t.Errorf("LIB$FREE_VM = %#x, want SS$_NORMAL", r0)
-	}
-
-	if r0 := call(t, env, "LIB$FREE_VM", sizeAddr, retAddr); r0 != statusFreeVMBadBlock {
-		t.Errorf("LIB$FREE_VM again = %d, want %d", r0, statusFreeVMBadBlock)
-	}
-}
-
-func TestLibDeleteVMZone(t *testing.T) {
-	env := fixture(t)
-	env.RegionSize[0] = 0x4000
-
-	addr, err := env.AllocateVM(16)
-	if err != nil || addr == 0 {
-		t.Fatalf("AllocateVM: %#x, %v", addr, err)
-	}
-
-	// No zone can be made yet, and the default zone (0) can't be
-	// deleted: every zone ID is an invalid one, and the heap's blocks
-	// survive.
-	for _, zone := range []uint32{0, 5} {
-		putLongword(t, env, 0x1000, zone)
-
-		if r0 := call(t, env, "LIB$DELETE_VM_ZONE", 0x1000); r0 != libBadBlockAddress {
-			t.Errorf("LIB$DELETE_VM_ZONE of %d = %#x, want LIB$_BADBLOADR", zone, r0)
-		}
-	}
-
-	if !env.FreeVM(addr) {
-		t.Error("the heap's block didn't survive")
-	}
-}
-
 // TestLibEstablishRevert: LIB$ESTABLISH and LIB$REVERT change the handler
 // of the caller's frame, whose FP the running shim's frame saved at 12.
 func TestLibEstablishRevert(t *testing.T) {

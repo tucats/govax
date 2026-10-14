@@ -41,10 +41,10 @@ const PageSize = 512
 
 // The errors the pool and zones report. The RTL routines turn them into
 // their condition values (LIB$_BADBLOSIZ, LIB$_BADBLOADR,
-// LIB$_INSVIRMEM).
+// LIB$_INSVIRMEM, LIB$_PAGLIMEXC).
 var (
 	// ErrBadSize is a size of zero (a block or page count must be
-	// positive).
+	// positive), or more than a fixed-size zone's blocks hold.
 	ErrBadSize = errors.New("vmheap: bad block size")
 
 	// ErrBadAddress is an address that isn't the start of an allocated
@@ -54,6 +54,20 @@ var (
 	// ErrNoMemory means the region can't supply the pages a request
 	// needs. Nothing is allocated in part.
 	ErrNoMemory = errors.New("vmheap: insufficient virtual memory")
+
+	// ErrBadAttributes is a zone's attributes breaking their rules
+	// (NewZone). The RTL reports LIB$_INVARG.
+	ErrBadAttributes = errors.New("vmheap: bad zone attributes")
+
+	// ErrPageLimit means a request would take a zone past its page
+	// limit. Nothing is allocated.
+	ErrPageLimit = errors.New("vmheap: zone's page limit exceeded")
+
+	// ErrFreedAgain is a block freed while it waits on a lookaside list,
+	// freed already. The zone is left as it was. The 5.0 LIB$ manual
+	// (chapter 6) says VMS returns SS$_NORMAL then, its lists damaged;
+	// the RTL returns SS$_NORMAL too, with nothing damaged.
+	ErrFreedAgain = errors.New("vmheap: block freed already")
 )
 
 // span is the address range [start, end): start is its first byte, end

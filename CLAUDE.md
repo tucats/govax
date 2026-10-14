@@ -352,7 +352,15 @@ expect adjustment as phases land):
   leaf package; `corevms/memory.go` is each image's heap on it
   (`AllocateVM`, `FreeVM`, `BlockSize`, DECC$MALLOC/FREE) and its page
   pool (`GetVMPages`, `FreeVMPages`: LIB$GET_VM_PAGE and
-  LIB$FREE_VM_PAGE, `librtl/vmpage.go`, subtask 3).
+  LIB$FREE_VM_PAGE, `librtl/vmpage.go`, subtask 3). Subtask 4: a
+  zone's `Attributes` (algorithm, boundary tags, initial size, page
+  limit, NO_EXTEND, TAIL_LARGE), the quick fit, frequent sizes, and
+  fixed size algorithms as lookaside lists, `Reset`, `Delete`
+  (`PagePool.Reclaim`); `corevms/vmzone.go` is each image's zones
+  (`CreateZone`, `ZoneAllocate`, `ZoneFree`, `ResetZone`, `DeleteZone`:
+  a zone ID is its control block's address, the state in Go; fills and
+  tags written there), and `librtl`'s LIB$CREATE_VM_ZONE (`vmzone.go`),
+  RESET_VM_ZONE, and GET_VM/FREE_VM/DELETE_VM_ZONE (`vm.go`) use them.
 - `internal/console` — the front end (Phase 08; since Phase 52 only
   that): a `Console` embeds a `*machine.Machine` and a
   `*dclshell.Interpreter`, and its `Dispatcher` routes each line to the

@@ -173,6 +173,21 @@ func (p *PagePool) Free(n, addr uint32) error {
 	return nil
 }
 
+// Reclaim returns the pages of span s, which a zone held (Lend), to the
+// pool's free pages: a zone deleted gives its areas back this way. It
+// returns ErrBadAddress, and changes nothing, unless a zone holds every
+// page of s.
+func (p *PagePool) Reclaim(s span) error {
+	if !covered(p.held, s) {
+		return ErrBadAddress
+	}
+
+	p.held = removeSpan(p.held, s)
+	p.free = insertSpan(p.free, s)
+
+	return nil
+}
+
 // OwnedPages is how many pages the region has given the pool.
 func (p *PagePool) OwnedPages() uint32 {
 	return totalSize(p.owned) / PageSize
@@ -227,6 +242,27 @@ func insertSpan(list []span, s span) []span {
 	list[i] = s
 
 	return list
+}
+
+// removeSpan takes s out of list (sorted, touching spans merged), which
+// must cover it (covered), and returns the list: the span holding s is
+// cut down to what lies before s and after it, either of which may be
+// nothing.
+func removeSpan(list []span, s span) []span {
+	i := sort.Search(len(list), func(k int) bool { return list[k].end > s.start })
+	whole := list[i]
+
+	var rest []span
+
+	if whole.start < s.start {
+		rest = append(rest, span{whole.start, s.start})
+	}
+
+	if s.end < whole.end {
+		rest = append(rest, span{s.end, whole.end})
+	}
+
+	return append(list[:i], append(rest, list[i+1:]...)...)
 }
 
 // covered reports whether s lies entirely within one span of list

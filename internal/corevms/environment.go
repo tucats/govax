@@ -141,6 +141,12 @@ type Environment struct {
 	heapZone  *vmheap.Zone
 	heapPages *vmheap.PagePool
 
+	// zones are the image's zones LIB$CREATE_VM_ZONE made, by zone ID,
+	// and zoneControl the private zone their control blocks are in
+	// (vmzone.go).
+	zones       map[uint32]*heapZone
+	zoneControl *vmheap.Zone
+
 	// jsbCall is set while a JSB routine's shim runs (JSBShim), and
 	// jsbSP is SP as the JSB left it, the return address on top: a
 	// routine reached by JSB has no frame, so a condition it signals is

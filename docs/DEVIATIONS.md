@@ -4112,6 +4112,11 @@ widened."
   LIB$DELETE_VM_ZONE returns LIB$_BADBLOADR (no zone can be made yet).
   LIB$FREE_VM's 4042 and LIB$GET_VM's ignored zone stay until subtask
   4.
+- **Status (subtask 4)**: LIB$FREE_VM of an address that isn't a block
+  returns LIB$_BADBLOADR, the manual's status, not 4042; LIB$GET_VM and
+  LIB$FREE_VM use the zone their zone-id names (LIB$CREATE_VM_ZONE),
+  and check sizes (LIB$_BADBLOSIZ for 0 or less, and for a LIB$FREE_VM
+  size that doesn't round to the block's).
 
 <!--
 Entry template:

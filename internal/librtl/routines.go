@@ -240,6 +240,8 @@ var Routines = []Routine{
 	{"LIB$TRIM_FILESPEC", 170, libTrimFilespec},
 	{"LIB$GET_VM_PAGE", 171, libGetVMPage},
 	{"LIB$FREE_VM_PAGE", 172, libFreeVMPage},
+	{"LIB$CREATE_VM_ZONE", 173, libCreateVMZone},
+	{"LIB$RESET_VM_ZONE", 174, libResetVMZone},
 }
 
 // callsBack names the routines that call back into the program (a

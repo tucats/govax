@@ -15,19 +15,35 @@ import (
 // free ones fit, and which the heap's zones take their areas from too
 // (internal/vmheap's PagePool, corevms's GetVMPages and FreeVMPages).
 
-var libBadBlockSize = vmsdef.LibrarySymbols["LIB$_BADBLOSIZ"]
+var (
+	libBadBlockSize = vmsdef.LibrarySymbols["LIB$_BADBLOSIZ"]
+	libPageLimit    = vmsdef.LibrarySymbols["LIB$_PAGLIMEXC"]
+	libBadTagValue  = vmsdef.LibrarySymbols["LIB$_BADTAGVAL"]
+)
 
-// vmStatus is the condition value for one of internal/vmheap's errors:
-// LIB$_BADBLOSIZ for a bad size, LIB$_BADBLOADR for a bad address, and
-// LIB$_INSVIRMEM when there's no room.
-func vmStatus(err error) uint32 {
+// vmFailure is the status for an error from the page pool, a zone, or
+// corevms's zone routines: LIB$_BADBLOSIZ for a bad size, LIB$_BADBLOADR
+// for a bad address or zone ID, LIB$_INSVIRMEM when there's no room,
+// LIB$_PAGLIMEXC past a zone's page limit, LIB$_BADTAGVAL for a changed
+// boundary tag, and LIB$_INVARG for a zone's bad attributes. Anything
+// else is a memory error (a fill or tag that couldn't be written), a
+// signaled access violation.
+func vmFailure(env *corevms.Environment, err error) (uint32, error) {
 	switch {
 	case errors.Is(err, vmheap.ErrBadSize):
-		return libBadBlockSize
-	case errors.Is(err, vmheap.ErrBadAddress):
-		return libBadBlockAddress
+		return libBadBlockSize, nil
+	case errors.Is(err, vmheap.ErrBadAddress), errors.Is(err, corevms.ErrBadZone):
+		return libBadBlockAddress, nil
+	case errors.Is(err, vmheap.ErrNoMemory):
+		return libInsVirMem, nil
+	case errors.Is(err, vmheap.ErrPageLimit):
+		return libPageLimit, nil
+	case errors.Is(err, corevms.ErrBadTag):
+		return libBadTagValue, nil
+	case errors.Is(err, vmheap.ErrBadAttributes):
+		return libInvArg, nil
 	default:
-		return libInsVirMem
+		return memoryFault(env, err)
 	}
 }
 
@@ -55,7 +71,7 @@ func libGetVMPage(env *corevms.Environment, argv []uint32) (uint32, error) {
 
 	addr, err := env.GetVMPages(count)
 	if err != nil {
-		return vmStatus(err), nil
+		return vmFailure(env, err)
 	}
 
 	if err := mem.StoreLongword(cpu, arg(argv, 1), addr); err != nil {
@@ -99,7 +115,7 @@ func libFreeVMPage(env *corevms.Environment, argv []uint32) (uint32, error) {
 	}
 
 	if err := env.FreeVMPages(count, addr); err != nil {
-		return vmStatus(err), nil
+		return vmFailure(env, err)
 	}
 
 	return ssNormal, nil

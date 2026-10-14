@@ -95,6 +95,7 @@ func (env *Environment) heap() *vmheap.Zone {
 // of P0 again, over where the blocks were.
 func (env *Environment) releaseHeap() {
 	env.heapZone, env.heapPages = nil, nil
+	env.zones, env.zoneControl = nil, nil
 }
 
 // allocate allocates size bytes from the heap, returning the block's
