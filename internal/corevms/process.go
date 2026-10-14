@@ -167,6 +167,13 @@ type Process struct {
 	// innermost last (cmode.go).
 	cmode []*cmodeCall
 
+	// shimCalls holds the calls of routines that call back into the
+	// program (ShimTable.RegisterCallback) whose callback is running,
+	// innermost last, and runningShim the one whose Go code is running
+	// now, if any (callback.go).
+	shimCalls   []*shimCall
+	runningShim *shimCall
+
 	// conditions holds the conditions being dispatched to handlers,
 	// innermost last: a handler may cause a condition of its own
 	// (condition.go).
@@ -365,8 +372,8 @@ func serviceSysAdjwsl(env *Environment, argv []uint32) (uint32, error) {
 // user mode, and disassociates its common event flag clusters (deleting
 // temporary ones nobody else uses), cancels its outstanding $SETIMR
 // timers and $SCHDWK wakeups, discards its queued user-mode ASTs, and
-// forgets its user-mode exit handlers and any $PUTMSG or $CMKRNL left
-// waiting for its routine, unmaps the global sections it mapped, and
+// forgets its user-mode exit handlers and any $PUTMSG, $CMKRNL, or
+// LIB$ routine left waiting for a routine it called, unmaps the global sections it mapped, and
 // forgets its heap (releaseHeap) and its RTL packages' data
 // (ImageData). The console calls it when an
 // image started by RUN returns or exits (and does its own logical-name
@@ -382,6 +389,7 @@ func (env *Environment) ImageRundown() {
 	env.cancelUserExitHandlers()
 	env.cancelPutmsgCalls()
 	env.cancelChangeModeCalls()
+	env.cancelShimCalls()
 	env.cancelConditions()
 	env.cancelPageLocks()
 	env.unmapSections()

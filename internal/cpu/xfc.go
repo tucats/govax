@@ -266,11 +266,13 @@ func emulXfcP1Vector(e *Engine) error {
 // A shim that waits (ErrServiceWait: LIB$PUT_OUTPUT to a full mailbox,
 // docs/PHASE-46.md) runs again: the XFC is re-executed, with R0 still
 // selecting it. A shim may also ask for a procedure to be called (a
-// *ServiceCall), as a service may; since R0 selects the shim, that's
-// only of use for an image's call, after which the shim's caller puts
-// its own registers back (the subprocess CLI, docs/PHASE-48.md), or for
-// a tail call, which returns past the XFC (LIB$SHOW_TIMER's action
-// routine, docs/PHASE-55). And a
+// *ServiceCall), as a service may: an image's call, after which the
+// shim's caller puts its own registers back (the subprocess CLI,
+// docs/PHASE-48.md); a tail call, which returns past the XFC
+// (LIB$SHOW_TIMER's action routine, docs/PHASE-55); or a plain call,
+// which returns to this XFC with the procedure's R0, where the services
+// find the shim waiting for it by its frame rather than by R0 (a LIB$
+// routine's callback, docs/PHASE-58; corevms's callback.go). And a
 // shim may end the image, as $EXIT does (ErrImageExit, with r0 its
 // status): the subprocess CLI's Ctrl/Y AST does (docs/PHASE-51).
 func emulXfcShim(e *Engine) error {

@@ -1,6 +1,7 @@
 # Phase 58 — LIB$ callbacks into the program, and file routines
 
-**Status:** in progress (subtask 1 done 2026-10-13). Planned 2026-10-12. Needs Phases 53 and 54. Part of the
+**Status:** in progress (subtasks 1 and 2 done 2026-10-13). Planned
+2026-10-12. Needs Phases 53 and 54. Part of the
 LIB$ program laid out in `PHASE-53 - RTL LIB support.md` (Part A).
 
 ## Goal
@@ -57,12 +58,13 @@ first to need the first:
 
 ## Open questions
 
-- **The callback mechanism's shape** (above): continuation versus
-  handoff. Decided in subtask 2, with a test that calls back from a
-  callback.
-- **A condition in a callback**: the program's handlers and a `$UNWIND`
-  past the LIB$ routine's frame must leave the shim's saved state
-  cleaned up, as the condition dispatcher's own stack is.
+- ~~**The callback mechanism's shape**~~ (decided 2026-10-13, subtask
+  2): the goroutine handoff (the survey's "The callbacks";
+  `corevms/callback.go`).
+- ~~**A condition in a callback**~~ (settled 2026-10-13, subtask 2): a
+  `$UNWIND` past the stub's frame abandons the routine
+  (`finishUnwind`), as image rundown does; what VMS's own routines do
+  then (anything left open) is still a probe case.
 - **FIND_FILE's flags** (multiple-file context, NODEFAULTS) and the
   context's lifetime; and FID_TO_NAME on a file with no back-link.
   The survey found the flags (NOWILD and MULTIPLE; there is no
@@ -565,7 +567,7 @@ TRIM_FILESPEC.
 
 1. **Survey.** **Done** 2026-10-13.
 2. **Callbacks from a shim**: design, the engine's side, nesting,
-   unwinding; a test routine that calls back.
+   unwinding; a test routine that calls back. **Done** 2026-10-13.
 3. **FIND_FILE, FIND_FILE_END.**
 4. **FILE_SCAN, FILE_SCAN_END.**
 5. **DELETE_FILE.**
@@ -594,3 +596,33 @@ TRIM_FILESPEC.
   walks the back-links in Go (the ACP has no ATR$C_FILE_SPEC yet), and
   TRIM_FILESPEC splits names in Go (govax has no `$FILESCAN`). Nothing
   needed the author's decision.
+- **2026-10-13** — Subtask 2, callbacks from a shim
+  (`internal/corevms/callback.go`). A routine registered with
+  `ShimTable.RegisterCallback` runs on a goroutine of its own, and
+  `Environment.Callback(routine, args...)` is a Go call returning the
+  procedure's R0: it writes the argument list below SP (in the stub's
+  frame), hands the dispatch a plain `CallRequest`, and waits. The
+  goroutine and the engine take turns over two channels (`handOff`), so
+  only one runs at a time. When the procedure's RET lands on the XFC
+  again, `Environment.Shim` looks first for a routine waiting for a
+  callback whose stub FP, SP, PC, and mode match (`returningShimCall`),
+  as `$CMKRNL` finds its call, and continues it whatever R0 selects, so
+  the engine needed no change (only `cpu/xfc.go`'s comment). Nesting
+  needs nothing more: a callback calling the routine again runs in a new
+  stub frame. A routine whose callback never returns is abandoned (its
+  pending Callback panics with a sentinel the goroutine recovers, so its
+  deferred code runs): by `$UNWIND` for the stub frames it removes
+  (`finishUnwind`, `abandonShimCallsBelow`), by image rundown
+  (`cancelShimCalls`, so process deletion too), and, as a backstop, at
+  the next shim call once the stack has been popped past it. A routine
+  that waits (ErrWait) after calling back fails rather than starting
+  over; one that waits before is run again as any shim. Tests:
+  `testdata/asm/callback.asm` run by internal/console's
+  `TestCallback_assembledProgram` (TEST$CALLBACK, a test-only routine at
+  code 999: a loop of callbacks, a callback calling it again, a callback
+  that LIB$SIG_TO_RET unwinds past, then a fresh call, with SP checked),
+  and corevms's `TestCallback_*` (the argument list, continuing whatever
+  R0 is, image rundown, a popped frame, the wait rule, Callback outside a
+  routine); race-clean under `go test -race`. `librtl.Routine` gets its
+  way to ask for `RegisterCallback` with the first routine that needs
+  it (subtask 4).

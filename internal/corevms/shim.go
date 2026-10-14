@@ -24,6 +24,10 @@ type shimEntry struct {
 	name string
 	fn   ShimFunc
 	jsb  JSBShimFunc
+
+	// callsBack is true for a routine that may call back into the
+	// program (RegisterCallback): it runs on a goroutine of its own.
+	callsBack bool
 }
 
 // ShimTable is a numeric-code-keyed registry of ShimFuncs.
@@ -43,6 +47,19 @@ func NewShimTable() *ShimTable {
 // immediately by this package's own tests.
 func (t *ShimTable) Register(code uint32, name string, fn ShimFunc) {
 	t.entries[code] = shimEntry{name: name, fn: fn}
+}
+
+// RegisterCallback adds fn under code as Register does, for a routine
+// that may call back into the program with Environment.Callback (a
+// success or error routine the program passed it; callback.go).
+func (t *ShimTable) RegisterCallback(code uint32, name string, fn ShimFunc) {
+	t.entries[code] = shimEntry{name: name, fn: fn, callsBack: true}
+}
+
+// CallsBack reports whether the routine under code was registered with
+// RegisterCallback.
+func (t *ShimTable) CallsBack(code uint32) bool {
+	return t.entries[code].callsBack
 }
 
 // RegisterJSB adds the JSB routine fn under code. CALL and JSB routines

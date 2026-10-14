@@ -383,7 +383,18 @@ func callHandler(fn func(*Environment, []uint32) (uint32, error), env *Environme
 // Shim implements cpu.SystemServices' RTL half (XFC$SHIM): dispatch a LIB$/
 // CRTL shim call by numeric code, with its argument list read from AP —
 // matching shim()'s own argc/argv-from-registers.AP marshaling.
+//
+// A routine that calls back into the program (ShimTable.RegisterCallback)
+// runs on a goroutine of its own, and the XFC its callback returns to
+// continues it, whatever R0 holds then: R0 is the callback's result
+// (callback.go).
 func (env *Environment) Shim(code uint32) (uint32, bool, error) {
+	if call := env.returningShimCall(); call != nil {
+		r0, err := env.resumeShimCall(call, env.cpu.GPR(registers.R0))
+
+		return r0, true, err
+	}
+
 	fn, ok := env.shims.Lookup(code)
 	if !ok {
 		return 0, false, nil
@@ -392,6 +403,13 @@ func (env *Environment) Shim(code uint32) (uint32, bool, error) {
 	argv, err := readArgs(env.cpu, env.mem, env.cpu.GPR(registers.AP))
 	if err != nil {
 		return 0, true, err
+	}
+
+	if env.shims.CallsBack(code) {
+		r0, err := env.startShimCall(env.shims.entries[code].name, fn, argv)
+		env.enterWait(errors.Is(err, ErrWait))
+
+		return r0, true, err
 	}
 
 	r0, err := callHandler(fn, env, argv)

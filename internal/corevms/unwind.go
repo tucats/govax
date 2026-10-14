@@ -281,6 +281,10 @@ func (env *Environment) finishUnwind(d *conditionDispatch) (uint32, error) {
 		env.endDispatch()
 	}
 
+	// So do the LIB$ routines waiting for a callback whose stub frames
+	// are removed (callback.go).
+	env.abandonShimCallsBelow(survivor)
+
 	c.SetGPR(registers.R1, r1)
 	c.SetGPR(registers.FP, u.frames[0])
 	c.SetGPR(registers.PC, ret)
