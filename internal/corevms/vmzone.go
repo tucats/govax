@@ -47,11 +47,14 @@ type ZoneSettings struct {
 }
 
 // heapZone is one zone of the image: its allocator, its settings, and
-// its ID (0 for the default zone).
+// its ID. A system zone is one the RTL made for itself (the default zone
+// and the string zone), which the program can use but not reset or
+// delete.
 type heapZone struct {
 	id       uint32
 	zone     *vmheap.Zone
 	settings ZoneSettings
+	system   bool
 }
 
 var (
@@ -73,9 +76,20 @@ var controlZone = vmheap.Attributes{BlockSize: 8, Alignment: 8, ExtendPages: 1, 
 // or vmheap.ErrNoMemory (or ErrPageLimit) when the initial area or the
 // control block can't be had; no zone is made then.
 func (env *Environment) CreateZone(s ZoneSettings) (uint32, error) {
-	zone, err := vmheap.NewZone(env.pagePool(), s.Attributes)
+	z, err := env.makeZone(s, false)
 	if err != nil {
 		return 0, err
+	}
+
+	return z.id, nil
+}
+
+// makeZone makes a zone with settings s, its control block, and its
+// entry in env.zones.
+func (env *Environment) makeZone(s ZoneSettings, system bool) (*heapZone, error) {
+	zone, err := vmheap.NewZone(env.pagePool(), s.Attributes)
+	if err != nil {
+		return nil, err
 	}
 
 	if env.zoneControl == nil {
@@ -95,23 +109,73 @@ func (env *Environment) CreateZone(s ZoneSettings) (uint32, error) {
 	if err != nil {
 		zone.Delete()
 
-		return 0, err
+		return nil, err
 	}
 
 	if env.zones == nil {
 		env.zones = map[uint32]*heapZone{}
 	}
 
-	env.zones[id] = &heapZone{id: id, zone: zone, settings: s}
+	z := &heapZone{id: id, zone: zone, settings: s, system: system}
+	env.zones[id] = z
 
-	return id, nil
+	return z, nil
 }
 
-// zoneFor returns the zone id names: 0 is the default zone (the image's
-// heap), anything else a zone CreateZone made.
+// systemZones makes the RTL's two zones, the default zone and then the
+// string zone (so in that order, as LIB$FIND_VM_ZONE finds them: the
+// 5.0 LIB$ manual), unless they're made already. They're made together
+// at the image's first allocation, from either.
+func (env *Environment) systemZones() error {
+	if env.defaultHeap != nil {
+		return nil
+	}
+
+	d, err := env.makeZone(defaultZone, true)
+	if err != nil {
+		return err
+	}
+
+	s, err := env.makeZone(stringZone, true)
+	if err != nil {
+		d.zone.Delete()
+		delete(env.zones, d.id)
+		_, _ = env.zoneControl.Free(d.id)
+
+		return err
+	}
+
+	env.defaultHeap, env.stringHeap = d, s
+
+	return nil
+}
+
+// defaultZone returns the image's default zone, making the RTL's zones
+// at the image's first allocation. The error is vmheap.ErrNoMemory when
+// P0 has no room for their control blocks.
+func (env *Environment) defaultZone() (*heapZone, error) {
+	if err := env.systemZones(); err != nil {
+		return nil, err
+	}
+
+	return env.defaultHeap, nil
+}
+
+// stringZone returns the image's string zone, as defaultZone does the
+// default zone.
+func (env *Environment) stringZone() (*heapZone, error) {
+	if err := env.systemZones(); err != nil {
+		return nil, err
+	}
+
+	return env.stringHeap, nil
+}
+
+// zoneFor returns the zone id names: 0 is the default zone, anything
+// else a zone of env.zones (the default zone's own ID among them).
 func (env *Environment) zoneFor(id uint32) (*heapZone, error) {
 	if id == 0 {
-		return &heapZone{zone: env.heap(), settings: ZoneSettings{Attributes: defaultZone}}, nil
+		return env.defaultZone()
 	}
 
 	z, ok := env.zones[id]
@@ -124,13 +188,15 @@ func (env *Environment) zoneFor(id uint32) (*heapZone, error) {
 
 // madeZone returns the zone id names, which must be one CreateZone made:
 // the default zone can't be reset or deleted (5.0 LIB$ manual, section
-// 5.3.3).
+// 5.3.3), and neither, by govax's choice, can the string zone
+// (unconfirmed).
 func (env *Environment) madeZone(id uint32) (*heapZone, error) {
-	if id == 0 {
+	z, ok := env.zones[id]
+	if !ok || z.system {
 		return nil, ErrBadZone
 	}
 
-	return env.zoneFor(id)
+	return z, nil
 }
 
 // ZoneSettingsOf returns the settings of the zone id names (0, the

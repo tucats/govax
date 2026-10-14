@@ -349,9 +349,12 @@ expect adjustment as phases land):
   `Check` verifying them (the tests run it after every operation). The
   bookkeeping is in Go, never in the memory managed. A zone takes its
   areas with `PagePool.Lend`, and `Free` refuses those held pages. A
-  leaf package; `corevms/memory.go` is each image's heap on it
-  (`AllocateVM`, `FreeVM`, `BlockSize`, DECC$MALLOC/FREE) and its page
-  pool (`GetVMPages`, `FreeVMPages`: LIB$GET_VM_PAGE and
+  leaf package; `corevms/memory.go` is each image's heap on it: the
+  default zone (`AllocateVM`, `FreeVM`, `BlockSize`, DECC$MALLOC/FREE)
+  and the string zone (`AllocateString`, `FreeString`, `StringSize`:
+  dynamic strings), both real zones with control blocks made together
+  at the first allocation (`vmzone.go`'s `systemZones`, subtask 5), and
+  its page pool (`GetVMPages`, `FreeVMPages`: LIB$GET_VM_PAGE and
   LIB$FREE_VM_PAGE, `librtl/vmpage.go`, subtask 3). Subtask 4: a
   zone's `Attributes` (algorithm, boundary tags, initial size, page
   limit, NO_EXTEND, TAIL_LARGE), the quick fit, frequent sizes, and

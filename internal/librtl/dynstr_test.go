@@ -34,7 +34,7 @@ func TestSget1DD(t *testing.T) {
 	}
 
 	length, class, first := descriptorAt(t, env, dynDesc)
-	if size, ok := env.BlockSize(first); length != 10 || class != dscClassD || !ok || size < 10 {
+	if size, ok := env.StringSize(first); length != 10 || class != dscClassD || !ok || size < 10 {
 		t.Fatalf("after SGET1_DD(10): length %d, class %d, pointer %#x (a block of %d: %v)", length, class, first, size, ok)
 	}
 
@@ -48,7 +48,7 @@ func TestSget1DD(t *testing.T) {
 
 	// Within the block's real size (10 rounds up), though longer than the
 	// descriptor's length: still the same storage.
-	size, _ := env.BlockSize(first)
+	size, _ := env.StringSize(first)
 	putLongword(t, env, dynDesc+16, size)
 	call(t, env, "LIB$SGET1_DD", dynDesc+16, dynDesc)
 
@@ -63,7 +63,7 @@ func TestSget1DD(t *testing.T) {
 	call(t, env, "LIB$SGET1_DD", dynDesc+16, dynDesc)
 
 	length, _, ptr := descriptorAt(t, env, dynDesc)
-	if size, ok := env.BlockSize(ptr); length != 200 || !ok || size < 200 {
+	if size, ok := env.StringSize(ptr); length != 200 || !ok || size < 200 {
 		t.Errorf("after SGET1_DD(200): length %d, pointer %#x, a block of %d (%v); want 200 bytes' room", length, ptr, size, ok)
 	}
 
@@ -80,7 +80,7 @@ func TestSget1DD(t *testing.T) {
 }
 
 // TestSfreeDD: LIB$SFREE1_DD frees and zeroes; a pointer that isn't the
-// heap's is STR$_ERRFREDYN, the descriptor untouched; a zero pointer is
+// string zone's is STR$_ERRFREDYN, the descriptor untouched; a zero pointer is
 // fine. LIB$SFREEN_DD frees a run of descriptors.
 func TestSfreeDD(t *testing.T) {
 	env := fixture(t)
@@ -101,7 +101,7 @@ func TestSfreeDD(t *testing.T) {
 		t.Errorf("after SFREE1_DD: length %d, pointer %#x; want 0 and 0", length, ptr)
 	}
 
-	if _, ok := env.BlockSize(first); ok {
+	if _, ok := env.StringSize(first); ok {
 		t.Error("SFREE1_DD left the block allocated")
 	}
 

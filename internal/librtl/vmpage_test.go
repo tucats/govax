@@ -203,8 +203,9 @@ func TestLibVMPagesShareThePool(t *testing.T) {
 
 	b := mustGetPages(t, env, 1)
 
-	// The default zone's first area is 128 pages, between the two.
-	if area := a + 0x200; block < area || block >= area+128*0x200 || b != area+128*0x200 {
+	// The RTL's zones' control blocks take a page, then the default
+	// zone's first area is 128 pages, between the two.
+	if area := a + 0x400; block < area || block >= area+128*0x200 || b != area+128*0x200 {
 		t.Fatalf("page %X, block %X, page %X; want the block's area between the pages", a, block, b)
 	}
 
@@ -213,7 +214,7 @@ func TestLibVMPagesShareThePool(t *testing.T) {
 	}
 
 	if r0 := freePages(t, env, 2, a); r0 != libBadBlockAddress {
-		t.Errorf("LIB$FREE_VM_PAGE of a page and the area's first = %#x, want LIB$_BADBLOADR", r0)
+		t.Errorf("LIB$FREE_VM_PAGE of a page and the control blocks' = %#x, want LIB$_BADBLOADR", r0)
 	}
 
 	if !env.FreeVM(block) {

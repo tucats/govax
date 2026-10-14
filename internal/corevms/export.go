@@ -64,17 +64,53 @@ func (env *Environment) ConditionToReturn(sig, mech uint32) (uint32, error) {
 	return env.conditionToReturn(sig, mech)
 }
 
-// AllocateVM allocates size bytes of the image's heap for LIBRTL,
-// returning the block's address, or 0 when P0 has no room. The heap is
-// the one DECC$MALLOC uses (memory.go).
+// AllocateVM allocates size bytes of the image's default zone for
+// LIBRTL's own blocks, returning the block's address, or 0 when P0 has
+// no room. The zone is the one DECC$MALLOC and LIB$GET_VM's zone 0 use
+// (memory.go).
 func (env *Environment) AllocateVM(size uint32) (uint32, error) {
-	return env.allocate(size), nil
+	z, err := env.defaultZone()
+
+	return allocate(z, err, size), nil
 }
 
-// FreeVM frees the heap block that starts at addr, reporting false if no
-// block starts there.
+// FreeVM frees the default zone's block that starts at addr, reporting
+// false if no block starts there.
 func (env *Environment) FreeVM(addr uint32) bool {
-	return env.release(addr)
+	return release(env.defaultHeap, addr)
+}
+
+// AllocateString allocates size bytes of the image's string zone for a
+// dynamic string's text, as AllocateVM does the default zone's.
+func (env *Environment) AllocateString(size uint32) (uint32, error) {
+	z, err := env.stringZone()
+
+	return allocate(z, err, size), nil
+}
+
+// FreeString frees the string zone's block that starts at addr,
+// reporting false if no block starts there.
+func (env *Environment) FreeString(addr uint32) bool {
+	return release(env.stringHeap, addr)
+}
+
+// DefaultZoneID and StringZoneID return the IDs of the image's default
+// zone and string zone (making them if the image hasn't allocated yet),
+// or 0 when P0 has no room for them.
+func (env *Environment) DefaultZoneID() uint32 {
+	if z, err := env.defaultZone(); err == nil {
+		return z.id
+	}
+
+	return 0
+}
+
+func (env *Environment) StringZoneID() uint32 {
+	if z, err := env.stringZone(); err == nil {
+		return z.id
+	}
+
+	return 0
 }
 
 // GetVMPages allocates n contiguous pages from the image's page pool
@@ -94,16 +130,18 @@ func (env *Environment) FreeVMPages(n, addr uint32) error {
 	return env.pagePool().Free(n, addr)
 }
 
-// BlockSize returns the size of the heap block that starts at addr, as
-// allocated (rounded up from what was asked for), and whether a block
-// starts there. A dynamic string's storage is kept when it's big enough
-// for a new value (LIB$SGET1_DD), so the RTL asks.
+// BlockSize returns the size of the default zone's block that starts at
+// addr, as allocated (rounded up from what was asked for), and whether a
+// block starts there.
 func (env *Environment) BlockSize(addr uint32) (uint32, bool) {
-	if env.heapZone == nil {
-		return 0, false
-	}
+	return blockSize(env.defaultHeap, addr)
+}
 
-	return env.heapZone.BlockSize(addr)
+// StringSize is BlockSize for the string zone: a dynamic string's
+// storage is kept when it's big enough for a new value (LIB$SGET1_DD),
+// so the RTL asks.
+func (env *Environment) StringSize(addr uint32) (uint32, bool) {
+	return blockSize(env.stringHeap, addr)
 }
 
 // WriteOutput writes s to the process's output stream (the console

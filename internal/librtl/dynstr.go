@@ -18,22 +18,23 @@ import (
 //
 // The RTL owns the storage: a routine that writes a dynamic string reuses
 // the block when it's big enough and otherwise frees it and allocates
-// another (dynamicText). The blocks come from the process heap
-// (Environment.AllocateVM); Phase 59's subtask 5 moves them to the RTL's
-// string zone.
+// another (dynamicText). The blocks come from the image's string zone
+// (Environment.AllocateString), apart from the default zone's, as
+// LIB$FIND_VM_ZONE's description in the 5.0 LIB$ manual says VMS's are.
 
 var strErrFreDyn = vmsdef.LibrarySymbols["STR$_ERRFREDYN"]
 
 // dynamicText returns where n bytes of a dynamic string's text go. text is
 // the descriptor's pointer, and length its length. The block at text is
-// kept when it holds n bytes: a heap block by its real size, or, when text
-// isn't a heap block's address (storage the program set up itself), by
-// the descriptor's length. Otherwise the block is freed (if it's the
-// heap's) and a new one allocated; with none needed (n is 0 and alloc0
+// kept when it holds n bytes: a string zone block by its real size, or,
+// when text isn't such a block's address (storage the program set up
+// itself, or a block it allocated with LIB$GET_VM), by the descriptor's
+// length. Otherwise the block is freed (if it's the string zone's) and a
+// new one allocated; with none needed (n is 0 and alloc0
 // false) the result is 0. errInsVirMem means the heap is full.
 func dynamicText(env *corevms.Environment, text, length, n uint32, alloc0 bool) (uint32, error) {
 	if text != 0 {
-		size, block := env.BlockSize(text)
+		size, block := env.StringSize(text)
 		if !block {
 			size = length
 		}
@@ -43,7 +44,7 @@ func dynamicText(env *corevms.Environment, text, length, n uint32, alloc0 bool) 
 		}
 
 		if block {
-			env.FreeVM(text)
+			env.FreeString(text)
 		}
 	}
 
@@ -51,7 +52,7 @@ func dynamicText(env *corevms.Environment, text, length, n uint32, alloc0 bool) 
 		return 0, nil
 	}
 
-	addr, err := env.AllocateVM(n)
+	addr, err := env.AllocateString(n)
 	if err != nil {
 		return 0, err
 	}
@@ -103,7 +104,7 @@ func getDynamic(env *corevms.Environment, desc, length uint32) (uint32, error) {
 
 // freeDynamic is LIB$SFREE1_DD's work: free the dynamic string described
 // at desc and set its pointer and length to 0. The class isn't checked. A
-// pointer of 0 has nothing to free; one that isn't a heap block's is
+// pointer of 0 has nothing to free; one that isn't a string zone block's is
 // STR$_ERRFREDYN ("error freeing dynamic string", the status VMS's
 // routine returns: the probe, testdata/lib54), the descriptor left as it
 // was.
@@ -115,7 +116,7 @@ func freeDynamic(env *corevms.Environment, desc uint32) (uint32, error) {
 		return memoryFault(env, err)
 	}
 
-	if text != 0 && !env.FreeVM(text) {
+	if text != 0 && !env.FreeString(text) {
 		return strErrFreDyn, nil
 	}
 

@@ -35,12 +35,16 @@ func malloc(t *testing.T, env *Environment, size uint32) uint32 {
 func checkHeap(t *testing.T, env *Environment) {
 	t.Helper()
 
-	if env.heapZone == nil {
-		return
+	for _, z := range env.zones {
+		if err := z.zone.Check(); err != nil {
+			t.Fatal(err)
+		}
 	}
 
-	if err := env.heapZone.Check(); err != nil {
-		t.Fatal(err)
+	if env.heapPages != nil {
+		if err := env.heapPages.Check(); err != nil {
+			t.Fatal(err)
+		}
 	}
 }
 
@@ -49,14 +53,15 @@ func TestMallocFirstBlock(t *testing.T) {
 
 	addr := malloc(t, env, 64)
 
-	// The first area starts at the P0 high-water mark, its first block
-	// after the area's control block.
-	if want := uint32(0x1000 + vmheap.AreaHeader); addr != want {
+	// The first page at the P0 high-water mark holds the RTL's zones'
+	// control blocks; the default zone's first area starts after it,
+	// its first block after the area's control block.
+	if want := uint32(0x1000 + pageSize + vmheap.AreaHeader); addr != want {
 		t.Errorf("malloc(64) = %#x, want %#x", addr, want)
 	}
 
 	// The area is the default zone's 128 pages, taken by $EXPREG's rule.
-	if want := uint32(0x1000 + 128*pageSize); env.RegionSize[0] != want {
+	if want := uint32(0x1000 + 129*pageSize); env.RegionSize[0] != want {
 		t.Errorf("RegionSize[0] = %#x, want %#x", env.RegionSize[0], want)
 	}
 
@@ -136,8 +141,8 @@ func TestFree(t *testing.T) {
 }
 
 func TestHeapStaysInP0(t *testing.T) {
-	// 160 pages of P0, the mark at page 8: one 128-page area fits,
-	// a second doesn't.
+	// 160 pages of P0, the mark at page 8: the control blocks' page and
+	// one 128-page area fit, a second area doesn't.
 	env := heapFixture(t, 160)
 
 	if a := malloc(t, env, 100); a == 0 {
@@ -145,7 +150,7 @@ func TestHeapStaysInP0(t *testing.T) {
 	}
 
 	// More than the area's free 127 pages needs a second area, of 131
-	// pages, where P0 has 24 left.
+	// pages, where P0 has 23 left.
 	if a := malloc(t, env, 130*pageSize); a != 0 {
 		t.Errorf("malloc(130 pages) = %#x, want 0: P0 has no room", a)
 	}
@@ -198,8 +203,8 @@ func TestHeapAndExpregShareP0(t *testing.T) {
 		t.Errorf("second area's block at %#x, inside the program's page at %#x", b, areaEnd)
 	}
 
-	if env.heapZone.Areas() != 2 || a == b {
-		t.Errorf("%d areas, want 2", env.heapZone.Areas())
+	if env.defaultHeap.zone.Areas() != 2 || a == b {
+		t.Errorf("%d areas, want 2", env.defaultHeap.zone.Areas())
 	}
 
 	checkHeap(t, env)

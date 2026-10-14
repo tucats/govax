@@ -137,10 +137,11 @@ func TestLibGetFreeVM(t *testing.T) {
 
 	addr := mustGetVM(t, env, 100, 0)
 
-	// The heap's first area starts at the P0 high-water mark, its first
+	// The P0 high-water mark's first page holds the RTL's zones' control
+	// blocks; the default zone's first area starts after it, its first
 	// block after the area's 64-byte control block.
-	if addr != 0x4040 {
-		t.Errorf("allocated at %#x, want 0x4040", addr)
+	if addr != 0x4240 {
+		t.Errorf("allocated at %#x, want 0x4240", addr)
 	}
 
 	for _, size := range []uint32{0, 0xFFFFFFFF, 0x80000000} {
@@ -173,6 +174,76 @@ func TestLibGetFreeVM(t *testing.T) {
 
 	if r0 := call(t, env, "LIB$FREE_VM", 0, vmAddrCell, vmZoneCell); r0 != ssNormal {
 		t.Errorf("LIB$FREE_VM without a size = %#x, want SS$_NORMAL", r0)
+	}
+}
+
+// The RTL's own zones (Phase 59, subtask 5): the default zone and the
+// string zone, made together at the image's first allocation, each with
+// a control block whose address is its ID. Zone 0 is the default zone
+// by its ID too; neither can be reset or deleted; dynamic strings are
+// the string zone's blocks, not the default zone's.
+func TestLibSystemZones(t *testing.T) {
+	env := pageFixture(t)
+
+	def, str := env.DefaultZoneID(), env.StringZoneID()
+	if def == 0 || str <= def || longword(t, env, def) != def || longword(t, env, str) != str {
+		t.Fatalf("default zone %#x, string zone %#x; want two IDs, in order, each its control block's mark", def, str)
+	}
+
+	for _, c := range []struct {
+		id   uint32
+		name string
+	}{{0, "DEFAULT_ZONE"}, {def, "DEFAULT_ZONE"}, {str, "STRING_ZONE"}} {
+		if s, ok := env.ZoneSettingsOf(c.id); !ok || s.Name != c.name || s.BlockSize != 8 || s.ExtendPages != 128 || !s.ExtendArea {
+			t.Errorf("zone %#x: %+v, %v; want %s, Table 5-3's attributes", c.id, s, ok, c.name)
+		}
+	}
+
+	// The default zone's own ID and 0 name one zone.
+	a := mustGetVM(t, env, 40, def)
+	if r0 := freeVM(t, env, 40, a, 0); r0 != ssNormal {
+		t.Errorf("a block of zone %#x freed in zone 0 = %#x, want SS$_NORMAL", def, r0)
+	}
+
+	for _, routine := range []string{"LIB$RESET_VM_ZONE", "LIB$DELETE_VM_ZONE"} {
+		for _, id := range []uint32{0, def, str} {
+			putLongword(t, env, vmZoneCell, id)
+
+			if r0 := call(t, env, routine, vmZoneCell); r0 != libBadBlockAddress {
+				t.Errorf("%s of zone %#x = %#x, want LIB$_BADBLOADR", routine, id, r0)
+			}
+		}
+	}
+
+	// A dynamic string's text is in the string zone.
+	putDesc(t, env, dynDesc, 0, dscClassD, 0)
+	putLongword(t, env, dynDesc+16, 30)
+	call(t, env, "LIB$SGET1_DD", dynDesc+16, dynDesc)
+
+	_, _, text := descriptorAt(t, env, dynDesc)
+
+	if _, ok := env.StringSize(text); !ok {
+		t.Fatalf("the dynamic string's text at %#x isn't a string zone block", text)
+	}
+
+	if _, ok := env.BlockSize(text); ok {
+		t.Errorf("the dynamic string's text at %#x is a default zone block", text)
+	}
+
+	if r0 := freeVM(t, env, 30, text, 0); r0 != libBadBlockAddress {
+		t.Errorf("the text freed in the default zone = %#x, want LIB$_BADBLOADR", r0)
+	}
+
+	if got := call(t, env, "LIB$SFREE1_DD", dynDesc); got != ssNormal {
+		t.Errorf("LIB$SFREE1_DD = %#x, want SS$_NORMAL", got)
+	}
+
+	// A block from LIB$GET_VM isn't a dynamic string's to free.
+	b := mustGetVM(t, env, 16, 0)
+	putDesc(t, env, dynDesc, 16, dscClassD, b)
+
+	if got := call(t, env, "LIB$SFREE1_DD", dynDesc); got != strErrFreDyn {
+		t.Errorf("LIB$SFREE1_DD of a LIB$GET_VM block = %#x, want STR$_ERRFREDYN", got)
 	}
 }
 

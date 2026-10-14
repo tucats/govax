@@ -135,15 +135,17 @@ type Environment struct {
 	// VMS, so ImageRundown forgets it.
 	imageData map[any]any
 
-	// heapZone and heapPages are the image's heap and the page pool it
-	// takes P0 pages from, which LIB$GET_VM_PAGE shares (memory.go),
-	// each made at its first use.
-	heapZone  *vmheap.Zone
-	heapPages *vmheap.PagePool
+	// heapPages is the image's page pool, which LIB$GET_VM_PAGE and
+	// the zones take P0 pages from (memory.go), and defaultHeap and
+	// stringHeap the zones the RTL makes for itself, the default zone
+	// and the string zone (vmzone.go), each made at its first use.
+	heapPages   *vmheap.PagePool
+	defaultHeap *heapZone
+	stringHeap  *heapZone
 
-	// zones are the image's zones LIB$CREATE_VM_ZONE made, by zone ID,
-	// and zoneControl the private zone their control blocks are in
-	// (vmzone.go).
+	// zones are the image's zones by zone ID (the two above and those
+	// LIB$CREATE_VM_ZONE made), and zoneControl the private zone their
+	// control blocks are in (vmzone.go).
 	zones       map[uint32]*heapZone
 	zoneControl *vmheap.Zone
 

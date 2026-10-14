@@ -1,6 +1,6 @@
 # Phase 59 — LIB$ virtual memory zones
 
-**Status:** in progress (subtasks 1 to 4 done 2026-10-14).
+**Status:** in progress (subtasks 1 to 5 done 2026-10-14).
 Needs Phases 53, 54, and 58 (callbacks, for user-defined zones). Part
 of the LIB$ program laid out in `PHASE-53 - RTL LIB support.md` (Part
 A).
@@ -668,7 +668,7 @@ VERIFY), and `vmmalloc.go`. `dynstr.go` allocates in the string zone.
    quick fit, frequent sizes, fixed size; tags and fills. **Done**
    2026-10-14.
 5. **The default and string zones**, dynamic strings and DECC$MALLOC
-   moved onto them.
+   moved onto them. **Done** 2026-10-14.
 6. **User zones**: CREATE_USER_VM_ZONE (tail calls), and get-page and
    free-page routines (callbacks).
 7. **Statistics**: SHOW_VM, STAT_VM.
@@ -811,3 +811,33 @@ VERIFY), and `vmmalloc.go`. `dynstr.go` allocates in the string zone.
   program that makes a fixed-size zone with a fill and runs it through
   every routine. Dynamic strings and DECC$MALLOC still use the default
   zone directly (subtask 5).
+- **2026-10-14** — Subtask 5, the default and string zones. The RTL's
+  two zones are now zones like the program's (`corevms/vmzone.go`,
+  `makeZone`, shared with `CreateZone`): each has a control block from
+  the control zone, whose address is its ID and which holds the ID, and
+  an entry in `Environment.zones`, marked `system`. `systemZones` makes
+  both at the image's first allocation, the default zone first, so their
+  IDs (and LIB$FIND_VM_ZONE's order, subtask 9) are default, then
+  string. The default zone (`defaultZone`, now `ZoneSettings`) is named
+  DEFAULT_ZONE, as the manual's LIB$FIND_VM_ZONE example shows; the
+  string zone has the default zone's attributes and the name
+  STRING_ZONE (both **unconfirmed**, probe cases). Zone 0 and the default
+  zone's own ID name the same zone; LIB$RESET_VM_ZONE and
+  LIB$DELETE_VM_ZONE of either system zone are LIB$_BADBLOADR (the
+  string zone's by govax's choice, **unconfirmed**). `Environment`'s
+  `heapZone` field is gone: `defaultHeap` and `stringHeap` replace it.
+  DECC$MALLOC/FREE and the RTL's own blocks (`AllocateVM`, `FreeVM`,
+  `BlockSize`) use the default zone; dynamic strings
+  (`librtl/dynstr.go`) the string zone, through `AllocateString`,
+  `FreeString`, and `StringSize`. So LIB$SFREE1_DD of a block from
+  LIB$GET_VM is STR$_ERRFREDYN, and LIB$FREE_VM of a dynamic string's
+  text in zone 0 LIB$_BADBLOADR (VMS's answers presumably; probe cases).
+  `DefaultZoneID` and `StringZoneID` are for the tests now and
+  LIB$FIND_VM_ZONE later. Blocks moved again: the control blocks' page
+  comes first, so the default zone's first block is a page later (three
+  govax tests pinned it: 0x4040 is now 0x4240); no oracle moved. Tests:
+  `TestLibSystemZones` (the IDs and their order, the names and
+  attributes, zone 0 as the default zone's ID, RESET and DELETE refused,
+  a dynamic string's text in the string zone and not freeable in the
+  default zone, a LIB$GET_VM block not freeable as a dynamic string);
+  corevms's heap tests check every zone and the pool.
