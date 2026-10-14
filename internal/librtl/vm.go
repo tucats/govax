@@ -11,7 +11,8 @@ import (
 // (corevms's ZoneAllocate and ZoneFree; LIB$CREATE_VM_ZONE is vmzone.go),
 // or from the default zone, the image's heap, for zone ID 0 or none. For
 // a user-defined zone each calls the program's routine instead
-// (vmuser.go).
+// (vmuser.go). Their successful calls are counted for LIB$STAT_VM and
+// LIB$SHOW_VM (vmstat.go).
 
 // Statuses the virtual-memory routines, and others, return.
 var (
@@ -71,6 +72,8 @@ func libGetVM(env *corevms.Environment, argv []uint32) (uint32, error) {
 
 		return memoryFault(env, writing(err))
 	}
+
+	heapStats(env).noteGet(addr, size)
 
 	return ssNormal, nil
 }
@@ -133,6 +136,8 @@ func libFreeVM(env *corevms.Environment, argv []uint32) (uint32, error) {
 	if err := env.ZoneFree(zone, addr, size, sized); err != nil {
 		return vmFailure(env, err)
 	}
+
+	heapStats(env).noteFree(addr, size, sized)
 
 	return ssNormal, nil
 }

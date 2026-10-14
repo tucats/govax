@@ -371,6 +371,9 @@ expect adjustment as phases land):
   on a goroutine when it finds it must call back); user-defined zones
   (`CreateUserZone`, `librtl/vmuser.go`'s LIB$CREATE_USER_VM_ZONE) are a
   control block whose routines the heap routines tail-call.
+  Subtask 7: LIB$STAT_VM and LIB$SHOW_VM (`librtl/vmstat.go`): the
+  heap's counts per image in librtl, the pages' the pool's own
+  (`PagePool.Calls`, `Environment.PageStatistics`).
 - `internal/console` — the front end (Phase 08; since Phase 52 only
   that): a `Console` embeds a `*machine.Machine` and a
   `*dclshell.Interpreter`, and its `Dispatcher` routes each line to the

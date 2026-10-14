@@ -130,6 +130,22 @@ func (env *Environment) FreeVMPages(n, addr uint32) error {
 	return env.pagePool().Free(n, addr)
 }
 
+// PageStatistics returns LIB$STAT_VM's page figures for the image's page
+// pool: the requests for pages it has satisfied, the frees it has taken,
+// and the pages allocated now. A zone's areas count with the program's
+// pages, since a zone without page routines of its own takes them as
+// LIB$GET_VM_PAGE does (vmheap.PagePool's Calls). All are 0 before the
+// image's first use of the pool.
+func (env *Environment) PageStatistics() (gets, frees, pages uint32) {
+	if env.heapPages == nil {
+		return 0, 0, 0
+	}
+
+	gets, frees = env.heapPages.Calls()
+
+	return gets, frees, env.heapPages.AllocatedPages()
+}
+
 // BlockSize returns the size of the default zone's block that starts at
 // addr, as allocated (rounded up from what was asked for), and whether a
 // block starts there.

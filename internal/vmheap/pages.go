@@ -33,11 +33,17 @@ const maxPages = 0x40000000 / PageSize
 // (Lend). Free refuses them: a zone's pages go back with the zone, so a
 // program's LIB$FREE_VM_PAGE of them can't hand them out a second time
 // while the zone's blocks are in them.
+//
+// The pool also counts its successful requests (Calls), for LIB$STAT_VM
+// and LIB$SHOW_VM: allocations (Allocate, and Lend, a zone's) and frees
+// (Free, and Reclaim, a zone's).
 type PagePool struct {
 	region Region
 	owned  []span
 	free   []span
 	held   []span
+	gets   uint32
+	frees  uint32
 }
 
 // NewPagePool returns an empty pool that takes its pages from region.
@@ -59,6 +65,8 @@ func (p *PagePool) Allocate(n uint32) (uint32, error) {
 	}
 
 	if addr, ok := p.take(n); ok {
+		p.gets++
+
 		return addr, nil
 	}
 
@@ -67,6 +75,7 @@ func (p *PagePool) Allocate(n uint32) (uint32, error) {
 	}
 
 	addr, _ := p.take(n)
+	p.gets++
 
 	return addr, nil
 }
@@ -169,6 +178,7 @@ func (p *PagePool) Free(n, addr uint32) error {
 	}
 
 	p.free = insertSpan(p.free, s)
+	p.frees++
 
 	return nil
 }
@@ -186,8 +196,22 @@ func (p *PagePool) Reclaim(addr, n uint32) error {
 
 	p.held = removeSpan(p.held, s)
 	p.free = insertSpan(p.free, s)
+	p.frees++
 
 	return nil
+}
+
+// Calls is how many requests for pages the pool has satisfied (gets:
+// Allocate and Lend) and how many frees it has taken (Free and
+// Reclaim). Refused requests aren't counted.
+func (p *PagePool) Calls() (gets, frees uint32) {
+	return p.gets, p.frees
+}
+
+// AllocatedPages is how many of the pool's pages are allocated, held by
+// zones or not: those it owns that aren't free.
+func (p *PagePool) AllocatedPages() uint32 {
+	return p.OwnedPages() - p.FreePages()
 }
 
 // OwnedPages is how many pages the region has given the pool.

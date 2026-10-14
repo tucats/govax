@@ -1,6 +1,6 @@
 # Phase 59 — LIB$ virtual memory zones
 
-**Status:** in progress (subtasks 1 to 6 done 2026-10-14).
+**Status:** in progress (subtasks 1 to 7 done 2026-10-14).
 Needs Phases 53, 54, and 58 (callbacks, for user-defined zones). Part
 of the LIB$ program laid out in `PHASE-53 - RTL LIB support.md` (Part
 A).
@@ -671,7 +671,7 @@ VERIFY), and `vmmalloc.go`. `dynstr.go` allocates in the string zone.
    moved onto them. **Done** 2026-10-14.
 6. **User zones**: CREATE_USER_VM_ZONE (tail calls), and get-page and
    free-page routines (callbacks). **Done** 2026-10-14.
-7. **Statistics**: SHOW_VM, STAT_VM.
+7. **Statistics**: SHOW_VM, STAT_VM. **Done** 2026-10-14.
 8. **The C library's routines** (if settled).
 9. **LIBRTL2's zone routines**: FIND_VM_ZONE, SHOW_VM_ZONE,
    VERIFY_VM_ZONE (offsets known).
@@ -897,3 +897,36 @@ VERIFY), and `vmmalloc.go`. `dynstr.go` allocates in the string zone.
   them to LIB$GET_VM_PAGE and LIB$FREE_VM_PAGE (the initial area, a new
   area, a failing routine's status returned, both areas given back).
   Swapping get-page and free-page's places fails the last.
+- **2026-10-14** — Subtask 7, the statistics. LIB$STAT_VM and
+  LIB$SHOW_VM (`librtl/vmstat.go`, codes 176 and 177). The heap's
+  figures (codes 1 to 3) are kept per image in librtl (`vmStats`,
+  `ImageData`), counted as LIB$GET_VM and LIB$FREE_VM succeed: the bytes
+  are those asked for, and a LIB$FREE_VM takes off its size or, omitted,
+  the size its LIB$GET_VM asked (each block's kept by address). The
+  pages' (5 to 7) are the page pool's own (`vmheap.PagePool.Calls`,
+  `AllocatedPages`; `corevms.Environment.PageStatistics`), so a zone's
+  areas count with the program's pages, a zone without page routines
+  taking its pages as LIB$GET_VM_PAGE does. By govax's choices
+  (**unconfirmed**, probe cases): only successful calls count, for 5 and
+  6 too; every zone's calls count but a user zone's (whose routine's
+  status the shim doesn't see) and not the RTL's own blocks (dynamic
+  strings, contexts, DECC$MALLOC); blocks LIB$RESET_VM_ZONE or
+  LIB$DELETE_VM_ZONE free stay in code 3 ("not yet deallocated by
+  LIB$FREE_VM"); a lookaside double free (SS$_NORMAL) counts. STAT_VM:
+  codes 1 to 3 and 5 to 7, LIB$_INVARG for an omitted code, 0, 4, or any
+  other, nothing written. SHOW_VM: code 0 (or omitted) is the manual's
+  line, ` mmm calls to LIB$GET_VM, nnn calls to LIB$FREE_VM, ppp bytes
+  still allocated`; code 4 the same form for the page routines (` ...
+  calls to LIB$GET_VM_PAGE, ... calls to LIB$FREE_VM_PAGE, ... pages
+  still allocated`), and each single code its part of those lines,
+  numbers unpadded (govax's wording, **unconfirmed**); to SYS$OUTPUT, or
+  to an action routine as a tail call with a class S descriptor and the
+  user argument (0 when omitted), as LIB$SHOW_TIMER does (`callAction`),
+  whose status is SHOW_VM's. Tests: vmheap's `TestPagesCalls` (refused
+  requests uncounted, a zone's Lend and Reclaim counted); librtl's
+  `TestLibStatVM` (each figure through GET, FREE with and without a
+  size, failures, pages, a zone's area, RESET and DELETE, a user zone,
+  image rundown), `TestLibStatVMBadCodes`, `TestLibShowVM` (every
+  code's line, INVARG writing nothing), `TestLibShowVMAction`; and
+  `TestLibrtlVMStatistics`, a linked program that reads the bytes still
+  allocated and shows the line both ways.

@@ -285,6 +285,52 @@ func TestPagesRegionMovedByOthers(t *testing.T) {
 	mustCheck(t, p)
 }
 
+// TestPagesCalls: the pool counts the requests it satisfies, a zone's
+// (Lend, Reclaim) among them, and not the ones it refuses; AllocatedPages
+// counts a zone's pages with the rest.
+func TestPagesCalls(t *testing.T) {
+	r := &fakeRegion{next: 0x10000, limit: 0x10000 + 8*PageSize}
+	p := NewPagePool(r)
+
+	want := func(gets, frees, pages uint32) {
+		t.Helper()
+
+		if g, f := p.Calls(); g != gets || f != frees || p.AllocatedPages() != pages {
+			t.Errorf("Calls() = %d, %d, %d pages allocated; want %d, %d, %d",
+				g, f, p.AllocatedPages(), gets, frees, pages)
+		}
+	}
+
+	a, _ := p.Allocate(3)
+	want(1, 0, 3)
+
+	_, _ = p.Allocate(0)
+	_, _ = p.Allocate(9)
+	_ = p.Free(1, a+5*PageSize)
+	want(1, 0, 3)
+
+	_ = p.Free(1, a+PageSize)
+	want(1, 1, 2)
+
+	z, err := NewZone(p, Attributes{BlockSize: 8, Alignment: 8, ExtendPages: 2})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if _, err := z.Allocate(16); err != nil {
+		t.Fatal(err)
+	}
+
+	want(2, 1, 4)
+
+	if _, err := z.Delete(); err != nil {
+		t.Fatal(err)
+	}
+
+	want(2, 2, 2)
+	mustCheck(t, p)
+}
+
 func TestPagesNoMemory(t *testing.T) {
 	r := &fakeRegion{next: 0x10000, limit: 0x10000 + 4*PageSize}
 	p := NewPagePool(r)
