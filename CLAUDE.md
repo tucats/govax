@@ -364,6 +364,13 @@ expect adjustment as phases land):
   a zone ID is its control block's address, the state in Go; fills and
   tags written there), and `librtl`'s LIB$CREATE_VM_ZONE (`vmzone.go`),
   RESET_VM_ZONE, and GET_VM/FREE_VM/DELETE_VM_ZONE (`vm.go`) use them.
+  Subtask 6: a zone's areas come from a `Pages` (`PagePool`, or
+  `Borrowed`, over a program's get-page and free-page routines,
+  `corevms/pageroutines.go`, called back through
+  `Environment.RunCallingBack`, which a plain shim uses to rerun itself
+  on a goroutine when it finds it must call back); user-defined zones
+  (`CreateUserZone`, `librtl/vmuser.go`'s LIB$CREATE_USER_VM_ZONE) are a
+  control block whose routines the heap routines tail-call.
 - `internal/console` — the front end (Phase 08; since Phase 52 only
   that): a `Console` embeds a `*machine.Machine` and a
   `*dclshell.Interpreter`, and its `Dispatcher` routes each line to the

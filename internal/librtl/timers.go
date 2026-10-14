@@ -441,16 +441,23 @@ func libShowTimer(env *corevms.Environment, argv []uint32) (uint32, error) {
 // (see libShowTimer), with the argument list (2, a class S descriptor of
 // line, value), laid out below SP with the descriptor and the text.
 func callAction(env *corevms.Environment, action uint32, line string, value uint32) (uint32, error) {
-	mem, cpu := env.Memory(), env.CPU()
-
 	desc, err := stackString(env, line)
 	if err != nil {
 		return memoryFault(env, writing(err))
 	}
 
-	argList := cpu.GPR(registers.SP) - 12
+	return tailCall(env, action, desc, value)
+}
 
-	for i, v := range []uint32{2, desc, value} {
+// tailCall calls the procedure at routine as the shim's tail call (see
+// libShowTimer), with args as its argument list, which it lays out below
+// SP: the procedure's R0 is the shim's status.
+func tailCall(env *corevms.Environment, routine uint32, args ...uint32) (uint32, error) {
+	mem, cpu := env.Memory(), env.CPU()
+
+	argList := cpu.GPR(registers.SP) - 4*uint32(len(args)+1)
+
+	for i, v := range append([]uint32{uint32(len(args))}, args...) {
 		if err := mem.StoreLongword(cpu, argList+uint32(4*i), v); err != nil {
 			return memoryFault(env, writing(err))
 		}
@@ -458,5 +465,5 @@ func callAction(env *corevms.Environment, action uint32, line string, value uint
 
 	cpu.SetGPR(registers.SP, argList)
 
-	return 0, &corevms.CallRequest{Routine: action, ArgList: argList, Tail: true}
+	return 0, &corevms.CallRequest{Routine: routine, ArgList: argList, Tail: true}
 }

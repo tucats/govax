@@ -242,6 +242,7 @@ var Routines = []Routine{
 	{"LIB$FREE_VM_PAGE", 172, libFreeVMPage},
 	{"LIB$CREATE_VM_ZONE", 173, libCreateVMZone},
 	{"LIB$RESET_VM_ZONE", 174, libResetVMZone},
+	{"LIB$CREATE_USER_VM_ZONE", 175, libCreateUserVMZone},
 }
 
 // callsBack names the routines that call back into the program (a

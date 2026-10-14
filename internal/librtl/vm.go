@@ -9,7 +9,9 @@ import (
 // that empty and remove a zone, LIB$RESET_VM_ZONE and LIB$DELETE_VM_ZONE
 // (5.0 LIB$ manual, chapter 5). Blocks come from the zone a zone ID names
 // (corevms's ZoneAllocate and ZoneFree; LIB$CREATE_VM_ZONE is vmzone.go),
-// or from the default zone, the image's heap, for zone ID 0 or none.
+// or from the default zone, the image's heap, for zone ID 0 or none. For
+// a user-defined zone each calls the program's routine instead
+// (vmuser.go).
 
 // Statuses the virtual-memory routines, and others, return.
 var (
@@ -48,6 +50,16 @@ func libGetVM(env *corevms.Environment, argv []uint32) (uint32, error) {
 		return libBadBlockSize, nil
 	}
 
+	if u, argAddr, ok := env.UserZoneOf(zone); ok {
+		return userRoutine(env, u.Allocate, arg(argv, 0), arg(argv, 1), argAddr)
+	}
+
+	// A zone with page routines of the program's may call its get-page
+	// routine for a new area: that needs a goroutine of the routine's own.
+	if env.ZoneCallsBack(zone) && !env.CallingBack() {
+		return env.RunCallingBack("LIB$GET_VM", libGetVM, argv)
+	}
+
 	addr, err := env.ZoneAllocate(zone, size)
 	if err != nil {
 		return vmFailure(env, err)
@@ -81,6 +93,12 @@ func libGetVM(env *corevms.Environment, argv []uint32) (uint32, error) {
 // program changed (the VSI manual's status; unconfirmed for VMS 7.3).
 // A block freed again while it waits on a lookaside list is SS$_NORMAL,
 // as the manual's chapter 6 says, but leaves the zone as it was.
+//
+// For a user-defined zone, LIB$GET_VM and LIB$FREE_VM call the zone's
+// allocation or deallocation routine with number-of-bytes and
+// base-address as they were given (number-of-bytes 0, omitted, when
+// LIB$FREE_VM's was) and the zone's user argument, and return its
+// status; a size of 0 or less is LIB$_BADBLOSIZ first (unconfirmed).
 func libFreeVM(env *corevms.Environment, argv []uint32) (uint32, error) {
 	mem, cpu := env.Memory(), env.CPU()
 
@@ -108,6 +126,10 @@ func libFreeVM(env *corevms.Environment, argv []uint32) (uint32, error) {
 		return libBadBlockSize, nil
 	}
 
+	if u, argAddr, ok := env.UserZoneOf(zone); ok {
+		return userRoutine(env, u.Free, arg(argv, 0), arg(argv, 1), argAddr)
+	}
+
 	if err := env.ZoneFree(zone, addr, size, sized); err != nil {
 		return vmFailure(env, err)
 	}
@@ -123,9 +145,30 @@ func libFreeVM(env *corevms.Environment, argv []uint32) (uint32, error) {
 // are freed (and filled if the zone says so) and its pages go back to
 // the processwide page pool. An ID that names no zone, and the default
 // zone's, 0, are LIB$_BADBLOADR (the manual's status for an invalid ID;
-// for zone 0 it says only "an error status", section 5.3.3).
+// for zone 0 it says only "an error status", section 5.3.3). A zone with
+// a free-page routine of the program's calls it for each area, and a
+// failure status it returns is LIB$DELETE_VM_ZONE's, the zone deleted
+// all the same. A user-defined zone is forgotten and its delete
+// routine called (deleteUserZone).
 func libDeleteVMZone(env *corevms.Environment, argv []uint32) (uint32, error) {
-	return zoneOperation(env, argv, env.DeleteZone)
+	zone, err := env.Memory().LoadLongword(env.CPU(), arg(argv, 0))
+	if err != nil {
+		return memoryFault(env, err)
+	}
+
+	if u, argAddr, ok := env.UserZoneOf(zone); ok {
+		return deleteUserZone(env, zone, u, argAddr)
+	}
+
+	if env.ZoneCallsBack(zone) && !env.CallingBack() {
+		return env.RunCallingBack("LIB$DELETE_VM_ZONE", libDeleteVMZone, argv)
+	}
+
+	if err := env.DeleteZone(zone); err != nil {
+		return vmFailure(env, err)
+	}
+
+	return ssNormal, nil
 }
 
 // libResetVMZone is LIB$RESET_VM_ZONE:
@@ -135,20 +178,19 @@ func libDeleteVMZone(env *corevms.Environment, argv []uint32) (uint32, error) {
 // It frees every block of the zone whose ID is the longword at zone-id
 // (filling them if the zone says so), keeping its pages: "the memory is
 // not returned to the processwide page pool". Its statuses are
-// LIB$DELETE_VM_ZONE's.
+// LIB$DELETE_VM_ZONE's. For a user-defined zone it calls the zone's
+// reset routine with the zone's user argument and returns its status.
 func libResetVMZone(env *corevms.Environment, argv []uint32) (uint32, error) {
-	return zoneOperation(env, argv, env.ResetZone)
-}
-
-// zoneOperation reads the zone ID at argv's first argument and applies
-// op to it.
-func zoneOperation(env *corevms.Environment, argv []uint32, op func(uint32) error) (uint32, error) {
 	zone, err := env.Memory().LoadLongword(env.CPU(), arg(argv, 0))
 	if err != nil {
 		return memoryFault(env, err)
 	}
 
-	if err := op(zone); err != nil {
+	if u, argAddr, ok := env.UserZoneOf(zone); ok {
+		return userRoutine(env, u.Reset, argAddr)
+	}
+
+	if err := env.ResetZone(zone); err != nil {
 		return vmFailure(env, err)
 	}
 

@@ -38,24 +38,51 @@ const (
 )
 
 // ZoneSettings are a zone's attributes as LIB$CREATE_VM_ZONE gives
-// them: the allocator's, the fills, and the zone's name.
+// them: the allocator's, the fills, the zone's name, and the program's
+// page routines.
+//
+// GetPage and FreePage are the entry masks' addresses of the get-page
+// and free-page routines (0: LIB$GET_VM_PAGE's and LIB$FREE_VM_PAGE's
+// code, the image's page pool), each called as those routines are
+// (number-of-pages and base-address by reference) for the zone's areas:
+// when it needs one, and for each when it's deleted (pageroutines.go).
 type ZoneSettings struct {
 	vmheap.Attributes
 
 	GetFill, FreeFill Fill
 	Name              string
+	GetPage, FreePage uint32
+}
+
+// UserZone is a user-defined zone's settings, as
+// LIB$CREATE_USER_VM_ZONE gives them: the user argument's value, the
+// entry masks' addresses of the program's routines that LIB$GET_VM,
+// LIB$FREE_VM, LIB$RESET_VM_ZONE, and LIB$DELETE_VM_ZONE call instead of
+// doing the work themselves (0 for a routine not given), and the zone's
+// name.
+type UserZone struct {
+	Argument                      uint32
+	Allocate, Free, Reset, Delete uint32
+	Name                          string
 }
 
 // heapZone is one zone of the image: its allocator, its settings, and
 // its ID. A system zone is one the RTL made for itself (the default zone
 // and the string zone), which the program can use but not reset or
-// delete.
+// delete. A user-defined zone has user and no allocator: its blocks are
+// the program's business.
 type heapZone struct {
 	id       uint32
 	zone     *vmheap.Zone
 	settings ZoneSettings
 	system   bool
+	user     *UserZone
 }
+
+// userArgument is the offset in a user-defined zone's control block of
+// the longword holding its user argument, which the program's routines
+// are given by reference.
+const userArgument = 4
 
 var (
 	// ErrBadZone is a zone ID that names no zone of the image, or names
@@ -65,6 +92,10 @@ var (
 	// ErrBadTag is a block whose boundary tags the program changed
 	// (LIB$_BADTAGVAL).
 	ErrBadTag = errors.New("corevms: a block's boundary tag was changed")
+
+	// ErrUserZone is a user-defined zone's ID given to an operation the
+	// RTL does itself: the zone's own routine does it (UserZoneOf).
+	ErrUserZone = errors.New("corevms: a user-defined zone's operation")
 )
 
 // controlZone is the zone the image's zones' control blocks are in,
@@ -85,41 +116,121 @@ func (env *Environment) CreateZone(s ZoneSettings) (uint32, error) {
 }
 
 // makeZone makes a zone with settings s, its control block, and its
-// entry in env.zones.
+// entry in env.zones. A zone with page routines of the program's calls
+// its get-page routine here for an initial area, so it must be made by
+// a routine that may call back (CallingBack).
 func (env *Environment) makeZone(s ZoneSettings, system bool) (*heapZone, error) {
-	zone, err := vmheap.NewZone(env.pagePool(), s.Attributes)
+	zone, err := vmheap.NewZone(env.zonePages(s), s.Attributes)
 	if err != nil {
 		return nil, err
 	}
 
-	if env.zoneControl == nil {
-		if env.zoneControl, err = vmheap.NewZone(env.pagePool(), controlZone); err != nil {
-			panic(err) // controlZone's attributes are valid
-		}
-	}
-
-	id, err := env.zoneControl.Allocate(ZoneControlSize)
-	if err == nil {
-		err = env.mem.StoreLongword(env.cpu, id, id)
-		if err != nil {
-			_, _ = env.zoneControl.Free(id)
-		}
-	}
-
+	id, err := env.controlBlock()
 	if err != nil {
-		zone.Delete()
+		_, _ = zone.Delete()
 
 		return nil, err
-	}
-
-	if env.zones == nil {
-		env.zones = map[uint32]*heapZone{}
 	}
 
 	z := &heapZone{id: id, zone: zone, settings: s, system: system}
 	env.zones[id] = z
 
 	return z, nil
+}
+
+// controlBlock allocates a zone's control block, whose address is the
+// zone's ID, and writes the ID in its first longword.
+func (env *Environment) controlBlock() (uint32, error) {
+	if env.zoneControl == nil {
+		var err error
+		if env.zoneControl, err = vmheap.NewZone(env.pagePool(), controlZone); err != nil {
+			panic(err) // controlZone's attributes are valid
+		}
+	}
+
+	id, err := env.zoneControl.Allocate(ZoneControlSize)
+	if err != nil {
+		return 0, err
+	}
+
+	if err := env.mem.StoreLongword(env.cpu, id, id); err != nil {
+		_, _ = env.zoneControl.Free(id)
+
+		return 0, err
+	}
+
+	if env.zones == nil {
+		env.zones = map[uint32]*heapZone{}
+	}
+
+	return id, nil
+}
+
+// dropControlBlock frees a zone's control block, clearing its mark so
+// the ID is invalid afterwards (until another zone's control block is
+// put there).
+func (env *Environment) dropControlBlock(id uint32) {
+	delete(env.zones, id)
+	_ = env.mem.StoreLongword(env.cpu, id, 0)
+	_, _ = env.zoneControl.Free(id)
+}
+
+// CreateUserZone makes a user-defined zone (LIB$CREATE_USER_VM_ZONE)
+// and returns its ID. Its control block holds the ID and, after it, the
+// user argument (UserZoneOf). The error is vmheap.ErrNoMemory when P0
+// has no room for the control block.
+func (env *Environment) CreateUserZone(u UserZone) (uint32, error) {
+	id, err := env.controlBlock()
+	if err != nil {
+		return 0, err
+	}
+
+	if err := env.mem.StoreLongword(env.cpu, id+userArgument, u.Argument); err != nil {
+		env.dropControlBlock(id)
+
+		return 0, err
+	}
+
+	env.zones[id] = &heapZone{id: id, user: &u, settings: ZoneSettings{Name: u.Name}}
+
+	return id, nil
+}
+
+// UserZoneOf returns the settings of the user-defined zone id names, the
+// address of the longword in its control block that holds its user
+// argument (passed to its routines by reference), and whether id names
+// a user-defined zone.
+func (env *Environment) UserZoneOf(id uint32) (UserZone, uint32, bool) {
+	z, ok := env.zones[id]
+	if !ok || z.user == nil {
+		return UserZone{}, 0, false
+	}
+
+	return *z.user, id + userArgument, true
+}
+
+// DeleteUserZone forgets the user-defined zone id names, freeing its
+// control block, for LIB$DELETE_VM_ZONE, which then calls the zone's
+// delete routine. The error is ErrBadZone when id names no user-defined
+// zone.
+func (env *Environment) DeleteUserZone(id uint32) error {
+	if _, _, ok := env.UserZoneOf(id); !ok {
+		return ErrBadZone
+	}
+
+	env.dropControlBlock(id)
+
+	return nil
+}
+
+// ZoneCallsBack reports whether an allocation from the zone id names,
+// or its deletion, may call the program's page routines (ZoneSettings'
+// GetPage and FreePage): the routine doing it must be able to call back
+// (CallingBack).
+func (env *Environment) ZoneCallsBack(id uint32) bool {
+	z, ok := env.zones[id]
+
+	return ok && z.zone != nil && (z.settings.GetPage != 0 || z.settings.FreePage != 0)
 }
 
 // systemZones makes the RTL's two zones, the default zone and then the
@@ -138,9 +249,8 @@ func (env *Environment) systemZones() error {
 
 	s, err := env.makeZone(stringZone, true)
 	if err != nil {
-		d.zone.Delete()
-		delete(env.zones, d.id)
-		_, _ = env.zoneControl.Free(d.id)
+		_, _ = d.zone.Delete()
+		env.dropControlBlock(d.id)
 
 		return err
 	}
@@ -179,8 +289,12 @@ func (env *Environment) zoneFor(id uint32) (*heapZone, error) {
 	}
 
 	z, ok := env.zones[id]
-	if !ok {
+
+	switch {
+	case !ok:
 		return nil, ErrBadZone
+	case z.user != nil:
+		return nil, ErrUserZone
 	}
 
 	return z, nil
@@ -192,8 +306,12 @@ func (env *Environment) zoneFor(id uint32) (*heapZone, error) {
 // (unconfirmed).
 func (env *Environment) madeZone(id uint32) (*heapZone, error) {
 	z, ok := env.zones[id]
-	if !ok || z.system {
+
+	switch {
+	case !ok || z.system:
 		return nil, ErrBadZone
+	case z.user != nil:
+		return nil, ErrUserZone
 	}
 
 	return z, nil
@@ -327,23 +445,28 @@ func (env *Environment) ResetZone(id uint32) error {
 }
 
 // DeleteZone frees every block of the zone id names, gives its pages
-// back to the page pool, and forgets it, for LIB$DELETE_VM_ZONE. Its
-// control block is freed, its mark cleared, so the ID is invalid
-// afterwards (until another zone's control block is put there). The
-// error is ErrBadZone for an ID that names no zone CreateZone made.
+// back to the page pool (or to the program's free-page routine), and
+// forgets it, for LIB$DELETE_VM_ZONE. Its control block is freed, its
+// mark cleared, so the ID is invalid afterwards (until another zone's
+// control block is put there). The error is ErrBadZone for an ID that
+// names no zone CreateZone made; the zone is gone after any other
+// (a fill that couldn't be written, or a PageRoutineFailure).
 func (env *Environment) DeleteZone(id uint32) error {
 	z, err := env.madeZone(id)
 	if err != nil {
 		return err
 	}
 
+	// The zone goes first, so that the program's free-page routine,
+	// called below, can't reach it.
+	env.dropControlBlock(id)
+
 	// The blocks are filled while the pages are still the zone's.
 	err = env.fillBlocks(z.zone.Reset(), z.settings.FreeFill)
-	z.zone.Delete()
 
-	delete(env.zones, id)
-	_ = env.mem.StoreLongword(env.cpu, id, 0)
-	_, _ = env.zoneControl.Free(id)
+	if _, perr := z.zone.Delete(); err == nil {
+		err = perr
+	}
 
 	return err
 }

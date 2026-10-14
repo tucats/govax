@@ -60,9 +60,9 @@ func checkList(name string, list []span) error {
 	return nil
 }
 
-// Check verifies the zone, and its pool (Pool.Check):
+// Check verifies the zone, and where its pages come from (Pages.Check):
 //
-//   - each area's pages are held in the pool, and no two areas overlap;
+//   - each area's pages are held for the zone, and no two areas overlap;
 //   - in each area, base <= first <= top <= end, and its free spans are
 //     sorted, apart, between first and top, none touching top;
 //   - every block's address (after its tag) is aligned, its size a
@@ -171,7 +171,7 @@ func (z *Zone) checkLists() error {
 
 // checkArea verifies one area's own bounds and free list.
 func (z *Zone) checkArea(a *area) error {
-	if !z.pages.isHeld(span{a.base, a.end}) {
+	if !z.pages.Holds(a.base, (a.end-a.base)/PageSize) {
 		return fmt.Errorf("vmheap: area %08X-%08X isn't held in the pool", a.base, a.end)
 	}
 

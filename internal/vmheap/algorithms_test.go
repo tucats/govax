@@ -265,7 +265,7 @@ func TestDelete(t *testing.T) {
 
 	a := mustAllocate(t, z, 3*PageSize)
 
-	if freed := z.Delete(); len(freed) != 1 || freed[0].Addr != a {
+	if freed, _ := z.Delete(); len(freed) != 1 || freed[0].Addr != a {
 		t.Errorf("Delete freed %+v, want the block at %X", freed, a)
 	}
 
@@ -275,7 +275,7 @@ func TestDelete(t *testing.T) {
 
 	mustCheck(t, p)
 
-	if err := p.Reclaim(span{0x10000, 0x10200}); !errors.Is(err, ErrBadAddress) {
+	if err := p.Reclaim(0x10000, 1); !errors.Is(err, ErrBadAddress) {
 		t.Errorf("Reclaim of free pages = %v, want ErrBadAddress", err)
 	}
 }
@@ -374,7 +374,7 @@ func TestAlgorithmsRandomWorkload(t *testing.T) {
 		}
 
 		mustCheck(t, z)
-		z.Delete()
+		_, _ = z.Delete()
 		mustCheck(t, p)
 
 		if p.HeldPages() != 0 {

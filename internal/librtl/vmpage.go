@@ -19,17 +19,26 @@ var (
 	libBadBlockSize = vmsdef.LibrarySymbols["LIB$_BADBLOSIZ"]
 	libPageLimit    = vmsdef.LibrarySymbols["LIB$_PAGLIMEXC"]
 	libBadTagValue  = vmsdef.LibrarySymbols["LIB$_BADTAGVAL"]
+	libInvOpeZon    = vmsdef.LibrarySymbols["LIB$_INVOPEZON"]
 )
 
 // vmFailure is the status for an error from the page pool, a zone, or
 // corevms's zone routines: LIB$_BADBLOSIZ for a bad size, LIB$_BADBLOADR
-// for a bad address or zone ID, LIB$_INSVIRMEM when there's no room,
-// LIB$_PAGLIMEXC past a zone's page limit, LIB$_BADTAGVAL for a changed
-// boundary tag, and LIB$_INVARG for a zone's bad attributes. Anything
+// for a bad address or zone ID (or pages a zone's get-page routine gave
+// that it can't use, by govax's choice: unconfirmed), LIB$_INSVIRMEM when
+// there's no room, LIB$_PAGLIMEXC past a zone's page limit,
+// LIB$_BADTAGVAL for a changed boundary tag, LIB$_INVARG for a zone's bad
+// attributes, and a zone's page routine's own failure status. Anything
 // else is a memory error (a fill or tag that couldn't be written), a
 // signaled access violation.
 func vmFailure(env *corevms.Environment, err error) (uint32, error) {
+	var failed *corevms.PageRoutineFailure
+
 	switch {
+	case errors.As(err, &failed):
+		return failed.Status, nil
+	case errors.Is(err, vmheap.ErrBadPages), errors.Is(err, corevms.ErrUserZone):
+		return libBadBlockAddress, nil
 	case errors.Is(err, vmheap.ErrBadSize):
 		return libBadBlockSize, nil
 	case errors.Is(err, vmheap.ErrBadAddress), errors.Is(err, corevms.ErrBadZone):

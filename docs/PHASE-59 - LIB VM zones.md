@@ -1,6 +1,6 @@
 # Phase 59 — LIB$ virtual memory zones
 
-**Status:** in progress (subtasks 1 to 5 done 2026-10-14).
+**Status:** in progress (subtasks 1 to 6 done 2026-10-14).
 Needs Phases 53, 54, and 58 (callbacks, for user-defined zones). Part
 of the LIB$ program laid out in `PHASE-53 - RTL LIB support.md` (Part
 A).
@@ -670,7 +670,7 @@ VERIFY), and `vmmalloc.go`. `dynstr.go` allocates in the string zone.
 5. **The default and string zones**, dynamic strings and DECC$MALLOC
    moved onto them. **Done** 2026-10-14.
 6. **User zones**: CREATE_USER_VM_ZONE (tail calls), and get-page and
-   free-page routines (callbacks).
+   free-page routines (callbacks). **Done** 2026-10-14.
 7. **Statistics**: SHOW_VM, STAT_VM.
 8. **The C library's routines** (if settled).
 9. **LIBRTL2's zone routines**: FIND_VM_ZONE, SHOW_VM_ZONE,
@@ -841,3 +841,59 @@ VERIFY), and `vmmalloc.go`. `dynstr.go` allocates in the string zone.
   a dynamic string's text in the string zone and not freeable in the
   default zone, a LIB$GET_VM block not freeable as a dynamic string);
   corevms's heap tests check every zone and the pool.
+- **2026-10-14** — Subtask 6, user zones and page routines.
+  LIB$CREATE_USER_VM_ZONE (`librtl/vmuser.go`, code 175) makes a zone
+  that is only a control block (`corevms.CreateUserZone`): the ID at
+  its start, then the copy of the user argument (`userArgument`,
+  offset 4), whose address its routines are given (`UserZoneOf`). For
+  such a zone LIB$GET_VM and LIB$FREE_VM end in a tail call of its
+  allocation or deallocation routine (`tailCall`, generalized from
+  SHOW_TIMER's `callAction`) with their own number-of-bytes and
+  base-address cells (FREE_VM's omitted size passed as omitted) and
+  the user argument; LIB$RESET_VM_ZONE with the user argument alone.
+  LIB$DELETE_VM_ZONE forgets the zone first, then calls its delete
+  routine with a copy of the user argument below SP, since the control
+  block is gone: so the manual's Example 5-1, which passes
+  LIB$DELETE_VM_ZONE itself as the delete routine, deletes the real
+  zone. A routine not given is LIB$_INVOPEZON, and a zone without a
+  delete routine stays. By govax's choices (**unconfirmed**): GET_VM
+  and FREE_VM check their size (LIB$_BADBLOSIZ) before calling, the
+  zone is gone whatever its delete routine returns, and the argument
+  addresses are as described. corevms's own zone operations refuse a
+  user zone (`ErrUserZone`).
+  Page routines: `internal/vmheap`'s zones now take their areas from a
+  `Pages` interface (`Lend`, `Reclaim`, `Holds`, `Check`), which
+  `PagePool` implements; `Borrowed` is a source over two Go functions,
+  keeping the pages lent (merged spans, so an area grown by EXTEND_AREA
+  goes back in one call) and refusing pages a zone can't use
+  (`ErrBadPages`: 0, unaligned, wrapping, or the zone's already).
+  `Zone.Delete` now returns the first error from giving an area back,
+  giving every area back regardless. corevms's `zonePages`
+  (`pageroutines.go`) makes a `Borrowed` whose functions call the
+  program's get-page and free-page routines (`callPageRoutine`: a page
+  count and base address below SP, then `Callback`); a failure status
+  is a `PageRoutineFailure`, whose status the RTL routine returns. A
+  routine not given is the pool's code (get-page alone: the pages go
+  to the pool's Free when the zone is deleted, which refuses ones that
+  aren't its own, silently; **unconfirmed**). As Decision 4 proposed,
+  a plain shim hands itself to the callback machinery only when it
+  needs to: `Environment.CallingBack` and `RunCallingBack` (an exported
+  `startShimCall`), used by LIB$CREATE_VM_ZONE when it's given a page
+  routine, and by LIB$GET_VM and LIB$DELETE_VM_ZONE of a zone that has
+  one (`ZoneCallsBack`); each reruns itself from the start on its own
+  goroutine, having changed nothing. LIB$CREATE_VM_ZONE reads get-page
+  and free-page from arguments 12 and 13 (the VSI manual's places), or
+  13 and 14 when the call has 14 arguments (the 5.0 manual's, after
+  number-of-areas) (**unconfirmed**, a probe case); pages a get-page
+  routine returns that a zone can't use are LIB$_BADBLOADR (govax's
+  choice). Tests: vmheap's `Borrowed` (areas from Get, one Put per
+  merged area, Get's and Put's failures, unusable pages); librtl's
+  tail calls of each user routine with their arguments, INVOPEZON for
+  each, the name and its bad descriptor; `TestLibrtlUserZone`, a linked
+  program running Example 5-1 end to end (the routines' calls counted,
+  a second free's BADBLOADR passed back, the real zone deleted through
+  the user zone's DELETE); and `TestLibrtlZonePageRoutines`, a zone
+  whose get-page and free-page routines count their calls and pass
+  them to LIB$GET_VM_PAGE and LIB$FREE_VM_PAGE (the initial area, a new
+  area, a failing routine's status returned, both areas given back).
+  Swapping get-page and free-page's places fails the last.

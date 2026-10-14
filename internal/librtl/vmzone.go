@@ -72,10 +72,18 @@ var errBadZoneArgument = errors.New("zone attribute out of range")
 // past the page limit. No room for the initial area is LIB$_INSVIRMEM.
 // After an error no zone is made.
 //
-// number-of-areas (the 5.0 manual's; nothing says what it does) is
-// ignored, and so, until user zones' page routines are done (Phase 59's
-// subtask 6), are get-page and free-page; which of arguments 12 to 14
-// VMS 7.3 reads them from is a probe question.
+// get-page and free-page are procedures (entry masks' addresses, by
+// value) the zone calls for its areas instead of LIB$GET_VM_PAGE and
+// LIB$FREE_VM_PAGE, with their arguments; 0 or omitted is those routines
+// (corevms's ZoneSettings). Where they are in the argument list the
+// manuals disagree: the 5.0 manual has number-of-areas twelfth (nothing
+// says what it does; ignored), get-page thirteenth, and free-page
+// fourteenth, and the VSI manual no number-of-areas, get-page twelfth and
+// free-page thirteenth. govax takes the 5.0 manual's places when the call
+// has 14 arguments and the VSI manual's otherwise (unconfirmed: which
+// VMS 7.3 has is a probe question). A zone with an initial size calls
+// its get-page routine here; a failure status it returns is
+// LIB$CREATE_VM_ZONE's.
 func libCreateVMZone(env *corevms.Environment, argv []uint32) (uint32, error) {
 	settings, err := zoneSettings(env, argv)
 
@@ -84,6 +92,17 @@ func libCreateVMZone(env *corevms.Environment, argv []uint32) (uint32, error) {
 		return libInvArg, nil
 	case err != nil:
 		return stringFailure(env, err)
+	}
+
+	settings.GetPage, settings.FreePage = arg(argv, 11), arg(argv, 12)
+	if len(argv) >= 14 {
+		settings.GetPage, settings.FreePage = arg(argv, 12), arg(argv, 13)
+	}
+
+	// Its initial area, or its deletion after an error below, calls the
+	// program's routines: that needs a goroutine of the routine's own.
+	if (settings.GetPage != 0 || settings.FreePage != 0) && !env.CallingBack() {
+		return env.RunCallingBack("LIB$CREATE_VM_ZONE", libCreateVMZone, argv)
 	}
 
 	id, err := env.CreateZone(settings)

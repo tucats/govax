@@ -173,11 +173,13 @@ func (p *PagePool) Free(n, addr uint32) error {
 	return nil
 }
 
-// Reclaim returns the pages of span s, which a zone held (Lend), to the
-// pool's free pages: a zone deleted gives its areas back this way. It
-// returns ErrBadAddress, and changes nothing, unless a zone holds every
-// page of s.
-func (p *PagePool) Reclaim(s span) error {
+// Reclaim returns n pages starting at addr, which a zone held (Lend),
+// to the pool's free pages: a zone deleted gives its areas back this
+// way. It returns ErrBadAddress, and changes nothing, unless a zone
+// holds every one of them.
+func (p *PagePool) Reclaim(addr, n uint32) error {
+	s := span{addr, addr + n*PageSize}
+
 	if !covered(p.held, s) {
 		return ErrBadAddress
 	}
@@ -203,10 +205,10 @@ func (p *PagePool) HeldPages() uint32 {
 	return totalSize(p.held) / PageSize
 }
 
-// isHeld reports whether every page of s is one a zone holds (used by
-// Check, for the zones' areas).
-func (p *PagePool) isHeld(s span) bool {
-	return covered(p.held, s)
+// Holds reports whether a zone holds (Lend) every one of the n pages
+// starting at addr: Zone.Check asks it of each area.
+func (p *PagePool) Holds(addr, n uint32) bool {
+	return covered(p.held, span{addr, addr + n*PageSize})
 }
 
 // insertSpan adds s to list, which is sorted by address and has no two

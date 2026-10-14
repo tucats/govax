@@ -152,21 +152,22 @@ type Zone struct {
 	round  uint32 // a block's size is a multiple of this
 	align  uint32 // a block's address is a multiple of this
 	offset uint32 // the tag before a block: 0 or TagSize
-	pages  *PagePool
+	pages  Pages
 	areas  []*area
 	blocks map[uint32]*block
 	lists  []lookaside
 	inUse  uint32
 }
 
-// NewZone returns a zone that takes its pages from pages, with its
+// NewZone returns a zone that takes its pages from pages (a *PagePool,
+// or a Borrowed for a zone with page routines of the program's), with its
 // initial area if InitialPages asks for one. It returns an error for
 // attributes that break their rules (BlockSize and Alignment powers of
 // 2; ExtendPages positive unless NoExtend, which needs InitialPages;
 // Lists positive for the lookaside algorithms; FixedSize positive for
 // FixedSize; InitialPages within PageLimit), and ErrNoMemory or
 // ErrPageLimit when the initial area can't be had.
-func NewZone(pages *PagePool, attr Attributes) (*Zone, error) {
+func NewZone(pages Pages, attr Attributes) (*Zone, error) {
 	if err := attr.validate(); err != nil {
 		return nil, err
 	}
@@ -531,21 +532,26 @@ func (z *Zone) Reset() []Block {
 	return freed
 }
 
-// Delete frees every block and gives the zone's pages back to the pool
-// (LIB$DELETE_VM_ZONE), returning the blocks the program had, by
-// address. The zone can't be used afterwards.
-func (z *Zone) Delete() []Block {
+// Delete frees every block and gives the zone's pages back to where
+// they came from (LIB$DELETE_VM_ZONE), returning the blocks the program
+// had, by address. Every area is given back; the error is the first
+// that giving one back returned (a program's free-page routine's
+// failure: a PagePool's areas always go back). The zone can't be used
+// afterwards.
+func (z *Zone) Delete() ([]Block, error) {
 	freed := z.Reset()
 
+	var first error
+
 	for _, a := range z.areas {
-		if err := z.pages.Reclaim(span{a.base, a.end}); err != nil {
-			panic(err) // can't happen: an area's pages are held (Check)
+		if err := z.pages.Reclaim(a.base, (a.end-a.base)/PageSize); err != nil && first == nil {
+			first = err
 		}
 	}
 
 	z.areas = nil
 
-	return freed
+	return freed, first
 }
 
 // allocated returns the blocks the program has, sorted by address.

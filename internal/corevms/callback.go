@@ -177,6 +177,27 @@ func (env *Environment) Callback(routine uint32, args ...uint32) (uint32, error)
 	return r.r0, nil
 }
 
+// CallingBack reports whether the Go code running now is a routine on a
+// goroutine of its own, so that it may call Callback: one registered
+// with RegisterCallback, or one RunCallingBack started.
+func (env *Environment) CallingBack() bool {
+	return env.Process.runningShim != nil
+}
+
+// RunCallingBack runs fn, a routine registered with Register (not
+// RegisterCallback), on a goroutine of its own, as if it had been
+// registered with RegisterCallback, and returns what the routine's shim
+// returns. It's for a routine that only sometimes calls back, and finds
+// out it must after it has started: LIB$GET_VM calls the program's
+// get-page routine only for a zone made with one (docs/PHASE-59, the
+// phase doc's Decision 4). Such a routine, having changed nothing yet,
+// returns RunCallingBack(name, itself, argv) unless CallingBack, and its
+// second run, on the goroutine, can call Callback. Every other call of
+// the routine runs as a plain shim and pays nothing.
+func (env *Environment) RunCallingBack(name string, fn ShimFunc, argv []uint32) (uint32, error) {
+	return env.startShimCall(name, fn, argv)
+}
+
 // startShimCall runs fn, a routine registered with RegisterCallback, on
 // a goroutine of its own, and returns what Shim returns: its result, or
 // the first callback it asks for. The goroutine waits for its first turn
