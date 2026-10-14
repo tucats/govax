@@ -64,13 +64,22 @@ func (env *Environment) expandP0(pages uint32) (uint32, bool) {
 	return start, true
 }
 
-// heap returns the image's heap zone, making it (and the page pool it
-// takes pages from) at the image's first allocation.
+// pagePool returns the image's page pool, the processwide pool
+// LIB$GET_VM_PAGE and LIB$FREE_VM_PAGE manage and the heap's zones take
+// their areas from, making it at the image's first use.
+func (env *Environment) pagePool() *vmheap.PagePool {
+	if env.heapPages == nil {
+		env.heapPages = vmheap.NewPagePool(p0Region{env})
+	}
+
+	return env.heapPages
+}
+
+// heap returns the image's heap zone, making it at the image's first
+// allocation.
 func (env *Environment) heap() *vmheap.Zone {
 	if env.heapZone == nil {
-		env.heapPages = vmheap.NewPagePool(p0Region{env})
-
-		zone, err := vmheap.NewZone(env.heapPages, defaultZone)
+		zone, err := vmheap.NewZone(env.pagePool(), defaultZone)
 		if err != nil {
 			panic(err) // defaultZone's attributes are valid
 		}

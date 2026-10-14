@@ -136,7 +136,8 @@ type Environment struct {
 	imageData map[any]any
 
 	// heapZone and heapPages are the image's heap and the page pool it
-	// takes P0 pages from (memory.go), made at the first allocation.
+	// takes P0 pages from, which LIB$GET_VM_PAGE shares (memory.go),
+	// each made at its first use.
 	heapZone  *vmheap.Zone
 	heapPages *vmheap.PagePool
 

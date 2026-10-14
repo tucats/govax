@@ -77,6 +77,23 @@ func (env *Environment) FreeVM(addr uint32) bool {
 	return env.release(addr)
 }
 
+// GetVMPages allocates n contiguous pages from the image's page pool
+// for LIB$GET_VM_PAGE, returning the first one's address. The pages are
+// P0's, so user-mode read/write whatever mode asks (the 5.0 LIB$ manual),
+// and demand-zero until first touched. The error is vmheap.ErrBadSize
+// for n of 0, or vmheap.ErrNoMemory when P0 has no room (memory.go).
+func (env *Environment) GetVMPages(n uint32) (uint32, error) {
+	return env.pagePool().Allocate(n)
+}
+
+// FreeVMPages returns n pages starting at addr to the image's page pool
+// for LIB$FREE_VM_PAGE. The error is vmheap.ErrBadSize for n of 0, or
+// vmheap.ErrBadAddress for pages that aren't all allocated (or an addr
+// not on a page boundary, or a zone's pages); nothing is freed then.
+func (env *Environment) FreeVMPages(n, addr uint32) error {
+	return env.pagePool().Free(n, addr)
+}
+
 // BlockSize returns the size of the heap block that starts at addr, as
 // allocated (rounded up from what was asked for), and whether a block
 // starts there. A dynamic string's storage is kept when it's big enough

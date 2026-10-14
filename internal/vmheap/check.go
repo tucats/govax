@@ -7,8 +7,8 @@ import (
 
 // Check verifies the pool's lists: each sorted by address, no two spans
 // touching or overlapping (so every free span is as large as it can be),
-// and every free page one the pool owns. It returns the first rule
-// broken, or nil.
+// every free page one the pool owns, and every held page an allocated
+// one. It returns the first rule broken, or nil.
 func (p *PagePool) Check() error {
 	if err := checkList("owned", p.owned); err != nil {
 		return err
@@ -18,9 +18,19 @@ func (p *PagePool) Check() error {
 		return err
 	}
 
+	if err := checkList("held", p.held); err != nil {
+		return err
+	}
+
 	for _, s := range p.free {
 		if !covered(p.owned, s) {
 			return fmt.Errorf("vmheap: free pages %08X-%08X aren't the pool's", s.start, s.end)
+		}
+	}
+
+	for _, s := range p.held {
+		if !covered(p.owned, s) || overlapsAny(p.free, s) {
+			return fmt.Errorf("vmheap: held pages %08X-%08X aren't allocated", s.start, s.end)
 		}
 	}
 
@@ -124,8 +134,8 @@ func (z *Zone) Check() error {
 
 // checkArea verifies one area's own bounds and free list.
 func (z *Zone) checkArea(a *area) error {
-	if !z.pages.isAllocated(span{a.base, a.end}) {
-		return fmt.Errorf("vmheap: area %08X-%08X isn't allocated in the pool", a.base, a.end)
+	if !z.pages.isHeld(span{a.base, a.end}) {
+		return fmt.Errorf("vmheap: area %08X-%08X isn't held in the pool", a.base, a.end)
 	}
 
 	if a.base > a.first || a.first > a.top || a.top > a.end {

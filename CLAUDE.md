@@ -347,9 +347,12 @@ expect adjustment as phases land):
   block allocator over areas from the pool), each keeping its free
   space as address-ordered spans merged with both neighbors, with
   `Check` verifying them (the tests run it after every operation). The
-  bookkeeping is in Go, never in the memory managed. A leaf package;
-  `corevms/memory.go` is each image's heap on it (`AllocateVM`,
-  `FreeVM`, `BlockSize`, DECC$MALLOC/FREE).
+  bookkeeping is in Go, never in the memory managed. A zone takes its
+  areas with `PagePool.Lend`, and `Free` refuses those held pages. A
+  leaf package; `corevms/memory.go` is each image's heap on it
+  (`AllocateVM`, `FreeVM`, `BlockSize`, DECC$MALLOC/FREE) and its page
+  pool (`GetVMPages`, `FreeVMPages`: LIB$GET_VM_PAGE and
+  LIB$FREE_VM_PAGE, `librtl/vmpage.go`, subtask 3).
 - `internal/console` — the front end (Phase 08; since Phase 52 only
   that): a `Console` embeds a `*machine.Machine` and a
   `*dclshell.Interpreter`, and its `Dispatcher` routes each line to the

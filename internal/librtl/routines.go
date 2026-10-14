@@ -238,6 +238,8 @@ var Routines = []Routine{
 	{"LIB$RENAME_FILE", 168, libRenameFile},
 	{"LIB$FID_TO_NAME", 169, libFidToName},
 	{"LIB$TRIM_FILESPEC", 170, libTrimFilespec},
+	{"LIB$GET_VM_PAGE", 171, libGetVMPage},
+	{"LIB$FREE_VM_PAGE", 172, libFreeVMPage},
 }
 
 // callsBack names the routines that call back into the program (a

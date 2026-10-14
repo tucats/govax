@@ -28,10 +28,16 @@ const maxPages = 0x40000000 / PageSize
 // and, within those, the pages that are free (adjacent spans merged, so
 // each free span is as large as it can be). A page is allocated when the
 // pool owns it and it isn't free.
+//
+// A third list, held, is the allocated pages a zone took as its areas
+// (Lend). Free refuses them: a zone's pages go back with the zone, so a
+// program's LIB$FREE_VM_PAGE of them can't hand them out a second time
+// while the zone's blocks are in them.
 type PagePool struct {
 	region Region
 	owned  []span
 	free   []span
+	held   []span
 }
 
 // NewPagePool returns an empty pool that takes its pages from region.
@@ -129,10 +135,24 @@ func (p *PagePool) hasRun(n uint32) bool {
 	return false
 }
 
+// Lend allocates n pages as Allocate does, for a zone's area: they're
+// held, so Free refuses them.
+func (p *PagePool) Lend(n uint32) (uint32, error) {
+	addr, err := p.Allocate(n)
+	if err != nil {
+		return 0, err
+	}
+
+	p.held = insertSpan(p.held, span{addr, addr + n*PageSize})
+
+	return addr, nil
+}
+
 // Free returns n pages starting at addr to the pool. Every page must be
-// allocated: ErrBadAddress is an addr that isn't page-aligned or pages
-// the pool doesn't own or that are free already, and ErrBadSize is n of
-// 0. Nothing is freed unless all of them can be.
+// allocated, and not held by a zone: ErrBadAddress is an addr that isn't
+// page-aligned or pages the pool doesn't own, that are free already, or
+// that a zone holds, and ErrBadSize is n of 0. Nothing is freed unless
+// all of them can be.
 func (p *PagePool) Free(n, addr uint32) error {
 	if n == 0 {
 		return ErrBadSize
@@ -144,7 +164,7 @@ func (p *PagePool) Free(n, addr uint32) error {
 
 	s := span{addr, addr + n*PageSize}
 
-	if !covered(p.owned, s) || overlapsAny(p.free, s) {
+	if !covered(p.owned, s) || overlapsAny(p.free, s) || overlapsAny(p.held, s) {
 		return ErrBadAddress
 	}
 
@@ -163,10 +183,15 @@ func (p *PagePool) FreePages() uint32 {
 	return totalSize(p.free) / PageSize
 }
 
-// isAllocated reports whether every page of s is the pool's and none is
-// free (used by Check, for the zones' areas).
-func (p *PagePool) isAllocated(s span) bool {
-	return covered(p.owned, s) && !overlapsAny(p.free, s)
+// HeldPages is how many of the pool's pages zones hold (Lend).
+func (p *PagePool) HeldPages() uint32 {
+	return totalSize(p.held) / PageSize
+}
+
+// isHeld reports whether every page of s is one a zone holds (used by
+// Check, for the zones' areas).
+func (p *PagePool) isHeld(s span) bool {
+	return covered(p.held, s)
 }
 
 // insertSpan adds s to list, which is sorted by address and has no two

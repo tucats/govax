@@ -1,6 +1,6 @@
 # Phase 59 — LIB$ virtual memory zones
 
-**Status:** in progress (subtasks 1 and 2 done 2026-10-14).
+**Status:** in progress (subtasks 1 to 3 done 2026-10-14).
 Needs Phases 53, 54, and 58 (callbacks, for user-defined zones). Part
 of the LIB$ program laid out in `PHASE-53 - RTL LIB support.md` (Part
 A).
@@ -597,7 +597,8 @@ should settle:
 
 - **Pages**: consecutive GET_VM_PAGE(1) addresses; a freed group reused;
   partial and combined frees; FREE_VM_PAGE of an unallocated page, a
-  freed one, an unaligned address, count 0 and -1; GET_VM_PAGE 0, -1,
+  freed one, an unaligned address, count 0 and -1, a page of a zone's
+  area (govax refuses it, LIB$_BADBLOADR); GET_VM_PAGE 0, -1,
   and more than P0 can hold; STAT_VM 5 to 7 around them; `$EXPREG` of a
   page between two GET_VM_PAGE calls.
 - **CREATE_VM_ZONE**: each attribute at and past each bound; a missing
@@ -661,7 +662,7 @@ VERIFY), and `vmmalloc.go`. `dynstr.go` allocates in the string zone.
    DECC$MALLOC/FREE, GET_VM/FREE_VM) moved onto it; P0's bound for the
    heap and `$EXPREG`. Fixes the overlapping blocks and partial merges.
    **Done** 2026-10-14.
-3. **Pages**: GET_VM_PAGE, FREE_VM_PAGE.
+3. **Pages**: GET_VM_PAGE, FREE_VM_PAGE. **Done** 2026-10-14.
 4. **Zones and the algorithms**: CREATE_VM_ZONE, DELETE_VM_ZONE,
    RESET_VM_ZONE; GET_VM and FREE_VM redone, with the manual's statuses;
    quick fit, frequent sizes, fixed size; tags and fills.
@@ -734,3 +735,23 @@ VERIFY), and `vmmalloc.go`. `dynstr.go` allocates in the string zone.
   Blocks moved (8-byte rounding, after the area's control block): one
   govax test pinned the first block's address (0x4000, now 0x4040);
   no oracle moved. DEVIATIONS.md records the change from the eVAX port.
+- **2026-10-14** — Subtask 3, the pages. LIB$GET_VM_PAGE and
+  LIB$FREE_VM_PAGE (`librtl/vmpage.go`, shim codes 171 and 172) on the
+  image's page pool, which corevms now makes apart from the heap zone
+  (`pagePool`; `GetVMPages`, `FreeVMPages`), so pages and the heap's
+  areas come from one pool, as the manual's levels have it. A count of
+  0 or less (a signed longword) is LIB$_BADBLOSIZ; FREE_VM_PAGE of an
+  unaligned address or pages not all allocated is LIB$_BADBLOADR, with
+  nothing freed; no room in P0 is LIB$_INSVIRMEM with base-address left
+  alone; `vmStatus` maps vmheap's errors to the conditions for the
+  routines to come. The pool now knows which pages a zone holds as its
+  areas (`PagePool.Lend`, the `held` list, checked by `Check`), and
+  `Free` refuses them, so a program's FREE_VM_PAGE of a zone's page
+  can't hand those pages out again under live blocks (**unconfirmed**:
+  VMS presumably frees them; a probe case). Tests: vmheap's held pages;
+  librtl's unit tests (adjacent pages upward from P0's end, reuse lowest
+  first, partial and cross-group frees, each bad argument changing
+  nothing, no room, pages and the default zone's area side by side);
+  and `TestLibrtlVMPages`, a linked program that gets three pages,
+  writes them in user mode, frees them in parts, and sees a double free
+  refused. STAT_VM's page counts (codes 5 to 7) wait for subtask 7.

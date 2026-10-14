@@ -183,6 +183,61 @@ func TestPagesBadFrees(t *testing.T) {
 	mustCheck(t, p)
 }
 
+// A zone's pages are held: freeing them as pages is refused, alone or
+// with a program's pages beside them, and the program's own pages around
+// them free as usual.
+func TestPagesHeldByZone(t *testing.T) {
+	p := NewPagePool(newRegion())
+
+	before, _ := p.Allocate(1)
+
+	z, err := NewZone(p, Attributes{BlockSize: 8, Alignment: 8, ExtendPages: 2})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if _, err := z.Allocate(16); err != nil {
+		t.Fatal(err)
+	}
+
+	after, _ := p.Allocate(1)
+	areaBase := before + PageSize
+
+	if after != areaBase+2*PageSize || p.HeldPages() != 2 {
+		t.Fatalf("program pages at %X and %X, %d held; want the area between them", before, after, p.HeldPages())
+	}
+
+	for _, c := range []struct {
+		name string
+		n    uint32
+		addr uint32
+	}{
+		{"the area", 2, areaBase},
+		{"the area's second page", 1, areaBase + PageSize},
+		{"a program page and the area", 3, before},
+		{"the area and a program page", 3, areaBase},
+	} {
+		if err := p.Free(c.n, c.addr); !errors.Is(err, ErrBadAddress) {
+			t.Errorf("%s: Free(%d, %X) = %v, want ErrBadAddress", c.name, c.n, c.addr, err)
+		}
+	}
+
+	if err := p.Free(1, before); err != nil {
+		t.Errorf("Free(1, %X): %v", before, err)
+	}
+
+	if err := p.Free(1, after); err != nil {
+		t.Errorf("Free(1, %X): %v", after, err)
+	}
+
+	if p.HeldPages() != 2 || p.FreePages() != 2 {
+		t.Errorf("%d held, %d free; want 2 and 2", p.HeldPages(), p.FreePages())
+	}
+
+	mustCheck(t, p)
+	mustCheck(t, z)
+}
+
 func TestPagesGrowJoinsTopRun(t *testing.T) {
 	r := newRegion()
 	p := NewPagePool(r)

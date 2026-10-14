@@ -178,7 +178,7 @@ func (z *Zone) extend(n uint32) (*area, error) {
 
 	pages := max(z.attr.ExtendPages, uint32(need))
 
-	addr, err := z.pages.Allocate(pages)
+	addr, err := z.pages.Lend(pages)
 	if err != nil {
 		return nil, err
 	}
