@@ -4034,6 +4034,48 @@ widened."
     govax's macro library doesn't get it.
 - **Status**: fixed (docs/PHASE-57, subtask 11).
 
+### [Phase 58] LIBRTL's file routines and callbacks: what VMS 7.1 settled
+
+- **Where**: `internal/librtl` (`findfile.go`, `filescan.go`,
+  `filewalk.go`, `deletefile.go`, `renamefile.go`, `fidtoname.go`,
+  `trimfilespec.go`), `internal/corevms` (`callback.go`, `fidname.go`),
+  `internal/rms` (`search.go`, `name.go`, `nam.go`, `parse.go`,
+  `erase.go`, `renamecmd.go`, `rename.go`, `acpfilespec.go`),
+  `internal/vmsdef/messages.go`, `internal/asm/operand.go`; the probe is
+  `testdata/lib58` (`TestLib58Oracle`, VMS V7.1 on simh's VAX 8600,
+  2026-10-14).
+- **Changed to VMS's behavior** (the routines' choices, each listed in
+  docs/PHASE-58's progress log): FIND_FILE's one search for a name with
+  no wildcard and RMS$_NMF ending its context; FILE_SCAN's callbacks
+  given its own argument list and its context a chain of name blocks;
+  DELETE_FILE's and RENAME_FILE's confirm routines given the search FAB,
+  the user argument always passed, an error routine's stop made severe;
+  FID_TO_NAME's `DISK$label:` names and its failures' outputs; the SHR$
+  shared messages.
+- **Changed beyond the routines**:
+  - RMS: a search returning one version of each name went back to the
+    same name when that version was deleted between searches (so
+    DELETE_FILE of a name without a version deleted every version); `;Q`
+    and an unclosed directory were RMS$_VER and RMS$_DIR, now RMS$_SYN;
+    RMS$_DNF now leaves the expanded name as the resultant string; a
+    wildcard-directory search's missing root is RMS$_DNF at once, its
+    RMS$_FNF has STV 0, and one of `[DIR...]` that runs out leaves
+    `[DIR]*.DIR;1` (VMS 7.3's RMS3 SEARCH case 3 agrees, now compared);
+    `$ERASE` of a directory that still has entries was RMS$_DEV, now
+    RMS$_MKD with SS$_DIRNOTEMPTY; a related NAM that isn't a NAM is
+    RMS$_RLF.
+  - DCL RENAME: an input that named a version no longer keeps it (the
+    DCL Dictionary's rules), and a wildcard among a name's characters is
+    RMS$_FNM, not RMS$_WLD.
+  - MACRO: a known displacement of 0 with no size given assembles as
+    register deferred mode, as real MACRO's object for the probe shows (a
+    literal 0 is taken the same way, unconfirmed).
+- **Not reproduced**: an access violation's address read from the stack
+  (FIND_FILE_END with no arguments), and a header slot inside VMS's
+  index file but past govax's (VMS had extended INDEXF.SYS to 829
+  blocks; govax's grows only as files are made).
+- **Status**: fixed (docs/PHASE-58, subtask 8).
+
 <!--
 Entry template:
 

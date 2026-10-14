@@ -200,7 +200,7 @@ docs don't need to carry that detail now.
 - `corevms`: `CallRequest` (`exit.go`): a service can return one to have
   the engine call a VAX routine with the service's own XFC as the return
   address. `$CMKRNL` (`cmode.go`), exit handlers, and the condition
-  dispatcher use it. Shims don't yet. Phase 58 generalizes it.
+  dispatcher use it. Shims didn't; Phase 58 generalized it (Decision 9).
 - `vmsdef.Messages` has 117 `LIB$_` condition values and their texts.
 - `internal/vaxfloat`: Unpack/Pack and exact arithmetic for F, D, G, and H,
   with EMOD's and POLY's arithmetic, so the floating routines don't need
@@ -288,6 +288,55 @@ answers to the two marked **(author)**.
    `LIB$AB_UPCASE`) are `librtl.Tables`, copied into the stub area's S0
    pages after the stubs (`ShimLink.Data`). Every entry of LIBRTL.EXE's
    transfer vector now resolves.
+
+9. **Calling back into the program (Phase 58, subtasks 2 and 9).** A
+   LIB$ routine in Go that calls a procedure the program gave it (a
+   success, error, or confirm routine; later the tree routines' action
+   routines, TPARSE's, a user zone's allocators) is registered with
+   `ShimTable.RegisterCallback` (`librtl`'s `callsBack` set, which
+   `Register` reads) and runs on a goroutine of its own
+   (`corevms/callback.go`). The convention:
+   - **The call.** `Environment.Callback(routine, args...)` is a Go call
+     that returns the procedure's R0. It writes the argument list below
+     SP, in the stub's frame, and hands the engine a plain `CallRequest`;
+     the goroutine and the engine take turns over channels, so only one
+     runs at a time. When the procedure's RET lands on the stub's XFC,
+     `Environment.Shim` finds the waiting routine by the stub's FP, SP,
+     PC, and mode (`returningShimCall`), whatever R0 now selects, and
+     resumes it. A callback calling the same routine again runs in a new
+     stub frame, so nesting needs nothing more. The routine reads as the
+     manual's loop: search, confirm, act, report.
+   - **What goes below SP.** Strings a procedure is given (a class S
+     descriptor and its text, `stackString`), longwords by reference
+     (`stackLongwords`), and blocks the routine needs while it calls out
+     (a search block, `layoutSearchBlock`) go in the stub's frame below
+     SP; the routine puts SP back between iterations, and the stub's RET
+     takes it all away.
+   - **What a procedure is given** is the manual's argument list, as VMS
+     7.1 builds it (testdata/lib58): FILE_SCAN's routines get
+     FILE_SCAN's own argument list (a CALLG with its AP); DELETE_FILE's
+     and RENAME_FILE's always get the user-specified-argument last, 0
+     when the program gave none, and their confirm routines get the
+     routine's own search FAB.
+   - **What it returns.** Bit 0 of R0 is what a confirm or error
+     procedure says; a success procedure's is ignored. An error procedure
+     that returns failure stops the routine, which returns the error made
+     severe.
+   - **Leaving early.** A procedure that never returns (a handler's
+     `$UNWIND` past the stub's frame, `$EXIT`, the image's end) abandons
+     the routine: its pending `Callback` panics with a sentinel the
+     goroutine recovers, so deferred code runs (`finishUnwind`'s
+     `abandonShimCallsBelow`, image rundown's `cancelShimCalls`, and, as
+     a backstop, the next shim call once the stack is popped past it).
+     State the routine would have kept at its end isn't (FILE_SCAN's
+     context longword stays 0).
+   - **Waiting.** A routine may wait (ErrWait) before its first callback,
+     and is then run again from the start as any shim; one that waits
+     after calling back fails, rather than starting over.
+   - **Testing.** `librtl`'s `callingBack` (filescan_test.go) drives a
+     routine through `env.Shim` as the XFC does, answering each callback
+     in Go; `testdata/asm/callback.asm` (`TestCallback_assembledProgram`)
+     and `testdata/lib58` run real VAX procedures.
 
 # Part C — the instruction routines
 
@@ -992,3 +1041,6 @@ so there's one implementation of each rule.
   `internal/rtl`, now `internal/corevms`), PLAN.md's row, and CLAUDE.md.
   No HELP topic lists the routines (Open questions). Phase 53 is done;
   Phase 54 (strings and conversion) is next.
+- **2026-10-14** — Phase 58's close-out added Decision 9, the
+  convention for routines that call back into the program, and updated
+  "What earlier phases leave in place" to match.

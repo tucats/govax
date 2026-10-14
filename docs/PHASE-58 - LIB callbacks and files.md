@@ -1,7 +1,6 @@
 # Phase 58 — LIB$ callbacks into the program, and file routines
 
-**Status:** in progress (subtasks 1 to 6 done 2026-10-13, 7 and 8 on
-2026-10-14). Planned
+**Status:** done (subtasks 1 to 6 2026-10-13, 7 to 9 2026-10-14). Planned
 2026-10-12. Needs Phases 53 and 54. Part of the
 LIB$ program laid out in `PHASE-53 - RTL LIB support.md` (Part A).
 
@@ -578,6 +577,7 @@ TRIM_FILESPEC.
 8. **The program** (`testdata/lib58/`, on a volume), its console test,
    and the VMS probe. **Done** 2026-10-14.
 9. **Close-out**: Phase 53's Part B gets the callback convention.
+   **Done** 2026-10-14.
 
 ## Progress log
 
@@ -903,4 +903,10 @@ TRIM_FILESPEC.
     `registerDisplacement`; `TestMACROZeroDisplacement`; a literal 0 is
     taken the same way, **unconfirmed**), and the objects match byte for
     byte but for the headers that name the assembler.
-
+- **2026-10-14** — Subtask 9, close-out. Phase 53's Part B has Decision
+  9, the convention for routines that call back into the program (the
+  call and its handoff, what goes below SP, what a procedure is given and
+  what its R0 means, leaving early, waiting, testing), for Phases 59 and
+  60's callers to follow; `internal/librtl/doc.go` describes the phase's
+  routines; DEVIATIONS.md has the phase's entry; PLAN.md's row and
+  CLAUDE.md are updated. Phase 58 is done; Phase 59 is next.

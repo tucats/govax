@@ -79,7 +79,8 @@ never had.
   DCL's ATTACH, `dclshell/attachcmd.go`), and the probe (subtask 10,
   `testdata/lib57`, checked against VMS 7.1; subtask 11 changed govax
   to its answers).
-  Phase 58 (in progress) is callbacks and the file routines: subtask 1
+  Phase 58 (done 2026-10-14; Phase 53's Decision 9 is its callback
+  convention) is callbacks and the file routines: subtask 1
   is the survey, subtask 2 the callback mechanism
   (`corevms/callback.go`: a routine registered with
   `ShimTable.RegisterCallback` runs on a goroutine of its own, and

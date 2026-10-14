@@ -97,6 +97,22 @@
 // but for CONVERT_DATE_STRING's strings with letters, which failed on
 // that VAX (docs/DEVIATIONS.md).
 //
+// Phase 58's routines are the file routines, and the first that call
+// back into the program. LIB$FIND_FILE (findfile.go) runs RMS's $PARSE
+// and $SEARCH on a FAB and NAM in a heap block, a file a call;
+// LIB$FILE_SCAN (filescan.go) runs a whole search on the program's own
+// FAB, calling its success and error routines, its context a chain of
+// name blocks for temporary defaulting; LIB$DELETE_FILE and
+// LIB$RENAME_FILE share filewalk.go's search, with success, error, and
+// confirm routines (deletefile.go, renamefile.go); LIB$FID_TO_NAME
+// (fidtoname.go) walks a file's back links, and LIB$TRIM_FILESPEC
+// (trimfilespec.go) fits a name to a width. A routine that calls back is
+// in routines.go's callsBack set: it runs on a goroutine of its own, and
+// corevms.Environment.Callback is a Go call of a VAX procedure that
+// returns its R0 (internal/corevms/callback.go; docs/PHASE-53's
+// Decision 9). VMS 7.1's run of testdata/lib58 (TestLib58Oracle) settled
+// what the manuals left open.
+//
 // # What's here and what's in corevms
 //
 // This package holds each routine's documented interface: reading its
