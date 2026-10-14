@@ -10,10 +10,7 @@ import (
 	"github.com/tucats/govax/internal/vmsdef"
 )
 
-var (
-	rmsFNF = vmsdef.Symbols["RMS$_FNF"]
-	rmsNMF = vmsdef.Symbols["RMS$_NMF"]
-)
+var rmsFNF = vmsdef.Symbols["RMS$_FNF"]
 
 // findFixture is createDirFixture's volume with files in [000000] (A.TXT,
 // B.TXT, C.DAT) and in [SUB] (D.TXT).

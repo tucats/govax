@@ -1,6 +1,6 @@
 # Phase 58 — LIB$ callbacks into the program, and file routines
 
-**Status:** in progress (subtasks 1 to 3 done 2026-10-13). Planned
+**Status:** in progress (subtasks 1 to 4 done 2026-10-13). Planned
 2026-10-12. Needs Phases 53 and 54. Part of the
 LIB$ program laid out in `PHASE-53 - RTL LIB support.md` (Part A).
 
@@ -569,7 +569,7 @@ TRIM_FILESPEC.
 2. **Callbacks from a shim**: design, the engine's side, nesting,
    unwinding; a test routine that calls back. **Done** 2026-10-13.
 3. **FIND_FILE, FIND_FILE_END.** **Done** 2026-10-13.
-4. **FILE_SCAN, FILE_SCAN_END.**
+4. **FILE_SCAN, FILE_SCAN_END.** **Done** 2026-10-13.
 5. **DELETE_FILE.**
 6. **RENAME_FILE.**
 7. **FID_TO_NAME, TRIM_FILESPEC.**
@@ -653,3 +653,32 @@ TRIM_FILESPEC.
   filespec on the same context, NOWILD, a missing file and status-value,
   default and related names, MULTIPLE, short and dynamic resultants, the
   context's checks) and rms's `TestParse_releasesSearch`.
+- **2026-10-13** — Subtask 4, FILE_SCAN and FILE_SCAN_END
+  (`internal/librtl/filescan.go`, codes 165 and 166), the first routine
+  that calls back. `librtl`'s `callsBack` set names the routines
+  `Register` installs with `RegisterCallback`. FILE_SCAN runs `$PARSE`,
+  then `$SEARCH` until RMS$_NMF, on the program's own FAB through
+  `CallService`, calling the success routine for each file and the error
+  routine for each failure with the FAB's address. The context is a heap
+  block holding a NAM whose resultant string is the last file found.
+  Choices made, each **unconfirmed** and a probe case: a routine of 0
+  isn't called; the routines' R0 is ignored (the scan always goes on);
+  the status is the last RMS service's (RMS$_NMF after a full scan, the
+  `$PARSE` error after calling the error routine); a failed `$SEARCH`
+  that leaves NAM$L_WCC unchanged (a missing directory in a search
+  without a wildcard context, which would fail the same way again) ends
+  the scan with its status, while RMS$_FNF (WCC moved on, next RMS$_NMF)
+  doesn't; with a context, the program's NAM$L_RLF points at the
+  context's NAM for the call when the program gave no related NAM of its
+  own, then goes back to 0; without one, FILE_SCAN does no defaulting
+  of its own; a context longword that names no context is LIB$_INVARG.
+  FILE_SCAN_END parses the null string on fab (FNS and DNS 0, put back
+  after; RMS$_FAB, nothing changed, for a block that isn't a FAB), frees
+  the context and clears its longword, and returns SS$_NORMAL. Tests:
+  librtl's `TestFileScan*`, driving the routine through `env.Shim` as
+  the XFC does with each callback answered in Go (`callingBack`):
+  wildcards and a wildcard directory, a missing file, a missing
+  directory, a bad default name, routines of 0, temporary defaulting
+  through a context, and FILE_SCAN_END's arguments (including a
+  wildcard context left part way, which it frees). The program run on
+  the machine is subtask 8's.

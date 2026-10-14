@@ -232,6 +232,16 @@ var Routines = []Routine{
 	{"LIB$ATTACH", 162, libAttach},
 	{"LIB$FIND_FILE", 163, libFindFile},
 	{"LIB$FIND_FILE_END", 164, libFindFileEnd},
+	{"LIB$FILE_SCAN", 165, libFileScan},
+	{"LIB$FILE_SCAN_END", 166, libFileScanEnd},
+}
+
+// callsBack names the routines that call back into the program (a
+// success, error, or confirm routine it was given): Register installs
+// them with corevms.ShimTable.RegisterCallback, so each runs on a
+// goroutine of its own (docs/PHASE-58, subtask 2).
+var callsBack = map[string]bool{
+	"LIB$FILE_SCAN": true,
 }
 
 // missing is Missing's list, and missingJSB MissingJSB's, made once.
@@ -256,7 +266,11 @@ func allJSB() []JSBRoutine {
 // JSBRoutines', and the shims of the routines govax lacks.
 func Register(t *corevms.ShimTable) {
 	for _, r := range all() {
-		if r.Fn != nil {
+		switch {
+		case r.Fn == nil:
+		case callsBack[r.Name]:
+			t.RegisterCallback(r.Code, r.Name, r.Fn)
+		default:
 			t.Register(r.Code, r.Name, r.Fn)
 		}
 	}

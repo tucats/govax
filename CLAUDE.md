@@ -86,7 +86,10 @@ never had.
   `Environment.Callback` calls a VAX procedure and returns its R0;
   the XFC its RET lands on finds the routine by the stub's FP and SP),
   subtask 3 FIND_FILE and FIND_FILE_END (`librtl/findfile.go`: a heap
-  block holding a FAB and NAMs, run through `$PARSE`/`$SEARCH`).
+  block holding a FAB and NAMs, run through `$PARSE`/`$SEARCH`),
+  subtask 4 FILE_SCAN and FILE_SCAN_END (`librtl/filescan.go`, the
+  first routine in `librtl`'s `callsBack` set, which `Register`
+  installs with `RegisterCallback`).
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
 - `docs/DEVIATIONS.md` — running log of suspected ISA/behavior fidelity issues found in
