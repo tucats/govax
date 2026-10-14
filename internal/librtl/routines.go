@@ -235,6 +235,7 @@ var Routines = []Routine{
 	{"LIB$FILE_SCAN", 165, libFileScan},
 	{"LIB$FILE_SCAN_END", 166, libFileScanEnd},
 	{"LIB$DELETE_FILE", 167, libDeleteFile},
+	{"LIB$RENAME_FILE", 168, libRenameFile},
 }
 
 // callsBack names the routines that call back into the program (a
@@ -244,6 +245,7 @@ var Routines = []Routine{
 var callsBack = map[string]bool{
 	"LIB$FILE_SCAN":   true,
 	"LIB$DELETE_FILE": true,
+	"LIB$RENAME_FILE": true,
 }
 
 // missing is Missing's list, and missingJSB MissingJSB's, made once.

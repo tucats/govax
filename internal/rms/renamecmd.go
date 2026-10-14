@@ -356,3 +356,58 @@ func resultName(device string, spec filespec.Spec) string {
 
 	return b.String()
 }
+
+// RenameTarget is one file's new name for LIB$RENAME_FILE, which, unlike
+// Session.Rename, searches for the files itself and calls back to the
+// program between finding a file and renaming it (docs/PHASE-58,
+// subtask 6). old is the file's full name as $SEARCH's resultant string
+// gives it, output the new-filespec, and inputVersion the version field
+// of the old specification as $PARSE expanded it ("" for none, "*", or a
+// number); newVersion is false for LIB$M_FIL_CUR_VER, /NONEW_VERSION. The
+// rules are Rename's (see this file's opening comment). It returns the
+// new name as a resultant name and 0, or an RMS status and the new name
+// as far as it was worked out ("" when not at all).
+func (s *Session) RenameTarget(old, output, inputVersion string, newVersion bool) (string, uint32) {
+	spec, err := filespec.Parse(old, filespec.Spec{})
+	if err != nil {
+		return "", rmsSyntaxError
+	}
+
+	src := renameSource{
+		spec:            spec,
+		display:         spec.Device,
+		wildVersion:     inputVersion == "*",
+		explicitVersion: inputVersion != "" && inputVersion != "*" && inputVersion != "0",
+	}
+
+	target, sts := s.renameTarget(src, output, RenameOptions{NewVersion: newVersion})
+
+	name := ""
+	if target.Device != "" {
+		name = resultName(target.Device, target)
+	}
+
+	return name, sts
+}
+
+// RenameFile renames the file old to target, both full names (target as
+// RenameTarget gives it), with $RENAME's own code. It returns the new
+// name with the version the file got, and $RENAME's status and STV
+// (RMS$_NORMAL on success; target as given on failure).
+func (s *Session) RenameFile(old, target string) (string, uint32, uint32) {
+	ctx := &Context{Mounts: s.Mounts, Logicals: s.Logicals, Session: s}
+
+	r, sts, stv := renameText(ctx, old, target)
+	if sts != rmsNormal {
+		return target, sts, stv
+	}
+
+	spec, err := filespec.Parse(target, filespec.Spec{})
+	if err != nil {
+		return target, sts, stv
+	}
+
+	spec.Version = strconv.Itoa(int(r.Version))
+
+	return resultName(spec.Device, spec), sts, stv
+}

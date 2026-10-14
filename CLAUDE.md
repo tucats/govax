@@ -91,7 +91,11 @@ never had.
   first routine in `librtl`'s `callsBack` set, which `Register`
   installs with `RegisterCallback`), subtask 5 DELETE_FILE
   (`librtl/deletefile.go`: the search block and a FAB of the file's own
-  below SP, the confirm, success, and error routines).
+  below SP, the confirm, success, and error routines; the search it
+  shares with RENAME_FILE is `librtl/filewalk.go`'s `fileWalk`),
+  subtask 6 RENAME_FILE (`librtl/renamefile.go`: each file's new name
+  and the rename through `rms.Session.RenameTarget`/`RenameFile`, DCL
+  RENAME's own code).
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
 - `docs/DEVIATIONS.md` — running log of suspected ISA/behavior fidelity issues found in

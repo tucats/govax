@@ -97,27 +97,15 @@ const (
 	fileBlockBytes = fileName + fileBuffer
 )
 
-// deleter is one LIB$DELETE_FILE call's state.
+// deleter is one LIB$DELETE_FILE call's state: the search's (fileWalk),
+// and the routines and resultant-name only this routine has.
 type deleter struct {
-	env *corevms.Environment
+	fileWalk
 
-	spec, defaultSpec, related string
-
-	// success, failure, and confirm are the program's routines (0 for
-	// none), user its argument (when hasUser), result its resultant-name
-	// descriptor (0 for none).
-	success, failure, confirm uint32
-	user                      uint32
-	hasUser                   bool
-	result                    uint32
-
-	// search is the search block's address, file the file block's.
-	search, file uint32
-
-	// erred is true once any error has been met, and worst is the most
-	// severe status among them.
-	erred bool
-	worst uint32
+	// success and confirm are the program's routines (0 for none),
+	// result its resultant-name descriptor (0 for none).
+	success, confirm uint32
+	result           uint32
 }
 
 // libDeleteFile is LIB$DELETE_FILE.
@@ -127,13 +115,20 @@ func libDeleteFile(env *corevms.Environment, argv []uint32) (uint32, error) {
 	}
 
 	d := &deleter{
-		env:     env,
-		success: arg(argv, 3), failure: arg(argv, 4), confirm: arg(argv, 5),
-		user: arg(argv, 6), hasUser: len(argv) > 6,
+		fileWalk: fileWalk{
+			env:     env,
+			failure: arg(argv, 4),
+			user:    arg(argv, 6), hasUser: len(argv) > 6,
+		},
+		success: arg(argv, 3), confirm: arg(argv, 5),
 		result: arg(argv, 7),
 	}
+	d.each = d.deleteOne
+	d.searchError = func(name string, status, stv uint32) (bool, uint32, error) {
+		return d.reportError(name, status, stv, sourceSearch)
+	}
 
-	if status, err := d.readNames(argv); err != nil || status != 0 {
+	if status, err := d.readNames(argv, 0); err != nil || status != 0 {
 		return status, err
 	}
 
@@ -146,188 +141,18 @@ func libDeleteFile(env *corevms.Environment, argv []uint32) (uint32, error) {
 		return libInvArg, nil
 	}
 
-	// The context, made on the first call that passes one.
-	var context uint32
-
-	if cell := arg(argv, 8); cell != 0 {
-		if context, err = env.Memory().LoadLongword(env.CPU(), cell); err != nil {
-			return memoryFault(env, err)
-		}
-
-		switch {
-		case context == 0:
-			if status, err := newScanBlock(env, cell, &context); err != nil || status != 0 {
-				return status, err
-			}
-		case !scanContexts(env)[context]:
-			return libInvArg, nil
-		}
-
-		if d.related == "" {
-			if d.related, err = resultantName(env, context+scanNAM); err != nil {
-				return memoryFault(env, err)
-			}
-		}
-	}
-
-	// SP goes back where it was when the deletion is over; the stub's RET
-	// would put it back anyway.
-	cpu := env.CPU()
-	sp := cpu.GPR(registers.SP)
-
-	status, last, err := d.run()
-
-	cpu.SetGPR(registers.SP, sp)
-
-	if err != nil || last == "" || context == 0 {
-		return status, err
-	}
-
-	if err := setScanName(env, context, last); err != nil {
-		return memoryFault(env, writing(err))
-	}
-
-	return status, nil
+	return d.walk(arg(argv, 8))
 }
 
-// readNames reads filespec, default-filespec, and related-filespec. A
-// name longer than a FAB can hold is LIB$_INVFILSPE; err is a memory
-// error, already signaled.
-func (d *deleter) readNames(argv []uint32) (uint32, error) {
-	for _, s := range []struct {
-		i   int
-		out *string
-	}{{0, &d.spec}, {1, &d.defaultSpec}, {2, &d.related}} {
-		addr := arg(argv, s.i)
-		if addr == 0 && s.i > 0 {
-			continue
-		}
-
-		var err error
-		if *s.out, err = readString(d.env, addr); err != nil {
-			return stringFailure(d.env, err)
-		}
-	}
-
-	if len(d.spec) > maxFileSpec || len(d.defaultSpec) > maxFileSpec {
-		return libInvFilSpe, nil
-	}
-
-	return 0, nil
-}
-
-// run is the deletion: the blocks laid out below SP, the search, and the
-// loop over the files found. It returns the routine's status and the
-// last file deleted ("" for none).
-func (d *deleter) run() (status uint32, last string, err error) {
-	env := d.env
-	cpu := env.CPU()
-
-	d.file = cpu.GPR(registers.SP) - fileBlockBytes
-	d.search = d.file - findBlockBytes
-	cpu.SetGPR(registers.SP, d.search)
-
-	if err := layoutSearchBlock(env, d.search); err != nil {
-		status, err = memoryFault(env, writing(err))
-
-		return status, "", err
-	}
-
-	status, err = startSearch(env, d.search, findArgs{spec: d.spec, defaultSpec: d.defaultSpec}, d.related)
-	if err != nil {
-		status, err = memoryFault(env, err)
-
-		return status, "", err
-	}
-
-	if status&1 == 0 {
-		stop, status, err := d.searchFailed(status)
-		if err != nil || stop {
-			return status, "", err
-		}
-
-		return d.status(), "", nil
-	}
-
-	// Each file's strings and argument lists go below base, and SP goes
-	// back to it for the next file.
-	base := cpu.GPR(registers.SP)
-	nam := d.search + findNAM
-
-	for {
-		cpu.SetGPR(registers.SP, base)
-
-		wcc, err := searchPlace(env, nam)
-		if err != nil {
-			status, err = memoryFault(env, err)
-
-			return status, last, err
-		}
-
-		status, err := env.CallService("SYS$SEARCH", []uint32{d.search + findFAB})
-		if err != nil {
-			return status, last, err
-		}
-
-		if status == rmsNMF {
-			break
-		}
-
-		if status&1 == 0 {
-			stop, status, err := d.searchFailed(status)
-			if err != nil || stop {
-				return status, last, err
-			}
-
-			after, err := searchPlace(env, nam)
-			if err != nil {
-				status, err = memoryFault(env, err)
-
-				return status, last, err
-			}
-
-			if after == wcc {
-				break
-			}
-
-			continue
-		}
-
-		name, err := resultantName(env, nam)
-		if err != nil {
-			status, err = memoryFault(env, err)
-
-			return status, last, err
-		}
-
-		deleted, stop, status, err := d.deleteOne(name)
-		if err != nil || stop {
-			return status, last, err
-		}
-
-		if deleted {
-			last = name
-		}
-	}
-
-	return d.status(), last, nil
-}
-
-// deleteOne asks the confirm routine about the file called name, deletes
-// it, and tells the success routine, or the error routine when the
-// delete fails. deleted is true when the file went; stop is true, with
-// the status to return, when the routine ends here (the error routine
-// said so, or a string couldn't be written).
+// deleteOne asks the confirm routine about the file called name (the file
+// block's), deletes it, and tells the success routine, or the error
+// routine when the delete fails. deleted is true when the file went; stop
+// is true, with the status to return, when the routine ends here (the
+// error routine said so, or a string couldn't be written).
 func (d *deleter) deleteOne(name string) (deleted, stop bool, status uint32, err error) {
 	env := d.env
 
-	if err := setFileBlock(env, d.file, name); err != nil {
-		status, err = memoryFault(env, writing(err))
-
-		return false, true, status, err
-	}
-
-	desc, status, err := d.nameArgument(name)
+	desc, status, err := d.nameArgument(d.result, name)
 	if err != nil || status != 0 {
 		return false, true, status, err
 	}
@@ -376,64 +201,13 @@ func (d *deleter) deleteOne(name string) (deleted, stop bool, status uint32, err
 	return true, false, 0, nil
 }
 
-// searchFailed reports a failed $PARSE or $SEARCH, status, to the error
-// routine, with the search FAB's status value and the NAM's name.
-func (d *deleter) searchFailed(status uint32) (stop bool, _ uint32, err error) {
-	env := d.env
-	mem, cpu := env.Memory(), env.CPU()
-
-	stv, err := mem.LoadLongword(cpu, d.search+findFAB+fabSTV)
-	if err != nil {
-		status, err = memoryFault(env, err)
-
-		return true, status, err
-	}
-
-	name, err := d.searchName()
-	if err != nil {
-		status, err = memoryFault(env, err)
-
-		return true, status, err
-	}
-
-	return d.reportError(name, status, stv, sourceSearch)
-}
-
-// searchName is the name an error searching is reported under: the
-// search NAM's resultant string, else its expanded string, else filespec
-// as given.
-func (d *deleter) searchName() (string, error) {
-	env := d.env
-	nam := d.search + findNAM
-
-	name, err := resultantName(env, nam)
-	if err != nil || name != "" {
-		return name, err
-	}
-
-	esl, err := env.Memory().LoadByte(env.CPU(), nam+namESL)
-	if err != nil {
-		return "", err
-	}
-
-	if esl != 0 {
-		return readText(env, d.search+findESA, uint32(esl))
-	}
-
-	return d.spec, nil
-}
-
 // reportError notes an error, status (with its status value stv, from
-// source), and calls the error routine, if there is one, about the file
-// called name. stop is true when the routine must end with the status
-// returned: the error routine returned failure, or a string couldn't be
-// written.
+// source), and calls the error
+// routine, if there is one, about the file called name. stop is true
+// when the routine must end with the status returned: the error routine
+// returned failure, or a string couldn't be written.
 func (d *deleter) reportError(name string, status, stv, source uint32) (stop bool, _ uint32, err error) {
-	if !d.erred || severityRank(status) > severityRank(d.worst) {
-		d.worst = status
-	}
-
-	d.erred = true
+	d.note(status)
 
 	if d.failure == 0 {
 		return false, 0, nil
@@ -441,7 +215,7 @@ func (d *deleter) reportError(name string, status, stv, source uint32) (stop boo
 
 	env := d.env
 
-	desc, st, err := d.nameArgument(name)
+	desc, st, err := d.nameArgument(d.result, name)
 	if err != nil || st != 0 {
 		return true, st, err
 	}
@@ -453,66 +227,7 @@ func (d *deleter) reportError(name string, status, stv, source uint32) (stop boo
 		return true, st, err
 	}
 
-	r0, err := env.Callback(d.failure, d.withUser(desc, values, values+4, values+8)...)
-	if err != nil {
-		st, err = memoryFault(env, err)
-
-		return true, st, err
-	}
-
-	if r0&1 == 0 {
-		return true, status, nil
-	}
-
-	return false, 0, nil
-}
-
-// status is the routine's status when it ran to the end: SS$_NORMAL
-// with no errors; after errors, LIB$_ERRROUCAL when there is an error
-// routine, else the most severe error.
-func (d *deleter) status() uint32 {
-	switch {
-	case !d.erred:
-		return ssNormal
-	case d.failure != 0:
-		return libErrRouCal
-	default:
-		return d.worst
-	}
-}
-
-// nameArgument returns a descriptor of name for a callback: the
-// program's resultant-name, with name written into it, or else a class S
-// descriptor below SP. A string the routine can't write ends it with
-// status (string copying errors don't go to the error routine).
-func (d *deleter) nameArgument(name string) (desc, status uint32, err error) {
-	env := d.env
-
-	if d.result == 0 {
-		if desc, err = stackString(env, name); err != nil {
-			status, err = memoryFault(env, writing(err))
-		}
-
-		return desc, status, err
-	}
-
-	if _, _, err := writeString(env, d.result, name); err != nil {
-		status, err = stringFailure(env, err)
-
-		return 0, status, err
-	}
-
-	return d.result, 0, nil
-}
-
-// withUser returns args with the user-specified-argument after them,
-// when the program passed one.
-func (d *deleter) withUser(args ...uint32) []uint32 {
-	if d.hasUser {
-		return append(args, d.user)
-	}
-
-	return args
+	return d.callError(status, d.withUser(desc, values, values+4, values+8)...)
 }
 
 // setFileBlock clears a file block and sets its FAB and NAM up as the

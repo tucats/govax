@@ -1,6 +1,6 @@
 # Phase 58 — LIB$ callbacks into the program, and file routines
 
-**Status:** in progress (subtasks 1 to 5 done 2026-10-13). Planned
+**Status:** in progress (subtasks 1 to 6 done 2026-10-13). Planned
 2026-10-12. Needs Phases 53 and 54. Part of the
 LIB$ program laid out in `PHASE-53 - RTL LIB support.md` (Part A).
 
@@ -571,7 +571,7 @@ TRIM_FILESPEC.
 3. **FIND_FILE, FIND_FILE_END.** **Done** 2026-10-13.
 4. **FILE_SCAN, FILE_SCAN_END.** **Done** 2026-10-13.
 5. **DELETE_FILE.** **Done** 2026-10-13.
-6. **RENAME_FILE.**
+6. **RENAME_FILE.** **Done** 2026-10-13.
 7. **FID_TO_NAME, TRIM_FILESPEC.**
 8. **The program** (`testdata/lib58/`, on a volume), its console test,
    and the VMS probe.
@@ -723,3 +723,36 @@ TRIM_FILESPEC.
   `$OPEN`/`$CLOSE` during a wildcard-directory search, resultant-name,
   the context, the argument checks) and rms's
   `TestSearch_plainAfterDelete`.
+- **2026-10-13** — Subtask 6, RENAME_FILE
+  (`internal/librtl/renamefile.go`, code 168, in `callsBack`). What it
+  shares with DELETE_FILE moved to `filewalk.go`'s `fileWalk`: the
+  names, the file-scan context, the search block and file block below
+  SP, the loop over `$SEARCH`, the status rule, and the name
+  descriptors; each routine gives its per-file step and its report of
+  an error searching. For each file found: the new name, worked out by
+  `rms.Session.RenameTarget` (DCL RENAME's `renameTarget`: new-filespec
+  parsed with the old name as its related file, `*` fields the old
+  file's, the version rules; RMS$_WLD and the rest are error source 1);
+  the confirm routine (`old, new, old-fab [,user]`, the new name before
+  its version is known); the rename, `rms.Session.RenameFile`
+  (`$RENAME`'s `renameText`, returning the version the file got; its
+  failures are source 2); the success routine (`old, new [,user]`, the
+  new name with its version). An error searching is source 0. The error
+  routine always gets six arguments, the user argument 0 when the
+  program gave none (the manual's format, without brackets). Choices
+  made, each **unconfirmed** and a probe case: fewer than two arguments
+  or more than twelve is LIB$_WRONUMARG; flag bits past CUR_VER,
+  INH_SECUR, and LONG_NAMES are LIB$_INVARG, the last two changing
+  nothing; a new-filespec over 255 characters is LIB$_INVFILSPE; at
+  source 0 the new name is new-filespec as given, at source 1 as far as
+  it was worked out, status value 0; the input's version for the
+  version rules is the version field of the `$PARSE`'s expanded string
+  (a default name's version counts); with CUR_VER, a name that exists is
+  `$RENAME`'s RMS$_ENT with SS$_DUPFILENAME (the manual says RMS$_FEX);
+  a file renamed to its own name keeps version 1, since `$RENAME`
+  removes the old entry before working out the next version. Tests:
+  librtl's `TestRenameFile*` (wildcards with a refusing confirm and the
+  user argument, a new directory with a default name, the version rules
+  and CUR_VER, errors at sources 0, 1, and 2 with and without an error
+  routine and one that stops, the resultant names, the context, the
+  argument checks, files renamed to their own names not found again).
