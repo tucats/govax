@@ -472,6 +472,14 @@ func (env *Environment) deviceName(name string) (string, uint32) {
 		return "", ssIvDevNam
 	}
 
+	// A full device name has the node's name in front, as NAM$T_DVI
+	// and $GETDVI's DVI$_FULLDEVNAM write it ("_GOVAX$DUA1"): this node's
+	// devices are its own.
+	if node := strings.ToUpper(env.NodeName) + "$"; env.NodeName != "" &&
+		strings.HasPrefix(strings.ToUpper(strings.TrimPrefix(device, "_")), node) {
+		device = strings.TrimPrefix(device, "_")[len(node):]
+	}
+
 	// NL: is the generic name of the null device.
 	if device == "NL" {
 		device = nullDeviceName

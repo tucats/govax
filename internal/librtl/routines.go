@@ -236,6 +236,8 @@ var Routines = []Routine{
 	{"LIB$FILE_SCAN_END", 166, libFileScanEnd},
 	{"LIB$DELETE_FILE", 167, libDeleteFile},
 	{"LIB$RENAME_FILE", 168, libRenameFile},
+	{"LIB$FID_TO_NAME", 169, libFidToName},
+	{"LIB$TRIM_FILESPEC", 170, libTrimFilespec},
 }
 
 // callsBack names the routines that call back into the program (a

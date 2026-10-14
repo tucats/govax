@@ -95,7 +95,10 @@ never had.
   shares with RENAME_FILE is `librtl/filewalk.go`'s `fileWalk`),
   subtask 6 RENAME_FILE (`librtl/renamefile.go`: each file's new name
   and the rename through `rms.Session.RenameTarget`/`RenameFile`, DCL
-  RENAME's own code).
+  RENAME's own code), subtask 7 FID_TO_NAME (`librtl/fidtoname.go`:
+  the back-link walk is `rms.MountTable.ACPFileSpec`, reached through
+  `corevms.Environment.FileSpecByID`) and TRIM_FILESPEC
+  (`librtl/trimfilespec.go`, the name split in Go, `splitFileSpec`).
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
 - `docs/DEVIATIONS.md` — running log of suspected ISA/behavior fidelity issues found in

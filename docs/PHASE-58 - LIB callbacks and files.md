@@ -1,6 +1,7 @@
 # Phase 58 — LIB$ callbacks into the program, and file routines
 
-**Status:** in progress (subtasks 1 to 6 done 2026-10-13). Planned
+**Status:** in progress (subtasks 1 to 6 done 2026-10-13, 7 on
+2026-10-14). Planned
 2026-10-12. Needs Phases 53 and 54. Part of the
 LIB$ program laid out in `PHASE-53 - RTL LIB support.md` (Part A).
 
@@ -572,7 +573,7 @@ TRIM_FILESPEC.
 4. **FILE_SCAN, FILE_SCAN_END.** **Done** 2026-10-13.
 5. **DELETE_FILE.** **Done** 2026-10-13.
 6. **RENAME_FILE.** **Done** 2026-10-13.
-7. **FID_TO_NAME, TRIM_FILESPEC.**
+7. **FID_TO_NAME, TRIM_FILESPEC.** **Done** 2026-10-14.
 8. **The program** (`testdata/lib58/`, on a volume), its console test,
    and the VMS probe.
 9. **Close-out**: Phase 53's Part B gets the callback convention.
@@ -756,3 +757,34 @@ TRIM_FILESPEC.
   and CUR_VER, errors at sources 0, 1, and 2 with and without an error
   routine and one that stops, the resultant names, the context, the
   argument checks, files renamed to their own names not found again).
+- **2026-10-14** — Subtask 7, FID_TO_NAME and TRIM_FILESPEC
+  (`internal/librtl/fidtoname.go` and `trimfilespec.go`, codes 169 and
+  170). FID_TO_NAME's walk up the back links is RMS's
+  (`rms.MountTable.ACPFileSpec`, `rms/acpfilespec.go`: each directory's
+  and the file's name that of its entry in the directory its back link
+  names, else its header's; the master file directory is
+  `[000000]000000.DIR;1`), reached through
+  `corevms.Environment.FileSpecByID` (`corevms/fidname.go`), which finds
+  the device as `$ASSIGN` does and maps the ACP's errors as the disk
+  driver does. `$ASSIGN`'s device names now take a full name with this
+  node's name in front, as NAM$T_DVI holds it (`_GOVAX$DUA1`;
+  `corevms/devices.go`'s `deviceName`). TRIM_FILESPEC splits the name
+  in Go (`splitFileSpec`: node with access control, device, one or more
+  bracketed directories, name, type, version), leaving parts out in the
+  manual's order. Choices made, each **unconfirmed** and a probe case:
+  FID_TO_NAME's specification starts with the device's full name
+  (`_GOVAX$DUA1:`) whatever form was given; a file whose back links
+  don't reach the master file directory is named without a directory,
+  acp-status SS$_NOSUCHFILE, the routine still LIB$_NORMAL; a file ID
+  that names no file is SS$_NOSUCHFILE, a device that isn't mounted
+  SS$_DEVNOTMOUNT, one that doesn't exist SS$_NOSUCHDEV, one that isn't
+  a disk LIB$_INVFILSPE; fewer than three arguments, or a 0 for one of
+  them, LIB$_INVARG. TRIM_FILESPEC leaves out each part only while
+  what's left is too wide; width omitted is new-filespec's current
+  length; width 0 leaves nothing (LIB$_STRTRU); fewer than two arguments
+  or more than four is LIB$_WRONUMARG. Tests: librtl's `TestFidToName*`
+  (files at three depths, the MFD and a directory, each form of the
+  device name, a short filespec, the failures with nothing written,
+  broken back links) and `TestTrimFilespec*`/`TestSplitFileSpec` (the
+  manual's example, each part's edge, width 0 and omitted, a short
+  new-filespec, 255 and 256 characters, the argument counts).
