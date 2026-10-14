@@ -1,6 +1,7 @@
 # Phase 59 — LIB$ virtual memory zones
 
-**Status:** in progress (subtasks 1 to 9 done 2026-10-14).
+**Status:** in progress (subtasks 1 to 9 done 2026-10-14; subtask 10's
+program written, its VMS run pending).
 Needs Phases 53, 54, and 58 (callbacks, for user-defined zones). Part
 of the LIB$ program laid out in `PHASE-53 - RTL LIB support.md` (Part
 A).
@@ -1032,3 +1033,25 @@ VERIFY), and `vmmalloc.go`. `dynstr.go` allocates in the string zone.
   program running the manual's FIND_VM_ZONE example, both kinds of
   action routine, and VERIFY. Leaving the tags unfilled, or the padding,
   fails `TestLibVerifyVMZone`.
+- **2026-10-14** — Subtask 10, part 1: the program and its console
+  test. `testdata/lib59/gen.go` writes `lib59.mar` (526 cases),
+  `lib59.com`, and `exchange.cmd` (README.md has the layout and the VAX
+  run). Addresses are shown only as differences between blocks, page
+  offsets, whether a cell was written, and fill maps; LIB$SHOW_VM's and
+  LIB$SHOW_VM_ZONE's lines go to an action routine that logs them as
+  `  |` lines (or straight to SYS$OUTPUT between `{{` and `}}`), which
+  `TestLib59Oracle` (`internal/console/lib59_test.go`) compares with
+  every 8-digit hex number masked. The user zone routines log each
+  argument by what it is (the caller's cells, an offset in the user
+  zone's control block, the stack) and then do as Example 5-1's do; the
+  page routines log their counts and pass the calls on; cases marked
+  counted show what they changed in LIB$STAT_VM's six figures. Each
+  attribute case shows its zone at detail level 1, so VMS's defaults and
+  rounding are seen whole. The cases that may damage a zone on VMS
+  (double frees, interior and wrong-size frees, a changed tag, an
+  overwritten free block, FREE_VM_PAGE of an area's page, deleted and
+  junk zone IDs, the system zones, argument counts, a changed control
+  block) come last, each in a zone of its own. DECC$MALLOC isn't
+  called: linking DECC$SHR would activate the C RTL with the program,
+  which may make zones before the first case; a program of its own can
+  look at it later. The test skips until `vax/lib59-vax.txt` exists.

@@ -214,6 +214,15 @@ never had.
   it on a fresh RD51 volume as DUA1 (node SIMVAX) and matches VMS V7.1's
   output, `vax/lib58-vax.txt`, line for line but for
   `expectedLib58Differences`.
+- `testdata/lib59/` — Phase 59's probe of LIBRTL's memory routines
+  (README.md): `gen.go` writes `lib59.mar` (526 cases: pages, zone
+  attributes, each algorithm, user zones, page routines, statistics,
+  FIND/SHOW/VERIFY, the VM_MALLOC family, and last the cases that may
+  damage a zone), `lib59.com`, and `exchange.cmd`. Addresses show only
+  as differences, page offsets, and fill maps; the zone reports' lines
+  (`  |`, and SYS$OUTPUT's between `{{` and `}}`) are compared with
+  8-digit hex masked. `TestLib59Oracle` skips until VMS's output is in
+  `vax/lib59-vax.txt`.
 - `testdata/probe49/` — Phase 49's VMS probe in three rounds (`probe6`,
   `probe6b`, `probe6c`; README.md has each round's answers), run by
   `TestProbe6*`; `testdata/rms49/` and `testdata/sec49/` are the phase's
