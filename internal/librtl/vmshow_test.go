@@ -87,9 +87,10 @@ func wantLines(t *testing.T, step string, got []string, want ...string) {
 }
 
 // LIB$FIND_VM_ZONE: the default zone, the string zone, then the
-// program's zones, user-defined too, in the order they were made; a
-// deleted zone isn't found, and a scan in progress goes on past it; the
-// argument count.
+// program's zones, user-defined too, as their control blocks lie in the
+// control zone (VMS 7.1's order, testdata/lib59): first fit, so a zone
+// made after one was deleted takes its place. A scan in progress goes on
+// from where it is; the argument count.
 func TestLibFindVMZone(t *testing.T) {
 	e := userFixture(t)
 
@@ -107,8 +108,9 @@ func TestLibFindVMZone(t *testing.T) {
 		t.Errorf("zones %X, want %X", ids, want)
 	}
 
-	// A scan that has found the user zone goes on to b when a and the
-	// user zone are deleted, and a zone made since comes after b.
+	// A scan that has found the user zone goes on to b when a is
+	// deleted; a zone made since, in a's place, comes before where the
+	// scan is, so it ends after b.
 	putLongword(t, e, zoneScanCell, 0)
 
 	for range 4 {
@@ -122,11 +124,21 @@ func TestLibFindVMZone(t *testing.T) {
 	}
 
 	c := mustCreateZone(t, e, 1)
+	if c != a {
+		t.Errorf("a zone made after a deletion at %X, want the deleted zone's %X", c, a)
+	}
 
-	for _, wantID := range []uint32{b, c} {
-		if r0 := call(t, e, "LIB$FIND_VM_ZONE", zoneScanCell, zoneFoundCell); r0 != ssNormal || longword(t, e, zoneFoundCell) != wantID {
-			t.Errorf("LIB$FIND_VM_ZONE = %#x, %X; want %X", r0, longword(t, e, zoneFoundCell), wantID)
-		}
+	if r0 := call(t, e, "LIB$FIND_VM_ZONE", zoneScanCell, zoneFoundCell); r0 != ssNormal || longword(t, e, zoneFoundCell) != b {
+		t.Errorf("LIB$FIND_VM_ZONE = %#x, %X; want %X", r0, longword(t, e, zoneFoundCell), b)
+	}
+
+	if r0 := call(t, e, "LIB$FIND_VM_ZONE", zoneScanCell, zoneFoundCell); r0 != libNotFou {
+		t.Errorf("LIB$FIND_VM_ZONE at the end = %#x, want LIB$_NOTFOU", r0)
+	}
+
+	want = []uint32{e.DefaultZoneID(), e.StringZoneID(), c, u, b}
+	if ids := findZones(t, e); fmt.Sprint(ids) != fmt.Sprint(want) {
+		t.Errorf("zones %X, want %X", ids, want)
 	}
 
 	if r0 := call(t, e, "LIB$FIND_VM_ZONE", zoneScanCell); r0 != libWroNumArg {
@@ -160,8 +172,8 @@ func TestLibFindVMZoneDamaged(t *testing.T) {
 }
 
 // LIB$VERIFY_VM_ZONE: sound zones (the default zone as 0, a user zone,
-// zones with a free fill through frees that merge, tags, and alignment
-// padding) are SS$_NORMAL; a freed block the program wrote in, on a free
+// zones with a free fill through frees that merge, tags) are SS$_NORMAL;
+// a freed block the program wrote in past its control words, on a free
 // list or a lookaside list, is LIB$_BADZONE; a bad ID, a null argument,
 // and the argument count.
 func TestLibVerifyVMZone(t *testing.T) {
@@ -186,16 +198,18 @@ func TestLibVerifyVMZone(t *testing.T) {
 	} {
 		id := mustCreateZone(t, e, c.values...)
 
-		var blocks []uint32
+		var blocks, sizes []uint32
 		for i := range 12 {
-			blocks = append(blocks, mustGetVM(t, e, uint32(8+8*(i%5)), id))
+			size := uint32(8 + 8*(i%5))
+			blocks = append(blocks, mustGetVM(t, e, size, id))
+			sizes = append(sizes, size)
 		}
 
 		// Free every other block, then the rest, so that freed blocks
 		// merge with neighbors on both sides.
 		for _, step := range []int{0, 1} {
 			for i := step; i < len(blocks); i += 2 {
-				if r0 := freeVM(t, e, 0, blocks[i], id); r0 != ssNormal {
+				if r0 := freeVM(t, e, sizes[i], blocks[i], id); r0 != ssNormal {
 					t.Fatalf("%s: LIB$FREE_VM = %#x", c.name, r0)
 				}
 
@@ -205,11 +219,12 @@ func TestLibVerifyVMZone(t *testing.T) {
 			}
 		}
 
-		// Allocate again (from the freed space), free one, and write in it.
-		x := mustGetVM(t, e, 8, id)
+		// Allocate again (from the freed space), free one, and write in
+		// it, past its control words.
+		x := mustGetVM(t, e, 40, id)
 		mustGetVM(t, e, 8, id)
 
-		if r0 := freeVM(t, e, 0, x, id); r0 != ssNormal {
+		if r0 := freeVM(t, e, 40, x, id); r0 != ssNormal {
 			t.Fatalf("%s: LIB$FREE_VM = %#x", c.name, r0)
 		}
 
@@ -217,7 +232,7 @@ func TestLibVerifyVMZone(t *testing.T) {
 			t.Errorf("%s: LIB$VERIFY_VM_ZONE = %#x", c.name, r0)
 		}
 
-		putLongword(t, e, x, 0x12345678)
+		putLongword(t, e, x+16, 0x12345678)
 
 		if r0 := verifyZone(t, e, id); r0 != libBadZone {
 			t.Errorf("%s: LIB$VERIFY_VM_ZONE with a freed block written in = %#x, want LIB$_BADZONE", c.name, r0)
@@ -239,59 +254,104 @@ func TestLibVerifyVMZone(t *testing.T) {
 	}
 }
 
-// LIB$SHOW_VM_ZONE of the default zone at levels 0 and 1, as the
-// manual's sample lays level 1 out, before and after its first block.
+// The area summary's and the scan's column headings.
+var (
+	areaHeadings = []string{
+		"\tArea Summary:",
+		"",
+		"\t      First     Last       Pages    Bytes not yet",
+		"\t     address   address    assigned    allocated",
+		"\t    --------  --------  ----------  -------------",
+	}
+	listHeadings = []string{
+		"",
+		"\t     List        Block   Number of",
+		"\t    number        size     blocks",
+		"\t    ------  ----------  ----------",
+	}
+)
+
+// lines joins its arguments, strings or slices of them, into one list.
+func lines(parts ...any) []string {
+	var out []string
+
+	for _, p := range parts {
+		switch p := p.(type) {
+		case string:
+			out = append(out, p)
+		case []string:
+			out = append(out, p...)
+		}
+	}
+
+	return out
+}
+
+// LIB$SHOW_VM_ZONE of the default zone at levels 0, 1, and 3, laid out
+// as VMS 7.1 lays them out (testdata/lib59), before and after its first
+// block.
 func TestLibShowVMZoneDefault(t *testing.T) {
 	e, out := statFixture(t)
 	id := e.DefaultZoneID()
 
-	r0, lines := showZoneLines(t, e, out, 0, 0)
+	r0, got := showZoneLines(t, e, out, id, 0)
 	if r0 != ssNormal {
 		t.Errorf("LIB$SHOW_VM_ZONE = %#x", r0)
 	}
 
 	head := fmt.Sprintf(`Zone Id = %08X,  Zone name = "DEFAULT_ZONE"`, id)
-	wantLines(t, "level 0", lines, head)
+	wantLines(t, "level 0", got, head)
 
-	_, lines = showZoneLines(t, e, out, id, 1)
-	wantLines(t, "level 1", lines,
+	_, got = showZoneLines(t, e, out, 0, 1)
+	wantLines(t, "level 1", got,
 		head,
-		"    Algorithm = LIB$K_VM_FIRST_FIT",
-		"    Flags = 00000020",
-		"                 LIB$M_VM_EXTEND_AREA",
-		"    Initial size =       0 pages     Current size = 0 pages in 0 areas",
-		"    Extend size  =     128 pages     Page limit   = None",
-		"    Requests are rounded up to a multiple of 8 bytes,",
-		"    naturally aligned on 8 byte boundaries",
-		"    0 bytes have been freed and not yet reallocated",
-		"    128 bytes are used for zone and area control blocks, or 100.0% overhead")
+		"",
+		"\tAlgorithm = LIB$K_VM_FIRST_FIT",
+		"",
+		"\tFlags = 00000020",
+		"\t\t     LIB$M_VM_EXTEND_AREA",
+		"",
+		"\tInitial size =     124 pages     Current size = 0 pages in 0 areas",
+		"\tExtend size  =     128 pages     Page limit   = None",
+		"",
+		"\tRequests are rounded up to a multiple of 8 bytes,",
+		"\tnaturally aligned on 8 byte boundaries",
+		"",
+		"\t0 bytes have been freed and not yet reallocated",
+		"",
+		"\t80 bytes are used for zone and area control blocks, or 100.0% overhead",
+		"")
 
 	a := mustGetVM(t, e, 100, 0)
 	mustGetVM(t, e, 20, 0)
 
-	if r0 := freeVM(t, e, 0, a, 0); r0 != ssNormal {
+	if r0 := freeVM(t, e, 100, a, 0); r0 != ssNormal {
 		t.Fatalf("LIB$FREE_VM = %#x", r0)
 	}
 
-	_, lines = showZoneLines(t, e, out, 0, 3)
-	wantLines(t, "level 3", lines[4:],
-		"    Initial size =       0 pages     Current size = 128 pages in 1 area",
-		"    Extend size  =     128 pages     Page limit   = None",
-		"    Requests are rounded up to a multiple of 8 bytes,",
-		"    naturally aligned on 8 byte boundaries",
-		"    104 bytes have been freed and not yet reallocated",
-		"    192 bytes are used for zone and area control blocks, or 0.3% overhead",
-		"    Area Summary:",
-		"          First     Last       Pages    Bytes not yet",
-		"         address   address    assigned    allocated",
-		"        --------  --------  ----------  -------------",
-		fmt.Sprintf("        %08X  %08X         128          65344", a-64, a-64+128*512-1),
-		fmt.Sprintf("    Scanning Free List for Area at %08X", a-64),
-		"      Number of blocks = 1, Min blocksize = 104, Max blocksize = 104")
+	_, got = showZoneLines(t, e, out, 0, 3)
+	wantLines(t, "level 3", got[7:], lines(
+		"\tInitial size =     124 pages     Current size = 124 pages in 1 area",
+		"\tExtend size  =     128 pages     Page limit   = None",
+		"",
+		"\tRequests are rounded up to a multiple of 8 bytes,",
+		"\tnaturally aligned on 8 byte boundaries",
+		"",
+		"\t104 bytes have been freed and not yet reallocated",
+		"",
+		"\t144 bytes are used for zone and area control blocks, or 0.2% overhead",
+		"",
+		areaHeadings,
+		fmt.Sprintf("\t    %08X  %08X         124          63360", a, a+124*512-1),
+		"",
+		fmt.Sprintf("\tScanning Free List for Area at %08X", a),
+		"\t  Number of blocks = 1, Min blocksize = 104, Max blocksize = 104",
+		"",
+		"")...)
 }
 
 // LIB$SHOW_VM_ZONE of a quick fit zone with a free fill at levels 2 and
-// 3 (the manual's second sample's form), and a freed block written in.
+// 3, and a freed block written in: an error, and LIB$_BADZONE.
 func TestLibShowVMZoneQuickFit(t *testing.T) {
 	e, out := statFixture(t)
 
@@ -310,120 +370,133 @@ func TestLibShowVMZoneQuickFit(t *testing.T) {
 
 	id := longword(t, e, vmZoneCell)
 
+	sizes := []uint32{16, 16, 24, 200, 300, 8}
+
 	var blocks []uint32
-	for _, size := range []uint32{16, 16, 24, 200, 300, 8} {
+	for _, size := range sizes {
 		blocks = append(blocks, mustGetVM(t, e, size, id))
 	}
 
 	for _, i := range []int{0, 1, 2, 3} {
-		if r0 := freeVM(t, e, 0, blocks[i], id); r0 != ssNormal {
+		if r0 := freeVM(t, e, sizes[i], blocks[i], id); r0 != ssNormal {
 			t.Fatalf("LIB$FREE_VM = %#x", r0)
 		}
 	}
 
-	area := blocks[0] - 64
+	area := blocks[0]
 
-	_, lines := showZoneLines(t, e, out, id, 3)
-	wantLines(t, "level 3", lines,
+	r0, got := showZoneLines(t, e, out, id, 3)
+	wantLines(t, "level 3", got, lines(
 		fmt.Sprintf(`Zone Id = %08X,  Zone name = "Mix"`, id),
-		"    Algorithm = LIB$K_VM_QUICK_FIT  with 4 Lookaside Lists ranging from",
-		"                a minimum blocksize of 8, to a maximum blocksize of 32",
-		"    Flags = 00000028",
-		"                 LIB$M_VM_FREE_FILL0",
-		"                 LIB$M_VM_EXTEND_AREA",
-		"    Initial size =      16 pages     Current size = 16 pages in 1 area",
-		"    Extend size  =      16 pages     Page limit   = None",
-		"    Requests are rounded up to a multiple of 8 bytes,",
-		"    naturally aligned on 8 byte boundaries",
-		"    256 bytes have been freed and not yet reallocated",
-		"    192 bytes are used for zone and area control blocks, or 2.3% overhead",
-		"    Quick Fit Lookaside List Summary:",
-		"         List        Block   Number of",
-		"        number        size     blocks",
-		"        ------  ----------  ----------",
-		"             2          16           2",
-		"             3          24           1",
-		"    Area Summary:",
-		"          First     Last       Pages    Bytes not yet",
-		"         address   address    assigned    allocated",
-		"        --------  --------  ----------  -------------",
-		fmt.Sprintf("        %08X  %08X          16           7560", area, area+16*512-1),
-		"    Scanning Lookaside Lists in Zone Control Block",
-		fmt.Sprintf("    Scanning Free List for Area at %08X", area),
-		"      Number of blocks = 1, Min blocksize = 200, Max blocksize = 200")
+		"",
+		"\tAlgorithm = LIB$K_VM_QUICK_FIT  with 4 Lookaside Lists ranging from",
+		"\t            a minimum blocksize of 8, to a maximum blocksize of 32",
+		"",
+		"\tFlags = 00000028",
+		"\t\t     LIB$M_VM_FREE_FILL0",
+		"\t\t     LIB$M_VM_EXTEND_AREA",
+		"",
+		"\tInitial size =      16 pages     Current size = 16 pages in 1 area",
+		"\tExtend size  =      16 pages     Page limit   = None",
+		"",
+		"\tRequests are rounded up to a multiple of 8 bytes,",
+		"\tnaturally aligned on 8 byte boundaries",
+		"",
+		"\t256 bytes have been freed and not yet reallocated",
+		"",
+		"\t184 bytes are used for zone and area control blocks, or 2.1% overhead",
+		"",
+		"\tQuick Fit Lookaside List Summary:",
+		listHeadings,
+		"\t         2          16           2",
+		"\t         3          24           1",
+		"",
+		areaHeadings,
+		fmt.Sprintf("\t    %08X  %08X          16           7624", area, area+16*512-1),
+		"",
+		"\tScanning Lookaside Lists in Zone Control Block",
+		fmt.Sprintf("\tScanning Free List for Area at %08X", area),
+		"\t  Number of blocks = 1, Min blocksize = 200, Max blocksize = 200",
+		"",
+		"")...)
 
-	// A block on a lookaside list written in shows as an error with its
-	// contents; the zone fails verification.
-	putLongword(t, e, blocks[2]+4, 0x6B6E754A) // "Junk"
+	if r0 != ssNormal {
+		t.Errorf("LIB$SHOW_VM_ZONE = %#x", r0)
+	}
 
-	_, lines = showZoneLines(t, e, out, id, 3)
-	wantLines(t, "damaged", lines[23:],
-		"    Scanning Lookaside Lists in Zone Control Block",
-		"    **** ERROR -- free-fill mismatch ****",
-		"    Block size = 24",
-		"    Block contents:",
-		fmt.Sprintf("      00000000 00000000 6B6E754A 00000000  ....Junk........ 00000 %08X", blocks[2]),
-		fmt.Sprintf("                        00000000 00000000  ........         00010 %08X", blocks[2]+16),
-		fmt.Sprintf("    Scanning Free List for Area at %08X", area),
-		"      Number of blocks = 1, Min blocksize = 200, Max blocksize = 200")
+	// Level 2 stops after the area summary.
+	if _, got := showZoneLines(t, e, out, id, 2); len(got) != 34 {
+		t.Errorf("level 2: %d lines, want 34:\n%s", len(got), strings.Join(got, "\n"))
+	}
+
+	// A block on a lookaside list written in past its control words
+	// shows as an error with its contents; the zone is LIB$_BADZONE.
+	putLongword(t, e, blocks[2]+12, 0x6B6E754A) // "Junk"
+
+	r0, got = showZoneLines(t, e, out, id, 3)
+	if r0 != libBadZone || !strings.Contains(strings.Join(got, "\n"), "\t**** ERROR -- free-fill mismatch ****") {
+		t.Errorf("damaged: %#x\n%s", r0, strings.Join(got, "\n"))
+	}
 
 	if r0 := verifyZone(t, e, id); r0 != libBadZone {
 		t.Errorf("LIB$VERIFY_VM_ZONE = %#x, want LIB$_BADZONE", r0)
 	}
-
-	// Level 2 stops after the area summary.
-	_, lines = showZoneLines(t, e, out, id, 2)
-	if len(lines) != 23 {
-		t.Errorf("level 2: %d lines, want 23:\n%s", len(lines), strings.Join(lines, "\n"))
-	}
 }
 
-// LIB$SHOW_VM_ZONE's other algorithms' lines, a user zone (its first line
-// only), and its failures: a bad ID, a bad detail level, the argument
-// count.
+// LIB$SHOW_VM_ZONE's other algorithms' lines, a user zone (its user
+// argument), and its answers: a bad ID, a detail level past 3 (level
+// 3), zone-id omitted, the argument count.
 func TestLibShowVMZoneOthers(t *testing.T) {
 	e, out := statFixture(t)
 
 	fixed := mustCreateZone(t, e, 4, 64, 0x01|0x40, 16, 4, 8, 4, 8) // FIXED 64, tags, NO_EXTEND, 4 pages, limit 8
-	_, lines := showZoneLines(t, e, out, fixed, 1)
-	wantLines(t, "fixed", lines[1:],
-		"    Algorithm = LIB$K_VM_FIXED  with a blocksize of 64",
-		"    Flags = 00000041",
-		"                 LIB$M_VM_BOUNDARY_TAGS",
-		"                 LIB$M_VM_NO_EXTEND",
-		"    Initial size =       4 pages     Current size = 4 pages in 1 area",
-		"    Extend size  =       0 pages     Page limit   = 8 pages",
-		"    Requests are rounded up to a multiple of 8 bytes,",
-		"    aligned on 4 byte boundaries",
-		"    0 bytes have been freed and not yet reallocated",
-		"    192 bytes are used for zone and area control blocks, or 8.6% overhead")
+	_, got := showZoneLines(t, e, out, fixed, 1)
+	wantLines(t, "fixed", got[1:],
+		"",
+		"\tAlgorithm = LIB$K_VM_FIXED  with block size of 64",
+		"",
+		"\tFlags = 00000001",
+		"\t\t     LIB$M_VM_BOUNDARY_TAGS",
+		"",
+		"\tInitial size =       4 pages     Current size = 4 pages in 1 area",
+		"\tExtend size  =      16 pages     Page limit   = 8 pages",
+		"",
+		"\tRequests are rounded up to a multiple of 8 bytes,",
+		"\tnaturally aligned on 8 byte boundaries",
+		"",
+		"\t0 bytes have been freed and not yet reallocated",
+		"",
+		"\t152 bytes are used for zone and area control blocks, or 6.9% overhead",
+		"")
 
 	freq := mustCreateZone(t, e, 3, 2)
-	_, lines = showZoneLines(t, e, out, freq, 1)
+	_, got = showZoneLines(t, e, out, freq, 1)
 
-	if lines[1] != "    Algorithm = LIB$K_VM_FREQ_SIZES  with 2 Lookaside Lists" {
-		t.Errorf("frequent sizes: %q", lines[1])
+	if got[2] != "\tAlgorithm = LIB$K_VM_FREQ_SIZES  with 2 Lookaside Lists" {
+		t.Errorf("frequent sizes: %q", got[2])
 	}
 
 	u := createUserZone(t, e, 7)
-	_, lines = showZoneLines(t, e, out, u, 3)
-	wantLines(t, "user zone", lines, fmt.Sprintf(`Zone Id = %08X,  Zone name = ""`, u))
+	_, got = showZoneLines(t, e, out, u, 3)
+	wantLines(t, "user zone", got,
+		fmt.Sprintf(`Zone Id = %08X,  Zone name = ""`, u),
+		"",
+		"\tAlgorithm = (user zone)   USER_ARG = 7")
 
-	if r0, lines := showZoneLines(t, e, out, 0x12340, 0); r0 != libBadZone || lines != nil {
-		t.Errorf("LIB$SHOW_VM_ZONE of no zone = %#x, %q; want LIB$_BADZONE, nothing", r0, lines)
+	if r0, got := showZoneLines(t, e, out, 0x12340, 0); r0 != libBadZone || got != nil {
+		t.Errorf("LIB$SHOW_VM_ZONE of no zone = %#x, %q; want LIB$_BADZONE, nothing", r0, got)
 	}
 
+	_, level3 := showZoneLines(t, e, out, fixed, 3)
+
 	for _, detail := range []uint32{4, 0xFFFFFFFF} {
-		if r0, lines := showZoneLines(t, e, out, 0, detail); r0 != libInvArg || lines != nil {
-			t.Errorf("LIB$SHOW_VM_ZONE at level %d = %#x, %q; want LIB$_INVARG, nothing", int32(detail), r0, lines)
+		if r0, got := showZoneLines(t, e, out, fixed, detail); r0 != ssNormal || strings.Join(got, "\n") != strings.Join(level3, "\n") {
+			t.Errorf("LIB$SHOW_VM_ZONE at level %d = %#x, %q; want level 3's", int32(detail), r0, got)
 		}
 	}
 
-	// Omitted zone-id and detail-level: the default zone at level 0.
-	before := out.Len()
-	if r0 := call(t, e, "LIB$SHOW_VM_ZONE", 0); r0 != ssNormal ||
-		out.String()[before:] != fmt.Sprintf("Zone Id = %08X,  Zone name = \"DEFAULT_ZONE\"\n", e.DefaultZoneID()) {
-		t.Errorf("LIB$SHOW_VM_ZONE() = %#x, %q", r0, out.String()[before:])
+	if r0 := call(t, e, "LIB$SHOW_VM_ZONE", 0); r0 != libInvArg {
+		t.Errorf("LIB$SHOW_VM_ZONE with zone-id omitted = %#x, want LIB$_INVARG", r0)
 	}
 
 	for _, argv := range [][]uint32{{}, {showZone, 0, 0, 0, 0}} {

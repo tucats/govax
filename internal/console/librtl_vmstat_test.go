@@ -35,9 +35,10 @@ func TestLibrtlVMStatistics(t *testing.T) {
 		t.Errorf("R0 = %#x, want 1", r0)
 	}
 
-	const want = " 2 calls to LIB$GET_VM, 1 calls to LIB$FREE_VM, 100 bytes still allocated\n" +
+	// 100 bytes are 104 as rounded, which VMS 7.1 counts.
+	const want = " 2 calls to LIB$GET_VM, 1 calls to LIB$FREE_VM, 104 bytes still allocated\n" +
 		" 2 calls to LIB$GET_VM\n" +
-		"100 00000001 12345671\n"
+		"104 00000001 12345671\n"
 	if out != want {
 		t.Errorf("output %q, want %q", out, want)
 	}

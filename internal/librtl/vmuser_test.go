@@ -111,9 +111,15 @@ func TestLibUserZoneRoutines(t *testing.T) {
 
 	argAddr := args[2]
 
-	req = tailCallOf(t, e, "LIB$FREE_VM", 0, vmAddrCell, vmZoneCell)
-	if args := argList(t, e, req, 3); req.Routine != userFree || args[0] != 0 || args[1] != vmAddrCell || args[2] != argAddr {
-		t.Errorf("FREE_VM without a size calls %#x with %#x; want %#x with 0, the address's cell, %#x", req.Routine, args, userFree, argAddr)
+	req = tailCallOf(t, e, "LIB$FREE_VM", vmSizeCell, vmAddrCell, vmZoneCell)
+	if args := argList(t, e, req, 3); req.Routine != userFree || args[0] != vmSizeCell || args[1] != vmAddrCell || args[2] != argAddr {
+		t.Errorf("FREE_VM calls %#x with %#x; want %#x with the size's and address's cells, %#x", req.Routine, args, userFree, argAddr)
+	}
+
+	// Without a size, VMS 7.1 reads its longword at 0 (no-access there;
+	// this fixture's page 0 holds 0, LIB$_BADBLOSIZ) and calls nothing.
+	if r0 := call(t, e, "LIB$FREE_VM", 0, vmAddrCell, vmZoneCell); r0 != libBadBlockSize && r0 != ssAccVio {
+		t.Errorf("FREE_VM without a size = %#x, want SS$_ACCVIO or LIB$_BADBLOSIZ", r0)
 	}
 
 	req = tailCallOf(t, e, "LIB$RESET_VM_ZONE", vmZoneCell)
@@ -133,11 +139,12 @@ func TestLibUserZoneRoutines(t *testing.T) {
 		t.Error("ZoneSettingsOf a user-defined zone: ok, want not")
 	}
 
-	// DELETE forgets the zone, then calls its routine with a copy of the
-	// user argument (the control block is gone).
+	// DELETE forgets the zone, then calls its routine with the user
+	// argument's address in its control block, freed but not yet reused,
+	// as VMS 7.1 does.
 	req = tailCallOf(t, e, "LIB$DELETE_VM_ZONE", vmZoneCell)
-	if args := argList(t, e, req, 1); req.Routine != userDelete || longword(t, e, args[0]) != 0x1234 || args[0] == argAddr {
-		t.Errorf("DELETE_VM_ZONE calls %#x with %#x; want %#x with a copy of 1234", req.Routine, args, userDelete)
+	if args := argList(t, e, req, 1); req.Routine != userDelete || longword(t, e, args[0]) != 0x1234 || args[0] != argAddr {
+		t.Errorf("DELETE_VM_ZONE calls %#x with %#x; want %#x with %#x, holding 1234", req.Routine, args, userDelete, argAddr)
 	}
 
 	if r0 := zoneCall(t, e, "LIB$DELETE_VM_ZONE", id); r0 != libBadBlockAddress {
@@ -150,8 +157,8 @@ func TestLibUserZoneRoutines(t *testing.T) {
 }
 
 // A routine not given is LIB$_INVOPEZON; without a delete routine the
-// zone can't be deleted. Omitted arguments are a user argument of 0 and
-// no name.
+// zone is deleted all the same, as on VMS 7.1. Omitted arguments are a
+// user argument of 0 and no name.
 func TestLibUserZoneMissingRoutines(t *testing.T) {
 	e := userFixture(t)
 
@@ -184,8 +191,8 @@ func TestLibUserZoneMissingRoutines(t *testing.T) {
 		}
 	}
 
-	if _, _, ok := e.UserZoneOf(id); !ok {
-		t.Error("the zone is gone after a DELETE_VM_ZONE without its routine")
+	if _, _, ok := e.UserZoneOf(id); ok {
+		t.Error("the zone is still there after a DELETE_VM_ZONE without its routine")
 	}
 }
 

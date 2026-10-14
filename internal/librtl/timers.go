@@ -268,8 +268,9 @@ func libInitTimer(env *corevms.Environment, argv []uint32) (uint32, error) {
 // It frees the heap timer block whose address is the longword at
 // handle-address, and zeroes that longword. LIB$_INVARG if it isn't a
 // timer block (isTimerBlock; a handle holding 0 is an access violation,
-// as on VMS 7.1), and LIB$_BADBLOADR if the heap no longer has it (the
-// program freed it with LIB$FREE_VM). The tag is cleared first, so a
+// as on VMS 7.1; a block the program freed with LIB$FREE_VM holds the
+// free space's control words where its tag was), and LIB$_BADBLOADR if
+// the heap no longer has it. The tag is cleared first, so a
 // copy of the handle no longer names a block (unconfirmed).
 func libFreeTimer(env *corevms.Environment, argv []uint32) (uint32, error) {
 	handle := arg(argv, 0)

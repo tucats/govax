@@ -38,6 +38,14 @@ const maxPages = 0x40000000 / PageSize
 // and LIB$SHOW_VM: allocations (Allocate, and Lend, a zone's) and frees
 // (Free, and Reclaim, a zone's).
 type PagePool struct {
+	// Chunk, when not 0, is the fewest pages the pool asks its region
+	// for when it grows (more when a request needs more), as VMS 7.1's
+	// does: its first LIB$GET_VM_PAGE takes 128 pages from P0, so a
+	// $EXPREG after it gets the page 128 pages on (testdata/lib59). The
+	// pool asks for just what it needs when the region can't give a
+	// whole chunk.
+	Chunk uint32
+
 	region Region
 	owned  []span
 	free   []span
@@ -112,8 +120,10 @@ func (p *PagePool) grow(n uint32) error {
 	}
 
 	for {
-		addr, ok := p.region.Expand(need)
-		if !ok {
+		addr, ok := p.region.Expand(max(need, p.Chunk))
+		if ok {
+			need = max(need, p.Chunk)
+		} else if addr, ok = p.region.Expand(need); !ok {
 			return ErrNoMemory
 		}
 

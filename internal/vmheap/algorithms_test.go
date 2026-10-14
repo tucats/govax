@@ -58,7 +58,9 @@ func TestQuickFit(t *testing.T) {
 }
 
 // Frequent sizes: each list takes the size of the first block freed to
-// it while empty; a size no list has, with none empty, is first fit.
+// it while empty; a size no list has, with none empty, takes over the
+// next list in turn, whose blocks go back to their area (as VMS 7.1
+// does: testdata/lib59).
 func TestFrequentSizes(t *testing.T) {
 	z, _ := newZone(t, Attributes{Algorithm: FrequentSizes, Lists: 2, BlockSize: 8, Alignment: 8, ExtendPages: 4})
 
@@ -68,25 +70,29 @@ func TestFrequentSizes(t *testing.T) {
 
 	mustFree(t, z, a)
 	mustFree(t, z, b)
-	mustFree(t, z, c) // no empty list: back to the area
+	mustFree(t, z, c) // no empty list: the first list takes 48
 
-	if z.listed() != 2 || z.lists[0].n != 16 || z.lists[1].n != 32 {
-		t.Fatalf("lists %+v, want 16 and 32 with a block each", z.lists)
+	if z.listed() != 2 || z.lists[0].n != 48 || z.lists[1].n != 32 {
+		t.Fatalf("lists %+v, want 48 and 32 with a block each", z.lists)
 	}
 
 	if x := mustAllocate(t, z, 48); x != c {
-		t.Errorf("48 bytes at %X, want first fit's %X", x, c)
+		t.Errorf("48 bytes at %X, want the listed %X", x, c)
 	}
 
-	// Emptied, the 32-byte list takes the next size freed to it.
+	if x := mustAllocate(t, z, 16); x != a {
+		t.Errorf("16 bytes at %X, want first fit's %X", x, a)
+	}
+
+	// Emptied, a list keeps its size.
 	if x := mustAllocate(t, z, 32); x != b {
 		t.Errorf("32 bytes at %X, want the listed %X", x, b)
 	}
 
 	mustFree(t, z, c)
 
-	if z.lists[1].n != 48 || len(z.lists[1].addrs) != 1 {
-		t.Errorf("second list %+v, want 48 bytes, one block", z.lists[1])
+	if z.lists[0].n != 48 || len(z.lists[0].addrs) != 1 || z.lists[1].n != 32 {
+		t.Errorf("lists %+v, want 48 bytes with one block, then 32", z.lists)
 	}
 }
 
@@ -106,8 +112,8 @@ func TestFixedSize(t *testing.T) {
 		t.Errorf("blocks %d apart, want 24", b-a)
 	}
 
-	if n, _ := z.BlockSize(a); n != 24 || z.Usable(3) != 24 {
-		t.Errorf("block size %d, Usable(3) %d; want 24", n, z.Usable(3))
+	if n, _ := z.BlockSize(a); n != 24 {
+		t.Errorf("block size %d, want 24", n)
 	}
 
 	mustFree(t, z, a)
@@ -131,12 +137,12 @@ func TestBoundaryTags(t *testing.T) {
 	b := mustAllocate(t, z, 8) // 16
 	c := mustAllocate(t, z, 9) // 24
 
-	if a%PageSize != AreaHeader+TagSize || b-a != 16 || c-b != 16 {
-		t.Errorf("blocks at offset %d, then +%d, +%d; want %d, +16, +16", a%PageSize, b-a, c-a, AreaHeader+TagSize)
+	if a%PageSize != TagSize || b-a != 16 || c-b != 16 {
+		t.Errorf("blocks at offset %d, then +%d, +%d; want %d, +16, +16", a%PageSize, b-a, c-a, TagSize)
 	}
 
-	if n, _ := z.BlockSize(a); n != 8 || z.Usable(9) != 16 {
-		t.Errorf("BlockSize(a) = %d, Usable(9) = %d; want 8 and 16", n, z.Usable(9))
+	if n, _ := z.BlockSize(a); n != 8 {
+		t.Errorf("BlockSize(a) = %d, want 8", n)
 	}
 
 	before, after, value, ok := z.Tags(c)
@@ -189,14 +195,15 @@ func TestInitialSizeAndPageLimit(t *testing.T) {
 	}
 }
 
-// NoExtend keeps the zone to its initial area.
+// NoExtend keeps the zone to its first area: past it is ErrPageLimit,
+// as VMS 7.1 answers (testdata/lib59).
 func TestNoExtend(t *testing.T) {
 	z, _ := newZone(t, Attributes{BlockSize: 8, Alignment: 8, InitialPages: 1, NoExtend: true})
 
 	mustAllocate(t, z, 400)
 
-	if _, err := z.Allocate(100); !errors.Is(err, ErrNoMemory) {
-		t.Errorf("past the initial area: %v, want ErrNoMemory", err)
+	if _, err := z.Allocate(200); !errors.Is(err, ErrPageLimit) {
+		t.Errorf("past the initial area: %v, want ErrPageLimit", err)
 	}
 
 	if z.Areas() != 1 {
@@ -241,7 +248,7 @@ func TestReset(t *testing.T) {
 	freed := z.Reset()
 	mustCheck(t, z)
 
-	if len(freed) != 2 || freed[0].Addr != second || freed[0].Size != 104 {
+	if len(freed) != 2 || freed[0].Addr != second || freed[0].End-freed[0].Start != 104 {
 		t.Errorf("Reset freed %+v, want 2 blocks starting with %X (104 bytes)", freed, second)
 	}
 
@@ -288,7 +295,6 @@ func TestNewZoneRejectsBadAlgorithmAttributes(t *testing.T) {
 		func(a *Attributes) { a.Algorithm = FrequentSizes },
 		func(a *Attributes) { a.Algorithm = FixedSize },
 		func(a *Attributes) { a.Algorithm = 9 },
-		func(a *Attributes) { a.NoExtend = true },
 		func(a *Attributes) { a.InitialPages, a.PageLimit = 3, 2 },
 	} {
 		attr := base

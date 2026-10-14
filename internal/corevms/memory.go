@@ -13,24 +13,6 @@ import "github.com/tucats/govax/internal/vmheap"
 // rundown forgets them (releaseHeap), as VMS deletes the P0 pages they
 // were in.
 
-// defaultZone is the default zone's attributes, the 5.0 LIB$ manual's
-// Table 5-3: blocks a multiple of 8 bytes, quadword aligned, from areas
-// of 128 pages; and LIB$M_VM_EXTEND_AREA, which the manual's
-// LIB$SHOW_VM_ZONE example shows the default zone has. Its name is the
-// one the manual's LIB$FIND_VM_ZONE example shows.
-var defaultZone = ZoneSettings{
-	Attributes: vmheap.Attributes{BlockSize: 8, Alignment: 8, ExtendPages: 128, ExtendArea: true},
-	Name:       "DEFAULT_ZONE",
-}
-
-// stringZone is the string zone's attributes. Neither manual gives
-// them, nor its name; these are the default zone's, under a name of
-// govax's (unconfirmed: a probe case).
-var stringZone = ZoneSettings{
-	Attributes: defaultZone.Attributes,
-	Name:       "STRING_ZONE",
-}
-
 // p0Region is the process's P0 region as the heap's page pool sees it:
 // it grows by $EXPREG's rule (expandP0).
 type p0Region struct {
@@ -79,12 +61,17 @@ func (env *Environment) expandP0(pages uint32) (uint32, bool) {
 	return start, true
 }
 
+// poolChunk is the fewest pages the page pool takes from P0 when it
+// grows, VMS 7.1's 128 (testdata/lib59).
+const poolChunk = 128
+
 // pagePool returns the image's page pool, the processwide pool
 // LIB$GET_VM_PAGE and LIB$FREE_VM_PAGE manage and the heap's zones take
 // their areas from, making it at the image's first use.
 func (env *Environment) pagePool() *vmheap.PagePool {
 	if env.heapPages == nil {
 		env.heapPages = vmheap.NewPagePool(p0Region{env})
+		env.heapPages.Chunk = poolChunk
 	}
 
 	return env.heapPages
@@ -95,19 +82,20 @@ func (env *Environment) pagePool() *vmheap.PagePool {
 // of P0 again, over where the blocks were.
 func (env *Environment) releaseHeap() {
 	env.heapPages, env.defaultHeap, env.stringHeap = nil, nil, nil
-	env.zones, env.zoneControl, env.zoneSeq = nil, nil, 0
+	env.zones, env.zoneControl, env.vmCounts = nil, nil, VMCounts{}
+	env.cHeap = nil
 }
 
 // allocate allocates size bytes from the RTL's zone z (the default or
-// the string zone, neither of which tags or fills), returning the
-// block's address, or 0 when P0 has no room. A size of 0 gets the
-// smallest block, so that each call returns a distinct address.
-func allocate(z *heapZone, err error, size uint32) uint32 {
+// the string zone), returning the block's address, or 0 when P0 has no
+// room. A size of 0 gets the smallest block, so that each call returns
+// a distinct address.
+func (env *Environment) allocate(z *heapZone, err error, size uint32) uint32 {
 	if err != nil {
 		return 0
 	}
 
-	addr, err := z.zone.Allocate(max(size, 1))
+	addr, err := env.allocateIn(z, max(size, 1))
 	if err != nil {
 		return 0
 	}
@@ -116,16 +104,27 @@ func allocate(z *heapZone, err error, size uint32) uint32 {
 }
 
 // release frees the block that starts at addr in the RTL's zone z,
-// reporting false when none of z's blocks starts there (or z hasn't
-// been made: it has no blocks).
-func release(z *heapZone, addr uint32) bool {
+// returning the bytes the statistics count for it, and false when none
+// of z's blocks starts there (or z hasn't been made: it has no blocks).
+func (env *Environment) release(z *heapZone, addr uint32) (uint32, bool) {
 	if z == nil {
-		return false
+		return 0, false
 	}
 
-	_, err := z.zone.Free(addr)
+	class, ok := z.zone.Class(addr)
+	if !ok {
+		return 0, false
+	}
 
-	return err == nil
+	if _, err := z.zone.Free(addr); err != nil {
+		return 0, false
+	}
+
+	if z.zone.Tagged() {
+		class += 2 * vmheap.TagSize
+	}
+
+	return class, true
 }
 
 // blockSize returns the size of the block that starts at addr in the
@@ -138,19 +137,83 @@ func blockSize(z *heapZone, addr uint32) (uint32, bool) {
 	return z.zone.BlockSize(addr)
 }
 
+// The C library's heap, the blocks of LIBRTL's LIB$VM_MALLOC family: VMS
+// 7.1 keeps them apart from the zones LIB$FIND_VM_ZONE finds, each with
+// 16 bytes before the address it returns, and LIB$STAT_VM doesn't count
+// them, nor its pages (testdata/lib59: its first allocation changes no
+// figure). govax's is a hidden quick fit zone (its blocks of one size
+// reused, as VMS's are) in 16-page areas from P0 directly, not the page
+// pool; the 16 bytes hold the size asked for. Its layout beyond that is
+// govax's (unconfirmed).
+var cHeapZone = vmheap.Attributes{Algorithm: vmheap.QuickFit, Lists: 128, Smallest: 16,
+	BlockSize: 8, Alignment: 8, ExtendPages: 16}
+
+// cHeader is the bytes before each C block's address.
+const cHeader = 16
+
+// CAllocate allocates size bytes from the C library's heap, returning
+// the address the program uses, or 0 when there's no room.
+func (env *Environment) CAllocate(size uint32) uint32 {
+	if env.cHeap == nil {
+		var err error
+		if env.cHeap, err = vmheap.NewZone(vmheap.NewPagePool(p0Region{env}), cHeapZone); err != nil {
+			panic(err) // cHeapZone's attributes are valid
+		}
+	}
+
+	if size > 0xFFFFFFFF-cHeader {
+		return 0
+	}
+
+	block, err := env.cHeap.Allocate(size + cHeader)
+	if err != nil {
+		return 0
+	}
+
+	_ = env.mem.StoreLongword(env.cpu, block, size)
+
+	return block + cHeader
+}
+
+// CFree frees the C block at addr, reporting false when there's none.
+func (env *Environment) CFree(addr uint32) bool {
+	if env.cHeap == nil || addr < cHeader {
+		return false
+	}
+
+	_, err := env.cHeap.Free(addr - cHeader)
+
+	return err == nil
+}
+
+// CSize returns how many bytes the C block at addr can hold, and
+// whether there's one there.
+func (env *Environment) CSize(addr uint32) (uint32, bool) {
+	if env.cHeap == nil || addr < cHeader {
+		return 0, false
+	}
+
+	n, ok := env.cHeap.BlockSize(addr - cHeader)
+	if !ok {
+		return 0, false
+	}
+
+	return n - cHeader, true
+}
+
 // shimDeccMalloc is DECC$MALLOC: malloc(size) returns a new block's
 // address, or 0 (NULL) when there's no room.
 func shimDeccMalloc(env *Environment, argv []uint32) (uint32, error) {
 	z, err := env.defaultZone()
 
-	return allocate(z, err, optArg(argv, 0)), nil
+	return env.allocate(z, err, optArg(argv, 0)), nil
 }
 
 // shimDeccFree is DECC$FREE: free(ptr) frees the block malloc returned.
 // free(NULL) does nothing; a pointer that isn't a block's returns -1.
 func shimDeccFree(env *Environment, argv []uint32) (uint32, error) {
 	ptr := optArg(argv, 0)
-	if ptr == 0 || release(env.defaultHeap, ptr) {
+	if _, ok := env.release(env.defaultHeap, ptr); ptr == 0 || ok {
 		return 0, nil
 	}
 

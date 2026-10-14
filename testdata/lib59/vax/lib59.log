@@ -1,0 +1,30 @@
+$ ! LIB59.COM - the Phase 59 probe of LIBRTL's memory routines.
+$ ! Written by testdata/lib59/gen.go. Run it with the exchange volume's
+$ ! [000000] as the default directory:
+$ !
+$ !     @LIB59/OUTPUT=LIB59.LOG
+$ !
+$ ! LIB59.OUT gets the program's output; LIB59.LOG this procedure's.
+$ SET NOON
+$ SET VERIFY
+$ WRITE SYS$OUTPUT F$GETSYI("VERSION"), " ", F$GETSYI("HW_NAME")
+V7.1     VAX 8600
+$ SHOW PROCESS/QUOTAS
+
+14-OCT-2026 16:56:36.15   User: SYSTEM           Process ID:   00000114
+                          Node: SIMVAX           Process name: "SYSTEM"
+
+Process Quotas:
+ Account name: SYSTEM  
+ CPU limit:                      Infinite  Direct I/O limit:        40
+ Buffered I/O byte count quota:     32256  Buffered I/O limit:      40
+ Timer queue entry quota:              30  Open file quota:        298
+ Paging file quota:                 39470  Subprocess quota:        10
+ Default page fault cluster:           16  AST quota:               48
+ Enqueue quota:                       200  Shared file limit:        0
+ Max detached processes:                0  Max active jobs:          0
+$ DEFINE/USER_MODE SYS$OUTPUT LIB59.MLG
+$ MACRO/NOLIST LIB59
+$ LINK/NOMAP LIB59
+$ DEFINE/USER_MODE SYS$OUTPUT LIB59.OUT
+$ RUN LIB59

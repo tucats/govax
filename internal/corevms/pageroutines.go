@@ -33,8 +33,8 @@ func (e *PageRoutineFailure) Error() string {
 // pool's code: a zone with only a get-page routine gives its pages to
 // the pool when it's deleted (which refuses, silently, pages that
 // aren't the pool's), and one with only a free-page routine takes them
-// from the pool as LIB$GET_VM_PAGE does, so that the routine may give
-// them back by LIB$FREE_VM_PAGE (unconfirmed: a probe case).
+// from the pool as LIB$GET_VM_PAGE does, and gives them to the routine,
+// as VMS 7.1 does (testdata/lib59).
 func (env *Environment) zonePages(s ZoneSettings) vmheap.Pages {
 	pool := env.pagePool()
 

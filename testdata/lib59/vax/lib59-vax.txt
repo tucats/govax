@@ -1,0 +1,3383 @@
+STAT at start R0=00000001
+  ~SV: 00000000 00000000 00000000 00000000 00000000 00000000
+FIND at start R0=00158274
+  | Zone Id = 0004EA68,  Zone name = "DEFAULT_ZONE"
+  | Zone Id = 0004EB08,  Zone name = "STRING_ZONE"
+  = end 00158274 after 2
+FIND the first two R0=00000001
+  Z_DEFAULT: set
+  Z_STRING: set
+  S: 00000001
+SVZ zone 0 level 1 R0=00000001
+  | Zone Id = 0004EA68,  Zone name = "DEFAULT_ZONE"
+  | 
+  | 	Algorithm = LIB$K_VM_FIRST_FIT
+  | 
+  | 	Flags = 00000020
+  | 		     LIB$M_VM_EXTEND_AREA
+  | 
+  | 	Initial size =     124 pages     Current size = 0 pages in 0 areas
+  | 	Extend size  =     128 pages     Page limit   = None
+  | 
+  | 	Requests are rounded up to a multiple of 8 bytes,
+  | 	naturally aligned on 8 byte boundaries
+  | 
+  | 	0 bytes have been freed and not yet reallocated
+  | 
+  | 	80 bytes are used for zone and area control blocks, or 100.0% overhead
+  | 
+  action: calls=17 argc=00000002 arg=12345678 dsc=0000010E
+SVZ default by ID level 1 R0=00000001
+  | Zone Id = 0004EA68,  Zone name = "DEFAULT_ZONE"
+  | 
+  | 	Algorithm = LIB$K_VM_FIRST_FIT
+  | 
+  | 	Flags = 00000020
+  | 		     LIB$M_VM_EXTEND_AREA
+  | 
+  | 	Initial size =     124 pages     Current size = 0 pages in 0 areas
+  | 	Extend size  =     128 pages     Page limit   = None
+  | 
+  | 	Requests are rounded up to a multiple of 8 bytes,
+  | 	naturally aligned on 8 byte boundaries
+  | 
+  | 	0 bytes have been freed and not yet reallocated
+  | 
+  | 	80 bytes are used for zone and area control blocks, or 100.0% overhead
+  | 
+  action: calls=17 argc=00000002 arg=12345678 dsc=0000010E
+SVZ string zone level 1 R0=00000001
+  | Zone Id = 0004EB08,  Zone name = "STRING_ZONE"
+  | 
+  | 	Algorithm = LIB$K_VM_QUICK_FIT  with 17 Lookaside Lists ranging from
+  | 	            a minimum blocksize of 16, to a maximum blocksize of 144
+  | 
+  | 	Flags = 00000021
+  | 		     LIB$M_VM_BOUNDARY_TAGS
+  | 		     LIB$M_VM_EXTEND_AREA
+  | 
+  | 	Initial size =       4 pages     Current size = 0 pages in 0 areas
+  | 	Extend size  =      32 pages     Page limit   = None
+  | 
+  | 	Requests are rounded up to a multiple of 8 bytes,
+  | 	naturally aligned on 8 byte boundaries
+  | 
+  | 	0 bytes have been freed and not yet reallocated
+  | 
+  | 	216 bytes are used for zone and area control blocks, or 100.0% overhead
+  | 
+  action: calls=19 argc=00000002 arg=12345678 dsc=0000010E
+GP 1 R0=00000001
+  P_1 in its page: 00000000
+  SD: 00000000 00000000 00000000 00000001 00000000 00000001
+GP 1 second R0=00000001
+  P_2-P_1: 00000200
+GP 1 third R0=00000001
+  P_3-P_1: 00000400
+GP 4 R0=00000001
+  P_4-P_1: 00000600
+FP the second R0=00000001
+  SD: 00000000 00000000 00000000 00000000 00000001 FFFFFFFF
+GP 1 after a free R0=00000001
+  P_5-P_1: 00000200
+FP upper half of 4 R0=00000001
+FP lower half of 4 R0=00000001
+GP 3 after the halves R0=00000001
+  P_6-P_1: 00000600
+FP 3 across groups R0=00000001
+  SD: 00000000 00000000 00000000 00000000 00000001 FFFFFFFD
+FP freed already R0=00158264
+  SD: 00000000 00000000 00000000 00000000 00000000 00000000
+FP unaligned R0=00158264
+FP inside a page R0=00158264
+FP count 0 R0=0015826C
+FP count -1 R0=0015826C
+FP never allocated R0=00158264
+GP 0 R0=0015826C
+  P_7: untouched
+  SD: 00000000 00000000 00000000 00000000 00000000 00000000
+GP -1 R0=0015826C
+  P_7: untouched
+GP more than P0 R0=00158214
+  P_7: untouched
+  SD: 00000000 00000000 00000000 00000000 00000000 00000000
+GP before $EXPREG R0=00000001
+  P_7-P_1: 00000000
+$EXPREG 1 page R0=00000001
+  R-P_7: 00010000
+GP after $EXPREG R0=00000001
+  P_8-P_7: 00000200
+FP the 3 R0=00000001
+FP the one before $EXPREG R0=00000001
+FP the one after R0=00000001
+FP 1 argument R0=00158264
+GP 3 arguments R0=00000001
+  P_9: set
+FP the 3-argument page R0=00000001
+CZ defaults R0=00000001
+  | Zone Id = 00050600,  Zone name = ""
+  | 
+  | 	Algorithm = LIB$K_VM_FIRST_FIT
+  | 
+  | 	Flags = 00000000
+  | 
+  | 	Initial size =      16 pages     Current size = 0 pages in 0 areas
+  | 	Extend size  =      16 pages     Page limit   = None
+  | 
+  | 	Requests are rounded up to a multiple of 8 bytes,
+  | 	naturally aligned on 8 byte boundaries
+  | 
+  | 	0 bytes have been freed and not yet reallocated
+  | 
+  | 	80 bytes are used for zone and area control blocks, or 100.0% overhead
+  | 
+  Z_DEF: set
+SVZ defaults level 0 R0=00000001
+  | Zone Id = 00050600,  Zone name = ""
+  action: calls=1 argc=00000002 arg=12345678 dsc=00000000
+SVZ defaults level 2 R0=00000001
+  | Zone Id = 00050600,  Zone name = ""
+  | 
+  | 	Algorithm = LIB$K_VM_FIRST_FIT
+  | 
+  | 	Flags = 00000000
+  | 
+  | 	Initial size =      16 pages     Current size = 0 pages in 0 areas
+  | 	Extend size  =      16 pages     Page limit   = None
+  | 
+  | 	Requests are rounded up to a multiple of 8 bytes,
+  | 	naturally aligned on 8 byte boundaries
+  | 
+  | 	0 bytes have been freed and not yet reallocated
+  | 
+  | 	80 bytes are used for zone and area control blocks, or 100.0% overhead
+  | 
+  action: calls=16 argc=00000002 arg=12345678 dsc=0000010E
+SVZ defaults level 3 R0=00000001
+  | Zone Id = 00050600,  Zone name = ""
+  | 
+  | 	Algorithm = LIB$K_VM_FIRST_FIT
+  | 
+  | 	Flags = 00000000
+  | 
+  | 	Initial size =      16 pages     Current size = 0 pages in 0 areas
+  | 	Extend size  =      16 pages     Page limit   = None
+  | 
+  | 	Requests are rounded up to a multiple of 8 bytes,
+  | 	naturally aligned on 8 byte boundaries
+  | 
+  | 	0 bytes have been freed and not yet reallocated
+  | 
+  | 	80 bytes are used for zone and area control blocks, or 100.0% overhead
+  | 
+  action: calls=16 argc=00000002 arg=12345678 dsc=0000010E
+DZ defaults R0=00000001
+CZ algorithm 0 R0=00158234
+  Z_T: untouched
+CZ algorithm 1 R0=00000001
+  | Zone Id = 00050600,  Zone name = ""
+  | 
+  | 	Algorithm = LIB$K_VM_FIRST_FIT
+  | 
+  | 	Flags = 00000000
+  | 
+  | 	Initial size =      16 pages     Current size = 0 pages in 0 areas
+  | 	Extend size  =      16 pages     Page limit   = None
+  | 
+  | 	Requests are rounded up to a multiple of 8 bytes,
+  | 	naturally aligned on 8 byte boundaries
+  | 
+  | 	0 bytes have been freed and not yet reallocated
+  | 
+  | 	80 bytes are used for zone and area control blocks, or 100.0% overhead
+  | 
+  Z_T: set
+CZ algorithm 5 R0=00158234
+  Z_T: untouched
+CZ first fit, argument 5 R0=00000001
+  | Zone Id = 00050600,  Zone name = ""
+  | 
+  | 	Algorithm = LIB$K_VM_FIRST_FIT
+  | 
+  | 	Flags = 00000000
+  | 
+  | 	Initial size =      16 pages     Current size = 0 pages in 0 areas
+  | 	Extend size  =      16 pages     Page limit   = None
+  | 
+  | 	Requests are rounded up to a multiple of 8 bytes,
+  | 	naturally aligned on 8 byte boundaries
+  | 
+  | 	0 bytes have been freed and not yet reallocated
+  | 
+  | 	80 bytes are used for zone and area control blocks, or 100.0% overhead
+  | 
+  Z_T: set
+CZ quick fit, no argument R0=00158234
+  Z_T: untouched
+CZ quick fit 0 R0=00158234
+  Z_T: untouched
+CZ quick fit 1 R0=00000001
+  | Zone Id = 00050650,  Zone name = ""
+  | 
+  | 	Algorithm = LIB$K_VM_QUICK_FIT  with 1 Lookaside Lists ranging from
+  | 	            a minimum blocksize of 8, to a maximum blocksize of 8
+  | 
+  | 	Flags = 00000000
+  | 
+  | 	Initial size =      16 pages     Current size = 0 pages in 0 areas
+  | 	Extend size  =      16 pages     Page limit   = None
+  | 
+  | 	Requests are rounded up to a multiple of 8 bytes,
+  | 	naturally aligned on 8 byte boundaries
+  | 
+  | 	0 bytes have been freed and not yet reallocated
+  | 
+  | 	88 bytes are used for zone and area control blocks, or 100.0% overhead
+  | 
+  Z_T: set
+CZ quick fit 128 R0=00000001
+  | Zone Id = 000506A8,  Zone name = ""
+  | 
+  | 	Algorithm = LIB$K_VM_QUICK_FIT  with 128 Lookaside Lists ranging from
+  | 	            a minimum blocksize of 8, to a maximum blocksize of 1024
+  | 
+  | 	Flags = 00000000
+  | 
+  | 	Initial size =      16 pages     Current size = 0 pages in 0 areas
+  | 	Extend size  =      16 pages     Page limit   = None
+  | 
+  | 	Requests are rounded up to a multiple of 8 bytes,
+  | 	naturally aligned on 8 byte boundaries
+  | 
+  | 	0 bytes have been freed and not yet reallocated
+  | 
+  | 	1104 bytes are used for zone and area control blocks, or 100.0% overhead
+  | 
+  Z_T: set
+CZ quick fit 129 R0=00158234
+  Z_T: untouched
+CZ frequent sizes, no argument R0=00158234
+  Z_T: untouched
+CZ frequent sizes 0 R0=00158234
+  Z_T: untouched
+CZ frequent sizes 16 R0=00000001
+  | Zone Id = 00050600,  Zone name = ""
+  | 
+  | 	Algorithm = LIB$K_VM_FREQ_SIZES  with 16 Lookaside Lists
+  | 
+  | 	Flags = 00000000
+  | 
+  | 	Initial size =      16 pages     Current size = 0 pages in 0 areas
+  | 	Extend size  =      16 pages     Page limit   = None
+  | 
+  | 	Requests are rounded up to a multiple of 8 bytes,
+  | 	naturally aligned on 8 byte boundaries
+  | 
+  | 	0 bytes have been freed and not yet reallocated
+  | 
+  | 	336 bytes are used for zone and area control blocks, or 100.0% overhead
+  | 
+  Z_T: set
+CZ frequent sizes 17 R0=00158234
+  Z_T: untouched
+CZ fixed, no argument R0=00158234
+  Z_T: untouched
+CZ fixed 0 R0=00158234
+  Z_T: untouched
+CZ fixed 1 R0=00000001
+  | Zone Id = 00050600,  Zone name = ""
+  | 
+  | 	Algorithm = LIB$K_VM_FIXED  with block size of 1
+  | 
+  | 	Flags = 00000000
+  | 
+  | 	Initial size =      16 pages     Current size = 0 pages in 0 areas
+  | 	Extend size  =      16 pages     Page limit   = None
+  | 
+  | 	Requests are rounded up to a multiple of 8 bytes,
+  | 	naturally aligned on 8 byte boundaries
+  | 
+  | 	0 bytes have been freed and not yet reallocated
+  | 
+  | 	88 bytes are used for zone and area control blocks, or 100.0% overhead
+  | 
+  Z_T: set
+CZ fixed -1 R0=00158234
+  Z_T: untouched
+CZ fixed 10000 R0=00000001
+  | Zone Id = 00050600,  Zone name = ""
+  | 
+  | 	Algorithm = LIB$K_VM_FIXED  with block size of 10000
+  | 
+  | 	Flags = 00000000
+  | 
+  | 	Initial size =      16 pages     Current size = 0 pages in 0 areas
+  | 	Extend size  =      16 pages     Page limit   = None
+  | 
+  | 	Requests are rounded up to a multiple of 8 bytes,
+  | 	naturally aligned on 8 byte boundaries
+  | 
+  | 	0 bytes have been freed and not yet reallocated
+  | 
+  | 	88 bytes are used for zone and area control blocks, or 100.0% overhead
+  | 
+  Z_T: set
+CZ flags 1 R0=00000001
+  | Zone Id = 00050600,  Zone name = ""
+  | 
+  | 	Algorithm = LIB$K_VM_FIRST_FIT
+  | 
+  | 	Flags = 00000001
+  | 		     LIB$M_VM_BOUNDARY_TAGS
+  | 
+  | 	Initial size =      16 pages     Current size = 0 pages in 0 areas
+  | 	Extend size  =      16 pages     Page limit   = None
+  | 
+  | 	Requests are rounded up to a multiple of 8 bytes,
+  | 	naturally aligned on 8 byte boundaries
+  | 
+  | 	0 bytes have been freed and not yet reallocated
+  | 
+  | 	80 bytes are used for zone and area control blocks, or 100.0% overhead
+  | 
+  Z_T: set
+CZ flags 6, both GET fills R0=00000001
+  | Zone Id = 00050600,  Zone name = ""
+  | 
+  | 	Algorithm = LIB$K_VM_FIRST_FIT
+  | 
+  | 	Flags = 00000002
+  | 		     LIB$M_VM_GET_FILL0
+  | 
+  | 	Initial size =      16 pages     Current size = 0 pages in 0 areas
+  | 	Extend size  =      16 pages     Page limit   = None
+  | 
+  | 	Requests are rounded up to a multiple of 8 bytes,
+  | 	naturally aligned on 8 byte boundaries
+  | 
+  | 	0 bytes have been freed and not yet reallocated
+  | 
+  | 	80 bytes are used for zone and area control blocks, or 100.0% overhead
+  | 
+  Z_T: set
+CZ flags 24, both FREE fills R0=00000001
+  | Zone Id = 00050600,  Zone name = ""
+  | 
+  | 	Algorithm = LIB$K_VM_FIRST_FIT
+  | 
+  | 	Flags = 00000008
+  | 		     LIB$M_VM_FREE_FILL0
+  | 
+  | 	Initial size =      16 pages     Current size = 0 pages in 0 areas
+  | 	Extend size  =      16 pages     Page limit   = None
+  | 
+  | 	Requests are rounded up to a multiple of 8 bytes,
+  | 	naturally aligned on 8 byte boundaries
+  | 
+  | 	0 bytes have been freed and not yet reallocated
+  | 
+  | 	80 bytes are used for zone and area control blocks, or 100.0% overhead
+  | 
+  Z_T: set
+CZ flags 63 R0=00000001
+  | Zone Id = 00050600,  Zone name = ""
+  | 
+  | 	Algorithm = LIB$K_VM_FIRST_FIT
+  | 
+  | 	Flags = 0000002B
+  | 		     LIB$M_VM_BOUNDARY_TAGS
+  | 		     LIB$M_VM_GET_FILL0
+  | 		     LIB$M_VM_FREE_FILL0
+  | 		     LIB$M_VM_EXTEND_AREA
+  | 
+  | 	Initial size =      16 pages     Current size = 0 pages in 0 areas
+  | 	Extend size  =      16 pages     Page limit   = None
+  | 
+  | 	Requests are rounded up to a multiple of 8 bytes,
+  | 	naturally aligned on 8 byte boundaries
+  | 
+  | 	0 bytes have been freed and not yet reallocated
+  | 
+  | 	80 bytes are used for zone and area control blocks, or 100.0% overhead
+  | 
+  Z_T: set
+CZ flags 32 R0=00000001
+  | Zone Id = 00050600,  Zone name = ""
+  | 
+  | 	Algorithm = LIB$K_VM_FIRST_FIT
+  | 
+  | 	Flags = 00000020
+  | 		     LIB$M_VM_EXTEND_AREA
+  | 
+  | 	Initial size =      16 pages     Current size = 0 pages in 0 areas
+  | 	Extend size  =      16 pages     Page limit   = None
+  | 
+  | 	Requests are rounded up to a multiple of 8 bytes,
+  | 	naturally aligned on 8 byte boundaries
+  | 
+  | 	0 bytes have been freed and not yet reallocated
+  | 
+  | 	80 bytes are used for zone and area control blocks, or 100.0% overhead
+  | 
+  Z_T: set
+CZ NO_EXTEND, no initial R0=00000001
+  | Zone Id = 00050600,  Zone name = ""
+  | 
+  | 	Algorithm = LIB$K_VM_FIRST_FIT
+  | 
+  | 	Flags = 00000000
+  | 
+  | 	Initial size =      16 pages     Current size = 0 pages in 0 areas
+  | 	Extend size  =      16 pages     Page limit   = None
+  | 
+  | 	Requests are rounded up to a multiple of 8 bytes,
+  | 	naturally aligned on 8 byte boundaries
+  | 
+  | 	0 bytes have been freed and not yet reallocated
+  | 
+  | 	80 bytes are used for zone and area control blocks, or 100.0% overhead
+  | 
+  Z_T: set
+CZ NO_EXTEND, initial 4 R0=00000001
+  | Zone Id = 00050600,  Zone name = ""
+  | 
+  | 	Algorithm = LIB$K_VM_FIRST_FIT
+  | 
+  | 	Flags = 00000000
+  | 
+  | 	Initial size =       4 pages     Current size = 4 pages in 1 area
+  | 	Extend size  =      16 pages     Page limit   = None
+  | 
+  | 	Requests are rounded up to a multiple of 8 bytes,
+  | 	naturally aligned on 8 byte boundaries
+  | 
+  | 	0 bytes have been freed and not yet reallocated
+  | 
+  | 	144 bytes are used for zone and area control blocks, or 6.5% overhead
+  | 
+  Z_T: set
+CZ TAIL_LARGE R0=00000001
+  | Zone Id = 00050600,  Zone name = ""
+  | 
+  | 	Algorithm = LIB$K_VM_FIRST_FIT
+  | 
+  | 	Flags = 00000000
+  | 
+  | 	Initial size =      16 pages     Current size = 0 pages in 0 areas
+  | 	Extend size  =      16 pages     Page limit   = None
+  | 
+  | 	Requests are rounded up to a multiple of 8 bytes,
+  | 	naturally aligned on 8 byte boundaries
+  | 
+  | 	0 bytes have been freed and not yet reallocated
+  | 
+  | 	80 bytes are used for zone and area control blocks, or 100.0% overhead
+  | 
+  Z_T: set
+CZ flags 256 R0=00000001
+  | Zone Id = 00050600,  Zone name = ""
+  | 
+  | 	Algorithm = LIB$K_VM_FIRST_FIT
+  | 
+  | 	Flags = 00000000
+  | 
+  | 	Initial size =      16 pages     Current size = 0 pages in 0 areas
+  | 	Extend size  =      16 pages     Page limit   = None
+  | 
+  | 	Requests are rounded up to a multiple of 8 bytes,
+  | 	naturally aligned on 8 byte boundaries
+  | 
+  | 	0 bytes have been freed and not yet reallocated
+  | 
+  | 	80 bytes are used for zone and area control blocks, or 100.0% overhead
+  | 
+  Z_T: set
+CZ flags 512 R0=00158234
+  Z_T: untouched
+CZ flags 1<<31 R0=00158234
+  Z_T: untouched
+CZ extend 0 R0=00158234
+  Z_T: untouched
+CZ extend 1 R0=00000001
+  | Zone Id = 00050600,  Zone name = ""
+  | 
+  | 	Algorithm = LIB$K_VM_FIRST_FIT
+  | 
+  | 	Flags = 00000000
+  | 
+  | 	Initial size =       1 pages     Current size = 0 pages in 0 areas
+  | 	Extend size  =       1 pages     Page limit   = None
+  | 
+  | 	Requests are rounded up to a multiple of 8 bytes,
+  | 	naturally aligned on 8 byte boundaries
+  | 
+  | 	0 bytes have been freed and not yet reallocated
+  | 
+  | 	80 bytes are used for zone and area control blocks, or 100.0% overhead
+  | 
+  Z_T: set
+CZ extend 1024 R0=00000001
+  | Zone Id = 00050600,  Zone name = ""
+  | 
+  | 	Algorithm = LIB$K_VM_FIRST_FIT
+  | 
+  | 	Flags = 00000000
+  | 
+  | 	Initial size =    1024 pages     Current size = 0 pages in 0 areas
+  | 	Extend size  =    1024 pages     Page limit   = None
+  | 
+  | 	Requests are rounded up to a multiple of 8 bytes,
+  | 	naturally aligned on 8 byte boundaries
+  | 
+  | 	0 bytes have been freed and not yet reallocated
+  | 
+  | 	80 bytes are used for zone and area control blocks, or 100.0% overhead
+  | 
+  Z_T: set
+CZ extend 1025 R0=00000001
+  | Zone Id = 00050600,  Zone name = ""
+  | 
+  | 	Algorithm = LIB$K_VM_FIRST_FIT
+  | 
+  | 	Flags = 00000000
+  | 
+  | 	Initial size =    1025 pages     Current size = 0 pages in 0 areas
+  | 	Extend size  =    1025 pages     Page limit   = None
+  | 
+  | 	Requests are rounded up to a multiple of 8 bytes,
+  | 	naturally aligned on 8 byte boundaries
+  | 
+  | 	0 bytes have been freed and not yet reallocated
+  | 
+  | 	80 bytes are used for zone and area control blocks, or 100.0% overhead
+  | 
+  Z_T: set
+CZ extend -1 R0=00158234
+  Z_T: untouched
+CZ initial -1 R0=00158234
+  Z_T: untouched
+CZ initial 1 R0=00000001
+  | Zone Id = 00050600,  Zone name = ""
+  | 
+  | 	Algorithm = LIB$K_VM_FIRST_FIT
+  | 
+  | 	Flags = 00000000
+  | 
+  | 	Initial size =       1 pages     Current size = 1 pages in 1 area
+  | 	Extend size  =      16 pages     Page limit   = None
+  | 
+  | 	Requests are rounded up to a multiple of 8 bytes,
+  | 	naturally aligned on 8 byte boundaries
+  | 
+  | 	0 bytes have been freed and not yet reallocated
+  | 
+  | 	144 bytes are used for zone and area control blocks, or 21.9% overhead
+  | 
+  Z_T: set
+CZ initial 20 R0=00000001
+  | Zone Id = 00050600,  Zone name = ""
+  | 
+  | 	Algorithm = LIB$K_VM_FIRST_FIT
+  | 
+  | 	Flags = 00000000
+  | 
+  | 	Initial size =      20 pages     Current size = 20 pages in 1 area
+  | 	Extend size  =      16 pages     Page limit   = None
+  | 
+  | 	Requests are rounded up to a multiple of 8 bytes,
+  | 	naturally aligned on 8 byte boundaries
+  | 
+  | 	0 bytes have been freed and not yet reallocated
+  | 
+  | 	144 bytes are used for zone and area control blocks, or 1.3% overhead
+  | 
+  Z_T: set
+CZ block 0 R0=00158234
+  Z_T: untouched
+CZ block 4 R0=00158234
+  Z_T: untouched
+CZ block 12 R0=00158234
+  Z_T: untouched
+CZ block 16 R0=00000001
+  | Zone Id = 00050600,  Zone name = ""
+  | 
+  | 	Algorithm = LIB$K_VM_FIRST_FIT
+  | 
+  | 	Flags = 00000000
+  | 
+  | 	Initial size =      16 pages     Current size = 0 pages in 0 areas
+  | 	Extend size  =      16 pages     Page limit   = None
+  | 
+  | 	Requests are rounded up to a multiple of 16 bytes,
+  | 	naturally aligned on 16 byte boundaries
+  | 
+  | 	0 bytes have been freed and not yet reallocated
+  | 
+  | 	80 bytes are used for zone and area control blocks, or 100.0% overhead
+  | 
+  Z_T: set
+CZ block 512 R0=00000001
+  | Zone Id = 00050600,  Zone name = ""
+  | 
+  | 	Algorithm = LIB$K_VM_FIRST_FIT
+  | 
+  | 	Flags = 00000000
+  | 
+  | 	Initial size =      16 pages     Current size = 0 pages in 0 areas
+  | 	Extend size  =      16 pages     Page limit   = None
+  | 
+  | 	Requests are rounded up to a multiple of 512 bytes,
+  | 	naturally aligned on 512 byte boundaries
+  | 
+  | 	0 bytes have been freed and not yet reallocated
+  | 
+  | 	80 bytes are used for zone and area control blocks, or 100.0% overhead
+  | 
+  Z_T: set
+CZ block 1024 R0=00158234
+  Z_T: untouched
+CZ align 0 R0=00158234
+  Z_T: untouched
+CZ align 2 R0=00158234
+  Z_T: untouched
+CZ align 4 R0=00000001
+  | Zone Id = 00050600,  Zone name = ""
+  | 
+  | 	Algorithm = LIB$K_VM_FIRST_FIT
+  | 
+  | 	Flags = 00000000
+  | 
+  | 	Initial size =      16 pages     Current size = 0 pages in 0 areas
+  | 	Extend size  =      16 pages     Page limit   = None
+  | 
+  | 	Requests are rounded up to a multiple of 8 bytes,
+  | 	naturally aligned on 8 byte boundaries
+  | 
+  | 	0 bytes have been freed and not yet reallocated
+  | 
+  | 	80 bytes are used for zone and area control blocks, or 100.0% overhead
+  | 
+  Z_T: set
+CZ align 12 R0=00158234
+  Z_T: untouched
+CZ align 512 R0=00000001
+  | Zone Id = 00050600,  Zone name = ""
+  | 
+  | 	Algorithm = LIB$K_VM_FIRST_FIT
+  | 
+  | 	Flags = 00000000
+  | 
+  | 	Initial size =      16 pages     Current size = 0 pages in 0 areas
+  | 	Extend size  =      16 pages     Page limit   = None
+  | 
+  | 	Requests are rounded up to a multiple of 512 bytes,
+  | 	naturally aligned on 512 byte boundaries
+  | 
+  | 	0 bytes have been freed and not yet reallocated
+  | 
+  | 	80 bytes are used for zone and area control blocks, or 100.0% overhead
+  | 
+  Z_T: set
+CZ align 1024 R0=00158234
+  Z_T: untouched
+CZ block 8 align 64 R0=00000001
+  | Zone Id = 00050600,  Zone name = ""
+  | 
+  | 	Algorithm = LIB$K_VM_FIRST_FIT
+  | 
+  | 	Flags = 00000000
+  | 
+  | 	Initial size =      16 pages     Current size = 0 pages in 0 areas
+  | 	Extend size  =      16 pages     Page limit   = None
+  | 
+  | 	Requests are rounded up to a multiple of 64 bytes,
+  | 	naturally aligned on 64 byte boundaries
+  | 
+  | 	0 bytes have been freed and not yet reallocated
+  | 
+  | 	80 bytes are used for zone and area control blocks, or 100.0% overhead
+  | 
+  Z_T: set
+CZ tags, block 8 align 4 R0=00000001
+  | Zone Id = 00050600,  Zone name = ""
+  | 
+  | 	Algorithm = LIB$K_VM_FIRST_FIT
+  | 
+  | 	Flags = 00000001
+  | 		     LIB$M_VM_BOUNDARY_TAGS
+  | 
+  | 	Initial size =      16 pages     Current size = 0 pages in 0 areas
+  | 	Extend size  =      16 pages     Page limit   = None
+  | 
+  | 	Requests are rounded up to a multiple of 8 bytes,
+  | 	naturally aligned on 8 byte boundaries
+  | 
+  | 	0 bytes have been freed and not yet reallocated
+  | 
+  | 	80 bytes are used for zone and area control blocks, or 100.0% overhead
+  | 
+  Z_T: set
+CZ limit 10, no initial R0=00000001
+  | Zone Id = 00050600,  Zone name = ""
+  | 
+  | 	Algorithm = LIB$K_VM_FIRST_FIT
+  | 
+  | 	Flags = 00000000
+  | 
+  | 	Initial size =      16 pages     Current size = 0 pages in 0 areas
+  | 	Extend size  =      16 pages     Page limit   = 10 pages
+  | 
+  | 	Requests are rounded up to a multiple of 8 bytes,
+  | 	naturally aligned on 8 byte boundaries
+  | 
+  | 	0 bytes have been freed and not yet reallocated
+  | 
+  | 	80 bytes are used for zone and area control blocks, or 100.0% overhead
+  | 
+  Z_T: set
+CZ limit 10, initial 4 R0=00000001
+  | Zone Id = 00050600,  Zone name = ""
+  | 
+  | 	Algorithm = LIB$K_VM_FIRST_FIT
+  | 
+  | 	Flags = 00000000
+  | 
+  | 	Initial size =       4 pages     Current size = 4 pages in 1 area
+  | 	Extend size  =      16 pages     Page limit   = 10 pages
+  | 
+  | 	Requests are rounded up to a multiple of 8 bytes,
+  | 	naturally aligned on 8 byte boundaries
+  | 
+  | 	0 bytes have been freed and not yet reallocated
+  | 
+  | 	144 bytes are used for zone and area control blocks, or 6.5% overhead
+  | 
+  Z_T: set
+CZ limit 10, initial 20 R0=001583C4
+  Z_T: set
+CZ limit 10, initial 10 R0=00000001
+  | Zone Id = 00050600,  Zone name = ""
+  | 
+  | 	Algorithm = LIB$K_VM_FIRST_FIT
+  | 
+  | 	Flags = 00000000
+  | 
+  | 	Initial size =      10 pages     Current size = 10 pages in 1 area
+  | 	Extend size  =      16 pages     Page limit   = 10 pages
+  | 
+  | 	Requests are rounded up to a multiple of 8 bytes,
+  | 	naturally aligned on 8 byte boundaries
+  | 
+  | 	0 bytes have been freed and not yet reallocated
+  | 
+  | 	144 bytes are used for zone and area control blocks, or 2.7% overhead
+  | 
+  Z_T: set
+CZ limit 32767, initial 1 R0=00000001
+  | Zone Id = 00050600,  Zone name = ""
+  | 
+  | 	Algorithm = LIB$K_VM_FIRST_FIT
+  | 
+  | 	Flags = 00000000
+  | 
+  | 	Initial size =       1 pages     Current size = 1 pages in 1 area
+  | 	Extend size  =      16 pages     Page limit   = 32767 pages
+  | 
+  | 	Requests are rounded up to a multiple of 8 bytes,
+  | 	naturally aligned on 8 byte boundaries
+  | 
+  | 	0 bytes have been freed and not yet reallocated
+  | 
+  | 	144 bytes are used for zone and area control blocks, or 21.9% overhead
+  | 
+  Z_T: set
+CZ limit 32768, initial 1 R0=00158234
+  Z_T: untouched
+CZ limit -1, initial 1 R0=00158234
+  Z_T: untouched
+CZ quick fit 4, smallest 4 R0=00000001
+  | Zone Id = 00050600,  Zone name = ""
+  | 
+  | 	Algorithm = LIB$K_VM_QUICK_FIT  with 4 Lookaside Lists ranging from
+  | 	            a minimum blocksize of 8, to a maximum blocksize of 32
+  | 
+  | 	Flags = 00000000
+  | 
+  | 	Initial size =      16 pages     Current size = 0 pages in 0 areas
+  | 	Extend size  =      16 pages     Page limit   = None
+  | 
+  | 	Requests are rounded up to a multiple of 8 bytes,
+  | 	naturally aligned on 8 byte boundaries
+  | 
+  | 	0 bytes have been freed and not yet reallocated
+  | 
+  | 	112 bytes are used for zone and area control blocks, or 100.0% overhead
+  | 
+  Z_T: set
+CZ quick fit 4, smallest 12 R0=00000001
+  | Zone Id = 00050600,  Zone name = ""
+  | 
+  | 	Algorithm = LIB$K_VM_QUICK_FIT  with 4 Lookaside Lists ranging from
+  | 	            a minimum blocksize of 16, to a maximum blocksize of 40
+  | 
+  | 	Flags = 00000000
+  | 
+  | 	Initial size =      16 pages     Current size = 0 pages in 0 areas
+  | 	Extend size  =      16 pages     Page limit   = None
+  | 
+  | 	Requests are rounded up to a multiple of 8 bytes,
+  | 	naturally aligned on 8 byte boundaries
+  | 
+  | 	0 bytes have been freed and not yet reallocated
+  | 
+  | 	112 bytes are used for zone and area control blocks, or 100.0% overhead
+  | 
+  Z_T: set
+CZ quick fit 4, smallest 16 R0=00000001
+  | Zone Id = 00050600,  Zone name = ""
+  | 
+  | 	Algorithm = LIB$K_VM_QUICK_FIT  with 4 Lookaside Lists ranging from
+  | 	            a minimum blocksize of 16, to a maximum blocksize of 40
+  | 
+  | 	Flags = 00000000
+  | 
+  | 	Initial size =      16 pages     Current size = 0 pages in 0 areas
+  | 	Extend size  =      16 pages     Page limit   = None
+  | 
+  | 	Requests are rounded up to a multiple of 8 bytes,
+  | 	naturally aligned on 8 byte boundaries
+  | 
+  | 	0 bytes have been freed and not yet reallocated
+  | 
+  | 	112 bytes are used for zone and area control blocks, or 100.0% overhead
+  | 
+  Z_T: set
+CZ quick fit 4, smallest 0 R0=00158234
+  Z_T: untouched
+CZ quick fit 4, block 16 smallest 8 R0=00000001
+  | Zone Id = 00050600,  Zone name = ""
+  | 
+  | 	Algorithm = LIB$K_VM_QUICK_FIT  with 4 Lookaside Lists ranging from
+  | 	            a minimum blocksize of 16, to a maximum blocksize of 64
+  | 
+  | 	Flags = 00000000
+  | 
+  | 	Initial size =      16 pages     Current size = 0 pages in 0 areas
+  | 	Extend size  =      16 pages     Page limit   = None
+  | 
+  | 	Requests are rounded up to a multiple of 16 bytes,
+  | 	naturally aligned on 16 byte boundaries
+  | 
+  | 	0 bytes have been freed and not yet reallocated
+  | 
+  | 	112 bytes are used for zone and area control blocks, or 100.0% overhead
+  | 
+  Z_T: set
+CZ first fit, smallest 16 R0=00000001
+  | Zone Id = 00050600,  Zone name = ""
+  | 
+  | 	Algorithm = LIB$K_VM_FIRST_FIT
+  | 
+  | 	Flags = 00000000
+  | 
+  | 	Initial size =      16 pages     Current size = 0 pages in 0 areas
+  | 	Extend size  =      16 pages     Page limit   = None
+  | 
+  | 	Requests are rounded up to a multiple of 8 bytes,
+  | 	naturally aligned on 8 byte boundaries
+  | 
+  | 	0 bytes have been freed and not yet reallocated
+  | 
+  | 	80 bytes are used for zone and area control blocks, or 100.0% overhead
+  | 
+  Z_T: set
+CZ name R0=00000001
+  | Zone Id = 00050600,  Zone name = "PROBE59 ZONE"
+  | 
+  | 	Algorithm = LIB$K_VM_FIRST_FIT
+  | 
+  | 	Flags = 00000000
+  | 
+  | 	Initial size =      16 pages     Current size = 0 pages in 0 areas
+  | 	Extend size  =      16 pages     Page limit   = None
+  | 
+  | 	Requests are rounded up to a multiple of 8 bytes,
+  | 	naturally aligned on 8 byte boundaries
+  | 
+  | 	0 bytes have been freed and not yet reallocated
+  | 
+  | 	96 bytes are used for zone and area control blocks, or 100.0% overhead
+  | 
+  Z_T: set
+CZ empty name R0=00000001
+  | Zone Id = 00050600,  Zone name = ""
+  | 
+  | 	Algorithm = LIB$K_VM_FIRST_FIT
+  | 
+  | 	Flags = 00000000
+  | 
+  | 	Initial size =      16 pages     Current size = 0 pages in 0 areas
+  | 	Extend size  =      16 pages     Page limit   = None
+  | 
+  | 	Requests are rounded up to a multiple of 8 bytes,
+  | 	naturally aligned on 8 byte boundaries
+  | 
+  | 	0 bytes have been freed and not yet reallocated
+  | 
+  | 	80 bytes are used for zone and area control blocks, or 100.0% overhead
+  | 
+  Z_T: set
+CZ name class D R0=00000001
+  | Zone Id = 00050600,  Zone name = "DYNAM"
+  | 
+  | 	Algorithm = LIB$K_VM_FIRST_FIT
+  | 
+  | 	Flags = 00000000
+  | 
+  | 	Initial size =      16 pages     Current size = 0 pages in 0 areas
+  | 	Extend size  =      16 pages     Page limit   = None
+  | 
+  | 	Requests are rounded up to a multiple of 8 bytes,
+  | 	naturally aligned on 8 byte boundaries
+  | 
+  | 	0 bytes have been freed and not yet reallocated
+  | 
+  | 	88 bytes are used for zone and area control blocks, or 100.0% overhead
+  | 
+  Z_T: set
+CZ name class 99 R0=00158224
+  Z_T: untouched
+CZ 40-character name R0=00000001
+  | Zone Id = 00050600,  Zone name = "NNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNNN"
+  | 
+  | 	Algorithm = LIB$K_VM_FIRST_FIT
+  | 
+  | 	Flags = 00000000
+  | 
+  | 	Initial size =      16 pages     Current size = 0 pages in 0 areas
+  | 	Extend size  =      16 pages     Page limit   = None
+  | 
+  | 	Requests are rounded up to a multiple of 8 bytes,
+  | 	naturally aligned on 8 byte boundaries
+  | 
+  | 	0 bytes have been freed and not yet reallocated
+  | 
+  | 	128 bytes are used for zone and area control blocks, or 100.0% overhead
+  | 
+  Z_T: set
+CZ 12 arguments R0=00000001
+  | Zone Id = 00050600,  Zone name = "TWELVE"
+  | 
+  | 	Algorithm = LIB$K_VM_FIRST_FIT
+  | 
+  | 	Flags = 00000000
+  | 
+  | 	Initial size =      16 pages     Current size = 0 pages in 0 areas
+  | 	Extend size  =      16 pages     Page limit   = None
+  | 
+  | 	Requests are rounded up to a multiple of 8 bytes,
+  | 	naturally aligned on 8 byte boundaries
+  | 
+  | 	0 bytes have been freed and not yet reallocated
+  | 
+  | 	88 bytes are used for zone and area control blocks, or 100.0% overhead
+  | 
+  Z_T: set
+CZ 14 arguments R0=0015835C
+  Z_T: untouched
+CZ 15 arguments R0=0015835C
+  Z_T: untouched
+CZ number-of-areas 3 R0=0000043C signal 0000043C 00000000 00000000
+  Z_T: untouched
+CZ no arguments R0=0000000C signal 0000000C 00000004 00013400
+CZ zone-id only R0=00000001
+  | Zone Id = 00050650,  Zone name = ""
+  | 
+  | 	Algorithm = LIB$K_VM_FIRST_FIT
+  | 
+  | 	Flags = 00000000
+  | 
+  | 	Initial size =      16 pages     Current size = 0 pages in 0 areas
+  | 	Extend size  =      16 pages     Page limit   = None
+  | 
+  | 	Requests are rounded up to a multiple of 8 bytes,
+  | 	naturally aligned on 8 byte boundaries
+  | 
+  | 	0 bytes have been freed and not yet reallocated
+  | 
+  | 	80 bytes are used for zone and area control blocks, or 100.0% overhead
+  | 
+  Z_T: set
+CZ first fit R0=00000001
+  | Zone Id = 00050650,  Zone name = "FIRST"
+  | 
+  | 	Algorithm = LIB$K_VM_FIRST_FIT
+  | 
+  | 	Flags = 00000000
+  | 
+  | 	Initial size =      16 pages     Current size = 0 pages in 0 areas
+  | 	Extend size  =      16 pages     Page limit   = None
+  | 
+  | 	Requests are rounded up to a multiple of 8 bytes,
+  | 	naturally aligned on 8 byte boundaries
+  | 
+  | 	0 bytes have been freed and not yet reallocated
+  | 
+  | 	88 bytes are used for zone and area control blocks, or 100.0% overhead
+  | 
+  Z_FF: set
+GV FF 1: 1 R0=00000001
+  B_FF1 in its page: 00000000
+GV FF 2: 8 R0=00000001
+  B_FF2-B_FF1: 00000008
+GV FF 3: 9 R0=00000001
+  B_FF3-B_FF1: 00000010
+GV FF 4: 16 R0=00000001
+  B_FF4-B_FF1: 00000020
+GV FF 5: 24 R0=00000001
+  B_FF5-B_FF1: 00000030
+GV FF 6: 100 R0=00000001
+  B_FF6-B_FF1: 00000048
+FV FF 9 R0=00000001
+GV FF 9 again R0=00000001
+  B_FF7-B_FF1: 00000010
+FV FF 8 R0=00000001
+FV FF 16 R0=00000001
+GV FF 40 into the hole R0=00000001
+  B_FF8-B_FF1: 000000B0
+FV FF size omitted R0=0000000C signal 0000000C 00000000 00000000
+GV FF 24 after R0=00000001
+  B_FF9-B_FF1: 000000D8
+GV FF 0 R0=0015826C
+  B_T: untouched
+GV FF -1 R0=0015826C
+  B_T: untouched
+GV FF 8000 R0=00000001
+  B_FF10-B_FF1: 00002000
+  B_FF10 in its page: 00000000
+GV FF 20000 R0=00000001
+  B_FF11 in its page: 00000000
+GV FF 16 after the areas R0=00000001
+  B_FF12-B_FF1: 00008E20
+SVZ FF level 2 R0=00000001
+  | Zone Id = 00050650,  Zone name = "FIRST"
+  | 
+  | 	Algorithm = LIB$K_VM_FIRST_FIT
+  | 
+  | 	Flags = 00000000
+  | 
+  | 	Initial size =      16 pages     Current size = 72 pages in 3 areas
+  | 	Extend size  =      16 pages     Page limit   = None
+  | 
+  | 	Requests are rounded up to a multiple of 8 bytes,
+  | 	naturally aligned on 8 byte boundaries
+  | 
+  | 	24 bytes have been freed and not yet reallocated
+  | 
+  | 	280 bytes are used for zone and area control blocks, or 0.7% overhead
+  | 
+  | 	Area Summary:
+  | 
+  | 	      First     Last       Pages    Bytes not yet
+  | 	     address   address    assigned    allocated
+  | 	    --------  --------  ----------  -------------
+  | 	    00054E00  00059DFF          40            464
+  | 	    00052E00  00054DFF          16            192
+  | 	    00050E00  00052DFF          16           7952
+  | 
+  action: calls=25 argc=00000002 arg=12345678 dsc=0000010E
+SVZ FF level 3 R0=00000001
+  | Zone Id = 00050650,  Zone name = "FIRST"
+  | 
+  | 	Algorithm = LIB$K_VM_FIRST_FIT
+  | 
+  | 	Flags = 00000000
+  | 
+  | 	Initial size =      16 pages     Current size = 72 pages in 3 areas
+  | 	Extend size  =      16 pages     Page limit   = None
+  | 
+  | 	Requests are rounded up to a multiple of 8 bytes,
+  | 	naturally aligned on 8 byte boundaries
+  | 
+  | 	24 bytes have been freed and not yet reallocated
+  | 
+  | 	280 bytes are used for zone and area control blocks, or 0.7% overhead
+  | 
+  | 	Area Summary:
+  | 
+  | 	      First     Last       Pages    Bytes not yet
+  | 	     address   address    assigned    allocated
+  | 	    --------  --------  ----------  -------------
+  | 	    00054E00  00059DFF          40            464
+  | 	    00052E00  00054DFF          16            192
+  | 	    00050E00  00052DFF          16           7952
+  | 
+  | 	Scanning Free List for Area at 00054E00
+  | 	Scanning Free List for Area at 00052E00
+  | 	Scanning Free List for Area at 00050E00
+  | 	  Number of blocks = 2, Min blocksize = 8, Max blocksize = 16
+  | 
+  | 
+  action: calls=31 argc=00000002 arg=12345678 dsc=0000010E
+VZ FF R0=00000001
+GV default omitted R0=00000001
+  B_D1 in its page: 00000000
+  SD: 00000001 00000000 00000010 00000001 00000000 0000007C
+GV default zone 0 R0=00000001
+  B_D2-B_D1: 00000010
+GV default by ID R0=00000001
+  B_D3-B_D1: 00000020
+FV default block in FF R0=00158264
+FV FF block in default R0=00158264
+FV default zone 0 R0=00000001
+  SD: 00000000 00000001 FFFFFFF0 00000000 00000000 00000000
+FV default omitted R0=00000001
+FV default by ID R0=00000001
+GV string zone R0=00000001
+  B_S1: set
+  SD: 00000001 00000000 00000018 00000001 00000000 00000004
+FV string zone R0=00000001
+  SD: 00000000 00000001 FFFFFFE8 00000000 00000000 00000000
+CZ quick fit R0=00000001
+  | Zone Id = 000506A8,  Zone name = "QUICK"
+  | 
+  | 	Algorithm = LIB$K_VM_QUICK_FIT  with 4 Lookaside Lists ranging from
+  | 	            a minimum blocksize of 16, to a maximum blocksize of 40
+  | 
+  | 	Flags = 00000000
+  | 
+  | 	Initial size =      16 pages     Current size = 0 pages in 0 areas
+  | 	Extend size  =      16 pages     Page limit   = None
+  | 
+  | 	Requests are rounded up to a multiple of 8 bytes,
+  | 	naturally aligned on 8 byte boundaries
+  | 
+  | 	0 bytes have been freed and not yet reallocated
+  | 
+  | 	120 bytes are used for zone and area control blocks, or 100.0% overhead
+  | 
+  Z_QF: set
+GV QF 1: 16 R0=00000001
+  B_QF1 in its page: 00000000
+GV QF 2: 24 R0=00000001
+  B_QF2-B_QF1: 00000010
+GV QF 3: 8 R0=00000001
+  B_QF3-B_QF1: 00000028
+GV QF 4: 48 R0=00000001
+  B_QF4-B_QF1: 00000030
+GV QF 5: 40 R0=00000001
+  B_QF5-B_QF1: 00000060
+FV QF 16 R0=00000001
+GV QF 16 again R0=00000001
+  B_QF6-B_QF1: 00000000
+FV QF 24 R0=00000001
+FV QF 8 R0=00000001
+FV QF 40 R0=00000001
+SVZ QF level 2 R0=00000001
+  | Zone Id = 000506A8,  Zone name = "QUICK"
+  | 
+  | 	Algorithm = LIB$K_VM_QUICK_FIT  with 4 Lookaside Lists ranging from
+  | 	            a minimum blocksize of 16, to a maximum blocksize of 40
+  | 
+  | 	Flags = 00000000
+  | 
+  | 	Initial size =      16 pages     Current size = 16 pages in 1 area
+  | 	Extend size  =      16 pages     Page limit   = None
+  | 
+  | 	Requests are rounded up to a multiple of 8 bytes,
+  | 	naturally aligned on 8 byte boundaries
+  | 
+  | 	72 bytes have been freed and not yet reallocated
+  | 
+  | 	184 bytes are used for zone and area control blocks, or 2.1% overhead
+  | 
+  | 	Quick Fit Lookaside List Summary:
+  | 
+  | 	     List        Block   Number of
+  | 	    number        size     blocks
+  | 	    ------  ----------  ----------
+  | 	         2          24           1
+  | 	         4          40           1
+  | 
+  | 	Area Summary:
+  | 
+  | 	      First     Last       Pages    Bytes not yet
+  | 	     address   address    assigned    allocated
+  | 	    --------  --------  ----------  -------------
+  | 	    0005A600  0005C5FF          16           8056
+  | 
+  action: calls=32 argc=00000002 arg=12345678 dsc=0000010E
+GV QF 8 again R0=00000001
+  B_QF7-B_QF1: 00000028
+GV QF 20 R0=00000001
+  B_QF8-B_QF1: 00000010
+GV QF 40 again R0=00000001
+  B_QF9-B_QF1: 00000060
+SVZ QF level 3 R0=00000001
+  | Zone Id = 000506A8,  Zone name = "QUICK"
+  | 
+  | 	Algorithm = LIB$K_VM_QUICK_FIT  with 4 Lookaside Lists ranging from
+  | 	            a minimum blocksize of 16, to a maximum blocksize of 40
+  | 
+  | 	Flags = 00000000
+  | 
+  | 	Initial size =      16 pages     Current size = 16 pages in 1 area
+  | 	Extend size  =      16 pages     Page limit   = None
+  | 
+  | 	Requests are rounded up to a multiple of 8 bytes,
+  | 	naturally aligned on 8 byte boundaries
+  | 
+  | 	0 bytes have been freed and not yet reallocated
+  | 
+  | 	184 bytes are used for zone and area control blocks, or 2.1% overhead
+  | 
+  | 	Quick Fit Lookaside List Summary:
+  | 
+  | 	     List        Block   Number of
+  | 	    number        size     blocks
+  | 	    ------  ----------  ----------
+  | 
+  | 	Area Summary:
+  | 
+  | 	      First     Last       Pages    Bytes not yet
+  | 	     address   address    assigned    allocated
+  | 	    --------  --------  ----------  -------------
+  | 	    0005A600  0005C5FF          16           8056
+  | 
+  | 	Scanning Lookaside Lists in Zone Control Block
+  | 	Scanning Free List for Area at 0005A600
+  | 
+  action: calls=33 argc=00000002 arg=12345678 dsc=0000010E
+VZ QF R0=00000001
+CZ frequent sizes R0=00000001
+  | Zone Id = 00050720,  Zone name = "FREQUENT"
+  | 
+  | 	Algorithm = LIB$K_VM_FREQ_SIZES  with 2 Lookaside Lists
+  | 
+  | 	Flags = 00000000
+  | 
+  | 	Initial size =      16 pages     Current size = 0 pages in 0 areas
+  | 	Extend size  =      16 pages     Page limit   = None
+  | 
+  | 	Requests are rounded up to a multiple of 8 bytes,
+  | 	naturally aligned on 8 byte boundaries
+  | 
+  | 	0 bytes have been freed and not yet reallocated
+  | 
+  | 	128 bytes are used for zone and area control blocks, or 100.0% overhead
+  | 
+  Z_FS: set
+GV FS 1: 16 R0=00000001
+  B_FS1 in its page: 00000000
+GV FS 2: 32 R0=00000001
+  B_FS2-B_FS1: 00000010
+GV FS 3: 48 R0=00000001
+  B_FS3-B_FS1: 00000030
+GV FS 4: 16 R0=00000001
+  B_FS4-B_FS1: 00000060
+FV FS 16 R0=00000001
+FV FS 32 R0=00000001
+FV FS 48 R0=00000001
+SVZ FS level 2 R0=00000001
+  | Zone Id = 00050720,  Zone name = "FREQUENT"
+  | 
+  | 	Algorithm = LIB$K_VM_FREQ_SIZES  with 2 Lookaside Lists
+  | 
+  | 	Flags = 00000000
+  | 
+  | 	Initial size =      16 pages     Current size = 16 pages in 1 area
+  | 	Extend size  =      16 pages     Page limit   = None
+  | 
+  | 	Requests are rounded up to a multiple of 8 bytes,
+  | 	naturally aligned on 8 byte boundaries
+  | 
+  | 	96 bytes have been freed and not yet reallocated
+  | 
+  | 	192 bytes are used for zone and area control blocks, or 2.2% overhead
+  | 
+  | 	Frequent Sizes Lookaside List Summary:
+  | 
+  | 	     List        Block   Number of
+  | 	    number        size     blocks
+  | 	    ------  ----------  ----------
+  | 	         1          48           1
+  | 	         2          32           1
+  | 
+  | 	Area Summary:
+  | 
+  | 	      First     Last       Pages    Bytes not yet
+  | 	     address   address    assigned    allocated
+  | 	    --------  --------  ----------  -------------
+  | 	    0005C600  0005E5FF          16           8080
+  | 
+  action: calls=31 argc=00000002 arg=12345678 dsc=0000010E
+GV FS 48 again R0=00000001
+  B_FS5-B_FS1: 00000030
+GV FS 32 again R0=00000001
+  B_FS6-B_FS1: 00000010
+GV FS 16 again R0=00000001
+  B_FS7-B_FS1: 00000000
+SVZ FS level 3 R0=00000001
+  | Zone Id = 00050720,  Zone name = "FREQUENT"
+  | 
+  | 	Algorithm = LIB$K_VM_FREQ_SIZES  with 2 Lookaside Lists
+  | 
+  | 	Flags = 00000000
+  | 
+  | 	Initial size =      16 pages     Current size = 16 pages in 1 area
+  | 	Extend size  =      16 pages     Page limit   = None
+  | 
+  | 	Requests are rounded up to a multiple of 8 bytes,
+  | 	naturally aligned on 8 byte boundaries
+  | 
+  | 	0 bytes have been freed and not yet reallocated
+  | 
+  | 	192 bytes are used for zone and area control blocks, or 2.2% overhead
+  | 
+  | 	Frequent Sizes Lookaside List Summary:
+  | 
+  | 	     List        Block   Number of
+  | 	    number        size     blocks
+  | 	    ------  ----------  ----------
+  | 
+  | 	Area Summary:
+  | 
+  | 	      First     Last       Pages    Bytes not yet
+  | 	     address   address    assigned    allocated
+  | 	    --------  --------  ----------  -------------
+  | 	    0005C600  0005E5FF          16           8080
+  | 
+  | 	Scanning Lookaside Lists in Zone Control Block
+  | 	Scanning Free List for Area at 0005C600
+  | 
+  action: calls=32 argc=00000002 arg=12345678 dsc=0000010E
+CZ fixed 24 R0=00000001
+  | Zone Id = 000507A0,  Zone name = "FIXED"
+  | 
+  | 	Algorithm = LIB$K_VM_FIXED  with block size of 24
+  | 
+  | 	Flags = 00000000
+  | 
+  | 	Initial size =      16 pages     Current size = 0 pages in 0 areas
+  | 	Extend size  =      16 pages     Page limit   = None
+  | 
+  | 	Requests are rounded up to a multiple of 8 bytes,
+  | 	naturally aligned on 8 byte boundaries
+  | 
+  | 	0 bytes have been freed and not yet reallocated
+  | 
+  | 	96 bytes are used for zone and area control blocks, or 100.0% overhead
+  | 
+  Z_FX: set
+GV FX 1: 24 R0=00000001
+  B_FX1 in its page: 00000000
+GV FX 2: 16 R0=00000001
+  B_FX2-B_FX1: 00000018
+GV FX 3: 1 R0=00000001
+  B_FX3-B_FX1: 00000030
+GV FX 32 R0=0015826C
+  B_T: untouched
+GV FX 0 R0=0015826C
+  B_T: untouched
+FV FX 24 R0=00000001
+GV FX 24 again R0=00000001
+  B_FX4-B_FX1: 00000000
+FV FX 16 R0=00000001
+FV FX size omitted R0=0000000C signal 0000000C 00000000 00000000
+GV FX 8 after R0=00000001
+  B_FX5-B_FX1: 00000018
+SVZ FX level 2 R0=00000001
+  | Zone Id = 000507A0,  Zone name = "FIXED"
+  | 
+  | 	Algorithm = LIB$K_VM_FIXED  with block size of 24
+  | 
+  | 	Flags = 00000000
+  | 
+  | 	Initial size =      16 pages     Current size = 16 pages in 1 area
+  | 	Extend size  =      16 pages     Page limit   = None
+  | 
+  | 	Requests are rounded up to a multiple of 8 bytes,
+  | 	naturally aligned on 8 byte boundaries
+  | 
+  | 	0 bytes have been freed and not yet reallocated
+  | 
+  | 	160 bytes are used for zone and area control blocks, or 1.9% overhead
+  | 
+  | 	Area Summary:
+  | 
+  | 	      First     Last       Pages    Bytes not yet
+  | 	     address   address    assigned    allocated
+  | 	    --------  --------  ----------  -------------
+  | 	    00070600  000725FF          16           8120
+  | 
+  action: calls=23 argc=00000002 arg=12345678 dsc=0000010E
+SVZ FX level 3 R0=00000001
+  | Zone Id = 000507A0,  Zone name = "FIXED"
+  | 
+  | 	Algorithm = LIB$K_VM_FIXED  with block size of 24
+  | 
+  | 	Flags = 00000000
+  | 
+  | 	Initial size =      16 pages     Current size = 16 pages in 1 area
+  | 	Extend size  =      16 pages     Page limit   = None
+  | 
+  | 	Requests are rounded up to a multiple of 8 bytes,
+  | 	naturally aligned on 8 byte boundaries
+  | 
+  | 	0 bytes have been freed and not yet reallocated
+  | 
+  | 	160 bytes are used for zone and area control blocks, or 1.9% overhead
+  | 
+  | 	Area Summary:
+  | 
+  | 	      First     Last       Pages    Bytes not yet
+  | 	     address   address    assigned    allocated
+  | 	    --------  --------  ----------  -------------
+  | 	    00070600  000725FF          16           8120
+  | 
+  | 	Scanning Lookaside Lists in Zone Control Block
+  | 	Scanning Free List for Area at 00070600
+  | 
+  action: calls=26 argc=00000002 arg=12345678 dsc=0000010E
+CZ block 32 R0=00000001
+  | Zone Id = 00050800,  Zone name = "BLOCK32"
+  | 
+  | 	Algorithm = LIB$K_VM_FIRST_FIT
+  | 
+  | 	Flags = 00000000
+  | 
+  | 	Initial size =      16 pages     Current size = 0 pages in 0 areas
+  | 	Extend size  =      16 pages     Page limit   = None
+  | 
+  | 	Requests are rounded up to a multiple of 32 bytes,
+  | 	naturally aligned on 32 byte boundaries
+  | 
+  | 	0 bytes have been freed and not yet reallocated
+  | 
+  | 	88 bytes are used for zone and area control blocks, or 100.0% overhead
+  | 
+  Z_BS: set
+GV BS 1: 1 R0=00000001
+  B_BS1 in its page: 00000000
+GV BS 2: 33 R0=00000001
+  B_BS2-B_BS1: 00000020
+GV BS 3: 1 R0=00000001
+  B_BS3-B_BS1: 00000060
+CZ align 64 R0=00000001
+  | Zone Id = 00050858,  Zone name = "ALIGN64"
+  | 
+  | 	Algorithm = LIB$K_VM_FIRST_FIT
+  | 
+  | 	Flags = 00000000
+  | 
+  | 	Initial size =      16 pages     Current size = 0 pages in 0 areas
+  | 	Extend size  =      16 pages     Page limit   = None
+  | 
+  | 	Requests are rounded up to a multiple of 64 bytes,
+  | 	naturally aligned on 64 byte boundaries
+  | 
+  | 	0 bytes have been freed and not yet reallocated
+  | 
+  | 	88 bytes are used for zone and area control blocks, or 100.0% overhead
+  | 
+  Z_AL: set
+GV AL 1: 8 R0=00000001
+  B_AL1 in its page: 00000000
+GV AL 2: 8 R0=00000001
+  B_AL2-B_AL1: 00000040
+GV AL 3: 72 R0=00000001
+  B_AL3-B_AL1: 00000080
+CZ block 16 align 4 R0=00000001
+  | Zone Id = 000508B0,  Zone name = "B16A4"
+  | 
+  | 	Algorithm = LIB$K_VM_FIRST_FIT
+  | 
+  | 	Flags = 00000000
+  | 
+  | 	Initial size =      16 pages     Current size = 0 pages in 0 areas
+  | 	Extend size  =      16 pages     Page limit   = None
+  | 
+  | 	Requests are rounded up to a multiple of 16 bytes,
+  | 	naturally aligned on 16 byte boundaries
+  | 
+  | 	0 bytes have been freed and not yet reallocated
+  | 
+  | 	88 bytes are used for zone and area control blocks, or 100.0% overhead
+  | 
+  Z_BA: set
+GV BA 1: 1 R0=00000001
+  B_BA1 in its page: 00000000
+GV BA 2: 17 R0=00000001
+  B_BA2-B_BA1: 00000010
+GV BA 3: 1 R0=00000001
+  B_BA3-B_BA1: 00000030
+CZ tags R0=00000001
+  | Zone Id = 00050908,  Zone name = "TAGS"
+  | 
+  | 	Algorithm = LIB$K_VM_FIRST_FIT
+  | 
+  | 	Flags = 00000001
+  | 		     LIB$M_VM_BOUNDARY_TAGS
+  | 
+  | 	Initial size =      16 pages     Current size = 0 pages in 0 areas
+  | 	Extend size  =      16 pages     Page limit   = None
+  | 
+  | 	Requests are rounded up to a multiple of 8 bytes,
+  | 	naturally aligned on 8 byte boundaries
+  | 
+  | 	0 bytes have been freed and not yet reallocated
+  | 
+  | 	88 bytes are used for zone and area control blocks, or 100.0% overhead
+  | 
+  Z_TG: set
+GV TG 1: 1 R0=00000001
+  B_TG1 in its page: 00000004
+GV TG 2: 8 R0=00000001
+  B_TG2-B_TG1: 00000010
+GV TG 3: 9 R0=00000001
+  B_TG3-B_TG1: 00000020
+GV TG 4: 16 R0=00000001
+  B_TG4-B_TG1: 00000038
+the tags of a block of 8 R0=00000001
+  ~B_TG2-8: 00050110 40000012 00000000 00000000
+  ~B_TG2+8: 00050110 4000001A
+FV TG size omitted R0=00000001
+FV TG 9 R0=00000001
+GV TG 8 again R0=00000001
+  B_TG5-B_TG1: 00000010
+GV TG 24 R0=00000001
+  B_TG6-B_TG1: 00000050
+SVZ TG level 3 R0=00000001
+  | Zone Id = 00050908,  Zone name = "TAGS"
+  | 
+  | 	Algorithm = LIB$K_VM_FIRST_FIT
+  | 
+  | 	Flags = 00000001
+  | 		     LIB$M_VM_BOUNDARY_TAGS
+  | 
+  | 	Initial size =      16 pages     Current size = 16 pages in 1 area
+  | 	Extend size  =      16 pages     Page limit   = None
+  | 
+  | 	Requests are rounded up to a multiple of 8 bytes,
+  | 	naturally aligned on 8 byte boundaries
+  | 
+  | 	24 bytes have been freed and not yet reallocated
+  | 
+  | 	152 bytes are used for zone and area control blocks, or 1.8% overhead
+  | 
+  | 	Area Summary:
+  | 
+  | 	      First     Last       Pages    Bytes not yet
+  | 	     address   address    assigned    allocated
+  | 	    --------  --------  ----------  -------------
+  | 	    00078600  0007A5FF          16           8080
+  | 
+  | 	Scanning Free List for Area at 00078600
+  | 	  Number of blocks = 1, Min blocksize = 24, Max blocksize = 24
+  | 
+  | 
+  action: calls=28 argc=00000002 arg=12345678 dsc=0000010E
+CZ tags, defaults R0=00000001
+  | Zone Id = 00050960,  Zone name = "TAGS8"
+  | 
+  | 	Algorithm = LIB$K_VM_FIRST_FIT
+  | 
+  | 	Flags = 00000001
+  | 		     LIB$M_VM_BOUNDARY_TAGS
+  | 
+  | 	Initial size =      16 pages     Current size = 0 pages in 0 areas
+  | 	Extend size  =      16 pages     Page limit   = None
+  | 
+  | 	Requests are rounded up to a multiple of 8 bytes,
+  | 	naturally aligned on 8 byte boundaries
+  | 
+  | 	0 bytes have been freed and not yet reallocated
+  | 
+  | 	88 bytes are used for zone and area control blocks, or 100.0% overhead
+  | 
+  Z_TD: set
+GV TD 1: 1 R0=00000001
+  B_TD1 in its page: 00000008
+GV TD 2: 8 R0=00000001
+  B_TD2-B_TD1: 00000010
+GV TD 3: 9 R0=00000001
+  B_TD3-B_TD1: 00000028
+CZ GET_FILL1 FREE_FILL0 R0=00000001
+  | Zone Id = 000509B8,  Zone name = "FILL10"
+  | 
+  | 	Algorithm = LIB$K_VM_FIRST_FIT
+  | 
+  | 	Flags = 0000000C
+  | 		     LIB$M_VM_GET_FILL1
+  | 		     LIB$M_VM_FREE_FILL0
+  | 
+  | 	Initial size =      16 pages     Current size = 0 pages in 0 areas
+  | 	Extend size  =      16 pages     Page limit   = None
+  | 
+  | 	Requests are rounded up to a multiple of 8 bytes,
+  | 	naturally aligned on 8 byte boundaries
+  | 
+  | 	0 bytes have been freed and not yet reallocated
+  | 
+  | 	88 bytes are used for zone and area control blocks, or 100.0% overhead
+  | 
+  Z_F1: set
+GV F1 32 R0=00000001
+  B_F11 FF: FFFFFFFF
+GV F1 32 second R0=00000001
+  B_F12-B_F11: 00000020
+  B_F12 FF: FFFFFFFF
+GV F1 32 third R0=00000001
+FV F1 first R0=00000001
+  B_F11 00: ..FFFFFF
+FV F1 second R0=00000001
+  B_F11 00: ..FFFFFFFFFFFFFF
+GV F1 8 R0=00000001
+  B_F14-B_F11: 00000000
+  B_F11 00: ....FFFFFFFFFFFF
+CZ GET_FILL0 FREE_FILL1 R0=00000001
+  | Zone Id = 00050A10,  Zone name = "FILL01"
+  | 
+  | 	Algorithm = LIB$K_VM_FIRST_FIT
+  | 
+  | 	Flags = 00000012
+  | 		     LIB$M_VM_GET_FILL0
+  | 		     LIB$M_VM_FREE_FILL1
+  | 
+  | 	Initial size =      16 pages     Current size = 0 pages in 0 areas
+  | 	Extend size  =      16 pages     Page limit   = None
+  | 
+  | 	Requests are rounded up to a multiple of 8 bytes,
+  | 	naturally aligned on 8 byte boundaries
+  | 
+  | 	0 bytes have been freed and not yet reallocated
+  | 
+  | 	88 bytes are used for zone and area control blocks, or 100.0% overhead
+  | 
+  Z_F0: set
+GV F0 40 R0=00000001
+  B_F01 00: FFFFFFFFFF
+GV F0 40 second R0=00000001
+FV F0 40 R0=00000001
+  B_F01 FF: ..FFFFFFFF
+CZ fixed 16, FREE_FILL1 R0=00000001
+  | Zone Id = 00050A68,  Zone name = "FIXFILL"
+  | 
+  | 	Algorithm = LIB$K_VM_FIXED  with block size of 16
+  | 
+  | 	Flags = 00000010
+  | 		     LIB$M_VM_FREE_FILL1
+  | 
+  | 	Initial size =      16 pages     Current size = 0 pages in 0 areas
+  | 	Extend size  =      16 pages     Page limit   = None
+  | 
+  | 	Requests are rounded up to a multiple of 8 bytes,
+  | 	naturally aligned on 8 byte boundaries
+  | 
+  | 	0 bytes have been freed and not yet reallocated
+  | 
+  | 	96 bytes are used for zone and area control blocks, or 100.0% overhead
+  | 
+  Z_FF1: set
+GV FF1 16 R0=00000001
+GV FF1 16 second R0=00000001
+FV FF1 16 R0=00000001
+  B_XF1 FF: ..FF
+CZ tags, FREE_FILL1 R0=00000001
+  | Zone Id = 00050AF8,  Zone name = "TAGFILL"
+  | 
+  | 	Algorithm = LIB$K_VM_FIRST_FIT
+  | 
+  | 	Flags = 00000011
+  | 		     LIB$M_VM_BOUNDARY_TAGS
+  | 		     LIB$M_VM_FREE_FILL1
+  | 
+  | 	Initial size =      16 pages     Current size = 0 pages in 0 areas
+  | 	Extend size  =      16 pages     Page limit   = None
+  | 
+  | 	Requests are rounded up to a multiple of 8 bytes,
+  | 	naturally aligned on 8 byte boundaries
+  | 
+  | 	0 bytes have been freed and not yet reallocated
+  | 
+  | 	88 bytes are used for zone and area control blocks, or 100.0% overhead
+  | 
+  Z_TF1: set
+GV TF1 16 R0=00000001
+GV TF1 16 second R0=00000001
+FV TF1 16 R0=00000001
+  B_TF1 FF: .FFF
+  ~B_TF1-8: 00000023 00050270
+  ~B_TF1+16: FFFFFFFF 00000023
+CZ limit 4, initial 2, extend 1 R0=00000001
+  | Zone Id = 00050B50,  Zone name = "LIMIT"
+  | 
+  | 	Algorithm = LIB$K_VM_FIRST_FIT
+  | 
+  | 	Flags = 00000000
+  | 
+  | 	Initial size =       2 pages     Current size = 2 pages in 1 area
+  | 	Extend size  =       1 pages     Page limit   = 4 pages
+  | 
+  | 	Requests are rounded up to a multiple of 8 bytes,
+  | 	naturally aligned on 8 byte boundaries
+  | 
+  | 	0 bytes have been freed and not yet reallocated
+  | 
+  | 	152 bytes are used for zone and area control blocks, or 12.9% overhead
+  | 
+  Z_PL: set
+GV PL 1: 600 R0=00000001
+  B_PL1 in its page: 00000000
+GV PL 2: 600 R0=00000001
+  B_PL2-B_PL1: 00000400
+GV PL 3: 600 R0=001583C4
+  B_PL3-B_PL1: untouched
+GV PL 4: 600 R0=001583C4
+  B_PL4-B_PL1: untouched
+SVZ PL level 2 R0=00000001
+  | Zone Id = 00050B50,  Zone name = "LIMIT"
+  | 
+  | 	Algorithm = LIB$K_VM_FIRST_FIT
+  | 
+  | 	Flags = 00000000
+  | 
+  | 	Initial size =       2 pages     Current size = 4 pages in 2 areas
+  | 	Extend size  =       1 pages     Page limit   = 4 pages
+  | 
+  | 	Requests are rounded up to a multiple of 8 bytes,
+  | 	naturally aligned on 8 byte boundaries
+  | 
+  | 	0 bytes have been freed and not yet reallocated
+  | 
+  | 	216 bytes are used for zone and area control blocks, or 9.5% overhead
+  | 
+  | 	Area Summary:
+  | 
+  | 	      First     Last       Pages    Bytes not yet
+  | 	     address   address    assigned    allocated
+  | 	    --------  --------  ----------  -------------
+  | 	    0005EA00  0005EDFF           2            424
+  | 	    0005E600  0005E9FF           2            424
+  | 
+  action: calls=24 argc=00000002 arg=12345678 dsc=0000010E
+CZ NO_EXTEND, initial 2 R0=00000001
+  | Zone Id = 00050BA8,  Zone name = "NOEXTEND"
+  | 
+  | 	Algorithm = LIB$K_VM_FIRST_FIT
+  | 
+  | 	Flags = 00000000
+  | 
+  | 	Initial size =       2 pages     Current size = 2 pages in 1 area
+  | 	Extend size  =      16 pages     Page limit   = None
+  | 
+  | 	Requests are rounded up to a multiple of 8 bytes,
+  | 	naturally aligned on 8 byte boundaries
+  | 
+  | 	0 bytes have been freed and not yet reallocated
+  | 
+  | 	160 bytes are used for zone and area control blocks, or 13.5% overhead
+  | 
+  Z_NE: set
+GV NE 1: 400 R0=00000001
+  B_NE1 in its page: 00000000
+GV NE 2: 400 R0=00000001
+  B_NE2-B_NE1: 00000190
+GV NE 3: 400 R0=001583C4
+  B_NE3-B_NE1: untouched
+SVZ NE level 2 R0=00000001
+  | Zone Id = 00050BA8,  Zone name = "NOEXTEND"
+  | 
+  | 	Algorithm = LIB$K_VM_FIRST_FIT
+  | 
+  | 	Flags = 00000000
+  | 
+  | 	Initial size =       2 pages     Current size = 2 pages in 1 area
+  | 	Extend size  =      16 pages     Page limit   = None
+  | 
+  | 	Requests are rounded up to a multiple of 8 bytes,
+  | 	naturally aligned on 8 byte boundaries
+  | 
+  | 	0 bytes have been freed and not yet reallocated
+  | 
+  | 	160 bytes are used for zone and area control blocks, or 13.5% overhead
+  | 
+  | 	Area Summary:
+  | 
+  | 	      First     Last       Pages    Bytes not yet
+  | 	     address   address    assigned    allocated
+  | 	    --------  --------  ----------  -------------
+  | 	    0005EE00  0005F1FF           2            224
+  | 
+  action: calls=23 argc=00000002 arg=12345678 dsc=0000010E
+CZ EXTEND_AREA, initial 1, extend 1 R0=00000001
+  | Zone Id = 00050C08,  Zone name = "EXTAREA"
+  | 
+  | 	Algorithm = LIB$K_VM_FIRST_FIT
+  | 
+  | 	Flags = 00000020
+  | 		     LIB$M_VM_EXTEND_AREA
+  | 
+  | 	Initial size =       1 pages     Current size = 1 pages in 1 area
+  | 	Extend size  =       1 pages     Page limit   = None
+  | 
+  | 	Requests are rounded up to a multiple of 8 bytes,
+  | 	naturally aligned on 8 byte boundaries
+  | 
+  | 	0 bytes have been freed and not yet reallocated
+  | 
+  | 	152 bytes are used for zone and area control blocks, or 22.8% overhead
+  | 
+  Z_EA: set
+GV EA 1: 400 R0=00000001
+  B_EA1 in its page: 00000000
+GV EA 2: 400 R0=00000001
+  B_EA2-B_EA1: 00000190
+GV EA 3: 400 R0=00000001
+  B_EA3-B_EA1: 00000320
+SVZ EA level 2 R0=00000001
+  | Zone Id = 00050C08,  Zone name = "EXTAREA"
+  | 
+  | 	Algorithm = LIB$K_VM_FIRST_FIT
+  | 
+  | 	Flags = 00000020
+  | 		     LIB$M_VM_EXTEND_AREA
+  | 
+  | 	Initial size =       1 pages     Current size = 3 pages in 1 area
+  | 	Extend size  =       1 pages     Page limit   = None
+  | 
+  | 	Requests are rounded up to a multiple of 8 bytes,
+  | 	naturally aligned on 8 byte boundaries
+  | 
+  | 	0 bytes have been freed and not yet reallocated
+  | 
+  | 	152 bytes are used for zone and area control blocks, or 9.0% overhead
+  | 
+  | 	Area Summary:
+  | 
+  | 	      First     Last       Pages    Bytes not yet
+  | 	     address   address    assigned    allocated
+  | 	    --------  --------  ----------  -------------
+  | 	    0005F200  0005F7FF           3            336
+  | 
+  action: calls=24 argc=00000002 arg=12345678 dsc=0000010E
+CZ initial 1, extend 1 R0=00000001
+  | Zone Id = 00050C60,  Zone name = "NOEXTAREA"
+  | 
+  | 	Algorithm = LIB$K_VM_FIRST_FIT
+  | 
+  | 	Flags = 00000000
+  | 
+  | 	Initial size =       1 pages     Current size = 1 pages in 1 area
+  | 	Extend size  =       1 pages     Page limit   = None
+  | 
+  | 	Requests are rounded up to a multiple of 8 bytes,
+  | 	naturally aligned on 8 byte boundaries
+  | 
+  | 	0 bytes have been freed and not yet reallocated
+  | 
+  | 	160 bytes are used for zone and area control blocks, or 23.8% overhead
+  | 
+  Z_NA: set
+GV NA 1: 400 R0=00000001
+  B_NA1 in its page: 00000000
+GV NA 2: 400 R0=00000001
+  B_NA2-B_NA1: 00000200
+GV NA 3: 400 R0=00000001
+  B_NA3-B_NA1: 00000400
+SVZ NA level 2 R0=00000001
+  | Zone Id = 00050C60,  Zone name = "NOEXTAREA"
+  | 
+  | 	Algorithm = LIB$K_VM_FIRST_FIT
+  | 
+  | 	Flags = 00000000
+  | 
+  | 	Initial size =       1 pages     Current size = 3 pages in 3 areas
+  | 	Extend size  =       1 pages     Page limit   = None
+  | 
+  | 	Requests are rounded up to a multiple of 8 bytes,
+  | 	naturally aligned on 8 byte boundaries
+  | 
+  | 	0 bytes have been freed and not yet reallocated
+  | 
+  | 	288 bytes are used for zone and area control blocks, or 15.7% overhead
+  | 
+  | 	Area Summary:
+  | 
+  | 	      First     Last       Pages    Bytes not yet
+  | 	     address   address    assigned    allocated
+  | 	    --------  --------  ----------  -------------
+  | 	    0005FC00  0005FDFF           1            112
+  | 	    0005FA00  0005FBFF           1            112
+  | 	    0005F800  0005F9FF           1            112
+  | 
+  action: calls=25 argc=00000002 arg=12345678 dsc=0000010E
+CZ TAIL_LARGE, initial 1, extend 1 R0=00000001
+  | Zone Id = 00050CC0,  Zone name = "TAIL"
+  | 
+  | 	Algorithm = LIB$K_VM_FIRST_FIT
+  | 
+  | 	Flags = 00000000
+  | 
+  | 	Initial size =       1 pages     Current size = 1 pages in 1 area
+  | 	Extend size  =       1 pages     Page limit   = None
+  | 
+  | 	Requests are rounded up to a multiple of 8 bytes,
+  | 	naturally aligned on 8 byte boundaries
+  | 
+  | 	0 bytes have been freed and not yet reallocated
+  | 
+  | 	152 bytes are used for zone and area control blocks, or 22.8% overhead
+  | 
+  Z_TL: set
+GV TL 1: 100 R0=00000001
+  B_TL1 in its page: 00000000
+GV TL 2: 2000 R0=00000001
+  B_TL2-B_TL1: 00000200
+GV TL 3: 100 R0=00000001
+  B_TL3-B_TL1: 00000068
+GV TL 4: 600 R0=00000001
+  B_TL4-B_TL1: 00000A00
+GV TL 5: 100 R0=00000001
+  B_TL5-B_TL1: 000000D0
+SVZ TL level 2 R0=00000001
+  | Zone Id = 00050CC0,  Zone name = "TAIL"
+  | 
+  | 	Algorithm = LIB$K_VM_FIRST_FIT
+  | 
+  | 	Flags = 00000000
+  | 
+  | 	Initial size =       1 pages     Current size = 7 pages in 3 areas
+  | 	Extend size  =       1 pages     Page limit   = None
+  | 
+  | 	Requests are rounded up to a multiple of 8 bytes,
+  | 	naturally aligned on 8 byte boundaries
+  | 
+  | 	0 bytes have been freed and not yet reallocated
+  | 
+  | 	280 bytes are used for zone and area control blocks, or 7.2% overhead
+  | 
+  | 	Area Summary:
+  | 
+  | 	      First     Last       Pages    Bytes not yet
+  | 	     address   address    assigned    allocated
+  | 	    --------  --------  ----------  -------------
+  | 	    00060000  000601FF           1            200
+  | 	    00060200  000609FF           4             48
+  | 	    00060A00  00060DFF           2            424
+  | 
+  action: calls=25 argc=00000002 arg=12345678 dsc=0000010E
+CZ initial 1, extend 1, no TAIL_LARGE R0=00000001
+  | Zone Id = 00050D18,  Zone name = "HEAD"
+  | 
+  | 	Algorithm = LIB$K_VM_FIRST_FIT
+  | 
+  | 	Flags = 00000000
+  | 
+  | 	Initial size =       1 pages     Current size = 1 pages in 1 area
+  | 	Extend size  =       1 pages     Page limit   = None
+  | 
+  | 	Requests are rounded up to a multiple of 8 bytes,
+  | 	naturally aligned on 8 byte boundaries
+  | 
+  | 	0 bytes have been freed and not yet reallocated
+  | 
+  | 	152 bytes are used for zone and area control blocks, or 22.8% overhead
+  | 
+  Z_HL: set
+GV HL 1: 100 R0=00000001
+  B_HL1 in its page: 00000000
+GV HL 2: 2000 R0=00000001
+  B_HL2-B_HL1: 00000200
+GV HL 3: 100 R0=00000001
+  B_HL3-B_HL1: 00000068
+GV HL 4: 600 R0=00000001
+  B_HL4-B_HL1: 00000A00
+GV HL 5: 100 R0=00000001
+  B_HL5-B_HL1: 00000C58
+SVZ HL level 2 R0=00000001
+  | Zone Id = 00050D18,  Zone name = "HEAD"
+  | 
+  | 	Algorithm = LIB$K_VM_FIRST_FIT
+  | 
+  | 	Flags = 00000000
+  | 
+  | 	Initial size =       1 pages     Current size = 7 pages in 3 areas
+  | 	Extend size  =       1 pages     Page limit   = None
+  | 
+  | 	Requests are rounded up to a multiple of 8 bytes,
+  | 	naturally aligned on 8 byte boundaries
+  | 
+  | 	0 bytes have been freed and not yet reallocated
+  | 
+  | 	280 bytes are used for zone and area control blocks, or 7.2% overhead
+  | 
+  | 	Area Summary:
+  | 
+  | 	      First     Last       Pages    Bytes not yet
+  | 	     address   address    assigned    allocated
+  | 	    --------  --------  ----------  -------------
+  | 	    00085000  000853FF           2            320
+  | 	    00084800  00084FFF           4             48
+  | 	    00084600  000847FF           1            304
+  | 
+  action: calls=25 argc=00000002 arg=12345678 dsc=0000010E
+CZ reset, FREE_FILL1 R0=00000001
+  | Zone Id = 00050D70,  Zone name = "RESET"
+  | 
+  | 	Algorithm = LIB$K_VM_FIRST_FIT
+  | 
+  | 	Flags = 00000010
+  | 		     LIB$M_VM_FREE_FILL1
+  | 
+  | 	Initial size =      16 pages     Current size = 0 pages in 0 areas
+  | 	Extend size  =      16 pages     Page limit   = None
+  | 
+  | 	Requests are rounded up to a multiple of 8 bytes,
+  | 	naturally aligned on 8 byte boundaries
+  | 
+  | 	0 bytes have been freed and not yet reallocated
+  | 
+  | 	88 bytes are used for zone and area control blocks, or 100.0% overhead
+  | 
+  Z_RS: set
+GV RS 1: 16 R0=00000001
+  B_RS1 in its page: 00000000
+GV RS 2: 16 R0=00000001
+  B_RS2-B_RS1: 00000010
+GV RS 3: 100 R0=00000001
+  B_RS3-B_RS1: 00000020
+RZ RS R0=00000001
+  B_RS1 FF: FFFF
+  B_RS3 FF: FFFFFFFFFFFFFFFFFFFFFFFFF
+GV RS after reset 1: 16 R0=00000001
+  B_RA1 in its page: 00000000
+GV RS after reset 2: 16 R0=00000001
+  B_RA2-B_RA1: 00000010
+GV RS after reset 3: 100 R0=00000001
+  B_RA3-B_RA1: 00000020
+GV RS after reset 4: 16 R0=00000001
+  B_RA4-B_RA1: 00000088
+the blocks after reset R0=00000001
+  B_RA1-B_RS1: 00000000
+  B_RA2-B_RS2: 00000000
+  B_RA3-B_RS3: 00000000
+SVZ RS level 2 R0=00000001
+  | Zone Id = 00050D70,  Zone name = "RESET"
+  | 
+  | 	Algorithm = LIB$K_VM_FIRST_FIT
+  | 
+  | 	Flags = 00000010
+  | 		     LIB$M_VM_FREE_FILL1
+  | 
+  | 	Initial size =      16 pages     Current size = 16 pages in 1 area
+  | 	Extend size  =      16 pages     Page limit   = None
+  | 
+  | 	Requests are rounded up to a multiple of 8 bytes,
+  | 	naturally aligned on 8 byte boundaries
+  | 
+  | 	0 bytes have been freed and not yet reallocated
+  | 
+  | 	152 bytes are used for zone and area control blocks, or 1.8% overhead
+  | 
+  | 	Area Summary:
+  | 
+  | 	      First     Last       Pages    Bytes not yet
+  | 	     address   address    assigned    allocated
+  | 	    --------  --------  ----------  -------------
+  | 	    00085400  000873FF          16           8040
+  | 
+  action: calls=24 argc=00000002 arg=12345678 dsc=0000010E
+CZ delete, FREE_FILL1 R0=00000001
+  | Zone Id = 00087C00,  Zone name = "DELETE"
+  | 
+  | 	Algorithm = LIB$K_VM_FIRST_FIT
+  | 
+  | 	Flags = 00000010
+  | 		     LIB$M_VM_FREE_FILL1
+  | 
+  | 	Initial size =      16 pages     Current size = 0 pages in 0 areas
+  | 	Extend size  =      16 pages     Page limit   = None
+  | 
+  | 	Requests are rounded up to a multiple of 8 bytes,
+  | 	naturally aligned on 8 byte boundaries
+  | 
+  | 	0 bytes have been freed and not yet reallocated
+  | 
+  | 	88 bytes are used for zone and area control blocks, or 100.0% overhead
+  | 
+  Z_DL: set
+GV DL 64 R0=00000001
+DZ DL R0=00000001
+  B_DL1 FF: FFFFFFFFFFFFFFFF
+  SD: 00000000 00000001 FFFFFF68 00000000 00000001 FFFFFFF0
+GP after DZ R0=00000001
+  P_10: set
+the page and the deleted block R0=00000001
+  B_DL1-P_10: 00000000
+FP after DZ R0=00000001
+DZ zone 0 R0=00158264
+RZ zone 0 R0=00158264
+DZ zone-id omitted R0=0000000C signal 0000000C 00000000 00000000
+RZ zone-id omitted R0=0000000C signal 0000000C 00000000 00000000
+CZ for RZ twice R0=00000001
+  | Zone Id = 00087C00,  Zone name = "RESET2"
+  | 
+  | 	Algorithm = LIB$K_VM_FIRST_FIT
+  | 
+  | 	Flags = 00000000
+  | 
+  | 	Initial size =      16 pages     Current size = 0 pages in 0 areas
+  | 	Extend size  =      16 pages     Page limit   = None
+  | 
+  | 	Requests are rounded up to a multiple of 8 bytes,
+  | 	naturally aligned on 8 byte boundaries
+  | 
+  | 	0 bytes have been freed and not yet reallocated
+  | 
+  | 	88 bytes are used for zone and area control blocks, or 100.0% overhead
+  | 
+  Z_R2: set
+RZ twice 1 R0=00000001
+RZ twice 2 R0=00000001
+DZ after RZ R0=00000001
+CZ for DZ with blocks R0=00000001
+  | Zone Id = 00087C58,  Zone name = "DELBLOCKS"
+  | 
+  | 	Algorithm = LIB$K_VM_FIRST_FIT
+  | 
+  | 	Flags = 00000000
+  | 
+  | 	Initial size =      16 pages     Current size = 0 pages in 0 areas
+  | 	Extend size  =      16 pages     Page limit   = None
+  | 
+  | 	Requests are rounded up to a multiple of 8 bytes,
+  | 	naturally aligned on 8 byte boundaries
+  | 
+  | 	0 bytes have been freed and not yet reallocated
+  | 
+  | 	96 bytes are used for zone and area control blocks, or 100.0% overhead
+  | 
+  Z_DB: set
+GV DB 100 R0=00000001
+GV DB 200 R0=00000001
+DZ with blocks R0=00000001
+  SD: 00000000 00000001 FFFFFE70 00000000 00000001 FFFFFFF0
+CZ the monitor's real zone R0=00000001
+  | Zone Id = 00087C00,  Zone name = "REAL1"
+  | 
+  | 	Algorithm = LIB$K_VM_FIRST_FIT
+  | 
+  | 	Flags = 00000000
+  | 
+  | 	Initial size =      16 pages     Current size = 0 pages in 0 areas
+  | 	Extend size  =      16 pages     Page limit   = None
+  | 
+  | 	Requests are rounded up to a multiple of 8 bytes,
+  | 	naturally aligned on 8 byte boundaries
+  | 
+  | 	0 bytes have been freed and not yet reallocated
+  | 
+  | 	88 bytes are used for zone and area control blocks, or 100.0% overhead
+  | 
+  Z_R1: set
+CUZ monitor R0=00000001
+  Z_U1: set
+UGV 16 R0=00000001
+  > alloc 3
+  >  1: GVN 16
+  >  2: GVB
+  >  3: zone+00000048 the real zone
+  >   status 00000001
+  GVB: set
+  GVB in its page: 00000000
+  SD: 00000002 00000000 00000010 00000001 00000000 00000010
+UFV 16 R0=00000001
+  > free 3
+  >  1: GVN 16
+  >  2: GVB
+  >  3: zone+00000048 the real zone
+  >   status 00000001
+  SD: 00000000 00000002 FFFFFFF0 00000000 00000000 00000000
+UGV 24 R0=00000001
+  > alloc 3
+  >  1: GVN 24
+  >  2: GVB
+  >  3: zone+00000048 the real zone
+  >   status 00000001
+  GVB: set
+UFV size omitted R0=0000000C signal 0000000C 00000000 00000000
+UGV 0 R0=0015826C
+  GVB: untouched
+UGV -1 R0=0015826C
+  GVB: untouched
+UGV 32 R0=00000001
+  > alloc 3
+  >  1: GVN 32
+  >  2: GVB
+  >  3: zone+00000048 the real zone
+  >   status 00000001
+  GVB: set
+UFV 0 R0=0015826C
+UFV 32 R0=00000001
+  > free 3
+  >  1: GVN 32
+  >  2: GVB
+  >  3: zone+00000048 the real zone
+  >   status 00000001
+UFV 32 again R0=00158264
+  > free 3
+  >  1: GVN 32
+  >  2: GVB
+  >  3: zone+00000048 the real zone
+  >   status 00158264
+UGV allocation fails R0=00001230
+  > alloc 3
+  >  1: GVN 16
+  >  2: GVB
+  >  3: zone+00000048 the real zone
+  GVB: untouched
+URZ monitor R0=00000001
+  > reset 1
+  >  1: zone+00000048 the real zone
+  >   status 00000001
+SVZ monitor level 0 R0=00000001
+  | Zone Id = 00087CB8,  Zone name = "MONITOR"
+  action: calls=1 argc=00000002 arg=12345678 dsc=00000000
+SVZ monitor level 3 R0=00000001
+  | Zone Id = 00087CB8,  Zone name = "MONITOR"
+  | 
+  | 	Algorithm = (user zone)   USER_ARG = 556032
+  action: calls=3 argc=00000002 arg=12345678 dsc=00000000
+VZ monitor R0=00000001
+FIND with a user zone R0=00158274
+  | Zone Id = 0004EA68,  Zone name = "DEFAULT_ZONE"
+  | Zone Id = 0004EB08,  Zone name = "STRING_ZONE"
+  | Zone Id = 00087C00,  Zone name = "REAL1"
+  | Zone Id = 00087CB8,  Zone name = "MONITOR"
+  | Zone Id = 00050650,  Zone name = "FIRST"
+  | Zone Id = 000506A8,  Zone name = "QUICK"
+  | Zone Id = 00050720,  Zone name = "FREQUENT"
+  | Zone Id = 000507A0,  Zone name = "FIXED"
+  | Zone Id = 00050800,  Zone name = "BLOCK32"
+  | Zone Id = 00050858,  Zone name = "ALIGN64"
+  | Zone Id = 000508B0,  Zone name = "B16A4"
+  | Zone Id = 00050908,  Zone name = "TAGS"
+  | Zone Id = 00050960,  Zone name = "TAGS8"
+  | Zone Id = 000509B8,  Zone name = "FILL10"
+  | Zone Id = 00050A10,  Zone name = "FILL01"
+  | Zone Id = 00050A68,  Zone name = "FIXFILL"
+  | Zone Id = 00050AF8,  Zone name = "TAGFILL"
+  | Zone Id = 00050B50,  Zone name = "LIMIT"
+  | Zone Id = 00050BA8,  Zone name = "NOEXTEND"
+  | Zone Id = 00050C08,  Zone name = "EXTAREA"
+  | Zone Id = 00050C60,  Zone name = "NOEXTAREA"
+  | Zone Id = 00050CC0,  Zone name = "TAIL"
+  | Zone Id = 00050D18,  Zone name = "HEAD"
+  | Zone Id = 00050D70,  Zone name = "RESET"
+  = end 00158274 after 24
+UDZ monitor R0=00000001
+  > delete 1
+  >  1: zone+00000048 the real zone
+  >   status 00000001
+FIND after the monitor R0=00158274
+  | Zone Id = 0004EA68,  Zone name = "DEFAULT_ZONE"
+  | Zone Id = 0004EB08,  Zone name = "STRING_ZONE"
+  | Zone Id = 00050650,  Zone name = "FIRST"
+  | Zone Id = 000506A8,  Zone name = "QUICK"
+  | Zone Id = 00050720,  Zone name = "FREQUENT"
+  | Zone Id = 000507A0,  Zone name = "FIXED"
+  | Zone Id = 00050800,  Zone name = "BLOCK32"
+  | Zone Id = 00050858,  Zone name = "ALIGN64"
+  | Zone Id = 000508B0,  Zone name = "B16A4"
+  | Zone Id = 00050908,  Zone name = "TAGS"
+  | Zone Id = 00050960,  Zone name = "TAGS8"
+  | Zone Id = 000509B8,  Zone name = "FILL10"
+  | Zone Id = 00050A10,  Zone name = "FILL01"
+  | Zone Id = 00050A68,  Zone name = "FIXFILL"
+  | Zone Id = 00050AF8,  Zone name = "TAGFILL"
+  | Zone Id = 00050B50,  Zone name = "LIMIT"
+  | Zone Id = 00050BA8,  Zone name = "NOEXTEND"
+  | Zone Id = 00050C08,  Zone name = "EXTAREA"
+  | Zone Id = 00050C60,  Zone name = "NOEXTAREA"
+  | Zone Id = 00050CC0,  Zone name = "TAIL"
+  | Zone Id = 00050D18,  Zone name = "HEAD"
+  | Zone Id = 00050D70,  Zone name = "RESET"
+  = end 00158274 after 22
+CUZ no routines R0=00000001
+  Z_U2: set
+UGV no routine R0=001583BC
+  GVB: untouched
+UFV no routine R0=001583BC
+URZ no routine R0=001583BC
+UDZ no routine R0=001583BC
+SVZ no routines level 1 R0=001583D4
+  action: calls=0 argc=55555555 arg=55555555 dsc=55555555
+FIND after UDZ no routine R0=00158274
+  | Zone Id = 0004EA68,  Zone name = "DEFAULT_ZONE"
+  | Zone Id = 0004EB08,  Zone name = "STRING_ZONE"
+  | Zone Id = 00050650,  Zone name = "FIRST"
+  | Zone Id = 000506A8,  Zone name = "QUICK"
+  | Zone Id = 00050720,  Zone name = "FREQUENT"
+  | Zone Id = 000507A0,  Zone name = "FIXED"
+  | Zone Id = 00050800,  Zone name = "BLOCK32"
+  | Zone Id = 00050858,  Zone name = "ALIGN64"
+  | Zone Id = 000508B0,  Zone name = "B16A4"
+  | Zone Id = 00050908,  Zone name = "TAGS"
+  | Zone Id = 00050960,  Zone name = "TAGS8"
+  | Zone Id = 000509B8,  Zone name = "FILL10"
+  | Zone Id = 00050A10,  Zone name = "FILL01"
+  | Zone Id = 00050A68,  Zone name = "FIXFILL"
+  | Zone Id = 00050AF8,  Zone name = "TAGFILL"
+  | Zone Id = 00050B50,  Zone name = "LIMIT"
+  | Zone Id = 00050BA8,  Zone name = "NOEXTEND"
+  | Zone Id = 00050C08,  Zone name = "EXTAREA"
+  | Zone Id = 00050C60,  Zone name = "NOEXTAREA"
+  | Zone Id = 00050CC0,  Zone name = "TAIL"
+  | Zone Id = 00050D18,  Zone name = "HEAD"
+  | Zone Id = 00050D70,  Zone name = "RESET"
+  = end 00158274 after 22
+CZ a real zone for a failing delete R0=00000001
+  | Zone Id = 00087C00,  Zone name = "REAL3"
+  | 
+  | 	Algorithm = LIB$K_VM_FIRST_FIT
+  | 
+  | 	Flags = 00000000
+  | 
+  | 	Initial size =      16 pages     Current size = 0 pages in 0 areas
+  | 	Extend size  =      16 pages     Page limit   = None
+  | 
+  | 	Requests are rounded up to a multiple of 8 bytes,
+  | 	naturally aligned on 8 byte boundaries
+  | 
+  | 	0 bytes have been freed and not yet reallocated
+  | 
+  | 	88 bytes are used for zone and area control blocks, or 100.0% overhead
+  | 
+  Z_R3: set
+CUZ failing delete R0=00000001
+  Z_U3: set
+UDZ fails R0=00001230
+  > delete 1
+  >  1: zone+00000048 the real zone
+UGV after a failed delete R0=00158264
+  GVB: untouched
+UDZ again R0=00158264
+CZ a real zone for Example 5-1's delete R0=00000001
+  | Zone Id = 00087C58,  Zone name = "REAL4"
+  | 
+  | 	Algorithm = LIB$K_VM_FIRST_FIT
+  | 
+  | 	Flags = 00000000
+  | 
+  | 	Initial size =      16 pages     Current size = 0 pages in 0 areas
+  | 	Extend size  =      16 pages     Page limit   = None
+  | 
+  | 	Requests are rounded up to a multiple of 8 bytes,
+  | 	naturally aligned on 8 byte boundaries
+  | 
+  | 	0 bytes have been freed and not yet reallocated
+  | 
+  | 	88 bytes are used for zone and area control blocks, or 100.0% overhead
+  | 
+  Z_R4: set
+CUZ with LIB$DELETE_VM_ZONE R0=00000001
+  Z_U4: set
+UDZ by LIB$DELETE_VM_ZONE R0=00000001
+FIND after Example 5-1's delete R0=00158274
+  | Zone Id = 0004EA68,  Zone name = "DEFAULT_ZONE"
+  | Zone Id = 0004EB08,  Zone name = "STRING_ZONE"
+  | Zone Id = 00087C00,  Zone name = "REAL3"
+  | Zone Id = 00050650,  Zone name = "FIRST"
+  | Zone Id = 000506A8,  Zone name = "QUICK"
+  | Zone Id = 00050720,  Zone name = "FREQUENT"
+  | Zone Id = 000507A0,  Zone name = "FIXED"
+  | Zone Id = 00050800,  Zone name = "BLOCK32"
+  | Zone Id = 00050858,  Zone name = "ALIGN64"
+  | Zone Id = 000508B0,  Zone name = "B16A4"
+  | Zone Id = 00050908,  Zone name = "TAGS"
+  | Zone Id = 00050960,  Zone name = "TAGS8"
+  | Zone Id = 000509B8,  Zone name = "FILL10"
+  | Zone Id = 00050A10,  Zone name = "FILL01"
+  | Zone Id = 00050A68,  Zone name = "FIXFILL"
+  | Zone Id = 00050AF8,  Zone name = "TAGFILL"
+  | Zone Id = 00050B50,  Zone name = "LIMIT"
+  | Zone Id = 00050BA8,  Zone name = "NOEXTEND"
+  | Zone Id = 00050C08,  Zone name = "EXTAREA"
+  | Zone Id = 00050C60,  Zone name = "NOEXTAREA"
+  | Zone Id = 00050CC0,  Zone name = "TAIL"
+  | Zone Id = 00050D18,  Zone name = "HEAD"
+  | Zone Id = 00050D70,  Zone name = "RESET"
+  = end 00158274 after 23
+CUZ zone-id only R0=00000001
+  Z_U5: set
+SVZ zone-id only level 1 R0=00000001
+  | Zone Id = 00087C58,  Zone name = ""
+  | 
+  | 	Algorithm = (user zone)   USER_ARG = 0
+  action: calls=3 argc=00000002 arg=12345678 dsc=00000000
+CUZ user argument omitted R0=00000001
+  Z_U6: set
+UGV user argument omitted R0=00000001
+  > alloc 3
+  >  1: GVN 16
+  >  2: GVB
+  >  3: zone+00000048 value 00000000
+  >   status 00000001
+  GVB: set
+CUZ 8 arguments R0=00000001
+  Z_T: set
+CUZ name class 99 R0=00158224
+  Z_T: untouched
+CUZ no arguments R0=0000000C signal 0000000C 00000004 00013400
+CZ page routines at 12 and 13 R0=00000001
+  > get-page 2 n=1
+  >   status 00000001
+  > get-page 2 n=2
+  >   status 00000001
+  | Zone Id = 00088400,  Zone name = "PAGES1213"
+  | 
+  | 	Algorithm = LIB$K_VM_FIRST_FIT
+  | 
+  | 	Flags = 00000000
+  | 
+  | 	Initial size =       2 pages     Current size = 2 pages in 1 area
+  | 	Extend size  =       1 pages     Page limit   = None
+  | 
+  | 	Requests are rounded up to a multiple of 8 bytes,
+  | 	naturally aligned on 8 byte boundaries
+  | 
+  | 	0 bytes have been freed and not yet reallocated
+  | 
+  | 	160 bytes are used for zone and area control blocks, or 13.5% overhead
+  | 
+  Z_G1: set
+GV G1 600 R0=00000001
+GV G1 2000 R0=00000001
+  > get-page 2 n=4
+  >   status 00000001
+DZ G1 R0=00000001
+  > free-page 2 n=4
+  >   status 00000001
+  > free-page 2 n=2
+  >   status 00000001
+  > free-page 2 n=1
+  >   status 00000001
+CZ page routines at 13 and 14 R0=0015835C
+  Z_G2: untouched
+GV G2 600 R0=0000000C signal 0000000C 00000001 5555555D
+DZ G2 R0=00158264
+CZ get-page at 13 of 13 R0=00000001
+  | Zone Id = 00087DF0,  Zone name = "PAGES13"
+  | 
+  | 	Algorithm = LIB$K_VM_FIRST_FIT
+  | 
+  | 	Flags = 00000000
+  | 
+  | 	Initial size =       1 pages     Current size = 0 pages in 0 areas
+  | 	Extend size  =       1 pages     Page limit   = None
+  | 
+  | 	Requests are rounded up to a multiple of 8 bytes,
+  | 	naturally aligned on 8 byte boundaries
+  | 
+  | 	0 bytes have been freed and not yet reallocated
+  | 
+  | 	88 bytes are used for zone and area control blocks, or 100.0% overhead
+  | 
+  Z_G3: set
+GV G3 16 R0=00000001
+DZ G3 R0=00000001
+  > get-page 2 n=1
+  >   status 00000001
+CZ get-page only R0=00000001
+  > get-page 2 n=1
+  >   status 00000001
+  > get-page 2 n=1
+  >   status 00000001
+  | Zone Id = 00088800,  Zone name = "GETONLY"
+  | 
+  | 	Algorithm = LIB$K_VM_FIRST_FIT
+  | 
+  | 	Flags = 00000000
+  | 
+  | 	Initial size =       1 pages     Current size = 1 pages in 1 area
+  | 	Extend size  =       1 pages     Page limit   = None
+  | 
+  | 	Requests are rounded up to a multiple of 8 bytes,
+  | 	naturally aligned on 8 byte boundaries
+  | 
+  | 	0 bytes have been freed and not yet reallocated
+  | 
+  | 	152 bytes are used for zone and area control blocks, or 22.8% overhead
+  | 
+  Z_G4: set
+DZ G4 R0=00000001
+CZ get-page fails R0=00001230
+  > get-page 2 n=1
+  Z_G5: untouched
+CZ get-page fails later R0=00000001
+  > get-page 2 n=1
+  >   status 00000001
+  | Zone Id = 00088800,  Zone name = "GETFAILS2"
+  | 
+  | 	Algorithm = LIB$K_VM_FIRST_FIT
+  | 
+  | 	Flags = 00000000
+  | 
+  | 	Initial size =       1 pages     Current size = 0 pages in 0 areas
+  | 	Extend size  =       1 pages     Page limit   = None
+  | 
+  | 	Requests are rounded up to a multiple of 8 bytes,
+  | 	naturally aligned on 8 byte boundaries
+  | 
+  | 	0 bytes have been freed and not yet reallocated
+  | 
+  | 	96 bytes are used for zone and area control blocks, or 100.0% overhead
+  | 
+  Z_G6: set
+GV G6 when get-page fails R0=00158214
+  > get-page 2 n=1
+GV G6 R0=00000001
+  > get-page 2 n=1
+  >   status 00000001
+DZ G6, free-page fails R0=00001230
+  > free-page 2 n=1
+FIND after the page routines R0=00158274
+  | Zone Id = 0004EA68,  Zone name = "DEFAULT_ZONE"
+  | Zone Id = 0004EB08,  Zone name = "STRING_ZONE"
+  | Zone Id = 00087C00,  Zone name = "REAL3"
+  | Zone Id = 00087C58,  Zone name = ""
+  | Zone Id = 00087CB8,  Zone name = "EIGHT"
+  | Zone Id = 00087D20,  Zone name = "NOUSERARG"
+  | Zone Id = 00050650,  Zone name = "FIRST"
+  | Zone Id = 000506A8,  Zone name = "QUICK"
+  | Zone Id = 00050720,  Zone name = "FREQUENT"
+  | Zone Id = 000507A0,  Zone name = "FIXED"
+  | Zone Id = 00050800,  Zone name = "BLOCK32"
+  | Zone Id = 00050858,  Zone name = "ALIGN64"
+  | Zone Id = 000508B0,  Zone name = "B16A4"
+  | Zone Id = 00050908,  Zone name = "TAGS"
+  | Zone Id = 00050960,  Zone name = "TAGS8"
+  | Zone Id = 000509B8,  Zone name = "FILL10"
+  | Zone Id = 00050A10,  Zone name = "FILL01"
+  | Zone Id = 00050A68,  Zone name = "FIXFILL"
+  | Zone Id = 00050AF8,  Zone name = "TAGFILL"
+  | Zone Id = 00050B50,  Zone name = "LIMIT"
+  | Zone Id = 00050BA8,  Zone name = "NOEXTEND"
+  | Zone Id = 00050C08,  Zone name = "EXTAREA"
+  | Zone Id = 00050C60,  Zone name = "NOEXTAREA"
+  | Zone Id = 00050CC0,  Zone name = "TAIL"
+  | Zone Id = 00050D18,  Zone name = "HEAD"
+  | Zone Id = 00050D70,  Zone name = "RESET"
+  = end 00158274 after 26
+STAT GV 9 R0=00000001
+  SD: 00000001 00000000 00000010 00000000 00000000 00000000
+STAT FV 9 R0=00000001
+  SD: 00000000 00000001 FFFFFFF0 00000000 00000000 00000000
+STAT GV 9 tagged R0=00000001
+  SD: 00000001 00000000 00000018 00000000 00000000 00000000
+STAT FV tagged, size omitted R0=00000001
+  SD: 00000000 00000001 FFFFFFE8 00000000 00000000 00000000
+STAT GV fails R0=0015826C
+  SD: 00000000 00000000 00000000 00000000 00000000 00000000
+STAT FV fails R0=00158264
+  SD: 00000000 00000001 00000000 00000000 00000000 00000000
+STAT SGET1_DD R0=00000001
+  SD: 00000001 00000000 00000020 00000000 00000000 00000000
+STAT SFREE1_DD R0=00000001
+  SD: 00000000 00000000 FFFFFFE0 00000000 00000000 00000000
+STAT GET_VM_PAGE 2 and FREE 1 R0=00000001
+  SD: 00000000 00000000 00000000 00000001 00000001 00000001
+STAT FREE_VM_PAGE the other R0=00000001
+  SD: 00000000 00000000 00000000 00000000 00000001 FFFFFFFF
+STAT_VM 0 R0=00158234
+  V: 55555555
+STAT_VM 1 R0=00000001
+  V: 000000C5
+STAT_VM 4 R0=00158234
+  V: 55555555
+STAT_VM 8 R0=00158234
+  V: 55555555
+STAT_VM -1 R0=00158234
+  V: 55555555
+STAT_VM value omitted R0=0000000C signal 0000000C 00000004 00000000
+STAT_VM 1 argument R0=0000000C signal 0000000C 00000004 00013400
+{{
+ 197 calls to LIB$GET_VM, 89 calls to LIB$FREE_VM, 41984 bytes still allocated
+}}
+SHOW_VM to SYS$OUTPUT R0=00000001
+{{
+ 66 calls to LIB$GET_VM_PAGE, 25 calls to LIB$FREE_VM_PAGE, 454 pages still allocated
+}}
+SHOW_VM 4 to SYS$OUTPUT R0=00000001
+SHOW_VM omitted R0=00000001
+  |  197 calls to LIB$GET_VM, 89 calls to LIB$FREE_VM, 41984 bytes still allocated
+  action: calls=1 argc=00000002 arg=12345678 dsc=0000010E
+SHOW_VM 0 R0=00000001
+  |  197 calls to LIB$GET_VM, 89 calls to LIB$FREE_VM, 41984 bytes still allocated
+  action: calls=1 argc=00000002 arg=12345678 dsc=0000010E
+SHOW_VM 1 R0=00000001
+  |  197 calls to LIB$GET_VM
+  action: calls=1 argc=00000002 arg=12345678 dsc=0000010E
+SHOW_VM 2 R0=00000001
+  |  89 calls to LIB$FREE_VM
+  action: calls=1 argc=00000002 arg=12345678 dsc=0000010E
+SHOW_VM 3 R0=00000001
+  |  41984 bytes still allocated
+  action: calls=1 argc=00000002 arg=12345678 dsc=0000010E
+SHOW_VM 4 R0=00000001
+  |  66 calls to LIB$GET_VM_PAGE, 25 calls to LIB$FREE_VM_PAGE, 454 pages still allocated
+  action: calls=1 argc=00000002 arg=12345678 dsc=0000010E
+SHOW_VM 5 R0=00000001
+  |  66 calls to LIB$GET_VM_PAGE
+  action: calls=1 argc=00000002 arg=12345678 dsc=0000010E
+SHOW_VM 6 R0=00000001
+  |  25 calls to LIB$FREE_VM_PAGE
+  action: calls=1 argc=00000002 arg=12345678 dsc=0000010E
+SHOW_VM 7 R0=00000001
+  |  454 pages still allocated
+  action: calls=1 argc=00000002 arg=12345678 dsc=0000010E
+SHOW_VM 8 R0=00158234
+  action: calls=0 argc=55555555 arg=55555555 dsc=55555555
+SHOW_VM -1 R0=00158234
+  action: calls=0 argc=55555555 arg=55555555 dsc=55555555
+SHOW_VM 0 action fails R0=00001230
+  |  197 calls to LIB$GET_VM, 89 calls to LIB$FREE_VM, 41984 bytes still allocated
+  action: calls=1 argc=00000002 arg=12345678 dsc=0000010E
+SHOW_VM 4 action fails R0=00001230
+  |  66 calls to LIB$GET_VM_PAGE, 25 calls to LIB$FREE_VM_PAGE, 454 pages still allocated
+  action: calls=1 argc=00000002 arg=12345678 dsc=0000010E
+SHOW_VM user argument omitted R0=00000001
+  |  197 calls to LIB$GET_VM
+  action: calls=1 argc=00000002 arg=00000000 dsc=0000010E
+SHOW_VM 4 arguments R0=00000001
+  |  197 calls to LIB$GET_VM
+  action: calls=1 argc=00000002 arg=12345678 dsc=0000010E
+FIND all R0=00158274
+  | Zone Id = 0004EA68,  Zone name = "DEFAULT_ZONE"
+  | Zone Id = 0004EB08,  Zone name = "STRING_ZONE"
+  | Zone Id = 00087C00,  Zone name = "REAL3"
+  | Zone Id = 00087C58,  Zone name = ""
+  | Zone Id = 00087CB8,  Zone name = "EIGHT"
+  | Zone Id = 00087D20,  Zone name = "NOUSERARG"
+  | Zone Id = 00050650,  Zone name = "FIRST"
+  | Zone Id = 000506A8,  Zone name = "QUICK"
+  | Zone Id = 00050720,  Zone name = "FREQUENT"
+  | Zone Id = 000507A0,  Zone name = "FIXED"
+  | Zone Id = 00050800,  Zone name = "BLOCK32"
+  | Zone Id = 00050858,  Zone name = "ALIGN64"
+  | Zone Id = 000508B0,  Zone name = "B16A4"
+  | Zone Id = 00050908,  Zone name = "TAGS"
+  | Zone Id = 00050960,  Zone name = "TAGS8"
+  | Zone Id = 000509B8,  Zone name = "FILL10"
+  | Zone Id = 00050A10,  Zone name = "FILL01"
+  | Zone Id = 00050A68,  Zone name = "FIXFILL"
+  | Zone Id = 00050AF8,  Zone name = "TAGFILL"
+  | Zone Id = 00050B50,  Zone name = "LIMIT"
+  | Zone Id = 00050BA8,  Zone name = "NOEXTEND"
+  | Zone Id = 00050C08,  Zone name = "EXTAREA"
+  | Zone Id = 00050C60,  Zone name = "NOEXTAREA"
+  | Zone Id = 00050CC0,  Zone name = "TAIL"
+  | Zone Id = 00050D18,  Zone name = "HEAD"
+  | Zone Id = 00050D70,  Zone name = "RESET"
+  = end 00158274 after 26
+FIND 1 argument R0=0015835C
+FIND 3 arguments R0=0015835C
+FIND context 2 R0=00000001
+  E: 00000001
+SVZ FF default level R0=00000001
+  | Zone Id = 00050650,  Zone name = "FIRST"
+  action: calls=1 argc=00000002 arg=12345678 dsc=00000000
+{{
+Zone Id = 00050650,  Zone name = "FIRST"
+
+	Algorithm = LIB$K_VM_FIRST_FIT
+
+	Flags = 00000000
+
+	Initial size =      16 pages     Current size = 72 pages in 3 areas
+	Extend size  =      16 pages     Page limit   = None
+
+	Requests are rounded up to a multiple of 8 bytes,
+	naturally aligned on 8 byte boundaries
+
+	72 bytes have been freed and not yet reallocated
+
+	280 bytes are used for zone and area control blocks, or 0.7% overhead
+
+}}
+SVZ FF to SYS$OUTPUT level 1 R0=00000001
+{{
+Zone Id = 00050650,  Zone name = "FIRST"
+}}
+SVZ FF zone-id only R0=00000001
+SVZ FF level 4 R0=00000001
+  | Zone Id = 00050650,  Zone name = "FIRST"
+  | 
+  | 	Algorithm = LIB$K_VM_FIRST_FIT
+  | 
+  | 	Flags = 00000000
+  | 
+  | 	Initial size =      16 pages     Current size = 72 pages in 3 areas
+  | 	Extend size  =      16 pages     Page limit   = None
+  | 
+  | 	Requests are rounded up to a multiple of 8 bytes,
+  | 	naturally aligned on 8 byte boundaries
+  | 
+  | 	72 bytes have been freed and not yet reallocated
+  | 
+  | 	280 bytes are used for zone and area control blocks, or 0.7% overhead
+  | 
+  | 	Area Summary:
+  | 
+  | 	      First     Last       Pages    Bytes not yet
+  | 	     address   address    assigned    allocated
+  | 	    --------  --------  ----------  -------------
+  | 	    00054E00  00059DFF          40            448
+  | 	    00052E00  00054DFF          16            192
+  | 	    00050E00  00052DFF          16           7952
+  | 
+  | 	Scanning Free List for Area at 00054E00
+  | 	  Number of blocks = 1, Min blocksize = 16, Max blocksize = 16
+  | 
+  | 	Scanning Free List for Area at 00052E00
+  | 	Scanning Free List for Area at 00050E00
+  | 	  Number of blocks = 2, Min blocksize = 8, Max blocksize = 16
+  | 
+  | 
+  action: calls=33 argc=00000002 arg=12345678 dsc=0000010E
+SVZ FF level -1 R0=00000001
+  | Zone Id = 00050650,  Zone name = "FIRST"
+  | 
+  | 	Algorithm = LIB$K_VM_FIRST_FIT
+  | 
+  | 	Flags = 00000000
+  | 
+  | 	Initial size =      16 pages     Current size = 72 pages in 3 areas
+  | 	Extend size  =      16 pages     Page limit   = None
+  | 
+  | 	Requests are rounded up to a multiple of 8 bytes,
+  | 	naturally aligned on 8 byte boundaries
+  | 
+  | 	72 bytes have been freed and not yet reallocated
+  | 
+  | 	280 bytes are used for zone and area control blocks, or 0.7% overhead
+  | 
+  | 	Area Summary:
+  | 
+  | 	      First     Last       Pages    Bytes not yet
+  | 	     address   address    assigned    allocated
+  | 	    --------  --------  ----------  -------------
+  | 	    00054E00  00059DFF          40            448
+  | 	    00052E00  00054DFF          16            192
+  | 	    00050E00  00052DFF          16           7952
+  | 
+  | 	Scanning Free List for Area at 00054E00
+  | 	  Number of blocks = 1, Min blocksize = 16, Max blocksize = 16
+  | 
+  | 	Scanning Free List for Area at 00052E00
+  | 	Scanning Free List for Area at 00050E00
+  | 	  Number of blocks = 2, Min blocksize = 8, Max blocksize = 16
+  | 
+  | 
+  action: calls=33 argc=00000002 arg=12345678 dsc=0000010E
+SVZ junk zone R0=001583D4
+  action: calls=0 argc=55555555 arg=55555555 dsc=55555555
+SVZ action fails R0=00001230
+  | Zone Id = 00050650,  Zone name = "FIRST"
+  | 
+  | 	Algorithm = LIB$K_VM_FIRST_FIT
+  action: calls=3 argc=00000002 arg=12345678 dsc=0000010E
+SVZ zone-id omitted R0=00158234
+  action: calls=0 argc=55555555 arg=55555555 dsc=55555555
+SVZ no arguments R0=0015835C
+SVZ 5 arguments R0=0015835C
+  action: calls=0 argc=55555555 arg=55555555 dsc=55555555
+VZ default R0=00000001
+VZ string R0=00000001
+VZ zone 0 R0=00000001
+VZ zone-id omitted R0=00158234
+VZ junk zone R0=001583D4
+VZ no arguments R0=0015835C
+VZ 2 arguments R0=0015835C
+VM_MALLOC 24 R0=00000001
+  B_M1 in its page: 00000010
+  SD: 00000000 00000000 00000000 00000000 00000000 00000000
+VM_MALLOC 0 R0=00000001
+  B_M2-B_M1: 00000028
+VM_MALLOC 24 again R0=00000001
+  B_M3-B_M1: 00000038
+VM_FREE first R0=00000001
+  SD: 00000000 00000000 00000000 00000000 00000000 00000000
+VM_FREE 0 R0=00000001
+VM_MALLOC 16 after R0=00000001
+  B_M4-B_M1: 00000060
+VM_CALLOC 3, 8 R0=00000001
+  B_M5-B_M1: 00000000
+  B_M5 00: FFFFFF
+VM_REALLOC to 100 R0=00000001
+  B_M6-B_M5: 00000080
+VM_REALLOC to 8 R0=00000001
+  B_M7-B_M6: 00000000
+VM_REALLOC of 0 R0=00000001
+  B_M8-B_M1: 00000130
+VM_REALLOC to 0 R0=00000001
+the C blocks and the default zone's R0=00000001
+  B_M1-B_D1: 0002F210
+VM_FREE a default zone block R0=00000001
+GV default after the C blocks R0=00000001
+  B_D4-B_M3: FFFD0DC8
+FV a C block R0=00158264
+FIND after the C routines R0=00158274
+  | Zone Id = 0004EA68,  Zone name = "DEFAULT_ZONE"
+  | Zone Id = 0004EB08,  Zone name = "STRING_ZONE"
+  | Zone Id = 00087C00,  Zone name = "REAL3"
+  | Zone Id = 00087C58,  Zone name = ""
+  | Zone Id = 00087CB8,  Zone name = "EIGHT"
+  | Zone Id = 00087D20,  Zone name = "NOUSERARG"
+  | Zone Id = 00050650,  Zone name = "FIRST"
+  | Zone Id = 000506A8,  Zone name = "QUICK"
+  | Zone Id = 00050720,  Zone name = "FREQUENT"
+  | Zone Id = 000507A0,  Zone name = "FIXED"
+  | Zone Id = 00050800,  Zone name = "BLOCK32"
+  | Zone Id = 00050858,  Zone name = "ALIGN64"
+  | Zone Id = 000508B0,  Zone name = "B16A4"
+  | Zone Id = 00050908,  Zone name = "TAGS"
+  | Zone Id = 00050960,  Zone name = "TAGS8"
+  | Zone Id = 000509B8,  Zone name = "FILL10"
+  | Zone Id = 00050A10,  Zone name = "FILL01"
+  | Zone Id = 00050A68,  Zone name = "FIXFILL"
+  | Zone Id = 00050AF8,  Zone name = "TAGFILL"
+  | Zone Id = 00050B50,  Zone name = "LIMIT"
+  | Zone Id = 00050BA8,  Zone name = "NOEXTEND"
+  | Zone Id = 00050C08,  Zone name = "EXTAREA"
+  | Zone Id = 00050C60,  Zone name = "NOEXTAREA"
+  | Zone Id = 00050CC0,  Zone name = "TAIL"
+  | Zone Id = 00050D18,  Zone name = "HEAD"
+  | Zone Id = 00050D70,  Zone name = "RESET"
+  = end 00158274 after 26
+CZ for a double free R0=00000001
+  | Zone Id = 00087DF0,  Zone name = "DOUBLE"
+  | 
+  | 	Algorithm = LIB$K_VM_FIRST_FIT
+  | 
+  | 	Flags = 00000000
+  | 
+  | 	Initial size =      16 pages     Current size = 0 pages in 0 areas
+  | 	Extend size  =      16 pages     Page limit   = None
+  | 
+  | 	Requests are rounded up to a multiple of 8 bytes,
+  | 	naturally aligned on 8 byte boundaries
+  | 
+  | 	0 bytes have been freed and not yet reallocated
+  | 
+  | 	88 bytes are used for zone and area control blocks, or 100.0% overhead
+  | 
+  Z_X1: set
+GV X1 32 R0=00000001
+GV X1 32 second R0=00000001
+FV X1 first R0=00000001
+FV X1 first again R0=00158264
+VZ X1 R0=00000001
+CZ for an interior free R0=00000001
+  | Zone Id = 00087E48,  Zone name = "INTERIOR"
+  | 
+  | 	Algorithm = LIB$K_VM_FIRST_FIT
+  | 
+  | 	Flags = 00000000
+  | 
+  | 	Initial size =      16 pages     Current size = 0 pages in 0 areas
+  | 	Extend size  =      16 pages     Page limit   = None
+  | 
+  | 	Requests are rounded up to a multiple of 8 bytes,
+  | 	naturally aligned on 8 byte boundaries
+  | 
+  | 	0 bytes have been freed and not yet reallocated
+  | 
+  | 	96 bytes are used for zone and area control blocks, or 100.0% overhead
+  | 
+  Z_X2: set
+GV X2 64 R0=00000001
+GV X2 64 second R0=00000001
+FV X2 interior R0=00000001
+FV X2 unaligned R0=00158264
+FV X2 past the areas R0=00158264
+VZ X2 R0=00000001
+CZ for a larger free R0=00000001
+  | Zone Id = 00087EA8,  Zone name = "LARGER"
+  | 
+  | 	Algorithm = LIB$K_VM_FIRST_FIT
+  | 
+  | 	Flags = 00000000
+  | 
+  | 	Initial size =      16 pages     Current size = 0 pages in 0 areas
+  | 	Extend size  =      16 pages     Page limit   = None
+  | 
+  | 	Requests are rounded up to a multiple of 8 bytes,
+  | 	naturally aligned on 8 byte boundaries
+  | 
+  | 	0 bytes have been freed and not yet reallocated
+  | 
+  | 	88 bytes are used for zone and area control blocks, or 100.0% overhead
+  | 
+  Z_X3: set
+GV X3 32 R0=00000001
+GV X3 32 second R0=00000001
+GV X3 32 third R0=00000001
+FV X3 64 of 32 R0=00000001
+GV X3 64 R0=00000001
+  B_X8-B_X5: 00000000
+VZ X3 R0=00000001
+CZ for a smaller free R0=00000001
+  | Zone Id = 00087F00,  Zone name = "SMALLER"
+  | 
+  | 	Algorithm = LIB$K_VM_FIRST_FIT
+  | 
+  | 	Flags = 00000000
+  | 
+  | 	Initial size =      16 pages     Current size = 0 pages in 0 areas
+  | 	Extend size  =      16 pages     Page limit   = None
+  | 
+  | 	Requests are rounded up to a multiple of 8 bytes,
+  | 	naturally aligned on 8 byte boundaries
+  | 
+  | 	0 bytes have been freed and not yet reallocated
+  | 
+  | 	88 bytes are used for zone and area control blocks, or 100.0% overhead
+  | 
+  Z_X4: set
+GV X4 64 R0=00000001
+GV X4 64 second R0=00000001
+FV X4 32 of 64 R0=00000001
+GV X4 32 R0=00000001
+  B_X11-B_X9: 00000000
+GV X4 32 second R0=00000001
+  B_X12-B_X9: 00000080
+SVZ X4 level 3 R0=00000001
+  | Zone Id = 00087F00,  Zone name = "SMALLER"
+  | 
+  | 	Algorithm = LIB$K_VM_FIRST_FIT
+  | 
+  | 	Flags = 00000000
+  | 
+  | 	Initial size =      16 pages     Current size = 16 pages in 1 area
+  | 	Extend size  =      16 pages     Page limit   = None
+  | 
+  | 	Requests are rounded up to a multiple of 8 bytes,
+  | 	naturally aligned on 8 byte boundaries
+  | 
+  | 	0 bytes have been freed and not yet reallocated
+  | 
+  | 	152 bytes are used for zone and area control blocks, or 1.8% overhead
+  | 
+  | 	Area Summary:
+  | 
+  | 	      First     Last       Pages    Bytes not yet
+  | 	     address   address    assigned    allocated
+  | 	    --------  --------  ----------  -------------
+  | 	    000A0000  000A1FFF          16           8032
+  | 
+  | 	Scanning Free List for Area at 000A0000
+  | 
+  action: calls=25 argc=00000002 arg=12345678 dsc=0000010E
+CZ fixed, for a double free R0=00000001
+  | Zone Id = 00087F58,  Zone name = "FIXDOUBLE"
+  | 
+  | 	Algorithm = LIB$K_VM_FIXED  with block size of 16
+  | 
+  | 	Flags = 00000000
+  | 
+  | 	Initial size =      16 pages     Current size = 0 pages in 0 areas
+  | 	Extend size  =      16 pages     Page limit   = None
+  | 
+  | 	Requests are rounded up to a multiple of 8 bytes,
+  | 	naturally aligned on 8 byte boundaries
+  | 
+  | 	0 bytes have been freed and not yet reallocated
+  | 
+  | 	104 bytes are used for zone and area control blocks, or 100.0% overhead
+  | 
+  Z_X5: set
+GV X5 16 R0=00000001
+FV X5 R0=00000001
+FV X5 again R0=00000001
+GV X5 after R0=00000001
+  B_X14-B_X13: 00000000
+GV X5 after, second R0=00000001
+  B_X15-B_X13: 00000000
+SVZ X5 level 3 R0=001583D4
+  | Zone Id = 00087F58,  Zone name = "FIXDOUBLE"
+  | 
+  | 	Algorithm = LIB$K_VM_FIXED  with block size of 16
+  | 
+  | 	Flags = 00000000
+  | 
+  | 	Initial size =      16 pages     Current size = 16 pages in 1 area
+  | 	Extend size  =      16 pages     Page limit   = None
+  | 
+  | 	Requests are rounded up to a multiple of 8 bytes,
+  | 	naturally aligned on 8 byte boundaries
+  | 
+  | 	0 bytes have been freed and not yet reallocated
+  | 
+  | 	168 bytes are used for zone and area control blocks, or 2.0% overhead
+  | 
+  | 	Area Summary:
+  | 
+  | 	      First     Last       Pages    Bytes not yet
+  | 	     address   address    assigned    allocated
+  | 	    --------  --------  ----------  -------------
+  | 	    000A2000  000A3FFF          16           8176
+  | 
+  | 	Scanning Lookaside Lists in Zone Control Block
+  | 
+  | 	**** WARNING -- forward-link of current block may not be valid ****
+  | 
+  | 	Link Analysis for Current Block:
+  | 
+  | 	                    Previous   Current      Next
+  | 	                    --------  --------  --------
+  | 	  Block adr      :  00087FA8  000A2000  000A2000
+  | 	  Forw link (rel):  0001A058  00000000  00000000
+  | 	  Back link (rel):  0001A058  FFFE5FA8  FFFE5FA8
+  | 
+  | 	  Forw link (abs):  000A2000  000A2000  000A2000
+  | 	  Back link (abs):  000A2000  00087FA8  00087FA8
+  | 
+  | 	Block size = 16
+  | 
+  | 	Block contents:
+  | 
+  | 	  00000000 00000000 FFFE5FA8 00000000 ....¨_þ......... 00000 000A2000
+  | 
+  | 
+  | 	Scanning Free List for Area at 000A2000
+  | 
+  action: calls=47 argc=00000002 arg=12345678 dsc=0000010E
+VZ X5 R0=001583D4
+CZ quick fit, for a double free R0=00000001
+  | Zone Id = 00087FC0,  Zone name = "QFDOUBLE"
+  | 
+  | 	Algorithm = LIB$K_VM_QUICK_FIT  with 4 Lookaside Lists ranging from
+  | 	            a minimum blocksize of 16, to a maximum blocksize of 40
+  | 
+  | 	Flags = 00000000
+  | 
+  | 	Initial size =      16 pages     Current size = 0 pages in 0 areas
+  | 	Extend size  =      16 pages     Page limit   = None
+  | 
+  | 	Requests are rounded up to a multiple of 8 bytes,
+  | 	naturally aligned on 8 byte boundaries
+  | 
+  | 	0 bytes have been freed and not yet reallocated
+  | 
+  | 	128 bytes are used for zone and area control blocks, or 100.0% overhead
+  | 
+  Z_X6: set
+GV X6 16 R0=00000001
+FV X6 R0=00000001
+FV X6 again R0=00000001
+GV X6 after R0=00000001
+  B_X17-B_X16: 00000000
+GV X6 after, second R0=00000001
+  B_X18-B_X16: 00000000
+SVZ X6 level 3 R0=001583D4
+  | Zone Id = 00087FC0,  Zone name = "QFDOUBLE"
+  | 
+  | 	Algorithm = LIB$K_VM_QUICK_FIT  with 4 Lookaside Lists ranging from
+  | 	            a minimum blocksize of 16, to a maximum blocksize of 40
+  | 
+  | 	Flags = 00000000
+  | 
+  | 	Initial size =      16 pages     Current size = 16 pages in 1 area
+  | 	Extend size  =      16 pages     Page limit   = None
+  | 
+  | 	Requests are rounded up to a multiple of 8 bytes,
+  | 	naturally aligned on 8 byte boundaries
+  | 
+  | 	0 bytes have been freed and not yet reallocated
+  | 
+  | 	192 bytes are used for zone and area control blocks, or 2.2% overhead
+  | 
+  | 	Quick Fit Lookaside List Summary:
+  | 
+  | 	     List        Block   Number of
+  | 	    number        size     blocks
+  | 	    ------  ----------  ----------
+  | 	         1          16       *****
+  | 
+  | 	Area Summary:
+  | 
+  | 	      First     Last       Pages    Bytes not yet
+  | 	     address   address    assigned    allocated
+  | 	    --------  --------  ----------  -------------
+  | 	    000A4000  000A5FFF          16           8176
+  | 
+  | 	Scanning Lookaside Lists in Zone Control Block
+  | 
+  | 	**** WARNING -- forward-link of current block may not be valid ****
+  | 
+  | 	Link Analysis for Current Block:
+  | 
+  | 	                    Previous   Current      Next
+  | 	                    --------  --------  --------
+  | 	  Block adr      :  00088010  000A4000  000A4000
+  | 	  Forw link (rel):  0001BFF0  00000000  00000000
+  | 	  Back link (rel):  0001BFF0  FFFE4010  FFFE4010
+  | 
+  | 	  Forw link (abs):  000A4000  000A4000  000A4000
+  | 	  Back link (abs):  000A4000  00088010  00088010
+  | 
+  | 	Block size = 16
+  | 
+  | 	Block contents:
+  | 
+  | 	  00000000 00000000 FFFE4010 00000000 .....@þ......... 00000 000A4000
+  | 
+  | 
+  | 	Scanning Free List for Area at 000A4000
+  | 
+  action: calls=55 argc=00000002 arg=12345678 dsc=0000010E
+CZ tags, for a changed tag R0=00000001
+  | Zone Id = 00088040,  Zone name = "BADTAG"
+  | 
+  | 	Algorithm = LIB$K_VM_FIRST_FIT
+  | 
+  | 	Flags = 00000001
+  | 		     LIB$M_VM_BOUNDARY_TAGS
+  | 
+  | 	Initial size =      16 pages     Current size = 0 pages in 0 areas
+  | 	Extend size  =      16 pages     Page limit   = None
+  | 
+  | 	Requests are rounded up to a multiple of 8 bytes,
+  | 	naturally aligned on 8 byte boundaries
+  | 
+  | 	0 bytes have been freed and not yet reallocated
+  | 
+  | 	88 bytes are used for zone and area control blocks, or 100.0% overhead
+  | 
+  Z_X7: set
+GV X7 16 R0=00000001
+GV X7 16 second R0=00000001
+FV X7 changed tag R0=00000001
+FV X7 changed tag, size given R0=001583B4
+FV X7 changed end tag R0=00000001
+VZ X7 R0=00000001
+CZ FREE_FILL1, for an overwritten free block R0=00000001
+  | Zone Id = 00088098,  Zone name = "OVERWRITE"
+  | 
+  | 	Algorithm = LIB$K_VM_FIRST_FIT
+  | 
+  | 	Flags = 00000010
+  | 		     LIB$M_VM_FREE_FILL1
+  | 
+  | 	Initial size =      16 pages     Current size = 0 pages in 0 areas
+  | 	Extend size  =      16 pages     Page limit   = None
+  | 
+  | 	Requests are rounded up to a multiple of 8 bytes,
+  | 	naturally aligned on 8 byte boundaries
+  | 
+  | 	0 bytes have been freed and not yet reallocated
+  | 
+  | 	96 bytes are used for zone and area control blocks, or 100.0% overhead
+  | 
+  Z_X8: set
+GV X8 64 R0=00000001
+GV X8 64 second R0=00000001
+FV X8 R0=00000001
+VZ X8 sound R0=00000001
+write in X8's free block R0=00000001
+VZ X8 overwritten R0=001583D4
+SVZ X8 level 3 R0=001583D4
+  | Zone Id = 00088098,  Zone name = "OVERWRITE"
+  | 
+  | 	Algorithm = LIB$K_VM_FIRST_FIT
+  | 
+  | 	Flags = 00000010
+  | 		     LIB$M_VM_FREE_FILL1
+  | 
+  | 	Initial size =      16 pages     Current size = 16 pages in 1 area
+  | 	Extend size  =      16 pages     Page limit   = None
+  | 
+  | 	Requests are rounded up to a multiple of 8 bytes,
+  | 	naturally aligned on 8 byte boundaries
+  | 
+  | 	64 bytes have been freed and not yet reallocated
+  | 
+  | 	160 bytes are used for zone and area control blocks, or 1.9% overhead
+  | 
+  | 	Area Summary:
+  | 
+  | 	      First     Last       Pages    Bytes not yet
+  | 	     address   address    assigned    allocated
+  | 	    --------  --------  ----------  -------------
+  | 	    000A8000  000A9FFF          16           8064
+  | 
+  | 	Scanning Free List for Area at 000A8000
+  | 
+  | 	**** ERROR -- free-fill mismatch ****
+  | 
+  | 	Link Analysis for Current Block:
+  | 
+  | 	                    Previous   Current      Next
+  | 	                    --------  --------  --------
+  | 	  Block adr      :  00087630  000A8000  00087630
+  | 
+  | 	  Forw link (abs):  000A8000  00087630  000A8000
+  | 
+  | 	Block size =       64
+  | 
+  | 	Block contents:
+  | 
+  | 	  FFFFFFFF FFFFFFFF 00087630 00000040 @...0v.......... 00000 000A8000
+  | 	  FFFFFFFF FFFFFFFF FFFFFFFF FFFFFFFF ................ 00010 000A8010
+  | 	  FFFFFFFF FFFFFFFF FFFFFFFF 00000000 ................ 00020 000A8020
+  | 	  FFFFFFFF FFFFFFFF FFFFFFFF FFFFFFFF ................ 00030 000A8030
+  | 
+  | 
+  | 
+  action: calls=47 argc=00000002 arg=12345678 dsc=0000010E
+FIND with X8 overwritten R0=00158274
+  | Zone Id = 0004EA68,  Zone name = "DEFAULT_ZONE"
+  | Zone Id = 0004EB08,  Zone name = "STRING_ZONE"
+  | Zone Id = 00087C00,  Zone name = "REAL3"
+  | Zone Id = 00087C58,  Zone name = ""
+  | Zone Id = 00087CB8,  Zone name = "EIGHT"
+  | Zone Id = 00087D20,  Zone name = "NOUSERARG"
+  | Zone Id = 00087DF0,  Zone name = "DOUBLE"
+  | Zone Id = 00087E48,  Zone name = "INTERIOR"
+  | Zone Id = 00087EA8,  Zone name = "LARGER"
+  | Zone Id = 00087F00,  Zone name = "SMALLER"
+  | Zone Id = 00087F58,  Zone name = "FIXDOUBLE"
+  | Zone Id = 00087FC0,  Zone name = "QFDOUBLE"
+  | Zone Id = 00088040,  Zone name = "BADTAG"
+  | Zone Id = 00088098,  Zone name = "OVERWRITE"
+  | Zone Id = 00050650,  Zone name = "FIRST"
+  | Zone Id = 000506A8,  Zone name = "QUICK"
+  | Zone Id = 00050720,  Zone name = "FREQUENT"
+  | Zone Id = 000507A0,  Zone name = "FIXED"
+  | Zone Id = 00050800,  Zone name = "BLOCK32"
+  | Zone Id = 00050858,  Zone name = "ALIGN64"
+  | Zone Id = 000508B0,  Zone name = "B16A4"
+  | Zone Id = 00050908,  Zone name = "TAGS"
+  | Zone Id = 00050960,  Zone name = "TAGS8"
+  | Zone Id = 000509B8,  Zone name = "FILL10"
+  | Zone Id = 00050A10,  Zone name = "FILL01"
+  | Zone Id = 00050A68,  Zone name = "FIXFILL"
+  | Zone Id = 00050AF8,  Zone name = "TAGFILL"
+  | Zone Id = 00050B50,  Zone name = "LIMIT"
+  | Zone Id = 00050BA8,  Zone name = "NOEXTEND"
+  | Zone Id = 00050C08,  Zone name = "EXTAREA"
+  | Zone Id = 00050C60,  Zone name = "NOEXTAREA"
+  | Zone Id = 00050CC0,  Zone name = "TAIL"
+  | Zone Id = 00050D18,  Zone name = "HEAD"
+  | Zone Id = 00050D70,  Zone name = "RESET"
+  = end 00158274 after 34
+CZ for FREE_VM_PAGE of an area R0=00000001
+  | Zone Id = 000880F8,  Zone name = "AREAPAGE"
+  | 
+  | 	Algorithm = LIB$K_VM_FIRST_FIT
+  | 
+  | 	Flags = 00000000
+  | 
+  | 	Initial size =       1 pages     Current size = 1 pages in 1 area
+  | 	Extend size  =      16 pages     Page limit   = None
+  | 
+  | 	Requests are rounded up to a multiple of 8 bytes,
+  | 	naturally aligned on 8 byte boundaries
+  | 
+  | 	0 bytes have been freed and not yet reallocated
+  | 
+  | 	160 bytes are used for zone and area control blocks, or 23.8% overhead
+  | 
+  Z_X9: set
+GV X9 16 R0=00000001
+FP X9's area page R0=00000001
+GV X9 after R0=00000001
+  B_X24-B_X23: 00000010
+VZ X9 R0=00000001
+GV deleted zone R0=00000001
+  B_T: set
+FV deleted zone R0=00158264
+RZ deleted zone R0=00000001
+DZ deleted zone R0=00000001
+SVZ deleted zone R0=001583D4
+  action: calls=0 argc=55555555 arg=55555555 dsc=55555555
+VZ deleted zone R0=001583D4
+GV the monitor's deleted real zone R0=00158264
+  B_T: untouched
+UGV the deleted monitor R0=001583BC
+  GVB: untouched
+UDZ the deleted monitor R0=001583BC
+GV junk zone R0=00158264
+  B_T: untouched
+FV junk zone R0=00158264
+RZ junk zone R0=00158264
+DZ junk zone R0=00158264
+RZ the default zone by ID R0=00158264
+DZ the default zone by ID R0=00158264
+RZ the string zone R0=00158264
+DZ the string zone R0=00158264
+FIND after the system zones R0=00158274
+  | Zone Id = 0004EA68,  Zone name = "DEFAULT_ZONE"
+  | Zone Id = 0004EB08,  Zone name = "STRING_ZONE"
+  | Zone Id = 00087C58,  Zone name = ""
+  | Zone Id = 00087D20,  Zone name = "NOUSERARG"
+  | Zone Id = 00087DF0,  Zone name = "DOUBLE"
+  | Zone Id = 00087E48,  Zone name = "INTERIOR"
+  | Zone Id = 00087EA8,  Zone name = "LARGER"
+  | Zone Id = 00087F00,  Zone name = "SMALLER"
+  | Zone Id = 00087F58,  Zone name = "FIXDOUBLE"
+  | Zone Id = 00087FC0,  Zone name = "QFDOUBLE"
+  | Zone Id = 00088040,  Zone name = "BADTAG"
+  | Zone Id = 00088098,  Zone name = "OVERWRITE"
+  | Zone Id = 000880F8,  Zone name = "AREAPAGE"
+  | Zone Id = 00050650,  Zone name = "FIRST"
+  | Zone Id = 000506A8,  Zone name = "QUICK"
+  | Zone Id = 00050720,  Zone name = "FREQUENT"
+  | Zone Id = 000507A0,  Zone name = "FIXED"
+  | Zone Id = 00050800,  Zone name = "BLOCK32"
+  | Zone Id = 00050858,  Zone name = "ALIGN64"
+  | Zone Id = 000508B0,  Zone name = "B16A4"
+  | Zone Id = 00050908,  Zone name = "TAGS"
+  | Zone Id = 00050960,  Zone name = "TAGS8"
+  | Zone Id = 000509B8,  Zone name = "FILL10"
+  | Zone Id = 00050A10,  Zone name = "FILL01"
+  | Zone Id = 00050A68,  Zone name = "FIXFILL"
+  | Zone Id = 00050AF8,  Zone name = "TAGFILL"
+  | Zone Id = 00050B50,  Zone name = "LIMIT"
+  | Zone Id = 00050BA8,  Zone name = "NOEXTEND"
+  | Zone Id = 00050C08,  Zone name = "EXTAREA"
+  | Zone Id = 00050C60,  Zone name = "NOEXTAREA"
+  | Zone Id = 00050CC0,  Zone name = "TAIL"
+  | Zone Id = 00050D18,  Zone name = "HEAD"
+  | Zone Id = 00050D70,  Zone name = "RESET"
+  = end 00158274 after 33
+GV 1 argument R0=0000000C signal 0000000C 00000004 00013400
+GV 4 arguments R0=00000001
+  B_T: set
+FV 1 argument R0=00158264
+GV no arguments R0=0015826C
+DZ no arguments R0=00158264
+RZ no arguments R0=00158264
+GP no arguments R0=0015826C
+STAT_VM no arguments R0=00158234
+CZ for a changed control block R0=00000001
+  | Zone Id = 00087C00,  Zone name = "HEADER"
+  | 
+  | 	Algorithm = LIB$K_VM_FIRST_FIT
+  | 
+  | 	Flags = 00000000
+  | 
+  | 	Initial size =      16 pages     Current size = 0 pages in 0 areas
+  | 	Extend size  =      16 pages     Page limit   = None
+  | 
+  | 	Requests are rounded up to a multiple of 8 bytes,
+  | 	naturally aligned on 8 byte boundaries
+  | 
+  | 	0 bytes have been freed and not yet reallocated
+  | 
+  | 	88 bytes are used for zone and area control blocks, or 100.0% overhead
+  | 
+  Z_XC: set
+change XC's first longword R0=00000001

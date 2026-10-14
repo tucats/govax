@@ -119,13 +119,15 @@ RESETS:	.LONG	0
 // TestLibrtlZonePageRoutines: a zone made with get-page and free-page
 // routines of the program's (LIB$CREATE_VM_ZONE's twelfth and thirteenth
 // arguments, the VSI manual's places), which count their calls and pass
-// them on to LIB$GET_VM_PAGE and LIB$FREE_VM_PAGE. The zone's one-page
-// initial area is a get-page call; a small block fits there, a 2000-byte
-// block takes a second call (a new area); with the routine failing
-// (status ^X1234), a block too large for both areas fails with that
-// status; and LIB$DELETE_VM_ZONE gives both areas back, a free-page
-// call each. It ends with 1 when all of that held, or the number of the
-// check that failed, or the failing status.
+// them on to LIB$GET_VM_PAGE and LIB$FREE_VM_PAGE. As on VMS 7.1
+// (testdata/lib59), the zone's control block's page is a get-page call,
+// and its one-page initial area another; a small block fits there, a
+// 2000-byte block takes a third call (a new area); with the routine
+// failing (status ^X1234), a block too large for both areas is
+// LIB$_INSVIRMEM; and LIB$DELETE_VM_ZONE gives both areas and the
+// control block's page back, a free-page call each. It ends with 1 when
+// all of that held, or the number of the check that failed, or the
+// failing status.
 func TestLibrtlZonePageRoutines(t *testing.T) {
 	r0, _ := runMacroProgram(t, `	.PSECT	DATA,NOEXE,WRT,LONG
 ZONE:	.LONG	0
@@ -164,7 +166,7 @@ FAIL:	.LONG	0
 	BLBS	R0,2$
 	RET
 2$:	MOVL	#10,R0
-	CMPL	GETP,#1
+	CMPL	GETP,#2
 	BEQL	54$
 	RET
 54$:	PUSHAL	ZONE
@@ -174,7 +176,7 @@ FAIL:	.LONG	0
 	BLBS	R0,3$
 	RET
 3$:	MOVL	#20,R0
-	CMPL	GETP,#1
+	CMPL	GETP,#2
 	BEQL	55$
 	RET
 55$:	PUSHAL	ZONE
@@ -184,7 +186,7 @@ FAIL:	.LONG	0
 	BLBS	R0,4$
 	RET
 4$:	MOVL	#30,R0
-	CMPL	GETP,#2
+	CMPL	GETP,#3
 	BEQL	56$
 	RET
 56$:	MOVL	#1,FAIL
@@ -193,12 +195,12 @@ FAIL:	.LONG	0
 	PUSHAL	HUGE
 	CALLS	#3,G^LIB$GET_VM
 	MOVL	#40,R1
-	CMPL	R0,#^X1234
+	CMPL	R0,#^X158214
 	BEQL	62$
 	MOVL	R1,R0
 	RET
 62$:	MOVL	#50,R0
-	CMPL	GETP,#3
+	CMPL	GETP,#4
 	BEQL	57$
 	RET
 57$:	CLRL	FAIL
@@ -207,7 +209,7 @@ FAIL:	.LONG	0
 	BLBS	R0,5$
 	RET
 5$:	MOVL	#60,R0
-	CMPL	FREEP,#2
+	CMPL	FREEP,#3
 	BEQL	58$
 	RET
 58$:	MOVL	#1,R0
@@ -216,7 +218,8 @@ FAIL:	.LONG	0
 `)
 
 	if r0 != 1 {
-		t.Errorf("R0 = %#x, want 1 (10: no get-page call for the initial area, 20: one for a block that fit, 30: none for a new area, "+
-			"40: the failing routine's status not returned, 50: it wasn't called, 60: not a free-page call per area; otherwise the failing status)", r0)
+		t.Errorf("R0 = %#x, want 1 (10: not a get-page call for the control block and one for the initial area, 20: one for a block that fit, "+
+			"30: none for a new area, 40: not LIB$_INSVIRMEM when the routine failed, 50: it wasn't called, "+
+			"60: not a free-page call per area and the control block; otherwise the failing status)", r0)
 	}
 }

@@ -71,8 +71,9 @@ func TestLibGetVMPage(t *testing.T) {
 		t.Fatalf("pages at %X, %X, %X; want 4000, 4200, 4400", a, b, c)
 	}
 
-	if env.RegionSize[0] != 0x4A00 {
-		t.Errorf("P0 ends at %X, want 4A00", env.RegionSize[0])
+	// The pool takes 128 pages from P0 at a time, as VMS 7.1's does.
+	if env.RegionSize[0] != 0x14000 {
+		t.Errorf("P0 ends at %X, want 14000", env.RegionSize[0])
 	}
 
 	if r0 := freePages(t, env, 1, a); r0 != ssNormal {
@@ -203,9 +204,9 @@ func TestLibVMPagesShareThePool(t *testing.T) {
 
 	b := mustGetPages(t, env, 1)
 
-	// The RTL's zones' control blocks take a page, then the default
-	// zone's first area is 128 pages, between the two.
-	if area := a + 0x400; block < area || block >= area+128*0x200 || b != area+128*0x200 {
+	// The default zone's initial area is the pool's next 124 pages
+	// (its first block at its start), between the two pages.
+	if area := a + 0x200; block != area || b != area+124*0x200 {
 		t.Fatalf("page %X, block %X, page %X; want the block's area between the pages", a, block, b)
 	}
 

@@ -69,6 +69,11 @@ func vmFailure(env *corevms.Environment, err error) (uint32, error) {
 func libGetVMPage(env *corevms.Environment, argv []uint32) (uint32, error) {
 	mem, cpu := env.Memory(), env.CPU()
 
+	// Too few arguments, as VMS 7.1 answers them (testdata/lib59).
+	if len(argv) == 0 {
+		return libBadBlockSize, nil
+	}
+
 	count, err := mem.LoadLongword(cpu, arg(argv, 0))
 	if err != nil {
 		return memoryFault(env, err)
@@ -104,10 +109,15 @@ func libGetVMPage(env *corevms.Environment, argv []uint32) (uint32, error) {
 // LIB$_BADBLOSIZ; an address not on a page boundary, or any page not
 // allocated (never, or freed already), is LIB$_BADBLOADR, and then
 // nothing is freed. A zone's pages are refused the same way: they go
-// back with the zone (unconfirmed: VMS presumably frees them, leaving
-// the zone's blocks in free pages).
+// back with the zone. VMS 7.1 frees them, the zone's blocks left in free
+// pages the pool may hand out again (testdata/lib59); govax keeps its
+// heap sound instead (an expected difference of TestLib59Oracle).
 func libFreeVMPage(env *corevms.Environment, argv []uint32) (uint32, error) {
 	mem, cpu := env.Memory(), env.CPU()
+
+	if len(argv) < 2 {
+		return libBadBlockAddress, nil
+	}
 
 	count, err := mem.LoadLongword(cpu, arg(argv, 0))
 	if err != nil {

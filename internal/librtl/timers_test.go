@@ -235,7 +235,9 @@ func TestTimerHeapBlock(t *testing.T) {
 }
 
 // TestFreeTimerBadBlock: a block the program freed itself with
-// LIB$FREE_VM is LIB$_BADBLOADR to FREE_TIMER.
+// LIB$FREE_VM is LIB$_INVARG to FREE_TIMER: its first longword, the
+// tag, holds the free space's size now, as VMS 7.1 keeps it there
+// (Phase 59, testdata/lib59).
 func TestFreeTimerBadBlock(t *testing.T) {
 	env, _, _ := timerFixture(t)
 
@@ -246,8 +248,8 @@ func TestFreeTimerBadBlock(t *testing.T) {
 		t.Fatal("FreeVM of the timer block failed")
 	}
 
-	if got := call(t, env, "LIB$FREE_TIMER", timerHandle); got != libBadBlockAddress {
-		t.Errorf("FREE_TIMER: %#x, want LIB$_BADBLOADR", got)
+	if got := call(t, env, "LIB$FREE_TIMER", timerHandle); got != libInvArg {
+		t.Errorf("FREE_TIMER: %#x, want LIB$_INVARG", got)
 	}
 }
 

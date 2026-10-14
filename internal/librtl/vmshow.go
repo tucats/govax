@@ -19,10 +19,10 @@ import (
 // the checks are of what the program can damage, a zone's control block
 // and the free fill in its free space.
 //
-// LIB$SHOW_VM_ZONE's report follows the VSI manual's two samples (detail
-// levels 1 and 3), which agree with the 5.0 manual's; every line the
-// samples don't show, and the samples' own spacing (they're indented
-// differently), are govax's choices (unconfirmed: probe cases).
+// LIB$SHOW_VM_ZONE's report is laid out as VMS 7.1 lays it out
+// (testdata/lib59, which showed every section and level); the link
+// analysis of a damaged block shows govax's own links, which the program
+// can't see, so its addresses aren't VMS's.
 
 var libBadZone = vmsdef.LibrarySymbols["LIB$_BADZONE"]
 
@@ -45,12 +45,12 @@ func zoneFailure(env *corevms.Environment, err error) (uint32, error) {
 //	LIB$FIND_VM_ZONE context.mlu.r ,zone-id.wlu.r
 //
 // Each call writes the ID of the next of the image's zones to zone-id:
-// the default zone, the string zone, then the rest in the order they
-// were made (user-defined zones too). context is the scan's: 0 starts
-// it, and it then holds the number of the zone last found (govax's form;
-// the manual leaves it the RTL's). A context of 0 verifies every zone
-// first (LIB$VERIFY_VM_ZONE), and a damaged one is LIB$_BADZONE, nothing
-// written. After the last zone it's LIB$_NOTFOU (an alternate success),
+// the default zone, the string zone, then the rest, user-defined zones
+// too, in VMS 7.1's order (corevms.Environment.NextZone). context is the
+// scan's: 0 starts it, and it then holds where the zone last found is
+// (govax's form; the manual leaves it the RTL's). A context of 0 checks
+// every zone's control block first, and a damaged one is LIB$_BADZONE,
+// nothing written. After the last zone it's LIB$_NOTFOU (an alternate success),
 // zone-id and context left alone. Not exactly two arguments is
 // LIB$_WRONUMARG.
 func libFindVMZone(env *corevms.Environment, argv []uint32) (uint32, error) {
@@ -71,7 +71,7 @@ func libFindVMZone(env *corevms.Environment, argv []uint32) (uint32, error) {
 		}
 	}
 
-	id, seq, ok, err := env.NextZone(context)
+	id, next, ok, err := env.NextZone(context)
 
 	switch {
 	case err != nil:
@@ -84,7 +84,7 @@ func libFindVMZone(env *corevms.Environment, argv []uint32) (uint32, error) {
 		return memoryFault(env, writing(err))
 	}
 
-	if err := mem.StoreLongword(cpu, arg(argv, 0), seq); err != nil {
+	if err := mem.StoreLongword(cpu, arg(argv, 0), next); err != nil {
 		return memoryFault(env, writing(err))
 	}
 
@@ -126,14 +126,17 @@ func libVerifyVMZone(env *corevms.Environment, argv []uint32) (uint32, error) {
 //	LIB$SHOW_VM_ZONE zone-id.rlu.r [,detail-level.rl.r]
 //	    [,user-action-procedure.szem.v] [,user-arg.rz.v]
 //
-// It describes the zone zone-id names (0 or omitted, the default zone)
-// at detail-level 0 to 3 (0 when omitted; another, LIB$_INVARG): the
-// lines of zoneReport. Each line goes to SYS$OUTPUT as LIB$PUT_OUTPUT
-// writes it, or, with an action routine, to the routine, called with a
-// class S descriptor of the line and user-arg (0 when omitted); a
-// failure status from either ends the report and is the routine's
-// ("success codes are ignored"). An ID that names no zone is
-// LIB$_BADZONE; no arguments, or more than four, LIB$_WRONUMARG.
+// It describes the zone zone-id names (0, the default zone) at
+// detail-level 0 to 3 (0 when omitted; any other is 3, as VMS 7.1 takes
+// it, testdata/lib59): the lines of zoneReport. Each line goes to
+// SYS$OUTPUT as LIB$PUT_OUTPUT writes it, or, with an action routine, to
+// the routine, called with a descriptor of the line and user-arg (0 when
+// omitted); a failure status from either ends the report and is the
+// routine's ("success codes are ignored"). A report that finds the zone
+// damaged (a free block without its free fill, a lookaside list linked
+// to itself) shows the damage and is LIB$_BADZONE. An ID that names no
+// zone is LIB$_BADZONE; zone-id omitted LIB$_INVARG; no arguments, or
+// more than four, LIB$_WRONUMARG.
 //
 // The action routine is called back once a line, so a call with one
 // runs on a goroutine of its own (corevms.Environment.RunCallingBack),
@@ -143,7 +146,11 @@ func libShowVMZone(env *corevms.Environment, argv []uint32) (uint32, error) {
 		return libWroNumArg, nil
 	}
 
-	id, err := optionalLongword(env, arg(argv, 0), 0)
+	if arg(argv, 0) == 0 {
+		return libInvArg, nil
+	}
+
+	id, err := env.Memory().LoadLongword(env.CPU(), arg(argv, 0))
 	if err != nil {
 		return memoryFault(env, err)
 	}
@@ -153,9 +160,7 @@ func libShowVMZone(env *corevms.Environment, argv []uint32) (uint32, error) {
 		return memoryFault(env, err)
 	}
 
-	if int32(detail) < 0 || detail > 3 {
-		return libInvArg, nil
-	}
+	detail = min(detail, 3)
 
 	r, err := env.ZoneReportOf(id)
 	if err != nil {
@@ -167,7 +172,7 @@ func libShowVMZone(env *corevms.Environment, argv []uint32) (uint32, error) {
 		return env.RunCallingBack("LIB$SHOW_VM_ZONE", libShowVMZone, argv)
 	}
 
-	lines, err := zoneReport(env, r, int(detail))
+	lines, damaged, err := zoneReport(env, r, int(detail))
 	if err != nil {
 		return memoryFault(env, err)
 	}
@@ -179,15 +184,29 @@ func libShowVMZone(env *corevms.Environment, argv []uint32) (uint32, error) {
 		}
 	}
 
+	if damaged {
+		return libBadZone, nil
+	}
+
 	return ssNormal, nil
+}
+
+// zoneLine is one line of LIB$SHOW_VM_ZONE's report. A plain line is
+// one with nothing in it but its text (a blank line, a heading), which
+// VMS 7.1 gives an action routine as a class S text descriptor; any
+// other comes from $FAO, its descriptor's type and class 0
+// (testdata/lib59).
+type zoneLine struct {
+	text  string
+	plain bool
 }
 
 // showZoneLine writes one of LIB$SHOW_VM_ZONE's lines: to SYS$OUTPUT, or
 // to the action routine (with value, the user argument), its descriptor
 // below SP for the call.
-func showZoneLine(env *corevms.Environment, action, value uint32, line string) (uint32, error) {
+func showZoneLine(env *corevms.Environment, action, value uint32, line zoneLine) (uint32, error) {
 	if action == 0 {
-		return env.PutOutput(line)
+		return env.PutOutput(line.text)
 	}
 
 	cpu := env.CPU()
@@ -195,9 +214,15 @@ func showZoneLine(env *corevms.Environment, action, value uint32, line string) (
 
 	defer cpu.SetGPR(registers.SP, sp)
 
-	desc, err := stackString(env, line)
+	desc, err := stackString(env, line.text)
 	if err != nil {
 		return memoryFault(env, writing(err))
+	}
+
+	if !line.plain {
+		if err := env.Memory().StoreWord(cpu, desc+2, 0); err != nil {
+			return memoryFault(env, writing(err))
+		}
 	}
 
 	status, err := env.Callback(action, desc, value)
@@ -208,13 +233,6 @@ func showZoneLine(env *corevms.Environment, action, value uint32, line string) (
 	return status, nil
 }
 
-// The report's indentations: the lines after the first, and a flag's
-// name under the flags.
-const (
-	zoneIndent = "    "
-	flagIndent = zoneIndent + "             "
-)
-
 // zoneAlgorithms are the algorithms' names, by vmheap's Algorithm.
 var zoneAlgorithms = []string{
 	vmheap.FirstFit:      "LIB$K_VM_FIRST_FIT",
@@ -223,16 +241,17 @@ var zoneAlgorithms = []string{
 	vmheap.FixedSize:     "LIB$K_VM_FIXED",
 }
 
-// zoneListTitles are the lookaside list summaries' titles, by
-// algorithm (Quick Fit's is the manual's).
-var zoneListTitles = []string{
+// zoneListTitles are the lookaside list summaries' titles, by algorithm
+// (a fixed size zone has none).
+var zoneListTitles = map[vmheap.Algorithm]string{
 	vmheap.QuickFit:      "Quick Fit Lookaside List Summary:",
 	vmheap.FrequentSizes: "Frequent Sizes Lookaside List Summary:",
-	vmheap.FixedSize:     "Fixed Size Lookaside List Summary:",
 }
 
-// zoneFlag is one of the flags LIB$CREATE_VM_ZONE takes, its name, and
-// whether a zone's settings have it.
+// zoneFlag is one of the flags LIB$SHOW_VM_ZONE shows, its name, and
+// whether a zone's settings have it. VMS 7.1 shows bits 0 to 5 only,
+// a GET_FILL1 or FREE_FILL1 given with its FILL0 left out (testdata/
+// lib59).
 type zoneFlag struct {
 	name string
 	bit  uint32
@@ -247,36 +266,61 @@ var zoneFlags = []zoneFlag{
 	{"LIB$M_VM_FREE_FILL0", vmFreeFill0, func(s corevms.ZoneSettings) bool { return s.FreeFill == corevms.FillZero }},
 	{"LIB$M_VM_FREE_FILL1", vmFreeFill1, func(s corevms.ZoneSettings) bool { return s.FreeFill == corevms.FillOnes }},
 	{"LIB$M_VM_EXTEND_AREA", vmExtendArea, func(s corevms.ZoneSettings) bool { return s.ExtendArea }},
-	{"LIB$M_VM_NO_EXTEND", vmNoExtend, func(s corevms.ZoneSettings) bool { return s.NoExtend }},
-	{"LIB$M_VM_TAIL_LARGE", vmTailLarge, func(s corevms.ZoneSettings) bool { return s.TailLarge }},
+}
+
+// zoneReporter builds a report's lines.
+type zoneReporter struct {
+	lines []zoneLine
+}
+
+// plain adds a line of text alone; line adds a formatted one, after a
+// tab (as all but the first line are, VMS 7.1's layout).
+func (z *zoneReporter) plain(text string) {
+	z.lines = append(z.lines, zoneLine{text, true})
+}
+
+func (z *zoneReporter) line(format string, args ...any) {
+	z.lines = append(z.lines, zoneLine{"\t" + fmt.Sprintf(format, args...), false})
+}
+
+func (z *zoneReporter) blank() {
+	z.plain("")
 }
 
 // zoneReport returns LIB$SHOW_VM_ZONE's lines for the zone r describes
-// at detail level detail:
+// at detail level detail, laid out as VMS 7.1 lays them out
+// (testdata/lib59), and whether it found the zone damaged:
 //
-//   - 0: the zone's ID and name (a user-defined zone shows only this, at
-//     every level; unconfirmed);
+//   - 0: the zone's ID and name;
 //   - 1: its algorithm, flags, and sizes, the bytes freed and not yet
-//     allocated again, and the bytes of its control blocks;
-//   - 2: a lookaside list's summary (the lists that hold blocks), and the
-//     area summary;
-//   - 3: the scan of the lookaside lists and of each area's free list:
-//     with a free fill, each free block that doesn't hold it is shown as
-//     an error, with its contents.
+//     allocated again, and the bytes of its control blocks (a
+//     user-defined zone shows its user argument instead);
+//   - 2: a lookaside list summary (quick fit and frequent sizes: the
+//     lists that hold blocks), and the area summary;
+//   - 3: the scan of the lookaside lists and of each area's free list,
+//     with each area's count of free blocks, and the damage found: a
+//     list linked to itself, a free block without its free fill.
 //
 // The error is memory that can't be read.
-func zoneReport(env *corevms.Environment, r corevms.ZoneReport, detail int) ([]string, error) {
-	lines := []string{fmt.Sprintf("Zone Id = %08X,  Zone name = %q", r.ID, r.Settings.Name)}
-	if detail == 0 || r.User != nil {
-		return lines, nil
+func zoneReport(env *corevms.Environment, r corevms.ZoneReport, detail int) ([]zoneLine, bool, error) {
+	z := &zoneReporter{}
+	z.lines = []zoneLine{{fmt.Sprintf("Zone Id = %08X,  Zone name = %q", r.ID, r.Settings.Name), false}}
+
+	if detail == 0 {
+		return z.lines, false, nil
 	}
 
-	add := func(format string, args ...any) {
-		lines = append(lines, zoneIndent+fmt.Sprintf(format, args...))
+	z.blank()
+
+	if r.User != nil {
+		z.line("Algorithm = (user zone)   USER_ARG = %d", r.User.Argument)
+
+		return z.lines, false, nil
 	}
 
 	s := r.Settings
-	lines = append(lines, algorithmLines(r)...)
+	algorithmLines(z, r)
+	z.blank()
 
 	var flags uint32
 
@@ -286,13 +330,15 @@ func zoneReport(env *corevms.Environment, r corevms.ZoneReport, detail int) ([]s
 		}
 	}
 
-	add("Flags = %08X", flags)
+	z.line("Flags = %08X", flags)
 
 	for _, f := range zoneFlags {
 		if f.set(s) {
-			lines = append(lines, flagIndent+f.name)
+			z.plain("\t\t     " + f.name)
 		}
 	}
+
+	z.blank()
 
 	areas := "areas"
 	if len(r.Areas) == 1 {
@@ -304,159 +350,177 @@ func zoneReport(env *corevms.Environment, r corevms.ZoneReport, detail int) ([]s
 		limit = fmt.Sprintf("%d pages", s.PageLimit)
 	}
 
-	add("Initial size = %7d pages     Current size = %d pages in %d %s", s.InitialPages, r.Pages, len(r.Areas), areas)
-	add("Extend size  = %7d pages     Page limit   = %s", s.ExtendPages, limit)
-	add("Requests are rounded up to a multiple of %d bytes,", r.Quantum)
+	z.line("Initial size = %7d pages     Current size = %d pages in %d %s", s.InitialShown(), r.Pages, len(r.Areas), areas)
+	z.line("Extend size  = %7d pages     Page limit   = %s", s.ExtendPages, limit)
+	z.blank()
+	z.line("Requests are rounded up to a multiple of %d bytes,", max(r.Quantum, r.Alignment))
+	z.line("naturally aligned on %d byte boundaries", max(r.Quantum, r.Alignment))
+	z.blank()
+	z.line("%d bytes have been freed and not yet reallocated", r.FreeBytes())
+	z.blank()
 
-	if r.Alignment == r.Quantum {
-		add("naturally aligned on %d byte boundaries", r.Alignment)
-	} else {
-		add("aligned on %d byte boundaries", r.Alignment)
-	}
-
-	add("%d bytes have been freed and not yet reallocated", r.FreeBytes())
-
+	// The overhead is the control blocks' share of themselves and the
+	// zone's pages, cut (not rounded) to a tenth of a percent.
 	control := r.ControlBytes()
-	add("%d bytes are used for zone and area control blocks, or %.1f%% overhead",
-		control, 100*float64(control)/float64(uint64(control)+uint64(r.Pages)*vmheap.PageSize))
+	tenths := uint64(control) * 1000 / (uint64(control) + uint64(r.Pages)*vmheap.PageSize)
+	z.line("%d bytes are used for zone and area control blocks, or %d.%d%% overhead", control, tenths/10, tenths%10)
+	z.blank()
 
 	if detail == 1 {
-		return lines, nil
+		return z.lines, false, nil
 	}
 
-	lines = append(lines, listSummary(r)...)
-	lines = append(lines, areaSummary(r)...)
+	// VMS 7.1 shows no more of a zone that has no areas yet.
+	if len(r.Areas) == 0 {
+		return z.lines, false, nil
+	}
+
+	listSummary(z, r)
+	areaSummary(z, r)
 
 	if detail == 2 {
-		return lines, nil
+		return z.lines, false, nil
 	}
 
-	scan, err := scanLines(env, r)
+	damaged, err := scanLines(env, z, r)
+	z.blank()
 
-	return append(lines, scan...), err
+	return z.lines, damaged, err
 }
 
 // algorithmLines are the report's algorithm line, with what a lookaside
-// algorithm's lists are (Quick Fit's wording is the manual's, the
-// others' govax's).
-func algorithmLines(r corevms.ZoneReport) []string {
+// algorithm's lists are.
+func algorithmLines(z *zoneReporter, r corevms.ZoneReport) {
 	s := r.Settings
-	name := zoneIndent + "Algorithm = " + zoneAlgorithms[s.Algorithm]
+	name := "Algorithm = " + zoneAlgorithms[s.Algorithm]
 
 	switch s.Algorithm {
 	case vmheap.QuickFit:
-		smallest, largest := r.Lists[0].Size, r.Lists[len(r.Lists)-1].Size
-
-		return []string{
-			fmt.Sprintf("%s  with %d Lookaside Lists ranging from", name, len(r.Lists)),
-			fmt.Sprintf("%s            a minimum blocksize of %d, to a maximum blocksize of %d", zoneIndent, smallest, largest),
-		}
+		z.line("%s  with %d Lookaside Lists ranging from", name, len(r.Lists))
+		z.line("            a minimum blocksize of %d, to a maximum blocksize of %d",
+			r.Smallest, r.Smallest+uint32(len(r.Lists)-1)*r.Quantum)
 
 	case vmheap.FrequentSizes:
-		return []string{fmt.Sprintf("%s  with %d Lookaside Lists", name, len(r.Lists))}
+		z.line("%s  with %d Lookaside Lists", name, len(r.Lists))
 
 	case vmheap.FixedSize:
-		return []string{fmt.Sprintf("%s  with a blocksize of %d", name, s.FixedSize)}
-	}
+		z.line("%s  with block size of %d", name, s.FixedSize)
 
-	return []string{name}
+	default:
+		z.plain("\t" + name)
+	}
 }
 
-// listSummary is the lookaside lists' summary, for the algorithms that
-// have them: each list that holds blocks, its number (from 1), its
-// blocks' size, and how many it holds. The manual's samples leave out
-// the first list, which can have held no blocks, so a list without any
-// isn't shown (unconfirmed).
-func listSummary(r corevms.ZoneReport) []string {
-	if r.Settings.Algorithm == vmheap.FirstFit {
-		return nil
+// listSummary is the lookaside lists' summary, for quick fit and
+// frequent sizes: each list that holds blocks, its number (from 1), its
+// blocks' size, and how many it holds ("*****" for a list linked to
+// itself, whose blocks can't be counted).
+func listSummary(z *zoneReporter, r corevms.ZoneReport) {
+	title, ok := zoneListTitles[r.Settings.Algorithm]
+	if !ok {
+		return
 	}
 
-	lines := []string{
-		zoneIndent + zoneListTitles[r.Settings.Algorithm],
-		"         List        Block   Number of",
-		"        number        size     blocks",
-		"        ------  ----------  ----------",
-	}
+	z.plain("\t" + title)
+	z.blank()
+	z.plain("\t     List        Block   Number of")
+	z.plain("\t    number        size     blocks")
+	z.plain("\t    ------  ----------  ----------")
 
 	for i, l := range r.Lists {
-		if len(l.Blocks) > 0 {
-			lines = append(lines, fmt.Sprintf("        %6d  %10d  %10d", i+1, l.Size, len(l.Blocks)))
+		switch {
+		case l.Loop != 0:
+			z.line("%10d  %10d  %10s", i+1, l.Size, "*****")
+		case len(l.Blocks) > 0:
+			z.line("%10d  %10d  %10d", i+1, l.Size, len(l.Blocks))
 		}
 	}
 
-	return lines
+	z.blank()
 }
 
 // areaSummary is the areas' summary: each area's first and last
 // address, its pages, and the bytes of its unallocated end.
-func areaSummary(r corevms.ZoneReport) []string {
-	lines := []string{
-		zoneIndent + "Area Summary:",
-		"          First     Last       Pages    Bytes not yet",
-		"         address   address    assigned    allocated",
-		"        --------  --------  ----------  -------------",
-	}
+func areaSummary(z *zoneReporter, r corevms.ZoneReport) {
+	z.plain("\tArea Summary:")
+	z.blank()
+	z.plain("\t      First     Last       Pages    Bytes not yet")
+	z.plain("\t     address   address    assigned    allocated")
+	z.plain("\t    --------  --------  ----------  -------------")
 
 	for _, a := range r.Areas {
-		lines = append(lines, fmt.Sprintf("        %08X  %08X  %10d  %13d",
-			a.Base, a.End-1, (a.End-a.Base)/vmheap.PageSize, a.Unallocated()))
+		z.line("    %08X  %08X  %10d  %13d", a.Base, a.End-1, (a.End-a.Base)/vmheap.PageSize, a.Unallocated())
 	}
 
-	return lines
+	z.blank()
 }
 
 // scanLines are detail level 3's scans: the lookaside lists (for the
 // algorithms that have them), then each area's free list, with the
-// number of free blocks and their smallest and largest sizes. With a
-// free fill, a free block that doesn't hold it is shown, before the
-// counts, as an error and a dump of its contents.
-func scanLines(env *corevms.Environment, r corevms.ZoneReport) ([]string, error) {
-	var lines []string
+// number of free blocks and their smallest and largest sizes. A list
+// linked to itself is shown as VMS 7.1 shows it, a warning and its
+// block; a free block without the zone's free fill as an error and its
+// block, the rest of its area's free list not counted. It reports
+// whether it found damage.
+func scanLines(env *corevms.Environment, z *zoneReporter, r corevms.ZoneReport) (bool, error) {
+	damaged := false
 
-	fill := r.Settings.FreeFill
+	if r.Settings.Algorithm != vmheap.FirstFit {
+		z.plain("\tScanning Lookaside Lists in Zone Control Block")
 
-	check := func(blocks []vmheap.Span) error {
-		for _, b := range blocks {
-			bad, err := env.FillMismatch(b, fill)
-			if err != nil {
-				return err
+		for _, l := range r.Lists {
+			if l.Loop == 0 {
+				continue
 			}
 
-			if bad {
-				dump, err := blockDump(env, b)
-				if err != nil {
-					return err
-				}
+			damaged = true
 
-				lines = append(lines, zoneIndent+"**** ERROR -- free-fill mismatch ****")
-				lines = append(lines, dump...)
+			if err := loopedList(env, z, r, l); err != nil {
+				return damaged, err
 			}
 		}
 
-		return nil
-	}
-
-	if r.Settings.Algorithm != vmheap.FirstFit {
-		lines = append(lines, zoneIndent+"Scanning Lookaside Lists in Zone Control Block")
-
 		for _, l := range r.Lists {
-			if err := check(l.Blocks); err != nil {
-				return lines, err
+			for _, b := range l.Blocks {
+				bad, err := env.FreeFillMismatch(r.ID, b)
+				if err != nil {
+					return damaged, err
+				}
+
+				if bad {
+					damaged = true
+
+					if err := fillMismatch(env, z, r, b); err != nil {
+						return damaged, err
+					}
+				}
 			}
 		}
 	}
 
 	for _, a := range r.Areas {
-		lines = append(lines, fmt.Sprintf("%sScanning Free List for Area at %08X", zoneIndent, a.Base))
+		z.line("Scanning Free List for Area at %08X", a.Base)
 
-		if err := check(a.Free); err != nil {
-			return lines, err
+		bad := false
+
+		for _, b := range a.Free {
+			mismatch, err := env.FreeFillMismatch(r.ID, b)
+			if err != nil {
+				return damaged, err
+			}
+
+			if mismatch {
+				bad, damaged = true, true
+
+				if err := fillMismatch(env, z, r, b); err != nil {
+					return damaged, err
+				}
+
+				break
+			}
 		}
 
-		if len(a.Free) == 0 {
-			lines = append(lines, zoneIndent+"  Number of blocks = 0")
-
+		if bad || len(a.Free) == 0 {
 			continue
 		}
 
@@ -465,24 +529,77 @@ func scanLines(env *corevms.Environment, r corevms.ZoneReport) ([]string, error)
 			smallest, largest = min(smallest, s.Size()), max(largest, s.Size())
 		}
 
-		lines = append(lines, fmt.Sprintf("%s  Number of blocks = %d, Min blocksize = %d, Max blocksize = %d",
-			zoneIndent, len(a.Free), smallest, largest))
+		z.line("  Number of blocks = %d, Min blocksize = %d, Max blocksize = %d", len(a.Free), smallest, largest)
+		z.blank()
 	}
 
-	return lines, nil
+	return damaged, nil
 }
 
-// blockDump is a free block's size and contents as the manual's sample
-// error display shows them: 16 bytes a line, as four longwords from the
-// highest address down, the bytes as text (a period for one that isn't
-// printable), the line's offset in the block, and its address. A last
-// line of fewer longwords is padded on the left.
-func blockDump(env *corevms.Environment, b vmheap.Span) ([]string, error) {
+// zoneListHead is where govax says a zone's lookaside lists' heads are
+// in its control block, for the link analysis (VMS's are its own).
+const zoneListHead = 0x50
+
+// loopedList shows a lookaside list linked to itself as VMS 7.1 does:
+// a warning, the link analysis of its block (the list's head before it,
+// and itself after it), and the block.
+func loopedList(env *corevms.Environment, z *zoneReporter, r corevms.ZoneReport, l vmheap.ListReport) error {
+	head, cur := r.ID+zoneListHead, l.Loop
+
+	z.blank()
+	z.plain("\t**** WARNING -- forward-link of current block may not be valid ****")
+	z.blank()
+	linkHeader(z)
+	z.line("  Block adr      :  %08X  %08X  %08X", head, cur, cur)
+	z.line("  Forw link (rel):  %08X  %08X  %08X", cur-head, 0, 0)
+	z.line("  Back link (rel):  %08X  %08X  %08X", cur-head, head-cur, head-cur)
+	z.blank()
+	z.line("  Forw link (abs):  %08X  %08X  %08X", cur, cur, cur)
+	z.line("  Back link (abs):  %08X  %08X  %08X", cur, head, head)
+	z.blank()
+	z.line("Block size = %d", l.Size)
+
+	return blockDump(env, z, vmheap.Span{Start: cur, End: cur + l.Size})
+}
+
+// fillMismatch shows a free block without its zone's free fill as VMS
+// 7.1 does: an error, the link analysis of the block (the free list's
+// head before and after it), and the block.
+func fillMismatch(env *corevms.Environment, z *zoneReporter, r corevms.ZoneReport, b vmheap.Span) error {
+	head := r.ID + zoneListHead
+
+	z.blank()
+	z.plain("\t**** ERROR -- free-fill mismatch ****")
+	z.blank()
+	linkHeader(z)
+	z.line("  Block adr      :  %08X  %08X  %08X", head, b.Start, head)
+	z.blank()
+	z.line("  Forw link (abs):  %08X  %08X  %08X", b.Start, head, b.Start)
+	z.blank()
+	z.line("Block size = %8d", b.Size())
+
+	return blockDump(env, z, b)
+}
+
+// linkHeader is a link analysis's title and column headings.
+func linkHeader(z *zoneReporter) {
+	z.plain("\tLink Analysis for Current Block:")
+	z.blank()
+	z.plain("\t                    Previous   Current      Next")
+	z.plain("\t                    --------  --------  --------")
+}
+
+// blockDump is a block's contents as VMS 7.1 shows them: 16 bytes a
+// line, as four longwords from the highest address down, the bytes as
+// text (a period for one that isn't printable in the DEC Multinational
+// set), the line's offset in the block, and its address; then two blank
+// lines.
+func blockDump(env *corevms.Environment, z *zoneReporter, b vmheap.Span) error {
 	mem, cpu := env.Memory(), env.CPU()
-	lines := []string{
-		fmt.Sprintf("%sBlock size = %d", zoneIndent, b.Size()),
-		zoneIndent + "Block contents:",
-	}
+
+	z.blank()
+	z.plain("\tBlock contents:")
+	z.blank()
 
 	for line := b.Start; line < b.End; line += 16 {
 		var longs, text strings.Builder
@@ -492,10 +609,10 @@ func blockDump(env *corevms.Environment, b vmheap.Span) ([]string, error) {
 		for i := uint32(0); i < n; i++ {
 			c, err := mem.LoadByte(cpu, line+i)
 			if err != nil {
-				return lines, err
+				return err
 			}
 
-			if c < 0x20 || c > 0x7E {
+			if c < 0x20 || c > 0x7E && c < 0xA1 || c == 0xFF {
 				c = '.'
 			}
 
@@ -512,14 +629,17 @@ func blockDump(env *corevms.Environment, b vmheap.Span) ([]string, error) {
 
 			v, err := mem.LoadLongword(cpu, at)
 			if err != nil {
-				return lines, err
+				return err
 			}
 
 			fmt.Fprintf(&longs, "%08X ", v)
 		}
 
-		lines = append(lines, fmt.Sprintf("%s  %s %-16s %05X %08X", zoneIndent, longs.String(), text.String(), line-b.Start, line))
+		z.line("  %s%-16s %05X %08X", longs.String(), text.String(), line-b.Start, line)
 	}
 
-	return lines, nil
+	z.blank()
+	z.blank()
+
+	return nil
 }

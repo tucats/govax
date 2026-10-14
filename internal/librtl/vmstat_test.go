@@ -50,11 +50,14 @@ func wantStats(t *testing.T, env *corevms.Environment, step string, want [6]uint
 	}
 }
 
-// TestLibStatVM: the heap's counts follow successful GET_VM and FREE_VM
-// calls, in the default zone and the program's own, with FREE_VM's size
-// or, omitted, the size GET_VM asked; failed calls and a user zone's
-// calls don't count, nor do RESET's frees. The page counts follow the
-// pool, a zone's areas among them.
+// TestLibStatVM: the heap's counts as VMS 7.1 keeps them (testdata/
+// lib59): successful GET_VM calls, and FREE_VM calls whose bytes are the
+// zone's (a double free too), not those outside it; bytes as each block
+// was rounded, the size FREE_VM is given trusted; a zone's control block
+// counted as a GET_VM, and DELETE's freeing of it as a FREE_VM, its
+// blocks' bytes coming off then, or at a RESET; a user zone's GET_VM
+// counted when it has the routine. The page counts follow the pool, a
+// zone's areas among them.
 func TestLibStatVM(t *testing.T) {
 	env, _ := statFixture(t)
 
@@ -68,47 +71,55 @@ func TestLibStatVM(t *testing.T) {
 		t.Fatalf("PageStatistics after the default zone's first block: %d, %d, %d", gets, frees, pages)
 	}
 
-	wantStats(t, env, "two blocks", [6]uint32{2, 0, 110, gets, 0, pages})
+	wantStats(t, env, "two blocks", [6]uint32{2, 0, 120, gets, 0, pages})
 
-	// Failures count nowhere.
+	// A bad size, or bytes not the zone's (misaligned), count nowhere.
 	if r0, _ := getVM(t, env, 0, 0); r0 != libBadBlockSize {
 		t.Errorf("GET_VM(0) = %#x", r0)
 	}
 
-	if r0 := freeVM(t, env, 0, a+4, 0); r0 != libBadBlockAddress {
-		t.Errorf("FREE_VM of an interior address = %#x", r0)
+	if r0 := freeVM(t, env, 8, a+4, 0); r0 != libBadBlockAddress {
+		t.Errorf("FREE_VM of a misaligned address = %#x", r0)
 	}
 
-	wantStats(t, env, "failures", [6]uint32{2, 0, 110, gets, 0, pages})
+	wantStats(t, env, "failures", [6]uint32{2, 0, 120, gets, 0, pages})
 
 	if r0 := freeVM(t, env, 10, a, 0); r0 != ssNormal {
 		t.Fatalf("FREE_VM(10) = %#x", r0)
 	}
 
-	if r0 := freeVM(t, env, 0, b, 0); r0 != ssNormal {
-		t.Fatalf("FREE_VM without a size = %#x", r0)
+	// A double free counts as a call, its bytes nowhere.
+	if r0 := freeVM(t, env, 10, a, 0); r0 != libBadBlockAddress {
+		t.Fatalf("FREE_VM again = %#x", r0)
 	}
 
-	wantStats(t, env, "both freed", [6]uint32{2, 2, 0, gets, 0, pages})
+	if r0 := freeVM(t, env, 100, b, 0); r0 != ssNormal {
+		t.Fatalf("FREE_VM(100) = %#x", r0)
+	}
+
+	wantStats(t, env, "both freed", [6]uint32{2, 3, 0, gets, 0, pages})
 
 	// The program's pages, and a zone's area: one more request each.
 	p := mustGetPages(t, env, 3)
-	wantStats(t, env, "three pages", [6]uint32{2, 2, 0, gets + 1, 0, pages + 3})
+	wantStats(t, env, "three pages", [6]uint32{2, 3, 0, gets + 1, 0, pages + 3})
 
 	if r0 := freePages(t, env, 1, p+512); r0 != ssNormal {
 		t.Fatalf("FREE_VM_PAGE = %#x", r0)
 	}
 
-	wantStats(t, env, "a page freed", [6]uint32{2, 2, 0, gets + 1, 1, pages + 2})
+	wantStats(t, env, "a page freed", [6]uint32{2, 3, 0, gets + 1, 1, pages + 2})
 
-	zone := mustCreateZone(t, env, 1, omit, omit, 2) // first fit, 2-page areas
+	zone := mustCreateZone(t, env, 1, omit, omit, 2) // first fit, 2-page areas: an 80-byte control block
 	g, _, n := env.PageStatistics()
+
+	wantStats(t, env, "a zone made", [6]uint32{3, 3, 80, g, 1, n})
+
 	c := mustGetVM(t, env, 24, zone)
 
-	wantStats(t, env, "a zone's block", [6]uint32{3, 2, 24, g + 1, 1, n + 2})
+	wantStats(t, env, "a zone's block", [6]uint32{4, 3, 104, g + 1, 1, n + 2})
 
-	// RESET frees the block, but not by FREE_VM; DELETE gives the area
-	// back to the pool.
+	// RESET takes the block's bytes off; DELETE frees the control block
+	// and gives the area back to the pool.
 	if r0 := zoneCall(t, env, "LIB$RESET_VM_ZONE", zone); r0 != ssNormal {
 		t.Fatalf("RESET_VM_ZONE = %#x", r0)
 	}
@@ -117,20 +128,23 @@ func TestLibStatVM(t *testing.T) {
 		t.Errorf("FREE_VM after RESET = %#x, want LIB$_BADBLOADR", r0)
 	}
 
+	wantStats(t, env, "the zone reset", [6]uint32{4, 3, 80, g + 1, 1, n + 2})
+
 	if r0 := zoneCall(t, env, "LIB$DELETE_VM_ZONE", zone); r0 != ssNormal {
 		t.Fatalf("DELETE_VM_ZONE = %#x", r0)
 	}
 
-	wantStats(t, env, "the zone deleted", [6]uint32{3, 2, 24, g + 1, 2, n})
+	wantStats(t, env, "the zone deleted", [6]uint32{4, 4, 0, g + 1, 2, n})
 
-	// A user zone's GET_VM is its routine's, uncounted.
+	// A user zone's GET_VM counts (its control block too), its bytes the
+	// routine's.
 	user := createUserZone(t, env, 7, 0x2000, 0x2100)
 	putLongword(t, env, vmSizeCell, 16)
 	putLongword(t, env, vmZoneCell, user)
 	_ = tailCallOf(t, env, "LIB$GET_VM", vmSizeCell, vmAddrCell, vmZoneCell)
 
-	if r0, v := statVM(t, env, 1); r0 != ssNormal || v != 3 {
-		t.Errorf("STAT_VM(1) after a user zone's GET_VM = %#x, %d; want 3", r0, v)
+	if r0, v := statVM(t, env, 1); r0 != ssNormal || v != 6 {
+		t.Errorf("STAT_VM(1) after a user zone's GET_VM = %#x, %d; want 6", r0, v)
 	}
 
 	// Image rundown starts the counts again.
@@ -180,10 +194,10 @@ func TestLibShowVM(t *testing.T) {
 	gets, frees, pages := env.PageStatistics()
 
 	for code, want := range []string{
-		0: " 2 calls to LIB$GET_VM, 1 calls to LIB$FREE_VM, 2 bytes still allocated\n",
+		0: " 2 calls to LIB$GET_VM, 1 calls to LIB$FREE_VM, 8 bytes still allocated\n",
 		1: " 2 calls to LIB$GET_VM\n",
 		2: " 1 calls to LIB$FREE_VM\n",
-		3: " 2 bytes still allocated\n",
+		3: " 8 bytes still allocated\n",
 		4: " " + itoa(gets) + " calls to LIB$GET_VM_PAGE, " + itoa(frees) + " calls to LIB$FREE_VM_PAGE, " +
 			itoa(pages) + " pages still allocated\n",
 		5: " " + itoa(gets) + " calls to LIB$GET_VM_PAGE\n",
@@ -240,7 +254,7 @@ func TestLibShowVMAction(t *testing.T) {
 		desc := longword(t, env, req.ArgList+4)
 
 		line, err := readString(env, desc)
-		if err != nil || line != " 1 calls to LIB$GET_VM, 0 calls to LIB$FREE_VM, 5 bytes still allocated" {
+		if err != nil || line != " 1 calls to LIB$GET_VM, 0 calls to LIB$FREE_VM, 8 bytes still allocated" {
 			t.Errorf("the routine's line: %q, %v", line, err)
 		}
 

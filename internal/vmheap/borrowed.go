@@ -70,7 +70,7 @@ func (b *Borrowed) Lend(n uint32) (uint32, error) {
 
 	s := span{addr, addr + n*PageSize}
 
-	if addr == 0 || addr%PageSize != 0 || uint64(addr)+uint64(n)*PageSize > 1<<32 || overlapsAny(b.lent, s) {
+	if addr == 0 || addr%PageSize != 0 || uint64(addr)+uint64(n)*PageSize >= 1<<32 || overlapsAny(b.lent, s) {
 		return 0, ErrBadPages
 	}
 

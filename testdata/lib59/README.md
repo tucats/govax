@@ -16,7 +16,7 @@ from one table of cases:
 
 | File | What it holds |
 | ---- | ------------- |
-| `lib59.mar` | The program, 526 cases: the zones and statistics at the start; the page routines (adjacency, reuse, partial and combined frees, every bad argument, `$EXPREG` between two calls); CREATE_VM_ZONE's attributes at and past each bound, each zone shown at detail level 1; GET_VM and FREE_VM in each algorithm (block distances, rounding, alignment, tags, fills, the default and string zones, the page limit, NO_EXTEND, EXTEND_AREA, TAIL_LARGE); RESET and DELETE; user zones (the manual's Example 5-1, routines omitted, a failing delete routine, LIB$DELETE_VM_ZONE as the delete routine); a zone's get-page and free-page routines at arguments 12 and 13, and 13 and 14; STAT_VM and SHOW_VM; FIND, SHOW_VM_ZONE, VERIFY; the VM_MALLOC family by value; and, last, the cases that may damage a zone (double frees, interior and wrong-size frees, a changed tag, an overwritten free block, a freed area page, deleted and junk zone IDs, the system zones, argument counts, a changed control block) |
+| `lib59.mar` | The program, 522 cases: the zones and statistics at the start; the page routines (adjacency, reuse, partial and combined frees, every bad argument, `$EXPREG` between two calls); CREATE_VM_ZONE's attributes at and past each bound, each zone shown at detail level 1; GET_VM and FREE_VM in each algorithm (block distances, rounding, alignment, tags, fills, the default and string zones, the page limit, NO_EXTEND, EXTEND_AREA, TAIL_LARGE); RESET and DELETE; user zones (the manual's Example 5-1, routines omitted, a failing delete routine, LIB$DELETE_VM_ZONE as the delete routine); a zone's get-page and free-page routines at arguments 12 and 13, and 13 and 14; STAT_VM and SHOW_VM; FIND, SHOW_VM_ZONE, VERIFY; the VM_MALLOC family by value; and, last, the cases that may damage a zone (double frees, interior and wrong-size frees, a changed tag, an overwritten free block, a freed area page, deleted and junk zone IDs, the system zones, argument counts, a changed control block) |
 | `lib59.com` | Assembles, links, and runs the program |
 | `exchange.cmd` | The govax console script that builds the exchange volume |
 | `vax/lib59-vax.txt` | The program's output on VMS (`LIB59.OUT`) |
@@ -94,3 +94,21 @@ What else is new:
    and `$STATUS`.
 3. Copy `LIB59.OUT` and `LIB59.LOG` back as `vax/lib59-vax.txt` and
    `vax/lib59.log`.
+
+## The run
+
+2026-10-14, OpenVMS V7.1 on simh's VAX 8600 (node SIMVAX), MACRO and
+LINK with no messages. The program ran until its 523rd case, a
+LIB$VERIFY_VM_ZONE of a zone whose control block's first longword it
+had changed, which ran on without end (stopped after a minute of CPU
+time); `vax/lib59-vax.txt` holds everything before it. The program now
+ends at the case before (the change itself), so its 522 cases are the
+ones VMS ran. VMS settled the choices the phase doc left open (its
+progress log lists them), and govax now does what VMS did, but for the
+lines `TestLib59Oracle` lists in `expectedLib59Differences`: addresses
+read past an argument list, addresses shown in decimal or as text,
+the C heap's place in P0 and where a moved C block goes, the pages a
+zone holds (govax won't free them as pages), and the heap's totals
+(LIB$SHOW_VM and LIB$STAT_VM's code 1), which differ by a few calls,
+bytes, and pages that no case shows one by one. If `lib59.mar` changes,
+run it again and replace `vax/`.

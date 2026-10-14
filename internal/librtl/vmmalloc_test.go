@@ -20,10 +20,11 @@ func mustMalloc(t *testing.T, env *corevms.Environment, size uint32) uint32 {
 	return addr
 }
 
-// TestLibVMMalloc: blocks are the default zone's, distinct and quadword
-// aligned (size 0 too); LIB$VM_FREE frees each once, ignores NULL, and
-// refuses anything else; no room is NULL; none of it counts in
-// LIB$STAT_VM.
+// TestLibVMMalloc: blocks are the C heap's (not the default zone's),
+// distinct and quadword aligned (size 0 too), 16 bytes into their
+// blocks, as VMS 7.1's are; LIB$VM_FREE frees each once and returns 1,
+// ignores NULL (1), and refuses anything else (0); blocks of one size
+// are reused; no room is NULL; none of it counts in LIB$STAT_VM.
 func TestLibVMMalloc(t *testing.T) {
 	env, _ := statFixture(t)
 
@@ -37,31 +38,35 @@ func TestLibVMMalloc(t *testing.T) {
 		}
 	}
 
-	if a == b || b == c || a == c {
-		t.Errorf("blocks %#x, %#x, %#x aren't distinct", a, b, c)
+	if a == b || b == c || a == c || a%512 != 16 {
+		t.Errorf("blocks %#x, %#x, %#x aren't distinct, the first 16 bytes into its page", a, b, c)
 	}
 
-	if size, ok := env.BlockSize(a); !ok || size != 16 {
-		t.Errorf("BlockSize(%#x) = %d, %v; want the default zone's 16", a, size, ok)
+	if size, ok := env.CSize(a); !ok || size != 16 {
+		t.Errorf("CSize(%#x) = %d, %v; want 16", a, size, ok)
 	}
 
-	if r0 := call(t, env, "LIB$VM_FREE", 0); r0 != 0 {
-		t.Errorf("LIB$VM_FREE(NULL) = %#x, want 0", r0)
+	if _, ok := env.BlockSize(a); ok {
+		t.Errorf("%#x is a default zone block", a)
 	}
 
-	if r0 := call(t, env, "LIB$VM_FREE", a+8); r0 != 0xFFFFFFFF {
-		t.Errorf("LIB$VM_FREE of an interior address = %#x, want -1", r0)
+	if r0 := call(t, env, "LIB$VM_FREE", 0); r0 != 1 {
+		t.Errorf("LIB$VM_FREE(NULL) = %#x, want 1", r0)
+	}
+
+	if r0 := call(t, env, "LIB$VM_FREE", a+8); r0 != 0 {
+		t.Errorf("LIB$VM_FREE of an interior address = %#x, want 0", r0)
+	}
+
+	if r0 := call(t, env, "LIB$VM_FREE", a); r0 != 1 {
+		t.Errorf("LIB$VM_FREE(%#x) = %#x, want 1", a, r0)
 	}
 
 	if r0 := call(t, env, "LIB$VM_FREE", a); r0 != 0 {
-		t.Errorf("LIB$VM_FREE(%#x) = %#x, want 0", a, r0)
+		t.Errorf("LIB$VM_FREE of a freed block = %#x, want 0", r0)
 	}
 
-	if r0 := call(t, env, "LIB$VM_FREE", a); r0 != 0xFFFFFFFF {
-		t.Errorf("LIB$VM_FREE of a freed block = %#x, want -1", r0)
-	}
-
-	// First fit: the freed block is the next one of its size.
+	// The freed block is the next one of its size.
 	if p := mustMalloc(t, env, 16); p != a {
 		t.Errorf("LIB$VM_MALLOC(16) after the free = %#x, want %#x", p, a)
 	}
@@ -70,8 +75,7 @@ func TestLibVMMalloc(t *testing.T) {
 		t.Errorf("LIB$VM_MALLOC with no room = %#x, want 0", p)
 	}
 
-	gets, frees, pages := env.PageStatistics()
-	wantStats(t, env, "the C routines", [6]uint32{0, 0, 0, gets, frees, pages})
+	wantStats(t, env, "the C routines", [6]uint32{})
 }
 
 // TestLibVMCalloc: the array is all zeros, even in a block that held
@@ -82,7 +86,7 @@ func TestLibVMCalloc(t *testing.T) {
 	a := mustMalloc(t, env, 64)
 	putBytes(t, env, a, strings.Repeat("\xAA", 64))
 
-	if r0 := call(t, env, "LIB$VM_FREE", a); r0 != 0 {
+	if r0 := call(t, env, "LIB$VM_FREE", a); r0 != 1 {
 		t.Fatalf("LIB$VM_FREE = %#x", r0)
 	}
 
@@ -104,26 +108,24 @@ func TestLibVMCalloc(t *testing.T) {
 	}
 }
 
-// TestLibVMRealloc: NULL is malloc; a block big enough stays; a larger
-// one moves with its bytes, past 64K too, and the old block is freed;
-// size 0 frees; an address that isn't a block's, or no room, is NULL
-// with nothing changed.
+// TestLibVMRealloc: NULL is malloc; a block big enough stays (size 0
+// too, as on VMS 7.1); a larger one moves with its bytes, past 64K too,
+// and the old block is freed; an address that isn't a block's, or no
+// room, is NULL with nothing changed.
 func TestLibVMRealloc(t *testing.T) {
 	env, _ := statFixture(t)
 
 	a := call(t, env, "LIB$VM_REALLOC", 0, 20)
-	if size, ok := env.BlockSize(a); a == 0 || !ok || size != 24 {
+	if size, ok := env.CSize(a); a == 0 || !ok || size != 24 {
 		t.Fatalf("LIB$VM_REALLOC(NULL, 20) = %#x (size %d, %v); want a 24-byte block", a, size, ok)
 	}
 
 	putBytes(t, env, a, "abcdefghijklmnopqrstuvwx")
 
-	if p := call(t, env, "LIB$VM_REALLOC", a, 24); p != a {
-		t.Errorf("LIB$VM_REALLOC to the block's size = %#x, want %#x", p, a)
-	}
-
-	if p := call(t, env, "LIB$VM_REALLOC", a, 4); p != a {
-		t.Errorf("LIB$VM_REALLOC smaller = %#x, want %#x", p, a)
+	for _, size := range []uint32{24, 4, 0} {
+		if p := call(t, env, "LIB$VM_REALLOC", a, size); p != a {
+			t.Errorf("LIB$VM_REALLOC to %d = %#x, want %#x", size, p, a)
+		}
 	}
 
 	if p := call(t, env, "LIB$VM_REALLOC", a+8, 100); p != 0 {
@@ -134,7 +136,7 @@ func TestLibVMRealloc(t *testing.T) {
 		t.Errorf("LIB$VM_REALLOC with no room = %#x, want 0", p)
 	}
 
-	if _, ok := env.BlockSize(a); !ok {
+	if _, ok := env.CSize(a); !ok {
 		t.Fatal("a failed LIB$VM_REALLOC freed the block")
 	}
 
@@ -147,7 +149,7 @@ func TestLibVMRealloc(t *testing.T) {
 		t.Errorf("the moved block holds %q", got)
 	}
 
-	if _, ok := env.BlockSize(a); ok {
+	if _, ok := env.CSize(a); ok {
 		t.Error("LIB$VM_REALLOC kept the old block")
 	}
 
@@ -163,13 +165,5 @@ func TestLibVMRealloc(t *testing.T) {
 
 	if bytesAt(t, env, moved, 4) != "head" || bytesAt(t, env, moved+0x17FFC, 4) != "tail" {
 		t.Error("the large block's bytes didn't all move")
-	}
-
-	if p := call(t, env, "LIB$VM_REALLOC", b, 0); p != 0 {
-		t.Errorf("LIB$VM_REALLOC(p, 0) = %#x, want 0", p)
-	}
-
-	if _, ok := env.BlockSize(b); ok {
-		t.Error("LIB$VM_REALLOC(p, 0) didn't free the block")
 	}
 }

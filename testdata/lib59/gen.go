@@ -1043,10 +1043,11 @@ func allCases() []probeCase {
 		// A zone whose control block the program changed.
 		cz("CZ for a changed control block", "Z_XC", za{name: "HEADER"}, true),
 		probeCase{name: "change XC's first longword", pre: []string{"MOVL\tZ_XC,R1", "INCL\t(R1)", "MOVL\t#1,R0"}},
-		verify("VZ XC", "Z_XC"),
-		gv("GV XC", "16", "B_T", "Z_XC").with(set("B_T")),
-		findAll("FIND with XC changed"),
-		probeCase{name: "STAT at the end", pre: []string{"CALLS\t#0,STATREAD"}, show: []show{vmem("SV", 6)}},
+
+		// VMS 7.1's LIB$VERIFY_VM_ZONE of that zone ran on without end
+		// (the run of 2026-10-14 was stopped there), so the program ends
+		// here: its VERIFY, a GET_VM, and a FIND of the zone were the
+		// last cases.
 	)
 }
 

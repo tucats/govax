@@ -130,18 +130,20 @@ func allBytes(b string, v byte) bool {
 	return true
 }
 
-// The default zone: zone ID 0 or none, its first block after its area's
-// control block, sizes checked, and a second free refused.
+// The default zone: zone ID 0 or none, its first block at its first
+// area's start, the size LIB$FREE_VM is given trusted (VMS 7.1's way,
+// testdata/lib59), and a second free refused.
 func TestLibGetFreeVM(t *testing.T) {
 	env := pageFixture(t)
 
 	addr := mustGetVM(t, env, 100, 0)
 
 	// The P0 high-water mark's first page holds the RTL's zones' control
-	// blocks; the default zone's first area starts after it, its first
-	// block after the area's 64-byte control block.
-	if addr != 0x4240 {
-		t.Errorf("allocated at %#x, want 0x4240", addr)
+	// blocks; the page pool starts after it, and the default zone's
+	// initial area is its first pages, its first block at its start (an
+	// area's control block is kept apart).
+	if addr != 0x4200 {
+		t.Errorf("allocated at %#x, want 0x4200", addr)
 	}
 
 	for _, size := range []uint32{0, 0xFFFFFFFF, 0x80000000} {
@@ -150,30 +152,34 @@ func TestLibGetFreeVM(t *testing.T) {
 		}
 	}
 
-	// A size that doesn't round to the block's (100 is 104) changes
-	// nothing; 97 to 104 do.
-	for _, size := range []uint32{96, 105, 0xFFFFFFFF} {
-		if r0 := freeVM(t, env, size, addr, 0); r0 != libBadBlockSize {
-			t.Errorf("LIB$FREE_VM(%d) = %#x, want LIB$_BADBLOSIZ", size, r0)
-		}
+	if r0 := freeVM(t, env, 0xFFFFFFFF, addr, 0); r0 != libBadBlockSize {
+		t.Errorf("LIB$FREE_VM(-1) = %#x, want LIB$_BADBLOSIZ", r0)
 	}
 
-	if r0 := freeVM(t, env, 97, addr, 0); r0 != ssNormal {
-		t.Errorf("LIB$FREE_VM = %#x, want SS$_NORMAL", r0)
+	// 96 bytes of the 104-byte block free 96, leaving its last 8 the
+	// program's; freed again, they're LIB$_BADBLOADR.
+	if r0 := freeVM(t, env, 96, addr, 0); r0 != ssNormal {
+		t.Errorf("LIB$FREE_VM(96) = %#x, want SS$_NORMAL", r0)
 	}
 
-	if r0 := freeVM(t, env, 100, addr, 0); r0 != libBadBlockAddress {
+	if r0 := freeVM(t, env, 96, addr, 0); r0 != libBadBlockAddress {
 		t.Errorf("LIB$FREE_VM again = %#x, want LIB$_BADBLOADR", r0)
 	}
 
-	// Without a size, the block's own is used; zone-id holding 0 is the
-	// default zone too.
+	if r0 := freeVM(t, env, 8, addr+96, 0); r0 != ssNormal {
+		t.Errorf("LIB$FREE_VM of the rest = %#x, want SS$_NORMAL", r0)
+	}
+
+	// Without a size, an untagged zone's block's size is read from the
+	// longword at 0, as VMS 7.1 reads it (no-access there, so an access
+	// violation; this fixture's page 0 holds 0, LIB$_BADBLOSIZ). zone-id
+	// holding 0 is the default zone too.
 	b := mustGetVM(t, env, 8, 0)
 	putLongword(t, env, vmAddrCell, b)
 	putLongword(t, env, vmZoneCell, 0)
 
-	if r0 := call(t, env, "LIB$FREE_VM", 0, vmAddrCell, vmZoneCell); r0 != ssNormal {
-		t.Errorf("LIB$FREE_VM without a size = %#x, want SS$_NORMAL", r0)
+	if r0 := call(t, env, "LIB$FREE_VM", 0, vmAddrCell, vmZoneCell); r0 != libBadBlockSize && r0 != ssAccVio {
+		t.Errorf("LIB$FREE_VM without a size = %#x, want SS$_ACCVIO or LIB$_BADBLOSIZ", r0)
 	}
 }
 
@@ -190,12 +196,18 @@ func TestLibSystemZones(t *testing.T) {
 		t.Fatalf("default zone %#x, string zone %#x; want two IDs, in order, each its control block's mark", def, str)
 	}
 
+	// Their attributes are VMS 7.1's (testdata/lib59).
 	for _, c := range []struct {
-		id   uint32
-		name string
-	}{{0, "DEFAULT_ZONE"}, {def, "DEFAULT_ZONE"}, {str, "STRING_ZONE"}} {
-		if s, ok := env.ZoneSettingsOf(c.id); !ok || s.Name != c.name || s.BlockSize != 8 || s.ExtendPages != 128 || !s.ExtendArea {
-			t.Errorf("zone %#x: %+v, %v; want %s, Table 5-3's attributes", c.id, s, ok, c.name)
+		id      uint32
+		name    string
+		extend  uint32
+		initial uint32
+		tags    bool
+	}{{0, "DEFAULT_ZONE", 128, 124, false}, {def, "DEFAULT_ZONE", 128, 124, false}, {str, "STRING_ZONE", 32, 4, true}} {
+		s, ok := env.ZoneSettingsOf(c.id)
+		if !ok || s.Name != c.name || s.BlockSize != 8 || s.ExtendPages != c.extend || s.InitialPages != c.initial ||
+			s.BoundaryTags != c.tags || !s.ExtendArea {
+			t.Errorf("zone %#x: %+v, %v; want %s, VMS 7.1's attributes", c.id, s, ok, c.name)
 		}
 	}
 
@@ -281,7 +293,7 @@ func TestLibCreateVMZone(t *testing.T) {
 	}
 
 	// Not a zone's ID.
-	for _, bad := range []uint32{id + 8, 0x4000, 1} {
+	for _, bad := range []uint32{id + 8, env.DefaultZoneID() + 4} {
 		if r0, _ := getVM(t, env, 8, bad); r0 != libBadBlockAddress {
 			t.Errorf("LIB$GET_VM in zone %#x = %#x, want LIB$_BADBLOADR", bad, r0)
 		}
@@ -314,7 +326,7 @@ func TestLibCreateVMZoneBadArguments(t *testing.T) {
 		free0  = 0x08
 		free1  = 0x10
 		noExt  = 0x40
-		badBit = 0x100
+		badBit = 0x200
 	)
 
 	for _, c := range []struct {
@@ -329,11 +341,8 @@ func TestLibCreateVMZoneBadArguments(t *testing.T) {
 		{"frequent sizes, 17 lists", []int64{3, 17}},
 		{"fixed size 0", []int64{4, 0}},
 		{"fixed size -8", []int64{4, -8}},
-		{"flag bit 8", []int64{1, omit, badBit}},
-		{"both get fills", []int64{1, omit, fill0 | fill1}},
-		{"both free fills", []int64{1, omit, free0 | free1 | tags}},
+		{"flag bit 9", []int64{1, omit, badBit}},
 		{"extend 0", []int64{1, omit, 0, 0}},
-		{"extend 1025", []int64{1, omit, 0, 1025}},
 		{"initial -1", []int64{1, omit, 0, 16, -1}},
 		{"block size 4", []int64{1, omit, 0, 16, 0, 4}},
 		{"block size 24", []int64{1, omit, 0, 16, 0, 24}},
@@ -342,9 +351,6 @@ func TestLibCreateVMZoneBadArguments(t *testing.T) {
 		{"alignment 12", []int64{1, omit, 0, 16, 0, 8, 12}},
 		{"page limit -1", []int64{1, omit, 0, 16, 1, 8, 8, -1}},
 		{"page limit 32768", []int64{1, omit, 0, 16, 1, 8, 8, 32768}},
-		{"page limit without initial", []int64{1, omit, 0, 16, 0, 8, 8, 10}},
-		{"initial past the limit", []int64{1, omit, 0, 16, 11, 8, 8, 10}},
-		{"no extend without initial", []int64{1, omit, noExt}},
 		{"smallest 0", []int64{2, 4, 0, 16, 0, 8, 8, 0, 0}},
 	} {
 		if r0, id := createZone(t, env(t), c.values...); r0 != libInvArg || id != 0xDEADBEEF {
@@ -352,16 +358,36 @@ func TestLibCreateVMZoneBadArguments(t *testing.T) {
 		}
 	}
 
-	// In range: NO_EXTEND ignores extend-size; the algorithms' bounds.
+	// In range, as VMS 7.1 takes them (testdata/lib59): flag bit 8,
+	// both fills of a pair (the fill of 0 wins), an extend size past
+	// 1,024, a page limit or NO_EXTEND without an initial size; the
+	// algorithms' bounds.
 	e := pageFixture(t)
 	for _, values := range [][]int64{
-		{1, omit, noExt, 0, 1},
+		{1, omit, 0x100},
+		{1, omit, fill0 | fill1},
+		{1, omit, free0 | free1 | tags},
+		{1, omit, 0, 1025},
+		{1, omit, 0, 16, 0, 8, 8, 10},
+		{1, omit, noExt},
 		{2, 128},
 		{3, 16},
 		{4, 1},
 		{1, 99, 0, 1024, 1, 512, 512, 32767, omit},
 	} {
 		mustCreateZone(t, e, values...)
+	}
+
+	if s, _ := e.ZoneSettingsOf(mustCreateZone(t, e, 1, omit, fill0|fill1)); s.GetFill != corevms.FillZero {
+		t.Errorf("both get fills: %v, want the fill of 0", s.GetFill)
+	}
+
+	// An initial size past the page limit is LIB$_PAGLIMEXC, with
+	// zone-id written, though no zone is made.
+	if r0, id := createZone(t, e, 1, omit, 0, 16, 11, 8, 8, 10); r0 != libPageLimit || id == 0xDEADBEEF {
+		t.Errorf("initial past the limit: %#x, zone-id %#x; want LIB$_PAGLIMEXC, written", r0, id)
+	} else if _, ok := e.ZoneSettingsOf(id); ok {
+		t.Errorf("initial past the limit made zone %#x", id)
 	}
 }
 
@@ -387,8 +413,10 @@ func TestLibVMFills(t *testing.T) {
 		t.Fatalf("LIB$FREE_VM = %#x", r0)
 	}
 
-	if b := bytesAt(t, e, a, 24); !allBytes(b, 0) {
-		t.Errorf("a freed block holds % X, want 00", b)
+	// Its first 8 bytes are the free space's control words (its size,
+	// then a link), as VMS 7.1 keeps them; the rest hold the fill.
+	if b := bytesAt(t, e, a+8, 16); !allBytes(b, 0) || longword(t, e, a) != 24 {
+		t.Errorf("a freed block holds size %d, then % X; want 24, then 00", longword(t, e, a), b)
 	}
 
 	for _, op := range []string{"LIB$RESET_VM_ZONE", "LIB$DELETE_VM_ZONE"} {
@@ -409,39 +437,56 @@ func TestLibVMFills(t *testing.T) {
 	}
 }
 
-// Boundary tags: each holds the block's size; a block frees without a
-// size; a tag the program changes is LIB$_BADTAGVAL, the block kept.
+// Boundary tags, as VMS 7.1 writes them (testdata/lib59): the first
+// holds the block's size with bit 30 and 2 (allocated), the last its
+// zone; a block frees without a size; freed again, or with bit 30 of its
+// first tag cleared, it's LIB$_BADTAGVAL, the block kept; a changed last
+// tag isn't checked.
 func TestLibVMBoundaryTags(t *testing.T) {
 	e := pageFixture(t)
 	id := mustCreateZone(t, e, 1, omit, 0x01, 16, 0, 8, 4) // tags, block size 8, alignment 4
 
 	a := mustGetVM(t, e, 8, id)
 	b := mustGetVM(t, e, 8, id)
+	c := mustGetVM(t, e, 8, id)
 
-	if b-a != 16 || longword(t, e, a-4) != 16 || longword(t, e, a+8) != 16 {
-		t.Errorf("blocks %d apart, tags %d and %d; want 16 apart, tags 16", b-a, longword(t, e, a-4), longword(t, e, a+8))
+	if b-a != 16 || longword(t, e, a-4) != 0x40000012 || longword(t, e, a+8) != id {
+		t.Errorf("blocks %d apart, tags %#x and %#x; want 16 apart, tags 0x40000012 and %#x",
+			b-a, longword(t, e, a-4), longword(t, e, a+8), id)
 	}
 
 	if r0 := freeVM(t, e, 0, a, id); r0 != ssNormal {
 		t.Errorf("LIB$FREE_VM without a size = %#x", r0)
 	}
 
-	putLongword(t, e, b+8, 0x12345678)
-
-	if r0 := freeVM(t, e, 0, b, id); r0 != libBadTagValue {
-		t.Errorf("LIB$FREE_VM with a changed tag = %#x, want LIB$_BADTAGVAL", r0)
+	if r0 := freeVM(t, e, 0, a, id); r0 != libBadTagValue {
+		t.Errorf("LIB$FREE_VM again = %#x, want LIB$_BADTAGVAL", r0)
 	}
 
-	putLongword(t, e, b+8, 16)
+	putLongword(t, e, b+8, 0x12345678)
 
-	if r0 := freeVM(t, e, 8, b, id); r0 != ssNormal {
+	if r0 := freeVM(t, e, 0, b, id); r0 != ssNormal {
+		t.Errorf("LIB$FREE_VM with a changed last tag = %#x, want SS$_NORMAL", r0)
+	}
+
+	putLongword(t, e, c-4, 0x12)
+
+	if r0 := freeVM(t, e, 0, c, id); r0 != libBadTagValue {
+		t.Errorf("LIB$FREE_VM with a changed first tag = %#x, want LIB$_BADTAGVAL", r0)
+	}
+
+	putLongword(t, e, c-4, 0x40000012)
+
+	if r0 := freeVM(t, e, 8, c, id); r0 != ssNormal {
 		t.Errorf("LIB$FREE_VM with the tag put back = %#x", r0)
 	}
 }
 
 // A fixed-size zone: requests up to its size get its size, larger ones
 // are LIB$_BADBLOSIZ; and a lookaside block freed twice is SS$_NORMAL,
-// where a first fit block freed twice is LIB$_BADBLOADR.
+// its list then giving out that block from then on, as VMS 7.1's does
+// (testdata/lib59), where a first fit block freed twice is
+// LIB$_BADBLOADR.
 func TestLibVMFixedSizeAndDoubleFrees(t *testing.T) {
 	e := pageFixture(t)
 	id := mustCreateZone(t, e, 4, 20)
@@ -467,13 +512,17 @@ func TestLibVMFixedSizeAndDoubleFrees(t *testing.T) {
 		}
 	}
 
-	// The double free left one copy on the list.
-	if x := mustGetVM(t, e, 1, id); x != a {
-		t.Errorf("next block %X, want the freed %X", x, a)
+	// The double free linked the block to itself.
+	for range 2 {
+		if x := mustGetVM(t, e, 1, id); x != a {
+			t.Errorf("next block %X, want the freed %X", x, a)
+		}
 	}
 
-	if x := mustGetVM(t, e, 1, id); x == a {
-		t.Errorf("the freed block came back twice")
+	putLongword(t, e, vmZoneCell, id)
+
+	if r0 := call(t, e, "LIB$VERIFY_VM_ZONE", vmZoneCell); r0 != libBadZone {
+		t.Errorf("LIB$VERIFY_VM_ZONE of the damaged zone = %#x, want LIB$_BADZONE", r0)
 	}
 
 	first := mustCreateZone(t, e)
@@ -485,8 +534,8 @@ func TestLibVMFixedSizeAndDoubleFrees(t *testing.T) {
 	}
 }
 
-// The page limit is LIB$_PAGLIMEXC; NO_EXTEND past the initial area is
-// LIB$_INSVIRMEM.
+// The page limit is LIB$_PAGLIMEXC, and so is NO_EXTEND past the
+// initial area, as VMS 7.1 answers (testdata/lib59).
 func TestLibVMPageLimit(t *testing.T) {
 	e := pageFixture(t)
 	limited := mustCreateZone(t, e, 1, omit, 0, 16, 1, 8, 8, 2)
@@ -500,8 +549,8 @@ func TestLibVMPageLimit(t *testing.T) {
 	fixed := mustCreateZone(t, e, 1, omit, 0x40, omit, 1)
 	mustGetVM(t, e, 400, fixed)
 
-	if r0, _ := getVM(t, e, 100, fixed); r0 != libInsVirMem {
-		t.Errorf("past a NO_EXTEND zone's area: %#x, want LIB$_INSVIRMEM", r0)
+	if r0, _ := getVM(t, e, 200, fixed); r0 != libPageLimit {
+		t.Errorf("past a NO_EXTEND zone's area: %#x, want LIB$_PAGLIMEXC", r0)
 	}
 }
 
@@ -510,14 +559,14 @@ func TestLibVMPageLimit(t *testing.T) {
 func TestLibResetDeleteVMZone(t *testing.T) {
 	e := pageFixture(t)
 
-	// The zone's initial area is the pool's two pages after the zones'
-	// control blocks' page.
+	// The zone's initial area is the pool's two pages after the control
+	// zone's first area, four pages from the pool's start.
 	id := mustCreateZone(t, e, 1, omit, 0, 16, 2)
 	a := mustGetVM(t, e, 100, id)
 	mustGetVM(t, e, 200, id)
 
-	if a != 0x4240 {
-		t.Errorf("the zone's first block at %#x, want 0x4240", a)
+	if a != 0x4A00 {
+		t.Errorf("the zone's first block at %#x, want 0x4A00", a)
 	}
 
 	end := e.RegionSize[0]
@@ -554,8 +603,8 @@ func TestLibResetDeleteVMZone(t *testing.T) {
 	}
 
 	// Its pages are the pool's again.
-	if p := mustGetPages(t, e, 2); p != 0x4200 {
-		t.Errorf("2 pages at %#x, want the deleted zone's 0x4200", p)
+	if p := mustGetPages(t, e, 2); p != 0x4A00 {
+		t.Errorf("2 pages at %#x, want the deleted zone's 0x4A00", p)
 	}
 
 	// The default zone can't be reset or deleted, and its blocks

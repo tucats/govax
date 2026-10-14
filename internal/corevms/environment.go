@@ -149,9 +149,10 @@ type Environment struct {
 	zones       map[uint32]*heapZone
 	zoneControl *vmheap.Zone
 
-	// zoneSeq is how many zones the image has made, numbering each
-	// (heapZone's seq).
-	zoneSeq uint32
+	// vmCounts is the image's heap statistics (VMStatistics), and cHeap
+	// the C library's heap (memory.go's CAllocate).
+	vmCounts VMCounts
+	cHeap    *vmheap.Zone
 
 	// jsbCall is set while a JSB routine's shim runs (JSBShim), and
 	// jsbSP is SP as the JSB left it, the return address on top: a

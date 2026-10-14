@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/tucats/govax/internal/dclcmd"
+	"github.com/tucats/govax/internal/registers"
 )
 
 // The Phase 59 oracle (docs/PHASE-59, subtask 10): testdata/lib59's
@@ -28,18 +29,107 @@ var lib59Dir = filepath.Join("..", "..", "testdata", "lib59")
 
 // expectedLib59Differences are the lines of VMS's output govax doesn't
 // reproduce, each with why: the line VMS printed, by its case's name and
-// the line's first word.
-var expectedLib59Differences = map[string]string{}
+// the line's first word ("|" for a zone report's line). A line a routine
+// wrote to SYS$OUTPUT itself, between "{{" and "}}", is its case's,
+// whose line follows.
+var expectedLib59Differences = map[string]string{
+	// A call with too few arguments reads its next argument's address
+	// past the argument list: on VMS a longword of the stack's, whose
+	// fault shows that address, in govax 0.
+	"CZ no arguments/CZ":         "the stack's contents",
+	"CUZ no arguments/CUZ":       "the stack's contents",
+	"STAT_VM 1 argument/STAT_VM": "the stack's contents",
+	"GV 1 argument/GV":           "the stack's contents",
+
+	// The user argument is the real zone's ID, an address, which the
+	// report shows in decimal (so the mask doesn't cover it).
+	"SVZ monitor level 3/|": "the real zone's address, in decimal",
+
+	// A damaged block's dump shows its bytes as text too: its links,
+	// addresses, are characters the mask doesn't cover.
+	"SVZ X5 level 3/|": "a list link's address as text",
+	"SVZ X6 level 3/|": "a list link's address as text",
+	"SVZ X8 level 3/|": "a free-list link's address as text",
+
+	// Where a C block that has to move goes, and the C heap's place in
+	// P0, are VMS's own (docs/PHASE-59, subtask 10).
+	"VM_REALLOC of 0/B_M8-B_M1:":                     "the C heap's layout",
+	"the C blocks and the default zone's/B_M1-B_D1:": "the C heap's place in P0",
+	"GV default after the C blocks/B_D4-B_M3:":       "the C heap's place in P0",
+
+	// govax refuses to free pages a zone's area holds (the zone's
+	// blocks are in them); VMS frees them.
+	"FP X9's area page/FP": "a zone's pages refused",
+
+	// The heap's totals: every count each case shows matches, but VMS
+	// counts some of the RTL's own work that the run doesn't show one by
+	// one (docs/PHASE-59, subtask 10): its totals differ from govax's by
+	// a call or two and a few bytes and pages.
+	"STAT_VM 1/V:":                    "the heap's totals",
+	"SHOW_VM to SYS$OUTPUT/197":       "the heap's totals",
+	"SHOW_VM 4 to SYS$OUTPUT/66":      "the page totals",
+	"SHOW_VM omitted/|":               "the heap's totals",
+	"SHOW_VM 0/|":                     "the heap's totals",
+	"SHOW_VM 1/|":                     "the heap's totals",
+	"SHOW_VM 2/|":                     "the heap's totals",
+	"SHOW_VM 3/|":                     "the heap's totals",
+	"SHOW_VM 4/|":                     "the page totals",
+	"SHOW_VM 5/|":                     "the page totals",
+	"SHOW_VM 7/|":                     "the page totals",
+	"SHOW_VM 0 action fails/|":        "the heap's totals",
+	"SHOW_VM 4 action fails/|":        "the page totals",
+	"SHOW_VM user argument omitted/|": "the heap's totals",
+	"SHOW_VM 4 arguments/|":           "the heap's totals",
+}
+
+// lib59Owners returns each line's case: the case whose line it follows,
+// or, for a line between "{{" and "}}", the case whose line follows the
+// "}}" (a routine's own output comes before its case's line).
+func lib59Owners(lines []string) []string {
+	owners := make([]string, len(lines))
+	caseName := ""
+
+	for i, line := range lines {
+		if name, _, ok := strings.Cut(line, " R0="); ok && !strings.HasPrefix(line, " ") {
+			caseName = name
+		}
+
+		owners[i] = caseName
+	}
+
+	for i := 0; i < len(lines); i++ {
+		if lines[i] != "{{" {
+			continue
+		}
+
+		end := i
+		for end < len(lines) && lines[end] != "}}" {
+			end++
+		}
+
+		if end+1 < len(lines) {
+			for k := i; k <= end; k++ {
+				owners[k] = owners[end+1]
+			}
+		}
+
+		i = end
+	}
+
+	return owners
+}
 
 // hexWord is an 8-digit hex number in a zone report's line.
 var hexWord = regexp.MustCompile(`\b[0-9A-F]{8}\b`)
 
 // runLib59 assembles, links, and runs lib59.mar as lib59.com does on
-// VMS.
+// VMS. A HALT in user mode is a privileged instruction fault, as on a
+// VAX, not govax's debugging stop: a case calls data as a routine.
 func runLib59(t *testing.T) (uint32, string) {
 	t.Helper()
 
 	c := newBootableConsole(t)
+	c.CPU.SetDebug(c.CPU.Debug() &^ registers.DebugUserHalt)
 	out := &bytes.Buffer{}
 	c.Out = out
 	dir := t.TempDir()
@@ -93,6 +183,13 @@ func TestLib59Oracle(t *testing.T) {
 		t.Errorf("the program's status = %#x, want 1", r0)
 	}
 
+	// LIB59_OUT names a file for govax's output, for study.
+	if path := os.Getenv("LIB59_OUT"); path != "" {
+		if err := os.WriteFile(path, []byte(out), 0o644); err != nil {
+			t.Fatal(err)
+		}
+	}
+
 	want, err := os.ReadFile(filepath.Join(lib59Dir, "vax", "lib59-vax.txt"))
 	if errors.Is(err, os.ErrNotExist) {
 		t.Logf("govax's output:\n%s", out)
@@ -105,7 +202,7 @@ func TestLib59Oracle(t *testing.T) {
 
 	gotLines := maskLib59(strings.Split(out, "\n"))
 	wantLines := maskLib59(strings.Split(strings.ReplaceAll(string(want), "\r", ""), "\n"))
-	caseName := ""
+	owners := lib59Owners(wantLines)
 	seen := map[string]bool{}
 
 	for i := range max(len(gotLines), len(wantLines)) {
@@ -114,13 +211,10 @@ func TestLib59Oracle(t *testing.T) {
 			g = gotLines[i]
 		}
 
-		if i < len(wantLines) {
-			w = wantLines[i]
-		}
+		caseName := ""
 
-		// A case's line starts in column 1, its name before " R0=".
-		if name, _, ok := strings.Cut(w, " R0="); ok && !strings.HasPrefix(w, " ") {
-			caseName = name
+		if i < len(wantLines) {
+			w, caseName = wantLines[i], owners[i]
 		}
 
 		// A value that varies: compare its name only.

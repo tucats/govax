@@ -215,14 +215,16 @@ never had.
   output, `vax/lib58-vax.txt`, line for line but for
   `expectedLib58Differences`.
 - `testdata/lib59/` — Phase 59's probe of LIBRTL's memory routines
-  (README.md): `gen.go` writes `lib59.mar` (526 cases: pages, zone
+  (README.md): `gen.go` writes `lib59.mar` (522 cases: pages, zone
   attributes, each algorithm, user zones, page routines, statistics,
   FIND/SHOW/VERIFY, the VM_MALLOC family, and last the cases that may
   damage a zone), `lib59.com`, and `exchange.cmd`. Addresses show only
   as differences, page offsets, and fill maps; the zone reports' lines
   (`  |`, and SYS$OUTPUT's between `{{` and `}}`) are compared with
-  8-digit hex masked. `TestLib59Oracle` skips until VMS's output is in
-  `vax/lib59-vax.txt`.
+  8-digit hex masked. `TestLib59Oracle` matches VMS V7.1's run,
+  `vax/lib59-vax.txt`, but for `expectedLib59Differences` (the heap's
+  totals among them); VMS hung in the case after the last, a VERIFY of
+  a zone whose control block was changed, so the program ends there.
 - `testdata/probe49/` — Phase 49's VMS probe in three rounds (`probe6`,
   `probe6b`, `probe6c`; README.md has each round's answers), run by
   `TestProbe6*`; `testdata/rms49/` and `testdata/sec49/` are the phase's
@@ -381,17 +383,26 @@ expect adjustment as phases land):
   (`CreateUserZone`, `librtl/vmuser.go`'s LIB$CREATE_USER_VM_ZONE) are a
   control block whose routines the heap routines tail-call.
   Subtask 7: LIB$STAT_VM and LIB$SHOW_VM (`librtl/vmstat.go`): the
-  heap's counts per image in librtl, the pages' the pool's own
-  (`PagePool.Calls`, `Environment.PageStatistics`).
+  heap's counts (`corevms.Environment.VMStatistics`), the pages' the
+  pool's own (`PagePool.Calls`, `Environment.PageStatistics`).
   Subtask 8: LIB$VM_MALLOC, VM_FREE, VM_CALLOC, VM_REALLOC
-  (`librtl/vmmalloc.go`): C's malloc family on the default zone, by
-  value with the result in R0 (unconfirmed; the `_P` forms are stubs).
+  (`librtl/vmmalloc.go`): C's malloc family, by value with the result
+  in R0, on a hidden C heap (`corevms.CAllocate`; the `_P` forms are
+  stubs).
   Subtask 9: LIBRTL2's FIND_VM_ZONE, SHOW_VM_ZONE, VERIFY_VM_ZONE
   (`librtl/vmshow.go`, over `corevms/vmshow.go` and vmheap's
-  `report.go`): zones in the order made (the RTL's two first), and the
-  checks of what a program can damage, a control block's longword and
-  the free fill (the free space holds it throughout: tags filled on
-  free, alignment padding by `Zone.OnPadding`).
+  `report.go`), and the checks of what a program can damage, a control
+  block's longword, the free fill, a looped lookaside list.
+  Subtask 10: VMS 7.1's answers (`testdata/lib59`): areas without an
+  in-area header; tagged blocks laid out as VMS's (`Zone.slot`); an
+  untagged zone's free trusts its size (`FreeRange`); a lookaside
+  double free loops the list (`FreeAgain`); freed space stays free
+  space; the freed-bytes count (`FreedBytes`); frequent sizes' list
+  take-over; the pool grows by 128 pages (`PagePool.Chunk`); in corevms
+  control blocks of VMS's sizes from a 4-page first fit control zone,
+  whose layout is FIND's order, the system zones' VMS attributes, free
+  space's control words written to memory (`freeWords`), and the
+  statistics' counting rules.
 - `internal/console` — the front end (Phase 08; since Phase 52 only
   that): a `Console` embeds a `*machine.Machine` and a
   `*dclshell.Interpreter`, and its `Dispatcher` routes each line to the

@@ -2,8 +2,6 @@ package corevms
 
 import (
 	"testing"
-
-	"github.com/tucats/govax/internal/vmheap"
 )
 
 // heapFixture is an environment whose P0 high-water mark is at 0x1000,
@@ -54,13 +52,14 @@ func TestMallocFirstBlock(t *testing.T) {
 	addr := malloc(t, env, 64)
 
 	// The first page at the P0 high-water mark holds the RTL's zones'
-	// control blocks; the default zone's first area starts after it,
-	// its first block after the area's control block.
-	if want := uint32(0x1000 + pageSize + vmheap.AreaHeader); addr != want {
+	// control blocks; the default zone's first area starts after it, its
+	// first block at its start (the area's control block is apart).
+	if want := uint32(0x1000 + pageSize); addr != want {
 		t.Errorf("malloc(64) = %#x, want %#x", addr, want)
 	}
 
-	// The area is the default zone's 128 pages, taken by $EXPREG's rule.
+	// The page pool takes 128 pages by $EXPREG's rule, the default
+	// zone's 124-page initial area among them.
 	if want := uint32(0x1000 + 129*pageSize); env.RegionSize[0] != want {
 		t.Errorf("RegionSize[0] = %#x, want %#x", env.RegionSize[0], want)
 	}

@@ -34,7 +34,10 @@
 // rules and the accounting; the tests run it after every operation.
 package vmheap
 
-import "errors"
+import (
+	"errors"
+	"fmt"
+)
 
 // PageSize is the VAX page: 512 bytes.
 const PageSize = 512
@@ -66,8 +69,15 @@ var (
 	// ErrFreedAgain is a block freed while it waits on a lookaside list,
 	// freed already. The zone is left as it was. The 5.0 LIB$ manual
 	// (chapter 6) says VMS returns SS$_NORMAL then, its lists damaged;
-	// the RTL returns SS$_NORMAL too, with nothing damaged.
+	// the RTL returns SS$_NORMAL too, and damages the list as VMS does
+	// (Zone.FreeAgain).
 	ErrFreedAgain = errors.New("vmheap: block freed already")
+
+	// ErrDoubleFree is bytes freed that are free already, in an area's
+	// free space: ErrBadAddress to the RTL (LIB$_BADBLOADR), but a call
+	// VMS 7.1 counts, where it doesn't count a free of bytes outside the
+	// zone's areas (testdata/lib59). It wraps ErrBadAddress.
+	ErrDoubleFree = fmt.Errorf("%w: freed already", ErrBadAddress)
 )
 
 // span is the address range [start, end): start is its first byte, end

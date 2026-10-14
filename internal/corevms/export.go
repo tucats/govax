@@ -71,27 +71,43 @@ func (env *Environment) ConditionToReturn(sig, mech uint32) (uint32, error) {
 func (env *Environment) AllocateVM(size uint32) (uint32, error) {
 	z, err := env.defaultZone()
 
-	return allocate(z, err, size), nil
+	return env.allocate(z, err, size), nil
 }
 
 // FreeVM frees the default zone's block that starts at addr, reporting
 // false if no block starts there.
 func (env *Environment) FreeVM(addr uint32) bool {
-	return release(env.defaultHeap, addr)
+	_, ok := env.release(env.defaultHeap, addr)
+
+	return ok
 }
 
 // AllocateString allocates size bytes of the image's string zone for a
-// dynamic string's text, as AllocateVM does the default zone's.
+// dynamic string's text, as AllocateVM does the default zone's. VMS 7.1
+// counts it in LIB$STAT_VM's figures as a LIB$GET_VM of its bytes
+// (testdata/lib59).
 func (env *Environment) AllocateString(size uint32) (uint32, error) {
 	z, err := env.stringZone()
 
-	return allocate(z, err, size), nil
+	addr := env.allocate(z, err, size)
+	if addr != 0 {
+		env.vmCounts.Gets++
+		env.vmCounts.Bytes += z.zone.Nominal(max(size, 1))
+	}
+
+	return addr, nil
 }
 
 // FreeString frees the string zone's block that starts at addr,
-// reporting false if no block starts there.
+// reporting false if no block starts there. VMS 7.1 takes its bytes off
+// LIB$STAT_VM's figures, but doesn't count the call (testdata/lib59).
 func (env *Environment) FreeString(addr uint32) bool {
-	return release(env.stringHeap, addr)
+	n, ok := env.release(env.stringHeap, addr)
+	if ok {
+		env.vmCounts.Bytes -= n
+	}
+
+	return ok
 }
 
 // DefaultZoneID and StringZoneID return the IDs of the image's default

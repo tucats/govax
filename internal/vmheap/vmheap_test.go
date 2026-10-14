@@ -363,8 +363,8 @@ func TestZoneRoundingAndAlignment(t *testing.T) {
 	b := mustAllocate(t, z, 9)
 	c := mustAllocate(t, z, 16)
 
-	if a%PageSize != AreaHeader {
-		t.Errorf("first block at offset %d in its page, want %d (after the area's control block)", a%PageSize, AreaHeader)
+	if a%PageSize != 0 {
+		t.Errorf("first block at offset %d in its page, want 0 (the area's control block is apart)", a%PageSize)
 	}
 
 	if b-a != 8 || c-b != 16 {
@@ -431,11 +431,12 @@ func TestZoneMergesBothNeighbors(t *testing.T) {
 		t.Fatalf("free spans %v, want one, %X-%X", ar.free, a, d)
 	}
 
-	// Freeing the last block returns everything to the unallocated end.
+	// Freeing the last block makes the area's blocks one free span,
+	// which stays free space, as VMS 7.1 keeps it.
 	mustFree(t, z, d)
 
-	if len(ar.free) != 0 || ar.top != ar.first {
-		t.Errorf("after freeing all: %d free spans, top %X; want none, %X", len(ar.free), ar.top, ar.first)
+	if len(ar.free) != 1 || ar.free[0] != (span{ar.base, ar.top}) {
+		t.Errorf("after freeing all: free spans %v, top %X; want one, %X-%X", ar.free, ar.top, ar.base, ar.top)
 	}
 }
 
@@ -487,8 +488,8 @@ func TestZoneAreas(t *testing.T) {
 
 	// A request larger than ExtendPages gets an area of its own size.
 	big := mustAllocate(t, z, 10*PageSize)
-	if z.Pages() < 11 {
-		t.Errorf("zone has %d pages after a 10-page block, want at least 11", z.Pages())
+	if z.Pages() < 10 {
+		t.Errorf("zone has %d pages after a 10-page block, want at least 10", z.Pages())
 	}
 
 	// The next area's pages adjoin the first, so ExtendArea appends them.
@@ -595,9 +596,9 @@ func TestZoneRandomWorkload(t *testing.T) {
 		}
 
 		for _, a := range z.areas {
-			if len(a.free) != 0 || a.top != a.first {
-				t.Errorf("%+v: area %X not empty after freeing all: %d spans, top %X, first %X",
-					attr, a.base, len(a.free), a.top, a.first)
+			if a.top != a.base && (len(a.free) != 1 || a.free[0] != (span{a.base, a.top})) {
+				t.Errorf("%+v: area %X not one free span after freeing all: %v, top %X",
+					attr, a.base, a.free, a.top)
 			}
 		}
 

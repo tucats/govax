@@ -90,20 +90,27 @@ NAME:	.ASCID	/PROBE/
 	// The zone IDs are the image's addresses: masked.
 	got := regexp.MustCompile(`Id = [0-9A-F]{8}`).ReplaceAllString(out, "Id = XXXXXXXX")
 
-	const want = `Zone Id = XXXXXXXX,  Zone name = "DEFAULT_ZONE"
-Zone Id = XXXXXXXX,  Zone name = "STRING_ZONE"
-Zone Id = XXXXXXXX,  Zone name = "PROBE"
-Zone Id = XXXXXXXX,  Zone name = "PROBE"
-    Algorithm = LIB$K_VM_FIRST_FIT
-    Flags = 00000000
-    Initial size =       0 pages     Current size = 0 pages in 0 areas
-    Extend size  =      16 pages     Page limit   = None
-    Requests are rounded up to a multiple of 8 bytes,
-    naturally aligned on 8 byte boundaries
-    0 bytes have been freed and not yet reallocated
-    128 bytes are used for zone and area control blocks, or 100.0% overhead
-Zone Id = XXXXXXXX,  Zone name = "PROBE"
-`
+	const want = "Zone Id = XXXXXXXX,  Zone name = \"DEFAULT_ZONE\"\n" +
+		"Zone Id = XXXXXXXX,  Zone name = \"STRING_ZONE\"\n" +
+		"Zone Id = XXXXXXXX,  Zone name = \"PROBE\"\n" +
+		"Zone Id = XXXXXXXX,  Zone name = \"PROBE\"\n" +
+		"\n" +
+		"\tAlgorithm = LIB$K_VM_FIRST_FIT\n" +
+		"\n" +
+		"\tFlags = 00000000\n" +
+		"\n" +
+		"\tInitial size =      16 pages     Current size = 0 pages in 0 areas\n" +
+		"\tExtend size  =      16 pages     Page limit   = None\n" +
+		"\n" +
+		"\tRequests are rounded up to a multiple of 8 bytes,\n" +
+		"\tnaturally aligned on 8 byte boundaries\n" +
+		"\n" +
+		"\t0 bytes have been freed and not yet reallocated\n" +
+		"\n" +
+		"\t88 bytes are used for zone and area control blocks, or 100.0% overhead\n" +
+		"\n" +
+		"Zone Id = XXXXXXXX,  Zone name = \"PROBE\"\n"
+
 	if got != want {
 		t.Errorf("output:\n%s\nwant:\n%s", got, want)
 	}

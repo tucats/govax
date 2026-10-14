@@ -27,11 +27,17 @@ var (
 	vmTailLarge    = vmsdef.LibrarySymbols["LIB$M_VM_TAIL_LARGE"]
 )
 
-// vmFlagsDefined are the flag bits VMS 7.3 defines (the 5.0 manual
-// stops at EXTEND_AREA, bit 5; the VSI manual describes NO_EXTEND and
-// TAIL_LARGE, bits 6 and 7); any other bit is LIB$_INVARG.
-var vmFlagsDefined = vmBoundaryTags | vmGetFill0 | vmGetFill1 | vmFreeFill0 | vmFreeFill1 |
-	vmExtendArea | vmNoExtend | vmTailLarge
+// vmFlagsAccepted are the flag bits VMS 7.1 accepts (testdata/lib59):
+// bits 0 to 8. Bits 6 and 7 are NO_EXTEND and TAIL_LARGE (the VSI
+// manual's; the 5.0 manual stops at EXTEND_AREA, bit 5), which act but
+// aren't shown by LIB$SHOW_VM_ZONE; bit 8 does nothing govax knows of.
+// Any other bit is LIB$_INVARG.
+const vmFlagsAccepted = 0x1FF
+
+// vmMaxCreateArgs is the most arguments LIB$CREATE_VM_ZONE takes on VMS
+// 7.1: thirteen, get-page twelfth and free-page thirteenth, as the VSI
+// manual has them (testdata/lib59: fourteen is LIB$_WRONUMARG).
+const vmMaxCreateArgs = 13
 
 // algorithms are the manual's algorithm codes, each with the bounds of
 // its algorithm-argument (0 and 0: none, ignored).
@@ -54,37 +60,36 @@ var errBadZoneArgument = errors.New("zone attribute out of range")
 //	LIB$CREATE_VM_ZONE zone-id [,algorithm] [,algorithm-argument]
 //	    [,flags] [,extend-size] [,initial-size] [,block-size]
 //	    [,alignment] [,page-limit] [,smallest-block-size] [,zone-name]
-//	    [,number-of-areas] [,get-page] [,free-page]
+//	    [,get-page] [,free-page]
 //
 // It makes a zone and writes its ID to zone-id. Every argument but
 // zone-id is optional, a longword by reference but for zone-name (a
-// string of any class). Defaults and ranges, the manual's: algorithm 1
-// to 4, first fit by default; algorithm-argument required for the other
-// three (quick fit's lists 1 to 128, frequent sizes' 1 to 16, a fixed
-// size above 0); extend-size 1 to 1,024 pages, 16 by default, unused
-// with NO_EXTEND; initial-size 0 or more pages, 0 (no area until the
-// first LIB$GET_VM) by default; block-size a power of 2 from 8 to 512,
-// alignment from 4 to 512, both 8 by default; page-limit 0 (none) to
-// 32,767 pages; smallest-block-size above 0, the block size by default.
-// Anything out of range is LIB$_INVARG, and so are, by govax's choice
-// (unconfirmed): a flag bit VMS doesn't define, both fills of a pair, a
-// page limit or NO_EXTEND without an initial size, and an initial size
-// past the page limit. No room for the initial area is LIB$_INSVIRMEM.
-// After an error no zone is made.
+// string of any class) and the procedures. The rules are VMS 7.1's
+// (testdata/lib59): algorithm 1 to 4, first fit by default;
+// algorithm-argument required for the other three (quick fit's lists 1
+// to 128, frequent sizes' 1 to 16, a fixed size above 0) and ignored for
+// first fit; flags bits 0 to 8, both fills of a pair being the fill of
+// 0; extend-size above 0 pages, 16 by default; initial-size 0 or more
+// pages, none by default (no area until the first LIB$GET_VM);
+// block-size a power of 2 from 8 to 512, alignment from 4 to 512, both 8
+// by default; page-limit 0 (none) to 32,767 pages, an initial size past
+// it LIB$_PAGLIMEXC (zone-id written, though no zone is made);
+// smallest-block-size above 0, the block size by default, rounded up to
+// a multiple of it. Anything out of range is LIB$_INVARG; more than 13
+// arguments LIB$_WRONUMARG. No room for the initial area is
+// LIB$_INSVIRMEM. After an error no zone is made.
 //
 // get-page and free-page are procedures (entry masks' addresses, by
-// value) the zone calls for its areas instead of LIB$GET_VM_PAGE and
-// LIB$FREE_VM_PAGE, with their arguments; 0 or omitted is those routines
-// (corevms's ZoneSettings). Where they are in the argument list the
-// manuals disagree: the 5.0 manual has number-of-areas twelfth (nothing
-// says what it does; ignored), get-page thirteenth, and free-page
-// fourteenth, and the VSI manual no number-of-areas, get-page twelfth and
-// free-page thirteenth. govax takes the 5.0 manual's places when the call
-// has 14 arguments and the VSI manual's otherwise (unconfirmed: which
-// VMS 7.3 has is a probe question). A zone with an initial size calls
-// its get-page routine here; a failure status it returns is
-// LIB$CREATE_VM_ZONE's.
+// value) the zone calls instead of LIB$GET_VM_PAGE and LIB$FREE_VM_PAGE,
+// with their arguments; 0 or omitted is those routines (corevms's
+// ZoneSettings). A zone with a get-page routine calls it here for its
+// control block's page and its initial area; a failure status it
+// returns is LIB$CREATE_VM_ZONE's.
 func libCreateVMZone(env *corevms.Environment, argv []uint32) (uint32, error) {
+	if len(argv) > vmMaxCreateArgs {
+		return libWroNumArg, nil
+	}
+
 	settings, err := zoneSettings(env, argv)
 
 	switch {
@@ -95,17 +100,23 @@ func libCreateVMZone(env *corevms.Environment, argv []uint32) (uint32, error) {
 	}
 
 	settings.GetPage, settings.FreePage = arg(argv, 11), arg(argv, 12)
-	if len(argv) >= 14 {
-		settings.GetPage, settings.FreePage = arg(argv, 12), arg(argv, 13)
-	}
 
-	// Its initial area, or its deletion after an error below, calls the
-	// program's routines: that needs a goroutine of the routine's own.
+	// Its control block, initial area, or deletion after an error below
+	// calls the program's routines: that needs a goroutine of the
+	// routine's own.
 	if (settings.GetPage != 0 || settings.FreePage != 0) && !env.CallingBack() {
 		return env.RunCallingBack("LIB$CREATE_VM_ZONE", libCreateVMZone, argv)
 	}
 
 	id, err := env.CreateZone(settings)
+	if errors.Is(err, vmheap.ErrPageLimit) && id != 0 {
+		if err := env.Memory().StoreLongword(env.CPU(), arg(argv, 0), id); err != nil {
+			return memoryFault(env, writing(err))
+		}
+
+		return libPageLimit, nil
+	}
+
 	if err != nil {
 		return vmFailure(env, err)
 	}
@@ -177,9 +188,7 @@ func zoneSettings(env *corevms.Environment, argv []uint32) (corevms.ZoneSettings
 	}
 
 	flags := uint32(value(2, 0))
-	if flags&^vmFlagsDefined != 0 ||
-		flags&(vmGetFill0|vmGetFill1) == vmGetFill0|vmGetFill1 ||
-		flags&(vmFreeFill0|vmFreeFill1) == vmFreeFill0|vmFreeFill1 {
+	if flags&^vmFlagsAccepted != 0 {
 		return s, errBadZoneArgument
 	}
 
@@ -194,18 +203,13 @@ func zoneSettings(env *corevms.Environment, argv []uint32) (corevms.ZoneSettings
 	blockSize, alignment := value(5, 8), value(6, 8)
 	limit, smallest := value(7, 0), value(8, blockSize)
 
-	if !s.NoExtend && (extend < 1 || extend > 1024) ||
-		initial < 0 ||
+	if extend < 1 || initial < 0 ||
 		!powerOf2Within(blockSize, 8, 512) || !powerOf2Within(alignment, 4, 512) ||
-		limit < 0 || limit > 32767 || limit > 0 && (initial == 0 || initial > limit) ||
-		s.NoExtend && initial == 0 ||
-		smallest <= 0 {
+		limit < 0 || limit > 32767 || smallest <= 0 {
 		return s, errBadZoneArgument
 	}
 
-	if !s.NoExtend {
-		s.ExtendPages = uint32(extend)
-	}
+	s.ExtendPages = uint32(extend)
 
 	s.InitialPages, s.PageLimit = uint32(initial), uint32(limit)
 	s.BlockSize, s.Alignment = uint32(blockSize), uint32(alignment)

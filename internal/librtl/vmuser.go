@@ -2,7 +2,6 @@ package librtl
 
 import (
 	"github.com/tucats/govax/internal/corevms"
-	"github.com/tucats/govax/internal/registers"
 )
 
 // User-defined zones: LIB$CREATE_USER_VM_ZONE, and the calls of the
@@ -75,36 +74,19 @@ func userRoutine(env *corevms.Environment, routine uint32, args ...uint32) (uint
 	return tailCall(env, routine, args...)
 }
 
-// deleteUserZone is LIB$DELETE_VM_ZONE of a user-defined zone: the zone
-// is forgotten and its delete routine called, its status
-// LIB$DELETE_VM_ZONE's. The zone is gone whatever the routine returns
-// (unconfirmed). Its control block goes with it, so the routine is given
-// the address of a copy of the user argument, below SP with the argument
-// list (unconfirmed: VMS's address is a probe case). A zone without a
-// delete routine is LIB$_INVOPEZON, and stays.
+// deleteUserZone is LIB$DELETE_VM_ZONE of a user-defined zone, as VMS
+// 7.1 does it (testdata/lib59): the zone is forgotten, then its delete
+// routine called with the address of the user argument in its control
+// block (freed, but not yet reused), its status LIB$DELETE_VM_ZONE's. A
+// zone without a delete routine is gone too, the status LIB$_INVOPEZON.
 func deleteUserZone(env *corevms.Environment, zone uint32, u corevms.UserZone, argAddr uint32) (uint32, error) {
-	if u.Delete == 0 {
-		return libInvOpeZon, nil
-	}
-
-	mem, cpu := env.Memory(), env.CPU()
-
-	value, err := mem.LoadLongword(cpu, argAddr)
-	if err != nil {
-		return memoryFault(env, err)
-	}
-
-	copied := cpu.GPR(registers.SP) - 4
-
-	if err := mem.StoreLongword(cpu, copied, value); err != nil {
-		return memoryFault(env, writing(err))
-	}
-
-	cpu.SetGPR(registers.SP, copied)
-
 	if err := env.DeleteUserZone(zone); err != nil {
 		return vmFailure(env, err)
 	}
 
-	return tailCall(env, u.Delete, copied)
+	if u.Delete == 0 {
+		return libInvOpeZon, nil
+	}
+
+	return tailCall(env, u.Delete, argAddr)
 }

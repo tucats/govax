@@ -1,7 +1,6 @@
 # Phase 59 — LIB$ virtual memory zones
 
-**Status:** in progress (subtasks 1 to 9 done 2026-10-14; subtask 10's
-program written, its VMS run pending).
+**Status:** in progress (subtasks 1 to 10 done 2026-10-14).
 Needs Phases 53, 54, and 58 (callbacks, for user-defined zones). Part
 of the LIB$ program laid out in `PHASE-53 - RTL LIB support.md` (Part
 A).
@@ -679,7 +678,7 @@ VERIFY), and `vmmalloc.go`. `dynstr.go` allocates in the string zone.
 9. **LIBRTL2's zone routines**: FIND_VM_ZONE, SHOW_VM_ZONE,
    VERIFY_VM_ZONE (offsets known). **Done** 2026-10-14.
 10. **The program** (`testdata/lib59/`), its console test, and the VMS
-    probe; govax changed to its answers.
+    probe; govax changed to its answers. **Done** 2026-10-14.
 11. **Close-out**: DEVIATIONS.md records the heap's change from the
     eVAX port.
 
@@ -1055,3 +1054,110 @@ VERIFY), and `vmmalloc.go`. `dynstr.go` allocates in the string zone.
   called: linking DECC$SHR would activate the C RTL with the program,
   which may make zones before the first case; a program of its own can
   look at it later. The test skips until `vax/lib59-vax.txt` exists.
+- **2026-10-14** — Subtask 10, part 2: the VMS run (OpenVMS V7.1 on
+  simh's VAX 8600; `vax/lib59-vax.txt`, `vax/lib59.log`), and govax
+  changed to its answers. The run stopped in LIB$VERIFY_VM_ZONE of a
+  zone whose control block's first longword the program had changed
+  (it ran on without end), so the program ends before that case (522
+  cases). `TestLib59Oracle` now matches every line but those in
+  `expectedLib59Differences` (stack contents read past an argument list,
+  an address shown in decimal, damaged blocks' links shown as text, the
+  C heap's place, FREE_VM_PAGE of a zone's page, and the heap's
+  totals). What VMS settled:
+  - **Zone control blocks**: a zone's is 80 bytes, with 8 for each
+    quick fit list, 16 for each frequent sizes list, 8 for a fixed size
+    zone, and its name as a counted string rounded to a quadword; a
+    user zone's 96 and its name, its user argument at offset 72 (the
+    address its routines get). They're in a zone of the RTL's own,
+    first fit in 4-page areas, the latest area searched first, and
+    LIB$FIND_VM_ZONE finds the zones in that layout's order (the RTL's
+    two first): a zone made after a deletion takes its place
+    (`corevms/vmzone.go`'s `controlZone`, `corevms/vmshow.go`'s
+    `NextZone`). A zone with a get-page routine has its control block
+    in a page from that routine (its first call, for one page) and an
+    80-byte entry in the control zone; deleting it frees its areas,
+    then that page. A tagged zone with a free fill takes 48 more bytes
+    of the control zone (one sample; the fixed size zone with a free
+    fill made before it could have: **unconfirmed**), not counted.
+    Area control blocks (64 bytes) are apart from the areas: a fresh
+    area's first block is at its start.
+  - **The system zones**: the default zone first fit, EXTEND_AREA, an
+    initial area of 124 pages made at its first allocation, 128-page
+    areas after it, an 80-byte control block; the string zone quick
+    fit with 17 lists from 16 bytes, boundary tags, EXTEND_AREA, an
+    initial area of 4 pages at its first allocation, 32-page areas, 216
+    bytes. Neither can be reset or deleted (LIB$_BADBLOADR).
+  - **LIB$CREATE_VM_ZONE**: 13 arguments at most (get-page twelfth,
+    free-page thirteenth, as the VSI manual; 14 is LIB$_WRONUMARG); flag
+    bits 0 to 8 accepted, both fills of a pair the fill of 0, NO_EXTEND
+    and TAIL_LARGE acting though LIB$SHOW_VM_ZONE doesn't show them;
+    extend-size above 0 with no upper bound; page-limit 0 to 32,767, an
+    initial size past it LIB$_PAGLIMEXC with zone-id written; a page
+    limit or NO_EXTEND without an initial size accepted;
+    smallest-block-size above 0, rounded up to the block size; an
+    initial area made at once, and "Initial size" shown as the extend
+    size when there's none.
+  - **GET_VM and FREE_VM**: an untagged zone's LIB$FREE_VM trusts its
+    size (a part of a block, two blocks, or bytes inside one: vmheap's
+    `FreeRange`); without a size, VMS reads the size's longword at 0 (an
+    access violation) in any zone but a tagged one, a user zone too; a
+    misaligned address or one outside the zone's areas is
+    LIB$_BADBLOADR, as is a first fit double free; a lookaside double
+    free is SS$_NORMAL and links the list to itself, so that every
+    request it serves gets that block (`FreeAgain`), which VERIFY and
+    SHOW report as damage (LIB$_BADZONE); freed space at an area's
+    unallocated end stays free space. Tagged blocks: a longword before
+    the block's address and one at its end, the block rounded to the
+    block size (`Zone.slot`); the first tag the block's bytes with bit
+    30 and 2 (allocated) or 3 (free), the last its area (govax's: its
+    zone); a free reads the first tag, LIB$_BADTAGVAL when it isn't an
+    allocated block's (freed already), and doesn't check the last.
+    NO_EXTEND past its area is LIB$_PAGLIMEXC; a get-page routine's
+    failure during GET_VM is LIB$_INSVIRMEM (during CREATE, its status).
+    An unknown zone ID is read 8 bytes in: unmapped, an access
+    violation. Frequent sizes: a size no list has, with every list
+    holding one, takes over the next list in turn, whose blocks go back
+    to the area. Free space holds control words (VMS's links), which a
+    fill map and LIB$VERIFY_VM_ZONE see: untagged, the size and a link
+    at its start; tagged, the first tag, two links, and the tag again
+    at its end (`corevms`'s `freeWords`).
+  - **User zones**: deletion removes the zone whatever its delete
+    routine returns, or without one (LIB$_INVOPEZON then), the routine
+    getting the user argument's address in the freed control block.
+  - **Statistics**: LIB$GET_VM's successful calls, a zone's control
+    block's allocation, a dynamic string's, and a user zone's call when
+    it has the routine; LIB$FREE_VM's calls whose bytes are the zone's
+    (a double free too, not bytes outside it, misaligned, or a bad
+    tag), a control block's freeing (not a dynamic string's); bytes as
+    rounded, with tags; DELETE and RESET take the blocks' bytes off. The
+    page routines count a zone's areas. LIB$SHOW_VM's lines are as govax
+    had them. The totals still differ by a call or two and a few bytes
+    and pages, from RTL work no case shows one by one.
+  - **LIB$SHOW_VM_ZONE**: laid out as VMS lays it out (tab-indented
+    sections between blank lines, the flags' names, the overhead cut
+    to a tenth of a percent, the lookaside summary's headings even
+    with no lists in use, the area summary and the scans only for a
+    zone with areas, a count line and a blank after each area with
+    free blocks, the damage dumps); a detail level past 3 is 3, zone-id
+    omitted LIB$_INVARG; "bytes freed and not yet reallocated" is a
+    running count, failed frees included (`Zone.FreedBytes`); a user
+    zone shows its user argument in decimal; plain lines go to an
+    action routine as class S text, $FAO's with type and class 0.
+    LIB$FIND_VM_ZONE's first call doesn't check free fills or lists.
+  - **The C routines**: their blocks are a heap of their own, 16 bytes
+    into each block, not counted, not found by FIND, refused by
+    LIB$FREE_VM; LIB$VM_FREE returns 1; LIB$VM_REALLOC to 0 keeps the
+    block (`corevms`'s `CAllocate`).
+  - **The page pool** grows by 128 pages at a time (`PagePool.Chunk`).
+  - Argument counts: GET_VM with none LIB$_BADBLOSIZ, FREE_VM without
+    a base-address and DELETE/RESET with none LIB$_BADBLOADR,
+    GET_VM_PAGE with none LIB$_BADBLOSIZ, FREE_VM_PAGE with one
+    LIB$_BADBLOADR.
+  A govax defect the run found: $UNWIND left R0 and R1 as a removed
+  frame's entry mask had saved them, not the mechanism array's
+  (`corevms/unwind.go`'s `replaceSavedR0R1`). The probe's call of data
+  as a routine needs the console's user-mode HALT stop off (a debug
+  setting, on by default; `TestLib59Oracle` turns it off), so that the
+  HALT is a privileged instruction fault, as on a VAX. govax still refuses
+  LIB$FREE_VM_PAGE of a zone's pages, where VMS frees them.
+

@@ -58,6 +58,9 @@ const (
 	frameMaskPSW = 4
 	frameSavedFP = 12
 	frameSavedPC = 16
+
+	// frameSavedRegs is where a frame's saved registers begin.
+	frameSavedRegs = 20
 )
 
 // signal starts dispatching the condition described by argv, the

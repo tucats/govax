@@ -104,7 +104,7 @@ func TestBorrowedFailures(t *testing.T) {
 	}
 
 	f.fail = nil
-	a := mustAllocate(t, z, 8)
+	mustAllocate(t, z, 8)
 
 	for _, give := range []uint32{0x20000 + 0x10, 0x20000, 0xFFFFFE00} {
 		f.give = give
@@ -125,11 +125,9 @@ func TestBorrowedFailures(t *testing.T) {
 		t.Errorf("Delete with Put failing = %v, want its error", err)
 	}
 
-	if len(f.puts) != 2 || b.LentPages() != 0 {
-		t.Errorf("%d Put calls, %d pages lent after Delete; want 2, 0", len(f.puts), b.LentPages())
-	}
-
-	if err := b.Reclaim(a&^(PageSize-1), 1); !errors.Is(err, ErrBadAddress) {
-		t.Errorf("Reclaim of pages given back = %v, want ErrBadAddress", err)
+	// Delete stops at the first area that can't be given back, as VMS
+	// 7.1 does (testdata/lib59).
+	if len(f.puts) != 1 || b.LentPages() == 0 {
+		t.Errorf("%d Put calls, %d pages lent after Delete; want 1, some", len(f.puts), b.LentPages())
 	}
 }

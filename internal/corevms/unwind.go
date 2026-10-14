@@ -268,6 +268,15 @@ func (env *Environment) finishUnwind(d *conditionDispatch) (uint32, error) {
 		return 0, fmt.Errorf("rtl: can't read the mechanism array at %08X", d.mech)
 	}
 
+	// R0 and R1 are the mechanism array's when the caller resumes, even
+	// if a removed frame's entry mask saved them: its RET would restore
+	// the saved values, so they're replaced with the mechanism array's.
+	for _, frame := range u.frames {
+		if err := env.replaceSavedR0R1(frame, r0, r1); err != nil {
+			return 0, err
+		}
+	}
+
 	// The frame that receives control is the last removed frame's
 	// caller; any dispatch whose stack lies below it is gone.
 	survivor, err := env.mem.LoadLongword(c, u.frames[last]+frameSavedFP)
@@ -290,6 +299,36 @@ func (env *Environment) finishUnwind(d *conditionDispatch) (uint32, error) {
 	c.SetGPR(registers.PC, ret)
 
 	return r0, nil
+}
+
+// replaceSavedR0R1 stores r0 and r1 where the call frame at frame saved
+// R0 and R1, if its entry mask saved them: they're the first registers
+// after the frame's five longwords (condition handler, mask and PSW, AP,
+// FP, PC), in register order.
+func (env *Environment) replaceSavedR0R1(frame, r0, r1 uint32) error {
+	c := env.cpu
+
+	maskPSW, err := env.mem.LoadLongword(c, frame+frameMaskPSW)
+	if err != nil {
+		return fmt.Errorf("rtl: can't read the call frame at %08X: %w", frame, err)
+	}
+
+	mask := maskPSW >> 16 & 0xFFF
+	at := frame + frameSavedRegs
+
+	for reg, value := range []uint32{r0, r1} {
+		if mask&(1<<reg) == 0 {
+			continue
+		}
+
+		if err := env.mem.StoreLongword(c, at, value); err != nil {
+			return fmt.Errorf("rtl: can't change the call frame at %08X: %w", frame, err)
+		}
+
+		at += 4
+	}
+
+	return nil
 }
 
 // conditionToReturn is LIB$SIG_TO_RET's work (see ConditionToReturn):
