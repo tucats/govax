@@ -128,3 +128,40 @@ func TestMACRODialectParenthesisIsIllegalExpression(t *testing.T) {
 
 	requireBytes(t, out, 0xD0, 12, 0x50)
 }
+
+// TestMACROZeroDisplacement: in the MACRO dialect, a known displacement
+// of 0 whose size isn't given is register deferred mode, as real MACRO
+// assembles FAB$B_BID(R2) (VMS 7.1's object for testdata/lib58); B^0
+// keeps its byte displacement, and so does @0(Rn), and the console
+// dialect is unchanged.
+func TestMACROZeroDisplacement(t *testing.T) {
+	cases := []struct {
+		name  string
+		macro bool
+		src   string
+		want  []byte
+	}{
+		{"a symbol of 0", true, "OFF=0\n\tCLRL\tOFF(R2)", []byte{0xD4, 0x62}},
+		{"a literal 0", true, "CLRL\t0(R2)", []byte{0xD4, 0x62}},
+		{"B^0", true, "CLRL\tB^0(R2)", []byte{0xD4, 0xA2, 0x00}},
+		{"deferred", true, "CLRL\t@0(R2)", []byte{0xD4, 0xB2, 0x00}},
+		{"a displacement of 4", true, "CLRL\t4(R2)", []byte{0xD4, 0xA2, 0x04}},
+		{"the console dialect", false, "CLRL 0(R2)", []byte{0xD4, 0xA2, 0x00}},
+	}
+
+	for _, c := range cases {
+		a := New(true)
+		if c.macro {
+			a = macroAssembler()
+		}
+
+		out, err := a.Assemble(c.src)
+		if err != nil {
+			t.Fatalf("%s: %v", c.name, err)
+		}
+
+		if string(out) != string(c.want) {
+			t.Errorf("%s: % X, want % X", c.name, out, c.want)
+		}
+	}
+}

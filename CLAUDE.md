@@ -99,8 +99,9 @@ never had.
   the back-link walk is `rms.MountTable.ACPFileSpec`, reached through
   `corevms.Environment.FileSpecByID`) and TRIM_FILESPEC
   (`librtl/trimfilespec.go`, the name split in Go, `splitFileSpec`),
-  subtask 8 the probe (`testdata/lib58`; written, waiting for its VMS
-  run).
+  subtask 8 the probe (`testdata/lib58`, checked against VMS 7.1, which
+  settled the routines' open choices and some of RMS's; the progress
+  log lists them).
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
 - `docs/DEVIATIONS.md` — running log of suspected ISA/behavior fidelity issues found in
@@ -209,8 +210,9 @@ never had.
   tree under `[LIB58]` the program makes, so a fresh volume each run;
   the program's own routines log each call and argument under the
   case's line), `lib58.com`, and `exchange.cmd`. `TestLib58Oracle` runs
-  it on a fresh RD51 volume as DUA1 and skips until VMS's output,
-  `vax/lib58-vax.txt`, is there.
+  it on a fresh RD51 volume as DUA1 (node SIMVAX) and matches VMS V7.1's
+  output, `vax/lib58-vax.txt`, line for line but for
+  `expectedLib58Differences`.
 - `testdata/probe49/` — Phase 49's VMS probe in three rounds (`probe6`,
   `probe6b`, `probe6c`; README.md has each round's answers), run by
   `TestProbe6*`; `testdata/rms49/` and `testdata/sec49/` are the phase's

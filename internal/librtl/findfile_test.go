@@ -10,8 +10,6 @@ import (
 	"github.com/tucats/govax/internal/vmsdef"
 )
 
-var rmsFNF = vmsdef.Symbols["RMS$_FNF"]
-
 // findFixture is createDirFixture's volume with files in [000000] (A.TXT,
 // B.TXT, C.DAT) and in [SUB] (D.TXT).
 func findFixture(t *testing.T) *corevms.Environment {
@@ -90,20 +88,27 @@ func (f *finder) end() uint32 {
 }
 
 // TestFindFileWildcard: a wildcard name returns each match in turn, then
-// RMS$_NMF, and RMS$_NMF again on a further call.
+// RMS$_NMF, which ends the context (its longword 0), so the call after
+// starts the search again.
 func TestFindFileWildcard(t *testing.T) {
 	f := newFinder(t, findFixture(t))
 
 	f.expect("DUA0:[000000]*.TXT", "", "", 0, rmsNormal, "DUA0:[000000]A.TXT;1")
 	f.expect("DUA0:[000000]*.TXT", "", "", 0, rmsNormal, "DUA0:[000000]B.TXT;1")
-	f.expect("DUA0:[000000]*.TXT", "", "", 0, rmsNMF, "")
-	f.expect("DUA0:[000000]*.TXT", "", "", 0, rmsNMF, "")
 
 	if longword(t, f.env, f.cell) == 0 {
-		t.Error("the context longword is still 0")
+		t.Error("the context longword is 0 during the search")
 	}
 
-	if st := f.end(); st != rmsNormal {
+	f.expect("DUA0:[000000]*.TXT", "", "", 0, rmsNMF, "")
+
+	if c := longword(t, f.env, f.cell); c != 0 {
+		t.Errorf("context after RMS$_NMF = %#x, want 0", c)
+	}
+
+	f.expect("DUA0:[000000]*.TXT", "", "", 0, rmsNormal, "DUA0:[000000]A.TXT;1")
+
+	if st := f.end(); st != ssNormal {
 		t.Errorf("FIND_FILE_END = %#x", st)
 	}
 
@@ -135,7 +140,7 @@ func TestFindFileWildDirectory(t *testing.T) {
 	f.expect("DUA0:[000000]*.DAT", "", "", 0, rmsNormal, "DUA0:[000000]C.DAT;1")
 	f.expect("DUA0:[000000]*.DAT", "", "", 0, rmsNMF, "")
 
-	if st := f.end(); st != rmsNormal {
+	if st := f.end(); st != ssNormal {
 		t.Errorf("FIND_FILE_END = %#x", st)
 	}
 }
@@ -157,7 +162,8 @@ func TestFindFileOne(t *testing.T) {
 }
 
 // TestFindFileMissing: a missing file is RMS$_FNF, with FAB$L_STV in
-// status-value; a success leaves status-value alone.
+// status-value; a call that starts a search writes $PARSE's (0), and one
+// that goes on with it leaves status-value alone.
 func TestFindFileMissing(t *testing.T) {
 	f := newFinder(t, findFixture(t))
 
@@ -167,10 +173,16 @@ func TestFindFileMissing(t *testing.T) {
 		t.Errorf("status-value = %#x, want SS$_NOSUCHFILE", stv)
 	}
 
-	f.expect("DUA0:[000000]A.TXT", "", "", 0, rmsNormal, "DUA0:[000000]A.TXT;1")
+	f.expect("DUA0:[000000]*.TXT", "", "", 0, rmsNormal, "DUA0:[000000]A.TXT;1")
+
+	if stv := longword(t, f.env, f.stv); stv != 0 {
+		t.Errorf("status-value after a new search = %#x, want 0", stv)
+	}
+
+	f.expect("DUA0:[000000]*.TXT", "", "", 0, rmsNormal, "DUA0:[000000]B.TXT;1")
 
 	if stv := longword(t, f.env, f.stv); stv != 0xDEAD {
-		t.Errorf("status-value after a success = %#x, want it unchanged", stv)
+		t.Errorf("status-value after a search went on = %#x, want it unchanged", stv)
 	}
 
 	f.end()
@@ -191,16 +203,17 @@ func TestFindFileDefaults(t *testing.T) {
 	f.end()
 }
 
-// TestFindFileResult: a short fixed resultant string is LIB$_STRTRU with
-// the name cut short; a dynamic one gets the whole name.
+// TestFindFileResult: a short fixed resultant string gets the name cut
+// short, and the status is still $SEARCH's (no LIB$_STRTRU); a dynamic
+// one gets the whole name.
 func TestFindFileResult(t *testing.T) {
 	env := findFixture(t)
 	a := newArena(t, env)
 	cell := a.long(0)
 
 	short := a.desc("          ")
-	if st := call(t, env, "LIB$FIND_FILE", a.desc("DUA0:[000000]A.TXT"), short, cell); st != libStrTru {
-		t.Errorf("short result: status %#x, want LIB$_STRTRU", st)
+	if st := call(t, env, "LIB$FIND_FILE", a.desc("DUA0:[000000]A.TXT"), short, cell); st != rmsNormal {
+		t.Errorf("short result: status %#x, want RMS$_NORMAL", st)
 	}
 
 	if s := descText(t, env, short); s != "DUA0:[0000" {
@@ -211,7 +224,7 @@ func TestFindFileResult(t *testing.T) {
 	putDesc(t, env, dyn, 0, dscClassD, 0)
 	a.long(0)
 
-	if st := call(t, env, "LIB$FIND_FILE", a.desc("DUA0:[000000]C.DAT"), dyn, cell); st != rmsNormal {
+	if st := call(t, env, "LIB$FIND_FILE", a.desc("DUA0:[000000]C.DAT"), dyn, a.long(0)); st != rmsNormal {
 		t.Errorf("dynamic result: status %#x", st)
 	}
 
@@ -220,14 +233,14 @@ func TestFindFileResult(t *testing.T) {
 	}
 }
 
-// TestFindFileContexts: FIND_FILE_END of 0 is RMS$_NORMAL; a context
-// longword that names no context is RMS$_FAB to both routines; a name
-// longer than 255 characters is LIB$_INVFILSPE.
+// TestFindFileContexts: FIND_FILE_END of 0 is SS$_NORMAL; a context
+// longword that names no context is RMS$_FAB to both routines; a name of
+// 256 characters is one of none (FNS is a byte): the default name's.
 func TestFindFileContexts(t *testing.T) {
 	env := findFixture(t)
 	f := newFinder(t, env)
 
-	if st := f.end(); st != rmsNormal {
+	if st := f.end(); st != ssNormal {
 		t.Errorf("FIND_FILE_END of 0 = %#x", st)
 	}
 
@@ -244,7 +257,8 @@ func TestFindFileContexts(t *testing.T) {
 	f.expect("DUA0:[000000]A.TXT", "", "", 0, rmsFAB, "")
 
 	putLongword(t, env, f.cell, 0)
-	f.expect("DUA0:[000000]"+strings.Repeat("A", 250), "", "", 0, libInvFilSpe, "")
+	f.expect("DUA0:[000000]"+strings.Repeat("A", 243), "DUA0:[000000]A.TXT", "", 0, rmsNormal, "DUA0:[000000]A.TXT;1")
+	f.end()
 	f.expect("DUA0:[000000]B.TXT", "", "", 0, rmsNormal, "DUA0:[000000]B.TXT;1")
 	f.end()
 }

@@ -24,12 +24,12 @@ import (
 //
 //  1. its new name is worked out: new-filespec, its missing fields and
 //     its "*" fields the old file's, and the version by DCL RENAME's
-//     rules (rms.Session.RenameTarget, the code DCL's RENAME uses); a
-//     failure (a wildcard the new name can't take: RMS$_WLD) is error
-//     source 1;
+//     rules (rms.Session.RenameTarget, the code DCL's RENAME uses), and
+//     its directory must exist; a failure (a syntax error, a wildcard the
+//     new name can't take, RMS$_DNF) is error source 1;
 //  2. the confirm routine, when there is one, is called with the old and
-//     new names and a FAB that describes the old file; a failure (bit 0
-//     of R0 clear) passes the file over;
+//     new names and the search's FAB, which describes the old file; a
+//     failure (bit 0 of R0 clear) passes the file over;
 //  3. the file is renamed with $RENAME's code (rms.Session.RenameFile); a
 //     failure is error source 2;
 //  4. the success routine is called with the old name and the new one,
@@ -37,39 +37,38 @@ import (
 //
 // An error searching for old-filespec is error source 0. The error
 // routine gets the old and new names, the RMS status and status value
-// and the error source by reference, and the user-specified-argument,
-// which, unlike the other routines' (and as the manual's format shows
-// it), is always passed: 0 when the program gave none. Its success goes
-// on, its failure stops the routine at once with the RMS status.
+// and the error source by reference, and the user-specified-argument.
+// Every routine gets that last, 0 when the program gave none. The error
+// routine's success goes on, its failure stops the routine at once with
+// the RMS status made severe.
 //
 // flags bit 0, LIB$M_FIL_CUR_VER, keeps a file's version when
-// new-filespec gives none, as /NONEW_VERSION does. Bit 1 (INH_SECUR) and bit 2 (LONG_NAMES) are
-// the VSI manual's and change nothing on the VAX.
+// new-filespec gives none, as /NONEW_VERSION does. Bit 1 (INH_SECUR)
+// changes nothing on the VAX; bit 2 (the VSI manual's LONG_NAMES) and the
+// rest are LIB$_INVARG, as on VMS 7.1.
 //
-// The choices the manuals leave open are the survey's probe cases, each
-// unconfirmed until the probe (subtask 8) runs on VMS:
+// What the manuals leave open is as VMS 7.1 does it (testdata/lib58,
+// docs/PHASE-58's subtask 8), but where marked unconfirmed:
 //
 //   - Fewer than two arguments, or more than twelve, is LIB$_WRONUMARG; a
-//     flag bit past the three is LIB$_INVARG; a new-filespec over 255
-//     characters is LIB$_INVFILSPE, as old-filespec is.
+//     new-filespec over 255 characters is LIB$_INVFILSPE, as old-filespec
+//     is.
 //   - The new name the error routine gets at source 0 is new-filespec as
-//     given; at source 1, the new name as far as it was worked out (else
-//     new-filespec as given), with status value 0.
-//   - The input's version, for the version rules, is the version field of
-//     old-filespec as $PARSE expanded it (so a default-filespec's version
-//     counts too).
-//   - A new name that exists already is $RENAME's failure, RMS$_ENT with
-//     SS$_DUPFILENAME, as govax's DCL RENAME reports it; the manual says
-//     CUR_VER gives RMS$_FEX then.
+//     given; at source 1, the new name as far as it was worked out (else,
+//     for a syntax error, new-filespec as given).
+//   - An input that named a version doesn't keep it: the file gets the
+//     next version of its new name (1 when there's none).
+//   - A new name that exists already, with CUR_VER, is $RENAME's failure,
+//     RMS$_ENT with SS$_DUPFILENAME.
 //   - The statuses are LIB$DELETE_FILE's (SS$_NORMAL; LIB$_ERRROUCAL; the
-//     RMS status when the error routine stops; the most severe error with
-//     no error routine).
+//     RMS status made severe when the error routine stops; the most severe
+//     error with no error routine).
 
 // renameFlags are the flag bits LIB$RENAME_FILE accepts, and renameCurVer
 // LIB$M_FIL_CUR_VER.
 const (
 	renameCurVer = 1 << 0
-	renameFlags  = renameCurVer | 1<<1 | 1<<2
+	renameFlags  = renameCurVer | 1<<1
 )
 
 // The error source for a new name that can't be worked out; errors
@@ -105,7 +104,7 @@ func libRenameFile(env *corevms.Environment, argv []uint32) (uint32, error) {
 		fileWalk: fileWalk{
 			env:     env,
 			failure: arg(argv, 6),
-			user:    arg(argv, 8), hasUser: len(argv) > 8,
+			user:    arg(argv, 8),
 		},
 		success: arg(argv, 5), confirm: arg(argv, 7),
 		oldResult: arg(argv, 9), newResult: arg(argv, 10),
@@ -155,13 +154,13 @@ func (r *renamer) renameOne(name string) (renamed, stop bool, status uint32, err
 	env := r.env
 	s := session(env)
 
-	target, status := s.RenameTarget(name, r.newSpec, inputVersion(r.expanded), !r.curVer)
+	target, status, stv := s.RenameTarget(name, r.newSpec, inputVersion(r.expanded), !r.curVer)
 	if status != 0 {
 		if target == "" {
 			target = r.newSpec
 		}
 
-		stop, status, err := r.reportError(name, target, status, 0, sourceParse)
+		stop, status, err := r.reportError(name, target, status, stv, sourceParse)
 
 		return false, stop, status, err
 	}
@@ -172,7 +171,7 @@ func (r *renamer) renameOne(name string) (renamed, stop bool, status uint32, err
 	}
 
 	if r.confirm != 0 {
-		r0, err := env.Callback(r.confirm, r.withUser(oldDesc, newDesc, r.file+fileFAB)...)
+		r0, err := r.confirming(r.confirm, r.withUser(oldDesc, newDesc, r.search+findFAB)...)
 		if err != nil {
 			status, err = memoryFault(env, err)
 
@@ -182,6 +181,19 @@ func (r *renamer) renameOne(name string) (renamed, stop bool, status uint32, err
 		if r0&1 == 0 {
 			return false, false, 0, nil
 		}
+	}
+
+	open, err := r.searchOpen()
+	if err != nil {
+		status, err = memoryFault(env, err)
+
+		return false, true, status, err
+	}
+
+	if open {
+		stop, status, err := r.reportError(name, target, rmsIFI, 0, sourceRename)
+
+		return false, stop, status, err
 	}
 
 	newName, status, stv := s.RenameFile(name, target)

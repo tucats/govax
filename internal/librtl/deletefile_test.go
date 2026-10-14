@@ -11,7 +11,6 @@ import (
 )
 
 var (
-	rmsIFI = vmsdef.Symbols["RMS$_IFI"]
 	fabFAC = vmsdef.Symbols["FAB$B_FAC"]
 	fabPUT = vmsdef.Symbols["FAB$M_PUT"]
 )
@@ -167,8 +166,8 @@ func TestDeleteFileOne(t *testing.T) {
 
 // TestDeleteFileErrors: a missing file is an error searching (source 0);
 // with an error routine that returns success the status is
-// LIB$_ERRROUCAL, with one that returns failure the RMS status, and with
-// none the error itself.
+// LIB$_ERRROUCAL, with one that returns failure the RMS status made
+// severe (VMS 7.1), and with none the error itself.
 func TestDeleteFileErrors(t *testing.T) {
 	env := findFixture(t)
 	a := newArena(t, env)
@@ -185,8 +184,8 @@ func TestDeleteFileErrors(t *testing.T) {
 	l = newDeleteLog(t, env)
 	l.errorStatus = 0
 
-	if st := l.deleteFile(a, missing, 0, 0, 0, errorRoutine); st != rmsFNF || len(l.calls) != 1 {
-		t.Errorf("an error routine that stops = %#x %q, want RMS$_FNF", st, l.calls)
+	if st := l.deleteFile(a, missing, 0, 0, 0, errorRoutine); st != rmsFNF&^7|4 || len(l.calls) != 1 {
+		t.Errorf("an error routine that stops = %#x %q, want RMS$_FNF made severe", st, l.calls)
 	}
 
 	if st := deleteCall(t, env, a, missing); st != rmsFNF {
@@ -198,8 +197,10 @@ func TestDeleteFileErrors(t *testing.T) {
 	}
 }
 
-// TestDeleteFileDeleteError: an $ERASE that fails (here the confirm
-// routine leaves the FAB open) is error source 1, and the search goes on.
+// TestDeleteFileDeleteError: a confirm routine that leaves the search's
+// FAB open makes the delete RMS$_IFI (error source 1), and then the next
+// $SEARCH (source 0), which ends the search, as on VMS 7.1. Every
+// routine is given the user argument, 0 when the program gave none.
 func TestDeleteFileDeleteError(t *testing.T) {
 	env := findFixture(t)
 	a := newArena(t, env)
@@ -218,8 +219,8 @@ func TestDeleteFileDeleteError(t *testing.T) {
 	st := l.deleteFile(a, a.desc("DUA0:[000000]*.TXT"), 0, 0, successRoutine, errorRoutine, confirmRoutine)
 
 	want := []string{
-		"?DUA0:[000000]A.TXT;1", "-DUA0:[000000]A.TXT;1 " + hexStatus(rmsIFI) + " 1",
-		"?DUA0:[000000]B.TXT;1", "-DUA0:[000000]B.TXT;1 " + hexStatus(rmsIFI) + " 1",
+		"?DUA0:[000000]A.TXT;1 u=0", "-DUA0:[000000]A.TXT;1 " + hexStatus(rmsIFI) + " 1 u=0",
+		"-DUA0:[000000]A.TXT;1 " + hexStatus(rmsIFI) + " 0 u=0",
 	}
 	if st != libErrRouCal || !slices.Equal(l.calls, want) {
 		t.Errorf("DELETE_FILE = %#x %q, want LIB$_ERRROUCAL %q", st, l.calls, want)
@@ -227,7 +228,8 @@ func TestDeleteFileDeleteError(t *testing.T) {
 }
 
 // TestDeleteFileConfirmOpen: the confirm routine may $OPEN and $CLOSE
-// its FAB, and the search goes on.
+// its FAB (the search's, which opens the file its NAM names), and the
+// search goes on.
 func TestDeleteFileConfirmOpen(t *testing.T) {
 	env := findFixture(t)
 	a := newArena(t, env)
@@ -244,9 +246,9 @@ func TestDeleteFileConfirmOpen(t *testing.T) {
 	st := l.deleteFile(a, a.desc("DUA0:[000000...]*.TXT"), 0, 0, successRoutine, 0, confirmRoutine)
 
 	want := []string{
-		"?DUA0:[000000]A.TXT;1", "+DUA0:[000000]A.TXT;1",
-		"?DUA0:[000000]B.TXT;1", "+DUA0:[000000]B.TXT;1",
-		"?DUA0:[SUB]D.TXT;1", "+DUA0:[SUB]D.TXT;1",
+		"?DUA0:[000000]A.TXT;1 u=0", "+DUA0:[000000]A.TXT;1 u=0",
+		"?DUA0:[000000]B.TXT;1 u=0", "+DUA0:[000000]B.TXT;1 u=0",
+		"?DUA0:[SUB]D.TXT;1 u=0", "+DUA0:[SUB]D.TXT;1 u=0",
 	}
 	if st != ssNormal || !slices.Equal(l.calls, want) {
 		t.Errorf("DELETE_FILE = %#x %q, want SS$_NORMAL %q", st, l.calls, want)
@@ -304,10 +306,9 @@ func TestDeleteFileContext(t *testing.T) {
 	}
 }
 
-// TestDeleteFileArguments: no arguments or more than ten are
-// LIB$_WRONUMARG, an undefined flag bit LIB$_INVARG, a name over 255
-// characters LIB$_INVFILSPE, and a context longword that names none
-// LIB$_INVARG.
+// TestDeleteFileArguments: no arguments or more than nine (VMS 7.1 has
+// no flags argument) are LIB$_WRONUMARG, and a name over 255 characters
+// LIB$_INVFILSPE.
 func TestDeleteFileArguments(t *testing.T) {
 	env := findFixture(t)
 	a := newArena(t, env)
@@ -319,10 +320,8 @@ func TestDeleteFileArguments(t *testing.T) {
 		want uint32
 	}{
 		{"no arguments", nil, libWroNumArg},
-		{"eleven arguments", make([]uint32, 11), libWroNumArg},
-		{"flag bit 3", []uint32{spec, 0, 0, 0, 0, 0, 0, 0, 0, a.long(8)}, libInvArg},
+		{"ten arguments", []uint32{spec, 0, 0, 0, 0, 0, 0, 0, 0, a.long(0)}, libWroNumArg},
 		{"a long name", []uint32{a.desc(strings.Repeat("A", 256))}, libInvFilSpe},
-		{"a bad context", []uint32{spec, 0, 0, 0, 0, 0, 0, 0, a.long(0x12340)}, libInvArg},
 	}
 
 	for _, c := range cases {
@@ -333,10 +332,6 @@ func TestDeleteFileArguments(t *testing.T) {
 
 	if !exists(t, env, "DUA0:[000000]A.TXT") {
 		t.Error("a refused call deleted A.TXT")
-	}
-
-	if st := deleteCall(t, env, a, spec, 0, 0, 0, 0, 0, 0, 0, 0, a.long(4)); st != ssNormal {
-		t.Errorf("LONG_NAMES = %#x, want SS$_NORMAL", st)
 	}
 }
 

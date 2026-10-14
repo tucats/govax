@@ -24,17 +24,18 @@ import (
 // directory, name, type -- is the old file's. So "RENAME [A]X.TXT [B]"
 // gives [B]X.TXT, and "RENAME X.TXT .DAT" gives X.DAT. A field written as
 // "*" is the old file's too, which is how one output name serves several
-// files: "RENAME *.TXT *.OLD". Any other wildcard in the output is
+// files: "RENAME *.TXT *.OLD". A name with a wildcard among other
+// characters ("A*B") is RMS$_FNM, any other wildcard in the output
 // RMS$_WLD.
 //
-// The version follows LIB$RENAME_FILE's rules, which copy DCL's:
+// The version follows the DCL Dictionary's RENAME rules, which
+// LIB$RENAME_FILE's are (VMS 7.1: testdata/lib58):
 //
 //   - an output version is used as given, and ";*" means the old file's;
 //   - with no output version, the old file keeps its version if the input
-//     named one (";3", ";-1") or all of them (";*"), or if /NONEW_VERSION
-//     was given;
-//   - otherwise (the input named no version, which selects each name's
-//     highest one) the file gets the next version of its new name.
+//     named all of them (";*"), or if /NONEW_VERSION was given;
+//   - otherwise the file gets the next version of its new name (1 when
+//     there's none): an input that named a version (";3") doesn't keep it.
 //
 // # Several input files
 //
@@ -90,9 +91,9 @@ type renameSource struct {
 	spec    filespec.Spec // its full name, with its version
 	display string        // the device to show: a concealed name, if one was used
 
-	// wildVersion and explicitVersion say what the input's version was:
-	// ";*", or a number (see this file's opening comment).
-	wildVersion, explicitVersion bool
+	// wildVersion says the input's version was ";*" (see this file's
+	// opening comment).
+	wildVersion bool
 }
 
 // Rename renames every file inputs match to output (see this file's
@@ -176,9 +177,8 @@ func (s *Session) findRenameInputs(input string, sticky *filespec.Spec) ([]renam
 					Type:    m.Type,
 					Version: strconv.Itoa(int(m.Version)),
 				},
-				display:         r.Display,
-				wildVersion:     r.Spec.Version == "*",
-				explicitVersion: r.Spec.Version != "" && r.Spec.Version != "*" && r.Spec.Version != "0",
+				display:     r.Display,
+				wildVersion: r.Spec.Version == "*",
 			})
 		}
 
@@ -313,8 +313,12 @@ func (s *Session) renameTarget(src renameSource, output string, opts RenameOptio
 	switch {
 	case target.Version == "*":
 		target.Version = old.Version
-	case target.Version == "" && (src.wildVersion || src.explicitVersion || !opts.NewVersion):
+	case target.Version == "" && (src.wildVersion || !opts.NewVersion):
 		target.Version = old.Version
+	}
+
+	if strings.ContainsAny(target.Name, "*%") {
+		return target, rmsFileNameError
 	}
 
 	if hasWildcard(target) {
@@ -364,21 +368,25 @@ func resultName(device string, spec filespec.Spec) string {
 // gives it, output the new-filespec, and inputVersion the version field
 // of the old specification as $PARSE expanded it ("" for none, "*", or a
 // number); newVersion is false for LIB$M_FIL_CUR_VER, /NONEW_VERSION. The
-// rules are Rename's (see this file's opening comment). It returns the
-// new name as a resultant name and 0, or an RMS status and the new name
-// as far as it was worked out ("" when not at all).
-func (s *Session) RenameTarget(old, output, inputVersion string, newVersion bool) (string, uint32) {
+// rules are Rename's (see this file's opening comment), and the new
+// name's directory must exist, when its device is a mounted volume
+// (RMS$_DNF, with SS$_NOSUCHFILE; VMS 7.1: testdata/lib58). It returns
+// the new name as a resultant name and 0, or an RMS status and status
+// value and the new name as far as it was worked out ("" when not at
+// all).
+func (s *Session) RenameTarget(old, output, inputVersion string, newVersion bool) (string, uint32, uint32) {
 	spec, err := filespec.Parse(old, filespec.Spec{})
 	if err != nil {
-		return "", rmsSyntaxError
+		return "", rmsSyntaxError, 0
 	}
 
-	src := renameSource{
-		spec:            spec,
-		display:         spec.Device,
-		wildVersion:     inputVersion == "*",
-		explicitVersion: inputVersion != "" && inputVersion != "*" && inputVersion != "0",
+	// The new name must be well formed by name processing's rules first
+	// (";Q" is RMS$_SYN; VMS 7.1: testdata/lib58's RF bad syntax new).
+	if _, sts := scanName(output); sts != 0 {
+		return "", sts, 0
 	}
+
+	src := renameSource{spec: spec, display: spec.Device, wildVersion: inputVersion == "*"}
 
 	target, sts := s.renameTarget(src, output, RenameOptions{NewVersion: newVersion})
 
@@ -387,7 +395,17 @@ func (s *Session) RenameTarget(old, output, inputVersion string, newVersion bool
 		name = resultName(target.Device, target)
 	}
 
-	return name, sts
+	if sts != 0 {
+		return name, sts, 0
+	}
+
+	if vol, ok := s.Mounts.Lookup(target.Device); ok {
+		if _, err := filespec.ResolveDirectory(vol, target.Dirs); err != nil {
+			return name, rmsDirNotFound, ssNoSuchFile
+		}
+	}
+
+	return name, 0, 0
 }
 
 // RenameFile renames the file old to target, both full names (target as

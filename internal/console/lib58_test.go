@@ -25,16 +25,29 @@ var lib58Dir = filepath.Join("..", "..", "testdata", "lib58")
 // expectedLib58Differences are the lines of VMS's output govax doesn't
 // reproduce, each with why: the line VMS printed, by its case's name and
 // the line's first word.
-var expectedLib58Differences = map[string]string{}
+var expectedLib58Differences = map[string]string{
+	// LIB$FIND_FILE_END with no arguments reads its context longword's
+	// address past the argument list: on VMS a longword of the stack's,
+	// whose fault shows that address, in govax 0.
+	"FFE no arguments/FFE": "the stack's contents",
+
+	// File number 200 was a header slot never used: VMS had extended
+	// INDEXF.SYS to 829 blocks by then, so the slot was inside it
+	// (SS$_FILESTRUCT); govax's index file grows only as files are made,
+	// so the slot was past its end (SS$_NOSUCHFILE).
+	"FTN unused header/FTN": "the index file's allocation",
+	"FTN unused header/A:":  "the index file's allocation",
+}
 
 // runLib58 assembles, links, and runs lib58.mar as lib58.com does on
 // VMS: on a fresh RD51 volume labeled LIB58 mounted as DUA1, its
-// [000000] the default directory, LIB58_DISK naming it, and NLA0:
-// defined (as vax.init defines it).
+// [000000] the default directory, LIB58_DISK naming it, NLA0: defined
+// (as vax.init defines it), and the VAX's node name, SIMVAX.
 func runLib58(t *testing.T) (uint32, string) {
 	t.Helper()
 
 	c := newBootableConsole(t)
+	c.RTL.NodeName = "SIMVAX" // the VAX's, which NAM$T_DVI shows
 	out := &bytes.Buffer{}
 	c.Out = out
 	dir := t.TempDir()

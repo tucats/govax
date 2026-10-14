@@ -1,6 +1,8 @@
 package rms
 
 import (
+	"errors"
+
 	"github.com/tucats/ods2/filespec"
 	"github.com/tucats/ods2/volume"
 )
@@ -66,6 +68,12 @@ func SysErase(ctx *Context, argv []uint32) (uint32, error) {
 		return 0, err
 	}
 
+	// A directory that still has entries can't be marked for deletion
+	// (VMS 7.1: testdata/lib58's erase GONE.DIR).
+	if sts == rmsMarkDeleteFailed {
+		return fabStatus(ctx, fabAddr, sts, ssDirNotEmpty)
+	}
+
 	if sts != 0 {
 		return fabStatus(ctx, fabAddr, sts, stvFor(sts))
 	}
@@ -117,6 +125,10 @@ func eraseOnVolume(ctx *Context, p parsedName) (uint32, error) {
 	}
 
 	if err := volume.DeleteFile(dir, entry.Name, entry.Version, bm, ib); err != nil {
+		if errors.Is(err, volume.ErrDirectoryNotEmpty) {
+			return rmsMarkDeleteFailed, nil
+		}
+
 		return rmsDeviceError, nil
 	}
 

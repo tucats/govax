@@ -11,7 +11,7 @@ import (
 )
 
 var (
-	rmsWLD   = vmsdef.Symbols["RMS$_WLD"]
+	rmsFNMSt = vmsdef.Symbols["RMS$_FNM"]
 	rmsENT   = vmsdef.Symbols["RMS$_ENT"]
 	rmsFNFSt = vmsdef.Symbols["RMS$_FNF"]
 )
@@ -144,30 +144,30 @@ func TestRenameFileDirectory(t *testing.T) {
 
 	st := l.rename(a, a.desc("C"), a.desc("DUA0:[SUB]"), a.desc("DUA0:[000000].DAT"), 0, 0, successRoutine)
 
-	want := []string{"+DUA0:[000000]C.DAT;1>DUA0:[SUB]C.DAT;1"}
+	want := []string{"+DUA0:[000000]C.DAT;1>DUA0:[SUB]C.DAT;1 u=0"}
 	if st != ssNormal || !slices.Equal(l.calls, want) {
 		t.Errorf("RENAME_FILE = %#x %q, want SS$_NORMAL %q", st, l.calls, want)
 	}
 }
 
-// TestRenameFileVersions: with no version on either name the file gets
-// the new name's next version; with CUR_VER it keeps its own, which fails
-// when that name exists (error source 2); an explicit old version keeps
-// it too.
+// TestRenameFileVersions: with no version on the new name the file gets
+// the new name's next version, even when the old name gave one (VMS
+// 7.1); with CUR_VER it keeps its own, which fails when that name exists
+// (error source 2).
 func TestRenameFileVersions(t *testing.T) {
 	env := findFixture(t)
 	a := newArena(t, env)
 
 	l := newRenameLog(t, env)
 	if st := l.rename(a, a.desc("DUA0:[000000]A.TXT"), a.desc("B"), 0, 0, 0, successRoutine); st != ssNormal ||
-		!slices.Equal(l.calls, []string{"+DUA0:[000000]A.TXT;1>DUA0:[000000]B.TXT;2"}) {
+		!slices.Equal(l.calls, []string{"+DUA0:[000000]A.TXT;1>DUA0:[000000]B.TXT;2 u=0"}) {
 		t.Errorf("a new version = %#x %q", st, l.calls)
 	}
 
 	l = newRenameLog(t, env)
 	st := l.rename(a, a.desc("DUA0:[000000]B.TXT;2"), a.desc("D.TXT"), 0, 0, 0, successRoutine)
 
-	if st != ssNormal || !slices.Equal(l.calls, []string{"+DUA0:[000000]B.TXT;2>DUA0:[000000]D.TXT;2"}) {
+	if st != ssNormal || !slices.Equal(l.calls, []string{"+DUA0:[000000]B.TXT;2>DUA0:[000000]D.TXT;1 u=0"}) {
 		t.Errorf("an explicit version = %#x %q", st, l.calls)
 	}
 
@@ -182,15 +182,16 @@ func TestRenameFileVersions(t *testing.T) {
 	l = newRenameLog(t, env)
 	st = l.rename(a, a.desc("DUA0:[000000]D.TXT"), a.desc("E"), 0, 0, a.long(renameCurVer), successRoutine)
 
-	if st != ssNormal || !slices.Equal(l.calls, []string{"+DUA0:[000000]D.TXT;2>DUA0:[000000]E.TXT;2"}) {
+	if st != ssNormal || !slices.Equal(l.calls, []string{"+DUA0:[000000]D.TXT;1>DUA0:[000000]E.TXT;1 u=0"}) {
 		t.Errorf("CUR_VER = %#x %q", st, l.calls)
 	}
 }
 
 // TestRenameFileErrors: a missing file is error source 0, with the new
-// name as given; a wildcard the new name can't take is source 1; with no
-// error routine the status is the error, and an error routine that
-// returns failure stops with the RMS status.
+// name as given; a wildcard among a name's characters is RMS$_FNM, at
+// source 1; with no error routine the status is the error, and an error
+// routine that returns failure stops with the RMS status made severe
+// (RMS$_FNM's severity is already).
 func TestRenameFileErrors(t *testing.T) {
 	env := findFixture(t)
 	a := newArena(t, env)
@@ -207,8 +208,8 @@ func TestRenameFileErrors(t *testing.T) {
 	st = l.rename(a, a.desc("DUA0:[000000]*.TXT"), a.desc("X%.TXT"), 0, 0, 0, 0, errorRoutine)
 
 	want = []string{
-		"-DUA0:[000000]A.TXT;1>DUA0:[000000]X%.TXT; " + hexStatus(rmsWLD) + " 1 u=0",
-		"-DUA0:[000000]B.TXT;1>DUA0:[000000]X%.TXT; " + hexStatus(rmsWLD) + " 1 u=0",
+		"-DUA0:[000000]A.TXT;1>DUA0:[000000]X%.TXT; " + hexStatus(rmsFNMSt) + " 1 u=0",
+		"-DUA0:[000000]B.TXT;1>DUA0:[000000]X%.TXT; " + hexStatus(rmsFNMSt) + " 1 u=0",
 	}
 	if st != libErrRouCal || !slices.Equal(l.calls, want) {
 		t.Errorf("a wildcard new name = %#x %q, want LIB$_ERRROUCAL %q", st, l.calls, want)
@@ -217,8 +218,8 @@ func TestRenameFileErrors(t *testing.T) {
 	l = newRenameLog(t, env)
 	l.errorStatus = 0
 
-	if st := l.rename(a, a.desc("DUA0:[000000]*.TXT"), a.desc("X%.TXT"), 0, 0, 0, 0, errorRoutine); st != rmsWLD || len(l.calls) != 1 {
-		t.Errorf("an error routine that stops = %#x %q, want RMS$_WLD", st, l.calls)
+	if st := l.rename(a, a.desc("DUA0:[000000]*.TXT"), a.desc("X%.TXT"), 0, 0, 0, 0, errorRoutine); st != rmsFNMSt || len(l.calls) != 1 {
+		t.Errorf("an error routine that stops = %#x %q, want RMS$_FNM", st, l.calls)
 	}
 
 	if st := renameCall(t, env, a, a.desc("DUA0:[000000]NONE.TXT"), a.desc("X")); st != rmsFNFSt {
@@ -282,9 +283,9 @@ func TestRenameFileContext(t *testing.T) {
 }
 
 // TestRenameFileArguments: fewer than two arguments or more than twelve
-// are LIB$_WRONUMARG, an undefined flag bit LIB$_INVARG, and a name over
-// 255 characters LIB$_INVFILSPE; the VSI manual's other two flags are
-// taken.
+// are LIB$_WRONUMARG, a flag bit past INH_SECUR LIB$_INVARG (the VSI
+// manual's LONG_NAMES too, as on VMS 7.1), and a name over 255
+// characters LIB$_INVFILSPE; INH_SECUR is taken.
 func TestRenameFileArguments(t *testing.T) {
 	env := findFixture(t)
 	a := newArena(t, env)
@@ -299,6 +300,7 @@ func TestRenameFileArguments(t *testing.T) {
 		{"one argument", []uint32{old}, libWroNumArg},
 		{"thirteen arguments", make([]uint32, 13), libWroNumArg},
 		{"flag bit 3", []uint32{old, newName, 0, 0, a.long(8)}, libInvArg},
+		{"LONG_NAMES", []uint32{old, newName, 0, 0, a.long(4)}, libInvArg},
 		{"a long old name", []uint32{long, newName}, libInvFilSpe},
 		{"a long new name", []uint32{old, long}, libInvFilSpe},
 	}
@@ -313,8 +315,8 @@ func TestRenameFileArguments(t *testing.T) {
 		t.Error("a refused call renamed A.TXT")
 	}
 
-	if st := renameCall(t, env, a, old, newName, 0, 0, a.long(6)); st != ssNormal || !exists(t, env, "DUA0:[000000]Q.TXT") {
-		t.Errorf("INH_SECUR and LONG_NAMES = %#x, want SS$_NORMAL", st)
+	if st := renameCall(t, env, a, old, newName, 0, 0, a.long(2)); st != ssNormal || !exists(t, env, "DUA0:[000000]Q.TXT") {
+		t.Errorf("INH_SECUR = %#x, want SS$_NORMAL", st)
 	}
 }
 
@@ -331,11 +333,11 @@ func TestRenameFileSameName(t *testing.T) {
 		st := l.rename(a, a.desc(spec), a.desc("*.*"), 0, 0, 0, successRoutine)
 
 		want := []string{
-			"+DUA0:[000000]A.TXT;1>DUA0:[000000]A.TXT;1",
-			"+DUA0:[000000]B.TXT;1>DUA0:[000000]B.TXT;1",
+			"+DUA0:[000000]A.TXT;1>DUA0:[000000]A.TXT;1 u=0",
+			"+DUA0:[000000]B.TXT;1>DUA0:[000000]B.TXT;1 u=0",
 		}
 		if strings.Contains(spec, "...") {
-			want = append(want, "+DUA0:[SUB]D.TXT;1>DUA0:[SUB]D.TXT;1")
+			want = append(want, "+DUA0:[SUB]D.TXT;1>DUA0:[SUB]D.TXT;1 u=0")
 		}
 
 		if st != ssNormal || !slices.Equal(l.calls, want) {

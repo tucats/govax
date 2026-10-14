@@ -24,10 +24,10 @@ func TestScanName(t *testing.T) {
 		{"[TEST...]*.*;*", fileName{"", "[TEST...]", "*", ".*", ";*"}, 0},
 		{"_DUA1:X", fileName{"_DUA1:", "", "X", "", ""}, 0},
 		{"A.B.C", fileName{}, rmsSyntaxError},
-		{"A;C", fileName{}, rmsInvalidVersion},
+		{"A;C", fileName{}, rmsSyntaxError}, // VMS 7.1: testdata/lib58
 		{"A;32768", fileName{"", "", "A", "", ";32768"}, 0},
 		{"A;65536", fileName{}, rmsInvalidVersion},
-		{"[TEST", fileName{}, rmsDirError},
+		{"[TEST", fileName{}, rmsSyntaxError}, // VMS 7.1: testdata/lib58
 		{"[A..B]", fileName{}, rmsDirError},
 		{"NODE::X", fileName{}, rmsSyntaxError},
 		{"ABCDEFGHIJKLMNOPQRSTUVWXYZABCDEFGHIJKLMN.DAT", fileName{}, rmsFileNameError},

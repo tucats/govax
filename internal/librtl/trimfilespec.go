@@ -23,26 +23,25 @@ import (
 // VMS splits the name with $FILESCAN, which govax doesn't have yet;
 // splitFileSpec finds the same parts.
 
-// maxTrimSpec is the longest old-filespec the manual allows.
-const maxTrimSpec = 255
-
 // libTrimFilespec is LIB$TRIM_FILESPEC. new-filespec is written by its
 // class; the width is word-integer-width, else new-filespec's current
 // length; resultant-length gets the characters written, padding and
 // truncated characters not counted.
 //
-// Choices the manual leaves open, each **unconfirmed** (probe cases):
+// What the manual leaves open is as VMS 7.1 does it (testdata/lib58):
 //
 //   - Each part goes only while what's left is too wide: the first that
 //     makes it fit is the last left out, and a specification that fits
 //     already is unchanged.
 //   - A width of 0 (given, or a dynamic new-filespec's length 0) leaves
 //     nothing: the name cut to nothing, LIB$_STRTRU unless it was empty.
+//   - An old-filespec of more than 255 characters is trimmed as any other
+//     (the 5.0 manual's LIB$_INVARG for one isn't VMS 7.1's).
 //
 // Statuses: SS$_NORMAL; LIB$_STRTRU when the name is cut off or the
-// result doesn't fit new-filespec; LIB$_INVARG for an old-filespec of
-// more than 255 characters; LIB$_WRONUMARG for fewer than two arguments
-// or more than four; LIB$_INVSTRDES and the rest of the string routines'.
+// result doesn't fit new-filespec; LIB$_WRONUMARG for fewer than two
+// arguments or more than four; LIB$_INVSTRDES and the rest of the string
+// routines'.
 // An argument it can't read or write is an access violation, signaled.
 func libTrimFilespec(env *corevms.Environment, argv []uint32) (uint32, error) {
 	if len(argv) < 2 || len(argv) > 4 {
@@ -52,10 +51,6 @@ func libTrimFilespec(env *corevms.Environment, argv []uint32) (uint32, error) {
 	old, err := readString(env, argv[0])
 	if err != nil {
 		return stringFailure(env, err)
-	}
-
-	if len(old) > maxTrimSpec {
-		return libInvArg, nil
 	}
 
 	var width uint32

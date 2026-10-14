@@ -179,7 +179,8 @@ func renameSpecs(ctx *Context, oldSpecs, newSpecs []resolvedSpec) (r volume.Rena
 	// isn't mounted at all -- isn't.
 	newSide.vol, _ = ctx.Mounts.Lookup(newSide.spec.Device)
 	if newSide.vol != oldSide.vol {
-		return r, rmsDeviceError, rmsDeviceError
+		// No status value (VMS 7.1: testdata/lib58's RF other device).
+		return r, rmsDeviceError, 0
 	}
 
 	// Step 6: the new directory. (The loop check is volume.Rename's.)

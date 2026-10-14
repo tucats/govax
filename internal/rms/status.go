@@ -176,6 +176,15 @@ var (
 	// concern this phase's plain-file SYS$OPEN doesn't need.
 	rmsInvalidVersion = vmsConst("RMS$_VER")
 
+	// rmsInvalidRLF is RMS$_RLF: a NAM's NAM$L_RLF names a block that
+	// isn't a NAM.
+	rmsInvalidRLF = vmsConst("RMS$_RLF")
+
+	// rmsMarkDeleteFailed is RMS$_MKD: the ACP couldn't mark the file for
+	// deletion (a directory that still has entries, SS$_DIRNOTEMPTY).
+	rmsMarkDeleteFailed = vmsConst("RMS$_MKD")
+	ssDirNotEmpty       = vmsConst("SS$_DIRNOTEMPTY")
+
 	// rmsRecordTooBig is RMS$_RSZ: a SYS$PUT record was longer than the
 	// file's own declared maximum record size (fab.go's fabMRS), or a
 	// SYS$GET record was longer than the caller's supplied buffer.

@@ -1,8 +1,7 @@
 # Phase 58 — LIB$ callbacks into the program, and file routines
 
-**Status:** in progress (subtasks 1 to 6 done 2026-10-13, 7 on
-2026-10-14; subtask 8's program written 2026-10-14, waiting for its VMS
-run). Planned
+**Status:** in progress (subtasks 1 to 6 done 2026-10-13, 7 and 8 on
+2026-10-14). Planned
 2026-10-12. Needs Phases 53 and 54. Part of the
 LIB$ program laid out in `PHASE-53 - RTL LIB support.md` (Part A).
 
@@ -67,10 +66,11 @@ first to need the first:
   `$UNWIND` past the stub's frame abandons the routine
   (`finishUnwind`), as image rundown does; what VMS's own routines do
   then (anything left open) is still a probe case.
-- **FIND_FILE's flags** (multiple-file context, NODEFAULTS) and the
-  context's lifetime; and FID_TO_NAME on a file with no back-link.
-  The survey found the flags (NOWILD and MULTIPLE; there is no
-  NODEFAULTS) and lists the rest as probe cases.
+- ~~**FIND_FILE's flags** (multiple-file context, NODEFAULTS) and the
+  context's lifetime; and FID_TO_NAME on a file with no back-link~~
+  (settled 2026-10-14, subtask 8): the flags are NOWILD and MULTIPLE;
+  RMS$_NMF ends a context (but with MULTIPLE); a file its directory has
+  no entry for is `[]NAME`.
 
 ## The survey (subtask 1)
 
@@ -576,8 +576,7 @@ TRIM_FILESPEC.
 6. **RENAME_FILE.** **Done** 2026-10-13.
 7. **FID_TO_NAME, TRIM_FILESPEC.** **Done** 2026-10-14.
 8. **The program** (`testdata/lib58/`, on a volume), its console test,
-   and the VMS probe. Program and test written 2026-10-14; the VMS run
-   and govax's changes to its answers are next.
+   and the VMS probe. **Done** 2026-10-14.
 9. **Close-out**: Phase 53's Part B gets the callback convention.
 
 ## Progress log
@@ -821,3 +820,87 @@ TRIM_FILESPEC.
   SS$_DIRNOTEMPTY), and NAM$T_DVI and FID_TO_NAME's device are
   `_GOVAX$DUA1`, where VMS 7.1 on that VAX (not in a cluster) gave
   DEVNAM `_DUA1:` in Phase 55's run.
+- **2026-10-14** — Subtask 8, part 2: the VMS run (OpenVMS V7.1 on
+  simh's VAX 8600; `vax/lib58-vax.txt`, `vax/lib58.log`), and govax
+  changed to its answers. `TestLib58Oracle` now matches all 1907 lines
+  but for three in `expectedLib58Differences` (an access violation's
+  address read from the stack; a header slot inside VMS's index file,
+  extended to 829 blocks, but past govax's). What VMS settled:
+  - **FIND_FILE**: a name with no wildcard (a search list included) gets
+    one `$SEARCH`; the next call is RMS$_NMF with nothing written.
+    RMS$_NMF ends the context (block freed, longword 0), so the next call
+    starts again, except with MULTIPLE. A short resultant is still
+    `$SEARCH`'s status (no STRTRU); a failure writes the NAM's resultant
+    string, else its expanded string, else the filespec; status-value is
+    written after each `$PARSE` and after a failing `$SEARCH`. MULTIPLE's
+    related name is the last call's name, a failed call's included. FNS
+    and DNS are bytes: a 256-character name is an empty one (no
+    INVFILSPE). FIND_FILE_END's success is SS$_NORMAL. Flag bits past
+    MULTIPLE are ignored; a text comparison decides "a different
+    filespec".
+  - **FILE_SCAN**: the routines get FILE_SCAN's own argument list. Its
+    first act is a write of the NAM's WCC (a FAB with no NAM, or a block
+    that isn't a FAB, is an access violation at NAM$L_WCC+3). A failed
+    `$PARSE` leaves the expanded string, else the filespec, in the
+    resultant string. One `$SEARCH` for a name with no wildcard; RMS$_FNF
+    and RMS$_DNF end a scan; the status is the last service's. After a
+    successful `$PARSE`, DNS is 0. With a context, the related name is a
+    chain of name blocks, newest first, each RLF the next (temporary
+    defaulting through every earlier call: `librtl/filescan.go`'s
+    `scanChain`, and RMS's `relatedName` follows a related NAM's own
+    RLF, **unconfirmed** which of the two VMS does); a call's filespec
+    joins the chain at the start of the next call, and the context is made
+    when the call ends (a call abandoned in a callback leaves the longword
+    0). An unknown context is used unchecked (its related NAM is
+    RMS$_RLF). FILE_SCAN_END leaves FNS, DNS, and the NAM's ESS 0
+    (**unconfirmed** which VMS sets; a FILE_SCAN after is RMS$_ESL), and
+    clears an unknown context's longword with SS$_NORMAL.
+  - **DELETE_FILE**: at most nine arguments (no flags on VMS 7.1). The
+    confirm routine gets the search's FAB (FAB$V_NAM set), whose related
+    NAM holds the expanded name; govax puts the search NAM back after it,
+    and a FAB left open makes the delete RMS$_IFI (source 1), then the
+    search (source 0), which ends it. The user argument is always passed,
+    0 when not given. An error routine that stops makes the status severe
+    (%X18292 returns %X18294). A wildcard filespec with no default gets
+    ";*" as its default (**unconfirmed** for one without a wildcard:
+    DELETE of `D2.TXT` deleted only the highest version). A directory
+    that still has entries is RMS$_MKD with SS$_DIRNOTEMPTY.
+  - **RENAME_FILE**: the new name is worked out, its syntax checked by
+    RMS's rules and its directory looked up, before the confirm routine;
+    a failure there is source 1 (`;Q` RMS$_SYN with new-filespec as
+    given; a missing directory RMS$_DNF, SS$_NOSUCHFILE; `A*B` RMS$_FNM).
+    An input that named a version doesn't keep it: the next version of
+    the new name (the DCL Dictionary's RENAME rules; DCL RENAME changes
+    with it). LONG_NAMES (bit 2) is LIB$_INVARG; INH_SECUR is taken. A
+    rename to another device is source 2 with STV 0.
+  - **FID_TO_NAME**: SS$_NORMAL; the device is the volume's logical
+    name, `DISK$label:` (`DISK$LIB58:`); a failure writes the device alone and the ACP's
+    status as acp-status, which is the routine's status (a header slot
+    never used SS$_FILESTRUCT, others SS$_NOSUCHFILE); directory-id is
+    used when given (a directory without the file, or an ID of 0, is
+    SS$_NOSUCHFILE); a file its back link's directory has no entry for is
+    `[]NAME.TYP;V`; a device that isn't a disk is LIB$_INVFILSPE with
+    filespec-length 0 and acp-status SS$_NORMAL; an empty device name is
+    SS$_IVLOGNAM; a file-id of 0 is an access violation.
+  - **TRIM_FILESPEC**: as govax did, but more than 255 characters is
+    trimmed (no INVARG).
+  - **Messages**: the shared (SHR$) messages, a code whose bit 15 is
+    clear shown with its own facility's name: `%LIB-E-NOWILD, no
+    wildcard permitted`, `PARSEFAIL, error parsing !AS`
+    (`vmsdef/messages.go`'s `sharedMessages`, from VMS's output).
+  - **RMS**, beyond the routines: `;Q` and a directory with no closing
+    bracket are RMS$_SYN (were RMS$_VER and RMS$_DIR; unconfirmed choices
+    of Phase 24's); RMS$_DNF writes the expanded name as the resultant
+    string; a wildcard-directory search whose directory above the
+    wildcard is missing is RMS$_DNF at once; RMS$_FNF from a
+    wildcard-directory search has STV 0; and a `[DIR...]` search that
+    runs out leaves `[DIR]*.DIR;1`, DID [DIR]'s, and FNB as for its
+    subdirectories (VMS 7.3's RMS3 SEARCH case 3 shows the same, so that
+    case is now compared rather than masked).
+  - **The assembler**: comparing the VAX's LIB58.OBJ with govax's showed
+    real MACRO assembling `FAB$B_BID(R2)` (a known 0) as `(R2)`, register
+    deferred; govax's MACRO dialect now does (`asm/operand.go`'s
+    `registerDisplacement`; `TestMACROZeroDisplacement`; a literal 0 is
+    taken the same way, **unconfirmed**), and the objects match byte for
+    byte but for the headers that name the assembler.
+

@@ -89,6 +89,10 @@ func (ctx *Context) parseInto(fab, nam uint32) (sts, stv uint32, err error) {
 		return 0, 0, err
 	}
 
+	if in.BadRelated {
+		return rmsInvalidRLF, 0, nil
+	}
+
 	names, sts := ctx.expandName(in)
 	if sts != 0 {
 		return sts, 0, nil

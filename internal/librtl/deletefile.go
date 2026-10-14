@@ -1,28 +1,30 @@
 package librtl
 
 import (
+	"strings"
+
 	"github.com/tucats/govax/internal/corevms"
 	"github.com/tucats/govax/internal/registers"
 	"github.com/tucats/govax/internal/vmsdef"
 )
 
 // LIB$DELETE_FILE (docs/PHASE-58, subtask 5; the survey's "DELETE_FILE
-// (106)"), written from the 5.0 LIB$ manual (LIB-106), with the VSI
-// manual's tenth argument:
+// (106)"), written from the 5.0 LIB$ manual (LIB-106):
 //
 //	LIB$DELETE_FILE filespec [,default-filespec] [,related-filespec]
 //	                [,user-success-procedure] [,user-error-procedure]
 //	                [,user-confirm-procedure] [,user-specified-argument]
-//	                [,resultant-name] [,file-scan-context] [,flags]
+//	                [,resultant-name] [,file-scan-context]
 //
 // It deletes every file filespec matches, as DCL's DELETE does: a
 // $PARSE and then $SEARCH until RMS$_NMF, as LIB$FILE_SCAN runs them
 // (filescan.go), and for each file found
 //
 //  1. the confirm routine, when there is one, is called with the file's
-//     name and a FAB that describes the file; a failure (bit 0 of R0
-//     clear) passes the file over;
-//  2. the file is deleted ($ERASE of that FAB);
+//     name and the search's FAB, which describes the file (FAB$V_NAM is
+//     set, so an $OPEN of it opens the file its NAM names); a failure
+//     (bit 0 of R0 clear) passes the file over;
+//  2. the file is deleted ($ERASE);
 //  3. the success routine is called with the file's name.
 //
 // An error searching (error-source 0) or deleting (1) calls the error
@@ -30,55 +32,51 @@ import (
 // error source, each of the three by reference. If it returns success
 // the routine goes on with the next file; if failure, it stops at once.
 // Each routine is given user-specified-argument last, the longword as
-// the routine's own argument list has it, when the program passed one.
+// the routine's own argument list has it, or 0.
 //
 // The names go to the callbacks by descriptor: resultant-name, the
 // name written into it first, or else a class S descriptor in the
 // stub's frame. The FAB and NAM the search runs on are in the stub's
 // frame too (below SP, as the callbacks' argument lists are), and so is
-// a second FAB and NAM, the file's: its file name is the file found,
-// and it is the FAB the confirm routine gets, to $OPEN (and $CLOSE) if
-// it wants the file's attributes, and the one $ERASE deletes. A FAB of
-// its own keeps a confirm routine's $OPEN from disturbing the search's
-// NAM (whose wildcard context an $OPEN would clear).
+// a second FAB, whose file name is the file found, which $ERASE deletes.
 //
 // file-scan-context is LIB$FILE_SCAN's context: the last file deleted
 // is the related name of the next call ("need only be specified ... with
 // multiple input files, as the DCL command DELETE does"), and
 // LIB$FILE_SCAN_END frees it.
 //
-// The choices the manuals leave open are the survey's probe cases, each
-// unconfirmed until the probe (subtask 8) runs on VMS:
+// What the manuals leave open is as VMS 7.1 does it (testdata/lib58,
+// docs/PHASE-58's subtask 8), but where marked unconfirmed:
 //
-//   - No arguments, or more than ten, is LIB$_WRONUMARG. A flag bit
-//     other than the VSI manual's three (two reserved, LONG_NAMES) is
-//     LIB$_INVARG; those three change nothing on the VAX.
-//   - A name without a version deletes the highest version, $SEARCH's
-//     and $ERASE's rule (the manual's Pascal example passes "*;" as the
-//     default name for DCL's rule).
+//   - No arguments, or more than nine, is LIB$_WRONUMARG (the VSI
+//     manual's tenth argument, flags, isn't VMS 7.1's).
+//   - With no default-filespec, a filespec with a wildcard is parsed
+//     with ";*" as its default (the search FAB's DNA); one without
+//     deletes the highest version (unconfirmed which rule VMS uses).
 //   - The routine's status is SS$_NORMAL with no errors. After errors,
 //     when there is an error routine, LIB$_ERRROUCAL, but the RMS status
-//     itself when the error routine stopped the deletion; with none, the
-//     most severe error status met (the first of the most severe).
+//     made severe when the error routine stopped the deletion; with none,
+//     the most severe error status met (the first of the most severe).
 //   - The name the error routine gets is the NAM's resultant string,
 //     else its expanded string, else filespec as given.
 //   - A related-filespec wins over the context's last file, as the
-//     program's own related NAM wins in LIB$FILE_SCAN.
+//     program's own related NAM wins in LIB$FILE_SCAN (unconfirmed).
 //   - A failed $SEARCH that can't go on (NAM$L_WCC unchanged) ends the
-//     search, as in LIB$FILE_SCAN.
-//   - What the success and confirm routines' argument lists hold when the
-//     program gave no user-specified-argument: just the name (and the
-//     FAB).
+//     search, as in LIB$FILE_SCAN. A confirm routine that leaves the FAB
+//     open makes the delete RMS$_IFI (error source 1), and then the
+//     search (source 0), which ends it.
+//   - The search NAM's related NAM holds the expanded name (what the
+//     confirm routine sees of it).
 
 // Statuses and fields LIB$DELETE_FILE uses beyond the search routines'.
 var (
 	libErrRouCal = vmsdef.LibrarySymbols["LIB$_ERRROUCAL"]
+	rmsIFI       = vmsdef.Symbols["RMS$_IFI"]
 	namESL       = vmsdef.Symbols["NAM$B_ESL"]
+	fabIFI       = vmsdef.Symbols["FAB$W_IFI"]
+	fabFOP       = vmsdef.Symbols["FAB$L_FOP"]
+	fopNAM       = vmsdef.Symbols["FAB$M_NAM"]
 )
-
-// deleteFlags are the flag bits LIB$DELETE_FILE accepts: the VSI
-// manual's two reserved bits and LIB$M_FIL_LONG_NAMES.
-const deleteFlags = 1<<0 | 1<<1 | 1<<2
 
 // The error sources the error routine is given.
 const (
@@ -110,7 +108,7 @@ type deleter struct {
 
 // libDeleteFile is LIB$DELETE_FILE.
 func libDeleteFile(env *corevms.Environment, argv []uint32) (uint32, error) {
-	if len(argv) == 0 || len(argv) > 10 {
+	if len(argv) == 0 || len(argv) > 9 {
 		return libWroNumArg, nil
 	}
 
@@ -118,7 +116,7 @@ func libDeleteFile(env *corevms.Environment, argv []uint32) (uint32, error) {
 		fileWalk: fileWalk{
 			env:     env,
 			failure: arg(argv, 4),
-			user:    arg(argv, 6), hasUser: len(argv) > 6,
+			user:    arg(argv, 6),
 		},
 		success: arg(argv, 3), confirm: arg(argv, 5),
 		result: arg(argv, 7),
@@ -132,13 +130,8 @@ func libDeleteFile(env *corevms.Environment, argv []uint32) (uint32, error) {
 		return status, err
 	}
 
-	flags, err := optionalLongword(env, arg(argv, 9), 0)
-	if err != nil {
-		return memoryFault(env, err)
-	}
-
-	if flags&^deleteFlags != 0 {
-		return libInvArg, nil
+	if d.defaultSpec == "" && (strings.ContainsAny(d.spec, "*%") || strings.Contains(d.spec, "...")) {
+		d.defaultSpec = ";*"
 	}
 
 	return d.walk(arg(argv, 8))
@@ -160,7 +153,7 @@ func (d *deleter) deleteOne(name string) (deleted, stop bool, status uint32, err
 	fab := d.file + fileFAB
 
 	if d.confirm != 0 {
-		r0, err := env.Callback(d.confirm, d.withUser(desc, fab)...)
+		r0, err := d.confirming(d.confirm, d.withUser(desc, d.search+findFAB)...)
 		if err != nil {
 			status, err = memoryFault(env, err)
 
@@ -170,6 +163,19 @@ func (d *deleter) deleteOne(name string) (deleted, stop bool, status uint32, err
 		if r0&1 == 0 {
 			return false, false, 0, nil
 		}
+	}
+
+	open, err := d.searchOpen()
+	if err != nil {
+		status, err = memoryFault(env, err)
+
+		return false, true, status, err
+	}
+
+	if open {
+		stop, status, err := d.reportError(name, rmsIFI, 0, sourceDelete)
+
+		return false, stop, status, err
 	}
 
 	status, err = env.CallService("SYS$ERASE", []uint32{fab})

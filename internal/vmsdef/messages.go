@@ -50,7 +50,43 @@ func LookupMessage(code uint32) (Message, bool) {
 		m, ok = govaxMessages[code&messageKeyMask]
 	}
 
+	if !ok && code&facilitySpecific == 0 {
+		m, ok = sharedMessage(code)
+	}
+
 	return m, ok
+}
+
+// facilitySpecific is STS$V_FAC_SP (bit 15 of a condition value): set,
+// the message number is the facility's own; clear, it is one of the
+// shared messages (SHR$), which any facility may use, shown with that
+// facility's name: LIB$_NOWILD (%X15112A) is SHR$_NOWILD (%X1128) as
+// %LIB-E-NOWILD.
+const facilitySpecific = 0x8000
+
+// sharedMessages are the shared (SHR$) messages, by message number (bits
+// 3-14, the severity cleared), as VMS 7.1's $GETMSG showed them
+// (testdata/lib58): the system message file govax's tables were made
+// from doesn't have them.
+var sharedMessages = map[uint32]Message{
+	0x1128: {Ident: "NOWILD", Text: "no wildcard permitted"},
+	0x1248: {Ident: "PARSEFAIL", Text: "error parsing !AS", FAOCount: 1},
+}
+
+// sharedMessage returns the shared message code names, with the
+// facility's name the code's (SYSTEM for facility 0).
+func sharedMessage(code uint32) (Message, bool) {
+	m, ok := sharedMessages[code&0x7FF8]
+	if !ok {
+		return Message{}, false
+	}
+
+	fac := code >> 16 & 0xFFF
+	if m.Facility, ok = MessageFacilities[fac]; !ok {
+		return Message{}, false
+	}
+
+	return m, true
 }
 
 // vaxMessages are messages VMS on a VAX words differently from the

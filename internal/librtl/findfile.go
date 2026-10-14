@@ -28,24 +28,33 @@ import (
 // is in Go, per image (corevms.Environment.ImageData), by the block's
 // address, as the date and time contexts are (dtcontext.go).
 //
-// The choices the manuals leave open are the survey's probe cases, each
-// unconfirmed until the probe (subtask 8) runs on VMS:
+// What the manuals leave open is as VMS 7.1 does it (testdata/lib58,
+// docs/PHASE-58's subtask 8):
 //
 //   - A new search starts on the first call, when filespec's text isn't
 //     the last call's (compared as given), and on every call with
-//     LIB$M_FIL_NOWILD set. Otherwise the call goes on with the search:
-//     after RMS$_NMF, that is RMS$_NMF again, $SEARCH's answer.
-//   - The routine's success is $SEARCH's status, RMS$_NORMAL (the VSI
-//     manual's; the 5.0 manual says SS$_NORMAL), or LIB$_STRTRU when
-//     resultant-filespec is too short for the name.
-//   - status-value is written only when an RMS service fails: FAB$L_STV.
+//     LIB$M_FIL_NOWILD set. A specification with no wildcard (NAM$L_FNB's
+//     NAM$V_WILDCARD clear after the $PARSE, a search list included) gets
+//     one $SEARCH: the next call with it is RMS$_NMF, with nothing
+//     written. RMS$_NMF ends the context: the block goes back to the
+//     heap and the longword is cleared, so the call after starts the
+//     search again; with LIB$M_FIL_MULTIPLE the context stays, for the
+//     related name.
+//   - The routine's success is $SEARCH's, RMS$_NORMAL, even when
+//     resultant-filespec is too short for the name (no LIB$_STRTRU).
+//   - When a service fails, resultant-filespec gets the NAM's resultant
+//     string, else its expanded string, else (a $PARSE that failed) the
+//     filespec as given.
+//   - status-value gets FAB$L_STV after each $PARSE and after a $SEARCH
+//     that fails.
 //   - With LIB$M_FIL_MULTIPLE, related-filespec is ignored and the last
-//     file found (its resultant string) is the related name of each new
-//     search: temporary defaulting, "[SMITH]A,B" making B [SMITH]B.
-//   - A filespec or default-filespec longer than 255 characters (FNS and
-//     DNS are bytes) is LIB$_INVFILSPE; flag bits past MULTIPLE are
+//     call's name (the file found, or what a failing call wrote to
+//     resultant-filespec) is the related name of each new search:
+//     temporary defaulting, "[SMITH]A,B" making B [SMITH]B.
+//   - FNS and DNS are bytes, so a filespec of 256 characters is one of 0:
+//     the length is taken modulo 256. Flag bits past MULTIPLE are
 //     ignored; a context longword that holds no context's address is
-//     RMS$_FAB, as $SEARCH would say of a block that isn't a FAB.
+//     RMS$_FAB. LIB$FIND_FILE_END's success is SS$_NORMAL.
 
 // Statuses the file search routines return.
 var (
@@ -114,12 +123,14 @@ const (
 
 // findContext is what LIB$FIND_FILE keeps in Go for one context: the
 // filespec being searched for (searching false before a search has
-// started, or after its $PARSE failed), and the last file found, the
-// related name of the next search with LIB$M_FIL_MULTIPLE.
+// started, or after its $PARSE failed), whether it has a wildcard and
+// has been searched once, and the last call's name, the related name of
+// the next search with LIB$M_FIL_MULTIPLE.
 type findContext struct {
-	spec      string
-	searching bool
-	previous  string
+	spec           string
+	searching      bool
+	wild, searched bool
+	previous       string
 }
 
 // findContextsKey is the corevms.Environment.ImageData key of the
@@ -169,9 +180,12 @@ func libFindFile(env *corevms.Environment, argv []uint32) (uint32, error) {
 		return rmsFAB, nil
 	}
 
-	if !c.searching || a.flags&findNoWild != 0 || a.spec != c.spec {
+	multiple := a.flags&findMultiple != 0
+
+	switch {
+	case !c.searching || a.flags&findNoWild != 0 || a.spec != c.spec:
 		related := a.related
-		if a.flags&findMultiple != 0 {
+		if multiple {
 			related = c.previous
 		}
 
@@ -180,21 +194,30 @@ func libFindFile(env *corevms.Environment, argv []uint32) (uint32, error) {
 			return memoryFault(env, err)
 		}
 
-		c.spec, c.searching = a.spec, status&1 != 0
+		if err := copySTV(env, block, a.statusValue); err != nil {
+			return memoryFault(env, err)
+		}
+
+		c.spec, c.searching, c.searched = a.spec, status&1 != 0, false
 		if status&1 == 0 {
-			return failedRMS(env, block, a.statusValue, status)
+			return failedSearch(env, c, block, a, status)
 		}
 
-		if a.flags&findNoWild != 0 {
-			fnb, err := mem.LoadLongword(cpu, block+findNAM+namFNB)
-			if err != nil {
-				return memoryFault(env, err)
-			}
-
-			if fnb&fnbWildcard != 0 {
-				return libNoWild, nil
-			}
+		fnb, err := mem.LoadLongword(cpu, block+findNAM+namFNB)
+		if err != nil {
+			return memoryFault(env, err)
 		}
+
+		c.wild = fnb&fnbWildcard != 0
+
+		if a.flags&findNoWild != 0 && c.wild {
+			return failedSearch(env, c, block, a, libNoWild)
+		}
+
+	case !c.wild && c.searched:
+		// The one file a specification without a wildcard names has been
+		// given (or wasn't there).
+		return endSearch(env, c, block, a, rmsNMF)
 	}
 
 	status, err = env.CallService("SYS$SEARCH", []uint32{block + findFAB})
@@ -202,8 +225,14 @@ func libFindFile(env *corevms.Environment, argv []uint32) (uint32, error) {
 		return status, err
 	}
 
+	c.searched = true
+
 	if status&1 == 0 {
-		return failedRMS(env, block, a.statusValue, status)
+		if err := copySTV(env, block, a.statusValue); err != nil {
+			return memoryFault(env, err)
+		}
+
+		return failedSearch(env, c, block, a, status)
 	}
 
 	name, err := resultantName(env, block+findNAM)
@@ -213,16 +242,92 @@ func libFindFile(env *corevms.Environment, argv []uint32) (uint32, error) {
 
 	c.previous = name
 
-	_, truncated, err := writeString(env, a.result, name)
-	if err != nil {
+	if _, _, err := writeString(env, a.result, name); err != nil {
 		return stringFailure(env, err)
 	}
 
-	if truncated {
-		return libStrTru, nil
+	return status, nil
+}
+
+// failedSearch is the end of a call whose $PARSE or $SEARCH failed with
+// status (or LIB$_NOWILD): resultant-filespec gets the NAM's resultant
+// string, else its expanded string, else the filespec, which is also the next MULTIPLE
+// search's related name, and RMS$_NMF ends the context.
+func failedSearch(env *corevms.Environment, c *findContext, block uint32, a findArgs, status uint32) (uint32, error) {
+	name, err := resultantName(env, block+findNAM)
+	if err == nil && name == "" {
+		name, err = expandedString(env, block+findNAM)
+	}
+
+	if err != nil {
+		return memoryFault(env, err)
+	}
+
+	if name == "" {
+		name = a.spec
+	}
+
+	c.previous = name
+
+	if name != "" {
+		if _, _, err := writeString(env, a.result, name); err != nil {
+			return stringFailure(env, err)
+		}
+	}
+
+	if status == rmsNMF {
+		return endSearch(env, c, block, a, status)
 	}
 
 	return status, nil
+}
+
+// endSearch returns status (RMS$_NMF) after ending the context, unless
+// LIB$M_FIL_MULTIPLE keeps it for the related name.
+func endSearch(env *corevms.Environment, c *findContext, block uint32, a findArgs, status uint32) (uint32, error) {
+	if a.flags&findMultiple != 0 {
+		return status, nil
+	}
+
+	if _, err := endFindContext(env, block, a.cell); err != nil {
+		return 0, err
+	}
+
+	return status, nil
+}
+
+// copySTV copies the block's FAB$L_STV to the longword at statusValue,
+// when given. err is a memory error, for the caller to signal.
+func copySTV(env *corevms.Environment, block, statusValue uint32) error {
+	if statusValue == 0 {
+		return nil
+	}
+
+	mem, cpu := env.Memory(), env.CPU()
+
+	stv, err := mem.LoadLongword(cpu, block+findFAB+fabSTV)
+	if err != nil {
+		return err
+	}
+
+	return writing(mem.StoreLongword(cpu, statusValue, stv))
+}
+
+// expandedString reads the expanded string of the NAM at nam.
+func expandedString(env *corevms.Environment, nam uint32) (string, error) {
+	mem, cpu := env.Memory(), env.CPU()
+
+	esl, err := mem.LoadByte(cpu, nam+namESL)
+	if err != nil {
+		return "", err
+	}
+
+	esa, err := mem.LoadLongword(cpu, nam+namESA)
+	if err != nil {
+		return "", err
+	}
+
+	return readText(env, esa, uint32(esl))
 }
 
 // readFindArgs reads LIB$FIND_FILE's arguments. status is nonzero for
@@ -247,9 +352,9 @@ func readFindArgs(env *corevms.Environment, argv []uint32) (a findArgs, status u
 		}
 	}
 
-	if len(a.spec) > maxFileSpec || len(a.defaultSpec) > maxFileSpec {
-		return a, libInvFilSpe, nil
-	}
+	// FNS and DNS are bytes: what's past a multiple of 256 is all RMS sees.
+	a.spec = a.spec[:len(a.spec)%256]
+	a.defaultSpec = a.defaultSpec[:len(a.defaultSpec)%256]
 
 	if a.flags, err = optionalLongword(env, arg(argv, 6), 0); err != nil {
 		status, err = memoryFault(env, err)
@@ -407,54 +512,34 @@ func resultantName(env *corevms.Environment, nam uint32) (string, error) {
 	return readText(env, rsa, uint32(rsl))
 }
 
-// failedRMS is the end of a call whose RMS service failed with status:
-// the block's FAB$L_STV goes to the longword at statusValue (when given),
-// and the status is returned.
-func failedRMS(env *corevms.Environment, block, statusValue, status uint32) (uint32, error) {
-	if statusValue == 0 {
-		return status, nil
-	}
-
-	mem, cpu := env.Memory(), env.CPU()
-
-	stv, err := mem.LoadLongword(cpu, block+findFAB+fabSTV)
-	if err != nil {
-		return memoryFault(env, err)
-	}
-
-	if err := mem.StoreLongword(cpu, statusValue, stv); err != nil {
-		return memoryFault(env, writing(err))
-	}
-
-	return status, nil
-}
-
 // libFindFileEnd is LIB$FIND_FILE_END. It ends the search the context
-// longword names: a $PARSE of the null string frees RMS's search context
-// ("parses the null string to deallocate any saved RMS context"), then
-// the block goes back to the heap and the longword is cleared
-// (unconfirmed: the manuals say only that the value is no longer valid).
-// A longword of 0 is RMS$_NORMAL, nothing to end; one that names no
-// context is RMS$_FAB. Its success is RMS$_NORMAL (the 5.0 manual's;
-// the VSI manual says SS$_NORMAL).
+// longword names (endFindContext). A longword of 0 is nothing to end; one
+// that names no context is RMS$_FAB. Its success is SS$_NORMAL (the VSI
+// manual's, and VMS 7.1's; the 5.0 manual says RMS$_NORMAL).
 func libFindFileEnd(env *corevms.Environment, argv []uint32) (uint32, error) {
-	mem, cpu := env.Memory(), env.CPU()
 	cell := arg(argv, 0)
 
-	block, err := mem.LoadLongword(cpu, cell)
+	block, err := env.Memory().LoadLongword(env.CPU(), cell)
 	if err != nil {
 		return memoryFault(env, err)
 	}
 
 	if block == 0 {
-		return rmsNormal, nil
+		return ssNormal, nil
 	}
 
-	contexts := findContexts(env)
-	if contexts[block] == nil {
+	if findContexts(env)[block] == nil {
 		return rmsFAB, nil
 	}
 
+	return endFindContext(env, block, cell)
+}
+
+// endFindContext ends the context in block: a $PARSE of the null string
+// frees RMS's search context ("parses the null string to deallocate any
+// saved RMS context"), then the block goes back to the heap and the
+// longword at cell is cleared (as VMS 7.1 does).
+func endFindContext(env *corevms.Environment, block, cell uint32) (uint32, error) {
 	if err := setBlockNames(env, block, "", "", ""); err != nil {
 		return memoryFault(env, writing(err))
 	}
@@ -463,12 +548,12 @@ func libFindFileEnd(env *corevms.Environment, argv []uint32) (uint32, error) {
 		return 0, err
 	}
 
-	delete(contexts, block)
+	delete(findContexts(env), block)
 	env.FreeVM(block)
 
-	if err := mem.StoreLongword(cpu, cell, 0); err != nil {
+	if err := env.Memory().StoreLongword(env.CPU(), cell, 0); err != nil {
 		return memoryFault(env, writing(err))
 	}
 
-	return rmsNormal, nil
+	return ssNormal, nil
 }

@@ -177,9 +177,10 @@ func runOracleProbe(t *testing.T, device, node, probe string) (vms, govax []prob
 //     depend on the index file's history, and the creation and revision
 //     dates set from the clock as they're made and closed (case 107's
 //     revision date is the probe's own, and is compared);
-//   - in the SEARCH probe, what a search of a wildcard directory leaves in
-//     the NAM and resultant string buffer when it runs out (cases 3 and
-//     9): VMS's own search state, not a file;
+//   - in the SEARCH probe, what a search of "[*]" leaves in the NAM and
+//     resultant string buffer when it runs out (case 9): VMS's own search
+//     state, not a file ("[.......]*.DIR;1"); case 3's, "[TEST...]", is
+//     modeled (rms/search.go's endAtRoot) and compared;
 //   - in the XAB probe, the first of two XABDATs (DUP1), into which VMS
 //     writes the time as it rejects the second with RMS$_IMX.
 func maskRecord(probe string, r probeRecord) probeRecord {
@@ -211,7 +212,7 @@ func maskRecord(probe string, r probeRecord) probeRecord {
 	case probe == "create" && r.Tag == "RRDT" && r.Step != 107:
 		zero(0xc, 0x14)
 
-	case probe == "search" && (r.Step == 312 || r.Step == 905) && (r.Tag == "NAM_" || r.Tag == "RSA_"):
+	case probe == "search" && r.Step == 905 && (r.Tag == "NAM_" || r.Tag == "RSA_"):
 		zero(0, len(d))
 
 	case probe == "xab" && r.Tag == "DUP1":

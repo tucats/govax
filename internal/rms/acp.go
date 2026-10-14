@@ -69,6 +69,7 @@ var (
 	ErrACPEndOfFile    = errors.New("rms: end of file")                  // SS$_ENDOFFILE
 	ErrACPBadBlock     = errors.New("rms: virtual block number is zero") // SS$_BADPARAM
 	ErrACPDeviceFull   = errors.New("rms: no room to extend the file")   // SS$_DEVICEFULL
+	ErrACPBadHeader    = errors.New("rms: file header not valid")        // SS$_FILESTRUCT
 
 	// ErrACPAccessConflict is an access that conflicts with the file's
 	// other accessors' (sharing.go).

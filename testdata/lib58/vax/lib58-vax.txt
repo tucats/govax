@@ -1,0 +1,1907 @@
+make directories R0=00000619
+  N: 00000004
+make A and B files R0=00010001
+  N: 00000007
+define LIB58_LIST R0=00000001
+  S: 00000001
+FF A*.TXT 1 R0=00010001
+  D: 23 "DUA1:[LIB58.A]ONE.TXT;1"
+  STV: 00000000
+  Z: 00000001
+FF A*.TXT 2 R0=00010001
+  D: 23 "DUA1:[LIB58.A]TWO.TXT;2"
+  STV: 55555555
+  Z: 00000001
+FF A*.TXT 3 R0=000182CA
+  D: 20 "DUA1:[LIB58.A]*.TXT;"
+  STV: 00000930
+  Z: 00000000
+FF A*.TXT 4 R0=00010001
+  D: 23 "DUA1:[LIB58.A]ONE.TXT;1"
+  STV: 00000000
+  Z: 00000001
+FF A*.TXT 5 R0=00010001
+  D: 23 "DUA1:[LIB58.A]TWO.TXT;2"
+  STV: 55555555
+  Z: 00000001
+FF A*.TXT 6 R0=000182CA
+  D: 20 "DUA1:[LIB58.A]*.TXT;"
+  STV: 00000930
+  Z: 00000000
+FFE A*.TXT R0=00000001
+  Z: 00000000
+FFE A*.TXT again R0=00000001
+  Z: 00000000
+FF ONE.TXT 1 R0=00010001
+  D: 23 "DUA1:[LIB58.A]ONE.TXT;1"
+  STV: 00000000
+  Z: 00000001
+FF ONE.TXT 2 R0=000182CA
+  D: 0 ""
+  STV: 55555555
+  Z: 00000000
+FF ONE.TXT 3 R0=00010001
+  D: 23 "DUA1:[LIB58.A]ONE.TXT;1"
+  STV: 00000000
+  Z: 00000001
+FFE ONE.TXT R0=00000001
+  Z: 00000000
+FF NOWILD ONE.TXT 1 R0=00010001
+  D: 23 "DUA1:[LIB58.A]ONE.TXT;1"
+  STV: 00000000
+  Z: 00000001
+FF NOWILD ONE.TXT 2 R0=00010001
+  D: 23 "DUA1:[LIB58.A]ONE.TXT;1"
+  STV: 00000000
+  Z: 00000001
+FF NOWILD ONE.TXT 3 R0=00010001
+  D: 23 "DUA1:[LIB58.A]ONE.TXT;1"
+  STV: 00000000
+  Z: 00000001
+FF NOWILD *.TXT R0=0015112A
+  D: 20 "DUA1:[LIB58.A]*.TXT;"
+  STV: 00000000
+  Z: 00000001
+FF NOWILD *.TXT again R0=0015112A
+  D: 20 "DUA1:[LIB58.A]*.TXT;"
+  STV: 00000000
+  Z: 00000001
+FF NOWILD wild directory R0=0015112A
+  D: 23 "DUA1:[LIB58...]ONE.TXT;"
+  STV: 00000000
+  Z: 00000001
+FFE NOWILD R0=00000001
+  Z: 00000000
+FF [LIB58...]*.TXT 1 R0=00010001
+  D: 23 "DUA1:[LIB58.A]ONE.TXT;1"
+  STV: 00000000
+  Z: 00000001
+FF [LIB58...]*.TXT 2 R0=00010001
+  D: 23 "DUA1:[LIB58.A]TWO.TXT;2"
+  STV: 55555555
+  Z: 00000001
+FF [LIB58...]*.TXT 3 R0=00010001
+  D: 28 "DUA1:[LIB58.A.SUB]DEEP.TXT;1"
+  STV: 55555555
+  Z: 00000001
+FF [LIB58...]*.TXT 4 R0=00010001
+  D: 24 "DUA1:[LIB58.B]FOUR.TXT;1"
+  STV: 55555555
+  Z: 00000001
+FF [LIB58...]*.TXT 5 R0=00010001
+  D: 23 "DUA1:[LIB58.B]ONE.TXT;1"
+  STV: 55555555
+  Z: 00000001
+FF [LIB58...]*.TXT 6 R0=000182CA
+  D: 19 "DUA1:[LIB58]*.DIR;1"
+  STV: 00000000
+  Z: 00000000
+FF [LIB58...]*.TXT 7 R0=00010001
+  D: 23 "DUA1:[LIB58.A]ONE.TXT;1"
+  STV: 00000000
+  Z: 00000001
+FF [LIB58...]*.TXT 8 R0=00010001
+  D: 23 "DUA1:[LIB58.A]TWO.TXT;2"
+  STV: 55555555
+  Z: 00000001
+FFE [LIB58...] R0=00000001
+  Z: 00000000
+FF LIB58_LIST:*.TXT 1 R0=00010001
+  D: 23 "DUA1:[LIB58.A]ONE.TXT;1"
+  STV: 00000000
+  Z: 00000001
+FF LIB58_LIST:*.TXT 2 R0=00010001
+  D: 23 "DUA1:[LIB58.A]TWO.TXT;2"
+  STV: 55555555
+  Z: 00000001
+FF LIB58_LIST:*.TXT 3 R0=00010001
+  D: 24 "DUA1:[LIB58.B]FOUR.TXT;1"
+  STV: 55555555
+  Z: 00000001
+FF LIB58_LIST:*.TXT 4 R0=00010001
+  D: 23 "DUA1:[LIB58.B]ONE.TXT;1"
+  STV: 55555555
+  Z: 00000001
+FF LIB58_LIST:*.TXT 5 R0=000182CA
+  D: 20 "DUA1:[LIB58.B]*.TXT;"
+  STV: 00000930
+  Z: 00000000
+FF LIB58_LIST:*.TXT 6 R0=00010001
+  D: 23 "DUA1:[LIB58.A]ONE.TXT;1"
+  STV: 00000000
+  Z: 00000001
+FF LIB58_LIST:ONE.TXT 1 R0=00010001
+  D: 23 "DUA1:[LIB58.A]ONE.TXT;1"
+  STV: 00000000
+  Z: 00000001
+FF LIB58_LIST:ONE.TXT 2 R0=000182CA
+  D: 0 ""
+  STV: 55555555
+  Z: 00000000
+FF LIB58_LIST:ONE.TXT 3 R0=00010001
+  D: 23 "DUA1:[LIB58.A]ONE.TXT;1"
+  STV: 00000000
+  Z: 00000001
+FFE LIB58_LIST R0=00000001
+  Z: 00000000
+FF new spec A R0=00010001
+  D: 23 "DUA1:[LIB58.A]ONE.TXT;1"
+  STV: 00000000
+  Z: 00000001
+FF new spec B 1 R0=00010001
+  D: 24 "DUA1:[LIB58.B]FOUR.TXT;1"
+  STV: 00000000
+  Z: 00000001
+FF new spec B 2 R0=00010001
+  D: 23 "DUA1:[LIB58.B]ONE.TXT;1"
+  STV: 55555555
+  Z: 00000001
+FF new spec A again R0=00010001
+  D: 23 "DUA1:[LIB58.A]ONE.TXT;1"
+  STV: 00000000
+  Z: 00000001
+FF new spec lowercase R0=00010001
+  D: 23 "DUA1:[LIB58.A]ONE.TXT;1"
+  STV: 00000000
+  Z: 00000001
+FFE new spec R0=00000001
+  Z: 00000000
+FF missing 1 R0=00018292
+  D: 23 "DUA1:[LIB58.A]NONE.TXT;"
+  STV: 00000910
+  Z: 00000001
+FF missing 2 R0=000182CA
+  D: 0 ""
+  STV: 55555555
+  Z: 00000000
+FF missing wildcard R0=00018292
+  D: 24 "DUA1:[LIB58.A]NONE*.TXT;"
+  STV: 00000910
+  Z: 00000001
+FF missing directory R0=0001C04A
+  D: 24 "DUA1:[LIB58.NODIR]X.TXT;"
+  STV: 00000910
+  Z: 00000001
+FF missing wild directory R0=0001C04A
+  D: 27 "DUA1:[LIB58.NODIR...]X.TXT;"
+  STV: 00000910
+  Z: 00000001
+FF bad syntax R0=000186D4
+  D: 16 "[LIB58.A]X.TXT;Q"
+  STV: 00000000
+  Z: 00000001
+FF no such device R0=000184C4
+  D: 18 "XYZ0:[LIB58]X.TXT;"
+  STV: 00000908
+  Z: 00000001
+FF empty spec R0=00018292
+  D: 15 "DUA1:[000000].;"
+  STV: 00000910
+  Z: 00000001
+FFE missing R0=00000001
+  Z: 00000000
+FF default name R0=00010001
+  D: 23 "DUA1:[LIB58.A]ONE.TXT;1"
+  STV: 00000000
+  Z: 00000001
+FF same spec, related name R0=000182CA
+  D: 0 ""
+  STV: 55555555
+  Z: 00000000
+FFE default R0=00000001
+  Z: 00000000
+FF related name R0=00010001
+  D: 23 "DUA1:[LIB58.B]ONE.TXT;1"
+  STV: 00000000
+  Z: 00000001
+FF related name 2 R0=000182CA
+  D: 0 ""
+  STV: 55555555
+  Z: 00000000
+FFE related R0=00000001
+  Z: 00000000
+FF related wildcard R0=00010001
+  D: 24 "DUA1:[LIB58.B]FOUR.TXT;1"
+  STV: 00000000
+  Z: 00000001
+FF related wildcard 2 R0=00010001
+  D: 23 "DUA1:[LIB58.B]ONE.TXT;1"
+  STV: 55555555
+  Z: 00000001
+FFE related wildcard R0=00000001
+  Z: 00000000
+FF related wildcard type R0=00010001
+  D: 23 "DUA1:[LIB58.B]ONE.TXT;1"
+  STV: 00000000
+  Z: 00000001
+FFE related wildcard type R0=00000001
+  Z: 00000000
+FF related and default R0=00018292
+  D: 22 "DUA1:[LIB58.B]ONE.DAT;"
+  STV: 00000910
+  Z: 00000001
+FFE related and default R0=00000001
+  Z: 00000000
+FF default and spec type R0=00010001
+  D: 25 "DUA1:[LIB58.A]THREE.DAT;1"
+  STV: 00000000
+  Z: 00000001
+FFE default and spec type R0=00000001
+  Z: 00000000
+FF MULTIPLE B ONE R0=00010001
+  D: 23 "DUA1:[LIB58.B]ONE.TXT;1"
+  STV: 00000000
+  Z: 00000001
+FF MULTIPLE FOUR R0=00010001
+  D: 24 "DUA1:[LIB58.B]FOUR.TXT;1"
+  STV: 00000000
+  Z: 00000001
+FF MULTIPLE FOUR again R0=000182CA
+  D: 0 ""
+  STV: 55555555
+  Z: 00000001
+FF MULTIPLE [LIB58.A] R0=00018292
+  D: 23 "DUA1:[LIB58.A]FOUR.TXT;"
+  STV: 00000910
+  Z: 00000001
+FF MULTIPLE TWO R0=00010001
+  D: 23 "DUA1:[LIB58.A]TWO.TXT;2"
+  STV: 00000000
+  Z: 00000001
+FF MULTIPLE TWO again R0=000182CA
+  D: 0 ""
+  STV: 55555555
+  Z: 00000001
+FF MULTIPLE * R0=00010001
+  D: 23 "DUA1:[LIB58.A]ONE.TXT;1"
+  STV: 00000000
+  Z: 00000001
+FFE MULTIPLE R0=00000001
+  Z: 00000000
+FF MULTIPLE related 1 R0=00018292
+  D: 18 "DUA1:[000000]ONE.;"
+  STV: 00000910
+  Z: 00000001
+FF MULTIPLE related 2 R0=00018292
+  D: 19 "DUA1:[000000]FOUR.;"
+  STV: 00000910
+  Z: 00000001
+FFE MULTIPLE related R0=00000001
+  Z: 00000000
+FF no MULTIPLE 1 R0=00010001
+  D: 23 "DUA1:[LIB58.B]ONE.TXT;1"
+  STV: 00000000
+  Z: 00000001
+FF no MULTIPLE 2 R0=00018292
+  D: 19 "DUA1:[000000]FOUR.;"
+  STV: 00000910
+  Z: 00000001
+FFE no MULTIPLE R0=00000001
+  Z: 00000000
+FF into S 12 R0=00010001
+  D: 12 "DUA1:[LIB58."
+  STV: 00000000
+  Z: 00000001
+FFE into S 12 R0=00000001
+  Z: 00000000
+FF into S 40 R0=00010001
+  D: 40 "DUA1:[LIB58.A]ONE.TXT;1                 "
+  STV: 00000000
+  Z: 00000001
+FFE into S 40 R0=00000001
+  Z: 00000000
+FF into VS 30 R0=00010001
+  D: 23 "DUA1:[LIB58.A]ONE.TXT;1"
+  STV: 00000000
+  Z: 00000001
+FFE into VS 30 R0=00000001
+  Z: 00000000
+FF 255 characters R0=0001852C
+  D: 255 "[LIB58.A]XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX
+  STV: 00000000
+  Z: 00000001
+FFE 255 R0=00000001
+  Z: 00000000
+FF 256 characters R0=00018292
+  D: 15 "DUA1:[000000].;"
+  STV: 00000910
+  Z: 00000001
+FFE 256 R0=00000001
+  Z: 00000000
+FF 40-character name R0=0001852C
+  D: 53 "[LIB58.A]XXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXXX.TXT"
+  STV: 00000000
+  Z: 00000001
+FFE 40 R0=00000001
+  Z: 00000000
+FF flags 4 R0=00010001
+  D: 23 "DUA1:[LIB58.A]ONE.TXT;1"
+  STV: 00000000
+  Z: 00000001
+FFE flags 4 R0=00000001
+  Z: 00000000
+FF flags 8 R0=00010001
+  D: 23 "DUA1:[LIB58.A]ONE.TXT;1"
+  STV: 00000000
+  Z: 00000001
+FFE flags 8 R0=00000001
+  Z: 00000000
+FFE of 0 R0=00000001
+  C: 00000000
+FF context omitted R0=0000000C signal 0000000C 00000000 00000000
+  D: 0 ""
+FF 3 arguments R0=00010001
+  D: 23 "DUA1:[LIB58.A]ONE.TXT;1"
+FFE 3 arguments R0=00000001
+  Z: 00000000
+FF 8 arguments R0=00010001
+  D: 23 "DUA1:[LIB58.A]ONE.TXT;1"
+FFE 8 arguments R0=00000001
+  Z: 00000000
+FFE no arguments R0=0000000C signal 0000000C 00000001 ACD00000
+FS A*.TXT R0=000182CA
+  > FS success 3
+  >  1: fab
+  >     fab bid=03 sts=00010001 stv=00000000 ctx=0000FAB0 ifi=0
+  >     fna 14 "[LIB58.A]*.TXT"
+  >     dna 0 ""
+  >     nam rsl=23 "DUA1:[LIB58.A]ONE.TXT;1" wcc=1
+  >     nam esl=20 "DUA1:[LIB58.A]*.TXT;"
+  >  2: val 0001173D
+  >  3: val 00011765
+  > FS success 3
+  >  1: fab
+  >     fab bid=03 sts=00010001 stv=00000000 ctx=0000FAB0 ifi=0
+  >     fna 14 "[LIB58.A]*.TXT"
+  >     dna 0 ""
+  >     nam rsl=23 "DUA1:[LIB58.A]TWO.TXT;2" wcc=1
+  >     nam esl=20 "DUA1:[LIB58.A]*.TXT;"
+  >  2: val 0001173D
+  >  3: val 00011765
+  F:
+    fab bid=03 sts=000182CA stv=00000930 ctx=0000FAB0 ifi=0
+    fna 14 "[LIB58.A]*.TXT"
+    dna 0 ""
+    nam rsl=20 "DUA1:[LIB58.A]*.TXT;" wcc=1
+    nam esl=20 "DUA1:[LIB58.A]*.TXT;"
+FS [LIB58...]*.TXT R0=000182CA
+  > FS success 3
+  >  1: fab
+  >     fab bid=03 sts=00010001 stv=00000000 ctx=0000FAB0 ifi=0
+  >     fna 15 "[LIB58...]*.TXT"
+  >     dna 0 ""
+  >     nam rsl=23 "DUA1:[LIB58.A]ONE.TXT;1" wcc=1
+  >     nam esl=21 "DUA1:[LIB58...]*.TXT;"
+  >  2: val 0001173D
+  >  3: val 00011765
+  > FS success 3
+  >  1: fab
+  >     fab bid=03 sts=00010001 stv=00000000 ctx=0000FAB0 ifi=0
+  >     fna 15 "[LIB58...]*.TXT"
+  >     dna 0 ""
+  >     nam rsl=23 "DUA1:[LIB58.A]TWO.TXT;2" wcc=1
+  >     nam esl=21 "DUA1:[LIB58...]*.TXT;"
+  >  2: val 0001173D
+  >  3: val 00011765
+  > FS success 3
+  >  1: fab
+  >     fab bid=03 sts=00010001 stv=00000000 ctx=0000FAB0 ifi=0
+  >     fna 15 "[LIB58...]*.TXT"
+  >     dna 0 ""
+  >     nam rsl=28 "DUA1:[LIB58.A.SUB]DEEP.TXT;1" wcc=1
+  >     nam esl=21 "DUA1:[LIB58...]*.TXT;"
+  >  2: val 0001173D
+  >  3: val 00011765
+  > FS success 3
+  >  1: fab
+  >     fab bid=03 sts=00010001 stv=00000000 ctx=0000FAB0 ifi=0
+  >     fna 15 "[LIB58...]*.TXT"
+  >     dna 0 ""
+  >     nam rsl=24 "DUA1:[LIB58.B]FOUR.TXT;1" wcc=1
+  >     nam esl=21 "DUA1:[LIB58...]*.TXT;"
+  >  2: val 0001173D
+  >  3: val 00011765
+  > FS success 3
+  >  1: fab
+  >     fab bid=03 sts=00010001 stv=00000000 ctx=0000FAB0 ifi=0
+  >     fna 15 "[LIB58...]*.TXT"
+  >     dna 0 ""
+  >     nam rsl=23 "DUA1:[LIB58.B]ONE.TXT;1" wcc=1
+  >     nam esl=21 "DUA1:[LIB58...]*.TXT;"
+  >  2: val 0001173D
+  >  3: val 00011765
+  F:
+    fab bid=03 sts=000182CA stv=00000000 ctx=0000FAB0 ifi=0
+    fna 15 "[LIB58...]*.TXT"
+    dna 0 ""
+    nam rsl=19 "DUA1:[LIB58]*.DIR;1" wcc=1
+    nam esl=21 "DUA1:[LIB58...]*.TXT;"
+FS missing file R0=00018292
+  > FS error 3
+  >  1: fab
+  >     fab bid=03 sts=00018292 stv=00000910 ctx=0000FAB0 ifi=0
+  >     fna 17 "[LIB58.A]NONE.TXT"
+  >     dna 0 ""
+  >     nam rsl=23 "DUA1:[LIB58.A]NONE.TXT;" wcc=1
+  >     nam esl=23 "DUA1:[LIB58.A]NONE.TXT;"
+  >  2: val 0001173D
+  >  3: val 00011765
+  F:
+    fab bid=03 sts=00018292 stv=00000910 ctx=0000FAB0 ifi=0
+    fna 17 "[LIB58.A]NONE.TXT"
+    dna 0 ""
+    nam rsl=23 "DUA1:[LIB58.A]NONE.TXT;" wcc=1
+    nam esl=23 "DUA1:[LIB58.A]NONE.TXT;"
+FS missing wildcard R0=00018292
+  > FS error 3
+  >  1: fab
+  >     fab bid=03 sts=00018292 stv=00000910 ctx=0000FAB0 ifi=0
+  >     fna 18 "[LIB58.A]NONE*.TXT"
+  >     dna 0 ""
+  >     nam rsl=24 "DUA1:[LIB58.A]NONE*.TXT;" wcc=1
+  >     nam esl=24 "DUA1:[LIB58.A]NONE*.TXT;"
+  >  2: val 0001173D
+  >  3: val 00011765
+  F:
+    fab bid=03 sts=00018292 stv=00000910 ctx=0000FAB0 ifi=0
+    fna 18 "[LIB58.A]NONE*.TXT"
+    dna 0 ""
+    nam rsl=24 "DUA1:[LIB58.A]NONE*.TXT;" wcc=1
+    nam esl=24 "DUA1:[LIB58.A]NONE*.TXT;"
+FS missing directory R0=0001C04A
+  > FS error 3
+  >  1: fab
+  >     fab bid=03 sts=0001C04A stv=00000910 ctx=0000FAB0 ifi=0
+  >     fna 18 "[LIB58.NODIR]*.TXT"
+  >     dna 0 ""
+  >     nam rsl=24 "DUA1:[LIB58.NODIR]*.TXT;" wcc=0
+  >     nam esl=24 "DUA1:[LIB58.NODIR]*.TXT;"
+  >  2: val 0001173D
+  >  3: val 00011765
+  F:
+    fab bid=03 sts=0001C04A stv=00000910 ctx=0000FAB0 ifi=0
+    fna 18 "[LIB58.NODIR]*.TXT"
+    dna 0 ""
+    nam rsl=24 "DUA1:[LIB58.NODIR]*.TXT;" wcc=0
+    nam esl=24 "DUA1:[LIB58.NODIR]*.TXT;"
+FS missing wild directory R0=0001C04A
+  > FS error 3
+  >  1: fab
+  >     fab bid=03 sts=0001C04A stv=00000910 ctx=0000FAB0 ifi=0
+  >     fna 21 "[LIB58.NODIR...]*.TXT"
+  >     dna 0 ""
+  >     nam rsl=27 "DUA1:[LIB58.NODIR...]*.TXT;" wcc=0
+  >     nam esl=27 "DUA1:[LIB58.NODIR...]*.TXT;"
+  >  2: val 0001173D
+  >  3: val 00011765
+  F:
+    fab bid=03 sts=0001C04A stv=00000910 ctx=0000FAB0 ifi=0
+    fna 21 "[LIB58.NODIR...]*.TXT"
+    dna 0 ""
+    nam rsl=27 "DUA1:[LIB58.NODIR...]*.TXT;" wcc=0
+    nam esl=27 "DUA1:[LIB58.NODIR...]*.TXT;"
+FS search list R0=00010001
+  > FS success 3
+  >  1: fab
+  >     fab bid=03 sts=00010001 stv=00000000 ctx=0000FAB0 ifi=0
+  >     fna 18 "LIB58_LIST:ONE.TXT"
+  >     dna 0 ""
+  >     nam rsl=23 "DUA1:[LIB58.A]ONE.TXT;1" wcc=1
+  >     nam esl=22 "DUA1:[LIB58.A]ONE.TXT;"
+  >  2: val 0001173D
+  >  3: val 00011765
+  F:
+    fab bid=03 sts=00010001 stv=00000000 ctx=0000FAB0 ifi=0
+    fna 18 "LIB58_LIST:ONE.TXT"
+    dna 0 ""
+    nam rsl=23 "DUA1:[LIB58.A]ONE.TXT;1" wcc=1
+    nam esl=22 "DUA1:[LIB58.A]ONE.TXT;"
+FS default name R0=00010001
+  > FS success 3
+  >  1: fab
+  >     fab bid=03 sts=00010001 stv=00000000 ctx=0000FAB0 ifi=0
+  >     fna 3 "ONE"
+  >     dna 0 ""
+  >     nam rsl=23 "DUA1:[LIB58.B]ONE.TXT;1" wcc=1
+  >     nam esl=22 "DUA1:[LIB58.B]ONE.TXT;"
+  >  2: val 0001173D
+  >  3: val 00011765
+  F:
+    fab bid=03 sts=00010001 stv=00000000 ctx=0000FAB0 ifi=0
+    fna 3 "ONE"
+    dna 0 ""
+    nam rsl=23 "DUA1:[LIB58.B]ONE.TXT;1" wcc=1
+    nam esl=22 "DUA1:[LIB58.B]ONE.TXT;"
+FS bad default name R0=000186D4
+  > FS error 3
+  >  1: fab
+  >     fab bid=03 sts=000186D4 stv=00000000 ctx=0000FAB0 ifi=0
+  >     fna 3 "ONE"
+  >     dna 3 "[[["
+  >     nam rsl=3 "ONE" wcc=0
+  >     nam esl=0 ""
+  >  2: val 0001173D
+  >  3: val 00011765
+  F:
+    fab bid=03 sts=000186D4 stv=00000000 ctx=0000FAB0 ifi=0
+    fna 3 "ONE"
+    dna 3 "[[["
+    nam rsl=3 "ONE" wcc=0
+    nam esl=0 ""
+FS success 0 R0=000182CA
+  F:
+    fab bid=03 sts=000182CA stv=00000930 ctx=0000FAB0 ifi=0
+    fna 14 "[LIB58.A]*.TXT"
+    dna 0 ""
+    nam rsl=20 "DUA1:[LIB58.A]*.TXT;" wcc=1
+    nam esl=20 "DUA1:[LIB58.A]*.TXT;"
+FS error 0 R0=00018292
+  F:
+    fab bid=03 sts=00018292 stv=00000910 ctx=0000FAB0 ifi=0
+    fna 17 "[LIB58.A]NONE.TXT"
+    dna 0 ""
+    nam rsl=23 "DUA1:[LIB58.A]NONE.TXT;" wcc=1
+    nam esl=23 "DUA1:[LIB58.A]NONE.TXT;"
+FS success fails R0=000182CA
+  > FS success 3
+  >  1: fab
+  >     fab bid=03 sts=00010001 stv=00000000 ctx=0000FAB0 ifi=0
+  >     fna 14 "[LIB58.A]*.TXT"
+  >     dna 0 ""
+  >     nam rsl=23 "DUA1:[LIB58.A]ONE.TXT;1" wcc=1
+  >     nam esl=20 "DUA1:[LIB58.A]*.TXT;"
+  >  2: val 0001173D
+  >  3: val 00011765
+  > FS success 3
+  >  1: fab
+  >     fab bid=03 sts=00010001 stv=00000000 ctx=0000FAB0 ifi=0
+  >     fna 14 "[LIB58.A]*.TXT"
+  >     dna 0 ""
+  >     nam rsl=23 "DUA1:[LIB58.A]TWO.TXT;2" wcc=1
+  >     nam esl=20 "DUA1:[LIB58.A]*.TXT;"
+  >  2: val 0001173D
+  >  3: val 00011765
+  F:
+    fab bid=03 sts=000182CA stv=00000930 ctx=0000FAB0 ifi=0
+    fna 14 "[LIB58.A]*.TXT"
+    dna 0 ""
+    nam rsl=20 "DUA1:[LIB58.A]*.TXT;" wcc=1
+    nam esl=20 "DUA1:[LIB58.A]*.TXT;"
+FS error fails R0=00018292
+  > FS error 3
+  >  1: fab
+  >     fab bid=03 sts=00018292 stv=00000000 ctx=0000FAB0 ifi=0
+  >     fna 18 "[LIB58...]NONE.TXT"
+  >     dna 0 ""
+  >     nam rsl=24 "DUA1:[LIB58...]NONE.TXT;" wcc=1
+  >     nam esl=24 "DUA1:[LIB58...]NONE.TXT;"
+  >  2: val 0001173D
+  >  3: val 00011765
+  F:
+    fab bid=03 sts=00018292 stv=00000000 ctx=0000FAB0 ifi=0
+    fna 18 "[LIB58...]NONE.TXT"
+    dna 0 ""
+    nam rsl=24 "DUA1:[LIB58...]NONE.TXT;" wcc=1
+    nam esl=24 "DUA1:[LIB58...]NONE.TXT;"
+FS FAB without NAM R0=0000000C signal 0000000C 00000004 00000033
+  F:
+    fab bid=03 sts=00000000 stv=00000000 ctx=0000FA00 ifi=0
+    fna 16 "[LIB58.A]ONE.TXT"
+    dna 0 ""
+FS 5 arguments R0=00010001
+  > FS success 5
+  >  1: fab
+  >     fab bid=03 sts=00010001 stv=00000000 ctx=0000FA07 ifi=0
+  >     fna 16 "[LIB58.A]ONE.TXT"
+  >     dna 0 ""
+  >     nam rsl=23 "DUA1:[LIB58.A]ONE.TXT;1" wcc=1
+  >     nam esl=22 "DUA1:[LIB58.A]ONE.TXT;"
+  >  2: val 0001173D
+  >  3: val 00011765
+  >  4: val 00000000
+  >  5: val 00000000
+  SFF:
+    fab bid=03 sts=00010001 stv=00000000 ctx=0000FA07 ifi=0
+    fna 16 "[LIB58.A]ONE.TXT"
+    dna 0 ""
+    nam rsl=23 "DUA1:[LIB58.A]ONE.TXT;1" wcc=1
+    nam esl=22 "DUA1:[LIB58.A]ONE.TXT;"
+FS context 1 R0=00010001
+  > FS success 4
+  >  1: fab
+  >     fab bid=03 sts=00010001 stv=00000000 ctx=0000FA01 ifi=0
+  >     fna 16 "[LIB58.B]ONE.TXT"
+  >     dna 0 ""
+  >     nam rsl=23 "DUA1:[LIB58.B]ONE.TXT;1" wcc=1
+  >     nam esl=22 "DUA1:[LIB58.B]ONE.TXT;"
+  >  2: val 0001173D
+  >  3: val 00011765
+  >  4: val 00007E34
+  SFA:
+    fab bid=03 sts=00010001 stv=00000000 ctx=0000FA01 ifi=0
+    fna 16 "[LIB58.B]ONE.TXT"
+    dna 0 ""
+    nam rsl=23 "DUA1:[LIB58.B]ONE.TXT;1" wcc=1
+    nam esl=22 "DUA1:[LIB58.B]ONE.TXT;"
+  Z: 00000001
+FS context 2 R0=00010001
+  > FS success 4
+  >  1: fab
+  >     fab bid=03 sts=00010001 stv=00000000 ctx=0000FA02 ifi=0
+  >     fna 8 "FOUR.TXT"
+  >     dna 0 ""
+  >     nam rsl=24 "DUA1:[LIB58.B]FOUR.TXT;1" wcc=1
+  >     nam esl=23 "DUA1:[LIB58.B]FOUR.TXT;"
+  >     rlf rsl=16 "[LIB58.B]ONE.TXT"
+  >  2: val 0001173D
+  >  3: val 00011765
+  >  4: val 00007E34
+  SFB:
+    fab bid=03 sts=00010001 stv=00000000 ctx=0000FA02 ifi=0
+    fna 8 "FOUR.TXT"
+    dna 0 ""
+    nam rsl=24 "DUA1:[LIB58.B]FOUR.TXT;1" wcc=1
+    nam esl=23 "DUA1:[LIB58.B]FOUR.TXT;"
+    rlf rsl=16 "[LIB58.B]ONE.TXT"
+FS context 2 again R0=00010001
+  > FS success 4
+  >  1: fab
+  >     fab bid=03 sts=00010001 stv=00000000 ctx=0000FA02 ifi=0
+  >     fna 8 "FOUR.TXT"
+  >     dna 0 ""
+  >     nam rsl=24 "DUA1:[LIB58.B]FOUR.TXT;1" wcc=1
+  >     nam esl=23 "DUA1:[LIB58.B]FOUR.TXT;"
+  >     rlf rsl=8 "FOUR.TXT"
+  >  2: val 0001173D
+  >  3: val 00011765
+  >  4: val 00007E34
+  SFB:
+    fab bid=03 sts=00010001 stv=00000000 ctx=0000FA02 ifi=0
+    fna 8 "FOUR.TXT"
+    dna 0 ""
+    nam rsl=24 "DUA1:[LIB58.B]FOUR.TXT;1" wcc=1
+    nam esl=23 "DUA1:[LIB58.B]FOUR.TXT;"
+    rlf rsl=8 "FOUR.TXT"
+FSE context R0=00000001
+  Z: 00000000
+FS no context 1 R0=00010001
+  > FS success 3
+  >  1: fab
+  >     fab bid=03 sts=00010001 stv=00000000 ctx=0000FA03 ifi=0
+  >     fna 16 "[LIB58.B]ONE.TXT"
+  >     dna 0 ""
+  >     nam rsl=23 "DUA1:[LIB58.B]ONE.TXT;1" wcc=1
+  >     nam esl=22 "DUA1:[LIB58.B]ONE.TXT;"
+  >  2: val 0001173D
+  >  3: val 00011765
+  SFC:
+    fab bid=03 sts=00010001 stv=00000000 ctx=0000FA03 ifi=0
+    fna 16 "[LIB58.B]ONE.TXT"
+    dna 0 ""
+    nam rsl=23 "DUA1:[LIB58.B]ONE.TXT;1" wcc=1
+    nam esl=22 "DUA1:[LIB58.B]ONE.TXT;"
+FS no context 2 R0=00018292
+  > FS error 3
+  >  1: fab
+  >     fab bid=03 sts=00018292 stv=00000910 ctx=0000FA04 ifi=0
+  >     fna 8 "FOUR.TXT"
+  >     dna 0 ""
+  >     nam rsl=22 "DUA1:[000000]FOUR.TXT;" wcc=1
+  >     nam esl=22 "DUA1:[000000]FOUR.TXT;"
+  >  2: val 0001173D
+  >  3: val 00011765
+  SFD:
+    fab bid=03 sts=00018292 stv=00000910 ctx=0000FA04 ifi=0
+    fna 8 "FOUR.TXT"
+    dna 0 ""
+    nam rsl=22 "DUA1:[000000]FOUR.TXT;" wcc=1
+    nam esl=22 "DUA1:[000000]FOUR.TXT;"
+FS signal in success R0=0888888A signal 0888888A 00000000 00000000
+  > FS success 3
+  >  1: fab
+  >     fab bid=03 sts=00010001 stv=00000000 ctx=0000FA05 ifi=0
+  >     fna 14 "[LIB58.A]*.TXT"
+  >     dna 0 ""
+  >     nam rsl=23 "DUA1:[LIB58.A]ONE.TXT;1" wcc=1
+  >     nam esl=20 "DUA1:[LIB58.A]*.TXT;"
+  >  2: val 0001173D
+  >  3: val 00011765
+  SFS:
+    fab bid=03 sts=00010001 stv=00000000 ctx=0000FA05 ifi=0
+    fna 14 "[LIB58.A]*.TXT"
+    dna 0 ""
+    nam rsl=23 "DUA1:[LIB58.A]ONE.TXT;1" wcc=1
+    nam esl=20 "DUA1:[LIB58.A]*.TXT;"
+FS after signal R0=000182CA
+  > FS success 3
+  >  1: fab
+  >     fab bid=03 sts=00010001 stv=00000000 ctx=0000FA05 ifi=0
+  >     fna 14 "[LIB58.A]*.TXT"
+  >     dna 0 ""
+  >     nam rsl=23 "DUA1:[LIB58.A]ONE.TXT;1" wcc=1
+  >     nam esl=20 "DUA1:[LIB58.A]*.TXT;"
+  >  2: val 0001173D
+  >  3: val 00011765
+  > FS success 3
+  >  1: fab
+  >     fab bid=03 sts=00010001 stv=00000000 ctx=0000FA05 ifi=0
+  >     fna 14 "[LIB58.A]*.TXT"
+  >     dna 0 ""
+  >     nam rsl=23 "DUA1:[LIB58.A]TWO.TXT;2" wcc=1
+  >     nam esl=20 "DUA1:[LIB58.A]*.TXT;"
+  >  2: val 0001173D
+  >  3: val 00011765
+  SFS:
+    fab bid=03 sts=000182CA stv=00000930 ctx=0000FA05 ifi=0
+    fna 14 "[LIB58.A]*.TXT"
+    dna 0 ""
+    nam rsl=20 "DUA1:[LIB58.A]*.TXT;" wcc=1
+    nam esl=20 "DUA1:[LIB58.A]*.TXT;"
+FS signal again R0=0888888A signal 0888888A 00000000 00000000
+  > FS success 3
+  >  1: fab
+  >     fab bid=03 sts=00010001 stv=00000000 ctx=0000FA05 ifi=0
+  >     fna 14 "[LIB58.A]*.TXT"
+  >     dna 0 ""
+  >     nam rsl=23 "DUA1:[LIB58.A]ONE.TXT;1" wcc=1
+  >     nam esl=20 "DUA1:[LIB58.A]*.TXT;"
+  >  2: val 0001173D
+  >  3: val 00011765
+  SFS:
+    fab bid=03 sts=00010001 stv=00000000 ctx=0000FA05 ifi=0
+    fna 14 "[LIB58.A]*.TXT"
+    dna 0 ""
+    nam rsl=23 "DUA1:[LIB58.A]ONE.TXT;1" wcc=1
+    nam esl=20 "DUA1:[LIB58.A]*.TXT;"
+FSE after signal R0=00000001
+  SFS:
+    fab bid=03 sts=00010001 stv=00000000 ctx=0000FA05 ifi=0
+    fna 0 ""
+    dna 0 ""
+    nam rsl=0 "" wcc=0
+    nam esl=0 ""
+FS after FSE R0=00018714
+  > FS error 3
+  >  1: fab
+  >     fab bid=03 sts=00018714 stv=00000000 ctx=0000FA05 ifi=0
+  >     fna 0 ""
+  >     dna 0 ""
+  >     nam rsl=0 "" wcc=0
+  >     nam esl=0 ""
+  >  2: val 0001173D
+  >  3: val 00011765
+  SFS:
+    fab bid=03 sts=00018714 stv=00000000 ctx=0000FA05 ifi=0
+    fna 0 ""
+    dna 0 ""
+    nam rsl=0 "" wcc=0
+    nam esl=0 ""
+FS context, signal R0=0888888A signal 0888888A 00000000 00000000
+  > FS success 4
+  >  1: fab
+  >     fab bid=03 sts=00010001 stv=00000000 ctx=0000FA06 ifi=0
+  >     fna 15 "[LIB58...]*.TXT"
+  >     dna 0 ""
+  >     nam rsl=23 "DUA1:[LIB58.A]ONE.TXT;1" wcc=1
+  >     nam esl=21 "DUA1:[LIB58...]*.TXT;"
+  >  2: val 0001173D
+  >  3: val 00011765
+  >  4: val 00007E3C
+  SFE:
+    fab bid=03 sts=00010001 stv=00000000 ctx=0000FA06 ifi=0
+    fna 15 "[LIB58...]*.TXT"
+    dna 0 ""
+    nam rsl=23 "DUA1:[LIB58.A]ONE.TXT;1" wcc=1
+    nam esl=21 "DUA1:[LIB58...]*.TXT;"
+  Z: 00000000
+FSE fab and context R0=00000001
+  SFE:
+    fab bid=03 sts=00010001 stv=00000000 ctx=0000FA06 ifi=0
+    fna 0 ""
+    dna 0 ""
+    nam rsl=0 "" wcc=0
+    nam esl=0 ""
+  Z: 00000000
+FSE fab and context again R0=00000001
+  SFE:
+    fab bid=03 sts=00010001 stv=00000000 ctx=0000FA06 ifi=0
+    fna 0 ""
+    dna 0 ""
+    nam rsl=0 "" wcc=0
+    nam esl=0 ""
+FSE no arguments R0=00000001
+FSE 0 and 0 R0=00000001
+FSE context of 0 R0=00000001
+  C: 00000000
+make DEL directories R0=00000619
+  N: 00000002
+make DEL files R0=00010001
+  N: 00000023
+DEL list before R0=000182CA
+  = DUA1:[LIB58.DEL]C1.TXT;1
+  = DUA1:[LIB58.DEL]C2.TXT;1
+  = DUA1:[LIB58.DEL]D1.TXT;1
+  = DUA1:[LIB58.DEL]D2.TXT;3
+  = DUA1:[LIB58.DEL]D2.TXT;2
+  = DUA1:[LIB58.DEL]D2.TXT;1
+  = DUA1:[LIB58.DEL]E1.TXT;1
+  = DUA1:[LIB58.DEL]E2.TXT;1
+  = DUA1:[LIB58.DEL]F0.TXT;1
+  = DUA1:[LIB58.DEL]F1.TXT;1
+  = DUA1:[LIB58.DEL]F4.TXT;1
+  = DUA1:[LIB58.DEL]F8.TXT;1
+  = DUA1:[LIB58.DEL]N1.TXT;1
+  = DUA1:[LIB58.DEL]N2.TXT;1
+  = DUA1:[LIB58.DEL]O1.TXT;1
+  = DUA1:[LIB58.DEL]P1.TXT;1
+  = DUA1:[LIB58.DEL]Q1.TXT;1
+  = DUA1:[LIB58.DEL]Q2.TXT;1
+  = DUA1:[LIB58.DEL]Q3.TXT;1
+  = DUA1:[LIB58.DEL]Q4.TXT;1
+  = DUA1:[LIB58.DEL]S1.TXT;1
+  = DUA1:[LIB58.DEL]S2.TXT;1
+  = DUA1:[LIB58.DEL]SUB.DIR;1
+  = DUA1:[LIB58.DEL]U1.TXT;1
+  = DUA1:[LIB58.DEL]U2.TXT;1
+  = DUA1:[LIB58.DEL]V1.TXT;2
+  = DUA1:[LIB58.DEL]V1.TXT;1
+  = DUA1:[LIB58.DEL]V2.TXT;1
+  = DUA1:[LIB58.DEL]W1.DAT;1
+  = DUA1:[LIB58.DEL]W2.DAT;1
+  = DUA1:[LIB58.DEL]W3.DAT;1
+  = DUA1:[LIB58.DEL]W4.DAT;1
+  = DUA1:[LIB58.DEL]W5.DAT;1
+  = DUA1:[LIB58.DEL]Y1.TXT;1
+  = DUA1:[LIB58.DEL]Y2.TXT;1
+  = DUA1:[LIB58.DEL.SUB]X.TXT;1
+  = end 000182CA
+DF one file R0=00000001
+  > DF success 2
+  >  1: dsc 14,1 24 "DUA1:[LIB58.DEL]D1.TXT;1"
+  >  2: val 12345678
+DF no version R0=00000001
+  > DF success 2
+  >  1: dsc 14,1 24 "DUA1:[LIB58.DEL]D2.TXT;3"
+  >  2: val 00000000
+DF no version left R0=000182CA
+  = DUA1:[LIB58.DEL]D2.TXT;2
+  = DUA1:[LIB58.DEL]D2.TXT;1
+  = end 000182CA
+DF ;0 R0=00000001
+  > DF success 2
+  >  1: dsc 14,1 24 "DUA1:[LIB58.DEL]D2.TXT;2"
+  >  2: val 00000000
+DF ;-1 R0=00018292
+DF ;0 ;-1 left R0=000182CA
+  = DUA1:[LIB58.DEL]D2.TXT;1
+  = end 000182CA
+DF wildcard confirm R0=00000001
+  > DF confirm 3
+  >  1: dsc 14,1 24 "DUA1:[LIB58.DEL]W1.DAT;1"
+  >  2: fab
+  >     fab bid=03 sts=00010001 stv=00000000 ctx=00000000 ifi=0
+  >     fna 19 "[LIB58.DEL]W*.DAT;*"
+  >     dna 2 ";*"
+  >     nam rsl=24 "DUA1:[LIB58.DEL]W1.DAT;1" wcc=1
+  >     nam esl=24 "DUA1:[LIB58.DEL]W*.DAT;*"
+  >     rlf rsl=24 "DUA1:[LIB58.DEL]W*.DAT;*"
+  >  3: val 12345678
+  > DF success 2
+  >  1: dsc 14,1 24 "DUA1:[LIB58.DEL]W1.DAT;1"
+  >  2: val 12345678
+  > DF confirm 3
+  >  1: dsc 14,1 24 "DUA1:[LIB58.DEL]W2.DAT;1"
+  >  2: fab
+  >     fab bid=03 sts=00010001 stv=00000000 ctx=00000000 ifi=0
+  >     fna 19 "[LIB58.DEL]W*.DAT;*"
+  >     dna 2 ";*"
+  >     nam rsl=24 "DUA1:[LIB58.DEL]W2.DAT;1" wcc=1
+  >     nam esl=24 "DUA1:[LIB58.DEL]W*.DAT;*"
+  >     rlf rsl=24 "DUA1:[LIB58.DEL]W*.DAT;*"
+  >  3: val 12345678
+  > DF confirm 3
+  >  1: dsc 14,1 24 "DUA1:[LIB58.DEL]W3.DAT;1"
+  >  2: fab
+  >     fab bid=03 sts=00010001 stv=00000000 ctx=00000000 ifi=0
+  >     fna 19 "[LIB58.DEL]W*.DAT;*"
+  >     dna 2 ";*"
+  >     nam rsl=24 "DUA1:[LIB58.DEL]W3.DAT;1" wcc=1
+  >     nam esl=24 "DUA1:[LIB58.DEL]W*.DAT;*"
+  >     rlf rsl=24 "DUA1:[LIB58.DEL]W*.DAT;*"
+  >  3: val 12345678
+  > DF success 2
+  >  1: dsc 14,1 24 "DUA1:[LIB58.DEL]W3.DAT;1"
+  >  2: val 12345678
+  > DF confirm 3
+  >  1: dsc 14,1 24 "DUA1:[LIB58.DEL]W4.DAT;1"
+  >  2: fab
+  >     fab bid=03 sts=00010001 stv=00000000 ctx=00000000 ifi=0
+  >     fna 19 "[LIB58.DEL]W*.DAT;*"
+  >     dna 2 ";*"
+  >     nam rsl=24 "DUA1:[LIB58.DEL]W4.DAT;1" wcc=1
+  >     nam esl=24 "DUA1:[LIB58.DEL]W*.DAT;*"
+  >     rlf rsl=24 "DUA1:[LIB58.DEL]W*.DAT;*"
+  >  3: val 12345678
+  > DF confirm 3
+  >  1: dsc 14,1 24 "DUA1:[LIB58.DEL]W5.DAT;1"
+  >  2: fab
+  >     fab bid=03 sts=00010001 stv=00000000 ctx=00000000 ifi=0
+  >     fna 19 "[LIB58.DEL]W*.DAT;*"
+  >     dna 2 ";*"
+  >     nam rsl=24 "DUA1:[LIB58.DEL]W5.DAT;1" wcc=1
+  >     nam esl=24 "DUA1:[LIB58.DEL]W*.DAT;*"
+  >     rlf rsl=24 "DUA1:[LIB58.DEL]W*.DAT;*"
+  >  3: val 12345678
+  > DF success 2
+  >  1: dsc 14,1 24 "DUA1:[LIB58.DEL]W5.DAT;1"
+  >  2: val 12345678
+DF wildcard left R0=000182CA
+  = DUA1:[LIB58.DEL]W2.DAT;1
+  = DUA1:[LIB58.DEL]W4.DAT;1
+  = end 000182CA
+DF wildcard all versions R0=00000001
+  > DF success 2
+  >  1: dsc 14,1 24 "DUA1:[LIB58.DEL]V1.TXT;2"
+  >  2: val 00000000
+  > DF success 2
+  >  1: dsc 14,1 24 "DUA1:[LIB58.DEL]V1.TXT;1"
+  >  2: val 00000000
+  > DF success 2
+  >  1: dsc 14,1 24 "DUA1:[LIB58.DEL]V2.TXT;1"
+  >  2: val 00000000
+DF all versions left R0=00018292
+  = end 00018292
+DF missing R0=00158029
+  > DF error 5
+  >  1: dsc 14,1 25 "DUA1:[LIB58.DEL]NONE.TXT;"
+  >  2: ref 00018292
+  >  3: ref 00000910
+  >  4: ref 00000000
+  >  5: val 12345678
+DF missing no error routine R0=00018292
+DF missing wildcard R0=00158029
+  > DF error 5
+  >  1: dsc 14,1 27 "DUA1:[LIB58.DEL]NONE*.TXT;*"
+  >  2: ref 00018292
+  >  3: ref 00000910
+  >  4: ref 00000000
+  >  5: val 00000000
+DF missing directory R0=00158029
+  > DF error 5
+  >  1: dsc 14,1 24 "DUA1:[LIB58.NODIR]X.TXT;"
+  >  2: ref 0001C04A
+  >  3: ref 00000910
+  >  4: ref 00000000
+  >  5: val 00000000
+DF missing error fails R0=00018294
+  > DF error 5
+  >  1: dsc 14,1 25 "DUA1:[LIB58.DEL]NONE.TXT;"
+  >  2: ref 00018292
+  >  3: ref 00000910
+  >  4: ref 00000000
+  >  5: val 00000000
+DF bad syntax R0=00158029
+  > DF error 5
+  >  1: dsc 14,1 18 "[LIB58.DEL]X.TXT;Q"
+  >  2: ref 000186D4
+  >  3: ref 00000000
+  >  4: ref 00000000
+  >  5: val 00000000
+DF confirm opens R0=00000001
+  > DF confirm 3
+  >  1: dsc 14,1 24 "DUA1:[LIB58.DEL]O1.TXT;1"
+  >  2: fab
+  >     fab bid=03 sts=00010001 stv=00000000 ctx=00000000 ifi=0
+  >     fna 19 "[LIB58.DEL]O1.TXT;*"
+  >     dna 2 ";*"
+  >     nam rsl=24 "DUA1:[LIB58.DEL]O1.TXT;1" wcc=1
+  >     nam esl=24 "DUA1:[LIB58.DEL]O1.TXT;*"
+  >     rlf rsl=24 "DUA1:[LIB58.DEL]O1.TXT;*"
+  >  3: val 00000000
+  >   open 00010001 close 00010001
+  > DF success 2
+  >  1: dsc 14,1 24 "DUA1:[LIB58.DEL]O1.TXT;1"
+  >  2: val 00000000
+DF confirm leaves open R0=00158029
+  > DF confirm 3
+  >  1: dsc 14,1 24 "DUA1:[LIB58.DEL]Q1.TXT;1"
+  >  2: fab
+  >     fab bid=03 sts=00010001 stv=00000000 ctx=00000000 ifi=0
+  >     fna 19 "[LIB58.DEL]Q*.TXT;*"
+  >     dna 2 ";*"
+  >     nam rsl=24 "DUA1:[LIB58.DEL]Q1.TXT;1" wcc=1
+  >     nam esl=24 "DUA1:[LIB58.DEL]Q*.TXT;*"
+  >     rlf rsl=24 "DUA1:[LIB58.DEL]Q*.TXT;*"
+  >  3: val 00000000
+  >   open 00010001
+  > DF error 5
+  >  1: dsc 14,1 24 "DUA1:[LIB58.DEL]Q1.TXT;1"
+  >  2: ref 00018564
+  >  3: ref 00000000
+  >  4: ref 00000001
+  >  5: val 00000000
+  > DF error 5
+  >  1: dsc 14,1 24 "DUA1:[LIB58.DEL]Q1.TXT;1"
+  >  2: ref 00018564
+  >  3: ref 00000000
+  >  4: ref 00000000
+  >  5: val 00000000
+DF leaves open left R0=000182CA
+  = DUA1:[LIB58.DEL]Q1.TXT;1
+  = DUA1:[LIB58.DEL]Q2.TXT;1
+  = DUA1:[LIB58.DEL]Q3.TXT;1
+  = DUA1:[LIB58.DEL]Q4.TXT;1
+  = end 000182CA
+DF leaves open, error fails R0=00018564
+  > DF confirm 3
+  >  1: dsc 14,1 24 "DUA1:[LIB58.DEL]Q1.TXT;1"
+  >  2: fab
+  >     fab bid=03 sts=00010001 stv=00000000 ctx=00000000 ifi=0
+  >     fna 19 "[LIB58.DEL]Q*.TXT;*"
+  >     dna 2 ";*"
+  >     nam rsl=24 "DUA1:[LIB58.DEL]Q1.TXT;1" wcc=1
+  >     nam esl=24 "DUA1:[LIB58.DEL]Q*.TXT;*"
+  >     rlf rsl=24 "DUA1:[LIB58.DEL]Q*.TXT;*"
+  >  3: val 00000000
+  >   open 00010001
+  > DF error 5
+  >  1: dsc 14,1 24 "DUA1:[LIB58.DEL]Q1.TXT;1"
+  >  2: ref 00018564
+  >  3: ref 00000000
+  >  4: ref 00000001
+  >  5: val 00000000
+DF error fails left R0=000182CA
+  = DUA1:[LIB58.DEL]Q1.TXT;1
+  = DUA1:[LIB58.DEL]Q2.TXT;1
+  = DUA1:[LIB58.DEL]Q3.TXT;1
+  = DUA1:[LIB58.DEL]Q4.TXT;1
+  = end 000182CA
+DF leaves open, no error routine R0=00018564
+  > DF confirm 3
+  >  1: dsc 14,1 24 "DUA1:[LIB58.DEL]Q1.TXT;1"
+  >  2: fab
+  >     fab bid=03 sts=00010001 stv=00000000 ctx=00000000 ifi=0
+  >     fna 19 "[LIB58.DEL]Q*.TXT;*"
+  >     dna 2 ";*"
+  >     nam rsl=24 "DUA1:[LIB58.DEL]Q1.TXT;1" wcc=1
+  >     nam esl=24 "DUA1:[LIB58.DEL]Q*.TXT;*"
+  >     rlf rsl=24 "DUA1:[LIB58.DEL]Q*.TXT;*"
+  >  3: val 00000000
+  >   open 00010001
+DF no error routine left R0=000182CA
+  = DUA1:[LIB58.DEL]Q1.TXT;1
+  = DUA1:[LIB58.DEL]Q2.TXT;1
+  = DUA1:[LIB58.DEL]Q3.TXT;1
+  = DUA1:[LIB58.DEL]Q4.TXT;1
+  = end 000182CA
+DF dynamic resultant R0=00000001
+  > DF confirm 3
+  >  1: dsc 14,2 24 "DUA1:[LIB58.DEL]Y1.TXT;1"
+  >  2: fab
+  >     fab bid=03 sts=00010001 stv=00000000 ctx=00000000 ifi=0
+  >     fna 19 "[LIB58.DEL]Y1.TXT;*"
+  >     dna 2 ";*"
+  >     nam rsl=24 "DUA1:[LIB58.DEL]Y1.TXT;1" wcc=1
+  >     nam esl=24 "DUA1:[LIB58.DEL]Y1.TXT;*"
+  >     rlf rsl=24 "DUA1:[LIB58.DEL]Y1.TXT;*"
+  >  3: val 00000000
+  > DF success 2
+  >  1: dsc 14,2 24 "DUA1:[LIB58.DEL]Y1.TXT;1"
+  >  2: val 00000000
+  N: 24 "DUA1:[LIB58.DEL]Y1.TXT;1"
+DF fixed resultant 10 R0=00000001
+  > DF confirm 3
+  >  1: dsc 14,1 10 "DUA1:[LIB5"
+  >  2: fab
+  >     fab bid=03 sts=00010001 stv=00000000 ctx=00000000 ifi=0
+  >     fna 19 "[LIB58.DEL]Y2.TXT;*"
+  >     dna 2 ";*"
+  >     nam rsl=24 "DUA1:[LIB58.DEL]Y2.TXT;1" wcc=1
+  >     nam esl=24 "DUA1:[LIB58.DEL]Y2.TXT;*"
+  >     rlf rsl=24 "DUA1:[LIB58.DEL]Y2.TXT;*"
+  >  3: val 00000000
+  > DF success 2
+  >  1: dsc 14,1 10 "DUA1:[LIB5"
+  >  2: val 00000000
+  N: 10 "DUA1:[LIB5"
+DF missing dynamic resultant R0=00158029
+  > DF error 5
+  >  1: dsc 14,2 25 "DUA1:[LIB58.DEL]NONE.TXT;"
+  >  2: ref 00018292
+  >  3: ref 00000910
+  >  4: ref 00000000
+  >  5: val 00000000
+  N: 25 "DUA1:[LIB58.DEL]NONE.TXT;"
+DF nested R0=00000001
+  > DF confirm 3
+  >  1: dsc 14,1 24 "DUA1:[LIB58.DEL]N1.TXT;1"
+  >  2: fab
+  >     fab bid=03 sts=00010001 stv=00000000 ctx=00000000 ifi=0
+  >     fna 19 "[LIB58.DEL]N1.TXT;*"
+  >     dna 2 ";*"
+  >     nam rsl=24 "DUA1:[LIB58.DEL]N1.TXT;1" wcc=1
+  >     nam esl=24 "DUA1:[LIB58.DEL]N1.TXT;*"
+  >     rlf rsl=24 "DUA1:[LIB58.DEL]N1.TXT;*"
+  >  3: val 00000000
+  > DF success 2
+  >  1: dsc 14,1 24 "DUA1:[LIB58.DEL]N2.TXT;1"
+  >  2: val 00000000
+  >   nested 00000001
+  > DF success 2
+  >  1: dsc 14,1 24 "DUA1:[LIB58.DEL]N1.TXT;1"
+  >  2: val 00000000
+DF nested left R0=00018292
+  = end 00018292
+DF flags 0 R0=0015835C
+DF flags 1 R0=0015835C
+DF flags 4 R0=0015835C
+DF flags 8 R0=0015835C
+DF default name R0=00000001
+  > DF success 2
+  >  1: dsc 14,1 24 "DUA1:[LIB58.DEL]E1.TXT;1"
+  >  2: val 00000000
+DF related name R0=00000001
+  > DF success 2
+  >  1: dsc 14,1 24 "DUA1:[LIB58.DEL]E2.TXT;1"
+  >  2: val 00000000
+DF context 1 R0=00000001
+  > DF success 2
+  >  1: dsc 14,1 24 "DUA1:[LIB58.DEL]C1.TXT;1"
+  >  2: val 00000000
+DF context 2 R0=00000001
+  > DF success 2
+  >  1: dsc 14,1 24 "DUA1:[LIB58.DEL]C2.TXT;1"
+  >  2: val 00000000
+FSE DF context R0=00000001
+  Z: 00000000
+DF signal in confirm R0=0888888A signal 0888888A 00000000 00000000
+  > DF confirm 3
+  >  1: dsc 14,1 24 "DUA1:[LIB58.DEL]S1.TXT;1"
+  >  2: fab
+  >     fab bid=03 sts=00010001 stv=00000000 ctx=00000000 ifi=0
+  >     fna 19 "[LIB58.DEL]S*.TXT;*"
+  >     dna 2 ";*"
+  >     nam rsl=24 "DUA1:[LIB58.DEL]S1.TXT;1" wcc=1
+  >     nam esl=24 "DUA1:[LIB58.DEL]S*.TXT;*"
+  >     rlf rsl=24 "DUA1:[LIB58.DEL]S*.TXT;*"
+  >  3: val 00000000
+DF signal left R0=000182CA
+  = DUA1:[LIB58.DEL]S1.TXT;1
+  = DUA1:[LIB58.DEL]S2.TXT;1
+  = end 000182CA
+DF after signal R0=00000001
+  > DF confirm 3
+  >  1: dsc 14,1 24 "DUA1:[LIB58.DEL]S1.TXT;1"
+  >  2: fab
+  >     fab bid=03 sts=00010001 stv=00000000 ctx=00000000 ifi=0
+  >     fna 19 "[LIB58.DEL]S*.TXT;*"
+  >     dna 2 ";*"
+  >     nam rsl=24 "DUA1:[LIB58.DEL]S1.TXT;1" wcc=1
+  >     nam esl=24 "DUA1:[LIB58.DEL]S*.TXT;*"
+  >     rlf rsl=24 "DUA1:[LIB58.DEL]S*.TXT;*"
+  >  3: val 00000000
+  > DF success 2
+  >  1: dsc 14,1 24 "DUA1:[LIB58.DEL]S1.TXT;1"
+  >  2: val 00000000
+  > DF confirm 3
+  >  1: dsc 14,1 24 "DUA1:[LIB58.DEL]S2.TXT;1"
+  >  2: fab
+  >     fab bid=03 sts=00010001 stv=00000000 ctx=00000000 ifi=0
+  >     fna 19 "[LIB58.DEL]S*.TXT;*"
+  >     dna 2 ";*"
+  >     nam rsl=24 "DUA1:[LIB58.DEL]S2.TXT;1" wcc=1
+  >     nam esl=24 "DUA1:[LIB58.DEL]S*.TXT;*"
+  >     rlf rsl=24 "DUA1:[LIB58.DEL]S*.TXT;*"
+  >  3: val 00000000
+  > DF success 2
+  >  1: dsc 14,1 24 "DUA1:[LIB58.DEL]S2.TXT;1"
+  >  2: val 00000000
+DF after signal left R0=00018292
+  = end 00018292
+DF signal in success R0=0888888A signal 0888888A 00000000 00000000
+  > DF success 2
+  >  1: dsc 14,1 24 "DUA1:[LIB58.DEL]U1.TXT;1"
+  >  2: val 00000000
+DF success signal left R0=000182CA
+  = DUA1:[LIB58.DEL]U2.TXT;1
+  = end 000182CA
+DF user argument only R0=00000001
+DF directory with a file R0=00158029
+  > DF error 5
+  >  1: dsc 14,1 25 "DUA1:[LIB58.DEL]SUB.DIR;1"
+  >  2: ref 0001C032
+  >  3: ref 00002174
+  >  4: ref 00000001
+  >  5: val 00000000
+DF 256 characters R0=0015839C
+DF default 256 characters R0=0015839C
+DF no arguments R0=0015835C
+DF 11 arguments R0=0015835C
+DEL list after R0=000182CA
+  = DUA1:[LIB58.DEL]D2.TXT;1
+  = DUA1:[LIB58.DEL]F0.TXT;1
+  = DUA1:[LIB58.DEL]F1.TXT;1
+  = DUA1:[LIB58.DEL]F4.TXT;1
+  = DUA1:[LIB58.DEL]F8.TXT;1
+  = DUA1:[LIB58.DEL]Q1.TXT;1
+  = DUA1:[LIB58.DEL]Q2.TXT;1
+  = DUA1:[LIB58.DEL]Q3.TXT;1
+  = DUA1:[LIB58.DEL]Q4.TXT;1
+  = DUA1:[LIB58.DEL]SUB.DIR;1
+  = DUA1:[LIB58.DEL]U2.TXT;1
+  = DUA1:[LIB58.DEL]W2.DAT;1
+  = DUA1:[LIB58.DEL]W4.DAT;1
+  = DUA1:[LIB58.DEL.SUB]X.TXT;1
+  = end 000182CA
+make REN directories R0=00000619
+  N: 00000002
+make REN files R0=00010001
+  N: 0000001D
+RF one R0=00000001
+  > RF success 3
+  >  1: dsc 14,1 24 "DUA1:[LIB58.REN]R1.TXT;1"
+  >  2: dsc 14,1 24 "DUA1:[LIB58.REN]R1.NEW;1"
+  >  3: val 12345678
+RF * type R0=00000001
+  > RF success 3
+  >  1: dsc 14,1 24 "DUA1:[LIB58.REN]R2.TXT;1"
+  >  2: dsc 14,1 24 "DUA1:[LIB58.REN]R2.DAT;1"
+  >  3: val 00000000
+RF new directory R0=00000001
+  > RF success 3
+  >  1: dsc 14,1 24 "DUA1:[LIB58.REN]R3.TXT;1"
+  >  2: dsc 14,1 28 "DUA1:[LIB58.REN.NEW]R3.TXT;1"
+  >  3: val 00000000
+RF wildcard confirm R0=00000001
+  > RF confirm 4
+  >  1: dsc 14,1 24 "DUA1:[LIB58.REN]W1.TXT;1"
+  >  2: dsc 14,1 23 "DUA1:[LIB58.REN]W1.OUT;"
+  >  3: fab
+  >     fab bid=03 sts=00010001 stv=00000000 ctx=00000000 ifi=0
+  >     fna 17 "[LIB58.REN]W*.TXT"
+  >     dna 0 ""
+  >     nam rsl=24 "DUA1:[LIB58.REN]W1.TXT;1" wcc=1
+  >     nam esl=23 "DUA1:[LIB58.REN]W*.TXT;"
+  >     rlf rsl=23 "DUA1:[LIB58.REN]W*.TXT;"
+  >  4: val 12345678
+  > RF success 3
+  >  1: dsc 14,1 24 "DUA1:[LIB58.REN]W1.TXT;1"
+  >  2: dsc 14,1 24 "DUA1:[LIB58.REN]W1.OUT;1"
+  >  3: val 12345678
+  > RF confirm 4
+  >  1: dsc 14,1 24 "DUA1:[LIB58.REN]W2.TXT;1"
+  >  2: dsc 14,1 23 "DUA1:[LIB58.REN]W2.OUT;"
+  >  3: fab
+  >     fab bid=03 sts=00010001 stv=00000000 ctx=00000000 ifi=0
+  >     fna 17 "[LIB58.REN]W*.TXT"
+  >     dna 0 ""
+  >     nam rsl=24 "DUA1:[LIB58.REN]W2.TXT;1" wcc=1
+  >     nam esl=23 "DUA1:[LIB58.REN]W*.TXT;"
+  >     rlf rsl=23 "DUA1:[LIB58.REN]W*.TXT;"
+  >  4: val 12345678
+  > RF confirm 4
+  >  1: dsc 14,1 24 "DUA1:[LIB58.REN]W3.TXT;1"
+  >  2: dsc 14,1 23 "DUA1:[LIB58.REN]W3.OUT;"
+  >  3: fab
+  >     fab bid=03 sts=00010001 stv=00000000 ctx=00000000 ifi=0
+  >     fna 17 "[LIB58.REN]W*.TXT"
+  >     dna 0 ""
+  >     nam rsl=24 "DUA1:[LIB58.REN]W3.TXT;1" wcc=1
+  >     nam esl=23 "DUA1:[LIB58.REN]W*.TXT;"
+  >     rlf rsl=23 "DUA1:[LIB58.REN]W*.TXT;"
+  >  4: val 12345678
+  > RF success 3
+  >  1: dsc 14,1 24 "DUA1:[LIB58.REN]W3.TXT;1"
+  >  2: dsc 14,1 24 "DUA1:[LIB58.REN]W3.OUT;1"
+  >  3: val 12345678
+  > RF confirm 4
+  >  1: dsc 14,1 24 "DUA1:[LIB58.REN]W4.TXT;1"
+  >  2: dsc 14,1 23 "DUA1:[LIB58.REN]W4.OUT;"
+  >  3: fab
+  >     fab bid=03 sts=00010001 stv=00000000 ctx=00000000 ifi=0
+  >     fna 17 "[LIB58.REN]W*.TXT"
+  >     dna 0 ""
+  >     nam rsl=24 "DUA1:[LIB58.REN]W4.TXT;1" wcc=1
+  >     nam esl=23 "DUA1:[LIB58.REN]W*.TXT;"
+  >     rlf rsl=23 "DUA1:[LIB58.REN]W*.TXT;"
+  >  4: val 12345678
+RF wildcard left R0=000182CA
+  = DUA1:[LIB58.REN]W1.OUT;1
+  = DUA1:[LIB58.REN]W2.TXT;1
+  = DUA1:[LIB58.REN]W3.OUT;1
+  = DUA1:[LIB58.REN]W4.TXT;1
+  = end 000182CA
+RF V1;1 to V2 R0=00000001
+  > RF success 3
+  >  1: dsc 14,1 24 "DUA1:[LIB58.REN]V1.TXT;1"
+  >  2: dsc 14,1 24 "DUA1:[LIB58.REN]V2.TXT;1"
+  >  3: val 00000000
+RF V1;2 to V2 R0=00000001
+  > RF success 3
+  >  1: dsc 14,1 24 "DUA1:[LIB58.REN]V1.TXT;2"
+  >  2: dsc 14,1 24 "DUA1:[LIB58.REN]V2.TXT;2"
+  >  3: val 00000000
+RF versions left R0=000182CA
+  = DUA1:[LIB58.REN]V2.TXT;2
+  = DUA1:[LIB58.REN]V2.TXT;1
+  = end 000182CA
+RF T1 to T2 ;* R0=00000001
+  > RF success 3
+  >  1: dsc 14,1 24 "DUA1:[LIB58.REN]T1.TXT;2"
+  >  2: dsc 14,1 24 "DUA1:[LIB58.REN]T2.TXT;2"
+  >  3: val 00000000
+  > RF success 3
+  >  1: dsc 14,1 24 "DUA1:[LIB58.REN]T1.TXT;1"
+  >  2: dsc 14,1 24 "DUA1:[LIB58.REN]T2.TXT;1"
+  >  3: val 00000000
+RF ;* left R0=000182CA
+  = DUA1:[LIB58.REN]T2.TXT;2
+  = DUA1:[LIB58.REN]T2.TXT;1
+  = end 000182CA
+RF CUR_VER exists R0=00158029
+  > RF error 6
+  >  1: dsc 14,1 24 "DUA1:[LIB58.REN]K1.TXT;1"
+  >  2: dsc 14,1 24 "DUA1:[LIB58.REN]K2.TXT;1"
+  >  3: ref 0001C01A
+  >  4: ref 00000868
+  >  5: ref 00000002
+  >  6: val 00000000
+RF CUR_VER new name R0=00000001
+  > RF success 3
+  >  1: dsc 14,1 24 "DUA1:[LIB58.REN]K1.TXT;1"
+  >  2: dsc 14,1 24 "DUA1:[LIB58.REN]K3.TXT;1"
+  >  3: val 00000000
+RF no CUR_VER exists R0=00000001
+  > RF success 3
+  >  1: dsc 14,1 24 "DUA1:[LIB58.REN]K4.TXT;1"
+  >  2: dsc 14,1 24 "DUA1:[LIB58.REN]K2.TXT;2"
+  >  3: val 00000000
+RF CUR_VER left R0=000182CA
+  = DUA1:[LIB58.REN]K2.TXT;2
+  = DUA1:[LIB58.REN]K2.TXT;1
+  = DUA1:[LIB58.REN]K3.TXT;1
+  = end 000182CA
+RF flags 2 R0=00000001
+  > RF success 3
+  >  1: dsc 14,1 24 "DUA1:[LIB58.REN]G2.TXT;1"
+  >  2: dsc 14,1 24 "DUA1:[LIB58.REN]H2.TXT;1"
+  >  3: val 00000000
+RF flags 4 R0=00158234
+RF flags 8 R0=00158234
+RF flags 16 R0=00158234
+RF missing R0=00158029
+  > RF error 6
+  >  1: dsc 14,1 25 "DUA1:[LIB58.REN]NONE.TXT;"
+  >  2: dsc 14,1 18 "[LIB58.REN]NEW.TXT"
+  >  3: ref 00018292
+  >  4: ref 00000910
+  >  5: ref 00000000
+  >  6: val 12345678
+RF missing no error routine R0=00018292
+RF missing wildcard R0=00158029
+  > RF error 6
+  >  1: dsc 14,1 26 "DUA1:[LIB58.REN]NONE*.TXT;"
+  >  2: dsc 14,1 5 "*.NEW"
+  >  3: ref 00018292
+  >  4: ref 00000910
+  >  5: ref 00000000
+  >  6: val 00000000
+RF bad wildcard new R0=00158029
+  > RF error 6
+  >  1: dsc 14,1 24 "DUA1:[LIB58.REN]E1.TXT;1"
+  >  2: dsc 14,1 24 "DUA1:[LIB58.REN]A*B.TXT;"
+  >  3: ref 0001852C
+  >  4: ref 00000000
+  >  5: ref 00000001
+  >  6: val 00000000
+RF bad syntax new R0=00158029
+  > RF error 6
+  >  1: dsc 14,1 24 "DUA1:[LIB58.REN]E1.TXT;1"
+  >  2: dsc 14,1 19 "[LIB58.REN]E1.TXT;Q"
+  >  3: ref 000186D4
+  >  4: ref 00000000
+  >  5: ref 00000001
+  >  6: val 00000000
+RF new missing directory R0=00158029
+  > RF error 6
+  >  1: dsc 14,1 24 "DUA1:[LIB58.REN]E2.TXT;1"
+  >  2: dsc 14,1 25 "DUA1:[LIB58.NODIR]E2.TXT;"
+  >  3: ref 0001C04A
+  >  4: ref 00000910
+  >  5: ref 00000001
+  >  6: val 00000000
+RF other device R0=00158029
+  > RF error 6
+  >  1: dsc 14,1 24 "DUA1:[LIB58.REN]E2.TXT;1"
+  >  2: dsc 14,1 23 "NLA0:[LIB58.REN]E2.TXT;"
+  >  3: ref 000184C4
+  >  4: ref 00000000
+  >  5: ref 00000002
+  >  6: val 00000000
+RF error fails R0=0001C04C
+  > RF error 6
+  >  1: dsc 14,1 25 "DUA1:[LIB58.REN]E3A.TXT;1"
+  >  2: dsc 14,1 26 "DUA1:[LIB58.NODIR]E3A.TXT;"
+  >  3: ref 0001C04A
+  >  4: ref 00000910
+  >  5: ref 00000001
+  >  6: val 00000000
+RF error, no routine R0=0001C04A
+RF dynamic resultants R0=00000001
+  > RF confirm 4
+  >  1: dsc 14,2 24 "DUA1:[LIB58.REN]Y1.TXT;1"
+  >  2: dsc 14,2 23 "DUA1:[LIB58.REN]Y9.TXT;"
+  >  3: fab
+  >     fab bid=03 sts=00010001 stv=00000000 ctx=00000000 ifi=0
+  >     fna 17 "[LIB58.REN]Y1.TXT"
+  >     dna 0 ""
+  >     nam rsl=24 "DUA1:[LIB58.REN]Y1.TXT;1" wcc=1
+  >     nam esl=23 "DUA1:[LIB58.REN]Y1.TXT;"
+  >     rlf rsl=23 "DUA1:[LIB58.REN]Y1.TXT;"
+  >  4: val 00000000
+  > RF success 3
+  >  1: dsc 14,2 24 "DUA1:[LIB58.REN]Y1.TXT;1"
+  >  2: dsc 14,2 24 "DUA1:[LIB58.REN]Y9.TXT;1"
+  >  3: val 00000000
+  P: 24 "DUA1:[LIB58.REN]Y1.TXT;1"
+  Q: 24 "DUA1:[LIB58.REN]Y9.TXT;1"
+RF missing, resultants R0=00158029
+  > RF error 6
+  >  1: dsc 14,2 25 "DUA1:[LIB58.REN]NONE.TXT;"
+  >  2: dsc 14,2 17 "[LIB58.REN]Y9.TXT"
+  >  3: ref 00018292
+  >  4: ref 00000910
+  >  5: ref 00000000
+  >  6: val 00000000
+  P: 25 "DUA1:[LIB58.REN]NONE.TXT;"
+  Q: 17 "[LIB58.REN]Y9.TXT"
+RF fixed resultants 12 R0=00000001
+  > RF success 3
+  >  1: dsc 14,1 12 "DUA1:[LIB58."
+  >  2: dsc 14,1 12 "DUA1:[LIB58."
+  >  3: val 00000000
+  P: 12 "DUA1:[LIB58."
+  Q: 12 "DUA1:[LIB58."
+RF context 1 R0=00000001
+  > RF success 3
+  >  1: dsc 14,1 24 "DUA1:[LIB58.REN]X1.TXT;1"
+  >  2: dsc 14,1 24 "DUA1:[LIB58.REN]X1.OUT;1"
+  >  3: val 00000000
+RF context 2 R0=00000001
+  > RF success 3
+  >  1: dsc 14,1 24 "DUA1:[LIB58.REN]X2.TXT;1"
+  >  2: dsc 14,1 24 "DUA1:[LIB58.REN]X2.OUT;1"
+  >  3: val 00000000
+FSE RF context R0=00000001
+RF signal in confirm R0=0888888A signal 0888888A 00000000 00000000
+  > RF confirm 4
+  >  1: dsc 14,1 24 "DUA1:[LIB58.REN]Z1.TXT;1"
+  >  2: dsc 14,1 23 "DUA1:[LIB58.REN]Z1.OUT;"
+  >  3: fab
+  >     fab bid=03 sts=00010001 stv=00000000 ctx=00000000 ifi=0
+  >     fna 17 "[LIB58.REN]Z*.TXT"
+  >     dna 0 ""
+  >     nam rsl=24 "DUA1:[LIB58.REN]Z1.TXT;1" wcc=1
+  >     nam esl=23 "DUA1:[LIB58.REN]Z*.TXT;"
+  >     rlf rsl=23 "DUA1:[LIB58.REN]Z*.TXT;"
+  >  4: val 00000000
+RF after signal R0=00000001
+  > RF confirm 4
+  >  1: dsc 14,1 24 "DUA1:[LIB58.REN]Z1.TXT;1"
+  >  2: dsc 14,1 23 "DUA1:[LIB58.REN]Z1.OUT;"
+  >  3: fab
+  >     fab bid=03 sts=00010001 stv=00000000 ctx=00000000 ifi=0
+  >     fna 17 "[LIB58.REN]Z*.TXT"
+  >     dna 0 ""
+  >     nam rsl=24 "DUA1:[LIB58.REN]Z1.TXT;1" wcc=1
+  >     nam esl=23 "DUA1:[LIB58.REN]Z*.TXT;"
+  >     rlf rsl=23 "DUA1:[LIB58.REN]Z*.TXT;"
+  >  4: val 00000000
+  > RF success 3
+  >  1: dsc 14,1 24 "DUA1:[LIB58.REN]Z1.TXT;1"
+  >  2: dsc 14,1 24 "DUA1:[LIB58.REN]Z1.OUT;1"
+  >  3: val 00000000
+  > RF confirm 4
+  >  1: dsc 14,1 24 "DUA1:[LIB58.REN]Z2.TXT;1"
+  >  2: dsc 14,1 23 "DUA1:[LIB58.REN]Z2.OUT;"
+  >  3: fab
+  >     fab bid=03 sts=00010001 stv=00000000 ctx=00000000 ifi=0
+  >     fna 17 "[LIB58.REN]Z*.TXT"
+  >     dna 0 ""
+  >     nam rsl=24 "DUA1:[LIB58.REN]Z2.TXT;1" wcc=1
+  >     nam esl=23 "DUA1:[LIB58.REN]Z*.TXT;"
+  >     rlf rsl=23 "DUA1:[LIB58.REN]Z*.TXT;"
+  >  4: val 00000000
+  > RF success 3
+  >  1: dsc 14,1 24 "DUA1:[LIB58.REN]Z2.TXT;1"
+  >  2: dsc 14,1 24 "DUA1:[LIB58.REN]Z2.OUT;1"
+  >  3: val 00000000
+RF signal left R0=000182CA
+  = DUA1:[LIB58.REN]Z1.OUT;1
+  = DUA1:[LIB58.REN]Z2.OUT;1
+  = end 000182CA
+RF confirm opens R0=00000001
+  > RF confirm 4
+  >  1: dsc 14,1 24 "DUA1:[LIB58.REN]O1.TXT;1"
+  >  2: dsc 14,1 23 "DUA1:[LIB58.REN]O1.OUT;"
+  >  3: fab
+  >     fab bid=03 sts=00010001 stv=00000000 ctx=00000000 ifi=0
+  >     fna 17 "[LIB58.REN]O1.TXT"
+  >     dna 0 ""
+  >     nam rsl=24 "DUA1:[LIB58.REN]O1.TXT;1" wcc=1
+  >     nam esl=23 "DUA1:[LIB58.REN]O1.TXT;"
+  >     rlf rsl=23 "DUA1:[LIB58.REN]O1.TXT;"
+  >  4: val 00000000
+  >   open 00010001 close 00010001
+  > RF success 3
+  >  1: dsc 14,1 24 "DUA1:[LIB58.REN]O1.TXT;1"
+  >  2: dsc 14,1 24 "DUA1:[LIB58.REN]O1.OUT;1"
+  >  3: val 00000000
+RF to its own name R0=00000001
+  > RF success 3
+  >  1: dsc 14,1 24 "DUA1:[LIB58.REN]M1.TXT;1"
+  >  2: dsc 14,1 24 "DUA1:[LIB58.REN]M1.TXT;1"
+  >  3: val 00000000
+RF 256-character new R0=0015839C
+RF no arguments R0=0015835C
+RF 13 arguments R0=0015835C
+REN list after R0=000182CA
+  = DUA1:[LIB58.REN]E1.TXT;1
+  = DUA1:[LIB58.REN]E2.TXT;1
+  = DUA1:[LIB58.REN]E3A.TXT;1
+  = DUA1:[LIB58.REN]E3B.TXT;1
+  = DUA1:[LIB58.REN]G16.TXT;1
+  = DUA1:[LIB58.REN]G4.TXT;1
+  = DUA1:[LIB58.REN]G8.TXT;1
+  = DUA1:[LIB58.REN]H2.TXT;1
+  = DUA1:[LIB58.REN]K2.TXT;2
+  = DUA1:[LIB58.REN]K2.TXT;1
+  = DUA1:[LIB58.REN]K3.TXT;1
+  = DUA1:[LIB58.REN]M1.TXT;1
+  = DUA1:[LIB58.REN]NEW.DIR;1
+  = DUA1:[LIB58.REN]O1.OUT;1
+  = DUA1:[LIB58.REN]R1.NEW;1
+  = DUA1:[LIB58.REN]R2.DAT;1
+  = DUA1:[LIB58.REN]T2.TXT;2
+  = DUA1:[LIB58.REN]T2.TXT;1
+  = DUA1:[LIB58.REN]V2.TXT;2
+  = DUA1:[LIB58.REN]V2.TXT;1
+  = DUA1:[LIB58.REN]W1.OUT;1
+  = DUA1:[LIB58.REN]W2.TXT;1
+  = DUA1:[LIB58.REN]W3.OUT;1
+  = DUA1:[LIB58.REN]W4.TXT;1
+  = DUA1:[LIB58.REN]X1.OUT;1
+  = DUA1:[LIB58.REN]X2.OUT;1
+  = DUA1:[LIB58.REN]Y8.TXT;1
+  = DUA1:[LIB58.REN]Z1.OUT;1
+  = DUA1:[LIB58.REN]Z2.OUT;1
+  = DUA1:[LIB58.REN.NEW]R3.TXT;1
+  = end 000182CA
+ID of DEEP.TXT R0=00000001
+  ~FIDDEEP: 00010019 00120000
+the device's DVI R0=00000001
+  DVIDSC: 12 "_SIMVAX$DUA1"
+FTN DEEP by DVI R0=00000001
+  D: 34 "DISK$LIB58:[LIB58.A.SUB]DEEP.TXT;1"
+  L: 55550022
+  A: 00000001
+FTN DEEP by DVI without _ R0=00000001
+  D: 34 "DISK$LIB58:[LIB58.A.SUB]DEEP.TXT;1"
+  L: 55550022
+  A: 00000001
+FTN DEEP by LIB58_DISK: R0=00000001
+  D: 34 "DISK$LIB58:[LIB58.A.SUB]DEEP.TXT;1"
+  L: 55550022
+  A: 00000001
+FTN DEEP by LIB58_DISK R0=00000001
+  D: 34 "DISK$LIB58:[LIB58.A.SUB]DEEP.TXT;1"
+  L: 55550022
+  A: 00000001
+FTN DEEP by SYS$DISK R0=00000001
+  D: 34 "DISK$LIB58:[LIB58.A.SUB]DEEP.TXT;1"
+  L: 55550022
+  A: 00000001
+FTN DEEP device and file R0=00000001
+  D: 34 "DISK$LIB58:[LIB58.A.SUB]DEEP.TXT;1"
+  L: 55550022
+  A: 00000001
+FTN DEEP into S 10 R0=00158011
+  D: 10 "DISK$LIB58"
+  L: 5555000A
+  A: 00000001
+FTN DEEP into S 50 R0=00000001
+  D: 50 "DISK$LIB58:[LIB58.A.SUB]DEEP.TXT;1                "
+  L: 55550022
+  A: 00000001
+FTN DEEP into VS 50 R0=00000001
+  D: 34 "DISK$LIB58:[LIB58.A.SUB]DEEP.TXT;1"
+  L: 55550022
+  A: 00000001
+FTN DEEP 3 arguments R0=00000001
+  D: 34 "DISK$LIB58:[LIB58.A.SUB]DEEP.TXT;1"
+  L: 55555555
+  A: 55555555
+FTN DEEP 4 arguments R0=00000001
+  D: 34 "DISK$LIB58:[LIB58.A.SUB]DEEP.TXT;1"
+  L: 55550022
+  A: 55555555
+FTN DEEP directory-id R0=00000910
+  D: 11 "DISK$LIB58:"
+  L: 5555000B
+  A: 00000910
+ID of A ONE.TXT R0=00000001
+  ~FIDONE: 00010015 00000000
+FTN ONE.TXT R0=00000001
+  D: 29 "DISK$LIB58:[LIB58.A]ONE.TXT;1"
+  L: 5555001D
+  A: 00000001
+ID of LIB58.DIR R0=00000001
+  ~FIDDIR: 00010010 00000000
+FTN LIB58.DIR R0=00000001
+  D: 30 "DISK$LIB58:[000000]LIB58.DIR;1"
+  L: 5555001E
+  A: 00000001
+FTN MFD R0=00000001
+  D: 31 "DISK$LIB58:[000000]000000.DIR;1"
+  L: 5555001F
+  A: 00000001
+FTN INDEXF.SYS R0=00000001
+  D: 31 "DISK$LIB58:[000000]INDEXF.SYS;1"
+  L: 5555001F
+  A: 00000001
+FTN BITMAP.SYS R0=00000001
+  D: 31 "DISK$LIB58:[000000]BITMAP.SYS;1"
+  L: 5555001F
+  A: 00000001
+FTN unused header R0=000008C0
+  D: 11 "DISK$LIB58:"
+  L: 5555000B
+  A: 000008C0
+FTN past the index file R0=00000910
+  D: 11 "DISK$LIB58:"
+  L: 5555000B
+  A: 00000910
+FTN file number 0 R0=00000910
+  D: 11 "DISK$LIB58:"
+  L: 5555000B
+  A: 00000910
+FTN wrong sequence R0=00000910
+  D: 11 "DISK$LIB58:"
+  L: 5555000B
+  A: 00000910
+FTN RVN 1 R0=00000001
+  D: 34 "DISK$LIB58:[LIB58.A.SUB]DEEP.TXT;1"
+  L: 55550022
+  A: 00000001
+FTN NLA0: R0=0015839C
+  D: 0 ""
+  L: 55550000
+  A: 00000001
+FTN no such device R0=00000908
+  D: 0 ""
+  L: 55555555
+  A: 55555555
+FTN 64-character device R0=00000908
+  D: 0 ""
+  L: 55555555
+  A: 55555555
+FTN 65-character device R0=00158234
+  D: 0 ""
+  L: 55555555
+  A: 55555555
+FTN empty device R0=00000154
+  D: 0 ""
+  L: 55555555
+  A: 55555555
+FTN 2 arguments R0=00158234
+  D: 0 ""
+  L: 55555555
+  A: 55555555
+FTN no arguments R0=00158234
+FTN file-id 0 R0=0000000C signal 0000000C 00000000 00000000
+  D: 0 ""
+  L: 55555555
+  A: 55555555
+make LOST directories R0=00000619
+  N: 00000002
+make ORPHAN.TXT R0=00010001
+FTN ORPHAN.TXT entered R0=00000001
+  D: 35 "DISK$LIB58:[LIB58.LOST]ORPHAN.TXT;1"
+  L: 55550023
+  A: 00000001
+remove ORPHAN.TXT's entry R0=00000001
+  A: 00000001
+  Q: 00000001
+  I: 00000001
+LOST list R0=00018292
+  = end 00018292
+FTN ORPHAN.TXT removed R0=00000001
+  D: 25 "DISK$LIB58:[]ORPHAN.TXT;1"
+  L: 55550019
+  A: 00000001
+make G.TXT R0=00010001
+erase GONE.DIR R0=0001C032
+  F:
+    fab bid=03 sts=0001C032 stv=00002174 ctx=00000000 ifi=0
+    fna 17 "[LIB58]GONE.DIR;1"
+    dna 0 ""
+FTN G.TXT R0=00000001
+  D: 30 "DISK$LIB58:[LIB58.GONE]G.TXT;1"
+  L: 5555001E
+  A: 00000001
+TF manual's example R0=00000001
+  D: 21 "FILENAME.EXTENSTION;1"
+  L: 55550015
+TF manual's, width omitted R0=00000001
+  D: 32 "FILENAME.EXTENSTION;1           "
+  L: 55550015
+TF width 40 R0=00000001
+  D: 40 "NODE::DUA1:[DIR.SUB]FILENAME.TYP;12     "
+  L: 55550023
+TF width 35 R0=00000001
+  D: 40 "NODE::DUA1:[DIR.SUB]FILENAME.TYP;12     "
+  L: 55550023
+TF width 34 R0=00000001
+  D: 40 "DUA1:[DIR.SUB]FILENAME.TYP;12           "
+  L: 5555001D
+TF width 29 R0=00000001
+  D: 40 "DUA1:[DIR.SUB]FILENAME.TYP;12           "
+  L: 5555001D
+TF width 28 R0=00000001
+  D: 40 "[DIR.SUB]FILENAME.TYP;12                "
+  L: 55550018
+TF width 24 R0=00000001
+  D: 40 "[DIR.SUB]FILENAME.TYP;12                "
+  L: 55550018
+TF width 23 R0=00000001
+  D: 40 "FILENAME.TYP;12                         "
+  L: 5555000F
+TF width 15 R0=00000001
+  D: 40 "FILENAME.TYP;12                         "
+  L: 5555000F
+TF width 14 R0=00000001
+  D: 40 "FILENAME.TYP                            "
+  L: 5555000C
+TF width 12 R0=00000001
+  D: 40 "FILENAME.TYP                            "
+  L: 5555000C
+TF width 11 R0=00000001
+  D: 40 "FILENAME                                "
+  L: 55550008
+TF width 8 R0=00000001
+  D: 40 "FILENAME                                "
+  L: 55550008
+TF width 7 R0=00158011
+  D: 40 "FILENAM                                 "
+  L: 55550007
+TF width 1 R0=00158011
+  D: 40 "F                                       "
+  L: 55550001
+TF width 0 R0=00158011
+  D: 40 "                                        "
+  L: 55550000
+TF access control R0=00000001
+  D: 40 "DUA1:[DIR]F.T;1                         "
+  L: 5555000F
+TF access control 20 R0=00000001
+  D: 40 "DUA1:[DIR]F.T;1                         "
+  L: 5555000F
+TF angle brackets R0=00000001
+  D: 40 "F.T;1                                   "
+  L: 55550005
+TF no type or version R0=00000001
+  D: 40 "FILENAME                                "
+  L: 55550008
+TF type, no version R0=00000001
+  D: 40 "FILENAME.TYP                            "
+  L: 5555000C
+TF version dot R0=00000001
+  D: 40 "FILENAME.TYP.12                         "
+  L: 5555000F
+TF directory only R0=00000001
+  D: 40 "                                        "
+  L: 55550000
+TF logical name device R0=00000001
+  D: 40 "[SYSMGR]LOGIN.COM;2                     "
+  L: 55550013
+TF already fits R0=00000001
+  D: 40 "A.B;1                                   "
+  L: 55550005
+TF empty R0=00000001
+  D: 40 "                                        "
+  L: 55550000
+TF into S 20, omitted R0=00000001
+  D: 20 "FILENAME.TYP;12     "
+  L: 5555000F
+TF into D, omitted R0=00158011
+  D: 0 ""
+  L: 55550000
+TF into D, 20 R0=00000001
+  D: 15 "FILENAME.TYP;12"
+  L: 5555000F
+TF into S 10, 20 R0=00158011
+  D: 10 "FILENAME.T"
+  L: 5555000A
+TF 255 characters R0=00158011
+  D: 40 "NNNNNNNNNNNNNNNNNNNNNNNNNNNNNN          "
+  L: 5555001E
+TF 256 characters R0=00158011
+  D: 40 "NNNNNNNNNNNNNNNNNNNNNNNNNNNNNN          "
+  L: 5555001E
+TF 257 characters R0=00158011
+  D: 40 "NNNNNNNNNNNNNNNNNNNNNNNNNNNNNN          "
+  L: 5555001E
+TF 1 argument R0=0015835C
+TF 5 arguments R0=0015835C
+  D: 10 "----------"
+message LIB$_NOWILD R0=00000001
+  D: 36 "%LIB-E-NOWILD, no wildcard permitted"
+message SHR$_NOWILD R0=00000001
+  D: 39 "%SYSTEM-E-NOWILD, no wildcard permitted"
+message SHR$_PARSEFAIL LIB R0=00000001
+  D: 35 "%LIB-E-PARSEFAIL, error parsing !AS"
+message SHR$_PARSEFAIL CLI R0=00000001
+  D: 35 "%CLI-E-PARSEFAIL, error parsing !AS"
+message LIB$_ERRROUCAL R0=00000001
+  D: 38 "%LIB-S-ERRROUCAL, error routine called"
+message LIB$_INVFILSPE R0=00000001
+  D: 44 "%LIB-F-INVFILSPE, invalid file specification"
+message LIB$_NORMAL R0=00000001
+  D: 43 "%LIB-S-NORMAL, normal successful completion"
+message SS$_DIRNOTEMPTY R0=00000001
+  D: 50 "%SYSTEM-F-DIRNOTEMPTY, directory file is not empty"
+FFE of junk R0=0001850C
+  Z: 00000001
+FF junk context R0=0001850C
+  D: 0 ""
+FS not a FAB R0=0000000C signal 0000000C 00000004 00000033
+FS 2 arguments R0=00010001
+  > FS success 2
+  >  1: fab
+  >     fab bid=03 sts=00010001 stv=00000000 ctx=0000FA07 ifi=0
+  >     fna 16 "[LIB58.A]ONE.TXT"
+  >     dna 0 ""
+  >     nam rsl=23 "DUA1:[LIB58.A]ONE.TXT;1" wcc=1
+  >     nam esl=22 "DUA1:[LIB58.A]ONE.TXT;"
+  >  2: val 0001173D
+  SFF:
+    fab bid=03 sts=00010001 stv=00000000 ctx=0000FA07 ifi=0
+    fna 16 "[LIB58.A]ONE.TXT"
+    dna 0 ""
+    nam rsl=23 "DUA1:[LIB58.A]ONE.TXT;1" wcc=1
+    nam esl=22 "DUA1:[LIB58.A]ONE.TXT;"
+FS context junk R0=00018674
+  > FS error 4
+  >  1: fab
+  >     fab bid=03 sts=00018674 stv=00000000 ctx=0000FA03 ifi=0
+  >     fna 16 "[LIB58.B]ONE.TXT"
+  >     dna 0 ""
+  >     nam rsl=16 "[LIB58.B]ONE.TXT" wcc=0
+  >     nam esl=0 ""
+  >     rlf rsl=0 ""
+  >  2: val 0001173D
+  >  3: val 00011765
+  >  4: val 00007D08
+FSE not a FAB R0=0001850C
+FSE junk context R0=00000001
+RF 1 argument R0=0015835C

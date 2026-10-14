@@ -108,6 +108,7 @@ var acpStatuses = []struct {
 	{rms.ErrACPReadOnly, vmsdef.Symbols["SS$_NOPRIV"]},
 	{rms.ErrACPEndOfFile, vmsdef.Symbols["SS$_ENDOFFILE"]},
 	{rms.ErrACPBadBlock, vmsdef.Symbols["SS$_BADPARAM"]},
+	{rms.ErrACPBadHeader, vmsdef.Symbols["SS$_FILESTRUCT"]},
 	{rms.ErrACPDeviceFull, vmsdef.Symbols["SS$_DEVICEFULL"]},
 	{rms.ErrACPDuplicate, vmsdef.Symbols["SS$_DUPFILENAME"]},
 	{rms.ErrACPDirNotEmpty, vmsdef.Symbols["SS$_DIRNOTEMPTY"]},

@@ -88,8 +88,9 @@ func TestTrimFilespecArguments(t *testing.T) {
 		t.Errorf("a short new-filespec: status %#x, want LIB$_STRTRU", st)
 	}
 
-	if st := call(t, env, "LIB$TRIM_FILESPEC", a.desc(strings.Repeat("A", 256)), out); st != libInvArg {
-		t.Errorf("256 characters: status %#x, want LIB$_INVARG", st)
+	// More than 255 characters is trimmed as any other (VMS 7.1).
+	if st := call(t, env, "LIB$TRIM_FILESPEC", a.desc(strings.Repeat("A", 256)), out); st != libStrTru {
+		t.Errorf("256 characters: status %#x, want LIB$_STRTRU", st)
 	}
 
 	if st := call(t, env, "LIB$TRIM_FILESPEC", a.desc(strings.Repeat("A", 255)), out); st != libStrTru {

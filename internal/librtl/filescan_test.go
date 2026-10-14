@@ -7,10 +7,7 @@ import (
 
 	"github.com/tucats/govax/internal/corevms"
 	"github.com/tucats/govax/internal/registers"
-	"github.com/tucats/govax/internal/vmsdef"
 )
-
-var rmsDNF = vmsdef.Symbols["RMS$_DNF"]
 
 // The stub frame callingBack runs a routine in, as the XFC would find it.
 const (
@@ -138,13 +135,14 @@ func scanFAB(t *testing.T, a *arena, spec, defaultSpec string) (fab, nam uint32)
 type scanLog []string
 
 // recorder returns a procedure that logs each call to successRoutine and
-// errorRoutine, checking each gets just the FAB.
+// errorRoutine, checking each gets LIB$FILE_SCAN's own argument list,
+// the FAB first.
 func (l *scanLog) recorder(t *testing.T, env *corevms.Environment, fab, nam uint32) procedure {
 	return func(routine uint32, args []uint32) uint32 {
 		t.Helper()
 
-		if len(args) != 1 || args[0] != fab {
-			t.Errorf("callback arguments %#x, want the FAB %#x", args, fab)
+		if len(args) < 3 || args[0] != fab || args[1] != successRoutine || args[2] != errorRoutine {
+			t.Errorf("callback arguments %#x, want FILE_SCAN's, the FAB %#x first", args, fab)
 		}
 
 		name, err := resultantName(env, nam)
@@ -196,39 +194,41 @@ func fileScan(t *testing.T, env *corevms.Environment, a *arena, spec, defaultSpe
 }
 
 // TestFileScanWildcard: the success routine is called for each file a
-// wildcard name matches, with the FAB; the status is RMS$_NMF; a
-// wildcard directory walks the tree.
+// wildcard name matches; the status is RMS$_NMF; a wildcard directory
+// walks the tree. A name with no wildcard gets one $SEARCH, and its
+// status.
 func TestFileScanWildcard(t *testing.T) {
 	env := findFixture(t)
 	a := newArena(t, env)
 
 	cases := []struct {
-		spec string
-		want scanLog
+		spec   string
+		status uint32
+		want   scanLog
 	}{
-		{"DUA0:[000000]*.TXT", scanLog{"+DUA0:[000000]A.TXT;1", "+DUA0:[000000]B.TXT;1"}},
-		{"DUA0:[000000...]*.TXT", scanLog{"+DUA0:[000000]A.TXT;1", "+DUA0:[000000]B.TXT;1", "+DUA0:[SUB]D.TXT;1"}},
-		{"DUA0:[SUB]D.TXT", scanLog{"+DUA0:[SUB]D.TXT;1"}},
+		{"DUA0:[000000]*.TXT", rmsNMF, scanLog{"+DUA0:[000000]A.TXT;1", "+DUA0:[000000]B.TXT;1"}},
+		{"DUA0:[000000...]*.TXT", rmsNMF, scanLog{"+DUA0:[000000]A.TXT;1", "+DUA0:[000000]B.TXT;1", "+DUA0:[SUB]D.TXT;1"}},
+		{"DUA0:[SUB]D.TXT", rmsNormal, scanLog{"+DUA0:[SUB]D.TXT;1"}},
 	}
 
 	for _, c := range cases {
 		st, log, _ := fileScan(t, env, a, c.spec, "", 0)
-		if st != rmsNMF || !slices.Equal(log, c.want) {
-			t.Errorf("FILE_SCAN(%q) = %#x %q, want RMS$_NMF %q", c.spec, st, log, c.want)
+		if st != c.status || !slices.Equal(log, c.want) {
+			t.Errorf("FILE_SCAN(%q) = %#x %q, want %#x %q", c.spec, st, log, c.status, c.want)
 		}
 	}
 }
 
 // TestFileScanErrors: the error routine is called for a file not found
-// (the search then runs out, RMS$_NMF), for a $PARSE that fails (its
-// status returned), and for a search that can't go on.
+// (RMS$_FNF, which ends the scan), for a $PARSE that fails (its status
+// returned), and for a search that can't go on.
 func TestFileScanErrors(t *testing.T) {
 	env := findFixture(t)
 	a := newArena(t, env)
 
 	st, log, _ := fileScan(t, env, a, "DUA0:[000000]NONE.TXT", "", 0)
-	if want := (scanLog{"-DUA0:[000000]NONE.TXT; " + hexStatus(rmsFNF)}); st != rmsNMF || !slices.Equal(log, want) {
-		t.Errorf("a missing file: %#x %q, want RMS$_NMF %q", st, log, want)
+	if want := (scanLog{"-DUA0:[000000]NONE.TXT; " + hexStatus(rmsFNF)}); st != rmsFNF || !slices.Equal(log, want) {
+		t.Errorf("a missing file: %#x %q, want RMS$_FNF %q", st, log, want)
 	}
 
 	st, log, _ = fileScan(t, env, a, "DUA0:[NODIR]X.TXT", "", 0)
@@ -256,17 +256,18 @@ func TestFileScanNoRoutines(t *testing.T) {
 	}
 }
 
-// TestFileScanContext: with a context, the last file found is the next
-// call's related name (temporary defaulting), the program's NAM$L_RLF is
-// 0 again after each call, and FILE_SCAN_END frees the context and
-// clears the longword.
+// TestFileScanContext: with a context, the last call's file
+// specification is the next call's related name (temporary defaulting),
+// the program's NAM$L_RLF pointing at the context's name blocks, and
+// FILE_SCAN_END frees the context, clears the longword, and leaves FNS
+// 0. A third call's name is defaulted through the first two.
 func TestFileScanContext(t *testing.T) {
 	env := findFixture(t)
 	a := newArena(t, env)
 	cell := a.long(0)
 
 	st, log, _ := fileScan(t, env, a, "DUA0:[SUB]D.TXT", "", cell)
-	if st != rmsNMF || len(log) != 1 {
+	if st != rmsNormal || len(log) != 1 {
 		t.Fatalf("first FILE_SCAN = %#x %q", st, log)
 	}
 
@@ -280,8 +281,14 @@ func TestFileScanContext(t *testing.T) {
 	}
 
 	nam := longword(t, env, fab+fabNAM)
-	if rlf := longword(t, env, nam+namRLF); rlf != 0 {
-		t.Errorf("NAM$L_RLF after the call = %#x, want 0", rlf)
+	if rlf := longword(t, env, nam+namRLF); rlf != longword(t, env, cell) {
+		t.Errorf("NAM$L_RLF after the call = %#x, want the context's %#x", rlf, longword(t, env, cell))
+	}
+
+	// "D" defaults from "*.TXT", which defaults from "DUA0:[SUB]D.TXT".
+	st, log, _ = fileScan(t, env, a, "D", "", cell)
+	if want := (scanLog{"+DUA0:[SUB]D.TXT;1"}); st != rmsNormal || !slices.Equal(log, want) {
+		t.Errorf("third FILE_SCAN = %#x %q, want %q through the chain", st, log, want)
 	}
 
 	if st := call(t, env, "LIB$FILE_SCAN_END", fab, cell); st != ssNormal {
@@ -292,15 +299,15 @@ func TestFileScanContext(t *testing.T) {
 		t.Errorf("context after FILE_SCAN_END = %#x, want 0", c)
 	}
 
-	if fns := byteAt(t, env, fab+fabFNS); fns != byte(len("*.TXT")) {
-		t.Errorf("FAB$B_FNS after FILE_SCAN_END = %d, want it put back", fns)
+	if fns := byteAt(t, env, fab+fabFNS); fns != 0 {
+		t.Errorf("FAB$B_FNS after FILE_SCAN_END = %d, want 0", fns)
 	}
 }
 
 // TestFileScanEnd: FILE_SCAN_END's arguments: neither, a context of 0, a
-// context longword that names none (LIB$_INVARG), a block that isn't a
-// FAB (RMS$_FAB, nothing changed); and its $PARSE of the null string
-// ends a wildcard search left part way.
+// context longword that names none (SS$_NORMAL, the longword cleared), a
+// block that isn't a FAB (RMS$_FAB, nothing changed); and its $PARSE of
+// the null string ends a wildcard search left part way.
 func TestFileScanEnd(t *testing.T) {
 	env := findFixture(t)
 	a := newArena(t, env)
@@ -313,8 +320,8 @@ func TestFileScanEnd(t *testing.T) {
 		t.Errorf("FILE_SCAN_END(, 0) = %#x", st)
 	}
 
-	if st := call(t, env, "LIB$FILE_SCAN_END", 0, a.long(0x12340)); st != libInvArg {
-		t.Errorf("FILE_SCAN_END(, junk) = %#x, want LIB$_INVARG", st)
+	if junk := a.long(0x12340); call(t, env, "LIB$FILE_SCAN_END", 0, junk) != ssNormal || longword(t, env, junk) != 0 {
+		t.Errorf("FILE_SCAN_END(, junk) = %#x, want SS$_NORMAL and the longword 0", longword(t, env, junk))
 	}
 
 	notFAB := a.long(0x55)

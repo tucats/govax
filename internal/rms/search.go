@@ -5,6 +5,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/tucats/ods2/filespec"
 	"github.com/tucats/ods2/ondisk"
 	"github.com/tucats/ods2/volume"
 )
@@ -450,6 +451,12 @@ func (ctx *Context) searchPlain(nam, wcc uint32) (sts, stv uint32, err error) {
 	}
 
 	if dir == nil {
+		// The resultant string is the expanded name (VMS 7.1:
+		// testdata/lib58's FS missing directory).
+		if err := ctx.storeResultant(nam, p.fileName); err != nil {
+			return 0, 0, err
+		}
+
 		return rmsDirNotFound, ssNoSuchFile, nil
 	}
 
@@ -561,6 +568,12 @@ func (ctx *Context) searchContext(nam uint32, st *searchState) (sts, stv uint32,
 			vol, ok := ctx.Mounts.Lookup(p.Lookup)
 			if ok {
 				st.Dirs = searchDirs(vol, p.DirSpec)
+
+				// The directory above the wildcard isn't there: RMS$_DNF
+				// at once ("[NODIR...]", VMS 7.1: testdata/lib58).
+				if len(st.Dirs) == 0 && !directoryExists(vol, fixedPrefix(p.DirSpec)) {
+					return ctx.wildDirNotFound(nam, st, p)
+				}
 			}
 
 			if st.Dirs == nil {
@@ -621,7 +634,18 @@ func (ctx *Context) searchContext(nam uint32, st *searchState) (sts, stv uint32,
 	delete(ctx.Files.searches, st.ID)
 
 	last := st.Names[len(st.Names)-1]
-	if err := ctx.endSearch(nam, last); err != nil {
+
+	// A search of "[DIR...]" that runs out leaves, as VMS's does, the
+	// search for subdirectories it made last: the resultant string
+	// "[DIR]*.DIR;1", DID [DIR]'s, and FNB as for [DIR]'s subdirectories
+	// (VMS 7.1 and 7.3:
+	// testdata/lib58, testdata/mar/rms3's SEARCH case 3). What a wildcard
+	// elsewhere in the directory leaves isn't modeled.
+	if root, ok := wildRoot(last.DirSpec); ok && st.Found {
+		if err := ctx.endAtRoot(nam, last, root); err != nil {
+			return 0, 0, err
+		}
+	} else if err := ctx.endSearch(nam, last); err != nil {
 		return 0, 0, err
 	}
 
@@ -647,10 +671,125 @@ func (ctx *Context) searchContext(nam uint32, st *searchState) (sts, stv uint32,
 	}
 
 	if !st.Found {
+		// A wildcard directory's search that finds nothing says so with
+		// no STV (VMS 7.1: testdata/lib58's FS error fails).
+		if last.FNB&fnbWildDir != 0 {
+			return rmsFileNotFound, 0, nil
+		}
+
 		return rmsFileNotFound, ssNoSuchFile, nil
 	}
 
 	return rmsNoMoreFiles, stv, nil
+}
+
+// wildDirNotFound ends st's search, whose directory above the wildcard
+// doesn't exist: RMS$_DNF, the resultant string the expanded name, and
+// no wildcard context left (VMS 7.1: testdata/lib58).
+func (ctx *Context) wildDirNotFound(nam uint32, st *searchState, p parsedName) (sts, stv uint32, err error) {
+	delete(ctx.Files.searches, st.ID)
+
+	if err := ctx.storeResultant(nam, p.fileName); err != nil {
+		return 0, 0, err
+	}
+
+	if err := ctx.storeLongword(nam+namWCC, 0); err != nil {
+		return 0, 0, err
+	}
+
+	return rmsDirNotFound, ssNoSuchFile, nil
+}
+
+// storeResultant writes f as the NAM's resultant string, as far as RSS
+// allows.
+func (ctx *Context) storeResultant(nam uint32, f fileName) error {
+	rss, err := ctx.loadByte(nam + namRSS)
+	if err != nil {
+		return err
+	}
+
+	rsa, err := ctx.loadLongword(nam + namRSA)
+	if err != nil {
+		return err
+	}
+
+	_, err = ctx.storeNameString(nam, rsa, rss, namRSL, f)
+
+	return err
+}
+
+// endAtRoot ends a search of "[root...]" (see searchContext).
+func (ctx *Context) endAtRoot(nam uint32, p parsedName, root []string) error {
+	f := fileName{Dev: p.Dev, Dir: dirSpec{Elems: root}.String(), Name: "*", Type: ".DIR", Ver: ";1"}
+	if err := ctx.storeResultant(nam, f); err != nil {
+		return err
+	}
+
+	if vol, ok := ctx.Mounts.Lookup(p.Lookup); ok {
+		path := dirSpec{Elems: root}.names()
+		if dir, err := filespec.ResolveDirectory(vol, path); err == nil {
+			if err := ctx.storeFid(nam+namDID, dir.Header.Fid); err != nil {
+				return err
+			}
+		}
+
+		// The level below the root is the wildcard one, as in the
+		// search for its subdirectories.
+		fnb := matchFNB(p.FNB, searchDir{Path: path})
+
+		switch lvl := len(path); {
+		case lvl == 0:
+			fnb |= fnbWildUFD
+		case lvl <= 7:
+			fnb |= fnbWildSFD1 << (lvl - 1)
+		}
+
+		if err := ctx.storeLongword(nam+namFNB, fnb); err != nil {
+			return err
+		}
+	}
+
+	return ctx.storeLongword(nam+namWCC, wccDone)
+}
+
+// fixedPrefix is d's elements before the first wildcard or ellipsis, as
+// names to look up.
+func fixedPrefix(d dirSpec) []string {
+	var out []string
+
+	for _, e := range d.Elems {
+		if e == ellipsis || strings.ContainsAny(e, "*%") {
+			break
+		}
+
+		out = append(out, e)
+	}
+
+	return dirSpec{Elems: out}.names()
+}
+
+// directoryExists reports whether the directory path names one on vol.
+func directoryExists(vol *volume.Volume, path []string) bool {
+	_, err := filespec.ResolveDirectory(vol, path)
+
+	return err == nil
+}
+
+// wildRoot is the directory above d's ellipsis, when d is a directory
+// whose only wildcard is a trailing ellipsis ("[DIR...]").
+func wildRoot(d dirSpec) ([]string, bool) {
+	n := len(d.Elems)
+	if n == 0 || d.Elems[n-1] != ellipsis {
+		return nil, false
+	}
+
+	for _, e := range d.Elems[:n-1] {
+		if e == ellipsis || strings.ContainsAny(e, "*%") {
+			return nil, false
+		}
+	}
+
+	return append([]string{}, d.Elems[:n-1]...), true
 }
 
 // nextDir moves st's search to its next directory once the current one

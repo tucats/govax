@@ -17,75 +17,90 @@ import (
 // LIB$FILE_SCAN runs a whole wildcard search in one call, on the
 // program's own FAB and NAM: a $PARSE, then $SEARCH until RMS$_NMF,
 // calling the success routine for each file found and the error routine
-// for each failure, each with one argument, the FAB's address. The
-// routines read what they need from the FAB and its NAM (the resultant
-// name, FAB$L_STS and FAB$L_STV, the program's own FAB$L_CTX). It is the
-// first routine that calls back into the program, so it runs on a
-// goroutine of its own (corevms.Environment.Callback; corevms's
-// callback.go), and reads as the loop the manual describes.
+// for each failure. The routines read what they need from the FAB and its
+// NAM (the resultant name, FAB$L_STS and FAB$L_STV, the program's own
+// FAB$L_CTX). It is the first routine that calls back into the program,
+// so it runs on a goroutine of its own (corevms.Environment.Callback;
+// corevms's callback.go), and reads as the loop the manual describes.
 //
 // The context, "the address of a longword" in which the routine keeps
 // the "name blocks and file specification strings" it allocates for
 // temporary defaulting across "multiple input files" (DCL's
 // COPY [SMITH]A,B,C *), is a heap block holding a NAM and a buffer: the
-// last file found, the related name of the next call's $PARSE. What's
-// kept in Go is only which blocks are contexts, per image, as for
-// LIB$FIND_FILE's (findfile.go).
+// last call's file specification, the related name of the next call's
+// $PARSE. What's kept in Go is only which blocks are this image's
+// contexts, as for LIB$FIND_FILE's (findfile.go).
 //
-// The choices the manuals leave open are the survey's probe cases, each
-// unconfirmed until the probe (subtask 8) runs on VMS:
+// What the manuals leave open is as VMS 7.1 does it (testdata/lib58,
+// docs/PHASE-58's subtask 8):
 //
-//   - A success or error routine of 0 isn't called. What the routines
-//     return in R0 is ignored: the search goes on after every file and
-//     every error ("allows the search sequence to continue even if an
-//     error occurs").
-//   - The routine's status is that of the last RMS service: RMS$_NMF
-//     after a search that ran out, the error when $PARSE failed (the
-//     error routine is called first) or when $SEARCH failed in a way it
-//     can't go on from. A failed $SEARCH that leaves NAM$L_WCC as it was
-//     (a missing directory or device, in a search without a wildcard
-//     context) would fail the same way again, so the scan ends there; one
-//     that moved it on (RMS$_FNF, after which the next $SEARCH says
-//     RMS$_NMF) is followed by another $SEARCH.
-//   - With a context, the last file found is the related name of the
-//     next call: the program's NAM$L_RLF points at the context's NAM for
-//     the call, when the program gave no related NAM of its own, and is
-//     put back to 0 when the call ends. Without one, the routine does no
-//     defaulting of its own: "inherited from the previous file
-//     specification processed" is read as the program's own related NAM,
-//     if it has one.
-//   - A context longword that holds no context's address is LIB$_INVARG,
-//     to both routines.
+//   - The routines are called with LIB$FILE_SCAN's own argument list, the
+//     FAB's address first (a CALLG with its AP). A routine of 0 isn't
+//     called, and what the routines return is ignored.
+//   - The first thing the routine does is write the NAM (its WCC's high
+//     byte), without checking the FAB: a FAB with no NAM, or a block
+//     that isn't a FAB, is an access violation at NAM$L_WCC+3.
+//   - A $PARSE that fails leaves the file specification in the NAM's
+//     resultant string, and the error routine is called.
+//   - A specification with no wildcard (NAM$V_WILDCARD clear, a search
+//     list included) gets one $SEARCH. Otherwise $SEARCH runs until
+//     RMS$_NMF, or until it fails with RMS$_FNF or RMS$_DNF, or in a way
+//     that leaves NAM$L_WCC as it was (it would fail the same way again).
+//     The routine's status is the last service's.
+//   - With a context, the last call's file specification (FNA, as the
+//     program gave it) is the related name: the NAM's RLF points at the
+//     context's NAM, and stays so. The context is made, and its longword
+//     written, when the call ends; a call abandoned in a callback leaves
+//     the longword 0. A longword that holds an address that isn't one of
+//     this image's contexts is taken as one anyway, unchecked, as VMS
+//     does (its related NAM then fails $PARSE with RMS$_RLF). Without a
+//     context, the routine does no defaulting of its own.
 //   - LIB$FILE_SCAN_END's fab is parsed with FNS and DNS 0 (the null
-//     string), which frees RMS's wildcard context, and both are put back
-//     after; its status is SS$_NORMAL (the VSI manual's), or RMS$_FAB for
-//     a block that isn't a FAB. Its context is freed and the longword
-//     cleared ("replacing the context value passed to it with a
-//     temporary context value"), which a longword of 0 needs nothing for.
+//     string) and its NAM's ESS 0, which frees RMS's wildcard context,
+//     and they stay 0 (unconfirmed which of them VMS sets); its
+//     status is SS$_NORMAL, or RMS$_FAB for a block that isn't a FAB. Its
+//     context is freed (when it's this image's) and the longword cleared.
 
 // Statuses and fields LIB$FILE_SCAN uses beyond LIB$FIND_FILE's.
 var (
 	rmsNMF = vmsdef.Symbols["RMS$_NMF"]
+	rmsFNF = vmsdef.Symbols["RMS$_FNF"]
+	rmsDNF = vmsdef.Symbols["RMS$_DNF"]
 	namWCC = vmsdef.Symbols["NAM$L_WCC"]
 )
 
-// A scan context's layout: a NAM whose resultant string is the last
-// file found, then its buffer.
+// A scan context's layout: a chain of name blocks, each a NAM and its
+// resultant string's buffer, the first the newest file specification.
+// Each NAM's RLF points at the next, so a specification is defaulted from
+// the one before it, which was from the one before that ("the addresses
+// of name blocks and file specification strings" the manual says the
+// context keeps).
 const (
 	scanNAM        = 0
 	scanRSA        = scanNAM + 96
-	scanBlockBytes = scanRSA + fileBuffer
+	scanSlot       = scanRSA + fileBuffer
+	scanSlots      = 8
+	scanBlockBytes = scanSlot * scanSlots
 )
+
+// scanContext is what LIB$FILE_SCAN keeps in Go for a context: the
+// specifications in its chain, newest first, and the one the next call
+// adds to it (the last call's, as VMS 7.1 adds it: at the start of the
+// call after).
+type scanContext struct {
+	names   []string
+	pending string
+}
 
 // scanContextsKey is the corevms.Environment.ImageData key of the image's
 // scan contexts, by their blocks' addresses.
 type scanContextsKey struct{}
 
 // scanContexts returns the running image's scan contexts.
-func scanContexts(env *corevms.Environment) map[uint32]bool {
+func scanContexts(env *corevms.Environment) map[uint32]*scanContext {
 	return env.ImageData(scanContextsKey{}, func() any {
-		return map[uint32]bool{}
-	}).(map[uint32]bool)
+		return map[uint32]*scanContext{}
+	}).(map[uint32]*scanContext)
 }
 
 // libFileScan is LIB$FILE_SCAN.
@@ -93,50 +108,47 @@ func libFileScan(env *corevms.Environment, argv []uint32) (uint32, error) {
 	fab, success, failure, cell := arg(argv, 0), arg(argv, 1), arg(argv, 2), arg(argv, 3)
 	mem, cpu := env.Memory(), env.CPU()
 
-	// The context, made on the first call that passes one.
+	nam, err := mem.LoadLongword(cpu, fab+fabNAM)
+	if err != nil {
+		return memoryFault(env, err)
+	}
+
+	// The NAM's WCC is the routine's first write (see the opening comment).
+	if err := touchByte(env, nam+namWCC+3); err != nil {
+		return memoryFault(env, writing(err))
+	}
+
 	var block uint32
 
 	if cell != 0 {
-		var err error
 		if block, err = mem.LoadLongword(cpu, cell); err != nil {
 			return memoryFault(env, err)
 		}
-
-		switch {
-		case block == 0:
-			status, err := newScanBlock(env, cell, &block)
-			if err != nil || status != 0 {
-				return status, err
-			}
-		case !scanContexts(env)[block]:
-			return libInvArg, nil
-		}
 	}
 
-	// call calls routine, when there is one, with the FAB's address.
+	// call calls routine, when there is one, with the routine's own
+	// argument list.
 	call := func(routine uint32) error {
 		if routine == 0 {
 			return nil
 		}
 
-		_, err := env.Callback(routine, fab)
+		_, err := env.Callback(routine, argv...)
 
 		return err
 	}
 
-	// With a context holding a name, it is the related name, unless the
-	// program gave its own.
-	nam, related, err := scanRelated(env, fab, block)
-	if err != nil {
-		return memoryFault(env, err)
-	}
+	if block != 0 {
+		related, err := scanChain(env, block)
+		if err != nil {
+			return memoryFault(env, writing(err))
+		}
 
-	if related {
-		defer func() {
-			// The deferred put-back may run as the routine is abandoned
-			// in a callback; a memory error is then nobody's to report.
-			_ = mem.StoreLongword(cpu, nam+namRLF, 0)
-		}()
+		if related {
+			if err := mem.StoreLongword(cpu, nam+namRLF, block+scanNAM); err != nil {
+				return memoryFault(env, writing(err))
+			}
+		}
 	}
 
 	status, err := env.CallService("SYS$PARSE", []uint32{fab})
@@ -145,6 +157,10 @@ func libFileScan(env *corevms.Environment, argv []uint32) (uint32, error) {
 	}
 
 	if status&1 == 0 {
+		if err := resultantIsSpec(env, fab, nam); err != nil {
+			return memoryFault(env, err)
+		}
+
 		if err := call(failure); err != nil {
 			return memoryFault(env, err)
 		}
@@ -152,7 +168,18 @@ func libFileScan(env *corevms.Environment, argv []uint32) (uint32, error) {
 		return status, nil
 	}
 
-	var last string
+	// The default name has been applied: VMS 7.1 leaves FAB$B_DNS 0 from
+	// here on (testdata/lib58's FS default name).
+	if err := mem.StoreByte(cpu, fab+fabDNS, 0); err != nil {
+		return memoryFault(env, writing(err))
+	}
+
+	fnb, err := mem.LoadLongword(cpu, nam+namFNB)
+	if err != nil {
+		return memoryFault(env, err)
+	}
+
+	wild := fnb&fnbWildcard != 0
 
 	for {
 		wcc, err := searchPlace(env, nam)
@@ -168,39 +195,153 @@ func libFileScan(env *corevms.Environment, argv []uint32) (uint32, error) {
 			break
 		}
 
-		if status&1 != 0 {
-			if last, err = resultantName(env, nam); err != nil {
-				return memoryFault(env, err)
-			}
-
-			if err := call(success); err != nil {
-				return memoryFault(env, err)
-			}
-
-			continue
+		routine := success
+		if status&1 == 0 {
+			routine = failure
 		}
 
-		if err := call(failure); err != nil {
+		if err := call(routine); err != nil {
 			return memoryFault(env, err)
 		}
 
-		after, err := searchPlace(env, nam)
-		if err != nil {
-			return memoryFault(env, err)
-		}
-
-		if after == wcc {
+		if !wild {
 			break
+		}
+
+		if status&1 == 0 {
+			after, err := searchPlace(env, nam)
+			if err != nil {
+				return memoryFault(env, err)
+			}
+
+			if after == wcc || status == rmsFNF || status == rmsDNF {
+				break
+			}
 		}
 	}
 
-	if block != 0 && last != "" {
-		if err := setScanName(env, block, last); err != nil {
-			return memoryFault(env, writing(err))
+	if cell != 0 {
+		if err := keepScanSpec(env, fab, cell, block); err != nil {
+			return memoryFault(env, err)
 		}
 	}
 
 	return status, nil
+}
+
+// touchByte writes the byte at addr with its own value: what an access
+// to it would do, without changing it.
+func touchByte(env *corevms.Environment, addr uint32) error {
+	mem, cpu := env.Memory(), env.CPU()
+
+	b, err := mem.LoadByte(cpu, addr)
+	if err != nil {
+		return err
+	}
+
+	return mem.StoreByte(cpu, addr, b)
+}
+
+// resultantIsSpec writes the NAM's expanded string, or, when $PARSE got
+// no expanded string, the FAB's file specification (FNA, FNS), as its
+// resultant string, as far as RSS allows: what LIB$FILE_SCAN leaves after
+// a $PARSE that failed.
+func resultantIsSpec(env *corevms.Environment, fab, nam uint32) error {
+	mem, cpu := env.Memory(), env.CPU()
+
+	spec, err := expandedString(env, nam)
+	if err == nil && spec == "" {
+		spec, err = fabFileName(env, fab)
+	}
+
+	if err != nil {
+		return err
+	}
+
+	rss, err := mem.LoadByte(cpu, nam+namRSS)
+	if err != nil {
+		return err
+	}
+
+	rsa, err := mem.LoadLongword(cpu, nam+namRSA)
+	if err != nil {
+		return err
+	}
+
+	if rsa == 0 {
+		return nil
+	}
+
+	spec = spec[:min(len(spec), int(rss))]
+
+	for i := range len(spec) {
+		if err := mem.StoreByte(cpu, rsa+uint32(i), spec[i]); err != nil {
+			return writing(err)
+		}
+	}
+
+	return writing(mem.StoreByte(cpu, nam+namRSL, byte(len(spec))))
+}
+
+// fabFileName reads the FAB's file specification, FNA for FNS bytes.
+func fabFileName(env *corevms.Environment, fab uint32) (string, error) {
+	mem, cpu := env.Memory(), env.CPU()
+
+	fns, err := mem.LoadByte(cpu, fab+fabFNS)
+	if err != nil {
+		return "", err
+	}
+
+	fna, err := mem.LoadLongword(cpu, fab+fabFNA)
+	if err != nil {
+		return "", err
+	}
+
+	return readText(env, fna, uint32(fns))
+}
+
+// keepScanSpec keeps the FAB's file specification for the scan context
+// to add to its chain at the next call, making the context first when the
+// longword at cell is 0 (block). err is a memory error, for the caller to
+// signal.
+func keepScanSpec(env *corevms.Environment, fab, cell, block uint32) error {
+	block, err := scanBlockAt(env, cell, block)
+	if err != nil || block == 0 {
+		return err
+	}
+
+	st := scanContexts(env)[block]
+	if st == nil {
+		// A block this image didn't make: nothing is kept in it.
+		return nil
+	}
+
+	st.pending, err = fabFileName(env, fab)
+
+	return err
+}
+
+// scanChain adds the scan context's pending specification to its chain
+// and lays the chain out, reporting whether the block now has a related
+// name to give (a block that isn't one of this image's contexts is taken
+// as having one, unchecked). err is a memory error.
+func scanChain(env *corevms.Environment, block uint32) (bool, error) {
+	st := scanContexts(env)[block]
+	if st == nil {
+		return true, nil
+	}
+
+	if st.pending != "" {
+		st.names = append([]string{st.pending}, st.names...)
+		st.names = st.names[:min(len(st.names), scanSlots)]
+		st.pending = ""
+	}
+
+	if err := layoutScanChain(env, block, st.names); err != nil {
+		return false, err
+	}
+
+	return len(st.names) > 0, nil
 }
 
 // searchPlace returns the NAM's NAM$L_WCC, where its search is: 0 when
@@ -213,34 +354,7 @@ func searchPlace(env *corevms.Environment, nam uint32) (uint32, error) {
 	return env.Memory().LoadLongword(env.CPU(), nam+namWCC)
 }
 
-// newScanBlock allocates a scan context, sets up its NAM, and writes its
-// address to the longword at cell and to *block. Its status is
-// LIB$_INSVIRMEM when the heap has no room; err is a memory error,
-// already signaled.
-func newScanBlock(env *corevms.Environment, cell uint32, block *uint32) (uint32, error) {
-	addr, err := env.AllocateVM(scanBlockBytes, 0)
-	if err != nil {
-		return 0, err
-	}
-
-	if addr == 0 {
-		return libInsVirMem, nil
-	}
-
-	if err := initScanBlock(env, addr, cell); err != nil {
-		env.FreeVM(addr)
-
-		return memoryFault(env, writing(err))
-	}
-
-	scanContexts(env)[addr] = true
-	*block = addr
-
-	return 0, nil
-}
-
-// initScanBlock clears a scan context and sets its NAM up as the $NAM
-// macro would, its resultant string the block's buffer (empty), then
+// initScanBlock clears a scan context and lays out an empty chain, then
 // writes the block's address to the longword at cell.
 func initScanBlock(env *corevms.Environment, block, cell uint32) error {
 	mem, cpu := env.Memory(), env.CPU()
@@ -251,67 +365,74 @@ func initScanBlock(env *corevms.Environment, block, cell uint32) error {
 		}
 	}
 
-	for _, b := range []struct{ addr, v uint32 }{
-		{block + scanNAM + namBID, namBIDValue},
-		{block + scanNAM + namBLN, namBLNValue},
-		{block + scanNAM + namRSS, maxFileSpec},
-	} {
-		if err := mem.StoreByte(cpu, b.addr, byte(b.v)); err != nil {
-			return err
-		}
-	}
-
-	if err := mem.StoreLongword(cpu, block+scanNAM+namRSA, block+scanRSA); err != nil {
+	if err := layoutScanChain(env, block, nil); err != nil {
 		return err
 	}
 
 	return mem.StoreLongword(cpu, cell, block)
 }
 
-// scanRelated returns the program's NAM (FAB$L_NAM) and, when the scan
-// context block holds a name and the NAM has no related NAM of its own,
-// points the NAM's RLF at the context's NAM, returning related true: the
-// caller puts RLF back to 0 when it's done.
-func scanRelated(env *corevms.Environment, fab, block uint32) (nam uint32, related bool, err error) {
+// layoutScanChain sets the context's name blocks up as the $NAM macro
+// would, each one's resultant string a name of names (none for slots past
+// them) and its RLF the next one's NAM.
+func layoutScanChain(env *corevms.Environment, block uint32, names []string) error {
 	mem, cpu := env.Memory(), env.CPU()
 
-	if nam, err = mem.LoadLongword(cpu, fab+fabNAM); err != nil || nam == 0 || block == 0 {
-		return nam, false, err
-	}
+	for i := range scanSlots {
+		nam := block + uint32(i)*scanSlot + scanNAM
+		buf := block + uint32(i)*scanSlot + scanRSA
 
-	rsl, err := mem.LoadByte(cpu, block+scanNAM+namRSL)
-	if err != nil || rsl == 0 {
-		return nam, false, err
-	}
+		name := ""
+		if i < len(names) {
+			name = names[i]
+		}
 
-	rlf, err := mem.LoadLongword(cpu, nam+namRLF)
-	if err != nil || rlf != 0 {
-		return nam, false, err
-	}
+		name = name[:min(len(name), maxFileSpec)]
 
-	if err := mem.StoreLongword(cpu, nam+namRLF, block+scanNAM); err != nil {
-		return nam, false, writing(err)
-	}
+		for _, b := range []struct{ addr, v uint32 }{
+			{nam + namBID, namBIDValue},
+			{nam + namBLN, namBLNValue},
+			{nam + namRSS, maxFileSpec},
+			{nam + namRSL, uint32(len(name))},
+		} {
+			if err := mem.StoreByte(cpu, b.addr, byte(b.v)); err != nil {
+				return err
+			}
+		}
 
-	return nam, true, nil
-}
+		for j := range len(name) {
+			if err := mem.StoreByte(cpu, buf+uint32(j), name[j]); err != nil {
+				return err
+			}
+		}
 
-// setScanName makes name (at most a file specification's length) the
-// scan context's related name.
-func setScanName(env *corevms.Environment, block uint32, name string) error {
-	mem, cpu := env.Memory(), env.CPU()
+		rlf := uint32(0)
+		if i+1 < len(names) {
+			rlf = nam + scanSlot
+		}
 
-	if len(name) > maxFileSpec {
-		name = name[:maxFileSpec]
-	}
-
-	for i := range len(name) {
-		if err := mem.StoreByte(cpu, block+scanRSA+uint32(i), name[i]); err != nil {
-			return err
+		for _, l := range []struct{ addr, v uint32 }{{nam + namRSA, buf}, {nam + namRLF, rlf}} {
+			if err := mem.StoreLongword(cpu, l.addr, l.v); err != nil {
+				return err
+			}
 		}
 	}
 
-	return mem.StoreByte(cpu, block+scanNAM+namRSL, byte(len(name)))
+	return nil
+}
+
+// setScanName makes name the scan context's only name: how LIB$DELETE_FILE
+// and LIB$RENAME_FILE leave the last file they acted on as the next call's
+// related name.
+func setScanName(env *corevms.Environment, block uint32, name string) error {
+	st := scanContexts(env)[block]
+	if st == nil {
+		return nil
+	}
+
+	st.names, st.pending = []string{name}, ""
+
+	return layoutScanChain(env, block, st.names)
 }
 
 // libFileScanEnd is LIB$FILE_SCAN_END: with fab, a $PARSE of the null
@@ -342,13 +463,12 @@ func libFileScanEnd(env *corevms.Environment, argv []uint32) (uint32, error) {
 		return ssNormal, nil
 	}
 
-	contexts := scanContexts(env)
-	if !contexts[block] {
-		return libInvArg, nil
+	// A block that isn't one of this image's contexts isn't freed; the
+	// longword is cleared all the same.
+	if contexts := scanContexts(env); contexts[block] != nil {
+		delete(contexts, block)
+		env.FreeVM(block)
 	}
-
-	delete(contexts, block)
-	env.FreeVM(block)
 
 	if err := mem.StoreLongword(cpu, cell, 0); err != nil {
 		return memoryFault(env, writing(err))
@@ -358,8 +478,9 @@ func libFileScanEnd(env *corevms.Environment, argv []uint32) (uint32, error) {
 }
 
 // parseNull runs $PARSE on the program's FAB with its FNS and DNS 0, the
-// null string, so that RMS frees any wildcard context its NAM names,
-// then puts FNS and DNS back. It returns $PARSE's status, or RMS$_FAB
+// null string, and its NAM's ESS 0, so that RMS frees any wildcard
+// context its NAM names (all three stay 0, as VMS leaves them). It
+// returns $PARSE's status, or RMS$_FAB
 // without changing anything when the block isn't a FAB; err is a memory
 // error, already signaled.
 func parseNull(env *corevms.Environment, fab uint32) (uint32, error) {
@@ -374,36 +495,25 @@ func parseNull(env *corevms.Environment, fab uint32) (uint32, error) {
 		return rmsFAB, nil
 	}
 
-	fns, err := mem.LoadByte(cpu, fab+fabFNS)
+	sizes := []uint32{fab + fabFNS, fab + fabDNS}
+
+	// The NAM's ESS too, so the parse makes no expanded string: VMS 7.1
+	// leaves all three 0, and a LIB$FILE_SCAN of the FAB after is then
+	// RMS$_ESL from $SEARCH (testdata/lib58's FS after FSE).
+	nam, err := mem.LoadLongword(cpu, fab+fabNAM)
 	if err != nil {
 		return memoryFault(env, err)
 	}
 
-	dns, err := mem.LoadByte(cpu, fab+fabDNS)
-	if err != nil {
-		return memoryFault(env, err)
+	if nam != 0 {
+		sizes = append(sizes, nam+namESS)
 	}
 
-	sizes := func(f, d byte) error {
-		if err := mem.StoreByte(cpu, fab+fabFNS, f); err != nil {
-			return err
+	for _, size := range sizes {
+		if err := mem.StoreByte(cpu, size, 0); err != nil {
+			return memoryFault(env, writing(err))
 		}
-
-		return mem.StoreByte(cpu, fab+fabDNS, d)
 	}
 
-	if err := sizes(0, 0); err != nil {
-		return memoryFault(env, writing(err))
-	}
-
-	status, err := env.CallService("SYS$PARSE", []uint32{fab})
-	if err != nil {
-		return status, err
-	}
-
-	if err := sizes(fns, dns); err != nil {
-		return memoryFault(env, writing(err))
-	}
-
-	return status, nil
+	return env.CallService("SYS$PARSE", []uint32{fab})
 }

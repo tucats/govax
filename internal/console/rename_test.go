@@ -102,9 +102,11 @@ func TestRename_failureMessages(t *testing.T) {
 			"%RENAME-E-SEARCHFAIL, error searching for DUA0:[000000]NOPE.TXT;",
 			"-RMS-E-FNF, file not found",
 		}},
+		// A wildcard among a name's characters is RMS$_FNM (VMS 7.1's
+		// LIB$RENAME_FILE: testdata/lib58).
 		{"RENAME FIRST.TXT X*.TXT", []string{
 			"%RENAME-E-OPENOUT, error opening DUA0:[000000]X*.TXT; as output",
-			"-RMS-F-WLD, invalid wildcard operation",
+			"-RMS-F-FNM, error in file name",
 		}},
 		{"RENAME FIRST.TXT DUA1:[000000]", []string{
 			"%RENAME-E-NOTRENAMED, DUA0:[000000]FIRST.TXT;1 not renamed",

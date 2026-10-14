@@ -81,17 +81,18 @@ func TestSessionRename_versions(t *testing.T) {
 	wantRenamed(t, renameCmd(t, s, []string{"V.TXT"}, "[B]W.TXT", defaultRename),
 		"DUA0:[A]V.TXT;5", "DUA0:[B]W.TXT;9")
 
-	// An explicit input version: kept.
+	// An explicit input version: not kept, the next version of the new
+	// name (VMS 7.1: testdata/lib58's RF no CUR_VER exists).
 	wantRenamed(t, renameCmd(t, s, []string{"V.TXT;3"}, "[B]W.TXT", defaultRename),
-		"DUA0:[A]V.TXT;3", "DUA0:[B]W.TXT;3")
+		"DUA0:[A]V.TXT;3", "DUA0:[B]W.TXT;10")
 
 	// /NONEW_VERSION: kept, even with no input version.
 	wantRenamed(t, renameCmd(t, s, []string{"[B]W.TXT"}, "[A]Z.TXT", RenameOptions{}),
-		"DUA0:[B]W.TXT;9", "DUA0:[A]Z.TXT;9")
+		"DUA0:[B]W.TXT;10", "DUA0:[A]Z.TXT;10")
 
 	// ";*": every version, each keeping its own.
 	wantRenamed(t, renameCmd(t, s, []string{"[B]W.TXT;*"}, "[A]*.OLD", defaultRename),
-		"DUA0:[B]W.TXT;8", "DUA0:[A]W.OLD;8", "DUA0:[B]W.TXT;3", "DUA0:[A]W.OLD;3")
+		"DUA0:[B]W.TXT;9", "DUA0:[A]W.OLD;9", "DUA0:[B]W.TXT;8", "DUA0:[A]W.OLD;8")
 
 	// An explicit output version, and "*" for the input's.
 	wantRenamed(t, renameCmd(t, s, []string{"W.OLD;8"}, "W.OLD;20", defaultRename),
@@ -159,8 +160,8 @@ func TestSessionRename_failures(t *testing.T) {
 		{"a missing file", []string{"NOPE.TXT"}, "Z.TXT", RenameSearching, rmsFileNotFound, rmsFileNotFound, "DUA0:[A]NOPE.TXT;", ""},
 		{"a missing directory", []string{"[NOPE]X.TXT"}, "Z.TXT", RenameSearching, rmsDirNotFound, rmsDirNotFound, "DUA0:[NOPE]X.TXT;", ""},
 		{"an unmounted device", []string{"DUA7:[A]X.TXT"}, "Z.TXT", RenameSearching, rmsDeviceNotReady, rmsDeviceNotReady, "DUA7:[A]X.TXT;", ""},
-		{"a partial output wildcard", []string{"X.TXT"}, "Z*.TXT", RenameParsing, rmsWildcardError, rmsWildcardError, "DUA0:[A]X.TXT;1", "DUA0:[A]Z*.TXT;"},
-		{"another device", []string{"X.TXT"}, "DUA1:[000000]", RenameRenaming, rmsDeviceError, rmsDeviceError, "DUA0:[A]X.TXT;1", "DUA1:[000000]X.TXT;"},
+		{"a partial output wildcard", []string{"X.TXT"}, "Z*.TXT", RenameParsing, rmsFileNameError, rmsFileNameError, "DUA0:[A]X.TXT;1", "DUA0:[A]Z*.TXT;"},
+		{"another device", []string{"X.TXT"}, "DUA1:[000000]", RenameRenaming, rmsDeviceError, 0, "DUA0:[A]X.TXT;1", "DUA1:[000000]X.TXT;"},
 		{"an existing version", []string{"X.TXT"}, "TAKEN.TXT;1", RenameRenaming, rmsEnterFailed, ssDuplicateFileName, "DUA0:[A]X.TXT;1", "DUA0:[A]TAKEN.TXT;1"},
 	} {
 		results := s.Rename(tc.inputs, tc.output, defaultRename)

@@ -97,9 +97,11 @@ func scanName(text string) (fileName, uint32) {
 			end = '>'
 		}
 
+		// A directory with no closing bracket ("[[[") is a syntax error
+		// (VMS 7.1: testdata/lib58's FS bad default name).
 		k := strings.IndexByte(s, end)
 		if k < 0 {
-			return f, rmsDirError
+			return f, rmsSyntaxError
 		}
 
 		if _, ok := scanDir(s[1:k]); !ok {
@@ -136,7 +138,10 @@ func scanName(text string) (fileName, uint32) {
 	if s != "" {
 		v := s[1:]
 		if !validVersion(v) {
-			if s[0] == '.' {
+			// A version that isn't a number at all (";Q") is a syntax
+			// error, one out of range RMS$_VER (VMS 7.1: testdata/lib58's
+			// FF bad syntax).
+			if s[0] == '.' || !numericVersion(v) {
 				return f, rmsSyntaxError
 			}
 
@@ -147,6 +152,23 @@ func scanName(text string) (fileName, uint32) {
 	}
 
 	return f, 0
+}
+
+// numericVersion reports whether v is a number, with or without a
+// minus sign.
+func numericVersion(v string) bool {
+	v = strings.TrimPrefix(v, "-")
+	if v == "" {
+		return false
+	}
+
+	for i := range len(v) {
+		if v[i] < '0' || v[i] > '9' {
+			return false
+		}
+	}
+
+	return true
 }
 
 // validVersion reports whether v (the text after ";") is a version name
@@ -348,8 +370,10 @@ type nameInputs struct {
 	// Primary and Default are the FAB's file name and default name.
 	Primary, Default string
 
-	// Related is the related file's resultant string, or "".
-	Related string
+	// Related is the related file's resultant string, or "", and
+	// BadRelated true when NAM$L_RLF names a block that isn't a NAM.
+	Related    string
+	BadRelated bool
 
 	// OFP is FAB$V_OFP: the related file gives only the name and type.
 	OFP bool

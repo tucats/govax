@@ -1091,7 +1091,7 @@ func (a *Assembler) relativeOperand(x exprVal, deferred byte, size int) error {
 
 // registerDisplacement assembles displacement [deferred] mode from
 // register reg. A known value gets the smallest displacement that holds
-// it. An unknown one (a forward reference, or in the MACRO dialect a
+// it (in the MACRO dialect, 0 is register deferred mode instead). An unknown one (a forward reference, or in the MACRO dialect a
 // relocatable or external value) gets a longword in the console dialect
 // and a word in the MACRO dialect (the MACRO manual, §5.1.6), finished
 // once it's known or by the linker. In the MACRO dialect a byte or word
@@ -1128,6 +1128,13 @@ func (a *Assembler) registerDisplacement(x exprVal, deferred, reg byte, size int
 	}
 
 	value := x.v
+
+	// A known displacement of 0, its size not given, is register deferred
+	// mode in the MACRO dialect: real MACRO assembles FAB$B_BID(R2), with
+	// FAB$B_BID 0, as (R2) (VMS 7.1: testdata/lib58's object).
+	if size == 0 && value == 0 && deferred == 0 && a.dialect == DialectMACRO {
+		return a.emitByte(0x60 | reg)
+	}
 
 	if size == 0 {
 		for _, size = range []int{1, 2, 4} {

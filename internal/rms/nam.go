@@ -107,7 +107,7 @@ func fabNames(ctx *Context, fab, nam uint32) (nameInputs, error) {
 	}
 
 	dn := ""
-	
+
 	if dns > 0 {
 		if dn, err = ctx.loadFixedString(dna, int(dns)); err != nil {
 			return in, err
@@ -137,21 +137,91 @@ func fabNames(ctx *Context, fab, nam uint32) (nameInputs, error) {
 		return in, err
 	}
 
+	in.Related, in.BadRelated, err = ctx.relatedName(rlf, maxRelatedChain)
+
+	return in, err
+}
+
+// maxRelatedChain bounds how many related NAMs, each the next one's
+// related file, relatedName follows.
+const maxRelatedChain = 16
+
+// relatedName is the related file the NAM at rlf gives: its resultant
+// string, with what that leaves out taken from its own related file, if
+// it has one (LIB$FILE_SCAN's chain of name blocks for temporary
+// defaulting, VMS 7.1: testdata/lib58's FS context cases; unconfirmed
+// whether RMS or the routine does the chaining). bad reports a block that
+// isn't a NAM, RMS$_RLF.
+func (ctx *Context) relatedName(rlf uint32, depth int) (text string, bad bool, err error) {
+	bid, err := ctx.loadByte(rlf + namBID)
+	if err != nil {
+		return "", false, err
+	}
+
+	if bid != namBIDValue {
+		return "", true, nil
+	}
+
 	rsl, err := ctx.loadByte(rlf + namRSL)
 	if err != nil {
-		return in, err
+		return "", false, err
 	}
 
 	rsa, err := ctx.loadLongword(rlf + namRSA)
 	if err != nil {
-		return in, err
+		return "", false, err
 	}
 
 	if rsl > 0 {
-		in.Related, err = ctx.loadFixedString(rsa, int(rsl))
+		if text, err = ctx.loadFixedString(rsa, int(rsl)); err != nil {
+			return "", false, err
+		}
 	}
 
-	return in, err
+	inner, err := ctx.loadLongword(rlf + namRLF)
+	if err != nil || inner == 0 || inner == rlf || depth <= 1 {
+		return text, false, err
+	}
+
+	outer, bad, err := ctx.relatedName(inner, depth-1)
+	if err != nil || bad || outer == "" {
+		return text, false, err
+	}
+
+	return defaultedFrom(text, outer), false, nil
+}
+
+// defaultedFrom is text with the device, directory, name, and type it
+// leaves out taken from related (not the version), as related file
+// processing takes them; text as it is if either isn't well formed.
+func defaultedFrom(text, related string) string {
+	f, sts := scanName(text)
+	if sts != 0 {
+		return text
+	}
+
+	r, sts := scanName(related)
+	if sts != 0 {
+		return text
+	}
+
+	if f.Dev == "" {
+		f.Dev = r.Dev
+	}
+
+	if f.Dir == "" {
+		f.Dir = r.Dir
+	}
+
+	if f.Name == "" {
+		f.Name = r.Name
+	}
+
+	if f.Type == "" {
+		f.Type = r.Type
+	}
+
+	return f.Dev + f.Dir + f.Name + f.Type + f.Ver
 }
 
 // fabNAM returns the FAB's NAM block address, 0 if it has none, or

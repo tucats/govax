@@ -89,3 +89,19 @@ What's new:
    the program left.
 3. Copy `LIB58.OUT` and `LIB58.LOG` back as `vax/lib58-vax.txt` and
    `vax/lib58.log`.
+
+## The run
+
+2026-10-14, OpenVMS V7.1 on simh's VAX 8600 (node SIMVAX, the volume on
+DUA1, its logical volume name DISK$LIB58), MACRO and LINK with no
+messages; the program ran all 332 cases and exited with SS$_NORMAL.
+VMS settled the choices the phase doc left open (its progress log lists
+them), and govax now does what VMS did, but for the lines
+`TestLib58Oracle` lists in `expectedLib58Differences`: an access
+violation's address read from the stack, and a header slot that was
+inside VMS's index file (extended to 829 blocks) but past govax's. The
+VAX's LIB58.OBJ, compared with govax's (they now match byte for byte
+but for the headers that name the assembler), showed an assembler
+difference too: real MACRO assembles a known displacement of 0 as
+register deferred mode. If `lib58.mar` changes, run it on a fresh volume
+again and replace `vax/`.

@@ -1,0 +1,129 @@
+$ WRITE SYS$OUTPUT F$GETSYI("VERSION"), " ", F$GETSYI("HW_NAME")
+V7.1     VAX 8600
+$ DEV = F$PARSE("[000000]",,,"DEVICE")
+$ SET DEFAULT DUA1:[000000]
+$ DEFINE LIB58_DISK DUA1:
+$ SHOW LOGICAL SYS$DISK
+   "SYS$DISK" = "DUA1:" (LNM$PROCESS_TABLE)
+   "SYS$DISK" = "SIMVAX$DUA0:" (LNM$SYSTEM_TABLE)
+$ SHOW LOGICAL LIB58_LIST
+%SHOW-S-NOTRAN, no translation for logical name LIB58_LIST
+$ WRITE SYS$OUTPUT "DEVNAM=", F$GETDVI(DEV,"DEVNAM"), " FULLDEVNAM=", F$GETDVI(DEV,"FULLDEVNAM")
+DEVNAM=_DUA1: FULLDEVNAM=_SIMVAX$DUA1:
+$ WRITE SYS$OUTPUT "NODENAME=", F$GETSYI("NODENAME")
+NODENAME=SIMVAX
+$ DEFINE/USER_MODE SYS$OUTPUT LIB58.MLG
+$ MACRO/NOLIST LIB58
+$ LINK/NOMAP LIB58
+$ DEFINE/USER_MODE SYS$OUTPUT LIB58.OUT
+$ RUN LIB58
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ DIRECTORY/SIZE [LIB58...]
+
+Directory DUA1:[LIB58]
+
+A.DIR;1                    1
+B.DIR;1                    1
+DEL.DIR;1                  3
+GONE.DIR;1                 1
+LOST.DIR;1                 1
+REN.DIR;1                  2
+
+Total of 6 files, 9 blocks.
+
+Directory DUA1:[LIB58.A]
+
+ONE.TXT;1                  1
+SUB.DIR;1                  1
+THREE.DAT;1                1
+TWO.TXT;2                  1
+TWO.TXT;1                  1
+
+Total of 5 files, 5 blocks.
+
+Directory DUA1:[LIB58.A.SUB]
+
+DEEP.TXT;1                 1
+
+Total of 1 file, 1 block.
+
+Directory DUA1:[LIB58.B]
+
+FOUR.TXT;1                 1
+ONE.TXT;1                  1
+
+Total of 2 files, 2 blocks.
+
+Directory DUA1:[LIB58.DEL]
+
+D2.TXT;1                   1
+F0.TXT;1                   1
+F1.TXT;1                   1
+F4.TXT;1                   1
+F8.TXT;1                   1
+Q1.TXT;1                   1
+Q2.TXT;1                   1
+Q3.TXT;1                   1
+Q4.TXT;1                   1
+SUB.DIR;1                  1
+U2.TXT;1                   1
+W2.DAT;1                   1
+W4.DAT;1                   1
+
+Total of 13 files, 13 blocks.
+
+Directory DUA1:[LIB58.DEL.SUB]
+
+X.TXT;1                    1
+
+Total of 1 file, 1 block.
+
+Directory DUA1:[LIB58.GONE]
+
+G.TXT;1                    1
+
+Total of 1 file, 1 block.
+
+Directory DUA1:[LIB58.REN]
+
+E1.TXT;1                   1
+E2.TXT;1                   1
+E3A.TXT;1                  1
+E3B.TXT;1                  1
+G16.TXT;1                  1
+G4.TXT;1                   1
+G8.TXT;1                   1
+H2.TXT;1                   1
+K2.TXT;2                   1
+K2.TXT;1                   1
+K3.TXT;1                   1
+M1.TXT;1                   1
+NEW.DIR;1                  1
+O1.OUT;1                   1
+R1.NEW;1                   1
+R2.DAT;1                   1
+T2.TXT;2                   1
+T2.TXT;1                   1
+V2.TXT;2                   1
+V2.TXT;1                   1
+W1.OUT;1                   1
+W2.TXT;1                   1
+W3.OUT;1                   1
+W4.TXT;1                   1
+X1.OUT;1                   1
+X2.OUT;1                   1
+Y8.TXT;1                   1
+Z1.OUT;1                   1
+Z2.OUT;1                   1
+
+Total of 29 files, 29 blocks.
+
+Directory DUA1:[LIB58.REN.NEW]
+
+R3.TXT;1                   1
+
+Total of 1 file, 1 block.
+
+Grand total of 9 directories, 59 files, 62 blocks.
+$ DEASSIGN LIB58_DISK
