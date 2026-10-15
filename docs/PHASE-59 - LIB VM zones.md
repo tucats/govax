@@ -1,6 +1,6 @@
 # Phase 59 — LIB$ virtual memory zones
 
-**Status:** in progress (subtasks 1 to 10 done 2026-10-14).
+**Status:** done (2026-10-14).
 Needs Phases 53, 54, and 58 (callbacks, for user-defined zones). Part
 of the LIB$ program laid out in `PHASE-53 - RTL LIB support.md` (Part
 A).
@@ -680,7 +680,7 @@ VERIFY), and `vmmalloc.go`. `dynstr.go` allocates in the string zone.
 10. **The program** (`testdata/lib59/`), its console test, and the VMS
     probe; govax changed to its answers. **Done** 2026-10-14.
 11. **Close-out**: DEVIATIONS.md records the heap's change from the
-    eVAX port.
+    eVAX port. **Done** 2026-10-14.
 
 ## Progress log
 
@@ -1160,4 +1160,14 @@ VERIFY), and `vmmalloc.go`. `dynstr.go` allocates in the string zone.
   setting, on by default; `TestLib59Oracle` turns it off), so that the
   HALT is a privileged instruction fault, as on a VAX. govax still refuses
   LIB$FREE_VM_PAGE of a zone's pages, where VMS frees them.
+- **2026-10-14** — Subtask 11, the close-out. DEVIATIONS.md's heap
+  entry gets subtask 10's status, and a new entry records what VMS 7.1
+  settled, the $UNWIND fix, and what isn't reproduced; librtl's doc.go
+  describes the phase's routines; PLAN.md and CLAUDE.md mark the phase
+  done. Left for later, should they matter: a second probe round to
+  account for the heap's totals (STAT_VM around zone creation and
+  deletion) and to tell which zone took the 48 bytes; DECC$MALLOC on
+  VMS, in a program of its own (DECC$SHR's activation may make zones);
+  the `_P` forms of the VM_MALLOC family. Phase 60 (trees and TPARSE)
+  is next.
 

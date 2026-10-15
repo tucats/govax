@@ -4117,6 +4117,42 @@ widened."
   LIB$FREE_VM use the zone their zone-id names (LIB$CREATE_VM_ZONE),
   and check sizes (LIB$_BADBLOSIZ for 0 or less, and for a LIB$FREE_VM
   size that doesn't round to the block's).
+- **Status (subtask 10)**: VMS 7.1's run of `testdata/lib59` settled
+  the rest, and govax follows it: an untagged zone's LIB$FREE_VM trusts
+  its size (so the size check above is gone), areas keep their control
+  block apart, and the default zone's initial area is 124 pages (the
+  next entry).
+
+### [Phase 59] LIBRTL's memory routines: what VMS 7.1 settled
+
+- **Where**: `internal/vmheap` (`zone.go`, `pages.go`, `check.go`,
+  `report.go`), `internal/corevms` (`vmzone.go`, `vmshow.go`,
+  `memory.go`, `unwind.go`), `internal/librtl` (`vm.go`, `vmzone.go`,
+  `vmuser.go`, `vmpage.go`, `vmstat.go`, `vmshow.go`, `vmmalloc.go`);
+  the probe is `testdata/lib59` (`TestLib59Oracle`, VMS V7.1 on simh's
+  VAX 8600, 2026-10-14).
+- **Changed to VMS's behavior** (each listed in docs/PHASE-59's
+  progress log, subtask 10): control blocks of VMS's sizes in a control
+  zone whose layout is LIB$FIND_VM_ZONE's order; the system zones'
+  attributes; tagged blocks' layout and tags; FREE_VM trusting its
+  size, a lookaside double free looping the list, freed space staying
+  free space, free space's control words; CREATE_VM_ZONE's rules;
+  user zones deleted without a delete routine; the statistics' counting;
+  LIB$SHOW_VM_ZONE's layout and its running freed-bytes count; the C
+  routines' own heap; the page pool's 128-page growth; argument counts.
+- **Changed beyond the routines**: $UNWIND (`corevms/unwind.go`) left R0
+  and R1 as a removed frame's entry mask had saved them, where VMS
+  gives the caller the mechanism array's; each removed frame's saved
+  R0 and R1 are now replaced first (`replaceSavedR0R1`).
+- **Not reproduced**: the heap's totals (LIB$SHOW_VM, LIB$STAT_VM's
+  code 1), which differ by a call or two, a few bytes, and a few pages,
+  from RTL work no case shows one by one; the C heap's place in P0 and
+  where LIB$VM_REALLOC moves a block; LIB$FREE_VM_PAGE of a zone's
+  pages, which VMS frees and govax refuses (the zone's blocks are in
+  them); addresses read past an argument list. A 48-byte block of the
+  control zone a tagged zone with a free fill takes is modeled from one
+  sample (unconfirmed).
+- **Status**: fixed (docs/PHASE-59, subtask 10).
 
 <!--
 Entry template:

@@ -113,6 +113,19 @@
 // Decision 9). VMS 7.1's run of testdata/lib58 (TestLib58Oracle) settled
 // what the manuals left open.
 //
+// Phase 59's routines are the memory manager: LIB$GET_VM_PAGE and
+// LIB$FREE_VM_PAGE (vmpage.go) on the image's page pool; LIB$GET_VM,
+// LIB$FREE_VM, LIB$RESET_VM_ZONE, and LIB$DELETE_VM_ZONE (vm.go) and
+// LIB$CREATE_VM_ZONE (vmzone.go) on zones, internal/vmheap's allocator
+// under corevms's zone database (internal/corevms/vmzone.go); user zones
+// (vmuser.go), whose routines the heap routines tail-call; LIB$STAT_VM
+// and LIB$SHOW_VM (vmstat.go); C's malloc family (vmmalloc.go); and
+// LIBRTL2's FIND_VM_ZONE, SHOW_VM_ZONE, and VERIFY_VM_ZONE (vmshow.go).
+// The bookkeeping is in Go; what a program sees in memory (tags, the
+// control words in free space, the fills) is written as VMS 7.1 writes
+// it. Its run of testdata/lib59 (TestLib59Oracle) settled what the
+// manuals left open.
+//
 // # What's here and what's in corevms
 //
 // This package holds each routine's documented interface: reading its

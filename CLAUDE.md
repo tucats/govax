@@ -103,6 +103,13 @@ never had.
   subtask 8 the probe (`testdata/lib58`, checked against VMS 7.1, which
   settled the routines' open choices and some of RMS's; the progress
   log lists them).
+  Phase 59 (done 2026-10-14) is the memory manager: subtask 2 the
+  heap's foundation (`internal/vmheap`, below), 3 to 9 the routines
+  (pages, zones and their algorithms, the system zones, user zones and
+  page routines, statistics, the VM_MALLOC family, LIBRTL2's
+  FIND/SHOW/VERIFY_VM_ZONE), 10 the probe (`testdata/lib59`, checked
+  against VMS 7.1, which settled the heap's layout, statuses, report,
+  and counting), 11 the close-out.
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
 - `docs/DEVIATIONS.md` — running log of suspected ISA/behavior fidelity issues found in
