@@ -1,12 +1,14 @@
 # Phase 62 — VMS paging: the plan, the decisions, and the groundwork
 
 **Status:** planned (2026-10-15). Part A (the survey) and Part B (the
-decisions) are written for the author's review; nothing is implemented
-yet. Part C splits the work into Phases 62 to 67. Needs Phases 43–49
-(processes, the scheduler, sections) and 52.
+decisions) were reviewed and accepted by the author on 2026-10-15 (the
+answers are under "The review"). Part C splits the work into Phases 62
+to 67, each with a planning doc of its own. Subtask 1 is done; nothing
+is implemented yet. Needs Phases 43–49 (processes, the scheduler,
+sections) and 52.
 
 Today govax translates virtual addresses faithfully, but a page that
-isn't valid has only one fate: the first touch gives it a physical page 
+isn't valid has only one fate: the first touch gives it a physical page
 (a zeroed one, or one read from a section's file), and from then on it
 stays in memory until the page is deleted. Nothing ever takes a page
 away from a process. There is no working set, no list of pages waiting
@@ -252,7 +254,7 @@ of scope; see "Future work".
   contents are already in a file, or it was never written. After the
   write a page moves to the free list, still faultable, and its PTE
   learns its page file block only when its frame is reused. The plan
-  follows VMS (Decision 7); see open question 2.
+  follows VMS (Decision 7), as the author confirmed.
 - *"When a TNV fault occurs, look where the page is and reassign it"*:
   the PTE's form says where it is (table above). For a transition page
   the PFN database says which list it's on.
@@ -266,7 +268,7 @@ of scope; see "Future work".
   copy-on-reference pages), not the pages it may have. It's pooled: one
   count per job, which is how govax keeps it already.
 
-# Part B — decisions (proposed, for review)
+# Part B — decisions (accepted 2026-10-15)
 
 **Decision 1 — paging is a mode, chosen at VMINIT.** With
 `vax.sysgen.paging.enable` false (the default) govax behaves exactly as
@@ -279,7 +281,8 @@ The mode can't change without a new VMINIT, because VMINIT is when
 physical memory is wiped and the tables are built.
 
 **Decision 2 — the pager's bookkeeping is a leaf package,
-`internal/mmg`** (VMS's facility prefix for memory management). It's
+`internal/paging`** (the author's choice of name over VMS's facility
+prefix, MMG, for future maintainers' sake). It's
 like `internal/sched`, `internal/lck`, and `internal/vmheap`: plain Go, no
 VAX dependency, tested on its own with a `Check` of its invariants after
 every operation. It holds:
@@ -303,9 +306,10 @@ form above (transition and page file PTEs included), and the pages
 themselves: a page on the free or modified list is a real frame of VAX
 memory, still holding its contents. Everything that describes them lives
 in Go: the PFN database, the list links, working set lists, the process
-section table, the global page table, and the page file map. This is how
-I read *"only the free-list of pages and the virtual address space maps
-must live in VAX memory"*; see open question 1.
+section table, the global page table, and the page file map. The
+author confirmed this reading: govax doesn't support programs that read
+VMS's internal data structures directly, so none of them needs a VAX
+layout.
 
 **Decision 4 — VMS's PTE forms, bit for bit**, as in the table above.
 `vm` gains `TransitionPTE`/`PFN` on an invalid PTE, `PageFilePTE`/
@@ -323,7 +327,9 @@ Faults are counted as soft or hard either way. The alternative was a
 real TNV exception that backs out the instruction, with PFW until a
 simulated read completes. It would let other processes run during page
 reads, but it costs a fault path through the CPU and the scheduler and
-gains nothing visible to programs (open question 4).
+gains nothing visible to programs. The author agreed: the host is about
+20 times faster than a real VAX, so asynchronous paging would add
+complexity without changing how programs see the system.
 
 **Decision 6 — working set replacement is VMS's modified FIFO.**
 
@@ -443,9 +449,17 @@ SET WORKING_SET or `$CREPRC` quota list to change.
 
 The minimums (PQL_Mxxx) stay `quotaRules`' table values. The defaults
 marked unconfirmed should come from SYSGEN SHOW on the simh VAX (a
-subtask asks for that run). Only the first four rows were in your
-request; the rest are the parameters VMS's pager reads. Each is optional
-and keeps its default when unset.
+subtask asks for that run). Only the first four rows were in the
+author's request; the rest are the parameters VMS's pager reads. Each
+is optional and keeps its default when unset. The author's rule for
+adding more (2026-10-15): a setting the pager reads should be a key, not
+a constant, named `vax.sysgen.` plus the VMS SYSGEN parameter's name in
+lowercase, so that someone who knows SYSGEN recognizes it. Only
+settings VMS has no parameter for (`paging.enable`, `.file`, `.size`)
+are govax's own. Later phases add their keys by the same rule:
+`vax.sysgen.gblpages`, `gblsections`, and `gblpagfil` (Phase 65, today's
+`DefaultGlobalPageLimit` and `DefaultGlobalSectionLimit` constants
+among them), and `vax.sysgen.virtualpagecnt` (Phase 67).
 
 **Decision 12 — accounting.**
 
@@ -503,7 +517,9 @@ write.
   linker doesn't produce, are treated as CRF.
 - **The file stays open** while the image runs. For a volume image it's
   an `rms.ACPFile` held as a section file is (`holdFile`); for a host
-  image, an `os.File`. It's let go at image rundown.
+  image, an `os.File`. It's let go at image rundown. Pages are read
+  from the file, not from the Go copy `ReadImage` makes, for a host
+  image too: the author chose VMS's behavior.
 - **Protection:** `setImageProtection` sets protection in every PTE form,
   not only valid PTEs.
 - **Image rundown deletes P0**, as VMS's image reset does: the pages,
@@ -542,12 +558,12 @@ address space model becomes worth having, and it's its own phase (67):
 
 This is the riskiest phase (PCB copies of the length registers, any code
 assuming an S0 page's physical address is its virtual address minus
-0x80000000, tests that use P0 freely), so it goes last and can be
-deferred without blocking the rest (open question 6).
+0x80000000, tests that use P0 freely), so it goes last: the author
+deferred it to the end of the program.
 
 **Decision 17 — testing.**
 
-- **Unit tests:** `internal/mmg` with `Check` after every operation,
+- **Unit tests:** `internal/paging` with `Check` after every operation,
   and `vm` and corevms tests in both modes.
 - **The full suite, paging off:** passes unchanged at every commit.
 - **The full suite, paging on:** a second run with a small physical
@@ -564,147 +580,51 @@ deferred without blocking the rest (open question 6).
 
 | Phase | Subject | Builds on |
 |---|---|---|
-| **62** | The plan (this doc), settings, `internal/mmg`'s PFN database and lists, the PTE forms, and the frame manager wired in, with nothing evicted yet | — |
+| **62** | The plan (this doc), settings, `internal/paging`'s PFN database and lists, the PTE forms, and the frame manager wired in, with nothing evicted yet | — |
 | **63** | Working sets, soft faults, the free and modified lists, the working set services, the reclaimer, and accounting | 62 |
 | **64** | The page file, the modified page writer, hard faults from the page file, and PGFLQUOTA | 63 |
 | **65** | Sections under the pager: private file sections, the global page table's states, page-file global sections, `$UPDSEC`, and read clustering | 64 |
 | **66** | Image activation by mapping, and image reset deleting P0 | 65 |
-| **67** | Created address space, page tables backed on demand, the S0 pool backed on demand, and PGFLQUOTA at creation | 66 (deferrable) |
+| **67** | Created address space, page tables backed on demand, the S0 pool backed on demand, and PGFLQUOTA at creation | 66 (deferred to the end) |
 
-Each phase gets its own doc when it starts (`PHASE-6n - ....md`), with
-its survey, subtasks, and progress log; the subtasks below are the
-starting list. Each subtask is one commit with its tests, and the work
-stops for review after each.
+Each later phase has a planning doc of its own: its goal, what earlier
+phases leave in place, its open questions, and its provisional subtasks
+(the survey that starts the phase may change them):
+
+- [PHASE-63 - working sets](PHASE-63%20-%20working%20sets.md)
+- [PHASE-64 - page file](PHASE-64%20-%20page%20file.md)
+- [PHASE-65 - sections and paging](PHASE-65%20-%20sections%20and%20paging.md)
+- [PHASE-66 - mapped image activation](PHASE-66%20-%20mapped%20image%20activation.md)
+- [PHASE-67 - address space under paging](PHASE-67%20-%20address%20space%20under%20paging.md)
+
+Each subtask is one commit with its tests, and the work stops for
+review after each.
 
 ## Phase 62 — groundwork (this phase)
 
-1. **The survey and plan** (this doc): done when the author has
-   reviewed it.
+1. **The survey and plan** (this doc, and the planning docs of Phases
+   63 to 67): done (2026-10-15).
 2. **Settings:** the `Sysgen` struct and the `vax.sysgen.*` keys
    (`validConfigs`, HELP CONFIG KEYS); `quotaRules`' defaults and process
    1's nominal values read from it; VMINIT `/[NO]PAGING`; `vax.init`
    passing the setting.
-3. **`internal/mmg`'s PFN database and lists:** frame states, owners,
+3. **`internal/paging`'s PFN database and lists:** frame states, owners,
    backing store, counts, the free list's head and tail rules, the
    modified list, and `Check`. Unit tests only.
 4. **`vm`:** the transition and page file PTE forms (`SectionIndex`
    fixed); a `FrameAllocator` seam on `Memory`, which uses `pageMap` with
-   paging off and `mmg` with it on; demand-zero frames zeroed when
+   paging off and `paging` with it on; demand-zero frames zeroed when
    allocated in paging mode; the set of frames translated since the last
    instruction boundary.
 5. **corevms wiring:** with paging on, every frame claim and release
-   goes through `mmg`, with its owner recorded. The callers are
+   goes through `paging`, with its owner recorded. The callers are
    `DemandZero`, `readPage`, `createSection`, `releaseFrame`, and
    `releasePTE`'s free. Nothing is evicted yet, and the suite passes in
    both modes.
 6. **Showing it:** SHOW MEMORY's frame counts by state in paging mode,
    and SHOW PAGE (`LookupPTE`'s report) naming each PTE form.
-7. **Close-out:** CLAUDE.md, HELP, and PLAN.md's index.
-
-## Phase 63 — working sets and soft faults
-
-1. **Survey:** the working set services from the manuals (`$ADJWSL`,
-   `$PURGWS`, `$LKWSET`/`$ULWSET`, `$LCKPAG`/`$ULKPAG`, statuses such as
-   SS$_LKWSETFUL), and the DCL commands (SHOW/SET WORKING_SET).
-2. **Working set lists:** a page enters at its fault, and FIFO
-   replacement follows Decision 6. Removal writes the transition PTE and
-   puts the frame on a list; a fault on a transition page is soft.
-3. **Growth and limits:** WSQUOTA, GROWLIM, BORROWLIM, WSEXTENT,
-   MINWSCNT; `$ADJWSL` changes the real limit; image exit resets it to
-   WSDEFAULT.
-4. **Every exit path handles transition pages:** `releasePTE`,
-   `TeardownAddressSpace`, `$DELTVA`, `$CRETVA` over pages, and
-   `unmapSections`. A deleted page's frame goes to the head of the free
-   list.
-5. **The working set services:** `$PURGWS`; real `$LKWSET`/`$ULWSET`
-   (locked entries) and `$LCKPAG`/`$ULKPAG` (frames never reclaimed).
-6. **Private section pages through the working set:** clean pages go to
-   the free list and their PTE returns to the PSTX when the frame is
-   reused. Dirty write-back pages go to the modified list and the writer
-   writes them to the section file (the page file arrives in Phase 64).
-7. **The reclaimer:** FREELIM and FREEGOAL; working sets above WSQUOTA
-   are trimmed.
-8. **Accounting:** soft and hard counts; `$GETJPI` PPGCNT, GPGCNT,
-   WSSIZE, WSPEAK; SHOW SYSTEM and SHOW PROCESS; DCL SHOW WORKING_SET.
-9. **The VMS probe** (`testdata/pg63`; SYSGEN SHOW of the paging
-   parameters too). govax is then changed to its answers.
-10. **Close-out.**
-
-## Phase 64 — the page file
-
-1. **Survey:** the page file in the SYSAdmin manuals, SHOW MEMORY/FILES,
-   and an audit of ods2's reentrancy (Decision 9).
-2. **The page file:** open or create it (volume or host), the block map,
-   and its block I/O.
-3. **The modified page writer:** thresholds and clustering. A page that
-   belongs in the page file gets its block, and its PTE takes the page
-   file form when its frame is reused.
-4. **Hard faults from the page file:** a block is freed when its page is
-   deleted or modified again (its old block no longer holds its
-   contents).
-5. **PGFLQUOTA:** charge and refund (Decision 10); SS$_EXQUOTA from
-   `$CRETVA`, `$EXPREG`, and `$CRMPSC`; JPI$_PAGFILCNT; PAGEFRAG and
-   PAGECRIT; the full page file's behavior.
-6. **Rundown and deletion** give back blocks and charges; DISMOUNT
-   refuses the page file's volume.
-7. **SHOW MEMORY's page file report.**
-8. **The probe** (`testdata/pg64`).
-9. **Close-out.**
-
-## Phase 65 — sections under the pager
-
-1. **Survey:** global page transitions (15.3) against today's
-   `GlobalSection`.
-2. **Private file sections, completely:** CRF pages take the page file
-   as backing store, and `$UPDSEC` and `$DELTVA` reach pages on the
-   modified list.
-3. **The global page table's states:** share counts, soft faults on a
-   global page valid elsewhere or in transition, global pages on the
-   lists, and GPGCNT.
-4. **Page-file global sections become demand-zero global pages** backed
-   by the page file; a permanent section's pages leave memory when it's
-   unmapped.
-5. **Global copy-on-reference.**
-6. **Read clustering:** PFCDEFAULT, `$CRMPSC`'s pfc argument, and the
-   ISD's cluster. This is done only if the probes' fault counts show VMS
-   clustering (it will, for image and section files), since clustering
-   changes JPI$_PAGEFLTS.
-7. **The probe** (extending `testdata/mp`'s section probes), and the
-   close-out.
-
-## Phase 66 — image activation by mapping
-
-1. **Survey:** chapter 21.1's activator; the ISD flags (CRF, WRT, DZRO,
-   GBL, FIXUPVEC, PROTECT) as govax's images use them.
-2. **The image page source:** a volume image as a held `ACPFile`, a
-   host image as an `os.File`, kept by the ICB and let go at rundown.
-3. **Mapping the ISDs** (Decision 15): process section table entries,
-   PTEs with protection, DZRO pages, the header. The fixup pass faults
-   the pages it writes; `setImageProtection` covers every PTE form.
-4. **Shareable images, the same way.**
-5. **Image reset:** delete P0 (and the part of P1 VMS deletes), let the
-   files go, reset the working set.
-6. **`$CREPRC`'s activation through the same path.**
-7. **The full suite with paging on:** the oracle tests' images run
-   mapped, and the probe compares activation faults with VMS's.
-8. **Close-out.**
-
-## Phase 67 — the address space and page tables under paging (deferrable)
-
-1. **Survey:** region lengths in the PCB and every place that reads
-   P0LR or P1LR; any code assuming S0's physical address is its virtual
-   address minus 0x80000000; tests that use P0 freely.
-2. **Created space:** the length registers track it; `$CRETVA`,
-   `$EXPREG`, `$DELTVA`, and `$CNTREG` grow and shrink it; automatic user
-   stack expansion; FREP0VA and FREP1VA.
-3. **Page tables backed on demand** within a virtual size fixed at
-   process creation (VMINIT's `/P0` and `/P1`, or
-   `vax.sysgen.virtualpagecnt`).
-4. **The S0 pool backed on demand**, and VMINIT backing only its own
-   layout in paging mode.
-5. **PGFLQUOTA at creation** (Decision 10's switch).
-6. **The console's P0 conveniences** for process 1 (ASM, DEPOSIT).
-7. **The probe and close-out.**
+7. **Close-out:** CLAUDE.md's package descriptions (`internal/paging`,
+   the settings), HELP, and PLAN.md's entry.
 
 ## Future work (not planned)
 
@@ -717,7 +637,11 @@ stops for review after each.
 - **Automatic working set adjustment** (PFRATL/PFRATH, WSINC/WSDEC).
 - **Paged page tables, more than one page file, and a SYSGEN command.**
 
-## Open questions (for the review)
+## The review (2026-10-15)
+
+The questions the plan asked, with the author's answers; the
+decisions above have been changed to follow them.
+
 
 1. **The free list in VAX memory.** Decision 3 reads your note as: the
    free (and modified) pages are real frames of VAX memory that keep
@@ -768,3 +692,12 @@ stops for review after each.
   management may change when paging is on (when they're created, and
   whether by settings or VMINIT qualifiers), and Decision 16 and Phase 67
   answer that.
+- **2026-10-15:** The author reviewed the plan and answered its
+  questions ("The review"). The decisions were changed to follow the
+  answers: the package is `internal/paging` (Decision 2); the lists'
+  links stay in Go (Decision 3); VMS's two lists (Decision 7);
+  synchronous paging (Decision 5); settings named for SYSGEN's
+  parameters, with more keys added as needed (Decision 11); host images
+  read from their file (Decision 15); Phase 67 deferred to the end
+  (Decision 16). Phases 63 to 67 each got a planning doc, and PLAN.md's
+  index lists them. Subtask 1 is done.

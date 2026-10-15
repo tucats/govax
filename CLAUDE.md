@@ -110,6 +110,19 @@ never had.
   FIND/SHOW/VERIFY_VM_ZONE), 10 the probe (`testdata/lib59`, checked
   against VMS 7.1, which settled the heap's layout, statuses, report,
   and counting), 11 the close-out.
+  Phases 62–67 (planned 2026-10-15, the plan reviewed and accepted by
+  the author) are the paging program, VMS's paging behind a
+  `vax.sysgen.paging.enable` setting (off by default, when govax behaves
+  as before): `PHASE-62`'s Part A is the survey of govax's memory
+  management and VMS's, Part B the accepted decisions (with "The
+  review", the author's answers), Part C the phases. 62 is the groundwork
+  (the `vax.sysgen.*` settings, named for SYSGEN's parameters; the
+  `internal/paging` package's PFN database and lists, kept in Go; the
+  transition and page file PTE forms); 63 working sets and soft faults;
+  64 the page file and modified page writer; 65 sections under the
+  pager; 66 image activation by mapping; 67 the address space and page
+  tables under paging, deferred to the end. Paging is synchronous, with no
+  PFW, COLPG, or FPG waits. Each later phase has a planning doc.
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
 - `docs/DEVIATIONS.md` — running log of suspected ISA/behavior fidelity issues found in
