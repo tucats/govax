@@ -20,6 +20,8 @@
 //                          CANCEL TYPE (subtask 18).
 //              10/11/26    DEPOSIT/INSTRUCTION (subtask 19).
 //              10/12/26    Built-in symbols (subtask 20).
+//              10/15/26    SHOW MEMORY's page frame counts with paging on;
+//                          SHOW PAGE names the PTE's form.
 //
 
 $HELP

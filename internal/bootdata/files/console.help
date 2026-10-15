@@ -126,6 +126,7 @@
 //              10/13/26    Added ATTACH
 //              10/15/26    VMINIT/[NO]PAGING; the vax.sysgen.* keys in
 //                          CONFIG KEYS (docs/PHASE-62 - VMS paging.md)
+//              10/15/26    SHOW MEMORY's page frame counts with paging on
 
 This is the help documentation for the govax VAX emulator.  Topic sections are
 marked by a "$" delimiter.  This is followed by as many tokens of the help
@@ -2326,9 +2327,12 @@ $VM
                         either, the vax.sysgen.paging.enable setting
                         decides (see HELP CONFIG KEYS); it is off unless
                         set.  The choice lasts until the next VMINIT.
-                        Paging is being added to govax in stages: for now
-                        the choice is recorded, and memory is managed the
-                        same way either way.
+                        Paging is being added to govax in stages: for now,
+                        with paging on, each physical page is recorded in
+                        a PFN database with the page it holds (SHOW
+                        MEMORY shows the counts), but no page is yet taken
+                        from a process, so memory is used the same way
+                        either way.
 
     Example:
 

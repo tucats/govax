@@ -1,12 +1,12 @@
 # Phase 62 — VMS paging: the plan, the decisions, and the groundwork
 
-**Status:** planned (2026-10-15). Part A (the survey) and Part B (the
+**Status:** done (2026-10-15). Part A (the survey) and Part B (the
 decisions) were reviewed and accepted by the author on 2026-10-15 (the
 answers are under "The review"). Part C splits the work into Phases 62
-to 67, each with a planning doc of its own. Subtasks 1 to 6 are done
-(the plan, the settings, `internal/paging`'s PFN database, `vm`'s
-PTE forms and frame allocator, corevms's frame claims, and SHOW MEMORY's
-and SHOW PAGE's reports). Needs Phases 43–49 (processes, the scheduler,
+to 67, each with a planning doc of its own. All seven subtasks are
+done (the plan, the settings, `internal/paging`'s PFN database, `vm`'s
+PTE forms and frame allocator, corevms's frame claims, SHOW MEMORY's and
+SHOW PAGE's reports, and the close-out); Phase 63 is next. Needs Phases 43–49 (processes, the scheduler,
 sections) and 52.
 
 Today govax translates virtual addresses faithfully, but a page that
@@ -639,7 +639,7 @@ review after each.
    both modes.
 6. **Showing it** (done 2026-10-15): SHOW MEMORY's frame counts by state in paging mode,
    and SHOW PAGE (`LookupPTE`'s report) naming each PTE form.
-7. **Close-out:** CLAUDE.md's package descriptions (`internal/paging`,
+7. **Close-out** (done 2026-10-15): CLAUDE.md's package descriptions (`internal/paging`,
    the settings), HELP, and PLAN.md's entry.
 
 ## Future work (not planned)
@@ -848,3 +848,11 @@ decisions above have been changed to follow them.
   (`machine/show_test.go`): the counts with paging on (adding up to the
   database's frames) and their absence with it off, and each PTE form
   stored at a P0 page and named. The full suite passes.
+- **2026-10-15, subtask 7 (close-out):** CLAUDE.md describes
+  `internal/paging`, `vm`'s new forms and frame allocator, and the
+  `vax.sysgen.*` settings, and marks Phase 62 done in the program's
+  summary. HELP VMINIT's `/[NO]PAGING` now says what paging mode does so
+  far (frames recorded with their owners, none taken from a process), and
+  the console's and debugger's help histories note SHOW MEMORY's and SHOW
+  PAGE's changes. PLAN.md's index marks the phase done. Phase 62 is
+  complete; Phase 63 (working sets) is next.

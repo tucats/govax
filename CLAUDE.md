@@ -115,10 +115,14 @@ never had.
   `vax.sysgen.paging.enable` setting (off by default, when govax behaves
   as before): `PHASE-62`'s Part A is the survey of govax's memory
   management and VMS's, Part B the accepted decisions (with "The
-  review", the author's answers), Part C the phases. 62 is the groundwork
-  (the `vax.sysgen.*` settings, named for SYSGEN's parameters; the
-  `internal/paging` package's PFN database and lists, kept in Go; the
-  transition and page file PTE forms); 63 working sets and soft faults;
+  review", the author's answers), Part C the phases. 62 (done
+  2026-10-15) is the groundwork (the `vax.sysgen.*` settings, named for
+  SYSGEN's parameters, and VMINIT `/[NO]PAGING`; the `internal/paging`
+  package's PFN database and lists, kept in Go; the transition and page
+  file PTE forms; `vm`'s frame allocator; corevms claiming every frame
+  with its owner and backing store, `corevms/frames.go`; SHOW MEMORY's
+  frame counts and SHOW PAGE's PTE forms; nothing evicted yet); 63
+  working sets and soft faults;
   64 the page file and modified page writer; 65 sections under the
   pager; 66 image activation by mapping; 67 the address space and page
   tables under paging, deferred to the end. Paging is synchronous, with no
@@ -322,6 +326,15 @@ expect adjustment as phases land):
   fault on an invalid page goes to it (`PageIn`, given a `PageFault`
   with the address space), or is demand-zero without one
   (`DemandZero`). The seam a working set manager and page file will use.
+  Phase 62 added the page file form (`PageFilePTE`, both TYP bits) and
+  the transition form (`TransitionPTE`, neither, a frame other than 0),
+  and `frames.go`: a `FrameAllocator` on `Memory` (`SetPaging`), the old
+  bitmap with paging off, `internal/paging`'s database with it on
+  (`Memory.Paging`); `AllocateFrame` takes a `FrameClaim` (owner and
+  backing store), `DemandZeroFor` is `DemandZero` with one; and the
+  frames translated since the last instruction boundary
+  (`BeginInstruction`, `TranslatedThisInstruction`), which a reclaimer
+  must not take.
 - `internal/cpu` — instruction decode/execute engine and instruction-set emulation
   (Phases 03-07). Phase 35 finished the set and Phase 43 added LDPCTX and
   SVPCTX: every instruction has a handler (`TestEveryInstructionImplemented`).
@@ -360,6 +373,19 @@ expect adjustment as phases land):
   `Charge` (quantum; no quantum end for real-time), `Wait`/`Ready` (and
   the higher-or-equal preemption test), `SetBasePriority`, `Choose`. A
   leaf package; processes are opaque `Handle`s (PIDs).
+- `internal/paging` — the PFN database (Phase 62), from *VAX/VMS
+  Internals and Data Structures*, 14.2 and 15.2, kept in Go (`doc.go`):
+  an `Entry` per frame, its `State` (`Free`, `Modified`, `Active`),
+  `Type` (process, global, system page), the virtual page it's tied to
+  (`Owner`: an opaque handle and an address), its `Backing` store,
+  reference and share counts, and the saved modify bit; the free and
+  modified lists, doubly linked through arrays. `Allocate` takes the
+  free list's head (breaking an old tie through the caller's
+  `TieBreaker`), `Release` puts a frame at a list's tail by its modify
+  bit, `Reclaim` is a soft fault, `Delete` unties a frame to the free
+  list's head, `FirstModified`/`Cleaned` are the modified page writer's.
+  `Check` verifies the lists, counts, and ties. A leaf package; with
+  paging on, `vm`'s frame allocator is one.
 - `internal/lck` — the lock manager (Phase 47), from the System Services
   manual ($ENQ/$DEQ) and the Internals book's chapter 13: a `Manager` of
   resources (name, UIC group or 0, access mode, parent) with granted,
@@ -1056,6 +1082,14 @@ expect adjustment as phases land):
   Unset file: no default volume, names go to the host. Every key read must
   be in `cmd/govax/main.go`'s `validConfigs`, and documented in vax.help's
   `HELP CONFIG KEYS`.
+  `vax.sysgen.*` (Phase 62) — govax's SYSGEN parameters, each named for
+  the VMS parameter in lowercase: `paging.enable` (bool, VMINIT's
+  default for `/[NO]PAGING`, off when unset), `minwscnt`,
+  `pql_dwsdefault`, `pql_dwsquota`, `pql_dwsextent`, `pql_dpgflquota`
+  (counts in pages, decimal or %X; `machine/sysgen.go`'s
+  `ParseSysgenCount`). They reach each `System` as a `corevms.Sysgen`
+  (`corevms/sysgen.go`), whose defaults `$CREPRC`'s quotas and a
+  logging-in process's account (`LoginQuotas`) use.
   `vax.library` (string) — the host directory LINK and MACRO look
   in for IMAGELIB.OLB, STARLET.OLB, shareable images, and STARLET.MLB when
   `SYS$LIBRARY`/`SYS$SHARE` don't lead to them (read by the console, not `NewEngine`;
