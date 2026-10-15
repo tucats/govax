@@ -3,9 +3,9 @@
 **Status:** planned (2026-10-15). Part A (the survey) and Part B (the
 decisions) were reviewed and accepted by the author on 2026-10-15 (the
 answers are under "The review"). Part C splits the work into Phases 62
-to 67, each with a planning doc of its own. Subtasks 1 to 4 are done
-(the plan, the settings, `internal/paging`'s PFN database, and `vm`'s
-PTE forms and frame allocator). Needs Phases 43–49 (processes, the scheduler,
+to 67, each with a planning doc of its own. Subtasks 1 to 5 are done
+(the plan, the settings, `internal/paging`'s PFN database, `vm`'s
+PTE forms and frame allocator, and corevms's frame claims). Needs Phases 43–49 (processes, the scheduler,
 sections) and 52.
 
 Today govax translates virtual addresses faithfully, but a page that
@@ -631,7 +631,7 @@ review after each.
    paging off and `paging` with it on; demand-zero frames zeroed when
    allocated in paging mode; the set of frames translated since the last
    instruction boundary.
-5. **corevms wiring:** with paging on, every frame claim and release
+5. **corevms wiring** (done 2026-10-15): with paging on, every frame claim and release
    goes through `paging`, with its owner recorded. The callers are
    `DemandZero`, `readPage`, `createSection`, `releaseFrame`, and
    `releasePTE`'s free. Nothing is evicted yet, and the suite passes in
@@ -801,3 +801,37 @@ decisions above have been changed to follow them.
   `console/pagingframes_test.go` (vax.init with paging on, then an
   image touching demand-zero pages and `$EXPREG`/`$DELTVA`, the
   database sound after). The full suite passes.
+- **2026-10-15, subtask 5 (corevms wiring):** `corevms/frames.go`
+  builds the `vm.FrameClaim` for each frame the system gives a page. A
+  process page (P0 or P1) is a `ProcessPage` owned by its process's PID
+  and the page's address (`processClaim`; for a fault, `faultClaim`
+  finds the process by the fault's address space); an S0 page, or one
+  whose process isn't found, stays an untied system frame. A global
+  section's page is a `GlobalPage` owned by the section's serial number
+  (`GlobalSection.serial`, from `GlobalSections.newSerial` when a
+  section is made) and the page's byte offset in it (`globalClaim`), so
+  one frame however many processes map it. Backing store, by Decision
+  8: none for a demand-zero page; `SectionFile` (PSTX, block) for a
+  private section's page; `GlobalSection` (GPTX) for a file global
+  section's; the page file, block yet to be allocated, for a page-file
+  global section's page and for a process's private copy of a
+  copy-on-reference page. The callers: `resolveFault`'s demand-zero
+  pages go through `vm.Memory.DemandZeroFor` (new: `DemandZero` with a
+  claim); `readPage` takes the claim and sets `Fill` (it writes the
+  whole frame); `pageInGlobal` takes the fault, for the CRF copy's
+  owner; `createSection` claims with `globalClaim`. The releases
+  (`releasePTE`, `releaseFrame`, `maybeDeleteSection`) needed no
+  change: `FreePage` is `Database.Delete` with paging on, which unties
+  the frame. Nothing is evicted, so no `TieBreaker` is installed yet.
+  Tests (`console/pagingowners_test.go`): `frameOwners` checks the
+  database and that every tied frame is its owner's (a process page's
+  PTE valid and holding the frame, a global page in its section at that
+  offset); `TestPagingGlobalSectionFrames` (a page-file section mapped
+  twice: two global frames backed by the page file, free and untied
+  after the section goes); `TestPagingFrames` now checks the owners
+  too, and `TestPagingFileSections` runs Phase 49's SECPARENT/SECCHILD
+  and RUNDOWN programs with paging on. Each new check fails with the
+  claims left untied. The full suite passes with paging off, and passed
+  with the paging default forced on and `Check` run after every frame
+  claim and release (a temporary change, not committed; the only
+  failure was `TestVMInitPaging`'s check that the default is off).

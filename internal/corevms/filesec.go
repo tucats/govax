@@ -4,6 +4,7 @@ import (
 	"slices"
 
 	iodev "github.com/tucats/govax/internal/io"
+	"github.com/tucats/govax/internal/paging"
 	"github.com/tucats/govax/internal/registers"
 	"github.com/tucats/govax/internal/rms"
 	"github.com/tucats/govax/internal/sched"
@@ -284,10 +285,13 @@ func (sys *System) writePage(f *rms.ACPFile, vbn, pfn uint32) error {
 	return f.WritePage(vbn, buf)
 }
 
-// readPage reads block vbn of f into a new physical page, returning its
-// number, or false if memory is exhausted or the block can't be read.
-func (sys *System) readPage(f *rms.ACPFile, vbn uint32) (uint32, bool) {
-	pfn, ok := sys.mem.AllocatePage()
+// readPage reads block vbn of f into a new physical page for the page c
+// describes (frames.go), returning its number, or false if memory is
+// exhausted or the block can't be read.
+func (sys *System) readPage(f *rms.ACPFile, vbn uint32, c vm.FrameClaim) (uint32, bool) {
+	c.Fill = true
+
+	pfn, ok := sys.mem.AllocateFrame(c)
 	if !ok {
 		return 0, false
 	}
@@ -343,7 +347,7 @@ func (sys *System) resolveFault(f vm.PageFault) (vm.PTE, bool) {
 	prot, owner := f.PTE.Protection(), f.PTE.Owner()
 
 	if gi, ok := f.PTE.GlobalIndex(); ok {
-		pfn, ok := sys.pageInGlobal(gi)
+		pfn, ok := sys.pageInGlobal(gi, f)
 
 		return vm.ValidPTE(pfn, prot, owner), ok
 	}
@@ -364,26 +368,26 @@ func (sys *System) resolveFault(f vm.PageFault) (vm.PTE, bool) {
 			return 0, false
 		}
 
-		pfn, ok := sys.readPage(ps.file, ps.vbn+i)
+		pfn, ok := sys.readPage(ps.file, ps.vbn+i, processClaim(env, f.Addr, sectionBacking(si, ps.vbn+i)))
 
 		return vm.ValidPTE(pfn, prot, owner), ok
 	}
 
-	return sys.mem.DemandZero(f.PTE)
+	return sys.mem.DemandZeroFor(f.PTE, sys.faultClaim(f, paging.Backing{}))
 }
 
 // pageInGlobal returns the physical page for global page table entry gi:
 // the section's own, read in if this is its first touch, or, for a
-// copy-on-reference section, a private copy (and the section loses the
-// reference the faulting PTE held).
-func (sys *System) pageInGlobal(gi uint32) (uint32, bool) {
+// copy-on-reference section, a private copy for the process fault f
+// touched (and the section loses the reference the faulting PTE held).
+func (sys *System) pageInGlobal(gi uint32, f vm.PageFault) (uint32, bool) {
 	s, i, ok := sys.Sections.globalPage(gi)
 	if !ok || s.File == nil {
 		return 0, false
 	}
 
 	if s.CopyOnRef {
-		pfn, ok := sys.readPage(s.File, s.VBN+uint32(i))
+		pfn, ok := sys.readPage(s.File, s.VBN+uint32(i), sys.faultClaim(f, copyOnRefBacking))
 		if ok {
 			s.Refs--
 			sys.maybeDeleteSection(s)
@@ -393,7 +397,7 @@ func (sys *System) pageInGlobal(gi uint32) (uint32, bool) {
 	}
 
 	if s.Frames[i] == 0 {
-		pfn, ok := sys.readPage(s.File, s.VBN+uint32(i))
+		pfn, ok := sys.readPage(s.File, s.VBN+uint32(i), globalClaim(s, i))
 		if !ok {
 			return 0, false
 		}

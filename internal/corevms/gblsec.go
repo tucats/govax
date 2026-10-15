@@ -157,6 +157,10 @@ type GlobalSection struct {
 	CopyOnRef bool
 	Dirty     []bool
 	gpt       uint32
+
+	// serial numbers the section among every section the system has
+	// made, from 1: its frames' owner in the PFN database (frames.go).
+	serial uint32
 }
 
 // writesBack reports whether s's modified pages go back to its file: a
@@ -193,6 +197,15 @@ type GlobalSections struct {
 
 	// pages is how many pages the sections have in all.
 	pages int
+
+	// serials is the last section serial number given (newSerial).
+	serials uint32
+}
+
+// newSerial gives s the next section serial number.
+func (g *GlobalSections) newSerial(s *GlobalSection) {
+	g.serials++
+	s.serial = g.serials
 }
 
 // NewGlobalSections returns an empty table with the default limits.
@@ -370,8 +383,10 @@ func (sys *System) createSection(s *GlobalSection, pages int) (*GlobalSection, u
 		return nil, ssGptFull
 	}
 
-	for range pages {
-		pfn, ok := sys.mem.AllocatePage()
+	g.newSerial(s)
+
+	for i := range pages {
+		pfn, ok := sys.mem.AllocateFrame(globalClaim(s, i))
 		if !ok {
 			for _, f := range s.Frames {
 				sys.mem.FreePage(f)
@@ -380,8 +395,8 @@ func (sys *System) createSection(s *GlobalSection, pages int) (*GlobalSection, u
 			return nil, ssInsfMem
 		}
 
-		// A page never used reads as zeros, and FreePage clears a page
-		// it gives back; clearing it here as well costs little.
+		// AllocateFrame hands out a cleared frame in either paging mode;
+		// clearing it here as well costs little.
 		var zero [pageSize]byte
 		if err := sys.mem.StorePhysical(pfn*pageSize, zero[:]); err != nil {
 			return nil, ssInsfMem
@@ -414,6 +429,8 @@ func (sys *System) createFileSection(s *GlobalSection, pages int) uint32 {
 	if g.pages+pages > g.PageLimit || !g.allocPageTable(s, pages) {
 		return ssGptFull
 	}
+
+	g.newSerial(s)
 
 	s.Frames = make([]uint32, pages)
 	s.Dirty = make([]bool, pages)

@@ -219,11 +219,20 @@ func (m *Memory) SetPager(p Pager) { m.pager = p }
 // valid and pointing at it, its other forms' bits cleared. It reports
 // false if no VMINIT has run yet or physical memory is exhausted.
 func (m *Memory) DemandZero(pte PTE) (PTE, bool) {
+	return m.DemandZeroFor(pte, FrameClaim{})
+}
+
+// DemandZeroFor is DemandZero for the page c describes: with paging on,
+// the frame is recorded as that page's (its owner and backing store). A
+// claim to fill the frame is ignored: a demand-zero page reads as zeros.
+func (m *Memory) DemandZeroFor(pte PTE, c FrameClaim) (PTE, bool) {
 	if !m.vmValid {
 		return pte, false
 	}
 
-	pfn, ok := m.AllocatePage()
+	c.Fill = false
+
+	pfn, ok := m.AllocateFrame(c)
 	if !ok {
 		return pte, false
 	}

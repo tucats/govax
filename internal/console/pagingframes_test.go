@@ -6,6 +6,8 @@ import (
 
 	"github.com/tucats/govax/internal/console"
 	"github.com/tucats/govax/internal/console/consoletest"
+	"github.com/tucats/govax/internal/machine"
+	"github.com/tucats/govax/internal/registers"
 )
 
 // pagedImageSource touches eight pages of its own data, creates four
@@ -71,5 +73,41 @@ func TestPagingFrames(t *testing.T) {
 
 	if counts.Free+counts.Active() != db.Frames() || counts.Modified != 0 {
 		t.Errorf("counts %+v over %d frames", counts, db.Frames())
+	}
+
+	// Subtask 5: the image's pages are process 1's, each frame recorded
+	// as its page's.
+	if process, _ := console.FrameOwners(t, c); process == 0 {
+		t.Error("no frame is tied to a process page")
+	}
+}
+
+// TestPagingFileSections runs Phase 49's file section programs with
+// paging on (docs/PHASE-62 - VMS paging.md, subtask 5): a global section
+// two processes share, and private and copy-on-reference sections left
+// for image rundown. Each still ends as it should, and afterward every
+// frame left tied is its owner's, with no global page left.
+func TestPagingFileSections(t *testing.T) {
+	setSetting(t, "vax.sysgen.paging.enable", "true")
+
+	for _, image := range []string{"SECPARENT", "RUNDOWN"} {
+		t.Run(image, func(t *testing.T) {
+			c := sectionMachine(t, longQuantum, "secchild", "secparent", "rundown")
+			if c.Mem.Paging() == nil {
+				t.Fatal("VMINIT left paging off")
+			}
+
+			if err := c.Run("DUA0:[000000]"+image+".EXE", machine.RunOptions{}); err != nil {
+				t.Fatalf("RUN: %v", err)
+			}
+
+			if got := c.CPU.GPR(registers.R0); got != 999 {
+				t.Fatalf("R0 = %d, want 999 (another value is the step that failed)", got)
+			}
+
+			if process, global := console.FrameOwners(t, c); process == 0 || global != 0 {
+				t.Errorf("tied frames: %d process, %d global; want some process frames, no global ones", process, global)
+			}
+		})
 	}
 }
