@@ -613,7 +613,7 @@ phases leave in place, its open questions, and its provisional subtasks
 Each subtask is one commit with its tests, and the work stops for
 review after each.
 
-## Phase 62 — groundwork (this phase)
+## Phase 62 — groundwork subtasks (this phase)
 
 1. **The survey and plan** (this doc, and the planning docs of Phases
    63 to 67): done (2026-10-15).
