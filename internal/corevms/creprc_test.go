@@ -234,7 +234,7 @@ func TestCreprc_quotas(t *testing.T) {
 		{pql("PRCLM"), 3},
 	}
 
-	values, deducted, st := resolveQuotas(creator, items, false, false)
+	values, deducted, st := resolveQuotas(nil, creator, items, false, false)
 	if st != 0 || deducted != 0 {
 		t.Fatalf("resolveQuotas: status %#x, %d deducted", st, deducted)
 	}
@@ -263,7 +263,7 @@ func TestCreprc_quotas(t *testing.T) {
 
 	// A detached process created with DETACH gets what it asks for, and
 	// its job the pooled values.
-	values, _, _ = resolveQuotas(creator, items, true, true)
+	values, _, _ = resolveQuotas(nil, creator, items, true, true)
 	d := NewProcess()
 	d.Job = newJob(0x999)
 	applyQuotas(d, values, true)
@@ -275,7 +275,7 @@ func TestCreprc_quotas(t *testing.T) {
 
 	// The working-set default is held to the quota (and then each gets
 	// $CREPRC's 4 pages).
-	values, _, _ = resolveQuotas(creator, []QuotaItem{{pql("WSDEFAULT"), 3000}, {pql("WSQUOTA"), 2000}}, true, true)
+	values, _, _ = resolveQuotas(nil, creator, []QuotaItem{{pql("WSDEFAULT"), 3000}, {pql("WSQUOTA"), 2000}}, true, true)
 	w := NewProcess()
 	w.Job = newJob(0x999)
 	applyQuotas(w, values, true)

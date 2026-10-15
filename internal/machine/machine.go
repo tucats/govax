@@ -64,6 +64,10 @@ type Machine struct {
 
 	VMInitValid bool // set by VMINIT (vminit.go); cleared by INIT/ZERO
 
+	// paging is the paging mode the last VMINIT chose (VMInitPaging);
+	// INIT and ZERO clear it. Each new System gets it in its Sysgen.
+	paging bool
+
 	// Regions holds the P0/P1/S0 region bookkeeping VMInit computes (index
 	// 0/1/2, matching vax.h's own struct VMREGION array) — kept around
 	// purely so a later SHOW MEMORY can display it, matching that struct's
@@ -359,6 +363,7 @@ func (m *Machine) newRTL() *corevms.Environment {
 	m.otherImages = nil
 
 	sys.SetProcessSettings(processSettings())
+	sys.SetSysgen(sysgenSettings(m.paging))
 
 	// A process $CREPRC creates activates its image with the console's
 	// image activator (docs/PHASE-45.md, subtask 5).
@@ -408,6 +413,9 @@ func (m *Machine) newRTL() *corevms.Environment {
 
 	return env
 }
+
+// Paging reports whether the last VMINIT turned VMS paging on.
+func (m *Machine) Paging() bool { return m.paging }
 
 // Initialized reports whether an INIT command has allocated a machine yet
 // (matching the C source's vax_init flag).

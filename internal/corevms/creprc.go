@@ -343,7 +343,7 @@ func (env *Environment) CreateProcess(req CreateRequest) (*Environment, uint32) 
 	// anything else is held to its creator's.
 	independent := detached && creator.hasPrivilege(privDETACH)
 
-	quotas, cpuDeducted, st := resolveQuotas(creator, req.Quotas, detached, independent)
+	quotas, cpuDeducted, st := resolveQuotas(&env.Sysgen, creator, req.Quotas, detached, independent)
 	if st != 0 {
 		return nil, st
 	}
@@ -396,6 +396,7 @@ func (env *Environment) CreateProcess(req CreateRequest) (*Environment, uint32) 
 	p.ResourceWaitDisabled = req.Flags&prcSSRWAIT != 0
 
 	applyQuotas(p, quotas, detached)
+	p.MinWSCount = env.Sysgen.MinWSCount
 	creator.CPULimit -= cpuDeducted
 	p.cpuDeducted = cpuDeducted
 

@@ -22,6 +22,7 @@ func (m *Machine) Init(physBytes uint32) error {
 	m.CPU.SetDebugWriter(m.Hooks.Output())
 	m.Mem = vm.NewMemory(size)
 	m.Engine = cpu.NewEngine(m.CPU, m.Mem)
+	m.paging = false
 	m.newRTL()
 	m.Engine.SetSystemServices(m)
 
@@ -56,6 +57,7 @@ func (m *Machine) Zero() error {
 	size := m.Mem.Size()
 	m.Mem = vm.NewMemory(size)
 	m.Engine = cpu.NewEngine(m.CPU, m.Mem)
+	m.paging = false
 	m.newRTL()
 	m.Engine.SetSystemServices(m)
 

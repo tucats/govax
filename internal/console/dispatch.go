@@ -102,11 +102,20 @@ func (d *Dispatcher) bindGrammar() {
 	g.Bind("DEBUG", func(id int64, r *dcl.Result) error { return d.Console.StartDebugger() })
 
 	g.Bind("VMINIT", func(id int64, r *dcl.Result) error {
-		return d.Console.VMInit(
+		sizes := []uint32{
 			uint32(r.Int("P0")), uint32(r.Int("P1")), uint32(r.Int("S0")),
 			uint32(r.Int("KSP")), uint32(r.Int("ESP")), uint32(r.Int("SSP")), uint32(r.Int("ISP")),
 			uint32(r.Int("STRINGPOOL")),
-		)
+		}
+
+		// Without /[NO]PAGING, VMInit takes the mode from the
+		// configuration (vax.sysgen.paging.enable).
+		if !r.Present("PAGING") {
+			return d.Console.VMInit(sizes[0], sizes[1], sizes[2], sizes[3], sizes[4], sizes[5], sizes[6], sizes[7])
+		}
+
+		return d.Console.VMInitPaging(!r.Negated("PAGING"),
+			sizes[0], sizes[1], sizes[2], sizes[3], sizes[4], sizes[5], sizes[6], sizes[7])
 	})
 
 	g.Bind("CLEAR_STRINGS", func(id int64, r *dcl.Result) error { return d.Console.ClearString() })

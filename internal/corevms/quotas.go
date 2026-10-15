@@ -111,14 +111,16 @@ var pqlCPULM = vmsdef.Symbols["PQL$_CPULM"]
 // code, and how much CPU time to take out of the creator's limit.
 // detached says whether the new process is detached, and independent
 // whether its creator has DETACH too, so its values aren't held to the
-// creator's. SS$_EXQUOTA if the CPU time taken would leave the creator
-// none.
-func resolveQuotas(creator *Process, items []QuotaItem, detached, independent bool) (map[uint32]uint32, uint32, uint32) {
+// creator's. A quota the list doesn't name starts at its default: the
+// configured PQL_Dxxx parameter in sg if there is one (sysgen.go), else
+// the rule's own; sg may be nil. SS$_EXQUOTA if the CPU time taken would
+// leave the creator none.
+func resolveQuotas(sg *Sysgen, creator *Process, items []QuotaItem, detached, independent bool) (map[uint32]uint32, uint32, uint32) {
 	values := map[uint32]uint32{}
 	given := map[uint32]bool{}
 
 	for code, rule := range quotasByCode {
-		values[code] = rule.def
+		values[code] = sg.pqlDefault(rule)
 	}
 
 	for _, item := range items {

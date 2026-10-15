@@ -33,6 +33,7 @@ import (
 	"github.com/tucats/govax/internal/dclcmd"
 	"github.com/tucats/govax/internal/debugger"
 	"github.com/tucats/govax/internal/help"
+	"github.com/tucats/govax/internal/machine"
 	"github.com/tucats/govax/internal/respath"
 	"github.com/tucats/govax/internal/rms"
 	"github.com/tucats/govax/internal/vmserrors"
@@ -640,6 +641,15 @@ var validConfigs = map[string]bool{
 	"vax.process.quantum":   true,
 	"vax.process.preempt":   true,
 
+	// The system parameters (docs/PHASE-62 - VMS paging.md, Decision
+	// 11): internal/machine's sysgen.go reads them.
+	"vax.sysgen.paging.enable":  true,
+	"vax.sysgen.minwscnt":       true,
+	"vax.sysgen.pql_dwsdefault": true,
+	"vax.sysgen.pql_dwsquota":   true,
+	"vax.sysgen.pql_dwsextent":  true,
+	"vax.sysgen.pql_dpgflquota": true,
+
 	// Read by vax.init (F$CONFIG): the memory's sizes, in pages.
 	"vax.memory.size": true,
 	"vax.memory.p0":   true,
@@ -671,5 +681,15 @@ func auditConfig() {
 	// console would quietly use the default.
 	if _, err := corevms.ParsePreemptMode(settings.Get("vax.process.preempt")); err != nil {
 		fmt.Printf("\nWarning, %v; the default, all, will be used\n", err)
+	}
+
+	// So is a system parameter that must be a count of pages.
+	for _, key := range machine.SysgenCountKeys() {
+		if settings.Exists(key) {
+			if _, ok := machine.ParseSysgenCount(settings.Get(key)); !ok {
+				fmt.Printf("\nWarning, %s is %q; it must be a positive integer, and its default will be used\n",
+					key, settings.Get(key))
+			}
+		}
 	}
 }

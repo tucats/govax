@@ -337,6 +337,10 @@ grammar console
 			        /type=$integer -
                                 /default=8
 
+            ! /[NO]PAGING (docs/PHASE-62 - VMS paging.md, Decision 1):
+            ! VMS paging on or off; without it, vax.sysgen.paging.enable.
+            qualifier       paging /id=1818
+
             qualifier       debug /id=1809
             qualifier       verify /alias=debug
             qualifier       log /alias=debug

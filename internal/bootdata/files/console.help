@@ -124,6 +124,8 @@
 //                          /[NO]HEADING, /[NO]TRAILING
 //              10/12/26    Added DUMP
 //              10/13/26    Added ATTACH
+//              10/15/26    VMINIT/[NO]PAGING; the vax.sysgen.* keys in
+//                          CONFIG KEYS (docs/PHASE-62 - VMS paging.md)
 
 This is the help documentation for the govax VAX emulator.  Topic sections are
 marked by a "$" delimiter.  This is followed by as many tokens of the help
@@ -2044,6 +2046,44 @@ $CONF,KEY
                                       all; govax warns at startup about
                                       any other value.
 
+    System parameters
+
+    The vax.sysgen.* keys are govax's SYSGEN parameters: each is named
+    for the VMS SYSGEN parameter it stands for, in lowercase.  Counts
+    are in 512-byte pages, as a decimal integer or %X followed by hex
+    digits; govax warns at startup about a value that isn't a positive
+    integer, and uses the default.  The values that start a process off
+    are copied into each process when it's created.
+
+        vax.sysgen.paging.enable      true or false: whether VMINIT turns
+                                      VMS paging on (see HELP VMINIT,
+                                      /[NO]PAGING).  Default false.
+
+        vax.sysgen.pql_dwsdefault     PQL_DWSDEFAULT: a new process's
+                                      default working set size.  Default
+                                      294 for a process $CREPRC creates;
+                                      the console's process has the
+                                      SYSTEM account's 512.
+
+        vax.sysgen.pql_dwsquota       PQL_DWSQUOTA: a new process's
+                                      working set quota, the pages it is
+                                      guaranteed.  Default 588; the
+                                      console's process has 1024.
+
+        vax.sysgen.pql_dwsextent      PQL_DWSEXTENT: a new process's
+                                      working set extent, the most its
+                                      working set may grow to while free
+                                      pages allow.  Default 16400.
+
+        vax.sysgen.pql_dpgflquota     PQL_DPGFLQUOTA: a new job's paging
+                                      file quota, the pages its processes
+                                      may together have in the page file.
+                                      Default 16400; the console's job
+                                      has 40960.
+
+        vax.sysgen.minwscnt           MINWSCNT: the smallest working set
+                                      a process may have.  Default 20.
+
     Debugging switches
 
         vax.debug.NAME                true or false: the initial state of
@@ -2242,7 +2282,7 @@ $VM
 
         VMINIT [/P0=pages] [/P1=pages] [/S0=pages]
                [/KSP=pages] [/ESP=pages] [/SSP=pages] [/ISP=pages]
-               [/STRINGPOOL=pages]
+               [/STRINGPOOL=pages] [/[NO]PAGING]
 
     Each value is a count of 512-byte pages, a decimal integer (the
     console's radix doesn't apply).
@@ -2278,6 +2318,14 @@ $VM
         /ISP=pages      The size of the interrupt stack.  Default 4.
         /STRINGPOOL=pages
                         The size of the console's string pool.  Default 8.
+        /[NO]PAGING     Whether VMS paging is on: working sets, the free
+                        and modified page lists, and a page file.  Without
+                        either, the vax.sysgen.paging.enable setting
+                        decides (see HELP CONFIG KEYS); it is off unless
+                        set.  The choice lasts until the next VMINIT.
+                        Paging is being added to govax in stages: for now
+                        the choice is recorded, and memory is managed the
+                        same way either way.
 
     Example:
 

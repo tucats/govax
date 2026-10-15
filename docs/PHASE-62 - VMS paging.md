@@ -430,6 +430,7 @@ SET WORKING_SET or `$CREPRC` quota list to change.
 | Key | VMS name | Default (unconfirmed unless noted) | Meaning |
 |---|---|---|---|
 | `vax.sysgen.paging.enable` | — (govax) | false | paging on (Decision 1) |
+| | | | *Each key below is added to `validConfigs` and HELP in the subtask that first reads it; subtask 2 added `paging.enable`, the four PQL keys, and `minwscnt`.* |
 | `vax.sysgen.paging.file` | — (govax) | none | page file: volume or host path |
 | `vax.sysgen.paging.size` | (SYSGEN CREATE /SIZE) | 32768 blocks | page file size if govax creates it |
 | `vax.sysgen.pql_dwsdefault` | PQL_DWSDEFAULT | 294 (VMS 7.1's) | a new process's WSDEFAULT |
@@ -446,6 +447,18 @@ SET WORKING_SET or `$CREPRC` quota list to change.
 | `vax.sysgen.mpw_wrtcluster` | MPW_WRTCLUSTER | 96 | pages per write |
 | `vax.sysgen.pfcdefault` | PFCDEFAULT | 32 | read cluster |
 | `vax.sysgen.tbskipwsl` | TBSKIPWSL | 8 (the book's) | TB-valid entries skipped |
+
+**Process 1 and future logins.** On VMS a process that logs in gets
+its quotas from its account's SYSUAF record, not the PQL parameters.
+govax has one account, SYSTEM, the console's process, and no
+authorization file yet. The author plans one, and plans process 1 to
+become one of many detached jobs (2026-10-15). So a logging-in process's
+quotas come from an `Account` record (today always `SystemAccount()`),
+with any configured PQL_Dxxx parameter laid over it
+(`Sysgen.LoginQuotas`). A future SYSUAF supplies other records through
+the same function. With no key set, process 1 keeps the SYSTEM
+account's values (WSDEFAULT 512, WSQUOTA 1024, WSEXTENT 16400, its job's
+PGFLQUOTA 40960). A process `$CREPRC` makes gets the PQL defaults.
 
 The minimums (PQL_Mxxx) stay `quotaRules`' table values. The defaults
 marked unconfirmed should come from SYSGEN SHOW on the simh VAX (a
@@ -604,10 +617,11 @@ review after each.
 
 1. **The survey and plan** (this doc, and the planning docs of Phases
    63 to 67): done (2026-10-15).
-2. **Settings:** the `Sysgen` struct and the `vax.sysgen.*` keys
-   (`validConfigs`, HELP CONFIG KEYS); `quotaRules`' defaults and process
-   1's nominal values read from it; VMINIT `/[NO]PAGING`; `vax.init`
-   passing the setting.
+2. **Settings** (done 2026-10-15): the `Sysgen` struct and the
+   `vax.sysgen.*` keys (`validConfigs`, HELP CONFIG KEYS); `$CREPRC`'s
+   defaults and process 1's login quotas read from it; VMINIT
+   `/[NO]PAGING`, defaulting to the setting (so `vax.init` needs no
+   change).
 3. **`internal/paging`'s PFN database and lists:** frame states, owners,
    backing store, counts, the free list's head and tail rules, the
    modified list, and `Check`. Unit tests only.
@@ -701,3 +715,24 @@ decisions above have been changed to follow them.
   read from their file (Decision 15); Phase 67 deferred to the end
   (Decision 16). Phases 63 to 67 each got a planning doc, and PLAN.md's
   index lists them. Subtask 1 is done.
+- **2026-10-15, subtask 2 (settings):** `corevms/sysgen.go`: `Sysgen`
+  (`Paging`, the configured PQL defaults by quota name, `MinWSCount`) on
+  the `System` (`SetSysgen`), with `DefaultSysgen`. `resolveQuotas`
+  takes a quota's default from it (`pqlDefault`). `Account`,
+  `SystemAccount`, and `LoginQuotas` give a logging-in process (process 1
+  today, `NewEnvironment`) its working set sizes and its job's PGFLQUOTA,
+  laid over by the configuration, and MINWSCNT. `$CREPRC` sets the
+  child's MINWSCNT from it too. The author's note that process 1 will
+  become one of many detached jobs with a SYSUAF behind them shaped
+  this: no special case for process 1, only an account record.
+  `machine/sysgen.go` reads `vax.sysgen.paging.enable`, `minwscnt`,
+  `pql_dwsdefault`, `pql_dwsquota`, `pql_dwsextent`, and `pql_dpgflquota`
+  (`ParseSysgenCount`: decimal or %X; anything not a positive integer
+  keeps the default, and cmd/govax warns at startup).
+  `Machine.VMInitPaging` takes the mode, `VMInit` takes it from the
+  setting, and INIT and ZERO clear it. The mode reaches each new System
+  through `newRTL`. VMINIT's `/[NO]PAGING` qualifier is in `console.dcl`
+  (id 1818). HELP VMINIT and CONFIG KEYS describe them; HELP says paging
+  is being added in stages and changes nothing yet. Tests:
+  `corevms/sysgen_test.go`, `machine/sysgen_test.go`,
+  `console/vmpaging_test.go`. The full suite passes.

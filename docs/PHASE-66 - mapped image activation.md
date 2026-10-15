@@ -48,8 +48,8 @@ P0 alone.
   `ReadPage(vbn, buf)`. It's implemented by `rms.ACPFile` (volume) and a
   host file, opened when the image is read and kept by the ICB until
   rundown. `ReadImage`'s Go copy is no longer where pages come from.
-- **The header** (the author, 2026-10-15: leave it where it is for now,
-  and decide later). A closer look shows it isn't kept in P0 at all.
+- **The header is not written to P0 in paging mode** (the author,
+  2026-10-15, after first leaving it for later). A closer look shows it isn't kept in P0 at all.
   `imageLoad` writes the header blocks at the image's base plus 0x200
   only to read the transfer offset, ident offset, and ISDs back with
   `loadWord`. It doesn't move `RegionSize` for them. The image's own
@@ -63,11 +63,12 @@ P0 alone.
   would fault in demand-zero pages, counted in PAGEFLTS and charged to
   PGFLQUOTA, that the mapping replaces at once. Writing after the mapping
   would dirty image pages and give them page file backing. The
-  recommendation for subtask 3 is to parse the header from `ReadImage`'s
-  Go copy in paging mode and not write it to P0. The only visible
-  difference would be pages no ISD covers inside the header's range,
-  which would read as zeros rather than header bytes. Subtask 1 confirms
-  that no image govax runs relies on that, and the author decides.
+  rule for subtask 3: in paging mode, parse the header from
+  `ReadImage`'s Go copy and don't write it to P0. The only visible
+  difference is in pages inside the header's range that no ISD covers,
+  which read as zeros rather than header bytes. Subtask 1 checks that no
+  image govax runs relies on that. With paging off, the header goes to
+  P0 as today.
 - **Protection and fixups:** the pages are mapped UW, the fixup pass
   writes them through faults, and then `setImageProtection` gives each
   section its protection *in every PTE form*. Today it skips pages
@@ -87,8 +88,6 @@ P0 alone.
 
 ## Open questions
 
-- **The header in P0:** the author leaves it for now (above). Subtask 1
-  brings the recommendation back for a decision.
 - **Host shareable images:** load mapped and private per process, as
   today's copies are. Installing them as shared global sections is future
   work.
@@ -122,3 +121,5 @@ P0 alone.
 - **2026-10-15:** The author: leave the header mapped for now and decide
   later. The design notes record that it's a scratch copy overwritten by
   the image's own pages, and recommend not writing it in paging mode.
+- **2026-10-15:** The author agreed: the header isn't written to P0 in
+  paging mode.

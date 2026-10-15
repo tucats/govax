@@ -293,6 +293,11 @@ func NewEnvironment(sys *System, logicals *lnm.Database, consoleIn io.Reader, co
 
 	env.Process.Job = newJob(env.Process.PID)
 
+	// The process logs in as SYSTEM, the one account govax has
+	// (sysgen.go): its quotas, with the configuration's PQL parameters
+	// laid over them.
+	sys.Sysgen.LoginQuotas(env.Process, SystemAccount())
+
 	return env, nil
 }
 

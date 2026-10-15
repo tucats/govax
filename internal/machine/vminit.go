@@ -32,8 +32,17 @@ const (
 )
 
 // VMInit implements the VMINIT command: builds P0/P1/S0 page tables and
-// turns on virtual memory.
+// turns on virtual memory, with VMS paging on or off as
+// vax.sysgen.paging.enable says (VMInitPaging).
 func (m *Machine) VMInit(p0Pages, p1Pages, s0Pages, kspPages, espPages, sspPages, ispPages, stringPoolPages uint32) error {
+	return m.VMInitPaging(pagingDefault(), p0Pages, p1Pages, s0Pages, kspPages, espPages, sspPages, ispPages, stringPoolPages)
+}
+
+// VMInitPaging is VMINIT with its paging mode given: /PAGING or
+// /NOPAGING (docs/PHASE-62 - VMS paging.md, Decision 1). The mode lasts
+// until the next VMINIT, INIT, or ZERO, since VMINIT is when physical
+// memory is wiped and the page tables built.
+func (m *Machine) VMInitPaging(paging bool, p0Pages, p1Pages, s0Pages, kspPages, espPages, sspPages, ispPages, stringPoolPages uint32) error {
 	if err := m.requireInit(); err != nil {
 		return err
 	}
@@ -105,6 +114,7 @@ func (m *Machine) VMInit(p0Pages, p1Pages, s0Pages, kspPages, espPages, sspPages
 
 	m.Mem = vm.NewMemory(m.Mem.Size())
 	m.Engine = cpu.NewEngine(m.CPU, m.Mem)
+	m.paging = paging
 	m.newRTL()
 
 	m.Engine.SetSystemServices(m)

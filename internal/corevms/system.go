@@ -102,6 +102,11 @@ type System struct {
 	// (SetProcessSettings, which also gives the scheduler its quantum).
 	ProcessSettings ProcessSettings
 
+	// Sysgen holds the system parameters (sysgen.go). NewSystem sets
+	// the defaults; the console replaces them with the vax.sysgen.*
+	// settings (SetSysgen).
+	Sysgen Sysgen
+
 	// ActivateImage activates image in env's process, a process $CREPRC
 	// created, at its startup (startup.go): it loads the image and the
 	// shareable images it needs into the process's P0 and returns the
@@ -188,6 +193,7 @@ func NewSystem(cpu *registers.CPU, mem *vm.Memory, devices *iodev.DeviceTable, m
 		Clock:             wallClock,
 		NodeName:          nominalNodeName,
 		ProcessSettings:   DefaultProcessSettings(),
+		Sysgen:            DefaultSysgen(),
 		procs:             newProcessTable(),
 		sched:             sched.New(DefaultProcessQuantum),
 	}
