@@ -3,8 +3,8 @@
 **Status:** planned (2026-10-15). Part A (the survey) and Part B (the
 decisions) were reviewed and accepted by the author on 2026-10-15 (the
 answers are under "The review"). Part C splits the work into Phases 62
-to 67, each with a planning doc of its own. Subtask 1 is done; nothing
-is implemented yet. Needs Phases 43–49 (processes, the scheduler,
+to 67, each with a planning doc of its own. Subtasks 1 to 3 are done
+(the plan, the settings, and `internal/paging`'s PFN database). Needs Phases 43–49 (processes, the scheduler,
 sections) and 52.
 
 Today govax translates virtual addresses faithfully, but a page that
@@ -622,9 +622,9 @@ review after each.
    defaults and process 1's login quotas read from it; VMINIT
    `/[NO]PAGING`, defaulting to the setting (so `vax.init` needs no
    change).
-3. **`internal/paging`'s PFN database and lists:** frame states, owners,
-   backing store, counts, the free list's head and tail rules, the
-   modified list, and `Check`. Unit tests only.
+3. **`internal/paging`'s PFN database and lists** (done 2026-10-15):
+   frame states, owners, backing store, counts, the free list's head and
+   tail rules, the modified list, and `Check`. Unit tests only.
 4. **`vm`:** the transition and page file PTE forms (`SectionIndex`
    fixed); a `FrameAllocator` seam on `Memory`, which uses `pageMap` with
    paging off and `paging` with it on; demand-zero frames zeroed when
@@ -736,3 +736,31 @@ decisions above have been changed to follow them.
   is being added in stages and changes nothing yet. Tests:
   `corevms/sysgen_test.go`, `machine/sysgen_test.go`,
   `console/vmpaging_test.go`. The full suite passes.
+- **2026-10-15, subtask 3 (the PFN database):** `internal/paging`, a
+  leaf package (`doc.go` describes the model, from the book's 14.2 and
+  15.2). `Database` (`New(frames)`: every frame free, in PFN order, so
+  the lowest go first as today) keeps an `Entry` per frame: `State`
+  (`Free`, `Modified`, `Active`), `Type` (`ProcessPage`, `GlobalPage`,
+  `SystemPage`), the tie to a virtual page (`Tied`, `Owner`: an opaque
+  handle and a virtual address), `Backing` (none, page file block or
+  "to be allocated", section PSTX and block, GPTX), `RefCount`,
+  `ShareCount`, and `SavedModify`. The lists are doubly linked through
+  Go arrays (`list.go`, VMS's FLINK/BLINK). Operations: `Reserve` (a
+  system frame, VMINIT's), `Allocate` (the free list's head; a tied
+  frame's old tie is broken first through the caller's `TieBreaker`),
+  `Release` (to the tail of the free or modified list by the saved
+  modify bit, ORed with the PTE's), `Hold`, `Share`/`Unshare` (the first
+  share is one reference), `Reclaim` (a soft fault, from anywhere on
+  either list, keeping the bit), `Delete` (untied, to the free list's
+  head), `SetBacking`, `SetModified`, `FirstModified` and `Cleaned` (the
+  writer's: to the free list's tail, still tied). Left out, as Decision
+  5 allows: the read/write in progress and release pending states, the
+  collided bit, and the bad page list; the WSLX is Phase 63's. Two rules
+  of govax's own: `Release` refuses an untied frame (`Delete` gives a
+  reserved one back), and a frame on the modified list must be tied.
+  `Check` verifies the links both ways, each frame in one place, the
+  counts, each state's fields, and that no two tied frames share an
+  owner. Tests (`database_test.go`): each operation and order rule,
+  `Check` finding 24 kinds of damage, and 20,000 random operations with
+  `Check` after each (which found the untied-frame rule). Nothing uses
+  the package yet.
