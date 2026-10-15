@@ -6,7 +6,7 @@ yet. Part C splits the work into Phases 62 to 67. Needs Phases 43–49
 (processes, the scheduler, sections) and 52.
 
 Today govax translates virtual addresses faithfully, but a page that
-isn't valid has only one fate: the first touch gives it a physical page
+isn't valid has only one fate: the first touch gives it a physical page 
 (a zeroed one, or one read from a section's file), and from then on it
 stays in memory until the page is deleted. Nothing ever takes a page
 away from a process. There is no working set, no list of pages waiting
@@ -723,26 +723,42 @@ stops for review after each.
    free (and modified) pages are real frames of VAX memory that keep
    their contents, and the list's links are Go. Did you mean the list
    structure itself should be in VAX memory (for example a PFN database
-   in S0 that VAX code could inspect)?
+   in S0 that VAX code could inspect)? **Answer** The list structure
+   itself does not need to reside in VAX memory. `govax` will not support
+   user programs that attempt to directly access internal VAX/VMS data
+   structures.
 2. **Two lists or one?** The plan follows VMS: clean pages on a free
    list, dirty ones on a modified list that the writer drains to the page
    file when it grows past MPW_HILIMIT (Decision 7). Your description had
    a single free list spilling to the page file. Is VMS's model what you
-   want?
+   want? **Answer** Yes, follow the VMS model.
 3. **Settings.** Is the rename to `pql_dpgflquota` OK? Do you want the
    extra pager parameters in the table as keys, or kept as constants
-   until a probe gives VMS's values?
+   until a probe gives VMS's values? **Answer** Yes, renaming the
+   parameters to match VMS `sysgen` names is good. You can extend the
+   config parameters as needed; that's better than constants. The goal
+   is that somewhat familiar with `SYSGEN` on VMS will recognize the
+   meaning/use of the config keys with corresponding `vax.sysgen.` names.
 4. **Wait states.** Decision 5 resolves faults synchronously, with no
    PFW, COLPG, or FPG states. Is that acceptable, or should a hard fault
-   make the process wait (letting others run) as VMS does?
+   make the process wait (letting others run) as VMS does? **Answer** it
+   is fine to do all paging operations synchronously; the host system is
+   so much faster than a real VAX (20x in most cases) that there is no
+   meaningful benefit to asynchronous operations, and lots of added
+   complexity that doesn't benefit the user-written programs' perception
+   of how things are operating.
 5. **Host images.** With mapping, a host image's pages are read from
    the host file while it runs. If something rewrites that file in place
    meanwhile (LINK to the same host path), the running image would see
    it. Should host images keep reading from the file (VMS-like), or page
-   from the Go copy `ReadImage` already made?
+   from the Go copy `ReadImage` already made? **Answer** While I do not
+   anticipate there is every a case where external writes to an image
+   or section file would happen, the VMS-like behavior is correct.
 6. **Phase 67:** in the program, or deferred until the rest is done?
+   **Answer** You can defer to the end.
 7. **The package name:** `internal/mmg`, or something plainer
-   (`internal/paging`)?
+   (`internal/paging`)? **Answer** I prefer "internal/paging" for ease
+   of reading by future maintainers of `govax`.
 
 ## Progress log
 
