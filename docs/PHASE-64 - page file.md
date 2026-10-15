@@ -67,14 +67,13 @@ memory:
   (the probe confirms the item's meaning).
 - **Read clustering** from the page file is Phase 65's subtask with the
   sections', so clustering is built once, for every backing store.
+- **Exhaustion** (the author, 2026-10-15): when the page file is full and
+  no frame can be freed, govax writes a console message and the fault
+  fails, as it does today when memory runs out. No process waits for
+  space (VMS's RWMPE and RWMPB states aren't modeled).
 
 ## Open questions
 
-- **A full page file:** the writer stops and dirty pages stay. If
-  physical memory is then exhausted too, a fault fails as it does today
-  when memory runs out. On VMS the process would wait (RWMPE). Is a
-  console message and the failed fault (the program sees what it sees
-  today) enough?
 - **Contiguous creation on a volume:** does ods2 offer contiguous
   allocation, or does govax need a new ods2 release (tag, then
   `GOWORK=off go get`, per CLAUDE.md)?
@@ -98,7 +97,8 @@ memory:
 4. **Hard faults from the page file**, and blocks freed on delete and on
    re-modification.
 5. **PGFLQUOTA:** charge and refund, SS$_EXQUOTA from the creating
-   services, JPI$_PAGFILCNT.
+   services, JPI$_PAGFILCNT; exhaustion's console message and failed
+   fault.
 6. **Rundown and deletion** give blocks and charges back; DISMOUNT
    refuses the page file's volume; the reclaimer runs the writer first.
 7. **Reporting:** SHOW MEMORY's page file usage; the system-wide writer
@@ -112,3 +112,5 @@ memory:
 ## Progress log
 
 - **2026-10-15:** Planned with Phase 62's review.
+- **2026-10-15:** The author settled exhaustion: a console message and
+  a failed fault, with no process waiting.

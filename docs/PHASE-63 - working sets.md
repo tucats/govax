@@ -24,6 +24,10 @@ leaving memory as they do on VMS:
 - the working set services stop being bookkeeping: `$ADJWSL` changes the
   real limit, `$PURGWS` empties a range, `$LKWSET` locks pages in, and
   `$LCKPAG` locks them in memory;
+- DCL's **SET WORKING_SET** (/LIMIT, /QUOTA, /EXTENT, /[NO]ADJUST) changes
+  the current process's own values within what it was authorized at
+  creation, the first per-process setting after creation (the author,
+  2026-10-15), and SHOW WORKING_SET reports them;
 - faults are counted per process as soft or hard, and the working set's
   sizes are reported.
 
@@ -80,9 +84,12 @@ pages being reused and by deletion, as before.
   count too. govax's page tables don't fault (Decision 13). The probe
   shows how much of VMS's counts that accounts for; differences are
   expected and listed, not chased.
-- **SET WORKING_SET** (/LIMIT, /QUOTA, /EXTENT, /[NO]ADJUST) is the
-  per-process setting the author mentioned for later. It's small once the
-  working set is real: here (subtask 8) or later?
+- **SET WORKING_SET's limits:** the DCL Dictionary bounds /QUOTA and
+  /EXTENT by the authorized values (WSAUTH, WSAUTHEXT) and by PQL_MWSQUOTA
+  and PQL_MWSEXTENT. govax's authorized values are those the process got
+  at creation. /ADJUST has nothing to switch until automatic adjustment
+  exists, so it's recorded and shown (the survey checks how VMS reports
+  it).
 - **Statuses:** `$LKWSET`'s SS$_LKWSETFUL threshold, and `$PURGWS` on a
   range with locked pages. The manuals first, then the probe.
 
@@ -112,14 +119,19 @@ pages being reused and by deletion, as before.
    be.
 8. **The reclaimer** (FREELIM, FREEGOAL), and accounting: soft and hard
    counts; `$GETJPI` PPGCNT, GPGCNT, WSSIZE, WSPEAK; SHOW SYSTEM's and
-   SHOW PROCESS's page faults; DCL SHOW WORKING_SET.
-9. **The VMS probe** (`testdata/pg63`): a program that sets a limit
+   SHOW PROCESS's page faults.
+9. **DCL SET WORKING_SET and SHOW WORKING_SET** (the console's grammar
+   and `internal/dclshell`), in process 1 and in subprocesses, through
+   the same code as `$ADJWSL`.
+10. **The VMS probe** (`testdata/pg63`): a program that sets a limit
    with `$ADJWSL`, purges with `$PURGWS`, touches pages in known
    patterns, and reports PAGEFLTS deltas, PPGCNT, GPGCNT, and WSSIZE;
    also the services' statuses, and SYSGEN SHOW of the paging parameters
    (Decision 11's table). govax is then changed to its answers.
-10. **Close-out:** CLAUDE.md, HELP, PLAN.md.
+11. **Close-out:** CLAUDE.md, HELP, PLAN.md.
 
 ## Progress log
 
 - **2026-10-15:** Planned with Phase 62's review.
+- **2026-10-15:** The author put SET WORKING_SET in this phase
+  (subtask 9).
