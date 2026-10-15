@@ -1029,9 +1029,10 @@ $SHOW,VM
 $SH,MEMO
 $SH,VM
   Shows the size of physical memory and, once VMINIT has made page tables,
-  how much of each region (P0, P1, S0) is used (govax's own). With
-  /STATISTICS, counters of the memory system's work; /RUNTIME and /FULL
-  show more.
+  how much of each region (P0, P1, S0) is used (govax's own). With paging
+  on (VMINIT/PAGING), the page frames on the free and modified lists and
+  in use. With /STATISTICS, counters of the memory system's work;
+  /RUNTIME and /FULL show more.
 
   Format:
 
@@ -1069,8 +1070,12 @@ $SH,PTE
 
     SHOW PAGE [/READ|/WRITE] address
 
-  The entry's fields are shown, with its protection by name (PTE$K_KW).
-  /READ and /WRITE say which access the entry is checked for.
+  The entry's fields are shown, with its protection by name (PTE$K_KW),
+  and the form it takes: valid; or, when invalid, a process section page
+  (its PSTX), a global page (its GPTX), a page in the page file (its
+  block), a page in transition on the free or modified list (its frame),
+  or demand zero. /READ and /WRITE say which access the entry is checked
+  for.
 
 $SHOW,SCB
 $SH,SCB

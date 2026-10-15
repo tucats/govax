@@ -185,7 +185,10 @@ $SHOW,MEM
 $SH  ,MEMO
 $SH  ,MEM
     The SHOW MEMORY command displays the amount of physical and virtual
-    memory available on the virtual VAX.
+    memory available on the virtual VAX. With paging on (VMINIT/PAGING),
+    it also shows how many page frames are on the free list, on the
+    modified list, and in use, by the kind of page each holds (a process's,
+    a global section's, or the system's).
 
 $SHOW,TRAN
 $SH  ,TRAN

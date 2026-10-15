@@ -3,9 +3,10 @@
 **Status:** planned (2026-10-15). Part A (the survey) and Part B (the
 decisions) were reviewed and accepted by the author on 2026-10-15 (the
 answers are under "The review"). Part C splits the work into Phases 62
-to 67, each with a planning doc of its own. Subtasks 1 to 5 are done
+to 67, each with a planning doc of its own. Subtasks 1 to 6 are done
 (the plan, the settings, `internal/paging`'s PFN database, `vm`'s
-PTE forms and frame allocator, and corevms's frame claims). Needs Phases 43–49 (processes, the scheduler,
+PTE forms and frame allocator, corevms's frame claims, and SHOW MEMORY's
+and SHOW PAGE's reports). Needs Phases 43–49 (processes, the scheduler,
 sections) and 52.
 
 Today govax translates virtual addresses faithfully, but a page that
@@ -636,7 +637,7 @@ review after each.
    `DemandZero`, `readPage`, `createSection`, `releaseFrame`, and
    `releasePTE`'s free. Nothing is evicted yet, and the suite passes in
    both modes.
-6. **Showing it:** SHOW MEMORY's frame counts by state in paging mode,
+6. **Showing it** (done 2026-10-15): SHOW MEMORY's frame counts by state in paging mode,
    and SHOW PAGE (`LookupPTE`'s report) naming each PTE form.
 7. **Close-out:** CLAUDE.md's package descriptions (`internal/paging`,
    the settings), HELP, and PLAN.md's entry.
@@ -835,3 +836,15 @@ decisions above have been changed to follow them.
   with the paging default forced on and `Check` run after every frame
   claim and release (a temporary change, not committed; the only
   failure was `TestVMInitPaging`'s check that the default is off).
+- **2026-10-15, subtask 6 (showing it):** `machine/show.go`: in paging
+  mode SHOW MEMORY adds the PFN database's counts (`showFrames`: the free
+  list, the modified list, and the active frames by type, process,
+  global, and system); with paging off its output is unchanged. SHOW PAGE
+  gains a `PTE Form:` line (`pteForm`): valid with its PFN, or, when
+  invalid, process section (PSTX), global page (GPTX), page file (its
+  block, or "not yet allocated" for block 0), transition (its PFN), or
+  demand zero, named by the PTE's bits alone in either mode. HELP SHOW
+  MEMORY (console and debugger) and SHOW PAGE describe them. Tests
+  (`machine/show_test.go`): the counts with paging on (adding up to the
+  database's frames) and their absence with it off, and each PTE form
+  stored at a P0 page and named. The full suite passes.

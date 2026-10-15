@@ -11,6 +11,7 @@ import (
 	"github.com/tucats/govax/internal/corevms"
 	"github.com/tucats/govax/internal/cpu"
 	"github.com/tucats/govax/internal/lnm"
+	"github.com/tucats/govax/internal/paging"
 	"github.com/tucats/govax/internal/registers"
 	"github.com/tucats/govax/internal/symtab"
 	"github.com/tucats/govax/internal/vm"
@@ -105,6 +106,10 @@ func (m *Machine) ShowMemory() error {
 	mapped := m.Mem.MappedPages()
 	m.Printf("    There are %d physical pages mapped, %d free.\n\n", mapped, int(pages)-mapped)
 
+	if db := m.Mem.Paging(); db != nil {
+		m.showFrames(db.Counts())
+	}
+
 	bases := [3]uint32{m.CPU.PR(registers.P0BR), m.CPU.PR(registers.P1BR), m.CPU.PR(registers.SBR)}
 	lens := [3]uint32{m.CPU.PR(registers.P0LR), m.CPU.PR(registers.P1LR), m.CPU.PR(registers.SLR)}
 
@@ -124,6 +129,20 @@ func (m *Machine) ShowMemory() error {
 	}
 
 	return nil
+}
+
+// showFrames prints, in paging mode (VMINIT/PAGING), how many page frames
+// are in each place the PFN database keeps them: the free list, the
+// modified list (pages waiting to be written to the page file), and in
+// use, by the kind of page each holds.
+func (m *Machine) showFrames(c paging.Counts) {
+	m.Printf("    Page frames (paging on)\n")
+	m.Printf("        Free list          %8d\n", c.Free)
+	m.Printf("        Modified list      %8d\n", c.Modified)
+	m.Printf("        Active             %8d\n", c.Active())
+	m.Printf("            Process pages  %8d\n", c.Process)
+	m.Printf("            Global pages   %8d\n", c.Global)
+	m.Printf("            System pages   %8d\n\n", c.System)
 }
 
 // ShowSymbols prints every defined symbol whose name matches pattern,
@@ -687,6 +706,7 @@ func (m *Machine) ShowPage(addrExpr string, write bool) error {
 	m.Printf("    Region:            %02d\n", region)
 	m.Printf("    PTE Address:       %08X\n", pteAddr)
 	m.Printf("    PTE Longword:      %08X\n", uint32(pte))
+	m.Printf("    PTE Form:          %s\n", pteForm(pte))
 	m.Printf("        VALID: %s\n", boolToDigit(pte.Valid()))
 	m.Printf("        PROT:  %02X (PTE$K_%s)\n", uint8(pte.Protection()), pte.Protection())
 	m.Printf("        M:     %s\n", boolToDigit(pte.Modified()))
@@ -713,6 +733,42 @@ func (m *Machine) ShowPage(addrExpr string, write bool) error {
 	}
 
 	return nil
+}
+
+// pteForm names the form a PTE takes (internal/vm's pager.go; *VAX/VMS
+// Internals and Data Structures*, figure 14-3) and the number its form
+// holds. An invalid PTE's type bits say where the page is: a process
+// section, a global section, the page file, a frame on the free or
+// modified list (in transition), or nowhere yet (demand zero). The forms
+// are named by their bits alone; with paging off, govax never writes the
+// page file or transition forms, and treats any invalid page that isn't a
+// section or global page as demand zero.
+func pteForm(pte vm.PTE) string {
+	if pte.Valid() {
+		return fmt.Sprintf("valid, PFN %08X", pte.PFN())
+	}
+
+	if i, ok := pte.SectionIndex(); ok {
+		return fmt.Sprintf("process section, PSTX %X", i)
+	}
+
+	if i, ok := pte.GlobalIndex(); ok {
+		return fmt.Sprintf("global page, GPTX %X", i)
+	}
+
+	if b, ok := pte.PageFileBlock(); ok {
+		if b == 0 {
+			return "page file, block not yet allocated"
+		}
+
+		return fmt.Sprintf("page file, block %X", b)
+	}
+
+	if pfn, ok := pte.Transition(); ok {
+		return fmt.Sprintf("transition, PFN %08X", pfn)
+	}
+
+	return "demand zero"
 }
 
 func boolToDigit(b bool) string {
