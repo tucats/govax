@@ -384,6 +384,12 @@ func (e *Engine) Step() error {
 
 	e.instrCount++
 
+	// A new instruction begins: with VMS paging on, the memory forgets
+	// which frames the last one translated (internal/vm/frames.go), so
+	// the pager may take them away again. Interrupt and AST delivery
+	// below count as part of this instruction.
+	e.mem.BeginInstruction()
+
 	// Advance the clocks (clock.go). In hardware-clock mode, look at the
 	// host's clock only every hostClockPollInterval instructions: reading
 	// it costs more than most instructions do. In quantum mode, count this

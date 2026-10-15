@@ -113,6 +113,7 @@ func (m *Machine) VMInitPaging(paging bool, p0Pages, p1Pages, s0Pages, kspPages,
 	m.EndOtherProcesses()
 
 	m.Mem = vm.NewMemory(m.Mem.Size())
+	m.Mem.SetPaging(paging) // the PFN database, or the bitmap without paging
 	m.Engine = cpu.NewEngine(m.CPU, m.Mem)
 	m.paging = paging
 	m.newRTL()

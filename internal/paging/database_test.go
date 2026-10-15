@@ -613,3 +613,49 @@ func TestRandomOperations(t *testing.T) {
 		t.Fatalf("counts %+v don't add up to %d frames", c, d.Frames())
 	}
 }
+
+// AllocateSystem takes the free list's head, as Allocate does, for an
+// untied system frame, breaking the frame's old tie first.
+func TestAllocateSystem(t *testing.T) {
+	d := New(3)
+	log := &tieLog{}
+	d.SetTieBreaker(log)
+
+	release(t, d, allocate(t, d, 0x400), false, Free)
+
+	pfn, err := d.AllocateSystem()
+	must(t, d, err)
+
+	if pfn != 1 {
+		t.Fatalf("system frame %d, want the free list's head, 1", pfn)
+	}
+
+	e := entry(t, d, pfn)
+	if e.State != Active || e.Type != SystemPage || e.Tied || e.RefCount != 1 {
+		t.Fatalf("system frame's record %+v", e)
+	}
+
+	pfn, err = d.AllocateSystem()
+	must(t, d, err)
+
+	if pfn != 2 || len(log.ties) != 0 {
+		t.Fatalf("second system frame %d, ties broken %v", pfn, log.ties)
+	}
+
+	pfn, err = d.AllocateSystem()
+	must(t, d, err)
+
+	if pfn != 0 || len(log.ties) != 1 || log.ties[0].owner != (Owner{1, 0x400}) {
+		t.Fatalf("third system frame %d, ties broken %v", pfn, log.ties)
+	}
+
+	if _, err := d.AllocateSystem(); !errors.Is(err, ErrNoFrame) {
+		t.Fatalf("system frame from an empty free list: %v", err)
+	}
+
+	must(t, d, d.Delete(2))
+
+	if c := d.Counts(); c.System != 2 || c.Free != 1 {
+		t.Fatalf("counts %+v", c)
+	}
+}

@@ -17,17 +17,26 @@ package vm
 // 24-23 (owner) mean the same in all of them, and bits 26 (TYP0) and 22
 // (TYP1) say which form the rest is:
 //
-//   - TYP0 set: a *process section table index* in bits 21-0. The page
-//     belongs to a section of a file the process mapped privately
-//     ($CRMPSC), and the process section table entry says which file and
-//     which block.
+//   - TYP0 set, TYP1 clear: a *process section table index* in bits
+//     21-0. The page belongs to a section of a file the process mapped
+//     privately ($CRMPSC, or an image file), and the process section
+//     table entry says which file and which block.
 //   - TYP1 set, TYP0 clear: a *global page table index* in bits 21-0. The
 //     page belongs to a global section; the global page table entry says
 //     which section and which of its pages.
-//   - both clear, and the other bits 0: a demand-zero page, whose first
-//     touch gives it a page of zeros. (VMS also keeps a page file block
-//     number or a page "in transition" in this form; govax has neither
-//     yet.)
+//   - both set: a *page file block* in bits 21-0. The page was written to
+//     the page file, at that block; block 0 means a block will be given
+//     to it when it's first written, and hasn't been yet.
+//   - both clear, and a page frame number in bits 20-0: a page *in
+//     transition*. The page has left the process's working set, but its
+//     frame, that one, still holds it, on the free or modified page list;
+//     a fault takes it back with no I/O (a "soft" fault).
+//   - both clear, and the frame number 0: a demand-zero page, whose first
+//     touch gives it a page of zeros.
+//
+// Only VMS paging (VMINIT/PAGING) writes the page file and transition
+// forms; with it off, an invalid PTE is a section, a global page, or
+// demand-zero.
 //
 // (In a *valid* PTE, bit 26 is the modify bit and bit 22 a software bit;
 // the forms apply only while the valid bit is clear.)
@@ -62,14 +71,48 @@ const (
 // table index an invalid PTE can hold.
 const MaxPTEIndex = pteMaskIndex
 
+// MaxPageFileBlock is the largest page file block an invalid PTE can
+// hold.
+const MaxPageFileBlock = pteMaskIndex
+
 // SectionIndex returns an invalid PTE's process section table index, and
-// whether it is one (valid bit clear, TYP0 set).
+// whether it is one (valid bit clear, TYP0 set, TYP1 clear).
 func (p PTE) SectionIndex() (uint32, bool) {
-	if p.Valid() || p&pteBitTyp0 == 0 {
+	if p.Valid() || p&pteBitTyp0 == 0 || p&pteBitTyp1 != 0 {
 		return 0, false
 	}
 
 	return uint32(p) & pteMaskIndex, true
+}
+
+// PageFileBlock returns an invalid PTE's page file block, and whether it
+// is one (valid bit clear, TYP0 and TYP1 set). Block 0 is a page whose
+// block is yet to be allocated.
+func (p PTE) PageFileBlock() (uint32, bool) {
+	if p.Valid() || p&pteBitTyp0 == 0 || p&pteBitTyp1 == 0 {
+		return 0, false
+	}
+
+	return uint32(p) & pteMaskIndex, true
+}
+
+// Transition returns the frame of an invalid PTE in transition, and
+// whether it is one (valid bit clear, TYP0 and TYP1 clear, a frame number
+// other than 0).
+func (p PTE) Transition() (uint32, bool) {
+	if p.Valid() || p&(pteBitTyp0|pteBitTyp1) != 0 || p.PFN() == 0 {
+		return 0, false
+	}
+
+	return p.PFN(), true
+}
+
+// IsDemandZero reports whether an invalid PTE is the demand-zero form
+// (valid bit clear, TYP0 and TYP1 clear, frame number 0). With paging
+// off, any invalid page that isn't a section or global page is treated as
+// demand-zero whatever its other bits say; this is the form itself.
+func (p PTE) IsDemandZero() bool {
+	return !p.Valid() && p&(pteBitTyp0|pteBitTyp1) == 0 && p.PFN() == 0
 }
 
 // GlobalIndex returns an invalid PTE's global page table index, and
@@ -96,6 +139,31 @@ func SectionPTE(index uint32, prot Protection, owner uint8) PTE {
 // with protection prot and owner mode owner.
 func GlobalPTE(index uint32, prot Protection, owner uint8) PTE {
 	p := PTE(index&pteMaskIndex) | pteBitTyp1
+	p.SetProtection(prot)
+	p.SetOwner(owner)
+
+	return p
+}
+
+// PageFilePTE returns an invalid PTE holding page file block block (0:
+// a block yet to be allocated), with protection prot and owner mode
+// owner.
+func PageFilePTE(block uint32, prot Protection, owner uint8) PTE {
+	p := PTE(block&pteMaskIndex) | pteBitTyp0 | pteBitTyp1
+	p.SetProtection(prot)
+	p.SetOwner(owner)
+
+	return p
+}
+
+// TransitionPTE returns an invalid PTE for a page in transition in frame
+// pfn (which must not be 0, the demand-zero form), with protection prot
+// and owner mode owner: the form a page's PTE takes when the page leaves
+// its working set but keeps its frame.
+func TransitionPTE(pfn uint32, prot Protection, owner uint8) PTE {
+	var p PTE
+
+	p.SetPFN(pfn)
 	p.SetProtection(prot)
 	p.SetOwner(owner)
 

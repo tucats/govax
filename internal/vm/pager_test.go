@@ -44,11 +44,89 @@ func TestPTEForms(t *testing.T) {
 		t.Error("a demand-zero PTE reads as a global PTE")
 	}
 
+	if !dz.IsDemandZero() {
+		t.Error("a demand-zero PTE isn't one")
+	}
+
 	v := ValidPTE(7, ProtUW, 3)
 	v.SetModified(true)
 
 	if _, ok := v.SectionIndex(); ok {
 		t.Error("a valid, modified PTE reads as a section PTE")
+	}
+
+	if _, ok := v.PageFileBlock(); ok {
+		t.Error("a valid, modified PTE reads as a page file PTE")
+	}
+
+	if _, ok := v.Transition(); ok || v.IsDemandZero() {
+		t.Error("a valid PTE reads as in transition or demand-zero")
+	}
+}
+
+// TestPageFileAndTransitionForms checks the forms only paging writes: a
+// page file PTE (TYP0 and TYP1 set) and a transition PTE (both clear, a
+// frame number), each told apart from the others.
+func TestPageFileAndTransitionForms(t *testing.T) {
+	pf := PageFilePTE(0x2ABCDE&MaxPageFileBlock, ProtUR, 3)
+	if b, ok := pf.PageFileBlock(); !ok || b != 0x2ABCDE&MaxPageFileBlock {
+		t.Errorf("PageFileBlock = %#x, %v", b, ok)
+	}
+
+	if pf.Protection() != ProtUR || pf.Owner() != 3 || pf.Valid() {
+		t.Errorf("page file PTE %08X: protection, owner, or valid wrong", uint32(pf))
+	}
+
+	// TYP0 is set, but this isn't a section PTE any more than a global one.
+	if _, ok := pf.SectionIndex(); ok {
+		t.Error("a page file PTE reads as a section PTE")
+	}
+
+	if _, ok := pf.GlobalIndex(); ok {
+		t.Error("a page file PTE reads as a global PTE")
+	}
+
+	if _, ok := pf.Transition(); ok || pf.IsDemandZero() {
+		t.Error("a page file PTE reads as in transition or demand-zero")
+	}
+
+	// Block 0: a block yet to be allocated, still the page file form.
+	if b, ok := PageFilePTE(0, ProtUW, 3).PageFileBlock(); !ok || b != 0 {
+		t.Errorf("unallocated page file PTE's block = %d, %v", b, ok)
+	}
+
+	tr := TransitionPTE(0x1234, ProtUW, 3)
+	if pfn, ok := tr.Transition(); !ok || pfn != 0x1234 {
+		t.Errorf("Transition = %#x, %v", pfn, ok)
+	}
+
+	if tr.Protection() != ProtUW || tr.Owner() != 3 || tr.Valid() || tr.IsDemandZero() {
+		t.Errorf("transition PTE %08X: protection, owner, valid, or form wrong", uint32(tr))
+	}
+
+	for name, ok := range map[string]bool{
+		"section":   func() bool { _, ok := tr.SectionIndex(); return ok }(),
+		"global":    func() bool { _, ok := tr.GlobalIndex(); return ok }(),
+		"page file": func() bool { _, ok := tr.PageFileBlock(); return ok }(),
+	} {
+		if ok {
+			t.Errorf("a transition PTE reads as a %s PTE", name)
+		}
+	}
+
+	// Frame 0 in that form is demand-zero, not a transition.
+	if _, ok := TransitionPTE(0, ProtUW, 3).Transition(); ok {
+		t.Error("a PTE with frame 0 reads as in transition")
+	}
+
+	for _, p := range []PTE{SectionPTE(1, ProtUW, 3), GlobalPTE(1, ProtUW, 3)} {
+		if _, ok := p.Transition(); ok || p.IsDemandZero() {
+			t.Errorf("PTE %08X reads as in transition or demand-zero", uint32(p))
+		}
+
+		if _, ok := p.PageFileBlock(); ok {
+			t.Errorf("PTE %08X reads as a page file PTE", uint32(p))
+		}
 	}
 }
 

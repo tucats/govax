@@ -130,6 +130,24 @@ func (d *Database) Allocate(typ Type, owner Owner, back Backing) (PFN, error) {
 	return pfn, nil
 }
 
+// AllocateSystem takes the frame at the head of the free list for a
+// system page, tied to nothing and never paged: Reserve's rule for a
+// frame the caller doesn't choose (as VMS takes a frame for nonpaged
+// pool). An old tie is broken first, as Allocate does. Delete gives it
+// back.
+func (d *Database) AllocateSystem() (PFN, error) {
+	pfn := d.free.head
+	if pfn == noFrame {
+		return 0, ErrNoFrame
+	}
+
+	d.breakTie(pfn)
+	d.unlink(&d.free, pfn)
+	d.activate(pfn, Entry{Type: SystemPage, RefCount: 1})
+
+	return pfn, nil
+}
+
 // Hold adds a reason to keep an active frame active (VMS increments the
 // reference count to lock a page down). Release gives it back.
 func (d *Database) Hold(pfn PFN) error {

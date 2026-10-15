@@ -267,6 +267,10 @@ func (m *Memory) translate(cpu *registers.CPU, addr uint32, access AccessType, s
 
 			m.tb.stcFill(vpage, entry, mode)
 
+			if m.touched != nil {
+				m.noteTranslated(paddr)
+			}
+
 			if cpu.DebugEnabled(registers.DebugTB) {
 				ratio := 0.0
 				if m.tb.tries > 0 {
@@ -475,6 +479,10 @@ func (m *Memory) translate(cpu *registers.CPU, addr uint32, access AccessType, s
 	// comment — can skip straight to the fast paths near the top of this
 	// function instead of walking the page table all over again.
 	paddr := pte.PFN()<<9 + byteOffset
+
+	if m.touched != nil {
+		m.noteTranslated(paddr)
+	}
 
 	//
 	// The entry caches the page's protection code and modify bit, so it

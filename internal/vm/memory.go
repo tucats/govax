@@ -32,12 +32,12 @@ import (
 // the console (Phase 08) and I/O (Phase 09) subsystems that own that state,
 // so a physical address outside RAM is simply reported as unbacked for now.
 //
-// pageMap/vmValid are the Go equivalent of vm.c's global page_map array and
-// VMVALID macro: the free/claimed state of every physical page, and whether
-// a VMINIT has run and demand-paging (translate.go's Translate, on an
-// invalid PTE) is allowed to claim one — see AllocatePage/ReservePage/
-// MappedPages and internal/console/vminit.go, which is the only writer of
-// vmValid and the initial S0 reservations.
+// frames/vmValid are the Go equivalent of vm.c's global page_map array and
+// VMVALID macro: the free/claimed state of every physical page (frames.go's
+// FrameAllocator), and whether a VMINIT has run and demand-paging
+// (translate.go's Translate, on an invalid PTE) is allowed to claim one —
+// see AllocatePage/ReservePage/MappedPages and internal/machine/vminit.go,
+// which is the only writer of vmValid and the initial S0 reservations.
 type Memory struct {
 	// ram is a Go slice of bytes — a dynamically-sized, contiguous view
 	// over an underlying array, essentially "a resizable/sliceable array"
@@ -62,11 +62,19 @@ type Memory struct {
 	NVRAMEnd  uint32
 	NVRAMFile string // path passed to the last successful LoadNVRAM, for SHOW NVRAM
 
-	// pageMap records, one bool per 512-byte physical page, whether that
-	// page is currently claimed by some virtual mapping (true) or still
-	// free (false). It's the same idea as ram but at page granularity
-	// instead of byte granularity: len(pageMap) == len(ram)/pageSize.
-	pageMap []bool
+	// frames hands out and takes back physical page frames: a bitmap
+	// with VMS paging off, internal/paging's PFN database with it on
+	// (frames.go, SetPaging).
+	frames FrameAllocator
+
+	// pagingOn is set while frames is the PFN database (SetPaging).
+	pagingOn bool
+
+	// touched and touchGen are the frames translated in the current
+	// instruction, kept only with paging on (frames.go's
+	// BeginInstruction).
+	touched  []uint32
+	touchGen uint32
 
 	vmValid              bool
 	translationCount     int64
@@ -94,11 +102,11 @@ type Memory struct {
 // with every element already set to its zero value — for byte, that's 0 —
 // which is exactly "zeroed RAM" of the requested size. size/pageSize (an
 // integer division, so any partial trailing page is silently dropped) is
-// how many whole 512-byte pages fit in that much RAM, and make([]bool, ...)
-// likewise allocates that many bools, each defaulting to false ("not yet
-// claimed") — see the pageMap field comment above.
+// how many whole 512-byte pages fit in that much RAM, and the frame
+// allocator starts with every one of them free. It's the bitmap one (VMS
+// paging off) until SetPaging says otherwise.
 func NewMemory(size uint32) *Memory {
-	return &Memory{ram: make([]byte, size), pageMap: make([]bool, size/pageSize)}
+	return &Memory{ram: make([]byte, size), frames: newBitmapFrames(size / pageSize)}
 }
 
 // SetVMValid records whether a VMINIT has established page tables for this
@@ -112,9 +120,7 @@ func (m *Memory) SetVMValid(v bool) { m.vmValid = v }
 // always pre-mapped, DYNVM or not; see vminit.go), matching vm.c's own
 // unconditional `page_map[ page ] = 1` in that same loop.
 func (m *Memory) ReservePage(pfn uint32) {
-	if int(pfn) < len(m.pageMap) {
-		m.pageMap[pfn] = true
-	}
+	m.frames.Reserve(pfn)
 }
 
 // AllocatePage claims and returns the lowest-numbered free physical page,
@@ -133,6 +139,9 @@ func (m *Memory) ReservePage(pfn uint32) {
 // returned tuple means, which is why you'll see this pattern repeated
 // elsewhere in this package (e.g. Memory.Stats below).
 //
+// It claims an untied frame (FrameClaim's zero value); AllocateFrame
+// claims one for a page the pager may take away.
+//
 // Unlike vm.c's validate_page, which sizes its search to mapsize =
 // (memsize>>9)+1 — one slot past the last real physical page, letting it
 // hand out a PFN that addresses beyond RAM once every real page is taken —
@@ -142,15 +151,7 @@ func (m *Memory) ReservePage(pfn uint32) {
 // fail the subsequent memory access instead of getting one). See
 // docs/DEVIATIONS.md.
 func (m *Memory) AllocatePage() (pfn uint32, ok bool) {
-	for n := 1; n < len(m.pageMap); n++ {
-		if !m.pageMap[n] {
-			m.pageMap[n] = true
-
-			return uint32(n), true
-		}
-	}
-
-	return 0, false
+	return m.AllocateFrame(FrameClaim{})
 }
 
 // FreePage releases physical page pfn, claimed earlier by AllocatePage,
@@ -162,15 +163,19 @@ func (m *Memory) AllocatePage() (pfn uint32, ok bool) {
 // what it allocates (until pages could be freed, every page it handed out
 // had never been used). Page 0 and a page number beyond physical memory
 // are ignored.
+//
+// With VMS paging on, the page goes to the head of the free list with its
+// contents left as they are: AllocateFrame clears a frame when it hands it
+// out instead (frames.go).
 func (m *Memory) FreePage(pfn uint32) {
-	if pfn == 0 || int(pfn) >= len(m.pageMap) {
+	if pfn == 0 || pfn >= uint32(len(m.ram))/pageSize {
 		return
 	}
 
-	m.pageMap[pfn] = false
+	m.frames.Free(pfn)
 
-	if b, err := m.phys(pfn<<9, 512); err == nil {
-		clear(b)
+	if !m.pagingOn {
+		m.clearFrame(pfn)
 	}
 }
 
@@ -178,15 +183,7 @@ func (m *Memory) FreePage(pfn uint32) {
 // (reserved or demand-paged in), matching mapped_pages() — which, like
 // AllocatePage, never counts physical page 0.
 func (m *Memory) MappedPages() int {
-	count := 0
-
-	for n := 1; n < len(m.pageMap); n++ {
-		if m.pageMap[n] {
-			count++
-		}
-	}
-
-	return count
+	return m.frames.Claimed()
 }
 
 // Stats returns the key statistics for memory usage. If the translation

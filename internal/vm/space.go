@@ -152,7 +152,13 @@ func (m *Memory) resolvePTE(as AddressSpace, pteAddr, addr uint32, access Access
 
 	m.translationCount++
 
-	return pte.PFN()<<9 + addr&(pageSize-1), nil
+	paddr := pte.PFN()<<9 + addr&(pageSize-1)
+
+	if m.touched != nil {
+		m.noteTranslated(paddr)
+	}
+
+	return paddr, nil
 }
 
 // LookupPTEIn returns the page-table entry that maps addr in as (or in

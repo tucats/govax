@@ -3,8 +3,9 @@
 **Status:** planned (2026-10-15). Part A (the survey) and Part B (the
 decisions) were reviewed and accepted by the author on 2026-10-15 (the
 answers are under "The review"). Part C splits the work into Phases 62
-to 67, each with a planning doc of its own. Subtasks 1 to 3 are done
-(the plan, the settings, and `internal/paging`'s PFN database). Needs Phases 43–49 (processes, the scheduler,
+to 67, each with a planning doc of its own. Subtasks 1 to 4 are done
+(the plan, the settings, `internal/paging`'s PFN database, and `vm`'s
+PTE forms and frame allocator). Needs Phases 43–49 (processes, the scheduler,
 sections) and 52.
 
 Today govax translates virtual addresses faithfully, but a page that
@@ -625,7 +626,7 @@ review after each.
 3. **`internal/paging`'s PFN database and lists** (done 2026-10-15):
    frame states, owners, backing store, counts, the free list's head and
    tail rules, the modified list, and `Check`. Unit tests only.
-4. **`vm`:** the transition and page file PTE forms (`SectionIndex`
+4. **`vm`** (done 2026-10-15): the transition and page file PTE forms (`SectionIndex`
    fixed); a `FrameAllocator` seam on `Memory`, which uses `pageMap` with
    paging off and `paging` with it on; demand-zero frames zeroed when
    allocated in paging mode; the set of frames translated since the last
@@ -764,3 +765,39 @@ decisions above have been changed to follow them.
   `Check` finding 24 kinds of damage, and 20,000 random operations with
   `Check` after each (which found the untied-frame rule). Nothing uses
   the package yet.
+- **2026-10-15, subtask 4 (`vm`):** `pager.go`: the page file form
+  (`PageFilePTE`, `PageFileBlock`, `MaxPageFileBlock`; TYP0 and TYP1
+  set, block 0 a block yet to be allocated), the transition form
+  (`TransitionPTE`, `Transition`: both clear, a frame number other than
+  0), and `IsDemandZero` (both clear, frame 0). `SectionIndex` now
+  requires TYP1 clear. Nothing writes the new forms yet; with paging off
+  any other invalid page is still demand-zero. `frames.go`: a
+  `FrameAllocator` on `Memory`, `bitmapFrames` (the old `pageMap`, its
+  rules unchanged: lowest frame first, a freed frame cleared) or
+  `pagingFrames` (the PFN database; frame 0 reserved when it's made).
+  `SetPaging` chooses, and VMINIT calls it on the memory it makes, with
+  its paging mode; `Memory.Paging` returns the database (nil with paging
+  off). `AllocateFrame` takes a `FrameClaim` (the zero value an untied
+  system frame; `Tied` with a type, owner, and backing store for
+  `paging.Allocate`); with paging on a frame is cleared when it's handed
+  out unless the claim says the caller fills it (`Fill`), and `FreePage`
+  leaves its contents, the frame at the free list's head
+  (`Database.Delete`). `AllocatePage`, `ReservePage` (a second
+  reservation harmless, as before), `FreePage`, and `MappedPages` keep
+  their meanings in both modes, so subtask 5's callers change only to
+  record owners. `internal/paging` gained `AllocateSystem` (the free
+  list's head for an untied system frame, as Reserve gives a chosen
+  one). The translated-frames set: with paging on, `touched[pfn]` holds
+  the instruction generation in which the frame was last translated (a
+  page table walk, a TB hit, or `TranslateIn`), and
+  `BeginInstruction`, which `cpu.Engine.Step` calls first thing (inlined;
+  one comparison with paging off), moves the generation on.
+  `TranslatedThisInstruction(pfn)` also counts the STC's frame and the
+  fetch window's, so the STC's hit path stays as it was. Tests:
+  `vm/frames_test.go` (both modes, clearing rules, the database's
+  `Check`, the set through walks, TB hits, the STC, the fetch window,
+  `TranslateIn`, and the generation's wrap), `vm/pager_test.go`'s
+  forms, `paging`'s `TestAllocateSystem`, and
+  `console/pagingframes_test.go` (vax.init with paging on, then an
+  image touching demand-zero pages and `$EXPREG`/`$DELTVA`, the
+  database sound after). The full suite passes.
