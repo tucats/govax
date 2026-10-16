@@ -71,6 +71,11 @@ type Process struct {
 	WSAuth     uint32 // the authorized WSQuota
 	WSAuthExt  uint32 // the authorized WSExtent
 
+	// WSAdjustOff is SET WORKING_SET/NOADJUST's (PCB$V_DISAWS): automatic
+	// working set adjustment is off for the process. govax has no
+	// automatic adjustment, so it's only kept and shown.
+	WSAdjustOff bool
+
 	// ASTLimit is the AST quota (UAF ASTLM, PCB$W_ASTCNT's starting
 	// value): how many ASTs may be outstanding at once. It's reported by
 	// $GETJPI (JPI$_ASTLM, and JPI$_ASTCNT as what's left of it) but not

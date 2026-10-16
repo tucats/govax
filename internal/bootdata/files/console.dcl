@@ -304,6 +304,9 @@ grammar console
         ! table and one process, as VMS's DCL shows them.
         keyword         system          /syntax=show_system
         keyword         process         /syntax=show_process
+        ! WORKING_SET (docs/PHASE-63, subtask 9): the process's working
+        ! set values.
+        keyword         working_set     /syntax=show_working_set
                 
 
 	verb vminit
@@ -401,6 +404,7 @@ grammar console
                         /type=$string
             parameter   process_name/id=1941        -
                         /type=$string
+        syntax          show_working_set/id=166
 
 
     !
@@ -1121,6 +1125,7 @@ grammar console
         keyword     on                  /syntax=set_on
         keyword     control             /syntax=set_control/value
         keyword     quantum             /syntax=set_quantum/nonegatable
+        keyword     working_set         /syntax=set_working_set/nonegatable
 
 
     verb set/id=1760
@@ -1134,6 +1139,19 @@ grammar console
                        /type=$integer              -
                        /prompt="Quantum"
   
+    ! SET WORKING_SET [/LIMIT=n] [/QUOTA=n] [/EXTENT=n] [/[NO]ADJUST]
+    ! [/[NO]LOG]: the process's own working set values, within what it
+    ! was authorized (docs/PHASE-63, subtask 9).
+    syntax set_working_set/id=1820
+        qualifier   limit/id=1821/nonegatable   -
+                    /type=$integer
+        qualifier   quota/id=1822/nonegatable   -
+                    /type=$integer
+        qualifier   extent/id=1823/nonegatable  -
+                    /type=$integer
+        qualifier   adjust/id=1824
+        qualifier   log/id=1825
+
     ! SET RADIX 8|10|16|HEX|DEC.
     syntax set_radix/id=1773
         parameter   radix/id=1774               -

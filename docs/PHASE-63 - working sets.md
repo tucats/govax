@@ -12,7 +12,8 @@ writer for private file sections (`corevms/mpw.go`, MPW_HILIMIT and
 MPW_LOLIMIT, `$UPDSEC` from the modified list), and subtask 8, the
 reclaimer and the accounting (`corevms/reclaim.go`, FREELIM and
 FREEGOAL; `corevms/accounting.go`, faults by kind, PPGCNT, GPGCNT,
-WSPEAK), are done. Needs Phase 62 (settings, the
+WSPEAK), and subtask 9, DCL's SET WORKING_SET and SHOW WORKING_SET
+(`corevms/setworkingset.go`, `dclcmd/workingset.go`), are done. Needs Phase 62 (settings, the
 `internal/paging` PFN database and lists, the PTE forms, frame
 allocation through `internal/paging`). Part of the paging program laid
 out in `PHASE-62 - VMS paging.md` (Parts A and B: the survey and the
@@ -588,6 +589,7 @@ from run to run.
 9. **DCL SET WORKING_SET and SHOW WORKING_SET** (the console's grammar
    and `internal/dclshell`), in process 1 and in subprocesses, through
    the same code as `$ADJWSL`; SHOW's /Limit is DFWSCNT (finding 12).
+   (Done 2026-10-16; the progress log says what it chose.)
 10. **The VMS probe** (`testdata/pg63`), Part A's case list, and a
    macro round for the six services. govax is then changed to its
    answers.
@@ -1015,3 +1017,45 @@ from run to run.
     failed, each for the forced settings: two paging-off tests, two of
     the settings' defaults, and `TestModifiedPageWriter`, whose section
     pages the reclaimer had written before they came back.
+- **2026-10-16:** Subtask 9, SET WORKING_SET and SHOW WORKING_SET
+  (`corevms/setworkingset.go`, `dclcmd/workingset.go`; the grammar's
+  `set_working_set` and `show_working_set`, bound in
+  `console/dispatch.go`; HELP SET WORKING_SET and SHOW WORKING_SET; tests
+  in `internal/console/setworkingset_test.go`).
+  - **Where:** the commands are the console's utility commands
+    (`dclcmd.Context`), on `Context.RTL`, the process whose DCL runs the
+    line, so a subprocess's SET and SHOW are its own (a SPAWNed
+    subprocess's default and quota are its creator's current ones and 4
+    pages more, `applyQuotas`, so its authorized quota is that too).
+  - **The rules** (`Environment.SetWorkingSet`, the Dictionary's and the
+    book's 16.4.1.2): /EXTENT at most WSAUTHEXT; /QUOTA at most WSAUTH
+    and the extent; /LIMIT (DFWSCNT) at most WSAUTHEXT, a limit above the
+    quota raising the quota (as far as WSAUTH), and then at most the
+    quota; a smaller extent or quota bringing the values under it down.
+    Unconfirmed choices, for the probe: an /EXTENT at or below MINWSCNT
+    is raised to MINWSCNT + 1 (the Dictionary says only that it must be
+    greater; VMS may refuse it with a message instead); /QUOTA and /LIMIT
+    are at least MINWSCNT; a /LIMIT above WSAUTH leaves the limit at the
+    quota.
+  - **The current limit** (WSLIMIT, JPI$_WSSIZE) is set to the new
+    default at once, through `setWorkingSetLimit` (`$ADJWSL`'s and image
+    exit's code): DCL runs between images, when the limit is the default
+    anyway. With paging on, a smaller list gives up its oldest pages.
+    Unconfirmed: VMS's DCL is an image of the process, and its WSSIZE
+    after SET is the probe's.
+  - **/NOADJUST** is `Process.WSAdjustOff` (PCB$V_DISAWS), kept and shown
+    as "Adjustment disabled"; govax has no automatic adjustment.
+  - **The message:** `%SET-I-NEWLIMS, new working set: Limit = n Quota =
+    n Extent = n`, printed with /LOG, or when a value asked for was cut
+    back to its bound (unconfirmed: both of the Dictionary's examples
+    show it without /LOG, one of them for a value within bounds; the
+    probe settles when VMS shows it).
+  - **SHOW's layout** is the Dictionary's VAX example's (`/Limit=%4d
+    /Quota=%4d`, eleven blanks, `/Extent=%4d`; `Adjustment enabled`,
+    four blanks, `Authorized Quota=%4d Authorized Extent=%4d`), whose
+    spacing the PDF doesn't pin down: the probe captures the real one.
+    SHOW's /OUTPUT isn't implemented (no other SHOW in govax has it).
+  - **The tests:** each qualifier within and beyond its bound, /LOG,
+    /NOADJUST, F$GETJPI's DFWSCNT, WSSIZE, and WSQUOTA after, a SPAWNed
+    subprocess's own values, unchanged in process 1 after it; with paging
+    on, the list's size following SET's /LIMIT and /EXTENT.

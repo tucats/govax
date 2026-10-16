@@ -147,6 +147,29 @@ func (d *Dispatcher) bindGrammar() {
 		return d.Console.cmd().ShowProcess(r.String("PROCESS_NAME"), r.String("IDENTIFICATION"))
 	})
 
+	// SET WORKING_SET and SHOW WORKING_SET (docs/PHASE-63, subtask 9):
+	// the values of the process whose DCL runs the command.
+	g.Bind("SET_WORKING_SET", func(id int64, r *dcl.Result) error {
+		opts := dclcmd.WorkingSetOptions{Log: r.Present("LOG") && !r.Negated("LOG")}
+
+		for name, field := range map[string]**uint32{
+			"LIMIT": &opts.Change.Limit, "QUOTA": &opts.Change.Quota, "EXTENT": &opts.Change.Extent,
+		} {
+			if r.Present(name) {
+				v := uint32(max(r.Int(name), 0))
+				*field = &v
+			}
+		}
+
+		if r.Present("ADJUST") {
+			adjust := !r.Negated("ADJUST")
+			opts.Change.Adjust = &adjust
+		}
+
+		return d.Console.cmd().SetWorkingSet(opts)
+	})
+	g.Bind("SHOW_WORKING_SET", func(id int64, r *dcl.Result) error { return d.Console.cmd().ShowWorkingSet() })
+
 	g.Bind("SHOW_DEBUG", func(id int64, r *dcl.Result) error { return d.Console.ShowDebug() })
 
 	// SHOW MEMORY is allowed in both console and debugger

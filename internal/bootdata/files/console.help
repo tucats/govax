@@ -1450,8 +1450,9 @@ $SET
     The SET command is used to set the state of information in the virtual
     VAX or the console processor.  See the help text on:
 
-    DEBUG       DEFAULT     ON          PREFIX
-    PROMPT      RADIX       VERIFY
+    CONTROL     DEBUG       DEFAULT     ON
+    PREFIX      PROMPT      QUANTUM     RADIX
+    VERIFY      WORKING_SET
 
     A symbol is set with DCL's assignments (see HELP SYMBOL).
 
@@ -1684,6 +1685,44 @@ $SET ,NOCONT
         $ SET NOCONTROL=Y
         $ SET CONTROL=Y         ! CTRL/Y's default action is back
 
+$SET ,WORK
+
+    The SET WORKING_SET command changes the current process's working set
+    values, within the quota and extent it was authorized when it was
+    created (SHOW WORKING_SET shows them).  A value above its authorized
+    bound is set to the bound, and the command then reports the values,
+    as /LOG does.  The current limit is set to the new default at once
+    (DCL runs between images).  With paging on (HELP CONFIG KEYS,
+    vax.sysgen.paging.enable), a smaller limit takes the oldest pages out
+    of the working set.
+
+    Syntax:
+
+        SET WORKING_SET [/LIMIT=n] [/QUOTA=n] [/EXTENT=n] [/[NO]ADJUST]
+                        [/[NO]LOG]
+
+    Qualifiers:
+
+        /LIMIT=n        The default working set, in pages: the limit each
+                        image starts with, and goes back to at its exit.
+                        A value above the quota raises the quota too.
+        /QUOTA=n        The working set quota: the most an image's
+                        $ADJWSL can count on.  At most the authorized
+                        quota and the extent.
+        /EXTENT=n       The working set extent: the most $ADJWSL can
+                        reach.  At most the authorized extent, and more
+                        than the SYSGEN parameter MINWSCNT.  A smaller
+                        extent brings the quota and limit down with it.
+        /[NO]ADJUST     Whether the system may adjust the working set by
+                        itself.  govax remembers and shows the setting,
+                        but has no automatic adjustment.
+        /[NO]LOG        Report the new values (/NOLOG is the default).
+
+    Example:
+
+        $ SET WORKING_SET/QUOTA=5000
+        %SET-I-NEWLIMS, new working set: Limit = 512 Quota = 1024 Extent = 16400
+
 $SET ,RAD 
 $SET ,RADI
 
@@ -1793,6 +1832,7 @@ $SH
         SHOW SYMBOL
         SHOW SYSTEM
         SHOW TRANSLATION
+        SHOW WORKING_SET
 
 $SHOW,STRI
 $SH  ,STRI
@@ -4022,6 +4062,25 @@ $SH  ,PROC
         /IDENTIFICATION=pid
                         The process ID, in hexadecimal, as SHOW SYSTEM
                         lists it.
+
+$SHOW,WORK
+$SH  ,WORK
+
+    The SHOW WORKING_SET command displays the current process's working
+    set values, in pages: the default working set (shown as the limit),
+    the quota, and the extent; whether automatic adjustment is enabled;
+    and the authorized quota and extent, which SET WORKING_SET can't go
+    beyond.
+
+    Syntax:
+
+        SHOW WORKING_SET
+
+    Example:
+
+        $ SHOW WORKING_SET
+          Working Set      /Limit= 512 /Quota=1024           /Extent=16400
+          Adjustment enabled    Authorized Quota=1024 Authorized Extent=16400
 
 $SHOW,DEFA
 $SH  ,DEFA
