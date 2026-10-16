@@ -79,6 +79,13 @@ OVER:
 	CALLS	#1,SETLIMR
 	.ENDM	SETLIM
 
+; SETREL k: make the working set limit the floor (FLOOR, the least
+; $ADJWSL allows: MINWSCNT and, on VMS, the list's permanent part) plus k.
+	.MACRO	SETREL	K
+	ADDL3	K,FLOOR,-(SP)
+	CALLS	#1,SETLIMR
+	.ENDM	SETREL
+
 ; PAGE n, reg: the address of the array's page n.
 	.MACRO	PAGE	N,REG
 	MULL3	#512,N,REG
@@ -192,8 +199,8 @@ N_MPWLO:	.ASCID	/MPW_LOLIMIT/
 N_PFC:		.ASCID	/PFCDEFAULT/
 N_TBSKIP:	.ASCID	/TBSKIPWSL/
 
-; The patterns' sizes (part C).
-NTAB:	.LONG	50,90,100,110,150,300,0
+; The patterns' sizes (part C), at a limit of the floor plus 80.
+NTAB:	.LONG	30,60,75,90,120,300,0
 
 ; PG63_PART's translation.
 LNMTAB:	.ASCID	/LNM$FILE_DEV/
@@ -223,6 +230,7 @@ RNG:	.LONG	0,0
 REV:	.LONG	0,0
 RET:	.LONG	0,0
 CURLIM:	.LONG	0
+FLOOR:	.LONG	0			; the least limit $ADJWSL gives (B4)
 LIM:	.LONG	0
 PSWAPM:	.LONG	<1@PRV$V_PSWAPM>,0
 STAT:	.LONG	0
@@ -294,26 +302,30 @@ PARTA:	SAY	</A1 start: flts=!UL ppg=!UL gpg=!UL wssize=!UL peak=!UL/>, -
 	MOVL	R0,STAT
 	SNAP	SB
 	SAY	</B4 adjwsl -100000: !XL wsetlm=!UL ppg=!UL/>, STAT, LIM, SB+S_PPG
-	SETLIM	#100
+	MOVL	LIM,FLOOR
+	SETREL	#80
 	$ADJWSL_S PAGCNT=#10, WSETLM=START
 	MOVL	R0,STAT
 	$ADJWSL_S PAGCNT=#0, WSETLM=LIM
-	SAY	</B5 adjwsl +10 into code: !XL, then the limit !UL/>, STAT, LIM
+	SUBL2	FLOOR,LIM
+	SAY	</B5 adjwsl +10 into code: !XL, then the limit floor+!SL/>, STAT, LIM
 ; A shrink below the pages in use.
-	SETLIM	#200
+	SETREL	#180
 	$PURGWS_S INADR=ALLRNG
 	SWEEP	#0,#150
 	SNAP	SB
-	SETLIM	#60
+	SETREL	#40
 	SNAP	SC
-	SAY	</B6 200 to 60 with 150 touched: limit=!UL ppg !UL to !UL wssize=!UL/>, -
-		CURLIM, SB+S_PPG, SC+S_PPG, SC+S_WS
+	SUBL3	FLOOR,CURLIM,R6
+	SUBL3	FLOOR,SC+S_WS,R7
+	SAY	</B6 floor+180 to floor+40 with 150 touched: limit floor+!SL ppg !UL to !UL wssize floor+!SL/>, -
+		R6, SB+S_PPG, SC+S_PPG, R7
 ; A grow: is the room used at once?
-	SETLIM	#60
+	SETREL	#40
 	$PURGWS_S INADR=ALLRNG
 	SWEEP	#0,#100
 	SWEEP	#0,#100
-	SETLIM	#200
+	SETREL	#180
 	SNAP	SB
 	SWEEP	#0,#150
 	SNAP	SC
@@ -321,17 +333,17 @@ PARTA:	SAY	</A1 start: flts=!UL ppg=!UL gpg=!UL wssize=!UL peak=!UL/>, -
 	SNAP	SD
 	FAULTS	SB,SC,R6
 	FAULTS	SC,SD,R7
-	SAY	</B7 60 to 200, two sweeps of 150: flts !UL !UL ppg=!UL/>, R6, R7, SD+S_PPG
+	SAY	</B7 floor+40 to floor+180, two sweeps of 150: flts !UL !UL ppg=!UL/>, R6, R7, SD+S_PPG
 
 ;
-; C: patterns. At a limit of 100, after a purge, N pages written three
-; times over.
+; C: patterns. At a limit of the floor plus 80, after a purge, N pages
+; written three times over.
 ;
 	MOVAL	NTAB,R8
 20$:	MOVL	(R8)+,R9
 	BNEQ	21$
 	BRW	29$
-21$:	SETLIM	#100
+21$:	SETREL	#80
 	$PURGWS_S INADR=ALLRNG
 	SNAP	SA
 	SWEEP	#0,R9
@@ -351,7 +363,7 @@ PARTA:	SAY	</A1 start: flts=!UL ppg=!UL gpg=!UL wssize=!UL peak=!UL/>, -
 ;
 ; D: $PURGWS.
 ;
-	SETLIM	#100
+	SETREL	#80
 	SNAP	SA
 	$PURGWS_S INADR=ALLRNG
 	MOVL	R0,STAT
@@ -412,7 +424,7 @@ PARTA:	SAY	</A1 start: flts=!UL ppg=!UL gpg=!UL wssize=!UL peak=!UL/>, -
 ;
 ; E: $LKWSET and $ULWSET.
 ;
-	SETLIM	#100
+	SETREL	#80
 	SWEEP	#0,#8
 	RANGE	#0,#1
 	MNEGL	#1,RET
@@ -441,12 +453,12 @@ PARTA:	SAY	</A1 start: flts=!UL ppg=!UL gpg=!UL wssize=!UL peak=!UL/>, -
 	RANGE	#0,#2
 	$ULWSET_S INADR=RNG
 	SAY	</E6 unlock 0-1 (0 locked): !XL/>, R0
-	PUSHL	#100
+	PUSHL	#80
 	CALLS	#1,FILLR
-	PUSHL	#150
+	PUSHL	#130
 	CALLS	#1,FILLR
-; One call over 200 pages at a limit of 100.
-	SETLIM	#100
+; One call over 200 pages at a limit of the floor plus 80.
+	SETREL	#80
 	$PURGWS_S INADR=ALLRNG
 	RANGE	#0,#200
 	MNEGL	#1,RET
@@ -464,7 +476,7 @@ PARTA:	SAY	</A1 start: flts=!UL ppg=!UL gpg=!UL wssize=!UL peak=!UL/>, -
 	MOVL	R0,R7
 	RANGE	#0,#200
 	$ULWSET_S INADR=RNG
-	SAY	</E9 lock 200 pages at 100: !XL retadr !SL !SL wssize=!UL ppg=!UL; unlock !XL/>, -
+	SAY	</E9 lock 200 pages at floor+80: !XL retadr !SL !SL wssize=!UL ppg=!UL; unlock !XL/>, -
 		STAT, R6, R7, SB+S_WS, SB+S_PPG, R0
 ; A writable global page, then a read-only one.
 	$CRMPSC_S INADR=P0ANY, RETADR=GRNG, GSDNAM=GNAME, PAGCNT=#4, -
@@ -553,10 +565,10 @@ PARTA:	SAY	</A1 start: flts=!UL ppg=!UL gpg=!UL wssize=!UL peak=!UL/>, -
 	$ULKPAG_S INADR=RNG
 
 ;
-; G: what part A leaves for part B: a limit of 250, page 0 locked in the
-; working set, page 1 in memory.
+; G: what part A leaves for part B: a limit of the floor plus 230, page 0
+; locked in the working set, page 1 in memory.
 ;
-	SETLIM	#250
+	SETREL	#230
 	SWEEP	#0,#200
 	RANGE	#0,#1
 	$LKWSET_S INADR=RNG
@@ -570,10 +582,10 @@ PARTA:	SAY	</A1 start: flts=!UL ppg=!UL gpg=!UL wssize=!UL peak=!UL/>, -
 	MOVL	#SS$_NORMAL,R0
 	RET
 
-; FILLR limit: E7 and E8. At the limit, after a purge, lock the array's
-; pages one at a time until a lock fails; then unlock them all.
+; FILLR k: E7. At a limit of the floor plus k, after a purge, lock the
+; array's pages one at a time until a lock fails; then unlock them all.
 	.ENTRY	FILLR,^M<R2,R3,R4,R5,R6,R7>
-	SETLIM	4(AP)
+	SETREL	4(AP)
 	$PURGWS_S INADR=ALLRNG
 	CLRL	R6
 1$:	RANGE	R6,#1
@@ -586,8 +598,9 @@ PARTA:	SAY	</A1 start: flts=!UL ppg=!UL gpg=!UL wssize=!UL peak=!UL/>, -
 	SNAP	SB
 	RANGE	#0,#ARRPAGES
 	$ULWSET_S INADR=RNG
-	SAY	</E7 at !UL: !UL locked, then !XL; wssize=!UL ppg=!UL; unlock !XL/>, -
-		CURLIM, R6, R7, SB+S_WS, SB+S_PPG, R0
+	MOVL	R0,STAT
+	SAY	</E7 at floor+!UL: !UL locked, then !XL; wssize=!UL ppg=!UL; unlock !XL/>, -
+		4(AP), R6, R7, SB+S_WS, SB+S_PPG, STAT
 	RET
 
 ; SAYR ctrstr, p1, ...: write a line.

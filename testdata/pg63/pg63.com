@@ -40,8 +40,12 @@ SHOW PQL_DWSEXTENT
 SHOW PQL_MWSEXTENT
 EXIT
 $ !
-$ ! SET WORKING_SET: each qualifier within, at, and beyond its bounds,
-$ ! with /LOG and without; then the values as they were.
+$ ! SET WORKING_SET: each qualifier within and beyond its bounds, with
+$ ! /LOG and without; then the values as they were. Round 1 found that
+$ ! a quota near the floor leaves the process unable to run images, so
+$ ! only values that keep the quota and extent at Q0 - 100 or more are
+$ ! tried here; the rest are tried in subprocesses (PG63X.COM, below,
+$ ! whose logs are typed here).
 $ !
 $ L0 = F$GETJPI("","DFWSCNT")
 $ Q0 = F$GETJPI("","WSQUOTA")
@@ -66,23 +70,19 @@ $ GOSUB WSS
 $ X = AE + 100
 $ SET WORKING_SET/LIMIT='X'/LOG
 $ GOSUB WSS
-$ SET WORKING_SET/LIMIT=5/LOG
-$ GOSUB WSS
-$ SET WORKING_SET/QUOTA=5/LOG
+$ SET WORKING_SET/LIMIT='L0'/QUOTA='Q0'/LOG
 $ GOSUB WSS
 $ X = AQ + 100
 $ SET WORKING_SET/QUOTA='X'
 $ GOSUB WSS
-$ SET WORKING_SET/EXTENT='M'/LOG
-$ GOSUB WSS
-$ X = M - 1
-$ SET WORKING_SET/EXTENT='X'/LOG
-$ GOSUB WSS
-$ X = M + 1
+$ X = E0 - 1000
 $ SET WORKING_SET/EXTENT='X'/LOG
 $ GOSUB WSS
 $ X = AE + 100
 $ SET WORKING_SET/EXTENT='X'
+$ GOSUB WSS
+$ X = L0 - 100
+$ SET WORKING_SET/LIMIT='X'/LOG
 $ GOSUB WSS
 $ SET WORKING_SET/EXTENT='E0'/QUOTA='Q0'/LIMIT='L0'/LOG
 $ GOSUB WSS
@@ -90,11 +90,38 @@ $ SET WORKING_SET/NOADJUST
 $ GOSUB WSS
 $ SET WORKING_SET/ADJUST
 $ GOSUB WSS
-$ SET WORKING_SET/EXTENT=0/LOG
-$ GOSUB WSS
-$ SET WORKING_SET/LIMIT=0/LOG
-$ GOSUB WSS
-$ SET WORKING_SET/EXTENT='E0'/QUOTA='Q0'/LIMIT='L0'
+$ !
+$ ! The values near and below the floor, each in a subprocess of its own,
+$ ! which may be left unable to run images: PG63X.COM shows its values,
+$ ! sets them, and shows them again with lexical functions, which need no
+$ ! image.
+$ !
+$ SPAWN/OUTPUT=PG63X.LOG @PG63X "/LIMIT=50/LOG"
+$ TYPE PG63X.LOG
+$ SPAWN/OUTPUT=PG63X.LOG @PG63X "/LIMIT=5/LOG"
+$ TYPE PG63X.LOG
+$ SPAWN/OUTPUT=PG63X.LOG @PG63X "/LIMIT=0/LOG"
+$ TYPE PG63X.LOG
+$ SPAWN/OUTPUT=PG63X.LOG @PG63X "/QUOTA=300/LOG"
+$ TYPE PG63X.LOG
+$ SPAWN/OUTPUT=PG63X.LOG @PG63X "/QUOTA=200/LOG"
+$ TYPE PG63X.LOG
+$ SPAWN/OUTPUT=PG63X.LOG @PG63X "/QUOTA=5/LOG"
+$ TYPE PG63X.LOG
+$ SPAWN/OUTPUT=PG63X.LOG @PG63X "/QUOTA=5"
+$ TYPE PG63X.LOG
+$ SPAWN/OUTPUT=PG63X.LOG @PG63X "/QUOTA=0/LOG"
+$ TYPE PG63X.LOG
+$ SPAWN/OUTPUT=PG63X.LOG @PG63X "/EXTENT=300/LOG"
+$ TYPE PG63X.LOG
+$ SPAWN/OUTPUT=PG63X.LOG @PG63X "/EXTENT=21/LOG"
+$ TYPE PG63X.LOG
+$ SPAWN/OUTPUT=PG63X.LOG @PG63X "/EXTENT=20/LOG"
+$ TYPE PG63X.LOG
+$ SPAWN/OUTPUT=PG63X.LOG @PG63X "/EXTENT=19/LOG"
+$ TYPE PG63X.LOG
+$ SPAWN/OUTPUT=PG63X.LOG @PG63X "/EXTENT=0/LOG"
+$ TYPE PG63X.LOG
 $ GOSUB WSS
 $ !
 $ ! A subprocess's own values.

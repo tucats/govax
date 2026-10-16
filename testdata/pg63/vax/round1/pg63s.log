@@ -1,0 +1,16 @@
+$ ! PG63S.COM - the subprocess's part of Phase 63's probe (PG63.COM spawns
+$ ! it): its own working set values, and SET WORKING_SET's bounds there.
+$ SET VERIFY
+$ SHOW WORKING_SET
+  Working Set      /Limit=98   /Quota=98    /Extent=16404
+  Adjustment enabled      Authorized Quota=98  Authorized Extent=16404
+$ WRITE SYS$OUTPUT "sub dfwscnt=", F$GETJPI("","DFWSCNT"), " wssize=", F$GETJPI("","WSSIZE"), -
+	" quota=", F$GETJPI("","WSQUOTA"), " extent=", F$GETJPI("","WSEXTENT"), -
+	" auth=", F$GETJPI("","WSAUTH"), " authext=", F$GETJPI("","WSAUTHEXT")
+sub dfwscnt=98 wssize=98 quota=98 extent=16404 auth=98 authext=16404
+$ SET WORKING_SET/QUOTA=100000/LOG
+%SET-I-NEWLIMS, new working set:  Limit = 98  Quota = 98  Extent = 16404
+$ SHOW WORKING_SET
+  Working Set      /Limit=98   /Quota=98    /Extent=16404
+  Adjustment enabled      Authorized Quota=98  Authorized Extent=16404
+$ EXIT

@@ -1083,3 +1083,33 @@ from run to run.
     image of the same layout takes few faults or none. VMS deletes P0 at
     rundown (the book's 21.3); the VAX run's `ws` lines show its numbers,
     and govax is changed after it, with the other answers.
+- **2026-10-16:** The probe's round 1 on VMS V7.1 (`testdata/pg63/vax/round1`).
+  It stopped early: SET WORKING_SET/QUOTA=5 set the quota to 94, the
+  floor, with a status 7.1 has no text for (`%SET-I-NOMSG, Message number
+  007781C3`; facility 119, SET), and from then on no image would run in
+  the process (LIB-F-INSVIRMEM; INSFWSL activating LIBRTL), so the
+  program never ran. What it settled, and govax now does:
+  - **SHOW WORKING_SET's layout:** the numbers unpadded and the gaps
+    fixed (`/Limit=512   /Quota=1024    /Extent=16400`, `Adjustment
+    enabled      Authorized Quota=1024  Authorized Extent=16400`). The
+    gap after "disabled" is still unconfirmed (one blank fewer).
+  - **NEWLIMS** has two blanks before each value (`new working set:
+    Limit = 512  Quota = 924  Extent = 16400`); it's shown with /LOG and
+    not shown without it for values within bounds.
+  - **A SPAWNed subprocess's extent** is its creator's plus 4 too (16404,
+    above WSMAX 16400), as its default and quota are (`applyQuotas`).
+  - Confirmed as govax had them: /LIMIT above the quota raises the quota;
+    /LIMIT above WSAUTH or WSAUTHEXT gives the authorized quota;
+    WSSIZE follows the default at DCL level after SET.
+  - **The floor:** /LIMIT=5 gave 94, not MINWSCNT (20): MINWSCNT above
+    the list's permanent part, which govax doesn't have (Decision 13).
+    Left as a difference for now; round 2 measures it in subprocesses.
+  - The SYSGEN values on that VAX: MINWSCNT 20, WSMAX 16400, GROWLIM and
+    BORROWLIM and FREELIM 143, FREEGOAL 8192, TBSKIPWSL 8, MPW_HILIMIT
+    5634, MPW_LOLIMIT 120, MPW_WRTCLUSTER 120, PFCDEFAULT 16, PFRATL 0,
+    PFRATH 120, WSINC 150, WSDEC 250, AWSTIME 20, AWSMIN 50, SWPOUTPGCNT
+    500; 65536 pages of memory, 28075 free.
+  - **Round 2** runs the cases near the floor each in a subprocess of its
+    own (`pg63x.com`), keeps the main process's quota and extent high,
+    and sets the program's limits relative to the floor (`SETREL`), so
+    that VMS's patterns have the dynamic room govax's have.

@@ -19,8 +19,9 @@ type WorkingSetOptions struct {
 // a value asked for was cut back to its bound, it reports the values
 // that resulted, as the DCL Dictionary's examples show:
 //
-//	%SET-I-NEWLIMS, new working set: Limit = 150 Quota = 700 Extent = 700
+//	%SET-I-NEWLIMS, new working set:  Limit = 150  Quota = 700  Extent = 700
 //
+// (two blanks before each value, as VMS 7.1 shows it).
 // (When VMS shows the message without /LOG is unconfirmed: both of the
 // Dictionary's examples show it without, one of them for a value within
 // its bounds.)
@@ -31,7 +32,7 @@ func (c *Context) SetWorkingSet(opts WorkingSetOptions) error {
 
 	v, clamped := c.RTL.SetWorkingSet(opts.Change)
 	if opts.Log || clamped {
-		c.Printf("%%SET-I-NEWLIMS, new working set: Limit = %d Quota = %d Extent = %d\n",
+		c.Printf("%%SET-I-NEWLIMS, new working set:  Limit = %d  Quota = %d  Extent = %d\n",
 			v.Limit, v.Quota, v.Extent)
 	}
 
@@ -40,11 +41,15 @@ func (c *Context) SetWorkingSet(opts WorkingSetOptions) error {
 
 // ShowWorkingSet is SHOW WORKING_SET: the process's default working set
 // (shown as the limit), quota, and extent, whether automatic adjustment
-// is enabled, and the authorized quota and extent, laid out as the DCL
-// Dictionary's VAX example (the exact spacing is unconfirmed):
+// is enabled, and the authorized quota and extent, laid out as VMS 7.1
+// lays them out (testdata/pg63, round 1): the numbers unpadded, the gaps
+// between the fields fixed.
 //
-//	  Working Set      /Limit= 180 /Quota= 350           /Extent=1200
-//	  Adjustment enabled    Authorized Quota= 350 Authorized Extent=1200
+//	  Working Set      /Limit=512   /Quota=1024    /Extent=16400
+//	  Adjustment enabled      Authorized Quota=1024  Authorized Extent=16400
+//
+// (With adjustment disabled, the gap after "disabled" is unconfirmed: one
+// blank fewer, so the columns line up.)
 func (c *Context) ShowWorkingSet() error {
 	if c.RTL == nil || c.RTL.Process == nil {
 		return vmserrors.New(vmserrors.CLI_NOVAX)
@@ -52,13 +57,13 @@ func (c *Context) ShowWorkingSet() error {
 
 	v := c.RTL.WorkingSetValues()
 
-	adjust := "enabled "
+	adjust := "enabled      "
 	if !v.Adjust {
-		adjust = "disabled"
+		adjust = "disabled     "
 	}
 
-	c.Printf("  Working Set      /Limit=%4d /Quota=%4d           /Extent=%4d\n", v.Limit, v.Quota, v.Extent)
-	c.Printf("  Adjustment %s   Authorized Quota=%4d Authorized Extent=%4d\n", adjust, v.AuthQuota, v.AuthExt)
+	c.Printf("  Working Set      /Limit=%d   /Quota=%d    /Extent=%d\n", v.Limit, v.Quota, v.Extent)
+	c.Printf("  Adjustment %sAuthorized Quota=%d  Authorized Extent=%d\n", adjust, v.AuthQuota, v.AuthExt)
 
 	return nil
 }

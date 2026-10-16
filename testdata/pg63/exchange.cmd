@@ -8,6 +8,7 @@ MOUNT/WRITE DUA1 "testdata/disks/pg63-exchange.dsk"
 COPY "testdata/pg63/pg63.mar"/HOST DUA1:[000000]PG63.MAR
 COPY "testdata/pg63/pg63.com"/HOST DUA1:[000000]PG63.COM
 COPY "testdata/pg63/pg63s.com"/HOST DUA1:[000000]PG63S.COM
+COPY "testdata/pg63/pg63x.com"/HOST DUA1:[000000]PG63X.COM
 COPY "testdata/mp/macros/r8_purgws.mar"/HOST DUA1:[000000]R8_PURGWS.MAR
 COPY "testdata/mp/macros/macros8.com"/HOST DUA1:[000000]MACROS8.COM
 DIRECTORY DUA1:[000000]

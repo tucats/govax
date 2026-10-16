@@ -206,14 +206,17 @@ func applyQuotas(p *Process, values map[uint32]uint32, detached bool) {
 
 	p.WSDefault = min(p.WSDefault, p.WSQuota)
 
-	// A new process's default working set and working-set quota are 4
-	// pages above the values the rules give (after they were lowered to
-	// the creator's): VMS 7.1's child had each PQL minimum plus 4
-	// (testdata/mp/probe1), and VMS 7.3's each default plus 4 (DFWSCNT
-	// 516, WSQUOTA 1028; testdata/mp/probe5/vax, step 1). Why is
-	// unconfirmed: perhaps the pages of the process header.
+	// A new process's default working set, working-set quota, and extent
+	// are 4 pages above the values the rules give (after they were lowered
+	// to the creator's): VMS 7.1's child had each PQL minimum plus 4
+	// (testdata/mp/probe1), VMS 7.3's each default plus 4 (DFWSCNT 516,
+	// WSQUOTA 1028; testdata/mp/probe5/vax, step 1), and VMS 7.1's SPAWNed
+	// subprocess its creator's extent plus 4 too (16404, above WSMAX;
+	// testdata/pg63, round 1). Why is unconfirmed: perhaps the pages of
+	// the process header.
 	p.WSDefault += wsCreationPages
 	p.WSQuota += wsCreationPages
+	p.WSExtent += wsCreationPages
 	p.WSLimit = p.WSDefault
 	p.WSAuth, p.WSAuthExt = p.WSQuota, p.WSExtent
 }

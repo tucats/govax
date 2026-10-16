@@ -1721,7 +1721,7 @@ $SET ,WORK
     Example:
 
         $ SET WORKING_SET/QUOTA=5000
-        %SET-I-NEWLIMS, new working set: Limit = 512 Quota = 1024 Extent = 16400
+        %SET-I-NEWLIMS, new working set:  Limit = 512  Quota = 1024  Extent = 16400
 
 $SET ,RAD 
 $SET ,RADI
@@ -4079,8 +4079,8 @@ $SH  ,WORK
     Example:
 
         $ SHOW WORKING_SET
-          Working Set      /Limit= 512 /Quota=1024           /Extent=16400
-          Adjustment enabled    Authorized Quota=1024 Authorized Extent=16400
+          Working Set      /Limit=512   /Quota=1024    /Extent=16400
+          Adjustment enabled      Authorized Quota=1024  Authorized Extent=16400
 
 $SHOW,DEFA
 $SH  ,DEFA

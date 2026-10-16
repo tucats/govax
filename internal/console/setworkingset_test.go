@@ -44,8 +44,8 @@ func TestSetWorkingSet(t *testing.T) {
 	p := c.ProcessOne().Process
 
 	const (
-		show = "  Working Set      /Limit= 512 /Quota=1024           /Extent=16400|" +
-			"  Adjustment enabled    Authorized Quota=1024 Authorized Extent=16400"
+		show = "  Working Set      /Limit=512   /Quota=1024    /Extent=16400|" +
+			"  Adjustment enabled      Authorized Quota=1024  Authorized Extent=16400"
 		spawned  = "%DCL-S-SPAWNED, process SYSTEM_1 spawned|%DCL-S-ATTACHED, terminal now attached to process SYSTEM_1|"
 		returned = "|%DCL-S-RETURNED, control returned to process SYSTEM"
 	)
@@ -53,28 +53,28 @@ func TestSetWorkingSet(t *testing.T) {
 	for _, tt := range []struct{ line, want string }{
 		{"SHOW WORKING_SET", show},
 		// A quota above the authorized one is cut back, and says so.
-		{"SET WORKING_SET/QUOTA=5000", "%SET-I-NEWLIMS, new working set: Limit = 512 Quota = 1024 Extent = 16400"},
+		{"SET WORKING_SET/QUOTA=5000", "%SET-I-NEWLIMS, new working set:  Limit = 512  Quota = 1024  Extent = 16400"},
 		// Within bounds, the message only with /LOG.
 		{"SET WORKING_SET/QUOTA=800", ""},
-		{"SET WORKING_SET/LIMIT=300/LOG", "%SET-I-NEWLIMS, new working set: Limit = 300 Quota = 800 Extent = 16400"},
+		{"SET WORKING_SET/LIMIT=300/LOG", "%SET-I-NEWLIMS, new working set:  Limit = 300  Quota = 800  Extent = 16400"},
 		// A limit above the quota raises the quota.
-		{"SET WORKING_SET/LIMIT=900/LOG", "%SET-I-NEWLIMS, new working set: Limit = 900 Quota = 900 Extent = 16400"},
+		{"SET WORKING_SET/LIMIT=900/LOG", "%SET-I-NEWLIMS, new working set:  Limit = 900  Quota = 900  Extent = 16400"},
 		// An extent below the quota brings the quota and limit down.
-		{"SET WORKING_SET/EXTENT=700/LOG", "%SET-I-NEWLIMS, new working set: Limit = 700 Quota = 700 Extent = 700"},
+		{"SET WORKING_SET/EXTENT=700/LOG", "%SET-I-NEWLIMS, new working set:  Limit = 700  Quota = 700  Extent = 700"},
 		// An extent must be more than MINWSCNT (20).
-		{"SET WORKING_SET/EXTENT=5", "%SET-I-NEWLIMS, new working set: Limit = 21 Quota = 21 Extent = 21"},
-		{"SET WORKING_SET/EXTENT=99999/QUOTA=600/LIMIT=250/NOADJUST", "%SET-I-NEWLIMS, new working set: Limit = 250 Quota = 600 Extent = 16400"},
-		{"SHOW WORKING_SET", "  Working Set      /Limit= 250 /Quota= 600           /Extent=16400|" +
-			"  Adjustment disabled   Authorized Quota=1024 Authorized Extent=16400"},
+		{"SET WORKING_SET/EXTENT=5", "%SET-I-NEWLIMS, new working set:  Limit = 21  Quota = 21  Extent = 21"},
+		{"SET WORKING_SET/EXTENT=99999/QUOTA=600/LIMIT=250/NOADJUST", "%SET-I-NEWLIMS, new working set:  Limit = 250  Quota = 600  Extent = 16400"},
+		{"SHOW WORKING_SET", "  Working Set      /Limit=250   /Quota=600    /Extent=16400|" +
+			"  Adjustment disabled     Authorized Quota=1024  Authorized Extent=16400"},
 		{`WRITE SYS$OUTPUT F$GETJPI("","DFWSCNT"), " ", F$GETJPI("","WSSIZE"), " ", F$GETJPI("","WSQUOTA")`, "250 250 600"},
 		{"SET WORKING_SET/ADJUST", ""},
-		// A subprocess's values are its own: its default and quota are
-		// its creator's and 4 pages more, its authorized quota that.
+		// A subprocess's values are its own: its default, quota, and
+		// extent are its creator's and 4 pages more, its authorized ones those.
 		{"SPAWN SHOW WORKING_SET", spawned +
-			"  Working Set      /Limit= 254 /Quota= 604           /Extent=16400|" +
-			"  Adjustment enabled    Authorized Quota= 604 Authorized Extent=16400" + returned},
+			"  Working Set      /Limit=254   /Quota=604    /Extent=16404|" +
+			"  Adjustment enabled      Authorized Quota=604  Authorized Extent=16404" + returned},
 		{"SPAWN SET WORKING_SET/QUOTA=2000", spawned +
-			"%SET-I-NEWLIMS, new working set: Limit = 254 Quota = 604 Extent = 16400" + returned},
+			"%SET-I-NEWLIMS, new working set:  Limit = 254  Quota = 604  Extent = 16404" + returned},
 	} {
 		if got := dispatch(tt.line); got != tt.want {
 			t.Errorf("%s:\n got %q\nwant %q", tt.line, got, tt.want)
