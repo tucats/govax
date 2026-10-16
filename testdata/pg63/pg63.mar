@@ -1,0 +1,644 @@
+	.TITLE	PG63	Phase 63 working set probe
+	.IDENT	/V1.0/
+;
+; Phase 63's probe (docs/PHASE-63 - working sets.md, subtask 10; README.md
+; here). It asks VMS what the working set services do, and how the working
+; set fills, empties, and refills, by reading the process's counts with
+; $GETJPIW around each case (PAGEFLTS, PPGCNT, GPGCNT, WSSIZE, WSPEAK, and
+; the quotas). Each output line is "id what: values"; statuses are in
+; hexadecimal, counts in decimal, and addresses only as differences from
+; the address asked for (-1 when a service wrote -1), so that the lines
+; don't depend on where the program was loaded.
+;
+; It uses only system services and RMS (no LIBRTL: a shareable image's
+; pages would be in VMS's working set and not in govax's), and writes its
+; lines to SYS$OUTPUT with $PUT. The logical name PG63_PART picks the
+; part: A (everything; the default) or B (the second image, which reads
+; what image exit left).
+;
+	$SSDEF
+	$JPIDEF
+	$SYIDEF
+	$SECDEF
+	$PRVDEF
+	$LNMDEF
+	$FABDEF
+	$RABDEF
+
+; A snapshot's longwords (SNAP).
+S_FLTS	= 0				; JPI$_PAGEFLTS
+S_PPG	= 4				; JPI$_PPGCNT
+S_GPG	= 8				; JPI$_GPGCNT
+S_WS	= 12				; JPI$_WSSIZE
+S_PEAK	= 16				; JPI$_WSPEAK
+S_DF	= 20				; JPI$_DFWSCNT
+S_QUO	= 24				; JPI$_WSQUOTA
+S_EXT	= 28				; JPI$_WSEXTENT
+S_AUQ	= 32				; JPI$_WSAUTH
+S_AUE	= 36				; JPI$_WSAUTHEXT
+SNAPSZ	= 40
+
+ARRPAGES = 700				; the array's pages ($EXPREG)
+
+; SAY text, a1, ... a10: format text with $FAOL and the arguments (each
+; a longword, pushed by value) and write the line. The text is in line,
+; branched around: a .PSECT would end the local label block it's in.
+	.MACRO	SAY	TEXT,A1,A2,A3,A4,A5,A6,A7,A8,A9,A10,?LBL,?OVER
+	BRW	OVER
+LBL:	.ASCID	TEXT
+OVER:
+	$$N = 1
+	.IRP	ARG,<A10,A9,A8,A7,A6,A5,A4,A3,A2,A1>
+	.IF	NOT_BLANK,<ARG>
+	PUSHL	ARG
+	$$N = $$N + 1
+	.ENDC
+	.ENDR
+	PUSHAQ	LBL
+	CALLS	#$$N,SAYR
+	.ENDM	SAY
+
+; SNAP block: a snapshot of the counts into block.
+	.MACRO	SNAP	BLOCK
+	PUSHAL	BLOCK
+	CALLS	#1,SNAPR
+	.ENDM	SNAP
+
+; SWEEP first, count: write a longword into each of count pages of the
+; array, starting at page first.
+	.MACRO	SWEEP	FIRST,COUNT
+	PUSHL	COUNT
+	PUSHL	FIRST
+	CALLS	#2,SWEEPR
+	.ENDM	SWEEP
+
+; SETLIM n: make the working set limit n with $ADJWSL (CURLIM gets the
+; limit that resulted).
+	.MACRO	SETLIM	N
+	PUSHL	N
+	CALLS	#1,SETLIMR
+	.ENDM	SETLIM
+
+; PAGE n, reg: the address of the array's page n.
+	.MACRO	PAGE	N,REG
+	MULL3	#512,N,REG
+	ADDL2	ARR,REG
+	.ENDM	PAGE
+
+; RANGE first, count: RNG is the array's pages first to first+count-1.
+	.MACRO	RANGE	FIRST,COUNT
+	PUSHL	COUNT
+	PUSHL	FIRST
+	CALLS	#2,RANGER
+	.ENDM	RANGE
+
+; FAULTS from, to, reg: reg = to's PAGEFLTS less from's.
+	.MACRO	FAULTS	FROM,TO,REG
+	SUBL3	FROM+S_FLTS,TO+S_FLTS,REG
+	.ENDM	FAULTS
+
+	.PSECT	DATA,NOEXE,WRT,PAGE
+
+; SYS$OUTPUT.
+OFAB:	$FAB	FNM=<SYS$OUTPUT>,RAT=CR,RFM=VAR,FAC=PUT
+ORAB:	$RAB	FAB=OFAB,RBF=OBUF
+OBUF:	.BLKB	200
+OUTD:	.LONG	200
+	.ADDRESS OBUF
+OUTLEN:	.WORD	0,0
+
+; The snapshot's item list and buffer.
+	.ALIGN	LONG
+JPILST:	.WORD	4,JPI$_PAGEFLTS
+	.ADDRESS CUR+S_FLTS
+	.LONG	0
+	.WORD	4,JPI$_PPGCNT
+	.ADDRESS CUR+S_PPG
+	.LONG	0
+	.WORD	4,JPI$_GPGCNT
+	.ADDRESS CUR+S_GPG
+	.LONG	0
+	.WORD	4,JPI$_WSSIZE
+	.ADDRESS CUR+S_WS
+	.LONG	0
+	.WORD	4,JPI$_WSPEAK
+	.ADDRESS CUR+S_PEAK
+	.LONG	0
+	.WORD	4,JPI$_DFWSCNT
+	.ADDRESS CUR+S_DF
+	.LONG	0
+	.WORD	4,JPI$_WSQUOTA
+	.ADDRESS CUR+S_QUO
+	.LONG	0
+	.WORD	4,JPI$_WSEXTENT
+	.ADDRESS CUR+S_EXT
+	.LONG	0
+	.WORD	4,JPI$_WSAUTH
+	.ADDRESS CUR+S_AUQ
+	.LONG	0
+	.WORD	4,JPI$_WSAUTHEXT
+	.ADDRESS CUR+S_AUE
+	.LONG	0
+	.LONG	0
+CUR:	.BLKB	SNAPSZ
+JIOSB:	.QUAD	0
+
+SA:	.BLKB	SNAPSZ			; the snapshots the cases take
+SB:	.BLKB	SNAPSZ
+SC:	.BLKB	SNAPSZ
+SD:	.BLKB	SNAPSZ
+
+; $GETSYIW's item list, one item at a time (SYIR).
+SYILST:	.WORD	4
+SYICOD:	.WORD	0
+	.ADDRESS SYIVAL
+	.LONG	0
+	.LONG	0
+SYIVAL:	.LONG	0
+SIOSB:	.QUAD	0
+
+; The SYSGEN parameters, by code and name.
+	.ALIGN	LONG
+SYITAB:	.LONG	SYI$_MINWSCNT
+	.ADDRESS N_MINWS
+	.LONG	SYI$_WSMAX
+	.ADDRESS N_WSMAX
+	.LONG	SYI$_GROWLIM
+	.ADDRESS N_GROW
+	.LONG	SYI$_BORROWLIM
+	.ADDRESS N_BORROW
+	.LONG	SYI$_FREELIM
+	.ADDRESS N_FREELIM
+	.LONG	SYI$_FREEGOAL
+	.ADDRESS N_FREEGOAL
+	.LONG	SYI$_MPW_HILIMIT
+	.ADDRESS N_MPWHI
+	.LONG	SYI$_MPW_LOLIMIT
+	.ADDRESS N_MPWLO
+	.LONG	SYI$_PFCDEFAULT
+	.ADDRESS N_PFC
+	.LONG	SYI$_TBSKIPWSL
+	.ADDRESS N_TBSKIP
+	.LONG	0
+
+N_MINWS:	.ASCID	/MINWSCNT/
+N_WSMAX:	.ASCID	/WSMAX/
+N_GROW:		.ASCID	/GROWLIM/
+N_BORROW:	.ASCID	/BORROWLIM/
+N_FREELIM:	.ASCID	/FREELIM/
+N_FREEGOAL:	.ASCID	/FREEGOAL/
+N_MPWHI:	.ASCID	/MPW_HILIMIT/
+N_MPWLO:	.ASCID	/MPW_LOLIMIT/
+N_PFC:		.ASCID	/PFCDEFAULT/
+N_TBSKIP:	.ASCID	/TBSKIPWSL/
+
+; The patterns' sizes (part C).
+NTAB:	.LONG	50,90,100,110,150,300,0
+
+; PG63_PART's translation.
+LNMTAB:	.ASCID	/LNM$FILE_DEV/
+LNMNAM:	.ASCID	/PG63_PART/
+LNMLST:	.WORD	8,LNM$_STRING
+	.ADDRESS PART
+	.ADDRESS PARTLEN
+	.LONG	0
+PART:	.BLKB	8
+PARTLEN: .LONG	0
+
+; The array, a 4-page global section, and its read-only mapping.
+EXPRET:	.LONG	0,0
+ARR:	.LONG	0			; the array's first page
+P0ANY:	.LONG	^X200,^X200		; "anywhere in P0" with SEC$M_EXPREG
+GNAME:	.ASCID	/PG63SEC/
+GRNG:	.LONG	0,0
+GRNG2:	.LONG	0,0
+
+; Ranges and the cells the services write.
+ALLRNG:	.LONG	0,^X7FFFFFFF		; all of P0 and P1
+S0RNG:	.LONG	^X80000000,^X80000200
+S0ONE:	.LONG	^X80000000,^X80000000
+CROSS:	.LONG	^X7FFFFE00,^X80000200
+NOPAGE:	.LONG	^X3FFF0000,^X3FFF0000	; no page there
+RNG:	.LONG	0,0
+REV:	.LONG	0,0
+RET:	.LONG	0,0
+CURLIM:	.LONG	0
+LIM:	.LONG	0
+PSWAPM:	.LONG	<1@PRV$V_PSWAPM>,0
+STAT:	.LONG	0
+STAT2:	.LONG	0
+
+	.PSECT	CODE,EXE,NOWRT,PAGE
+	.ENTRY	START,^M<R2,R3,R4,R5,R6,R7,R8,R9,R10,R11>
+	SNAP	SA			; before anything else
+	$CREATE	FAB=OFAB
+	$CONNECT RAB=ORAB
+	$EXPREG_S PAGCNT=#ARRPAGES, RETADR=EXPRET
+	MOVL	EXPRET,ARR
+	$TRNLNM_S TABNAM=LNMTAB, LOGNAM=LNMNAM, ITMLST=LNMLST
+	CMPB	PART,#^A/B/
+	BNEQ	1$
+	BRW	PARTB
+1$:	BRW	PARTA
+
+;
+; Part B: the second image. Its first snapshot was taken at its first
+; instruction.
+;
+PARTB:	SAY	</R1 start: flts=!UL ppg=!UL gpg=!UL wssize=!UL peak=!UL dfwscnt=!UL/>, -
+		SA+S_FLTS, SA+S_PPG, SA+S_GPG, SA+S_WS, SA+S_PEAK, SA+S_DF
+; The pages part A locked are gone with its P0; are new pages at those
+; addresses locked?
+	RANGE	#0,#1
+	$ULWSET_S INADR=RNG
+	MOVL	R0,STAT
+	RANGE	#1,#1
+	$ULKPAG_S INADR=RNG
+	SAY	</R2 unlock A's pages: $ULWSET !XL $ULKPAG !XL/>, STAT, R0
+	SNAP	SB
+	SAY	</R3 end: wssize=!UL peak=!UL/>, SB+S_WS, SB+S_PEAK
+	MOVL	#SS$_NORMAL,R0
+	RET
+
+;
+; Part A.
+;
+PARTA:	SAY	</A1 start: flts=!UL ppg=!UL gpg=!UL wssize=!UL peak=!UL/>, -
+		SA+S_FLTS, SA+S_PPG, SA+S_GPG, SA+S_WS, SA+S_PEAK
+	SAY	</A2 quotas: dfwscnt=!UL quota=!UL extent=!UL auth=!UL authext=!UL/>, -
+		SA+S_DF, SA+S_QUO, SA+S_EXT, SA+S_AUQ, SA+S_AUE
+	MOVAL	SYITAB,R6
+10$:	TSTL	(R6)
+	BEQL	11$
+	MOVW	(R6),SYICOD
+	CLRL	SYIVAL
+	$GETSYIW_S ITMLST=SYILST, IOSB=SIOSB
+	SAY	</A3 syi !AS: !XL !UL/>, 4(R6), R0, SYIVAL
+	ADDL2	#8,R6
+	BRB	10$
+11$:
+
+;
+; B: $ADJWSL.
+;
+	$ADJWSL_S PAGCNT=#0, WSETLM=LIM
+	MOVL	R0,STAT
+	SNAP	SB
+	SAY	</B1 adjwsl 0: !XL wsetlm=!UL wssize=!UL/>, STAT, LIM, SB+S_WS
+	MNEGL	#1,LIM
+	$ADJWSL_S WSETLM=LIM
+	SAY	</B2 adjwsl omitted: !XL wsetlm=!UL/>, R0, LIM
+	$ADJWSL_S PAGCNT=#100000, WSETLM=LIM
+	SAY	</B3 adjwsl +100000: !XL wsetlm=!UL/>, R0, LIM
+	$ADJWSL_S PAGCNT=#-100000, WSETLM=LIM
+	MOVL	R0,STAT
+	SNAP	SB
+	SAY	</B4 adjwsl -100000: !XL wsetlm=!UL ppg=!UL/>, STAT, LIM, SB+S_PPG
+	SETLIM	#100
+	$ADJWSL_S PAGCNT=#10, WSETLM=START
+	MOVL	R0,STAT
+	$ADJWSL_S PAGCNT=#0, WSETLM=LIM
+	SAY	</B5 adjwsl +10 into code: !XL, then the limit !UL/>, STAT, LIM
+; A shrink below the pages in use.
+	SETLIM	#200
+	$PURGWS_S INADR=ALLRNG
+	SWEEP	#0,#150
+	SNAP	SB
+	SETLIM	#60
+	SNAP	SC
+	SAY	</B6 200 to 60 with 150 touched: limit=!UL ppg !UL to !UL wssize=!UL/>, -
+		CURLIM, SB+S_PPG, SC+S_PPG, SC+S_WS
+; A grow: is the room used at once?
+	SETLIM	#60
+	$PURGWS_S INADR=ALLRNG
+	SWEEP	#0,#100
+	SWEEP	#0,#100
+	SETLIM	#200
+	SNAP	SB
+	SWEEP	#0,#150
+	SNAP	SC
+	SWEEP	#0,#150
+	SNAP	SD
+	FAULTS	SB,SC,R6
+	FAULTS	SC,SD,R7
+	SAY	</B7 60 to 200, two sweeps of 150: flts !UL !UL ppg=!UL/>, R6, R7, SD+S_PPG
+
+;
+; C: patterns. At a limit of 100, after a purge, N pages written three
+; times over.
+;
+	MOVAL	NTAB,R8
+20$:	MOVL	(R8)+,R9
+	BNEQ	21$
+	BRW	29$
+21$:	SETLIM	#100
+	$PURGWS_S INADR=ALLRNG
+	SNAP	SA
+	SWEEP	#0,R9
+	SNAP	SB
+	SWEEP	#0,R9
+	SNAP	SC
+	SWEEP	#0,R9
+	SNAP	SD
+	FAULTS	SA,SB,R6
+	FAULTS	SB,SC,R7
+	FAULTS	SC,SD,R10
+	SAY	</C N=!UL: flts !UL !UL !UL ppg=!UL gpg=!UL peak=!UL/>, -
+		R9, R6, R7, R10, SD+S_PPG, SD+S_GPG, SD+S_PEAK
+	BRW	20$
+29$:
+
+;
+; D: $PURGWS.
+;
+	SETLIM	#100
+	SNAP	SA
+	$PURGWS_S INADR=ALLRNG
+	MOVL	R0,STAT
+	SNAP	SB
+	FAULTS	SA,SB,R6
+	SAY	</D1 purge all: !XL, then ppg=!UL gpg=!UL with !UL faults/>, -
+		STAT, SB+S_PPG, SB+S_GPG, R6
+	SNAP	SC
+	SAY	</D1 a snapshot later: ppg=!UL/>, SC+S_PPG
+; One page.
+	SWEEP	#0,#4
+	RANGE	#0,#1
+	SNAP	SA
+	$PURGWS_S INADR=RNG
+	MOVL	R0,STAT
+	SWEEP	#0,#4
+	SNAP	SB
+	FAULTS	SA,SB,R6
+	SAY	</D2 purge one page: !XL, then 4 touched: !UL faults/>, STAT, R6
+; A reversed range.
+	SWEEP	#0,#4
+	PAGE	#3,REV
+	MOVL	ARR,REV+4
+	SNAP	SA
+	$PURGWS_S INADR=REV
+	MOVL	R0,STAT
+	SWEEP	#0,#4
+	SNAP	SB
+	FAULTS	SA,SB,R6
+	SAY	</D3 purge 4 pages reversed: !XL, then 4 touched: !UL faults/>, STAT, R6
+; A range with a locked page.
+	SWEEP	#0,#4
+	RANGE	#1,#1
+	$LKWSET_S INADR=RNG
+	MOVL	R0,STAT
+	RANGE	#0,#4
+	$PURGWS_S INADR=RNG
+	MOVL	R0,STAT2
+	SNAP	SA
+	SWEEP	#1,#1
+	SNAP	SB
+	FAULTS	SA,SB,R6
+	SNAP	SA
+	SWEEP	#0,#1
+	SNAP	SB
+	FAULTS	SA,SB,R7
+	RANGE	#1,#1
+	$ULWSET_S INADR=RNG
+	SAY	</D4 lock page 1 !XL, purge 0-3 !XL; page 1 !UL faults, page 0 !UL; unlock !XL/>, -
+		STAT, STAT2, R6, R7, R0
+	$PURGWS_S INADR=S0RNG
+	SAY	</D5 purge in S0: !XL/>, R0
+	$PURGWS_S INADR=CROSS
+	SAY	</D6 purge P1 to S0: !XL/>, R0
+	$PURGWS_S INADR=0
+	SAY	</D7 purge, inadr 0: !XL/>, R0
+
+;
+; E: $LKWSET and $ULWSET.
+;
+	SETLIM	#100
+	SWEEP	#0,#8
+	RANGE	#0,#1
+	MNEGL	#1,RET
+	MNEGL	#1,RET+4
+	$LKWSET_S INADR=RNG, RETADR=RET
+	MOVL	R0,STAT
+	PUSHL	RNG
+	PUSHAL	RET
+	CALLS	#2,RELR
+	MOVL	R0,R6
+	PUSHL	RNG
+	PUSHAL	RET+4
+	CALLS	#2,RELR
+	SAY	</E1 lock page 0: !XL retadr !SL !SL/>, STAT, R6, R0
+	$LKWSET_S INADR=RNG
+	SAY	</E2 lock it again: !XL/>, R0
+	RANGE	#0,#4
+	$LKWSET_S INADR=RNG
+	SAY	</E3 lock pages 0-3 (0 locked): !XL/>, R0
+	$ULWSET_S INADR=RNG
+	SAY	</E4 unlock 0-3 (all locked): !XL/>, R0
+	$ULWSET_S INADR=RNG
+	SAY	</E5 unlock 0-3 (none locked): !XL/>, R0
+	RANGE	#0,#1
+	$LKWSET_S INADR=RNG
+	RANGE	#0,#2
+	$ULWSET_S INADR=RNG
+	SAY	</E6 unlock 0-1 (0 locked): !XL/>, R0
+	PUSHL	#100
+	CALLS	#1,FILLR
+	PUSHL	#150
+	CALLS	#1,FILLR
+; One call over 200 pages at a limit of 100.
+	SETLIM	#100
+	$PURGWS_S INADR=ALLRNG
+	RANGE	#0,#200
+	MNEGL	#1,RET
+	MNEGL	#1,RET+4
+	$LKWSET_S INADR=RNG, RETADR=RET
+	MOVL	R0,STAT
+	SNAP	SB
+	PUSHL	RNG
+	PUSHAL	RET
+	CALLS	#2,RELR
+	MOVL	R0,R6
+	PUSHL	RNG
+	PUSHAL	RET+4
+	CALLS	#2,RELR
+	MOVL	R0,R7
+	RANGE	#0,#200
+	$ULWSET_S INADR=RNG
+	SAY	</E9 lock 200 pages at 100: !XL retadr !SL !SL wssize=!UL ppg=!UL; unlock !XL/>, -
+		STAT, R6, R7, SB+S_WS, SB+S_PPG, R0
+; A writable global page, then a read-only one.
+	$CRMPSC_S INADR=P0ANY, RETADR=GRNG, GSDNAM=GNAME, PAGCNT=#4, -
+		FLAGS=#<SEC$M_GBL!SEC$M_PAGFIL!SEC$M_WRT!SEC$M_EXPREG>
+	MOVL	R0,STAT
+	BLBC	STAT,30$
+	MOVL	#1,@GRNG
+30$:	SNAP	SB
+	MOVL	GRNG,RNG
+	MOVL	GRNG,RNG+4
+	$LKWSET_S INADR=RNG
+	MOVL	R0,STAT2
+	$LCKPAG_S INADR=RNG
+	MOVL	R0,R6
+	$ULKPAG_S INADR=RNG
+	SAY	</E10 writable global: $CRMPSC !XL gpg=!UL; $LKWSET !XL $LCKPAG !XL $ULKPAG !XL/>, -
+		STAT, SB+S_GPG, STAT2, R6, R0
+	$MGBLSC_S INADR=P0ANY, RETADR=GRNG2, GSDNAM=GNAME, -
+		FLAGS=#<SEC$M_EXPREG>
+	MOVL	R0,STAT
+	CLRL	R7
+	BLBC	STAT,31$
+	MOVL	GRNG2,R2
+	MOVL	(R2),R7
+31$:
+	MOVL	GRNG2,RNG
+	MOVL	GRNG2,RNG+4
+	$LKWSET_S INADR=RNG
+	MOVL	R0,STAT2
+	$ULWSET_S INADR=RNG
+	SAY	</E11 read-only global: $MGBLSC !XL value !UL; $LKWSET !XL $ULWSET !XL/>, -
+		STAT, R7, STAT2, R0
+	MNEGL	#1,RET
+	MNEGL	#1,RET+4
+	$LKWSET_S INADR=S0ONE, RETADR=RET
+	SAY	</E12 lock a system page: !XL retadr !XL !XL/>, R0, RET, RET+4
+	MNEGL	#1,RET
+	MNEGL	#1,RET+4
+	$LKWSET_S INADR=NOPAGE, RETADR=RET
+	SAY	</E13 lock a missing page: !XL retadr !XL !XL/>, R0, RET, RET+4
+	RANGE	#5,#1
+	$LKWSET_S INADR=RNG, RETADR=START
+	MOVL	R0,STAT
+	$ULWSET_S INADR=RNG
+	SAY	</E14 lock, retadr in code: !XL; unlock !XL/>, STAT, R0
+	$LKWSET_S INADR=RNG, ACMODE=#0
+	MOVL	R0,STAT
+	$ULWSET_S INADR=RNG, ACMODE=#0
+	SAY	</E15 lock and unlock, acmode kernel: !XL !XL/>, STAT, R0
+	$LKWSET_S INADR=0
+	SAY	</E16 lock, inadr 0: !XL/>, R0
+
+;
+; F: $LCKPAG and $ULKPAG, with and without PSWAPM.
+;
+	$SETPRV_S ENBFLG=#1, PRVADR=PSWAPM
+	SAY	</F1 enable PSWAPM: !XL/>, R0
+	RANGE	#6,#1
+	$LCKPAG_S INADR=RNG
+	MOVL	R0,STAT
+	$LCKPAG_S INADR=RNG
+	SAY	</F2 lock in memory: !XL, again !XL/>, STAT, R0
+	$LKWSET_S INADR=RNG
+	MOVL	R0,STAT
+	$ULWSET_S INADR=RNG
+	MOVL	R0,STAT2
+	$ULWSET_S INADR=RNG
+	SAY	</F3 then $LKWSET !XL $ULWSET !XL, again !XL/>, STAT, STAT2, R0
+	$ULKPAG_S INADR=RNG
+	MOVL	R0,STAT
+	$ULKPAG_S INADR=RNG
+	SAY	</F4 $ULKPAG !XL, again !XL/>, STAT, R0
+	$LCKPAG_S INADR=RNG
+	$SETPRV_S ENBFLG=#0, PRVADR=PSWAPM
+	SAY	</F5 lock in memory, then disable PSWAPM: !XL/>, R0
+	$ULKPAG_S INADR=RNG
+	MOVL	R0,STAT
+	$ULKPAG_S INADR=RNG
+	SAY	</F6 without PSWAPM, $ULKPAG of the locked page !XL, again !XL/>, STAT, R0
+	$LCKPAG_S INADR=RNG
+	MOVL	R0,STAT
+	$LCKPAG_S INADR=0
+	SAY	</F7 without PSWAPM, $LCKPAG !XL, inadr 0 !XL/>, STAT, R0
+	$SETPRV_S ENBFLG=#1, PRVADR=PSWAPM
+	SAY	</F8 enable PSWAPM: !XL/>, R0
+	$ULKPAG_S INADR=RNG
+
+;
+; G: what part A leaves for part B: a limit of 250, page 0 locked in the
+; working set, page 1 in memory.
+;
+	SETLIM	#250
+	SWEEP	#0,#200
+	RANGE	#0,#1
+	$LKWSET_S INADR=RNG
+	MOVL	R0,STAT
+	RANGE	#1,#1
+	$LCKPAG_S INADR=RNG
+	MOVL	R0,STAT2
+	SNAP	SB
+	SAY	</G1 end: limit=!UL lock !XL !XL; wssize=!UL ppg=!UL peak=!UL flts=!UL/>, -
+		CURLIM, STAT, STAT2, SB+S_WS, SB+S_PPG, SB+S_PEAK, SB+S_FLTS
+	MOVL	#SS$_NORMAL,R0
+	RET
+
+; FILLR limit: E7 and E8. At the limit, after a purge, lock the array's
+; pages one at a time until a lock fails; then unlock them all.
+	.ENTRY	FILLR,^M<R2,R3,R4,R5,R6,R7>
+	SETLIM	4(AP)
+	$PURGWS_S INADR=ALLRNG
+	CLRL	R6
+1$:	RANGE	R6,#1
+	$LKWSET_S INADR=RNG
+	BLBC	R0,2$
+	INCL	R6
+	CMPL	R6,#ARRPAGES
+	BLSS	1$
+2$:	MOVL	R0,R7
+	SNAP	SB
+	RANGE	#0,#ARRPAGES
+	$ULWSET_S INADR=RNG
+	SAY	</E7 at !UL: !UL locked, then !XL; wssize=!UL ppg=!UL; unlock !XL/>, -
+		CURLIM, R6, R7, SB+S_WS, SB+S_PPG, R0
+	RET
+
+; SAYR ctrstr, p1, ...: write a line.
+	.ENTRY	SAYR,^M<R2,R3,R4,R5>
+	MOVL	#200,OUTD
+	$FAOL_S	CTRSTR=@4(AP), OUTLEN=OUTLEN, OUTBUF=OUTD, PRMLST=8(AP)
+	MOVW	OUTLEN,ORAB+RAB$W_RSZ
+	$PUT	RAB=ORAB
+	RET
+
+; SNAPR block.
+	.ENTRY	SNAPR,^M<R2,R3,R4,R5>
+	$GETJPIW_S ITMLST=JPILST, IOSB=JIOSB
+	MOVC3	#SNAPSZ,CUR,@4(AP)
+	RET
+
+; SWEEPR first, count.
+	.ENTRY	SWEEPR,^M<R2,R3>
+	MULL3	#512,4(AP),R2
+	ADDL2	ARR,R2
+	MOVL	8(AP),R3
+	BEQL	2$
+1$:	MOVL	R3,(R2)
+	ADDL2	#512,R2
+	SOBGTR	R3,1$
+2$:	RET
+
+; SETLIMR n.
+	.ENTRY	SETLIMR,^M<R2>
+	$ADJWSL_S PAGCNT=#0, WSETLM=CURLIM
+	SUBL3	CURLIM,4(AP),R2
+	$ADJWSL_S PAGCNT=R2, WSETLM=CURLIM
+	RET
+
+; RANGER first, count.
+	.ENTRY	RANGER,^M<R2>
+	MULL3	#512,4(AP),R2
+	ADDL2	ARR,R2
+	MOVL	R2,RNG
+	MULL3	#512,8(AP),R2
+	ADDL2	RNG,R2
+	DECL	R2
+	MOVL	R2,RNG+4
+	RET
+
+; RELR cell, base: R0 = the longword at cell less base, or -1 if it's -1.
+	.ENTRY	RELR,^M<>
+	MOVL	@4(AP),R0
+	CMPL	R0,#-1
+	BEQL	1$
+	SUBL2	8(AP),R0
+1$:	RET
+
+	.END	START

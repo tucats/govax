@@ -389,7 +389,7 @@ func main() {
 	}
 
 	// Round 5: what round 4 left open.
-	var round5, round6, round7 []string
+	var round5, round6, round7, round8 []string
 
 	{
 		text, calls := r5Probe()
@@ -421,7 +421,19 @@ func main() {
 		round7 = append(round7, "r7_lock")
 	}
 
-	names = append(append(append(names, round5...), round6...), round7...)
+	// Round 8 (docs/PHASE-63 - working sets.md, subtask 10): $PURGWS, the
+	// one working set service govax's STARLET had no macro for, by round
+	// 4's method. It runs from Phase 63's probe volume (testdata/pg63).
+	for _, s := range r8Services {
+		name := "r8_" + strings.ToLower(s.name)
+		text, calls := r4Probe(s, "R8")
+		write(name+".mar", text)
+		write(name+".calls", strings.Join(calls, "\n")+"\n")
+
+		round8 = append(round8, name)
+	}
+
+	names = append(append(append(append(names, round5...), round6...), round7...), round8...)
 
 	// The command procedures: one per round, each with its own log, and
 	// MACROS.COM, which runs both.
@@ -446,17 +458,19 @@ func main() {
 	roundProcedure(5, round5)
 	roundProcedure(6, round6)
 	roundProcedure(7, round7)
+	roundProcedure(8, round8)
 
-	write("macros.com", `$ ! MACROS.COM - the system service macro probes, round 7
+	write("macros.com", `$ ! MACROS.COM - the system service macro probes, round 8
 $ ! (testdata/mp/macros/README.md). Written by gen.go. Run it with the
 $ ! exchange volume as the default directory:
 $ !
 $ !     @MACROS
 $ !
-$ ! Rounds 5 and 6 have run (MACROS5.COM and MACROS6.COM, logs in vax/);
-$ ! round 7 writes MACROS7.LOG.
+$ ! Rounds 5 to 7 have run (MACROS5.COM to MACROS7.COM, logs in vax/);
+$ ! round 8 writes MACROS8.LOG. (Phase 63's probe, testdata/pg63, runs
+$ ! MACROS8.COM itself.)
 $ !
-$ @MACROS7/OUTPUT=MACROS7.LOG
+$ @MACROS8/OUTPUT=MACROS8.LOG
 $ EXIT
 `)
 
@@ -484,13 +498,15 @@ $ EXIT
 		fmt.Fprintf(&o, "COPY DUA1:[000000]%s.ANL \"%s/vax/%s.anl\"/HOST/QUIET\n", up, dir, n)
 	}
 
-	for _, n := range []string{"macros.com", "macros5.com", "macros6.com"} {
+	for _, n := range []string{"macros.com", "macros5.com", "macros6.com", "macros7.com", "macros8.com"} {
 		fmt.Fprintf(&x, "COPY \"%s/%s\"/HOST DUA1:[000000]%s\n", dir, n, strings.ToUpper(n))
 	}
 
 	x.WriteString("DIRECTORY DUA1:[000000]\nDISMOUNT DUA1\n")
 	fmt.Fprintf(&o, "COPY DUA1:[000000]MACROS5.LOG \"%s/vax/macros5.log\"/HOST/QUIET\n", dir)
 	fmt.Fprintf(&o, "COPY DUA1:[000000]MACROS6.LOG \"%s/vax/macros6.log\"/HOST/QUIET\n", dir)
+	fmt.Fprintf(&o, "COPY DUA1:[000000]MACROS7.LOG \"%s/vax/macros7.log\"/HOST/QUIET\n", dir)
+	fmt.Fprintf(&o, "COPY DUA1:[000000]MACROS8.LOG \"%s/vax/macros8.log\"/HOST/QUIET\n", dir)
 	o.WriteString("DISMOUNT DUA1\n")
 
 	write("exchange.cmd", x.String())
@@ -686,6 +702,12 @@ var r6Services = []r4Service{
 	{"DEQ", []arg{v("LKID"), a("VALBLK"), v("ACMODE"), v("FLAGS")}, nil, nil},
 	{"GETLKI", []arg{v("EFN"), a("LKIDADR"), a("ITMLST"), a("IOSB"), a("ASTADR"), v("ASTPRM"), v("NULLARG")}, nil, nil},
 	{"GETLKIW", []arg{v("EFN"), a("LKIDADR"), a("ITMLST"), a("IOSB"), a("ASTADR"), v("ASTPRM"), v("NULLARG")}, nil, nil},
+}
+
+// r8Services is round 8's (docs/PHASE-63 - working sets.md): $PURGWS,
+// whose one argument is the manual's.
+var r8Services = []r4Service{
+	{"PURGWS", []arg{a("INADR")}, nil, nil},
 }
 
 // r4Probe writes one service's round 4 program (and round 6's: round is

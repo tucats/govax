@@ -1059,3 +1059,27 @@ from run to run.
     /NOADJUST, F$GETJPI's DFWSCNT, WSSIZE, and WSQUOTA after, a SPAWNed
     subprocess's own values, unchanged in process 1 after it; with paging
     on, the list's size following SET's /LIMIT and /EXTENT.
+- **2026-10-16:** Subtask 10, the probe, written (`testdata/pg63`,
+  README.md; the VAX run is next). `pg63.mar` is one program in two parts
+  (PG63_PART): part A's cases follow "The probe's cases" above (the
+  `$ADJWSL` bounds and shrinks, the patterns at a limit of 100, `$PURGWS`,
+  the lock services' statuses and SS$_LKWSETFUL's threshold at two limits,
+  global pages, `$LCKPAG`/`$ULKPAG` with and without PSWAPM), and part B
+  is the second image. It uses no LIBRTL, so no shareable image's pages
+  are in VMS's working set. `pg63.com` asks SYSGEN, SHOW and SET
+  WORKING_SET (each qualifier within and beyond its bounds, at DCL level,
+  F$GETJPI after each), and a subprocess (`pg63s.com`), and runs the
+  program twice with /NOADJUST, so that automatic adjustment doesn't
+  change the limits under the patterns. The macro round is
+  `testdata/mp/macros`'s round 8 (`r8_purgws.mar`, `macros8.com`, by
+  round 4's generator), run from the same volume. Its log and the build
+  log are on the clean-room hook's unaudited list until the author has
+  checked them.
+  - **govax's dry run** (paging on) ran it all. Besides the commands
+    govax's DCL lacks (SYSGEN, SHOW MEMORY/PHYSICAL_PAGES, F$GETSYI's
+    HW_NAME), it found that **image rundown doesn't delete P0**
+    (`ImageRundown` has no such step): after part A exits, DCL sees its
+    array's pages still in the working set (PPGCNT 210), and a second
+    image of the same layout takes few faults or none. VMS deletes P0 at
+    rundown (the book's 21.3); the VAX run's `ws` lines show its numbers,
+    and govax is changed after it, with the other answers.

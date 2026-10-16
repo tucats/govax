@@ -61,8 +61,10 @@ fi
 # definition probes' log (testdata/mp/run48) and macro round 7's
 # (testdata/mp/final); none holds expansion text. Phase 49's probe's
 # MACRO logs (testdata/probe49/vax, rounds 1 and 2) were audited on
-# 2026-10-09: empty. Nothing waits now.
-unaudited=''
+# 2026-10-09: empty. Waiting (2026-10-16): Phase 63's probe's MACRO
+# build log (testdata/pg63/vax) and macro round 8's log
+# (testdata/mp/macros/vax), once the VAX run brings them back.
+unaudited='macros8\.log|pg63_build\.log'
 if [ -n "$unaudited" ] && printf '%s' "$text" | grep -Eq "$unaudited"; then
 	refuse "this names real-MACRO output that may show STARLET macro text and hasn't been audited"
 fi

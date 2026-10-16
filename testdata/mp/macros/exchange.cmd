@@ -16,8 +16,11 @@ COPY "testdata/mp/macros/r6_deq.mar"/HOST DUA1:[000000]R6_DEQ.MAR
 COPY "testdata/mp/macros/r6_getlki.mar"/HOST DUA1:[000000]R6_GETLKI.MAR
 COPY "testdata/mp/macros/r6_getlkiw.mar"/HOST DUA1:[000000]R6_GETLKIW.MAR
 COPY "testdata/mp/macros/r7_lock.mar"/HOST DUA1:[000000]R7_LOCK.MAR
+COPY "testdata/mp/macros/r8_purgws.mar"/HOST DUA1:[000000]R8_PURGWS.MAR
 COPY "testdata/mp/macros/macros.com"/HOST DUA1:[000000]MACROS.COM
 COPY "testdata/mp/macros/macros5.com"/HOST DUA1:[000000]MACROS5.COM
 COPY "testdata/mp/macros/macros6.com"/HOST DUA1:[000000]MACROS6.COM
+COPY "testdata/mp/macros/macros7.com"/HOST DUA1:[000000]MACROS7.COM
+COPY "testdata/mp/macros/macros8.com"/HOST DUA1:[000000]MACROS8.COM
 DIRECTORY DUA1:[000000]
 DISMOUNT DUA1
