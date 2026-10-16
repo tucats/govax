@@ -1,6 +1,7 @@
 package console
 
 import (
+	"fmt"
 	"strings"
 	"time"
 
@@ -106,7 +107,7 @@ func (c *Console) Help(h *help.File, words []string) error {
 // image of process 1's that never exited is run down, the other processes
 // are deleted (their files closed), and every file process 1 and DCL's
 // OPEN have open is closed, so that what they wrote reaches the volumes
-// before they're dismounted.
+// before they're dismounted; so is the page file.
 func (c *Console) EndSession() {
 	c.RunDownAbandonedImage()
 	c.EndOtherProcesses()
@@ -114,5 +115,9 @@ func (c *Console) EndSession() {
 
 	if c.RTL != nil {
 		c.RTL.CloseFiles()
+
+		if err := c.RTL.ClosePageFile(); err != nil {
+			fmt.Fprintf(c.Out, "%%GOVAX-W-PAGEFILE, closing the page file: %v\n", err)
+		}
 	}
 }

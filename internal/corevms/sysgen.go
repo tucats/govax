@@ -84,6 +84,18 @@ type Sysgen struct {
 	// thresholds (reclaim.go).
 	FreeLimit uint32
 	FreeGoal  uint32
+
+	// PageFileName is vax.sysgen.paging.file, the page file's name (a
+	// volume file's specification, or a host path, in quotes when it
+	// could be taken for either; "" for no page file), and PageFileSize
+	// vax.sysgen.paging.size, its size in blocks when it's created
+	// (pagefile.go).
+	PageFileName string
+	PageFileSize uint32
+
+	// MPWWriteCluster is MPW_WRTCLUSTER: the most pages the modified page
+	// writer writes to the page file at once.
+	MPWWriteCluster uint32
 }
 
 // DefaultSysgen returns the parameters with no key set.
@@ -92,6 +104,7 @@ func DefaultSysgen() Sysgen {
 		MinWSCount: DefaultMinWSCount, GrowLimit: DefaultGrowLimit, TBSkipWSL: DefaultTBSkipWSL,
 		MPWHiLimit: DefaultMPWHiLimit, MPWLoLimit: DefaultMPWLoLimit,
 		FreeLimit: DefaultFreeLimit, FreeGoal: DefaultFreeGoal,
+		PageFileSize: DefaultPageFileSize, MPWWriteCluster: DefaultMPWWriteCluster,
 	}
 }
 

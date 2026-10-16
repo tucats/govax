@@ -22,6 +22,8 @@ const (
 	mpwLoLimitSetting = "vax.sysgen.mpw_lolimit"
 	freeLimSetting    = "vax.sysgen.freelim"
 	freeGoalSetting   = "vax.sysgen.freegoal"
+	pageFileSetting   = "vax.sysgen.paging.file"
+	pageSizeSetting   = "vax.sysgen.paging.size"
 )
 
 // pqlSettings are the PQL_Dxxx keys, by the quota each sets the default
@@ -39,6 +41,7 @@ func SysgenKeys() []string {
 	keys := []string{
 		PagingSetting, minWSCountSetting, tbSkipWSLSetting, growLimSetting,
 		mpwHiLimitSetting, mpwLoLimitSetting, freeLimSetting, freeGoalSetting,
+		pageFileSetting, pageSizeSetting,
 	}
 
 	for key := range pqlSettings {
@@ -51,7 +54,7 @@ func SysgenKeys() []string {
 // SysgenCountKeys returns the keys whose value is a count of pages, which
 // must be a positive integer (cmd/govax's audit warns about any other).
 func SysgenCountKeys() []string {
-	keys := []string{minWSCountSetting}
+	keys := []string{minWSCountSetting, pageSizeSetting}
 
 	for key := range pqlSettings {
 		keys = append(keys, key)
@@ -136,6 +139,12 @@ func sysgenSettings(paging bool) corevms.Sysgen {
 
 	if v, ok := ParseSysgenNumber(settings.Get(freeGoalSetting)); ok {
 		sg.FreeGoal = v
+	}
+
+	sg.PageFileName = strings.TrimSpace(settings.Get(pageFileSetting))
+
+	if v, ok := ParseSysgenCount(settings.Get(pageSizeSetting)); ok {
+		sg.PageFileSize = v
 	}
 
 	for key, quota := range pqlSettings {

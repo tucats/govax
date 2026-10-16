@@ -349,10 +349,15 @@ func NewMachine(out io.Writer) *Machine {
 // RTL environment of its first process, process 1, made by the console
 // (Hooks.NewProcessOne). The files the old process 1 left open are
 // closed first, so what it wrote reaches the volumes (they outlive the
-// machine).
+// machine), and so is the old System's page file, so that its volume can
+// be dismounted.
 func (m *Machine) newRTL() *corevms.Environment {
 	if m.processOne != nil {
 		m.processOne.CloseFiles()
+
+		if err := m.processOne.ClosePageFile(); err != nil {
+			fmt.Fprintf(m.Hooks.Output(), "%%GOVAX-W-PAGEFILE, closing the page file: %v\n", err)
+		}
 	}
 
 	sys := corevms.NewSystem(m.CPU, m.Mem, m.Devices, m.Mounts)

@@ -2,7 +2,8 @@
 
 **Status:** in progress. Subtask 1, the survey (Part A below), done
 2026-10-16, and its questions answered by the author the same day
-("Questions for the author"). Planned 2026-10-15. Needs Phase 63 (working sets, the
+("Questions for the author"). Subtask 2, the page file, done
+2026-10-16. Planned 2026-10-15. Needs Phase 63 (working sets, the
 lists, soft faults). Part of the paging program laid out in
 `PHASE-62 - VMS paging.md` (Decisions 7, 8, 9, and 10 are this phase's).
 
@@ -574,7 +575,7 @@ pg63's. Values that vary from run to run print as differences.
    reentrancy audit (safe, as long as the page file never extends) and
    contiguous allocation (ods2's `Extend` already is
    contiguous-best-try).
-2. **The page file:** the `vax.sysgen.paging.file` and `paging.size`
+2. **The page file** (done 2026-10-16): the `vax.sysgen.paging.file` and `paging.size`
    keys; open or create it (host, and volume through a new
    `internal/rms` function, contiguous-best-try; finding 15) at first
    need, held with exclusive access, closed when its System goes
@@ -643,3 +644,40 @@ pg63's. Values that vary from run to run print as differences.
   section and adds VMS's `/FILES` layout after the probe; the probe
   doesn't install a second page file on the VAX; MPW_LOLIMIT's default
   becomes 32. Subtask 2 is next.
+- **2026-10-16:** Subtask 2, the page file. `internal/paging/pagefile.go`
+  is the allocation map (`PageFileMap`): a bitmap, blocks numbered from
+  1, `Allocate(want)` by the book's rule (a run of the allocation size,
+  first fit from the file's start; no such run drops the size by 16; at
+  16 or less, the first free run however short; never more than asked
+  for), `Free` (the size regrows by 8, to MPW_WRTCLUSTER, when the freed
+  blocks' run is long enough), and `Check`; PAGEFRAG and PAGECRIT come
+  back from `Allocate` as a `Warning` the first time use passes 65% and
+  90%. `internal/rms/pagefile.go`'s `Session.OpenPageFile` opens or
+  creates the file: a quoted name, or one `Locate` calls a host path, is
+  a host file (created sparse by `Truncate`); anything else a volume
+  file, created through `MountTable.ACPCreate` with its blocks (refused,
+  leaving nothing behind, when the volume hasn't room), marked
+  contiguous-best-try (and contiguous when it is) with fixed 512-byte
+  records and its end of file at its allocation (unconfirmed until the
+  probe), then accessed with Write, NoRead, NoWrite. Either is used at
+  its own size if it exists. Its `ReadBlock`/`WriteBlock` refuse block
+  0 and blocks past its size, so it never grows. `corevms/pagefile.go`
+  is the System's: `OpenPageFile` opens it at first need, only with
+  paging on and a name configured, in process 1's RMS session; a
+  failure is one console message (`%GOVAX-W-NOPAGEFILE`, with the
+  reason) and no page file after it. `AllocatePageFile` writes PAGEFRAG
+  and PAGECRIT on the console (7.3's texts, SYSTEM facility,
+  unconfirmed); `FreePageFile`; `ClosePageFile`, which the machine calls
+  before it replaces the System (INIT, VMINIT, ZERO; finding 16) and the
+  console at the session's end, before the volumes are dismounted.
+  `Sysgen` gains `PageFileName`, `PageFileSize` (default 32768 blocks,
+  `DefaultPageFileSize`), and `MPWWriteCluster` (default 120; its key is
+  subtask 3's). The keys are in `machine/sysgen.go`, `validConfigs`, and
+  HELP CONFIG KEYS. Tests: the map's rules (`internal/paging`), host and
+  volume files with exclusive access and DISMOUNT's refusal
+  (`internal/rms`), the System's lazy open, failure message, warnings,
+  and close (`internal/corevms`), and the keys and VMINIT's close
+  (`internal/machine`). For subtask 3: opening may create the file,
+  which changes the volume's bitmap and directory, so the writer must
+  call `OpenPageFile` at an instruction boundary (the reclaimer's), not
+  from inside a fault; afterward the block I/O is safe anywhere.

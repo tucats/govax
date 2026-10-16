@@ -130,7 +130,9 @@ never had.
   reclaimer, faults by kind and PPGCNT/GPGCNT/WSPEAK, DCL's SET and
   SHOW WORKING_SET, image rundown deleting P0; checked against VMS 7.1
   by `testdata/pg63`);
-  64 the page file and modified page writer; 65 sections under the
+  64 the page file and modified page writer (in progress: subtask 2,
+  the page file, done 2026-10-16: `paging.PageFileMap`,
+  `rms.Session.OpenPageFile`, `corevms/pagefile.go`); 65 sections under the
   pager; 66 image activation by mapping; 67 the address space and page
   tables under paging, deferred to the end. Paging is synchronous, with no
   PFW, COLPG, or FPG waits. Each later phase has a planning doc.
@@ -1150,7 +1152,9 @@ expect adjustment as phases land):
   (counts in pages, decimal or %X; `machine/sysgen.go`'s
   `ParseSysgenCount`); Phase 63's `growlim`, `tbskipwsl`, `freelim`,
   `freegoal`, `mpw_hilimit`, `mpw_lolimit` (numbers, 0 allowed:
-  `ParseSysgenNumber`, `SysgenNumberKeys`). They reach each `System` as a `corevms.Sysgen`
+  `ParseSysgenNumber`, `SysgenNumberKeys`); Phase 64's `paging.file`
+  (the page file: a volume file, or a quoted host path) and
+  `paging.size` (its size in blocks when created, default 32768). They reach each `System` as a `corevms.Sysgen`
   (`corevms/sysgen.go`), whose defaults `$CREPRC`'s quotas and a
   logging-in process's account (`LoginQuotas`) use.
   `vax.library` (string) — the host directory LINK and MACRO look

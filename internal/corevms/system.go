@@ -73,6 +73,11 @@ type System struct {
 	// sectionFiles counts the sections using each file (filesec.go).
 	sectionFiles map[*rms.ACPFile]*sectionFile
 
+	// pageFile is the page file, once it's open, and pageFileState how
+	// far the System has got with opening it (pagefile.go).
+	pageFile      *PageFile
+	pageFileState pageFileState
+
 	// mpwStuck is how many frames the modified page writer last passed
 	// over because it can't write them (mpw.go).
 	mpwStuck int

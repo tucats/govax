@@ -1,9 +1,12 @@
 package machine
 
 import (
+	"path/filepath"
 	"testing"
 
 	"github.com/tucats/gopackages/app-cli/settings"
+
+	"github.com/tucats/govax/internal/corevms"
 )
 
 // TestParseSysgenCount: a count is a positive decimal integer or %X hex,
@@ -241,5 +244,54 @@ func TestSysgenReclaimer(t *testing.T) {
 			t.Errorf("vax.sysgen.freelim %q, freegoal %q: %d and %d, want %d and %d",
 				tc.lim, tc.goal, sg.FreeLimit, sg.FreeGoal, tc.wantLim, tc.wantGoal)
 		}
+	}
+}
+
+// TestSysgenPageFile: vax.sysgen.paging.file and paging.size reach the
+// System; unset, there's no page file, of the default size.
+func TestSysgenPageFile(t *testing.T) {
+	c, _ := newTestMachine(t)
+	if sg := c.ProcessOne().Sysgen; sg.PageFileName != "" || sg.PageFileSize != corevms.DefaultPageFileSize {
+		t.Errorf("unset: page file %q of %d blocks, want none of %d", sg.PageFileName, sg.PageFileSize, corevms.DefaultPageFileSize)
+	}
+
+	withSettings(t, map[string]string{pageFileSetting: ` "./pagefile.sys" `, pageSizeSetting: "%X1000"})
+
+	c, _ = newTestMachine(t)
+	if sg := c.ProcessOne().Sysgen; sg.PageFileName != `"./pagefile.sys"` || sg.PageFileSize != 0x1000 {
+		t.Errorf("page file %q of %d blocks, want \"./pagefile.sys\" of 4096", sg.PageFileName, sg.PageFileSize)
+	}
+}
+
+// TestVMInitClosesPageFile: a new System (VMINIT here) closes the old
+// one's page file first (the phase doc's finding 16).
+func TestVMInitClosesPageFile(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "pagefile.sys")
+	withSettings(t, map[string]string{pageFileSetting: `"` + path + `"`, pageSizeSetting: "50"})
+
+	c, out := newTestMachine(t)
+	if err := c.VMInitPaging(true, 64, 64, 64, 4, 0, 0, 0, 0); err != nil {
+		t.Fatal(err)
+	}
+
+	old := c.ProcessOne()
+	if old.OpenPageFile() == nil {
+		t.Fatalf("the page file didn't open: %q", out)
+	}
+
+	if err := c.VMInitPaging(true, 64, 64, 64, 4, 0, 0, 0, 0); err != nil {
+		t.Fatal(err)
+	}
+
+	if old.PageFile() != nil {
+		t.Error("the old System's page file is still open")
+	}
+
+	if c.ProcessOne().PageFile() != nil {
+		t.Error("the new System's page file is open before it's needed")
+	}
+
+	if c.ProcessOne().OpenPageFile() == nil {
+		t.Errorf("the new System's page file didn't open: %q", out)
 	}
 }

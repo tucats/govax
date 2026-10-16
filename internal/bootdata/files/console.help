@@ -134,6 +134,8 @@
 //              10/16/26    vax.sysgen.freelim and freegoal in CONFIG KEYS
 //              10/16/26    SET and SHOW WORKING_SET; SHOW SYSTEM's
 //                          counts and VMINIT/PAGING brought up to date
+//              10/16/26    vax.sysgen.paging.file and paging.size in
+//                          CONFIG KEYS
 
 This is the help documentation for the govax VAX emulator.  Topic sections are
 marked by a "$" delimiter.  This is followed by as many tokens of the help
@@ -2171,6 +2173,24 @@ $CONF,KEY
         vax.sysgen.freegoal           FREEGOAL: the reclaimer stops when
                                       this many pages are free.  0 is
                                       allowed.  Default 200.
+
+        vax.sysgen.paging.file        With paging on, the page file: where
+                                      pages with no file of their own go
+                                      when their memory is needed.  A
+                                      file on a mounted volume
+                                      (DUA0:[WORK]PAGEFILE.SYS), or a
+                                      host file, in quotes
+                                      ("./pagefile.sys").  It's created
+                                      if it's missing, opened when it's
+                                      first needed, and used at its own
+                                      size if it exists; its volume
+                                      can't be dismounted while it's
+                                      open.  Unset, there's no page
+                                      file.
+
+        vax.sysgen.paging.size        The page file's size in blocks
+                                      (pages) when govax creates it.
+                                      Default 32768.
 
     Debugging switches
 

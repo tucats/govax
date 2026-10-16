@@ -644,6 +644,8 @@ var validConfigs = map[string]bool{
 	// The system parameters (docs/PHASE-62 - VMS paging.md, Decision
 	// 11): internal/machine's sysgen.go reads them.
 	"vax.sysgen.paging.enable":  true,
+	"vax.sysgen.paging.file":    true,
+	"vax.sysgen.paging.size":    true,
 	"vax.sysgen.minwscnt":       true,
 	"vax.sysgen.tbskipwsl":      true,
 	"vax.sysgen.growlim":        true,
