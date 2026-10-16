@@ -54,15 +54,22 @@ type Process struct {
 	UIC uint32
 
 	// Working-set state (kept in the process header on VMS). WSLimit is
-	// the current limit $ADJWSL adjusts, starting at WSDefault; $ADJWSL keeps
-	// it within [MinWSCount, WSExtent]. None of these are enforced by
-	// govax's memory model — they're kept so the services that report or
-	// adjust them behave as documented. All counts are in pages.
+	// the current limit $ADJWSL adjusts, starting at WSDefault and reset
+	// to it at image exit; $ADJWSL keeps it within [MinWSCount,
+	// WSExtent]. With paging on, it's the size of the process's working
+	// set list (workingset.go), which a page fault beyond it makes room
+	// in; with paging off, it's kept only so the services that report or
+	// adjust it behave as documented. WSAuth and WSAuthExt are the
+	// values WSQuota and WSExtent were given when the process was
+	// created: the most SET WORKING_SET may raise them to (PHD$W_WSAUTH,
+	// WSAUTHEXT; never changed). All counts are in pages.
 	WSLimit    uint32
 	WSDefault  uint32 // UAF WSDEFAULT: the initial WSLimit
 	WSQuota    uint32 // UAF WSQUOTA
 	WSExtent   uint32 // UAF WSEXTENT: the most $ADJWSL can grow WSLimit to
 	MinWSCount uint32 // SYSGEN MINWSCNT: the least $ADJWSL can shrink it to
+	WSAuth     uint32 // the authorized WSQuota
+	WSAuthExt  uint32 // the authorized WSExtent
 
 	// ASTLimit is the AST quota (UAF ASTLM, PCB$W_ASTCNT's starting
 	// value): how many ASTs may be outstanding at once. It's reported by
@@ -253,6 +260,8 @@ func NewProcess() *Process {
 		WSQuota:    nominalWSQuota,
 		WSExtent:   nominalWSExtent,
 		MinWSCount: nominalMinWSCount,
+		WSAuth:     nominalWSQuota,
+		WSAuthExt:  nominalWSExtent,
 
 		ASTLimit:        nominalASTLimit,
 		BufferedIOLimit: nominalBIOLM,
@@ -341,26 +350,35 @@ func serviceSysAdjstk(env *Environment, argv []uint32) (uint32, error) {
 // working-set limit and returns the result through wsetlm. A limit pushed
 // past WSEXTENT or below MINWSCNT is quietly clamped there, as the manual
 // says ("no error condition is returned"). With pagcnt 0 (or omitted)
-// nothing changes and the current limit is returned. wsetlm is optional.
+// nothing changes and the current limit is returned. wsetlm is optional;
+// if it can't be written, the limit is left as it was (unconfirmed).
 //
-// The limit is recorded in env.Process but not enforced: govax's memory
-// model has no working set.
+// With paging on, the working set list itself changes size
+// (setWorkingSetLimit): a smaller limit takes the oldest pages over it
+// out, and a limit can't go below MINWSCNT more than the pages locked in
+// the working set.
 func serviceSysAdjwsl(env *Environment, argv []uint32) (uint32, error) {
 	pagcnt, wsetlm := int32(optArg(argv, 0)), optArg(argv, 1)
 	p := env.Process
 
-	limit := min(max(int64(p.WSLimit)+int64(pagcnt), int64(p.MinWSCount)), int64(p.WSExtent))
-	if pagcnt == 0 {
-		limit = int64(p.WSLimit)
-	}
-
+	// Make sure wsetlm can be written before anything changes.
 	if wsetlm != 0 {
-		if err := env.mem.StoreLongword(env.cpu, wsetlm, uint32(limit)); err != nil {
+		if err := env.mem.StoreLongword(env.cpu, wsetlm, p.WSLimit); err != nil {
 			return ssAccVio, nil
 		}
 	}
 
-	p.WSLimit = uint32(limit)
+	if pagcnt == 0 {
+		return ssNormal, nil
+	}
+
+	limit := env.setWorkingSetLimit(int64(p.WSLimit) + int64(pagcnt))
+
+	if wsetlm != 0 {
+		if err := env.mem.StoreLongword(env.cpu, wsetlm, limit); err != nil {
+			return ssAccVio, nil
+		}
+	}
 
 	return ssNormal, nil
 }
@@ -373,7 +391,8 @@ func serviceSysAdjwsl(env *Environment, argv []uint32) (uint32, error) {
 // temporary ones nobody else uses), cancels its outstanding $SETIMR
 // timers and $SCHDWK wakeups, discards its queued user-mode ASTs, and
 // forgets its user-mode exit handlers and any $PUTMSG, $CMKRNL, or
-// LIB$ routine left waiting for a routine it called, unmaps the global sections it mapped, and
+// LIB$ routine left waiting for a routine it called, unmaps the global sections it mapped,
+// resets the working-set limit to its default (resetWorkingSet), and
 // forgets its heap (releaseHeap) and its RTL packages' data
 // (ImageData). The console calls it when an
 // image started by RUN returns or exits (and does its own logical-name
@@ -394,6 +413,7 @@ func (env *Environment) ImageRundown() {
 	env.cancelPageLocks()
 	env.unmapSections()
 	env.resetImagePrivileges()
+	env.resetWorkingSet()
 	env.qiowWaits = nil
 	env.enqWaits = nil
 	env.releaseHeap()

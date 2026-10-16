@@ -74,6 +74,10 @@ func TestLoginQuotas(t *testing.T) {
 			p.WSQuota, p.WSDefault, p.WSLimit)
 	}
 
+	if p.WSAuth != 400 || p.WSAuthExt != 16400 {
+		t.Errorf("WSAUTH %d, WSAUTHEXT %d; want the quota and extent, 400 and 16400", p.WSAuth, p.WSAuthExt)
+	}
+
 	if p.Job.Pooled.PGFLQUOTA != 9000 || p.MinWSCount != 40 || p.WSExtent != 16400 {
 		t.Errorf("PGFLQUOTA %d, MinWSCount %d, WSEXTENT %d; want 9000, 40, 16400",
 			p.Job.Pooled.PGFLQUOTA, p.MinWSCount, p.WSExtent)

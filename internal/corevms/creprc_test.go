@@ -253,6 +253,8 @@ func TestCreprc_quotas(t *testing.T) {
 		{"WSDEFAULT (default, raised to the minimum, and 4 pages)", p.WSDefault, 516},
 		{"WSQUOTA (default, raised to the minimum, and 4 pages)", p.WSQuota, 1028},
 		{"working set", p.WSLimit, 516},
+		{"WSAUTH (the quota it was given)", p.WSAuth, 1028},
+		{"WSAUTHEXT (the extent it was given)", p.WSAuthExt, p.WSExtent},
 		{"PRCLM (pooled, a subprocess's is ignored)", p.Job.SubprocessLimit, nominalPRCLM},
 		{"CPULM (the creator has none)", p.CPULimit, 0},
 	} {

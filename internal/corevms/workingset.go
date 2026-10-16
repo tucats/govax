@@ -44,9 +44,7 @@ import (
 // gives the global page table its own states. There's no page file
 // (Phase 64), and no writer for a private file section's modified pages
 // (subtask 7), so a page on the modified list leaves it only by a soft
-// fault. The working set's limit is fixed at the process's WSLIMIT when
-// the list is first made; $ADJWSL and image exit move it from subtask 4.
-// And a page that's deleted, or whose process is, while it's in
+// fault. And a page that's deleted, or whose process is, while it's in
 // transition keeps its frame on its list until subtask 5 frees it.
 
 // WorkingSet returns the process's working set list, made at its first
@@ -58,16 +56,72 @@ func (env *Environment) WorkingSet() *paging.WorkingSet {
 	}
 
 	if env.ws == nil || env.wsDB != db {
-		p := env.Process
-		env.ws = paging.NewWorkingSet(int(p.WSLimit), paging.Bounds{
-			Quota:   int(p.WSQuota),
-			Extent:  int(p.WSExtent),
-			Minimum: int(p.MinWSCount),
-		})
+		env.ws = paging.NewWorkingSet(int(env.Process.WSLimit), env.workingSetBounds())
 		env.wsDB = db
+		env.Process.WSLimit = uint32(env.ws.Size())
 	}
 
 	return env.ws
+}
+
+// workingSetBounds are the limits the process's working set list moves
+// within: its WSQUOTA, WSEXTENT, and MINWSCNT.
+func (env *Environment) workingSetBounds() paging.Bounds {
+	p := env.Process
+
+	return paging.Bounds{
+		Quota:   int(p.WSQuota),
+		Extent:  int(p.WSExtent),
+		Minimum: int(p.MinWSCount),
+	}
+}
+
+// setWorkingSetLimit makes the process's working-set limit (WSLIMIT)
+// limit, kept within [MINWSCNT, WSEXTENT], and returns the limit it
+// set. It's $ADJWSL's work and image exit's reset (resetWorkingSet).
+//
+// With paging on, the working set list changes size with it
+// (paging.WorkingSet.Resize). A smaller list takes its oldest pages over
+// the new limit out, into transition as any page leaving the working
+// set; the list's own floor is MINWSCNT more than its locked pages, so
+// with pages locked the limit may stay above the one asked for. A page
+// in use by the instruction running (the CHMK or XFC that called
+// $ADJWSL) can't leave yet, so the list may stay over its limit until
+// the instruction ends, as when it grows past it (enterWorkingSet).
+func (env *Environment) setWorkingSetLimit(limit int64) uint32 {
+	p := env.Process
+	limit = min(max(limit, int64(p.MinWSCount)), int64(p.WSExtent))
+	p.WSLimit = uint32(limit)
+
+	ws := env.WorkingSet()
+	if ws == nil {
+		return p.WSLimit
+	}
+
+	ws.SetBounds(env.workingSetBounds())
+
+	for _, page := range ws.Resize(int(limit), env.replacementConditions()) {
+		env.evictPage(page)
+	}
+
+	if ws.Over() {
+		env.mem.AtNextInstruction(env.System.trimWorkingSets)
+	}
+
+	p.WSLimit = uint32(ws.Size())
+
+	return p.WSLimit
+}
+
+// resetWorkingSet is image exit's working-set step (the book's 21.3,
+// MMG$IMGRESET): the limit goes back to the process's default (DFWSCNT,
+// SET WORKING_SET/LIMIT's value), undoing the image's $ADJWSL calls,
+// with paging on or off. With paging on, the pages over the default
+// leave the working set, oldest first.
+func (env *Environment) resetWorkingSet() {
+	if env.Process != nil {
+		env.setWorkingSetLimit(int64(env.Process.WSDefault))
+	}
 }
 
 // pageSpace is the address space the process's P0 and P1 pages are in:

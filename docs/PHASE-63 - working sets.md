@@ -2,8 +2,10 @@
 
 **Status:** in progress (2026-10-16): subtask 1, the survey (Part A
 below), subtask 2, the working set lists (`internal/paging`'s
-`WorkingSet`), and subtask 3, faults, replacement, and soft faults in
-corevms (`corevms/workingset.go`), are done. Needs Phase 62 (settings, the
+`WorkingSet`), subtask 3, faults, replacement, and soft faults in
+corevms (`corevms/workingset.go`), and subtask 4, the limits (`$ADJWSL`
+on the real list, WSAUTH and WSAUTHEXT, GROWLIM's key, the reset at
+image exit), are done. Needs Phase 62 (settings, the
 `internal/paging` PFN database and lists, the PTE forms, frame
 allocation through `internal/paging`). Part of the paging program laid
 out in `PHASE-62 - VMS paging.md` (Parts A and B: the survey and the
@@ -548,7 +550,8 @@ from run to run.
 4. **Limits:** WSQUOTA, GROWLIM (its key), WSEXTENT, and MINWSCNT;
    `$ADJWSL` on the real list (a shrink removes the excess); WSAUTH and
    WSAUTHEXT as fields (finding 2); the reset to DFWSCNT at image exit,
-   in both modes (finding 3). No BORROWLIM (finding 1).
+   in both modes (finding 3). No BORROWLIM (finding 1). (Done
+   2026-10-16; the progress log says what it chose.)
 5. **Every exit path handles transition pages:** `releasePTE`,
    `TeardownAddressSpace`, `$DELTVA`, `$CRETVA` over existing pages,
    and `unmapSections`. Deleted pages' frames go to the head of the free
@@ -724,3 +727,40 @@ from run to run.
     so a new page at that address makes two frames with one owner:
     subtask 5. A private section's modified page on the modified list
     isn't written by `$UPDSEC`, `$DELTVA`, or image rundown: subtask 7.
+- **2026-10-16:** Subtask 4, the limits (`corevms/workingset.go`'s
+  `setWorkingSetLimit` and `resetWorkingSet`; tests in
+  `internal/console/workingsetlimit_test.go`, and corevms's
+  `TestImageRundownResetsWorkingSet`).
+  - **`$ADJWSL`** clamps the new limit to [MINWSCNT, WSEXTENT] as before,
+    and with paging on resizes the list (`WorkingSet.Resize`, its bounds
+    refreshed from the process first): a smaller limit takes the oldest
+    pages over it out (`evictPage`, into transition), and the result is
+    the list's size, which with pages locked in the working set may be
+    above the one asked for (the list's floor is MINWSCNT more than the
+    locked pages). Pages the calling instruction has translated can't
+    leave, so a list left over its limit is trimmed at the next
+    instruction boundary, as finding 10's growth is. `wsetlm` is checked
+    for writing before anything changes, so an unwritable one still
+    leaves the limit alone (SS$_ACCVIO, as before; unconfirmed which way
+    VMS orders it). `pagcnt` 0 changes nothing.
+  - **Image exit** (`ImageRundown`'s `resetWorkingSet`) sets the limit
+    back to DFWSCNT through the same code, in both modes (finding 3).
+    No oracle depended on a second image's WSSIZE: the whole suite
+    passed unchanged. Process deletion runs image rundown too, so a
+    process being deleted shrinks its list before its address space is
+    torn down; the pages that leaves in transition are subtask 5's,
+    with the others.
+  - **WSAUTH and WSAUTHEXT** are `Process.WSAuth` and `WSAuthExt`
+    (finding 2): set to the quota and extent in `NewProcess`,
+    `applyQuotas` (after `$CREPRC`'s 4 pages, so a child's WSAUTH is its
+    WSQUOTA, 1028 by default), and `LoginQuotas`, and never changed.
+    `$GETJPI`'s JPI$_WSAUTH and WSAUTHEXT report them.
+  - **`vax.sysgen.growlim`** (`Sysgen.GrowLimit`, default 63; 0 is
+    allowed, a number key like TBSKIPWSL), in `validConfigs` and HELP
+    CONFIG KEYS. WSQUOTA, WSEXTENT, and MINWSCNT were already the list's
+    `Bounds` from subtask 3.
+  - **The test:** an image with a 60-page working set touches 80 pages
+    (at least 20 in transition), shrinks by 30 (`wsetlm` 30, the list 30
+    long and not over it, at least 50 in transition), grows by 100 and
+    sweeps again (130; none in transition), sweeps once more (no faults),
+    and returns, after which the limit and the list are 60 again.

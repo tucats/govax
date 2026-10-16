@@ -192,8 +192,9 @@ func cpuLimit(creator *Process, v uint32, given, detached, independent bool) (ui
 // applyQuotas gives p, a new process, the quotas resolveQuotas worked
 // out. The pooled ones are its job's: set only for a detached process,
 // which has a new job. The working-set default can't be above the
-// working-set quota (the manual's PQL$_WSDEFAULT), and the working set
-// starts at its default.
+// working-set quota (the manual's PQL$_WSDEFAULT), the working set
+// starts at its default, and the quota and extent it's given are the
+// ones it's authorized for (WSAuth, WSAuthExt).
 func applyQuotas(p *Process, values map[uint32]uint32, detached bool) {
 	for code, rule := range quotasByCode {
 		if rule.kind == quotaPooled && !detached {
@@ -214,6 +215,7 @@ func applyQuotas(p *Process, values map[uint32]uint32, detached bool) {
 	p.WSDefault += wsCreationPages
 	p.WSQuota += wsCreationPages
 	p.WSLimit = p.WSDefault
+	p.WSAuth, p.WSAuthExt = p.WSQuota, p.WSExtent
 }
 
 // wsCreationPages is what $CREPRC adds to a new process's working set

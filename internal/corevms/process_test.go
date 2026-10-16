@@ -211,6 +211,31 @@ func TestServiceSysAdjwsl(t *testing.T) {
 	}
 }
 
+// TestImageRundownResetsWorkingSet: image exit puts the working-set
+// limit back at its default (DFWSCNT), undoing the image's $ADJWSL, with
+// paging off too (docs/PHASE-63 - working sets.md, finding 3), and the
+// authorized values are the quota and extent it was given.
+func TestImageRundownResetsWorkingSet(t *testing.T) {
+	env, _ := fixture()
+	p := env.Process
+
+	wantR0(t, callLNM(t, env, serviceSysAdjwsl, 200), ssNormal)
+
+	if p.WSLimit != p.WSDefault+200 {
+		t.Fatalf("WSLimit = %d after +200, want %d", p.WSLimit, p.WSDefault+200)
+	}
+
+	env.ImageRundown()
+
+	if p.WSLimit != p.WSDefault {
+		t.Errorf("WSLimit = %d after image rundown, want DFWSCNT %d", p.WSLimit, p.WSDefault)
+	}
+
+	if p.WSAuth != nominalWSQuota || p.WSAuthExt != nominalWSExtent {
+		t.Errorf("WSAUTH %d, WSAUTHEXT %d; want %d and %d", p.WSAuth, p.WSAuthExt, nominalWSQuota, nominalWSExtent)
+	}
+}
+
 func TestServiceSysAdjwslAccvio(t *testing.T) {
 	env, _ := fixture()
 	start := env.Process.WSLimit

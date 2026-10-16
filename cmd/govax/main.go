@@ -646,6 +646,7 @@ var validConfigs = map[string]bool{
 	"vax.sysgen.paging.enable":  true,
 	"vax.sysgen.minwscnt":       true,
 	"vax.sysgen.tbskipwsl":      true,
+	"vax.sysgen.growlim":        true,
 	"vax.sysgen.pql_dwsdefault": true,
 	"vax.sysgen.pql_dwsquota":   true,
 	"vax.sysgen.pql_dwsextent":  true,

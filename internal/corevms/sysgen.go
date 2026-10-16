@@ -53,7 +53,7 @@ type Sysgen struct {
 
 	// GrowLimit is GROWLIM, and TBSkipWSL is TBSKIPWSL (0 turns the TB
 	// check off): two of the rules working set replacement follows
-	// (workingset.go). GROWLIM has no key yet (docs/PHASE-63, subtask 4).
+	// (workingset.go).
 	GrowLimit uint32
 	TBSkipWSL uint32
 }
@@ -111,8 +111,9 @@ func SystemAccount() Account {
 // replaces the account's value: with no authorization file, the
 // configuration is how the author sets every process's starting values
 // (docs/PHASE-62, Decision 11). The working-set default can't exceed the
-// quota, the limit starts at the default, and the smallest working set is
-// MINWSCNT.
+// quota, the limit starts at the default, the quota and extent are the
+// ones the process is authorized for (WSAuth, WSAuthExt), and the
+// smallest working set is MINWSCNT.
 func (sg *Sysgen) LoginQuotas(p *Process, acct Account) {
 	pick := func(name string, v uint32) uint32 {
 		if c, ok := sg.PQL[name]; ok {
@@ -126,6 +127,7 @@ func (sg *Sysgen) LoginQuotas(p *Process, acct Account) {
 	p.WSDefault = min(pick("WSDEFAULT", acct.WSDefault), p.WSQuota)
 	p.WSExtent = pick("WSEXTENT", acct.WSExtent)
 	p.WSLimit = p.WSDefault
+	p.WSAuth, p.WSAuthExt = p.WSQuota, p.WSExtent
 	p.MinWSCount = sg.MinWSCount
 
 	if p.Job != nil {

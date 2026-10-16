@@ -17,6 +17,7 @@ const (
 	PagingSetting     = "vax.sysgen.paging.enable"
 	minWSCountSetting = "vax.sysgen.minwscnt"
 	tbSkipWSLSetting  = "vax.sysgen.tbskipwsl"
+	growLimSetting    = "vax.sysgen.growlim"
 )
 
 // pqlSettings are the PQL_Dxxx keys, by the quota each sets the default
@@ -31,7 +32,7 @@ var pqlSettings = map[string]string{
 // SysgenKeys returns every vax.sysgen.* key the console reads, for
 // cmd/govax's validConfigs and its audit.
 func SysgenKeys() []string {
-	keys := []string{PagingSetting, minWSCountSetting, tbSkipWSLSetting}
+	keys := []string{PagingSetting, minWSCountSetting, tbSkipWSLSetting, growLimSetting}
 
 	for key := range pqlSettings {
 		keys = append(keys, key)
@@ -54,9 +55,10 @@ func SysgenCountKeys() []string {
 
 // SysgenNumberKeys returns the keys whose value is a number that may be
 // 0, which must be a nonnegative integer (cmd/govax's audit warns about
-// any other): TBSKIPWSL, which 0 turns off.
+// any other): TBSKIPWSL, which 0 turns off, and GROWLIM, which 0 lets a
+// working set grow past its quota while any page is free.
 func SysgenNumberKeys() []string {
-	return []string{tbSkipWSLSetting}
+	return []string{tbSkipWSLSetting, growLimSetting}
 }
 
 // ParseSysgenCount reads a count key's text: a positive decimal integer,
@@ -101,6 +103,10 @@ func sysgenSettings(paging bool) corevms.Sysgen {
 
 	if v, ok := ParseSysgenNumber(settings.Get(tbSkipWSLSetting)); ok {
 		sg.TBSkipWSL = v
+	}
+
+	if v, ok := ParseSysgenNumber(settings.Get(growLimSetting)); ok {
+		sg.GrowLimit = v
 	}
 
 	for key, quota := range pqlSettings {

@@ -72,6 +72,27 @@ func TestSysgenTBSkipWSL(t *testing.T) {
 	}
 }
 
+// TestSysgenGrowLimit: vax.sysgen.growlim reaches the System, 0
+// included; unset, or bad, it's 63.
+func TestSysgenGrowLimit(t *testing.T) {
+	for _, tc := range []struct {
+		text string
+		want uint32
+	}{{"0", 0}, {"%X100", 256}, {"-1", 63}, {"", 63}} {
+		values := map[string]string{growLimSetting: tc.text}
+		withSettings(t, values)
+
+		if tc.text == "" {
+			_ = settings.Delete(growLimSetting)
+		}
+
+		c, _ := newTestMachine(t)
+		if got := c.ProcessOne().Sysgen.GrowLimit; got != tc.want {
+			t.Errorf("vax.sysgen.growlim %q: GrowLimit = %d, want %d", tc.text, got, tc.want)
+		}
+	}
+}
+
 // TestSysgenSettings: the vax.sysgen.* keys reach the System, and process
 // 1 starts from them; a bad value keeps the default.
 func TestSysgenSettings(t *testing.T) {
