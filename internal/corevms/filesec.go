@@ -238,7 +238,9 @@ func (env *Environment) processSectionAt(addr uint32) (*processSection, uint32, 
 // modify bit is set, marks the page modified in the section); a page of a
 // private section is written back to its file if it's modified and the
 // section writes back, and the section loses it; any other valid page's
-// physical page goes back to the free list.
+// physical page goes back to the free list. With paging on, a page in
+// transition is released as a valid one is, its frame taken off the
+// list it's on, and modified by its saved modify bit.
 func (env *Environment) releasePTE(addr uint32, old vm.PTE) {
 	delete(env.sectionPages, addr)
 	env.leaveWorkingSet(addr)
@@ -257,22 +259,30 @@ func (env *Environment) releasePTE(addr uint32, old vm.PTE) {
 		return
 	}
 
-	if !old.Valid() {
+	// A valid page's frame, or, with paging on, the frame a page in
+	// transition still holds (workingset.go's heldFrame).
+	var pid uint32
+	if env.Process != nil {
+		pid = env.Process.PID
+	}
+
+	pfn, modified, ok := env.heldFrame(pid, addr, old)
+	if !ok {
 		return
 	}
 
 	if ps, idx, i := env.processSectionAt(addr &^ pageMask); ps != nil {
-		if ps.writeBack && old.Modified() {
-			_ = env.writePage(ps.file, ps.vbn+uint32(i), old.PFN())
+		if ps.writeBack && modified {
+			_ = env.writePage(ps.file, ps.vbn+uint32(i), pfn)
 		}
 
-		env.mem.FreePage(old.PFN())
+		env.mem.FreePage(pfn)
 		env.unmapProcessPage(idx, i)
 
 		return
 	}
 
-	env.releaseFrame(old.PFN(), old.Modified())
+	env.releaseFrame(pfn, modified)
 }
 
 // writePage writes physical page pfn to block vbn of f.

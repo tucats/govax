@@ -72,6 +72,10 @@ type ProcessSpace struct {
 	// and are never given back.
 	P0Table, P1Table uint32
 
+	// PID is the process the space was built for (0 for process 1's):
+	// the owner its pages' frames are tied to, with paging on.
+	PID uint32
+
 	// shared lists the physical page numbers mapped into this space from
 	// another process's (the P1 vector's); teardown leaves them alone.
 	shared map[uint32]bool
@@ -205,6 +209,7 @@ func (sys *System) BuildAddressSpace(pid, p0Pages, p1Pages uint32) (*ProcessSpac
 		},
 		P0Pages: p0Pages, P1Pages: p1Pages,
 		P0Table: p0Table, P1Table: p1Table,
+		PID:    pid,
 		shared: map[uint32]bool{},
 	}
 
@@ -275,8 +280,9 @@ func (sys *System) mapShared(s *ProcessSpace) error {
 }
 
 // TeardownAddressSpace gives back everything s uses: every physical page
-// its P0 and P1 pages were given (but not the shared ones; a global
-// section's page only loses the section a reference), then its page
+// its P0 and P1 pages were given, valid or in transition (but not the
+// shared ones; a global section's page only loses the section a
+// reference), then its page
 // tables' S0 pages. It does nothing for process 1's space, whose tables
 // are VMINIT's. The process must not be the current one: the CPU's
 // registers, and the translation buffer, would still describe tables
@@ -291,7 +297,13 @@ func (sys *System) TeardownAddressSpace(s *ProcessSpace) error {
 		return fmt.Errorf("can't tear down the current process's address space")
 	}
 
-	for _, t := range []struct{ table, n uint32 }{{s.P0Table, s.P0Pages}, {s.P1Table, s.P1Pages}} {
+	// Each table's first entry is the page at base.
+	tables := []struct{ table, n, base uint32 }{
+		{s.P0Table, s.P0Pages, 0},
+		{s.P1Table, s.P1Pages, p1Base + s.P1LR*pageSize},
+	}
+
+	for _, t := range tables {
 		buf := make([]byte, t.n*4)
 
 		if err := sys.mem.LoadIn(sys.cpu, cur, t.table, buf); err != nil {
@@ -303,8 +315,13 @@ func (sys *System) TeardownAddressSpace(s *ProcessSpace) error {
 
 			if gi, ok := pte.GlobalIndex(); ok {
 				sys.unrefGlobalPage(gi)
-			} else if pte.Valid() && !s.shared[pte.PFN()] {
-				sys.releaseFrame(pte.PFN(), pte.Modified())
+
+				continue
+			}
+
+			// A valid page's frame, or one a page in transition holds.
+			if pfn, modified, ok := sys.heldFrame(s.PID, t.base+i*pageSize, pte); ok && !s.shared[pfn] {
+				sys.releaseFrame(pfn, modified)
 			}
 		}
 

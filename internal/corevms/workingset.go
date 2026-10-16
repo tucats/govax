@@ -44,8 +44,18 @@ import (
 // gives the global page table its own states. There's no page file
 // (Phase 64), and no writer for a private file section's modified pages
 // (subtask 7), so a page on the modified list leaves it only by a soft
-// fault. And a page that's deleted, or whose process is, while it's in
-// transition keeps its frame on its list until subtask 5 frees it.
+// fault, or by being deleted.
+//
+// # Deleting a page in transition
+//
+// A page can be deleted while it's out of the working set ($DELTVA,
+// $CRETVA over it, image rundown's unmapping of sections, the deletion
+// of its process). Its frame is still tied to it, on the free or
+// modified list, and must go with it: heldFrame finds it from the PTE,
+// and it's deleted as a valid page's frame is, to the head of the free
+// list (paging.Database.Delete), where it's reused first. Left there
+// tied, a new page at the same address would make two frames with one
+// owner.
 
 // WorkingSet returns the process's working set list, made at its first
 // use from the process's limit and bounds, or nil with paging off.
@@ -299,6 +309,59 @@ func (sys *System) softFault(f vm.PageFault, pfn uint32) (vm.PTE, bool) {
 	}
 
 	return vm.ValidPTE(pfn, f.PTE.Protection(), f.PTE.Owner()), true
+}
+
+// heldFrame returns the frame the page at va of process pid holds, by
+// its PTE pte, for a page being deleted, and whether the frame's
+// contents differ from the page's backing store: a valid page's frame,
+// modified if its PTE's modify bit or, for a frame tied to the page, its
+// saved modify bit is set (a page soft-faulted back after being written
+// has a clean PTE and the bit in the database); or, with paging on, a
+// page in transition's frame, still on its list and tied to the page,
+// modified by its saved modify bit. Any other PTE holds no frame. So
+// does a transition PTE whose frame has gone to another page, which
+// happens only when the frame was reused after the process left the
+// process table (BreakTie then can't find the PTE to change).
+func (sys *System) heldFrame(pid, va uint32, pte vm.PTE) (pfn uint32, modified, ok bool) {
+	if pte.Valid() {
+		e, tied := sys.tiedEntry(pid, va, pte.PFN())
+
+		return pte.PFN(), pte.Modified() || (tied && e.SavedModify), true
+	}
+
+	if sys.mem.Paging() == nil {
+		return 0, false, false
+	}
+
+	frame, ok := pte.Transition()
+	if !ok {
+		return 0, false, false
+	}
+
+	e, tied := sys.tiedEntry(pid, va, frame)
+	if !tied || e.State == paging.Active {
+		return 0, false, false
+	}
+
+	return frame, e.SavedModify, true
+}
+
+// tiedEntry returns frame pfn's PFN database entry if it's tied to the
+// process page at va of process pid; false with paging off, or for any
+// other frame.
+func (sys *System) tiedEntry(pid, va, pfn uint32) (paging.Entry, bool) {
+	db := sys.mem.Paging()
+	if db == nil {
+		return paging.Entry{}, false
+	}
+
+	e, err := db.Entry(paging.PFN(pfn))
+	if err != nil || !e.Tied || e.Type != paging.ProcessPage ||
+		e.Owner != (paging.Owner{Handle: pid, VA: va &^ pageMask}) {
+		return paging.Entry{}, false
+	}
+
+	return e, true
 }
 
 // effectivelyModified sets the saved modify bit of frame pfn, which a

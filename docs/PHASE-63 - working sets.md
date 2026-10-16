@@ -5,7 +5,7 @@ below), subtask 2, the working set lists (`internal/paging`'s
 `WorkingSet`), subtask 3, faults, replacement, and soft faults in
 corevms (`corevms/workingset.go`), and subtask 4, the limits (`$ADJWSL`
 on the real list, WSAUTH and WSAUTHEXT, GROWLIM's key, the reset at
-image exit), are done. Needs Phase 62 (settings, the
+image exit), and subtask 5, deleting pages in transition, are done. Needs Phase 62 (settings, the
 `internal/paging` PFN database and lists, the PTE forms, frame
 allocation through `internal/paging`). Part of the paging program laid
 out in `PHASE-62 - VMS paging.md` (Parts A and B: the survey and the
@@ -555,7 +555,7 @@ from run to run.
 5. **Every exit path handles transition pages:** `releasePTE`,
    `TeardownAddressSpace`, `$DELTVA`, `$CRETVA` over existing pages,
    and `unmapSections`. Deleted pages' frames go to the head of the free
-   list.
+   list. (Done 2026-10-16; the progress log says what it chose.)
 6. **The working set services:** `$PURGWS` (new, both modes; it walks
    the list, finding 4); real `$LKWSET`/`$ULWSET` and
    `$LCKPAG`/`$ULKPAG`; the unlock statuses fixed in both modes
@@ -764,3 +764,44 @@ from run to run.
     long and not over it, at least 50 in transition), grows by 100 and
     sweeps again (130; none in transition), sweeps once more (no faults),
     and returns, after which the limit and the list are 60 again.
+- **2026-10-16:** Subtask 5, deleting pages in transition
+  (`corevms/workingset.go`'s `heldFrame`; tests in
+  `internal/console/workingsetdelete_test.go`).
+  - **One rule for every exit path:** `heldFrame` says which frame a
+    page being deleted holds, by its PTE: a valid page's, or, with
+    paging on, a transition page's, if that frame is on a list and still
+    tied to the page (the process's PID and the page's address). Any
+    other PTE holds none. `releasePTE` (which `$DELTVA`, `$CRETVA` over
+    existing pages, `$CNTREG`, and `unmapSections` all reach) and
+    `TeardownAddressSpace` use it, so a transition page's frame is
+    released as a valid page's is: `FreePage`, which with paging on is
+    `paging.Database.Delete`, taking the frame off its list to the free
+    list's head, untied.
+  - **The PID in the address space:** `TeardownAddressSpace` runs after
+    the process has left the table, so `ProcessSpace` keeps the PID it
+    was built for (`PID`). The tie check matters there: a free-list
+    frame reused after the process left the table can't have its old
+    PTE changed (`BreakTie` doesn't find the process), so the PTE still
+    says transition while the frame is someone else's; that frame is
+    left alone.
+  - **The saved modify bit counts as modified** for a deleted page: a
+    transition page is modified by its saved modify bit, and a valid
+    page by its PTE's bit or, if its frame is tied to it, the saved one.
+    A page of a writable private section written, taken out of the
+    working set, and soft-faulted back by a read has a clean PTE and the
+    bit only in the database; without this, image rundown's unmapping
+    lost the write. So `$DELTVA` and image rundown now write back a
+    section's pages on the modified list too; `$UPDSEC` doesn't yet
+    (subtask 7).
+  - **The tests:** an image with a 30-page working set touches an
+    80-page array, recreates the first 40 pages with `$CRETVA` and
+    deletes the other 40 with `$DELTVA`: each frame the pages held in
+    transition is free and untied, and the next frame allocated is one
+    of them (the free list's head). It then maps a 64-page file as a
+    writable private section, adds 1000 to each page, reads the first 10
+    again (soft faults, clean PTEs), and returns: every block of the
+    file holds its new value. A second process, built in Go with a
+    30-page working set, has 80 pages touched and is removed: no frame
+    stays tied to it and the frame counts are as before it was made.
+    Each test fails without the change, and the write-back one without
+    the saved modify bit.
