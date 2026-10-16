@@ -1,8 +1,8 @@
 # Phase 64 — the page file and the modified page writer
 
 **Status:** in progress. Subtask 1, the survey (Part A below), done
-2026-10-16; its "Questions for the author" wait for answers before
-subtask 5. Planned 2026-10-15. Needs Phase 63 (working sets, the
+2026-10-16, and its questions answered by the author the same day
+("Questions for the author"). Planned 2026-10-15. Needs Phase 63 (working sets, the
 lists, soft faults). Part of the paging program laid out in
 `PHASE-62 - VMS paging.md` (Decisions 7, 8, 9, and 10 are this phase's).
 
@@ -24,7 +24,8 @@ memory:
   frame is reused;
 - **hard faults from the page file**: a page whose PTE holds a page file
   block is read back into a new frame and enters the working set;
-- **PGFLQUOTA** charged and given back by Decision 10's rules, with
+- **PGFLQUOTA** charged and given back by Decision 10's rules (as the
+  author's answer to the survey's question 1 changed them), with
   SS$_EXQUOTA from `$CRETVA`, `$EXPREG`, and `$CRMPSC`;
 - the page file's blocks given back when pages are deleted, at image
   rundown, and at process deletion; and its use reported.
@@ -77,18 +78,18 @@ memory:
 
 ## Open questions
 
-The survey (Part A) answered the first and third; the second is
-question 3 under "Questions for the author".
+The survey (Part A) answered the first and third, and the author the
+second (question 3 under "Questions for the author").
 
 - **Contiguous creation on a volume:** *answered.* No new ods2 release:
   its `Extend` takes one free run of the whole size when the volume has
   one, which is SYSGEN CREATE's default, contiguous-best-try. govax
   needs an `internal/rms` function to create the file (Part A, "The ods2
   audit").
-- **SHOW MEMORY:** keep govax's own layout with a page file section
-  added, or add VMS's `SHOW MEMORY/FILES` layout (DCL Dictionary)
-  beside it? The Dictionary's examples are Alpha's; the probe captures
-  the VAX's.
+- **SHOW MEMORY:** *answered* (the author, 2026-10-16). govax's own
+  layout gains a page file section, and `/FILES` is added in VMS's VAX
+  layout once the probe has captured it (the Dictionary's examples are
+  Alpha's).
 - **`$GETSYI` items** for the page file: *answered.* SYI$_PAGEFILE_FREE
   and SYI$_PAGEFILE_PAGE are in the VMS 5.0 manual, so 7.x has them
   (finding 14); the probe shows their values.
@@ -413,7 +414,7 @@ ods2.
 2. **MPW_LOLIMIT's SYSGEN default is 32**, not 120 (the VAX's 120 was
    AUTOGEN's). Phase 63 took SYSGEN's defaults for BORROWLIM and
    PFCDEFAULT; subtask 3 changes `DefaultMPWLoLimit` to 32 for the same
-   reason, unless the author prefers to keep 120 (question 5).
+   reason (the author's answer to question 5).
 3. **A dirty page with no backing store is page file bound.** The
    writer treats `NoBacking` and `PageFile` frames alike. The claim for
    a demand-zero page could instead take `PageFile` backing, block 0, as
@@ -456,7 +457,7 @@ ods2.
    JPI$_PAGFILCNT), each process its own charged pages and peak
    (LOGOUT's "Peak page file size", ACC$L_PGFLPEAK). A subprocess's
    charges come from the job's pool and go back at its deletion.
-10. **Where the charge is made** (question 1). Decision 10 charges at a
+10. **Where the charge is made** (question 1; the author agreed). Decision 10 charges at a
     page's first fault because every P0 and P1 page exists from the
     start. But the services that create pages know which ones they
     create: `$CRETVA`, `$EXPREG` (both regions), the heap's `expandP0`.
@@ -465,17 +466,21 @@ ods2.
     and DEPOSIT's, the user stack), with a per-process set of charged
     pages so nothing is charged twice, would make PAGFILCNT move as
     VMS's does in the probe's `$EXPREG` and `$DELTVA` cases now, not in
-    Phase 67. Phase 67 would then only drop the first-touch rule.
+    Phase 67. Phase 67 then only drops the first-touch rule.
 11. **`$EXPREG` of P0 succeeds in part**, page by page, when the quota
     runs out (the book's 16.2.1), as `$CRETVA` already does; today it's
     all or nothing. The probe confirms retadr's range.
-12. **Image pages under copying activation** (question 2). Until Phase
+12. **Image pages under copying activation** (question 2; the author
+    chose to charge only writable and DZRO ISDs' pages). Until Phase
     66, every image page is a demand-zero page the loader wrote, so its
     contents exist only in memory and its backing must be the page file,
     read-only code included. On VMS only the writable (CRF) and DZRO
     sections are charged. govax's PAGFILCNT in an image would be lower
-    than VMS's by the image's read-only pages.
-13. **SHOW MEMORY** (question 3): keep govax's layout with a page file
+    than VMS's by the image's read-only pages if every page were charged,
+    so the loader charges only the pages of writable and DZRO ISDs (the
+    ones VMS charges); the read-only ones are backed by the page file
+    but uncharged until Phase 66 maps them.
+13. **SHOW MEMORY** (question 3; the author agreed): keep govax's layout with a page file
     section (its name, size, free and charged blocks, PAGEFRAG/PAGECRIT
     state, the writer's counts), and add `/FILES` in VMS 7.1's VAX
     layout once the probe has captured it.
@@ -500,26 +505,31 @@ ods2.
 
 ## Questions for the author
 
+Answered by the author on 2026-10-16: each recommendation accepted. The
+findings and subtasks above and below follow the answers.
+
 1. **Charge at creation where govax knows it** (finding 10), first
    touch only for pages no service created? *Recommended: yes.* It
    changes Decision 10's rule now instead of in Phase 67, and makes the
-   probe's PAGFILCNT cases comparable.
+   probe's PAGFILCNT cases comparable. **Answer:** yes.
 2. **Image pages until Phase 66** (finding 12): charge every page the
    loader writes (simple, but PAGFILCNT lower than VMS's), or only the
    pages of writable and DZRO ISDs (closer to VMS; the loader marks
    them)? *Recommended: only writable and DZRO ISDs.* Either way every
-   image page is backed by the page file until Phase 66.
+   image page is backed by the page file until Phase 66. **Answer:**
+   only writable and DZRO ISDs.
 3. **SHOW MEMORY** (finding 13): govax's layout plus a page file
    section, with VMS's `/FILES` layout added from the probe?
-   *Recommended: yes.*
+   *Recommended: yes.* **Answer:** yes.
 4. **A probe case that changes the VAX's configuration:** SYSGEN CREATE
    and INSTALL a small second page file on DUA1, to see SHOW MEMORY/FILES
    with two files, the reservable count, and DISMOUNT's refusal. VMS can
    only DEINSTALL it to "deinstall pending", so DUA1 couldn't be
    dismounted until the VAX reboots. *Recommended: leave it out* unless
-   you're willing to reboot the VAX after the run.
+   you're willing to reboot the VAX after the run. **Answer:** left
+   out; the probe doesn't change the VAX's configuration.
 5. **MPW_LOLIMIT's default** (finding 2): SYSGEN's 32, or keep 120?
-   *Recommended: 32.*
+   *Recommended: 32.* **Answer:** 32.
 
 ## The probe's cases (subtask 8)
 
@@ -582,8 +592,11 @@ pg63's. Values that vary from run to run print as differences.
    (finding 6: `$DELTVA`, `$CRETVA` over pages, image rundown, process
    teardown); hard faults counted as page reads.
 5. **PGFLQUOTA:** the job's count and each process's charge and peak
-   (finding 9), charged where the author's answers to questions 1 and 2
-   say; SS$_EXQUOTA (or EXPGFLQUOTA, by the probe) from `$CRETVA` and
+   (finding 9), charged at creation by `$CRETVA`, `$EXPREG`, and the
+   heap's expansion, by the image loader for writable and DZRO ISDs'
+   pages, and at first touch only for pages nothing created, with a
+   per-process set of charged pages (findings 10 and 12, the author's
+   answers); SS$_EXQUOTA (or EXPGFLQUOTA, by the probe) from `$CRETVA` and
    `$EXPREG` with partial success (finding 11) and from the heap's
    expansion; refunds at deletion; JPI$_PAGFILCNT and PAGFILLOC
    (F$GETJPI too); LOGOUT's peak and ACC$L_PGFLPEAK; exhaustion's console
@@ -621,3 +634,12 @@ pg63's. Values that vary from run to run print as differences.
   volume with the page file open. The subtasks are adjusted, the probe's
   cases listed, and five questions are for the author ("Questions for
   the author").
+- **2026-10-16:** The author reviewed the survey and accepted each
+  recommendation: PGFLQUOTA is charged at creation where a service or
+  the image loader creates the pages, and at first touch only for pages
+  nothing created (a change to Phase 62's Decision 10, noted there and
+  in Phase 67's doc); image pages are charged only for writable and DZRO
+  ISDs until Phase 66; SHOW MEMORY keeps govax's layout with a page file
+  section and adds VMS's `/FILES` layout after the probe; the probe
+  doesn't install a second page file on the VAX; MPW_LOLIMIT's default
+  becomes 32. Subtask 2 is next.

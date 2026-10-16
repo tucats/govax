@@ -20,7 +20,9 @@ stop spending physical memory on page tables and S0 nobody uses:
 - **PGFLQUOTA at creation.** Each demand-zero and copy-on-reference page
   is charged when it's created, so `$CRETVA` and `$EXPREG` fail with
   SS$_EXQUOTA exactly where VMS's do. Decision 10's first-touch rule
-  goes away.
+  goes away. (Since Phase 64 the creating services and the image
+  loader already charge at creation; only the first-touch charge, for
+  pages nothing created, is left for this phase to remove.)
 - **Page tables backed on demand.** Each process's tables are still made
   when the process is (VMINIT for process 1, `BuildAddressSpace` for the
   others), with a *virtual* size fixed then: VMINIT's `/P0` and `/P1` for
@@ -48,7 +50,8 @@ stop spending physical memory on page tables and S0 nobody uses:
 - **`cpu/context.go`:** the PCB's copies of P0BR, P0LR, P1BR, and P1LR,
   and `SaveMemoryContext`, which writes the live registers into the
   outgoing PCB.
-- **Phase 64:** the PGFLQUOTA charge, which moves to creation.
+- **Phase 64:** the PGFLQUOTA charge, already at creation in the
+  services that create pages; only the first-touch rule remains.
 
 ## Design notes
 

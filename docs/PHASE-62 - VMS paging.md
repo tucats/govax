@@ -421,6 +421,12 @@ and return SS$_EXQUOTA if they don't, as VMS's do. A first-touch charge
 never fails a fault: it may exceed the quota, and JPI$_PAGFILCNT shows
 it. Phase 67 moves the charge to creation and drops the first-touch rule
 (one function, `chargePageFile`).
+*Changed 2026-10-16* (Phase 64's survey, its finding 10 and question 1,
+accepted by the author): the services that create pages (`$CRETVA`,
+`$EXPREG`, the heap's expansion) charge them at creation already in
+Phase 64, and the image loader charges the pages of writable and DZRO
+ISDs; the first-touch charge is left only for pages nothing created,
+and Phase 67 drops it.
 
 **Decision 11 — the settings** are `vax.sysgen.*` keys (each in
 `cmd/govax/main.go`'s `validConfigs` and in `HELP CONFIG KEYS`), read into
