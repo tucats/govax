@@ -127,6 +127,7 @@
 //              10/15/26    VMINIT/[NO]PAGING; the vax.sysgen.* keys in
 //                          CONFIG KEYS (docs/PHASE-62 - VMS paging.md)
 //              10/15/26    SHOW MEMORY's page frame counts with paging on
+//              10/16/26    vax.sysgen.tbskipwsl in CONFIG KEYS
 
 This is the help documentation for the govax VAX emulator.  Topic sections are
 marked by a "$" delimiter.  This is followed by as many tokens of the help
@@ -2087,6 +2088,13 @@ $CONF,KEY
 
         vax.sysgen.minwscnt           MINWSCNT: the smallest working set
                                       a process may have.  Default 20.
+
+        vax.sysgen.tbskipwsl          TBSKIPWSL: with paging on, how many
+                                      pages still in the translation
+                                      buffer the pager passes over when
+                                      it chooses a page to take out of a
+                                      working set.  0 turns the check
+                                      off (and is allowed).  Default 8.
 
     Debugging switches
 

@@ -13,9 +13,9 @@ import (
 // lowest first, as they always were. With paging on (VMINIT/PAGING) the
 // claim is recorded in the PFN database (internal/paging): the frame's
 // owner and type, and where its contents come from (its backing store),
-// so that a later phase can take the frame away from its page and know
-// how to get the contents back. Nothing takes a frame away yet; this
-// file only makes sure every frame is recorded as the right page's.
+// so that the pager can take the frame away from its page and know how
+// to get the contents back (workingset.go, Phase 63). This file makes
+// sure every frame is recorded as the right page's.
 //
 // A frame's owner names its virtual page, and two frames of one type
 // never have the same owner (paging.Database.Check):

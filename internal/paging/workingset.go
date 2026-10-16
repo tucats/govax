@@ -310,6 +310,21 @@ func (w *WorkingSet) Add(va uint32, global bool, c Conditions) ([]Page, error) {
 	return removed, nil
 }
 
+// Over reports whether the list is longer than its limit: it had to grow
+// past it because nothing could be replaced (Add).
+func (w *WorkingSet) Over() bool {
+	return len(w.slots) > w.size
+}
+
+// Trim brings a list that grew past its limit back down to it, as the
+// next Add would first, and returns the pages removed, oldest first: the
+// caller makes their PTEs transition PTEs and releases their frames. The
+// pages it passes over by c's rules stay, and the list with them, if
+// nothing else can go.
+func (w *WorkingSet) Trim(c Conditions) []Page {
+	return w.trim(w.size, c, true)
+}
+
 // mayGrow says whether an available entry may take a new page (the
 // book's 15.4.3, checks 1, 3, and 4).
 func (w *WorkingSet) mayGrow(c Conditions) bool {

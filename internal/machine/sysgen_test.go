@@ -31,6 +31,47 @@ func TestParseSysgenCount(t *testing.T) {
 	}
 }
 
+// TestParseSysgenNumber: a number key takes 0 too.
+func TestParseSysgenNumber(t *testing.T) {
+	for _, tc := range []struct {
+		text string
+		want uint32
+		ok   bool
+	}{
+		{"0", 0, true},
+		{"%X0", 0, true},
+		{"8", 8, true},
+		{"-1", 0, false},
+		{"", 0, false},
+	} {
+		got, ok := ParseSysgenNumber(tc.text)
+		if got != tc.want || ok != tc.ok {
+			t.Errorf("ParseSysgenNumber(%q) = %d, %v; want %d, %v", tc.text, got, ok, tc.want, tc.ok)
+		}
+	}
+}
+
+// TestSysgenTBSkipWSL: vax.sysgen.tbskipwsl reaches the System, 0
+// included; unset, or bad, it's the book's 8.
+func TestSysgenTBSkipWSL(t *testing.T) {
+	for _, tc := range []struct {
+		text string
+		want uint32
+	}{{"0", 0}, {"3", 3}, {"many", 8}, {"", 8}} {
+		values := map[string]string{tbSkipWSLSetting: tc.text}
+		withSettings(t, values)
+
+		if tc.text == "" {
+			_ = settings.Delete(tbSkipWSLSetting)
+		}
+
+		c, _ := newTestMachine(t)
+		if got := c.ProcessOne().Sysgen.TBSkipWSL; got != tc.want {
+			t.Errorf("vax.sysgen.tbskipwsl %q: TBSkipWSL = %d, want %d", tc.text, got, tc.want)
+		}
+	}
+}
+
 // TestSysgenSettings: the vax.sysgen.* keys reach the System, and process
 // 1 starts from them; a bad value keeps the default.
 func TestSysgenSettings(t *testing.T) {

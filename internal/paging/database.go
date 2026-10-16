@@ -148,6 +148,33 @@ func (d *Database) AllocateSystem() (PFN, error) {
 	return pfn, nil
 }
 
+// MakeSystem turns an active frame tied to a virtual page, with only its
+// owner's reference, into a system page tied to nothing, never to be
+// paged: how the P1 vector's pages, which every process maps onto the
+// same frames, stop being the pages of the process that first touched
+// them (the phase doc's Decision 13). A frame that's already an untied
+// system page is left as it is. Delete gives it back.
+func (d *Database) MakeSystem(pfn PFN) error {
+	e, err := d.activeEntry(pfn, "make system")
+	if err != nil {
+		return err
+	}
+
+	if e.Type == SystemPage && !e.Tied {
+		return nil
+	}
+
+	if e.RefCount != 1 || e.ShareCount != 0 {
+		return fmt.Errorf("%w: make system of frame %d with %d references, %d shares",
+			ErrWrongState, pfn, e.RefCount, e.ShareCount)
+	}
+
+	d.active[e.Type]--
+	d.activate(pfn, Entry{Type: SystemPage, RefCount: 1})
+
+	return nil
+}
+
 // Hold adds a reason to keep an active frame active (VMS increments the
 // reference count to lock a page down). Release gives it back.
 func (d *Database) Hold(pfn PFN) error {

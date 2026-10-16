@@ -204,8 +204,13 @@ func NewSystem(cpu *registers.CPU, mem *vm.Memory, devices *iodev.DeviceTable, m
 	sys.Locks.DeadlockWait = lck.DefaultDeadlockWait
 
 	// The pager (filesec.go) brings in the pages of file sections, and
-	// every demand-zero page.
+	// every demand-zero page. With paging on, the System also breaks a
+	// reused frame's tie to the page it held (workingset.go's BreakTie).
 	mem.SetPager(sys)
+
+	if db := mem.Paging(); db != nil {
+		db.SetTieBreaker(sys)
+	}
 
 	sys.BootTime = sys.Clock()
 	sys.removeStaleMailboxes()

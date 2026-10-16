@@ -1,8 +1,9 @@
 # Phase 63 — working sets, soft faults, and the page lists
 
 **Status:** in progress (2026-10-16): subtask 1, the survey (Part A
-below), and subtask 2, the working set lists (`internal/paging`'s
-`WorkingSet`), are done. Needs Phase 62 (settings, the
+below), subtask 2, the working set lists (`internal/paging`'s
+`WorkingSet`), and subtask 3, faults, replacement, and soft faults in
+corevms (`corevms/workingset.go`), are done. Needs Phase 62 (settings, the
 `internal/paging` PFN database and lists, the PTE forms, frame
 allocation through `internal/paging`). Part of the paging program laid
 out in `PHASE-62 - VMS paging.md` (Parts A and B: the survey and the
@@ -456,7 +457,11 @@ Page locks go with the deleted pages.
     rest of that instruction, and comes back down at the next fault
     after it (the oldest entries over the limit go first). VMS doesn't
     face this: its services lock I/O buffers and fault page by page.
-    Subtask 3 tests it.
+    Subtask 3 tests it, and changed "at the next fault" to "at the next
+    instruction boundary" (`vm.Memory.AtNextInstruction`): the image
+    activator writes every page of an image in one Go call, and an image
+    that then touched only its own pages never faulted again, so it kept
+    them all.
 11. **Image startup purge** (book 16.4.1). VMS purges the working set
     when an image starts. govax's DCL is Go and has no pages to drop,
     but the purge also drops the previous image's P1 pages. Whether
@@ -538,7 +543,8 @@ from run to run.
    replacement removes one (transition PTE, frame to a list, the TB
    entry invalidated), and a soft fault takes a transition page back.
    TBSKIPWSL (its key, and a `vm` query for a page valid in the TB);
-   global mappings enter the list at mapping time (finding 9).
+   global mappings enter the list at mapping time (finding 9). (Done
+   2026-10-16; the progress log says what it chose.)
 4. **Limits:** WSQUOTA, GROWLIM (its key), WSEXTENT, and MINWSCNT;
    `$ADJWSL` on the real list (a shrink removes the excess); WSAUTH and
    WSAUTHEXT as fields (finding 2); the reset to DFWSCNT at image exit,
@@ -637,3 +643,84 @@ from run to run.
     holes and adds room at the list's end (16.4.1), where, by the
     scan's rule above, a wrapped list would use it only after reusing
     the pages before it. The probe's `$ADJWSL` patterns test it.
+- **2026-10-16:** Subtask 3, the working set in corevms
+  (`corevms/workingset.go`; tests in `internal/console`'s
+  `workingset_test.go` and `workingsetglobal_test.go`).
+  - **Where the list lives:** `Environment.WorkingSet()`, made at its
+    first use with paging on from the process's WSLIMIT, WSQUOTA,
+    WSEXTENT, and MINWSCNT (a new PFN database, from a new VMINIT,
+    starts it afresh). Its size stays the one it was made with until
+    subtask 4.
+  - **Entering:** `System.PageIn` puts each P0/P1 page of a known
+    process in its working set *before* resolving the fault, as VMS
+    frees an entry before it takes a frame (so a clean page leaving can
+    give its frame to the page coming in); a fault that then fails takes
+    the page out again. A page-file global section's pages, valid from
+    mapping, enter at `mapSectionPage` as global pages; a file global
+    section's enter at their fault (a copy-on-reference section's
+    private copy is a process page). `releasePTE` takes any page leaving
+    its PTE out (deletion, not paging out).
+  - **Replacement** (`evictPage`): the chosen page's PTE becomes
+    `TransitionPTE` (protection and owner kept) through `StorePTEIn`,
+    which empties its TB slot; the frame is released with the PTE's
+    modify bit (`paging.Database.Release`). Only a frame tied to that
+    page, with one reference, is touched. The conditions
+    (`replacementConditions`): the free list's length; GROWLIM (a
+    `Sysgen.GrowLimit` field, default 63, whose key is subtask 4's);
+    TBSKIPWSL and `vm.Memory.ValidInTB` only for the process whose
+    address space the CPU holds; and the protected pages
+    (`wsProtected`): global pages (resident until Phase 65), pages whose
+    frames were translated this instruction, and pages whose PTEs can't
+    be read.
+  - **Effectively modified:** a demand-zero page's frame and a
+    copy-on-reference copy's get the saved modify bit at their fault
+    (`effectivelyModified`), so they go to the modified list.
+  - **Soft faults:** with paging on, `resolveFault` looks for a
+    transition PTE first (`softFault`): the frame must still be tied to
+    the faulting page, and `Reclaim` takes it off its list. The new PTE
+    is valid and unmodified (the saved modify bit stays in the
+    database). Soft faults count in JPI$_PAGEFLTS (the design notes);
+    the split into soft and hard is subtask 8's.
+  - **Ties:** the System is the database's `TieBreaker` (`BreakTie`,
+    installed by `NewSystem`): when a free-list frame is reused, its old
+    page, if its PTE is still in transition in that frame, gets its
+    backing store's form back (`backingPTE`: section, global, page
+    file, or demand-zero). In this phase only a private file section's
+    clean pages reach the free list, so the form is the PSTX, and the
+    next touch reads the file.
+  - **The P1 vector** (Decision 13): `ShareP1` takes its pages out of
+    the depositing process's working set and makes their frames untied
+    system pages (`paging.Database.MakeSystem`, new).
+  - **Growth past the limit** (finding 10, refined there): when `Add`
+    leaves a list over its limit, `vm.Memory.AtNextInstruction` (new: a
+    routine run once from `BeginInstruction`, with paging on only) runs
+    `trimWorkingSets` at the next instruction boundary, which evicts
+    what `WorkingSet.Trim` (new, with `Over`) takes out.
+  - **`vax.sysgen.tbskipwsl`** (default 8; 0 is allowed, so it's read
+    with `ParseSysgenNumber` and audited as a nonnegative number,
+    `SysgenNumberKeys`), in `validConfigs` and HELP CONFIG KEYS.
+  - **A fix found by running the whole suite with paging forced on and
+    25- and 30-page working sets** (an experiment, not committed):
+    `setImageProtection` changed only valid pages' protections, so a
+    page of the last image that was in transition kept its read-only
+    protection, and the next image's activation failed writing it
+    (TestLib57Oracle). A page in transition counts as touched now
+    (`ImageProcess.touched`). With that, every test passed at both
+    sizes, also with the PFN database's and the working set's `Check`
+    run after every 32nd fault.
+  - **The tests:** an image with a 30-page working set sweeps an 80-page
+    array and a 64-page private read-only file section, then spins.
+    After the instruction limit stops it, the array's pages that left
+    the set are in transition on the modified list and the section's on
+    the free list; the array's come back in their own frames (soft
+    faults); taking every free frame sends the section's PTEs back to
+    their PSTX, and they read back from the file. With TBSKIPWSL 0 every
+    touch faults (601 faults); with 8, the four sweeps of 34 pages find
+    pages still there (537). Global pages stay in the set while 60 P0
+    pages pass through it, and the P1 vector's frames are system pages.
+  - **Left for later:** a page deleted while in transition
+    (`releasePTE` returns early for an invalid PTE, and
+    `TeardownAddressSpace` skips it) keeps its tied frame on its list,
+    so a new page at that address makes two frames with one owner:
+    subtask 5. A private section's modified page on the modified list
+    isn't written by `$UPDSEC`, `$DELTVA`, or image rundown: subtask 7.

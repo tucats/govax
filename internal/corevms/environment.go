@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/tucats/govax/internal/lnm"
+	"github.com/tucats/govax/internal/paging"
 	"github.com/tucats/govax/internal/registers"
 	"github.com/tucats/govax/internal/rms"
 	"github.com/tucats/govax/internal/vm"
@@ -110,6 +111,12 @@ type Environment struct {
 	// process section table index their pages' PTEs hold. A nil entry is
 	// free.
 	procSections []*processSection
+
+	// ws is the process's working set list, with paging on (workingset.go;
+	// made at its first use), and wsDB the PFN database it was made for:
+	// a VMINIT that builds a new one starts the list afresh.
+	ws   *paging.WorkingSet
+	wsDB *paging.Database
 
 	// Process is the emulated VMS process this Environment runs images in:
 	// its PID, username, UIC and quota state (process.go,

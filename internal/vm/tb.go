@@ -318,6 +318,27 @@ func (m *Memory) InvalidatePage(addr uint32) {
 	m.tb.stcFlush()
 }
 
+// ValidInTB reports whether the TB holds a translation of addr's page.
+// VMS's pager asks it when it chooses a page to take out of a working set
+// (docs/PHASE-63 - working sets.md): a page still in the TB was used
+// recently, so it's passed over, up to TBSKIPWSL of them, in favor of an
+// older one. The answer is the current address space's: the TB holds
+// only the running process's P0 and P1 translations (LDPCTX empties
+// them), so for any other process's page it means nothing, and the
+// pager doesn't ask.
+//
+// An entry may have been filled by a page-table walk long ago and never
+// hit since; a real VAX's TB is no wiser, which is why VMS calls the
+// check a heuristic.
+func (m *Memory) ValidInTB(addr uint32) bool {
+	region := (addr >> 30) & 0x3
+	page := (addr & 0x3FFFFFFF) >> 9
+
+	e := &m.tb.entries[tbIndex(region, page)]
+
+	return e.valid && e.page == page
+}
+
 // InvalidateProtection is called whenever the CPU's current access mode
 // (CurMod) actually changes, at a real mode transition (see
 // docs/PHASE-21.md's design notes on why this port hooks the real

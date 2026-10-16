@@ -182,6 +182,8 @@ func (m *Memory) SetPaging(on bool) {
 
 	m.pagingOn = on
 
+	m.atBoundary = nil
+
 	if on {
 		m.frames = newPagingFrames(frames)
 		m.touched = make([]uint32, frames)
@@ -256,7 +258,8 @@ func (m *Memory) BeginInstruction() {
 	}
 }
 
-// nextGeneration starts a new instruction generation.
+// nextGeneration starts a new instruction generation, and runs the
+// routine waiting for an instruction boundary, if there is one.
 func (m *Memory) nextGeneration() {
 	m.touchGen++
 	if m.touchGen == 0 {
@@ -264,6 +267,25 @@ func (m *Memory) nextGeneration() {
 		// over, so an old frame's generation can't match a new one.
 		clear(m.touched)
 		m.touchGen = 1
+	}
+
+	if f := m.atBoundary; f != nil {
+		m.atBoundary = nil
+		f()
+	}
+}
+
+// AtNextInstruction asks for f to run at the next instruction boundary
+// (BeginInstruction), once, after the new instruction's generation has
+// begun, so no frame counts as translated in it yet but the STC's and
+// the instruction-fetch window's. The pager uses it to bring a working
+// set that had to grow past its limit, while every page it held was in
+// use by one instruction, back down as soon as that instruction is over.
+// One routine waits at a time: a second call replaces the first. With
+// paging off there are no generations, and f never runs.
+func (m *Memory) AtNextInstruction(f func()) {
+	if m.touched != nil {
+		m.atBoundary = f
 	}
 }
 

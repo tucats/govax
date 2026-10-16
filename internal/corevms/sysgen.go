@@ -21,6 +21,17 @@ package corevms
 // process may have, and the least $ADJWSL can shrink one to.
 const DefaultMinWSCount = 20
 
+// DefaultGrowLimit is GROWLIM's default (the phase doc's Decision 11):
+// past its quota, a working set takes a new page into an available entry
+// only while the free page list holds more than this many pages.
+const DefaultGrowLimit = 63
+
+// DefaultTBSkipWSL is TBSKIPWSL's default, the book's value: how many
+// pages still valid in the translation buffer a working set's
+// replacement scan passes over before it takes the next page whatever
+// its state.
+const DefaultTBSkipWSL = 8
+
 // Sysgen holds the system parameters a System runs with.
 type Sysgen struct {
 	// Paging is whether VMS paging is on (vax.sysgen.paging.enable, or
@@ -39,11 +50,17 @@ type Sysgen struct {
 
 	// MinWSCount is MINWSCNT.
 	MinWSCount uint32
+
+	// GrowLimit is GROWLIM, and TBSkipWSL is TBSKIPWSL (0 turns the TB
+	// check off): two of the rules working set replacement follows
+	// (workingset.go). GROWLIM has no key yet (docs/PHASE-63, subtask 4).
+	GrowLimit uint32
+	TBSkipWSL uint32
 }
 
 // DefaultSysgen returns the parameters with no key set.
 func DefaultSysgen() Sysgen {
-	return Sysgen{MinWSCount: DefaultMinWSCount}
+	return Sysgen{MinWSCount: DefaultMinWSCount, GrowLimit: DefaultGrowLimit, TBSkipWSL: DefaultTBSkipWSL}
 }
 
 // SetSysgen gives the System its parameters. The console calls it for

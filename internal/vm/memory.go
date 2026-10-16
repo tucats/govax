@@ -76,6 +76,10 @@ type Memory struct {
 	touched  []uint32
 	touchGen uint32
 
+	// atBoundary is a routine to run at the next instruction boundary
+	// (AtNextInstruction), or nil.
+	atBoundary func()
+
 	vmValid              bool
 	translationCount     int64
 	singlebyteReadCount  int64

@@ -803,6 +803,9 @@ func imageProtection(isd *ISD) vm.Protection {
 // as ResetICBList does so the next RUN can load over the old image's
 // read-only pages. Pages never touched (still invalid) are left alone;
 // a page outside the page tables (VMINIT shrank P0 since) is skipped.
+// With paging on, a page that has left the working set but still has a
+// frame (in transition) has been touched too, and its protection is
+// changed: it is still the old image's page (docs/PHASE-63, subtask 3).
 // The C source never sets image page protections, so every page stayed
 // at P0's default (UW); see docs/DEVIATIONS.md.
 func (p *ImageProcess) setImageProtection(icb *ICB, protect bool) {
@@ -826,7 +829,7 @@ func (p *ImageProcess) setImageProtection(icb *ICB, protect bool) {
 			addr := icb.Base + ((n + uint32(isd.VPN)) << 9)
 
 			pte, err := p.m.Mem.LookupPTEIn(p.m.CPU, space, addr)
-			if err != nil || !pte.Valid() || pte.Protection() == prot {
+			if err != nil || !p.touched(pte) || pte.Protection() == prot {
 				continue
 			}
 
@@ -834,6 +837,19 @@ func (p *ImageProcess) setImageProtection(icb *ICB, protect bool) {
 			_ = p.m.Mem.StorePTEIn(p.m.CPU, space, addr, pte)
 		}
 	}
+}
+
+// touched reports whether the page whose PTE is pte has been touched: it
+// is valid, or, with paging on, in transition (its frame on the free or
+// modified list). With paging off no PTE takes the transition form.
+func (p *ImageProcess) touched(pte vm.PTE) bool {
+	if pte.Valid() {
+		return true
+	}
+
+	_, inTransition := pte.Transition()
+
+	return inTransition && p.m.Mem.Paging() != nil
 }
 
 // imageLow is an image's base for its fixup lists: the address of its

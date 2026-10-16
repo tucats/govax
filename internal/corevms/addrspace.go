@@ -4,6 +4,7 @@ import (
 	"encoding/binary"
 	"fmt"
 
+	"github.com/tucats/govax/internal/paging"
 	"github.com/tucats/govax/internal/registers"
 	"github.com/tucats/govax/internal/vm"
 )
@@ -131,7 +132,31 @@ func (sys *System) ShareP1(base, end uint32) error {
 		}
 	}
 
+	sys.makeSharedSystem(as)
+
 	return nil
+}
+
+// makeSharedSystem, with paging on, makes the shared P1 pages system
+// pages (the phase doc's Decision 13): they were faulted in as pages of
+// the process whose address space as is, but every process maps their
+// frames, so they leave its working set and their frames are tied to no
+// page, never to be paged.
+func (sys *System) makeSharedSystem(as vm.AddressSpace) {
+	db := sys.mem.Paging()
+	if db == nil {
+		return
+	}
+
+	owner := sys.processForSpace(as)
+
+	for _, sp := range sys.sharedP1 {
+		if owner != nil {
+			owner.leaveWorkingSet(sp.va)
+		}
+
+		_ = db.MakeSystem(paging.PFN(sp.pfn))
+	}
 }
 
 // MinP1Pages is the smallest P1 table that maps a process's initial user

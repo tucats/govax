@@ -645,6 +645,7 @@ var validConfigs = map[string]bool{
 	// 11): internal/machine's sysgen.go reads them.
 	"vax.sysgen.paging.enable":  true,
 	"vax.sysgen.minwscnt":       true,
+	"vax.sysgen.tbskipwsl":      true,
 	"vax.sysgen.pql_dwsdefault": true,
 	"vax.sysgen.pql_dwsquota":   true,
 	"vax.sysgen.pql_dwsextent":  true,
@@ -688,6 +689,15 @@ func auditConfig() {
 		if settings.Exists(key) {
 			if _, ok := machine.ParseSysgenCount(settings.Get(key)); !ok {
 				fmt.Printf("\nWarning, %s is %q; it must be a positive integer, and its default will be used\n",
+					key, settings.Get(key))
+			}
+		}
+	}
+
+	for _, key := range machine.SysgenNumberKeys() {
+		if settings.Exists(key) {
+			if _, ok := machine.ParseSysgenNumber(settings.Get(key)); !ok {
+				fmt.Printf("\nWarning, %s is %q; it must be a nonnegative integer, and its default will be used\n",
 					key, settings.Get(key))
 			}
 		}

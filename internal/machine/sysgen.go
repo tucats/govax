@@ -16,6 +16,7 @@ import (
 const (
 	PagingSetting     = "vax.sysgen.paging.enable"
 	minWSCountSetting = "vax.sysgen.minwscnt"
+	tbSkipWSLSetting  = "vax.sysgen.tbskipwsl"
 )
 
 // pqlSettings are the PQL_Dxxx keys, by the quota each sets the default
@@ -30,7 +31,7 @@ var pqlSettings = map[string]string{
 // SysgenKeys returns every vax.sysgen.* key the console reads, for
 // cmd/govax's validConfigs and its audit.
 func SysgenKeys() []string {
-	keys := []string{PagingSetting, minWSCountSetting}
+	keys := []string{PagingSetting, minWSCountSetting, tbSkipWSLSetting}
 
 	for key := range pqlSettings {
 		keys = append(keys, key)
@@ -51,10 +52,25 @@ func SysgenCountKeys() []string {
 	return keys
 }
 
+// SysgenNumberKeys returns the keys whose value is a number that may be
+// 0, which must be a nonnegative integer (cmd/govax's audit warns about
+// any other): TBSKIPWSL, which 0 turns off.
+func SysgenNumberKeys() []string {
+	return []string{tbSkipWSLSetting}
+}
+
 // ParseSysgenCount reads a count key's text: a positive decimal integer,
 // or %X followed by hex digits, as vax.init's F$INTEGER reads the
 // vax.memory.* keys. It reports false for anything else.
 func ParseSysgenCount(text string) (uint32, bool) {
+	v, ok := ParseSysgenNumber(text)
+
+	return v, ok && v != 0
+}
+
+// ParseSysgenNumber reads a number key's text: ParseSysgenCount's forms,
+// or 0.
+func ParseSysgenNumber(text string) (uint32, bool) {
 	text = strings.TrimSpace(text)
 	base := 10
 
@@ -63,7 +79,7 @@ func ParseSysgenCount(text string) (uint32, bool) {
 	}
 
 	v, err := strconv.ParseUint(text, base, 32)
-	if err != nil || v == 0 {
+	if err != nil {
 		return 0, false
 	}
 
@@ -81,6 +97,10 @@ func sysgenSettings(paging bool) corevms.Sysgen {
 
 	if v, ok := ParseSysgenCount(settings.Get(minWSCountSetting)); ok {
 		sg.MinWSCount = v
+	}
+
+	if v, ok := ParseSysgenNumber(settings.Get(tbSkipWSLSetting)); ok {
+		sg.TBSkipWSL = v
 	}
 
 	for key, quota := range pqlSettings {

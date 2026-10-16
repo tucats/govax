@@ -241,6 +241,7 @@ func (env *Environment) processSectionAt(addr uint32) (*processSection, uint32, 
 // physical page goes back to the free list.
 func (env *Environment) releasePTE(addr uint32, old vm.PTE) {
 	delete(env.sectionPages, addr)
+	env.leaveWorkingSet(addr)
 
 	if gi, ok := old.GlobalIndex(); ok {
 		env.unrefGlobalPage(gi)
@@ -317,10 +318,23 @@ func (sys *System) readPage(f *rms.ACPFile, vbn uint32, c vm.FrameClaim) (uint32
 //
 // Each fault it resolves on a P0 or P1 page counts in the faulting
 // process's page faults (countFault).
+//
+// With paging on (workingset.go), the page enters the process's working
+// set first, which may take another page out of it, as VMS's pager makes
+// room before it takes a frame (so a clean page leaving can give its
+// frame to the page coming in); and a page in transition is a soft
+// fault, its frame taken back off its list.
 func (sys *System) PageIn(f vm.PageFault) (vm.PTE, bool) {
+	env := sys.pagingProcess(f)
+	if env != nil {
+		env.enterWorkingSet(f.Addr, sys.faultIsGlobal(f.PTE))
+	}
+
 	pte, ok := sys.resolveFault(f)
 	if ok {
 		sys.countFault(f)
+	} else if env != nil {
+		env.leaveWorkingSet(f.Addr)
 	}
 
 	return pte, ok
@@ -330,8 +344,9 @@ func (sys *System) PageIn(f vm.PageFault) (vm.PTE, bool) {
 // in its Process.PageFaults: $GETJPI's JPI$_PAGEFLTS, which LIB$INIT_TIMER
 // and its kind report (docs/PHASE-55, subtask 5). A fault on a system
 // (S0) page belongs to no process. VMS counts every fault a working set
-// sees, soft ones included; govax has no working set, so it counts only
-// the pages it brings in: demand-zero pages and section pages.
+// sees, soft ones included, and so does govax with paging on; with it
+// off there are no soft faults, and the count is of the pages it brings
+// in: demand-zero pages and section pages.
 func (sys *System) countFault(f vm.PageFault) {
 	if f.Addr >= 0x80000000 { // S0 and up
 		return
@@ -345,6 +360,15 @@ func (sys *System) countFault(f vm.PageFault) {
 // resolveFault is PageIn's work: the page's new PTE by its old one's form.
 func (sys *System) resolveFault(f vm.PageFault) (vm.PTE, bool) {
 	prot, owner := f.PTE.Protection(), f.PTE.Owner()
+
+	// With paging off no PTE takes the transition form, and an invalid
+	// PTE that isn't a section's is demand-zero whatever its frame field
+	// holds.
+	if sys.mem.Paging() != nil {
+		if pfn, ok := f.PTE.Transition(); ok {
+			return sys.softFault(f, pfn)
+		}
+	}
 
 	if gi, ok := f.PTE.GlobalIndex(); ok {
 		pfn, ok := sys.pageInGlobal(gi, f)
@@ -373,7 +397,14 @@ func (sys *System) resolveFault(f vm.PageFault) (vm.PTE, bool) {
 		return vm.ValidPTE(pfn, prot, owner), ok
 	}
 
-	return sys.mem.DemandZeroFor(f.PTE, sys.faultClaim(f, paging.Backing{}))
+	claim := sys.faultClaim(f, paging.Backing{})
+
+	pte, ok := sys.mem.DemandZeroFor(f.PTE, claim)
+	if ok {
+		sys.effectivelyModified(pte.PFN(), claim)
+	}
+
+	return pte, ok
 }
 
 // pageInGlobal returns the physical page for global page table entry gi:
@@ -387,8 +418,12 @@ func (sys *System) pageInGlobal(gi uint32, f vm.PageFault) (uint32, bool) {
 	}
 
 	if s.CopyOnRef {
-		pfn, ok := sys.readPage(s.File, s.VBN+uint32(i), sys.faultClaim(f, copyOnRefBacking))
+		claim := sys.faultClaim(f, copyOnRefBacking)
+
+		pfn, ok := sys.readPage(s.File, s.VBN+uint32(i), claim)
 		if ok {
+			sys.effectivelyModified(pfn, claim)
+
 			s.Refs--
 			sys.maybeDeleteSection(s)
 		}

@@ -659,3 +659,47 @@ func TestAllocateSystem(t *testing.T) {
 		t.Fatalf("counts %+v", c)
 	}
 }
+
+// TestMakeSystem: a process page's frame becomes an untied system page,
+// counted as one; making it a system page again changes nothing; a frame
+// with a hold, a share, or on a list can't be made one.
+func TestMakeSystem(t *testing.T) {
+	d := New(4)
+
+	pfn := allocate(t, d, 0x7FFE0000)
+	must(t, d, d.MakeSystem(pfn))
+
+	if e := entry(t, d, pfn); e.State != Active || e.Type != SystemPage || e.Tied || e.RefCount != 1 {
+		t.Fatalf("the frame's record %+v", e)
+	}
+
+	if c := d.Counts(); c.System != 1 || c.Process != 0 {
+		t.Fatalf("counts %+v", c)
+	}
+
+	must(t, d, d.MakeSystem(pfn))
+
+	held := allocate(t, d, 0x200)
+	must(t, d, d.Hold(held))
+
+	if err := d.MakeSystem(held); !errors.Is(err, ErrWrongState) {
+		t.Errorf("make system of a held frame: %v", err)
+	}
+
+	listed := allocate(t, d, 0x400)
+	release(t, d, listed, false, Free)
+
+	if err := d.MakeSystem(listed); !errors.Is(err, ErrWrongState) {
+		t.Errorf("make system of a free frame: %v", err)
+	}
+
+	global, err := d.Allocate(GlobalPage, Owner{Handle: 9}, Backing{Kind: PageFile})
+	must(t, d, err)
+	must(t, d, d.Share(global))
+
+	if err := d.MakeSystem(global); !errors.Is(err, ErrWrongState) {
+		t.Errorf("make system of a shared frame: %v", err)
+	}
+
+	check(t, d)
+}

@@ -52,10 +52,12 @@ package vm
 // the pager that reads section pages from their files and hands out
 // demand-zero pages (DemandZero) for the rest.
 //
-// This is the seam a working set manager and a page file would use: they
-// would decide which pages stay valid, write modified pages out when they
-// are taken away, and leave an invalid PTE that says where each page went,
-// for PageIn to find.
+// This is the seam VMS paging uses (VMINIT/PAGING; docs/PHASE-63 -
+// working sets.md): corevms's pager puts each page it brings in into the
+// process's working set, takes another page out when the set is full
+// (leaving its PTE in transition, for PageIn to find), and resolves a
+// fault on a page in transition by taking its frame back. A page file
+// (Phase 64) will use it the same way.
 
 // PTE type bits of an invalid page table entry (see above).
 const (

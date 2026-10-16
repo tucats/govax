@@ -278,3 +278,47 @@ func TestTranslatedThisInstruction(t *testing.T) {
 		t.Errorf("after the wrap: generation %d, page 2's frame %d", mem.touchGen, mem.touched[frame(2)])
 	}
 }
+
+// TestAtNextInstruction: the routine runs once, at the next boundary,
+// after the new generation began (a frame translated before it no longer
+// counts); a second request replaces the first; with paging off nothing
+// runs.
+func TestAtNextInstruction(t *testing.T) {
+	cpu, mem := newTranslateFixture(t, 4)
+
+	ran := 0
+
+	mem.AtNextInstruction(func() { ran++ })
+	mem.BeginInstruction()
+
+	if ran != 0 {
+		t.Fatal("a routine ran with paging off")
+	}
+
+	mem.SetPaging(true)
+
+	if _, err := mem.Translate(cpu, 1*pageSize, AccessRead); err != nil {
+		t.Fatal(err)
+	}
+
+	mem.InvalidateTB() // so that the STC doesn't keep page 1's frame counting
+
+	var counted bool
+
+	mem.AtNextInstruction(func() { ran += 10 })
+	mem.AtNextInstruction(func() {
+		ran++
+		counted = mem.TranslatedThisInstruction(ptBase>>9 + 1)
+	})
+
+	if ran != 0 {
+		t.Fatal("the routine ran before the boundary")
+	}
+
+	mem.BeginInstruction()
+	mem.BeginInstruction()
+
+	if ran != 1 || counted {
+		t.Errorf("ran %d (want 1, once and not the replaced routine); page 1's frame counted %v", ran, counted)
+	}
+}

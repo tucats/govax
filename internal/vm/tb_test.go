@@ -222,6 +222,49 @@ func TestInvalidatePageClearsOnlyOneSlot(t *testing.T) {
 	}
 }
 
+// TestValidInTB: a page is valid in the TB once a translation has filled
+// its slot, and not after the slot is emptied or taken by another page
+// that shares it (page numbers 32 apart share a slot).
+func TestValidInTB(t *testing.T) {
+	cpu, mem := newTranslateFixture(t, 40)
+
+	addrA := uint32(2*pageSize) + 0x10
+	addrB := uint32(3*pageSize) + 0x20
+	addrC := uint32((2+32)*pageSize) + 0x30 // A's slot
+
+	if mem.ValidInTB(addrA) {
+		t.Error("A is valid in the TB before any translation")
+	}
+
+	for _, addr := range []uint32{addrA, addrB} {
+		if _, err := mem.Translate(cpu, addr, AccessRead); err != nil {
+			t.Fatalf("Translate %08X: %v", addr, err)
+		}
+	}
+
+	if !mem.ValidInTB(addrA) || !mem.ValidInTB(addrB) || !mem.ValidInTB(addrA&^0x1FF) {
+		t.Error("A and B aren't valid in the TB after their translations")
+	}
+
+	if mem.ValidInTB(addrC) {
+		t.Error("C, never translated, is valid in the TB (it shares A's slot)")
+	}
+
+	if _, err := mem.Translate(cpu, addrC, AccessRead); err != nil {
+		t.Fatalf("Translate C: %v", err)
+	}
+
+	if mem.ValidInTB(addrA) || !mem.ValidInTB(addrC) {
+		t.Error("after C's translation, its slot should hold C and not A")
+	}
+
+	mem.InvalidatePage(addrB)
+
+	if mem.ValidInTB(addrB) {
+		t.Error("B is valid in the TB after InvalidatePage")
+	}
+}
+
 // TestInvalidateProtectionKeepsMappingFlushesSTC covers what a mode
 // change does to the caches since Study 1's R3 (docs/PERFORMANCE.md):
 // InvalidateProtection empties the one-slot STC, which doesn't check the

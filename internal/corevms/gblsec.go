@@ -990,6 +990,13 @@ func (env *Environment) mapSectionPage(s *GlobalSection, addr uint32, pte vm.PTE
 
 	env.sectionPages[addr] = true
 
+	// A page-file section's pages are valid from the start, so they enter
+	// the working set now, as global pages (workingset.go); a file
+	// section's enter it when they're faulted in.
+	if pte.Valid() {
+		env.enterWorkingSet(addr, true)
+	}
+
 	return ssNormal
 }
 

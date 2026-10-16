@@ -259,6 +259,45 @@ func TestWorkingSetOverflow(t *testing.T) {
 	}
 }
 
+// Trim brings a list over its limit back down without adding a page,
+// the oldest pages going first, passing over protected ones; a list at
+// its limit is left alone.
+func TestWorkingSetTrim(t *testing.T) {
+	w := small()
+
+	for n := range 4 {
+		add(t, w, n, Conditions{})
+	}
+
+	if w.Over() || len(w.Trim(Conditions{})) != 0 {
+		t.Fatal("a list at its limit is over it, or was trimmed")
+	}
+
+	everything := Conditions{Protected: func(uint32) bool { return true }}
+	add(t, w, 4, everything)
+	add(t, w, 5, everything)
+
+	if !w.Over() {
+		t.Fatal("a list of 6 entries isn't over its limit of 4")
+	}
+
+	if removed := w.Trim(everything); len(removed) != 0 || !w.Over() {
+		t.Fatalf("trimmed %v with every page protected", pageNumbers(removed))
+	}
+
+	notOne := Conditions{Protected: func(va uint32) bool { return va == page(1) }}
+	removed := w.Trim(notOne)
+	checkSet(t, w)
+
+	if got := pageNumbers(removed); !sameInts(got, []int{0, 2}) || w.Over() {
+		t.Fatalf("trim removed %v (over %v), want [0 2]", got, w.Over())
+	}
+
+	if got := inSet(w); !sameInts(got, []int{1, 3, 4, 5}) {
+		t.Fatalf("set %v", got)
+	}
+}
+
 // A removed page leaves its entry available, and the scan uses it when
 // it gets there (or at once, if it was the newest).
 func TestWorkingSetRemove(t *testing.T) {
