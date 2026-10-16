@@ -32,6 +32,15 @@ const DefaultGrowLimit = 63
 // its state.
 const DefaultTBSkipWSL = 8
 
+// DefaultMPWHiLimit and DefaultMPWLoLimit are MPW_HILIMIT's and
+// MPW_LOLIMIT's defaults (the phase doc's Decision 11): the modified
+// page writer starts when the modified page list holds more than the
+// first, and writes until it holds no more than the second (mpw.go).
+const (
+	DefaultMPWHiLimit = 500
+	DefaultMPWLoLimit = 120
+)
+
 // Sysgen holds the system parameters a System runs with.
 type Sysgen struct {
 	// Paging is whether VMS paging is on (vax.sysgen.paging.enable, or
@@ -56,11 +65,19 @@ type Sysgen struct {
 	// (workingset.go).
 	GrowLimit uint32
 	TBSkipWSL uint32
+
+	// MPWHiLimit is MPW_HILIMIT and MPWLoLimit MPW_LOLIMIT: the modified
+	// page writer's thresholds (mpw.go).
+	MPWHiLimit uint32
+	MPWLoLimit uint32
 }
 
 // DefaultSysgen returns the parameters with no key set.
 func DefaultSysgen() Sysgen {
-	return Sysgen{MinWSCount: DefaultMinWSCount, GrowLimit: DefaultGrowLimit, TBSkipWSL: DefaultTBSkipWSL}
+	return Sysgen{
+		MinWSCount: DefaultMinWSCount, GrowLimit: DefaultGrowLimit, TBSkipWSL: DefaultTBSkipWSL,
+		MPWHiLimit: DefaultMPWHiLimit, MPWLoLimit: DefaultMPWLoLimit,
+	}
 }
 
 // SetSysgen gives the System its parameters. The console calls it for

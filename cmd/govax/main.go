@@ -647,6 +647,8 @@ var validConfigs = map[string]bool{
 	"vax.sysgen.minwscnt":       true,
 	"vax.sysgen.tbskipwsl":      true,
 	"vax.sysgen.growlim":        true,
+	"vax.sysgen.mpw_hilimit":    true,
+	"vax.sysgen.mpw_lolimit":    true,
 	"vax.sysgen.pql_dwsdefault": true,
 	"vax.sysgen.pql_dwsquota":   true,
 	"vax.sysgen.pql_dwsextent":  true,

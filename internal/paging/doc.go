@@ -38,9 +38,11 @@
 //   - A frame whose virtual page is deleted loses its tie and goes to the
 //     *head* of the free list, to be used first: nothing will ever fault
 //     it back. Delete does this.
-//   - The modified page writer (Phase 64) writes frames from the modified
+//   - The modified page writer (corevms's mpw.go: section files from Phase
+//     63, the page file from Phase 64) writes frames from the modified
 //     list to their backing store and moves them to the free list, where
-//     they can still be faulted back softly. Cleaned does this.
+//     they can still be faulted back softly. ModifiedFrames lists them in
+//     its order, and Cleaned does the move.
 //
 // Like VMS, the database keeps the lists' links outside the frames (VMS
 // in its FLINK and BLINK arrays, here in Go), because a frame on a list

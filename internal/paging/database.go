@@ -359,6 +359,35 @@ func (d *Database) FirstModified() (PFN, bool) {
 	return d.modified.head, d.modified.head != noFrame
 }
 
+// ModifiedFrames returns the frames on the modified list, head first:
+// the order the modified page writer takes them in, longest waiting
+// first. It's a copy, so the caller may change the list while it goes
+// through it.
+func (d *Database) ModifiedFrames() []PFN {
+	frames := make([]PFN, 0, d.modified.count)
+
+	for pfn := d.modified.head; pfn != noFrame; pfn = d.flink[pfn] {
+		frames = append(frames, pfn)
+	}
+
+	return frames
+}
+
+// ClearModified clears an active frame's saved modify bit: its contents
+// have just been written to its backing store while it was in use (as
+// $UPDSEC writes a section's page), so if it's released before it's
+// written again it can go to the free list.
+func (d *Database) ClearModified(pfn PFN) error {
+	e, err := d.activeEntry(pfn, "clear modified")
+	if err != nil {
+		return err
+	}
+
+	e.SavedModify = false
+
+	return nil
+}
+
 // Cleaned records that a frame on the modified list has been written to
 // its backing store: its saved modify bit is cleared, and it moves to the
 // tail of the free list, still tied, so a fault can take it back softly

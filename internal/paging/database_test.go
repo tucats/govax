@@ -467,6 +467,48 @@ func TestCleaned(t *testing.T) {
 	}
 }
 
+// ModifiedFrames lists the modified list head first, and is a copy: a
+// frame cleaned while going through it doesn't disturb the walk.
+func TestModifiedFrames(t *testing.T) {
+	d := New(4)
+	a, b, c := allocate(t, d, 0), allocate(t, d, 0x200), allocate(t, d, 0x400)
+	release(t, d, b, true, Modified)
+	release(t, d, c, false, Free)
+	release(t, d, a, true, Modified)
+
+	frames := d.ModifiedFrames()
+	if !samePFNs(frames, []PFN{b, a}) {
+		t.Fatalf("modified frames %v, want %v", frames, []PFN{b, a})
+	}
+
+	for _, pfn := range frames {
+		must(t, d, d.Cleaned(pfn))
+	}
+
+	if got := d.ModifiedFrames(); len(got) != 0 {
+		t.Fatalf("modified frames %v after cleaning, want none", got)
+	}
+}
+
+// ClearModified clears an active frame's saved modify bit, so its
+// release goes to the free list; a frame on a list is refused.
+func TestClearModified(t *testing.T) {
+	d := New(2)
+	a := allocate(t, d, 0)
+	must(t, d, d.SetModified(a))
+	must(t, d, d.ClearModified(a))
+
+	if e := entry(t, d, a); e.SavedModify {
+		t.Fatalf("saved modify bit still set: %+v", e)
+	}
+
+	release(t, d, a, false, Free)
+
+	if err := d.ClearModified(a); !errors.Is(err, ErrWrongState) {
+		t.Fatalf("clear modified of a free frame: %v", err)
+	}
+}
+
 func TestSetBacking(t *testing.T) {
 	d := New(2)
 	pfn := allocate(t, d, 0)

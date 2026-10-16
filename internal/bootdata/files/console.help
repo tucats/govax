@@ -129,6 +129,8 @@
 //              10/15/26    SHOW MEMORY's page frame counts with paging on
 //              10/16/26    vax.sysgen.tbskipwsl in CONFIG KEYS
 //              10/16/26    vax.sysgen.growlim in CONFIG KEYS
+//              10/16/26    vax.sysgen.mpw_hilimit and mpw_lolimit in
+//                          CONFIG KEYS
 
 This is the help documentation for the govax VAX emulator.  Topic sections are
 marked by a "$" delimiter.  This is followed by as many tokens of the help
@@ -2103,6 +2105,17 @@ $CONF,KEY
                                       only while more than this many
                                       pages are free.  0 is allowed.
                                       Default 63.
+
+        vax.sysgen.mpw_hilimit        MPW_HILIMIT: with paging on, the
+                                      modified page writer starts when
+                                      more than this many pages are on
+                                      the modified page list.  0 is
+                                      allowed.  Default 500.
+
+        vax.sysgen.mpw_lolimit        MPW_LOLIMIT: the modified page
+                                      writer stops when the modified
+                                      page list is down to this many
+                                      pages.  0 is allowed.  Default 120.
 
     Debugging switches
 

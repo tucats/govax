@@ -7,7 +7,9 @@ corevms (`corevms/workingset.go`), and subtask 4, the limits (`$ADJWSL`
 on the real list, WSAUTH and WSAUTHEXT, GROWLIM's key, the reset at
 image exit), subtask 5, deleting pages in transition, and subtask 6,
 the working set services (`$PURGWS`, the locks on the real list,
-SS$_LKWSETFUL, the unlock statuses), are done. Needs Phase 62 (settings, the
+SS$_LKWSETFUL, the unlock statuses), and subtask 7, the modified page
+writer for private file sections (`corevms/mpw.go`, MPW_HILIMIT and
+MPW_LOLIMIT, `$UPDSEC` from the modified list), are done. Needs Phase 62 (settings, the
 `internal/paging` PFN database and lists, the PTE forms, frame
 allocation through `internal/paging`). Part of the paging program laid
 out in `PHASE-62 - VMS paging.md` (Parts A and B: the survey and the
@@ -572,7 +574,8 @@ from run to run.
    page's PTE returns to its PSTX when its frame is reused, and a dirty
    write-back page is written to its file from the modified list. The
    writer's thresholds are MPW_HILIMIT and MPW_LOLIMIT (their keys), as
-   Phase 64's will be.
+   Phase 64's will be. (Done 2026-10-16; the progress log says what it
+   chose.)
 8. **The reclaimer** (FREELIM, FREEGOAL, their keys), and accounting:
    soft and hard counts; `$GETJPI` PPGCNT, GPGCNT, WSPEAK (WSSIZE stays
    the limit); `$GETSYI`'s paging parameters; SHOW SYSTEM's page faults
@@ -869,3 +872,59 @@ from run to run.
     purged pages one at a time (each faulted in; 10 succeed, the 11th is
     SS$_LKWSETFUL), locks that page in memory (SS$_WASCLR), and returns,
     after which no page is locked.
+- **2026-10-16:** Subtask 7, the modified page writer for private file
+  sections (`corevms/mpw.go`; tests in `internal/console`'s
+  `workingsetwriter_test.go`, `paging`'s `TestModifiedFrames` and
+  `TestClearModified`, `machine`'s `TestSysgenModifiedPageWriter`).
+  - **A clean page's PTE returning to its PSTX** was already subtask 3's
+    (`BreakTie`); a page the writer has written takes the same path, and
+    the test reads every page back from the file after taking every free
+    frame.
+  - **The writer** (`wakeModifiedPageWriter`, `writeModifiedPages`):
+    `evictPage` wakes it after each frame it sends to the modified list.
+    Over MPW_HILIMIT it takes the list head first
+    (`paging.Database.ModifiedFrames`, new) until the list holds
+    MPW_LOLIMIT, and writes each frame it can to its block
+    (`writableSectionPage`: a tied process page backed by a block of a
+    private section that writes back, still mapped at that address), then
+    moves it to the free list's tail (`Cleaned`), still tied, so a touch
+    is a soft fault. Synchronous, inside the operation that crossed the
+    threshold (Decision 7), and unclustered: the book's clustering
+    (15.5.2.2) and MPW_WRTCLUSTER change only the I/O count, and wait for
+    Phase 64.
+  - **Pages it can't write** (demand-zero and copy-on-reference pages,
+    whose place is the page file) stay on the list. So that a list full
+    of them isn't walked at every eviction, the writer remembers how many
+    it passed over (`System.mpwStuck`) and wakes again only when the list
+    is over MPW_HILIMIT by more than that; the count is forgotten once the
+    list is back to MPW_HILIMIT. govax's rule (VMS always has a page
+    file), to revisit in Phase 64, where a full page file leaves pages
+    stuck the same way.
+  - **From inside a fault:** the writes go through the file's block I/O
+    (`rms.ACPFile.WritePage`), as `releasePTE`'s did already; ods2 keeps
+    no locks a write could wait on, so a fault in the middle of an RMS
+    operation can run the writer. (Decision 9's audit for the page file
+    is still Phase 64's.)
+  - **`$UPDSEC`** (subtask 5's leftover): a private section's page out of
+    the working set whose frame waits on the modified list is written
+    from there and moved to the free list (`modifiedTransitionPage`); a
+    valid page with a clean PTE but its modify bit saved in its frame (a
+    soft fault off the modified list) is written too, and the saved bit
+    cleared (`paging.Database.ClearModified`, new). A page whose frame is
+    on the free list is clean, and isn't written.
+  - **`vax.sysgen.mpw_hilimit`** (500) and **`vax.sysgen.mpw_lolimit`**
+    (120), number keys (0 allowed: 0 and 0 write every page they can
+    whenever one is modified), `Sysgen.MPWHiLimit` and `MPWLoLimit`, in
+    `validConfigs` and HELP CONFIG KEYS. Nothing checks that the low limit
+    is below the high one; if it isn't, a run writes nothing.
+  - **The test:** an image with a 30-page working set and the thresholds
+    at 10 and 2 writes 80 demand-zero pages (at least 50 stuck on the
+    modified list), then adds 1000 to each of a 64-page writable private
+    section's pages and reads 14 of them again. At most 10 of the
+    section's pages wait on the modified list, the rest out of the set
+    are on the free list with their blocks written, and at least one page
+    is back with its modify bit saved. `$UPDSEC` then leaves none on the
+    modified list or saved, and every block written; after every free
+    frame is taken, the written pages' PTEs are their PSTX again, and the
+    program reads every new value back. The test fails with the writer
+    off, and with `$UPDSEC`'s two additions off.

@@ -42,9 +42,9 @@ import (
 // Global section pages enter the working set (counted as global pages)
 // but are never chosen to leave it: they stay resident until Phase 65
 // gives the global page table its own states. There's no page file
-// (Phase 64), and no writer for a private file section's modified pages
-// (subtask 7), so a page on the modified list leaves it only by a soft
-// fault, or by being deleted.
+// (Phase 64): the modified page writer (mpw.go) writes only a writable
+// private file section's pages, to their file, so any other page on the
+// modified list leaves it only by a soft fault, or by being deleted.
 //
 // # Deleting a page in transition
 //
@@ -261,7 +261,8 @@ func (env *Environment) wsProtected(as vm.AddressSpace, va uint32) bool {
 // frame goes to the tail of the modified list or the free list
 // (paging.Database.Release), by its saved modify bit with the PTE's
 // modify bit ORed in. Storing the PTE also empties the page's TB slot,
-// whose cached modify bit and frame would otherwise outlive it.
+// whose cached modify bit and frame would otherwise outlive it. A frame
+// sent to the modified list may wake the modified page writer (mpw.go).
 //
 // The frame must be the page's own: active, tied to this process's page,
 // and held by nothing else. Anything else (which the pager never makes)
@@ -287,7 +288,9 @@ func (env *Environment) evictPage(p paging.Page) {
 		return
 	}
 
-	_, _ = db.Release(pfn, pte.Modified())
+	if state, err := db.Release(pfn, pte.Modified()); err == nil && state == paging.Modified {
+		env.wakeModifiedPageWriter()
+	}
 }
 
 // softFault resolves a fault on a page in transition, frame pfn: the

@@ -73,6 +73,10 @@ type System struct {
 	// sectionFiles counts the sections using each file (filesec.go).
 	sectionFiles map[*rms.ACPFile]*sectionFile
 
+	// mpwStuck is how many frames the modified page writer last passed
+	// over because it can't write them (mpw.go).
+	mpwStuck int
+
 	// Locks is the lock database (internal/lck, Phase 47): every
 	// resource and lock $ENQ and RMS have made, system state too.
 	Locks *lck.Manager

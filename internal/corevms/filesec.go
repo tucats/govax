@@ -55,21 +55,22 @@ import (
 // The hardware sets a valid PTE's modify bit on the first write. A private
 // page that's modified is written back to its block when the page is
 // unmapped ($DELTVA, $CRETVA over it, image rundown, process deletion) or
-// by $UPDSEC. A global page's modify bits are spread over the PTEs of the
+// by $UPDSEC. With paging on, it may also leave the working set while
+// modified, its frame waiting on the modified page list until the
+// modified page writer (mpw.go) or $UPDSEC writes it to its block. A
+// global page's modify bits are spread over the PTEs of the
 // processes mapping it; each one's is gathered into the section
 // (GlobalSection.Dirty) as that PTE goes, and the section writes its
 // modified pages back when it's deleted, or for $UPDSEC.
 //
-// # How govax leaves room for a pager
+// # Paging
 //
-// Nothing takes a page away yet: once in, a page stays until it's
-// unmapped (there's no working set limit and no page file). The pieces a
-// working set manager would need are the ones here: the invalid PTE forms
-// say where each page lives; PageIn reads a page in by them; writePage
-// writes one back; and releasePTE is the one place a page leaving a PTE
-// is accounted for. Taking a page away would be writing it back if
-// modified (writePage), giving its frame up, and putting the invalid form
-// back in the PTE, for PageIn to find again.
+// With paging off, nothing takes a page away: once in, a page stays
+// until it's unmapped. With it on (workingset.go), a private section's
+// page can leave the working set: its PTE keeps its frame in the
+// transition form, and when the frame is reused the PTE gets its process
+// section table index back (BreakTie), for PageIn to read the page in
+// again. A global section's pages stay resident until Phase 65.
 //
 // # The file stays accessed
 //
@@ -771,7 +772,10 @@ func firstUnwritten(pages, written []uint32) uint32 {
 }
 
 // updateSections is $UPDSEC's work over pages: it writes each page that
-// should go back (see serviceSysUpdsec) and clears its modify bit. It
+// should go back (see serviceSysUpdsec) and clears its modify bit. With
+// paging on, a private section's page is modified by its frame's saved
+// modify bit too, and a page out of the working set whose frame waits on
+// the modified list is written from there (modifiedTransitionPage). It
 // returns the pages written, and, if a write failed, the page's address
 // and the status (SS$_NORMAL and 0 otherwise).
 func (env *Environment) updateSections(pages []uint32, mode registers.AccessMode, callerOnly bool) ([]uint32, uint32, uint32) {
@@ -788,11 +792,18 @@ func (env *Environment) updateSections(pages []uint32, mode registers.AccessMode
 		switch {
 		case pte.Valid():
 			if ps, _, i := env.processSectionAt(addr); ps != nil {
-				if !ps.writeBack || !pte.Modified() {
+				// A page soft-faulted back after it was written has a
+				// clean PTE and the modify bit saved in its frame's
+				// record.
+				saved := env.savedModify(addr, pte.PFN())
+				if !ps.writeBack || !pte.Modified() && !saved {
 					continue
 				}
 
 				err2 = env.writePage(ps.file, ps.vbn+uint32(i), pte.PFN())
+				if err2 == nil && saved {
+					_ = env.mem.Paging().ClearModified(paging.PFN(pte.PFN()))
+				}
 
 				break
 			}
@@ -804,6 +815,18 @@ func (env *Environment) updateSections(pages []uint32, mode registers.AccessMode
 
 			err2 = env.writePage(sp.s.File, sp.s.VBN+uint32(sp.page), pte.PFN())
 			sp.s.Dirty[sp.page] = false
+
+		case env.modifiedTransitionPage(addr, pte) != nil:
+			// A page out of the working set, its frame waiting on the
+			// modified list: written as the modified page writer
+			// would, and moved to the free list (mpw.go).
+			ps, _, i := env.processSectionAt(addr)
+			pfn, _ := pte.Transition()
+
+			err2 = env.writePage(ps.file, ps.vbn+uint32(i), pfn)
+			if err2 == nil {
+				_ = env.mem.Paging().Cleaned(paging.PFN(pfn))
+			}
 
 		default:
 			// A global page this process hasn't touched: with updflg 0

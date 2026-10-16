@@ -197,3 +197,26 @@ func TestVMInitPaging(t *testing.T) {
 		t.Error("VMINIT with no setting turned paging on")
 	}
 }
+
+// TestSysgenModifiedPageWriter: vax.sysgen.mpw_hilimit and mpw_lolimit
+// reach the System, 0 included; unset, or bad, they're 500 and 120.
+func TestSysgenModifiedPageWriter(t *testing.T) {
+	for _, tc := range []struct {
+		hi, lo         string
+		wantHi, wantLo uint32
+	}{{"0", "0", 0, 0}, {"%X40", "16", 64, 16}, {"lots", "-3", 500, 120}, {"", "", 500, 120}} {
+		values := map[string]string{mpwHiLimitSetting: tc.hi, mpwLoLimitSetting: tc.lo}
+		withSettings(t, values)
+
+		if tc.hi == "" {
+			_ = settings.Delete(mpwHiLimitSetting)
+			_ = settings.Delete(mpwLoLimitSetting)
+		}
+
+		c, _ := newTestMachine(t)
+		if sg := c.ProcessOne().Sysgen; sg.MPWHiLimit != tc.wantHi || sg.MPWLoLimit != tc.wantLo {
+			t.Errorf("vax.sysgen.mpw_hilimit %q, mpw_lolimit %q: %d and %d, want %d and %d",
+				tc.hi, tc.lo, sg.MPWHiLimit, sg.MPWLoLimit, tc.wantHi, tc.wantLo)
+		}
+	}
+}
