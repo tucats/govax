@@ -24,6 +24,10 @@ const (
 	freeGoalSetting   = "vax.sysgen.freegoal"
 	pageFileSetting   = "vax.sysgen.paging.file"
 	pageSizeSetting   = "vax.sysgen.paging.size"
+
+	// WriteClusterSetting is MPW_WRTCLUSTER's key, whose value has a
+	// rule of its own (ParseWriteCluster).
+	WriteClusterSetting = "vax.sysgen.mpw_wrtcluster"
 )
 
 // pqlSettings are the PQL_Dxxx keys, by the quota each sets the default
@@ -41,7 +45,7 @@ func SysgenKeys() []string {
 	keys := []string{
 		PagingSetting, minWSCountSetting, tbSkipWSLSetting, growLimSetting,
 		mpwHiLimitSetting, mpwLoLimitSetting, freeLimSetting, freeGoalSetting,
-		pageFileSetting, pageSizeSetting,
+		pageFileSetting, pageSizeSetting, WriteClusterSetting,
 	}
 
 	for key := range pqlSettings {
@@ -104,6 +108,15 @@ func ParseSysgenNumber(text string) (uint32, bool) {
 	return uint32(v), true
 }
 
+// ParseWriteCluster reads MPW_WRTCLUSTER's text: a number in
+// ParseSysgenNumber's forms from 16 to 120 and a multiple of 8, SYSGEN's
+// range for the parameter on a VAX. It reports false for anything else.
+func ParseWriteCluster(text string) (uint32, bool) {
+	v, ok := ParseSysgenNumber(text)
+
+	return v, ok && v >= 16 && v <= 120 && v%8 == 0
+}
+
 // sysgenSettings reads the vax.sysgen.* keys into the parameters a new
 // System gets, each key that isn't set, or isn't a positive count,
 // keeping its default (cmd/govax warns about a bad value at startup).
@@ -131,6 +144,10 @@ func sysgenSettings(paging bool) corevms.Sysgen {
 
 	if v, ok := ParseSysgenNumber(settings.Get(mpwLoLimitSetting)); ok {
 		sg.MPWLoLimit = v
+	}
+
+	if v, ok := ParseWriteCluster(settings.Get(WriteClusterSetting)); ok {
+		sg.MPWWriteCluster = v
 	}
 
 	if v, ok := ParseSysgenNumber(settings.Get(freeLimSetting)); ok {

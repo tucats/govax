@@ -65,8 +65,10 @@ type PageCounts struct {
 	Faults FaultCounts
 
 	// Written counts the pages the modified page writer has written
-	// (mpw.go), on its own or for the reclaimer.
-	Written uint64
+	// (mpw.go), on its own or for the reclaimer, and WriteIOs the writes
+	// it made, one for each cluster (MONITOR PAGE's page writes and page
+	// write I/Os).
+	Written, WriteIOs uint64
 
 	// Reclaims counts the reclaimer's runs, and Trimmed the pages it took
 	// out of working sets (reclaim.go).

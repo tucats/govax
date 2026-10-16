@@ -33,12 +33,14 @@ const DefaultGrowLimit = 63
 const DefaultTBSkipWSL = 8
 
 // DefaultMPWHiLimit and DefaultMPWLoLimit are MPW_HILIMIT's and
-// MPW_LOLIMIT's defaults (the phase doc's Decision 11): the modified
-// page writer starts when the modified page list holds more than the
-// first, and writes until it holds no more than the second (mpw.go).
+// MPW_LOLIMIT's defaults: the modified page writer starts when the
+// modified page list holds more than the first, and writes until it
+// holds no more than the second (mpw.go). They're SYSGEN's defaults on a
+// VAX (docs/PHASE-64 - page file.md, finding 2; Phase 62's Decision 11
+// had taken 120, a VAX's AUTOGEN value, for the second).
 const (
 	DefaultMPWHiLimit = 500
-	DefaultMPWLoLimit = 120
+	DefaultMPWLoLimit = 32
 )
 
 // DefaultFreeLimit and DefaultFreeGoal are FREELIM's and FREEGOAL's

@@ -3,7 +3,7 @@
 **Status:** in progress. Subtask 1, the survey (Part A below), done
 2026-10-16, and its questions answered by the author the same day
 ("Questions for the author"). Subtask 2, the page file, done
-2026-10-16. Planned 2026-10-15. Needs Phase 63 (working sets, the
+2026-10-16. Subtask 3, the modified page writer, done 2026-10-16. Planned 2026-10-15. Needs Phase 63 (working sets, the
 lists, soft faults). Part of the paging program laid out in
 `PHASE-62 - VMS paging.md` (Decisions 7, 8, 9, and 10 are this phase's).
 
@@ -583,7 +583,7 @@ pg63's. Values that vary from run to run print as differences.
    allocation-size rule (finding 7); block I/O that never extends the
    file; PAGEFRAG and PAGECRIT. Unit tests on a host file and on a test
    volume.
-3. **The modified page writer:** `vax.sysgen.mpw_wrtcluster`, and
+3. **The modified page writer** (done 2026-10-16): `vax.sysgen.mpw_wrtcluster`, and
    MPW_LOLIMIT's default (findings 1, 2); demand-zero pages claimed with
    page file backing (finding 3); clustering (finding 8); blocks
    assigned at write time, pages to the free list after the write, the
@@ -681,3 +681,45 @@ pg63's. Values that vary from run to run print as differences.
   which changes the volume's bitmap and directory, so the writer must
   call `OpenPageFile` at an instruction boundary (the reclaimer's), not
   from inside a fault; afterward the block I/O is safe anywhere.
+- **2026-10-16:** Subtask 3, the modified page writer. The
+  `vax.sysgen.mpw_wrtcluster` key (`machine.ParseWriteCluster`: a
+  multiple of 8 from 16 to 120, else the default, 120, with cmd/govax's
+  warning), and MPW_LOLIMIT's default is 32 (finding 2). A demand-zero
+  page's frame is claimed with page file backing, block 0
+  (`corevms/frames.go`'s `demandZeroBacking`; finding 3). `mpw.go`'s
+  writer now writes in clusters (finding 8): from the list's first
+  frame, `miniCluster` takes the neighbors in its process's page table,
+  down then up, that are in transition with frames on the modified list
+  bound for the same place, to MPW_WRTCLUSTER; a section's cluster is
+  that run, written to the section's blocks; a page file cluster first
+  allocates a run of blocks (no more than there are page-file-bound
+  frames, to MPW_WRTCLUSTER), fills it with miniclusters around that
+  frame and the next ones on the list bound for the page file, writes
+  each page to its block, sets the block as the frame's backing store,
+  and moves the frame to the free list (`Cleaned`); unfilled blocks go
+  back. A cluster is one write: `PageCounts.WriteIOs` beside `Written`.
+  When the page file is full or missing, the frames bound for it count
+  as stuck, as before; the console message for exhaustion is subtask
+  5's. The page file is opened at an instruction boundary: the writer,
+  woken inside a fault with the file configured but unopened, asks for
+  the boundary, where `openWantedPageFile` opens it (when the modified
+  list is over MPW_HILIMIT, or over MPW_LOLIMIT for the reclaimer's
+  writing), forgets the stuck counts, and runs the writer. A reused
+  frame's page takes the page file PTE form with its block (`BreakTie`,
+  unchanged), and `resolveFault` reads a page file PTE with a block
+  back into a new, clean frame backed by that block
+  (`pageInFromPageFile`, a hard fault, counted as a read); block 0 is
+  demand-zero (finding 4). Brought forward from subtask 4, because the
+  writer relies on it: a frame that goes to the modified list with a
+  page file block (read back, then modified again) gives the block up
+  at once (`forgetPageFileBlock`, finding 5), and the writer allocates
+  a new one; the writer also frees an old block it finds. Deletion
+  still doesn't free a page's block (subtask 4). Tests:
+  `internal/console`'s `TestPageFileWriter` (an 80-page array at a
+  30-page working set, thresholds 10 and 2, clusters of 16, a host page
+  file: pages written in clusters to consecutive blocks holding their
+  contents, page file PTEs after the frames are reused, every page read
+  back by hard faults, re-modified pages' blocks replaced with no
+  growth) and `TestPageFileWriterNoFile` (no page file: pages stay on
+  the modified list, as before); `internal/machine`'s
+  `TestSysgenWriteCluster` and the new MPW_LOLIMIT default.

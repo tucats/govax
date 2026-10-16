@@ -651,6 +651,7 @@ var validConfigs = map[string]bool{
 	"vax.sysgen.growlim":        true,
 	"vax.sysgen.mpw_hilimit":    true,
 	"vax.sysgen.mpw_lolimit":    true,
+	"vax.sysgen.mpw_wrtcluster": true,
 	"vax.sysgen.freelim":        true,
 	"vax.sysgen.freegoal":       true,
 	"vax.sysgen.pql_dwsdefault": true,
@@ -707,6 +708,13 @@ func auditConfig() {
 				fmt.Printf("\nWarning, %s is %q; it must be a nonnegative integer, and its default will be used\n",
 					key, settings.Get(key))
 			}
+		}
+	}
+
+	if key := machine.WriteClusterSetting; settings.Exists(key) {
+		if _, ok := machine.ParseWriteCluster(settings.Get(key)); !ok {
+			fmt.Printf("\nWarning, %s is %q; it must be a multiple of 8 from 16 to 120, and its default will be used\n",
+				key, settings.Get(key))
 		}
 	}
 }

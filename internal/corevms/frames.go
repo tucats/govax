@@ -82,3 +82,16 @@ func sectionBacking(si, vbn uint32) paging.Backing {
 // copy-on-reference page: the page file, from its first fault (the phase
 // doc's Decision 8), a block to be allocated when it's first written.
 var copyOnRefBacking = paging.Backing{Kind: paging.PageFile}
+
+// demandZeroBacking is the backing store of a demand-zero page from its
+// first fault: the page file too, a block to be allocated when it's first
+// written, as VMS's pager gives it (the book's 15.2.2; docs/PHASE-64 -
+// page file.md, finding 3). Its contents exist only in its frame until
+// then, so the frame is effectively modified (effectivelyModified).
+var demandZeroBacking = paging.Backing{Kind: paging.PageFile}
+
+// pageFileBacking is the backing store of a page whose contents are in
+// block vbn of the page file.
+func pageFileBacking(vbn uint32) paging.Backing {
+	return paging.Backing{Kind: paging.PageFile, Block: vbn}
+}

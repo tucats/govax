@@ -37,8 +37,8 @@ import (
 // only clean pages (a file section's, unchanged since read) reach the
 // free list at once; written ones go to the modified list, which the
 // writer then empties if it can. So after trimming, the writer runs
-// again. Until the page file (Phase 64), a demand-zero page has nowhere
-// to be written, and trimming one gains no free frame.
+// again. Without a page file (pagefile.go), a demand-zero page has
+// nowhere to be written, and trimming one gains no free frame.
 //
 // # When it runs
 //
@@ -107,11 +107,13 @@ func (sys *System) wakeReclaimer() {
 
 // atInstructionBoundary is the work the pager leaves for the next
 // instruction boundary: working sets left over their limits come back
-// down (trimWorkingSets), and, if the free list is below FREELIM, the
-// reclaimer runs. Both share the one routine vm.Memory keeps for the
+// down (trimWorkingSets), the page file is opened if the modified page
+// writer wants it (openWantedPageFile), and, if the free list is below
+// FREELIM, the reclaimer runs. Both share the one routine vm.Memory keeps for the
 // boundary.
 func (sys *System) atInstructionBoundary() {
 	sys.trimWorkingSets()
+	sys.openWantedPageFile(sys.Sysgen.MPWHiLimit)
 	sys.reclaim()
 }
 
@@ -154,6 +156,8 @@ func (sys *System) reclaim() {
 // unless the list is no longer than that by more than the pages it
 // couldn't write the last time.
 func (sys *System) reclaimWrite() {
+	sys.openWantedPageFile(sys.Sysgen.MPWLoLimit)
+
 	lo := int(sys.Sysgen.MPWLoLimit)
 	if sys.mem.Paging().ModifiedCount() > lo+sys.reclaimStuck {
 		sys.reclaimStuck = sys.writeModifiedPages(lo)

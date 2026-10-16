@@ -132,7 +132,10 @@ never had.
   by `testdata/pg63`);
   64 the page file and modified page writer (in progress: subtask 2,
   the page file, done 2026-10-16: `paging.PageFileMap`,
-  `rms.Session.OpenPageFile`, `corevms/pagefile.go`); 65 sections under the
+  `rms.Session.OpenPageFile`, `corevms/pagefile.go`; subtask 3, the
+  writer's clusters to the page file and section files, the page file
+  PTE's hard fault, and `vax.sysgen.mpw_wrtcluster`, done 2026-10-16,
+  `corevms/mpw.go`); 65 sections under the
   pager; 66 image activation by mapping; 67 the address space and page
   tables under paging, deferred to the end. Paging is synchronous, with no
   PFW, COLPG, or FPG waits. Each later phase has a planning doc.
@@ -1152,7 +1155,8 @@ expect adjustment as phases land):
   (counts in pages, decimal or %X; `machine/sysgen.go`'s
   `ParseSysgenCount`); Phase 63's `growlim`, `tbskipwsl`, `freelim`,
   `freegoal`, `mpw_hilimit`, `mpw_lolimit` (numbers, 0 allowed:
-  `ParseSysgenNumber`, `SysgenNumberKeys`); Phase 64's `paging.file`
+  `ParseSysgenNumber`, `SysgenNumberKeys`); Phase 64's `mpw_wrtcluster`
+  (a multiple of 8 from 16 to 120, `ParseWriteCluster`), `paging.file`
   (the page file: a volume file, or a quoted host path) and
   `paging.size` (its size in blocks when created, default 32768). They reach each `System` as a `corevms.Sysgen`
   (`corevms/sysgen.go`), whose defaults `$CREPRC`'s quotas and a

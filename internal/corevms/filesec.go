@@ -324,8 +324,9 @@ func (sys *System) readPage(f *rms.ACPFile, vbn uint32, c vm.FrameClaim) (uint32
 // section's physical page, read from the file the first time any process
 // touches it (or, for a copy-on-reference section, a private copy read
 // for this process, which then no longer maps the section); a private
-// section's page is read from its file into a new page; any other page is
-// demand-zero.
+// section's page is read from its file into a new page; with paging on,
+// a page the modified page writer put in the page file is read back from
+// its block (mpw.go); any other page is demand-zero.
 //
 // Each fault it resolves on a P0 or P1 page counts in the faulting
 // process's page faults, by its kind (accounting.go's countFault).
@@ -392,7 +393,17 @@ func (sys *System) resolveFault(f vm.PageFault) (vm.PTE, faultKind, bool) {
 		return vm.ValidPTE(pfn, prot, owner), faultRead, ok
 	}
 
-	claim := sys.faultClaim(f, paging.Backing{})
+	// A page whose contents the modified page writer put in the page file
+	// (mpw.go), and whose frame has since gone to another page: a hard
+	// fault reads the block back. Block 0, a block never allocated, is a
+	// page never written, so demand-zero.
+	if vbn, ok := f.PTE.PageFileBlock(); ok && vbn != 0 && sys.mem.Paging() != nil {
+		pfn, ok := sys.pageInFromPageFile(vbn, f)
+
+		return vm.ValidPTE(pfn, prot, owner), faultRead, ok
+	}
+
+	claim := sys.faultClaim(f, demandZeroBacking)
 
 	pte, ok := sys.mem.DemandZeroFor(f.PTE, claim)
 	if ok {
@@ -400,6 +411,38 @@ func (sys *System) resolveFault(f vm.PageFault) (vm.PTE, faultKind, bool) {
 	}
 
 	return pte, faultDemandZero, ok
+}
+
+// pageInFromPageFile reads block vbn of the page file into a new frame
+// for the page fault f touched, returning the frame's number, or false if
+// there's no page file open, memory is exhausted, or the block can't be
+// read. The frame's backing store is the block, and its contents match
+// it: the page is clean, so if it leaves the working set unmodified its
+// frame goes to the free list, and it's never written again unless it's
+// modified (the book's 15.2.4).
+func (sys *System) pageInFromPageFile(vbn uint32, f vm.PageFault) (uint32, bool) {
+	pf := sys.PageFile()
+	if pf == nil {
+		return 0, false
+	}
+
+	c := sys.faultClaim(f, pageFileBacking(vbn))
+	c.Fill = true
+
+	pfn, ok := sys.mem.AllocateFrame(c)
+	if !ok {
+		return 0, false
+	}
+
+	buf := make([]byte, pageSize)
+
+	if pf.Read(vbn, buf) != nil || sys.mem.StorePhysical(pfn*pageSize, buf) != nil {
+		sys.mem.FreePage(pfn)
+
+		return 0, false
+	}
+
+	return pfn, true
 }
 
 // pageInGlobal returns the physical page for global page table entry gi:

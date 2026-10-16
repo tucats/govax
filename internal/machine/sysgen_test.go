@@ -202,12 +202,12 @@ func TestVMInitPaging(t *testing.T) {
 }
 
 // TestSysgenModifiedPageWriter: vax.sysgen.mpw_hilimit and mpw_lolimit
-// reach the System, 0 included; unset, or bad, they're 500 and 120.
+// reach the System, 0 included; unset, or bad, they're 500 and 32.
 func TestSysgenModifiedPageWriter(t *testing.T) {
 	for _, tc := range []struct {
 		hi, lo         string
 		wantHi, wantLo uint32
-	}{{"0", "0", 0, 0}, {"%X40", "16", 64, 16}, {"lots", "-3", 500, 120}, {"", "", 500, 120}} {
+	}{{"0", "0", 0, 0}, {"%X40", "16", 64, 16}, {"lots", "-3", 500, 32}, {"", "", 500, 32}} {
 		values := map[string]string{mpwHiLimitSetting: tc.hi, mpwLoLimitSetting: tc.lo}
 		withSettings(t, values)
 
@@ -220,6 +220,27 @@ func TestSysgenModifiedPageWriter(t *testing.T) {
 		if sg := c.ProcessOne().Sysgen; sg.MPWHiLimit != tc.wantHi || sg.MPWLoLimit != tc.wantLo {
 			t.Errorf("vax.sysgen.mpw_hilimit %q, mpw_lolimit %q: %d and %d, want %d and %d",
 				tc.hi, tc.lo, sg.MPWHiLimit, sg.MPWLoLimit, tc.wantHi, tc.wantLo)
+		}
+	}
+}
+
+// TestSysgenWriteCluster: vax.sysgen.mpw_wrtcluster reaches the System
+// when it's a multiple of 8 from 16 to 120; unset, or anything else, it's
+// 120.
+func TestSysgenWriteCluster(t *testing.T) {
+	for _, tc := range []struct {
+		text string
+		want uint32
+	}{{"16", 16}, {"%X40", 64}, {"120", 120}, {"8", 120}, {"128", 120}, {"20", 120}, {"0", 120}, {"many", 120}, {"", 120}} {
+		withSettings(t, map[string]string{WriteClusterSetting: tc.text})
+
+		if tc.text == "" {
+			_ = settings.Delete(WriteClusterSetting)
+		}
+
+		c, _ := newTestMachine(t)
+		if got := c.ProcessOne().Sysgen.MPWWriteCluster; got != tc.want {
+			t.Errorf("vax.sysgen.mpw_wrtcluster %q: %d, want %d", tc.text, got, tc.want)
 		}
 	}
 }

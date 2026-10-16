@@ -136,6 +136,8 @@
 //                          counts and VMINIT/PAGING brought up to date
 //              10/16/26    vax.sysgen.paging.file and paging.size in
 //                          CONFIG KEYS
+//              10/16/26    vax.sysgen.mpw_wrtcluster in CONFIG KEYS;
+//                          mpw_lolimit's default is 32
 
 This is the help documentation for the govax VAX emulator.  Topic sections are
 marked by a "$" delimiter.  This is followed by as many tokens of the help
@@ -2160,7 +2162,14 @@ $CONF,KEY
         vax.sysgen.mpw_lolimit        MPW_LOLIMIT: the modified page
                                       writer stops when the modified
                                       page list is down to this many
-                                      pages.  0 is allowed.  Default 120.
+                                      pages.  0 is allowed.  Default 32.
+
+        vax.sysgen.mpw_wrtcluster     MPW_WRTCLUSTER: the most pages the
+                                      modified page writer writes in
+                                      one cluster, and so the largest
+                                      run of page file blocks it takes
+                                      at once.  A multiple of 8 from 16
+                                      to 120.  Default 120.
 
         vax.sysgen.freelim            FREELIM: with paging on, when fewer
                                       than this many pages are on the

@@ -25,7 +25,8 @@ import (
 // unchanged since it was read), the modified page list if they must be
 // written first (a page that was written, or a demand-zero or
 // copy-on-reference page, which has nowhere else to come from: such
-// pages are "effectively modified" from their first fault). If the
+// pages are "effectively modified" from their first fault, and the page
+// file is their backing store). If the
 // process touches the page again before the frame is reused, the fault
 // takes the frame back off its list with no I/O: a *soft fault*. A new
 // frame is always taken from the free list's head, so a frame waits on
@@ -41,10 +42,11 @@ import (
 //
 // Global section pages enter the working set (counted as global pages)
 // but are never chosen to leave it: they stay resident until Phase 65
-// gives the global page table its own states. There's no page file
-// (Phase 64): the modified page writer (mpw.go) writes only a writable
-// private file section's pages, to their file, so any other page on the
-// modified list leaves it only by a soft fault, or by being deleted.
+// gives the global page table its own states. Without a page file
+// (pagefile.go), the modified page writer (mpw.go) writes only a
+// writable private file section's pages, to their file, so any other
+// page on the modified list leaves it only by a soft fault, or by being
+// deleted.
 //
 // # Deleting a page in transition
 //
@@ -289,8 +291,24 @@ func (env *Environment) evictPage(p paging.Page) {
 	}
 
 	if state, err := db.Release(pfn, pte.Modified()); err == nil && state == paging.Modified {
+		env.forgetPageFileBlock(pfn, e.Backing)
 		env.wakeModifiedPageWriter()
 	}
+}
+
+// forgetPageFileBlock frees the page file block of frame pfn, whose
+// backing store was back, as the frame goes to the modified list: a page
+// read back from the page file and modified again no longer matches its
+// block, so the block is given back, and the writer allocates the page a
+// new one (the book's 15.2.1.1, step 6). Freeing it here lets the writer
+// gather the page into a cluster with others, in a run of blocks.
+func (sys *System) forgetPageFileBlock(pfn paging.PFN, back paging.Backing) {
+	if back.Kind != paging.PageFile || back.Block == 0 {
+		return
+	}
+
+	_ = sys.FreePageFile(paging.Run{First: back.Block, Count: 1})
+	_ = sys.mem.Paging().SetBacking(pfn, paging.Backing{Kind: paging.PageFile})
 }
 
 // softFault resolves a fault on a page in transition, frame pfn: the
@@ -381,7 +399,7 @@ func (sys *System) tiedEntry(pid, va, pfn uint32) (paging.Entry, bool) {
 // demand-zero or copy-on-reference page was just given, as VMS does at
 // such a page's first fault: its contents exist nowhere else, so it must
 // go to the modified list, never the free list, whenever it leaves the
-// working set (to be written to the page file, from Phase 64). An S0
+// working set, to be written to the page file (mpw.go). An S0
 // page's frame, tied to nothing, is left alone.
 func (sys *System) effectivelyModified(pfn uint32, claim vm.FrameClaim) {
 	if db := sys.mem.Paging(); db != nil && claim.Tied {
