@@ -1,6 +1,8 @@
 package dclcmd
 
 import (
+	"errors"
+	"fmt"
 	"strings"
 
 	iodev "github.com/tucats/govax/internal/io"
@@ -179,6 +181,9 @@ func (c *Context) volumeLogicalName(device string) (string, bool) {
 //
 // Like Mount, it translates device first, and it deletes the DISK$label
 // logical name Mount defined for the volume.
+//
+// A volume with files open isn't dismounted, and the messages say why,
+// as VMS's DISMOUNT words them (dismountRefusal).
 func (c *Context) Dismount(device string) error {
 	device, err := c.mountDevice(device)
 	if err != nil {
@@ -192,6 +197,11 @@ func (c *Context) Dismount(device string) error {
 	name, labeled := c.volumeLogicalName(device)
 
 	if err := c.Mounts.Dismount(device); err != nil {
+		var open *rms.FilesOpenError
+		if errors.As(err, &open) {
+			return c.dismountRefusal(open)
+		}
+
 		return vmserrors.Wrap(vmserrors.SS_NOMOUNT, err, device)
 	}
 
@@ -200,6 +210,32 @@ func (c *Context) Dismount(device string) error {
 	}
 
 	return nil
+}
+
+// dismountRefusal shows why a volume with files open can't be
+// dismounted, a message for each kind of file, as the DCL Dictionary's
+// DISMOUNT example shows VMS's:
+//
+//	%DISM-W-CANNOTDMT, DUA1: cannot be dismounted
+//	%DISM-W-INSWPGFIL, 1 swap or page files installed on volume
+//	%DISM-W-USERFILES, 2 user files open on volume
+//
+// (VMS 7.3's wording; VMS 7.1's is unconfirmed, as no probe can install a
+// page file on a volume it may dismount.) It returns the first message,
+// already shown, as the command's failure.
+func (c *Context) dismountRefusal(open *rms.FilesOpenError) error {
+	head := fmt.Sprintf("DISM-W-CANNOTDMT, %s: cannot be dismounted", open.Device)
+	c.Printf("%%%s\n", head)
+
+	if open.PageFiles > 0 {
+		c.Printf("%%DISM-W-INSWPGFIL, %d swap or page files installed on volume\n", open.PageFiles)
+	}
+
+	if open.UserFiles > 0 {
+		c.Printf("%%DISM-W-USERFILES, %d user files open on volume\n", open.UserFiles)
+	}
+
+	return vmserrors.InhibitMessage(errors.New(head))
 }
 
 // deleteVolumeLogicalName deletes name from the system table if it still

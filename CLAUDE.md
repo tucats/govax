@@ -138,7 +138,10 @@ never had.
   `corevms/mpw.go`; subtask 4, blocks given back at deletion,
   `releasePageFileBlock`, done 2026-10-16; subtask 5, PGFLQUOTA
   charged at creation and given back at deletion,
-  `corevms/pgflquota.go`, done 2026-10-16); 65 sections under the
+  `corevms/pgflquota.go`, done 2026-10-16; subtask 6, the rest of the
+  system: DISMOUNT's VMS messages for the page file's volume,
+  `rms.FilesOpenError`, the reclaimer and a subprocess with the page
+  file, done 2026-10-16); 65 sections under the
   pager; 66 image activation by mapping; 67 the address space and page
   tables under paging, deferred to the end. Paging is synchronous, with no
   PFW, COLPG, or FPG waits. Each later phase has a planning doc.

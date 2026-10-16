@@ -138,8 +138,15 @@ func TestPageFileVolume(t *testing.T) {
 	}
 
 	// Its volume can't be dismounted while it's open.
-	if err := s.Mounts.Dismount("DUA0"); !errors.Is(err, ErrFilesOpen) {
-		t.Errorf("Dismount = %v, want ErrFilesOpen", err)
+	// Its volume can't be dismounted while it's open, and DISMOUNT is told
+	// it's a page file, not a user's.
+	err = s.Mounts.Dismount("DUA0")
+
+	var open *FilesOpenError
+	if !errors.As(err, &open) || !errors.Is(err, ErrFilesOpen) {
+		t.Errorf("Dismount = %v, want a FilesOpenError", err)
+	} else if open.Device != "DUA0" || open.PageFiles != 1 || open.UserFiles != 0 {
+		t.Errorf("Dismount's error %+v, want one page file and no user files on DUA0", open)
 	}
 
 	blocks := p.Blocks()

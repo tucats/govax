@@ -4,7 +4,8 @@
 2026-10-16, and its questions answered by the author the same day
 ("Questions for the author"). Subtask 2, the page file, done
 2026-10-16. Subtask 3, the modified page writer, done 2026-10-16. Subtask 4,
-blocks freed, done 2026-10-16. Subtask 5, PGFLQUOTA, done 2026-10-16. Planned 2026-10-15. Needs Phase 63 (working sets, the
+blocks freed, done 2026-10-16. Subtask 5, PGFLQUOTA, done 2026-10-16. Subtask 6, the rest of the
+system, done 2026-10-16. Planned 2026-10-15. Needs Phase 63 (working sets, the
 lists, soft faults). Part of the paging program laid out in
 `PHASE-62 - VMS paging.md` (Decisions 7, 8, 9, and 10 are this phase's).
 
@@ -604,7 +605,7 @@ pg63's. Values that vary from run to run print as differences.
    (F$GETJPI too); LOGOUT's peak and ACC$L_PGFLPEAK; exhaustion's console
    message and failed fault, and the stuck counts (`mpwStuck`,
    `reclaimStuck`) for a full page file.
-6. **The rest of the system:** DISMOUNT's refusal of the page file's
+6. **The rest of the system** (done 2026-10-16): DISMOUNT's refusal of the page file's
    volume tested (it holds already, the survey found); the reclaimer's
    writer with the page file; a subprocess's charges back to the job at
    its deletion.
@@ -799,3 +800,43 @@ pg63's. Values that vary from run to run print as differences.
   committed) fails only where it should: LOGOUT's tests now see a peak,
   and paging-off and default tests (TestLkwsetFull fails that way
   without this subtask too).
+- **2026-10-16:** Subtask 6, the rest of the system. DISMOUNT of the
+  page file's volume was already refused (as SS$_NOMOUNT, "files are
+  open"); it now says why as VMS's DISMOUNT does, the DCL Dictionary's
+  example being the source (VMS 7.3's wording; 7.1's unconfirmed, since
+  the probe doesn't install a page file on a volume it could dismount,
+  question 4): `%DISM-W-CANNOTDMT, DUA1: cannot be dismounted`, then
+  `%DISM-W-INSWPGFIL, n swap or page files installed on volume` and
+  `%DISM-W-USERFILES, n user files open on volume`, each when its count
+  isn't 0 (`dclcmd/mount.go`'s `dismountRefusal`; the command fails with
+  the first, already shown). `rms.MountTable.Dismount`'s error for a
+  volume with files open is now a `*FilesOpenError` (it still wraps
+  `ErrFilesOpen`) with the two counts: each mounted volume counts its
+  open page files (`mountedVolume.pageFiles`, kept by
+  `openVolumePageFile` and `PageFileStore.Close`), and the user files
+  are the rest of ods2's open files. govax has no DISM facility in
+  `vmserrors` and DISM$_CANNOTDMT's value isn't known, so `$STATUS`
+  after the refusal is SS$_ABORT with the inhibit bit, a severe status
+  where VMS's is a warning: an ON ERROR procedure ends at it in govax and
+  wouldn't on VMS (unconfirmed; the value could come from a probe of a
+  DISMOUNT refused for a user's open file). The reclaimer already called the
+  writer and opened the page file at its boundary (subtask 3); now
+  tested. A subprocess's charges going back at deletion were subtask
+  5's (`releaseMemory`, which `DeleteProcess` and `RemoveProcess` both
+  reach); now tested with a real SPAWN. Tests: `internal/rms`'s
+  `TestPageFileVolume` checks the error's counts; `internal/console`'s
+  `pagefilesystem_test.go`: `TestDismountPageFileVolume` (the refusal
+  with the page file, then with a DCL OPEN file too, then after
+  `EndSession` closes the page file the volume dismounts),
+  `TestReclaimerPageFile` (Phase 63's reclaimer program with a volume
+  page file and MPW_HILIMIT above the program's pages: the reclaimer
+  opens the page file and writes every trimmed page to it, none left on
+  the modified list, each block holding its page), and
+  `TestSubprocessPageFile` (`SPAWN @` of a procedure running an image
+  that dirties 120 pages at a 34-page working set: its pages written to
+  the page file and read back right, and after its LOGOUT the job's
+  charges and the page file's blocks are process 1's alone). Found: a
+  subprocess's DCL has no LOGOUT/FULL (the full report is only a
+  LOGINOUT job's, `corevms/logout.go`), so "Peak page file size" can't
+  be shown for a spawned process; left for the probe (subtask 8), which
+  asks for LOGOUT/FULL of a subprocess and can settle its layout.

@@ -34,6 +34,10 @@ type mountedVolume struct {
 	// openers is the RMS opens of each open file, by file ID, for
 	// RMS's arbitration (sharing.go).
 	openers map[FileID][]*opener
+
+	// pageFiles counts the page files open on the volume (pagefile.go):
+	// files DISMOUNT reports apart from users' (FilesOpenError).
+	pageFiles int
 }
 
 // MountTable tracks which VAX device names currently have an ODS-2 volume
@@ -150,16 +154,38 @@ func (t *MountTable) Mount(device, path string, writable bool) error {
 // sibling ods2 module); this method's only added responsibility is
 // forgetting the MountTable entry afterward.
 //
-// Dismount fails if device has nothing mounted on it, and, wrapping
-// ErrFilesOpen, if a process has files on it open (Phase 47: a process
-// stopped by the console may still have them, and closing the container
-// under it would lose its later writes); DismountAll goes ahead anyway.
+// Dismount fails if device has nothing mounted on it, and, with a
+// *FilesOpenError (which wraps ErrFilesOpen), if a process has files on
+// it open (Phase 47: a process stopped by the console may still have
+// them, and closing the container under it would lose its later writes)
+// or the page file is on it (Phase 64); DismountAll goes ahead anyway.
 func (t *MountTable) Dismount(device string) error {
 	return t.dismount(device, false)
 }
 
 // ErrFilesOpen is the error Dismount wraps for a volume with files open.
 var ErrFilesOpen = errors.New("files are open on the volume")
+
+// FilesOpenError is Dismount's error for a volume with files open: how
+// many are page files (on VMS, swap and page files installed on the
+// volume) and how many are any other file, a user's. It wraps
+// ErrFilesOpen.
+type FilesOpenError struct {
+	// Device is the volume's device name, without its colon.
+	Device string
+
+	// PageFiles is how many of the open files are page files.
+	PageFiles int
+
+	// UserFiles is how many are any other file.
+	UserFiles int
+}
+
+func (e *FilesOpenError) Error() string {
+	return fmt.Sprintf("rms: %s: %d %v", e.Device, e.PageFiles+e.UserFiles, ErrFilesOpen)
+}
+
+func (e *FilesOpenError) Unwrap() error { return ErrFilesOpen }
 
 // dismount is Dismount, going ahead with files open if force.
 func (t *MountTable) dismount(device string, force bool) error {
@@ -171,7 +197,7 @@ func (t *MountTable) dismount(device string, force bool) error {
 	}
 
 	if n := entry.Volume.OpenFiles(); n > 0 && !force {
-		return fmt.Errorf("rms: %s: %d %w", key, n, ErrFilesOpen)
+		return &FilesOpenError{Device: key, PageFiles: entry.pageFiles, UserFiles: max(n-entry.pageFiles, 0)}
 	}
 
 	if err := entry.Volume.Dismount(); err != nil {

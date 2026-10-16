@@ -58,6 +58,10 @@ type PageFileStore struct {
 	blocks uint32
 	acp    *ACPFile
 	host   *os.File
+
+	// volume is a volume file's mount, where it's counted among the
+	// volume's page files while open (FilesOpenError).
+	volume *mountedVolume
 }
 
 // Blocks is the file's size in blocks: how many pages it can hold.
@@ -112,6 +116,11 @@ func (p *PageFileStore) Close() error {
 	case p.acp != nil:
 		err := p.acp.Deaccess()
 		p.acp = nil
+
+		if p.volume != nil {
+			p.volume.pageFiles--
+			p.volume = nil
+		}
 
 		return err
 	}
@@ -274,6 +283,11 @@ func (s *Session) openVolumePageFile(text string, size uint32) (*PageFileStore, 
 
 	spec.Version = fmt.Sprint(version)
 	store.Name, store.acp, store.blocks = spec.String(), a, a.AllocatedBlocks()
+
+	if entry, ok := s.Mounts.mounts[normalizeDeviceName(spec.Device)]; ok {
+		store.volume = entry
+		entry.pageFiles++
+	}
 
 	return store, nil
 }
