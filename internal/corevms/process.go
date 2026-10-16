@@ -193,9 +193,9 @@ type Process struct {
 	exceptionVectors [4][3]uint32
 
 	// memoryLocks and workingSetLocks are the pages locked in memory
-	// ($LCKPAG) and in the working set ($LKWSET), by address. Nothing
-	// pages in govax, so they only decide what the locking services
-	// report (pageprot.go).
+	// ($LCKPAG) and in the working set ($LKWSET), by address: what the
+	// locking services report (pageprot.go). With paging on, the working
+	// set list holds the locks too, and keeps the pages in.
 	memoryLocks, workingSetLocks pageLocks
 }
 

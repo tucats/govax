@@ -526,15 +526,21 @@ func (w *WorkingSet) Remove(va uint32) (Page, bool) {
 // RemoveRange takes every page from lo's to hi's out of the working set
 // and returns their entries, oldest first: $PURGWS, which walks the list
 // rather than the range (the phase doc's finding 4), since a range of all
-// of P0 and P1 is millions of pages. With keepLocked, locked pages stay.
-func (w *WorkingSet) RemoveRange(lo, hi uint32, keepLocked bool) []Page {
+// of P0 and P1 is millions of pages. With keepLocked, locked pages stay,
+// and so do the pages c.Protected names (the TB isn't asked: a purge
+// isn't a choice).
+func (w *WorkingSet) RemoveRange(lo, hi uint32, keepLocked bool, c Conditions) []Page {
 	lo &= pageMask
 	hi &= pageMask
 
 	var vas []uint32
 
 	for _, p := range w.Pages() {
-		if p.VA >= lo && p.VA <= hi && (p.Locks == 0 || !keepLocked) {
+		if p.VA < lo || p.VA > hi || p.Locks != 0 && keepLocked {
+			continue
+		}
+
+		if c.Protected == nil || !c.Protected(p.VA) {
 			vas = append(vas, p.VA)
 		}
 	}

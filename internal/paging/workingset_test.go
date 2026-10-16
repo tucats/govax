@@ -507,7 +507,7 @@ func TestWorkingSetRemoveRange(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	removed := w.RemoveRange(page(2), page(7)+0x1FF, true)
+	removed := w.RemoveRange(page(2), page(7)+0x1FF, true, Conditions{})
 	checkSet(t, w)
 
 	// Locking page 3 exchanged it with page 5, the first entry, so page 5
@@ -516,10 +516,20 @@ func TestWorkingSetRemoveRange(t *testing.T) {
 		t.Fatalf("purge kept locked pages, removed %v", got)
 	}
 
-	removed = w.RemoveRange(0, 0x7FFFFFFF, false)
+	// A protected page stays, whatever the range.
+	protect9 := Conditions{Protected: func(va uint32) bool { return va == page(9) }}
+
+	removed = w.RemoveRange(0, 0x7FFFFFFF, false, protect9)
 	checkSet(t, w)
 
-	if got := pageNumbers(removed); !sameInts(got, []int{3, 1, 9}) {
+	if got := pageNumbers(removed); !sameInts(got, []int{3, 1}) {
+		t.Fatalf("purge with page 9 protected removed %v", got)
+	}
+
+	removed = w.RemoveRange(0, 0x7FFFFFFF, false, Conditions{})
+	checkSet(t, w)
+
+	if got := pageNumbers(removed); !sameInts(got, []int{9}) {
 		t.Fatalf("purge of everything removed %v", got)
 	}
 
@@ -688,7 +698,7 @@ func TestWorkingSetRandom(t *testing.T) {
 
 		case op < 18:
 			lo := page(rng.Intn(48))
-			w.RemoveRange(lo, lo+page(rng.Intn(8)), rng.Intn(2) == 0)
+			w.RemoveRange(lo, lo+page(rng.Intn(8)), rng.Intn(2) == 0, Conditions{})
 
 		case op < 19:
 			// A new instruction: a few pages in use.

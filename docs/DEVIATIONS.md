@@ -4154,6 +4154,22 @@ widened."
   sample (unconfirmed).
 - **Status**: fixed (docs/PHASE-59, subtask 10).
 
+### [Phase 63] $ULWSET and $ULKPAG: the success statuses were the lock services'
+
+- **Where**: `internal/corevms/pageprot.go`'s `lockPages` (Phase 26,
+  subtask 36), shared by `$LKWSET`, `$ULWSET`, `$LCKPAG`, and `$ULKPAG`.
+- **What**: every one of the four returned SS$_WASSET if any page in the
+  range was locked before, SS$_WASCLR if none was. That's the lock
+  services' rule. The 5.0 System Services manual and VSI's text both
+  give the unlock services the other one: SS$_WASSET only if **every**
+  page was locked, SS$_WASCLR if at least one wasn't. So `$ULWSET` of a
+  range in which some pages were locked and some not returned SS$_WASSET
+  where VMS returns SS$_WASCLR. Found by Phase 63's survey (Part A, "The
+  services").
+- **Status**: fixed in both paging modes (docs/PHASE-63 - working
+  sets.md, subtask 6; `TestLockStatuses`). The probe (subtask 10)
+  confirms it on VMS.
+
 <!--
 Entry template:
 

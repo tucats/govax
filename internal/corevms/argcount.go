@@ -89,6 +89,7 @@ var serviceMinArgs = map[string]int{
 	"SYS$GETLKI":  3,
 	"SYS$GETLKIW": 3,
 	"SYS$GETMSG":  3,
+	"SYS$PURGWS":  1,
 	"SYS$PUTMSG":  1,
 	"SYS$SCHDWK":  3,
 	"SYS$SETAST":  1,

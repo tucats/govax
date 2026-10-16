@@ -5,7 +5,9 @@ below), subtask 2, the working set lists (`internal/paging`'s
 `WorkingSet`), subtask 3, faults, replacement, and soft faults in
 corevms (`corevms/workingset.go`), and subtask 4, the limits (`$ADJWSL`
 on the real list, WSAUTH and WSAUTHEXT, GROWLIM's key, the reset at
-image exit), and subtask 5, deleting pages in transition, are done. Needs Phase 62 (settings, the
+image exit), subtask 5, deleting pages in transition, and subtask 6,
+the working set services (`$PURGWS`, the locks on the real list,
+SS$_LKWSETFUL, the unlock statuses), are done. Needs Phase 62 (settings, the
 `internal/paging` PFN database and lists, the PTE forms, frame
 allocation through `internal/paging`). Part of the paging program laid
 out in `PHASE-62 - VMS paging.md` (Parts A and B: the survey and the
@@ -391,7 +393,10 @@ Page locks go with the deleted pages.
   `$ADJWSL`, `$PURGWS`, `$LKWSET`, `$ULWSET`, `$LCKPAG`, or `$ULKPAG` in
   any form. The probe can be written with `CALLS G^SYS$...`. Programs
   that use the macros need them, checked against real MACRO's objects
-  as `testdata/mp/macros` checked the others.
+  as `testdata/mp/macros` checked the others. *(Wrong, found in subtask
+  6: five of them were there, checked by the macro probes' rounds 3 and
+  4, `testdata/mp/macros/ext_*.mar` and `r4_*.mar`. Only `$PURGWS` was
+  missing.)*
 - **Where P0/P1 pages become valid**: only through the pager
   (`System.PageIn`: demand-zero and section pages), and through
   `$MGBLSC`/`$CRMPSC` of a global section, whose mapping PTEs are valid
@@ -561,7 +566,8 @@ from run to run.
    `$LCKPAG`/`$ULKPAG`; the unlock statuses fixed in both modes
    (finding 5, DEVIATIONS.md); SS$_LKWSETFUL (finding 6) and NOPRIV for
    a writable global page (finding 8); the six services' macros in
-   govax's STARLET.
+   govax's STARLET. (Done 2026-10-16; the progress log says what it
+   chose.)
 7. **Private file section pages through the working set:** a clean
    page's PTE returns to its PSTX when its frame is reused, and a dirty
    write-back page is written to its file from the modified list. The
@@ -805,3 +811,61 @@ from run to run.
     stays tied to it and the frame counts are as before it was made.
     Each test fails without the change, and the write-back one without
     the saved modify bit.
+- **2026-10-16:** Subtask 6, the working set services
+  (`corevms/pageprot.go`; tests in `internal/console`'s
+  `pageprot_test.go`, paging off, and `workingsetservices_test.go`,
+  paging on).
+  - **The locks:** the process's maps (`memoryLocks`,
+    `workingSetLocks`) still record the locks in both modes and decide
+    the statuses, so the two modes answer alike. With paging on the
+    working set list holds them too (`lockInWorkingSet`): a page not in
+    the list is faulted in first (`TranslateIn` with kernel access, which
+    goes through the pager; SS$_ACCVIO if it can't be), then locked with
+    `WorkingSet.Lock`, which moves it out of the dynamic part. A valid
+    page in no working set (the P1 vector's) is only recorded. An unlock
+    takes the lock off in the list too, and image rundown's
+    `cancelPageLocks` unlocks every page in it before the working set is
+    reset, so the reset can shrink it.
+  - **The statuses** (finding 5): locking is SS$_WASSET if any page was
+    locked, unlocking SS$_WASSET only if every page was; SS$_WASCLR
+    otherwise. Fixed in both modes; DEVIATIONS.md has the entry.
+  - **SS$_LKWSETFUL** (finding 6, unconfirmed): with paging on,
+    `WorkingSet.Lock`'s rule (fewer than MINWSCNT unlocked entries of the
+    limit would be left); with paging off the same rule, counted from the
+    maps (pages locked either way, once each). A page already locked in
+    memory can be locked in the working set without the check, as in the
+    list. `$LCKPAG` has no limit, and never returns SS$_LCKPAGFUL
+    (finding 7). The service stops at the failing page; `retadr` holds
+    the pages done before it.
+  - **SS$_NOPRIV for a writable global page** (finding 8), in `$LKWSET`
+    only, both modes (`writableGlobalPage`): a page `mapSectionPage`
+    mapped, whose protection lets kernel mode write, and whose PTE is a
+    global page table index of a section that isn't copy on reference,
+    or a valid PTE whose frame is a section's (a copy-on-reference copy
+    is the process's own). `$LCKPAG` locks such a page.
+  - **`$PURGWS`** (new, both modes; finding 4): reads `inadr` (SS$_ACCVIO),
+    refuses a range reaching S0 (SS$_NOPRIV, VSI's list, unconfirmed),
+    and with paging on takes the range's pages out of the working set
+    with `WorkingSet.RemoveRange` (which now takes `Conditions`), each
+    into transition (`evictPage`). Locked pages stay (unconfirmed), and
+    so do the pages replacement passes over: global pages (resident until
+    Phase 65) and those the calling instruction translated (its code,
+    its argument list, `inadr`), which the image would fault back at once
+    anyway. In the test, a purge of everything left 8 pages: the 5 locked
+    and 3 of the call's. With paging off it returns SS$_NORMAL. Its
+    argument count is 1 (the manual's), and it's in govax's STARLET
+    (`$PURGWS_S`, `$PURGWS`, `$PURGWS_G`, by the other services' rules,
+    unchecked until the macro round). The other five services' macros
+    were already there, checked against real MACRO (Part A's "What govax
+    has today" was wrong about that).
+  - **The tests:** with paging off, the statuses of mixed ranges (the
+    unlock of a half-locked range is SS$_WASCLR), SS$_LKWSETFUL at
+    MINWSCNT + 2 with a page locked in memory counted, a writable and a
+    read-only global page, and `$PURGWS`'s statuses. With paging on, an
+    image with a 30-page working set (MINWSCNT 20) locks 5 pages, sweeps
+    80 others past them (the locked ones stay, the rest of their array
+    goes into transition), purges all of P0 and P1 (the locked pages
+    stay, the swept array leaves the set), unlocks (SS$_WASSET), locks
+    purged pages one at a time (each faulted in; 10 succeed, the 11th is
+    SS$_LKWSETFUL), locks that page in memory (SS$_WASCLR), and returns,
+    after which no page is locked.

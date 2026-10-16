@@ -2982,6 +2982,29 @@
 	CALLG	LST,G^SYS$ULWSET
 	.ENDM	$ULWSET_G
 
+; $PURGWS inadr (docs/PHASE-63 - working sets.md, subtask 6: written from
+; the manual by the rules above, not yet checked against real MACRO's
+; object, which the phase's macro round does)
+	.MACRO	$PURGWS_S INADR
+	.GLOBL	SYS$PURGWS
+	.IF	B,<INADR>
+	.ERROR	; MISSING REQUIRED ARGUMENT INADR;
+	.MEXIT
+	.ENDC
+	$PUSHADR INADR,CONTEXT=Q
+	CALLS	#1,G^SYS$PURGWS
+	.ENDM	$PURGWS_S
+
+	.MACRO	$PURGWS INADR=0
+	.LONG	1
+	.ADDRESS	INADR
+	.ENDM	$PURGWS
+
+	.MACRO	$PURGWS_G LST
+	.GLOBL	SYS$PURGWS
+	CALLG	LST,G^SYS$PURGWS
+	.ENDM	$PURGWS_G
+
 ; $SETPRT inadr, [retadr], [acmode], prot, [prvprt]
 	.MACRO	$SETPRT_S INADR,RETADR=0,ACMODE=#0,PROT,PRVPRT=0
 	.GLOBL	SYS$SETPRT

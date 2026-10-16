@@ -14,6 +14,7 @@ var (
 	ssLenVio    = vmsdef.Symbols["SS$_LENVIO"]
 	ssWasClr    = vmsdef.Symbols["SS$_WASCLR"]
 	ssWasSet    = vmsdef.Symbols["SS$_WASSET"]
+	ssLkwsetFul = vmsdef.Symbols["SS$_LKWSETFUL"]
 )
 
 const vaPrvprt = 0x8020
@@ -193,5 +194,153 @@ func TestPageProt_assembledProgram(t *testing.T) {
 		if got := word(ck.sym); got != ck.want {
 			t.Errorf("%s = %#x, want %#x", ck.sym, got, ck.want)
 		}
+	}
+}
+
+// TestLockStatuses: the locking services' statuses run one way, the
+// unlocking services' the other (docs/PHASE-63 - working sets.md, Part
+// A): a lock is SS$_WASSET if any page was locked already, an unlock
+// SS$_WASSET only if every page was.
+func TestLockStatuses(t *testing.T) {
+	c := newServiceConsole(t)
+
+	steps := []struct {
+		service     string
+		first, last uint32
+		want        uint32
+	}{
+		{"SYS$LKWSET", vaPages, vaPages, ssWasClr},
+		{"SYS$LKWSET", vaPages, vaPages + 0x200, ssWasSet}, // one was locked
+		{"SYS$ULWSET", vaPages + 0x200, vaPages + 0x200, ssWasSet},
+		{"SYS$ULWSET", vaPages, vaPages + 0x200, ssWasClr}, // one wasn't locked
+		{"SYS$ULWSET", vaPages, vaPages + 0x200, ssWasClr},
+		{"SYS$LCKPAG", vaPages, vaPages + 0x200, ssWasClr},
+		{"SYS$ULKPAG", vaPages, vaPages + 0x200, ssWasSet},
+	}
+
+	for i, st := range steps {
+		putRange(t, c, vaInadr, st.first, st.last)
+
+		if got := callService(t, c, st.service, vaInadr, vaRetadr); got != st.want {
+			t.Errorf("step %d %s = %#x, want %#x", i, st.service, got, st.want)
+		}
+	}
+}
+
+// TestLkwsetFull: a lock in the working set that would leave fewer than
+// MINWSCNT of the working set limit's pages unlocked is SS$_LKWSETFUL,
+// counting pages locked in memory; a page already locked in memory can
+// still be locked in the working set, and a lock in memory has no limit.
+func TestLkwsetFull(t *testing.T) {
+	c := newServiceConsole(t)
+	p := c.RTL.Process
+	p.WSLimit = p.MinWSCount + 2
+
+	steps := []struct {
+		service string
+		page    uint32
+		want    uint32
+	}{
+		{"SYS$LKWSET", 0, ssWasClr},
+		{"SYS$LKWSET", 1, ssWasClr},
+		{"SYS$LKWSET", 2, ssLkwsetFul},
+		{"SYS$LCKPAG", 2, ssWasClr},
+		{"SYS$LKWSET", 2, ssWasClr},
+		{"SYS$LKWSET", 3, ssLkwsetFul},
+		{"SYS$ULWSET", 0, ssWasSet},
+		{"SYS$LKWSET", 3, ssLkwsetFul}, // page 2 is still locked in memory
+		{"SYS$ULKPAG", 2, ssWasSet},
+		{"SYS$ULWSET", 2, ssWasSet},
+		{"SYS$LKWSET", 3, ssWasClr},
+	}
+
+	for i, st := range steps {
+		addr := vaPages + st.page*0x200
+		putRange(t, c, vaInadr, addr, addr)
+
+		got := callService(t, c, st.service, vaInadr, vaRetadr)
+		if got != st.want {
+			t.Errorf("step %d %s of page %d = %#x, want %#x", i, st.service, st.page, got, st.want)
+		}
+
+		if a, _ := getRange(t, c, vaRetadr); got == ssLkwsetFul && a != 0xFFFFFFFF {
+			t.Errorf("step %d: retadr %#x, want -1", i, a)
+		}
+	}
+}
+
+// TestLkwsetWritableGlobalPage: a global section's page mapped for
+// writing can't be locked in the working set (SS$_NOPRIV), but can be
+// locked in memory; mapped read-only, it can be locked either way.
+func TestLkwsetWritableGlobalPage(t *testing.T) {
+	c := newServiceConsole(t)
+
+	if got := crmpsc(t, c, "WSLOCK", pageFile, secPages, secPages+0x200, 2, 0); got != ssCreated {
+		t.Fatalf("$CRMPSC = %#x, want SS$_CREATED", got)
+	}
+
+	putRange(t, c, vaInadr, secPages, secPages+0x200)
+
+	if got := callService(t, c, "SYS$LKWSET", vaInadr, vaRetadr); got != ssNoPriv {
+		t.Errorf("$LKWSET of a writable global page = %#x, want SS$_NOPRIV", got)
+	}
+
+	if a, b := getRange(t, c, vaRetadr); a != 0xFFFFFFFF || b != 0xFFFFFFFF {
+		t.Errorf("retadr %#x-%#x, want -1", a, b)
+	}
+
+	if got := callService(t, c, "SYS$LCKPAG", vaInadr); got != ssWasClr {
+		t.Errorf("$LCKPAG of a writable global page = %#x, want SS$_WASCLR", got)
+	}
+
+	if got := mgblsc(t, c, "WSLOCK", 0, secPages+0x1000, secPages+0x1000, 0, 0); got != ssNormal {
+		t.Fatalf("read-only $MGBLSC = %#x", got)
+	}
+
+	putRange(t, c, vaInadr, secPages+0x1000, secPages+0x1000)
+
+	if got := callService(t, c, "SYS$LKWSET", vaInadr); got != ssWasClr {
+		t.Errorf("$LKWSET of a read-only global page = %#x, want SS$_WASCLR", got)
+	}
+}
+
+// TestPurgwsPagingOff: with paging off there's no working set to purge,
+// so $PURGWS only checks its argument: SS$_NORMAL for any range of P0
+// and P1 (all of it included), SS$_NOPRIV for a range into system space,
+// SS$_ACCVIO for an inadr it can't read.
+func TestPurgwsPagingOff(t *testing.T) {
+	c := newServiceConsole(t)
+
+	if err := storeLong(c, vaPages, 1); err != nil {
+		t.Fatal(err)
+	}
+
+	before := pteAt(t, c, vaPages)
+
+	cases := []struct {
+		name        string
+		first, last uint32
+		want        uint32
+	}{
+		{"two pages", vaPages, vaPages + 0x200, ssNormal},
+		{"reversed", vaPages + 0x200, vaPages, ssNormal},
+		{"everything", 0, 0x7FFFFFFF, ssNormal},
+		{"into S0", 0x7FFFFE00, 0x80000000, ssNoPriv},
+	}
+
+	for _, tc := range cases {
+		putRange(t, c, vaInadr, tc.first, tc.last)
+
+		if got := callService(t, c, "SYS$PURGWS", vaInadr); got != tc.want {
+			t.Errorf("%s: $PURGWS = %#x, want %#x", tc.name, got, tc.want)
+		}
+	}
+
+	if got := callService(t, c, "SYS$PURGWS", (c.CPU.PR(registers.P0LR)+4)*512); got != ssAccVio {
+		t.Errorf("$PURGWS of an unreadable inadr = %#x, want SS$_ACCVIO", got)
+	}
+
+	if after := pteAt(t, c, vaPages); after != before || !after.Valid() {
+		t.Errorf("a purge with paging off changed a PTE from %#x to %#x", uint32(before), uint32(after))
 	}
 }
