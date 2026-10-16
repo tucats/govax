@@ -1,7 +1,8 @@
 // Package paging holds the bookkeeping beneath govax's VMS paging (the
 // paging program, Phases 62 to 67; docs/PHASE-62 - VMS paging.md): the
-// PFN database and its page lists, as plain Go with no CPU or memory of
-// its own, so the rules can be tested on their own.
+// PFN database and its page lists, and each process's working set list
+// (WorkingSet, Phase 63), as plain Go with no CPU or memory of its own,
+// so the rules can be tested on their own.
 //
 // A VAX's physical memory is divided into 512-byte page frames, numbered
 // from 0; a frame's number is its PFN (page frame number). A valid page
@@ -52,8 +53,8 @@
 //     states, and the collided-page bit: govax's page I/O completes
 //     inside the fault (Decision 5), so no frame ever waits for I/O.
 //   - The bad page list: govax's memory has no bad pages.
-//   - The working set list index (the WSLX array): working sets are Phase
-//     63's.
+//   - The working set list index (the WSLX array): a WorkingSet finds a
+//     page's entry by its address instead.
 //
 // The package doesn't know what a PTE looks like, or how to read a page:
 // a frame's owner is an opaque handle (a PID, for a process page) and a

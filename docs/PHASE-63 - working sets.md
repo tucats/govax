@@ -1,7 +1,8 @@
 # Phase 63 — working sets, soft faults, and the page lists
 
-**Status:** in progress (2026-10-15): subtask 1, the survey (Part A
-below), is done. Needs Phase 62 (settings, the
+**Status:** in progress (2026-10-16): subtask 1, the survey (Part A
+below), and subtask 2, the working set lists (`internal/paging`'s
+`WorkingSet`), are done. Needs Phase 62 (settings, the
 `internal/paging` PFN database and lists, the PTE forms, frame
 allocation through `internal/paging`). Part of the paging program laid
 out in `PHASE-62 - VMS paging.md` (Parts A and B: the survey and the
@@ -493,7 +494,9 @@ from run to run.
   SPAWNed subprocess (its authorized values).
 - **`$ADJWSL`:** 0; +n; a huge +n (WSEXTENT?); a huge -n (MINWSCNT, or a
   higher floor?); PPGCNT straight after a shrink below the pages in use;
-  `wsetlm` unwritable.
+  `wsetlm` unwritable; after a grow, a sweep over the new limit's pages
+  (is the room used at once, or only once the list wraps? Subtask 2's
+  `Resize` chose at once).
 - **Patterns** (each after `$PURGWS` of everything, at a limit set with
   `$ADJWSL`): touch N pages of a large array once, read and write,
   for N below the limit, at it, and above it (a cyclic sweep over more
@@ -529,7 +532,8 @@ from run to run.
 2. **Working set lists** in `internal/paging`, with `Check`: add,
    replace (Decision 6, the book's MMG$FREWSLE steps), remove, lock
    (locked entries out of the dynamic part), and growth past the limit
-   when nothing can be replaced (finding 10). Unit tests.
+   when nothing can be replaced (finding 10). Unit tests. (Done
+   2026-10-16; the progress log says what it chose.)
 3. **corevms:** a resolved fault adds the page to the working set,
    replacement removes one (transition PTE, frame to a list, the TB
    entry invalidated), and a soft fault takes a transition page back.
@@ -583,3 +587,53 @@ from run to run.
   counts are 0; Phase 62 added only MINWSCNT and the PQL keys to
   `Sysgen`. The subtasks are adjusted to match, and the probe's cases
   are listed.
+- **2026-10-16:** Subtask 2, the working set lists
+  (`internal/paging/workingset.go`, tests in `workingset_test.go`). A
+  `WorkingSet` is one process's list: a slice of entries (page address,
+  global or private, lock bits), the locked part before `dyn` (WSDYN)
+  and the dynamic part after it, a circular buffer whose newest entry
+  is `next` (WSNEXT); a map by address stands in for the PFN database's
+  WSLX array. Its size is the limit (WSSIZE), its `Bounds` are WSQUOTA,
+  WSEXTENT, and MINWSCNT (WSFLUID), and it counts PPGCNT, GPGCNT, the
+  locked entries, and the peak (WSPEAK). What a choice depends on
+  outside the list comes in as `Conditions`: the free list's length and
+  GROWLIM, TBSKIPWSL, and two questions about a page (`ValidInTB`, and
+  `Protected`, which the caller answers from the frames translated this
+  instruction; subtask 3 can use it for global pages too). The
+  operations:
+  - **`Add`** follows the book's 15.4 as written: the scan starts at
+    the entry at `next`, if it's available, then the entries after it,
+    wrapping to `dyn`. An available entry is used only if the set isn't
+    full and is below WSQUOTA, or the free list has more than GROWLIM
+    pages. Otherwise it's passed over, and the first entry in use that
+    the scan reaches, the oldest, is reused (removed and returned). So
+    a list that has wrapped reuses its oldest pages before it reaches
+    available entries further on, as the book's steps do. Protected
+    pages are always passed over. Pages valid in the TB are passed over
+    up to TBSKIPWSL, and a second pass reuses the first unprotected
+    page if the first pass skipped them all.
+  - **Nothing replaceable** (finding 10): the page takes a new entry
+    after `next`, the list grows past its limit, and the next `Add`
+    first trims it back, oldest first; a `Remove` from such a list
+    takes the entry out too.
+  - **`Lock`/`Unlock`** move an entry between the parts by the book's
+    exchanges (16.4.2.1, 16.4.2.3): a newly locked entry is exchanged
+    with the one at `dyn`, an entry left with no lock with the last
+    locked one. That reorders the FIFO a little, as VMS's does. Both
+    return the locks the page had, from which subtask 6 makes WASSET
+    and WASCLR. A lock in the working set fails with `ErrLockedSetFull`
+    (SS$_LKWSETFUL) if it would leave fewer than MINWSCNT unlocked
+    entries of the limit (finding 6, unconfirmed); a lock in memory
+    has no such check.
+  - **`Remove`** (deletion; locked pages too) and **`RemoveRange`**
+    (`$PURGWS`, walking the list, finding 4, with or without the locked
+    pages, oldest first).
+  - **`Resize`** (`$ADJWSL`, image exit's reset) clamps to at most
+    WSEXTENT and at least MINWSCNT more than the locked pages (the
+    book's EXTDYNWS floor), removes the oldest unprotected pages over a
+    smaller limit (no TB skipping), and then lays the dynamic part out
+    again, oldest to newest from `dyn` with the available entries
+    after. The re-layout is govax's choice (unconfirmed): VMS leaves
+    holes and adds room at the list's end (16.4.1), where, by the
+    scan's rule above, a wrapped list would use it only after reusing
+    the pages before it. The probe's `$ADJWSL` patterns test it.
