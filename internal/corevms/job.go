@@ -41,8 +41,13 @@ type Job struct {
 
 	// Pooled are the job's other pooled quotas (table 20-3): limits
 	// every process in the job shares. They're recorded, for $GETJPI
-	// and $CREPRC, but not enforced.
+	// and $CREPRC; ENQLM and, with paging on, PGFLQUOTA are enforced.
 	Pooled PooledQuotas
+
+	// PageFileCharged is how many pages the job's processes have charged
+	// against PGFLQUOTA (pgflquota.go): JIB$L_PGFLCNT is the quota less
+	// this.
+	PageFileCharged uint32
 
 	// LogicalTable is the job's logical-name table (LNM$JOB_xxxxxxxx)
 	// when $CREPRC made it for the job, to be deleted with the job's

@@ -47,12 +47,30 @@ func (env *Environment) p0Limit() uint64 {
 }
 
 // expandP0 adds pages pages at P0's high-water mark for the heap's page
-// pool, returning the first one's address, or false when P0 has no room.
+// pool, returning the first one's address, or false when P0 has no room
+// or, with paging on, the job's paging file quota hasn't enough pages
+// left for them.
 func (env *Environment) expandP0(pages uint32) (uint32, bool) {
+	return env.growP0(pages, false)
+}
+
+// growP0 is expandP0's work. The new pages are charged against the
+// paging file quota, all or none (pgflquota.go): the heap can't use part
+// of an expansion. With force set they're charged even past the quota,
+// as the system zones' control page is (vmzone.go): on VMS the RTL's own.
+func (env *Environment) growP0(pages uint32, force bool) (uint32, bool) {
 	start := p0Start(env.RegionSize[0])
 	end := uint64(start) + uint64(pages)*pageSize
 
 	if end > env.p0Limit() {
+		return 0, false
+	}
+
+	if force {
+		for i := range pages {
+			env.chargePage(start+i*pageSize, true)
+		}
+	} else if !env.chargePages(start, pages) {
 		return 0, false
 	}
 

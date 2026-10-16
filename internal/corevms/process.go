@@ -177,6 +177,11 @@ type Process struct {
 	// residentPages).
 	WSPeak uint32
 
+	// PageFilePeak is the most pages the process has had charged against
+	// its job's PGFLQUOTA at once (ACC$L_PGFLPEAK, LOGOUT's "Peak page
+	// file size"; pgflquota.go).
+	PageFilePeak uint32
+
 	// putmsg holds the $PUTMSG calls whose action routine is running,
 	// innermost last (an action routine may call $PUTMSG itself;
 	// message.go).

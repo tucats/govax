@@ -455,28 +455,8 @@ func (p *ImageProcess) imageLoad(fn string, flag uint32) (*ICB, error) {
 			continue
 		}
 
-		fileAddr := int64(isd.VBN-1) * 512
-
-		for n := uint32(0); n < uint32(isd.Pages); n++ {
-			addr := icb.Base + ((n + uint32(isd.VPN)) << 9)
-			if addr >= p.process().RegionSize[0] {
-				p.process().RegionSize[0] = addr + 512
-			}
-
-			if addr+0x1FF > icb.End {
-				icb.End = addr + 0x1FF
-			}
-
-			block := make([]byte, 512)
-
-			off := fileAddr + int64(n)*512
-			if off >= 0 && off < int64(len(data)) {
-				copy(block, data[off:])
-			}
-
-			if err := p.storeBytes(addr, block); err != nil {
-				return nil, err
-			}
+		if err := p.loadSection(icb, isd, data); err != nil {
+			return nil, err
 		}
 	}
 
@@ -784,6 +764,50 @@ func (m *Machine) ReadImage(fn string, main bool) ([]byte, error) {
 	}
 
 	return m.Paths.ReadFile(path)
+}
+
+// loadSection copies a section of an image, isd, from the image file's
+// contents, data, into its pages, moving P0's high-water mark and the
+// image's end past them. With paging on, the loader's writes are each
+// page's first touch, which charges it against the job's paging file
+// quota; VMS charges only an image's writable sections (and its
+// demand-zero ones, which loadImage zeroes itself), so a read-only
+// section's pages are written uncharged (docs/PHASE-64 - page file.md,
+// finding 12).
+func (p *ImageProcess) loadSection(icb *ICB, isd *ISD, data []byte) error {
+	load := func() error {
+		fileAddr := int64(isd.VBN-1) * 512
+
+		for n := uint32(0); n < uint32(isd.Pages); n++ {
+			addr := icb.Base + ((n + uint32(isd.VPN)) << 9)
+			if addr >= p.process().RegionSize[0] {
+				p.process().RegionSize[0] = addr + 512
+			}
+
+			if addr+0x1FF > icb.End {
+				icb.End = addr + 0x1FF
+			}
+
+			block := make([]byte, 512)
+
+			off := fileAddr + int64(n)*512
+			if off >= 0 && off < int64(len(data)) {
+				copy(block, data[off:])
+			}
+
+			if err := p.storeBytes(addr, block); err != nil {
+				return err
+			}
+		}
+
+		return nil
+	}
+
+	if isd.Flags&isdWRT != 0 {
+		return load()
+	}
+
+	return p.process().WithoutPageFileCharge(load)
 }
 
 // imageProtection is the page protection VMS's image activator gives a

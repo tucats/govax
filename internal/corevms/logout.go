@@ -74,7 +74,7 @@ func (env *Environment) LogoutReport(interactive bool) []string {
 		"",
 		"  Accounting information:",
 		counts("Buffered I/O count:", int(p.BufferedIO), "Peak working set size:", int(env.WorkingSetPeak(env))),
-		counts("Direct I/O count:", int(p.DirectIO), "Peak page file size:", 0),
+		counts("Direct I/O count:", int(p.DirectIO), "Peak page file size:", int(p.PageFilePeak)),
 		counts("Page faults:", int(p.PageFaults), "Mounted volumes:", 0),
 		fmt.Sprintf("  Charged CPU time:%24s   Elapsed time:%18s", delta(env.CPUTime(env)), delta(elapsed)),
 	}

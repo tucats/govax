@@ -245,6 +245,7 @@ func (env *Environment) processSectionAt(addr uint32) (*processSection, uint32, 
 func (env *Environment) releasePTE(addr uint32, old vm.PTE) {
 	delete(env.sectionPages, addr)
 	env.leaveWorkingSet(addr)
+	env.refundPage(addr)
 
 	if gi, ok := old.GlobalIndex(); ok {
 		env.unrefGlobalPage(gi)
@@ -353,6 +354,8 @@ func (sys *System) PageIn(f vm.PageFault) (vm.PTE, bool) {
 		env.leaveWorkingSet(f.Addr)
 	}
 
+	sys.noteFault(f.Addr, ok)
+
 	return pte, ok
 }
 
@@ -412,6 +415,7 @@ func (sys *System) resolveFault(f vm.PageFault) (vm.PTE, faultKind, bool) {
 	pte, ok := sys.mem.DemandZeroFor(f.PTE, claim)
 	if ok {
 		sys.effectivelyModified(pte.PFN(), claim)
+		sys.chargeFirstTouch(claim)
 	}
 
 	return pte, faultDemandZero, ok
@@ -469,6 +473,7 @@ func (sys *System) pageInGlobal(gi uint32, f vm.PageFault) (uint32, faultKind, b
 		pfn, ok := sys.readPage(s.File, s.VBN+uint32(i), claim)
 		if ok {
 			sys.effectivelyModified(pfn, claim)
+			sys.chargeFirstTouch(claim)
 
 			s.Refs--
 			sys.maybeDeleteSection(s)

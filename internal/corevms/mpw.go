@@ -252,6 +252,8 @@ func (sys *System) writePageFileCluster(frames []paging.PFN) bool {
 
 	run, ok := sys.AllocatePageFile(want)
 	if !ok {
+		sys.notePageFileFull()
+
 		return false
 	}
 

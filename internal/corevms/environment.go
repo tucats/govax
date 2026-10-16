@@ -113,6 +113,14 @@ type Environment struct {
 	// to global sections (gblsec.go), which image rundown unmaps.
 	sectionPages map[uint32]bool
 
+	// pageFileCharges are the pages of the process charged against its
+	// job's PGFLQUOTA, by address, and chargeDB the PFN database the set
+	// was made for (pgflquota.go). unchargedTouch suspends first-touch
+	// charges while the image loader writes read-only sections.
+	pageFileCharges map[uint32]bool
+	chargeDB        *paging.Database
+	unchargedTouch  bool
+
 	// procSections is the process section table: the private file
 	// sections the process has mapped (filesec.go), indexed by the
 	// process section table index their pages' PTEs hold. A nil entry is

@@ -2134,7 +2134,10 @@ $CONF,KEY
                                       file quota, the pages its processes
                                       may together have in the page file.
                                       Default 16400; the console's job
-                                      has 40960.
+                                      has 40960.  With paging on, pages
+                                      are charged as they are created,
+                                      and $CRETVA, $EXPREG, and LIB$GET_VM
+                                      fail past it.
 
         vax.sysgen.minwscnt           MINWSCNT: the smallest working set
                                       a process may have.  Default 20.

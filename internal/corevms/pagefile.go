@@ -186,7 +186,77 @@ func (sys *System) FreePageFile(run paging.Run) error {
 		return fmt.Errorf("corevms: freeing page file blocks %d to %d with no page file open", run.First, run.Last())
 	}
 
-	return pf.Map.Free(run)
+	if err := pf.Map.Free(run); err != nil {
+		return err
+	}
+
+	// Space again in a page file that was full: the writer may now write
+	// the pages it passed over, so its counts of them are forgotten.
+	if sys.pageFileFull {
+		sys.pageFileFull = false
+		sys.mpwStuck, sys.reclaimStuck = 0, 0
+	}
+
+	return nil
+}
+
+// Exhaustion (docs/PHASE-64 - page file.md, "Design notes"; the
+// author's rule, 2026-10-15). When the page file is full, pages bound for
+// it stay on the modified list, and when no frame is left, a fault fails,
+// as it does when physical memory runs out without paging: no process
+// waits for space (VMS's RWMPE and RWMPB states aren't modeled). Each is
+// told to the console: a full page file once, as PAGEFRAG and PAGECRIT
+// are (a file nearly full fills and empties by a few blocks at a time),
+// and a failed fault once until a fault succeeds again.
+
+// notePageFileFull records that the page file is full, telling the
+// console the first time.
+func (sys *System) notePageFileFull() {
+	pf := sys.PageFile()
+	if pf == nil {
+		return
+	}
+
+	sys.pageFileFull = true
+
+	if sys.pageFileFullTold {
+		return
+	}
+
+	sys.pageFileFullTold = true
+	sys.consoleNotice(fmt.Sprintf("%%GOVAX-W-PAGEFILEFULL, page file %s is full; modified pages stay in memory\n", pf.Name()))
+}
+
+// noteFault records how a page fault at addr ended: one that failed with
+// paging on and no free frame tells the console, once until a fault
+// succeeds again, that memory is exhausted, and why the modified pages
+// couldn't make room.
+func (sys *System) noteFault(addr uint32, ok bool) {
+	if ok {
+		sys.memoryOut = false
+
+		return
+	}
+
+	db := sys.mem.Paging()
+	if db == nil || db.FreeCount() > 0 || sys.memoryOut {
+		return
+	}
+
+	sys.memoryOut = true
+
+	text := fmt.Sprintf("%%GOVAX-F-MEMEXHAUST, physical memory exhausted; page fault at %08X not resolved\n", addr)
+
+	if db.ModifiedCount() > 0 {
+		switch {
+		case sys.pageFileFull:
+			text += "-GOVAX-I-PAGEFILEFULL, the page file is full\n"
+		case sys.PageFile() == nil:
+			text += "-GOVAX-I-NOPAGEFILE, there is no page file to write modified pages to\n"
+		}
+	}
+
+	sys.consoleNotice(text)
 }
 
 // consoleNotice writes a message for the operator on the console:

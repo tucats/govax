@@ -301,6 +301,7 @@ func (sys *System) releaseMemory(env *Environment) {
 	// frames allocated, a leak rather than a corruption; FreeProcess below
 	// still gives back the tables' pages.
 	_ = sys.TeardownAddressSpace(env.Space)
+	env.refundAllPageFile()
 
 	if sys.s0 != nil {
 		sys.s0.FreeProcess(env.Process.PID)

@@ -179,8 +179,9 @@ func pageExists(pte vm.PTE) bool {
 // is what was created before it.
 //
 // It returns SS$_NORMAL; SS$_NOPRIV for a system-region page;
-// SS$_VASFULL for a page beyond the region's page table; SS$_PAGOWNVIO; or
-// SS$_ACCVIO if inadr can't be read or retadr written.
+// SS$_VASFULL for a page beyond the region's page table; SS$_PAGOWNVIO;
+// SS$_EXQUOTA, with paging on, when the job's paging file quota runs out
+// (pgflquota.go); or SS$_ACCVIO if inadr can't be read or retadr written.
 //
 // Creating P0 pages beyond the high-water mark $EXPREG and LIB$GET_VM
 // allocate from (Environment.RegionSize[0]) moves the mark past them, so
@@ -234,6 +235,12 @@ func (env *Environment) createPage(addr uint32, mode registers.AccessMode) uint3
 		return ssPagOwnVio
 	}
 
+	// A new demand-zero page is charged against the paging file quota
+	// (pgflquota.go); one already charged keeps its charge.
+	if !env.canChargePage(addr) {
+		return ssExQuota
+	}
+
 	var pte vm.PTE
 
 	pte.SetProtection(modeProtections[mode])
@@ -242,6 +249,8 @@ func (env *Environment) createPage(addr uint32, mode registers.AccessMode) uint3
 	if !env.replacePTE(addr, old, pte) {
 		return ssVasFull
 	}
+
+	env.chargePage(addr, true)
 
 	return ssNormal
 }
@@ -416,6 +425,10 @@ func (env *Environment) DeleteP0() {
 
 		env.releasePTE(addr, old)
 	}
+
+	// Pages $EXPREG or the heap charged but nothing touched still have
+	// the PTE they started with, passed over above.
+	env.refundPagesBelow(p1Base)
 
 	env.RegionSize[0] = 0
 }

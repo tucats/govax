@@ -86,6 +86,16 @@ type System struct {
 	// over (reclaim.go).
 	reclaimStuck int
 
+	// pageFileFull is set when the writer found the page file full, and
+	// cleared when a block is freed; pageFileFullTold once the console
+	// has been told, which it is once per page file. memoryOut is set
+	// when a fault failed for want of a frame, and cleared by the next
+	// fault resolved; the console is told each time it's set
+	// (pagefile.go's exhaustion notices).
+	pageFileFull     bool
+	pageFileFullTold bool
+	memoryOut        bool
+
 	// PageCounts are the system's paging counts: its page faults by kind,
 	// and what the modified page writer and the reclaimer have done
 	// (accounting.go).

@@ -86,6 +86,8 @@ var jpiItemsByName = map[string]func(env *Environment) itemValue{
 	"JPI$_BYTLM":        func(env *Environment) itemValue { return itemLong(env.Process.Job.Pooled.BYTLM) },
 	"JPI$_FILLM":        func(env *Environment) itemValue { return itemLong(env.Process.Job.Pooled.FILLM) },
 	"JPI$_PGFLQUOTA":    func(env *Environment) itemValue { return itemLong(env.Process.Job.Pooled.PGFLQUOTA) },
+	"JPI$_PAGFILCNT":    func(env *Environment) itemValue { return itemLong(uint32(int32(env.PageFileRemaining()))) },
+	"JPI$_PAGFILLOC":    func(env *Environment) itemValue { return itemLong(env.pageFileLocation()) },
 	"JPI$_TQLM":         func(env *Environment) itemValue { return itemLong(env.Process.Job.Pooled.TQELM) },
 	"JPI$_ENQLM":        func(env *Environment) itemValue { return itemLong(env.Process.Job.Pooled.ENQLM) },
 	"JPI$_ENQCNT":       func(env *Environment) itemValue { return itemLong(env.remainingLocks()) },

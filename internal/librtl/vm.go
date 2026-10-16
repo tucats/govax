@@ -71,8 +71,10 @@ func libGetVM(env *corevms.Environment, argv []uint32) (uint32, error) {
 
 	// VMS 7.1 reads an unknown zone ID's control block, 8 bytes in: an
 	// ID that isn't mapped memory is an access violation there, not
-	// LIB$_BADBLOADR (testdata/lib59).
-	if _, known := env.ZoneTagged(zone); !known {
+	// LIB$_BADBLOADR (testdata/lib59). Zone 0 is always the default zone,
+	// even when there was no room to make it (ZoneAllocate's
+	// LIB$_INSVIRMEM).
+	if _, known := env.ZoneTagged(zone); !known && zone != 0 {
 		if _, err := mem.LoadLongword(cpu, zone+8); err != nil {
 			return memoryFault(env, err)
 		}

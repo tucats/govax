@@ -529,7 +529,7 @@ func (env *Environment) systemZones() error {
 		return nil
 	}
 
-	page, ok := env.expandP0(1)
+	page, ok := env.growP0(1, true)
 	if !ok {
 		return vmheap.ErrNoMemory
 	}

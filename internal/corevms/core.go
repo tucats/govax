@@ -45,6 +45,27 @@ func serviceSysExpreg(env *Environment, argv []uint32) (uint32, error) {
 		return ssVasFull, nil
 	}
 
+	// With paging on, each page is charged against the job's paging file
+	// quota (pgflquota.go), one at a time: when the quota runs out, the
+	// pages before it are made and SS$_EXQUOTA returned (the book's
+	// 16.2.1; the status unconfirmed: VMS 7.3 also has SS$_EXPGFLQUOTA).
+	status := uint32(ssNormal)
+
+	for i := range pageCount {
+		if !env.chargePage(start+i*pageSize, false) {
+			status = ssExQuota
+			size = i * pageSize
+
+			break
+		}
+	}
+
+	if size == 0 {
+		_ = env.storeRetadr(retAddr, nil)
+
+		return status, nil
+	}
+
 	end := start + size - 1
 	env.RegionSize[region] = end + 1
 
@@ -60,7 +81,7 @@ func serviceSysExpreg(env *Environment, argv []uint32) (uint32, error) {
 
 	env.cpu.SetGPR(registers.R1, start) // "expected side effect", matching sys_expreg's own comment
 
-	return ssNormal, nil
+	return status, nil
 }
 
 // expandP1Pages is $EXPREG of region 1, P1: pageCount new demand-zero

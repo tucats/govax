@@ -4,7 +4,7 @@
 2026-10-16, and its questions answered by the author the same day
 ("Questions for the author"). Subtask 2, the page file, done
 2026-10-16. Subtask 3, the modified page writer, done 2026-10-16. Subtask 4,
-blocks freed, done 2026-10-16. Planned 2026-10-15. Needs Phase 63 (working sets, the
+blocks freed, done 2026-10-16. Subtask 5, PGFLQUOTA, done 2026-10-16. Planned 2026-10-15. Needs Phase 63 (working sets, the
 lists, soft faults). Part of the paging program laid out in
 `PHASE-62 - VMS paging.md` (Decisions 7, 8, 9, and 10 are this phase's).
 
@@ -593,7 +593,7 @@ pg63's. Values that vary from run to run print as differences.
 4. **Blocks freed** (done 2026-10-16) on re-modification (finding 5) and on deletion
    (finding 6: `$DELTVA`, `$CRETVA` over pages, image rundown, process
    teardown); hard faults counted as page reads.
-5. **PGFLQUOTA:** the job's count and each process's charge and peak
+5. **PGFLQUOTA** (done 2026-10-16): the job's count and each process's charge and peak
    (finding 9), charged at creation by `$CRETVA`, `$EXPREG`, and the
    heap's expansion, by the image loader for writable and DZRO ISDs'
    pages, and at first touch only for pages nothing created, with a
@@ -746,3 +746,56 @@ pg63's. Values that vary from run to run print as differences.
   exactly those process 1's pages hold, one page each) and
   `TestDeleteProcessGivesPageFileBlocksBack` (a second process's pages
   written and waiting on the free list, then the process removed).
+- **2026-10-16:** Subtask 5, PGFLQUOTA (`corevms/pgflquota.go`). Charged
+  only with paging on, so with it off nothing changes. Each process keeps
+  the set of its pages charged (`Environment.pageFileCharges`, by page
+  address, started afresh when VMINIT builds a new PFN database), so no
+  page is charged twice, and its peak (`Process.PageFilePeak`); the job
+  keeps the total (`Job.PageFileCharged`), and JPI$_PAGFILCNT is the
+  quota less it (`PageFileRemaining`). Charged at creation (finding 10):
+  `$CRETVA` and P1 `$EXPREG` through `createPage`, which refuses a page
+  past the quota with SS$_EXQUOTA after the pages before it; P0
+  `$EXPREG` page by page, now with partial success (finding 11:
+  retadr and RegionSize cover the pages made, -1 in retadr with none);
+  the heap's `expandP0`, all or none, so LIB$GET_VM returns
+  LIB$_INSVIRMEM. The system zones' control page (`vmzone.go`, the
+  RTL's own on VMS) is charged even past the quota (`growP0`'s force),
+  so the heap's first use can take the job a page over. The image
+  loader's writes are each page's first touch: a read-only section's
+  pages are written uncharged (`WithoutPageFileCharge`; finding 12), so
+  only writable and DZRO sections' pages are charged, as the author
+  chose. Any other page (the user stack's, ASM's and DEPOSIT's) is
+  charged at its first demand-zero or copy-on-reference fault
+  (`chargeFirstTouch`, next to `effectivelyModified`), never failing
+  the fault, so the count can go negative (unconfirmed). Refunds:
+  `releasePTE` (so `$DELTVA`, `$CRETVA` over a page, `$CRMPSC` over
+  pages), image rundown (`DeleteP0`, which also refunds P0 pages
+  charged but never touched, whose PTEs it passes over), and process
+  deletion (`refundAllPageFile`, after the teardown: a subprocess's
+  charges go back to the job's pool). JPI$_PAGFILCNT and PAGFILLOC
+  (index 1 in the fourth byte with a page file configured, unconfirmed),
+  in F$GETJPI too; LOGOUT's "Peak page file size" and ACC$L_PGFLPEAK
+  are the process's peak. Status SS$_EXQUOTA, not EXPGFLQUOTA, until
+  the probe says. Exhaustion (`pagefile.go`): the writer finding the
+  page file full tells the console once per page file
+  (`%GOVAX-W-PAGEFILEFULL`; a file nearly full fills and empties a few
+  blocks at a time, so once, like PAGEFRAG and PAGECRIT), and the first
+  block freed afterward forgets the stuck counts (`mpwStuck`,
+  `reclaimStuck`) so the writer tries again; a fault that fails with no
+  free frame tells the console (`%GOVAX-F-MEMEXHAUST`, with why the
+  modified pages couldn't make room), once until a fault succeeds. A
+  fix found on the way (`librtl/vm.go`): LIB$GET_VM of zone 0 when the
+  system zones couldn't be made read the "unknown zone's" control block
+  at address 8, an access violation, instead of returning
+  LIB$_INSVIRMEM. Tests (`internal/console/pgflquota_test.go`): an
+  image's charges (data charged, code not, the stack at first touch),
+  `$EXPREG` and `$CRETVA` past the quota (30 of 50 and 40 pages,
+  SS$_EXQUOTA, retadr), `$DELTVA`'s refund of untouched pages, P1
+  `$EXPREG`, LIB$GET_VM's LIB$_INSVIRMEM, F$GETJPI's PAGFILCNT, image
+  rundown's refund of P0, the peak; a subprocess's first-touch charges
+  in the job's pool and their refund at deletion; nothing charged with
+  paging off; the full page file's and exhausted memory's notices, once
+  each. The whole suite with paging forced on (an experiment, not
+  committed) fails only where it should: LOGOUT's tests now see a peak,
+  and paging-off and default tests (TestLkwsetFull fails that way
+  without this subtask too).

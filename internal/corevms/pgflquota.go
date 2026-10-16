@@ -1,0 +1,277 @@
+package corevms
+
+import (
+	"maps"
+
+	"github.com/tucats/govax/internal/paging"
+	"github.com/tucats/govax/internal/vm"
+)
+
+// The paging file quota, PGFLQUOTA (docs/PHASE-64 - page file.md,
+// subtask 5; the paging plan's Decision 10, as the survey's finding 10
+// changed it).
+//
+// On VMS every page whose contents may one day have to go to the page
+// file, a demand-zero page or the private copy of a copy-on-reference
+// page, is charged against its job's PGFLQUOTA when it's created, and
+// the charge is given back when the page is deleted (VAX/VMS Internals
+// and Data Structures, 16.2.1.1 and 16.2.2.1). The quota is pooled: every
+// process in the job draws on one count (JIB$L_PGFLCNT, which $GETJPI
+// reports as JPI$_PAGFILCNT, the pages left). A service that creates
+// pages, $CRETVA or $EXPREG, creates them one at a time and stops with
+// SS$_EXQUOTA when the quota runs out, having made the pages before it.
+//
+// govax charges only with paging on, so that with it off nothing
+// changes. It keeps the charged pages as a set per process (the
+// Environment's pageFileCharges, by page address), so that no page is
+// charged twice, and the job's total (Job.PageFileCharged). A page is
+// charged:
+//
+//   - at creation, by the services that create pages: $CRETVA, $EXPREG of
+//     P0 or P1, and the heap's expansion of P0 (expandP0), each refusing
+//     pages past the quota;
+//   - by the image loader, for the pages of an image's writable and
+//     demand-zero sections (finding 12: until Phase 66 maps images, every
+//     image page is one the loader writes, but VMS charges only those);
+//     the loader's writes into read-only sections go uncharged
+//     (WithoutPageFileCharge);
+//   - at its first fault, demand-zero or a copy-on-reference copy, if
+//     nothing charged it before: govax's every P0 and P1 page exists from
+//     the start (until Phase 67), so a page no service created, such as
+//     the user stack's, or one the console's DEPOSIT wrote, is charged when
+//     it's first touched. Such a charge never fails a fault: it may take
+//     the job past its quota, which JPI$_PAGFILCNT then shows as a
+//     negative count (unconfirmed).
+//
+// The charge is given back when the page is deleted (releasePTE: $DELTVA,
+// $CRETVA over the page, image rundown), and a process's whole charge
+// when the process is deleted (refundAllPageFile).
+//
+// Each process also notes the most pages it has had charged at once, its
+// peak (Process.PageFilePeak): LOGOUT/FULL's "Peak page file size" and
+// the termination message's ACC$L_PGFLPEAK.
+
+// chargingPageFile reports whether env's pages are charged against the
+// quota: with paging on, for a process with a job.
+func (env *Environment) chargingPageFile() bool {
+	return env.mem != nil && env.mem.Paging() != nil && env.Process != nil && env.Process.Job != nil
+}
+
+// pageFileChargeSet returns env's set of charged pages, starting it
+// afresh (and giving its old charges back to the job) when the PFN
+// database has changed since it was made: VMINIT built a new one, and
+// every page the old set held is gone.
+func (env *Environment) pageFileChargeSet() map[uint32]bool {
+	db := env.mem.Paging()
+	if env.pageFileCharges == nil || env.chargeDB != db {
+		env.dropPageFileCharges()
+		env.pageFileCharges = map[uint32]bool{}
+		env.chargeDB = db
+	}
+
+	return env.pageFileCharges
+}
+
+// dropPageFileCharges gives every page env has charged back to its job.
+func (env *Environment) dropPageFileCharges() {
+	if env.Process != nil && env.Process.Job != nil {
+		job := env.Process.Job
+		job.PageFileCharged -= min(job.PageFileCharged, uint32(len(env.pageFileCharges)))
+	}
+
+	env.pageFileCharges = nil
+}
+
+// PageFileRemaining is JPI$_PAGFILCNT: how many pages env's job may still
+// charge against its PGFLQUOTA, negative when first-touch charges took it
+// past the quota.
+func (env *Environment) PageFileRemaining() int64 {
+	job := env.Process.Job
+
+	return int64(job.Pooled.PGFLQUOTA) - int64(job.PageFileCharged)
+}
+
+// PageFileCharged is how many of env's pages are charged against its
+// job's quota now.
+func (env *Environment) PageFileCharged() uint32 {
+	if !env.chargingPageFile() {
+		return 0
+	}
+
+	return uint32(len(env.pageFileChargeSet()))
+}
+
+// canChargePage reports whether the page at va could be charged without
+// taking the job past its quota: it's charged already, or there's a page
+// left, or nothing is charged at all (paging off).
+func (env *Environment) canChargePage(va uint32) bool {
+	if !env.chargingPageFile() {
+		return true
+	}
+
+	return env.pageFileChargeSet()[va&^pageMask] || env.PageFileRemaining() >= 1
+}
+
+// chargePage charges the page at va against the job's quota, if it
+// isn't charged already. Unless force is set, it refuses, charging
+// nothing, when the job has no page left. It reports whether the page is
+// charged (always true with paging off, when nothing is charged).
+func (env *Environment) chargePage(va uint32, force bool) bool {
+	if !env.chargingPageFile() {
+		return true
+	}
+
+	set := env.pageFileChargeSet()
+	va &^= pageMask
+
+	if set[va] {
+		return true
+	}
+
+	if !force && env.PageFileRemaining() < 1 {
+		return false
+	}
+
+	set[va] = true
+	env.Process.Job.PageFileCharged++
+	env.Process.PageFilePeak = max(env.Process.PageFilePeak, uint32(len(set)))
+
+	return true
+}
+
+// chargePages charges count pages from first up, all or none: it
+// refuses, charging nothing, when the ones not already charged don't fit
+// in what's left of the job's quota.
+func (env *Environment) chargePages(first, count uint32) bool {
+	if !env.chargingPageFile() {
+		return true
+	}
+
+	set := env.pageFileChargeSet()
+	needed := int64(0)
+
+	for i := range count {
+		if !set[(first+i*pageSize)&^pageMask] {
+			needed++
+		}
+	}
+
+	if needed > env.PageFileRemaining() {
+		return false
+	}
+
+	for i := range count {
+		env.chargePage(first+i*pageSize, true)
+	}
+
+	return true
+}
+
+// refundPage gives the charge for the page at va back to the job, if it
+// was charged, as the page is deleted.
+func (env *Environment) refundPage(va uint32) {
+	if !env.chargingPageFile() {
+		return
+	}
+
+	set := env.pageFileChargeSet()
+	va &^= pageMask
+
+	if set[va] {
+		delete(set, va)
+
+		env.Process.Job.PageFileCharged--
+	}
+}
+
+// refundPagesBelow gives back the charges of every page of env's below
+// limit: image rundown's for P0, whose pages a service charged but
+// nothing touched still have the PTE they started with, which rundown
+// passes over.
+func (env *Environment) refundPagesBelow(limit uint32) {
+	if !env.chargingPageFile() {
+		return
+	}
+
+	for va := range env.pageFileChargeSet() {
+		if va < limit {
+			env.refundPage(va)
+		}
+	}
+}
+
+// refundAllPageFile gives back every charge env holds, as the process is
+// deleted: a subprocess's charges return to its job's pool.
+func (env *Environment) refundAllPageFile() {
+	if env.chargingPageFile() {
+		env.pageFileChargeSet()
+	}
+
+	env.dropPageFileCharges()
+}
+
+// WithoutPageFileCharge runs fn with env's first-touch charges
+// suspended: the image loader writes an image's read-only sections in it
+// (finding 12), since VMS charges only writable and demand-zero ones.
+func (env *Environment) WithoutPageFileCharge(fn func() error) error {
+	if env == nil {
+		return fn()
+	}
+
+	saved := env.unchargedTouch
+	env.unchargedTouch = true
+
+	defer func() { env.unchargedTouch = saved }()
+
+	return fn()
+}
+
+// chargeFirstTouch charges the page a fault just gave a frame with
+// contents only memory holds (a demand-zero page, or a copy-on-reference
+// page's private copy), if nothing charged it before: a page no service
+// created. It never fails the fault. claim names the page; an untied
+// claim (an S0 page) is charged to no one.
+func (sys *System) chargeFirstTouch(claim vm.FrameClaim) {
+	if !claim.Tied || claim.Type != paging.ProcessPage {
+		return
+	}
+
+	env, ok := sys.FindProcess(claim.Owner.Handle)
+	if !ok || env.unchargedTouch {
+		return
+	}
+
+	env.chargePage(claim.Owner.VA, true)
+}
+
+// pageFileIndex is the index govax's one page file would have in VMS's
+// table of page and swap files: 1 (unconfirmed; the probe's
+// JPI$_PAGFILLOC shows a VAX's).
+const pageFileIndex = 1
+
+// pageFileLocation is JPI$_PAGFILLOC: the index of the page file the
+// process is assigned to in the longword's fourth byte (the VSI system
+// services manual), with paging on and a page file configured, else 0.
+func (env *Environment) pageFileLocation() uint32 {
+	if env.mem == nil || env.mem.Paging() == nil || env.Sysgen.PageFileName == "" {
+		return 0
+	}
+
+	return pageFileIndex << 24
+}
+
+// PageFileChargedAt reports whether the page at va is charged against
+// env's job's paging file quota.
+func (env *Environment) PageFileChargedAt(va uint32) bool {
+	return env.chargingPageFile() && env.pageFileChargeSet()[va&^pageMask]
+}
+
+// ChargedPages returns the addresses of env's pages charged against its
+// job's paging file quota, as a set.
+func (env *Environment) ChargedPages() map[uint32]bool {
+	if !env.chargingPageFile() {
+		return nil
+	}
+
+	return maps.Clone(env.pageFileChargeSet())
+}

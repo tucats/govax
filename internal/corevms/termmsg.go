@@ -37,8 +37,9 @@ import (
 //
 // ACC$K_TERMLEN (84) bytes in all. The I/O counts are the process's
 // (iocount.go), and so are its page faults and its working set's peak
-// (accounting.go). govax has no paging file yet, and mounts volumes for
-// the whole system, so the page file's peak and the volume count are 0.
+// (accounting.go), and so is its peak charge against the paging file
+// quota (pgflquota.go; 0 with paging off). govax mounts volumes for the
+// whole system, so the volume count is 0.
 //
 // VAX/VMS Internals and Data Structures (section 22.2.1, step 11, and
 // table 22-1) puts the message's sending after the process's channels
@@ -86,6 +87,7 @@ func (sys *System) terminationMessage(env *Environment) []byte {
 	long("ACC$L_BIOCNT", p.BufferedIO)
 	long("ACC$L_DIOCNT", p.DirectIO)
 	long("ACC$L_PAGEFLTS", p.PageFaults)
+	long("ACC$L_PGFLPEAK", p.PageFilePeak)
 	long("ACC$L_WSPEAK", p.WSPeak)
 	quad("ACC$Q_LOGIN", p.LoginTime)
 	long("ACC$L_OWNER", p.Owner)
