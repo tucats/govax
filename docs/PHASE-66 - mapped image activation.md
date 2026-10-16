@@ -27,10 +27,21 @@ image instead of copying it, as VMS's image activator does (21.1):
   image's sections; the files are let go and the working set returns to
   WSDEFAULT.
 
-With paging off, activation copies as it does today, and rundown leaves
-P0 alone.
+With paging off, activation copies as it does today. (Rundown deleting
+P0 is already done, in both modes: Phase 63's probe found govax kept an
+image's pages after its exit where VMS's PPGCNT fell, and
+`corevms.Environment.DeleteP0` came in then; see "What earlier phases
+leave in place".)
 
 ## What earlier phases leave in place
+
+- **Phase 63 (2026-10-16):** image rundown deletes P0 in both modes
+  (`Environment.DeleteP0`: every P0 page back to `ProcessPTE`'s form, its
+  frame released through `releasePTE`), but for an image the debugger
+  holds, whose pages stay until the next activation (`KeepP0`,
+  `ResetICBList`). The whole suite passed with it; the tests that found
+  their P0 scratch data gone after a rundown were changed. The image's
+  part of P1 is not deleted yet (item 5 below).
 
 - **`machine/image.go`:** `ReadImage` (the whole file in Go, still used
   for the header, the ISD list, the fixups' tables, and debug symbols),
@@ -104,8 +115,8 @@ P0 alone.
    header blocks, and the ISD's cluster factor; fixups through faults;
    `setImageProtection` over every PTE form.
 4. **Shareable images** the same way.
-5. **Image reset:** delete P0 and the image's part of P1, let the files
-   go, and reset the working set; `ResetICBList`'s reload-over-old-pages
+5. **Image reset:** delete the image's part of P1 (P0 is done, Phase
+   63), let the files go, and reset the working set (done, Phase 63); `ResetICBList`'s reload-over-old-pages
    workaround is not needed in paging mode.
 6. **`$CREPRC`'s activation** (`ActivateCreatedImage`) through the same
    path.

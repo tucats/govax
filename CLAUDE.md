@@ -122,7 +122,14 @@ never had.
   file PTE forms; `vm`'s frame allocator; corevms claiming every frame
   with its owner and backing store, `corevms/frames.go`; SHOW MEMORY's
   frame counts and SHOW PAGE's PTE forms; nothing evicted yet); 63
-  working sets and soft faults;
+  (done 2026-10-16) working sets and soft faults (each process's
+  working set list, replacement into transition, soft faults off the
+  free and modified lists, `$ADJWSL` on the real list and the reset at
+  image exit, deleting pages in transition, `$PURGWS` and the real
+  locks, the modified page writer for private file sections, the
+  reclaimer, faults by kind and PPGCNT/GPGCNT/WSPEAK, DCL's SET and
+  SHOW WORKING_SET, image rundown deleting P0; checked against VMS 7.1
+  by `testdata/pg63`);
   64 the page file and modified page writer; 65 sections under the
   pager; 66 image activation by mapping; 67 the address space and page
   tables under paging, deferred to the end. Paging is synchronous, with no
@@ -168,7 +175,8 @@ never had.
 - `testdata/mp/` — the multiprocessing program's programs and VMS runs
   (README.md): the milestone (`msparent.mar`, `mschild.mar`), probes 1 to
   5, the definition probes (`defs`), the system service macro probes
-  (`macros`, rounds 1 to 7), and each VAX run's exchange scripts
+  (`macros`, rounds 1 to 8; round 8, `$PURGWS`, ran from `testdata/pg63`'s
+  volume), and each VAX run's exchange scripts
   (`run46`, `run48`, `final`); `vax/` directories hold VMS's output.
 - `testdata/dcl50/` — Phase 50's VMS probe of DCL (README.md): symbol
   substitution, expressions, `@`, and statuses, as a command procedure
@@ -249,6 +257,19 @@ never had.
   `vax/lib59-vax.txt`, but for `expectedLib59Differences` (the heap's
   totals among them); VMS hung in the case after the last, a VERIFY of
   a zone whose control block was changed, so the program ends there.
+- `testdata/pg63/` — Phase 63's probe of the working set (README.md):
+  `pg63.mar` (part A: `$ADJWSL`, sweeps at limits relative to the
+  floor, `$PURGWS`, the lock services, global pages, `$LCKPAG` with and
+  without PSWAPM; part B, picked by PG63_PART: the next image),
+  `pg63.com` (SYSGEN, SET and SHOW WORKING_SET's bounds, the subprocess
+  cases in `pg63x.com` and `pg63s.com`, the two runs, macro round 8).
+  `vax/` is VMS V7.1's round 2 (round 1, which a quota at the floor
+  stopped, in `vax/round1/`). `TestPG63Oracle` runs the program on govax
+  and matches VMS's lines but for `expectedPG63Differences` (mostly VMS's
+  permanent part of the working set list, which govax doesn't have);
+  `TestPG63SetWorkingSet` replays the log's SET and SHOW WORKING_SET.
+  The program's outputs are `.out` files, force-added past
+  `.gitignore`.
 - `testdata/probe49/` — Phase 49's VMS probe in three rounds (`probe6`,
   `probe6b`, `probe6c`; README.md has each round's answers), run by
   `TestProbe6*`; `testdata/rms49/` and `testdata/sec49/` are the phase's
@@ -334,7 +355,11 @@ expect adjustment as phases land):
   backing store), `DemandZeroFor` is `DemandZero` with one; and the
   frames translated since the last instruction boundary
   (`BeginInstruction`, `TranslatedThisInstruction`), which a reclaimer
-  must not take.
+  must not take. Phase 63 added `ValidInTB` (TBSKIPWSL's question,
+  `tb.go`), `AtNextInstruction` (a routine run once at the next
+  instruction boundary: the working sets' trim and the reclaimer), and
+  `SetFreeLimit` (a routine called when an allocation leaves the free
+  list below a limit: FREELIM).
 - `internal/cpu` — instruction decode/execute engine and instruction-set emulation
   (Phases 03-07). Phase 35 finished the set and Phase 43 added LDPCTX and
   SVPCTX: every instruction has a handler (`TestEveryInstructionImplemented`).
@@ -385,7 +410,18 @@ expect adjustment as phases land):
   bit, `Reclaim` is a soft fault, `Delete` unties a frame to the free
   list's head, `FirstModified`/`Cleaned` are the modified page writer's.
   `Check` verifies the lists, counts, and ties. A leaf package; with
-  paging on, `vm`'s frame allocator is one.
+  paging on, `vm`'s frame allocator is one. `workingset.go` (Phase 63)
+  is one process's working set list (`WorkingSet`): entries with lock
+  bits, the locked part before WSDYN and the dynamic part a circular
+  FIFO after it, its size the limit and its `Bounds` WSQUOTA, WSEXTENT,
+  and MINWSCNT; `Add` is the book's replacement (15.4: TBSKIPWSL, the
+  growth rules with GROWLIM, protected pages passed over; growth past
+  the limit when nothing can go, `Over`/`Trim`), `Lock`/`Unlock`
+  (`ErrLockedSetFull`), `Remove`/`RemoveRange` (`$PURGWS`), `Resize`
+  (`$ADJWSL`), `Shrink` (the reclaimer); what a choice depends on comes
+  in as `Conditions`. `ModifiedFrames`, `ClearModified`, and
+  `MakeSystem` are the database's additions for the writer, `$UPDSEC`,
+  and the P1 vector.
 - `internal/lck` — the lock manager (Phase 47), from the System Services
   manual ($ENQ/$DEQ) and the Internals book's chapter 13: a `Manager` of
   resources (name, UIC group or 0, access mode, parent) with granted,
@@ -487,7 +523,8 @@ expect adjustment as phases land):
   DUMP (`dump.go`, Phase 51),
   CREATE, SET/SHOW DEFAULT, MOUNT/DISMOUNT, INITIALIZE/CONTAINER, the
   default volume, DEFINE/ASSIGN/DEASSIGN and SHOW LOGICAL/TRANSLATION,
-  DEFINE/DEVICE and SHOW DEVICES, SHOW SYSTEM/PROCESS, MACRO, LINK
+  DEFINE/DEVICE and SHOW DEVICES, SHOW SYSTEM/PROCESS, SET and SHOW
+  WORKING_SET (`workingset.go`, Phase 63), MACRO, LINK
   (`linksource.go`, `GovaxSymbols`), LIBRARY, ANALYZE, the VMS library
   search (`syslib.go`), and paging (`page.go`). Each is a method of
   `Context`, which the console builds for each command from the DCL
@@ -777,6 +814,30 @@ expect adjustment as phases land):
   (`iocount.go`: JPI$_BUFIO/DIRIO, counted as each `$QIO` completes; a
   disk's and NL:'s are direct I/O); EXE$OPEN's host files are shared by
   RMS's rule (`System.HostOpeners`, `rms/hostshare.go`).
+  Phase 63, with paging on (`docs/PHASE-63 - working sets.md`):
+  `workingset.go` gives each process its `paging.WorkingSet`
+  (`Environment.WorkingSet`): `System.PageIn` puts a page in before
+  resolving its fault, replacement (`evictPage`) leaves a page in
+  transition with its frame on the free or modified list, a fault on a
+  transition page is a soft fault (`softFault`), and `BreakTie` gives a
+  reused frame's old page its backing store's form again;
+  `setWorkingSetLimit` is `$ADJWSL`'s and image exit's
+  (`resetWorkingSet`); `heldFrame` is the frame a page being deleted
+  holds, valid or in transition. `pageprot.go` has `$PURGWS` and the
+  lock services on the list too (both modes keep the maps that decide
+  the statuses). `mpw.go` is the modified page writer for private file
+  sections (MPW_HILIMIT, MPW_LOLIMIT), `reclaim.go` the reclaimer
+  (FREELIM, FREEGOAL: the writer, then trimming sets above WSQUOTA, at
+  an instruction boundary), `accounting.go` the faults by kind
+  (`FaultCounts`, `System.PageCounts`) and PPGCNT/GPGCNT/WSPEAK
+  (`residentPages`, either mode). `setworkingset.go` is SET
+  WORKING_SET's rules (`SetWorkingSet`, `WorkingSetValues`;
+  `Process.WSAuth`/`WSAuthExt` bound it, `WSAdjustOff` is /NOADJUST).
+  Image rundown deletes P0 in both modes (`DeleteP0`; `KeepP0`, which
+  the machine sets while the debugger holds the image, defers it to the
+  next image's activation). govax's list has no permanent part (page
+  tables, the process header), so its floor is MINWSCNT where VMS's is
+  higher; `testdata/pg63`'s oracle lists the differences that follows.
 - `internal/librtl` — LIBRTL.EXE's routines (Phase 34): the LIB$ and STR$
   shims a program reaches through `SHIM$LIBRTL_<offset>` stubs. `Routines`
   lists each with its XFC$SHIM code (its transfer-vector offset is
@@ -1087,7 +1148,9 @@ expect adjustment as phases land):
   default for `/[NO]PAGING`, off when unset), `minwscnt`,
   `pql_dwsdefault`, `pql_dwsquota`, `pql_dwsextent`, `pql_dpgflquota`
   (counts in pages, decimal or %X; `machine/sysgen.go`'s
-  `ParseSysgenCount`). They reach each `System` as a `corevms.Sysgen`
+  `ParseSysgenCount`); Phase 63's `growlim`, `tbskipwsl`, `freelim`,
+  `freegoal`, `mpw_hilimit`, `mpw_lolimit` (numbers, 0 allowed:
+  `ParseSysgenNumber`, `SysgenNumberKeys`). They reach each `System` as a `corevms.Sysgen`
   (`corevms/sysgen.go`), whose defaults `$CREPRC`'s quotas and a
   logging-in process's account (`LoginQuotas`) use.
   `vax.library` (string) — the host directory LINK and MACRO look

@@ -115,6 +115,16 @@ pairs and required arguments are in `starlet.mar`'s comment; VMS 7.3's
 unknown (not `NULLARG`). `TestServiceMacroObjects` compares every call
 real MACRO assembled without error, in both rounds.
 
+## Round 8
+
+`r8_purgws.mar` (gen.go's `r8Services`, round 4's method): `$PURGWS`, the
+one working set service govax's STARLET had no macro for
+(`docs/PHASE-63 - working sets.md`). It ran on 2026-10-16 from Phase 63's
+probe volume (`../../pg63`, whose `pg63.com` runs `MACROS8.COM`), on VMS
+V7.1; its log (`vax/macros8.log`, audited by the author) shows errors only
+for the two calls without INADR, which is required, and govax's
+`$PURGWS_S` matches the other five (`TestServiceMacroObjects`).
+
 ## The VAX run
 
 Rounds 5 and 6 run with the other end-of-Phase-46 runs, on one volume:

@@ -132,6 +132,8 @@
 //              10/16/26    vax.sysgen.mpw_hilimit and mpw_lolimit in
 //                          CONFIG KEYS
 //              10/16/26    vax.sysgen.freelim and freegoal in CONFIG KEYS
+//              10/16/26    SET and SHOW WORKING_SET; SHOW SYSTEM's
+//                          counts and VMINIT/PAGING brought up to date
 
 This is the help documentation for the govax VAX emulator.  Topic sections are
 marked by a "$" delimiter.  This is followed by as many tokens of the help
@@ -2409,12 +2411,16 @@ $VM
                         either, the vax.sysgen.paging.enable setting
                         decides (see HELP CONFIG KEYS); it is off unless
                         set.  The choice lasts until the next VMINIT.
-                        Paging is being added to govax in stages: for now,
-                        with paging on, each physical page is recorded in
-                        a PFN database with the page it holds (SHOW
-                        MEMORY shows the counts), but no page is yet taken
-                        from a process, so memory is used the same way
-                        either way.
+                        Paging is being added to govax in stages: with
+                        paging on, each process has a working set (HELP
+                        SET WORKING_SET), pages that leave it keep their
+                        memory on the free or modified page list and come
+                        back without I/O when touched again, and a
+                        reclaimer trims working sets when free memory
+                        runs low (SHOW MEMORY shows the counts).  There
+                        is no page file yet, so a modified page waits on
+                        the modified list unless it belongs to a file
+                        section, whose file it is written back to.
 
     Example:
 
@@ -4025,10 +4031,11 @@ $SH  ,SYST
     is running, COM one ready to run, and the wait states are HIB
     (hibernating), LEF and CEF (waiting for a local or common event
     flag), SUSP, and a resource wait such as RWMBX (room in a full
-    mailbox).  govax doesn't count I/O operations or page faults, so
-    those columns are 0, and Pages counts the pages each process's
-    address space maps.  Several processes run only with the
-    vax.process.scheduler setting on (HELP CONFIG KEYS).
+    mailbox).  I/O is the process's buffered and direct I/O operations,
+    Page flts its page faults, and Pages the pages in its working set
+    (with paging off, the pages its address space has in memory).
+    Several processes run only with the vax.process.scheduler setting on
+    (HELP CONFIG KEYS).
 
     Syntax:
 

@@ -1,19 +1,19 @@
 # Phase 63 — working sets, soft faults, and the page lists
 
-**Status:** in progress (2026-10-16): subtask 1, the survey (Part A
-below), subtask 2, the working set lists (`internal/paging`'s
-`WorkingSet`), subtask 3, faults, replacement, and soft faults in
-corevms (`corevms/workingset.go`), and subtask 4, the limits (`$ADJWSL`
-on the real list, WSAUTH and WSAUTHEXT, GROWLIM's key, the reset at
-image exit), subtask 5, deleting pages in transition, and subtask 6,
-the working set services (`$PURGWS`, the locks on the real list,
-SS$_LKWSETFUL, the unlock statuses), and subtask 7, the modified page
-writer for private file sections (`corevms/mpw.go`, MPW_HILIMIT and
-MPW_LOLIMIT, `$UPDSEC` from the modified list), and subtask 8, the
-reclaimer and the accounting (`corevms/reclaim.go`, FREELIM and
-FREEGOAL; `corevms/accounting.go`, faults by kind, PPGCNT, GPGCNT,
-WSPEAK), and subtask 9, DCL's SET WORKING_SET and SHOW WORKING_SET
-(`corevms/setworkingset.go`, `dclcmd/workingset.go`), are done. Needs Phase 62 (settings, the
+**Status:** done (2026-10-16). Subtasks 1 to 11: the survey (Part A
+below); the working set lists (`internal/paging`'s `WorkingSet`);
+faults, replacement, and soft faults in corevms
+(`corevms/workingset.go`); the limits (`$ADJWSL` on the real list,
+WSAUTH and WSAUTHEXT, GROWLIM, the reset at image exit); deleting pages
+in transition; the working set services (`$PURGWS`, the locks on the
+real list, SS$_LKWSETFUL, the unlock statuses); the modified page
+writer for private file sections (`corevms/mpw.go`); the reclaimer and
+the accounting (`corevms/reclaim.go`, `corevms/accounting.go`); DCL's
+SET and SHOW WORKING_SET (`corevms/setworkingset.go`,
+`dclcmd/workingset.go`); the VMS probe (`testdata/pg63`, two rounds on
+VMS V7.1, with image rundown deleting P0 among the changes it brought);
+and the close-out (CLAUDE.md, HELP, PLAN.md, the macro probes' README,
+Phase 66's doc). Needs Phase 62 (settings, the
 `internal/paging` PFN database and lists, the PTE forms, frame
 allocation through `internal/paging`). Part of the paging program laid
 out in `PHASE-62 - VMS paging.md` (Parts A and B: the survey and the
@@ -592,8 +592,9 @@ from run to run.
    (Done 2026-10-16; the progress log says what it chose.)
 10. **The VMS probe** (`testdata/pg63`), Part A's case list, and a
    macro round for the six services. govax is then changed to its
-   answers.
-11. **Close-out:** CLAUDE.md, HELP, PLAN.md.
+   answers. (Done 2026-10-16, in two rounds; the macro round was
+   `$PURGWS` alone, the other five having been checked already.)
+11. **Close-out:** CLAUDE.md, HELP, PLAN.md. (Done 2026-10-16.)
 
 ## Progress log
 
@@ -1170,3 +1171,18 @@ from run to run.
     govax's replacement is the book's, and isn't tuned to it. And GPGCNT
     counts a global page once touched on VMS, from its mapping on govax
     (finding 9, Phase 65).
+- **2026-10-16:** Subtask 11, the close-out. CLAUDE.md describes the
+  phase (the paging program's paragraph, `vm`'s, `internal/paging`'s,
+  and corevms's additions, SET and SHOW WORKING_SET in `dclcmd`, the
+  new `vax.sysgen.*` keys, `testdata/pg63`, macro round 8); PLAN.md's
+  row is done, and Phase 66's row and doc say that image reset's P0
+  deletion came in here (its part of P1 is still Phase 66's); HELP's
+  SHOW SYSTEM no longer says page faults aren't counted, and VMINIT's
+  /PAGING describes what paging does now. `testdata/mp/macros/README.md`
+  has round 8. **Carried forward:** VMS's permanent part of the working
+  set list (its floor, its purge residue, LKWSETFUL's room for page
+  table pages) waits for page tables under paging (Phase 67), if a
+  later probe asks for it; GPGCNT for untouched global pages is Phase
+  65's (finding 9); the page file is Phase 64's, and with it the
+  modified pages that wait today, the stuck-page counts
+  (`mpwStuck`, `reclaimStuck`), and Decision 9's audit.
