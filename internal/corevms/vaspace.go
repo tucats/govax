@@ -379,3 +379,43 @@ func registerAddressSpaceServices(t *ServiceTable) {
 	t.Register("SYS$DELTVA", serviceSysDeltva)
 	t.Register("SYS$CNTREG", serviceSysCntreg)
 }
+
+// DeleteP0 is image rundown's deletion of P0 (the book's 21.3,
+// MMG$IMGRESET): every P0 page the image created, loaded, or touched goes
+// back to the form a new address space gives it (ProcessPTE: demand-zero,
+// read/write, user's; page 0 a no-access guard), and the frame it held,
+// valid or in transition, is released as $DELTVA releases it
+// (releasePTE). VMS deletes the pages, and the next image's activation
+// makes its own; govax keeps P0's page table at its length and leaves
+// every page demand-zero, which the next image sees the same way.
+// Without this, an image's pages stayed after its exit, in memory and in
+// the working set, and the next image of the same layout found them
+// there (testdata/pg63's dry run; VMS's PPGCNT falls back at image exit).
+//
+// Image activation calls it too, for the pages a rundown with KeepP0 set
+// left.
+func (env *Environment) DeleteP0() {
+	if env.cpu == nil || env.cpu.PR(registers.MAPEN) == 0 {
+		return
+	}
+
+	space := env.pageSpace()
+
+	for i := range space.P0LR {
+		addr := i * pageSize
+		fresh := ProcessPTE(false, i)
+
+		old, err := env.mem.LookupPTEIn(env.cpu, space, addr)
+		if err != nil || old == fresh {
+			continue
+		}
+
+		if env.mem.StorePTEIn(env.cpu, space, addr, fresh) != nil {
+			continue
+		}
+
+		env.releasePTE(addr, old)
+	}
+
+	env.RegionSize[0] = 0
+}

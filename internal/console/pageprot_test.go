@@ -145,8 +145,10 @@ func TestLockServices(t *testing.T) {
 		t.Errorf("$LKWSET of recreated pages = %#x, want SS$_WASCLR", got)
 	}
 
-	// Image rundown unlocks everything.
+	// Image rundown unlocks everything. (It deletes P0 too, the range
+	// cell with it.)
 	c.RTL.ImageRundown()
+	putRange(t, c, vaInadr, vaPages, vaPages+0x200)
 
 	if got := callService(t, c, "SYS$LKWSET", vaInadr); got != ssWasClr {
 		t.Errorf("$LKWSET after rundown = %#x, want SS$_WASCLR", got)
@@ -269,9 +271,10 @@ func TestLkwsetFull(t *testing.T) {
 	}
 }
 
-// TestLkwsetWritableGlobalPage: a global section's page mapped for
-// writing can't be locked in the working set (SS$_NOPRIV), but can be
-// locked in memory; mapped read-only, it can be locked either way.
+// TestLkwsetWritableGlobalPage: a writable global section's page can't be
+// locked in the working set (SS$_NOPRIV), but can be locked in memory;
+// mapped read-only it still can't, as VMS 7.1 answered (testdata/pg63,
+// round 2, E11): the section counts, not the mapping.
 func TestLkwsetWritableGlobalPage(t *testing.T) {
 	c := newServiceConsole(t)
 
@@ -299,8 +302,8 @@ func TestLkwsetWritableGlobalPage(t *testing.T) {
 
 	putRange(t, c, vaInadr, secPages+0x1000, secPages+0x1000)
 
-	if got := callService(t, c, "SYS$LKWSET", vaInadr); got != ssWasClr {
-		t.Errorf("$LKWSET of a read-only global page = %#x, want SS$_WASCLR", got)
+	if got := callService(t, c, "SYS$LKWSET", vaInadr); got != ssNoPriv {
+		t.Errorf("$LKWSET of a writable section's page mapped read-only = %#x, want SS$_NOPRIV", got)
 	}
 }
 

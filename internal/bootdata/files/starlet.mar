@@ -2983,8 +2983,8 @@
 	.ENDM	$ULWSET_G
 
 ; $PURGWS inadr (docs/PHASE-63 - working sets.md, subtask 6: written from
-; the manual by the rules above, not yet checked against real MACRO's
-; object, which the phase's macro round does)
+; the manual by the rules above; the _S form checked against real MACRO's
+; object by testdata/mp/macros's round 8, INADR required)
 	.MACRO	$PURGWS_S INADR
 	.GLOBL	SYS$PURGWS
 	.IF	B,<INADR>

@@ -473,7 +473,11 @@ func (m *Machine) ImageRundown() {
 	}
 
 	if m.processOne != nil {
+		// A debugger session keeps the image's memory to examine after
+		// its exit; the next image's activation deletes it (ResetICBList).
+		m.processOne.KeepP0 = m.InDebugger()
 		m.processOne.ImageRundown()
+		m.processOne.KeepP0 = false
 	}
 }
 

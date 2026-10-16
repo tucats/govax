@@ -1,0 +1,58 @@
+A1 start: flts=10250 ppg=229 gpg=81 wssize=512 peak=1360
+A2 quotas: dfwscnt=512 quota=1024 extent=16400 auth=1024 authext=16400
+A3 syi MINWSCNT: 00000001 20
+A3 syi WSMAX: 00000001 16400
+A3 syi GROWLIM: 00000001 143
+A3 syi BORROWLIM: 00000001 143
+A3 syi FREELIM: 00000001 143
+A3 syi FREEGOAL: 00000001 8192
+A3 syi MPW_HILIMIT: 00000001 5634
+A3 syi MPW_LOLIMIT: 00000001 120
+A3 syi PFCDEFAULT: 00000001 16
+A3 syi TBSKIPWSL: 00000001 8
+B1 adjwsl 0: 00000001 wsetlm=512 wssize=512
+B2 adjwsl omitted: 00000001 wsetlm=512
+B3 adjwsl +100000: 00000001 wsetlm=16400
+B4 adjwsl -100000: 00000001 wsetlm=206 ppg=206
+B5 adjwsl +10 into code: 0000000C, then the limit floor+90
+B6 floor+180 to floor+40 with 150 touched: limit floor+40 ppg 327 to 246 wssize floor+40
+B7 floor+40 to floor+180, two sweeps of 150: flts 80 0 ppg=330
+C N=30: flts 33 0 0 ppg=209 gpg=0 peak=1360
+C N=60: flts 63 0 0 ppg=239 gpg=0 peak=1360
+C N=75: flts 78 0 0 ppg=254 gpg=0 peak=1360
+C N=90: flts 93 0 0 ppg=269 gpg=0 peak=1360
+C N=120: flts 123 26 25 ppg=286 gpg=0 peak=1360
+C N=300: flts 308 301 311 ppg=286 gpg=0 peak=1360
+D1 purge all: 00000001, then ppg=178 gpg=0 with 8 faults
+D1 a snapshot later: ppg=185
+D2 purge one page: 00000001, then 4 touched: 1 faults
+D3 purge 4 pages reversed: 00000001, then 4 touched: 4 faults
+D4 lock page 1 00000001, purge 0-3 00000001; page 1 0 faults, page 0 1; unlock 00000009
+D5 purge in S0: 00000024
+D6 purge P1 to S0: 00000024
+D7 purge, inadr 0: 0000000C
+E1 lock page 0: 00000001 retadr 0 511
+E2 lock it again: 00000009
+E3 lock pages 0-3 (0 locked): 00000009
+E4 unlock 0-3 (all locked): 00000009
+E5 unlock 0-3 (none locked): 00000001
+E6 unlock 0-1 (0 locked): 00000001
+E7 at floor+80: 78 locked, then 00000194; wssize=286 ppg=257; unlock 00000001
+E7 at floor+130: 127 locked, then 00000194; wssize=336 ppg=309; unlock 00000001
+E9 lock 200 pages at floor+80: 00000194 retadr 0 39935 wssize=286 ppg=260; unlock 00000001
+E10 writable global: $CRMPSC 00000619 gpg=1; $LKWSET 00000024 $LCKPAG 00000001 $ULKPAG 00000009
+E11 read-only global: $MGBLSC 00000001 value 1; $LKWSET 00000024 $ULWSET 00000001
+E12 lock a system page: 00000024 retadr FFFFFFFF FFFFFFFF
+E13 lock a missing page: 0000000C retadr FFFFFFFF FFFFFFFF
+E14 lock, retadr in code: 0000000C; unlock 00000001
+E15 lock and unlock, acmode kernel: 00000001 00000009
+E16 lock, inadr 0: 0000000C
+F1 enable PSWAPM: 00000001
+F2 lock in memory: 00000001, again 00000009
+F3 then $LKWSET 00000001 $ULWSET 00000009, again 00000001
+F4 $ULKPAG 00000009, again 00000001
+F5 lock in memory, then disable PSWAPM: 00000001
+F6 without PSWAPM, $ULKPAG of the locked page 00000009, again 00000001
+F7 without PSWAPM, $LCKPAG 00000024, inadr 0 00000024
+F8 enable PSWAPM: 00000001
+G1 end: limit=436 lock 00000001 00000001; wssize=436 ppg=393 peak=1360 flts=14107

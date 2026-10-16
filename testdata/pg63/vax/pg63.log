@@ -1,0 +1,816 @@
+$ WRITE SYS$OUTPUT F$GETSYI("VERSION"), " ", F$GETSYI("HW_NAME")
+V7.1     VAX 8600
+$ GOSUB WSS
+$ WSS:
+$ SHOW WORKING_SET
+  Working Set      /Limit=512   /Quota=1024    /Extent=16400
+  Adjustment enabled      Authorized Quota=1024  Authorized Extent=16400
+$ WSV:
+$ WRITE SYS$OUTPUT "ws dfwscnt=", F$GETJPI("","DFWSCNT"), " wssize=", F$GETJPI("","WSSIZE"), -
+	" quota=", F$GETJPI("","WSQUOTA"), " extent=", F$GETJPI("","WSEXTENT"), -
+	" auth=", F$GETJPI("","WSAUTH"), " authext=", F$GETJPI("","WSAUTHEXT")
+ws dfwscnt=512 wssize=512 quota=1024 extent=16400 auth=1024 authext=16400
+$ WRITE SYS$OUTPUT "ws ppg=", F$GETJPI("","PPGCNT"), " gpg=", F$GETJPI("","GPGCNT"), -
+	" peak=", F$GETJPI("","WSPEAK"), " flts=", F$GETJPI("","PAGEFLTS")
+ws ppg=216 gpg=185 peak=856 flts=2904
+$ RETURN
+$ SHOW MEMORY/PHYSICAL_PAGES
+              System Memory Resources on 16-OCT-2026 11:02:25.72
+
+Physical Memory Usage (pages):     Total        Free      In Use    Modified
+  Main Memory (32.00Mb)            65536       30214       32100        3222
+
+Of the physical pages in use, 13114 pages are permanently allocated to OpenVMS.
+$ RUN SYS$SYSTEM:SYSGEN
+USE ACTIVE
+SHOW MINWSCNT
+MINWSCNT                       20         20        10        -1 Pages      
+SHOW WSMAX
+WSMAX                       16400       1024        60   1048576 Pages      
+SHOW GROWLIM
+GROWLIM                       143         63         0        -1 Pages      D
+SHOW BORROWLIM
+BORROWLIM                     143        300         0        -1 Pages      D
+SHOW FREELIM
+FREELIM                       143         32        16        -1 Pages      
+SHOW FREEGOAL
+FREEGOAL                     8192        200        16        -1 Pages      D
+SHOW TBSKIPWSL
+TBSKIPWSL                       8          8         0       512 Pages      D
+SHOW MPW_HILIMIT
+MPW_HILIMIT                  5634        500         0        -1 Pages      
+SHOW MPW_LOLIMIT
+MPW_LOLIMIT                   120         32         0        -1 Pages      
+SHOW MPW_WRTCLUSTER
+MPW_WRTCLUSTER                120        120        16       120 Pages      
+SHOW PFCDEFAULT
+PFCDEFAULT                     16         32         0       127 Pages      D
+SHOW PFRATL
+PFRATL                          0          0         0        -1 Flts/10Sec D
+SHOW PFRATH
+PFRATH                        120        120         0        -1 Flts/10Sec D
+SHOW WSINC
+WSINC                         150        150         0        -1 Pages      D
+SHOW WSDEC
+WSDEC                         250        250         0        -1 Pages      D
+SHOW AWSTIME
+AWSTIME                        20         20         1        -1 10Ms       D
+SHOW AWSMIN
+AWSMIN                         50         50         0        -1 Pages      D
+SHOW SWPOUTPGCNT
+SWPOUTPGCNT                   500        288         0        -1 Pages      D
+SHOW PQL_DWSDEFAULT
+PQL_DWSDEFAULT                294        100        60        -1 Pages      
+SHOW PQL_MWSDEFAULT
+PQL_MWSDEFAULT                512         60        60        -1 Pages      
+SHOW PQL_DWSQUOTA
+PQL_DWSQUOTA                  588        200        60        -1 Pages      D
+SHOW PQL_MWSQUOTA
+PQL_MWSQUOTA                 1024         60        60        -1 Pages      D
+SHOW PQL_DWSEXTENT
+PQL_DWSEXTENT               16400        400        60        -1 Pages      D
+SHOW PQL_MWSEXTENT
+PQL_MWSEXTENT               16400         60        60        -1 Pages      D
+EXIT
+$ !
+$ ! SET WORKING_SET: each qualifier within and beyond its bounds, with
+$ ! /LOG and without; then the values as they were. Round 1 found that
+$ ! a quota near the floor leaves the process unable to run images, so
+$ ! only values that keep the quota and extent at Q0 - 100 or more are
+$ ! tried here; the rest are tried in subprocesses (PG63X.COM, below,
+$ ! whose logs are typed here).
+$ !
+$ L0 = F$GETJPI("","DFWSCNT")
+$ Q0 = F$GETJPI("","WSQUOTA")
+$ E0 = F$GETJPI("","WSEXTENT")
+$ AQ = F$GETJPI("","WSAUTH")
+$ AE = F$GETJPI("","WSAUTHEXT")
+$ M = F$GETSYI("MINWSCNT")
+$ SET WORKING_SET
+$ GOSUB WSS
+$ WSS:
+$ SHOW WORKING_SET
+  Working Set      /Limit=512   /Quota=1024    /Extent=16400
+  Adjustment enabled      Authorized Quota=1024  Authorized Extent=16400
+$ WSV:
+$ WRITE SYS$OUTPUT "ws dfwscnt=", F$GETJPI("","DFWSCNT"), " wssize=", F$GETJPI("","WSSIZE"), -
+	" quota=", F$GETJPI("","WSQUOTA"), " extent=", F$GETJPI("","WSEXTENT"), -
+	" auth=", F$GETJPI("","WSAUTH"), " authext=", F$GETJPI("","WSAUTHEXT")
+ws dfwscnt=512 wssize=512 quota=1024 extent=16400 auth=1024 authext=16400
+$ WRITE SYS$OUTPUT "ws ppg=", F$GETJPI("","PPGCNT"), " gpg=", F$GETJPI("","GPGCNT"), -
+	" peak=", F$GETJPI("","WSPEAK"), " flts=", F$GETJPI("","PAGEFLTS")
+ws ppg=187 gpg=99 peak=856 flts=3292
+$ RETURN
+$ X = Q0 - 100
+$ SET WORKING_SET/QUOTA=924/LOG
+%SET-I-NEWLIMS, new working set:  Limit = 512  Quota = 924  Extent = 16400
+$ GOSUB WSS
+$ WSS:
+$ SHOW WORKING_SET
+  Working Set      /Limit=512   /Quota=924    /Extent=16400
+  Adjustment enabled      Authorized Quota=1024  Authorized Extent=16400
+$ WSV:
+$ WRITE SYS$OUTPUT "ws dfwscnt=", F$GETJPI("","DFWSCNT"), " wssize=", F$GETJPI("","WSSIZE"), -
+	" quota=", F$GETJPI("","WSQUOTA"), " extent=", F$GETJPI("","WSEXTENT"), -
+	" auth=", F$GETJPI("","WSAUTH"), " authext=", F$GETJPI("","WSAUTHEXT")
+ws dfwscnt=512 wssize=512 quota=924 extent=16400 auth=1024 authext=16400
+$ WRITE SYS$OUTPUT "ws ppg=", F$GETJPI("","PPGCNT"), " gpg=", F$GETJPI("","GPGCNT"), -
+	" peak=", F$GETJPI("","WSPEAK"), " flts=", F$GETJPI("","PAGEFLTS")
+ws ppg=180 gpg=87 peak=856 flts=3423
+$ RETURN
+$ X = Q0 - 90
+$ SET WORKING_SET/QUOTA=934
+$ GOSUB WSS
+$ WSS:
+$ SHOW WORKING_SET
+  Working Set      /Limit=512   /Quota=934    /Extent=16400
+  Adjustment enabled      Authorized Quota=1024  Authorized Extent=16400
+$ WSV:
+$ WRITE SYS$OUTPUT "ws dfwscnt=", F$GETJPI("","DFWSCNT"), " wssize=", F$GETJPI("","WSSIZE"), -
+	" quota=", F$GETJPI("","WSQUOTA"), " extent=", F$GETJPI("","WSEXTENT"), -
+	" auth=", F$GETJPI("","WSAUTH"), " authext=", F$GETJPI("","WSAUTHEXT")
+ws dfwscnt=512 wssize=512 quota=934 extent=16400 auth=1024 authext=16400
+$ WRITE SYS$OUTPUT "ws ppg=", F$GETJPI("","PPGCNT"), " gpg=", F$GETJPI("","GPGCNT"), -
+	" peak=", F$GETJPI("","WSPEAK"), " flts=", F$GETJPI("","PAGEFLTS")
+ws ppg=179 gpg=87 peak=856 flts=3504
+$ RETURN
+$ X = Q0 - 50
+$ SET WORKING_SET/LIMIT=974/LOG
+%SET-I-NEWLIMS, new working set:  Limit = 974  Quota = 974  Extent = 16400
+$ GOSUB WSS
+$ WSS:
+$ SHOW WORKING_SET
+  Working Set      /Limit=974   /Quota=974    /Extent=16400
+  Adjustment enabled      Authorized Quota=1024  Authorized Extent=16400
+$ WSV:
+$ WRITE SYS$OUTPUT "ws dfwscnt=", F$GETJPI("","DFWSCNT"), " wssize=", F$GETJPI("","WSSIZE"), -
+	" quota=", F$GETJPI("","WSQUOTA"), " extent=", F$GETJPI("","WSEXTENT"), -
+	" auth=", F$GETJPI("","WSAUTH"), " authext=", F$GETJPI("","WSAUTHEXT")
+ws dfwscnt=974 wssize=974 quota=974 extent=16400 auth=1024 authext=16400
+$ WRITE SYS$OUTPUT "ws ppg=", F$GETJPI("","PPGCNT"), " gpg=", F$GETJPI("","GPGCNT"), -
+	" peak=", F$GETJPI("","WSPEAK"), " flts=", F$GETJPI("","PAGEFLTS")
+ws ppg=196 gpg=87 peak=856 flts=3628
+$ RETURN
+$ X = AQ + 100
+$ SET WORKING_SET/LIMIT=1124/LOG
+%SET-I-NEWLIMS, new working set:  Limit = 1024  Quota = 1024  Extent = 16400
+$ GOSUB WSS
+$ WSS:
+$ SHOW WORKING_SET
+  Working Set      /Limit=1024   /Quota=1024    /Extent=16400
+  Adjustment enabled      Authorized Quota=1024  Authorized Extent=16400
+$ WSV:
+$ WRITE SYS$OUTPUT "ws dfwscnt=", F$GETJPI("","DFWSCNT"), " wssize=", F$GETJPI("","WSSIZE"), -
+	" quota=", F$GETJPI("","WSQUOTA"), " extent=", F$GETJPI("","WSEXTENT"), -
+	" auth=", F$GETJPI("","WSAUTH"), " authext=", F$GETJPI("","WSAUTHEXT")
+ws dfwscnt=1024 wssize=1024 quota=1024 extent=16400 auth=1024 authext=16400
+$ WRITE SYS$OUTPUT "ws ppg=", F$GETJPI("","PPGCNT"), " gpg=", F$GETJPI("","GPGCNT"), -
+	" peak=", F$GETJPI("","WSPEAK"), " flts=", F$GETJPI("","PAGEFLTS")
+ws ppg=198 gpg=87 peak=856 flts=3727
+$ RETURN
+$ X = AE + 100
+$ SET WORKING_SET/LIMIT=16500/LOG
+%SET-I-NEWLIMS, new working set:  Limit = 1024  Quota = 1024  Extent = 16400
+$ GOSUB WSS
+$ WSS:
+$ SHOW WORKING_SET
+  Working Set      /Limit=1024   /Quota=1024    /Extent=16400
+  Adjustment enabled      Authorized Quota=1024  Authorized Extent=16400
+$ WSV:
+$ WRITE SYS$OUTPUT "ws dfwscnt=", F$GETJPI("","DFWSCNT"), " wssize=", F$GETJPI("","WSSIZE"), -
+	" quota=", F$GETJPI("","WSQUOTA"), " extent=", F$GETJPI("","WSEXTENT"), -
+	" auth=", F$GETJPI("","WSAUTH"), " authext=", F$GETJPI("","WSAUTHEXT")
+ws dfwscnt=1024 wssize=1024 quota=1024 extent=16400 auth=1024 authext=16400
+$ WRITE SYS$OUTPUT "ws ppg=", F$GETJPI("","PPGCNT"), " gpg=", F$GETJPI("","GPGCNT"), -
+	" peak=", F$GETJPI("","WSPEAK"), " flts=", F$GETJPI("","PAGEFLTS")
+ws ppg=197 gpg=87 peak=856 flts=3824
+$ RETURN
+$ SET WORKING_SET/LIMIT=512/QUOTA=1024/LOG
+%SET-I-NEWLIMS, new working set:  Limit = 512  Quota = 1024  Extent = 16400
+$ GOSUB WSS
+$ WSS:
+$ SHOW WORKING_SET
+  Working Set      /Limit=512   /Quota=1024    /Extent=16400
+  Adjustment enabled      Authorized Quota=1024  Authorized Extent=16400
+$ WSV:
+$ WRITE SYS$OUTPUT "ws dfwscnt=", F$GETJPI("","DFWSCNT"), " wssize=", F$GETJPI("","WSSIZE"), -
+	" quota=", F$GETJPI("","WSQUOTA"), " extent=", F$GETJPI("","WSEXTENT"), -
+	" auth=", F$GETJPI("","WSAUTH"), " authext=", F$GETJPI("","WSAUTHEXT")
+ws dfwscnt=512 wssize=512 quota=1024 extent=16400 auth=1024 authext=16400
+$ WRITE SYS$OUTPUT "ws ppg=", F$GETJPI("","PPGCNT"), " gpg=", F$GETJPI("","GPGCNT"), -
+	" peak=", F$GETJPI("","WSPEAK"), " flts=", F$GETJPI("","PAGEFLTS")
+ws ppg=179 gpg=81 peak=856 flts=3994
+$ RETURN
+$ X = AQ + 100
+$ SET WORKING_SET/QUOTA=1124
+%SET-I-NEWLIMS, new working set:  Limit = 512  Quota = 1024  Extent = 16400
+$ GOSUB WSS
+$ WSS:
+$ SHOW WORKING_SET
+  Working Set      /Limit=512   /Quota=1024    /Extent=16400
+  Adjustment enabled      Authorized Quota=1024  Authorized Extent=16400
+$ WSV:
+$ WRITE SYS$OUTPUT "ws dfwscnt=", F$GETJPI("","DFWSCNT"), " wssize=", F$GETJPI("","WSSIZE"), -
+	" quota=", F$GETJPI("","WSQUOTA"), " extent=", F$GETJPI("","WSEXTENT"), -
+	" auth=", F$GETJPI("","WSAUTH"), " authext=", F$GETJPI("","WSAUTHEXT")
+ws dfwscnt=512 wssize=512 quota=1024 extent=16400 auth=1024 authext=16400
+$ WRITE SYS$OUTPUT "ws ppg=", F$GETJPI("","PPGCNT"), " gpg=", F$GETJPI("","GPGCNT"), -
+	" peak=", F$GETJPI("","WSPEAK"), " flts=", F$GETJPI("","PAGEFLTS")
+ws ppg=185 gpg=78 peak=856 flts=4168
+$ RETURN
+$ X = E0 - 1000
+$ SET WORKING_SET/EXTENT=15400/LOG
+%SET-I-NEWLIMS, new working set:  Limit = 512  Quota = 1024  Extent = 15400
+$ GOSUB WSS
+$ WSS:
+$ SHOW WORKING_SET
+  Working Set      /Limit=512   /Quota=1024    /Extent=15400
+  Adjustment enabled      Authorized Quota=1024  Authorized Extent=16400
+$ WSV:
+$ WRITE SYS$OUTPUT "ws dfwscnt=", F$GETJPI("","DFWSCNT"), " wssize=", F$GETJPI("","WSSIZE"), -
+	" quota=", F$GETJPI("","WSQUOTA"), " extent=", F$GETJPI("","WSEXTENT"), -
+	" auth=", F$GETJPI("","WSAUTH"), " authext=", F$GETJPI("","WSAUTHEXT")
+ws dfwscnt=512 wssize=512 quota=1024 extent=15400 auth=1024 authext=16400
+$ WRITE SYS$OUTPUT "ws ppg=", F$GETJPI("","PPGCNT"), " gpg=", F$GETJPI("","GPGCNT"), -
+	" peak=", F$GETJPI("","WSPEAK"), " flts=", F$GETJPI("","PAGEFLTS")
+ws ppg=189 gpg=82 peak=856 flts=4290
+$ RETURN
+$ X = AE + 100
+$ SET WORKING_SET/EXTENT=16500
+%SET-I-NEWLIMS, new working set:  Limit = 512  Quota = 1024  Extent = 16400
+$ GOSUB WSS
+$ WSS:
+$ SHOW WORKING_SET
+  Working Set      /Limit=512   /Quota=1024    /Extent=16400
+  Adjustment enabled      Authorized Quota=1024  Authorized Extent=16400
+$ WSV:
+$ WRITE SYS$OUTPUT "ws dfwscnt=", F$GETJPI("","DFWSCNT"), " wssize=", F$GETJPI("","WSSIZE"), -
+	" quota=", F$GETJPI("","WSQUOTA"), " extent=", F$GETJPI("","WSEXTENT"), -
+	" auth=", F$GETJPI("","WSAUTH"), " authext=", F$GETJPI("","WSAUTHEXT")
+ws dfwscnt=512 wssize=512 quota=1024 extent=16400 auth=1024 authext=16400
+$ WRITE SYS$OUTPUT "ws ppg=", F$GETJPI("","PPGCNT"), " gpg=", F$GETJPI("","GPGCNT"), -
+	" peak=", F$GETJPI("","WSPEAK"), " flts=", F$GETJPI("","PAGEFLTS")
+ws ppg=191 gpg=82 peak=856 flts=4391
+$ RETURN
+$ X = L0 - 100
+$ SET WORKING_SET/LIMIT=412/LOG
+%SET-I-NEWLIMS, new working set:  Limit = 412  Quota = 1024  Extent = 16400
+$ GOSUB WSS
+$ WSS:
+$ SHOW WORKING_SET
+  Working Set      /Limit=412   /Quota=1024    /Extent=16400
+  Adjustment enabled      Authorized Quota=1024  Authorized Extent=16400
+$ WSV:
+$ WRITE SYS$OUTPUT "ws dfwscnt=", F$GETJPI("","DFWSCNT"), " wssize=", F$GETJPI("","WSSIZE"), -
+	" quota=", F$GETJPI("","WSQUOTA"), " extent=", F$GETJPI("","WSEXTENT"), -
+	" auth=", F$GETJPI("","WSAUTH"), " authext=", F$GETJPI("","WSAUTHEXT")
+ws dfwscnt=412 wssize=412 quota=1024 extent=16400 auth=1024 authext=16400
+$ WRITE SYS$OUTPUT "ws ppg=", F$GETJPI("","PPGCNT"), " gpg=", F$GETJPI("","GPGCNT"), -
+	" peak=", F$GETJPI("","WSPEAK"), " flts=", F$GETJPI("","PAGEFLTS")
+ws ppg=193 gpg=82 peak=856 flts=4492
+$ RETURN
+$ SET WORKING_SET/EXTENT=16400/QUOTA=1024/LIMIT=512/LOG
+%SET-I-NEWLIMS, new working set:  Limit = 512  Quota = 1024  Extent = 16400
+$ GOSUB WSS
+$ WSS:
+$ SHOW WORKING_SET
+  Working Set      /Limit=512   /Quota=1024    /Extent=16400
+  Adjustment enabled      Authorized Quota=1024  Authorized Extent=16400
+$ WSV:
+$ WRITE SYS$OUTPUT "ws dfwscnt=", F$GETJPI("","DFWSCNT"), " wssize=", F$GETJPI("","WSSIZE"), -
+	" quota=", F$GETJPI("","WSQUOTA"), " extent=", F$GETJPI("","WSEXTENT"), -
+	" auth=", F$GETJPI("","WSAUTH"), " authext=", F$GETJPI("","WSAUTHEXT")
+ws dfwscnt=512 wssize=512 quota=1024 extent=16400 auth=1024 authext=16400
+$ WRITE SYS$OUTPUT "ws ppg=", F$GETJPI("","PPGCNT"), " gpg=", F$GETJPI("","GPGCNT"), -
+	" peak=", F$GETJPI("","WSPEAK"), " flts=", F$GETJPI("","PAGEFLTS")
+ws ppg=187 gpg=75 peak=856 flts=4683
+$ RETURN
+$ SET WORKING_SET/NOADJUST
+$ GOSUB WSS
+$ WSS:
+$ SHOW WORKING_SET
+  Working Set      /Limit=512   /Quota=1024    /Extent=16400
+  Adjustment disabled     Authorized Quota=1024  Authorized Extent=16400
+$ WSV:
+$ WRITE SYS$OUTPUT "ws dfwscnt=", F$GETJPI("","DFWSCNT"), " wssize=", F$GETJPI("","WSSIZE"), -
+	" quota=", F$GETJPI("","WSQUOTA"), " extent=", F$GETJPI("","WSEXTENT"), -
+	" auth=", F$GETJPI("","WSAUTH"), " authext=", F$GETJPI("","WSAUTHEXT")
+ws dfwscnt=512 wssize=512 quota=1024 extent=16400 auth=1024 authext=16400
+$ WRITE SYS$OUTPUT "ws ppg=", F$GETJPI("","PPGCNT"), " gpg=", F$GETJPI("","GPGCNT"), -
+	" peak=", F$GETJPI("","WSPEAK"), " flts=", F$GETJPI("","PAGEFLTS")
+ws ppg=180 gpg=77 peak=856 flts=4815
+$ RETURN
+$ SET WORKING_SET/ADJUST
+$ GOSUB WSS
+$ WSS:
+$ SHOW WORKING_SET
+  Working Set      /Limit=512   /Quota=1024    /Extent=16400
+  Adjustment enabled      Authorized Quota=1024  Authorized Extent=16400
+$ WSV:
+$ WRITE SYS$OUTPUT "ws dfwscnt=", F$GETJPI("","DFWSCNT"), " wssize=", F$GETJPI("","WSSIZE"), -
+	" quota=", F$GETJPI("","WSQUOTA"), " extent=", F$GETJPI("","WSEXTENT"), -
+	" auth=", F$GETJPI("","WSAUTH"), " authext=", F$GETJPI("","WSAUTHEXT")
+ws dfwscnt=512 wssize=512 quota=1024 extent=16400 auth=1024 authext=16400
+$ WRITE SYS$OUTPUT "ws ppg=", F$GETJPI("","PPGCNT"), " gpg=", F$GETJPI("","GPGCNT"), -
+	" peak=", F$GETJPI("","WSPEAK"), " flts=", F$GETJPI("","PAGEFLTS")
+ws ppg=187 gpg=80 peak=856 flts=4922
+$ RETURN
+$ !
+$ ! The values near and below the floor, each in a subprocess of its own,
+$ ! which may be left unable to run images: PG63X.COM shows its values,
+$ ! sets them, and shows them again with lexical functions, which need no
+$ ! image.
+$ !
+$ SPAWN/OUTPUT=PG63X.LOG @PG63X "/LIMIT=50/LOG"
+%DCL-S-SPAWNED, process SYSTEM_1 spawned
+%DCL-S-ATTACHED, terminal now attached to process SYSTEM_1
+%DCL-S-RETURNED, control returned to process SYSTEM
+$ TYPE PG63X.LOG
+$ ! PG63X.COM - one SET WORKING_SET near or below the floor, in a
+$ ! subprocess PG63.COM spawns for it (P1 holds the qualifiers). The
+$ ! values are shown with F$GETJPI, which needs no image, since the SET
+$ ! may leave the process unable to run one.
+$ SET VERIFY
+$ WRITE SYS$OUTPUT "x dfwscnt=", F$GETJPI("","DFWSCNT"), " wssize=", F$GETJPI("","WSSIZE"), -
+	" quota=", F$GETJPI("","WSQUOTA"), " extent=", F$GETJPI("","WSEXTENT"), -
+	" auth=", F$GETJPI("","WSAUTH"), " authext=", F$GETJPI("","WSAUTHEXT")
+x dfwscnt=516 wssize=516 quota=1028 extent=16404 auth=1028 authext=16404
+$ SET WORKING_SET/LIMIT=50/LOG
+%SET-I-NEWLIMS, new working set:  Limit = 83  Quota = 1028  Extent = 16404
+$ WRITE SYS$OUTPUT "x status=", $STATUS
+x status=%X107781C3
+$ WRITE SYS$OUTPUT "x dfwscnt=", F$GETJPI("","DFWSCNT"), " wssize=", F$GETJPI("","WSSIZE"), -
+	" quota=", F$GETJPI("","WSQUOTA"), " extent=", F$GETJPI("","WSEXTENT"), -
+	" auth=", F$GETJPI("","WSAUTH"), " authext=", F$GETJPI("","WSAUTHEXT")
+x dfwscnt=83 wssize=83 quota=1028 extent=16404 auth=1028 authext=16404
+$ SHOW WORKING_SET
+  Working Set      /Limit=83   /Quota=1028    /Extent=16404
+  Adjustment enabled      Authorized Quota=1028  Authorized Extent=16404
+$ EXIT
+$ SPAWN/OUTPUT=PG63X.LOG @PG63X "/LIMIT=5/LOG"
+%DCL-S-SPAWNED, process SYSTEM_1 spawned
+%DCL-S-ATTACHED, terminal now attached to process SYSTEM_1
+%DCL-S-RETURNED, control returned to process SYSTEM
+$ TYPE PG63X.LOG
+$ ! PG63X.COM - one SET WORKING_SET near or below the floor, in a
+$ ! subprocess PG63.COM spawns for it (P1 holds the qualifiers). The
+$ ! values are shown with F$GETJPI, which needs no image, since the SET
+$ ! may leave the process unable to run one.
+$ SET VERIFY
+$ WRITE SYS$OUTPUT "x dfwscnt=", F$GETJPI("","DFWSCNT"), " wssize=", F$GETJPI("","WSSIZE"), -
+	" quota=", F$GETJPI("","WSQUOTA"), " extent=", F$GETJPI("","WSEXTENT"), -
+	" auth=", F$GETJPI("","WSAUTH"), " authext=", F$GETJPI("","WSAUTHEXT")
+x dfwscnt=516 wssize=516 quota=1028 extent=16404 auth=1028 authext=16404
+$ SET WORKING_SET/LIMIT=5/LOG
+%SET-I-NEWLIMS, new working set:  Limit = 83  Quota = 1028  Extent = 16404
+$ WRITE SYS$OUTPUT "x status=", $STATUS
+x status=%X107781C3
+$ WRITE SYS$OUTPUT "x dfwscnt=", F$GETJPI("","DFWSCNT"), " wssize=", F$GETJPI("","WSSIZE"), -
+	" quota=", F$GETJPI("","WSQUOTA"), " extent=", F$GETJPI("","WSEXTENT"), -
+	" auth=", F$GETJPI("","WSAUTH"), " authext=", F$GETJPI("","WSAUTHEXT")
+x dfwscnt=83 wssize=233 quota=1028 extent=16404 auth=1028 authext=16404
+$ SHOW WORKING_SET
+  Working Set      /Limit=83   /Quota=1028    /Extent=16404
+  Adjustment enabled      Authorized Quota=1028  Authorized Extent=16404
+$ EXIT
+$ SPAWN/OUTPUT=PG63X.LOG @PG63X "/LIMIT=0/LOG"
+%DCL-S-SPAWNED, process SYSTEM_1 spawned
+%DCL-S-ATTACHED, terminal now attached to process SYSTEM_1
+%DCL-S-RETURNED, control returned to process SYSTEM
+$ TYPE PG63X.LOG
+$ ! PG63X.COM - one SET WORKING_SET near or below the floor, in a
+$ ! subprocess PG63.COM spawns for it (P1 holds the qualifiers). The
+$ ! values are shown with F$GETJPI, which needs no image, since the SET
+$ ! may leave the process unable to run one.
+$ SET VERIFY
+$ WRITE SYS$OUTPUT "x dfwscnt=", F$GETJPI("","DFWSCNT"), " wssize=", F$GETJPI("","WSSIZE"), -
+	" quota=", F$GETJPI("","WSQUOTA"), " extent=", F$GETJPI("","WSEXTENT"), -
+	" auth=", F$GETJPI("","WSAUTH"), " authext=", F$GETJPI("","WSAUTHEXT")
+x dfwscnt=516 wssize=516 quota=1028 extent=16404 auth=1028 authext=16404
+$ SET WORKING_SET/LIMIT=0/LOG
+%SET-I-NEWLIMS, new working set:  Limit = 83  Quota = 1028  Extent = 16404
+$ WRITE SYS$OUTPUT "x status=", $STATUS
+x status=%X107781C3
+$ WRITE SYS$OUTPUT "x dfwscnt=", F$GETJPI("","DFWSCNT"), " wssize=", F$GETJPI("","WSSIZE"), -
+	" quota=", F$GETJPI("","WSQUOTA"), " extent=", F$GETJPI("","WSEXTENT"), -
+	" auth=", F$GETJPI("","WSAUTH"), " authext=", F$GETJPI("","WSAUTHEXT")
+x dfwscnt=83 wssize=83 quota=1028 extent=16404 auth=1028 authext=16404
+$ SHOW WORKING_SET
+  Working Set      /Limit=83   /Quota=1028    /Extent=16404
+  Adjustment enabled      Authorized Quota=1028  Authorized Extent=16404
+$ EXIT
+$ SPAWN/OUTPUT=PG63X.LOG @PG63X "/QUOTA=300/LOG"
+%DCL-S-SPAWNED, process SYSTEM_1 spawned
+%DCL-S-ATTACHED, terminal now attached to process SYSTEM_1
+%DCL-S-RETURNED, control returned to process SYSTEM
+$ TYPE PG63X.LOG
+$ ! PG63X.COM - one SET WORKING_SET near or below the floor, in a
+$ ! subprocess PG63.COM spawns for it (P1 holds the qualifiers). The
+$ ! values are shown with F$GETJPI, which needs no image, since the SET
+$ ! may leave the process unable to run one.
+$ SET VERIFY
+$ WRITE SYS$OUTPUT "x dfwscnt=", F$GETJPI("","DFWSCNT"), " wssize=", F$GETJPI("","WSSIZE"), -
+	" quota=", F$GETJPI("","WSQUOTA"), " extent=", F$GETJPI("","WSEXTENT"), -
+	" auth=", F$GETJPI("","WSAUTH"), " authext=", F$GETJPI("","WSAUTHEXT")
+x dfwscnt=516 wssize=516 quota=1028 extent=16404 auth=1028 authext=16404
+$ SET WORKING_SET/QUOTA=300/LOG
+%SET-I-NEWLIMS, new working set:  Limit = 300  Quota = 300  Extent = 16404
+$ WRITE SYS$OUTPUT "x status=", $STATUS
+x status=%X107781C3
+$ WRITE SYS$OUTPUT "x dfwscnt=", F$GETJPI("","DFWSCNT"), " wssize=", F$GETJPI("","WSSIZE"), -
+	" quota=", F$GETJPI("","WSQUOTA"), " extent=", F$GETJPI("","WSEXTENT"), -
+	" auth=", F$GETJPI("","WSAUTH"), " authext=", F$GETJPI("","WSAUTHEXT")
+x dfwscnt=300 wssize=300 quota=300 extent=16404 auth=1028 authext=16404
+$ SHOW WORKING_SET
+  Working Set      /Limit=300   /Quota=300    /Extent=16404
+  Adjustment enabled      Authorized Quota=1028  Authorized Extent=16404
+$ EXIT
+$ SPAWN/OUTPUT=PG63X.LOG @PG63X "/QUOTA=200/LOG"
+%DCL-S-SPAWNED, process SYSTEM_1 spawned
+%DCL-S-ATTACHED, terminal now attached to process SYSTEM_1
+%DCL-S-RETURNED, control returned to process SYSTEM
+$ TYPE PG63X.LOG
+$ ! PG63X.COM - one SET WORKING_SET near or below the floor, in a
+$ ! subprocess PG63.COM spawns for it (P1 holds the qualifiers). The
+$ ! values are shown with F$GETJPI, which needs no image, since the SET
+$ ! may leave the process unable to run one.
+$ SET VERIFY
+$ WRITE SYS$OUTPUT "x dfwscnt=", F$GETJPI("","DFWSCNT"), " wssize=", F$GETJPI("","WSSIZE"), -
+	" quota=", F$GETJPI("","WSQUOTA"), " extent=", F$GETJPI("","WSEXTENT"), -
+	" auth=", F$GETJPI("","WSAUTH"), " authext=", F$GETJPI("","WSAUTHEXT")
+x dfwscnt=516 wssize=516 quota=1028 extent=16404 auth=1028 authext=16404
+$ SET WORKING_SET/QUOTA=200/LOG
+%SET-I-NEWLIMS, new working set:  Limit = 200  Quota = 200  Extent = 16404
+$ WRITE SYS$OUTPUT "x status=", $STATUS
+x status=%X107781C3
+$ WRITE SYS$OUTPUT "x dfwscnt=", F$GETJPI("","DFWSCNT"), " wssize=", F$GETJPI("","WSSIZE"), -
+	" quota=", F$GETJPI("","WSQUOTA"), " extent=", F$GETJPI("","WSEXTENT"), -
+	" auth=", F$GETJPI("","WSAUTH"), " authext=", F$GETJPI("","WSAUTHEXT")
+x dfwscnt=200 wssize=200 quota=200 extent=16404 auth=1028 authext=16404
+$ SHOW WORKING_SET
+  Working Set      /Limit=200   /Quota=200    /Extent=16404
+  Adjustment enabled      Authorized Quota=1028  Authorized Extent=16404
+$ EXIT
+$ SPAWN/OUTPUT=PG63X.LOG @PG63X "/QUOTA=5/LOG"
+%DCL-S-SPAWNED, process SYSTEM_1 spawned
+%DCL-S-ATTACHED, terminal now attached to process SYSTEM_1
+%DCL-S-RETURNED, control returned to process SYSTEM
+$ TYPE PG63X.LOG
+$ ! PG63X.COM - one SET WORKING_SET near or below the floor, in a
+$ ! subprocess PG63.COM spawns for it (P1 holds the qualifiers). The
+$ ! values are shown with F$GETJPI, which needs no image, since the SET
+$ ! may leave the process unable to run one.
+$ SET VERIFY
+$ WRITE SYS$OUTPUT "x dfwscnt=", F$GETJPI("","DFWSCNT"), " wssize=", F$GETJPI("","WSSIZE"), -
+	" quota=", F$GETJPI("","WSQUOTA"), " extent=", F$GETJPI("","WSEXTENT"), -
+	" auth=", F$GETJPI("","WSAUTH"), " authext=", F$GETJPI("","WSAUTHEXT")
+x dfwscnt=516 wssize=516 quota=1028 extent=16404 auth=1028 authext=16404
+$ SET WORKING_SET/QUOTA=5/LOG
+%SET-I-NOMSG, Message number 007781C3
+$ WRITE SYS$OUTPUT "x status=", $STATUS
+x status=%X107781C3
+$ WRITE SYS$OUTPUT "x dfwscnt=", F$GETJPI("","DFWSCNT"), " wssize=", F$GETJPI("","WSSIZE"), -
+	" quota=", F$GETJPI("","WSQUOTA"), " extent=", F$GETJPI("","WSEXTENT"), -
+	" auth=", F$GETJPI("","WSAUTH"), " authext=", F$GETJPI("","WSAUTHEXT")
+x dfwscnt=83 wssize=83 quota=83 extent=16404 auth=1028 authext=16404
+$ SHOW WORKING_SET
+%LIB-F-INSVIRMEM, insufficient virtual memory
+$ SPAWN/OUTPUT=PG63X.LOG @PG63X "/QUOTA=5"
+%DCL-S-SPAWNED, process SYSTEM_1 spawned
+%DCL-S-ATTACHED, terminal now attached to process SYSTEM_1
+%DCL-S-RETURNED, control returned to process SYSTEM
+$ TYPE PG63X.LOG
+$ ! PG63X.COM - one SET WORKING_SET near or below the floor, in a
+$ ! subprocess PG63.COM spawns for it (P1 holds the qualifiers). The
+$ ! values are shown with F$GETJPI, which needs no image, since the SET
+$ ! may leave the process unable to run one.
+$ SET VERIFY
+$ WRITE SYS$OUTPUT "x dfwscnt=", F$GETJPI("","DFWSCNT"), " wssize=", F$GETJPI("","WSSIZE"), -
+	" quota=", F$GETJPI("","WSQUOTA"), " extent=", F$GETJPI("","WSEXTENT"), -
+	" auth=", F$GETJPI("","WSAUTH"), " authext=", F$GETJPI("","WSAUTHEXT")
+x dfwscnt=516 wssize=516 quota=1028 extent=16404 auth=1028 authext=16404
+$ SET WORKING_SET/QUOTA=5
+%SET-I-NOMSG, Message number 007781C3
+$ WRITE SYS$OUTPUT "x status=", $STATUS
+x status=%X107781C3
+$ WRITE SYS$OUTPUT "x dfwscnt=", F$GETJPI("","DFWSCNT"), " wssize=", F$GETJPI("","WSSIZE"), -
+	" quota=", F$GETJPI("","WSQUOTA"), " extent=", F$GETJPI("","WSEXTENT"), -
+	" auth=", F$GETJPI("","WSAUTH"), " authext=", F$GETJPI("","WSAUTHEXT")
+x dfwscnt=83 wssize=83 quota=83 extent=16404 auth=1028 authext=16404
+$ SHOW WORKING_SET
+%LIB-F-INSVIRMEM, insufficient virtual memory
+$ SPAWN/OUTPUT=PG63X.LOG @PG63X "/QUOTA=0/LOG"
+%DCL-S-SPAWNED, process SYSTEM_1 spawned
+%DCL-S-ATTACHED, terminal now attached to process SYSTEM_1
+%DCL-S-RETURNED, control returned to process SYSTEM
+$ TYPE PG63X.LOG
+$ ! PG63X.COM - one SET WORKING_SET near or below the floor, in a
+$ ! subprocess PG63.COM spawns for it (P1 holds the qualifiers). The
+$ ! values are shown with F$GETJPI, which needs no image, since the SET
+$ ! may leave the process unable to run one.
+$ SET VERIFY
+$ WRITE SYS$OUTPUT "x dfwscnt=", F$GETJPI("","DFWSCNT"), " wssize=", F$GETJPI("","WSSIZE"), -
+	" quota=", F$GETJPI("","WSQUOTA"), " extent=", F$GETJPI("","WSEXTENT"), -
+	" auth=", F$GETJPI("","WSAUTH"), " authext=", F$GETJPI("","WSAUTHEXT")
+x dfwscnt=516 wssize=516 quota=1028 extent=16404 auth=1028 authext=16404
+$ SET WORKING_SET/QUOTA=0/LOG
+%SET-I-NOMSG, Message number 007781C3
+$ WRITE SYS$OUTPUT "x status=", $STATUS
+x status=%X107781C3
+$ WRITE SYS$OUTPUT "x dfwscnt=", F$GETJPI("","DFWSCNT"), " wssize=", F$GETJPI("","WSSIZE"), -
+	" quota=", F$GETJPI("","WSQUOTA"), " extent=", F$GETJPI("","WSEXTENT"), -
+	" auth=", F$GETJPI("","WSAUTH"), " authext=", F$GETJPI("","WSAUTHEXT")
+x dfwscnt=83 wssize=83 quota=83 extent=16404 auth=1028 authext=16404
+$ SHOW WORKING_SET
+%LIB-F-INSVIRMEM, insufficient virtual memory
+$ SPAWN/OUTPUT=PG63X.LOG @PG63X "/EXTENT=300/LOG"
+%DCL-S-SPAWNED, process SYSTEM_1 spawned
+%DCL-S-ATTACHED, terminal now attached to process SYSTEM_1
+%DCL-S-RETURNED, control returned to process SYSTEM
+$ TYPE PG63X.LOG
+$ ! PG63X.COM - one SET WORKING_SET near or below the floor, in a
+$ ! subprocess PG63.COM spawns for it (P1 holds the qualifiers). The
+$ ! values are shown with F$GETJPI, which needs no image, since the SET
+$ ! may leave the process unable to run one.
+$ SET VERIFY
+$ WRITE SYS$OUTPUT "x dfwscnt=", F$GETJPI("","DFWSCNT"), " wssize=", F$GETJPI("","WSSIZE"), -
+	" quota=", F$GETJPI("","WSQUOTA"), " extent=", F$GETJPI("","WSEXTENT"), -
+	" auth=", F$GETJPI("","WSAUTH"), " authext=", F$GETJPI("","WSAUTHEXT")
+x dfwscnt=516 wssize=516 quota=1028 extent=16404 auth=1028 authext=16404
+$ SET WORKING_SET/EXTENT=300/LOG
+%SET-I-NEWLIMS, new working set:  Limit = 300  Quota = 300  Extent = 300
+$ WRITE SYS$OUTPUT "x status=", $STATUS
+x status=%X107781C3
+$ WRITE SYS$OUTPUT "x dfwscnt=", F$GETJPI("","DFWSCNT"), " wssize=", F$GETJPI("","WSSIZE"), -
+	" quota=", F$GETJPI("","WSQUOTA"), " extent=", F$GETJPI("","WSEXTENT"), -
+	" auth=", F$GETJPI("","WSAUTH"), " authext=", F$GETJPI("","WSAUTHEXT")
+x dfwscnt=300 wssize=300 quota=300 extent=300 auth=1028 authext=16404
+$ SHOW WORKING_SET
+  Working Set      /Limit=300   /Quota=300    /Extent=300
+  Adjustment enabled      Authorized Quota=1028  Authorized Extent=16404
+$ EXIT
+$ SPAWN/OUTPUT=PG63X.LOG @PG63X "/EXTENT=21/LOG"
+%DCL-S-SPAWNED, process SYSTEM_1 spawned
+%DCL-S-ATTACHED, terminal now attached to process SYSTEM_1
+%DCL-S-RETURNED, control returned to process SYSTEM
+$ TYPE PG63X.LOG
+$ ! PG63X.COM - one SET WORKING_SET near or below the floor, in a
+$ ! subprocess PG63.COM spawns for it (P1 holds the qualifiers). The
+$ ! values are shown with F$GETJPI, which needs no image, since the SET
+$ ! may leave the process unable to run one.
+$ SET VERIFY
+$ WRITE SYS$OUTPUT "x dfwscnt=", F$GETJPI("","DFWSCNT"), " wssize=", F$GETJPI("","WSSIZE"), -
+	" quota=", F$GETJPI("","WSQUOTA"), " extent=", F$GETJPI("","WSEXTENT"), -
+	" auth=", F$GETJPI("","WSAUTH"), " authext=", F$GETJPI("","WSAUTHEXT")
+x dfwscnt=516 wssize=516 quota=1028 extent=16404 auth=1028 authext=16404
+$ SET WORKING_SET/EXTENT=21/LOG
+%SET-I-NOMSG, Message number 007781C3
+$ WRITE SYS$OUTPUT "x status=", $STATUS
+x status=%X107781C3
+$ WRITE SYS$OUTPUT "x dfwscnt=", F$GETJPI("","DFWSCNT"), " wssize=", F$GETJPI("","WSSIZE"), -
+	" quota=", F$GETJPI("","WSQUOTA"), " extent=", F$GETJPI("","WSEXTENT"), -
+	" auth=", F$GETJPI("","WSAUTH"), " authext=", F$GETJPI("","WSAUTHEXT")
+x dfwscnt=83 wssize=83 quota=83 extent=83 auth=1028 authext=16404
+$ SHOW WORKING_SET
+%LIB-F-INSVIRMEM, insufficient virtual memory
+$ SPAWN/OUTPUT=PG63X.LOG @PG63X "/EXTENT=20/LOG"
+%DCL-S-SPAWNED, process SYSTEM_1 spawned
+%DCL-S-ATTACHED, terminal now attached to process SYSTEM_1
+%DCL-S-RETURNED, control returned to process SYSTEM
+$ TYPE PG63X.LOG
+$ ! PG63X.COM - one SET WORKING_SET near or below the floor, in a
+$ ! subprocess PG63.COM spawns for it (P1 holds the qualifiers). The
+$ ! values are shown with F$GETJPI, which needs no image, since the SET
+$ ! may leave the process unable to run one.
+$ SET VERIFY
+$ WRITE SYS$OUTPUT "x dfwscnt=", F$GETJPI("","DFWSCNT"), " wssize=", F$GETJPI("","WSSIZE"), -
+	" quota=", F$GETJPI("","WSQUOTA"), " extent=", F$GETJPI("","WSEXTENT"), -
+	" auth=", F$GETJPI("","WSAUTH"), " authext=", F$GETJPI("","WSAUTHEXT")
+x dfwscnt=516 wssize=516 quota=1028 extent=16404 auth=1028 authext=16404
+$ SET WORKING_SET/EXTENT=20/LOG
+%SET-I-NOMSG, Message number 007781C3
+$ WRITE SYS$OUTPUT "x status=", $STATUS
+x status=%X107781C3
+$ WRITE SYS$OUTPUT "x dfwscnt=", F$GETJPI("","DFWSCNT"), " wssize=", F$GETJPI("","WSSIZE"), -
+	" quota=", F$GETJPI("","WSQUOTA"), " extent=", F$GETJPI("","WSEXTENT"), -
+	" auth=", F$GETJPI("","WSAUTH"), " authext=", F$GETJPI("","WSAUTHEXT")
+x dfwscnt=83 wssize=83 quota=83 extent=83 auth=1028 authext=16404
+$ SHOW WORKING_SET
+%LIB-F-INSVIRMEM, insufficient virtual memory
+$ SPAWN/OUTPUT=PG63X.LOG @PG63X "/EXTENT=19/LOG"
+%DCL-S-SPAWNED, process SYSTEM_1 spawned
+%DCL-S-ATTACHED, terminal now attached to process SYSTEM_1
+%DCL-S-RETURNED, control returned to process SYSTEM
+$ TYPE PG63X.LOG
+$ ! PG63X.COM - one SET WORKING_SET near or below the floor, in a
+$ ! subprocess PG63.COM spawns for it (P1 holds the qualifiers). The
+$ ! values are shown with F$GETJPI, which needs no image, since the SET
+$ ! may leave the process unable to run one.
+$ SET VERIFY
+$ WRITE SYS$OUTPUT "x dfwscnt=", F$GETJPI("","DFWSCNT"), " wssize=", F$GETJPI("","WSSIZE"), -
+	" quota=", F$GETJPI("","WSQUOTA"), " extent=", F$GETJPI("","WSEXTENT"), -
+	" auth=", F$GETJPI("","WSAUTH"), " authext=", F$GETJPI("","WSAUTHEXT")
+x dfwscnt=516 wssize=516 quota=1028 extent=16404 auth=1028 authext=16404
+$ SET WORKING_SET/EXTENT=19/LOG
+%SET-I-NOMSG, Message number 007781C3
+$ WRITE SYS$OUTPUT "x status=", $STATUS
+x status=%X107781C3
+$ WRITE SYS$OUTPUT "x dfwscnt=", F$GETJPI("","DFWSCNT"), " wssize=", F$GETJPI("","WSSIZE"), -
+	" quota=", F$GETJPI("","WSQUOTA"), " extent=", F$GETJPI("","WSEXTENT"), -
+	" auth=", F$GETJPI("","WSAUTH"), " authext=", F$GETJPI("","WSAUTHEXT")
+x dfwscnt=83 wssize=83 quota=83 extent=83 auth=1028 authext=16404
+$ SHOW WORKING_SET
+%LIB-F-INSVIRMEM, insufficient virtual memory
+$ SPAWN/OUTPUT=PG63X.LOG @PG63X "/EXTENT=0/LOG"
+%DCL-S-SPAWNED, process SYSTEM_1 spawned
+%DCL-S-ATTACHED, terminal now attached to process SYSTEM_1
+%DCL-S-RETURNED, control returned to process SYSTEM
+$ TYPE PG63X.LOG
+$ ! PG63X.COM - one SET WORKING_SET near or below the floor, in a
+$ ! subprocess PG63.COM spawns for it (P1 holds the qualifiers). The
+$ ! values are shown with F$GETJPI, which needs no image, since the SET
+$ ! may leave the process unable to run one.
+$ SET VERIFY
+$ WRITE SYS$OUTPUT "x dfwscnt=", F$GETJPI("","DFWSCNT"), " wssize=", F$GETJPI("","WSSIZE"), -
+	" quota=", F$GETJPI("","WSQUOTA"), " extent=", F$GETJPI("","WSEXTENT"), -
+	" auth=", F$GETJPI("","WSAUTH"), " authext=", F$GETJPI("","WSAUTHEXT")
+x dfwscnt=516 wssize=516 quota=1028 extent=16404 auth=1028 authext=16404
+$ SET WORKING_SET/EXTENT=0/LOG
+%SET-I-NOMSG, Message number 007781C3
+$ WRITE SYS$OUTPUT "x status=", $STATUS
+x status=%X107781C3
+$ WRITE SYS$OUTPUT "x dfwscnt=", F$GETJPI("","DFWSCNT"), " wssize=", F$GETJPI("","WSSIZE"), -
+	" quota=", F$GETJPI("","WSQUOTA"), " extent=", F$GETJPI("","WSEXTENT"), -
+	" auth=", F$GETJPI("","WSAUTH"), " authext=", F$GETJPI("","WSAUTHEXT")
+x dfwscnt=83 wssize=83 quota=83 extent=83 auth=1028 authext=16404
+$ SHOW WORKING_SET
+%LIB-F-INSVIRMEM, insufficient virtual memory
+$ GOSUB WSS
+$ WSS:
+$ SHOW WORKING_SET
+  Working Set      /Limit=512   /Quota=1024    /Extent=16400
+  Adjustment enabled      Authorized Quota=1024  Authorized Extent=16400
+$ WSV:
+$ WRITE SYS$OUTPUT "ws dfwscnt=", F$GETJPI("","DFWSCNT"), " wssize=", F$GETJPI("","WSSIZE"), -
+	" quota=", F$GETJPI("","WSQUOTA"), " extent=", F$GETJPI("","WSEXTENT"), -
+	" auth=", F$GETJPI("","WSAUTH"), " authext=", F$GETJPI("","WSAUTHEXT")
+ws dfwscnt=512 wssize=512 quota=1024 extent=16400 auth=1024 authext=16400
+$ WRITE SYS$OUTPUT "ws ppg=", F$GETJPI("","PPGCNT"), " gpg=", F$GETJPI("","GPGCNT"), -
+	" peak=", F$GETJPI("","WSPEAK"), " flts=", F$GETJPI("","PAGEFLTS")
+ws ppg=178 gpg=97 peak=856 flts=5856
+$ RETURN
+$ !
+$ ! A subprocess's own values.
+$ !
+$ SPAWN/OUTPUT=PG63S.LOG @PG63S
+%DCL-S-SPAWNED, process SYSTEM_1 spawned
+%DCL-S-ATTACHED, terminal now attached to process SYSTEM_1
+%DCL-S-RETURNED, control returned to process SYSTEM
+$ TYPE PG63S.LOG
+$ ! PG63S.COM - the subprocess's part of Phase 63's probe (PG63.COM spawns
+$ ! it): its own working set values, and SET WORKING_SET's bounds there.
+$ SET VERIFY
+$ SHOW WORKING_SET
+  Working Set      /Limit=516   /Quota=1028    /Extent=16404
+  Adjustment enabled      Authorized Quota=1028  Authorized Extent=16404
+$ WRITE SYS$OUTPUT "sub dfwscnt=", F$GETJPI("","DFWSCNT"), " wssize=", F$GETJPI("","WSSIZE"), -
+	" quota=", F$GETJPI("","WSQUOTA"), " extent=", F$GETJPI("","WSEXTENT"), -
+	" auth=", F$GETJPI("","WSAUTH"), " authext=", F$GETJPI("","WSAUTHEXT")
+sub dfwscnt=516 wssize=516 quota=1028 extent=16404 auth=1028 authext=16404
+$ SET WORKING_SET/QUOTA=100000/LOG
+%SET-I-NEWLIMS, new working set:  Limit = 516  Quota = 1028  Extent = 16404
+$ SHOW WORKING_SET
+  Working Set      /Limit=516   /Quota=1028    /Extent=16404
+  Adjustment enabled      Authorized Quota=1028  Authorized Extent=16404
+$ EXIT
+$ GOSUB WSS
+$ WSS:
+$ SHOW WORKING_SET
+  Working Set      /Limit=512   /Quota=1024    /Extent=16400
+  Adjustment enabled      Authorized Quota=1024  Authorized Extent=16400
+$ WSV:
+$ WRITE SYS$OUTPUT "ws dfwscnt=", F$GETJPI("","DFWSCNT"), " wssize=", F$GETJPI("","WSSIZE"), -
+	" quota=", F$GETJPI("","WSQUOTA"), " extent=", F$GETJPI("","WSEXTENT"), -
+	" auth=", F$GETJPI("","WSAUTH"), " authext=", F$GETJPI("","WSAUTHEXT")
+ws dfwscnt=512 wssize=512 quota=1024 extent=16400 auth=1024 authext=16400
+$ WRITE SYS$OUTPUT "ws ppg=", F$GETJPI("","PPGCNT"), " gpg=", F$GETJPI("","GPGCNT"), -
+	" peak=", F$GETJPI("","WSPEAK"), " flts=", F$GETJPI("","PAGEFLTS")
+ws ppg=203 gpg=100 peak=856 flts=6051
+$ RETURN
+$ !
+$ ! The program, assembled and linked, then run twice: part A and part B
+$ ! (README.md), with automatic adjustment off.
+$ !
+$ DEFINE/USER_MODE SYS$OUTPUT PG63_BUILD.LOG
+$ DEFINE/USER_MODE SYS$ERROR PG63_BUILD.LOG
+$ MACRO/NOLIST PG63
+$ LINK/NOMAP PG63
+$ SET WORKING_SET/NOADJUST
+$ GOSUB WSV
+$ WSV:
+$ WRITE SYS$OUTPUT "ws dfwscnt=", F$GETJPI("","DFWSCNT"), " wssize=", F$GETJPI("","WSSIZE"), -
+	" quota=", F$GETJPI("","WSQUOTA"), " extent=", F$GETJPI("","WSEXTENT"), -
+	" auth=", F$GETJPI("","WSAUTH"), " authext=", F$GETJPI("","WSAUTHEXT")
+ws dfwscnt=512 wssize=512 quota=1024 extent=16400 auth=1024 authext=16400
+$ WRITE SYS$OUTPUT "ws ppg=", F$GETJPI("","PPGCNT"), " gpg=", F$GETJPI("","GPGCNT"), -
+	" peak=", F$GETJPI("","WSPEAK"), " flts=", F$GETJPI("","PAGEFLTS")
+ws ppg=200 gpg=70 peak=1360 flts=10226
+$ RETURN
+$ DEFINE/USER_MODE SYS$OUTPUT PG63A.OUT
+$ RUN PG63
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ GOSUB WSV
+$ WSV:
+$ WRITE SYS$OUTPUT "ws dfwscnt=", F$GETJPI("","DFWSCNT"), " wssize=", F$GETJPI("","WSSIZE"), -
+	" quota=", F$GETJPI("","WSQUOTA"), " extent=", F$GETJPI("","WSEXTENT"), -
+	" auth=", F$GETJPI("","WSAUTH"), " authext=", F$GETJPI("","WSAUTHEXT")
+ws dfwscnt=512 wssize=512 quota=1024 extent=16400 auth=1024 authext=16400
+$ WRITE SYS$OUTPUT "ws ppg=", F$GETJPI("","PPGCNT"), " gpg=", F$GETJPI("","GPGCNT"), -
+	" peak=", F$GETJPI("","WSPEAK"), " flts=", F$GETJPI("","PAGEFLTS")
+ws ppg=267 gpg=75 peak=1360 flts=14254
+$ RETURN
+$ DEFINE PG63_PART B
+$ DEFINE/USER_MODE SYS$OUTPUT PG63B.OUT
+$ RUN PG63
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ GOSUB WSV
+$ WSV:
+$ WRITE SYS$OUTPUT "ws dfwscnt=", F$GETJPI("","DFWSCNT"), " wssize=", F$GETJPI("","WSSIZE"), -
+	" quota=", F$GETJPI("","WSQUOTA"), " extent=", F$GETJPI("","WSEXTENT"), -
+	" auth=", F$GETJPI("","WSAUTH"), " authext=", F$GETJPI("","WSAUTHEXT")
+ws dfwscnt=512 wssize=512 quota=1024 extent=16400 auth=1024 authext=16400
+$ WRITE SYS$OUTPUT "ws ppg=", F$GETJPI("","PPGCNT"), " gpg=", F$GETJPI("","GPGCNT"), -
+	" peak=", F$GETJPI("","WSPEAK"), " flts=", F$GETJPI("","PAGEFLTS")
+ws ppg=319 gpg=88 peak=1360 flts=14327
+$ RETURN
+$ DEASSIGN PG63_PART
+$ SET WORKING_SET/ADJUST
+$ TYPE PG63A.OUT
+A1 start: flts=10250 ppg=229 gpg=81 wssize=512 peak=1360
+A2 quotas: dfwscnt=512 quota=1024 extent=16400 auth=1024 authext=16400
+A3 syi MINWSCNT: 00000001 20
+A3 syi WSMAX: 00000001 16400
+A3 syi GROWLIM: 00000001 143
+A3 syi BORROWLIM: 00000001 143
+A3 syi FREELIM: 00000001 143
+A3 syi FREEGOAL: 00000001 8192
+A3 syi MPW_HILIMIT: 00000001 5634
+A3 syi MPW_LOLIMIT: 00000001 120
+A3 syi PFCDEFAULT: 00000001 16
+A3 syi TBSKIPWSL: 00000001 8
+B1 adjwsl 0: 00000001 wsetlm=512 wssize=512
+B2 adjwsl omitted: 00000001 wsetlm=512
+B3 adjwsl +100000: 00000001 wsetlm=16400
+B4 adjwsl -100000: 00000001 wsetlm=206 ppg=206
+B5 adjwsl +10 into code: 0000000C, then the limit floor+90
+B6 floor+180 to floor+40 with 150 touched: limit floor+40 ppg 327 to 246 wssize floor+40
+B7 floor+40 to floor+180, two sweeps of 150: flts 80 0 ppg=330
+C N=30: flts 33 0 0 ppg=209 gpg=0 peak=1360
+C N=60: flts 63 0 0 ppg=239 gpg=0 peak=1360
+C N=75: flts 78 0 0 ppg=254 gpg=0 peak=1360
+C N=90: flts 93 0 0 ppg=269 gpg=0 peak=1360
+C N=120: flts 123 26 25 ppg=286 gpg=0 peak=1360
+C N=300: flts 308 301 311 ppg=286 gpg=0 peak=1360
+D1 purge all: 00000001, then ppg=178 gpg=0 with 8 faults
+D1 a snapshot later: ppg=185
+D2 purge one page: 00000001, then 4 touched: 1 faults
+D3 purge 4 pages reversed: 00000001, then 4 touched: 4 faults
+D4 lock page 1 00000001, purge 0-3 00000001; page 1 0 faults, page 0 1; unlock 00000009
+D5 purge in S0: 00000024
+D6 purge P1 to S0: 00000024
+D7 purge, inadr 0: 0000000C
+E1 lock page 0: 00000001 retadr 0 511
+E2 lock it again: 00000009
+E3 lock pages 0-3 (0 locked): 00000009
+E4 unlock 0-3 (all locked): 00000009
+E5 unlock 0-3 (none locked): 00000001
+E6 unlock 0-1 (0 locked): 00000001
+E7 at floor+80: 78 locked, then 00000194; wssize=286 ppg=257; unlock 00000001
+E7 at floor+130: 127 locked, then 00000194; wssize=336 ppg=309; unlock 00000001
+E9 lock 200 pages at floor+80: 00000194 retadr 0 39935 wssize=286 ppg=260; unlock 00000001
+E10 writable global: $CRMPSC 00000619 gpg=1; $LKWSET 00000024 $LCKPAG 00000001 $ULKPAG 00000009
+E11 read-only global: $MGBLSC 00000001 value 1; $LKWSET 00000024 $ULWSET 00000001
+E12 lock a system page: 00000024 retadr FFFFFFFF FFFFFFFF
+E13 lock a missing page: 0000000C retadr FFFFFFFF FFFFFFFF
+E14 lock, retadr in code: 0000000C; unlock 00000001
+E15 lock and unlock, acmode kernel: 00000001 00000009
+E16 lock, inadr 0: 0000000C
+F1 enable PSWAPM: 00000001
+F2 lock in memory: 00000001, again 00000009
+F3 then $LKWSET 00000001 $ULWSET 00000009, again 00000001
+F4 $ULKPAG 00000009, again 00000001
+F5 lock in memory, then disable PSWAPM: 00000001
+F6 without PSWAPM, $ULKPAG of the locked page 00000009, again 00000001
+F7 without PSWAPM, $LCKPAG 00000024, inadr 0 00000024
+F8 enable PSWAPM: 00000001
+G1 end: limit=436 lock 00000001 00000001; wssize=436 ppg=393 peak=1360 flts=14107
+$ TYPE PG63B.OUT
+R1 start: flts=14306 ppg=320 gpg=88 wssize=512 peak=1360 dfwscnt=512
+R2 unlock A's pages: $ULWSET 00000001 $ULKPAG 00000001
+R3 end: wssize=512 peak=1360
+$ !
+$ ! The $PURGWS macro round (testdata/mp/macros, round 8).
+$ !
+$ @MACROS8/OUTPUT=MACROS8.LOG

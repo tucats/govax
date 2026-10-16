@@ -35,6 +35,13 @@ type Environment struct {
 	// System shares them; env.System names the System itself.
 	*System
 
+	// KeepP0 makes image rundown leave P0's pages where they are
+	// (DeleteP0): the machine sets it while a debugger session holds the
+	// image, whose memory VMS's debugger still shows after the image has
+	// exited (testdata/dbgcmd's errors.dlg). The next image's activation
+	// deletes them.
+	KeepP0 bool
+
 	// OnUnhandled, when set, is told of every condition no handler
 	// continued, after the catch-all has shown its message and before it
 	// acts (ends the image, or lets the program continue). If it returns

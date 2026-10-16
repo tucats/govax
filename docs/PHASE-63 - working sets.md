@@ -1113,3 +1113,60 @@ from run to run.
     own (`pg63x.com`), keeps the main process's quota and extent high,
     and sets the program's limits relative to the floor (`SETREL`), so
     that VMS's patterns have the dynamic room govax's have.
+- **2026-10-16:** The probe's round 2 on VMS V7.1 (`testdata/pg63/vax`; the
+  logs audited by the author), and govax changed to its answers.
+  `TestPG63Oracle` runs the program on govax (paging on, SYSGEN's keys at
+  that VAX's values) and matches VMS's lines but for
+  `expectedPG63Differences`; `TestPG63SetWorkingSet` replays the log's SET
+  and SHOW WORKING_SET commands, in the main process and in subprocesses.
+  The macro round's `$PURGWS_S` matched (`TestServiceMacroObjects`, round
+  8: the five calls MACRO accepted; INADR is required).
+  - **Confirmed as govax had them:** the lock and unlock services'
+    statuses (finding 5), retadr's -1, SS$_NOPRIV for a system page, a
+    privileged `acmode` maximized; `$LCKPAG` needs PSWAPM and checks it
+    before `inadr`, `$ULKPAG` doesn't need it, and a page locked in memory
+    isn't locked in the working set; `$PURGWS` keeps locked pages,
+    purges a reversed range, and refuses S0 (SS$_NOPRIV, VSI's list);
+    `$ADJWSL`'s +100000 stops at WSEXTENT; a shrink takes the pages over
+    the limit out at once, and a grow's room is used at once (Subtask 2's
+    `Resize`); WSSIZE is back at DFWSCNT in the next image; WSPEAK is the
+    process's (finding 3's reset doesn't touch it); SET WORKING_SET's
+    rules for /QUOTA, /LIMIT above the quota, the authorized bounds, and
+    the message (shown with /LOG or for a value cut back, not otherwise);
+    "Adjustment disabled" with five blanks after it.
+  - **Changed:**
+    - **Image rundown deletes P0** (`Environment.DeleteP0`, from
+      `ImageRundown`): every P0 page goes back to a new address space's
+      form and its frame, valid or in transition, is released. VMS's
+      PPGCNT fell back at image exit; govax's stayed. Under the debugger
+      the image's memory stays until the next image's activation
+      (`KeepP0`, `ResetICBList`), since VMS's debugger examined it after
+      the image's exit (testdata/dbgcmd's `errors.dlg`). There was no
+      image startup purge to add (finding 11): VMS's PPGCNT at the
+      second image's first instruction was above DCL's.
+    - **`$ADJWSL`** changes the limit before writing `wsetlm`, so an
+      unwritable one is SS$_ACCVIO with the limit changed (B5).
+    - **The lock services** check that `retadr` can be written before
+      they change anything (E14; VMS locked nothing).
+    - **`$LKWSET` refuses any page of a writable global section**, mapped
+      read-only too (E11; `writableGlobalPage` now asks the section).
+    - **`$GETSYI`** answers WSMAX (16400), BORROWLIM (300), and
+      PFCDEFAULT (32), SYSGEN's defaults for the last two.
+    - **SET WORKING_SET:** /EXTENT's lower bound is the floor, as the
+      others' are (VMS raised 21, 20, 19, and 0 alike); `$STATUS` after
+      the message is %X107781C3 (NEWLIMS, facility 119, with the inhibit
+      bit). Round 1's `%SET-I-NOMSG` was the crippled process failing to
+      read the message file, not a different status.
+  - **Left as listed differences** (`expectedPG63Differences`), all but
+    the last from VMS's permanent part of the working set list, which
+    govax's doesn't have (Decision 13): VMS's floor is MINWSCNT above it
+    (83 pages for a subprocess's DCL, 94 for a login process's, 206 in
+    the image), a purge of everything leaves 178 pages, PPGCNT counts it,
+    and SS$_LKWSETFUL comes two or three pages sooner (room for page
+    table pages, finding 6). A quota at VMS's floor leaves a process
+    unable to run images; govax's runs them. The cyclic sweep of 120
+    pages at floor+80 refaulted far fewer pages on VMS (26 and 25 against
+    govax's 124), the TB skip on an 8600's large TB keeping recent pages;
+    govax's replacement is the book's, and isn't tuned to it. And GPGCNT
+    counts a global page once touched on VMS, from its mapping on govax
+    (finding 9, Phase 65).

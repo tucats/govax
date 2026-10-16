@@ -283,6 +283,8 @@ func macroErrors(t *testing.T, name string) []int {
 		logName = "macros6.log"
 	case strings.HasPrefix(name, "r7_"):
 		logName = "macros7.log"
+	case strings.HasPrefix(name, "r8_"):
+		logName = "macros8.log"
 	}
 
 	data, err := os.ReadFile(filepath.Join(serviceDir, "vax", logName))
@@ -415,9 +417,10 @@ func TestServiceMacroObjects(t *testing.T) {
 
 	// The argument-list and CALLG forms (round 3), the other services (round
 	// 3's, with keywords that are partly wrong, and round 4's), what round 4
-	// left open (round 5), and the global section and lock services (round
-	// 6).
-	for _, prefix := range []string{"lst_", "ext_", "r4_", "r5_", "r6_", "r7_"} {
+	// left open (round 5), the global section and lock services (round
+	// 6), what round 6 left open (round 7), and $PURGWS (round 8, Phase
+	// 63).
+	for _, prefix := range []string{"lst_", "ext_", "r4_", "r5_", "r6_", "r7_", "r8_"} {
 		more, _ := filepath.Glob(filepath.Join(serviceDir, prefix+"*.mar"))
 		probes = append(probes, more...)
 	}

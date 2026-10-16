@@ -225,10 +225,19 @@ func (env *Environment) pageLockMap(kind paging.Locks) *pageLocks {
 // be read or retadr written; SS$_PAGOWNVIO for a page a more privileged
 // mode owns; and SS$_LKWSETFUL for a working set too full of locked
 // pages. An error stops the service at its page, and retadr receives the
-// pages done before it.
+// pages done before it; a retadr that can't be written stops it before
+// the first.
 func (env *Environment) lockPages(argv []uint32, kind paging.Locks, lock bool) (uint32, error) {
 	r, ok := env.readRange(optArg(argv, 0), true)
 	if !ok {
+		return ssAccVio, nil
+	}
+
+	// A retadr that can't be written stops the service before any page
+	// changes: VMS 7.1's $LKWSET locked nothing then (testdata/pg63,
+	// round 2, E14; the other three services by the same rule,
+	// unconfirmed).
+	if retadr := optArg(argv, 1); retadr != 0 && (!env.canWriteLongword(retadr) || !env.canWriteLongword(retadr+4)) {
 		return ssAccVio, nil
 	}
 
@@ -360,20 +369,22 @@ func (env *Environment) lockedPageCount() int {
 }
 
 // writableGlobalPage reports whether the page at addr, whose PTE is pte,
-// is a global section's page mapped for writing, which $LKWSET refuses
+// is a page of a writable global section, which $LKWSET refuses
 // (SS$_NOPRIV): the swapper drops such pages from a process's working set
-// when it's outswapped (the book's 16.4.2.1). A copy-on-reference
+// when it's outswapped (the book's 16.4.2.1). It's the section that
+// counts, not the mapping: VMS 7.1 refused a page of a writable section
+// mapped read-only too (testdata/pg63, round 2, E11). A copy-on-reference
 // section's page, once touched, is the process's own copy, not the
 // section's.
 func (env *Environment) writableGlobalPage(addr uint32, pte vm.PTE) bool {
-	if !env.sectionPages[addr] || !pte.Protection().Allows(registers.Kernel, vm.AccessWrite) {
+	if !env.sectionPages[addr] {
 		return false
 	}
 
 	if gi, ok := pte.GlobalIndex(); ok {
 		s, _, ok := env.Sections.globalPage(gi)
 
-		return ok && !s.CopyOnRef
+		return ok && s.Writable && !s.CopyOnRef
 	}
 
 	if !pte.Valid() {
@@ -381,7 +392,7 @@ func (env *Environment) writableGlobalPage(addr uint32, pte vm.PTE) bool {
 	}
 
 	for _, s := range env.Sections.Sections() {
-		if slices.Contains(s.Frames, pte.PFN()) {
+		if s.Writable && !s.CopyOnRef && slices.Contains(s.Frames, pte.PFN()) {
 			return true
 		}
 	}

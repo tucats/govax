@@ -40,12 +40,16 @@ func (env *Environment) WorkingSetValues() WorkingSetValues {
 //
 // The rules (the DCL Dictionary, and the book's 16.4.1.2):
 //
-//   - /EXTENT is at most the authorized extent and must be more than
-//     MINWSCNT; a smaller one is raised to MINWSCNT + 1 (govax's choice,
-//     unconfirmed: the Dictionary says only that it must be greater).
+//   - /EXTENT is at most the authorized extent.
 //   - /QUOTA is at most the authorized quota, and at most the extent.
-//   - /QUOTA and /LIMIT are at least MINWSCNT, the least a working set
-//     may be (unconfirmed).
+//   - /LIMIT, /QUOTA, and /EXTENT are each at least the floor, the least
+//     a working set may be: VMS 7.1 raised a /LIMIT of 5 or 0, a /QUOTA
+//     of 5 or 0, and an /EXTENT of 21, 20, 19, or 0 all to the same value
+//     (testdata/pg63, rounds 1 and 2). VMS's floor is MINWSCNT above the
+//     list's permanent part (83 pages in a subprocess's DCL, 94 in a
+//     login process's); govax's list has no permanent part (Decision
+//     13), so its floor is MINWSCNT. A quota at the floor leaves VMS's
+//     process unable to run images; govax's runs them.
 //   - /LIMIT (the default working set) above the quota raises the quota
 //     too, as far as the authorized quota; the limit is then at most the
 //     quota (unconfirmed: the Dictionary doesn't say what a limit above
@@ -77,7 +81,7 @@ func (env *Environment) SetWorkingSet(change WorkingSetChange) (WorkingSetValues
 	}
 
 	if change.Extent != nil {
-		p.WSExtent = bound(*change.Extent, p.MinWSCount+1, max(p.WSAuthExt, p.MinWSCount+1))
+		p.WSExtent = bound(*change.Extent, p.MinWSCount, max(p.WSAuthExt, p.MinWSCount))
 	}
 
 	if change.Quota != nil {

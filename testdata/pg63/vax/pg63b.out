@@ -1,0 +1,3 @@
+R1 start: flts=14306 ppg=320 gpg=88 wssize=512 peak=1360 dfwscnt=512
+R2 unlock A's pages: $ULWSET 00000001 $ULKPAG 00000001
+R3 end: wssize=512 peak=1360

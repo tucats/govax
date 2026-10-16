@@ -12,19 +12,26 @@ type WorkingSetOptions struct {
 	Log    bool
 }
 
+// setNewLimits is the SET facility's NEWLIMS condition as $STATUS holds
+// it after SET WORKING_SET has shown it: %X007781C3 (facility 119, SET;
+// informational), with STS$M_INHIB_MSG (VMS 7.1, testdata/pg63).
+const setNewLimits = 0x107781C3
+
 // SetWorkingSet is SET WORKING_SET: it changes the process's default
 // working set (/LIMIT), quota, and extent within what the process is
 // authorized, and turns automatic adjustment on or off
 // (corevms.Environment.SetWorkingSet has the rules). With /LOG, or when
 // a value asked for was cut back to its bound, it reports the values
-// that resulted, as the DCL Dictionary's examples show:
+// that resulted, and $STATUS is the message's condition
+// (setNewLimits). Without the message the status is SS$_NORMAL
+// (unconfirmed). As VMS 7.1 shows it (testdata/pg63):
 //
 //	%SET-I-NEWLIMS, new working set:  Limit = 150  Quota = 700  Extent = 700
 //
 // (two blanks before each value, as VMS 7.1 shows it).
-// (When VMS shows the message without /LOG is unconfirmed: both of the
-// Dictionary's examples show it without, one of them for a value within
-// its bounds.)
+// VMS 7.1 showed it for a value cut back without /LOG, and not for one
+// within bounds; the Dictionary's second example, shown without /LOG for
+// a value within bounds, doesn't match.
 func (c *Context) SetWorkingSet(opts WorkingSetOptions) error {
 	if c.RTL == nil || c.RTL.Process == nil {
 		return vmserrors.New(vmserrors.CLI_NOVAX)
@@ -34,6 +41,10 @@ func (c *Context) SetWorkingSet(opts WorkingSetOptions) error {
 	if opts.Log || clamped {
 		c.Printf("%%SET-I-NEWLIMS, new working set:  Limit = %d  Quota = %d  Extent = %d\n",
 			v.Limit, v.Quota, v.Extent)
+
+		if c.SetStatus != nil {
+			c.SetStatus(setNewLimits)
+		}
 	}
 
 	return nil

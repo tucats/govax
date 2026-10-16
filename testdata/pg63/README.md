@@ -107,6 +107,20 @@ its creator's plus 4 too. Round 2 keeps the process able to run images:
 the cases near the floor run in subprocesses of their own (PG63X.COM),
 and the program's limits are relative to the floor.
 
+## Round 2 (2026-10-16)
+
+OpenVMS V7.1 on simh's VAX 8600, everything run (`vax/`: the log, the
+program's two outputs, the subprocess's log; MACRO wrote no messages;
+round 8's object, analysis, and log in `../mp/macros/vax/`). The logs
+were audited by the author. `TestPG63Oracle` (`internal/console/pg63_test.go`)
+runs the program's two parts on govax, with paging on and SYSGEN's keys
+set to that VAX's values, and matches VMS's lines but for
+`expectedPG63Differences`; `TestPG63SetWorkingSet` replays the log's SET
+and SHOW WORKING_SET commands (the main process's, then each
+subprocess's SET) and matches their output but for the cases answered
+with VMS's floor (`expectedPG63SetDifferences`). The phase doc's
+progress log lists what VMS answered and what govax changed.
+
 ## govax's dry run
 
 Before the VAX run, govax ran it all (2026-10-16, paging on). What it

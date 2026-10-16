@@ -133,6 +133,7 @@ func (p *ImageProcess) ResetICBList() {
 	}
 
 	p.ICBList = nil
+	p.process().DeleteP0() // what a rundown under the debugger left
 	p.process().RegionSize[0] = 0
 }
 

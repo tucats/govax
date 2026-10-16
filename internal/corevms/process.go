@@ -363,7 +363,8 @@ func serviceSysAdjstk(env *Environment, argv []uint32) (uint32, error) {
 // past WSEXTENT or below MINWSCNT is quietly clamped there, as the manual
 // says ("no error condition is returned"). With pagcnt 0 (or omitted)
 // nothing changes and the current limit is returned. wsetlm is optional;
-// if it can't be written, the limit is left as it was (unconfirmed).
+// if it can't be written the status is SS$_ACCVIO, but the limit has
+// changed all the same (VMS 7.1, testdata/pg63).
 //
 // With paging on, the working set list itself changes size
 // (setWorkingSetLimit): a smaller limit takes the oldest pages over it
@@ -373,18 +374,14 @@ func serviceSysAdjwsl(env *Environment, argv []uint32) (uint32, error) {
 	pagcnt, wsetlm := int32(optArg(argv, 0)), optArg(argv, 1)
 	p := env.Process
 
-	// Make sure wsetlm can be written before anything changes.
-	if wsetlm != 0 {
-		if err := env.mem.StoreLongword(env.cpu, wsetlm, p.WSLimit); err != nil {
-			return ssAccVio, nil
-		}
-	}
+	limit := p.WSLimit
 
-	if pagcnt == 0 {
-		return ssNormal, nil
+	// The limit changes before wsetlm is written: VMS 7.1 changed it, and
+	// then returned SS$_ACCVIO, for a wsetlm it couldn't write
+	// (testdata/pg63, round 2, B5).
+	if pagcnt != 0 {
+		limit = env.setWorkingSetLimit(int64(p.WSLimit) + int64(pagcnt))
 	}
-
-	limit := env.setWorkingSetLimit(int64(p.WSLimit) + int64(pagcnt))
 
 	if wsetlm != 0 {
 		if err := env.mem.StoreLongword(env.cpu, wsetlm, limit); err != nil {
@@ -425,6 +422,9 @@ func (env *Environment) ImageRundown() {
 	env.cancelConditions()
 	env.cancelPageLocks()
 	env.unmapSections()
+	if !env.KeepP0 {
+		env.DeleteP0()
+	}
 	env.resetImagePrivileges()
 	env.resetWorkingSet()
 	env.qiowWaits = nil

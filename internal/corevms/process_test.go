@@ -241,10 +241,10 @@ func TestServiceSysAdjwslAccvio(t *testing.T) {
 	start := env.Process.WSLimit
 
 	// wsetlm outside the fixture's 1MB of memory can't be written; the
-	// limit is left alone.
+	// limit changes all the same, as VMS 7.1's did (testdata/pg63).
 	wantR0(t, callLNM(t, env, serviceSysAdjwsl, 10, 0x7FFF0000), ssAccVio)
 
-	if env.Process.WSLimit != start {
-		t.Errorf("WSLimit = %d after SS$_ACCVIO, want it unchanged at %d", env.Process.WSLimit, start)
+	if env.Process.WSLimit != start+10 {
+		t.Errorf("WSLimit = %d after SS$_ACCVIO, want %d", env.Process.WSLimit, start+10)
 	}
 }

@@ -65,9 +65,12 @@ const maxNodeNameLength = 15
 //   - SYI$_MINWSCNT is the SYSGEN parameter that bounds $ADJWSL.
 //   - The paging parameters (Phase 63) are the System's Sysgen
 //     (sysgen.go), the vax.sysgen.* keys or their defaults, and the PQL_D
-//     parameters the defaults $CREPRC gives (sysgenPQL). SYSGEN
-//     parameters govax has no use for (BORROWLIM, WSMAX, PFCDEFAULT,
-//     MPW_WRTCLUSTER, ...) aren't items.
+//     parameters the defaults $CREPRC gives (sysgenPQL). Three that
+//     govax has no use for are items all the same, since VMS 7.1 answers
+//     them (testdata/pg63, round 2): WSMAX is the largest extent govax
+//     gives a process (16400, which that VAX had too), and BORROWLIM and
+//     PFCDEFAULT are SYSGEN's defaults (300 and 32). Others
+//     (MPW_WRTCLUSTER, ...) aren't items.
 var syiItemsByName = map[string]func(env *Environment) itemValue{
 	"SYI$_VERSION":        func(env *Environment) itemValue { return itemPadded(VersionString, 8) },
 	"SYI$_NODE_SWVERS":    func(env *Environment) itemValue { return itemPadded(VersionString, 4) },
@@ -85,11 +88,22 @@ var syiItemsByName = map[string]func(env *Environment) itemValue{
 	"SYI$_TBSKIPWSL":      func(env *Environment) itemValue { return itemLong(env.Sysgen.TBSkipWSL) },
 	"SYI$_MPW_HILIMIT":    func(env *Environment) itemValue { return itemLong(env.Sysgen.MPWHiLimit) },
 	"SYI$_MPW_LOLIMIT":    func(env *Environment) itemValue { return itemLong(env.Sysgen.MPWLoLimit) },
+	"SYI$_WSMAX":          func(env *Environment) itemValue { return itemLong(nominalWSExtent) },
+	"SYI$_BORROWLIM":      func(env *Environment) itemValue { return itemLong(defaultBorrowLimit) },
+	"SYI$_PFCDEFAULT":     func(env *Environment) itemValue { return itemLong(defaultPFCDefault) },
 	"SYI$_PQL_DWSDEFAULT": func(env *Environment) itemValue { return itemLong(env.sysgenPQL("WSDEFAULT")) },
 	"SYI$_PQL_DWSQUOTA":   func(env *Environment) itemValue { return itemLong(env.sysgenPQL("WSQUOTA")) },
 	"SYI$_PQL_DWSEXTENT":  func(env *Environment) itemValue { return itemLong(env.sysgenPQL("WSEXTENT")) },
 	"SYI$_PQL_DPGFLQUOTA": func(env *Environment) itemValue { return itemLong(env.sysgenPQL("PGFLQUOTA")) },
 }
+
+// SYSGEN's defaults for BORROWLIM and PFCDEFAULT, which only $GETSYI
+// reports: govax has no automatic working set adjustment to borrow with,
+// and no page fault clustering.
+const (
+	defaultBorrowLimit = 300
+	defaultPFCDefault  = 32
+)
 
 // sysgenPQL is the PQL_D parameter for the quota called name: the
 // default $CREPRC gives it (Sysgen.pqlDefault).

@@ -61,8 +61,10 @@ func TestSetWorkingSet(t *testing.T) {
 		{"SET WORKING_SET/LIMIT=900/LOG", "%SET-I-NEWLIMS, new working set:  Limit = 900  Quota = 900  Extent = 16400"},
 		// An extent below the quota brings the quota and limit down.
 		{"SET WORKING_SET/EXTENT=700/LOG", "%SET-I-NEWLIMS, new working set:  Limit = 700  Quota = 700  Extent = 700"},
-		// An extent must be more than MINWSCNT (20).
-		{"SET WORKING_SET/EXTENT=5", "%SET-I-NEWLIMS, new working set:  Limit = 21  Quota = 21  Extent = 21"},
+		// An extent is at least the floor, MINWSCNT (20) in govax.
+		{"SET WORKING_SET/EXTENT=5", "%SET-I-NEWLIMS, new working set:  Limit = 20  Quota = 20  Extent = 20"},
+		// Shown, the message is $STATUS (VMS 7.1's %X107781C3).
+		{`WRITE SYS$OUTPUT $STATUS`, "%X107781C3"},
 		{"SET WORKING_SET/EXTENT=99999/QUOTA=600/LIMIT=250/NOADJUST", "%SET-I-NEWLIMS, new working set:  Limit = 250  Quota = 600  Extent = 16400"},
 		{"SHOW WORKING_SET", "  Working Set      /Limit=250   /Quota=600    /Extent=16400|" +
 			"  Adjustment disabled     Authorized Quota=1024  Authorized Extent=16400"},

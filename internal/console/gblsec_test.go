@@ -427,7 +427,9 @@ func TestCrmpsc_lifetime(t *testing.T) {
 		t.Errorf("unmapped PTE %#x, want a new process's", uint32(pte))
 	}
 
-	if after := c.Mem.MappedPages(); after != before {
+	// Image rundown deletes P0 too, so the test's own scratch pages are
+	// freed with the sections' (docs/PHASE-63, subtask 10).
+	if after := c.Mem.MappedPages(); after > before {
 		t.Errorf("%d physical pages in use, %d before", after, before)
 	}
 }
