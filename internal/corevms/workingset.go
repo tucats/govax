@@ -115,7 +115,7 @@ func (env *Environment) setWorkingSetLimit(limit int64) uint32 {
 	}
 
 	if ws.Over() {
-		env.mem.AtNextInstruction(env.System.trimWorkingSets)
+		env.mem.AtNextInstruction(env.System.atInstructionBoundary)
 	}
 
 	p.WSLimit = uint32(ws.Size())
@@ -183,7 +183,7 @@ func (env *Environment) enterWorkingSet(va uint32, global bool) {
 	// the list grows past its limit; it comes back down as soon as the
 	// instruction is over (the phase doc's finding 10).
 	if ws.Over() {
-		env.mem.AtNextInstruction(env.System.trimWorkingSets)
+		env.mem.AtNextInstruction(env.System.atInstructionBoundary)
 	}
 }
 
@@ -295,23 +295,33 @@ func (env *Environment) evictPage(p paging.Page) {
 
 // softFault resolves a fault on a page in transition, frame pfn: the
 // frame is taken off its list (paging.Database.Reclaim) and the page's
-// PTE made valid again, pointing at it, with no I/O. The frame must still
-// be tied to this page; if it isn't, the PTE is stale and the fault
-// fails.
-func (sys *System) softFault(f vm.PageFault, pfn uint32) (vm.PTE, bool) {
+// PTE made valid again, pointing at it, with no I/O. The fault's kind
+// says which list the frame was on; a frame off the free list leaves it
+// shorter, which may wake the reclaimer (reclaim.go). The frame must still be tied to this
+// page; if it isn't, the PTE is stale and the fault fails.
+func (sys *System) softFault(f vm.PageFault, pfn uint32) (vm.PTE, faultKind, bool) {
 	db := sys.mem.Paging()
 	claim := sys.faultClaim(f, paging.Backing{})
 
 	e, err := db.Entry(paging.PFN(pfn))
 	if err != nil || !claim.Tied || !e.Tied || e.Type != paging.ProcessPage || e.Owner != claim.Owner {
-		return 0, false
+		return 0, faultFreeList, false
+	}
+
+	kind := faultFreeList
+	if e.State == paging.Modified {
+		kind = faultModifiedList
 	}
 
 	if db.Reclaim(paging.PFN(pfn)) != nil {
-		return 0, false
+		return 0, kind, false
 	}
 
-	return vm.ValidPTE(pfn, f.PTE.Protection(), f.PTE.Owner()), true
+	if kind == faultFreeList {
+		sys.wakeReclaimerIfLow()
+	}
+
+	return vm.ValidPTE(pfn, f.PTE.Protection(), f.PTE.Owner()), kind, true
 }
 
 // heldFrame returns the frame the page at va of process pid holds, by

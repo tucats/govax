@@ -111,6 +111,8 @@ func (sys *System) writeModifiedFrame(pfn paging.PFN) bool {
 		return false
 	}
 
+	sys.PageCounts.Written++
+
 	return db.Cleaned(pfn) == nil
 }
 

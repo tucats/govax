@@ -108,6 +108,10 @@ func (m *Machine) ShowMemory() error {
 
 	if db := m.Mem.Paging(); db != nil {
 		m.showFrames(db.Counts())
+
+		if m.processOne != nil {
+			m.showPaging(m.processOne.PageCounts)
+		}
 	}
 
 	bases := [3]uint32{m.CPU.PR(registers.P0BR), m.CPU.PR(registers.P1BR), m.CPU.PR(registers.SBR)}
@@ -143,6 +147,27 @@ func (m *Machine) showFrames(c paging.Counts) {
 	m.Printf("            Process pages  %8d\n", c.Process)
 	m.Printf("            Global pages   %8d\n", c.Global)
 	m.Printf("            System pages   %8d\n\n", c.System)
+}
+
+// showPaging prints, in paging mode, the system's page faults by how
+// each was resolved (soft faults taking a frame back off the free or
+// modified list, or finding a global page in memory; demand-zero faults;
+// hard faults reading a file), the pages the modified page writer has
+// written, and the reclaimer's runs and the pages it has trimmed from
+// working sets (internal/corevms's accounting.go). VMS shows its fault
+// rates in MONITOR PAGE, not SHOW MEMORY; these lines are govax's own.
+func (m *Machine) showPaging(c corevms.PageCounts) {
+	f := c.Faults
+
+	m.Printf("    Page faults        %12d\n", f.Total())
+	m.Printf("        Free list          %8d\n", f.FreeList)
+	m.Printf("        Modified list      %8d\n", f.ModifiedList)
+	m.Printf("        Global valid       %8d\n", f.GlobalValid)
+	m.Printf("        Demand zero        %8d\n", f.DemandZero)
+	m.Printf("        Read               %8d\n", f.Read)
+	m.Printf("    Pages written      %12d\n", c.Written)
+	m.Printf("    Reclaimer runs     %12d\n", c.Reclaims)
+	m.Printf("        Pages trimmed      %8d\n\n", c.Trimmed)
 }
 
 // ShowSymbols prints every defined symbol whose name matches pattern,

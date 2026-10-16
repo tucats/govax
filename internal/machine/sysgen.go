@@ -20,6 +20,8 @@ const (
 	growLimSetting    = "vax.sysgen.growlim"
 	mpwHiLimitSetting = "vax.sysgen.mpw_hilimit"
 	mpwLoLimitSetting = "vax.sysgen.mpw_lolimit"
+	freeLimSetting    = "vax.sysgen.freelim"
+	freeGoalSetting   = "vax.sysgen.freegoal"
 )
 
 // pqlSettings are the PQL_Dxxx keys, by the quota each sets the default
@@ -36,7 +38,7 @@ var pqlSettings = map[string]string{
 func SysgenKeys() []string {
 	keys := []string{
 		PagingSetting, minWSCountSetting, tbSkipWSLSetting, growLimSetting,
-		mpwHiLimitSetting, mpwLoLimitSetting,
+		mpwHiLimitSetting, mpwLoLimitSetting, freeLimSetting, freeGoalSetting,
 	}
 
 	for key := range pqlSettings {
@@ -63,9 +65,13 @@ func SysgenCountKeys() []string {
 // any other): TBSKIPWSL, which 0 turns off; GROWLIM, which 0 lets a
 // working set grow past its quota while any page is free; and the
 // modified page writer's MPW_HILIMIT and MPW_LOLIMIT, which 0 has write
-// whenever any page is modified, and write every page it can.
+// whenever any page is modified, and write every page it can; and the
+// reclaimer's FREELIM, which 0 turns off, and FREEGOAL.
 func SysgenNumberKeys() []string {
-	return []string{tbSkipWSLSetting, growLimSetting, mpwHiLimitSetting, mpwLoLimitSetting}
+	return []string{
+		tbSkipWSLSetting, growLimSetting, mpwHiLimitSetting, mpwLoLimitSetting,
+		freeLimSetting, freeGoalSetting,
+	}
 }
 
 // ParseSysgenCount reads a count key's text: a positive decimal integer,
@@ -122,6 +128,14 @@ func sysgenSettings(paging bool) corevms.Sysgen {
 
 	if v, ok := ParseSysgenNumber(settings.Get(mpwLoLimitSetting)); ok {
 		sg.MPWLoLimit = v
+	}
+
+	if v, ok := ParseSysgenNumber(settings.Get(freeLimSetting)); ok {
+		sg.FreeLimit = v
+	}
+
+	if v, ok := ParseSysgenNumber(settings.Get(freeGoalSetting)); ok {
+		sg.FreeGoal = v
 	}
 
 	for key, quota := range pqlSettings {

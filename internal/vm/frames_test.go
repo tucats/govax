@@ -322,3 +322,40 @@ func TestAtNextInstruction(t *testing.T) {
 		t.Errorf("ran %d (want 1, once and not the replaced routine); page 1's frame counted %v", ran, counted)
 	}
 }
+
+// SetFreeLimit's routine is called after each allocation that leaves the
+// free list below the limit, and never with paging off; SetPaging turns
+// it off.
+func TestSetFreeLimit(t *testing.T) {
+	m := NewMemory(16 * pageSize)
+
+	calls := 0
+	m.SetFreeLimit(100, func() { calls++ })
+
+	if _, ok := m.AllocateFrame(FrameClaim{}); !ok || calls != 0 {
+		t.Fatalf("paging off: allocated %v, %d calls", ok, calls)
+	}
+
+	m.SetPaging(true)
+
+	free := m.Paging().FreeCount()
+	m.SetFreeLimit(free-2, func() { calls++ })
+
+	for n := 1; n <= 4; n++ {
+		if _, ok := m.AllocateFrame(FrameClaim{}); !ok {
+			t.Fatal("AllocateFrame failed")
+		}
+
+		// The first two allocations leave free-1 and free-2 frames, not
+		// below the limit.
+		if want := max(n-2, 0); calls != want {
+			t.Fatalf("after %d allocations: %d calls, want %d", n, calls, want)
+		}
+	}
+
+	m.SetPaging(true)
+
+	if _, ok := m.AllocateFrame(FrameClaim{}); !ok || calls != 2 {
+		t.Fatalf("after SetPaging: allocated %v, %d calls, want 2", ok, calls)
+	}
+}

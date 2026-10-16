@@ -220,3 +220,26 @@ func TestSysgenModifiedPageWriter(t *testing.T) {
 		}
 	}
 }
+
+// TestSysgenReclaimer: vax.sysgen.freelim and freegoal reach the System,
+// 0 included; unset, or bad, they're 32 and 200.
+func TestSysgenReclaimer(t *testing.T) {
+	for _, tc := range []struct {
+		lim, goal         string
+		wantLim, wantGoal uint32
+	}{{"0", "0", 0, 0}, {"%X40", "300", 64, 300}, {"many", "-1", 32, 200}, {"", "", 32, 200}} {
+		values := map[string]string{freeLimSetting: tc.lim, freeGoalSetting: tc.goal}
+		withSettings(t, values)
+
+		if tc.lim == "" {
+			_ = settings.Delete(freeLimSetting)
+			_ = settings.Delete(freeGoalSetting)
+		}
+
+		c, _ := newTestMachine(t)
+		if sg := c.ProcessOne().Sysgen; sg.FreeLimit != tc.wantLim || sg.FreeGoal != tc.wantGoal {
+			t.Errorf("vax.sysgen.freelim %q, freegoal %q: %d and %d, want %d and %d",
+				tc.lim, tc.goal, sg.FreeLimit, sg.FreeGoal, tc.wantLim, tc.wantGoal)
+		}
+	}
+}

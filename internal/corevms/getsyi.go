@@ -63,6 +63,11 @@ const maxNodeNameLength = 15
 //   - The cluster items describe a node outside any cluster: not a
 //     member, cluster system ID 0.
 //   - SYI$_MINWSCNT is the SYSGEN parameter that bounds $ADJWSL.
+//   - The paging parameters (Phase 63) are the System's Sysgen
+//     (sysgen.go), the vax.sysgen.* keys or their defaults, and the PQL_D
+//     parameters the defaults $CREPRC gives (sysgenPQL). SYSGEN
+//     parameters govax has no use for (BORROWLIM, WSMAX, PFCDEFAULT,
+//     MPW_WRTCLUSTER, ...) aren't items.
 var syiItemsByName = map[string]func(env *Environment) itemValue{
 	"SYI$_VERSION":        func(env *Environment) itemValue { return itemPadded(VersionString, 8) },
 	"SYI$_NODE_SWVERS":    func(env *Environment) itemValue { return itemPadded(VersionString, 4) },
@@ -74,6 +79,28 @@ var syiItemsByName = map[string]func(env *Environment) itemValue{
 	"SYI$_CLUSTER_MEMBER": func(env *Environment) itemValue { return itemByte(0) },
 	"SYI$_NODE_CSID":      func(env *Environment) itemValue { return itemLong(localCSID) },
 	"SYI$_MINWSCNT":       func(env *Environment) itemValue { return itemLong(env.Process.MinWSCount) },
+	"SYI$_GROWLIM":        func(env *Environment) itemValue { return itemLong(env.Sysgen.GrowLimit) },
+	"SYI$_FREELIM":        func(env *Environment) itemValue { return itemLong(env.Sysgen.FreeLimit) },
+	"SYI$_FREEGOAL":       func(env *Environment) itemValue { return itemLong(env.Sysgen.FreeGoal) },
+	"SYI$_TBSKIPWSL":      func(env *Environment) itemValue { return itemLong(env.Sysgen.TBSkipWSL) },
+	"SYI$_MPW_HILIMIT":    func(env *Environment) itemValue { return itemLong(env.Sysgen.MPWHiLimit) },
+	"SYI$_MPW_LOLIMIT":    func(env *Environment) itemValue { return itemLong(env.Sysgen.MPWLoLimit) },
+	"SYI$_PQL_DWSDEFAULT": func(env *Environment) itemValue { return itemLong(env.sysgenPQL("WSDEFAULT")) },
+	"SYI$_PQL_DWSQUOTA":   func(env *Environment) itemValue { return itemLong(env.sysgenPQL("WSQUOTA")) },
+	"SYI$_PQL_DWSEXTENT":  func(env *Environment) itemValue { return itemLong(env.sysgenPQL("WSEXTENT")) },
+	"SYI$_PQL_DPGFLQUOTA": func(env *Environment) itemValue { return itemLong(env.sysgenPQL("PGFLQUOTA")) },
+}
+
+// sysgenPQL is the PQL_D parameter for the quota called name: the
+// default $CREPRC gives it (Sysgen.pqlDefault).
+func (sys *System) sysgenPQL(name string) uint32 {
+	for i := range quotaRules {
+		if quotaRules[i].name == name {
+			return sys.Sysgen.pqlDefault(&quotaRules[i])
+		}
+	}
+
+	return 0
 }
 
 // syiItems is syiItemsByName keyed by item code.

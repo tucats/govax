@@ -65,30 +65,6 @@ func (sys *System) CPUTime(env *Environment) uint64 {
 	return env.cpuTime
 }
 
-// mappedPages counts the valid pages in a process's P0 and P1 regions:
-// SHOW SYSTEM's "Pages" (VMS's is the physical pages in the working set;
-// govax has no paging, so a valid page is a resident one).
-func (sys *System) mappedPages(env *Environment) int {
-	if env.Space == nil {
-		return 0
-	}
-
-	as := env.Space.AddressSpace
-	count := func(base uint32, pages uint32) int {
-		n := 0
-
-		for i := range pages {
-			if pte, err := sys.mem.LookupPTEIn(sys.cpu, as, base+i*pageSize); err == nil && pte.Valid() {
-				n++
-			}
-		}
-
-		return n
-	}
-
-	return count(0, env.Space.P0Pages) + count(0x80000000-env.Space.P1Pages*pageSize, env.Space.P1Pages)
-}
-
 // ProcessState is SHOW SYSTEM's state for env (processState): the
 // debugger's SHOW PROCESS shows it too.
 func (sys *System) ProcessState(env *Environment) string {
@@ -141,15 +117,18 @@ func systemLine(pid uint32, name, state string, pri int, io uint32, cpu uint64, 
 
 // SystemReport is SHOW SYSTEM's display, a line per process, in PID
 // order (its I/O column the process's buffered and direct I/O counts
-// together, iocount.go), after the title (naming system and node) and the column
-// headings.
+// together, iocount.go; its page faults, JPI$_PAGEFLTS; its pages, those
+// in its working set, PPGCNT and GPGCNT together, accounting.go), after
+// the title (naming system and node) and the column headings.
 func (sys *System) SystemReport(system, node string) []string {
 	lines := []string{systemTitle(system, node, sys.Clock(), sys.BootTime), systemHeadings}
 
 	for _, env := range sys.Processes() {
 		state, pri := sys.processState(env)
 		io := env.Process.BufferedIO + env.Process.DirectIO
-		lines = append(lines, systemLine(env.Process.PID, env.Process.Name, state, pri, io, sys.CPUTime(env), 0, sys.mappedPages(env)))
+		process, global := sys.residentPages(env)
+		lines = append(lines, systemLine(env.Process.PID, env.Process.Name, state, pri, io, sys.CPUTime(env),
+			int(env.Process.PageFaults), process+global))
 	}
 
 	return lines

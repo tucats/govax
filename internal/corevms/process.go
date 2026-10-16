@@ -162,8 +162,15 @@ type Process struct {
 	BufferedIO, DirectIO uint32
 
 	// PageFaults counts the faults on the process's P0 and P1 pages the
-	// pager resolved (PHD$L_PAGEFLTS; filesec.go's countFault).
+	// pager resolved (PHD$L_PAGEFLTS; filesec.go's countFault), and
+	// Faults the same faults by kind (accounting.go).
 	PageFaults uint32
+	Faults     FaultCounts
+
+	// WSPeak is the most pages the process's working set has been seen
+	// to hold (PHD$W_WSPEAK, JPI$_WSPEAK; accounting.go's
+	// residentPages).
+	WSPeak uint32
 
 	// putmsg holds the $PUTMSG calls whose action routine is running,
 	// innermost last (an action routine may call $PUTMSG itself;
@@ -398,6 +405,7 @@ func serviceSysAdjwsl(env *Environment, argv []uint32) (uint32, error) {
 // image started by RUN returns or exits (and does its own logical-name
 // rundown alongside).
 func (env *Environment) ImageRundown() {
+	env.residentPages(env) // the working set's peak, before the image's pages go
 	env.CloseFiles()
 	env.deassignUserChannels()
 	env.deallocateUserDevices()

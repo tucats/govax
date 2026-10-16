@@ -725,3 +725,56 @@ func TestWorkingSetRandom(t *testing.T) {
 		}
 	}
 }
+
+// Shrink takes the oldest pages out down to a count, passing over locked
+// and protected pages but not those valid in the TB, and leaves the
+// limit as it was; the emptied entries take new pages past the quota
+// only while the free list has more than GROWLIM pages.
+func TestWorkingSetShrink(t *testing.T) {
+	w := NewWorkingSet(8, Bounds{Quota: 4, Extent: 8, Minimum: 2})
+	plenty := Conditions{FreePages: 64, GrowLimit: 63}
+	scarce := Conditions{FreePages: 10, GrowLimit: 63}
+
+	for n := range 8 {
+		add(t, w, n, plenty)
+	}
+
+	if _, err := w.Lock(page(2), LockedInWorkingSet); err != nil {
+		t.Fatal(err)
+	}
+
+	checkSet(t, w)
+
+	c := scarce
+	c.TBSkip = 8
+	c.ValidInTB = func(uint32) bool { return true }
+	c.Protected = func(va uint32) bool { return va == page(0) }
+
+	removed := w.Shrink(4, c)
+	checkSet(t, w)
+
+	if got := pageNumbers(removed); !sameInts(got, []int{1, 3, 4, 5}) {
+		t.Fatalf("Shrink removed %v, want [1 3 4 5]", got)
+	}
+
+	if got := w.Counts(); got.Size != 8 || w.InUse() != 4 {
+		t.Fatalf("after Shrink: counts %+v, %d in use", got, w.InUse())
+	}
+
+	// Below the free list's GROWLIM, the set stays at its quota: a new
+	// page replaces the oldest unprotected one rather than taking an
+	// available entry.
+	add(t, w, 8, scarce, 0)
+
+	// With pages to spare, it grows into the emptied entries.
+	add(t, w, 9, plenty)
+
+	if w.InUse() != 5 {
+		t.Fatalf("after growing: %d in use, want 5", w.InUse())
+	}
+
+	// Nothing to take: a count above the pages held removes nothing.
+	if removed := w.Shrink(6, scarce); len(removed) != 0 {
+		t.Fatalf("Shrink to 6 removed %v", pageNumbers(removed))
+	}
+}

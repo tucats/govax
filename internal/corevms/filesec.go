@@ -328,7 +328,7 @@ func (sys *System) readPage(f *rms.ACPFile, vbn uint32, c vm.FrameClaim) (uint32
 // demand-zero.
 //
 // Each fault it resolves on a P0 or P1 page counts in the faulting
-// process's page faults (countFault).
+// process's page faults, by its kind (accounting.go's countFault).
 //
 // With paging on (workingset.go), the page enters the process's working
 // set first, which may take another page out of it, as VMS's pager makes
@@ -341,9 +341,9 @@ func (sys *System) PageIn(f vm.PageFault) (vm.PTE, bool) {
 		env.enterWorkingSet(f.Addr, sys.faultIsGlobal(f.PTE))
 	}
 
-	pte, ok := sys.resolveFault(f)
+	pte, kind, ok := sys.resolveFault(f)
 	if ok {
-		sys.countFault(f)
+		sys.countFault(f, kind)
 	} else if env != nil {
 		env.leaveWorkingSet(f.Addr)
 	}
@@ -351,25 +351,9 @@ func (sys *System) PageIn(f vm.PageFault) (vm.PTE, bool) {
 	return pte, ok
 }
 
-// countFault counts a resolved fault on a process's own page (P0 or P1)
-// in its Process.PageFaults: $GETJPI's JPI$_PAGEFLTS, which LIB$INIT_TIMER
-// and its kind report (docs/PHASE-55, subtask 5). A fault on a system
-// (S0) page belongs to no process. VMS counts every fault a working set
-// sees, soft ones included, and so does govax with paging on; with it
-// off there are no soft faults, and the count is of the pages it brings
-// in: demand-zero pages and section pages.
-func (sys *System) countFault(f vm.PageFault) {
-	if f.Addr >= 0x80000000 { // S0 and up
-		return
-	}
-
-	if env := sys.processForSpace(f.Space); env != nil {
-		env.Process.PageFaults++
-	}
-}
-
-// resolveFault is PageIn's work: the page's new PTE by its old one's form.
-func (sys *System) resolveFault(f vm.PageFault) (vm.PTE, bool) {
+// resolveFault is PageIn's work: the page's new PTE by its old one's
+// form, and the fault's kind.
+func (sys *System) resolveFault(f vm.PageFault) (vm.PTE, faultKind, bool) {
 	prot, owner := f.PTE.Protection(), f.PTE.Owner()
 
 	// With paging off no PTE takes the transition form, and an invalid
@@ -382,30 +366,30 @@ func (sys *System) resolveFault(f vm.PageFault) (vm.PTE, bool) {
 	}
 
 	if gi, ok := f.PTE.GlobalIndex(); ok {
-		pfn, ok := sys.pageInGlobal(gi, f)
+		pfn, kind, ok := sys.pageInGlobal(gi, f)
 
-		return vm.ValidPTE(pfn, prot, owner), ok
+		return vm.ValidPTE(pfn, prot, owner), kind, ok
 	}
 
 	if si, ok := f.PTE.SectionIndex(); ok {
 		env := sys.processForSpace(f.Space)
 		if env == nil || si >= uint32(len(env.procSections)) || env.procSections[si] == nil {
-			return 0, false
+			return 0, faultRead, false
 		}
 
 		ps := env.procSections[si]
 		if f.Addr < ps.first {
-			return 0, false
+			return 0, faultRead, false
 		}
 
 		i := (f.Addr - ps.first) / pageSize
 		if i >= uint32(len(ps.present)) {
-			return 0, false
+			return 0, faultRead, false
 		}
 
 		pfn, ok := sys.readPage(ps.file, ps.vbn+i, processClaim(env, f.Addr, sectionBacking(si, ps.vbn+i)))
 
-		return vm.ValidPTE(pfn, prot, owner), ok
+		return vm.ValidPTE(pfn, prot, owner), faultRead, ok
 	}
 
 	claim := sys.faultClaim(f, paging.Backing{})
@@ -415,17 +399,19 @@ func (sys *System) resolveFault(f vm.PageFault) (vm.PTE, bool) {
 		sys.effectivelyModified(pte.PFN(), claim)
 	}
 
-	return pte, ok
+	return pte, faultDemandZero, ok
 }
 
 // pageInGlobal returns the physical page for global page table entry gi:
 // the section's own, read in if this is its first touch, or, for a
 // copy-on-reference section, a private copy for the process fault f
-// touched (and the section loses the reference the faulting PTE held).
-func (sys *System) pageInGlobal(gi uint32, f vm.PageFault) (uint32, bool) {
+// touched (and the section loses the reference the faulting PTE held);
+// and the fault's kind: a read, or a global valid fault if the section's
+// page was in memory already.
+func (sys *System) pageInGlobal(gi uint32, f vm.PageFault) (uint32, faultKind, bool) {
 	s, i, ok := sys.Sections.globalPage(gi)
 	if !ok || s.File == nil {
-		return 0, false
+		return 0, faultRead, false
 	}
 
 	if s.CopyOnRef {
@@ -439,20 +425,22 @@ func (sys *System) pageInGlobal(gi uint32, f vm.PageFault) (uint32, bool) {
 			sys.maybeDeleteSection(s)
 		}
 
-		return pfn, ok
+		return pfn, faultRead, ok
 	}
 
-	if s.Frames[i] == 0 {
-		pfn, ok := sys.readPage(s.File, s.VBN+uint32(i), globalClaim(s, i))
-		if !ok {
-			return 0, false
-		}
-
-		s.Frames[i] = pfn
-		sys.Sections.byFrame[pfn] = sectionPage{s, i}
+	if s.Frames[i] != 0 {
+		return s.Frames[i], faultGlobalValid, true
 	}
 
-	return s.Frames[i], true
+	pfn, ok := sys.readPage(s.File, s.VBN+uint32(i), globalClaim(s, i))
+	if !ok {
+		return 0, faultRead, false
+	}
+
+	s.Frames[i] = pfn
+	sys.Sections.byFrame[pfn] = sectionPage{s, i}
+
+	return pfn, faultRead, true
 }
 
 // processForSpace returns the process whose address space is as.

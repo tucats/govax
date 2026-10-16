@@ -131,6 +131,7 @@
 //              10/16/26    vax.sysgen.growlim in CONFIG KEYS
 //              10/16/26    vax.sysgen.mpw_hilimit and mpw_lolimit in
 //                          CONFIG KEYS
+//              10/16/26    vax.sysgen.freelim and freegoal in CONFIG KEYS
 
 This is the help documentation for the govax VAX emulator.  Topic sections are
 marked by a "$" delimiter.  This is followed by as many tokens of the help
@@ -2116,6 +2117,18 @@ $CONF,KEY
                                       writer stops when the modified
                                       page list is down to this many
                                       pages.  0 is allowed.  Default 120.
+
+        vax.sysgen.freelim            FREELIM: with paging on, when fewer
+                                      than this many pages are on the
+                                      free page list, govax reclaims
+                                      pages: it writes modified pages it
+                                      can, and trims working sets that
+                                      grew past their quotas.  0 turns
+                                      it off.  Default 32.
+
+        vax.sysgen.freegoal           FREEGOAL: the reclaimer stops when
+                                      this many pages are free.  0 is
+                                      allowed.  Default 200.
 
     Debugging switches
 

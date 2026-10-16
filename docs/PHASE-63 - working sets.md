@@ -9,7 +9,10 @@ image exit), subtask 5, deleting pages in transition, and subtask 6,
 the working set services (`$PURGWS`, the locks on the real list,
 SS$_LKWSETFUL, the unlock statuses), and subtask 7, the modified page
 writer for private file sections (`corevms/mpw.go`, MPW_HILIMIT and
-MPW_LOLIMIT, `$UPDSEC` from the modified list), are done. Needs Phase 62 (settings, the
+MPW_LOLIMIT, `$UPDSEC` from the modified list), and subtask 8, the
+reclaimer and the accounting (`corevms/reclaim.go`, FREELIM and
+FREEGOAL; `corevms/accounting.go`, faults by kind, PPGCNT, GPGCNT,
+WSPEAK), are done. Needs Phase 62 (settings, the
 `internal/paging` PFN database and lists, the PTE forms, frame
 allocation through `internal/paging`). Part of the paging program laid
 out in `PHASE-62 - VMS paging.md` (Parts A and B: the survey and the
@@ -580,7 +583,8 @@ from run to run.
    soft and hard counts; `$GETJPI` PPGCNT, GPGCNT, WSPEAK (WSSIZE stays
    the limit); `$GETSYI`'s paging parameters; SHOW SYSTEM's page faults
    and pages, LOGOUT's page faults and peak working set, and the
-   termination message's WSPEAK, all 0 or approximations today.
+   termination message's WSPEAK, all 0 or approximations today. (Done
+   2026-10-16; the progress log says what it chose.)
 9. **DCL SET WORKING_SET and SHOW WORKING_SET** (the console's grammar
    and `internal/dclshell`), in process 1 and in subprocesses, through
    the same code as `$ADJWSL`; SHOW's /Limit is DFWSCNT (finding 12).
@@ -928,3 +932,86 @@ from run to run.
     frame is taken, the written pages' PTEs are their PSTX again, and the
     program reads every new value back. The test fails with the writer
     off, and with `$UPDSEC`'s two additions off.
+- **2026-10-16:** Subtask 8, the reclaimer and the accounting
+  (`corevms/reclaim.go`, `corevms/accounting.go`; tests in
+  `internal/console/workingsetreclaim_test.go`, `paging`'s
+  `TestWorkingSetShrink`, `vm`'s `TestSetFreeLimit`, `machine`'s
+  `TestSysgenReclaimer`, corevms's `TestSYIPagingParameters`).
+  - **When it wakes:** `vm.Memory.SetFreeLimit` (new) calls a routine
+    whenever an allocation leaves the free list below a limit; the System
+    installs `wakeReclaimer` there with FREELIM (`installReclaimer`, from
+    `NewSystem` and `SetSysgen`). A soft fault off the free list wakes it
+    too (`wakeReclaimerIfLow`); a soft fault off the modified list
+    doesn't, since the free list is no shorter. It runs at the next
+    instruction boundary, not inside the fault: `atInstructionBoundary`
+    (new) is the one routine `AtNextInstruction` keeps, running
+    `trimWorkingSets` and then `reclaim`, so the two don't replace each
+    other.
+  - **What it does** (the book's 17.1.1 and 17.2.2, Decision 7): if the
+    free list is still below FREELIM, the modified page writer's run down
+    to MPW_LOLIMIT (the book's MFYLOLIM; no MPW_THRESH), then the first
+    pass of the swapper's selection table: each process whose working set
+    holds more than its WSQUOTA loses its oldest pages down to it
+    (`WorkingSet.Shrink`, new: locked and protected pages stay, TB-valid
+    pages don't count as a reason to keep one), until the free list
+    reaches FREEGOAL; then the writer again, for the pages trimming sent
+    to the modified list. Outswapping, process headers, and the
+    SWPOUTPGCNT pass need a swapper govax doesn't have.
+  - **Choices (unconfirmed):** the processes' order is the book's Table
+    17-2 by scheduling state alone (SUSP, LEF, HIB, CEF, FPG, COLPG,
+    MWAIT, PFW, then the computable ones, the current process last), by
+    PID within a state (the book scans each state's queue from its newest
+    entry, which `internal/sched` doesn't expose); trimming leaves the
+    limit (WSSIZE) alone, so a trimmed set grows back past its quota only
+    while the free list has more than GROWLIM pages; the reclaimer's
+    writer remembers the pages it couldn't write (`reclaimStuck`) and
+    runs only when the modified list is over MPW_LOLIMIT by more than
+    that, forgetting the count when the free list is back to FREELIM (as
+    the writer's own `mpwStuck`). A set trimmed to its quota can take its
+    own pages back off the modified list without waking the reclaimer, so
+    it may be a few pages over its quota until its next allocation (the
+    test allows 4).
+  - **`vax.sysgen.freelim`** (32; 0 turns the reclaimer off) and
+    **`vax.sysgen.freegoal`** (200), number keys (`Sysgen.FreeLimit`,
+    `FreeGoal`), in `validConfigs` and HELP CONFIG KEYS.
+  - **Faults by kind** (`FaultCounts`): soft off the free list, soft off
+    the modified list, global valid (a global section page already in
+    memory, which `pageInGlobal` now tells from a read), demand-zero, and
+    read (hard). `resolveFault` returns the kind, and `countFault` counts
+    it in the process (`Process.Faults`, beside `PageFaults`, which stays
+    JPI$_PAGEFLTS) and the system (`System.PageCounts`, with the pages the
+    writer wrote and the reclaimer's runs and trimmed pages). SHOW MEMORY
+    shows the system's counts in paging mode, as govax's own lines (VMS
+    shows rates in MONITOR PAGE).
+  - **Pages in the working set** (`residentPages`): with paging on the
+    working set's counts (PPGCNT, GPGCNT, its peak); with it off, the
+    valid P0 and P1 PTEs, global if the frame is a global section's
+    (`Sections.byFrame`). `Process.WSPeak` is the most any count has
+    seen; with paging off that's a lower bound, counted when something
+    asks and at the start of image rundown, before the image's pages go.
+  - **Reported:** `$GETJPI`'s JPI$_PPGCNT, GPGCNT, WSPEAK (and F$GETJPI's
+    keywords); SHOW SYSTEM's page faults (JPI$_PAGEFLTS) and pages
+    (PPGCNT + GPGCNT; `mappedPages` is gone); LOGOUT's page faults and
+    peak working set; the termination message's ACC$L_WSPEAK. `$GETSYI`
+    (and F$GETSYI) has GROWLIM, FREELIM, FREEGOAL, TBSKIPWSL,
+    MPW_HILIMIT, MPW_LOLIMIT, and the PQL_DWSDEFAULT, DWSQUOTA,
+    DWSEXTENT, and DPGFLQUOTA parameters (`sysgenPQL`, the defaults
+    `$CREPRC` gives). BORROWLIM, WSMAX, PFCDEFAULT, and MPW_WRTCLUSTER
+    have no value in govax and stay SS$_BADPARAM.
+  - **The test:** an image with a 30-page default, a 40-page quota, and
+    `$ADJWSL` to 100, FREELIM and FREEGOAL above any free list, and
+    MPW_LOLIMIT 0, touches 80 `$EXPREG` pages (at most 44 in the set, the
+    rest in transition on the modified list), adds 1000 to each page of
+    a 64-page writable private section (every page out of the set on the
+    free list, its block written), sweeps the array again (soft faults
+    off the modified list), and reads PPGCNT, GPGCNT, WSPEAK, and
+    PAGEFLTS with `$GETJPIW` (the working set's counts). With FREELIM 0
+    the whole array stays in the set and nothing is written. It fails
+    without the trimming, and without the reclaimer's writes. SHOW
+    SYSTEM's and LOGOUT's tests now check the counts in place of 0.
+  - **An experiment** (not committed): the whole suite with paging
+    forced on and FREELIM and FREEGOAL at 2^30, so the reclaimer trims
+    every set to its quota after every allocation. Only five tests
+    failed, each for the forced settings: two paging-off tests, two of
+    the settings' defaults, and `TestModifiedPageWriter`, whose section
+    pages the reclaimer had written before they came back.

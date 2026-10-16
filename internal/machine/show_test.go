@@ -46,6 +46,9 @@ func TestShowMemory_frames(t *testing.T) {
 		fmt.Sprintf("        Modified list      %8d\n", counts.Modified),
 		fmt.Sprintf("        Active             %8d\n", counts.Active()),
 		fmt.Sprintf("            System pages   %8d\n", counts.System),
+		"    Page faults        ",
+		"        Demand zero        ",
+		"    Reclaimer runs     ",
 	} {
 		if !strings.Contains(out, line) {
 			t.Errorf("output = %q, want it to contain %q", out, line)

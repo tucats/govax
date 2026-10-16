@@ -171,3 +171,37 @@ func TestSYIItemsRegistry(t *testing.T) {
 		t.Error("SYI$_VERSION/CPU don't have their $SYIDEF codes (4096/8192)")
 	}
 }
+
+// The paging parameters are the System's Sysgen: the configured values,
+// or their defaults, and for the PQL_D parameters the defaults $CREPRC
+// gives (the configured one, or the quota rule's own).
+func TestSYIPagingParameters(t *testing.T) {
+	env, _ := fixture()
+
+	sg := DefaultSysgen()
+	sg.GrowLimit, sg.FreeLimit, sg.FreeGoal, sg.TBSkipWSL = 11, 22, 333, 0
+	sg.MPWHiLimit, sg.MPWLoLimit = 44, 5
+	sg.PQL = map[string]uint32{"WSQUOTA": 777}
+	env.SetSysgen(sg)
+
+	long := func(v uint32) string { return string([]byte{byte(v), byte(v >> 8), byte(v >> 16), byte(v >> 24)}) }
+
+	for name, want := range map[string]uint32{
+		"SYI$_GROWLIM":        11,
+		"SYI$_FREELIM":        22,
+		"SYI$_FREEGOAL":       333,
+		"SYI$_TBSKIPWSL":      0,
+		"SYI$_MPW_HILIMIT":    44,
+		"SYI$_MPW_LOLIMIT":    5,
+		"SYI$_PQL_DWSQUOTA":   777,
+		"SYI$_PQL_DWSDEFAULT": env.sysgenPQL("WSDEFAULT"),
+	} {
+		if got, ok := env.SYIItem(name); !ok || got != long(want) {
+			t.Errorf("%s = %q (%v), want %d", name, got, ok, want)
+		}
+	}
+
+	if v := env.sysgenPQL("WSEXTENT"); v == 0 {
+		t.Error("PQL_DWSEXTENT is 0, want the quota rule's default")
+	}
+}

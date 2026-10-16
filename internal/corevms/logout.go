@@ -20,10 +20,12 @@ import (
 //
 // An interactive one gets one line, "  SYSTEM       logged out at
 // <time>" (unconfirmed: no probe has logged out an interactive
-// process). The I/O counts are the process's (iocount.go); govax has
-// no paging, and volumes are mounted for the whole system, so the other
-// counts are 0, as in the termination message (termmsg.go); the CPU
-// time is the process's, and the elapsed time runs from its creation.
+// process). The I/O counts are the process's (iocount.go), and so are
+// its page faults and its working set's peak (accounting.go); govax has
+// no page file yet, and volumes are mounted for the whole system, so the
+// other counts are 0, as in the termination message (termmsg.go); the
+// CPU time is the process's, and the elapsed time runs from its
+// creation.
 
 // SubprocessLogoutLine is what a spawned subprocess's LOGOUT command
 // writes, as VMS 7.3's DCL wrote it (testdata/mp/probe5/vax, step 9):
@@ -71,9 +73,9 @@ func (env *Environment) LogoutReport(interactive bool) []string {
 		fmt.Sprintf("  %-12s job terminated at %s", p.Username, date),
 		"",
 		"  Accounting information:",
-		counts("Buffered I/O count:", int(p.BufferedIO), "Peak working set size:", 0),
+		counts("Buffered I/O count:", int(p.BufferedIO), "Peak working set size:", int(env.WorkingSetPeak(env))),
 		counts("Direct I/O count:", int(p.DirectIO), "Peak page file size:", 0),
-		counts("Page faults:", 0, "Mounted volumes:", 0),
+		counts("Page faults:", int(p.PageFaults), "Mounted volumes:", 0),
 		fmt.Sprintf("  Charged CPU time:%24s   Elapsed time:%18s", delta(env.CPUTime(env)), delta(elapsed)),
 	}
 }

@@ -80,6 +80,11 @@ type Memory struct {
 	// (AtNextInstruction), or nil.
 	atBoundary func()
 
+	// freeLimit and lowFree are SetFreeLimit's: the routine to call when
+	// an allocation leaves fewer than freeLimit frames on the free list.
+	freeLimit int
+	lowFree   func()
+
 	vmValid              bool
 	translationCount     int64
 	singlebyteReadCount  int64

@@ -183,6 +183,7 @@ func (m *Memory) SetPaging(on bool) {
 	m.pagingOn = on
 
 	m.atBoundary = nil
+	m.lowFree = nil
 
 	if on {
 		m.frames = newPagingFrames(frames)
@@ -220,7 +221,26 @@ func (m *Memory) AllocateFrame(c FrameClaim) (uint32, bool) {
 		m.clearFrame(pfn)
 	}
 
+	if m.lowFree != nil && m.Paging().FreeCount() < m.freeLimit {
+		m.lowFree()
+	}
+
 	return pfn, true
+}
+
+// SetFreeLimit asks for f to be called whenever an allocation leaves
+// fewer than n frames on the free list, with paging on: the system's
+// reclaimer, which works to give the free list frames back (on VMS, the
+// swapper, which the pager wakes when the list falls below the SYSGEN
+// parameter FREELIM). f runs inside AllocateFrame, so it should only
+// note the need; nil turns it off. SetPaging turns it off too, so the
+// system sets it again after each VMINIT.
+func (m *Memory) SetFreeLimit(n int, f func()) {
+	if !m.pagingOn {
+		f = nil
+	}
+
+	m.freeLimit, m.lowFree = n, f
 }
 
 // clearFrame writes zeros over frame pfn.

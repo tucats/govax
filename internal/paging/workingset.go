@@ -325,6 +325,33 @@ func (w *WorkingSet) Trim(c Conditions) []Page {
 	return w.trim(w.size, c, true)
 }
 
+// Shrink takes the oldest pages out of the set until it holds no more
+// than n, and returns them, oldest first: the swapper's working set
+// trimming (the book's 17.2.2, its first pass, which brings a set grown
+// past its quota back to WSQUOTA). The limit stays as it is, so the
+// entries emptied are available again, but past the quota the growth
+// rule (mayGrow) lets a page take one only while the free list has more
+// than GROWLIM pages. Locked and protected pages stay, and so do pages
+// still valid in the TB: the removal isn't a choice. It stops early if
+// every page left is passed over.
+func (w *WorkingSet) Shrink(n int, c Conditions) []Page {
+	c.TBSkip = 0
+
+	var removed []Page
+
+	for w.InUse() > n {
+		i, ok := w.choose(c, false)
+		if !ok {
+			break
+		}
+
+		removed = append(removed, w.slots[i].Page)
+		w.empty(i)
+	}
+
+	return removed
+}
+
 // mayGrow says whether an available entry may take a new page (the
 // book's 15.4.3, checks 1, 3, and 4).
 func (w *WorkingSet) mayGrow(c Conditions) bool {

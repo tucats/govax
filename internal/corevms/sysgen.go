@@ -41,6 +41,15 @@ const (
 	DefaultMPWLoLimit = 120
 )
 
+// DefaultFreeLimit and DefaultFreeGoal are FREELIM's and FREEGOAL's
+// defaults (the phase doc's Decision 11): when an allocation leaves the
+// free page list with fewer than the first, the reclaimer works to bring
+// it back up to the second (reclaim.go).
+const (
+	DefaultFreeLimit = 32
+	DefaultFreeGoal  = 200
+)
+
 // Sysgen holds the system parameters a System runs with.
 type Sysgen struct {
 	// Paging is whether VMS paging is on (vax.sysgen.paging.enable, or
@@ -70,6 +79,11 @@ type Sysgen struct {
 	// page writer's thresholds (mpw.go).
 	MPWHiLimit uint32
 	MPWLoLimit uint32
+
+	// FreeLimit is FREELIM and FreeGoal FREEGOAL: the reclaimer's
+	// thresholds (reclaim.go).
+	FreeLimit uint32
+	FreeGoal  uint32
 }
 
 // DefaultSysgen returns the parameters with no key set.
@@ -77,6 +91,7 @@ func DefaultSysgen() Sysgen {
 	return Sysgen{
 		MinWSCount: DefaultMinWSCount, GrowLimit: DefaultGrowLimit, TBSkipWSL: DefaultTBSkipWSL,
 		MPWHiLimit: DefaultMPWHiLimit, MPWLoLimit: DefaultMPWLoLimit,
+		FreeLimit: DefaultFreeLimit, FreeGoal: DefaultFreeGoal,
 	}
 }
 
@@ -84,6 +99,7 @@ func DefaultSysgen() Sysgen {
 // each new System, before process 1 is made.
 func (sys *System) SetSysgen(sg Sysgen) {
 	sys.Sysgen = sg
+	sys.installReclaimer()
 }
 
 // pqlDefault returns the default $CREPRC gives rule's quota: the

@@ -77,6 +77,15 @@ type System struct {
 	// over because it can't write them (mpw.go).
 	mpwStuck int
 
+	// reclaimStuck is how many frames the reclaimer's writing last passed
+	// over (reclaim.go).
+	reclaimStuck int
+
+	// PageCounts are the system's paging counts: its page faults by kind,
+	// and what the modified page writer and the reclaimer have done
+	// (accounting.go).
+	PageCounts PageCounts
+
 	// Locks is the lock database (internal/lck, Phase 47): every
 	// resource and lock $ENQ and RMS have made, system state too.
 	Locks *lck.Manager
@@ -215,6 +224,8 @@ func NewSystem(cpu *registers.CPU, mem *vm.Memory, devices *iodev.DeviceTable, m
 	if db := mem.Paging(); db != nil {
 		db.SetTieBreaker(sys)
 	}
+
+	sys.installReclaimer()
 
 	sys.BootTime = sys.Clock()
 	sys.removeStaleMailboxes()

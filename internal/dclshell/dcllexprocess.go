@@ -295,10 +295,11 @@ var jpiKeywords = []string{
 	"ACCOUNT", "ASTACT", "ASTCNT", "ASTEN", "ASTLM", "AUTHPRI", "AUTHPRIV",
 	"BIOLM", "BUFIO", "BYTLM", "CLINAME", "CPULIM", "CPUTIM", "CREPRC_FLAGS",
 	"CURPRIV", "DFWSCNT", "DIOLM", "DIRIO", "EFCS", "EFCU", "ENQCNT", "ENQLM",
-	"FILLM", "GRP", "IMAGPRIV", "JOBPRCCNT", "JOBTYPE", "LOGINTIM",
-	"MASTER_PID", "MEM", "MODE", "OWNER", "PAGEFLTS", "PGFLQUOTA", "PID", "PRCCNT",
-	"PRCLM", "PRCNAM", "PRI", "PRIB", "PROCPRIV", "TERMINAL", "TMBU", "TQLM",
-	"UIC", "USERNAME", "WSAUTH", "WSAUTHEXT", "WSEXTENT", "WSQUOTA", "WSSIZE",
+	"FILLM", "GPGCNT", "GRP", "IMAGPRIV", "JOBPRCCNT", "JOBTYPE", "LOGINTIM",
+	"MASTER_PID", "MEM", "MODE", "OWNER", "PAGEFLTS", "PGFLQUOTA", "PID", "PPGCNT",
+	"PRCCNT", "PRCLM", "PRCNAM", "PRI", "PRIB", "PROCPRIV", "TERMINAL", "TMBU",
+	"TQLM", "UIC", "USERNAME", "WSAUTH", "WSAUTHEXT", "WSEXTENT", "WSPEAK",
+	"WSQUOTA", "WSSIZE",
 }
 
 func init() {
@@ -369,6 +370,9 @@ var syiKeywords = map[string]bool{
 	"BOOTTIME": true, "CLUSTER_MEMBER": true, "CPU": true, "MINWSCNT": true,
 	"NODE_CSID": true, "NODE_SWTYPE": true, "NODE_SWVERS": true,
 	"NODENAME": true, "SID": true, "VERSION": true,
+	"GROWLIM": true, "FREELIM": true, "FREEGOAL": true, "TBSKIPWSL": true,
+	"MPW_HILIMIT": true, "MPW_LOLIMIT": true, "PQL_DWSDEFAULT": true,
+	"PQL_DWSQUOTA": true, "PQL_DWSEXTENT": true, "PQL_DPGFLQUOTA": true,
 }
 
 // lexGetSYI is F$GETSYI(item [,node]): the item (syiItems) for this

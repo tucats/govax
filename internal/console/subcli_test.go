@@ -91,7 +91,8 @@ func splitLogoutReport(lines []string) (before, report []string) {
 // interactive (corevms's LogoutReport) as programLines leaves it: VMS's
 // lines, less the blank one, with govax's counts. The buffered I/O
 // count is the job's own (it has read commands and written lines), so
-// it is checked for its place, and to be more than 0.
+// it is checked for its place, and to be more than 0; so are its page
+// faults and its working set's peak (it has run images).
 func checkLogoutReport(t *testing.T, report []string) {
 	t.Helper()
 
@@ -100,7 +101,7 @@ func checkLogoutReport(t *testing.T, report []string) {
 		"  Accounting information:",
 		"  Buffered I/O count:",
 		"  Direct I/O count:                 0         Peak page file size:         0",
-		"  Page faults:                      0         Mounted volumes:             0",
+		"  Page faults:",
 		"  Charged CPU time:           ",
 	}
 
@@ -110,10 +111,16 @@ func checkLogoutReport(t *testing.T, report []string) {
 		return
 	}
 
-	var buffered int
-	if _, err := fmt.Sscanf(report[2], "  Buffered I/O count: %d", &buffered); err != nil || buffered == 0 ||
-		report[2] != fmt.Sprintf("  Buffered I/O count:%16d         Peak working set size:       0", buffered) {
-		t.Errorf("LOGOUT's report, line 3: %q, want a buffered I/O count past 0, in its column", report[2])
+	var buffered, peak, faults int
+	if _, err := fmt.Sscanf(report[2], "  Buffered I/O count: %d Peak working set size: %d", &buffered, &peak); err != nil ||
+		buffered == 0 || peak == 0 ||
+		report[2] != fmt.Sprintf("  Buffered I/O count:%16d         Peak working set size:%8d", buffered, peak) {
+		t.Errorf("LOGOUT's report, line 3: %q, want a buffered I/O count and a peak past 0, in their columns", report[2])
+	}
+
+	if _, err := fmt.Sscanf(report[4], "  Page faults: %d", &faults); err != nil || faults == 0 ||
+		report[4] != fmt.Sprintf("  Page faults:%23d         Mounted volumes:             0", faults) {
+		t.Errorf("LOGOUT's report, line 5: %q, want page faults past 0, in their column", report[4])
 	}
 
 	for i, w := range want {
