@@ -70,6 +70,11 @@ type PageCounts struct {
 	// write I/Os).
 	Written, WriteIOs uint64
 
+	// PageFileReads counts the pages read back from the page file, by
+	// hard faults on page file PTEs (filesec.go's pageInFromPageFile):
+	// among Faults.Read, which counts section files' reads too.
+	PageFileReads uint64
+
 	// Reclaims counts the reclaimer's runs, and Trimmed the pages it took
 	// out of working sets (reclaim.go).
 	Reclaims, Trimmed uint64

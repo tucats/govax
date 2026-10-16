@@ -135,7 +135,8 @@ never had.
   `rms.Session.OpenPageFile`, `corevms/pagefile.go`; subtask 3, the
   writer's clusters to the page file and section files, the page file
   PTE's hard fault, and `vax.sysgen.mpw_wrtcluster`, done 2026-10-16,
-  `corevms/mpw.go`); 65 sections under the
+  `corevms/mpw.go`; subtask 4, blocks given back at deletion,
+  `releasePageFileBlock`, done 2026-10-16); 65 sections under the
   pager; 66 image activation by mapping; 67 the address space and page
   tables under paging, deferred to the end. Paging is synchronous, with no
   PFW, COLPG, or FPG waits. Each later phase has a planning doc.

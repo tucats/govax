@@ -319,7 +319,10 @@ func (sys *System) TeardownAddressSpace(s *ProcessSpace) error {
 				continue
 			}
 
-			// A valid page's frame, or one a page in transition holds.
+			// The page's page file block, then a valid page's frame, or
+			// one a page in transition holds.
+			sys.releasePageFileBlock(s.PID, t.base+i*pageSize, pte)
+
 			if pfn, modified, ok := sys.heldFrame(s.PID, t.base+i*pageSize, pte); ok && !s.shared[pfn] {
 				sys.releaseFrame(pfn, modified)
 			}

@@ -267,6 +267,10 @@ func (env *Environment) releasePTE(addr uint32, old vm.PTE) {
 		pid = env.Process.PID
 	}
 
+	// With paging on, the page's page file block, if it has one, whether
+	// in its PTE or its frame's backing store.
+	env.releasePageFileBlock(pid, addr&^pageMask, old)
+
 	pfn, modified, ok := env.heldFrame(pid, addr, old)
 	if !ok {
 		return
@@ -441,6 +445,8 @@ func (sys *System) pageInFromPageFile(vbn uint32, f vm.PageFault) (uint32, bool)
 
 		return 0, false
 	}
+
+	sys.PageCounts.PageFileReads++
 
 	return pfn, true
 }

@@ -311,6 +311,38 @@ func (sys *System) forgetPageFileBlock(pfn paging.PFN, back paging.Backing) {
 	_ = sys.mem.Paging().SetBacking(pfn, paging.Backing{Kind: paging.PageFile})
 }
 
+// releasePageFileBlock gives back the page file block the page at va of
+// process pid holds, by its PTE pte, as the page is deleted (the book's
+// 16.2.2.1): a page whose contents are only in the page file holds its
+// block in its PTE (the page file form); a page that still has its frame
+// (valid, or in transition) holds it as the frame's backing store, when
+// the page was written and then faulted back, or read back from the
+// page file, and not modified since. A page file page's contents are
+// never written at deletion. Nothing happens with paging off, or for a
+// page with no block.
+func (sys *System) releasePageFileBlock(pid, va uint32, pte vm.PTE) {
+	if sys.mem.Paging() == nil {
+		return
+	}
+
+	if vbn, ok := pte.PageFileBlock(); ok {
+		if vbn != 0 {
+			_ = sys.FreePageFile(paging.Run{First: vbn, Count: 1})
+		}
+
+		return
+	}
+
+	pfn, _, ok := sys.heldFrame(pid, va, pte)
+	if !ok {
+		return
+	}
+
+	if e, tied := sys.tiedEntry(pid, va, pfn); tied {
+		sys.forgetPageFileBlock(paging.PFN(pfn), e.Backing)
+	}
+}
+
 // softFault resolves a fault on a page in transition, frame pfn: the
 // frame is taken off its list (paging.Database.Reclaim) and the page's
 // PTE made valid again, pointing at it, with no I/O. The fault's kind

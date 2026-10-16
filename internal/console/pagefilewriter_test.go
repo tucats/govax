@@ -238,6 +238,10 @@ func TestPageFileWriter(t *testing.T) {
 		t.Errorf("checkpoint 2: %d hard faults, want at least the %d pages read from the page file", got, len(blocks))
 	}
 
+	if got := c.RTL.PageCounts.PageFileReads; got < uint64(len(blocks)) {
+		t.Errorf("checkpoint 2: %d pages read from the page file, want at least %d", got, len(blocks))
+	}
+
 	// Checkpoint 3: every page modified again; those written have new
 	// blocks, and the file holds no more blocks than there are pages.
 	release(2)
@@ -280,6 +284,16 @@ func TestPageFileWriter(t *testing.T) {
 	}
 
 	checkWorkingSets(t, c)
+
+	// Phase 64's subtask 4: image rundown deleted the array's pages, read
+	// back from the page file and clean, so their blocks went back.
+	if used := pf.Map.UsedBlocks(); used != 0 {
+		t.Errorf("after the image: %d page file blocks still in use", used)
+	}
+
+	if err := pf.Map.Check(); err != nil {
+		t.Fatal(err)
+	}
 }
 
 // TestPageFileWriterNoFile: with paging on and no page file configured,

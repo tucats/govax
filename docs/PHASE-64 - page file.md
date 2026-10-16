@@ -3,7 +3,8 @@
 **Status:** in progress. Subtask 1, the survey (Part A below), done
 2026-10-16, and its questions answered by the author the same day
 ("Questions for the author"). Subtask 2, the page file, done
-2026-10-16. Subtask 3, the modified page writer, done 2026-10-16. Planned 2026-10-15. Needs Phase 63 (working sets, the
+2026-10-16. Subtask 3, the modified page writer, done 2026-10-16. Subtask 4,
+blocks freed, done 2026-10-16. Planned 2026-10-15. Needs Phase 63 (working sets, the
 lists, soft faults). Part of the paging program laid out in
 `PHASE-62 - VMS paging.md` (Decisions 7, 8, 9, and 10 are this phase's).
 
@@ -589,7 +590,7 @@ pg63's. Values that vary from run to run print as differences.
    assigned at write time, pages to the free list after the write, the
    page file PTE form when the frame is reused, and the fault that reads
    it back (finding 4), so no page is lost between commits.
-4. **Blocks freed** on re-modification (finding 5) and on deletion
+4. **Blocks freed** (done 2026-10-16) on re-modification (finding 5) and on deletion
    (finding 6: `$DELTVA`, `$CRETVA` over pages, image rundown, process
    teardown); hard faults counted as page reads.
 5. **PGFLQUOTA:** the job's count and each process's charge and peak
@@ -723,3 +724,25 @@ pg63's. Values that vary from run to run print as differences.
   growth) and `TestPageFileWriterNoFile` (no page file: pages stay on
   the modified list, as before); `internal/machine`'s
   `TestSysgenWriteCluster` and the new MPW_LOLIMIT default.
+- **2026-10-16:** Subtask 4, blocks freed. Re-modification was subtask
+  3's (`forgetPageFileBlock`). Deletion (finding 6):
+  `corevms/workingset.go`'s `releasePageFileBlock` gives back the block a
+  page being deleted holds, in its PTE (the page file form) or as the
+  backing store of the frame it still has, valid or in transition, tied
+  to the page (`heldFrame`, `tiedEntry`): a page written and soft-faulted
+  back, or read back from the page file, and not modified since. Its
+  contents are never written. `releasePTE` calls it, so `$DELTVA`,
+  `$CRETVA` over existing pages, `$CRMPSC` over pages, and image
+  rundown (`DeleteP0`) all give blocks back, and `TeardownAddressSpace`
+  calls it for each P0 and P1 PTE at process deletion. Hard faults on
+  the page file count in `PageCounts.PageFileReads` (among
+  `Faults.Read`, which counts section reads too), shown by SHOW MEMORY
+  as a "Page file" line under Read. The quota's refunds come with the
+  quota, subtask 5. Tests: `TestPageFileWriter` now checks the page
+  file reads and that image rundown leaves no block in use;
+  `internal/console`'s `TestDeleteGivesPageFileBlocksBack` (blocks in
+  page file PTEs and in valid frames read back, then `$DELTVA` of the
+  array; `checkPageFileHolders` checks that the blocks in use are
+  exactly those process 1's pages hold, one page each) and
+  `TestDeleteProcessGivesPageFileBlocksBack` (a second process's pages
+  written and waiting on the free list, then the process removed).
