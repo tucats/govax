@@ -335,6 +335,7 @@ func TestGetjpi_wildcard(t *testing.T) {
 			}
 
 			wantR0(t, r0, ssNormal)
+			
 			pids = append(pids, a.readLong(pidBuf))
 		}
 

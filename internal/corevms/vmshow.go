@@ -60,9 +60,11 @@ func (env *Environment) NextZone(context uint32) (id, next uint32, ok bool, err 
 		after = env.placeOf(context)
 	}
 
-	var found *heapZone
-	var at zonePlace
-
+	var (
+		found *heapZone
+		at    zonePlace
+	)
+	
 	for _, z := range env.zones {
 		if z.system {
 			continue

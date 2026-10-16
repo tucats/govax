@@ -74,9 +74,9 @@ func TestSystemReport(t *testing.T) {
 // TestCPUTime: without the scheduler, process 1 has had the CPU since
 // boot; $GETJPI's JPI$_CPUTIM is in 10ms units.
 func TestCPUTime(t *testing.T) {
-	env, _ := fixture()
-
 	var now uint64 = 1_000_000_000
+
+	env, _ := fixture()
 	env.Clock = func() uint64 { return now }
 	env.BootTime = now - 25*100_000 // 25 hundredths
 

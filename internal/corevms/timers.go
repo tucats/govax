@@ -55,8 +55,8 @@ type timerRequest struct {
 }
 
 // timerCPUTime is $SETIMR's flags bit 0: the time is CPU time rather than
-// elapsed time.
-const timerCPUTime = 1
+// elapsed time. Currently unused, so commented out.
+//const timerCPUTime = 1
 
 // wallClock is the default Environment.Clock: the host's time, in VMS
 // format. The console replaces it with its Engine's SystemTime.

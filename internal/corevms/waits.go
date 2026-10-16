@@ -229,6 +229,7 @@ func (sys *System) wakeWaiters() bool {
 		w := env.waiting
 		if w.over == nil || w.over() || (!w.ignoreASTs && env.astDeliverable()) {
 			env.endWait(w.class)
+			
 			woke = true
 		}
 	}

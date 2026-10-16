@@ -117,8 +117,8 @@ func TestTerminal_deletion(t *testing.T) {
 		p.consoleIn, p.consoleOut = term, &out
 	}
 
-	_, _, _ = a.ReadInputLine("A> ", 80)
-	_, _, _ = b.ReadInputLine("B> ", 80)
+	_, _, _ = a.ReadInputLine("A> ", 80) //nolint:dogsled
+	_, _, _ = b.ReadInputLine("B> ", 80) //nolint:dogsled
 
 	a.processRundown()
 

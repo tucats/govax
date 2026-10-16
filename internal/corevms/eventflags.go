@@ -187,6 +187,7 @@ func serviceSysSetef(env *Environment, argv []uint32) (uint32, error) {
 	}
 
 	st = flagStatus(*word, bit)
+	
 	env.postFlag(argv[0], setefBoost)
 
 	return st, nil
