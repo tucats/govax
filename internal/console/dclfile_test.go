@@ -487,6 +487,7 @@ func TestDCLFile_sharing(t *testing.T) {
 		"-RMS-E-FLK, file currently locked by another user\n" +
 		`  $STATUS == "%X10951098"` + "\n" +
 		"written\n"
+
 	if out != want {
 		t.Errorf("the procedure wrote:\n%s\nwant:\n%s", out, want)
 	}
@@ -507,4 +508,3 @@ func TestDCLFile_ownCommand(t *testing.T) {
 		t.Errorf("the procedure wrote %q, want %q", out, want)
 	}
 }
-

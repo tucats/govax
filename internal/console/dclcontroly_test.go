@@ -260,6 +260,7 @@ func TestWait(t *testing.T) {
 	}()
 
 	buf.Reset()
+	
 	start = time.Now()
 
 	if err := d.Dispatch("@" + proc); err != nil || time.Since(start) > 10*time.Second || !strings.HasSuffix(buf.String(), "after the wait\n") {

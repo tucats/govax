@@ -256,6 +256,7 @@ func reclaimerRun(t *testing.T, on bool) {
 		// Every section page out of the set is on the free list: none
 		// waits on the modified list.
 		valid := 0
+		
 		for i := range uint32(wsPagesBlocks) {
 			if pteIn(t, c, section+i*512).Valid() {
 				valid++

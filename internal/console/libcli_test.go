@@ -244,6 +244,7 @@ func TestLibCLI_getCommand(t *testing.T) {
 	)
 
 	c.In = strings.NewReader("from the terminal\r\n")
+
 	out.Reset()
 
 	d := console.NewDispatcher(c, consoletest.ConsoleGrammar(t), nil)
@@ -306,6 +307,7 @@ func TestLibCLI_common(t *testing.T) {
 	get := buildImage(t, c, "getcommon", getCommonSource)
 
 	d := console.NewDispatcher(c, consoletest.ConsoleGrammar(t), nil)
+
 	out.Reset()
 
 	for _, line := range []string{`RUN "` + get + `"`, `RUN "` + put + `"`, "X = 1", `RUN "` + get + `"`} {
@@ -410,7 +412,10 @@ func chainConsole(t *testing.T) (*console.Console, *bytes.Buffer, *console.Dispa
 func TestLibCLI_doCommand(t *testing.T) {
 	c, out, d := chainConsole(t)
 
-	for _, line := range []string{"DOCMD SHOW SYMBOL CHAINED", "DOCMD DOCMD SHOW SYMBOL CHAINED"} {
+	for _, line := range []string{
+		"DOCMD SHOW SYMBOL CHAINED",
+		"DOCMD DOCMD SHOW SYMBOL CHAINED", //nolint:dupword
+	} {
 		if err := d.Dispatch(line); err != nil {
 			t.Fatalf("%s: %v", line, err)
 		}

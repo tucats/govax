@@ -443,11 +443,13 @@ func TestCrmpsc_limits(t *testing.T) {
 	crmpsc(t, c, "ONE", pageFile, secPages, secPages+0x200, 2, 0)
 
 	g.SectionLimit = 1
+
 	if got := crmpsc(t, c, "TWO", pageFile, secPages+0x400, secPages+0x400, 1, 0); got != ssGsdFull {
 		t.Errorf("past GBLSECTIONS: %#x, want SS$_GSDFULL", got)
 	}
 
 	g.SectionLimit, g.PageLimit = 10, 3
+
 	if got := crmpsc(t, c, "TWO", pageFile, secPages+0x400, secPages+0x600, 2, 0); got != ssGptFull {
 		t.Errorf("past GBLPAGES: %#x, want SS$_GPTFULL", got)
 	}
@@ -471,5 +473,4 @@ func TestCrmpsc_limits(t *testing.T) {
 	if pte := pteAt(t, c, want); !pte.Valid() || pte.PFN() != section(c, "TWO").Frames[0] {
 		t.Errorf("EXPREG PTE %#x", uint32(pte))
 	}
-
 }

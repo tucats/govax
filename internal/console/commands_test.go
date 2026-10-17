@@ -108,7 +108,7 @@ func TestCommands_time(t *testing.T) {
 func TestCommands_ifErrors(t *testing.T) {
 	d, _, _ := newCommandDispatcher(t)
 
-	if err := d.Dispatch("IF"); !errors.Is(err, vmserrors.New(vmserrors.CLI_INSFPRM)) {
+	if err := d.Dispatch(ifTOKEN); !errors.Is(err, vmserrors.New(vmserrors.CLI_INSFPRM)) {
 		t.Errorf("bare IF: %v, want CLI_INSFPRM", err)
 	}
 

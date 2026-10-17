@@ -240,6 +240,7 @@ func (env *Environment) enqueue(argv []uint32) (uint32, *enqRequest) {
 		}
 
 		group := uint16(env.Process.UICGroup())
+		
 		if flags&lckSystem != 0 {
 			if caller > uint32(registers.Executive) && !env.Process.hasPrivilege(privSYSLCK) {
 				return ssNoSysLck, nil

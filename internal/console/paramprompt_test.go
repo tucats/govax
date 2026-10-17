@@ -38,6 +38,7 @@ func TestParameterPrompt(t *testing.T) {
 
 	// An empty reply asks again; the reply is uppercased with the line.
 	out.Reset()
+
 	c.In = strings.NewReader("\nmemory\n")
 
 	if err := d.Dispatch("SHOW"); err != nil {
@@ -53,6 +54,7 @@ func TestParameterPrompt(t *testing.T) {
 	_ = d.Dispatch("SHOW NOSUCHTHING")
 
 	out.Reset()
+	
 	c.In = strings.NewReader("")
 
 	if err := d.Dispatch("SHOW"); err != nil || out.String() != "_What: " {
