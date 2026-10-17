@@ -244,10 +244,17 @@ func (sys *System) chargeFirstTouch(claim vm.FrameClaim) {
 	env.chargePage(claim.Owner.VA, true)
 }
 
-// pageFileIndex is the index govax's one page file would have in VMS's
-// table of page and swap files: 1 (unconfirmed; the probe's
-// JPI$_PAGFILLOC shows a VAX's).
-const pageFileIndex = 1
+// pageFileIndex is the index govax's one page file has in VMS's table of
+// page and swap files: 3, as the VMS 7.1 VAX of Phase 64's probe gave
+// its page file (JPI$_PAGFILLOC %X03000000, SHOW MEMORY/FILES/FULL's
+// "Paging File Number"), its swap file being 1. That VAX's SWPFILCNT was
+// 2, so the page files' numbers seem to follow the swap files' slots
+// (unconfirmed: one VAX, one page file).
+const pageFileIndex = 3
+
+// PageFileIndex is the page file's number in VMS's table of page and
+// swap files (SHOW MEMORY/FILES/FULL's "Paging File Number").
+const PageFileIndex = pageFileIndex
 
 // pageFileLocation is JPI$_PAGFILLOC: the index of the page file the
 // process is assigned to in the longword's fourth byte (the VSI system

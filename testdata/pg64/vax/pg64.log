@@ -1,0 +1,446 @@
+$ WRITE SYS$OUTPUT F$GETSYI("VERSION"), " ", F$GETSYI("HW_NAME")
+V7.1     VAX 8600
+$ RUN SYS$SYSTEM:SYSGEN
+USE ACTIVE
+SHOW PAGFILCNT
+PAGFILCNT                       4          4         4        63 Files      
+SHOW SWPFILCNT
+SWPFILCNT                       2          2         0        63 Files      
+SHOW MPW_HILIMIT
+MPW_HILIMIT                  5634        500         0        -1 Pages      
+SHOW MPW_LOLIMIT
+MPW_LOLIMIT                   120         32         0        -1 Pages      
+SHOW MPW_WRTCLUSTER
+MPW_WRTCLUSTER                120        120        16       120 Pages      
+SHOW MPW_WAITLIMIT
+MPW_WAITLIMIT                5754        620         0        -1 Pages      D
+SHOW MPW_LOWAITLIMIT
+MPW_LOWAITLIMIT              5514        380         0        -1 Pages      D
+SHOW MPW_THRESH
+MPW_THRESH                    200        200         0        -1 Pages      D
+SHOW PQL_DPGFLQUOTA
+PQL_DPGFLQUOTA              16400       8192       512        -1 Pages      D
+SHOW PQL_MPGFLQUOTA
+PQL_MPGFLQUOTA              16400        512       512        -1 Pages      D
+SHOW GBLPAGFIL
+GBLPAGFIL                    4096       1024       128   4194176 Pages      
+SHOW VIRTUALPAGECNT
+VIRTUALPAGECNT              65500      12032       512   4194304 Pages      
+SHOW PFCDEFAULT
+PFCDEFAULT                     16         32         0       127 Pages      D
+EXIT
+$ SHOW MEMORY/FILES
+              System Memory Resources on 17-OCT-2026 06:31:42.35
+
+Paging File Usage (pages):                      Free  Reservable       Total
+  DISK$OPENVMS071:[SYS0.SYSEXE]SWAPFILE.SYS                                     
+                                                1000        1000        1000
+  DISK$OPENVMS071:[SYS0.SYSEXE]PAGEFILE.SYS                                     
+                                               91487       61854       94000
+$ SHOW MEMORY/FILES/FULL
+              System Memory Resources on 17-OCT-2026 06:31:42.36
+
+DISK$OPENVMS071:[SYS0.SYSEXE]SWAPFILE.SYS                                       
+    Free Blocks                   1000    Reservable Blocks             1000
+    Total Size (blocks)           1000    Paging File Number               1
+    Swap Usage (processes)           0    Paging Usage (processes)         0
+  This file is used exclusively for swapping.
+
+DISK$OPENVMS071:[SYS0.SYSEXE]PAGEFILE.SYS                                       
+    Free Blocks                  91487    Reservable Blocks            61877
+    Total Size (blocks)          94000    Paging File Number               3
+    Swap Usage (processes)           0    Paging Usage (processes)        16
+  This file can be used for either paging or swapping.
+$ SHOW MEMORY
+              System Memory Resources on 17-OCT-2026 06:31:42.36
+
+Physical Memory Usage (pages):     Total        Free      In Use    Modified
+  Main Memory (32.00Mb)            65536       30716       34679         141
+
+Virtual I/O Cache Usage (pages):   Total        Free      In Use     Maximum
+  Cache Memory                     13819         256       13563       41401
+
+Slot Usage (slots):                Total        Free    Resident     Swapped
+  Process Entry Slots                230         213          17           0
+  Balance Set Slots                  123         108          15           0
+
+Dynamic Memory Usage (bytes):      Total        Free      In Use     Largest
+  Nonpaged Dynamic Memory        1639936      792000      847936      580864
+  Paged Dynamic Memory           1498624     1058048      440576     1056432
+
+Paging File Usage (pages):                      Free  Reservable       Total
+  DISK$OPENVMS071:[SYS0.SYSEXE]SWAPFILE.SYS                                     
+                                                1000        1000        1000
+  DISK$OPENVMS071:[SYS0.SYSEXE]PAGEFILE.SYS                                     
+                                               91487       61900       94000
+
+Of the physical pages in use, 13114 pages are permanently allocated to OpenVMS.
+$ DIRECTORY/FULL SYS$SYSTEM:PAGEFILE.SYS
+
+Directory SYS$SYSROOT:[SYSEXE]
+
+PAGEFILE.SYS;1                File ID:  (83,1,0)              
+Size:        94000/94002      Owner:    [SYSTEM]
+Created:   10-DEC-1996 14:16:01.65
+Revised:   21-SEP-2026 10:07:23.31 (7)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Sequential
+Shelved state:      Online 
+File attributes:    Allocation: 94002, Extend: 0, Global buffer count: 0, No version limit, Backups disabled, MoveFile disabled
+Record format:      Undefined, maximum 0 bytes, longest 0 bytes
+Record attributes:  None
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:, World:
+Access Cntrl List:  None
+
+Total of 1 file, 94000/94002 blocks.
+$ SHOW PROCESS/QUOTA
+
+17-OCT-2026 06:31:42.37   User: SYSTEM           Process ID:   00000114
+                          Node: SIMVAX           Process name: "SYSTEM"
+
+Process Quotas:
+ Account name: SYSTEM  
+ CPU limit:                      Infinite  Direct I/O limit:        40
+ Buffered I/O byte count quota:     32256  Buffered I/O limit:      40
+ Timer queue entry quota:              30  Open file quota:        298
+ Paging file quota:                 39470  Subprocess quota:        10
+ Default page fault cluster:           16  AST quota:               48
+ Enqueue quota:                       200  Shared file limit:        0
+ Max detached processes:                0  Max active jobs:          0
+$ GOSUB PFV
+$ PFV:
+$ WRITE SYS$OUTPUT "pf free=", F$GETSYI("PAGEFILE_FREE"), " page=", F$GETSYI("PAGEFILE_PAGE"), -
+	" swfree=", F$GETSYI("SWAPFILE_FREE"), " swpage=", F$GETSYI("SWAPFILE_PAGE")
+pf free=91487 page=94000 swfree=1000 swpage=1000
+$ WRITE SYS$OUTPUT "pf pgflquota=", F$GETJPI("","PGFLQUOTA"), " pagfilcnt=", F$GETJPI("","PAGFILCNT"), -
+	" pagfilloc=", F$GETJPI("","PAGFILLOC"), " dirio=", F$GETJPI("","DIRIO"), -
+	" flts=", F$GETJPI("","PAGEFLTS")
+pf pgflquota=40960 pagfilcnt=39799 pagfilloc=03000000 dirio=909 flts=62496
+$ RETURN
+$ !
+$ ! The programs, assembled and linked.
+$ !
+$ DEFINE/USER_MODE SYS$OUTPUT PG64_BUILD.LOG
+$ DEFINE/USER_MODE SYS$ERROR PG64_BUILD.LOG
+$ MACRO/NOLIST PG64
+$ DEFINE/USER_MODE SYS$OUTPUT PG64_BUILD.LOG
+$ DEFINE/USER_MODE SYS$ERROR PG64_BUILD.LOG
+$ LINK/NOMAP PG64
+$ DEFINE/USER_MODE SYS$OUTPUT PG64_BUILD.LOG
+$ DEFINE/USER_MODE SYS$ERROR PG64_BUILD.LOG
+$ MACRO/NOLIST PG64V
+$ DEFINE/USER_MODE SYS$OUTPUT PG64_BUILD.LOG
+$ DEFINE/USER_MODE SYS$ERROR PG64_BUILD.LOG
+$ LINK/NOMAP PG64V
+$ GOSUB PFV
+$ PFV:
+$ WRITE SYS$OUTPUT "pf free=", F$GETSYI("PAGEFILE_FREE"), " page=", F$GETSYI("PAGEFILE_PAGE"), -
+	" swfree=", F$GETSYI("SWAPFILE_FREE"), " swpage=", F$GETSYI("SWAPFILE_PAGE")
+pf free=91509 page=94000 swfree=1000 swpage=1000
+$ WRITE SYS$OUTPUT "pf pgflquota=", F$GETJPI("","PGFLQUOTA"), " pagfilcnt=", F$GETJPI("","PAGFILCNT"), -
+	" pagfilloc=", F$GETJPI("","PAGFILLOC"), " dirio=", F$GETJPI("","DIRIO"), -
+	" flts=", F$GETJPI("","PAGEFLTS")
+pf pgflquota=40960 pagfilcnt=39799 pagfilloc=03000000 dirio=1029 flts=72408
+$ RETURN
+$ !
+$ ! Part Q, the quota, here; then part C runs it twice in a detached
+$ ! process with a small quota, with every privilege SYSTEM has and
+$ ! without EXQUOTA. The detached process sees only the system's logical
+$ ! names, so the files'names are given with the device's full name.
+$ !
+$ DEFINE PG64_PART Q
+$ DEFINE/USER_MODE SYS$OUTPUT PG64Q1.OUT
+$ RUN PG64
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ GOSUB PFV
+$ PFV:
+$ WRITE SYS$OUTPUT "pf free=", F$GETSYI("PAGEFILE_FREE"), " page=", F$GETSYI("PAGEFILE_PAGE"), -
+	" swfree=", F$GETSYI("SWAPFILE_FREE"), " swpage=", F$GETSYI("SWAPFILE_PAGE")
+pf free=91630 page=94000 swfree=1000 swpage=1000
+$ WRITE SYS$OUTPUT "pf pgflquota=", F$GETJPI("","PGFLQUOTA"), " pagfilcnt=", F$GETJPI("","PAGFILCNT"), -
+	" pagfilloc=", F$GETJPI("","PAGFILLOC"), " dirio=", F$GETJPI("","DIRIO"), -
+	" flts=", F$GETJPI("","PAGEFLTS")
+pf pgflquota=40960 pagfilcnt=39799 pagfilloc=03000000 dirio=1040 flts=73636
+$ RETURN
+$ DEV = F$GETDVI(F$PARSE("PG64.EXE",,,"DEVICE"),"FULLDEVNAM")
+$ DIR = F$PARSE("PG64.EXE",,,"DIRECTORY")
+$ DEFINE PG64_IMAGE _SIMVAX$DUA1:[000000]PG64.EXE
+$ DEFINE PG64_OUT2 _SIMVAX$DUA1:[000000]PG64Q2.OUT
+$ DEFINE PG64_OUT3 _SIMVAX$DUA1:[000000]PG64Q3.OUT
+$ SHOW LOGICAL PG64_*
+
+(LNM$PROCESS_TABLE)
+
+  "PG64_IMAGE" = "_SIMVAX$DUA1:[000000]PG64.EXE"
+  "PG64_OUT2" = "_SIMVAX$DUA1:[000000]PG64Q2.OUT"
+  "PG64_OUT3" = "_SIMVAX$DUA1:[000000]PG64Q3.OUT"
+  "PG64_PART" = "Q"
+
+(LNM$JOB_81C60C00)
+
+(LNM$GROUP_000001)
+
+(LNM$SYSTEM_TABLE)
+$ DEFINE PG64_PART C
+%DCL-I-SUPERSEDE, previous value of PG64_PART has been superseded
+$ DEFINE/USER_MODE SYS$OUTPUT PG64C.OUT
+$ RUN PG64
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ GOSUB PFV
+$ PFV:
+$ WRITE SYS$OUTPUT "pf free=", F$GETSYI("PAGEFILE_FREE"), " page=", F$GETSYI("PAGEFILE_PAGE"), -
+	" swfree=", F$GETSYI("SWAPFILE_FREE"), " swpage=", F$GETSYI("SWAPFILE_PAGE")
+pf free=91681 page=94000 swfree=1000 swpage=1000
+$ WRITE SYS$OUTPUT "pf pgflquota=", F$GETJPI("","PGFLQUOTA"), " pagfilcnt=", F$GETJPI("","PAGFILCNT"), -
+	" pagfilloc=", F$GETJPI("","PAGFILLOC"), " dirio=", F$GETJPI("","DIRIO"), -
+	" flts=", F$GETJPI("","PAGEFLTS")
+pf pgflquota=40960 pagfilcnt=39799 pagfilloc=03000000 dirio=1048 flts=74028
+$ RETURN
+$ !
+$ ! LIB$GET_VM.
+$ !
+$ DEFINE/USER_MODE SYS$OUTPUT PG64V.OUT
+$ RUN PG64V
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ GOSUB PFV
+$ PFV:
+$ WRITE SYS$OUTPUT "pf free=", F$GETSYI("PAGEFILE_FREE"), " page=", F$GETSYI("PAGEFILE_PAGE"), -
+	" swfree=", F$GETSYI("SWAPFILE_FREE"), " swpage=", F$GETSYI("SWAPFILE_PAGE")
+pf free=91841 page=94000 swfree=1000 swpage=1000
+$ WRITE SYS$OUTPUT "pf pgflquota=", F$GETJPI("","PGFLQUOTA"), " pagfilcnt=", F$GETJPI("","PAGFILCNT"), -
+	" pagfilloc=", F$GETJPI("","PAGFILLOC"), " dirio=", F$GETJPI("","DIRIO"), -
+	" flts=", F$GETJPI("","PAGEFLTS")
+pf pgflquota=40960 pagfilcnt=39799 pagfilloc=03000000 dirio=1057 flts=74504
+$ RETURN
+$ !
+$ ! Part W, the writer and the page file; the page file's free count at
+$ ! the program's exit, and a few seconds later.
+$ !
+$ SHOW MEMORY/FILES
+              System Memory Resources on 17-OCT-2026 06:31:45.15
+
+Paging File Usage (pages):                      Free  Reservable       Total
+  DISK$OPENVMS071:[SYS0.SYSEXE]SWAPFILE.SYS                                     
+                                                1000        1000        1000
+  DISK$OPENVMS071:[SYS0.SYSEXE]PAGEFILE.SYS                                     
+                                               91849       61284       94000
+$ DEFINE PG64_PART W
+%DCL-I-SUPERSEDE, previous value of PG64_PART has been superseded
+$ DEFINE/USER_MODE SYS$OUTPUT PG64W.OUT
+$ RUN PG64
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ GOSUB PFV
+$ PFV:
+$ WRITE SYS$OUTPUT "pf free=", F$GETSYI("PAGEFILE_FREE"), " page=", F$GETSYI("PAGEFILE_PAGE"), -
+	" swfree=", F$GETSYI("SWAPFILE_FREE"), " swpage=", F$GETSYI("SWAPFILE_PAGE")
+pf free=91296 page=94000 swfree=1000 swpage=1000
+$ WRITE SYS$OUTPUT "pf pgflquota=", F$GETJPI("","PGFLQUOTA"), " pagfilcnt=", F$GETJPI("","PAGFILCNT"), -
+	" pagfilloc=", F$GETJPI("","PAGFILLOC"), " dirio=", F$GETJPI("","DIRIO"), -
+	" flts=", F$GETJPI("","PAGEFLTS")
+pf pgflquota=40960 pagfilcnt=39799 pagfilloc=03000000 dirio=1066 flts=101755
+$ RETURN
+$ WAIT 00:00:05
+$ GOSUB PFV
+$ PFV:
+$ WRITE SYS$OUTPUT "pf free=", F$GETSYI("PAGEFILE_FREE"), " page=", F$GETSYI("PAGEFILE_PAGE"), -
+	" swfree=", F$GETSYI("SWAPFILE_FREE"), " swpage=", F$GETSYI("SWAPFILE_PAGE")
+pf free=91296 page=94000 swfree=1000 swpage=1000
+$ WRITE SYS$OUTPUT "pf pgflquota=", F$GETJPI("","PGFLQUOTA"), " pagfilcnt=", F$GETJPI("","PAGFILCNT"), -
+	" pagfilloc=", F$GETJPI("","PAGFILLOC"), " dirio=", F$GETJPI("","DIRIO"), -
+	" flts=", F$GETJPI("","PAGEFLTS")
+pf pgflquota=40960 pagfilcnt=39799 pagfilloc=03000000 dirio=1067 flts=101767
+$ RETURN
+$ SHOW MEMORY/FILES
+              System Memory Resources on 17-OCT-2026 06:32:04.06
+
+Paging File Usage (pages):                      Free  Reservable       Total
+  DISK$OPENVMS071:[SYS0.SYSEXE]SWAPFILE.SYS                                     
+                                                1000        1000        1000
+  DISK$OPENVMS071:[SYS0.SYSEXE]PAGEFILE.SYS                                     
+                                               91296       61804       94000
+$ !
+$ ! Part S, the job's pool, seen from a waiting subprocess.
+$ !
+$ SPAWN/NOWAIT/PROCESS=PG64SUB/OUTPUT=NL: WAIT 00:02:00
+%DCL-S-SPAWNED, process PG64SUB spawned
+$ WAIT 00:00:05
+$ DEFINE PG64_PART S
+%DCL-I-SUPERSEDE, previous value of PG64_PART has been superseded
+$ DEFINE/USER_MODE SYS$OUTPUT PG64S.OUT
+$ RUN PG64
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ STOP PG64SUB
+$ WAIT 00:00:02
+$ GOSUB PFV
+$ PFV:
+$ WRITE SYS$OUTPUT "pf free=", F$GETSYI("PAGEFILE_FREE"), " page=", F$GETSYI("PAGEFILE_PAGE"), -
+	" swfree=", F$GETSYI("SWAPFILE_FREE"), " swpage=", F$GETSYI("SWAPFILE_PAGE")
+pf free=91394 page=94000 swfree=1000 swpage=1000
+$ WRITE SYS$OUTPUT "pf pgflquota=", F$GETJPI("","PGFLQUOTA"), " pagfilcnt=", F$GETJPI("","PAGFILCNT"), -
+	" pagfilloc=", F$GETJPI("","PAGFILLOC"), " dirio=", F$GETJPI("","DIRIO"), -
+	" flts=", F$GETJPI("","PAGEFLTS")
+pf pgflquota=40960 pagfilcnt=39799 pagfilloc=03000000 dirio=1079 flts=102298
+$ RETURN
+$ !
+$ ! A subprocess that uses the page file, and its LOGOUT/FULL.
+$ !
+$ SPAWN/OUTPUT=PG64L.LOG @PG64L
+%DCL-S-SPAWNED, process SYSTEM_1 spawned
+%DCL-S-ATTACHED, terminal now attached to process SYSTEM_1
+%DCL-S-RETURNED, control returned to process SYSTEM
+$ GOSUB PFV
+$ PFV:
+$ WRITE SYS$OUTPUT "pf free=", F$GETSYI("PAGEFILE_FREE"), " page=", F$GETSYI("PAGEFILE_PAGE"), -
+	" swfree=", F$GETSYI("SWAPFILE_FREE"), " swpage=", F$GETSYI("SWAPFILE_PAGE")
+pf free=91402 page=94000 swfree=1000 swpage=1000
+$ WRITE SYS$OUTPUT "pf pgflquota=", F$GETJPI("","PGFLQUOTA"), " pagfilcnt=", F$GETJPI("","PAGFILCNT"), -
+	" pagfilloc=", F$GETJPI("","PAGFILLOC"), " dirio=", F$GETJPI("","DIRIO"), -
+	" flts=", F$GETJPI("","PAGEFLTS")
+pf pgflquota=40960 pagfilcnt=38512 pagfilloc=03000000 dirio=1083 flts=102336
+$ RETURN
+$ DEASSIGN PG64_PART
+$ DEASSIGN PG64_IMAGE
+$ DEASSIGN PG64_OUT2
+$ DEASSIGN PG64_OUT3
+$ SHOW MEMORY/FILES
+              System Memory Resources on 17-OCT-2026 06:32:11.08
+
+Paging File Usage (pages):                      Free  Reservable       Total
+  DISK$OPENVMS071:[SYS0.SYSEXE]SWAPFILE.SYS                                     
+                                                1000        1000        1000
+  DISK$OPENVMS071:[SYS0.SYSEXE]PAGEFILE.SYS                                     
+                                               91417       60370       94000
+$ TYPE PG64Q1.OUT
+Q1 start: pgflquota=40960 pagfilcnt=39771 pagfilloc=03000000 exquota=1
+Q1 the job's charges at the first instruction: 1189
+Q2 expreg 100 P0: 00000001 pages=100 charged=100
+Q2 touched: charged=0
+Q2 deltva the upper 50: 00000001 charged=-50
+Q2 deltva the lower 50: 00000001 charged=-50
+Q3 expreg 40 untouched: 00000001 charged=40; deltva 00000001 charged=-40
+Q4 cretva 100 at P0's end: 00000001 pages=100 charged=100
+Q4 touched: charged=0
+Q4 cretva over them: 00000001 pages=100 charged=0; pages not zero 99
+Q4 touched again: charged=0
+Q4 deltva: 00000001 charged=-100
+Q5 expreg 100 P1: 00000001 pages=100 charged=100
+Q5 touched: charged=0
+Q5 deltva: 00000001 charged=-100
+Q10 filled: pagfilcnt=200
+Q11 expreg P0 pagfilcnt+10: 0000001C pages=pagfilcnt0 charged=pagfilcnt0 pagfilcnt then 0
+Q11 deltva: 00000001 pagfilcnt back to the start0
+Q11 cretva pagfilcnt+10: 0000001C pages=pagfilcnt0 charged=pagfilcnt0 pagfilcnt then 0
+Q11 deltva: 00000001 pagfilcnt back to the start0
+Q11 expreg P1 pagfilcnt+10: 0000001C pages=pagfilcnt0 charged=pagfilcnt0 pagfilcnt then 0
+Q11 deltva: 00000001 pagfilcnt back to the start0
+Q12 expreg pagfilcnt+10, touched: 0000001C pages=200 charged=200 pagfilcnt then 0
+Q13 expreg pagfilcnt: 00000001 pages=pagfilcnt0; one more 0000001C pages=-1; pagfilcnt then 0
+Q13 deltva: 00000001 pagfilcnt back to the start0
+$ TYPE PG64C.OUT
+C1 creprc, exquota=1: 00000001
+C2 ended
+C1 creprc, exquota=0: 00000001
+C2 ended
+$ TYPE PG64Q2.OUT
+Q1 start: pgflquota=16400 pagfilcnt=15723 pagfilloc=03000000 exquota=1
+Q1 the job's charges at the first instruction: 677
+Q2 expreg 100 P0: 00000001 pages=100 charged=100
+Q2 touched: charged=0
+Q2 deltva the upper 50: 00000001 charged=-50
+Q2 deltva the lower 50: 00000001 charged=-50
+Q3 expreg 40 untouched: 00000001 charged=40; deltva 00000001 charged=-40
+Q4 cretva 100 at P0's end: 00000001 pages=100 charged=100
+Q4 touched: charged=0
+Q4 cretva over them: 00000001 pages=100 charged=0; pages not zero 99
+Q4 touched again: charged=0
+Q4 deltva: 00000001 charged=-100
+Q5 expreg 100 P1: 00000001 pages=100 charged=100
+Q5 touched: charged=0
+Q5 deltva: 00000001 charged=-100
+Q10 filled: pagfilcnt=200
+Q11 expreg P0 pagfilcnt+10: 0000001C pages=pagfilcnt0 charged=pagfilcnt0 pagfilcnt then 0
+Q11 deltva: 00000001 pagfilcnt back to the start0
+Q11 cretva pagfilcnt+10: 0000001C pages=pagfilcnt0 charged=pagfilcnt0 pagfilcnt then 0
+Q11 deltva: 00000001 pagfilcnt back to the start0
+Q11 expreg P1 pagfilcnt+10: 0000001C pages=pagfilcnt0 charged=pagfilcnt0 pagfilcnt then 0
+Q11 deltva: 00000001 pagfilcnt back to the start0
+Q12 expreg pagfilcnt+10, touched: 0000001C pages=200 charged=200 pagfilcnt then 0
+Q13 expreg pagfilcnt: 00000001 pages=pagfilcnt0; one more 0000001C pages=-1; pagfilcnt then 0
+Q13 deltva: 00000001 pagfilcnt back to the start0
+$ TYPE PG64Q3.OUT
+Q1 start: pgflquota=16400 pagfilcnt=15723 pagfilloc=03000000 exquota=0
+Q1 the job's charges at the first instruction: 677
+Q2 expreg 100 P0: 00000001 pages=100 charged=100
+Q2 touched: charged=0
+Q2 deltva the upper 50: 00000001 charged=-50
+Q2 deltva the lower 50: 00000001 charged=-50
+Q3 expreg 40 untouched: 00000001 charged=40; deltva 00000001 charged=-40
+Q4 cretva 100 at P0's end: 00000001 pages=100 charged=100
+Q4 touched: charged=0
+Q4 cretva over them: 00000001 pages=100 charged=0; pages not zero 99
+Q4 touched again: charged=0
+Q4 deltva: 00000001 charged=-100
+Q5 expreg 100 P1: 00000001 pages=100 charged=100
+Q5 touched: charged=0
+Q5 deltva: 00000001 charged=-100
+Q10 filled: pagfilcnt=200
+Q11 expreg P0 pagfilcnt+10: 0000001C pages=pagfilcnt0 charged=pagfilcnt0 pagfilcnt then 0
+Q11 deltva: 00000001 pagfilcnt back to the start0
+Q11 cretva pagfilcnt+10: 0000001C pages=pagfilcnt0 charged=pagfilcnt0 pagfilcnt then 0
+Q11 deltva: 00000001 pagfilcnt back to the start0
+Q11 expreg P1 pagfilcnt+10: 0000001C pages=pagfilcnt0 charged=pagfilcnt0 pagfilcnt then 0
+Q11 deltva: 00000001 pagfilcnt back to the start0
+Q12 expreg pagfilcnt+10, touched: 0000001C pages=200 charged=200 pagfilcnt then 0
+Q13 expreg pagfilcnt: 00000001 pages=pagfilcnt0; one more 0000001C pages=-1; pagfilcnt then 0
+Q13 deltva: 00000001 pagfilcnt back to the start0
+$ TYPE PG64V.OUT
+V1 get_vm 100 pages: 00000001 charged=136
+V1 get_vm 400 pages: 00000001 charged=401
+V2 get_vm pagfilcnt+10 pages: 00158214 charged=-39221 pagfilcnt then 39221
+$ TYPE PG64W.OUT
+W1 mpw_hilimit=5634 mpw_lolimit=120 mpw_wrtcluster=120
+W1 pages=mpw_hilimit1000 wssize=282
+W2 expreg: 00000001 charged=pages0 page file used=0
+W3 first sweep (write): flts=pages97 dirio=0 charged=0 page file used=1421
+W3 page file used=pages-5213
+W4 second sweep (read): flts=pages36 dirio=0 charged=0 page file used=229 bad=0
+W5 third sweep (write): flts=pages65 dirio=0 charged=0 page file used=-9
+W5 then read: flts=pages27 dirio=0 page file used=83 bad=0
+W6 deltva: 00000001 charged=-pages0 page file used=-1130
+W6 a wait later: page file used=0
+$ TYPE PG64S.OUT
+S1 subprocess: 00000001 pagfilcnt=own0 pgflquota=own0
+S2 expreg 200 here, touched: charged=200; the subprocess's pagfilcnt down by 200
+S3 deltva here: charged=-200; the subprocess's pagfilcnt down by -200
+$ TYPE PG64L.LOG
+$ ! PG64L.COM - the subprocess Phase 64's probe spawns (PG64.COM): the
+$ ! program's part T touches 300 pages, then LOGOUT/FULL shows the peak
+$ ! page file size.
+$ SET VERIFY
+$ WRITE SYS$OUTPUT "sub pgflquota=", F$GETJPI("","PGFLQUOTA"), " pagfilcnt=", F$GETJPI("","PAGFILCNT")
+sub pgflquota=40960 pagfilcnt=38512
+$ DEFINE PG64_PART T
+%DCL-I-SUPERSEDE, previous value of PG64_PART has been superseded
+$ RUN PG64
+T1 expreg 300, touched: charged=300
+$ WRITE SYS$OUTPUT "sub pgflquota=", F$GETJPI("","PGFLQUOTA"), " pagfilcnt=", F$GETJPI("","PAGFILCNT")
+sub pgflquota=40960 pagfilcnt=38512
+$ LOGOUT/FULL
+  Process SYSTEM_1 logged out at 17-OCT-2026 06:32:11.08
+
+  Accounting information:
+  Buffered I/O count:              37         Peak working set size:     602
+  Direct I/O count:                 9         Peak page file size:      2984
+  Page faults:                    672         Mounted volumes:             0
+  Charged CPU time:           0 00:00:00.01   Elapsed time:     0 00:00:00.01
+$ SET NOVERIFY

@@ -1,0 +1,20 @@
+$ ! PG64L.COM - the subprocess Phase 64's probe spawns (PG64.COM): the
+$ ! program's part T touches 300 pages, then LOGOUT/FULL shows the peak
+$ ! page file size.
+$ SET VERIFY
+$ WRITE SYS$OUTPUT "sub pgflquota=", F$GETJPI("","PGFLQUOTA"), " pagfilcnt=", F$GETJPI("","PAGFILCNT")
+sub pgflquota=40960 pagfilcnt=38512
+$ DEFINE PG64_PART T
+%DCL-I-SUPERSEDE, previous value of PG64_PART has been superseded
+$ RUN PG64
+T1 expreg 300, touched: charged=300
+$ WRITE SYS$OUTPUT "sub pgflquota=", F$GETJPI("","PGFLQUOTA"), " pagfilcnt=", F$GETJPI("","PAGFILCNT")
+sub pgflquota=40960 pagfilcnt=38512
+$ LOGOUT/FULL
+  Process SYSTEM_1 logged out at 17-OCT-2026 06:32:11.08
+
+  Accounting information:
+  Buffered I/O count:              37         Peak working set size:     602
+  Direct I/O count:                 9         Peak page file size:      2984
+  Page faults:                    672         Mounted volumes:             0
+  Charged CPU time:           0 00:00:00.01   Elapsed time:     0 00:00:00.01
