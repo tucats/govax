@@ -132,6 +132,11 @@ func (m *PageFileMap) UsedBlocks() uint32 { return m.size - m.free }
 // AllocationSize is the size of run the map looks for now.
 func (m *PageFileMap) AllocationSize() uint32 { return m.allocSize }
 
+// Warned is the highest use threshold reported so far (NoWarning,
+// PageFrag, or PageCrit). It doesn't fall as blocks are freed: each
+// threshold is reported once in the file's life.
+func (m *PageFileMap) Warned() Warning { return m.warned }
+
 // Allocated reports whether block vbn is allocated. A block outside the
 // file isn't.
 func (m *PageFileMap) Allocated(vbn uint32) bool {

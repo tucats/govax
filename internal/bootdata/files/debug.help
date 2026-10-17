@@ -22,6 +22,7 @@
 //              10/12/26    Built-in symbols (subtask 20).
 //              10/15/26    SHOW MEMORY's page frame counts with paging on;
 //                          SHOW PAGE names the PTE's form.
+//              10/17/26    SHOW MEMORY's page file section.
 //
 
 $HELP
@@ -1033,7 +1034,8 @@ $SH,VM
   Shows the size of physical memory and, once VMINIT has made page tables,
   how much of each region (P0, P1, S0) is used (govax's own). With paging
   on (VMINIT/PAGING), the page frames on the free and modified lists and
-  in use. With /STATISTICS, counters of the memory system's work;
+  in use, the page faults by kind, the modified page writer's pages and
+  writes, and the page file's use. With /STATISTICS, counters of the memory system's work;
   /RUNTIME and /FULL show more.
 
   Format:

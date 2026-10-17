@@ -138,6 +138,8 @@
 //                          CONFIG KEYS
 //              10/16/26    vax.sysgen.mpw_wrtcluster in CONFIG KEYS;
 //                          mpw_lolimit's default is 32
+//              10/17/26    SHOW MEMORY's page file section; F$GETSYI's
+//                          page file items
 
 This is the help documentation for the govax VAX emulator.  Topic sections are
 marked by a "$" delimiter.  This is followed by as many tokens of the help
@@ -200,7 +202,14 @@ $SH  ,MEM
     memory available on the virtual VAX. With paging on (VMINIT/PAGING),
     it also shows how many page frames are on the free list, on the
     modified list, and in use, by the kind of page each holds (a process's,
-    a global section's, or the system's).
+    a global section's, or the system's); the page faults by kind; the
+    pages the modified page writer has written and the writes it took; and
+    the page file: its name, and once it's open its size, its free and
+    used blocks, and whether it has passed the PAGEFRAG (65%) or PAGECRIT
+    (90%) threshold or is full. "Page file committed" is the pages charged
+    against every job's PGFLQUOTA: a page is charged when it's made, and
+    takes a page file block only when it's written there. The page file is
+    opened when it's first needed, so it may show as "not opened yet".
 
 $SHOW,TRAN
 $SH  ,TRAN
@@ -1341,7 +1350,10 @@ $LEXI
                                          process): PID, PRCNAM, USERNAME,
                                          UIC, CURPRIV, STATE, MODE, ...
         F$GETSYI(item [,node])           $GETSYI's items: NODENAME, VERSION,
-                                         BOOTTIME, SID, ...
+                                         BOOTTIME, SID, ...; the paging
+                                         parameters; PAGEFILE_PAGE and
+                                         PAGEFILE_FREE (the page file's
+                                         size and free pages)
         F$IDENTIFIER(identifier, type)   NAME_TO_NUMBER: an identifier's
                                          value (0 if there's none);
                                          NUMBER_TO_NAME: its name ("")

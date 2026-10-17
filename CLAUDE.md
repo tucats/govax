@@ -141,7 +141,9 @@ never had.
   `corevms/pgflquota.go`, done 2026-10-16; subtask 6, the rest of the
   system: DISMOUNT's VMS messages for the page file's volume,
   `rms.FilesOpenError`, the reclaimer and a subprocess with the page
-  file, done 2026-10-16); 65 sections under the
+  file, done 2026-10-16; subtask 7, reporting: SHOW MEMORY's page file
+  section, `System.PageFileReport`, and `$GETSYI`'s PAGEFILE_PAGE and
+  PAGEFILE_FREE, done 2026-10-17); 65 sections under the
   pager; 66 image activation by mapping; 67 the address space and page
   tables under paging, deferred to the end. Paging is synchronous, with no
   PFW, COLPG, or FPG waits. Each later phase has a planning doc.

@@ -104,3 +104,47 @@ func TestShowPage_forms(t *testing.T) {
 		}
 	}
 }
+
+// TestShowMemory_pageFile: in paging mode SHOW MEMORY has a page file
+// section: none configured, or one configured but not yet needed (SHOW
+// MEMORY doesn't open it), with the pages committed to it; and the
+// writer's write I/Os under its pages written.
+func TestShowMemory_pageFile(t *testing.T) {
+	c, buf := newTestMachine(t)
+
+	if err := c.VMInitPaging(true, 20, 20, 0, 2, 2, 2, 2, 8); err != nil {
+		t.Fatalf("VMInitPaging: %v", err)
+	}
+
+	show := func() string {
+		t.Helper()
+		buf.Reset()
+
+		if err := c.ShowMemory(); err != nil {
+			t.Fatalf("ShowMemory: %v", err)
+		}
+
+		return buf.String()
+	}
+
+	out := show()
+	for _, line := range []string{
+		"        Write I/Os                0\n",
+		"    Page file: none\n",
+		"    Page file committed",
+	} {
+		if !strings.Contains(out, line) {
+			t.Errorf("output = %q, want it to contain %q", out, line)
+		}
+	}
+
+	c.processOne.Sysgen.PageFileName = "DUA0:[SYSEXE]PAGEFILE.SYS"
+
+	if out := show(); !strings.Contains(out, "    Page file: DUA0:[SYSEXE]PAGEFILE.SYS (not opened yet)\n") {
+		t.Errorf("output = %q, want the page file not opened yet", out)
+	}
+
+	if c.processOne.PageFile() != nil {
+		t.Error("SHOW MEMORY opened the page file")
+	}
+}

@@ -5,7 +5,7 @@
 ("Questions for the author"). Subtask 2, the page file, done
 2026-10-16. Subtask 3, the modified page writer, done 2026-10-16. Subtask 4,
 blocks freed, done 2026-10-16. Subtask 5, PGFLQUOTA, done 2026-10-16. Subtask 6, the rest of the
-system, done 2026-10-16. Planned 2026-10-15. Needs Phase 63 (working sets, the
+system, done 2026-10-16. Subtask 7, reporting, done 2026-10-17. Planned 2026-10-15. Needs Phase 63 (working sets, the
 lists, soft faults). Part of the paging program laid out in
 `PHASE-62 - VMS paging.md` (Decisions 7, 8, 9, and 10 are this phase's).
 
@@ -609,7 +609,7 @@ pg63's. Values that vary from run to run print as differences.
    volume tested (it holds already, the survey found); the reclaimer's
    writer with the page file; a subprocess's charges back to the job at
    its deletion.
-7. **Reporting:** SHOW MEMORY's page file section (question 3) and the
+7. **Reporting** (done 2026-10-17): SHOW MEMORY's page file section (question 3) and the
    writer's counts; `$GETSYI` and F$GETSYI's items (finding 14).
 8. **The VMS probe** (`testdata/pg64`), Part A's case list; govax is then
    changed to its answers (SHOW MEMORY/FILES's VAX layout among them).
@@ -840,3 +840,37 @@ pg63's. Values that vary from run to run print as differences.
   LOGINOUT job's, `corevms/logout.go`), so "Peak page file size" can't
   be shown for a spawned process; left for the probe (subtask 8), which
   asks for LOGOUT/FULL of a subprocess and can settle its layout.
+- **2026-10-17:** Subtask 7, reporting. `corevms/pagefile.go`'s
+  `System.PageFileReport` says where the page file stands (none: paging
+  off or no name; not opened yet; in use; unavailable: it failed to open,
+  or was closed with its System) and, while it's open, its name, size,
+  free and used blocks, allocation size, the highest threshold reported
+  (`paging.PageFileMap.Warned`, new), and whether the writer last found
+  it full; `Charged` is the page file's committed use, every job's
+  `PageFileCharged` counted once a job. It never opens the file. SHOW
+  MEMORY (`machine/show.go`'s `showPageFile`) shows it in govax's layout
+  after the page fault counts, as the author chose (question 3): `Page
+  file: name`, with its Size, Free, In use, Allocation size, and a State
+  line when it has passed PAGEFRAG or PAGECRIT or is full; or `Page
+  file: none`, `(not opened yet)`, `(not available)`; then `Page file
+  committed`. The writer's write I/Os (`PageCounts.WriteIOs`, subtask
+  3's) show under Pages written. VMS's `/FILES` layout waits for the
+  probe (subtask 8). `$GETSYI` (finding 14): SYI$_PAGEFILE_PAGE and
+  PAGEFILE_FREE are the page file's size and free blocks, in pages,
+  `pageFileSizes`; a program asking for them is a need, so they open the
+  page file (a service runs between instructions, where opening is safe),
+  as VMS's is always installed; 0 with none. SWAPFILE_PAGE and
+  SWAPFILE_FREE are 0 (no swap file; unconfirmed). MPW_WRTCLUSTER is the
+  Sysgen's, PQL_MPGFLQUOTA `quotaRules`' minimum (16400, the VAX's,
+  `pqlMinimum`). All six are F$GETSYI keywords too
+  (`dclshell/dcllexprocess.go`'s `syiKeywords`). PAGEFILE_FREE counts
+  blocks not allocated, not the committed pages (unconfirmed: the probe
+  reads it before and after the writer writes). `$GETJPI`'s PAGFILCNT
+  and PAGFILLOC were subtask 5's. Tests: `internal/corevms`'s
+  `TestPageFileReport` (each status, the counts, PAGEFRAG, full,
+  committed) and `TestSYIPageFileItems`; `internal/machine`'s
+  `TestShowMemory_pageFile` (none, not opened yet and not opened by SHOW
+  MEMORY, Write I/Os); `internal/console`'s `TestPageFileReporting`
+  (pfSource with the writer on a host page file: SHOW MEMORY's lines and
+  F$GETSYI's values against the map). HELP SHOW MEMORY and F$GETSYI's
+  line in both help files describe them. Subtask 8, the probe, is next.

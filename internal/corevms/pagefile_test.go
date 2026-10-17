@@ -192,3 +192,92 @@ func TestPageFileOnVolume(t *testing.T) {
 		t.Errorf("Dismount after ClosePageFile = %v", err)
 	}
 }
+
+// TestPageFileReport: the report says whether there's a page file and,
+// once it's open, its blocks' use and thresholds; committed is every
+// job's charges, counted once a job.
+func TestPageFileReport(t *testing.T) {
+	env, _ := fixture()
+	if r := env.PageFileReport(); r.Status != PageFileNone {
+		t.Errorf("paging off: status %d, want none", r.Status)
+	}
+
+	path := filepath.Join(t.TempDir(), "pagefile.sys")
+	env, out := pagingFixture(`"`+path+`"`, 100)
+
+	if r := env.PageFileReport(); r.Status != PageFileNotOpened || r.Name != `"`+path+`"` || r.Size != 0 {
+		t.Errorf("before opening: %+v, want not opened, the configured name", r)
+	}
+
+	if env.PageFile() != nil {
+		t.Fatal("the report opened the page file")
+	}
+
+	if env.OpenPageFile() == nil {
+		t.Fatalf("OpenPageFile failed: %q", out)
+	}
+
+	for range 7 {
+		if _, ok := env.AllocatePageFile(10); !ok {
+			t.Fatal("allocation failed")
+		}
+	}
+
+	env.Process.Job.PageFileCharged = 12
+
+	r := env.PageFileReport()
+	if r.Status != PageFileInUse || r.Name != path || r.Size != 100 || r.Used != 70 || r.Free != 30 ||
+		r.Warned != paging.PageFrag || r.Full || r.Charged != 12 {
+		t.Errorf("in use: %+v, want 70 of 100 blocks, PAGEFRAG, 12 committed", r)
+	}
+
+	env.notePageFileFull()
+
+	if r := env.PageFileReport(); !r.Full {
+		t.Error("the writer found it full, but the report doesn't say so")
+	}
+
+	if err := env.ClosePageFile(); err != nil {
+		t.Fatal(err)
+	}
+
+	if r := env.PageFileReport(); r.Status != PageFileUnavailable {
+		t.Errorf("closed: status %d, want unavailable", r.Status)
+	}
+}
+
+// TestSYIPageFileItems: $GETSYI's page file items open the page file
+// and report its size and free blocks; with none they're 0, as the swap
+// file's always are.
+func TestSYIPageFileItems(t *testing.T) {
+	long := func(v uint32) string { return string([]byte{byte(v), byte(v >> 8), byte(v >> 16), byte(v >> 24)}) }
+
+	item := func(env *Environment, name string, want uint32) {
+		t.Helper()
+
+		if got, ok := env.SYIItem(name); !ok || got != long(want) {
+			t.Errorf("%s = %q (%v), want %d", name, got, ok, want)
+		}
+	}
+
+	env, _ := fixture()
+	item(env, "SYI$_PAGEFILE_PAGE", 0)
+	item(env, "SYI$_PAGEFILE_FREE", 0)
+	item(env, "SYI$_MPW_WRTCLUSTER", DefaultMPWWriteCluster)
+	item(env, "SYI$_PQL_MPGFLQUOTA", 16400)
+
+	env, out := pagingFixture(`"`+filepath.Join(t.TempDir(), "pagefile.sys")+`"`, 200)
+	item(env, "SYI$_PAGEFILE_PAGE", 200)
+
+	if env.PageFile() == nil {
+		t.Fatalf("PAGEFILE_PAGE didn't open the page file: %q", out)
+	}
+
+	if _, ok := env.AllocatePageFile(16); !ok {
+		t.Fatal("allocation failed")
+	}
+
+	item(env, "SYI$_PAGEFILE_FREE", 184)
+	item(env, "SYI$_SWAPFILE_PAGE", 0)
+	item(env, "SYI$_SWAPFILE_FREE", 0)
+}

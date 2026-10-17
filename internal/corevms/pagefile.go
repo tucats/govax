@@ -266,3 +266,110 @@ func (sys *System) consoleNotice(text string) {
 		procs[0].writeConsole(text)
 	}
 }
+
+// Reporting (subtask 7): what SHOW MEMORY and $GETSYI say about the page
+// file.
+
+// PageFileStatus is where the System's page file stands, for a report.
+type PageFileStatus uint8
+
+const (
+	// PageFileNone: paging is off, or no page file is configured.
+	PageFileNone PageFileStatus = iota
+
+	// PageFileNotOpened: one is configured, but nothing has needed it yet.
+	PageFileNotOpened
+
+	// PageFileInUse: it's open.
+	PageFileInUse
+
+	// PageFileUnavailable: it couldn't be opened (the console was told
+	// why), or it was closed with its System.
+	PageFileUnavailable
+)
+
+// PageFileReport describes the System's page file and its use.
+type PageFileReport struct {
+	Status PageFileStatus
+
+	// Name is the open file's full name, or the configured one when it
+	// isn't open.
+	Name string
+
+	// Size, Free, and Used count its blocks (each holds a page), and
+	// AllocationSize is the run of blocks its map looks for now. All are
+	// 0 unless it's open.
+	Size, Free, Used, AllocationSize uint32
+
+	// Warned is the highest use threshold reported (PAGEFRAG, PAGECRIT),
+	// and Full whether the writer last found it full.
+	Warned paging.Warning
+	Full   bool
+
+	// Charged is the pages charged against the PGFLQUOTA of every job,
+	// the page file's committed use, which may be more or less than Used:
+	// a page is charged when it's made, and takes a block only when the
+	// writer writes it.
+	Charged uint64
+}
+
+// PageFileReport reports on the System's page file. It never opens it.
+func (sys *System) PageFileReport() PageFileReport {
+	r := PageFileReport{Name: sys.Sysgen.PageFileName, Charged: sys.pageFileCommitted()}
+
+	switch {
+	case sys.pageFileState == pageFileOpen:
+		m := sys.pageFile.Map
+		r.Status = PageFileInUse
+		r.Name = sys.pageFile.Name()
+		r.Size, r.Free, r.Used = m.Size(), m.FreeBlocks(), m.UsedBlocks()
+		r.AllocationSize, r.Warned, r.Full = m.AllocationSize(), m.Warned(), sys.pageFileFull
+
+	case !sys.Sysgen.Paging || sys.Sysgen.PageFileName == "":
+		r.Status = PageFileNone
+
+	case sys.pageFileState == pageFileUnopened:
+		r.Status = PageFileNotOpened
+
+	default:
+		r.Status = PageFileUnavailable
+	}
+
+	return r
+}
+
+// pageFileCommitted is the total of every job's pages charged against
+// its PGFLQUOTA.
+func (sys *System) pageFileCommitted() uint64 {
+	seen := map[*Job]bool{}
+
+	var total uint64
+
+	for _, env := range sys.Processes() {
+		if env.Process == nil {
+			continue
+		}
+
+		if job := env.Process.Job; job != nil && !seen[job] {
+			seen[job] = true
+			total += uint64(job.PageFileCharged)
+		}
+	}
+
+	return total
+}
+
+// pageFileSizes are $GETSYI's SYI$_PAGEFILE_PAGE and PAGEFILE_FREE: the
+// page file's size and its free blocks, in pages. On VMS the page file is
+// installed when the system starts, so a program always sees it; govax
+// opens it at first need, and a program asking about it is one (a service
+// runs between instructions, where opening is safe). With none, both
+// are 0.
+func (sys *System) pageFileSizes() (size, free uint32) {
+	pf := sys.OpenPageFile()
+	if pf == nil {
+		return 0, 0
+	}
+
+	return pf.Map.Size(), pf.Map.FreeBlocks()
+}

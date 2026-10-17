@@ -69,8 +69,13 @@ const maxNodeNameLength = 15
 //     govax has no use for are items all the same, since VMS 7.1 answers
 //     them (testdata/pg63, round 2): WSMAX is the largest extent govax
 //     gives a process (16400, which that VAX had too), and BORROWLIM and
-//     PFCDEFAULT are SYSGEN's defaults (300 and 32). Others
-//     (MPW_WRTCLUSTER, ...) aren't items.
+//     PFCDEFAULT are SYSGEN's defaults (300 and 32).
+//   - The page file's (Phase 64, subtask 7): MPW_WRTCLUSTER and
+//     PQL_MPGFLQUOTA (quotaRules' minimum) are parameters;
+//     PAGEFILE_PAGE and PAGEFILE_FREE the page file's size and free
+//     blocks, in pages (pageFileSizes; 0 with none); SWAPFILE_PAGE and
+//     SWAPFILE_FREE are 0, since govax has no swap file (unconfirmed:
+//     VMS may count a page file in their place).
 var syiItemsByName = map[string]func(env *Environment) itemValue{
 	"SYI$_VERSION":        func(env *Environment) itemValue { return itemPadded(VersionString, 8) },
 	"SYI$_NODE_SWVERS":    func(env *Environment) itemValue { return itemPadded(VersionString, 4) },
@@ -95,6 +100,20 @@ var syiItemsByName = map[string]func(env *Environment) itemValue{
 	"SYI$_PQL_DWSQUOTA":   func(env *Environment) itemValue { return itemLong(env.sysgenPQL("WSQUOTA")) },
 	"SYI$_PQL_DWSEXTENT":  func(env *Environment) itemValue { return itemLong(env.sysgenPQL("WSEXTENT")) },
 	"SYI$_PQL_DPGFLQUOTA": func(env *Environment) itemValue { return itemLong(env.sysgenPQL("PGFLQUOTA")) },
+	"SYI$_PQL_MPGFLQUOTA": func(env *Environment) itemValue { return itemLong(pqlMinimum("PGFLQUOTA")) },
+	"SYI$_MPW_WRTCLUSTER": func(env *Environment) itemValue { return itemLong(env.Sysgen.MPWWriteCluster) },
+	"SYI$_PAGEFILE_PAGE": func(env *Environment) itemValue {
+		size, _ := env.pageFileSizes()
+
+		return itemLong(size)
+	},
+	"SYI$_PAGEFILE_FREE": func(env *Environment) itemValue {
+		_, free := env.pageFileSizes()
+
+		return itemLong(free)
+	},
+	"SYI$_SWAPFILE_PAGE": func(env *Environment) itemValue { return itemLong(0) },
+	"SYI$_SWAPFILE_FREE": func(env *Environment) itemValue { return itemLong(0) },
 }
 
 // SYSGEN's defaults for BORROWLIM and PFCDEFAULT, which only $GETSYI
@@ -104,6 +123,18 @@ const (
 	defaultBorrowLimit = 300
 	defaultPFCDefault  = 32
 )
+
+// pqlMinimum is the PQL_M parameter for the quota called name: the
+// smallest value $CREPRC gives it.
+func pqlMinimum(name string) uint32 {
+	for i := range quotaRules {
+		if quotaRules[i].name == name {
+			return quotaRules[i].min
+		}
+	}
+
+	return 0
+}
 
 // sysgenPQL is the PQL_D parameter for the quota called name: the
 // default $CREPRC gives it (Sysgen.pqlDefault).

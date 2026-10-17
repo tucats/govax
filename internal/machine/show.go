@@ -111,6 +111,7 @@ func (m *Machine) ShowMemory() error {
 
 		if m.processOne != nil {
 			m.showPaging(m.processOne.PageCounts)
+			m.showPageFile(m.processOne.PageFileReport())
 		}
 	}
 
@@ -167,8 +168,54 @@ func (m *Machine) showPaging(c corevms.PageCounts) {
 	m.Printf("        Read               %8d\n", f.Read)
 	m.Printf("            Page file      %8d\n", c.PageFileReads)
 	m.Printf("    Pages written      %12d\n", c.Written)
+	m.Printf("        Write I/Os         %8d\n", c.WriteIOs)
 	m.Printf("    Reclaimer runs     %12d\n", c.Reclaims)
 	m.Printf("        Pages trimmed      %8d\n\n", c.Trimmed)
+}
+
+// showPageFile prints, in paging mode, the page file's section (Phase
+// 64, subtask 7; govax's own layout, VMS's SHOW MEMORY/FILES being
+// another): its name and state, and when it's open, its size, its free
+// and used blocks (each holds one page), the run of blocks its map
+// looks for now, and whether it has passed the PAGEFRAG and PAGECRIT
+// thresholds or the writer last found it full. Committed is the pages
+// charged against every job's PGFLQUOTA, which the file need not hold
+// yet: a page is charged when it's made, and takes a block only when
+// the modified page writer writes it.
+func (m *Machine) showPageFile(r corevms.PageFileReport) {
+	switch r.Status {
+	case corevms.PageFileNone:
+		m.Printf("    Page file: none\n")
+	case corevms.PageFileNotOpened:
+		m.Printf("    Page file: %s (not opened yet)\n", r.Name)
+	case corevms.PageFileUnavailable:
+		m.Printf("    Page file: %s (not available)\n", r.Name)
+	case corevms.PageFileInUse:
+		m.Printf("    Page file: %s\n", r.Name)
+		m.Printf("        Size               %8d\n", r.Size)
+		m.Printf("        Free               %8d\n", r.Free)
+		m.Printf("        In use             %8d\n", r.Used)
+		m.Printf("        Allocation size    %8d\n", r.AllocationSize)
+
+		var state []string
+
+		switch r.Warned {
+		case paging.PageFrag:
+			state = append(state, "past PAGEFRAG (65%)")
+		case paging.PageCrit:
+			state = append(state, "past PAGECRIT (90%)")
+		}
+
+		if r.Full {
+			state = append(state, "full")
+		}
+
+		if len(state) > 0 {
+			m.Printf("        State              %s\n", strings.Join(state, ", "))
+		}
+	}
+
+	m.Printf("    Page file committed%12d\n\n", r.Charged)
 }
 
 // ShowSymbols prints every defined symbol whose name matches pattern,

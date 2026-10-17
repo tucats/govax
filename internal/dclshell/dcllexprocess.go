@@ -373,6 +373,8 @@ var syiKeywords = map[string]bool{
 	"GROWLIM": true, "FREELIM": true, "FREEGOAL": true, "TBSKIPWSL": true,
 	"MPW_HILIMIT": true, "MPW_LOLIMIT": true, "PQL_DWSDEFAULT": true,
 	"PQL_DWSQUOTA": true, "PQL_DWSEXTENT": true, "PQL_DPGFLQUOTA": true,
+	"PQL_MPGFLQUOTA": true, "MPW_WRTCLUSTER": true, "PAGEFILE_PAGE": true,
+	"PAGEFILE_FREE": true, "SWAPFILE_PAGE": true, "SWAPFILE_FREE": true,
 }
 
 // lexGetSYI is F$GETSYI(item [,node]): the item (syiItems) for this
