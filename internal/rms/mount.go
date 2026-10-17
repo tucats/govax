@@ -79,7 +79,11 @@ func NewMountTable() *MountTable {
 // normalizeDeviceName upper-cases name and strips one trailing ':' and
 // the leading '_' that marks a physical device name, so that "DUA0",
 // "DUA0:", "_DUA0:", and "dua0:" — all valid ways to write the same VMS
-// device name — produce the same map key.
+// device name — produce the same map key. It also drops a node's or
+// allocation class's prefix ("_GOVAX$DUA0:", as $GETDVI's FULLDEVNAM
+// and NAM$T_DVI write a device's name, or "$1$DUA0:"): a physical
+// device's own name (controller and unit) never has a '$' in it, so
+// everything up to the last one is the prefix.
 //
 // internal/io's own DeviceTable has an unexported helper doing exactly
 // this same two-line job; it isn't reused here because this package
@@ -90,7 +94,13 @@ func NewMountTable() *MountTable {
 // regardless. Duplicating two lines is simpler than restructuring package
 // boundaries just to share them.
 func normalizeDeviceName(name string) string {
-	return strings.ToUpper(strings.TrimPrefix(strings.TrimSuffix(name, ":"), "_"))
+	name = strings.ToUpper(strings.TrimPrefix(strings.TrimSuffix(name, ":"), "_"))
+
+	if i := strings.LastIndexByte(name, '$'); i >= 0 && i < len(name)-1 {
+		name = name[i+1:]
+	}
+
+	return name
 }
 
 // Mount opens the container file at path and mounts it as an ODS-2 volume

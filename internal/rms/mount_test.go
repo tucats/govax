@@ -69,6 +69,10 @@ func TestMountTable_mountAndLookup(t *testing.T) {
 		t.Errorf("mounted volume's label = %q, want %q", got, want)
 	}
 
+	if _, ok := mt.Lookup("_GOVAX$DUA0:"); !ok {
+		t.Error("Lookup(_GOVAX$DUA0:) = not found, want the volume on DUA0 (a node's prefix)")
+	}
+
 	if !mt.Writable("DUA0") {
 		t.Error("Writable(DUA0) = false, want true (mounted with writable=true)")
 	}

@@ -1,0 +1,138 @@
+$ ! PG64.COM - Phase 64's probe of the page file (testdata/pg64/README.md).
+$ ! Run it, from SYSTEM, with the exchange volume's [000000] as the default
+$ ! directory:
+$ !
+$ !     @PG64/OUTPUT=PG64.LOG
+$ !
+$ ! PG64.LOG gets this procedure's log; PG64Q1.OUT the quota part's run
+$ ! here, PG64Q2.OUT and PG64Q3.OUT its runs in a detached process with a
+$ ! small quota (with EXQUOTA and without), PG64C.OUT the lines of the
+$ ! run that made them, PG64V.OUT the
+$ ! LIB$GET_VM program's, PG64W.OUT the writer's, PG64S.OUT the job's
+$ ! pool; PG64L.LOG the subprocess's LOGOUT/FULL; PG64_BUILD.LOG MACRO's
+$ ! and LINK's messages.
+$ SET NOON
+$ SET VERIFY
+$ WRITE SYS$OUTPUT F$GETSYI("VERSION"), " ", F$GETSYI("HW_NAME")
+$ RUN SYS$SYSTEM:SYSGEN
+USE ACTIVE
+SHOW PAGFILCNT
+SHOW SWPFILCNT
+SHOW MPW_HILIMIT
+SHOW MPW_LOLIMIT
+SHOW MPW_WRTCLUSTER
+SHOW MPW_WAITLIMIT
+SHOW MPW_LOWAITLIMIT
+SHOW MPW_THRESH
+SHOW PQL_DPGFLQUOTA
+SHOW PQL_MPGFLQUOTA
+SHOW GBLPAGFIL
+SHOW VIRTUALPAGECNT
+SHOW PFCDEFAULT
+EXIT
+$ SHOW MEMORY/FILES
+$ SHOW MEMORY/FILES/FULL
+$ SHOW MEMORY
+$ DIRECTORY/FULL SYS$SYSTEM:PAGEFILE.SYS
+$ SHOW PROCESS/QUOTA
+$ GOSUB PFV
+$ !
+$ ! The programs, assembled and linked.
+$ !
+$ DEFINE/USER_MODE SYS$OUTPUT PG64_BUILD.LOG
+$ DEFINE/USER_MODE SYS$ERROR PG64_BUILD.LOG
+$ MACRO/NOLIST PG64
+$ DEFINE/USER_MODE SYS$OUTPUT PG64_BUILD.LOG
+$ DEFINE/USER_MODE SYS$ERROR PG64_BUILD.LOG
+$ LINK/NOMAP PG64
+$ DEFINE/USER_MODE SYS$OUTPUT PG64_BUILD.LOG
+$ DEFINE/USER_MODE SYS$ERROR PG64_BUILD.LOG
+$ MACRO/NOLIST PG64V
+$ DEFINE/USER_MODE SYS$OUTPUT PG64_BUILD.LOG
+$ DEFINE/USER_MODE SYS$ERROR PG64_BUILD.LOG
+$ LINK/NOMAP PG64V
+$ GOSUB PFV
+$ !
+$ ! Part Q, the quota, here; then part C runs it twice in a detached
+$ ! process with a small quota, with every privilege SYSTEM has and
+$ ! without EXQUOTA. The detached process sees only the system's logical
+$ ! names, so the files' names are given with the device's full name.
+$ !
+$ DEFINE PG64_PART Q
+$ DEFINE/USER_MODE SYS$OUTPUT PG64Q1.OUT
+$ RUN PG64
+$ SHOW SYMBOL $STATUS
+$ GOSUB PFV
+$ DEV = F$GETDVI(F$PARSE("PG64.EXE",,,"DEVICE"),"FULLDEVNAM")
+$ DIR = F$PARSE("PG64.EXE",,,"DIRECTORY")
+$ DEFINE PG64_IMAGE 'DEV''DIR'PG64.EXE
+$ DEFINE PG64_OUT2 'DEV''DIR'PG64Q2.OUT
+$ DEFINE PG64_OUT3 'DEV''DIR'PG64Q3.OUT
+$ SHOW LOGICAL PG64_*
+$ DEFINE PG64_PART C
+$ DEFINE/USER_MODE SYS$OUTPUT PG64C.OUT
+$ RUN PG64
+$ SHOW SYMBOL $STATUS
+$ GOSUB PFV
+$ !
+$ ! LIB$GET_VM.
+$ !
+$ DEFINE/USER_MODE SYS$OUTPUT PG64V.OUT
+$ RUN PG64V
+$ SHOW SYMBOL $STATUS
+$ GOSUB PFV
+$ !
+$ ! Part W, the writer and the page file; the page file's free count at
+$ ! the program's exit, and a few seconds later.
+$ !
+$ SHOW MEMORY/FILES
+$ DEFINE PG64_PART W
+$ DEFINE/USER_MODE SYS$OUTPUT PG64W.OUT
+$ RUN PG64
+$ SHOW SYMBOL $STATUS
+$ GOSUB PFV
+$ WAIT 00:00:05
+$ GOSUB PFV
+$ SHOW MEMORY/FILES
+$ !
+$ ! Part S, the job's pool, seen from a waiting subprocess.
+$ !
+$ SPAWN/NOWAIT/PROCESS=PG64SUB/OUTPUT=NL: WAIT 00:02:00
+$ WAIT 00:00:05
+$ DEFINE PG64_PART S
+$ DEFINE/USER_MODE SYS$OUTPUT PG64S.OUT
+$ RUN PG64
+$ SHOW SYMBOL $STATUS
+$ STOP PG64SUB
+$ WAIT 00:00:02
+$ GOSUB PFV
+$ !
+$ ! A subprocess that uses the page file, and its LOGOUT/FULL.
+$ !
+$ SPAWN/OUTPUT=PG64L.LOG @PG64L
+$ GOSUB PFV
+$ DEASSIGN PG64_PART
+$ DEASSIGN PG64_IMAGE
+$ DEASSIGN PG64_OUT2
+$ DEASSIGN PG64_OUT3
+$ SHOW MEMORY/FILES
+$ TYPE PG64Q1.OUT
+$ TYPE PG64C.OUT
+$ TYPE PG64Q2.OUT
+$ TYPE PG64Q3.OUT
+$ TYPE PG64V.OUT
+$ TYPE PG64W.OUT
+$ TYPE PG64S.OUT
+$ TYPE PG64L.LOG
+$ SET NOVERIFY
+$ EXIT
+$ !
+$ ! PFV: the page file's and the quota's values.
+$ !
+$ PFV:
+$ WRITE SYS$OUTPUT "pf free=", F$GETSYI("PAGEFILE_FREE"), " page=", F$GETSYI("PAGEFILE_PAGE"), -
+	" swfree=", F$GETSYI("SWAPFILE_FREE"), " swpage=", F$GETSYI("SWAPFILE_PAGE")
+$ WRITE SYS$OUTPUT "pf pgflquota=", F$GETJPI("","PGFLQUOTA"), " pagfilcnt=", F$GETJPI("","PAGFILCNT"), -
+	" pagfilloc=", F$GETJPI("","PAGFILLOC"), " dirio=", F$GETJPI("","DIRIO"), -
+	" flts=", F$GETJPI("","PAGEFLTS")
+$ RETURN

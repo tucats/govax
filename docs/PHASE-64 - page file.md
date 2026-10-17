@@ -7,7 +7,9 @@
 blocks freed, done 2026-10-16. Subtask 5, PGFLQUOTA, done 2026-10-16. Subtask 6, the rest of the
 system, done 2026-10-16. Subtask 7, reporting, done 2026-10-17. Subtask 8,
 the page file installed at startup (added by the author 2026-10-17; the
-probe and close-out became 9 and 10), done 2026-10-17. Planned 2026-10-15. Needs Phase 63 (working sets, the
+probe and close-out became 9 and 10), done 2026-10-17. Subtask 9, the
+probe, written 2026-10-17 (`testdata/pg64`); the VAX run is next.
+Planned 2026-10-15. Needs Phase 63 (working sets, the
 lists, soft faults). Part of the paging program laid out in
 `PHASE-62 - VMS paging.md` (Decisions 7, 8, 9, and 10 are this phase's).
 
@@ -932,3 +934,41 @@ pg63's. Values that vary from run to run print as differences.
   once, F$GETSYI's PAGEFILE_PAGE) and `TestPageFileDeferred`. Not covered
   by a test: cmd/govax's call itself (its tests don't configure paging).
   Subtask 9, the probe, is next.
+- **2026-10-17:** Subtask 9, the probe, written (`testdata/pg64`,
+  README.md; the VAX run is next). `pg64.mar` is one program in parts
+  (PG64_PART), each case read with `$GETJPIW` (PAGFILCNT, PGFLQUOTA,
+  PAGFILLOC, DIRIO, PAGEFLTS, CURPRIV) and `$GETSYIW` (PAGEFILE_FREE,
+  PAGEFILE_PAGE), counts that depend on the quota shown only as
+  differences. Part Q follows "The probe's cases": charges at
+  `$EXPREG`, first touch, and `$DELTVA` of P0 and P1, `$CRETVA` (and over
+  existing pages), untouched pages; then it fills the quota to 200 pages
+  with untouched pages (P1 first, then P0) so that the requests past it
+  (`$EXPREG` of P0 and P1, `$CRETVA`, each PAGFILCNT + 10; touched; the
+  boundary at exactly PAGFILCNT) meet the quota, not the address space.
+  Part C runs part Q in a detached process `$CREPRC` makes with a
+  PGFLQUOTA of 2048, with SYSTEM's privileges and without EXQUOTA: SYSTEM's
+  own quota is larger than govax's address space, possibly VMS's too,
+  and govax's DCL has neither RUN/DETACHED nor SET PROCESS/PRIVILEGE.
+  Part W dirties MPW_HILIMIT + 1000 pages at a small working set three
+  times (write, read back with a contents check, write again) and reads
+  the page file's use after each, then after `$DELTVA`; part S reads a
+  waiting subprocess's PAGFILCNT around this process's charges (the
+  job's pool); part T is a subprocess's pages before LOGOUT/FULL.
+  `pg64v.mar` is LIB$GET_VM's case. `pg64.com` adds SYSGEN's parameters,
+  SHOW MEMORY/FILES (/FULL; before and after the writer), DIRECTORY/FULL
+  of `SYS$SYSTEM:PAGEFILE.SYS`, SHOW PROCESS/QUOTA, and the page file's
+  and quota's values after each image's exit. The exchange volume must be
+  mounted /SYSTEM on the VAX, for the detached process.
+  - **govax's dry run** (README.md has it all) ran every part. Besides the
+    commands govax's DCL lacks, it found: `$DELTVA` at a region's end
+    doesn't give the addresses back to `$EXPREG` (a high-water mark; VMS
+    contracts the region; Phase 67's), and P1 pages an image made outlive
+    it with their charges (image rundown deletes only P0). Both wait for
+    VMS's answers. A host-file SYS$OUTPUT for an image writes nowhere
+    (not fixed; the probe runs on a volume, as VMS's does).
+  - **Fixed on the way:** RMS didn't know a device by its full name with
+    the node's prefix (`_GOVAX$DUA1:`, F$GETDVI's FULLDEVNAM, which part
+    C passes to `$CREPRC`), so the detached process couldn't open its
+    image. `rms.normalizeDeviceName` now drops a node's or allocation
+    class's prefix (everything to the last `$`: a physical device's own
+    name has none); tests in `internal/rms`.

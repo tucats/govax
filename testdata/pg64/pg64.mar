@@ -1,0 +1,815 @@
+	.TITLE	PG64	Phase 64 page file probe
+	.IDENT	/V1.0/
+;
+; Phase 64's probe (docs/PHASE-64 - page file.md, subtask 9; README.md
+; here). It asks VMS how the page file quota is charged and given back,
+; and what the modified page writer does with the page file, by reading
+; the process's counts with $GETJPIW, and the page file's with $GETSYIW,
+; around each case. Each output line is "id what: values"; statuses are
+; in hexadecimal, counts in decimal, and counts that depend on the
+; account's quota or the VAX's configuration only as differences (from
+; PAGFILCNT, or from the pages the case made), so that the lines can be
+; compared with govax's.
+;
+; It uses only system services and RMS (no LIBRTL, whose writable pages
+; would be charged to the quota on VMS and not on govax; PG64V is the
+; LIB$GET_VM case), and writes its lines to SYS$OUTPUT with $PUT. The
+; logical name PG64_PART picks the part:
+;
+;   Q  the quota (the default): $EXPREG, $CRETVA, P1, $DELTVA, and
+;      requests past the quota
+;   W  the modified page writer and the page file
+;   S  the job's pool, seen from a subprocess named PG64SUB
+;   T  a subprocess's pages, for LOGOUT/FULL's peak
+;   C  part Q again in a detached process with a small quota, made with
+;      $CREPRC twice: with this process's privileges, and without
+;      EXQUOTA (the image's and output files' names are the logical
+;      names PG64_IMAGE, PG64_OUT2, and PG64_OUT3)
+;
+; Part Q ends by filling the quota (Q10): it makes untouched pages until
+; PAGFILCNT is 200, so that the requests past the quota that follow
+; (Q11) meet the quota and not the end of the address space. A process
+; whose address space is smaller than its quota may not get there; the
+; detached process's small quota is for that.
+;
+	$SSDEF
+	$JPIDEF
+	$SYIDEF
+	$PRVDEF
+	$PQLDEF
+	$LNMDEF
+	$FABDEF
+	$RABDEF
+
+; A snapshot's longwords (SNAP).
+S_FLTS	= 0				; JPI$_PAGEFLTS
+S_CNT	= 4				; JPI$_PAGFILCNT
+S_QUO	= 8				; JPI$_PGFLQUOTA
+S_LOC	= 12				; JPI$_PAGFILLOC
+S_DIO	= 16				; JPI$_DIRIO
+S_PPG	= 20				; JPI$_PPGCNT
+S_WS	= 24				; JPI$_WSSIZE
+S_PRIV	= 28				; JPI$_CURPRIV (a quadword)
+S_PFREE	= 36				; SYI$_PAGEFILE_FREE
+S_PSIZE	= 40				; SYI$_PAGEFILE_PAGE
+SNAPSZ	= 44
+
+; SAY text, a1, ... a10: format text with $FAOL and the arguments (each
+; a longword, pushed by value) and write the line. The text is in line,
+; branched around: a .PSECT would end the local label block it's in.
+	.MACRO	SAY	TEXT,A1,A2,A3,A4,A5,A6,A7,A8,A9,A10,?LBL,?OVER
+	BRW	OVER
+LBL:	.ASCID	TEXT
+OVER:
+	$$N = 1
+	.IRP	ARG,<A10,A9,A8,A7,A6,A5,A4,A3,A2,A1>
+	.IF	NOT_BLANK,<ARG>
+	PUSHL	ARG
+	$$N = $$N + 1
+	.ENDC
+	.ENDR
+	PUSHAQ	LBL
+	CALLS	#$$N,SAYR
+	.ENDM	SAY
+
+; SNAP block: a snapshot of the counts into block.
+	.MACRO	SNAP	BLOCK
+	PUSHAL	BLOCK
+	CALLS	#1,SNAPR
+	.ENDM	SNAP
+
+; SWEEP first, count: write each page's number into its first longword,
+; for count pages of the array (ARR) from page first.
+	.MACRO	SWEEP	FIRST,COUNT
+	PUSHL	COUNT
+	PUSHL	FIRST
+	CALLS	#2,SWEEPR
+	.ENDM	SWEEP
+
+; CHECK first, count: read the same pages back; R0 is how many don't
+; hold their number.
+	.MACRO	CHECK	FIRST,COUNT
+	PUSHL	COUNT
+	PUSHL	FIRST
+	CALLS	#2,CHECKR
+	.ENDM	CHECK
+
+; PAGES cell: R0 is how many pages the range at cell covers, or -1 if
+; the service wrote -1 there.
+	.MACRO	PAGES	CELL
+	PUSHAL	CELL
+	CALLS	#1,PAGESR
+	.ENDM	PAGES
+
+; PAGE n, reg: the address of the array's page n.
+	.MACRO	PAGE	N,REG
+	MULL3	#512,N,REG
+	ADDL2	ARR,REG
+	.ENDM	PAGE
+
+; CHARGED from, to, reg: the pages charged to the quota between two
+; snapshots (from's PAGFILCNT less to's: negative for a refund).
+	.MACRO	CHARGED	FROM,TO,REG
+	SUBL3	TO+S_CNT,FROM+S_CNT,REG
+	.ENDM	CHARGED
+
+; FAULTS from, to, reg: reg = to's PAGEFLTS less from's.
+	.MACRO	FAULTS	FROM,TO,REG
+	SUBL3	FROM+S_FLTS,TO+S_FLTS,REG
+	.ENDM	FAULTS
+
+; DIRIO from, to, reg: reg = to's DIRIO less from's.
+	.MACRO	DIRIO	FROM,TO,REG
+	SUBL3	FROM+S_DIO,TO+S_DIO,REG
+	.ENDM	DIRIO
+
+; USED from, to, reg: the page file's blocks taken between two snapshots
+; (from's PAGEFILE_FREE less to's: negative when blocks came back).
+	.MACRO	USED	FROM,TO,REG
+	SUBL3	TO+S_PFREE,FROM+S_PFREE,REG
+	.ENDM	USED
+
+	.PSECT	DATA,NOEXE,WRT,PAGE
+
+; SYS$OUTPUT.
+OFAB:	$FAB	FNM=<SYS$OUTPUT>,RAT=CR,RFM=VAR,FAC=PUT
+ORAB:	$RAB	FAB=OFAB,RBF=OBUF
+OBUF:	.BLKB	200
+OUTD:	.LONG	200
+	.ADDRESS OBUF
+OUTLEN:	.WORD	0,0
+
+; The snapshot's item lists and buffer.
+	.ALIGN	LONG
+JPILST:	.WORD	4,JPI$_PAGEFLTS
+	.ADDRESS CUR+S_FLTS
+	.LONG	0
+	.WORD	4,JPI$_PAGFILCNT
+	.ADDRESS CUR+S_CNT
+	.LONG	0
+	.WORD	4,JPI$_PGFLQUOTA
+	.ADDRESS CUR+S_QUO
+	.LONG	0
+	.WORD	4,JPI$_PAGFILLOC
+	.ADDRESS CUR+S_LOC
+	.LONG	0
+	.WORD	4,JPI$_DIRIO
+	.ADDRESS CUR+S_DIO
+	.LONG	0
+	.WORD	4,JPI$_PPGCNT
+	.ADDRESS CUR+S_PPG
+	.LONG	0
+	.WORD	4,JPI$_WSSIZE
+	.ADDRESS CUR+S_WS
+	.LONG	0
+	.WORD	8,JPI$_CURPRIV
+	.ADDRESS CUR+S_PRIV
+	.LONG	0
+	.LONG	0
+SYILST:	.WORD	4,SYI$_PAGEFILE_FREE
+	.ADDRESS CUR+S_PFREE
+	.LONG	0
+	.WORD	4,SYI$_PAGEFILE_PAGE
+	.ADDRESS CUR+S_PSIZE
+	.LONG	0
+	.LONG	0
+CUR:	.BLKB	SNAPSZ
+JIOSB:	.QUAD	0
+SIOSB:	.QUAD	0
+
+SA:	.BLKB	SNAPSZ			; the snapshots the cases take
+SB:	.BLKB	SNAPSZ
+SC:	.BLKB	SNAPSZ
+SD:	.BLKB	SNAPSZ
+
+; $GETSYIW's item list, one item at a time (SYIR).
+SYI1:	.WORD	4
+SYICOD:	.WORD	0
+	.ADDRESS SYIVAL
+	.LONG	0
+	.LONG	0
+SYIVAL:	.LONG	0
+
+; The subprocess (part S).
+SUBNAM:	.ASCID	/PG64SUB/
+SUBLST:	.WORD	4,JPI$_PAGFILCNT
+	.ADDRESS SUBCNT
+	.LONG	0
+	.WORD	4,JPI$_PGFLQUOTA
+	.ADDRESS SUBQUO
+	.LONG	0
+	.LONG	0
+SUBCNT:	.LONG	0
+SUBQUO:	.LONG	0
+
+; PG64_PART's translation.
+LNMTAB:	.ASCID	/LNM$FILE_DEV/
+LNMNAM:	.ASCID	/PG64_PART/
+LNMLST:	.WORD	8,LNM$_STRING
+	.ADDRESS PART
+	.ADDRESS PARTLEN
+	.LONG	0
+PART:	.BLKB	8
+PARTLEN: .LONG	0
+
+; The writer's wait (WAITR): long enough for VMS's writer, which runs in
+; the swapper, to finish what the sweep gave it.
+WAITTXT: .ASCID	/0 00:00:03.00/
+WAITQ:	.QUAD	0
+
+; The cases' cells.
+RET:	.LONG	0,0
+RET2:	.LONG	0,0
+RNG:	.LONG	0,0
+ARR:	.LONG	0			; the array's first page
+PEND:	.LONG	0			; the first page past P0's end
+NPG:	.LONG	0
+HILIM:	.LONG	0
+LOLIM:	.LONG	0
+WCLUS:	.LONG	0
+LIM:	.LONG	0
+STAT:	.LONG	0
+STAT2:	.LONG	0
+
+; Part C: the detached process.
+IMGLNM:	.ASCID	/PG64_IMAGE/
+O2LNM:	.ASCID	/PG64_OUT2/
+O3LNM:	.ASCID	/PG64_OUT3/
+NAMLST:	.WORD	128,LNM$_STRING
+	.ADDRESS NAMBUF
+	.ADDRESS NAMLEN
+	.LONG	0
+NAMBUF:	.BLKB	128
+NAMLEN:	.LONG	0
+IMGD:	.LONG	0
+	.ADDRESS IMGBUF
+IMGBUF:	.BLKB	128
+OUTD2:	.LONG	0
+	.ADDRESS OUT2BUF
+OUT2BUF: .BLKB	128
+OUTD3:	.LONG	0
+	.ADDRESS OUT3BUF
+OUT3BUF: .BLKB	128
+DETNAM:	.ASCID	/PG64DET/
+DQUO:	.BYTE	PQL$_PGFLQUOTA
+	.LONG	2048
+	.BYTE	PQL$_LISTEND
+	.ALIGN	LONG
+DPID:	.LONG	0
+DPRIV:	.QUAD	0
+UICLST:	.WORD	4,JPI$_UIC
+	.ADDRESS MYUIC
+	.LONG	0
+	.LONG	0
+MYUIC:	.LONG	0
+PIDLST:	.WORD	4,JPI$_PID
+	.ADDRESS PIDVAL
+	.LONG	0
+	.LONG	0
+PIDVAL:	.LONG	0
+ONETXT:	.ASCID	/0 00:00:01.00/
+ONEQ:	.QUAD	0
+
+; The labels of the cases past the quota (OVERR).
+L_P0:	.ASCID	/expreg P0/
+L_CRE:	.ASCID	/cretva/
+L_P1:	.ASCID	/expreg P1/
+
+	.PSECT	CODE,EXE,NOWRT,PAGE
+	.ENTRY	START,^M<R2,R3,R4,R5,R6,R7,R8,R9,R10,R11>
+	SNAP	SA			; before anything else
+	$CREATE	FAB=OFAB
+	$CONNECT RAB=ORAB
+	$BINTIM_S TIMBUF=WAITTXT, TIMADR=WAITQ
+	$TRNLNM_S TABNAM=LNMTAB, LOGNAM=LNMNAM, ITMLST=LNMLST
+	CMPB	PART,#^A/W/
+	BNEQ	1$
+	BRW	PARTW
+1$:	CMPB	PART,#^A/S/
+	BNEQ	2$
+	BRW	PARTS
+2$:	CMPB	PART,#^A/T/
+	BNEQ	3$
+	BRW	PARTT
+3$:	CMPB	PART,#^A/C/
+	BNEQ	4$
+	BRW	PARTC
+4$:	BRW	PARTQ
+
+;
+; Part Q: the quota.
+;
+PARTQ:	EXTZV	#PRV$V_EXQUOTA,#1,SA+S_PRIV,R6
+	SAY	</Q1 start: pgflquota=!UL pagfilcnt=!UL pagfilloc=!XL exquota=!UL/>, -
+		SA+S_QUO, SA+S_CNT, SA+S_LOC, R6
+	SUBL3	SA+S_CNT,SA+S_QUO,R7
+	SAY	</Q1 the job's charges at the first instruction: !SL/>, R7
+
+; $EXPREG of P0, touched, then deleted in two halves.
+	SNAP	SA
+	$EXPREG_S PAGCNT=#100, RETADR=RET
+	MOVL	R0,STAT
+	SNAP	SB
+	PAGES	RET
+	MOVL	R0,R6
+	CHARGED	SA,SB,R7
+	SAY	</Q2 expreg 100 P0: !XL pages=!SL charged=!SL/>, STAT, R6, R7
+	MOVL	RET,ARR
+	SWEEP	#0,#100
+	SNAP	SC
+	CHARGED	SB,SC,R7
+	SAY	</Q2 touched: charged=!SL/>, R7
+	PAGE	#50,RNG
+	MOVL	RET+4,RNG+4
+	$DELTVA_S INADR=RNG
+	MOVL	R0,STAT
+	SNAP	SD
+	CHARGED	SC,SD,R7
+	SAY	</Q2 deltva the upper 50: !XL charged=!SL/>, STAT, R7
+	MOVL	RET,RNG
+	PAGE	#50,R2
+	DECL	R2
+	MOVL	R2,RNG+4
+	$DELTVA_S INADR=RNG
+	MOVL	R0,STAT
+	SNAP	SA
+	CHARGED	SD,SA,R7
+	SAY	</Q2 deltva the lower 50: !XL charged=!SL/>, STAT, R7
+
+; Pages made and deleted untouched.
+	SNAP	SA
+	$EXPREG_S PAGCNT=#40, RETADR=RET
+	MOVL	R0,STAT
+	SNAP	SB
+	$DELTVA_S INADR=RET
+	MOVL	R0,STAT2
+	SNAP	SC
+	CHARGED	SA,SB,R6
+	CHARGED	SB,SC,R7
+	SAY	</Q3 expreg 40 untouched: !XL charged=!SL; deltva !XL charged=!SL/>, -
+		STAT, R6, STAT2, R7
+
+; $CRETVA at P0's end (found by a one-page $EXPREG, deleted), touched;
+; again over the same pages; touched; deleted.
+	$EXPREG_S PAGCNT=#1, RETADR=RET
+	MOVL	RET,PEND
+	$DELTVA_S INADR=RET
+	MOVL	PEND,RNG
+	ADDL3	#<100*512-1>,PEND,RNG+4
+	SNAP	SA
+	$CRETVA_S INADR=RNG, RETADR=RET
+	MOVL	R0,STAT
+	SNAP	SB
+	PAGES	RET
+	MOVL	R0,R6
+	CHARGED	SA,SB,R7
+	SAY	</Q4 cretva 100 at P0's end: !XL pages=!SL charged=!SL/>, STAT, R6, R7
+	MOVL	PEND,ARR
+	SWEEP	#0,#100
+	SNAP	SC
+	CHARGED	SB,SC,R7
+	SAY	</Q4 touched: charged=!SL/>, R7
+	$CRETVA_S INADR=RNG, RETADR=RET
+	MOVL	R0,STAT
+	SNAP	SD
+	PAGES	RET
+	MOVL	R0,R6
+	CHARGED	SC,SD,R7
+	CHECK	#0,#100
+	MOVL	R0,R8
+	SAY	</Q4 cretva over them: !XL pages=!SL charged=!SL; pages not zero !UL/>, -
+		STAT, R6, R7, R8
+	SWEEP	#0,#100
+	SNAP	SA
+	CHARGED	SD,SA,R7
+	SAY	</Q4 touched again: charged=!SL/>, R7
+	$DELTVA_S INADR=RNG
+	MOVL	R0,STAT
+	SNAP	SB
+	CHARGED	SA,SB,R7
+	SAY	</Q4 deltva: !XL charged=!SL/>, STAT, R7
+
+; $EXPREG of P1, touched, deleted.
+	SNAP	SA
+	$EXPREG_S PAGCNT=#100, RETADR=RET, REGION=#1
+	MOVL	R0,STAT
+	SNAP	SB
+	PAGES	RET
+	MOVL	R0,R6
+	CHARGED	SA,SB,R7
+	SAY	</Q5 expreg 100 P1: !XL pages=!SL charged=!SL/>, STAT, R6, R7
+	MOVL	RET,ARR
+	CMPL	RET+4,ARR
+	BGEQU	10$
+	MOVL	RET+4,ARR
+10$:	SWEEP	#0,#100
+	SNAP	SC
+	CHARGED	SB,SC,R7
+	SAY	</Q5 touched: charged=!SL/>, R7
+	$DELTVA_S INADR=RET
+	MOVL	R0,STAT
+	SNAP	SD
+	CHARGED	SC,SD,R7
+	SAY	</Q5 deltva: !XL charged=!SL/>, STAT, R7
+
+; Q10: fill the quota to 200 pages left, with untouched pages: P1 in
+; chunks of up to 1000 pages until $EXPREG fails, then P0 the same way
+; (P1 first, so that P0, where most of the requests past the quota are
+; made, keeps room for them). The pages stay until the image exits.
+	MOVL	#1,R10			; the region
+30$:	SNAP	SA
+	SUBL3	#200,SA+S_CNT,R8	; the pages still to make
+	BGTR	34$
+	BRW	32$
+34$:	CMPL	R8,#1000
+	BLEQ	31$
+	MOVL	#1000,R8
+31$:	$EXPREG_S PAGCNT=R8, RETADR=RET, REGION=R10
+	BLBC	R0,35$
+	BRW	30$
+35$:	MOVL	R0,STAT
+	SAY	</Q10 fill: region !UL stopped: !XL with pagfilcnt !UL/>, R10, STAT, SA+S_CNT
+	DECL	R10
+	BGEQ	36$
+	BRW	32$
+36$:	BRW	30$
+32$:	SNAP	SA
+	SAY	</Q10 filled: pagfilcnt=!SL/>, SA+S_CNT
+; Q11: requests past the quota.
+	PUSHAQ	L_P0
+	PUSHL	#0
+	CALLS	#2,OVERR
+	PUSHAQ	L_CRE
+	PUSHL	#1
+	CALLS	#2,OVERR
+	PUSHAQ	L_P1
+	PUSHL	#2
+	CALLS	#2,OVERR
+; And touched pages past it: $EXPREG of what's left plus 10, then
+; touching them all (the pages a process may touch are charged at
+; creation; does touching them charge anything more?).
+	SNAP	SA
+	ADDL3	#10,SA+S_CNT,R8
+	MNEGL	#1,RET
+	MNEGL	#1,RET+4
+	$EXPREG_S PAGCNT=R8, RETADR=RET
+	MOVL	R0,STAT
+	PAGES	RET
+	MOVL	R0,R6
+	CMPL	R6,#-1
+	BEQL	33$
+	MOVL	RET,ARR
+	SWEEP	#0,R6
+33$:	SNAP	SB
+	CHARGED	SA,SB,R7
+	SAY	</Q12 expreg pagfilcnt+10, touched: !XL pages=!SL charged=!SL pagfilcnt then !SL/>, -
+		STAT, R6, R7, SB+S_CNT
+	CMPL	RET,#-1
+	BEQL	37$
+	$DELTVA_S INADR=RET
+37$:
+
+; Q13: the boundary: $EXPREG of exactly PAGFILCNT pages, then one more.
+	SNAP	SA
+	MNEGL	#1,RET
+	MNEGL	#1,RET+4
+	$EXPREG_S PAGCNT=SA+S_CNT, RETADR=RET
+	MOVL	R0,STAT
+	PAGES	RET
+	SUBL3	SA+S_CNT,R0,R6
+	MNEGL	#1,RET2
+	MNEGL	#1,RET2+4
+	$EXPREG_S PAGCNT=#1, RETADR=RET2
+	MOVL	R0,STAT2
+	SNAP	SB
+	PAGES	RET2
+	MOVL	R0,R7
+	SAY	</Q13 expreg pagfilcnt: !XL pages=pagfilcnt!SL; one more !XL pages=!SL; pagfilcnt then !SL/>, -
+		STAT, R6, STAT2, R7, SB+S_CNT
+	CMPL	RET2,#-1
+	BEQL	40$
+	$DELTVA_S INADR=RET2
+40$:	MOVL	#SS$_NORMAL,STAT
+	CMPL	RET,#-1
+	BEQL	41$
+	$DELTVA_S INADR=RET
+	MOVL	R0,STAT
+41$:
+	SNAP	SC
+	SUBL3	SA+S_CNT,SC+S_CNT,R6
+	SAY	</Q13 deltva: !XL pagfilcnt back to the start!SL/>, STAT, R6
+	MOVL	#SS$_NORMAL,R0
+	RET
+
+;
+; Part C: part Q in a detached process with a PGFLQUOTA of 2048 (or the
+; system's minimum, if that's more), once with this process's privileges
+; and once without EXQUOTA. Each run's lines are in its own output file.
+;
+PARTC:	PUSHAQ	IMGD
+	PUSHAQ	IMGLNM
+	CALLS	#2,NAMER
+	PUSHAQ	OUTD2
+	PUSHAQ	O2LNM
+	CALLS	#2,NAMER
+	PUSHAQ	OUTD3
+	PUSHAQ	O3LNM
+	CALLS	#2,NAMER
+	$BINTIM_S TIMBUF=ONETXT, TIMADR=ONEQ
+	$GETJPIW_S ITMLST=UICLST, IOSB=JIOSB
+	PUSHAQ	OUTD2
+	PUSHL	#1
+	CALLS	#2,DETR
+	PUSHAQ	OUTD3
+	PUSHL	#0
+	CALLS	#2,DETR
+	MOVL	#SS$_NORMAL,R0
+	RET
+
+; NAMER logical, descriptor: copy the logical name's translation into
+; the descriptor's buffer, and its length into the descriptor.
+	.ENTRY	NAMER,^M<R2,R3,R4,R5>
+	CLRL	NAMLEN
+	$TRNLNM_S TABNAM=LNMTAB, LOGNAM=@4(AP), ITMLST=NAMLST
+	MOVL	8(AP),R2
+	MOVW	NAMLEN,(R2)
+	MOVC3	NAMLEN,NAMBUF,@4(R2)
+	RET
+
+; DETR exquota, output: create the detached process (exquota 0: without
+; EXQUOTA), and wait until it has gone, at most two minutes.
+	.ENTRY	DETR,^M<R2,R3,R4,R5,R6>
+	MOVQ	SA+S_PRIV,DPRIV
+	TSTL	4(AP)
+	BNEQ	1$
+	BICL2	#<1@PRV$V_EXQUOTA>,DPRIV
+1$:	$CREPRC_S PIDADR=DPID, IMAGE=IMGD, OUTPUT=@8(AP), ERROR=@8(AP), -
+		PRVADR=DPRIV, QUOTA=DQUO, PRCNAM=DETNAM, BASPRI=#4, UIC=MYUIC
+	MOVL	R0,STAT
+	SAY	</C1 creprc, exquota=!UL: !XL/>, 4(AP), STAT
+	BLBS	STAT,5$
+	BRW	4$
+5$:	MOVL	#120,R6
+2$:	$SETIMR_S EFN=#1, DAYTIM=ONEQ
+	$WAITFR_S EFN=#1
+	$GETJPIW_S PIDADR=DPID, ITMLST=PIDLST, IOSB=JIOSB
+	CMPL	R0,#SS$_NONEXPR
+	BEQL	3$
+	SOBGTR	R6,2$
+	SAY	</C2 still running after two minutes/>
+	RET
+3$:	SAY	</C2 ended/>
+4$:	RET
+
+; OVERR kind, label: Q11, a request for PAGFILCNT plus 10 pages: kind 0 is
+; $EXPREG of P0, 1 $CRETVA at P0's end, 2 $EXPREG of P1. The pages it
+; made are shown relative to PAGFILCNT (0: exactly the quota), then
+; deleted.
+	.ENTRY	OVERR,^M<R2,R3,R4,R5,R6,R7,R8,R9>
+	$EXPREG_S PAGCNT=#1, RETADR=RET
+	MOVL	RET,PEND
+	$DELTVA_S INADR=RET
+	SNAP	SA
+	ADDL3	#10,SA+S_CNT,R8
+	MNEGL	#1,RET
+	MNEGL	#1,RET+4
+	CASEL	4(AP),#0,#2
+1$:	.WORD	2$-1$,3$-1$,4$-1$
+	BRW	5$
+2$:	$EXPREG_S PAGCNT=R8, RETADR=RET
+	BRB	5$
+3$:	MOVL	PEND,RNG
+	MULL3	#512,R8,R2
+	ADDL2	PEND,R2
+	DECL	R2
+	MOVL	R2,RNG+4
+	$CRETVA_S INADR=RNG, RETADR=RET
+	BRB	5$
+4$:	$EXPREG_S PAGCNT=R8, RETADR=RET, REGION=#1
+5$:	MOVL	R0,STAT
+	SNAP	SB
+	CHARGED	SA,SB,R7
+	SUBL2	SA+S_CNT,R7
+	CMPL	RET,#-1
+	BNEQ	6$
+	SAY	</Q11 !AS pagfilcnt+10: !XL retadr -1 charged=pagfilcnt!SL pagfilcnt then !SL/>, -
+		8(AP), STAT, R7, SB+S_CNT
+	RET
+6$:	PAGES	RET
+	SUBL3	SA+S_CNT,R0,R6
+	SAY	</Q11 !AS pagfilcnt+10: !XL pages=pagfilcnt!SL charged=pagfilcnt!SL pagfilcnt then !SL/>, -
+		8(AP), STAT, R6, R7, SB+S_CNT
+	$DELTVA_S INADR=RET
+	MOVL	R0,STAT
+	SNAP	SC
+	SUBL3	SA+S_CNT,SC+S_CNT,R6
+	SAY	</Q11 deltva: !XL pagfilcnt back to the start!SL/>, STAT, R6
+	RET
+
+;
+; Part W: the modified page writer. At a small working set limit, more
+; pages than MPW_HILIMIT are written, so that the modified list passes it
+; and the writer writes to the page file; the page file's free count is
+; read after each sweep, then after the pages are deleted.
+;
+PARTW:	MOVZWL	#SYI$_MPW_HILIMIT,-(SP)
+	CALLS	#1,SYIR
+	MOVL	R0,HILIM
+	MOVZWL	#SYI$_MPW_LOLIMIT,-(SP)
+	CALLS	#1,SYIR
+	MOVL	R0,LOLIM
+	MOVZWL	#SYI$_MPW_WRTCLUSTER,-(SP)
+	CALLS	#1,SYIR
+	MOVL	R0,WCLUS
+	SAY	</W1 mpw_hilimit=!UL mpw_lolimit=!UL mpw_wrtcluster=!UL/>, HILIM, LOLIM, WCLUS
+; MPW_HILIMIT plus 1000 pages, if the quota allows; else what it allows
+; less 500.
+	ADDL3	#1000,HILIM,NPG
+	SUBL3	#500,SA+S_CNT,R6
+	CMPL	NPG,R6
+	BLEQ	1$
+	MOVL	R6,NPG
+1$:	$ADJWSL_S PAGCNT=#-100000, WSETLM=LIM
+	$ADJWSL_S PAGCNT=#80, WSETLM=LIM
+	SUBL3	HILIM,NPG,R6
+	SAY	</W1 pages=mpw_hilimit!SL wssize=!UL/>, R6, LIM
+	SNAP	SA
+	$EXPREG_S PAGCNT=NPG, RETADR=RET
+	MOVL	R0,STAT
+	SNAP	SB
+	MOVL	RET,ARR
+	CHARGED	SA,SB,R6
+	SUBL2	NPG,R6
+	USED	SA,SB,R7
+	SAY	</W2 expreg: !XL charged=pages!SL page file used=!SL/>, STAT, R6, R7
+; The first sweep writes every page.
+	SWEEP	#0,NPG
+	CALLS	#0,WAITR
+	SNAP	SC
+	FAULTS	SB,SC,R6
+	SUBL2	NPG,R6
+	DIRIO	SB,SC,R7
+	CHARGED	SB,SC,R8
+	USED	SB,SC,R9
+	SAY	</W3 first sweep (write): flts=pages!SL dirio=!UL charged=!SL page file used=!SL/>, -
+		R6, R7, R8, R9
+	SUBL3	NPG,R9,R9
+	SAY	</W3 page file used=pages!SL/>, R9
+; The second reads them back.
+	CHECK	#0,NPG
+	MOVL	R0,R10
+	CALLS	#0,WAITR
+	SNAP	SD
+	FAULTS	SC,SD,R6
+	SUBL2	NPG,R6
+	DIRIO	SC,SD,R7
+	CHARGED	SC,SD,R8
+	USED	SC,SD,R9
+	SAY	</W4 second sweep (read): flts=pages!SL dirio=!UL charged=!SL page file used=!SL bad=!UL/>, -
+		R6, R7, R8, R9, R10
+; The third writes them again.
+	SWEEP	#0,NPG
+	CALLS	#0,WAITR
+	SNAP	SA
+	FAULTS	SD,SA,R6
+	SUBL2	NPG,R6
+	DIRIO	SD,SA,R7
+	CHARGED	SD,SA,R8
+	USED	SD,SA,R9
+	SAY	</W5 third sweep (write): flts=pages!SL dirio=!UL charged=!SL page file used=!SL/>, -
+		R6, R7, R8, R9
+	CHECK	#0,NPG
+	MOVL	R0,R10
+	SNAP	SB
+	FAULTS	SA,SB,R6
+	SUBL2	NPG,R6
+	DIRIO	SA,SB,R7
+	USED	SA,SB,R9
+	SAY	</W5 then read: flts=pages!SL dirio=!UL page file used=!SL bad=!UL/>, R6, R7, R9, R10
+; Deleted: are the blocks back at once?
+	$DELTVA_S INADR=RET
+	MOVL	R0,STAT
+	SNAP	SC
+	CHARGED	SB,SC,R6
+	ADDL2	NPG,R6
+	USED	SB,SC,R7
+	SAY	</W6 deltva: !XL charged=-pages!SL page file used=!SL/>, STAT, R6, R7
+	CALLS	#0,WAITR
+	SNAP	SD
+	USED	SC,SD,R7
+	SAY	</W6 a wait later: page file used=!SL/>, R7
+	MOVL	#SS$_NORMAL,R0
+	RET
+
+;
+; Part S: the job's pool. PG64.COM has spawned a subprocess named PG64SUB,
+; which waits; its PAGFILCNT is read around this process's $EXPREG.
+;
+PARTS:	$GETJPIW_S PRCNAM=SUBNAM, ITMLST=SUBLST, IOSB=JIOSB
+	MOVL	R0,STAT
+	MOVL	SUBCNT,R9
+	SUBL3	SA+S_CNT,SUBCNT,R6
+	SUBL3	SA+S_QUO,SUBQUO,R7
+	SAY	</S1 subprocess: !XL pagfilcnt=own!SL pgflquota=own!SL/>, STAT, R6, R7
+	$EXPREG_S PAGCNT=#200, RETADR=RET
+	MOVL	RET,ARR
+	SWEEP	#0,#200
+	SNAP	SB
+	$GETJPIW_S PRCNAM=SUBNAM, ITMLST=SUBLST, IOSB=JIOSB
+	CHARGED	SA,SB,R6
+	SUBL3	SUBCNT,R9,R7
+	MOVL	SUBCNT,R9
+	SAY	</S2 expreg 200 here, touched: charged=!SL; the subprocess's pagfilcnt down by !SL/>, R6, R7
+	$DELTVA_S INADR=RET
+	SNAP	SC
+	$GETJPIW_S PRCNAM=SUBNAM, ITMLST=SUBLST, IOSB=JIOSB
+	CHARGED	SB,SC,R6
+	SUBL3	SUBCNT,R9,R7
+	SAY	</S3 deltva here: charged=!SL; the subprocess's pagfilcnt down by !SL/>, R6, R7
+	MOVL	#SS$_NORMAL,R0
+	RET
+
+;
+; Part T: a subprocess's pages, before its LOGOUT/FULL (PG64L.COM).
+;
+PARTT:	$EXPREG_S PAGCNT=#300, RETADR=RET
+	MOVL	RET,ARR
+	SWEEP	#0,#300
+	SNAP	SB
+	CHARGED	SA,SB,R6
+	SAY	</T1 expreg 300, touched: charged=!SL/>, R6
+	MOVL	#SS$_NORMAL,R0
+	RET
+
+; SAYR ctrstr, p1, ...: write a line.
+	.ENTRY	SAYR,^M<R2,R3,R4,R5>
+	MOVL	#200,OUTD
+	$FAOL_S	CTRSTR=@4(AP), OUTLEN=OUTLEN, OUTBUF=OUTD, PRMLST=8(AP)
+	MOVW	OUTLEN,ORAB+RAB$W_RSZ
+	$PUT	RAB=ORAB
+	RET
+
+; SNAPR block.
+	.ENTRY	SNAPR,^M<R2,R3,R4,R5>
+	$GETJPIW_S ITMLST=JPILST, IOSB=JIOSB
+	$GETSYIW_S ITMLST=SYILST, IOSB=SIOSB
+	MOVC3	#SNAPSZ,CUR,@4(AP)
+	RET
+
+; SYIR code: R0 = one $GETSYIW item's longword.
+	.ENTRY	SYIR,^M<R2,R3,R4,R5>
+	MOVW	4(AP),SYICOD
+	CLRL	SYIVAL
+	$GETSYIW_S ITMLST=SYI1, IOSB=SIOSB
+	MOVL	SYIVAL,R0
+	RET
+
+; WAITR: wait WAITQ (3 seconds).
+	.ENTRY	WAITR,^M<R2,R3,R4,R5>
+	$SETIMR_S EFN=#1, DAYTIM=WAITQ
+	$WAITFR_S EFN=#1
+	RET
+
+; SWEEPR first, count.
+	.ENTRY	SWEEPR,^M<R2,R3,R4>
+	MULL3	#512,4(AP),R2
+	ADDL2	ARR,R2
+	MOVL	4(AP),R4
+	MOVL	8(AP),R3
+	BEQL	2$
+1$:	MOVL	R4,(R2)
+	INCL	R4
+	ADDL2	#512,R2
+	SOBGTR	R3,1$
+2$:	RET
+
+; CHECKR first, count: R0 = the pages that don't hold their number.
+	.ENTRY	CHECKR,^M<R2,R3,R4>
+	CLRL	R0
+	MULL3	#512,4(AP),R2
+	ADDL2	ARR,R2
+	MOVL	4(AP),R4
+	MOVL	8(AP),R3
+	BEQL	3$
+1$:	CMPL	R4,(R2)
+	BEQL	2$
+	INCL	R0
+2$:	INCL	R4
+	ADDL2	#512,R2
+	SOBGTR	R3,1$
+3$:	RET
+
+; PAGESR cell: R0 = the pages of the range at cell, or -1.
+	.ENTRY	PAGESR,^M<R2>
+	MOVL	4(AP),R2
+	MOVL	(R2),R0
+	CMPL	R0,#-1
+	BEQL	2$
+	SUBL3	(R2),4(R2),R0
+	BGEQ	1$
+	MNEGL	R0,R0
+1$:	ADDL2	#1,R0
+	DIVL2	#512,R0
+2$:	RET
+
+	.END	START

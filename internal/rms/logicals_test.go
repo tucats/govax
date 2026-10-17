@@ -326,3 +326,14 @@ func TestNormalizeDeviceName_underscore(t *testing.T) {
 		}
 	}
 }
+
+// A device's full name has its node's name in front ($GETDVI's
+// FULLDEVNAM, NAM$T_DVI), or an allocation class: either names the same
+// device.
+func TestNormalizeDeviceName_prefix(t *testing.T) {
+	for _, in := range []string{"_GOVAX$DUA1:", "govax$dua1", "$1$DUA1:", "_SIMVAX$DUA1"} {
+		if got := normalizeDeviceName(in); got != "DUA1" {
+			t.Errorf("normalizeDeviceName(%q) = %q, want DUA1", in, got)
+		}
+	}
+}

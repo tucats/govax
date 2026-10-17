@@ -146,7 +146,8 @@ never had.
   PAGEFILE_FREE, done 2026-10-17; subtask 8, the page file installed
   at startup after vax.init, `Machine.StartPageFile` and
   `System.InstallPageFile`, resized to `paging.size`, unless
-  `vax.sysgen.paging.defer`, done 2026-10-17); 65 sections under the
+  `vax.sysgen.paging.defer`, done 2026-10-17; subtask 9, the probe,
+  `testdata/pg64`, written 2026-10-17, its VAX run next); 65 sections under the
   pager; 66 image activation by mapping; 67 the address space and page
   tables under paging, deferred to the end. Paging is synchronous, with no
   PFW, COLPG, or FPG waits. Each later phase has a planning doc.
@@ -286,6 +287,13 @@ never had.
   `TestPG63SetWorkingSet` replays the log's SET and SHOW WORKING_SET.
   The program's outputs are `.out` files, force-added past
   `.gitignore`.
+- `testdata/pg64/` — Phase 64's probe of the page file (README.md):
+  `pg64.mar` (parts by PG64_PART: Q the quota's charges, the quota filled
+  and requests past it; C part Q in a detached process with a small
+  quota, with and without EXQUOTA; W the writer and the page file's use;
+  S the job's pool from a subprocess; T a subprocess's pages),
+  `pg64v.mar` (LIB$GET_VM), `pg64.com`, `pg64l.com`. Written and dry-run
+  on govax; the VAX run is next.
 - `testdata/probe49/` — Phase 49's VMS probe in three rounds (`probe6`,
   `probe6b`, `probe6c`; README.md has each round's answers), run by
   `TestProbe6*`; `testdata/rms49/` and `testdata/sec49/` are the phase's
