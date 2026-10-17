@@ -21,11 +21,24 @@ import (
 // are in use is kept in Go (internal/paging's PageFileMap), and nothing
 // in the file outlives the System that wrote it.
 //
-// The file isn't opened when the System is made: govax's default volume
-// is mounted only after vax.init has run VMINIT. It's opened the first
-// time the pager needs it (OpenPageFile). If it can't be, the console
-// is told once, and paging goes on without a page file: pages bound for
-// it stay on the modified page list (the plan's Decision 7).
+// On VMS the page file is made when the system is installed (or by
+// AUTOGEN) and installed at every boot, so its blocks are the system's
+// before anything else can take them, and a volume without room for it
+// is known at once. govax does the same by installing it when the
+// system starts (InstallPageFile, subtask 8): the console calls it once
+// vax.init has run, before any of the user's commands, and for each new
+// System after that (VMINIT, INIT, ZERO). Installing creates the file if
+// it's missing and makes it vax.sysgen.paging.size blocks if it isn't
+// (internal/rms's pagefile.go). The System can't install it when it's
+// made, during vax.init: a volume vax.init mounts after its VMINIT isn't
+// there yet.
+//
+// With vax.sysgen.paging.defer, or before the system has started, the
+// file is opened instead the first time the pager needs it
+// (OpenPageFile), as it was before subtask 8. Either way, if it can't
+// be opened the console is told once, and paging goes on without a page
+// file: pages bound for it stay on the modified page list (the plan's
+// Decision 7).
 //
 // Opening it may create it, which changes the volume's storage bitmap
 // and directory. That mustn't happen in the middle of an RMS operation
@@ -119,6 +132,15 @@ func (sys *System) OpenPageFile() *PageFile {
 		return nil
 	}
 
+	switch {
+	case store.GrowFailed != nil:
+		sys.consoleNotice(fmt.Sprintf("%%GOVAX-W-PAGEFILESIZE, page file %s kept at %d blocks; it couldn't grow to %d\n-GOVAX-W-REASON, %v\n",
+			store.Name, store.Blocks(), size, store.GrowFailed))
+	case store.Resized != 0:
+		sys.consoleNotice(fmt.Sprintf("%%GOVAX-I-PAGEFILESIZE, page file %s changed from %d to %d blocks\n",
+			store.Name, store.Resized, store.Blocks()))
+	}
+
 	sys.pageFile = &PageFile{
 		store: store,
 		Map:   paging.NewPageFileMap(store.Blocks(), sys.Sysgen.MPWWriteCluster),
@@ -126,6 +148,19 @@ func (sys *System) OpenPageFile() *PageFile {
 	sys.pageFileState = pageFileOpen
 
 	return sys.pageFile
+}
+
+// InstallPageFile opens the System's page file as the system starts
+// (this file's opening comment): with paging on, a page file named, and
+// vax.sysgen.paging.defer not set; otherwise it does nothing, and the
+// file waits for the pager's first need. It returns the page file, or
+// nil.
+func (sys *System) InstallPageFile() *PageFile {
+	if !sys.Sysgen.Paging || sys.Sysgen.PageFileName == "" || sys.Sysgen.PageFileDefer {
+		return nil
+	}
+
+	return sys.OpenPageFile()
 }
 
 // pageFileSession is the RMS session a page file's name is resolved in:

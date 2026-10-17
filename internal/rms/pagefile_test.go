@@ -99,16 +99,25 @@ func TestPageFileHost(t *testing.T) {
 		t.Errorf("host file %v, %v; want 64 blocks", info, err)
 	}
 
-	// Opened again with another size, it's used at its own.
-	p, err = s.OpenPageFile(path, 200)
-	if err != nil {
-		t.Fatal(err)
-	}
+	// Opened again at its size, it's used as it is; with another size,
+	// it's made that size, larger or smaller.
+	for _, tc := range []struct{ size, resized uint32 }{{64, 0}, {200, 64}, {16, 200}} {
+		p, err = s.OpenPageFile(path, tc.size)
+		if err != nil {
+			t.Fatal(err)
+		}
 
-	defer p.Close()
+		if p.Created || p.Blocks() != tc.size || p.Resized != tc.resized || p.GrowFailed != nil {
+			t.Errorf("reopened at %d: %+v; want %d blocks, resized from %d", tc.size, p, tc.size, tc.resized)
+		}
 
-	if p.Created || p.Blocks() != 64 {
-		t.Errorf("reopened: created %v, %d blocks; want the existing 64", p.Created, p.Blocks())
+		if err := p.Close(); err != nil {
+			t.Fatal(err)
+		}
+
+		if info, err := os.Stat(path); err != nil || info.Size() != int64(tc.size)*ondisk.BlockSize {
+			t.Errorf("host file %v, %v; want %d blocks", info, err, tc.size)
+		}
 	}
 }
 
@@ -166,15 +175,15 @@ func TestPageFileVolume(t *testing.T) {
 		t.Errorf("characteristics %#x, want contiguous-best-try and contiguous", attr.Characteristics)
 	}
 
-	// Opened again (by a name the default completes), the same file at
-	// its own size, with what was written still there.
-	p, err = s.OpenPageFile("PAGEFILE.SYS", 10)
+	// Opened again (by a name the default completes) at its size, the
+	// same file, with what was written still there.
+	p, err = s.OpenPageFile("PAGEFILE.SYS", 50)
 	if err != nil {
 		t.Fatal(err)
 	}
 
-	if p.Created || p.Blocks() != blocks {
-		t.Errorf("reopened: created %v, %d blocks; want the existing %d", p.Created, p.Blocks(), blocks)
+	if p.Created || p.Blocks() != blocks || p.Resized != 0 {
+		t.Errorf("reopened: %+v; want the existing %d blocks", p, blocks)
 	}
 
 	got := make([]byte, ondisk.BlockSize)
@@ -190,6 +199,84 @@ func TestPageFileVolume(t *testing.T) {
 	if err := s.Mounts.Dismount("DUA0"); err != nil {
 		t.Errorf("Dismount after Close = %v", err)
 	}
+}
+
+// TestPageFileVolumeResize: a volume page file opened with a larger size
+// is extended in place, keeping its version; with a smaller one it's
+// deleted and made again at that size, with the same version; with a
+// size the volume hasn't room to grow to, it's used at its own size, and
+// the reason is given.
+func TestPageFileVolumeResize(t *testing.T) {
+	s := newPageFileSession(t)
+
+	open := func(size uint32) *PageFileStore {
+		t.Helper()
+
+		p, err := s.OpenPageFile("DUA0:[000000]PAGEFILE.SYS", size)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		return p
+	}
+
+	closeIt := func(p *PageFileStore) {
+		t.Helper()
+
+		if err := p.Close(); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	p := open(50)
+	first := p.Blocks()
+	closeIt(p)
+
+	p = open(200)
+	if p.Created || p.Resized != first || p.Blocks() < 200 || p.Name != "DUA0:[000000]PAGEFILE.SYS;1" {
+		t.Errorf("grown: %+v; want ;1 extended from %d to at least 200 blocks", p, first)
+	}
+
+	roundTrip(t, p)
+
+	grown := p.Blocks()
+	closeIt(p)
+
+	attr := mustAttributes(t, s.Mounts, mustLookup(t, s.Mounts, "PAGEFILE.SYS"))
+	if ra, _ := ondisk.DecodeRecAttr(attr.RecordAttributes[:]); ra.EndOfFileBlock != grown+1 {
+		t.Errorf("grown: end of file block %d, want %d", ra.EndOfFileBlock, grown+1)
+	}
+
+	p = open(20)
+	if !p.Created || p.Resized != grown || p.Blocks() < 20 || p.Blocks() >= grown || p.Name != "DUA0:[000000]PAGEFILE.SYS;1" {
+		t.Errorf("shrunk: %+v; want ;1 made again with about 20 blocks", p)
+	}
+
+	small := p.Blocks()
+	closeIt(p)
+
+	if _, _, err := s.Mounts.ACPLookup("DUA0", mfd, "PAGEFILE.SYS;2"); !errors.Is(err, ErrACPNoSuchFile) {
+		t.Errorf("a second version after shrinking: %v", err)
+	}
+
+	p = open(100000)
+	if p.Created || p.Resized != 0 || p.Blocks() != small || !errors.Is(p.GrowFailed, ErrACPDeviceFull) {
+		t.Errorf("too big to grow: %+v; want the existing %d blocks and ErrACPDeviceFull", p, small)
+	}
+
+	closeIt(p)
+}
+
+// mustLookup returns the file ID of name in the volume's MFD.
+func mustLookup(t *testing.T, mounts *MountTable, name string) FileID {
+	t.Helper()
+
+	fid, _, err := mounts.ACPLookup("DUA0", mfd, name)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	return fid
 }
 
 func TestPageFileVolumeErrors(t *testing.T) {

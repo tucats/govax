@@ -24,6 +24,7 @@ const (
 	freeGoalSetting   = "vax.sysgen.freegoal"
 	pageFileSetting   = "vax.sysgen.paging.file"
 	pageSizeSetting   = "vax.sysgen.paging.size"
+	pageDeferSetting  = "vax.sysgen.paging.defer"
 
 	// WriteClusterSetting is MPW_WRTCLUSTER's key, whose value has a
 	// rule of its own (ParseWriteCluster).
@@ -45,7 +46,7 @@ func SysgenKeys() []string {
 	keys := []string{
 		PagingSetting, minWSCountSetting, tbSkipWSLSetting, growLimSetting,
 		mpwHiLimitSetting, mpwLoLimitSetting, freeLimSetting, freeGoalSetting,
-		pageFileSetting, pageSizeSetting, WriteClusterSetting,
+		pageFileSetting, pageSizeSetting, pageDeferSetting, WriteClusterSetting,
 	}
 
 	for key := range pqlSettings {
@@ -163,6 +164,8 @@ func sysgenSettings(paging bool) corevms.Sysgen {
 	if v, ok := ParseSysgenCount(settings.Get(pageSizeSetting)); ok {
 		sg.PageFileSize = v
 	}
+
+	sg.PageFileDefer = settings.Exists(pageDeferSetting) && settings.GetBool(pageDeferSetting)
 
 	for key, quota := range pqlSettings {
 		if v, ok := ParseSysgenCount(settings.Get(key)); ok {

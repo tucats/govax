@@ -140,6 +140,8 @@
 //                          mpw_lolimit's default is 32
 //              10/17/26    SHOW MEMORY's page file section; F$GETSYI's
 //                          page file items
+//              10/17/26    The page file installed at startup;
+//                          vax.sysgen.paging.defer in CONFIG KEYS
 
 This is the help documentation for the govax VAX emulator.  Topic sections are
 marked by a "$" delimiter.  This is followed by as many tokens of the help
@@ -2204,17 +2206,30 @@ $CONF,KEY
                                       file on a mounted volume
                                       (DUA0:[WORK]PAGEFILE.SYS), or a
                                       host file, in quotes
-                                      ("./pagefile.sys").  It's created
-                                      if it's missing, opened when it's
-                                      first needed, and used at its own
-                                      size if it exists; its volume
-                                      can't be dismounted while it's
-                                      open.  Unset, there's no page
-                                      file.
+                                      ("./pagefile.sys").  It's
+                                      installed as govax starts, after
+                                      vax.init and before your commands
+                                      (and again after each VMINIT,
+                                      INIT, or ZERO): created if it's
+                                      missing, and made
+                                      vax.sysgen.paging.size blocks if
+                                      it isn't, so its space is taken at
+                                      once.  Its volume can't be
+                                      dismounted while it's open.
+                                      Unset, or with paging off, there's
+                                      no page file.
 
         vax.sysgen.paging.size        The page file's size in blocks
-                                      (pages) when govax creates it.
-                                      Default 32768.
+                                      (pages).  An existing page file of
+                                      another size is grown or shrunk to
+                                      it (kept at its size, with a
+                                      warning, if its volume hasn't room
+                                      to grow it).  Default 32768.
+
+        vax.sysgen.paging.defer       true or false: true leaves the page
+                                      file unopened until paging first
+                                      needs it, instead of installing it
+                                      as govax starts.  Default false.
 
     Debugging switches
 

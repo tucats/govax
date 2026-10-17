@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"errors"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -280,4 +281,95 @@ func TestSYIPageFileItems(t *testing.T) {
 	item(env, "SYI$_PAGEFILE_FREE", 184)
 	item(env, "SYI$_SWAPFILE_PAGE", 0)
 	item(env, "SYI$_SWAPFILE_FREE", 0)
+}
+
+// TestInstallPageFile: installing opens the page file only with paging
+// on, a name, and no deferral; a file of another size is made the
+// configured size, and the console is told, or told why it couldn't
+// grow.
+func TestInstallPageFile(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "pagefile.sys")
+	spec := `"` + path + `"`
+
+	env, _ := fixture()
+	env.Sysgen.PageFileName = spec
+
+	if env.InstallPageFile() != nil {
+		t.Error("installed with paging off")
+	}
+
+	env, _ = pagingFixture("", 0)
+	if env.InstallPageFile() != nil {
+		t.Error("installed with no name")
+	}
+
+	env, _ = pagingFixture(spec, 40)
+	env.Sysgen.PageFileDefer = true
+
+	if env.InstallPageFile() != nil || env.PageFile() != nil {
+		t.Error("installed with vax.sysgen.paging.defer")
+	}
+
+	env, out := pagingFixture(spec, 40)
+	if pf := env.InstallPageFile(); pf == nil || pf.Size() != 40 || !pf.Created() {
+		t.Fatalf("not installed new at 40 blocks: %q", out)
+	}
+
+	if out.Len() != 0 {
+		t.Errorf("console output %q for a new page file, want none", out)
+	}
+
+	if err := env.ClosePageFile(); err != nil {
+		t.Fatal(err)
+	}
+
+	env, out = pagingFixture(spec, 60)
+	if pf := env.InstallPageFile(); pf == nil || pf.Size() != 60 || pf.Created() {
+		t.Fatalf("not resized to 60 blocks: %q", out)
+	}
+
+	if want := "%GOVAX-I-PAGEFILESIZE, page file " + path + " changed from 40 to 60 blocks\n"; out.String() != want {
+		t.Errorf("console output %q, want %q", out, want)
+	}
+
+	if err := env.ClosePageFile(); err != nil {
+		t.Fatal(err)
+	}
+}
+
+// TestInstallPageFileCantGrow: a volume page file the volume hasn't room
+// to grow to its configured size is installed at its own size, and the
+// console is told why.
+func TestInstallPageFileCantGrow(t *testing.T) {
+	env, out := pagingFixture("DUA0:[000000]PAGEFILE.SYS", 64)
+	newMountedVolumeFixture(t, env)
+
+	pf := env.InstallPageFile()
+	if pf == nil {
+		t.Fatalf("InstallPageFile failed: %q", out)
+	}
+
+	size := pf.Size()
+	mounts := env.Mounts
+
+	if err := env.ClosePageFile(); err != nil {
+		t.Fatal(err)
+	}
+
+	env, out = pagingFixture("DUA0:[000000]PAGEFILE.SYS", 10_000_000)
+	env.Mounts = mounts
+
+	if pf = env.InstallPageFile(); pf == nil || pf.Size() != size {
+		t.Fatalf("not installed at its own %d blocks: %q", size, out)
+	}
+
+	want := "%GOVAX-W-PAGEFILESIZE, page file DUA0:[000000]PAGEFILE.SYS;1 kept at " +
+		strconv.FormatUint(uint64(size), 10) + " blocks; it couldn't grow to 10000000\n-GOVAX-W-REASON, "
+	if !strings.HasPrefix(out.String(), want) {
+		t.Errorf("console output %q, want %q...", out, want)
+	}
+
+	if err := env.ClosePageFile(); err != nil {
+		t.Fatal(err)
+	}
 }

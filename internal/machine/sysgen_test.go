@@ -316,3 +316,57 @@ func TestVMInitClosesPageFile(t *testing.T) {
 		t.Errorf("the new System's page file didn't open: %q", out)
 	}
 }
+
+// TestStartPageFile: StartPageFile installs process 1's page file, and
+// from then on each new System (VMINIT here) installs its own as it's
+// made; vax.sysgen.paging.defer leaves it for the pager's first need,
+// and with paging off there's none.
+func TestStartPageFile(t *testing.T) {
+	path := filepath.Join(t.TempDir(), "pagefile.sys")
+	withSettings(t, map[string]string{pageFileSetting: `"` + path + `"`, pageSizeSetting: "50"})
+
+	c, out := newTestMachine(t)
+	if err := c.VMInitPaging(true, 64, 64, 64, 4, 0, 0, 0, 0); err != nil {
+		t.Fatal(err)
+	}
+
+	if c.ProcessOne().PageFile() != nil {
+		t.Fatal("the page file is open before the system has started")
+	}
+
+	c.StartPageFile()
+
+	if pf := c.ProcessOne().PageFile(); pf == nil || pf.Size() != 50 {
+		t.Fatalf("StartPageFile didn't install a 50-block page file: %q", out)
+	}
+
+	if err := c.VMInitPaging(true, 64, 64, 64, 4, 0, 0, 0, 0); err != nil {
+		t.Fatal(err)
+	}
+
+	if c.ProcessOne().PageFile() == nil {
+		t.Errorf("VMINIT's new System didn't install its page file: %q", out)
+	}
+
+	if err := c.VMInitPaging(false, 64, 64, 64, 4, 0, 0, 0, 0); err != nil {
+		t.Fatal(err)
+	}
+
+	if c.ProcessOne().PageFile() != nil {
+		t.Error("a page file was installed with paging off")
+	}
+
+	withSettings(t, map[string]string{pageDeferSetting: "true"})
+
+	if err := c.VMInitPaging(true, 64, 64, 64, 4, 0, 0, 0, 0); err != nil {
+		t.Fatal(err)
+	}
+
+	if !c.ProcessOne().Sysgen.PageFileDefer || c.ProcessOne().PageFile() != nil {
+		t.Error("vax.sysgen.paging.defer didn't defer the page file")
+	}
+
+	if c.ProcessOne().OpenPageFile() == nil {
+		t.Errorf("the deferred page file didn't open at need: %q", out)
+	}
+}

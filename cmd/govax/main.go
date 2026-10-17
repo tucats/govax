@@ -285,6 +285,13 @@ func run(paths []string, instructionLimit int, timeLimit time.Duration, out io.W
 		fmt.Fprintln(out, "%"+err.Error())
 	}
 
+	// With paging on, the page file is installed now, after vax.init and
+	// before any of the user's commands, as VMS installs its page file at
+	// boot: created, or made its configured size, so its space is the
+	// system's from the start (unless vax.sysgen.paging.defer leaves it
+	// for the pager's first need).
+	c.StartPageFile()
+
 	// IF there is a default startup procedure speciried, run that. First check to
 	// see if the named script exists on the default container vaolume. If it doe snot,
 	// there is no error. But if it does, run it as a comamand procedure, and report
@@ -646,6 +653,7 @@ var validConfigs = map[string]bool{
 	"vax.sysgen.paging.enable":  true,
 	"vax.sysgen.paging.file":    true,
 	"vax.sysgen.paging.size":    true,
+	"vax.sysgen.paging.defer":   true,
 	"vax.sysgen.minwscnt":       true,
 	"vax.sysgen.tbskipwsl":      true,
 	"vax.sysgen.growlim":        true,

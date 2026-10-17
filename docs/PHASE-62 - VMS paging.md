@@ -392,11 +392,15 @@ start (a page file's contents never outlive the session).
 - **Where:** `vax.sysgen.paging.file` names it, as a volume file
   (`DUA0:[WORK]PAGEFILE.SYS`) or a host file (`"./pagefile.sys"`), with
   `vax.sysgen.paging.size` blocks. It's created contiguous if it's
-  missing, and used at its own size if it exists.
+  missing, and used at its own size if it exists. (Changed by Phase 64's
+  subtask 8, 2026-10-17: an existing file is resized to
+  `vax.sysgen.paging.size`.)
 - **When it's opened:** at first need, not at VMINIT. The default volume
   is mounted after `vax.init` runs, and a page file that can't be opened
   gets one console message, after which paging goes on without one
-  (Decision 7).
+  (Decision 7). (Changed by Phase 64's subtask 8, 2026-10-17: it's
+  installed after `vax.init`, before the user's commands, as VMS's is
+  at boot; `vax.sysgen.paging.defer` keeps the open at first need.)
 - **I/O:** blocks go straight through the file's block I/O
   (`ods2`'s `File.ReadBlock`/`WriteBlock` for a volume file, `ReadAt`/
   `WriteAt` for a host one), never through RMS's record path. That is

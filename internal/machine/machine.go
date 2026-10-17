@@ -68,6 +68,11 @@ type Machine struct {
 	// INIT and ZERO clear it. Each new System gets it in its Sysgen.
 	paging bool
 
+	// pageFileStarted is set once the system has started (StartPageFile:
+	// vax.init has run), after which each new System installs its page
+	// file as it's made.
+	pageFileStarted bool
+
 	// Regions holds the P0/P1/S0 region bookkeeping VMInit computes (index
 	// 0/1/2, matching vax.h's own struct VMREGION array) — kept around
 	// purely so a later SHOW MEMORY can display it, matching that struct's
@@ -344,6 +349,19 @@ func NewMachine(out io.Writer) *Machine {
 	return c
 }
 
+// StartPageFile installs the page file as the system starts
+// (corevms.System.InstallPageFile; docs/PHASE-64 - page file.md, subtask
+// 8): cmd/govax calls it once vax.init has run, before any of the user's
+// commands, and from then on each new System (VMINIT, INIT, ZERO)
+// installs its own as it's made.
+func (m *Machine) StartPageFile() {
+	m.pageFileStarted = true
+
+	if m.processOne != nil {
+		m.processOne.InstallPageFile()
+	}
+}
+
 // newRTL returns a fresh System for the current CPU and memory, sharing
 // the machine's devices and mounts, on the engine's system clock, and the
 // RTL environment of its first process, process 1, made by the console
@@ -400,6 +418,10 @@ func (m *Machine) newRTL() *corevms.Environment {
 
 	env := m.Hooks.NewProcessOne(sys)
 	m.processOne = env
+
+	if m.pageFileStarted {
+		env.InstallPageFile()
+	}
 
 	// A condition nobody handled goes to the debugger first, if there is
 	// one that wants it. The hook reads c.OnUnhandled each time, so a

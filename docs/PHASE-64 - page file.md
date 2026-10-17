@@ -5,7 +5,9 @@
 ("Questions for the author"). Subtask 2, the page file, done
 2026-10-16. Subtask 3, the modified page writer, done 2026-10-16. Subtask 4,
 blocks freed, done 2026-10-16. Subtask 5, PGFLQUOTA, done 2026-10-16. Subtask 6, the rest of the
-system, done 2026-10-16. Subtask 7, reporting, done 2026-10-17. Planned 2026-10-15. Needs Phase 63 (working sets, the
+system, done 2026-10-16. Subtask 7, reporting, done 2026-10-17. Subtask 8,
+the page file installed at startup (added by the author 2026-10-17; the
+probe and close-out became 9 and 10), done 2026-10-17. Planned 2026-10-15. Needs Phase 63 (working sets, the
 lists, soft faults). Part of the paging program laid out in
 `PHASE-62 - VMS paging.md` (Decisions 7, 8, 9, and 10 are this phase's).
 
@@ -17,7 +19,8 @@ memory:
 - **the page file**, `PAGEFILE.SYS`: `vax.sysgen.paging.file` names a
   volume file (`DUA0:[WORK]PAGEFILE.SYS`) or a host file
   (`"./pagefile.sys"`), `vax.sysgen.paging.size` blocks, created if it's
-  missing, opened at first need (Decision 9);
+  missing, opened at first need (Decision 9; since subtask 8, installed
+  at startup unless `vax.sysgen.paging.defer`);
 - **the modified page writer**: when the modified list grows past
   MPW_HILIMIT it writes pages down to MPW_LOLIMIT, in clusters of up to
   MPW_WRTCLUSTER, to the page file (demand-zero and CRF pages) or to the
@@ -534,7 +537,7 @@ findings and subtasks above and below follow the answers.
 5. **MPW_LOLIMIT's default** (finding 2): SYSGEN's 32, or keep 120?
    *Recommended: 32.* **Answer:** 32.
 
-## The probe's cases (subtask 8)
+## The probe's cases (subtask 9)
 
 `testdata/pg64`: a program, a command procedure, and `exchange.cmd`, as
 pg63's. Values that vary from run to run print as differences.
@@ -611,9 +614,15 @@ pg63's. Values that vary from run to run print as differences.
    its deletion.
 7. **Reporting** (done 2026-10-17): SHOW MEMORY's page file section (question 3) and the
    writer's counts; `$GETSYI` and F$GETSYI's items (finding 14).
-8. **The VMS probe** (`testdata/pg64`), Part A's case list; govax is then
+8. **The page file installed at startup** (added 2026-10-17, done
+   2026-10-17): with paging on and a page file named, it's created (or
+   made `paging.size` blocks) after vax.init and before the user's
+   commands, as VMS's is installed at boot, so its space is taken before
+   anything else can take it and a volume without room is known at
+   once; `vax.sysgen.paging.defer` keeps the open at first need.
+9. **The VMS probe** (`testdata/pg64`), Part A's case list; govax is then
    changed to its answers (SHOW MEMORY/FILES's VAX layout among them).
-9. **Close-out.**
+10. **Close-out.**
 
 ## Progress log
 
@@ -874,3 +883,52 @@ pg63's. Values that vary from run to run print as differences.
   (pfSource with the writer on a host page file: SHOW MEMORY's lines and
   F$GETSYI's values against the map). HELP SHOW MEMORY and F$GETSYI's
   line in both help files describe them. Subtask 8, the probe, is next.
+- **2026-10-17:** Subtask 8, the page file installed at startup, added
+  by the author after subtask 7: on VMS the page file is made when the
+  system is installed (or by AUTOGEN) and installed at boot, so its
+  blocks are allocated before anything else can take them and a volume
+  without room for it is known at once; govax's open at first need could
+  find the volume filled by then, and paging went on without a page file
+  after one console message in the middle of a run. The probe became
+  subtask 9 and the close-out 10. Decided with the author: no page file
+  is made with paging off or no `vax.sysgen.paging.file`; otherwise it's
+  installed after vax.init and before any of the user's commands
+  (`vax.startup.procedure`, the one-shot command, the prompt); the new
+  `vax.sysgen.paging.defer` key (boolean, default false) keeps subtask
+  2's open at first need. `corevms.System.InstallPageFile` opens the
+  file under those rules; `machine.Machine.StartPageFile`, which
+  cmd/govax calls after vax.init, installs process 1's and marks the
+  system started, after which each new System (VMINIT, INIT, ZERO)
+  installs its own in `newRTL`. vax.init itself can't install it at its
+  VMINIT: a volume it mounts later wouldn't be there yet. Before the
+  system has started (tests' consoles, which don't call StartPageFile),
+  and with deferral, the lazy open of subtasks 2 and 3 is unchanged.
+  `paging.size` now decides an existing file's size, where it was used at
+  its own (`internal/rms/pagefile.go`): a host file is truncated to it;
+  a volume file is extended in place when smaller (as SYSGEN CREATE
+  extends VMS's; the contiguous flag is cleared if it's no longer one
+  run), or, when larger by more than the cluster rounding, deleted and
+  made again at the size with the same version, since ods2 can't give a
+  file's last blocks back (nothing in it is kept: Decision 9). A file
+  the volume has no room to grow is used at its own size
+  (`PageFileStore.GrowFailed`). The console is told of a change
+  (`%GOVAX-I-PAGEFILESIZE, page file NAME changed from a to b blocks`)
+  or of a growth that failed (`%GOVAX-W-PAGEFILESIZE, ... kept at a
+  blocks; it couldn't grow to b`, with the reason); a new file is made
+  silently. Resizing happens only while opening, before any block is
+  in use, so the rule that an open page file never grows stands. Since
+  the page file is open from the start, its volume (the default volume,
+  typically) can't be dismounted during the session, as on VMS. The key
+  is in `validConfigs` and HELP CONFIG KEYS. Tests: `internal/rms`'s
+  `TestPageFileHost` (reopened larger and smaller) and
+  `TestPageFileVolumeResize` (extended in place, deleted and made again
+  smaller with ;1 still its only version, a size the volume can't hold);
+  `internal/corevms`'s `TestInstallPageFile` (paging off, no name,
+  deferral, new, resized with its notice) and
+  `TestInstallPageFileCantGrow`; `internal/machine`'s `TestStartPageFile`
+  (installed at the start, again at a later VMINIT, none with paging off,
+  deferral); `internal/console`'s `TestPageFileInstalledAtStartup` (a
+  volume page file installed with nothing written, DISMOUNT refused at
+  once, F$GETSYI's PAGEFILE_PAGE) and `TestPageFileDeferred`. Not covered
+  by a test: cmd/govax's call itself (its tests don't configure paging).
+  Subtask 9, the probe, is next.

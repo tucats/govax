@@ -143,7 +143,10 @@ never had.
   `rms.FilesOpenError`, the reclaimer and a subprocess with the page
   file, done 2026-10-16; subtask 7, reporting: SHOW MEMORY's page file
   section, `System.PageFileReport`, and `$GETSYI`'s PAGEFILE_PAGE and
-  PAGEFILE_FREE, done 2026-10-17); 65 sections under the
+  PAGEFILE_FREE, done 2026-10-17; subtask 8, the page file installed
+  at startup after vax.init, `Machine.StartPageFile` and
+  `System.InstallPageFile`, resized to `paging.size`, unless
+  `vax.sysgen.paging.defer`, done 2026-10-17); 65 sections under the
   pager; 66 image activation by mapping; 67 the address space and page
   tables under paging, deferred to the end. Paging is synchronous, with no
   PFW, COLPG, or FPG waits. Each later phase has a planning doc.
@@ -1165,8 +1168,9 @@ expect adjustment as phases land):
   `freegoal`, `mpw_hilimit`, `mpw_lolimit` (numbers, 0 allowed:
   `ParseSysgenNumber`, `SysgenNumberKeys`); Phase 64's `mpw_wrtcluster`
   (a multiple of 8 from 16 to 120, `ParseWriteCluster`), `paging.file`
-  (the page file: a volume file, or a quoted host path) and
-  `paging.size` (its size in blocks when created, default 32768). They reach each `System` as a `corevms.Sysgen`
+  (the page file: a volume file, or a quoted host path), `paging.size`
+  (its size in blocks, default 32768; an existing file is resized to
+  it), and `paging.defer` (open it at first need, not at startup). They reach each `System` as a `corevms.Sysgen`
   (`corevms/sysgen.go`), whose defaults `$CREPRC`'s quotas and a
   logging-in process's account (`LoginQuotas`) use.
   `vax.library` (string) — the host directory LINK and MACRO look

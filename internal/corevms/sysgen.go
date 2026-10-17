@@ -95,6 +95,11 @@ type Sysgen struct {
 	PageFileName string
 	PageFileSize uint32
 
+	// PageFileDefer is vax.sysgen.paging.defer: true leaves the page file
+	// unopened until the pager first needs it, instead of installing it
+	// when the system starts (InstallPageFile).
+	PageFileDefer bool
+
 	// MPWWriteCluster is MPW_WRTCLUSTER: the most pages the modified page
 	// writer writes to the page file at once.
 	MPWWriteCluster uint32

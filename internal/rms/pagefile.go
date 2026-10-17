@@ -20,7 +20,11 @@ import (
 // mounted volume, as VMS's SYS$SYSTEM:PAGEFILE.SYS is, or on the host.
 // Either way it's only a row of 512-byte blocks, block n holding one
 // page: govax keeps its allocation map in Go, and nothing in it outlives
-// the session, so an existing file is simply used again at its own size.
+// the session, so an existing file is simply used again, made the size
+// asked for first (vax.sysgen.paging.size, as SYSGEN CREATE resizes
+// VMS's): a volume file is extended in place, or, when it's to be
+// smaller, deleted and created again (ods2 has no way to give a file's
+// last blocks back); a host file is truncated to the size either way.
 //
 // Two rules make it safe to read and write the file from inside a page
 // fault, which may come in the middle of an RMS operation that is itself
@@ -47,9 +51,16 @@ type PageFileStore struct {
 	// Host is true for a host file.
 	Host bool
 
-	// Created reports that the file didn't exist and was made at the
-	// size asked for; otherwise it's used at its own size.
+	// Created reports that the file didn't exist (or was made again,
+	// smaller) at the size asked for.
 	Created bool
+
+	// Resized is the file's old size in blocks when an existing file was
+	// made the size asked for, else 0. GrowFailed is the reason an
+	// existing file couldn't grow to it, the volume having no room: it's
+	// used at its old size.
+	Resized    uint32
+	GrowFailed error
 
 	// Contiguous reports that a volume file's blocks are one run on the
 	// disk (a host file's are the host's business).
@@ -131,8 +142,8 @@ func (p *PageFileStore) Close() error {
 // OpenPageFile opens the page file spec names, creating it with size
 // blocks if it doesn't exist. A spec in quotes, or one that Locate's
 // rules say is a host path, is a host file; any other is a volume file,
-// which must name one file with no wildcards. An existing file is used
-// at its own size (one with no blocks at all is given size).
+// which must name one file with no wildcards. An existing file is made
+// size blocks too, when it can be (this file's opening comment).
 func (s *Session) OpenPageFile(spec string, size uint32) (*PageFileStore, error) {
 	text := strings.TrimSpace(spec)
 	quoted := len(text) >= 2 && text[0] == '"' && text[len(text)-1] == '"'
@@ -178,22 +189,25 @@ func openHostPageFile(path string, size uint32) (*PageFileStore, error) {
 		return nil, fmt.Errorf("rms: opening page file %s: %w", path, err)
 	}
 
-	blocks := uint32(min(info.Size()/ondisk.BlockSize, int64(^uint32(0))))
+	store := &PageFileStore{Name: path, Host: true, Created: created, blocks: size, host: f}
 
-	if blocks == 0 {
-		// New, or empty: made the size asked for. Truncate makes a sparse
-		// file on hosts that have them, so the blocks cost nothing until
-		// they're written.
+	old := uint32(min(info.Size()/ondisk.BlockSize, int64(^uint32(0))))
+	if old != size {
+		// Made the size asked for. Truncate makes a sparse file on hosts
+		// that have them, so the blocks cost nothing until they're
+		// written.
 		if err := f.Truncate(int64(size) * ondisk.BlockSize); err != nil {
 			_ = f.Close()
 
 			return nil, fmt.Errorf("rms: sizing page file %s: %w", path, err)
 		}
 
-		blocks = size
+		if !created && old != 0 {
+			store.Resized = old
+		}
 	}
 
-	return &PageFileStore{Name: path, Host: true, Created: created, blocks: blocks, host: f}, nil
+	return store, nil
 }
 
 // openVolumePageFile opens or creates the volume page file text names,
@@ -230,28 +244,11 @@ func (s *Session) openVolumePageFile(text string, size uint32) (*PageFileStore, 
 	case err == nil:
 		fid, version = fileIDFrom(entry.Fid), entry.Version
 	case errors.Is(err, volume.ErrNotFound):
-		if !s.Mounts.Writable(spec.Device) {
-			return nil, fmt.Errorf("rms: creating page file %s: %w", text, ErrACPWriteLocked)
+		if fid, version, err = s.createVolumePageFile(spec.Device, dir, vol, name, version, size, text); err != nil {
+			return nil, err
 		}
 
-		// A file the volume hasn't room for isn't made at all, rather
-		// than left behind empty.
-		if free, err := freeBlocks(vol); err != nil || free < size {
-			return nil, fmt.Errorf("rms: creating page file %s: %w", text, ErrACPDeviceFull)
-		}
-
-		req := ACPCreateRequest{Directory: fileIDFrom(dir.Header.Fid), Name: name, Blocks: size}
-		if version != 0 {
-			req.Name = fmt.Sprintf("%s;%d", name, version)
-		}
-
-		created, err := s.Mounts.ACPCreate(spec.Device, req)
-		if err != nil {
-			return nil, fmt.Errorf("rms: creating page file %s: %w", text, err)
-		}
-
-		fid, store.Created = created.FID, true
-		_, version, _ = splitACPName(created.Name)
+		store.Created = true
 	default:
 		return nil, fmt.Errorf("rms: page file %s: %w", text, err)
 	}
@@ -261,7 +258,16 @@ func (s *Session) openVolumePageFile(text string, size uint32) (*PageFileStore, 
 		return nil, fmt.Errorf("rms: accessing page file %s: %w", text, err)
 	}
 
-	if a.AllocatedBlocks() == 0 {
+	// A volume allocates whole clusters, so a file made for size blocks
+	// may hold up to a cluster more; that's the size too.
+	cluster := max(uint32(vol.Devices[0].Home.ClusterSize), 1)
+	rounded := (size + cluster - 1) / cluster * cluster
+
+	switch old := a.AllocatedBlocks(); {
+	case old >= size && old <= rounded:
+
+	case old == 0:
+		// A file with no blocks at all is given them.
 		if _, err := a.Extend(size); err != nil {
 			_ = a.Deaccess()
 
@@ -269,11 +275,42 @@ func (s *Session) openVolumePageFile(text string, size uint32) (*PageFileStore, 
 		}
 
 		store.Created = true
+
+	case old < size:
+		// Grown in place, as SYSGEN CREATE extends VMS's; without room,
+		// used at its old size.
+		if _, err := a.Extend(size - old); err != nil {
+			store.GrowFailed = err
+		} else {
+			store.Resized = old
+		}
+
+	default:
+		// Smaller: deleted, and made again at the size, with its version.
+		// Nothing in it is kept, and its blocks are free for the new one.
+		if err := a.Deaccess(); err != nil {
+			return nil, fmt.Errorf("rms: page file %s: %w", text, err)
+		}
+
+		del := ACPDeleteRequest{Directory: fileIDFrom(dir.Header.Fid), Name: fmt.Sprintf("%s;%d", name, version), DeleteFile: true}
+		if _, err := s.Mounts.ACPDelete(spec.Device, del); err != nil {
+			return nil, fmt.Errorf("rms: resizing page file %s: %w", text, err)
+		}
+
+		if fid, version, err = s.createVolumePageFile(spec.Device, dir, vol, name, version, size, text); err != nil {
+			return nil, err
+		}
+
+		if a, err = s.Mounts.ACPAccessWith(spec.Device, fid, ACPAccessMode{Write: true, NoRead: true, NoWrite: true}); err != nil {
+			return nil, fmt.Errorf("rms: accessing page file %s: %w", text, err)
+		}
+
+		store.Created, store.Resized = true, old
 	}
 
 	store.Contiguous = contiguous(a.file.Extents)
 
-	if store.Created {
+	if store.Created || store.Resized != 0 {
 		if err := markPageFile(a, store.Contiguous); err != nil {
 			_ = a.Deaccess()
 
@@ -290,6 +327,37 @@ func (s *Session) openVolumePageFile(text string, size uint32) (*PageFileStore, 
 	}
 
 	return store, nil
+}
+
+// createVolumePageFile creates the page file name (NAME.TYP) in dir on
+// the volume mounted on device, of size blocks, with version if it isn't
+// 0, returning its file ID and version. A volume without room for it
+// gets no file at all, rather than one left behind empty. text is the
+// name as given, for errors.
+func (s *Session) createVolumePageFile(device string, dir *volume.Directory, vol *volume.Volume,
+	name string, version uint16, size uint32, text string,
+) (FileID, uint16, error) {
+	if !s.Mounts.Writable(device) {
+		return FileID{}, 0, fmt.Errorf("rms: creating page file %s: %w", text, ErrACPWriteLocked)
+	}
+
+	if free, err := freeBlocks(vol); err != nil || free < size {
+		return FileID{}, 0, fmt.Errorf("rms: creating page file %s: %w", text, ErrACPDeviceFull)
+	}
+
+	req := ACPCreateRequest{Directory: fileIDFrom(dir.Header.Fid), Name: name, Blocks: size}
+	if version != 0 {
+		req.Name = fmt.Sprintf("%s;%d", name, version)
+	}
+
+	created, err := s.Mounts.ACPCreate(device, req)
+	if err != nil {
+		return FileID{}, 0, fmt.Errorf("rms: creating page file %s: %w", text, err)
+	}
+
+	_, version, _ = splitACPName(created.Name)
+
+	return created.FID, version, nil
 }
 
 // freeBlocks is how many blocks are free on vol's first device.
@@ -339,6 +407,8 @@ func markPageFile(a *ACPFile, isContiguous bool) error {
 		attr.Characteristics |= ondisk.FchContigB
 		if isContiguous {
 			attr.Characteristics |= ondisk.FchContig
+		} else {
+			attr.Characteristics &^= ondisk.FchContig // grown past its run
 		}
 	})
 }
