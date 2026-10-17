@@ -85,8 +85,10 @@ func (m *Machine) ShowMemory() error {
 	size := m.Mem.Size()
 	pages := size / 512
 
-	m.Printf("\n    Physical Memory\n        %08X (%d decimal) pages\n        Addresses  00000000 - %08X\n\n",
-		pages, pages, size-1)
+	megaText := strings.TrimSpace(fmt.Sprintf("%4.2fMb", float64(size)/(1024*1024)))
+
+	m.Printf("\n    Physical Memory (%s)\n        %08X (%d decimal) pages\n        Addresses  00000000 - %08X\n\n",
+		megaText, pages, pages, size-1)
 
 	state := disabledState
 	if m.CPU.PR(registers.MAPEN) != 0 {
