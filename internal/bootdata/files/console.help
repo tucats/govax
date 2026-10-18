@@ -1378,7 +1378,11 @@ $LEXI
                                          BOOTTIME, SID, ...; the paging
                                          parameters; PAGEFILE_PAGE and
                                          PAGEFILE_FREE (the page file's
-                                         size and free pages)
+                                         size and free pages); the global
+                                         section limits GBLSECTIONS,
+                                         GBLPAGES, GBLPAGFIL, and what's
+                                         left, FREE_GBLSECTS, FREE_GBLPAGES,
+                                         CONTIG_GBLPAGES
         F$IDENTIFIER(identifier, type)   NAME_TO_NUMBER: an identifier's
                                          value (0 if there's none);
                                          NUMBER_TO_NAME: its name ("")

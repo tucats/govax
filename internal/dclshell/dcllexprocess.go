@@ -375,6 +375,9 @@ var syiKeywords = map[string]bool{
 	"PQL_DWSQUOTA": true, "PQL_DWSEXTENT": true, "PQL_DPGFLQUOTA": true,
 	"PQL_MPGFLQUOTA": true, "MPW_WRTCLUSTER": true, "PAGEFILE_PAGE": true,
 	"PAGEFILE_FREE": true, "SWAPFILE_PAGE": true, "SWAPFILE_FREE": true,
+	"PFCDEFAULT": true, "GBLSECTIONS": true, "GBLPAGES": true,
+	"GBLPAGFIL": true, "FREE_GBLSECTS": true, "FREE_GBLPAGES": true,
+	"CONTIG_GBLPAGES": true,
 }
 
 // lexGetSYI is F$GETSYI(item [,node]): the item (syiItems) for this

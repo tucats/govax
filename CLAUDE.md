@@ -292,6 +292,13 @@ never had.
   exit gives its charges back; round 2 (`pg64x.com`, `pg64m.com`,
   `vax/round2/`) timed the writer against a monitor of the modified list,
   and `TestPG64WriterRound2` holds govax's part X to it.
+- `testdata/pg65/` — Phase 65's probe of sections under the pager
+  (README.md): `pg65.mar` (parts by PG65_PART: M makes PG65.DAT, G the
+  global section limits, F/D/R a permanent page-file section through
+  the writer, P purged global pages, C copy-on-reference, U `$UPDSEC`,
+  K read clustering, H a holder subprocess and S this process sharing
+  pages through common event flags), `pg65.com`. `TestPG65DryRun` runs
+  every part on govax; VMS V7.1's run (`vax/`) is still to come.
 - `testdata/probe49/` — Phase 49's VMS probe in three rounds (`probe6`,
   `probe6b`, `probe6c`; README.md has each round's answers), run by
   `TestProbe6*`; `testdata/rms49/` and `testdata/sec49/` are the phase's

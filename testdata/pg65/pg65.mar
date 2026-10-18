@@ -1,0 +1,1268 @@
+	.TITLE	PG65	Phase 65 sections and paging probe
+	.IDENT	/V1.0/
+;
+; Phase 65's probe (docs/PHASE-65 - sections and paging.md, subtask 7;
+; README.md here). It asks VMS how section pages behave under the pager:
+; the global section limits and their counting, page-file global
+; sections, global pages leaving working sets and coming back, pages
+; shared by two processes, copy-on-reference sections, $UPDSEC, and read
+; clustering. It reads the process's counts with $GETJPIW, and the
+; system's with $GETSYIW, around each case. Each output line is "id
+; what: values"; statuses are in hexadecimal, counts in decimal, and
+; counts that depend on the VAX's configuration or load appear only as
+; differences, so that the lines can be compared with govax's.
+;
+; It uses only system services and RMS, and writes its lines to
+; SYS$OUTPUT with $PUT. Its own pages are locked in the working set at
+; the start, so that the fault counts are the cases' alone. The logical
+; name PG65_PART picks the part:
+;
+;   M  make PG65.DAT: 200 blocks, each block's first longword its
+;      number (the other parts map it)
+;   G  the global section limits: GBLSECTIONS, GBLPAGES, GBLPAGFIL, and
+;      the free counts around sections of 1 to 4 pages; a page-file
+;      section larger than GBLPAGFIL
+;   F  a permanent page-file section, PG65_PF: what mapping it charges,
+;      its pages' first faults, a second mapping; left for part R
+;   D  dirty more pages than MPW_HILIMIT at a small working set, so that
+;      the writer runs with PG65_PF's pages on the modified list
+;   R  PG65_PF mapped again: its contents, faults; then deleted
+;   P  a global file section's pages leaving a small working set
+;      ($PURGWS) and coming back
+;   C  copy-on-reference sections, private and global: charges, faults,
+;      and a global CRF section after its only mapper touched it
+;   U  $UPDSEC of a global section (UPDFLG 0 and 1), after the caller's
+;      pages left the working set and while they're valid; of a
+;      page-file section; of a private section
+;   K  read clustering: a 200-page section read in order with each pfc,
+;      up and down, private and global, and at a small working set
+;   H  the holder, run in a subprocess named PG65HLD: maps PG65_SH (of
+;      PG65.DAT) and PG65_SP (a page-file section), touches them, and
+;      steps with part S through common event flags 64 to 67 (cluster
+;      PG65_EFC)
+;   S  pages another process holds: PG65_SH and PG65_SP mapped and
+;      touched while the holder holds them, purged, touched again; then
+;      after the holder has purged its own
+;
+	$SSDEF
+	$JPIDEF
+	$SYIDEF
+	$SECDEF
+	$LNMDEF
+	$FABDEF
+	$RABDEF
+
+; $GETSYI's free global page and section counts. Their codes aren't in
+; every $SYIDEF, so they're given here.
+I_FREEGP = ^X110F			; SYI$_FREE_GBLPAGES
+I_CONTIG = ^X1110			; SYI$_CONTIG_GBLPAGES
+I_FREEGS = ^X1111			; SYI$_FREE_GBLSECTS
+
+; A snapshot's longwords (SNAP).
+S_FLTS	= 0				; JPI$_PAGEFLTS
+S_CNT	= 4				; JPI$_PAGFILCNT
+S_GPG	= 8				; JPI$_GPGCNT
+S_PPG	= 12				; JPI$_PPGCNT
+S_DIO	= 16				; JPI$_DIRIO
+S_WS	= 20				; JPI$_WSSIZE
+S_PFREE	= 24				; SYI$_PAGEFILE_FREE
+S_FGP	= 28				; SYI$_FREE_GBLPAGES
+S_FGS	= 32				; SYI$_FREE_GBLSECTS
+S_CGP	= 36				; SYI$_CONTIG_GBLPAGES
+SNAPSZ	= 40
+
+; The sections' flags.
+F_PF	= SEC$M_GBL!SEC$M_PAGFIL!SEC$M_WRT!SEC$M_DZRO!SEC$M_EXPREG
+F_GRO	= SEC$M_GBL!SEC$M_EXPREG
+F_GWRT	= SEC$M_GBL!SEC$M_WRT!SEC$M_EXPREG
+F_PRO	= SEC$M_EXPREG
+F_PWRT	= SEC$M_WRT!SEC$M_EXPREG
+F_CRF	= SEC$M_CRF!SEC$M_WRT!SEC$M_EXPREG
+F_CRFRO	= SEC$M_CRF!SEC$M_EXPREG
+F_GCRF	= SEC$M_GBL!SEC$M_CRF!SEC$M_WRT!SEC$M_EXPREG
+F_MRO	= SEC$M_EXPREG			; $MGBLSC's
+F_MWRT	= SEC$M_WRT!SEC$M_EXPREG
+
+; SAY text, a1, ... a10: format text with $FAOL and the arguments (each
+; a longword, pushed by value) and write the line. The text is in line,
+; branched around: a .PSECT would end the local label block it's in.
+	.MACRO	SAY	TEXT,A1,A2,A3,A4,A5,A6,A7,A8,A9,A10,?LBL,?OVER
+	BRW	OVER
+LBL:	.ASCID	TEXT
+OVER:
+	$$N = 1
+	.IRP	ARG,<A10,A9,A8,A7,A6,A5,A4,A3,A2,A1>
+	.IF	NOT_BLANK,<ARG>
+	PUSHL	ARG
+	$$N = $$N + 1
+	.ENDC
+	.ENDR
+	PUSHAQ	LBL
+	CALLS	#$$N,SAYR
+	.ENDM	SAY
+
+; REPORT text, from, to: a case's line, "text: flts= charged= gpg= ppg=
+; pfused= dirio=", the counts' changes between two snapshots.
+	.MACRO	REPORT	TEXT,FROM,TO,?LBL,?OVER
+	BRW	OVER
+LBL:	.ASCID	TEXT
+OVER:	PUSHAL	TO
+	PUSHAL	FROM
+	PUSHAQ	LBL
+	CALLS	#3,REPR
+	.ENDM	REPORT
+
+; GREPORT text, from, to: "text: sects= gblpages= contig=", the global
+; sections and pages used between two snapshots (FREE_GBLSECTS,
+; FREE_GBLPAGES, and CONTIG_GBLPAGES gone down by).
+	.MACRO	GREPORT	TEXT,FROM,TO,?LBL,?OVER
+	BRW	OVER
+LBL:	.ASCID	TEXT
+OVER:	PUSHAL	TO
+	PUSHAL	FROM
+	PUSHAQ	LBL
+	CALLS	#3,GREPR
+	.ENDM	GREPORT
+
+; SNAP block: a snapshot of the counts into block.
+	.MACRO	SNAP	BLOCK
+	PUSHAL	BLOCK
+	CALLS	#1,SNAPR
+	.ENDM	SNAP
+
+; MAP flags, name, chan, pages, pfc: $CRMPSC at the end of P0 (name 0
+; for a private section, chan 0 for a page-file section); RET is the
+; range, R0 the status.
+	.MACRO	MAP	FLAGS,NAME,CHAN,PAGES,PFC
+	PUSHL	PFC
+	PUSHL	PAGES
+	PUSHL	CHAN
+	PUSHL	NAME
+	PUSHL	FLAGS
+	CALLS	#5,MAPR
+	.ENDM	MAP
+
+; MAPGBL flags, name: $MGBLSC at the end of P0; RET, R0 as MAP's.
+	.MACRO	MAPGBL	FLAGS,NAME
+	PUSHL	NAME
+	PUSHL	FLAGS
+	CALLS	#2,MGBR
+	.ENDM	MAPGBL
+
+; CHECK base, first, count, offset: read the longword at offset in count
+; pages from base, page i expected to hold first+i; R0 is how many
+; don't. CHECKDOWN reads the same pages from the last one down.
+	.MACRO	CHECK	BASE,FIRST,COUNT,OFFSET=#0
+	PUSHL	#0
+	PUSHL	OFFSET
+	PUSHL	COUNT
+	PUSHL	FIRST
+	PUSHL	BASE
+	CALLS	#5,CHKR
+	.ENDM	CHECK
+	.MACRO	CHECKDOWN BASE,FIRST,COUNT,OFFSET=#0
+	PUSHL	#1
+	PUSHL	OFFSET
+	PUSHL	COUNT
+	PUSHL	FIRST
+	PUSHL	BASE
+	CALLS	#5,CHKR
+	.ENDM	CHECKDOWN
+
+; ZERO base, count: R0 is how many of count pages from base don't have
+; a first longword of zero.
+	.MACRO	ZERO	BASE,COUNT
+	PUSHL	COUNT
+	PUSHL	BASE
+	CALLS	#2,ZEROR
+	.ENDM	ZERO
+
+; FILL base, first, count, offset: write first+i at offset in page i.
+	.MACRO	FILL	BASE,FIRST,COUNT,OFFSET=#0
+	PUSHL	OFFSET
+	PUSHL	COUNT
+	PUSHL	FIRST
+	PUSHL	BASE
+	CALLS	#4,FILLR
+	.ENDM	FILL
+
+; PAGES cell: R0 is how many pages the range at cell covers, or -1 if
+; the service wrote -1 there.
+	.MACRO	PAGES	CELL
+	PUSHAL	CELL
+	CALLS	#1,PAGESR
+	.ENDM	PAGES
+
+; LOW cell: R0 is the range's lower address.
+	.MACRO	LOW	CELL
+	PUSHAL	CELL
+	CALLS	#1,LOWR
+	.ENDM	LOW
+
+; WSET n: the working set limit set to the floor plus n (n -1: as high
+; as $ADJWSL takes it); R0 is the new limit.
+	.MACRO	WSET	N
+	PUSHL	N
+	CALLS	#1,WSETR
+	.ENDM	WSET
+
+; UPDATE range, flag: $UPDSECW of the range with UPDFLG flag; R0 the
+; status, UIOSB the IOSB, URET the range written.
+	.MACRO	UPDATE	RANGE,FLAG
+	PUSHL	FLAG
+	PUSHAL	RANGE
+	CALLS	#2,UPDR
+	.ENDM	UPDATE
+
+	.PSECT	DATA,NOEXE,WRT,PAGE
+DATBEG:
+
+; SYS$OUTPUT.
+OFAB:	$FAB	FNM=<SYS$OUTPUT>,RAT=CR,RFM=VAR,FAC=PUT
+ORAB:	$RAB	FAB=OFAB,RBF=OBUF
+OBUF:	.BLKB	200
+OUTD:	.LONG	200
+	.ADDRESS OBUF
+OUTLEN:	.WORD	0,0
+
+; PG65.DAT: made by part M, mapped through RFAB (read-only, shared) or
+; WFAB (read and write).
+MFAB:	$FAB	FNM=<PG65.DAT>,ALQ=200,RFM=FIX,MRS=512,FAC=PUT,ORG=SEQ
+MRAB:	$RAB	FAB=MFAB,RBF=MBUF,RSZ=512
+RFAB:	$FAB	FNM=<PG65.DAT>,FAC=GET,SHR=GET,FOP=UFO
+WFAB:	$FAB	FNM=<PG65.DAT>,FAC=<GET,PUT>,FOP=UFO
+
+; The snapshot's item lists and buffer.
+	.ALIGN	LONG
+JPILST:	.WORD	4,JPI$_PAGEFLTS
+	.ADDRESS CUR+S_FLTS
+	.LONG	0
+	.WORD	4,JPI$_PAGFILCNT
+	.ADDRESS CUR+S_CNT
+	.LONG	0
+	.WORD	4,JPI$_GPGCNT
+	.ADDRESS CUR+S_GPG
+	.LONG	0
+	.WORD	4,JPI$_PPGCNT
+	.ADDRESS CUR+S_PPG
+	.LONG	0
+	.WORD	4,JPI$_DIRIO
+	.ADDRESS CUR+S_DIO
+	.LONG	0
+	.WORD	4,JPI$_WSSIZE
+	.ADDRESS CUR+S_WS
+	.LONG	0
+	.LONG	0
+SYILST:	.WORD	4,SYI$_PAGEFILE_FREE
+	.ADDRESS CUR+S_PFREE
+	.LONG	0
+	.WORD	4,I_FREEGP
+	.ADDRESS CUR+S_FGP
+	.LONG	0
+	.WORD	4,I_FREEGS
+	.ADDRESS CUR+S_FGS
+	.LONG	0
+	.WORD	4,I_CONTIG
+	.ADDRESS CUR+S_CGP
+	.LONG	0
+	.LONG	0
+CUR:	.BLKB	SNAPSZ
+JIOSB:	.QUAD	0
+SIOSB:	.QUAD	0
+
+SA:	.BLKB	SNAPSZ			; the snapshots the cases take
+SB:	.BLKB	SNAPSZ
+SC:	.BLKB	SNAPSZ
+SD:	.BLKB	SNAPSZ
+
+; $GETSYIW's item list, one item at a time (SYIR).
+SYI1:	.WORD	4
+SYICOD:	.WORD	0
+	.ADDRESS SYIVAL
+	.LONG	0
+	.LONG	0
+SYIVAL:	.LONG	0
+
+; PG65_PART's translation.
+LNMTAB:	.ASCID	/LNM$FILE_DEV/
+LNMNAM:	.ASCID	/PG65_PART/
+LNMLST:	.WORD	8,LNM$_STRING
+	.ADDRESS PART
+	.ADDRESS PARTLEN
+	.LONG	0
+PART:	.BLKB	8
+PARTLEN: .LONG	0
+
+; The waits: WAITQ for the writer, which runs in the swapper; ONEQ a
+; second, the step of a wait for an event flag.
+WAITTXT: .ASCID	/0 00:00:03.00/
+WAITQ:	.QUAD	0
+ONETXT:	.ASCID	/0 00:00:01.00/
+ONEQ:	.QUAD	0
+
+; The image's own pages, locked in the working set.
+CODRNG:	.ADDRESS CODBEG,CODEND
+DATRNG:	.ADDRESS DATBEG,DATEND
+
+; The sections' names.
+N_PF:	.ASCID	/PG65_PF/
+N_G:	.ASCID	/PG65_G/
+N_GF:	.ASCID	/PG65_GF/
+N_GBIG:	.ASCID	/PG65_GBIG/
+N_P:	.ASCID	/PG65_P/
+N_CRF:	.ASCID	/PG65_CRF/
+N_UP:	.ASCID	/PG65_UP/
+N_UPF:	.ASCID	/PG65_UPF/
+N_K:	.ASCID	/PG65_K/
+N_SH:	.ASCID	/PG65_SH/
+N_SP:	.ASCID	/PG65_SP/
+EFCNAM:	.ASCID	/PG65_EFC/
+
+; The cases' cells.
+P0ANY:	.LONG	^X200,^X200		; with SEC$M_EXPREG: anywhere in P0
+RET:	.LONG	0,0
+RET2:	.LONG	0,0
+RET3:	.LONG	0,0
+RNG:	.LONG	0,0
+URET:	.LONG	0,0
+UIOSB:	.QUAD	0
+UPDLST:	.LONG	8			; $UPDSECW's argument list (UPDR)
+UINADR:	.LONG	0			; inadr
+	.ADDRESS URET			; retadr
+	.LONG	0			; acmode
+UFLAG:	.LONG	0			; updflg
+	.LONG	1			; efn
+	.ADDRESS UIOSB			; iosb
+	.LONG	0			; astadr
+	.LONG	0			; astprm
+BASE:	.LONG	0
+BASE2:	.LONG	0
+CHAN:	.LONG	0
+NPG:	.LONG	0
+HILIM:	.LONG	0
+LIM:	.LONG	0
+STAT:	.LONG	0
+STAT2:	.LONG	0
+GPF:	.LONG	0			; GBLPAGFIL
+PFC:	.LONG	0			; part K's pfc, and its list
+PFCS:	.LONG	0,1,4,16,64,127,200,-1
+
+MBUF:	.BLKB	512			; part M's record
+
+DATEND:	.BLKB	1
+
+	.PSECT	CODE,EXE,NOWRT,PAGE
+CODBEG:
+	.ENTRY	START,^M<R2,R3,R4,R5,R6,R7,R8,R9,R10,R11>
+	$LKWSET_S INADR=CODRNG
+	$LKWSET_S INADR=DATRNG
+	$CREATE	FAB=OFAB
+	$CONNECT RAB=ORAB
+	$BINTIM_S TIMBUF=WAITTXT, TIMADR=WAITQ
+	$BINTIM_S TIMBUF=ONETXT, TIMADR=ONEQ
+	$TRNLNM_S TABNAM=LNMTAB, LOGNAM=LNMNAM, ITMLST=LNMLST
+	MOVZBL	PART,R0
+	MOVAB	PARTS,R1
+1$:	TSTB	(R1)
+	BEQL	2$
+	CMPB	R0,(R1)+
+	BEQL	3$
+	ADDL2	#4,R1
+	BRB	1$
+2$:	SAY	</? no such part/>
+	MOVL	#SS$_NORMAL,R0
+	RET
+3$:	ADDL2	(R1),R1			; the part's displacement
+	JMP	(R1)
+
+; The parts: a letter, then a longword, the part's address less the
+; longword's.
+	.MACRO	PARTIS	LETTER,LABEL,?L
+	.ASCII	/LETTER/
+L:	.LONG	LABEL-L
+	.ENDM	PARTIS
+PARTS:	PARTIS	M,PARTM
+	PARTIS	G,PARTG
+	PARTIS	F,PARTF
+	PARTIS	D,PARTD
+	PARTIS	R,PARTR
+	PARTIS	P,PARTP
+	PARTIS	C,PARTC
+	PARTIS	U,PARTU
+	PARTIS	K,PARTK
+	PARTIS	H,PARTH
+	PARTIS	S,PARTS_
+	.BYTE	0
+
+;
+; Part M: PG65.DAT, 200 fixed 512-byte records, a block each, block n's
+; first longword n.
+;
+PARTM:	$CREATE	FAB=MFAB
+	MOVL	R0,STAT
+	BLBS	R0,1$
+	SAY	</M1 create: !XL/>, STAT
+	RET
+1$:	$CONNECT RAB=MRAB
+	MOVL	#1,R6
+2$:	MOVL	R6,MBUF
+	$PUT	RAB=MRAB
+	BLBC	R0,3$
+	AOBLEQ	#200,R6,2$
+	MOVL	#SS$_NORMAL,R0
+3$:	MOVL	R0,STAT2
+	$CLOSE	FAB=MFAB
+	DECL	R6
+	SAY	</M1 PG65.DAT: create !XL, !UL blocks written, last put !XL/>, STAT, R6, STAT2
+	MOVL	#SS$_NORMAL,R0
+	RET
+
+;
+; Part G: the global section limits.
+;
+PARTG:	MOVZWL	#SYI$_GBLSECTIONS,-(SP)
+	CALLS	#1,SYIR
+	MOVL	R0,R6
+	MOVZWL	#SYI$_GBLPAGES,-(SP)
+	CALLS	#1,SYIR
+	MOVL	R0,R7
+	MOVZWL	#SYI$_GBLPAGFIL,-(SP)
+	CALLS	#1,SYIR
+	MOVL	R0,GPF
+	MOVZWL	#SYI$_PFCDEFAULT,-(SP)
+	CALLS	#1,SYIR
+	MOVL	R0,R8
+	MOVZWL	#SYI$_PAGTBLPFC,-(SP)
+	CALLS	#1,SYIR
+	MOVL	R0,R9
+	SAY	</G1 gblsections=!UL gblpages=!UL gblpagfil=!UL pfcdefault=!UL pagtblpfc=!UL/>, -
+		R6, R7, GPF, R8, R9
+	SNAP	SA
+	SUBL3	SA+S_FGS,R6,R6
+	SUBL3	SA+S_FGP,R7,R7
+	SUBL3	SA+S_CGP,SA+S_FGP,R8
+	SAY	</G1 in use: sections=!UL gblpages=!UL; free less contig=!SL/>, R6, R7, R8
+; Page-file sections of 1 to 4 pages, each made, then deleted (a
+; temporary section goes with its last mapping).
+	MOVL	#1,R10
+10$:	SNAP	SA
+	MAP	#F_PF, #N_G, #0, R10, #0
+	MOVL	R0,STAT
+	SNAP	SB
+	PAGES	RET
+	SAY	</G2 page-file section of !UL: !XL pages=!SL/>, R10, STAT, R0
+	GREPORT	</G2 made/>, SA, SB
+	$DELTVA_S INADR=RET
+	SNAP	SC
+	GREPORT	</G2 deleted/>, SA, SC
+	INCL	R10
+	CMPL	R10,#4
+	BGTR	11$
+	BRW	10$
+11$:
+; A file section of 3 pages.
+	$OPEN	FAB=RFAB
+	MOVL	R0,STAT
+	MOVL	RFAB+FAB$L_STV,CHAN
+	SNAP	SA
+	MAP	#F_GRO, #N_GF, CHAN, #3, #0
+	MOVL	R0,STAT2
+	SNAP	SB
+	PAGES	RET
+	SAY	</G3 file section of 3: open !XL, crmpsc !XL pages=!SL/>, STAT, STAT2, R0
+	GREPORT	</G3 made/>, SA, SB
+	$DELTVA_S INADR=RET
+	SNAP	SC
+	GREPORT	</G3 deleted/>, SA, SC
+	$DASSGN_S CHAN=CHAN
+; A page-file section of GBLPAGFIL + 1 pages.
+	ADDL3	#1,GPF,R6
+	SNAP	SA
+	MAP	#F_PF, #N_GBIG, #0, R6, #0
+	MOVL	R0,STAT
+	SNAP	SB
+	PAGES	RET
+	SAY	</G4 page-file section of gblpagfil+1: !XL pages=!SL/>, STAT, R0
+	GREPORT	</G4 made/>, SA, SB
+	BLBC	STAT,20$
+	$DELTVA_S INADR=RET
+20$:	MOVL	#SS$_NORMAL,R0
+	RET
+
+;
+; Part F: a permanent page-file section, PG65_PF, 64 pages; left for
+; part R with page n holding 1000+n.
+;
+PARTF:	WSET	#-1
+	MOVL	R0,LIM
+	SNAP	SA
+	MAP	#F_PF!SEC$M_PERM, #N_PF, #0, #64, #0
+	MOVL	R0,STAT
+	SNAP	SB
+	PAGES	RET
+	SAY	</F1 permanent page-file section of 64: !XL pages=!SL/>, STAT, R0
+	REPORT	</F1 made/>, SA, SB
+	GREPORT	</F1 made/>, SA, SB
+	LOW	RET
+	MOVL	R0,BASE
+	ZERO	BASE, #1
+	MOVL	R0,R6
+	ZERO	BASE, #64
+	MOVL	R0,R7
+	SNAP	SC
+	SAY	</F2 read: page 0 not zero !UL, pages not zero !UL/>, R6, R7
+	REPORT	</F2 read every page/>, SB, SC
+	FILL	BASE, #1000, #64
+	SNAP	SD
+	REPORT	</F2 written/>, SC, SD
+; A second mapping, read through.
+	MAPGBL	#F_MWRT, #N_PF
+	MOVL	R0,STAT
+	MOVQ	RET,RET2
+	LOW	RET2
+	MOVL	R0,BASE2
+	SNAP	SA
+	CHECK	BASE2, #1000, #64
+	MOVL	R0,R6
+	SNAP	SB
+	SAY	</F3 mgblsc: !XL; bad=!UL/>, STAT, R6
+	REPORT	</F3 read through the second mapping/>, SA, SB
+; Both deleted; the section stays.
+	$DELTVA_S INADR=RET2
+	MOVL	R0,STAT
+	PUSHAL	BASE
+	CALLS	#1,RANGE64
+	$DELTVA_S INADR=RNG
+	MOVL	R0,STAT2
+	SNAP	SC
+	SAY	</F4 deltva both: !XL !XL/>, STAT, STAT2
+	REPORT	</F4 unmapped/>, SB, SC
+	GREPORT	</F4 unmapped/>, SB, SC
+	CALLS	#0,WAITR
+	SNAP	SD
+	REPORT	</F4 a wait later/>, SC, SD
+	MOVL	#SS$_NORMAL,R0
+	RET
+
+;
+; Part D: more pages than MPW_HILIMIT written at a small working set, so
+; that the modified page writer writes, with PG65_PF's pages (part F's,
+; on the modified list since its exit) among the oldest.
+;
+PARTD:	MOVZWL	#SYI$_MPW_HILIMIT,-(SP)
+	CALLS	#1,SYIR
+	MOVL	R0,HILIM
+	ADDL3	#1000,HILIM,NPG
+	SNAP	SA
+	SUBL3	#500,SA+S_CNT,R6
+	CMPL	NPG,R6
+	BLEQ	1$
+	MOVL	R6,NPG
+1$:	WSET	#80
+	MOVL	R0,LIM
+	SUBL3	HILIM,NPG,R6
+	SAY	</D1 pages=mpw_hilimit!SL/>, R6
+	$EXPREG_S PAGCNT=NPG, RETADR=RET
+	MOVL	R0,STAT
+	LOW	RET
+	MOVL	R0,BASE
+	FILL	BASE, #1, NPG
+	CALLS	#0,WAITR
+	SNAP	SB
+	SUBL3	SA+S_FLTS,SB+S_FLTS,R6
+	SUBL2	NPG,R6
+	SUBL3	SB+S_PFREE,SA+S_PFREE,R7
+	SAY	</D1 expreg !XL, written: flts=pages!SL page file used=!SL/>, STAT, R6, R7
+	$DELTVA_S INADR=RET
+	MOVL	#SS$_NORMAL,R0
+	RET
+
+;
+; Part R: PG65_PF again, its contents read back; then deleted.
+;
+PARTR:	WSET	#-1
+	MOVL	R0,LIM
+	SNAP	SA
+	MAPGBL	#F_MWRT, #N_PF
+	MOVL	R0,STAT
+	SNAP	SB
+	PAGES	RET
+	SAY	</R1 mgblsc PG65_PF: !XL pages=!SL/>, STAT, R0
+	REPORT	</R1 mapped/>, SA, SB
+	BLBS	STAT,1$
+	MOVL	#SS$_NORMAL,R0
+	RET
+1$:	LOW	RET
+	MOVL	R0,BASE
+	CHECK	BASE, #1000, #64
+	MOVL	R0,R6
+	SNAP	SC
+	SAY	</R2 read: bad=!UL/>, R6
+	REPORT	</R2 read every page/>, SB, SC
+; Deleted while mapped, then unmapped.
+	$DGBLSC_S GSDNAM=N_PF
+	MOVL	R0,STAT
+	MOVQ	RET,RET3
+	MAPGBL	#F_MWRT, #N_PF
+	MOVL	R0,STAT2
+	SAY	</R3 dgblsc while mapped: !XL; mgblsc then !XL/>, STAT, STAT2
+	BLBC	STAT2,2$
+	$DELTVA_S INADR=RET
+2$:	SNAP	SD
+	$DELTVA_S INADR=RET3
+	MOVL	R0,STAT
+	SNAP	SA
+	SAY	</R4 deltva: !XL/>, STAT
+	REPORT	</R4 unmapped/>, SD, SA
+	GREPORT	</R4 unmapped/>, SD, SA
+	MAPGBL	#F_MWRT, #N_PF
+	MOVL	R0,STAT
+	SAY	</R4 mgblsc then: !XL/>, STAT
+	BLBC	STAT,3$
+	$DELTVA_S INADR=RET
+3$:	MOVL	#SS$_NORMAL,R0
+	RET
+
+;
+; Part P: a global section of PG65.DAT at a small working set; its range
+; purged, and touched again.
+;
+PARTP:	WSET	#40
+	MOVL	R0,LIM
+	$OPEN	FAB=RFAB
+	MOVL	RFAB+FAB$L_STV,CHAN
+	MAP	#F_GRO, #N_P, CHAN, #64, #1
+	MOVL	R0,STAT
+	PAGES	RET
+	SAY	</P1 global file section of 64, pfc 1: !XL pages=!SL/>, STAT, R0
+	LOW	RET
+	MOVL	R0,BASE
+	SNAP	SA
+	CHECK	BASE, #1, #64
+	MOVL	R0,R6
+	SNAP	SB
+	SAY	</P2 read: bad=!UL/>, R6
+	REPORT	</P2 read every page/>, SA, SB
+	$PURGWS_S INADR=RET
+	MOVL	R0,STAT
+	SNAP	SC
+	SAY	</P3 purgws: !XL/>, STAT
+	REPORT	</P3 purged/>, SB, SC
+	CHECK	BASE, #1, #64
+	MOVL	R0,R6
+	SNAP	SD
+	SAY	</P4 read again: bad=!UL/>, R6
+	REPORT	</P4 read again/>, SC, SD
+; Other pages written, then the section's read again.
+	$EXPREG_S PAGCNT=#100, RETADR=RET2
+	LOW	RET2
+	MOVL	R0,BASE2
+	FILL	BASE2, #1, #100
+	SNAP	SA
+	REPORT	</P5 100 other pages written/>, SD, SA
+	CHECK	BASE, #1, #64
+	MOVL	R0,R6
+	SNAP	SB
+	SAY	</P6 read again: bad=!UL/>, R6
+	REPORT	</P6 read again/>, SA, SB
+	$DELTVA_S INADR=RET2
+	$DELTVA_S INADR=RET
+	$DASSGN_S CHAN=CHAN
+	MOVL	#SS$_NORMAL,R0
+	RET
+
+;
+; Part C: copy-on-reference sections of PG65.DAT, opened read-only.
+;
+PARTC:	WSET	#-1
+	MOVL	R0,LIM
+	$OPEN	FAB=RFAB
+	MOVL	RFAB+FAB$L_STV,CHAN
+; A writable private CRF section.
+	SNAP	SA
+	MAP	#F_CRF, #0, CHAN, #64, #1
+	MOVL	R0,STAT
+	SNAP	SB
+	PAGES	RET
+	SAY	</C1 private crf section of 64: !XL pages=!SL/>, STAT, R0
+	REPORT	</C1 mapped/>, SA, SB
+	LOW	RET
+	MOVL	R0,BASE
+	CHECK	BASE, #1, #64
+	MOVL	R0,R6
+	SNAP	SC
+	SAY	</C2 read: bad=!UL/>, R6
+	REPORT	</C2 read every page/>, SB, SC
+	FILL	BASE, #7000, #64, #4
+	SNAP	SD
+	REPORT	</C2 written/>, SC, SD
+	$DELTVA_S INADR=RET
+	SNAP	SA
+	REPORT	</C3 deleted/>, SD, SA
+; A read-only one.
+	MAP	#F_CRFRO, #0, CHAN, #64, #1
+	MOVL	R0,STAT
+	SNAP	SB
+	PAGES	RET
+	SAY	</C4 read-only crf section of 64: !XL pages=!SL/>, STAT, R0
+	REPORT	</C4 mapped/>, SA, SB
+	LOW	RET
+	MOVL	R0,BASE
+	CHECK	BASE, #1, #64
+	SNAP	SC
+	REPORT	</C4 read every page/>, SB, SC
+	$DELTVA_S INADR=RET
+	SNAP	SD
+	REPORT	</C4 deleted/>, SC, SD
+; A temporary global CRF section, every page written by its only mapper,
+; then mapped again by name.
+	SNAP	SA
+	MAP	#F_GCRF, #N_CRF, CHAN, #64, #1
+	MOVL	R0,STAT
+	SNAP	SB
+	PAGES	RET
+	SAY	</C5 global crf section of 64: !XL pages=!SL/>, STAT, R0
+	REPORT	</C5 mapped/>, SA, SB
+	GREPORT	</C5 mapped/>, SA, SB
+	LOW	RET
+	MOVL	R0,BASE
+	FILL	BASE, #8000, #64, #4
+	SNAP	SC
+	REPORT	</C5 every page written/>, SB, SC
+	GREPORT	</C5 every page written/>, SA, SC
+	MAPGBL	#F_MWRT, #N_CRF
+	MOVL	R0,STAT
+	SNAP	SD
+	SAY	</C6 mgblsc PG65_CRF then: !XL/>, STAT
+	BLBS	STAT,1$
+	BRW	2$
+1$:	REPORT	</C6 mapped again/>, SC, SD
+	LOW	RET
+	MOVL	R0,BASE2
+	CHECK	BASE2, #1, #64
+	MOVL	R0,R6
+	CHECK	BASE2, #8000, #64, #4
+	MOVL	R0,R7
+	SNAP	SA
+	SAY	</C6 read: not the file's !UL, not the first mapping's !UL/>, R6, R7
+	REPORT	</C6 read every page/>, SD, SA
+	$DELTVA_S INADR=RET
+2$:	PUSHAL	BASE
+	CALLS	#1,RANGE64
+	SNAP	SA
+	$DELTVA_S INADR=RNG
+	SNAP	SB
+	REPORT	</C7 deleted/>, SA, SB
+	GREPORT	</C7 deleted/>, SA, SB
+	$DASSGN_S CHAN=CHAN
+	MOVL	#SS$_NORMAL,R0
+	RET
+
+;
+; Part U: $UPDSEC. A global section of PG65.DAT, opened for writing;
+; the cases write the pages' second longwords, and a private read-only
+; mapping of the same file (DISK) counts which reached the file.
+;
+PARTU:	WSET	#-1
+	MOVL	R0,LIM
+	$OPEN	FAB=WFAB
+	MOVL	R0,STAT
+	MOVL	WFAB+FAB$L_STV,CHAN
+	MAP	#F_GWRT, #N_UP, CHAN, #64, #1
+	MOVL	R0,STAT2
+	PAGES	RET
+	SAY	</U1 open !XL; writable global section of 64: !XL pages=!SL/>, STAT, STAT2, R0
+	LOW	RET
+	MOVL	R0,BASE
+; Every page written, the range purged, UPDFLG 0.
+	FILL	BASE, #3000, #64, #4
+	$PURGWS_S INADR=RET
+	UPDATE	RET, #0
+	PUSHL	#3000
+	PUSHL	#64
+	PUSHL	#0
+	CALLS	#3,DISKR
+	MOVL	R0,R6
+	PUSHAL	URET
+	CALLS	#1,OFFR
+	SAY	</U2 every page written, purged; updsecw 0: !XL iosb=!XL pages !SL to !SL; on disk !UL/>, -
+		STAT, UIOSB, R0, R1, R6
+; Again, nothing written since.
+	UPDATE	RET, #0
+	PUSHAL	URET
+	CALLS	#1,OFFR
+	SAY	</U3 again: !XL iosb=!XL pages !SL to !SL/>, STAT, UIOSB, R0, R1
+	UPDATE	RET, #1
+	PUSHAL	URET
+	CALLS	#1,OFFR
+	SAY	</U3 again with 1: !XL iosb=!XL pages !SL to !SL/>, STAT, UIOSB, R0, R1
+; Pages 0 to 31 written, still valid; UPDFLG 1.
+	FILL	BASE, #4000, #32, #4
+	UPDATE	RET, #1
+	PUSHL	#4000
+	PUSHL	#32
+	PUSHL	#0
+	CALLS	#3,DISKR
+	MOVL	R0,R6
+	PUSHAL	URET
+	CALLS	#1,OFFR
+	SAY	</U4 pages 0-31 written, valid; updsecw 1: !XL iosb=!XL pages !SL to !SL; on disk !UL/>, -
+		STAT, UIOSB, R0, R1, R6
+; Pages 10 to 19 written, purged; UPDFLG 1.
+	ADDL3	#<10*512>,BASE,R6
+	FILL	R6, #5010, #10, #4
+	$PURGWS_S INADR=RET
+	UPDATE	RET, #1
+	PUSHL	#5010
+	PUSHL	#10
+	PUSHL	#10
+	CALLS	#3,DISKR
+	MOVL	R0,R6
+	PUSHAL	URET
+	CALLS	#1,OFFR
+	SAY	</U5 pages 10-19 written, purged; updsecw 1: !XL iosb=!XL pages !SL to !SL; on disk !UL/>, -
+		STAT, UIOSB, R0, R1, R6
+	MOVQ	RET,RET3
+; A page-file section.
+	MAP	#F_PF, #N_UPF, #0, #8, #0
+	MOVL	R0,STAT2
+	LOW	RET
+	MOVL	R0,BASE2
+	FILL	BASE2, #1, #8
+	UPDATE	RET, #0
+	SAY	</U6 page-file section of 8 (!XL), written; updsecw 0: !XL iosb=!XL/>, STAT2, STAT, UIOSB
+	$DELTVA_S INADR=RET
+; A writable private section, pages 0 to 15 written, purged.
+	MAP	#F_PWRT, #0, CHAN, #16, #1
+	MOVL	R0,STAT2
+	LOW	RET
+	MOVL	R0,BASE2
+	FILL	BASE2, #6000, #16, #4
+	$PURGWS_S INADR=RET
+	UPDATE	RET, #0
+	PUSHL	#6000
+	PUSHL	#16
+	PUSHL	#0
+	CALLS	#3,DISKR
+	MOVL	R0,R6
+	MOVL	BASE2,BASE
+	PUSHAL	URET
+	CALLS	#1,OFFR
+	SAY	</U7 private section of 16 (!XL), written, purged; updsecw 0: !XL iosb=!XL pages !SL to !SL; on disk !UL/>, -
+		STAT2, STAT, UIOSB, R0, R1, R6
+	$DELTVA_S INADR=RET
+	$DELTVA_S INADR=RET3
+	$DASSGN_S CHAN=CHAN
+	MOVL	#SS$_NORMAL,R0
+	RET
+
+;
+; Part K: read clustering. A 200-page section of PG65.DAT read in order
+; with each pfc, at a working set as large as $ADJWSL makes it; then
+; down, global, and at a small working set.
+;
+PARTK:	WSET	#-1
+	MOVL	R0,LIM
+	SUBL3	#200,LIM,R6
+	SAY	</K0 working set less 200: !SL/>, R6
+	$OPEN	FAB=RFAB
+	MOVL	RFAB+FAB$L_STV,CHAN
+	MOVAL	PFCS,R11
+1$:	MOVL	(R11)+,PFC
+	BLSS	2$
+	PUSHL	#0
+	PUSHL	#F_PRO
+	CALLS	#2,KREADR
+	BRB	1$
+2$:	PUSHL	#1
+	PUSHL	#F_PRO
+	MOVL	#16,PFC
+	CALLS	#2,KREADR
+	PUSHL	#1
+	PUSHL	#F_PRO
+	CLRL	PFC
+	CALLS	#2,KREADR
+	PUSHL	#0
+	PUSHL	#F_GRO
+	MOVL	#16,PFC
+	CALLS	#2,KREADR
+	PUSHL	#1
+	PUSHL	#F_GRO
+	CALLS	#2,KREADR
+	PUSHL	#0
+	PUSHL	#F_CRFRO
+	CALLS	#2,KREADR
+; At a small working set.
+	WSET	#20
+	MOVL	R0,LIM
+	SAY	</K2 small working set/>
+	PUSHL	#0
+	PUSHL	#F_PRO
+	MOVL	#64,PFC
+	CALLS	#2,KREADR
+	$DASSGN_S CHAN=CHAN
+	MOVL	#SS$_NORMAL,R0
+	RET
+
+; KREADR flags, down: one of part K's reads, with PFC.
+	.ENTRY	KREADR,^M<R2,R3,R4,R5,R6,R7,R8>
+	MAP	4(AP), #N_K, CHAN, #200, PFC
+	MOVL	R0,STAT
+	BLBS	R0,1$
+	SAY	</K1 flags !XL pfc=!UL: crmpsc !XL/>, 4(AP), PFC, STAT
+	RET
+1$:	LOW	RET
+	MOVL	R0,R8
+	SNAP	SA
+	TSTL	8(AP)
+	BNEQ	2$
+	CHECK	R8, #1, #200
+	BRB	3$
+2$:	CHECKDOWN R8, #1, #200
+3$:	MOVL	R0,R6
+	SNAP	SB
+	SUBL3	SA+S_FLTS,SB+S_FLTS,R7
+	SUBL3	SA+S_DIO,SB+S_DIO,R5
+	SUBL3	SA+S_GPG,SB+S_GPG,R4
+	SUBL3	SA+S_PPG,SB+S_PPG,R3
+	MOVAB	UP_,R2
+	TSTL	8(AP)
+	BEQL	4$
+	MOVAB	DOWN_,R2
+4$:	SAY	</K1 flags !XL pfc=!UL !AC: flts=!SL dirio=!SL gpg=!SL ppg=!SL bad=!UL/>, -
+		4(AP), PFC, R2, R7, R5, R4, R3, R6
+	$DELTVA_S INADR=RET
+	RET
+UP_:	.ASCIC	/up/
+DOWN_:	.ASCIC	/down/
+
+;
+; Part H: the holder, in the subprocess PG65HLD. It maps PG65_SH (64
+; pages of PG65.DAT) and PG65_SP (a 16-page page-file section, page n
+; holding 2000+n), touches every page, and sets flag 64; at flag 65 it
+; purges PG65_SH's range and sets 66; at 67 it ends.
+;
+PARTH:	WSET	#-1
+	$ASCEFC_S EFN=#64, NAME=EFCNAM
+	MOVL	R0,STAT
+	$OPEN	FAB=RFAB
+	MOVL	R0,STAT2
+	MOVL	RFAB+FAB$L_STV,CHAN
+	MAP	#F_GRO, #N_SH, CHAN, #64, #1
+	MOVL	R0,R6
+	MOVQ	RET,RET2
+	LOW	RET2
+	MOVL	R0,BASE
+	MAP	#F_PF, #N_SP, #0, #16, #0
+	MOVL	R0,R7
+	LOW	RET
+	MOVL	R0,BASE2
+	FILL	BASE2, #2000, #16
+	CHECK	BASE, #1, #64
+	MOVL	R0,R8
+	SAY	</H1 ascefc !XL open !XL PG65_SH !XL PG65_SP !XL; bad=!UL/>, STAT, STAT2, R6, R7, R8
+	$SETEF_S EFN=#64
+	PUSHL	#65
+	CALLS	#1,WAITEFR
+	SAY	</H2 flag 65: !UL/>, R0
+	$PURGWS_S INADR=RET2
+	MOVL	R0,STAT
+	SAY	</H2 purgws PG65_SH: !XL/>, STAT
+	$SETEF_S EFN=#66
+	PUSHL	#67
+	CALLS	#1,WAITEFR
+	SAY	</H3 flag 67: !UL/>, R0
+	MOVL	#SS$_NORMAL,R0
+	RET
+
+;
+; Part S: the holder's pages, here.
+;
+PARTS_:	WSET	#-1
+	$ASCEFC_S EFN=#64, NAME=EFCNAM
+	MOVL	R0,STAT
+	PUSHL	#64
+	CALLS	#1,WAITEFR
+	SAY	</S0 ascefc !XL; the holder ready: !UL/>, STAT, R0
+	BLBS	R0,1$
+	MOVL	#SS$_NORMAL,R0
+	RET
+1$:	SNAP	SA
+	MAPGBL	#F_MRO, #N_SH
+	MOVL	R0,STAT
+	SNAP	SB
+	MOVQ	RET,RET2
+	LOW	RET2
+	MOVL	R0,BASE
+	SAY	</S1 mgblsc PG65_SH: !XL/>, STAT
+	REPORT	</S1 mapped/>, SA, SB
+	CHECK	BASE, #1, #64
+	MOVL	R0,R6
+	SNAP	SC
+	SAY	</S1 read: bad=!UL/>, R6
+	REPORT	</S1 read every page/>, SB, SC
+	$PURGWS_S INADR=RET2
+	SNAP	SD
+	REPORT	</S2 purged/>, SC, SD
+	CHECK	BASE, #1, #64
+	MOVL	R0,R6
+	SNAP	SA
+	SAY	</S2 read again: bad=!UL/>, R6
+	REPORT	</S2 read again/>, SD, SA
+	MAPGBL	#F_MWRT, #N_SP
+	MOVL	R0,STAT
+	LOW	RET
+	MOVL	R0,BASE2
+	SNAP	SB
+	CHECK	BASE2, #2000, #16
+	MOVL	R0,R6
+	SNAP	SC
+	SAY	</S3 mgblsc PG65_SP: !XL; read: bad=!UL/>, STAT, R6
+	REPORT	</S3 read every page/>, SB, SC
+	$DELTVA_S INADR=RET
+; The holder purges its own.
+	$SETEF_S EFN=#65
+	PUSHL	#66
+	CALLS	#1,WAITEFR
+	SAY	</S4 the holder purged: !UL/>, R0
+	SNAP	SA
+	$PURGWS_S INADR=RET2
+	SNAP	SB
+	REPORT	</S4 purged/>, SA, SB
+	CHECK	BASE, #1, #64
+	MOVL	R0,R6
+	SNAP	SC
+	SAY	</S4 read again: bad=!UL/>, R6
+	REPORT	</S4 read again/>, SB, SC
+	$DELTVA_S INADR=RET2
+	$SETEF_S EFN=#67
+	MOVL	#SS$_NORMAL,R0
+	RET
+
+; SAYR ctrstr, p1, ...: write a line.
+	.ENTRY	SAYR,^M<R2,R3,R4,R5>
+	MOVL	#200,OUTD
+	$FAOL_S	CTRSTR=@4(AP), OUTLEN=OUTLEN, OUTBUF=OUTD, PRMLST=8(AP)
+	MOVW	OUTLEN,ORAB+RAB$W_RSZ
+	$PUT	RAB=ORAB
+	RET
+
+; REPR text, from, to: REPORT's line.
+	.ENTRY	REPR,^M<R2,R3,R4,R5,R6,R7,R8,R9>
+	MOVL	8(AP),R2
+	MOVL	12(AP),R3
+	SUBL3	S_FLTS(R2),S_FLTS(R3),R4
+	SUBL3	S_CNT(R3),S_CNT(R2),R5
+	SUBL3	S_GPG(R2),S_GPG(R3),R6
+	SUBL3	S_PPG(R2),S_PPG(R3),R7
+	SUBL3	S_PFREE(R3),S_PFREE(R2),R8
+	SUBL3	S_DIO(R2),S_DIO(R3),R9
+	SAY	</!AS: flts=!SL charged=!SL gpg=!SL ppg=!SL pfused=!SL dirio=!SL/>, -
+		4(AP), R4, R5, R6, R7, R8, R9
+	RET
+
+; GREPR text, from, to: GREPORT's line.
+	.ENTRY	GREPR,^M<R2,R3,R4,R5,R6>
+	MOVL	8(AP),R2
+	MOVL	12(AP),R3
+	SUBL3	S_FGS(R3),S_FGS(R2),R4
+	SUBL3	S_FGP(R3),S_FGP(R2),R5
+	SUBL3	S_CGP(R3),S_CGP(R2),R6
+	SAY	</!AS: sects=!SL gblpages=!SL contig=!SL/>, 4(AP), R4, R5, R6
+	RET
+
+; SNAPR block.
+	.ENTRY	SNAPR,^M<R2,R3,R4,R5>
+	$GETJPIW_S ITMLST=JPILST, IOSB=JIOSB
+	$GETSYIW_S ITMLST=SYILST, IOSB=SIOSB
+	MOVC3	#SNAPSZ,CUR,@4(AP)
+	RET
+
+; SYIR code: R0 = one $GETSYIW item's longword.
+	.ENTRY	SYIR,^M<R2,R3,R4,R5>
+	MOVW	4(AP),SYICOD
+	CLRL	SYIVAL
+	$GETSYIW_S ITMLST=SYI1, IOSB=SIOSB
+	MOVL	SYIVAL,R0
+	RET
+
+; WAITR: wait WAITQ (3 seconds).
+	.ENTRY	WAITR,^M<R2,R3,R4,R5>
+	$SETIMR_S EFN=#1, DAYTIM=WAITQ
+	$WAITFR_S EFN=#1
+	RET
+
+; WAITEFR efn: wait at most two minutes for a common event flag; R0 1
+; if it was set, else 0.
+	.ENTRY	WAITEFR,^M<R2,R3,R4,R5,R6>
+	MOVL	#120,R6
+1$:	$READEF_S EFN=4(AP), STATE=STAT2
+	CMPL	R0,#SS$_WASSET
+	BEQL	2$
+	$SETIMR_S EFN=#1, DAYTIM=ONEQ
+	$WAITFR_S EFN=#1
+	SOBGTR	R6,1$
+	CLRL	R0
+	RET
+2$:	MOVL	#1,R0
+	RET
+
+; MAPR flags, name, chan, pages, pfc.
+	.ENTRY	MAPR,^M<R2,R3,R4,R5>
+	MNEGL	#1,RET
+	MNEGL	#1,RET+4
+	$CRMPSC_S INADR=P0ANY, RETADR=RET, FLAGS=4(AP), GSDNAM=@8(AP), -
+		CHAN=12(AP), PAGCNT=16(AP), PFC=20(AP)
+	RET
+
+; MGBR flags, name.
+	.ENTRY	MGBR,^M<R2,R3,R4,R5>
+	MNEGL	#1,RET
+	MNEGL	#1,RET+4
+	$MGBLSC_S INADR=P0ANY, RETADR=RET, FLAGS=4(AP), GSDNAM=@8(AP)
+	RET
+
+; UPDR range, flag: $UPDSECW; STAT its status.
+	.ENTRY	UPDR,^M<R2,R3,R4,R5>
+	MOVL	4(AP),UINADR
+	MOVL	8(AP),UFLAG
+	MNEGL	#1,URET
+	MNEGL	#1,URET+4
+	CLRQ	UIOSB
+	CALLG	UPDLST,G^SYS$UPDSECW
+	MOVL	R0,STAT
+	RET
+
+; DISKR first page, count, value: a private read-only mapping of the
+; same pages of CHAN's file; R0 is how many of them hold value+i in
+; their second longword (reached the file).
+	.ENTRY	DISKR,^M<R2,R3,R4,R5,R6>
+	MOVQ	RET,RET2
+	ADDL3	#1,4(AP),R6		; the first page's block
+	MNEGL	#1,RET
+	MNEGL	#1,RET+4
+	$CRMPSC_S INADR=P0ANY, RETADR=RET, FLAGS=#F_PRO, CHAN=CHAN, -
+		PAGCNT=8(AP), VBN=R6, PFC=#1
+	BLBS	R0,1$
+	MOVQ	RET2,RET
+	MNEGL	#1,R0
+	RET
+1$:	LOW	RET
+	MOVL	R0,R6
+	CHECK	R6, 12(AP), 8(AP), #4
+	SUBL3	R0,8(AP),R6
+	$DELTVA_S INADR=RET
+	MOVQ	RET2,RET
+	MOVL	R6,R0
+	RET
+
+; OFFR cell: R0 and R1 are the range's first and last pages, from BASE
+; (-1 if the service wrote -1).
+	.ENTRY	OFFR,^M<R2>
+	MOVL	4(AP),R2
+	MNEGL	#1,R0
+	MNEGL	#1,R1
+	CMPL	(R2),#-1
+	BEQL	1$
+	SUBL3	BASE,(R2),R0
+	DIVL2	#512,R0
+	SUBL3	BASE,4(R2),R1
+	DIVL2	#512,R1
+1$:	RET
+
+; RANGE64 base: RNG is the 64 pages from base's address.
+	.ENTRY	RANGE64,^M<>
+	MOVL	@4(AP),RNG
+	ADDL3	#<64*512-1>,RNG,RNG+4
+	RET
+
+; WSETR n.
+	.ENTRY	WSETR,^M<R2,R3,R4,R5>
+	$ADJWSL_S PAGCNT=#-100000, WSETLM=LIM
+	CMPL	4(AP),#-1
+	BNEQ	1$
+	$ADJWSL_S PAGCNT=#100000, WSETLM=LIM
+	BRB	2$
+1$:	$ADJWSL_S PAGCNT=4(AP), WSETLM=LIM
+2$:	MOVL	LIM,R0
+	RET
+
+; FILLR base, first, count, offset.
+	.ENTRY	FILLR,^M<R2,R3,R4>
+	ADDL3	4(AP),16(AP),R2
+	MOVL	8(AP),R4
+	MOVL	12(AP),R3
+	BEQL	2$
+1$:	MOVL	R4,(R2)
+	INCL	R4
+	ADDL2	#512,R2
+	SOBGTR	R3,1$
+2$:	RET
+
+; CHKR base, first, count, offset, down: R0 = the pages that don't hold
+; their value.
+	.ENTRY	CHKR,^M<R2,R3,R4,R5>
+	CLRL	R0
+	ADDL3	4(AP),16(AP),R2
+	MOVL	8(AP),R4
+	MOVL	12(AP),R3
+	BEQL	3$
+	MOVL	#512,R5
+	TSTL	20(AP)
+	BEQL	1$
+	DECL	R3
+	MULL3	#512,R3,R5
+	ADDL2	R5,R2
+	ADDL2	R3,R4
+	INCL	R3
+	MNEGL	#512,R5
+1$:	CMPL	R4,(R2)
+	BEQL	2$
+	INCL	R0
+2$:	TSTL	20(AP)
+	BEQL	4$
+	DECL	R4
+	BRB	5$
+4$:	INCL	R4
+5$:	ADDL2	R5,R2
+	SOBGTR	R3,1$
+3$:	RET
+
+; ZEROR base, count.
+	.ENTRY	ZEROR,^M<R2,R3>
+	CLRL	R0
+	MOVL	4(AP),R2
+	MOVL	8(AP),R3
+	BEQL	2$
+1$:	TSTL	(R2)
+	BEQL	3$
+	INCL	R0
+3$:	ADDL2	#512,R2
+	SOBGTR	R3,1$
+2$:	RET
+
+; PAGESR cell: R0 = the pages of the range at cell, or -1.
+	.ENTRY	PAGESR,^M<R2>
+	MOVL	4(AP),R2
+	MOVL	(R2),R0
+	CMPL	R0,#-1
+	BEQL	2$
+	SUBL3	(R2),4(R2),R0
+	BGEQ	1$
+	MNEGL	R0,R0
+1$:	ADDL2	#1,R0
+	DIVL2	#512,R0
+2$:	RET
+
+; LOWR cell: R0 = the lower of the range's two addresses.
+	.ENTRY	LOWR,^M<R2>
+	MOVL	4(AP),R2
+	MOVL	(R2),R0
+	CMPL	4(R2),R0
+	BGEQU	1$
+	MOVL	4(R2),R0
+1$:	RET
+
+CODEND:	.BYTE	0
+
+	.END	START

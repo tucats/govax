@@ -1,6 +1,7 @@
 # Phase 65 — sections under the pager
 
-**Status:** planned (2026-10-15). Needs Phase 64 (the page file and the
+**Status:** in progress (planned 2026-10-15; subtasks 1 to 6 done, the
+probe of subtask 7 written 2026-10-18, its VAX run next). Needs Phase 64 (the page file and the
 writer). Part of the paging program laid out in
 `PHASE-62 - VMS paging.md` (Decision 14 is this phase's).
 
@@ -498,7 +499,8 @@ a procedure, `exchange.cmd`. A second process for the sharing cases
    argument kept per section, the scan for section files, global
    sections, and the page file (image files in Phase 66), pages read
    counted.
-7. **The VMS probe** (`testdata/pg65`), the cases above; govax is then
+7. **The VMS probe** (`testdata/pg65`), the cases above (written and
+   dry-run on govax 2026-10-18; the VAX run is next); govax is then
    changed to its answers.
 8. **Close-out.**
 
@@ -784,3 +786,38 @@ a procedure, `exchange.cmd`. A second process for the sharing cases
     the key's. The backward cases fail without the scan down.
     `TestGlobalCopyOnRefPaging` and `TestReclaimer` now run with
     PFCDEFAULT 1, so that each page is still its own fault there.
+- **2026-10-18:** Subtask 7, the probe, written (`testdata/pg65`,
+  README.md; the VAX run is next). `pg65.mar` is one program in parts
+  (PG65_PART), each case read with `$GETJPIW` (PAGEFLTS, PAGFILCNT,
+  GPGCNT, PPGCNT, DIRIO, WSSIZE) and `$GETSYIW` (PAGEFILE_FREE,
+  FREE_GBLPAGES, FREE_GBLSECTS, CONTIG_GBLPAGES, the last three by code),
+  printed as changes; the image's own pages are locked in the working set
+  first, so the faults are the cases'. The parts follow "The probe's
+  cases": M makes PG65.DAT (200 blocks, block n holding n); G the limits
+  and GBLPAGES' counting (page-file sections of 1 to 4 pages, a 3-page
+  file section, one of GBLPAGFIL + 1 pages); F a permanent page-file
+  section (charges at mapping, first faults, a second mapping), D the
+  writer run with its pages on the modified list, R the section mapped
+  again, `$DGBLSC` while mapped, and unmapped; P a global file section's
+  pages purged from a small working set and back; C copy-on-reference
+  (private writable and read-only, and a temporary global section
+  `$MGBLSC`'d by name after its only mapper touched every page); U
+  `$UPDSECW` with UPDFLG 0 and 1, after a purge and with the pages valid,
+  of a page-file section and a private section, with a private mapping
+  of the same blocks counting what reached the file; K clustering (pfc
+  0, 1, 4, 16, 64, 127, 200 up; 16 and 0 down; global; CRF; a small
+  working set); H, in a spawned subprocess, and S here, stepping through
+  common event flags: another process's valid pages, purged, and after
+  the holder purged its own. Not probed: a CRF mapping past PGFLQUOTA,
+  and clustering from the page file (no frame reuse on that VAX).
+  - **govax's dry run** (README.md lists its answers):
+    `TestPG65DryRun` runs every part, the holder in a subprocess, and
+    checks that every page reads back right, GBLPAGES' rule, and the
+    holder's steps. G4 meets SS$_GPTFULL before EXGBLPAGFIL with govax's
+    equal defaults (the checks' order is still a probe question). govax's
+    DCL lacks F$GETSYI's HW_NAME, SYSGEN, and SHOW MEMORY/PHYSICAL_PAGES,
+    which the procedure asks for (it goes on past them).
+  - **Fixed on the way:** F$GETSYI didn't take the global section items
+    or PFCDEFAULT that subtasks 4 and 6 gave `$GETSYI`
+    (`dclshell/dcllexprocess.go`'s `syiKeywords`; HELP LEXICAL lists
+    them); `TestGetSYIGlobalSectionItems` compares each with `$GETSYI`'s.
