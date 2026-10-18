@@ -87,29 +87,434 @@ that section pages leave memory and come back the way VMS's do:
   survives with its contents while unmapped (govax keeps them today by
   keeping the frames).
 
-## Subtasks (provisional)
+# Part A — the survey (subtask 1, 2026-10-18)
 
-1. **Survey:** chapter 15.3 and 16.3 against today's `GlobalSection` and
-   `processSection`; the `$CRMPSC` pfc argument; GBLPAGFIL in the
-   SYSAdmin manuals.
-2. **Private file sections finished:** CRF pages backed by the page
-   file and charged; `$UPDSEC` and `$DELTVA` over pages on the modified
-   list.
-3. **The global page table's states and share counts:** soft faults on
-   global pages valid elsewhere or in transition; global pages leaving
-   working sets; the GPTX form back in the process PTE; global pages on
-   the lists and written by the writer.
-4. **Page-file global sections as global demand-zero pages;** the
-   GBLPAGES, GBLSECTIONS, and GBLPAGFIL keys.
-5. **Global copy-on-reference.**
-6. **Read clustering** for section files, image files (used in Phase
-   66), and the page file.
-7. **The VMS probe**, extending `testdata/mp`'s section probes: GPGCNT
-   and share behavior across two processes, fault counts for sequential
-   access with and without a pfc, `$UPDSEC` after pages leave the
-   working set.
+## Sources
+
+- ***VAX/VMS Internals and Data Structures*** (the OCR text, beside the
+  PDF): 14.2.6 and 14.2.7 (REFCNT and SHRCNT), 14.3 (the global section
+  descriptor, the global section table entry, global page table entries
+  and their forms, process PTEs for global pages; figures 14-14 to
+  14-19), 15.2.1.3 and 15.2.3 (copy-on-reference pages, private and
+  global), 15.3 (page faults for global pages: read-only, read/write,
+  copy-on-reference, page-file backing store; figures 15-6 to 15-8),
+  15.5.1 (page reads and clustering, Table 15-1), 15.5.3 (`$UPDSEC`),
+  16.2.2.1 (what deletion gives back), and 16.3 (`$CRMPSC`, `$MGBLSC`,
+  `$DGBLSC`, `$UPDSEC`).
+- **VMS 5.0 System Services Reference Manual** (extracted): `$CRMPSC`'s
+  arguments table (which arguments each kind of section uses), its pfc
+  argument, its description (PGFLQUOTA for copy-on-reference pages,
+  GBLPAGFIL for page-file pages), its statuses (SS$_EXGBLPAGFIL,
+  SS$_EXQUOTA, SS$_GPTFULL, SS$_GSDFULL); `$GETSYI`'s FREE_GBLPAGES,
+  FREE_GBLSECTS, and CONTIG_GBLPAGES.
+- **HP OpenVMS System Management Utilities Reference Manual**, M–Z,
+  7.3-2 (`VMS SYSAdmin II.pdf`, extracted): GBLPAGES, GBLPAGFIL,
+  GBLSECTIONS, and PFCDEFAULT in appendix C; SYSGEN SHOW's rule for
+  abbreviations on a VAX (6–27: `SHOW GBL` shows only GBLSECTIONS, and
+  GBLPAGFIL needs `SHOW GBLPAGF`).
+- **Earlier VMS runs:** `testdata/pg64/vax/pg64.log`'s SYSGEN SHOW of
+  GBLPAGFIL and PFCDEFAULT, and `testdata/pg63`'s `$GETSYI` of
+  PFCDEFAULT, on the VMS 7.1 VAX.
+- **govax:** `corevms/gblsec.go`, `filesec.go`, `frames.go`,
+  `workingset.go`, `mpw.go`, `pgflquota.go`, `accounting.go`,
+  `getsyi.go`; `internal/paging`'s `database.go`; `vmsimage`'s ISD.
+
+## Global pages on VMS (14.3, 15.3)
+
+**The structures.** A global section has three: a global section
+descriptor (GSD: name, protection, ident, flags; used only to create,
+map, and delete), a global section table entry (GSTE, in the system
+header, the twin of a process section table entry: the file's window,
+base VBN, the section's page fault cluster, flags, and the count of
+process PTEs that map the section), and one **global page table entry**
+per page. The global page table sits, as far as memory management's
+code is concerned, at the virtual end of the system page table: a
+global page table index (GPTX) is a pseudo system page number. The
+hardware never sees it.
+
+**A GPTE's forms** (14.3.3): **valid** (the page is in at least one
+working set, the PFN in the GPTE), **transition** (its frame is on the
+free or modified list, or being read or written; the PFN STATE array
+says which), **demand zero** (a page-file section's page never
+touched), and **out**: a global section table index (GSTX) for a page
+in a section file, or, for a page-file section, a page file block. The
+modify bit in a GPTE means nothing: the hardware can't reach it.
+
+**A process PTE for a global page** holds the GPTX until the process
+faults the page, and only then the PFN, valid; when the page leaves the
+process's working set it gets the GPTX back, never a transition form
+(15.3.1, steps 6 and 7; 15.3.2). The GPTX is recomputed from the PFN
+entry's PTE pointer, which for a global page points at the GPTE.
+
+**The PFN entry of a global frame:** its PTE pointer is the GPTE's
+address, not any process PTE's; BAK is the GSTX (or the page file
+backing store address for a page-file page); **SHRCNT** counts the
+process PTEs valid on the frame. Its first share adds one to REFCNT and
+its last takes it away (14.2.7). A frame with a share count is on no
+list.
+
+**The read-only example** (15.3.1, figure 15-6): processes A and B map
+the section (each PTE a GPTX; nothing else changes). B faults first:
+the pager follows the GPTX to the GPTE, finds a GSTX, allocates a frame
+(REFCNT 2, SHRCNT 1 while the read is in progress, BAK the GSTX) and
+reads it; the GPTE is in transition and B's PTE still a GPTX until the
+read completes, when both become valid. A then faults: the GPTE is
+valid, so A's PTE is a copy of it and SHRCNT becomes 2 (a soft fault,
+MONITOR's "global valid"). B's working set lets go: SHRCNT 1, B's PTE
+gets its GPTX back. A's lets go: SHRCNT 0, REFCNT 0, the frame goes to
+the free list (or the modified list by its saved modify bit) with the
+GPTE in transition. When the frame is reused, the tie is broken through
+the GPTE: BAK goes back into it, and no process PTE changes.
+
+**Read/write global pages** (15.3.2) go through the same states as a
+private page that isn't copy on reference, but in the GPTE. A process's
+modify bit is gathered into the frame's saved modify bit as its PTE
+leaves (the GPTE has none).
+
+**Global copy-on-reference pages** (15.3.3, figure 15-7): the GPTE keeps
+its GSTX for good (with the CRF bit). The fault reads the page into a
+frame that is the process's own: its PTE becomes a transition PTE and
+then valid, the PFN entry points at the process PTE, BAK is the page
+file with no block, and the saved modify bit is set. All ties with the
+section are broken; from then on it's a private copy-on-reference page
+(figure 15-4).
+
+**Global page-file pages** (15.3.4, figure 15-8): each GPTE starts as
+demand zero. The first fault anywhere allocates a frame (the PFN entry
+points at the GPTE, BAK the page file with no block), stores its PFN in
+the GPTE, makes it valid, and makes the process PTE valid too; a later
+fault by another process copies the valid GPTE. From then on the
+transitions are a page file page's (figure 15-5), in the GPTE: written
+by the writer to a page file block, faulted back from it.
+
+**Private copy-on-reference pages** (15.2.1.3, figure 15-4): the
+section's PTEs hold the PSTX with the CRF bit. The first fault reads the
+page from the file, **sets the saved modify bit** (so it goes to the
+modified list whenever it leaves the working set, modified or not), and
+makes the page file its backing store, block not yet allocated: "all
+ties to the original image file are broken". From then on it's a page
+file page.
+
+## Lifetimes, writing back, and deletion
+
+- **`$DELTVA`** (16.2.2.1) gives back the frame (valid or in
+  transition), an allocated page file block, the working set entry, and
+  the PGFLQUOTA of every page with page file backing store; a modified
+  page of a section file is written back first. A private section's
+  reference count (in its PSTE) drops, and the PSTE goes at zero. For a
+  global page, the count of PTEs in the GSTE drops.
+- **`$DGBLSC`** (16.3.3) marks the section delete pending and clears
+  its permanent bit; the section goes when the GSTE's count reaches zero,
+  and its writable pages are written to their backing store first (the
+  section file; a page-file section's contents just go).
+- **`$UPDSEC`** (15.5.3, 16.3.4): for a private section only modified
+  pages are written (the PTE's modify bit, or the PFN's for a transition
+  page). For a **global** section VMS can't know which pages are
+  modified (no back pointers from a frame to the process PTEs), so
+  **every page in the range is written**, modified or not, unless
+  the flags' low bit says the caller is the only writer; then the
+  caller's PTEs choose. Writes cluster up to MPW_WRTCLUSTER, in the
+  direction the range is given.
+- **Permanent sections:** a permanent page-file section's pages,
+  unmapped, are global pages with no share count: on the lists, then in
+  the page file (the open question's case).
+
+## Read clustering (15.5.1)
+
+**The scan.** On a hard fault the pager looks at the PTEs at higher
+addresses first, for pages in the same backing store, until the cluster
+is full or it meets: a PTE that isn't the same kind (below); an invalid
+page table page; no more working set list entries; no free frame. **Only
+if the forward scan added no page** does it scan toward lower addresses,
+by the same rules. Every page read is added to the working set.
+
+**What matches** (15.5.1.2): for a PSTX, exactly the same PSTX (every
+page of a private section holds the same one, so the cluster runs over
+the section's pages still out); for a page file PTE, successively
+increasing (or decreasing) blocks; for a GPTX, successive GPTXs whose
+GPTEs hold the same GSTX. Only hard faults cluster: not demand zero,
+not soft faults.
+
+**The cluster's size** (15.5.1.3, Table 15-1):
+
+| Page | Cluster |
+|---|---|
+| private section (image file or `$CRMPSC`) | the PSTE's PFC, or PFCDEFAULT (through PHD$B_DFPFC) when 0 |
+| global section | the GSTE's PFC, or PFCDEFAULT |
+| global copy-on-reference | the same |
+| page file | the page file's PFL$B_PFC, normally 0, so PFCDEFAULT |
+| process page table pages | PAGTBLPFC (govax: no paged page tables, Decision 13) |
+| global page table pages | 1 |
+
+A section's PFC comes from LINK's CLUSTER option (an ISD's PFC byte,
+Phase 66) or from `$CRMPSC`'s pfc argument. The 5.0 manual: pfc is "how
+many pages are to be brought into memory when a page fault occurs for a
+single page", **not used for page-file sections** (nor PFN-mapped or
+shared-memory ones), and `$MGBLSC` has no pfc argument: a global
+section's PFC is its creator's. PFCDEFAULT (appendix C): "the number of
+image pages read from disk per I/O operation", from an image file or the
+page file, "less than PFCDEFAULT, depending on the size of image
+sections and the pattern of page references", at most 127.
+
+**Unconfirmed by the book:** whether the faulting page counts in the
+cluster's size (the probe's sequential fault counts show it); what "no
+more working set list entries" means when the list is full but could
+replace (govax's reading: the cluster stops rather than evicting); how a
+page-file global section's pages match once their GPTEs hold page file
+blocks rather than a GSTX; a pfc above 127, and what PFCDEFAULT 0 does
+(the range allows it).
+
+## The parameters
+
+| Parameter | VAX current | SYSGEN default | Range | Meaning | govax today |
+|---|---|---|---|---|---|
+| GBLSECTIONS | not asked | 40 (7.3-2's example) | 20– | global section descriptors | constant 128 |
+| GBLPAGES | not asked | not given | | global page table entries: each section a page per page plus 2, rounded up to even | constant 4096, a page per page |
+| GBLPAGFIL | 4096 | 1024 | 128–4194176 | page-file global section pages, systemwide | none |
+| PFCDEFAULT | 16 | 32 | 0–127 | the default read cluster | `$GETSYI` constant 32 |
+| PAGTBLPFC | not asked | 2 (the book) | | page table pages' cluster | none (no paged page tables) |
+
+`$GETSYI` has items for each (SYI$_GBLSECTIONS, GBLPAGES, GBLPAGFIL,
+PFCDEFAULT, PAGTBLPFC), and for what's left: SYI$_FREE_GBLPAGES (free
+global page table entries), FREE_GBLSECTS, and CONTIG_GBLPAGES (the
+largest run of free entries). All are in `vmsdef.Symbols`; govax answers
+only PFCDEFAULT. FREE_GBLPAGES before and after a `$CRMPSC` shows the
+"plus 2, rounded up to even" rule on the VAX.
+
+## What govax has today
+
+- **Page-file global sections** (`createSection`) allocate every frame
+  at creation, zeroed, claimed as global pages backed by the page file
+  (`globalClaim`), and a mapping process's PTEs are **valid at once**,
+  pointing at them (`mapSection`). They have no global page table
+  entries, and `byFrame` maps their frames back to the section. So
+  JPI$_GPGCNT counts a page from its mapping, not its first touch
+  (Phase 63's finding 9), and nothing faults.
+- **File global sections** (`createFileSection`) have a global page
+  table in Go (`GlobalSections.pageTable`, an entry per page: the
+  section and page number), and mapping PTEs hold the GPTX. The first
+  fault anywhere reads the page into a frame the section keeps
+  (`Frames[i]`) until it's deleted; later faults are global valid
+  (`pageInGlobal`). The entry has no state: a page is in (`Frames[i]`)
+  or out.
+- **A global frame never leaves memory.** It's claimed `GlobalPage`
+  with one reference and stays active; `paging.Database`'s `Share` and
+  `Unshare` exist but nothing calls them. Global pages enter working
+  sets (counted in GPGCNT) but `wsProtected` keeps them from being
+  chosen, `evictPage` refuses any frame that isn't a process page's, and
+  `BreakTie` ignores global frames. A process PTE leaving (`releasePTE`)
+  drops the section's `Refs`, and with paging off or on its modify bit
+  goes into `Dirty[i]`, which `writeBackSection` (at deletion) and
+  `$UPDSEC` clear.
+- **Private copy-on-reference sections** (`createPrivateSection` with
+  SEC$M_CRF) are read with the **section file as backing store**
+  (`sectionBacking`) and no saved modify bit. With paging on, a clean
+  page leaves to the free list and is read from the file again (VMS's
+  goes to the modified list and the page file); a modified one goes to
+  the modified list, which nothing writes (`writableSectionPage` wants
+  a section that writes back), so it waits there, counted stuck, until
+  a soft fault or its deletion. It's **never charged** to PGFLQUOTA.
+- **Global copy-on-reference** pages are read into a private frame
+  backed by the page file and effectively modified, as VMS's, but
+  **charged at first touch** (`chargeFirstTouch`), not at mapping.
+- **`$UPDSEC` and `$DELTVA` over private pages on the modified list
+  are done** (Phase 63's subtasks 5 and 7: `modifiedTransitionPage`,
+  `heldFrame`, `releasePTE`); the plan's subtask 2 listed them.
+  `$UPDSEC` of a global section writes every resident page in the range
+  unless the flags' low bit is set, as the book says, and a page another
+  process brought in that this one hasn't touched (its PTE still a
+  GPTX) too.
+- **The writer** writes private section pages and page-file-bound
+  process pages; it knows no global frame (`pageFileBound` and
+  `writableSectionPage` want process pages).
+- **No limits beyond two constants:** GBLSECTIONS (128) and GBLPAGES
+  (4096, a page per page, file and page-file sections alike); no
+  GBLPAGFIL, no SS$_EXGBLPAGFIL; no `vax.sysgen.gblpages`,
+  `gblsections`, `gblpagfil`, or `pfcdefault` key (Phase 62's table
+  planned `pfcdefault`; nothing added it).
+- **No clustering:** every hard fault reads one page. `$CRMPSC`'s pfc
+  (argument 12) isn't read, and the image ISD's PFC (`vmsimage.ISD.PFC`)
+  is decoded but unused.
+- **Counts:** `FaultCounts.Read` counts hard faults; nothing counts
+  pages read apart from faults (MONITOR PAGE's page reads against page
+  read I/Os), which clustering makes different.
+
+## Findings that change the plan
+
+1. **Subtask 2 shrinks** to private copy-on-reference pages: the first
+   fault claims the frame with the page file as backing store (no
+   block) and sets the saved modify bit, as `pageInGlobal`'s CRF path
+   already does; from then on the writer and the page file PTE's fault
+   handle it, and a modified page no longer waits forever. `$UPDSEC` and
+   `$DELTVA` over the modified list were Phase 63's.
+2. **Copy-on-reference pages are charged at mapping** (16.2.1.1, the
+   5.0 manual's SS$_EXQUOTA "while creating copy-on-reference ...
+   pages"): `$CRMPSC` of a private CRF section, and `$CRMPSC`/`$MGBLSC`
+   of a global CRF one, charge every page mapped, refusing past the quota
+   (whether in part or whole is the probe's question; `$CRETVA` maps in
+   part). The global CRF fault's first-touch charge then finds the page
+   already charged. Unconfirmed: whether a read-only CRF mapping is
+   charged too (the book's rule says every CRF page).
+3. **The global page table entry gets a state** (subtask 3): valid
+   (frame, share count), transition (frame on a list), out (the section
+   file's block, a page file block, or demand zero). `pageTable` covers
+   every section, page-file ones included (subtask 4); `Frames` and
+   `byFrame` become what the entries say rather than permanent.
+4. **Share counts are the database's.** A process PTE made valid on a
+   global frame is a `Share`; leaving the working set, or being
+   released, an `Unshare` with the PTE's modify bit (gathered into the
+   saved modify bit, replacing `Dirty` with paging on); the frame goes to
+   a list when the last share goes. The frame's allocation reference
+   must become the first share's (the database's `Release` refuses a
+   shared frame's last reference). `evictPage` learns global pages
+   (the process PTE gets its GPTX back, not a transition form),
+   `wsProtected` stops protecting them, `softFault` finds a GPTE in
+   transition through the GPTX, and `BreakTie` breaks a global frame's
+   tie through the global page table (no process PTE changes).
+5. **The writer learns global frames** (subtask 3): a writable file
+   section's modified page to its file, clustered over successive GPTXs
+   of one section; a page-file section's to the page file, the block
+   then kept in the GPTE when the frame is reused. Deleting a section
+   writes back its pages on the modified list as well as its valid ones,
+   and deletes their frames (`Database.Delete` of a listed frame).
+6. **Page-file global sections become demand-zero GPTEs** (subtask 4):
+   no frames at creation; the mapping PTEs hold the GPTX; the first fault
+   anywhere is demand zero (the frame claimed `GlobalPage`, page file
+   backing, effectively modified), later ones global valid. GPGCNT then
+   counts a page from its first touch, closing Phase 63's finding 9.
+7. **GBLPAGFIL is checked at creation** for page-file sections, the
+   whole section at once (SS$_EXGBLPAGFIL, "no part of the section was
+   mapped"), and **not PGFLQUOTA** (the 5.0 manual names PGFLQUOTA only
+   for CRF pages; the probe confirms PAGFILCNT doesn't move). GBLPAGES
+   counts entries by the manual's rule (pages plus 2, rounded up to
+   even), which SYI$_FREE_GBLPAGES shows. Three keys:
+   `vax.sysgen.gblsections`, `gblpages`, `gblpagfil` (question 2 for
+   their defaults), and `$GETSYI`'s SYI$_GBLSECTIONS, GBLPAGES,
+   GBLPAGFIL, FREE_GBLPAGES, FREE_GBLSECTS, CONTIG_GBLPAGES (F$GETSYI
+   too).
+8. **Read clustering** (subtask 6) is the book's: forward first, then
+   backward only if forward added nothing; the matching rules above;
+   stopping at a full working set list (without evicting) or an empty
+   free list. The size: `$CRMPSC`'s pfc for its section (kept in the
+   process section entry or the global section; 0 meaning PFCDEFAULT),
+   PFCDEFAULT for the page file and page-file sections, an ISD's PFC in
+   Phase 66. A new key, `vax.sysgen.pfcdefault` (default 32, SYSGEN's;
+   0–127), replaces `getsyi.go`'s constant. Pages read with a fault don't
+   fault later, so PAGEFLTS drops; `PageCounts` gains pages read beside
+   the read faults (Decision 12's "pages read").
+9. **`$UPDSEC` of a global page out of the caller's working set**
+   follows the GPTE (subtask 3): valid elsewhere or on the modified list,
+   it's written (the latter moved to the free list); out, nothing to
+   write. Of a page-file section: unconfirmed; govax writes nothing
+   (SS$_NOTMODIFIED) until the probe says otherwise.
+10. **Process deletion and image rundown** release global pages through
+    `releasePTE` already; with share counts, a valid global PTE's
+    release is an `Unshare` (finding 4), so no new path is needed.
+
+## Questions for the author
+
+1. **Paging off.** Decision 1 says that with paging off govax behaves as
+   before. Should the new global page states (finding 6: page-file
+   sections faulting on first touch, frames allocated lazily) and read
+   clustering (finding 8) apply only with paging on? *Recommended: yes,*
+   both only with paging on: with it off, page-file sections keep their
+   frames from creation and valid PTEs, and every read is one page, so
+   no paging-off count changes. The limits (GBLPAGFIL, GBLPAGES'
+   counting rule, the new keys and `$GETSYI` items) apply in both modes,
+   since they aren't paging.
+2. **The limits' defaults.** VMS's SYSGEN defaults are lower than
+   govax's constants (GBLSECTIONS 40 against 128; GBLPAGFIL 1024, where
+   the VAX had 4096; GBLPAGES' isn't in the manual, and the probe's
+   SYSGEN SHOW gives it). Phase 64 took SYSGEN's defaults for
+   MPW_LOLIMIT. *Recommended:* keep govax's present values as defaults
+   (GBLSECTIONS 128, GBLPAGES 4096; GBLPAGES raised if the new counting
+   rule's two extra entries a section make an existing test fail) and
+   take the VAX's 4096 for GBLPAGFIL, so that no existing program meets
+   a limit it didn't before; the keys lower them. PFCDEFAULT takes SYSGEN's 32, as `$GETSYI` reports now.
+3. **CRF charges** (finding 2): charge copy-on-reference pages at
+   mapping, as VMS does? *Recommended: yes.*
+
+## The probe's cases (subtask 7)
+
+`testdata/pg65`: a program (parts picked by a logical name, as pg64's),
+a procedure, `exchange.cmd`. A second process for the sharing cases
+(SPAWN, as pg64's part S). Counts print as differences.
+
+- **SYSGEN SHOW** GBLSECTIONS, GBLPAGES, GBLPAGFIL (`SHOW GBLPAGF`),
+  PFCDEFAULT, PAGTBLPFC; `$GETSYI` of FREE_GBLPAGES, FREE_GBLSECTS,
+  CONTIG_GBLPAGES before and after a 1-, 2-, and 3-page section (the
+  plus-2, even rule).
+- **Page-file global sections:** PAGFILCNT and GPGCNT before and after
+  creating and mapping (no PGFLQUOTA charge? GPGCNT 0 until touched?);
+  touching every page (faults, GPGCNT); a second process mapping and
+  touching (global valid faults, GPGCNT); a section larger than
+  GBLPAGFIL (SS$_EXGBLPAGFIL, retadr); a permanent section unmapped
+  with its contents written, at a small working set while another image
+  dirties memory, then mapped again (contents kept; faults).
+- **Global pages leaving working sets:** at a small working set limit,
+  touch a file section's pages and others, `$PURGWS` the section's
+  range, touch again (soft faults, from the list or global valid);
+  two processes each purging while the other holds.
+- **Copy-on-reference:** PAGFILCNT after mapping a private CRF section
+  and a global one (charged at mapping; in part past the quota?), after
+  touching; a read-only CRF mapping.
+- **`$UPDSEC`** of a global section with the flags' low bit clear and
+  set, after the caller's pages left the working set (which pages are
+  written: IOSB, retadr); of a page-file section.
+- **Clustering:** sequential reads over a 200-page file section with
+  pfc 0, 1, 4, 16, 64, 127, 200 (PAGEFLTS, and DIRIO, which shouldn't
+  move); backward reads (the backward scan); a private section and a
+  global one; pages written to the page file and read back sequentially
+  (PFCDEFAULT from the page file); a working set limit smaller than the
+  cluster (where the cluster stops).
+
+## Subtasks (provisional; adjusted by the survey)
+
+1. **Survey** (done 2026-10-18): Part A.
+2. **Private copy-on-reference pages** (finding 1): the page file as
+   backing store and the saved modify bit at the first fault; their
+   PGFLQUOTA charged at mapping, with the global CRF mapping's (finding
+   2, question 3).
+3. **The global page table's states and share counts** (findings 3, 4,
+   5, 9, 10): soft faults on global pages valid elsewhere or in
+   transition; global pages leaving working sets with the GPTX back in
+   the process PTE; global frames on the lists, written by the writer,
+   their ties broken through the GPTE; sections deleted with pages on
+   the lists; `$UPDSEC` through the GPTE.
+4. **Page-file global sections as global demand-zero pages** (finding
+   6), with paging on; the GBLSECTIONS, GBLPAGES, and GBLPAGFIL keys,
+   GBLPAGES' counting rule, SS$_EXGBLPAGFIL, and the `$GETSYI` items
+   (finding 7).
+5. **Global copy-on-reference** checked against the new states (its
+   fault already makes a private page; what's left is whatever subtask 3
+   changes, and its tests). May fold into subtask 3.
+6. **Read clustering** (finding 8): `vax.sysgen.pfcdefault`, the pfc
+   argument kept per section, the scan for section files, global
+   sections, and the page file (image files in Phase 66), pages read
+   counted.
+7. **The VMS probe** (`testdata/pg65`), the cases above; govax is then
+   changed to its answers.
 8. **Close-out.**
 
 ## Progress log
 
 - **2026-10-15:** Planned with Phase 62's review.
+- **2026-10-18:** Subtask 1, the survey (Part A): the Internals book's
+  global page structures (GSD, GSTE, GPTEs and their forms, process
+  PTEs for global pages, SHRCNT), the four kinds of global page fault
+  (read-only, read/write, copy-on-reference, page-file), private
+  copy-on-reference pages, deletion, `$DGBLSC`, `$UPDSEC` (every page of
+  a global section unless the caller is the only writer), and read
+  clustering (forward first, backward only if forward found nothing;
+  the matching rules; the cluster sizes of Table 15-1); `$CRMPSC`'s pfc
+  (not for page-file sections) and GBLPAGFIL from the 5.0 manual;
+  GBLPAGES (a page per page plus 2, rounded up to even), GBLPAGFIL,
+  GBLSECTIONS, and PFCDEFAULT from the utilities manual. Found: the
+  plan's `$UPDSEC` and `$DELTVA` work was done in Phase 63; private
+  copy-on-reference pages keep the section file as backing store, are
+  never effectively modified or charged, and a modified one waits on the
+  modified list for good; global CRF pages are charged at first touch,
+  not mapping; `paging.Database`'s share counts are unused; page-file
+  sections are charged to nothing (VMS: GBLPAGFIL); no `pfcdefault` key
+  exists. The subtasks are adjusted, the probe's cases listed, and three
+  questions are for the author.
