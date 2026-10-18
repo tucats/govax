@@ -461,7 +461,9 @@ a procedure, `exchange.cmd`. A second process for the sharing cases
   two processes each purging while the other holds.
 - **Copy-on-reference:** PAGFILCNT after mapping a private CRF section
   and a global one (charged at mapping; in part past the quota?), after
-  touching; a read-only CRF mapping.
+  touching; a read-only CRF mapping; a temporary global CRF section
+  after its only mapper has touched every page (`$MGBLSC` of it by name:
+  does the section live on, or did the faults take its references?).
 - **`$UPDSEC`** of a global section with the flags' low bit clear and
   set, after the caller's pages left the working set (which pages are
   written: IOSB, retadr); of a page-file section.
@@ -489,9 +491,9 @@ a procedure, `exchange.cmd`. A second process for the sharing cases
    2026-10-18; finding 6), with paging on; the GBLSECTIONS, GBLPAGES, and GBLPAGFIL keys,
    GBLPAGES' counting rule, SS$_EXGBLPAGFIL, and the `$GETSYI` items
    (finding 7).
-5. **Global copy-on-reference** checked against the new states (its
-   fault already makes a private page; what's left is whatever subtask 3
-   changes, and its tests). May fold into subtask 3.
+5. **Global copy-on-reference** checked against the new states (done
+   2026-10-18; no code change: its fault already makes a private page,
+   and subtasks 2 to 4 left it one; the tests).
 6. **Read clustering** (finding 8): `vax.sysgen.pfcdefault`, the pfc
    argument kept per section, the scan for section files, global
    sections, and the page file (image files in Phase 66), pages read
@@ -688,3 +690,39 @@ a procedure, `exchange.cmd`. A second process for the sharing cases
     `TestPagingGlobalSectionFrames` and `TestWorkingSetGlobalPages` now
     expect frames from the first touch, and the pages to leave working
     sets and come back.
+- **2026-10-18:** Subtask 5, global copy-on-reference under the new
+  states (tests in `internal/console/globalcrf_test.go`; no code
+  change). The survey's reading of 15.3.3 holds against subtasks 2 to 4:
+  the global page table entry of a CRF section keeps its section file
+  form for good (`pageInGlobal` takes the CRF path before
+  `pageInSharedGlobal`, so the section's `Frames` stay 0 and no frame is
+  ever tied to it); each PTE's first fault reads the file into a frame
+  of the process's own (`faultClaim`, a `ProcessPage` tied to the PTE's
+  page), backed by the page file and effectively modified, and the
+  section loses that PTE's reference ("all ties ... are broken"; that
+  the GSTE's count drops is govax's reading, unconfirmed, now a probe
+  case). From then on every path treats it as subtask 2's private
+  copy: `faultIsGlobal` keeps it out of GPGCNT, so `evictPage` gives
+  it the transition form rather than a GPTX and `wsProtected` doesn't
+  hold it; the writer writes it to the page file (`pageFileBound`);
+  `BreakTie` gives its PTE the page file form; `releasePTE` finds no
+  section for it (no `byFrame` entry) and frees the frame and block;
+  and `$UPDSEC` passes over it (neither a section's frame nor a GPTX),
+  so a range of copies is SS$_NOTMODIFIED.
+  - **The tests:** `TestGlobalCopyOnRefPaging` maps a writable global
+    CRF section of PAGES.DAT, opened read-only, twice in process 1, with
+    a 30-page working set and a host page file: at mapping every PTE is
+    a GPTX and charged, the section 128 references and no frames; page
+    0 through both ranges is two hard faults (no global valid one) on
+    two frames, range A's write not reaching range B's copy; after every
+    page is modified through both ranges no PTE is a GPTX, every frame is
+    process 1's own, backed by the page file and effectively modified
+    (or holding its block), no two PTEs share one, GPGCNT is 0, nothing
+    more is charged, and the temporary section has gone with its last
+    reference; frames reused leave copies in the page file form, each
+    reading back its own range's value; `$UPDSEC` over range A is
+    SS$_NOTMODIFIED; rundown gives back every charge and block; PAGES.DAT
+    is never written. `TestGlobalCopyOnRefPagingOff` runs the touches
+    with paging off. It fails if the copy counts as a global page
+    (`faultIsGlobal`), if the fault keeps the section's reference, or
+    if the copy isn't effectively modified.
