@@ -741,7 +741,11 @@ func IsODSFileName(s string) bool {
 		}
 	}
 
-	_, sts := scanName(s)
+	// Validate that this is a valid ODS-2 file name. If it is not, we will return false.
+	// Note this is disabled; a mal-formed ODS2 name should not be interpreted as a host
+	// file name. We don't want "FOO]BAT.TXT"
+	// _, sts := scanName(s)
+	sts := 0
 
 	return sts == 0
 }

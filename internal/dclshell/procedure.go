@@ -353,6 +353,10 @@ func parseProcedureCommand(text string) (procedureCommand, error) {
 		return cmd, vmserrors.New(vmserrors.CLI_DEFOVF)
 	}
 
+	if !rms.IsODSFileName(cmd.file) {
+		cmd.host = true
+	}
+
 	return cmd, nil
 }
 
