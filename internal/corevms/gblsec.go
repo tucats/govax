@@ -978,7 +978,10 @@ func (env *Environment) mapSectionPage(s *GlobalSection, addr uint32, pte vm.PTE
 	// that mapping a page over itself doesn't delete the section.
 	s.Refs++
 
-	if st := env.mapPage(addr, pte, mode); st != ssNormal {
+	// A copy-on-reference section's page is charged against the paging
+	// file quota as it's mapped (mapChargedPage); its fault makes the
+	// process's own copy (pageInGlobal).
+	if st := env.mapChargedPage(addr, pte, mode, s.CopyOnRef); st != ssNormal {
 		s.Refs--
 
 		return st

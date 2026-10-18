@@ -475,7 +475,7 @@ a procedure, `exchange.cmd`. A second process for the sharing cases
 ## Subtasks (provisional; adjusted by the survey)
 
 1. **Survey** (done 2026-10-18): Part A.
-2. **Private copy-on-reference pages** (finding 1): the page file as
+2. **Private copy-on-reference pages** (done 2026-10-18; finding 1): the page file as
    backing store and the saved modify bit at the first fault; their
    PGFLQUOTA charged at mapping, with the global CRF mapping's (finding
    2, question 3).
@@ -527,3 +527,46 @@ a procedure, `exchange.cmd`. A second process for the sharing cases
   with paging on (the limits in both modes); GBLSECTIONS 128, GBLPAGES
   4096, GBLPAGFIL 4096, PFCDEFAULT 32 by default; copy-on-reference
   pages charged at mapping.
+- **2026-10-18:** Subtask 2, private copy-on-reference pages
+  (`corevms/filesec.go`, `gblsec.go`; tests in
+  `internal/console/crfsection_test.go`):
+  - **The first fault** of a private section made with SEC$M_CRF
+    (`processSection.copyOnRef`, new) claims the frame with the page
+    file as backing store, no block (`copyOnRefBacking`), and sets its
+    saved modify bit (`effectivelyModified`), as the global CRF fault
+    already did: the page goes to the modified list whenever it leaves
+    the working set, the writer writes it to the page file
+    (`pageFileBound` takes it), and a reused frame leaves its PTE in the
+    page file form, whose fault reads it back. The section's file is
+    never written. With paging off nothing changes: there's no PFN
+    database to record the backing store in.
+  - **Charged at mapping** (the author's answer to question 3):
+    `mapChargedPage` is `mapPage` for a copy-on-reference section's
+    page, private (`mapProcessSection`) or global (`mapSectionPage`, so
+    `$CRMPSC` and `$MGBLSC`): with no page of quota left, SS$_EXQUOTA,
+    the pages before it mapped and charged, as `$CRETVA` does
+    (unconfirmed: the probe shows whether VMS's `$CRMPSC` maps in part or
+    not at all). The fault's first-touch charge then finds the page
+    charged.
+  - **Rundown and deletion of a page in the page file form:**
+    `releasePTE` gave back its block and charge but returned before the
+    section lost the page, so a CRF section whose copies were in the page
+    file was never dropped and kept its file accessed. It now unmaps the
+    page from its section whether or not the page holds a frame.
+    `Environment.ProcessSections` (new) counts a process's private
+    sections, for the test.
+  - **The tests:** `TestCopyOnRefSectionPaging` maps a 64-page writable
+    CRF section of a file opened read-only, with a 30-page working set
+    and a host page file: every page is charged at mapping; after each
+    page is modified, every frame is backed by the page file, at most
+    MPW_HILIMIT wait on the modified list and the rest hold their new
+    values in page file blocks; with their frames reused, their PTEs
+    are page file blocks, and every page reads back right; after
+    rundown, nothing is charged, the page file's blocks match their
+    holders, the section is gone, and the file was never written.
+    `TestCopyOnRefSectionPagingOff` runs the same with paging off.
+    `TestCopyOnRefSectionQuota` leaves 20 pages of quota: the private
+    mapping and then a global CRF mapping each stop at 20 pages with
+    SS$_EXQUOTA, and the global page's fault makes an effectively
+    modified private copy without charging again. Each fails without the
+    change it checks (the backing store, the charge, and the unmapping).

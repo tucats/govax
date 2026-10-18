@@ -30,6 +30,9 @@ import (
 //   - at creation, by the services that create pages: $CRETVA, $EXPREG of
 //     P0 or P1, and the heap's expansion of P0 (expandP0), each refusing
 //     pages past the quota;
+//   - at mapping, a copy-on-reference section's pages, private or global
+//     ($CRMPSC, $MGBLSC; filesec.go's mapChargedPage, Phase 65), refused
+//     past the quota the same way;
 //   - by the image loader, for the pages of an image's writable and
 //     demand-zero sections (finding 12: until Phase 66 maps images, every
 //     image page is one the loader writes, but VMS charges only those);

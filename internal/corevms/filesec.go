@@ -70,7 +70,14 @@ import (
 // page can leave the working set: its PTE keeps its frame in the
 // transition form, and when the frame is reused the PTE gets its process
 // section table index back (BreakTie), for PageIn to read the page in
-// again. A global section's pages stay resident until Phase 65.
+// again. A copy-on-reference page is different (Phase 65, subtask 2): the
+// read makes it the process's own page, backed by the page file and
+// "effectively modified", so it goes to the modified list whenever it
+// leaves, the modified page writer (mpw.go) writes it to the page file,
+// and a reused frame leaves its PTE in the page file form. Copy-on-
+// reference pages, private or global, are charged against the paging
+// file quota when they're mapped (pgflquota.go). A global section's pages
+// stay resident until Phase 65's subtask 3.
 //
 // # The file stays accessed
 //
@@ -160,8 +167,11 @@ type processSection struct {
 	mapped  int
 
 	// writeBack is set for a section whose modified pages go back to
-	// the file: SEC$M_WRT without SEC$M_CRF.
+	// the file: SEC$M_WRT without SEC$M_CRF. copyOnRef is set for one
+	// made with SEC$M_CRF: each page read becomes the process's own copy,
+	// backed by the page file from then on.
 	writeBack bool
+	copyOnRef bool
 }
 
 // addProcessSection puts ps in the first free slot of the process's
@@ -183,6 +193,20 @@ func (env *Environment) addProcessSection(ps *processSection) (uint32, bool) {
 	env.procSections = append(env.procSections, ps)
 
 	return uint32(len(env.procSections) - 1), true
+}
+
+// ProcessSections is how many private sections the process has: the
+// entries in use in its section table.
+func (env *Environment) ProcessSections() int {
+	n := 0
+
+	for _, ps := range env.procSections {
+		if ps != nil {
+			n++
+		}
+	}
+
+	return n
 }
 
 // unmapProcessPage notes that page i of process section index idx is no
@@ -272,12 +296,21 @@ func (env *Environment) releasePTE(addr uint32, old vm.PTE) {
 	// in its PTE or its frame's backing store.
 	env.releasePageFileBlock(pid, addr&^pageMask, old)
 
+	ps, idx, i := env.processSectionAt(addr &^ pageMask)
+
 	pfn, modified, ok := env.heldFrame(pid, addr, old)
 	if !ok {
+		// A copy-on-reference section's page whose copy is in the page
+		// file (its frame reused since the writer wrote it) holds no
+		// frame, but the section still loses it.
+		if ps != nil {
+			env.unmapProcessPage(idx, i)
+		}
+
 		return
 	}
 
-	if ps, idx, i := env.processSectionAt(addr &^ pageMask); ps != nil {
+	if ps != nil {
 		if ps.writeBack && modified {
 			_ = env.writePage(ps.file, ps.vbn+uint32(i), pfn)
 		}
@@ -395,7 +428,23 @@ func (sys *System) resolveFault(f vm.PageFault) (vm.PTE, faultKind, bool) {
 			return 0, faultRead, false
 		}
 
-		pfn, ok := sys.readPage(ps.file, ps.vbn+i, processClaim(env, f.Addr, sectionBacking(si, ps.vbn+i)))
+		// A copy-on-reference page's tie to its file ends with this read
+		// (the book's 15.2.1.3): its backing store is the page file, a
+		// block to be allocated when the writer first writes it, and its
+		// saved modify bit is set, so that it goes to the modified list,
+		// to be written there, whenever it leaves the working set.
+		back := sectionBacking(si, ps.vbn+i)
+		if ps.copyOnRef {
+			back = copyOnRefBacking
+		}
+
+		claim := processClaim(env, f.Addr, back)
+
+		pfn, ok := sys.readPage(ps.file, ps.vbn+i, claim)
+		if ok && ps.copyOnRef {
+			sys.effectivelyModified(pfn, claim)
+			sys.chargeFirstTouch(claim)
+		}
 
 		return vm.ValidPTE(pfn, prot, owner), faultRead, ok
 	}
@@ -551,6 +600,7 @@ func (env *Environment) mapProcessSection(f *rms.ACPFile, vbn, pages uint32, a s
 		file: f, vbn: vbn, first: r.first,
 		present: make([]bool, min(pages, (r.last-r.first)/pageSize+1)),
 		mapped:  1, writeBack: write && a.flags&secCRF == 0,
+		copyOnRef: a.flags&secCRF != 0,
 	}
 
 	idx, ok := env.addProcessSection(ps)
@@ -573,7 +623,7 @@ func (env *Environment) mapProcessSection(f *rms.ACPFile, vbn, pages uint32, a s
 	for i := range ps.present {
 		addr := r.first + uint32(i)*pageSize
 
-		if st := env.mapPage(addr, vm.SectionPTE(idx, prot, uint8(a.mode)), a.mode); st != ssNormal {
+		if st := env.mapChargedPage(addr, vm.SectionPTE(idx, prot, uint8(a.mode)), a.mode, ps.copyOnRef); st != ssNormal {
 			status = st
 
 			break
@@ -618,6 +668,30 @@ func (env *Environment) mapPage(addr uint32, pte vm.PTE, mode registers.AccessMo
 
 	if !env.replacePTE(addr, old, pte) {
 		return ssVasFull
+	}
+
+	return ssNormal
+}
+
+// mapChargedPage is mapPage for a page that, if charge is set, is
+// charged against the paging file quota as it's mapped: a
+// copy-on-reference section's page, whose private copy may one day go to
+// the page file (the book's 16.2.1.1; the 5.0 manual's SS$_EXQUOTA "while
+// creating copy-on-reference ... pages"). With no quota left for it the
+// page isn't mapped: SS$_EXQUOTA, the pages before it mapped, as
+// $CRETVA's (unconfirmed for $CRMPSC: the probe's). A page already
+// charged keeps its charge, as createPage's does.
+func (env *Environment) mapChargedPage(addr uint32, pte vm.PTE, mode registers.AccessMode, charge bool) uint32 {
+	if charge && !env.canChargePage(addr) {
+		return ssExQuota
+	}
+
+	if st := env.mapPage(addr, pte, mode); st != ssNormal {
+		return st
+	}
+
+	if charge {
+		env.chargePage(addr, true)
 	}
 
 	return ssNormal

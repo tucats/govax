@@ -79,8 +79,9 @@ func sectionBacking(si, vbn uint32) paging.Backing {
 }
 
 // copyOnRefBacking is the backing store of a process's private copy of a
-// copy-on-reference page: the page file, from its first fault (the phase
-// doc's Decision 8), a block to be allocated when it's first written.
+// copy-on-reference page, of a global section or a private one: the page
+// file, from its first fault (the book's 15.2.1.3), a block to be
+// allocated when it's first written.
 var copyOnRefBacking = paging.Backing{Kind: paging.PageFile}
 
 // demandZeroBacking is the backing store of a demand-zero page from its
