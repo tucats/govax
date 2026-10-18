@@ -413,6 +413,9 @@ only PFCDEFAULT. FREE_GBLPAGES before and after a `$CRMPSC` shows the
 
 ## Questions for the author
 
+Answered by the author on 2026-10-18: each recommendation accepted. The
+findings and subtasks follow the answers.
+
 1. **Paging off.** Decision 1 says that with paging off govax behaves as
    before. Should the new global page states (finding 6: page-file
    sections faulting on first touch, frames allocated lazily) and read
@@ -421,7 +424,7 @@ only PFCDEFAULT. FREE_GBLPAGES before and after a `$CRMPSC` shows the
    frames from creation and valid PTEs, and every read is one page, so
    no paging-off count changes. The limits (GBLPAGFIL, GBLPAGES'
    counting rule, the new keys and `$GETSYI` items) apply in both modes,
-   since they aren't paging.
+   since they aren't paging. **Answer:** yes, paging on only.
 2. **The limits' defaults.** VMS's SYSGEN defaults are lower than
    govax's constants (GBLSECTIONS 40 against 128; GBLPAGFIL 1024, where
    the VAX had 4096; GBLPAGES' isn't in the manual, and the probe's
@@ -430,9 +433,10 @@ only PFCDEFAULT. FREE_GBLPAGES before and after a `$CRMPSC` shows the
    (GBLSECTIONS 128, GBLPAGES 4096; GBLPAGES raised if the new counting
    rule's two extra entries a section make an existing test fail) and
    take the VAX's 4096 for GBLPAGFIL, so that no existing program meets
-   a limit it didn't before; the keys lower them. PFCDEFAULT takes SYSGEN's 32, as `$GETSYI` reports now.
+   a limit it didn't before; the keys lower them. PFCDEFAULT takes
+   SYSGEN's 32, as `$GETSYI` reports now. **Answer:** yes.
 3. **CRF charges** (finding 2): charge copy-on-reference pages at
-   mapping, as VMS does? *Recommended: yes.*
+   mapping, as VMS does? *Recommended: yes.* **Answer:** yes.
 
 ## The probe's cases (subtask 7)
 
@@ -518,3 +522,8 @@ a procedure, `exchange.cmd`. A second process for the sharing cases
   sections are charged to nothing (VMS: GBLPAGFIL); no `pfcdefault` key
   exists. The subtasks are adjusted, the probe's cases listed, and three
   questions are for the author.
+- **2026-10-18:** The author accepted each of the survey's
+  recommendations: the new global page states and read clustering only
+  with paging on (the limits in both modes); GBLSECTIONS 128, GBLPAGES
+  4096, GBLPAGFIL 4096, PFCDEFAULT 32 by default; copy-on-reference
+  pages charged at mapping.
