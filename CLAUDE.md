@@ -1215,7 +1215,8 @@ expect adjustment as phases land):
   (its size in blocks, default 32768; an existing file is resized to
   it), and `paging.defer` (open it at first need, not at startup);
   Phase 65's `gblsections`, `gblpages`, `gblpagfil` (the global section
-  limits, in both paging modes). They reach each `System` as a `corevms.Sysgen`
+  limits, in both paging modes) and `pfcdefault` (the read cluster's
+  default size, 0 to 127, `ParsePFCDefault`; `corevms/cluster.go`). They reach each `System` as a `corevms.Sysgen`
   (`corevms/sysgen.go`), whose defaults `$CREPRC`'s quotas and a
   logging-in process's account (`LoginQuotas`) use.
   `vax.library` (string) — the host directory LINK and MACRO look

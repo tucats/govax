@@ -54,6 +54,15 @@ const (
 	DefaultFreeGoal  = 200
 )
 
+// DefaultPFCDefault is PFCDEFAULT's default, SYSGEN's (the phase doc's
+// question 2): with paging on, the most pages a hard fault reads at once
+// when the page's section names no cluster size of its own
+// (cluster.go). MaxPFCDefault is the parameter's largest value.
+const (
+	DefaultPFCDefault = 32
+	MaxPFCDefault     = 127
+)
+
 // Sysgen holds the system parameters a System runs with.
 type Sysgen struct {
 	// Paging is whether VMS paging is on (vax.sysgen.paging.enable, or
@@ -111,6 +120,10 @@ type Sysgen struct {
 	GlobalSections uint32
 	GlobalPages    uint32
 	GlobalPageFile uint32
+
+	// PFCDefault is PFCDEFAULT: the read cluster's size for a page whose
+	// section gave none (cluster.go). 0 and 1 read only the page faulted.
+	PFCDefault uint32
 }
 
 // DefaultSysgen returns the parameters with no key set.
@@ -121,7 +134,7 @@ func DefaultSysgen() Sysgen {
 		FreeLimit: DefaultFreeLimit, FreeGoal: DefaultFreeGoal,
 		PageFileSize: DefaultPageFileSize, MPWWriteCluster: DefaultMPWWriteCluster,
 		GlobalSections: DefaultGlobalSectionLimit, GlobalPages: DefaultGlobalPageLimit,
-		GlobalPageFile: DefaultGlobalPageFileLimit,
+		GlobalPageFile: DefaultGlobalPageFileLimit, PFCDefault: DefaultPFCDefault,
 	}
 }
 

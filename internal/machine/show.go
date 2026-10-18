@@ -181,7 +181,8 @@ func (m *Machine) showFrames(c paging.Counts) {
 // showPaging prints, in paging mode, the system's page faults by how
 // each was resolved (soft faults taking a frame back off the free or
 // modified list, or finding a global page in memory; demand-zero faults;
-// hard faults reading a file, and of those the page file), the pages
+// hard faults reading a file; the pages they read, the faulting pages
+// and their clusters, and of those the page file's), the pages
 // the modified page writer has written, and the reclaimer's runs and the
 // pages it has trimmed from working sets (internal/corevms's accounting.go). VMS shows its fault
 // rates in MONITOR PAGE, not SHOW MEMORY; these lines are govax's own.
@@ -194,6 +195,7 @@ func (m *Machine) showPaging(c corevms.PageCounts) {
 	m.Printf("        Global valid       %8d\n", f.GlobalValid)
 	m.Printf("        Demand zero        %8d\n", f.DemandZero)
 	m.Printf("        Read               %8d\n", f.Read)
+	m.Printf("            Pages read     %8d\n", c.PagesRead)
 	m.Printf("            Page file      %8d\n", c.PageFileReads)
 	m.Printf("    Pages written      %12d\n", c.Written)
 	m.Printf("        Write I/Os         %8d\n", c.WriteIOs)

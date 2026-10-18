@@ -146,6 +146,7 @@
 //                          file
 //              10/18/26    vax.sysgen.gblsections, gblpages, and
 //                          gblpagfil in CONFIG KEYS
+//              10/18/26    vax.sysgen.pfcdefault in CONFIG KEYS
 
 This is the help documentation for the govax VAX emulator.  Topic sections are
 marked by a "$" delimiter.  This is followed by as many tokens of the help
@@ -2243,6 +2244,16 @@ $CONF,KEY
                                       global sections may have in all;
                                       $CRMPSC fails with SS$_EXGBLPAGFIL
                                       past it.  Default 4096.
+
+        vax.sysgen.pfcdefault         PFCDEFAULT: with paging on, the
+                                      most pages a page fault reads
+                                      from a file or the page file at
+                                      once, the page faulted and its
+                                      neighbors, when the section gave
+                                      no cluster size of its own
+                                      ($CRMPSC's pfc argument).  0 and
+                                      1 read only the page faulted.
+                                      From 0 to 127.  Default 32.
 
         vax.sysgen.paging.file        With paging on, the page file: where
                                       pages with no file of their own go

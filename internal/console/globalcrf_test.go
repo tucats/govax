@@ -6,6 +6,7 @@ import (
 	"github.com/tucats/govax/internal/console"
 	"github.com/tucats/govax/internal/console/consoletest"
 	"github.com/tucats/govax/internal/corevms"
+	"github.com/tucats/govax/internal/machine"
 	"github.com/tucats/govax/internal/paging"
 	"github.com/tucats/govax/internal/vmsdef"
 )
@@ -221,6 +222,10 @@ func checkGlobalCopies(t *testing.T, r *gblPagingRun, vas []uint32, label string
 // to the page file, and comes back.
 func TestGlobalCopyOnRefPaging(t *testing.T) {
 	pageFileSettings(t)
+
+	// One page a fault, so that each copy is made by its own fault: read
+	// clustering is clusterpaging_test.go's.
+	setSetting(t, machine.PFCDefaultSetting, "1")
 
 	r := startGlobalCRF(t)
 	c, env, p := r.c, r.env, r.env.Process

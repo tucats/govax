@@ -552,7 +552,8 @@ func printPagingStats(out io.Writer, s machine.PagingStatistics) {
 	line("  Global Valid", int64(p.Faults.GlobalValid))
 	line("  Demand Zero", int64(p.Faults.DemandZero))
 	line("  Read", int64(p.Faults.Read))
-	line("    From Page File", int64(p.PageFileReads))
+	line("    Pages Read", int64(p.PagesRead))
+	line("      From Page File", int64(p.PageFileReads))
 	line("Pages Written", int64(p.Written))
 	line("  Write I/Os", int64(p.WriteIOs))
 	line("Reclaimer Runs", int64(p.Reclaims))
@@ -737,6 +738,7 @@ var validConfigs = map[string]bool{
 	"vax.sysgen.gblsections":    true,
 	"vax.sysgen.gblpages":       true,
 	"vax.sysgen.gblpagfil":      true,
+	"vax.sysgen.pfcdefault":     true,
 
 	// Read by vax.init (F$CONFIG): the memory's sizes, in pages.
 	"vax.memory.size": true,
@@ -793,6 +795,13 @@ func auditConfig() {
 	if key := machine.WriteClusterSetting; settings.Exists(key) {
 		if _, ok := machine.ParseWriteCluster(settings.Get(key)); !ok {
 			fmt.Printf("\nWarning, %s is %q; it must be a multiple of 8 from 16 to 120, and its default will be used\n",
+				key, settings.Get(key))
+		}
+	}
+
+	if key := machine.PFCDefaultSetting; settings.Exists(key) {
+		if _, ok := machine.ParsePFCDefault(settings.Get(key)); !ok {
+			fmt.Printf("\nWarning, %s is %q; it must be a number from 0 to 127, and its default will be used\n",
 				key, settings.Get(key))
 		}
 	}

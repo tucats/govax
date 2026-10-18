@@ -494,7 +494,7 @@ a procedure, `exchange.cmd`. A second process for the sharing cases
 5. **Global copy-on-reference** checked against the new states (done
    2026-10-18; no code change: its fault already makes a private page,
    and subtasks 2 to 4 left it one; the tests).
-6. **Read clustering** (finding 8): `vax.sysgen.pfcdefault`, the pfc
+6. **Read clustering** (done 2026-10-18; finding 8): `vax.sysgen.pfcdefault`, the pfc
    argument kept per section, the scan for section files, global
    sections, and the page file (image files in Phase 66), pages read
    counted.
@@ -726,3 +726,61 @@ a procedure, `exchange.cmd`. A second process for the sharing cases
     with paging off. It fails if the copy counts as a global page
     (`faultIsGlobal`), if the fault keeps the section's reference, or
     if the copy isn't effectively modified.
+- **2026-10-18:** Subtask 6, read clustering, with paging on
+  (`corevms/cluster.go`, new; `filesec.go`, `gblsec.go`, `sysgen.go`,
+  `getsyi.go`, `accounting.go`; `paging.WorkingSet.AddAvailable`;
+  `machine/sysgen.go`, `show.go`; cmd/govax; tests in
+  `internal/console/clusterpaging_test.go`):
+  - **PFCDEFAULT** is `vax.sysgen.pfcdefault` (0 to 127, default 32,
+    `ParsePFCDefault`; cmd/govax warns about a value out of range; HELP
+    CONFIG KEYS), `Sysgen.PFCDefault`, which `$GETSYI`'s SYI$_PFCDEFAULT
+    now reports in place of the constant.
+  - **The pfc argument** of `$CRMPSC` (its twelfth) is kept in a private
+    section's entry (`processSection.pfc`) and a global file section
+    (`GlobalSection.PFC`); a page-file section has none (the manual), and
+    `$MGBLSC` maps with its creator's.
+  - **The scan** (`readCluster`, called by `PageIn` after a hard fault):
+    up from the faulting page first, then down only if up read nothing,
+    each neighbor read as a fault on it would be (`resolveFault`), given
+    its valid PTE, and added to the working set. A neighbor matches by
+    the faulting PTE's form: the same process section table index; the
+    next page file block (the one before, going down); the next global
+    page table index (the one before) of the same section, the page out
+    (a file section's page with no frame, every copy-on-reference page,
+    a page-file section's page the writer wrote). The scan stops at a
+    page that doesn't match, a PTE that can't be read, the region's end,
+    an empty free list, or a working set with no available entry: it
+    takes none from another page (`AddAvailable`, which fills the first
+    available entry after next, past the quota only above GROWLIM, as
+    the list's growth does). Neighbors aren't faults: JPI$_PAGEFLTS
+    counts the one.
+  - **The size** is the section's pfc or, when 0, PFCDEFAULT; the page
+    file's and a page-file section's PFCDEFAULT. Unconfirmed, for the
+    probe: the size counts the faulting page; 0 and 1 read it alone; a
+    pfc above 127 is 127; a page-file section's written pages match
+    whatever their blocks.
+  - **Counts:** `PageCounts.PagesRead` (new) counts every page hard
+    faults read, the faulting pages and their clusters, beside
+    `Faults.Read`, the reads; `PageFileReads` counts the page file's
+    pages among them. SHOW MEMORY's paging section and `--stats` show
+    it. With paging off nothing clusters (the author's answer to
+    question 1), and `PagesRead` equals the read faults.
+  - **The tests:** `TestReadClustering` reads a 64-page section of
+    PAGES.DAT in order with a working set big enough for it, private
+    with pfc 0 (PFCDEFAULT 16, 32, 1, and 0), 1, 4, 5, 64, and 200, up
+    and, with 16 and 5, down; global with 16, and with PFCDEFAULT 8 down;
+    and global copy-on-reference with 8: one read fault per cluster
+    (13 for 5: the last cluster short), no other fault, 64 pages read,
+    every page valid, in the working set, and right, a global page's
+    frame with one share and a copy the process's own, effectively
+    modified. `TestReadClusteringWorkingSet` reads it with a 30-page
+    working set and pfc 64: the first cluster fills the set to its limit
+    and takes no page out, later faults read less, every page is right.
+    `TestReadClusteringPageFile` writes 64 demand-zero pages with a
+    30-page working set, reuses the written pages' frames, grows the
+    limit with `$ADJWSL`, and reads them back in order: one read fault
+    for each run of successive blocks (up to PFCDEFAULT, 16).
+    `TestWorkingSetAddAvailable` is the list's, `TestSysgenPFCDefault`
+    the key's. The backward cases fail without the scan down.
+    `TestGlobalCopyOnRefPaging` and `TestReclaimer` now run with
+    PFCDEFAULT 1, so that each page is still its own fault there.

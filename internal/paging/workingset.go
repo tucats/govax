@@ -310,6 +310,43 @@ func (w *WorkingSet) Add(va uint32, global bool, c Conditions) ([]Page, error) {
 	return removed, nil
 }
 
+// AddAvailable puts the page at va in an available entry, taking no
+// page out, and reports whether it could: only if the list isn't over its
+// limit and the growth checks pass (fewer pages than the limit, and below
+// the quota or more than GROWLIM pages free). The entry is the first
+// available one after next, as Add's scan would find it were no page in
+// the way. Read clustering adds its pages this way, since it stops when
+// the list has no room rather than replace a page (the book's 15.5.1).
+func (w *WorkingSet) AddAvailable(va uint32, global bool, c Conditions) (bool, error) {
+	va &= pageMask
+	if _, ok := w.where[va]; ok {
+		return false, fmt.Errorf("%w: %08X", ErrInWorkingSet, va)
+	}
+
+	n := len(w.slots) - w.dyn
+	if w.Over() || n == 0 || !w.mayGrow(c) {
+		return false, nil
+	}
+
+	i := max(w.next, w.dyn-1)
+
+	for range n {
+		i++
+		if i >= len(w.slots) {
+			i = w.dyn
+		}
+
+		if !w.slots[i].used {
+			w.fill(i, Page{VA: va, Global: global})
+			w.next = i
+
+			return true, nil
+		}
+	}
+
+	return false, nil
+}
+
 // Over reports whether the list is longer than its limit: it had to grow
 // past it because nothing could be replaced (Add).
 func (w *WorkingSet) Over() bool {

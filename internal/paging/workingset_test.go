@@ -172,6 +172,62 @@ func TestWorkingSetGrowthPastQuota(t *testing.T) {
 	add(t, w, 9, plenty, 3)
 }
 
+// AddAvailable fills available entries, taking no page out: never at the
+// limit, past the quota only with more than GROWLIM pages free, and into
+// an available entry even when Add's scan would reach a page first.
+func TestWorkingSetAddAvailable(t *testing.T) {
+	w := NewWorkingSet(6, Bounds{Quota: 3, Extent: 8, Minimum: 2})
+	plenty := Conditions{FreePages: 64, GrowLimit: 63}
+	scarce := Conditions{FreePages: 63, GrowLimit: 63}
+
+	addAvailable := func(n int, c Conditions, want bool) {
+		t.Helper()
+
+		got, err := w.AddAvailable(page(n), false, c)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		checkSet(t, w)
+
+		if got != want {
+			t.Fatalf("AddAvailable of page %d: %v, want %v", n, got, want)
+		}
+	}
+
+	addAvailable(0, scarce, true)
+	addAvailable(1, scarce, true)
+	addAvailable(2, scarce, true)
+
+	// At the quota with the free list at GROWLIM: no room.
+	addAvailable(3, scarce, false)
+
+	// Pages in the way of Add's scan (page 3 takes page 0's entry, so
+	// pages 1 and 2 come next): AddAvailable goes past them to the
+	// available entry, as Add's scan does past a protected page, and the
+	// page's place in the circular list is that entry's.
+	add(t, w, 3, scarce, 0)
+	addAvailable(4, plenty, true)
+
+	if got := inSet(w); !sameInts(got, []int{3, 1, 2, 4}) {
+		t.Fatalf("set %v", got)
+	}
+
+	addAvailable(5, plenty, true)
+	addAvailable(6, plenty, true)
+
+	// Full is full.
+	addAvailable(7, plenty, false)
+
+	if _, err := w.AddAvailable(page(6), false, plenty); !errors.Is(err, ErrInWorkingSet) {
+		t.Fatalf("AddAvailable of a page in the set: %v", err)
+	}
+
+	if got := inSet(w); !sameInts(got, []int{3, 1, 2, 4, 5, 6}) {
+		t.Fatalf("set %v", got)
+	}
+}
+
 // The entries the scan passes over: up to TBSKIPWSL pages still valid in
 // the TB, then the next whatever its state (the book's 15.4.4); and
 // always a protected page.

@@ -182,6 +182,11 @@ type GlobalSection struct {
 	Dirty     []bool
 	gpt       uint32
 
+	// PFC is a file section's read cluster size, its creator's $CRMPSC
+	// pfc argument: 0 for PFCDEFAULT (cluster.go). A page-file section
+	// has none: the manual says pfc isn't used for one.
+	PFC uint32
+
 	// serial numbers the section among every section the system has
 	// made, from 1: its frames' owner in the PFN database (frames.go).
 	serial uint32
@@ -603,6 +608,10 @@ type sectionArgs struct {
 	name          string
 	ident         sectionIdent
 	relpag        uint32
+
+	// pfc is $CRMPSC's page fault cluster argument (cluster.go); $MGBLSC
+	// has none.
+	pfc uint32
 }
 
 // readSectionArgs reads the arguments $CRMPSC and $MGBLSC share: inadr,
@@ -798,7 +807,7 @@ func serviceSysCrmpsc(env *Environment, argv []uint32) (uint32, error) {
 			return env.failRetadr(argv, st)
 		}
 
-		s.File, s.VBN, s.CopyOnRef = f, vbn, flags&secCRF != 0
+		s.File, s.VBN, s.CopyOnRef, s.PFC = f, vbn, flags&secCRF != 0, optArg(argv, 11)
 
 		if st := env.createFileSection(s, int(pages)); st != ssNormal {
 			return env.failRetadr(argv, st)
@@ -837,6 +846,7 @@ func (env *Environment) createPrivateSection(argv []uint32) (uint32, error) {
 		retadr: optArg(argv, 1),
 		mode:   max(registers.AccessMode(optArg(argv, 2)&3), env.cpu.PSL().CurMod()),
 		flags:  optArg(argv, 3),
+		pfc:    optArg(argv, 11),
 	}
 
 	f, st := env.fileSectionChannel(optArg(argv, 7)&0xFFFF, a.flags)

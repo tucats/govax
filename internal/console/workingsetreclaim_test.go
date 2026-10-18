@@ -147,6 +147,10 @@ func reclaimerRun(t *testing.T, on bool) {
 	setSetting(t, "vax.sysgen.freelim", freeLimit)
 	setSetting(t, "vax.sysgen.freegoal", "1000000")
 
+	// One page a fault, so that each of the section's pages is a read
+	// fault: read clustering is clusterpaging_test.go's.
+	setSetting(t, machine.PFCDefaultSetting, "1")
+
 	c, out := scheduledConsole(t, longQuantum, brbSelf)
 	d := console.NewDispatcher(c, consoletest.ConsoleGrammar(t), nil)
 

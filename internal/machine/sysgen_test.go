@@ -245,6 +245,26 @@ func TestSysgenWriteCluster(t *testing.T) {
 	}
 }
 
+// TestSysgenPFCDefault: vax.sysgen.pfcdefault reaches the System from 0
+// to 127; unset, or anything else, it's 32.
+func TestSysgenPFCDefault(t *testing.T) {
+	for _, tc := range []struct {
+		text string
+		want uint32
+	}{{"0", 0}, {"1", 1}, {"%X10", 16}, {"127", 127}, {"128", 32}, {"-1", 32}, {"many", 32}, {"", 32}} {
+		withSettings(t, map[string]string{PFCDefaultSetting: tc.text})
+
+		if tc.text == "" {
+			_ = settings.Delete(PFCDefaultSetting)
+		}
+
+		c, _ := newTestMachine(t)
+		if got := c.ProcessOne().Sysgen.PFCDefault; got != tc.want {
+			t.Errorf("vax.sysgen.pfcdefault %q: %d, want %d", tc.text, got, tc.want)
+		}
+	}
+}
+
 // TestSysgenReclaimer: vax.sysgen.freelim and freegoal reach the System,
 // 0 included; unset, or bad, they're 32 and 200.
 func TestSysgenReclaimer(t *testing.T) {

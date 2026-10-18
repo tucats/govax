@@ -50,6 +50,7 @@ func TestShowMemory_frames(t *testing.T) {
 		fmt.Sprintf("            System pages   %8d\n", counts.System),
 		"    Page faults        ",
 		"        Demand zero        ",
+		"            Pages read     ",
 		"    Reclaimer runs     ",
 	} {
 		if !strings.Contains(out, line) {

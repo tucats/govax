@@ -32,6 +32,10 @@ const (
 	// WriteClusterSetting is MPW_WRTCLUSTER's key, whose value has a
 	// rule of its own (ParseWriteCluster).
 	WriteClusterSetting = "vax.sysgen.mpw_wrtcluster"
+
+	// PFCDefaultSetting is PFCDEFAULT's key, whose value has a rule of
+	// its own (ParsePFCDefault).
+	PFCDefaultSetting = "vax.sysgen.pfcdefault"
 )
 
 // pqlSettings are the PQL_Dxxx keys, by the quota each sets the default
@@ -50,7 +54,7 @@ func SysgenKeys() []string {
 		PagingSetting, minWSCountSetting, tbSkipWSLSetting, growLimSetting,
 		mpwHiLimitSetting, mpwLoLimitSetting, freeLimSetting, freeGoalSetting,
 		pageFileSetting, pageSizeSetting, pageDeferSetting, WriteClusterSetting,
-		gblSectSetting, gblPagesSetting, gblPagFilSetting,
+		gblSectSetting, gblPagesSetting, gblPagFilSetting, PFCDefaultSetting,
 	}
 
 	for key := range pqlSettings {
@@ -122,6 +126,15 @@ func ParseWriteCluster(text string) (uint32, bool) {
 	return v, ok && v >= 16 && v <= 120 && v%8 == 0
 }
 
+// ParsePFCDefault reads PFCDEFAULT's text: a number in
+// ParseSysgenNumber's forms from 0 to 127, SYSGEN's range for the
+// parameter. It reports false for anything else.
+func ParsePFCDefault(text string) (uint32, bool) {
+	v, ok := ParseSysgenNumber(text)
+
+	return v, ok && v <= corevms.MaxPFCDefault
+}
+
 // sysgenSettings reads the vax.sysgen.* keys into the parameters a new
 // System gets, each key that isn't set, or isn't a positive count,
 // keeping its default (cmd/govax warns about a bad value at startup).
@@ -173,6 +186,10 @@ func sysgenSettings(paging bool) corevms.Sysgen {
 
 	if v, ok := ParseSysgenCount(settings.Get(gblPagFilSetting)); ok {
 		sg.GlobalPageFile = v
+	}
+
+	if v, ok := ParsePFCDefault(settings.Get(PFCDefaultSetting)); ok {
+		sg.PFCDefault = v
 	}
 
 	sg.PageFileName = strings.TrimSpace(settings.Get(pageFileSetting))

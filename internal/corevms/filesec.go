@@ -175,6 +175,10 @@ type processSection struct {
 	// backed by the page file from then on.
 	writeBack bool
 	copyOnRef bool
+
+	// pfc is the section's read cluster size, $CRMPSC's pfc argument: 0
+	// for PFCDEFAULT (cluster.go).
+	pfc uint32
 }
 
 // addProcessSection puts ps in the first free slot of the process's
@@ -376,7 +380,8 @@ func (sys *System) readPage(f *rms.ACPFile, vbn uint32, c vm.FrameClaim) (uint32
 // set first, which may take another page out of it, as VMS's pager makes
 // room before it takes a frame (so a clean page leaving can give its
 // frame to the page coming in); and a page in transition is a soft
-// fault, its frame taken back off its list.
+// fault, its frame taken back off its list; and a hard fault reads the
+// page's neighbors with it (read clustering, cluster.go).
 func (sys *System) PageIn(f vm.PageFault) (vm.PTE, bool) {
 	env := sys.pagingProcess(f)
 	if env != nil {
@@ -386,6 +391,16 @@ func (sys *System) PageIn(f vm.PageFault) (vm.PTE, bool) {
 	pte, kind, ok := sys.resolveFault(f)
 	if ok {
 		sys.countFault(f, kind)
+
+		// A hard fault reads its page, and with paging on its neighbors
+		// in the same backing store (cluster.go).
+		if kind == faultRead && f.Addr < s0Base {
+			sys.PageCounts.PagesRead++
+
+			if env != nil {
+				sys.readCluster(env, f)
+			}
+		}
 	} else if env != nil {
 		env.leaveWorkingSet(f.Addr)
 	}
@@ -623,7 +638,7 @@ func (env *Environment) mapProcessSection(f *rms.ACPFile, vbn, pages uint32, a s
 		file: f, vbn: vbn, first: r.first,
 		present: make([]bool, min(pages, (r.last-r.first)/pageSize+1)),
 		mapped:  1, writeBack: write && a.flags&secCRF == 0,
-		copyOnRef: a.flags&secCRF != 0,
+		copyOnRef: a.flags&secCRF != 0, pfc: a.pfc,
 	}
 
 	idx, ok := env.addProcessSection(ps)

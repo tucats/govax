@@ -68,8 +68,9 @@ const maxNodeNameLength = 15
 //     parameters the defaults $CREPRC gives (sysgenPQL). Three that
 //     govax has no use for are items all the same, since VMS 7.1 answers
 //     them (testdata/pg63, round 2): WSMAX is the largest extent govax
-//     gives a process (16400, which that VAX had too), and BORROWLIM and
-//     PFCDEFAULT are SYSGEN's defaults (300 and 32).
+//     gives a process (16400, which that VAX had too), and BORROWLIM is
+//     SYSGEN's default (300). PFCDEFAULT, the read cluster's default
+//     size (Phase 65, subtask 6), is the System's.
 //   - The page file's (Phase 64, subtask 7): MPW_WRTCLUSTER and
 //     PQL_MPGFLQUOTA (quotaRules' minimum) are parameters;
 //     PAGEFILE_PAGE and PAGEFILE_FREE the page file's size and free
@@ -102,7 +103,7 @@ var syiItemsByName = map[string]func(env *Environment) itemValue{
 	"SYI$_MPW_LOLIMIT":    func(env *Environment) itemValue { return itemLong(env.Sysgen.MPWLoLimit) },
 	"SYI$_WSMAX":          func(env *Environment) itemValue { return itemLong(nominalWSExtent) },
 	"SYI$_BORROWLIM":      func(env *Environment) itemValue { return itemLong(defaultBorrowLimit) },
-	"SYI$_PFCDEFAULT":     func(env *Environment) itemValue { return itemLong(defaultPFCDefault) },
+	"SYI$_PFCDEFAULT":     func(env *Environment) itemValue { return itemLong(env.Sysgen.PFCDefault) },
 	"SYI$_PQL_DWSDEFAULT": func(env *Environment) itemValue { return itemLong(env.sysgenPQL("WSDEFAULT")) },
 	"SYI$_PQL_DWSQUOTA":   func(env *Environment) itemValue { return itemLong(env.sysgenPQL("WSQUOTA")) },
 	"SYI$_PQL_DWSEXTENT":  func(env *Environment) itemValue { return itemLong(env.sysgenPQL("WSEXTENT")) },
@@ -129,13 +130,10 @@ var syiItemsByName = map[string]func(env *Environment) itemValue{
 	"SYI$_SWAPFILE_FREE":   func(env *Environment) itemValue { return itemLong(0) },
 }
 
-// SYSGEN's defaults for BORROWLIM and PFCDEFAULT, which only $GETSYI
-// reports: govax has no automatic working set adjustment to borrow with,
-// and no page fault clustering.
-const (
-	defaultBorrowLimit = 300
-	defaultPFCDefault  = 32
-)
+// defaultBorrowLimit is SYSGEN's default for BORROWLIM, which only
+// $GETSYI reports: govax has no automatic working set adjustment to
+// borrow with.
+const defaultBorrowLimit = 300
 
 // pqlMinimum is the PQL_M parameter for the quota called name: the
 // smallest value $CREPRC gives it.
