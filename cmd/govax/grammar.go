@@ -151,11 +151,13 @@ var grammar = []cli.Option{
 		Action:               func(c *cli.Context) error { return addMount(c, "mount-write", true) },
 	},
 	{
-		LongName:    "console",
-		Description: "Execute VAX console commands",
-		OptionType:  cli.Subcommand,
-		Action:      consoleCmd,
-		DefaultVerb: true,
+		LongName:             "console",
+		Description:          "Execute VAX console commands",
+		OptionType:           cli.Subcommand,
+		ParametersExpected:   -99,
+		ParameterDescription: "command...",
+		Action:               consoleCmd,
+		DefaultVerb:          true,
 	},
 	{
 		LongName:             "asm",
@@ -614,8 +616,9 @@ func setPaths(c *cli.Context) error {
 
 func consoleCmd(c *cli.Context) error {
 	paths = loadConfigPaths(paths)
+	args := c.FindGlobal().Parameters
 
-	return run(paths, instructionLimit, timeLimit, os.Stdout, nil, []string{})
+	return run(paths, instructionLimit, timeLimit, os.Stdout, nil, args)
 }
 
 func asmCmd(c *cli.Context) error {
