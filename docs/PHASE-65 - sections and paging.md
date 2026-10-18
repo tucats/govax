@@ -1,7 +1,7 @@
 # Phase 65 — sections under the pager
 
-**Status:** in progress (planned 2026-10-15; subtasks 1 to 6 done, the
-probe of subtask 7 written 2026-10-18, its VAX run next). Needs Phase 64 (the page file and the
+**Status:** in progress (planned 2026-10-15; subtasks 1 to 7 done
+2026-10-18, the close-out next). Needs Phase 64 (the page file and the
 writer). Part of the paging program laid out in
 `PHASE-62 - VMS paging.md` (Decision 14 is this phase's).
 
@@ -499,9 +499,8 @@ a procedure, `exchange.cmd`. A second process for the sharing cases
    argument kept per section, the scan for section files, global
    sections, and the page file (image files in Phase 66), pages read
    counted.
-7. **The VMS probe** (`testdata/pg65`), the cases above (written and
-   dry-run on govax 2026-10-18; the VAX run is next); govax is then
-   changed to its answers.
+7. **The VMS probe** (`testdata/pg65`, done 2026-10-18), the cases
+   above; govax is then changed to its answers.
 8. **Close-out.**
 
 ## Progress log
@@ -821,3 +820,47 @@ a procedure, `exchange.cmd`. A second process for the sharing cases
     or PFCDEFAULT that subtasks 4 and 6 gave `$GETSYI`
     (`dclshell/dcllexprocess.go`'s `syiKeywords`; HELP LEXICAL lists
     them); `TestGetSYIGlobalSectionItems` compares each with `$GETSYI`'s.
+- **2026-10-18:** The probe's run on VMS V7.1 (`testdata/pg65/vax`;
+  README.md has every answer), and govax changed to its answers.
+  `TestPG65Oracle` (replacing the dry run) runs every part with the
+  VAX's SYSGEN values (GBLSECTIONS 520, GBLPAGES 50000, GBLPAGFIL 4096,
+  PFCDEFAULT 16) and matches VMS's lines but for
+  `expectedPG65Differences`.
+  - **Confirmed:** GBLPAGES' counting; SS$_EXGBLPAGFIL with retadr -1
+    (the checks' order still unprobed: GBLPAGES was far from full); no
+    charge for page-file sections, GPGCNT from the first touch; a
+    permanent section's contents kept; NOSUCHSEC at once after
+    `$DGBLSC`; copy-on-reference pages charged at mapping, read-only
+    ones too (question 3's answer), and refunded at deletion; the
+    temporary global CRF section gone by name once its only mapper
+    touched every page (subtask 5's reading); read clustering as subtask
+    6 has it (the faulting page counted, pfc 1 alone, above 127 is 127,
+    backward only when forward read nothing); the second process's
+    global valid faults and soft faults after purges.
+  - **`$UPDSEC` of a global section** (`corevms/globalpages.go`'s
+    `updateGlobalPage`, `filesec.go`): UPDFLG 0 writes every page with a
+    frame, valid anywhere or on either list, modified or not (the book's
+    16.3.4; U3 rewrote 64 clean pages); UPDFLG 1 writes the modified
+    ones, the caller's valid PTEs' and, out of its working set, those on
+    the modified list or valid with the saved modify bit (U5). Pages out
+    are never written (unprobed). `TestGlobalSectionPaging`'s
+    checkpoint 2 now expects the run up to the first page out.
+  - **Deleted sections wait** (`corevms/gblsec.go`): a page-file or
+    copy-on-reference section with nothing mapping or keeping it leaves
+    the name table at once but goes on `GlobalSections.pending`
+    (`PendingSections`), still counted in GBLSECTIONS, GBLPAGES, and
+    GBLPAGFIL and holding its frames and page file blocks, until
+    `ReleasePendingSections` (`releaseSection`, the old teardown): at the
+    next global section's creation and at image rundown (`DeleteP0`). A
+    file section goes at once, as G3's did. Why VMS waits, and when else
+    it releases them, is unknown (govax's choice, unconfirmed).
+    `TestCrmpsc_lifetime`, `TestPagingGlobalSectionFrames`, and
+    `TestPageFileGlobalSection` check the section pending, then
+    released; `checkPageFileHolders` counts pending sections' blocks.
+  - **PAGTBLPFC** is 2 (SYSGEN's default, the VAX's) in `$GETSYI` and
+    F$GETSYI.
+  - **Differences that stay:** VMS's pageable process page tables (a few
+    more faults and PPGCNT at each P0 expansion; Phase 67), the working
+    set's floor (parts P and K2: at the floor plus 20 VMS's list had no
+    free entry for a cluster), part D's writer, G1's sections in use.
+  - The `.out` files are force-added past `.gitignore`, as pg64's.

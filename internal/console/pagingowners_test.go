@@ -177,6 +177,14 @@ func TestPagingGlobalSectionFrames(t *testing.T) {
 		t.Fatal("the section outlived its mappings")
 	}
 
+	// Gone by name, the section waits to be released (testdata/pg65's
+	// G2), as image rundown or the next section's creation does.
+	if p := c.RTL.Sections.PendingSections(); len(p) != 1 || p[0].Name != "PAGED" {
+		t.Fatalf("pending %v, want PAGED", p)
+	}
+
+	c.RTL.ReleasePendingSections()
+
 	for _, pfn := range frames {
 		if e, _ := db.Entry(paging.PFN(pfn)); e.State != paging.Free || e.Tied {
 			t.Errorf("frame %d after the section: %+v", pfn, e)

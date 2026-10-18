@@ -70,7 +70,9 @@ const maxNodeNameLength = 15
 //     them (testdata/pg63, round 2): WSMAX is the largest extent govax
 //     gives a process (16400, which that VAX had too), and BORROWLIM is
 //     SYSGEN's default (300). PFCDEFAULT, the read cluster's default
-//     size (Phase 65, subtask 6), is the System's.
+//     size (Phase 65, subtask 6), is the System's; PAGTBLPFC, the page
+//     table pages' cluster, is SYSGEN's default (2, as that VAX had),
+//     since govax's page tables aren't paged.
 //   - The page file's (Phase 64, subtask 7): MPW_WRTCLUSTER and
 //     PQL_MPGFLQUOTA (quotaRules' minimum) are parameters;
 //     PAGEFILE_PAGE and PAGEFILE_FREE the page file's size and free
@@ -104,6 +106,7 @@ var syiItemsByName = map[string]func(env *Environment) itemValue{
 	"SYI$_WSMAX":          func(env *Environment) itemValue { return itemLong(nominalWSExtent) },
 	"SYI$_BORROWLIM":      func(env *Environment) itemValue { return itemLong(defaultBorrowLimit) },
 	"SYI$_PFCDEFAULT":     func(env *Environment) itemValue { return itemLong(env.Sysgen.PFCDefault) },
+	"SYI$_PAGTBLPFC":      func(env *Environment) itemValue { return itemLong(defaultPageTablePFC) },
 	"SYI$_PQL_DWSDEFAULT": func(env *Environment) itemValue { return itemLong(env.sysgenPQL("WSDEFAULT")) },
 	"SYI$_PQL_DWSQUOTA":   func(env *Environment) itemValue { return itemLong(env.sysgenPQL("WSQUOTA")) },
 	"SYI$_PQL_DWSEXTENT":  func(env *Environment) itemValue { return itemLong(env.sysgenPQL("WSEXTENT")) },
@@ -134,6 +137,12 @@ var syiItemsByName = map[string]func(env *Environment) itemValue{
 // $GETSYI reports: govax has no automatic working set adjustment to
 // borrow with.
 const defaultBorrowLimit = 300
+
+// defaultPageTablePFC is SYSGEN's default for PAGTBLPFC, the read cluster
+// of process page table pages, which VMS 7.1 reported (testdata/pg65's
+// G1): govax's page tables aren't paged (Phase 62, Decision 13), so only
+// $GETSYI reports it.
+const defaultPageTablePFC = 2
 
 // pqlMinimum is the PQL_M parameter for the quota called name: the
 // smallest value $CREPRC gives it.

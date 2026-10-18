@@ -441,19 +441,29 @@ func TestGlobalSectionPaging(t *testing.T) {
 		}
 	}
 
-	// Checkpoint 2: $UPDSEC over range A follows each page's global page
-	// table entry, writing the pages valid anywhere and those on the
-	// modified list, leaving none there: its first run of pages written
-	// is pages 0 to 8 (page 9 is on the free list, matching its block).
+	// Checkpoint 2: $UPDSEC (UPDFLG 0) over range A follows each page's
+	// global page table entry, writing every page with a frame, valid
+	// anywhere or on either list, modified or not, as VMS 7.1 did
+	// (testdata/pg65's U3), and leaving none on the modified list: its
+	// first run of pages written ends before the first page that's out.
 	// PAGES.DAT holds every page's new value.
+	run := 0
+	for run < len(s.Frames) && s.Frames[run] != 0 {
+		run++
+	}
+
+	if run < 9 {
+		t.Fatalf("before $UPDSEC: page %d is out", run)
+	}
+
 	r.checkpoint(2)
 
 	if got, want := c.CPU.GPR(9), vmsdef.Symbols["SS$_NORMAL"]; got != want {
 		t.Errorf("$UPDSEC: status %08X, want SS$_NORMAL", got)
 	}
 
-	if first, last := c.CPU.GPR(7), c.CPU.GPR(8); first != r.rangeA || last != r.rangeA+9*512-1 {
-		t.Errorf("$UPDSEC: first run written %08X to %08X, want %08X to %08X", first, last, r.rangeA, r.rangeA+9*512-1)
+	if first, last := c.CPU.GPR(7), c.CPU.GPR(8); first != r.rangeA || last != r.rangeA+uint32(run)*512-1 {
+		t.Errorf("$UPDSEC: first run written %08X to %08X, want %08X to %08X", first, last, r.rangeA, r.rangeA+uint32(run)*512-1)
 	}
 
 	if states := r.checkGlobalPages(t, "after $UPDSEC"); states.modified != 0 {

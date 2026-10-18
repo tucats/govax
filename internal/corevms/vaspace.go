@@ -435,6 +435,10 @@ func (env *Environment) DeleteP0() {
 	env.RegionSize[0] = 0
 
 	env.deleteImageP1()
+
+	// Global sections the image's deletions left waiting are released
+	// (gblsec.go's maybeDeleteSection).
+	env.ReleasePendingSections()
 }
 
 // deleteImageP1 is image rundown's deletion of the pages the image added

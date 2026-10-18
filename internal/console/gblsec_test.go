@@ -337,7 +337,7 @@ func TestCrmpsc_ident(t *testing.T) {
 }
 
 // TestCrmpsc_lifetime: a temporary section goes with its last mapping,
-// its physical pages freed; a permanent one stays unmapped until
+// its physical pages freed when it's released; a permanent one stays unmapped until
 // $DGBLSC, which deletes its name at once (a new section may take it)
 // and the section with its last mapping; image rundown unmaps.
 func TestCrmpsc_lifetime(t *testing.T) {
@@ -367,6 +367,19 @@ func TestCrmpsc_lifetime(t *testing.T) {
 	if s := section(c, "TEMP"); s != nil {
 		t.Errorf("TEMP outlived its mappings: %+v", s)
 	}
+
+	// A page-file section, gone by name, still uses GBLSECTIONS and holds
+	// its pages until it's released, as VMS 7.1's did (testdata/pg65's
+	// G2): at the next section's creation, or image rundown.
+	if p := c.RTL.Sections.PendingSections(); len(p) != 1 || p[0].Name != "TEMP" {
+		t.Errorf("pending %v, want TEMP", p)
+	}
+
+	if got := c.RTL.Sections.FreeSections(); got != corevms.DefaultGlobalSectionLimit-1 {
+		t.Errorf("FREE_GBLSECTS %d with TEMP pending, want %d", got, corevms.DefaultGlobalSectionLimit-1)
+	}
+
+	c.RTL.ReleasePendingSections()
 
 	if after := c.Mem.MappedPages(); after != before {
 		t.Errorf("%d physical pages in use, %d before: the section's weren't freed", after, before)

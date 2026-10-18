@@ -1,0 +1,15 @@
+K0 working set less 200: 16200
+K1 flags 00020000 pfc=0 up: flts=15 dirio=0 gpg=0 ppg=201 bad=0
+K1 flags 00020000 pfc=1 up: flts=200 dirio=0 gpg=0 ppg=200 bad=0
+K1 flags 00020000 pfc=4 up: flts=50 dirio=0 gpg=0 ppg=200 bad=0
+K1 flags 00020000 pfc=16 up: flts=13 dirio=0 gpg=0 ppg=200 bad=0
+K1 flags 00020000 pfc=64 up: flts=4 dirio=0 gpg=0 ppg=200 bad=0
+K1 flags 00020000 pfc=127 up: flts=2 dirio=0 gpg=0 ppg=200 bad=0
+K1 flags 00020000 pfc=200 up: flts=2 dirio=0 gpg=0 ppg=200 bad=0
+K1 flags 00020000 pfc=16 down: flts=13 dirio=0 gpg=0 ppg=200 bad=0
+K1 flags 00020000 pfc=0 down: flts=13 dirio=0 gpg=0 ppg=200 bad=0
+K1 flags 00020001 pfc=16 up: flts=13 dirio=0 gpg=200 ppg=0 bad=0
+K1 flags 00020001 pfc=16 down: flts=13 dirio=0 gpg=200 ppg=0 bad=0
+K1 flags 00020002 pfc=16 up: flts=13 dirio=0 gpg=0 ppg=200 bad=0
+K2 small working set
+K1 flags 00020000 pfc=64 up: flts=206 dirio=0 gpg=0 ppg=19 bad=0

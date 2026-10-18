@@ -2,6 +2,7 @@ package console_test
 
 import (
 	"encoding/binary"
+	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -26,6 +27,13 @@ func pg65Console(t *testing.T) (*console.Console, func(string) string) {
 	setSetting(t, machine.PagingSetting, "true")
 	setSetting(t, "vax.sysgen.paging.file", "DUA1:[000000]PAGEFILE.SYS")
 	setSetting(t, "vax.sysgen.paging.size", "20000")
+	setSetting(t, "vax.sysgen.gblsections", "520")
+	setSetting(t, "vax.sysgen.gblpages", "50000")
+	setSetting(t, "vax.sysgen.gblpagfil", "4096")
+	setSetting(t, "vax.sysgen.pfcdefault", "16")
+	setSetting(t, "vax.sysgen.mpw_hilimit", "5634")
+	setSetting(t, "vax.sysgen.mpw_lolimit", "120")
+	setSetting(t, machine.WriteClusterSetting, "120")
 
 	c, dispatch := wsDispatcher(t)
 	dsk := filepath.Join(t.TempDir(), "pg65.dsk")
@@ -50,13 +58,56 @@ func pg65Console(t *testing.T) (*console.Console, func(string) string) {
 	return c, dispatch
 }
 
-// TestPG65DryRun runs every part, the holder (part H) in a subprocess
-// as PG65.COM runs it, and checks what doesn't wait for VMS's answers:
-// every part writes lines, every page read back holds what it should
-// ("bad=0"), and GBLPAGES' counting rule (a section's pages plus 2,
-// rounded up to even). The lines are compared with VMS's once its run
-// is back.
-func TestPG65DryRun(t *testing.T) {
+// expectedPG65Differences are the program's lines (by their first words)
+// that differ from VMS's, and why.
+var expectedPG65Differences = map[string]string{
+	"G1 in use:":                            "the VAX's other global sections (installed images, DECwindows): govax has none",
+	"F1 made:":                              "VMS's process page table pages are in the working set and fault in as P0 grows; govax's aren't paged (Phase 62, Decision 13; Phase 67)",
+	"F2 read every page:":                   "as F1 made, with VMS's DIRIO of 2 (a page table page's read, unconfirmed)",
+	"R1 mapped:":                            "as F1 made",
+	"R2 read every page:":                   "as F2",
+	"C1 mapped:":                            "as F1 made",
+	"C2 read every page:":                   "as F2",
+	"S1 mapped:":                            "as F1 made",
+	"S2 purged:":                            "as F1 made: the purge takes page table pages out too",
+	"S4 read again:":                        "as F1 made",
+	"K1 flags 00020000 pfc=0 up:":           "as F1 made: the first section of part K grows P0's page table",
+	"K1 flags 00020000 pfc=64 up: flts=206": "at a small working set VMS's list is full (its page table pages and others), so no entry is free for a cluster; govax's has free entries (pg63: no permanent part)",
+	"D1 expreg":                             "the pages written by then: VMS's writer is asynchronous and its working set has fewer dynamic pages (pg64's W3)",
+	"P2 read every page:":                   "the working set at the floor plus 40: VMS's floor is above its list's permanent part (pg63), and its page table pages",
+	"P3 purged:":                            "as P2",
+	"P4 read again:":                        "as P2",
+	"P5 100 other pages":                    "as P2",
+	"P6 read again:":                        "as P2",
+}
+
+// pg65Expected returns the reason line is expected to differ, or "".
+func pg65Expected(line string) string {
+	for key, why := range expectedPG65Differences {
+		if strings.HasPrefix(line, key) {
+			return why
+		}
+	}
+
+	return ""
+}
+
+// pg65VAX reads one of VMS's output files.
+func pg65VAX(t *testing.T, name string) []string {
+	t.Helper()
+
+	data, err := os.ReadFile(filepath.Join(pg65Dir, "vax", name))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	return strings.Split(strings.TrimRight(strings.ReplaceAll(string(data), "\r", ""), "\n"), "\n")
+}
+
+// TestPG65Oracle runs every part, the holder (part H) in a subprocess as
+// PG65.COM runs it, with the VAX's SYSGEN values, and matches VMS
+// V7.1's lines (testdata/pg65/vax) but for the expected differences.
+func TestPG65Oracle(t *testing.T) {
 	_, dispatch := pg65Console(t)
 
 	run := func(part string) []string {
@@ -67,9 +118,10 @@ func TestPG65DryRun(t *testing.T) {
 		return strings.Split(dispatch("RUN PG65"), "|")
 	}
 
+	order := []string{"M", "G", "F", "D", "R", "P", "C", "U", "K", "S", "H"}
 	parts := map[string][]string{}
 
-	for _, part := range []string{"M", "G", "F", "D", "R", "P", "C", "U", "K"} {
+	for _, part := range order[:9] {
 		parts[part] = run(part)
 	}
 
@@ -79,50 +131,31 @@ func TestPG65DryRun(t *testing.T) {
 	dispatch("WAIT 00:00:01")
 	parts["H"] = strings.Split(dispatch("TYPE PG65H.OUT"), "|")
 
-	t.Cleanup(func() {
-		if t.Failed() {
-			for _, part := range []string{"M", "G", "F", "D", "R", "P", "C", "U", "K", "S", "H"} {
-				t.Logf("part %s:\n%s", part, strings.Join(parts[part], "\n"))
+	for _, part := range order {
+		got := parts[part]
+		want := pg65VAX(t, "pg65"+strings.ToLower(part)+".out")
+
+		if len(got) != len(want) {
+			t.Errorf("part %s: %d lines, VMS %d\n%s", part, len(got), len(want), strings.Join(got, "\n"))
+
+			continue
+		}
+
+		differ := 0
+
+		for i := range want {
+			if got[i] == want[i] {
+				continue
+			}
+
+			differ++
+
+			if pg65Expected(want[i]) == "" {
+				t.Errorf("part %s line %d:\n got %s\nwant %s", part, i+1, got[i], want[i])
 			}
 		}
-	})
 
-	for part, lines := range parts {
-		if !strings.HasPrefix(lines[0], part) {
-			t.Errorf("part %s: %q", part, lines)
-		}
-
-		for _, line := range lines {
-			if i := strings.Index(line, "bad="); i >= 0 && !strings.HasPrefix(line[i:], "bad=0") {
-				t.Errorf("part %s: %s", part, line)
-			}
-
-			if strings.HasPrefix(line, "?") || strings.HasPrefix(line, "%") {
-				t.Errorf("part %s: %s", part, line)
-			}
-		}
-	}
-
-	var made []string
-
-	for _, line := range parts["G"] {
-		if strings.HasPrefix(line, "G2 made:") || strings.HasPrefix(line, "G3 made:") {
-			made = append(made, line)
-		}
-	}
-
-	want := []string{
-		"G2 made: sects=1 gblpages=4 contig=4", "G2 made: sects=1 gblpages=4 contig=4",
-		"G2 made: sects=1 gblpages=6 contig=6", "G2 made: sects=1 gblpages=6 contig=6",
-		"G3 made: sects=1 gblpages=6 contig=6",
-	}
-
-	if strings.Join(made, "|") != strings.Join(want, "|") {
-		t.Errorf("GBLPAGES' counting:\n%s\nwant\n%s", strings.Join(made, "\n"), strings.Join(want, "\n"))
-	}
-
-	if h := parts["H"]; len(h) != 4 || h[3] != "H3 flag 67: 1" {
-		t.Errorf("the holder: %q", h)
+		t.Logf("part %s: %d lines, %d of them listed differences", part, len(want), differ)
 	}
 }
 
@@ -132,7 +165,7 @@ func TestGetSYIGlobalSectionItems(t *testing.T) {
 	c, dispatch := wsDispatcher(t)
 
 	for _, key := range []string{
-		"PFCDEFAULT", "GBLSECTIONS", "GBLPAGES", "GBLPAGFIL",
+		"PFCDEFAULT", "PAGTBLPFC", "GBLSECTIONS", "GBLPAGES", "GBLPAGFIL",
 		"FREE_GBLSECTS", "FREE_GBLPAGES", "CONTIG_GBLPAGES",
 	} {
 		data, ok := c.ProcessOne().SYIItem("SYI$_" + key)

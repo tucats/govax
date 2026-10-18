@@ -297,8 +297,10 @@ never had.
   global section limits, F/D/R a permanent page-file section through
   the writer, P purged global pages, C copy-on-reference, U `$UPDSEC`,
   K read clustering, H a holder subprocess and S this process sharing
-  pages through common event flags), `pg65.com`. `TestPG65DryRun` runs
-  every part on govax; VMS V7.1's run (`vax/`) is still to come.
+  pages through common event flags), `pg65.com`. `vax/` is VMS V7.1's
+  run; `TestPG65Oracle` runs every part on govax with the VAX's SYSGEN
+  values and matches VMS's lines but for `expectedPG65Differences`
+  (mostly VMS's pageable page tables and working set floor).
 - `testdata/probe49/` — Phase 49's VMS probe in three rounds (`probe6`,
   `probe6b`, `probe6c`; README.md has each round's answers), run by
   `TestProbe6*`; `testdata/rms49/` and `testdata/sec49/` are the phase's

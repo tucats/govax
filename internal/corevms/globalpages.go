@@ -408,14 +408,25 @@ func (sys *System) writeGlobalCluster(pfn paging.PFN, s *GlobalSection, i int) b
 
 // updateGlobalPage is $UPDSEC's work for page i of global section s,
 // one the caller's PTE doesn't hold valid, with paging on: it follows the
-// page's global page table entry. A page valid in another process's
-// working set, or on the modified list, is written (the latter then moved
-// to the free list); one on the free list matches its block already, and
-// one that's out has nothing in memory to write (the phase doc's finding
-// 9). It reports whether it wrote the page, and the write's error.
-func (sys *System) updateGlobalPage(s *GlobalSection, i int) (bool, error) {
+// page's global page table entry. A page that's out has nothing in memory
+// to write. With modifiedOnly clear (UPDFLG 0) every page with a frame is
+// written, valid in another process's working set or on either list,
+// modified or not: VMS can't tell which global pages were modified, and
+// writes them all (16.3.4; VMS 7.1 rewrote a section's clean pages,
+// testdata/pg65's U3). With it set (UPDFLG 1, the caller the only
+// writer) only a modified page is written: on the modified list, or
+// valid with its frame's saved modify bit set (U5: pages the caller
+// modified and purged were written). A page written on the modified list
+// moves to the free list. It reports whether it wrote the page, and the
+// write's error.
+func (sys *System) updateGlobalPage(s *GlobalSection, i int, modifiedOnly bool) (bool, error) {
 	pfn, e, ok := sys.globalFrame(s, i)
-	if !ok || e.State == paging.Free {
+	if !ok {
+		return false, nil
+	}
+
+	modified := e.State == paging.Modified || e.State == paging.Active && e.SavedModify
+	if modifiedOnly && !modified {
 		return false, nil
 	}
 
@@ -423,9 +434,10 @@ func (sys *System) updateGlobalPage(s *GlobalSection, i int) (bool, error) {
 		return false, err
 	}
 
-	if e.State == paging.Modified {
+	switch e.State {
+	case paging.Modified:
 		_ = sys.mem.Paging().Cleaned(pfn)
-	} else {
+	case paging.Active:
 		_ = sys.mem.Paging().ClearModified(pfn)
 	}
 

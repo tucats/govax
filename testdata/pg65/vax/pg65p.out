@@ -1,0 +1,10 @@
+P1 global file section of 64, pfc 1: 00000619 pages=64
+P2 read: bad=0
+P2 read every page: flts=68 charged=0 gpg=63 ppg=-56 pfused=-21 dirio=0
+P3 purgws: 00000001
+P3 purged: flts=7 charged=0 gpg=-63 ppg=-1 pfused=-3 dirio=0
+P4 read again: bad=0
+P4 read again: flts=64 charged=0 gpg=64 ppg=0 pfused=0 dirio=0
+P5 100 other pages written: flts=105 charged=100 gpg=-64 ppg=64 pfused=0 dirio=0
+P6 read again: bad=0
+P6 read again: flts=72 charged=0 gpg=64 ppg=-64 pfused=0 dirio=0

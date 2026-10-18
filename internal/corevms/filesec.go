@@ -989,10 +989,9 @@ func (env *Environment) updateSections(pages []uint32, mode registers.AccessMode
 			}
 
 		default:
-			// A global page this process hasn't touched: with updflg 0
-			// it's written if another process brought it in.
+			// A global page the caller's PTE doesn't hold valid.
 			gi, ok := pte.GlobalIndex()
-			if !ok || callerOnly {
+			if !ok {
 				continue
 			}
 
@@ -1001,10 +1000,11 @@ func (env *Environment) updateSections(pages []uint32, mode registers.AccessMode
 				continue
 			}
 
-			// With paging on, the page's global page table entry says
-			// whether there's anything to write (globalpages.go).
+			// With paging on, the page may have left the caller's
+			// working set, so its global page table entry says what
+			// there is to write (globalpages.go), by updflg.
 			if env.mem.Paging() != nil {
-				wrote, err := env.updateGlobalPage(s, i)
+				wrote, err := env.updateGlobalPage(s, i, callerOnly)
 				if !wrote && err == nil {
 					continue
 				}
@@ -1012,6 +1012,12 @@ func (env *Environment) updateSections(pages []uint32, mode registers.AccessMode
 				err2 = err
 
 				break
+			}
+
+			// With paging off, a page the caller hasn't touched: with
+			// updflg 0 it's written if another process brought it in.
+			if callerOnly {
+				continue
 			}
 
 			err2 = env.writePage(s.File, s.VBN+uint32(i), s.Frames[i])

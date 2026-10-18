@@ -1,0 +1,14 @@
+S0 ascefc 00000001; the holder ready: 1
+S1 mgblsc PG65_SH: 00000001
+S1 mapped: flts=2 charged=0 gpg=0 ppg=2 pfused=0 dirio=0
+S1 read: bad=0
+S1 read every page: flts=64 charged=0 gpg=64 ppg=0 pfused=0 dirio=0
+S2 purged: flts=0 charged=0 gpg=-64 ppg=-3 pfused=0 dirio=0
+S2 read again: bad=0
+S2 read again: flts=64 charged=0 gpg=64 ppg=0 pfused=0 dirio=0
+S3 mgblsc PG65_SP: 00000001; read: bad=0
+S3 read every page: flts=16 charged=0 gpg=16 ppg=0 pfused=0 dirio=0
+S4 the holder purged: 1
+S4 purged: flts=0 charged=0 gpg=-64 ppg=0 pfused=0 dirio=0
+S4 read again: bad=0
+S4 read again: flts=65 charged=0 gpg=64 ppg=1 pfused=0 dirio=0

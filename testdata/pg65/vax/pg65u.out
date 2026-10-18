@@ -1,0 +1,8 @@
+U1 open 00010001; writable global section of 64: 00000619 pages=64
+U2 every page written, purged; updsecw 0: 00000001 iosb=00000001 pages 0 to 63; on disk 64
+U3 again: 00000001 iosb=00000001 pages 0 to 63
+U3 again with 1: 00000659 iosb=00000659 pages -1 to -1
+U4 pages 0-31 written, valid; updsecw 1: 00000001 iosb=00000001 pages 0 to 31; on disk 32
+U5 pages 10-19 written, purged; updsecw 1: 00000001 iosb=00000001 pages 10 to 19; on disk 10
+U6 page-file section of 8 (00000619), written; updsecw 0: 00000659 iosb=00000659
+U7 private section of 16 (00000619), written, purged; updsecw 0: 00000001 iosb=00000001 pages 0 to 15; on disk 16

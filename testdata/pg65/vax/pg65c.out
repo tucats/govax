@@ -1,0 +1,18 @@
+C1 private crf section of 64: 00000619 pages=64
+C1 mapped: flts=2 charged=64 gpg=0 ppg=2 pfused=0 dirio=0
+C2 read: bad=0
+C2 read every page: flts=66 charged=0 gpg=0 ppg=66 pfused=0 dirio=2
+C2 written: flts=0 charged=0 gpg=0 ppg=0 pfused=0 dirio=0
+C3 deleted: flts=0 charged=-64 gpg=0 ppg=-64 pfused=0 dirio=0
+C4 read-only crf section of 64: 00000619 pages=64
+C4 mapped: flts=0 charged=64 gpg=0 ppg=0 pfused=0 dirio=0
+C4 read every page: flts=64 charged=0 gpg=0 ppg=64 pfused=0 dirio=0
+C4 deleted: flts=0 charged=-64 gpg=0 ppg=-64 pfused=0 dirio=0
+C5 global crf section of 64: 00000619 pages=64
+C5 mapped: flts=0 charged=64 gpg=0 ppg=0 pfused=0 dirio=0
+C5 mapped: sects=1 gblpages=66 contig=66
+C5 every page written: flts=64 charged=0 gpg=0 ppg=64 pfused=0 dirio=0
+C5 every page written: sects=1 gblpages=66 contig=66
+C6 mgblsc PG65_CRF then: 00000978
+C7 deleted: flts=0 charged=-64 gpg=0 ppg=-64 pfused=0 dirio=0
+C7 deleted: sects=0 gblpages=0 contig=0

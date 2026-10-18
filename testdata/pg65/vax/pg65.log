@@ -1,0 +1,363 @@
+$ WRITE SYS$OUTPUT F$GETSYI("VERSION"), " ", F$GETSYI("HW_NAME")
+V7.1     VAX 8600
+$ RUN SYS$SYSTEM:SYSGEN
+USE ACTIVE
+SHOW GBLSECTIONS
+GBLSECTIONS                   520        250        60      4095 Sections   
+SHOW GBLPAGES
+GBLPAGES                    50000      15000       512   4194176 Pages      
+SHOW GBLPAGFIL
+GBLPAGFIL                    4096       1024       128   4194176 Pages      
+SHOW PFCDEFAULT
+PFCDEFAULT                     16         32         0       127 Pages      D
+SHOW PAGTBLPFC
+PAGTBLPFC                       2          2         0       127 Pages      D
+SHOW MPW_HILIMIT
+MPW_HILIMIT                  5634        500         0        -1 Pages      
+SHOW MPW_LOLIMIT
+MPW_LOLIMIT                   120         32         0        -1 Pages      
+SHOW MPW_WRTCLUSTER
+MPW_WRTCLUSTER                120        120        16       120 Pages      
+SHOW MINWSCNT
+MINWSCNT                       20         20        10        -1 Pages      
+SHOW WSMAX
+WSMAX                       16400       1024        60   1048576 Pages      
+SHOW BORROWLIM
+BORROWLIM                     143        300         0        -1 Pages      D
+SHOW GROWLIM
+GROWLIM                       143         63         0        -1 Pages      D
+SHOW FREELIM
+FREELIM                       143         32        16        -1 Pages      
+SHOW FREEGOAL
+FREEGOAL                     8192        200        16        -1 Pages      D
+EXIT
+$ SHOW WORKING_SET
+  Working Set      /Limit=512   /Quota=1024    /Extent=16400
+  Adjustment enabled      Authorized Quota=1024  Authorized Extent=16400
+$ SHOW MEMORY/PHYSICAL_PAGES
+              System Memory Resources on 18-OCT-2026 19:16:39.99
+
+Physical Memory Usage (pages):     Total        Free      In Use    Modified
+  Main Memory (32.00Mb)            65536       30167       31586        3783
+
+Of the physical pages in use, 13114 pages are permanently allocated to OpenVMS.
+$ GOSUB GBL
+$ GBL:
+$ WRITE SYS$OUTPUT "gbl free_gblsects=", F$GETSYI("FREE_GBLSECTS"), -
+	" free_gblpages=", F$GETSYI("FREE_GBLPAGES"), -
+	" contig_gblpages=", F$GETSYI("CONTIG_GBLPAGES"), -
+	" pagefile_free=", F$GETSYI("PAGEFILE_FREE")
+gbl free_gblsects=299 free_gblpages=7124 contig_gblpages=7122 pagefile_free=94000
+$ RETURN
+$ !
+$ ! The program, assembled and linked.
+$ !
+$ DEFINE/USER_MODE SYS$OUTPUT PG65_BUILD.LOG
+$ DEFINE/USER_MODE SYS$ERROR PG65_BUILD.LOG
+$ MACRO/NOLIST PG65
+$ DEFINE/USER_MODE SYS$OUTPUT PG65_BUILD.LOG
+$ DEFINE/USER_MODE SYS$ERROR PG65_BUILD.LOG
+$ LINK/NOMAP PG65
+$ !
+$ ! Part M makes PG65.DAT, which the other parts map.
+$ !
+$ DEFINE PG65_PART M
+$ DEFINE/USER_MODE SYS$OUTPUT PG65M.OUT
+$ RUN PG65
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ DIRECTORY/FULL PG65.DAT
+
+Directory DUA1:[000000]
+
+PG65.DAT;1                    File ID:  (18,1,0)              
+Size:          200/200        Owner:    [SYSTEM]
+Created:   18-OCT-2026 19:16:40.62
+Revised:   18-OCT-2026 19:16:40.63 (1)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Sequential
+Shelved state:      Online 
+File attributes:    Allocation: 200, Extend: 0, Global buffer count: 0, No version limit
+Record format:      Fixed length 512 byte records
+Record attributes:  None
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+Total of 1 file, 200/200 blocks.
+$ !
+$ ! The global section limits.
+$ !
+$ DEFINE PG65_PART G
+%DCL-I-SUPERSEDE, previous value of PG65_PART has been superseded
+$ DEFINE/USER_MODE SYS$OUTPUT PG65G.OUT
+$ RUN PG65
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ GOSUB GBL
+$ GBL:
+$ WRITE SYS$OUTPUT "gbl free_gblsects=", F$GETSYI("FREE_GBLSECTS"), -
+	" free_gblpages=", F$GETSYI("FREE_GBLPAGES"), -
+	" contig_gblpages=", F$GETSYI("CONTIG_GBLPAGES"), -
+	" pagefile_free=", F$GETSYI("PAGEFILE_FREE")
+gbl free_gblsects=299 free_gblpages=7124 contig_gblpages=7122 pagefile_free=94000
+$ RETURN
+$ !
+$ ! A permanent page-file section (F), the writer run with its pages on
+$ ! the modified list (D), and the section mapped again and deleted (R).
+$ !
+$ DEFINE PG65_PART F
+%DCL-I-SUPERSEDE, previous value of PG65_PART has been superseded
+$ DEFINE/USER_MODE SYS$OUTPUT PG65F.OUT
+$ RUN PG65
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ GOSUB GBL
+$ GBL:
+$ WRITE SYS$OUTPUT "gbl free_gblsects=", F$GETSYI("FREE_GBLSECTS"), -
+	" free_gblpages=", F$GETSYI("FREE_GBLPAGES"), -
+	" contig_gblpages=", F$GETSYI("CONTIG_GBLPAGES"), -
+	" pagefile_free=", F$GETSYI("PAGEFILE_FREE")
+gbl free_gblsects=298 free_gblpages=7058 contig_gblpages=7056 pagefile_free=93984
+$ RETURN
+$ SHOW MEMORY/PHYSICAL_PAGES
+              System Memory Resources on 18-OCT-2026 19:16:44.39
+
+Physical Memory Usage (pages):     Total        Free      In Use    Modified
+  Main Memory (32.00Mb)            65536       29318       32337        3881
+
+Of the physical pages in use, 13114 pages are permanently allocated to OpenVMS.
+$ DEFINE PG65_PART D
+%DCL-I-SUPERSEDE, previous value of PG65_PART has been superseded
+$ DEFINE/USER_MODE SYS$OUTPUT PG65D.OUT
+$ RUN PG65
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ GOSUB GBL
+$ GBL:
+$ WRITE SYS$OUTPUT "gbl free_gblsects=", F$GETSYI("FREE_GBLSECTS"), -
+	" free_gblpages=", F$GETSYI("FREE_GBLPAGES"), -
+	" contig_gblpages=", F$GETSYI("CONTIG_GBLPAGES"), -
+	" pagefile_free=", F$GETSYI("PAGEFILE_FREE")
+gbl free_gblsects=298 free_gblpages=7058 contig_gblpages=7056 pagefile_free=90017
+$ RETURN
+$ SHOW MEMORY/PHYSICAL_PAGES
+              System Memory Resources on 18-OCT-2026 19:16:47.47
+
+Physical Memory Usage (pages):     Total        Free      In Use    Modified
+  Main Memory (32.00Mb)            65536       33159       32367          10
+
+Of the physical pages in use, 13114 pages are permanently allocated to OpenVMS.
+$ DEFINE PG65_PART R
+%DCL-I-SUPERSEDE, previous value of PG65_PART has been superseded
+$ DEFINE/USER_MODE SYS$OUTPUT PG65R.OUT
+$ RUN PG65
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ GOSUB GBL
+$ GBL:
+$ WRITE SYS$OUTPUT "gbl free_gblsects=", F$GETSYI("FREE_GBLSECTS"), -
+	" free_gblpages=", F$GETSYI("FREE_GBLPAGES"), -
+	" contig_gblpages=", F$GETSYI("CONTIG_GBLPAGES"), -
+	" pagefile_free=", F$GETSYI("PAGEFILE_FREE")
+gbl free_gblsects=299 free_gblpages=7124 contig_gblpages=7122 pagefile_free=90183
+$ RETURN
+$ !
+$ ! Global pages leaving a small working set; copy-on-reference;
+$ ! $UPDSEC; read clustering.
+$ !
+$ DEFINE PG65_PART P
+%DCL-I-SUPERSEDE, previous value of PG65_PART has been superseded
+$ DEFINE/USER_MODE SYS$OUTPUT PG65P.OUT
+$ RUN PG65
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ DEFINE PG65_PART C
+%DCL-I-SUPERSEDE, previous value of PG65_PART has been superseded
+$ DEFINE/USER_MODE SYS$OUTPUT PG65C.OUT
+$ RUN PG65
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ GOSUB GBL
+$ GBL:
+$ WRITE SYS$OUTPUT "gbl free_gblsects=", F$GETSYI("FREE_GBLSECTS"), -
+	" free_gblpages=", F$GETSYI("FREE_GBLPAGES"), -
+	" contig_gblpages=", F$GETSYI("CONTIG_GBLPAGES"), -
+	" pagefile_free=", F$GETSYI("PAGEFILE_FREE")
+gbl free_gblsects=299 free_gblpages=7124 contig_gblpages=7122 pagefile_free=90220
+$ RETURN
+$ DEFINE PG65_PART U
+%DCL-I-SUPERSEDE, previous value of PG65_PART has been superseded
+$ DEFINE/USER_MODE SYS$OUTPUT PG65U.OUT
+$ RUN PG65
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ DEFINE PG65_PART K
+%DCL-I-SUPERSEDE, previous value of PG65_PART has been superseded
+$ DEFINE/USER_MODE SYS$OUTPUT PG65K.OUT
+$ RUN PG65
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ GOSUB GBL
+$ GBL:
+$ WRITE SYS$OUTPUT "gbl free_gblsects=", F$GETSYI("FREE_GBLSECTS"), -
+	" free_gblpages=", F$GETSYI("FREE_GBLPAGES"), -
+	" contig_gblpages=", F$GETSYI("CONTIG_GBLPAGES"), -
+	" pagefile_free=", F$GETSYI("PAGEFILE_FREE")
+gbl free_gblsects=299 free_gblpages=7124 contig_gblpages=7122 pagefile_free=90221
+$ RETURN
+$ !
+$ ! Pages another process holds: the holder (part H) in a subprocess,
+$ ! part S here; they step through common event flags. The holder ends
+$ ! by itself; STOP is for a holder left waiting.
+$ !
+$ DEFINE PG65_PART H
+%DCL-I-SUPERSEDE, previous value of PG65_PART has been superseded
+$ SPAWN/NOWAIT/PROCESS=PG65HLD/OUTPUT=PG65H.OUT RUN PG65
+%DCL-S-SPAWNED, process PG65HLD spawned
+$ DEFINE PG65_PART S
+%DCL-I-SUPERSEDE, previous value of PG65_PART has been superseded
+$ DEFINE/USER_MODE SYS$OUTPUT PG65S.OUT
+$ RUN PG65
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ WAIT 00:00:05
+$ STOP PG65HLD
+%SYSTEM-W-NONEXPR, nonexistent process
+$ GOSUB GBL
+$ GBL:
+$ WRITE SYS$OUTPUT "gbl free_gblsects=", F$GETSYI("FREE_GBLSECTS"), -
+	" free_gblpages=", F$GETSYI("FREE_GBLPAGES"), -
+	" contig_gblpages=", F$GETSYI("CONTIG_GBLPAGES"), -
+	" pagefile_free=", F$GETSYI("PAGEFILE_FREE")
+gbl free_gblsects=299 free_gblpages=7124 contig_gblpages=7122 pagefile_free=90227
+$ RETURN
+$ DEASSIGN PG65_PART
+$ TYPE PG65M.OUT
+M1 PG65.DAT: create 00010001, 200 blocks written, last put 00000001
+$ TYPE PG65G.OUT
+G1 gblsections=520 gblpages=50000 gblpagfil=4096 pfcdefault=16 pagtblpfc=2
+G1 in use: sections=221 gblpages=42876; free less contig=2
+G2 page-file section of 1: 00000619 pages=1
+G2 made: sects=1 gblpages=4 contig=4
+G2 deleted: sects=1 gblpages=4 contig=4
+G2 page-file section of 2: 00000619 pages=2
+G2 made: sects=0 gblpages=0 contig=0
+G2 deleted: sects=0 gblpages=0 contig=0
+G2 page-file section of 3: 00000619 pages=3
+G2 made: sects=0 gblpages=2 contig=2
+G2 deleted: sects=0 gblpages=2 contig=2
+G2 page-file section of 4: 00000619 pages=4
+G2 made: sects=0 gblpages=0 contig=0
+G2 deleted: sects=0 gblpages=0 contig=0
+G3 file section of 3: open 00010001, crmpsc 00000619 pages=3
+G3 made: sects=0 gblpages=0 contig=0
+G3 deleted: sects=-1 gblpages=-6 contig=-6
+G4 page-file section of gblpagfil+1: 00002164 pages=-1
+G4 made: sects=0 gblpages=0 contig=0
+$ TYPE PG65F.OUT
+F1 permanent page-file section of 64: 00000619 pages=64
+F1 made: flts=4 charged=0 gpg=0 ppg=4 pfused=0 dirio=0
+F1 made: sects=1 gblpages=66 contig=66
+F2 read: page 0 not zero 0, pages not zero 0
+F2 read every page: flts=74 charged=0 gpg=64 ppg=10 pfused=0 dirio=2
+F2 written: flts=0 charged=0 gpg=0 ppg=0 pfused=0 dirio=0
+F3 mgblsc: 00000001; bad=0
+F3 read through the second mapping: flts=64 charged=0 gpg=64 ppg=0 pfused=0 dirio=0
+F4 deltva both: 00000001 00000001
+F4 unmapped: flts=0 charged=0 gpg=-128 ppg=0 pfused=0 dirio=0
+F4 unmapped: sects=0 gblpages=0 contig=0
+F4 a wait later: flts=0 charged=0 gpg=0 ppg=0 pfused=0 dirio=0
+$ TYPE PG65D.OUT
+D1 pages=mpw_hilimit1000
+D1 expreg 00000001, written: flts=pages157 page file used=4795
+$ TYPE PG65R.OUT
+R1 mgblsc PG65_PF: 00000001 pages=64
+R1 mapped: flts=5 charged=0 gpg=0 ppg=5 pfused=0 dirio=0
+R2 read: bad=0
+R2 read every page: flts=76 charged=0 gpg=64 ppg=12 pfused=0 dirio=2
+R3 dgblsc while mapped: 00000001; mgblsc then 00000978
+R4 deltva: 00000001
+R4 unmapped: flts=0 charged=0 gpg=-64 ppg=0 pfused=0 dirio=0
+R4 unmapped: sects=0 gblpages=0 contig=0
+R4 mgblsc then: 00000978
+$ TYPE PG65P.OUT
+P1 global file section of 64, pfc 1: 00000619 pages=64
+P2 read: bad=0
+P2 read every page: flts=68 charged=0 gpg=63 ppg=-56 pfused=-21 dirio=0
+P3 purgws: 00000001
+P3 purged: flts=7 charged=0 gpg=-63 ppg=-1 pfused=-3 dirio=0
+P4 read again: bad=0
+P4 read again: flts=64 charged=0 gpg=64 ppg=0 pfused=0 dirio=0
+P5 100 other pages written: flts=105 charged=100 gpg=-64 ppg=64 pfused=0 dirio=0
+P6 read again: bad=0
+P6 read again: flts=72 charged=0 gpg=64 ppg=-64 pfused=0 dirio=0
+$ TYPE PG65C.OUT
+C1 private crf section of 64: 00000619 pages=64
+C1 mapped: flts=2 charged=64 gpg=0 ppg=2 pfused=0 dirio=0
+C2 read: bad=0
+C2 read every page: flts=66 charged=0 gpg=0 ppg=66 pfused=0 dirio=2
+C2 written: flts=0 charged=0 gpg=0 ppg=0 pfused=0 dirio=0
+C3 deleted: flts=0 charged=-64 gpg=0 ppg=-64 pfused=0 dirio=0
+C4 read-only crf section of 64: 00000619 pages=64
+C4 mapped: flts=0 charged=64 gpg=0 ppg=0 pfused=0 dirio=0
+C4 read every page: flts=64 charged=0 gpg=0 ppg=64 pfused=0 dirio=0
+C4 deleted: flts=0 charged=-64 gpg=0 ppg=-64 pfused=0 dirio=0
+C5 global crf section of 64: 00000619 pages=64
+C5 mapped: flts=0 charged=64 gpg=0 ppg=0 pfused=0 dirio=0
+C5 mapped: sects=1 gblpages=66 contig=66
+C5 every page written: flts=64 charged=0 gpg=0 ppg=64 pfused=0 dirio=0
+C5 every page written: sects=1 gblpages=66 contig=66
+C6 mgblsc PG65_CRF then: 00000978
+C7 deleted: flts=0 charged=-64 gpg=0 ppg=-64 pfused=0 dirio=0
+C7 deleted: sects=0 gblpages=0 contig=0
+$ TYPE PG65U.OUT
+U1 open 00010001; writable global section of 64: 00000619 pages=64
+U2 every page written, purged; updsecw 0: 00000001 iosb=00000001 pages 0 to 63; on disk 64
+U3 again: 00000001 iosb=00000001 pages 0 to 63
+U3 again with 1: 00000659 iosb=00000659 pages -1 to -1
+U4 pages 0-31 written, valid; updsecw 1: 00000001 iosb=00000001 pages 0 to 31; on disk 32
+U5 pages 10-19 written, purged; updsecw 1: 00000001 iosb=00000001 pages 10 to 19; on disk 10
+U6 page-file section of 8 (00000619), written; updsecw 0: 00000659 iosb=00000659
+U7 private section of 16 (00000619), written, purged; updsecw 0: 00000001 iosb=00000001 pages 0 to 15; on disk 16
+$ TYPE PG65K.OUT
+K0 working set less 200: 16200
+K1 flags 00020000 pfc=0 up: flts=15 dirio=0 gpg=0 ppg=201 bad=0
+K1 flags 00020000 pfc=1 up: flts=200 dirio=0 gpg=0 ppg=200 bad=0
+K1 flags 00020000 pfc=4 up: flts=50 dirio=0 gpg=0 ppg=200 bad=0
+K1 flags 00020000 pfc=16 up: flts=13 dirio=0 gpg=0 ppg=200 bad=0
+K1 flags 00020000 pfc=64 up: flts=4 dirio=0 gpg=0 ppg=200 bad=0
+K1 flags 00020000 pfc=127 up: flts=2 dirio=0 gpg=0 ppg=200 bad=0
+K1 flags 00020000 pfc=200 up: flts=2 dirio=0 gpg=0 ppg=200 bad=0
+K1 flags 00020000 pfc=16 down: flts=13 dirio=0 gpg=0 ppg=200 bad=0
+K1 flags 00020000 pfc=0 down: flts=13 dirio=0 gpg=0 ppg=200 bad=0
+K1 flags 00020001 pfc=16 up: flts=13 dirio=0 gpg=200 ppg=0 bad=0
+K1 flags 00020001 pfc=16 down: flts=13 dirio=0 gpg=200 ppg=0 bad=0
+K1 flags 00020002 pfc=16 up: flts=13 dirio=0 gpg=0 ppg=200 bad=0
+K2 small working set
+K1 flags 00020000 pfc=64 up: flts=206 dirio=0 gpg=0 ppg=19 bad=0
+$ TYPE PG65S.OUT
+S0 ascefc 00000001; the holder ready: 1
+S1 mgblsc PG65_SH: 00000001
+S1 mapped: flts=2 charged=0 gpg=0 ppg=2 pfused=0 dirio=0
+S1 read: bad=0
+S1 read every page: flts=64 charged=0 gpg=64 ppg=0 pfused=0 dirio=0
+S2 purged: flts=0 charged=0 gpg=-64 ppg=-3 pfused=0 dirio=0
+S2 read again: bad=0
+S2 read again: flts=64 charged=0 gpg=64 ppg=0 pfused=0 dirio=0
+S3 mgblsc PG65_SP: 00000001; read: bad=0
+S3 read every page: flts=16 charged=0 gpg=16 ppg=0 pfused=0 dirio=0
+S4 the holder purged: 1
+S4 purged: flts=0 charged=0 gpg=-64 ppg=0 pfused=0 dirio=0
+S4 read again: bad=0
+S4 read again: flts=65 charged=0 gpg=64 ppg=1 pfused=0 dirio=0
+$ TYPE PG65H.OUT
+H1 ascefc 00000001 open 00010001 PG65_SH 00000619 PG65_SP 00000619; bad=0
+H2 flag 65: 1
+H2 purgws PG65_SH: 00000001
+H3 flag 67: 1
+$ SET NOVERIFY

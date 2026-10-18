@@ -1,0 +1,12 @@
+F1 permanent page-file section of 64: 00000619 pages=64
+F1 made: flts=4 charged=0 gpg=0 ppg=4 pfused=0 dirio=0
+F1 made: sects=1 gblpages=66 contig=66
+F2 read: page 0 not zero 0, pages not zero 0
+F2 read every page: flts=74 charged=0 gpg=64 ppg=10 pfused=0 dirio=2
+F2 written: flts=0 charged=0 gpg=0 ppg=0 pfused=0 dirio=0
+F3 mgblsc: 00000001; bad=0
+F3 read through the second mapping: flts=64 charged=0 gpg=64 ppg=0 pfused=0 dirio=0
+F4 deltva both: 00000001 00000001
+F4 unmapped: flts=0 charged=0 gpg=-128 ppg=0 pfused=0 dirio=0
+F4 unmapped: sects=0 gblpages=0 contig=0
+F4 a wait later: flts=0 charged=0 gpg=0 ppg=0 pfused=0 dirio=0

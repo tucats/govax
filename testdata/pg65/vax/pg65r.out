@@ -1,0 +1,9 @@
+R1 mgblsc PG65_PF: 00000001 pages=64
+R1 mapped: flts=5 charged=0 gpg=0 ppg=5 pfused=0 dirio=0
+R2 read: bad=0
+R2 read every page: flts=76 charged=0 gpg=64 ppg=12 pfused=0 dirio=2
+R3 dgblsc while mapped: 00000001; mgblsc then 00000978
+R4 deltva: 00000001
+R4 unmapped: flts=0 charged=0 gpg=-64 ppg=0 pfused=0 dirio=0
+R4 unmapped: sects=0 gblpages=0 contig=0
+R4 mgblsc then: 00000978

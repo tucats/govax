@@ -432,8 +432,9 @@ func TestPageFileGlobalSection(t *testing.T) {
 		t.Errorf("checkpoint 3: %d pages charged, %d before the section", got, charged)
 	}
 
-	// Checkpoint 4: $DGBLSC, then range C deleted: the section is gone,
-	// with every frame it held and every page file block.
+	// Checkpoint 4: $DGBLSC, then range C deleted: the section is gone by
+	// name, but waits to be released, holding its frames and page file
+	// blocks, as VMS 7.1's did (testdata/pg65's R4).
 	checkpoint(4)
 
 	if st := c.CPU.GPR(9); st != vmsdef.Symbols["SS$_NORMAL"] {
@@ -446,15 +447,27 @@ func TestPageFileGlobalSection(t *testing.T) {
 		}
 	}
 
-	for n := range db.Frames() {
-		if e, _ := db.Entry(paging.PFN(n)); e.Tied && e.Type == paging.GlobalPage {
-			t.Errorf("checkpoint 4: frame %d is still tied to a global page: %+v", n, e)
-		}
+	if p := c.RTL.Sections.PendingSections(); len(p) != 1 || p[0].Name != "PFGLOBAL" {
+		t.Errorf("checkpoint 4: pending %v, want PFGLOBAL", p)
 	}
 
 	checkWorkingSets(t, c)
 	checkPageFileHolders(t, c, "checkpoint 4")
 
+	// Image rundown releases it, with every frame it held and every page
+	// file block.
 	c.CPU.SetGPR(10, 4)
 	finishImage(t, c)
+
+	if p := c.RTL.Sections.PendingSections(); len(p) != 0 {
+		t.Errorf("after rundown: pending %v", p)
+	}
+
+	for n := range db.Frames() {
+		if e, _ := db.Entry(paging.PFN(n)); e.Tied && e.Type == paging.GlobalPage {
+			t.Errorf("after rundown: frame %d is still tied to a global page: %+v", n, e)
+		}
+	}
+
+	checkPageFileHolders(t, c, "after rundown")
 }

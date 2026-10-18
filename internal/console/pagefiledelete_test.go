@@ -227,7 +227,7 @@ func checkPageFileHolders(t *testing.T, c *console.Console, label string) {
 		look(0x40000000 + i*512)
 	}
 
-	for _, s := range c.RTL.Sections.Sections() {
+	for _, s := range append(c.RTL.Sections.Sections(), c.RTL.Sections.PendingSections()...) {
 		for i, vbn := range s.PageFileBlocks() {
 			if vbn != 0 {
 				hold(vbn, uint32(i)*512)

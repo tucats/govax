@@ -113,10 +113,10 @@ end whatever happened.
 
 ## govax's dry run (2026-10-18)
 
-`TestPG65DryRun` (`internal/console/pg65_test.go`) runs every part on
-govax (paging on, an RD54 volume with a 20000-block page file on DUA1,
-govax's default SYSGEN values), the holder in a spawned subprocess as
-PG65.COM runs it. Every page read back held what it should. What govax
+A dry run (`internal/console/pg65_test.go`, since replaced by
+`TestPG65Oracle`) ran every part on govax (paging on, an RD54 volume
+with a 20000-block page file on DUA1, govax's default SYSGEN values),
+the holder in a spawned subprocess as PG65.COM runs it. Every page read back held what it should. What govax
 answers, for comparison with VMS's:
 
 - **G:** GBLPAGES' rule as the utilities manual gives it (4, 4, 6, 6 for
@@ -154,3 +154,55 @@ answers, for comparison with VMS's:
 - **Found and fixed:** F$GETSYI didn't know FREE_GBLSECTS, FREE_GBLPAGES,
   CONTIG_GBLPAGES, GBLSECTIONS, GBLPAGES, GBLPAGFIL, or PFCDEFAULT
   (`$GETSYI` did); `TestGetSYIGlobalSectionItems`.
+
+## The VAX run (2026-10-18)
+
+OpenVMS V7.1 on simh's VAX 8600 (`vax/`: the procedure's log, the parts'
+outputs; MACRO and LINK wrote no messages). That VAX had GBLSECTIONS
+520, GBLPAGES 50000, GBLPAGFIL 4096, PFCDEFAULT 16, PAGTBLPFC 2.
+`TestPG65Oracle` (`internal/console/pg65_test.go`) runs every part on
+govax with those values and matches VMS's lines but for
+`expectedPG65Differences`. VMS answered:
+
+- **Confirmed as govax had them:** GBLPAGES' rule (a page per page plus
+  2, rounded up to even, for page-file and file sections alike); a
+  section past GBLPAGFIL is SS$_EXGBLPAGFIL with retadr -1 (GBLPAGES
+  wasn't the limit there, so the checks' order is still open); a
+  page-file section charges nothing at mapping or at its faults, its
+  pages count in GPGCNT from their first touch, a second mapping's are
+  global valid faults counted again; a permanent section's contents
+  survive unmapping and the writer; `$MGBLSC` after `$DGBLSC` is
+  SS$_NOSUCHSEC at once; copy-on-reference pages are charged at mapping
+  (read-only mappings too) and refunded at deletion; a temporary global
+  CRF section is gone (SS$_NOSUCHSEC) once its only mapper has touched
+  every page; a page-file section's `$UPDSEC` is SS$_NOTMODIFIED, a
+  private section's writes its modified pages; read clustering as
+  govax's (one fault per cluster, the faulting page counted; pfc 1 alone;
+  a pfc over 127 is 127; the backward scan only when the forward one read
+  nothing; global and CRF sections the same); another process's valid
+  pages are global valid faults, and come back after a purge with one
+  fault each.
+- **Changed:** **`$UPDSEC` of a global section** with UPDFLG 0 writes
+  every page in memory, modified or not (U3: the 64 pages, clean since
+  U2, written again), and with UPDFLG 1 every modified page, including
+  those that have left the caller's working set (U5: pages 10 to 19,
+  modified and purged, written). govax skipped clean pages on the free
+  list with 0, and pages out of the working set with 1.
+  **A deleted page-file or copy-on-reference section** keeps its
+  GBLSECTIONS and GBLPAGES entries and its page file blocks after it's
+  gone by name: G2's sections were released only when the next was
+  made, R4's kept its blocks, C5's CRF section still counted at C7,
+  where G3's file section was released at once. govax now puts such a
+  section on a pending list, released at the next global section's
+  creation or an image's rundown (when else VMS releases them is
+  unknown: by the procedure's next line they were gone).
+  **PAGTBLPFC** is 2 (SYSGEN's default) in `$GETSYI` and F$GETSYI.
+- **Differences that stay:** VMS's process page tables are pageable and
+  in the working set, so each P0 expansion's first touches fault page
+  table pages in (the `flts`/`ppg` a few above govax's on F1, F2, R1,
+  R2, C1, C2, S1, S2, S4, and the first K line; with DIRIO 2 on F2, R2,
+  and C2, unexplained); govax's aren't paged (Phase 67). Part P's working
+  set at the floor plus 40 and K2's at the floor plus 20 hold different
+  pages (VMS's floor, pg63's finding): at K2 VMS's list had no free entry
+  for a cluster (206 faults for 200 pages), govax's had some (164).
+  Part D's writer (pg64's W3). G1's sections in use.

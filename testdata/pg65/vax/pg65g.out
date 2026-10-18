@@ -1,0 +1,19 @@
+G1 gblsections=520 gblpages=50000 gblpagfil=4096 pfcdefault=16 pagtblpfc=2
+G1 in use: sections=221 gblpages=42876; free less contig=2
+G2 page-file section of 1: 00000619 pages=1
+G2 made: sects=1 gblpages=4 contig=4
+G2 deleted: sects=1 gblpages=4 contig=4
+G2 page-file section of 2: 00000619 pages=2
+G2 made: sects=0 gblpages=0 contig=0
+G2 deleted: sects=0 gblpages=0 contig=0
+G2 page-file section of 3: 00000619 pages=3
+G2 made: sects=0 gblpages=2 contig=2
+G2 deleted: sects=0 gblpages=2 contig=2
+G2 page-file section of 4: 00000619 pages=4
+G2 made: sects=0 gblpages=0 contig=0
+G2 deleted: sects=0 gblpages=0 contig=0
+G3 file section of 3: open 00010001, crmpsc 00000619 pages=3
+G3 made: sects=0 gblpages=0 contig=0
+G3 deleted: sects=-1 gblpages=-6 contig=-6
+G4 page-file section of gblpagfil+1: 00002164 pages=-1
+G4 made: sects=0 gblpages=0 contig=0

@@ -232,8 +232,10 @@ type sectionPage struct {
 type GlobalSections struct {
 	// sections are the sections whose names can be found, in creation
 	// order; deleted lists those $DGBLSC has deleted that still have
-	// mappings.
-	sections, deleted []*GlobalSection
+	// mappings; pending those gone (nothing maps them, their names can't
+	// be found) whose entries, frames, and page file blocks wait to be
+	// released (ReleasePendingSections).
+	sections, deleted, pending []*GlobalSection
 
 	// byFrame finds the section page a physical page is.
 	byFrame map[uint32]sectionPage
@@ -316,7 +318,7 @@ func (g *GlobalSections) account(s *GlobalSection, pages, sign int) {
 // bySerial returns the section, its name deleted or not, whose serial
 // number is serial.
 func (g *GlobalSections) bySerial(serial uint32) *GlobalSection {
-	for _, list := range [][]*GlobalSection{g.sections, g.deleted} {
+	for _, list := range [][]*GlobalSection{g.sections, g.deleted, g.pending} {
 		for _, s := range list {
 			if s.serial == serial {
 				return s
@@ -333,9 +335,16 @@ func (g *GlobalSections) Sections() []*GlobalSection {
 	return slices.Clone(g.sections)
 }
 
-// count is how many sections exist, deleted ones still mapped included.
+// PendingSections returns the sections gone by name whose entries,
+// frames, and page file blocks wait to be released (maybeDeleteSection).
+func (g *GlobalSections) PendingSections() []*GlobalSection {
+	return slices.Clone(g.pending)
+}
+
+// count is how many sections use GBLSECTIONS: those that exist, deleted
+// ones still mapped and those waiting to be released included.
 func (g *GlobalSections) count() int {
-	return len(g.sections) + len(g.deleted)
+	return len(g.sections) + len(g.deleted) + len(g.pending)
 }
 
 // sectionIdent is a version ident argument: a match control and the
@@ -455,20 +464,56 @@ func (sys *System) releaseFrame(pfn uint32, modified bool) {
 }
 
 // maybeDeleteSection deletes s if nothing maps it and nothing keeps it:
-// a temporary section, or one $DGBLSC has deleted. A file section's
-// modified pages are written back to its file first, and the file is let
-// go. Its physical pages go back to the free list (cleared). With paging
-// on, a section's pages that hold frames are all in transition then
-// (nothing maps the section, so no PTE is valid on them): those on the
-// modified list are the ones written, and every frame, on either list,
-// is deleted to the free list's head. A paged page-file section's pages
-// give back their page file blocks, whether out or in a frame's backing
-// store.
+// a temporary section, or one $DGBLSC has deleted. A page-file or
+// copy-on-reference section goes at once by name, but its use of
+// GBLSECTIONS, GBLPAGES, and GBLPAGFIL, its frames, and its page file
+// blocks wait on the pending list for the next global section's creation
+// or an image's rundown (ReleasePendingSections): VMS 7.1 held them so
+// (testdata/pg65: G2's page-file sections were released as the next was
+// made, R4's section kept its blocks, and C5's copy-on-reference section,
+// gone when its only mapper had touched every page, still counted at
+// C7), where a file section went at once (G3). Why VMS waits isn't
+// known, and when else it releases them is govax's choice (unconfirmed).
 func (sys *System) maybeDeleteSection(s *GlobalSection) {
 	g := sys.Sections
-	if s.Refs > 0 || s.Permanent {
+	if s.Refs > 0 || s.Permanent || slices.Contains(g.pending, s) {
 		return
 	}
+
+	if s.File == nil || s.CopyOnRef {
+		g.sections = slices.DeleteFunc(g.sections, func(x *GlobalSection) bool { return x == s })
+		g.deleted = slices.DeleteFunc(g.deleted, func(x *GlobalSection) bool { return x == s })
+		g.pending = append(g.pending, s)
+
+		return
+	}
+
+	sys.releaseSection(s)
+}
+
+// ReleasePendingSections releases every section on the pending list
+// (maybeDeleteSection): at a global section's creation, and at image
+// rundown (DeleteP0).
+func (sys *System) ReleasePendingSections() {
+	g := sys.Sections
+
+	for len(g.pending) > 0 {
+		s := g.pending[0]
+		sys.releaseSection(s)
+	}
+}
+
+// releaseSection releases s, which nothing maps or keeps. A file
+// section's modified pages are written back to its file first, and the
+// file is let go. Its physical pages go back to the free list (cleared).
+// With paging on, a section's pages that hold frames are all in
+// transition then (nothing maps the section, so no PTE is valid on them):
+// those on the modified list are the ones written, and every frame, on
+// either list, is deleted to the free list's head. A paged page-file
+// section's pages give back their page file blocks, whether out or in a
+// frame's backing store.
+func (sys *System) releaseSection(s *GlobalSection) {
+	g := sys.Sections
 
 	sys.writeBackSection(s)
 
@@ -506,6 +551,7 @@ func (sys *System) maybeDeleteSection(s *GlobalSection) {
 
 	g.sections = slices.DeleteFunc(g.sections, func(x *GlobalSection) bool { return x == s })
 	g.deleted = slices.DeleteFunc(g.deleted, func(x *GlobalSection) bool { return x == s })
+	g.pending = slices.DeleteFunc(g.pending, func(x *GlobalSection) bool { return x == s })
 }
 
 // createSection makes a new page-file section of pages pages, returning
@@ -516,9 +562,11 @@ func (sys *System) maybeDeleteSection(s *GlobalSection) {
 // pages), SS$_INSFMEM when physical memory runs out. With paging off, its
 // pages are zeroed physical pages allocated now; with paging on, global
 // demand-zero pages with global page table entries, and no frames until
-// they're touched (globalpages.go).
+// they're touched (globalpages.go). The sections waiting on the pending
+// list are released first (maybeDeleteSection).
 func (sys *System) createSection(s *GlobalSection, pages int) (*GlobalSection, uint32) {
 	g := sys.Sections
+	sys.ReleasePendingSections()
 
 	if st := g.checkLimits(pages, true); st != ssNormal {
 		return nil, st
@@ -576,9 +624,11 @@ func (sys *System) createSection(s *GlobalSection, pages int) (*GlobalSection, u
 // createFileSection makes a new section of pages pages of s.File, from
 // block s.VBN, none read in yet (filesec.go), returning the status that
 // stops it: SS$_GSDFULL or SS$_GPTFULL past the limits (or the global
-// page table's largest index).
+// page table's largest index). The sections waiting on the pending list
+// are released first (maybeDeleteSection).
 func (sys *System) createFileSection(s *GlobalSection, pages int) uint32 {
 	g := sys.Sections
+	sys.ReleasePendingSections()
 
 	if st := g.checkLimits(pages, false); st != ssNormal {
 		return st
