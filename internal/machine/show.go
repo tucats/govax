@@ -138,6 +138,32 @@ func (m *Machine) ShowMemory() error {
 	return nil
 }
 
+// PagingStatistics is what SHOW MEMORY shows of paging, gathered for
+// govax's --stats report at exit (docs/PHASE-64 - page file.md, subtask
+// 10): the page frames by place, the system's page faults and the
+// writer's and reclaimer's work, and the page file.
+type PagingStatistics struct {
+	Frames   paging.Counts
+	Pages    corevms.PageCounts
+	PageFile corevms.PageFileReport
+}
+
+// PagingStatistics returns the paging figures SHOW MEMORY shows, and
+// false when paging is off (or VMINIT hasn't made process 1), when
+// there are none.
+func (m *Machine) PagingStatistics() (PagingStatistics, bool) {
+	db := m.Mem.Paging()
+	if db == nil || m.processOne == nil {
+		return PagingStatistics{}, false
+	}
+
+	return PagingStatistics{
+		Frames:   db.Counts(),
+		Pages:    m.processOne.PageCounts,
+		PageFile: m.processOne.PageFileReport(),
+	}, true
+}
+
 // showFrames prints, in paging mode (VMINIT/PAGING), how many page frames
 // are in each place the PFN database keeps them: the free list, the
 // modified list (pages waiting to be written to the page file), and in

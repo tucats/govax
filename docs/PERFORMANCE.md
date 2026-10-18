@@ -37,6 +37,13 @@ The headline metric for comparing studies is **ns per instruction**
 (Elapsed ÷ Instructions), since different programs run very different
 instruction counts.
 
+With paging on (VMINIT/PAGING), the report ends with a **Paging**
+section and a **Page File** section (`printPagingStats`, since Phase 64):
+what SHOW MEMORY shows of paging, the page frames on the free and
+modified lists and in use, the page faults by how each was resolved, the
+pages the modified page writer wrote, the reclaimer's runs, and the page
+file's size, use, and committed pages.
+
 ### Profiling
 
 `--cpu-profile FILE` (added for Study 1, `cmd/govax/profile.go`) runs Go's

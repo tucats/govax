@@ -153,7 +153,9 @@ never had.
   SHOW MEMORY/FILES[/FULL] (`machine.ShowMemoryFiles`), and from round
   2 the writer that MPW_HILIMIT wakes writing the list down a cluster
   below it, not to MPW_LOLIMIT (`mpwGoal`); subtask 10, paging statistics
-  in `--statistics`, next); 65 sections under the
+  in `--stats` (`-s`), done 2026-10-18: `machine.PagingStatistics`,
+  printed by cmd/govax's `printPagingStats`; subtask 11, the close-out,
+  next); 65 sections under the
   pager; 66 image activation by mapping; 67 the address space and page
   tables under paging, deferred to the end. Paging is synchronous, with no
   PFW, COLPG, or FPG waits. Each later phase has a planning doc.

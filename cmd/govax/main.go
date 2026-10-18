@@ -34,6 +34,7 @@ import (
 	"github.com/tucats/govax/internal/debugger"
 	"github.com/tucats/govax/internal/help"
 	"github.com/tucats/govax/internal/machine"
+	"github.com/tucats/govax/internal/paging"
 	"github.com/tucats/govax/internal/respath"
 	"github.com/tucats/govax/internal/rms"
 	"github.com/tucats/govax/internal/vmserrors"
@@ -519,7 +520,74 @@ func printStats(c *console.Console, out io.Writer, flag bool) {
 
 		fmt.Fprintf(out, "    Fetch Window Hits:      %13s\n", formatLargeNumber(fetchHits))
 		fmt.Fprintf(out, "    Fetch Window Fills:     %13s\n", formatLargeNumber(fetchFills))
+
+		if s, ok := c.PagingStatistics(); ok {
+			printPagingStats(out, s)
+		}
 	}
+}
+
+// printPagingStats adds paging's section to the statistics, with paging
+// on (VMINIT/PAGING): what SHOW MEMORY shows of it, the page frames on
+// each list and in use, the page faults by how each was resolved, the
+// pages the modified page writer wrote, the reclaimer's runs, and the
+// page file's use.
+func printPagingStats(out io.Writer, s machine.PagingStatistics) {
+	line := func(label string, n int64) {
+		fmt.Fprintf(out, "    %-24s%13s\n", label+":", formatLargeNumber(n))
+	}
+
+	f, p, r := s.Frames, s.Pages, s.PageFile
+
+	fmt.Fprintf(out, "\n  Paging:\n")
+	line("Free List Frames", int64(f.Free))
+	line("Modified List Frames", int64(f.Modified))
+	line("Active Frames", int64(f.Active()))
+	line("  Process Pages", int64(f.Process))
+	line("  Global Pages", int64(f.Global))
+	line("  System Pages", int64(f.System))
+	line("Page Faults", int64(p.Faults.Total()))
+	line("  Free List", int64(p.Faults.FreeList))
+	line("  Modified List", int64(p.Faults.ModifiedList))
+	line("  Global Valid", int64(p.Faults.GlobalValid))
+	line("  Demand Zero", int64(p.Faults.DemandZero))
+	line("  Read", int64(p.Faults.Read))
+	line("    From Page File", int64(p.PageFileReads))
+	line("Pages Written", int64(p.Written))
+	line("  Write I/Os", int64(p.WriteIOs))
+	line("Reclaimer Runs", int64(p.Reclaims))
+	line("  Pages Trimmed", int64(p.Trimmed))
+
+	fmt.Fprintf(out, "\n  Page File:\n")
+
+	switch r.Status {
+	case corevms.PageFileNone:
+		fmt.Fprintf(out, "    None\n")
+
+		return
+	case corevms.PageFileNotOpened:
+		fmt.Fprintf(out, "    %s (not opened)\n", r.Name)
+	case corevms.PageFileUnavailable:
+		fmt.Fprintf(out, "    %s (not available)\n", r.Name)
+	case corevms.PageFileInUse:
+		fmt.Fprintf(out, "    %s\n", r.Name)
+		line("Size (blocks)", int64(r.Size))
+		line("Free", int64(r.Free))
+		line("In Use", int64(r.Used))
+
+		switch r.Warned {
+		case paging.PageFrag:
+			fmt.Fprintf(out, "    Passed PAGEFRAG (65%%)\n")
+		case paging.PageCrit:
+			fmt.Fprintf(out, "    Passed PAGECRIT (90%%)\n")
+		}
+
+		if r.Full {
+			fmt.Fprintf(out, "    The writer found it full\n")
+		}
+	}
+
+	line("Committed", int64(r.Charged))
 }
 
 func formatDuration(d time.Duration) string {

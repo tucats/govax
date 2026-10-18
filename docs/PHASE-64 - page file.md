@@ -12,7 +12,7 @@ probe, written 2026-10-17 (`testdata/pg64`), run on VMS 7.1 the same
 day, and govax changed to its answers 2026-10-18; round 2, the writer's
 stopping point, run and govax changed to it the same day. Subtask 10, paging
 statistics in `--statistics` (added by the author 2026-10-18; the
-close-out became 11), is next. Planned 2026-10-15. Needs Phase 63 (working sets, the
+close-out became 11), done 2026-10-18. The close-out, 11, is next. Planned 2026-10-15. Needs Phase 63 (working sets, the
 lists, soft faults). Part of the paging program laid out in
 `PHASE-62 - VMS paging.md` (Decisions 7, 8, 9, and 10 are this phase's).
 
@@ -627,7 +627,8 @@ pg63's. Values that vary from run to run print as differences.
    once; `vax.sysgen.paging.defer` keeps the open at first need.
 9. **The VMS probe** (`testdata/pg64`), Part A's case list; govax is then
    changed to its answers (SHOW MEMORY/FILES's VAX layout among them).
-10. **Paging statistics at exit** (added by the author 2026-10-18): with
+10. **Paging statistics at exit** (added by the author 2026-10-18, done
+   2026-10-18): with
    paging on, govax's `--statistics` (`-s`) report includes what SHOW
    MEMORY shows of paging: the page frames, page faults, pages written,
    reclaimer runs, and the page file.
@@ -1088,3 +1089,19 @@ pg63's. Values that vary from run to run print as differences.
   set has fewer dynamic pages); part W's lines (W3 to W6) are now a
   cluster or two from VMS's, still listed differences for that reason.
   HELP CONFIG KEYS describes the two limits' roles.
+- **2026-10-18:** Subtask 10, paging statistics at exit. govax's
+  statistics option (`--stats`, `-s`) now ends, with paging on, with a
+  Paging section and a Page File section in the report's own layout:
+  the frames on the free and modified lists and active (by process,
+  global, and system pages), the page faults by kind (free list,
+  modified list, global valid, demand zero, read, and the reads from the
+  page file), the pages written and write I/Os, the reclaimer's runs and
+  pages trimmed, and the page file's name and state, size, free and used
+  blocks, PAGEFRAG/PAGECRIT and full marks, and committed pages. The
+  figures are SHOW MEMORY's: `machine.PagingStatistics` gathers them
+  (false with paging off, when the sections are left out), and
+  `cmd/govax`'s `printPagingStats` prints them. The report is printed
+  before the session ends, so the page file is still open.
+  `TestRun_statsPaging` (a host page file installed at startup) and
+  `TestRun_statsNoPaging` check both cases. docs/PERFORMANCE.md's
+  "Measuring" describes the sections.
