@@ -51,9 +51,19 @@ leave in place".)
   for the header, the ISD list, the fixups' tables, and debug symbols),
   `imageLoad`, `imageFixup`, `setImageProtection`, `ResetICBList`, and
   `ActivateCreatedImage`.
-- **Phase 65:** private sections with PSTX pages, CRF to the page file,
-  and read clustering with a per-section PFC (an ISD's own cluster
-  factor, when the linker gave one).
+- **Phase 65 (done 2026-10-18):** private sections with PSTX pages; a
+  copy-on-reference section's first fault claims the frame with page
+  file backing, effectively modified (`processSection.copyOnRef`,
+  `copyOnRefBacking`), which is the rule an image section's modified
+  pages need; CRF pages charged at mapping (`mapChargedPage`), as an
+  image's writable pages are already charged at load. Read clustering
+  (`corevms/cluster.go`'s `readCluster`) takes a private section's pfc
+  from `processSection.pfc` (0 for PFCDEFAULT, `vax.sysgen.pfcdefault`;
+  at most 127): an image section gets its ISD's cluster factor there.
+  Its scan reads neighbors through `resolveFault`, so an image file's
+  read (an `os.File` for a host image) needs only the section's page
+  reader. Image rundown (`DeleteP0`) also releases the global sections
+  left pending (`ReleasePendingSections`).
 - **Phase 49:** `holdFile`/`dropFile`, which keep a section's file
   accessed after its channel goes.
 

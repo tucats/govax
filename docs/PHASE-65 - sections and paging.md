@@ -1,7 +1,14 @@
 # Phase 65 — sections under the pager
 
-**Status:** in progress (planned 2026-10-15; subtasks 1 to 7 done
-2026-10-18, the close-out next). Needs Phase 64 (the page file and the
+**Status:** done (2026-10-18). Subtasks 1 to 8: the survey (Part A,
+its questions answered by the author); private copy-on-reference pages
+(page file backing, charged at mapping); the global page table's states
+and share counts (`corevms/globalpages.go`); page-file global sections
+as global demand-zero pages and the GBLSECTIONS, GBLPAGES, and GBLPAGFIL
+limits; global copy-on-reference checked under the new states; read
+clustering (`corevms/cluster.go`, `vax.sysgen.pfcdefault`); the VMS
+probe (`testdata/pg65`, run on VMS 7.1: `$UPDSEC` by UPDFLG and deleted
+sections pending were changed to its answers); the close-out. Needs Phase 64 (the page file and the
 writer). Part of the paging program laid out in
 `PHASE-62 - VMS paging.md` (Decision 14 is this phase's).
 
@@ -501,7 +508,7 @@ a procedure, `exchange.cmd`. A second process for the sharing cases
    counted.
 7. **The VMS probe** (`testdata/pg65`, done 2026-10-18), the cases
    above; govax is then changed to its answers.
-8. **Close-out.**
+8. **Close-out** (done 2026-10-18).
 
 ## Progress log
 
@@ -864,3 +871,31 @@ a procedure, `exchange.cmd`. A second process for the sharing cases
     set's floor (parts P and K2: at the floor plus 20 VMS's list had no
     free entry for a cluster), part D's writer, G1's sections in use.
   - The `.out` files are force-added past `.gitignore`, as pg64's.
+- **2026-10-18:** Subtask 8, the close-out. CLAUDE.md describes the
+  phase (the paging program's paragraph; `internal/paging`'s
+  `ShareFirst` and `AddAvailable`; corevms's copy-on-reference pages,
+  global page states, page-file sections, limits, `$UPDSEC`, pending
+  sections, and read clustering; the `testdata/pg65` entry); PLAN.md's
+  row is done; HELP's VMINIT/PAGING describes section pages and
+  clustering, and HELP LEXICAL F$GETSYI's global section items; Phase
+  66's doc lists what this phase leaves it (the CRF rule an image
+  section's modified pages need, `processSection.pfc` for an ISD's
+  cluster factor, the scan through `resolveFault`, pending sections
+  released at rundown), and Phase 67's the page table differences the
+  probe found. The open questions above are answered: clustering is
+  visible in the fault counts and follows the book (the probe's K
+  lines), and a permanent page-file section keeps its contents while
+  unmapped and through the writer (F and R).
+  **Carried forward:** the order of the GBLSECTIONS, GBLPAGES, and
+  GBLPAGFIL checks (GBLPAGES was never near full on the VAX); why VMS
+  holds a deleted page-file or CRF section's entries and blocks, and
+  when it releases them besides the next creation (govax adds image
+  rundown); `$UPDSEC` of pages out of memory (not written) and UPDFLG 1
+  for pages another process modified (written if on the modified list);
+  a CRF mapping past PGFLQUOTA (govax maps the pages the quota allows,
+  then SS$_EXQUOTA); read clustering from the page file and over a
+  page-file section's written pages, and a PFCDEFAULT of 0, all
+  unprobed (that VAX never reused frames); an image file's clusters
+  (Phase 66); VMS's pageable process page tables and the DIRIO of 2
+  beside them (Phase 67, Decision 13); the working set floor behind
+  parts P and K2 (pg63's finding: govax's list has no permanent part).

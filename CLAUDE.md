@@ -141,8 +141,16 @@ never had.
   the page file's volume; SHOW MEMORY's page file section and
   /FILES[/FULL], `$GETSYI`'s and `$GETJPI`'s page file items, and the
   paging statistics in `--stats`; checked against VMS 7.1 by
-  `testdata/pg64`); 65 sections under the
-  pager; 66 image activation by mapping; 67 the address space and page
+  `testdata/pg64`); 65 (done 2026-10-18) sections under the pager
+  (private copy-on-reference pages backed by the page file and charged
+  at mapping; global pages valid with a share count, in transition on
+  the lists, or out, with soft faults through the GPTX and the writer
+  writing global frames; page-file global sections as global
+  demand-zero pages; the GBLSECTIONS, GBLPAGES, and GBLPAGFIL limits;
+  `$UPDSEC` by UPDFLG; deleted page-file and CRF sections pending until
+  the next creation or image rundown; read clustering by the section's
+  pfc or PFCDEFAULT; checked against VMS 7.1 by `testdata/pg65`); 66
+  image activation by mapping; 67 the address space and page
   tables under paging, deferred to the end. Paging is synchronous, with no
   PFW, COLPG, or FPG waits. Each later phase has a planning doc.
   Read the relevant phase doc
@@ -457,6 +465,10 @@ expect adjustment as phases land):
   n one page, and the book's allocation size (14.5, 15.5.2.4: runs of
   up to MPW_WRTCLUSTER, dropping by 16 when none is free, regrowing by
   8), reporting the PAGEFRAG and PAGECRIT thresholds (65%, 90%).
+  Phase 65: `Database.ShareFirst` (a frame's allocation reference
+  becomes its first share, so it goes to a list with its last) and
+  `WorkingSet.AddAvailable` (a read cluster's page, put in an available
+  entry only: it takes none from another page).
 - `internal/lck` — the lock manager (Phase 47), from the System Services
   manual ($ENQ/$DEQ) and the Internals book's chapter 13: a `Manager` of
   resources (name, UIC group or 0, access mode, parent) with granted,
@@ -899,6 +911,33 @@ expect adjustment as phases land):
   pages with P0 (`vaspace.go`'s `deleteImageP1`). A full page file
   with no frame to free is a console message and a failed fault; no
   process waits for space.
+  Phase 65, with paging on (`docs/PHASE-65 - sections and paging.md`):
+  a copy-on-reference page's first fault claims its frame with page
+  file backing (`copyOnRefBacking`), effectively modified, and CRF
+  pages are charged at mapping (`mapChargedPage`). `globalpages.go` is
+  the global page states: a global page is valid (one share per valid
+  PTE), in transition (its frame on a list, tied to the global page), or
+  out; faults come through the GPTX (`pageInSharedGlobal`: global
+  valid, soft, or hard; `pageInGlobalOut`, a page-file section's
+  demand-zero first touch), a PTE leaving a working set gets its GPTX
+  back (`evictGlobalPage`), a reused frame's tie is broken through the
+  global page table (`loseGlobalFrame`, a page-file section's block
+  kept in `GlobalSection.blocks`), the writer writes global frames in
+  clusters (`writeGlobalCluster`, `globalMiniCluster`), and `$UPDSEC`
+  follows the GPTE (`updateGlobalPage`: UPDFLG 0 every page in memory,
+  1 the modified ones, as VMS 7.1's). Page-file sections have no frames
+  at creation and count against GBLPAGFIL, not PGFLQUOTA; sections use
+  GBLPAGES at a page per page plus 2, rounded up to even
+  (`globalPageEntries`, both paging modes). A deleted page-file or CRF
+  section leaves the name table at once but waits on
+  `GlobalSections.pending` (`PendingSections`) with its entries, frames,
+  and blocks until `ReleasePendingSections`: the next global section's
+  creation, or image rundown (`DeleteP0`). `cluster.go` is read
+  clustering (`readCluster`, after a hard fault: up, then down only if up
+  read nothing; neighbors matched by PSTX, successive page file blocks,
+  or successive GPTXs of the section; sized by the section's pfc or
+  PFCDEFAULT, at most 127; stopping where the working set has no
+  available entry), counted in `PageCounts.PagesRead`.
 - `internal/librtl` — LIBRTL.EXE's routines (Phase 34): the LIB$ and STR$
   shims a program reaches through `SHIM$LIBRTL_<offset>` stubs. `Routines`
   lists each with its XFC$SHIM code (its transfer-vector offset is

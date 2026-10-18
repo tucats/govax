@@ -147,6 +147,8 @@
 //              10/18/26    vax.sysgen.gblsections, gblpages, and
 //                          gblpagfil in CONFIG KEYS
 //              10/18/26    vax.sysgen.pfcdefault in CONFIG KEYS
+//              10/18/26    F$GETSYI's global section items;
+//                          VMINIT/PAGING brought up to date with sections
 
 This is the help documentation for the govax VAX emulator.  Topic sections are
 marked by a "$" delimiter.  This is followed by as many tokens of the help
@@ -2540,7 +2542,14 @@ $VM
                         file (vax.sysgen.paging.file), or a file
                         section's to its file, and a page written out is
                         read back when touched.  Each job's PGFLQUOTA
-                        limits the pages it may create.  SHOW MEMORY
+                        limits the pages it may create.  Section pages
+                        page too: a global section's pages are shared
+                        among the working sets holding them and leave
+                        memory when none does, a page-file section's
+                        pages take memory only when touched, and a hard
+                        fault reads the neighboring pages of the same
+                        file with it (the section's cluster size, or
+                        vax.sysgen.pfcdefault).  SHOW MEMORY
                         shows the counts, and govax's --stats option
                         reports them at exit.
 

@@ -52,6 +52,14 @@ stop spending physical memory on page tables and S0 nobody uses:
   outgoing PCB.
 - **Phase 64:** the PGFLQUOTA charge, already at creation in the
   services that create pages; only the first-touch rule remains.
+- **Phase 65 (2026-10-18):** `testdata/pg65` shows VMS's process page
+  table pages in the working set: each P0 expansion's first touches
+  fault a page table page in (a few more PAGEFLTS and PPGCNT than
+  govax's, and a DIRIO of 2 on some, unexplained), and at a small
+  working set they leave no entry free for a read cluster. Decision 13
+  keeps govax's tables unpaged, so these stay listed differences
+  (`expectedPG65Differences`) unless this phase revisits it; SYI$_
+  PAGTBLPFC reports SYSGEN's 2.
 
 ## Design notes
 
