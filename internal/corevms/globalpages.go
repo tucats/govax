@@ -6,14 +6,14 @@ import (
 )
 
 // Global pages under the pager (docs/PHASE-65 - sections and paging.md,
-// subtask 3), with paging on.
+// subtasks 3 and 4), with paging on.
 //
 // # A global page's states
 //
-// A page of a global file section is in one of three places, which its
-// global page table entry says (the book's 14.3.3; govax keeps the entry
-// in Go, GlobalSections.pageTable, and the section's Frames slot for the
-// page holds its frame):
+// A page of a global file section, or of a page-file section, is in one
+// of three places, which its global page table entry says (the book's
+// 14.3.3; govax keeps the entry in Go, GlobalSections.pageTable, and the
+// section's Frames slot for the page holds its frame):
 //
 //   - **valid**: the page is in one or more processes' working sets. Its
 //     frame is active, and its share count (the PFN database's, VMS's
@@ -24,7 +24,10 @@ import (
 //     does, on the free list or the modified list, tied to the global
 //     page (not to any process's page).
 //   - **out**: no frame; its contents are in its block of the section
-//     file. The Frames slot is 0.
+//     file, or for a page-file section in a page file block (the
+//     section's blocks slot for the page), or nowhere yet: a page-file
+//     section's page never written is a global demand-zero page. The
+//     Frames slot is 0.
 //
 // # Process PTEs
 //
@@ -41,7 +44,21 @@ import (
 // (pageInSharedGlobal): a page valid elsewhere is a soft "global valid"
 // fault that adds a share; one in transition is a soft fault that takes
 // the frame back off its list; one out is a hard fault that reads it from
-// the file.
+// the file or the page file, or a demand-zero fault that gives it a frame
+// of zeros.
+//
+// # Page-file sections
+//
+// A page-file section (SEC$M_PAGFIL) made with paging on has no frames
+// when it's made (subtask 4; the book's 14.3.2's global demand-zero
+// page). Its first fault anywhere gives a page a frame of zeros, backed
+// by the page file and effectively modified, as a process's demand-zero
+// page is: whenever its last share goes it waits on the modified list,
+// and the writer writes it to the page file (mpw.go) with any of its
+// neighbors in the section waiting there too. A reused frame leaves the
+// block in the section's blocks slot, and the page's next fault reads it
+// back. A permanent section's pages can so leave memory while nothing
+// maps it. A page modified again gives its old block up.
 //
 // # Frames reused and written
 //
@@ -53,23 +70,19 @@ import (
 // the section on the list as one cluster (writeGlobalCluster), and moves
 // it to the free list, still the page's.
 //
-// # What isn't here yet
+// # Paging off
 //
-// A page-file section's pages (SEC$M_PAGFIL) are still allocated when
-// it's created and valid in each mapping process from the start: no share
-// counts, never chosen to leave a working set (wsProtected), until
-// subtask 4 makes them global demand-zero pages. With paging off, none of
-// this happens: a global page, once read, keeps its frame until its
-// section is deleted, and the section's Dirty marks gather the modify
-// bits.
+// With paging off, none of this happens: a global page, once read, keeps
+// its frame until its section is deleted, a page-file section's frames
+// are allocated when it's made and valid in each mapping process from the
+// start, and the section's Dirty marks gather the modify bits.
 
 // globalFrame returns the frame page i of global section s holds, valid
 // or in transition, with its PFN database entry, if it's tied to that
-// page; false with paging off, for a page that's out, and for a
-// page-file section's frame (which has no share counts yet).
+// page; false with paging off, and for a page that's out.
 func (sys *System) globalFrame(s *GlobalSection, i int) (paging.PFN, paging.Entry, bool) {
 	db := sys.mem.Paging()
-	if db == nil || s.File == nil || i < 0 || i >= len(s.Frames) || s.Frames[i] == 0 {
+	if db == nil || !s.hasPageTable() || i < 0 || i >= len(s.Frames) || s.Frames[i] == 0 {
 		return 0, paging.Entry{}, false
 	}
 
@@ -83,13 +96,13 @@ func (sys *System) globalFrame(s *GlobalSection, i int) (paging.PFN, paging.Entr
 	return pfn, e, true
 }
 
-// pageInSharedGlobal resolves a fault on page i of global file section s
-// with paging on: a page valid in some working set gets one more share
-// (a global valid fault); a page in transition is taken back off its list
+// pageInSharedGlobal resolves a fault on page i of global section s with
+// paging on: a page valid in some working set gets one more share (a
+// global valid fault); a page in transition is taken back off its list
 // (a soft fault from the free or modified list) and given its first
-// share; a page that's out is read from the file into a new frame, which
-// the faulting process's share holds. It returns the frame, the fault's
-// kind, and whether it worked.
+// share; a page that's out is read into a new frame (pageInGlobalOut),
+// which the faulting process's share holds. It returns the frame, the
+// fault's kind, and whether it worked.
 func (sys *System) pageInSharedGlobal(s *GlobalSection, i int) (uint32, faultKind, bool) {
 	db := sys.mem.Paging()
 
@@ -114,21 +127,55 @@ func (sys *System) pageInSharedGlobal(s *GlobalSection, i int) (uint32, faultKin
 		return uint32(pfn), kind, true
 	}
 
-	pfn, ok := sys.readPage(s.File, s.VBN+uint32(i), globalClaim(s, i))
+	pfn, kind, ok := sys.pageInGlobalOut(s, i)
 	if !ok {
-		return 0, faultRead, false
+		return 0, kind, false
 	}
 
 	if db.ShareFirst(paging.PFN(pfn)) != nil {
 		sys.mem.FreePage(pfn)
 
-		return 0, faultRead, false
+		return 0, kind, false
 	}
 
 	s.Frames[i] = pfn
 	sys.Sections.byFrame[pfn] = sectionPage{s, i}
 
-	return pfn, faultRead, true
+	return pfn, kind, true
+}
+
+// pageInGlobalOut gives page i of global section s, which is out, a new
+// frame tied to it, returning the frame and the fault's kind: a file
+// section's page is read from its block of the file; a page-file
+// section's from its page file block if the writer wrote it (the block
+// then the frame's backing store, and the page clean), or else, never
+// written, a frame of zeros, effectively modified (a demand-zero fault).
+func (sys *System) pageInGlobalOut(s *GlobalSection, i int) (uint32, faultKind, bool) {
+	claim := globalClaim(s, i)
+
+	if s.File != nil {
+		pfn, ok := sys.readPage(s.File, s.VBN+uint32(i), claim)
+
+		return pfn, faultRead, ok
+	}
+
+	if vbn := s.blocks[i]; vbn != 0 {
+		pfn, ok := sys.readPageFileBlock(vbn, claim)
+		if ok {
+			s.blocks[i] = 0
+		}
+
+		return pfn, faultRead, ok
+	}
+
+	pfn, ok := sys.mem.AllocateFrame(claim)
+	if !ok {
+		return 0, faultDemandZero, false
+	}
+
+	sys.effectivelyModified(pfn, claim)
+
+	return pfn, faultDemandZero, true
 }
 
 // sharedGlobalPage returns the global section page frame pfn holds, if
@@ -166,11 +213,27 @@ func (env *Environment) evictGlobalPage(as vm.AddressSpace, va uint32, pte vm.PT
 		return true
 	}
 
+	env.dropStaleBlock(paging.PFN(pte.PFN()), pte.Modified())
+
 	if state, err := env.mem.Paging().Unshare(paging.PFN(pte.PFN()), pte.Modified()); err == nil && state == paging.Modified {
 		env.wakeModifiedPageWriter()
 	}
 
 	return true
+}
+
+// dropStaleBlock gives back the page file block frame pfn's backing store
+// names, if modified is set: a page-file section's page read back from
+// the page file and written since no longer matches its block, which the
+// writer will replace (the book's 15.2.4, as for a process's page).
+func (sys *System) dropStaleBlock(pfn paging.PFN, modified bool) {
+	if !modified {
+		return
+	}
+
+	if e, err := sys.mem.Paging().Entry(pfn); err == nil {
+		sys.forgetPageFileBlock(pfn, e.Backing)
+	}
 }
 
 // unshareGlobalFrame drops one process PTE's share of frame pfn, a
@@ -183,27 +246,92 @@ func (sys *System) unshareGlobalFrame(pfn uint32, modified bool) (shared, toModi
 		return false, false
 	}
 
+	sys.dropStaleBlock(paging.PFN(pfn), modified)
 	state, err := sys.mem.Paging().Unshare(paging.PFN(pfn), modified)
 
 	return true, err == nil && state == paging.Modified
 }
 
 // loseGlobalFrame is BreakTie for a global page's frame being reused off
-// the free list: the global page table entry the frame's backing store
-// names loses it, and the page is out, in its block of the file. No
-// process PTE changes: each one mapping the page holds its GPTX.
+// the free list: the global page the frame holds loses it, and the page
+// is out, in its block of the file, or for a page-file section's page in
+// the page file block its backing store names, kept in the section's
+// blocks slot (a page-file section's frame reaches the free list only
+// once the writer has given it a block: until then it's effectively
+// modified). No process PTE changes: each one mapping the page holds its
+// GPTX.
 func (sys *System) loseGlobalFrame(pfn paging.PFN, owner paging.Owner, back paging.Backing) {
-	if back.Kind != paging.GlobalSection {
+	sp, ok := sys.Sections.byFrame[uint32(pfn)]
+	if !ok || sp.s.serial != owner.Handle || sp.s.Frames[sp.page] != uint32(pfn) {
 		return
 	}
 
-	s, i, ok := sys.Sections.globalPage(back.Index)
-	if !ok || s.serial != owner.Handle || s.Frames[i] != uint32(pfn) {
-		return
+	s, i := sp.s, sp.page
+
+	if s.paged && back.Kind == paging.PageFile {
+		s.blocks[i] = back.Block
 	}
 
 	s.Frames[i] = 0
 	delete(sys.Sections.byFrame, uint32(pfn))
+}
+
+// pageFileGlobal reports whether a frame, whose entry is e, is a paged
+// page-file section's page whose contents go to the page file when the
+// writer writes it.
+func (sys *System) pageFileGlobal(e paging.Entry) bool {
+	if !e.Tied || e.Type != paging.GlobalPage || e.Backing.Kind != paging.PageFile {
+		return false
+	}
+
+	s := sys.Sections.bySerial(e.Owner.Handle)
+
+	return s != nil && s.paged
+}
+
+// globalMiniCluster is miniCluster for frame pfn, a page-file section's
+// page whose entry is e: the frame with its neighbors in the section,
+// first the pages below it, then those above, for as long as each holds a
+// frame on the modified list which match accepts and taken doesn't hold,
+// up to size frames, in page order.
+func (sys *System) globalMiniCluster(pfn paging.PFN, e paging.Entry, size uint32, match func(paging.Entry) bool,
+	taken map[paging.PFN]bool) []paging.PFN {
+	s := sys.Sections.bySerial(e.Owner.Handle)
+	i := int(e.Owner.VA / pageSize)
+
+	if s == nil || i >= len(s.Frames) || s.Frames[i] != uint32(pfn) {
+		return []paging.PFN{pfn}
+	}
+
+	neighbor := func(j int) (paging.PFN, bool) {
+		frame, n, ok := sys.globalFrame(s, j)
+
+		return frame, ok && n.State == paging.Modified && !taken[frame] && match(n)
+	}
+
+	first, last := i, i
+	for first > 0 && uint32(last-first+1) < size {
+		if _, ok := neighbor(first - 1); !ok {
+			break
+		}
+
+		first--
+	}
+
+	for last+1 < len(s.Frames) && uint32(last-first+1) < size {
+		if _, ok := neighbor(last + 1); !ok {
+			break
+		}
+
+		last++
+	}
+
+	cluster := make([]paging.PFN, 0, last-first+1)
+	for j := first; j <= last; j++ {
+		cluster = append(cluster, paging.PFN(s.Frames[j]))
+	}
+
+	return cluster
 }
 
 // globalPageModified reports whether page i of global section s, which

@@ -76,6 +76,13 @@ const maxNodeNameLength = 15
 //     blocks, in pages (pageFileSizes; 0 with none); SWAPFILE_PAGE and
 //     SWAPFILE_FREE are 0, since govax has no swap file (unconfirmed:
 //     VMS may count a page file in their place).
+//   - The global section limits (Phase 65, subtask 4): GBLSECTIONS,
+//     GBLPAGES, and GBLPAGFIL are the parameters (the System's
+//     GlobalSections, from the vax.sysgen.* keys); FREE_GBLSECTS and
+//     FREE_GBLPAGES what's left of the first two; CONTIG_GBLPAGES, the
+//     largest run of free global page table entries on VMS, is
+//     FREE_GBLPAGES, since govax's global page table has no fixed size to
+//     fragment (unconfirmed).
 var syiItemsByName = map[string]func(env *Environment) itemValue{
 	"SYI$_VERSION":        func(env *Environment) itemValue { return itemPadded(VersionString, 8) },
 	"SYI$_NODE_SWVERS":    func(env *Environment) itemValue { return itemPadded(VersionString, 4) },
@@ -112,8 +119,14 @@ var syiItemsByName = map[string]func(env *Environment) itemValue{
 
 		return itemLong(free)
 	},
-	"SYI$_SWAPFILE_PAGE": func(env *Environment) itemValue { return itemLong(0) },
-	"SYI$_SWAPFILE_FREE": func(env *Environment) itemValue { return itemLong(0) },
+	"SYI$_GBLSECTIONS":     func(env *Environment) itemValue { return itemLong(uint32(env.Sections.SectionLimit)) },
+	"SYI$_GBLPAGES":        func(env *Environment) itemValue { return itemLong(uint32(env.Sections.PageLimit)) },
+	"SYI$_GBLPAGFIL":       func(env *Environment) itemValue { return itemLong(uint32(env.Sections.PageFileLimit)) },
+	"SYI$_FREE_GBLSECTS":   func(env *Environment) itemValue { return itemLong(uint32(env.Sections.FreeSections())) },
+	"SYI$_FREE_GBLPAGES":   func(env *Environment) itemValue { return itemLong(uint32(env.Sections.FreePages())) },
+	"SYI$_CONTIG_GBLPAGES": func(env *Environment) itemValue { return itemLong(uint32(env.Sections.FreePages())) },
+	"SYI$_SWAPFILE_PAGE":   func(env *Environment) itemValue { return itemLong(0) },
+	"SYI$_SWAPFILE_FREE":   func(env *Environment) itemValue { return itemLong(0) },
 }
 
 // SYSGEN's defaults for BORROWLIM and PFCDEFAULT, which only $GETSYI
@@ -148,12 +161,25 @@ func (sys *System) sysgenPQL(name string) uint32 {
 	return 0
 }
 
+// syiCodeOf returns the $SYIDEF item code called name. A few items
+// (FREE_GBLPAGES, FREE_GBLSECTS, CONTIG_GBLPAGES) are among STARLET.OLB's
+// definitions but not vmsdef.Symbols'.
+func syiCodeOf(name string) (uint32, bool) {
+	if code, ok := vmsdef.Symbols[name]; ok {
+		return code, true
+	}
+
+	code, ok := vmsdef.LibrarySymbols[name]
+
+	return code, ok
+}
+
 // syiItems is syiItemsByName keyed by item code.
 var syiItems = func() map[uint16]func(*Environment) itemValue {
 	out := map[uint16]func(*Environment) itemValue{}
 
 	for name, fn := range syiItemsByName {
-		code, ok := vmsdef.Symbols[name]
+		code, ok := syiCodeOf(name)
 		if !ok {
 			panic("rtl: no $SYIDEF item code " + name)
 		}

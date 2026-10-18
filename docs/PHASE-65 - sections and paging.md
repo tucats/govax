@@ -485,8 +485,8 @@ a procedure, `exchange.cmd`. A second process for the sharing cases
    the process PTE; global frames on the lists, written by the writer,
    their ties broken through the GPTE; sections deleted with pages on
    the lists; `$UPDSEC` through the GPTE.
-4. **Page-file global sections as global demand-zero pages** (finding
-   6), with paging on; the GBLSECTIONS, GBLPAGES, and GBLPAGFIL keys,
+4. **Page-file global sections as global demand-zero pages** (done
+   2026-10-18; finding 6), with paging on; the GBLSECTIONS, GBLPAGES, and GBLPAGFIL keys,
    GBLPAGES' counting rule, SS$_EXGBLPAGFIL, and the `$GETSYI` items
    (finding 7).
 5. **Global copy-on-reference** checked against the new states (its
@@ -628,3 +628,63 @@ a procedure, `exchange.cmd`. A second process for the sharing cases
     runs the same touches with paging off. `TestShareFirst` is the
     database's. Each fails without the change it checks (the share, the
     tie broken, the cluster, `$UPDSEC`'s GPTE, deletion's write-back).
+- **2026-10-18:** Subtask 4, page-file global sections as global
+  demand-zero pages, and the global section limits (`corevms/gblsec.go`,
+  `globalpages.go`, `filesec.go`, `mpw.go`, `sysgen.go`, `getsyi.go`;
+  `machine/sysgen.go`; tests in `internal/console/pfglobal_test.go`):
+  - **No frames at creation** (with paging on): `createSection` gives a
+    page-file section global page table entries (`GlobalSection.paged`,
+    `hasPageTable`), and a mapping process's PTEs hold the GPTX, as a
+    file section's. The first fault anywhere is a demand-zero fault
+    (`pageInGlobalOut`): a frame of zeros claimed `GlobalPage`, backed by
+    the page file with no block, effectively modified; later faults are
+    global valid or soft, as subtask 3's. GPGCNT now counts a page from
+    its first touch, closing Phase 63's finding 9. With paging off,
+    nothing changes (the author's answer to question 1).
+  - **The page file:** a page-file section's frame on the modified list
+    is page-file bound (`pageFileGlobal`), so the writer writes it with
+    the process pages, clustered with its section's neighbors on the
+    list (`globalMiniCluster`; a global frame's owner is a section's
+    serial number, not a PID, so `miniCluster` no longer looks it up as
+    a process). A reused frame's block goes to the section's `blocks`
+    slot for the page (`loseGlobalFrame`, now found through `byFrame`
+    for both kinds of section), and the next fault reads it back
+    (`readPageFileBlock`, shared with the page file PTE's fault), the
+    block then the frame's backing store and the page clean. A page
+    modified again gives its block up as its share goes
+    (`dropStaleBlock`). Deletion gives back every block, out or in a
+    frame's backing store. A permanent section's pages leave memory
+    while nothing maps it, and come back with their contents.
+  - **Not charged to PGFLQUOTA** at mapping or at the fault (finding 7).
+  - **The limits, in both paging modes:** GBLSECTIONS, GBLPAGES, and
+    GBLPAGFIL are `vax.sysgen.gblsections`, `gblpages`, `gblpagfil`
+    (counts; defaults 128, 4096, 4096 by the author's answer to question
+    2; HELP CONFIG KEYS), the System's `Sections.SectionLimit`,
+    `PageLimit`, `PageFileLimit` from `SetSysgen`. A section uses its
+    pages plus 2, rounded up to even, of GBLPAGES (`globalPageEntries`),
+    and a page-file section its pages of GBLPAGFIL, whole at creation
+    (SS$_EXGBLPAGFIL, retadr -1). The checks' order (GBLSECTIONS,
+    GBLPAGES, GBLPAGFIL) is govax's, unconfirmed.
+  - **`$GETSYI` (and F$GETSYI):** GBLSECTIONS, GBLPAGES, GBLPAGFIL,
+    FREE_GBLSECTS, FREE_GBLPAGES, and CONTIG_GBLPAGES (FREE_GBLPAGES'
+    value: govax's global page table has no fixed size to fragment;
+    unconfirmed). The last three item codes are among STARLET.OLB's
+    definitions only (`vmsdef.LibrarySymbols`), which `syiCodeOf` reads.
+  - **The tests:** `TestPageFileGlobalSection` runs a program that
+    creates a permanent 64-page section, maps it twice, deletes both
+    ranges, maps it again, and deletes it, with a 30-page working set and
+    a host page file: no frames and no charge at mapping; page 0 a
+    demand-zero fault then a global valid fault, two shares; every page
+    written, leaving to the modified list and the page file in clusters;
+    frames reused, pages out in their blocks and read back by hard
+    faults; pages rewritten giving up their blocks; the unmapped section
+    keeping its contents; and at deletion every frame and block given
+    back. After each step every PTE is valid or a GPTX, shares match the
+    valid PTEs, and the page file's blocks are exactly those the pages
+    hold (`checkPageFileHolders` now counts the sections' too). It fails
+    without the deletion's block release (either holder), the block kept
+    at reuse, or the block given up when modified. `TestCrmpsc_limits`
+    checks the counting rule, SS$_EXGBLPAGFIL, and the `$GETSYI` counts;
+    `TestPagingGlobalSectionFrames` and `TestWorkingSetGlobalPages` now
+    expect frames from the first touch, and the pages to leave working
+    sets and come back.

@@ -168,9 +168,11 @@ func TestDeleteGivesPageFileBlocksBack(t *testing.T) {
 }
 
 // checkPageFileHolders checks that the page file's blocks in use are
-// exactly those process 1's pages hold, each by one page: in a page file
-// PTE, or as the backing store of the frame a valid or transition PTE
-// names, tied to the page.
+// exactly those process 1's pages and the global sections' pages hold,
+// each by one page: in a page file PTE, or as the backing store of the
+// frame a valid or transition PTE names, tied to the page; for a
+// page-file global section's page, in the section's block for a page
+// that's out, or as its frame's backing store.
 func checkPageFileHolders(t *testing.T, c *console.Console, label string) {
 	t.Helper()
 
@@ -223,6 +225,33 @@ func checkPageFileHolders(t *testing.T, c *console.Console, label string) {
 
 	for i := space.AddressSpace.P1LR; i < 1<<21; i++ {
 		look(0x40000000 + i*512)
+	}
+
+	for _, s := range c.RTL.Sections.Sections() {
+		for i, vbn := range s.PageFileBlocks() {
+			if vbn != 0 {
+				hold(vbn, uint32(i)*512)
+			}
+
+			if s.Frames[i] == 0 {
+				continue
+			}
+
+			if e, err := db.Entry(paging.PFN(s.Frames[i])); err == nil && e.Tied && e.Type == paging.GlobalPage &&
+				e.Backing.Kind == paging.PageFile && e.Backing.Block != 0 {
+				hold(e.Backing.Block, uint32(i)*512)
+			}
+		}
+	}
+
+	// The page file opens at its first need: until then, no page holds a
+	// block.
+	if pf == nil {
+		if len(held) != 0 {
+			t.Errorf("%s: pages hold %d page file blocks, and there's no page file", label, len(held))
+		}
+
+		return
 	}
 
 	for vbn := range held {

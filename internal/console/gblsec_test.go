@@ -1,6 +1,7 @@
 package console
 
 import (
+	"encoding/binary"
 	"strings"
 	"testing"
 
@@ -31,14 +32,15 @@ var (
 	secDZRO   = vmsdef.LibrarySymbols["SEC$M_DZRO"]
 	secCRF    = vmsdef.LibrarySymbols["SEC$M_CRF"]
 
-	ssCreated    = vmsdef.Symbols["SS$_CREATED"]
-	ssNoSuchSec  = vmsdef.Symbols["SS$_NOSUCHSEC"]
-	ssIvSecFlg   = vmsdef.Symbols["SS$_IVSECFLG"]
-	ssIvSecIdCtl = vmsdef.Symbols["SS$_IVSECIDCTL"]
-	ssGsdFull    = vmsdef.Symbols["SS$_GSDFULL"]
-	ssGptFull    = vmsdef.Symbols["SS$_GPTFULL"]
-	ssIvLogNam   = vmsdef.Symbols["SS$_IVLOGNAM"]
-	ssEndOfFile  = vmsdef.Symbols["SS$_ENDOFFILE"]
+	ssCreated     = vmsdef.Symbols["SS$_CREATED"]
+	ssNoSuchSec   = vmsdef.Symbols["SS$_NOSUCHSEC"]
+	ssIvSecFlg    = vmsdef.Symbols["SS$_IVSECFLG"]
+	ssIvSecIdCtl  = vmsdef.Symbols["SS$_IVSECIDCTL"]
+	ssGsdFull     = vmsdef.Symbols["SS$_GSDFULL"]
+	ssGptFull     = vmsdef.Symbols["SS$_GPTFULL"]
+	ssExGblPagFil = vmsdef.Symbols["SS$_EXGBLPAGFIL"]
+	ssIvLogNam    = vmsdef.Symbols["SS$_IVLOGNAM"]
+	ssEndOfFile   = vmsdef.Symbols["SS$_ENDOFFILE"]
 )
 
 // pageFile is the flags of a writable page-file global section.
@@ -434,13 +436,38 @@ func TestCrmpsc_lifetime(t *testing.T) {
 	}
 }
 
-// TestCrmpsc_limits: GBLSECTIONS and GBLPAGES, and SEC$M_EXPREG placing
-// a section above P0's high-water mark and moving it.
+// TestCrmpsc_limits: GBLSECTIONS, GBLPAGES (a section's pages and two
+// more, rounded up to an even number), and GBLPAGFIL, with
+// $GETSYI's counts of what's left; and SEC$M_EXPREG placing a section
+// above P0's high-water mark and moving it.
 func TestCrmpsc_limits(t *testing.T) {
 	c := newServiceConsole(t)
 	g := c.RTL.Sections
 
+	freePages, freeSections := g.FreePages(), g.FreeSections()
+
 	crmpsc(t, c, "ONE", pageFile, secPages, secPages+0x200, 2, 0)
+
+	if got := freePages - g.FreePages(); got != 4 {
+		t.Errorf("a 2-page section took %d of GBLPAGES, want 4", got)
+	}
+
+	if got := freeSections - g.FreeSections(); got != 1 {
+		t.Errorf("a section took %d of GBLSECTIONS, want 1", got)
+	}
+
+	for _, item := range []struct {
+		name string
+		want int
+	}{
+		{"SYI$_FREE_GBLPAGES", g.FreePages()}, {"SYI$_FREE_GBLSECTS", g.FreeSections()},
+		{"SYI$_GBLPAGFIL", corevms.DefaultGlobalPageFileLimit},
+	} {
+		data, ok := c.RTL.SYIItem(item.name)
+		if !ok || len(data) != 4 || binary.LittleEndian.Uint32([]byte(data)) != uint32(item.want) {
+			t.Errorf("%s = % x (%v), want %d", item.name, data, ok, item.want)
+		}
+	}
 
 	g.SectionLimit = 1
 
@@ -448,11 +475,25 @@ func TestCrmpsc_limits(t *testing.T) {
 		t.Errorf("past GBLSECTIONS: %#x, want SS$_GSDFULL", got)
 	}
 
-	g.SectionLimit, g.PageLimit = 10, 3
+	// ONE takes 4 entries of 8: a 3-page section needs 6, a 1-page one 4.
+	g.SectionLimit, g.PageLimit = 10, 8
 
-	if got := crmpsc(t, c, "TWO", pageFile, secPages+0x400, secPages+0x600, 2, 0); got != ssGptFull {
+	if got := crmpsc(t, c, "TWO", pageFile, secPages+0x400, secPages+0x800, 3, 0); got != ssGptFull {
 		t.Errorf("past GBLPAGES: %#x, want SS$_GPTFULL", got)
 	}
+
+	// ONE's 2 pages of 4: a 3-page page-file section is past GBLPAGFIL.
+	g.PageLimit, g.PageFileLimit = 100, 4
+
+	if got := crmpsc(t, c, "TWO", pageFile, secPages+0x400, secPages+0x800, 3, 0); got != ssExGblPagFil {
+		t.Errorf("past GBLPAGFIL: %#x, want SS$_EXGBLPAGFIL", got)
+	}
+
+	if a, b := getRange(t, c, vaRetadr); a != 0xFFFFFFFF || b != 0xFFFFFFFF {
+		t.Errorf("past GBLPAGFIL: retadr %#x-%#x, want -1 in both", a, b)
+	}
+
+	g.PageLimit = 8
 
 	// EXPREG: at the first page above the high-water mark.
 	mark := c.RTL.RegionSize[0]

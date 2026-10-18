@@ -247,8 +247,8 @@ func (env *Environment) replacementConditions() paging.Conditions {
 
 // wsProtected reports whether the page at va, in address space as, must
 // stay in the working set for now: a global page whose frame isn't
-// shared out by the pager (a page-file section's, resident until
-// subtask 4 of Phase 65), or a page whose frame has been translated
+// shared out by the pager (since Phase 65's subtask 4 every global
+// section's page is, so this is a safeguard), or a page whose frame has been translated
 // during the current instruction (the phase doc's Decision 6), which the
 // instruction, or the Go code running inside it, may still be using. A
 // page whose PTE can't be read is kept too: nothing could be done with

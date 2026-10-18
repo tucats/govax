@@ -105,6 +105,12 @@ type Sysgen struct {
 	// MPWWriteCluster is MPW_WRTCLUSTER: the most pages the modified page
 	// writer writes to the page file at once.
 	MPWWriteCluster uint32
+
+	// GlobalSections is GBLSECTIONS, GlobalPages GBLPAGES, and
+	// GlobalPageFile GBLPAGFIL: the limits on global sections (gblsec.go).
+	GlobalSections uint32
+	GlobalPages    uint32
+	GlobalPageFile uint32
 }
 
 // DefaultSysgen returns the parameters with no key set.
@@ -114,6 +120,8 @@ func DefaultSysgen() Sysgen {
 		MPWHiLimit: DefaultMPWHiLimit, MPWLoLimit: DefaultMPWLoLimit,
 		FreeLimit: DefaultFreeLimit, FreeGoal: DefaultFreeGoal,
 		PageFileSize: DefaultPageFileSize, MPWWriteCluster: DefaultMPWWriteCluster,
+		GlobalSections: DefaultGlobalSectionLimit, GlobalPages: DefaultGlobalPageLimit,
+		GlobalPageFile: DefaultGlobalPageFileLimit,
 	}
 }
 
@@ -122,6 +130,9 @@ func DefaultSysgen() Sysgen {
 func (sys *System) SetSysgen(sg Sysgen) {
 	sys.Sysgen = sg
 	sys.installReclaimer()
+
+	g := sys.Sections
+	g.SectionLimit, g.PageLimit, g.PageFileLimit = int(sg.GlobalSections), int(sg.GlobalPages), int(sg.GlobalPageFile)
 }
 
 // pqlDefault returns the default $CREPRC gives rule's quota: the

@@ -734,6 +734,9 @@ var validConfigs = map[string]bool{
 	"vax.sysgen.pql_dwsquota":   true,
 	"vax.sysgen.pql_dwsextent":  true,
 	"vax.sysgen.pql_dpgflquota": true,
+	"vax.sysgen.gblsections":    true,
+	"vax.sysgen.gblpages":       true,
+	"vax.sysgen.gblpagfil":      true,
 
 	// Read by vax.init (F$CONFIG): the memory's sizes, in pages.
 	"vax.memory.size": true,

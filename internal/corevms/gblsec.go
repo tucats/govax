@@ -4,6 +4,7 @@ import (
 	"maps"
 	"slices"
 
+	"github.com/tucats/govax/internal/paging"
 	"github.com/tucats/govax/internal/registers"
 	"github.com/tucats/govax/internal/rms"
 	"github.com/tucats/govax/internal/vm"
@@ -48,16 +49,19 @@ import (
 // # How govax does it
 //
 // A section's physical pages belong to the section, not to the processes
-// mapping it. A page-file section's are allocated, zeroed, when it's
+// mapping it. A file section's (filesec.go) come in when first touched:
+// each has an entry in the global page table (globalPage), and a mapping
+// process's PTEs hold its index until the pager reads the page in. With
+// paging off, a page-file section's are allocated, zeroed, when it's
 // created, and a mapping process's PTEs are valid from the start,
-// pointing at them. A file section's (filesec.go) come in when first
-// touched: each has an entry in the global page table (globalPage), and
-// a mapping process's PTEs hold its index until the pager reads the page
-// in. Either way the code that gives back a page when its PTE is replaced
+// pointing at them; with paging on, its pages are global demand-zero
+// pages (globalpages.go), with global page table entries as a file
+// section's, each given a frame of zeros by the first fault anywhere.
+// Either way the code that gives back a page when its PTE is replaced
 // (releasePTE, TeardownAddressSpace) asks the System first
 // (releaseFrame): a page of a section only drops the section's
-// reference count. With paging on, a file section's page can leave
-// memory while the section lasts (globalpages.go).
+// reference count. With paging on, a section's page can leave memory
+// while the section lasts (globalpages.go).
 //
 // Sections mapped by PFN (SEC$M_PFNMAP) aren't supported:
 // SS$_UNSUPPORTED.
@@ -102,13 +106,30 @@ var (
 // maxSectionNameLength is the longest global section name.
 const maxSectionNameLength = 43
 
-// The SYSGEN limits on global sections, at govax's defaults: how many
-// sections may exist (GBLSECTIONS; SS$_GSDFULL beyond it) and how many
-// pages they may have in all (GBLPAGES; SS$_GPTFULL beyond it).
+// The SYSGEN limits on global sections, at govax's defaults (the phase
+// doc's question 2: govax's earlier constants, so that no program meets a
+// limit it didn't before, and the VAX's GBLPAGFIL): how many sections may
+// exist (GBLSECTIONS; SS$_GSDFULL beyond it), how many global page table
+// entries they may have in all (GBLPAGES, counted by globalPageEntries;
+// SS$_GPTFULL beyond it), and how many pages the page-file sections may
+// have in all (GBLPAGFIL; SS$_EXGBLPAGFIL beyond it). The vax.sysgen.*
+// keys change them (Sysgen).
 const (
-	DefaultGlobalSectionLimit = 128
-	DefaultGlobalPageLimit    = 4096
+	DefaultGlobalSectionLimit  = 128
+	DefaultGlobalPageLimit     = 4096
+	DefaultGlobalPageFileLimit = 4096
 )
+
+// ssExGblPagFil is $CRMPSC's status for a page-file section that would
+// take the page-file sections past GBLPAGFIL.
+var ssExGblPagFil = vmsdef.Symbols["SS$_EXGBLPAGFIL"]
+
+// globalPageEntries is how many of GBLPAGES a section of pages pages
+// uses: a page table entry per page and two more, rounded up to an even
+// number (the System Generation utility manual's rule for GBLPAGES).
+func globalPageEntries(pages int) int {
+	return (pages + 2 + 1) &^ 1
+}
 
 // GlobalSection is one global section.
 type GlobalSection struct {
@@ -142,7 +163,8 @@ type GlobalSection struct {
 
 	// Frames are the section's physical pages, in order. A file
 	// section's page not read in yet is 0, and, with paging on, one whose
-	// frame has gone to another page (globalpages.go).
+	// frame has gone to another page (globalpages.go); so is a paged
+	// page-file section's page not touched yet, or out.
 	Frames []uint32
 
 	// Refs is how many process page table entries map the section.
@@ -163,6 +185,28 @@ type GlobalSection struct {
 	// serial numbers the section among every section the system has
 	// made, from 1: its frames' owner in the PFN database (frames.go).
 	serial uint32
+
+	// paged is set for a page-file section made with paging on: its
+	// pages are global demand-zero pages, faulted in through global page
+	// table entries (globalpages.go). blocks holds, for each of its pages
+	// that's out, the page file block its contents are in (0 for a page
+	// never written, still demand zero).
+	paged  bool
+	blocks []uint32
+}
+
+// PageFileBlocks returns, for each page of a page-file section made with
+// paging on, the page file block holding its contents while it's out (0
+// for a page in memory, or never written); nil for any other section.
+func (s *GlobalSection) PageFileBlocks() []uint32 {
+	return slices.Clone(s.blocks)
+}
+
+// hasPageTable reports whether s's pages have global page table entries,
+// which a mapping process's PTEs hold until the page is faulted in: a
+// file section's, and a paged page-file section's.
+func (s *GlobalSection) hasPageTable() bool {
+	return s.File != nil || s.paged
 }
 
 // writesBack reports whether s's modified pages go back to its file: a
@@ -190,15 +234,19 @@ type GlobalSections struct {
 	byFrame map[uint32]sectionPage
 
 	// pageTable is the global page table: an entry for each page of each
-	// file section, which a mapping process's invalid PTE holds the
-	// index of (vm.GlobalPTE). An entry whose section is nil is free.
+	// section that has them (hasPageTable), which a mapping process's
+	// invalid PTE holds the index of (vm.GlobalPTE). An entry whose
+	// section is nil is free.
 	pageTable []sectionPage
 
-	// SectionLimit and PageLimit are GBLSECTIONS and GBLPAGES.
-	SectionLimit, PageLimit int
+	// SectionLimit, PageLimit, and PageFileLimit are GBLSECTIONS,
+	// GBLPAGES, and GBLPAGFIL.
+	SectionLimit, PageLimit, PageFileLimit int
 
-	// pages is how many pages the sections have in all.
-	pages int
+	// pages is how many of GBLPAGES the sections use in all
+	// (globalPageEntries), and pageFilePages how many pages the page-file
+	// sections have.
+	pages, pageFilePages int
 
 	// serials is the last section serial number given (newSerial).
 	serials uint32
@@ -214,9 +262,64 @@ func (g *GlobalSections) newSerial(s *GlobalSection) {
 func NewGlobalSections() *GlobalSections {
 	return &GlobalSections{
 		byFrame:      map[uint32]sectionPage{},
-		SectionLimit: DefaultGlobalSectionLimit,
-		PageLimit:    DefaultGlobalPageLimit,
+		SectionLimit:  DefaultGlobalSectionLimit,
+		PageLimit:     DefaultGlobalPageLimit,
+		PageFileLimit: DefaultGlobalPageFileLimit,
 	}
+}
+
+// FreePages is how many of GBLPAGES are left (SYI$_FREE_GBLPAGES), and
+// FreeSections how many sections more may be made (SYI$_FREE_GBLSECTS).
+func (g *GlobalSections) FreePages() int {
+	return max(g.PageLimit-g.pages, 0)
+}
+
+// FreeSections is how many more sections may be made under GBLSECTIONS.
+func (g *GlobalSections) FreeSections() int {
+	return max(g.SectionLimit-g.count(), 0)
+}
+
+// checkLimits returns the status that stops a new section of pages pages
+// (a page-file section's, if pageFile is set): SS$_GSDFULL past
+// GBLSECTIONS, SS$_GPTFULL past GBLPAGES, SS$_EXGBLPAGFIL past GBLPAGFIL;
+// SS$_NORMAL if none does. The limits are checked in that order
+// (unconfirmed: the probe's).
+func (g *GlobalSections) checkLimits(pages int, pageFile bool) uint32 {
+	switch {
+	case g.count() >= g.SectionLimit:
+		return ssGsdFull
+	case g.pages+globalPageEntries(pages) > g.PageLimit:
+		return ssGptFull
+	case pageFile && g.pageFilePages+pages > g.PageFileLimit:
+		return ssExGblPagFil
+	}
+
+	return ssNormal
+}
+
+// account adds s's use of GBLPAGES and GBLPAGFIL, of pages pages, to the
+// totals, or, with sign -1, takes it away, and adds s to the sections
+// (or leaves them alone).
+func (g *GlobalSections) account(s *GlobalSection, pages, sign int) {
+	g.pages += sign * globalPageEntries(pages)
+
+	if s.File == nil {
+		g.pageFilePages += sign * pages
+	}
+}
+
+// bySerial returns the section, its name deleted or not, whose serial
+// number is serial.
+func (g *GlobalSections) bySerial(serial uint32) *GlobalSection {
+	for _, list := range [][]*GlobalSection{g.sections, g.deleted} {
+		for _, s := range list {
+			if s.serial == serial {
+				return s
+			}
+		}
+	}
+
+	return nil
 }
 
 // Sections returns the sections whose names can be found, in creation
@@ -350,10 +453,12 @@ func (sys *System) releaseFrame(pfn uint32, modified bool) {
 // a temporary section, or one $DGBLSC has deleted. A file section's
 // modified pages are written back to its file first, and the file is let
 // go. Its physical pages go back to the free list (cleared). With paging
-// on, a file section's pages that hold frames are all in transition then
+// on, a section's pages that hold frames are all in transition then
 // (nothing maps the section, so no PTE is valid on them): those on the
 // modified list are the ones written, and every frame, on either list,
-// is deleted to the free list's head.
+// is deleted to the free list's head. A paged page-file section's pages
+// give back their page file blocks, whether out or in a frame's backing
+// store.
 func (sys *System) maybeDeleteSection(s *GlobalSection) {
 	g := sys.Sections
 	if s.Refs > 0 || s.Permanent {
@@ -362,41 +467,73 @@ func (sys *System) maybeDeleteSection(s *GlobalSection) {
 
 	sys.writeBackSection(s)
 
-	for _, pfn := range s.Frames {
-		if pfn != 0 {
-			delete(g.byFrame, pfn)
-			sys.mem.FreePage(pfn)
+	for i, pfn := range s.Frames {
+		if pfn == 0 {
+			continue
+		}
+
+		if frame, e, ok := sys.globalFrame(s, i); ok {
+			sys.forgetPageFileBlock(frame, e.Backing)
+		}
+
+		delete(g.byFrame, pfn)
+		sys.mem.FreePage(pfn)
+	}
+
+	for _, vbn := range s.blocks {
+		if vbn != 0 {
+			_ = sys.FreePageFile(paging.Run{First: vbn, Count: 1})
+		}
+	}
+
+	if s.hasPageTable() {
+		for i := range s.Frames {
+			g.pageTable[s.gpt+uint32(i)] = sectionPage{}
 		}
 	}
 
 	if s.File != nil {
-		for i := range s.Frames {
-			g.pageTable[s.gpt+uint32(i)] = sectionPage{}
-		}
-
 		sys.dropFile(s.File)
-		s.File = nil
 	}
 
-	g.pages -= len(s.Frames)
-	s.Frames = nil
+	g.account(s, len(s.Frames), -1)
+	s.File, s.Frames, s.blocks = nil, nil, nil
 
 	g.sections = slices.DeleteFunc(g.sections, func(x *GlobalSection) bool { return x == s })
 	g.deleted = slices.DeleteFunc(g.deleted, func(x *GlobalSection) bool { return x == s })
 }
 
-// createSection makes a new section of pages zeroed physical pages,
-// returning it or the status that stops it: SS$_GSDFULL or SS$_GPTFULL
-// past the limits, SS$_INSFMEM when physical memory runs out.
+// createSection makes a new page-file section of pages pages, returning
+// it or the status that stops it: SS$_GSDFULL, SS$_GPTFULL, or
+// SS$_EXGBLPAGFIL past the limits (checkLimits; GBLPAGFIL is taken for
+// the whole section at once, and the process's paging file quota isn't
+// charged: the 5.0 manual names PGFLQUOTA only for copy-on-reference
+// pages), SS$_INSFMEM when physical memory runs out. With paging off, its
+// pages are zeroed physical pages allocated now; with paging on, global
+// demand-zero pages with global page table entries, and no frames until
+// they're touched (globalpages.go).
 func (sys *System) createSection(s *GlobalSection, pages int) (*GlobalSection, uint32) {
 	g := sys.Sections
 
-	if g.count() >= g.SectionLimit {
-		return nil, ssGsdFull
+	if st := g.checkLimits(pages, true); st != ssNormal {
+		return nil, st
 	}
 
-	if g.pages+pages > g.PageLimit {
-		return nil, ssGptFull
+	if sys.mem.Paging() != nil {
+		if !g.allocPageTable(s, pages) {
+			return nil, ssGptFull
+		}
+
+		g.newSerial(s)
+
+		s.paged = true
+		s.Frames = make([]uint32, pages)
+		s.blocks = make([]uint32, pages)
+
+		g.account(s, pages, 1)
+		g.sections = append(g.sections, s)
+
+		return s, ssNormal
 	}
 
 	g.newSerial(s)
@@ -425,7 +562,7 @@ func (sys *System) createSection(s *GlobalSection, pages int) (*GlobalSection, u
 		g.byFrame[pfn] = sectionPage{s, i}
 	}
 
-	g.pages += pages
+	g.account(s, pages, 1)
 	g.sections = append(g.sections, s)
 
 	return s, ssNormal
@@ -438,11 +575,11 @@ func (sys *System) createSection(s *GlobalSection, pages int) (*GlobalSection, u
 func (sys *System) createFileSection(s *GlobalSection, pages int) uint32 {
 	g := sys.Sections
 
-	if g.count() >= g.SectionLimit {
-		return ssGsdFull
+	if st := g.checkLimits(pages, false); st != ssNormal {
+		return st
 	}
 
-	if g.pages+pages > g.PageLimit || !g.allocPageTable(s, pages) {
+	if !g.allocPageTable(s, pages) {
 		return ssGptFull
 	}
 
@@ -451,7 +588,7 @@ func (sys *System) createFileSection(s *GlobalSection, pages int) uint32 {
 	s.Frames = make([]uint32, pages)
 	s.Dirty = make([]bool, pages)
 
-	g.pages += pages
+	g.account(s, pages, 1)
 	g.sections = append(g.sections, s)
 	sys.holdFile(s.File)
 
@@ -547,7 +684,8 @@ func (env *Environment) readIdent(addr uint32) (sectionIdent, uint32) {
 //
 //   - A *page-file* global section: flags SEC$M_GBL and SEC$M_PAGFIL
 //     (with SEC$M_DZRO, implied anyway), of pagcnt pages (SS$_ENDOFFILE
-//     for 0, as VMS 7.3 says), zeroed.
+//     for 0, as VMS 7.3 says), zeroed. Its pages count against GBLPAGFIL
+//     (SS$_EXGBLPAGFIL past it), not the paging file quota.
 //   - A *file* global section: SEC$M_GBL without SEC$M_PAGFIL, of the
 //     file accessed on channel chan (filesec.go), from block vbn, pagcnt
 //     pages or the rest of the file.
@@ -573,7 +711,7 @@ func (env *Environment) readIdent(addr uint32) (sectionIdent, uint32) {
 // file section with no channel; SS$_UNSUPPORTED for a section mapped by
 // PFN; fileSectionChannel's and fileSectionSize's (SS$_NOPRIV,
 // SS$_NOTFILEDEV, SS$_NOWRT, SS$_ENDOFFILE); SS$_NOPRIV; SS$_GSDFULL,
-// SS$_GPTFULL, SS$_INSFMEM; readSectionArgs's and mapRange's. Any
+// SS$_GPTFULL, SS$_EXGBLPAGFIL, SS$_INSFMEM; readSectionArgs's and mapRange's. Any
 // failure before a page is mapped writes -1 to both longwords of retadr
 // (failRetadr).
 //
@@ -910,9 +1048,10 @@ func (env *Environment) expandP1(count uint32) (uint32, uint32) {
 // section. Each page is owned by a.mode, read/write for a.mode and the
 // more privileged modes with SEC$M_WRT, read-only for them without. A
 // page-file section's page becomes a valid page pointing at the
-// section's physical page; a file section's an invalid one holding its
-// global page table index, which the pager resolves when it's touched
-// (filesec.go). A page already there is replaced as by $CRETVA
+// section's physical page (with paging off); a file section's, and with
+// paging on a page-file section's, an invalid one holding its global page
+// table index, which the pager resolves when it's touched (filesec.go,
+// globalpages.go). A page already there is replaced as by $CRETVA
 // (SS$_PAGOWNVIO if a more privileged mode owns it; SS$_NOPRIV for a
 // system page, SS$_VASFULL beyond the page table). Mapping without the
 // access the section's protection gives the process is SS$_NOPRIV; a
@@ -961,7 +1100,7 @@ func (env *Environment) mapSection(s *GlobalSection, a sectionArgs, r pageRange)
 
 	for i, addr := a.relpag, r.first; i < uint32(len(s.Frames)) && addr >= r.first && addr <= r.last; i, addr = i+1, addr+pageSize {
 		pte := vm.GlobalPTE(s.gpt+i, prot, uint8(a.mode))
-		if s.File == nil {
+		if !s.hasPageTable() {
 			pte = vm.ValidPTE(s.Frames[i], prot, uint8(a.mode))
 		}
 
@@ -1009,9 +1148,9 @@ func (env *Environment) mapSectionPage(s *GlobalSection, addr uint32, pte vm.PTE
 
 	env.sectionPages[addr] = true
 
-	// A page-file section's pages are valid from the start, so they enter
-	// the working set now, as global pages (workingset.go); a file
-	// section's enter it when they're faulted in.
+	// A page-file section's pages are valid from the start with paging
+	// off (when there are no working sets); any other section's pages
+	// enter the working set when they're faulted in.
 	if pte.Valid() {
 		env.enterWorkingSet(addr, true)
 	}

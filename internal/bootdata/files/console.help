@@ -144,6 +144,8 @@
 //                          vax.sysgen.paging.defer in CONFIG KEYS
 //              10/18/26    VMINIT/PAGING brought up to date with the page
 //                          file
+//              10/18/26    vax.sysgen.gblsections, gblpages, and
+//                          gblpagfil in CONFIG KEYS
 
 This is the help documentation for the govax VAX emulator.  Topic sections are
 marked by a "$" delimiter.  This is followed by as many tokens of the help
@@ -2224,6 +2226,23 @@ $CONF,KEY
         vax.sysgen.freegoal           FREEGOAL: the reclaimer stops when
                                       this many pages are free.  0 is
                                       allowed.  Default 200.
+
+        vax.sysgen.gblsections        GBLSECTIONS: the most global
+                                      sections that may exist at once;
+                                      $CRMPSC fails with SS$_GSDFULL
+                                      past it.  Default 128.
+
+        vax.sysgen.gblpages           GBLPAGES: the global page table
+                                      entries the global sections may
+                                      use in all, each section its pages
+                                      and two more, rounded up to an
+                                      even number; $CRMPSC fails with
+                                      SS$_GPTFULL past it.  Default 4096.
+
+        vax.sysgen.gblpagfil          GBLPAGFIL: the pages the page-file
+                                      global sections may have in all;
+                                      $CRMPSC fails with SS$_EXGBLPAGFIL
+                                      past it.  Default 4096.
 
         vax.sysgen.paging.file        With paging on, the page file: where
                                       pages with no file of their own go

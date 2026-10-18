@@ -337,8 +337,13 @@ func (sys *System) writePageFileCluster(frames []paging.PFN) bool {
 // pageFileBound reports whether a frame's contents go to the page file
 // when the writer writes it: a tied process page whose backing store is
 // the page file (or, for a frame claimed before demand-zero pages had
-// one, nothing), of a process that still exists.
+// one, nothing), of a process that still exists, or a page-file global
+// section's page (pageFileGlobal).
 func (sys *System) pageFileBound(e paging.Entry) bool {
+	if sys.pageFileGlobal(e) {
+		return true
+	}
+
 	if !e.Tied || e.Type != paging.ProcessPage {
 		return false
 	}
@@ -360,6 +365,11 @@ func (sys *System) pageFileBound(e paging.Entry) bool {
 // A page never crosses from P0 to P1.
 func (sys *System) miniCluster(pfn paging.PFN, e paging.Entry, size uint32, match func(paging.Entry) bool,
 	taken map[paging.PFN]bool) []paging.PFN {
+	// A global page's neighbors are its section's, not a process's.
+	if e.Type == paging.GlobalPage {
+		return sys.globalMiniCluster(pfn, e, size, match, taken)
+	}
+
 	env, ok := sys.FindProcess(e.Owner.Handle)
 	if !ok || size <= 1 {
 		return []paging.PFN{pfn}

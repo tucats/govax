@@ -108,9 +108,11 @@ func globalFrameFound(c *Console, pfn uint32, owner paging.Owner) bool {
 }
 
 // TestPagingGlobalSectionFrames: with paging on, a page-file global
-// section's frames are global pages backed by the page file, one per
-// page however many mappings there are, and they go back to the free
-// list with the section.
+// section's pages have no frames until they're touched (Phase 65's
+// subtask 4: global demand-zero pages); then each has one frame, a global
+// page backed by the page file and effectively modified, however many
+// mappings share it; and the frames go back to the free list with the
+// section.
 func TestPagingGlobalSectionFrames(t *testing.T) {
 	withSettings(t, map[string]string{machine.PagingSetting: "true"})
 
@@ -131,9 +133,21 @@ func TestPagingGlobalSectionFrames(t *testing.T) {
 		t.Fatalf("$MGBLSC = %#x", got)
 	}
 
+	if after := frameOwners(t, c); after.global != before.global {
+		t.Errorf("global frames %d, then %d after mapping; want none more", before.global, after.global)
+	}
+
+	for _, va := range []uint32{secPages, secPages + 0x200, secPages + 0x1000, secPages + 0x1200} {
+		c.Mem.BeginInstruction()
+
+		if v, err := c.Mem.LoadLongword(c.CPU, va); err != nil || v != 0 {
+			t.Errorf("section page at %08X holds %d (%v), want 0", va, v, err)
+		}
+	}
+
 	after := frameOwners(t, c)
 	if after.global != before.global+2 {
-		t.Errorf("global frames %d, then %d; want 2 more", before.global, after.global)
+		t.Errorf("global frames %d, then %d after the touches; want 2 more", before.global, after.global)
 	}
 
 	s := section(c, "PAGED")
@@ -143,7 +157,8 @@ func TestPagingGlobalSectionFrames(t *testing.T) {
 
 	for i, pfn := range s.Frames {
 		e, _ := db.Entry(paging.PFN(pfn))
-		if e.Type != paging.GlobalPage || e.Backing.Kind != paging.PageFile || e.Owner.VA != uint32(i)*512 {
+		if e.Type != paging.GlobalPage || e.Backing.Kind != paging.PageFile || e.Owner.VA != uint32(i)*512 ||
+			e.ShareCount != 2 || !e.SavedModify {
 			t.Errorf("page %d's frame %d: %+v", i, pfn, e)
 		}
 	}

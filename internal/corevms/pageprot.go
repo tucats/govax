@@ -440,12 +440,11 @@ func (env *Environment) cancelPageLocks() {
 // of P0 and P1. The service walks the working set, not the range (the
 // phase doc's finding 4). Pages locked in the working set or in memory
 // stay (neither manual says; unconfirmed), and so do the pages
-// replacement passes over (wsProtected): page-file section pages,
-// resident until Phase 65's subtask 4, and the pages the calling
+// replacement passes over (wsProtected): the pages the calling
 // instruction has translated (its code, its argument list, inadr), which
-// the image would fault back at once anyway. A global file section's
-// page purged gets its global page table index back in the PTE
-// (globalpages.go).
+// the image would fault back at once anyway. A global section's page
+// purged, a file section's or a page-file section's, gets its global page
+// table index back in the PTE (globalpages.go).
 //
 // It returns SS$_NORMAL; SS$_ACCVIO if inadr can't be read; SS$_NOPRIV
 // if the range reaches system space (VSI's list; the 5.0 manual's has no

@@ -160,7 +160,7 @@ func TestServiceSysGetsyiCompletion(t *testing.T) {
 
 func TestSYIItemsRegistry(t *testing.T) {
 	for name := range syiItemsByName {
-		if _, ok := vmsdef.Symbols[name]; !ok {
+		if _, ok := syiCodeOf(name); !ok {
 			t.Errorf("%s is not a $SYIDEF item code", name)
 		}
 	}

@@ -481,12 +481,20 @@ func (sys *System) resolveFault(f vm.PageFault) (vm.PTE, faultKind, bool) {
 // frame goes to the free list, and it's never written again unless it's
 // modified (the book's 15.2.4).
 func (sys *System) pageInFromPageFile(vbn uint32, f vm.PageFault) (uint32, bool) {
+	return sys.readPageFileBlock(vbn, sys.faultClaim(f, paging.Backing{}))
+}
+
+// readPageFileBlock reads block vbn of the page file into a new frame for
+// the page claim c describes, its backing store the block, returning the
+// frame's number, or false if there's no page file open, memory is
+// exhausted, or the block can't be read.
+func (sys *System) readPageFileBlock(vbn uint32, c vm.FrameClaim) (uint32, bool) {
 	pf := sys.PageFile()
 	if pf == nil {
 		return 0, false
 	}
 
-	c := sys.faultClaim(f, pageFileBacking(vbn))
+	c.Backing = pageFileBacking(vbn)
 	c.Fill = true
 
 	pfn, ok := sys.mem.AllocateFrame(c)
@@ -508,15 +516,16 @@ func (sys *System) pageInFromPageFile(vbn uint32, f vm.PageFault) (uint32, bool)
 }
 
 // pageInGlobal returns the physical page for global page table entry gi:
-// the section's own, read in if this is its first touch, or, for a
-// copy-on-reference section, a private copy for the process fault f
+// the section's own, read in if this is its first touch (with paging on,
+// a page-file section's is a frame of zeros or its page file block), or,
+// for a copy-on-reference section, a private copy for the process fault f
 // touched (and the section loses the reference the faulting PTE held);
 // and the fault's kind: a read, or a global valid fault if the section's
 // page was in memory already. With paging on, a section's own page may
 // also be taken back off a list (pageInSharedGlobal).
 func (sys *System) pageInGlobal(gi uint32, f vm.PageFault) (uint32, faultKind, bool) {
 	s, i, ok := sys.Sections.globalPage(gi)
-	if !ok || s.File == nil {
+	if !ok || !s.hasPageTable() {
 		return 0, faultRead, false
 	}
 
