@@ -145,8 +145,9 @@ here, ran everything. The logs were audited by the author.
 `TestPG64Oracle` (`internal/console/pg64_test.go`) runs the parts on
 govax and matches VMS's lines but for `expectedPG64Differences`; the
 phase doc's progress log lists what VMS answered and what govax
-changed. The modified page writer's stopping point is still open: VMS
-wrote far fewer pages than govax's writer does (W3 to W6).
+changed. The modified page writer's stopping point was left open: VMS
+wrote far fewer pages than govax's writer then did (W3 to W6). Round 2
+settled it.
 
 ## Round 2: where the writer stops
 
@@ -182,3 +183,15 @@ govax's dry run of part X: the first sweep's chunks show nothing written
 until the list passes MPW_HILIMIT (between 5500 and 6000 pages), then
 5520 pages written at once, the list down to MPW_LOLIMIT; nothing more
 during the rest or the read-back.
+
+### Round 2's run (2026-10-18)
+
+OpenVMS V7.1 on simh's VAX 8600 (`vax/round2/`: the procedure's log, part
+X's output, the monitor's log; MACRO and LINK wrote no messages). The
+writer started when the modified list passed MPW_HILIMIT (5634) and
+stopped a cluster below it, at about 5514 (MPW_HILIMIT less
+MPW_WRTCLUSTER, also that VAX's MPW_LOWAITLIMIT), not at MPW_LOLIMIT
+(120); the list stayed near 5530 until the pages were deleted. govax's
+writer now does the same, and `TestPG64WriterRound2` runs part X on
+govax and holds the page file's use after each chunk to VMS's within
+two clusters.

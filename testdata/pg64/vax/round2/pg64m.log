@@ -1,0 +1,334 @@
+$ ! PG64M.COM - round 2's monitor (PG64X.COM spawns it): the time and
+$ ! SHOW MEMORY/PHYSICAL_PAGES (the modified list's size is its last
+$ ! column) once a second, until PG64_DONE is defined in the job table,
+$ ! at most 300 times.
+$ SET NOVERIFY
+m 18-OCT-2026 16:58:10.78
+              System Memory Resources on 18-OCT-2026 16:58:10.78
+
+Physical Memory Usage (pages):     Total        Free      In Use    Modified
+  Main Memory (32.00Mb)            65536       30440       34956         140
+
+Of the physical pages in use, 13114 pages are permanently allocated to OpenVMS.
+m 18-OCT-2026 16:58:11.78
+              System Memory Resources on 18-OCT-2026 16:58:11.78
+
+Physical Memory Usage (pages):     Total        Free      In Use    Modified
+  Main Memory (32.00Mb)            65536       30437       34959         140
+
+Of the physical pages in use, 13114 pages are permanently allocated to OpenVMS.
+m 18-OCT-2026 16:58:12.78
+              System Memory Resources on 18-OCT-2026 16:58:12.78
+
+Physical Memory Usage (pages):     Total        Free      In Use    Modified
+  Main Memory (32.00Mb)            65536       30437       34925         174
+
+Of the physical pages in use, 13114 pages are permanently allocated to OpenVMS.
+m 18-OCT-2026 16:58:13.78
+              System Memory Resources on 18-OCT-2026 16:58:13.78
+
+Physical Memory Usage (pages):     Total        Free      In Use    Modified
+  Main Memory (32.00Mb)            65536       30446       34880         210
+
+Of the physical pages in use, 13114 pages are permanently allocated to OpenVMS.
+m 18-OCT-2026 16:58:14.78
+              System Memory Resources on 18-OCT-2026 16:58:14.78
+
+Physical Memory Usage (pages):     Total        Free      In Use    Modified
+  Main Memory (32.00Mb)            65536       30455       34885         196
+
+Of the physical pages in use, 13114 pages are permanently allocated to OpenVMS.
+m 18-OCT-2026 16:58:15.78
+              System Memory Resources on 18-OCT-2026 16:58:15.78
+
+Physical Memory Usage (pages):     Total        Free      In Use    Modified
+  Main Memory (32.00Mb)            65536       30424       34929         183
+
+Of the physical pages in use, 13114 pages are permanently allocated to OpenVMS.
+m 18-OCT-2026 16:58:16.82
+              System Memory Resources on 18-OCT-2026 16:58:16.82
+
+Physical Memory Usage (pages):     Total        Free      In Use    Modified
+  Main Memory (32.00Mb)            65536       25015       34994        5527
+
+Of the physical pages in use, 13114 pages are permanently allocated to OpenVMS.
+m 18-OCT-2026 16:58:17.82
+              System Memory Resources on 18-OCT-2026 16:58:17.82
+
+Physical Memory Usage (pages):     Total        Free      In Use    Modified
+  Main Memory (32.00Mb)            65536       25023       34981        5532
+
+Of the physical pages in use, 13114 pages are permanently allocated to OpenVMS.
+m 18-OCT-2026 16:58:18.82
+              System Memory Resources on 18-OCT-2026 16:58:18.82
+
+Physical Memory Usage (pages):     Total        Free      In Use    Modified
+  Main Memory (32.00Mb)            65536       25018       34996        5522
+
+Of the physical pages in use, 13114 pages are permanently allocated to OpenVMS.
+m 18-OCT-2026 16:58:19.82
+              System Memory Resources on 18-OCT-2026 16:58:19.82
+
+Physical Memory Usage (pages):     Total        Free      In Use    Modified
+  Main Memory (32.00Mb)            65536       25005       35009        5522
+
+Of the physical pages in use, 13114 pages are permanently allocated to OpenVMS.
+m 18-OCT-2026 16:58:20.82
+              System Memory Resources on 18-OCT-2026 16:58:20.82
+
+Physical Memory Usage (pages):     Total        Free      In Use    Modified
+  Main Memory (32.00Mb)            65536       25006       34993        5537
+
+Of the physical pages in use, 13114 pages are permanently allocated to OpenVMS.
+m 18-OCT-2026 16:58:21.82
+              System Memory Resources on 18-OCT-2026 16:58:21.82
+
+Physical Memory Usage (pages):     Total        Free      In Use    Modified
+  Main Memory (32.00Mb)            65536       25013       34981        5542
+
+Of the physical pages in use, 13114 pages are permanently allocated to OpenVMS.
+m 18-OCT-2026 16:58:22.82
+              System Memory Resources on 18-OCT-2026 16:58:22.82
+
+Physical Memory Usage (pages):     Total        Free      In Use    Modified
+  Main Memory (32.00Mb)            65536       25017       34987        5532
+
+Of the physical pages in use, 13114 pages are permanently allocated to OpenVMS.
+m 18-OCT-2026 16:58:23.82
+              System Memory Resources on 18-OCT-2026 16:58:23.82
+
+Physical Memory Usage (pages):     Total        Free      In Use    Modified
+  Main Memory (32.00Mb)            65536       25005       35000        5531
+
+Of the physical pages in use, 13114 pages are permanently allocated to OpenVMS.
+m 18-OCT-2026 16:58:24.82
+              System Memory Resources on 18-OCT-2026 16:58:24.82
+
+Physical Memory Usage (pages):     Total        Free      In Use    Modified
+  Main Memory (32.00Mb)            65536       25004       35003        5529
+
+Of the physical pages in use, 13114 pages are permanently allocated to OpenVMS.
+m 18-OCT-2026 16:58:25.82
+              System Memory Resources on 18-OCT-2026 16:58:25.82
+
+Physical Memory Usage (pages):     Total        Free      In Use    Modified
+  Main Memory (32.00Mb)            65536       25019       34981        5536
+
+Of the physical pages in use, 13114 pages are permanently allocated to OpenVMS.
+m 18-OCT-2026 16:58:26.82
+              System Memory Resources on 18-OCT-2026 16:58:26.82
+
+Physical Memory Usage (pages):     Total        Free      In Use    Modified
+  Main Memory (32.00Mb)            65536       25016       34996        5524
+
+Of the physical pages in use, 13114 pages are permanently allocated to OpenVMS.
+m 18-OCT-2026 16:58:27.82
+              System Memory Resources on 18-OCT-2026 16:58:27.82
+
+Physical Memory Usage (pages):     Total        Free      In Use    Modified
+  Main Memory (32.00Mb)            65536       25005       35000        5531
+
+Of the physical pages in use, 13114 pages are permanently allocated to OpenVMS.
+m 18-OCT-2026 16:58:28.82
+              System Memory Resources on 18-OCT-2026 16:58:28.82
+
+Physical Memory Usage (pages):     Total        Free      In Use    Modified
+  Main Memory (32.00Mb)            65536       25005       34995        5536
+
+Of the physical pages in use, 13114 pages are permanently allocated to OpenVMS.
+m 18-OCT-2026 16:58:29.82
+              System Memory Resources on 18-OCT-2026 16:58:29.82
+
+Physical Memory Usage (pages):     Total        Free      In Use    Modified
+  Main Memory (32.00Mb)            65536       25012       34981        5543
+
+Of the physical pages in use, 13114 pages are permanently allocated to OpenVMS.
+m 18-OCT-2026 16:58:30.82
+              System Memory Resources on 18-OCT-2026 16:58:30.82
+
+Physical Memory Usage (pages):     Total        Free      In Use    Modified
+  Main Memory (32.00Mb)            65536       25017       34987        5532
+
+Of the physical pages in use, 13114 pages are permanently allocated to OpenVMS.
+m 18-OCT-2026 16:58:31.82
+              System Memory Resources on 18-OCT-2026 16:58:31.82
+
+Physical Memory Usage (pages):     Total        Free      In Use    Modified
+  Main Memory (32.00Mb)            65536       25004       35008        5524
+
+Of the physical pages in use, 13114 pages are permanently allocated to OpenVMS.
+m 18-OCT-2026 16:58:32.82
+              System Memory Resources on 18-OCT-2026 16:58:32.82
+
+Physical Memory Usage (pages):     Total        Free      In Use    Modified
+  Main Memory (32.00Mb)            65536       25004       35003        5529
+
+Of the physical pages in use, 13114 pages are permanently allocated to OpenVMS.
+m 18-OCT-2026 16:58:33.82
+              System Memory Resources on 18-OCT-2026 16:58:33.82
+
+Physical Memory Usage (pages):     Total        Free      In Use    Modified
+  Main Memory (32.00Mb)            65536       25018       34980        5538
+
+Of the physical pages in use, 13114 pages are permanently allocated to OpenVMS.
+m 18-OCT-2026 16:58:34.82
+              System Memory Resources on 18-OCT-2026 16:58:34.82
+
+Physical Memory Usage (pages):     Total        Free      In Use    Modified
+  Main Memory (32.00Mb)            65536       25016       34995        5525
+
+Of the physical pages in use, 13114 pages are permanently allocated to OpenVMS.
+m 18-OCT-2026 16:58:35.82
+              System Memory Resources on 18-OCT-2026 16:58:35.82
+
+Physical Memory Usage (pages):     Total        Free      In Use    Modified
+  Main Memory (32.00Mb)            65536       25005       34998        5533
+
+Of the physical pages in use, 13114 pages are permanently allocated to OpenVMS.
+m 18-OCT-2026 16:58:36.82
+              System Memory Resources on 18-OCT-2026 16:58:36.82
+
+Physical Memory Usage (pages):     Total        Free      In Use    Modified
+  Main Memory (32.00Mb)            65536       25005       34994        5537
+
+Of the physical pages in use, 13114 pages are permanently allocated to OpenVMS.
+m 18-OCT-2026 16:58:37.82
+              System Memory Resources on 18-OCT-2026 16:58:37.82
+
+Physical Memory Usage (pages):     Total        Free      In Use    Modified
+  Main Memory (32.00Mb)            65536       25012       34981        5543
+
+Of the physical pages in use, 13114 pages are permanently allocated to OpenVMS.
+m 18-OCT-2026 16:58:38.82
+              System Memory Resources on 18-OCT-2026 16:58:38.82
+
+Physical Memory Usage (pages):     Total        Free      In Use    Modified
+  Main Memory (32.00Mb)            65536       25017       34985        5534
+
+Of the physical pages in use, 13114 pages are permanently allocated to OpenVMS.
+m 18-OCT-2026 16:58:39.82
+              System Memory Resources on 18-OCT-2026 16:58:39.82
+
+Physical Memory Usage (pages):     Total        Free      In Use    Modified
+  Main Memory (32.00Mb)            65536       25004       35008        5524
+
+Of the physical pages in use, 13114 pages are permanently allocated to OpenVMS.
+m 18-OCT-2026 16:58:40.82
+              System Memory Resources on 18-OCT-2026 16:58:40.82
+
+Physical Memory Usage (pages):     Total        Free      In Use    Modified
+  Main Memory (32.00Mb)            65536       25122       35153        5261
+
+Of the physical pages in use, 13114 pages are permanently allocated to OpenVMS.
+m 18-OCT-2026 16:58:41.82
+              System Memory Resources on 18-OCT-2026 16:58:41.82
+
+Physical Memory Usage (pages):     Total        Free      In Use    Modified
+  Main Memory (32.00Mb)            65536       25138       35130        5268
+
+Of the physical pages in use, 13114 pages are permanently allocated to OpenVMS.
+m 18-OCT-2026 16:58:42.82
+              System Memory Resources on 18-OCT-2026 16:58:42.82
+
+Physical Memory Usage (pages):     Total        Free      In Use    Modified
+  Main Memory (32.00Mb)            65536       25135       35135        5266
+
+Of the physical pages in use, 13114 pages are permanently allocated to OpenVMS.
+m 18-OCT-2026 16:58:43.82
+              System Memory Resources on 18-OCT-2026 16:58:43.82
+
+Physical Memory Usage (pages):     Total        Free      In Use    Modified
+  Main Memory (32.00Mb)            65536       30718       34805          13
+
+Of the physical pages in use, 13114 pages are permanently allocated to OpenVMS.
+m 18-OCT-2026 16:58:44.82
+              System Memory Resources on 18-OCT-2026 16:58:44.82
+
+Physical Memory Usage (pages):     Total        Free      In Use    Modified
+  Main Memory (32.00Mb)            65536       30718       34800          18
+
+Of the physical pages in use, 13114 pages are permanently allocated to OpenVMS.
+m 18-OCT-2026 16:58:45.82
+              System Memory Resources on 18-OCT-2026 16:58:45.82
+
+Physical Memory Usage (pages):     Total        Free      In Use    Modified
+  Main Memory (32.00Mb)            65536       30726       34787          23
+
+Of the physical pages in use, 13114 pages are permanently allocated to OpenVMS.
+m 18-OCT-2026 16:58:46.82
+              System Memory Resources on 18-OCT-2026 16:58:46.82
+
+Physical Memory Usage (pages):     Total        Free      In Use    Modified
+  Main Memory (32.00Mb)            65536       30664       34861          11
+
+Of the physical pages in use, 13114 pages are permanently allocated to OpenVMS.
+m 18-OCT-2026 16:58:47.82
+              System Memory Resources on 18-OCT-2026 16:58:47.82
+
+Physical Memory Usage (pages):     Total        Free      In Use    Modified
+  Main Memory (32.00Mb)            65536       30658       34867          11
+
+Of the physical pages in use, 13114 pages are permanently allocated to OpenVMS.
+m 18-OCT-2026 16:58:48.82
+              System Memory Resources on 18-OCT-2026 16:58:48.82
+
+Physical Memory Usage (pages):     Total        Free      In Use    Modified
+  Main Memory (32.00Mb)            65536       30658       34863          15
+
+Of the physical pages in use, 13114 pages are permanently allocated to OpenVMS.
+m 18-OCT-2026 16:58:49.82
+              System Memory Resources on 18-OCT-2026 16:58:49.82
+
+Physical Memory Usage (pages):     Total        Free      In Use    Modified
+  Main Memory (32.00Mb)            65536       30658       34857          21
+
+Of the physical pages in use, 13114 pages are permanently allocated to OpenVMS.
+m 18-OCT-2026 16:58:50.82
+              System Memory Resources on 18-OCT-2026 16:58:50.82
+
+Physical Memory Usage (pages):     Total        Free      In Use    Modified
+  Main Memory (32.00Mb)            65536       30665       34852          19
+
+Of the physical pages in use, 13114 pages are permanently allocated to OpenVMS.
+m 18-OCT-2026 16:58:51.82
+              System Memory Resources on 18-OCT-2026 16:58:51.82
+
+Physical Memory Usage (pages):     Total        Free      In Use    Modified
+  Main Memory (32.00Mb)            65536       30659       34858          19
+
+Of the physical pages in use, 13114 pages are permanently allocated to OpenVMS.
+m 18-OCT-2026 16:58:52.82
+              System Memory Resources on 18-OCT-2026 16:58:52.82
+
+Physical Memory Usage (pages):     Total        Free      In Use    Modified
+  Main Memory (32.00Mb)            65536       30659       34854          23
+
+Of the physical pages in use, 13114 pages are permanently allocated to OpenVMS.
+m 18-OCT-2026 16:58:53.82
+              System Memory Resources on 18-OCT-2026 16:58:53.82
+
+Physical Memory Usage (pages):     Total        Free      In Use    Modified
+  Main Memory (32.00Mb)            65536       30659       34849          28
+
+Of the physical pages in use, 13114 pages are permanently allocated to OpenVMS.
+m 18-OCT-2026 16:58:54.82
+              System Memory Resources on 18-OCT-2026 16:58:54.82
+
+Physical Memory Usage (pages):     Total        Free      In Use    Modified
+  Main Memory (32.00Mb)            65536       30664       34861          11
+
+Of the physical pages in use, 13114 pages are permanently allocated to OpenVMS.
+m 18-OCT-2026 16:58:55.82
+              System Memory Resources on 18-OCT-2026 16:58:55.82
+
+Physical Memory Usage (pages):     Total        Free      In Use    Modified
+  Main Memory (32.00Mb)            65536       30658       34868          10
+
+Of the physical pages in use, 13114 pages are permanently allocated to OpenVMS.
+m 18-OCT-2026 16:58:56.82
+              System Memory Resources on 18-OCT-2026 16:58:56.82
+
+Physical Memory Usage (pages):     Total        Free      In Use    Modified
+  Main Memory (32.00Mb)            65536       30647       34871          18
+
+Of the physical pages in use, 13114 pages are permanently allocated to OpenVMS.

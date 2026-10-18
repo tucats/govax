@@ -1,0 +1,42 @@
+X1 mpw_hilimit=5634 mpw_lolimit=120 mpw_wrtcluster=120
+X1 expreg 6634 pages: 00000001 wssize=282
+X2 16:58:15.78 start: page file free=91509
+X3 16:58:15.78 written 500: page file used=-1 flts=516
+X3 16:58:15.79 written 1000: page file used=-1 flts=1035
+X3 16:58:15.79 written 1500: page file used=-1 flts=1553
+X3 16:58:15.79 written 2000: page file used=-1 flts=2072
+X3 16:58:15.80 written 2500: page file used=-1 flts=2589
+X3 16:58:15.80 written 3000: page file used=-1 flts=3108
+X3 16:58:15.80 written 3500: page file used=-1 flts=3628
+X3 16:58:15.81 written 4000: page file used=-1 flts=4154
+X3 16:58:15.81 written 4500: page file used=-1 flts=4674
+X3 16:58:15.81 written 5000: page file used=-1 flts=5189
+X3 16:58:15.82 written 5500: page file used=-1 flts=5707
+X3 16:58:15.82 written 6000: page file used=479 flts=6226
+X3 16:58:15.83 written 6500: page file used=950 flts=6746
+X3 16:58:15.83 written 6634: page file used=1190 flts=6892
+X4 16:58:18.83 rest: page file used=1190
+X4 16:58:21.83 rest: page file used=1182
+X4 16:58:24.83 rest: page file used=1182
+X4 16:58:27.83 rest: page file used=1182
+X4 16:58:30.83 rest: page file used=1182
+X4 16:58:33.83 rest: page file used=1182
+X4 16:58:36.83 rest: page file used=1182
+X4 16:58:39.83 rest: page file used=1182
+X5 16:58:39.83 read 500: page file used=1300 flts=7404
+X5 16:58:39.83 read 1000: page file used=1300 flts=7920
+X5 16:58:39.83 read 1500: page file used=1300 flts=8436
+X5 16:58:39.84 read 2000: page file used=1300 flts=8953
+X5 16:58:39.84 read 2500: page file used=1300 flts=9468
+X5 16:58:39.84 read 3000: page file used=1299 flts=9985
+X5 16:58:39.85 read 3500: page file used=1299 flts=10500
+X5 16:58:39.85 read 4000: page file used=1299 flts=11015
+X5 16:58:39.85 read 4500: page file used=1299 flts=11530
+X5 16:58:39.85 read 5000: page file used=1299 flts=12046
+X5 16:58:39.86 read 5500: page file used=1299 flts=12561
+X5 16:58:39.86 read 6000: page file used=1299 flts=13076
+X5 16:58:39.86 read 6500: page file used=1299 flts=13592
+X5 16:58:39.86 read 6634: page file used=1299 flts=13734
+X6 16:58:42.86 a wait later: page file used=1299 bad=0
+X7 16:58:42.87 deltva: 00000001 page file used=261
+X7 16:58:45.87 a wait later: page file used=261

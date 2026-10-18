@@ -150,9 +150,10 @@ never had.
   `testdata/pg64`, run on VMS 7.1 and govax changed to its answers
   2026-10-18: image rundown deletes the image's P1 pages too
   (`deleteImageP1`), PAGFILLOC's index 3, VMS's page file attributes,
-  SHOW MEMORY/FILES[/FULL] (`machine.ShowMemoryFiles`), the writer's
-  stopping point open; subtask 10, paging statistics in `--statistics`,
-  next); 65 sections under the
+  SHOW MEMORY/FILES[/FULL] (`machine.ShowMemoryFiles`), and from round
+  2 the writer that MPW_HILIMIT wakes writing the list down a cluster
+  below it, not to MPW_LOLIMIT (`mpwGoal`); subtask 10, paging statistics
+  in `--statistics`, next); 65 sections under the
   pager; 66 image activation by mapping; 67 the address space and page
   tables under paging, deferred to the end. Paging is synchronous, with no
   PFW, COLPG, or FPG waits. Each later phase has a planning doc.
@@ -299,9 +300,10 @@ never had.
   S the job's pool from a subprocess; T a subprocess's pages),
   `pg64v.mar` (LIB$GET_VM), `pg64.com`, `pg64l.com`. `vax/` is VMS
   V7.1's run; `TestPG64Oracle` runs the parts on govax and matches VMS's
-  lines but for `expectedPG64Differences` (the writer's stopping point
-  among them, still open), and checks that each image's exit gives its
-  charges back.
+  lines but for `expectedPG64Differences`, and checks that each image's
+  exit gives its charges back; round 2 (`pg64x.com`, `pg64m.com`,
+  `vax/round2/`) timed the writer against a monitor of the modified list,
+  and `TestPG64WriterRound2` holds govax's part X to it.
 - `testdata/probe49/` — Phase 49's VMS probe in three rounds (`probe6`,
   `probe6b`, `probe6c`; README.md has each round's answers), run by
   `TestProbe6*`; `testdata/rms49/` and `testdata/sec49/` are the phase's

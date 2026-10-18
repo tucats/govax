@@ -34,8 +34,10 @@ const DefaultTBSkipWSL = 8
 
 // DefaultMPWHiLimit and DefaultMPWLoLimit are MPW_HILIMIT's and
 // MPW_LOLIMIT's defaults: the modified page writer starts when the
-// modified page list holds more than the first, and writes until it
-// holds no more than the second (mpw.go). They're SYSGEN's defaults on a
+// modified page list holds more than the first, and writes it down to a
+// cluster below the first (VMS 7.1's rule, testdata/pg64's round 2),
+// never below the second; writing for the reclaimer goes down to the
+// second (mpw.go). They're SYSGEN's defaults on a
 // VAX (docs/PHASE-64 - page file.md, finding 2; Phase 62's Decision 11
 // had taken 120, a VAX's AUTOGEN value, for the second).
 const (

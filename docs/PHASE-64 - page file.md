@@ -9,8 +9,8 @@ system, done 2026-10-16. Subtask 7, reporting, done 2026-10-17. Subtask 8,
 the page file installed at startup (added by the author 2026-10-17; the
 probe and close-out became 9 and 10), done 2026-10-17. Subtask 9, the
 probe, written 2026-10-17 (`testdata/pg64`), run on VMS 7.1 the same
-day, and govax changed to its answers 2026-10-18 but for the writer's
-stopping point (an open question for the author). Subtask 10, paging
+day, and govax changed to its answers 2026-10-18; round 2, the writer's
+stopping point, run and govax changed to it the same day. Subtask 10, paging
 statistics in `--statistics` (added by the author 2026-10-18; the
 close-out became 11), is next. Planned 2026-10-15. Needs Phase 63 (working sets, the
 lists, soft faults). Part of the paging program laid out in
@@ -1059,3 +1059,32 @@ pg63's. Values that vary from run to run print as differences.
     (PAGFILCNT 38512); govax gives them back at the deletion (timing,
     unconfirmed).
   - The `.out` files are force-added past `.gitignore`, as pg63's.
+- **2026-10-18:** Round 2 of the probe, the writer's stopping point
+  (`testdata/pg64/vax/round2`; the author chose it over adopting a rule
+  unprobed). The program's part X is part W's case with the time of day
+  on each line, the sweeps in chunks of 500 pages, and a 24-second rest;
+  `pg64m.com`, a monitor subprocess, wrote SHOW MEMORY/PHYSICAL_PAGES
+  once a second meanwhile. With 139 pages on the modified list before,
+  VMS's writer wrote nothing until the sweep had sent between 5500 and
+  6000 pages to the list (MPW_HILIMIT 5634), then a cluster at a time
+  as the list grew (479 pages by 6000 swept, 950 by 6500, 1190 at the
+  end); the list then stayed at 5522 to 5543 through the rest, never
+  written further, until the pages were deleted. So VMS 7.1's writer,
+  woken by the list passing MPW_HILIMIT, writes it down to a cluster
+  below MPW_HILIMIT (5514), not to MPW_LOLIMIT (120) as the book (15.5.2,
+  17.2) and the 7.3 SYSGEN manual say. That VAX's MPW_LOWAITLIMIT was
+  5514 too (SYSGEN's defaults and AUTOGEN keep it MPW_HILIMIT less 120),
+  so which VMS uses is unconfirmed; govax uses MPW_HILIMIT less
+  MPW_WRTCLUSTER, needing no new key (`corevms/mpw.go`'s `mpwGoal`,
+  never below MPW_LOLIMIT). Writing for the reclaimer, when the free
+  list falls below FREELIM, still goes down to MPW_LOLIMIT, as the book's
+  swapper does (not probed: that VAX's free list never ran short).
+  During the read-back sweep VMS wrote about one more cluster (229 and
+  118 pages in the two rounds), and govax does too (238): pages faulted
+  back from the modified list and sent there again take the list over
+  MPW_HILIMIT once more. `TestPG64WriterRound2` runs part X on govax and
+  holds each line's page file use to VMS's within two clusters (VMS
+  writes asynchronously, MPW_IOLIMIT 4 writes in flight, and its working
+  set has fewer dynamic pages); part W's lines (W3 to W6) are now a
+  cluster or two from VMS's, still listed differences for that reason.
+  HELP CONFIG KEYS describes the two limits' roles.

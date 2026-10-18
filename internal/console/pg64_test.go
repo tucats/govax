@@ -24,10 +24,10 @@ var expectedPG64Differences = map[string]string{
 	"Q1 start:": "the quota and what's left of it at the first instruction: VMS's DCL and image activation charge far more (P1's control region, LIBRTL's and DCL's pages)",
 	"Q1 the job's charges": "as Q1 start",
 	"W1 pages=":            "the working set limit: VMS's floor is MINWSCNT above the list's permanent part (testdata/pg63)",
-	"W3":                   "how much the writer wrote: govax's writes the modified list down to MPW_LOLIMIT, VMS's left it far above (README.md, the open question)",
-	"W4":                   "as W3: the pages still on VMS's modified list were faulted back and written later",
+	"W3":                   "the pages written by then: VMS's writer is asynchronous (MPW_IOLIMIT writes in flight) and its working set has fewer dynamic pages, so its count is a cluster or two away from govax's (round 2, TestPG64WriterRound2)",
+	"W4":                   "as W3",
 	"W5":                   "as W3",
-	"W6 deltva:":           "the blocks given back are those the writer used, as W3",
+	"W6 deltva:":           "the blocks given back are those written, as W3",
 	"V1":                   "the heap's charges: VMS's first LIB$GET_VM charges 136 pages, govax's 129; the second 401 and 396 (the heap's layout, Phase 59)",
 }
 
@@ -230,4 +230,78 @@ func TestPG64Oracle(t *testing.T) {
 	dispatch("SPAWN/NOWAIT/PROCESS=PG64SUB/OUTPUT=NL: WAIT 00:02:00")
 	comparePG64(t, "S", run("S", "PG64"), pg64VAX(t, "pg64s.out"))
 	dispatch("STOP PG64SUB")
+}
+
+// pg64Used is the page file's use on one of part X's lines (X3, X4, X5,
+// X6), and the line's kind and count of pages swept, with the time of
+// day taken out: "X3 16:58:15.82 written 6000: page file used=479
+// flts=6226" is ("X3 written 6000", 479).
+func pg64Used(line string) (string, int, bool) {
+	f := strings.Fields(line)
+	if len(f) < 3 || !strings.HasPrefix(f[0], "X") || f[0] < "X3" || f[0] > "X6" {
+		return "", 0, false
+	}
+
+	i := strings.Index(line, "used=")
+	if i < 0 {
+		return "", 0, false
+	}
+
+	n, err := strconv.Atoi(strings.Fields(line[i+len("used="):])[0])
+	if err != nil {
+		return "", 0, false
+	}
+
+	return f[0] + " " + strings.SplitN(strings.Join(f[2:], " "), ":", 2)[0], n, true
+}
+
+// TestPG64WriterRound2 runs part X, round 2's timed sweeps, and holds the
+// writer to VMS 7.1's (vax/round2): woken by the modified list passing
+// MPW_HILIMIT, it writes the list down a cluster below it and no
+// further, so the page file's use after each chunk of the sweeps, and
+// through the rest, is VMS's within two clusters (VMS writes
+// asynchronously, and its working set has fewer dynamic pages).
+func TestPG64WriterRound2(t *testing.T) {
+	_, dispatch := pg64Console(t)
+
+	dispatch("DEFINE PG64_PART X")
+	got := strings.Split(dispatch("RUN PG64"), "|")
+
+	data, err := os.ReadFile(filepath.Join(pg64Dir, "vax", "round2", "pg64x.out"))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	want := strings.Split(strings.TrimRight(strings.ReplaceAll(string(data), "\r", ""), "\n"), "\n")
+	if len(got) != len(want) {
+		t.Fatalf("%d lines, VMS %d\n%s", len(got), len(want), strings.Join(got, "\n"))
+	}
+
+	const slack = 2 * 120 // two clusters of MPW_WRTCLUSTER
+
+	compared := 0
+
+	for i := range want {
+		wk, wn, ok := pg64Used(want[i])
+		if !ok || strings.HasPrefix(wk, "X6") {
+			continue // X6's use includes VMS's other processes' pages
+		}
+
+		gk, gn, ok := pg64Used(got[i])
+		if !ok || gk != wk {
+			t.Errorf("line %d: %q, VMS %q", i+1, got[i], want[i])
+
+			continue
+		}
+
+		compared++
+
+		if gn < wn-slack || gn > wn+slack {
+			t.Errorf("%s: page file used=%d, VMS %d (more than two clusters apart)", wk, gn, wn)
+		}
+	}
+
+	if compared == 0 {
+		t.Fatal("no lines compared")
+	}
 }

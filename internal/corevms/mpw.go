@@ -18,8 +18,17 @@ import (
 // the modified page list (workingset.go's evictPage), where it waits to
 // be written to its backing store. On VMS a system process, the modified
 // page writer, does the writing: it wakes when the list holds more than
-// MPW_HILIMIT pages and writes until it holds MPW_LOLIMIT (the book's
-// 15.5.2 and 17.2). Each frame written moves to the tail of the free list, still
+// MPW_HILIMIT pages and writes until it holds MPW_LOLIMIT, the book
+// (15.5.2 and 17.2) and the 7.3 SYSGEN manual say. VMS 7.1 doesn't
+// (testdata/pg64, round 2): woken by the list passing MPW_HILIMIT, its
+// writer stopped once the list was a cluster below it, at MPW_HILIMIT
+// less MPW_WRTCLUSTER (5514 with 5634 and 120; the VAX's
+// MPW_LOWAITLIMIT was 5514 too, as AUTOGEN and SYSGEN's defaults make
+// it, so which of the two VMS uses is unconfirmed), and wrote nothing
+// more while the list stayed under MPW_HILIMIT. govax's writer does the
+// same (mpwGoal); writing for the reclaimer, to make free pages
+// (reclaim.go), still goes down to MPW_LOLIMIT, as the book's swapper
+// does. Each frame written moves to the tail of the free list, still
 // holding the page, so a touch before the frame is reused is still a
 // soft fault; when the frame is reused, the page's PTE goes back to the
 // form that says where it was written (BreakTie), and the next touch
@@ -29,7 +38,7 @@ import (
 // operation that took the list over MPW_HILIMIT, and its writes complete
 // at once. It takes the frames head first, those that have waited
 // longest. With its writes done at once, a run may leave the list a
-// little below MPW_LOLIMIT, by up to one cluster.
+// little below its goal, by up to one cluster.
 //
 // # Where it writes
 //
@@ -112,8 +121,18 @@ func (sys *System) wakeModifiedPageWriter() {
 	}
 
 	if n > hi+sys.mpwStuck {
-		sys.mpwStuck = sys.writeModifiedPages(int(sys.Sysgen.MPWLoLimit))
+		sys.mpwStuck = sys.writeModifiedPages(sys.mpwGoal())
 	}
+}
+
+// mpwGoal is how far the writer MPW_HILIMIT wakes writes the modified
+// list down: a cluster below MPW_HILIMIT (MPW_HILIMIT less
+// MPW_WRTCLUSTER), as VMS 7.1's did (testdata/pg64, round 2), but never
+// below MPW_LOLIMIT.
+func (sys *System) mpwGoal() int {
+	hi, lo := int(sys.Sysgen.MPWHiLimit), int(sys.Sysgen.MPWLoLimit)
+
+	return max(hi-int(sys.writeClusterSize()), lo)
 }
 
 // pageFileWanted reports whether the page file is configured but hasn't

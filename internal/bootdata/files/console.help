@@ -2191,13 +2191,18 @@ $CONF,KEY
         vax.sysgen.mpw_hilimit        MPW_HILIMIT: with paging on, the
                                       modified page writer starts when
                                       more than this many pages are on
-                                      the modified page list.  0 is
-                                      allowed.  Default 500.
+                                      the modified page list, and
+                                      writes it down to one cluster
+                                      (mpw_wrtcluster) below this, as
+                                      VMS 7.1's does.  0 is allowed.
+                                      Default 500.
 
         vax.sysgen.mpw_lolimit        MPW_LOLIMIT: the modified page
-                                      writer stops when the modified
-                                      page list is down to this many
-                                      pages.  0 is allowed.  Default 32.
+                                      writer never writes the list
+                                      below this many pages, and writes
+                                      it down to this when the free
+                                      list runs short (freelim).  0 is
+                                      allowed.  Default 32.
 
         vax.sysgen.mpw_wrtcluster     MPW_WRTCLUSTER: the most pages the
                                       modified page writer writes in
