@@ -1,0 +1,25 @@
+Q1 start: pgflquota=16400 pagfilcnt=15723 pagfilloc=03000000 exquota=1
+Q1 the job's charges at the first instruction: 677
+Q2 expreg 100 P0: 00000001 pages=100 charged=100
+Q2 touched: charged=0
+Q2 deltva the upper 50: 00000001 charged=-50
+Q2 deltva the lower 50: 00000001 charged=-50
+Q3 expreg 40 untouched: 00000001 charged=40; deltva 00000001 charged=-40
+Q4 cretva 100 at P0's end: 00000001 pages=100 charged=100
+Q4 touched: charged=0
+Q4 cretva over them: 00000001 pages=100 charged=0; pages not zero 99
+Q4 touched again: charged=0
+Q4 deltva: 00000001 charged=-100
+Q5 expreg 100 P1: 00000001 pages=100 charged=100
+Q5 touched: charged=0
+Q5 deltva: 00000001 charged=-100
+Q10 filled: pagfilcnt=200
+Q11 expreg P0 pagfilcnt+10: 0000001C pages=pagfilcnt0 charged=pagfilcnt0 pagfilcnt then 0
+Q11 deltva: 00000001 pagfilcnt back to the start0
+Q11 cretva pagfilcnt+10: 0000001C pages=pagfilcnt0 charged=pagfilcnt0 pagfilcnt then 0
+Q11 deltva: 00000001 pagfilcnt back to the start0
+Q11 expreg P1 pagfilcnt+10: 0000001C pages=pagfilcnt0 charged=pagfilcnt0 pagfilcnt then 0
+Q11 deltva: 00000001 pagfilcnt back to the start0
+Q12 expreg pagfilcnt+10, touched: 0000001C pages=200 charged=200 pagfilcnt then 0
+Q13 expreg pagfilcnt: 00000001 pages=pagfilcnt0; one more 0000001C pages=-1; pagfilcnt then 0
+Q13 deltva: 00000001 pagfilcnt back to the start0

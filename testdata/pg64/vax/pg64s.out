@@ -1,0 +1,3 @@
+S1 subprocess: 00000001 pagfilcnt=own0 pgflquota=own0
+S2 expreg 200 here, touched: charged=200; the subprocess's pagfilcnt down by 200
+S3 deltva here: charged=-200; the subprocess's pagfilcnt down by -200

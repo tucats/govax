@@ -1,0 +1,10 @@
+W1 mpw_hilimit=5634 mpw_lolimit=120 mpw_wrtcluster=120
+W1 pages=mpw_hilimit1000 wssize=282
+W2 expreg: 00000001 charged=pages0 page file used=0
+W3 first sweep (write): flts=pages97 dirio=0 charged=0 page file used=1421
+W3 page file used=pages-5213
+W4 second sweep (read): flts=pages36 dirio=0 charged=0 page file used=229 bad=0
+W5 third sweep (write): flts=pages65 dirio=0 charged=0 page file used=-9
+W5 then read: flts=pages27 dirio=0 page file used=83 bad=0
+W6 deltva: 00000001 charged=-pages0 page file used=-1130
+W6 a wait later: page file used=0

@@ -220,6 +220,59 @@ func (m *Machine) showPageFile(r corevms.PageFileReport) {
 	m.Printf("    Page file committed%12d\n\n", r.Charged)
 }
 
+// ShowMemoryFiles is SHOW MEMORY/FILES, VMS's report of the page and
+// swap files, in VMS 7.1's VAX layout (testdata/pg64): its title, then a
+// line of headings and, for the page file, its name on a line of its own
+// and its free, reservable, and total pages. With full (/FILES/FULL) each
+// file has a block of its details instead. govax has one page file and
+// no swap file; the page file's number is VMS's (corevms.PageFileIndex),
+// its reservable pages are those not committed to a job's PGFLQUOTA, and
+// it's listed only while it's open (with paging off, deferred, or
+// unavailable, the report has no files).
+func (m *Machine) ShowMemoryFiles(full bool) error {
+	if err := m.requireInit(); err != nil {
+		return err
+	}
+
+	if m.processOne == nil {
+		return nil
+	}
+
+	r := m.processOne.PageFileReport()
+	open := r.Status == corevms.PageFileInUse
+	reservable := int64(r.Size) - int64(r.Charged)
+
+	m.Printf("%s\n\n", m.processOne.MemoryResourcesTitle())
+
+	if !full {
+		m.Printf("%-26s%26s%12s%12s\n", "Paging File Usage (pages):", "Free", "Reservable", "Total")
+
+		if open {
+			m.Printf("  %-78s\n%52d%12d%12d\n", r.FilesName, r.Free, reservable, r.Size)
+		}
+
+		return nil
+	}
+
+	if !open {
+		return nil
+	}
+
+	// Each line is two halves of 38 columns, a label and its value
+	// right-aligned at the half's end.
+	half := func(label string, n int64) string {
+		return fmt.Sprintf("    %s%*d", label, 34-len(label), n)
+	}
+
+	m.Printf("%-80s\n", r.FilesName)
+	m.Printf("%s%s\n", half("Free Blocks", int64(r.Free)), half("Reservable Blocks", reservable))
+	m.Printf("%s%s\n", half("Total Size (blocks)", int64(r.Size)), half("Paging File Number", corevms.PageFileIndex))
+	m.Printf("%s%s\n", half("Swap Usage (processes)", 0), half("Paging Usage (processes)", int64(r.Processes)))
+	m.Printf("  This file can be used for either paging or swapping.\n")
+
+	return nil
+}
+
 // ShowSymbols prints every defined symbol whose name matches pattern,
 // for the debugger's SHOW SYMBOL/ALL [pattern]: VMS wildcards, "*" for any run of
 // characters and "%" for exactly one; an empty pattern matches every

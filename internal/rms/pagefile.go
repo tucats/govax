@@ -310,8 +310,17 @@ func (s *Session) openVolumePageFile(text string, size uint32) (*PageFileStore, 
 
 	store.Contiguous = contiguous(a.file.Extents)
 
+	// The file's size is the size asked for, which a volume rounds up to
+	// whole clusters (VMS's PAGEFILE.SYS: 94000 blocks, 94002 allocated,
+	// and $GETSYI's PAGEFILE_PAGE 94000); one the volume couldn't grow
+	// keeps its own.
+	blocks := min(size, a.AllocatedBlocks())
+	if store.GrowFailed != nil {
+		blocks = a.AllocatedBlocks()
+	}
+
 	if store.Created || store.Resized != 0 {
-		if err := markPageFile(a, store.Contiguous); err != nil {
+		if err := markPageFile(a, blocks); err != nil {
 			_ = a.Deaccess()
 
 			return nil, fmt.Errorf("rms: page file %s: %w", text, err)
@@ -319,7 +328,7 @@ func (s *Session) openVolumePageFile(text string, size uint32) (*PageFileStore, 
 	}
 
 	spec.Version = fmt.Sprint(version)
-	store.Name, store.acp, store.blocks = spec.String(), a, a.AllocatedBlocks()
+	store.Name, store.acp, store.blocks = spec.String(), a, blocks
 
 	if entry, ok := s.Mounts.mounts[normalizeDeviceName(spec.Device)]; ok {
 		store.volume = entry
@@ -384,31 +393,41 @@ func contiguous(extents []volume.ExtentLocation) bool {
 	return true
 }
 
-// markPageFile gives a new page file its attributes: fixed-length
-// 512-byte records, every block in use, and contiguous-best-try (SYSGEN
-// CREATE's default), contiguous too if its blocks are one run. (The
-// record attributes, owner, and protection VMS gives its page file are
-// unconfirmed until the phase's probe.)
-func markPageFile(a *ACPFile, isContiguous bool) error {
-	blocks := a.AllocatedBlocks()
-
+// markPageFile gives a new page file its attributes, as VMS 7.1's
+// SYS$SYSTEM:PAGEFILE.SYS has them (testdata/pg64's DIRECTORY/FULL):
+// undefined record format, the end of file at size blocks (the
+// allocation may be a cluster more), backups and moving disabled
+// (FCH$V_NOBACKUP, fchNoMove), neither contiguous flag, owner [SYSTEM],
+// and protection (S:RWED,O:RWED,G,W).
+func markPageFile(a *ACPFile, size uint32) error {
 	return updateAttributes(a.file, func(attr *ACPAttributes) {
 		ra, err := ondisk.DecodeRecAttr(attr.RecordAttributes[:])
 		if err != nil {
 			ra = ondisk.RecAttr{}
 		}
 
-		ra.Format = ondisk.RecordFormatFixed
-		ra.RecordSize = ondisk.BlockSize
-		ra.EndOfFileBlock = blocks + 1
+		ra.Format = ondisk.RecordFormatUndefined
+		ra.RecordSize = 0
+		ra.EndOfFileBlock = size + 1
 		ra.FirstFreeByte = 0
 		copy(attr.RecordAttributes[:], ondisk.EncodeRecAttr(ra))
 
-		attr.Characteristics |= ondisk.FchContigB
-		if isContiguous {
-			attr.Characteristics |= ondisk.FchContig
-		} else {
-			attr.Characteristics &^= ondisk.FchContig // grown past its run
-		}
+		attr.Characteristics |= ondisk.FchNoBackup | fchNoMove
+		attr.Characteristics &^= ondisk.FchContigB | ondisk.FchContig
+		attr.Owner = pageFileOwner
+		attr.Protection = pageFileProtection
 	})
 }
+
+// fchNoMove is FCH$V_NOMOVE, a file the movefile function mustn't move,
+// bit 21 (DIRECTORY/FULL's "MoveFile disabled"; the bit is unconfirmed:
+// govax's definitions lack the FCH$ names).
+const fchNoMove uint32 = 1 << 21
+
+// pageFileOwner and pageFileProtection are the page file's owner, [1,4]
+// ([SYSTEM]), and protection, (S:RWED,O:RWED,G,W): a set bit denies, and
+// group's and world's four bits are all set.
+const (
+	pageFileOwner      uint32 = 1<<16 | 4
+	pageFileProtection uint16 = 0xFF00
+)

@@ -173,7 +173,13 @@ func (d *Dispatcher) bindGrammar() {
 	g.Bind("SHOW_DEBUG", func(id int64, r *dcl.Result) error { return d.Console.ShowDebug() })
 
 	// SHOW MEMORY is allowed in both console and debugger
-	g.Bind("SHOW_MEMORY", func(id int64, r *dcl.Result) error { return d.Console.ShowMemory() })
+	g.Bind("SHOW_MEMORY", func(id int64, r *dcl.Result) error {
+		if r.Present("FILES") {
+			return d.Console.ShowMemoryFiles(r.Present("FULL"))
+		}
+
+		return d.Console.ShowMemory()
+	})
 
 	// Phase 09 (internal/io): device abstraction and logical name tables.
 	g.Bind("SHOW_DEVICE", func(id int64, r *dcl.Result) error {

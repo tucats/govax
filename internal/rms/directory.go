@@ -382,13 +382,32 @@ func writeFullEntry(b *strings.Builder, name string, m filespec.Match, a FileAtt
 	b.WriteString("Recording: <None specified>\n")
 	fmt.Fprintf(b, "File organization:  %s\n", organizationName(a.Organization))
 	b.WriteString("Shelved state:      Online \n")
-	fmt.Fprintf(b, "File attributes:    Allocation: %d, Extend: %d, Global buffer count: %d, %s\n", a.Allocated, a.Extend, a.GlobalBuffers, limit)
+	fmt.Fprintf(b, "File attributes:    Allocation: %d, Extend: %d, Global buffer count: %d, %s%s\n",
+		a.Allocated, a.Extend, a.GlobalBuffers, limit, characteristicsText(a.Characteristics))
 	fmt.Fprintf(b, "Record format:      %s\n", recordFormatText(a))
 	fmt.Fprintf(b, "Record attributes:  %s\n", recordAttributesText(a.RecordAttributes))
 	b.WriteString("RMS attributes:     None\n")
 	b.WriteString("Journaling enabled: None\n")
 	fmt.Fprintf(b, "File protection:    %s\n", fullProtection(a.Protection))
 	b.WriteString("Access Cntrl List:  None\n\n")
+}
+
+// characteristicsText is what /FULL's file attributes line adds for a
+// file's characteristics, each after a comma: VMS 7.1's page file shows
+// ", Backups disabled, MoveFile disabled" (testdata/pg64). The other
+// characteristics' words aren't known, so they show nothing.
+func characteristicsText(fch uint32) string {
+	var b strings.Builder
+
+	if fch&ondisk.FchNoBackup != 0 {
+		b.WriteString(", Backups disabled")
+	}
+
+	if fch&fchNoMove != 0 {
+		b.WriteString(", MoveFile disabled")
+	}
+
+	return b.String()
 }
 
 // ownerText is an owner's UIC as opts writes it.

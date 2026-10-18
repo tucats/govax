@@ -147,7 +147,12 @@ never had.
   at startup after vax.init, `Machine.StartPageFile` and
   `System.InstallPageFile`, resized to `paging.size`, unless
   `vax.sysgen.paging.defer`, done 2026-10-17; subtask 9, the probe,
-  `testdata/pg64`, written 2026-10-17, its VAX run next); 65 sections under the
+  `testdata/pg64`, run on VMS 7.1 and govax changed to its answers
+  2026-10-18: image rundown deletes the image's P1 pages too
+  (`deleteImageP1`), PAGFILLOC's index 3, VMS's page file attributes,
+  SHOW MEMORY/FILES[/FULL] (`machine.ShowMemoryFiles`), the writer's
+  stopping point open; subtask 10, paging statistics in `--statistics`,
+  next); 65 sections under the
   pager; 66 image activation by mapping; 67 the address space and page
   tables under paging, deferred to the end. Paging is synchronous, with no
   PFW, COLPG, or FPG waits. Each later phase has a planning doc.
@@ -292,8 +297,11 @@ never had.
   and requests past it; C part Q in a detached process with a small
   quota, with and without EXQUOTA; W the writer and the page file's use;
   S the job's pool from a subprocess; T a subprocess's pages),
-  `pg64v.mar` (LIB$GET_VM), `pg64.com`, `pg64l.com`. Written and dry-run
-  on govax; the VAX run is next.
+  `pg64v.mar` (LIB$GET_VM), `pg64.com`, `pg64l.com`. `vax/` is VMS
+  V7.1's run; `TestPG64Oracle` runs the parts on govax and matches VMS's
+  lines but for `expectedPG64Differences` (the writer's stopping point
+  among them, still open), and checks that each image's exit gives its
+  charges back.
 - `testdata/probe49/` — Phase 49's VMS probe in three rounds (`probe6`,
   `probe6b`, `probe6c`; README.md has each round's answers), run by
   `TestProbe6*`; `testdata/rms49/` and `testdata/sec49/` are the phase's

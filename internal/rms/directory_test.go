@@ -281,3 +281,21 @@ func TestSession_directoryBadFileSpec(t *testing.T) {
 		t.Errorf("Directory error = %v, want a plain error, not a *NotMountedError", err)
 	}
 }
+
+// DIRECTORY/FULL's file attributes line ends with the characteristics VMS
+// 7.1 names (testdata/pg64's page file), and nothing for the others.
+func TestCharacteristicsText(t *testing.T) {
+	for _, c := range []struct {
+		fch  uint32
+		want string
+	}{
+		{0, ""},
+		{ondisk.FchNoBackup, ", Backups disabled"},
+		{ondisk.FchNoBackup | fchNoMove, ", Backups disabled, MoveFile disabled"},
+		{ondisk.FchContigB, ""},
+	} {
+		if got := characteristicsText(c.fch); got != c.want {
+			t.Errorf("characteristicsText(%#x) = %q, want %q", c.fch, got, c.want)
+		}
+	}
+}

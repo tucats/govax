@@ -2,6 +2,8 @@ package machine
 
 import (
 	"fmt"
+	"path/filepath"
+	"slices"
 	"strings"
 	"testing"
 
@@ -146,5 +148,73 @@ func TestShowMemory_pageFile(t *testing.T) {
 
 	if c.processOne.PageFile() != nil {
 		t.Error("SHOW MEMORY opened the page file")
+	}
+}
+
+// TestShowMemoryFiles: SHOW MEMORY/FILES and /FILES/FULL in VMS 7.1's
+// VAX layout (testdata/pg64), with no page file and with a host one.
+func TestShowMemoryFiles(t *testing.T) {
+	c, buf := newTestMachine(t)
+
+	if err := c.VMInitPaging(true, 20, 20, 0, 2, 2, 2, 2, 8); err != nil {
+		t.Fatalf("VMInitPaging: %v", err)
+	}
+
+	show := func(full bool) []string {
+		t.Helper()
+		buf.Reset()
+
+		if err := c.ShowMemoryFiles(full); err != nil {
+			t.Fatalf("ShowMemoryFiles: %v", err)
+		}
+
+		return strings.Split(strings.TrimSuffix(buf.String(), "\n"), "\n")
+	}
+
+	const headings = "Paging File Usage (pages):                      Free  Reservable       Total"
+
+	// No page file: the title and the headings alone; /FULL the title.
+	lines := show(false)
+	if len(lines) != 3 || !strings.HasPrefix(lines[0], "              System Memory Resources on ") ||
+		lines[1] != "" || lines[2] != headings {
+		t.Errorf("no page file: %q", lines)
+	}
+
+	if lines := show(true); len(lines) != 2 {
+		t.Errorf("no page file, /FULL: %q", lines)
+	}
+
+	path := filepath.Join(t.TempDir(), "pagefile.sys")
+	c.processOne.Sysgen.PageFileName = `"` + path + `"`
+	c.processOne.Sysgen.PageFileSize = 600
+
+	if c.processOne.OpenPageFile() == nil {
+		t.Fatal("no page file opened")
+	}
+
+	committed := int(c.processOne.PageFileReport().Charged)
+
+	lines = show(false)
+	want := []string{
+		headings,
+		fmt.Sprintf("  %-78s", path),
+		fmt.Sprintf("%52d%12d%12d", 600, 600-committed, 600),
+	}
+
+	if len(lines) != 5 || !slices.Equal(lines[2:], want) {
+		t.Errorf("SHOW MEMORY/FILES:\n%s\nwant\n%s", strings.Join(lines[2:], "\n"), strings.Join(want, "\n"))
+	}
+
+	lines = show(true)
+	want = []string{
+		fmt.Sprintf("%-80s", path),
+		fmt.Sprintf("    Free Blocks                    600    Reservable Blocks %16d", 600-committed),
+		"    Total Size (blocks)            600    Paging File Number               3",
+		fmt.Sprintf("    Swap Usage (processes)           0    Paging Usage (processes)%10d", len(c.processOne.Processes())),
+		"  This file can be used for either paging or swapping.",
+	}
+
+	if len(lines) != 7 || !slices.Equal(lines[2:], want) {
+		t.Errorf("SHOW MEMORY/FILES/FULL:\n%s\nwant\n%s", strings.Join(lines[2:], "\n"), strings.Join(want, "\n"))
 	}
 }

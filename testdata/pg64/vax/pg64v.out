@@ -1,0 +1,3 @@
+V1 get_vm 100 pages: 00000001 charged=136
+V1 get_vm 400 pages: 00000001 charged=401
+V2 get_vm pagfilcnt+10 pages: 00158214 charged=-39221 pagfilcnt then 39221

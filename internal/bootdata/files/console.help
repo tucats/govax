@@ -211,7 +211,25 @@ $SH  ,MEM
     (90%) threshold or is full. "Page file committed" is the pages charged
     against every job's PGFLQUOTA: a page is charged when it's made, and
     takes a page file block only when it's written there. The page file is
-    opened when it's first needed, so it may show as "not opened yet".
+    installed at startup (opened when it's first needed with
+    vax.sysgen.paging.defer), so it may show as "not opened yet".
+
+    Qualifiers:
+
+        /FILES
+
+            Show only the paging files, as VMS does on a VAX: each one's
+            name (a volume file by its volume's DISK$label logical name)
+            and its free, reservable, and total pages. Reservable pages
+            are those not committed to a job's PGFLQUOTA. govax has one
+            page file and no swap file, and lists the page file only
+            while it's open.
+
+        /FULL
+
+            With /FILES, show each file's details instead: its free,
+            reservable, and total blocks, its paging file number (3, as
+            on VMS), and how many processes use it.
 
 $SHOW,TRAN
 $SH  ,TRAN

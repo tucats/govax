@@ -403,6 +403,8 @@ func registerAddressSpaceServices(t *ServiceTable) {
 //
 // Image activation calls it too, for the pages a rundown with KeepP0 set
 // left.
+//
+// It deletes the P1 pages the image added too (deleteImageP1).
 func (env *Environment) DeleteP0() {
 	if env.cpu == nil || env.cpu.PR(registers.MAPEN) == 0 {
 		return
@@ -431,4 +433,42 @@ func (env *Environment) DeleteP0() {
 	env.refundPagesBelow(p1Base)
 
 	env.RegionSize[0] = 0
+
+	env.deleteImageP1()
+}
+
+// deleteImageP1 is image rundown's deletion of the pages the image added
+// to P1 ($EXPREG of region 1, a section mapped with SEC$M_EXPREG there):
+// those from P1's low end (RegionSize[1]) up to where it started, below
+// the user stack's reserve. VMS deletes them with the image (VMS 7.1 in
+// testdata/pg64: PAGFILCNT is back where it was after an image that
+// filled its quota with P1 pages); the process's own P1, above, stays.
+// Each page goes back to ProcessPTE's form, its frame and page file
+// block released and its charge refunded, as DeleteP0's are.
+func (env *Environment) deleteImageP1() {
+	low, start := env.RegionSize[1], uint32(UserStackTop-userStackPages*pageSize)
+	if low == 0 || low >= start {
+		return
+	}
+
+	space := env.pageSpace()
+
+	for addr := low; addr < start; addr += pageSize {
+		fresh := ProcessPTE(true, (addr-p1Base)/pageSize)
+
+		old, err := env.mem.LookupPTEIn(env.cpu, space, addr)
+		if err != nil || old == fresh {
+			continue
+		}
+
+		if env.mem.StorePTEIn(env.cpu, space, addr, fresh) != nil {
+			continue
+		}
+
+		env.releasePTE(addr, old)
+	}
+
+	env.refundPagesIn(low, start)
+
+	env.RegionSize[1] = 0
 }

@@ -8,8 +8,11 @@ blocks freed, done 2026-10-16. Subtask 5, PGFLQUOTA, done 2026-10-16. Subtask 6,
 system, done 2026-10-16. Subtask 7, reporting, done 2026-10-17. Subtask 8,
 the page file installed at startup (added by the author 2026-10-17; the
 probe and close-out became 9 and 10), done 2026-10-17. Subtask 9, the
-probe, written 2026-10-17 (`testdata/pg64`); the VAX run is next.
-Planned 2026-10-15. Needs Phase 63 (working sets, the
+probe, written 2026-10-17 (`testdata/pg64`), run on VMS 7.1 the same
+day, and govax changed to its answers 2026-10-18 but for the writer's
+stopping point (an open question for the author). Subtask 10, paging
+statistics in `--statistics` (added by the author 2026-10-18; the
+close-out became 11), is next. Planned 2026-10-15. Needs Phase 63 (working sets, the
 lists, soft faults). Part of the paging program laid out in
 `PHASE-62 - VMS paging.md` (Decisions 7, 8, 9, and 10 are this phase's).
 
@@ -624,7 +627,11 @@ pg63's. Values that vary from run to run print as differences.
    once; `vax.sysgen.paging.defer` keeps the open at first need.
 9. **The VMS probe** (`testdata/pg64`), Part A's case list; govax is then
    changed to its answers (SHOW MEMORY/FILES's VAX layout among them).
-10. **Close-out.**
+10. **Paging statistics at exit** (added by the author 2026-10-18): with
+   paging on, govax's `--statistics` (`-s`) report includes what SHOW
+   MEMORY shows of paging: the page frames, page faults, pages written,
+   reclaimer runs, and the page file.
+11. **Close-out.**
 
 ## Progress log
 
@@ -972,3 +979,83 @@ pg63's. Values that vary from run to run print as differences.
     image. `rms.normalizeDeviceName` now drops a node's or allocation
     class's prefix (everything to the last `$`: a physical device's own
     name has none); tests in `internal/rms`.
+- **2026-10-17/18:** The probe's run on VMS V7.1 (`testdata/pg64/vax`;
+  the author ran it twice, the first without MOUNT/SYSTEM, which part C
+  needs; logs audited by the author), and govax changed to its answers.
+  `TestPG64Oracle` (`internal/console/pg64_test.go`) runs the parts on
+  govax (paging on, an RD54 volume with the page file on DUA1, the VAX's
+  MPW_HILIMIT 5634, MPW_LOLIMIT 120, MPW_WRTCLUSTER 120) and matches
+  VMS's lines but for `expectedPG64Differences`, and checks that each
+  image's exit gives its charges back. VMS answered:
+  - **The quota's rules are govax's:** charged at creation (`$EXPREG` of
+    P0 and P1, `$CRETVA`), nothing more at the first touch, refunded at
+    `$DELTVA` touched or not; `$CRETVA` over existing pages charges
+    nothing net and leaves them zero. Past the quota, all three services
+    return **SS$_EXQUOTA** (not EXPGFLQUOTA) after making exactly the
+    pages the quota allows (partial success, retadr covering them); one
+    page more after the quota is used is SS$_EXQUOTA with retadr -1.
+    **EXQUOTA doesn't let a process exceed it.** The quota is the job's:
+    a subprocess sees the same PAGFILCNT and PGFLQUOTA, and its PAGFILCNT
+    moves with the parent's charges. A detached process given 2048 got
+    PQL_MPGFLQUOTA, 16400 (that VAX's AUTOGEN value; SYSGEN's default is
+    512, PQL_DPGFLQUOTA's 8192). LIB$GET_VM past the quota is
+    LIB$_INSVIRMEM. Confirmed as they were.
+  - **PAGFILLOC** is `%X03000000`: the page file is number 3 (SHOW
+    MEMORY/FILES/FULL's "Paging File Number"), the swap file 1, with
+    SWPFILCNT 2. `pageFileIndex` is 3 (the rule that page files follow
+    the swap files' slots is unconfirmed).
+  - **Image exit gives back every charge:** PAGFILCNT is back where it
+    was after each image, part Q's P1 fill included. govax kept the P1
+    pages an image made, with their charges; image rundown now deletes
+    them (`corevms/vaspace.go`'s `deleteImageP1`, called by `DeleteP0`:
+    the pages from P1's low end, `RegionSize[1]`, up to where it started
+    below the user stack's reserve, freed and refunded, the low end
+    reset).
+  - **The page file's attributes** (DIRECTORY/FULL of
+    `SYS$SYSTEM:PAGEFILE.SYS`): undefined record format, end of file at
+    the size (94000) with the allocation rounded up (94002), owner
+    [SYSTEM], protection (S:RWED,O:RWED,G,W), "Backups disabled, MoveFile
+    disabled", no contiguity shown. `rms.markPageFile` now gives a new or
+    resized page file those (FCH$V_NOMOVE's bit, 21, is unconfirmed:
+    govax's definitions lack the FCH$ names), and drops the
+    contiguous-best-try mark subtask 2 chose; the store's size is the size
+    asked for, not the rounded allocation (so PAGEFILE_PAGE is 94000 on
+    VMS, `paging.size` on govax). DIRECTORY/FULL's file attributes line
+    now ends with ", Backups disabled" and ", MoveFile disabled" for
+    those characteristics (`rms.characteristicsText`; other
+    characteristics' words are unknown, so they show nothing).
+  - **SHOW MEMORY/FILES** and **/FILES/FULL**, in VMS's VAX layout, are
+    added (`machine.ShowMemoryFiles`; the grammar's `files` qualifier):
+    the title ("System Memory Resources on" and the time), the headings,
+    and the page file's name (DISK$label, no version) on a line of its
+    own with its free, reservable (not committed), and total pages; under
+    /FULL each file's block with its number, 3, and the processes using
+    it (`PageFileReport.FilesName`, `Processes`). govax has no swap file,
+    and lists the page file only while it's open. HELP SHOW MEMORY says
+    so.
+  - **SWAPFILE_FREE and SWAPFILE_PAGE** were 1000 on that VAX, which has
+    a swap file; govax's 0 stands (no swap file). **DIRIO** doesn't count
+    page file I/O on either. Writing charges nothing.
+  - **The writer** (the open question): of the 6634 pages part W dirtied
+    at a working set of 282, VMS wrote 1421 to the page file by the end of
+    the first sweep and a few hundred more later; nothing more after the
+    image exited. Its modified list stayed thousands of pages above
+    MPW_LOLIMIT (120), where govax's writer, once the list passes
+    MPW_HILIMIT, writes it down to MPW_LOLIMIT (5520 pages here, as the
+    book's 15.5.2 describes). The program can't see the list's size, so
+    the stopping rule isn't settled (one reading: VMS writes only until
+    the list is back below MPW_HILIMIT, or MPW_LOWAITLIMIT, 5514); W3 to
+    W6 are listed differences until it is.
+  - **Differences that stay:** Q1's charges at the first instruction (VMS's
+    DCL and image activation charge about 1190 pages, govax's 13); part
+    Q in SYSTEM's own process from the fill on (its quota, 40960, is more
+    than govax's P0 and P1, so govax meets SS$_VASFULL; the detached runs
+    reach the quota as VMS's process did, with one more line where
+    govax's smaller P1 runs out); W1's working set (VMS's floor); the
+    heap's charges in V1 (136 and 401 pages on VMS, 129 and 396 on
+    govax). A subprocess's LOGOUT/FULL ("Peak page file size: 2984")
+    still has no govax counterpart. Right after a subprocess's SPAWN
+    returned, VMS's parent still showed the subprocess's charges
+    (PAGFILCNT 38512); govax gives them back at the deletion (timing,
+    unconfirmed).
+  - The `.out` files are force-added past `.gitignore`, as pg63's.

@@ -200,6 +200,20 @@ func (env *Environment) refundPagesBelow(limit uint32) {
 	}
 }
 
+// refundPagesIn gives back the charges of env's pages from low up to,
+// not including, high.
+func (env *Environment) refundPagesIn(low, high uint32) {
+	if !env.chargingPageFile() {
+		return
+	}
+
+	for va := range env.pageFileChargeSet() {
+		if va >= low && va < high {
+			env.refundPage(va)
+		}
+	}
+}
+
 // refundAllPageFile gives back every charge env holds, as the process is
 // deleted: a subprocess's charges return to its job's pool.
 func (env *Environment) refundAllPageFile() {

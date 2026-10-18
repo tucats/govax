@@ -167,12 +167,18 @@ func TestPageFileVolume(t *testing.T) {
 	attr := mustAttributes(t, s.Mounts, fid)
 	ra, _ := ondisk.DecodeRecAttr(attr.RecordAttributes[:])
 
-	if ra.Format != ondisk.RecordFormatFixed || ra.RecordSize != ondisk.BlockSize || ra.EndOfFileBlock != blocks+1 {
-		t.Errorf("record attributes %+v; want fixed 512-byte records, end of file after block %d", ra, blocks)
+	// VMS 7.1's page file's attributes (testdata/pg64).
+	if ra.Format != ondisk.RecordFormatUndefined || ra.RecordSize != 0 || ra.EndOfFileBlock != blocks+1 {
+		t.Errorf("record attributes %+v; want undefined records, end of file after block %d", ra, blocks)
 	}
 
-	if want := ondisk.FchContigB | ondisk.FchContig; attr.Characteristics&want != want {
-		t.Errorf("characteristics %#x, want contiguous-best-try and contiguous", attr.Characteristics)
+	if want := ondisk.FchNoBackup | fchNoMove; attr.Characteristics&want != want ||
+		attr.Characteristics&(ondisk.FchContigB|ondisk.FchContig) != 0 {
+		t.Errorf("characteristics %#x, want backups and moving disabled, not contiguous", attr.Characteristics)
+	}
+
+	if attr.Owner != 1<<16|4 || attr.Protection != 0xFF00 {
+		t.Errorf("owner %#x protection %#x, want [1,4] and (S:RWED,O:RWED,G,W)", attr.Owner, attr.Protection)
 	}
 
 	// Opened again (by a name the default completes) at its size, the

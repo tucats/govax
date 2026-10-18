@@ -14,10 +14,13 @@ grammar console
         keyword concealed/id=1
         keyword terminal/id=2
 
+    ! SHOW MEMORY/FILES is VMS's page file report (Phase 64), with each
+    ! file's details under /FULL.
     syntax show_memory/id=215
         qualifier   statistics/id=216
         qualifier   runtime/id=217
         qualifier   full/id=218
+        qualifier   files/id=233
 
     syntax show_logical
         parameter name/id=301/type=$any/list

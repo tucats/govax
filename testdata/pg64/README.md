@@ -132,3 +132,16 @@ VMS's:
   named no mounted volume in RMS, so `$CREPRC` couldn't open the image;
   `rms.normalizeDeviceName` now drops a node's or allocation class's
   prefix.
+
+## The VAX run (2026-10-17)
+
+OpenVMS V7.1 on simh's VAX 8600 (`vax/`: the procedure's log, the
+programs' outputs, the subprocess's log; MACRO and LINK wrote no
+messages). The first attempt had the volume mounted without /SYSTEM, so
+part C's detached process couldn't open its files; the second, kept
+here, ran everything. The logs were audited by the author.
+`TestPG64Oracle` (`internal/console/pg64_test.go`) runs the parts on
+govax and matches VMS's lines but for `expectedPG64Differences`; the
+phase doc's progress log lists what VMS answered and what govax
+changed. The modified page writer's stopping point is still open: VMS
+wrote far fewer pages than govax's writer does (W3 to W6).

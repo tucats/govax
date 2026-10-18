@@ -2,6 +2,7 @@ package corevms
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/tucats/govax/internal/paging"
 	"github.com/tucats/govax/internal/rms"
@@ -346,6 +347,16 @@ type PageFileReport struct {
 	// a page is charged when it's made, and takes a block only when the
 	// writer writes it.
 	Charged uint64
+
+	// FilesName is the open file's name as SHOW MEMORY/FILES shows it:
+	// a volume file by its volume's logical name, with no version
+	// ("DISK$WORK:[WORK]PAGEFILE.SYS"); a host file by its path.
+	FilesName string
+
+	// Processes is how many processes are assigned to the page file
+	// (SHOW MEMORY/FILES/FULL's "Paging Usage (processes)"): every one,
+	// as govax has one page file.
+	Processes int
 }
 
 // PageFileReport reports on the System's page file. It never opens it.
@@ -359,6 +370,7 @@ func (sys *System) PageFileReport() PageFileReport {
 		r.Name = sys.pageFile.Name()
 		r.Size, r.Free, r.Used = m.Size(), m.FreeBlocks(), m.UsedBlocks()
 		r.AllocationSize, r.Warned, r.Full = m.AllocationSize(), m.Warned(), sys.pageFileFull
+		r.FilesName, r.Processes = sys.pageFileFilesName(), len(sys.Processes())
 
 	case !sys.Sysgen.Paging || sys.Sysgen.PageFileName == "":
 		r.Status = PageFileNone
@@ -371,6 +383,38 @@ func (sys *System) PageFileReport() PageFileReport {
 	}
 
 	return r
+}
+
+// pageFileFilesName is the open page file's name as SHOW MEMORY/FILES
+// shows VMS 7.1's (testdata/pg64: "DISK$OPENVMS071:[SYS0.SYSEXE]
+// PAGEFILE.SYS"): the device as its volume's logical name, DISK$ and the
+// label, as LIB$FID_TO_NAME names it too, and no version. A host file's
+// name is its path.
+func (sys *System) pageFileFilesName() string {
+	name := sys.pageFile.Name()
+	if sys.pageFile.store.Host {
+		return name
+	}
+
+	if i := strings.LastIndexByte(name, ';'); i >= 0 {
+		name = name[:i]
+	}
+
+	if i := strings.IndexByte(name, ':'); i > 0 && sys.Mounts != nil {
+		if label, ok := sys.Mounts.VolumeLabel(name[:i]); ok {
+			name = "DISK$" + strings.TrimSpace(label) + name[i:]
+		}
+	}
+
+	return name
+}
+
+// MemoryResourcesTitle is SHOW MEMORY's title line on VMS, with the time
+// now: "              System Memory Resources on 17-OCT-2026 06:31:42.35".
+func (sys *System) MemoryResourcesTitle() string {
+	date, _ := formatVMSTime(sys.Clock(), false)
+
+	return "              System Memory Resources on " + date
 }
 
 // pageFileCommitted is the total of every job's pages charged against
