@@ -142,6 +142,8 @@
 //                          page file items
 //              10/17/26    The page file installed at startup;
 //                          vax.sysgen.paging.defer in CONFIG KEYS
+//              10/18/26    VMINIT/PAGING brought up to date with the page
+//                          file
 
 This is the help documentation for the govax VAX emulator.  Topic sections are
 marked by a "$" delimiter.  This is followed by as many tokens of the help
@@ -2499,10 +2501,14 @@ $VM
                         memory on the free or modified page list and come
                         back without I/O when touched again, and a
                         reclaimer trims working sets when free memory
-                        runs low (SHOW MEMORY shows the counts).  There
-                        is no page file yet, so a modified page waits on
-                        the modified list unless it belongs to a file
-                        section, whose file it is written back to.
+                        runs low.  When the modified list grows long, the
+                        modified page writer writes its pages to the page
+                        file (vax.sysgen.paging.file), or a file
+                        section's to its file, and a page written out is
+                        read back when touched.  Each job's PGFLQUOTA
+                        limits the pages it may create.  SHOW MEMORY
+                        shows the counts, and govax's --stats option
+                        reports them at exit.
 
     Example:
 

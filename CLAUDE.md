@@ -130,32 +130,18 @@ never had.
   reclaimer, faults by kind and PPGCNT/GPGCNT/WSPEAK, DCL's SET and
   SHOW WORKING_SET, image rundown deleting P0; checked against VMS 7.1
   by `testdata/pg63`);
-  64 the page file and modified page writer (in progress: subtask 2,
-  the page file, done 2026-10-16: `paging.PageFileMap`,
-  `rms.Session.OpenPageFile`, `corevms/pagefile.go`; subtask 3, the
-  writer's clusters to the page file and section files, the page file
-  PTE's hard fault, and `vax.sysgen.mpw_wrtcluster`, done 2026-10-16,
-  `corevms/mpw.go`; subtask 4, blocks given back at deletion,
-  `releasePageFileBlock`, done 2026-10-16; subtask 5, PGFLQUOTA
-  charged at creation and given back at deletion,
-  `corevms/pgflquota.go`, done 2026-10-16; subtask 6, the rest of the
-  system: DISMOUNT's VMS messages for the page file's volume,
-  `rms.FilesOpenError`, the reclaimer and a subprocess with the page
-  file, done 2026-10-16; subtask 7, reporting: SHOW MEMORY's page file
-  section, `System.PageFileReport`, and `$GETSYI`'s PAGEFILE_PAGE and
-  PAGEFILE_FREE, done 2026-10-17; subtask 8, the page file installed
-  at startup after vax.init, `Machine.StartPageFile` and
-  `System.InstallPageFile`, resized to `paging.size`, unless
-  `vax.sysgen.paging.defer`, done 2026-10-17; subtask 9, the probe,
-  `testdata/pg64`, run on VMS 7.1 and govax changed to its answers
-  2026-10-18: image rundown deletes the image's P1 pages too
-  (`deleteImageP1`), PAGFILLOC's index 3, VMS's page file attributes,
-  SHOW MEMORY/FILES[/FULL] (`machine.ShowMemoryFiles`), and from round
-  2 the writer that MPW_HILIMIT wakes writing the list down a cluster
-  below it, not to MPW_LOLIMIT (`mpwGoal`); subtask 10, paging statistics
-  in `--stats` (`-s`), done 2026-10-18: `machine.PagingStatistics`,
-  printed by cmd/govax's `printPagingStats`; subtask 11, the close-out,
-  next); 65 sections under the
+  64 (done 2026-10-18) the page file and modified page writer (the
+  page file, `vax.sysgen.paging.file`, a volume or host file installed
+  at startup unless `vax.sysgen.paging.defer`, with its block map; the
+  writer's clusters to the page file and section files, woken at
+  MPW_HILIMIT and writing down a cluster below it, as VMS 7.1's did;
+  the page file PTE's hard fault; blocks given back at deletion;
+  PGFLQUOTA charged at creation, SS$_EXQUOTA, refunds at deletion and
+  image exit, which now deletes the image's P1 pages too; DISMOUNT of
+  the page file's volume; SHOW MEMORY's page file section and
+  /FILES[/FULL], `$GETSYI`'s and `$GETJPI`'s page file items, and the
+  paging statistics in `--stats`; checked against VMS 7.1 by
+  `testdata/pg64`); 65 sections under the
   pager; 66 image activation by mapping; 67 the address space and page
   tables under paging, deferred to the end. Paging is synchronous, with no
   PFW, COLPG, or FPG waits. Each later phase has a planning doc.
@@ -457,7 +443,11 @@ expect adjustment as phases land):
   (`$ADJWSL`), `Shrink` (the reclaimer); what a choice depends on comes
   in as `Conditions`. `ModifiedFrames`, `ClearModified`, and
   `MakeSystem` are the database's additions for the writer, `$UPDSEC`,
-  and the P1 vector.
+  and the P1 vector. `pagefile.go` (Phase 64) is the page file's block
+  map (`PageFileMap`, kept in Go, empty each session): a bitmap, block
+  n one page, and the book's allocation size (14.5, 15.5.2.4: runs of
+  up to MPW_WRTCLUSTER, dropping by 16 when none is free, regrowing by
+  8), reporting the PAGEFRAG and PAGECRIT thresholds (65%, 90%).
 - `internal/lck` — the lock manager (Phase 47), from the System Services
   manual ($ENQ/$DEQ) and the Internals book's chapter 13: a `Manager` of
   resources (name, UIC group or 0, access mode, parent) with granted,
@@ -554,6 +544,10 @@ expect adjustment as phases land):
   `dclshell.NewInterpreter` sets. `NewMachine` makes one with hooks of
   its own, so it works, and is tested, alone (`helpers_test.go`:
   `newTestMachine`, `newBootableMachine`). Imports only lower packages.
+  Phase 64: `StartPageFile` installs the page file after vax.init;
+  `show.go` has SHOW MEMORY's page file section, `ShowMemoryFiles`
+  (/FILES[/FULL] in VMS's VAX layout), and `PagingStatistics`, the
+  figures cmd/govax's `--stats` prints at exit (`printPagingStats`).
 - `internal/dclcmd` — the utility commands (Phase 52; earlier in
   `internal/console`): DIRECTORY, TYPE, COPY, DELETE, PURGE, RENAME,
   DUMP (`dump.go`, Phase 51),
@@ -874,6 +868,28 @@ expect adjustment as phases land):
   next image's activation). govax's list has no permanent part (page
   tables, the process header), so its floor is MINWSCNT where VMS's is
   higher; `testdata/pg63`'s oracle lists the differences that follows.
+  Phase 64 (`docs/PHASE-64 - page file.md`): `pagefile.go` is the
+  System's page file (`OpenPageFile` at first need, `InstallPageFile`
+  at startup, `ClosePageFile`; `AllocatePageFile`/`FreePageFile` on
+  its `paging.PageFileMap`; the console's PAGEFRAG, PAGECRIT, and
+  page-file-full notices; `PageFileReport`, SHOW MEMORY's). `mpw.go`'s
+  writer now also writes demand-zero pages (claimed with page file
+  backing) to the page file in clusters (`writePageFileCluster`,
+  `miniCluster`, `vax.sysgen.mpw_wrtcluster`), the blocks assigned at
+  write time; woken at MPW_HILIMIT it stops at `mpwGoal` (MPW_HILIMIT
+  less a cluster), for the reclaimer at MPW_LOLIMIT. A reused frame's
+  page takes the page file PTE form (`BreakTie`), and its fault reads
+  the block back (`filesec.go`'s `pageInFromPageFile`); a page's block
+  goes back when the page is deleted or modified again
+  (`releasePageFileBlock`). `pgflquota.go` is PGFLQUOTA, the job's:
+  charged at creation by `$CRETVA`, `$EXPREG`, the heap, and the image
+  loader (writable and DZRO ISDs), at first touch only for pages
+  nothing created (`chargeFirstTouch`), SS$_EXQUOTA after the pages the
+  quota allows, refunded at deletion; JPI$_PAGFILCNT, PAGFILLOC (page
+  file 3), and ACC$L_PGFLPEAK. Image rundown deletes the image's P1
+  pages with P0 (`vaspace.go`'s `deleteImageP1`). A full page file
+  with no frame to free is a console message and a failed fault; no
+  process waits for space.
 - `internal/librtl` — LIBRTL.EXE's routines (Phase 34): the LIB$ and STR$
   shims a program reaches through `SHIM$LIBRTL_<offset>` stubs. `Routines`
   lists each with its XFC$SHIM code (its transfer-vector offset is
@@ -1101,6 +1117,13 @@ expect adjustment as phases land):
   and records with RFAs for DUMP, and `$PUT` and DCL's WRITE record the
   longest record (FAT$W_RSIZE, `noteLongest`). ods2's writer ends a
   block's variable-length records with VMS's FFFF word.
+  Phase 64: `pagefile.go`'s `Session.OpenPageFile` opens or creates the
+  page file (a host file, or a volume file contiguous-best-try, held
+  with exclusive access, resized to the size asked for, given VMS's
+  page file attributes by `markPageFile`), a `PageFileStore` whose block
+  I/O bypasses the record layer and never extends the file, so a fault
+  in the middle of an RMS call can use it. DISMOUNT of the page file's
+  volume is refused with VMS's messages (`FilesOpenError`).
 - `internal/link` — the VAX linker (Phase 30): builds a VMS executable image from
   `internal/obj` modules, laid out as real LINK lays images out (byte for byte on
   the fixtures). The console's `LINK` command (`internal/dclcmd/link.go`) drives it.

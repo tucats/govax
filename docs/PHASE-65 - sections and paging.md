@@ -46,7 +46,14 @@ that section pages leave memory and come back the way VMS's do:
   `writeBackSection`, `$UPDSEC(W)`, `sectionFiles` holding files open.
 - **Phase 63:** working sets with GPGCNT, global pages kept resident
   until now, the section-file writer.
-- **Phase 64:** page file backing, the writer, PGFLQUOTA.
+- **Phase 64 (done 2026-10-18):** page file backing (`corevms/pagefile.go`
+  over `paging.PageFileMap` and `rms.PageFileStore`), the writer's
+  clusters to the page file and section files (`corevms/mpw.go`; woken
+  at MPW_HILIMIT, it writes down to MPW_HILIMIT less MPW_WRTCLUSTER,
+  `mpwGoal`, as VMS 7.1 did), the page file PTE's hard fault (one page
+  at a time: read clustering from the page file is this phase's, with
+  the sections'), and PGFLQUOTA (`corevms/pgflquota.go`). The writer
+  writes no global pages yet.
 
 ## Design notes
 

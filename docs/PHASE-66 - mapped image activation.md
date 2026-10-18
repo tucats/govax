@@ -40,8 +40,12 @@ leave in place".)
   frame released through `releasePTE`), but for an image the debugger
   holds, whose pages stay until the next activation (`KeepP0`,
   `ResetICBList`). The whole suite passed with it; the tests that found
-  their P0 scratch data gone after a rundown were changed. The image's
-  part of P1 is not deleted yet (item 5 below).
+  their P0 scratch data gone after a rundown were changed.
+- **Phase 64 (2026-10-18):** the image's part of P1 is deleted at
+  rundown too, as Phase 64's probe found VMS's PAGFILCNT back where it
+  was after each image (`vaspace.go`'s `deleteImageP1`, called by
+  `DeleteP0`: the pages from P1's low end up to the user stack's
+  reserve, freed and their PGFLQUOTA refunded, and the low end reset).
 
 - **`machine/image.go`:** `ReadImage` (the whole file in Go, still used
   for the header, the ISD list, the fixups' tables, and debug symbols),
@@ -86,8 +90,9 @@ leave in place".)
   that aren't valid, which would be most of a mapped image.
 - **What image reset deletes in P1:** VMS deletes the part of P1 the
   image created. In govax that's what `$EXPREG` region 1 and
-  `SEC$M_EXPREG` added below the user stack's reserve (`expandP1`).
-  The survey checks nothing else in P1 belongs to an image.
+  `SEC$M_EXPREG` added below the user stack's reserve (`expandP1`),
+  which `deleteImageP1` already deletes (Phase 64). The survey checks
+  nothing else in P1 belongs to an image.
 - **Process 1's P0 after rundown:** the console's own uses of P0
   (ASM and DEPOSIT into process 1's P0 before a RUN) are lost at the
   next image reset, as on VMS. The survey looks for tests that rely on
@@ -115,8 +120,9 @@ leave in place".)
    header blocks, and the ISD's cluster factor; fixups through faults;
    `setImageProtection` over every PTE form.
 4. **Shareable images** the same way.
-5. **Image reset:** delete the image's part of P1 (P0 is done, Phase
-   63), let the files go, and reset the working set (done, Phase 63); `ResetICBList`'s reload-over-old-pages
+5. **Image reset:** let the files go (deleting P0 and the working
+   set's reset are done, Phase 63, and the image's part of P1, Phase
+   64); `ResetICBList`'s reload-over-old-pages
    workaround is not needed in paging mode.
 6. **`$CREPRC`'s activation** (`ActivateCreatedImage`) through the same
    path.

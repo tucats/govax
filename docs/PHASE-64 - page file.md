@@ -1,18 +1,18 @@
 # Phase 64 — the page file and the modified page writer
 
-**Status:** in progress. Subtask 1, the survey (Part A below), done
-2026-10-16, and its questions answered by the author the same day
-("Questions for the author"). Subtask 2, the page file, done
-2026-10-16. Subtask 3, the modified page writer, done 2026-10-16. Subtask 4,
-blocks freed, done 2026-10-16. Subtask 5, PGFLQUOTA, done 2026-10-16. Subtask 6, the rest of the
-system, done 2026-10-16. Subtask 7, reporting, done 2026-10-17. Subtask 8,
-the page file installed at startup (added by the author 2026-10-17; the
-probe and close-out became 9 and 10), done 2026-10-17. Subtask 9, the
-probe, written 2026-10-17 (`testdata/pg64`), run on VMS 7.1 the same
-day, and govax changed to its answers 2026-10-18; round 2, the writer's
-stopping point, run and govax changed to it the same day. Subtask 10, paging
-statistics in `--statistics` (added by the author 2026-10-18; the
-close-out became 11), done 2026-10-18. The close-out, 11, is next. Planned 2026-10-15. Needs Phase 63 (working sets, the
+**Status:** done (2026-10-18). Subtasks 1 to 11: the survey (Part A
+below, its questions answered by the author 2026-10-16); the page file
+(`paging.PageFileMap`, `rms.Session.OpenPageFile`,
+`corevms/pagefile.go`); the modified page writer's clusters to the page
+file and section files and the page file PTE's hard fault
+(`corevms/mpw.go`); blocks freed; PGFLQUOTA (`corevms/pgflquota.go`);
+the rest of the system (DISMOUNT, the reclaimer, subprocesses);
+reporting (SHOW MEMORY, `$GETSYI`); the page file installed at startup
+(added by the author 2026-10-17); the VMS probe (`testdata/pg64`, run
+on VMS 7.1 with a second round for the writer's stopping point, and
+govax changed to its answers 2026-10-18); paging statistics in
+`--stats` (added by the author 2026-10-18); and the close-out
+(CLAUDE.md, HELP, PLAN.md, Phases 65's and 66's docs). Planned 2026-10-15. Needs Phase 63 (working sets, the
 lists, soft faults). Part of the paging program laid out in
 `PHASE-62 - VMS paging.md` (Decisions 7, 8, 9, and 10 are this phase's).
 
@@ -632,7 +632,7 @@ pg63's. Values that vary from run to run print as differences.
    paging on, govax's `--statistics` (`-s`) report includes what SHOW
    MEMORY shows of paging: the page frames, page faults, pages written,
    reclaimer runs, and the page file.
-11. **Close-out.**
+11. **Close-out:** CLAUDE.md, HELP, PLAN.md. (Done 2026-10-18.)
 
 ## Progress log
 
@@ -1105,3 +1105,22 @@ pg63's. Values that vary from run to run print as differences.
   `TestRun_statsPaging` (a host page file installed at startup) and
   `TestRun_statsNoPaging` check both cases. docs/PERFORMANCE.md's
   "Measuring" describes the sections.
+- **2026-10-18:** Subtask 11, the close-out. CLAUDE.md describes the
+  phase (the paging program's paragraph; `internal/paging`'s
+  `pagefile.go`; corevms's page file, writer, hard fault, block release,
+  and PGFLQUOTA; RMS's page file store; the machine's startup install,
+  SHOW MEMORY/FILES, and paging statistics); PLAN.md's row is done;
+  HELP's VMINIT/PAGING describes the page file and the quota; Phase 65's
+  doc lists what this phase leaves it, and Phase 66's that image
+  rundown already deletes the image's P1 pages (`deleteImageP1`).
+  **Carried forward:** read clustering from the page file, and the
+  writer for global pages, are Phase 65's; the first-touch charge for
+  pages nothing created goes with Phase 67; VMS's image activation
+  charges (about 1190 pages at an image's first instruction, govax's
+  13) wait for Phase 66's mapped activation, if a later probe asks; a
+  subprocess's LOGOUT/FULL peak page file line, a swap file (govax has
+  none: SWAPFILE_FREE and SWAPFILE_PAGE are 0), and whether VMS's writer
+  stops at MPW_HILIMIT less a cluster or at MPW_LOWAITLIMIT (equal on
+  that VAX) stay open; FCH$V_NOMOVE's bit (21) is unconfirmed; the
+  writer's timing differs from VMS's asynchronous one by a cluster or
+  two (`expectedPG64Differences`' W3 to W6).
