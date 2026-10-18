@@ -21,6 +21,8 @@
 ;   W  the modified page writer and the page file
 ;   S  the job's pool, seen from a subprocess named PG64SUB
 ;   T  a subprocess's pages, for LOGOUT/FULL's peak
+;   X  round 2 (PG64X.COM): part W's sweeps in timed chunks, and a rest,
+;      for comparison with a monitor's samples of the modified list
 ;   C  part Q again in a detached process with a small quota, made with
 ;      $CREPRC twice: with this process's privileges, and without
 ;      EXQUOTA (the image's and output files' names are the logical
@@ -270,6 +272,12 @@ PIDVAL:	.LONG	0
 ONETXT:	.ASCID	/0 00:00:01.00/
 ONEQ:	.QUAD	0
 
+; Part X's time of day ($ASCTIM, "hh:mm:ss.cc") and chunk size.
+TIMED:	.LONG	11
+	.ADDRESS TIMBUF
+TIMBUF:	.BLKB	11
+CHUNK	= 500
+
 ; The labels of the cases past the quota (OVERR).
 L_P0:	.ASCID	/expreg P0/
 L_CRE:	.ASCID	/cretva/
@@ -294,7 +302,10 @@ L_P1:	.ASCID	/expreg P1/
 3$:	CMPB	PART,#^A/C/
 	BNEQ	4$
 	BRW	PARTC
-4$:	BRW	PARTQ
+4$:	CMPB	PART,#^A/X/
+	BNEQ	5$
+	BRW	PARTX
+5$:	BRW	PARTQ
 
 ;
 ; Part Q: the quota.
@@ -730,6 +741,100 @@ PARTS:	$GETJPIW_S PRCNAM=SUBNAM, ITMLST=SUBLST, IOSB=JIOSB
 	RET
 
 ;
+; Part X: round 2. Part W's case again, with the time of day on each
+; line: the first sweep in chunks of CHUNK pages, the page file's use
+; after each; a rest of 24 seconds, sampled every 3; the read-back sweep
+; in chunks; the deletion. PG64M.COM samples the modified list's size
+; every second meanwhile, so that the two logs together show where VMS's
+; writer stops writing.
+;
+PARTX:	MOVZWL	#SYI$_MPW_HILIMIT,-(SP)
+	CALLS	#1,SYIR
+	MOVL	R0,HILIM
+	MOVZWL	#SYI$_MPW_LOLIMIT,-(SP)
+	CALLS	#1,SYIR
+	MOVL	R0,LOLIM
+	MOVZWL	#SYI$_MPW_WRTCLUSTER,-(SP)
+	CALLS	#1,SYIR
+	MOVL	R0,WCLUS
+	SAY	</X1 mpw_hilimit=!UL mpw_lolimit=!UL mpw_wrtcluster=!UL/>, HILIM, LOLIM, WCLUS
+	ADDL3	#1000,HILIM,NPG
+	SUBL3	#500,SA+S_CNT,R6
+	CMPL	NPG,R6
+	BLEQ	1$
+	MOVL	R6,NPG
+1$:	$ADJWSL_S PAGCNT=#-100000, WSETLM=LIM
+	$ADJWSL_S PAGCNT=#80, WSETLM=LIM
+	$EXPREG_S PAGCNT=NPG, RETADR=RET
+	MOVL	R0,STAT
+	MOVL	RET,ARR
+	SAY	</X1 expreg !UL pages: !XL wssize=!UL/>, NPG, STAT, LIM
+	SNAP	SA
+	CALLS	#0,NOWR
+	SAY	</X2 !AS start: page file free=!UL/>, #TIMED, SA+S_PFREE
+; The first sweep, a chunk at a time.
+	CLRL	R8			; pages swept
+10$:	SUBL3	R8,NPG,R9
+	BGTR	14$
+	BRW	12$
+14$:	CMPL	R9,#CHUNK
+	BLEQ	11$
+	MOVL	#CHUNK,R9
+11$:	SWEEP	R8,R9
+	ADDL2	R9,R8
+	SNAP	SB
+	CALLS	#0,NOWR
+	USED	SA,SB,R6
+	FAULTS	SA,SB,R7
+	SAY	</X3 !AS written !UL: page file used=!SL flts=!UL/>, #TIMED, R8, R6, R7
+	BRW	10$
+; The rest.
+12$:	MOVL	#8,R10
+13$:	CALLS	#0,WAITR
+	SNAP	SB
+	CALLS	#0,NOWR
+	USED	SA,SB,R6
+	SAY	</X4 !AS rest: page file used=!SL/>, #TIMED, R6
+	SOBGTR	R10,13$
+; The read-back sweep, a chunk at a time.
+	CLRL	R8
+	CLRL	R11			; pages without their contents
+20$:	SUBL3	R8,NPG,R9
+	BGTR	24$
+	BRW	22$
+24$:	CMPL	R9,#CHUNK
+	BLEQ	21$
+	MOVL	#CHUNK,R9
+21$:	CHECK	R8,R9
+	ADDL2	R0,R11
+	ADDL2	R9,R8
+	SNAP	SB
+	CALLS	#0,NOWR
+	USED	SA,SB,R6
+	FAULTS	SA,SB,R7
+	SAY	</X5 !AS read !UL: page file used=!SL flts=!UL/>, #TIMED, R8, R6, R7
+	BRW	20$
+22$:	CALLS	#0,WAITR
+	SNAP	SB
+	CALLS	#0,NOWR
+	USED	SA,SB,R6
+	SAY	</X6 !AS a wait later: page file used=!SL bad=!UL/>, #TIMED, R6, R11
+; The deletion.
+	$DELTVA_S INADR=RET
+	MOVL	R0,STAT
+	SNAP	SB
+	CALLS	#0,NOWR
+	USED	SA,SB,R6
+	SAY	</X7 !AS deltva: !XL page file used=!SL/>, #TIMED, STAT, R6
+	CALLS	#0,WAITR
+	SNAP	SB
+	CALLS	#0,NOWR
+	USED	SA,SB,R6
+	SAY	</X7 !AS a wait later: page file used=!SL/>, #TIMED, R6
+	MOVL	#SS$_NORMAL,R0
+	RET
+
+;
 ; Part T: a subprocess's pages, before its LOGOUT/FULL (PG64L.COM).
 ;
 PARTT:	$EXPREG_S PAGCNT=#300, RETADR=RET
@@ -762,6 +867,11 @@ PARTT:	$EXPREG_S PAGCNT=#300, RETADR=RET
 	CLRL	SYIVAL
 	$GETSYIW_S ITMLST=SYI1, IOSB=SIOSB
 	MOVL	SYIVAL,R0
+	RET
+
+; NOWR: TIMED is the time of day now.
+	.ENTRY	NOWR,^M<R2,R3,R4,R5>
+	$ASCTIM_S TIMBUF=TIMED, CVTFLG=#1
 	RET
 
 ; WAITR: wait WAITQ (3 seconds).

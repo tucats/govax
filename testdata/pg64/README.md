@@ -17,6 +17,8 @@ F$GETJPI between the runs, and makes the subprocesses.
 | `pg64l.com` | A spawned subprocess's part: part T, then LOGOUT/FULL |
 | `exchange.cmd` | The govax console script that builds the exchange volume |
 | `copyout.cmd` | The govax console script that copies the results back |
+| `pg64x.com`, `pg64m.com` | Round 2: the writer's stopping point (below) |
+| `exchange2.cmd`, `copyout2.cmd` | Round 2's scripts: the new files onto the existing volume, and its results back to `vax/round2/` |
 | `vax/` | VMS's output, after the run |
 
 ## How the program works
@@ -145,3 +147,38 @@ govax and matches VMS's lines but for `expectedPG64Differences`; the
 phase doc's progress log lists what VMS answered and what govax
 changed. The modified page writer's stopping point is still open: VMS
 wrote far fewer pages than govax's writer does (W3 to W6).
+
+## Round 2: where the writer stops
+
+Round 1's part W showed VMS's writer leaving its modified list far above
+MPW_LOLIMIT, but a program can't see the list's size. Round 2 runs part
+X, part W's case with the time of day on each line (the first sweep in
+chunks of 500 pages with the page file's use after each, a 24-second
+rest sampled every 3 seconds, the read-back sweep in chunks, the
+deletion), while a monitor subprocess (`pg64m.com`) writes the time and
+SHOW MEMORY/PHYSICAL_PAGES once a second, whose last column is the
+modified list's size. The two logs together show the list's size when
+the writer starts and stops. `pg64x.com` also asks SYSGEN for the
+writer's other parameters (MPW_WAITLIMIT, MPW_LOWAITLIMIT, MPW_THRESH,
+MPW_IOLIMIT, MPW_PRIO, FREELIM, FREEGOAL).
+
+1. With the volume dismounted on the VAX, add round 2's files to it,
+   from the repository root:
+
+       govax console < testdata/pg64/exchange2.cmd
+
+2. On the VAX, as SYSTEM:
+
+       MOUNT/SYSTEM DUA1: PG64
+       SET DEFAULT DUA1:[000000]
+       @PG64X/OUTPUT=PG64X.LOG
+
+   It takes about two minutes.
+3. Copy the results back, from the repository root:
+
+       govax console < testdata/pg64/copyout2.cmd
+
+govax's dry run of part X: the first sweep's chunks show nothing written
+until the list passes MPW_HILIMIT (between 5500 and 6000 pages), then
+5520 pages written at once, the list down to MPW_LOLIMIT; nothing more
+during the rest or the read-back.
