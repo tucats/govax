@@ -418,6 +418,55 @@ func TestShare(t *testing.T) {
 	}
 }
 
+// A global page's first share takes over the reference its allocation
+// (or a reclaim) gave it, so the frame goes to a list with its last
+// share, and comes back with the next first share.
+func TestShareFirst(t *testing.T) {
+	d := New(3)
+
+	pfn, err := d.Allocate(GlobalPage, Owner{1, 0}, Backing{Kind: GlobalSection, Index: 4})
+	must(t, d, err)
+	must(t, d, d.ShareFirst(pfn))
+
+	if e := entry(t, d, pfn); e.ShareCount != 1 || e.RefCount != 1 {
+		t.Fatalf("first share's record %+v", e)
+	}
+
+	if err := d.ShareFirst(pfn); !errors.Is(err, ErrWrongState) {
+		t.Fatalf("a second first share: %v", err)
+	}
+
+	must(t, d, d.Share(pfn))
+
+	if e := entry(t, d, pfn); e.ShareCount != 2 || e.RefCount != 1 {
+		t.Fatalf("second share's record %+v", e)
+	}
+
+	for _, want := range []State{Active, Modified} {
+		got, err := d.Unshare(pfn, want == Active)
+		must(t, d, err)
+
+		if got != want {
+			t.Fatalf("unshare left the frame %s, want %s", got, want)
+		}
+	}
+
+	must(t, d, d.Reclaim(pfn))
+	must(t, d, d.ShareFirst(pfn))
+
+	if e := entry(t, d, pfn); e.State != Active || e.ShareCount != 1 || e.RefCount != 1 || !e.SavedModify {
+		t.Fatalf("reclaimed frame's record %+v", e)
+	}
+
+	if err := d.ShareFirst(allocate(t, d, 0)); !errors.Is(err, ErrWrongState) {
+		t.Fatalf("first share of a process page: %v", err)
+	}
+
+	if err := d.ShareFirst(9); !errors.Is(err, ErrBadFrame) {
+		t.Fatalf("first share of no frame: %v", err)
+	}
+}
+
 // The writer's path: the modified list's head is the oldest, and a
 // cleaned frame goes to the free list's tail, still tied and faultable.
 func TestCleaned(t *testing.T) {

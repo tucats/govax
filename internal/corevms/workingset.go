@@ -38,11 +38,18 @@ import (
 // working set, every page stays valid until it's deleted, and these
 // functions do nothing.
 //
+// # Global pages
+//
+// A global file section's pages enter the working set as global pages
+// (counted in GPGCNT) and leave it as the process's own do, but their
+// frames are shared, so a page leaving gives its PTE the global page
+// table index back rather than a transition form, and its frame goes to
+// a list only when no working set holds it (globalpages.go). A page-file
+// section's pages are never chosen to leave yet (wsProtected).
+//
 // # What isn't here yet
 //
-// Global section pages enter the working set (counted as global pages)
-// but are never chosen to leave it: they stay resident until Phase 65
-// gives the global page table its own states. Without a page file
+// Without a page file
 // (pagefile.go), the modified page writer (mpw.go) writes only a
 // writable private file section's pages, to their file, so any other
 // page on the modified list leaves it only by a soft fault, or by being
@@ -239,20 +246,23 @@ func (env *Environment) replacementConditions() paging.Conditions {
 }
 
 // wsProtected reports whether the page at va, in address space as, must
-// stay in the working set for now: a global section's page (resident
-// until Phase 65), or a page whose frame has been translated during the
-// current instruction (the phase doc's Decision 6), which the
+// stay in the working set for now: a global page whose frame isn't
+// shared out by the pager (a page-file section's, resident until
+// subtask 4 of Phase 65), or a page whose frame has been translated
+// during the current instruction (the phase doc's Decision 6), which the
 // instruction, or the Go code running inside it, may still be using. A
 // page whose PTE can't be read is kept too: nothing could be done with
 // it.
 func (env *Environment) wsProtected(as vm.AddressSpace, va uint32) bool {
-	if p, ok := env.ws.Lookup(va); ok && p.Global {
-		return true
-	}
-
 	pte, err := env.mem.LookupPTEIn(env.cpu, as, va)
 	if err != nil {
 		return true
+	}
+
+	if p, ok := env.ws.Lookup(va); ok && p.Global {
+		if _, shared := env.sharedGlobalPage(pte.PFN()); !pte.Valid() || !shared {
+			return true
+		}
 	}
 
 	return pte.Valid() && env.mem.TranslatedThisInstruction(pte.PFN())
@@ -268,13 +278,21 @@ func (env *Environment) wsProtected(as vm.AddressSpace, va uint32) bool {
 //
 // The frame must be the page's own: active, tied to this process's page,
 // and held by nothing else. Anything else (which the pager never makes)
-// leaves the PTE as it is.
+// leaves the PTE as it is. A global page's frame is shared instead: its
+// PTE gets its global page table index back, and the process's share of
+// the frame goes (evictGlobalPage).
 func (env *Environment) evictPage(p paging.Page) {
 	db := env.mem.Paging()
 	as := env.pageSpace()
 
 	pte, err := env.mem.LookupPTEIn(env.cpu, as, p.VA)
 	if err != nil || !pte.Valid() {
+		return
+	}
+
+	if p.Global {
+		env.evictGlobalPage(as, p.VA, pte)
+
 		return
 	}
 
@@ -444,9 +462,15 @@ func (sys *System) effectivelyModified(pfn uint32, claim vm.FrameClaim) {
 // transition, loses it, and its PTE goes back to the form that says where
 // the page's contents are (backingPTE), so the page's next touch reads it
 // in again. The PTE is changed only if it's still in transition in that
-// frame. Global pages never leave a working set in this phase, so only a
-// process page's tie is broken.
+// frame. A global page's tie is broken in the global page table instead
+// (loseGlobalFrame), where no process PTE points at the frame.
 func (sys *System) BreakTie(pfn paging.PFN, typ paging.Type, owner paging.Owner, back paging.Backing) {
+	if typ == paging.GlobalPage {
+		sys.loseGlobalFrame(pfn, owner, back)
+
+		return
+	}
+
 	if typ != paging.ProcessPage {
 		return
 	}

@@ -238,6 +238,29 @@ func (d *Database) Share(pfn PFN) error {
 	return nil
 }
 
+// ShareFirst makes the one reference an active global frame has, the one
+// Allocate or Reclaim gave it, the first process's share: the share count
+// becomes 1 and the reference count stays 1. It's how a process's fault
+// brings a global page in, or takes it back off a list: the faulting
+// process's PTE is the page's first share, and when it lets go (Unshare)
+// the frame goes to a list (the book's 15.3.1). The frame must have no
+// other reference and no share.
+func (d *Database) ShareFirst(pfn PFN) error {
+	e, err := d.activeEntry(pfn, "first share")
+	if err != nil {
+		return err
+	}
+
+	if e.Type != GlobalPage || e.RefCount != 1 || e.ShareCount != 0 {
+		return fmt.Errorf("%w: first share of %s frame %d with %d references, %d shares",
+			ErrWrongState, e.Type, pfn, e.RefCount, e.ShareCount)
+	}
+
+	e.ShareCount = 1
+
+	return nil
+}
+
 // Unshare records one process fewer mapping a global page's frame;
 // modified is that process's PTE's modify bit, ORed into the saved
 // modify bit. When the last process lets go, the share's reason to keep

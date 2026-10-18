@@ -479,8 +479,8 @@ a procedure, `exchange.cmd`. A second process for the sharing cases
    backing store and the saved modify bit at the first fault; their
    PGFLQUOTA charged at mapping, with the global CRF mapping's (finding
    2, question 3).
-3. **The global page table's states and share counts** (findings 3, 4,
-   5, 9, 10): soft faults on global pages valid elsewhere or in
+3. **The global page table's states and share counts** (done
+   2026-10-18; findings 3, 4, 5, 9, 10): soft faults on global pages valid elsewhere or in
    transition; global pages leaving working sets with the GPTX back in
    the process PTE; global frames on the lists, written by the writer,
    their ties broken through the GPTE; sections deleted with pages on
@@ -570,3 +570,61 @@ a procedure, `exchange.cmd`. A second process for the sharing cases
     SS$_EXQUOTA, and the global page's fault makes an effectively
     modified private copy without charging again. Each fails without the
     change it checks (the backing store, the charge, and the unmapping).
+- **2026-10-18:** Subtask 3, the global page table's states and share
+  counts, with paging on (`corevms/globalpages.go`, new; `filesec.go`,
+  `gblsec.go`, `workingset.go`, `mpw.go`; `paging.Database.ShareFirst`;
+  tests in `internal/console/globalpaging_test.go`):
+  - **States.** A global file section's page is valid (its frame active,
+    one share per process PTE valid on it), in transition (its frame on
+    the free or modified list, tied to the global page), or out (its
+    `Frames` slot 0, its contents in the file). The PFN database's state
+    says which of the first two; the entry needs nothing more in Go.
+    `Refs` stays the count of PTEs mapping the section.
+  - **Faults** come through the GPTX (`pageInSharedGlobal`): valid
+    elsewhere is a global valid fault and a `Share`; in transition a soft
+    fault off its list (counted as a free or modified list fault), the
+    frame reclaimed and given its first share; out a hard read. A frame's
+    allocation (or reclaim) reference becomes its first share
+    (`ShareFirst`, new), so the frame goes to a list with its last share.
+  - **Leaving a working set** (`evictPage`, `evictGlobalPage`): the
+    process PTE gets its GPTX back and its share goes (`Unshare`, the
+    PTE's modify bit gathered into the saved modify bit); `wsProtected`
+    now protects only page-file sections' pages (subtask 4), and so does
+    `$PURGWS`. Releasing a valid PTE (`releaseFrame`: `$DELTVA`, rundown,
+    process deletion) is an `Unshare` too; `Dirty` is paging off's alone.
+  - **Reuse** breaks the tie through the global page table
+    (`BreakTie` → `loseGlobalFrame`): the slot goes to 0, no process PTE
+    changes.
+  - **The writer** writes a writable section's global frames on the
+    modified list to their blocks, clustered over the section's
+    neighboring pages on the list, lower first, then higher, up to
+    MPW_WRTCLUSTER (`writeGlobalCluster`; the order is govax's,
+    unconfirmed, as `miniCluster`'s).
+  - **Deletion** writes back the pages left on the modified list
+    (`globalPageModified`, the saved modify bit) and deletes every frame
+    the section's pages hold.
+  - **`$UPDSEC`** of a page the caller's PTE doesn't hold valid follows
+    the GPTE (`updateGlobalPage`): valid elsewhere, written and its saved
+    modify bit cleared; on the modified list, written and moved to the
+    free list; on the free list or out, not written (finding 9; the
+    free-list case is govax's reading of "every page", unconfirmed). A
+    valid page written clears its frame's saved modify bit too.
+  - **Paging off** is unchanged: a page keeps its frame until the section
+    goes, `Dirty` gathers the modify bits.
+  - **The tests:** `TestGlobalSectionPaging` maps one writable global
+    section of PAGES.DAT twice in process 1 (two PTEs per page), with a
+    30-page working set: page 0 through both ranges is a hard fault, then
+    a global valid fault, two shares; each page modified through one
+    range leaves the working set, its PTE a GPTX, the writer writing the
+    pages in clusters to the file; reading through the other range (from
+    the top down) takes frames off the lists and shares those still
+    valid, with no hard fault; reused frames leave their pages out, read
+    back from the file; `$UPDSEC` writes the pages on the modified list
+    and those valid only through the other range (its first run, pages 0
+    to 8, in retadr), leaving none on the list; rundown deletes the
+    section, writing back what waited on the modified list. After each
+    step every PTE is valid or a GPTX, each frame's share count matches
+    the valid PTEs, and the database checks. `TestGlobalSectionPagingOff`
+    runs the same touches with paging off. `TestShareFirst` is the
+    database's. Each fails without the change it checks (the share, the
+    tie broken, the cluster, `$UPDSEC`'s GPTE, deletion's write-back).

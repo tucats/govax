@@ -56,7 +56,8 @@ import (
 // in. Either way the code that gives back a page when its PTE is replaced
 // (releasePTE, TeardownAddressSpace) asks the System first
 // (releaseFrame): a page of a section only drops the section's
-// reference count.
+// reference count. With paging on, a file section's page can leave
+// memory while the section lasts (globalpages.go).
 //
 // Sections mapped by PFN (SEC$M_PFNMAP) aren't supported:
 // SS$_UNSUPPORTED.
@@ -140,7 +141,8 @@ type GlobalSection struct {
 	DeletePending bool
 
 	// Frames are the section's physical pages, in order. A file
-	// section's page not read in yet is 0.
+	// section's page not read in yet is 0, and, with paging on, one whose
+	// frame has gone to another page (globalpages.go).
 	Frames []uint32
 
 	// Refs is how many process page table entries map the section.
@@ -318,6 +320,9 @@ func (g *GlobalSections) allocPageTable(s *GlobalSection, pages int) bool {
 // section's page, when the section loses a reference instead (and is
 // deleted if that was its last, unless it's permanent), and, if the PTE
 // had modified the page, the page is marked modified in the section.
+// With paging on, a file section's page loses the PTE's share instead,
+// its modify bit gathered into the frame's saved modify bit, and the
+// frame goes to a list with its last share (globalpages.go).
 func (sys *System) releaseFrame(pfn uint32, modified bool) {
 	sp, ok := sys.Sections.byFrame[pfn]
 	if !ok {
@@ -326,18 +331,29 @@ func (sys *System) releaseFrame(pfn uint32, modified bool) {
 		return
 	}
 
-	if modified && sp.s.Dirty != nil {
+	shared, toModified := sys.unshareGlobalFrame(pfn, modified)
+	if !shared && modified && sp.s.Dirty != nil {
 		sp.s.Dirty[sp.page] = true
 	}
 
 	sp.s.Refs--
 	sys.maybeDeleteSection(sp.s)
+
+	// A frame left on the modified list by a section that lives on may
+	// wake the writer.
+	if toModified {
+		sys.wakeModifiedPageWriter()
+	}
 }
 
 // maybeDeleteSection deletes s if nothing maps it and nothing keeps it:
 // a temporary section, or one $DGBLSC has deleted. A file section's
 // modified pages are written back to its file first, and the file is let
-// go. Its physical pages go back to the free list (cleared).
+// go. Its physical pages go back to the free list (cleared). With paging
+// on, a file section's pages that hold frames are all in transition then
+// (nothing maps the section, so no PTE is valid on them): those on the
+// modified list are the ones written, and every frame, on either list,
+// is deleted to the free list's head.
 func (sys *System) maybeDeleteSection(s *GlobalSection) {
 	g := sys.Sections
 	if s.Refs > 0 || s.Permanent {

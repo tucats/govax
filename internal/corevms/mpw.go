@@ -47,6 +47,9 @@ import (
 //   - a page of a writable private section mapped from a file ($CRMPSC
 //     with SEC$M_WRT, without SEC$M_CRF) goes to its own block of the
 //     file, the frame's backing store address;
+//   - a page of a writable global file section goes to its block of the
+//     section's file, clustered with its neighbors in the section
+//     (globalpages.go's writeGlobalCluster);
 //   - every other page, a demand-zero page or a private copy of a
 //     copy-on-reference page, goes to the page file (pagefile.go), to a
 //     block the writer allocates when it writes the page. The block
@@ -184,9 +187,14 @@ func (sys *System) writeModifiedPages(goal int) int {
 
 		written := false
 
-		switch ps, ok := sys.writableSectionPage(e); {
+		ps, ok := sys.writableSectionPage(e)
+		gs, gi, global := sys.writableGlobalFrame(pfn, e)
+
+		switch {
 		case ok:
 			written = sys.writeSectionCluster(pfn, e, ps)
+		case global:
+			written = sys.writeGlobalCluster(pfn, gs, gi)
 		case sys.pageFileBound(e) && !pageFileFull:
 			written = sys.writePageFileCluster(frames[i:])
 			pageFileFull = !written

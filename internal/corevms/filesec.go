@@ -76,8 +76,11 @@ import (
 // leaves, the modified page writer (mpw.go) writes it to the page file,
 // and a reused frame leaves its PTE in the page file form. Copy-on-
 // reference pages, private or global, are charged against the paging
-// file quota when they're mapped (pgflquota.go). A global section's pages
-// stay resident until Phase 65's subtask 3.
+// file quota when they're mapped (pgflquota.go). A global section's page
+// leaves a working set too (Phase 65, subtask 3; globalpages.go): the
+// process's PTE gets its global page table index back, and the page's
+// frame stays in memory while any process holds it valid, then waits on
+// a list, tied to the global page, until it's faulted back or reused.
 //
 // # The file stays accessed
 //
@@ -509,7 +512,8 @@ func (sys *System) pageInFromPageFile(vbn uint32, f vm.PageFault) (uint32, bool)
 // copy-on-reference section, a private copy for the process fault f
 // touched (and the section loses the reference the faulting PTE held);
 // and the fault's kind: a read, or a global valid fault if the section's
-// page was in memory already.
+// page was in memory already. With paging on, a section's own page may
+// also be taken back off a list (pageInSharedGlobal).
 func (sys *System) pageInGlobal(gi uint32, f vm.PageFault) (uint32, faultKind, bool) {
 	s, i, ok := sys.Sections.globalPage(gi)
 	if !ok || s.File == nil {
@@ -529,6 +533,12 @@ func (sys *System) pageInGlobal(gi uint32, f vm.PageFault) (uint32, faultKind, b
 		}
 
 		return pfn, faultRead, ok
+	}
+
+	// With paging on, the page may be valid elsewhere, in transition, or
+	// out (globalpages.go).
+	if sys.mem.Paging() != nil {
+		return sys.pageInSharedGlobal(s, i)
 	}
 
 	if s.Frames[i] != 0 {
@@ -573,13 +583,17 @@ func (sys *System) unrefGlobalPage(gi uint32) {
 // writeBackSection writes a global file section's modified pages to its
 // file, if it's one whose pages go back (writable, not copy on
 // reference), and marks them unmodified.
+//
+// With paging on, nothing maps a section being deleted, so each page that
+// holds a frame is in transition, and a page on the modified list is one
+// to write (globalPageModified).
 func (sys *System) writeBackSection(s *GlobalSection) {
 	if !s.writesBack() {
 		return
 	}
 
 	for i, pfn := range s.Frames {
-		if pfn != 0 && s.Dirty[i] {
+		if pfn != 0 && sys.globalPageModified(s, i) {
 			_ = sys.writePage(s.File, s.VBN+uint32(i), pfn)
 			s.Dirty[i] = false
 		}
@@ -932,6 +946,12 @@ func (env *Environment) updateSections(pages []uint32, mode registers.AccessMode
 			err2 = env.writePage(sp.s.File, sp.s.VBN+uint32(sp.page), pte.PFN())
 			sp.s.Dirty[sp.page] = false
 
+			// With paging on, the frame's saved modify bit holds what
+			// the PTEs that have let go of it wrote.
+			if _, _, ok := env.globalFrame(sp.s, sp.page); ok && err2 == nil {
+				_ = env.mem.Paging().ClearModified(paging.PFN(pte.PFN()))
+			}
+
 		case env.modifiedTransitionPage(addr, pte) != nil:
 			// A page out of the working set, its frame waiting on the
 			// modified list: written as the modified page writer
@@ -955,6 +975,19 @@ func (env *Environment) updateSections(pages []uint32, mode registers.AccessMode
 			s, i, ok := env.Sections.globalPage(gi)
 			if !ok || !s.writesBack() || s.Frames[i] == 0 {
 				continue
+			}
+
+			// With paging on, the page's global page table entry says
+			// whether there's anything to write (globalpages.go).
+			if env.mem.Paging() != nil {
+				wrote, err := env.updateGlobalPage(s, i)
+				if !wrote && err == nil {
+					continue
+				}
+
+				err2 = err
+
+				break
 			}
 
 			err2 = env.writePage(s.File, s.VBN+uint32(i), s.Frames[i])
