@@ -1,0 +1,50 @@
+	.TITLE	MAIN2 - a program that uses SHR2, which uses SHR1 (Phase 68 probe)
+	.IDENT	/V2.0/
+;
+; SAY ctl[,a,b,c] formats a line with $FAO (CTL is a .ASCID control
+; string, A to C its arguments, pushed as longwords) and writes it with
+; LIB$PUT_OUTPUT. It uses only the system service and LIBRTL entry
+; points, through G^, and changes R0 and R1.
+;
+	.MACRO	SAY	CTL,A=#0,B=#0,C=#0
+	PUSHL	C
+	PUSHL	B
+	PUSHL	A
+	PUSHAQ	BUFD
+	PUSHAW	OUTD
+	PUSHAQ	CTL
+	CALLS	#6,G^SYS$FAO
+	PUSHAQ	OUTD
+	CALLS	#1,G^LIB$PUT_OUTPUT
+	.ENDM	SAY
+
+	.PSECT	SAY_DATA,WRT,NOEXE,LONG
+BUF:	.BLKB	132
+BUFD:	.WORD	132
+	.BYTE	14,1
+	.ADDRESS BUF
+OUTD:	.WORD	0
+	.BYTE	14,1
+	.ADDRESS BUF
+
+	.PSECT	MAIN_DATA,WRT,NOEXE,LONG
+F_TWI:	.ASCID	/MAIN2: SHR2_TWICE(21) !SL/
+F_CNT:	.ASCID	/MAIN2: SHR2_COUNT() !SL/
+F_ADR:	.ASCID	/MAIN2: SHR2_ADDR() !SL/
+
+	.PSECT	MAIN_CODE,NOWRT,EXE,LONG
+	.ENTRY	MAIN2,^M<R2>
+	PUSHL	#21
+	CALLS	#1,G^SHR2_TWICE
+	MOVL	R0,R2
+	SAY	F_TWI,R2
+	CALLS	#0,G^SHR2_COUNT
+	MOVL	R0,R2
+	SAY	F_CNT,R2
+	CALLS	#0,G^SHR2_ADDR
+	MOVL	R0,R2
+	SAY	F_ADR,R2
+	MOVL	#1,R0
+	RET
+
+	.END	MAIN2

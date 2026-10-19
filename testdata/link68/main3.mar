@@ -1,0 +1,46 @@
+	.TITLE	MAIN3 - a program that uses SHR3 (Phase 68 probe)
+	.IDENT	/V3.0/
+;
+; Linked against SHR3 (based) as MAIN3 and SHR3P (not) as MAIN3P.
+; Shows SHR3_GET's answer and the address G^SHR3_DATA reaches, both
+; absolute: equal when the .ADDRESS in the image is right.
+;
+; SAY ctl[,a,b,c] formats a line with $FAO (CTL is a .ASCID control
+; string, A to C its arguments, pushed as longwords) and writes it with
+; LIB$PUT_OUTPUT. It uses only the system service and LIBRTL entry
+; points, through G^, and changes R0 and R1.
+;
+	.MACRO	SAY	CTL,A=#0,B=#0,C=#0
+	PUSHL	C
+	PUSHL	B
+	PUSHL	A
+	PUSHAQ	BUFD
+	PUSHAW	OUTD
+	PUSHAQ	CTL
+	CALLS	#6,G^SYS$FAO
+	PUSHAQ	OUTD
+	CALLS	#1,G^LIB$PUT_OUTPUT
+	.ENDM	SAY
+
+	.PSECT	SAY_DATA,WRT,NOEXE,LONG
+BUF:	.BLKB	132
+BUFD:	.WORD	132
+	.BYTE	14,1
+	.ADDRESS BUF
+OUTD:	.WORD	0
+	.BYTE	14,1
+	.ADDRESS BUF
+
+	.PSECT	MAIN_DATA,WRT,NOEXE,LONG
+F_GET:	.ASCID	/MAIN3: SHR3_GET() !XL, G^SHR3_DATA !XL holds !XL/
+
+	.PSECT	MAIN_CODE,NOWRT,EXE,LONG
+	.ENTRY	MAIN3,^M<R2,R3>
+	CALLS	#0,G^SHR3_GET
+	MOVL	R0,R2
+	MOVAB	G^SHR3_DATA,R3
+	SAY	F_GET,R2,R3,G^SHR3_DATA
+	MOVL	#1,R0
+	RET
+
+	.END	MAIN3

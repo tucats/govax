@@ -1,0 +1,59 @@
+	.TITLE	EXE1 - an executable laid out by options (Phase 68 probe)
+	.IDENT	/V1.0/
+;
+; Linked with BASE=, CLUSTER= (EXE1B in a cluster of its own),
+; COLLECT=, PSECT_ATTR=, IOSEGMENT=, DZRO_MIN=, and ISD_MAX=, from
+; SYS$INPUT. Shows where each psect landed, absolute.
+;
+; SAY ctl[,a,b,c] formats a line with $FAO (CTL is a .ASCID control
+; string, A to C its arguments, pushed as longwords) and writes it with
+; LIB$PUT_OUTPUT. It uses only the system service and LIBRTL entry
+; points, through G^, and changes R0 and R1.
+;
+	.MACRO	SAY	CTL,A=#0,B=#0,C=#0
+	PUSHL	C
+	PUSHL	B
+	PUSHL	A
+	PUSHAQ	BUFD
+	PUSHAW	OUTD
+	PUSHAQ	CTL
+	CALLS	#6,G^SYS$FAO
+	PUSHAQ	OUTD
+	CALLS	#1,G^LIB$PUT_OUTPUT
+	.ENDM	SAY
+
+	.PSECT	SAY_DATA,WRT,NOEXE,LONG
+BUF:	.BLKB	132
+BUFD:	.WORD	132
+	.BYTE	14,1
+	.ADDRESS BUF
+OUTD:	.WORD	0
+	.BYTE	14,1
+	.ADDRESS BUF
+
+	.PSECT	EXE1_DATA,WRT,NOEXE,LONG
+DAT1:	.LONG	1
+F_DAT:	.ASCID	/EXE1: EXE1_DATA !XL, EXE1_RO !XL, EXE1_ZERO !XL/
+F_COD:	.ASCID	/EXE1: EXE1 !XL, EXE1B_ROUT !XL, EXE1B_DATA !XL/
+
+	.PSECT	EXE1_RO,NOWRT,NOEXE,LONG
+RO1:	.LONG	2
+
+	.PSECT	EXE1_ZERO,WRT,NOEXE,PAGE
+ZER1:	.BLKB	2048			; 4 pages nothing is stored in
+
+	.PSECT	EXE1_CODE,NOWRT,EXE,LONG
+	.ENTRY	EXE1,^M<R2,R3,R4>
+	MOVAB	DAT1,R2
+	MOVAB	RO1,R3
+	MOVAB	ZER1,R4
+	SAY	F_DAT,R2,R3,R4
+	MOVAB	EXE1,R2
+	CALLS	#0,EXE1B_ROUT
+	MOVL	R0,R3
+	MOVAB	EXE1B_DATA,R4
+	SAY	F_COD,R2,R3,R4
+	MOVL	#1,R0
+	RET
+
+	.END	EXE1

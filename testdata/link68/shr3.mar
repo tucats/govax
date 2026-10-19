@@ -1,0 +1,18 @@
+	.TITLE	SHR3 - position-dependent code (Phase 68 probe)
+	.IDENT	/V3.0/
+;
+; NOPIC psects, linked based (BASE=, SHR3.EXE) and not (SHR3P.EXE).
+; SHR3_GET returns what LINK stored for a .ADDRESS of SHR3_DATA.
+;
+	.PSECT	SHR3_DATA,WRT,NOEXE,NOPIC,NOSHR,LONG
+SHR3_DATA::
+	.LONG	^X3333
+SHR3_SELF:
+	.ADDRESS SHR3_DATA
+
+	.PSECT	SHR3_CODE,NOWRT,EXE,NOPIC,SHR,LONG
+	.ENTRY	SHR3_GET,^M<>
+	MOVL	SHR3_SELF,R0
+	RET
+
+	.END

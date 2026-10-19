@@ -1,0 +1,6 @@
+! SHR1.OPT - SHR1's options (testdata/link68/README.md): the transfer
+! vector in a cluster of its own, first; the library; the universal
+! data. GSMATCH= comes from a second options file.
+CLUSTER=SHR1_VECTORS,,,XFR1.OBJ
+SHR1.OBJ
+UNIVERSAL=SHR1_COUNT,SHR1_TABLE,SHR1_ORIGIN

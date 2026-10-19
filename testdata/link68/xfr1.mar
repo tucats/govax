@@ -1,0 +1,42 @@
+	.TITLE	XFR1 - SHR1's transfer vector (Phase 68 probe)
+	.IDENT	/V1.0/
+;
+; The transfer vector for SHR1, which LINK68.COM links first in a
+; cluster of its own (SHR1.OPT's CLUSTER=). Each entry is 8 bytes:
+; .TRANSFER (no bytes; an instruction to the linker), then a CALL
+; entry's register save mask and a jump past the routine's own mask,
+; or a JSB entry's jump and 2 bytes of padding (the Linker manual,
+; Examples 4-1 and 4-2).
+;
+	.PSECT	$$XFR1,EXE,NOWRT,PIC,SHR,GBL,PAGE
+
+	.TRANSFER SHR1_BASE		; a CALL entry in SHR1.MAR
+	.MASK	SHR1_BASE
+	JMP	L^SHR1_BASE+2
+
+	.TRANSFER SHR1_ADD		; a mask ORed with more registers
+	.MASK	SHR1_ADD,^M<R4,R5>
+	JMP	L^SHR1_ADD+2
+
+	.TRANSFER SHR1_JSB		; a JSB entry
+	JMP	L^SHR1_JSB
+	.BLKB	2
+
+	.TRANSFER SHR1_SHOW
+	.MASK	SHR1_SHOW
+	JMP	L^SHR1_SHOW+2
+
+	.TRANSFER SHR1_LOCAL		; defined later in this module
+	.MASK	SHR1_LOCAL
+	BRW	SHR1_LOCAL+2		; the MACRO manual's branch
+	.BLKB	3
+
+	.BLKB	32			; room for later vectors
+
+	.PSECT	XFR1_CODE,NOWRT,EXE,PIC,SHR,LONG
+
+	.ENTRY	SHR1_LOCAL,^M<>
+	MOVL	#17,R0
+	RET
+
+	.END

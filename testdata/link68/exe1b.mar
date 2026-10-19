@@ -1,0 +1,15 @@
+	.TITLE	EXE1B - EXE1's second cluster (Phase 68 probe)
+	.IDENT	/V1.0/
+;
+; EXE1B_ROUT returns its own address.
+;
+	.PSECT	EXE1B_DATA,WRT,NOEXE,LONG
+EXE1B_DATA::
+	.LONG	5
+
+	.PSECT	EXE1B_CODE,NOWRT,EXE,LONG
+	.ENTRY	EXE1B_ROUT,^M<>
+	MOVAB	EXE1B_ROUT,R0
+	RET
+
+	.END

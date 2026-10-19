@@ -1,0 +1,31 @@
+	.TITLE	SHR2 - a shareable image that uses SHR1 (Phase 68 probe)
+	.IDENT	/V2.0/
+;
+; Universal by UNIVERSAL= alone (no transfer vector):
+;
+;   SHR2_TWICE	returns SHR1_ADD(n, n), called through G^
+;   SHR2_COUNT	returns SHR1_COUNT, read through G^
+;   SHR2_ADDR	returns a .ADDRESS of SHR1_ADD less the address G^
+;		reaches (0 when the two agree)
+;
+	.PSECT	SHR2_DATA,WRT,NOEXE,PIC,NOSHR,LONG
+SHR2_ADDR_ADD:
+	.ADDRESS SHR1_ADD		; .ADDRESS into another shareable image
+
+	.PSECT	SHR2_CODE,NOWRT,EXE,PIC,SHR,LONG
+	.ENTRY	SHR2_TWICE,^M<>
+	PUSHL	4(AP)
+	PUSHL	4(AP)
+	CALLS	#2,G^SHR1_ADD
+	RET
+
+	.ENTRY	SHR2_COUNT,^M<>
+	MOVL	G^SHR1_COUNT,R0
+	RET
+
+	.ENTRY	SHR2_ADDR,^M<>
+	MOVAB	G^SHR1_ADD,R0
+	SUBL3	R0,SHR2_ADDR_ADD,R0
+	RET
+
+	.END

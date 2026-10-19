@@ -1,0 +1,63 @@
+	.TITLE	SHR1 - the probe's shareable image (Phase 68 probe)
+	.IDENT	/V1.0/
+;
+; The routines XFR1's transfer vector leads to, and their data:
+;
+;   SHR1_BASE	returns SHR1_ORIGIN's address (the first byte of
+;		SHR1_CODE), from which MAIN1 measures SHR1's addresses
+;   SHR1_ADD	returns its two arguments' sum
+;   SHR1_JSB	R0 = R0*2+1 (a JSB entry)
+;   SHR1_SHOW	writes its argument with LIB$PUT_OUTPUT, then whether
+;		the .ADDRESS of its own table (a self-relative fixup)
+;		holds the table's address
+;
+; Each counts its calls in SHR1_COUNT, universal data. SHR1_TABLE is
+; read-only, shared, universal data. SHR1_ZERO is never stored in.
+;
+	.PSECT	SHR1_RO,NOWRT,NOEXE,PIC,SHR,LONG
+SHR1_TABLE::
+	.LONG	^X11111111,^X22222222,^X33333333
+
+	.PSECT	SHR1_DATA,WRT,NOEXE,PIC,NOSHR,LONG
+SHR1_COUNT::
+	.LONG	0
+SHR1_PTR:
+	.ADDRESS SHR1_TABLE		; .ADDRESS of the image's own data
+GOOD:	.ASCID	/SHR1: the .ADDRESS of its own table is right/
+BAD:	.ASCID	/SHR1: the .ADDRESS of its own table is WRONG/
+
+	.PSECT	SHR1_ZERO,WRT,NOEXE,PIC,NOSHR,PAGE
+	.BLKB	4096			; 8 pages nothing is stored in
+
+	.PSECT	SHR1_CODE,NOWRT,EXE,PIC,SHR,LONG
+SHR1_ORIGIN::
+	.ENTRY	SHR1_BASE,^M<>
+	MOVAB	SHR1_ORIGIN,R0
+	RET
+
+	.ENTRY	SHR1_ADD,^M<>
+	ADDL3	4(AP),8(AP),R0
+	INCL	SHR1_COUNT
+	RET
+
+SHR1_JSB::
+	MULL2	#2,R0
+	INCL	R0
+	INCL	SHR1_COUNT
+	RSB
+
+	.ENTRY	SHR1_SHOW,^M<R2>
+	INCL	SHR1_COUNT
+	PUSHL	4(AP)
+	CALLS	#1,G^LIB$PUT_OUTPUT
+	MOVAB	SHR1_TABLE,R2
+	CMPL	R2,SHR1_PTR
+	BEQL	10$
+	PUSHAQ	BAD
+	BRB	20$
+10$:	PUSHAQ	GOOD
+20$:	CALLS	#1,G^LIB$PUT_OUTPUT
+	MOVL	#1,R0
+	RET
+
+	.END

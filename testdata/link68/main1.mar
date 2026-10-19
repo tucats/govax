@@ -1,0 +1,88 @@
+	.TITLE	MAIN1 - a program that uses SHR1 (Phase 68 probe)
+	.IDENT	/V1.0/
+;
+; Calls SHR1's routines and reads its data, through G^ and .ADDRESS.
+; SHR1's addresses show as offsets from SHR1_ORIGIN (SHR1_BASE's
+; answer), which shows once, absolute, as does MAIN1's own entry.
+; Linked against SHR1 (MAIN1, MAIN1N, MAIN1L, MAIN1U), SHR1A (MAIN1A),
+; and SHR4 (MAIN4).
+;
+; SAY ctl[,a,b,c] formats a line with $FAO (CTL is a .ASCID control
+; string, A to C its arguments, pushed as longwords) and writes it with
+; LIB$PUT_OUTPUT. It uses only the system service and LIBRTL entry
+; points, through G^, and changes R0 and R1.
+;
+	.MACRO	SAY	CTL,A=#0,B=#0,C=#0
+	PUSHL	C
+	PUSHL	B
+	PUSHL	A
+	PUSHAQ	BUFD
+	PUSHAW	OUTD
+	PUSHAQ	CTL
+	CALLS	#6,G^SYS$FAO
+	PUSHAQ	OUTD
+	CALLS	#1,G^LIB$PUT_OUTPUT
+	.ENDM	SAY
+
+	.PSECT	SAY_DATA,WRT,NOEXE,LONG
+BUF:	.BLKB	132
+BUFD:	.WORD	132
+	.BYTE	14,1
+	.ADDRESS BUF
+OUTD:	.WORD	0
+	.BYTE	14,1
+	.ADDRESS BUF
+
+	.PSECT	MAIN_DATA,WRT,NOEXE,LONG
+ORIGIN:	.LONG	0
+ADDR_ADD:
+	.ADDRESS SHR1_ADD		; a .ADDRESS of a routine in SHR1
+ADDR_TAB:
+	.ADDRESS SHR1_TABLE		; and of its data
+HELLO:	.ASCID	/MAIN1: hello, through SHR1_SHOW/
+F_ORG:	.ASCID	/MAIN1: SHR1_ORIGIN !XL, MAIN1 !XL/
+F_ADD:	.ASCID	/MAIN1: SHR1_ADD(3,4) !SL, SHR1_COUNT !SL/
+F_JSB:	.ASCID	/MAIN1: SHR1_JSB(5) !SL/
+F_REF:	.ASCID	/MAIN1: G^SHR1_ADD origin+!XL, .ADDRESS origin+!XL/
+F_TAB:	.ASCID	/MAIN1: G^SHR1_TABLE origin+!XL holds !XL, .ADDRESS origin+!XL/
+F_CNT:	.ASCID	/MAIN1: G^SHR1_COUNT origin+!XL holds !SL/
+
+	.PSECT	MAIN_CODE,NOWRT,EXE,LONG
+	.ENTRY	MAIN1,^M<R2,R3>
+	CALLS	#0,G^SHR1_BASE
+	MOVL	R0,ORIGIN
+	MOVAB	MAIN1,R2
+	SAY	F_ORG,ORIGIN,R2
+
+	PUSHL	#4
+	PUSHL	#3
+	CALLS	#2,G^SHR1_ADD
+	MOVL	R0,R2
+	SAY	F_ADD,R2,G^SHR1_COUNT
+
+	MOVL	#5,R0
+	JSB	G^SHR1_JSB
+	MOVL	R0,R2
+	SAY	F_JSB,R2
+
+	MOVAB	G^SHR1_ADD,R2
+	SUBL2	ORIGIN,R2
+	SUBL3	ORIGIN,ADDR_ADD,R3
+	SAY	F_REF,R2,R3
+
+	MOVAB	G^SHR1_TABLE,R2
+	SUBL2	ORIGIN,R2
+	SUBL3	ORIGIN,ADDR_TAB,R3
+	SAY	F_TAB,R2,G^SHR1_TABLE,R3
+
+	PUSHAQ	HELLO
+	CALLS	#1,G^SHR1_SHOW
+
+	MOVAB	G^SHR1_COUNT,R2
+	SUBL2	ORIGIN,R2
+	SAY	F_CNT,R2,G^SHR1_COUNT
+
+	MOVL	#1,R0
+	RET
+
+	.END	MAIN1

@@ -1,0 +1,41 @@
+	.TITLE	MAIN6 - a program that uses SHR6 (Phase 68 probe)
+	.IDENT	/V6.0/
+;
+; SAY ctl[,a,b,c] formats a line with $FAO (CTL is a .ASCID control
+; string, A to C its arguments, pushed as longwords) and writes it with
+; LIB$PUT_OUTPUT. It uses only the system service and LIBRTL entry
+; points, through G^, and changes R0 and R1.
+;
+	.MACRO	SAY	CTL,A=#0,B=#0,C=#0
+	PUSHL	C
+	PUSHL	B
+	PUSHL	A
+	PUSHAQ	BUFD
+	PUSHAW	OUTD
+	PUSHAQ	CTL
+	CALLS	#6,G^SYS$FAO
+	PUSHAQ	OUTD
+	CALLS	#1,G^LIB$PUT_OUTPUT
+	.ENDM	SAY
+
+	.PSECT	SAY_DATA,WRT,NOEXE,LONG
+BUF:	.BLKB	132
+BUFD:	.WORD	132
+	.BYTE	14,1
+	.ADDRESS BUF
+OUTD:	.WORD	0
+	.BYTE	14,1
+	.ADDRESS BUF
+
+	.PSECT	MAIN_DATA,WRT,NOEXE,LONG
+F_GET:	.ASCID	/MAIN6: SHR6_GET() !SL/
+
+	.PSECT	MAIN_CODE,NOWRT,EXE,LONG
+	.ENTRY	MAIN6,^M<R2>
+	CALLS	#0,G^SHR6_GET
+	MOVL	R0,R2
+	SAY	F_GET,R2
+	MOVL	#1,R0
+	RET
+
+	.END	MAIN6

@@ -1,0 +1,19 @@
+	.TITLE	SHR6 - .ADDRESS in a shared, read-only psect (Phase 68 probe)
+	.IDENT	/V6.0/
+;
+; SHR6_GET returns the .ADDRESS of SHR6_TABLE less its address: 0 when
+; the activator fixed up a longword in a shared, read-only section.
+;
+	.PSECT	SHR6_RO,NOWRT,NOEXE,PIC,SHR,LONG
+SHR6_TABLE::
+	.LONG	6
+SHR6_PTR:
+	.ADDRESS SHR6_TABLE
+
+	.PSECT	SHR6_CODE,NOWRT,EXE,PIC,SHR,LONG
+	.ENTRY	SHR6_GET,^M<>
+	MOVAB	SHR6_TABLE,R0
+	SUBL3	R0,SHR6_PTR,R0
+	RET
+
+	.END

@@ -1,9 +1,10 @@
 # Phase 68 — LINK makes shareable images, and programs use them
 
-**Status:** planned (2026-10-19). Part A is the survey. Part B holds the
-proposed decisions and the questions for the author. Part C is the
-subtasks. Nothing is built yet. Subtask 1 is a VMS probe, which the
-author runs on the simh VAX.
+**Status:** planned (2026-10-19); the plan reviewed and accepted by the
+author the same day. Part A is the survey. Part B holds the decisions
+and the author's answers to the plan's questions. Part C is the
+subtasks. Subtask 1, the VMS probe (`testdata/link68`), is written and
+waits for the author's run on the simh VAX.
 
 ## Goal
 
@@ -151,9 +152,9 @@ no fixup section and no stack ISD.
 | Activation | The GSMATCH check (`SS$_SHRIDMISMAT`, already in `vmsdef.Messages`); VMS's message for a missing image (`-CLI-E-IMGNAME`, ...) in place of silently skipping it; RUN of a shareable image itself |
 | Libraries | Shareable image libraries (`LIBRARY/CREATE/SHARE`) and user default libraries (`LNK$LIBRARY`, `/USERLIBRARY`): see question 2 |
 
-## Part B — decisions (proposed) and questions
+## Part B — decisions and questions
 
-### Proposed decisions
+### Decisions (accepted by the author, 2026-10-19)
 
 1. **The probe comes first.** The clean room bars the linker's
    listings, so the layouts the manual leaves open come from real LINK's
@@ -177,8 +178,8 @@ no fixup section and no stack ISD.
    - **(c)** **Then govax's shims**, for an image govax emulates
      (LIBRTL, LIBRTL2, SYS$PUBLIC_VECTORS, ...).
 
-   Question 1 asks whether (c) should come *before* (a) and (b) for
-   emulated images.
+   An emulated image goes to (c) before (a) and (b), unless a logical
+   name of the image's own name is defined (question 1's answer).
 4. **A shareable image that isn't found, and has no shims, stops
    activation** with VMS's messages (from the probe), instead of being
    skipped. The program would only fail later at its first call, as
@@ -200,7 +201,10 @@ no fixup section and no stack ISD.
 8. **MACRO's changes are this phase's** (the author). They are checked
    byte for byte against real MACRO's objects for the probe's sources.
 
-### Questions for the author
+### Questions for the author (answered 2026-10-19)
+
+The author took each proposal.
+
 
 1. **Emulated images: shims or files first?** Should an image govax has
    shims for (LIBRTL, ...) resolve to the shims even when a real
@@ -208,18 +212,21 @@ no fixup section and no stack ISD.
    VMS code there can't run on govax's microkernel, but govax's LINK
    reads those files' GSTs.
 
-   *Proposed:* shims win unless a logical name of that image's name is
+   *Answer:* shims win unless a logical name of that image's name is
    defined. Defining one is an explicit opt-in, as `DEFINE LIBRTL
    DUA1:[X]LIBRTL.EXE` is.
 2. **Shareable image libraries:** should `LIBRARY/CREATE/SHARE`,
    linking through a user shareable image library, and `LNK$LIBRARY`/
    `/USERLIBRARY` be in this phase (subtask 12), or a later one?
-   *Proposed:* in, as the last subtask before the close-out, so it can
-   be cut without disturbing the rest.
+   *Answer:* in, as the last subtask before the close-out, so it can be
+   cut without disturbing the rest. The probe covers it.
 3. **The probe's VAX:** VMS 7.1 on simh, as for Phases 55 to 67, with
    its LINK (`V11-xx`) as the reference? The Phase 30 fixtures came from
    7.3's LINK V11-39. Does it matter whether both are run?
+   *Answer:* VMS 7.1 on simh, its LINK the reference. The probe logs
+   the version, so a difference from V11-39 shows.
 4. **The doc's name** uses VMS's spelling, "shareable". Fine?
+   *Answer:* yes.
 
 ### The probe's cases (subtask 1; `testdata/link68`)
 
@@ -261,7 +268,8 @@ Each subtask is one tested commit, as in earlier phases. Subtasks 2, 3,
 and 10 don't need the probe's answers. The rest are checked against
 them.
 
-1. **The probe** (`testdata/link68`): the sources, options files,
+1. **The probe** (`testdata/link68`; written 2026-10-19, waiting for
+   the VAX run): the sources, options files,
    `link68.com`, `exchange.cmd` and `copyout.cmd` (as
    `testdata/pg67`'s), and a README with the cases. The author runs it
    on the VAX, and the output goes in `vax/`. Then a pass over the
@@ -350,3 +358,35 @@ them.
 
 Surveyed the linker, MACRO, the image loaders, and the Linker manual
 (Part A). Proposed the decisions and subtasks for the author's review.
+
+### 2026-10-19 — Plan accepted; subtask 1's probe written
+
+The author accepted the proposals (Part B's answers). The probe is in
+`testdata/link68` (its README lists the files and steps). It has eleven
+sources: XFR1 (the transfer vector), SHR1, SHR2, SHR3, SHR6, MAIN1,
+MAIN2, MAIN3, MAIN6, EXE1, and EXE1B. There are 21 links that make
+images, 8 GSMATCH relinks of SHR1, 12 runs, the shareable image library
+cases, and 9 error cases. All but XFR1 assemble with govax's MACRO.
+`exchange.cmd` builds `testdata/disks/link68-exchange.dsk`, and
+`copyout.cmd` brings back the log, listings, objects, maps, `.ANI`s,
+images, `SHR1.STB`, and `MYSHR.OLB`. The VAX run is the author's.
+
+A dry run of `LINK68.COM` under govax's own DCL found no mistakes in
+the procedure. It did list govax's gaps, which later subtasks will
+close:
+
+- MACRO has no `.TRANSFER` (subtask 2).
+- LINK has no `/SHAREABLE`, `/FULL`, `/SYMBOL_TABLE`, or
+  `/USERLIBRARY` (subtasks 5, 6, 8, and 12).
+- LINK doesn't read `SYS$INPUT/OPTIONS`: it looks for a file
+  `SYS$INPUT.OPT` (subtask 3).
+- When a LINK fails, the options lines after it run as DCL commands.
+  govax's DCL treats data after one of its own commands that way
+  (Phase 50's `dclOwnCommands`); VMS, where LINK is an image, skips
+  them (SKPDAT). Subtask 3 should make the data LINK's, whether or not
+  the link goes ahead.
+- `LIBRARY` has no `/SHARE` (subtask 12), and `DIRECTORY/OUTPUT` is
+  missing.
+- `SYS$SHARE` isn't defined in govax (subtask 10).
+- `F$GETSYI("HW_NAME")` isn't an item govax's F$GETSYI knows.
+
