@@ -1,6 +1,6 @@
 # Phase 66 — image activation by mapping, and image reset
 
-**Status:** in progress (planned 2026-10-15; subtasks 1 to 3 done 2026-10-18). Needs Phase 65 (sections under the
+**Status:** in progress (planned 2026-10-15; subtasks 1 to 4 done 2026-10-18). Needs Phase 65 (sections under the
 pager, read clustering). Part of the paging program laid out in
 `PHASE-62 - VMS paging.md` (Decision 15 is this phase's).
 
@@ -583,3 +583,27 @@ procedure. Counts print as differences.
   lazily faulted code moved it); `TestDeleteTransitionPages` records the
   `$DELTVA` range's frames, valid or in transition, just before the
   deletion, as more of the array is still valid at checkpoint 1 now.
+- **2026-10-18:** Subtask 4, shareable images. With paging on, a
+  shareable image the main image names is mapped as the main image is
+  (`mapsImages` no longer asks which image it is): `OpenImage` finds it
+  on the host (`findImage`, the shareable image prefix) and holds it as
+  a `HostPageSource`, and `imageMap` maps its sections privately at P0's
+  high-water mark after the main image, from its own VPN 0, as the
+  book's 21.1.1.4 maps a shareable image that isn't installed. With
+  paging off it's copied as before. Tests (`imageshare_test.go`):
+  govax's LINK makes only executables, so the test makes a stand-in by
+  hand from a govax-linked image of one read-only data page (its
+  sections one page lower, so the first is at VPN 0; its transfer
+  addresses cleared, since an executable's first, SYS$IMGSTA's, would be
+  taken for the shareable image's initialization routine; its type
+  IHD$K_LIM), saved as CRFSHR.EXE under the shareable image prefix. The
+  main image's G^ reference to CRF$INSRTKEY (CRFSHR's offset 0, from
+  `vmsdef.ImageSymbols`) gets the stand-in's base in its fixup cell.
+  `TestMappedSharedImage`: the stand-in's page is a process section of
+  its file, UR, in its section form until the main image reads it, its
+  contents read right, its section gone at the image's end;
+  `TestCopiedSharedImage`: the same with paging off. **Not yet checked:**
+  a real shareable image (no user stack ISD, its own fixup section and
+  G^ references, a transfer vector, more than one section); that needs
+  an image linked /SHAREABLE on VMS (a probe image brought back as test
+  data) or a LINK that makes shareable images.

@@ -344,7 +344,7 @@ func (p *ImageProcess) imageLoad(fn string, flag uint32) (*ICB, error) {
 		}
 	}
 
-	if p.mapsImages(flag) {
+	if p.mapsImages() {
 		return p.imageMap(fn, flag)
 	}
 

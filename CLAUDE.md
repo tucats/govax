@@ -159,7 +159,10 @@ never had.
   in P0, each private ISD a `corevms.MapImageSection`, each DZRO ISD
   `CreateImagePages`, `corevms/imagesec.go`; `setImageProtection` over
   every PTE form and the fixup section's change-protection list, in both
-  modes; DEPOSIT past a page's protection sets its modify bit); 67 the
+  modes; DEPOSIT past a page's protection sets its modify bit; subtask
+  4: a shareable image mapped the same way, privately after the main
+  image, `imageshare_test.go`'s stand-in made by hand from an
+  executable, since LINK makes no shareable images); 67 the
   address space and page
   tables under paging, deferred to the end. Paging is synchronous, with no
   PFW, COLPG, or FPG waits. Each later phase has a planning doc.

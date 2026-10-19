@@ -11,8 +11,8 @@ import (
 // Image activation by mapping (docs/PHASE-66 - mapped image
 // activation.md, subtask 3).
 //
-// With paging on, the main image is mapped rather than copied, as VMS's
-// image activator maps it (the book's 21.1.1.3): the image file is held
+// With paging on, an image is mapped rather than copied, as VMS's image
+// activator maps it (the book's 21.1.1.3): the image file is held
 // open as its sections' page source (OpenImage), the header is decoded
 // from the file's contents in Go and never written to P0, and each ISD
 // becomes a mapping (corevms's imagesec.go): a private section of the
@@ -21,14 +21,21 @@ import (
 // (imageFixup), which run next, fault in the pages they read and write,
 // in the image's own process. setImageProtection then gives each
 // section its protection, whatever form its PTEs are in.
+//
+// A shareable image the main image names (subtask 4) is mapped the same
+// way, at P0's high-water mark after the main image, privately to the
+// process, as the book's 21.1.1.4 maps a shareable image that isn't
+// installed: a host file found by findImage, its sections starting at
+// its own VPN 0. Installing one as shared global sections is future
+// work.
 
-// mapsImages reports whether an image loaded with flag is mapped rather
-// than copied: with paging on and memory mapping enabled, for the main
-// image (a shareable image is still copied: subtask 4).
-func (p *ImageProcess) mapsImages(flag uint32) bool {
+// mapsImages reports whether images are mapped rather than copied: with
+// paging on and memory mapping enabled, the main image and the shareable
+// images it loads alike.
+func (p *ImageProcess) mapsImages() bool {
 	m := p.m
 
-	return flag == icbMain && m.CPU != nil && m.Mem != nil && m.Mem.Paging() != nil &&
+	return m.CPU != nil && m.Mem != nil && m.Mem.Paging() != nil &&
 		m.CPU.PR(registers.MAPEN) != 0 && p.process() != nil
 }
 
