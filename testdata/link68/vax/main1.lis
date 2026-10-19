@@ -1,0 +1,192 @@
+MAIN1                           - a program that uses SHR1 (Phase 68 pro 19-OCT-2026 15:22:46  VAX MACRO V5.4-3            Page   1
+V1.0                                                                     19-OCT-2026 15:22:38  DUA1:[000000]MAIN1.MAR;1          (1)
+
+                                     0000     1 	.TITLE	MAIN1 - a program that uses SHR1 (Phase 68 probe)
+                                     0000     2 	.IDENT	/V1.0/
+                                     0000     3 ;
+                                     0000     4 ; Calls SHR1's routines and reads its data, through G^ and .ADDRESS.
+                                     0000     5 ; SHR1's addresses show as offsets from SHR1_ORIGIN (SHR1_BASE's
+                                     0000     6 ; answer), which shows once, absolute, as does MAIN1's own entry.
+                                     0000     7 ; Linked against SHR1 (MAIN1, MAIN1N, MAIN1L, MAIN1U), SHR1A (MAIN1A),
+                                     0000     8 ; and SHR4 (MAIN4).
+                                     0000     9 ;
+                                     0000    10 ; SAY ctl[,a,b,c] formats a line with $FAO (CTL is a .ASCID control
+                                     0000    11 ; string, A to C its arguments, pushed as longwords) and writes it with
+                                     0000    12 ; LIB$PUT_OUTPUT. It uses only the system service and LIBRTL entry
+                                     0000    13 ; points, through G^, and changes R0 and R1.
+                                     0000    14 ;
+                                     0000    15 	.MACRO	SAY	CTL,A=#0,B=#0,C=#0
+                                     0000    16 	PUSHL	C
+                                     0000    17 	PUSHL	B
+                                     0000    18 	PUSHL	A
+                                     0000    19 	PUSHAQ	BUFD
+                                     0000    20 	PUSHAW	OUTD
+                                     0000    21 	PUSHAQ	CTL
+                                     0000    22 	CALLS	#6,G^SYS$FAO
+                                     0000    23 	PUSHAQ	OUTD
+                                     0000    24 	CALLS	#1,G^LIB$PUT_OUTPUT
+                                     0000    25 	.ENDM	SAY
+                                     0000    26 
+                                 00000000    27 	.PSECT	SAY_DATA,WRT,NOEXE,LONG
+                           00000084  0000    28 BUF:	.BLKB	132
+                               0084  0084    29 BUFD:	.WORD	132
+                              01 0E  0086    30 	.BYTE	14,1
+                           00000000' 0088    31 	.ADDRESS BUF
+                               0000  008C    32 OUTD:	.WORD	0
+                              01 0E  008E    33 	.BYTE	14,1
+                           00000000' 0090    34 	.ADDRESS BUF
+                                     0094    35 
+                                 00000000    36 	.PSECT	MAIN_DATA,WRT,NOEXE,LONG
+                           00000000  0000    37 ORIGIN:	.LONG	0
+                                     0004    38 ADDR_ADD:
+                           00000000' 0004    39 	.ADDRESS SHR1_ADD		; a .ADDRESS of a routine in SHR1
+                                     0008    40 ADDR_TAB:
+                           00000000' 0008    41 	.ADDRESS SHR1_TABLE		; and of its data
+3A 31 4E 49 41 4D 00000014'010E0000' 000C    42 HELLO:	.ASCID	/MAIN1: hello, through SHR1_SHOW/
+6F 72 68 74 20 2C 6F 6C 6C 65 68 20  001A       
+4F 48 53 5F 31 52 48 53 20 68 67 75  0026       
+                                 57  0032       
+3A 31 4E 49 41 4D 0000003B'010E0000' 0033    43 F_ORG:	.ASCID	/MAIN1: SHR1_ORIGIN !XL, MAIN1 !XL/
+4E 49 47 49 52 4F 5F 31 52 48 53 20  0041       
+20 31 4E 49 41 4D 20 2C 4C 58 21 20  004D       
+                           4C 58 21  0059       
+3A 31 4E 49 41 4D 00000064'010E0000' 005C    44 F_ADD:	.ASCID	/MAIN1: SHR1_ADD(3,4) !SL, SHR1_COUNT !SL/
+2C 33 28 44 44 41 5F 31 52 48 53 20  006A       
+31 52 48 53 20 2C 4C 53 21 20 29 34  0076       
+      4C 53 21 20 54 4E 55 4F 43 5F  0082       
+3A 31 4E 49 41 4D 00000094'010E0000' 008C    45 F_JSB:	.ASCID	/MAIN1: SHR1_JSB(5) !SL/
+29 35 28 42 53 4A 5F 31 52 48 53 20  009A       
+                        4C 53 21 20  00A6       
+3A 31 4E 49 41 4D 000000B2'010E0000' 00AA    46 F_REF:	.ASCID	/MAIN1: G^SHR1_ADD origin+!XL, .ADDRESS origin+!XL/
+MAIN1                           - a program that uses SHR1 (Phase 68 pro 19-OCT-2026 15:22:46  VAX MACRO V5.4-3            Page   2
+V1.0                                                                     19-OCT-2026 15:22:38  DUA1:[000000]MAIN1.MAR;1          (1)
+
+20 44 44 41 5F 31 52 48 53 5E 47 20  00B8       
+20 2C 4C 58 21 2B 6E 69 67 69 72 6F  00C4       
+69 72 6F 20 53 53 45 52 44 44 41 2E  00D0       
+               4C 58 21 2B 6E 69 67  00DC       
+3A 31 4E 49 41 4D 000000EB'010E0000' 00E3    47 F_TAB:	.ASCID	/MAIN1: G^SHR1_TABLE origin+!XL holds !XL, .ADDRESS origin+!XL/
+4C 42 41 54 5F 31 52 48 53 5E 47 20  00F1       
+4C 58 21 2B 6E 69 67 69 72 6F 20 45  00FD       
+20 2C 4C 58 21 20 73 64 6C 6F 68 20  0109       
+69 72 6F 20 53 53 45 52 44 44 41 2E  0115       
+               4C 58 21 2B 6E 69 67  0121       
+3A 31 4E 49 41 4D 00000130'010E0000' 0128    48 F_CNT:	.ASCID	/MAIN1: G^SHR1_COUNT origin+!XL holds !SL/
+4E 55 4F 43 5F 31 52 48 53 5E 47 20  0136       
+4C 58 21 2B 6E 69 67 69 72 6F 20 54  0142       
+      4C 53 21 20 73 64 6C 6F 68 20  014E       
+                                     0158    49 
+                                 00000000    50 	.PSECT	MAIN_CODE,NOWRT,EXE,LONG
+                               000C  0000    51 	.ENTRY	MAIN1,^M<R2,R3>
+              00000000'GF   00   FB  0002    52 	CALLS	#0,G^SHR1_BASE
+              00000000'EF   50   D0  0009    53 	MOVL	R0,ORIGIN
+                    52   ED AF   9E  0010    54 	MOVAB	MAIN1,R2
+                                     0014    55 	SAY	F_ORG,ORIGIN,R2
+                                     0044    56 
+                            04   DD  0044    57 	PUSHL	#4
+                            03   DD  0046    58 	PUSHL	#3
+              00000000'GF   02   FB  0048    59 	CALLS	#2,G^SHR1_ADD
+                       52   50   D0  004F    60 	MOVL	R0,R2
+                                     0052    61 	SAY	F_ADD,R2,G^SHR1_COUNT
+                                     0082    62 
+                       50   05   D0  0082    63 	MOVL	#5,R0
+                   00000000'GF   16  0085    64 	JSB	G^SHR1_JSB
+                       52   50   D0  008B    65 	MOVL	R0,R2
+                                     008E    66 	SAY	F_JSB,R2
+                                     00BA    67 
+              52   00000000'GF   9E  00BA    68 	MOVAB	G^SHR1_ADD,R2
+              52   00000000'EF   C2  00C1    69 	SUBL2	ORIGIN,R2
+53   00000004'EF   00000000'EF   C3  00C8    70 	SUBL3	ORIGIN,ADDR_ADD,R3
+                                     00D4    71 	SAY	F_REF,R2,R3
+                                     0100    72 
+              52   00000000'GF   9E  0100    73 	MOVAB	G^SHR1_TABLE,R2
+              52   00000000'EF   C2  0107    74 	SUBL2	ORIGIN,R2
+53   00000008'EF   00000000'EF   C3  010E    75 	SUBL3	ORIGIN,ADDR_TAB,R3
+                                     011A    76 	SAY	F_TAB,R2,G^SHR1_TABLE,R3
+                                     014A    77 
+                   0000000C'EF   7F  014A    78 	PUSHAQ	HELLO
+              00000000'GF   01   FB  0150    79 	CALLS	#1,G^SHR1_SHOW
+                                     0157    80 
+              52   00000000'GF   9E  0157    81 	MOVAB	G^SHR1_COUNT,R2
+              52   00000000'EF   C2  015E    82 	SUBL2	ORIGIN,R2
+                                     0165    83 	SAY	F_CNT,R2,G^SHR1_COUNT
+                                     0195    84 
+                       50   01   D0  0195    85 	MOVL	#1,R0
+                                 04  0198    86 	RET
+                                     0199    87 
+                                     0199    88 	.END	MAIN1
+MAIN1                           - a program that uses SHR1 (Phase 68 pro 19-OCT-2026 15:22:46  VAX MACRO V5.4-3            Page   3
+Symbol table                                                             19-OCT-2026 15:22:38  DUA1:[000000]MAIN1.MAR;1          (1)
+
+ADDR_ADD         00000004 R     02      
+ADDR_TAB         00000008 R     02      
+BUF              00000000 R     01      
+BUFD             00000084 R     01      
+F_ADD            0000005C R     02      
+F_CNT            00000128 R     02      
+F_JSB            0000008C R     02      
+F_ORG            00000033 R     02      
+F_REF            000000AA R     02      
+F_TAB            000000E3 R     02      
+HELLO            0000000C R     02      
+LIB$PUT_OUTPUT   ********   X   03      
+MAIN1            00000000 RG    03      
+ORIGIN           00000000 R     02      
+OUTD             0000008C R     01      
+SHR1_ADD         ********   X   02      
+SHR1_BASE        ********   X   03      
+SHR1_COUNT       ********   X   03      
+SHR1_JSB         ********   X   03      
+SHR1_SHOW        ********   X   03      
+SHR1_TABLE       ********   X   02      
+SYS$FAO          ********   X   03      
+
+                                                +----------------+
+                                                ! Psect synopsis !
+                                                +----------------+
+
+PSECT name                      Allocation          PSECT No.  Attributes     
+----------                      ----------          ---------  ----------     
+.  ABS  .                       00000000  (    0.)  00 (  0.)  NOPIC   USR   CON   ABS   LCL NOSHR NOEXE NORD  NOWRT NOVEC BYTE  
+SAY_DATA                        00000094  (  148.)  01 (  1.)  NOPIC   USR   CON   REL   LCL NOSHR NOEXE   RD    WRT NOVEC LONG  
+MAIN_DATA                       00000158  (  344.)  02 (  2.)  NOPIC   USR   CON   REL   LCL NOSHR NOEXE   RD    WRT NOVEC LONG  
+MAIN_CODE                       00000199  (  409.)  03 (  3.)  NOPIC   USR   CON   REL   LCL NOSHR   EXE   RD  NOWRT NOVEC LONG  
+
+                                             +------------------------+
+                                             ! Performance indicators !
+                                             +------------------------+
+
+Phase                    Page faults    CPU Time       Elapsed Time   
+-----                    -----------    --------       ------------   
+Initialization                  471     00:00:00.00    00:00:00.00
+Command processing              923     00:00:00.00    00:00:00.00
+Pass 1                          214     00:00:00.00    00:00:00.01
+Symbol table sort                 1     00:00:00.00    00:00:00.00
+Pass 2                           55     00:00:00.00    00:00:00.01
+Symbol table output               5     00:00:00.00    00:00:00.00
+Psect synopsis output             5     00:00:00.00    00:00:00.00
+Cross-reference output            0     00:00:00.00    00:00:00.00
+Assembler run totals           1702     00:00:00.00    00:00:00.03
+
+The working set limit was 512 pages.
+4105 bytes (9 pages) of virtual memory were used to buffer the intermediate code.
+There were 10 pages of symbol table space allocated to hold 22 non-local and 0 local symbols.
+88 source lines were read in Pass 1, producing 21 object records in Pass 2.
+1 page of virtual memory was used to define 1 macro.
+MAIN1                           - a program that uses SHR1 (Phase 68 pro 19-OCT-2026 15:22:46  VAX MACRO V5.4-3            Page   4
+VAX-11 Macro Run Statistics                                              19-OCT-2026 15:22:38  DUA1:[000000]MAIN1.MAR;1          (1)
+
+
+                                            +--------------------------+
+                                            ! Macro library statistics !
+                                            +--------------------------+
+
+Macro library name                           Macros defined      
+------------------                           --------------      
+SYS$COMMON:[SYSLIB]STARLET.MLB;1                        0        
+
+0 GETS were required to define 0 macros.
+
+There were no errors, warnings or information messages.
+
+MACRO/LIST MAIN1.MAR

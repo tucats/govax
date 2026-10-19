@@ -1,0 +1,16 @@
+Directory of SHAREABLE IMAGE SYMBOL TABLE library DUA1:[000000]MYSHR.OLB;1 on 19-OCT-2026 15:22:51
+Creation date:  19-OCT-2026 15:22:51      Creator:  Librarian T09-20
+Revision date:  19-OCT-2026 15:22:51      Library format:   3.0
+Number of modules:      2                 Max. key length:  39
+Other entries:         11                 Preallocated index blocks:     58
+Recoverable deleted blocks:      0        Total index blocks used:        2
+Max. Number history records:      20      Library history records:        0
+
+Module SHR1             Ident 01,0003E8        Inserted 19-OCT-2026 15:22:51 8 symbols
+SHR1_ADD                                 SHR1_BASE                                SHR1_COUNT
+SHR1_JSB                                 SHR1_LOCAL                               SHR1_ORIGIN
+SHR1_SHOW                                SHR1_TABLE
+
+Module SHR2             Ident 02,000005        Inserted 19-OCT-2026 15:22:51 3 symbols
+SHR2_ADDR                                SHR2_COUNT                               SHR2_TWICE
+

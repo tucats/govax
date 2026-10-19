@@ -1,0 +1,141 @@
+EXE1                            - an executable laid out by options (Pha 19-OCT-2026 15:22:47  VAX MACRO V5.4-3            Page   1
+V1.0                                                                     19-OCT-2026 15:22:38  DUA1:[000000]EXE1.MAR;1           (1)
+
+                                     0000     1 	.TITLE	EXE1 - an executable laid out by options (Phase 68 probe)
+                                     0000     2 	.IDENT	/V1.0/
+                                     0000     3 ;
+                                     0000     4 ; Linked with BASE=, CLUSTER= (EXE1B in a cluster of its own),
+                                     0000     5 ; COLLECT=, PSECT_ATTR=, IOSEGMENT=, DZRO_MIN=, and ISD_MAX=, from
+                                     0000     6 ; SYS$INPUT. Shows where each psect landed, absolute.
+                                     0000     7 ;
+                                     0000     8 ; SAY ctl[,a,b,c] formats a line with $FAO (CTL is a .ASCID control
+                                     0000     9 ; string, A to C its arguments, pushed as longwords) and writes it with
+                                     0000    10 ; LIB$PUT_OUTPUT. It uses only the system service and LIBRTL entry
+                                     0000    11 ; points, through G^, and changes R0 and R1.
+                                     0000    12 ;
+                                     0000    13 	.MACRO	SAY	CTL,A=#0,B=#0,C=#0
+                                     0000    14 	PUSHL	C
+                                     0000    15 	PUSHL	B
+                                     0000    16 	PUSHL	A
+                                     0000    17 	PUSHAQ	BUFD
+                                     0000    18 	PUSHAW	OUTD
+                                     0000    19 	PUSHAQ	CTL
+                                     0000    20 	CALLS	#6,G^SYS$FAO
+                                     0000    21 	PUSHAQ	OUTD
+                                     0000    22 	CALLS	#1,G^LIB$PUT_OUTPUT
+                                     0000    23 	.ENDM	SAY
+                                     0000    24 
+                                 00000000    25 	.PSECT	SAY_DATA,WRT,NOEXE,LONG
+                           00000084  0000    26 BUF:	.BLKB	132
+                               0084  0084    27 BUFD:	.WORD	132
+                              01 0E  0086    28 	.BYTE	14,1
+                           00000000' 0088    29 	.ADDRESS BUF
+                               0000  008C    30 OUTD:	.WORD	0
+                              01 0E  008E    31 	.BYTE	14,1
+                           00000000' 0090    32 	.ADDRESS BUF
+                                     0094    33 
+                                 00000000    34 	.PSECT	EXE1_DATA,WRT,NOEXE,LONG
+                           00000001  0000    35 DAT1:	.LONG	1
+20 3A 31 45 58 45 0000000C'010E0000' 0004    36 F_DAT:	.ASCID	/EXE1: EXE1_DATA !XL, EXE1_RO !XL, EXE1_ZERO !XL/
+58 21 20 41 54 41 44 5F 31 45 58 45  0012       
+21 20 4F 52 5F 31 45 58 45 20 2C 4C  001E       
+52 45 5A 5F 31 45 58 45 20 2C 4C 58  002A       
+                     4C 58 21 20 4F  0036       
+20 3A 31 45 58 45 00000043'010E0000' 003B    37 F_COD:	.ASCID	/EXE1: EXE1 !XL, EXE1B_ROUT !XL, EXE1B_DATA !XL/
+58 45 20 2C 4C 58 21 20 31 45 58 45  0049       
+4C 58 21 20 54 55 4F 52 5F 42 31 45  0055       
+41 54 41 44 5F 42 31 45 58 45 20 2C  0061       
+                        4C 58 21 20  006D       
+                                     0071    38 
+                                 00000000    39 	.PSECT	EXE1_RO,NOWRT,NOEXE,LONG
+                           00000002  0000    40 RO1:	.LONG	2
+                                     0004    41 
+                                 00000000    42 	.PSECT	EXE1_ZERO,WRT,NOEXE,PAGE
+                           00000800  0000    43 ZER1:	.BLKB	2048			; 4 pages nothing is stored in
+                                     0800    44 
+                                 00000000    45 	.PSECT	EXE1_CODE,NOWRT,EXE,LONG
+                               001C  0000    46 	.ENTRY	EXE1,^M<R2,R3,R4>
+              52   00000000'EF   9E  0002    47 	MOVAB	DAT1,R2
+              53   00000000'EF   9E  0009    48 	MOVAB	RO1,R3
+              54   00000000'EF   9E  0010    49 	MOVAB	ZER1,R4
+EXE1                            - an executable laid out by options (Pha 19-OCT-2026 15:22:47  VAX MACRO V5.4-3            Page   2
+V1.0                                                                     19-OCT-2026 15:22:38  DUA1:[000000]EXE1.MAR;1           (1)
+
+                                     0017    50 	SAY	F_DAT,R2,R3,R4
+                    52   BA AF   9E  0043    51 	MOVAB	EXE1,R2
+              00000000'EF   00   FB  0047    52 	CALLS	#0,EXE1B_ROUT
+                       53   50   D0  004E    53 	MOVL	R0,R3
+              54   00000000'EF   9E  0051    54 	MOVAB	EXE1B_DATA,R4
+                                     0058    55 	SAY	F_COD,R2,R3,R4
+                       50   01   D0  0084    56 	MOVL	#1,R0
+                                 04  0087    57 	RET
+                                     0088    58 
+                                     0088    59 	.END	EXE1
+EXE1                            - an executable laid out by options (Pha 19-OCT-2026 15:22:47  VAX MACRO V5.4-3            Page   3
+Symbol table                                                             19-OCT-2026 15:22:38  DUA1:[000000]EXE1.MAR;1           (1)
+
+BUF              00000000 R     01      
+BUFD             00000084 R     01      
+DAT1             00000000 R     02      
+EXE1             00000000 RG    05      
+EXE1B_DATA       ********   X   05      
+EXE1B_ROUT       ********   X   05      
+F_COD            0000003B R     02      
+F_DAT            00000004 R     02      
+LIB$PUT_OUTPUT   ********   X   05      
+OUTD             0000008C R     01      
+RO1              00000000 R     03      
+SYS$FAO          ********   X   05      
+ZER1             00000000 R     04      
+
+                                                +----------------+
+                                                ! Psect synopsis !
+                                                +----------------+
+
+PSECT name                      Allocation          PSECT No.  Attributes     
+----------                      ----------          ---------  ----------     
+.  ABS  .                       00000000  (    0.)  00 (  0.)  NOPIC   USR   CON   ABS   LCL NOSHR NOEXE NORD  NOWRT NOVEC BYTE  
+SAY_DATA                        00000094  (  148.)  01 (  1.)  NOPIC   USR   CON   REL   LCL NOSHR NOEXE   RD    WRT NOVEC LONG  
+EXE1_DATA                       00000071  (  113.)  02 (  2.)  NOPIC   USR   CON   REL   LCL NOSHR NOEXE   RD    WRT NOVEC LONG  
+EXE1_RO                         00000004  (    4.)  03 (  3.)  NOPIC   USR   CON   REL   LCL NOSHR NOEXE   RD  NOWRT NOVEC LONG  
+EXE1_ZERO                       00000800  ( 2048.)  04 (  4.)  NOPIC   USR   CON   REL   LCL NOSHR NOEXE   RD    WRT NOVEC PAGE  
+EXE1_CODE                       00000088  (  136.)  05 (  5.)  NOPIC   USR   CON   REL   LCL NOSHR   EXE   RD  NOWRT NOVEC LONG  
+
+                                             +------------------------+
+                                             ! Performance indicators !
+                                             +------------------------+
+
+Phase                    Page faults    CPU Time       Elapsed Time   
+-----                    -----------    --------       ------------   
+Initialization                  474     00:00:00.00    00:00:00.00
+Command processing              923     00:00:00.00    00:00:00.01
+Pass 1                          205     00:00:00.00    00:00:00.00
+Symbol table sort                 1     00:00:00.00    00:00:00.00
+Pass 2                           46     00:00:00.00    00:00:00.01
+Symbol table output               4     00:00:00.00    00:00:00.00
+Psect synopsis output             6     00:00:00.00    00:00:00.00
+Cross-reference output            0     00:00:00.00    00:00:00.00
+Assembler run totals           1687     00:00:00.00    00:00:00.02
+
+The working set limit was 512 pages.
+1727 bytes (4 pages) of virtual memory were used to buffer the intermediate code.
+There were 10 pages of symbol table space allocated to hold 13 non-local and 0 local symbols.
+59 source lines were read in Pass 1, producing 23 object records in Pass 2.
+1 page of virtual memory was used to define 1 macro.
+
+                                            +--------------------------+
+                                            ! Macro library statistics !
+                                            +--------------------------+
+
+Macro library name                           Macros defined      
+------------------                           --------------      
+SYS$COMMON:[SYSLIB]STARLET.MLB;1                        0        
+
+EXE1                            - an executable laid out by options (Pha 19-OCT-2026 15:22:47  VAX MACRO V5.4-3            Page   4
+VAX-11 Macro Run Statistics                                              19-OCT-2026 15:22:38  DUA1:[000000]EXE1.MAR;1           (1)
+
+0 GETS were required to define 0 macros.
+
+There were no errors, warnings or information messages.
+
+MACRO/LIST EXE1.MAR

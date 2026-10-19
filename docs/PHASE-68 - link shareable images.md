@@ -152,6 +152,213 @@ no fixup section and no stack ISD.
 | Activation | The GSMATCH check (`SS$_SHRIDMISMAT`, already in `vmsdef.Messages`); VMS's message for a missing image (`-CLI-E-IMGNAME`, ...) in place of silently skipping it; RUN of a shareable image itself |
 | Libraries | Shareable image libraries (`LIBRARY/CREATE/SHARE`) and user default libraries (`LNK$LIBRARY`, `/USERLIBRARY`): see question 2 |
 
+### The probe's answers (subtask 1, 2026-10-19)
+
+VMS V7.1 on the simh VAX (an 8600) ran `LINK68.COM`. Its LINK is
+V11-39 and its MACRO V5.4-3. Everything is in `testdata/link68/vax/`:
+`link68.log`, the listings, objects, maps, `.ANI`s, and images, plus
+`shr1.stb`, `myshr.olb`, and `myshr.lis`. Every image ANALYZE/IMAGE
+checked has 0 errors. Unconfirmed points are marked; a later round
+can settle them.
+
+**MACRO.** `.TRANSFER sym` is `TIR$C_OPR_REDEF` with the symbol's
+name, in the TIR stream at the location counter, and nothing else.
+`.MASK sym,expr` is `STA_UB expr`, `STA_EPM sym`, `OPR_IOR`, then
+`STO_W` (`xfr1.anl`).
+
+**A shareable image's header** (`shr1.ani`; `shr1a.exe`'s bytes):
+
+- `IHD$B_IMGTYPE` is 2 (`IHD$K_LIM`).
+- GSMATCH is in the existing fields. `IHD$L_IDENT` (+0x24) is the
+  major ident in its top byte and the minor in its low 24 bits, and the
+  match control is the top byte of `IHD$L_LNKFLAGS` (+0x20: 0 ALWAYS,
+  1 EQUAL, 2 LEQUAL).
+- Without `GSMATCH=`, the ident is bits 16–47 of the link time (EQUAL).
+  Executables already get this (Phase 30's "IDENT is bytes 2 to 5 of
+  the link time").
+- `IHD$V_LNKNOTFR` is set: a shareable image has no user transfer
+  address. The first transfer address is `SYS$IMGSTA` with traceback
+  and 0 without (SHR1A, `/NOTRACEBACK`).
+- `PICIMG` is set unless the image is based (SHR3); a nonbased image
+  with NOPIC psects still has it (SHR3P).
+- VMS's ANALYZE/IMAGE shows the GSMATCH under the image type (`global
+  section major id: %X'01', minor id: %X'0003E8'`, `match control:
+  ISD$K_MATLEQ`), and, after the ISDs, a section `SHAREABLE IMAGE -
+  GLOBAL SYMBOL TABLE` analyzing the GST's records, as ANALYZE/OBJECT
+  would. govax's ANALYZE/IMAGE has neither.
+
+**Sections** (`shr1.ani`, `shr1.map`):
+
+- Base 0 and no user stack ISD. Each cluster starts on a page:
+  SHR1_VECTORS (XFR1's two psects, in one section) at 0, then the
+  default cluster in Table 6-1's shareable order.
+- Section types: SHR+PIC is `SHRPIC`, NOSHR+PIC `PRVPIC`, SHR+NOPIC
+  `SHRFXD`, NOSHR+NOPIC `PRVFXD`. Writable private sections get CRF+WRT,
+  as in executables.
+- **The fixup section is `PRVFXD`** (CRF, WRT, FIXUPVEC), after the last
+  user cluster, and its IAF has `IAF$V_SHR` set. It appears when the
+  image uses another shareable image or has a `.ADDRESS` (SHR3P has
+  only `.ADDRESS` fixups; SHR3, based, has no fixup section at all).
+- **`.ADDRESS` fixups are relative to image 0, the image itself** ("3
+  references to image 0", relative to `%X'00000000'`); `.ASCID`'s
+  pointers count too. The change-protection entry is the fixup page,
+  `PRT$C_UREW`, as in executables.
+- **A `.ADDRESS` in a shared, read-only psect** (SHR6) makes that
+  section CRF+WRT (still `SHRPIC`), and a second change-protection
+  entry sets its page to `PRT$C_UR` after the fixups. At run time the
+  fixup was right (`MAIN6: SHR6_GET() 0`).
+- **No demand-zero compression in these shareable images.** SHR1's 8
+  pages that are never stored in are written into the file, in a
+  9-page `PRVPIC` section, even with `DZRO_MIN=1` (SHR4). `ISD_MAX=` is
+  ignored with `%LINK-I-OPTIGNSHR, option ignored for shareable image`.
+  LIBRTL has a DZRO section, so the rule is unconfirmed: these images
+  have none.
+- `PSECT_ATTR=SHR1_RO,NOSHR` made a read-only `PRVPIC` section (no CRF).
+  `COLLECT=FIRST,SHR1_RO` moved it into cluster FIRST, after XFR1's
+  `SHRPIC` section, by Table 6-1's order (SHR4).
+- `PROTECT=YES` around a cluster sets `ISD$V_PROTECT` (bit 18) on its
+  sections (SHR5).
+- A based shareable image (SHR3, `BASE=%X300000`) has its sections at
+  their addresses and no fixup section.
+
+**The GST** (`shr1.ani`, 5 records):
+
+- a main header (the image's name and ident, the link time; maximum
+  record size 512);
+- an LNM, `Linker V11-39`;
+- a GSD defining psect 0, `.$$ABS$$.` (PIC, LIB, RD);
+- one GSD of the universal symbols: `EPM` for an entry point (with its
+  mask) and `SYM` otherwise, each flagged DEF, UNI, REL, psect 0, with
+  its offset in the image;
+- an EOM.
+
+The symbols' order was SHR1_LOCAL, TABLE, SHOW, ADD, BASE, JSB,
+ORIGIN, COUNT; the rule is unconfirmed. In a based image the symbols
+are absolute (no REL). A `.TRANSFER`ed symbol's GST value is its
+transfer vector entry (`SHR1_ADD` is 8), and it is an `EPM` carrying
+the vector's mask. Inside the image, references go to the routine:
+the map's "Symbols By Name" shows `SHR1_ADD 00000407-RU`, and "By
+Value" shows `R-SHR1_ADD` without the U. `shr1.stb`
+(`/SYMBOL_TABLE`) is the same table as an object module file (262
+bytes).
+
+**A program linked against a shareable image** (`main1.ani`):
+
+- The global section ISD's page count is the shareable image's first
+  ISD's (SHR1: 1; LIBRTL: 264). Its name is `NAME_001`, with the
+  image's ident and match control.
+- The SHL lists the images in the order of the link's input:
+  SHR1 (`/SHAREABLE` in an options file) before LIBRTL (IMAGELIB).
+- G^ cells hold offsets in the image: the transfer vector entries for
+  routines, data offsets for data.
+- A based shareable image (MAIN3 against SHR3) gets a global ISD per
+  section (`SHR3_001` `SHRFXD`, `SHR3_002` `PRVFXD`), each with BASED
+  and LASTCLU, at its own address. No G^ cells: references resolve at
+  link time.
+- `PICIMG` is clear in MAIN3 and EXE1, and set in MAIN1 and MAIN2.
+- In MAIN3 and EXE1, VMS's ANALYZE/IMAGE prints the change-protection
+  entry's address line twice; in MAIN1 and MAIN2, once. govax's must
+  match.
+
+**EXE1** (`exe1.ani`, `exe1.map`):
+
+- `BASE=%X10000` puts the default cluster there, and `CLUSTER=SECOND,
+  %X40000` the other; `COLLECT=` moved EXE1_RO into SECOND.
+- LINK also **based LIBRTL** at link time, in the gap after the
+  default cluster: two global ISDs, `LIBRTL_001` at ^X10E00 and
+  `LIBRTL_002` at ^X31E00, with BASED. There are no G^ fixups, and the
+  SHL still lists LIBRTL.
+- `DZRO_MIN=2` split a section: EXE1_ZERO's 4 uninitialized pages
+  became a DZRO ISD, and SAY_DATA's page stayed a separate CRF ISD.
+  Phase 30 makes only a whole section DZRO.
+- `PSECT_ATTR=EXE1_DATA,NOWRT` worked; `IOSEGMENT=40` is the header's
+  I/O page count.
+- The fixup section follows the highest user cluster (^X40600), and
+  LASTCLU marks cluster SECOND's sections.
+
+**Activation** (`link68.log`):
+
+- MAIN1 at ^X400 (code), LIBRTL mapped at ^X800, SHR1 at ^X23600 (its
+  origin ^X23A00): **LIBRTL, last in the SHL, was mapped first**, right
+  after the main image. MAIN3P (SHR3P, which doesn't use LIBRTL) puts
+  SHR3P after LIBRTL too. So the order is either the SHL from its end,
+  or installed images first; unconfirmed, and a later round can
+  settle it with two uninstalled images.
+- Each image is laid out contiguously: LIBRTL's two ISDs take ^X22E00
+  bytes.
+- Finding the image (R1–R4):
+  - A full logical name works.
+  - A logical name with no device (`[000000]SHR1`) takes `SYS$SHARE`'s
+    device and root: `%DCL-W-ACTIMAGE, error activating image SHR1`,
+    `-CLI-E-IMAGEFNF, image file not found
+    SIMVAX$DUA0:[SYS0.SYSCOMMON.][000000]SHR1.EXE;`. The default spec
+    is `SYS$SHARE:.EXE`.
+  - No logical name gives the same message with
+    `...[SYSLIB]SHR1.EXE;`. `$STATUS` is %X100388B2.
+  - A process `SYS$SHARE` search list finds SHR1 in its first
+    directory.
+- GSMATCH, for MAIN1 (linked with LEQUAL 1,1000):
+  - LEQUAL 1,1001 runs; LEQUAL 1,999 and LEQUAL 2,1000 fail;
+  - **EQUAL 1,1000 fails**, as do EQUAL 1,1001 and ALWAYS 3,3;
+  - MAIN1N (EQUAL 1,1001) runs against EQUAL 1,1001 and fails against
+    ALWAYS 3,3;
+  - MAIN4 (ALWAYS 0,0) runs against ALWAYS 7,7;
+  - MAIN1A fails once SHR1A is relinked (the time-based ident).
+
+  The rule that fits every case: **the match controls must agree, and
+  then the linked-with control decides**. ALWAYS matches any ident,
+  EQUAL needs both idents equal, and LEQUAL needs the same major and a
+  minor at least the linked one. ALWAYS in the program against another
+  control in the image wasn't tried. A mismatch is `%DCL-W-ACTIMAGE`,
+  `-CLI-E-IMGNAME, image file DUA1:[000000]SHR1.EXE;3`,
+  `-SYSTEM-F-SHRIDMISMAT, ident mismatch with shareable image`, with
+  `$STATUS` %X100020BC.
+- `RUN SHR1.EXE` is `%DCL-E-NOTFR, no transfer address`, `$STATUS`
+  %X0003889A.
+- Every program's results were right: G^ calls and data, a JSB through
+  G^, `.ADDRESS` of a routine (the vector) and of data, self-relative
+  `.ADDRESS`, a shareable image using another (MAIN2: 42, 1, 0), based
+  and nonbased NOPIC images (MAIN3: ^X300200; MAIN3P: ^X23800, so the
+  activator relocated SHR3P's `.ADDRESS`), and the library links.
+
+**Options and errors:**
+
+- `GSMATCH=NEVER` is a syntax error in V11-39 (`%LINK-F-OPTSYNERR,
+  syntax error in options file ...GSM.OPT;7`, `-LINK-E-OPTLIN, options
+  line in error`, then the line with the bad token in quotes:
+  `GSMATCH='NEVER',1,1000`). The keywords are ALWAYS, EQUAL, and
+  LEQUAL.
+- A major ident past 255 is `%LINK-F-OPTVALERR, GSMATCH option value
+  300. is out of range (0. to 255.)`. A misspelled option is
+  OPTSYNERR with the keyword quoted. `GSMATCH=` twice: the last wins
+  (E6's header), with no message.
+- `UNIVERSAL=` of an undefined symbol: `%LINK-W-NUDFSYMS`/`UDFSYM`, and
+  the image is still made (E1).
+- `UNIVERSAL=` in an executable is accepted silently (E8).
+- `.TRANSFER` in an executable link: no message about it; LINK only
+  warns `%LINK-W-USRTFR, image ... has no user transfer address` and
+  makes the image, with LNKNOTFR set (E2).
+- A shareable image named as an object (E3): `RECTYP`, `SEQNCE`, `NOEOM`,
+  `ERRORS`, `NOIMGFIL`, then the undefined symbols and `ILLRECTYP`s,
+  `$STATUS` %X106482B2.
+- An executable based on top of a based shareable image (E5):
+  `%LINK-W-BASSHRBEL` and `%LINK-E-CONFMEM`, no image.
+- The statuses: %X10000001 for a clean link, %X10648268 with warnings,
+  %X106483B4 for OPTSYNERR, and %X106483BC for OPTVALERR.
+- `/NOUSERLIBRARY` (E9) leaves SHR1's symbols undefined (`USEUNDEF` for
+  each reference) and still makes an image.
+
+**Libraries:** `LIBRARY/CREATE/SHARE` makes a "SHAREABLE IMAGE SYMBOL
+TABLE library" (`myshr.lis`). Each module is listed with `Ident
+01,0003E8` and its symbol count. Linking `MYSHR/LIBRARY` and through
+`LNK$LIBRARY` both found SHR1, and the programs ran.
+
+**What govax already does with VMS's images:** `link.ReadShareableImage`
+reads SHR1, SHR1A, SHR2, and SHR4 correctly: the vector offsets, the
+ident, the match control, and the first section's page count. It reads
+SHR3 (based) as absolute symbols, but with a page count of 0, and it
+refuses `shr1.stb`, which is an object module, not an image.
+
 ## Part B — decisions and questions
 
 ### Decisions (accepted by the author, 2026-10-19)
@@ -268,8 +475,8 @@ Each subtask is one tested commit, as in earlier phases. Subtasks 2, 3,
 and 10 don't need the probe's answers. The rest are checked against
 them.
 
-1. **The probe** (`testdata/link68`; written 2026-10-19, waiting for
-   the VAX run): the sources, options files,
+1. **Done (2026-10-19).** **The probe** (`testdata/link68`; Part A's
+   "The probe's answers"): the sources, options files,
    `link68.com`, `exchange.cmd` and `copyout.cmd` (as
    `testdata/pg67`'s), and a README with the cases. The author runs it
    on the VAX, and the output goes in `vax/`. Then a pass over the
@@ -281,8 +488,8 @@ them.
    object, its listing line, and errors. It is matched against real
    MACRO's `XFR1.OBJ` and listing once the probe is back; until then it
    is written from the manual's 7.4. Anything else the probe's objects
-   show MACRO lacks. In the linker, pass 2 takes `OPR_REDEF` (an
-   executable link ignores or refuses it, as the probe says).
+   show MACRO lacks. In the linker, pass 2 takes `OPR_REDEF`: an
+   executable link ignores it, as V11-39 did with E2.
 3. **Options files, all of VAX LINK's options.** The parser and its
    checks for `UNIVERSAL=`, `GSMATCH=`, `CLUSTER=`, `COLLECT=`,
    `PSECT_ATTR=`, `BASE=`, `DZRO_MIN=`, `ISD_MAX=`, `PROTECT=`,
@@ -290,58 +497,89 @@ them.
    values. Also `SYS$INPUT/OPTIONS`, reading a procedure's data lines
    (DCL's SYS$INPUT, Phase 50) and the terminal at level 0. Until later
    subtasks act on an option, `Link` refuses it with a clear message.
-   Unit tests only.
+   The probe's messages: OPTSYNERR with the bad token quoted (NEVER
+   isn't a GSMATCH keyword), OPTVALERR, and the last GSMATCH= wins.
+   When a LINK fails, its `SYS$INPUT` data lines are skipped
+   (SKPDAT), not run as commands. Unit tests only.
 4. **Clusters, for executables.** The cluster list: the default cluster,
    `CLUSTER=` (with base and file names), `COLLECT=`, and shareable
    image clusters in their place. Also the two allocation passes (6.3.4),
-   `PSECT_ATTR=`, demand-zero compression by `DZRO_MIN`/`ISD_MAX`, and
-   `BASE=`. The map's cluster lines. Matched against `EXE1`, and the
-   Phase 30 fixtures must stay byte for byte.
+   `PSECT_ATTR=`, demand-zero compression by `DZRO_MIN`/`ISD_MAX`
+   (splitting a section's uninitialized run off as its own ISD, as
+   EXE1's was), `BASE=`, and `IOSEGMENT=`. With `BASE=`, shareable
+   images are based at link time in the gaps (EXE1's LIBRTL_001/002,
+   BASED, no G^ cells). The map's cluster lines. Matched against
+   `EXE1`, and the Phase 30 fixtures must stay byte for byte.
 5. **`LINK/SHAREABLE`, the image.** The console's `/SHAREABLE[=file]`
    and `govax link --shareable`. The `IHD$K_LIM` header at base 0,
    Table 6-1's shareable order (PIC, SHR), each ISD's section type
    (SHRPIC, PRVPIC, SHRFXD, PRVFXD), no stack ISD, GSMATCH in the
-   header (the default from the link time), and the transfer addresses
-   a shareable image has. A shareable image with no outside references
-   and no `.ADDRESS`, matched against the probe's sections and header.
+   header (`IHD$L_IDENT` and the link flags' top byte; the default
+   from the link time), LNKNOTFR, and the first transfer address
+   (`SYS$IMGSTA` with traceback). No demand-zero compression, and
+   `ISD_MAX=`'s OPTIGNSHR. `PROTECT=`'s `ISD$V_PROTECT`. A shareable
+   image with no outside references and no `.ADDRESS`, matched against
+   the probe's sections and header.
 6. **`LINK/SHAREABLE`, the GST.** Universal symbols from `UNIVERSAL=`
    and `OPR_REDEF`: the transfer vector's address outside the image,
    and the routine's inside it. Also entry masks and the GST's records
-   as real LINK writes them, so that `ReadShareableImage` reads
+   as real LINK writes them (Part A: MHD, LNM, `.$$ABS$$.`, one GSD of
+   EPM/SYM entries with UNI and REL, EOM; the order to be worked out
+   from the probe's images), so that `ReadShareableImage` reads
    govax's images as it reads LIBRTL's. `/SYMBOL_TABLE[=file]` writes
    the same table as an `.STB` file.
 7. **`LINK/SHAREABLE`, fixups and bases.** A shareable image's fixup
-   section, under the manual's two conditions: the `.ADDRESS` list
-   relative to the image itself (SHL entry 0), and G^ cells for the
-   images it uses. Also a non-PIC image (the PICIMG flag), and based
-   images (`BASE=`, `ISD$V_BASED`). Matched against SHR1, SHR2, and
-   SHR3.
-8. **Maps for shareable links.** Universal symbols (`U`), the
-   transfer vector's two values, `/FULL`'s sections as the probe shows
-   them, and the synopsis of a link that uses govax's own shareable
-   images.
+   section (`PRVFXD`, `IAF$V_SHR`), under the manual's two conditions:
+   the `.ADDRESS` list relative to the image itself (SHL entry 0), and
+   G^ cells for the images it uses. A `.ADDRESS` in a shared read-only
+   section makes it CRF+WRT, with a `PRT$C_UR` change-protection entry
+   (SHR6). Also NOPIC psects (`SHRFXD`/`PRVFXD`; PICIMG stays set
+   unless based), and based images (`BASE=`, no fixup section,
+   absolute GST symbols). Matched against SHR1, SHR2, SHR3, SHR3P,
+   and SHR6.
+8. **Maps and ANALYZE/IMAGE for shareable images.** The map:
+   universal symbols (`U`), the transfer vector's two values (`RU` by
+   name, `R-` by value), `/FULL`'s sections (the Image Section
+   Synopsis with clusters, types, global section names, and
+   match/idents), and the synopsis's `Image type: PIC, SHAREABLE.
+   Global Section Match=...`. ANALYZE/IMAGE: the header's GSMATCH
+   lines, the GST section, and the change-protection address printed
+   twice for the based images (MAIN3, EXE1), all matched against the
+   probe's `.ANI`s.
 9. **Linking against govax's shareable images.** An options file's
    `MYSHR/SHAREABLE` of a govax-made image. The global section ISD and
-   SHL entry from its header (its name, `_001`, ident, match), the
-   order of several shareable images, and a shareable image that uses
-   another. MAIN1 and MAIN2, byte for byte.
+   SHL entry from its header (its name, `_001`, ident, match, and the
+   first ISD's page count), the order of several shareable images (the
+   link's input order, IMAGELIB's last), and a shareable image that
+   uses another. A based shareable image: a global ISD per section,
+   BASED and LASTCLU, no G^ cells (`ReadShareableImage` must give its
+   sections, not a page count of 0). MAIN1, MAIN2, and MAIN3, byte for
+   byte.
 10. **Finding a shareable image.** Decision 3's locator, used by both
     loaders (copy and map), by LINK for IMAGELIB's images (folding
     `readLibraryFile`'s rule into it), and exported for Phase 61. SHOW
-    IMAGES shows each image's file. The missing image's messages
-    (Decision 4). Console tests with a logical name, `SYS$SHARE` on a
-    volume, and the host.
-11. **Activating govax's shareable images.** The GSMATCH check, a
-    shareable image's own fixups (self-relative `.ADDRESS`, its G^
-    cells), dependencies of dependencies, and where each image lands
-    (as the probe shows). RUN of a shareable image itself. All of this
-    in both paging modes. `imageshare_test.go`'s hand-made image gives
+    IMAGES shows each image's file. The default spec is
+    `SYS$SHARE:.EXE`, merged with a logical name's translation (R2).
+    The missing image's messages (Decision 4): ACTIMAGE, then IMAGEFNF
+    with the spec RMS tried, `$STATUS` %X100388B2. Console tests with a
+    logical name, a partial one, `SYS$SHARE` on a volume and as a
+    search list, and the host.
+11. **Activating govax's shareable images.** The GSMATCH check (Part
+    A's rule: the match controls agree, then the linked-with control
+    decides; ACTIMAGE, IMGNAME, SHRIDMISMAT, %X100020BC), a shareable
+    image's own fixups (self-relative `.ADDRESS`, its G^ cells, a
+    read-only page fixed up then made UR), dependencies of
+    dependencies, based shareable images at their addresses, and where
+    each image lands (the SHL from its end, as the probe suggests,
+    unless a later round says otherwise). `RUN` of a shareable image:
+    `%DCL-E-NOTFR`. All of this in both paging modes. `imageshare_test.go`'s hand-made image gives
     way to one LINK/SHAREABLE makes.
-12. **Shareable image libraries** (if question 2 says so).
+12. **Shareable image libraries.**
     `LIBRARY/CREATE/SHARE` and `/INSERT` of a shareable image (its GST
     as the library's module), and `LIBRARY/LIST` of one. LINK searches
     a user's shareable image library (`MYLIB/LIBRARY`), and its default
-    libraries (`LNK$LIBRARY`, `LNK$LIBRARY_1`, ...; `/USERLIBRARY`).
+    libraries (`LNK$LIBRARY`, `LNK$LIBRARY_1`, ...; `/USERLIBRARY`),
+    matched against `myshr.olb`, `myshr.lis`, and MAIN1L/MAIN1U.
 13. **The milestone and the oracle.** `TestLink68Oracle` runs
     `LINK68.COM` on govax: MACRO, LINK/SHAREABLE, LINK, ANALYZE, and
     RUN. It matches VMS's log, maps, and `.ANI`s (times masked) and the
@@ -389,4 +627,27 @@ close:
   missing.
 - `SYS$SHARE` isn't defined in govax (subtask 10).
 - `F$GETSYI("HW_NAME")` isn't an item govax's F$GETSYI knows.
+
+### 2026-10-19 — Subtask 1: the probe's VMS run
+
+The author ran `LINK68.COM` on VMS V7.1 (LINK V11-39) and copied the
+results into `testdata/link68/vax/`. Part A's "The probe's answers"
+records what they show, and the subtasks they touch now carry those
+answers. Several things the plan didn't foresee:
+
+- The fixup section of a shareable image is `PRVFXD` with `IAF$V_SHR`.
+- A `.ADDRESS` in a shared read-only psect makes it CRF+WRT, with a UR
+  change-protection entry.
+- These shareable images got no demand-zero compression, even with
+  `DZRO_MIN=1`.
+- With `BASE=`, an executable bases LIBRTL at link time.
+- `DZRO_MIN` splits an uninitialized run off a section.
+- GSMATCH needs the match controls to agree.
+- LIBRTL was mapped before SHR1.
+- VMS's ANALYZE/IMAGE shows a shareable image's GSMATCH and GST.
+- `GSMATCH=NEVER` isn't accepted.
+
+Two points are left unconfirmed: the order in which the activator maps
+images, and the GST's symbol order. A second round can take them up
+when subtask 11 needs them.
 

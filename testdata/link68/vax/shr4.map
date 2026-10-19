@@ -1,0 +1,187 @@
+
+SHR4                                                            19-OCT-2026 15:22        Linker V11-39                    Page    1
+
+                                             +------------------------+
+                                             ! Object Module Synopsis !
+                                             +------------------------+
+
+Module Name     Ident              Bytes      File                                Creation Date      Creator
+-----------     -----              -----      -----                               -------------      -------
+XFR1            V1.0                   78 DUA1:[000000]XFR1.OBJ;1              19-OCT-2026 15:22  VAX MACRO V5.4-3
+SHR1            V1.0                 4313 DUA1:[000000]SHR1.OBJ;1              19-OCT-2026 15:22  VAX MACRO V5.4-3
+SYS$P1_VECTOR   X-4                     0 SYS$COMMON:[SYSLIB]STARLET.OLB;1     24-NOV-1996 16:16  VAX MACRO V5.4-3
+LIBRTL          V06-001                 0 SYS$COMMON:[SYSLIB]LIBRTL.EXE;1      24-NOV-1996 19:04  Linker V11-38
+
+                                     +---------------------------------------+
+                                     ! Module Relocatable Reference Synopsis !
+                                     +---------------------------------------+
+
+Module Name                        Number  Module Name                        Number  Module Name                        Number
+-----------                        ------  -----------                        ------  -----------                        ------
+XFR1                                    3  SHR1                                   10  
+
+DUA1:[000000]SHR4.EXE;1                                         19-OCT-2026 15:22        Linker V11-39                    Page    2
+
+                                             +------------------------+
+                                             ! Image Section Synopsis !
+                                             +------------------------+
+
+   Cluster      Type Pages   Base Addr  Disk VBN PFC Protection and Paging      Global Sec. Name   Match     Majorid   Minorid
+   -------      ---- -----   ---------  -------- --- ---------------------      ----------------   -----     -------   -------
+
+FIRST              3     1    00000000-R        2   0 READ ONLY     
+                   4     1    00000200-R        3   0 READ ONLY     
+
+DEFAULT_CLUSTER    3     1    00000400-R        4   0 READ ONLY     
+                   4     9    00000600-R        5   0 READ WRITE   COPY ON REF
+                   2     1    00001800-R       14   0 READ WRITE   FIXUP VECTORS
+
+LIBRTL             3   264    00000000-R        0   0 READ ONLY                  LIBRTL_001       LESS/EQUAL        1        14
+                   4    15    00021000-R        0   0 READ WRITE   DEMAND ZERO   LIBRTL_002       LESS/EQUAL        1        14
+
+
+
+	  Key for special characters above:
+		+--------------------+
+		! R  - Relocatable   !
+		! P  - Protected     !
+		+--------------------+
+
+DUA1:[000000]SHR4.EXE;1                                         19-OCT-2026 15:22        Linker V11-39                    Page    3
+
+                                            +--------------------------+
+                                            ! Program Section Synopsis !
+                                            +--------------------------+
+
+Psect Name      Module Name       Base     End           Length            Align                 Attributes
+----------      -----------       ----     ---           ------            -----                 ----------
+
+$$XFR1                          00000000 00000047 00000048 (         72.) PAGE  9   PIC,USR,CON,REL,GBL,  SHR,  EXE,  RD,NOWRT,NOVEC
+                XFR1            00000000 00000047 00000048 (         72.) PAGE  9
+
+XFR1_CODE                       00000048 0000004D 00000006 (          6.) LONG  2   PIC,USR,CON,REL,LCL,  SHR,  EXE,  RD,NOWRT,NOVEC
+                XFR1            00000048 0000004D 00000006 (          6.) LONG  2
+
+SHR1_RO                         00000200 0000020B 0000000C (         12.) LONG  2   PIC,USR,CON,REL,GBL,NOSHR,NOEXE,  RD,NOWRT,NOVEC
+                SHR1            00000200 0000020B 0000000C (         12.) LONG  2
+
+SHR1_CODE                       00000400 0000045C 0000005D (         93.) LONG  2   PIC,USR,CON,REL,LCL,  SHR,  EXE,  RD,NOWRT,NOVEC
+                SHR1            00000400 0000045C 0000005D (         93.) LONG  2
+
+SHR1_DATA                       00000600 0000066F 00000070 (        112.) LONG  2   PIC,USR,CON,REL,LCL,NOSHR,NOEXE,  RD,  WRT,NOVEC
+                SHR1            00000600 0000066F 00000070 (        112.) LONG  2
+
+SHR1_ZERO                       00000800 000017FF 00001000 (       4096.) PAGE  9   PIC,USR,CON,REL,LCL,NOSHR,NOEXE,  RD,  WRT,NOVEC
+                SHR1            00000800 000017FF 00001000 (       4096.) PAGE  9
+
+DUA1:[000000]SHR4.EXE;1                                         19-OCT-2026 15:22        Linker V11-39                    Page    4
+
+                                                +-----------------+
+                                                ! Symbols By Name !
+                                                +-----------------+
+
+Symbol          Value              Symbol          Value              Symbol          Value              Symbol          Value
+------          -----              ------          -----              ------          -----              ------          -----
+LIB$PUT_OUTPUT  00001848-RX       
+SHR1_ADD        00000407-RU       
+SHR1_BASE       00000400-RU       
+SHR1_COUNT      00000600-RU       
+SHR1_JSB        00000416-RU       
+SHR1_LOCAL      00000048-RU       
+SHR1_ORIGIN     00000400-RU       
+SHR1_SHOW       00000422-RU       
+SHR1_TABLE      00000200-RU       
+SYS$IMGSTA      7FFEDF68          
+
+DUA1:[000000]SHR4.EXE;1                                         19-OCT-2026 15:22        Linker V11-39                    Page    5
+
+                                                +------------------+
+                                                ! Symbols By Value !
+                                                +------------------+
+
+Value                                   Symbols...
+-----                                   ----------
+00000048      R-SHR1_LOCAL    
+00000200     RU-SHR1_TABLE    
+00000400      R-SHR1_BASE       RU-SHR1_ORIGIN   
+00000407      R-SHR1_ADD      
+00000416      R-SHR1_JSB      
+00000422      R-SHR1_SHOW     
+00000600     RU-SHR1_COUNT    
+00001848     RX-LIB$PUT_OUTPUT
+7FFEDF68        SYS$IMGSTA    
+
+
+
+	  Key for special characters above:
+		+--------------------+
+		! *  - Undefined     !
+		! A  - Alias Name    !
+		! I  - Internal Name !
+		! U  - Universal     !
+		! R  - Relocatable   !
+		! X  - External      !
+		! WK - Weak          !
+		+--------------------+
+
+DUA1:[000000]SHR4.EXE;1                                         19-OCT-2026 15:22        Linker V11-39                    Page    6
+
+                                                 +----------------+
+                                                 ! Image Synopsis !
+                                                 +----------------+
+
+Virtual memory allocated:                         00000000 000019FF 00001A00 (6656. bytes, 13. pages)
+Stack size:                                              0. pages
+Image header virtual block limits:                       1.        1. (    1. block)
+Image binary virtual block limits:                       2.        5. (    4. blocks)
+Image name and identification:                    SHR4 V1.0
+Number of files:                                         5.
+Number of modules:                                       4.
+Number of program sections:                             10.
+Number of global symbols:                              311.
+Number of image sections:                                7.
+Debugger transfer address:                        7FFEDF68
+Number of address fixups:                                3.
+Number of code references to shareable images:           1.
+Image type:                                         PIC, SHAREABLE. Global Section Match=ALWAYS, Ident, Major=0, Minor=0
+Map format:                                       FULL in file DUA1:[000000]SHR4.MAP;1
+Estimated map length:                             66. blocks
+                                              +---------------------+
+                                              ! Link Run Statistics !
+                                              +---------------------+
+
+Performance Indicators                            Page Faults	CPU Time	Elapsed Time
+----------------------                            -----------	--------	------------
+    Command processing:                                   287	00:00:00.00	00:00:00.01
+    Pass 1:                                              1716	00:00:00.00	00:00:00.02
+    Allocation/Relocation:                                114	00:00:00.00	00:00:00.01
+    Pass 2:                                              1185	00:00:00.00	00:00:00.02
+    Map data after object module synopsis:                 63	00:00:00.00	00:00:00.00
+    Symbol table output:                                   20	00:00:00.00	00:00:00.00
+Total run values:                                        3385	00:00:00.00	00:00:00.06
+
+Using a working set limited to 512 pages and 1478 pages of data storage (excluding image)
+
+Total number object records read (both passes):   166
+    of which 26 were in libraries and 6 were DEBUG data records containing 251 bytes
+217 bytes of DEBUG data were written,starting at VBN 15 with 2 blocks allocated
+
+Number of modules extracted explicitly             = 0
+    with 1 extracted to resolve undefined symbols
+
+0 library searches were for symbols not in the library searched
+
+A total of 5 global symbol table records was written
+
+LINK/SHAREABLE=SHR4/MAP=SHR4/FULL SYS$INPUT/OPTIONS
+CLUSTER=FIRST,,,XFR1.OBJ
+COLLECT=FIRST,SHR1_RO
+SHR1.OBJ
+PSECT_ATTR=SHR1_RO,NOSHR
+DZRO_MIN=1
+ISD_MAX=20
+GSMATCH=ALWAYS,0,0
+
+DUA1:[000000]SHR4.EXE;1                                         19-OCT-2026 15:22        Linker V11-39                    Page    7
+
+UNIVERSAL=SHR1_COUNT,SHR1_TABLE,SHR1_ORIGIN

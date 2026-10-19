@@ -1,0 +1,2506 @@
+
+Directory DUA1:[000000]
+
+000000.DIR;1                  File ID:  (4,4,0)               
+Size:            9/9          Owner:    [SYSTEM]
+Created:   19-OCT-2026 15:22:38.31
+Revised:   19-OCT-2026 15:22:38.31 (1)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Sequential
+Shelved state:      Online 
+File attributes:    Allocation: 9, Extend: 0, Global buffer count: 0, No default version limit, Contiguous, Directory file
+Record format:      Variable length, maximum 512 bytes, longest 512 bytes
+Record attributes:  No carriage control, Non-spanned
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:E
+Access Cntrl List:  None
+
+BACKUP.SYS;1                  File ID:  (8,8,0)               
+Size:            0/0          Owner:    [SYSTEM]
+Created:   19-OCT-2026 15:22:38.31
+Revised:   19-OCT-2026 15:22:38.31 (1)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Sequential
+Shelved state:      Online 
+File attributes:    Allocation: 0, Extend: 0, Global buffer count: 0, Version limit: 1
+Record format:      Fixed length 64 byte records
+Record attributes:  None
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+BADBLK.SYS;1                  File ID:  (3,3,0)               
+Size:            0/0          Owner:    [SYSTEM]
+Created:   19-OCT-2026 15:22:38.31
+Revised:   19-OCT-2026 15:22:38.31 (1)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Sequential
+Shelved state:      Online 
+File attributes:    Allocation: 0, Extend: 0, Global buffer count: 0, Version limit: 1
+Record format:      Fixed length 512 byte records
+Record attributes:  None
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+BADLOG.SYS;1                  File ID:  (9,9,0)               
+Size:            0/0          Owner:    [SYSTEM]
+Created:   19-OCT-2026 15:22:38.31
+Revised:   19-OCT-2026 15:22:38.31 (1)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Sequential
+Shelved state:      Online 
+File attributes:    Allocation: 0, Extend: 0, Global buffer count: 0, Version limit: 1
+Record format:      Fixed length 16 byte records
+Record attributes:  None
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+BITMAP.SYS;1                  File ID:  (2,2,0)               
+Size:            7/7          Owner:    [SYSTEM]
+Created:   19-OCT-2026 15:22:38.31
+Revised:   19-OCT-2026 15:22:38.31 (1)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Sequential
+Shelved state:      Online 
+File attributes:    Allocation: 7, Extend: 0, Global buffer count: 0, Version limit: 1, Contiguous
+Record format:      Fixed length 512 byte records
+Record attributes:  None
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+CONTIN.SYS;1                  File ID:  (7,7,0)               
+Size:            0/0          Owner:    [SYSTEM]
+Created:   19-OCT-2026 15:22:38.31
+Revised:   19-OCT-2026 15:22:38.31 (1)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Sequential
+Shelved state:      Online 
+File attributes:    Allocation: 0, Extend: 0, Global buffer count: 0, Version limit: 1
+Record format:      Fixed length 512 byte records
+Record attributes:  None
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+CORIMG.SYS;1                  File ID:  (5,5,0)               
+Size:            0/0          Owner:    [SYSTEM]
+Created:   19-OCT-2026 15:22:38.31
+Revised:   19-OCT-2026 15:22:38.31 (1)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Sequential
+Shelved state:      Online 
+File attributes:    Allocation: 0, Extend: 0, Global buffer count: 0, Version limit: 1
+Record format:      Fixed length 512 byte records
+Record attributes:  None
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+E1.EXE;1                      File ID:  (136,1,0)             
+Size:           16/16         Owner:    [SYSTEM]
+Created:   19-OCT-2026 15:22:51.42
+Revised:   19-OCT-2026 15:22:51.43 (1)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Sequential
+Shelved state:      Online 
+File attributes:    Allocation: 16, Extend: 0, Global buffer count: 0, No version limit, Contiguous best try
+Record format:      Fixed length 512 byte records
+Record attributes:  None
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+E2.EXE;1                      File ID:  (137,1,0)             
+Size:            6/6          Owner:    [SYSTEM]
+Created:   19-OCT-2026 15:22:51.49
+Revised:   19-OCT-2026 15:22:51.49 (1)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Sequential
+Shelved state:      Online 
+File attributes:    Allocation: 6, Extend: 0, Global buffer count: 0, No version limit, Contiguous best try
+Record format:      Fixed length 512 byte records
+Record attributes:  None
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+E6.EXE;1                      File ID:  (138,1,0)             
+Size:           16/16         Owner:    [SYSTEM]
+Created:   19-OCT-2026 15:22:51.67
+Revised:   19-OCT-2026 15:22:51.68 (1)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Sequential
+Shelved state:      Online 
+File attributes:    Allocation: 16, Extend: 0, Global buffer count: 0, No version limit, Contiguous best try
+Record format:      Fixed length 512 byte records
+Record attributes:  None
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+E8.EXE;1                      File ID:  (139,1,0)             
+Size:            5/5          Owner:    [SYSTEM]
+Created:   19-OCT-2026 15:22:51.74
+Revised:   19-OCT-2026 15:22:51.75 (1)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Sequential
+Shelved state:      Online 
+File attributes:    Allocation: 5, Extend: 0, Global buffer count: 0, No version limit, Contiguous best try
+Record format:      Fixed length 512 byte records
+Record attributes:  None
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+E9.EXE;1                      File ID:  (135,1,0)             
+Size:            5/5          Owner:    [SYSTEM]
+Created:   19-OCT-2026 15:22:51.37
+Revised:   19-OCT-2026 15:22:51.37 (1)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Sequential
+Shelved state:      Online 
+File attributes:    Allocation: 5, Extend: 0, Global buffer count: 0, No version limit, Contiguous best try
+Record format:      Fixed length 512 byte records
+Record attributes:  None
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+EXE1.ANI;1                    File ID:  (126,1,0)             
+Size:           17/17         Owner:    [SYSTEM]
+Created:   19-OCT-2026 15:22:51.12
+Revised:   19-OCT-2026 15:22:51.13 (1)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Sequential
+Shelved state:      Online 
+File attributes:    Allocation: 17, Extend: 0, Global buffer count: 0, No version limit
+Record format:      Variable length, maximum 0 bytes, longest 80 bytes
+Record attributes:  Carriage return carriage control
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+EXE1.EXE;1                    File ID:  (125,1,0)             
+Size:            9/9          Owner:    [SYSTEM]
+Created:   19-OCT-2026 15:22:51.11
+Revised:   19-OCT-2026 15:22:51.11 (1)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Sequential
+Shelved state:      Online 
+File attributes:    Allocation: 9, Extend: 0, Global buffer count: 0, No version limit, Contiguous best try
+Record format:      Fixed length 512 byte records
+Record attributes:  None
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+EXE1.LIS;1                    File ID:  (44,1,0)              
+Size:           19/19         Owner:    [SYSTEM]
+Created:   19-OCT-2026 15:22:47.04
+Revised:   19-OCT-2026 15:22:47.06 (1)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Sequential
+Shelved state:      Online 
+File attributes:    Allocation: 19, Extend: 80, Global buffer count: 0, No version limit
+Record format:      Variable length, maximum 0 bytes, longest 132 bytes
+Record attributes:  Carriage return carriage control
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+EXE1.MAP;1                    File ID:  (124,1,0)             
+Size:           20/20         Owner:    [SYSTEM]
+Created:   19-OCT-2026 15:22:51.09
+Revised:   19-OCT-2026 15:22:51.11 (1)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Sequential
+Shelved state:      Online 
+File attributes:    Allocation: 20, Extend: 0, Global buffer count: 0, No version limit
+Record format:      Variable length, maximum 0 bytes, longest 132 bytes
+Record attributes:  Carriage return carriage control
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+EXE1.MAR;1                    File ID:  (20,1,0)              
+Size:            3/3          Owner:    [SYSTEM]
+Created:   19-OCT-2026 15:22:38.31
+Revised:   19-OCT-2026 15:22:38.31 (1)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Sequential
+Shelved state:      Online 
+File attributes:    Allocation: 3, Extend: 0, Global buffer count: 0, No version limit
+Record format:      Stream_LF, maximum 0 bytes, longest 0 bytes
+Record attributes:  None
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+EXE1.OBJ;1                    File ID:  (43,1,0)              
+Size:            2/2          Owner:    [SYSTEM]
+Created:   19-OCT-2026 15:22:47.04
+Revised:   19-OCT-2026 15:22:47.06 (1)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Sequential
+Shelved state:      Online 
+File attributes:    Allocation: 2, Extend: 20, Global buffer count: 0, No version limit
+Record format:      Variable length, maximum 0 bytes, longest 224 bytes
+Record attributes:  None
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+EXE1B.LIS;1                   File ID:  (46,1,0)              
+Size:            9/9          Owner:    [SYSTEM]
+Created:   19-OCT-2026 15:22:47.08
+Revised:   19-OCT-2026 15:22:47.09 (1)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Sequential
+Shelved state:      Online 
+File attributes:    Allocation: 9, Extend: 80, Global buffer count: 0, No version limit
+Record format:      Variable length, maximum 0 bytes, longest 132 bytes
+Record attributes:  Carriage return carriage control
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+EXE1B.MAR;1                   File ID:  (21,1,0)              
+Size:            1/1          Owner:    [SYSTEM]
+Created:   19-OCT-2026 15:22:38.31
+Revised:   19-OCT-2026 15:22:38.31 (1)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Sequential
+Shelved state:      Online 
+File attributes:    Allocation: 1, Extend: 0, Global buffer count: 0, No version limit
+Record format:      Stream_LF, maximum 0 bytes, longest 0 bytes
+Record attributes:  None
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+EXE1B.OBJ;1                   File ID:  (45,1,0)              
+Size:            1/1          Owner:    [SYSTEM]
+Created:   19-OCT-2026 15:22:47.08
+Revised:   19-OCT-2026 15:22:47.09 (1)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Sequential
+Shelved state:      Online 
+File attributes:    Allocation: 1, Extend: 20, Global buffer count: 0, No version limit
+Record format:      Variable length, maximum 0 bytes, longest 50 bytes
+Record attributes:  None
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+FILES.LST;1                   File ID:  (140,1,0)             
+Size:            0/32         Owner:    [SYSTEM]
+Created:   19-OCT-2026 15:22:51.75
+Revised:   19-OCT-2026 15:22:51.75 (0)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Sequential
+Shelved state:      Online 
+File attributes:    Allocation: 32, Extend: 0, Global buffer count: 0, No version limit
+Record format:      Variable length, maximum 0 bytes, longest 0 bytes
+Record attributes:  Carriage return carriage control
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+GSM.OPT;9                     File ID:  (80,1,0)              
+Size:            1/1          Owner:    [SYSTEM]
+Created:   19-OCT-2026 15:22:47.93
+Revised:   19-OCT-2026 15:22:47.93 (1)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Sequential
+Shelved state:      Online 
+File attributes:    Allocation: 1, Extend: 0, Global buffer count: 0, No version limit
+Record format:      VFC, 2 byte header, maximum 0 bytes, longest 21 bytes
+Record attributes:  Print file carriage control
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+GSM.OPT;8                     File ID:  (77,1,0)              
+Size:            1/1          Owner:    [SYSTEM]
+Created:   19-OCT-2026 15:22:47.84
+Revised:   19-OCT-2026 15:22:47.85 (1)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Sequential
+Shelved state:      Online 
+File attributes:    Allocation: 1, Extend: 0, Global buffer count: 0, No version limit
+Record format:      VFC, 2 byte header, maximum 0 bytes, longest 18 bytes
+Record attributes:  Print file carriage control
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+GSM.OPT;7                     File ID:  (73,1,0)              
+Size:            1/1          Owner:    [SYSTEM]
+Created:   19-OCT-2026 15:22:47.74
+Revised:   19-OCT-2026 15:22:47.74 (1)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Sequential
+Shelved state:      Online 
+File attributes:    Allocation: 1, Extend: 0, Global buffer count: 0, No version limit
+Record format:      VFC, 2 byte header, maximum 0 bytes, longest 20 bytes
+Record attributes:  Print file carriage control
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+GSM.OPT;6                     File ID:  (70,1,0)              
+Size:            1/1          Owner:    [SYSTEM]
+Created:   19-OCT-2026 15:22:47.66
+Revised:   19-OCT-2026 15:22:47.66 (1)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Sequential
+Shelved state:      Online 
+File attributes:    Allocation: 1, Extend: 0, Global buffer count: 0, No version limit
+Record format:      VFC, 2 byte header, maximum 0 bytes, longest 20 bytes
+Record attributes:  Print file carriage control
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+GSM.OPT;5                     File ID:  (67,1,0)              
+Size:            1/1          Owner:    [SYSTEM]
+Created:   19-OCT-2026 15:22:47.58
+Revised:   19-OCT-2026 15:22:47.58 (1)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Sequential
+Shelved state:      Online 
+File attributes:    Allocation: 1, Extend: 0, Global buffer count: 0, No version limit
+Record format:      VFC, 2 byte header, maximum 0 bytes, longest 20 bytes
+Record attributes:  Print file carriage control
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+GSM.OPT;4                     File ID:  (64,1,0)              
+Size:            1/1          Owner:    [SYSTEM]
+Created:   19-OCT-2026 15:22:47.50
+Revised:   19-OCT-2026 15:22:47.50 (1)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Sequential
+Shelved state:      Online 
+File attributes:    Allocation: 1, Extend: 0, Global buffer count: 0, No version limit
+Record format:      VFC, 2 byte header, maximum 0 bytes, longest 21 bytes
+Record attributes:  Print file carriage control
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+GSM.OPT;3                     File ID:  (61,1,0)              
+Size:            1/1          Owner:    [SYSTEM]
+Created:   19-OCT-2026 15:22:47.42
+Revised:   19-OCT-2026 15:22:47.42 (1)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Sequential
+Shelved state:      Online 
+File attributes:    Allocation: 1, Extend: 0, Global buffer count: 0, No version limit
+Record format:      VFC, 2 byte header, maximum 0 bytes, longest 20 bytes
+Record attributes:  Print file carriage control
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+GSM.OPT;2                     File ID:  (58,1,0)              
+Size:            1/1          Owner:    [SYSTEM]
+Created:   19-OCT-2026 15:22:47.33
+Revised:   19-OCT-2026 15:22:47.34 (1)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Sequential
+Shelved state:      Online 
+File attributes:    Allocation: 1, Extend: 0, Global buffer count: 0, No version limit
+Record format:      VFC, 2 byte header, maximum 0 bytes, longest 21 bytes
+Record attributes:  Print file carriage control
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+GSM.OPT;1                     File ID:  (48,1,0)              
+Size:            1/1          Owner:    [SYSTEM]
+Created:   19-OCT-2026 15:22:47.12
+Revised:   19-OCT-2026 15:22:47.12 (1)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Sequential
+Shelved state:      Online 
+File attributes:    Allocation: 1, Extend: 0, Global buffer count: 0, No version limit
+Record format:      VFC, 2 byte header, maximum 0 bytes, longest 21 bytes
+Record attributes:  Print file carriage control
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+INDEXF.SYS;1                  File ID:  (1,1,0)               
+Size:          843/843        Owner:    [SYSTEM]
+Created:   19-OCT-2026 15:22:38.31
+Revised:   19-OCT-2026 15:22:38.31 (1)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Sequential
+Shelved state:      Online 
+File attributes:    Allocation: 843, Extend: 0, Global buffer count: 0, Version limit: 1, Contiguous best try
+Record format:      Fixed length 512 byte records
+Record attributes:  None
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+LINK68.COM;1                  File ID:  (23,1,0)              
+Size:           20/20         Owner:    [SYSTEM]
+Created:   19-OCT-2026 15:22:38.31
+Revised:   19-OCT-2026 15:22:38.31 (1)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Sequential
+Shelved state:      Online 
+File attributes:    Allocation: 20, Extend: 0, Global buffer count: 0, No version limit
+Record format:      Stream_LF, maximum 0 bytes, longest 0 bytes
+Record attributes:  None
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+LINK68.LOG;1                  File ID:  (24,1,0)              
+Size:            0/80         Owner:    [SYSTEM]
+Created:   19-OCT-2026 15:22:46.71
+Revised:   19-OCT-2026 15:22:46.71 (0)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Sequential
+Shelved state:      Online 
+File attributes:    Allocation: 80, Extend: 0, Global buffer count: 0, No version limit
+Record format:      VFC, 2 byte header, maximum 0 bytes, longest 0 bytes
+Record attributes:  Print file carriage control
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+MAIN1.ANI;1                   File ID:  (55,1,0)              
+Size:           12/12         Owner:    [SYSTEM]
+Created:   19-OCT-2026 15:22:47.29
+Revised:   19-OCT-2026 15:22:47.30 (1)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Sequential
+Shelved state:      Online 
+File attributes:    Allocation: 12, Extend: 0, Global buffer count: 0, No version limit
+Record format:      Variable length, maximum 0 bytes, longest 80 bytes
+Record attributes:  Carriage return carriage control
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+MAIN1.EXE;1                   File ID:  (54,1,0)              
+Size:            5/5          Owner:    [SYSTEM]
+Created:   19-OCT-2026 15:22:47.27
+Revised:   19-OCT-2026 15:22:47.28 (1)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Sequential
+Shelved state:      Online 
+File attributes:    Allocation: 5, Extend: 0, Global buffer count: 0, No version limit, Contiguous best try
+Record format:      Fixed length 512 byte records
+Record attributes:  None
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+MAIN1.LIS;1                   File ID:  (36,1,0)              
+Size:           25/25         Owner:    [SYSTEM]
+Created:   19-OCT-2026 15:22:46.90
+Revised:   19-OCT-2026 15:22:46.92 (1)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Sequential
+Shelved state:      Online 
+File attributes:    Allocation: 25, Extend: 80, Global buffer count: 0, No version limit
+Record format:      Variable length, maximum 0 bytes, longest 132 bytes
+Record attributes:  Carriage return carriage control
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+MAIN1.MAP;1                   File ID:  (53,1,0)              
+Size:           20/20         Owner:    [SYSTEM]
+Created:   19-OCT-2026 15:22:47.23
+Revised:   19-OCT-2026 15:22:47.28 (1)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Sequential
+Shelved state:      Online 
+File attributes:    Allocation: 20, Extend: 0, Global buffer count: 0, No version limit
+Record format:      Variable length, maximum 0 bytes, longest 132 bytes
+Record attributes:  Carriage return carriage control
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+MAIN1.MAR;1                   File ID:  (16,1,0)              
+Size:            5/5          Owner:    [SYSTEM]
+Created:   19-OCT-2026 15:22:38.31
+Revised:   19-OCT-2026 15:22:38.31 (1)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Sequential
+Shelved state:      Online 
+File attributes:    Allocation: 5, Extend: 0, Global buffer count: 0, No version limit
+Record format:      Stream_LF, maximum 0 bytes, longest 0 bytes
+Record attributes:  None
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+MAIN1.OBJ;1                   File ID:  (35,1,0)              
+Size:            4/4          Owner:    [SYSTEM]
+Created:   19-OCT-2026 15:22:46.90
+Revised:   19-OCT-2026 15:22:46.92 (1)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Sequential
+Shelved state:      Online 
+File attributes:    Allocation: 4, Extend: 20, Global buffer count: 0, No version limit
+Record format:      Variable length, maximum 0 bytes, longest 462 bytes
+Record attributes:  None
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+MAIN1A.ANI;1                  File ID:  (88,1,0)              
+Size:           12/12         Owner:    [SYSTEM]
+Created:   19-OCT-2026 15:22:48.11
+Revised:   19-OCT-2026 15:22:48.12 (1)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Sequential
+Shelved state:      Online 
+File attributes:    Allocation: 12, Extend: 0, Global buffer count: 0, No version limit
+Record format:      Variable length, maximum 0 bytes, longest 80 bytes
+Record attributes:  Carriage return carriage control
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+MAIN1A.EXE;1                  File ID:  (87,1,0)              
+Size:            5/5          Owner:    [SYSTEM]
+Created:   19-OCT-2026 15:22:48.10
+Revised:   19-OCT-2026 15:22:48.10 (1)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Sequential
+Shelved state:      Online 
+File attributes:    Allocation: 5, Extend: 0, Global buffer count: 0, No version limit, Contiguous best try
+Record format:      Fixed length 512 byte records
+Record attributes:  None
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+MAIN1A.MAP;1                  File ID:  (86,1,0)              
+Size:           20/20         Owner:    [SYSTEM]
+Created:   19-OCT-2026 15:22:48.08
+Revised:   19-OCT-2026 15:22:48.10 (1)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Sequential
+Shelved state:      Online 
+File attributes:    Allocation: 20, Extend: 0, Global buffer count: 0, No version limit
+Record format:      Variable length, maximum 0 bytes, longest 132 bytes
+Record attributes:  Carriage return carriage control
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+MAIN1L.ANI;1                  File ID:  (131,1,0)             
+Size:           12/12         Owner:    [SYSTEM]
+Created:   19-OCT-2026 15:22:51.23
+Revised:   19-OCT-2026 15:22:51.23 (1)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Sequential
+Shelved state:      Online 
+File attributes:    Allocation: 12, Extend: 0, Global buffer count: 0, No version limit
+Record format:      Variable length, maximum 0 bytes, longest 80 bytes
+Record attributes:  Carriage return carriage control
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+MAIN1L.EXE;1                  File ID:  (130,1,0)             
+Size:            5/5          Owner:    [SYSTEM]
+Created:   19-OCT-2026 15:22:51.20
+Revised:   19-OCT-2026 15:22:51.21 (1)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Sequential
+Shelved state:      Online 
+File attributes:    Allocation: 5, Extend: 0, Global buffer count: 0, No version limit, Contiguous best try
+Record format:      Fixed length 512 byte records
+Record attributes:  None
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+MAIN1L.MAP;1                  File ID:  (129,1,0)             
+Size:           20/20         Owner:    [SYSTEM]
+Created:   19-OCT-2026 15:22:51.18
+Revised:   19-OCT-2026 15:22:51.21 (1)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Sequential
+Shelved state:      Online 
+File attributes:    Allocation: 20, Extend: 0, Global buffer count: 0, No version limit
+Record format:      Variable length, maximum 0 bytes, longest 132 bytes
+Record attributes:  Carriage return carriage control
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+MAIN1N.ANI;1                  File ID:  (76,1,0)              
+Size:           12/12         Owner:    [SYSTEM]
+Created:   19-OCT-2026 15:22:47.83
+Revised:   19-OCT-2026 15:22:47.84 (1)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Sequential
+Shelved state:      Online 
+File attributes:    Allocation: 12, Extend: 0, Global buffer count: 0, No version limit
+Record format:      Variable length, maximum 0 bytes, longest 80 bytes
+Record attributes:  Carriage return carriage control
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+MAIN1N.EXE;1                  File ID:  (75,1,0)              
+Size:            5/5          Owner:    [SYSTEM]
+Created:   19-OCT-2026 15:22:47.82
+Revised:   19-OCT-2026 15:22:47.82 (1)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Sequential
+Shelved state:      Online 
+File attributes:    Allocation: 5, Extend: 0, Global buffer count: 0, No version limit, Contiguous best try
+Record format:      Fixed length 512 byte records
+Record attributes:  None
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+MAIN1N.MAP;1                  File ID:  (74,1,0)              
+Size:           20/20         Owner:    [SYSTEM]
+Created:   19-OCT-2026 15:22:47.79
+Revised:   19-OCT-2026 15:22:47.82 (1)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Sequential
+Shelved state:      Online 
+File attributes:    Allocation: 20, Extend: 0, Global buffer count: 0, No version limit
+Record format:      Variable length, maximum 0 bytes, longest 132 bytes
+Record attributes:  Carriage return carriage control
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+MAIN1U.ANI;1                  File ID:  (134,1,0)             
+Size:           12/12         Owner:    [SYSTEM]
+Created:   19-OCT-2026 15:22:51.31
+Revised:   19-OCT-2026 15:22:51.31 (1)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Sequential
+Shelved state:      Online 
+File attributes:    Allocation: 12, Extend: 0, Global buffer count: 0, No version limit
+Record format:      Variable length, maximum 0 bytes, longest 80 bytes
+Record attributes:  Carriage return carriage control
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+MAIN1U.EXE;1                  File ID:  (133,1,0)             
+Size:            5/5          Owner:    [SYSTEM]
+Created:   19-OCT-2026 15:22:51.29
+Revised:   19-OCT-2026 15:22:51.29 (1)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Sequential
+Shelved state:      Online 
+File attributes:    Allocation: 5, Extend: 0, Global buffer count: 0, No version limit, Contiguous best try
+Record format:      Fixed length 512 byte records
+Record attributes:  None
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+MAIN1U.MAP;1                  File ID:  (132,1,0)             
+Size:           20/20         Owner:    [SYSTEM]
+Created:   19-OCT-2026 15:22:51.27
+Revised:   19-OCT-2026 15:22:51.29 (1)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Sequential
+Shelved state:      Online 
+File attributes:    Allocation: 20, Extend: 0, Global buffer count: 0, No version limit
+Record format:      Variable length, maximum 0 bytes, longest 132 bytes
+Record attributes:  Carriage return carriage control
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+MAIN2.ANI;1                   File ID:  (95,1,0)              
+Size:           13/13         Owner:    [SYSTEM]
+Created:   19-OCT-2026 15:22:50.29
+Revised:   19-OCT-2026 15:22:50.30 (1)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Sequential
+Shelved state:      Online 
+File attributes:    Allocation: 13, Extend: 0, Global buffer count: 0, No version limit
+Record format:      Variable length, maximum 0 bytes, longest 80 bytes
+Record attributes:  Carriage return carriage control
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+MAIN2.EXE;1                   File ID:  (94,1,0)              
+Size:            5/5          Owner:    [SYSTEM]
+Created:   19-OCT-2026 15:22:50.25
+Revised:   19-OCT-2026 15:22:50.28 (1)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Sequential
+Shelved state:      Online 
+File attributes:    Allocation: 5, Extend: 0, Global buffer count: 0, No version limit, Contiguous best try
+Record format:      Fixed length 512 byte records
+Record attributes:  None
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+MAIN2.LIS;1                   File ID:  (38,1,0)              
+Size:           16/16         Owner:    [SYSTEM]
+Created:   19-OCT-2026 15:22:46.94
+Revised:   19-OCT-2026 15:22:46.95 (1)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Sequential
+Shelved state:      Online 
+File attributes:    Allocation: 16, Extend: 80, Global buffer count: 0, No version limit
+Record format:      Variable length, maximum 0 bytes, longest 132 bytes
+Record attributes:  Carriage return carriage control
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+MAIN2.MAP;1                   File ID:  (93,1,0)              
+Size:           19/19         Owner:    [SYSTEM]
+Created:   19-OCT-2026 15:22:50.24
+Revised:   19-OCT-2026 15:22:50.28 (1)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Sequential
+Shelved state:      Online 
+File attributes:    Allocation: 19, Extend: 0, Global buffer count: 0, No version limit
+Record format:      Variable length, maximum 0 bytes, longest 132 bytes
+Record attributes:  Carriage return carriage control
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+MAIN2.MAR;1                   File ID:  (17,1,0)              
+Size:            3/3          Owner:    [SYSTEM]
+Created:   19-OCT-2026 15:22:38.31
+Revised:   19-OCT-2026 15:22:38.31 (1)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Sequential
+Shelved state:      Online 
+File attributes:    Allocation: 3, Extend: 0, Global buffer count: 0, No version limit
+Record format:      Stream_LF, maximum 0 bytes, longest 0 bytes
+Record attributes:  None
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+MAIN2.OBJ;1                   File ID:  (37,1,0)              
+Size:            2/2          Owner:    [SYSTEM]
+Created:   19-OCT-2026 15:22:46.94
+Revised:   19-OCT-2026 15:22:46.95 (1)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Sequential
+Shelved state:      Online 
+File attributes:    Allocation: 2, Extend: 20, Global buffer count: 0, No version limit
+Record format:      Variable length, maximum 0 bytes, longest 286 bytes
+Record attributes:  None
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+MAIN3.ANI;1                   File ID:  (104,1,0)             
+Size:           13/13         Owner:    [SYSTEM]
+Created:   19-OCT-2026 15:22:50.51
+Revised:   19-OCT-2026 15:22:50.51 (1)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Sequential
+Shelved state:      Online 
+File attributes:    Allocation: 13, Extend: 0, Global buffer count: 0, No version limit
+Record format:      Variable length, maximum 0 bytes, longest 80 bytes
+Record attributes:  Carriage return carriage control
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+MAIN3.EXE;1                   File ID:  (103,1,0)             
+Size:            5/5          Owner:    [SYSTEM]
+Created:   19-OCT-2026 15:22:50.47
+Revised:   19-OCT-2026 15:22:50.50 (1)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Sequential
+Shelved state:      Online 
+File attributes:    Allocation: 5, Extend: 0, Global buffer count: 0, No version limit, Contiguous best try
+Record format:      Fixed length 512 byte records
+Record attributes:  None
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+MAIN3.LIS;1                   File ID:  (40,1,0)              
+Size:           15/15         Owner:    [SYSTEM]
+Created:   19-OCT-2026 15:22:46.97
+Revised:   19-OCT-2026 15:22:46.99 (1)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Sequential
+Shelved state:      Online 
+File attributes:    Allocation: 15, Extend: 80, Global buffer count: 0, No version limit
+Record format:      Variable length, maximum 0 bytes, longest 132 bytes
+Record attributes:  Carriage return carriage control
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+MAIN3.MAP;1                   File ID:  (102,1,0)             
+Size:           18/18         Owner:    [SYSTEM]
+Created:   19-OCT-2026 15:22:50.47
+Revised:   19-OCT-2026 15:22:50.50 (1)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Sequential
+Shelved state:      Online 
+File attributes:    Allocation: 18, Extend: 0, Global buffer count: 0, No version limit
+Record format:      Variable length, maximum 0 bytes, longest 132 bytes
+Record attributes:  Carriage return carriage control
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+MAIN3.MAR;1                   File ID:  (18,1,0)              
+Size:            3/3          Owner:    [SYSTEM]
+Created:   19-OCT-2026 15:22:38.31
+Revised:   19-OCT-2026 15:22:38.31 (1)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Sequential
+Shelved state:      Online 
+File attributes:    Allocation: 3, Extend: 0, Global buffer count: 0, No version limit
+Record format:      Stream_LF, maximum 0 bytes, longest 0 bytes
+Record attributes:  None
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+MAIN3.OBJ;1                   File ID:  (39,1,0)              
+Size:            2/2          Owner:    [SYSTEM]
+Created:   19-OCT-2026 15:22:46.97
+Revised:   19-OCT-2026 15:22:46.99 (1)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Sequential
+Shelved state:      Online 
+File attributes:    Allocation: 2, Extend: 20, Global buffer count: 0, No version limit
+Record format:      Variable length, maximum 0 bytes, longest 124 bytes
+Record attributes:  None
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+MAIN3P.ANI;1                  File ID:  (107,1,0)             
+Size:           12/12         Owner:    [SYSTEM]
+Created:   19-OCT-2026 15:22:50.58
+Revised:   19-OCT-2026 15:22:50.59 (1)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Sequential
+Shelved state:      Online 
+File attributes:    Allocation: 12, Extend: 0, Global buffer count: 0, No version limit
+Record format:      Variable length, maximum 0 bytes, longest 80 bytes
+Record attributes:  Carriage return carriage control
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+MAIN3P.EXE;1                  File ID:  (106,1,0)             
+Size:            5/5          Owner:    [SYSTEM]
+Created:   19-OCT-2026 15:22:50.56
+Revised:   19-OCT-2026 15:22:50.57 (1)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Sequential
+Shelved state:      Online 
+File attributes:    Allocation: 5, Extend: 0, Global buffer count: 0, No version limit, Contiguous best try
+Record format:      Fixed length 512 byte records
+Record attributes:  None
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+MAIN3P.MAP;1                  File ID:  (105,1,0)             
+Size:           18/18         Owner:    [SYSTEM]
+Created:   19-OCT-2026 15:22:50.54
+Revised:   19-OCT-2026 15:22:50.57 (1)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Sequential
+Shelved state:      Online 
+File attributes:    Allocation: 18, Extend: 0, Global buffer count: 0, No version limit
+Record format:      Variable length, maximum 0 bytes, longest 132 bytes
+Record attributes:  Carriage return carriage control
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+MAIN4.ANI;1                   File ID:  (113,1,0)             
+Size:           12/12         Owner:    [SYSTEM]
+Created:   19-OCT-2026 15:22:50.75
+Revised:   19-OCT-2026 15:22:50.76 (1)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Sequential
+Shelved state:      Online 
+File attributes:    Allocation: 12, Extend: 0, Global buffer count: 0, No version limit
+Record format:      Variable length, maximum 0 bytes, longest 80 bytes
+Record attributes:  Carriage return carriage control
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+MAIN4.EXE;1                   File ID:  (112,1,0)             
+Size:            5/5          Owner:    [SYSTEM]
+Created:   19-OCT-2026 15:22:50.74
+Revised:   19-OCT-2026 15:22:50.74 (1)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Sequential
+Shelved state:      Online 
+File attributes:    Allocation: 5, Extend: 0, Global buffer count: 0, No version limit, Contiguous best try
+Record format:      Fixed length 512 byte records
+Record attributes:  None
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+MAIN4.MAP;1                   File ID:  (111,1,0)             
+Size:           20/20         Owner:    [SYSTEM]
+Created:   19-OCT-2026 15:22:50.71
+Revised:   19-OCT-2026 15:22:50.74 (1)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Sequential
+Shelved state:      Online 
+File attributes:    Allocation: 20, Extend: 0, Global buffer count: 0, No version limit
+Record format:      Variable length, maximum 0 bytes, longest 132 bytes
+Record attributes:  Carriage return carriage control
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+MAIN6.ANI;1                   File ID:  (123,1,0)             
+Size:           12/12         Owner:    [SYSTEM]
+Created:   19-OCT-2026 15:22:51.04
+Revised:   19-OCT-2026 15:22:51.05 (1)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Sequential
+Shelved state:      Online 
+File attributes:    Allocation: 12, Extend: 0, Global buffer count: 0, No version limit
+Record format:      Variable length, maximum 0 bytes, longest 80 bytes
+Record attributes:  Carriage return carriage control
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+MAIN6.EXE;1                   File ID:  (122,1,0)             
+Size:            5/5          Owner:    [SYSTEM]
+Created:   19-OCT-2026 15:22:51.03
+Revised:   19-OCT-2026 15:22:51.03 (1)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Sequential
+Shelved state:      Online 
+File attributes:    Allocation: 5, Extend: 0, Global buffer count: 0, No version limit, Contiguous best try
+Record format:      Fixed length 512 byte records
+Record attributes:  None
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+MAIN6.LIS;1                   File ID:  (42,1,0)              
+Size:           13/13         Owner:    [SYSTEM]
+Created:   19-OCT-2026 15:22:47.01
+Revised:   19-OCT-2026 15:22:47.03 (1)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Sequential
+Shelved state:      Online 
+File attributes:    Allocation: 13, Extend: 80, Global buffer count: 0, No version limit
+Record format:      Variable length, maximum 0 bytes, longest 132 bytes
+Record attributes:  Carriage return carriage control
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+MAIN6.MAP;1                   File ID:  (121,1,0)             
+Size:           18/18         Owner:    [SYSTEM]
+Created:   19-OCT-2026 15:22:51.01
+Revised:   19-OCT-2026 15:22:51.03 (1)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Sequential
+Shelved state:      Online 
+File attributes:    Allocation: 18, Extend: 0, Global buffer count: 0, No version limit
+Record format:      Variable length, maximum 0 bytes, longest 132 bytes
+Record attributes:  Carriage return carriage control
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+MAIN6.MAR;1                   File ID:  (19,1,0)              
+Size:            2/2          Owner:    [SYSTEM]
+Created:   19-OCT-2026 15:22:38.31
+Revised:   19-OCT-2026 15:22:38.31 (1)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Sequential
+Shelved state:      Online 
+File attributes:    Allocation: 2, Extend: 0, Global buffer count: 0, No version limit
+Record format:      Stream_LF, maximum 0 bytes, longest 0 bytes
+Record attributes:  None
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+MAIN6.OBJ;1                   File ID:  (41,1,0)              
+Size:            2/2          Owner:    [SYSTEM]
+Created:   19-OCT-2026 15:22:47.01
+Revised:   19-OCT-2026 15:22:47.02 (1)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Sequential
+Shelved state:      Online 
+File attributes:    Allocation: 2, Extend: 20, Global buffer count: 0, No version limit
+Record format:      Variable length, maximum 0 bytes, longest 97 bytes
+Record attributes:  None
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+MYSHR.LIS;1                   File ID:  (128,1,0)             
+Size:            3/3          Owner:    [SYSTEM]
+Created:   19-OCT-2026 15:22:51.15
+Revised:   19-OCT-2026 15:22:51.15 (1)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Sequential
+Shelved state:      Online 
+File attributes:    Allocation: 3, Extend: 0, Global buffer count: 0, No version limit
+Record format:      Variable length, maximum 0 bytes, longest 98 bytes
+Record attributes:  Carriage return carriage control
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+MYSHR.OLB;1                   File ID:  (127,1,0)             
+Size:           60/100        Owner:    [SYSTEM]
+Created:   19-OCT-2026 15:22:51.14
+Revised:   19-OCT-2026 15:22:51.14 (1)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Sequential
+Shelved state:      Online 
+File attributes:    Allocation: 100, Extend: 0, Global buffer count: 0, No version limit, Contiguous best try
+Record format:      Fixed length 512 byte records
+Record attributes:  None
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+SECURITY.SYS;1                File ID:  (10,10,0)             
+Size:            1/6          Owner:    [SYSTEM]
+Created:   19-OCT-2026 15:22:38.31
+Revised:   19-OCT-2026 15:22:38.31 (1)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Sequential
+Shelved state:      Online 
+File attributes:    Allocation: 6, Extend: 0, Global buffer count: 0, Version limit: 1, Contiguous
+Record format:      Fixed length 512 byte records
+Record attributes:  None
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+SHR1.ANI;1                    File ID:  (52,1,0)              
+Size:           20/20         Owner:    [SYSTEM]
+Created:   19-OCT-2026 15:22:47.20
+Revised:   19-OCT-2026 15:22:47.21 (1)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Sequential
+Shelved state:      Online 
+File attributes:    Allocation: 20, Extend: 0, Global buffer count: 0, No version limit
+Record format:      Variable length, maximum 0 bytes, longest 80 bytes
+Record attributes:  Carriage return carriage control
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+SHR1.EXE;8                    File ID:  (81,1,0)              
+Size:           17/17         Owner:    [SYSTEM]
+Created:   19-OCT-2026 15:22:47.98
+Revised:   19-OCT-2026 15:22:47.98 (1)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Sequential
+Shelved state:      Online 
+File attributes:    Allocation: 17, Extend: 0, Global buffer count: 0, No version limit, Contiguous best try
+Record format:      Fixed length 512 byte records
+Record attributes:  None
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+SHR1.EXE;7                    File ID:  (78,1,0)              
+Size:           17/17         Owner:    [SYSTEM]
+Created:   19-OCT-2026 15:22:47.90
+Revised:   19-OCT-2026 15:22:47.90 (1)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Sequential
+Shelved state:      Online 
+File attributes:    Allocation: 17, Extend: 0, Global buffer count: 0, No version limit, Contiguous best try
+Record format:      Fixed length 512 byte records
+Record attributes:  None
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+SHR1.EXE;6                    File ID:  (71,1,0)              
+Size:           17/17         Owner:    [SYSTEM]
+Created:   19-OCT-2026 15:22:47.71
+Revised:   19-OCT-2026 15:22:47.71 (1)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Sequential
+Shelved state:      Online 
+File attributes:    Allocation: 17, Extend: 0, Global buffer count: 0, No version limit, Contiguous best try
+Record format:      Fixed length 512 byte records
+Record attributes:  None
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+SHR1.EXE;5                    File ID:  (68,1,0)              
+Size:           17/17         Owner:    [SYSTEM]
+Created:   19-OCT-2026 15:22:47.63
+Revised:   19-OCT-2026 15:22:47.63 (1)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Sequential
+Shelved state:      Online 
+File attributes:    Allocation: 17, Extend: 0, Global buffer count: 0, No version limit, Contiguous best try
+Record format:      Fixed length 512 byte records
+Record attributes:  None
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+SHR1.EXE;4                    File ID:  (65,1,0)              
+Size:           17/17         Owner:    [SYSTEM]
+Created:   19-OCT-2026 15:22:47.55
+Revised:   19-OCT-2026 15:22:47.56 (1)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Sequential
+Shelved state:      Online 
+File attributes:    Allocation: 17, Extend: 0, Global buffer count: 0, No version limit, Contiguous best try
+Record format:      Fixed length 512 byte records
+Record attributes:  None
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+SHR1.EXE;3                    File ID:  (62,1,0)              
+Size:           17/17         Owner:    [SYSTEM]
+Created:   19-OCT-2026 15:22:47.47
+Revised:   19-OCT-2026 15:22:47.48 (1)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Sequential
+Shelved state:      Online 
+File attributes:    Allocation: 17, Extend: 0, Global buffer count: 0, No version limit, Contiguous best try
+Record format:      Fixed length 512 byte records
+Record attributes:  None
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+SHR1.EXE;2                    File ID:  (59,1,0)              
+Size:           17/17         Owner:    [SYSTEM]
+Created:   19-OCT-2026 15:22:47.38
+Revised:   19-OCT-2026 15:22:47.39 (1)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Sequential
+Shelved state:      Online 
+File attributes:    Allocation: 17, Extend: 0, Global buffer count: 0, No version limit, Contiguous best try
+Record format:      Fixed length 512 byte records
+Record attributes:  None
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+SHR1.EXE;1                    File ID:  (50,1,0)              
+Size:           17/17         Owner:    [SYSTEM]
+Created:   19-OCT-2026 15:22:47.16
+Revised:   19-OCT-2026 15:22:47.19 (1)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Sequential
+Shelved state:      Online 
+File attributes:    Allocation: 17, Extend: 0, Global buffer count: 0, No version limit, Contiguous best try
+Record format:      Fixed length 512 byte records
+Record attributes:  None
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+SHR1.LIS;1                    File ID:  (28,1,0)              
+Size:           19/19         Owner:    [SYSTEM]
+Created:   19-OCT-2026 15:22:46.76
+Revised:   19-OCT-2026 15:22:46.78 (1)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Sequential
+Shelved state:      Online 
+File attributes:    Allocation: 19, Extend: 80, Global buffer count: 0, No version limit
+Record format:      Variable length, maximum 0 bytes, longest 132 bytes
+Record attributes:  Carriage return carriage control
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+SHR1.MAP;1                    File ID:  (49,1,0)              
+Size:           21/21         Owner:    [SYSTEM]
+Created:   19-OCT-2026 15:22:47.16
+Revised:   19-OCT-2026 15:22:47.19 (1)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Sequential
+Shelved state:      Online 
+File attributes:    Allocation: 21, Extend: 0, Global buffer count: 0, No version limit
+Record format:      Variable length, maximum 0 bytes, longest 132 bytes
+Record attributes:  Carriage return carriage control
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+SHR1.MAR;1                    File ID:  (12,1,0)              
+Size:            3/3          Owner:    [SYSTEM]
+Created:   19-OCT-2026 15:22:38.31
+Revised:   19-OCT-2026 15:22:38.31 (1)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Sequential
+Shelved state:      Online 
+File attributes:    Allocation: 3, Extend: 0, Global buffer count: 0, No version limit
+Record format:      Stream_LF, maximum 0 bytes, longest 0 bytes
+Record attributes:  None
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+SHR1.OBJ;1                    File ID:  (27,1,0)              
+Size:            2/2          Owner:    [SYSTEM]
+Created:   19-OCT-2026 15:22:46.76
+Revised:   19-OCT-2026 15:22:46.78 (1)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Sequential
+Shelved state:      Online 
+File attributes:    Allocation: 2, Extend: 20, Global buffer count: 0, No version limit
+Record format:      Variable length, maximum 0 bytes, longest 162 bytes
+Record attributes:  None
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+SHR1.OPT;1                    File ID:  (22,1,0)              
+Size:            1/1          Owner:    [SYSTEM]
+Created:   19-OCT-2026 15:22:38.31
+Revised:   19-OCT-2026 15:22:38.31 (1)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Sequential
+Shelved state:      Online 
+File attributes:    Allocation: 1, Extend: 0, Global buffer count: 0, No version limit
+Record format:      Stream_LF, maximum 0 bytes, longest 0 bytes
+Record attributes:  None
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+SHR1.STB;1                    File ID:  (51,1,0)              
+Size:            1/1          Owner:    [SYSTEM]
+Created:   19-OCT-2026 15:22:47.18
+Revised:   19-OCT-2026 15:22:47.19 (1)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Sequential
+Shelved state:      Online 
+File attributes:    Allocation: 1, Extend: 0, Global buffer count: 0, No version limit
+Record format:      Variable length, maximum 512 bytes, longest 164 bytes
+Record attributes:  None
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+SHR1A.ANI;1                   File ID:  (85,1,0)              
+Size:           18/18         Owner:    [SYSTEM]
+Created:   19-OCT-2026 15:22:48.04
+Revised:   19-OCT-2026 15:22:48.05 (1)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Sequential
+Shelved state:      Online 
+File attributes:    Allocation: 18, Extend: 0, Global buffer count: 0, No version limit
+Record format:      Variable length, maximum 0 bytes, longest 80 bytes
+Record attributes:  Carriage return carriage control
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+SHR1A.EXE;2                   File ID:  (89,1,0)              
+Size:           14/14         Owner:    [SYSTEM]
+Created:   19-OCT-2026 15:22:50.13
+Revised:   19-OCT-2026 15:22:50.13 (1)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Sequential
+Shelved state:      Online 
+File attributes:    Allocation: 14, Extend: 0, Global buffer count: 0, No version limit, Contiguous best try
+Record format:      Fixed length 512 byte records
+Record attributes:  None
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+SHR1A.EXE;1                   File ID:  (84,1,0)              
+Size:           14/14         Owner:    [SYSTEM]
+Created:   19-OCT-2026 15:22:48.02
+Revised:   19-OCT-2026 15:22:48.03 (1)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Sequential
+Shelved state:      Online 
+File attributes:    Allocation: 14, Extend: 0, Global buffer count: 0, No version limit, Contiguous best try
+Record format:      Fixed length 512 byte records
+Record attributes:  None
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+SHR1A.MAP;1                   File ID:  (83,1,0)              
+Size:           18/18         Owner:    [SYSTEM]
+Created:   19-OCT-2026 15:22:48.02
+Revised:   19-OCT-2026 15:22:48.03 (1)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Sequential
+Shelved state:      Online 
+File attributes:    Allocation: 18, Extend: 0, Global buffer count: 0, No version limit
+Record format:      Variable length, maximum 0 bytes, longest 132 bytes
+Record attributes:  Carriage return carriage control
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+SHR1_1.ANI;1                  File ID:  (60,1,0)              
+Size:           20/20         Owner:    [SYSTEM]
+Created:   19-OCT-2026 15:22:47.40
+Revised:   19-OCT-2026 15:22:47.41 (1)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Sequential
+Shelved state:      Online 
+File attributes:    Allocation: 20, Extend: 0, Global buffer count: 0, No version limit
+Record format:      Variable length, maximum 0 bytes, longest 80 bytes
+Record attributes:  Carriage return carriage control
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+SHR1_2.ANI;1                  File ID:  (63,1,0)              
+Size:           20/20         Owner:    [SYSTEM]
+Created:   19-OCT-2026 15:22:47.49
+Revised:   19-OCT-2026 15:22:47.49 (1)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Sequential
+Shelved state:      Online 
+File attributes:    Allocation: 20, Extend: 0, Global buffer count: 0, No version limit
+Record format:      Variable length, maximum 0 bytes, longest 80 bytes
+Record attributes:  Carriage return carriage control
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+SHR1_3.ANI;1                  File ID:  (66,1,0)              
+Size:           20/20         Owner:    [SYSTEM]
+Created:   19-OCT-2026 15:22:47.57
+Revised:   19-OCT-2026 15:22:47.57 (1)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Sequential
+Shelved state:      Online 
+File attributes:    Allocation: 20, Extend: 0, Global buffer count: 0, No version limit
+Record format:      Variable length, maximum 0 bytes, longest 80 bytes
+Record attributes:  Carriage return carriage control
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+SHR1_4.ANI;1                  File ID:  (69,1,0)              
+Size:           20/20         Owner:    [SYSTEM]
+Created:   19-OCT-2026 15:22:47.65
+Revised:   19-OCT-2026 15:22:47.65 (1)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Sequential
+Shelved state:      Online 
+File attributes:    Allocation: 20, Extend: 0, Global buffer count: 0, No version limit
+Record format:      Variable length, maximum 0 bytes, longest 80 bytes
+Record attributes:  Carriage return carriage control
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+SHR1_5.ANI;1                  File ID:  (72,1,0)              
+Size:           20/20         Owner:    [SYSTEM]
+Created:   19-OCT-2026 15:22:47.73
+Revised:   19-OCT-2026 15:22:47.73 (1)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Sequential
+Shelved state:      Online 
+File attributes:    Allocation: 20, Extend: 0, Global buffer count: 0, No version limit
+Record format:      Variable length, maximum 0 bytes, longest 80 bytes
+Record attributes:  Carriage return carriage control
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+SHR1_6.ANI;1                  File ID:  (79,1,0)              
+Size:           20/20         Owner:    [SYSTEM]
+Created:   19-OCT-2026 15:22:47.91
+Revised:   19-OCT-2026 15:22:47.92 (1)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Sequential
+Shelved state:      Online 
+File attributes:    Allocation: 20, Extend: 0, Global buffer count: 0, No version limit
+Record format:      Variable length, maximum 0 bytes, longest 80 bytes
+Record attributes:  Carriage return carriage control
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+SHR1_7.ANI;1                  File ID:  (82,1,0)              
+Size:           20/20         Owner:    [SYSTEM]
+Created:   19-OCT-2026 15:22:47.99
+Revised:   19-OCT-2026 15:22:48.00 (1)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Sequential
+Shelved state:      Online 
+File attributes:    Allocation: 20, Extend: 0, Global buffer count: 0, No version limit
+Record format:      Variable length, maximum 0 bytes, longest 80 bytes
+Record attributes:  Carriage return carriage control
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+SHR2.ANI;1                    File ID:  (92,1,0)              
+Size:           16/16         Owner:    [SYSTEM]
+Created:   19-OCT-2026 15:22:50.21
+Revised:   19-OCT-2026 15:22:50.21 (1)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Sequential
+Shelved state:      Online 
+File attributes:    Allocation: 16, Extend: 0, Global buffer count: 0, No version limit
+Record format:      Variable length, maximum 0 bytes, longest 80 bytes
+Record attributes:  Carriage return carriage control
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+SHR2.EXE;1                    File ID:  (91,1,0)              
+Size:            7/7          Owner:    [SYSTEM]
+Created:   19-OCT-2026 15:22:50.18
+Revised:   19-OCT-2026 15:22:50.19 (1)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Sequential
+Shelved state:      Online 
+File attributes:    Allocation: 7, Extend: 0, Global buffer count: 0, No version limit, Contiguous best try
+Record format:      Fixed length 512 byte records
+Record attributes:  None
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+SHR2.LIS;1                    File ID:  (30,1,0)              
+Size:           12/12         Owner:    [SYSTEM]
+Created:   19-OCT-2026 15:22:46.80
+Revised:   19-OCT-2026 15:22:46.81 (1)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Sequential
+Shelved state:      Online 
+File attributes:    Allocation: 12, Extend: 80, Global buffer count: 0, No version limit
+Record format:      Variable length, maximum 0 bytes, longest 132 bytes
+Record attributes:  Carriage return carriage control
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+SHR2.MAP;1                    File ID:  (90,1,0)              
+Size:           19/19         Owner:    [SYSTEM]
+Created:   19-OCT-2026 15:22:50.16
+Revised:   19-OCT-2026 15:22:50.20 (1)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Sequential
+Shelved state:      Online 
+File attributes:    Allocation: 19, Extend: 0, Global buffer count: 0, No version limit
+Record format:      Variable length, maximum 0 bytes, longest 132 bytes
+Record attributes:  Carriage return carriage control
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+SHR2.MAR;1                    File ID:  (13,1,0)              
+Size:            2/2          Owner:    [SYSTEM]
+Created:   19-OCT-2026 15:22:38.31
+Revised:   19-OCT-2026 15:22:38.31 (1)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Sequential
+Shelved state:      Online 
+File attributes:    Allocation: 2, Extend: 0, Global buffer count: 0, No version limit
+Record format:      Stream_LF, maximum 0 bytes, longest 0 bytes
+Record attributes:  None
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+SHR2.OBJ;1                    File ID:  (29,1,0)              
+Size:            2/2          Owner:    [SYSTEM]
+Created:   19-OCT-2026 15:22:46.80
+Revised:   19-OCT-2026 15:22:46.81 (1)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Sequential
+Shelved state:      Online 
+File attributes:    Allocation: 2, Extend: 20, Global buffer count: 0, No version limit
+Record format:      Variable length, maximum 0 bytes, longest 67 bytes
+Record attributes:  None
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+SHR3.ANI;1                    File ID:  (98,1,0)              
+Size:           10/10         Owner:    [SYSTEM]
+Created:   19-OCT-2026 15:22:50.37
+Revised:   19-OCT-2026 15:22:50.37 (1)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Sequential
+Shelved state:      Online 
+File attributes:    Allocation: 10, Extend: 0, Global buffer count: 0, No version limit
+Record format:      Variable length, maximum 0 bytes, longest 80 bytes
+Record attributes:  Carriage return carriage control
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+SHR3.EXE;1                    File ID:  (97,1,0)              
+Size:            5/5          Owner:    [SYSTEM]
+Created:   19-OCT-2026 15:22:50.35
+Revised:   19-OCT-2026 15:22:50.35 (1)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Sequential
+Shelved state:      Online 
+File attributes:    Allocation: 5, Extend: 0, Global buffer count: 0, No version limit, Contiguous best try
+Record format:      Fixed length 512 byte records
+Record attributes:  None
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+SHR3.LIS;1                    File ID:  (32,1,0)              
+Size:           10/10         Owner:    [SYSTEM]
+Created:   19-OCT-2026 15:22:46.83
+Revised:   19-OCT-2026 15:22:46.84 (1)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Sequential
+Shelved state:      Online 
+File attributes:    Allocation: 10, Extend: 80, Global buffer count: 0, No version limit
+Record format:      Variable length, maximum 0 bytes, longest 132 bytes
+Record attributes:  Carriage return carriage control
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+SHR3.MAP;1                    File ID:  (96,1,0)              
+Size:           15/15         Owner:    [SYSTEM]
+Created:   19-OCT-2026 15:22:50.33
+Revised:   19-OCT-2026 15:22:50.35 (1)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Sequential
+Shelved state:      Online 
+File attributes:    Allocation: 15, Extend: 0, Global buffer count: 0, No version limit
+Record format:      Variable length, maximum 0 bytes, longest 132 bytes
+Record attributes:  Carriage return carriage control
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+SHR3.MAR;1                    File ID:  (14,1,0)              
+Size:            1/1          Owner:    [SYSTEM]
+Created:   19-OCT-2026 15:22:38.31
+Revised:   19-OCT-2026 15:22:38.31 (1)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Sequential
+Shelved state:      Online 
+File attributes:    Allocation: 1, Extend: 0, Global buffer count: 0, No version limit
+Record format:      Stream_LF, maximum 0 bytes, longest 0 bytes
+Record attributes:  None
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+SHR3.OBJ;1                    File ID:  (31,1,0)              
+Size:            1/1          Owner:    [SYSTEM]
+Created:   19-OCT-2026 15:22:46.83
+Revised:   19-OCT-2026 15:22:46.84 (1)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Sequential
+Shelved state:      Online 
+File attributes:    Allocation: 1, Extend: 20, Global buffer count: 0, No version limit
+Record format:      Variable length, maximum 0 bytes, longest 49 bytes
+Record attributes:  None
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+SHR3P.ANI;1                   File ID:  (101,1,0)             
+Size:           12/12         Owner:    [SYSTEM]
+Created:   19-OCT-2026 15:22:50.43
+Revised:   19-OCT-2026 15:22:50.44 (1)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Sequential
+Shelved state:      Online 
+File attributes:    Allocation: 12, Extend: 0, Global buffer count: 0, No version limit
+Record format:      Variable length, maximum 0 bytes, longest 80 bytes
+Record attributes:  Carriage return carriage control
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+SHR3P.EXE;1                   File ID:  (100,1,0)             
+Size:            7/7          Owner:    [SYSTEM]
+Created:   19-OCT-2026 15:22:50.41
+Revised:   19-OCT-2026 15:22:50.42 (1)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Sequential
+Shelved state:      Online 
+File attributes:    Allocation: 7, Extend: 0, Global buffer count: 0, No version limit, Contiguous best try
+Record format:      Fixed length 512 byte records
+Record attributes:  None
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+SHR3P.MAP;1                   File ID:  (99,1,0)              
+Size:           16/16         Owner:    [SYSTEM]
+Created:   19-OCT-2026 15:22:50.40
+Revised:   19-OCT-2026 15:22:50.42 (1)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Sequential
+Shelved state:      Online 
+File attributes:    Allocation: 16, Extend: 0, Global buffer count: 0, No version limit
+Record format:      Variable length, maximum 0 bytes, longest 132 bytes
+Record attributes:  Carriage return carriage control
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+SHR4.ANI;1                    File ID:  (110,1,0)             
+Size:           20/20         Owner:    [SYSTEM]
+Created:   19-OCT-2026 15:22:50.68
+Revised:   19-OCT-2026 15:22:50.68 (1)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Sequential
+Shelved state:      Online 
+File attributes:    Allocation: 20, Extend: 0, Global buffer count: 0, No version limit
+Record format:      Variable length, maximum 0 bytes, longest 80 bytes
+Record attributes:  Carriage return carriage control
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+SHR4.EXE;2                    File ID:  (114,1,0)             
+Size:           17/17         Owner:    [SYSTEM]
+Created:   19-OCT-2026 15:22:50.80
+Revised:   19-OCT-2026 15:22:50.82 (1)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Sequential
+Shelved state:      Online 
+File attributes:    Allocation: 17, Extend: 0, Global buffer count: 0, No version limit, Contiguous best try
+Record format:      Fixed length 512 byte records
+Record attributes:  None
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+SHR4.EXE;1                    File ID:  (109,1,0)             
+Size:           17/17         Owner:    [SYSTEM]
+Created:   19-OCT-2026 15:22:50.65
+Revised:   19-OCT-2026 15:22:50.66 (1)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Sequential
+Shelved state:      Online 
+File attributes:    Allocation: 17, Extend: 0, Global buffer count: 0, No version limit, Contiguous best try
+Record format:      Fixed length 512 byte records
+Record attributes:  None
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+SHR4.MAP;1                    File ID:  (108,1,0)             
+Size:           21/21         Owner:    [SYSTEM]
+Created:   19-OCT-2026 15:22:50.64
+Revised:   19-OCT-2026 15:22:50.66 (1)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Sequential
+Shelved state:      Online 
+File attributes:    Allocation: 21, Extend: 0, Global buffer count: 0, No version limit
+Record format:      Variable length, maximum 0 bytes, longest 132 bytes
+Record attributes:  Carriage return carriage control
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+SHR5.ANI;1                    File ID:  (117,1,0)             
+Size:           19/19         Owner:    [SYSTEM]
+Created:   19-OCT-2026 15:22:50.90
+Revised:   19-OCT-2026 15:22:50.90 (1)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Sequential
+Shelved state:      Online 
+File attributes:    Allocation: 19, Extend: 0, Global buffer count: 0, No version limit
+Record format:      Variable length, maximum 0 bytes, longest 80 bytes
+Record attributes:  Carriage return carriage control
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+SHR5.EXE;1                    File ID:  (116,1,0)             
+Size:           17/17         Owner:    [SYSTEM]
+Created:   19-OCT-2026 15:22:50.87
+Revised:   19-OCT-2026 15:22:50.88 (1)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Sequential
+Shelved state:      Online 
+File attributes:    Allocation: 17, Extend: 0, Global buffer count: 0, No version limit, Contiguous best try
+Record format:      Fixed length 512 byte records
+Record attributes:  None
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+SHR5.MAP;1                    File ID:  (115,1,0)             
+Size:           20/20         Owner:    [SYSTEM]
+Created:   19-OCT-2026 15:22:50.86
+Revised:   19-OCT-2026 15:22:50.89 (1)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Sequential
+Shelved state:      Online 
+File attributes:    Allocation: 20, Extend: 0, Global buffer count: 0, No version limit
+Record format:      Variable length, maximum 0 bytes, longest 132 bytes
+Record attributes:  Carriage return carriage control
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+SHR6.ANI;1                    File ID:  (120,1,0)             
+Size:           11/11         Owner:    [SYSTEM]
+Created:   19-OCT-2026 15:22:50.97
+Revised:   19-OCT-2026 15:22:50.97 (1)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Sequential
+Shelved state:      Online 
+File attributes:    Allocation: 11, Extend: 0, Global buffer count: 0, No version limit
+Record format:      Variable length, maximum 0 bytes, longest 80 bytes
+Record attributes:  Carriage return carriage control
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+SHR6.EXE;1                    File ID:  (119,1,0)             
+Size:            7/7          Owner:    [SYSTEM]
+Created:   19-OCT-2026 15:22:50.95
+Revised:   19-OCT-2026 15:22:50.95 (1)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Sequential
+Shelved state:      Online 
+File attributes:    Allocation: 7, Extend: 0, Global buffer count: 0, No version limit, Contiguous best try
+Record format:      Fixed length 512 byte records
+Record attributes:  None
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+SHR6.LIS;1                    File ID:  (34,1,0)              
+Size:           10/10         Owner:    [SYSTEM]
+Created:   19-OCT-2026 15:22:46.86
+Revised:   19-OCT-2026 15:22:46.88 (1)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Sequential
+Shelved state:      Online 
+File attributes:    Allocation: 10, Extend: 80, Global buffer count: 0, No version limit
+Record format:      Variable length, maximum 0 bytes, longest 132 bytes
+Record attributes:  Carriage return carriage control
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+SHR6.MAP;1                    File ID:  (118,1,0)             
+Size:           16/16         Owner:    [SYSTEM]
+Created:   19-OCT-2026 15:22:50.93
+Revised:   19-OCT-2026 15:22:50.96 (1)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Sequential
+Shelved state:      Online 
+File attributes:    Allocation: 16, Extend: 0, Global buffer count: 0, No version limit
+Record format:      Variable length, maximum 0 bytes, longest 132 bytes
+Record attributes:  Carriage return carriage control
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+SHR6.MAR;1                    File ID:  (15,1,0)              
+Size:            1/1          Owner:    [SYSTEM]
+Created:   19-OCT-2026 15:22:38.31
+Revised:   19-OCT-2026 15:22:38.31 (1)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Sequential
+Shelved state:      Online 
+File attributes:    Allocation: 1, Extend: 0, Global buffer count: 0, No version limit
+Record format:      Stream_LF, maximum 0 bytes, longest 0 bytes
+Record attributes:  None
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+SHR6.OBJ;1                    File ID:  (33,1,0)              
+Size:            1/1          Owner:    [SYSTEM]
+Created:   19-OCT-2026 15:22:46.86
+Revised:   19-OCT-2026 15:22:46.88 (1)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Sequential
+Shelved state:      Online 
+File attributes:    Allocation: 1, Extend: 20, Global buffer count: 0, No version limit
+Record format:      Variable length, maximum 0 bytes, longest 49 bytes
+Record attributes:  None
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+SHRDIR.DIR;1                  File ID:  (56,1,0)              
+Size:            1/1          Owner:    [SYSTEM]
+Created:   19-OCT-2026 15:22:47.31
+Revised:   19-OCT-2026 15:22:47.31 (0)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Sequential
+Shelved state:      Online 
+File attributes:    Allocation: 1, Extend: 0, Global buffer count: 0, No default version limit, Contiguous, Directory file
+Record format:      Variable length, maximum 512 bytes, longest 512 bytes
+Record attributes:  No carriage control, Non-spanned
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWE, Owner:RWE, Group:RE, World:E
+Access Cntrl List:  None
+
+VOLSET.SYS;1                  File ID:  (6,6,0)               
+Size:            0/0          Owner:    [SYSTEM]
+Created:   19-OCT-2026 15:22:38.31
+Revised:   19-OCT-2026 15:22:38.31 (1)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Sequential
+Shelved state:      Online 
+File attributes:    Allocation: 0, Extend: 0, Global buffer count: 0, Version limit: 1
+Record format:      Fixed length 64 byte records
+Record attributes:  None
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+XFR1.ANL;1                    File ID:  (47,1,0)              
+Size:           26/26         Owner:    [SYSTEM]
+Created:   19-OCT-2026 15:22:47.11
+Revised:   19-OCT-2026 15:22:47.12 (1)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Sequential
+Shelved state:      Online 
+File attributes:    Allocation: 26, Extend: 0, Global buffer count: 0, No version limit
+Record format:      Variable length, maximum 0 bytes, longest 80 bytes
+Record attributes:  Carriage return carriage control
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+XFR1.LIS;1                    File ID:  (26,1,0)              
+Size:           13/13         Owner:    [SYSTEM]
+Created:   19-OCT-2026 15:22:46.73
+Revised:   19-OCT-2026 15:22:46.74 (1)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Sequential
+Shelved state:      Online 
+File attributes:    Allocation: 13, Extend: 80, Global buffer count: 0, No version limit
+Record format:      Variable length, maximum 0 bytes, longest 132 bytes
+Record attributes:  Carriage return carriage control
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+XFR1.MAR;1                    File ID:  (11,1,0)              
+Size:            3/3          Owner:    [SYSTEM]
+Created:   19-OCT-2026 15:22:38.31
+Revised:   19-OCT-2026 15:22:38.31 (1)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Sequential
+Shelved state:      Online 
+File attributes:    Allocation: 3, Extend: 0, Global buffer count: 0, No version limit
+Record format:      Stream_LF, maximum 0 bytes, longest 0 bytes
+Record attributes:  None
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+XFR1.OBJ;1                    File ID:  (25,1,0)              
+Size:            2/2          Owner:    [SYSTEM]
+Created:   19-OCT-2026 15:22:46.73
+Revised:   19-OCT-2026 15:22:46.74 (1)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Sequential
+Shelved state:      Online 
+File attributes:    Allocation: 2, Extend: 20, Global buffer count: 0, No version limit
+Record format:      Variable length, maximum 0 bytes, longest 214 bytes
+Record attributes:  None
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+Total of 139 files, 2302/2459 blocks.

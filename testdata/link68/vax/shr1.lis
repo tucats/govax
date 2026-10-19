@@ -1,0 +1,142 @@
+SHR1                            - the probe's shareable image (Phase 68  19-OCT-2026 15:22:46  VAX MACRO V5.4-3            Page   1
+V1.0                                                                     19-OCT-2026 15:22:38  DUA1:[000000]SHR1.MAR;1           (1)
+
+                                     0000     1 	.TITLE	SHR1 - the probe's shareable image (Phase 68 probe)
+                                     0000     2 	.IDENT	/V1.0/
+                                     0000     3 ;
+                                     0000     4 ; The routines XFR1's transfer vector leads to, and their data:
+                                     0000     5 ;
+                                     0000     6 ;   SHR1_BASE	returns SHR1_ORIGIN's address (the first byte of
+                                     0000     7 ;		SHR1_CODE), from which MAIN1 measures SHR1's addresses
+                                     0000     8 ;   SHR1_ADD	returns its two arguments' sum
+                                     0000     9 ;   SHR1_JSB	R0 = R0*2+1 (a JSB entry)
+                                     0000    10 ;   SHR1_SHOW	writes its argument with LIB$PUT_OUTPUT, then whether
+                                     0000    11 ;		the .ADDRESS of its own table (a self-relative fixup)
+                                     0000    12 ;		holds the table's address
+                                     0000    13 ;
+                                     0000    14 ; Each counts its calls in SHR1_COUNT, universal data. SHR1_TABLE is
+                                     0000    15 ; read-only, shared, universal data. SHR1_ZERO is never stored in.
+                                     0000    16 ;
+                                 00000000    17 	.PSECT	SHR1_RO,NOWRT,NOEXE,PIC,SHR,LONG
+                                     0000    18 SHR1_TABLE::
+         33333333 22222222 11111111  0000    19 	.LONG	^X11111111,^X22222222,^X33333333
+                                     000C    20 
+                                 00000000    21 	.PSECT	SHR1_DATA,WRT,NOEXE,PIC,NOSHR,LONG
+                                     0000    22 SHR1_COUNT::
+                           00000000  0000    23 	.LONG	0
+                                     0004    24 SHR1_PTR:
+                           00000000' 0004    25 	.ADDRESS SHR1_TABLE		; .ADDRESS of the image's own data
+20 3A 31 52 48 53 00000010'010E0000' 0008    26 GOOD:	.ASCID	/SHR1: the .ADDRESS of its own table is right/
+53 53 45 52 44 44 41 2E 20 65 68 74  0016       
+20 6E 77 6F 20 73 74 69 20 66 6F 20  0022       
+67 69 72 20 73 69 20 65 6C 62 61 74  002E       
+                              74 68  003A       
+20 3A 31 52 48 53 00000044'010E0000' 003C    27 BAD:	.ASCID	/SHR1: the .ADDRESS of its own table is WRONG/
+53 53 45 52 44 44 41 2E 20 65 68 74  004A       
+20 6E 77 6F 20 73 74 69 20 66 6F 20  0056       
+4F 52 57 20 73 69 20 65 6C 62 61 74  0062       
+                              47 4E  006E       
+                                     0070    28 
+                                 00000000    29 	.PSECT	SHR1_ZERO,WRT,NOEXE,PIC,NOSHR,PAGE
+                           00001000  0000    30 	.BLKB	4096			; 8 pages nothing is stored in
+                                     1000    31 
+                                 00000000    32 	.PSECT	SHR1_CODE,NOWRT,EXE,PIC,SHR,LONG
+                                     0000    33 SHR1_ORIGIN::
+                               0000  0000    34 	.ENTRY	SHR1_BASE,^M<>
+                    50   FB AF   9E  0002    35 	MOVAB	SHR1_ORIGIN,R0
+                                 04  0006    36 	RET
+                                     0007    37 
+                               0000  0007    38 	.ENTRY	SHR1_ADD,^M<>
+            50   08 AC   04 AC   C1  0009    39 	ADDL3	4(AP),8(AP),R0
+                   00000000'EF   D6  000F    40 	INCL	SHR1_COUNT
+                                 04  0015    41 	RET
+                                     0016    42 
+                                     0016    43 SHR1_JSB::
+                       50   02   C4  0016    44 	MULL2	#2,R0
+                            50   D6  0019    45 	INCL	R0
+                   00000000'EF   D6  001B    46 	INCL	SHR1_COUNT
+                                 05  0021    47 	RSB
+                                     0022    48 
+                               0004  0022    49 	.ENTRY	SHR1_SHOW,^M<R2>
+SHR1                            - the probe's shareable image (Phase 68  19-OCT-2026 15:22:46  VAX MACRO V5.4-3            Page   2
+V1.0                                                                     19-OCT-2026 15:22:38  DUA1:[000000]SHR1.MAR;1           (1)
+
+                   00000000'EF   D6  0024    50 	INCL	SHR1_COUNT
+                         04 AC   DD  002A    51 	PUSHL	4(AP)
+              00000000'GF   01   FB  002D    52 	CALLS	#1,G^LIB$PUT_OUTPUT
+              52   00000000'EF   9E  0034    53 	MOVAB	SHR1_TABLE,R2
+              00000004'EF   52   D1  003B    54 	CMPL	R2,SHR1_PTR
+                            08   13  0042    55 	BEQL	10$
+                   0000003C'EF   7F  0044    56 	PUSHAQ	BAD
+                            06   11  004A    57 	BRB	20$
+                   00000008'EF   7F  004C    58 10$:	PUSHAQ	GOOD
+              00000000'GF   01   FB  0052    59 20$:	CALLS	#1,G^LIB$PUT_OUTPUT
+                       50   01   D0  0059    60 	MOVL	#1,R0
+                                 04  005C    61 	RET
+                                     005D    62 
+                                     005D    63 	.END
+SHR1                            - the probe's shareable image (Phase 68  19-OCT-2026 15:22:46  VAX MACRO V5.4-3            Page   3
+Symbol table                                                             19-OCT-2026 15:22:38  DUA1:[000000]SHR1.MAR;1           (1)
+
+BAD              0000003C R     02      
+GOOD             00000008 R     02      
+LIB$PUT_OUTPUT   ********   X   04      
+SHR1_ADD         00000007 RG    04      
+SHR1_BASE        00000000 RG    04      
+SHR1_COUNT       00000000 RG    02      
+SHR1_JSB         00000016 RG    04      
+SHR1_ORIGIN      00000000 RG    04      
+SHR1_PTR         00000004 R     02      
+SHR1_SHOW        00000022 RG    04      
+SHR1_TABLE       00000000 RG    01      
+
+                                                +----------------+
+                                                ! Psect synopsis !
+                                                +----------------+
+
+PSECT name                      Allocation          PSECT No.  Attributes     
+----------                      ----------          ---------  ----------     
+.  ABS  .                       00000000  (    0.)  00 (  0.)  NOPIC   USR   CON   ABS   LCL NOSHR NOEXE NORD  NOWRT NOVEC BYTE  
+SHR1_RO                         0000000C  (   12.)  01 (  1.)    PIC   USR   CON   REL   LCL   SHR NOEXE   RD  NOWRT NOVEC LONG  
+SHR1_DATA                       00000070  (  112.)  02 (  2.)    PIC   USR   CON   REL   LCL NOSHR NOEXE   RD    WRT NOVEC LONG  
+SHR1_ZERO                       00001000  ( 4096.)  03 (  3.)    PIC   USR   CON   REL   LCL NOSHR NOEXE   RD    WRT NOVEC PAGE  
+SHR1_CODE                       0000005D  (   93.)  04 (  4.)    PIC   USR   CON   REL   LCL   SHR   EXE   RD  NOWRT NOVEC LONG  
+
+                                             +------------------------+
+                                             ! Performance indicators !
+                                             +------------------------+
+
+Phase                    Page faults    CPU Time       Elapsed Time   
+-----                    -----------    --------       ------------   
+Initialization                  477     00:00:00.00    00:00:00.01
+Command processing              923     00:00:00.00    00:00:00.00
+Pass 1                          193     00:00:00.00    00:00:00.00
+Symbol table sort                 1     00:00:00.00    00:00:00.00
+Pass 2                           44     00:00:00.00    00:00:00.01
+Symbol table output               2     00:00:00.00    00:00:00.00
+Psect synopsis output             4     00:00:00.00    00:00:00.00
+Cross-reference output            0     00:00:00.00    00:00:00.00
+Assembler run totals           1669     00:00:00.00    00:00:00.03
+
+The working set limit was 512 pages.
+1446 bytes (3 pages) of virtual memory were used to buffer the intermediate code.
+There were 10 pages of symbol table space allocated to hold 11 non-local and 2 local symbols.
+63 source lines were read in Pass 1, producing 27 object records in Pass 2.
+0 pages of virtual memory were used to define 0 macros.
+
+                                            +--------------------------+
+                                            ! Macro library statistics !
+                                            +--------------------------+
+
+Macro library name                           Macros defined      
+------------------                           --------------      
+SYS$COMMON:[SYSLIB]STARLET.MLB;1                        0        
+
+0 GETS were required to define 0 macros.
+
+There were no errors, warnings or information messages.
+SHR1                            - the probe's shareable image (Phase 68  19-OCT-2026 15:22:46  VAX MACRO V5.4-3            Page   4
+VAX-11 Macro Run Statistics                                              19-OCT-2026 15:22:38  DUA1:[000000]SHR1.MAR;1           (1)
+
+
+MACRO/LIST SHR1.MAR

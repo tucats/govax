@@ -1,0 +1,134 @@
+
+SHR3                                                            19-OCT-2026 15:22        Linker V11-39                    Page    1
+
+                                             +------------------------+
+                                             ! Object Module Synopsis !
+                                             +------------------------+
+
+Module Name     Ident              Bytes      File                                Creation Date      Creator
+-----------     -----              -----      -----                               -------------      -------
+SHR3            V3.0                   18 DUA1:[000000]SHR3.OBJ;1              19-OCT-2026 15:22  VAX MACRO V5.4-3
+SYS$P1_VECTOR   X-4                     0 SYS$COMMON:[SYSLIB]STARLET.OLB;1     24-NOV-1996 16:16  VAX MACRO V5.4-3
+
+DUA1:[000000]SHR3.EXE;1                                         19-OCT-2026 15:22        Linker V11-39                    Page    2
+
+                                             +------------------------+
+                                             ! Image Section Synopsis !
+                                             +------------------------+
+
+   Cluster      Type Pages   Base Addr  Disk VBN PFC Protection and Paging      Global Sec. Name   Match     Majorid   Minorid
+   -------      ---- -----   ---------  -------- --- ---------------------      ----------------   -----     -------   -------
+
+DEFAULT_CLUSTER    1     1    00300000          2   0 READ ONLY     
+                   2     1    00300200          3   0 READ WRITE   COPY ON REF
+
+
+
+	  Key for special characters above:
+		+--------------------+
+		! R  - Relocatable   !
+		! P  - Protected     !
+		+--------------------+
+
+DUA1:[000000]SHR3.EXE;1                                         19-OCT-2026 15:22        Linker V11-39                    Page    3
+
+                                            +--------------------------+
+                                            ! Program Section Synopsis !
+                                            +--------------------------+
+
+Psect Name      Module Name       Base     End           Length            Align                 Attributes
+----------      -----------       ----     ---           ------            -----                 ----------
+
+SHR3_CODE                       00300000 00300009 0000000A (         10.) LONG  2 NOPIC,USR,CON,REL,LCL,  SHR,  EXE,  RD,NOWRT,NOVEC
+                SHR3            00300000 00300009 0000000A (         10.) LONG  2
+
+SHR3_DATA                       00300200 00300207 00000008 (          8.) LONG  2 NOPIC,USR,CON,REL,LCL,NOSHR,NOEXE,  RD,  WRT,NOVEC
+                SHR3            00300200 00300207 00000008 (          8.) LONG  2
+
+DUA1:[000000]SHR3.EXE;1                                         19-OCT-2026 15:22        Linker V11-39                    Page    4
+
+                                                +-----------------+
+                                                ! Symbols By Name !
+                                                +-----------------+
+
+Symbol          Value              Symbol          Value              Symbol          Value              Symbol          Value
+------          -----              ------          -----              ------          -----              ------          -----
+SHR3_DATA       00300200-RU       
+SHR3_GET        00300000-RU       
+SYS$IMGSTA      7FFEDF68          
+
+DUA1:[000000]SHR3.EXE;1                                         19-OCT-2026 15:22        Linker V11-39                    Page    5
+
+                                                +------------------+
+                                                ! Symbols By Value !
+                                                +------------------+
+
+Value                                   Symbols...
+-----                                   ----------
+00300000     RU-SHR3_GET  
+00300200     RU-SHR3_DATA 
+7FFEDF68        SYS$IMGSTA
+
+
+
+	  Key for special characters above:
+		+--------------------+
+		! *  - Undefined     !
+		! A  - Alias Name    !
+		! I  - Internal Name !
+		! U  - Universal     !
+		! R  - Relocatable   !
+		! X  - External      !
+		! WK - Weak          !
+		+--------------------+
+
+DUA1:[000000]SHR3.EXE;1                                         19-OCT-2026 15:22        Linker V11-39                    Page    6
+
+                                                 +----------------+
+                                                 ! Image Synopsis !
+                                                 +----------------+
+
+Virtual memory allocated:                         00300000 003003FF 00000400 (1024. bytes, 2. pages)
+Stack size:                                              0. pages
+Image header virtual block limits:                       1.        1. (    1. block)
+Image binary virtual block limits:                       2.        3. (    2. blocks)
+Image name and identification:                    SHR3 V3.0
+Number of files:                                         3.
+Number of modules:                                       2.
+Number of program sections:                              4.
+Number of global symbols:                                1.
+Number of image sections:                                2.
+Debugger transfer address:                        7FFEDF68
+Image type:                                       NOPIC, SHAREABLE. Global Section Match=EQUAL, Ident, Major=67, Minor=6695595
+Map format:                                       FULL in file DUA1:[000000]SHR3.MAP;1
+Estimated map length:                             15. blocks
+                                              +---------------------+
+                                              ! Link Run Statistics !
+                                              +---------------------+
+
+Performance Indicators                            Page Faults	CPU Time	Elapsed Time
+----------------------                            -----------	--------	------------
+    Command processing:                                   181	00:00:00.00	00:00:00.00
+    Pass 1:                                              1434	00:00:00.00	00:00:00.01
+    Allocation/Relocation:                                 81	00:00:00.00	00:00:00.01
+    Pass 2:                                              1065	00:00:00.00	00:00:00.02
+    Map data after object module synopsis:                 68	00:00:00.00	00:00:00.00
+    Symbol table output:                                   26	00:00:00.00	00:00:00.00
+Total run values:                                        2855	00:00:00.00	00:00:00.04
+
+Using a working set limited to 512 pages and 86 pages of data storage (excluding image)
+
+Total number object records read (both passes):   88
+    of which 26 were in libraries and 3 were DEBUG data records containing 84 bytes
+72 bytes of DEBUG data were written,starting at VBN 4 with 1 blocks allocated
+
+Number of modules extracted explicitly             = 0
+    with 1 extracted to resolve undefined symbols
+
+0 library searches were for symbols not in the library searched
+
+A total of 5 global symbol table records was written
+
+LINK/SHAREABLE=SHR3/MAP=SHR3/FULL SHR3.OBJ,SYS$INPUT/OPTIONS
+BASE=%X300000
+UNIVERSAL=SHR3_GET,SHR3_DATA

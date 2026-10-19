@@ -1,0 +1,74 @@
+SHR6                            - .ADDRESS in a shared, read-only psect  19-OCT-2026 15:22:46  VAX MACRO V5.4-3            Page   1
+V6.0                                                                     19-OCT-2026 15:22:38  DUA1:[000000]SHR6.MAR;1           (1)
+
+                                     0000     1 	.TITLE	SHR6 - .ADDRESS in a shared, read-only psect (Phase 68 probe)
+                                     0000     2 	.IDENT	/V6.0/
+                                     0000     3 ;
+                                     0000     4 ; SHR6_GET returns the .ADDRESS of SHR6_TABLE less its address: 0 when
+                                     0000     5 ; the activator fixed up a longword in a shared, read-only section.
+                                     0000     6 ;
+                                 00000000     7 	.PSECT	SHR6_RO,NOWRT,NOEXE,PIC,SHR,LONG
+                                     0000     8 SHR6_TABLE::
+                           00000006  0000     9 	.LONG	6
+                                     0004    10 SHR6_PTR:
+                           00000000' 0004    11 	.ADDRESS SHR6_TABLE
+                                     0008    12 
+                                 00000000    13 	.PSECT	SHR6_CODE,NOWRT,EXE,PIC,SHR,LONG
+                               0000  0000    14 	.ENTRY	SHR6_GET,^M<>
+              50   00000000'EF   9E  0002    15 	MOVAB	SHR6_TABLE,R0
+         50   00000004'EF   50   C3  0009    16 	SUBL3	R0,SHR6_PTR,R0
+                                 04  0011    17 	RET
+                                     0012    18 
+                                     0012    19 	.END
+SHR6                            - .ADDRESS in a shared, read-only psect  19-OCT-2026 15:22:46  VAX MACRO V5.4-3            Page   2
+Symbol table                                                             19-OCT-2026 15:22:38  DUA1:[000000]SHR6.MAR;1           (1)
+
+SHR6_GET         00000000 RG    02      
+SHR6_PTR         00000004 R     01      
+SHR6_TABLE       00000000 RG    01      
+
+                                                +----------------+
+                                                ! Psect synopsis !
+                                                +----------------+
+
+PSECT name                      Allocation          PSECT No.  Attributes     
+----------                      ----------          ---------  ----------     
+.  ABS  .                       00000000  (    0.)  00 (  0.)  NOPIC   USR   CON   ABS   LCL NOSHR NOEXE NORD  NOWRT NOVEC BYTE  
+SHR6_RO                         00000008  (    8.)  01 (  1.)    PIC   USR   CON   REL   LCL   SHR NOEXE   RD  NOWRT NOVEC LONG  
+SHR6_CODE                       00000012  (   18.)  02 (  2.)    PIC   USR   CON   REL   LCL   SHR   EXE   RD  NOWRT NOVEC LONG  
+
+                                             +------------------------+
+                                             ! Performance indicators !
+                                             +------------------------+
+
+Phase                    Page faults    CPU Time       Elapsed Time   
+-----                    -----------    --------       ------------   
+Initialization                  470     00:00:00.00    00:00:00.00
+Command processing              922     00:00:00.00    00:00:00.01
+Pass 1                          186     00:00:00.00    00:00:00.00
+Symbol table sort                 1     00:00:00.00    00:00:00.00
+Pass 2                           32     00:00:00.00    00:00:00.01
+Symbol table output               0     00:00:00.00    00:00:00.00
+Psect synopsis output             2     00:00:00.00    00:00:00.00
+Cross-reference output            0     00:00:00.00    00:00:00.00
+Assembler run totals           1638     00:00:00.00    00:00:00.02
+
+The working set limit was 512 pages.
+292 bytes (1 page) of virtual memory were used to buffer the intermediate code.
+There were 10 pages of symbol table space allocated to hold 3 non-local and 0 local symbols.
+19 source lines were read in Pass 1, producing 17 object records in Pass 2.
+0 pages of virtual memory were used to define 0 macros.
+
+                                            +--------------------------+
+                                            ! Macro library statistics !
+                                            +--------------------------+
+
+Macro library name                           Macros defined      
+------------------                           --------------      
+SYS$COMMON:[SYSLIB]STARLET.MLB;1                        0        
+
+0 GETS were required to define 0 macros.
+
+There were no errors, warnings or information messages.
+
+MACRO/LIST SHR6.MAR

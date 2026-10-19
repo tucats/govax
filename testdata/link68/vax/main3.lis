@@ -1,0 +1,112 @@
+MAIN3                           - a program that uses SHR3 (Phase 68 pro 19-OCT-2026 15:22:46  VAX MACRO V5.4-3            Page   1
+V3.0                                                                     19-OCT-2026 15:22:38  DUA1:[000000]MAIN3.MAR;1          (1)
+
+                                     0000     1 	.TITLE	MAIN3 - a program that uses SHR3 (Phase 68 probe)
+                                     0000     2 	.IDENT	/V3.0/
+                                     0000     3 ;
+                                     0000     4 ; Linked against SHR3 (based) as MAIN3 and SHR3P (not) as MAIN3P.
+                                     0000     5 ; Shows SHR3_GET's answer and the address G^SHR3_DATA reaches, both
+                                     0000     6 ; absolute: equal when the .ADDRESS in the image is right.
+                                     0000     7 ;
+                                     0000     8 ; SAY ctl[,a,b,c] formats a line with $FAO (CTL is a .ASCID control
+                                     0000     9 ; string, A to C its arguments, pushed as longwords) and writes it with
+                                     0000    10 ; LIB$PUT_OUTPUT. It uses only the system service and LIBRTL entry
+                                     0000    11 ; points, through G^, and changes R0 and R1.
+                                     0000    12 ;
+                                     0000    13 	.MACRO	SAY	CTL,A=#0,B=#0,C=#0
+                                     0000    14 	PUSHL	C
+                                     0000    15 	PUSHL	B
+                                     0000    16 	PUSHL	A
+                                     0000    17 	PUSHAQ	BUFD
+                                     0000    18 	PUSHAW	OUTD
+                                     0000    19 	PUSHAQ	CTL
+                                     0000    20 	CALLS	#6,G^SYS$FAO
+                                     0000    21 	PUSHAQ	OUTD
+                                     0000    22 	CALLS	#1,G^LIB$PUT_OUTPUT
+                                     0000    23 	.ENDM	SAY
+                                     0000    24 
+                                 00000000    25 	.PSECT	SAY_DATA,WRT,NOEXE,LONG
+                           00000084  0000    26 BUF:	.BLKB	132
+                               0084  0084    27 BUFD:	.WORD	132
+                              01 0E  0086    28 	.BYTE	14,1
+                           00000000' 0088    29 	.ADDRESS BUF
+                               0000  008C    30 OUTD:	.WORD	0
+                              01 0E  008E    31 	.BYTE	14,1
+                           00000000' 0090    32 	.ADDRESS BUF
+                                     0094    33 
+                                 00000000    34 	.PSECT	MAIN_DATA,WRT,NOEXE,LONG
+3A 33 4E 49 41 4D 00000008'010E0000' 0000    35 F_GET:	.ASCID	/MAIN3: SHR3_GET() !XL, G^SHR3_DATA !XL holds !XL/
+20 29 28 54 45 47 5F 33 52 48 53 20  000E       
+5F 33 52 48 53 5E 47 20 2C 4C 58 21  001A       
+6C 6F 68 20 4C 58 21 20 41 54 41 44  0026       
+                  4C 58 21 20 73 64  0032       
+                                     0038    36 
+                                 00000000    37 	.PSECT	MAIN_CODE,NOWRT,EXE,LONG
+                               000C  0000    38 	.ENTRY	MAIN3,^M<R2,R3>
+              00000000'GF   00   FB  0002    39 	CALLS	#0,G^SHR3_GET
+                       52   50   D0  0009    40 	MOVL	R0,R2
+              53   00000000'GF   9E  000C    41 	MOVAB	G^SHR3_DATA,R3
+                                     0013    42 	SAY	F_GET,R2,R3,G^SHR3_DATA
+                       50   01   D0  0043    43 	MOVL	#1,R0
+                                 04  0046    44 	RET
+                                     0047    45 
+                                     0047    46 	.END	MAIN3
+MAIN3                           - a program that uses SHR3 (Phase 68 pro 19-OCT-2026 15:22:46  VAX MACRO V5.4-3            Page   2
+Symbol table                                                             19-OCT-2026 15:22:38  DUA1:[000000]MAIN3.MAR;1          (1)
+
+BUF              00000000 R     01      
+BUFD             00000084 R     01      
+F_GET            00000000 R     02      
+LIB$PUT_OUTPUT   ********   X   03      
+MAIN3            00000000 RG    03      
+OUTD             0000008C R     01      
+SHR3_DATA        ********   X   03      
+SHR3_GET         ********   X   03      
+SYS$FAO          ********   X   03      
+
+                                                +----------------+
+                                                ! Psect synopsis !
+                                                +----------------+
+
+PSECT name                      Allocation          PSECT No.  Attributes     
+----------                      ----------          ---------  ----------     
+.  ABS  .                       00000000  (    0.)  00 (  0.)  NOPIC   USR   CON   ABS   LCL NOSHR NOEXE NORD  NOWRT NOVEC BYTE  
+SAY_DATA                        00000094  (  148.)  01 (  1.)  NOPIC   USR   CON   REL   LCL NOSHR NOEXE   RD    WRT NOVEC LONG  
+MAIN_DATA                       00000038  (   56.)  02 (  2.)  NOPIC   USR   CON   REL   LCL NOSHR NOEXE   RD    WRT NOVEC LONG  
+MAIN_CODE                       00000047  (   71.)  03 (  3.)  NOPIC   USR   CON   REL   LCL NOSHR   EXE   RD  NOWRT NOVEC LONG  
+
+                                             +------------------------+
+                                             ! Performance indicators !
+                                             +------------------------+
+
+Phase                    Page faults    CPU Time       Elapsed Time   
+-----                    -----------    --------       ------------   
+Initialization                  473     00:00:00.00    00:00:00.00
+Command processing              922     00:00:00.00    00:00:00.01
+Pass 1                          203     00:00:00.00    00:00:00.00
+Symbol table sort                 1     00:00:00.00    00:00:00.00
+Pass 2                           42     00:00:00.00    00:00:00.01
+Symbol table output               3     00:00:00.00    00:00:00.00
+Psect synopsis output             4     00:00:00.00    00:00:00.00
+Cross-reference output            0     00:00:00.00    00:00:00.00
+Assembler run totals           1674     00:00:00.00    00:00:00.02
+
+The working set limit was 512 pages.
+1019 bytes (2 pages) of virtual memory were used to buffer the intermediate code.
+There were 10 pages of symbol table space allocated to hold 9 non-local and 0 local symbols.
+46 source lines were read in Pass 1, producing 19 object records in Pass 2.
+1 page of virtual memory was used to define 1 macro.
+
+                                            +--------------------------+
+                                            ! Macro library statistics !
+                                            +--------------------------+
+
+Macro library name                           Macros defined      
+------------------                           --------------      
+SYS$COMMON:[SYSLIB]STARLET.MLB;1                        0        
+
+0 GETS were required to define 0 macros.
+
+There were no errors, warnings or information messages.
+
+MACRO/LIST MAIN3.MAR
