@@ -164,7 +164,12 @@ never had.
   done 2026-10-19: with paging on P0LR and P1LR describe the pages that
   exist, `corevms/regions.go`, and creating services lengthen the
   regions; ACCVIO's reason mask is the architecture's in both modes,
-  `vm.MaskLength`/`MaskPTERef`/`MaskWrite`). Paging is synchronous, with no
+  `vm.MaskLength`/`MaskPTERef`/`MaskWrite`; subtask 3, the user stack,
+  done 2026-10-19: activation creates it from the image's stack ISD,
+  `corevms/userstack.go`'s `CreateUserStack`, a user-mode access below
+  P1's low end expands it through `vm.Memory.SetStackExpander`, as does
+  `$ADJSTK`, and rundown deletes it but for the page the user SP is in
+  and above). Paging is synchronous, with no
   PFW, COLPG, or FPG waits. Each later phase has a planning doc.
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.

@@ -2,7 +2,8 @@
 
 **Status:** in progress: subtask 1, the survey, done 2026-10-19 (Part A
 below; its questions answered by the author the same day, each
-recommendation accepted); subtask 2, created space, done 2026-10-19.
+recommendation accepted); subtask 2, created space, done 2026-10-19;
+subtask 3, the user stack, done 2026-10-19.
 Planned 2026-10-15,
 deferred to the end of the paging program (the author, 2026-10-15).
 Needs Phase 66. Part of the paging
@@ -658,3 +659,62 @@ FREP1VA where they vary.
     `SEC$M_EXPREG` mapping, made lowest page first, lengthening P1 to
     its lowest page at once (a failure partway leaves nonexistent pages
     inside P1).
+- **2026-10-19:** Subtask 3, the user stack (findings 8, 9), with paging
+  on only (`corevms/userstack.go`).
+  - **P1's layout:** a new space's P1 length register is UserStackTop's
+    page (`userStackTopPage`), not the bottom of the old 1024-page
+    reserve; the entries from UserStackTop up to the P1 vector's lowest
+    page (`p1VectorPage`, from `vmsdef.P1VectorTable`) are the all-zero
+    PTE, inside P1's length but nonexistent, and the vector's pages up
+    are P1's permanent part (`InitialPTE`). P1 never contracts above
+    UserStackTop.
+  - **Created at activation:** a mapped main image's user stack ISD
+    (type 253, LINK's `STACK=`) gives the stack's size, 20 pages without
+    one (`defaultUserStackPages`); `CreateUserStack` creates those pages
+    below UserStackTop that don't exist, top down, each as `$CRETVA`
+    creates one for user mode, charged (`machine/imagemap.go`). P1
+    expansions now begin directly below the stack.
+  - **Automatic expansion:** `vm.Memory.SetStackExpander` (installed by
+    the System, `expandUserStack`) is called by `translate` for a real
+    (non-PROBE) user-mode access below P1LR; `expandStack` creates the
+    pages from P1's low end down to the address, one at a time, and the
+    access goes on; a failure (the quota, the table's end) is the length
+    violation, the pages created kept. Instructions and Go code in user
+    mode (AST delivery, condition dispatch, LIB$ frames, `CallEntry`)
+    all come through it; executive mode, `TranslateIn`, PROBE, and the
+    console's kernel-mode reads never expand. `$ADJSTK` of the user
+    stack expands to the new pointer first, returning the creation's
+    status (SS$_EXQUOTA, SS$_VASFULL) with nothing changed.
+  - **Rundown:** `deleteImageP1` deletes from P1's low end up to
+    UserStackTop, but for the page the user stack pointer is in and
+    those above it (`imageP1Top`, `userStackPointer`: the CPU's SP or
+    USP when the process is current, its PCB's otherwise), which hold
+    what called the image: a subprocess's CLI stub's frames. At the
+    console process 1's user SP is back at UserStackTop when an image
+    ends, so its whole stack goes, as on VMS.
+  - **Tests:** `TestStackExpansion` (a push and a read below P1's low
+    end expand it, charged; PROBE and executive mode don't; the hole
+    above UserStackTop has no access, the vector reads),
+    `TestStackExpansionQuota`, `TestAdjstkExpands`, `TestStackRundown`
+    (the live part kept), `TestUserStackPagingOff`, and
+    `TestUserStackImage` (a MACRO image: 20 pages at its first
+    instruction, 40 more by expansion, every charge back at its exit).
+    Changed: `TestCreatedSpace*` (P1 starts at UserStackTop; `$EXPREG`
+    of P1 lands directly below it), `TestMappedImage` (activation charges
+    the stack's 20 pages too: 43 at PG66's first instruction, VMS's 62,
+    was 24), `TestPagingFrames` and `TestPagingFileSections` (no frame
+    is left tied to a process page after an image now),
+    `TestDeleteTransitionPages` (records the first range's still-valid
+    frames too, which the free list's head may give back first),
+    `TestPG64Oracle` (part S gives back a page more than it was charged:
+    DCL's SPAWN before it calls LIB$SPAWN in process 1's user mode,
+    expanding its stack, which the image's rundown deletes),
+    `TestPG66Oracle`'s harness (the console's stack pages, given back by
+    R1's rundown).
+  - **Unconfirmed, for the probe:** pages created before an expansion
+    fails being kept (the book's 16.2.1: services create a page at a
+    time); a stray user-mode reference far below the stack creating
+    every page down to it, quota and table permitting (the book says
+    so); the user stack's size at the first instruction against
+    FREP1VA (the probe's `STACK=50` case); the pages between the
+    stack's top and the P1 vector being no-access.

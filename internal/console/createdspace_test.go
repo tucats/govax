@@ -16,10 +16,10 @@ import (
 // with paging on, P0LR and P1LR describe the pages that exist, and the
 // services that create and delete pages move them.
 
-// userStackBottomPage is the P1 page number of the bottom of the user
-// stack's reserve (1024 pages below UserStackTop): P1's permanent part
-// starts there.
-const userStackBottomPage = (corevms.UserStackTop - 1024*512 - 0x40000000) / 512
+// stackTopPage is UserStackTop's P1 page number: a new space's P1 length
+// register, below which the user stack and P1 expansions grow (subtask
+// 3).
+const stackTopPage = (corevms.UserStackTop - 0x40000000) / 512
 
 // jpiLong is process env's $GETJPI item name, a longword.
 func jpiLong(t *testing.T, env *corevms.Environment, name string) uint32 {
@@ -79,29 +79,29 @@ func TestCreatedSpace(t *testing.T) {
 		t.Fatal("VMINIT left paging off")
 	}
 
-	lengths(t, c, "at the start", 0, userStackBottomPage)
+	lengths(t, c, "at the start", 0, stackTopPage)
 
-	if got := jpiLong(t, env, "JPI$_FREP1VA"); got != 0x40000000+(userStackBottomPage-1)*512 {
+	if got := jpiLong(t, env, "JPI$_FREP1VA"); got != 0x40000000+(stackTopPage-1)*512 {
 		t.Errorf("FREP1VA %#x at the start", got)
 	}
 
 	// The scratch range array's page, then two pages well above it.
 	putRange(t, c, vaInadr, vaPages, vaPages+0x3FF)
-	lengths(t, c, "the scratch page", vaInadr/512+1, userStackBottomPage)
+	lengths(t, c, "the scratch page", vaInadr/512+1, stackTopPage)
 
 	if got := callService(t, c, "SYS$CRETVA", vaInadr, vaRetadr, 0); got != ssNormal {
 		t.Fatalf("$CRETVA = %#x", got)
 	}
 
 	end := uint32(vaPages/512 + 2)
-	lengths(t, c, "after $CRETVA", end, userStackBottomPage)
+	lengths(t, c, "after $CRETVA", end, stackTopPage)
 
 	if got := jpiLong(t, env, "JPI$_FREP0VA"); got != end*512 {
 		t.Errorf("FREP0VA %#x, want %#x", got, end*512)
 	}
 
 	sp := env.Space
-	if got, want := jpiLong(t, env, "JPI$_FREPTECNT"), sp.P0Pages-end+userStackBottomPage-(0x200000-sp.P1Pages); got != want {
+	if got, want := jpiLong(t, env, "JPI$_FREPTECNT"), sp.P0Pages-end+stackTopPage-(0x200000-sp.P1Pages); got != want {
 		t.Errorf("FREPTECNT %d, want %d", got, want)
 	}
 
@@ -127,7 +127,7 @@ func TestCreatedSpace(t *testing.T) {
 		t.Fatalf("$DELTVA = %#x", got)
 	}
 
-	lengths(t, c, "after $DELTVA of the last page", end-1, userStackBottomPage)
+	lengths(t, c, "after $DELTVA of the last page", end-1, stackTopPage)
 
 	putRange(t, c, vaInadr, vaPages, vaPages+0x1FF)
 
@@ -135,7 +135,7 @@ func TestCreatedSpace(t *testing.T) {
 		t.Fatalf("$DELTVA = %#x", got)
 	}
 
-	lengths(t, c, "after $DELTVA of the other", vaInadr/512+1, userStackBottomPage)
+	lengths(t, c, "after $DELTVA of the other", vaInadr/512+1, stackTopPage)
 
 	// $EXPREG adds pages at each region's end.
 	if got := callService(t, c, "SYS$EXPREG", 3, vaRetadr, 0, 0); got != ssNormal {
@@ -146,15 +146,15 @@ func TestCreatedSpace(t *testing.T) {
 		t.Errorf("$EXPREG P0's retadr %#x %#x", a, b)
 	}
 
-	lengths(t, c, "after $EXPREG P0", vaInadr/512+4, userStackBottomPage)
+	lengths(t, c, "after $EXPREG P0", vaInadr/512+4, stackTopPage)
 
 	if got := callService(t, c, "SYS$EXPREG", 2, vaRetadr, 0, 1); got != ssNormal {
 		t.Fatalf("$EXPREG P1 = %#x", got)
 	}
 
-	lengths(t, c, "after $EXPREG P1", vaInadr/512+4, userStackBottomPage-2)
+	lengths(t, c, "after $EXPREG P1", vaInadr/512+4, stackTopPage-2)
 
-	low := uint32(0x40000000 + (userStackBottomPage-2)*512)
+	low := uint32(0x40000000 + (stackTopPage-2)*512)
 	if a, b := getRange(t, c, vaRetadr); a != low+0x3FF || b != low {
 		t.Errorf("$EXPREG P1's retadr %#x %#x", a, b)
 	}
@@ -164,7 +164,7 @@ func TestCreatedSpace(t *testing.T) {
 	}
 
 	peak := jpiLong(t, env, "JPI$_VIRTPEAK")
-	if want := uint32(vaPages/512+2) + 0x200000 - userStackBottomPage; peak != want {
+	if want := uint32(vaPages/512+2) + 0x200000 - stackTopPage; peak != want {
 		t.Errorf("VIRTPEAK %d, want %d", peak, want)
 	}
 
@@ -173,7 +173,7 @@ func TestCreatedSpace(t *testing.T) {
 		t.Fatalf("$CNTREG P1 = %#x", got)
 	}
 
-	lengths(t, c, "after $CNTREG P1", vaInadr/512+4, userStackBottomPage)
+	lengths(t, c, "after $CNTREG P1", vaInadr/512+4, stackTopPage)
 
 	if m := faultMask(t, c, low, vm.AccessRead); m != vm.MaskLength {
 		t.Errorf("a read below P1's low end: mask %d, want 1", m)
@@ -181,7 +181,7 @@ func TestCreatedSpace(t *testing.T) {
 
 	// Image rundown deletes P0.
 	env.DeleteP0()
-	lengths(t, c, "after DeleteP0", 0, userStackBottomPage)
+	lengths(t, c, "after DeleteP0", 0, stackTopPage)
 
 	if got := jpiLong(t, env, "JPI$_VIRTPEAK"); got != peak {
 		t.Errorf("VIRTPEAK %d after DeleteP0, want the peak, %d", got, peak)
@@ -212,7 +212,7 @@ func TestCreatedSpaceOtherProcess(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if env.Space.P0LR != 0 || env.Space.P1LR != userStackBottomPage {
+	if env.Space.P0LR != 0 || env.Space.P1LR != stackTopPage {
 		t.Errorf("a new space's lengths: P0LR %#x, P1LR %#x", env.Space.P0LR, env.Space.P1LR)
 	}
 
@@ -236,7 +236,7 @@ func TestCreatedSpaceOtherProcess(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	if env.Space.P0LR != 4 || pcb.P0LR != 4 || pcb.P1LR != userStackBottomPage || pcb.ASTLVL != 4 {
+	if env.Space.P0LR != 4 || pcb.P0LR != 4 || pcb.P1LR != stackTopPage || pcb.ASTLVL != 4 {
 		t.Errorf("after creating pages 2 and 3: the space's P0LR %d, the PCB's %+v", env.Space.P0LR, pcb)
 	}
 

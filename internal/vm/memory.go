@@ -102,6 +102,10 @@ type Memory struct {
 
 	// pager, if set, resolves faults on invalid pages (pager.go).
 	pager Pager
+
+	// expandStack, if set, is SetStackExpander's: the routine that
+	// creates P1 pages for a user-mode access below P1's low end.
+	expandStack func(space AddressSpace, addr uint32) bool
 }
 
 // NewMemory returns a Memory with size bytes of zeroed RAM and every

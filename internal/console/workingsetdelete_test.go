@@ -230,6 +230,7 @@ func TestDeleteTransitionPages(t *testing.T) {
 
 	// Checkpoint 2: $CRETVA over the first 40 pages makes them new
 	// demand-zero pages; those in transition give up their frames.
+	record(array, 40)
 	release(1)
 	checkpoint(2)
 

@@ -190,7 +190,15 @@ func TestMappedImage(t *testing.T) {
 	sawDZRO, sawRO, sawFixup := false, false, false
 
 	for _, isd := range main.ISDList {
-		if isd.Flags>>24 == mapISDUsrStack || isd.Flags&mapISDGBL != 0 {
+		// The user stack's pages are created and charged at activation
+		// (Phase 67's subtask 3).
+		if isd.Flags>>24 == mapISDUsrStack {
+			charged += int64(isd.Pages)
+
+			continue
+		}
+
+		if isd.Flags&mapISDGBL != 0 {
 			continue
 		}
 
@@ -257,10 +265,10 @@ func TestMappedImage(t *testing.T) {
 	}
 
 	// The image's exit refunds what it was charged, which is all its
-	// writable and demand-zero pages were charged at activation: none of
-	// them was charged later.
+	// writable and demand-zero pages and its user stack were charged at
+	// activation: none of them was charged later.
 	if got := env.PageFileRemaining() - running; got != charged {
-		t.Errorf("activation charged %d pages, want the writable and demand-zero sections' %d", got, charged)
+		t.Errorf("activation charged %d pages, want the writable and demand-zero sections' and the stack's %d", got, charged)
 	}
 
 	if err := c.Mounts.Dismount("DUA0"); err != nil {

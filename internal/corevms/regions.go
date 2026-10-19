@@ -6,6 +6,7 @@ import (
 	"github.com/tucats/govax/internal/cpu"
 	"github.com/tucats/govax/internal/registers"
 	"github.com/tucats/govax/internal/vm"
+	"github.com/tucats/govax/internal/vmsdef"
 	"github.com/tucats/govax/internal/vmserrors"
 )
 
@@ -41,21 +42,39 @@ import (
 // from the start, the length registers never move, and RegionSize is a
 // high-water mark of its own.
 //
-// Until the user stack is created at image activation (subtask 3), P1's
-// permanent part is everything from the bottom of the user stack's
-// reserve (userStackBottom) up: those pages exist from the start, and P1
-// expansions grow below them.
+// P1's permanent part is the P1 vector's pages, from p1VectorPage up
+// (every process maps the vector; the pages above it come along). The
+// user stack is an image's: activation creates it below UserStackTop
+// (CreateUserStack), a user-mode access below P1's low end expands it a
+// page at a time (expandStack), and rundown deletes it with the image's
+// other P1 pages (userstack.go). So a new space's P1 length register is
+// UserStackTop's page, and the pages between the stack's top and the
+// vector are inside P1's length but don't exist: the all-zero PTE.
 
 // errVasFull is storePTE's error for a page its region's page table
 // can't reach.
 var errVasFull = errors.New("the page table doesn't reach the page")
 
-// userStackBottom is the bottom of the user stack's reserve: the lowest
-// address of P1's permanent part, below which P1 expansions grow.
+// userStackBottom is the bottom of the user stack's reserve with paging
+// off, below which P1 expansions grow.
 const userStackBottom = UserStackTop - userStackPages*pageSize
 
-// userStackBottomPage is userStackBottom's P1 page number.
-const userStackBottomPage = (userStackBottom - p1Base) / pageSize
+// userStackTopPage is UserStackTop's P1 page number: in created space,
+// the P1 length register a space starts with, and the page the user stack
+// grows down from.
+const userStackTopPage = (UserStackTop - p1Base) / pageSize
+
+// p1VectorPage is the P1 page number of the P1 vector's lowest page:
+// in created space the pages from it up exist from the start, and those
+// from UserStackTop to below it don't.
+var p1VectorPage = func() uint32 {
+	low := uint32(s0Base)
+	for _, e := range vmsdef.P1VectorTable {
+		low = min(low, e.Addr)
+	}
+
+	return (low - p1Base) / pageSize
+}()
 
 // createdSpace reports whether env's P0 and P1 are created space: VMS
 // paging on, memory mapping enabled, and an address space of the
@@ -67,13 +86,13 @@ func (env *Environment) createdSpace() bool {
 }
 
 // initialP1Length is the P1 length register a new address space starts
-// with, for a P1 table of p1Pages entries: with paging on, P1's
-// permanent part (userStackBottom up), or as much of it as the table
-// reaches; with paging off, the whole table.
+// with, for a P1 table of p1Pages entries: with paging on, UserStackTop's
+// page, or as much of P1 as the table reaches; with paging off, the whole
+// table.
 func initialP1Length(p1Pages uint32, paging bool) uint32 {
 	low := uint32(regionPages - p1Pages)
 	if paging {
-		low = max(low, userStackBottomPage)
+		low = max(low, userStackTopPage)
 	}
 
 	return low
@@ -81,8 +100,8 @@ func initialP1Length(p1Pages uint32, paging bool) uint32 {
 
 // InitialLengths is the P0 and P1 length registers a new address space
 // with tables of p0Pages and p1Pages entries starts with, with paging on
-// or off: with paging on, no P0 pages and P1's permanent part; with it
-// off, both tables whole. VMINIT and BuildAddressSpace use it, and
+// or off: with paging on, no P0 pages and P1 from UserStackTop up; with
+// it off, both tables whole. VMINIT and BuildAddressSpace use it, and
 // InitialPTE says what each entry starts as.
 func InitialLengths(p0Pages, p1Pages uint32, paging bool) (p0lr, p1lr uint32) {
 	if paging {
@@ -94,11 +113,12 @@ func InitialLengths(p0Pages, p1Pages uint32, paging bool) (p0lr, p1lr uint32) {
 
 // InitialPTE is the PTE a new address space's P0 (p1 false) or P1 entry
 // for page number page starts with, with paging on or off: ProcessPTE's
-// demand-zero page for a page within the initial lengths
-// (InitialLengths), and the all-zero PTE, no page, for an entry beyond
-// them, into which a region grows.
+// demand-zero page for a page of P1's permanent part (with paging off,
+// for every page), and the all-zero PTE, no page, for an entry beyond the
+// initial lengths (InitialLengths), into which a region grows, or
+// between the user stack's top and the P1 vector.
 func InitialPTE(p1 bool, page, p1lr uint32, paging bool) vm.PTE {
-	if paging && (!p1 || page < p1lr) {
+	if paging && (!p1 || page < p1lr || page < p1VectorPage) {
 		return 0
 	}
 
@@ -254,7 +274,7 @@ func (env *Environment) inRegion(addr uint32) bool {
 // reached a region's end leaves them. $CNTREG's pages go to the same
 // deletion routine as $DELTVA's (the book's 16.2.2.3), so both contract a
 // region they delete the end of (unconfirmed for $DELTVA: a probe case).
-// P1 never shrinks into its permanent part.
+// P1 never shrinks above UserStackTop.
 func (env *Environment) contractRegions() {
 	if !env.createdSpace() {
 		return
@@ -272,7 +292,7 @@ func (env *Environment) contractRegions() {
 	}
 
 	p1 := sp.P1LR
-	for p1 < userStackBottomPage && !env.pageAt(p1Base+p1*pageSize) {
+	for p1 < userStackTopPage && !env.pageAt(p1Base+p1*pageSize) {
 		p1++
 	}
 

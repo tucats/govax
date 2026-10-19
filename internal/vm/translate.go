@@ -414,6 +414,15 @@ func (m *Memory) translate(cpu *registers.CPU, addr uint32, access AccessType, s
 		// so P1LR instead marks the *lowest* page number still considered
 		// part of the region — anything below P1LR is out of bounds, the
 		// mirror image of P0's check.
+		// A user-mode access just below the region may expand the user
+		// stack (SetStackExpander), lowering P1LR to cover the page.
+		if page < cpu.PR(registers.P1LR) && signal && mode == registers.User && m.expandStack != nil &&
+			m.expandStack(CurrentAddressSpace(cpu), addr) {
+			*entry = tbEntry{}
+
+			m.tb.stcFlush()
+		}
+
 		if page < cpu.PR(registers.P1LR) {
 			*entry = tbEntry{}
 

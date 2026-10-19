@@ -34,7 +34,7 @@ var expectedPG64Differences = map[string]string{
 }
 
 // pg64QuotaFillDifference is the line govax's detached run adds: its P1
-// (8192 pages in all, the user stack's reserve above) runs out before the
+// (8192 pages in all, the user stack and P1 vector above) runs out before the
 // quota does, where VMS's (VIRTUALPAGECNT 65500) doesn't, so the fill
 // goes on in P0 after a "Q10 fill: region 1 stopped" line VMS doesn't
 // write.
@@ -177,6 +177,12 @@ func pagfilcnt(t *testing.T, dispatch func(string) string) int {
 // TestPG64Oracle runs the program's parts and compares their lines with
 // VMS's, and checks that each image's exit gives its charges back, as
 // the VAX's "pf" lines show (PAGFILCNT 39799 after every run).
+//
+// Part S's image gives back one page more than it was charged: DCL's
+// SPAWN before it calls LIB$SPAWN in process 1, in user mode, which
+// expands process 1's user stack by a page (Phase 67's subtask 3), and
+// the image's rundown deletes the stack, that page with it. (VMS's DCL
+// runs on its own supervisor-mode stack.)
 func TestPG64Oracle(t *testing.T) {
 	_, dispatch := pg64Console(t)
 
@@ -188,7 +194,12 @@ func TestPG64Oracle(t *testing.T) {
 		before := pagfilcnt(t, dispatch)
 		lines := strings.Split(dispatch("RUN "+image), "|")
 
-		if after := pagfilcnt(t, dispatch); after != before {
+		refund := 0
+		if part == "S" {
+			refund = 1
+		}
+
+		if after := pagfilcnt(t, dispatch); after != before+refund {
 			t.Errorf("part %s: PAGFILCNT %d after the image, %d before", part, after, before)
 		}
 

@@ -479,29 +479,39 @@ func (env *Environment) resetPage(space vm.AddressSpace, addr uint32, fresh vm.P
 }
 
 // deleteImageP1 is image rundown's deletion of the pages the image added
-// to P1 ($EXPREG of region 1, a section mapped with SEC$M_EXPREG there):
-// those from P1's low end up to the bottom of the user stack's reserve
-// (userStackBottom). VMS deletes them with the image (VMS 7.1 in
-// testdata/pg64: PAGFILCNT is back where it was after an image that
-// filled its quota with P1 pages); the process's own P1, above, stays.
+// to P1 ($EXPREG of region 1, a section mapped with SEC$M_EXPREG there,
+// and in created space the user stack). VMS deletes them with the image
+// (VMS 7.1 in testdata/pg64: PAGFILCNT is back where it was after an
+// image that filled its quota with P1 pages); the process's own P1,
+// above, stays. With paging off they're those from P1's low end up to
+// the bottom of the user stack's reserve (userStackBottom), which stays
+// with the process. In created space they're those from P1's low end up
+// to UserStackTop, the stack included, but for the stack's live part
+// (imageP1Top): the pages from the one the user stack pointer is in up,
+// which hold the frames of what called the image (a subprocess's CLI).
 // Each page's frame and page file block are released and its charge
 // refunded, as DeleteP0's are; in created space it gets the all-zero PTE
-// and P1's length goes back to the reserve's bottom, and with paging off
-// it goes back to ProcessPTE's form.
+// and P1's length goes up past it, and with paging off it goes back to
+// ProcessPTE's form.
 func (env *Environment) deleteImageP1() {
 	created := env.createdSpace()
 	if !created && env.RegionSize[1] == 0 {
 		return // P1 never expanded
 	}
 
+	top := uint32(userStackBottom)
+	if created {
+		top = env.imageP1Top()
+	}
+
 	low := env.p1Low()
-	if low >= userStackBottom {
+	if low >= top {
 		return
 	}
 
 	space := env.pageSpace()
 
-	for addr := low; addr < userStackBottom; addr += pageSize {
+	for addr := low; addr < top; addr += pageSize {
 		fresh := ProcessPTE(true, (addr-p1Base)/pageSize)
 		if created {
 			fresh = 0
@@ -510,11 +520,11 @@ func (env *Environment) deleteImageP1() {
 		env.resetPage(space, addr, fresh)
 	}
 
-	env.refundPagesIn(low, userStackBottom)
+	env.refundPagesIn(low, top)
 
 	env.RegionSize[1] = 0
 
 	if created {
-		env.setRegionLength(regionP1, userStackBottomPage)
+		env.setRegionLength(regionP1, (top-p1Base)/pageSize)
 	}
 }

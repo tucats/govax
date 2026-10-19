@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"github.com/tucats/govax/internal/console"
+	"github.com/tucats/govax/internal/corevms"
 	"github.com/tucats/govax/internal/machine"
 )
 
@@ -27,7 +28,7 @@ var pg66Dir = filepath.Join("..", "..", "testdata", "pg66")
 // tables, the process header), so that the image's pages replace each
 // other there and not in govax's (testdata/pg63's differences).
 var expectedPG66Differences = map[string]string{
-	"A1 at the first instruction:":  "activation's faults and charges: VMS's image activator, LIBRTL's writable pages, and P1's image pieces; govax charges the image's writable and demand-zero pages alone",
+	"A1 at the first instruction:":  "activation's faults and charges: VMS's image activator, LIBRTL's writable pages, and P1's image pieces; govax charges the image's writable and demand-zero pages and its user stack alone",
 	"A2 LIB$INIT_TIMER:":            "LIBRTL's pages fault on VMS (global pages); govax's LIB$ routines are shims",
 	"A2 the program's start:":       "RMS's own pages and its I/O to the SYS$OUTPUT file PG66.COM defines; govax's RMS is in Go, and its output goes to the console",
 	"A5 BIG read: flts":             "the clusters as govax's (PFCDEFAULT 16, or the section's 8), but VMS's working set list, full of DCL's and its permanent part's pages, replaced BIG's own pages as they came in (PPGCNT 38 to 80, not 100), and some faulted again",
@@ -159,12 +160,23 @@ func TestPG66Oracle(t *testing.T) {
 	c, dispatch := pg66Console(t)
 
 	// The test console's spin loop (scheduledConsole) is in process 1's
-	// P0, its page charged; the first image's activation deletes P0 and
-	// gives it back, so R1 ends a page below where it began. VMS's P0 is
-	// empty before the first image, so its R1 is 0 like the others.
+	// P0, its page charged, and what the console ran before the first
+	// image expanded process 1's user stack (Phase 67's subtask 3), its
+	// pages charged; the first image's activation deletes P0 and its
+	// rundown the stack, giving them back, so R1 ends as many pages below
+	// where it began. VMS's P0 is empty before the first image, and its
+	// DCL runs on its own stack, so its R1 is 0 like the others.
+	env := c.ProcessOne()
+
 	harness := 0
-	if c.ProcessOne().PageFileChargedAt(codeAddr) {
+	if env.PageFileChargedAt(codeAddr) {
 		harness = 1
+	}
+
+	for va := env.FreeP1VA() + 512; va < corevms.UserStackTop; va += 512 {
+		if env.PageFileChargedAt(va) {
+			harness++
+		}
 	}
 
 	for _, run := range []struct{ image, id string }{{"PG66", "R1"}, {"PG66", "R2"}, {"PG66C", "R3"}} {

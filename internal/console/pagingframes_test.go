@@ -75,18 +75,22 @@ func TestPagingFrames(t *testing.T) {
 		t.Errorf("counts %+v over %d frames", counts, db.Frames())
 	}
 
-	// Subtask 5: the image's pages are process 1's, each frame recorded
-	// as its page's.
-	if process, _ := console.FrameOwners(t, c); process == 0 {
-		t.Error("no frame is tied to a process page")
+	// Subtask 5: the image's pages were process 1's, each frame recorded
+	// as its page's, and they went with the image: since Phase 67's
+	// subtask 3 its user stack does too, so no frame is left tied to a
+	// process page.
+	if process, _ := console.FrameOwners(t, c); process != 0 {
+		t.Errorf("%d frames still tied to process pages after the image", process)
 	}
 }
 
 // TestPagingFileSections runs Phase 49's file section programs with
 // paging on (docs/PHASE-62 - VMS paging.md, subtask 5): a global section
 // two processes share, and private and copy-on-reference sections left
-// for image rundown. Each still ends as it should, and afterward every
-// frame left tied is its owner's, with no global page left.
+// for image rundown. Each still ends as it should, and afterward no
+// frame is left tied to a global page; since Phase 67's subtask 3 image
+// rundown takes the user stack too, so none is left tied to a process
+// page either.
 func TestPagingFileSections(t *testing.T) {
 	setSetting(t, "vax.sysgen.paging.enable", "true")
 
@@ -105,8 +109,8 @@ func TestPagingFileSections(t *testing.T) {
 				t.Fatalf("R0 = %d, want 999 (another value is the step that failed)", got)
 			}
 
-			if process, global := console.FrameOwners(t, c); process == 0 || global != 0 {
-				t.Errorf("tied frames: %d process, %d global; want some process frames, no global ones", process, global)
+			if process, global := console.FrameOwners(t, c); process != 0 || global != 0 {
+				t.Errorf("tied frames: %d process, %d global; want none", process, global)
 			}
 		})
 	}

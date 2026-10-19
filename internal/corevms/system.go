@@ -236,6 +236,10 @@ func NewSystem(cpu *registers.CPU, mem *vm.Memory, devices *iodev.DeviceTable, m
 	// reused frame's tie to the page it held (workingset.go's BreakTie).
 	mem.SetPager(sys)
 
+	// In created space, a user-mode access below P1's low end expands the
+	// user stack (userstack.go).
+	mem.SetStackExpander(sys.expandUserStack)
+
 	if db := mem.Paging(); db != nil {
 		db.SetTieBreaker(sys)
 	}

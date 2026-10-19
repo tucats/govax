@@ -216,6 +216,22 @@ type Pager interface {
 // goes back to treating every invalid page as demand-zero.
 func (m *Memory) SetPager(p Pager) { m.pager = p }
 
+// SetStackExpander installs fn, the routine that expands the user stack
+// (the book's 16.2.1.3, EXE$EXPANDSTK; docs/PHASE-67 - address space
+// under paging.md, subtask 3). A P1 address below the P1 length register
+// is a length violation; when the access is a real one (not a PROBE's) in
+// user mode, translate first calls fn with the current address space and
+// the address. fn creates the pages from P1's low end down to the
+// address, lowering the CPU's P1LR, and reports whether it did; if so the
+// access goes on as if the page had always been there, and if not it's
+// the length violation. The access may be an instruction's or Go code's
+// in user mode (AST delivery, condition dispatch, a LIB$ routine's frame):
+// every one comes through here. Accesses through TranslateIn, which are
+// kernel mode's, never expand. nil removes it.
+func (m *Memory) SetStackExpander(fn func(space AddressSpace, addr uint32) bool) {
+	m.expandStack = fn
+}
+
 // DemandZero gives a demand-zero page its physical page: it claims a free
 // page (AllocatePage hands out pages already zeroed) and returns pte made
 // valid and pointing at it, its other forms' bits cleared. It reports

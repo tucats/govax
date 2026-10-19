@@ -342,6 +342,10 @@ var ssNoPriv = vmsdef.Symbols["SS$_NOPRIV"]
 // what gets loaded when the CPU next changes into that mode. The manual's
 // SS$_ACCVIO for "a portion of the new stack segment cannot be written"
 // isn't checked: govax doesn't probe the new stack, only newadr itself.
+// In created space (VMS paging on), a new user stack pointer below P1's
+// low end expands the user stack down to it first (expandStack, the
+// book's 16.2.1.3), and a failure is the status of the page creation that
+// failed ($CRETVA's: SS$_EXQUOTA, SS$_VASFULL), nothing changed.
 func serviceSysAdjstk(env *Environment, argv []uint32) (uint32, error) {
 	acmode, adjust, newadr := optArg(argv, 0), int16(optArg(argv, 1)), optArg(argv, 2)
 
@@ -366,6 +370,12 @@ func serviceSysAdjstk(env *Environment, argv []uint32) (uint32, error) {
 	}
 
 	value += uint32(int32(adjust))
+
+	if mode == uint32(registers.User) {
+		if st := env.expandStack(value); st != ssNormal {
+			return st, nil
+		}
+	}
 
 	if err := env.mem.StoreLongword(env.cpu, newadr, value); err != nil {
 		return ssAccVio, nil

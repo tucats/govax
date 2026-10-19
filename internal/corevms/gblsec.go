@@ -1068,8 +1068,10 @@ func (env *Environment) mapRange(a sectionArgs, count uint32) (pageRange, bool, 
 }
 
 // userStackPages is how much of P1, below the user stack's top
-// (UserStackTop), is kept for the stack: P1 expansion ($EXPREG of region
-// 1, SEC$M_EXPREG) begins below it.
+// (UserStackTop), is kept for the stack with paging off: P1 expansion
+// ($EXPREG of region 1, SEC$M_EXPREG) begins below it. In created space
+// there's no reserve: the stack is the image's, and P1 expansions grow
+// directly below it (userstack.go).
 const userStackPages = 1024
 
 // p1Low is P1's low end: the lowest P1 address in use, below which P1

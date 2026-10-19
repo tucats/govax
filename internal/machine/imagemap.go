@@ -95,12 +95,23 @@ func (p *ImageProcess) imageMap(fn string, flag uint32) (*ICB, error) {
 		})
 	}
 
+	// The main image brings the user stack (docs/PHASE-67 - address space
+	// under paging.md, subtask 3): its user stack ISD's pages, created
+	// below UserStackTop (LINK's default when it has none).
+	stack := uint32(0)
+
 	for _, isd := range icb.ISDList {
 		if isd.Flags&isdFIXUPVEC != 0 {
 			icb.FixupISD = isd
 		}
 
-		if isdType(isd.Flags) == isdUsrStack || isd.Flags&isdGBL != 0 {
+		if isdType(isd.Flags) == isdUsrStack {
+			stack = uint32(isd.Pages)
+
+			continue
+		}
+
+		if isd.Flags&isdGBL != 0 {
 			continue
 		}
 
@@ -114,6 +125,12 @@ func (p *ImageProcess) imageMap(fn string, flag uint32) (*ICB, error) {
 		}
 
 		if err != nil {
+			return nil, err
+		}
+	}
+
+	if flag == icbMain {
+		if err := env.CreateUserStack(stack); err != nil {
 			return nil, err
 		}
 	}
