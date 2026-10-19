@@ -7,16 +7,13 @@ import (
 	"testing"
 
 	"github.com/tucats/govax/internal/dclshell"
-	"github.com/tucats/govax/internal/machine"
 	"github.com/tucats/govax/internal/vmserrors"
 )
-
-
 
 // TestAssignSymbol defines symbols with each operator and abbreviation,
 // and rejects what it can't evaluate.
 func TestAssignSymbol(t *testing.T) {
-	c := &Console{Machine: &machine.Machine{}, Interpreter: &dclshell.Interpreter{Shell: &dclshell.Shell{}}}
+	c := &Console{Interpreter: &dclshell.Interpreter{Shell: &dclshell.Shell{}}}
 
 	for _, tc := range []struct{ name, op, text string }{
 		{"DIR*ECTORY", ":==", " directory/size"},
@@ -166,11 +163,11 @@ func TestShowDCLSymbols(t *testing.T) {
 	}
 
 	for line, code := range map[string]uint32{
-		"SHOW SYMBOL NOSUCH":        vmserrors.CLI_UNDSYM,
-		"SHOW SYMBOL NOSUCH*":       vmserrors.CLI_UNDSYM,
-		"SHOW SYMBOL/LOCAL N":       vmserrors.CLI_UNDSYM,
-		"SHOW SYMBOL/GLOBAL SAY":    vmserrors.CLI_UNDSYM,
-		"SHOW SYMBOL":               vmserrors.CLI_MISSINGPARAMETER,
+		"SHOW SYMBOL NOSUCH":         vmserrors.CLI_UNDSYM,
+		"SHOW SYMBOL NOSUCH*":        vmserrors.CLI_UNDSYM,
+		"SHOW SYMBOL/LOCAL N":        vmserrors.CLI_UNDSYM,
+		"SHOW SYMBOL/GLOBAL SAY":     vmserrors.CLI_UNDSYM,
+		"SHOW SYMBOL":                vmserrors.CLI_MISSINGPARAMETER,
 		"SHOW SYMBOL/LOCAL/GLOBAL N": 0,
 	} {
 		err := d.Dispatch(line)
@@ -255,10 +252,10 @@ func TestDCLSymbols_localAndGlobal(t *testing.T) {
 	}
 
 	for line, code := range map[string]uint32{
-		"DELETE/SYMBOL":              vmserrors.CLI_MISSINGPARAMETER,
-		"DELETE/SYMBOL/ALL Y":        vmserrors.CLI_EXPSYN,
+		"DELETE/SYMBOL":                vmserrors.CLI_MISSINGPARAMETER,
+		"DELETE/SYMBOL/ALL Y":          vmserrors.CLI_EXPSYN,
 		"DELETE/SYMBOL/LOCAL/GLOBAL Y": vmserrors.CLI_EXPSYN,
-		"DELETE/SYMBOL/BOGUS Y":      vmserrors.CLI_EXPSYN,
+		"DELETE/SYMBOL/BOGUS Y":        vmserrors.CLI_EXPSYN,
 	} {
 		if err := d.Dispatch(line); !hasStatus(err, code) {
 			t.Errorf("%s: %v, want %#x", line, err, code)
