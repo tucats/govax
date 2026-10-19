@@ -162,7 +162,10 @@ never had.
   modes; DEPOSIT past a page's protection sets its modify bit; subtask
   4: a shareable image mapped the same way, privately after the main
   image, `imageshare_test.go`'s stand-in made by hand from an
-  executable, since LINK makes no shareable images); 67 the
+  executable, since LINK makes no shareable images; subtask 5: image reset,
+  `unmapSections` now `DeleteP0`'s first step, so a debugger's `KeepP0`
+  keeps a mapped image's sections and file until the next activation,
+  `imagereset_test.go`); 67 the
   address space and page
   tables under paging, deferred to the end. Paging is synchronous, with no
   PFW, COLPG, or FPG waits. Each later phase has a planning doc.

@@ -404,8 +404,13 @@ func registerAddressSpaceServices(t *ServiceTable) {
 // Image activation calls it too, for the pages a rundown with KeepP0 set
 // left.
 //
-// It deletes the P1 pages the image added too (deleteImageP1).
+// Every page mapped to a section goes first (unmapSections), wherever it
+// is, so the sections, and the files they hold (a mapped image's own,
+// Phase 66), go with P0; under KeepP0 they stay with it. It deletes the
+// P1 pages the image added too (deleteImageP1).
 func (env *Environment) DeleteP0() {
+	env.unmapSections()
+
 	if env.cpu == nil || env.cpu.PR(registers.MAPEN) == 0 {
 		return
 	}

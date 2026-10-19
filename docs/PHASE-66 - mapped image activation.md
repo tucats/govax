@@ -1,6 +1,6 @@
 # Phase 66 — image activation by mapping, and image reset
 
-**Status:** in progress (planned 2026-10-15; subtasks 1 to 4 done 2026-10-18). Needs Phase 65 (sections under the
+**Status:** in progress (planned 2026-10-15; subtasks 1 to 5 done 2026-10-18). Needs Phase 65 (sections under the
 pager, read clustering). Part of the paging program laid out in
 `PHASE-62 - VMS paging.md` (Decision 15 is this phase's).
 
@@ -607,3 +607,26 @@ procedure. Counts print as differences.
   G^ references, a transfer vector, more than one section); that needs
   an image linked /SHAREABLE on VMS (a probe image brought back as test
   data) or a LINK that makes shareable images.
+- **2026-10-18:** Subtask 5, image reset. Finding 2 held for an image
+  that ends by itself and for one abandoned (stopped and run down by the
+  next RUN's `EndAbandonedImage`), but not under the debugger: image
+  rundown unmapped every section page (`unmapSections`) before asking
+  `KeepP0`, so an image ending under the debugger lost its sections, and
+  with mapping its own code and data, which then read as demand-zero
+  pages, while the session still showed the image. `unmapSections` is
+  now `DeleteP0`'s first step, not rundown's, so `KeepP0` keeps the
+  sections, and the file they hold, with the rest of P0, and the next
+  activation's `ResetICBList` (`DeleteP0`) lets them go; process
+  deletion still reaches it through `ImageRundown`. `ResetICBList` needs
+  nothing more with paging on. Tests (`imagereset_test.go`, each ending
+  with `checkImageReset`: no process sections, every P0 PTE in its fresh
+  form, no frame tied to a P0 page of process 1, the working set at
+  WSDEFAULT with no P0 page, the PFN database and working sets
+  consistent, and the image's volume dismountable): `TestMappedImageReset`
+  (an image that exits; its page file quota all back),
+  `TestMappedImageResetAbandoned` (an image stopped with its array's
+  pages valid, in transition, and on the modified list),
+  `TestMappedImageResetDebugger` (RUN/DEBUG: the sections and the hold
+  on the file kept after the image's end, DISMOUNT refused; then a
+  second RUN of the same image from its file, with only its own
+  sections, both runs' output, and nothing left after).

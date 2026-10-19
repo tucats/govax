@@ -1218,7 +1218,8 @@ func (env *Environment) mapSectionPage(s *GlobalSection, addr uint32, pte vm.PTE
 	return ssNormal
 }
 
-// unmapSections is image rundown's step for sections: VMS deletes the
+// unmapSections is image rundown's step for sections, DeleteP0's first
+// (so a rundown under KeepP0 keeps them too): VMS deletes the
 // image's address space when it exits, and with it every mapping of a
 // section; govax keeps the rest of P0, but each page mapped to a section,
 // global or private, becomes again the demand-zero page a process starts

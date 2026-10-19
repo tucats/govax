@@ -405,8 +405,8 @@ func serviceSysAdjwsl(env *Environment, argv []uint32) (uint32, error) {
 // temporary ones nobody else uses), cancels its outstanding $SETIMR
 // timers and $SCHDWK wakeups, discards its queued user-mode ASTs, and
 // forgets its user-mode exit handlers and any $PUTMSG, $CMKRNL, or
-// LIB$ routine left waiting for a routine it called, unmaps the global sections it mapped,
-// resets the working-set limit to its default (resetWorkingSet), and
+// LIB$ routine left waiting for a routine it called, deletes P0 and the
+// sections mapped there (DeleteP0, unless KeepP0 keeps them), resets the working-set limit to its default (resetWorkingSet), and
 // forgets its heap (releaseHeap) and its RTL packages' data
 // (ImageData). The console calls it when an
 // image started by RUN returns or exits (and does its own logical-name
@@ -426,7 +426,6 @@ func (env *Environment) ImageRundown() {
 	env.cancelShimCalls()
 	env.cancelConditions()
 	env.cancelPageLocks()
-	env.unmapSections()
 	if !env.KeepP0 {
 		env.DeleteP0()
 	}

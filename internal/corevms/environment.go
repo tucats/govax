@@ -35,8 +35,8 @@ type Environment struct {
 	// System shares them; env.System names the System itself.
 	*System
 
-	// KeepP0 makes image rundown leave P0's pages where they are
-	// (DeleteP0): the machine sets it while a debugger session holds the
+	// KeepP0 makes image rundown leave P0's pages, and the sections
+	// mapped there, where they are (DeleteP0): the machine sets it while a debugger session holds the
 	// image, whose memory VMS's debugger still shows after the image has
 	// exited (testdata/dbgcmd's errors.dlg). The next image's activation
 	// deletes them.
