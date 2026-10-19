@@ -371,9 +371,8 @@ func (x *machine) command(c obj.Command) error {
 	case "OPR_REDEF":
 		// .TRANSFER: the symbol's universal value in a shareable image
 		// is the location here, its transfer vector entry (the Linker
-		// manual, 7.4). It touches neither the stack nor the location,
-		// and an executable has no universal symbols, so an executable
-		// link ignores it, as real LINK does (testdata/link68's E2).
+		// manual, 7.4). It touches neither the stack nor the location.
+		x.redefine(c.Name)
 
 	case "STO_PICR":
 		if x.debug {
@@ -748,14 +747,14 @@ func (l *linker) image() (*Image, error) {
 		l.imageID = l.opts.Ident
 	}
 
-	// Linked /DEBUG, the global symbol table comes last. Real LINK ends
-	// the file at its last record, mid-block; govax pads it to a whole
-	// block, as images are whole blocks everywhere in govax (rms, and
-	// ods2's fixed-length records). Readers find the GST by the IHS's
+	// Linked /DEBUG, or in a shareable image, the global symbol table
+	// comes last. Real LINK ends the file at its last record, mid-block;
+	// govax pads it to a whole block, as images are whole blocks
+	// everywhere in govax (rms, and ods2's fixed-length records). Readers find the GST by the IHS's
 	// VBN and record count, so the padding should be harmless; it's a
 	// known difference to revisit if VMS objects (docs/PHASE-29.md,
 	// Decision 7).
-	if l.opts.Debug {
+	if l.opts.Debug || l.opts.Shareable {
 		gst, records, err := l.globalSymbolTable()
 		if err != nil {
 			return nil, fmt.Errorf("link: the global symbol table: %w", err)

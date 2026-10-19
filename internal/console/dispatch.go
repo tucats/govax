@@ -489,6 +489,8 @@ func (d *Dispatcher) bindGrammar() {
 			NoExecutable:  r.Present("EXECUTABLE") && r.Negated("EXECUTABLE"),
 			Shareable:     r.Present("SHAREABLE") && !r.Negated("SHAREABLE") && !r.Defaulted("SHAREABLE"),
 			ShareableFile: r.String("SHAREABLE"),
+			SymbolTable:   r.Present("SYMBOL_TABLE") && !r.Negated("SYMBOL_TABLE") && !r.Defaulted("SYMBOL_TABLE"),
+			SymbolFile:    r.String("SYMBOL_TABLE"),
 			NoTraceback:   r.Present("TRACEBACK") && r.Negated("TRACEBACK"),
 			Debug:         r.Present("DEBUG") && !r.Negated("DEBUG") && !r.Defaulted("DEBUG"),
 			DebugModule:   r.String("DEBUG"),

@@ -716,6 +716,8 @@ grammar console
     ! file it follows ("LINK MAIN,MYLIB/LIBRARY,PROG/OPTIONS").
     ! SHAREABLE is /SHAREABLE[=file] (docs/PHASE-68, subtask 5): a
     ! shareable image, named by its value or as EXECUTABLE says.
+    ! SYMBOL_TABLE is /SYMBOL_TABLE[=file] (subtask 6): the image's
+    ! global symbol table as an object module file, NAME.STB by default.
     !
     verb link/id=1350
 
@@ -742,6 +744,9 @@ grammar console
                     /type=$string               -
                     /default=""
         qualifier   shareable/id=1363           -
+                    /type=$string               -
+                    /default=""
+        qualifier   symbol_table/id=1364        -
                     /type=$string               -
                     /default=""
         qualifier   traceback/id=1354

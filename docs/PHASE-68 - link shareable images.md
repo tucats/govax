@@ -5,8 +5,8 @@ author the same day. Part A is the survey. Part B holds the decisions
 and the author's answers to the plan's questions. Part C is the
 subtasks. Subtask 1, the VMS probe (`testdata/link68`), is done, and so
 are subtask 2 (MACRO's `.TRANSFER`), subtask 3 (options files),
-subtask 4 (clusters for executables), and subtask 5 (`LINK/SHAREABLE`,
-the image).
+subtask 4 (clusters for executables), subtask 5 (`LINK/SHAREABLE`,
+the image), and subtask 6 (the global symbol table).
 
 ## Goal
 
@@ -238,7 +238,8 @@ The symbols' order was SHR1_LOCAL, TABLE, SHOW, ADD, BASE, JSB,
 ORIGIN, COUNT; the rule is unconfirmed. In a based image the symbols
 are absolute (no REL). A `.TRANSFER`ed symbol's GST value is its
 transfer vector entry (`SHR1_ADD` is 8), and it is an `EPM` carrying
-the vector's mask. Inside the image, references go to the routine:
+the routine's own entry mask (`SHR1_ADD`'s 0, not the vector's
+`^M<R4,R5>`; subtask 6). Inside the image, references go to the routine:
 the map's "Symbols By Name" shows `SHR1_ADD 00000407-RU`, and "By
 Value" shows `R-SHR1_ADD` without the U. `shr1.stb`
 (`/SYMBOL_TABLE`) is the same table as an object module file (262
@@ -522,7 +523,7 @@ them.
    `ISD_MAX=`'s OPTIGNSHR. `PROTECT=`'s `ISD$V_PROTECT`. A shareable
    image with no outside references and no `.ADDRESS`, matched against
    the probe's sections and header.
-6. **`LINK/SHAREABLE`, the GST.** Universal symbols from `UNIVERSAL=`
+6. **Done (2026-10-19).** **`LINK/SHAREABLE`, the GST.** Universal symbols from `UNIVERSAL=`
    and `OPR_REDEF`: the transfer vector's address outside the image,
    and the routine's inside it. Also entry masks and the GST's records
    as real LINK writes them (Part A: MHD, LNM, `.$$ABS$$.`, one GSD of
@@ -939,3 +940,60 @@ or a based CLUSTER=), a position-dependent (NOPIC) psect, and a
 image as an executable's (subtask 8). `/EXECUTABLE=` and `/SHAREABLE=`
 naming the image both is refused (VMS's message there is
 **unconfirmed**).
+
+### 2026-10-19 — Subtask 6: the global symbol table
+
+A shareable image's global symbol table lists its universal symbols
+(`internal/link/universal.go`). `link.Options.Universals` is
+`UNIVERSAL=`'s list, which the console's LINK now passes. Pass 2's
+`OPR_REDEF` makes a symbol universal, with the `.TRANSFER`'s location
+as its value. The table is written by the code that writes a `/DEBUG`
+image's (`globalSymbolTable`), after the DST and its fixup records. The
+probe's SHR1, SHR1A, SHR4, SHR5, and E1 now link byte for byte as real
+LINK's, GST included (`TestLinkShareableImages`), padded to a whole
+block as Phase 29's Decision 7 has it. `ReadShareableImage` reads
+govax's images as it reads VMS's (`TestReadGovaxShareableImage`).
+
+What the probe's tables settled:
+
+- **The entries.** Each is DEF and UNI, and REL when its psect's cluster
+  has no base of its own (SHR3's, based, have no REL; govax can't link
+  SHR3 until subtask 7). An entry point is an `EPM` with the routine's
+  own mask. A `.TRANSFER`'d symbol's value is its vector entry, but its
+  mask is still the routine's (`SHR1_ADD`'s 0, not the vector's
+  `^M<R4,R5>`). A `.TRANSFER`'d JSB routine is a `SYM` (`SHR1_JSB`).
+- **A universal symbol nothing defines** (E1's `UNIVERSAL=NOSUCH`) is
+  one of the link's undefined symbols: `NUDFSYMS` and `UDFSYM`. It isn't
+  listed, so E1's table has no symbol GSD record at all. **Its end of
+  module record's severity is 1**, the link's warning (`03 01`). govax
+  sets it for any link that warned, executables linked `/DEBUG` too
+  (**unconfirmed** there).
+- **The order** (**unconfirmed**; `universalSymbols`): absolute
+  symbols first, then the psects in address order. Within a psect come
+  the entry points, then the other symbols, each in descending order of
+  value, which in these sources is the reverse of the modules'
+  definitions. A `.TRANSFER`'d symbol is placed by its routine, not by
+  its vector. That fits all seven of the probe's tables (the tests
+  link four; SHR2's, SHR3's, and SHR6's are checked by hand until
+  subtasks 7 and 9 can link them), and Phase 29's
+  TRACE too (`LEVEL`, then DATA's `GLOBDATA`, then `$CODE`'s `SECOND`,
+  `FIRST`, `TRACE`). FORTH's `SYS$` names in name order don't fit it, so
+  executables keep Phase 29's rule. The sources can't tell descending
+  value from these two alternatives: entry points in reverse definition
+  order with the others in definition order, or a hash of the names
+  (no simple one fits). Equal values of one kind, and several modules'
+  symbols in one psect, are ordered by the reverse of their definitions.
+- **An executable** still takes `UNIVERSAL=` and `.TRANSFER` without
+  effect (`TestUniversalInExecutable`: E2 with `UNIVERSAL=` added is
+  still real LINK's image), and gets no table unless linked `/DEBUG`.
+
+**`/SYMBOL_TABLE[=file]`** (and `govax link --symbol-table FILE`)
+writes the image's table as an object module file, by default the first
+input file's name with the type STB. It holds the table record for
+record: govax's SHR1.STB is real LINK's byte for byte
+(`TestLinkSymbolTableFile`), and `TestLinkShareable` checks it through
+DCL. For an executable, the file is the table the image would have
+linked `/DEBUG`. What real LINK writes there is **unconfirmed**.
+
+The map's universal symbols (`U`, and the vector's two values) are still
+subtask 8's.

@@ -123,6 +123,11 @@ type Options struct {
 	// time, matched EQUAL. An executable link ignores GSMatch.
 	Shareable bool
 	GSMatch   *GSMatch
+	// Universals are the symbols UNIVERSAL= makes universal in a
+	// shareable image, which its global symbol table lists with those
+	// .TRANSFER redefines (universal.go). An executable link ignores
+	// them.
+	Universals []string
 }
 
 // Image is a linked executable image.
@@ -244,6 +249,8 @@ func Link(inputs []Input, opts Options) (*Image, error) {
 		l.refer(imgstaName, "").strongRef = true
 	}
 
+	l.noteUniversals()
+
 	if err := l.checkUndefined(); err != nil {
 		return nil, err
 	}
@@ -338,8 +345,9 @@ type linker struct {
 	// (debug.go), and dmtVBN its first block.
 	dmt    []byte
 	dmtVBN uint32
-	// gst is the global symbol table of an image linked /DEBUG, as
-	// variable-length records (debug.go); gstVBN is its first block, and
+	// gst is the global symbol table of an image linked /DEBUG or of a
+	// shareable image, as variable-length records (debug.go); gstVBN is
+	// its first block, and
 	// gstRecords its record count.
 	gst        []byte
 	gstVBN     uint32
@@ -435,6 +443,14 @@ type global struct {
 	module     *module
 	psectIndex int
 	rel        bool
+
+	// universal says a shareable image's global symbol table lists it
+	// (universal.go): UNIVERSAL= names it, or a .TRANSFER redefines it,
+	// which makes vector, its transfer vector entry, its value outside
+	// the image (vectored).
+	universal bool
+	vectored  bool
+	vector    uint32
 }
 
 // pass1 reads a module's global symbol directory and end of module

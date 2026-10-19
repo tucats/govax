@@ -74,13 +74,16 @@ const gstPsectName = ".$$ABS$$."
 
 // globalSymbolTable returns the global symbol table (GST) of an image
 // linked /DEBUG, which the debugger falls back on where the DST says
-// nothing: an object module named for the image, as real LINK writes it
-// (docs/PHASE-29.md, "What real LINK/DEBUG writes"). Its records are a
-// main header (the image's name and ident, the link time), the linker's
-// name, a GSD record defining the absolute psect .$$ABS$$., GSD records
-// of the global symbols, each absolute with its final value, and an end
-// of module record. It returns the records in ODS-2's variable-length
-// layout, and their count.
+// nothing, or of a shareable image, which LINK reads to link programs
+// against it: an object module named for the image, as real LINK writes
+// it (docs/PHASE-29.md, "What real LINK/DEBUG writes"; docs/PHASE-68,
+// "The probe's answers"). Its records are a main header (the image's
+// name and ident, the link time), the linker's name, a GSD record
+// defining the absolute psect .$$ABS$$., GSD records of the symbols
+// (gstEntry), and an end of module record. An executable's symbols are
+// its global symbols, each absolute with its final value; a shareable
+// image's, its universal symbols (universal.go). It returns the records
+// in ODS-2's variable-length layout, and their count.
 func (l *linker) globalSymbolTable() ([]byte, int, error) {
 	date := mapDate(l.opts.Time)
 
@@ -100,11 +103,13 @@ func (l *linker) globalSymbolTable() ([]byte, int, error) {
 
 	gsd, size := &obj.GSD{}, 1
 
-	for _, g := range l.gstSymbols() {
-		s := &obj.Symbol{Type: obj.GSDSymbol, Flags: obj.SymDEF, Value: g.value, Name: g.name}
-		if g.entry {
-			s.Type, s.Mask = obj.GSDEntry, g.mask
-		}
+	symbols := l.gstSymbols
+	if l.opts.Shareable {
+		symbols = l.universalSymbols
+	}
+
+	for _, g := range symbols() {
+		s := l.gstEntry(g)
 
 		b, err := obj.EncodeRecord(&obj.GSD{Subrecords: []obj.Subrecord{s}})
 		if err != nil {
@@ -112,7 +117,8 @@ func (l *linker) globalSymbolTable() ([]byte, int, error) {
 		}
 
 		// Each GSD record holds as many symbols as fit; how real LINK
-		// splits a long table isn't known (FORTH's eight fit in one).
+		// splits a long table isn't known (FORTH's eight fit in one, as
+		// SHR1's eight universal symbols did).
 		if n := len(b) - 1; size+n > gstMaxRecord && len(gsd.Subrecords) > 0 {
 			m.Records = append(m.Records, gsd)
 			gsd, size = &obj.GSD{}, 1
@@ -126,7 +132,14 @@ func (l *linker) globalSymbolTable() ([]byte, int, error) {
 		m.Records = append(m.Records, gsd)
 	}
 
-	m.Records = append(m.Records, &obj.EOM{})
+	// The end of module record's severity is the link's: a warning (1)
+	// when it reported one, as E1's undefined universal symbol did.
+	eom := &obj.EOM{}
+	if l.warned() {
+		eom.Severity = 1
+	}
+
+	m.Records = append(m.Records, eom)
 
 	records, err := obj.Encode(m)
 	if err != nil {

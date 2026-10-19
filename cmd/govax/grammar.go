@@ -75,6 +75,7 @@ type linkFlags struct {
 	executable   string // --executable
 	noExecutable bool   // --no-executable
 	shareable    bool   // --shareable: a shareable image (LINK/SHAREABLE)
+	symbolTable  string // --symbol-table: the global symbol table file (LINK/SYMBOL_TABLE=)
 	noTraceback  bool   // --no-traceback
 	debug        bool   // --debug
 	noSysLib     bool   // --no-syslib
@@ -418,6 +419,16 @@ var linkGrammar = []cli.Option{
 		},
 	},
 	{
+		LongName:    "symbol-table",
+		Description: "Write the image's global symbol table to this object file (LINK/SYMBOL_TABLE)",
+		OptionType:  cli.StringType,
+		Action: func(c *cli.Context) error {
+			link.symbolTable, _ = c.String("symbol-table")
+
+			return nil
+		},
+	},
+	{
 		LongName:    "no-traceback",
 		Description: "Don't start the image through SYS$IMGSTA",
 		OptionType:  cli.BooleanType,
@@ -756,6 +767,10 @@ func linkCommand(objects []string, f linkFlags) string {
 
 	if f.shareable {
 		command += "/SHAREABLE"
+	}
+
+	if f.symbolTable != "" {
+		command += "/SYMBOL_TABLE=" + dclQuote(f.symbolTable)
 	}
 
 	if f.noTraceback {

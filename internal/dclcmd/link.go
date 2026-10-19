@@ -68,6 +68,12 @@ type LinkOptions struct {
 	Shareable     bool
 	ShareableFile string
 
+	// SymbolTable is /SYMBOL_TABLE: write the image's global symbol
+	// table as an object module file, to SymbolFile, or by default to a
+	// file named after the first file with the type STB.
+	SymbolTable bool
+	SymbolFile  string
+
 	// NoTraceback is /NOTRACEBACK: the image doesn't start through
 	// SYS$IMGSTA.
 	NoTraceback bool
@@ -191,6 +197,7 @@ func (c *Context) Link(opts LinkOptions) error {
 		IOSegment:  o.IOSegment,
 		Shareable:  opts.Shareable,
 		GSMatch:    o.GSMatch,
+		Universals: o.Universals,
 	})
 	if err != nil {
 		return linkFailure(err, exe.Name)
@@ -237,6 +244,12 @@ func (c *Context) Link(opts LinkOptions) error {
 		c.SetStatus(status | stsInhibitMsg)
 	}
 
+	if opts.SymbolTable {
+		if err := c.writeSymbolTable(img, opts.SymbolFile, in.first); err != nil {
+			return err
+		}
+	}
+
 	if !opts.Map {
 		return nil
 	}
@@ -262,6 +275,30 @@ func (c *Context) Link(opts LinkOptions) error {
 
 	if _, err := s.CreateRecordFile(mapLoc, rms.TextRecords, records); err != nil {
 		return vmserrors.Wrap(vmserrors.CLI_LINKING, err, mapLoc.Name)
+	}
+
+	return nil
+}
+
+// writeSymbolTable writes the image's global symbol table (/SYMBOL_TABLE)
+// as an object module file: file, or the first input file's name with the
+// type STB. Another link can name it as an input object; real LINK's
+// SHR1.STB is the table SHR1.EXE holds, record for record.
+func (c *Context) writeSymbolTable(img *link.Image, file string, first rms.FileLocation) error {
+	s := c.ContainerSession
+
+	loc, err := outputLocation(s, file, first, "STB")
+	if err != nil {
+		return FileFailure(err, file)
+	}
+
+	records, err := img.SymbolTable()
+	if err != nil {
+		return vmserrors.Wrap(vmserrors.CLI_LINKING, err, loc.Name)
+	}
+
+	if _, err := s.CreateRecordFile(loc, rms.VariableRecords, records); err != nil {
+		return vmserrors.Wrap(vmserrors.CLI_LINKING, err, loc.Name)
 	}
 
 	return nil

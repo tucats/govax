@@ -30,11 +30,12 @@ import (
 //     base to (referSelf). The fixup section is there only when something
 //     needs it, a .ADDRESS or a reference to another shareable image, and
 //     is PRVFXD with IAF$V_SHR (hasFixupSection, fixupSectionFlags).
+//   - Its global symbol table lists its universal symbols, which other
+//     images are linked against (universal.go).
 //
-// What isn't done yet (docs/PHASE-68, subtasks 6 and 7) is refused: a
+// What isn't done yet (docs/PHASE-68, subtask 7) is refused: a
 // position-dependent (NOPIC) psect, a based image (BASE= or a based
-// CLUSTER=), and a .ADDRESS in a read-only section. The image has no
-// global symbol table yet (subtask 6).
+// CLUSTER=), and a .ADDRESS in a read-only section.
 
 // sectionType returns the ISD$K_ type of image section s: 0 (NORMAL) in
 // an executable, and in a shareable image the type its SHR and PIC
