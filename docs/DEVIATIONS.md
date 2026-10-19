@@ -4205,6 +4205,29 @@ widened."
   read, `$QIO`'s buffer check) want a page brought in and are unchanged.
   `TestProbeAccessDoesNotPageIn`, and `TestPG66Oracle`'s A3.
 
+### [Phase 67] The CPU's access-violation reason mask
+
+- **Where**: `internal/cpu/dispatch.go`'s `wrapMemError` (ported from
+  the C source's `set_fault(EXC_ACCVIO, ...)` subcodes, Phase 12), over
+  `internal/vm/translate.go`'s `TranslationFault`.
+- **What**: the architecture's access-violation parameters are the
+  virtual address and a reason mask: bit 0 a length violation, bit 1 a
+  fault on the reference to the process PTE (the P0/P1 page table's own
+  S0 page), bit 2 a write (modify intent). govax's CPU gives 1 for a
+  length violation and 2 for a protection violation, never sets the
+  write bit, and reports a fault on a P0/P1 PTE's reference with the
+  PTE's S0 address instead of the address the program used, without
+  bit 1. The signal array `corevms` builds from them is VMS's (mask,
+  then address), and the LIB$ routines' own `memoryFault` uses the
+  architecture's bits, which VMS 7.1 confirmed (`testdata/lib53`: 0 for
+  a read of page 0, 4 for a write), so the same access gives a
+  different mask from an instruction than from a LIB$ routine. Found by
+  Phase 67's survey (its open question on the mask; with created space,
+  length violations past P0's end and below the stack become common).
+- **Status**: open; the survey recommends fixing it in both paging
+  modes in Phase 67's subtask 2 (docs/PHASE-67 - address space under
+  paging.md, question 5), the probe's handlers checking the masks.
+
 <!--
 Entry template:
 
