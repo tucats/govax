@@ -135,6 +135,75 @@ func TestSessionCopy_volumeToVolume(t *testing.T) {
 	}
 }
 
+// TestSessionCopy_volumeToVolumeKeepsFormat: a file of fixed-length
+// 512-byte records (as an image is), holding bytes that aren't text, is
+// copied as it is, without /BINARY: the copy's record format and record
+// size are the source's, and its bytes the same, as VMS's COPY keeps
+// them (docs/PHASE-66 - mapped image activation.md, subtask 7: a copied
+// image was reframed as Stream_LF text and no longer ran).
+func TestSessionCopy_volumeToVolumeKeepsFormat(t *testing.T) {
+	s, vol := newCopyTestSession(t)
+
+	dir, err := vol.OpenDirectory(ondisk.MasterFileDirectoryFid)
+	if err != nil {
+		t.Fatalf("OpenDirectory(MFD): %v", err)
+	}
+
+	bm, err := dir.Device.Bitmap()
+	if err != nil {
+		t.Fatalf("Bitmap: %v", err)
+	}
+
+	ib, err := dir.Device.IndexBitmap()
+	if err != nil {
+		t.Fatalf("IndexBitmap: %v", err)
+	}
+
+	attr := ondisk.RecAttr{Format: ondisk.RecordFormatFixed, RecordSize: 512, MaxRecordSize: 512}
+
+	f, err := vol.CreateFile(dir, "IMG.EXE", attr, bm, ib)
+	if err != nil {
+		t.Fatalf("CreateFile: %v", err)
+	}
+
+	want := make([]byte, 2*ondisk.BlockSize)
+	for i := range want {
+		want[i] = byte(i * 7) // newlines, zeros, and everything between
+	}
+
+	for vbn := uint32(1); vbn <= 2; vbn++ {
+		if err := f.WriteBlock(vbn, want[(vbn-1)*ondisk.BlockSize:vbn*ondisk.BlockSize]); err != nil {
+			t.Fatalf("WriteBlock(%d): %v", vbn, err)
+		}
+	}
+
+	if err := f.Close(); err != nil {
+		t.Fatalf("Close: %v", err)
+	}
+
+	if _, err := s.Copy("IMG.EXE", false, "IMGCOPY.EXE", false, CopyOptions{}); err != nil {
+		t.Fatalf("Copy: %v", err)
+	}
+
+	if got := readRawVolumeFile(t, vol, "IMGCOPY.EXE"); string(got) != string(want) {
+		t.Errorf("the copy's %d bytes differ from the source's %d", len(got), len(want))
+	}
+
+	entry, err := dir.Lookup("IMGCOPY.EXE", 0)
+	if err != nil {
+		t.Fatalf("Lookup(IMGCOPY.EXE): %v", err)
+	}
+
+	copied, err := vol.OpenFID(entry.Fid)
+	if err != nil {
+		t.Fatalf("OpenFID(IMGCOPY.EXE): %v", err)
+	}
+
+	if got := copied.Header.RecordAttributes; got.Format != ondisk.RecordFormatFixed || got.RecordSize != 512 {
+		t.Errorf("the copy's record format %v, record size %d; want fixed, 512", got.Format, got.RecordSize)
+	}
+}
+
 // TestSessionCopy_volumeToVolumeInheritsSourceName confirms that a
 // destination spec naming no file of its own (just a device/directory --
 // "DUA0:", which resolves to no Name/Type since SetDefault("DUA0:") never

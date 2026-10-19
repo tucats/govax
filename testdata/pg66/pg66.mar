@@ -1,0 +1,558 @@
+	.TITLE	PG66	Phase 66 image activation probe
+	.IDENT	/V1.0/
+;
+; Phase 66's probe (docs/PHASE-66 - mapped image activation.md, subtask
+; 7; README.md here). It asks VMS how an image's pages come in: what
+; activation costs in faults and page file quota, what protection each
+; of the image's pages has once it's running, how its read-only pages
+; fault (read clustering by the image section's cluster factor), what
+; others may do with the image file while it runs, and how the pages
+; come back at a small working set.
+;
+; The image has read-only code (CODE), a 100-page read-only section
+; (BIG: page n's first longword n+1), initialized writable data (DATA,
+; copy-on-reference), a demand-zero section (ZERO, 20 pages), and a
+; fixup section (its G^ calls of LIBRTL). PG66.COM links it twice: as
+; PG66.EXE, every section with the default cluster factor, and as
+; PG66C.EXE, BIG in a cluster of its own with a cluster factor of 8.
+;
+; Each output line is "id what: values"; statuses are in hexadecimal,
+; counts in decimal, and counts that depend on the VAX's configuration
+; or load appear only as differences. It uses only system services and
+; RMS but for LIB$INIT_TIMER and LIB$STAT_TIMER (which make the fixup
+; section), and writes its lines to SYS$OUTPUT with $PUT. The logical
+; name PG66_PART picks the part:
+;
+;   A  activation: the counts at the first instruction against the ones
+;      PG66.COM took before RUN (PG66_FLTS, PG66_CNT, PG66_PPG); PROBEW
+;      of an untouched page; BIG read in order, twice; ZERO touched; the
+;      image's file (PG66_IMAGE) opened by RMS while it runs; the
+;      protection of every page of the image
+;   W  BIG read twice at a small working set
+;   D  run from PG66D.EXE in a subprocess: makes PG66D.RDY, waits while
+;      PG66.COM deletes PG66D.EXE, then reads BIG, which it hasn't
+;      touched, and makes PG66D.END
+;
+	$SSDEF
+	$JPIDEF
+	$LNMDEF
+	$FABDEF
+	$RABDEF
+
+; A snapshot's longwords (SNAP).
+S_FLTS	= 0				; JPI$_PAGEFLTS
+S_CNT	= 4				; JPI$_PAGFILCNT
+S_GPG	= 8				; JPI$_GPGCNT
+S_PPG	= 12				; JPI$_PPGCNT
+S_DIO	= 16				; JPI$_DIRIO
+S_WS	= 20				; JPI$_WSSIZE
+SNAPSZ	= 24
+
+BIGPG	= 100				; BIG's pages
+ZEROPG	= 20				; ZERO's pages
+
+; SAY text, a1, ... a10: format text with $FAOL and the arguments (each
+; a longword, pushed by value) and write the line. The text is in line,
+; branched around: a .PSECT would end the local label block it's in.
+	.MACRO	SAY	TEXT,A1,A2,A3,A4,A5,A6,A7,A8,A9,A10,?LBL,?OVER
+	BRW	OVER
+LBL:	.ASCID	TEXT
+OVER:
+	$$N = 1
+	.IRP	ARG,<A10,A9,A8,A7,A6,A5,A4,A3,A2,A1>
+	.IF	NOT_BLANK,<ARG>
+	PUSHL	ARG
+	$$N = $$N + 1
+	.ENDC
+	.ENDR
+	PUSHAQ	LBL
+	CALLS	#$$N,SAYR
+	.ENDM	SAY
+
+; REPORT text, from, to: a case's line, "text: flts= charged= gpg= ppg=
+; dirio=", the counts' changes between two snapshots.
+	.MACRO	REPORT	TEXT,FROM,TO,?LBL,?OVER
+	BRW	OVER
+LBL:	.ASCID	TEXT
+OVER:	PUSHAL	TO
+	PUSHAL	FROM
+	PUSHAQ	LBL
+	CALLS	#3,REPR
+	.ENDM	REPORT
+
+; SNAP block: a snapshot of the counts into block.
+	.MACRO	SNAP	BLOCK
+	PUSHAL	BLOCK
+	CALLS	#1,SNAPR
+	.ENDM	SNAP
+
+; CHECK base, first, count: read the first longword of count pages from
+; base, page i expected to hold first+i; R0 is how many don't.
+	.MACRO	CHECK	BASE,FIRST,COUNT
+	PUSHL	COUNT
+	PUSHL	FIRST
+	PUSHL	BASE
+	CALLS	#3,CHKR
+	.ENDM	CHECK
+
+; ZERO base, count: R0 is how many of count pages from base don't have
+; a first longword of zero.
+	.MACRO	ZERO	BASE,COUNT
+	PUSHL	COUNT
+	PUSHL	BASE
+	CALLS	#2,ZEROR
+	.ENDM	ZERO
+
+; WSET n: the working set limit set to the floor plus n; R0 is the new
+; limit.
+	.MACRO	WSET	N
+	PUSHL	N
+	CALLS	#1,WSETR
+	.ENDM	WSET
+
+; NUMBER name, cell: the decimal value of the logical name at name (an
+; .ASCID) into cell, -1 if it has none.
+	.MACRO	NUMBER	NAME,CELL
+	PUSHAL	CELL
+	PUSHAQ	NAME
+	CALLS	#2,NUMR
+	.ENDM	NUMBER
+
+; OPENIMG fab, text: $OPEN of the image's file through fab, its status
+; and STV on a line, and $CLOSE if it opened.
+	.MACRO	OPENIMG	FAB,TEXT,?LBL,?OVER
+	BRW	OVER
+LBL:	.ASCID	TEXT
+OVER:	PUSHAQ	LBL
+	PUSHAL	FAB
+	CALLS	#2,OPENR
+	.ENDM	OPENIMG
+
+	.PSECT	DATA,NOEXE,WRT,PAGE
+DATBEG:
+
+; SYS$OUTPUT.
+OFAB:	$FAB	FNM=<SYS$OUTPUT>,RAT=CR,RFM=VAR,FAC=PUT
+ORAB:	$RAB	FAB=OFAB,RBF=OBUF
+OBUF:	.BLKB	200
+OUTD:	.LONG	200
+	.ADDRESS OBUF
+OUTLEN:	.WORD	0,0
+
+; The image's own file, opened three ways while it runs.
+IFAB1:	$FAB	FNM=<PG66_IMAGE>,FAC=GET,SHR=GET
+IFAB2:	$FAB	FNM=<PG66_IMAGE>,FAC=GET,SHR=NIL
+IFAB3:	$FAB	FNM=<PG66_IMAGE>,FAC=<GET,PUT>,SHR=GET
+
+; Part D's markers.
+RFAB:	$FAB	FNM=<PG66D.RDY>,FAC=PUT,RFM=VAR
+EFAB:	$FAB	FNM=<PG66D.END>,FAC=PUT,RFM=VAR
+
+; The snapshot's item list and buffer.
+	.ALIGN	LONG
+JPILST:	.WORD	4,JPI$_PAGEFLTS
+	.ADDRESS CUR+S_FLTS
+	.LONG	0
+	.WORD	4,JPI$_PAGFILCNT
+	.ADDRESS CUR+S_CNT
+	.LONG	0
+	.WORD	4,JPI$_GPGCNT
+	.ADDRESS CUR+S_GPG
+	.LONG	0
+	.WORD	4,JPI$_PPGCNT
+	.ADDRESS CUR+S_PPG
+	.LONG	0
+	.WORD	4,JPI$_DIRIO
+	.ADDRESS CUR+S_DIO
+	.LONG	0
+	.WORD	4,JPI$_WSSIZE
+	.ADDRESS CUR+S_WS
+	.LONG	0
+	.LONG	0
+CUR:	.BLKB	SNAPSZ
+JIOSB:	.QUAD	0
+
+S0:	.BLKB	SNAPSZ			; the snapshots: S0 at the first
+SI:	.BLKB	SNAPSZ			; instruction, SI after LIB$INIT_TIMER,
+SA:	.BLKB	SNAPSZ			; the others the cases'
+SB:	.BLKB	SNAPSZ
+SC:	.BLKB	SNAPSZ
+
+; The logical names' translations.
+LNMTAB:	.ASCID	/LNM$FILE_DEV/
+N_PART:	.ASCID	/PG66_PART/
+N_FLTS:	.ASCID	/PG66_FLTS/
+N_CNT:	.ASCID	/PG66_CNT/
+N_PPG:	.ASCID	/PG66_PPG/
+LNMLST:	.WORD	16,LNM$_STRING
+	.ADDRESS LNMBUF
+	.ADDRESS LNMLEN
+	.LONG	0
+LNMBUF:	.BLKB	16
+LNMLEN:	.LONG	0
+PART:	.LONG	0
+
+; The counts PG66.COM took before RUN.
+B_FLTS:	.LONG	0
+B_CNT:	.LONG	0
+B_PPG:	.LONG	0
+
+; Part D's wait.
+WAITTXT: .ASCID	/0 00:00:10.00/
+WAITQ:	.QUAD	0
+
+; The image's own code and data, locked in the working set before the
+; cases that count faults.
+CODRNG:	.ADDRESS CODBEG,CODEND
+DATRNG:	.ADDRESS DATBEG,DATEND
+
+; The psects' ends: the protection map goes to the highest, and one
+; page more, the fixup section, which LINK puts after the others.
+ENDS:	.ADDRESS CODEND,BIGEND,DATEND,ZEREND,RMSEND
+NENDS	= 5
+
+; LIB$STAT_TIMER's code for page faults.
+CODE5:	.LONG	5
+TFLTS:	.LONG	0
+
+; The cases' cells.
+LIM:	.LONG	0
+STAT:	.LONG	0
+STV:	.LONG	0
+MAPLINE: .BLKB	64			; one line of the protection map
+MAPD:	.LONG	64
+	.ADDRESS MAPLINE
+
+DATEND:	.BLKB	1
+
+;
+; BIG: 100 read-only pages, page n's first longword n+1.
+;
+	.PSECT	BIG,NOEXE,NOWRT,PAGE
+BIGBEG:
+	$$P = 1
+	.REPT	BIGPG
+	.LONG	$$P
+	.BLKB	508
+	$$P = $$P + 1
+	.ENDR
+BIGEND:	.BLKB	0
+
+;
+; ZERO: 20 demand-zero pages.
+;
+	.PSECT	ZERO,NOEXE,WRT,PAGE
+ZERBEG:	.BLKB	ZEROPG*512
+ZEREND:	.BLKB	0
+
+	.PSECT	CODE,EXE,NOWRT,PAGE
+CODBEG:
+	.ENTRY	START,^M<R2,R3,R4,R5,R6,R7,R8,R9,R10,R11>
+	SNAP	S0			; the counts at the first instruction
+	CALLS	#0,G^LIB$INIT_TIMER
+	SNAP	SI
+	$CREATE	FAB=OFAB
+	$CONNECT RAB=ORAB
+	MOVL	#16,LNMLEN
+	CLRL	LNMBUF
+	$TRNLNM_S TABNAM=LNMTAB, LOGNAM=N_PART, ITMLST=LNMLST
+	MOVZBL	LNMBUF,PART
+	CMPB	PART,#^A/W/
+	BNEQ	1$
+	BRW	PARTW
+1$:	CMPB	PART,#^A/D/
+	BNEQ	2$
+	BRW	PARTD
+2$:
+
+;
+; Part A: activation.
+;
+; A1: the counts at the first instruction against PG66.COM's before
+; RUN (DCL's own work between them is in them too); A2: LIB$INIT_TIMER,
+; the first call through the fixup section, then the program's start
+; (SYS$OUTPUT opened, the logical names read).
+	NUMBER	N_FLTS,B_FLTS
+	NUMBER	N_CNT,B_CNT
+	NUMBER	N_PPG,B_PPG
+	SNAP	SA
+	SUBL3	B_FLTS,S0+S_FLTS,R2
+	SUBL3	S0+S_CNT,B_CNT,R3
+	SUBL3	B_PPG,S0+S_PPG,R4
+	SAY	</A1 at the first instruction: flts=!SL charged=!SL ppg=!SL/>, R2, R3, R4
+	REPORT	</A2 LIB$INIT_TIMER/>, S0, SI
+	REPORT	</A2 the program's start/>, SI, SA
+
+; A3: PROBEW, from user mode, of a demand-zero page nothing has touched
+; (ZERO's last): the architecture's PROBE reads the PTE's protection
+; and doesn't touch the page, so it shouldn't fault.
+	SNAP	SA
+	MOVAB	ZEREND-512,R2
+	CLRL	R6
+	PROBEW	#3,#4,(R2)
+	BEQL	4$
+	INCL	R6
+4$:	SNAP	SB
+	SAY	</A3 PROBEW of an untouched demand-zero page: writable=!UL/>, R6
+	REPORT	</A3 PROBEW/>, SA, SB
+
+; A4: the image's code and data locked in the working set: the faults
+; for the pages not yet in.
+	SNAP	SA
+	$LKWSET_S INADR=CODRNG
+	$LKWSET_S INADR=DATRNG
+	SNAP	SB
+	REPORT	</A4 code and data locked/>, SA, SB
+
+; A5: BIG read in order, one longword a page; then again.
+	CHECK	#BIGBEG, #1, #BIGPG
+	MOVL	R0,R6
+	SNAP	SC
+	SAY	</A5 BIG read: bad=!UL/>, R6
+	REPORT	</A5 BIG read/>, SB, SC
+	CHECK	#BIGBEG, #1, #BIGPG
+	MOVL	R0,R6
+	SNAP	SA
+	SAY	</A6 BIG read again: bad=!UL/>, R6
+	REPORT	</A6 BIG read again/>, SC, SA
+
+; A7: ZERO read, then written.
+	ZERO	#ZERBEG, #ZEROPG
+	SUBL3	R0,#ZEROPG,R6		; pages that held zero
+	SNAP	SB
+	SAY	</A7 ZERO read: zero=!UL/>, R6
+	REPORT	</A7 ZERO read/>, SA, SB
+	MOVAB	ZERBEG,R2
+	MOVL	#ZEROPG,R3
+3$:	MOVL	R3,(R2)
+	ADDL2	#512,R2
+	SOBGTR	R3,3$
+	SNAP	SC
+	REPORT	</A7 ZERO written/>, SB, SC
+
+; A8: the faults LIB$STAT_TIMER counts since LIB$INIT_TIMER, less
+; those $GETJPI counts from just after LIB$INIT_TIMER to just before it.
+	SNAP	SA
+	PUSHAL	TFLTS
+	PUSHAL	CODE5
+	CALLS	#2,G^LIB$STAT_TIMER
+	MOVL	R0,STAT
+	SUBL3	SI+S_FLTS,SA+S_FLTS,R6
+	SUBL3	R6,TFLTS,R6
+	SAY	</A8 LIB$STAT_TIMER !XL: its faults less $GETJPI's: !SL/>, STAT, R6
+
+; A9: the image's file opened while the image runs: for reading,
+; sharing reads; for reading, sharing nothing; for writing.
+	OPENIMG	IFAB1,</A9 open to read, others read/>
+	OPENIMG	IFAB2,</A9 open to read, no sharing/>
+	OPENIMG	IFAB3,</A9 open to write, others read/>
+
+; A10: the protection of each page from ^X200 to the image's end, a
+; letter a page: W writable from user mode, R readable only, - neither.
+; Last, so that the probes can't change the counts above.
+	CALLS	#0,MAPR
+
+; A11: the image's faults and charges from the first instruction.
+	SNAP	SA
+	REPORT	</A11 the whole image/>, S0, SA
+	MOVL	#SS$_NORMAL,R0
+	RET
+
+;
+; Part W: BIG read twice at a small working set (the floor plus 10):
+; the second pass's faults are soft (the free list) or hard (DIRIO, the
+; image file) as the frames were reused.
+;
+PARTW:	$LKWSET_S INADR=CODRNG
+	$LKWSET_S INADR=DATRNG
+	WSET	#10
+	MOVL	R0,LIM
+	SNAP	SA
+	CHECK	#BIGBEG, #1, #BIGPG
+	MOVL	R0,R6
+	SNAP	SB
+	SAY	</W1 BIG read: bad=!UL/>, R6
+	REPORT	</W1 BIG read/>, SA, SB
+	CHECK	#BIGBEG, #1, #BIGPG
+	MOVL	R0,R6
+	SNAP	SC
+	SAY	</W2 BIG read again: bad=!UL/>, R6
+	REPORT	</W2 BIG read again/>, SB, SC
+	CHECK	#BIGBEG, #1, #BIGPG
+	MOVL	R0,R6
+	SNAP	SA
+	SAY	</W3 and a third time: bad=!UL/>, R6
+	REPORT	</W3 and a third time/>, SC, SA
+	MOVL	#SS$_NORMAL,R0
+	RET
+
+;
+; Part D: the image's file deleted while it runs. PG66D.RDY tells
+; PG66.COM the image is running; it deletes PG66D.EXE then. The image
+; waits ten seconds, reads BIG, which it hasn't touched, and makes
+; PG66D.END.
+;
+PARTD:	$LKWSET_S INADR=CODRNG
+	$LKWSET_S INADR=DATRNG
+	$CREATE	FAB=RFAB
+	MOVL	R0,STAT
+	$CLOSE	FAB=RFAB
+	SAY	</D1 PG66D.RDY made: !XL/>, STAT
+	$BINTIM_S TIMBUF=WAITTXT, TIMADR=WAITQ
+	$SETIMR_S EFN=#1, DAYTIM=WAITQ
+	$WAITFR_S EFN=#1
+	SNAP	SA
+	CHECK	#BIGBEG, #1, #BIGPG
+	MOVL	R0,R6
+	SNAP	SB
+	SAY	</D2 BIG read after the wait: bad=!UL/>, R6
+	REPORT	</D2 BIG read after the wait/>, SA, SB
+	$CREATE	FAB=EFAB
+	MOVL	R0,STAT
+	$CLOSE	FAB=EFAB
+	SAY	</D3 PG66D.END made: !XL/>, STAT
+	MOVL	#SS$_NORMAL,R0
+	RET
+
+; SAYR ctrstr, p1, ...: write a line.
+	.ENTRY	SAYR,^M<R2,R3,R4,R5>
+	MOVL	#200,OUTD
+	$FAOL_S	CTRSTR=@4(AP), OUTLEN=OUTLEN, OUTBUF=OUTD, PRMLST=8(AP)
+	MOVW	OUTLEN,ORAB+RAB$W_RSZ
+	$PUT	RAB=ORAB
+	RET
+
+; REPR text, from, to: REPORT's line.
+	.ENTRY	REPR,^M<R2,R3,R4,R5,R6,R7,R8>
+	MOVL	8(AP),R2
+	MOVL	12(AP),R3
+	SUBL3	S_FLTS(R2),S_FLTS(R3),R4
+	SUBL3	S_CNT(R3),S_CNT(R2),R5
+	SUBL3	S_GPG(R2),S_GPG(R3),R6
+	SUBL3	S_PPG(R2),S_PPG(R3),R7
+	SUBL3	S_DIO(R2),S_DIO(R3),R8
+	SAY	</!AS: flts=!SL charged=!SL gpg=!SL ppg=!SL dirio=!SL/>, -
+		4(AP), R4, R5, R6, R7, R8
+	RET
+
+; SNAPR block.
+	.ENTRY	SNAPR,^M<R2,R3,R4,R5>
+	$GETJPIW_S ITMLST=JPILST, IOSB=JIOSB
+	MOVC3	#SNAPSZ,CUR,@4(AP)
+	RET
+
+; WSETR n.
+	.ENTRY	WSETR,^M<R2,R3,R4,R5>
+	$ADJWSL_S PAGCNT=#-100000, WSETLM=LIM
+	$ADJWSL_S PAGCNT=4(AP), WSETLM=LIM
+	MOVL	LIM,R0
+	RET
+
+; CHKR base, first, count: R0 = the pages that don't hold their value.
+	.ENTRY	CHKR,^M<R2,R3,R4>
+	CLRL	R0
+	MOVL	4(AP),R2
+	MOVL	8(AP),R4
+	MOVL	12(AP),R3
+	BEQL	3$
+1$:	CMPL	R4,(R2)
+	BEQL	2$
+	INCL	R0
+2$:	INCL	R4
+	ADDL2	#512,R2
+	SOBGTR	R3,1$
+3$:	RET
+
+; ZEROR base, count.
+	.ENTRY	ZEROR,^M<R2,R3>
+	CLRL	R0
+	MOVL	4(AP),R2
+	MOVL	8(AP),R3
+	BEQL	2$
+1$:	TSTL	(R2)
+	BEQL	3$
+	INCL	R0
+3$:	ADDL2	#512,R2
+	SOBGTR	R3,1$
+2$:	RET
+
+; NUMR name, cell: the logical name's decimal value into cell, or -1.
+	.ENTRY	NUMR,^M<R2,R3,R4,R5,R6>
+	MNEGL	#1,@8(AP)
+	MOVL	#16,LNMLEN
+	$TRNLNM_S TABNAM=LNMTAB, LOGNAM=@4(AP), ITMLST=LNMLST
+	BLBC	R0,3$
+	CLRL	R6
+	MOVAB	LNMBUF,R2
+	MOVL	LNMLEN,R3
+	BEQL	3$
+1$:	MOVZBL	(R2)+,R4
+	SUBL2	#^A/0/,R4
+	BLSS	2$
+	CMPL	R4,#9
+	BGTR	2$
+	MULL2	#10,R6
+	ADDL2	R4,R6
+2$:	SOBGTR	R3,1$
+	MOVL	R6,@8(AP)
+3$:	RET
+
+; OPENR fab, text: $OPEN, the status and STV, $CLOSE.
+	.ENTRY	OPENR,^M<R2,R3,R4,R5,R6>
+	MOVL	4(AP),R6
+	$OPEN	FAB=(R6)
+	MOVL	R0,STAT
+	MOVL	FAB$L_STV(R6),STV
+	BLBC	R0,1$
+	$CLOSE	FAB=(R6)
+1$:	SAY	</!AS: !XL stv=!XL/>, 8(AP), STAT, STV
+	RET
+
+; MAPR: A10's lines, 64 pages a line, each "A10 address letters".
+	.ENTRY	MAPR,^M<R2,R3,R4,R5,R6,R7,R8>
+	CLRL	R8			; the image's end: the highest psect end
+	MOVAL	ENDS,R2
+	MOVL	#NENDS,R3
+1$:	CMPL	(R2),R8
+	BLEQU	2$
+	MOVL	(R2),R8
+2$:	ADDL2	#4,R2
+	SOBGTR	R3,1$
+	ADDL2	#511,R8
+	BICL2	#511,R8
+	ADDL2	#512,R8			; the fixup section's page
+	MOVL	#^X200,R6		; the page
+3$:	CMPL	R6,R8
+	BGEQU	9$
+	MOVL	R6,R7			; the line's first page
+	MOVAB	MAPLINE,R2
+	CLRL	R3			; letters in the line
+4$:	MOVB	#^A/-/,R4
+	PROBER	#3,#1,(R6)
+	BEQL	5$
+	MOVB	#^A/R/,R4
+	PROBEW	#3,#1,(R6)
+	BEQL	5$
+	MOVB	#^A/W/,R4
+5$:	MOVB	R4,(R2)+
+	INCL	R3
+	ADDL2	#512,R6
+	CMPL	R6,R8
+	BGEQU	6$
+	CMPL	R3,#64
+	BLSS	4$
+6$:	MOVL	R3,MAPD
+	SAY	</A10 !XL !AS/>, R7, #MAPD
+	BRB	3$
+9$:	SUBL3	#^X200,R8,R8
+	DIVL2	#512,R8
+	SAY	</A10 pages: !UL/>, R8
+	RET
+
+CODEND:	.BYTE	0
+
+; The end of $RMSNAM, where the $FAB macros put the files' names.
+	.PSECT	$RMSNAM
+RMSEND:	.BLKB	0
+
+	.END	START

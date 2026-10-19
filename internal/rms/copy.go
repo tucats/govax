@@ -112,10 +112,11 @@ import (
 // dispatch.go reads r.Present("VFC") only to note in its own comment why
 // it's discarded, not to populate any field here.
 type CopyOptions struct {
-	// Binary requests a raw, byte-for-byte copy (an Undefined-format
-	// destination file on a volume, or the source's exact on-disk bytes
-	// verbatim on a host destination) instead of the default text
-	// reframing every other direction/format combination uses.
+	// Binary requests a raw, byte-for-byte copy to or from the host (an
+	// Undefined-format destination file on a volume, or the source's
+	// exact on-disk bytes verbatim on a host destination) instead of the
+	// default text reframing. A copy from one volume file to another is
+	// always the file as it is (copyVolumeToVolume).
 	Binary bool
 
 	// Quiet suppresses the per-file "%COPY-S-COPIED" (or
@@ -353,6 +354,13 @@ func requireMatchable(matches []filespec.Match, destAcceptsMultiple bool, specTe
 // is always skipped (there's no "create an empty directory" operation a
 // plain file copy could perform on a volume destination), regardless of
 // /DIRS -- matching ods2's own cmdCopy exactly.
+//
+// Each file is copied as it is, whatever its type and with or without
+// /BINARY: its record attributes and its bytes (createBinaryFile), as
+// VMS's COPY keeps the input file's organization and record format. A
+// text reframing to Stream_LF made a copied image (fixed-length 512-byte
+// records) a different file, which no longer ran (docs/PHASE-66 - mapped
+// image activation.md, subtask 7).
 func (s *Session) copyVolumeToVolume(sourceText, destText string, opts CopyOptions) ([]CopyResult, error) {
 	srcVol, srcSpec, err := s.resolveVolume(sourceText)
 	if err != nil {
@@ -410,14 +418,7 @@ func (s *Session) copyVolumeToVolume(sourceText, destText string, opts CopyOptio
 			return results, fmt.Errorf("copy: %w", err)
 		}
 
-		var version uint16
-		if opts.Binary || isHostRecordType(m.Type) {
-			version, err = createBinaryFile(destVol, destDir, destBm, destIb, name, typ, src)
-		} else {
-			version, err = createTextFile(destVol, destDir, destBm, destIb, name, typ, func(w *odsrms.Writer) error {
-				return copyRecordsAsLines(w, src)
-			})
-		}
+		version, err := createBinaryFile(destVol, destDir, destBm, destIb, name, typ, src)
 
 		if err != nil {
 			return results, fmt.Errorf("copy: %w", err)
@@ -1016,69 +1017,6 @@ func copyHostRawToVolume(dst *volume.File, src io.Reader, size int64) error {
 	}
 
 	return dst.CloseWithFinalByte(uint16(size % ondisk.BlockSize))
-}
-
-// copyRecordsAsLines reframes src's records (whatever its own record
-// format is -- Fixed, Variable, VFC, Stream) as a sequence of individual
-// Stream_LF records on w, reusing writeRecords' own record-format-aware
-// text rendering (VFC carriage-control expansion and all) via
-// lineSplitWriter, which re-splits that rendered text back into
-// individual '\n'-delimited records for w.Put to apply Stream_LF's own
-// framing to. Functionally matches ods2's own copyRecordsToVolume.
-//
-// This is the volume-destination default (non-/BINARY) text path; unlike
-// copyToHostFile's own text path, it always uses lfLineEnding regardless
-// of a /CRLF, since /CRLF only chooses a host text file's own line
-// ending -- a volume destination's records are always Stream_LF framing
-// on disk either way, and lfLineEnding here is purely lineSplitWriter's
-// own "where does one record end" delimiter, matching ods2's own
-// identical choice in copyRecordsToVolume.
-func copyRecordsAsLines(w *odsrms.Writer, src *volume.File) error {
-	lw := &lineSplitWriter{put: w.Put}
-	if err := writeRecords(lw, src, lfLineEnding); err != nil {
-		return err
-	}
-
-	if len(lw.buf) > 0 {
-		// A trailing "line" with no terminating '\n' at all -- possible
-		// when src's own last record has no natural terminator (a VFC
-		// record using a carriage-control that suppresses the trailing
-		// line feed, most notably). Flushed as a final record rather
-		// than silently dropped.
-		return w.Put(lw.buf)
-	}
-
-	return nil
-}
-
-// lineSplitWriter is an io.Writer adapter that calls put once per
-// '\n'-terminated line written to it (excluding the '\n' itself),
-// buffering only whatever partial line hasn't seen its terminator yet --
-// the bridge between writeRecords (which writes a stream of already
-// line-terminated text) and odsrms.Writer (whose Put wants each record
-// handed to it individually, so it can apply its own destination
-// format's framing). Functionally matches ods2's own same-named type.
-type lineSplitWriter struct {
-	buf []byte
-	put func([]byte) error
-}
-
-func (l *lineSplitWriter) Write(p []byte) (int, error) {
-	for _, b := range p {
-		if b != '\n' {
-			l.buf = append(l.buf, b)
-
-			continue
-		}
-
-		if err := l.put(l.buf); err != nil {
-			return 0, err
-		}
-
-		l.buf = l.buf[:0]
-	}
-
-	return len(p), nil
 }
 
 // copyHostLinesAsRecords reframes src's plain host text as a sequence of

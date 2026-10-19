@@ -1,0 +1,4 @@
+! PG66C.OPT - PG66C.EXE's options: BIG in a cluster of its own, with a
+! page fault cluster factor of 8 (README.md).
+CLUSTER=BIGCL,,8
+COLLECT=BIGCL,BIG

@@ -1,6 +1,6 @@
 # Phase 66 — image activation by mapping, and image reset
 
-**Status:** in progress (planned 2026-10-15; subtasks 1 to 6 done 2026-10-18). Needs Phase 65 (sections under the
+**Status:** in progress (planned 2026-10-15; subtasks 1 to 6 done 2026-10-18; subtask 7's suite run and probe written 2026-10-18, the VMS run to come). Needs Phase 65 (sections under the
 pager, read clustering). Part of the paging program laid out in
 `PHASE-62 - VMS paging.md` (Decision 15 is this phase's).
 
@@ -672,3 +672,64 @@ procedure. Counts print as differences.
   set by `imageMap`), the debugger's `showSections`. Tests:
   `TestShowImageFull_mapped` (at the mapped image's two checkpoints) and
   `TestShowImageFull_copied` (paging off).
+- **2026-10-18:** Subtask 7, part 1: the whole suite with paging forced
+  on, and the probe written (`testdata/pg66`).
+  - **The forced runs** (an experiment, not committed; the patch is
+    small: environment variables that turn paging on whatever the
+    setting, set PQL_DWSDEFAULT and PQL_DWSQUOTA to n and PQL_DWSEXTENT
+    to 2n, and take free frames after VMINIT until a given number is
+    left, with the PFN database's and every working set's `Check` run
+    after every fault). Every image the suite runs was mapped. At
+    20-page sets with 180 free frames, image pages were read again from
+    their files 318 times (frames reused) and pages read back from the
+    page file 7085 times; at 30-page sets with 200 and 400 free frames,
+    195 and 58 image rereads.
+  - **Found and fixed:** a working set list grew past its limit while it
+    had available entries: when the growth checks pass over the
+    available entries (past WSQUOTA, the free list at GROWLIM) and every
+    page is protected (as `$LKWSET`'s pages are while it locks them),
+    `WorkingSet.Add` gave the page a new entry rather than an available
+    one, breaking the list's rule that a list over its limit has every
+    entry in use (`Check` found it in `TestPG63Oracle`'s `$LKWSET`, at
+    30-page sets). The page now takes the first available entry after
+    next, and the list grows only with none
+    (`availableAfterNext`, shared with `AddAvailable`;
+    `TestWorkingSetNowhereElse`). After it, no check failed in any
+    configuration.
+  - **What else failed, and why:** only tests of the forced settings
+    themselves: the paging-off tests and those of the defaults; tests
+    that expect a 30-page set's counts or a limit of 30 (`$ADJWSL`,
+    SET WORKING_SET, the replacement and reclaimer tests,
+    `TestProcessServices_assembledProgram`'s WSDEFAULT+10); the lock
+    tests at the floor (SS$_LKWSETFUL with a 20-page set); counts and
+    clusters of the writer tests and `TestShowImageFull_mapped`;
+    `TestLib55Oracle`'s LIB$SHOW_TIMER fault count (two digits at a
+    20-page set); `TestPageFileWriter`'s last check (the user stack's
+    top page, written to the page file at a 20-page set, keeps its
+    block, as it should: it outlives the image); `TestPG64WriterRound2`
+    (VMS's timing with the VAX's memory); and at 200 free frames
+    `TestPG64Oracle`'s detached process, whose page tables (a 16384-page
+    P0) take the memory: Phase 67's subject. The LOGOUT tests' peak and
+    `TestLkwsetFull` fail with paging forced on at any size, as Phase
+    64 found. No output oracle differed but for counts.
+  - **The probe** (`testdata/pg66`, README.md): one program linked
+    twice (PG66.EXE, and PG66C.EXE with BIG in a `CLUSTER=` of its own,
+    pfc 8), in three parts: A (activation's faults and charges at the
+    first instruction against the procedure's counts before RUN,
+    PROBEW of an untouched page, BIG read in order, ZERO, LIB$STAT_TIMER
+    against `$GETJPI`, the image's file opened three ways while it runs,
+    and a protection map of every page), W (BIG at a small working set),
+    and D (the image's file, a copy, deleted while it runs in a
+    subprocess). `TestPG66DryRun` runs it on govax with govax's own link
+    of PG66.EXE (govax's LINK has no CLUSTER=), checking what doesn't
+    depend on VMS's answers; the README lists govax's answers.
+  - **Found by the dry run:** PROBER/PROBEW page in the page they probe
+    (docs/DEVIATIONS.md): the protection map brought the whole image in.
+    Left for the probe's case A3 to confirm on VMS before PROBE is
+    changed. And COPY from one volume file to another reframed it as
+    Stream_LF text unless /BINARY, so a copied image didn't run: it now
+    copies the file as it is, as VMS's COPY keeps its record format
+    (`internal/rms/copy.go`; `TestSessionCopy_volumeToVolumeKeepsFormat`).
+    The suite passed unchanged with it.
+  - **Next:** the VAX run (the README's steps), then govax changed to
+    its answers and `TestPG66Oracle` in place of the dry run.

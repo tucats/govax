@@ -315,6 +315,37 @@ func TestWorkingSetOverflow(t *testing.T) {
 	}
 }
 
+// A list at its limit with available entries past its quota, every page
+// in it protected and the free list at GROWLIM: no page can go and no
+// entry may be grown into, so the page takes an available entry rather
+// than a new one past the limit (a list over its limit has every entry in
+// use). Found running the whole suite with paging forced on and 30-page
+// working sets (docs/PHASE-66 - mapped image activation.md, subtask 7).
+func TestWorkingSetNowhereElse(t *testing.T) {
+	w := NewWorkingSet(6, Bounds{Quota: 3, Extent: 8, Minimum: 2})
+	scarce := Conditions{FreePages: 63, GrowLimit: 63}
+	everything := Conditions{FreePages: 63, GrowLimit: 63, Protected: func(uint32) bool { return true }}
+
+	for n := range 3 {
+		add(t, w, n, scarce)
+	}
+
+	add(t, w, 3, everything)
+	add(t, w, 4, everything)
+
+	if c := w.Counts(); c.Entries != 6 || c.Process != 5 || w.Over() {
+		t.Fatalf("counts after adding with every page protected %+v", c)
+	}
+
+	// Only once every entry is in use does the list grow past its limit.
+	add(t, w, 5, everything)
+	add(t, w, 6, everything)
+
+	if c := w.Counts(); c.Entries != 7 || c.Process != 7 || !w.Over() {
+		t.Fatalf("counts after overflowing %+v", c)
+	}
+}
+
 // Trim brings a list over its limit back down without adding a page,
 // the oldest pages going first, passing over protected ones; a list at
 // its limit is left alone.

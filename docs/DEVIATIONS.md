@@ -244,6 +244,11 @@ against real VMS.
   - User-mode names are run down only when RUN's image returns from its main
     routine. govax has no `SYS$EXIT`, so an image ending in HALT or a fatal
     exception isn't run down.
+  - (Phase 66) Nor are they run down after govax's own commands that are
+    images on VMS (MACRO, LINK, ...): a `DEFINE/USER_MODE SYS$OUTPUT`
+    before MACRO is still defined at the next command, where VMS's went
+    at MACRO's exit (seen as `%DCL-I-SUPERSEDE` on the next DEFINE when
+    `testdata/pg66/pg66.com` ran on govax).
   - `$CRELOG`/`$DELLOG`/`$TRNLOG` follow the V4-era interface descriptions.
     The 7.3 source archive doesn't contain them to check against.
 - **Status**: open, deferred. None affects an existing test or fixture.
@@ -4169,6 +4174,32 @@ widened."
 - **Status**: fixed in both paging modes (docs/PHASE-63 - working
   sets.md, subtask 6; `TestLockStatuses`). The probe (subtask 10)
   confirms it on VMS.
+
+### [Phase 66] PROBER and PROBEW page in the page they probe
+
+- **Where**: `internal/cpu/misc.go`'s `emulProbe` (ported from
+  `emul_misc.c`'s `emul_probe`), through `internal/vm/translate.go`'s
+  `ProbeTranslate`, which is `translate` without the STC: an invalid
+  PTE goes to the pager like any other access.
+- **What**: the architecture's PROBE reads the protection field of the
+  PTE of the first and last byte and doesn't touch the page; the valid
+  bit doesn't matter (only a length violation, or an invalid system PTE
+  mapping the process page table, is a fault or "not accessible"). In
+  govax, PROBE of a page that isn't valid faults it in: with paging on, a
+  page fault counted in PAGEFLTS, a frame taken, the page in the working
+  set (a demand-zero page made, an image or section page read, with its
+  read cluster); with paging off, a demand-zero page made. The answer
+  (Z) is right either way, since every invalid PTE form carries the
+  page's protection. Found by Phase 66's probe (`testdata/pg66`) in its
+  govax dry run: a protection map of an image's pages by PROBER/PROBEW
+  brought the whole image in.
+- **Status**: deferred to the probe's VMS run (docs/PHASE-66 - mapped
+  image activation.md, subtask 7): case A3 PROBEWs an untouched
+  demand-zero page and reports the faults; govax shows 1. The other
+  callers of `ProbeTranslate` (the S0 PTE read in `translate`, the
+  debugger's memory read, `$QIO`'s buffer check) want a page brought in,
+  so the fix belongs in PROBE alone: an invalid PTE's protection field
+  read without paging.
 
 <!--
 Entry template:

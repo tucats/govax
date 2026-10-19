@@ -283,11 +283,14 @@ func (w *WorkingSet) order() []int {
 // its state. The first entry not passed over is reused.
 //
 // When every entry is passed over (every page in the dynamic part is
-// protected, or the dynamic part is empty), the list grows
-// past its limit: the page takes a new entry after next, and nothing is
-// removed. A Go routine inside a single instruction can touch more pages
-// than the limit; the list comes back down at the next Add after the
-// instruction (the phase doc's finding 10).
+// protected, or the dynamic part is empty), nothing is removed: the page
+// takes an available entry, the first after next, even though the growth
+// checks passed it over (it can go nowhere else); with none, the list
+// grows past its limit, the page taking a new entry after next. So a list
+// over its limit always has every entry in use. A Go routine inside a
+// single instruction can touch more pages than the limit; the list comes
+// back down at the next Add after the instruction (the phase doc's
+// finding 10).
 func (w *WorkingSet) Add(va uint32, global bool, c Conditions) ([]Page, error) {
 	va &= pageMask
 	if _, ok := w.where[va]; ok {
@@ -298,7 +301,9 @@ func (w *WorkingSet) Add(va uint32, global bool, c Conditions) ([]Page, error) {
 
 	i, ok := w.choose(c, true)
 	if !ok {
-		i = w.insertAfterNext()
+		if i, ok = w.availableAfterNext(); !ok {
+			i = w.insertAfterNext()
+		}
 	} else if s := w.slots[i]; s.used {
 		removed = append(removed, s.Page)
 		w.empty(i)
@@ -323,11 +328,25 @@ func (w *WorkingSet) AddAvailable(va uint32, global bool, c Conditions) (bool, e
 		return false, fmt.Errorf("%w: %08X", ErrInWorkingSet, va)
 	}
 
-	n := len(w.slots) - w.dyn
-	if w.Over() || n == 0 || !w.mayGrow(c) {
+	if w.Over() || !w.mayGrow(c) {
 		return false, nil
 	}
 
+	i, ok := w.availableAfterNext()
+	if !ok {
+		return false, nil
+	}
+
+	w.fill(i, Page{VA: va, Global: global})
+	w.next = i
+
+	return true, nil
+}
+
+// availableAfterNext is the first available entry of the dynamic part
+// after next, in the order Add's scan visits them, if there is one.
+func (w *WorkingSet) availableAfterNext() (int, bool) {
+	n := len(w.slots) - w.dyn
 	i := max(w.next, w.dyn-1)
 
 	for range n {
@@ -337,14 +356,11 @@ func (w *WorkingSet) AddAvailable(va uint32, global bool, c Conditions) (bool, e
 		}
 
 		if !w.slots[i].used {
-			w.fill(i, Page{VA: va, Global: global})
-			w.next = i
-
-			return true, nil
+			return i, true
 		}
 	}
 
-	return false, nil
+	return 0, false
 }
 
 // Over reports whether the list is longer than its limit: it had to grow
