@@ -24,6 +24,8 @@ func (c *Console) cmd() *dclcmd.Context {
 		SetStatus:        func(status uint32) { c.SetCommandStatus(status, nil) },
 		ReadReply:        c.ReadReply,
 		TypeDCL:          c.TypeDCL,
+		InputStream:      c.IsInputStream,
+		VerifyImage:      c.VerifyImage,
 	}
 }
 

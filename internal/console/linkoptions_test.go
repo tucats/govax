@@ -86,14 +86,16 @@ func TestLink_inputErrors(t *testing.T) {
 	dir := t.TempDir()
 	obj := assembleFixture(t, c, "entry", dir)
 
-	writeHostFile(t, filepath.Join(dir, "bad.opt"), "entry\nCLUSTER=A,,,ENTRY\n")
+	writeHostFile(t, filepath.Join(dir, "bad.opt"), "entry\nCLUSTERS=A,,,ENTRY\n")
+	writeHostFile(t, filepath.Join(dir, "later.opt"), "CLUSTER=A,,,ENTRY\n")
 	writeHostFile(t, filepath.Join(dir, "none.opt"), "STACK=10\n")
 
 	cases := []struct {
 		files []link.InputFile
 		want  string
 	}{
-		{[]link.InputFile{{Name: obj}, {Name: "bad", Options: true}}, "line 2: option CLUSTER: isn't supported"},
+		{[]link.InputFile{{Name: obj}, {Name: "bad", Options: true}}, "options line in error\n\t'CLUSTERS'=A,,,ENTRY"},
+		{[]link.InputFile{{Name: obj}, {Name: "later", Options: true}}, "the option CLUSTER= isn't supported yet"},
 		{[]link.InputFile{{Name: filepath.Join(dir, "none"), Options: true}}, "no object modules"},
 		{[]link.InputFile{{Name: obj}, {Name: "x", Shareable: true}}, "are named in an options file"},
 		{[]link.InputFile{{Name: obj}, {Name: "entry.obj", Library: true}}, "entry.obj"},

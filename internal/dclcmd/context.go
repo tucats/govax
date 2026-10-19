@@ -64,6 +64,15 @@ type Context struct {
 	// in a procedure, a file DCL's OPEN opened), reporting whether it
 	// did.
 	TypeDCL func(spec string) (handled bool, err error)
+
+	// InputStream reports whether spec names SYS$INPUT, itself or
+	// through logical names (LINK's SYS$INPUT/OPTIONS).
+	InputStream func(spec string) bool
+
+	// VerifyImage reports whether image verification is on, when a
+	// utility shows the lines it reads from a file (LINK's options
+	// files).
+	VerifyImage func() bool
 }
 
 // Printf writes to the DCL's output.

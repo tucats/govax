@@ -1,6 +1,7 @@
 package dclcmd
 
 import (
+	"errors"
 	"fmt"
 	"path/filepath"
 	"strings"
@@ -24,9 +25,13 @@ import (
 //	file/SELECTIVE_SEARCH                 an object searched selectively
 //	file/OPTIONS                          an options file (.OPT)
 //
-// An options file (link.ParseOptions) names more input files, which may
-// also be shareable images (file/SHAREABLE, .EXE), and options: STACK=,
-// IDENTIFICATION=, NAME=, and SYMBOL=.
+// An options file (link.OptionsParser) names more input files, which may
+// also be shareable images (file/SHAREABLE, .EXE), and options. LINK acts
+// on STACK=, IDENTIFICATION=, NAME=, SYMBOL=, UNIVERSAL=, and GSMATCH=
+// (the last two ignored in an executable, as VMS's LINK ignored
+// UNIVERSAL=: testdata/link68's E8), and refuses the others for now.
+// SYS$INPUT/OPTIONS reads the options from SYS$INPUT: in a command
+// procedure, the data lines after the LINK command.
 //
 // LINK reads each object module, links them with internal/link, and writes
 // the executable image, and a link map if asked. Every file can be a host
@@ -124,6 +129,11 @@ func (c *Context) Link(opts LinkOptions) error {
 
 	if len(in.modules) == 0 {
 		return vmserrors.Wrap(vmserrors.CLI_LINKING, fmt.Errorf("no object modules to link"), in.first.Name)
+	}
+
+	// Options govax's LINK reads but doesn't act on yet.
+	if names := in.options.Unimplemented(); len(names) > 0 {
+		return vmserrors.Wrap(vmserrors.CLI_LINKING, fmt.Errorf("the option %s isn't supported yet", strings.Join(names, ", ")), in.first.Name)
 	}
 
 	exe, err := outputLocation(s, opts.Executable, in.first, "EXE")
@@ -262,6 +272,10 @@ func (c *Context) linkInput(in *linkInputs, f link.InputFile, host, fromCommand 
 		typ = "OLB"
 	}
 
+	if typ == "OPT" && !host && c.InputStream != nil && c.InputStream(f.Name) {
+		return c.linkOptions(in, inputOptionsName, c.inputLine, false, host)
+	}
+
 	var (
 		loc rms.FileLocation
 		err error
@@ -293,23 +307,21 @@ func (c *Context) linkInput(in *linkInputs, f link.InputFile, host, fromCommand 
 			return FileFailure(err, loc.Name)
 		}
 
-		lines := make([]string, len(records))
-		for i, r := range records {
-			lines[i] = string(r)
-		}
+		next := func() (string, bool) {
+			if len(records) == 0 {
+				return "", false
+			}
 
-		o, err := link.ParseOptions(lines)
-		if err != nil {
-			return failed(err, found.Name)
+			line := string(records[0])
+			records = records[1:]
+
+			return line, true
 		}
 
 		in.noteFile(found)
-		in.mergeOptions(o)
 
-		for _, g := range o.Files {
-			if err := c.linkInput(in, g, host, false); err != nil {
-				return err
-			}
+		if err := c.linkOptions(in, found.Name, next, c.VerifyImage != nil && c.VerifyImage(), host); err != nil {
+			return err
 		}
 
 		in.prev = found
@@ -423,20 +435,69 @@ func (in *linkInputs) noteFile(found rms.FileLocation) {
 	in.prev = found
 }
 
-// mergeOptions takes an options file's options: a later file's value
-// replaces an earlier one's, and symbols add up.
-func (in *linkInputs) mergeOptions(o *link.OptionsFile) {
-	if o.Stack != 0 {
-		in.options.Stack = o.Stack
+// inputOptionsName is SYS$INPUT as an options file, named as VMS's LINK
+// names it in a message (testdata/link68's E4).
+const inputOptionsName = "SYS$INPUT:.;"
+
+// linkOptions reads an options file, named file, whose lines next
+// returns, a line at a time, into in, then reads the input files it
+// names. With echo, each line is shown as it's read, as VMS's LINK does
+// with image verification on (testdata/link68's log); SYS$INPUT's lines
+// DCL shows itself. LINK stops at the first line in error, so the data
+// lines after it in a procedure are DCL's to skip.
+func (c *Context) linkOptions(in *linkInputs, file string, next func() (string, bool), echo, host bool) error {
+	var p link.OptionsParser
+
+	for {
+		line, ok := next()
+		if !ok {
+			break
+		}
+
+		if echo {
+			c.Printf("%s\n", line)
+		}
+
+		if err := p.Line(line); err != nil {
+			return optionsFailure(err, file)
+		}
 	}
 
-	if o.Ident != "" {
-		in.options.Ident = o.Ident
+	o, err := p.End()
+	if err != nil {
+		return optionsFailure(err, file)
 	}
 
-	if o.Name != "" {
-		in.options.Name = o.Name
+	in.options.Merge(o)
+
+	for _, g := range o.Files {
+		if err := c.linkInput(in, g, host, false); err != nil {
+			return err
+		}
 	}
 
-	in.options.Symbols = append(in.options.Symbols, o.Symbols...)
+	return nil
+}
+
+// optionsFailure is the error for an options file, named file, LINK
+// couldn't read: an OptionError is VMS's message, with LINK's status
+// (marked as shown, as VMS's LINK leaves it).
+func optionsFailure(err error, file string) error {
+	var oe *link.OptionError
+	if errors.As(err, &oe) {
+		return vmserrors.ConditionError{Status: oe.Status() | stsInhibitMsg, Text: oe.Message(file)}
+	}
+
+	return vmserrors.Wrap(vmserrors.CLI_LINKING, fmt.Errorf("%s: %w", file, err), file)
+}
+
+// inputLine reads SYS$INPUT's next line: in a command procedure, the data
+// line after the command; at the terminal, a line typed. ok is false at
+// its end of file.
+func (c *Context) inputLine() (line string, ok bool) {
+	if c.RTL == nil || (c.Running != nil && !c.Running()) {
+		return "", false
+	}
+
+	return c.RTL.ReadLine(maxInputRecord)
 }

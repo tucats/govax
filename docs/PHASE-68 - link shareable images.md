@@ -4,7 +4,7 @@
 author the same day. Part A is the survey. Part B holds the decisions
 and the author's answers to the plan's questions. Part C is the
 subtasks. Subtask 1, the VMS probe (`testdata/link68`), is done, and so
-is subtask 2 (MACRO's `.TRANSFER`).
+are subtask 2 (MACRO's `.TRANSFER`) and subtask 3 (options files).
 
 ## Goal
 
@@ -490,7 +490,7 @@ them.
    is written from the manual's 7.4. Anything else the probe's objects
    show MACRO lacks. In the linker, pass 2 takes `OPR_REDEF`: an
    executable link ignores it, as V11-39 did with E2.
-3. **Options files, all of VAX LINK's options.** The parser and its
+3. **Done (2026-10-19).** **Options files, all of VAX LINK's options.** The parser and its
    checks for `UNIVERSAL=`, `GSMATCH=`, `CLUSTER=`, `COLLECT=`,
    `PSECT_ATTR=`, `BASE=`, `DZRO_MIN=`, `ISD_MAX=`, `PROTECT=`,
    `IOSEGMENT=`, and `UNSUPPORTED=`, with their abbreviations and
@@ -699,3 +699,72 @@ byte, from real MACRO's objects and from govax's
 (`TestLinkTransferVectorExecutable`), with `%LINK-W-USRTFR` as VMS
 gave it. Subtask 6 makes the redefinition a shareable image's
 universal value.
+
+### 2026-10-19 — Subtask 3: options files
+
+`internal/link/options.go` reads every VAX LINK option: `BASE=`,
+`CLUSTER=` (name, base, pfc, files; the files go among the input files
+with their cluster), `COLLECT=`, `DZRO_MIN=`, `GSMATCH=`,
+`IDENTIFICATION=`, `IOSEGMENT=` (`[NO]P0BUFS`), `ISD_MAX=`, `NAME=`,
+`PROTECT=`, `PSECT_ATTR=` (also spelled `PSECT_ATTRIBUTE=`, VSI's name:
+the attribute keywords and an alignment by keyword or power of 2),
+`STACK=`, `SYMBOL=`, `UNIVERSAL=`, and `UNSUPPORTED=`, each abbreviated
+to any unique prefix. `OptionsParser` reads a file a line at a time, as
+VMS's LINK does: the log shows `%LINK-I-OPTIGNSHR` between the line it
+was for and the next. A line in error is an `OptionError`, which words
+OPTSYNERR and OPTVALERR as the probe's log does, the part in error
+between apostrophes, with LINK's statuses (%X106483B4 and %X106483BC,
+the inhibit bit set). `TestOptionErrors` holds the probe's four
+messages word for word. A later options file's values replace an
+earlier one's, and its lists add to them (`OptionsFile.Merge`), so the
+last `GSMATCH=` wins, as E6 showed.
+
+In the LINK command (`internal/dclcmd/link.go`):
+
+- **`SYS$INPUT/OPTIONS`** (or a logical name for SYS$INPUT) reads the
+  options from SYS$INPUT, a line at a time through the process's input:
+  in a procedure, the data lines after the command; at the terminal,
+  lines typed up to Ctrl/Z. Its name in a message is `SYS$INPUT:.;`, as
+  in the probe's E4.
+- **With image verification on, an options file's lines are shown as
+  LINK reads them**, as VMS's log shows SHR1.OPT's and GSM.OPT's (DCL
+  already shows the SYS$INPUT data lines an image reads).
+- LINK stops at the first line in error, so the data lines after it are
+  DCL's to skip, with SKPDAT, as after any image (LINK isn't one of
+  `dclOwnCommands`). The dry run's lines run as commands came from
+  LINK's qualifiers the grammar didn't have yet: a command the grammar
+  refuses runs no image, so DCL reads the next line as a command (what
+  VMS does there is unconfirmed).
+- An option later subtasks act on (`BASE=`, `CLUSTER=`, `COLLECT=`,
+  `DZRO_MIN=`, `IOSEGMENT=`, `ISD_MAX=`, `PSECT_ATTR=`, `UNSUPPORTED=`)
+  is refused: "the option BASE= isn't supported yet"
+  (`OptionsFile.Unimplemented`). `UNIVERSAL=` and `GSMATCH=` are
+  accepted and ignored in an executable link, as VMS's LINK accepted
+  `UNIVERSAL=` there (E8; `GSMATCH=` there is unconfirmed). `PROTECT=`
+  only marks the clusters after it, so it needs no refusal of its own.
+
+`TestLinkOptionsInput` runs the cases through DCL with SET VERIFY: a
+SYS$INPUT error, a file's error, a good link, and a refused option.
+
+Unconfirmed, govax's choices where the probe is silent:
+
+- The checks beyond the probe's: a value that isn't a number or a
+  keyword, a missing or too-long name, a value too many or too few, and
+  an input file with an unknown qualifier are OPTSYNERR with that value
+  quoted; a number out of range is OPTVALERR. The ranges: the GSMATCH
+  minor ID 0 to %XFFFFFF (its header field), STACK= 1 to 2097152, a
+  cluster's pfc 0 to 127, an alignment 0 to 9, DZRO_MIN= and ISD_MAX=
+  at least 1.
+- The line shown in a message is the statement with its comment
+  removed and its continuation lines joined (the probe's were all one
+  line).
+- `PROTECT=` holds to the end of its options file, not into the next.
+- `IOSEGMENT=`'s default is P0BUFS (the 5.0 manual; VSI's says
+  NOP0BUFS).
+- What `UNSUPPORTED=` does: neither manual describes it. It takes a
+  number.
+- `/SHAREABLE=COPY` stays a plain refusal, not a syntax error: it is
+  VMS's, not govax's.
+
+`OPTIGNSHR` (`ISD_MAX=` in a shareable image) waits for `/SHAREABLE`,
+subtask 5.
