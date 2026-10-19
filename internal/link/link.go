@@ -5,12 +5,14 @@
 //
 // Linking follows the VMS 5.0 Linker Utility Manual's chapter 6:
 //
-//   - Pass 1 reads each module's global symbol directory: its program
-//     sections (psects), which modules contribute to by name, and the global
-//     symbols it defines and refers to.
-//   - Allocation groups the psects into image sections by their writability,
-//     executability, and vector attributes, and gives each psect and image
-//     section an address, starting at 0x200.
+//   - Pass 1 reads each module's global symbol directory, cluster by
+//     cluster (cluster.go): its program sections (psects), which modules
+//     contribute to by name, and the global symbols it defines and refers
+//     to.
+//   - Allocation groups each cluster's psects into image sections by their
+//     writability, executability, and vector attributes, gives each
+//     cluster its addresses (from 0x200, or the bases the options give),
+//     and then each psect and image section its own.
 //   - Pass 2 runs each module's text information and relocation (TIR)
 //     commands on the linker's stack machine, which stores the module's
 //     bytes, relocated, into the image sections.
@@ -57,6 +59,9 @@ type Input struct {
 	// default map leaves out; a module from the user's own library is
 	// listed.
 	System bool
+	// Cluster names the cluster a CLUSTER= option put the module's file
+	// in; "" for the default cluster.
+	Cluster string
 }
 
 // Options are the parts of an image that don't come from its modules.
@@ -90,6 +95,24 @@ type Options struct {
 	// Symbols are absolute global symbols an options file defines
 	// (SYMBOL=), which take precedence over the modules' definitions.
 	Symbols []Symbol
+
+	// Clusters are the clusters the options files make, in order:
+	// CLUSTER= options, and a cluster for each shareable image they name
+	// (Cluster.Image). Collects and PsectAttrs are COLLECT= and
+	// PSECT_ATTR= options, in order (cluster.go).
+	Clusters   []Cluster
+	Collects   []Collect
+	PsectAttrs []PsectAttr
+	// Base is BASE=, the default cluster's address; nil for none.
+	Base *uint32
+	// DZROMin is DZRO_MIN=, the fewest pages nothing is stored in that
+	// make a demand-zero section of their own (nil: 5), and ISDMax
+	// ISD_MAX=, the image sections past which the link makes no more
+	// (nil: 96).
+	DZROMin, ISDMax *uint32
+	// IOSegment is IOSEGMENT=, the image I/O segment's pages; nil for the
+	// system's default.
+	IOSegment *IOSegment
 }
 
 // Image is a linked executable image.
@@ -174,15 +197,23 @@ func Link(inputs []Input, opts Options) (*Image, error) {
 		opts.Traceback = true
 	}
 
-	l := &linker{opts: opts, psects: map[string]*psect{}, symbols: map[string]*global{}}
+	l := &linker{opts: opts, symbols: map[string]*global{}}
 
 	for _, s := range opts.Symbols {
 		g := l.refer(s.Name, "")
 		g.defined, g.option, g.offset = true, true, s.Value
 	}
 
-	for i := range inputs {
-		if _, err := l.pass1(&inputs[i], false); err != nil {
+	// Pass 1 reads the files cluster by cluster (cluster.go).
+	l.buildClusters()
+
+	ordered, err := l.byCluster(inputs)
+	if err != nil {
+		return nil, err
+	}
+
+	for _, in := range ordered {
+		if _, err := l.pass1(in, false); err != nil {
 			return nil, err
 		}
 	}
@@ -197,7 +228,11 @@ func Link(inputs []Input, opts Options) (*Image, error) {
 		return nil, err
 	}
 
-	l.allocate()
+	l.addImageClusters()
+
+	if err := l.allocate(); err != nil {
+		return nil, err
+	}
 
 	for _, m := range l.modules {
 		if err := l.pass2(m); err != nil {
@@ -214,17 +249,23 @@ type linker struct {
 
 	modules []*module
 
-	// psects are the image's program sections by name, and order the
-	// order they were first seen in.
-	psects map[string]*psect
-	order  []*psect
+	// clusters are the cluster list (cluster.go), defaultCluster the
+	// default cluster in it, and imageBase the image's first section's
+	// address, which the fixup section's lists are relative to.
+	clusters       []*cluster
+	defaultCluster *cluster
+	imageBase      uint32
+
+	// order is the image's program sections in the order they were
+	// first seen in; each cluster has its own by name.
+	order []*psect
 
 	symbols map[string]*global
 	// definitions counts the modules' symbol definitions, numbering each
 	// (global.defSeq).
 	definitions int
 
-	// sections are the image sections, by address.
+	// sections are the user clusters' image sections, by address.
 	sections []*section
 
 	// shared are the shareable images the image refers to, in the order
@@ -247,12 +288,15 @@ type linker struct {
 	undefined []string
 	messages  []Message
 
-	// What image() laid out, for the map: the image sections, and the
-	// fixup section's address and size.
-	isdCount    int
-	fixupVA     uint32
-	fixupLength uint32
-	imageBlocks uint32
+	// What image() laid out, for the map: the image sections, the
+	// fixup section's address and size, and the addresses the link
+	// placed anything at (the image's sections and the shareable images
+	// it placed, the stack aside).
+	isdCount      int
+	fixupVA       uint32
+	fixupLength   uint32
+	imageBlocks   uint32
+	vmLow, vmHigh uint32
 
 	// dst is the debug symbol table pass 2 builds from the modules'
 	// traceback records, and dstVBN its first block in the image file
@@ -290,8 +334,9 @@ type module struct {
 	// nothing referred to when it was read, in case something does later.
 	deferred map[string]*obj.Symbol
 	// contribs are the module's psect contributions, by its own psect
-	// index.
+	// index, and cluster the cluster its file is in.
 	contribs []*contribution
+	cluster  *cluster
 	// dstStart and dstEnd are where the module's records are in the
 	// debug symbol table, for the debug module table (debug.go).
 	dstStart, dstEnd uint32
@@ -306,6 +351,7 @@ type psect struct {
 	base     uint32
 	length   uint32
 	section  *section
+	cluster  *cluster
 }
 
 // contribution is one module's part of a psect.
@@ -342,9 +388,11 @@ type global struct {
 	mask    uint16 // an entry point's register save mask
 	entry   bool
 	// image is the shareable image a symbol from a source is in; its
-	// value is its offset there.
-	image string
-	refs  []string // modules that refer to it
+	// value is its offset there, unless placed says the link placed the
+	// image, making its value an address (cluster.go).
+	image  string
+	placed bool
+	refs   []string // modules that refer to it
 	// strongRef says something refers to it other than weakly. A symbol
 	// only referred to weakly is 0, silently, if nothing defines it, and
 	// isn't looked for in the symbol sources.
@@ -361,8 +409,19 @@ type global struct {
 // pass1 reads a module's global symbol directory and end of module
 // record. library says an object library supplied it.
 func (l *linker) pass1(in *Input, library bool) (*module, error) {
-	m := &module{input: in, library: library}
+	m := &module{input: in, library: library, cluster: l.defaultCluster}
 	l.modules = append(l.modules, m)
+
+	// A module from a library goes in the default cluster (the Linker
+	// manual, 6.3.3.3), and a file in its own.
+	if !library {
+		c, err := l.clusterOf(in)
+		if err != nil {
+			return nil, err
+		}
+
+		m.cluster = c
+	}
 
 	for _, rec := range in.Module.Records {
 		switch r := rec.(type) {
@@ -427,19 +486,15 @@ func (l *linker) gsdEntry(m *module, sub obj.Subrecord) error {
 			return fmt.Errorf("shareable image psect %s isn't supported yet", e.Name)
 		}
 
-		p, ok := l.psects[e.Name]
-		if !ok {
-			p = &psect{name: e.Name, flags: e.Flags}
-			l.psects[e.Name] = p
-			l.order = append(l.order, p)
-		}
+		flags, align := l.psectAttributes(e.Name, e.Flags, e.Align)
+		p := l.findPsect(m.cluster, e.Name, flags)
 
-		c := &contribution{psect: p, size: e.Alloc, align: e.Align}
+		c := &contribution{psect: p, size: e.Alloc, align: align}
 		p.contribs = append(p.contribs, c)
 		m.contribs = append(m.contribs, c)
 
-		if e.Align > p.align {
-			p.align = e.Align
+		if align > p.align {
+			p.align = align
 		}
 
 	case *obj.Symbol:

@@ -53,6 +53,37 @@ type SharedImage struct {
 	// (global ones and its stack aside), which the link counts as its own:
 	// a map reports these counts. They're 0 if unknown.
 	Symbols, Psects, Sections int
+	// Layout is the image's own image sections, in its header's order
+	// (its global ones and its stack aside), which a link that places the
+	// image at link time maps one by one, each through a global section
+	// ISD of its own (testdata/link68's EXE1). nil if unknown.
+	Layout []SharedSection
+	// Based says the image was linked at a base address of its own
+	// (BASE=): its sections' offsets are addresses, and its symbols are
+	// absolute.
+	Based bool
+}
+
+// SharedSection is one image section of a shareable image: where it is
+// (its offset from the image's start, a page multiple), its size, and its
+// ISD flags (copy on reference, demand zero, writable, and the section
+// type in the top byte).
+type SharedSection struct {
+	Offset uint32
+	Pages  uint32
+	Flags  uint32
+}
+
+// size is the bytes from the image's start to the end of its last
+// section: what it takes in an address space.
+func (i SharedImage) size() uint32 {
+	var end uint32
+
+	for _, s := range i.Layout {
+		end = max(end, s.Offset+s.Pages*blockSize)
+	}
+
+	return end
 }
 
 // SymbolSource finds global symbols the object modules don't define.

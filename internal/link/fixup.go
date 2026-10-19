@@ -133,8 +133,14 @@ func (l *linker) layoutFixups() fixupLayout {
 		r.orderCells()
 	}
 
+	// An image placed at link time has no cells: its references were
+	// resolved then (EXE1's LIBRTL), so it has no list.
 	p := f.gfix
 	for _, r := range l.shared {
+		if len(r.offsets) == 0 {
+			continue
+		}
+
 		p += 8 // the count and the image's index
 
 		for range r.offsets {
@@ -192,7 +198,7 @@ func (l *linker) fixupSection(f fixupLayout, fixupVA uint32) []byte {
 
 	le.PutUint32(b[0x08:], iafFixedLength)
 
-	if len(l.shared) > 0 {
+	if f.icp > f.gfix+4 {
 		le.PutUint32(b[0x0C:], f.gfix)
 	}
 
@@ -204,6 +210,10 @@ func (l *linker) fixupSection(f fixupLayout, fixupVA uint32) []byte {
 	// offset in the image, to which the image activator adds its base.
 	p := f.gfix
 	for i, r := range l.shared {
+		if len(r.offsets) == 0 {
+			continue
+		}
+
 		le.PutUint32(b[p:], uint32(len(r.offsets)))
 		le.PutUint32(b[p+4:], uint32(i+1))
 
@@ -216,10 +226,11 @@ func (l *linker) fixupSection(f fixupLayout, fixupVA uint32) []byte {
 
 	// The change-protection entry: the fixup section itself, which the
 	// image activator makes user read, executive write once it has done
-	// the fixups. Its address is relative to the image's base
-	// (ANALYZE/IMAGE: "relative to %X'00000200'").
+	// the fixups. Its address is relative to the image's base, its first
+	// section's address (ANALYZE/IMAGE: "relative to %X'00000200'", and
+	// EXE1's %X'00010000').
 	le.PutUint32(b[f.icp:], 1)
-	le.PutUint32(b[f.icp+4:], fixupVA-imageBase)
+	le.PutUint32(b[f.icp+4:], fixupVA-l.imageBase)
 	le.PutUint16(b[f.icp+8:], uint16(len(b)/blockSize))
 	le.PutUint16(b[f.icp+10:], prtUREW)
 
@@ -240,7 +251,7 @@ func (l *linker) fixupSection(f fixupLayout, fixupVA uint32) []byte {
 			p += 8
 
 			for _, a := range r.addresses {
-				le.PutUint32(b[p:], a-imageBase)
+				le.PutUint32(b[p:], a-l.imageBase)
 				p += 4
 			}
 		}
@@ -258,26 +269,27 @@ func (l *linker) fixupSection(f fixupLayout, fixupVA uint32) []byte {
 	return b
 }
 
-// globalSectionISD returns the ISD that maps a shareable image: a global
-// section (ISD$V_GBL), position independent and shareable (ISD$K_SHRPIC),
-// with the image's size, ident, and match control, named for the image's
-// first section.
-func globalSectionISD(img SharedImage) ([]byte, error) {
-	name := img.Name + "_001"
-	if len(name) > 43 {
-		return nil, fmt.Errorf("shareable image name %q is too long", img.Name)
+// globalSectionISD returns the ISD that maps a shareable image the
+// image activator places: a global section (ISD$V_GBL), position
+// independent and shareable (ISD$K_SHRPIC), the size of the image's first
+// section, with its ident and match control, named for that section.
+func globalSectionISD(img SharedImage) (isd, error) {
+	d := globalISD(img, 1, img.Pages, isdTypeSharedPIC)
+	if len(d.name) > 43 {
+		return isd{}, fmt.Errorf("shareable image name %q is too long", img.Name)
 	}
 
-	size := isdGlobalFixedSize + 1 + len(name)
-	b := make([]byte, size)
-	le := binary.LittleEndian
+	return d, nil
+}
 
-	le.PutUint16(b[0:], uint16(size))
-	le.PutUint16(b[2:], uint16(img.Pages))
-	le.PutUint32(b[8:], isdGBL|uint32(img.Match)<<isdMatchShift|isdTypeSharedPIC)
-	le.PutUint32(b[16:], uint32(img.MajorID)<<24|img.MinorID&0xFFFFFF)
-	b[20] = byte(len(name))
-	copy(b[21:], name)
-
-	return b, nil
+// globalISD returns a global section ISD for section n (from 1) of the
+// shareable image img: pages pages, with flags (the section's type and
+// attributes), img's ident and match control, and the name NAME_00n.
+func globalISD(img SharedImage, n int, pages, flags uint32) isd {
+	return isd{
+		pages: pages,
+		flags: isdGBL | uint32(img.Match)<<isdMatchShift | flags,
+		ident: uint32(img.MajorID)<<24 | img.MinorID&0xFFFFFF,
+		name:  fmt.Sprintf("%s_%03d", img.Name, n),
+	}
 }

@@ -45,3 +45,27 @@ type ImageSymbol struct {
 	Image string
 	Value uint32
 }
+
+// SharedImageSection is one image section of a shareable image: its
+// offset from the image's start, its pages, and its ISD flags (copy on
+// reference, demand zero, writable, and the section type, ISD$K_, in the
+// top byte).
+type SharedImageSection struct {
+	Offset, Pages, Flags uint32
+}
+
+// SharedImageSections are the image sections of shareable images in
+// SharedImages, for a link that places an image itself (LINK's BASE=,
+// docs/PHASE-68 - link shareable images.md, subtask 4) and maps each
+// section through a global section ISD. They come from VMS's own output,
+// not the image files: testdata/link68/vax/exe1.ani, where VMS 7.1's LINK
+// placed LIBRTL as LIBRTL_001 (264 pages, ISD$K_SHRPIC) and LIBRTL_002
+// (15 demand-zero, writable pages, ISD$K_PRVPIC). Kept by hand, as gen
+// doesn't capture them; an image not listed can't be placed at link time
+// without its file.
+var SharedImageSections = map[string][]SharedImageSection{
+	"LIBRTL": {
+		{Offset: 0, Pages: 264, Flags: 3 << 24},
+		{Offset: 0x21000, Pages: 15, Flags: 4<<24 | 0x0C},
+	},
+}

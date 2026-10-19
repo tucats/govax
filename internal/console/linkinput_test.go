@@ -42,7 +42,7 @@ func TestLinkOptionsInput(t *testing.T) {
 		"UNIVERSAL=X",
 		"$ LINK_STATUS == $STATUS",
 		link+"SYS$INPUT/OPTIONS",
-		"BASE=%X10000",
+		"UNSUPPORTED=1",
 		"$ SET NOVERIFY",
 	)
 
@@ -75,8 +75,8 @@ func TestLinkOptionsInput(t *testing.T) {
 		"UNIVERSAL=X",
 		"$ LINK_STATUS == $STATUS",
 		link + "SYS$INPUT/OPTIONS",
-		"BASE=%X10000",
-		"%DCL-E-LINKING, Linking entry.obj: the option BASE= isn't supported yet",
+		"UNSUPPORTED=1",
+		"%DCL-E-LINKING, Linking entry.obj: the option UNSUPPORTED= isn't supported yet",
 		"$ SET NOVERIFY",
 		"",
 	}, "\n")

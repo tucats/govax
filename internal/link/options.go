@@ -130,11 +130,43 @@ type GSMatch struct {
 // one, its page fault cluster (0 for the system's default), and whether a
 // PROTECT=YES before it protects its image sections. Its files are
 // among OptionsFile.Files.
+//
+// A shareable image an options file names is a cluster of its own, in
+// its place in the list (the Linker manual, 6.3.1.2): an entry with
+// Shareable set, and Image the image's name once LINK has read it
+// (OptionsFile.NameImage).
 type Cluster struct {
 	Name    string
 	Base    *uint32
 	PFC     uint32
 	Protect bool
+
+	Shareable bool
+	Image     string
+}
+
+// NameImage names the first shareable image cluster not yet named: the
+// image LINK has just read, the next one the options files name.
+func (o *OptionsFile) NameImage(name string) {
+	for i := range o.Clusters {
+		if c := &o.Clusters[i]; c.Shareable && c.Image == "" {
+			c.Image = name
+
+			return
+		}
+	}
+}
+
+// addFiles adds input files to the options, and a cluster for each
+// shareable image among them.
+func (o *OptionsFile) addFiles(files ...InputFile) {
+	for _, f := range files {
+		o.Files = append(o.Files, f)
+
+		if f.Shareable {
+			o.Clusters = append(o.Clusters, Cluster{Shareable: true})
+		}
+	}
 }
 
 // Collect is a COLLECT= option: psects moved into a cluster, which a
@@ -173,13 +205,6 @@ func (o *OptionsFile) Unimplemented() []string {
 		}
 	}
 
-	add(o.Base != nil, "BASE=")
-	add(len(o.Clusters) > 0, "CLUSTER=")
-	add(len(o.Collects) > 0, "COLLECT=")
-	add(o.DZROMin != nil, "DZRO_MIN=")
-	add(o.IOSegment != nil, "IOSEGMENT=")
-	add(o.ISDMax != nil, "ISD_MAX=")
-	add(len(o.PsectAttrs) > 0, "PSECT_ATTR=")
 	add(o.Unsupported != nil, "UNSUPPORTED=")
 
 	return names
@@ -233,7 +258,7 @@ type OptionError struct {
 	Line string
 	// Option, Value, Low, and High are OPTVALERR's: the option's keyword,
 	// the value given, and the range it must be in.
-	Option          string
+	Option           string
 	Value, Low, High uint32
 }
 
@@ -556,7 +581,7 @@ var linkOptions = map[string]func(p *OptionsParser, s *statement) error{
 		}
 
 		p.o.Clusters = append(p.o.Clusters, c)
-		p.o.Files = append(p.o.Files, files...)
+		p.o.addFiles(files...)
 
 		return nil
 	},
@@ -850,7 +875,7 @@ func (p *OptionsParser) read(text string) error {
 			return s.fileError(f, err)
 		}
 
-		p.o.Files = append(p.o.Files, file)
+		p.o.addFiles(file)
 	}
 
 	return nil

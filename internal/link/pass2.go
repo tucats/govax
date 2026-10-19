@@ -11,11 +11,12 @@ import (
 // section is one image section: psects with the same significant
 // attributes, together, at a page-aligned address.
 type section struct {
-	key    int
-	psects []*psect
-	base   uint32
-	pages  uint32
-	data   []byte
+	key     int
+	cluster *cluster
+	psects  []*psect
+	base    uint32
+	pages   uint32
+	data    []byte
 	// stored marks the pages something nonzero was stored in. A
 	// writable page with nothing stored in it can be demand-zero.
 	stored []bool
@@ -68,15 +69,13 @@ func alignUp(v uint32, align byte) uint32 {
 // pageUp rounds v up to a page boundary.
 func pageUp(v uint32) uint32 { return alignUp(v, 9) }
 
-// allocate lays out each psect's contributions, groups the relocatable
-// psects into image sections, and gives every psect, symbol, and the
-// transfer address its address (the Linker manual, §6.3.4). Contributions
-// to a concatenated psect follow one another, each at its own alignment;
-// those to an overlaid psect all start at its base. Within an image
-// section, psects are in alphabetical order.
-func (l *linker) allocate() {
-	groups := map[int]*section{}
-
+// allocate lays out each psect's contributions, then each user cluster's
+// image sections (cluster.go), gives the clusters their addresses, and
+// then every psect, symbol, and the transfer address theirs (the Linker
+// manual, 6.3.4). Contributions to a concatenated psect follow one
+// another, each at its own alignment; those to an overlaid psect all start
+// at its base.
+func (l *linker) allocate() error {
 	for _, p := range l.order {
 		var end uint32
 
@@ -93,63 +92,39 @@ func (l *linker) allocate() {
 		}
 
 		p.length = end
-
-		// An absolute psect's contributions are only offsets, from 0.
-		if p.flags&obj.PsectREL == 0 {
-			continue
-		}
-
-		key := sectionKey(p.flags)
-		if groups[key] == nil {
-			groups[key] = &section{key: key}
-		}
-
-		groups[key].psects = append(groups[key].psects, p)
 	}
 
-	keys := make([]int, 0, len(groups))
-	for k := range groups {
-		keys = append(keys, k)
+	for _, c := range l.clusters {
+		if c.user() {
+			l.layoutCluster(c)
+		}
 	}
 
-	sort.Ints(keys)
-
-	va := uint32(imageBase)
-
-	for _, k := range keys {
-		s := groups[k]
-
-		sort.SliceStable(s.psects, func(i, j int) bool { return s.psects[i].name < s.psects[j].name })
-
-		va = pageUp(va)
-		s.base = va
-
-		for _, p := range s.psects {
-			va = alignUp(va, p.align)
-			p.base, p.section = va, s
-			va += p.length
-		}
-
-		if va == s.base {
-			continue // nothing in it
-		}
-
-		s.pages = (pageUp(va) - s.base) / blockSize
-		s.data = make([]byte, s.pages*blockSize)
-		s.stored = make([]bool, s.pages)
-		l.sections = append(l.sections, s)
+	if err := l.placeClusters(); err != nil {
+		return err
 	}
 
+	// A symbol in a shareable image the link placed is an address now,
+	// which needs no fixup.
 	for _, g := range l.symbols {
 		g.value = g.offset
-		if g.contrib != nil {
+
+		switch {
+		case g.contrib != nil:
 			g.value += g.contrib.base()
+		case g.image != "":
+			if c := l.placedImage(g.image); c != nil {
+				g.value += c.base
+				g.placed = true
+			}
 		}
 	}
 
 	if l.transferSet {
 		l.transfer = l.pendingTransfer.contrib.base() + l.pendingTransfer.offset
 	}
+
+	return nil
 }
 
 // value is a value on the linker's stack, and whether it's an address in
@@ -337,7 +312,12 @@ func (x *machine) command(c obj.Command) error {
 			x.undefinedReference(g)
 		}
 
-		x.push(value{v: g.value, rel: g.contrib != nil, img: g.image, sym: c.Name})
+		img := g.image
+		if g.placed {
+			img = ""
+		}
+
+		x.push(value{v: g.value, rel: g.contrib != nil, img: img, sym: c.Name})
 
 	case "STA_EPM":
 		g := x.l.symbols[c.Name]
@@ -564,30 +544,37 @@ func (l *linker) write(addr uint32, data []byte) error {
 // dzroMin is the fewest uninitialized pages the linker makes a separate
 // demand-zero section of within a writable section (DZRO_MIN's default,
 // the Linker manual §6.3.6.1). A writable section with nothing stored in
-// it is demand-zero whatever its size.
-const dzroMin = 5
+// it is demand-zero whatever its size. isdMax is ISD_MAX's default, the
+// image sections past which the linker makes no more demand-zero ones:
+// "approximately 96" (3.3); govax takes it as exactly that.
+const (
+	dzroMin = 5
+	isdMax  = 96
+)
 
 // image lays out the image file: the header block, each image section's
 // pages (writable pages with nothing stored in them become demand-zero),
-// the fixup section, and the user stack.
+// the fixup section, and the user stack. The image sections the link
+// placed are in address order, and the shareable images the image
+// activator places come last (testdata/link68's EXE1 and MAIN3).
 func (l *linker) image() (*Image, error) {
-	var (
-		isds  []isd
-		pages [][]byte
-		end   uint32
-	)
+	l.imageOrder()
 
-	vbn := uint32(2)
+	// The fixup section follows the last section of the user cluster at
+	// the highest address (the Linker manual, 6.3.6.2). Laying it out
+	// gives each general mode operand's cell, whose displacement goes into
+	// the code before the sections' pages are written out.
+	var end uint32
 
-	// The fixup section follows the last section. Laying it out gives
-	// each general mode operand's cell, whose displacement goes into the
-	// code before the sections' pages are written out.
 	for _, s := range l.sections {
-		end = s.base + s.pages*blockSize
+		end = max(end, s.base+s.pages*blockSize)
 	}
 
 	if end == 0 {
-		end = imageBase
+		end = l.defaultCluster.base
+		if !l.defaultCluster.based {
+			end = imageBase
+		}
 	}
 
 	fixupVA := pageUp(end)
@@ -599,34 +586,94 @@ func (l *linker) image() (*Image, error) {
 
 	fixup := l.fixupSection(layout, fixupVA)
 
-	for _, s := range l.sections {
-		for _, run := range s.runs() {
-			vpn := (s.base >> 9) + run.first
+	placed, global, err := l.globalSections()
+	if err != nil {
+		return nil, fmt.Errorf("link: %w", err)
+	}
 
-			if run.demandZero {
-				isds = append(isds, isd{pages: run.count, vpn: vpn, flags: isdLASTCLU | isdDZRO | isdWRT})
+	// The image's own sections, each split into its runs, with as many
+	// demand-zero runs as ISD_MAX allows, from the first cluster to the
+	// last; the fixup section; the user stack.
+	minPages, limit := uint32(dzroMin), isdMax
+	if l.opts.DZROMin != nil {
+		minPages = *l.opts.DZROMin
+	}
 
-				continue
+	if l.opts.ISDMax != nil {
+		limit = int(*l.opts.ISDMax)
+	}
+
+	budget := limit - (len(l.sections) + len(placed) + len(global) + 2)
+
+	var isds []isd
+
+	for _, c := range l.clusters {
+		flags := uint32(0)
+		if c.last {
+			flags |= isdLASTCLU
+		}
+
+		if c.protect {
+			flags |= isdPROTECT
+		}
+
+		for _, s := range c.sections {
+			for _, run := range s.runs(minPages, &budget) {
+				d := isd{pages: run.count, vpn: (s.base >> 9) + run.first, pfc: c.pfc, flags: flags}
+
+				switch {
+				case run.demandZero:
+					d.flags |= isdDZRO | isdWRT
+				case s.writable():
+					d.flags |= isdWRT | isdCRF
+				}
+
+				if !run.demandZero {
+					d.data = s.data[run.first*blockSize : (run.first+run.count)*blockSize]
+				}
+
+				isds = append(isds, d)
 			}
-
-			flags := uint32(isdLASTCLU)
-			if s.writable() {
-				flags |= isdWRT | isdCRF
-			}
-
-			isds = append(isds, isd{pages: run.count, vpn: vpn, flags: flags, vbn: vbn})
-			pages = append(pages, s.data[run.first*blockSize:(run.first+run.count)*blockSize])
-			vbn += run.count
 		}
 	}
 
+	stackFlags := uint32(isdTypeUserStack | isdDZRO | isdWRT)
+	if l.defaultCluster.last {
+		stackFlags |= isdLASTCLU
+	}
+
+	isds = append(isds, placed...)
 	isds = append(isds,
-		isd{pages: uint32(len(fixup)) / blockSize, vpn: fixupVA >> 9, flags: isdFIXUPVEC | isdWRT | isdCRF, vbn: vbn},
-		isd{pages: uint32(l.opts.StackPages), vpn: 1<<22 - uint32(l.opts.StackPages), flags: isdTypeUserStack | isdLASTCLU | isdDZRO | isdWRT},
+		isd{pages: uint32(len(fixup)) / blockSize, vpn: fixupVA >> 9, flags: isdFIXUPVEC | isdWRT | isdCRF, data: fixup},
+		isd{pages: uint32(l.opts.StackPages), vpn: 1<<22 - uint32(l.opts.StackPages), flags: stackFlags},
 	)
 
-	pages = append(pages, fixup)
-	vbn += uint32(len(fixup)) / blockSize
+	sort.SliceStable(isds, func(i, j int) bool { return isds[i].vpn < isds[j].vpn })
+
+	// The sections' contents follow the header block, in their ISDs'
+	// order.
+	vbn := uint32(2)
+
+	var pages [][]byte
+
+	l.vmLow, l.vmHigh = ^uint32(0), 0
+
+	for i := range isds {
+		d := &isds[i]
+
+		if d.data != nil {
+			d.vbn = vbn
+			pages = append(pages, d.data)
+			vbn += d.pages
+		}
+
+		if d.flags&isdTypeMask != isdTypeUserStack {
+			l.vmLow = min(l.vmLow, d.vpn<<9)
+			l.vmHigh = max(l.vmHigh, (d.vpn+d.pages)<<9-1)
+		}
+	}
+
+	isds = append(isds, global...)
 
 	// The debug symbol table follows everything else, in whole blocks,
 	// and, linked /DEBUG, the debug module table after it. dst gathers
@@ -649,17 +696,6 @@ func (l *linker) image() (*Image, error) {
 			l.dmt = l.debugModuleTable()
 			l.dmtVBN = add(l.dmt)
 		}
-	}
-
-	global := make([][]byte, 0, len(l.shared))
-
-	for _, r := range l.shared {
-		g, err := globalSectionISD(r.image)
-		if err != nil {
-			return nil, fmt.Errorf("link: %w", err)
-		}
-
-		global = append(global, g)
 	}
 
 	if l.opts.ImageName == "" {
@@ -687,12 +723,14 @@ func (l *linker) image() (*Image, error) {
 		l.gstVBN = add(gst)
 	}
 
-	header, err := l.header(isds, global, fixupVA)
+	header, err := l.header(isds, fixupVA)
 	if err != nil {
 		return nil, fmt.Errorf("link: %w", err)
 	}
 
-	l.isdCount = len(isds)
+	// The map counts the image's own sections; each shareable image's
+	// count separately (mapCounts).
+	l.isdCount = len(isds) - len(placed) - len(global)
 	l.fixupVA, l.fixupLength = fixupVA, uint32(len(fixup))
 
 	img := &Image{Transfer: l.transfer, HasTransfer: l.transferSet, l: l}
@@ -701,7 +739,7 @@ func (l *linker) image() (*Image, error) {
 	for _, m := range l.modules {
 		img.Messages = append(img.Messages, m.messages...)
 	}
-	
+
 	img.Bytes = header
 
 	for _, p := range pages {
@@ -722,6 +760,39 @@ func (l *linker) image() (*Image, error) {
 	return img, nil
 }
 
+// globalSections returns the global section ISDs that map the shareable
+// images the image refers to: placed, a section each for those the link
+// placed (BASED, at their addresses), and global, one each for those the
+// image activator places, the size of the image's first section.
+func (l *linker) globalSections() (placed, global []isd, err error) {
+	for _, r := range l.shared {
+		c := l.placedImage(r.image.Name)
+		if c == nil {
+			d, err := globalSectionISD(r.image)
+			if err != nil {
+				return nil, nil, err
+			}
+
+			global = append(global, d)
+
+			continue
+		}
+
+		flags := uint32(isdBASED)
+		if c.last {
+			flags |= isdLASTCLU
+		}
+
+		for i, sec := range c.shared.Layout {
+			d := globalISD(c.shared, i+1, sec.Pages, flags|sec.Flags)
+			d.vpn = (c.base + sec.Offset) >> 9
+			placed = append(placed, d)
+		}
+	}
+
+	return placed, global, nil
+}
+
 // pageRun is a run of a section's pages that become one image section.
 type pageRun struct {
 	first, count uint32
@@ -730,9 +801,11 @@ type pageRun struct {
 
 // runs splits a section into its image sections. A read-only section is
 // one. A writable one with nothing stored in it is demand-zero; otherwise
-// each run of at least dzroMin pages with nothing stored in them is split
-// off as demand-zero.
-func (s *section) runs() []pageRun {
+// each run of at least minPages pages with nothing stored in them is split
+// off as demand-zero, while budget, the image sections ISD_MAX leaves,
+// allows: a run at the section's start or end takes one more, and one in
+// its middle two (the run, and the pages after it).
+func (s *section) runs(minPages uint32, budget *int) []pageRun {
 	if !s.writable() {
 		return []pageRun{{0, s.pages, false}}
 	}
@@ -745,7 +818,21 @@ func (s *section) runs() []pageRun {
 			q++
 		}
 
-		zero := !s.stored[p] && (q-p >= dzroMin || (p == 0 && q == s.pages))
+		whole := p == 0 && q == s.pages
+		zero := !s.stored[p] && (whole || q-p >= minPages)
+
+		if zero && !whole {
+			cost := 2
+			if p == 0 || q == s.pages {
+				cost = 1
+			}
+
+			if *budget < cost {
+				zero = false
+			} else {
+				*budget -= cost
+			}
+		}
 
 		if n := len(out); n > 0 && !zero && !out[n-1].demandZero {
 			out[n-1].count += q - p

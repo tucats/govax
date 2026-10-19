@@ -57,6 +57,8 @@ func ReadShareableImage(data []byte) (*TableSource, string, error) {
 			MajorID: uint8(h.ident >> 24),
 			MinorID: h.ident & 0xFFFFFF,
 			Match:   Match(h.matchCtl),
+			Layout:  h.layout,
+			Based:   h.based,
 		}},
 	}
 
@@ -89,6 +91,11 @@ type imageHeader struct {
 	sections    int    // its image sections, other than global ones and the stack
 	gstVBN      uint32
 	gstRecords  int
+	// layout is its image sections (sections's), and based says it was
+	// linked at a base of its own: its PICIMG flag is clear
+	// (testdata/link68's SHR3).
+	layout []SharedSection
+	based  bool
 }
 
 // Image types (IHD$B_IMGTYPE).
@@ -120,6 +127,7 @@ func readImageHeader(data []byte) (imageHeader, error) {
 	}
 
 	h.matchCtl = le.Uint32(data[0x20:]) >> 24 & 7
+	h.based = le.Uint32(data[0x20:])&ihdPICIMG == 0
 	h.ident = le.Uint32(data[0x24:])
 	h.gstVBN = le.Uint32(data[symOff+4:])
 	h.gstRecords = int(le.Uint16(data[symOff+10:]))
@@ -127,7 +135,7 @@ func readImageHeader(data []byte) (imageHeader, error) {
 
 	for blk, p := 0, isdOff; blk < hdrBlocks; {
 		b := data[blk*blockSize : (blk+1)*blockSize]
-		
+
 		if p+2 > blockSize {
 			return h, fmt.Errorf("link: the image header's section descriptors are damaged")
 		}
@@ -152,6 +160,11 @@ func readImageHeader(data []byte) (imageHeader, error) {
 
 		if flags&isdGBL == 0 && flags&0xFF000000 != isdTypeUserStack {
 			h.sections++
+			h.layout = append(h.layout, SharedSection{
+				Offset: (le.Uint32(b[p+4:]) & isdVPNMask) * blockSize,
+				Pages:  uint32(le.Uint16(b[p+2:])),
+				Flags:  flags & sharedSectionFlags,
+			})
 		}
 
 		p += size

@@ -153,18 +153,27 @@ func (c *Context) Link(opts LinkOptions) error {
 		name = in.options.Name
 	}
 
+	o := &in.options
+
 	img, err := link.Link(in.modules, link.Options{
 		ImageName:  name,
 		LinkerID:   linkerID(),
 		Traceback:  !opts.NoTraceback,
 		Debug:      opts.Debug,
 		Sources:    sources,
-		StackPages: in.options.Stack,
-		Ident:      in.options.Ident,
-		Symbols:    in.options.Symbols,
+		StackPages: o.Stack,
+		Ident:      o.Ident,
+		Symbols:    o.Symbols,
+		Clusters:   o.Clusters,
+		Collects:   o.Collects,
+		PsectAttrs: o.PsectAttrs,
+		Base:       o.Base,
+		DZROMin:    o.DZROMin,
+		ISDMax:     o.ISDMax,
+		IOSegment:  o.IOSegment,
 	})
 	if err != nil {
-		return vmserrors.Wrap(vmserrors.CLI_LINKING, err, exe.Name)
+		return linkFailure(err, exe.Name)
 	}
 
 	var imageFile string
@@ -335,13 +344,15 @@ func (c *Context) linkInput(in *linkInputs, f link.InputFile, host, fromCommand 
 			return FileFailure(err, loc.Name)
 		}
 
-		src, _, err := link.ReadShareableImage(data)
+		src, image, err := link.ReadShareableImage(data)
 		if err != nil {
 			return failed(err, found.Name)
 		}
 
 		src.File = found.Name
 		in.shared = append(in.shared, src)
+
+		in.options.NameImage(image)
 
 	case "OLB":
 		if found, err = c.linkLibrary(in, loc, f); err != nil {
@@ -364,7 +375,7 @@ func (c *Context) linkInput(in *linkInputs, f link.InputFile, host, fromCommand 
 			return failed(fmt.Errorf("%s", problems[0]), found.Name)
 		}
 
-		in.modules = append(in.modules, link.Input{File: found.Name, Module: m, Selective: f.Selective})
+		in.modules = append(in.modules, link.Input{File: found.Name, Module: m, Selective: f.Selective, Cluster: f.Cluster})
 	}
 
 	in.noteFile(found)
@@ -415,6 +426,7 @@ func (c *Context) linkLibrary(in *linkInputs, loc rms.FileLocation, f link.Input
 			return found, vmserrors.Wrap(vmserrors.CLI_LINKING, err, found.Name)
 		}
 
+		module.Cluster = f.Cluster
 		in.modules = append(in.modules, *module)
 	}
 
@@ -477,6 +489,18 @@ func (c *Context) linkOptions(in *linkInputs, file string, next func() (string, 
 	}
 
 	return nil
+}
+
+// linkFailure is the error for a link that made no image: a
+// link.FatalError is real LINK's messages, with LINK's status (marked as
+// shown).
+func linkFailure(err error, image string) error {
+	var fe *link.FatalError
+	if errors.As(err, &fe) {
+		return vmserrors.ConditionError{Status: fe.Status() | stsInhibitMsg, Text: strings.TrimPrefix(fe.Error(), "%")}
+	}
+
+	return vmserrors.Wrap(vmserrors.CLI_LINKING, err, image)
 }
 
 // optionsFailure is the error for an options file, named file, LINK

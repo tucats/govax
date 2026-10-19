@@ -515,12 +515,10 @@ func (w *mapWriter) synopsis(l *linker, opts MapOptions) {
 		w.out(fmt.Sprintf("%-50s"+format, append([]any{label}, args...)...))
 	}
 
-	low := uint32(imageBase)
-	if len(l.sections) > 0 {
-		low = l.sections[0].base
-	}
-
-	high := l.fixupVA + l.fixupLength - 1
+	// What the link placed: the image's sections, its fixup section, and
+	// any shareable images it placed (MAIN3's runs to the based SHR3's
+	// end).
+	low, high := l.vmLow, l.vmHigh
 	size := high - low + 1
 	pages := (size + blockSize - 1) / blockSize
 
@@ -554,7 +552,7 @@ func (w *mapWriter) synopsis(l *linker, opts MapOptions) {
 	if !opts.Brief && counts.options > 0 {
 		line("Number of cross references:", "%8d.", counts.options)
 	}
-	
+
 	line("Number of image sections:", "%8d.", counts.sections)
 
 	if l.transferSet {

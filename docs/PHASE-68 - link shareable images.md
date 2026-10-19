@@ -4,7 +4,8 @@
 author the same day. Part A is the survey. Part B holds the decisions
 and the author's answers to the plan's questions. Part C is the
 subtasks. Subtask 1, the VMS probe (`testdata/link68`), is done, and so
-are subtask 2 (MACRO's `.TRANSFER`) and subtask 3 (options files).
+are subtask 2 (MACRO's `.TRANSFER`), subtask 3 (options files), and
+subtask 4 (clusters for executables).
 
 ## Goal
 
@@ -501,7 +502,7 @@ them.
    isn't a GSMATCH keyword), OPTVALERR, and the last GSMATCH= wins.
    When a LINK fails, its `SYS$INPUT` data lines are skipped
    (SKPDAT), not run as commands. Unit tests only.
-4. **Clusters, for executables.** The cluster list: the default cluster,
+4. **Done (2026-10-19).** **Clusters, for executables.** The cluster list: the default cluster,
    `CLUSTER=` (with base and file names), `COLLECT=`, and shareable
    image clusters in their place. Also the two allocation passes (6.3.4),
    `PSECT_ATTR=`, demand-zero compression by `DZRO_MIN`/`ISD_MAX`
@@ -569,7 +570,9 @@ them.
     decides; ACTIMAGE, IMGNAME, SHRIDMISMAT, %X100020BC), a shareable
     image's own fixups (self-relative `.ADDRESS`, its G^ cells, a
     read-only page fixed up then made UR), dependencies of
-    dependencies, based shareable images at their addresses, and where
+    dependencies, based shareable images at their addresses (and an
+    executable's link-time-placed images, EXE1's LIBRTL: its shims at
+    the placed addresses, subtask 4), and where
     each image lands (the SHL from its end, as the probe suggests,
     unless a later round says otherwise). `RUN` of a shareable image:
     `%DCL-E-NOTFR`. All of this in both paging modes. `imageshare_test.go`'s hand-made image gives
@@ -768,3 +771,105 @@ Unconfirmed, govax's choices where the probe is silent:
 
 `OPTIGNSHR` (`ISD_MAX=` in a shareable image) waits for `/SHAREABLE`,
 subtask 5.
+
+### 2026-10-19 — Subtask 4: clusters, for executables
+
+The linker has clusters now (`internal/link/cluster.go`), and acts on
+every layout option: `BASE=`, `CLUSTER=`, `COLLECT=`, `PSECT_ATTR=`,
+`DZRO_MIN=`, `ISD_MAX=`, `IOSEGMENT=`, and `PROTECT=`. Only
+`UNSUPPORTED=` is still refused. `TestLinkClustersExecutable` links
+EXE1, from real MACRO's objects and from govax's, and its image is real
+LINK's byte for byte. `TestMapClustersExecutable` holds the lines of
+EXE1's map that a default map shares with VMS's `/FULL` one: the psect
+synopsis and the image synopsis's layout lines. The Phase 30 fixtures
+stay byte for byte. `link.Options` takes the options, and the console's
+LINK passes them.
+
+What EXE1's bytes and the other maps settled:
+
+- **The cluster list** is the CLUSTER= options' clusters and the options
+  files' shareable images, in order, then the default cluster, then the
+  shareable images found in libraries. Pass 1 reads the files cluster by
+  cluster, so EXE1B's module comes before EXE1's (the object module
+  synopsis). The maps fit this, with one more rule that waits for
+  subtask 9: a shareable image's own images come right after it (MAIN1:
+  SHR1, LIBRTL, DEFAULT_CLUSTER; MAIN3: SHR3, DEFAULT_CLUSTER, LIBRTL).
+- **A local psect belongs to its cluster.** EXE1's "Number of program
+  sections: 11" counts two `. ABS .` psects, EXE1's and EXE1B's. A
+  global psect is looked for in every cluster up to the current one.
+  COLLECT= makes a psect global (EXE1_RO shows GBL in the map), as the
+  manual's 6.3.2 says.
+- **Allocation** is the manual's two passes. Based clusters come first,
+  in list order (SECOND at ^X40000, the default cluster at BASE='s
+  ^X10000). Then the rest go at the lowest free addresses that hold
+  them.
+- **With BASE=, LIBRTL is placed at link time,** in that second pass:
+  ^X10E00, the first gap that holds its 279 pages. Each of its sections
+  gets a global ISD with ISD$V_BASED (LIBRTL_001 SHRPIC, LIBRTL_002
+  PRVPIC with DZRO+WRT). Its references become absolute (`9F` operands,
+  `LIB$PUT_OUTPUT` at ^X11278), with no G^ list. The shareable image
+  list still names LIBRTL, and IAF+0x0C (the G^ lists' offset) is 0.
+  MAIN3 shows that a based shareable image alone doesn't trigger this:
+  its LIBRTL stays activator-placed. Whether a based CLUSTER= without
+  BASE= triggers it is **unconfirmed**; govax doesn't place it then.
+- **The ISDs are in address order,** user sections, placed shareable
+  sections, the fixup section, and the stack together. The
+  activator-placed global ISDs come last (MAIN3: the stack before
+  LIBRTL_001). The file's blocks follow that order: the default
+  cluster's at VBNs 2–4, then SECOND's, then the fixup section.
+- **LASTCLU** marks the sections of the cluster at the highest address
+  (EXE1: SECOND; MAIN3: SHR3's global ISDs; otherwise the default
+  cluster). The stack has it when the default cluster does, and the
+  fixup section never has it.
+- **The fixup section** follows the user cluster at the highest
+  address. Its change-protection address is relative to the image's
+  first section (^X10000 in EXE1), as ANALYZE and govax's loader read
+  it.
+- **PICIMG** is clear when any cluster has a base (EXE1, MAIN3).
+  **IOSEGMENT=** is IHD$W_IMGIOCNT (+0x1E), and NOP0BUFS sets
+  IHD$V_NOP0BUFS (unconfirmed: the probe had only P0BUFS).
+- **DZRO_MIN=** sets the split threshold that runs already used: EXE1's
+  four untouched pages became a DZRO ISD at 2. **ISD_MAX=** stops the
+  splits once the image's sections would pass it. Its default is 96.
+  The manual calls both of those numbers approximate, so govax's exact
+  counts are **unconfirmed**. A split costs one section at a section's
+  start or end, and two in its middle.
+- **CONFMEM:** a based cluster whose pages another already has is VMS's
+  `%LINK-E-CONFMEM, conflicting virtual memory requirement` / `at
+  %X00300000 for 2. pages in cluster DEFAULT_CLUSTER`, then
+  `%LINK-E-NOIMGFIL, image file not created`, `$STATUS` %X106482B2, as
+  in E5 (`link.FatalError`).
+- The SHL lists an image an options file named before those from
+  IMAGELIB (`imageOrder`, the probe's MAIN1). Those from IMAGELIB keep
+  the order of their first reference.
+
+A shareable image is placed using its sections (`SharedImage.Layout`).
+`ReadShareableImage` now reads them from the image's ISDs, and notes a
+based image (PICIMG clear). govax's own tables take LIBRTL's from
+`vmsdef.SharedImageSections`. That table is kept by hand from EXE1's
+`.ANI`, real VMS output; `TestReadShareableImage` and
+`TestCapturedLIBRTLMatchesImage` check it against LIBRTL.EXE where the
+file is present. An image with no known sections can't be placed at link
+time, and the link says so. A based shareable image (SHR3) is refused
+for now; subtask 9 maps it.
+
+Other choices, all **unconfirmed**:
+
+- A COLLECT= of a cluster nothing else makes adds it after the default
+  cluster.
+- A CLUSTER= option's shareable image gets a cluster of its own after
+  the named one.
+- A library module goes in the default cluster.
+- A shareable image an options file names but nothing uses is left out,
+  as before. MAIN3's based SHR3, whose symbols are all absolute,
+  suggests VMS keeps it; that's subtask 9's.
+
+Left for later subtasks:
+
+- The map's Image Section Synopsis, which only `/FULL` has (subtask 8).
+- **RUN of an image that placed LIBRTL at link time** (subtask 11).
+  govax's loader puts LIBRTL's shims at P0's high-water mark, not at the
+  placed addresses, so EXE1's absolute calls would fault there. Images
+  without BASE= are unaffected, and `TestLink_clusters` runs one laid out
+  by BASE= and CLUSTER=.
+

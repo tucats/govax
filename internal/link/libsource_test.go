@@ -5,6 +5,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"testing"
 	"time"
@@ -91,9 +92,13 @@ func TestReadShareableImage(t *testing.T) {
 	}
 
 	// Its symbol table defines one psect, and it has two image sections:
-	// the shareable one and a demand-zero one.
-	want := SharedImage{Name: "LIBRTL", Pages: 264, MajorID: 1, MinorID: 0x0E, Match: MatchLEQ, Symbols: 305, Psects: 1, Sections: 2}
-	if i, ok := src.Image("LIBRTL"); !ok || i != want {
+	// the shareable one and a demand-zero one, as EXE1's LIBRTL_001 and
+	// LIBRTL_002 map them (testdata/link68).
+	want := SharedImage{
+		Name: "LIBRTL", Pages: 264, MajorID: 1, MinorID: 0x0E, Match: MatchLEQ, Symbols: 305, Psects: 1, Sections: 2,
+		Layout: []SharedSection{{0, 264, isdTypeSharedPIC}, {0x21000, 15, isdDZRO | isdWRT | 4<<24}},
+	}
+	if i, ok := src.Image("LIBRTL"); !ok || !reflect.DeepEqual(i, want) {
 		t.Errorf("image %+v, want %+v", i, want)
 	}
 

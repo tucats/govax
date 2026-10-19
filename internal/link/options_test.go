@@ -38,10 +38,16 @@ func TestParseOptions(t *testing.T) {
 		Ident:   "V2.0",
 		Name:    "PROG",
 		Symbols: []Symbol{{"LIMIT", 100}, {"MASK", 15}},
+		// The shareable image's cluster, named once LINK reads it.
+		Clusters: []Cluster{{Shareable: true}},
 	}
 
 	if !reflect.DeepEqual(o, want) {
 		t.Errorf("got  %+v\nwant %+v", o, want)
+	}
+
+	if o.NameImage("LIBRTL"); o.Clusters[0].Image != "LIBRTL" {
+		t.Errorf("the image's cluster is %+v", o.Clusters[0])
 	}
 
 	for _, bad := range []string{
@@ -122,7 +128,8 @@ func TestParseLayoutOptions(t *testing.T) {
 		t.Errorf("got  %+v\nwant %+v", o, want)
 	}
 
-	if got := o.Unimplemented(); len(got) != 8 {
+	// Only UNSUPPORTED=, which neither manual describes, is refused.
+	if got := o.Unimplemented(); !reflect.DeepEqual(got, []string{"UNSUPPORTED="}) {
 		t.Errorf("unimplemented %v", got)
 	}
 

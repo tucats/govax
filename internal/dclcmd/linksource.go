@@ -58,6 +58,12 @@ func GovaxSymbols(shims []corevms.ShimLink) *link.TableSource {
 			Name: name, Pages: i.Pages, MajorID: i.MajorID, MinorID: i.MinorID, Match: link.Match(i.Match),
 			Symbols: i.Symbols, Psects: i.Psects, Sections: i.Sections,
 		}
+
+		for _, sec := range vmsdef.SharedImageSections[name] {
+			img := src.Images[name]
+			img.Layout = append(img.Layout, link.SharedSection{Offset: sec.Offset, Pages: sec.Pages, Flags: sec.Flags})
+			src.Images[name] = img
+		}
 	}
 
 	for name, s := range vmsdef.ImageSymbols {

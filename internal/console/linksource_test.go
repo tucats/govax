@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"os"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"testing"
 
@@ -67,7 +68,7 @@ func TestCapturedLIBRTLMatchesImage(t *testing.T) {
 	govax := dclcmd.GovaxSymbols(machine.ShimTable)
 
 	want, _ := src.Image(name)
-	if got, ok := govax.Image(name); !ok || got != want {
+	if got, ok := govax.Image(name); !ok || !reflect.DeepEqual(got, want) {
 		t.Errorf("govax's %s is %+v, %v; the image's header says %+v", name, got, ok, want)
 	}
 

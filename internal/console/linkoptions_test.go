@@ -2,6 +2,7 @@ package console
 
 import (
 	"bytes"
+	"errors"
 	"os"
 	"path/filepath"
 	"strings"
@@ -9,6 +10,7 @@ import (
 
 	"github.com/tucats/govax/internal/dclcmd"
 	"github.com/tucats/govax/internal/link"
+	"github.com/tucats/govax/internal/vmserrors"
 )
 
 // linkMap links with a brief map and returns the map's text.
@@ -80,6 +82,70 @@ func TestLink_optionsFile(t *testing.T) {
 	}
 }
 
+// TestLink_clusters links a program laid out by options (docs/PHASE-68's
+// subtask 4): the default cluster at BASE=, its subroutine in a cluster
+// of its own at another base, read first, and a psect made read-only by
+// PSECT_ATTR=. The image runs, each routine at its cluster's address, and
+// the map shows the clusters' addresses. Two clusters with one base are
+// real LINK's CONFMEM, and no image.
+func TestLink_clusters(t *testing.T) {
+	c := newBootableConsole(t)
+	dir := t.TempDir()
+
+	writeHostFile(t, filepath.Join(dir, "main.mar"), "\t.PSECT\tDATA,WRT,NOEXE\nVALUE:\t.LONG\t41\n"+
+		"\t.PSECT\tCODE,NOWRT,EXE\n\t.ENTRY\tSTART,^M<>\n\tCALLS\t#0,SUB\n\tADDL2\tVALUE,R0\n\tRET\n\t.END\tSTART\n")
+	writeHostFile(t, filepath.Join(dir, "sub.mar"), "\t.PSECT\tCODE,NOWRT,EXE\n"+
+		"\t.ENTRY\tSUB,^M<>\n\tMOVL\t#1,R0\n\tRET\n\t.END\n")
+	writeHostFile(t, filepath.Join(dir, "layout.opt"), "BASE=%X10000\n"+
+		"CLUSTER=SUBS,%X20000,,sub\nPSECT_ATTR=DATA,NOWRT\n")
+	writeHostFile(t, filepath.Join(dir, "clash.opt"), "BASE=%X10000\nCLUSTER=SUBS,%X10000,,sub\n")
+
+	for _, name := range []string{"main", "sub"} {
+		if err := c.cmd().Macro(dclcmd.MacroOptions{Source: filepath.Join(dir, name+".mar")}); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	opts := dclcmd.LinkOptions{Files: []link.InputFile{{Name: filepath.Join(dir, "main")}, {Name: "layout", Options: true}}}
+	opts.Map, opts.MapFile = true, filepath.Join(dir, "link.map")
+
+	if err := c.cmd().Link(opts); err != nil {
+		t.Fatalf("LINK: %v", err)
+	}
+
+	data, err := os.ReadFile(opts.MapFile)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	for _, want := range []string{
+		"SUB             00020000-R",
+		"START           00010200-R",
+		"DATA                            00010000 00010003 00000004 (          4.) BYTE  0 NOPIC,USR,CON,REL,LCL,NOSHR,NOEXE,  RD,NOWRT,NOVEC",
+		"Virtual memory allocated:                         00010000 000203FF 00010400 (66560. bytes, 130. pages)",
+	} {
+		if !strings.Contains(string(data), want) {
+			t.Errorf("no %q in the map:\n%s", want, data)
+		}
+	}
+
+	if got := runImage(t, c, filepath.Join(dir, "main.exe")); got != 42 {
+		t.Errorf("R0 = %d, want 42", got)
+	}
+
+	err = c.cmd().Link(dclcmd.LinkOptions{Files: []link.InputFile{{Name: filepath.Join(dir, "main")}, {Name: "clash", Options: true}}, NoExecutable: true})
+
+	want := "LINK-E-CONFMEM, conflicting virtual memory requirement\n\tat %X00010000 for 2. pages in cluster DEFAULT_CLUSTER\n%LINK-E-NOIMGFIL, image file not created"
+	if err == nil || err.Error() != want {
+		t.Errorf("err = %v, want %q", err, want)
+	}
+
+	var ce vmserrors.ConditionError
+	if !errors.As(err, &ce) || ce.Status != 0x106482B2 {
+		t.Errorf("status %X, want %X", ce.Status, 0x106482B2)
+	}
+}
+
 // TestLink_inputErrors checks what an input file can't be.
 func TestLink_inputErrors(t *testing.T) {
 	c, _ := newTestConsole(t)
@@ -87,7 +153,7 @@ func TestLink_inputErrors(t *testing.T) {
 	obj := assembleFixture(t, c, "entry", dir)
 
 	writeHostFile(t, filepath.Join(dir, "bad.opt"), "entry\nCLUSTERS=A,,,ENTRY\n")
-	writeHostFile(t, filepath.Join(dir, "later.opt"), "CLUSTER=A,,,ENTRY\n")
+	writeHostFile(t, filepath.Join(dir, "later.opt"), "UNSUPPORTED=1\n")
 	writeHostFile(t, filepath.Join(dir, "none.opt"), "STACK=10\n")
 
 	cases := []struct {
@@ -95,7 +161,7 @@ func TestLink_inputErrors(t *testing.T) {
 		want  string
 	}{
 		{[]link.InputFile{{Name: obj}, {Name: "bad", Options: true}}, "options line in error\n\t'CLUSTERS'=A,,,ENTRY"},
-		{[]link.InputFile{{Name: obj}, {Name: "later", Options: true}}, "the option CLUSTER= isn't supported yet"},
+		{[]link.InputFile{{Name: obj}, {Name: "later", Options: true}}, "the option UNSUPPORTED= isn't supported yet"},
 		{[]link.InputFile{{Name: filepath.Join(dir, "none"), Options: true}}, "no object modules"},
 		{[]link.InputFile{{Name: obj}, {Name: "x", Shareable: true}}, "are named in an options file"},
 		{[]link.InputFile{{Name: obj}, {Name: "entry.obj", Library: true}}, "entry.obj"},
