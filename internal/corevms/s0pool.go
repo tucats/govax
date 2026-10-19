@@ -22,7 +22,9 @@ import (
 //
 // VMINIT maps every S0 page to a physical page up front, so a pool page
 // already has memory behind it: allocating one only decides who uses it.
-// Allocations are contiguous runs of pages (a page table must be), taken
+// (With paging on, a process's table area keeps frames behind only the
+// pages its regions need, tablearea.go, and its other pages have none
+// until the pool hands them out again.) Allocations are contiguous runs of pages (a page table must be), taken
 // first fit from the bottom of the pool, and each records the process it
 // belongs to and what it's for, so a process's pages can all be freed
 // when it's deleted, and SHOW MEMORY can list them.
@@ -32,8 +34,9 @@ import (
 // pages 0-308 and the microkernel the next 11, so the pool is pages
 // 320-8191, 7872 pages (TestS0PoolAfterVaxInit measures it; the start
 // moves with the microkernel's size). A process with VMINIT's sizes needs
-// 128 P0 page-table pages (16384 PTEs, 4 bytes each, 128 to a page), 64
-// P1 page-table pages, 38 stack pages (20 kernel, 1 guard and 8
+// a 192-page table area (24576 PTEs for P0's and P1's pages together, 4
+// bytes each, 128 to a page; with paging on its size is
+// vax.sysgen.virtualpagecnt's), 38 stack pages (20 kernel, 1 guard and 8
 // executive, 1 guard and 8 supervisor), and a page for its PCB: 231
 // pages, so 34 processes fit beside process 1. Smaller page tables for
 // subprocesses would let more fit (an open question for subtask 8).
@@ -200,10 +203,11 @@ func (sys *System) SetS0Pool(p *S0Pool) { sys.s0 = p }
 func (sys *System) S0Pool() *S0Pool { return sys.s0 }
 
 // AllocateS0 allocates pages contiguous S0 pages from the pool for process
-// pid (see S0Pool.Allocate) and clears them, so a page table made there
-// starts with every entry invalid and a stack starts zeroed. Each page is
-// cleared through its physical address, found from the S0 page table,
-// so it works whatever the current process is. Each page's protection is
+// pid (see S0Pool.Allocate) and clears them, so a stack starts zeroed.
+// Each page is cleared through its physical address, found from the S0
+// page table, so it works whatever the current process is. A page left
+// without a frame (with paging on, a table area's page given back,
+// tablearea.go) gets one. Each page's protection is
 // also put back to S0's default, URKW (every mode reads, kernel writes),
 // in case the pages' last owner changed it (a stack's guard page, say);
 // SetS0Protection changes it.
@@ -217,26 +221,8 @@ func (sys *System) AllocateS0(pages, pid uint32, purpose string) (uint32, error)
 		return 0, err
 	}
 
-	var zero [pageSize]byte
-
-	for i := uint32(0); i < pages; i++ {
-		va := addr + i*pageSize
-
-		_, _, pte, err := sys.mem.LookupPTE(sys.cpu, va)
-		if err == nil && !pte.Valid() {
-			err = fmt.Errorf("S0 page %08X is not mapped", va)
-		}
-
-		if err == nil {
-			err = sys.mem.StorePhysical(pte.PFN()*pageSize, zero[:])
-		}
-
-		if err == nil && pte.Protection() != vm.ProtURKW {
-			pte.SetProtection(vm.ProtURKW)
-			err = sys.mem.StorePTE(sys.cpu, va, pte)
-		}
-
-		if err != nil {
+	for i := range pages {
+		if err := sys.backS0Page(addr+i*pageSize, true); err != nil {
 			sys.s0.Free(addr)
 
 			return 0, err

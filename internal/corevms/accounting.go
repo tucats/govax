@@ -173,8 +173,8 @@ func (sys *System) validPages(env *Environment) (process, global int) {
 		}
 	}
 
-	count(0, env.Space.P0Pages)
-	count(s0Base-env.Space.P1Pages*pageSize, env.Space.P1Pages)
+	count(0, env.Space.P0LR)
+	count(p1Base+env.Space.P1LR*pageSize, env.Space.P1Pages())
 
 	return process, global
 }

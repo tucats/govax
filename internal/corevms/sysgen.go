@@ -124,6 +124,12 @@ type Sysgen struct {
 	// PFCDefault is PFCDEFAULT: the read cluster's size for a page whose
 	// section gave none (cluster.go). 0 and 1 read only the page faulted.
 	PFCDefault uint32
+
+	// VirtualPageCount is VIRTUALPAGECNT: with paging on, how many pages
+	// a new process's P0 and P1 may have together, the entries of its
+	// table area (creprc.go's newSpaceSizes). 0 until VMINIT sets its
+	// default, /P0 plus /P1, when the configuration names none.
+	VirtualPageCount uint32
 }
 
 // DefaultSysgen returns the parameters with no key set.

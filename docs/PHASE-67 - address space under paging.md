@@ -3,7 +3,8 @@
 **Status:** in progress: subtask 1, the survey, done 2026-10-19 (Part A
 below; its questions answered by the author the same day, each
 recommendation accepted); subtask 2, created space, done 2026-10-19;
-subtask 3, the user stack, done 2026-10-19.
+subtask 3, the user stack, done 2026-10-19; subtask 4, the table area
+backed on demand, done 2026-10-19.
 Planned 2026-10-15,
 deferred to the end of the paging program (the author, 2026-10-15).
 Needs Phase 66. Part of the paging
@@ -718,3 +719,69 @@ FREP1VA where they vary.
     so); the user stack's size at the first instruction against
     FREP1VA (the probe's `STACK=50` case); the pages between the
     stack's top and the P1 vector being no-access.
+- **2026-10-19:** Subtask 4, the table area backed on demand (findings
+  5, 13).
+  - **One table area** (`corevms.ProcessSpace`): `Entries` (how many
+    pages P0 and P1 may have together) and `Table` (the pool allocation,
+    0 for process 1) replace `P0Pages`/`P1Pages`/`P0Table`/`P1Table`. P0's
+    table starts at the area's bottom (P0BR) and P1's ends at its top
+    (P1BR + 2^21 entries is the area's end), so either region grows into
+    the room the other leaves: `P0Capacity` is `Entries` less P1's pages,
+    `P1Floor` the lowest P1 page with P0 as it is, and FREPTECNT the room
+    between, `Entries` less both regions' pages. With paging off the
+    formulas give each region's fixed size, as before.
+    `BuildAddressSpace(pid, p0, p1)` makes one pool allocation of
+    `tablePages(p0) + tablePages(p1)` pages ("page tables") in both
+    modes; VMINIT's layout is unchanged with paging off, and with it on
+    only P1's table moves, to the end of its last page (the rest of S0
+    stays where it was).
+  - **Backed on demand** (`corevms/tablearea.go`), with paging on: an
+    area page has a frame (an untied system frame, URKW) only while it
+    holds the entry of a page inside a region's length
+    (`tablePageNeeded`); the others have the all-zero S0 PTE, so a stray
+    reference is an access violation, never a fault that would back it
+    behind the area's back. `setRegionLength` backs the pages a growing
+    length reaches before the registers change (Decision 13: page tables
+    never fault) and gives back those a shrinking one leaves after, only
+    over the entries the change passes (`changedTablePages`); it reports
+    false if no frame is free, which `coverPage` turns into SS$_VASFULL
+    (govax's choice; VMS's tables are in the process header and the limit
+    would be the working set's room, SS$_INSFWSL; unconfirmed). A new
+    space backs only P1's permanent part's 32 pages (`fitTableArea`),
+    VMINIT's frames for process 1's other table pages go to the free list
+    (`TrimTableArea`), and teardown gives every frame back
+    (`releaseTableArea`), leaving the pool's pages without; `AllocateS0`
+    now backs a page that has none (the start of subtask 5's pool).
+    `DeleteP0` at image exit gives back every P0 table page.
+  - **VIRTUALPAGECNT:** `vax.sysgen.virtualpagecnt` (a count key, in
+    `validConfigs` and HELP CONFIG KEYS; `Sysgen.VirtualPageCount`),
+    VMINIT's `/P0` plus `/P1` when unset (set by VMINIT), and
+    SYI$_VIRTUALPAGECNT. With paging on `$CREPRC`'s process gets an area
+    of that many entries, split so P1 starts as process 1's does, from
+    UserStackTop up (`newSpaceSizes`); with paging off the creator's
+    region sizes, as before. P1's 4096 pages from UserStackTop up (most
+    of them the nonexistent hole below the P1 vector) count against it,
+    so a VIRTUALPAGECNT under about 4100 leaves P0 no room
+    (unconfirmed against VMS's FREPTECNT: the probe's question).
+  - **Tests:** `TestTableAreaOnDemand` (process 1: 33 of 80 table pages
+    backed at the start; a P0 page across a table page boundary backs one
+    and its deletion gives it back, as the System frame count shows; P0
+    grows past `/P0` to the area's end, every table page backed and
+    FREPTECNT 0, where `$CRETVA` and `$EXPREG` of P1 meet SS$_VASFULL; P1
+    grows past `/P1` into P0's room; `DeleteP0` leaves only P1's 32),
+    `TestTableAreaNewProcess` (32 of 65 at creation, P0 to the area's
+    end, teardown frees all 65, `AllocateS0` backs them again, cleared),
+    `TestVirtualPageCount` (the key and its default, a `$CREPRC`'d
+    process's 72-page area), `TestVMInit_tableArea` (VMINIT's layout in
+    both modes, the trimmed frames, the default). Changed:
+    `TestDeleteProcessTransitionPages` (its table area's two pool pages'
+    frames now go to the free list), `TestBuildAddressSpace`,
+    `TestProcessOneAdoptsVMInitTables`, `TestCreatedSpace*`'s FREPTECNT,
+    `TestVaxInitMemoryConfig` (sizes from `Machine.VMInitSizes`),
+    `TestCreprc_subprocess`. `TestPG64Oracle`: the detached runs' P1 no
+    longer ends before the quota (subtask 2's `pg64P1End` and the "Q10
+    fill: region 1 stopped" line are gone, with `withoutP1End`); its
+    Q11 lines are VMS's.
+  - **Left for subtask 5:** SHOW MEMORY's P0 and P1 "Physical addresses"
+    still show VMINIT's ranges, which with paging on no longer all have
+    frames (finding 7).

@@ -101,7 +101,7 @@ func TestCreatedSpace(t *testing.T) {
 	}
 
 	sp := env.Space
-	if got, want := jpiLong(t, env, "JPI$_FREPTECNT"), sp.P0Pages-end+stackTopPage-(0x200000-sp.P1Pages); got != want {
+	if got, want := jpiLong(t, env, "JPI$_FREPTECNT"), sp.Entries-end-(0x200000-stackTopPage); got != want {
 		t.Errorf("FREPTECNT %d, want %d", got, want)
 	}
 
@@ -258,8 +258,8 @@ func TestCreatedSpacePagingOff(t *testing.T) {
 	env := c.ProcessOne()
 	p0, p1 := c.CPU.PR(registers.P0LR), c.CPU.PR(registers.P1LR)
 
-	if p0 != env.Space.P0Pages || p1 != 0x200000-env.Space.P1Pages {
-		t.Fatalf("P0LR %#x, P1LR %#x: not the whole tables", p0, p1)
+	if want0, want1 := c.VMInitSizes(); p0 != want0 || p1 != 0x200000-want1 || env.Space.Entries != want0+want1 {
+		t.Fatalf("P0LR %#x, P1LR %#x, %d entries: not the whole tables", p0, p1, env.Space.Entries)
 	}
 
 	putRange(t, c, vaInadr, vaPages, vaPages+0x3FF)

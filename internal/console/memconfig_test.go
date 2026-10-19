@@ -45,11 +45,16 @@ func bootLayout(t *testing.T, values map[string]string) memoryLayout {
 	}
 
 	c := bootedConsole(t)
+	p0, p1 := c.VMInitSizes()
+
+	if c.RTL.Space.Entries != p0+p1 {
+		t.Errorf("process 1's table area has %d entries, want /P0 + /P1, %d", c.RTL.Space.Entries, p0+p1)
+	}
 
 	return memoryLayout{
 		physical: c.Mem.Size() >> 9,
-		p0:       c.RTL.Space.P0Pages,
-		p1:       c.RTL.Space.P1Pages,
+		p0:       p0,
+		p1:       p1,
 		s0:       c.CPU.PR(registers.SLR),
 		esp:      c.CPU.PR(registers.ESP),
 		ssp:      c.CPU.PR(registers.SSP),

@@ -27,10 +27,13 @@ import (
 // over some, a $DELTVA in the middle deletes some) have the all-zero PTE:
 // no access.
 //
-// The page tables themselves are still made at their full size when the
-// process is (VMINIT, BuildAddressSpace), and every entry past a region's
-// length is zero, so a region grows into entries that describe no page.
-// The table's size is how far a region can grow: past it is SS$_VASFULL.
+// The page tables are one table area per process (ProcessSpace: P0's
+// from its bottom up, P1's from its top down), made when the process is
+// (VMINIT, BuildAddressSpace), and every entry past a region's length is
+// zero, so a region grows into entries that describe no page. The area's
+// size is how far the two regions can grow together: past it is
+// SS$_VASFULL. Only the area's pages holding entries inside the regions'
+// lengths have frames (tablearea.go).
 //
 // A region's length lives in three places, kept together by
 // setRegionLength: the process's ProcessSpace, the CPU's length register
@@ -125,12 +128,14 @@ func InitialPTE(p1 bool, page, p1lr uint32, paging bool) vm.PTE {
 	return ProcessPTE(p1, page)
 }
 
-// p0Capacity is how many P0 pages env's P0 table can describe, and
-// p1Floor the lowest P1 page number its P1 table can: how far each
-// region can grow.
+// p0Capacity is how many P0 pages env's table area can describe, and
+// p1Floor the lowest P1 page number it can: how far each region can grow,
+// with the other as long as it is now (ProcessSpace's P0Capacity and
+// P1Floor). With paging off neither region moves, and they're the
+// regions' own sizes.
 func (env *Environment) p0Capacity() uint32 {
 	if env.Space != nil {
-		return env.Space.P0Pages
+		return env.Space.P0Capacity()
 	}
 
 	return env.cpu.PR(registers.P0LR)
@@ -138,7 +143,7 @@ func (env *Environment) p0Capacity() uint32 {
 
 func (env *Environment) p1Floor() uint32 {
 	if env.Space != nil {
-		return regionPages - env.Space.P1Pages
+		return env.Space.P1Floor()
 	}
 
 	return env.cpu.PR(registers.P1LR)
@@ -146,9 +151,11 @@ func (env *Environment) p1Floor() uint32 {
 
 // coverPage, in created space, lengthens the region the P0 or P1 page at
 // addr is in so that the page exists, if it doesn't: P0 up to and
-// including it, P1 down to it. It reports false if the region's page
-// table can't reach the page (SS$_VASFULL, for the caller). Outside
-// created space it does nothing.
+// including it, P1 down to it. It reports false if the table area can't
+// reach the page (SS$_VASFULL, for the caller), or physical memory has no
+// frame for a table page the region needs (govax's choice: VMS's tables
+// are in the process header, whose pages come from the working set, and
+// would be SS$_INSFWSL). Outside created space it does nothing.
 func (env *Environment) coverPage(addr uint32) bool {
 	if !env.createdSpace() || addr >= s0Base {
 		return true
@@ -162,13 +169,11 @@ func (env *Environment) coverPage(addr uint32) bool {
 			return true
 		}
 
-		if page >= sp.P0Pages {
+		if page >= sp.P0Capacity() {
 			return false
 		}
 
-		env.setRegionLength(regionP0, page+1)
-
-		return true
+		return env.setRegionLength(regionP0, page+1)
 	}
 
 	if page >= sp.P1LR {
@@ -179,9 +184,7 @@ func (env *Environment) coverPage(addr uint32) bool {
 		return false
 	}
 
-	env.setRegionLength(regionP1, page)
-
-	return true
+	return env.setRegionLength(regionP1, page)
 }
 
 // setRegionLength sets env's P0 length register (region 0) or P1 length
@@ -190,9 +193,24 @@ func (env *Environment) coverPage(addr uint32) bool {
 // RegionSize's byte form. A region is shortened only after the pages
 // leaving it are deleted: the translation buffer, which a page's
 // deletion empties, is consulted before the length check.
-func (env *Environment) setRegionLength(region int, lr uint32) {
+//
+// The table area's pages the new length reaches get frames first, and
+// those it leaves give theirs back after (tablearea.go). It reports false,
+// the lengths left as they were, if a page the region needs can't have a
+// frame.
+func (env *Environment) setRegionLength(region int, lr uint32) bool {
 	sp := env.Space
 	current := vm.CurrentAddressSpace(env.cpu).Same(sp.AddressSpace)
+
+	old, p0lr, p1lr := sp.P0LR, lr, sp.P1LR
+	if region == regionP1 {
+		old, p0lr, p1lr = sp.P1LR, sp.P0LR, lr
+	}
+
+	first, last, changed := sp.changedTablePages(region, old, lr)
+	if changed && !env.backTablePages(sp, first, last, p0lr, p1lr) {
+		return false
+	}
 
 	if region == regionP0 {
 		sp.P0LR = lr
@@ -217,6 +235,12 @@ func (env *Environment) setRegionLength(region int, lr uint32) {
 	if env.Process != nil {
 		env.Process.VirtualPeak = max(env.Process.VirtualPeak, env.virtualPages())
 	}
+
+	if changed {
+		env.unbackTablePages(sp, first, last, p0lr, p1lr)
+	}
+
+	return true
 }
 
 // lookupPTE returns the PTE of the P0 or P1 page at addr for a service
@@ -234,7 +258,7 @@ func (env *Environment) lookupPTE(addr uint32) (vm.PTE, error) {
 	if addr < s0Base && !env.inRegion(addr) {
 		page := (addr &^ p1Base) / pageSize
 
-		if addr < p1Base && page < env.Space.P0Pages || addr >= p1Base && page >= env.p1Floor() {
+		if addr < p1Base && page < env.p0Capacity() || addr >= p1Base && page >= env.p1Floor() {
 			return 0, nil
 		}
 	}
@@ -341,8 +365,17 @@ func (env *Environment) FreeP1VA() uint32 {
 }
 
 // FreePTECount is JPI$_FREPTECNT: how many more pages the process's page
-// tables can describe, P0's and P1's together (PHD$L_FREPTECNT).
+// tables can describe, P0's and P1's together (PHD$L_FREPTECNT): in
+// created space the room between the two regions' tables in the table
+// area; with paging off each region's room below its fixed size, past
+// its high-water mark.
 func (env *Environment) FreePTECount() uint32 {
+	if env.createdSpace() {
+		sp := env.Space
+
+		return sp.Entries - min(sp.P0LR+sp.P1Pages(), sp.Entries)
+	}
+
 	p0 := env.p0Capacity() - min(env.FreeP0VA()/pageSize, env.p0Capacity())
 	p1 := (env.p1Low()-p1Base)/pageSize - min(env.p1Floor(), (env.p1Low()-p1Base)/pageSize)
 

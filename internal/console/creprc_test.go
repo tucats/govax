@@ -115,9 +115,10 @@ func TestCreprc_subprocess(t *testing.T) {
 		t.Errorf("startup %+v; want pending, image CHILD.EXE, no output", child.Startup)
 	}
 
-	// Its memory: page tables the size of process 1's, its own stacks,
-	// and a PCB that starts it in user mode on its stacks.
-	if child.Space == nil || child.Space.P0Pages != one.Space.P0Pages || child.Space.P1Pages != one.Space.P1Pages {
+	// Its memory: a table area the size of process 1's (with paging on,
+	// VIRTUALPAGECNT's default), its own stacks, and a PCB that starts it
+	// in user mode on its stacks.
+	if child.Space == nil || child.Space.Entries != one.Space.Entries {
 		t.Fatalf("address space %+v; want process 1's sizes", child.Space)
 	}
 

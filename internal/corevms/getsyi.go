@@ -72,7 +72,8 @@ const maxNodeNameLength = 15
 //     SYSGEN's default (300). PFCDEFAULT, the read cluster's default
 //     size (Phase 65, subtask 6), is the System's; PAGTBLPFC, the page
 //     table pages' cluster, is SYSGEN's default (2, as that VAX had),
-//     since govax's page tables aren't paged.
+//     since govax's page tables aren't paged. VIRTUALPAGECNT (Phase 67)
+//     is the System's, the entries of a new process's table area.
 //   - The page file's (Phase 64, subtask 7): MPW_WRTCLUSTER and
 //     PQL_MPGFLQUOTA (quotaRules' minimum) are parameters;
 //     PAGEFILE_PAGE and PAGEFILE_FREE the page file's size and free
@@ -106,6 +107,7 @@ var syiItemsByName = map[string]func(env *Environment) itemValue{
 	"SYI$_WSMAX":          func(env *Environment) itemValue { return itemLong(nominalWSExtent) },
 	"SYI$_BORROWLIM":      func(env *Environment) itemValue { return itemLong(defaultBorrowLimit) },
 	"SYI$_PFCDEFAULT":     func(env *Environment) itemValue { return itemLong(env.Sysgen.PFCDefault) },
+	"SYI$_VIRTUALPAGECNT": func(env *Environment) itemValue { return itemLong(env.Sysgen.VirtualPageCount) },
 	"SYI$_PAGTBLPFC":      func(env *Environment) itemValue { return itemLong(defaultPageTablePFC) },
 	"SYI$_PQL_DWSDEFAULT": func(env *Environment) itemValue { return itemLong(env.sysgenPQL("WSDEFAULT")) },
 	"SYI$_PQL_DWSQUOTA":   func(env *Environment) itemValue { return itemLong(env.sysgenPQL("WSQUOTA")) },

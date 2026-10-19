@@ -28,6 +28,7 @@ const (
 	gblSectSetting    = "vax.sysgen.gblsections"
 	gblPagesSetting   = "vax.sysgen.gblpages"
 	gblPagFilSetting  = "vax.sysgen.gblpagfil"
+	virtPageSetting   = "vax.sysgen.virtualpagecnt"
 
 	// WriteClusterSetting is MPW_WRTCLUSTER's key, whose value has a
 	// rule of its own (ParseWriteCluster).
@@ -55,6 +56,7 @@ func SysgenKeys() []string {
 		mpwHiLimitSetting, mpwLoLimitSetting, freeLimSetting, freeGoalSetting,
 		pageFileSetting, pageSizeSetting, pageDeferSetting, WriteClusterSetting,
 		gblSectSetting, gblPagesSetting, gblPagFilSetting, PFCDefaultSetting,
+		virtPageSetting,
 	}
 
 	for key := range pqlSettings {
@@ -67,7 +69,10 @@ func SysgenKeys() []string {
 // SysgenCountKeys returns the keys whose value is a count of pages, which
 // must be a positive integer (cmd/govax's audit warns about any other).
 func SysgenCountKeys() []string {
-	keys := []string{minWSCountSetting, pageSizeSetting, gblSectSetting, gblPagesSetting, gblPagFilSetting}
+	keys := []string{
+		minWSCountSetting, pageSizeSetting, gblSectSetting, gblPagesSetting, gblPagFilSetting,
+		virtPageSetting,
+	}
 
 	for key := range pqlSettings {
 		keys = append(keys, key)
@@ -190,6 +195,11 @@ func sysgenSettings(paging bool) corevms.Sysgen {
 
 	if v, ok := ParsePFCDefault(settings.Get(PFCDefaultSetting)); ok {
 		sg.PFCDefault = v
+	}
+
+	// VIRTUALPAGECNT unset is 0, which VMINIT makes /P0 plus /P1.
+	if v, ok := ParseSysgenCount(settings.Get(virtPageSetting)); ok {
+		sg.VirtualPageCount = v
 	}
 
 	sg.PageFileName = strings.TrimSpace(settings.Get(pageFileSetting))

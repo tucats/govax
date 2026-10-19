@@ -15,11 +15,12 @@ import (
 // Every process sees the same S0, but P0 (its image and heap, growing up
 // from address 0) and P1 (its stacks and the P1 vector, growing down from
 // 0x80000000) are private: each process has its own two page tables, in
-// S0 pages from the System's pool, and the CPU's P0BR/P0LR/P1BR/P1LR
-// registers name the current process's. Process 1, the console's,
-// adopts the tables VMINIT built; BuildAddressSpace lays out the same
-// kind of tables for a new process, and TeardownAddressSpace gives back
-// everything a process's address space used.
+// one table area of S0 pages from the System's pool (ProcessSpace), and
+// the CPU's P0BR/P0LR/P1BR/P1LR registers name the current process's.
+// Process 1, the console's, adopts the tables VMINIT built;
+// BuildAddressSpace lays out the same kind of tables for a new process,
+// and TeardownAddressSpace gives back everything a process's address
+// space used.
 
 // regionPages is how many pages each of P0 and P1 has: each region is a
 // gigabyte, 0x40000000 bytes. A P1 page table describes only the
@@ -57,20 +58,31 @@ func ProcessPTE(p1 bool, page uint32) vm.PTE {
 // ProcessSpace is one process's address space, and what's needed to give
 // it back: where its page tables are, and which of its pages are shared
 // with other processes (whose physical pages it mustn't free).
+//
+// Its two page tables share one area of S0, as on VMS (the book's
+// 14.1.1 and figure 14-2): P0's table starts at the area's bottom (P0BR)
+// and grows up, P1's ends at the area's top and grows down, and either
+// region may grow into the room between them. Entries is how many pages
+// the two regions may have together (VMS's VIRTUALPAGECNT): P0 can grow
+// as far as P1's size leaves room for, and P1 as far as P0's does
+// (P0Capacity, P1Floor). With paging off neither region moves, and the
+// area is exactly the two tables. With paging on only the area's pages
+// that hold entries of the regions' pages have frames behind them
+// (tablearea.go).
 type ProcessSpace struct {
 	// AddressSpace is what the CPU's registers hold while the process
 	// runs, and what Go code passes to vm.Memory's ...In methods to reach
 	// the process's memory while it isn't current.
 	vm.AddressSpace
 
-	// P0Pages and P1Pages are how many pages each region's table
-	// describes.
-	P0Pages, P1Pages uint32
+	// Entries is how many PTEs the table area holds for the two regions
+	// together.
+	Entries uint32
 
-	// P0Table and P1Table are the S0 addresses of the pool allocations
-	// holding the tables. Zero for process 1, whose tables are VMINIT's
-	// and are never given back.
-	P0Table, P1Table uint32
+	// Table is the S0 address of the pool allocation holding the table
+	// area. Zero for process 1, whose tables are VMINIT's and are never
+	// given back.
+	Table uint32
 
 	// PID is the process the space was built for (0 for process 1's):
 	// the owner its pages' frames are tied to, with paging on.
@@ -83,12 +95,32 @@ type ProcessSpace struct {
 
 // Owned reports whether the space's page tables came from the S0 pool
 // (a process BuildAddressSpace made) rather than from VMINIT.
-func (s *ProcessSpace) Owned() bool { return s.P0Table != 0 }
+func (s *ProcessSpace) Owned() bool { return s.Table != 0 }
+
+// P1Pages is how many pages P1 has now: those from P1LR up.
+func (s *ProcessSpace) P1Pages() uint32 { return regionPages - min(s.P1LR, regionPages) }
+
+// P0Capacity is how many P0 pages the table area can describe with P1
+// as long as it is now: how far P0 can grow.
+func (s *ProcessSpace) P0Capacity() uint32 {
+	return s.Entries - min(s.P1Pages(), s.Entries)
+}
+
+// P1Floor is the lowest P1 page number the table area can describe with
+// P0 as long as it is now: how far P1 can grow down.
+func (s *ProcessSpace) P1Floor() uint32 {
+	return regionPages - (s.Entries - min(s.P0LR, s.Entries))
+}
+
+// areaEnd is the S0 address just past the table area: where P1's table,
+// whose last entry is P1's top page, ends.
+func (s *ProcessSpace) areaEnd() uint32 { return s.P1BR + regionPages*4 }
 
 // AdoptAddressSpace returns process 1's address space: the tables VMINIT
-// built, as the CPU's registers describe them, p0Pages and p1Pages long.
+// built, as the CPU's registers describe them, for p0Pages and p1Pages
+// pages (an area of their sum).
 func AdoptAddressSpace(cpu *registers.CPU, p0Pages, p1Pages uint32) *ProcessSpace {
-	return &ProcessSpace{AddressSpace: vm.CurrentAddressSpace(cpu), P0Pages: p0Pages, P1Pages: p1Pages}
+	return &ProcessSpace{AddressSpace: vm.CurrentAddressSpace(cpu), Entries: p0Pages + p1Pages}
 }
 
 // sharedPage is one page every process maps to the same physical page.
@@ -168,60 +200,69 @@ func (sys *System) makeSharedSystem(as vm.AddressSpace) {
 // table must describe those pages and the one below them, where the first
 // push lands. (The P1 vector, 0x7FFEDE00 up, is within them.) A smaller
 // table is allowed, for a process that never runs user-mode code on that
-// stack, but the stack pointer then points at nothing.
+// stack, but the stack pointer then points at nothing. (With paging on,
+// the user stack grows into the table area's room below P1 instead.)
 const MinP1Pages = (0x80000000-UserStackTop)/pageSize + 1
 
-// BuildAddressSpace makes a new process's address space: P0 and P1 page
-// tables of p0Pages and p1Pages entries, in S0 pages from the System's
-// pool (charged to pid), each entry a demand-zero page as ProcessPTE
-// says; with paging on, only P1's permanent part exists at first, every
-// other entry zero (InitialLengths, InitialPTE; regions.go). The P1 vector's pages (ShareP1) are mapped onto the physical pages
-// process 1's vector uses, read-only to every mode (ProtUR) and owned by
-// kernel mode, so the process can call system services through it but
-// can neither change it nor delete it.
+// BuildAddressSpace makes a new process's address space: a table area
+// for p0Pages and p1Pages pages, in S0 pages from the System's pool
+// (charged to pid), P0's table at its bottom and P1's at its top. With
+// paging off each region has exactly its pages, every entry a
+// demand-zero page as ProcessPTE says. With paging on the two regions
+// share the area's p0Pages + p1Pages entries as they grow (the split
+// says only where P1 starts, InitialLengths): only P1's permanent part
+// exists at first, every other entry zero (InitialPTE; regions.go), and
+// only the area's pages that hold those entries have frames behind them
+// (tablearea.go). The P1 vector's pages (ShareP1) are mapped onto the
+// physical pages process 1's vector uses, read-only to every mode
+// (ProtUR) and owned by kernel mode, so the process can call system
+// services through it but can neither change it nor delete it.
 //
 // The tables are written through their S0 addresses, so memory mapping
 // must be on (VMINIT has run). On an error, nothing stays allocated.
 func (sys *System) BuildAddressSpace(pid, p0Pages, p1Pages uint32) (*ProcessSpace, error) {
-	if p0Pages == 0 || p1Pages == 0 || p0Pages > regionPages || p1Pages > regionPages {
+	paging := sys.mem.Paging() != nil
+
+	if p0Pages > regionPages || p1Pages > regionPages || p0Pages+p1Pages == 0 ||
+		!paging && (p0Pages == 0 || p1Pages == 0) {
 		return nil, fmt.Errorf("P0 and P1 need 1 to %d pages each (%d and %d asked for)", regionPages, p0Pages, p1Pages)
 	}
 
-	p0Table, err := sys.AllocateS0(tablePages(p0Pages), pid, "P0 page table")
+	// The area holds each region's table, a whole number of pages each.
+	pages := tablePages(p0Pages) + tablePages(p1Pages)
+
+	table, err := sys.s0.Allocate(pages, pid, "page tables")
 	if err != nil {
 		return nil, err
 	}
 
-	p1Table, err := sys.AllocateS0(tablePages(p1Pages), pid, "P1 page table")
-	if err != nil {
-		sys.s0.Free(p0Table)
-
-		return nil, err
-	}
-
-	// The P1 table's first entry is for page p1Low; with paging on the
-	// regions start shorter than their tables (InitialLengths).
-	p1Low := regionPages - p1Pages
-	paging := sys.mem.Paging() != nil
+	// With paging on the regions start shorter than their tables
+	// (InitialLengths).
 	p0lr, p1lr := InitialLengths(p0Pages, p1Pages, paging)
 
 	s := &ProcessSpace{
 		AddressSpace: vm.AddressSpace{
-			P0BR: p0Table, P0LR: p0lr,
-			// P1BR is where entry 0 *would* be: the table holds only the
-			// entries from page p1Low up, and its first one is p1Low's.
-			P1BR: p1Table - p1Low*4, P1LR: p1lr,
+			P0BR: table, P0LR: p0lr,
+			// P1BR is where entry 0 *would* be: P1's table holds only the
+			// entries up to page regionPages-1, the last in the area.
+			P1BR: table + pages*pageSize - regionPages*4, P1LR: p1lr,
 		},
-		P0Pages: p0Pages, P1Pages: p1Pages,
-		P0Table: p0Table, P1Table: p1Table,
-		PID:    pid,
-		shared: map[uint32]bool{},
+		Entries: p0Pages + p1Pages,
+		Table:   table,
+		PID:     pid,
+		shared:  map[uint32]bool{},
 	}
 
-	err = sys.writeTable(p0Table, p0Pages, func(i uint32) vm.PTE { return InitialPTE(false, i, p1lr, paging) })
+	// The area's pages, backed or not, then the entries of the pages that
+	// exist.
+	err = sys.fitTableArea(s)
 
 	if err == nil {
-		err = sys.writeTable(p1Table, p1Pages, func(i uint32) vm.PTE { return InitialPTE(true, p1Low+i, p1lr, paging) })
+		err = sys.writeTable(s.P0BR, p0lr, func(i uint32) vm.PTE { return InitialPTE(false, i, p1lr, paging) })
+	}
+
+	if err == nil {
+		err = sys.writeTable(s.P1BR+p1lr*4, regionPages-p1lr, func(i uint32) vm.PTE { return InitialPTE(true, p1lr+i, p1lr, paging) })
 	}
 
 	if err == nil {
@@ -229,8 +270,7 @@ func (sys *System) BuildAddressSpace(pid, p0Pages, p1Pages uint32) (*ProcessSpac
 	}
 
 	if err != nil {
-		sys.s0.Free(p0Table)
-		sys.s0.Free(p1Table)
+		sys.releaseTableArea(s)
 
 		return nil, err
 	}
@@ -244,9 +284,13 @@ func tablePages(n uint32) uint32 {
 	return (n*4 + pageMask) / pageSize
 }
 
-// writeTable fills the page table at the S0 address table with n entries,
+// writeTable writes n page table entries from the S0 address table up,
 // entry i being pte(i).
 func (sys *System) writeTable(table, n uint32, pte func(uint32) vm.PTE) error {
+	if n == 0 {
+		return nil
+	}
+
 	buf := make([]byte, n*4)
 
 	for i := range n {
@@ -287,11 +331,10 @@ func (sys *System) mapShared(s *ProcessSpace) error {
 // TeardownAddressSpace gives back everything s uses: every physical page
 // its P0 and P1 pages were given, valid or in transition (but not the
 // shared ones; a global section's page only loses the section a
-// reference), then its page
-// tables' S0 pages. It does nothing for process 1's space, whose tables
-// are VMINIT's. The process must not be the current one: the CPU's
-// registers, and the translation buffer, would still describe tables
-// that no longer exist.
+// reference), then its table area's S0 pages and their frames. It does
+// nothing for process 1's space, whose tables are VMINIT's. The process
+// must not be the current one: the CPU's registers, and the translation
+// buffer, would still describe tables that no longer exist.
 func (sys *System) TeardownAddressSpace(s *ProcessSpace) error {
 	if s == nil || !s.Owned() {
 		return nil
@@ -302,16 +345,17 @@ func (sys *System) TeardownAddressSpace(s *ProcessSpace) error {
 		return fmt.Errorf("can't tear down the current process's address space")
 	}
 
-	// Each table's first entry is the page at base.
-	tables := []struct{ table, n, base uint32 }{
-		{s.P0Table, s.P0Pages, 0},
-		{s.P1Table, s.P1Pages, p1Base + (regionPages-s.P1Pages)*pageSize},
+	// The entries of the pages that exist: P0's from page 0, P1's from
+	// P1LR. (Every entry past a region's length is zero.)
+	tables := []struct{ entries, n, base uint32 }{
+		{s.P0BR, s.P0LR, 0},
+		{s.P1BR + s.P1LR*4, s.P1Pages(), p1Base + s.P1LR*pageSize},
 	}
 
 	for _, t := range tables {
 		buf := make([]byte, t.n*4)
 
-		if err := sys.mem.LoadIn(sys.cpu, cur, t.table, buf); err != nil {
+		if err := sys.mem.LoadIn(sys.cpu, cur, t.entries, buf); err != nil {
 			return err
 		}
 
@@ -332,11 +376,9 @@ func (sys *System) TeardownAddressSpace(s *ProcessSpace) error {
 				sys.releaseFrame(pfn, modified)
 			}
 		}
-
-		sys.s0.Free(t.table)
 	}
 
-	s.P0Table, s.P1Table = 0, 0
+	sys.releaseTableArea(s)
 
 	return nil
 }

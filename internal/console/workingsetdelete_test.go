@@ -309,7 +309,7 @@ func TestDeleteTransitionPages(t *testing.T) {
 // TestDeleteProcessTransitionPages touches 80 pages of a second process
 // with a 30-page working set, which leaves at least 50 of them in
 // transition, then removes the process: every frame it was given goes
-// back, none stays tied to it.
+// back, none stays tied to it, and its table area's too.
 func TestDeleteProcessTransitionPages(t *testing.T) {
 	setSetting(t, machine.PagingSetting, "true")
 
@@ -372,7 +372,14 @@ func TestDeleteProcessTransitionPages(t *testing.T) {
 
 	checkWorkingSets(t, c)
 
-	if after := db.Counts(); after != before {
-		t.Errorf("frame counts %+v after the process went, want %+v", after, before)
+	// Its table area's two pages (128 entries and 64) go back too: they
+	// were pool pages with VMINIT's frames behind them, which now go to
+	// the free list (the table area backed on demand, Phase 67).
+	want := before
+	want.Free += 2
+	want.System -= 2
+
+	if after := db.Counts(); after != want {
+		t.Errorf("frame counts %+v after the process went, want %+v", after, want)
 	}
 }

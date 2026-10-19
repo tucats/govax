@@ -2,6 +2,8 @@ package corevms
 
 import (
 	"testing"
+
+	"github.com/tucats/govax/internal/vm"
 )
 
 // heapFixture is an environment whose P0 high-water mark is at 0x1000,
@@ -13,7 +15,7 @@ func heapFixture(t *testing.T, pages uint32) *Environment {
 	env.RegionSize[0] = 0x1000
 
 	if pages != 0 {
-		env.Space = &ProcessSpace{P0Pages: pages}
+		env.Space = &ProcessSpace{Entries: pages, AddressSpace: vm.AddressSpace{P1LR: regionPages}}
 	}
 
 	return env

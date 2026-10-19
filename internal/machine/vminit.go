@@ -194,8 +194,17 @@ func (m *Machine) VMInitPaging(paging bool, p0Pages, p1Pages, s0Pages, kspPages,
 	}
 
 	// P1 region: grows down towards virtual address maxP1. Demand-paged on
-	// first touch, same as P0 above.
+	// first touch, same as P0 above. With paging on the two tables are
+	// one table area (corevms.ProcessSpace), P0's growing up from its
+	// bottom and P1's down from its top, so P1's table ends at the end of
+	// its last page rather than starting at its first.
 	paddr = roundUpPage(paddr)
+	p1TableEnd := roundUpPage(paddr + size[1]*4)
+
+	if paging {
+		paddr = p1TableEnd - size[1]*4
+	}
+
 	p1lr := uint32(p1TotalSlots) - size[1]
 	p1Base := maxP1 - size[1]*512
 	p1PStart := page
@@ -394,10 +403,21 @@ func (m *Machine) VMInitPaging(paging bool, p0Pages, p1Pages, s0Pages, kspPages,
 	m.processOne.Space = corevms.AdoptAddressSpace(m.CPU, size[0], size[1])
 	m.processOne.Stacks = corevms.AdoptStacks(m.CPU)
 
+	// VIRTUALPAGECNT, every new process's table area, is process 1's
+	// unless the configuration says otherwise.
+	if m.processOne.Sysgen.VirtualPageCount == 0 {
+		m.processOne.Sysgen.VirtualPageCount = size[0] + size[1]
+	}
+
 	m.DepositAddr = 0x200
 	m.CPU.SetPR(registers.MAPEN, 1)
 	m.VMInitValid = true
 	m.Mem.SetVMValid(true) // let Translate demand-page invalid P0/P1 PTEs from here on
+
+	// With paging on, the pages of process 1's table area that hold no
+	// entry of a page that exists give their frames back, to be backed
+	// again as its regions grow (corevms's tablearea.go).
+	m.processOne.TrimTableArea(m.processOne.Space)
 
 	// Invalidate_tb() plus a reset of its tries/hits/pflushes
 	// counters (tb_flush itself and the STC's own counters are left
@@ -409,6 +429,13 @@ func (m *Machine) VMInitPaging(paging bool, p0Pages, p1Pages, s0Pages, kspPages,
 	m.kernelPlaced = false
 
 	return nil
+}
+
+// VMInitSizes returns the P0 and P1 sizes, in pages, the last VMINIT
+// gave process 1's page tables (/P0 and /P1): with paging off its
+// regions' sizes, with it on its table area's split.
+func (m *Machine) VMInitSizes() (p0, p1 uint32) {
+	return m.Regions[0].size, m.Regions[1].size
 }
 
 // defaultModeStackPages is the size of the executive and supervisor

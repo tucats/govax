@@ -3,7 +3,6 @@ package console_test
 import (
 	"os"
 	"path/filepath"
-	"slices"
 	"strconv"
 	"strings"
 	"testing"
@@ -29,42 +28,7 @@ var expectedPG64Differences = map[string]string{
 	"W4":                   "as W3",
 	"W5":                   "as W3",
 	"W6 deltva:":           "the blocks given back are those written, as W3",
-	"Q11 expreg P1":        "the detached run's P1 ends before its quota does (pg64P1End)",
 	"V1":                   "the heap's charges: VMS's first LIB$GET_VM charges 136 pages, govax's 129; the second 401 and 396 (the heap's layout, Phase 59)",
-}
-
-// pg64QuotaFillDifference is the line govax's detached run adds: its P1
-// (8192 pages in all, the user stack and P1 vector above) runs out before the
-// quota does, where VMS's (VIRTUALPAGECNT 65500) doesn't, so the fill
-// goes on in P0 after a "Q10 fill: region 1 stopped" line VMS doesn't
-// write.
-const pg64QuotaFillDifference = "Q10 fill: region 1 stopped:"
-
-// pg64P1End is the start of the detached run's Q11 line for P1 when P1's
-// page table ends before the quota does. Since $DELTVA gives P1's pages
-// back (Phase 67's created space; Q5's 100 pages were never given back
-// before), the fill takes P1 to within 72 pages of its table's end, so
-// Q11's request for 210 meets the end of the address space (SS$_VASFULL,
-// retadr -1) where VMS's meets the quota, and the program writes no
-// "Q11 deltva" line after it. Until each process's P0 and P1 share one
-// table area (Phase 67's subtask 4), as VMS's VIRTUALPAGECNT does.
-const pg64P1End = "Q11 expreg P1 pagfilcnt+10: 00000244 retadr -1"
-
-// withoutP1End returns VMS's lines want without the "Q11 deltva" line
-// after its Q11 line for P1, if govax's lines got have pg64P1End there
-// instead.
-func withoutP1End(got, want []string) []string {
-	if !slices.ContainsFunc(got, func(l string) bool { return strings.HasPrefix(l, pg64P1End) }) {
-		return want
-	}
-
-	for i, line := range want {
-		if strings.HasPrefix(line, "Q11 expreg P1") && i+1 < len(want) && strings.HasPrefix(want[i+1], "Q11 deltva") {
-			return slices.Delete(slices.Clone(want), i+1, i+2)
-		}
-	}
-
-	return want
 }
 
 // pg64Expected returns the reason line is expected to differ, or "".
@@ -244,15 +208,7 @@ func TestPG64Oracle(t *testing.T) {
 	comparePG64(t, "C", run("C", "PG64"), pg64VAX(t, "pg64c.out"))
 
 	for _, f := range []string{"pg64q2.out", "pg64q3.out"} {
-		var got []string
-
-		for _, line := range strings.Split(dispatch("TYPE "+strings.ToUpper(f)), "|") {
-			if !strings.HasPrefix(line, pg64QuotaFillDifference) {
-				got = append(got, line)
-			}
-		}
-
-		comparePG64(t, f, got, withoutP1End(got, pg64VAX(t, f)))
+		comparePG64(t, f, strings.Split(dispatch("TYPE "+strings.ToUpper(f)), "|"), pg64VAX(t, f))
 	}
 
 	// LIB$GET_VM: its status past the quota is LIB$_INSVIRMEM.

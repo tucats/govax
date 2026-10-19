@@ -489,9 +489,9 @@ func (env *Environment) newDetachedProcess() (*Environment, error) {
 // and hardware PCB, from the S0 pool, and writes the PCB a first
 // dispatch loads: the stacks' and address space's registers, user mode,
 // and PC 0 for now (the process's startup decides where the image
-// starts). Its page tables are the size of env's (on VMS, every
-// process's are sized by one system parameter; govax's stand-in is
-// process 1's, from VMINIT). It reports whether it could; if it couldn't,
+// starts). With paging on its table area holds VIRTUALPAGECNT entries
+// (newSpaceSizes); with paging off its regions are the size of env's,
+// which never change. It reports whether it could; if it couldn't,
 // whatever it allocated is the process's (charged to its PID), for
 // RemoveProcess to free.
 func (env *Environment) buildProcessMemory(child *Environment) bool {
@@ -501,7 +501,9 @@ func (env *Environment) buildProcessMemory(child *Environment) bool {
 
 	pid := child.Process.PID
 
-	space, err := env.BuildAddressSpace(pid, env.Space.P0Pages, env.Space.P1Pages)
+	p0, p1 := env.newSpaceSizes()
+
+	space, err := env.BuildAddressSpace(pid, p0, p1)
 	if err != nil {
 		return false
 	}
@@ -523,6 +525,28 @@ func (env *Environment) buildProcessMemory(child *Environment) bool {
 	start := InitialPCB(space, stacks, 0, psl)
 
 	return cpu.WritePCB(env.mem, stacks.PCBB, &start) == nil
+}
+
+// newSpaceSizes is the P0 and P1 sizes a process env creates is given
+// (BuildAddressSpace). With paging on, a table area of VIRTUALPAGECNT
+// entries (vax.sysgen.virtualpagecnt, by default VMINIT's /P0 plus /P1:
+// process 1's area), as VMS gives every process (the book's 16.2.1.1),
+// split so that P1 starts as it does in process 1, with every page from
+// UserStackTop up (InitialLengths); the regions then share the area as
+// they grow. With paging off, env's own sizes, which never change.
+func (env *Environment) newSpaceSizes() (p0, p1 uint32) {
+	if env.mem.Paging() == nil {
+		return env.Space.P0LR, env.Space.P1Pages()
+	}
+
+	entries := env.Sysgen.VirtualPageCount
+	if entries == 0 {
+		entries = env.Space.Entries
+	}
+
+	p1 = min(entries, regionPages-userStackTopPage)
+
+	return entries - p1, p1
 }
 
 // inheritDefaults gives child, a new process, its creator env's default

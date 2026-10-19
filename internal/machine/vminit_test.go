@@ -353,3 +353,70 @@ func TestPageRounding(t *testing.T) {
 		}
 	}
 }
+
+// TestVMInit_tableArea: with paging on, VMINIT's P0 and P1 tables are one
+// table area (Phase 67's subtask 4): P1's table ends at the area's end
+// rather than starting at its page's beginning, and only the area's pages
+// holding entries of pages that exist keep frames (here P1's 200 pages,
+// in its last two; P0 has none). The rest of S0's layout doesn't move, and
+// VIRTUALPAGECNT defaults to /P0 plus /P1.
+func TestVMInit_tableArea(t *testing.T) {
+	c := NewMachine(&bytes.Buffer{})
+	if err := c.Init(16384 * 512); err != nil {
+		t.Fatalf("Init: %v", err)
+	}
+
+	// P0's 300 entries fill three pages, P1's 200 two: a 5-page area
+	// after S0's table.
+	if err := c.VMInitPaging(false, 300, 200, 8192, 20, 0, 0, 4, 8); err != nil {
+		t.Fatalf("VMInitPaging: %v", err)
+	}
+
+	area := c.CPU.PR(registers.P0BR)
+	ksp := c.CPU.PR(registers.KSP)
+
+	if got := c.CPU.PR(registers.P1BR) + c.CPU.PR(registers.P1LR)*4; got != area+3*512 {
+		t.Errorf("paging off: P1's table at %#x, want %#x, after P0's three pages", got, area+3*512)
+	}
+
+	if err := c.VMInitPaging(true, 300, 200, 8192, 20, 0, 0, 4, 8); err != nil {
+		t.Fatalf("VMInitPaging: %v", err)
+	}
+
+	if got := c.CPU.PR(registers.P0BR); got != area {
+		t.Errorf("P0BR %#x, want the area's start %#x", got, area)
+	}
+
+	if got := c.CPU.PR(registers.P1BR) + 0x200000*4; got != area+5*512 {
+		t.Errorf("P1's table ends at %#x, want the area's end %#x", got, area+5*512)
+	}
+
+	if got := c.CPU.PR(registers.KSP); got != ksp {
+		t.Errorf("KSP %#x with paging on, %#x with it off: the layout moved", got, ksp)
+	}
+
+	for i := range uint32(5) {
+		_, _, pte, err := c.Mem.LookupPTE(c.CPU, area+i*512)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		if want := i >= 3; pte.Valid() != want || !want && pte != 0 {
+			t.Errorf("table page %d: PTE %08X, want a frame %v", i, uint32(pte), want)
+		}
+	}
+
+	if got := c.ProcessOne().Sysgen.VirtualPageCount; got != 500 {
+		t.Errorf("VIRTUALPAGECNT %d, want /P0 + /P1, 500", got)
+	}
+
+	// The P1 vector's region still reads through the backed pages: P1's
+	// top page's PTE is ProcessPTE's.
+	if pte, err := c.Mem.LoadLongword(c.CPU, area+5*512-4); err != nil || vm.PTE(pte).Protection() != vm.ProtUW {
+		t.Errorf("P1's top entry %08X (%v), want a demand-zero UW page", pte, err)
+	}
+
+	if err := c.Mem.Paging().Check(); err != nil {
+		t.Error(err)
+	}
+}

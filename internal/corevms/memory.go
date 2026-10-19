@@ -37,13 +37,14 @@ func p0Start(mark uint32) uint32 {
 	return max((mark+pageMask)&^pageMask, pageSize)
 }
 
-// p0Limit is the address P0 ends at: the end of its page table, which
-// VMINIT (or $CREPRC) made P0Pages long, every page in it a demand-zero
-// page until it's touched. An environment without an address space of
-// its own (in tests) has the whole region.
+// p0Limit is the address P0 can grow to: as far as its table area
+// reaches with P1 as long as it is now (p0Capacity; with paging off P0's
+// fixed size, every page in it a demand-zero page until it's touched).
+// An environment without an address space of its own (in tests) has the
+// whole region.
 func (env *Environment) p0Limit() uint64 {
 	if env.Space != nil {
-		return uint64(env.Space.P0Pages) * pageSize
+		return uint64(env.p0Capacity()) * pageSize
 	}
 
 	return p1Base

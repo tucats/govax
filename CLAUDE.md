@@ -169,7 +169,16 @@ never had.
   `corevms/userstack.go`'s `CreateUserStack`, a user-mode access below
   P1's low end expands it through `vm.Memory.SetStackExpander`, as does
   `$ADJSTK`, and rundown deletes it but for the page the user SP is in
-  and above). Paging is synchronous, with no
+  and above; subtask 4, the table area backed on demand, done
+  2026-10-19: a process's P0 and P1 tables are one table area,
+  `corevms.ProcessSpace`'s `Entries` and `Table`, P0's at its bottom and
+  P1's ending at its top, each region growing into the room the other
+  leaves, `P0Capacity`/`P1Floor`; with paging on only the area's pages
+  holding entries inside the regions' lengths have frames,
+  `corevms/tablearea.go`, backed by `setRegionLength` before a length
+  reaches them and given back after it leaves; a new process's area is
+  `vax.sysgen.virtualpagecnt` entries, VMINIT's `/P0` plus `/P1` by
+  default, SYI$_VIRTUALPAGECNT). Paging is synchronous, with no
   PFW, COLPG, or FPG waits. Each later phase has a planning doc.
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
@@ -1311,7 +1320,10 @@ expect adjustment as phases land):
   it), and `paging.defer` (open it at first need, not at startup);
   Phase 65's `gblsections`, `gblpages`, `gblpagfil` (the global section
   limits, in both paging modes) and `pfcdefault` (the read cluster's
-  default size, 0 to 127, `ParsePFCDefault`; `corevms/cluster.go`). They reach each `System` as a `corevms.Sysgen`
+  default size, 0 to 127, `ParsePFCDefault`; `corevms/cluster.go`);
+  Phase 67's `virtualpagecnt` (a new process's table area, P0's and
+  P1's pages together, with paging on; VMINIT's `/P0` plus `/P1` when
+  unset). They reach each `System` as a `corevms.Sysgen`
   (`corevms/sysgen.go`), whose defaults `$CREPRC`'s quotas and a
   logging-in process's account (`LoginQuotas`) use.
   `vax.library` (string) — the host directory LINK and MACRO look

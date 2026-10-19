@@ -43,8 +43,8 @@ func TestProcessOneAdoptsVMInitTables(t *testing.T) {
 		t.Errorf("process 1's space %+v (owned %v), want the CPU's registers, not owned", s.AddressSpace, s.Owned())
 	}
 
-	if s.P0Pages != 16384 || s.P1Pages != 8192 {
-		t.Errorf("sizes %d/%d, want vax.init's 16384/8192", s.P0Pages, s.P1Pages)
+	if s.Entries != 16384+8192 || s.P0LR != 16384 || s.P1Pages() != 8192 {
+		t.Errorf("area of %d entries, sizes %d/%d, want vax.init's 16384/8192", s.Entries, s.P0LR, s.P1Pages())
 	}
 }
 
@@ -78,8 +78,9 @@ func TestBuildAddressSpace(t *testing.T) {
 		t.Errorf("tables took %d pool pages, want 192", used)
 	}
 
-	if s.P0LR != 16384 || s.P1LR != 0x200000-8192 || s.P1BR+s.P1LR*4 != s.P1Table {
-		t.Errorf("registers %+v, tables at %08X/%08X", s.AddressSpace, s.P0Table, s.P1Table)
+	// One table area: P0's table at its bottom, P1's ending at its top.
+	if s.P0LR != 16384 || s.P1LR != 0x200000-8192 || s.P0BR != s.Table || s.P1BR+0x200000*4 != s.Table+192*512 {
+		t.Errorf("registers %+v, table area at %08X", s.AddressSpace, s.Table)
 	}
 
 	// The P1 vector: the same physical page as process 1's, and read-only.

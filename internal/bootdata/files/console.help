@@ -151,6 +151,8 @@
 //                          VMINIT/PAGING brought up to date with sections
 //              10/19/26    VMINIT/PAGING brought up to date with mapped
 //                          image activation
+//              10/19/26    vax.sysgen.virtualpagecnt in CONFIG KEYS;
+//                          VMINIT/PAGING's page tables
 
 This is the help documentation for the govax VAX emulator.  Topic sections are
 marked by a "$" delimiter.  This is followed by as many tokens of the help
@@ -2263,6 +2265,18 @@ $CONF,KEY
                                       1 read only the page faulted.
                                       From 0 to 127.  Default 32.
 
+        vax.sysgen.virtualpagecnt     VIRTUALPAGECNT: with paging on, how
+                                      many pages a new process's program
+                                      and control regions (P0 and P1)
+                                      may have together: the size of its
+                                      page tables, which the two regions
+                                      share as they grow.  P1 starts
+                                      with 4096 of them (from the user
+                                      stack's top up).  $CRETVA and
+                                      $EXPREG fail with SS$_VASFULL past
+                                      it.  Default VMINIT's /P0 plus /P1
+                                      (process 1's).
+
         vax.sysgen.paging.file        With paging on, the page file: where
                                       pages with no file of their own go
                                       when their memory is needed.  A
@@ -2557,7 +2571,14 @@ $VM
                         held open while the image runs; on a volume,
                         others may only read it), and a writable page
                         becomes the process's own copy, backed by the
-                        page file.  SHOW MEMORY shows the counts, and
+                        page file.  A process's address space has only
+                        the pages created in it (an access past them is an
+                        access violation, but for the user stack, which
+                        grows by itself), and only the parts of its page
+                        tables those pages need take memory; the regions
+                        share the tables' size (/P0 plus /P1 for the
+                        console's process, vax.sysgen.virtualpagecnt for
+                        the others).  SHOW MEMORY shows the counts, and
                         govax's --stats option reports them at exit.
 
     Example:
