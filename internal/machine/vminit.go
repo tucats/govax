@@ -79,6 +79,10 @@ func (m *Machine) VMInitPaging(paging bool, p0Pages, p1Pages, s0Pages, kspPages,
 	layout := layoutPages(size, kspPages, espPages, sspPages, ispPages, stringPoolPages)
 
 	if paging {
+		if size[1] < corevms.MinPagingP1Pages {
+			return vmserrors.New(vmserrors.CLI_P1TOOSMALL)
+		}
+
 		if size[2] > maxS0Pages || layout > physPages {
 			return vmserrors.New(vmserrors.CLI_VMTOOLARGE)
 		}

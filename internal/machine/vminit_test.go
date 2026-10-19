@@ -5,6 +5,7 @@ import (
 	"errors"
 	"testing"
 
+	"github.com/tucats/govax/internal/corevms"
 	"github.com/tucats/govax/internal/registers"
 	"github.com/tucats/govax/internal/vm"
 	"github.com/tucats/govax/internal/vmserrors"
@@ -359,8 +360,8 @@ func TestPageRounding(t *testing.T) {
 // TestVMInit_tableArea: with paging on, VMINIT's P0 and P1 tables are one
 // table area (Phase 67's subtask 4): P1's table ends at the area's end
 // rather than starting at its page's beginning, and only the area's pages
-// holding entries of pages that exist keep frames (here P1's 200 pages,
-// in its last two; P0 has none). The rest of S0's layout doesn't move, and
+// holding entries of pages that exist keep frames (here P1's 4096 from
+// UserStackTop up, in its last 32; P0 has none). The rest of S0's layout doesn't move, and
 // VIRTUALPAGECNT defaults to /P0 plus /P1.
 func TestVMInit_tableArea(t *testing.T) {
 	c := NewMachine(&bytes.Buffer{})
@@ -368,13 +369,16 @@ func TestVMInit_tableArea(t *testing.T) {
 		t.Fatalf("Init: %v", err)
 	}
 
-	// P0's 300 entries fill three pages, P1's 200 two: a 5-page area
-	// after S0's table. S0 takes the rest of physical memory, so paging
+	// P0's 300 entries fill three pages, P1's 4224 thirty-three: a
+	// 36-page area after S0's table. S0 takes the rest of physical memory, so paging
 	// off has no leftover to fold into it and both modes' S0 is the same
 	// size (with paging on, S0 isn't tied to physical memory).
-	const s0 = 16384 - 300 - 200
+	const (
+		p1 = 4224
+		s0 = 16384 - 300 - p1
+	)
 
-	if err := c.VMInitPaging(false, 300, 200, s0, 20, 0, 0, 4, 8); err != nil {
+	if err := c.VMInitPaging(false, 300, p1, s0, 20, 0, 0, 4, 8); err != nil {
 		t.Fatalf("VMInitPaging: %v", err)
 	}
 
@@ -385,7 +389,7 @@ func TestVMInit_tableArea(t *testing.T) {
 		t.Errorf("paging off: P1's table at %#x, want %#x, after P0's three pages", got, area+3*512)
 	}
 
-	if err := c.VMInitPaging(true, 300, 200, s0, 20, 0, 0, 4, 8); err != nil {
+	if err := c.VMInitPaging(true, 300, p1, s0, 20, 0, 0, 4, 8); err != nil {
 		t.Fatalf("VMInitPaging: %v", err)
 	}
 
@@ -393,32 +397,32 @@ func TestVMInit_tableArea(t *testing.T) {
 		t.Errorf("P0BR %#x, want the area's start %#x", got, area)
 	}
 
-	if got := c.CPU.PR(registers.P1BR) + 0x200000*4; got != area+5*512 {
-		t.Errorf("P1's table ends at %#x, want the area's end %#x", got, area+5*512)
+	if got := c.CPU.PR(registers.P1BR) + 0x200000*4; got != area+36*512 {
+		t.Errorf("P1's table ends at %#x, want the area's end %#x", got, area+36*512)
 	}
 
 	if got := c.CPU.PR(registers.KSP); got != ksp {
 		t.Errorf("KSP %#x with paging on, %#x with it off: the layout moved", got, ksp)
 	}
 
-	for i := range uint32(5) {
+	for i := range uint32(36) {
 		_, _, pte, err := c.Mem.LookupPTE(c.CPU, area+i*512)
 		if err != nil {
 			t.Fatal(err)
 		}
 
-		if want := i >= 3; pte.Valid() != want || !want && pte != 0 {
+		if want := i >= 4; pte.Valid() != want || !want && pte != 0 {
 			t.Errorf("table page %d: PTE %08X, want a frame %v", i, uint32(pte), want)
 		}
 	}
 
-	if got := c.ProcessOne().Sysgen.VirtualPageCount; got != 500 {
-		t.Errorf("VIRTUALPAGECNT %d, want /P0 + /P1, 500", got)
+	if got := c.ProcessOne().Sysgen.VirtualPageCount; got != 300+p1 {
+		t.Errorf("VIRTUALPAGECNT %d, want /P0 + /P1, %d", got, 300+p1)
 	}
 
 	// The P1 vector's region still reads through the backed pages: P1's
 	// top page's PTE is ProcessPTE's.
-	if pte, err := c.Mem.LoadLongword(c.CPU, area+5*512-4); err != nil || vm.PTE(pte).Protection() != vm.ProtUW {
+	if pte, err := c.Mem.LoadLongword(c.CPU, area+36*512-4); err != nil || vm.PTE(pte).Protection() != vm.ProtUW {
 		t.Errorf("P1's top entry %08X (%v), want a demand-zero UW page", pte, err)
 	}
 
@@ -549,8 +553,9 @@ func TestVMInit_s0BeyondMemory(t *testing.T) {
 
 // TestVMInit_pagingLimits: with paging on, VMINIT refuses an S0 larger
 // than the architecture's 1 GB, a layout (the system page table among
-// it) that doesn't fit in physical memory, and an S0 too small for its
-// layout.
+// it) that doesn't fit in physical memory, an S0 too small for its
+// layout, and a P1 too small for its permanent part (the P1 vector and
+// the hole below it, from UserStackTop up) and LINK's default user stack.
 func TestVMInit_pagingLimits(t *testing.T) {
 	c := newSizedMachine(t, 256)
 
@@ -559,9 +564,10 @@ func TestVMInit_pagingLimits(t *testing.T) {
 		p0, p1, s0 uint32
 		want       uint32
 	}{
-		{"S0 past 1 GB", 20, 20, 0x200001, vmserrors.CLI_VMTOOLARGE},
-		{"a system page table bigger than memory", 20, 20, 0x200000, vmserrors.CLI_VMTOOLARGE},
-		{"S0 smaller than its layout", 20, 20, 40, vmserrors.CLI_S0TOOSMALL},
+		{"S0 past 1 GB", 20, corevms.MinPagingP1Pages, 0x200001, vmserrors.CLI_VMTOOLARGE},
+		{"a system page table bigger than memory", 20, corevms.MinPagingP1Pages, 0x200000, vmserrors.CLI_VMTOOLARGE},
+		{"S0 smaller than its layout", 20, corevms.MinPagingP1Pages, 60, vmserrors.CLI_S0TOOSMALL},
+		{"P1 without room for the user stack", 20, corevms.MinPagingP1Pages - 1, 96, vmserrors.CLI_P1TOOSMALL},
 	}
 
 	for _, tt := range tests {
@@ -571,7 +577,7 @@ func TestVMInit_pagingLimits(t *testing.T) {
 		}
 	}
 
-	if err := c.VMInitPaging(true, 20, 20, 96, 2, 2, 2, 2, 8); err != nil {
+	if err := c.VMInitPaging(true, 20, corevms.MinPagingP1Pages, 96, 2, 2, 2, 2, 8); err != nil {
 		t.Errorf("a layout that fits: %v", err)
 	}
 }
@@ -588,7 +594,7 @@ func TestVMInit_layoutPages(t *testing.T) {
 		ksp, esp, ssp, isp, strng uint32
 	}{
 		{true, 0, 0, 0, 20, 0, 0, 4, 8},
-		{true, 300, 200, 1000, 4, 3, 5, 2, 1},
+		{true, 300, corevms.MinPagingP1Pages, 1000, 4, 3, 5, 2, 1},
 		{false, 16384, 8192, 8192, 20, 8, 8, 4, 8},
 		{false, 300, 200, 0, 20, 0, 0, 4, 8},
 	}

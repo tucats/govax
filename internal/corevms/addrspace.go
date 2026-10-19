@@ -204,6 +204,13 @@ func (sys *System) makeSharedSystem(as vm.AddressSpace) {
 // the user stack grows into the table area's room below P1 instead.)
 const MinP1Pages = (0x80000000-UserStackTop)/pageSize + 1
 
+// MinPagingP1Pages is the smallest P1 table VMINIT gives process 1 with
+// paging on (CLI_P1TOOSMALL): the pages from UserStackTop up (the P1
+// vector, and the hole below it, inside P1's length from the start) and
+// LINK's default user stack below them, so that an image's activation
+// can always create its stack without borrowing P0's room.
+const MinPagingP1Pages = regionPages - userStackTopPage + defaultUserStackPages
+
 // BuildAddressSpace makes a new process's address space: a table area
 // for p0Pages and p1Pages pages, in S0 pages from the System's pool
 // (charged to pid), P0's table at its bottom and P1's at its top. With

@@ -159,8 +159,8 @@ func pg66Compare(t *testing.T, name string, got []string) {
 func TestPG66Oracle(t *testing.T) {
 	c, dispatch := pg66Console(t)
 
-	// The test console's spin loop (scheduledConsole) is in process 1's
-	// P0, its page charged, and what the console ran before the first
+	// The test console's spin loop and counter (scheduledConsole) are in
+	// process 1's P0, their pages charged, and what the console ran before the first
 	// image expanded process 1's user stack (Phase 67's subtask 3), its
 	// pages charged; the first image's activation deletes P0 and its
 	// rundown the stack, giving them back, so R1 ends as many pages below
@@ -169,8 +169,11 @@ func TestPG66Oracle(t *testing.T) {
 	env := c.ProcessOne()
 
 	harness := 0
-	if env.PageFileChargedAt(codeAddr) {
-		harness = 1
+
+	for va := uint32(codeAddr); va < codeAddr+programExtent(brbSelf); va += 512 {
+		if env.PageFileChargedAt(va) {
+			harness++
+		}
 	}
 
 	for va := env.FreeP1VA() + 512; va < corevms.UserStackTop; va += 512 {

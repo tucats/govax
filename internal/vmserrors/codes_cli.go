@@ -202,6 +202,10 @@ const (
 
 	// docs/PHASE-57 - LIB CLI access.md: the probe's answers.
 	cliBufOvf
+
+	// docs/PHASE-67 - address space under paging.md: VMINIT's /P1 with
+	// paging on.
+	cliP1TooSmall
 )
 
 // CLI facility status codes -- CLI_ prefix, matching real VMS's CLI$_
@@ -513,6 +517,10 @@ const (
 	// CLI_BUFOVF, a warning, is an expression whose symbol's value fills
 	// DCL's 1024-byte command buffer (VMS V7.1, testdata/lib57).
 	CLI_BUFOVF = CLIFacility<<FacilityPosition | cliBufOvf<<MessagePosition | StatusWarning
+
+	// CLI_P1TOOSMALL, an error, is VMINIT with paging on given a /P1 that
+	// can't hold P1's permanent part and the user stack.
+	CLI_P1TOOSMALL = CLIFacility<<FacilityPosition | cliP1TooSmall<<MessagePosition | StatusError
 )
 
 func init() {
@@ -669,5 +677,6 @@ func init() {
 	DefineMessage(CLI_ONERR, CLIFacility, "ONERR", "invalid ON condition - use WARNING, SEVERE, ERROR, or CONTROL_Y")
 	DefineMessage(CLI_STRTOOLNG, CLIFacility, "STRTOOLNG", "string argument is too long - shorten")
 	DefineMessage(CLI_BUFOVF, CLIFacility, "BUFOVF", "command buffer overflow - shorten expression or command line")
+	DefineMessage(CLI_P1TOOSMALL, CLIFacility, "P1TOOSMALL", "P1 region too small to hold its permanent part and the user stack")
 	DefineMessage(CLI_BADLIMIT, CLIFacility, "BADLIMIT", "Invalid /LIMIT value !D (must be at least 1; DELETE NAME;* removes every version)")
 }

@@ -92,6 +92,12 @@ func (env *Environment) expandStack(addr uint32) uint32 {
 
 	target := addr &^ pageMask
 
+	// The table area must hold the whole expansion, or nothing is created
+	// (spaceHolds).
+	if !env.spaceHolds(pageRange{first: target, last: env.p1Low() - pageSize}) {
+		return ssVasFull
+	}
+
 	for low := env.p1Low(); low > target; low -= pageSize {
 		if st := env.createPage(low-pageSize, registers.User); st != ssNormal {
 			return st

@@ -196,7 +196,14 @@ never had.
   P1 5120, S0 16384; vax.init gives 0 for each region the
   configuration doesn't size when F$CONFIG's BOOLEAN says
   `vax.sysgen.paging.enable` is on; with paging off nothing changes, but
-  an S0 larger than physical memory is VMTOOLARGE). Paging is synchronous, with no
+  an S0 larger than physical memory is VMTOOLARGE; subtask 9, part 1,
+  done 2026-10-19: the suite with paging forced on, which found a /P1
+  too small for paging (VMINIT's P1TOOSMALL under
+  `corevms.MinPagingP1Pages`), creations the table area can't hold
+  (`$CRETVA` and stack expansion SS$_VASFULL with nothing created,
+  `regions.go`'s `spaceHolds`), and an exception with no user stack to
+  report it on (the image ends, `condition.go`'s `lastChanceExit`); the
+  probe, `testdata/pg67`, waits for its VAX run). Paging is synchronous, with no
   PFW, COLPG, or FPG waits. Each later phase has a planning doc.
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
@@ -364,6 +371,16 @@ never had.
   `vax/pg66c.exe`) on govax and matches VMS's lines but for
   `expectedPG66Differences` (mostly VMS's activation and LIBRTL pages,
   and its working set's permanent part).
+- `testdata/pg67/` — Phase 67's probe of the address space (README.md):
+  `pg67.mar` (parts by PG67_PART: A created space, FREP0VA, FREP1VA,
+  FREPTECNT, VIRTPEAK through `$EXPREG`, `$DELTVA`, `$CNTREG`, `$CRETVA`,
+  references past P0's end and below P1's low end with their masks, and
+  creations past the address space's room; S the user stack's growth by
+  recursion; T the stack at the first instruction; C part Q in a
+  detached process with a small quota, its stack outgrowing it), linked
+  twice by `pg67.com` (PG67S.EXE with `pg67s.opt`'s STACK=50).
+  `TestPG67DryRun` runs it on govax with govax's links until VMS's run
+  is back.
 - `testdata/probe49/` — Phase 49's VMS probe in three rounds (`probe6`,
   `probe6b`, `probe6c`; README.md has each round's answers), run by
   `TestProbe6*`; `testdata/rms49/` and `testdata/sec49/` are the phase's

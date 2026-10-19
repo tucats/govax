@@ -2571,6 +2571,11 @@ $VM
                                   stacks, and PCBs of some 65
                                   processes at once
 
+                        With paging on, /P1 must be at least 4116: the
+                        4096 pages above the user stack's top and LINK's
+                        default user stack of 20 pages.  A smaller /P1 is
+                        refused (P1TOOSMALL).
+
                         S0 has a minimum size, based on the sizes of the
                         other regions: it holds the page tables for P0 and
                         P1, as well as the privileged modes' stacks.  If S0

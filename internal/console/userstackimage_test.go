@@ -51,12 +51,16 @@ func TestUserStackImage(t *testing.T) {
 
 	stackTop := uint32(corevms.UserStackTop)
 
-	// The test console's spin loop's P0 page, and the user stack pages
-	// it pushed onto, are charged; the image's activation and rundown
-	// give them back too (as TestPG66Oracle's harness).
+	// The test console's P0 pages (its spin loop's and its counter's),
+	// and the user stack pages it pushed onto, are charged; the image's
+	// activation and rundown give them back too (as TestPG66Oracle's
+	// harness).
 	before := env.PageFileRemaining()
-	if env.PageFileChargedAt(codeAddr) {
-		before++
+
+	for va := uint32(codeAddr); va < codeAddr+programExtent(brbSelf); va += 512 {
+		if env.PageFileChargedAt(va) {
+			before++
+		}
 	}
 
 	for va := env.FreeP1VA() + 512; va < stackTop; va += 512 {

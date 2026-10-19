@@ -22,7 +22,7 @@ func newSecondProcess(t *testing.T, c *Console) *corevms.Environment {
 		t.Fatal(err)
 	}
 
-	if env.Space, err = c.RTL.BuildAddressSpace(env.Process.PID, 1024, 256); err != nil {
+	if env.Space, err = c.RTL.BuildAddressSpace(env.Process.PID, 1024, corevms.MinPagingP1Pages); err != nil {
 		t.Fatal(err)
 	}
 

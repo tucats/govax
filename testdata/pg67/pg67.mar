@@ -1,0 +1,725 @@
+	.TITLE	PG67	Phase 67 address space probe
+	.IDENT	/V1.0/
+;
+; Phase 67's probe (docs/PHASE-67 - address space under paging.md,
+; subtask 9; README.md here). It asks VMS how a process's address space
+; grows and shrinks: what $GETJPI's FREP0VA, FREP1VA, FREPTECNT, and
+; VIRTPEAK say as pages are created and deleted, whether deleting a
+; region's end pages shortens it, what a reference past P0's end or below
+; P1's low end signals (the reason mask), how the user stack grows by
+; itself and how far, whether a creation the address space can't hold
+; makes some of its pages or none, and what happens to stack expansion
+; when the paging file quota is gone.
+;
+; Each output line is "id what: values"; statuses are in hexadecimal.
+; Addresses and counts that depend on the VAX's configuration, DCL, or
+; LIBRTL appear only as differences: page counts between two snapshots,
+; addresses as offsets from FREP0VA or FREP1VA. It uses only system
+; services and RMS, and writes its lines to SYS$OUTPUT with $PUT. The
+; logical name PG67_PART picks the part:
+;
+;   A  created space: the items at the first instruction, then $EXPREG,
+;      $DELTVA, $CNTREG, and $CRETVA in both regions, each followed by
+;      the items' changes; references past P0's end and below P1's low
+;      end, from user and executive mode; PROBE of them
+;   S  the user stack: recursion about 100 pages deep, then $EXPREG of
+;      P1 below it
+;   T  the items at the first instruction only (run from PG67S.EXE,
+;      linked with STACK=50)
+;   C  runs this image as the detached process PG67DET with a small
+;      paging file quota (part Q), and reads its termination message
+;   (none) part Q, which the detached process runs (it sees only the
+;      system's logical names): the quota nearly filled, then stack
+;      expansion past it
+;
+	$SSDEF
+	$JPIDEF
+	$LNMDEF
+	$PQLDEF
+	$PRVDEF
+	$DVIDEF
+	$IODEF
+
+; A condition handler's arguments: the signal array's and the mechanism
+; array's addresses; in the signal array the condition and its first
+; argument (an access violation's reason mask, then its address); in the
+; mechanism array the R0 the establisher's caller gets after an unwind.
+H_SIG	= 4
+H_MCH	= 8
+SIG_NAM	= 4
+SIG_A1	= 8
+MCH_R0	= 12
+
+; A snapshot's longwords (SNAP).
+S_P0	= 0				; JPI$_FREP0VA
+S_P1	= 4				; JPI$_FREP1VA
+S_FREE	= 8				; JPI$_FREPTECNT
+S_PEAK	= 12				; JPI$_VIRTPEAK
+S_CNT	= 16				; JPI$_PAGFILCNT
+S_QUO	= 20				; JPI$_PGFLQUOTA
+S_PRIV	= 24				; JPI$_CURPRIV (a quadword)
+SNAPSZ	= 32
+
+DEEP	= 100				; part S's recursion depth
+QDEEP	= 30				; part Q's
+
+; SAY text, a1, ... a8: format text with $FAOL and the arguments (each a
+; longword, pushed by value) and write the line. The text is in line,
+; branched around.
+	.MACRO	SAY	TEXT,A1,A2,A3,A4,A5,A6,A7,A8,?LBL,?OVER
+	BRW	OVER
+LBL:	.ASCID	TEXT
+OVER:
+	$$N = 1
+	.IRP	ARG,<A8,A7,A6,A5,A4,A3,A2,A1>
+	.IF	NOT_BLANK,<ARG>
+	PUSHL	ARG
+	$$N = $$N + 1
+	.ENDC
+	.ENDR
+	PUSHAQ	LBL
+	CALLS	#$$N,SAYR
+	.ENDM	SAY
+
+; SNAP block: a snapshot of the items into block.
+	.MACRO	SNAP	BLOCK
+	PUSHAL	BLOCK
+	CALLS	#1,SNAPR
+	.ENDM	SNAP
+
+; SPACE text, from, to: a case's line, "text: p0= p1= free= peak=
+; charged=": the pages P0 and P1 grew by (FREP0VA up, FREP1VA down),
+; FREPTECNT's and VIRTPEAK's changes, and the pages charged to the
+; paging file quota, between two snapshots.
+	.MACRO	SPACE	TEXT,FROM,TO,?LBL,?OVER
+	BRW	OVER
+LBL:	.ASCID	TEXT
+OVER:	PUSHAL	TO
+	PUSHAL	FROM
+	PUSHAQ	LBL
+	CALLS	#3,SPACER
+	.ENDM	SPACE
+
+; TOUCH text, addr, base, write: read (write 0) or write (write 1) the
+; longword at addr under a handler; the line is "text: ok", or the
+; condition, its reason mask, and its address less base.
+	.MACRO	TOUCH	TEXT,ADDR,BASE,WRITE,?LBL,?OVER
+	BRW	OVER
+LBL:	.ASCID	TEXT
+OVER:	PUSHL	WRITE
+	PUSHL	BASE
+	PUSHL	ADDR
+	PUSHAQ	LBL
+	CALLS	#4,TOUCHR
+	.ENDM	TOUCH
+
+; PROBE text, addr: PROBER and PROBEW from user mode of the byte at
+; addr; the line is "text: read=n write=n".
+	.MACRO	PROBE	TEXT,ADDR,?LBL,?OVER
+	BRW	OVER
+LBL:	.ASCID	TEXT
+OVER:	PUSHL	ADDR
+	PUSHAQ	LBL
+	CALLS	#2,PROBR
+	.ENDM	PROBE
+
+	.PSECT	DATA,NOEXE,WRT,PAGE
+
+; SYS$OUTPUT.
+OFAB:	$FAB	FNM=<SYS$OUTPUT>,RAT=CR,RFM=VAR,FAC=PUT
+ORAB:	$RAB	FAB=OFAB,RBF=OBUF
+OBUF:	.BLKB	200
+OUTD:	.LONG	200
+	.ADDRESS OBUF
+OUTLEN:	.WORD	0,0
+
+; The snapshot's item list and buffer.
+	.ALIGN	LONG
+JPILST:	.WORD	4,JPI$_FREP0VA
+	.ADDRESS CUR+S_P0
+	.LONG	0
+	.WORD	4,JPI$_FREP1VA
+	.ADDRESS CUR+S_P1
+	.LONG	0
+	.WORD	4,JPI$_FREPTECNT
+	.ADDRESS CUR+S_FREE
+	.LONG	0
+	.WORD	4,JPI$_VIRTPEAK
+	.ADDRESS CUR+S_PEAK
+	.LONG	0
+	.WORD	4,JPI$_PAGFILCNT
+	.ADDRESS CUR+S_CNT
+	.LONG	0
+	.WORD	4,JPI$_PGFLQUOTA
+	.ADDRESS CUR+S_QUO
+	.LONG	0
+	.WORD	8,JPI$_CURPRIV
+	.ADDRESS CUR+S_PRIV
+	.LONG	0
+	.LONG	0
+CUR:	.BLKB	SNAPSZ
+JIOSB:	.QUAD	0
+
+S0:	.BLKB	SNAPSZ			; the snapshots: S0 at the first
+SA:	.BLKB	SNAPSZ			; instruction, SD at part S's and Q's
+SB:	.BLKB	SNAPSZ			; deepest, the others the cases'
+SC:	.BLKB	SNAPSZ
+SD:	.BLKB	SNAPSZ
+
+; The logical names' translations.
+LNMTAB:	.ASCID	/LNM$FILE_DEV/
+N_PART:	.ASCID	/PG67_PART/
+LNMLST:	.WORD	16,LNM$_STRING
+	.ADDRESS LNMBUF
+	.ADDRESS LNMLEN
+	.LONG	0
+LNMBUF:	.BLKB	16
+LNMLEN:	.LONG	0
+PART:	.LONG	0
+
+; The cases' address arrays and cells.
+INADR:	.LONG	0,0
+RET:	.LONG	0,0
+RET2:	.LONG	0,0
+STAT:	.LONG	0
+SP0:	.LONG	0			; the stack pointer at the first instruction
+BASE:	.LONG	0
+FAR:	.LONG	0
+
+; What the handler saw: the condition, its reason mask, its address.
+SIGNAM:	.LONG	0
+SIGMSK:	.LONG	0
+SIGADR:	.LONG	0
+
+; Executive mode's argument list ($CMEXEC): the address to read.
+EXARGS:	.LONG	1
+EXADR:	.LONG	0
+
+; Part C: the detached process.
+IMGLNM:	.ASCID	/PG67_IMAGE/
+OQLNM:	.ASCID	/PG67_OUTQ/
+NAMLST:	.WORD	128,LNM$_STRING
+	.ADDRESS NAMBUF
+	.ADDRESS NAMLEN
+	.LONG	0
+NAMBUF:	.BLKB	128
+NAMLEN:	.LONG	0
+IMGD:	.LONG	0
+	.ADDRESS IMGBUF
+IMGBUF:	.BLKB	128
+OUTDQ:	.LONG	0
+	.ADDRESS OUTQBUF
+OUTQBUF: .BLKB	128
+DETNAM:	.ASCID	/PG67DET/
+DQUO:	.BYTE	PQL$_PGFLQUOTA
+	.LONG	2048
+	.BYTE	PQL$_LISTEND
+	.ALIGN	LONG
+DPID:	.LONG	0
+DPRIV:	.QUAD	0
+UICLST:	.WORD	4,JPI$_UIC
+	.ADDRESS MYUIC
+	.LONG	0
+	.LONG	0
+MYUIC:	.LONG	0
+PIDLST:	.WORD	4,JPI$_PID
+	.ADDRESS PIDVAL
+	.LONG	0
+	.LONG	0
+PIDVAL:	.LONG	0
+ONETXT:	.ASCID	/0 00:00:01.00/
+ONEQ:	.QUAD	0
+MBXCHN:	.WORD	0,0
+MBXUNT:	.LONG	0
+DVILST:	.WORD	4,DVI$_UNIT
+	.ADDRESS MBXUNT
+	.LONG	0
+	.LONG	0
+MIOSB:	.QUAD	0
+MSG:	.BLKB	128			; the termination message
+
+	.PSECT	CODE,EXE,NOWRT,PAGE
+	.ENTRY	START,^M<R2,R3,R4,R5,R6,R7,R8,R9,R10,R11>
+	MOVL	SP,SP0
+	SNAP	S0			; the items at the first instruction
+	$CREATE	FAB=OFAB
+	$CONNECT RAB=ORAB
+	MOVL	#16,LNMLEN
+	CLRL	LNMBUF
+	$TRNLNM_S TABNAM=LNMTAB, LOGNAM=N_PART, ITMLST=LNMLST
+	BLBS	R0,1$
+	BRW	PARTQ			; no PG67_PART: the detached process
+1$:	MOVZBL	LNMBUF,PART
+	CMPB	PART,#^A/S/
+	BNEQ	2$
+	BRW	PARTS
+2$:	CMPB	PART,#^A/T/
+	BNEQ	3$
+	BRW	PARTT
+3$:	CMPB	PART,#^A/C/
+	BNEQ	4$
+	BRW	PARTC
+4$:
+
+;
+; Part A: created space.
+;
+; A1: the items at the first instruction: FREP0VA (the image's end), the
+; user stack's size (the stack pointer less FREP1VA, in bytes),
+; FREPTECNT, VIRTPEAK, and the paging file quota left.
+	CALLS	#0,FIRSTR
+
+; A2: $EXPREG of 10 P0 pages: where they start against FREP0VA, and the
+; items' changes.
+	SNAP	SA
+	$EXPREG_S PAGCNT=#10, RETADR=RET
+	MOVL	R0,STAT
+	SNAP	SB
+	SUBL3	SA+S_P0,RET,R2
+	SUBL3	SA+S_P0,RET+4,R3
+	SAY	</A2 expreg 10 P0: !XL retadr frep0va+!XL frep0va+!XL/>, STAT, R2, R3
+	SPACE	</A2 expreg 10 P0/>, SA, SB
+	MOVQ	RET,RET2		; A2's pages, for A4 and A5
+
+; A3: $EXPREG of 10 P1 pages: where they are against FREP1VA.
+	SNAP	SA
+	$EXPREG_S PAGCNT=#10, RETADR=RET, REGION=#1
+	MOVL	R0,STAT
+	SNAP	SB
+	SUBL3	SA+S_P1,RET,R2
+	SUBL3	SA+S_P1,RET+4,R3
+	SAY	</A3 expreg 10 P1: !XL retadr frep1va+!XL frep1va+!XL/>, STAT, R2, R3
+	SPACE	</A3 expreg 10 P1/>, SA, SB
+
+; A4: $DELTVA of P1's 3 lowest pages (A3's last three): does P1 get
+; shorter? Then $EXPREG of 2 P1 pages: where they land.
+	SNAP	SA
+	MOVL	RET+4,INADR		; A3's lowest page
+	ADDL3	#3*512-1,RET+4,INADR+4
+	$DELTVA_S INADR=INADR
+	MOVL	R0,STAT
+	SNAP	SB
+	SAY	</A4 deltva P1's lowest 3: !XL/>, STAT
+	SPACE	</A4 deltva P1's lowest 3/>, SA, SB
+	$EXPREG_S PAGCNT=#2, RETADR=RET, REGION=#1
+	MOVL	R0,STAT
+	SNAP	SC
+	SUBL3	SA+S_P1,RET,R2
+	SUBL3	SA+S_P1,RET+4,R3
+	SAY	</A4 then expreg 2 P1: !XL retadr frep1va+!XL frep1va+!XL/>, STAT, R2, R3
+	SPACE	</A4 then expreg 2 P1/>, SB, SC
+
+; A5: $DELTVA of P0's last 3 pages (A2's): does P0 get shorter?
+	SNAP	SA
+	SUBL3	#3*512-1,RET2+4,INADR
+	MOVL	RET2+4,INADR+4
+	$DELTVA_S INADR=INADR
+	MOVL	R0,STAT
+	SNAP	SB
+	SAY	</A5 deltva P0's last 3: !XL/>, STAT
+	SPACE	</A5 deltva P0's last 3/>, SA, SB
+
+; A6: $DELTVA of a page in the middle of P0 (A2's fourth): FREP0VA
+; stays? A read of it: the reason mask (a protection violation?).
+	SNAP	SA
+	ADDL3	#3*512,RET2,INADR
+	ADDL3	#511,INADR,INADR+4
+	$DELTVA_S INADR=INADR
+	MOVL	R0,STAT
+	SNAP	SB
+	SAY	</A6 deltva a middle P0 page: !XL/>, STAT
+	SPACE	</A6 deltva a middle P0 page/>, SA, SB
+	TOUCH	</A6 read of it/>, INADR, RET2, #0
+	PROBE	</A6 probe of it/>, INADR
+
+; A7: $CNTREG of 2 P0 pages and of 2 P1 pages.
+	SNAP	SA
+	$CNTREG_S PAGCNT=#2, RETADR=RET
+	MOVL	R0,STAT
+	SNAP	SB
+	SUBL3	SA+S_P0,RET,R2
+	SUBL3	SA+S_P0,RET+4,R3
+	SAY	</A7 cntreg 2 P0: !XL retadr frep0va+!XL frep0va+!XL/>, STAT, R2, R3
+	SPACE	</A7 cntreg 2 P0/>, SA, SB
+	SNAP	SA
+	$CNTREG_S PAGCNT=#2, RETADR=RET, REGION=#1
+	MOVL	R0,STAT
+	SNAP	SB
+	SUBL3	SA+S_P1,RET,R2
+	SUBL3	SA+S_P1,RET+4,R3
+	SAY	</A7 cntreg 2 P1: !XL retadr frep1va+!XL frep1va+!XL/>, STAT, R2, R3
+	SPACE	</A7 cntreg 2 P1/>, SA, SB
+
+; A8: $CRETVA of one page 5 pages past P0's end: P0 grows past the 4
+; pages skipped? A read of a skipped page, and PROBE of it.
+	SNAP	SA
+	ADDL3	#5*512,SA+S_P0,INADR
+	ADDL3	#511,INADR,INADR+4
+	$CRETVA_S INADR=INADR, RETADR=RET
+	MOVL	R0,STAT
+	SNAP	SB
+	SUBL3	SA+S_P0,RET,R2
+	SAY	</A8 cretva 5 pages past P0's end: !XL retadr frep0va+!XL/>, STAT, R2
+	SPACE	</A8 cretva past P0's end/>, SA, SB
+	ADDL3	#2*512,SA+S_P0,R6
+	TOUCH	</A8 read of a skipped page/>, R6, SA+S_P0, #0
+	PROBE	</A8 probe of a skipped page/>, R6
+	TOUCH	</A8 read of the new page/>, INADR, SA+S_P0, #0
+
+; A9: references past P0's end: one page and far (a megabyte) past,
+; read and written; PROBE of each.
+	SNAP	SA
+	MOVL	SA+S_P0,R6
+	TOUCH	</A9 read at P0's end/>, R6, SA+S_P0, #0
+	TOUCH	</A9 write at P0's end/>, R6, SA+S_P0, #1
+	PROBE	</A9 probe at P0's end/>, R6
+	ADDL3	#^X100000,SA+S_P0,R6
+	TOUCH	</A9 read far past P0's end/>, R6, SA+S_P0, #0
+	TOUCH	</A9 write far past P0's end/>, R6, SA+S_P0, #1
+	PROBE	</A9 probe far past P0's end/>, R6
+	SNAP	SB
+	SPACE	</A9 after them/>, SA, SB
+
+; A10: references below P1's low end from user mode: PROBE first (does
+; it expand?), then a read of FREP1VA itself (the stack expands one
+; page?), then a read 50 pages below the new end (50 more?).
+	SNAP	SA
+	MOVL	SA+S_P1,R6
+	PROBE	</A10 probe at frep1va/>, R6
+	SNAP	SB
+	SPACE	</A10 after the probe/>, SA, SB
+	TOUCH	</A10 read at frep1va/>, R6, SA+S_P1, #0
+	SNAP	SB
+	SPACE	</A10 after the read/>, SA, SB
+	SUBL3	#50*512,SB+S_P1,R6
+	TOUCH	</A10 read 50 pages below/>, R6, SB+S_P1, #0
+	SNAP	SC
+	SPACE	</A10 after it/>, SB, SC
+
+; A11: a read below P1's low end from executive mode ($CMEXEC): does
+; the user stack expand for it?
+	SNAP	SA
+	MOVL	SA+S_P1,EXADR
+	$CMEXEC_S ROUTIN=EXECR, ARGLST=EXARGS
+	MOVL	R0,STAT
+	SNAP	SB
+	SUBL3	SA+S_P1,SIGADR,R2
+	SAY	</A11 executive read at frep1va: !XL signal !XL mask=!XL va=frep1va+!XL/>, -
+		STAT, SIGNAM, SIGMSK, R2
+	SPACE	</A11 after it/>, SA, SB
+
+; A12: $CRETVA from P0's end of FREPTECNT+100 pages: VASFULL with none
+; made, or pages up to a limit? Then the same in P1, below FREP1VA.
+	SNAP	SA
+	MOVL	SA+S_P0,INADR
+	ADDL3	#100,SA+S_FREE,R6
+	MULL2	#512,R6
+	ADDL3	R6,SA+S_P0,INADR+4
+	DECL	INADR+4
+	MNEGL	#1,RET
+	MNEGL	#1,RET+4
+	$CRETVA_S INADR=INADR, RETADR=RET
+	MOVL	R0,STAT
+	SNAP	SB
+	CALLS	#0,MADER
+	SAY	</A12 cretva freptecnt+100 in P0: !XL made=!UL/>, STAT, R0
+	SPACE	</A12 cretva in P0/>, SA, SB
+	MOVL	RET,INADR		; give back what it made
+	MOVL	RET+4,INADR+4
+	CMPL	RET,#-1
+	BEQL	5$
+	$DELTVA_S INADR=INADR
+5$:	SNAP	SA
+	SUBL3	#1,SA+S_P1,INADR+4	; FREP1VA's page's last byte, down
+	ADDL2	#512,INADR+4
+	ADDL3	#100,SA+S_FREE,R6
+	MULL2	#512,R6
+	SUBL3	R6,INADR+4,INADR
+	INCL	INADR
+	MNEGL	#1,RET
+	MNEGL	#1,RET+4
+	$CRETVA_S INADR=INADR, RETADR=RET
+	MOVL	R0,STAT
+	SNAP	SB
+	CALLS	#0,MADER
+	SAY	</A12 cretva freptecnt+100 in P1: !XL made=!UL/>, STAT, R0
+	SPACE	</A12 cretva in P1/>, SA, SB
+	MOVL	RET,INADR		; give back what it made
+	MOVL	RET+4,INADR+4
+	CMPL	RET,#-1
+	BEQL	6$
+	$DELTVA_S INADR=INADR
+6$:
+
+; A13: a read far below P1's low end, further than FREPTECNT pages
+; (more than the address space can hold): are some pages made, or none?
+	SNAP	SA
+	ADDL3	#100,SA+S_FREE,R6
+	MULL2	#512,R6
+	SUBL3	R6,SA+S_P1,R6
+	TOUCH	</A13 read beyond frep1va-freptecnt/>, R6, SA+S_P1, #0
+	SNAP	SB
+	SPACE	</A13 after it/>, SA, SB
+
+; A14: the whole image's changes from the first instruction.
+	SNAP	SA
+	SPACE	</A14 the whole image/>, S0, SA
+	MOVL	#SS$_NORMAL,R0
+	RET
+
+;
+; Part S: the user stack grows by itself: recursion about DEEP pages
+; deep (each level 512 bytes of locals and its call frame), the items at
+; the deepest level (SD), and after; then $EXPREG of 5 P1 pages, which
+; land below what the stack reached?
+;
+PARTS:	CALLS	#0,FIRSTR
+	SNAP	SA
+	PUSHL	#DEEP
+	CALLS	#1,RECR
+	SNAP	SB
+	SPACE	</S1 at the deepest/>, SA, SD
+	SPACE	</S2 after the return/>, SA, SB
+	$EXPREG_S PAGCNT=#5, RETADR=RET, REGION=#1
+	MOVL	R0,STAT
+	SNAP	SC
+	SUBL3	SD+S_P1,RET,R2
+	SUBL3	SD+S_P1,RET+4,R3
+	SAY	</S3 expreg 5 P1: !XL retadr deepest-frep1va+!XL deepest-frep1va+!XL/>, -
+		STAT, R2, R3
+	SPACE	</S3 expreg 5 P1/>, SB, SC
+	MOVL	#SS$_NORMAL,R0
+	RET
+
+;
+; Part T: the items at the first instruction, from PG67S.EXE (STACK=50).
+;
+PARTT:	CALLS	#0,FIRSTR
+	MOVL	#SS$_NORMAL,R0
+	RET
+
+;
+; Part C: part Q in the detached process PG67DET, with a paging file
+; quota of 2048 pages (raised to PQL_MPGFLQUOTA if that's more) and a
+; termination mailbox; its lines go to PG67_OUTQ. The image's and output
+; file's names come with the device's full name, since the detached
+; process sees only the system's logical names.
+;
+PARTC:	PUSHAQ	IMGD
+	PUSHAQ	IMGLNM
+	CALLS	#2,NAMER
+	PUSHAQ	OUTDQ
+	PUSHAQ	OQLNM
+	CALLS	#2,NAMER
+	$BINTIM_S TIMBUF=ONETXT, TIMADR=ONEQ
+	$GETJPIW_S ITMLST=UICLST, IOSB=JIOSB
+	$CREMBX_S CHAN=MBXCHN, MAXMSG=#128, BUFQUO=#512
+	MOVL	R0,STAT
+	SAY	</C1 crembx: !XL/>, STAT
+	$GETDVIW_S CHAN=MBXCHN, ITMLST=DVILST, IOSB=JIOSB
+	MOVQ	S0+S_PRIV,DPRIV
+	$CREPRC_S PIDADR=DPID, IMAGE=IMGD, OUTPUT=OUTDQ, ERROR=OUTDQ, -
+		PRVADR=DPRIV, QUOTA=DQUO, PRCNAM=DETNAM, BASPRI=#4, UIC=MYUIC, -
+		MBXUNT=MBXUNT
+	MOVL	R0,STAT
+	SAY	</C1 creprc: !XL/>, STAT
+	BLBS	STAT,1$
+	BRW	9$
+1$:	MOVL	#120,R6
+2$:	$SETIMR_S EFN=#1, DAYTIM=ONEQ
+	$WAITFR_S EFN=#1
+	$GETJPIW_S PIDADR=DPID, ITMLST=PIDLST, IOSB=JIOSB
+	CMPL	R0,#SS$_NONEXPR
+	BEQL	3$
+	SOBGTR	R6,2$
+	SAY	</C2 still running after two minutes/>
+	BRW	9$
+3$:	$QIOW_S	CHAN=MBXCHN, FUNC=#<IO$_READVBLK!IO$M_NOW>, IOSB=MIOSB, -
+		P1=MSG, P2=#128
+	MOVL	R0,STAT
+	MOVZWL	MIOSB,R2
+	MOVZWL	MIOSB+2,R3
+	SAY	</C2 ended; termination message: !XL iosb=!XL size=!UL/>, STAT, R2, R3
+	MOVZWL	MSG,R2			; the message type
+	SAY	</C3 type=!UL finalsts=!XL/>, R2, MSG+4
+9$:	MOVL	#SS$_NORMAL,R0
+	RET
+
+;
+; Part Q, in the detached process: the paging file quota filled but for
+; 10 pages, by $EXPREG of P0; then recursion QDEEP pages deep, under a
+; handler, which needs more stack than the quota allows.
+;
+PARTQ:	CALLS	#0,FIRSTR
+	SNAP	SA
+	SUBL3	#10,SA+S_CNT,R6
+	$EXPREG_S PAGCNT=R6, RETADR=RET
+	MOVL	R0,STAT
+	SNAP	SB
+	SAY	</Q1 expreg pagfilcnt-10 P0: !XL pagfilcnt then !SL/>, STAT, SB+S_CNT
+	CLRL	SIGNAM
+	CLRL	SD+S_P1
+	PUSHL	#QDEEP
+	CALLS	#1,QTOPR
+	MOVL	R0,STAT
+	SNAP	SC
+	SUBL3	SB+S_P1,SIGADR,R2
+	SAY	</Q2 recursion: !XL signal !XL mask=!XL va=frep1va+!XL/>, -
+		STAT, SIGNAM, SIGMSK, R2
+	SPACE	</Q2 recursion's deepest/>, SB, SD
+	SPACE	</Q2 after it/>, SB, SC
+	$EXPREG_S PAGCNT=#1, RETADR=RET, REGION=#1
+	MOVL	R0,STAT
+	SAY	</Q3 expreg 1 P1 then: !XL/>, STAT
+	MOVL	#SS$_NORMAL,R0
+	RET
+
+; FIRSTR: the first instruction's line (S0 and SP0).
+	.ENTRY	FIRSTR,^M<R2,R3>
+	SUBL3	S0+S_P1,SP0,R2
+	SAY	</A1 first instruction: frep0va=!XL sp-frep1va=!XL freptecnt=!UL virtpeak=!UL/>, -
+		S0+S_P0, R2, S0+S_FREE, S0+S_PEAK
+	SUBL3	S0+S_CNT,S0+S_QUO,R2
+	SAY	</A1 pgflquota less pagfilcnt: !SL/>, R2
+	RET
+
+; RECR depth: 512 bytes of locals, written, then RECR depth-1; at depth
+; 1, the snapshot SD.
+	.ENTRY	RECR,^M<R2>
+	SUBL2	#512,SP
+	MOVL	4(AP),(SP)
+	MOVL	4(AP),508(SP)
+	SUBL3	#1,4(AP),R2
+	BEQL	1$
+	PUSHL	R2
+	CALLS	#1,RECR
+	RET
+1$:	SNAP	SD
+	RET
+
+; QTOPR depth: RECR depth under a handler; R0 is 1, or 0 if it signaled.
+	.ENTRY	QTOPR,^M<>
+	MOVAB	HANDLR,(FP)
+	PUSHL	4(AP)
+	CALLS	#1,RECR
+	MOVL	#1,R0
+	RET
+
+; SAYR ctrstr, p1, ...: write a line.
+	.ENTRY	SAYR,^M<R2,R3,R4,R5>
+	MOVL	#200,OUTD
+	$FAOL_S	CTRSTR=@4(AP), OUTLEN=OUTLEN, OUTBUF=OUTD, PRMLST=8(AP)
+	MOVW	OUTLEN,ORAB+RAB$W_RSZ
+	$PUT	RAB=ORAB
+	RET
+
+; SNAPR block.
+	.ENTRY	SNAPR,^M<R2,R3,R4,R5>
+	$GETJPIW_S ITMLST=JPILST, IOSB=JIOSB
+	MOVC3	#SNAPSZ,CUR,@4(AP)
+	RET
+
+; SPACER text, from, to: SPACE's line.
+	.ENTRY	SPACER,^M<R2,R3,R4,R5,R6,R7,R8>
+	MOVL	8(AP),R2
+	MOVL	12(AP),R3
+	SUBL3	S_P0(R2),S_P0(R3),R4
+	DIVL2	#512,R4
+	SUBL3	S_P1(R3),S_P1(R2),R5
+	DIVL2	#512,R5
+	SUBL3	S_FREE(R2),S_FREE(R3),R6
+	SUBL3	S_PEAK(R2),S_PEAK(R3),R7
+	SUBL3	S_CNT(R3),S_CNT(R2),R8
+	SAY	</!AS: p0=!SL p1=!SL free=!SL peak=!SL charged=!SL/>, -
+		4(AP), R4, R5, R6, R7, R8
+	RET
+
+; TOUCHR text, addr, base, write: TOUCH's line.
+	.ENTRY	TOUCHR,^M<R2,R3>
+	CLRL	SIGNAM
+	PUSHL	16(AP)
+	PUSHL	8(AP)
+	CALLS	#2,ACCR
+	BLBC	R0,1$
+	SAY	</!AS: ok/>, 4(AP)
+	RET
+1$:	SUBL3	12(AP),SIGADR,R2
+	SAY	</!AS: signal !XL mask=!XL va=base+!XL/>, 4(AP), SIGNAM, SIGMSK, R2
+	RET
+
+; ACCR addr, write: the access under a handler; R0 is 1, or 0 if it
+; signaled (the handler's cells say what).
+	.ENTRY	ACCR,^M<R2>
+	MOVAB	HANDLR,(FP)
+	MOVL	4(AP),R2
+	TSTL	8(AP)
+	BNEQ	1$
+	MOVL	(R2),R1
+	BRB	2$
+1$:	CLRL	(R2)
+2$:	MOVL	#1,R0
+	RET
+
+; EXECR: in executive mode, a read of EXADR's longword under a handler;
+; R0 is 1, or 0 if it signaled.
+	.ENTRY	EXECR,^M<>
+	CLRL	SIGNAM
+	PUSHL	#0
+	PUSHL	EXADR
+	CALLS	#2,ACCR
+	RET
+
+; HANDLR: record the condition, its reason mask and address (an access
+; violation's), and unwind to the establisher's caller with R0 0.
+	.ENTRY	HANDLR,^M<R2,R3>
+	MOVL	H_SIG(AP),R2
+	CMPL	SIG_NAM(R2),#SS$_UNWIND
+	BNEQ	1$
+	RET
+1$:	MOVL	SIG_NAM(R2),SIGNAM
+	MOVL	SIG_A1(R2),SIGMSK
+	MOVL	SIG_A1+4(R2),SIGADR
+	MOVL	H_MCH(AP),R3
+	CLRL	MCH_R0(R3)
+	$UNWIND_S
+	RET
+
+; PROBR text, addr: PROBE's line.
+	.ENTRY	PROBR,^M<R2,R3,R4>
+	MOVL	8(AP),R2
+	CLRL	R3
+	CLRL	R4
+	PROBER	#3,#4,(R2)
+	BEQL	1$
+	INCL	R3
+1$:	PROBEW	#3,#4,(R2)
+	BEQL	2$
+	INCL	R4
+2$:	SAY	</!AS: read=!UL write=!UL/>, 4(AP), R3, R4
+	RET
+
+; MADER: R0 is how many pages the range at RET holds, 0 if it's -1
+; (nothing was made).
+	.ENTRY	MADER,^M<>
+	CLRL	R0
+	CMPL	RET,#-1
+	BEQL	2$
+	SUBL3	RET,RET+4,R0
+	BGEQ	1$
+	MNEGL	R0,R0
+1$:	INCL	R0
+	ADDL2	#511,R0
+	DIVL2	#512,R0
+2$:	RET
+
+; NAMER logical, descriptor: copy the logical name's translation into
+; the descriptor's buffer, and its length into the descriptor.
+	.ENTRY	NAMER,^M<R2,R3,R4,R5>
+	CLRL	NAMLEN
+	$TRNLNM_S TABNAM=LNMTAB, LOGNAM=@4(AP), ITMLST=NAMLST
+	MOVL	8(AP),R2
+	MOVW	NAMLEN,(R2)
+	MOVC3	NAMLEN,NAMBUF,@4(R2)
+	RET
+
+	.END	START

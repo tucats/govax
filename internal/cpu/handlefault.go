@@ -1,6 +1,7 @@
 package cpu
 
 import (
+	"errors"
 	"fmt"
 
 	"github.com/tucats/govax/internal/registers"
@@ -106,6 +107,14 @@ func (e *Engine) HandleFault(f *Fault) error {
 		// itself, so a dispatched exception is simply done here.
 		if d, ok := e.services.(ExceptionDispatcher); ok {
 			dispatched, err := d.DispatchException(uint32(f.Code), f.Args, e.instructionPC, e.cpu.PSL())
+
+			// The dispatcher may end the image instead (an exception
+			// there's no user stack to report), R0 its exit status set,
+			// as $EXIT's XFC does.
+			if errors.Is(err, ErrImageExit) {
+				return e.exitImage()
+			}
+
 			if err != nil || dispatched {
 				return err
 			}

@@ -7,7 +7,9 @@ subtask 3, the user stack, done 2026-10-19; subtask 4, the table area
 backed on demand, done 2026-10-19; subtask 5, the S0 pool backed on
 demand, done 2026-10-19; subtask 6, PGFLQUOTA at creation only, done
 2026-10-19; subtask 7, the console's P0 conveniences, done 2026-10-19;
-subtask 8, VMINIT's sizes with paging on, done 2026-10-19.
+subtask 8, VMINIT's sizes with paging on, done 2026-10-19; subtask 9,
+part 1 (the suite with paging forced on, and the probe written,
+`testdata/pg67`), done 2026-10-19, part 2 (the VAX run) waiting.
 Planned 2026-10-15,
 deferred to the end of the paging program (the author, 2026-10-15).
 Needs Phase 66. Part of the paging
@@ -976,3 +978,94 @@ FREP1VA where they vary.
     image failures (subtask 7's log: SS$_VASFULL with a 200-page /P1)
     remain for subtask 9: a /P1 under 4097 can't hold P1's permanent
     part with paging on, which VMINIT doesn't refuse.
+- **2026-10-19:** Subtask 9, part 1: the whole suite with paging forced
+  on, and the probe written (`testdata/pg67`).
+  - **The forced runs** (an experiment, not committed, as Phase 66's:
+    environment variables that turn VMINIT's paging on whatever it's
+    asked, with the paging-off sizes and /P1 raised to the paging
+    default, run the PFN database's and the working set's `Check` after
+    every fault, and take free frames after VMINIT until 400 or 200 are
+    left). No check failed in any run. With paging forced on, every
+    console, debugger, and oracle test that runs an image passes; the
+    remaining failures are paging-off tests and fixtures (below).
+  - **Found and fixed:**
+    - **A /P1 too small for paging** (subtask 8's note): VMINIT with
+      paging on now refuses a /P1 under 4116 pages, the 4096 from
+      UserStackTop up and LINK's default 20-page stack
+      (`corevms.MinPagingP1Pages`, `CLI_P1TOOSMALL`; HELP VMINIT). Before,
+      every image's activation failed with SS$_VASFULL. The paging-on
+      tests that gave /P1 20 or 64 give it the minimum.
+    - **A creation the table area can't hold creates nothing**
+      (`regions.go`'s `spaceHolds`): `$CRETVA` of a range that would
+      take the regions past the area's entries is SS$_VASFULL with
+      retadr -1, and so is stack expansion to an address that far below
+      P1 (a length violation, nothing created). `TestLib59Oracle` failed
+      with paging on: its cases pass 0x55555555 as junk arguments, and
+      each user-mode reference to one, a P1 address far below the
+      stack, created pages down towards it until the area was full,
+      leaving P0 no room, so the C heap's later VM_MALLOC returned 0.
+      VMS 7.1 ran the same cases and its heap went on working, so its
+      expansion (a `$CRETVA`, the book's 16.2.1.3) can't have spent the
+      room: the whole range is checked first (inferred; the probe's A12
+      and A13 ask). The paging file quota is still met page by page,
+      VMS's own answer (testdata/pg64's Q11). `$EXPREG` already checked
+      its room first. `TestCreationNeedsRoom`.
+    - **An exception with no user stack to report it on ends the
+      image** (`condition.go`'s `noStackToReport`, `lastChanceExit`; the
+      engine's `HandleFault` ends the image on `cpu.ErrImageExit` from
+      the dispatcher): found by the probe's dry run, where a detached
+      process's recursion ran its quota out. The condition dispatch
+      couldn't push its arrays, the console's fallback couldn't either,
+      and the error stopped the whole run, process 1's image with it.
+      Now, as the book's 16.2.1.3 says, the handler search is passed
+      over: the condition's message is written as the catch-all writes
+      it, and the image ends with the condition (STS$M_INHIB_MSG) as its
+      status, its exit handlers not run (there's no stack for them).
+      Only in created space, in user mode.
+  - **Fixtures:** `scheduledConsole` and `handBuiltProcess` now create
+    P0 from `codeAddr` to `fixtureP0End` (^X4000, `programExtent`),
+    which every test program's code and data fit in (the counter at
+    `dataAddr` was on a page they didn't create, so with paging on a
+    hand-built process died at its first store); `newSecondProcess`
+    gives P1 the paging minimum. With them the scheduler, mailbox, RMS,
+    shared-file, terminal, and stress tests pass with paging forced on.
+    `TestUserStackImage` and `TestPG66Oracle` count the fixture's pages
+    among the harness's charges.
+  - **What else failed, and why** (all expected): the paging-off tests
+    and VMINIT's layout tests (sizes, physical frames, S0TOOSMALL with
+    the bigger /P1); tests whose fixtures write P0 pages from Go that
+    nothing created (`TestSetprt*`, the lock tests, `TestClearTB`,
+    `TestShowPage*`, `TestShowTB*`, `TestSetPTE*`,
+    `TestHandSwitchTwoProcesses`, `TestGlobalSectionPair_spinlock`'s data
+    at ^X6000, a hand-built process's user stack pushed onto from Go in
+    `TestSchedulerRun_otherImageEnds`); the `$CRMPSC` tests' paging-off
+    expectations (a page-file section's page valid at mapping);
+    `TestRun_fileSections`' step 32, which expects a P1 `$EXPREG` below
+    a P1 section the program deleted, where created space gives the
+    addresses back (the probe's A4 asks VMS); and, as Phase 64 found, the
+    LOGOUT reports' peak and `TestLkwsetFull`. At 400 free frames, the
+    tests of the frame counts, PG64's writer timing, `TestCreprc_limits`
+    (its filler takes a frame a pool page), and PG64's detached process
+    (MEMEXHAUST); at 200, the oracles whose images' working sets (512
+    pages by default) don't fit: govax has no free page wait or swapper
+    (Decision: paging is synchronous), which Phase 66's forced runs
+    avoided with small working sets.
+  - **The probe** (`testdata/pg67`, README.md): one program linked twice
+    (PG67S.EXE with `STACK=50`), in parts: A (the items at the first
+    instruction; `$EXPREG`, `$DELTVA` of each region's end and of a
+    middle page, `$CNTREG`, `$CRETVA` past P0's end; references past
+    P0's end and below P1's low end from user and executive mode, with
+    their masks and PROBE; `$CRETVA` of more than FREPTECNT pages, and a
+    read further below than that), S (recursion 100 pages deep, then a
+    P1 `$EXPREG`), T (the stack's size at the first instruction, both
+    images), C (part Q in a detached process with a small quota and a
+    termination mailbox: the quota nearly filled, then recursion past
+    it). VIRTUALPAGECNT can't be set for one process, so SS$_VASFULL at
+    a small one isn't asked. `TestPG67DryRun` runs it on govax with
+    govax's own links; the README lists govax's answers.
+  - **Noticed, not changed:** the catch-all (and now the last chance
+    exit) writes a condition's message to the console for every process,
+    where VMS writes it to the process's SYS$OUTPUT and SYS$ERROR, so a
+    detached process's message isn't in its output file.
+  - **Next:** the VAX run (the README's steps), then govax changed to
+    its answers and `TestPG67Oracle` in place of the dry run.

@@ -188,7 +188,9 @@ func pageExists(pte vm.PTE) bool {
 // is what was created before it.
 //
 // It returns SS$_NORMAL; SS$_NOPRIV for a system-region page;
-// SS$_VASFULL for a page beyond the region's page table; SS$_PAGOWNVIO;
+// SS$_VASFULL for a page beyond the region's page table (with paging on,
+// for a range the table area can't hold, before creating any page);
+// SS$_PAGOWNVIO;
 // SS$_EXQUOTA, with paging on, when the job's paging file quota runs out
 // (pgflquota.go); or SS$_ACCVIO if inadr can't be read or retadr written.
 //
@@ -203,6 +205,17 @@ func serviceSysCretva(env *Environment, argv []uint32) (uint32, error) {
 
 	retadr := optArg(argv, 1)
 	mode := max(registers.AccessMode(optArg(argv, 2)&3), env.cpu.PSL().CurMod())
+
+	// A range the table area can't hold is SS$_VASFULL with nothing
+	// created (spaceHolds); within it, the pages are created one at a
+	// time, and the quota may stop them partway.
+	if !env.spaceHolds(r) {
+		if !env.storeRetadr(retadr, nil) {
+			return ssAccVio, nil
+		}
+
+		return ssVasFull, nil
+	}
 
 	done := make([]uint32, 0, len(r.pages()))
 

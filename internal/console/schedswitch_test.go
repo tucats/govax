@@ -61,6 +61,19 @@ func counter() []byte {
 	return append(inc, brbBack(len(inc))...)
 }
 
+// fixtureP0End is where the P0 the test programs use ends: their code at
+// codeAddr, the counter at dataAddr, and the mailbox, RMS, and
+// termination tests' data from mbxData up.
+const fixtureP0End = 0x4000
+
+// programExtent is how many bytes from codeAddr a test program and its
+// data reach. With paging on they are the pages the fixtures below
+// create (EnsurePages) before writing the code, as a program's image
+// would have them created.
+func programExtent(code []byte) uint32 {
+	return max(uint32(len(code)), fixtureP0End-codeAddr)
+}
+
 // scheduledConsole boots a console with the scheduler on at the given
 // quantum, and puts process 1 in user mode at IPL 0, about to run code at
 // codeAddr in its P0.
@@ -85,7 +98,7 @@ func scheduledConsole(t testing.TB, quantum string, code []byte) (*console.Conso
 		t.Fatal("the scheduler isn't on")
 	}
 
-	if err := c.RTL.EnsurePages(codeAddr, uint32(len(code))); err != nil {
+	if err := c.RTL.EnsurePages(codeAddr, programExtent(code)); err != nil {
 		t.Fatal(err)
 	}
 
@@ -128,7 +141,7 @@ func handBuiltProcess(t testing.TB, c *console.Console, code []byte) *corevms.En
 		t.Fatal(err)
 	}
 
-	if err := env.EnsurePages(codeAddr, uint32(len(code))); err != nil {
+	if err := env.EnsurePages(codeAddr, programExtent(code)); err != nil {
 		t.Fatal(err)
 	}
 

@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 
+	"github.com/tucats/govax/internal/cpu"
 	"github.com/tucats/govax/internal/registers"
 	"github.com/tucats/govax/internal/vmsdef"
 )
@@ -355,6 +356,10 @@ func (env *Environment) DispatchException(code uint32, params []uint32, pc uint3
 	sig := append(append([]uint32{cond}, detail...), pc, uint32(psl))
 
 	if !env.startDispatch(d, sig, c.GPR(registers.R0), c.GPR(registers.R1)) {
+		if env.noStackToReport(psl) {
+			return false, env.lastChanceExit(sig)
+		}
+
 		return false, nil
 	}
 
@@ -363,6 +368,47 @@ func (env *Environment) DispatchException(code uint32, params []uint32, pc uint3
 	}
 
 	return true, nil
+}
+
+// noStackToReport reports whether an exception in mode psl's couldn't be
+// reported because the user stack has no room for its arrays and can't
+// grow: in created space (regions.go), a user-mode exception whose
+// dispatch failed with SYS$SRCHANDLER in place, which only the stack's
+// expansion failing (the paging file quota, or the table area's room)
+// can cause. The book's 16.2.1.3: "If there is not enough user stack to
+// report the exception, the normal condition handler search is bypassed
+// and the exception is reported directly to the last chance handler,"
+// which by default ends the image.
+func (env *Environment) noStackToReport(psl registers.PSL) bool {
+	if !env.createdSpace() || psl.CurMod() != registers.User {
+		return false
+	}
+
+	w, err := env.mem.LoadWord(env.cpu, srchandlerAddr)
+
+	return err == nil && w == xfcP1VectorWord
+}
+
+// lastChanceExit is the last chance handler's default for an exception
+// there's no user stack to report (noStackToReport): the condition's
+// message, as the catch-all writes it from sig (the condition, its
+// detail, PC, and PSL), and the image's end with the condition, marked
+// STS$M_INHIB_MSG, as its status. No handler runs, exit handlers
+// included: there's no stack to call them on (image rundown forgets the
+// user-mode ones). The engine ends the image (cpu.ErrImageExit), as for
+// $EXIT.
+func (env *Environment) lastChanceExit(sig []uint32) error {
+	body, tail := sig[:len(sig)-2], sig[len(sig)-2:]
+
+	for _, line := range env.formatMessageVector(body, tail, defaultMessageFlags, "") {
+		env.writeConsole(line + "\n")
+	}
+
+	status := sig[0] | stsInhibitMsg
+	env.Process.ExitStatus = status
+	env.cpu.SetGPR(registers.R0, status)
+
+	return cpu.ErrImageExit
 }
 
 // startDispatch lays out a dispatch's arrays on the current stack and
