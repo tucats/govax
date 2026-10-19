@@ -394,27 +394,31 @@ with **one header block**. Their ISDs have seven forms:
 
 ## Questions for the author
 
+Answered by the author on 2026-10-18: each recommendation accepted. The
+findings and subtasks follow the answers.
+
 1. **The change-protection list** (finding 5): apply it after the
    fixups, making each fixup page UREW as VMS does? It's activation's
    protection, not paging, so *recommended: yes, in both modes* (with
    paging off nothing else changes; a program writing its own G^ cells
    from user mode would then get an ACCVIO, as on VMS). The probe checks
-   the page's protection with PROBEW.
+   the page's protection with PROBEW. **Answer:** yes, in both modes.
 2. **Sharing the held image file:** VMS opens it as a process-permanent
    file; the Internals book doesn't say with what sharing.
    *Recommended:* read access, others allowed to read but not to write
    (ods2's `NoWrite`), so a `$CREATE`/OPEN of the same file for writing
    gets RMS$_FLK (and DISMOUNT of its volume is refused, its file open)
    while the image runs; unconfirmed until the probe tries it. A host
-   image is held open, its writers not stopped.
+   image is held open, its writers not stopped. **Answer:** yes, read
+   access sharing reads only; the probe confirms.
 3. **DEPOSIT into a read-only page** (finding 6): set the PTE's modify
    bit when the debugger writes past a page's protection, so that the
    page keeps the change (backed by the page file from then on)?
    *Recommended: yes,* with paging on only (with it off a page never
-   leaves memory, so nothing changes).
+   leaves memory, so nothing changes). **Answer:** yes, paging on only.
 4. **Past the file's allocation** (finding 7): zeros for an image
    section's page there? *Recommended: yes,* as the copy does; no image
-   the tests run has one.
+   the tests run has one. **Answer:** yes.
 
 ## The probe's cases (subtask 7)
 
@@ -499,3 +503,10 @@ procedure. Counts print as differences.
   surviving a run; the paging-on tests' activation counts will move.
   The subtasks are adjusted, the probe's cases listed, and four
   questions are for the author.
+- **2026-10-18:** The author accepted the survey's findings, the
+  revised subtasks, and each recommendation: the change-protection list
+  applied after the fixups in both modes (the fixup page UREW); the held
+  image file read with others allowed to read but not write (the probe
+  confirms); the debugger's DEPOSIT past a page's protection sets its
+  modify bit, with paging on only; an image section's pages past the
+  file's allocation read as zeros.
