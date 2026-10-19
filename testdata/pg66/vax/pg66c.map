@@ -1,0 +1,199 @@
+
+PG66C                                                           18-OCT-2026 21:37        Linker V11-39                    Page    1
+
+                                             +------------------------+
+                                             ! Object Module Synopsis !
+                                             +------------------------+
+
+Module Name     Ident              Bytes      File                                Creation Date      Creator
+-----------     -----              -----      -----                               -------------      -------
+PG66            V1.0                65967 DUA1:[000000]PG66.OBJ;1              18-OCT-2026 21:37  VAX MACRO V5.4-3
+SYS$P1_VECTOR   X-4                     0 SYS$COMMON:[SYSLIB]STARLET.OLB;1     24-NOV-1996 16:16  VAX MACRO V5.4-3
+LIBRTL          V06-001                 0 SYS$COMMON:[SYSLIB]LIBRTL.EXE;1      24-NOV-1996 19:04  Linker V11-38
+
+DUA1:[000000]PG66C.EXE;1                                        18-OCT-2026 21:37        Linker V11-39                    Page    2
+
+                                             +------------------------+
+                                             ! Image Section Synopsis !
+                                             +------------------------+
+
+   Cluster      Type Pages   Base Addr  Disk VBN PFC Protection and Paging      Global Sec. Name   Match     Majorid   Minorid
+   -------      ---- -----   ---------  -------- --- ---------------------      ----------------   -----     -------   -------
+
+BIGCL              0   100    00000200          2   8 READ ONLY     
+
+DEFAULT_CLUSTER    0     3    0000CA00        102   0 READ WRITE   COPY ON REF
+                   0    20    0000D000          0   0 READ WRITE   DEMAND ZERO  
+                   0     7    0000F800        105   0 READ ONLY     
+                   0     1    00010600        112   0 READ WRITE   COPY ON REF
+                   0     1    00010800        113   0 READ WRITE   FIXUP VECTORS
+                 253    20    7FFFD800          0   0 READ WRITE   DEMAND ZERO  
+
+LIBRTL             3   264    00000000-R        0   0 READ ONLY                  LIBRTL_001       LESS/EQUAL        1        14
+                   4    15    00021000-R        0   0 READ WRITE   DEMAND ZERO   LIBRTL_002       LESS/EQUAL        1        14
+
+
+
+	  Key for special characters above:
+		+--------------------+
+		! R  - Relocatable   !
+		! P  - Protected     !
+		+--------------------+
+
+DUA1:[000000]PG66C.EXE;1                                        18-OCT-2026 21:37        Linker V11-39                    Page    3
+
+                                            +--------------------------+
+                                            ! Program Section Synopsis !
+                                            +--------------------------+
+
+Psect Name      Module Name       Base     End           Length            Align                 Attributes
+----------      -----------       ----     ---           ------            -----                 ----------
+
+BIG                             00000200 0000C9FF 0000C800 (      51200.) PAGE  9 NOPIC,USR,CON,REL,GBL,NOSHR,NOEXE,  RD,NOWRT,NOVEC
+                PG66            00000200 0000C9FF 0000C800 (      51200.) PAGE  9
+
+DATA                            0000CA00 0000CF03 00000504 (       1284.) PAGE  9 NOPIC,USR,CON,REL,LCL,NOSHR,NOEXE,  RD,  WRT,NOVEC
+                PG66            0000CA00 0000CF03 00000504 (       1284.) PAGE  9
+
+ZERO                            0000D000 0000F7FF 00002800 (      10240.) PAGE  9 NOPIC,USR,CON,REL,LCL,NOSHR,NOEXE,  RD,  WRT,NOVEC
+                PG66            0000D000 0000F7FF 00002800 (      10240.) PAGE  9
+
+CODE                            0000F800 00010470 00000C71 (       3185.) PAGE  9 NOPIC,USR,CON,REL,LCL,NOSHR,  EXE,  RD,NOWRT,NOVEC
+                PG66            0000F800 00010470 00000C71 (       3185.) PAGE  9
+
+$RMSNAM                         00010600 00010639 0000003A (         58.) BYTE  0 NOPIC,USR,CON,REL,LCL,NOSHR,  EXE,  RD,  WRT,NOVEC
+                PG66            00010600 00010639 0000003A (         58.) BYTE  0
+
+DUA1:[000000]PG66C.EXE;1                                        18-OCT-2026 21:37        Linker V11-39                    Page    4
+
+                                                +-----------------+
+                                                ! Symbols By Name !
+                                                +-----------------+
+
+Symbol          Value              Symbol          Value              Symbol          Value              Symbol          Value
+------          -----              ------          -----              ------          -----              ------          -----
+CHKR            0001029B-R        
+LIB$INIT_TIMER  0001084C-RX       
+LIB$STAT_TIMER  00010848-RX       
+MAPR            00010394-R        
+NUMR            000102E0-R        
+OPENR           00010337-R        
+REPR            000101CD-R        
+SAYR            0001018E-R        
+SNAPR           00010247-R        
+START           0000F800-R        
+SYS$ADJWSL      7FFEDE28          
+SYS$BINTIM      7FFEDE58          
+SYS$CLOSE       7FFEE1B8          
+SYS$CONNECT     7FFEE1C0          
+SYS$CREATE      7FFEE1C8          
+SYS$FAOL        7FFEDF58          
+SYS$GETJPIW     7FFEE420          
+SYS$LKWSET      7FFEDFA0          
+SYS$OPEN        7FFEE208          
+SYS$PUT         7FFEE188          
+SYS$SETIMR      7FFEE020          
+SYS$TRNLNM      7FFEE490          
+SYS$WAITFR      7FFEE078          
+WSETR           0001026E-R        
+ZEROR           000102C1-R        
+
+DUA1:[000000]PG66C.EXE;1                                        18-OCT-2026 21:37        Linker V11-39                    Page    5
+
+                                                +------------------+
+                                                ! Symbols By Value !
+                                                +------------------+
+
+Value                                   Symbols...
+-----                                   ----------
+0000F800      R-START         
+0001018E      R-SAYR          
+000101CD      R-REPR          
+00010247      R-SNAPR         
+0001026E      R-WSETR         
+0001029B      R-CHKR          
+000102C1      R-ZEROR         
+000102E0      R-NUMR          
+00010337      R-OPENR         
+00010394      R-MAPR          
+00010848     RX-LIB$STAT_TIMER
+0001084C     RX-LIB$INIT_TIMER
+7FFEDE28        SYS$ADJWSL    
+7FFEDE58        SYS$BINTIM    
+7FFEDF58        SYS$FAOL      
+7FFEDFA0        SYS$LKWSET    
+7FFEE020        SYS$SETIMR    
+7FFEE078        SYS$WAITFR    
+7FFEE188        SYS$PUT       
+7FFEE1B8        SYS$CLOSE     
+7FFEE1C0        SYS$CONNECT   
+7FFEE1C8        SYS$CREATE    
+7FFEE208        SYS$OPEN      
+7FFEE420        SYS$GETJPIW   
+7FFEE490        SYS$TRNLNM    
+
+
+
+	  Key for special characters above:
+		+--------------------+
+		! *  - Undefined     !
+		! A  - Alias Name    !
+		! I  - Internal Name !
+		! U  - Universal     !
+		! R  - Relocatable   !
+		! X  - External      !
+		! WK - Weak          !
+		+--------------------+
+
+DUA1:[000000]PG66C.EXE;1                                        18-OCT-2026 21:37        Linker V11-39                    Page    6
+
+                                                 +----------------+
+                                                 ! Image Synopsis !
+                                                 +----------------+
+
+Virtual memory allocated:                         00000200 000109FF 00010800 (67584. bytes, 132. pages)
+Stack size:                                             20. pages
+Image header virtual block limits:                       1.        1. (    1. block)
+Image binary virtual block limits:                       2.      113. (  112. blocks)
+Image name and identification:                    PG66C V1.0
+Number of files:                                         4.
+Number of modules:                                       3.
+Number of program sections:                              8.
+Number of global symbols:                              328.
+Number of image sections:                                9.
+User transfer address:                            0000F800
+Number of code references to shareable images:           2.
+Image type:                                       EXECUTABLE.
+Map format:                                       FULL in file DUA1:[000000]PG66C.MAP;1
+Estimated map length:                             63. blocks
+                                              +---------------------+
+                                              ! Link Run Statistics !
+                                              +---------------------+
+
+Performance Indicators                            Page Faults	CPU Time	Elapsed Time
+----------------------                            -----------	--------	------------
+    Command processing:                                   237	00:00:00.00	00:00:00.00
+    Pass 1:                                              1721	00:00:00.01	00:00:00.03
+    Allocation/Relocation:                                 75	00:00:00.00	00:00:00.00
+    Pass 2:                                              1308	00:00:00.01	00:00:00.02
+    Map data after object module synopsis:                 67	00:00:00.00	00:00:00.01
+    Symbol table output:                                   12	00:00:00.00	00:00:00.00
+Total run values:                                        3420	00:00:00.02	00:00:00.06
+
+Using a working set limited to 662 pages and 1612 pages of data storage (excluding image)
+
+Total number object records read (both passes):   204
+    of which 26 were in libraries and 3 were DEBUG data records containing 272 bytes
+
+Number of modules extracted explicitly             = 0
+    with 1 extracted to resolve undefined symbols
+
+0 library searches were for symbols not in the library searched
+
+A total of 0 global symbol table records was written
+
+LINK/NOTRACEBACK/MAP=PG66C/FULL/EXECUTABLE=PG66C PG66,PG66C/OPTIONS
+! PG66C.OPT - PG66C.EXE's options: BIG in a cluster of its own, with a
+! page fault cluster factor of 8 (README.md).
+CLUSTER=BIGCL,,8
+COLLECT=BIGCL,BIG

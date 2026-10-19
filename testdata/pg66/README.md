@@ -33,7 +33,11 @@ instruction, with every section's cluster factor the default
 (PFCDEFAULT). PG66C.EXE is the same with BIG in a cluster of its own,
 `CLUSTER=BIGCL,,8`, so BIG's image section has a cluster factor of 8.
 govax's LINK has no CLUSTER= option, so govax runs VMS's images (`vax/`)
-once they're back; until then its dry run links PG66.EXE itself.
+(`TestPG66Oracle`); its dry run, before they were back, linked PG66.EXE
+itself. govax's link differs from VMS's only in the header's time and
+linker name and in the order of the two fixup cells (LIB$STAT_TIMER's
+first on VMS), a known LINK difference (`internal/link/fixup.go`'s
+`orderCells`).
 
 ## How the program works
 
@@ -97,7 +101,8 @@ DEFINEs) is in the counts too.
 
 ## govax's dry run (2026-10-18)
 
-`TestPG66DryRun` (`internal/console/pg66_test.go`) builds PG66.EXE with
+`TestPG66DryRun` (`internal/console/pg66_test.go`, since replaced by
+`TestPG66Oracle`) built PG66.EXE with
 govax's MACRO and LINK/NOTRACEBACK on an RD54 volume (paging on, a
 20000-block page file on the volume, PFCDEFAULT 16) and runs parts A
 (twice), W, and D as PG66.COM does. What govax answers, for comparison
@@ -137,3 +142,48 @@ with VMS's:
   (a reserved opcode at its first instruction). It now copies the file
   as it is, as VMS's COPY keeps its organization and record format
   (`TestSessionCopy_volumeToVolumeKeepsFormat`).
+
+## The VAX run (2026-10-18)
+
+OpenVMS V7.1 on simh's VAX 8600 (`vax/`: the procedure's log, the runs'
+outputs, both links' maps, the object, and both images; MACRO wrote no
+messages, and LINK's second log is only its options file echoed). That
+VAX had PFCDEFAULT 16, MINWSCNT 20, GROWLIM and FREELIM 143, FREEGOAL
+8192, and a working set limit of 512. `TestPG66Oracle` runs VMS's own
+images on govax (paging on, PFCDEFAULT 16) as PG66.COM did and matches
+VMS's lines but for `expectedPG66Differences`. VMS answered:
+
+- **Confirmed as govax had them:** the image's layout and every page's
+  protection (A10, line for line: BIG, DATA and ZERO, CODE, `$RMSNAM`
+  writable, the fixup page readable only, UREW); RMS$_FLK for opening
+  the running image's file without sharing or to write, and success to
+  read sharing reads (A9: the activator's hold is read-shared, Phase 66's
+  question 2); 20 demand-zero faults for ZERO, every page zero; BIG's
+  clusters by the section's cluster factor (R2: 7 faults at PFCDEFAULT
+  16; R3's 15 at pfc 8, two of them pages its full working set had
+  dropped); no image page read is direct I/O; LIB$STAT_TIMER counts the
+  faults `$GETJPI` does (but its own); every run's charges come back at
+  its exit (R1 to R3 `charged=0`); DELETE of the running image's file
+  succeeds, the name is gone at once, and the image still reads its
+  untouched pages from it (D, line for line: 7 faults, PPGCNT 100).
+- **Changed:** **PROBE doesn't fault**: A3's PROBEW of an untouched
+  demand-zero page faulted nothing (govax's faulted it in; now it reads
+  the PTE's protection, `vm.Memory.ProbeAccess`; docs/DEVIATIONS.md).
+  **RMS$_FLK's STV** is SS$_ACCONFLICT (%X800; govax's was 0).
+- **Differences that stay** (the test's list): activation's faults and
+  charges (VMS charged 62 pages at the first instruction to govax's 24:
+  LIBRTL's writable pages and P1's image pieces; Phase 64's probe saw the
+  same); LIBRTL's and RMS's own page faults and DIRIO (govax's are shims
+  and Go); a successful `$OPEN`'s STV (%XA0 on VMS, perhaps the file's
+  channel; unconfirmed); and VMS's working set list full of DCL's pages
+  and its permanent part, so BIG's pages replaced each other as they
+  came in (PPGCNT rose by 38 to 80 for 100 pages read) and some faulted
+  again. Part W too: at the floor plus 10, VMS read BIG's first pass in
+  14 faults to govax's 75, its clusters taking entries from BIG's older
+  pages where govax's take only free entries, as the book's 15.5.1.1
+  says; Phase 65's K2 (pfc 64 at the floor plus 20) found VMS not
+  clustering at all, so no rule both fit is clear, and govax keeps the
+  book's.
+- **Not govax's to change here:** VMS's DELETE leaves `$STATUS`
+  %X10000001, an image's exit status, where govax's built-in DELETE
+  leaves CLI$_NORMAL (docs/DEVIATIONS.md, with the user-mode names).

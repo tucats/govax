@@ -299,3 +299,48 @@ func TestDemandZero(t *testing.T) {
 		t.Errorf("DemandZero = %08X, %v", uint32(got), ok)
 	}
 }
+
+// TestProbeAccessDoesNotPageIn: PROBE's test reads an invalid page's
+// protection from its PTE and leaves the page alone, as the architecture's
+// PROBE does (testdata/pg66's A3): no fault reaches the pager, and the PTE
+// is unchanged. A page whose protection denies the access, and one past
+// P0's length, aren't accessible.
+func TestProbeAccessDoesNotPageIn(t *testing.T) {
+	cpu, mem := newTranslateFixture(t, 4)
+	mem.SetVMValid(true)
+
+	p := &fakePager{mem: mem, fill: 0xA5}
+	mem.SetPager(p)
+
+	section := SectionPTE(5, ProtUW, 3)
+	denied := SectionPTE(6, ProtNA, 3)
+
+	for page, pte := range map[uint32]PTE{2: section, 3: denied} {
+		if err := mem.writePhysLongword(p0PTPhys+page*4, uint32(pte)); err != nil {
+			t.Fatalf("seed PTE: %v", err)
+		}
+	}
+
+	for _, tt := range []struct {
+		addr   uint32
+		access AccessType
+		want   bool
+	}{
+		{2*pageSize + 8, AccessRead, true},
+		{2*pageSize + 8, AccessWrite, true},
+		{3 * pageSize, AccessRead, false},
+		{4 * pageSize, AccessRead, false}, // past P0LR
+	} {
+		if got := mem.ProbeAccess(cpu, tt.addr, tt.access); got != tt.want {
+			t.Errorf("ProbeAccess(%08X, %v) = %v, want %v", tt.addr, tt.access, got, tt.want)
+		}
+	}
+
+	if len(p.faults) != 0 {
+		t.Errorf("the pager saw %d faults, want none", len(p.faults))
+	}
+
+	if raw, _ := mem.readPhysLongword(p0PTPhys + 2*4); PTE(raw) != section {
+		t.Errorf("PTE = %08X, want it unchanged (%08X)", raw, uint32(section))
+	}
+}

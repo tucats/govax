@@ -167,9 +167,10 @@ never had.
   keeps a mapped image's sections and file until the next activation,
   `imagereset_test.go`; subtask 6: `$CREPRC`'s and a subprocess's
   RUN's activation already mapped, `imagecreated_test.go`; subtask 7,
-  part 1: the suite run with paging forced on, an experiment, which
-  found `WorkingSet.Add` growing a list past its limit with entries
-  free, and the probe, `testdata/pg66`, written, its VMS run to come); 67 the
+  the suite run with paging forced on, an experiment, which found
+  `WorkingSet.Add` growing a list past its limit with entries free, and
+  the probe, `testdata/pg66`, checked against VMS 7.1: PROBE reads the
+  PTE's protection and never pages in, `vm.Memory.ProbeAccess`); 67 the
   address space and page
   tables under paging, deferred to the end. Paging is synchronous, with no
   PFW, COLPG, or FPG waits. Each later phase has a planning doc.
@@ -335,7 +336,10 @@ never had.
   pages, the image file opened while it runs, a protection map; W a
   small working set; D the image's file deleted while it runs), linked
   twice by `pg66.com` (PG66C.EXE with `pg66c.opt`'s CLUSTER=, pfc 8).
-  `TestPG66DryRun` runs it on govax until VMS's run is back.
+  `TestPG66Oracle` runs VMS V7.1's own images (`vax/pg66.exe`,
+  `vax/pg66c.exe`) on govax and matches VMS's lines but for
+  `expectedPG66Differences` (mostly VMS's activation and LIBRTL pages,
+  and its working set's permanent part).
 - `testdata/probe49/` — Phase 49's VMS probe in three rounds (`probe6`,
   `probe6b`, `probe6c`; README.md has each round's answers), run by
   `TestProbe6*`; `testdata/rms49/` and `testdata/sec49/` are the phase's

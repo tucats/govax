@@ -132,10 +132,14 @@ func (ctx *Context) fillNAM(fab, nam uint32, f foundFile, out namOutputs) (uint3
 	return 0, ctx.storeDVI(nam, ctx.deviceID(f.Device))
 }
 
-// stvFor is the STV value VMS reports with a failure to find or make a
-// file: the file system's SS$_ reason.
+// stvFor is the STV value VMS reports with a failure to find, open, or
+// make a file: the file system's SS$_ reason. A file another opener's
+// sharing keeps from this one is RMS$_FLK with SS$_ACCONFLICT
+// (testdata/pg66's A9: VMS 7.1's $OPEN of a running image's file).
 func stvFor(sts uint32) uint32 {
 	switch sts {
+	case rmsFileLocked:
+		return ssAccessConflict
 	case rmsFileNotFound, rmsDirNotFound:
 		return ssNoSuchFile
 	case rmsDeviceError, rmsDeviceNotReady:

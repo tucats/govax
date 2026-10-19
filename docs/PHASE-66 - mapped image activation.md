@@ -1,6 +1,6 @@
 # Phase 66 — image activation by mapping, and image reset
 
-**Status:** in progress (planned 2026-10-15; subtasks 1 to 6 done 2026-10-18; subtask 7's suite run and probe written 2026-10-18, the VMS run to come). Needs Phase 65 (sections under the
+**Status:** in progress (planned 2026-10-15; subtasks 1 to 6 done 2026-10-18; subtask 7 done 2026-10-19: the suite run with paging forced on, and the probe, checked against VMS 7.1). Needs Phase 65 (sections under the
 pager, read clustering). Part of the paging program laid out in
 `PHASE-62 - VMS paging.md` (Decision 15 is this phase's).
 
@@ -465,7 +465,7 @@ procedure. Counts print as differences.
 6. **`$CREPRC`'s activation** (`ActivateCreatedImage`) and a
    subprocess's RUN through the same path (both already reach
    `ImageProcess.ActivateImage`; the tests).
-7. **The full suite with paging on:** every oracle test's images run
+7. **The full suite with paging on** (done 2026-10-19): every oracle test's images run
    mapped, with a small memory and small working sets; the paging-on
    tests' activation counts changed where they move. Then the VMS
    probe (`testdata/pg66`, the cases above), and govax changed to its
@@ -733,3 +733,38 @@ procedure. Counts print as differences.
     The suite passed unchanged with it.
   - **Next:** the VAX run (the README's steps), then govax changed to
     its answers and `TestPG66Oracle` in place of the dry run.
+- **2026-10-19:** Subtask 7, part 2: the probe's VMS run
+  (`testdata/pg66/vax`; README.md's "The VAX run"), OpenVMS V7.1 on
+  simh's VAX 8600. `TestPG66Oracle` (in place of the dry run) runs VMS's
+  own two images on govax as PG66.COM did and matches VMS's lines but for
+  `expectedPG66Differences`.
+  - **Confirmed:** the image's layout and every page's protection after
+    activation, the fixup page UREW (question 1); the running image's
+    file readable by others who share reads, RMS$_FLK otherwise (question
+    2); demand-zero and image section faults, BIG's clusters by the
+    section's cluster factor (the default, PFCDEFAULT, or LINK's
+    CLUSTER=); image page reads aren't direct I/O; every image's charges
+    back at its exit; the image file deleted while it runs, its name gone
+    at once and its pages still read (part D, line for line).
+  - **Changed:** PROBER/PROBEW no longer page in what they probe
+    (`vm.Memory.ProbeAccess`: the PTE's protection field, the valid bit
+    ignored; `TestProbeAccessDoesNotPageIn`; docs/DEVIATIONS.md): VMS's
+    PROBEW of an untouched page faulted nothing. RMS$_FLK's STV is
+    SS$_ACCONFLICT (`stvFor`).
+  - **Differences that stay:** activation's faults and charges (VMS
+    charged 62 pages at the first instruction, govax 24: LIBRTL's
+    writable pages and P1's image pieces); LIBRTL's and RMS's own faults
+    and I/O; a successful `$OPEN`'s STV; and the effects of VMS's working
+    set list holding DCL's pages and its permanent part, which govax's
+    doesn't have (Phase 63): BIG's pages replacing each other as they came
+    in, and part W's first pass clustered by replacement on VMS (14
+    faults) where govax's clusters take only free entries, the book's
+    15.5.1.1 rule (75). Phase 65's K2 found VMS not clustering at a
+    small working set at all, so the rule stays the book's.
+  - **Noted, not changed:** govax's LINK puts the two LIBRTL fixup
+    cells in the other order (a fifth data point for `orderCells`, which
+    no rule fits); govax's DELETE, an image on VMS, leaves CLI$_NORMAL
+    in `$STATUS` where VMS's leaves %X10000001 (docs/DEVIATIONS.md, with
+    the user-mode names an image's exit deletes). The first RUN's
+    `charged=-1` in govax's dry run was the test console's own spin loop
+    in P0, which the first activation deletes.

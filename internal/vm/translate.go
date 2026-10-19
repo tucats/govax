@@ -169,6 +169,29 @@ func (m *Memory) ProbeTranslate(cpu *registers.CPU, addr uint32, access AccessTy
 	return m.translate(cpu, addr, access, false)
 }
 
+// ProbeAccess is the PROBER/PROBEW instruction's test: whether the CPU's
+// current mode may make access to addr. As the architecture's PROBE, it
+// reads the protection field of the page's PTE and doesn't touch the
+// page: the PTE's valid bit doesn't matter, so a page that isn't valid
+// (demand-zero, in a section, in transition, in the page file) is never
+// paged in, and no fault is counted (testdata/pg66's A3: VMS 7.1's PROBEW
+// of an untouched page faulted nothing). An address beyond its region's
+// length, or whose PTE can't be read, isn't accessible. Every invalid PTE
+// form keeps the page's protection, so the answer is the one an access
+// would get.
+func (m *Memory) ProbeAccess(cpu *registers.CPU, addr uint32, access AccessType) bool {
+	if cpu.PR(registers.MAPEN) == 0 {
+		return true
+	}
+
+	_, _, pte, err := m.LookupPTE(cpu, addr)
+	if err != nil {
+		return false
+	}
+
+	return pte.Protection().allows(cpu.PSL().CurMod(), access)
+}
+
 // translate is the shared implementation behind Translate/ProbeTranslate.
 // signal is true for a real (Translate) access and false for a probing
 // (ProbeTranslate) one -- see that function's doc comment for its one

@@ -248,7 +248,10 @@ against real VMS.
     images on VMS (MACRO, LINK, ...): a `DEFINE/USER_MODE SYS$OUTPUT`
     before MACRO is still defined at the next command, where VMS's went
     at MACRO's exit (seen as `%DCL-I-SUPERSEDE` on the next DEFINE when
-    `testdata/pg66/pg66.com` ran on govax).
+    `testdata/pg66/pg66.com` ran on govax). And their `$STATUS` on
+    success is DCL's own CLI$_NORMAL (%X00030001), where VMS's is the
+    image's exit status: DELETE left %X10000001 in VMS 7.1's run of
+    `pg66.com`.
   - `$CRELOG`/`$DELLOG`/`$TRNLOG` follow the V4-era interface descriptions.
     The 7.3 source archive doesn't contain them to check against.
 - **Status**: open, deferred. None affects an existing test or fixture.
@@ -4193,13 +4196,14 @@ widened."
   page's protection. Found by Phase 66's probe (`testdata/pg66`) in its
   govax dry run: a protection map of an image's pages by PROBER/PROBEW
   brought the whole image in.
-- **Status**: deferred to the probe's VMS run (docs/PHASE-66 - mapped
-  image activation.md, subtask 7): case A3 PROBEWs an untouched
-  demand-zero page and reports the faults; govax shows 1. The other
-  callers of `ProbeTranslate` (the S0 PTE read in `translate`, the
-  debugger's memory read, `$QIO`'s buffer check) want a page brought in,
-  so the fix belongs in PROBE alone: an invalid PTE's protection field
-  read without paging.
+- **Status**: fixed in Go (2026-10-19, docs/PHASE-66 - mapped image
+  activation.md, subtask 7). The probe's case A3, a PROBEW of an
+  untouched demand-zero page, faulted nothing on VMS 7.1 (govax faulted
+  1). PROBE now reads the PTE with `LookupPTE` and checks its protection
+  field (`vm.Memory.ProbeAccess`), never paging in; the other callers of
+  `ProbeTranslate` (the S0 PTE read in `translate`, the debugger's memory
+  read, `$QIO`'s buffer check) want a page brought in and are unchanged.
+  `TestProbeAccessDoesNotPageIn`, and `TestPG66Oracle`'s A3.
 
 <!--
 Entry template:

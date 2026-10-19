@@ -246,10 +246,12 @@ var (
 
 	// SS$_ values the file system reports, which an RMS$_RMV/RMS$_ENT
 	// carries in STV: the volume is write-locked (mounted read-only), the
-	// name and version are already in the directory, the version is out
-	// of range. ssInsufficientArgs is SS$_INSFARG, a service called with
+	// file's access conflicts with another's (RMS$_FLK's STV), the name
+	// and version are already in the directory, the version is out of
+	// range. ssInsufficientArgs is SS$_INSFARG, a service called with
 	// too few arguments, returned in R0 alone.
 	ssWriteLocked       = ssConst("SS$_WRITLCK")
+	ssAccessConflict    = ssConst("SS$_ACCONFLICT")
 	ssDuplicateFileName = ssConst("SS$_DUPFILENAME")
 	ssBadFileVersion    = ssConst("SS$_BADFILEVER")
 	ssInsufficientArgs  = ssConst("SS$_INSFARG")

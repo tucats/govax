@@ -1,0 +1,291 @@
+$ WRITE SYS$OUTPUT F$GETSYI("VERSION"), " ", F$GETSYI("HW_NAME")
+V7.1     VAX 8600
+$ RUN SYS$SYSTEM:SYSGEN
+USE ACTIVE
+SHOW PFCDEFAULT
+PFCDEFAULT                     16         32         0       127 Pages      D
+SHOW MINWSCNT
+MINWSCNT                       20         20        10        -1 Pages      
+SHOW WSMAX
+WSMAX                       16400       1024        60   1048576 Pages      
+SHOW GROWLIM
+GROWLIM                       143         63         0        -1 Pages      D
+SHOW FREELIM
+FREELIM                       143         32        16        -1 Pages      
+SHOW FREEGOAL
+FREEGOAL                     8192        200        16        -1 Pages      D
+SHOW DZRO_MIN
+%SYSGEN-E-NOPARAM, no such parameter
+EXIT
+$ SHOW WORKING_SET
+  Working Set      /Limit=512   /Quota=1024    /Extent=16400
+  Adjustment enabled      Authorized Quota=1024  Authorized Extent=16400
+$ !
+$ ! The program, assembled, and linked twice: PG66.EXE with every
+$ ! section's default cluster factor, PG66C.EXE with BIG's 8.
+$ !
+$ DEFINE/USER_MODE SYS$OUTPUT PG66_BUILD.LOG
+$ DEFINE/USER_MODE SYS$ERROR PG66_BUILD.LOG
+$ MACRO/NOLIST PG66
+$ DEFINE/USER_MODE SYS$OUTPUT PG66L1.LOG
+$ DEFINE/USER_MODE SYS$ERROR PG66L1.LOG
+$ LINK/NOTRACEBACK/MAP=PG66/FULL PG66
+$ DEFINE/USER_MODE SYS$OUTPUT PG66L2.LOG
+$ DEFINE/USER_MODE SYS$ERROR PG66L2.LOG
+$ LINK/NOTRACEBACK/MAP=PG66C/FULL/EXECUTABLE=PG66C PG66,PG66C/OPTIONS
+$ DIRECTORY/SIZE=ALL PG66*.EXE
+
+Directory DUA1:[000000]
+
+PG66.EXE;1               113/113    
+PG66C.EXE;1              113/113    
+
+Total of 2 files, 226/226 blocks.
+$ !
+$ ! Part A: the activation, from each image, PG66.EXE twice in a row.
+$ !
+$ CALL RUNA PG66 R1
+$ RUNA: SUBROUTINE
+$ DEFINE PG66_PART A
+$ DEFINE PG66_IMAGE PG66.EXE
+$ f0 = F$GETJPI("","PAGEFLTS")
+$ c0 = F$GETJPI("","PAGFILCNT")
+$ g0 = F$GETJPI("","PPGCNT")
+$ DEFINE PG66_FLTS 37875
+$ DEFINE PG66_CNT 39799
+$ DEFINE PG66_PPG 313
+$ DEFINE/USER_MODE SYS$OUTPUT PG66R1.OUT
+$ RUN PG66
+$ s = $STATUS
+$ f1 = F$GETJPI("","PAGEFLTS")
+$ c1 = F$GETJPI("","PAGFILCNT")
+$ g1 = F$GETJPI("","PPGCNT")
+$ WRITE SYS$OUTPUT P2, " ", P1, " around RUN: status=", s, " flts=", f1 - f0, -
+	" charged=", c0 - c1, " ppg=", g1 - g0
+R1 PG66 around RUN: status=%X00000001 flts=156 charged=0 ppg=-15
+$ ENDSUBROUTINE
+$ CALL RUNA PG66 R2
+$ RUNA: SUBROUTINE
+$ DEFINE PG66_PART A
+%DCL-I-SUPERSEDE, previous value of PG66_PART has been superseded
+$ DEFINE PG66_IMAGE PG66.EXE
+%DCL-I-SUPERSEDE, previous value of PG66_IMAGE has been superseded
+$ f0 = F$GETJPI("","PAGEFLTS")
+$ c0 = F$GETJPI("","PAGFILCNT")
+$ g0 = F$GETJPI("","PPGCNT")
+$ DEFINE PG66_FLTS 38066
+%DCL-I-SUPERSEDE, previous value of PG66_FLTS has been superseded
+$ DEFINE PG66_CNT 39799
+%DCL-I-SUPERSEDE, previous value of PG66_CNT has been superseded
+$ DEFINE PG66_PPG 315
+%DCL-I-SUPERSEDE, previous value of PG66_PPG has been superseded
+$ DEFINE/USER_MODE SYS$OUTPUT PG66R2.OUT
+$ RUN PG66
+$ s = $STATUS
+$ f1 = F$GETJPI("","PAGEFLTS")
+$ c1 = F$GETJPI("","PAGFILCNT")
+$ g1 = F$GETJPI("","PPGCNT")
+$ WRITE SYS$OUTPUT P2, " ", P1, " around RUN: status=", s, " flts=", f1 - f0, -
+	" charged=", c0 - c1, " ppg=", g1 - g0
+R2 PG66 around RUN: status=%X00000001 flts=81 charged=0 ppg=-10
+$ ENDSUBROUTINE
+$ CALL RUNA PG66C R3
+$ RUNA: SUBROUTINE
+$ DEFINE PG66_PART A
+%DCL-I-SUPERSEDE, previous value of PG66_PART has been superseded
+$ DEFINE PG66_IMAGE PG66C.EXE
+%DCL-I-SUPERSEDE, previous value of PG66_IMAGE has been superseded
+$ f0 = F$GETJPI("","PAGEFLTS")
+$ c0 = F$GETJPI("","PAGFILCNT")
+$ g0 = F$GETJPI("","PPGCNT")
+$ DEFINE PG66_FLTS 38177
+%DCL-I-SUPERSEDE, previous value of PG66_FLTS has been superseded
+$ DEFINE PG66_CNT 39799
+%DCL-I-SUPERSEDE, previous value of PG66_CNT has been superseded
+$ DEFINE PG66_PPG 315
+%DCL-I-SUPERSEDE, previous value of PG66_PPG has been superseded
+$ DEFINE/USER_MODE SYS$OUTPUT PG66R3.OUT
+$ RUN PG66C
+$ s = $STATUS
+$ f1 = F$GETJPI("","PAGEFLTS")
+$ c1 = F$GETJPI("","PAGFILCNT")
+$ g1 = F$GETJPI("","PPGCNT")
+$ WRITE SYS$OUTPUT P2, " ", P1, " around RUN: status=", s, " flts=", f1 - f0, -
+	" charged=", c0 - c1, " ppg=", g1 - g0
+R3 PG66C around RUN: status=%X00000001 flts=164 charged=0 ppg=-1
+$ ENDSUBROUTINE
+$ !
+$ ! Part W: BIG at a small working set.
+$ !
+$ DEFINE PG66_PART W
+%DCL-I-SUPERSEDE, previous value of PG66_PART has been superseded
+$ DEFINE/USER_MODE SYS$OUTPUT PG66W.OUT
+$ RUN PG66
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ !
+$ ! Part D: the image's file deleted while it runs, in a subprocess.
+$ ! The image makes PG66D.RDY once it runs, waits ten seconds, reads
+$ ! BIG, and makes PG66D.END.
+$ !
+$ COPY PG66.EXE PG66D.EXE
+$ IF F$SEARCH("PG66D.RDY") .NES. "" THEN DELETE PG66D.RDY;*
+$ IF F$SEARCH("PG66D.END") .NES. "" THEN DELETE PG66D.END;*
+$ DEFINE PG66_PART D
+%DCL-I-SUPERSEDE, previous value of PG66_PART has been superseded
+$ SPAWN/NOWAIT/PROCESS=PG66DEL/OUTPUT=PG66D.OUT RUN PG66D
+%DCL-S-SPAWNED, process PG66DEL spawned
+$ n = 0
+$ WAITRDY:
+$ IF F$SEARCH("PG66D.RDY") .NES. "" THEN GOTO READY
+$ WAIT 00:00:01
+$ n = n + 1
+$ IF n .LT. 60 THEN GOTO WAITRDY
+$ WAITRDY:
+$ IF F$SEARCH("PG66D.RDY") .NES. "" THEN GOTO READY
+$ READY:
+$ DELETE PG66D.EXE;*
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X10000001"
+$ WRITE SYS$OUTPUT "D after DELETE: ", F$SEARCH("PG66D.EXE")
+D after DELETE: 
+$ n = 0
+$ WAITEND:
+$ IF F$SEARCH("PG66D.END") .NES. "" THEN GOTO ENDED
+$ WAIT 00:00:01
+$ n = n + 1
+$ IF n .LT. 60 THEN GOTO WAITEND
+$ WAITEND:
+$ IF F$SEARCH("PG66D.END") .NES. "" THEN GOTO ENDED
+$ WAIT 00:00:01
+$ n = n + 1
+$ IF n .LT. 60 THEN GOTO WAITEND
+$ WAITEND:
+$ IF F$SEARCH("PG66D.END") .NES. "" THEN GOTO ENDED
+$ WAIT 00:00:01
+$ n = n + 1
+$ IF n .LT. 60 THEN GOTO WAITEND
+$ WAITEND:
+$ IF F$SEARCH("PG66D.END") .NES. "" THEN GOTO ENDED
+$ WAIT 00:00:01
+$ n = n + 1
+$ IF n .LT. 60 THEN GOTO WAITEND
+$ WAITEND:
+$ IF F$SEARCH("PG66D.END") .NES. "" THEN GOTO ENDED
+$ WAIT 00:00:01
+$ n = n + 1
+$ IF n .LT. 60 THEN GOTO WAITEND
+$ WAITEND:
+$ IF F$SEARCH("PG66D.END") .NES. "" THEN GOTO ENDED
+$ WAIT 00:00:01
+$ n = n + 1
+$ IF n .LT. 60 THEN GOTO WAITEND
+$ WAITEND:
+$ IF F$SEARCH("PG66D.END") .NES. "" THEN GOTO ENDED
+$ WAIT 00:00:01
+$ n = n + 1
+$ IF n .LT. 60 THEN GOTO WAITEND
+$ WAITEND:
+$ IF F$SEARCH("PG66D.END") .NES. "" THEN GOTO ENDED
+$ WAIT 00:00:01
+$ n = n + 1
+$ IF n .LT. 60 THEN GOTO WAITEND
+$ WAITEND:
+$ IF F$SEARCH("PG66D.END") .NES. "" THEN GOTO ENDED
+$ WAIT 00:00:01
+$ n = n + 1
+$ IF n .LT. 60 THEN GOTO WAITEND
+$ WAITEND:
+$ IF F$SEARCH("PG66D.END") .NES. "" THEN GOTO ENDED
+$ WAIT 00:00:01
+$ n = n + 1
+$ IF n .LT. 60 THEN GOTO WAITEND
+$ WAITEND:
+$ IF F$SEARCH("PG66D.END") .NES. "" THEN GOTO ENDED
+$ ENDED:
+$ WAIT 00:00:02
+$ WRITE SYS$OUTPUT "D after the image: ", F$SEARCH("PG66D.EXE")
+D after the image: 
+$ DEASSIGN PG66_PART
+$ TYPE PG66R1.OUT
+A1 at the first instruction: flts=13 charged=62 ppg=16
+A2 LIB$INIT_TIMER: flts=7 charged=0 gpg=6 ppg=1 dirio=0
+A2 the program's start: flts=16 charged=0 gpg=0 ppg=16 dirio=6
+A3 PROBEW of an untouched demand-zero page: writable=1
+A3 PROBEW: flts=0 charged=0 gpg=0 ppg=0 dirio=0
+A4 code and data locked: flts=0 charged=0 gpg=0 ppg=0 dirio=0
+A5 BIG read: bad=0
+A5 BIG read: flts=9 charged=0 gpg=-16 ppg=38 dirio=0
+A6 BIG read again: bad=0
+A6 BIG read again: flts=5 charged=0 gpg=0 ppg=0 dirio=0
+A7 ZERO read: zero=20
+A7 ZERO read: flts=20 charged=0 gpg=-16 ppg=16 dirio=0
+A7 ZERO written: flts=1 charged=0 gpg=0 ppg=0 dirio=0
+A8 LIB$STAT_TIMER 00000001: its faults less $GETJPI's: 1
+A9 open to read, others read: 00010001 stv=000000A0
+A9 open to read, no sharing: 0001828A stv=00000800
+A9 open to write, others read: 0001828A stv=00000800
+A10 00000200 RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR
+A10 00008200 RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRWWWWWWWWWWWWWWWWWWWWWWWRRRRR
+A10 00010200 RRWR
+A10 pages: 132
+A11 the whole image: flts=90 charged=0 gpg=-52 ppg=97 dirio=9
+$ TYPE PG66R2.OUT
+A1 at the first instruction: flts=17 charged=62 ppg=15
+A2 LIB$INIT_TIMER: flts=7 charged=0 gpg=3 ppg=-3 dirio=0
+A2 the program's start: flts=10 charged=0 gpg=-8 ppg=8 dirio=3
+A3 PROBEW of an untouched demand-zero page: writable=1
+A3 PROBEW: flts=0 charged=0 gpg=0 ppg=0 dirio=0
+A4 code and data locked: flts=0 charged=0 gpg=0 ppg=0 dirio=0
+A5 BIG read: bad=0
+A5 BIG read: flts=7 charged=0 gpg=-41 ppg=74 dirio=0
+A6 BIG read again: bad=0
+A6 BIG read again: flts=0 charged=0 gpg=0 ppg=0 dirio=0
+A7 ZERO read: zero=20
+A7 ZERO read: flts=20 charged=0 gpg=0 ppg=20 dirio=0
+A7 ZERO written: flts=0 charged=0 gpg=0 ppg=0 dirio=0
+A8 LIB$STAT_TIMER 00000001: its faults less $GETJPI's: 1
+A9 open to read, others read: 00010001 stv=000000A0
+A9 open to read, no sharing: 0001828A stv=00000800
+A9 open to write, others read: 0001828A stv=00000800
+A10 00000200 RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR
+A10 00008200 RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRWWWWWWWWWWWWWWWWWWWWWWWRRRRR
+A10 00010200 RRWR
+A10 pages: 132
+A11 the whole image: flts=45 charged=0 gpg=-46 ppg=100 dirio=6
+$ TYPE PG66R3.OUT
+A1 at the first instruction: flts=13 charged=62 ppg=19
+A2 LIB$INIT_TIMER: flts=7 charged=0 gpg=6 ppg=1 dirio=0
+A2 the program's start: flts=15 charged=0 gpg=0 ppg=15 dirio=3
+A3 PROBEW of an untouched demand-zero page: writable=1
+A3 PROBEW: flts=0 charged=0 gpg=0 ppg=0 dirio=0
+A4 code and data locked: flts=0 charged=0 gpg=0 ppg=0 dirio=0
+A5 BIG read: bad=0
+A5 BIG read: flts=15 charged=0 gpg=0 ppg=80 dirio=0
+A6 BIG read again: bad=0
+A6 BIG read again: flts=5 charged=0 gpg=0 ppg=0 dirio=0
+A7 ZERO read: zero=20
+A7 ZERO read: flts=20 charged=0 gpg=-2 ppg=2 dirio=0
+A7 ZERO written: flts=1 charged=0 gpg=-1 ppg=1 dirio=0
+A8 LIB$STAT_TIMER 00000001: its faults less $GETJPI's: 1
+A9 open to read, others read: 00010001 stv=000000A0
+A9 open to read, no sharing: 0001828A stv=00000800
+A9 open to write, others read: 0001828A stv=00000800
+A10 00000200 RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRR
+A10 00008200 RRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRRWWWWWWWWWWWWWWWWWWWWWWWRRRRR
+A10 00010200 RRWR
+A10 pages: 132
+A11 the whole image: flts=95 charged=0 gpg=-4 ppg=106 dirio=6
+$ TYPE PG66W.OUT
+W1 BIG read: bad=0
+W1 BIG read: flts=14 charged=0 gpg=0 ppg=8 dirio=0
+W2 BIG read again: bad=0
+W2 BIG read again: flts=130 charged=0 gpg=0 ppg=0 dirio=3
+W3 and a third time: bad=0
+W3 and a third time: flts=114 charged=0 gpg=0 ppg=0 dirio=0
+$ TYPE PG66D.OUT
+D1 PG66D.RDY made: 00010001
+D2 BIG read after the wait: bad=0
+D2 BIG read after the wait: flts=7 charged=0 gpg=0 ppg=100 dirio=0
+D3 PG66D.END made: 00010001
+$ SET NOVERIFY

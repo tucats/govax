@@ -87,7 +87,9 @@ func (l *linker) sharedTarget(name string, offset uint32, sym string) *sharedRef
 // LIB$STOP's cell comes before LIB$SIGNAL's. So is PI.EXE
 // (testdata/mar/vax), whose cells are LIB$GET_FOREIGN, LIB$PUT_OUTPUT,
 // LIB$GET_VM: the order of its first references, which CELLS.EXE's
-// aren't. No rule found fits all four; real LINK's order may come from its hash table or from LIBRTL's
+// aren't. And PG66.EXE (testdata/pg66/vax) gives LIB$STAT_TIMER's cell
+// before LIB$INIT_TIMER's, though it calls LIB$INIT_TIMER first and its
+// offset in LIBRTL is the lower. No rule found fits all five; real LINK's order may come from its hash table or from LIBRTL's
 // own symbol table, neither of which its output shows. So govax uses the
 // names' order, and FAILSIG's images are a known difference
 // (docs/PHASE-29.md, subtask 14). A target reached without a symbol (an
