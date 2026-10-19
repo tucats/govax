@@ -4224,9 +4224,10 @@ widened."
   different mask from an instruction than from a LIB$ routine. Found by
   Phase 67's survey (its open question on the mask; with created space,
   length violations past P0's end and below the stack become common).
-- **Status**: open; the survey recommends fixing it in both paging
-  modes in Phase 67's subtask 2 (docs/PHASE-67 - address space under
-  paging.md, question 5), the probe's handlers checking the masks.
+- **Status**: open; to be fixed in both paging modes in Phase 67's
+  subtask 2, as the author decided (docs/PHASE-67 - address space
+  under paging.md, question 5), the probe's handlers checking the
+  masks.
 
 <!--
 Entry template:

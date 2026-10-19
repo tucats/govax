@@ -1,7 +1,8 @@
 # Phase 67 — the address space and page tables under paging
 
 **Status:** in progress: subtask 1, the survey, done 2026-10-19 (Part A
-below; its questions for the author open). Planned 2026-10-15,
+below; its questions answered by the author the same day, each
+recommendation accepted). Planned 2026-10-15,
 deferred to the end of the paging program (the author, 2026-10-15).
 Needs Phase 66. Part of the paging
 program laid out in `PHASE-62 - VMS paging.md` (Decision 16 is this
@@ -108,7 +109,7 @@ stop spending physical memory on page tables and S0 nobody uses:
   the program with VMS's signal arguments? The probe compares.
   *Survey:* the length bit is set, and the signal array is VMS's, but
   the write bit never is and a protection violation's mask is wrong
-  (finding 11, question 5).
+  (finding 11, question 5; the author: fix it in both modes).
 - **VIRTUALPAGECNT for subprocesses:** one key for P0 and P1 together,
   as VMS's, means a split must be chosen per process. VMS grows each
   region's table within one process header, so govax would reserve
@@ -116,7 +117,7 @@ stop spending physical memory on page tables and S0 nobody uses:
   space is plentiful), backed only as used. *Survey:* S0 virtual space
   isn't plentiful in govax (VMINIT's S0 is as big as the frames it maps,
   4 MB with vax.init's sizes), so the survey recommends VMS's single
-  area instead (finding 5, question 1).
+  area instead (finding 5, question 1), which the author accepted.
 
 # Part A — the survey (subtask 1, 2026-10-19)
 
@@ -466,35 +467,40 @@ Phase 66) go. The user stack is then charged where it's created.
 
 ## Questions for the author
 
+Answered by the author on 2026-10-19: each recommendation accepted. The
+findings and subtasks follow the answers.
+
 1. **The table area** (finding 5): one run of VIRTUALPAGECNT entries per
    process, P0 up from the bottom and P1 down from the top (VMS's figure
    14-2), with `vax.sysgen.virtualpagecnt` defaulting to VMINIT's
    `/P0 + /P1`? *Recommended: yes.* The alternative is the plan's, two
    tables of VIRTUALPAGECNT entries each, which doubles the S0 each
-   process reserves and has no FREPTECNT.
+   process reserves and has no FREPTECNT. **Answer:** yes, one area,
+   the key defaulting to `/P0 + /P1`.
 2. **The user stack** (finding 8): created at activation from its ISD
    and deleted at rundown, P1 expansions directly below it, no reserve,
    and the unused P1 above `UserStackTop` nonexistent? *Recommended:
    yes, with paging on only* (with it off, today's reserve and
    persistent stack stay). It changes where `$EXPREG` of P1 puts pages
    with paging on (programs see the address in retadr; the probes print
-   differences). `UserStackTop` itself stays.
+   differences). `UserStackTop` itself stays. **Answer:** yes, with
+   paging on only.
 3. **Stack expansion** (finding 9): one hook in `vm` for a user-mode P1
    length violation, rather than a check in each Go path that pushes?
    *Recommended: yes.* It expands for a user-mode access anywhere below
-   P1's low end, as the book says VMS does.
+   P1's low end, as the book says VMS does. **Answer:** yes, one hook.
 4. **The S0 pool's unallocated pages** (finding 6): no access until
    allocated, the microkernel's and ASM's S0 writes claiming their
    pages first, and a console DEPOSIT into an unallocated pool page an
    access violation? *Recommended: yes*, over frames at first touch
    (which the pager could already give, but the pool wouldn't know of
-   them) or a fixed kernel reserve.
+   them) or a fixed kernel reserve. **Answer:** yes.
 5. **ACCVIO's reason mask** (finding 11): the architecture's bits from
    the CPU in *both* paging modes? It's ISA fidelity, not paging, and
    clear-cut (VMS's own masks are in `testdata/lib53`), so the
    bug-fixing policy allows fixing it in scope. *Recommended: yes, in
    subtask 2*; a test that checks today's 2 for a protection violation
-   changes with it.
+   changes with it. **Answer:** yes, in both modes, in subtask 2.
 
 ## The probe's cases (subtask 8)
 
@@ -577,3 +583,11 @@ FREP1VA where they vary.
   findings, five questions for the author, the probe's cases, and the
   subtasks adjusted (the user stack its own subtask, the forced suite
   run with the probe).
+- **2026-10-19:** The author answered the survey's five questions,
+  accepting each recommendation: one table area per process with
+  `vax.sysgen.virtualpagecnt` defaulting to `/P0 + /P1`; the user stack
+  created at activation and deleted at rundown, P1 expansions below it,
+  no reserve, with paging on only; stack expansion through one `vm`
+  hook; the S0 pool's unallocated pages no-access, claimed before the
+  console's writes; ACCVIO's reason mask fixed in both paging modes in
+  subtask 2.
