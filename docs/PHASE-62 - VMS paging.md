@@ -6,7 +6,10 @@ answers are under "The review"). Part C splits the work into Phases 62
 to 67, each with a planning doc of its own. All seven subtasks are
 done (the plan, the settings, `internal/paging`'s PFN database, `vm`'s
 PTE forms and frame allocator, corevms's frame claims, SHOW MEMORY's and
-SHOW PAGE's reports, and the close-out); Phase 63 is next. Needs Phases 43–49 (processes, the scheduler,
+SHOW PAGE's reports, and the close-out). The program is complete:
+Phases 63 to 67 were done 2026-10-16 to 2026-10-19, each checked
+against VMS 7.1 by a probe (`testdata/pg63` to `testdata/pg67`); what
+they carry forward is in each phase's close-out entry. Needs Phases 43–49 (processes, the scheduler,
 sections) and 52.
 
 Today govax translates virtual addresses faithfully, but a page that

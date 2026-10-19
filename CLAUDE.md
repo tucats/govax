@@ -111,7 +111,7 @@ never had.
   against VMS 7.1, which settled the heap's layout, statuses, report,
   and counting), 11 the close-out.
   Phases 62–67 (planned 2026-10-15, the plan reviewed and accepted by
-  the author) are the paging program, VMS's paging behind a
+  the author; done 2026-10-19) are the paging program, VMS's paging behind a
   `vax.sysgen.paging.enable` setting (off by default, when govax behaves
   as before): `PHASE-62`'s Part A is the survey of govax's memory
   management and VMS's, Part B the accepted decisions (with "The
@@ -158,54 +158,21 @@ never had.
   change-protection list, in both modes; image reset is `DeleteP0`'s;
   JPI$_IMAGNAME; checked against VMS 7.1 by `testdata/pg66`, which
   also found that PROBE reads the PTE's protection and never pages in,
-  `vm.Memory.ProbeAccess`); 67 the
-  address space and page
-  tables under paging, deferred to the end (subtask 2, created space,
-  done 2026-10-19: with paging on P0LR and P1LR describe the pages that
-  exist, `corevms/regions.go`, and creating services lengthen the
-  regions; ACCVIO's reason mask is the architecture's in both modes,
-  `vm.MaskLength`/`MaskPTERef`/`MaskWrite`; subtask 3, the user stack,
-  done 2026-10-19: activation creates it from the image's stack ISD,
-  `corevms/userstack.go`'s `CreateUserStack`, a user-mode access below
-  P1's low end expands it through `vm.Memory.SetStackExpander`, as does
-  `$ADJSTK`, and rundown deletes it but for the page the user SP is in
-  and above; subtask 4, the table area backed on demand, done
-  2026-10-19: a process's P0 and P1 tables are one table area,
-  `corevms.ProcessSpace`'s `Entries` and `Table`, P0's at its bottom and
-  P1's ending at its top, each region growing into the room the other
-  leaves, `P0Capacity`/`P1Floor`; with paging on only the area's pages
-  holding entries inside the regions' lengths have frames,
-  `corevms/tablearea.go`, backed by `setRegionLength` before a length
-  reaches them and given back after it leaves; a new process's area is
-  `vax.sysgen.virtualpagecnt` entries, VMINIT's `/P0` plus `/P1` by
-  default, SYI$_VIRTUALPAGECNT; subtask 5, the S0 pool backed on
-  demand, done 2026-10-19: with paging on a pool page has a frame only
-  while it's allocated, `AllocateS0` backing it and
-  `FreeS0`/`FreeProcessS0` taking it back, VMINIT never backing the
-  pool's pages (subtask 8), and the microkernel's ASM claiming its
-  pages before writing them, `ClaimS0`; SHOW MEMORY's regions show
-  created space and table frames, `showPagedRegions`; subtask 6,
-  PGFLQUOTA at creation only, done 2026-10-19: the first-touch charge
-  removed, every charged page being created by something; subtask 7,
-  the console's conveniences, done 2026-10-19: ASM and DEPOSIT, the
-  console's and the debugger's, create the process 1 P0 pages they
-  write, `machine/exam.go`'s `ensureConsolePages`; subtask 8, VMINIT's
-  sizes with paging on, done 2026-10-19: VMINIT maps only its own
-  layout, `layoutPages`, so S0 may be larger than physical memory, and
-  a region given 0 takes its paging default, `pagingSizes`: P0 19456,
-  P1 5120, S0 16384; vax.init gives 0 for each region the
-  configuration doesn't size when F$CONFIG's BOOLEAN says
-  `vax.sysgen.paging.enable` is on; with paging off nothing changes, but
-  an S0 larger than physical memory is VMTOOLARGE; subtask 9, part 1,
-  done 2026-10-19: the suite with paging forced on, which found a /P1
-  too small for paging (VMINIT's P1TOOSMALL under
-  `corevms.MinPagingP1Pages`), P1 creations the table area can't hold
-  (`$CRETVA` and stack expansion SS$_VASFULL with nothing created,
-  `regions.go`'s `spaceHolds`; P0's made page by page), and an exception
-  with no user stack to report it on (the image ends, no message,
-  `condition.go`'s `lastChanceExit`); and the probe, checked against VMS
-  7.1 by `testdata/pg67`, part 2 the same day: `$CNTREG`'s retadr in
-  `$EXPREG`'s order, F$GETJPI's FREP0VA/FREP1VA as hex). Paging is synchronous, with no
+  `vm.Memory.ProbeAccess`); 67 (done 2026-10-19) the address space and
+  page tables under paging (created space: P0LR and P1LR describe the
+  pages that exist, the creating services lengthen the regions and
+  `$DELTVA`/`$CNTREG` shorten them, FREP0VA, FREP1VA, FREPTECNT,
+  VIRTPEAK; ACCVIO's reason mask the architecture's in both modes; the
+  user stack created at activation from the image's STACK= and expanded
+  by a user-mode access below P1, deleted at rundown; one table area per
+  process, `vax.sysgen.virtualpagecnt` entries, backed on demand; the S0
+  pool backed only while allocated; PGFLQUOTA charged at creation only;
+  the console's DEPOSIT and ASM creating process 1's P0 pages; VMINIT
+  mapping only its own layout, with paging defaults P0 19456, P1 5120,
+  S0 16384, and /P1 at least 4116, P1TOOSMALL; a P1 creation the area
+  can't hold making no pages, P0's made page by page; an exception with
+  no user stack to report it ending the image; checked against VMS 7.1
+  by `testdata/pg67`). Paging is synchronous, with no
   PFW, COLPG, or FPG waits. Each later phase has a planning doc.
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
@@ -1033,6 +1000,25 @@ expect adjustment as phases land):
   the debugger modified takes the page file as backing store when it
   leaves the working set (`leaveReadOnlySection`). The running image's
   file is JPI$_IMAGNAME (`SetImageName`, cleared at rundown).
+  Phase 67, with paging on (`docs/PHASE-67 - address space under
+  paging.md`): created space (`regions.go`): `InitialLengths` and
+  `InitialPTE` start a space with no P0 pages and P1 from UserStackTop
+  up, `setRegionLength` is the one place a length changes (the
+  `ProcessSpace`, the CPU or the PCB, `RegionSize`, the peak), creators
+  reach a page through `lookupPTE`/`storePTE` (`coverPage` lengthening
+  its region), `contractRegions` shortens a region after a deletion at
+  its end, `spaceHolds` refuses a P1 creation the area can't hold before
+  making any page, and `vm.AddressSpace.Same` (P0BR) is how a space is
+  known; `EnsurePages` creates the pages Go code (tests, the console)
+  is about to write. One table area per process (`ProcessSpace`'s
+  `Entries` and `Table`, P0's table at its bottom and P1's ending at its
+  top; `tablearea.go` backs its pages as the lengths reach them).
+  `userstack.go`: `CreateUserStack` at activation, `expandStack` (the
+  System's `vm` stack expander, and `$ADJSTK`), rundown keeping the
+  page the user SP is in and above. `s0pool.go`'s `AllocateS0`/`FreeS0`
+  back and free pool pages, `ClaimS0` the microkernel's. An exception
+  whose arrays the user stack can't take ends the image
+  (`condition.go`'s `noStackToReport`, `lastChanceExit`).
 - `internal/librtl` — LIBRTL.EXE's routines (Phase 34): the LIB$ and STR$
   shims a program reaches through `SHIM$LIBRTL_<offset>` stubs. `Routines`
   lists each with its XFC$SHIM code (its transfer-vector offset is

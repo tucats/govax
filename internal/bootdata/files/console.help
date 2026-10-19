@@ -156,6 +156,10 @@
 //              10/19/26    SHOW MEMORY's regions with paging on
 //              10/19/26    VMINIT's sizes with paging on; F$CONFIG's
 //                          BOOLEAN; vax.memory.* defaults with paging
+//              10/19/26    VMINIT's /P1 minimum with paging on
+//                          (P1TOOSMALL); F$GETJPI's address space
+//                          items; VMINIT/PAGING's description of the
+//                          finished paging program
 
 This is the help documentation for the govax VAX emulator.  Topic sections are
 marked by a "$" delimiter.  This is followed by as many tokens of the help
@@ -1391,7 +1395,11 @@ $LEXI
                                          ...
         F$GETJPI(pid, item)              $GETJPI's items ("" for this
                                          process): PID, PRCNAM, USERNAME,
-                                         UIC, CURPRIV, STATE, MODE, ...
+                                         UIC, CURPRIV, STATE, MODE, ...;
+                                         the address space's FREP0VA and
+                                         FREP1VA (eight hex digits, as
+                                         OWNER; FREP0VA "" with no P0
+                                         pages), FREPTECNT, and VIRTPEAK
         F$GETSYI(item [,node])           $GETSYI's items: NODENAME, VERSION,
                                          BOOTTIME, SID, ...; the paging
                                          parameters; PAGEFILE_PAGE and
@@ -2599,8 +2607,7 @@ $VM
                         either, the vax.sysgen.paging.enable setting
                         decides (see HELP CONFIG KEYS); it is off unless
                         set.  The choice lasts until the next VMINIT.
-                        Paging is being added to govax in stages: with
-                        paging on, each process has a working set (HELP
+                        With paging on, each process has a working set (HELP
                         SET WORKING_SET), pages that leave it keep their
                         memory on the free or modified page list and come
                         back without I/O when touched again, and a
@@ -2626,11 +2633,19 @@ $VM
                         page file.  A process's address space has only
                         the pages created in it (an access past them is an
                         access violation, but for the user stack, which
-                        grows by itself), and only the parts of its page
-                        tables those pages need take memory; the regions
-                        share the tables' size (/P0 plus /P1 for the
-                        console's process, vax.sysgen.virtualpagecnt for
-                        the others).  SHOW MEMORY shows the counts, and
+                        grows by itself from user mode), and only the
+                        parts of its page tables those pages need take
+                        memory; the regions share the tables' size (/P0
+                        plus /P1 for the console's process,
+                        vax.sysgen.virtualpagecnt for the others).  Each
+                        page is charged to the job's PGFLQUOTA when it's
+                        created, and a creation stops where the quota
+                        runs out; a P1 creation the tables can't hold
+                        (or a reference that far below the stack) makes
+                        no pages at all.  An exception the user stack
+                        has no room to report ends the image.  The S0
+                        pool's pages take memory only while allocated.
+                        SHOW MEMORY shows the counts, and
                         govax's --stats option reports them at exit.
 
     Example:

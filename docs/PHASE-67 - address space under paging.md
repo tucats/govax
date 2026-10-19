@@ -1,15 +1,12 @@
 # Phase 67 — the address space and page tables under paging
 
-**Status:** in progress: subtask 1, the survey, done 2026-10-19 (Part A
-below; its questions answered by the author the same day, each
-recommendation accepted); subtask 2, created space, done 2026-10-19;
-subtask 3, the user stack, done 2026-10-19; subtask 4, the table area
-backed on demand, done 2026-10-19; subtask 5, the S0 pool backed on
-demand, done 2026-10-19; subtask 6, PGFLQUOTA at creation only, done
-2026-10-19; subtask 7, the console's P0 conveniences, done 2026-10-19;
-subtask 8, VMINIT's sizes with paging on, done 2026-10-19; subtask 9 (the
-suite with paging forced on, and the probe, `testdata/pg67`, checked
-against VMS 7.1), done 2026-10-19.
+**Status:** done (2026-10-19). Subtasks 1 to 10: the survey (Part A,
+its questions answered by the author); created space; the user stack;
+the table area backed on demand; the S0 pool backed on demand;
+PGFLQUOTA at creation only; the console's P0 conveniences; VMINIT's
+sizes with paging on; the suite run with paging forced on, and the
+probe, checked against VMS 7.1 (`testdata/pg67`); the close-out. The
+last phase of the paging program.
 Planned 2026-10-15,
 deferred to the end of the paging program (the author, 2026-10-15).
 Needs Phase 66. Part of the paging
@@ -540,7 +537,7 @@ FREP1VA where they vary.
   instruction (SP against FREP1VA) with the default `STACK=` and with
   `STACK=50`.
 
-## Subtasks (provisional; adjusted by the survey)
+## Subtasks (all done 2026-10-19)
 
 1. **Survey** (done 2026-10-19): Part A.
 2. **Created space** (findings 1 to 4, 11): with paging on, one record
@@ -604,7 +601,7 @@ FREP1VA where they vary.
 9. **The full suite with paging on** (Phase 66's forced runs) and **the
    VMS probe** (`testdata/pg67`, the cases above), and govax changed to
    its answers.
-10. **Close-out.**
+10. **Close-out:** CLAUDE.md, HELP, PLAN.md.
 
 ## Progress log
 
@@ -1101,3 +1098,38 @@ FREP1VA where they vary.
   - **Not asked:** SS$_VASFULL at a small VIRTUALPAGECNT (a SYSGEN
     parameter needing a reboot); the item forms of FREP0VA and FREP1VA
     in LIB$GETJPI, left numbers.
+- **2026-10-19:** Subtask 10, the close-out. CLAUDE.md describes the
+  phase (the paging program's paragraph, condensed, and corevms's created
+  space, table area, user stack, and S0 pool); PLAN.md's row is done, and
+  Phase 62's doc says the program is complete; HELP's VMINIT/PAGING
+  describes the finished program (no longer "in stages": PGFLQUOTA at
+  creation, P1 creations the tables can't hold, an exception with no
+  stack to report it, the S0 pool), and F$GETJPI's entry names the
+  address space's items. The open questions are settled above (ACCVIO's
+  mask in subtask 2, VIRTUALPAGECNT as one table area in subtask 4).
+  **Carried forward:**
+  - **Page tables never page** (Decision 13): VMS's process page tables
+    are in the working set and fault (testdata/pg65's differences); a
+    table area page with no frame free is SS$_VASFULL, govax's choice
+    (VMS's limit would be the working set's, SS$_INSFWSL; unconfirmed).
+  - **A new process's table frames:** about 33 back P1 from the start,
+    32 of them holding entries of the nonexistent pages between
+    UserStackTop and the P1 vector, inside P1's length (VMS's layout).
+  - **VIRTUALPAGECNT** below about 4116 leaves a `$CREPRC`'d process's P0
+    no room (VMINIT refuses such a /P1 for process 1, P1TOOSMALL); a
+    small VIRTUALPAGECNT's SS$_VASFULL wasn't asked of VMS (it needs a
+    reboot).
+  - **Messages of other processes:** the catch-all writes a condition's
+    message to the console for every process, where VMS writes it to the
+    process's SYS$OUTPUT and SYS$ERROR.
+  - **LIB$GETJPI's FREP0VA and FREP1VA** are written as numbers; only
+    DCL's form (hex, as OWNER) is VMS's answer.
+  - **Synchronous paging:** no free page wait or swapper, so working sets
+    larger than free memory end in MEMEXHAUST (the forced run at 200 free
+    frames).
+  - **Activation's charges and stack use** differ from VMS's (its DCL,
+    LIBRTL, and P1 image pieces; `expectedPG66Differences`,
+    `expectedPG67Differences`).
+  - **Paging-off tests and fixtures** that write P0 pages from Go without
+    creating them fail with paging forced on; they test paging-off
+    behavior and are left so.
