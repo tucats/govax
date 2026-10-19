@@ -375,7 +375,7 @@ Phase 66) go. The user stack is then charged where it's created.
 - **The forced runs** (Phase 66's experiment: the whole suite with
   paging on) would reach every debugger and console test that loads
   code into process 1's P0: subtask 7's conveniences are what keep them
-  working, and the run is subtask 8's check.
+  working, and the run is subtask 9's check.
 
 ## Findings that change the plan
 
@@ -507,7 +507,7 @@ findings and subtasks follow the answers.
    subtask 2*; a test that checks today's 2 for a protection violation
    changes with it. **Answer:** yes, in both modes, in subtask 2.
 
-## The probe's cases (subtask 8)
+## The probe's cases (subtask 9)
 
 `testdata/pg67`, as pg64's and pg66's: a program in parts, a procedure,
 counts printed as differences, addresses as offsets from FREP0VA and
@@ -560,10 +560,48 @@ FREP1VA where they vary.
    removed, with the tests that relied on it.
 7. **The console's P0 conveniences** for process 1: ASM and DEPOSIT
    beyond P0's end extend it.
-8. **The full suite with paging on** (Phase 66's forced runs) and **the
+8. **VMINIT's sizes with paging on** (added 2026-10-19 at the author's
+   request, after subtask 6): with created space, the table area, and the
+   pool all backed on demand, /S0, /P0, and /P1 cost virtual space, not
+   frames, and the defaults should say so. The author's aim is practical
+   rather than VMS's: leave as many physical frames as possible free for
+   programs (and, later, shareable images). With paging on:
+   - **S0 apart from physical memory.** VMINIT maps only its own layout
+     (the system page table, process 1's table area, the stacks, the
+     scratch, shim, and SCB pages), identity mapped as now so the
+     interrupt stack stays physically addressable; every pool page starts
+     with the all-zero PTE, no access, rather than mapped and then given
+     back (`UnbackS0Pool`'s work done at the start). S0's size then has
+     no physical limit but the system page table's own frames (one per
+     128 S0 pages), which must fit below the layout. S0TOOSMALL stays,
+     against the layout's size.
+   - **The size rules.** A region of 0 sharing what physical memory is
+     left, and leftover pages folded into S0, are physical rules; they
+     apply with paging off only. With paging on, 0 takes the
+     paging-mode default.
+   - **The defaults.** S0 sized for processes, not for memory (the
+     author, 2026-10-19: the future has many detached processes, not
+     only process 1 and its subprocesses, so the pool must hold many
+     processes' tables and stacks at once; a full pool is the limit on
+     how many can exist, and should be one users rarely meet): each
+     process's pool cost is its table area (VIRTUALPAGECNT / 128 pages)
+     plus about 40 pages of stacks and PCB, so 8192 fits about 33
+     processes at VIRTUALPAGECNT 24576, 16384 about twice that (128
+     system page table frames). P1 about 5120: the 4096 pages from
+     UserStackTop to the P1 vector (a nonexistent hole, but inside P1's
+     length) plus the stack and room for P1 expansions; P0 the rest of
+     the area, whose total is VIRTUALPAGECNT's default. Where the
+     defaults live is the subtask's choice: `vax.init` picking paging
+     mode's values when `vax.sysgen.paging.enable` is set and the
+     `vax.memory.*` keys aren't, or VMINIT's own defaults for regions
+     given as 0. With paging off nothing changes.
+   - **Showing it:** SHOW MEMORY's frame counts and `--stats`' figures
+     after vax.init, and a test that S0 may be larger than physical
+     memory with paging on (and is refused with it off).
+9. **The full suite with paging on** (Phase 66's forced runs) and **the
    VMS probe** (`testdata/pg67`, the cases above), and govax changed to
    its answers.
-9. **Close-out.**
+10. **Close-out.**
 
 ## Progress log
 
@@ -846,3 +884,7 @@ FREP1VA where they vary.
     charged by its creation at activation. The rest of the suite needed
     no change: subtasks 2 and 3 had already made the paging-on tests
     create what they write.
+- **2026-10-19:** Subtask 8 added at the author's request: VMINIT's sizes
+  with paging on (S0 apart from physical memory, the physical size rules
+  paging-off only, defaults that leave frames free for programs); the
+  full suite and probe are now subtask 9, the close-out 10.
