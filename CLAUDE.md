@@ -165,7 +165,8 @@ never had.
   executable, since LINK makes no shareable images; subtask 5: image reset,
   `unmapSections` now `DeleteP0`'s first step, so a debugger's `KeepP0`
   keeps a mapped image's sections and file until the next activation,
-  `imagereset_test.go`); 67 the
+  `imagereset_test.go`; subtask 6: `$CREPRC`'s and a subprocess's
+  RUN's activation already mapped, `imagecreated_test.go`); 67 the
   address space and page
   tables under paging, deferred to the end. Paging is synchronous, with no
   PFW, COLPG, or FPG waits. Each later phase has a planning doc.

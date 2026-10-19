@@ -1,6 +1,6 @@
 # Phase 66 — image activation by mapping, and image reset
 
-**Status:** in progress (planned 2026-10-15; subtasks 1 to 5 done 2026-10-18). Needs Phase 65 (sections under the
+**Status:** in progress (planned 2026-10-15; subtasks 1 to 6 done 2026-10-18). Needs Phase 65 (sections under the
 pager, read clustering). Part of the paging program laid out in
 `PHASE-62 - VMS paging.md` (Decision 15 is this phase's).
 
@@ -630,3 +630,30 @@ procedure. Counts print as differences.
   on the file kept after the image's end, DISMOUNT refused; then a
   second RUN of the same image from its file, with only its own
   sections, both runs' output, and nothing left after).
+- **2026-10-18:** Subtask 6, `$CREPRC`'s activation and a subprocess's
+  RUN. Both already reached the mapping path
+  (`ActivateCreatedImage`, then `ImageProcess.ActivateImage` and
+  `imageMap`, which maps through the process's own page tables and
+  `OpenImage`'s current session), so no code changed; the tests
+  (`imagecreated_test.go`) check it. `TestMappedCreatedImage`: a
+  `$CREPRC` of the mapped-image program from the volume; at its first
+  checkpoint the image's sections are the child's (process 1 has none),
+  its never-run code still in its section form, every section's
+  protection and the fixup page's UREW in the child's page tables, and
+  the volume can't be dismounted; it runs to its end through a small
+  working set (its G^ call says hello), and once the process is deleted
+  and the CPU has left it (`awaitGone`: a deleted process's memory goes
+  then) no frame is tied to its P0, the working sets are consistent, and
+  the volume dismounts. `TestMappedSpawnedImage`: SPAWN/NOWAIT of a
+  procedure that RUNs the image twice; each run is mapped into the
+  subprocess, and each image's rundown takes its sections before the
+  next RUN (the ICB list still the run's own), then the subprocess goes
+  with nothing left. (Process 1's DCL leaves its CPU at no instruction
+  of its own after lending it, so the test puts process 1 back in its
+  spin loop, below the subprocess's priority: its 10-million-instruction
+  quantum would otherwise keep the CPU, and expire no timers.)
+  `TestMilestone_paging`: the multiprocessing milestone with paging on,
+  by `$CREPRC` and by LIB$SPAWN, both images mapped from the volume
+  (checked by hand: sections mapped in both processes), with
+  `TestMilestone`'s output and files, and the volume dismounted and
+  verified after.
