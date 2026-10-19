@@ -129,6 +129,12 @@ func (m *Machine) ensureAsmSession() *asm.Assembler {
 // per-statement loop, since either can extend any of these regions.
 func (m *Machine) depositAsmImage(a *asm.Assembler) error {
 	if p0 := a.Bytes(); len(p0) > 0 {
+		// With paging on, P0 has only the pages something created: the
+		// program's are made now, P0 growing to hold them.
+		if err := m.ensureConsolePages(a.Origin(), uint32(len(p0))); err != nil {
+			return err
+		}
+
 		if err := m.storeBytes(a.Origin(), p0); err != nil {
 			return err
 		}

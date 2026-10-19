@@ -6,7 +6,7 @@ recommendation accepted); subtask 2, created space, done 2026-10-19;
 subtask 3, the user stack, done 2026-10-19; subtask 4, the table area
 backed on demand, done 2026-10-19; subtask 5, the S0 pool backed on
 demand, done 2026-10-19; subtask 6, PGFLQUOTA at creation only, done
-2026-10-19.
+2026-10-19; subtask 7, the console's P0 conveniences, done 2026-10-19.
 Planned 2026-10-15,
 deferred to the end of the paging program (the author, 2026-10-15).
 Needs Phase 66. Part of the paging
@@ -884,6 +884,33 @@ FREP1VA where they vary.
     charged by its creation at activation. The rest of the suite needed
     no change: subtasks 2 and 3 had already made the paging-on tests
     create what they write.
+- **2026-10-19:** Subtask 7, the console's P0 conveniences, with paging
+  on.
+  - **One helper** (`machine/exam.go`'s `ensureConsolePages`): before the
+    console writes process 1's memory it creates the P0 pages the write
+    reaches that don't exist, through subtask 2's `EnsurePages` (each a
+    user-mode demand-zero page as `$CRETVA` makes one, charged, P0's
+    length growing to it; pages a write passes over stay nonexistent).
+    Its callers are the console's DEPOSIT (`Machine.Deposit`), the
+    debugger's DEPOSIT and DEPOSIT/INSTRUCTION (`Machine.WriteBytes`),
+    and ASM, the console's and the debugger's, file and interactive
+    (`depositAsmImage`'s P0 part). It acts only while the CPU is in
+    process 1 and only on P0: a write into another process after SET
+    PROCESS, below P1's low end, or into an unallocated S0 pool page
+    gets the access check a program would (the S0 rule is subtask 5's).
+    With paging off it does nothing.
+  - **Tests:** `TestConsolePagesPagingOn` (DEPOSIT past P0's end, a
+    longword across two new pages, `WriteBytes`, ASM at 0x200 into a
+    page DEPOSIT passed over, the charge, the skipped pages' protection
+    violation, a write below P1's low end refused),
+    `TestConsolePagesPagingOff`.
+  - **Checked by a forced run** (not committed; paging forced on by an
+    environment variable): every console and debugger test that loads
+    code with DEPOSIT passes. The debugger tests that RUN an image fail
+    with SS$_VASFULL at activation: their fixture's VMINIT gives P1 200
+    pages, which can't hold the 4096 nonexistent pages above
+    `UserStackTop` (subtask 3). That's VMINIT's sizes with paging on,
+    for subtasks 8 and 9.
 - **2026-10-19:** Subtask 8 added at the author's request: VMINIT's sizes
   with paging on (S0 apart from physical memory, the physical size rules
   paging-off only, defaults that leave frames free for programs); the

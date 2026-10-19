@@ -178,6 +178,10 @@ func (m *Machine) Deposit(reg string, addr uint32, sz ExamSize, value uint32) er
 		return nil
 	}
 
+	if err := m.ensureConsolePages(addr, sizeBytes(sz)); err != nil {
+		return err
+	}
+
 	// See loadSized's doc comment: DEPOSIT is console-driven memory access
 	// and must not be gated by whatever mode the CPU was last running in.
 	err := m.withKernelMode(func() error {
@@ -199,4 +203,33 @@ func (m *Machine) Deposit(reg string, addr uint32, sz ExamSize, value uint32) er
 	m.DepositAddr = addr + sizeBytes(sz)
 
 	return nil
+}
+
+// ensureConsolePages creates the P0 pages the console is about to write
+// length bytes of at addr (ASM's program, DEPOSIT's value) when they
+// don't exist, so interactive use works as it does with paging off
+// (docs/PHASE-67 - address space under paging.md, subtask 7). With paging
+// on, P0's length register describes only the pages that exist, and a
+// write past P0's end would be an access violation; this extends P0 to
+// cover the pages, each created as $CRETVA creates a user-mode page
+// (corevms.Environment.EnsurePages: demand-zero, read/write, charged
+// against the paging file quota). It's process 1's convenience only, and
+// only P0's: a write into another process (after the debugger's SET
+// PROCESS), into P1, or into S0 gets the access check a program would.
+// With paging off it does nothing, since every page of the tables exists.
+func (m *Machine) ensureConsolePages(addr, length uint32) error {
+	env := m.processOne
+	if env == nil || length == 0 || m.RunningProcess() != env {
+		return nil
+	}
+
+	// Only the part that lies in P0 (addresses below 0x40000000).
+	const p1Base = 0x40000000
+	if addr >= p1Base {
+		return nil
+	}
+
+	length = min(length, p1Base-addr)
+
+	return env.EnsurePages(addr, length)
 }

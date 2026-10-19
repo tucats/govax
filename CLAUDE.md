@@ -186,7 +186,10 @@ never had.
   pages before writing them, `ClaimS0`; SHOW MEMORY's regions show
   created space and table frames, `showPagedRegions`; subtask 6,
   PGFLQUOTA at creation only, done 2026-10-19: the first-touch charge
-  removed, every charged page being created by something). Paging is synchronous, with no
+  removed, every charged page being created by something; subtask 7,
+  the console's conveniences, done 2026-10-19: ASM and DEPOSIT, the
+  console's and the debugger's, create the process 1 P0 pages they
+  write, `machine/exam.go`'s `ensureConsolePages`). Paging is synchronous, with no
   PFW, COLPG, or FPG waits. Each later phase has a planning doc.
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
