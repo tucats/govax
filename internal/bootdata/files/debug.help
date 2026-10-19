@@ -1139,7 +1139,17 @@ $SH,IMAG
 
     SHOW IMAGE [/FULL]
 
-  /FULL (govax's own) adds each image's counts of modules and routines.
+  /FULL (govax's own) adds each image's counts of modules and routines,
+  the file it came from, and how its sections are laid out in memory:
+  for each section its kind (read-only, writable, fixup, demand zero,
+  user stack, or a shareable image's global section), first and last
+  address, size in pages, protection now, and backing store; then its
+  pages by what they're mapped to now (valid, in transition on the free
+  or modified list, not yet read from the image file, in the page file,
+  demand zero), and the pages in memory by where their contents go when
+  their frames are reused (the image file, the page file, or nothing
+  yet). With paging on an image is mapped from its file, so these move as
+  the program runs; with paging off it's copied, every page in memory.
 
 $SHOW,MODU
 $SH,MODU

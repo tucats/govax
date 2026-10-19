@@ -657,3 +657,18 @@ procedure. Counts print as differences.
   (checked by hand: sections mapped in both processes), with
   `TestMilestone`'s output and files, and the volume dismounted and
   verified after.
+- **2026-10-18:** At the author's request, the debugger's SHOW
+  IMAGE/FULL shows how each image's sections are laid out in memory
+  (govax's own; VMS's debugger has nothing like it): the image's file and
+  whether it was mapped or copied, then per ISD its kind, addresses,
+  pages, protection now, and backing store (the image file from its VBN
+  and its process section's index, then the page file for a writable
+  one; the page file for demand-zero pages; "none" for a copied image),
+  its pages by PTE form (valid, in transition on the free or modified
+  list, not yet read, in the page file, demand zero), and its pages in
+  memory by their frames' backing store. `corevms/pageinfo.go`
+  (`PageInfoAt`, `SectionAt`: a read-only look at a page's PTE, frame,
+  and section), `machine/imagelayout.go` (`ImageSections`; `ICB.Mapped`,
+  set by `imageMap`), the debugger's `showSections`. Tests:
+  `TestShowImageFull_mapped` (at the mapped image's two checkpoints) and
+  `TestShowImageFull_copied` (paging off).

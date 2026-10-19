@@ -65,6 +65,7 @@ func (p *ImageProcess) imageMap(fn string, flag uint32) (*ICB, error) {
 	}
 
 	icb := p.newICB(fn, flag)
+	icb.Mapped = true
 
 	// The transfer addresses: four longwords at the header's activation
 	// offset (as the copying loader reads them from its copy in P0).

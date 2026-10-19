@@ -116,6 +116,10 @@ type ICB struct {
 	Debug    *dbgsym.Program
 	DebugErr error
 
+	// Mapped is set for an image mapped from its file (imageMap, with
+	// paging on), clear for one copied into memory.
+	Mapped bool
+
 	// LinkDebug is the image header's IHD$V_LNKDEBUG: the image was
 	// linked /DEBUG, so RUN starts the debugger on it unless told not to.
 	LinkDebug bool

@@ -5,10 +5,12 @@ import (
 	"sort"
 	"strings"
 
+	"github.com/tucats/govax/internal/corevms"
 	"github.com/tucats/govax/internal/dbgsym"
 	"github.com/tucats/govax/internal/dcl"
 	"github.com/tucats/govax/internal/lnm"
 	"github.com/tucats/govax/internal/machine"
+	"github.com/tucats/govax/internal/paging"
 	"github.com/tucats/govax/internal/registers"
 	"github.com/tucats/govax/internal/symtab"
 	"github.com/tucats/govax/internal/vmserrors"
@@ -129,7 +131,8 @@ func yesNo(b bool) string {
 // instead (unconfirmed, no probe could say what VMS counts).
 //
 // /FULL is govax's own: it adds, below each image with symbols, how many
-// modules and routines they describe.
+// modules and routines they describe, and below every image its file
+// and how its sections are laid out in memory (showSections).
 func (d *Debugger) showImage(full bool) error {
 	c := d.Machine
 
@@ -163,11 +166,174 @@ func (d *Debugger) showImage(full bool) error {
 
 			c.Printf("    %d modules, %d routines\n", len(img.Program.Modules), routines)
 		}
+
+		if full {
+			d.showSections(img)
+		}
 	}
 
 	c.Printf("\n %-32sbytes allocated: %d\n", fmt.Sprintf("total images: %d", len(images)), total)
 
 	return nil
+}
+
+// showSections is SHOW IMAGE/FULL's part for one image: its file, and a
+// line per image section with its addresses, size, protection now, and
+// backing store, then what its pages are mapped to now. With paging on,
+// an image is mapped from its file (Phase 66), so this shows the
+// sections' pages coming in from the file as the program touches them,
+// leaving the working set for the free and modified lists, and going to
+// the page file. For example, part way through a run:
+//
+//	    file DUA0:[000000]IMAP.EXE, mapped
+//	    section       start     end       pages  prot  backing store
+//	    demand zero   00000400  000053FF     40  ALL   page file
+//	                  pages: 28 valid, 12 in transition (on the modified list)
+//	                  in memory: 40 backed by the page file
+//	    read-only     00005400  00005DFF      5  UR    image file from VBN 3 (section 1)
+//	                  pages: 1 valid, 4 in transition (on the free list)
+//	                  in memory: 5 backed by the image file
+//	    user stack                           20        the process's own stack, not mapped
+//
+// With paging off, an image is copied: every page is in memory, with no
+// backing store.
+func (d *Debugger) showSections(img machine.ImageInfo) {
+	c := d.Machine
+
+	how := "copied into memory"
+	if img.Mapped {
+		how = "mapped"
+	}
+
+	c.Printf("    file %s, %s\n", img.File, how)
+
+	sections := c.ImageSections(img)
+	if len(sections) == 0 {
+		return
+	}
+
+	c.Printf("    %-14s%-10s%-10s%5s  %-6s%s\n", "section", "start", "end", "pages", "prot", "backing store")
+
+	for _, s := range sections {
+		switch s.Kind {
+		case machine.SectionUserStack:
+			c.Printf("    %-34s%5d  %-6s%s\n", s.Kind, s.Pages, "", "the process's own stack, not mapped")
+
+			continue
+		case machine.SectionGlobal:
+			c.Printf("    %-14s%-20s%5d  %-6s%s\n", s.Kind, s.Name, s.Pages, "", "a shareable image's, not mapped here")
+
+			continue
+		}
+
+		c.Printf("    %-14s%-10s%-10s%5d  %-6s%s\n", s.Kind, fmt.Sprintf("%08X", s.First), fmt.Sprintf("%08X", s.Last),
+			s.Pages, s.Protection, sectionBacking(img, s))
+
+		if line := pageForms(s); line != "" {
+			c.Printf("    %-14spages: %s\n", "", line)
+		}
+
+		if line := frameBacking(s); line != "" {
+			c.Printf("    %-14sin memory: %s\n", "", line)
+		}
+	}
+}
+
+// sectionBacking is the backing store column of SHOW IMAGE/FULL's line
+// for section s of img.
+func sectionBacking(img machine.ImageInfo, s machine.ImageSection) string {
+	if !img.Mapped {
+		if s.Kind == machine.SectionDemandZero {
+			return "none (zeroed in memory)"
+		}
+
+		return fmt.Sprintf("none (copied from VBN %d)", s.VBN)
+	}
+
+	var text string
+
+	switch s.Kind {
+	case machine.SectionDemandZero:
+		return "page file"
+	case machine.SectionReadOnly:
+		text = fmt.Sprintf("image file from VBN %d", s.VBN)
+	default:
+		text = fmt.Sprintf("image file from VBN %d, then the page file", s.VBN)
+	}
+
+	if s.InSection {
+		text += fmt.Sprintf(" (section %d", s.Section.Index)
+
+		if s.Section.PFC != 0 {
+			text += fmt.Sprintf(", cluster %d", s.Section.PFC)
+		}
+
+		text += ")"
+	}
+
+	return text
+}
+
+// pageForms is SHOW IMAGE/FULL's count of section s's pages by the
+// form their PTEs are in: "3 valid, 2 not yet read".
+func pageForms(s machine.ImageSection) string {
+	var parts []string
+
+	for _, f := range []corevms.PageForm{
+		corevms.PageValid, corevms.PageTransition, corevms.PageInSection,
+		corevms.PageInPageFile, corevms.PageDemandZero, corevms.PageGlobal,
+	} {
+		n := s.Forms[f]
+		if n == 0 {
+			continue
+		}
+
+		part := fmt.Sprintf("%d %s", n, f)
+		if f == corevms.PageTransition {
+			part += transitionLists(n, s.OnModified)
+		}
+
+		parts = append(parts, part)
+	}
+
+	return strings.Join(parts, ", ")
+}
+
+// transitionLists says which lists n pages in transition are on, of
+// which modified are on the modified list and the rest on the free list.
+func transitionLists(n, modified int) string {
+	switch free := n - modified; {
+	case modified == 0:
+		return " (on the free list)"
+	case free == 0:
+		return " (on the modified list)"
+	default:
+		return fmt.Sprintf(" (%d on the free list, %d on the modified list)", free, modified)
+	}
+}
+
+// frameBacking is SHOW IMAGE/FULL's count of section s's pages in
+// memory (valid or in transition) by their frames' backing store: where
+// a page's contents go, or come back from, when its frame is reused.
+// Empty with paging off, where a page never leaves memory.
+func frameBacking(s machine.ImageSection) string {
+	var parts []string
+
+	for _, b := range []struct {
+		kind paging.BackingKind
+		name string
+	}{
+		{paging.SectionFile, "the image file"},
+		{paging.PageFile, "the page file"},
+		{paging.GlobalSection, "a global section"},
+		{paging.NoBacking, "nothing yet"},
+	} {
+		if n := s.Backing[b.kind]; n > 0 {
+			parts = append(parts, fmt.Sprintf("%d backed by %s", n, b.name))
+		}
+	}
+
+	return strings.Join(parts, ", ")
 }
 
 // showModule runs SHOW MODULE: a table of every module of the loaded

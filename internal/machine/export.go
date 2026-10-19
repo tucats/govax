@@ -361,6 +361,13 @@ type ImageInfo struct {
 	// without one. An image whose symbols the debugger can use is one
 	// that has one.
 	Program *dbgsym.Program
+
+	// File is the file the image was loaded from, and Mapped whether it
+	// was mapped from it (with paging on) rather than copied.
+	File   string
+	Mapped bool
+
+	icb *ICB
 }
 
 // Images returns the loaded images, main image first, as the debugger's
@@ -393,6 +400,9 @@ func (m *Machine) Images() []ImageInfo {
 			End:     icb.End,
 			Main:    icb.Flags&icbMain != 0,
 			Program: icb.Debug,
+			File:    icb.File,
+			Mapped:  icb.Mapped,
+			icb:     icb,
 		})
 	}
 
