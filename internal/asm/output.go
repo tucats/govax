@@ -24,6 +24,9 @@ const (
 	// evPatch: the size-byte constant value was stored back at offset,
 	// behind the location, as real MACRO fills in .ASCID's length.
 	evPatch
+	// evTransfer: .TRANSFER redefined sym at offset (the linker's
+	// OPR_REDEF), storing nothing.
+	evTransfer
 )
 
 // outEvent is one step of a MACRO-dialect assembly's output, in source

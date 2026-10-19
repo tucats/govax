@@ -3,8 +3,8 @@
 **Status:** planned (2026-10-19); the plan reviewed and accepted by the
 author the same day. Part A is the survey. Part B holds the decisions
 and the author's answers to the plan's questions. Part C is the
-subtasks. Subtask 1, the VMS probe (`testdata/link68`), is written and
-waits for the author's run on the simh VAX.
+subtasks. Subtask 1, the VMS probe (`testdata/link68`), is done, and so
+is subtask 2 (MACRO's `.TRANSFER`).
 
 ## Goal
 
@@ -484,7 +484,7 @@ them.
    `OPR_REDEF`, the section types and order, the shareable image's
    fixup section, the maps, and the messages. The pass also adjusts the
    later subtasks.
-2. **MACRO: `.TRANSFER`.** The directive, its `OPR_REDEF` in the
+2. **Done (2026-10-19).** **MACRO: `.TRANSFER`.** The directive, its `OPR_REDEF` in the
    object, its listing line, and errors. It is matched against real
    MACRO's `XFR1.OBJ` and listing once the probe is back; until then it
    is written from the manual's 7.4. Anything else the probe's objects
@@ -651,3 +651,51 @@ Two points are left unconfirmed: the order in which the activator maps
 images, and the GST's symbol order. A second round can take them up
 when subtask 11 needs them.
 
+
+### 2026-10-19 — Subtask 2: MACRO's `.TRANSFER`
+
+`.TRANSFER symbol` is a MACRO-only directive (`macrodir.go`'s
+`pseudoTransfer`). It stores nothing and makes the symbol global, and
+the object gets a `TIR$C_OPR_REDEF` with the symbol's name at the
+location counter (`output.go`'s `evTransfer`). Its listing line shows
+only the location counter. govax's objects and listings of all eleven
+of the probe's sources now match real MACRO's (`internal/asm`'s
+`TestLink68Objects` and `TestLink68Listings`). Getting there turned up
+three things:
+
+- **`.MASK sym,expr` stacks the expression first**, then `STA_EPM`,
+  then `OPR_IOR`. govax had the two the other way round, and two unit
+  tests (`TestMaskMACRO`, `TestObjectMask`) held that guess; they now
+  hold XFR1's order.
+- **A symbol `.TRANSFER` names is referred to by name.** XFR1's
+  `BRW SHR1_LOCAL+2` reaches its own `.ENTRY`, defined later in another
+  psect, through `STA_GBL SHR1_LOCAL`, not the psect and offset. govax
+  takes the rule to be the `.TRANSFER` (`SymTransfer`): the linker may
+  redefine such a symbol, so every reference to it, forward or back,
+  goes by name. **Unconfirmed**: the other reading is that MACRO refers
+  to any global of its own by name when the reference is forward and in
+  another psect. No real object settles it. Every cross-psect reference
+  to a module's own global in `testdata` is a backward one, and those go
+  by psect and offset. A reference read before the `.TRANSFER`, to a
+  symbol already defined, keeps its psect and offset in govax. A later
+  VAX round can settle both with a forward reference to a global of
+  another psect, without `.TRANSFER`.
+- **A branch the linker finishes is listed as a displacement.** The
+  listing shows that BRW's field as `FFDD'`, the placeholder (2) less
+  the end of the field (^X25). An operand's displacement shows the
+  placeholder itself (`JMP L^SHR1_BASE+2` is `00000002'`), as govax
+  already did. No earlier listing had a relocated branch.
+
+`.TRANSFER` in an absolute psect is ABSDATA, as data there is. The
+linker must know the location, but real MACRO's rule there is
+unconfirmed. `.TRANSFER` with no symbol is EXTRATEXT, and of a local
+label NOTGLOBAL, as `.GLOBAL`'s are; the console dialect's ASM refuses
+it (MACROONLY).
+
+In the linker, pass 2 takes `OPR_REDEF` and does nothing with it in an
+executable link (`pass2.go`). That is enough for the probe's E2 (XFR1
+and SHR1 linked as an executable) to match real LINK's image byte for
+byte, from real MACRO's objects and from govax's
+(`TestLinkTransferVectorExecutable`), with `%LINK-W-USRTFR` as VMS
+gave it. Subtask 6 makes the redefinition a shareable image's
+universal value.

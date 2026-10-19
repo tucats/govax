@@ -156,12 +156,13 @@ LATER:	.BYTE 7
 }
 
 // TestObjectMask checks that .MASK stacks the entry point's mask with
-// STA_EPM.
+// STA_EPM, after the expression ORed with it, as real MACRO does
+// (testdata/link68's XFR1).
 func TestObjectMask(t *testing.T) {
 	requireDump(t, objectDump(t, `.PSECT V
 .MASK SUB, ^M<R3>`),
 		`SYM "SUB" (reference), REL`,
-		`STA_EPM "SUB"`, "STA_UB 0x8", "OPR_IOR", "STO_W")
+		"STA_UB 0x8", `STA_EPM "SUB"`, "OPR_IOR", "STO_W")
 }
 
 // TestObjectOperands checks that an operand's value is stacked before its

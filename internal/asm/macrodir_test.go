@@ -405,11 +405,52 @@ func TestMaskMACRO(t *testing.T) {
 	.MASK SUB
 	.MASK EXT, ^M<R3>`)
 
-	requireRelocations(t, a, "VECTOR+0 W MASK(SUB)", "VECTOR+2 W MASK(EXT) 8 !")
+	requireRelocations(t, a, "VECTOR+0 W MASK(SUB)", "VECTOR+2 W 8 MASK(EXT) !")
 	requireBytes(t, psectBytes(t, a, "VECTOR"), 0, 0, 0, 0)
 	requireSymbol(t, a, "EXT", SymExternal)
 
 	requireMACROError(t, ".PSECT CODE\nNOTENTRY: NOP\n.MASK NOTENTRY", vmserrors.VAX_NOTENTRY)
+}
+
+// TestTransferMACRO checks MACRO-32's .TRANSFER: it stores nothing, makes
+// its symbol global, and gives the linker an OPR_REDEF at the location
+// counter. A reference to the symbol goes to the linker by name, before
+// its definition or after it, as real MACRO's XFR1 has it
+// (testdata/link68).
+func TestTransferMACRO(t *testing.T) {
+	src := `.PSECT VECTOR
+	.TRANSFER SUB
+	.MASK SUB
+	BRW SUB+2
+	.TRANSFER EXT
+	.PSECT CODE
+	.ENTRY SUB, ^M<R2>
+	RET
+	BRB SUB`
+
+	a := macroAssemble(t, src)
+
+	// The vector entry is the mask and the BRW: .TRANSFER took no room.
+	if got := len(psectBytes(t, a, "VECTOR")); got != 5 {
+		t.Fatalf("VECTOR is %d bytes, want 5", got)
+	}
+
+	requireSymbol(t, a, "SUB", SymGlobal|SymTransfer)
+	requireSymbol(t, a, "EXT", SymGlobal|SymExternal)
+	requireRelocations(t, a, "VECTOR+0 W MASK(SUB)", "VECTOR+3 WD SUB 2 +", "CODE+4 BD SUB")
+
+	requireDump(t, objectDump(t, src),
+		`OPR_REDEF "SUB"`, `STA_EPM "SUB"`, "STO_W",
+		"STO_IMM 1 bytes: 31", `STA_GBL "SUB"`, "STA_UB 0x2", "OPR_ADD", "STO_WD",
+		`OPR_REDEF "EXT"`)
+
+	requireMACROError(t, ".PSECT V\n.TRANSFER", vmserrors.VAX_EXTRATEXT)
+	requireMACROError(t, ".PSECT V\n.TRANSFER 10$", vmserrors.VAX_NOTGLOBAL)
+	requireMACROError(t, ".PSECT V,ABS\n.TRANSFER SUB", vmserrors.VAX_ABSDATA)
+
+	if _, err := New(true).Assemble(".TRANSFER SUB\n"); !errors.Is(err, vmserrors.New(vmserrors.VAX_MACROONLY)) {
+		t.Errorf("console dialect: %v, want MACROONLY", err)
+	}
 }
 
 // TestFloatingMACRO checks MACRO-32's names for the floating-point data

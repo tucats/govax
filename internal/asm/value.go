@@ -437,6 +437,11 @@ func (a *Assembler) lookupSymbolValue(name string, st *exprState) (exprVal, erro
 	usable := found && (sym.defined() || (!st.allowForward && a.dialect == DialectConsole))
 
 	switch {
+	case usable && sym.sect != nil && sym.flags&SymTransfer != 0:
+		// The linker may redefine a .TRANSFER symbol, so the object
+		// refers to it by name (see pseudoTransfer).
+		return exprVal{x: &rexpr{op: rSym, key: resolved}}, nil
+
 	case usable && sym.sect != nil:
 		return exprVal{x: baseNode(sym.sect, sym.value)}, nil
 

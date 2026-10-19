@@ -126,7 +126,7 @@ func (t *rexpr) resolved() *rexpr {
 func (t *rexpr) substituted() *rexpr {
 	switch t.op {
 	case rSym:
-		if t.sym == nil || !t.sym.defined() {
+		if t.sym == nil || !t.sym.defined() || t.sym.flags&SymTransfer != 0 {
 			return t
 		}
 

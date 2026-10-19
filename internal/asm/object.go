@@ -407,6 +407,11 @@ func (e *emitter) event(ev outEvent) error {
 
 		e.loc += ev.size
 
+	case evTransfer:
+		// The linker redefines the symbol at its own location, which
+		// the commands so far have left at offset.
+		e.b.Emit(obj.Command{Op: opRedefine, Name: ev.sym.name})
+
 	case evPatch:
 		e.b.Emit(obj.Command{Op: opAugmentRelocBase, Value: ev.offset - e.loc})
 
@@ -635,6 +640,7 @@ var (
 	opAugmentRelocBase = tirOp("CTL_AUGRB")
 	opNegate           = tirOp("OPR_NEG")
 	opComplement       = tirOp("OPR_COM")
+	opRedefine         = tirOp("OPR_REDEF")
 
 	// binaryOps are the TIR operators for MACRO-32's binary operators.
 	binaryOps = map[byte]obj.Op{

@@ -502,7 +502,18 @@ func (a *Assembler) listFields(l *listLine) []listBytes {
 					n--
 				}
 
-				out = append(out, listBytes{offset: p, data: littleEndian(r.expr.placeholder(), n), group: f.group, mark: markReloc})
+				// A branch the linker finishes is listed as a
+				// displacement to its placeholder, from the field's
+				// end: BRW SHR1_LOCAL+2 at ^X22, a symbol XFR1 refers
+				// to by name, is FFDD' (testdata/link68's XFR1). An
+				// operand's displacement shows the placeholder itself
+				// (JMP L^SHR1_BASE+2 is 00000002').
+				v := r.expr.placeholder()
+				if isBranch(r.kind) {
+					v -= p + n
+				}
+
+				out = append(out, listBytes{offset: p, data: littleEndian(v, n), group: f.group, mark: markReloc})
 				p += n
 
 				continue

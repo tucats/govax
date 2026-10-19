@@ -151,8 +151,10 @@ func init() {
 		"DSABL":   {macro, func(a *Assembler, c *cursor) error { return a.pseudoEnable(c, false) }},
 		"DEFAULT": {macro, (*Assembler).pseudoDefault},
 
-		// Routine entry points.
-		"ENTRY": {both, (*Assembler).pseudoEntry},
+		// Routine entry points, and a shareable image's transfer
+		// vectors.
+		"ENTRY":    {both, (*Assembler).pseudoEntry},
+		"TRANSFER": {macro, (*Assembler).pseudoTransfer},
 
 		// Conditional assembly.
 		"IF":            {both, (*Assembler).pseudoIf},

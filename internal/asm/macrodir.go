@@ -400,7 +400,9 @@ func (a *Assembler) pseudoMaskMACRO(c *cursor) error {
 			return err
 		}
 
-		t = &rexpr{op: rBinary, bin: '!', l: t, r: constNode(v)}
+		// Real MACRO stacks the expression first, then the mask
+		// (testdata/link68's XFR1).
+		t = &rexpr{op: rBinary, bin: '!', l: constNode(v), r: t}
 	}
 
 	// The mask is the entry point's, wherever it's defined, so the
@@ -414,6 +416,49 @@ func (a *Assembler) pseudoMaskMACRO(c *cursor) error {
 	a.relocs = append(a.relocs, relocation{sect: a.cur, offset: a.cur.loc, kind: fixAddrW, expr: t, stmt: a.stmt})
 
 	return a.emitWord(0)
+}
+
+// pseudoTransfer assembles MACRO-32's .TRANSFER symbol, which starts
+// an entry of a shareable image's transfer vector. It stores nothing:
+// the object tells the linker (TIR$C_OPR_REDEF, the Linker manual, 7.4)
+// that when it links a shareable image, symbol's universal value is the
+// location counter here, the vector entry, rather than the routine
+// itself. symbol is made global.
+//
+// The object refers to symbol by name (STA_GBL) wherever it's used, even
+// where the module defines it: real MACRO's XFR1 (testdata/link68)
+// branches to its own SHR1_LOCAL, defined later in another psect, that
+// way. Whether that's because .TRANSFER names it, as govax takes it, or
+// because the reference is forward, is unconfirmed: no real object has a
+// forward reference to a global of its own in another psect without
+// .TRANSFER. A reference read before the .TRANSFER, to a symbol already
+// defined, keeps its psect and offset.
+//
+// The location must be one the linker knows, so .TRANSFER in an
+// absolute psect is ABSDATA, as data there is; real MACRO's rule there
+// is unconfirmed.
+func (a *Assembler) pseudoTransfer(c *cursor) error {
+	c.skipBlanks()
+
+	name := scanName(c)
+
+	switch {
+	case name == "":
+		return vmserrors.New(vmserrors.VAX_EXTRATEXT, c.rest())
+	case isLocalLabel(name):
+		return vmserrors.New(vmserrors.VAX_NOTGLOBAL, name)
+	}
+
+	sym := a.declareSymbol(name, SymGlobal|SymTransfer)
+	sym.referenced = true
+
+	if err := a.output(); err != nil {
+		return err
+	}
+
+	a.logEvent(outEvent{kind: evTransfer, sect: a.cur, offset: a.cur.loc, sym: sym})
+
+	return nil
 }
 
 // warn records a warning for the statement being assembled.

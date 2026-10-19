@@ -57,6 +57,10 @@ const (
 	// symbol table doesn't mark global (G) while it's undefined, though
 	// .EXTERNAL also sets SymGlobal.
 	SymExtern
+	// SymTransfer marks a symbol named by .TRANSFER, which the linker
+	// may redefine (see pseudoTransfer): the object refers to it by
+	// name, even where the module defines it.
+	SymTransfer
 )
 
 // fixupKind says how a pending forward reference's value should be written

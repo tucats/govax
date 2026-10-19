@@ -372,6 +372,13 @@ func (x *machine) command(c obj.Command) error {
 	case "CTL_AUGRB":
 		x.loc += c.StackedValue()
 
+	case "OPR_REDEF":
+		// .TRANSFER: the symbol's universal value in a shareable image
+		// is the location here, its transfer vector entry (the Linker
+		// manual, 7.4). It touches neither the stack nor the location,
+		// and an executable has no universal symbols, so an executable
+		// link ignores it, as real LINK does (testdata/link68's E2).
+
 	case "STO_PICR":
 		if x.debug {
 			return fmt.Errorf("a general mode operand in a traceback record")
