@@ -1058,14 +1058,14 @@ What the images settled:
   table. FAILSIG, FSIGNOTB, and PI, known differences since Phase 29,
   now match real LINK's images when linked with VMS's own libraries
   (`TestLinkProbeImagesMatchRealLINK`, `TestLinkPiMatchesRealLINK`).
-  govax's own LIBRTL table (`vmsdef.ImageSymbols`) has no places yet.
-  `ImageSymbol.Order` and the generator are ready for them, and the
-  generator fills them in without `-replace`. Until the table is
-  regenerated from LIBRTL.EXE (`go run ./internal/vmsdef/gen -image
-  .../librtl.exe`, plus LIBRTL2 and CRFSHR), the cells of a link that
-  uses govax's tables fall back on ascending names, and the RLFSIG and
-  RLFSIGNT round images stay skipped. `TestCapturedLIBRTLMatchesImage`
-  checks the places once they're there. Why real LINK's two orders
+  govax's own LIBRTL table (`vmsdef.ImageSymbols`) keeps the places
+  too (`ImageSymbol.Order`). The author regenerated it from LIBRTL.EXE
+  (`go run ./internal/vmsdef/gen -image .../librtl.exe`; the generator
+  fills in places without `-replace`), so the RLFSIG and RLFSIGNT round
+  images, linked with govax's tables, match real LINK's as well, and
+  `TestCapturedLIBRTLMatchesImage` checks every place. LIBRTL2's and
+  CRFSHR's symbols have no places yet, so their cells fall back on
+  ascending names until those images are merged again the same way. Why real LINK's two orders
   differ is **unconfirmed**. It may come from how it enters an options
   file's image's symbols (all at once) and a library's (as each is
   looked up).
