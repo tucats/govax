@@ -1,6 +1,8 @@
 package corevms
 
 import (
+	"slices"
+
 	"github.com/tucats/govax/internal/registers"
 	"github.com/tucats/govax/internal/vm"
 	"github.com/tucats/govax/internal/vmsdef"
@@ -189,7 +191,7 @@ func pageExists(pte vm.PTE) bool {
 //
 // It returns SS$_NORMAL; SS$_NOPRIV for a system-region page;
 // SS$_VASFULL for a page beyond the region's page table (with paging on,
-// for a range the table area can't hold, before creating any page);
+// for a P1 range the table area can't hold, before creating any page);
 // SS$_PAGOWNVIO;
 // SS$_EXQUOTA, with paging on, when the job's paging file quota runs out
 // (pgflquota.go); or SS$_ACCVIO if inadr can't be read or retadr written.
@@ -206,9 +208,10 @@ func serviceSysCretva(env *Environment, argv []uint32) (uint32, error) {
 	retadr := optArg(argv, 1)
 	mode := max(registers.AccessMode(optArg(argv, 2)&3), env.cpu.PSL().CurMod())
 
-	// A range the table area can't hold is SS$_VASFULL with nothing
-	// created (spaceHolds); within it, the pages are created one at a
-	// time, and the quota may stop them partway.
+	// A P1 range the table area can't hold is SS$_VASFULL with nothing
+	// created (spaceHolds); otherwise the pages are created one at a
+	// time, and the quota or (in P0) the area's end may stop them
+	// partway.
 	if !env.spaceHolds(r) {
 		if !env.storeRetadr(retadr, nil) {
 			return ssAccVio, nil
@@ -360,7 +363,7 @@ const p1Base = 0x40000000
 // what was deleted; P1's bottom, the lowest page its length register
 // P1LR admits. Deleting works as for $DELTVA (acmode maximized, owner
 // checked, pages that don't exist passed over), from the region's end
-// inwards, and retadr receives the range deleted.
+// inwards, and retadr receives the range deleted, in $EXPREG's order.
 //
 // It returns SS$_NORMAL; SS$_ILLPAGCNT for a count of 0 or more pages
 // than the region has; SS$_PAGOWNVIO; SS$_BADPARAM for another region; or
@@ -403,6 +406,11 @@ func serviceSysCntreg(env *Environment, argv []uint32) (uint32, error) {
 	if optArg(argv, 3) == regionP0 && len(done) > 0 && !env.createdSpace() {
 		env.RegionSize[0] = done[len(done)-1]
 	}
+
+	// retadr is in the order $EXPREG reports a region's pages, P0's low
+	// to high and P1's high to low: the reverse of the deletion's, from
+	// the region's end inwards (VMS 7.1, testdata/pg67's A7).
+	slices.Reverse(done)
 
 	if !env.storeRetadr(retadr, done) {
 		return ssAccVio, nil

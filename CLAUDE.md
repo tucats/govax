@@ -199,11 +199,13 @@ never had.
   an S0 larger than physical memory is VMTOOLARGE; subtask 9, part 1,
   done 2026-10-19: the suite with paging forced on, which found a /P1
   too small for paging (VMINIT's P1TOOSMALL under
-  `corevms.MinPagingP1Pages`), creations the table area can't hold
+  `corevms.MinPagingP1Pages`), P1 creations the table area can't hold
   (`$CRETVA` and stack expansion SS$_VASFULL with nothing created,
-  `regions.go`'s `spaceHolds`), and an exception with no user stack to
-  report it on (the image ends, `condition.go`'s `lastChanceExit`); the
-  probe, `testdata/pg67`, waits for its VAX run). Paging is synchronous, with no
+  `regions.go`'s `spaceHolds`; P0's made page by page), and an exception
+  with no user stack to report it on (the image ends, no message,
+  `condition.go`'s `lastChanceExit`); and the probe, checked against VMS
+  7.1 by `testdata/pg67`, part 2 the same day: `$CNTREG`'s retadr in
+  `$EXPREG`'s order, F$GETJPI's FREP0VA/FREP1VA as hex). Paging is synchronous, with no
   PFW, COLPG, or FPG waits. Each later phase has a planning doc.
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
@@ -379,8 +381,10 @@ never had.
   recursion; T the stack at the first instruction; C part Q in a
   detached process with a small quota, its stack outgrowing it), linked
   twice by `pg67.com` (PG67S.EXE with `pg67s.opt`'s STACK=50).
-  `TestPG67DryRun` runs it on govax with govax's links until VMS's run
-  is back.
+  `TestPG67Oracle` runs VMS V7.1's own images (`vax/pg67.exe`,
+  `vax/pg67s.exe`) on govax and matches VMS's lines, VIRTPEAK masked,
+  but for `expectedPG67Differences` (the first instruction's lines, and
+  counts that follow from VMS's own FREPTECNT and quota).
 - `testdata/probe49/` — Phase 49's VMS probe in three rounds (`probe6`,
   `probe6b`, `probe6c`; README.md has each round's answers), run by
   `TestProbe6*`; `testdata/rms49/` and `testdata/sec49/` are the phase's

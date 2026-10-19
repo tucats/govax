@@ -15,7 +15,7 @@ program run part Q in a detached process.
 | `pg67.com` | The procedure: SYSGEN's parameters, SHOW PROCESS/QUOTA, the build, the runs, and a `va` line (F$GETJPI's FREP0VA, FREP1VA, FREPTECNT, VIRTPEAK, PAGFILCNT) after each |
 | `exchange.cmd` | The govax console script that builds the exchange volume |
 | `copyout.cmd` | The govax console script that copies the results back |
-| `vax/` | VMS's output, after the run |
+| `vax/` | VMS's output: the procedure's log, each part's lines, the maps, the object, and both images (no `pg67l1.log`: the first LINK wrote nothing, so its file was never made) |
 
 ## How the program works
 
@@ -93,9 +93,58 @@ so the quota and the room are told apart by the status.
    messages (`pg67_build.log`) may quote STARLET macro expansions: the
    clean-room hook refuses them until the author has audited them.
 
-## govax's dry run (2026-10-19)
+## The VAX run (2026-10-19)
 
-`TestPG67DryRun` (`internal/console/pg67_test.go`) builds PG67.EXE and
+OpenVMS V7.1 on simh's VAX 8600 (`vax/`). That VAX had VIRTUALPAGECNT
+65500, CTLPAGES 100, and PQL_DPGFLQUOTA and PQL_MPGFLQUOTA 16400 (so the
+detached process's 2048 became 16400); SYSTEM's PGFLQUOTA was 40960.
+`TestPG67Oracle` runs VMS's own two images on govax as PG67.COM did and
+matches VMS's lines, VIRTPEAK masked (it's the process's peak, which
+VMS's DCL had already taken higher), but for `expectedPG67Differences`.
+VMS answered:
+
+- **Confirmed as govax had them:** every `$EXPREG`, `$DELTVA`, and
+  `$CRETVA` line of part A, its items' changes and charges; `$DELTVA` of
+  a region's end pages shortens it, and P1's freed addresses are reused
+  (A4); a middle page's deletion leaves the length, and reading it is
+  mask 0; `$CRETVA` past P0's end lengthens P0 over the skipped pages,
+  which are mask 0; the masks past P0's end (1, and 5 for a write), near
+  or far; PROBE never expands; a user-mode read below P1's low end
+  creates every page down to it, charged, and an executive-mode one is
+  mask 1 with nothing created; a read further below than FREPTECNT
+  creates nothing (A13); the recursion's 87 pages, kept after the
+  return, with the next P1 `$EXPREG` just below; STACK=50's 30 pages
+  more at the first instruction; and part Q's image ending with
+  SS$_ACCVIO (`finalsts=1000000C`) when its stack outgrew the quota,
+  no handler run, no Q2 or Q3 line. The image's whole changes (A14) are
+  the same. After every run DCL's FREP0VA is empty, and FREP1VA,
+  FREPTECNT, and PAGFILCNT are back where they were.
+- **Changed:**
+  - **Only P1 creation is checked for room first:** A12's `$CRETVA` of
+    FREPTECNT+100 pages made none in P1 (SS$_VASFULL), but in P0 made
+    39708 pages one at a time until the quota stopped it (SS$_EXQUOTA).
+    govax's dry run had refused both at once; now P0's pages are made
+    one at a time as VMS's were, stopping at the quota or the area's end
+    (`regions.go`'s `spaceHolds`).
+  - **`$CNTREG`'s retadr** is in `$EXPREG`'s order (P0 low to high, P1
+    high to low), the reverse of the deletion's (A7); govax's was the
+    deletion's.
+  - **No message** when an exception has no stack to be reported on:
+    part Q's output has none (`lastChanceExit`).
+  - **F$GETJPI's FREP0VA and FREP1VA** are eight hexadecimal digits, and
+    FREP0VA "" when P0 is empty (the procedure's `va` lines: `frep0va=
+    frep1va=7FED5600`), as DCL writes JPI$_OWNER; govax's were decimal.
+- **Differences that stay** (the test's list): the first instruction's
+  lines (VMS's activation used 112 bytes of the stack to govax's 88, its
+  FREPTECNT is VIRTUALPAGECNT 65500's less DCL's P1 pages, and its job
+  had 1188 pages charged to govax's 25: DCL, LIBRTL, P1's image
+  pieces); A12's P0 count, which is the quota left; and A13's address,
+  which is FREPTECNT's distance below FREP1VA.
+
+## govax's dry run (2026-10-19, before the VAX run)
+
+`TestPG67DryRun` (`internal/console/pg67_test.go`, since replaced by
+`TestPG67Oracle`) built PG67.EXE and
 PG67S.EXE with govax's MACRO and LINK/NOTRACEBACK on an RD54 volume
 (paging on, a 20000-block page file on the volume) and runs parts A, S,
 T (both images), and C as PG67.COM does. What govax answers, for
@@ -123,8 +172,8 @@ comparison with VMS's:
 - **A11:** an executive-mode read at FREP1VA is an access violation,
   mask 1, nothing created.
 - **A12:** `$CRETVA` of FREPTECNT+100 pages, in either region, is
-  SS$_VASFULL with nothing made (govax checks the room for the whole
-  range first; Phase 67's subtask 9 changed it from page by page).
+  SS$_VASFULL with nothing made (govax checked the room for the whole
+  range first; VMS does so only in P1, above).
 - **A13:** the far read is mask 1, nothing created.
 - **S:** the recursion grows P1 by 87 pages (the default stack's 20
   held the rest), each charged, and the pages stay after the return; the
@@ -134,6 +183,5 @@ comparison with VMS's:
 - **C, Q:** with 10 pages of quota left, the recursion's stack can't
   grow past them, and there's no stack left to report the access
   violation on: the handler is passed over, the condition's message goes
-  to the console (govax's catch-all writes there for every process), and
-  the image ends with SS$_ACCVIO (`finalsts=1000000C`), so no Q2 or Q3
-  line.
+  to the console (no longer: VMS writes none), and the image ends with
+  SS$_ACCVIO (`finalsts=1000000C`), so no Q2 or Q3 line.

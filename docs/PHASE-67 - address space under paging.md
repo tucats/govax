@@ -7,9 +7,9 @@ subtask 3, the user stack, done 2026-10-19; subtask 4, the table area
 backed on demand, done 2026-10-19; subtask 5, the S0 pool backed on
 demand, done 2026-10-19; subtask 6, PGFLQUOTA at creation only, done
 2026-10-19; subtask 7, the console's P0 conveniences, done 2026-10-19;
-subtask 8, VMINIT's sizes with paging on, done 2026-10-19; subtask 9,
-part 1 (the suite with paging forced on, and the probe written,
-`testdata/pg67`), done 2026-10-19, part 2 (the VAX run) waiting.
+subtask 8, VMINIT's sizes with paging on, done 2026-10-19; subtask 9 (the
+suite with paging forced on, and the probe, `testdata/pg67`, checked
+against VMS 7.1), done 2026-10-19.
 Planned 2026-10-15,
 deferred to the end of the paging program (the author, 2026-10-15).
 Needs Phase 66. Part of the paging
@@ -1069,3 +1069,35 @@ FREP1VA where they vary.
     detached process's message isn't in its output file.
   - **Next:** the VAX run (the README's steps), then govax changed to
     its answers and `TestPG67Oracle` in place of the dry run.
+- **2026-10-19:** Subtask 9, part 2: the probe's VMS run
+  (`testdata/pg67/vax`; README.md's "The VAX run"), OpenVMS V7.1 on
+  simh's VAX 8600. `TestPG67Oracle` (in place of the dry run) runs VMS's
+  own two images on govax as PG67.COM did and matches VMS's lines,
+  VIRTPEAK masked, but for `expectedPG67Differences`.
+  - **Confirmed** (the progress log's unconfirmed items): FREP0VA and
+    FREP1VA as addresses, FREP1VA the page below P1's low end;
+    `$DELTVA` of a region's end shortens it, P1's too, and a later P1
+    `$EXPREG` reuses the addresses (so `TestRun_fileSections`' step 32,
+    a paging-off test, holds only with paging off); `$CRETVA` beyond
+    P0's end lengthens P0 over the pages it skips, which are protection
+    violations (mask 0); the masks past P0's end; PROBE never expands;
+    user-mode references below P1's low end create every page down to
+    them, charged, kept after the code returns, and executive-mode ones
+    don't; the stack's size at the first instruction is the image's
+    STACK= (30 pages more for STACK=50); a stray reference further below
+    than FREPTECNT creates nothing; an exception with no stack to report
+    it on ends the image with the condition, no handler run (part Q).
+  - **Changed:** only P1 creation checks the room for the whole range
+    first (`spaceHolds`): VMS's `$CRETVA` of FREPTECNT+100 P1 pages made
+    none, but in P0 made its pages one at a time until the quota stopped
+    it. `$CNTREG`'s retadr is in `$EXPREG`'s order, the reverse of the
+    deletion's (`TestCntreg`). The last chance exit writes no message.
+    F$GETJPI writes FREP0VA and FREP1VA as it writes JPI$_OWNER (eight
+    hexadecimal digits, "" for 0), though the DCL Dictionary calls them
+    integers.
+  - **Differences that stay:** the first instruction's lines (the
+    activation's stack use, FREPTECNT, the job's charges), A12's P0 count
+    (the quota left), and A13's address (FREPTECNT's distance).
+  - **Not asked:** SS$_VASFULL at a small VIRTUALPAGECNT (a SYSGEN
+    parameter needing a reboot); the item forms of FREP0VA and FREP1VA
+    in LIB$GETJPI, left numbers.

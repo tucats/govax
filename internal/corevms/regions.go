@@ -187,40 +187,30 @@ func (env *Environment) coverPage(addr uint32) bool {
 	return env.setRegionLength(regionP1, page)
 }
 
-// spaceHolds reports whether env's table area can describe every page of
-// r with the regions as long as they'd then be: in created space, P0
-// reaching r's highest P0 page and P1 reaching down to its lowest P1
-// page, together within the area's entries (FREPTECNT's room). A
-// creation the area can't hold fails at once, SS$_VASFULL, with nothing
-// created, so that a stray reference far below the user stack (the
-// book's 16.2.1.3) can't spend the room P0 needs on pages it reaches
-// only part of the way to: VMS 7.1 ran testdata/lib59's references to
-// 0x55555555 without losing its heap's room, its own VIRTUALPAGECNT
-// limit checked for the whole range (inferred: the probe's question,
-// testdata/pg67). Outside created space every page of the tables
-// exists, and createPage's own check is the one that applies.
+// spaceHolds reports whether env's table area can describe every P1
+// page of r: in created space, P1 reaching down to r's lowest P1 page
+// with P0 as long as it is, within the area's entries (FREPTECNT's
+// room). A P1 creation the area can't hold fails at once, SS$_VASFULL,
+// with nothing created, so that a stray reference far below the user
+// stack (the book's 16.2.1.3: the expansion is a $CRETVA) can't spend
+// the room P0 needs on pages it reaches only part of the way to. VMS 7.1
+// answered so (testdata/pg67's A12 and A13: $CRETVA of more P1 pages
+// than FREPTECNT made none, and so did a read that far below), where the
+// same request in P0 made its pages one at a time until the paging file
+// quota stopped it; P0's pages aren't checked here, and createPage's own
+// check (coverPage) stops them at the area's end. Outside created space
+// every page of the tables exists, and createPage's check is the one
+// that applies.
 func (env *Environment) spaceHolds(r pageRange) bool {
-	if !env.createdSpace() {
+	lo, hi := min(r.first, r.last), max(r.first, r.last)
+	if !env.createdSpace() || hi < p1Base || hi >= s0Base {
 		return true
 	}
 
-	lo, hi := min(r.first, r.last), max(r.first, r.last)
-	if hi >= s0Base {
-		return true // createPage refuses system pages itself
-	}
-
 	sp := env.Space
-	p0, p1 := uint64(sp.P0LR), uint64(regionPages-sp.P1LR)
+	p1 := max(uint64(regionPages-sp.P1LR), uint64(regionPages-(max(lo, p1Base)-p1Base)/pageSize))
 
-	if lo < p1Base {
-		p0 = max(p0, uint64(min(hi, p1Base-1)/pageSize)+1)
-	}
-
-	if hi >= p1Base {
-		p1 = max(p1, uint64(regionPages-(max(lo, p1Base)-p1Base)/pageSize))
-	}
-
-	return p0+p1 <= uint64(sp.Entries)
+	return uint64(sp.P0LR)+p1 <= uint64(sp.Entries)
 }
 
 // setRegionLength sets env's P0 length register (region 0) or P1 length

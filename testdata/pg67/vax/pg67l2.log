@@ -1,0 +1,2 @@
+! PG67S.OPT - PG67S.EXE: a user stack of 50 pages.
+STACK=50

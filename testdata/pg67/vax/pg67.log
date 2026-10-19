@@ -1,0 +1,216 @@
+$ WRITE SYS$OUTPUT F$GETSYI("VERSION"), " ", F$GETSYI("HW_NAME")
+V7.1     VAX 8600
+$ RUN SYS$SYSTEM:SYSGEN
+USE ACTIVE
+SHOW VIRTUALPAGECNT
+VIRTUALPAGECNT              65500      12032       512   4194304 Pages      
+SHOW CTLPAGES
+CTLPAGES                      100        100        10     65535 Pages      
+SHOW PQL_DPGFLQUOTA
+PQL_DPGFLQUOTA              16400       8192       512        -1 Pages      D
+SHOW PQL_MPGFLQUOTA
+PQL_MPGFLQUOTA              16400        512       512        -1 Pages      D
+EXIT
+$ SHOW PROCESS/QUOTA
+
+19-OCT-2026 14:48:12.91   User: SYSTEM           Process ID:   00000114
+                          Node: SIMVAX           Process name: "SYSTEM"
+
+Process Quotas:
+ Account name: SYSTEM  
+ CPU limit:                      Infinite  Direct I/O limit:        40
+ Buffered I/O byte count quota:     32256  Buffered I/O limit:      40
+ Timer queue entry quota:              30  Open file quota:        298
+ Paging file quota:                 39470  Subprocess quota:        10
+ Default page fault cluster:           16  AST quota:               48
+ Enqueue quota:                       200  Shared file limit:        0
+ Max detached processes:                0  Max active jobs:          0
+$ !
+$ ! The program, assembled, and linked twice: PG67.EXE with LINK's
+$ ! default user stack, PG67S.EXE with STACK=50.
+$ !
+$ DEFINE/USER_MODE SYS$OUTPUT PG67_BUILD.LOG
+$ DEFINE/USER_MODE SYS$ERROR PG67_BUILD.LOG
+$ MACRO/NOLIST PG67
+$ DEFINE/USER_MODE SYS$OUTPUT PG67L1.LOG
+$ DEFINE/USER_MODE SYS$ERROR PG67L1.LOG
+$ LINK/NOTRACEBACK/MAP=PG67/FULL PG67
+$ DEFINE/USER_MODE SYS$OUTPUT PG67L2.LOG
+$ DEFINE/USER_MODE SYS$ERROR PG67L2.LOG
+$ LINK/NOTRACEBACK/MAP=PG67S/FULL/EXECUTABLE=PG67S PG67,PG67S/OPTIONS
+$ DIRECTORY/SIZE=ALL PG67*.EXE
+
+Directory DUA1:[000000]
+
+PG67.EXE;1                19/19     
+PG67S.EXE;1               19/19     
+
+Total of 2 files, 38/38 blocks.
+$ GOSUB VA
+$ VA:
+$ WRITE SYS$OUTPUT "va frep0va=", F$GETJPI("","FREP0VA"), " frep1va=", F$GETJPI("","FREP1VA"), -
+	" freptecnt=", F$GETJPI("","FREPTECNT"), " virtpeak=", F$GETJPI("","VIRTPEAK"), -
+	" pagfilcnt=", F$GETJPI("","PAGFILCNT")
+va frep0va= frep1va=7FED5600 freptecnt=63140 virtpeak=9047 pagfilcnt=39799
+$ RETURN
+$ !
+$ ! Part A: created space. Each run's items before and after it show
+$ ! what image rundown gives back.
+$ !
+$ DEFINE PG67_PART A
+$ DEFINE/USER_MODE SYS$OUTPUT PG67A.OUT
+$ RUN PG67
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ GOSUB VA
+$ VA:
+$ WRITE SYS$OUTPUT "va frep0va=", F$GETJPI("","FREP0VA"), " frep1va=", F$GETJPI("","FREP1VA"), -
+	" freptecnt=", F$GETJPI("","FREPTECNT"), " virtpeak=", F$GETJPI("","VIRTPEAK"), -
+	" pagfilcnt=", F$GETJPI("","PAGFILCNT")
+va frep0va= frep1va=7FED5600 freptecnt=63140 virtpeak=42179 pagfilcnt=39799
+$ RETURN
+$ !
+$ ! Part S: the user stack grows by itself.
+$ !
+$ DEFINE PG67_PART S
+%DCL-I-SUPERSEDE, previous value of PG67_PART has been superseded
+$ DEFINE/USER_MODE SYS$OUTPUT PG67S.OUT
+$ RUN PG67
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ GOSUB VA
+$ VA:
+$ WRITE SYS$OUTPUT "va frep0va=", F$GETJPI("","FREP0VA"), " frep1va=", F$GETJPI("","FREP1VA"), -
+	" freptecnt=", F$GETJPI("","FREPTECNT"), " virtpeak=", F$GETJPI("","VIRTPEAK"), -
+	" pagfilcnt=", F$GETJPI("","PAGFILCNT")
+va frep0va= frep1va=7FED5600 freptecnt=63140 virtpeak=42179 pagfilcnt=39799
+$ RETURN
+$ !
+$ ! Part T: the first instruction, with the default stack and STACK=50.
+$ !
+$ DEFINE PG67_PART T
+%DCL-I-SUPERSEDE, previous value of PG67_PART has been superseded
+$ DEFINE/USER_MODE SYS$OUTPUT PG67T.OUT
+$ RUN PG67
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ DEFINE/USER_MODE SYS$OUTPUT PG67T50.OUT
+$ RUN PG67S
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ GOSUB VA
+$ VA:
+$ WRITE SYS$OUTPUT "va frep0va=", F$GETJPI("","FREP0VA"), " frep1va=", F$GETJPI("","FREP1VA"), -
+	" freptecnt=", F$GETJPI("","FREPTECNT"), " virtpeak=", F$GETJPI("","VIRTPEAK"), -
+	" pagfilcnt=", F$GETJPI("","PAGFILCNT")
+va frep0va= frep1va=7FED5600 freptecnt=63140 virtpeak=42179 pagfilcnt=39799
+$ RETURN
+$ !
+$ ! Part C: part Q in the detached process PG67DET, with a small paging
+$ ! file quota. The detached process sees only the system's logical
+$ ! names, so the files'names are given with the device's full name.
+$ !
+$ DEV = F$GETDVI(F$PARSE("PG67.EXE",,,"DEVICE"),"FULLDEVNAM")
+$ DIR = F$PARSE("PG67.EXE",,,"DIRECTORY")
+$ DEFINE PG67_IMAGE _SIMVAX$DUA1:[000000]PG67.EXE
+$ DEFINE PG67_OUTQ _SIMVAX$DUA1:[000000]PG67Q.OUT
+$ SHOW LOGICAL PG67_*
+
+(LNM$PROCESS_TABLE)
+
+  "PG67_IMAGE" = "_SIMVAX$DUA1:[000000]PG67.EXE"
+  "PG67_OUTQ" = "_SIMVAX$DUA1:[000000]PG67Q.OUT"
+  "PG67_PART" = "T"
+
+(LNM$JOB_81C6F140)
+
+(LNM$GROUP_000001)
+
+(LNM$SYSTEM_TABLE)
+$ DEFINE PG67_PART C
+%DCL-I-SUPERSEDE, previous value of PG67_PART has been superseded
+$ DEFINE/USER_MODE SYS$OUTPUT PG67C.OUT
+$ RUN PG67
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ GOSUB VA
+$ VA:
+$ WRITE SYS$OUTPUT "va frep0va=", F$GETJPI("","FREP0VA"), " frep1va=", F$GETJPI("","FREP1VA"), -
+	" freptecnt=", F$GETJPI("","FREPTECNT"), " virtpeak=", F$GETJPI("","VIRTPEAK"), -
+	" pagfilcnt=", F$GETJPI("","PAGFILCNT")
+va frep0va= frep1va=7FED5600 freptecnt=63140 virtpeak=42179 pagfilcnt=39799
+$ RETURN
+$ DEASSIGN PG67_PART
+$ DEASSIGN PG67_IMAGE
+$ DEASSIGN PG67_OUTQ
+$ TYPE PG67A.OUT
+A1 first instruction: frep0va=00002600 sp-frep1va=00002990 freptecnt=63099 virtpeak=9047
+A1 pgflquota less pagfilcnt: 1188
+A2 expreg 10 P0: 00000001 retadr frep0va+00000000 frep0va+000013FF
+A2 expreg 10 P0: p0=10 p1=0 free=-10 peak=0 charged=10
+A3 expreg 10 P1: 00000001 retadr frep1va+000001FF frep1va+FFFFEE00
+A3 expreg 10 P1: p0=0 p1=10 free=-10 peak=0 charged=10
+A4 deltva P1's lowest 3: 00000001
+A4 deltva P1's lowest 3: p0=0 p1=-3 free=3 peak=0 charged=-3
+A4 then expreg 2 P1: 00000001 retadr frep1va+000007FF frep1va+00000400
+A4 then expreg 2 P1: p0=0 p1=2 free=-2 peak=0 charged=2
+A5 deltva P0's last 3: 00000001
+A5 deltva P0's last 3: p0=-3 p1=0 free=3 peak=0 charged=-3
+A6 deltva a middle P0 page: 00000001
+A6 deltva a middle P0 page: p0=0 p1=0 free=0 peak=0 charged=-1
+A6 read of it: signal 0000000C mask=00000000 va=base+00000600
+A6 probe of it: read=0 write=0
+A7 cntreg 2 P0: 00000001 retadr frep0va+FFFFFC00 frep0va+FFFFFFFF
+A7 cntreg 2 P0: p0=-2 p1=0 free=2 peak=0 charged=-2
+A7 cntreg 2 P1: 00000001 retadr frep1va+000005FF frep1va+00000200
+A7 cntreg 2 P1: p0=0 p1=-2 free=2 peak=0 charged=-2
+A8 cretva 5 pages past P0's end: 00000001 retadr frep0va+00000A00
+A8 cretva past P0's end: p0=6 p1=0 free=-6 peak=0 charged=1
+A8 read of a skipped page: signal 0000000C mask=00000000 va=base+00000400
+A8 probe of a skipped page: read=0 write=0
+A8 read of the new page: ok
+A9 read at P0's end: signal 0000000C mask=00000001 va=base+00000000
+A9 write at P0's end: signal 0000000C mask=00000005 va=base+00000000
+A9 probe at P0's end: read=0 write=0
+A9 read far past P0's end: signal 0000000C mask=00000001 va=base+00100000
+A9 write far past P0's end: signal 0000000C mask=00000005 va=base+00100000
+A9 probe far past P0's end: read=0 write=0
+A9 after them: p0=0 p1=0 free=0 peak=0 charged=0
+A10 probe at frep1va: read=0 write=0
+A10 after the probe: p0=0 p1=0 free=0 peak=0 charged=0
+A10 read at frep1va: ok
+A10 after the read: p0=0 p1=1 free=-1 peak=0 charged=1
+A10 read 50 pages below: ok
+A10 after it: p0=0 p1=51 free=-51 peak=0 charged=51
+A11 executive read at frep1va: 00000000 signal 0000000C mask=00000001 va=frep1va+00000000
+A11 after it: p0=0 p1=0 free=0 peak=0 charged=0
+A12 cretva freptecnt+100 in P0: 0000001C made=39708
+A12 cretva in P0: p0=39708 p1=0 free=-39708 peak=33132 charged=39708
+A12 cretva freptecnt+100 in P1: 00000244 made=0
+A12 cretva in P1: p0=0 p1=0 free=0 peak=0 charged=0
+A13 read beyond frep1va-freptecnt: signal 0000000C mask=00000001 va=base+FE12CE00
+A13 after it: p0=0 p1=0 free=0 peak=0 charged=0
+A14 the whole image: p0=11 p1=59 free=-70 peak=33132 charged=64
+$ TYPE PG67S.OUT
+A1 first instruction: frep0va=00002600 sp-frep1va=00002990 freptecnt=63099 virtpeak=42179
+A1 pgflquota less pagfilcnt: 1188
+S1 at the deepest: p0=0 p1=87 free=-87 peak=0 charged=87
+S2 after the return: p0=0 p1=87 free=-87 peak=0 charged=87
+S3 expreg 5 P1: 00000001 retadr deepest-frep1va+000001FF deepest-frep1va+FFFFF800
+S3 expreg 5 P1: p0=0 p1=5 free=-5 peak=0 charged=5
+$ TYPE PG67T.OUT
+A1 first instruction: frep0va=00002600 sp-frep1va=00002990 freptecnt=63099 virtpeak=42179
+A1 pgflquota less pagfilcnt: 1188
+$ TYPE PG67T50.OUT
+A1 first instruction: frep0va=00002600 sp-frep1va=00006590 freptecnt=63069 virtpeak=42179
+A1 pgflquota less pagfilcnt: 1218
+$ TYPE PG67C.OUT
+C1 crembx: 00000001
+C1 creprc: 00000001
+C2 ended; termination message: 00000001 iosb=00000001 size=84
+C3 type=3 finalsts=1000000C
+$ TYPE PG67Q.OUT
+A1 first instruction: frep0va=00002600 sp-frep1va=00002990 freptecnt=64413 virtpeak=1087
+A1 pgflquota less pagfilcnt: 676
+Q1 expreg pagfilcnt-10 P0: 00000001 pagfilcnt then 10
+$ SET NOVERIFY

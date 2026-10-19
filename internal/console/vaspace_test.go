@@ -231,8 +231,10 @@ func TestCntreg(t *testing.T) {
 		t.Fatalf("$CNTREG = %#x", got)
 	}
 
-	if a, b := getRange(t, c, vaRetadr); a != vaPages+0x5FF || b != vaPages+0x200 {
-		t.Errorf("retadr %#x-%#x, want %#x-%#x", a, b, vaPages+0x5FF, vaPages+0x200)
+	// retadr is low to high, as $EXPREG reports P0's pages (VMS 7.1,
+	// testdata/pg67's A7), though the pages go from the top down.
+	if a, b := getRange(t, c, vaRetadr); a != vaPages+0x200 || b != vaPages+0x5FF {
+		t.Errorf("retadr %#x-%#x, want %#x-%#x", a, b, vaPages+0x200, vaPages+0x5FF)
 	}
 
 	if c.RTL.RegionSize[0] != vaPages+0x200 {

@@ -390,20 +390,15 @@ func (env *Environment) noStackToReport(psl registers.PSL) bool {
 }
 
 // lastChanceExit is the last chance handler's default for an exception
-// there's no user stack to report (noStackToReport): the condition's
-// message, as the catch-all writes it from sig (the condition, its
-// detail, PC, and PSL), and the image's end with the condition, marked
-// STS$M_INHIB_MSG, as its status. No handler runs, exit handlers
+// there's no user stack to report (noStackToReport): the image's end,
+// with the condition from sig (the condition, its detail, PC, and PSL),
+// marked STS$M_INHIB_MSG, as its status. No handler runs, exit handlers
 // included: there's no stack to call them on (image rundown forgets the
-// user-mode ones). The engine ends the image (cpu.ErrImageExit), as for
-// $EXIT.
+// user-mode ones). Nor is the condition's message written: VMS 7.1's
+// detached process ended so with nothing in its output
+// (testdata/pg67's part Q; its final status SS$_ACCVIO). The engine
+// ends the image (cpu.ErrImageExit), as for $EXIT.
 func (env *Environment) lastChanceExit(sig []uint32) error {
-	body, tail := sig[:len(sig)-2], sig[len(sig)-2:]
-
-	for _, line := range env.formatMessageVector(body, tail, defaultMessageFlags, "") {
-		env.writeConsole(line + "\n")
-	}
-
 	status := sig[0] | stsInhibitMsg
 	env.Process.ExitStatus = status
 	env.cpu.SetGPR(registers.R0, status)

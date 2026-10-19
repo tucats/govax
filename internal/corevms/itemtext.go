@@ -35,7 +35,10 @@ const (
 	FormHex
 
 	// FormOwner is a process's owner's PID (JPI$_OWNER): FormHex, but
-	// DCL writes no owner (0) as an empty string.
+	// DCL writes no owner (0) as an empty string. DCL writes the address
+	// items FREP0VA and FREP1VA the same way (VMS 7.1, testdata/pg67:
+	// "7FED5600", and "" for an empty P0), though the DCL Dictionary
+	// calls them integers.
 	FormOwner
 
 	// FormPrivileges is a privilege mask, written as the names of its
@@ -105,6 +108,8 @@ var jpiForms = map[string]forms{
 	"JPI$_PID":        both(FormHex),
 	"JPI$_MASTER_PID": both(FormHex),
 	"JPI$_OWNER":      both(FormOwner),
+	"JPI$_FREP0VA":    {dcl: FormOwner, lib: FormNumber},
+	"JPI$_FREP1VA":    {dcl: FormOwner, lib: FormNumber},
 	"JPI$_AUTHPRIV":   both(FormPrivileges),
 	"JPI$_CURPRIV":    both(FormPrivileges),
 	"JPI$_IMAGPRIV":   both(FormPrivileges),
