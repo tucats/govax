@@ -117,7 +117,7 @@ func (sys *System) BuildStacks(pid, kernel, executive, supervisor uint32) (*Proc
 	}
 
 	if err != nil {
-		sys.s0.Free(base)
+		sys.FreeS0(base)
 
 		return nil, err
 	}
@@ -156,7 +156,7 @@ func (sys *System) allocatePCB(pid uint32, st *ProcessStacks) error {
 	}
 
 	if err != nil {
-		sys.s0.Free(va)
+		sys.FreeS0(va)
 
 		return err
 	}

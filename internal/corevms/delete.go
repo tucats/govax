@@ -304,7 +304,7 @@ func (sys *System) releaseMemory(env *Environment) {
 	env.refundAllPageFile()
 
 	if sys.s0 != nil {
-		sys.s0.FreeProcess(env.Process.PID)
+		sys.FreeProcessS0(env.Process.PID)
 	}
 }
 

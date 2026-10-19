@@ -94,21 +94,14 @@ func (sys *System) TrimTableArea(s *ProcessSpace) {
 	}
 }
 
-// releaseTableArea gives back s's table area: with paging on, the
-// frames behind its pages (the pages are left without, for the pool's
-// next use to back as it needs), then the pool's pages themselves.
+// releaseTableArea gives back s's table area to the pool, and with
+// paging on the frames behind its pages (FreeS0).
 func (sys *System) releaseTableArea(s *ProcessSpace) {
 	if s.Table == 0 {
 		return
 	}
 
-	if sys.mem.Paging() != nil {
-		for va := s.P0BR &^ pageMask; va < s.areaEnd(); va += pageSize {
-			sys.unbackS0Page(va)
-		}
-	}
-
-	sys.s0.Free(s.Table)
+	sys.FreeS0(s.Table)
 	s.Table = 0
 }
 
@@ -207,4 +200,27 @@ func (sys *System) unbackS0Page(va uint32) {
 	if sys.mem.StorePTE(sys.cpu, va, 0) == nil {
 		sys.mem.FreePage(pte.PFN())
 	}
+}
+
+// TableFrames is how many pages of s's table area have frames behind
+// them for each region: those holding entries of P0's pages, and of P1's
+// (a page holding both, where the regions meet, counts for each). SHOW
+// MEMORY shows them.
+func (sys *System) TableFrames(s *ProcessSpace) (p0, p1 int) {
+	for va := s.P0BR &^ pageMask; va < s.areaEnd(); va += pageSize {
+		_, _, pte, err := sys.mem.LookupPTE(sys.cpu, va)
+		if err != nil || !pte.Valid() {
+			continue
+		}
+
+		if s.tablePageNeeded(va, s.P0LR, regionPages) {
+			p0++
+		}
+
+		if s.tablePageNeeded(va, 0, s.P1LR) {
+			p1++
+		}
+	}
+
+	return p0, p1
 }

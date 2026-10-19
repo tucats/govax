@@ -135,15 +135,15 @@ func (m *Machine) depositAsmImage(a *asm.Assembler) error {
 	}
 
 	if s0 := a.BytesRange(a.S0Origin(), a.S0End()); len(s0) > 0 {
-		if err := m.storeBytes(a.S0Origin(), s0); err != nil {
+		// Those S0 pages are no longer free for new processes'
+		// structures, and with paging on they get frames now: the pool's
+		// pages have none until they're claimed.
+		if err := m.processOne.ClaimS0(a.S0End()); err != nil {
 			return err
 		}
 
-		// Those S0 pages are no longer free for new processes' structures.
-		if pool := m.processOne.S0Pool(); pool != nil {
-			if err := pool.Claim(a.S0End()); err != nil {
-				return err
-			}
+		if err := m.storeBytes(a.S0Origin(), s0); err != nil {
+			return err
 		}
 	}
 

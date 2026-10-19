@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"slices"
 
+	"github.com/tucats/govax/internal/registers"
 	"github.com/tucats/govax/internal/vm"
 )
 
@@ -20,11 +21,17 @@ import (
 // and a hardware PCB -- and they come from the S0 pages left over, which
 // this pool hands out.
 //
-// VMINIT maps every S0 page to a physical page up front, so a pool page
-// already has memory behind it: allocating one only decides who uses it.
-// (With paging on, a process's table area keeps frames behind only the
-// pages its regions need, tablearea.go, and its other pages have none
-// until the pool hands them out again.) Allocations are contiguous runs of pages (a page table must be), taken
+// With paging off VMINIT maps every S0 page to a physical page up front,
+// so a pool page already has memory behind it: allocating one only
+// decides who uses it. With paging on (docs/PHASE-67 - address space
+// under paging.md, subtask 5) VMINIT backs only the S0 it lays out
+// itself, and a pool page has no frame (the all-zero PTE, no access)
+// until the pool hands it out (AllocateS0) or the console's ASM claims
+// it for the microkernel (ClaimS0); a page given back (FreeS0,
+// FreeProcessS0, UnbackS0Pool) gives its frame back too, so the pool
+// spends no physical memory on pages nobody uses. (A process's table
+// area also keeps frames behind only the pages its regions need,
+// tablearea.go.) Allocations are contiguous runs of pages (a page table must be), taken
 // first fit from the bottom of the pool, and each records the process it
 // belongs to and what it's for, so a process's pages can all be freed
 // when it's deleted, and SHOW MEMORY can list them.
@@ -38,7 +45,9 @@ import (
 // bytes each, 128 to a page; with paging on its size is
 // vax.sysgen.virtualpagecnt's), 38 stack pages (20 kernel, 1 guard and 8
 // executive, 1 guard and 8 supervisor), and a page for its PCB: 231
-// pages, so 34 processes fit beside process 1. Smaller page tables for
+// pages, so 34 processes fit beside process 1. (With paging on that's
+// virtual space only: a process's frames are its stacks', its PCB's, and
+// those of the table pages its regions need.) Smaller page tables for
 // subprocesses would let more fit (an open question for subtask 8).
 
 // S0Allocation is one run of pool pages handed out by the S0 pool.
@@ -149,7 +158,7 @@ func (p *S0Pool) Allocate(pages, pid uint32, purpose string) (uint32, error) {
 }
 
 // Free returns the run that starts at addr to the pool. It reports whether
-// there was one.
+// there was one. System.FreeS0 also gives back its frames.
 func (p *S0Pool) Free(addr uint32) bool {
 	for i, a := range p.allocs {
 		if a.Addr == addr {
@@ -163,7 +172,8 @@ func (p *S0Pool) Free(addr uint32) bool {
 }
 
 // FreeProcess returns every run belonging to process pid to the pool, and
-// reports how many pages that was.
+// reports how many pages that was. System.FreeProcessS0 also gives back
+// their frames.
 func (p *S0Pool) FreeProcess(pid uint32) uint32 {
 	freed := uint32(0)
 
@@ -205,9 +215,10 @@ func (sys *System) S0Pool() *S0Pool { return sys.s0 }
 // AllocateS0 allocates pages contiguous S0 pages from the pool for process
 // pid (see S0Pool.Allocate) and clears them, so a stack starts zeroed.
 // Each page is cleared through its physical address, found from the S0
-// page table, so it works whatever the current process is. A page left
-// without a frame (with paging on, a table area's page given back,
-// tablearea.go) gets one. Each page's protection is
+// page table, so it works whatever the current process is. A page
+// without a frame (with paging on, every page the pool hasn't handed out,
+// and a table area's page not in use, tablearea.go) gets one. Each page's
+// protection is
 // also put back to S0's default, URKW (every mode reads, kernel writes),
 // in case the pages' last owner changed it (a stack's guard page, say);
 // SetS0Protection changes it.
@@ -223,13 +234,116 @@ func (sys *System) AllocateS0(pages, pid uint32, purpose string) (uint32, error)
 
 	for i := range pages {
 		if err := sys.backS0Page(addr+i*pageSize, true); err != nil {
-			sys.s0.Free(addr)
+			sys.FreeS0(addr)
 
 			return 0, err
 		}
 	}
 
 	return addr, nil
+}
+
+// ClaimS0 moves the pool's start up to addr (S0Pool.Claim), for the S0
+// the console's ASM is about to fill: the microkernel, assembled just
+// above VMINIT's layout. The pages claimed get frames, if they have none,
+// before anything is written to them. The pool's start never moves down,
+// and claiming over pages already allocated is refused.
+func (sys *System) ClaimS0(addr uint32) error {
+	if sys.s0 == nil {
+		return nil
+	}
+
+	old, _ := sys.s0.Range()
+
+	if err := sys.s0.Claim(addr); err != nil {
+		return err
+	}
+
+	base, _ := sys.s0.Range()
+
+	for va := old; va < base; va += pageSize {
+		if err := sys.backS0Page(va, false); err != nil {
+			return err
+		}
+	}
+
+	return nil
+}
+
+// FreeS0 returns the run of pool pages that starts at addr to the pool
+// (S0Pool.Free), with paging on giving back their frames first. It
+// reports whether there was one.
+func (sys *System) FreeS0(addr uint32) bool {
+	for _, a := range sys.s0.allocs {
+		if a.Addr == addr {
+			sys.unbackS0Run(a.Addr, a.Pages)
+
+			break
+		}
+	}
+
+	return sys.s0.Free(addr)
+}
+
+// FreeProcessS0 returns every run of pool pages belonging to process pid
+// to the pool (S0Pool.FreeProcess), with paging on giving back their
+// frames first, and reports how many pages that was.
+func (sys *System) FreeProcessS0(pid uint32) uint32 {
+	for _, a := range sys.s0.allocs {
+		if a.PID == pid {
+			sys.unbackS0Run(a.Addr, a.Pages)
+		}
+	}
+
+	return sys.s0.FreeProcess(pid)
+}
+
+// UnbackS0Pool, with paging on, gives back the frames of every pool page
+// not handed out: VMINIT's, which mapped all of S0 to frames before the
+// pool's bounds were known. Each such page is left without a frame
+// until the pool hands it out. With paging off it does nothing.
+func (sys *System) UnbackS0Pool() {
+	if sys.s0 == nil || sys.mem.Paging() == nil {
+		return
+	}
+
+	start, limit := sys.s0.Range()
+
+	for _, a := range sys.s0.allocs {
+		sys.unbackS0Run(start, (a.Addr-start)/pageSize)
+		start = a.End()
+	}
+
+	sys.unbackS0Run(start, (limit-start)/pageSize)
+}
+
+// unbackS0Run, with paging on, takes the frames away from the pages S0
+// pages from addr (unbackS0Page). With paging off a pool page keeps
+// VMINIT's frame for good.
+func (sys *System) unbackS0Run(addr, pages uint32) {
+	if sys.mem.Paging() == nil {
+		return
+	}
+
+	for i := range pages {
+		sys.unbackS0Page(addr + i*pageSize)
+	}
+}
+
+// MappedS0Pages is how many of S0's pages have frames behind them: with
+// paging off all of them, with it on VMINIT's layout, the microkernel,
+// and the pool's pages in use (SHOW MEMORY).
+func (sys *System) MappedS0Pages() int {
+	count := 0
+
+	for i := range sys.cpu.PR(registers.SLR) {
+		_, _, pte, err := sys.mem.LookupPTE(sys.cpu, s0Base+i*pageSize)
+		if err == nil && pte.Valid() {
+			count++
+		}
+	}
+
+	return count
 }
 
 // SetS0Protection sets the protection code of the pages S0 pages from

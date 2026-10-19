@@ -4,7 +4,8 @@
 below; its questions answered by the author the same day, each
 recommendation accepted); subtask 2, created space, done 2026-10-19;
 subtask 3, the user stack, done 2026-10-19; subtask 4, the table area
-backed on demand, done 2026-10-19.
+backed on demand, done 2026-10-19; subtask 5, the S0 pool backed on
+demand, done 2026-10-19.
 Planned 2026-10-15,
 deferred to the end of the paging program (the author, 2026-10-15).
 Needs Phase 66. Part of the paging
@@ -785,3 +786,42 @@ FREP1VA where they vary.
   - **Left for subtask 5:** SHOW MEMORY's P0 and P1 "Physical addresses"
     still show VMINIT's ranges, which with paging on no longer all have
     frames (finding 7).
+- **2026-10-19:** Subtask 5, the S0 pool backed on demand (findings 6,
+  7), with paging on.
+  - **The pool's pages** (`corevms/s0pool.go`): VMINIT still maps all
+    of S0 to frames as it lays S0 out (its S0 loop runs before the
+    layout's end is known), then gives back every pool page's frame
+    (`UnbackS0Pool`, after `TrimTableArea`), so a pool page has the
+    all-zero PTE, no access for any mode, until it's used. `AllocateS0`
+    backs each page it hands out with a cleared system frame, URKW
+    (subtask 4's `backS0Page`); `FreeS0` and `FreeProcessS0`, which
+    every caller now uses in place of `S0Pool.Free`/`FreeProcess` (the
+    stacks, the PCB, the table area, process deletion), give the frames
+    back first. With paging off nothing changes: the pool's pages keep
+    VMINIT's frames for good.
+  - **The microkernel:** `depositAsmImage` claims its S0 pages
+    (`ClaimS0`: `S0Pool.Claim`, then a frame for each page claimed)
+    *before* writing them, where it used to write first and claim after;
+    so does any later ASM into S0 (the claim is still refused over pages
+    already allocated). A console write (DEPOSIT, EXAMINE) to a pool page
+    not in use is an access violation (the author's answer to question
+    4).
+  - **Frames:** after vax.init with paging on, 167 frames are in use
+    (166 system pages: 160 mapped S0 pages, VMINIT's layout less process
+    1's unused table pages, the microkernel, and the shim stubs; and the
+    P1 vector's frames), where the pool alone used to hold 7873 (half of
+    memory); `TestDeleteProcessTransitionPages` is back to its original
+    check (every frame back after the process goes, its pool pages' too).
+  - **SHOW MEMORY** (`machine/show.go`'s `showPagedRegions`), with paging
+    on, for the process the CPU is in: P0's and P1's size is the region's
+    length now, "Table frames" the table area's pages holding its entries
+    (`System.TableFrames`), and its virtual addresses the pages it has
+    ("none" for an empty region); S0's "Mapped pages" are those with
+    frames (`System.MappedS0Pages`). The "Physical addresses" lines, which
+    no longer meant anything with paging on, remain with it off. HELP
+    SHOW MEMORY says so.
+  - **Tests:** `TestS0PoolOnDemand` (after vax.init: frames behind the
+    microkernel and the pool's allocations only, an unallocated page
+    unreadable, `AllocateS0` cleared frames counted as system frames,
+    `FreeS0` and `FreeProcessS0` giving them back, the database
+    consistent), `TestS0PoolPagingOff`, `TestShowMemory_pagedRegions`.

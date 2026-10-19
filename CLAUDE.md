@@ -178,7 +178,13 @@ never had.
   `corevms/tablearea.go`, backed by `setRegionLength` before a length
   reaches them and given back after it leaves; a new process's area is
   `vax.sysgen.virtualpagecnt` entries, VMINIT's `/P0` plus `/P1` by
-  default, SYI$_VIRTUALPAGECNT). Paging is synchronous, with no
+  default, SYI$_VIRTUALPAGECNT; subtask 5, the S0 pool backed on
+  demand, done 2026-10-19: with paging on a pool page has a frame only
+  while it's allocated, `AllocateS0` backing it and
+  `FreeS0`/`FreeProcessS0` taking it back, VMINIT giving back the
+  pool's frames, `UnbackS0Pool`, and the microkernel's ASM claiming its
+  pages before writing them, `ClaimS0`; SHOW MEMORY's regions show
+  created space and table frames, `showPagedRegions`). Paging is synchronous, with no
   PFW, COLPG, or FPG waits. Each later phase has a planning doc.
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.

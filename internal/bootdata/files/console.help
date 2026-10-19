@@ -153,6 +153,7 @@
 //                          image activation
 //              10/19/26    vax.sysgen.virtualpagecnt in CONFIG KEYS;
 //                          VMINIT/PAGING's page tables
+//              10/19/26    SHOW MEMORY's regions with paging on
 
 This is the help documentation for the govax VAX emulator.  Topic sections are
 marked by a "$" delimiter.  This is followed by as many tokens of the help
@@ -224,6 +225,15 @@ $SH  ,MEM
     takes a page file block only when it's written there. The page file is
     installed at startup (opened when it's first needed with
     vax.sysgen.paging.defer), so it may show as "not opened yet".
+
+    With paging on, each region's lines describe the current process's
+    address space as it is: P0's and P1's size is the pages the region has
+    now, "Table frames" how many pages of its page tables hold their
+    entries (only those take memory), and its virtual addresses the range
+    those pages cover; S0's "Mapped pages" are those with memory behind
+    them (VMINIT's layout, the microkernel, and the system space in use by
+    processes). With paging off, each region shows the physical addresses
+    VMINIT laid it out at.
 
     Qualifiers:
 

@@ -419,6 +419,11 @@ func (m *Machine) VMInitPaging(paging bool, p0Pages, p1Pages, s0Pages, kspPages,
 	// again as its regions grow (corevms's tablearea.go).
 	m.processOne.TrimTableArea(m.processOne.Space)
 
+	// With paging on, the S0 pool's pages give their frames back too:
+	// each gets one when the pool hands it out, or when the microkernel's
+	// ASM claims it (corevms's s0pool.go).
+	m.processOne.UnbackS0Pool()
+
 	// Invalidate_tb() plus a reset of its tries/hits/pflushes
 	// counters (tb_flush itself and the STC's own counters are left
 	// alone, same asymmetry as CLEAR TB — see docs/PHASE-21.md).

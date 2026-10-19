@@ -120,6 +120,12 @@ func (m *Machine) ShowMemory() error {
 	bases := [3]uint32{m.CPU.PR(registers.P0BR), m.CPU.PR(registers.P1BR), m.CPU.PR(registers.SBR)}
 	lens := [3]uint32{m.CPU.PR(registers.P0LR), m.CPU.PR(registers.P1LR), m.CPU.PR(registers.SLR)}
 
+	if env := m.RunningProcess(); m.Mem.Paging() != nil && env != nil && env.Space != nil {
+		m.showPagedRegions(env, bases, lens)
+
+		return nil
+	}
+
 	for n, r := range m.Regions {
 		plural := "s"
 		if r.pteCount == 1 {
@@ -136,6 +142,52 @@ func (m *Machine) ShowMemory() error {
 	}
 
 	return nil
+}
+
+// showPagedRegions prints SHOW MEMORY's region lines with paging on
+// (docs/PHASE-67 - address space under paging.md, subtask 5), for the
+// process the CPU is in, env. P0 and P1 are created space: each region's
+// size is the pages it has now (its length register), its virtual
+// addresses the range they cover, and its table frames how many pages of
+// the process's table area hold its entries, each with a frame of its
+// own (none of them at a fixed physical address any more). S0's mapped
+// pages are those with frames: VMINIT's layout, the microkernel, and the
+// S0 pool's pages in use.
+func (m *Machine) showPagedRegions(env *corevms.Environment, bases, lens [3]uint32) {
+	p0Frames, p1Frames := env.TableFrames(env.Space)
+	p1Pages := env.Space.P1Pages()
+	s0 := m.Regions[2]
+
+	// extent is the virtual addresses line for pages pages from low up.
+	extent := func(low, pages uint32) string {
+		if pages == 0 {
+			return "            Virtual addresses  = none\n"
+		}
+
+		return fmt.Sprintf("            Virtual addresses  = %08X-%08X\n", low, low+pages*512-1)
+	}
+
+	region := func(name string, size uint32, label string, frames int, br, lr uint32, rest string) {
+		m.Printf("        %s Region\n            Size = %08X (%5d decimal) pages\n", name, size, size)
+		m.Printf("            %s = %d page%s  %sBR = %08X    %sLR = %08X\n",
+			label, frames, pluralS(frames), name, br, name, lr)
+		m.Printf("%s\n", rest)
+	}
+
+	region("P0", lens[0], "Table frames", p0Frames, bases[0], lens[0], extent(0, lens[0]))
+	region("P1", p1Pages, "Table frames", p1Frames, bases[1], lens[1], extent(0x40000000+lens[1]*512, p1Pages))
+	region("S0", s0.size, "PFN database", int(s0.pteCount), bases[2], lens[2],
+		fmt.Sprintf("            Mapped pages       = %d\n%s", env.MappedS0Pages(), extent(s0.vStart, s0.size)))
+}
+
+// pluralS is "s" for a count other than 1, and " " for 1 (SHOW MEMORY's
+// columns stay aligned).
+func pluralS(n int) string {
+	if n == 1 {
+		return " "
+	}
+
+	return "s"
 }
 
 // PagingStatistics is what SHOW MEMORY shows of paging, gathered for

@@ -224,3 +224,73 @@ func TestShowMemoryFiles(t *testing.T) {
 		t.Errorf("SHOW MEMORY/FILES/FULL:\n%s\nwant\n%s", strings.Join(lines[2:], "\n"), strings.Join(want, "\n"))
 	}
 }
+
+// TestShowMemory_pagedRegions: with paging on, SHOW MEMORY's region lines
+// show created space (Phase 67, subtask 5): each process region's pages
+// and the frames its table entries take, and S0's mapped pages, which
+// the S0 pool's unused pages no longer add to.
+func TestShowMemory_pagedRegions(t *testing.T) {
+	c, buf := newTestMachine(t)
+
+	if err := c.Init(8192 * 512); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := c.VMInitPaging(true, 2048, 8192, 2048, 20, 0, 0, 0, 0); err != nil {
+		t.Fatalf("VMInitPaging: %v", err)
+	}
+
+	show := func() string {
+		t.Helper()
+		buf.Reset()
+
+		if err := c.ShowMemory(); err != nil {
+			t.Fatalf("ShowMemory: %v", err)
+		}
+
+		return buf.String()
+	}
+
+	contains := func(out string, lines ...string) {
+		t.Helper()
+
+		for _, line := range lines {
+			if !strings.Contains(out, line) {
+				t.Errorf("output = %q, want it to contain %q", out, line)
+			}
+		}
+	}
+
+	// P0 has no pages, P1 its 4096 from UserStackTop up, their entries in
+	// the table area's last 32 pages.
+	contains(show(),
+		"        P0 Region\n            Size = 00000000 (    0 decimal) pages\n            Table frames = 0 pages  P0BR = ",
+		"P0LR = 00000000\n            Virtual addresses  = none\n",
+		"        P1 Region\n            Size = 00001000 ( 4096 decimal) pages\n            Table frames = 32 pages  P1BR = ",
+		"P1LR = 001FF000\n            Virtual addresses  = 7FE00000-7FFFFFFF\n",
+		fmt.Sprintf("            Mapped pages       = %d\n", c.processOne.MappedS0Pages()))
+
+	// S0's mapped pages are VMINIT's layout and the table pages in use,
+	// not the pool's 2048-odd.
+	if n := c.processOne.MappedS0Pages(); n > 200 {
+		t.Errorf("%d S0 pages mapped after VMINIT/PAGING, want VMINIT's layout alone", n)
+	}
+
+	// Pages 1 to 200: P0's first two table pages.
+	if err := c.processOne.EnsurePages(0x200, 200*512); err != nil {
+		t.Fatal(err)
+	}
+
+	contains(show(),
+		"            Size = 000000C9 (  201 decimal) pages\n            Table frames = 2 pages  P0BR = ",
+		"P0LR = 000000C9\n            Virtual addresses  = 00000000-000191FF\n")
+
+	// With paging off, the old layout: physical addresses.
+	if err := c.VMInitPaging(false, 2048, 8192, 2048, 20, 0, 0, 0, 0); err != nil {
+		t.Fatal(err)
+	}
+
+	if out := show(); !strings.Contains(out, "Physical addresses") || strings.Contains(out, "Table frames") {
+		t.Errorf("paging off: output = %q, want VMINIT's physical ranges", out)
+	}
+}
