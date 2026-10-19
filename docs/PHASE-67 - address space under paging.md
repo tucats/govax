@@ -6,7 +6,8 @@ recommendation accepted); subtask 2, created space, done 2026-10-19;
 subtask 3, the user stack, done 2026-10-19; subtask 4, the table area
 backed on demand, done 2026-10-19; subtask 5, the S0 pool backed on
 demand, done 2026-10-19; subtask 6, PGFLQUOTA at creation only, done
-2026-10-19; subtask 7, the console's P0 conveniences, done 2026-10-19.
+2026-10-19; subtask 7, the console's P0 conveniences, done 2026-10-19;
+subtask 8, VMINIT's sizes with paging on, done 2026-10-19.
 Planned 2026-10-15,
 deferred to the end of the paging program (the author, 2026-10-15).
 Needs Phase 66. Part of the paging
@@ -915,3 +916,63 @@ FREP1VA where they vary.
   with paging on (S0 apart from physical memory, the physical size rules
   paging-off only, defaults that leave frames free for programs); the
   full suite and probe are now subtask 9, the close-out 10.
+- **2026-10-19:** Subtask 8, VMINIT's sizes with paging on.
+  - **S0 apart from physical memory** (`machine/vminit.go`): with paging
+    on VMINIT maps only its own layout, each page to the frame of its
+    own number as before; every other S0 page keeps the all-zero PTE
+    memory was cleared to, so the pool starts unbacked and
+    `UnbackS0Pool` is gone (its work is now never done in the first
+    place). `layoutPages` counts the layout (the system page table,
+    process 1's table area, the stacks and guard pages, the scratch,
+    shim, and SCB pages, the string pool) before anything is written, so
+    the checks come before memory is wiped: with paging on, an S0 past
+    the architecture's 1 GB or a layout that doesn't fit in physical
+    memory is VMTOOLARGE, and a layout that leaves S0 fewer than 32
+    pages is S0TOOSMALL; with paging off the old S0TOOSMALL rule stays,
+    and an S0 larger than physical memory, which was mapped to frames
+    that don't exist, is now VMTOOLARGE. `TestVMInit_layoutPages` holds
+    the count to the layout VMINIT lays out, in both modes.
+  - **The size rules:** `physicalSizes` (paging off) is the old sharing
+    of physical memory among regions given 0 and the leftover folded
+    into S0; `pagingSizes` (paging on) gives each region given 0 its
+    paging default: P1 5120 (the 4096 nonexistent pages from
+    `UserStackTop` to the P1 vector, and 1024 for the stack and P1
+    expansions), P0 19456 (with P1 a 24576-entry table area, which stays
+    VIRTUALPAGECNT's default), S0 16384 (about 69 processes' table
+    areas, stacks, and PCBs at once; 128 frames of system page table).
+  - **Where the defaults live:** VMINIT's, for regions given 0. vax.init
+    gives VMINIT 0 for each of P0, P1, and S0 the configuration doesn't
+    size when `vax.sysgen.paging.enable` is on, asking with a new
+    F$CONFIG operation, `BOOLEAN` (1 if the value is one govax reads as
+    true, `settings.GetBool`'s rule, which DCL couldn't easily repeat).
+    So the numbers are in one place, and VMINIT/PAGING typed at the
+    console gets the same ones. With paging off vax.init's sizes are
+    unchanged (16384, 8192, 8192).
+  - **What it frees:** after vax.init with paging on, 231 frames are in
+    use (16153 free of 16384), where subtask 5 left 167 with an
+    8192-page S0: the larger S0's system page table is the difference.
+    Before Phase 67, the pool and the tables alone held over half of
+    memory.
+  - **Help:** VMINIT's /P0, /P1, /S0 (the rules in each mode, the
+    paging defaults, the errors), CONFIG KEYS' vax.memory.* (the paging
+    defaults), and LEXICAL's F$CONFIG (BOOLEAN).
+  - **Tests:** `TestVMInit_pagingDefaults`, `TestVMInit_s0BeyondMemory`
+    (an S0 eight times memory with paging on: the layout mapped, the
+    rest zero PTEs, the pool to S0's end, only the layout's frames
+    taken; refused with paging off), `TestVMInit_pagingLimits`,
+    `TestVMInit_layoutPages`; `TestVaxInitPagingSizes` and
+    `TestVaxInitNoPagingSizes` (vax.init's sizes, SHOW MEMORY, a
+    configured region kept); `TestRun_statsPaging` checks `--stats`'
+    free and active frames; `TestLexicalConfig` has BOOLEAN. Tests that
+    ran VMINIT with paging on, S0 given 0, and a 128-page memory give S0
+    96 pages now (the default's 128-page system page table doesn't fit
+    in it); `TestVMInit_tableArea` gives S0 the rest of memory, so that
+    both modes' S0, and so their layouts, are the same.
+  - **Noticed, for the author:** with paging on each process's table
+    area backs about 33 frames for P1 from the start, 32 of them holding
+    entries of the nonexistent pages between `UserStackTop` and the P1
+    vector, which are inside P1's length (subtask 3's layout, VMS's).
+    That's most of a new process's table frames. And the forced runs'
+    image failures (subtask 7's log: SS$_VASFULL with a 200-page /P1)
+    remain for subtask 9: a /P1 under 4097 can't hold P1's permanent
+    part with paging on, which VMINIT doesn't refuse.

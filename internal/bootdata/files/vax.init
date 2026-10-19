@@ -18,16 +18,27 @@ $!  left among the regions given 0), and KSP, ESP, SSP, and ISP the
 $!  kernel, executive, supervisor, and interrupt stacks (ESP, SSP, and
 $!  ISP's defaults are VMINIT's own).
 $!
+$!  With paging on (vax.sysgen.paging.enable), the regions cost virtual
+$!  space rather than memory, and P0, P1, and S0 are 0 unless configured:
+$!  VMINIT's paging defaults, sized for processes rather than for memory
+$!  (see HELP VMINIT).
+$!
 $ memory_size = 16384
 $ if f$config("vax.memory.size", "EXISTS") then -
      memory_size = f$integer(f$config("vax.memory.size"))
 $ memory_p0 = 16384
+$ memory_p1 = 8192
+$ memory_s0 = 8192
+$ if f$config("vax.sysgen.paging.enable", "BOOLEAN")
+$ then
+$    memory_p0 = 0
+$    memory_p1 = 0
+$    memory_s0 = 0
+$ endif
 $ if f$config("vax.memory.p0", "EXISTS") then -
      memory_p0 = f$integer(f$config("vax.memory.p0"))
-$ memory_p1 = 8192
 $ if f$config("vax.memory.p1", "EXISTS") then -
      memory_p1 = f$integer(f$config("vax.memory.p1"))
-$ memory_s0 = 8192
 $ if f$config("vax.memory.s0", "EXISTS") then -
      memory_s0 = f$integer(f$config("vax.memory.s0"))
 $ memory_ksp = 20
@@ -49,12 +60,11 @@ $!
 $ init/vax ^d'memory_size'
 $!
 $!   Create page tables for the VAX physical memory.
-$!   You can allocate more tables than will fit in
-$!   physical memory; virtual memory support sparse
-$!   memory maps. There is no support for paged
-$!   backing store, though, so you can exhaust the
-$!   physical memory by allocating too many physical
-$!   pages.
+$!   P0 and P1 may together be larger than physical
+$!   memory; their pages take memory only when touched.
+$!   With paging off, S0 is mapped to physical memory
+$!   and must fit in it; with paging on, it may be
+$!   larger.
 $!
 $ vminit /p0='memory_p0' /p1='memory_p1' /s0='memory_s0' -
      /ksp='memory_ksp' /esp='memory_esp' /ssp='memory_ssp' /isp='memory_isp'

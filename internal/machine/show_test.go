@@ -29,7 +29,7 @@ func TestShowMemory_frames(t *testing.T) {
 		t.Errorf("paging off, output = %q, want no frame counts", buf.String())
 	}
 
-	if err := c.VMInitPaging(true, 20, 20, 0, 2, 2, 2, 2, 8); err != nil {
+	if err := c.VMInitPaging(true, 20, 20, 96, 2, 2, 2, 2, 8); err != nil {
 		t.Fatalf("VMInitPaging: %v", err)
 	}
 
@@ -72,7 +72,7 @@ func TestShowMemory_frames(t *testing.T) {
 func TestShowPage_forms(t *testing.T) {
 	c, buf := newTestMachine(t)
 
-	if err := c.VMInitPaging(true, 20, 20, 0, 2, 2, 2, 2, 8); err != nil {
+	if err := c.VMInitPaging(true, 20, 20, 96, 2, 2, 2, 2, 8); err != nil {
 		t.Fatalf("VMInitPaging: %v", err)
 	}
 
@@ -120,7 +120,7 @@ func TestShowPage_forms(t *testing.T) {
 func TestShowMemory_pageFile(t *testing.T) {
 	c, buf := newTestMachine(t)
 
-	if err := c.VMInitPaging(true, 20, 20, 0, 2, 2, 2, 2, 8); err != nil {
+	if err := c.VMInitPaging(true, 20, 20, 96, 2, 2, 2, 2, 8); err != nil {
 		t.Fatalf("VMInitPaging: %v", err)
 	}
 
@@ -162,7 +162,7 @@ func TestShowMemory_pageFile(t *testing.T) {
 func TestShowMemoryFiles(t *testing.T) {
 	c, buf := newTestMachine(t)
 
-	if err := c.VMInitPaging(true, 20, 20, 0, 2, 2, 2, 2, 8); err != nil {
+	if err := c.VMInitPaging(true, 20, 20, 96, 2, 2, 2, 2, 8); err != nil {
 		t.Fatalf("VMInitPaging: %v", err)
 	}
 

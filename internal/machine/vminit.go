@@ -53,59 +53,52 @@ func (m *Machine) VMInitPaging(paging bool, p0Pages, p1Pages, s0Pages, kspPages,
 
 	physPages := m.Mem.Size() >> 9
 
-	size := [3]uint32{p0Pages, p1Pages, s0Pages}
-	explicitTotal := size[0] + size[1] + size[2]
-
-	// Under DYNVM (this port's only supported mode -- see this function's
-	// own doc comment), P0/P1 are virtual page counts backed by demand
-	// paging, not a pre-mapped allocation, so requesting more of them than
-	// exist in physical memory is not by itself an error -- matching
-	// console_vminit_dcl's own `#ifndef DYNVM` guard around this same
-	// check (i.e. it's skipped whenever DYNVM is the active build, which is
-	// unconditionally the case here).
-	if false && (explicitTotal > physPages) {
-		return vmserrors.New(vmserrors.CLI_VMTOOLARGE)
+	if espPages == 0 {
+		espPages = defaultModeStackPages
 	}
 
-	zcount := uint32(0)
+	if sspPages == 0 {
+		sspPages = defaultModeStackPages
+	}
 
-	for _, s := range size {
-		if s == 0 {
-			zcount++
+	var size [3]uint32
+	if paging {
+		size = pagingSizes(p0Pages, p1Pages, s0Pages)
+	} else {
+		size = physicalSizes(physPages, p0Pages, p1Pages, s0Pages)
+	}
+
+	// layout is how many S0 pages VMINIT's own structures fill, from S0's
+	// first page: the system page table, process 1's P0 and P1 tables, the
+	// stacks, the scratch, shim, and SCB pages, and the string pool. With
+	// paging on only these pages get frames (each S0 page the frame of
+	// its own number, so the interrupt stack can be addressed
+	// physically); the rest of S0 is the pool, backed page by page as it's
+	// handed out. With paging off all of S0 is mapped that way, so it
+	// can't be bigger than physical memory.
+	layout := layoutPages(size, kspPages, espPages, sspPages, ispPages, stringPoolPages)
+
+	if paging {
+		if size[2] > maxS0Pages || layout > physPages {
+			return vmserrors.New(vmserrors.CLI_VMTOOLARGE)
 		}
-	}
 
-	var share uint32
-
-	if zcount > 0 && physPages > explicitTotal {
-		share = (physPages - explicitTotal) / zcount
-	}
-
-	for i := range size {
-		if size[i] == 0 {
-			size[i] = share
+		if layout+32 > size[2] {
+			return vmserrors.New(vmserrors.CLI_S0TOOSMALL)
 		}
-	}
+	} else {
+		if size[2] > physPages {
+			return vmserrors.New(vmserrors.CLI_VMTOOLARGE)
+		}
 
-	// Any physical pages left over after the explicit/shared sizes above
-	// get folded into S0. size[0..2] are virtual page counts and are
-	// allowed to exceed physPages (sparse address spaces are intentional,
-	// see the disabled check above), so this must only run when there
-	// really is a positive leftover: doing the subtraction unconditionally
-	// in uint32 underflows and wraps size[2] up to billions of pages,
-	// which then runs the S0 page-table-build loop below straight off the
-	// end of physical memory.
-	if total := size[0] + size[1] + size[2]; physPages > total {
-		size[2] += physPages - total
-	}
+		page := uint32(0)
+		for _, s := range size {
+			page += pageTablePages(s)
+		}
 
-	page := uint32(0)
-	for _, s := range size {
-		page += pageTablePages(s)
-	}
-
-	if page+32 > size[2] {
-		return vmserrors.New(vmserrors.CLI_S0TOOSMALL)
+		if page+32 > size[2] {
+			return vmserrors.New(vmserrors.CLI_S0TOOSMALL)
+		}
 	}
 
 	// Wipe physical memory: we're about to overwrite it all with fresh
@@ -122,16 +115,29 @@ func (m *Machine) VMInitPaging(paging bool, p0Pages, p1Pages, s0Pages, kspPages,
 	m.CPU.SetPR(registers.MAPEN, 0)
 
 	paddr := uint32(0)
-	page = 0
+	page := uint32(0)
 
-	// S0 system region: identity-style page table starting at physical 0,
-	// always eagerly mapped regardless of DYNVM (see the C source's own S0
-	// PTE-creation loop, which has no #ifdef DYNVM branch at all — only
-	// P0/P1 below start out demand-paged).
+	mapped := size[2]
+	if paging {
+		mapped = layout
+	}
+
+	// S0 system region: identity-style page table starting at physical 0.
+	// With paging off every S0 page is mapped now; with it on only the
+	// first `mapped` pages, VMINIT's layout, and every other S0 page keeps
+	// the all-zero PTE memory was just cleared to (no frame, no access)
+	// until the pool hands it out.
 	m.CPU.SetPR(registers.SBR, 0)
 	m.CPU.SetPR(registers.SLR, size[2])
 
 	for i := uint32(0); i < size[2]; i++ {
+		if i >= mapped {
+			page++
+			paddr += 4
+
+			continue
+		}
+
 		var pte vm.PTE
 
 		pte.SetValid(true)
@@ -248,14 +254,6 @@ func (m *Machine) VMInitPaging(paging bool, p0Pages, p1Pages, s0Pages, kspPages,
 	// write them), and a caller passing 0 pages put them at the kernel
 	// stack's own address.
 	paddr = roundUpPage(paddr)
-
-	if espPages == 0 {
-		espPages = defaultModeStackPages
-	}
-
-	if sspPages == 0 {
-		sspPages = defaultModeStackPages
-	}
 
 	m.CPU.SetGPR(registers.SP, spP1) // USP, set below via SetPR too
 
@@ -419,11 +417,6 @@ func (m *Machine) VMInitPaging(paging bool, p0Pages, p1Pages, s0Pages, kspPages,
 	// again as its regions grow (corevms's tablearea.go).
 	m.processOne.TrimTableArea(m.processOne.Space)
 
-	// With paging on, the S0 pool's pages give their frames back too:
-	// each gets one when the pool hands it out, or when the microkernel's
-	// ASM claims it (corevms's s0pool.go).
-	m.processOne.UnbackS0Pool()
-
 	// Invalidate_tb() plus a reset of its tries/hits/pflushes
 	// counters (tb_flush itself and the STC's own counters are left
 	// alone, same asymmetry as CLEAR TB — see docs/PHASE-21.md).
@@ -434,6 +427,102 @@ func (m *Machine) VMInitPaging(paging bool, p0Pages, p1Pages, s0Pages, kspPages,
 	m.kernelPlaced = false
 
 	return nil
+}
+
+// The paging-mode sizes of the regions VMINIT is given 0 for, in pages.
+// With paging on, P0, P1, and S0 cost virtual space, not frames (a page
+// gets a frame only when it's created, a table page when a region's
+// length reaches it, a pool page when it's allocated), so the defaults
+// are sized for what processes need rather than shares of physical
+// memory (docs/PHASE-67 - address space under paging.md, subtask 8):
+//
+//   - P1 holds the 4096 pages from the user stack's top (UserStackTop)
+//     to the P1 vector, which exist in P1's length but have no pages,
+//     plus 1024 for the user stack and P1 expansions below it.
+//   - P0 is the rest of a 24576-page table area, which is also every new
+//     process's VIRTUALPAGECNT unless vax.sysgen.virtualpagecnt says
+//     otherwise.
+//   - S0 is mostly the pool new processes' table areas, stacks, and PCBs
+//     come from: about 230 pages each at the default VIRTUALPAGECNT, so
+//     16384 pages hold some 65 processes at once. Its cost in frames is
+//     the system page table's, a page per 128 S0 pages.
+const (
+	pagingP1Default = 5120
+	pagingP0Default = 24576 - pagingP1Default
+	pagingS0Default = 16384
+)
+
+// maxS0Pages is S0's size in pages: 1 GB.
+const maxS0Pages = 0x40000000 >> 9
+
+// pagingSizes are the region sizes VMINIT uses with paging on: each one
+// given, and the paging-mode default (pagingP0Default, ...) for each
+// given as 0. Physical memory doesn't enter into it.
+func pagingSizes(p0Pages, p1Pages, s0Pages uint32) [3]uint32 {
+	size := [3]uint32{p0Pages, p1Pages, s0Pages}
+	defaults := [3]uint32{pagingP0Default, pagingP1Default, pagingS0Default}
+
+	for i := range size {
+		if size[i] == 0 {
+			size[i] = defaults[i]
+		}
+	}
+
+	return size
+}
+
+// physicalSizes are the region sizes VMINIT uses with paging off, where
+// every S0 page has a frame: the regions given 0 share what physical
+// memory the others leave, and any physical pages still left over are
+// folded into S0.
+func physicalSizes(physPages, p0Pages, p1Pages, s0Pages uint32) [3]uint32 {
+	size := [3]uint32{p0Pages, p1Pages, s0Pages}
+	explicitTotal := size[0] + size[1] + size[2]
+
+	zcount := uint32(0)
+
+	for _, s := range size {
+		if s == 0 {
+			zcount++
+		}
+	}
+
+	var share uint32
+
+	if zcount > 0 && physPages > explicitTotal {
+		share = (physPages - explicitTotal) / zcount
+	}
+
+	for i := range size {
+		if size[i] == 0 {
+			size[i] = share
+		}
+	}
+
+	// P0 and P1 are virtual page counts and may together exceed physical
+	// memory (sparse address spaces are intentional), so the leftover is
+	// folded in only when there really is one: subtracting in uint32
+	// regardless would wrap S0's size around to billions of pages.
+	if total := size[0] + size[1] + size[2]; physPages > total {
+		size[2] += physPages - total
+	}
+
+	return size
+}
+
+// layoutPages is how many S0 pages VMINIT's layout fills, from S0's first
+// page, for regions of size's pages and the stacks given: the system page
+// table, P0's and P1's tables (one table area with paging on, the same
+// pages), the kernel stack, a guard page and the executive stack, a guard
+// page and the supervisor stack, the interrupt stack, CONSOLE$SCRATCH,
+// the shim stub page, the SCB page, and the string pool. VMInitPaging
+// lays them out in that order; the pool begins after them.
+func layoutPages(size [3]uint32, kspPages, espPages, sspPages, ispPages, stringPoolPages uint32) uint32 {
+	tables := pageTablePages(size[2]) + pageTablePages(size[0]) + pageTablePages(size[1])
+	stacks := kspPages + 1 + espPages + 1 + sspPages + ispPages
+	fixed := uint32(1) + shimPageBytes/512 + 1
+
+	return tables + stacks + fixed + stringPoolPages
 }
 
 // VMInitSizes returns the P0 and P1 sizes, in pages, the last VMINIT

@@ -28,7 +28,7 @@ import (
 // itself, and a pool page has no frame (the all-zero PTE, no access)
 // until the pool hands it out (AllocateS0) or the console's ASM claims
 // it for the microkernel (ClaimS0); a page given back (FreeS0,
-// FreeProcessS0, UnbackS0Pool) gives its frame back too, so the pool
+// FreeProcessS0) gives its frame back too, so the pool
 // spends no physical memory on pages nobody uses. (A process's table
 // area also keeps frames behind only the pages its regions need,
 // tablearea.go.) Allocations are contiguous runs of pages (a page table must be), taken
@@ -47,8 +47,12 @@ import (
 // executive, 1 guard and 8 supervisor), and a page for its PCB: 231
 // pages, so 34 processes fit beside process 1. (With paging on that's
 // virtual space only: a process's frames are its stacks', its PCB's, and
-// those of the table pages its regions need.) Smaller page tables for
-// subprocesses would let more fit (an open question for subtask 8).
+// those of the table pages its regions need.) With paging on, vax.init
+// leaves the regions to VMINIT's paging defaults (subtask 8: /P0=19456
+// /P1=5120 /S0=16384), the same 24576-entry table area, and S0 twice as
+// big, apart from physical memory: VMINIT's layout takes pages 0-372
+// (its system page table 128 of them), and the pool's 16000 pages or so
+// fit some 69 processes.
 
 // S0Allocation is one run of pool pages handed out by the S0 pool.
 type S0Allocation struct {
@@ -296,25 +300,6 @@ func (sys *System) FreeProcessS0(pid uint32) uint32 {
 	}
 
 	return sys.s0.FreeProcess(pid)
-}
-
-// UnbackS0Pool, with paging on, gives back the frames of every pool page
-// not handed out: VMINIT's, which mapped all of S0 to frames before the
-// pool's bounds were known. Each such page is left without a frame
-// until the pool hands it out. With paging off it does nothing.
-func (sys *System) UnbackS0Pool() {
-	if sys.s0 == nil || sys.mem.Paging() == nil {
-		return
-	}
-
-	start, limit := sys.s0.Range()
-
-	for _, a := range sys.s0.allocs {
-		sys.unbackS0Run(start, (a.Addr-start)/pageSize)
-		start = a.End()
-	}
-
-	sys.unbackS0Run(start, (limit-start)/pageSize)
 }
 
 // unbackS0Run, with paging on, takes the frames away from the pages S0

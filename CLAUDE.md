@@ -181,15 +181,22 @@ never had.
   default, SYI$_VIRTUALPAGECNT; subtask 5, the S0 pool backed on
   demand, done 2026-10-19: with paging on a pool page has a frame only
   while it's allocated, `AllocateS0` backing it and
-  `FreeS0`/`FreeProcessS0` taking it back, VMINIT giving back the
-  pool's frames, `UnbackS0Pool`, and the microkernel's ASM claiming its
+  `FreeS0`/`FreeProcessS0` taking it back, VMINIT never backing the
+  pool's pages (subtask 8), and the microkernel's ASM claiming its
   pages before writing them, `ClaimS0`; SHOW MEMORY's regions show
   created space and table frames, `showPagedRegions`; subtask 6,
   PGFLQUOTA at creation only, done 2026-10-19: the first-touch charge
   removed, every charged page being created by something; subtask 7,
   the console's conveniences, done 2026-10-19: ASM and DEPOSIT, the
   console's and the debugger's, create the process 1 P0 pages they
-  write, `machine/exam.go`'s `ensureConsolePages`). Paging is synchronous, with no
+  write, `machine/exam.go`'s `ensureConsolePages`; subtask 8, VMINIT's
+  sizes with paging on, done 2026-10-19: VMINIT maps only its own
+  layout, `layoutPages`, so S0 may be larger than physical memory, and
+  a region given 0 takes its paging default, `pagingSizes`: P0 19456,
+  P1 5120, S0 16384; vax.init gives 0 for each region the
+  configuration doesn't size when F$CONFIG's BOOLEAN says
+  `vax.sysgen.paging.enable` is on; with paging off nothing changes, but
+  an S0 larger than physical memory is VMTOOLARGE). Paging is synchronous, with no
   PFW, COLPG, or FPG waits. Each later phase has a planning doc.
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.

@@ -27,6 +27,18 @@ var configOperations = map[string]func(key string) dclValue{
 
 		return dclInteger(0)
 	},
+
+	// BOOLEAN is 1 if the item's value is one govax reads as true (TRUE,
+	// T, YES, Y, or 1, in any case), 0 if it's anything else or not set:
+	// how govax itself reads a true/false item, such as
+	// vax.sysgen.paging.enable.
+	"BOOLEAN": func(key string) dclValue {
+		if settings.GetBool(key) {
+			return dclInteger(1)
+		}
+
+		return dclInteger(0)
+	},
 }
 
 // lexConfig is F$CONFIG(key [,operation]): the configuration item key's

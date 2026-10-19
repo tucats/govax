@@ -2,10 +2,12 @@ package machine
 
 import (
 	"bytes"
+	"errors"
 	"testing"
 
 	"github.com/tucats/govax/internal/registers"
 	"github.com/tucats/govax/internal/vm"
+	"github.com/tucats/govax/internal/vmserrors"
 )
 
 func TestVMInit_enablesTranslation(t *testing.T) {
@@ -367,8 +369,12 @@ func TestVMInit_tableArea(t *testing.T) {
 	}
 
 	// P0's 300 entries fill three pages, P1's 200 two: a 5-page area
-	// after S0's table.
-	if err := c.VMInitPaging(false, 300, 200, 8192, 20, 0, 0, 4, 8); err != nil {
+	// after S0's table. S0 takes the rest of physical memory, so paging
+	// off has no leftover to fold into it and both modes' S0 is the same
+	// size (with paging on, S0 isn't tied to physical memory).
+	const s0 = 16384 - 300 - 200
+
+	if err := c.VMInitPaging(false, 300, 200, s0, 20, 0, 0, 4, 8); err != nil {
 		t.Fatalf("VMInitPaging: %v", err)
 	}
 
@@ -379,7 +385,7 @@ func TestVMInit_tableArea(t *testing.T) {
 		t.Errorf("paging off: P1's table at %#x, want %#x, after P0's three pages", got, area+3*512)
 	}
 
-	if err := c.VMInitPaging(true, 300, 200, 8192, 20, 0, 0, 4, 8); err != nil {
+	if err := c.VMInitPaging(true, 300, 200, s0, 20, 0, 0, 4, 8); err != nil {
 		t.Fatalf("VMInitPaging: %v", err)
 	}
 
@@ -418,5 +424,194 @@ func TestVMInit_tableArea(t *testing.T) {
 
 	if err := c.Mem.Paging().Check(); err != nil {
 		t.Error(err)
+	}
+}
+
+// newSizedMachine is a machine with pages pages of physical memory, after
+// INIT and before VMINIT.
+func newSizedMachine(t *testing.T, pages uint32) *Machine {
+	t.Helper()
+
+	c := NewMachine(&bytes.Buffer{})
+	if err := c.Init(pages * 512); err != nil {
+		t.Fatalf("Init: %v", err)
+	}
+
+	return c
+}
+
+// TestVMInit_pagingDefaults: with paging on, a region given 0 takes its
+// paging-mode default (docs/PHASE-67 - address space under paging.md,
+// subtask 8), whatever physical memory is, and VIRTUALPAGECNT is their
+// table area; with paging off, 0 still shares physical memory.
+func TestVMInit_pagingDefaults(t *testing.T) {
+	c := newSizedMachine(t, 16384)
+
+	if err := c.VMInitPaging(true, 0, 0, 0, 20, 0, 0, 4, 8); err != nil {
+		t.Fatalf("VMInitPaging: %v", err)
+	}
+
+	if p0, p1 := c.VMInitSizes(); p0 != 19456 || p1 != 5120 {
+		t.Errorf("paging on: /P0 %d, /P1 %d, want 19456 and 5120", p0, p1)
+	}
+
+	if got := c.CPU.PR(registers.SLR); got != 16384 {
+		t.Errorf("paging on: SLR %d, want 16384", got)
+	}
+
+	if got := c.ProcessOne().Sysgen.VirtualPageCount; got != 24576 {
+		t.Errorf("VIRTUALPAGECNT %d, want 24576", got)
+	}
+
+	// A region given its size keeps it.
+	if err := c.VMInitPaging(true, 1000, 0, 0, 20, 0, 0, 4, 8); err != nil {
+		t.Fatalf("VMInitPaging: %v", err)
+	}
+
+	if p0, p1 := c.VMInitSizes(); p0 != 1000 || p1 != 5120 {
+		t.Errorf("paging on, /P0=1000: /P0 %d, /P1 %d, want 1000 and 5120", p0, p1)
+	}
+
+	// Paging off: the three regions share the 16384 pages.
+	if err := c.VMInitPaging(false, 0, 0, 0, 20, 0, 0, 4, 8); err != nil {
+		t.Fatalf("VMInitPaging: %v", err)
+	}
+
+	p0, p1 := c.VMInitSizes()
+	if s0 := c.CPU.PR(registers.SLR); p0 != 5461 || p1 != 5461 || p0+p1+s0 != 16384 {
+		t.Errorf("paging off: /P0 %d, /P1 %d, S0 %d, want shares of 16384", p0, p1, s0)
+	}
+}
+
+// TestVMInit_s0BeyondMemory: with paging on S0 may be larger than
+// physical memory, since only VMINIT's layout is mapped (each page to
+// the frame of its own number) and every other S0 page starts with the
+// all-zero PTE; with paging off, where all of S0 is mapped, it's refused.
+func TestVMInit_s0BeyondMemory(t *testing.T) {
+	c := newSizedMachine(t, 4096)
+
+	if err := c.VMInitPaging(true, 1000, 5120, 32768, 20, 0, 0, 4, 8); err != nil {
+		t.Fatalf("VMInitPaging with S0 eight times memory: %v", err)
+	}
+
+	if got := c.CPU.PR(registers.SLR); got != 32768 {
+		t.Errorf("SLR %d, want 32768", got)
+	}
+
+	layout := (c.S0Free() - 0x80000000) / 512
+
+	for _, page := range []uint32{0, layout - 1} {
+		_, _, pte, err := c.Mem.LookupPTE(c.CPU, 0x80000000+page*512)
+		if err != nil || !pte.Valid() || pte.PFN() != page {
+			t.Errorf("layout page %d: PTE %08X (%v), want frame %d", page, uint32(pte), err, page)
+		}
+	}
+
+	for _, page := range []uint32{layout, 4096, 32767} {
+		_, _, pte, err := c.Mem.LookupPTE(c.CPU, 0x80000000+page*512)
+		if err != nil || pte != 0 {
+			t.Errorf("pool page %d: PTE %08X (%v), want 0", page, uint32(pte), err)
+		}
+	}
+
+	if _, limit := c.ProcessOne().S0Pool().Range(); limit != 0x80000000+32768*512 {
+		t.Errorf("the pool ends at %08X, want S0's end", limit)
+	}
+
+	// Only the layout's frames are taken (fewer, once process 1's unused
+	// table pages are given back): the rest are free.
+	if counts := c.Mem.Paging().Counts(); counts.Free < 4096-int(layout) {
+		t.Errorf("%d free frames and a %d-page layout, want the layout's frames the only ones taken", counts.Free, layout)
+	}
+
+	if err := c.Mem.Paging().Check(); err != nil {
+		t.Error(err)
+	}
+
+	// A pool page gets a frame when it's allocated, any free frame.
+	sys := c.ProcessOne().System
+
+	addr, err := sys.AllocateS0(2, 0x99, "test")
+	if err != nil {
+		t.Fatalf("AllocateS0: %v", err)
+	}
+
+	for va := addr; va < addr+2*512; va += 512 {
+		if _, _, pte, err := c.Mem.LookupPTE(c.CPU, va); err != nil || !pte.Valid() {
+			t.Errorf("allocated pool page %08X: PTE %08X (%v), want a frame", va, uint32(pte), err)
+		}
+	}
+
+	if err := c.VMInitPaging(false, 1000, 1000, 32768, 20, 0, 0, 4, 8); !errors.Is(err, vmserrors.New(vmserrors.CLI_VMTOOLARGE)) {
+		t.Errorf("paging off, S0 eight times memory: %v, want VMTOOLARGE", err)
+	}
+}
+
+// TestVMInit_pagingLimits: with paging on, VMINIT refuses an S0 larger
+// than the architecture's 1 GB, a layout (the system page table among
+// it) that doesn't fit in physical memory, and an S0 too small for its
+// layout.
+func TestVMInit_pagingLimits(t *testing.T) {
+	c := newSizedMachine(t, 256)
+
+	tests := []struct {
+		name       string
+		p0, p1, s0 uint32
+		want       uint32
+	}{
+		{"S0 past 1 GB", 20, 20, 0x200001, vmserrors.CLI_VMTOOLARGE},
+		{"a system page table bigger than memory", 20, 20, 0x200000, vmserrors.CLI_VMTOOLARGE},
+		{"S0 smaller than its layout", 20, 20, 40, vmserrors.CLI_S0TOOSMALL},
+	}
+
+	for _, tt := range tests {
+		err := c.VMInitPaging(true, tt.p0, tt.p1, tt.s0, 2, 2, 2, 2, 8)
+		if !errors.Is(err, vmserrors.New(tt.want)) {
+			t.Errorf("%s: %v, want %s", tt.name, err, vmserrors.New(tt.want))
+		}
+	}
+
+	if err := c.VMInitPaging(true, 20, 20, 96, 2, 2, 2, 2, 8); err != nil {
+		t.Errorf("a layout that fits: %v", err)
+	}
+}
+
+// TestVMInit_layoutPages: layoutPages, which VMINIT checks its sizes
+// with before laying S0 out, counts the pages it lays out, in both
+// modes: S0Free is the first address past them.
+func TestVMInit_layoutPages(t *testing.T) {
+	c := newSizedMachine(t, 16384)
+
+	tests := []struct {
+		paging                    bool
+		p0, p1, s0                uint32
+		ksp, esp, ssp, isp, strng uint32
+	}{
+		{true, 0, 0, 0, 20, 0, 0, 4, 8},
+		{true, 300, 200, 1000, 4, 3, 5, 2, 1},
+		{false, 16384, 8192, 8192, 20, 8, 8, 4, 8},
+		{false, 300, 200, 0, 20, 0, 0, 4, 8},
+	}
+
+	for _, tt := range tests {
+		if err := c.VMInitPaging(tt.paging, tt.p0, tt.p1, tt.s0, tt.ksp, tt.esp, tt.ssp, tt.isp, tt.strng); err != nil {
+			t.Fatalf("%+v: %v", tt, err)
+		}
+
+		p0, p1 := c.VMInitSizes()
+		size := [3]uint32{p0, p1, c.CPU.PR(registers.SLR)}
+		esp, ssp := tt.esp, tt.ssp // VMINIT's defaults for 0
+
+		if esp == 0 {
+			esp = defaultModeStackPages
+		}
+
+		if ssp == 0 {
+			ssp = defaultModeStackPages
+		}
+
+		if got, want := layoutPages(size, tt.ksp, esp, ssp, tt.isp, tt.strng)*512, c.S0Free()-0x80000000; got != want {
+			t.Errorf("%+v: layoutPages %#x bytes, VMINIT laid out %#x", tt, got, want)
+		}
 	}
 }

@@ -162,7 +162,7 @@ func TestVMInitPaging(t *testing.T) {
 		t.Fatal("paging is on after INIT, before any VMINIT")
 	}
 
-	if err := c.VMInit(20, 20, 0, 2, 2, 2, 2, 8); err != nil {
+	if err := c.VMInit(20, 20, 96, 2, 2, 2, 2, 8); err != nil {
 		t.Fatalf("VMInit: %v", err)
 	}
 
@@ -178,7 +178,7 @@ func TestVMInitPaging(t *testing.T) {
 		t.Error("VMINIT/NOPAGING left paging on")
 	}
 
-	if err := c.VMInitPaging(true, 20, 20, 0, 2, 2, 2, 2, 8); err != nil {
+	if err := c.VMInitPaging(true, 20, 20, 96, 2, 2, 2, 2, 8); err != nil {
 		t.Fatalf("VMInitPaging: %v", err)
 	}
 
@@ -192,7 +192,7 @@ func TestVMInitPaging(t *testing.T) {
 
 	_ = settings.Delete(PagingSetting)
 
-	if err := c.VMInit(20, 20, 0, 2, 2, 2, 2, 8); err != nil {
+	if err := c.VMInit(20, 20, 96, 2, 2, 2, 2, 8); err != nil {
 		t.Fatalf("VMInit: %v", err)
 	}
 

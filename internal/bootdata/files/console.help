@@ -154,6 +154,8 @@
 //              10/19/26    vax.sysgen.virtualpagecnt in CONFIG KEYS;
 //                          VMINIT/PAGING's page tables
 //              10/19/26    SHOW MEMORY's regions with paging on
+//              10/19/26    VMINIT's sizes with paging on; F$CONFIG's
+//                          BOOLEAN; vax.memory.* defaults with paging
 
 This is the help documentation for the govax VAX emulator.  Topic sections are
 marked by a "$" delimiter.  This is followed by as many tokens of the help
@@ -1462,7 +1464,10 @@ $LEXI
 
         F$CONFIG(key [,operation])       VALUE (the default): the item's
                                          value, or "" if it isn't set;
-                                         EXISTS: 1 if it's set, else 0
+                                         EXISTS: 1 if it's set, else 0;
+                                         BOOLEAN: 1 if its value is
+                                         TRUE, T, YES, Y, or 1 (any
+                                         case), else 0
 
     The key is a configuration item's name, such as "vax.startup.procedure",
     in either case.
@@ -2096,11 +2101,17 @@ $CONF,KEY
         vax.memory.size               Physical memory (INITIALIZE/VAX).
                                       Default 16384 (8MB).
 
-        vax.memory.p0                 VMINIT's P0 region.  Default 16384.
+        vax.memory.p0                 VMINIT's P0 region.  Default 16384,
+                                      or VMINIT's paging default with
+                                      paging on.
 
-        vax.memory.p1                 VMINIT's P1 region.  Default 8192.
+        vax.memory.p1                 VMINIT's P1 region.  Default 8192,
+                                      or VMINIT's paging default with
+                                      paging on.
 
-        vax.memory.s0                 VMINIT's S0 region.  Default 8192.
+        vax.memory.s0                 VMINIT's S0 region.  Default 8192,
+                                      or VMINIT's paging default with
+                                      paging on.
 
         vax.memory.ksp                The kernel stack.  Default 20.
 
@@ -2110,9 +2121,12 @@ $CONF,KEY
 
         vax.memory.isp                The interrupt stack.  Default 4.
 
-        A region given 0 shares, with the others given 0, the physical
-        memory the rest leave, and physical memory still left over is
-        added to S0 (see HELP VMINIT).
+        With paging off, a region given 0 shares, with the others given
+        0, the physical memory the rest leave, and physical memory still
+        left over is added to S0.  With paging on
+        (vax.sysgen.paging.enable), vax.init gives VMINIT 0 for each
+        region not set here, and VMINIT's paging defaults apply (see
+        HELP VMINIT).
 
     Processes
 
@@ -2527,20 +2541,43 @@ $VM
         /P1=pages       The pages of the P1 region, the control region.
         /S0=pages       The pages of the S0 region, system space.
 
-                        A region left out (or given 0) shares, with the
-                        others left out, whatever physical memory the
-                        regions given sizes leave, and any physical memory
-                        still left over is added to S0.  P0 and P1 are
-                        paged on demand, so they may together be larger
-                        than physical memory; a program can still exhaust
-                        physical memory by touching too many pages, since
-                        there is no paging to backing store.
+                        With paging off, a region left out (or given 0)
+                        shares, with the others left out, whatever
+                        physical memory the regions given sizes leave,
+                        and any physical memory still left over is added
+                        to S0.  P0 and P1 are paged on demand, so they may
+                        together be larger than physical memory; a
+                        program can still exhaust physical memory by
+                        touching too many pages, since there is no paging
+                        to backing store.  All of S0 is mapped to
+                        physical memory, so it can be no larger.
+
+                        With paging on, the regions cost virtual space,
+                        not memory: a page takes memory only when it's
+                        used, and S0 may be larger than physical memory
+                        (its system page table takes a page of memory per
+                        128 S0 pages).  A region left out (or given 0)
+                        takes its paging default, sized for processes
+                        rather than for memory:
+
+                            /P1   5120: the 4096 pages above the user
+                                  stack's top, which are inside P1 but
+                                  have no pages, and 1024 for the user
+                                  stack and P1's expansions
+                            /P0   19456: with /P1, a table area of
+                                  24576 pages, which is also each new
+                                  process's (vax.sysgen.virtualpagecnt)
+                            /S0   16384: room for the page tables,
+                                  stacks, and PCBs of some 65
+                                  processes at once
 
                         S0 has a minimum size, based on the sizes of the
-                        other regions: it holds the PFN database for P0 and
+                        other regions: it holds the page tables for P0 and
                         P1, as well as the privileged modes' stacks.  If S0
-                        is too small (or there is not enough physical
-                        memory left for it), an error message is displayed.
+                        is too small, or (with paging off) larger than
+                        physical memory, or (with paging on) VMINIT's own
+                        part of it doesn't fit in physical memory, an
+                        error message is displayed.
 
         /KSP=pages      The size of the kernel stack.  Default 4.
         /ESP=pages      The size of the executive stack.  Default 8.  Its

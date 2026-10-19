@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"io"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"testing"
 )
@@ -57,6 +58,38 @@ func TestRun_statsPaging(t *testing.T) {
 			t.Errorf("statistics lack %q:\n%s", want, stats)
 		}
 	}
+
+	// VMINIT's paging-mode sizes (docs/PHASE-67 - address space under
+	// paging.md, subtask 8) leave nearly all of vax.init's 16384 frames
+	// free: VMINIT's layout, the microkernel, and process 1's few pages
+	// hold the rest.
+	if free := statCount(t, stats, "Free List Frames:"); free < 16000 {
+		t.Errorf("%d frames on the free list, want at least 16000:\n%s", free, stats)
+	}
+
+	if active := statCount(t, stats, "Active Frames:"); active > 384 {
+		t.Errorf("%d active frames, want at most 384:\n%s", active, stats)
+	}
+}
+
+// statCount is the number on the --stats line labeled label (its digits,
+// without the thousands' commas).
+func statCount(t *testing.T, stats, label string) int {
+	t.Helper()
+
+	at := strings.Index(stats, label)
+	if at < 0 {
+		t.Fatalf("no %q line:\n%s", label, stats)
+	}
+
+	line, _, _ := strings.Cut(stats[at+len(label):], "\n")
+
+	n, err := strconv.Atoi(strings.ReplaceAll(strings.TrimSpace(line), ",", ""))
+	if err != nil {
+		t.Fatalf("%s %q: %v", label, line, err)
+	}
+
+	return n
 }
 
 // TestRun_statsNoPaging: with paging off, --stats has no paging section.

@@ -9,7 +9,7 @@ func TestVMInitPagingQualifier(t *testing.T) {
 	c, _ := newTestConsole(t)
 	d := NewDispatcher(c, loadEvaxGrammar(t), nil)
 
-	if err := d.Dispatch("vminit /p0=20 /p1=20 /ksp=2 /paging"); err != nil {
+	if err := d.Dispatch("vminit /p0=20 /p1=20 /s0=96 /ksp=2 /paging"); err != nil {
 		t.Fatalf("VMINIT/PAGING: %v", err)
 	}
 

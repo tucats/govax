@@ -193,8 +193,8 @@ func TestLexicalMessage(t *testing.T) {
 }
 
 // TestLexicalConfig: F$CONFIG, govax's own, reads the configuration: a
-// key's value (whatever case it's given in), whether it exists, and an
-// operation it doesn't know.
+// key's value (whatever case it's given in), whether it exists, whether
+// it's true, and an operation it doesn't know.
 func TestLexicalConfig(t *testing.T) {
 	const key = "vax.test.lexical.config"
 
@@ -205,11 +205,17 @@ func TestLexicalConfig(t *testing.T) {
 	settings.Set(key, "Some Value")
 	t.Cleanup(func() { _ = settings.Delete(key) })
 
+	settings.Set("vax.test.lexical.yes", "Yes")
+	t.Cleanup(func() { _ = settings.Delete("vax.test.lexical.yes") })
+
 	checkLexical(t, lexConsole(t), []lexCase{
 		{text: `F$CONFIG("vax.test.lexical.config")`, want: "Some Value"},
 		{text: `F$CONFIG("VAX.TEST.LEXICAL.CONFIG", "VALUE")`, want: "Some Value"},
 		{text: `F$CONFIG("vax.test.lexical.config", "exists")`, integer: true, want: "1"},
 		{text: `F$CONFIG("vax.test.lexical.nosuch", "EXISTS")`, integer: true, want: "0"},
+		{text: `F$CONFIG("vax.test.lexical.config", "BOOLEAN")`, integer: true, want: "0"},
+		{text: `F$CONFIG("vax.test.lexical.yes", "BOOLEAN")`, integer: true, want: "1"},
+		{text: `F$CONFIG("vax.test.lexical.nosuch", "BOOLEAN")`, integer: true, want: "0"},
 		{text: `F$CONFIG("vax.test.lexical.nosuch")`, want: ""},
 		{text: `F$CONF("vax.test.lexical.config")`, want: "Some Value"},
 		{text: `F$CON("vax.test.lexical.config")`, code: vmserrors.CLI_ABFNAM},
