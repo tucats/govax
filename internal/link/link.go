@@ -1,5 +1,7 @@
 // Package link is govax's VAX linker: it builds a VMS executable image from
-// object modules, as the VMS LINK command does (docs/PHASE-30.md). It reads
+// object modules, as the VMS LINK command does (docs/PHASE-30.md), or a
+// shareable image, as LINK/SHAREABLE does (shareable.go; docs/PHASE-68 -
+// link shareable images.md). It reads
 // modules through internal/obj, so it links govax's objects and real VAX
 // objects alike.
 //
@@ -113,6 +115,14 @@ type Options struct {
 	// IOSegment is IOSEGMENT=, the image I/O segment's pages; nil for the
 	// system's default.
 	IOSegment *IOSegment
+
+	// Shareable is LINK/SHAREABLE: the image is a shareable image
+	// (shareable.go), which other images are linked against and the image
+	// activator maps beside them. GSMatch is its GSMATCH=, the ident and
+	// match control those images record; nil for an ident from the link
+	// time, matched EQUAL. An executable link ignores GSMatch.
+	Shareable bool
+	GSMatch   *GSMatch
 }
 
 // Image is a linked executable image.
@@ -172,8 +182,18 @@ var sysImgsta = func() uint32 {
 	panic("link: no SYS$IMGSTA in the P1 vector table")
 }()
 
-// imageBase is where an executable image's first cluster starts.
+// imageBase is where an executable image's first cluster starts; a
+// shareable image's starts at 0 (origin).
 const imageBase = 0x200
+
+// origin is where the image's first cluster starts.
+func (l *linker) origin() uint32 {
+	if l.opts.Shareable {
+		return 0
+	}
+
+	return imageBase
+}
 
 // Link links inputs into an executable image.
 func Link(inputs []Input, opts Options) (*Image, error) {
@@ -230,6 +250,10 @@ func Link(inputs []Input, opts Options) (*Image, error) {
 
 	l.addImageClusters()
 
+	if err := l.checkShareable(); err != nil {
+		return nil, err
+	}
+
 	if err := l.allocate(); err != nil {
 		return nil, err
 	}
@@ -275,6 +299,13 @@ type linker struct {
 	// addressFixups counts the .ADDRESS longwords that hold offsets in
 	// shareable images.
 	addressFixups int
+	// selfAddresses are a shareable image's .ADDRESS longwords that hold
+	// its own addresses, which the image activator adds its base to
+	// (shareable.go).
+	selfAddresses []uint32
+	// dstFixups are the offsets in a shareable image's debug symbol table
+	// of the longwords that hold its addresses (shareable.go).
+	dstFixups []dstFixup
 
 	transfer        uint32
 	transferSet     bool
@@ -574,6 +605,13 @@ func (l *linker) symbol(m *module, s *obj.Symbol) error {
 // address (the Linker manual, IDENTIFICATION=).
 func (l *linker) noteTransfer(m *module, eom *obj.EOM) error {
 	weak := eom.HasFlags && eom.Flags&1 != 0
+
+	// A shareable image has no user transfer address: its entry points
+	// are its universal symbols. What real LINK does with a module's
+	// transfer address there is unconfirmed; govax passes over it.
+	if l.opts.Shareable {
+		return nil
+	}
 
 	switch {
 	case l.transferSet && weak:

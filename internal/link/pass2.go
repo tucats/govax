@@ -25,17 +25,23 @@ type section struct {
 // writable reports whether the section's psects are writable.
 func (s *section) writable() bool { return s.key&keyWRT != 0 }
 
-// Significant attributes of an executable image's psects, as bits of an
-// image section's key. The keys' numeric order is the order of image
-// sections in a cluster (the Linker manual, Table 6-1): NOWRT before WRT,
-// NOEXE before EXE, NOVEC before VEC, VEC the most significant.
+// Significant attributes of a psect, as bits of an image section's key.
+// The keys' numeric order is the order of image sections in a cluster
+// (the Linker manual, Table 6-1): NOWRT before WRT, NOEXE before EXE, and
+// NOVEC before VEC, VEC the most significant. In an executable image only
+// those three count. A shareable image's add SHR and PIC: SHR NOPIC
+// (SHRFXD), NOSHR NOPIC (PRVFXD), SHR PIC (SHRPIC), then NOSHR PIC
+// (PRVPIC), each with the other attributes' four combinations in order
+// (VSI's Linker manual, Table 7.3, and testdata/link68's SHR1 and SHR4).
 const (
 	keyWRT = 1 << iota
 	keyEXE
+	keyNOSHR
+	keyPIC
 	keyVEC
 )
 
-func sectionKey(flags uint16) int {
+func (l *linker) sectionKey(flags uint16) int {
 	key := 0
 
 	if flags&obj.PsectWRT != 0 {
@@ -48,6 +54,16 @@ func sectionKey(flags uint16) int {
 
 	if flags&obj.PsectVEC != 0 {
 		key |= keyVEC
+	}
+
+	if l.opts.Shareable {
+		if flags&obj.PsectSHR == 0 {
+			key |= keyNOSHR
+		}
+
+		if flags&obj.PsectPIC != 0 {
+			key |= keyPIC
+		}
 	}
 
 	return key
@@ -443,6 +459,12 @@ func (x *machine) store(st store) error {
 		x.l.referAddress(a.img, a.v, a.sym, x.loc)
 	case a.img != "":
 		return fmt.Errorf("a reference to shareable image %s must be general mode (G^) or .ADDRESS", a.img)
+	case a.rel && x.debug && x.l.opts.Shareable && st.size == 4:
+		x.l.dstFixups = append(x.l.dstFixups, dstFixup{offset: x.loc, address: a.v})
+	case a.rel && st.address && !x.debug && x.l.opts.Shareable:
+		if err := x.l.referSelf(x.loc); err != nil {
+			return err
+		}
 	}
 
 	v := int64(int32(a.v))
@@ -573,7 +595,7 @@ func (l *linker) image() (*Image, error) {
 	if end == 0 {
 		end = l.defaultCluster.base
 		if !l.defaultCluster.based {
-			end = imageBase
+			end = l.origin()
 		}
 	}
 
@@ -603,13 +625,19 @@ func (l *linker) image() (*Image, error) {
 		limit = int(*l.opts.ISDMax)
 	}
 
+	// A shareable image's sections aren't split: SHR1's eight untouched
+	// pages were written into the file, even with DZRO_MIN=1 (SHR4).
+	if l.opts.Shareable {
+		minPages = ^uint32(0)
+	}
+
 	budget := limit - (len(l.sections) + len(placed) + len(global) + 2)
 
 	var isds []isd
 
 	for _, c := range l.clusters {
 		flags := uint32(0)
-		if c.last {
+		if c.last && !l.opts.Shareable {
 			flags |= isdLASTCLU
 		}
 
@@ -619,13 +647,17 @@ func (l *linker) image() (*Image, error) {
 
 		for _, s := range c.sections {
 			for _, run := range s.runs(minPages, &budget) {
-				d := isd{pages: run.count, vpn: (s.base >> 9) + run.first, pfc: c.pfc, flags: flags}
+				d := isd{pages: run.count, vpn: (s.base >> 9) + run.first, pfc: c.pfc, flags: flags | l.sectionType(s)}
 
 				switch {
 				case run.demandZero:
 					d.flags |= isdDZRO | isdWRT
 				case s.writable():
-					d.flags |= isdWRT | isdCRF
+					d.flags |= isdWRT
+
+					if l.copyOnReference(s) {
+						d.flags |= isdCRF
+					}
 				}
 
 				if !run.demandZero {
@@ -637,16 +669,25 @@ func (l *linker) image() (*Image, error) {
 		}
 	}
 
-	stackFlags := uint32(isdTypeUserStack | isdDZRO | isdWRT)
-	if l.defaultCluster.last {
-		stackFlags |= isdLASTCLU
+	isds = append(isds, placed...)
+
+	// The fixup section, and an executable's user stack. A shareable
+	// image has a fixup section only when it has something to fix up,
+	// and no stack (shareable.go).
+	if l.hasFixupSection() {
+		isds = append(isds, isd{pages: uint32(len(fixup)) / blockSize, vpn: fixupVA >> 9, flags: l.fixupSectionFlags(), data: fixup})
+	} else {
+		fixupVA, fixup = 0, nil
 	}
 
-	isds = append(isds, placed...)
-	isds = append(isds,
-		isd{pages: uint32(len(fixup)) / blockSize, vpn: fixupVA >> 9, flags: isdFIXUPVEC | isdWRT | isdCRF, data: fixup},
-		isd{pages: uint32(l.opts.StackPages), vpn: 1<<22 - uint32(l.opts.StackPages), flags: stackFlags},
-	)
+	if !l.opts.Shareable {
+		stackFlags := uint32(isdTypeUserStack | isdDZRO | isdWRT)
+		if l.defaultCluster.last {
+			stackFlags |= isdLASTCLU
+		}
+
+		isds = append(isds, isd{pages: uint32(l.opts.StackPages), vpn: 1<<22 - uint32(l.opts.StackPages), flags: stackFlags})
+	}
 
 	sort.SliceStable(isds, func(i, j int) bool { return isds[i].vpn < isds[j].vpn })
 
@@ -690,6 +731,7 @@ func (l *linker) image() (*Image, error) {
 	}
 
 	if len(l.dst) > 0 {
+		l.dst = l.withDSTFixups(l.dst)
 		l.dstVBN = add(l.dst)
 
 		if l.opts.Debug {

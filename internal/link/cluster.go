@@ -338,7 +338,7 @@ func (l *linker) layoutCluster(c *cluster) {
 			continue // an absolute psect's contributions are only offsets
 		}
 
-		key := sectionKey(p.flags)
+		key := l.sectionKey(p.flags)
 		if groups[key] == nil {
 			groups[key] = &section{key: key, cluster: c}
 		}
@@ -461,7 +461,7 @@ func conflictingMemory(c *cluster, at uint32) *FatalError {
 // passes, then every psect, image section, and symbol its address. The
 // cluster at the highest address is the last cluster.
 func (l *linker) placeClusters() error {
-	free := &freeList{runs: [][2]uint32{{imageBase, p0Limit}}}
+	free := &freeList{runs: [][2]uint32{{l.origin(), p0Limit}}}
 
 	for _, c := range l.clusters {
 		switch {
@@ -549,7 +549,7 @@ func (l *linker) placeClusters() error {
 
 	sort.SliceStable(l.sections, func(i, j int) bool { return l.sections[i].base < l.sections[j].base })
 
-	l.imageBase = imageBase
+	l.imageBase = l.origin()
 	if len(l.sections) > 0 {
 		l.imageBase = l.sections[0].base
 	}

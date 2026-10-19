@@ -98,9 +98,6 @@ type imageHeader struct {
 	based  bool
 }
 
-// Image types (IHD$B_IMGTYPE).
-const ihdTypeShareable = 2 // IHD$K_LIM
-
 // readImageHeader reads a shareable image's header (block 1; image.go has
 // the layout). Its ISDs run to a zero size word, or to a size of ^XFFFF,
 // which continues them at the next header block.

@@ -714,6 +714,8 @@ grammar console
     ! MAP), and /BRIEF makes the map brief. LIBRARY, INCLUDE,
     ! SELECTIVE_SEARCH, and OPTIONS are positional: each belongs to the
     ! file it follows ("LINK MAIN,MYLIB/LIBRARY,PROG/OPTIONS").
+    ! SHAREABLE is /SHAREABLE[=file] (docs/PHASE-68, subtask 5): a
+    ! shareable image, named by its value or as EXECUTABLE says.
     !
     verb link/id=1350
 
@@ -737,6 +739,9 @@ grammar console
                     /placement=positional
 
         qualifier   executable/id=1353          -
+                    /type=$string               -
+                    /default=""
+        qualifier   shareable/id=1363           -
                     /type=$string               -
                     /default=""
         qualifier   traceback/id=1354

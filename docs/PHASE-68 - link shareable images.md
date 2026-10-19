@@ -4,8 +4,9 @@
 author the same day. Part A is the survey. Part B holds the decisions
 and the author's answers to the plan's questions. Part C is the
 subtasks. Subtask 1, the VMS probe (`testdata/link68`), is done, and so
-are subtask 2 (MACRO's `.TRANSFER`), subtask 3 (options files), and
-subtask 4 (clusters for executables).
+are subtask 2 (MACRO's `.TRANSFER`), subtask 3 (options files),
+subtask 4 (clusters for executables), and subtask 5 (`LINK/SHAREABLE`,
+the image).
 
 ## Goal
 
@@ -511,7 +512,7 @@ them.
    images are based at link time in the gaps (EXE1's LIBRTL_001/002,
    BASED, no G^ cells). The map's cluster lines. Matched against
    `EXE1`, and the Phase 30 fixtures must stay byte for byte.
-5. **`LINK/SHAREABLE`, the image.** The console's `/SHAREABLE[=file]`
+5. **Done (2026-10-19).** **`LINK/SHAREABLE`, the image.** The console's `/SHAREABLE[=file]`
    and `govax link --shareable`. The `IHD$K_LIM` header at base 0,
    Table 6-1's shareable order (PIC, SHR), each ISD's section type
    (SHRPIC, PRVPIC, SHRFXD, PRVFXD), no stack ISD, GSMATCH in the
@@ -532,7 +533,9 @@ them.
 7. **`LINK/SHAREABLE`, fixups and bases.** A shareable image's fixup
    section (`PRVFXD`, `IAF$V_SHR`), under the manual's two conditions:
    the `.ADDRESS` list relative to the image itself (SHL entry 0), and
-   G^ cells for the images it uses. A `.ADDRESS` in a shared read-only
+   G^ cells for the images it uses (all three done in subtask 5, which
+   SHR1 needed; what's left is checking them against SHR2's and SHR6's
+   and anything they show). A `.ADDRESS` in a shared read-only
    section makes it CRF+WRT, with a `PRT$C_UR` change-protection entry
    (SHR6). Also NOPIC psects (`SHRFXD`/`PRVFXD`; PICIMG stays set
    unless based), and based images (`BASE=`, no fixup section,
@@ -873,3 +876,66 @@ Left for later subtasks:
   without BASE= are unaffected, and `TestLink_clusters` runs one laid out
   by BASE= and CLUSTER=.
 
+### 2026-10-19 — Subtask 5: `LINK/SHAREABLE`, the image
+
+`link.Options.Shareable` links a shareable image, and
+`link.Options.GSMatch` is its GSMATCH= (`internal/link/shareable.go`
+says what differs from an executable). The console's LINK has
+`/SHAREABLE[=file]`, and `govax link --shareable`. The probe's SHR1,
+SHR1A, SHR4, and SHR5 link byte for byte as real LINK's, from real
+MACRO's objects and from govax's, but for the global symbol table, which
+is subtask 6's (`TestLinkShareableImages`). `TestLinkShareable` runs
+SHR4's link through DCL with SYS$INPUT options and SET VERIFY, and
+matches VMS's log and image.
+
+What the images settled:
+
+- **The header:** `IHD$K_LIM`, LNKNOTFR, PICIMG, `IHD$L_IDENT` and the
+  link flags' top byte from GSMATCH=, or the link time and EQUAL without
+  it (SHR1A). The first transfer address is `SYS$IMGSTA` with traceback
+  and 0 without. A module's transfer address in a shareable link is
+  passed over (**unconfirmed**: no probe image had one).
+- **Sections:** base 0, no user stack ISD, and the shareable half of
+  Table 6-1: the section key adds NOSHR and PIC below VEC, so the order
+  is SHRFXD, PRVFXD, SHRPIC, PRVPIC, each NOWRT/NOEXE, WRT, EXE, WRT+EXE
+  (VSI's manual, Table 7.3; SHR1 and SHR4). Only a private writable
+  section is CRF. **No section gets LASTCLU** in a shareable image (none
+  of the probe's had it), and no demand-zero run is split off; a whole
+  writable section nothing is stored in still becomes DZRO, as LIBRTL's
+  is (**unconfirmed** for these images, which have none). The VECTOR bit
+  Table 7.3 gives VEC sections isn't set: no probe image had one.
+- **The fixup section** (pulled forward from subtask 7, since every
+  probe image but the based SHR3 has one): it's there only when the image
+  refers to another shareable image or has a `.ADDRESS`, typed PRVFXD,
+  and its IAF has `IAF$V_SHR`. **IAF$V_SHR is in the word at IAF+0x0A**,
+  after the fixed part's size, a word at +8, not at +0x24 as
+  `internal/vmsimage` had guessed; `vmsimage.IAFFlags` is corrected, so
+  ANALYZE/IMAGE reads it right now. A `.ADDRESS` of the image's own data
+  goes in a `.ADDRESS` list for image 0, before the other images' lists
+  (the order is **unconfirmed**: SHR1 has only image 0's), relative to 0.
+- **The DST has fixup records** (`docs/DEBUG-RECORDS.md`'s 18.1, which
+  the probe confirms): after the last module's records, from the next
+  block, a `DST$K_FIXUP` record whose group is a longword count, the
+  counted name `DEFAULT_CLUSTER`, and the DST offset of each longword
+  that holds an image address (every relocatable longword pass 2 stores
+  in the DST). The offsets are in the order of the clusters the
+  addresses are in, then the DST's: SHR4's SHR1_RO, collected into
+  FIRST, came before the default cluster's routines. Why the group is
+  named DEFAULT_CLUSTER, when some of its addresses are in another
+  cluster, and how a list too long for one record is split, are
+  **unconfirmed**.
+- **Options:** `ISD_MAX=` in a shareable link is `%LINK-I-OPTIGNSHR,
+  option ignored for shareable image`, shown after its line
+  (`OptionsParser.Shareable`, `Notices`), and `DZRO_MIN=` is taken
+  silently. Neither changes the image.
+- **LINK's status** is VMS's now, for executables too: %X10000001 for a
+  clean link, %X10648268 for one with warnings (USRTFR, NUDFSYMS,
+  USEUNDEF), the inhibit bit set. A shareable image has no USRTFR, in
+  the log or the map.
+
+Refused until subtask 7, with a message: a based shareable image (BASE=,
+or a based CLUSTER=), a position-dependent (NOPIC) psect, and a
+`.ADDRESS` in a read-only section (SHR6). The map still describes the
+image as an executable's (subtask 8). `/EXECUTABLE=` and `/SHAREABLE=`
+naming the image both is refused (VMS's message there is
+**unconfirmed**).

@@ -155,9 +155,13 @@ func (l *linker) layoutFixups() fixupLayout {
 	f.shl = f.icp + 4 + icpEntryLength
 	f.size = f.shl + uint32(1+len(l.shared))*shlEntryLength
 
-	if l.addressFixups > 0 {
+	if l.addressFixups > 0 || len(l.selfAddresses) > 0 {
 		f.addr = f.size
 		f.size += 4 // the zero count that ends the lists
+
+		if len(l.selfAddresses) > 0 {
+			f.size += 8 + 4*uint32(len(l.selfAddresses))
+		}
 
 		for _, r := range l.shared {
 			if len(r.addresses) > 0 {
@@ -196,7 +200,7 @@ func (l *linker) fixupSection(f fixupLayout, fixupVA uint32) []byte {
 	b := make([]byte, pageUp(f.size))
 	le := binary.LittleEndian
 
-	le.PutUint32(b[0x08:], iafFixedLength)
+	le.PutUint16(b[0x08:], iafFixedLength)
 
 	if f.icp > f.gfix+4 {
 		le.PutUint32(b[0x0C:], f.gfix)
@@ -241,20 +245,31 @@ func (l *linker) fixupSection(f fixupLayout, fixupVA uint32) []byte {
 
 		p := f.addr
 
-		for i, r := range l.shared {
-			if len(r.addresses) == 0 {
+		// A shareable image's own .ADDRESS longwords come first, a list
+		// for image 0, the image itself (shareable.go).
+		lists := [][]uint32{l.selfAddresses}
+		for _, r := range l.shared {
+			lists = append(lists, r.addresses)
+		}
+
+		for i, addresses := range lists {
+			if len(addresses) == 0 {
 				continue
 			}
 
-			le.PutUint32(b[p:], uint32(len(r.addresses)))
-			le.PutUint32(b[p+4:], uint32(i+1))
+			le.PutUint32(b[p:], uint32(len(addresses)))
+			le.PutUint32(b[p+4:], uint32(i))
 			p += 8
 
-			for _, a := range r.addresses {
+			for _, a := range addresses {
 				le.PutUint32(b[p:], a-l.imageBase)
 				p += 4
 			}
 		}
+	}
+
+	if l.opts.Shareable {
+		le.PutUint16(b[iafFlags:], iafSHR)
 	}
 
 	// The shareable image list: the image itself, then each shareable

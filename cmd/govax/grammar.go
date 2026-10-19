@@ -74,6 +74,7 @@ type macroFlags struct {
 type linkFlags struct {
 	executable   string // --executable
 	noExecutable bool   // --no-executable
+	shareable    bool   // --shareable: a shareable image (LINK/SHAREABLE)
 	noTraceback  bool   // --no-traceback
 	debug        bool   // --debug
 	noSysLib     bool   // --no-syslib
@@ -402,6 +403,16 @@ var linkGrammar = []cli.Option{
 		OptionType:  cli.BooleanType,
 		Action: func(c *cli.Context) error {
 			link.noExecutable = true
+
+			return nil
+		},
+	},
+	{
+		LongName:    "shareable",
+		Description: "Link a shareable image (LINK/SHAREABLE), named as --executable says",
+		OptionType:  cli.BooleanType,
+		Action: func(c *cli.Context) error {
+			link.shareable = true
 
 			return nil
 		},
@@ -741,6 +752,10 @@ func linkCommand(objects []string, f linkFlags) string {
 		command += "/NOEXECUTABLE"
 	case f.executable != "":
 		command += "/EXECUTABLE=" + dclQuote(f.executable)
+	}
+
+	if f.shareable {
+		command += "/SHAREABLE"
 	}
 
 	if f.noTraceback {

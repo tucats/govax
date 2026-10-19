@@ -38,21 +38,23 @@ const (
 	ihdMajorID = '0' | '2'<<8
 	ihdMinorID = '0' | '5'<<8
 
-	// ihdTypeExecutable is IHD$K_EXE.
+	// ihdTypeExecutable is IHD$K_EXE, and ihdTypeShareable IHD$K_LIM.
 	ihdTypeExecutable = 1
+	ihdTypeShareable  = 2
 
 	// ihdLinkFlags is IHD$L_LNKFLAGS as real LINK wrote it in every
 	// fixture image. ANALYZE/IMAGE names the bits: IHD$V_PICIMG,
 	// IHD$V_DBGDMT, and IHD$V_IHSLONG. The top byte, 1, is
 	// IHD$V_MATCHCTL, which ANALYZE doesn't show.
-	ihdPICIMG    = 1 << 3
-	ihdDBGDMT    = 1 << 5
-	ihdIHSLONG   = 1 << 7
-	ihdLNKDEBUG  = 1 << 0 // linked /DEBUG: the debugger takes control
-	ihdLNKNOTFR  = 1 << 1 // no user transfer address
-	ihdNOP0BUFS  = 1 << 2 // IOSEGMENT=n,NOP0BUFS: RMS takes no more pages in P0
-	ihdMatchCtl  = 1 << 24
-	ihdLinkFlags = ihdPICIMG | ihdDBGDMT | ihdIHSLONG | ihdMatchCtl
+	ihdPICIMG     = 1 << 3
+	ihdDBGDMT     = 1 << 5
+	ihdIHSLONG    = 1 << 7
+	ihdLNKDEBUG   = 1 << 0 // linked /DEBUG: the debugger takes control
+	ihdLNKNOTFR   = 1 << 1 // no user transfer address
+	ihdNOP0BUFS   = 1 << 2 // IOSEGMENT=n,NOP0BUFS: RMS takes no more pages in P0
+	ihdMatchShift = 24
+	ihdMatchCtl   = 1 << ihdMatchShift
+	ihdLinkFlags  = ihdPICIMG | ihdDBGDMT | ihdIHSLONG | ihdMatchCtl
 
 	// ihdIOPages is IHD$W_IMGIOCNT, IOSEGMENT='s pages (0 for the
 	// system's default).
@@ -71,9 +73,12 @@ const (
 	isdFIXUPVEC = 1 << 10 // the fixup section
 	isdPROTECT  = 1 << 18 // a protected cluster's (PROTECT=YES)
 
-	isdTypeUserStack = 253 << 24
-	isdTypeSharedPIC = 3 << 24 // ISD$K_SHRPIC
-	isdTypeMask      = 0xFF << 24
+	isdTypeUserStack  = 253 << 24
+	isdTypeSharedFix  = 1 << 24 // ISD$K_SHRFXD: shared, position dependent
+	isdTypePrivateFix = 2 << 24 // ISD$K_PRVFXD: private, position dependent
+	isdTypeSharedPIC  = 3 << 24 // ISD$K_SHRPIC: shared, position independent
+	isdTypePrivatePIC = 4 << 24 // ISD$K_PRVPIC: private, position independent
+	isdTypeMask       = 0xFF << 24
 
 	// sharedSectionFlags are the flags of a shareable image's section that
 	// a global section ISD mapping it repeats (EXE1's LIBRTL_002 is DZRO,
@@ -112,6 +117,12 @@ const (
 	// prtUREW is PRT$C_UREW, user read and executive write: the
 	// protection the change-protection entry gives the fixup section.
 	prtUREW = 0x0D
+
+	// iafFlags is the IAF's flags word, and iafSHR its bit that says the
+	// fixup section is a shareable image's (IAF$V_SHR; testdata/link68's
+	// SHR1). The word before them is the fixed part's size.
+	iafFlags = 0x0A
+	iafSHR   = 1 << 0
 )
 
 // defaultStackPages is the user stack real LINK allocates without a
@@ -189,6 +200,10 @@ func (l *linker) header(isds []isd, fixupVA uint32) ([]byte, error) {
 	b[0x10] = 1 // IHD$B_HDRBLKCNT
 	b[0x11] = ihdTypeExecutable
 
+	if l.opts.Shareable {
+		b[0x11] = ihdTypeShareable
+	}
+
 	for i := 0x14; i < 0x1C; i++ {
 		b[i] = 0xFF // IHD$Q_PRIVREQS: all
 	}
@@ -198,6 +213,17 @@ func (l *linker) header(isds []isd, fixupVA uint32) ([]byte, error) {
 	flags := uint32(ihdLinkFlags)
 	if !l.transferSet {
 		flags |= ihdLNKNOTFR
+	}
+
+	// IHD$L_IDENT is the global section ident other images record when
+	// they're linked against this one, and the link flags' top byte its
+	// match control (shareable.go): GSMATCH='s, or bits 16 to 47 of the
+	// link time, matched EQUAL.
+	ident := uint32(linkTime >> 16)
+
+	if m := l.opts.GSMatch; m != nil && l.opts.Shareable {
+		ident = uint32(m.Major)<<24 | m.Minor&0xFFFFFF
+		flags = flags&^(0xFF<<ihdMatchShift) | uint32(m.Match)<<ihdMatchShift
 	}
 
 	// An image with a cluster at an address of its own isn't position
@@ -219,8 +245,8 @@ func (l *linker) header(isds []isd, fixupVA uint32) ([]byte, error) {
 	}
 
 	le.PutUint32(b[0x20:], flags)
-	le.PutUint32(b[0x24:], uint32(linkTime>>16)) // IHD$L_IDENT
-	le.PutUint32(b[0x2C:], fixupVA)              // IHD$L_IAFVA
+	le.PutUint32(b[0x24:], ident)   // IHD$L_IDENT
+	le.PutUint32(b[0x2C:], fixupVA) // IHD$L_IAFVA
 
 	// IHA: the transfer addresses. With traceback, the image activator
 	// calls SYS$IMGSTA first, which sets up traceback and then calls the

@@ -15,8 +15,8 @@ import (
 
 // This file implements docs/PHASE-30.md's LINK command:
 //
-//	LINK file[,file...][/HOST] [/EXECUTABLE[=image] | /NOEXECUTABLE] [/[NO]TRACEBACK] [/[NO]DEBUG] [/[NO]SYSLIB]
-//	     [/MAP[=map] [/BRIEF] | /NOMAP]
+//	LINK file[,file...][/HOST] [/EXECUTABLE[=image] | /NOEXECUTABLE | /SHAREABLE[=image]]
+//	     [/[NO]TRACEBACK] [/[NO]DEBUG] [/[NO]SYSLIB] [/MAP[=map] [/BRIEF] | /NOMAP]
 //
 // where each file is an object, or has its own qualifier:
 //
@@ -27,9 +27,11 @@ import (
 //
 // An options file (link.OptionsParser) names more input files, which may
 // also be shareable images (file/SHAREABLE, .EXE), and options. LINK acts
-// on STACK=, IDENTIFICATION=, NAME=, SYMBOL=, UNIVERSAL=, and GSMATCH=
-// (the last two ignored in an executable, as VMS's LINK ignored
-// UNIVERSAL=: testdata/link68's E8), and refuses the others for now.
+// on every VAX LINK option but UNSUPPORTED=, which it refuses.
+// UNIVERSAL= and GSMATCH= are a shareable image's, ignored in an
+// executable, as VMS's LINK ignored UNIVERSAL= (testdata/link68's E8).
+// /SHAREABLE makes a shareable image (docs/PHASE-68, subtask 5), whose
+// options files ignore ISD_MAX= (OPTIGNSHR).
 // SYS$INPUT/OPTIONS reads the options from SYS$INPUT: in a command
 // procedure, the data lines after the LINK command.
 //
@@ -60,6 +62,11 @@ type LinkOptions struct {
 	// /NOEXECUTABLE: link, and report errors, but write nothing.
 	Executable   string
 	NoExecutable bool
+
+	// Shareable is /SHAREABLE: link a shareable image, named by
+	// ShareableFile (/SHAREABLE='s value), or as Executable says.
+	Shareable     bool
+	ShareableFile string
 
 	// NoTraceback is /NOTRACEBACK: the image doesn't start through
 	// SYS$IMGSTA.
@@ -94,6 +101,9 @@ type linkInputs struct {
 	// options gathers the options files' options; a later one's value
 	// replaces an earlier one's.
 	options link.OptionsFile
+	// shareable says the link makes a shareable image, whose options
+	// files ignore some options.
+	shareable bool
 	// first is the first file, which names the image and map by default,
 	// and prev the one before the file being read.
 	first, prev rms.FileLocation
@@ -119,7 +129,15 @@ func (c *Context) Link(opts LinkOptions) error {
 		return vmserrors.Wrap(vmserrors.CLI_LINKING, fmt.Errorf("a user-written debugger module (/DEBUG=%s) isn't supported", opts.DebugModule), "LINK")
 	}
 
-	in := &linkInputs{}
+	if opts.Shareable && opts.ShareableFile != "" {
+		if opts.Executable != "" {
+			return vmserrors.Wrap(vmserrors.CLI_LINKING, fmt.Errorf("/EXECUTABLE and /SHAREABLE both name the image"), "LINK")
+		}
+
+		opts.Executable = opts.ShareableFile
+	}
+
+	in := &linkInputs{shareable: opts.Shareable}
 
 	for _, f := range files {
 		if err := c.linkInput(in, f, opts.Host, true); err != nil {
@@ -171,6 +189,8 @@ func (c *Context) Link(opts LinkOptions) error {
 		DZROMin:    o.DZROMin,
 		ISDMax:     o.ISDMax,
 		IOSegment:  o.IOSegment,
+		Shareable:  opts.Shareable,
+		GSMatch:    o.GSMatch,
 	})
 	if err != nil {
 		return linkFailure(err, exe.Name)
@@ -193,13 +213,28 @@ func (c *Context) Link(opts LinkOptions) error {
 	}
 
 	// Real LINK's warnings, which don't stop the image: undefined symbols
-	// and each reference to one, and a missing transfer address.
-	for _, m := range img.Messages {
+	// and each reference to one, and a missing transfer address. Its
+	// status says whether there were any (testdata/link68's log).
+	status := uint32(ssNormal)
+
+	note := func(m link.Message) {
 		c.Printf("%s\n", m)
+
+		if m.Severity == 'W' {
+			status = linkWarnings
+		}
 	}
 
-	if imageFile != "" && !img.HasTransfer {
-		c.Printf("%s\n", link.NoTransferMessage(imageFile))
+	for _, m := range img.Messages {
+		note(m)
+	}
+
+	if imageFile != "" && !img.HasTransfer && !opts.Shareable {
+		note(link.NoTransferMessage(imageFile))
+	}
+
+	if c.SetStatus != nil {
+		c.SetStatus(status | stsInhibitMsg)
 	}
 
 	if !opts.Map {
@@ -447,6 +482,11 @@ func (in *linkInputs) noteFile(found rms.FileLocation) {
 	in.prev = found
 }
 
+// linkWarnings is LINK's status for an image made with warnings (USRTFR,
+// NUDFSYMS, ...), less STS$M_INHIBIT_MSG: %X10648268 in testdata/link68's
+// log.
+const linkWarnings = 0x00648268
+
 // inputOptionsName is SYS$INPUT as an options file, named as VMS's LINK
 // names it in a message (testdata/link68's E4).
 const inputOptionsName = "SYS$INPUT:.;"
@@ -458,7 +498,14 @@ const inputOptionsName = "SYS$INPUT:.;"
 // DCL shows itself. LINK stops at the first line in error, so the data
 // lines after it in a procedure are DCL's to skip.
 func (c *Context) linkOptions(in *linkInputs, file string, next func() (string, bool), echo, host bool) error {
-	var p link.OptionsParser
+	p := link.OptionsParser{Shareable: in.shareable}
+
+	// Notices about a line follow it (OPTIGNSHR).
+	notices := func() {
+		for _, m := range p.Notices() {
+			c.Printf("%s\n", m)
+		}
+	}
 
 	for {
 		line, ok := next()
@@ -473,12 +520,16 @@ func (c *Context) linkOptions(in *linkInputs, file string, next func() (string, 
 		if err := p.Line(line); err != nil {
 			return optionsFailure(err, file)
 		}
+
+		notices()
 	}
 
 	o, err := p.End()
 	if err != nil {
 		return optionsFailure(err, file)
 	}
+
+	notices()
 
 	in.options.Merge(o)
 

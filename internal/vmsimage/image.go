@@ -94,7 +94,7 @@ const (
 	IAFShlOffset     = 0x18 // longword: the shareable image list
 	IAFShrImgCount   = 0x1C // longword: entries in the shareable image list
 	IAFShlExtra      = 0x20 // longword: extra shareable image entries (unconfirmed)
-	IAFFlags         = 0x24 // longword: IAF$V_ flags (unconfirmed)
+	IAFFlags         = 0x0A // word: IAF$V_ flags (testdata/link68's SHR1: IAF$V_SHR)
 	IAFFixedLength   = 0x40
 
 	// SHLEntryLength is a shareable image list entry's size, and
@@ -556,7 +556,7 @@ func (img *Image) fixups(data []byte) {
 		ShlOffset:     le.Uint32(b[IAFShlOffset:]),
 		ShareCount:    le.Uint32(b[IAFShrImgCount:]),
 		Extra:         le.Uint32(b[IAFShlExtra:]),
-		Flags:         le.Uint32(b[IAFFlags:]),
+		Flags:         uint32(le.Uint16(b[IAFFlags:])),
 	}
 	img.Fixups = f
 

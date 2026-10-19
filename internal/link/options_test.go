@@ -295,3 +295,38 @@ func TestLinkOptionsSymbolsAndIdent(t *testing.T) {
 		}
 	}
 }
+
+// TestShareableOptionNotices checks that options for a shareable image
+// ignore ISD_MAX=, with VMS's OPTIGNSHR after its line, and take
+// DZRO_MIN= without a word (testdata/link68's SHR4).
+func TestShareableOptionNotices(t *testing.T) {
+	p := OptionsParser{Shareable: true}
+
+	var shown []string
+
+	for _, line := range []string{"DZRO_MIN=1", "ISD_MAX=20", "GSMATCH=ALWAYS,0,0"} {
+		if err := p.Line(line); err != nil {
+			t.Fatal(err)
+		}
+
+		shown = append(shown, line)
+
+		for _, m := range p.Notices() {
+			shown = append(shown, m.String())
+		}
+	}
+
+	o, err := p.End()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	want := []string{"DZRO_MIN=1", "ISD_MAX=20", "%LINK-I-OPTIGNSHR, option ignored for shareable image", "GSMATCH=ALWAYS,0,0"}
+	if !reflect.DeepEqual(shown, want) {
+		t.Errorf("shown %q, want %q", shown, want)
+	}
+
+	if o.ISDMax != nil || o.DZROMin == nil || *o.DZROMin != 1 {
+		t.Errorf("ISD_MAX %v, DZRO_MIN %v: want nil and 1", o.ISDMax, o.DZROMin)
+	}
+}

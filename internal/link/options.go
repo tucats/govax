@@ -301,7 +301,14 @@ func (e *OptionError) Error() string {
 
 // OptionsParser reads an options file a line at a time.
 type OptionsParser struct {
+	// Shareable says the options are for a shareable image (LINK/
+	// SHAREABLE), which ignores some of them.
+	Shareable bool
+
 	o OptionsFile
+	// notices are the messages about the lines read since Notices was
+	// last called.
+	notices []Message
 	// statement holds a statement continued from earlier lines.
 	statement strings.Builder
 	// protect is PROTECT='s setting, for the clusters after it.
@@ -323,6 +330,16 @@ func (p *OptionsParser) Line(line string) error {
 	p.statement.WriteString(line)
 
 	return p.finish()
+}
+
+// Notices returns the informational messages about the lines read since
+// it was last called, as VMS's LINK shows them after the line they're
+// about (OPTIGNSHR).
+func (p *OptionsParser) Notices() []Message {
+	n := p.notices
+	p.notices = nil
+
+	return n
 }
 
 // End ends the file, reading any statement its last line continued, and
@@ -675,9 +692,22 @@ var linkOptions = map[string]func(p *OptionsParser, s *statement) error{
 		}
 
 		n, err := s.number(0, "ISD_MAX", 1, maxNumber)
+		if err != nil {
+			return err
+		}
+
+		// A shareable image's sections are never split, so it has no
+		// use for ISD_MAX=, and VMS's LINK said so after the line
+		// (testdata/link68's SHR4). DZRO_MIN= it took without a word.
+		if p.Shareable {
+			p.notices = append(p.notices, Message{'I', "OPTIGNSHR", "option ignored for shareable image"})
+
+			return nil
+		}
+
 		p.o.ISDMax = &n
 
-		return err
+		return nil
 	},
 	"NAME": func(p *OptionsParser, s *statement) error {
 		f := s.whole()

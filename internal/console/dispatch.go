@@ -483,17 +483,19 @@ func (d *Dispatcher) bindGrammar() {
 		}
 
 		return d.Console.cmd().Link(dclcmd.LinkOptions{
-			Files:        inputs,
-			Host:         r.ParamPresent("OBJECTS", "HOST"),
-			Executable:   r.String("EXECUTABLE"),
-			NoExecutable: r.Present("EXECUTABLE") && r.Negated("EXECUTABLE"),
-			NoTraceback:  r.Present("TRACEBACK") && r.Negated("TRACEBACK"),
-			Debug:        r.Present("DEBUG") && !r.Negated("DEBUG") && !r.Defaulted("DEBUG"),
-			DebugModule:  r.String("DEBUG"),
-			NoSysLib:     r.Present("SYSLIB") && r.Negated("SYSLIB"),
-			Map:          r.Present("MAP") && !r.Negated("MAP") && !r.Defaulted("MAP"),
-			MapFile:      r.String("MAP"),
-			Brief:        r.Present("BRIEF"),
+			Files:         inputs,
+			Host:          r.ParamPresent("OBJECTS", "HOST"),
+			Executable:    r.String("EXECUTABLE"),
+			NoExecutable:  r.Present("EXECUTABLE") && r.Negated("EXECUTABLE"),
+			Shareable:     r.Present("SHAREABLE") && !r.Negated("SHAREABLE") && !r.Defaulted("SHAREABLE"),
+			ShareableFile: r.String("SHAREABLE"),
+			NoTraceback:   r.Present("TRACEBACK") && r.Negated("TRACEBACK"),
+			Debug:         r.Present("DEBUG") && !r.Negated("DEBUG") && !r.Defaulted("DEBUG"),
+			DebugModule:   r.String("DEBUG"),
+			NoSysLib:      r.Present("SYSLIB") && r.Negated("SYSLIB"),
+			Map:           r.Present("MAP") && !r.Negated("MAP") && !r.Defaulted("MAP"),
+			MapFile:       r.String("MAP"),
+			Brief:         r.Present("BRIEF"),
 		})
 	})
 

@@ -55,6 +55,7 @@ func TestLinkCommand(t *testing.T) {
 		{[]string{"a"}, linkFlags{executable: "out.exe", noTraceback: true}, `LINK "a"/EXECUTABLE="out.exe"/NOTRACEBACK`},
 		{[]string{"a"}, linkFlags{debug: true}, `LINK "a"/DEBUG`},
 		{[]string{"a"}, linkFlags{noExecutable: true}, `LINK "a"/NOEXECUTABLE`},
+		{[]string{"a"}, linkFlags{executable: "s.exe", shareable: true}, `LINK "a"/EXECUTABLE="s.exe"/SHAREABLE`},
 		{[]string{"a"}, linkFlags{noSysLib: true}, `LINK "a"/NOSYSLIB`},
 		{[]string{"a"}, linkFlags{mapWanted: true}, `LINK "a"/MAP`},
 		{[]string{"a"}, linkFlags{mapWanted: true, mapFile: "a.lst", brief: true}, `LINK "a"/MAP="a.lst"/BRIEF`},

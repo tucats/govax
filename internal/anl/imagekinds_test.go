@@ -125,7 +125,7 @@ func kindsImage() []byte {
 	le.PutUint32(b[f+vmsimage.IAFShlOffset:], shl)
 	le.PutUint32(b[f+vmsimage.IAFShrImgCount:], 3)
 	le.PutUint32(b[f+vmsimage.IAFShlExtra:], 1)
-	le.PutUint32(b[f+vmsimage.IAFFlags:], 1)
+	le.PutUint16(b[f+vmsimage.IAFFlags:], 1)
 
 	longs := func(at int, values ...uint32) {
 		for i, v := range values {

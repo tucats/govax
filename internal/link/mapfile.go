@@ -112,7 +112,7 @@ func (img *Image) Map(opts MapOptions) []string {
 
 	// Writing the image, real LINK notes in the map that it has no
 	// transfer address.
-	if opts.ImageFile != "" && !l.transferSet {
+	if opts.ImageFile != "" && !l.transferSet && !l.opts.Shareable {
 		w.message(NoTransferMessage(opts.ImageFile))
 	}
 
