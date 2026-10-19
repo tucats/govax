@@ -150,27 +150,15 @@ never had.
   `$UPDSEC` by UPDFLG; deleted page-file and CRF sections pending until
   the next creation or image rundown; read clustering by the section's
   pfc or PFCDEFAULT; checked against VMS 7.1 by `testdata/pg65`); 66
-  (in progress) image activation by mapping (subtask 2: a section's
-  file is a `corevms.PageSource`, `corevms/pagesource.go`, a host file
-  a `HostPageSource`; `rms.Session.AccessImage` holds a volume image
-  read-shared, and `Machine.OpenImage` returns an image's bytes with its
-  held source; subtask 3: with paging on the main image is mapped,
-  `machine/imagemap.go`'s `imageMap`, the header decoded in Go and never
-  in P0, each private ISD a `corevms.MapImageSection`, each DZRO ISD
-  `CreateImagePages`, `corevms/imagesec.go`; `setImageProtection` over
-  every PTE form and the fixup section's change-protection list, in both
-  modes; DEPOSIT past a page's protection sets its modify bit; subtask
-  4: a shareable image mapped the same way, privately after the main
-  image, `imageshare_test.go`'s stand-in made by hand from an
-  executable, since LINK makes no shareable images; subtask 5: image reset,
-  `unmapSections` now `DeleteP0`'s first step, so a debugger's `KeepP0`
-  keeps a mapped image's sections and file until the next activation,
-  `imagereset_test.go`; subtask 6: `$CREPRC`'s and a subprocess's
-  RUN's activation already mapped, `imagecreated_test.go`; subtask 7,
-  the suite run with paging forced on, an experiment, which found
-  `WorkingSet.Add` growing a list past its limit with entries free, and
-  the probe, `testdata/pg66`, checked against VMS 7.1: PROBE reads the
-  PTE's protection and never pages in, `vm.Memory.ProbeAccess`); 67 the
+  (done 2026-10-19) image activation by mapping (with paging on, RUN,
+  `$CREPRC`'s and a subprocess's activation, and shareable images map
+  each private ISD as an image section of the held image file and each
+  DZRO ISD as demand-zero pages, the header decoded in Go and never
+  written to P0; `setImageProtection` over every PTE form and the
+  change-protection list, in both modes; image reset is `DeleteP0`'s;
+  JPI$_IMAGNAME; checked against VMS 7.1 by `testdata/pg66`, which
+  also found that PROBE reads the PTE's protection and never pages in,
+  `vm.Memory.ProbeAccess`); 67 the
   address space and page
   tables under paging, deferred to the end. Paging is synchronous, with no
   PFW, COLPG, or FPG waits. Each later phase has a planning doc.
@@ -600,6 +588,13 @@ expect adjustment as phases land):
   `show.go` has SHOW MEMORY's page file section, `ShowMemoryFiles`
   (/FILES[/FULL] in VMS's VAX layout), and `PagingStatistics`, the
   figures cmd/govax's `--stats` prints at exit (`printPagingStats`).
+  Phase 66: with paging on, `imagemap.go`'s `imageMap` activates an
+  image by mapping it (the header and ISDs from `vmsimage.ReadImage`,
+  never written to P0; fixups through faults; `setImageProtection` and
+  the change-protection list after them); `OpenImage`
+  (`imagesource.go`) returns an image's bytes and its held source,
+  through `rms.Session.AccessImage` for a volume image (read access,
+  sharing reads only, so a writer gets RMS$_FLK while it runs).
 - `internal/dclcmd` — the utility commands (Phase 52; earlier in
   `internal/console`): DIRECTORY, TYPE, COPY, DELETE, PURGE, RENAME,
   DUMP (`dump.go`, Phase 51),
@@ -969,6 +964,18 @@ expect adjustment as phases land):
   or successive GPTXs of the section; sized by the section's pfc or
   PFCDEFAULT, at most 127; stopping where the working set has no
   available entry), counted in `PageCounts.PagesRead`.
+  Phase 66, with paging on (`docs/PHASE-66 - mapped image
+  activation.md`): a section's file is a `PageSource`
+  (`pagesource.go`; a volume image an `rms.ACPFile`, a host image a
+  `HostPageSource`), held while any of its pages is mapped
+  (`ReleaseSource` lets the activator's own hold go). `imagesec.go`'s
+  `MapImageSection` maps an ISD as an image section (never written back;
+  a writable one copy-on-reference and charged at mapping; blocks past
+  the file's allocation read as zeros, `zeroPastEnd`), and
+  `CreateImagePages` a DZRO ISD's demand-zero pages; a read-only page
+  the debugger modified takes the page file as backing store when it
+  leaves the working set (`leaveReadOnlySection`). The running image's
+  file is JPI$_IMAGNAME (`SetImageName`, cleared at rundown).
 - `internal/librtl` — LIBRTL.EXE's routines (Phase 34): the LIB$ and STR$
   shims a program reaches through `SHIM$LIBRTL_<offset>` stubs. `Routines`
   lists each with its XFC$SHIM code (its transfer-vector offset is

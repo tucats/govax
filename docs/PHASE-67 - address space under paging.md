@@ -60,6 +60,18 @@ stop spending physical memory on page tables and S0 nobody uses:
   keeps govax's tables unpaged, so these stay listed differences
   (`expectedPG65Differences`) unless this phase revisits it; SYI$_
   PAGTBLPFC reports SYSGEN's 2.
+- **Phase 66 (2026-10-19):** with paging on an image is mapped
+  (`machine/imagemap.go`, `corevms/imagesec.go`): its ISDs' pages
+  exist as section or demand-zero PTEs in P0, and `RegionSize[0]` and
+  `icb.End` move by the ISDs' extent, which is where created space's P0
+  length comes from at activation. The user stack ISD (type 253,
+  `STACK=`) is still ignored in favor of the process's
+  `userStackPages` reserve (finding 9). The forced runs found
+  `TestPG64Oracle`'s detached process (a 16384-page P0's tables)
+  taking the memory at 200 free frames, which page tables backed on
+  demand would end; and VMS charged 62 pages at an image's first
+  instruction where govax charges 24, part of it P1's image pieces
+  (`testdata/pg66`, `expectedPG66Differences`).
 
 ## Design notes
 

@@ -1,6 +1,12 @@
 # Phase 66 — image activation by mapping, and image reset
 
-**Status:** in progress (planned 2026-10-15; subtasks 1 to 6 done 2026-10-18; subtask 7 done 2026-10-19: the suite run with paging forced on, and the probe, checked against VMS 7.1). Needs Phase 65 (sections under the
+**Status:** done (2026-10-19). Subtasks 1 to 8: the survey (Part A,
+its questions answered by the author); the page source; mapping the
+ISDs (image sections, demand-zero pages, protection over every PTE
+form, the change-protection list); shareable images; image reset;
+`$CREPRC`'s and a subprocess's activation; the suite run with paging
+forced on, and the probe, checked against VMS 7.1 (`testdata/pg66`);
+the close-out. Needs Phase 65 (sections under the
 pager, read clustering). Part of the paging program laid out in
 `PHASE-62 - VMS paging.md` (Decision 15 is this phase's).
 
@@ -116,7 +122,8 @@ leave in place".)
 
 - **Host shareable images:** load mapped and private per process, as
   today's copies are. Installing them as shared global sections is future
-  work.
+  work. **Settled** (subtask 4): mapped privately after the main image;
+  installing them shared stays future work.
 
 # Part A — the survey (subtask 1, 2026-10-18)
 
@@ -470,7 +477,7 @@ procedure. Counts print as differences.
    tests' activation counts changed where they move. Then the VMS
    probe (`testdata/pg66`, the cases above), and govax changed to its
    answers.
-8. **Close-out.**
+8. **Close-out** (done 2026-10-19).
 
 ## Progress log
 
@@ -785,3 +792,22 @@ procedure. Counts print as differences.
   found through a rooted logical name; govax writes the directory the
   file was found in as RMS's match gives it, not checked against VMS's
   `[SYS0.SYSCOMMON.][SYSEXE]` form.
+- **2026-10-19:** Subtask 8, the close-out. CLAUDE.md describes the
+  phase (the paging program's paragraph; corevms's page sources and
+  image sections, and the machine's `imageMap` and `OpenImage`); PLAN.md's
+  row is done; HELP's VMINIT/PAGING says that RUN maps an image; Phase
+  67's doc lists what this phase leaves it. The open question is
+  settled above.
+  **Carried forward:** activation's faults and charges, which differ
+  from VMS's because VMS's LIBRTL and the rest are installed images
+  with writable pages of their own, and its activator works in P1
+  (govax's RTL is shims; `expectedPG66Differences`); clustering by
+  replacement at a small working set, which VMS 7.1 did in part W
+  where govax keeps the book's rule of free entries only (Phase 65's
+  K2 saw VMS not cluster at all there), and the working set list's
+  permanent part (Phase 63); host shareable images installed as shared
+  global sections; the order of LINK's fixup cells (`orderCells`);
+  DELETE's `$STATUS` (docs/DEVIATIONS.md); JPI$_IMAGNAME for an image
+  found through a rooted logical name; the user stack ISD and the
+  page tables at small memories (Phase 67). With paging off the header
+  is still written to P0 as a scratch copy, as before this phase.

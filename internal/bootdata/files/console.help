@@ -149,6 +149,8 @@
 //              10/18/26    vax.sysgen.pfcdefault in CONFIG KEYS
 //              10/18/26    F$GETSYI's global section items;
 //                          VMINIT/PAGING brought up to date with sections
+//              10/19/26    VMINIT/PAGING brought up to date with mapped
+//                          image activation
 
 This is the help documentation for the govax VAX emulator.  Topic sections are
 marked by a "$" delimiter.  This is followed by as many tokens of the help
@@ -2549,9 +2551,14 @@ $VM
                         pages take memory only when touched, and a hard
                         fault reads the neighboring pages of the same
                         file with it (the section's cluster size, or
-                        vax.sysgen.pfcdefault).  SHOW MEMORY
-                        shows the counts, and govax's --stats option
-                        reports them at exit.
+                        vax.sysgen.pfcdefault).  RUN maps an image
+                        rather than copying it: its pages are read from
+                        the image file when first touched (the file is
+                        held open while the image runs; on a volume,
+                        others may only read it), and a writable page
+                        becomes the process's own copy, backed by the
+                        page file.  SHOW MEMORY shows the counts, and
+                        govax's --stats option reports them at exit.
 
     Example:
 
