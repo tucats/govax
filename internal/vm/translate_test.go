@@ -658,3 +658,73 @@ func assertAccessViolation(t *testing.T, err error, wantAddr uint32) {
 		t.Errorf("Addr = %#08x, want %#08x", tf.Addr, wantAddr)
 	}
 }
+
+// TestReasonMasks checks each fault's reason mask against the
+// architecture's bits (Phase 67): 1 for a length violation, 2 for a fault
+// on the process PTE's own reference (reported at the access's address),
+// 4 for a write; a read protection violation's mask is 0.
+func TestReasonMasks(t *testing.T) {
+	type want struct {
+		kind FaultKind
+		mask byte
+	}
+
+	check := func(name string, err error, addr uint32, w want) {
+		t.Helper()
+
+		var tf *TranslationFault
+		if !errors.As(err, &tf) {
+			t.Fatalf("%s: error = %v, want a *TranslationFault", name, err)
+		}
+
+		if tf.Kind != w.kind || tf.Mask != w.mask || tf.Addr != addr {
+			t.Errorf("%s: fault = %+v, want kind %d, mask %d, address %#x", name, *tf, w.kind, w.mask, addr)
+		}
+	}
+
+	cpu, mem := newTranslateFixture(t, 4)
+
+	past := uint32(4*pageSize) + 8
+
+	_, err := mem.Translate(cpu, past, AccessRead)
+	check("read past P0", err, past, want{AccessViolation, MaskLength})
+
+	_, err = mem.Translate(cpu, past, AccessWrite)
+	check("write past P0", err, past, want{AccessViolation, MaskLength | MaskWrite})
+
+	setProtection(t, mem, 1, ProtKW)
+
+	psl := cpu.PSL()
+	user := psl
+	user.SetCurMod(registers.User)
+	cpu.SetPSL(user)
+
+	kw := uint32(pageSize) + 4
+
+	_, err = mem.Translate(cpu, kw, AccessRead)
+	check("user read of KW", err, kw, want{ProtectionViolation, 0})
+
+	_, err = mem.Translate(cpu, kw, AccessWrite)
+	check("user write of KW", err, kw, want{ProtectionViolation, MaskWrite})
+
+	cpu.SetPSL(psl)
+
+	// P0 page 128's PTE is in S0 page 2, which the fixture's system page
+	// table leaves no-access: a protection violation on the PTE's
+	// reference. With SLR at 2, S0 page 2 is past the system table: a
+	// length violation on the reference.
+	cpu.SetPR(registers.P0LR, 256)
+
+	far := uint32(128*pageSize) + 12
+
+	_, err = mem.Translate(cpu, far, AccessWrite)
+	check("write, PTE no-access", err, far, want{ProtectionViolation, MaskPTERef | MaskWrite})
+
+	_, err = mem.TranslateIn(cpu, CurrentAddressSpace(cpu), far, AccessRead)
+	check("TranslateIn read, PTE no-access", err, far, want{ProtectionViolation, MaskPTERef})
+
+	cpu.SetPR(registers.SLR, 2)
+
+	_, err = mem.Translate(cpu, far, AccessRead)
+	check("read, PTE past SLR", err, far, want{AccessViolation, MaskPTERef | MaskLength})
+}

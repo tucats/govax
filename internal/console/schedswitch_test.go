@@ -85,6 +85,10 @@ func scheduledConsole(t testing.TB, quantum string, code []byte) (*console.Conso
 		t.Fatal("the scheduler isn't on")
 	}
 
+	if err := c.RTL.EnsurePages(codeAddr, uint32(len(code))); err != nil {
+		t.Fatal(err)
+	}
+
 	if err := c.Mem.StoreIn(c.CPU, c.RTL.Space.AddressSpace, codeAddr, code); err != nil {
 		t.Fatal(err)
 	}
@@ -121,6 +125,10 @@ func handBuiltProcess(t testing.TB, c *console.Console, code []byte) *corevms.En
 	}
 
 	if env.Stacks, err = sys.BuildStacks(pid, 4, 2, 2); err != nil {
+		t.Fatal(err)
+	}
+
+	if err := env.EnsurePages(codeAddr, uint32(len(code))); err != nil {
 		t.Fatal(err)
 	}
 

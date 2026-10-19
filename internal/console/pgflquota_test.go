@@ -273,8 +273,8 @@ func finishImage(t *testing.T, c *console.Console) {
 	}
 }
 
-// TestPageFileQuotaSubprocess: a subprocess's pages, charged at their
-// first touch, come from its job's pool, and go back to it when the
+// TestPageFileQuotaSubprocess: a subprocess's pages, charged as they're
+// created, come from its job's pool, and go back to it when the
 // subprocess is deleted. Its peak is its own.
 func TestPageFileQuotaSubprocess(t *testing.T) {
 	pageFileSettings(t)
@@ -290,6 +290,11 @@ func TestPageFileQuotaSubprocess(t *testing.T) {
 	}
 
 	if env.Space, err = sys.BuildAddressSpace(env.Process.PID, 128, 64); err != nil {
+		t.Fatal(err)
+	}
+
+	// With paging on a P0 page exists only once something creates it.
+	if err := env.EnsurePages(0x200, 20*512); err != nil {
 		t.Fatal(err)
 	}
 
@@ -385,6 +390,11 @@ func TestMemoryExhaustedNotice(t *testing.T) {
 
 	c, out := scheduledConsole(t, longQuantum, brbSelf)
 	db := c.Mem.Paging()
+
+	if err := c.ProcessOne().EnsurePages(0x30000, 4); err != nil {
+		t.Fatal(err)
+	}
+
 	space := c.ProcessOne().Space.AddressSpace
 
 	var taken []uint32

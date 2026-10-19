@@ -64,6 +64,22 @@ const (
 	TranslationNotValid
 )
 
+// The bits of a fault's reason mask, as the architecture defines them for
+// an access-control violation and a translation-not-valid fault (the
+// first of the fault's two parameters a handler sees, before the virtual
+// address).
+const (
+	// MaskLength is a length violation: the page is beyond its region's
+	// length register.
+	MaskLength = 1 << 0
+	// MaskPTERef is a fault on the reference to the process page table
+	// entry itself (the P0 or P1 table's page in S0), not on the page the
+	// access was for. The fault's address is still the access's.
+	MaskPTERef = 1 << 1
+	// MaskWrite is a write, or modify, intent.
+	MaskWrite = 1 << 2
+)
+
 // TranslationFault reports a failed virtual-to-physical address translation.
 // Turning this into the CPU-level exception/fault machinery (EXC_ACCVIO,
 // EXC_TNV, and the rest of set_fault's bookkeeping) belongs to Phase 03,
@@ -79,6 +95,10 @@ const (
 // can inspect *which* fault happened and act differently for a
 // TranslationNotValid than for a ProtectionViolation, instead of having to
 // pattern-match on error text.
+//
+// Mask is the architecture's reason mask (MaskLength, MaskPTERef,
+// MaskWrite): a read protection violation's is 0, a write length
+// violation's 5.
 type TranslationFault struct {
 	Kind FaultKind
 	Addr uint32
@@ -92,20 +112,50 @@ func (f *TranslationFault) Error() string {
 	case ProtectionViolation:
 		return fmt.Sprintf("SYSTEM-F-ACCVIO, access violation, reason mask=%02X, address %#08x", f.Mask, f.Addr)
 	default:
-		return fmt.Sprintf("SYSTEM-F-ACCVIO, access violation, address %#08x", f.Addr)
+		return fmt.Sprintf("SYSTEM-F-ACCVIO, access violation, reason mask=%02X, address %#08x", f.Mask, f.Addr)
 	}
 }
 
+// accessMask is the reason mask's write bit for access.
+func accessMask(access AccessType) byte {
+	if access == AccessWrite {
+		return MaskWrite
+	}
+
+	return 0
+}
+
+// accessViolation is a length violation at addr by a read: what a page
+// table walk that makes no access (LookupPTE, StorePTE) reports.
 func accessViolation(addr uint32) error {
-	return &TranslationFault{Kind: AccessViolation, Addr: addr}
+	return lengthViolation(addr, AccessRead)
 }
 
-func protectionViolation(addr uint32, mask byte) error {
-	return &TranslationFault{Kind: ProtectionViolation, Addr: addr, Mask: mask}
+// lengthViolation is a length violation at addr by access.
+func lengthViolation(addr uint32, access AccessType) error {
+	return &TranslationFault{Kind: AccessViolation, Addr: addr, Mask: MaskLength | accessMask(access)}
 }
 
-func translationNotValid(addr uint32) error {
-	return &TranslationFault{Kind: TranslationNotValid, Addr: addr}
+func protectionViolation(addr uint32, access AccessType) error {
+	return &TranslationFault{Kind: ProtectionViolation, Addr: addr, Mask: accessMask(access)}
+}
+
+func translationNotValid(addr uint32, access AccessType) error {
+	return &TranslationFault{Kind: TranslationNotValid, Addr: addr, Mask: accessMask(access)}
+}
+
+// pteReferenceFault turns err, a fault translating the address of addr's
+// process page table entry, into the fault the access to addr reports:
+// the same kind, at addr, with MaskPTERef and access's write bit added to
+// the PTE reference's own mask (its length bit, if the system page table
+// didn't reach the entry). Any other error is returned as it is.
+func pteReferenceFault(err error, addr uint32, access AccessType) error {
+	tf, ok := err.(*TranslationFault)
+	if !ok {
+		return err
+	}
+
+	return &TranslationFault{Kind: tf.Kind, Addr: addr, Mask: tf.Mask&MaskLength | MaskPTERef | accessMask(access)}
 }
 
 // Translate converts a virtual address to a physical address, consulting
@@ -346,7 +396,7 @@ func (m *Memory) translate(cpu *registers.CPU, addr uint32, access AccessType, s
 
 			m.tb.stcFlush()
 
-			return 0, accessViolation(addr)
+			return 0, lengthViolation(addr, access)
 		}
 
 		// P0BR (P0 Base Register) holds the *virtual* address of P0's
@@ -369,7 +419,7 @@ func (m *Memory) translate(cpu *registers.CPU, addr uint32, access AccessType, s
 
 			m.tb.stcFlush()
 
-			return 0, accessViolation(addr)
+			return 0, lengthViolation(addr, access)
 		}
 
 		pteVirtAddr = cpu.PR(registers.P1BR) + page*4
@@ -387,7 +437,7 @@ func (m *Memory) translate(cpu *registers.CPU, addr uint32, access AccessType, s
 
 			m.tb.stcFlush()
 
-			return 0, accessViolation(addr)
+			return 0, lengthViolation(addr, access)
 		}
 
 		pteVirtAddr = cpu.PR(registers.SBR) + page*4
@@ -398,7 +448,7 @@ func (m *Memory) translate(cpu *registers.CPU, addr uint32, access AccessType, s
 
 		m.tb.stcFlush()
 
-		return 0, accessViolation(addr)
+		return 0, lengthViolation(addr, access)
 	}
 
 	// pteAddr will end up as the *physical* address of the PTE itself —
@@ -416,7 +466,7 @@ func (m *Memory) translate(cpu *registers.CPU, addr uint32, access AccessType, s
 
 		pteAddr, err = m.Translate(cpu, pteVirtAddr, AccessRead)
 		if err != nil {
-			return 0, err
+			return 0, pteReferenceFault(err, addr, access)
 		}
 	}
 
@@ -448,7 +498,7 @@ func (m *Memory) translate(cpu *registers.CPU, addr uint32, access AccessType, s
 
 		m.tb.stcFlush()
 
-		return 0, protectionViolation(addr, byte(access))
+		return 0, protectionViolation(addr, access)
 	}
 
 	// The access is permitted in principle, but the PTE's Valid bit might
@@ -471,7 +521,7 @@ func (m *Memory) translate(cpu *registers.CPU, addr uint32, access AccessType, s
 		m.tb.stcFlush()
 
 		if !ok {
-			return 0, translationNotValid(addr)
+			return 0, translationNotValid(addr, access)
 		}
 	}
 

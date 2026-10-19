@@ -31,10 +31,15 @@ import (
 //
 // # How govax does it
 //
-// VMINIT builds the P0 and P1 page tables once, at their full size, with
-// every page demand-zero, user-owned, and readable and writable by every
-// mode (except P0's page 0, which is no-access). internal/vm allocates a
-// physical page on first touch. So these services work entirely on PTEs:
+// VMINIT builds the P0 and P1 page tables once, at their full size. With
+// paging off every page in them exists from the start, demand-zero,
+// user-owned, and readable and writable by every mode (except P0's page
+// 0, which is no-access), and the length registers never move. With
+// paging on the length registers describe the pages that exist, as
+// VMS's do, and these services lengthen and shorten the regions as they
+// create and delete pages (regions.go: created space). internal/vm
+// allocates a physical page on first touch. So these services work
+// entirely on PTEs:
 //
 //   - creating a page writes a demand-zero PTE (not valid, no physical
 //     page), protected read/write for the requested access mode and more
@@ -48,7 +53,8 @@ import (
 // translation buffer, so the next access sees the change.
 //
 // The page tables can't grow, so a page beyond the end of P0's or P1's
-// table can't be created: SS$_VASFULL.
+// table can't be created: SS$_VASFULL. With paging on, a page beyond a
+// region's length but within its table can: the region grows to it.
 
 // Status values the address space services return.
 var (
@@ -149,8 +155,11 @@ func (env *Environment) storeRetadr(retadr uint32, done []uint32) bool {
 // page it had, if it was valid, or, for a section's page, the section's
 // reference (and a private file section's modified page goes back to
 // its file).
+//
+// In created space (regions.go) a page beyond its region's end is covered
+// first: the region grows to include it.
 func (env *Environment) replacePTE(addr uint32, old, pte vm.PTE) bool {
-	if env.mem.StorePTE(env.cpu, addr, pte) != nil {
+	if env.storePTE(addr, pte) != nil {
 		return false
 	}
 
@@ -226,7 +235,7 @@ func (env *Environment) createPage(addr uint32, mode registers.AccessMode) uint3
 		return ssNoPriv
 	}
 
-	_, _, old, err := env.mem.LookupPTE(env.cpu, addr)
+	old, err := env.lookupPTE(addr)
 	if err != nil {
 		return ssVasFull
 	}
@@ -286,8 +295,12 @@ func serviceSysDeltva(env *Environment, argv []uint32) (uint32, error) {
 }
 
 // deletePages deletes pages, in order, on behalf of mode, stopping at the
-// first that can't be. It returns the status and the pages it did.
+// first that can't be. It returns the status and the pages it did. In
+// created space a region whose end it deleted is contracted
+// (contractRegions).
 func (env *Environment) deletePages(pages []uint32, mode registers.AccessMode) (uint32, []uint32) {
+	defer env.contractRegions()
+
 	done := make([]uint32, 0, len(pages))
 
 	for _, addr := range pages {
@@ -295,7 +308,7 @@ func (env *Environment) deletePages(pages []uint32, mode registers.AccessMode) (
 			return ssNoPriv, done
 		}
 
-		_, _, old, err := env.mem.LookupPTE(env.cpu, addr)
+		old, err := env.lookupPTE(addr)
 		if err == nil && pageExists(old) {
 			if registers.AccessMode(old.Owner()) < mode {
 				return ssPagOwnVio, done
@@ -357,7 +370,7 @@ func serviceSysCntreg(env *Environment, argv []uint32) (uint32, error) {
 		}
 
 	case regionP1:
-		bottom := p1Base + env.cpu.PR(registers.P1LR)*pageSize
+		bottom := p1Base + env.pageSpace().P1LR*pageSize
 		if pagcnt == 0 || pagcnt > (s0Base-bottom)/pageSize {
 			return ssIllPagCnt, nil
 		}
@@ -372,7 +385,9 @@ func serviceSysCntreg(env *Environment, argv []uint32) (uint32, error) {
 
 	status, done := env.deletePages(pages, mode)
 
-	if optArg(argv, 3) == regionP0 && len(done) > 0 {
+	// In created space deletePages contracted the region; otherwise P0's
+	// mark moves down past what was deleted.
+	if optArg(argv, 3) == regionP0 && len(done) > 0 && !env.createdSpace() {
 		env.RegionSize[0] = done[len(done)-1]
 	}
 
@@ -390,16 +405,17 @@ func registerAddressSpaceServices(t *ServiceTable) {
 }
 
 // DeleteP0 is image rundown's deletion of P0 (the book's 21.3,
-// MMG$IMGRESET): every P0 page the image created, loaded, or touched goes
-// back to the form a new address space gives it (ProcessPTE: demand-zero,
-// read/write, user's; page 0 a no-access guard), and the frame it held,
-// valid or in transition, is released as $DELTVA releases it
-// (releasePTE). VMS deletes the pages, and the next image's activation
-// makes its own; govax keeps P0's page table at its length and leaves
-// every page demand-zero, which the next image sees the same way.
-// Without this, an image's pages stayed after its exit, in memory and in
-// the working set, and the next image of the same layout found them
-// there (testdata/pg63's dry run; VMS's PPGCNT falls back at image exit).
+// MMG$IMGRESET): every P0 page the image created, loaded, or touched is
+// deleted, and the frame it held, valid or in transition, is released as
+// $DELTVA releases it (releasePTE). In created space (regions.go) each
+// page gets the all-zero PTE and P0's length goes to 0, as VMS's image
+// reset deletes all of P0. With paging off govax keeps P0's page table
+// at its length and gives each page the form a new address space gives
+// it (ProcessPTE: demand-zero, read/write, user's; page 0 a no-access
+// guard), which the next image sees the same way. Without this, an
+// image's pages stayed after its exit, in memory and in the working set,
+// and the next image of the same layout found them there
+// (testdata/pg63's dry run; VMS's PPGCNT falls back at image exit).
 //
 // Image activation calls it too, for the pages a rundown with KeepP0 set
 // left.
@@ -416,21 +432,17 @@ func (env *Environment) DeleteP0() {
 	}
 
 	space := env.pageSpace()
+	created := env.createdSpace()
 
 	for i := range space.P0LR {
 		addr := i * pageSize
+
 		fresh := ProcessPTE(false, i)
-
-		old, err := env.mem.LookupPTEIn(env.cpu, space, addr)
-		if err != nil || old == fresh {
-			continue
+		if created {
+			fresh = 0
 		}
 
-		if env.mem.StorePTEIn(env.cpu, space, addr, fresh) != nil {
-			continue
-		}
-
-		env.releasePTE(addr, old)
+		env.resetPage(space, addr, fresh)
 	}
 
 	// Pages $EXPREG or the heap charged but nothing touched still have
@@ -439,6 +451,10 @@ func (env *Environment) DeleteP0() {
 
 	env.RegionSize[0] = 0
 
+	if created {
+		env.setRegionLength(regionP0, 0)
+	}
+
 	env.deleteImageP1()
 
 	// Global sections the image's deletions left waiting are released
@@ -446,38 +462,59 @@ func (env *Environment) DeleteP0() {
 	env.ReleasePendingSections()
 }
 
+// resetPage gives the page at addr, in space, the PTE fresh, releasing
+// what its old PTE held (releasePTE). A page already in that form, or
+// whose PTE can't be reached, is passed over.
+func (env *Environment) resetPage(space vm.AddressSpace, addr uint32, fresh vm.PTE) {
+	old, err := env.mem.LookupPTEIn(env.cpu, space, addr)
+	if err != nil || old == fresh {
+		return
+	}
+
+	if env.mem.StorePTEIn(env.cpu, space, addr, fresh) != nil {
+		return
+	}
+
+	env.releasePTE(addr, old)
+}
+
 // deleteImageP1 is image rundown's deletion of the pages the image added
 // to P1 ($EXPREG of region 1, a section mapped with SEC$M_EXPREG there):
-// those from P1's low end (RegionSize[1]) up to where it started, below
-// the user stack's reserve. VMS deletes them with the image (VMS 7.1 in
+// those from P1's low end up to the bottom of the user stack's reserve
+// (userStackBottom). VMS deletes them with the image (VMS 7.1 in
 // testdata/pg64: PAGFILCNT is back where it was after an image that
 // filled its quota with P1 pages); the process's own P1, above, stays.
-// Each page goes back to ProcessPTE's form, its frame and page file
-// block released and its charge refunded, as DeleteP0's are.
+// Each page's frame and page file block are released and its charge
+// refunded, as DeleteP0's are; in created space it gets the all-zero PTE
+// and P1's length goes back to the reserve's bottom, and with paging off
+// it goes back to ProcessPTE's form.
 func (env *Environment) deleteImageP1() {
-	low, start := env.RegionSize[1], uint32(UserStackTop-userStackPages*pageSize)
-	if low == 0 || low >= start {
+	created := env.createdSpace()
+	if !created && env.RegionSize[1] == 0 {
+		return // P1 never expanded
+	}
+
+	low := env.p1Low()
+	if low >= userStackBottom {
 		return
 	}
 
 	space := env.pageSpace()
 
-	for addr := low; addr < start; addr += pageSize {
+	for addr := low; addr < userStackBottom; addr += pageSize {
 		fresh := ProcessPTE(true, (addr-p1Base)/pageSize)
-
-		old, err := env.mem.LookupPTEIn(env.cpu, space, addr)
-		if err != nil || old == fresh {
-			continue
+		if created {
+			fresh = 0
 		}
 
-		if env.mem.StorePTEIn(env.cpu, space, addr, fresh) != nil {
-			continue
-		}
-
-		env.releasePTE(addr, old)
+		env.resetPage(space, addr, fresh)
 	}
 
-	env.refundPagesIn(low, start)
+	env.refundPagesIn(low, userStackBottom)
 
 	env.RegionSize[1] = 0
+
+	if created {
+		env.setRegionLength(regionP1, userStackBottomPage)
+	}
 }

@@ -160,7 +160,11 @@ never had.
   also found that PROBE reads the PTE's protection and never pages in,
   `vm.Memory.ProbeAccess`); 67 the
   address space and page
-  tables under paging, deferred to the end. Paging is synchronous, with no
+  tables under paging, deferred to the end (subtask 2, created space,
+  done 2026-10-19: with paging on P0LR and P1LR describe the pages that
+  exist, `corevms/regions.go`, and creating services lengthen the
+  regions; ACCVIO's reason mask is the architecture's in both modes,
+  `vm.MaskLength`/`MaskPTERef`/`MaskWrite`). Paging is synchronous, with no
   PFW, COLPG, or FPG waits. Each later phase has a planning doc.
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.

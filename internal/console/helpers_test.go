@@ -248,7 +248,20 @@ func storeLong(c *Console, addr, v uint32) error {
 
 	binary.LittleEndian.PutUint32(b[:], v)
 
-	return c.WriteBytes(addr, b[:])
+	return writeScratch(c, addr, b[:])
+}
+
+// writeScratch writes b at addr in process 1's memory, creating the
+// pages first if they don't exist (with paging on a P0 page exists only
+// once something creates it: corevms's EnsurePages).
+func writeScratch(c *Console, addr uint32, b []byte) error {
+	if addr < 0x80000000 {
+		if err := c.ProcessOne().EnsurePages(addr, uint32(len(b))); err != nil {
+			return err
+		}
+	}
+
+	return c.WriteBytes(addr, b)
 }
 
 // withSettings sets each key for the length of the test, putting the old

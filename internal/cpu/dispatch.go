@@ -53,20 +53,18 @@ func wrapMemError(err error) error {
 	var tf *vm.TranslationFault
 
 	if errors.As(err, &tf) {
+		// The fault's parameters are the virtual address and the
+		// architecture's reason mask (vm.MaskLength, MaskPTERef,
+		// MaskWrite): a read protection violation's is 0, a write's 4, a
+		// length violation's 1 or 5. (Before Phase 67 a protection
+		// violation reported 2 and the write bit was never set; see
+		// docs/DEVIATIONS.md.)
+		code := ExcAccessViol
 		if tf.Kind == vm.TranslationNotValid {
-			return &Fault{Code: ExcTranslationNV, Args: []uint32{tf.Addr, 0}}
+			code = ExcTranslationNV
 		}
-		// vm.c's own EXC_ACCVIO subcode: 0x0001 for a length/base
-		// violation, 0x0002 for a protection violation -- vm.TranslationFault
-		// used to collapse this distinction (see docs/DEVIATIONS.md,
-		// resolved in Phase 12 by splitting vm.AccessViolation into two
-		// FaultKinds).
-		subcode := uint32(1)
-		if tf.Kind == vm.ProtectionViolation {
-			subcode = 2
-		}
-		
-		return &Fault{Code: ExcAccessViol, Args: []uint32{tf.Addr, subcode}}
+
+		return &Fault{Code: code, Args: []uint32{tf.Addr, uint32(tf.Mask)}}
 	}
 
 	var pe *vm.PhysicalAddressError

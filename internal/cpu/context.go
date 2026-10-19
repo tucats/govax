@@ -224,6 +224,24 @@ func WritePCB(mem *vm.Memory, addr uint32, p *PCB) error {
 	return writePCBWords(mem, addr, &w, PCBSize)
 }
 
+// WritePCBLengths writes p0lr and p1lr as the P0 and P1 length registers
+// in the hardware PCB at physical address addr, leaving the rest of the
+// PCB, ASTLVL and PME beside the lengths included, as it is. It's how
+// software changes the address space of a process that isn't running, as
+// VMS writes the lengths into the PCB whenever it changes them: the
+// process's next LDPCTX (or the Go switcher's LoadContext) loads them.
+func WritePCBLengths(mem *vm.Memory, addr, p0lr, p1lr uint32) error {
+	w, err := readPCBWords(mem, addr)
+	if err != nil {
+		return err
+	}
+
+	w[PCBP0LRAS/4] = w[PCBP0LRAS/4]&^pcbLengthMask | p0lr&pcbLengthMask
+	w[PCBP1LRPM/4] = w[PCBP1LRPM/4]&^pcbLengthMask | p1lr&pcbLengthMask
+
+	return writePCBWords(mem, addr, &w, PCBSize)
+}
+
 func init() {
 	reg := func(fn byte, h Handler) {
 		instructionTable.SetHandler(instructionTable.Lookup(Opcode{Function: fn}), h)

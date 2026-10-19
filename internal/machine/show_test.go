@@ -78,6 +78,11 @@ func TestShowPage_forms(t *testing.T) {
 
 	const addr = 0x200 // P0's second page
 
+	// With paging on, P0 has no pages until something creates them.
+	if err := c.processOne.EnsurePages(addr, 1); err != nil {
+		t.Fatal(err)
+	}
+
 	cases := []struct {
 		pte  vm.PTE
 		want string

@@ -38,6 +38,12 @@ func serviceSysExpreg(env *Environment, argv []uint32) (uint32, error) {
 	size := pageCount * 512
 	start := env.RegionSize[region]
 
+	// In created space P0's first page is never page 0, which no mode may
+	// touch, even in a process with no P0 pages yet.
+	if region == regionP0 && env.createdSpace() {
+		start = p0Start(start)
+	}
+
 	// P0 ends where its page table does: past it there are no pages to
 	// give, as $CRETVA finds (SS$_VASFULL). The heap's page pool grows by
 	// the same rule (expandP0).
@@ -49,11 +55,25 @@ func serviceSysExpreg(env *Environment, argv []uint32) (uint32, error) {
 	// quota (pgflquota.go), one at a time: when the quota runs out, the
 	// pages before it are made and SS$_EXQUOTA returned (the book's
 	// 16.2.1; the status unconfirmed: VMS 7.3 also has SS$_EXPGFLQUOTA).
+	// In created space (regions.go) each page is created as $CRETVA
+	// creates one, owned by mode, P0 growing to cover it; otherwise every
+	// page of the table exists already, and the mark moves past them.
 	status := uint32(ssNormal)
 
 	for i := range pageCount {
-		if !env.chargePage(start+i*pageSize, false) {
-			status = ssExQuota
+		addr := start + i*pageSize
+
+		var st uint32 = ssNormal
+
+		switch {
+		case region == regionP0 && env.createdSpace():
+			st = env.createPage(addr, registers.AccessMode(mode&3))
+		case !env.chargePage(addr, false):
+			st = ssExQuota
+		}
+
+		if st != ssNormal {
+			status = st
 			size = i * pageSize
 
 			break

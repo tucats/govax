@@ -117,6 +117,11 @@ func (env *Environment) mapImagePage(addr uint32, pte vm.PTE, charge bool) uint3
 		return ssExQuota
 	}
 
+	// In created space (regions.go) P0 grows to cover the page first.
+	if !env.coverPage(addr) {
+		return ssVasFull
+	}
+
 	space := env.pageSpace()
 
 	old, err := env.mem.LookupPTEIn(env.cpu, space, addr)

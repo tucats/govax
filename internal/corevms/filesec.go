@@ -595,12 +595,12 @@ func (sys *System) pageInGlobal(gi uint32, f vm.PageFault) (uint32, faultKind, b
 // processForSpace returns the process whose address space is as.
 func (sys *System) processForSpace(as vm.AddressSpace) *Environment {
 	for _, env := range sys.Processes() {
-		if env.Space != nil && env.Space.AddressSpace == as {
+		if env.Space != nil && env.Space.Same(as) {
 			return env
 		}
 	}
 
-	if cur := sys.Current(); cur != nil && vm.CurrentAddressSpace(sys.cpu) == as {
+	if cur := sys.Current(); cur != nil && vm.CurrentAddressSpace(sys.cpu).Same(as) {
 		return cur
 	}
 
@@ -707,7 +707,7 @@ func (env *Environment) mapPage(addr uint32, pte vm.PTE, mode registers.AccessMo
 		return ssNoPriv
 	}
 
-	_, _, old, err := env.mem.LookupPTE(env.cpu, addr)
+	old, err := env.lookupPTE(addr)
 	if err != nil {
 		return ssVasFull
 	}

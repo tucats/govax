@@ -58,7 +58,7 @@ func putName(t *testing.T, c *Console, name string) uint32 {
 		t.Fatal(err)
 	}
 
-	if err := c.WriteBytes(secName+8, []byte(name)); err != nil {
+	if err := writeScratch(c, secName+8, []byte(name)); err != nil {
 		t.Fatal(err)
 	}
 

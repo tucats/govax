@@ -237,7 +237,7 @@ func (env *Environment) replacementConditions() paging.Conditions {
 		Protected: func(va uint32) bool { return env.wsProtected(as, va) },
 	}
 
-	if vm.CurrentAddressSpace(env.cpu) == as {
+	if vm.CurrentAddressSpace(env.cpu).Same(as) {
 		c.TBSkip = int(env.Sysgen.TBSkipWSL)
 		c.ValidInTB = env.mem.ValidInTB
 	}

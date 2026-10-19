@@ -2,7 +2,8 @@
 
 **Status:** in progress: subtask 1, the survey, done 2026-10-19 (Part A
 below; its questions answered by the author the same day, each
-recommendation accepted). Planned 2026-10-15,
+recommendation accepted); subtask 2, created space, done 2026-10-19.
+Planned 2026-10-15,
 deferred to the end of the paging program (the author, 2026-10-15).
 Needs Phase 66. Part of the paging
 program laid out in `PHASE-62 - VMS paging.md` (Decision 16 is this
@@ -591,3 +592,69 @@ FREP1VA where they vary.
   hook; the S0 pool's unallocated pages no-access, claimed before the
   console's writes; ACCVIO's reason mask fixed in both paging modes in
   subtask 2.
+- **2026-10-19:** Subtask 2, created space (findings 1 to 4, 10, 11).
+  - **ACCVIO's reason mask** (both paging modes): `vm.TranslationFault`'s
+    `Mask` is the architecture's for every kind (`vm.MaskLength`,
+    `MaskPTERef`, `MaskWrite`); a fault on a P0/P1 PTE's own reference
+    is reported at the program's address with `MaskPTERef`
+    (`pteReferenceFault`, in `translate` and `TranslateIn`); and
+    `cpu.wrapMemError` passes the mask through, for a translation-not-valid
+    fault too. `TestReasonMasks`; `TestConditions_assembledProgram`'s
+    MASK is 0 now (a read protection violation); docs/DEVIATIONS.md's
+    entry resolved.
+  - **Created space** (`corevms/regions.go`), with paging on: VMINIT and
+    `BuildAddressSpace` start a space with no P0 pages and P1's
+    permanent part (`InitialLengths`, `InitialPTE`: every other entry
+    zero), which until subtask 3 is everything from the bottom of the
+    user stack's reserve (`userStackBottom`) up. One function sets a
+    region's length (`setRegionLength`: the `ProcessSpace`, the CPU when
+    the process is current, its PCB through the new
+    `cpu.WritePCBLengths` when it isn't, `RegionSize`'s byte form, and
+    the peak). Creators reach a page through `lookupPTE`/`storePTE`
+    (`replacePTE`), which treat an entry past the length but within the
+    table as the zero PTE and cover it (`coverPage`) before writing:
+    `$CRETVA`, `$EXPREG` (P0's pages now created as `$CRETVA` creates
+    them, owned by the caller's mode, never page 0; P1's by
+    `expandP1Pages`), the heap's `growP0`, `mapPage` (sections),
+    `mapImagePage` (image sections, for a process that may not be
+    current). `expandP1` only finds room in created space; P1's floor is
+    the process's table (`p1Floor`), not the CPU's P1LR. Deletion
+    contracts: `deletePages` ($DELTVA, $CNTREG) ends with
+    `contractRegions`, which passes back over every all-zero entry at a
+    region's end; `DeleteP0` zeroes P0 and sets P0LR 0; `deleteImageP1`
+    zeroes the image's P1 pages and puts P1LR back at the reserve.
+    `vm.AddressSpace.Same` (P0BR) is how a space is known
+    (`processForSpace`, `TeardownAddressSpace`, the TB-skip check), and
+    teardown walks the P1 table from its own first entry.
+    `Environment.EnsurePages` creates the pages Go code is about to write
+    (tests' programs and scratch words; subtask 7's console writes can
+    use it), doing nothing with paging off.
+  - **$GETJPI** (and LIB$GETJPI, F$GETJPI): `JPI$_FREP0VA` (P0's end),
+    `FREP1VA` (the page below P1's low end, the book's figure 14-2: P1's
+    table maps FREP1VA+200 up), `FREPTECNT` (what the two tables can
+    still describe), `VIRTPEAK` (`Process.VirtualPeak`, noted at each
+    change; with paging off only the present size is known).
+  - **Tests:** `TestCreatedSpace` (process 1's lengths through
+    $CRETVA, $DELTVA at the end, $EXPREG of both regions, $CNTREG,
+    DeleteP0; the items; the masks past P0's end, below P1's low end,
+    and on a skipped page), `TestCreatedSpaceOtherProcess` (a process
+    not current: its space and PCB change, the CPU's registers don't),
+    `TestCreatedSpacePagingOff`. The paging-on fixtures that wrote pages
+    of a bare space from Go (`scheduledConsole`, `handBuiltProcess`,
+    `storeLong`'s scratch words, the delete and quota tests,
+    `TestShowPage_forms`, `TestMemoryExhaustedNotice`) create them
+    first with `EnsurePages`; `TestPageFileQuotaSubprocess`'s 20 pages
+    are now charged at creation, the same count. `TestPG64Oracle`'s
+    detached run: `$DELTVA` now gives P1's room back (before, Q5's 100
+    pages never came back), so the fill takes P1 to within 72 pages of
+    its table's end and Q11's request for 210 in P1 meets SS$_VASFULL
+    where VMS's meets the quota (`pg64P1End`, listed until subtask 4's
+    single table area).
+  - **Unconfirmed, for the probe:** FREP1VA as an address (VSI) rather
+    than a PTE's; `$DELTVA` contracting a region whose end it deletes
+    (`$CNTREG` uses `$DELTVA`'s deletion routine, the book's 16.2.2.3),
+    and contracting past entries a `$CRETVA` beyond the end skipped;
+    `$EXPREG` of P0's pages owned by the caller's mode; a P1
+    `SEC$M_EXPREG` mapping, made lowest page first, lengthening P1 to
+    its lowest page at once (a failure partway leaves nonexistent pages
+    inside P1).

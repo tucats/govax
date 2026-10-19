@@ -185,6 +185,11 @@ type Process struct {
 	// residentPages).
 	WSPeak uint32
 
+	// VirtualPeak is the most P0 and P1 pages the process has had at once
+	// (JPI$_VIRTPEAK), noted as its regions change with VMS paging on
+	// (regions.go).
+	VirtualPeak uint32
+
 	// PageFilePeak is the most pages the process has had charged against
 	// its job's PGFLQUOTA at once (ACC$L_PGFLPEAK, LOGOUT's "Peak page
 	// file size"; pgflquota.go).

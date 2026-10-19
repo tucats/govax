@@ -37,6 +37,16 @@ type AddressSpace struct {
 	P1BR, P1LR uint32
 }
 
+// Same reports whether a and b are the same process's address space. A
+// process is known by where its page tables are, P0BR, which never moves
+// and which no two processes share; the lengths change as the process
+// creates and deletes pages (with VMS paging on, docs/PHASE-67), so two
+// copies of one space's registers taken at different times may differ in
+// them.
+func (a AddressSpace) Same(b AddressSpace) bool {
+	return a.P0BR == b.P0BR
+}
+
 // CurrentAddressSpace returns the address space the CPU's registers
 // describe now: the current process's.
 func CurrentAddressSpace(cpu *registers.CPU) AddressSpace {
@@ -68,7 +78,7 @@ func (m *Memory) TranslateIn(cpu *registers.CPU, as AddressSpace, addr uint32, a
 		return addr, nil
 	}
 
-	pteAddr, err := m.spacePTEAddress(cpu, as, addr)
+	pteAddr, err := m.spacePTEAddress(cpu, as, addr, access)
 	if err != nil {
 		return 0, err
 	}
@@ -78,8 +88,9 @@ func (m *Memory) TranslateIn(cpu *registers.CPU, as AddressSpace, addr uint32, a
 
 // spacePTEAddress finds the physical address of the PTE that maps addr in
 // as (or in the system page table, for an S0 address), checking the
-// region's length register as translate does.
-func (m *Memory) spacePTEAddress(cpu *registers.CPU, as AddressSpace, addr uint32) (uint32, error) {
+// region's length register as translate does. access is the access the
+// PTE is wanted for, which a fault's reason mask reports.
+func (m *Memory) spacePTEAddress(cpu *registers.CPU, as AddressSpace, addr uint32, access AccessType) (uint32, error) {
 	region := (addr >> 30) & 0x3
 	page := (addr & 0x3FFFFFFF) >> 9
 
@@ -88,27 +99,27 @@ func (m *Memory) spacePTEAddress(cpu *registers.CPU, as AddressSpace, addr uint3
 	switch region {
 	case 0: // P0 grows up: pages 0 through P0LR-1 exist.
 		if page >= as.P0LR {
-			return 0, accessViolation(addr)
+			return 0, lengthViolation(addr, access)
 		}
 
 		pteVirtAddr = as.P0BR + page*4
 
 	case 1: // P1 grows down: only pages above P1LR exist.
 		if page < as.P1LR {
-			return 0, accessViolation(addr)
+			return 0, lengthViolation(addr, access)
 		}
 
 		pteVirtAddr = as.P1BR + page*4
 
 	case 2: // S0: SBR is a physical address, so the PTE's is too.
 		if page >= cpu.PR(registers.SLR) {
-			return 0, accessViolation(addr)
+			return 0, lengthViolation(addr, access)
 		}
 
 		return cpu.PR(registers.SBR) + page*4, nil
 
 	default: // S1 doesn't exist.
-		return 0, accessViolation(addr)
+		return 0, lengthViolation(addr, access)
 	}
 
 	// A process page table lives in S0, so the PTE's own address is an S0
@@ -116,10 +127,15 @@ func (m *Memory) spacePTEAddress(cpu *registers.CPU, as AddressSpace, addr uint3
 	// which is the same for every process (the recursion translate does
 	// through Translate, here without the TB).
 	if (pteVirtAddr>>30)&0x3 != 2 {
-		return 0, accessViolation(addr)
+		return 0, lengthViolation(addr, access)
 	}
 
-	return m.TranslateIn(cpu, as, pteVirtAddr, AccessRead)
+	pteAddr, err := m.TranslateIn(cpu, as, pteVirtAddr, AccessRead)
+	if err != nil {
+		return 0, pteReferenceFault(err, addr, access)
+	}
+
+	return pteAddr, nil
 }
 
 // resolvePTE finishes a translation once the PTE's physical address is
@@ -135,11 +151,11 @@ func (m *Memory) resolvePTE(as AddressSpace, pteAddr, addr uint32, access Access
 	pte := PTE(raw)
 
 	if !pte.Protection().allows(registers.Kernel, access) {
-		return 0, protectionViolation(addr, byte(access))
+		return 0, protectionViolation(addr, access)
 	}
 
 	if !pte.Valid() && !m.pageIn(PageFault{Space: as, Addr: addr, PTEAddr: pteAddr, Write: access == AccessWrite}, &pte) {
-		return 0, translationNotValid(addr)
+		return 0, translationNotValid(addr, access)
 	}
 
 	if access == AccessWrite && !pte.Modified() {
@@ -171,7 +187,7 @@ func (m *Memory) LookupPTEIn(cpu *registers.CPU, as AddressSpace, addr uint32) (
 		return 0, accessViolation(addr)
 	}
 
-	pteAddr, err := m.spacePTEAddress(cpu, as, addr)
+	pteAddr, err := m.spacePTEAddress(cpu, as, addr, AccessRead)
 	if err != nil {
 		return 0, err
 	}
@@ -192,7 +208,7 @@ func (m *Memory) StorePTEIn(cpu *registers.CPU, as AddressSpace, addr uint32, pt
 		return accessViolation(addr)
 	}
 
-	pteAddr, err := m.spacePTEAddress(cpu, as, addr)
+	pteAddr, err := m.spacePTEAddress(cpu, as, addr, AccessRead)
 	if err != nil {
 		return err
 	}

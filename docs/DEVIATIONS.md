@@ -1513,7 +1513,9 @@ _None yet._
   reporting the length/base subcode. Verified by `internal/vm/translate_test.go`'s
   updated `TestTranslateProtectionViolation` (now asserts `ProtectionViolation`, not
   `AccessViolation`) and `internal/cpu/dispatch_test.go`'s new
-  `TestWrapMemErrorProtectionViolation`.
+  `TestWrapMemErrorProtectionViolation`. (Phase 67 replaced these
+  subcodes with the architecture's reason mask: see "The CPU's
+  access-violation reason mask" below.)
 
 ### [Phase 04] Register mode used where `OP_AD`/`OP_VA` access is required
 
@@ -4205,7 +4207,7 @@ widened."
   read, `$QIO`'s buffer check) want a page brought in and are unchanged.
   `TestProbeAccessDoesNotPageIn`, and `TestPG66Oracle`'s A3.
 
-### [Phase 67] The CPU's access-violation reason mask
+### [Phase 67, resolved Phase 67] The CPU's access-violation reason mask
 
 - **Where**: `internal/cpu/dispatch.go`'s `wrapMemError` (ported from
   the C source's `set_fault(EXC_ACCVIO, ...)` subcodes, Phase 12), over
@@ -4224,10 +4226,17 @@ widened."
   different mask from an instruction than from a LIB$ routine. Found by
   Phase 67's survey (its open question on the mask; with created space,
   length violations past P0's end and below the stack become common).
-- **Status**: open; to be fixed in both paging modes in Phase 67's
-  subtask 2, as the author decided (docs/PHASE-67 - address space
-  under paging.md, question 5), the probe's handlers checking the
-  masks.
+- **Status**: fixed in both paging modes in Phase 67's subtask 2
+  (2026-10-19), as the author decided (docs/PHASE-67 - address space
+  under paging.md, question 5). `vm.TranslationFault.Mask` is now the
+  architecture's mask for every kind (`vm.MaskLength`, `MaskPTERef`,
+  `MaskWrite`), a fault on a P0/P1 PTE's reference is reported at the
+  program's address with `MaskPTERef` (`pteReferenceFault`, in both
+  `translate` and `TranslateIn`), and `wrapMemError` passes the mask
+  through, for a translation-not-valid fault too. A read protection
+  violation's mask is 0, a write's 4. `TestReasonMasks`
+  (`internal/vm`); `TestConditions_assembledProgram`'s MASK is now 0.
+  The probe's handlers (subtask 8) are to confirm them on VMS.
 
 <!--
 Entry template:

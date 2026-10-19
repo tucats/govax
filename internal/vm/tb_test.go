@@ -448,7 +448,7 @@ func TestTBHitChecksCurrentMode(t *testing.T) {
 			t.Fatalf("user access %d: error = %v, want a *TranslationFault", access, err)
 		}
 
-		want := TranslationFault{Kind: ProtectionViolation, Addr: vaddr, Mask: byte(access)}
+		want := TranslationFault{Kind: ProtectionViolation, Addr: vaddr, Mask: accessMask(access)}
 		if *tf != want {
 			t.Errorf("user access %d: fault = %+v, want %+v", access, *tf, want)
 		}
@@ -499,7 +499,7 @@ func TestTBWriteToReadOnlyPageFaults(t *testing.T) {
 	_, err := mem.Translate(cpu, vaddr, AccessWrite)
 
 	var tf *TranslationFault
-	if !errors.As(err, &tf) || *tf != (TranslationFault{Kind: ProtectionViolation, Addr: vaddr, Mask: byte(AccessWrite)}) {
+	if !errors.As(err, &tf) || *tf != (TranslationFault{Kind: ProtectionViolation, Addr: vaddr, Mask: MaskWrite}) {
 		t.Errorf("write error = %v, want a protection violation for a write", err)
 	}
 }

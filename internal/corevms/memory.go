@@ -1,6 +1,9 @@
 package corevms
 
-import "github.com/tucats/govax/internal/vmheap"
+import (
+	"github.com/tucats/govax/internal/registers"
+	"github.com/tucats/govax/internal/vmheap"
+)
 
 // The process heap: the blocks LIB$GET_VM, DECC$MALLOC, and the RTL's
 // own routines (dynamic strings, FIND_FILE's and the timers' blocks, ...)
@@ -72,6 +75,16 @@ func (env *Environment) growP0(pages uint32, force bool) (uint32, bool) {
 		}
 	} else if !env.chargePages(start, pages) {
 		return 0, false
+	}
+
+	// In created space (regions.go) the pages are created, demand-zero
+	// and the user's, P0 growing to cover them; they're charged already.
+	if env.createdSpace() {
+		for i := range pages {
+			if env.createPage(start+i*pageSize, registers.User) != ssNormal {
+				return 0, false
+			}
+		}
 	}
 
 	env.RegionSize[0] = uint32(end)

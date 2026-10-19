@@ -174,7 +174,8 @@ const MinP1Pages = (0x80000000-UserStackTop)/pageSize + 1
 // BuildAddressSpace makes a new process's address space: P0 and P1 page
 // tables of p0Pages and p1Pages entries, in S0 pages from the System's
 // pool (charged to pid), each entry a demand-zero page as ProcessPTE
-// says. The P1 vector's pages (ShareP1) are mapped onto the physical pages
+// says; with paging on, only P1's permanent part exists at first, every
+// other entry zero (InitialLengths, InitialPTE; regions.go). The P1 vector's pages (ShareP1) are mapped onto the physical pages
 // process 1's vector uses, read-only to every mode (ProtUR) and owned by
 // kernel mode, so the process can call system services through it but
 // can neither change it nor delete it.
@@ -198,14 +199,18 @@ func (sys *System) BuildAddressSpace(pid, p0Pages, p1Pages uint32) (*ProcessSpac
 		return nil, err
 	}
 
-	p1lr := regionPages - p1Pages
+	// The P1 table's first entry is for page p1Low; with paging on the
+	// regions start shorter than their tables (InitialLengths).
+	p1Low := regionPages - p1Pages
+	paging := sys.mem.Paging() != nil
+	p0lr, p1lr := InitialLengths(p0Pages, p1Pages, paging)
 
 	s := &ProcessSpace{
 		AddressSpace: vm.AddressSpace{
-			P0BR: p0Table, P0LR: p0Pages,
+			P0BR: p0Table, P0LR: p0lr,
 			// P1BR is where entry 0 *would* be: the table holds only the
-			// entries from page P1LR up, and its first one is P1LR's.
-			P1BR: p1Table - p1lr*4, P1LR: p1lr,
+			// entries from page p1Low up, and its first one is p1Low's.
+			P1BR: p1Table - p1Low*4, P1LR: p1lr,
 		},
 		P0Pages: p0Pages, P1Pages: p1Pages,
 		P0Table: p0Table, P1Table: p1Table,
@@ -213,10 +218,10 @@ func (sys *System) BuildAddressSpace(pid, p0Pages, p1Pages uint32) (*ProcessSpac
 		shared: map[uint32]bool{},
 	}
 
-	err = sys.writeTable(p0Table, p0Pages, func(i uint32) vm.PTE { return ProcessPTE(false, i) })
+	err = sys.writeTable(p0Table, p0Pages, func(i uint32) vm.PTE { return InitialPTE(false, i, p1lr, paging) })
 
 	if err == nil {
-		err = sys.writeTable(p1Table, p1Pages, func(i uint32) vm.PTE { return ProcessPTE(true, p1lr+i) })
+		err = sys.writeTable(p1Table, p1Pages, func(i uint32) vm.PTE { return InitialPTE(true, p1Low+i, p1lr, paging) })
 	}
 
 	if err == nil {
@@ -293,14 +298,14 @@ func (sys *System) TeardownAddressSpace(s *ProcessSpace) error {
 	}
 
 	cur := vm.CurrentAddressSpace(sys.cpu)
-	if cur == s.AddressSpace {
+	if cur.Same(s.AddressSpace) {
 		return fmt.Errorf("can't tear down the current process's address space")
 	}
 
 	// Each table's first entry is the page at base.
 	tables := []struct{ table, n, base uint32 }{
 		{s.P0Table, s.P0Pages, 0},
-		{s.P1Table, s.P1Pages, p1Base + s.P1LR*pageSize},
+		{s.P1Table, s.P1Pages, p1Base + (regionPages-s.P1Pages)*pageSize},
 	}
 
 	for _, t := range tables {

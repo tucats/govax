@@ -166,10 +166,15 @@ func (m *Machine) VMInitPaging(paging bool, p0Pages, p1Pages, s0Pages, kspPages,
 	p0br := paddr
 	p0PStart := page
 
-	m.CPU.SetPR(registers.P0LR, size[0])
+	// With paging on, P0 starts with no pages and P1 with its permanent
+	// part, the rest of each table zero, into which the regions grow
+	// (corevms's regions.go); with it off, every page of both exists.
+	p0lr, p1Length := corevms.InitialLengths(size[0], size[1], paging)
+
+	m.CPU.SetPR(registers.P0LR, p0lr)
 
 	for i := uint32(0); i < size[0]; i++ {
-		pte := corevms.ProcessPTE(false, i)
+		pte := corevms.InitialPTE(false, i, p1Length, paging)
 
 		page++
 
@@ -195,11 +200,11 @@ func (m *Machine) VMInitPaging(paging bool, p0Pages, p1Pages, s0Pages, kspPages,
 	p1Base := maxP1 - size[1]*512
 	p1PStart := page
 
-	m.CPU.SetPR(registers.P1LR, p1lr)
+	m.CPU.SetPR(registers.P1LR, p1Length)
 	m.CPU.SetPR(registers.P1BR, (paddr+0x80000000)-p1lr*4)
 
 	for i := uint32(0); i < size[1]; i++ {
-		pte := corevms.ProcessPTE(true, p1lr+i)
+		pte := corevms.InitialPTE(true, p1lr+i, p1Length, paging)
 
 		page++
 

@@ -1073,32 +1073,41 @@ func (env *Environment) mapRange(a sectionArgs, count uint32) (pageRange, bool, 
 const userStackPages = 1024
 
 // p1Low is P1's low end: the lowest P1 address in use, below which P1
-// grows. Until the process expands P1 it's userStackPages below the user
-// stack's top.
+// grows. In created space (regions.go) it's the P1 length register's
+// page. Otherwise, until the process expands P1 it's userStackPages below
+// the user stack's top.
 func (env *Environment) p1Low() uint32 {
+	if env.createdSpace() {
+		return p1Base + env.Space.P1LR*pageSize
+	}
+
 	if env.RegionSize[1] == 0 {
-		env.RegionSize[1] = UserStackTop - userStackPages*pageSize
+		env.RegionSize[1] = userStackBottom
 	}
 
 	return env.RegionSize[1]
 }
 
-// expandP1 adds count pages to P1, below its low end, returning the
-// first (lowest) one. On VMS P1 grows down by lengthening its page table;
-// govax's tables are built at their full size, so P1 can grow only as
-// far down as its table reaches (the page P1LR names): beyond that it's
-// SS$_VASFULL, and no pages are added.
+// expandP1 finds room for count pages in P1, below its low end, returning
+// the first (lowest) one. P1 can grow only as far down as its page table
+// reaches (p1Floor): beyond that it's SS$_VASFULL, and no pages are
+// added. In created space the pages don't exist until the caller creates
+// them, each lengthening P1 as it goes (coverPage); otherwise the low end
+// moves down past them now.
 func (env *Environment) expandP1(count uint32) (uint32, uint32) {
 	low := env.p1Low()
-	bottom := p1Base + env.cpu.PR(registers.P1LR)*pageSize
+	bottom := p1Base + env.p1Floor()*pageSize
 
 	if count == 0 || low < bottom || (low-bottom)/pageSize < count {
 		return 0, ssVasFull
 	}
 
-	env.RegionSize[1] = low - count*pageSize
+	first := low - count*pageSize
+	if !env.createdSpace() {
+		env.RegionSize[1] = first
+	}
 
-	return env.RegionSize[1], 0
+	return first, 0
 }
 
 // mapSection maps section s into the pages of r, from the lowest up,

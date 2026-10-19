@@ -60,7 +60,7 @@ func TestConditions_assembledProgram(t *testing.T) {
 		{"SUBDEPTH", 0}, // ... for SUB1's own frame
 		{"DEPTH1", 1},   // MAINH, one frame up
 		{"VA", 0},       // the address SUB1 read
-		{"MASK", 2},     // the reason: a protection violation
+		{"MASK", 0},     // the reason: a read protection violation
 		{"R0SEEN", 0x55},
 		{"RET1", 2},
 		{"DEPTH2", 1},

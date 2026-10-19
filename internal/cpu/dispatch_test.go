@@ -61,7 +61,7 @@ func TestWrapMemErrorTranslationNotValid(t *testing.T) {
 }
 
 func TestWrapMemErrorAccessViolation(t *testing.T) {
-	src := &vm.TranslationFault{Kind: vm.AccessViolation, Addr: 0x2000}
+	src := &vm.TranslationFault{Kind: vm.AccessViolation, Addr: 0x2000, Mask: vm.MaskLength}
 	err := wrapMemError(src)
 
 	var f *Fault
@@ -79,14 +79,12 @@ func TestWrapMemErrorAccessViolation(t *testing.T) {
 	}
 }
 
-// TestWrapMemErrorProtectionViolation checks the fix for a known
-// deviation: vm.TranslationFault used to collapse EXC_ACCVIO's two
-// distinct signal subcodes (length/base violation vs protection
-// violation) into one, always reporting 0x0001. Fixed in Phase 12 by
-// splitting vm.AccessViolation into vm.AccessViolation/
-// vm.ProtectionViolation -- see docs/DEVIATIONS.md.
+// TestWrapMemErrorProtectionViolation checks that a protection
+// violation's reason mask is the architecture's: no length bit, and the
+// write bit for a write (Phase 67; it reported 2 before, see
+// docs/DEVIATIONS.md).
 func TestWrapMemErrorProtectionViolation(t *testing.T) {
-	src := &vm.TranslationFault{Kind: vm.ProtectionViolation, Addr: 0x2000}
+	src := &vm.TranslationFault{Kind: vm.ProtectionViolation, Addr: 0x2000, Mask: vm.MaskWrite}
 	err := wrapMemError(src)
 
 	var f *Fault
@@ -99,8 +97,8 @@ func TestWrapMemErrorProtectionViolation(t *testing.T) {
 		t.Errorf("Code = %#x, want ExcAccessViol", f.Code)
 	}
 
-	if len(f.Args) != 2 || f.Args[0] != 0x2000 || f.Args[1] != 2 {
-		t.Errorf("Args = %v, want [0x2000, 2]", f.Args)
+	if len(f.Args) != 2 || f.Args[0] != 0x2000 || f.Args[1] != vm.MaskWrite {
+		t.Errorf("Args = %v, want [0x2000, 4]", f.Args)
 	}
 }
 

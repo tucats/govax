@@ -333,6 +333,11 @@ func TestDeleteProcessTransitionPages(t *testing.T) {
 
 	env.Process.WSLimit = wsLimit
 
+	// With paging on a P0 page exists only once something creates it.
+	if err := env.EnsurePages(0x200, 80*512); err != nil {
+		t.Fatal(err)
+	}
+
 	for i := range uint32(80) {
 		c.Mem.BeginInstruction()
 
