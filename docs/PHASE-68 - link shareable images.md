@@ -1064,8 +1064,9 @@ What the images settled:
   fills in places without `-replace`), so the RLFSIG and RLFSIGNT round
   images, linked with govax's tables, match real LINK's as well, and
   `TestCapturedLIBRTLMatchesImage` checks every place. LIBRTL2's and
-  CRFSHR's symbols have no places yet, so their cells fall back on
-  ascending names until those images are merged again the same way. Why real LINK's two orders
+  CRFSHR's symbols have their places too, merged from the images again
+  (copied back from the VAX for it); CRFSHR's absolute `CRF$K_`
+  constants need none. Why real LINK's two orders
   differ is **unconfirmed**. It may come from how it enters an options
   file's image's symbols (all at once) and a library's (as each is
   looked up).
