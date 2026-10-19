@@ -510,3 +510,28 @@ procedure. Counts print as differences.
   confirms); the debugger's DEPOSIT past a page's protection sets its
   modify bit, with paging on only; an image section's pages past the
   file's allocation read as zeros.
+- **2026-10-18:** Subtask 2, the page source. `corevms/pagesource.go`:
+  a section's file is a `PageSource` (`ReadPage(vbn, buf)`,
+  `Deaccess`), which `processSection.file`, `holdFile`/`dropFile`/
+  `orphanFile` (`System.sectionFiles` is keyed by it), `readPage`, and
+  `mapProcessSection` take; writing back goes through `pageWriter`
+  (`WritePage`), which `writePage` asks the source for (an error for a
+  read-only one), so only an accessed volume file can be written.
+  `GlobalSection.File` stays an `*rms.ACPFile`. A host file is a
+  `HostPageSource` (an `io.ReaderAt` and its size: blocks of 512 bytes,
+  the last filled out with zeros, nothing past it; `Deaccess` closes
+  it). `System.ReleaseSource` is the activator letting go of the file
+  once its sections are mapped: left accessed while a section uses it
+  (`orphanFile`), else let go at once. `rms/imagefile.go`'s
+  `Session.AccessImage` finds a volume image as `ReadRawFile` does and
+  accesses it for reading with others allowed only to read
+  (`ACPAccessMode{NoWrite: true}`, question 2), returning the
+  `ACPFile` and the file's bytes; while it's held an RMS writer gets
+  RMS$_FLK, an IO$_ACCESS for writing ACCONFLICT, and DISMOUNT is
+  refused. `machine/imagesource.go`'s `Machine.OpenImage` is
+  `ReadImage` returning the held source with the bytes (a volume image
+  through `AccessImage`, a host image found by `findImage` as a
+  `HostPageSource`); subtask 3's loader uses it with paging on. Tests:
+  `TestAccessImage` (rms), `TestHostPageSource`, `TestReleaseSource`,
+  `TestSourcePages` (corevms), `TestOpenImage_volume`/`_host`
+  (console). Nothing calls `OpenImage` yet, so no behavior changes.

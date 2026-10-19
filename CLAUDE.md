@@ -150,7 +150,11 @@ never had.
   `$UPDSEC` by UPDFLG; deleted page-file and CRF sections pending until
   the next creation or image rundown; read clustering by the section's
   pfc or PFCDEFAULT; checked against VMS 7.1 by `testdata/pg65`); 66
-  image activation by mapping; 67 the address space and page
+  (in progress) image activation by mapping (subtask 2: a section's
+  file is a `corevms.PageSource`, `corevms/pagesource.go`, a host file
+  a `HostPageSource`; `rms.Session.AccessImage` holds a volume image
+  read-shared, and `Machine.OpenImage` returns an image's bytes with its
+  held source); 67 the address space and page
   tables under paging, deferred to the end. Paging is synchronous, with no
   PFW, COLPG, or FPG waits. Each later phase has a planning doc.
   Read the relevant phase doc

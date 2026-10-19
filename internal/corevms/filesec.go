@@ -107,9 +107,9 @@ type sectionFile struct {
 }
 
 // holdFile counts one more section using f.
-func (sys *System) holdFile(f *rms.ACPFile) {
+func (sys *System) holdFile(f PageSource) {
 	if sys.sectionFiles == nil {
-		sys.sectionFiles = map[*rms.ACPFile]*sectionFile{}
+		sys.sectionFiles = map[PageSource]*sectionFile{}
 	}
 
 	sf := sys.sectionFiles[f]
@@ -123,7 +123,7 @@ func (sys *System) holdFile(f *rms.ACPFile) {
 
 // dropFile counts one fewer section using f; the last one deaccesses it if
 // its channel has let it go.
-func (sys *System) dropFile(f *rms.ACPFile) {
+func (sys *System) dropFile(f PageSource) {
 	sf := sys.sectionFiles[f]
 	if sf == nil {
 		return
@@ -143,7 +143,7 @@ func (sys *System) dropFile(f *rms.ACPFile) {
 // orphanFile is a channel letting go of f ($DASSGN, IO$_DEACCESS): if
 // sections still use it, it's left accessed for them, and orphanFile
 // reports true (the channel mustn't deaccess it).
-func (sys *System) orphanFile(f *rms.ACPFile) bool {
+func (sys *System) orphanFile(f PageSource) bool {
 	sf := sys.sectionFiles[f]
 	if sf == nil {
 		return false
@@ -157,8 +157,9 @@ func (sys *System) orphanFile(f *rms.ACPFile) bool {
 // processSection is an entry of a process's section table: a private
 // section of a file.
 type processSection struct {
-	// file is the section's file and vbn the block of its first page.
-	file *rms.ACPFile
+	// file is the section's file (pagesource.go) and vbn the block of its
+	// first page.
+	file PageSource
 	vbn  uint32
 
 	// first is the virtual address of the section's first page, and
@@ -331,21 +332,27 @@ func (env *Environment) releasePTE(addr uint32, old vm.PTE) {
 	env.releaseFrame(pfn, modified)
 }
 
-// writePage writes physical page pfn to block vbn of f.
-func (sys *System) writePage(f *rms.ACPFile, vbn, pfn uint32) error {
+// writePage writes physical page pfn to block vbn of f: an error for a
+// file that can't be written (pagesource.go's pageWriter).
+func (sys *System) writePage(f PageSource, vbn, pfn uint32) error {
+	w, ok := f.(pageWriter)
+	if !ok {
+		return errReadOnlySource
+	}
+
 	buf := make([]byte, pageSize)
 
 	if err := sys.mem.LoadPhysical(pfn*pageSize, buf); err != nil {
 		return err
 	}
 
-	return f.WritePage(vbn, buf)
+	return w.WritePage(vbn, buf)
 }
 
 // readPage reads block vbn of f into a new physical page for the page c
 // describes (frames.go), returning its number, or false if memory is
 // exhausted or the block can't be read.
-func (sys *System) readPage(f *rms.ACPFile, vbn uint32, c vm.FrameClaim) (uint32, bool) {
+func (sys *System) readPage(f PageSource, vbn uint32, c vm.FrameClaim) (uint32, bool) {
 	c.Fill = true
 
 	pfn, ok := sys.mem.AllocateFrame(c)
@@ -631,7 +638,7 @@ func (sys *System) writeBackSection(s *GlobalSection) {
 // them without. A page already there is replaced as by $CRETVA (its
 // owner checked). It returns the status and stores retadr as
 // mapSection does. SS$_VASFULL if the process's section table is full.
-func (env *Environment) mapProcessSection(f *rms.ACPFile, vbn, pages uint32, a sectionArgs, r pageRange) uint32 {
+func (env *Environment) mapProcessSection(f PageSource, vbn, pages uint32, a sectionArgs, r pageRange) uint32 {
 	write := a.flags&secWRT != 0
 
 	ps := &processSection{
