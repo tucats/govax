@@ -1,6 +1,6 @@
 # Phase 66 — image activation by mapping, and image reset
 
-**Status:** planned (2026-10-15). Needs Phase 65 (sections under the
+**Status:** in progress (planned 2026-10-15; subtasks 1 to 3 done 2026-10-18). Needs Phase 65 (sections under the
 pager, read clustering). Part of the paging program laid out in
 `PHASE-62 - VMS paging.md` (Decision 15 is this phase's).
 
@@ -535,3 +535,51 @@ procedure. Counts print as differences.
   `TestAccessImage` (rms), `TestHostPageSource`, `TestReleaseSource`,
   `TestSourcePages` (corevms), `TestOpenImage_volume`/`_host`
   (console). Nothing calls `OpenImage` yet, so no behavior changes.
+- **2026-10-18:** Subtask 3, mapping the ISDs. With paging on and
+  mapping enabled, the main image is mapped (`machine/imagemap.go`'s
+  `imageMap`, chosen by `mapsImages`; a shareable image is still copied,
+  subtask 4's). `OpenImage` holds the file; the header is decoded by
+  `vmsimage.ReadImage` from the Go copy and never written to P0 (the
+  transfer addresses from the activation offset, the ISDs with their
+  23-bit VPN and pfc: `ISD.VPN` is now a `uint32`, `ISD.PFC` new); P0's
+  high-water mark and the ICB's end move by each ISD's extent
+  (`extend`). Each private ISD is `corevms.Environment.MapImageSection`
+  (`corevms/imagesec.go`): a process section of the file flagged
+  `image`, UW, user-owned PSTX PTEs written through the process's own
+  page tables (`mapImagePage`, so the process needn't be current),
+  copy-on-reference and charged at mapping for a writable ISD (the "treat
+  as CRF" rule), the ISD's pfc as the section's. Each DZRO ISD is
+  `CreateImagePages`: demand-zero PTEs, charged at creation. The
+  activator lets its hold on the file go (`ReleaseSource`) once the
+  sections are mapped. The loader's shared tail is `finishLoad` (debug
+  symbols, the protection list, the shareable image list and its loads,
+  `readSharedImages`), with `newICB` and `setTransfer` shared with the
+  copying path, which is otherwise unchanged. The fixups fault in the
+  pages they read and write. `setImageProtection` now sets every PTE
+  that exists, whatever its form (`protectPages`, `pageExists`), and,
+  after the sections', applies the fixup section's change-protection
+  list (`ICB.Protections`, from `vmsimage`'s decoding; addresses
+  relative to `imageLow`), in both modes (question 1): the fixup page is
+  UREW. An image section's block past the file's allocation reads as
+  zeros (`processSection.source`, `zeroPastEnd`; question 4). A modified
+  page of a private section that doesn't write back (an image's
+  read-only page, written by DEPOSIT) takes the page file as backing
+  store when it goes to the modified list (`evictPage`'s
+  `leaveReadOnlySection`), so the writer writes it there and its PTE
+  takes the page file form when its frame is reused; `Machine.WriteBytes`
+  sets the modify bit of a page it writes past its protection, with
+  paging on (`markModified`; question 3). Tests: `TestMappedImage`
+  (section PTEs, protections, the fixup page UREW, the sections counted,
+  the writable and DZRO pages charged and nothing else, the volume held
+  while the image runs, the sections and file gone after),
+  `TestMappedImageOutput` (the G^ call works), `TestMappedImageDeposit`,
+  `TestMappedImageCluster` (an image section's fault reads a
+  PFCDEFAULT cluster), `TestZeroPastEnd` (corevms). Changed:
+  `TestLink_helloPageProtection` expects the fixup page UREW;
+  `TestModifiedPageWriter`'s program now stops after its add loop
+  (checkpoint 5) and re-reads 14 pages down from the highest one on the
+  modified list, as the old fixed range passed by one page's luck (the
+  writer's last run decides which pages are still on the list, and the
+  lazily faulted code moved it); `TestDeleteTransitionPages` records the
+  `$DELTVA` range's frames, valid or in transition, just before the
+  deletion, as more of the array is still valid at checkpoint 1 now.

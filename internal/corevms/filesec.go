@@ -177,9 +177,14 @@ type processSection struct {
 	writeBack bool
 	copyOnRef bool
 
-	// pfc is the section's read cluster size, $CRMPSC's pfc argument: 0
-	// for PFCDEFAULT (cluster.go).
+	// pfc is the section's read cluster size, $CRMPSC's pfc argument (an
+	// image section's ISD's): 0 for PFCDEFAULT (cluster.go).
 	pfc uint32
+
+	// image is set for an image section, one of an image's ISDs mapped by
+	// the image activator (imagesec.go): its pages past the file's
+	// allocation read as zeros.
+	image bool
 }
 
 // addProcessSection puts ps in the first free slot of the process's
@@ -465,7 +470,7 @@ func (sys *System) resolveFault(f vm.PageFault) (vm.PTE, faultKind, bool) {
 
 		claim := processClaim(env, f.Addr, back)
 
-		pfn, ok := sys.readPage(ps.file, ps.vbn+i, claim)
+		pfn, ok := sys.readPage(ps.source(), ps.vbn+i, claim)
 		if ok && ps.copyOnRef {
 			sys.effectivelyModified(pfn, claim)
 			sys.chargeFirstTouch(claim)

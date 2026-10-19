@@ -278,8 +278,12 @@ func (m *Machine) ReadBytes(addr, n uint32) ([]byte, error) {
 // NOWRT) is written anyway, as the VMS debugger's DEPOSIT writes it: the
 // address is translated as a read, and the byte stored in the physical
 // page it maps to. (The VMS debugger changes the page's protection for the
-// write; govax leaves the protection, and the page's modify bit, as they
-// are.) A page that isn't there at all still fails.
+// write; govax leaves the protection as it is.) With paging on, the
+// page's modify bit is set (markModified), so that the change outlives
+// the page's leaving the working set: a read-only page of a mapped image
+// would otherwise be clean, and read again from the image file once its
+// frame went to another page (docs/PHASE-66, question 3). A page that
+// isn't there at all still fails.
 func (m *Machine) WriteBytes(addr uint32, data []byte) error {
 	if err := m.requireInit(); err != nil {
 		return err
@@ -302,6 +306,8 @@ func (m *Machine) WriteBytes(addr uint32, data []byte) error {
 			if err := m.Mem.StorePhysical(phys, []byte{b}); err != nil {
 				return err
 			}
+
+			m.markModified(at)
 		}
 
 		return nil
@@ -519,3 +525,21 @@ func (m *Machine) ResetAsmSession() { m.asmSession = nil }
 // S0Free is the first S0 address past every region VMINIT reserves, where
 // a live ASM session's S0 content starts.
 func (m *Machine) S0Free() uint32 { return m.s0Free }
+
+// markModified sets the modify bit of the current process's P0 or P1
+// page at addr, which WriteBytes just wrote past its protection, with
+// paging on; with it off a page never leaves memory, so nothing is
+// needed.
+func (m *Machine) markModified(addr uint32) {
+	if m.Mem.Paging() == nil || addr >= 0x80000000 {
+		return
+	}
+
+	_, _, pte, err := m.Mem.LookupPTE(m.CPU, addr)
+	if err != nil || !pte.Valid() || pte.Modified() {
+		return
+	}
+
+	pte.SetModified(true)
+	_ = m.Mem.StorePTE(m.CPU, addr, pte)
+}

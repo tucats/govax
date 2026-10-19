@@ -206,9 +206,16 @@ func TestLink_helloPageProtection(t *testing.T) {
 			}
 
 			want := vm.ProtUR
-			if isd.Flags&isdWRT != 0 {
+
+			switch {
+			case isd.Flags&isdFIXUPVEC != 0:
+				// The fixup section's change-protection entry makes its
+				// page user-read, executive-write (docs/PHASE-66,
+				// question 1).
+				want = vm.ProtUREW
+			case isd.Flags&isdWRT != 0:
 				want, sawWRT = vm.ProtUW, true
-			} else {
+			default:
 				sawRO = true
 			}
 
@@ -638,10 +645,12 @@ func TestDispatch_linkDebug(t *testing.T) {
 }
 
 // The image section descriptor flags and type a linked image's ISDs are
-// checked for (ISD$V_GBL, ISD$V_WRT, ISD_K_USRSTACK in the top byte).
+// checked for (ISD$V_GBL, ISD$V_WRT, ISD$V_FIXUPVEC, ISD_K_USRSTACK in
+// the top byte).
 const (
 	isdGBL      = 1 << 0
 	isdWRT      = 1 << 3
+	isdFIXUPVEC = 1 << 10
 	isdUsrStack = 253
 )
 

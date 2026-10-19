@@ -3,6 +3,7 @@ package console_test
 import (
 	"encoding/binary"
 	"path/filepath"
+	"slices"
 	"testing"
 
 	"github.com/tucats/govax/internal/console"
@@ -31,8 +32,9 @@ const (
 
 // mpwSource writes each of 80 pages of an array (checkpoint 1); maps
 // PAGES.DAT as a writable private section, adds 1000 to the longword at
-// the start of each of its 64 pages, and reads pages 20 to 33 again
-// (checkpoint 2, R7 the section's first address); calls $UPDSEC for the
+// the start of each of its 64 pages (checkpoint 5), and reads 14 pages
+// again, from the page R11 names down (checkpoint 2, R7 the section's
+// first address); calls $UPDSEC for the
 // whole section (checkpoint 3, R9 its status); reads every page of the
 // section back, counting in R9 those that don't hold their block number
 // plus 1000 (checkpoint 4); and returns, which unmaps the section. At
@@ -78,11 +80,12 @@ range:	.blkl	2
 20$:	addl2	#1000,(r2)
 	addl2	#512,r2
 	sobgtr	r3,20$
-	movl	range,r2
-	addl2	#512*20,r2
+	stop	5
+	ashl	#9,r11,r2
+	addl2	range,r2
 	movl	#14,r3
 30$:	tstl	(r2)
-	addl2	#512,r2
+	subl2	#512,r2
 	sobgtr	r3,30$
 	movl	range,r7
 	stop	2
@@ -244,18 +247,43 @@ func TestModifiedPageWriter(t *testing.T) {
 		t.Fatalf("checkpoint 1: %d frames on the modified list, want at least %d", stuck, 80-wsLimit)
 	}
 
+	// Checkpoint 5: every page of the section has been written. Which of
+	// them wait on the modified list depends on when the writer last
+	// ran, so the program reads 14 pages again down from the highest of
+	// them between pages 13 and 33 (33 if there's none): that one, at
+	// least, comes back off the modified list.
+	release(1)
+	checkpoint(5)
+
+	section := c.CPU.GPR(2) - 64*512
+	if section == 0 || c.CPU.GPR(9)&1 == 0 {
+		t.Fatalf("checkpoint 5: the section wasn't mapped (status %08X)", c.CPU.GPR(9))
+	}
+
+	reread := uint32(33)
+	onList := sectionPages(section).modified
+
+	for i := len(onList) - 1; i >= 0; i-- {
+		if p := uint32(onList[i]); p <= 33 && p >= 13 {
+			reread = p
+
+			break
+		}
+	}
+
+	c.CPU.SetGPR(11, reread)
+
 	// Checkpoint 2: of the section's 64 pages, the 30 last touched are in
 	// the working set; of the others, the writer has written all but at
 	// most MPW_HILIMIT, whose frames are on the free list, and the file
-	// holds those pages' new values. Pages 20 to 33, read again, came
-	// back by soft faults; any that came off the modified list have
-	// clean PTEs and their modify bits saved.
-	release(1)
+	// holds those pages' new values. The 14 pages read again came back by
+	// soft faults; any that came off the modified list have clean PTEs
+	// and their modify bits saved.
+	release(5)
 	checkpoint(2)
 
-	section := c.CPU.GPR(7)
-	if section == 0 {
-		t.Fatalf("checkpoint 2: the section wasn't mapped (status %08X)", c.CPU.GPR(9))
+	if got := c.CPU.GPR(7); got != section {
+		t.Fatalf("checkpoint 2: the section is at %08X, want %08X", got, section)
 	}
 
 	w := sectionPages(section)
@@ -263,8 +291,8 @@ func TestModifiedPageWriter(t *testing.T) {
 		t.Errorf("checkpoint 2: section pages on the free list %v, the modified list %v", w.free, w.modified)
 	}
 
-	if len(w.saved) == 0 {
-		t.Error("checkpoint 2: no section page is back with its modify bit saved")
+	if len(w.saved) == 0 && slices.Contains(onList, int(reread)) {
+		t.Errorf("checkpoint 2: no section page is back with its modify bit saved (page %d was on the modified list)", reread)
 	}
 
 	if n := db.ModifiedCount(); n < stuck {

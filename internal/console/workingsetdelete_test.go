@@ -170,6 +170,24 @@ func TestDeleteTransitionPages(t *testing.T) {
 		t.Fatalf("checkpoint 1: %d of the array's pages in transition, want at least %d", len(frames), 80-wsLimit)
 	}
 
+	// record notes the frames the pages from first, n of them, hold now,
+	// valid or in transition, just before they're deleted: a page still
+	// valid at checkpoint 1 may have left the working set since, or may
+	// still be in it, and its frame is freed with the others.
+	record := func(first, n uint32) {
+		t.Helper()
+
+		for _, va := range pagesInTransition(t, c, first, n, paging.Modified) {
+			frames[va], _ = pteIn(t, c, va).Transition()
+		}
+
+		for i := range n {
+			if pte := pteIn(t, c, first+i*512); pte.Valid() {
+				frames[first+i*512] = pte.PFN()
+			}
+		}
+	}
+
 	// deleted checks that the pages from first, n of them, gave up the
 	// frames they held in transition: each frame is free and tied to
 	// nothing, and a new frame comes from among them (the free list's
@@ -222,6 +240,7 @@ func TestDeleteTransitionPages(t *testing.T) {
 	deleted("$CRETVA", array, 40)
 
 	// Checkpoint 3: $DELTVA of the other 40 does the same.
+	record(array+40*512, 40)
 	release(2)
 	checkpoint(3)
 

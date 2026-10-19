@@ -154,7 +154,13 @@ never had.
   file is a `corevms.PageSource`, `corevms/pagesource.go`, a host file
   a `HostPageSource`; `rms.Session.AccessImage` holds a volume image
   read-shared, and `Machine.OpenImage` returns an image's bytes with its
-  held source); 67 the address space and page
+  held source; subtask 3: with paging on the main image is mapped,
+  `machine/imagemap.go`'s `imageMap`, the header decoded in Go and never
+  in P0, each private ISD a `corevms.MapImageSection`, each DZRO ISD
+  `CreateImagePages`, `corevms/imagesec.go`; `setImageProtection` over
+  every PTE form and the fixup section's change-protection list, in both
+  modes; DEPOSIT past a page's protection sets its modify bit); 67 the
+  address space and page
   tables under paging, deferred to the end. Paging is synchronous, with no
   PFW, COLPG, or FPG waits. Each later phase has a planning doc.
   Read the relevant phase doc

@@ -57,8 +57,12 @@ func isdType(flags uint32) uint32 { return flags >> 24 }
 // (already inconsistently-sized, per imgdef.h vs. its own count range)
 // 15-byte field -- Go strings have no such fixed-buffer concern.
 type ISD struct {
-	Pages     uint16
-	VPN       uint16
+	Pages uint16
+	VPN   uint32
+	// PFC is the section's page fault cluster, the top byte of the ISD's
+	// VPN longword (0 for the default, PFCDEFAULT). Only a mapped image
+	// (imageMap) reads it; the copying loader's ISDs leave it 0.
+	PFC       byte
 	Flags     uint32
 	VBN       uint32
 	SectionID uint32
@@ -116,6 +120,12 @@ type ICB struct {
 	// linked /DEBUG, so RUN starts the debugger on it unless told not to.
 	LinkDebug bool
 
+	// Protections are the fixup section's protection changes (each a
+	// run of pages from an address relative to the image's lowest
+	// section, imageLow, and a PRT$C_ code), applied after the fixups
+	// as VMS's image activator applies them (setImageProtection).
+	Protections []vmsimage.Protection
+
 	// Cells are the image's G^ fixup cells, by address, once imageFixup
 	// has filled them: what shareable image and transfer-vector offset
 	// each one's G^ reference asked for (Phase 41). The disassembler names
@@ -135,7 +145,7 @@ func (p *ImageProcess) ResetICBList() {
 	p.ICBList = nil
 
 	p.process().DeleteP0() // what a rundown under the debugger left
-	
+
 	p.process().RegionSize[0] = 0
 }
 
@@ -284,7 +294,7 @@ func (p *ImageProcess) readISD(addr uint32) (*ISD, uint32, error) {
 		name = string(buf)
 	}
 
-	return &ISD{Pages: pages, VPN: vpn, Flags: flags, VBN: vbn, SectionID: sectionID, Name: name}, uint32(size), nil
+	return &ISD{Pages: pages, VPN: uint32(vpn), Flags: flags, VBN: vbn, SectionID: sectionID, Name: name}, uint32(size), nil
 }
 
 // readIAF reads the fixed part of an Image Attribute/Fixup header at addr,
@@ -334,6 +344,10 @@ func (p *ImageProcess) imageLoad(fn string, flag uint32) (*ICB, error) {
 		}
 	}
 
+	if p.mapsImages(flag) {
+		return p.imageMap(fn, flag)
+	}
+
 	data, err := p.m.ReadImage(fn, flag == icbMain)
 	if err != nil {
 		return nil, err
@@ -363,14 +377,7 @@ func (p *ImageProcess) imageLoad(fn string, flag uint32) (*ICB, error) {
 		return nil, err
 	}
 
-	icb := &ICB{Base: p.process().RegionSize[0], Flags: flag | icbIncomplete, File: fn}
-	if flag == icbMain {
-		icb.Name = "<MAIN>"
-	} else {
-		icb.Name = fn
-	}
-
-	p.ICBList = append(p.ICBList, icb)
+	icb := p.newICB(fn, flag)
 
 	transferOffset, err := p.readIHDTransferOffset(base)
 	if err != nil {
@@ -388,25 +395,7 @@ func (p *ImageProcess) imageLoad(fn string, flag uint32) (*ICB, error) {
 			return nil, err
 		}
 
-		if v != 0 {
-			var sname string
-
-			v += icb.Base
-
-			if icb.Name != "<MAIN>" {
-				if n == 0 {
-					sname = fmt.Sprintf("SHARE$%s_INITIALIZE", icb.Name)
-				} else {
-					sname = fmt.Sprintf("SHARE$%s_TRANSFER_%d", icb.Name, n)
-				}
-			} else {
-				sname = "MAIN"
-			}
-
-			p.setSymbol(sname, v)
-		}
-
-		icb.Transfer[n] = v
+		p.setTransfer(icb, n, v)
 	}
 
 	isdAddr := base + identOffset + ihiSize
@@ -462,83 +451,163 @@ func (p *ImageProcess) imageLoad(fn string, flag uint32) (*ICB, error) {
 		}
 	}
 
-	icb.Flags &^= icbIncomplete
+	return icb, p.finishLoad(icb, data)
+}
 
-	icb.Debug, icb.LinkDebug, icb.DebugErr = readDebugSymbols(data, icb.Base)
-
-	if icb.FixupISD != nil {
-		addr := icb.Base + (uint32(icb.FixupISD.VPN) << 9)
-
-		iaf, err := p.readIAF(addr)
-		if err != nil {
-			return nil, err
-		}
-
-		namesOffset, err := p.loadLong(addr + iaf.OffsetShl + 16)
-		if err != nil {
-			return nil, err
-		}
-
-		iaf.OffsetNames = namesOffset
-		icb.IAF = iaf
-
-		self := &SHR{Name: icb.Name, ID: 0, Base: icb.Base, Icb: icb}
-		icb.SHRList = append(icb.SHRList, self)
-		naddr := addr + iaf.OffsetShl + 16 + iaf.OffsetNames
-
-		var imageID uint32
-
-		for n := uint32(1); n < iaf.ShrImgCnt; n++ {
-			nameAddr := naddr + 0x08
-			naddr += 0x40
-
-			nameLen, err := p.loadByte(nameAddr)
-			if err != nil {
-				return nil, err
-			}
-
-			buf := make([]byte, nameLen)
-
-			for i := range buf {
-				b, err := p.loadByte(nameAddr + 1 + uint32(i))
-				if err != nil {
-					return nil, err
-				}
-
-				buf[i] = b
-			}
-
-			imageID++
-			icb.SHRList = append(icb.SHRList, &SHR{Name: string(buf), ID: imageID})
-		}
-
-		for _, shr := range icb.SHRList {
-			if shr.ID == 0 {
-				continue
-			}
-
-			dep, err := p.imageLoad(shr.Name, icbSecondary)
-			if err != nil {
-				continue // matches image_load's VAX_FNF-is-tolerated handling
-			}
-
-			shr.Icb = dep
-			shr.Base = dep.Base
-		}
+// newICB starts the ICB of fn, an image being loaded with flag (icbMain
+// or icbSecondary) at P0's high-water mark, and adds it to the list.
+func (p *ImageProcess) newICB(fn string, flag uint32) *ICB {
+	icb := &ICB{Base: p.process().RegionSize[0], Flags: flag | icbIncomplete, File: fn}
+	if flag == icbMain {
+		icb.Name = "<MAIN>"
+	} else {
+		icb.Name = fn
 	}
 
-	return icb, nil
+	p.ICBList = append(p.ICBList, icb)
+
+	return icb
+}
+
+// setTransfer records transfer address n of icb, v as the header gives
+// it (relative to the image's base; 0 for none), and defines its symbol:
+// MAIN for the main image's first, SHARE$name_INITIALIZE and
+// SHARE$name_TRANSFER_n for a shareable image's.
+func (p *ImageProcess) setTransfer(icb *ICB, n, v uint32) {
+	if v != 0 {
+		var sname string
+
+		v += icb.Base
+
+		if icb.Name != "<MAIN>" {
+			if n == 0 {
+				sname = fmt.Sprintf("SHARE$%s_INITIALIZE", icb.Name)
+			} else {
+				sname = fmt.Sprintf("SHARE$%s_TRANSFER_%d", icb.Name, n)
+			}
+		} else {
+			sname = "MAIN"
+		}
+
+		p.setSymbol(sname, v)
+	}
+
+	icb.Transfer[n] = v
+}
+
+// extend moves P0's high-water mark and icb's end past isd's pages.
+func (p *ImageProcess) extend(icb *ICB, isd *ISD) {
+	if isd.Pages == 0 {
+		return
+	}
+
+	last := icb.Base + (isd.VPN+uint32(isd.Pages))<<9
+
+	env := p.process()
+	env.RegionSize[0] = max(env.RegionSize[0], last)
+	icb.End = max(icb.End, last-1)
+}
+
+// finishLoad is the end of loading icb, whose sections are in place,
+// from the image file's contents data: its debug symbols and protection
+// changes, and, if it has a fixup section, its shareable image list,
+// each of which is loaded in turn.
+func (p *ImageProcess) finishLoad(icb *ICB, data []byte) error {
+	icb.Flags &^= icbIncomplete
+
+	img, err := vmsimage.ReadImage(data)
+	if err == nil && img.Fixups != nil {
+		icb.Protections = img.Fixups.Protections
+	}
+
+	icb.Debug, icb.LinkDebug, icb.DebugErr = readDebugSymbols(img, err, data, icb.Base)
+
+	if icb.FixupISD == nil {
+		return nil
+	}
+
+	if err := p.readSharedImages(icb); err != nil {
+		return err
+	}
+
+	for _, shr := range icb.SHRList {
+		if shr.ID == 0 {
+			continue
+		}
+
+		dep, err := p.imageLoad(shr.Name, icbSecondary)
+		if err != nil {
+			continue // matches image_load's VAX_FNF-is-tolerated handling
+		}
+
+		shr.Icb = dep
+		shr.Base = dep.Base
+	}
+
+	return nil
+}
+
+// readSharedImages reads icb's fixup section header (IAF) and its
+// shareable image list from the image's memory, into icb.IAF and
+// icb.SHRList (the image itself first, as image 0).
+func (p *ImageProcess) readSharedImages(icb *ICB) error {
+	addr := icb.Base + (uint32(icb.FixupISD.VPN) << 9)
+
+	iaf, err := p.readIAF(addr)
+	if err != nil {
+		return err
+	}
+
+	namesOffset, err := p.loadLong(addr + iaf.OffsetShl + 16)
+	if err != nil {
+		return err
+	}
+
+	iaf.OffsetNames = namesOffset
+	icb.IAF = iaf
+
+	self := &SHR{Name: icb.Name, ID: 0, Base: icb.Base, Icb: icb}
+	icb.SHRList = append(icb.SHRList, self)
+	naddr := addr + iaf.OffsetShl + 16 + iaf.OffsetNames
+
+	var imageID uint32
+
+	for n := uint32(1); n < iaf.ShrImgCnt; n++ {
+		nameAddr := naddr + 0x08
+		naddr += 0x40
+
+		nameLen, err := p.loadByte(nameAddr)
+		if err != nil {
+			return err
+		}
+
+		buf := make([]byte, nameLen)
+
+		for i := range buf {
+			b, err := p.loadByte(nameAddr + 1 + uint32(i))
+			if err != nil {
+				return err
+			}
+
+			buf[i] = b
+		}
+
+		imageID++
+		icb.SHRList = append(icb.SHRList, &SHR{Name: string(buf), ID: imageID})
+	}
+
+	return nil
 }
 
 // readDebugSymbols reads the debug symbol table of the image file data,
-// loaded at base (see dbgsym.Read). An image without one gives nil and no
+// loaded at base (see dbgsym.Read), whose decoding is img (or the error
+// err that vmsimage.ReadImage gave). An image without one gives nil and no
 // error. A table that can't be read doesn't stop the image from loading
 // or running, since only the disassembler's names depend on it, so the
 // error is returned for SHOW IMAGES/FULL to report rather than for
 // imageLoad to fail on. It also reports whether the image header says the
 // image was linked /DEBUG (IHD$V_LNKDEBUG).
-func readDebugSymbols(data []byte, base uint32) (*dbgsym.Program, bool, error) {
-	img, err := vmsimage.ReadImage(data)
+func readDebugSymbols(img *vmsimage.Image, err error, data []byte, base uint32) (*dbgsym.Program, bool, error) {
 	if err != nil {
 		return nil, false, err
 	}
@@ -826,21 +895,22 @@ func imageProtection(isd *ISD) vm.Protection {
 
 // setImageProtection sets the protection of every page icb's sections
 // occupy: each section's own (imageProtection) when protect is true, as
-// RUN does once the image is loaded and fixed up, or UW when it's false,
-// as ResetICBList does so the next RUN can load over the old image's
-// read-only pages. Pages never touched (still invalid) are left alone;
-// a page outside the page tables (VMINIT shrank P0 since) is skipped.
-// With paging on, a page that has left the working set but still has a
-// frame (in transition) has been touched too, and its protection is
-// changed: it is still the old image's page (docs/PHASE-63, subtask 3).
-// The C source never sets image page protections, so every page stayed
-// at P0's default (UW); see docs/DEVIATIONS.md.
+// RUN does once the image is loaded and fixed up, then the protection
+// changes the fixup section lists (the fixup section's own page UREW,
+// user-read and executive-write, so a program can't overwrite its G^
+// cells), as VMS's image activator applies them after its fixups; or UW
+// when it's false, as ResetICBList does so the next RUN can load over the
+// old image's read-only pages. Every page that exists is set, whatever
+// its PTE's form: valid, in transition, still mapped to its section in
+// the image file, demand-zero, or in the page file (a mapped image's
+// pages are mostly not yet valid; docs/PHASE-66, subtask 3). A page
+// deleted since, or outside the page tables (VMINIT shrank P0 since), is
+// skipped. The C source never sets image page protections, so every page
+// stayed at P0's default (UW); see docs/DEVIATIONS.md.
 func (p *ImageProcess) setImageProtection(icb *ICB, protect bool) {
 	if p.m.CPU == nil || p.m.Mem == nil || p.m.CPU.PR(registers.MAPEN) == 0 {
 		return
 	}
-
-	space := p.space()
 
 	for _, isd := range icb.ISDList {
 		if isdType(isd.Flags) == isdUsrStack || isd.Flags&isdGBL != 0 {
@@ -852,31 +922,43 @@ func (p *ImageProcess) setImageProtection(icb *ICB, protect bool) {
 			prot = imageProtection(isd)
 		}
 
-		for n := uint32(0); n < uint32(isd.Pages); n++ {
-			addr := icb.Base + ((n + uint32(isd.VPN)) << 9)
+		p.protectPages(icb.Base+isd.VPN<<9, uint32(isd.Pages), prot)
+	}
 
-			pte, err := p.m.Mem.LookupPTEIn(p.m.CPU, space, addr)
-			if err != nil || !p.touched(pte) || pte.Protection() == prot {
-				continue
-			}
+	if !protect {
+		return
+	}
 
-			pte.SetProtection(prot)
-			_ = p.m.Mem.StorePTEIn(p.m.CPU, space, addr, pte)
-		}
+	low := imageLow(icb)
+
+	for _, c := range icb.Protections {
+		p.protectPages(low+c.Address, uint32(c.Pages), vm.Protection(c.Code&0xF))
 	}
 }
 
-// touched reports whether the page whose PTE is pte has been touched: it
-// is valid, or, with paging on, in transition (its frame on the free or
-// modified list). With paging off no PTE takes the transition form.
-func (p *ImageProcess) touched(pte vm.PTE) bool {
-	if pte.Valid() {
-		return true
+// protectPages gives the pages pages from addr protection prot, each that
+// exists (setImageProtection).
+func (p *ImageProcess) protectPages(addr, pages uint32, prot vm.Protection) {
+	space := p.space()
+
+	for n := range pages {
+		at := addr&^0x1FF + n<<9
+
+		pte, err := p.m.Mem.LookupPTEIn(p.m.CPU, space, at)
+		if err != nil || !pageExists(pte) || pte.Protection() == prot {
+			continue
+		}
+
+		pte.SetProtection(prot)
+		_ = p.m.Mem.StorePTEIn(p.m.CPU, space, at, pte)
 	}
+}
 
-	_, inTransition := pte.Transition()
-
-	return inTransition && p.m.Mem.Paging() != nil
+// pageExists reports whether pte describes a page of the address space:
+// one that is valid or has some protection. A deleted page (the all-zero
+// PTE) has neither.
+func pageExists(pte vm.PTE) bool {
+	return pte.Valid() || pte.Protection() != vm.ProtNA
 }
 
 // imageLow is an image's base for its fixup lists: the address of its

@@ -310,6 +310,7 @@ func (env *Environment) evictPage(p paging.Page) {
 
 	if state, err := db.Release(pfn, pte.Modified()); err == nil && state == paging.Modified {
 		env.forgetPageFileBlock(pfn, e.Backing)
+		env.leaveReadOnlySection(pfn, e.Backing)
 		env.wakeModifiedPageWriter()
 	}
 }
