@@ -81,7 +81,9 @@ func TestReadShareableImage(t *testing.T) {
 		t.Errorf("name %q", name)
 	}
 
-	if d, ok, _ := src.Lookup("LIB$PUT_OUTPUT"); !ok || d != (Definition{Image: "LIBRTL", Value: 0x478}) {
+	// It's the 83rd symbol in LIBRTL's table, a place that orders the
+	// fixup cells of an image linked against LIBRTL (orderCells).
+	if d, ok, _ := src.Lookup("LIB$PUT_OUTPUT"); !ok || d != (Definition{Image: "LIBRTL", Value: 0x478, Order: 83}) {
 		t.Errorf("LIB$PUT_OUTPUT = %+v, %v", d, ok)
 	}
 
@@ -93,9 +95,11 @@ func TestReadShareableImage(t *testing.T) {
 
 	// Its symbol table defines one psect, and it has two image sections:
 	// the shareable one and a demand-zero one, as EXE1's LIBRTL_001 and
-	// LIBRTL_002 map them (testdata/link68).
+	// LIBRTL_002 map them (testdata/link68). Its ident is the table's
+	// module version, and it uses no other shareable image.
 	want := SharedImage{
 		Name: "LIBRTL", Pages: 264, MajorID: 1, MinorID: 0x0E, Match: MatchLEQ, Symbols: 305, Psects: 1, Sections: 2,
+		Ident: "V06-001",
 		Layout: []SharedSection{{0, 264, isdTypeSharedPIC}, {0x21000, 15, isdDZRO | isdWRT | 4<<24}},
 	}
 	if i, ok := src.Image("LIBRTL"); !ok || !reflect.DeepEqual(i, want) {

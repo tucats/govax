@@ -257,10 +257,6 @@ func Link(inputs []Input, opts Options) (*Image, error) {
 
 	l.addImageClusters()
 
-	if err := l.checkShareable(); err != nil {
-		return nil, err
-	}
-
 	if err := l.allocate(); err != nil {
 		return nil, err
 	}
@@ -310,6 +306,10 @@ type linker struct {
 	// its own addresses, which the image activator adds its base to
 	// (shareable.go).
 	selfAddresses []uint32
+	// readOnlyFixups are the read-only sections selfAddresses are in,
+	// which the fixup section's change-protection list makes read-only
+	// again once they're fixed up.
+	readOnlyFixups []*section
 	// dstFixups are the offsets in a shareable image's debug symbol table
 	// of the longwords that hold its addresses (shareable.go).
 	dstFixups []dstFixup
@@ -431,7 +431,10 @@ type global struct {
 	// image, making its value an address (cluster.go).
 	image  string
 	placed bool
-	refs   []string // modules that refer to it
+	// order is its place in its shareable image's global symbol table,
+	// from 1 (Definition.Order); 0 if unknown.
+	order int
+	refs  []string // modules that refer to it
 	// strongRef says something refers to it other than weakly. A symbol
 	// only referred to weakly is 0, silently, if nothing defines it, and
 	// isn't looked for in the symbol sources.
@@ -505,6 +508,31 @@ func (l *linker) pass1(in *Input, library bool) (*module, error) {
 	}
 
 	return m, nil
+}
+
+// firstImageIdent returns the ident of the shareable image an options
+// file named before any module the link reads, if one did: real LINK read
+// the image's global symbol table first, as a module, so an image with no
+// transfer address took its ident (testdata/link68's SHR2, whose ident is
+// SHR1's "V1.0", not its own module's "V2.0").
+func (l *linker) firstImageIdent() (string, bool) {
+	for _, c := range l.clusters {
+		if c == l.defaultCluster {
+			return "", false
+		}
+
+		if !c.user() {
+			return c.shared.Ident, c.shared.Ident != ""
+		}
+
+		for _, m := range l.modules {
+			if m.cluster == c {
+				return "", false
+			}
+		}
+	}
+
+	return "", false
 }
 
 // resolvePsects gives each relocatable symbol the module defines its
@@ -675,7 +703,7 @@ func (l *linker) checkUndefined() error {
 			}
 
 			if d.Module == nil {
-				g.defined, g.fromSource, g.image, g.offset = true, true, d.Image, d.Value
+				g.defined, g.fromSource, g.image, g.offset, g.order = true, true, d.Image, d.Value, d.Order
 
 				continue
 			}

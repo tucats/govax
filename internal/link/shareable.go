@@ -2,11 +2,8 @@ package link
 
 import (
 	"encoding/binary"
-	"fmt"
 	"slices"
 	"sort"
-
-	"github.com/tucats/govax/internal/obj"
 )
 
 // This file is what makes a shareable image different from an executable
@@ -27,15 +24,18 @@ import (
 //     none.
 //   - A .ADDRESS of the image's own data is an address relative to image
 //     0, the image itself, which the image activator adds the image's
-//     base to (referSelf). The fixup section is there only when something
-//     needs it, a .ADDRESS or a reference to another shareable image, and
-//     is PRVFXD with IAF$V_SHR (hasFixupSection, fixupSectionFlags).
+//     base to (referSelf); one in a read-only section makes the section
+//     writable until the activator has fixed it up. The fixup section is
+//     there only when something needs it, a .ADDRESS or a reference to
+//     another shareable image, and is PRVFXD with IAF$V_SHR
+//     (hasFixupSection, fixupSectionFlags).
 //   - Its global symbol table lists its universal symbols, which other
 //     images are linked against (universal.go).
-//
-// What isn't done yet (docs/PHASE-68, subtask 7) is refused: a
-// position-dependent (NOPIC) psect, a based image (BASE= or a based
-// CLUSTER=), and a .ADDRESS in a read-only section.
+//   - A based image (BASE=, or a based CLUSTER=) is mapped at its own
+//     addresses: its sections are there, its universal symbols are
+//     absolute, and its .ADDRESS longwords need no fixing (SHR3). A
+//     position-dependent (NOPIC) psect is allowed in either kind; only a
+//     based image has PICIMG clear (SHR3P, not based, kept it).
 
 // sectionType returns the ISD$K_ type of image section s: 0 (NORMAL) in
 // an executable, and in a shareable image the type its SHR and PIC
@@ -85,41 +85,43 @@ func (l *linker) fixupSectionFlags() uint32 {
 	return flags
 }
 
-// referSelf records a .ADDRESS longword at addr that holds an address in
-// the shareable image itself. Its section must be writable, for the image
-// activator to fix it up.
-func (l *linker) referSelf(addr uint32) error {
-	for _, s := range l.sections {
-		if addr >= s.base && addr < s.base+s.pages*blockSize && !s.writable() {
-			return fmt.Errorf("a .ADDRESS at %%X%08X, in a read-only section of a shareable image, isn't supported yet", addr)
-		}
+// referSelf records a .ADDRESS longword at addr that holds target, an
+// address in the shareable image itself, for the image activator to add
+// the image's base to. A based image's addresses are where it will be, so
+// they need no fixing (SHR3 had no fixup section). A longword in a
+// read-only section makes the section writable and copy on reference, for
+// the activator to store in, and it gets a change-protection entry that
+// makes it read-only again afterwards (SHR6's SHR6_RO, still SHRPIC).
+func (l *linker) referSelf(addr, target uint32) {
+	if l.basedAt(target) {
+		return
+	}
+
+	if s := l.sectionAt(addr); s != nil && !s.writable() && !s.fixedUp {
+		s.fixedUp = true
+		l.readOnlyFixups = append(l.readOnlyFixups, s)
 	}
 
 	l.selfAddresses = append(l.selfAddresses, addr)
+}
+
+// sectionAt returns the image section that holds addr, or nil.
+func (l *linker) sectionAt(addr uint32) *section {
+	for _, s := range l.sections {
+		if addr >= s.base && addr < s.base+s.pages*blockSize {
+			return s
+		}
+	}
 
 	return nil
 }
 
-// checkShareable refuses a shareable image govax's LINK can't make yet:
-// one with a base, or with a position-dependent psect.
-func (l *linker) checkShareable() error {
-	if !l.opts.Shareable {
-		return nil
-	}
+// basedAt says addr is in a section of a cluster with a base of its own,
+// so that it is the address the image activator will map it at.
+func (l *linker) basedAt(addr uint32) bool {
+	s := l.sectionAt(addr)
 
-	for _, c := range l.clusters {
-		if c.user() && c.based {
-			return fmt.Errorf("link: a based shareable image (cluster %s) isn't supported yet", c.name)
-		}
-	}
-
-	for _, p := range l.order {
-		if p.flags&obj.PsectREL != 0 && p.flags&obj.PsectPIC == 0 && len(p.contribs) > 0 {
-			return fmt.Errorf("link: psect %s is position dependent (NOPIC), which a shareable image can't have yet", p.name)
-		}
-	}
-
-	return nil
+	return s != nil && s.cluster.based
 }
 
 // DST fixup records (docs/DEBUG-RECORDS.md, 18.1): a shareable image's

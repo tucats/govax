@@ -36,7 +36,7 @@ func readImage(data []byte) (string, vmsdef.SharedImage, map[string]vmsdef.Image
 
 	symbols := make(map[string]vmsdef.ImageSymbol, len(src.Symbols))
 	for n, d := range src.Symbols {
-		symbols[n] = vmsdef.ImageSymbol{Image: d.Image, Value: d.Value}
+		symbols[n] = vmsdef.ImageSymbol{Image: d.Image, Value: d.Value, Order: d.Order}
 	}
 
 	return name, image, symbols, nil
@@ -84,7 +84,9 @@ func mergeImage(images map[string]vmsdef.SharedImage, symbols map[string]vmsdef.
 		case old == d:
 			r.same++
 
-		case replace:
+		case replace, old.Order == 0 && old.Image == d.Image && old.Value == d.Value:
+			// A symbol recorded before its table place was kept takes it
+			// without -replace.
 			symbols[n] = d
 			r.changed = append(r.changed, fmt.Sprintf("%s: %s -> %s", n, imageSymbolString(old), imageSymbolString(d)))
 
@@ -99,11 +101,14 @@ func mergeImage(images map[string]vmsdef.SharedImage, symbols map[string]vmsdef.
 // imageSymbolString shows a symbol as an offset in its image, or as its
 // absolute value.
 func imageSymbolString(s vmsdef.ImageSymbol) string {
-	if s.Image == "" {
+	switch {
+	case s.Image == "":
 		return fmt.Sprintf("%#x", s.Value)
+	case s.Order == 0:
+		return fmt.Sprintf("%s+%#x", s.Image, s.Value)
+	default:
+		return fmt.Sprintf("%s+%#x (#%d)", s.Image, s.Value, s.Order)
 	}
-
-	return fmt.Sprintf("%s+%#x", s.Image, s.Value)
 }
 
 // generateImages returns the Go source of images_generated.go.
@@ -155,10 +160,13 @@ func generateImages(images map[string]vmsdef.SharedImage, symbols map[string]vms
 
 	for _, n := range names {
 		s := symbols[n]
-		if s.Image == "" {
+		switch {
+		case s.Image == "":
 			fmt.Fprintf(&b, "\t%q: {Value: %#x},\n", n, s.Value)
-		} else {
+		case s.Order == 0:
 			fmt.Fprintf(&b, "\t%q: {Image: %q, Value: %#x},\n", n, s.Image, s.Value)
+		default:
+			fmt.Fprintf(&b, "\t%q: {Image: %q, Value: %#x, Order: %d},\n", n, s.Image, s.Value, s.Order)
 		}
 	}
 

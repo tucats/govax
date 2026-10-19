@@ -2,6 +2,7 @@ package link
 
 import (
 	"fmt"
+	"slices"
 	"sort"
 	"strings"
 
@@ -323,6 +324,36 @@ func (l *linker) addImageClusters() {
 	}
 
 	l.clusters = kept
+
+	l.addDependencies()
+}
+
+// addDependencies gives the shareable images each shareable image uses
+// itself a cluster right after its own, unless they have one already: an
+// image linked against it uses them too, whether or not it refers to
+// them (testdata/link68's SHR2, which uses SHR1, lists LIBRTL, which SHR1
+// uses; MAIN1's clusters are SHR1, LIBRTL, then the default cluster). An
+// image's list holds every image it needs, its own images' images
+// included, but each one added is looked at in turn all the same.
+func (l *linker) addDependencies() {
+	for i := 0; i < len(l.clusters); i++ {
+		c := l.clusters[i]
+		if c.user() {
+			continue
+		}
+
+		at := i + 1
+
+		for _, name := range l.sharedImage(c.image).Uses {
+			if l.imageCluster(name) != nil {
+				continue
+			}
+
+			d := &cluster{name: name, image: name, psects: map[string]*psect{}, collected: map[string]bool{}}
+			l.clusters = slices.Insert(l.clusters, at, d)
+			at++
+		}
+	}
 }
 
 // layoutCluster lays out a user cluster's image sections from its start:
@@ -526,7 +557,7 @@ func (l *linker) placeClusters() error {
 	// list (EXE1's LIBRTL), though nothing refers to it through a cell.
 	for _, c := range l.clusters {
 		if !c.user() && c.placed {
-			l.shared = append(l.shared, &sharedRef{image: c.shared, names: map[uint32]string{}})
+			l.addShared(c.shared)
 		}
 	}
 

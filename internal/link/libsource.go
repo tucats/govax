@@ -6,6 +6,7 @@ import (
 
 	"github.com/tucats/govax/internal/lbr"
 	"github.com/tucats/govax/internal/obj"
+	"github.com/tucats/govax/internal/vmsimage"
 )
 
 // This file is docs/PHASE-30.md's symbol sources made from VMS files:
@@ -23,7 +24,9 @@ import (
 // a relocatable one as the image plus its offset there, an absolute one
 // as its value. It describes the image as a global section ISD will: its
 // shareable section's page count, and its global section ident and match
-// control (GSMATCH), from the image header.
+// control (GSMATCH), from the image header, the shareable images it uses
+// itself, from its fixup section, and its ident. Each symbol's Order is
+// its place in the table.
 func ReadShareableImage(data []byte) (*TableSource, string, error) {
 	h, err := readImageHeader(data)
 	if err != nil {
@@ -62,12 +65,12 @@ func ReadShareableImage(data []byte) (*TableSource, string, error) {
 		}},
 	}
 
-	for _, s := range m.Symbols() {
+	for i, s := range m.Symbols() {
 		if !s.Defined() {
 			continue
 		}
 
-		d := Definition{Value: s.Value}
+		d := Definition{Value: s.Value, Order: i + 1}
 		if s.Flags&obj.SymREL != 0 {
 			d.Image = name
 		}
@@ -77,6 +80,18 @@ func ReadShareableImage(data []byte) (*TableSource, string, error) {
 
 	img := src.Images[name]
 	img.Symbols, img.Psects, img.Sections = len(src.Symbols), len(m.Psects()), h.sections
+
+	for _, rec := range m.Records {
+		if r, ok := rec.(*obj.MainHeader); ok {
+			img.Ident = r.Version
+		}
+	}
+
+	// The shareable image list's first entry is the image itself.
+	if full, err := vmsimage.ReadImage(data); err == nil && full.Fixups != nil && len(full.Fixups.Shared) > 1 {
+		img.Uses = full.Fixups.Shared[1:]
+	}
+
 	src.Images[name] = img
 
 	return src, name, nil

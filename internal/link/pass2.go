@@ -17,6 +17,10 @@ type section struct {
 	base    uint32
 	pages   uint32
 	data    []byte
+	// fixedUp marks a read-only section of a shareable image that the
+	// image activator stores .ADDRESS fixups in (shareable.go's
+	// referSelf): it is writable and copy on reference until then.
+	fixedUp bool
 	// stored marks the pages something nonzero was stored in. A
 	// writable page with nothing stored in it can be demand-zero.
 	stored []bool
@@ -458,12 +462,10 @@ func (x *machine) store(st store) error {
 		x.l.referAddress(a.img, a.v, a.sym, x.loc)
 	case a.img != "":
 		return fmt.Errorf("a reference to shareable image %s must be general mode (G^) or .ADDRESS", a.img)
-	case a.rel && x.debug && x.l.opts.Shareable && st.size == 4:
+	case a.rel && x.debug && x.l.opts.Shareable && st.size == 4 && !x.l.basedAt(a.v):
 		x.l.dstFixups = append(x.l.dstFixups, dstFixup{offset: x.loc, address: a.v})
 	case a.rel && st.address && !x.debug && x.l.opts.Shareable:
-		if err := x.l.referSelf(x.loc); err != nil {
-			return err
-		}
+		x.l.referSelf(x.loc, a.v)
 	}
 
 	v := int64(int32(a.v))
@@ -579,6 +581,14 @@ const (
 // placed are in address order, and the shareable images the image
 // activator places come last (testdata/link68's EXE1 and MAIN3).
 func (l *linker) image() (*Image, error) {
+	// A shareable image the image uses only through another, such as
+	// SHR1's LIBRTL in SHR2, is in the list with no references.
+	for _, c := range l.clusters {
+		if !c.user() && l.sharedRef(c.image) == nil {
+			l.addShared(c.shared)
+		}
+	}
+
 	l.imageOrder()
 
 	// The fixup section follows the last section of the user cluster at
@@ -651,10 +661,10 @@ func (l *linker) image() (*Image, error) {
 				switch {
 				case run.demandZero:
 					d.flags |= isdDZRO | isdWRT
-				case s.writable():
+				case s.writable() || s.fixedUp:
 					d.flags |= isdWRT
 
-					if l.copyOnReference(s) {
+					if l.copyOnReference(s) || s.fixedUp {
 						d.flags |= isdCRF
 					}
 				}
@@ -745,6 +755,8 @@ func (l *linker) image() (*Image, error) {
 
 	if l.opts.Ident != "" {
 		l.imageID = l.opts.Ident
+	} else if id, ok := l.firstImageIdent(); ok && !l.transferSet {
+		l.imageID = id
 	}
 
 	// Linked /DEBUG, or in a shareable image, the global symbol table

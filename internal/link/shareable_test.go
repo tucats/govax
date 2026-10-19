@@ -19,16 +19,17 @@ func padded(image []byte) []byte {
 }
 
 // shareableCase is one of the probe's shareable images: its inputs, by
-// object name and cluster, and the options it was linked with.
+// object name and cluster, the options it was linked with, and the
+// shareable images an options file named, which it is linked against
+// (VMS's, from testdata/link68/vax).
 type shareableCase struct {
 	image   string
 	objects [][2]string
 	options func(*Options)
+	uses    []string
 }
 
-// shareableCases are the probe's shareable images that govax's LINK makes
-// so far: position independent, not based, with .ADDRESS only in
-// writable sections.
+// shareableCases are the probe's shareable images.
 var shareableCases = []shareableCase{
 	{
 		// SHR1.OPT's transfer vector cluster first, then SHR1's
@@ -89,6 +90,93 @@ var shareableCases = []shareableCase{
 		objects: [][2]string{{"shr1", ""}},
 		options: func(o *Options) { o.Universals = []string{"NOSUCH"} },
 	},
+	{
+		// SHR2 uses SHR1 (SHR1/SHAREABLE): G^ cells for SHR1 in
+		// descending name order, a .ADDRESS list for it, LIBRTL in the
+		// shareable image list and a global section ISD for it, as SHR1
+		// uses it, and SHR1's ident ("V1.0"), the first module read;
+		// GSMATCH=EQUAL,2,5.
+		image:   "shr2",
+		objects: [][2]string{{"shr2", ""}},
+		uses:    []string{"shr1"},
+		options: func(o *Options) {
+			o.GSMatch = &GSMatch{Match: MatchEqual, Major: 2, Minor: 5}
+			o.Universals = []string{"SHR2_TWICE", "SHR2_COUNT", "SHR2_ADDR"}
+		},
+	},
+	{
+		// SHR3, position dependent and based (BASE=%X300000): SHRFXD and
+		// PRVFXD sections at their addresses, PICIMG clear, absolute
+		// universal symbols, and no fixup section, since its .ADDRESS
+		// needs no fixing.
+		image:   "shr3",
+		objects: [][2]string{{"shr3", ""}},
+		options: func(o *Options) {
+			base := uint32(0x300000)
+			o.Base = &base
+			o.Universals = []string{"SHR3_GET", "SHR3_DATA"}
+		},
+	},
+	{
+		// SHR3P, the same objects not based: PICIMG set, and a .ADDRESS
+		// list for image 0.
+		image:   "shr3p",
+		objects: [][2]string{{"shr3", ""}},
+		options: func(o *Options) { o.Universals = []string{"SHR3_GET", "SHR3_DATA"} },
+	},
+	{
+		// SHR6, a .ADDRESS in a shared, read-only psect: its section is
+		// CRF+WRT (still SHRPIC), and a second change-protection entry
+		// makes it PRT$C_UR once fixed up.
+		image:   "shr6",
+		objects: [][2]string{{"shr6", ""}},
+		options: func(o *Options) { o.Universals = []string{"SHR6_GET"} },
+	},
+}
+
+// link68Uses returns VMS's shareable images names, from the probe, as
+// symbol sources, and the clusters the options files that named them
+// make.
+func link68Uses(t *testing.T, names []string) ([]SymbolSource, []Cluster) {
+	t.Helper()
+
+	var (
+		sources  []SymbolSource
+		clusters []Cluster
+	)
+
+	for _, n := range names {
+		data, err := os.ReadFile(filepath.Join(link68Dir, "vax", n+".exe"))
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		src, image, err := ReadShareableImage(data)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		sources = append(sources, src)
+		clusters = append(clusters, Cluster{Shareable: true, Image: image})
+	}
+
+	return sources, clusters
+}
+
+// shareableOptions returns c's options, added to realImage's opts: the
+// shareable images it uses, first, then govax's tables, as sources, and
+// their clusters before any its options make.
+func (c shareableCase) shareableOptions(t *testing.T, opts Options) Options {
+	t.Helper()
+
+	sources, clusters := link68Uses(t, c.uses)
+
+	opts.Sources = append(sources, govaxTables())
+	opts.Shareable = true
+	c.options(&opts)
+	opts.Clusters = append(clusters, opts.Clusters...)
+
+	return opts
 }
 
 // link68Source assembles one of the probe's sources with govax's MACRO.
@@ -116,10 +204,7 @@ func TestLinkShareableImages(t *testing.T) {
 	for _, c := range shareableCases {
 		real, opts := realImage(t, filepath.Join(link68Dir, "vax", c.image+".exe"))
 		want := padded(real)
-
-		opts.Sources = []SymbolSource{govaxTables()}
-		opts.Shareable = true
-		c.options(&opts)
+		opts = c.shareableOptions(t, opts)
 
 		for _, from := range []string{"real", platformName} {
 			t.Run(c.image+"/"+from, func(t *testing.T) {
@@ -151,30 +236,6 @@ func TestLinkShareableImages(t *testing.T) {
 	}
 }
 
-// TestLinkShareableRefusals checks what LINK/SHAREABLE refuses until later
-// subtasks: a based image, a position-dependent psect (SHR3), and a
-// .ADDRESS in a read-only section (SHR6).
-func TestLinkShareableRefusals(t *testing.T) {
-	base := uint32(0x300000)
-
-	for _, c := range []struct {
-		object string
-		base   *uint32
-		want   string
-	}{
-		{"shr3", &base, "based shareable image"},
-		{"shr3", nil, "position dependent"},
-		{"shr6", nil, "read-only section"},
-	} {
-		_, err := Link([]Input{{File: c.object + ".obj", Module: link68Object(t, c.object)}}, Options{
-			Shareable: true, Base: c.base, Sources: []SymbolSource{govaxTables()},
-		})
-		if err == nil || !strings.Contains(err.Error(), c.want) {
-			t.Errorf("%s: error %v, want one about a %s", c.object, err, c.want)
-		}
-	}
-}
-
 // linkShareableCase links one of shareableCases from real MACRO's
 // objects.
 func linkShareableCase(t *testing.T, name string) (*Image, []byte) {
@@ -186,9 +247,7 @@ func linkShareableCase(t *testing.T, name string) (*Image, []byte) {
 		}
 
 		real, opts := realImage(t, filepath.Join(link68Dir, "vax", c.image+".exe"))
-		opts.Sources = []SymbolSource{govaxTables()}
-		opts.Shareable = true
-		c.options(&opts)
+		opts = c.shareableOptions(t, opts)
 
 		var inputs []Input
 		for _, o := range c.objects {
@@ -238,7 +297,7 @@ func TestLinkSymbolTableFile(t *testing.T) {
 // shareable images govax's LINK makes as it reads real LINK's: the same
 // symbols, values, and image.
 func TestReadGovaxShareableImage(t *testing.T) {
-	for _, name := range []string{"shr1", "shr1a", "shr5"} {
+	for _, name := range []string{"shr1", "shr1a", "shr2", "shr3", "shr3p", "shr5", "shr6"} {
 		img, real := linkShareableCase(t, name)
 
 		got, gotName, err := ReadShareableImage(img.Bytes)

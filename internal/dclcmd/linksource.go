@@ -67,7 +67,7 @@ func GovaxSymbols(shims []corevms.ShimLink) *link.TableSource {
 	}
 
 	for name, s := range vmsdef.ImageSymbols {
-		src.Symbols[name] = link.Definition{Image: s.Image, Value: s.Value}
+		src.Symbols[name] = link.Definition{Image: s.Image, Value: s.Value, Order: s.Order}
 	}
 
 	for name, v := range vmsdef.LibrarySymbols {

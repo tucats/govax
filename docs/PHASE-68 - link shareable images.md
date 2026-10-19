@@ -6,7 +6,8 @@ and the author's answers to the plan's questions. Part C is the
 subtasks. Subtask 1, the VMS probe (`testdata/link68`), is done, and so
 are subtask 2 (MACRO's `.TRANSFER`), subtask 3 (options files),
 subtask 4 (clusters for executables), subtask 5 (`LINK/SHAREABLE`,
-the image), and subtask 6 (the global symbol table).
+the image), subtask 6 (the global symbol table), and subtask 7
+(fixups and bases).
 
 ## Goal
 
@@ -531,7 +532,7 @@ them.
    from the probe's images), so that `ReadShareableImage` reads
    govax's images as it reads LIBRTL's. `/SYMBOL_TABLE[=file]` writes
    the same table as an `.STB` file.
-7. **`LINK/SHAREABLE`, fixups and bases.** A shareable image's fixup
+7. **Done (2026-10-19).** **`LINK/SHAREABLE`, fixups and bases.** A shareable image's fixup
    section (`PRVFXD`, `IAF$V_SHR`), under the manual's two conditions:
    the `.ADDRESS` list relative to the image itself (SHL entry 0), and
    G^ cells for the images it uses (all three done in subtask 5, which
@@ -997,3 +998,84 @@ linked `/DEBUG`. What real LINK writes there is **unconfirmed**.
 
 The map's universal symbols (`U`, and the vector's two values) are still
 subtask 8's.
+
+### 2026-10-19 — Subtask 7: fixups and bases
+
+`LINK/SHAREABLE` refuses nothing now. The probe's SHR2, SHR3, SHR3P,
+and SHR6 link byte for byte as real LINK's, from real MACRO's objects
+and from govax's, global symbol tables included
+(`TestLinkShareableImages`, which now holds all nine of the probe's
+shareable images). `TestReadGovaxShareableImage` reads all seven
+govax-made images as it reads VMS's. `TestLinkShareableUsingAnother`
+links SHR2 through DCL against VMS's SHR1.EXE, named in SYS$INPUT
+options.
+
+What the images settled:
+
+- **A `.ADDRESS` in a read-only section** (SHR6). The section becomes
+  CRF+WRT and keeps its type (SHRPIC) and its place in Table 6-1's
+  order. The change-protection list gets an entry after the fixup
+  section's: the section's address and pages, `PRT$C_UR`
+  (`shareable.go`'s `referSelf`, `section.fixedUp`,
+  `linker.readOnlyFixups`). An entry covers the whole section; whether
+  real LINK gives a multi-page section one entry or one per page is
+  **unconfirmed**.
+- **NOPIC psects** need nothing new. They take the types SHRFXD and
+  PRVFXD (subtask 5's `sectionType`), and PICIMG stays set unless the
+  image is based (SHR3P).
+- **A based image** (SHR3) has its sections at their addresses and
+  absolute universal symbols (subtask 6's rule). It records no
+  image-relative `.ADDRESS` or DST fixups (`basedAt`), so it has no
+  fixup section. Whether a `.ADDRESS` from a based cluster to an
+  unbased one (only possible with a based CLUSTER=) needs a fixup is
+  **unconfirmed**. govax goes by the target's cluster.
+- **A shareable image's own images** (SHR2). SHR2 uses SHR1, and its
+  shareable image list and global section ISDs also name LIBRTL, which
+  SHR1 uses and SHR2 doesn't refer to. `ReadShareableImage` now reads an
+  image's shareable image list (`SharedImage.Uses`), and
+  `addDependencies` gives each image a cluster right after its own,
+  unless it has one already. That is also MAIN1's and MAIN1L's cluster
+  order (SHR1, LIBRTL, then the default cluster or after it), which
+  subtask 9 will check. An image that is in the list only as another's
+  dependency gets a list entry with no cells.
+- **The image ident** of an image without a transfer address is the
+  first module's, and a shareable image an options file names counts as
+  a module, read first. So SHR2's ident is SHR1's global symbol table's
+  module version, "V1.0", not its own "V2.0" (`firstImageIdent`,
+  `SharedImage.Ident`).
+- **The order of G^ cells**, open since Phase 29, has a rule that fits
+  every fixture with two cells or more (`orderCells`):
+  - When an options file names the image, the cells are in descending
+    name order: MAIN1, MAIN1A, MAIN1N, MAIN2, MAIN3P, MAIN4, E8, and
+    SHR2.
+  - When the image was found in a library, the cells are in descending
+    order of the symbols' places in the image's own global symbol
+    table. MAIN1L and MAIN1U list SHR1's cells in the reverse of SHR1's
+    table. LIBRTL's table gives FAILSIG's, FSIGNOTB's, PI's, PG66's,
+    CELLS's, CELLS2's, and DBGCMD's orders.
+
+  `Definition.Order` carries a symbol's place, read from the image's
+  table. FAILSIG, FSIGNOTB, and PI, known differences since Phase 29,
+  now match real LINK's images when linked with VMS's own libraries
+  (`TestLinkProbeImagesMatchRealLINK`, `TestLinkPiMatchesRealLINK`).
+  govax's own LIBRTL table (`vmsdef.ImageSymbols`) has no places yet.
+  `ImageSymbol.Order` and the generator are ready for them, and the
+  generator fills them in without `-replace`. Until the table is
+  regenerated from LIBRTL.EXE (`go run ./internal/vmsdef/gen -image
+  .../librtl.exe`, plus LIBRTL2 and CRFSHR), the cells of a link that
+  uses govax's tables fall back on ascending names, and the RLFSIG and
+  RLFSIGNT round images stay skipped. `TestCapturedLIBRTLMatchesImage`
+  checks the places once they're there. Why real LINK's two orders
+  differ is **unconfirmed**. It may come from how it enters an options
+  file's image's symbols (all at once) and a library's (as each is
+  looked up).
+
+Left for later subtasks:
+
+- Linking against a based shareable image (`placeClusters` still
+  refuses one, subtask 9). `ReadShareableImage` gives SHR3 a page count
+  of 0, since it has no SHRPIC section.
+- The map's account of these images (subtask 8).
+- Activating them: the second change-protection entry, the
+  self-relative `.ADDRESS` list, and the dependencies (subtask 11).
+

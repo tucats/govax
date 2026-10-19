@@ -44,6 +44,10 @@ type ImageSymbol struct {
 	// LIB$_ condition value's is.
 	Image string
 	Value uint32
+	// Order is the symbol's place in its image's global symbol table, from
+	// 1, which orders the fixup cells of an image linked against it
+	// (internal/link's orderCells); 0 if unknown.
+	Order int
 }
 
 // SharedImageSection is one image section of a shareable image: its

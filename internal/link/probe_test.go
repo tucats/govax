@@ -47,7 +47,8 @@ func probeObject(t *testing.T, name string) *obj.Module {
 //     debugger records are left out of the DST;
 //   - FAILMAIN and FAILSUB, two modules' DST records one after the other,
 //     with traceback, /NOTRACEBACK, and from their /DEBUG objects;
-//   - FAILSIG, with traceback and /NOTRACEBACK.
+//   - FAILSIG, with traceback and /NOTRACEBACK: its two fixup cells in
+//     the reverse of their places in LIBRTL's table (orderCells).
 //
 // Each traced program is linked again from govax's own objects of the
 // same sources. The links need VMS's own libraries (vmsSources), and are
@@ -69,13 +70,6 @@ func TestLinkProbeImagesMatchRealLINK(t *testing.T) {
 		{"fsignotb", []string{"failsig"}, nil, false},
 	} {
 		t.Run(c.image, func(t *testing.T) {
-			// FAILSIG's two fixup cells are in an order no rule found
-			// explains (orderCells): a known difference, and the only
-			// one these images show.
-			if c.image == "failsig" || c.image == "fsignotb" {
-				t.Skip("real LINK's order of FAILSIG's two fixup cells is a known difference (docs/PHASE-29.md, subtask 14)")
-			}
-
 			want, opts := realImage(t, filepath.Join(probeDir, "vax", c.image+".exe"))
 			opts.Traceback = c.trace
 			opts.Sources = vmsSources(t)
@@ -271,7 +265,7 @@ func govaxTables() *TableSource {
 	}
 
 	for name, s := range vmsdef.ImageSymbols {
-		src.Symbols[name] = Definition{Image: s.Image, Value: s.Value}
+		src.Symbols[name] = Definition{Image: s.Image, Value: s.Value, Order: s.Order}
 	}
 
 	for _, e := range vmsdef.P1VectorTable {
@@ -306,10 +300,12 @@ func TestLinkRoundImagesMatchRealLINK(t *testing.T) {
 		{"cells2", []string{"round/cells", "round/cellsb"}, true},
 	} {
 		t.Run(c.image, func(t *testing.T) {
-			// FAILSIG's two fixup cells are in an order no rule found
-			// explains (orderCells): a known difference.
-			if strings.HasPrefix(c.image, "rlfsig") {
-				t.Skip("real LINK's order of FAILSIG's two fixup cells is a known difference (docs/PHASE-29.md, subtask 14)")
+			// FAILSIG's two fixup cells are in the reverse of their
+			// places in LIBRTL's global symbol table (orderCells), which
+			// govax's tables don't record until vmsdef's ImageSymbols are
+			// regenerated from LIBRTL.EXE (docs/PHASE-68, subtask 7).
+			if strings.HasPrefix(c.image, "rlfsig") && vmsdef.ImageSymbols["LIB$STOP"].Order == 0 {
+				t.Skip("govax's LIBRTL table has no symbol table places, which order FAILSIG's two fixup cells")
 			}
 
 			want, opts := realImage(t, filepath.Join(mar, "round", "vax", c.image+".exe"))

@@ -1521,6 +1521,13 @@ details).
   It may come from real LINK's hash table, or from LIBRTL's own global
   symbol table, which its output doesn't show and the clean room can't
   look into.
+
+  *Settled by Phase 68's subtask 7 (2026-10-19):* it is LIBRTL's table.
+  An image found in a library gets its cells in the reverse of their
+  symbols' places in that image's global symbol table (FAILSIG, PI,
+  PG66, CELLS, and CELLS2 all fit), and one an options file names gets
+  them in descending name order. See `docs/PHASE-68 - link shareable
+  images.md` and `orderCells`.
 - **govax gives cells in name order** (`sharedRef.orderCells`,
   `internal/link/fixup.go`). LINK now keeps the global symbol a value
   came from (`value.sym`) for that. A target reached through arithmetic

@@ -17,6 +17,10 @@ type Definition struct {
 	// as a system service's address in the P1 vector is.
 	Image string
 	Value uint32
+	// Order is the symbol's place in its shareable image's global symbol
+	// table, from 1; 0 if unknown. It orders the image's fixup cells
+	// (fixup.go's orderCells).
+	Order int
 	// Module, from an object library, is a module that defines the
 	// symbol. The link adds it, as real LINK does, and then the symbols
 	// it refers to need defining too. A source returns the same *Input
@@ -62,6 +66,15 @@ type SharedImage struct {
 	// (BASE=): its sections' offsets are addresses, and its symbols are
 	// absolute.
 	Based bool
+	// Ident is the image's global symbol table's module version (its
+	// image ident: SHR1's "V1.0"), which real LINK read as a module's: an
+	// image linked without a transfer address takes it when the image
+	// comes first (testdata/link68's SHR2). "" if unknown.
+	Ident string
+	// Uses names the shareable images the image itself uses, from its
+	// shareable image list, in order. An image linked against it uses
+	// them too (SHR2, which uses SHR1, lists LIBRTL, which SHR1 uses).
+	Uses []string
 }
 
 // SharedSection is one image section of a shareable image: where it is

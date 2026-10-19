@@ -117,6 +117,9 @@ const (
 	// prtUREW is PRT$C_UREW, user read and executive write: the
 	// protection the change-protection entry gives the fixup section.
 	prtUREW = 0x0D
+	// prtUR is PRT$C_UR, user read: a read-only section of a shareable
+	// image once the activator has fixed it up (testdata/link68's SHR6).
+	prtUR = 0x0F
 
 	// iafFlags is the IAF's flags word, and iafSHR its bit that says the
 	// fixup section is a shareable image's (IAF$V_SHR; testdata/link68's

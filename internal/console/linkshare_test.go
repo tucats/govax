@@ -184,3 +184,70 @@ func link68Table(t *testing.T, path string, at uint32) []byte {
 
 	return buf.Bytes()
 }
+
+// TestLinkShareableUsingAnother runs the probe's LINK/SHAREABLE of SHR2
+// through DCL, linked against VMS's SHR1.EXE, which a SYS$INPUT options
+// file names (docs/PHASE-68's subtask 7). The image is VMS's but for the
+// name, time, and linker ID in its header: its ident is SHR1's, V1.0, the
+// first module LINK read; its shareable image list and global section
+// ISDs name LIBRTL, which SHR1 uses; and its cells for SHR1 are in
+// descending name order.
+func TestLinkShareableUsingAnother(t *testing.T) {
+	d, c, buf := newCommandDispatcher(t)
+	dir := t.TempDir()
+
+	object := filepath.Join(dir, "SHR2.OBJ")
+	if err := c.cmd().Macro(dclcmd.MacroOptions{Source: filepath.Join("..", "..", "testdata", "link68", "shr2.mar"), Object: object}); err != nil {
+		t.Fatalf("MACRO: %v", err)
+	}
+
+	shr1, err := os.ReadFile(filepath.Join(link68Vax, "shr1.exe"))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if err := os.WriteFile(filepath.Join(dir, "SHR1.EXE"), shr1, 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	exe := filepath.Join(dir, "SHR2.EXE")
+	proc := writeProcedure(t, dir, "link.com",
+		`$ LINK/SHAREABLE="`+exe+`"/NOMAP "`+object+`",SYS$INPUT/OPTIONS`,
+		`"`+filepath.Join(dir, "SHR1.EXE")+`"/SHAREABLE`,
+		"UNIVERSAL=SHR2_TWICE,SHR2_COUNT,SHR2_ADDR",
+		"GSMATCH=EQUAL,2,5",
+		"$ SHOW SYMBOL $STATUS",
+	)
+
+	if err := d.Dispatch("@" + proc); err != nil && !vmserrors.MessageInhibited(err) {
+		t.Fatalf("@link: %v", err)
+	}
+
+	if got := buf.String(); got != "  $STATUS == \"%X10000001\"\n" {
+		t.Errorf("output %q", got)
+	}
+
+	image, err := os.ReadFile(exe)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	vms, err := os.ReadFile(filepath.Join(link68Vax, "shr2.exe"))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// The header's name, link time, and linker ID are the image's own,
+	// and the global symbol table, from the block the IHS names, has them
+	// too (TestLinkShareable checks one).
+	const ihs, ihi = 0x44, 0x58
+
+	gst := (binary.LittleEndian.Uint32(vms[ihs+4:]) - 1) * 512
+	vms = bytes.Clone(vms[:gst])
+	copy(vms[ihi:ihi+40], image[ihi:ihi+40])
+	copy(vms[ihi+56:ihi+80], image[ihi+56:ihi+80])
+
+	if len(image) < len(vms) || !bytes.Equal(image[:len(vms)], vms) {
+		t.Errorf("SHR2.EXE differs from VMS's (%d bytes, want at least %d)", len(image), len(vms))
+	}
+}

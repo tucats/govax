@@ -11,12 +11,14 @@ import (
 // the fixup section. addresses are the image addresses of the .ADDRESS
 // longwords that hold an offset in it, which the image activator adds its
 // base to. names are the global symbols the offsets were reached through,
-// by offset, which order the cells (see orderCells).
+// by offset, and orders those symbols' places in the image's global symbol
+// table, which order the cells (see orderCells).
 type sharedRef struct {
 	image     SharedImage
 	offsets   []uint32
 	addresses []uint32
 	names     map[uint32]string
+	orders    map[uint32]int
 }
 
 // gRef is a general mode operand that reaches a shareable image: the
@@ -47,23 +49,17 @@ func (l *linker) referAddress(name string, offset uint32, sym string, addr uint3
 // reached through the global symbol sym ("" for none), giving it a cell,
 // and returns the image's record.
 func (l *linker) sharedTarget(name string, offset uint32, sym string) *sharedRef {
-	var ref *sharedRef
-
-	for _, r := range l.shared {
-		if r.image.Name == name {
-			ref = r
-
-			break
-		}
-	}
-
+	ref := l.sharedRef(name)
 	if ref == nil {
-		ref = &sharedRef{image: l.sharedImage(name), names: map[uint32]string{}}
-		l.shared = append(l.shared, ref)
+		ref = l.addShared(l.sharedImage(name))
 	}
 
 	if _, named := ref.names[offset]; !named && sym != "" {
 		ref.names[offset] = sym
+
+		if g := l.symbols[sym]; g != nil {
+			ref.orders[offset] = g.order
+		}
 	}
 
 	found := false
@@ -78,33 +74,86 @@ func (l *linker) sharedTarget(name string, offset uint32, sym string) *sharedRef
 	return ref
 }
 
-// orderCells puts a shareable image's targets in the order real LINK
-// gives their cells. In two of the three images Phase 29's VMS round
-// probed, that's the order of the symbols' names: CELLS.EXE and CELLS2.EXE
-// (testdata/mar/round) give LIB$ADDX, LIB$GET_INPUT, LIB$PUT_OUTPUT, and
-// LIB$WAIT their cells in that order, whatever order the code calls them
-// in, and whichever module calls them. FAILSIG.EXE is the exception: its
-// LIB$STOP's cell comes before LIB$SIGNAL's. So is PI.EXE
-// (testdata/mar/vax), whose cells are LIB$GET_FOREIGN, LIB$PUT_OUTPUT,
-// LIB$GET_VM: the order of its first references, which CELLS.EXE's
-// aren't. And PG66.EXE (testdata/pg66/vax) gives LIB$STAT_TIMER's cell
-// before LIB$INIT_TIMER's, though it calls LIB$INIT_TIMER first and its
-// offset in LIBRTL is the lower. No rule found fits all five; real LINK's order may come from its hash table or from LIBRTL's
-// own symbol table, neither of which its output shows. So govax uses the
-// names' order, and FAILSIG's images are a known difference
-// (docs/PHASE-29.md, subtask 14). A target reached without a symbol (an
-// offset from arithmetic) has no name, and keeps its place after the
-// named ones.
-func (r *sharedRef) orderCells() {
-	sort.SliceStable(r.offsets, func(i, j int) bool {
-		a, b := r.names[r.offsets[i]], r.names[r.offsets[j]]
+// sharedRef returns the record of the shareable image name among those
+// the image refers to, or nil.
+func (l *linker) sharedRef(name string) *sharedRef {
+	for _, r := range l.shared {
+		if r.image.Name == name {
+			return r
+		}
+	}
 
-		if (a == "") != (b == "") {
-			return b == ""
+	return nil
+}
+
+// addShared adds a shareable image to the ones the image refers to.
+func (l *linker) addShared(img SharedImage) *sharedRef {
+	ref := &sharedRef{image: img, names: map[uint32]string{}, orders: map[uint32]int{}}
+	l.shared = append(l.shared, ref)
+
+	return ref
+}
+
+// orderCells puts a shareable image's targets in the order real LINK
+// gives their cells. That depends on how the link found the image, and
+// every fixture with two cells or more fits one of two rules:
+//
+//   - An image an options file named (byName): the symbols' names in
+//     descending order. testdata/link68's MAIN1 gives SHR1's six cells as
+//     SHR1_TABLE, SHOW, JSB, COUNT, BASE, ADD, though SHR1's own table has
+//     them in another order, and so do MAIN1A, MAIN1N, MAIN2, MAIN3P,
+//     MAIN4, E8, and SHR2.
+//   - An image found in a library (IMAGELIB.OLB, or a user's shareable
+//     image library): the symbols' places in the image's global symbol
+//     table, in descending order. MAIN1L and MAIN1U, which found SHR1 in
+//     MYSHR.OLB, give its cells as SHR1_COUNT, JSB, BASE, ADD, SHOW,
+//     TABLE, the reverse of SHR1's table; and LIBRTL's table puts the
+//     cells of FAILSIG (LIB$STOP, LIB$SIGNAL), PG66, PI, CELLS, CELLS2,
+//     and DBGCMD in their real orders too, which Phase 29 found no rule
+//     for.
+//
+// A library image whose table places govax doesn't know (govax's own
+// tables, vmsdef's, without them) falls back on the names in ascending
+// order, which CELLS and CELLS2 fit and FAILSIG doesn't. A target reached
+// without a symbol (an offset from arithmetic) has no name, and keeps its
+// place after the named ones.
+func (r *sharedRef) orderCells(byName bool) {
+	byOrder := !byName
+
+	for _, o := range r.offsets {
+		if r.names[o] != "" && r.orders[o] == 0 {
+			byOrder = false
+		}
+	}
+
+	sort.SliceStable(r.offsets, func(i, j int) bool {
+		a, b := r.offsets[i], r.offsets[j]
+
+		if (r.names[a] == "") != (r.names[b] == "") {
+			return r.names[b] == ""
 		}
 
-		return a < b
+		switch {
+		case byName:
+			return r.names[a] > r.names[b]
+		case byOrder:
+			return r.orders[a] > r.orders[b]
+		default:
+			return r.names[a] < r.names[b]
+		}
 	})
+}
+
+// namedInOptions says an options file named the shareable image name
+// (NAME/SHAREABLE), rather than the link finding it in a library.
+func (l *linker) namedInOptions(name string) bool {
+	for _, c := range l.opts.Clusters {
+		if c.Shareable && c.Image == name {
+			return true
+		}
+	}
+
+	return false
 }
 
 // fixupLayout is where each part of the fixup section goes, as offsets
@@ -130,7 +179,7 @@ func (l *linker) layoutFixups() fixupLayout {
 	f := fixupLayout{gfix: iafFixedLength, cells: map[*sharedRef][]uint32{}}
 
 	for _, r := range l.shared {
-		r.orderCells()
+		r.orderCells(l.namedInOptions(r.image.Name))
 	}
 
 	// An image placed at link time has no cells: its references were
@@ -152,7 +201,7 @@ func (l *linker) layoutFixups() fixupLayout {
 	p += 4 // the zero count that ends the lists
 
 	f.icp = p
-	f.shl = f.icp + 4 + icpEntryLength
+	f.shl = f.icp + 4 + icpEntryLength*uint32(1+len(l.readOnlyFixups))
 	f.size = f.shl + uint32(1+len(l.shared))*shlEntryLength
 
 	if l.addressFixups > 0 || len(l.selfAddresses) > 0 {
@@ -233,10 +282,22 @@ func (l *linker) fixupSection(f fixupLayout, fixupVA uint32) []byte {
 	// the fixups. Its address is relative to the image's base, its first
 	// section's address (ANALYZE/IMAGE: "relative to %X'00000200'", and
 	// EXE1's %X'00010000').
-	le.PutUint32(b[f.icp:], 1)
+	//
+	// Then each read-only section of a shareable image the activator
+	// stores .ADDRESS fixups in, made user read once they're done (SHR6:
+	// "address: %X'00000000', page count: 1, protection: PRT$C_UR", after
+	// the fixup section's entry).
+	le.PutUint32(b[f.icp:], uint32(1+len(l.readOnlyFixups)))
 	le.PutUint32(b[f.icp+4:], fixupVA-l.imageBase)
 	le.PutUint16(b[f.icp+8:], uint16(len(b)/blockSize))
 	le.PutUint16(b[f.icp+10:], prtUREW)
+
+	for i, s := range l.readOnlyFixups {
+		entry := b[f.icp+4+uint32(i+1)*icpEntryLength:]
+		le.PutUint32(entry, s.base-l.imageBase)
+		le.PutUint16(entry[4:], uint16(s.pages))
+		le.PutUint16(entry[6:], prtUR)
+	}
 
 	// The .ADDRESS fixup lists, each longword's address relative to the
 	// image's base.

@@ -263,13 +263,10 @@ func TestLinkForthMatchesRealLINK(t *testing.T) {
 // places (testdata/mar/pi.mar), and compares the image byte for byte with
 // real LINK's PI.EXE (testdata/mar/vax/pi.exe): two psects, and calls to
 // LIB$GET_FOREIGN, LIB$GET_VM, and LIB$PUT_OUTPUT in LIBRTL.
-//
-// It's skipped: real LINK gives LIBRTL's cells in the order
-// LIB$GET_FOREIGN, LIB$PUT_OUTPUT, LIB$GET_VM, and govax in name order
-// (orderCells), so the two cells, and the G^ displacements that reach
-// them, differ. Like FAILSIG's, a known difference (docs/PHASE-29.md).
+// Real LINK gives LIBRTL's cells in the order LIB$GET_FOREIGN,
+// LIB$PUT_OUTPUT, LIB$GET_VM: the reverse of their places in LIBRTL's
+// global symbol table, which only VMS's own LIBRTL.EXE gives (orderCells).
 func TestLinkPiMatchesRealLINK(t *testing.T) {
-	t.Skip("real LINK's order of PI's LIBRTL fixup cells is a known difference (docs/PHASE-29.md, subtask 14)")
 
 	want, opts := realImage(t, filepath.Join(fixtureDir, "vax", "pi.exe"))
 	opts.Sources = vmsSources(t)
