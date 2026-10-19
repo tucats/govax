@@ -43,6 +43,12 @@ type FileLocation struct {
 	// Name is the host path, or the file specification to resolve on a
 	// mounted volume.
 	Name string
+
+	// Physical, in a location a reader found on a volume (ReadRawFile,
+	// AccessImage), is the file's full specification with its physical
+	// device, where Name shows a concealed device's logical name: what
+	// VMS's image activator records as an image's name (JPI$_IMAGNAME).
+	Physical string
 }
 
 // String returns the location's name.

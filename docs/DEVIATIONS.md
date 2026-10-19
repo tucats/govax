@@ -354,9 +354,9 @@ changed as a result.
 - **Where**: `internal/corevms/getjpi.go`.
 - **What**:
   - Only 28 item codes are supported (21 until subtask 21 added the AST
-    items, the priorities, and `STATE`). The others, for state govax
-    doesn't model (`IMAGNAME`, most quotas, privileges, CPU and I/O
-    accounting), are `SS$_BADPARAM`.
+    items, the priorities, and `STATE`; `IMAGNAME` since Phase 66). The
+    others, for state govax doesn't model (most quotas, privileges, CPU
+    and I/O accounting), are `SS$_BADPARAM`.
   - `JPI$_STATE` is always `SCH$C_CUR`, and the priorities are fixed
     values: there's one process and no scheduler.
   - The AST quota (`JPI$_ASTLM`/`ASTCNT`) is reported but not enforced.

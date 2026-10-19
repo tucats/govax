@@ -202,6 +202,10 @@ func (p *ImageProcess) ActivateImage(fn string) (*ICB, error) {
 		p.setImageProtection(icb, true)
 	}
 
+	if env := p.process(); env != nil {
+		env.SetImageName(main.Spec.Name, main.Spec.Host)
+	}
+
 	return main, nil
 }
 

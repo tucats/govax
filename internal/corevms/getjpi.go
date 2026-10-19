@@ -2,6 +2,7 @@ package corevms
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/tucats/govax/internal/registers"
 	"github.com/tucats/govax/internal/sched"
@@ -54,7 +55,8 @@ const maxProcessNameLength = 15
 // process's Job (job.go); JPI$_OWNER and JPI$_PRCCNT its own PCB fields.
 // JPI$_BIOLM, JPI$_DIOLM, JPI$_CPULIM, JPI$_CREPRC_FLAGS, and JPI$_TMBU
 // are what $CREPRC gave the process (creprc.go); JPI$_LOGINTIM is when
-// the process table took it in.
+// the process table took it in. JPI$_IMAGNAME is the running image's
+// file specification, empty when none runs (Process.ImageName).
 var jpiItemsByName = map[string]func(env *Environment) itemValue{
 	"JPI$_ACCOUNT":      func(env *Environment) itemValue { return itemPadded(env.Process.Account, 8) },
 	"JPI$_ASTACT":       func(env *Environment) itemValue { return itemLong(astModeMask(env.Process.ast.active)) },
@@ -64,6 +66,7 @@ var jpiItemsByName = map[string]func(env *Environment) itemValue{
 	"JPI$_AUTHPRI":      func(env *Environment) itemValue { return itemLong(env.Process.AuthorizedPriority) },
 	"JPI$_AUTHPRIV":     func(env *Environment) itemValue { return itemQuad(env.Process.AuthorizedPrivileges) },
 	"JPI$_CURPRIV":      func(env *Environment) itemValue { return itemQuad(env.Process.CurrentPrivileges) },
+	"JPI$_IMAGNAME":     func(env *Environment) itemValue { return itemString(env.Process.ImageName) },
 	"JPI$_IMAGPRIV":     func(env *Environment) itemValue { return itemQuad(env.Process.ImagePrivileges) },
 	"JPI$_PROCPRIV":     func(env *Environment) itemValue { return itemQuad(env.Process.ProcessPrivileges) },
 	"JPI$_PRI":          func(env *Environment) itemValue { return itemLong(env.currentPriority()) },
@@ -113,6 +116,26 @@ var jpiItemsByName = map[string]func(env *Environment) itemValue{
 	"JPI$_CREPRC_FLAGS": func(env *Environment) itemValue { return itemLong(env.Process.CreateFlags) },
 	"JPI$_TMBU":         func(env *Environment) itemValue { return itemLong(env.Process.TerminationMailbox) },
 	"JPI$_LOGINTIM":     func(env *Environment) itemValue { return itemQuad(env.Process.LoginTime) },
+}
+
+// SetImageName records name, the file the image activator found the
+// process's main image in, as the process's JPI$_IMAGNAME. A volume
+// file's specification has its device written with the node's name, as
+// VMS writes it ("SIMVAX$DUA0:[SYS0.SYSCOMMON.][SYSEXE]REMACP.EXE;1",
+// VMS 7.3 on simh); a host file's path (host) is kept as it is.
+func (env *Environment) SetImageName(name string, host bool) {
+	if !host && env.NodeName != "" {
+		if i := strings.IndexByte(name, ':'); i > 0 {
+			device := strings.TrimPrefix(name[:i], "_")
+			if j := strings.LastIndexByte(device, '$'); j >= 0 {
+				device = device[j+1:]
+			}
+
+			name = strings.ToUpper(env.NodeName) + "$" + device + name[i:]
+		}
+	}
+
+	env.Process.ImageName = name
 }
 
 // inConsoleJob reports whether the process belongs to process 1's job,

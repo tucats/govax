@@ -57,6 +57,28 @@ func TestRun_imageOnVolume(t *testing.T) {
 	if _, err := c.ReadImage("NOSUCH", true); !errors.Is(err, vmserrors.New(vmserrors.RMS_IMAGENOTFOUND)) {
 		t.Errorf("NOSUCH: err = %v, want IMAGENOTFOUND", err)
 	}
+
+	// Activating the image by its bare name records the file's full
+	// specification, with the node's name on the device, as its process's
+	// JPI$_IMAGNAME; image rundown forgets it.
+	env := c.ProcessOne()
+
+	c.ImageRundown()
+	c.ResetICBList()
+
+	if _, err := c.ActivateImage("MAIN"); err != nil {
+		t.Fatal(err)
+	}
+
+	if want := env.NodeName + "$DUA0:[000000]MAIN.EXE;1"; env.Process.ImageName != want {
+		t.Errorf("JPI$_IMAGNAME = %q, want %q", env.Process.ImageName, want)
+	}
+
+	c.ImageRundown()
+
+	if env.Process.ImageName != "" {
+		t.Errorf("after rundown, JPI$_IMAGNAME = %q, want empty", env.Process.ImageName)
+	}
 }
 
 // TestDispatch_runHost runs a host image with /HOST after its name while

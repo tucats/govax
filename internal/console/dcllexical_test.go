@@ -236,6 +236,7 @@ func TestLexicalProcess(t *testing.T) {
 		{text: `F$GETJPI("", "JOBTYPE")`, integer: true, want: "3"},
 		{text: `F$GETJPI("", "STATE")`, want: env.ProcessState(env)},
 		{text: `F$GETJPI("", "USERNAME")`, want: fmt.Sprintf("%-12s", env.Process.Username)},
+		{text: `F$GETJPI("", "IMAGNAME")`, want: ""}, // no image runs while DCL does
 		{text: `F$GETJPI("", "PRCNAMX")`, code: vmserrors.CLI_IVKEYW},
 		{text: `F$GETJPI("7FFF0001", "PID")`, vms: "SS$_NONEXPR"},
 		{text: `F$GETJPI("XYZ", "PID")`, vms: "SS$_NONEXPR"},

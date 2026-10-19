@@ -61,7 +61,7 @@ func (s *Session) AccessImage(loc FileLocation) (*ACPFile, []byte, FileLocation,
 		}
 
 		a = f
-		found = FileLocation{Name: fullSpec(r.Display, matches[0])}
+		found = FileLocation{Name: fullSpec(r.Display, matches[0]), Physical: fullSpec(r.Spec.Device, matches[0])}
 
 		return nil
 	})

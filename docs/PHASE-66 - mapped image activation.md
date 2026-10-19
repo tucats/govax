@@ -768,3 +768,20 @@ procedure. Counts print as differences.
     the user-mode names an image's exit deletes). The first RUN's
     `charged=-1` in govax's dry run was the test console's own spin loop
     in P0, which the first activation deletes.
+- **2026-10-19:** JPI$_IMAGNAME, which the probe had to do without (its
+  image's file came to it as the logical name PG66_IMAGE). The image
+  activator records where it found the main image (`ICB.Spec`, from
+  `readImage`/`openImage`, either mode) and `ActivateImage` gives it to
+  the process (`corevms.Environment.SetImageName`, `Process.ImageName`);
+  `ImageRundown` clears it, so at DCL's prompt it's empty, as on VMS. A
+  volume file's name is its full specification with the *physical*
+  device, the node's name in front, where RMS's resultant name would
+  show a concealed device's logical name (`rms.FileLocation.Physical`):
+  the author's VMS 7.3 on simh gave
+  `SIMVAX$DUA0:[SYS0.SYSCOMMON.][SYSEXE]REMACP.EXE;1` for a process
+  running REMACP. A host image's name is its absolute host path. $GETJPI,
+  LIB$GETJPI, and F$GETJPI all have it (`TestImageName`,
+  `TestRun_imageOnVolume`, `TestLexicalProcess`). Unconfirmed: an image
+  found through a rooted logical name; govax writes the directory the
+  file was found in as RMS's match gives it, not checked against VMS's
+  `[SYS0.SYSCOMMON.][SYSEXE]` form.

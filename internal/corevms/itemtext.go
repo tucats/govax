@@ -98,6 +98,7 @@ func both(f ItemForm) forms { return forms{f, f} }
 var jpiForms = map[string]forms{
 	"JPI$_ACCOUNT":    both(FormString),
 	"JPI$_CLINAME":    both(FormString),
+	"JPI$_IMAGNAME":   both(FormString),
 	"JPI$_PRCNAM":     both(FormString),
 	"JPI$_TERMINAL":   both(FormString),
 	"JPI$_USERNAME":   both(FormString),

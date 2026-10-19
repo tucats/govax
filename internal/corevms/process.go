@@ -37,6 +37,14 @@ type Process struct {
 	Terminal string
 	CLIName  string
 
+	// ImageName is the file specification of the image the process is
+	// running (JPI$_IMAGNAME): the full name the image activator found the
+	// main image's file under, device, directory, name, type, and version
+	// for a volume file, or the host path for a host file. Empty while no
+	// image runs (DCL at its prompt, or a process between images): the
+	// image activator sets it and ImageRundown clears it.
+	ImageName string
+
 	// Owner is the PID of the process that created this one, if it's a
 	// subprocess, or 0 for a detached process (PCB$L_OWNER).
 	// SubprocessCount is how many subprocesses this process has created
@@ -406,8 +414,8 @@ func serviceSysAdjwsl(env *Environment, argv []uint32) (uint32, error) {
 // timers and $SCHDWK wakeups, discards its queued user-mode ASTs, and
 // forgets its user-mode exit handlers and any $PUTMSG, $CMKRNL, or
 // LIB$ routine left waiting for a routine it called, deletes P0 and the
-// sections mapped there (DeleteP0, unless KeepP0 keeps them), resets the working-set limit to its default (resetWorkingSet), and
-// forgets its heap (releaseHeap) and its RTL packages' data
+// sections mapped there (DeleteP0, unless KeepP0 keeps them), resets the working-set limit to its default (resetWorkingSet),
+// forgets the image's name (Process.ImageName), and forgets its heap (releaseHeap) and its RTL packages' data
 // (ImageData). The console calls it when an
 // image started by RUN returns or exits (and does its own logical-name
 // rundown alongside).
@@ -435,6 +443,7 @@ func (env *Environment) ImageRundown() {
 	env.enqWaits = nil
 	env.releaseHeap()
 	env.imageData = nil
+	env.Process.ImageName = ""
 }
 
 // The small process-control services (docs/PHASE-26.md subtask 30):

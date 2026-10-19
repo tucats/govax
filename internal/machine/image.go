@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
 	"strings"
 
 	"github.com/tucats/govax/internal/dbgsym"
@@ -119,6 +120,11 @@ type ICB struct {
 	// Mapped is set for an image mapped from its file (imageMap, with
 	// paging on), clear for one copied into memory.
 	Mapped bool
+
+	// Spec is where the image's file was found: its full specification
+	// on a volume, or its host path. The main image's becomes its
+	// process's JPI$_IMAGNAME (ActivateImage).
+	Spec imageSpec
 
 	// LinkDebug is the image header's IHD$V_LNKDEBUG: the image was
 	// linked /DEBUG, so RUN starts the debugger on it unless told not to.
@@ -352,7 +358,7 @@ func (p *ImageProcess) imageLoad(fn string, flag uint32) (*ICB, error) {
 		return p.imageMap(fn, flag)
 	}
 
-	data, err := p.m.ReadImage(fn, flag == icbMain)
+	data, spec, err := p.m.readImage(fn, flag == icbMain)
 	if err != nil {
 		return nil, err
 	}
@@ -382,6 +388,7 @@ func (p *ImageProcess) imageLoad(fn string, flag uint32) (*ICB, error) {
 	}
 
 	icb := p.newICB(fn, flag)
+	icb.Spec = spec
 
 	transferOffset, err := p.readIHDTransferOffset(base)
 	if err != nil {
@@ -815,30 +822,57 @@ func (p *ImageProcess) imageFixup(icb *ICB) error {
 // looked for on the host (findImage), and govax's shims stand in for one
 // that isn't there.
 func (m *Machine) ReadImage(fn string, main bool) ([]byte, error) {
+	data, _, err := m.readImage(fn, main)
+
+	return data, err
+}
+
+// readImage is ReadImage, also returning where the image was found
+// (imageSpec).
+func (m *Machine) readImage(fn string, main bool) ([]byte, imageSpec, error) {
 	if s := m.Hooks.Session(); main && s != nil {
 		loc, err := s.Locate(fn, m.runHost)
 		if err != nil {
-			return nil, err
+			return nil, imageSpec{}, err
 		}
 
 		if !loc.Host {
-			data, _, err := s.ReadRawFile(loc.WithDefaultType("EXE"))
+			data, found, err := s.ReadRawFile(loc.WithDefaultType("EXE"))
 
 			var notFound *rms.NotFoundError
 			if errors.As(err, &notFound) {
-				return nil, vmserrors.New(vmserrors.RMS_IMAGENOTFOUND, fn)
+				return nil, imageSpec{}, vmserrors.New(vmserrors.RMS_IMAGENOTFOUND, fn)
 			}
 
-			return data, err
+			return data, imageSpec{Name: found.Physical}, err
 		}
 	}
 
 	path, ok := m.findImage(fn)
 	if !ok {
-		return nil, vmserrors.New(vmserrors.RMS_IMAGENOTFOUND, fn)
+		return nil, imageSpec{}, vmserrors.New(vmserrors.RMS_IMAGENOTFOUND, fn)
 	}
 
-	return m.Paths.ReadFile(path)
+	data, err := m.Paths.ReadFile(path)
+
+	return data, hostImageSpec(path), err
+}
+
+// imageSpec is where an image file was found: the full specification of
+// a volume file with its physical device (rms.FileLocation.Physical), or
+// the absolute path of a host file (Host).
+type imageSpec struct {
+	Name string
+	Host bool
+}
+
+// hostImageSpec is the imageSpec of the host file at path.
+func hostImageSpec(path string) imageSpec {
+	if abs, err := filepath.Abs(path); err == nil {
+		path = abs
+	}
+
+	return imageSpec{Name: path, Host: true}
 }
 
 // loadSection copies a section of an image, isd, from the image file's

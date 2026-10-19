@@ -297,3 +297,50 @@ func TestJPIItemsRegistry(t *testing.T) {
 		t.Error("JPI$_ACCOUNT/CLINAME don't match the codes eVAX's sys_getjpiw used (515/522)")
 	}
 }
+
+// TestImageName checks JPI$_IMAGNAME: empty with no image, a volume
+// file's specification with the node's name in front of its device
+// (VMS 7.3's "SIMVAX$DUA0:[SYS0.SYSCOMMON.][SYSEXE]REMACP.EXE;1"), a
+// host path unchanged, and empty again after image rundown.
+func TestImageName(t *testing.T) {
+	env, _ := fixture()
+	env.NodeName = "simvax"
+
+	imagname := func() string {
+		t.Helper()
+
+		data, ok := env.JPIItem("JPI$_IMAGNAME")
+		if !ok {
+			t.Fatal("JPI$_IMAGNAME isn't supported")
+		}
+
+		return data
+	}
+
+	if got := imagname(); got != "" {
+		t.Errorf("before any image: %q, want empty", got)
+	}
+
+	for _, c := range []struct {
+		name string
+		host bool
+		want string
+	}{
+		{"DUA0:[SYS0.SYSCOMMON.SYSEXE]REMACP.EXE;1", false, "SIMVAX$DUA0:[SYS0.SYSCOMMON.SYSEXE]REMACP.EXE;1"},
+		{"_DUA1:[WORK]PROG.EXE;3", false, "SIMVAX$DUA1:[WORK]PROG.EXE;3"},
+		{"GOVAX$DUA1:[WORK]PROG.EXE;3", false, "SIMVAX$DUA1:[WORK]PROG.EXE;3"},
+		{"/tmp/x:y/prog.exe", true, "/tmp/x:y/prog.exe"},
+	} {
+		env.SetImageName(c.name, c.host)
+
+		if got := imagname(); got != c.want {
+			t.Errorf("SetImageName(%q, %v): %q, want %q", c.name, c.host, got, c.want)
+		}
+	}
+
+	env.ImageRundown()
+
+	if got := imagname(); got != "" {
+		t.Errorf("after rundown: %q, want empty", got)
+	}
+}

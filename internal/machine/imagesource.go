@@ -23,34 +23,43 @@ import (
 // with corevms.System.ReleaseSource, which leaves it open for as long as
 // a section uses it.
 func (m *Machine) OpenImage(fn string, main bool) ([]byte, corevms.PageSource, error) {
+	data, src, _, err := m.openImage(fn, main)
+
+	return data, src, err
+}
+
+// openImage is OpenImage, also returning where the image was found.
+func (m *Machine) openImage(fn string, main bool) ([]byte, corevms.PageSource, imageSpec, error) {
 	if s := m.Hooks.Session(); main && s != nil {
 		loc, err := s.Locate(fn, m.runHost)
 		if err != nil {
-			return nil, nil, err
+			return nil, nil, imageSpec{}, err
 		}
 
 		if !loc.Host {
-			a, data, _, err := s.AccessImage(loc.WithDefaultType("EXE"))
+			a, data, found, err := s.AccessImage(loc.WithDefaultType("EXE"))
 
 			var notFound *rms.NotFoundError
 			if errors.As(err, &notFound) {
-				return nil, nil, vmserrors.New(vmserrors.RMS_IMAGENOTFOUND, fn)
+				return nil, nil, imageSpec{}, vmserrors.New(vmserrors.RMS_IMAGENOTFOUND, fn)
 			}
 
 			if err != nil {
-				return nil, nil, err
+				return nil, nil, imageSpec{}, err
 			}
 
-			return data, a, nil
+			return data, a, imageSpec{Name: found.Physical}, nil
 		}
 	}
 
 	path, ok := m.findImage(fn)
 	if !ok {
-		return nil, nil, vmserrors.New(vmserrors.RMS_IMAGENOTFOUND, fn)
+		return nil, nil, imageSpec{}, vmserrors.New(vmserrors.RMS_IMAGENOTFOUND, fn)
 	}
 
-	return openHostImage(path)
+	data, src, err := openHostImage(path)
+
+	return data, src, hostImageSpec(path), err
 }
 
 // openHostImage opens the host file at path as an image's page source,

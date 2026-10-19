@@ -44,7 +44,7 @@ func (p *ImageProcess) mapsImages() bool {
 // the copying loader does (finishLoad). The image file stays open while
 // any of its sections is mapped.
 func (p *ImageProcess) imageMap(fn string, flag uint32) (*ICB, error) {
-	data, src, err := p.m.OpenImage(fn, flag == icbMain)
+	data, src, spec, err := p.m.openImage(fn, flag == icbMain)
 	if err != nil {
 		return nil, err
 	}
@@ -66,6 +66,7 @@ func (p *ImageProcess) imageMap(fn string, flag uint32) (*ICB, error) {
 
 	icb := p.newICB(fn, flag)
 	icb.Mapped = true
+	icb.Spec = spec
 
 	// The transfer addresses: four longwords at the header's activation
 	// offset (as the copying loader reads them from its copy in P0).
