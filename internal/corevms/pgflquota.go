@@ -1,11 +1,6 @@
 package corevms
 
-import (
-	"maps"
-
-	"github.com/tucats/govax/internal/paging"
-	"github.com/tucats/govax/internal/vm"
-)
+import "maps"
 
 // The paging file quota, PGFLQUOTA (docs/PHASE-64 - page file.md,
 // subtask 5; the paging plan's Decision 10, as the survey's finding 10
@@ -33,18 +28,19 @@ import (
 //   - at mapping, a copy-on-reference section's pages, private or global
 //     ($CRMPSC, $MGBLSC; filesec.go's mapChargedPage, Phase 65), refused
 //     past the quota the same way;
-//   - by the image loader, for the pages of an image's writable and
-//     demand-zero sections (finding 12: until Phase 66 maps images, every
-//     image page is one the loader writes, but VMS charges only those);
-//     the loader's writes into read-only sections go uncharged
-//     (WithoutPageFileCharge);
-//   - at its first fault, demand-zero or a copy-on-reference copy, if
-//     nothing charged it before: govax's every P0 and P1 page exists from
-//     the start (until Phase 67), so a page no service created, such as
-//     the user stack's, or one the console's DEPOSIT wrote, is charged when
-//     it's first touched. Such a charge never fails a fault: it may take
-//     the job past its quota, which JPI$_PAGFILCNT then shows as a
-//     negative count (unconfirmed).
+//   - at activation, a mapped image's writable sections (copy-on-reference
+//     image sections) and demand-zero sections (imagesec.go), and its user
+//     stack (userstack.go), whose automatic expansion charges each page it
+//     creates.
+//
+// Every page that can hold contents only memory holds is created by one
+// of these, so a fault never charges (Phase 67's subtask 6: until then
+// every P0 and P1 page existed from the start, and a page no service
+// created, such as one the console's DEPOSIT wrote, was charged at its
+// first touch). With paging off, when images are copied into P0, nothing
+// is charged. Only the system zones' control page (vmzone.go) is charged
+// even past the quota, which JPI$_PAGFILCNT then shows as a negative
+// count (unconfirmed).
 //
 // The charge is given back when the page is deleted (releasePTE: $DELTVA,
 // $CRETVA over the page, image rundown), and a process's whole charge
@@ -86,8 +82,8 @@ func (env *Environment) dropPageFileCharges() {
 }
 
 // PageFileRemaining is JPI$_PAGFILCNT: how many pages env's job may still
-// charge against its PGFLQUOTA, negative when first-touch charges took it
-// past the quota.
+// charge against its PGFLQUOTA, negative when forced charges took it past
+// the quota.
 func (env *Environment) PageFileRemaining() int64 {
 	job := env.Process.Job
 
@@ -225,40 +221,6 @@ func (env *Environment) refundAllPageFile() {
 	}
 
 	env.dropPageFileCharges()
-}
-
-// WithoutPageFileCharge runs fn with env's first-touch charges
-// suspended: the image loader writes an image's read-only sections in it
-// (finding 12), since VMS charges only writable and demand-zero ones.
-func (env *Environment) WithoutPageFileCharge(fn func() error) error {
-	if env == nil {
-		return fn()
-	}
-
-	saved := env.unchargedTouch
-	env.unchargedTouch = true
-
-	defer func() { env.unchargedTouch = saved }()
-
-	return fn()
-}
-
-// chargeFirstTouch charges the page a fault just gave a frame with
-// contents only memory holds (a demand-zero page, or a copy-on-reference
-// page's private copy), if nothing charged it before: a page no service
-// created. It never fails the fault. claim names the page; an untied
-// claim (an S0 page) is charged to no one.
-func (sys *System) chargeFirstTouch(claim vm.FrameClaim) {
-	if !claim.Tied || claim.Type != paging.ProcessPage {
-		return
-	}
-
-	env, ok := sys.FindProcess(claim.Owner.Handle)
-	if !ok || env.unchargedTouch {
-		return
-	}
-
-	env.chargePage(claim.Owner.VA, true)
 }
 
 // pageFileIndex is the index govax's one page file has in VMS's table of

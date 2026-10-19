@@ -18,10 +18,11 @@ import (
 // Phase 64's subtask 5 (docs/PHASE-64 - page file.md): the paging file
 // quota. With paging on, the services that create pages charge them
 // against the job's PGFLQUOTA and stop with SS$_EXQUOTA when it runs
-// out, having made the pages before; deletion gives the charge back; the
-// image loader charges only writable sections' pages; a page nothing
-// created is charged at its first touch; a subprocess draws on its job's
-// pool and gives its charges back when it goes.
+// out, having made the pages before; deletion gives the charge back;
+// image activation charges only writable sections' pages and the user
+// stack's; a page is charged when it's created, never when it's touched
+// (Phase 67's subtask 6); a subprocess draws on its job's pool and gives
+// its charges back when it goes.
 
 // quotaSource runs the services against the quota the test sets at each
 // checkpoint. At each it waits in a loop until the test sets R10 to the
@@ -145,8 +146,8 @@ func TestPageFileQuotaServices(t *testing.T) {
 	}
 
 	// Checkpoint 1: the image's writable data page is charged, its
-	// read-only code isn't (finding 12), and its user stack, touched by
-	// the call frame, is charged at first touch.
+	// read-only code isn't (finding 12), and its user stack is, created at
+	// activation.
 	checkpoint(1)
 
 	code, data := c.CPU.GPR(7), c.CPU.GPR(8)
@@ -274,8 +275,9 @@ func finishImage(t *testing.T, c *console.Console) {
 }
 
 // TestPageFileQuotaSubprocess: a subprocess's pages, charged as they're
-// created, come from its job's pool, and go back to it when the
-// subprocess is deleted. Its peak is its own.
+// created (touching them charges nothing more), come from its job's
+// pool, and go back to it when the subprocess is deleted. Its peak is its
+// own.
 func TestPageFileQuotaSubprocess(t *testing.T) {
 	pageFileSettings(t)
 
@@ -293,11 +295,19 @@ func TestPageFileQuotaSubprocess(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	// With paging on a P0 page exists only once something creates it.
+	// With paging on a P0 page exists only once something creates it,
+	// and it's charged then.
 	if err := env.EnsurePages(0x200, 20*512); err != nil {
 		t.Fatal(err)
 	}
 
+	if got := job.PageFileCharged - before; got != 20 {
+		t.Errorf("after creation: the job has %d more pages charged, want the subprocess's 20", got)
+	}
+
+	// Touching the pages, each a demand-zero fault, charges nothing more;
+	// and a fault on a page nothing created is an access violation, not a
+	// charge.
 	for i := range uint32(20) {
 		c.Mem.BeginInstruction()
 
@@ -306,8 +316,14 @@ func TestPageFileQuotaSubprocess(t *testing.T) {
 		}
 	}
 
+	c.Mem.BeginInstruction()
+
+	if err := c.Mem.StoreLongwordIn(c.CPU, env.Space.AddressSpace, 0x200+20*512, 0); err == nil {
+		t.Error("a store to a page nothing created succeeded")
+	}
+
 	if got := job.PageFileCharged - before; got != 20 {
-		t.Errorf("the job has %d more pages charged, want the subprocess's 20", got)
+		t.Errorf("after the touches: the job has %d more pages charged, want 20", got)
 	}
 
 	if env.Process.PageFilePeak != 20 {

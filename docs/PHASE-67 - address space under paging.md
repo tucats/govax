@@ -5,7 +5,8 @@ below; its questions answered by the author the same day, each
 recommendation accepted); subtask 2, created space, done 2026-10-19;
 subtask 3, the user stack, done 2026-10-19; subtask 4, the table area
 backed on demand, done 2026-10-19; subtask 5, the S0 pool backed on
-demand, done 2026-10-19.
+demand, done 2026-10-19; subtask 6, PGFLQUOTA at creation only, done
+2026-10-19.
 Planned 2026-10-15,
 deferred to the end of the paging program (the author, 2026-10-15).
 Needs Phase 66. Part of the paging
@@ -825,3 +826,23 @@ FREP1VA where they vary.
     unreadable, `AllocateS0` cleared frames counted as system frames,
     `FreeS0` and `FreeProcessS0` giving them back, the database
     consistent), `TestS0PoolPagingOff`, `TestShowMemory_pagedRegions`.
+- **2026-10-19:** Subtask 6, PGFLQUOTA at creation only (finding 12).
+  - **The first-touch charge is gone:** `chargeFirstTouch` and its three
+    calls in `filesec.go` (a demand-zero fault, a private and a global
+    copy-on-reference copy), `Environment.unchargedTouch`, and
+    `WithoutPageFileCharge`. With created space every page whose contents
+    only memory holds is created, and charged, by something: `$CRETVA`,
+    `$EXPREG`, the heap's `growP0`, a copy-on-reference section's mapping,
+    a mapped image's writable and demand-zero sections, and the user
+    stack's creation and expansion; a fault never charges. The copying
+    loader's `loadSection` no longer suspends a charge that can't happen
+    (it runs only when images aren't mapped, when nothing is charged).
+    `pgflquota.go`'s account of what charges a page says so; the one
+    charge still forced past the quota is the system zones' control page.
+  - **Tests:** `TestPageFileQuotaSubprocess` is now a creation test: the
+    subprocess's 20 pages are charged by `EnsurePages`, touching them
+    charges nothing more, and a store to a page nothing created fails;
+    `TestPageFileQuotaServices`'s checkpoint 1 expects the user stack
+    charged by its creation at activation. The rest of the suite needed
+    no change: subtasks 2 and 3 had already made the paging-on tests
+    create what they write.

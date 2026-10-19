@@ -877,46 +877,36 @@ func hostImageSpec(path string) imageSpec {
 
 // loadSection copies a section of an image, isd, from the image file's
 // contents, data, into its pages, moving P0's high-water mark and the
-// image's end past them. With paging on, the loader's writes are each
-// page's first touch, which charges it against the job's paging file
-// quota; VMS charges only an image's writable sections (and its
-// demand-zero ones, which loadImage zeroes itself), so a read-only
-// section's pages are written uncharged (docs/PHASE-64 - page file.md,
-// finding 12).
+// image's end past them. This is the copying loader, which runs only when
+// images aren't mapped (paging off, or before VMINIT turns memory
+// mapping on), so nothing it writes is charged against the paging file
+// quota.
 func (p *ImageProcess) loadSection(icb *ICB, isd *ISD, data []byte) error {
-	load := func() error {
-		fileAddr := int64(isd.VBN-1) * 512
+	fileAddr := int64(isd.VBN-1) * 512
 
-		for n := uint32(0); n < uint32(isd.Pages); n++ {
-			addr := icb.Base + ((n + uint32(isd.VPN)) << 9)
-			if addr >= p.process().RegionSize[0] {
-				p.process().RegionSize[0] = addr + 512
-			}
-
-			if addr+0x1FF > icb.End {
-				icb.End = addr + 0x1FF
-			}
-
-			block := make([]byte, 512)
-
-			off := fileAddr + int64(n)*512
-			if off >= 0 && off < int64(len(data)) {
-				copy(block, data[off:])
-			}
-
-			if err := p.storeBytes(addr, block); err != nil {
-				return err
-			}
+	for n := uint32(0); n < uint32(isd.Pages); n++ {
+		addr := icb.Base + ((n + uint32(isd.VPN)) << 9)
+		if addr >= p.process().RegionSize[0] {
+			p.process().RegionSize[0] = addr + 512
 		}
 
-		return nil
+		if addr+0x1FF > icb.End {
+			icb.End = addr + 0x1FF
+		}
+
+		block := make([]byte, 512)
+
+		off := fileAddr + int64(n)*512
+		if off >= 0 && off < int64(len(data)) {
+			copy(block, data[off:])
+		}
+
+		if err := p.storeBytes(addr, block); err != nil {
+			return err
+		}
 	}
 
-	if isd.Flags&isdWRT != 0 {
-		return load()
-	}
-
-	return p.process().WithoutPageFileCharge(load)
+	return nil
 }
 
 // imageProtection is the page protection VMS's image activator gives a

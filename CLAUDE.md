@@ -184,7 +184,9 @@ never had.
   `FreeS0`/`FreeProcessS0` taking it back, VMINIT giving back the
   pool's frames, `UnbackS0Pool`, and the microkernel's ASM claiming its
   pages before writing them, `ClaimS0`; SHOW MEMORY's regions show
-  created space and table frames, `showPagedRegions`). Paging is synchronous, with no
+  created space and table frames, `showPagedRegions`; subtask 6,
+  PGFLQUOTA at creation only, done 2026-10-19: the first-touch charge
+  removed, every charged page being created by something). Paging is synchronous, with no
   PFW, COLPG, or FPG waits. Each later phase has a planning doc.
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
@@ -954,8 +956,8 @@ expect adjustment as phases land):
   goes back when the page is deleted or modified again
   (`releasePageFileBlock`). `pgflquota.go` is PGFLQUOTA, the job's:
   charged at creation by `$CRETVA`, `$EXPREG`, the heap, and the image
-  loader (writable and DZRO ISDs), at first touch only for pages
-  nothing created (`chargeFirstTouch`), SS$_EXQUOTA after the pages the
+  activator (writable and DZRO ISDs, the user stack), never at a fault
+  (Phase 67's subtask 6), SS$_EXQUOTA after the pages the
   quota allows, refunded at deletion; JPI$_PAGFILCNT, PAGFILLOC (page
   file 3), and ACC$L_PGFLPEAK. Image rundown deletes the image's P1
   pages with P0 (`vaspace.go`'s `deleteImageP1`). A full page file

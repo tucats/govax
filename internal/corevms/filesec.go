@@ -473,7 +473,6 @@ func (sys *System) resolveFault(f vm.PageFault) (vm.PTE, faultKind, bool) {
 		pfn, ok := sys.readPage(ps.source(), ps.vbn+i, claim)
 		if ok && ps.copyOnRef {
 			sys.effectivelyModified(pfn, claim)
-			sys.chargeFirstTouch(claim)
 		}
 
 		return vm.ValidPTE(pfn, prot, owner), faultRead, ok
@@ -494,7 +493,6 @@ func (sys *System) resolveFault(f vm.PageFault) (vm.PTE, faultKind, bool) {
 	pte, ok := sys.mem.DemandZeroFor(f.PTE, claim)
 	if ok {
 		sys.effectivelyModified(pte.PFN(), claim)
-		sys.chargeFirstTouch(claim)
 	}
 
 	return pte, faultDemandZero, ok
@@ -562,7 +560,6 @@ func (sys *System) pageInGlobal(gi uint32, f vm.PageFault) (uint32, faultKind, b
 		pfn, ok := sys.readPage(s.File, s.VBN+uint32(i), claim)
 		if ok {
 			sys.effectivelyModified(pfn, claim)
-			sys.chargeFirstTouch(claim)
 
 			s.Refs--
 			sys.maybeDeleteSection(s)
