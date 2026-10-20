@@ -139,89 +139,94 @@ func (s *Session) Directory(specText string, opts DirectoryOptions) (string, boo
 		totalUsed, totalAlloc uint32
 	)
 
-	// A search list lists each of its elements in turn (User's Manual
-	// §11.7.1), under that element's own "Directory" headers.
-	err := s.eachSpec(specText, func(vol *volume.Volume, r resolvedSpec) error {
-		// A name without a version lists every version, as VMS 7.3's
-		// DIRECTORY did (testdata/dcl50's round 4).
-		spec := r.Spec
-		if spec.Version == "" {
-			spec.Version = "*"
-		}
-
-		matches, err := filespec.Glob(vol, spec)
-		if err != nil {
-			return err
-		}
-
-		for _, group := range groupMatchesByDir(matches) {
-			dirName := r.Display + ":" + dirSpec{Elems: group.dirs}.String()
-			listed := newestVersions(group.matches, opts.Versions)
-
-			if len(listed) == 0 {
-				continue
+	// A list of names (DIRECTORY [R3...],[R4...]), like a search list,
+	// lists each element in turn (User's Manual §11.7.1), under that
+	// element's own "Directory" headers, with one grand total (VMS's
+	// log of testdata/backup69). VMS carries a name or type from one
+	// element to the next (sticky defaults); govax doesn't.
+	err := eachListed(specText, func(text string) error {
+		return s.eachSpec(text, func(vol *volume.Volume, r resolvedSpec) error {
+			// A name without a version lists every version, as VMS 7.3's
+			// DIRECTORY did (testdata/dcl50's round 4).
+			spec := r.Spec
+			if spec.Version == "" {
+				spec.Version = "*"
 			}
 
-			if !opts.NoHeading {
-				fmt.Fprintf(&b, "\nDirectory %s\n\n", dirName)
+			matches, err := filespec.Glob(vol, spec)
+			if err != nil {
+				return err
 			}
 
-			var used, alloc uint32
+			for _, group := range groupMatchesByDir(matches) {
+				dirName := r.Display + ":" + dirSpec{Elems: group.dirs}.String()
+				listed := newestVersions(group.matches, opts.Versions)
 
-			brief := newBriefColumns(&b)
-
-			for _, m := range listed {
-				name := m.ShortName(directoryVersionDelim)
-				if opts.NoHeading {
-					name = dirName + name
-				}
-
-				if opts.brief() && !opts.NoHeading {
-					brief.add(name)
-
+				if len(listed) == 0 {
 					continue
 				}
 
-				if opts.brief() {
-					fmt.Fprintln(&b, name)
-
-					continue
+				if !opts.NoHeading {
+					fmt.Fprintf(&b, "\nDirectory %s\n\n", dirName)
 				}
 
-				a, err := matchAttributes(vol, m)
-				if err != nil {
-					return err
+				var used, alloc uint32
+
+				brief := newBriefColumns(&b)
+
+				for _, m := range listed {
+					name := m.ShortName(directoryVersionDelim)
+					if opts.NoHeading {
+						name = dirName + name
+					}
+
+					if opts.brief() && !opts.NoHeading {
+						brief.add(name)
+
+						continue
+					}
+
+					if opts.brief() {
+						fmt.Fprintln(&b, name)
+
+						continue
+					}
+
+					a, err := matchAttributes(vol, m)
+					if err != nil {
+						return err
+					}
+
+					used += a.Used()
+					alloc += a.Allocated
+
+					if opts.Full {
+						writeFullEntry(&b, name, m, a, opts)
+
+						continue
+					}
+
+					writeColumnsEntry(&b, name, m, a, cols, opts)
 				}
 
-				used += a.Used()
-				alloc += a.Allocated
+				brief.end()
 
-				if opts.Full {
-					writeFullEntry(&b, name, m, a, opts)
+				dirs++
+				files += len(listed)
+				totalUsed += used
+				totalAlloc += alloc
 
-					continue
+				if !opts.NoTrailing {
+					if !opts.Full {
+						b.WriteString("\n")
+					}
+
+					fmt.Fprintf(&b, "Total of %s%s.\n", countText(len(listed), "file"), blocksText(cols, used, alloc))
 				}
-
-				writeColumnsEntry(&b, name, m, a, cols, opts)
 			}
 
-			brief.end()
-
-			dirs++
-			files += len(listed)
-			totalUsed += used
-			totalAlloc += alloc
-
-			if !opts.NoTrailing {
-				if !opts.Full {
-					b.WriteString("\n")
-				}
-
-				fmt.Fprintf(&b, "Total of %s%s.\n", countText(len(listed), "file"), blocksText(cols, used, alloc))
-			}
-		}
-
-		return nil
+			return nil
+		})
 	})
 	if err != nil {
 		return "", false, fmt.Errorf("directory: %w", err)
@@ -232,6 +237,18 @@ func (s *Session) Directory(specText string, opts DirectoryOptions) (string, boo
 	}
 
 	return b.String(), files > 0, nil
+}
+
+// eachListed calls each for each element of text, a comma-separated
+// list of names, in order.
+func eachListed(text string, each func(string) error) error {
+	for _, element := range strings.Split(text, ",") {
+		if err := each(strings.TrimSpace(element)); err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 // countText is "1 file", "2 files", "2 directories".
@@ -344,7 +361,7 @@ func writeColumnsEntry(b *strings.Builder, name string, m filespec.Match, a File
 	}
 
 	if cols.Owner {
-		fmt.Fprintf(b, "  %-20s", ownerText(a.Owner, opts))
+		fmt.Fprintf(b, "  %-31s", ownerText(a.Owner, opts))
 	}
 
 	if cols.Protection {

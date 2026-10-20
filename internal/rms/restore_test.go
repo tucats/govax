@@ -537,3 +537,150 @@ func TestACLText(t *testing.T) {
 		t.Errorf("aclText of another kind of ACE = %q", got)
 	}
 }
+
+// TestRestoreExisting: the output file qualifiers' rules for a version
+// that's there. /OVERLAY writes the saved file over it, keeping its file
+// ID and extending it when the saved file is larger, the overlaid file's
+// own ACL gone; /REPLACE makes it anew (VMS's r7.lst: a new file ID);
+// /NEW_VERSION makes the next version when the version or a higher one
+// is there, and the saved version otherwise; and a file someone has open
+// can be neither overlaid nor replaced.
+func TestRestoreExisting(t *testing.T) {
+	s := newRestoreSession(t, 4000, 3)
+	set := readSaveSet(t, "b69.bck")
+	text := savedFile(t, set, "[B69]TEXT.TXT;1")
+	medium := savedFile(t, set, "[B69.SUB1]MEDIUM.DAT;1")
+	acl := savedFile(t, set, "[B69]ACL.TXT;1")
+
+	restore := func(name string, f *backup.File, rule ExistingFile) (RestoreResult, error) {
+		t.Helper()
+
+		target, err := s.Locate(name, false)
+		if err != nil {
+			t.Fatalf("Locate(%s): %v", name, err)
+		}
+
+		return s.RestoreFile(target, f, RestoreOptions{Existing: rule})
+	}
+
+	attributes := func(name string) FileAttributes {
+		t.Helper()
+
+		a, err := s.FileAttributes(name)
+		if err != nil {
+			t.Fatalf("FileAttributes(%s): %v", name, err)
+		}
+
+		return a
+	}
+
+	data := func(name string) []byte {
+		t.Helper()
+
+		target, _ := s.Locate(name, false)
+
+		b, _, err := s.ReadRawFile(target)
+		if err != nil {
+			t.Fatalf("ReadRawFile(%s): %v", name, err)
+		}
+
+		return b
+	}
+
+	const x = "DUA1:[R]X.TXT;1"
+
+	if _, err := restore(x, acl, ExistingRefused); err != nil {
+		t.Fatal(err)
+	}
+
+	first := attributes(x)
+
+	// /OVERLAY of a larger file: the same file ID, extended, the saved
+	// data and attributes, and no ACL.
+	if r, err := restore(x, medium, ExistingOverlay); err != nil || r.Name != x || !r.Created {
+		t.Fatalf("overlay: %+v, %v", r, err)
+	}
+
+	if a := attributes(x); a.FID != first.FID || a.Used() != 74 || a.Allocated < 74 {
+		t.Errorf("overlaid: %s %d/%d, want %s 74 blocks", a.FID, a.Used(), a.Allocated, first.FID)
+	}
+
+	if !bytes.Equal(data(x), medium.Data()[:len(data(x))]) {
+		t.Error("overlaid data isn't MEDIUM.DAT's")
+	}
+
+	listing, _, err := s.Directory(x, DirectoryOptions{Full: true})
+	if err != nil || !strings.Contains(listing, "Access Cntrl List:  None") {
+		t.Errorf("overlaid file's ACL:\n%s%v", listing, err)
+	}
+
+	// /REPLACE: a new file ID, the saved file.
+	if _, err := restore(x, text, ExistingReplace); err != nil {
+		t.Fatalf("replace: %v", err)
+	}
+
+	if a := attributes(x); a.FID == first.FID || a.Used() != 1 {
+		t.Errorf("replaced: %s %d blocks, want a new file ID and 1 block", a.FID, a.Used())
+	}
+
+	// /NEW_VERSION: ;1 is there, so ;2; ;1 again, ;3; ;5, which isn't
+	// there and is higher, ;5.
+	for _, tc := range []struct{ name, want string }{
+		{x, "DUA1:[R]X.TXT;2"},
+		{x, "DUA1:[R]X.TXT;3"},
+		{"DUA1:[R]X.TXT;5", "DUA1:[R]X.TXT;5"},
+		{"DUA1:[R]X.TXT;4", "DUA1:[R]X.TXT;6"},
+	} {
+		if r, err := restore(tc.name, text, ExistingNewVersion); err != nil || r.Name != tc.want {
+			t.Errorf("new version of %s: %s, %v; want %s", tc.name, r.Name, err, tc.want)
+		}
+	}
+
+	// Open, so neither /OVERLAY nor /REPLACE.
+	target, _ := s.Locate(x, false)
+
+	open, err := s.OpenSaveSet(target)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	defer func() { _ = open.Close() }()
+
+	for _, rule := range []ExistingFile{ExistingOverlay, ExistingReplace} {
+		if _, err := restore(x, text, rule); !errors.Is(err, ErrACPAccessConflict) {
+			t.Errorf("rule %d of an open file: %v, want ErrACPAccessConflict", rule, err)
+		}
+	}
+}
+
+// TestRestoreParentOwner: /BY_OWNER=PARENT gives a file, and a saved
+// directory, the owner of the directory it's restored to (VMS's [R10C]).
+func TestRestoreParentOwner(t *testing.T) {
+	s := newRestoreSession(t, 2000, 3)
+	set := readSaveSet(t, "b69.bck")
+
+	owner := ondisk.Uic{Group: 0o100, Member: 0o100}
+	if _, err := s.CreateDirectory("DUA1:[R10C]", CreateDirectoryOptions{Owner: &owner}); err != nil {
+		t.Fatal(err)
+	}
+
+	for _, tc := range []struct{ saved, target, check string }{
+		{"[B69]OWNED.TXT;1", "DUA1:[R10C]OWNED.TXT;1", "DUA1:[R10C]OWNED.TXT;1"},
+		{"[B69]SUB1.DIR;1", "DUA1:[R10C]SUB1.DIR;1", "DUA1:[R10C]SUB1.DIR;1"},
+	} {
+		target, _ := s.Locate(tc.target, false)
+
+		if _, err := s.RestoreFile(target, savedFile(t, set, tc.saved), RestoreOptions{ParentOwner: true, Owner: &ondisk.Uic{Group: 1, Member: 4}}); err != nil {
+			t.Fatalf("%s: %v", tc.saved, err)
+		}
+
+		a, err := s.FileAttributes(tc.check)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		if a.Owner != 0o100<<16|0o100 {
+			t.Errorf("%s: owner %X, want [100,100]", tc.saved, a.Owner)
+		}
+	}
+}

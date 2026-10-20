@@ -118,8 +118,11 @@ func (c *Context) Backup(cmd BackupCommand) error {
 		return backupOperationFailure(err)
 	}
 
-	if op == BackupList {
+	switch op {
+	case BackupList:
 		return c.listSaveSet(cmd)
+	case BackupRestore:
+		return c.restoreSaveSet(cmd)
 	}
 
 	if op != BackupSave {
@@ -134,7 +137,6 @@ func (c *Context) Backup(cmd BackupCommand) error {
 // backupOperationNames name the operations for NOTYET, until each is in
 // place.
 var backupOperationNames = map[BackupOperation]string{
-	BackupRestore: "a BACKUP restore",
 	BackupCompare: "BACKUP/COMPARE",
 	BackupSave:    "a BACKUP save",
 }

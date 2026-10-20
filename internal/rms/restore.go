@@ -50,7 +50,42 @@ type RestoreOptions struct {
 	// It doesn't apply to the directories made above the file, which take
 	// their parents' owners, as CREATE/DIRECTORY's do.
 	Owner *ondisk.Uic
+
+	// ParentOwner gives the restored file its directory's owner instead
+	// (BACKUP's /BY_OWNER=PARENT); it wins over Owner.
+	ParentOwner bool
+
+	// Existing is what to do when the file's version is there already
+	// (BACKUP's output file qualifiers). It applies to a volume target
+	// with a version; a saved directory that exists is always left alone.
+	Existing ExistingFile
 }
+
+// ExistingFile is what a restore does with a file that's already there:
+// BACKUP's /NEW_VERSION, /OVERLAY, and /REPLACE (the System Management
+// Utilities Reference Manual's entries for each).
+type ExistingFile int
+
+const (
+	// ExistingRefused leaves the file there and restores nothing: an
+	// *OutputExistsError (RMS$_FEX), as VMS's BACKUP reports OPENOUT.
+	ExistingRefused ExistingFile = iota
+
+	// ExistingNewVersion restores the file as the next version when its
+	// version, or a higher one, exists (/NEW_VERSION: VMS made TEXT.TXT;2
+	// beside ;1).
+	ExistingNewVersion
+
+	// ExistingOverlay writes the file over the existing version, which
+	// keeps its file ID and its blocks, extended if the saved file needs
+	// more (/OVERLAY).
+	ExistingOverlay
+
+	// ExistingReplace deletes the existing version and makes the file
+	// anew with the same version (/REPLACE): a new file ID, as VMS's
+	// r7.lst shows.
+	ExistingReplace
+)
 
 // RestoreResult is what RestoreFile made.
 type RestoreResult struct {
@@ -209,10 +244,7 @@ func (w *volumeRestore) restore(spec filespec.Spec, version uint16, opts Restore
 		return w.restoreDirectory(parent, spec, version, opts, result)
 	}
 
-	owner := savedOwner(w.file.Owner)
-	if opts.Owner != nil {
-		owner = *opts.Owner
-	}
+	owner := restoredOwner(w.file, parent, opts)
 
 	saved, err := ondisk.DecodeRecAttr(w.file.RecordAttributes[:])
 	if err != nil {
@@ -221,6 +253,25 @@ func (w *volumeRestore) restore(spec filespec.Spec, version uint16, opts Restore
 
 	fullName := spec.Name + "." + spec.Type
 	out := filespec.Spec{Device: w.display, Dirs: spec.Dirs, Name: spec.Name, Type: spec.Type}
+
+	version, overlay, err := w.existing(parent, fullName, version, opts.Existing)
+	if err != nil {
+		out.Version = fmt.Sprint(version)
+
+		return result, fullOutputName(err, out)
+	}
+
+	if overlay != nil {
+		if err := w.fill(overlay, saved, owner, false); err != nil {
+			return result, fmt.Errorf("restoring %s;%d: %w", fullName, version, err)
+		}
+
+		out.Version = fmt.Sprint(version)
+		result.Name = out.String()
+		result.Created = true
+
+		return result, nil
+	}
 
 	f, err := createVersion(w.vol, parent, fullName, version, copiedAttributes(saved), w.bm, w.ib)
 	if err != nil {
@@ -232,7 +283,7 @@ func (w *volumeRestore) restore(spec filespec.Spec, version uint16, opts Restore
 		return result, err
 	}
 
-	if err := w.fill(f, saved, owner); err != nil {
+	if err := w.fill(f, saved, owner, true); err != nil {
 		// Nothing of a file that couldn't be made whole is left.
 		_ = volume.DeleteFile(parent, fullName, made1, w.bm, w.ib)
 
@@ -246,18 +297,104 @@ func (w *volumeRestore) restore(spec filespec.Spec, version uint16, opts Restore
 	return result, nil
 }
 
-// fill gives f, just created, w's file's allocation, data, and header.
-func (w *volumeRestore) fill(f *volume.File, saved ondisk.RecAttr, owner ondisk.Uic) error {
+// existing applies rule to fullName;version in parent before a restore
+// makes it: the version to create (0 for the next), or, for /OVERLAY of
+// a version that's there, that file opened for writing (with version
+// unchanged). /REPLACE deletes the version that's there. A version that's
+// there and no rule that allows it is an *OutputExistsError. A file that
+// some process has open can't be overlaid or replaced (SS$_ACCONFLICT;
+// VMS's message for it unconfirmed).
+func (w *volumeRestore) existing(parent *volume.Directory, fullName string, version uint16, rule ExistingFile) (uint16, *volume.File, error) {
+	if version == 0 {
+		return 0, nil, nil
+	}
+
+	highest, err := parent.Lookup(fullName, 0)
+	if errors.Is(err, volume.ErrNotFound) {
+		return version, nil, nil
+	}
+
+	if err != nil {
+		return version, nil, err
+	}
+
+	if rule == ExistingNewVersion {
+		// "a file with an identical directory name, file name, type, and
+		// equal or higher version number": the next version.
+		if highest.Version >= version {
+			return 0, nil, nil
+		}
+
+		return version, nil, nil
+	}
+
+	entry, err := parent.Lookup(fullName, version)
+	if errors.Is(err, volume.ErrNotFound) {
+		return version, nil, nil
+	}
+
+	if err != nil {
+		return version, nil, err
+	}
+
+	exists := &OutputExistsError{Spec: fmt.Sprintf("%s;%d", fullName, version), version: fmt.Sprint(version)}
+
+	switch rule {
+	case ExistingOverlay, ExistingReplace:
+		if w.vol.Accessed(entry.Fid) {
+			return version, nil, fmt.Errorf("%s;%d: %w", fullName, version, ErrACPAccessConflict)
+		}
+	default:
+		return version, nil, exists
+	}
+
+	if rule == ExistingReplace {
+		if err := volume.DeleteFile(parent, fullName, version, w.bm, w.ib); err != nil {
+			return version, nil, err
+		}
+
+		return version, nil, nil
+	}
+
+	f, err := w.vol.OpenFID(entry.Fid)
+	if err != nil {
+		return version, nil, err
+	}
+
+	if err := f.OpenForWrite(w.bm, w.ib); err != nil {
+		return version, nil, err
+	}
+
+	return version, f, nil
+}
+
+// restoredOwner is the owner a restore gives file in parent: the saved
+// owner, opts.Owner, or with opts.ParentOwner the directory's.
+func restoredOwner(file *backup.File, parent *volume.Directory, opts RestoreOptions) ondisk.Uic {
+	switch {
+	case opts.ParentOwner:
+		return parent.File.Header.Owner
+	case opts.Owner != nil:
+		return *opts.Owner
+	}
+
+	return savedOwner(file.Owner)
+}
+
+// fill gives f w's file's allocation, data, and header: f just created
+// (fresh), or an existing file being overlaid, whose blocks stay where
+// they are, extended only if the saved file needs more.
+func (w *volumeRestore) fill(f *volume.File, saved ondisk.RecAttr, owner ondisk.Uic, fresh bool) error {
 	file := w.file
 	data := file.Data()
 	blocks := uint32(len(data) / ondisk.BlockSize)
 
-	if allocation := max(file.Allocated, blocks); allocation > 0 {
-		if file.Characteristics&ondisk.FchContig != 0 && !w.contiguousRoom(allocation) {
+	if allocation := max(file.Allocated, blocks); allocation > f.Blocks() {
+		if fresh && file.Characteristics&ondisk.FchContig != 0 && !w.contiguousRoom(allocation) {
 			return ErrNoContiguousSpace
 		}
 
-		if err := volume.Extend(f, w.bm, w.ib, allocation); err != nil {
+		if err := volume.Extend(f, w.bm, w.ib, allocation-f.Blocks()); err != nil {
 			return fmt.Errorf("%w: %v", ErrACPDeviceFull, err)
 		}
 	}
@@ -296,9 +433,10 @@ func (w *volumeRestore) fill(f *volume.File, saved ondisk.RecAttr, owner ondisk.
 		// zeros, not as whatever the disk held there. The save set's
 		// HIGHWATER isn't used, since the blocks between the end of file
 		// and it weren't saved; what VMS's restore records is
-		// unconfirmed.
-		if h.HighWaterMark == 0 {
-			h.HighWaterMark = 1
+		// unconfirmed. An overlaid file's own mark may lie past the
+		// saved data, so it's set from the data.
+		if h.HighWaterMark == 0 || !fresh {
+			h.HighWaterMark = blocks + 1
 		}
 
 		id.Revision = file.Revision
@@ -311,7 +449,8 @@ func (w *volumeRestore) fill(f *volume.File, saved ondisk.RecAttr, owner ondisk.
 		return err
 	}
 
-	if len(file.ACL) > 0 {
+	// An overlaid file's own ACL goes, as nil removes it.
+	if len(file.ACL) > 0 || !fresh {
 		return volume.SetACL(f, file.ACL)
 	}
 
@@ -350,11 +489,7 @@ func (w *volumeRestore) restoreDirectory(parent *volume.Directory, spec filespec
 		return result, err
 	}
 
-	owner := savedOwner(w.file.Owner)
-	if opts.Owner != nil {
-		owner = *opts.Owner
-	}
-
+	owner := restoredOwner(w.file, parent, opts)
 	protection := w.file.Protection
 
 	d, err := w.vol.CreateDirectory(parent, fullName, volume.DirectoryOptions{

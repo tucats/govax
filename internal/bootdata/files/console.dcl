@@ -501,7 +501,7 @@ grammar console
     verb directory/id=900
 
         parameter   spec/id=901                 -
-                    /type=$string
+                    /type=$string/list
         qualifier   full/id=902
         qualifier   file/id=903
         qualifier   size/id=904                 -

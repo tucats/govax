@@ -7,8 +7,8 @@ done: Part A holds what the first save set
 the format. Subtask 2, the VMS probe (`testdata/backup69`), is done:
 "The probe's answers" in Part A settles the format, the CRCs, the XOR
 blocks, and VMS's messages. Subtasks 3 (COPY to a host name), 4 (`internal/backup`, the
-reader), 5 (opening a save set), 6 (the command), 7 (BACKUP/LIST), and
-8 (restoring a file) are done.
+reader), 5 (opening a save set), 6 (the command), 7 (BACKUP/LIST), 8
+(restoring a file), and 9 (BACKUP's restore) are done.
 
 ## Goal
 
@@ -617,7 +617,7 @@ reports, and every save set byte for byte (COPY/BINARY).
    its end of file. Directories made as needed. Host output by COPY's
    rule. ods2 gains what's missing (a release tagged and pinned as
    `docs/PHASE-22.md` describes).
-9. **BACKUP's restore:** the output-directory rules (7.3.3), `/SELECT`,
+9. **BACKUP's restore** — done (2026-10-20): the output-directory rules (7.3.3), `/SELECT`,
    `/EXCLUDE`, the existing-file rules and `/NEW_VERSION`, `/OVERLAY`,
    `/REPLACE`, `/BY_OWNER`, and `/LOG`. Checked against the probe's
    restores, file for file and header for header.
@@ -1069,3 +1069,91 @@ A leaf package (standard library only), `internal/backup`:
   the command do; and a restore to
   an existing version needs the existing-file rules on top of
   `OutputExistsError`.
+
+### 2026-10-20 — Subtask 9: BACKUP's restore
+
+- **The command** (`internal/dclcmd/backuprestore.go`,
+  `Context.restoreSaveSet`): the input save set's files that `/SELECT`
+  and `/EXCLUDE` choose, in save set order, each made by
+  `rms.Session.RestoreFile` at the name the output specifier gives it.
+  The output specifier is parsed from its expanded name
+  (`Session.ExpandName`): omitted or `[]` the default directory, `[*...]`
+  the saved directory, `[dir]` everything into dir (a saved directory
+  file too: `[B69]SUB1.DIR` went to `[R4]SUB1.DIR`), `[dir...]` dir with
+  the carried part below it. A name or type given replaces the saved
+  one (`[R9]NEW.TXT`); one left out or wild keeps it, and a restored file
+  keeps its saved version. A host output names a directory, `"out/..."`
+  being `[dir...]`'s form (govax's), its files named as COPY names them
+  (`NAME.TYPE;1`) and written by COPY's rule. `/LIST` with a restore
+  lists nothing yet.
+- **Selection** (`backupselect.go`): `/SELECT` and `/EXCLUDE` are matched
+  as text against the saved names, by the manual's rules (an omitted
+  name, type, or version is `*`; `;` and `;-n` every version) and what
+  VMS V7.1 did: a specification with no directory is `[*...]`, so
+  `/SELECT=*.TXT` and `/EXCLUDE=*.DAT` reach every directory, and a
+  device is ignored. Under `[dir...]` a file carries its whole directory
+  without `/SELECT` (`[R1.B69]`) and with it the components the first
+  matching selection's ellipses matched (`/SELECT=[B69.SUB1...]`:
+  `[R3]`, `[R3.SUB2]`; `/SELECT=*.TXT`: `[R5]`, `[R5.SUB1]`, the `*`
+  having matched B69). An ellipsis inside a directory (`[A...B]`) carries
+  what it matched (unconfirmed).
+- **`/BY_OWNER`** (output): DEFAULT, the default, is the process's UIC
+  (`RTL.Process.UIC`, SYSTEM's without one); ORIGINAL, the default with
+  no option, the saved owner; PARENT the directory's
+  (`RestoreOptions.ParentOwner`); a UIC. A bad UIC is SS$_IVIDENT (VMS's
+  message unconfirmed). The directories a restore makes take their
+  parents' owners, whatever `/BY_OWNER` says (unconfirmed).
+- **Existing files** (`rms.RestoreOptions.Existing`): with no qualifier,
+  the version there is OPENOUT with `-RMS-E-FEX`; `/NEW_VERSION` makes
+  the next version when the saved version or a higher one is there, the
+  saved version otherwise (the manual's entry); `/OVERLAY` writes over
+  the version there, keeping its file ID and blocks, extended if the
+  saved file needs more, its own ACL dropped and its high-water mark the
+  restore's; `/REPLACE` deletes it and makes the file anew (a new file
+  ID, as `r7.lst` shows; VMS makes the new one before deleting the old,
+  govax the other way round). A file some process has open can be
+  neither overlaid nor replaced (SS$_ACCONFLICT, VMS's message
+  unconfirmed). Without a qualifier, govax refuses only the same
+  version; the manual says an equal or lower one is refused too
+  (unconfirmed, not followed: RMS makes a lower version that isn't
+  there).
+- **Messages and status**, as VMS's log shows them: with `/LOG`, one
+  CREDIR per file naming the deepest directory made for it (VMS made
+  [R1] and [R1.B69] and named only [R1.B69]), a saved directory file
+  made is a CREDIR of the directory (one that's there says nothing,
+  unconfirmed), and CREATED for each file (a NOBACKUP file's too, not
+  HEADCOPIED). VBNMISSING comes before its file's CREATED, with or
+  without `/LOG`. A file that can't be made is OPENOUT with the reason
+  on the next line, and the restore goes on. After the files, XORERRS
+  for rebuilt blocks, then NOFILES when no file was made (even when one
+  was selected and refused). `$STATUS` is the first of the most severe
+  messages, error over warning (OPENOUT's %X10A38012 though NOFILES
+  followed; VBNMISSING's %X10A3822A though files followed), else
+  %X10000001.
+- **Found and fixed on the way:**
+  - ods2's `filespec.Parse` took `[]` as the master file directory. VMS's
+    `[]` is the default directory (a restore to `[]` went to `[R8]`, the
+    default), as it now is in ods2 (committed locally there, untagged,
+    beside subtask 8's change: `docs/PHASE-22.md`'s step is the
+    author's). `DIRECTORY []` listed `[000000]` before.
+  - DIRECTORY took one specification, though the user's manual shows
+    `file-spec[,...]`: a comma list is now each element in turn with one
+    grand total, as VMS's log shows (`eachListed`; console.dcl's SPEC is a
+    list). VMS's sticky defaults between elements aren't done.
+  - DIRECTORY/OWNER's owner column is 31 wide, as VMS's
+    `DIRECTORY/OWNER/PROTECTION` of [R10A...] shows; govax's was 20.
+- **Tests:** `TestBackupRestoreOracle` (`internal/console`) replays the
+  log from Part 4 on: every restore (Parts 4 to 6, the damaged save sets
+  included), the CREATE/DIRECTORY and SET DEFAULT they need, the
+  DIRECTORY reports of what they made (a made directory's time masked),
+  and each `SHOW SYMBOL $STATUS`, 52 commands, all matching VMS's
+  output line for line, on a volume with VMS's 3-block clusters
+  (`mountBackupSets` now makes one); the `[B69]` tree the `[*...]`
+  restores find is restored first. Then DIRECTORY/FULL of `[R7]` matches
+  `r7.lst`, file IDs masked. `TestBackupRestoreHost` (both host forms,
+  PI.EXE byte for byte, no output without `/LOG`),
+  `TestBackupRestoreBadOwner`; `TestBackupSelection` and
+  `TestBackupTargetLocation` (`internal/dclcmd`); `TestRestoreExisting`
+  and `TestRestoreParentOwner` (`internal/rms`); ods2's
+  `TestParseEmptyBracketsIsDefault`. `TestBackupMessages` checks a
+  restore's OPENIN where it had NOTYET.

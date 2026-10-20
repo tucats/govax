@@ -3415,12 +3415,14 @@ $DIR
 
         DIRECTORY [/FULL] [/FILE] [/SIZE[=option]] [/DATE] [/OWNER]
                   [/PROTECTION] [/VERSIONS=n] [/[NO]HEADING]
-                  [/[NO]TRAILING] [/OUTPUT[=file]] [file-spec]
+                  [/[NO]TRAILING] [/OUTPUT[=file]] [file-spec[,...]]
 
     Parameter:
 
         file-spec       The file specification to list, which may include
-                        wildcards (e.g. DUA0:[MYDIR]*.TXT;*).  Any part of
+                        wildcards (e.g. DUA0:[MYDIR]*.TXT;*), or a list of
+                        them, each listed in turn with one grand total
+                        (e.g. [A...],[B...]).  Any part of
                         the specification left out is filled in from the
                         current default device/directory (see SET
                         DEFAULT), but a version left out is every
@@ -3545,8 +3547,8 @@ $BACK
     one).
 
     govax is adding BACKUP's operations in steps.  So far it lists save
-    sets, as VMS V7.1 lists them; restoring, comparing, and saving open
-    and check the input save set, then say NOTYET.
+    sets and restores files from them, as VMS V7.1 does; comparing and
+    saving open and check the input save set, then say NOTYET.
 
     Syntax:
 
@@ -3628,7 +3630,20 @@ $BACK
 
     The output specifier of a restore names the directory the files go
     to: [*...] restores each file to the directory it was saved from,
-    [dir...] to a tree under [dir], and [dir] to that one directory.
+    [dir...] to a tree under [dir], and [dir] to that one directory (no
+    directory, or [], is the default directory).  Under [dir...] a file
+    keeps its whole directory ([B69.SUB1]A.TXT to [dir.B69.SUB1]), or
+    with /SELECT the part the selection's "..." matched:
+    /SELECT=[B69...] restores [B69.SUB1]A.TXT to [dir.SUB1].  A name or
+    type in the output specifier renames the files; each keeps its saved
+    version.  Directories that don't exist are made.  A host directory
+    may be the output too ("out", or "out/..." for a tree); its files are
+    written as COPY writes them.
+
+    A restored file keeps its saved attributes: record format, dates,
+    revision count, protection, characteristics, version limit,
+    allocation, and access control list.  A file the save set has only
+    part of is restored with zeros for the blocks missing (VBNMISSING).
 
     Examples:
 

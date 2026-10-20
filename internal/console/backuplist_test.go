@@ -18,7 +18,7 @@ func mountBackupSets(t *testing.T) (*Dispatcher, *Console, func() string) {
 	d, c, buf := newCommandDispatcher(t)
 
 	path := filepath.Join(t.TempDir(), "sets.dsk")
-	if err := c.cmd().InitializeContainer(path, 20000, "BACKUP69", 0, "RD54"); err != nil {
+	if err := c.cmd().InitializeContainer(path, 20000, "BACKUP69", 3, "RD54"); err != nil {
 		t.Fatalf("InitializeContainer: %v", err)
 	}
 

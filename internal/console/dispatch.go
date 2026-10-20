@@ -343,7 +343,7 @@ func (d *Dispatcher) bindGrammar() {
 			}
 		}
 
-		if err := d.Console.cmd().DirectoryTo(r.String("SPEC"), opts, output); err != nil {
+		if err := d.Console.cmd().DirectoryTo(strings.Join(r.List("SPEC"), ","), opts, output); err != nil {
 			return err
 		}
 

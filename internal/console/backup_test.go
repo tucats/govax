@@ -120,8 +120,9 @@ func TestBackupCommandParse(t *testing.T) {
 
 // TestBackupMessages: BACKUP's failures are VMS's messages, with the
 // condition values VMS V7.1's $STATUS showed for them (testdata/
-// backup69/vax/backup69.log), as far as this subtask goes: the
-// /SAVE_SET rule, and the input save set opened and read.
+// backup69/vax/backup69.log): the /SAVE_SET rule, and the input save
+// set opened and read (a restore's own messages are
+// TestBackupRestoreOracle's).
 func TestBackupMessages(t *testing.T) {
 	d, c := newTestDispatcher(t)
 	mountFreshContainer(t, c, "DUA0")
@@ -154,7 +155,8 @@ func TestBackupMessages(t *testing.T) {
 
 		// The operations, until their subtasks: the save set is read
 		// first.
-		{"BACKUP PI.BCK/SAVE_SET [R1...]", "BACKUP-F-NOTYET, a BACKUP restore is not implemented yet", 0x10A3FFAC},
+		{"BACKUP NONE.BCK/SAVE_SET [R1...]",
+			"BACKUP-F-OPENIN, error opening DUA0:[000000]NONE.BCK; as input\n-RMS-E-FNF, file not found", 0x10A3800C},
 		{"BACKUP/COMPARE PI.BCK/SAVE_SET [R1...]", "BACKUP-F-NOTYET, BACKUP/COMPARE is not implemented yet", 0x10A3FFAC},
 		{"BACKUP *.MAR OTHER.BCK/SAVE_SET", "BACKUP-F-NOTYET, a BACKUP save is not implemented yet", 0x10A3FFAC},
 	}
