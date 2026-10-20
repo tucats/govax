@@ -4,8 +4,9 @@
 accepted by the author the same day (Part B). Subtask 1, the survey, is
 done: Part A holds what the first save set
 (`testdata/backup69/vax/pi.bck`) and the public save set readers show of
-the format. Subtask 2, the VMS probe (`testdata/backup69`), is written
-and waits for the author's VAX run.
+the format. Subtask 2, the VMS probe (`testdata/backup69`), is done:
+"The probe's answers" in Part A settles the format, the CRCs, the XOR
+blocks, and VMS's messages.
 
 ## Goal
 
@@ -176,7 +177,8 @@ block's end. The names are the readers'.
 | 254 | word | %XBE02 | %X1B5D | checksum | The header's checksum (confirmed, below) |
 
 **The header checksum** is the CRC-16 of the whole 256-byte header,
-taking its last word as zero. The polynomial is %XA001 (CRC-16,
+taking its last word and the CRC longword (offset 36) as zero (the
+second part from the probe, answer 2). The polynomial is %XA001 (CRC-16,
 reflected, the VAX CRC instruction's "CRC-16" table), the initial value
 0, and nothing is XORed at the end. It matches both blocks. They differ
 in two fields, so a chance match is very unlikely. Found by searching
@@ -184,12 +186,13 @@ every 16-bit polynomial against the two headers' difference, then every
 initial value. The readers don't check it.
 
 **The data CRC:** none was stored, and the header says so: flag bit 0
-is NOCRC. No AUTODIN-II variant over the block comes out zero either.
-The command didn't say `/NOCRC`, though, and the author's note says
-`/CRC` is the default. So BACKUP V6.2 apparently didn't compute a CRC
-for this disk save set. The probe writes the same files with `/CRC` and
-`/NOCRC` to show where a CRC goes, what it covers, and when BACKUP
-stores one.
+is NOCRC. The command didn't say `/NOCRC`, though, and the author's note
+says `/CRC` is the default. The probe found that this VAX's BACKUP
+writes a CRC only when `/CRC` is given, and found the CRC's rule ("The
+probe's answers", 1).
+
+In `pi.bck` the CRC longword is zero, so the survey couldn't tell that
+the checksum leaves it out.
 
 #### Records
 
@@ -221,13 +224,12 @@ Record types (the readers' list, with what the fixture has):
 | 10 | RSTS directory attributes | |
 | 11 | A file alias entry | |
 
-A file save uses types 0, 1, 3, and 4, and perhaps 8 and 11. The probe
-will show which. The summary repeats in every block, so each block can
-be read alone and a damaged block costs only its own files. A file's
-data records hold its used blocks only, up to its end of file (PI.OBJ:
-5 of 6 allocated). Here every file fits one record in one block. How a
-file larger than a block (more than 63 blocks of data) or a record that
-would cross a block's end is split is for the probe.
+A file save uses types 0, 1, 3, and 4 (the probe saw no others). Only
+block 1 holds the summary (answer 4; the survey's guess that it repeats
+in every block came from `pi.bck`'s XOR block, a copy of block 1). A
+file's data records hold its used blocks only, up to its end of file
+(PI.OBJ: 5 of 6 allocated). A file larger than the room left in a block
+goes on in the next block in a new data record (answer 5).
 
 #### Attribute lists
 
@@ -261,9 +263,12 @@ names are the readers'):
 
 Types 20 to 41 are a volume summary's (image backups), out of scope.
 
-**A file's attributes**, all present for each of the three files and in
-this order (names are the readers'; "confirmed" means the fixture's
-values settle the meaning):
+**A file's attributes**, all present for each of the three files (names
+are the readers'; "confirmed" means the fixture's values settle the
+meaning). The table is in type order. The record's order is the same
+for every file in every save set the probe made: 42, 43, 44, 46, 47,
+52, 45, 48, 49, 50, 51, 75, 80, 87, 79, 53, 54, 55, 56, 57, 71, 72, 74,
+then 73 for a directory and 78 for a file with an ACL:
 
 | Type | Name | Size | PI.EXE | PI.MAR | PI.OBJ | Meaning |
 | --- | --- | --- | --- | --- | --- | --- |
@@ -301,7 +306,7 @@ The listing's size column is the used blocks, which the FAT's
 end-of-file block and first free byte give: 6, 24, 5. Its date is the
 creation time. "Total of 3 files, 35 blocks" is the used blocks' sum.
 
-### What the fixture doesn't settle (for the probe)
+### What the fixture didn't settle (the probe's questions; answered below)
 
 1. A file larger than a block, and data split across blocks or groups.
 2. Redundancy groups of more than one block (group size 10 with 11 or
@@ -331,6 +336,111 @@ creation time. "Total of 3 files, 35 blocks" is the used blocks' sum.
 12. Whether VMS's DIRECTORY/FULL shows "Contiguous best try" for an
     image (the probe's [B69]PI.EXE). govax's doesn't (side finding 2).
 
+### The probe's answers (subtask 2, 2026-10-20)
+
+VMS V7.1 (BACKUP V6.2) on the simh VAX ran `BACKUP69.COM` once, cleanly:
+every command in Part 1 worked, and every case gave an answer.
+`testdata/backup69/vax/` holds the log, the DIRECTORY/FULL reports, the
+listings, and the 20 save sets, 118 blocks in all. The answers below
+were checked on all of them with scratch scripts. The exchange volume
+also holds VMS's restored trees; answer 13 used them.
+
+1. **The data CRC is CRC-32**, the AUTODIN-II polynomial reflected
+   (%XEDB88320), initial value all ones, the result complemented. It is
+   the common CRC-32 (zlib's), taken over the whole block, header and
+   all, with the CRC longword (offset 36) and the checksum word (254)
+   taken as zero. Found by solving for the initial value over candidate
+   regions. It holds for every block of B69CRC, its XOR block too.
+   **This VAX's BACKUP writes a CRC only with `/CRC`.** The other 19
+   save sets, the defaults included, have flag bit 0 (NOCRC) and a zero
+   CRC. The command recorded in the summary shows no `/NOCRC`.
+2. **The header checksum** is the CRC-16 of Part A, over the header
+   with both the checksum word and the CRC longword zeroed. It holds
+   for all 118 blocks but the one SSCOPY damaged in its header (B69HDRD
+   block 2), and the CRC-32 for all of B69CRC's but the one damaged in
+   B69CRCD.
+3. **XOR blocks.** A group's XOR block follows its last data block.
+   Its body (bytes 256 to the end) is the XOR of the group's bodies.
+   Its header is the XOR of the group's headers, with its own size,
+   opsys, subsystem, application (2), number, flags, CRC, and checksum
+   written over. So in a group with an even number of blocks the
+   struclev, block size, and save set name come out zero, and in one
+   with an odd number they read normally. The last group may be short
+   (B69K8: groups of 10, 10, and 5). `/GROUP_SIZE=0` writes no XOR
+   blocks. Block numbers count XOR blocks too (B69G3: data 1–3, XOR 4,
+   data 5–7, XOR 8).
+4. **The summary is in block 1 only.** A later data block starts with
+   whatever record comes next, and its header's "current file" fields
+   (offsets 80 to 253) name the file being saved: its FID (with RVN 1,
+   unlike the file record's FID, whose RVN is 0), directory ID, name as
+   a counted string, record type, record attributes, record size,
+   maximum record, and allocation. They are zero in block 1.
+5. **Data records never cross a block's end.** A file's data goes on in
+   the next block as a new VBN record whose address is the next VBN
+   (CONTIG.DAT: VBNs 1–60 in block 1, 61 on in block 2), with no new
+   attribute record. A data record holds whole blocks. The null record
+   fills what's left.
+6. **Directories are saved as files** in a `[dir...]` save. They are
+   listed in their place (`[B69]SUB1.DIR;1`, 1 block), and their
+   attribute and data records have record flag 2 (DIRECTORY). Their
+   attributes add DIR_STATUS (73) = %X0F. A save that selects no files
+   (`/BEFORE=TODAY`) still saves the directories it walked, and writes a
+   save set (B69NONE).
+7. **NOBACKUP files** are saved as an attribute record with no data
+   records, and listed with their size (1). The save says
+   `%BACKUP-I-NOBACKUP, DUA1:[B69]NOBACK.TXT;1 data not copied, file
+   marked NOBACKUP`, and the restore says `%BACKUP-S-HEADCOPIED`.
+   `/IGNORE=NOBACKUP` saves the data.
+8. **An ACL** is attribute 78 (ACLSEGMENT): the ACEs packed, each
+   identifier ACE 12 bytes (size, type 1, flags, access mask, and the
+   UIC as member word and group word).
+9. **The summary:** `/COMMENT` adds attribute 3 after the command.
+   `/BY_OWNER` on the output save set adds nothing to the summary and
+   sets the save set file's owner. `/BLOCK_SIZE=8192` makes the buffer
+   count 32 (attribute 15).
+10. **The save set file:** fixed-length records of the block size
+    (8192 for B69K8), sized to the blocks written (B69NONE: 2 blocks,
+    126 disk blocks).
+11. **Messages and statuses** (from the log; codes as `$STATUS`
+    showed them, facility 266, BACKUP):
+    - `%BACKUP-S-CREATED, created file`, `%BACKUP-S-CREDIR, created
+      directory dir`, `%BACKUP-S-COPIED, copied file` (a save with
+      `/LOG`), `%BACKUP-S-COMPARED, compared file`,
+      `%BACKUP-S-HEADCOPIED`, `%BACKUP-I-NOBACKUP`;
+    - `%BACKUP-F-LISINPSAV, /LIST requires save set as input`
+      (%X10A3808C);
+    - `%BACKUP-F-OPENIN, error opening file as input` with
+      `-RMS-E-FNF` (%X10A3800C);
+    - `%BACKUP-F-NOTSAVESET, file is not a BACKUP save set`
+      (%X10A38104);
+    - `%BACKUP-W-NOFILES, no files selected from saveset` (%X10A38400);
+    - `%BACKUP-E-OPENOUT, error opening file as output` with
+      `-RMS-E-FEX, file already exists, not superseded`, for an
+      existing file without a version qualifier (then NOFILES);
+    - `%BACKUP-E-VBNMISSING, file has missing blocks 11 through 74`
+      (%X10A3822A), for the truncated save set;
+    - `%BACKUP-I-XORERRS, 1 error recovered by redundancy group in
+      saveset`, for the damaged header;
+    - `%BACKUP-E-VERIFYERR, verification error for block 1 of file`
+      (%X10A38272), a compare with a difference;
+    - `%BACKUP-E-OPENIN` with `-RMS-E-FNF` and NOFILES (%X10A3800A), a
+      compare with the file missing.
+12. **Version qualifiers:** `/NEW_VERSION` makes `;2`, and `/OVERLAY`
+    and `/REPLACE` write `;1` again (both `%BACKUP-S-CREATED`). `[*...]`
+    restores to the saved directory. The `/BY_OWNER` keywords, the
+    output-directory forms, `/SELECT`, and `/EXCLUDE` all ran. Their
+    results are in the log and in `r1.lst` and `r7.lst`.
+13. **Damaged data is restored without complaint, CRC or not.** VMS
+    listed and restored B69CRCD, B69G0D, and B69NOCRCD with no message
+    and success, and the restored CONTIG.DAT on the exchange volume has
+    the changed byte in all three, B69CRCD's included, although its CRC
+    shows the damage. The damaged header (B69HDRD) was found and
+    recovered from its XOR group. Why VMS didn't check B69CRCD's CRC on
+    input, where the manual says `/CRC` is the default, is question 8.
+14. **DIRECTORY/FULL** of [B69]PI.EXE ends its File attributes line with
+    ", Contiguous best try", which govax's leaves out (side finding 2,
+    confirmed).
+
 ### Side findings (2026-10-20)
 
 1. **COPY's destination ignores govax's host-name rule 3.** `COPY
@@ -341,9 +451,9 @@ creation time. "Total of 3 files, 35 blocks" is the used blocks' sum.
    `rms.Session.Copy` without `Session.Locate`'s rules. Subtask 3 fixes
    it (the author). Host COPY turns records into lines unless
    `/BINARY` is given; with it, a save set comes out byte for byte.
-2. **DIRECTORY/FULL may be missing "Contiguous best try"** on the File
-   attributes line for a file with FCH$V_CONTIGB (PI.EXE). Unconfirmed
-   until the probe's `TREE.LST` shows VMS's line for [B69]PI.EXE.
+2. **DIRECTORY/FULL is missing "Contiguous best try"** on the File
+   attributes line for a file with FCH$V_CONTIGB (PI.EXE). Confirmed by
+   the probe's `tree.lst` (answer 14). A small fix, made with subtask 3.
 
 ## Part B — decisions and questions
 
@@ -413,6 +523,19 @@ The author took each proposal and added `/COMPARE`.
 7. **Side finding 1** (COPY to a `/`-named host file): fix it here or
    separately? *Here, as a small subtask.*
 
+### Open question (from the probe, 2026-10-20)
+
+8. **Does govax check the CRC on input?** VMS restored B69CRCD's damaged
+   block silently, though the CRC shows the damage and the manual says
+   `/CRC` is the input default (answer 13). Two explanations fit: this
+   VAX's BACKUP doesn't check the CRC unless told (it doesn't write one
+   unless told either), or the check is there but its message was
+   missed. A short second round would settle it: `SHOW SYMBOL BACKUP`,
+   and B69CRCD restored with `/CRC` placed after the input save set.
+   Until then, proposed: govax's reader checks the CRC whenever a block
+   has one, and recovers or reports as VMS does for a bad header
+   checksum. The restore follows the second round's answer.
+
 ### The probe's cases (subtask 2; `testdata/backup69`)
 
 `testdata/backup69/README.md` lists the files and each part's cases in
@@ -451,14 +574,14 @@ reports, and every save set byte for byte (COPY/BINARY).
 1. **The survey** — done (2026-10-20). Part A: the fixture's format, the
    public readers' names, the sources, what earlier phases provide, the
    side findings, the plan.
-2. **The VMS probe** (`testdata/backup69`): the procedure, SSCOPY, the
-   exchange volume; then the author's run. Part A's tables are updated
-   from its answers ("readers" and "guess" become confirmed or
-   corrected), and its README lists what each output shows.
+2. **The VMS probe** — done (2026-10-20). `testdata/backup69`: the
+   procedure, SSCOPY, the exchange volume, the author's run, and Part
+   A's "The probe's answers".
 3. **COPY to a host name** (side finding 1): COPY's source and
    destination follow `Session.Locate`'s rules, as the user's manual
    says, so `"./pi.bck"` is a host file. Tested both ways, and the
-   manual checked.
+   manual checked. DIRECTORY/FULL's "Contiguous best try" (side finding
+   2) goes with it.
 4. **`internal/backup`, reading:** blocks (header, checksum, data CRC,
    flags), records, the summary, file attributes into Go types, a file's
    data in VBN order, and XOR recovery of a damaged block from its group.
@@ -560,3 +683,31 @@ subtasks 11, 10, and 3.
   `pi.bck`), so `copyout.cmd` uses it.
 - Built `testdata/disks/backup69-exchange.dsk` (RD54, BACKUP69) for the
   author's run.
+
+### 2026-10-20 — Subtask 2: the probe's VMS run
+
+The author ran `@BACKUP69` on the simh VAX (V7.1). `copyout.cmd` brought
+back the log, `tree.lst`, `sets.lst`, `r1.lst`, `r7.lst`, `text.lis`,
+`b69full.lis`, and all 20 save sets (B69NONE too: VMS writes a save set
+when no files are selected). Every command of Part 1 worked, and every
+case gave an answer.
+
+- Found the data CRC: standard CRC-32 over the block with the CRC and
+  checksum fields zeroed, by solving for the initial value over
+  candidate regions. It's written only with `/CRC`. Corrected the
+  checksum's rule: it leaves out the CRC longword too. Both rules hold
+  for every block of every save set but the two SSCOPY damaged.
+- XOR blocks are the XOR of their group, header and body, with the
+  header's own fields written over (answer 3). The summary is in block 1
+  only, and later blocks' headers name the file being saved (answer 4),
+  correcting the survey's guess. Data records stay within a block
+  (answer 5).
+- Directories, NOBACKUP files, ACLs, `/COMMENT`, and the save set file
+  itself (answers 6 to 10). VMS's messages and statuses for every case
+  (answer 11).
+- Checked VMS's restored trees on the exchange volume: the damaged data
+  byte reached CONTIG.DAT in all three data-damage cases, the `/CRC` one
+  included, with no message. Question 8 asks how govax should treat a
+  bad CRC, and proposes a short second VAX round.
+- VMS's DIRECTORY/FULL shows "Contiguous best try" for PI.EXE, which
+  confirms side finding 2. It goes with subtask 3.

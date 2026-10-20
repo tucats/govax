@@ -1,0 +1,40 @@
+
+Directory DUA1:[R7]
+
+TEXT.TXT;2                    File ID:  (189,2,0)             
+Size:            1/3          Owner:    [SYSTEM]
+Created:   20-OCT-2026 11:55:34.93
+Revised:   20-OCT-2026 11:55:34.93 (1)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Sequential
+Shelved state:      Online 
+File attributes:    Allocation: 3, Extend: 0, Global buffer count: 0, No version limit
+Record format:      Variable length, maximum 0 bytes, longest 67 bytes
+Record attributes:  Carriage return carriage control
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+TEXT.TXT;1                    File ID:  (190,1,0)             
+Size:            1/3          Owner:    [SYSTEM]
+Created:   20-OCT-2026 11:55:34.93
+Revised:   20-OCT-2026 11:55:34.93 (1)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Sequential
+Shelved state:      Online 
+File attributes:    Allocation: 3, Extend: 0, Global buffer count: 0, No version limit
+Record format:      Variable length, maximum 0 bytes, longest 67 bytes
+Record attributes:  Carriage return carriage control
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+Total of 2 files, 2/6 blocks.

@@ -54,6 +54,23 @@ Every BACKUP that may fail is followed by `SHOW SYMBOL $STATUS`.
 
        govax console < testdata/backup69/copyout.cmd
 
+## `vax/` — VMS's results (2026-10-20)
+
+The author's run of `@BACKUP69` on the simh VAX (V7.1, BACKUP V6.2),
+copied back by `copyout.cmd`. The phase doc's "The probe's answers"
+says what they show.
+
+| File | What it holds |
+| ---- | ------------- |
+| `backup69.log` | The procedure's log, with SET VERIFY |
+| `tree.lst` | DIRECTORY/FULL of the tree saved, `[B69...]` |
+| `sets.lst` | DIRECTORY/FULL of the save set files |
+| `r1.lst`, `r7.lst` | DIRECTORY/FULL of `[R1...]` (the whole tree restored) and of `[R7]` (after the version qualifiers) |
+| `text.lis`, `b69full.lis` | `/LIST=file` of TEXT.BCK, and of B69.BCK with `/FULL` |
+| `*.bck` | Every save set, byte for byte: `b69`, `b69k8`, `b69g0`, `b69g3`, `b69crc`, `b69nocrc`, `b69com`, `b69exc`, `b69byo`, `b69txt`, `b69none`, `text`, `b69own`, `list`, `b69ign`, and SSCOPY's `b69cut`, `b69crcd`, `b69g0d`, `b69nocrcd`, `b69hdrd` |
+
+The restored trees stayed on the exchange volume, which is local only.
+
 ## `vax/` — the first save set (2026-10-20)
 
 Made by the author on the simh VAX (OpenVMS VAX V7.1, BACKUP V6.2) and

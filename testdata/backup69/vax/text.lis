@@ -1,0 +1,20 @@
+Listing of save set(s)
+
+Save set:          TEXT.BCK
+Written by:        SYSTEM      
+UIC:               [000001,000004]
+Date:              20-OCT-2026 11:55:36.51
+Command:           BACKUP [B69]TEXT.TXT [SETS]TEXT.BCK/SAVE_SET
+Operating system:  OpenVMS VAX version V7.1
+BACKUP version:    V6.2
+CPU ID register:   040704D2
+Written on:        _SIMVAX$DUA1:
+Block size:        32256
+Group size:        10
+Buffer count:      8
+
+[B69]TEXT.TXT;1                                             1  20-OCT-2026 11:55
+
+Total of 1 file, 1 block
+End of save set
+

@@ -1,0 +1,274 @@
+
+Directory DUA1:[SETS]
+
+B69.BCK;1                     File ID:  (48,1,0)              
+Size:          441/441        Owner:    [SYSTEM]
+Created:   20-OCT-2026 11:55:35.97
+Revised:   20-OCT-2026 11:55:36.00 (1)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Sequential
+Shelved state:      Online 
+File attributes:    Allocation: 441, Extend: 0, Global buffer count: 0, No version limit
+Record format:      Fixed length 32256 byte records
+Record attributes:  None
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+B69BYO.BCK;1                  File ID:  (56,1,0)              
+Size:          126/126        Owner:    [SYSTEM]
+Created:   20-OCT-2026 11:55:36.40
+Revised:   20-OCT-2026 11:55:36.41 (1)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Sequential
+Shelved state:      Online 
+File attributes:    Allocation: 126, Extend: 0, Global buffer count: 0, No version limit
+Record format:      Fixed length 32256 byte records
+Record attributes:  None
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+B69COM.BCK;1                  File ID:  (54,1,0)              
+Size:          441/441        Owner:    [SYSTEM]
+Created:   20-OCT-2026 11:55:36.30
+Revised:   20-OCT-2026 11:55:36.33 (1)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Sequential
+Shelved state:      Online 
+File attributes:    Allocation: 441, Extend: 0, Global buffer count: 0, No version limit
+Record format:      Fixed length 32256 byte records
+Record attributes:  None
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+B69CRC.BCK;1                  File ID:  (52,1,0)              
+Size:          441/441        Owner:    [SYSTEM]
+Created:   20-OCT-2026 11:55:36.19
+Revised:   20-OCT-2026 11:55:36.22 (1)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Sequential
+Shelved state:      Online 
+File attributes:    Allocation: 441, Extend: 0, Global buffer count: 0, No version limit
+Record format:      Fixed length 32256 byte records
+Record attributes:  None
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+B69EXC.BCK;1                  File ID:  (55,1,0)              
+Size:          126/126        Owner:    [SYSTEM]
+Created:   20-OCT-2026 11:55:36.36
+Revised:   20-OCT-2026 11:55:36.37 (1)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Sequential
+Shelved state:      Online 
+File attributes:    Allocation: 126, Extend: 0, Global buffer count: 0, No version limit
+Record format:      Fixed length 32256 byte records
+Record attributes:  None
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+B69G0.BCK;1                   File ID:  (50,1,0)              
+Size:          378/378        Owner:    [SYSTEM]
+Created:   20-OCT-2026 11:55:36.09
+Revised:   20-OCT-2026 11:55:36.11 (1)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Sequential
+Shelved state:      Online 
+File attributes:    Allocation: 378, Extend: 0, Global buffer count: 0, No version limit
+Record format:      Fixed length 32256 byte records
+Record attributes:  None
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+B69G3.BCK;1                   File ID:  (51,1,0)              
+Size:          504/504        Owner:    [SYSTEM]
+Created:   20-OCT-2026 11:55:36.14
+Revised:   20-OCT-2026 11:55:36.17 (1)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Sequential
+Shelved state:      Online 
+File attributes:    Allocation: 504, Extend: 0, Global buffer count: 0, No version limit
+Record format:      Fixed length 32256 byte records
+Record attributes:  None
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+B69IGN.BCK;1                  File ID:  (62,1,0)              
+Size:          126/126        Owner:    [SYSTEM]
+Created:   20-OCT-2026 11:55:36.62
+Revised:   20-OCT-2026 11:55:36.62 (1)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Sequential
+Shelved state:      Online 
+File attributes:    Allocation: 126, Extend: 0, Global buffer count: 0, No version limit
+Record format:      Fixed length 32256 byte records
+Record attributes:  None
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+B69K8.BCK;1                   File ID:  (49,1,0)              
+Size:          448/450        Owner:    [SYSTEM]
+Created:   20-OCT-2026 11:55:36.03
+Revised:   20-OCT-2026 11:55:36.06 (1)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Sequential
+Shelved state:      Online 
+File attributes:    Allocation: 450, Extend: 0, Global buffer count: 0, No version limit
+Record format:      Fixed length 8192 byte records
+Record attributes:  None
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+B69NOCRC.BCK;1                File ID:  (53,1,0)              
+Size:          441/441        Owner:    [SYSTEM]
+Created:   20-OCT-2026 11:55:36.25
+Revised:   20-OCT-2026 11:55:36.27 (1)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Sequential
+Shelved state:      Online 
+File attributes:    Allocation: 441, Extend: 0, Global buffer count: 0, No version limit
+Record format:      Fixed length 32256 byte records
+Record attributes:  None
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+B69NONE.BCK;1                 File ID:  (58,1,0)              
+Size:          126/126        Owner:    [SYSTEM]
+Created:   20-OCT-2026 11:55:36.47
+Revised:   20-OCT-2026 11:55:36.49 (1)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Sequential
+Shelved state:      Online 
+File attributes:    Allocation: 126, Extend: 0, Global buffer count: 0, No version limit
+Record format:      Fixed length 32256 byte records
+Record attributes:  None
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+B69OWN.BCK;1                  File ID:  (60,1,0)              
+Size:          126/126        Owner:    [200,201]
+Created:   20-OCT-2026 11:55:36.55
+Revised:   20-OCT-2026 11:55:36.55 (1)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Sequential
+Shelved state:      Online 
+File attributes:    Allocation: 126, Extend: 0, Global buffer count: 0, No version limit
+Record format:      Fixed length 32256 byte records
+Record attributes:  None
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+B69TXT.BCK;1                  File ID:  (57,1,0)              
+Size:          126/126        Owner:    [SYSTEM]
+Created:   20-OCT-2026 11:55:36.44
+Revised:   20-OCT-2026 11:55:36.45 (1)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Sequential
+Shelved state:      Online 
+File attributes:    Allocation: 126, Extend: 0, Global buffer count: 0, No version limit
+Record format:      Fixed length 32256 byte records
+Record attributes:  None
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+LIST.BCK;1                    File ID:  (61,1,0)              
+Size:          189/189        Owner:    [SYSTEM]
+Created:   20-OCT-2026 11:55:36.58
+Revised:   20-OCT-2026 11:55:36.59 (1)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Sequential
+Shelved state:      Online 
+File attributes:    Allocation: 189, Extend: 0, Global buffer count: 0, No version limit
+Record format:      Fixed length 32256 byte records
+Record attributes:  None
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+TEXT.BCK;1                    File ID:  (59,1,0)              
+Size:          126/126        Owner:    [SYSTEM]
+Created:   20-OCT-2026 11:55:36.52
+Revised:   20-OCT-2026 11:55:36.52 (1)
+Expires:   <None specified>
+Backup:    <No backup recorded>
+Effective: <None specified>
+Recording: <None specified>
+File organization:  Sequential
+Shelved state:      Online 
+File attributes:    Allocation: 126, Extend: 0, Global buffer count: 0, No version limit
+Record format:      Fixed length 32256 byte records
+Record attributes:  None
+RMS attributes:     None
+Journaling enabled: None
+File protection:    System:RWED, Owner:RWED, Group:RE, World:
+Access Cntrl List:  None
+
+Total of 15 files, 4165/4167 blocks.
