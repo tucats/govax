@@ -6,8 +6,8 @@ done: Part A holds what the first save set
 (`testdata/backup69/vax/pi.bck`) and the public save set readers show of
 the format. Subtask 2, the VMS probe (`testdata/backup69`), is done:
 "The probe's answers" in Part A settles the format, the CRCs, the XOR
-blocks, and VMS's messages. Subtask 3 (COPY to a host name) and
-subtask 4 (`internal/backup`, the reader) are done.
+blocks, and VMS's messages. Subtasks 3 (COPY to a host name), 4 (`internal/backup`, the
+reader), and 5 (opening a save set) are done.
 
 ## Goal
 
@@ -596,7 +596,7 @@ reports, and every save set byte for byte (COPY/BINARY).
    data in VBN order, and XOR recovery of a damaged block from its group.
    Tested on `pi.bck` (the files match `pi.exe`, `pi.mar`, `pi.obj`),
    then on the probe's save sets, including the damaged ones.
-5. **Opening a save set:** a volume file through RMS (block I/O, record
+5. **Opening a save set** — done (2026-10-20): a volume file through RMS (block I/O, record
    attributes checked) or a host file, as an `io.ReaderAt` of blocks.
    The `/SAVE_SET` rule and its errors.
 6. **The command:** `BACKUP` in `console.dcl` (input and output
@@ -822,3 +822,50 @@ A leaf package (standard library only), `internal/backup`:
   size" line (B69G0's listing). B69CUT's listing shows every file the
   two blocks hold, MEDIUM.DAT with its full 74 blocks, and no message.
 
+
+### 2026-10-20 — Subtask 5: opening a save set
+
+- **`rms.Session.OpenSaveSet`** (`internal/rms/saveset.go`): a
+  `SaveSetFile`, an `io.ReaderAt` of the save set's bytes. A volume file
+  is accessed for reading, sharing reads only, while it's open (govax's
+  choice; VMS's sharing for a save set read is unconfirmed), and read a
+  virtual block at a time up to its end of file; a host file is read as
+  it is. `Name` is the file found with its version
+  ("DUA0:[000000]PI.BCK;1", NOTSAVESET's name). `Format` and
+  `RecordSize` are the volume file's record attributes, and
+  `RecordsMatch(blockSize)` says whether they're VMS's (fixed-length
+  records of the block size); a host file matches. A missing file is
+  `NotFound`'s `*DCLFileError` (RMS$_FNF or RMS$_DNF with the expanded
+  name, "DUA0:[000000]NONE.BCK;", as VMS's OPENIN shows it), a wildcard
+  RMS$_WLD (a save set on a disk is one file; VMS's message unconfirmed),
+  a missing host file RMS$_FNF with its path, and a file another opener
+  writes RMS$_FLK.
+- **The `/SAVE_SET` rule** (`internal/dclcmd/backupset.go`):
+  `BackupOperationFor` takes the two `BackupSpecifier`s (text, `/HOST`,
+  `/SAVE_SET`) and `/LIST` and `/COMPARE`, and gives Table 7-1's
+  operation: a save set as input is a restore, or a compare with
+  `/COMPARE`; a save set as output is a save; `/LIST` with no output
+  specifier lists the input, which must be a save set
+  (`ErrListNeedsSaveSet`, LISINPSAV); `/LIST` with an output specifier
+  is the specifiers' operation, listed too. Both save sets
+  (`ErrBothSaveSets`, which the manual forbids), neither
+  (`ErrNoSaveSet`, a file copy, out of scope), and `/COMPARE` with the
+  save set as output (`ErrCompareToSaveSet`, not in Table 7-1) are
+  errors whose VMS messages are unconfirmed.
+- **`Context.ReadSaveSet`** opens the input save set by `Locate`'s rules
+  and reads it with `backup.Read` (`/CRC` as `Options.CheckCRC`), then
+  closes it. A `SaveSetInput` has the found `Name`, the `Expanded` name
+  as given ("DUA1:[SETS]B69.BCK;", the name VMS's NOFILES shows), the
+  `Set`, and `RecordsMatch` (a mismatch is read anyway, Decision 3).
+  Failures are a `*SaveSetOpenError` (OPENIN: the name and RMS's error)
+  and a `*NotSaveSetError` (NOTSAVESET: the file's full name, as VMS
+  named `DUA1:[B69]TEXT.TXT;2`). Subtask 6 words them as `%BACKUP-`
+  messages.
+- **Tests:** `TestOpenSaveSetVolume` (PI.BCK copied onto a volume
+  with COPY/BINARY reads byte for byte at offsets inside and across
+  blocks and past the end; undefined records don't match, fixed 32256
+  records do), `TestOpenSaveSetSharing`, `TestOpenSaveSetErrors`,
+  `TestOpenSaveSetHost`; `TestReadSaveSet` (a volume and a host save
+  set, their names, `/CRC` finding B69CRCD's damage only when given),
+  `TestReadSaveSetErrors` (OPENIN with expanded names, NOTSAVESET for a
+  volume text file and a host image), `TestBackupOperationFor`.
