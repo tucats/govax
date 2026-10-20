@@ -565,6 +565,74 @@ grammar console
         qualifier   record/id=1173/nonegatable  -
                     /type=$string/default=ALL
 
+    !
+    ! docs/PHASE-69 - backup save sets.md: BACKUP lists, restores, compares,
+    ! and saves VMS save sets (internal/dclcmd/backup.go). As in VMS's
+    ! BACKUP, where a qualifier stands says what it is about (the System
+    ! Management Utilities Reference Manual, 7.2): after the verb, a command
+    ! qualifier; after INPUT, an input save-set or input file-selection
+    ! qualifier; after OUTPUT, an output save-set or output file qualifier.
+    ! /SAVE_SET, /CRC, /BY_OWNER, and govax's /HOST may follow either. OUTPUT
+    ! has no /prompt=, since /LIST alone needs none; the handler asks for it
+    ! otherwise. Which combinations of the input qualifiers (one date kind)
+    ! and of the output's (one of /NEW_VERSION, /OVERLAY, /REPLACE) may be
+    ! given together is checked there too: a DISALLOW is the entry's alone.
+    !
+    type backup_ignore
+        keyword nobackup/id=1
+        keyword interlock/id=2
+
+    verb backup/id=2200
+
+        parameter   input/id=2201               -
+                    /type=$string/list          -
+                    /prompt="From"
+        qualifier   host/id=2202/parameter=input
+        qualifier   save_set/id=2203/parameter=input
+        qualifier   crc/id=2204/parameter=input
+        qualifier   select/id=2205/parameter=input  -
+                    /type=$string/list
+        qualifier   exclude/id=2206/parameter=input -
+                    /type=$string/list
+        qualifier   since/id=2207/parameter=input   -
+                    /type=$string
+        qualifier   before/id=2208/parameter=input  -
+                    /type=$string
+        qualifier   by_owner/id=2209/parameter=input -
+                    /type=$string/default=""
+        qualifier   backup/id=2210/parameter=input
+        qualifier   created/id=2211/parameter=input
+        qualifier   expired/id=2212/parameter=input
+        qualifier   modified/id=2213/parameter=input
+
+        parameter   output/id=2220              -
+                    /type=$string
+        qualifier   host/id=2221/parameter=output
+        qualifier   save_set/id=2222/parameter=output
+        qualifier   crc/id=2223/parameter=output
+        qualifier   block_size/id=2224/parameter=output -
+                    /type=$integer
+        qualifier   group_size/id=2225/parameter=output -
+                    /type=$integer
+        qualifier   comment/id=2226/parameter=output -
+                    /type=$string
+        qualifier   by_owner/id=2227/parameter=output -
+                    /type=$string/default=""
+        qualifier   new_version/id=2228/parameter=output
+        qualifier   overlay/id=2229/parameter=output
+        qualifier   replace/id=2230/parameter=output
+
+        qualifier   list/id=2240                -
+                    /type=$string               -
+                    /default=""
+        qualifier   full/id=2241
+        qualifier   brief/id=2242
+        qualifier   log/id=2243
+        qualifier   compare/id=2244
+        qualifier   ignore/id=2245              -
+                    /type=backup_ignore/list
+        disallow    full and brief
+
     verb purge/id=1150
 
         parameter   spec/id=1151                -

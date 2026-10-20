@@ -352,6 +352,17 @@ func (d *Dispatcher) bindGrammar() {
 		return nil
 	})
 
+	// docs/PHASE-69 - backup save sets.md: BACKUP, its qualifiers
+	// sorted by where they stand (backup.go, internal/dclcmd/backup.go).
+	g.Bind("BACKUP", func(id int64, r *dcl.Result) error {
+		cmd, err := backupCommand(r, d.Console.Line())
+		if err != nil {
+			return err
+		}
+
+		return d.Console.cmd().Backup(cmd)
+	})
+
 	// Phase 51: DUMP shows a volume file in hexadecimal, by block or,
 	// with /RECORD, by record (internal/dclcmd/dump.go).
 	g.Bind("DUMP", func(id int64, r *dcl.Result) error {

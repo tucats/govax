@@ -169,6 +169,7 @@
 //              10/20/26    DELETE's null version (FOO.TXT;) and its list
 //                          of specifications
 //              10/20/26    COPY makes its output at the version given
+//              10/20/26    Added BACKUP (docs/PHASE-69 - backup save sets.md)
 
 This is the help documentation for the govax VAX emulator.  Topic sections are
 marked by a "$" delimiter.  This is followed by as many tokens of the help
@@ -2495,6 +2496,7 @@ $HELP
     @               Run a command procedure (a file of DCL commands)
     ANALYZE         Describe object and image files, as VMS's ANALYZE does
     ASSIGN          Create a logical name (equivalence first)
+    BACKUP          List, restore, compare, or save VMS BACKUP save sets
     CALL            Run a command procedure's subroutine at a new level
     CLEAR           Clear memory, symbols, strings
     COPY            Copy a file between the host and a mounted volume
@@ -3532,6 +3534,105 @@ $DEL
         DEL *.TMP;1
 
     See also the help for PURGE, DIRECTORY, and SET DEFAULT.
+
+$BACK
+
+    The BACKUP command works with VMS BACKUP save sets, with VMS's syntax:
+    it lists a save set, restores files from one, compares one with the
+    files it was made from, and saves files into a new one.  A save set
+    may be a file on a mounted volume, as VMS keeps one, or a host file
+    holding the same bytes (a binary FTP of a save set, or COPY/BINARY of
+    one).
+
+    govax is adding BACKUP's operations in steps.  So far it finds the
+    operation, opens and checks the input save set, and reports VMS's
+    messages for what is wrong; listing, restoring, comparing, and saving
+    then say NOTYET.
+
+    Syntax:
+
+        BACKUP/LIST[=file] save-set/SAVE_SET
+        BACKUP save-set/SAVE_SET output-spec
+        BACKUP/COMPARE save-set/SAVE_SET file-spec
+        BACKUP file-spec[,...] save-set/SAVE_SET
+
+    A save set on a disk must have /SAVE_SET.  Which specifier is the save
+    set says what BACKUP does: as input, a restore (or with /COMPARE, a
+    compare); as output, a save.  /LIST alone lists the input save set.
+
+    Where a qualifier stands says what it is about, as in VMS: after BACKUP
+    it is a command qualifier; after the input specifier, an input
+    save-set or input file-selection qualifier; after the output
+    specifier, an output save-set or output file qualifier.
+
+    Command qualifiers:
+
+        /LIST[=file]    List the save set, on SYS$OUTPUT or into the file.
+        /BRIEF, /FULL   The listing's layout: each file's name, size, and
+                        creation date (the default), or a DIRECTORY/FULL
+                        layout.
+        /LOG            Show each file as it is saved, restored, or
+                        compared.
+        /COMPARE        Compare the save set's files with the files named.
+        /IGNORE=NOBACKUP
+                        Save the data of files marked NOBACKUP too.
+
+    Input save-set qualifiers:
+
+        /SAVE_SET       The input is a save set.
+        /CRC            Check each block's CRC, recovering a damaged block
+                        from its redundancy group.  As in VMS V7.1, the
+                        default is /NOCRC; a block whose header is damaged
+                        is recovered either way.
+        /SELECT=(file-spec[,...])
+                        Only the save set's files these names match.
+        /EXCLUDE=(file-spec[,...])
+                        Not the files these names match.
+        /HOST           The save set is a host file, whatever its name.
+
+    Input file-selection qualifiers (a save):
+
+        /EXCLUDE=(file-spec[,...])
+        /BY_OWNER[=uic] Only files with this owner (yours, with no UIC).
+        /SINCE=time, /BEFORE=time
+                        Only files dated since or before the time (TODAY,
+                        YESTERDAY, TOMORROW, or a VMS time), by the date
+                        one of /MODIFIED (the default), /CREATED,
+                        /EXPIRED, or /BACKUP names.
+
+    Output save-set qualifiers (a save):
+
+        /SAVE_SET       The output is a save set.
+        /BLOCK_SIZE=n   The save set's block size in bytes (32256).
+        /GROUP_SIZE=n   Blocks in each redundancy group (10; 0 for none).
+        /CRC            Write each block's CRC (the default is /NOCRC).
+        /COMMENT=string Put the text in the save set's summary.
+        /BY_OWNER=uic   The save set file's owner.
+        /HOST           Write the save set as a host file.
+
+    Output file qualifiers (a restore):
+
+        /NEW_VERSION    Restore a file that exists as a new version.
+        /OVERLAY        Write over a file that exists, in place.
+        /REPLACE        Delete a file that exists, and restore it again.
+                        With none of the three, a file that exists isn't
+                        restored.
+        /BY_OWNER[=option]
+                        The restored files' owner: DEFAULT (yours, the
+                        default without /BY_OWNER), ORIGINAL (the saved
+                        owner, the default with /BY_OWNER alone), PARENT
+                        (the directory's), or a UIC.
+
+    The output specifier of a restore names the directory the files go
+    to: [*...] restores each file to the directory it was saved from,
+    [dir...] to a tree under [dir], and [dir] to that one directory.
+
+    Examples:
+
+        BACKUP/LIST DUA1:[SETS]B69.BCK/SAVE_SET
+        BACKUP/LOG DUA1:[SETS]B69.BCK/SAVE_SET/SELECT=[B69]*.TXT [R1...]
+        BACKUP/LIST "./pi.bck"/SAVE_SET
+        BACKUP [WORK...]*.* DUA1:[SETS]WORK.BCK/SAVE_SET
 
 $DUMP
 

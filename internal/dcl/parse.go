@@ -208,6 +208,20 @@ func (r *Result) setParam(paramName, qualName string, id int64, negated bool, va
 	}
 }
 
+// setParamList is setParam for a /list value: every element, with the
+// first as the plain ParamString value (BACKUP's input save set
+// "/SELECT=(A,B)").
+func (r *Result) setParamList(paramName, qualName string, id int64, negated bool, vals []Value) {
+	r.setParam(paramName, qualName, id, negated, vals[0])
+
+	list := make([]string, len(vals))
+	for i, v := range vals {
+		list[i] = v.Str
+	}
+
+	r.paramValues[upcase(paramName)][upcase(qualName)].list = list
+}
+
 func (r *Result) markParamPresent(paramName, qualName string, id int64, negated bool) {
 	paramName = upcase(paramName)
 
@@ -231,6 +245,15 @@ func (r *Result) ParamPresent(paramName, qualName string) bool {
 	return ok && v.present
 }
 
+// ParamDefaulted reports whether qualName, scoped to paramName, is
+// present only because its grammar gives it a default -- the
+// parameter-scoped mirror of Defaulted above.
+func (r *Result) ParamDefaulted(paramName, qualName string) bool {
+	v, ok := r.paramValue(paramName, qualName)
+
+	return ok && v.defaulted
+}
+
 // ParamNegated reports whether qualName, scoped to paramName, was supplied
 // in its "NO" form — the parameter-scoped mirror of Negated above.
 func (r *Result) ParamNegated(paramName, qualName string) bool {
@@ -249,6 +272,28 @@ func (r *Result) ParamString(paramName, qualName string) string {
 	}
 
 	return v.str
+}
+
+// ParamList returns the elements of a /list qualifier scoped to
+// paramName -- the parameter-scoped mirror of List above: the values in
+// the order given, or a one-element list for a value given without
+// parentheses or filled from its /default=; nil if absent or not a
+// string.
+func (r *Result) ParamList(paramName, qualName string) []string {
+	v, ok := r.paramValue(paramName, qualName)
+	if !ok || !v.present {
+		return nil
+	}
+
+	if v.list != nil {
+		return append([]string(nil), v.list...)
+	}
+
+	if !v.isString {
+		return nil
+	}
+
+	return []string{v.str}
 }
 
 // ParamInt returns the integer value of qualName scoped to paramName — the
@@ -589,7 +634,7 @@ func (g *Grammar) parseQualifier(r *Result, active *Entry, nextParam int, lastPa
 			r.setList(q.Name, q.ID, vals)
 			r.values[q.Name].negated = negated
 		} else {
-			r.setParam(scopeParam.Name, q.Name, q.ID, negated, vals[0])
+			r.setParamList(scopeParam.Name, q.Name, q.ID, negated, vals)
 		}
 
 		return active, nextParam, lastParam, rem, nil
@@ -761,6 +806,7 @@ func (g *Grammar) checkRequirements(active *Entry, r *Result) (*Parameter, error
 
 			if !r.ParamPresent(p.Name, q.Name) && q.Default != nil {
 				r.setParam(p.Name, q.Name, q.ID, false, *q.Default)
+				r.paramValues[upcase(p.Name)][upcase(q.Name)].defaulted = true
 			}
 		}
 	}

@@ -7,7 +7,7 @@ done: Part A holds what the first save set
 the format. Subtask 2, the VMS probe (`testdata/backup69`), is done:
 "The probe's answers" in Part A settles the format, the CRCs, the XOR
 blocks, and VMS's messages. Subtasks 3 (COPY to a host name), 4 (`internal/backup`, the
-reader), and 5 (opening a save set) are done.
+reader), 5 (opening a save set), and 6 (the command) are done.
 
 ## Goal
 
@@ -404,7 +404,9 @@ also holds VMS's restored trees; answer 13 used them.
     (8192 for B69K8), sized to the blocks written (B69NONE: 2 blocks,
     126 disk blocks).
 11. **Messages and statuses** (from the log; codes as `$STATUS`
-    showed them, facility 266, BACKUP):
+    showed them, with STS$M_INHIB_MSG, bit 28, set; facility 163,
+    %XA3, BACKUP, which this answer first gave as 266 by reading bit 28
+    as part of it, corrected in subtask 6):
     - `%BACKUP-S-CREATED, created file`, `%BACKUP-S-CREDIR, created
       directory dir`, `%BACKUP-S-COPIED, copied file` (a save with
       `/LOG`), `%BACKUP-S-COMPARED, compared file`,
@@ -599,10 +601,11 @@ reports, and every save set byte for byte (COPY/BINARY).
 5. **Opening a save set** — done (2026-10-20): a volume file through RMS (block I/O, record
    attributes checked) or a host file, as an `io.ReaderAt` of blocks.
    The `/SAVE_SET` rule and its errors.
-6. **The command:** `BACKUP` in `console.dcl` (input and output
-   specifiers, command qualifiers, and position-dependent qualifiers),
-   `HELP BACKUP` in `console.help`, and BACKUP's messages in `vmserrors`
-   (from the probe's log).
+6. **The command** — done (2026-10-20): `BACKUP` in `console.dcl`
+   (input and output specifiers, command qualifiers, and
+   position-dependent qualifiers), `HELP BACKUP` in `console.help`, and
+   BACKUP's messages (from the probe's log) in `vmsdef`, where VMS's
+   condition values live, rather than `vmserrors`.
 7. **BACKUP/LIST:** the summary block and file lines in VMS's layout,
    `/BRIEF`, `/FULL` (sharing DIRECTORY/FULL's writer where the layouts
    agree), `/LIST=file`, `/SELECT` and `/EXCLUDE`, the totals, and "End
@@ -869,3 +872,66 @@ A leaf package (standard library only), `internal/backup`:
   set, their names, `/CRC` finding B69CRCD's damage only when given),
   `TestReadSaveSetErrors` (OPENIN with expanded names, NOTSAVESET for a
   volume text file and a host image), `TestBackupOperationFor`.
+
+### 2026-10-20 — Subtask 6: the command
+
+- **The grammar** (`console.dcl`'s BACKUP): INPUT (a list, prompt
+  "From") and OUTPUT (no prompt: `/LIST` alone needs none) each carry
+  their own qualifiers, so a qualifier's place says what it is about,
+  as the manual's 7.2 describes: on INPUT `/SAVE_SET`, `/CRC`,
+  `/SELECT`, `/EXCLUDE`, `/SINCE`, `/BEFORE`, `/BY_OWNER[=uic]`, the
+  date kinds `/BACKUP`, `/CREATED`, `/EXPIRED`, `/MODIFIED`, and govax's
+  `/HOST`; on OUTPUT `/SAVE_SET`, `/CRC`, `/BLOCK_SIZE`, `/GROUP_SIZE`,
+  `/COMMENT`, `/BY_OWNER[=option]`, `/NEW_VERSION`, `/OVERLAY`,
+  `/REPLACE`, `/HOST`; on the verb `/LIST[=file]`, `/FULL`, `/BRIEF`
+  (not both), `/LOG`, `/COMPARE`, `/IGNORE=(NOBACKUP,INTERLOCK)`. Every
+  probe command parses.
+- **The DCL engine** (`internal/dcl`, in scope by the author's word):
+  a parameter-scoped qualifier with a `/list` value kept only its first
+  element; it now keeps them all (`ParamList`), for `/SELECT=(A,B)`. A
+  parameter-scoped qualifier filled from its `/default=` can now be told
+  from one given (`ParamDefaulted`, as `Defaulted` is at the verb's
+  level), so `/BY_OWNER` absent isn't `/BY_OWNER` alone.
+  `TestBackupShapedCommands` (`internal/dcl/backup_test.go`).
+- **The command** (`internal/console/backup.go`'s `backupCommand`,
+  `internal/dclcmd/backup.go`): the parse becomes a `BackupCommand`
+  (the command line too, for a save's summary), with the input's date
+  kind (`BackupDateKind`, `/MODIFIED` the default, as the manual's
+  `/SINCE` says) and the output's existing-file choice
+  (`BackupExisting`). Two of either is BADQUALIFIERCOMBO, checked in Go
+  since a grammar DISALLOW knows only the verb's qualifiers (VMS's
+  message unconfirmed). `Context.Backup` finds the operation
+  (`BackupOperationFor`), reads the input save set for a list, restore,
+  or compare, and then, until subtasks 7 to 11, ends with govax's
+  `%BACKUP-F-NOTYET`. No output without `/LIST` is DCL's INSFPRM (at a
+  terminal VMS asks for "_To:"; govax doesn't yet).
+- **The messages** (`internal/vmsdef/backup.go`): BACKUP's, keyed by
+  condition value as the system message file's are, so `LookupMessage`
+  (and `F$MESSAGE`, `ConditionLine`) know them. OPENIN, OPENOUT,
+  LISINPSAV, NOTSAVESET, VBNMISSING, VERIFYERR, and NOFILES have the
+  codes `$STATUS` showed; CREATED, CREDIR, COPIED, COMPARED, HEADCOPIED,
+  NOBACKUP, and XORERRS VMS's texts with govax's message numbers (they
+  never reached `$STATUS`), counted down from %X1FFF; BOTHSAVSET,
+  NOSAVESET, CMPINPSAV (the `/SAVE_SET` rule's other errors), and NOTYET
+  are govax's, text and code. XORERRS's plural ("2 errors") is govax's
+  guess. `FormatMessage` writes a message with its `!AS`, `!UL`, and
+  `!%S` parameters. A failure is a `ConditionError` whose status is the
+  code with STS$M_INHIB_MSG, so `$STATUS` reads as VMS's did
+  (%X10A3808C for LISINPSAV); `dclcmd.BackupLine` is a message as a line
+  of output, for `/LOG`.
+- **Why `vmsdef`, not `vmserrors`:** `vmserrors`' codes are govax's own
+  layout (facility at bit 20), which `dclshell.VMSCondition` maps to
+  VMS's through `vmsdef.Symbols`, which has no `BACKUP$_` names. The
+  messages' VMS codes belong beside the other messages VMS showed
+  (`observedMessages`).
+- **`HELP BACKUP`**, with a paragraph saying which operations are still
+  to come, and BACKUP in `HELP`'s list.
+- **Tests:** `TestBackupMessages` (vmsdef: the codes and every message
+  as the log shows it); `TestBackupCommandParse` (the probe's commands
+  into `BackupCommand`s, the conflicts); `TestBackupMessages` in
+  `internal/console` (LISINPSAV, OPENIN with `-RMS-E-FNF`, NOTSAVESET
+  for a volume and a host file, govax's three, NOTYET per operation,
+  each with its `$STATUS`; INSFPRM); `TestBackupMessageShown` (in a
+  procedure, the message shown once and the procedure ended with its
+  status). The verb count and the parameter-qualifier walk in
+  `internal/dcl`'s tests know BACKUP.
