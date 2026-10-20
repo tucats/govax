@@ -1,0 +1,169 @@
+	.TITLE	SSCOPY	Copy a save set, damaged or cut short
+	.IDENT	/V1.0/
+
+;
+; SSCOPY makes the damaged and truncated save sets for Phase 69's probe
+; (testdata/backup69/README.md). It reads five lines from SYS$INPUT
+; with LIB$GET_INPUT:
+;
+;	the input save set's name
+;	the output file's name
+;	how many records to copy (0 for all of them)
+;	which record to change, counting from 1 (0 for none)
+;	the offset of the byte to change in that record, from 0
+;
+; and copies the input's fixed-length records, one save set block each,
+; to a new file with the same record size. The byte changed is
+; complemented (XORed with ^XFF). It reports how many records it copied.
+;
+
+	$FABDEF
+	$RABDEF
+	$RMSDEF
+
+	.MACRO	STRING_DESC	LEN,ADDR
+	.WORD	LEN
+	.BYTE	14,1			; DSC$K_DTYPE_T, DSC$K_CLASS_S
+	.ADDRESS ADDR
+	.ENDM	STRING_DESC
+
+;
+; CHECK returns R0's status from the routine if it's a failure.
+;
+	.MACRO	CHECK	?L
+	BLBS	R0, L
+	RET
+L:
+	.ENDM	CHECK
+
+	.PSECT	SSC_DATA, WRT, NOEXE, LONG
+
+COUNT:	.LONG	0			; Records to copy, 0 for all
+CHANGE:	.LONG	0			; Record to change, 0 for none
+OFFSET:	.LONG	0			; Byte to change in it
+
+LINE_LEN:
+	.WORD	0
+LINE:	.BLKB	128
+LINE_DESC:
+	STRING_DESC	128,LINE
+
+IN_NAME:
+	.BLKB	128
+OUT_NAME:
+	.BLKB	128
+
+	.ALIGN	LONG
+INFAB:	$FAB	FAC=GET, FNA=IN_NAME
+	.ALIGN	LONG
+INRAB:	$RAB	FAB=INFAB, UBF=BUFFER, USZ=32767
+	.ALIGN	LONG
+OUTFAB:	$FAB	FAC=PUT, FNA=OUT_NAME, ORG=SEQ, RFM=FIX
+	.ALIGN	LONG
+OUTRAB:	$RAB	FAB=OUTFAB, RBF=BUFFER
+
+FAO_CTR:
+	.ASCID	/SSCOPY: !UL record!%S copied/
+FAO_LEN:
+	.WORD	0
+FAO_BUF:
+	.BLKB	80
+FAO_DESC:
+	STRING_DESC	80,FAO_BUF
+
+BUFFER:	.BLKB	32768			; One record: a save set block
+
+	.PSECT	SSC_CODE, NOWRT, EXE, LONG
+
+	.SBTTL	SSCOPY - main routine
+;
+; Registers:	R6 = records copied
+;
+	.ENTRY	SSCOPY, ^M<R2,R3,R4,R5,R6>
+	CALLS	#0, GET_LINE		; The input's name
+	CHECK
+	MOVC3	LINE_LEN, LINE, IN_NAME
+	MOVB	LINE_LEN, INFAB+FAB$B_FNS
+	CALLS	#0, GET_LINE		; The output's name
+	CHECK
+	MOVC3	LINE_LEN, LINE, OUT_NAME
+	MOVB	LINE_LEN, OUTFAB+FAB$B_FNS
+	PUSHAL	COUNT			; The three numbers
+	CALLS	#1, GET_NUMBER
+	CHECK
+	PUSHAL	CHANGE
+	CALLS	#1, GET_NUMBER
+	CHECK
+	PUSHAL	OFFSET
+	CALLS	#1, GET_NUMBER
+	CHECK
+
+	$OPEN	FAB=INFAB		; The input, and an output with
+	CHECK				; its record size
+	$CONNECT RAB=INRAB
+	CHECK
+	MOVW	INFAB+FAB$W_MRS, OUTFAB+FAB$W_MRS
+	$CREATE	FAB=OUTFAB
+	CHECK
+	$CONNECT RAB=OUTRAB
+	CHECK
+
+	CLRL	R6
+10$:	TSTL	COUNT			; Copied enough?
+	BEQL	20$
+	CMPL	R6, COUNT
+	BGEQ	50$
+20$:	$GET	RAB=INRAB
+	BLBC	R0, 40$
+	INCL	R6
+	CMPL	R6, CHANGE		; The record to change?
+	BNEQ	30$
+	MOVL	OFFSET, R1
+	XORB2	#^XFF, BUFFER[R1]
+30$:	MOVW	INRAB+RAB$W_RSZ, OUTRAB+RAB$W_RSZ
+	$PUT	RAB=OUTRAB
+	CHECK
+	BRB	10$
+
+40$:	CMPL	R0, #RMS$_EOF		; The end of the input is fine
+	BEQL	50$
+	RET
+50$:	$CLOSE	FAB=OUTFAB
+	CHECK
+	$CLOSE	FAB=INFAB
+	CHECK
+
+	$FAO_S	CTRSTR=FAO_CTR, OUTLEN=FAO_LEN, OUTBUF=FAO_DESC, P1=R6
+	MOVW	FAO_LEN, FAO_DESC
+	PUSHAQ	FAO_DESC
+	CALLS	#1, G^LIB$PUT_OUTPUT
+	MOVL	#1, R0
+	RET
+
+	.SBTTL	GET_LINE - read a line
+;
+; GET_LINE reads the next line of SYS$INPUT into LINE, its length in
+; LINE_LEN, and returns LIB$GET_INPUT's status.
+;
+	.ENTRY	GET_LINE, ^M<>
+	PUSHAW	LINE_LEN		; resultant-length
+	CLRL	-(SP)			; no prompt-string
+	PUSHAQ	LINE_DESC		; resultant-string
+	CALLS	#3, G^LIB$GET_INPUT
+	RET
+
+	.SBTTL	GET_NUMBER - read a decimal number
+;
+; GET_NUMBER(result) reads a line and stores its decimal value in the
+; longword at result. It returns LIB$CVT_DTB's status.
+;
+	.ENTRY	GET_NUMBER, ^M<>
+	CALLS	#0, GET_LINE
+	BLBC	R0, 10$
+	PUSHL	4(AP)			; result
+	PUSHAB	LINE			; decimal-string
+	MOVZWL	LINE_LEN, -(SP)		; byte-count
+	CALLS	#3, G^LIB$CVT_DTB
+10$:	RET
+
+	.END	SSCOPY

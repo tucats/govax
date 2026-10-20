@@ -1,41 +1,49 @@
 # Phase 69 — BACKUP save sets
 
-**Status:** planned 2026-10-20. Subtask 1, the survey, is done: Part A
-holds what the first save set (`testdata/backup69/vax/pi.bck`) shows of
-the format. The plan waits for the author's review. Part B's questions
-are open.
+**Status:** in progress. Planned 2026-10-20; the plan reviewed and
+accepted by the author the same day (Part B). Subtask 1, the survey, is
+done: Part A holds what the first save set
+(`testdata/backup69/vax/pi.bck`) and the public save set readers show of
+the format. Subtask 2, the VMS probe (`testdata/backup69`), is written
+and waits for the author's VAX run.
 
 ## Goal
 
-govax's DCL gets a `BACKUP` command that reads VMS save sets, with VMS
-BACKUP's syntax:
+govax's DCL gets a `BACKUP` command for VMS save sets, with VMS BACKUP's
+syntax:
 
 1. **List** a save set: `BACKUP/LIST saveset/SAVE_SET`, with VMS's
    layouts for the summary and file lines, `/BRIEF` (the default) and
    `/FULL`, and `/LIST=file`.
 2. **Restore** files from a save set: `BACKUP saveset/SAVE_SET
-   output-spec`, onto a mounted volume (and, by question 3's answer, to
-   the host). Each file keeps its saved attributes: record format, dates,
-   protection, owner, characteristics, allocation, and end of file. The
-   qualifiers people use are in scope: `/SELECT`, `/EXCLUDE`, `/LOG`,
-   `/NEW_VERSION`, `/OVERLAY`, `/REPLACE`, `/BY_OWNER`, and the
-   output-directory rules (`[*...]`, `[dir...]`, `[dir]`, omitted).
+   output-spec`, onto a mounted volume or to the host. Each file keeps
+   its saved attributes: record format, dates, protection, owner,
+   characteristics, allocation, and end of file. The qualifiers people
+   use are in scope: `/SELECT`, `/EXCLUDE`, `/LOG`, `/NEW_VERSION`,
+   `/OVERLAY`, `/REPLACE`, `/BY_OWNER`, and the output-directory rules
+   (`[*...]`, `[dir...]`, `[dir]`, omitted).
+3. **Compare** a save set with files: `BACKUP/COMPARE saveset/SAVE_SET
+   file-spec`.
+4. **Save** files into a new save set: `BACKUP file-spec
+   saveset/SAVE_SET`, with `/BLOCK_SIZE`, `/GROUP_SIZE`, `/CRC`,
+   `/COMMENT`, `/BY_OWNER`, and the input file-selection qualifiers
+   (`/SINCE`, `/BEFORE`, `/BY_OWNER`, `/EXCLUDE`, ...). Real VMS reads
+   govax's save sets in a second round, as Phase 68's second round ran
+   govax's images.
 
 A save set may be a file on a mounted volume, which is how VMS keeps
 one: fixed-length records the size of the save set's block. It may also
-be a host file holding the same bytes, as a binary FTP or a copy out of
-a container leaves it.
+be a host file holding the same bytes, as a binary FTP, COPY/BINARY, or
+a copy out of a container leaves it.
 
-Saving files into a new save set is a candidate for later in the phase
-(question 1). It would let real VMS read govax's save sets in a second
-round, as Phase 68's second round ran govax's images. Image and
-physical backups, tapes, journals, incremental backups, and multivolume
-save sets are out of scope (question 5).
+Out of scope: image, physical, and incremental operations, `/RECORD`,
+`/JOURNAL`, `/VERIFY`, `/DELETE`, tapes (and SIMH `.tap` images, a later
+phase), multivolume save sets, `/CONFIRM`, ODS-5 names, and
+`/INTERCHANGE`.
 
-As in other phases, the target is real VMS's output. BACKUP/LIST's
-listings and `/LOG`'s messages should match VMS's line for line, and a
-restored file should match its original block for block and attribute
-for attribute.
+As in other phases, the target is real VMS's output. Listings and
+`/LOG`'s messages should match VMS's line for line, and a restored file
+should match its original block for block and attribute for attribute.
 
 ## Part A — the survey (2026-10-20)
 
@@ -69,12 +77,24 @@ for attribute.
   default, BACKUP computes the AUTODIN-II 32-bit CRC (the VAX CRC
   instruction's polynomial) over each data block, stores it in the block
   header, and checks it on a restore with `/CRC`.
+- **Public save set readers** (allowed by the author, 2026-10-20; Part
+  B, question 6): independently reverse-engineered programs, not
+  DIGITAL's. They were read for the format's layouts and field names
+  only, and no code is copied from them (some are GPL):
+  - `vmsbackup` (github.com/FreddieAkeroyd/vmsbackup, from
+    vms2linux.de): `vmsconstants.h` names the operating system,
+    subsystem, and application codes and every attribute code (1 to
+    101), and `vmsbackup.c` lays out the block header (`bbhdef`), the
+    record header (`brhdef`), and the record types (0 to 11);
+  - a second `vmsbackup` (github.com/DaveShepperd/vmsbackup), the same
+    layouts (it leaves the header checksum as a TODO);
+  - `VMSBackupPython` (github.com/TonyBUK/VMSBackupPython), which names
+    the block flag `NOCRC` and the record flags.
 
-Not used: VMS's sources and definition files (the clean room). Several
-public, independently reverse-engineered save set readers exist (such as
-the `vmsbackup` program). Whether the phase may consult them is
-question 6. Until it's answered, everything below comes from the
-fixture alone, and every name in the tables is this survey's own.
+  None of them checks the header checksum or the data CRC, or recovers
+  a block from its XOR group. Those come from the fixture and the probe.
+
+Not used: VMS's sources and definition files (the clean room).
 
 ### What earlier phases leave in place
 
@@ -87,8 +107,8 @@ fixture alone, and every name in the tables is this survey's own.
   DIRECTORY/FULL". ods2's `volume.CreateFileVersion`, `WriteBlock`,
   `CloseWithFinalByte`, and `UpdateHeader` can make a file and set its
   header fields. Whether they set every field a restore needs (dates,
-  revision count, characteristics, highwater, allocation) is to be
-  checked in subtask 6.
+  revision count, characteristics, highwater, allocation, ACL) is to be
+  checked in subtask 8.
 - **Directories:** `rms.Session.CreateDirectory` (Phase 34) makes the
   directories a restore to `[*...]` or `[dir...]` needs.
 - **Name processing and wildcards:** `rms` parses names and
@@ -103,8 +123,10 @@ fixture alone, and every name in the tables is this survey's own.
 - **CRCs:** `cpu.CRC` (Phase 53) is the VAX CRC instruction, usable for
   both checks below with the right table and initial value.
 - **Messages:** `vmsdef.Messages` has no `BACKUP$_` messages. The texts
-  must come from the manual's examples, the probe, or VMS's message
-  definitions through `internal/vmsdef/gen` (question 4).
+  come from the probe's log, their codes unconfirmed (question 4).
+- **COPY/BINARY** copies a volume file to the host byte for byte. It
+  brought `pi.bck` out identical to the ods2 extraction, so the probe's
+  copy-out uses it.
 
 ### The save set as the fixture shows it
 
@@ -116,31 +138,42 @@ redundancy (XOR) block: the group size is 10, the group has one data
 block, and the XOR of one block is that block. Its records repeat block
 1's byte for byte, and only its header differs (below).
 
-Integers are little-endian. "Confirmed" means the fixture or VMS's
-listing settles a field. "Guess" means it fits this one save set and
-needs the probe.
+Integers are little-endian. In the tables, "confirmed" means the
+fixture or VMS's listing settles a field. "Readers" means the public
+readers name it and the fixture agrees, which the probe should still
+confirm. "Guess" means it fits this save set and needs the probe.
 
 #### The block header (256 bytes)
 
 Each block starts with a 256-byte header. Records follow it, up to the
-block's end.
+block's end. The names are the readers'.
 
-| Offset | Size | Block 1 | Block 2 | Meaning |
-| --- | --- | --- | --- | --- |
-| 0 | word | 256 | 256 | The header's size (confirmed: the records start there) |
-| 2 | word | %X0400 | %X0400 | The operating system: the same value as the summary's attribute 7 (guess: 1024 is VAX/VMS) |
-| 4 | word | 1 | 1 | Unknown (guess: a subsystem or format code) |
-| 6 | word | 1 | 2 | Unknown. 1 in the data block, 2 in the XOR block (guess: the block's kind, or a second count) |
-| 8 | long | 1 | 2 | The block's number in the save set (guess) |
-| 12–31 | 20 | 0 | 0 | Unused here |
-| 32 | word | %X0101 | %X0101 | A structure level (guess: 1.1, as the records' bodies start) |
-| 34 | word | 1 | 1 | The volume number (guess: for multivolume save sets) |
-| 36 | long | 0 | 0 | The data CRC (guess, from the author's note; zero here, see below) |
-| 40 | long | 32256 | 32256 | The block size (confirmed) |
-| 44 | long | 1 | 1 | Flags (guess: bit 0 says the block has no CRC) |
-| 48 | 32 | `PI.BCK` | `PI.BCK` | The save set's name, a counted string (confirmed) |
-| 80–253 | | 0 | 0 | Unused here (room for a file ID, a directory ID, a name, record attributes, a size, all zero in a disk save set? unknown) |
-| 254 | word | %XBE02 | %X1B5D | The header's checksum (confirmed, below) |
+| Offset | Size | Block 1 | Block 2 | Field | Meaning |
+| --- | --- | --- | --- | --- | --- |
+| 0 | word | 256 | 256 | size | The header's size (confirmed: the records start there) |
+| 2 | word | %X0400 | %X0400 | opsys | The operating system: %X0400 VAX, %X0800 Alpha, %X1000 I64 (readers); the summary's attribute 7 too |
+| 4 | word | 1 | 1 | subsys | The subsystem: 1, BACKUP (readers) |
+| 6 | word | 1 | 2 | applic | The application: 1 a data block, 2 an XOR block (readers; fits the fixture) |
+| 8 | long | 1 | 2 | number | The block's sequence number in the save set (readers) |
+| 12–31 | 20 | 0 | 0 | | Spare |
+| 32 | word | %X0101 | %X0101 | struclev | The block's structure level (readers) |
+| 34 | word | 1 | 1 | volnum | The volume number, for multivolume save sets (readers) |
+| 36 | long | 0 | 0 | crc | The data CRC (readers; zero here, see below) |
+| 40 | long | 32256 | 32256 | blocksize | The block size (confirmed) |
+| 44 | long | 1 | 1 | flags | Flags. Bit 0 is NOCRC: no data CRC (readers) |
+| 48 | 32 | `PI.BCK` | `PI.BCK` | ssname | The save set's name, a counted string (confirmed) |
+| 80 | 6 | 0 | 0 | fid | The current file's ID (readers; zero in a disk save set?) |
+| 86 | 6 | 0 | 0 | did | The current file's directory ID (readers) |
+| 92 | 128 | 0 | 0 | filename | The current file's name (readers) |
+| 220 | 1 | 0 | 0 | rtype | The current file's record type (readers) |
+| 221 | 1 | 0 | 0 | rattrib | Its record attributes (readers) |
+| 222 | word | 0 | 0 | rsize | Its record size (readers) |
+| 224 | 1 | 0 | 0 | bktsize | Its bucket size (readers) |
+| 225 | 1 | 0 | 0 | vfcsize | Its VFC area's size (readers) |
+| 226 | word | 0 | 0 | maxrec | Its maximum record size (readers) |
+| 228 | long | 0 | 0 | filesize | Its allocation (readers) |
+| 232–253 | 22 | 0 | 0 | | Spare |
+| 254 | word | %XBE02 | %X1B5D | checksum | The header's checksum (confirmed, below) |
 
 **The header checksum** is the CRC-16 of the whole 256-byte header,
 taking its last word as zero. The polynomial is %XA001 (CRC-16,
@@ -148,107 +181,121 @@ reflected, the VAX CRC instruction's "CRC-16" table), the initial value
 0, and nothing is XORed at the end. It matches both blocks. They differ
 in two fields, so a chance match is very unlikely. Found by searching
 every 16-bit polynomial against the two headers' difference, then every
-initial value.
+initial value. The readers don't check it.
 
-**The data CRC:** none was stored. No AUTODIN-II variant over the block
-(initial 0 or all ones, complemented or not, over the whole block, its
-records, or the block with the CRC field zeroed) comes out zero. No
-other header field is nonzero. Yet the command didn't say `/NOCRC`, and
-the author's note says `/CRC` is the default. Either BACKUP V6.2 didn't
-compute one for this disk save set, which would make flag bit 0 the
-"no CRC" bit, or it's stored somewhere the fixture can't show. The probe
-writes the same files with `/CRC` and `/NOCRC` to settle it.
+**The data CRC:** none was stored, and the header says so: flag bit 0
+is NOCRC. No AUTODIN-II variant over the block comes out zero either.
+The command didn't say `/NOCRC`, though, and the author's note says
+`/CRC` is the default. So BACKUP V6.2 apparently didn't compute a CRC
+for this disk save set. The probe writes the same files with `/CRC` and
+`/NOCRC` to show where a CRC goes, what it covers, and when BACKUP
+stores one.
 
 #### Records
 
 A record starts with a 16-byte record header:
 
-| Offset | Size | Meaning |
-| --- | --- | --- |
-| 0 | word | The size of the record's body, not counting this header (confirmed) |
-| 2 | word | The record's type (confirmed for the four below) |
-| 4 | long | Flags (zero in every record here) |
-| 8 | long | An address: the first virtual block of a data record, 0 otherwise (confirmed) |
-| 12 | long | Zero in every record here |
+| Offset | Size | Field | Meaning |
+| --- | --- | --- | --- |
+| 0 | word | rsize | The size of the record's body, not counting this header (confirmed) |
+| 2 | word | rtype | The record's type (confirmed for 0, 1, 3, 4; the rest are the readers') |
+| 4 | long | flags | Flags (readers): BADDATA, DIRECTORY, NONSEQUENTIAL, BLOCKERRS, ALIAS_ENTRY, HEADONLY, taken to be bits 0 to 5 in that order (guess). Zero in every record here |
+| 8 | long | address | The first virtual block of a data record (confirmed), or an LBN; 0 otherwise |
+| 12 | word | blockflags | A per-block error mask (readers). Zero here |
+| 14 | word | | Reserved. Zero here |
 
-Types seen:
+Record types (the readers' list, with what the fixture has):
 
 | Type | Meaning | In the fixture |
 | --- | --- | --- |
 | 0 | Null: fills the rest of the block. Its size runs exactly to the block's end | One per block, after the last file's data |
 | 1 | The save set summary | First in each block |
+| 2 | A volume summary (image backups) | |
 | 3 | A file's attributes | Before each file's data |
 | 4 | A file's data (virtual blocks) | After each file's attributes: the file's used blocks, starting at its address (VBN 1). Byte for byte the file's blocks |
+| 5 | Physical volume attributes | |
+| 6 | Volume blocks (LBNs) | |
+| 7 | A file identification | |
+| 8 | A file extension record | |
+| 9 | 576-byte LBNs | |
+| 10 | RSTS directory attributes | |
+| 11 | A file alias entry | |
 
-The summary repeats in every block. Each block can be read alone, so a
-damaged block costs only its own files. A file's data records hold its
-used blocks only, up to its end of file (PI.OBJ: 5 of 6 allocated).
-Here every file fits one record in one block. How a file larger than a
-block (more than 63 blocks of data) or a record that would cross a
-block's end is split is for the probe.
+A file save uses types 0, 1, 3, and 4, and perhaps 8 and 11. The probe
+will show which. The summary repeats in every block, so each block can
+be read alone and a damaged block costs only its own files. A file's
+data records hold its used blocks only, up to its end of file (PI.OBJ:
+5 of 6 allocated). Here every file fits one record in one block. How a
+file larger than a block (more than 63 blocks of data) or a record that
+would cross a block's end is split is for the probe.
 
 #### Attribute lists
 
-The summary's and a file record's bodies start with a word, %X0101
-(guess: a structure level), followed by attributes. Each attribute is a
+The summary's and a file record's bodies start with a word, %X0101 (a
+structure level, guess), followed by attributes. Each attribute is a
 word giving the value's size, a word giving its type, and the value.
 The list ends at a zero size and type (the summary's) or at the
 record's end (a file's).
 
-**The summary's attributes**, in the order the listing shows them:
+**The summary's attributes**, in the order the listing shows them (the
+names are the readers'):
 
-| Type | Size | Value here | Listing line |
-| --- | --- | --- | --- |
-| 1 | 6 | `PI.BCK` | Save set |
-| 2 | 27 | `BACKUP [.PI]*.* PI.BCK/SAVE` | Command |
-| 3 | — | absent | (guess: `/COMMENT`'s text, a `Comment:` line) |
-| 4 | 12 | `SYSTEM` blank-padded to 12 | Written by |
-| 5 | 4 | [1,4] as member word, group word | UIC |
-| 6 | 8 | 20-OCT-2026 10:45:22.88 | Date |
-| 7 | 2 | %X0400 | Operating system (with attribute 8: `OpenVMS VAX version V7.1`) |
-| 8 | 4 | `V7.1` | the version in the Operating system line |
-| 9 | — | absent | (guess: a node name, for a save set written over DECnet) |
-| 10 | 4 | %X040704D2 | CPU ID register |
-| 11 | 13 | `_SIMVAX$DUA1:` | Written on |
-| 12 | 4 | `V6.2` | BACKUP version |
-| 13 | 4 | 32256 | Block size |
-| 14 | 2 | 10 | Group size |
-| 15 | 2 | 8 | Buffer count |
+| Type | Name | Size | Value here | Listing line |
+| --- | --- | --- | --- | --- |
+| 1 | SSNAME | 6 | `PI.BCK` | Save set |
+| 2 | COMMAND | 27 | `BACKUP [.PI]*.* PI.BCK/SAVE` | Command |
+| 3 | COMMENT | — | absent | (`/COMMENT`'s text; the probe's B69COM) |
+| 4 | USERNAME | 12 | `SYSTEM` blank-padded to 12 | Written by |
+| 5 | USERUIC | 4 | [1,4] as member word, group word | UIC |
+| 6 | DATE | 8 | 20-OCT-2026 10:45:22.88 | Date |
+| 7 | OPSYS | 2 | %X0400 | Operating system (with attribute 8: `OpenVMS VAX version V7.1`) |
+| 8 | SYSVER | 4 | `V7.1` | the version in the Operating system line |
+| 9 | NODENAME | — | absent | (a node name) |
+| 10 | SIR | 4 | %X040704D2 | CPU ID register |
+| 11 | DRIVEID | 13 | `_SIMVAX$DUA1:` | Written on |
+| 12 | BACKVER | 4 | `V6.2` | BACKUP version |
+| 13 | BLOCKSIZE | 4 | 32256 | Block size |
+| 14 | XORSIZE | 2 | 10 | Group size |
+| 15 | BUFFERS | 2 | 8 | Buffer count |
+| 16–19 | VOLSETNAM, NVOLS, BACKSIZE, BACKFILES | — | absent | (a volume set's name and size, the save set's size and file count) |
+
+Types 20 to 41 are a volume summary's (image backups), out of scope.
 
 **A file's attributes**, all present for each of the three files and in
-this order:
+this order (names are the readers'; "confirmed" means the fixture's
+values settle the meaning):
 
-| Type | Size | PI.EXE | PI.MAR | PI.OBJ | Meaning |
-| --- | --- | --- | --- | --- | --- |
-| %X2A | var. | `[XFER.PI]PI.EXE;1` | ... | ... | The file's name as listed (confirmed) |
-| %X2B | 2 | %X0201 | %X0201 | %X0201 | Structure level: ODS-2 (guess) |
-| %X2C | 6 | (19,1,0) | (18,1,0) | (16,2,0) | The file ID (confirmed) |
-| %X2D | 6 | (17,1,0) | (17,1,0) | (17,1,0) | The directory's file ID: the back link (confirmed, [XFER.PI]) |
-| %X2E | 4 | 6 | 24 | 6 | The allocation in blocks (confirmed) |
-| %X2F | 4 | [1,4] | [1,4] | [1,4] | The owner (confirmed) |
-| %X30 | 2 | %XFA00 | %XFA00 | %XFA00 | The protection: (S:RWED,O:RWED,G:RE,W) (confirmed) |
-| %X31 | 2 | 0 | 0 | 0 | Unknown (guess: record protection) |
-| %X32 | 1 | 0 | 0 | 0 | Unknown |
-| %X33 | 4 | %X20 | 0 | 0 | The file characteristics: %X20 contiguous best try, which PI.EXE has (confirmed) |
-| %X34 | 32 | | | | The record attributes, the file header's 32-byte FAT area: format, attributes, record size, highest and end-of-file blocks, first free byte, maximum record, default extend (confirmed: PI.OBJ's extend 20, PI.MAR's longest record 79) |
-| %X35 | 2 | 1 | 2 | 1 | The revision count (confirmed) |
-| %X36 | 8 | | | | The creation time (confirmed) |
-| %X37 | 8 | | | | The revision time (confirmed) |
-| %X38 | 8 | 0 | 0 | 0 | The expiration time (guess) |
-| %X39 | 8 | 0 | 0 | 0 | The backup time (guess) |
-| %X47 | 4 | [1,4] | [1,4] | [1,4] | A UIC (guess: the directory's owner, or the file's creator) |
-| %X48 | 2 | %XBA88 | %XBA88 | %XBA88 | Unknown, the same for all three (guess: a protection, perhaps the directory's or the volume's default) |
-| %X4A | 2 | 32767 | 32767 | 32767 | A version limit (guess: the directory's) |
-| %X4B | 2 | 32767 | 32767 | 32767 | A version limit (guess: the file's; DIRECTORY/FULL says "No version limit") |
-| %X4F | 4 | 7 | 25 | 7 | The allocation plus one (guess: the highwater mark) |
-| %X50 | 1 | 0 | 0 | 0 | Unknown (guess: journaling flags) |
-| %X57 | 1 | 0 | 0 | 0 | Unknown |
+| Type | Name | Size | PI.EXE | PI.MAR | PI.OBJ | Meaning |
+| --- | --- | --- | --- | --- | --- | --- |
+| 42 (%X2A) | FILENAME | var. | `[XFER.PI]PI.EXE;1` | ... | ... | The file's name as listed (confirmed) |
+| 43 (%X2B) | STRUCLEV | 2 | %X0201 | %X0201 | %X0201 | The volume's structure level: ODS-2 |
+| 44 (%X2C) | FID | 6 | (19,1,0) | (18,1,0) | (16,2,0) | The file ID (confirmed) |
+| 45 (%X2D) | BACKLINK | 6 | (17,1,0) | (17,1,0) | (17,1,0) | The directory's file ID (confirmed, [XFER.PI]) |
+| 46 (%X2E) | FILESIZE | 4 | 6 | 24 | 6 | The allocation in blocks (confirmed) |
+| 47 (%X2F) | UIC | 4 | [1,4] | [1,4] | [1,4] | The owner (confirmed) |
+| 48 (%X30) | FPRO | 2 | %XFA00 | %XFA00 | %XFA00 | The protection: (S:RWED,O:RWED,G:RE,W) (confirmed) |
+| 49 (%X31) | RPRO | 2 | 0 | 0 | 0 | The record protection |
+| 50 (%X32) | ACLEVEL | 1 | 0 | 0 | 0 | The file's access level |
+| 51 (%X33) | UCHAR | 4 | %X20 | 0 | 0 | The file characteristics: %X20 contiguous best try, which PI.EXE has (confirmed) |
+| 52 (%X34) | RECATTR | 32 | | | | The record attributes, the file header's 32-byte FAT area: format, attributes, record size, highest and end-of-file blocks, first free byte, maximum record, default extend (confirmed: PI.OBJ's extend 20, PI.MAR's longest record 79) |
+| 53 (%X35) | REVISION | 2 | 1 | 2 | 1 | The revision count (confirmed) |
+| 54 (%X36) | CREDATE | 8 | | | | The creation time (confirmed) |
+| 55 (%X37) | REVDATE | 8 | | | | The revision time (confirmed) |
+| 56 (%X38) | EXPDATE | 8 | 0 | 0 | 0 | The expiration time |
+| 57 (%X39) | BAKDATE | 8 | 0 | 0 | 0 | The backup time |
+| 71 (%X47) | DIR_UIC | 4 | [1,4] | [1,4] | [1,4] | The directory's owner |
+| 72 (%X48) | DIR_FPRO | 2 | %XBA88 | %XBA88 | %XBA88 | The directory's protection: (S:RWE,O:RWE,G:RE,W:E) |
+| 74 (%X4A) | DIR_VERLIM | 2 | 32767 | 32767 | 32767 | The directory's version limit |
+| 75 (%X4B) | VERLIMIT | 2 | 32767 | 32767 | 32767 | The file's version limit (DIRECTORY/FULL: "No version limit") |
+| 79 (%X4F) | HIGHWATER | 4 | 7 | 25 | 7 | The highwater mark: the allocation plus one here |
+| 80 (%X50) | JNL_FLAGS | 1 | 0 | 0 | 0 | Journaling flags |
+| 87 (%X57) | RU_ACTIVE | 1 | 0 | 0 | 0 | The recoverable facility of active recovery units |
 
-The type numbers have gaps: %X3A–%X46, %X49, %X4C–%X4E, %X51–%X56.
-Those are probably attributes these files lack: an ACL, journaling, a
-placement, an RMS attribute area, a directory file's own data. The
-probe's files with ACLs, version limits, expiration dates, and other
-record formats are meant to show them.
+The readers name the types these files lack. Among them are 70
+PLACEMENT, 73 DIR_STATUS, 76 and 77 the retention times, 78 ACLSEGMENT
+(the probe's ACL.TXT), 81 the encryption key, 82 LBNSIZE, and 88
+BACKREV, the backup revision count. Types 93 to 101 are ODS-5's and
+later versions'.
 
 The listing's size column is the used blocks, which the FAT's
 end-of-file block and first free byte give: 6, 24, 5. Its date is the
@@ -258,26 +305,31 @@ creation time. "Total of 3 files, 35 blocks" is the used blocks' sum.
 
 1. A file larger than a block, and data split across blocks or groups.
 2. Redundancy groups of more than one block (group size 10 with 11 or
-   more blocks, `/GROUP_SIZE=3`, `/GROUP_SIZE=0`), and the header words at
-   offsets 4 to 8 across them. What VMS says when it recovers a damaged
-   block from its group, and when it can't.
-3. The data CRC (`/CRC`, `/NOCRC`) and the flags.
-4. Other block sizes (`/BLOCK_SIZE=8192`, the smallest allowed), and
-   whether the volume file's record size always equals the block size.
-5. Directory files saved by a `[dir...]` save, and how a restore makes
-   directories from them.
+   more blocks, `/GROUP_SIZE=3`, `/GROUP_SIZE=0`): what the XOR block
+   covers (its header? every data block of the group, padded?). What VMS
+   says when it recovers a damaged block from its group, and when it
+   can't.
+3. The data CRC (`/CRC`, `/NOCRC`): what it covers, its initial value,
+   and when BACKUP stores one.
+4. Other block sizes (`/BLOCK_SIZE=8192`), and whether the volume file's
+   record size always equals the block size.
+5. Directory files saved by a `[dir...]` save (record flag DIRECTORY?),
+   and how a restore makes directories from them.
 6. Files with an ACL, an expiration date, a version limit, several
-   versions, no blocks at all, and other record formats (fixed, VFC,
-   stream, indexed by FDL): the attribute types missing above.
-7. The summary's absent attributes (`/COMMENT`, and others as found).
+   versions, no blocks at all, NOBACKUP (HEADONLY?), and other record
+   formats (fixed, VFC, stream, indexed): the attribute types missing
+   above.
+7. The summary's absent attributes (COMMENT, and others as found).
 8. VMS's `/LIST/FULL` layout, `/LIST=file`, and the listing of a damaged
    save set.
 9. Restores: every output-directory form, `/SELECT`, `/EXCLUDE`, the
    version qualifiers, `/BY_OWNER`, `/LOG`'s messages, an existing file
    without a version qualifier, a missing `/SAVE_SET`, a missing or
    non-save-set input, and the restored files' headers (DIRECTORY/FULL).
-10. Whether VMS's DIRECTORY/FULL shows "Contiguous best try" for PI.EXE.
-    govax's doesn't (side finding 2).
+10. `/COMPARE`'s messages for a match, a difference, and a missing file.
+11. Saving: `/LOG`'s messages, a save that selects no files, input lists.
+12. Whether VMS's DIRECTORY/FULL shows "Contiguous best try" for an
+    image (the probe's [B69]PI.EXE). govax's doesn't (side finding 2).
 
 ### Side findings (2026-10-20)
 
@@ -286,31 +338,27 @@ creation time. "Total of 3 files, 35 blocks" is the used blocks' sum.
    `DUA0:[WORK]./pi.bck;1` (a name with a `/` in it). The user's manual,
    section 5, says a name with `/` is a host file. Only `/HOST` reached
    the host. `dclcmd.Context.Copy` hands both names to
-   `rms.Session.Copy` without `Session.Locate`'s rules. Not fixed here:
-   a small change to COPY, to be made in this phase or on its own as the
-   author prefers. Host COPY also turns records into lines (the save set
-   came out as 64514 bytes), so it can't move a save set to the host
-   whole. The survey read the volume through ods2 directly.
+   `rms.Session.Copy` without `Session.Locate`'s rules. Subtask 3 fixes
+   it (the author). Host COPY turns records into lines unless
+   `/BINARY` is given; with it, a save set comes out byte for byte.
 2. **DIRECTORY/FULL may be missing "Contiguous best try"** on the File
    attributes line for a file with FCH$V_CONTIGB (PI.EXE). Unconfirmed
-   until the probe's DIRECTORY/FULL of PI.EXE.
+   until the probe's `TREE.LST` shows VMS's line for [B69]PI.EXE.
 
 ## Part B — decisions and questions
 
-### Proposed decisions
+### Decisions (accepted by the author, 2026-10-20)
 
 1. **The probe comes first, then the reader.** As in Phases 53 to 68,
    real VMS's output settles what the fixture can't. Subtask 2 writes
-   the probe (sources, a command procedure, and the files it saves), and
-   the author runs it on the simh VAX. The reader (subtask 3) can start
-   on `pi.bck` while it waits.
+   the probe, and the author runs it on the simh VAX. The reader
+   (subtask 4) can start on `pi.bck` while it waits.
 2. **A leaf package, `internal/backup`,** holds the format: reading
    blocks (the header and its checksum, the data CRC when present, XOR
    recovery), records, the summary, and file attributes, decoded into Go
    types (`Summary`, `File` with an `rms`-independent attribute struct)
-   from any `io.ReaderAt`. It knows nothing of volumes or DCL, like
-   `internal/obj` and `internal/lbr`. A writer joins it if question 1's
-   answer is yes.
+   from any `io.ReaderAt`, and writing them (subtask 11). It knows
+   nothing of volumes or DCL, like `internal/obj` and `internal/lbr`.
 3. **The block size comes from the first block's header**, not the file's
    record attributes, so a save set whose attributes were lost (a host
    file, or a volume file FTP'd as fixed 512) still reads. A volume file
@@ -321,141 +369,135 @@ creation time. "Total of 3 files, 35 blocks" is the used blocks' sum.
    with a save set's attributes and data. `internal/dclcmd/backup.go` is
    the command: it parses the specifiers, selects files, maps names to
    output names, and prints. That follows COPY's split.
-5. **Messages are VMS's**, as `%BACKUP-` lines, from the probe's log
-   (question 4 for their condition values).
-6. **Fidelity:** listings and `/LOG` messages line for line, with times
-   masked only where they're the run's own. Restored files block for
-   block, with DIRECTORY/FULL matching VMS's restored copies. govax
-   keeps what VMS keeps (the dates, revision count, owner, protection),
-   and the probe shows what VMS resets.
+5. **Messages are VMS's**, as `%BACKUP-` lines, with the texts from the
+   probe's log and the codes unconfirmed (question 4).
+6. **Fidelity:** listings and messages line for line, with times masked
+   only where they're the run's own. Restored files block for block,
+   with DIRECTORY/FULL matching VMS's restored copies. govax keeps what
+   VMS keeps (the dates, revision count, owner, protection), and the
+   probe shows what VMS resets. govax's save sets of the probe's files
+   should match VMS's but for times, file IDs, and the system's own
+   fields (CPU ID, device, node).
+7. **Saving is in** (question 1), after list and restore work.
+8. **A save set may be a host file** (question 2), read as raw bytes in
+   blocks: `saveset.bck/HOST/SAVE_SET`, or a name govax's rules make a
+   host file.
+9. **Restoring to the host follows COPY's rule** (question 3): a text
+   file's records become lines, other files are raw bytes.
+10. **`/COMPARE` is in** (question 5). The rest of question 5's list stays
+    out (Goal).
+11. **The public readers may be consulted** (question 6), for layouts and
+    names, with no code copied. The probe confirms what they say.
+12. **Side finding 1 is fixed in this phase** (question 7), as a small
+    subtask.
 
-### Questions for the author
+### Questions for the author (answered 2026-10-20)
 
-1. **Saving too?** Should the phase also write save sets
-   (`BACKUP files saveset/SAVE_SET`, with `/BLOCK_SIZE`, `/GROUP_SIZE`,
-   `/CRC`, `/COMMENT`, and the input file-selection qualifiers `/SINCE`,
-   `/BEFORE`, `/BY_OWNER`, `/EXCLUDE`)? Proposed: yes, after list and
-   restore work (subtasks 9 and 10), so VMS can read govax's save sets
-   in a second round. That's the strongest check of the format.
-2. **Host save sets.** Proposed: a save set may be a host file
-   (`saveset.bck/HOST/SAVE_SET`, or a name govax's rules make a host
-   file), read as raw bytes in blocks. SIMH tape images (`.tap`, how many
-   VMS kits are distributed) would make a later phase.
-3. **Restoring to the host.** When the output names a host directory,
-   what should a host file get? Proposed: COPY's rule for a volume file
-   going to the host (records become lines for text files, raw bytes
-   otherwise), so a restored `PI.MAR` is readable on the host. The other
-   choice is raw blocks always.
-4. **BACKUP's message texts and codes.** `vmsdef.Messages` has none.
-   Should the author add the BACKUP facility's messages with
-   `internal/vmsdef/gen -msg` from the licensed definitions (which this
-   phase's tools can't touch, by the clean-room hook), or should the
-   texts come from the probe's log, with the codes unconfirmed?
-5. **Out of scope, as proposed:** image, physical, and incremental
-   operations, `/COMPARE`, `/RECORD`, `/JOURNAL`, `/VERIFY`, `/DELETE`,
-   tapes, multivolume save sets, `/CONFIRM`, ODS-5 names, `/INTERCHANGE`.
-   Should `/COMPARE saveset/SAVE_SET files` be in? It reuses the reader
-   and is small.
-6. **Public reverse-engineered descriptions.** Readers such as
-   `vmsbackup` (public C programs, not DIGITAL's) describe the block and
-   record layouts and name the fields. May the phase consult them, like
-   a manual? Or should the format come from real VMS output only, with
-   the fixture and probe as the whole source? Either works. They would
-   mainly speed up naming the fields Part A marks "guess", and the probe
-   would still confirm each one.
-7. **Side finding 1 (COPY to a `/`-named host file):** fix it in this
-   phase (a small extra subtask), or separately?
+The author took each proposal and added `/COMPARE`.
 
-### The probe's cases (subtask 2, proposed; `testdata/backup69`)
+1. **Saving too?** Should the phase also write save sets? *Yes, after
+   list and restore work, so VMS can read govax's save sets in a second
+   round.*
+2. **Host save sets?** May a save set be a host file, read as raw bytes
+   in blocks? *Yes. SIMH tape images would be a later phase.*
+3. **Restoring to the host:** COPY's rule (text files as lines, others
+   raw), or raw blocks always? *COPY's rule.*
+4. **BACKUP's message texts and codes:** add VMS's message definitions
+   with `internal/vmsdef/gen`, or take the texts from the probe's log?
+   *The probe's log.*
+5. **Out of scope** (image, physical, incremental, `/RECORD`,
+   `/JOURNAL`, `/VERIFY`, `/DELETE`, tapes, multivolume, `/CONFIRM`,
+   ODS-5, `/INTERCHANGE`); should `/COMPARE` be in? *`/COMPARE` is in.*
+6. **Public reverse-engineered descriptions** such as `vmsbackup`: may
+   the phase consult them? *Yes.*
+7. **Side finding 1** (COPY to a `/`-named host file): fix it here or
+   separately? *Here, as a small subtask.*
 
-The author runs a command procedure on the simh VAX, on an exchange
-volume that holds the probe's files. Its log, its listings, the save
-sets, and the restored trees come back on the volume.
+### The probe's cases (subtask 2; `testdata/backup69`)
 
-- **Files to save**, made by the procedure in a tree `[B69...]`
-  with two levels of subdirectories:
-  - small text files of each record format (variable with CR, VFC,
-    stream LF, fixed 80), an indexed file (CREATE/FDL plus a few
-    records), and an empty file;
-  - a file of more than 63 blocks and one of more than 630 (so a file
-    spans blocks and groups);
-  - a file with an ACL (SET SECURITY/ACL), one with an expiration date,
-    one with a version limit, several versions of one file, a file owned
-    by another UIC, and a file marked NOBACKUP (SET FILE/NOBACKUP).
-- **Save sets**:
-  - `[B69...]` with the defaults;
-  - `/BLOCK_SIZE=8192`;
-  - `/GROUP_SIZE=0` and `/GROUP_SIZE=3`;
-  - `/CRC` and `/NOCRC` (the same files);
-  - `/COMMENT="..."`;
-  - one input with `/EXCLUDE`;
-  - `/BY_OWNER` on the save set.
-- **Listings:** BACKUP/LIST, /LIST/FULL, /LIST/BRIEF, and /LIST=file of
-  each save set. DIRECTORY/FULL of each save set file (its record
-  attributes), and of `[XFER.PI]PI.EXE` (side finding 2).
-- **Restores** into fresh directories, each followed by DIRECTORY/FULL
-  of what it made:
-  - to `[*...]`, `[R1...]`, `[R2]`, and the default directory;
-  - with `/SELECT` (a file, a wildcard, a directory tree) and
-    `/EXCLUDE`;
-  - over existing files: none of `/NEW_VERSION`, `/OVERLAY`, `/REPLACE`,
-    then each of them;
-  - `/BY_OWNER=ORIGINAL`, `DEFAULT`, `PARENT`, and a UIC;
-  - all with `/LOG`.
-- **Errors:** a save set without `/SAVE_SET`, a missing save set, a
-  file that isn't a save set, a save set truncated by a block, and a
-  copy with one block's bytes changed: in a group with its XOR block
-  (VMS should recover it) and with `/GROUP_SIZE=0` (VMS can't). The
-  damaged copies are made on govax's side and put on the exchange
-  volume, so the VAX only reads them.
+`testdata/backup69/README.md` lists the files and each part's cases in
+full. In brief: one procedure, `BACKUP69.COM`, run once on a fresh RD54
+exchange volume, does six parts.
+
+1. **The tree:** it makes `[B69...]`: text files of each record format,
+   an indexed file, an empty file, an image, files larger than a save
+   set block, and files with an ACL, an expiration date, a version limit,
+   several versions, another owner, NOBACKUP, a protection, and
+   contiguous allocation. `TREE.LST` is their DIRECTORY/FULL.
+2. **Saves:** the tree with the defaults and with each output save-set
+   qualifier (`/BLOCK_SIZE`, `/GROUP_SIZE` 0 and 3, `/CRC`, `/NOCRC`,
+   `/COMMENT`, `/BY_OWNER`), the input file-selection qualifiers
+   (`/EXCLUDE`, `/BY_OWNER`, `/SINCE`, `/BEFORE` selecting nothing),
+   `/IGNORE=NOBACKUP`, an input list, and `/LOG`.
+3. **Listings:** every save set listed, plus `/FULL`, `/BRIEF`,
+   `/LIST=file`, and listings with `/SELECT` and `/EXCLUDE`.
+4. **Restores**, all with `/LOG`: every output-directory form, `/SELECT`,
+   `/EXCLUDE`, a new name, the `/BY_OWNER` keywords, an existing file
+   with and without each version qualifier, and the save sets of every
+   format. DIRECTORY/FULL of what they made.
+5. **Compares:** a match, a changed file, and a missing file.
+6. **Errors:** a missing `/SAVE_SET`, a missing save set, a file that
+   isn't one, and a `/SELECT` matching nothing. SSCOPY (`sscopy.mar`, a
+   small MACRO program run on the VAX, tested on govax first) makes a
+   truncated save set and four damaged ones from VMS's own: a data byte
+   changed with `/CRC`, with no XOR group, and with `/NOCRC`, and a
+   header byte changed. Each is listed and restored.
+
+`copyout.cmd` brings back the log, the listings, the DIRECTORY/FULL
+reports, and every save set byte for byte (COPY/BINARY).
 
 ## Part C — subtasks
 
 1. **The survey** — done (2026-10-20). Part A: the fixture's format, the
-   sources, what earlier phases provide, the side findings, the plan.
-2. **The VMS probe** (`testdata/backup69`): the files to save, the
-   command procedure (Part B's cases), the damaged copies, and the
+   public readers' names, the sources, what earlier phases provide, the
+   side findings, the plan.
+2. **The VMS probe** (`testdata/backup69`): the procedure, SSCOPY, the
    exchange volume; then the author's run. Part A's tables are updated
-   from its answers ("guess" becomes confirmed or corrected), and its
-   README lists what each output shows.
-3. **`internal/backup`, reading:** blocks (header, checksum, data CRC,
+   from its answers ("readers" and "guess" become confirmed or
+   corrected), and its README lists what each output shows.
+3. **COPY to a host name** (side finding 1): COPY's source and
+   destination follow `Session.Locate`'s rules, as the user's manual
+   says, so `"./pi.bck"` is a host file. Tested both ways, and the
+   manual checked.
+4. **`internal/backup`, reading:** blocks (header, checksum, data CRC,
    flags), records, the summary, file attributes into Go types, a file's
    data in VBN order, and XOR recovery of a damaged block from its group.
    Tested on `pi.bck` (the files match `pi.exe`, `pi.mar`, `pi.obj`),
    then on the probe's save sets, including the damaged ones.
-4. **Opening a save set:** a volume file through RMS (block I/O, record
+5. **Opening a save set:** a volume file through RMS (block I/O, record
    attributes checked) or a host file, as an `io.ReaderAt` of blocks.
    The `/SAVE_SET` rule and its errors.
-5. **The command:** `BACKUP` in `console.dcl` (input and output
+6. **The command:** `BACKUP` in `console.dcl` (input and output
    specifiers, command qualifiers, and position-dependent qualifiers),
    `HELP BACKUP` in `console.help`, and BACKUP's messages in `vmserrors`
-   (question 4).
-6. **BACKUP/LIST:** the summary block and file lines in VMS's layout,
+   (from the probe's log).
+7. **BACKUP/LIST:** the summary block and file lines in VMS's layout,
    `/BRIEF`, `/FULL` (sharing DIRECTORY/FULL's writer where the layouts
-   agree), `/LIST=file`, the totals, and "End of save set". Checked
-   against the probe's listings.
-7. **Restoring a file** (`internal/rms`): a new file on a volume with
+   agree), `/LIST=file`, `/SELECT` and `/EXCLUDE`, the totals, and "End
+   of save set". Checked against the probe's listings.
+8. **Restoring a file** (`internal/rms`): a new file on a volume with
    the saved record attributes, characteristics, owner, protection,
-   dates, revision count, version limit, allocation, and data up to its
-   end of file. Directories made as needed. Host output by question 3.
-   ods2 gains what's missing (a release tagged and pinned as
+   dates, revision count, version limit, ACL, allocation, and data up to
+   its end of file. Directories made as needed. Host output by COPY's
+   rule. ods2 gains what's missing (a release tagged and pinned as
    `docs/PHASE-22.md` describes).
-8. **BACKUP's restore:** the output-directory rules (7.3.3), `/SELECT`,
+9. **BACKUP's restore:** the output-directory rules (7.3.3), `/SELECT`,
    `/EXCLUDE`, the existing-file rules and `/NEW_VERSION`, `/OVERLAY`,
    `/REPLACE`, `/BY_OWNER`, and `/LOG`. Checked against the probe's
    restores, file for file and header for header.
-9. **(If question 1 is yes) Writing save sets:** `internal/backup`'s
-   writer (summary, file records, data records split as VMS splits them,
-   null fill, XOR blocks, header checksum, data CRC) and the save
-   command with its qualifiers. govax's save sets of the probe's files
-   should match VMS's, apart from times, IDs, and the CPU and node
-   fields.
-10. **The oracle:** `TestBackup69Oracle` runs the probe's procedure on
+10. **BACKUP/COMPARE:** a save set's files against files on a volume or
+    the host, with VMS's messages for a difference and a missing file.
+11. **Saving:** `internal/backup`'s writer (summary, file records, data
+    records split as VMS splits them, null fill, XOR blocks, header
+    checksum, data CRC) and the save command with its output save-set
+    qualifiers and input file-selection qualifiers.
+12. **The oracle:** `TestBackup69Oracle` runs the probe's procedure on
     govax and matches VMS's log and listings, the restored files, and
-    their headers, with a listed set of differences. With subtask 9,
-    a second VAX round in which VMS lists and restores govax's save sets,
-    replayed by `TestBackup69Round2`.
-11. **The close-out:** `docs/MANUAL.md` (BACKUP, with examples run on
+    their headers, with a listed set of differences; govax's save sets
+    of the probe's tree against VMS's. Then a second VAX round in which
+    VMS lists, restores, and compares govax's save sets, replayed by
+    `TestBackup69Round2`.
+13. **The close-out:** `docs/MANUAL.md` (BACKUP, with examples run on
     govax), `HELP BACKUP`, `CLAUDE.md`, `docs/PLAN.md`, and any
     `docs/DEVIATIONS.md` entries.
 
@@ -485,3 +527,36 @@ three files, plus VMS's DIRECTORY/FULL and BACKUP/LIST of it.
   Reference Manual* (the file named `VMS SYSAdmin I.pdf`) for the
   command's syntax and qualifiers.
 - Wrote Parts B and C. Paused for the author's review.
+
+### 2026-10-20 — Plan accepted; subtask 2's probe written
+
+The author accepted every proposal, added `/COMPARE`, allowed the public
+save set readers, and asked for side finding 1's fix in this phase.
+Parts B and C now say so. Saving, `/COMPARE`, and the COPY fix are
+subtasks 11, 10, and 3.
+
+- **The public readers** (Part A's sources) name every field of the
+  block and record headers, the record types, and the attribute codes.
+  Each agrees with the fixture: offset 6 is the application, 1 for a
+  data block and 2 for an XOR block; flag bit 0 is NOCRC, so the
+  fixture's save set says it has no CRC; and the file attributes Part A
+  had marked unknown are the record protection, access level, the
+  directory's owner, protection, and version limit, the file's version
+  limit, highwater mark, journaling flags, and recovery-unit facility.
+  None checks the header checksum or the CRC, or recovers from an XOR
+  block, so the checksum found in subtask 1 is new.
+- **The probe** (`testdata/backup69`): `backup69.com`, `sscopy.mar`,
+  `exchange.cmd`, `copyout.cmd`, and the README's tables. SSCOPY copies
+  a save set record by record, cut short or with one byte complemented,
+  so the damaged save sets come from VMS's own in the same run. It was
+  assembled, linked, and run on govax against `pi.bck`: the changed byte
+  was 32256 + 5000, complemented, and the cut copy was block 1 alone,
+  with VMS's record size. The whole procedure was dry-run on govax.
+  govax lacks BACKUP, CONVERT, SET FILE, SET SECURITY, SET PROTECTION,
+  and COPY/CONTIGUOUS, so those lines failed as expected, and the rest
+  (the loops, MACRO and LINK of PI and SSCOPY, SSCOPY's data lines) ran
+  as written. MEDIUM.DAT came out 74 blocks, BIG.DAT 169.
+- COPY/BINARY copies a save set off a volume byte for byte (checked on
+  `pi.bck`), so `copyout.cmd` uses it.
+- Built `testdata/disks/backup69-exchange.dsk` (RD54, BACKUP69) for the
+  author's run.

@@ -1,0 +1,322 @@
+$ ! BACKUP69.COM - Phase 69's probe of BACKUP save sets
+$ ! (testdata/backup69/README.md). Run it once, on a fresh exchange
+$ ! volume, with the volume's [000000] as the default directory:
+$ !
+$ !     @BACKUP69/OUTPUT=BACKUP69.LOG
+$ !
+$ ! Part 1 makes a tree of files to save, [B69...]. Part 2 saves it into
+$ ! save sets in [SETS], with BACKUP's output save-set qualifiers. Part 3
+$ ! lists them. Part 4 restores them into [R...] directories. Part 5
+$ ! compares. Part 6 is the errors, and the damaged and truncated save
+$ ! sets SSCOPY makes. DIRECTORY/FULL reports go to [SETS]*.LST.
+$ !
+$ SET NOON
+$ SET VERIFY
+$ WRITE SYS$OUTPUT F$GETSYI("VERSION"), " ", F$GETSYI("HW_NAME")
+$ HERE = F$ENVIRONMENT("DEFAULT")
+$ DEV = F$PARSE(HERE,,,"DEVICE")
+$ SHOW DEFAULT
+$ !
+$ ! ------------------------------------------------------------------
+$ ! Part 1: the files to save.
+$ ! ------------------------------------------------------------------
+$ !
+$ CREATE/DIRECTORY [B69]
+$ CREATE/DIRECTORY/VERSION_LIMIT=5 [B69.SUB1]
+$ CREATE/DIRECTORY [B69.SUB1.SUB2]
+$ CREATE/DIRECTORY [SETS]
+$ !
+$ ! Text files of each record format. TEXT.TXT is variable length with
+$ ! carriage-return carriage control, as CREATE makes it.
+$ !
+$ CREATE [B69]TEXT.TXT
+TEXT.TXT, line 1: the first file of Phase 69's probe.
+TEXT.TXT, line 2: variable-length records, carriage return control.
+TEXT.TXT, line 3.
+TEXT.TXT, line 4, the last.
+$ CREATE STMLF.FDL
+RECORD
+	CARRIAGE_CONTROL	CARRIAGE_RETURN
+	FORMAT			STREAM_LF
+$ CREATE FIX80.FDL
+RECORD
+	CARRIAGE_CONTROL	NONE
+	FORMAT			FIXED
+	SIZE			80
+$ CREATE VFC.FDL
+RECORD
+	CARRIAGE_CONTROL	PRINT
+	CONTROL_FIELD_SIZE	2
+	FORMAT			VFC
+$ CREATE IDX.FDL
+FILE
+	ORGANIZATION		INDEXED
+RECORD
+	CARRIAGE_CONTROL	CARRIAGE_RETURN
+	FORMAT			VARIABLE
+	SIZE			80
+KEY 0
+	SEG0_LENGTH		6
+	SEG0_POSITION		0
+	TYPE			STRING
+$ CREATE KEYS.TXT
+KEY001 the first record of the indexed file
+KEY002 the second record
+KEY003 the third record
+KEY004 the fourth record
+KEY005 the fifth and last record
+$ CONVERT/FDL=STMLF.FDL [B69]TEXT.TXT [B69]STMLF.TXT
+$ CONVERT/FDL=FIX80.FDL/PAD [B69]TEXT.TXT [B69]FIX80.DAT
+$ CONVERT/FDL=VFC.FDL [B69]TEXT.TXT [B69]VFC.TXT
+$ CONVERT/FDL=IDX.FDL/NOSORT KEYS.TXT [B69]INDEXED.IDX
+$ !
+$ ! An empty file (no blocks used), and an image (fixed 512-byte
+$ ! records, contiguous best try).
+$ !
+$ CREATE [B69]EMPTY.DAT
+$ MACRO/OBJECT=[B69]PI.OBJ PI.MAR
+$ LINK/EXECUTABLE=[B69]PI.EXE [B69]PI.OBJ
+$ !
+$ ! Files larger than a save set block: MEDIUM.DAT about 70 blocks,
+$ ! BIG.DAT about 165 blocks, each line numbered.
+$ !
+$ SET NOVERIFY
+$ OPEN/WRITE F [B69.SUB1]MEDIUM.DAT
+$ I = 0
+$ MEDIUM_LOOP:
+$   I = I + 1
+$   WRITE F F$FAO("MEDIUM.DAT line !5ZL: the quick brown fox jumps over the lazy dog.", I)
+$   IF I .LT. 520 THEN GOTO MEDIUM_LOOP
+$ CLOSE F
+$ OPEN/WRITE F [B69.SUB1.SUB2]BIG.DAT
+$ I = 0
+$ BIG_LOOP:
+$   I = I + 1
+$   WRITE F F$FAO("BIG.DAT line !5ZL: pack my box with five dozen liquor jugs, twice.", I)
+$   IF I .LT. 1200 THEN GOTO BIG_LOOP
+$ CLOSE F
+$ SET VERIFY
+$ CREATE [B69.SUB1]A.TXT
+A.TXT in [B69.SUB1].
+$ CREATE [B69.SUB1.SUB2]B.TXT
+B.TXT in [B69.SUB1.SUB2].
+$ !
+$ ! Files with attributes: an ACL, an expiration date, a version limit,
+$ ! several versions, another owner, NOBACKUP, a protection, and a
+$ ! contiguous file.
+$ !
+$ COPY [B69]TEXT.TXT [B69]ACL.TXT
+$ SET SECURITY/ACL=((IDENTIFIER=[1,4],ACCESS=READ+WRITE),(IDENTIFIER=[200,201],ACCESS=READ)) [B69]ACL.TXT
+$ COPY [B69]TEXT.TXT [B69]EXPIRE.TXT
+$ SET FILE/EXPIRATION_DATE=1-JAN-2030 [B69]EXPIRE.TXT
+$ COPY [B69]TEXT.TXT [B69]VERLIM.TXT
+$ COPY [B69]TEXT.TXT [B69]VERLIM.TXT
+$ SET FILE/VERSION_LIMIT=3 [B69]VERLIM.TXT;
+$ COPY [B69]TEXT.TXT [B69]MULTI.TXT
+$ COPY [B69]STMLF.TXT [B69]MULTI.TXT
+$ COPY [B69]VFC.TXT [B69]MULTI.TXT
+$ COPY [B69]TEXT.TXT [B69]OWNED.TXT
+$ SET FILE/OWNER_UIC=[200,201] [B69]OWNED.TXT
+$ COPY [B69]TEXT.TXT [B69]NOBACK.TXT
+$ SET FILE/NOBACKUP [B69]NOBACK.TXT
+$ COPY [B69]TEXT.TXT [B69]PROT.TXT
+$ SET PROTECTION=(S:RWED,O:RWED,G:RWE,W:R) [B69]PROT.TXT
+$ COPY/CONTIGUOUS [B69.SUB1]MEDIUM.DAT [B69]CONTIG.DAT
+$ !
+$ DIRECTORY/FULL/OUTPUT=[SETS]TREE.LST [B69...]
+$ DIRECTORY/SIZE=ALL/DATE [B69...]
+$ !
+$ ! ------------------------------------------------------------------
+$ ! Part 2: save sets.
+$ ! ------------------------------------------------------------------
+$ !
+$ BACKUP/LOG [B69...]*.* [SETS]B69.BCK/SAVE_SET
+$ SHOW SYMBOL $STATUS
+$ BACKUP [B69...]*.* [SETS]B69K8.BCK/SAVE_SET/BLOCK_SIZE=8192
+$ BACKUP [B69...]*.* [SETS]B69G0.BCK/SAVE_SET/GROUP_SIZE=0
+$ BACKUP [B69...]*.* [SETS]B69G3.BCK/SAVE_SET/GROUP_SIZE=3
+$ BACKUP [B69...]*.* [SETS]B69CRC.BCK/SAVE_SET/CRC
+$ BACKUP [B69...]*.* [SETS]B69NOCRC.BCK/SAVE_SET/NOCRC
+$ BACKUP [B69...]*.* [SETS]B69COM.BCK/SAVE_SET/COMMENT="Phase 69's probe, with a comment"
+$ BACKUP [B69...]*.*/EXCLUDE=(*.DAT,[B69.SUB1.SUB2]*.*) [SETS]B69EXC.BCK/SAVE_SET
+$ BACKUP [B69...]*.*/BY_OWNER=[200,201] [SETS]B69BYO.BCK/SAVE_SET
+$ BACKUP [B69]*.TXT;*/SINCE=TODAY [SETS]B69TXT.BCK/SAVE_SET
+$ BACKUP/LOG [B69...]*.*/BEFORE=TODAY [SETS]B69NONE.BCK/SAVE_SET
+$ SHOW SYMBOL $STATUS
+$ BACKUP [B69]TEXT.TXT [SETS]TEXT.BCK/SAVE_SET
+$ BACKUP [B69]TEXT.TXT [SETS]B69OWN.BCK/SAVE_SET/BY_OWNER=[200,201]
+$ BACKUP [B69]TEXT.TXT,[B69.SUB1]A.TXT [SETS]LIST.BCK/SAVE_SET
+$ BACKUP [B69]NOBACK.TXT/IGNORE=NOBACKUP [SETS]B69IGN.BCK/SAVE_SET
+$ DIRECTORY/FULL/OUTPUT=[SETS]SETS.LST [SETS]*.BCK
+$ DIRECTORY/SIZE=ALL [SETS]*.BCK
+$ !
+$ ! ------------------------------------------------------------------
+$ ! Part 3: listings.
+$ ! ------------------------------------------------------------------
+$ !
+$ LIST = "B69,B69K8,B69G0,B69G3,B69CRC,B69NOCRC,B69COM,B69EXC,B69BYO,B69TXT,B69NONE,TEXT,B69OWN,LIST,B69IGN"
+$ I = 0
+$ LIST_LOOP:
+$   F = F$ELEMENT(I, ",", LIST)
+$   IF F .EQS. "," THEN GOTO LIST_DONE
+$   BACKUP/LIST [SETS]'F'.BCK/SAVE_SET
+$   SHOW SYMBOL $STATUS
+$   I = I + 1
+$   GOTO LIST_LOOP
+$ LIST_DONE:
+$ BACKUP/LIST/FULL [SETS]B69.BCK/SAVE_SET
+$ BACKUP/LIST/FULL [SETS]B69COM.BCK/SAVE_SET
+$ BACKUP/LIST/BRIEF [SETS]TEXT.BCK/SAVE_SET
+$ BACKUP/LIST=[SETS]TEXT.LIS [SETS]TEXT.BCK/SAVE_SET
+$ BACKUP/LIST=[SETS]B69FULL.LIS/FULL [SETS]B69.BCK/SAVE_SET
+$ BACKUP/LIST [SETS]B69.BCK/SAVE_SET/SELECT=*.TXT
+$ BACKUP/LIST [SETS]B69.BCK/SAVE_SET/SELECT=[B69.SUB1...]
+$ BACKUP/LIST [SETS]B69.BCK/SAVE_SET/EXCLUDE=(*.DAT,*.TXT)
+$ !
+$ ! ------------------------------------------------------------------
+$ ! Part 4: restores, each with /LOG.
+$ ! ------------------------------------------------------------------
+$ !
+$ ! The output directory's forms: [R1...], [*...] (below), [R4],
+$ ! and the default directory (R8).
+$ !
+$ BACKUP/LOG [SETS]B69.BCK/SAVE_SET [R1...]
+$ SHOW SYMBOL $STATUS
+$ DIRECTORY/FULL/OUTPUT=[SETS]R1.LST [R1...]
+$ BACKUP/LOG [SETS]B69.BCK/SAVE_SET/SELECT=[B69.SUB1...] [R3...]
+$ BACKUP/LOG [SETS]B69.BCK/SAVE_SET [R4]
+$ BACKUP/LOG [SETS]B69.BCK/SAVE_SET/SELECT=*.TXT [R5...]
+$ BACKUP/LOG [SETS]B69.BCK/SAVE_SET/EXCLUDE=*.DAT [R6...]
+$ BACKUP/LOG [SETS]B69.BCK/SAVE_SET/SELECT=[B69]TEXT.TXT [R7]
+$ CREATE/DIRECTORY [R8]
+$ SET DEFAULT [R8]
+$ BACKUP/LOG 'DEV'[SETS]TEXT.BCK/SAVE_SET *.*
+$ BACKUP/LOG 'DEV'[SETS]B69.BCK/SAVE_SET/SELECT=[B69]STMLF.TXT []
+$ SET DEFAULT 'HERE'
+$ BACKUP/LOG [SETS]B69.BCK/SAVE_SET/SELECT=[B69]TEXT.TXT [R9]NEW.TXT
+$ BACKUP/LOG [SETS]B69.BCK/SAVE_SET/SELECT=[B69]MULTI.TXT;2 [R9]
+$ DIRECTORY/SIZE=ALL/DATE [R3...],[R4...],[R5...],[R6...],[R7...],[R8...],[R9...]
+$ !
+$ ! Owners: /BY_OWNER=ORIGINAL, DEFAULT, PARENT (a directory owned by
+$ ! [100,100]), and a UIC.
+$ !
+$ CREATE/DIRECTORY/OWNER_UIC=[100,100] [R10C]
+$ BACKUP/LOG [SETS]B69.BCK/SAVE_SET/SELECT=([B69]TEXT.TXT,[B69]OWNED.TXT) [R10A]/BY_OWNER=ORIGINAL
+$ BACKUP/LOG [SETS]B69.BCK/SAVE_SET/SELECT=([B69]TEXT.TXT,[B69]OWNED.TXT) [R10B]/BY_OWNER=DEFAULT
+$ BACKUP/LOG [SETS]B69.BCK/SAVE_SET/SELECT=([B69]TEXT.TXT,[B69]OWNED.TXT) [R10C]/BY_OWNER=PARENT
+$ BACKUP/LOG [SETS]B69.BCK/SAVE_SET/SELECT=([B69]TEXT.TXT,[B69]OWNED.TXT) [R10D]/BY_OWNER=[300,301]
+$ BACKUP/LOG [SETS]B69.BCK/SAVE_SET/SELECT=([B69]TEXT.TXT,[B69]OWNED.TXT) [R10E]
+$ DIRECTORY/OWNER/PROTECTION [R10A],[R10B],[R10C],[R10D],[R10E]
+$ !
+$ ! Existing files: none of the version qualifiers, then each of them.
+$ !
+$ BACKUP/LOG [SETS]B69.BCK/SAVE_SET/SELECT=[B69]TEXT.TXT [R7]
+$ SHOW SYMBOL $STATUS
+$ BACKUP/LOG [SETS]B69.BCK/SAVE_SET/SELECT=[B69]TEXT.TXT [R7]/NEW_VERSION
+$ BACKUP/LOG [SETS]B69.BCK/SAVE_SET/SELECT=[B69]TEXT.TXT [R7]/OVERLAY
+$ BACKUP/LOG [SETS]B69.BCK/SAVE_SET/SELECT=[B69]TEXT.TXT [R7]/REPLACE
+$ DIRECTORY/FULL/OUTPUT=[SETS]R7.LST [R7]
+$ DIRECTORY/SIZE=ALL/DATE [R7]
+$ !
+$ ! The other save sets restore too.
+$ !
+$ BACKUP/LOG [SETS]B69K8.BCK/SAVE_SET [R11...]
+$ BACKUP [SETS]B69G0.BCK/SAVE_SET [R12...]
+$ BACKUP [SETS]B69G3.BCK/SAVE_SET [R13...]
+$ BACKUP [SETS]B69NOCRC.BCK/SAVE_SET [R14...]
+$ BACKUP/LOG [SETS]B69IGN.BCK/SAVE_SET [R15...]
+$ DIRECTORY/SIZE=ALL [R11...],[R12...],[R13...],[R14...],[R15...]
+$ !
+$ ! ------------------------------------------------------------------
+$ ! Part 5: compares. B69TXT.BCK against the tree as it is, then
+$ ! TEXT.BCK against a copy that's changed, and then missing.
+$ !
+$ ! ------------------------------------------------------------------
+$ BACKUP/COMPARE/LOG [SETS]B69TXT.BCK/SAVE_SET [B69]*.TXT;*
+$ SHOW SYMBOL $STATUS
+$ BACKUP/LOG [SETS]TEXT.BCK/SAVE_SET [CMP]
+$ BACKUP/COMPARE/LOG [SETS]TEXT.BCK/SAVE_SET [CMP]
+$ SHOW SYMBOL $STATUS
+$ OPEN/APPEND F [CMP]TEXT.TXT
+$ WRITE F "A line added after the save."
+$ CLOSE F
+$ BACKUP/COMPARE/LOG [SETS]TEXT.BCK/SAVE_SET [CMP]
+$ SHOW SYMBOL $STATUS
+$ DELETE [CMP]TEXT.TXT;*
+$ BACKUP/COMPARE/LOG [SETS]TEXT.BCK/SAVE_SET [CMP]
+$ SHOW SYMBOL $STATUS
+$ !
+$ ! The restore to [*...] goes back to [B69], where the files are.
+$ !
+$ BACKUP/LOG [SETS]B69.BCK/SAVE_SET/SELECT=[B69]TEXT.TXT [*...]
+$ SHOW SYMBOL $STATUS
+$ BACKUP/LOG [SETS]B69.BCK/SAVE_SET/SELECT=[B69]TEXT.TXT [*...]/NEW_VERSION
+$ DIRECTORY/SIZE=ALL/DATE [B69]TEXT.TXT;*
+$ !
+$ ! ------------------------------------------------------------------
+$ ! Part 6: errors, and damaged and truncated save sets.
+$ ! ------------------------------------------------------------------
+$ !
+$ BACKUP/LIST [SETS]TEXT.BCK
+$ SHOW SYMBOL $STATUS
+$ BACKUP/LIST [SETS]NONE.BCK/SAVE_SET
+$ SHOW SYMBOL $STATUS
+$ BACKUP/LIST [B69]TEXT.TXT/SAVE_SET
+$ SHOW SYMBOL $STATUS
+$ BACKUP/LOG [SETS]B69.BCK/SAVE_SET/SELECT=[NOSUCH]*.* [R16...]
+$ SHOW SYMBOL $STATUS
+$ !
+$ ! SSCOPY reads the input, the output, the records to copy (0 for
+$ ! all), the record to change (0 for none), and the byte's offset.
+$ !
+$ MACRO SSCOPY.MAR
+$ LINK SSCOPY.OBJ
+$ RUN SSCOPY
+[SETS]B69.BCK
+[SETS]B69CUT.BCK
+2
+0
+0
+$ RUN SSCOPY
+[SETS]B69CRC.BCK
+[SETS]B69CRCD.BCK
+0
+2
+5000
+$ RUN SSCOPY
+[SETS]B69G0.BCK
+[SETS]B69G0D.BCK
+0
+2
+5000
+$ RUN SSCOPY
+[SETS]B69NOCRC.BCK
+[SETS]B69NOCRCD.BCK
+0
+2
+5000
+$ RUN SSCOPY
+[SETS]B69.BCK
+[SETS]B69HDRD.BCK
+0
+2
+100
+$ LIST = "B69CUT,B69CRCD,B69G0D,B69NOCRCD,B69HDRD"
+$ I = 0
+$ DAMAGE_LOOP:
+$   F = F$ELEMENT(I, ",", LIST)
+$   IF F .EQS. "," THEN GOTO DAMAGE_DONE
+$   BACKUP/LIST [SETS]'F'.BCK/SAVE_SET
+$   SHOW SYMBOL $STATUS
+$   BACKUP/LOG [SETS]'F'.BCK/SAVE_SET [D'F'...]
+$   SHOW SYMBOL $STATUS
+$   I = I + 1
+$   GOTO DAMAGE_LOOP
+$ DAMAGE_DONE:
+$ DIRECTORY/SIZE=ALL [DB69CUT...],[DB69CRCD...],[DB69G0D...],[DB69NOCRCD...],[DB69HDRD...]
+$ !
+$ ! Last, the save sets and listings on the volume.
+$ !
+$ DIRECTORY/SIZE=ALL/DATE [SETS]
+$ SET NOVERIFY
+$ EXIT
