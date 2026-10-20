@@ -460,12 +460,16 @@ func (x *machine) store(st store) error {
 		return fmt.Errorf("an address in shareable image %s in a traceback record", a.img)
 	case a.img != "" && st.address:
 		x.l.referAddress(a.img, a.v, a.sym, x.loc)
+		x.m.relocations++
 	case a.img != "":
 		return fmt.Errorf("a reference to shareable image %s must be general mode (G^) or .ADDRESS", a.img)
 	case a.rel && x.debug && x.l.opts.Shareable && st.size == 4 && !x.l.basedAt(a.v):
 		x.l.dstFixups = append(x.l.dstFixups, dstFixup{offset: x.loc, address: a.v})
+		x.m.relocations++
 	case a.rel && st.address && !x.debug && x.l.opts.Shareable:
-		x.l.referSelf(x.loc, a.v)
+		if x.l.referSelf(x.loc, a.v) {
+			x.m.relocations++
+		}
 	}
 
 	v := int64(int32(a.v))
@@ -616,6 +620,19 @@ func (l *linker) image() (*Image, error) {
 	}
 
 	fixup := l.fixupSection(layout, fixupVA)
+
+	// A full map shows each symbol in a shareable image at its cell.
+	l.cells = map[string]map[uint32]uint32{}
+
+	for _, r := range l.shared {
+		for i, o := range r.offsets {
+			if l.cells[r.image.Name] == nil {
+				l.cells[r.image.Name] = map[uint32]uint32{}
+			}
+
+			l.cells[r.image.Name][o] = fixupVA + layout.cells[r][i]
+		}
+	}
 
 	placed, global, err := l.globalSections()
 	if err != nil {
@@ -785,6 +802,13 @@ func (l *linker) image() (*Image, error) {
 	// count separately (mapCounts).
 	l.isdCount = len(isds) - len(placed) - len(global)
 	l.fixupVA, l.fixupLength = fixupVA, uint32(len(fixup))
+	l.ownISDs = nil
+
+	for _, d := range isds {
+		if d.flags&(isdGBL|isdBASED) == 0 {
+			l.ownISDs = append(l.ownISDs, d)
+		}
+	}
 
 	img := &Image{Transfer: l.transfer, HasTransfer: l.transferSet, l: l}
 	img.Messages = append(img.Messages, l.messages...)
@@ -800,6 +824,22 @@ func (l *linker) image() (*Image, error) {
 	}
 
 	l.imageBlocks = uint32(len(img.Bytes)/blockSize) - 1
+
+	// The map's count of a shareable image's binary blocks leaves out the
+	// sections that hold the image's own .ADDRESS longwords: that fits
+	// all eight of testdata/link68's shareable images (SHR1's 13 blocks
+	// are 4, its 9-page data section left out; SHR6's 3 are 2, its
+	// read-only section left out; SHR2, with no such longwords, keeps
+	// its 3), though why is unconfirmed. An executable's are all its
+	// blocks.
+	uncounted := map[*section]bool{}
+
+	for _, a := range l.selfAddresses {
+		if s := l.sectionAt(a); s != nil && !uncounted[s] {
+			uncounted[s] = true
+			l.imageBlocks -= s.pages
+		}
+	}
 	img.Bytes = append(img.Bytes, dst...)
 
 	for _, p := range l.order {

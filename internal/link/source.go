@@ -75,6 +75,11 @@ type SharedImage struct {
 	// shareable image list, in order. An image linked against it uses
 	// them too (SHR2, which uses SHR1, lists LIBRTL, which SHR1 uses).
 	Uses []string
+	// File is the file the image was read from, and Created and Creator
+	// its global symbol table's creation time ("dd-MMM-yyyy hh:mm") and
+	// language processor (the linker that made it), which a full map's
+	// object module synopsis lists as the image's. "" if unknown.
+	File, Created, Creator string
 }
 
 // SharedSection is one image section of a shareable image: where it is
@@ -85,6 +90,8 @@ type SharedSection struct {
 	Offset uint32
 	Pages  uint32
 	Flags  uint32
+	// Fixups says it is the image's fixup section (ISD$V_FIXUPVEC).
+	Fixups bool
 }
 
 // size is the bytes from the image's start to the end of its last
@@ -143,6 +150,9 @@ func (t *TableSource) Lookup(name string) (Definition, bool, error) {
 // Image implements SymbolSource.
 func (t *TableSource) Image(name string) (SharedImage, bool) {
 	i, ok := t.Images[name]
+	if ok && i.File == "" {
+		i.File = t.File
+	}
 
 	return i, ok
 }

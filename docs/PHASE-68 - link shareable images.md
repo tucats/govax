@@ -6,8 +6,8 @@ and the author's answers to the plan's questions. Part C is the
 subtasks. Subtask 1, the VMS probe (`testdata/link68`), is done, and so
 are subtask 2 (MACRO's `.TRANSFER`), subtask 3 (options files),
 subtask 4 (clusters for executables), subtask 5 (`LINK/SHAREABLE`,
-the image), subtask 6 (the global symbol table), and subtask 7
-(fixups and bases).
+the image), subtask 6 (the global symbol table), subtask 7 (fixups
+and bases), and subtask 8 (maps and ANALYZE/IMAGE).
 
 ## Goal
 
@@ -543,7 +543,7 @@ them.
    unless based), and based images (`BASE=`, no fixup section,
    absolute GST symbols). Matched against SHR1, SHR2, SHR3, SHR3P,
    and SHR6.
-8. **Maps and ANALYZE/IMAGE for shareable images.** The map:
+8. **Done (2026-10-19).** **Maps and ANALYZE/IMAGE for shareable images.** The map:
    universal symbols (`U`), the transfer vector's two values (`RU` by
    name, `R-` by value), `/FULL`'s sections (the Image Section
    Synopsis with clusters, types, global section names, and
@@ -1080,3 +1080,106 @@ Left for later subtasks:
 - Activating them: the second change-protection entry, the
   self-relative `.ADDRESS` list, and the dependencies (subtask 11).
 
+### 2026-10-19 — Subtask 8: maps and ANALYZE/IMAGE
+
+LINK writes `/FULL` maps now (`MapOptions.Full`, the console's
+`LINK/FULL`, `govax link --full`; with `/BRIEF` it is DCL's CONFLICT,
+since the Linker manual calls the two incompatible, though VMS's own
+message is **unconfirmed**). The full map's sections are
+`internal/link/mapfull.go`. All eight of the probe's shareable images'
+maps match real LINK's line for line up to the run statistics, when
+linked with VMS's own libraries (`TestMapShareableImagesFull`), and so
+do EXE1's, MAIN3P's, and MAIN6's (`TestMapExecutablesFull`). With
+govax's own tables, the lines differ only where the tables lack
+LIBRTL's ident and file, STARLET's SYS$P1_VECTOR, and the counts that
+follow (`TestMapShareableImagesGovaxTables`, which runs without VMS's
+files).
+
+What the maps settled:
+
+- **A full map puts each section on a page of its own.** The object
+  module synopsis lists every module and each shareable image used,
+  cluster by cluster: an image an options file names, and those it
+  uses, in its place in the cluster list; an image a library supplied
+  after the library modules (`mapModules`). An image is a module of 0
+  bytes with its global symbol table's ident, creation time, and
+  creator (`SharedImage.File`, `Created`, `Creator`). An image the link
+  uses only through another (SHR2's LIBRTL) is read all the same, as
+  its map lists it (`ImageLibrarySource.Image` opens one the library
+  lists).
+- **The module relocatable reference synopsis** follows on the first
+  page, when any module has something to list: the module's `.ADDRESS`
+  longwords that hold offsets in shareable images, and in a shareable
+  image those that hold its own addresses and its traceback records'
+  relocated longwords (`module.relocations`). SHR1's 10 are 3
+  `.ADDRESS`/`.ASCID` longwords and 7 traceback ones; SHR1A,
+  `/NOTRACEBACK`, has 3. The Linker manual's "number of .ADDRESS
+  directives" leaves out the traceback longwords. How more than three
+  entries fill the lines is **unconfirmed** (govax fills across).
+- **The image section synopsis**: each cluster's sections, after a
+  blank line, its name on the first (the fixup section with the cluster
+  at the highest address, the user stack with the default cluster),
+  with the type, pages, address (`P-` protected, `-R` relocatable: a
+  shareable image's unbased sections and those of the images used),
+  VBN, PFC, and protection and paging (`READ ONLY`, `COPY ON REF`,
+  `DEMAND ZERO`, `FIXUP VECTORS`; a read-only section the activator
+  fixes up is `NON-SHAREABLE ADDRESS DATA` in its own map, SHR6, but
+  `COPY ON REF` in MAIN6's). A shareable image lists each of its own
+  sections as global section `NAME_00n` with its match and idents
+  (`SharedSection.Fixups` marks its fixup section). A cluster name
+  longer than 15 characters goes on a line of its own (**unconfirmed**).
+- **The program section synopsis** in a full map has a blank line
+  before each psect, and the library modules' contributions too.
+- **Symbols by name** adds what libraries and shareable images define
+  and the image refers to: a symbol in a shareable image at its cell in
+  the fixup section, `-RX`, or at its address, unflagged, if the link
+  placed the image (EXE1's LIB$PUT_OUTPUT). Universal symbols are `U`.
+  The key follows the symbols by value.
+- **Symbols by value**: each value and its symbols, by name, each its
+  flags and a dash right-aligned in four columns and its name as wide
+  as the map's longest. A `.TRANSFER`'d symbol is `R-` without the U,
+  its value there its routine's. How many fit on a line is
+  **unconfirmed** (no fixture has more than two at a value), and so is
+  whether undefined symbols are listed (govax lists them, `*`).
+- **The image synopsis**: a shareable image has no stack (0 pages);
+  `Image type:  PIC, SHAREABLE. Global Section Match=..., Ident,
+  Major=n, Minor=n` (`NOPIC` if based; `gsMatch`, which the header now
+  shares); the address fixups count the image's own `.ADDRESS`
+  longwords too; a full map's estimated length counts the psects and
+  symbols twice (`7 + modules/4 + 2*(psects + symbols/16)`, which fits
+  every probe map).
+- Two counts follow rules fitted to the eight images, both
+  **unconfirmed**: the image binary block count leaves out the pages
+  of the sections that hold the image's own `.ADDRESS` longwords
+  (SHR1's 13 blocks are 4, SHR6's 3 are 2, SHR2's 3 stay 3), and the
+  global symbol count leaves out the defined symbols `UNIVERSAL=`
+  names, though not those a `.TRANSFER` makes universal (SHR1A's seven
+  leave 305, LIBRTL's). STARLET.OLB counts among the files only when a
+  module came from it (SHR1A's 3 files).
+
+ANALYZE/IMAGE (`internal/anl`) now matches every `.ANI` of the probe
+that has its image (`testdata/link68/vax` joins `TestImagePages`):
+
+- A shareable image's header shows its global section ident and match
+  control under the image type.
+- A shareable image's global symbol table follows the ISDs on a page
+  of its own, `SHAREABLE IMAGE - GLOBAL SYMBOL TABLE`, its records
+  described as ANALYZE/OBJECT describes them (`vmsimage.Image.GST`,
+  read by the header's record count, as govax pads the table's block).
+  A module header's patch time is shown only when it differs from the
+  creation time: real LINK writes the table's patch time as its
+  creation time, which ANALYZE leaves out (**unconfirmed** otherwise).
+- `.ADDRESS` fixups for image 0, the image itself, are a shareable
+  image's, not an error.
+- A based image without a fixup section shows the section's title and
+  "There is no fixup section in this image." (SHR3).
+- The blank line between two ISDs is written even on a full page
+  (EXE1's page 3 has 61 lines).
+- The change-protection address printed twice for MAIN3 and EXE1
+  needed nothing new.
+
+Left for subtask 9: MAIN1's, MAIN2's, and MAIN4's maps, where real
+LINK put LIBRTL right after the shareable image that uses it, though the
+program refers to LIBRTL itself (govax's cluster for it comes from
+IMAGELIB, at the end), and MAIN3's (a based shareable image, which
+`placeClusters` still refuses).

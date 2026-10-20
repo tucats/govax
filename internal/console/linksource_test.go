@@ -59,8 +59,9 @@ func TestShimOffsetsMatchCapturedImages(t *testing.T) {
 // TestCapturedLIBRTLMatchesImage checks the captured LIBRTL against
 // LIBRTL.EXE itself: govax's own tables describe the image, and define
 // each of its symbols, as the image's header and global symbol table do.
-// The tables don't keep the image's ident, which only an image an options
-// file names gives a link. Each symbol's place in the table is checked
+// The tables don't keep the image's ident, or its global symbol table's
+// creation time and creator (a full map's), which only an image read
+// from its file gives a link. Each symbol's place in the table is checked
 // once the tables have places (vmsdef's ImageSymbols, regenerated from
 // LIBRTL.EXE since Phase 68's subtask 7 added them).
 func TestCapturedLIBRTLMatchesImage(t *testing.T) {
@@ -72,7 +73,7 @@ func TestCapturedLIBRTLMatchesImage(t *testing.T) {
 	govax := dclcmd.GovaxSymbols(machine.ShimTable)
 
 	want, _ := src.Image(name)
-	want.Ident = ""
+	want.Ident, want.Created, want.Creator = "", "", ""
 
 	if got, ok := govax.Image(name); !ok || !reflect.DeepEqual(got, want) {
 		t.Errorf("govax's %s is %+v, %v; the image's header says %+v", name, got, ok, want)

@@ -150,6 +150,12 @@ type Image struct {
 	// ISDs are the image section descriptors, in order.
 	ISDs []ISD
 
+	// GST is a shareable image's global symbol table, its records as
+	// an object module's (each starting with its record type), read from
+	// the file at GSTVBN; nil for another image, which ANALYZE doesn't
+	// show the table of.
+	GST [][]byte
+
 	// Fixups is the fixup section, nil when the image has none.
 	Fixups *Fixups
 
@@ -171,6 +177,7 @@ type Part int
 const (
 	PartHeader   Part = iota // the fixed header and its blocks
 	PartSections             // the image section descriptors
+	PartSymbols              // a shareable image's global symbol table
 	PartFixups               // the fixup section
 )
 
@@ -296,10 +303,58 @@ func ReadImage(data []byte) (*Image, error) {
 	img.part = PartSections
 	img.sections(h, int(le.Uint16(h[IHDISDOffset:])))
 
+	img.part = PartSymbols
+	img.globalSymbols(data)
+
 	img.part = PartFixups
 	img.fixups(data)
 
 	return img, nil
+}
+
+// imageTypeShareable is IHD$K_LIM, a shareable image's type.
+const imageTypeShareable = 2
+
+// globalSymbols reads a shareable image's global symbol table: its
+// records, in ODS-2's variable-length layout (a length word, the record,
+// and a pad byte to a word boundary; a length of ^XFFFF ends a block's
+// records), from block GSTVBN. Real LINK ends the file at the table's
+// last record, mid-block, and govax pads it to a block, so only the
+// header's count of records is read.
+func (img *Image) globalSymbols(data []byte) {
+	if img.Type != imageTypeShareable || img.GSTVBN == 0 {
+		return
+	}
+
+	n := int(img.GSTRecordCount())
+	p := int(img.GSTVBN-1) * BlockSize
+	gst := make([][]byte, 0, n)
+
+	for len(gst) < n {
+		if p+2 > len(data) {
+			img.problem("The global symbol table's record %d is past the end of the file.", len(gst)+1)
+
+			return
+		}
+
+		size := int(binary.LittleEndian.Uint16(data[p:]))
+		if size == 0xFFFF {
+			p = (p/BlockSize + 1) * BlockSize
+
+			continue
+		}
+
+		if p+2+size > len(data) {
+			img.problem("The global symbol table's record %d is past the end of the file.", len(gst)+1)
+
+			return
+		}
+
+		gst = append(gst, data[p+2:p+2+size])
+		p += 2 + size + size&1
+	}
+
+	img.GST = gst
 }
 
 // problem records something that couldn't be decoded.

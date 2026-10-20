@@ -21,7 +21,7 @@ const refsPerLine = 4
 // fixupSection describes the fixup section, which starts a new page.
 func (a *imageAnalyzer) fixupSection() {
 	f := a.img.Fixups
-	if f == nil {
+	if f == nil && a.img.IAFVA != 0 {
 		// The header names a fixup section that couldn't be found.
 		a.problems(vmsimage.PartFixups)
 
@@ -31,6 +31,15 @@ func (a *imageAnalyzer) fixupSection() {
 	a.page("IMAGE ACTIVATOR FIXUP SECTION")
 	a.blank()
 	a.blank()
+
+	// An image whose header names none (a based shareable image with
+	// nothing to fix up: testdata/link68's SHR3.ANI).
+	if f == nil {
+		a.line("\tThere is no fixup section in this image.")
+		a.blank()
+
+		return
+	}
 
 	a.part("Fixed Information")
 	a.flagList("\t\t", "Flags:", iafFlagBits, f.Flags)
@@ -54,12 +63,12 @@ func (a *imageAnalyzer) fixupSection() {
 
 	if f.GFixOffset != 0 {
 		a.part("G^ Reference Fixups")
-		a.refLists(f.GRefs)
+		a.refLists(f.GRefs, false)
 	}
 
 	if f.DotAddrOffset != 0 {
 		a.part(fmt.Sprintf(".ADDRESS Reference Fixups (relative to %%X'%08X')", f.Base))
-		a.refLists(f.DotAddrRefs)
+		a.refLists(f.DotAddrRefs, a.img.Type == imageTypeShareable)
 	}
 
 	if f.ChgPrtOffset != 0 {
@@ -99,13 +108,15 @@ func (a *imageAnalyzer) hasProblems(part vmsimage.Part) bool {
 }
 
 // refLists shows each shareable image's references, each list followed
-// by a blank line.
-func (a *imageAnalyzer) refLists(lists []vmsimage.RefList) {
+// by a blank line. self allows a list for image 0, the image itself: a
+// shareable image's .ADDRESS longwords that hold its own addresses
+// (testdata/link68's SHR1.ANI, "3 references to image 0").
+func (a *imageAnalyzer) refLists(lists []vmsimage.RefList, self bool) {
 	for _, l := range lists {
 		n := len(l.Values)
 		a.keep(keepImageItem, fmt.Sprintf("\t\t%d reference%s to image %d:", n, plural(n), l.Image))
 
-		if l.Image == 0 || int(l.Image) >= len(a.img.Fixups.Shared) {
+		if l.Image == 0 && !self || int(l.Image) >= len(a.img.Fixups.Shared) {
 			a.fail("Image %d is not a shareable image in the shareable image list.", l.Image)
 		}
 

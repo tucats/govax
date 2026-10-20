@@ -92,9 +92,10 @@ func (l *linker) fixupSectionFlags() uint32 {
 // read-only section makes the section writable and copy on reference, for
 // the activator to store in, and it gets a change-protection entry that
 // makes it read-only again afterwards (SHR6's SHR6_RO, still SHRPIC).
-func (l *linker) referSelf(addr, target uint32) {
+// It reports whether the longword needs fixing.
+func (l *linker) referSelf(addr, target uint32) bool {
 	if l.basedAt(target) {
-		return
+		return false
 	}
 
 	if s := l.sectionAt(addr); s != nil && !s.writable() && !s.fixedUp {
@@ -103,6 +104,8 @@ func (l *linker) referSelf(addr, target uint32) {
 	}
 
 	l.selfAddresses = append(l.selfAddresses, addr)
+
+	return true
 }
 
 // sectionAt returns the image section that holds addr, or nil.

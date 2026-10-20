@@ -96,11 +96,15 @@ func TestReadShareableImage(t *testing.T) {
 	// Its symbol table defines one psect, and it has two image sections:
 	// the shareable one and a demand-zero one, as EXE1's LIBRTL_001 and
 	// LIBRTL_002 map them (testdata/link68). Its ident is the table's
-	// module version, and it uses no other shareable image.
+	// module version, and it uses no other shareable image. Its table was
+	// made by LINK V11-38 (ANALYZE/IMAGE's and a full map's dates).
 	want := SharedImage{
 		Name: "LIBRTL", Pages: 264, MajorID: 1, MinorID: 0x0E, Match: MatchLEQ, Symbols: 305, Psects: 1, Sections: 2,
-		Ident: "V06-001",
-		Layout: []SharedSection{{0, 264, isdTypeSharedPIC}, {0x21000, 15, isdDZRO | isdWRT | 4<<24}},
+		Ident: "V06-001", Created: "24-NOV-1996 19:04", Creator: "Linker V11-38",
+		Layout: []SharedSection{
+			{Offset: 0, Pages: 264, Flags: isdTypeSharedPIC},
+			{Offset: 0x21000, Pages: 15, Flags: isdDZRO | isdWRT | 4<<24},
+		},
 	}
 	if i, ok := src.Image("LIBRTL"); !ok || !reflect.DeepEqual(i, want) {
 		t.Errorf("image %+v, want %+v", i, want)

@@ -135,8 +135,9 @@ var shareableCases = []shareableCase{
 }
 
 // link68Uses returns VMS's shareable images names, from the probe, as
-// symbol sources, and the clusters the options files that named them
-// make.
+// symbol sources (each file named as the maps of the images linked
+// against it name it), and the clusters the options files that named
+// them make.
 func link68Uses(t *testing.T, names []string) ([]SymbolSource, []Cluster) {
 	t.Helper()
 
@@ -156,6 +157,7 @@ func link68Uses(t *testing.T, names []string) ([]SymbolSource, []Cluster) {
 			t.Fatal(err)
 		}
 
+		src.File = "DUA1:[000000]" + strings.ToUpper(n) + ".EXE;" + link68ImageVersions[n]
 		sources = append(sources, src)
 		clusters = append(clusters, Cluster{Shareable: true, Image: image})
 	}

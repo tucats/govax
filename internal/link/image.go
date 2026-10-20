@@ -143,6 +143,19 @@ func vmsTime(t time.Time) uint64 {
 	return uint64(local.Unix()-vmsEpoch)*10_000_000 + uint64(local.Nanosecond()/100)
 }
 
+// gsMatch is the image's global section match control and idents:
+// GSMATCH='s in a shareable image, or else bits 16 to 47 of the link
+// time, matched EQUAL.
+func (l *linker) gsMatch() GSMatch {
+	if m := l.opts.GSMatch; m != nil && l.opts.Shareable {
+		return *m
+	}
+
+	ident := uint32(vmsTime(l.opts.Time) >> 16)
+
+	return GSMatch{Match: MatchEqual, Major: uint8(ident >> 24), Minor: ident & 0xFFFFFF}
+}
+
 // isd is one image section descriptor to write.
 type isd struct {
 	pages uint32
@@ -220,14 +233,10 @@ func (l *linker) header(isds []isd, fixupVA uint32) ([]byte, error) {
 
 	// IHD$L_IDENT is the global section ident other images record when
 	// they're linked against this one, and the link flags' top byte its
-	// match control (shareable.go): GSMATCH='s, or bits 16 to 47 of the
-	// link time, matched EQUAL.
-	ident := uint32(linkTime >> 16)
-
-	if m := l.opts.GSMatch; m != nil && l.opts.Shareable {
-		ident = uint32(m.Major)<<24 | m.Minor&0xFFFFFF
-		flags = flags&^(0xFF<<ihdMatchShift) | uint32(m.Match)<<ihdMatchShift
-	}
+	// match control (shareable.go).
+	m := l.gsMatch()
+	ident := uint32(m.Major)<<24 | m.Minor&0xFFFFFF
+	flags = flags&^(0xFF<<ihdMatchShift) | uint32(m.Match)<<ihdMatchShift
 
 	// An image with a cluster at an address of its own isn't position
 	// independent (EXE1, BASE=; MAIN3, the based SHR3).

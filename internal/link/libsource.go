@@ -82,8 +82,13 @@ func ReadShareableImage(data []byte) (*TableSource, string, error) {
 	img.Symbols, img.Psects, img.Sections = len(src.Symbols), len(m.Psects()), h.sections
 
 	for _, rec := range m.Records {
-		if r, ok := rec.(*obj.MainHeader); ok {
-			img.Ident = r.Version
+		switch r := rec.(type) {
+		case *obj.MainHeader:
+			img.Ident, img.Created = r.Version, r.Created
+		case *obj.TextHeader:
+			if r.Type == obj.HdrLNM {
+				img.Creator = r.Text
+			}
 		}
 	}
 
@@ -176,6 +181,7 @@ func readImageHeader(data []byte) (imageHeader, error) {
 				Offset: (le.Uint32(b[p+4:]) & isdVPNMask) * blockSize,
 				Pages:  uint32(le.Uint16(b[p+2:])),
 				Flags:  flags & sharedSectionFlags,
+				Fixups: flags&isdFIXUPVEC != 0,
 			})
 		}
 
@@ -268,6 +274,17 @@ func (s *ImageLibrarySource) Lookup(name string) (Definition, bool, error) {
 func (s *ImageLibrarySource) Image(name string) (SharedImage, bool) {
 	if src, ok := s.opened[name]; ok {
 		return src.Image(name)
+	}
+
+	// An image the link uses only through another (SHR2's LIBRTL, which
+	// SHR1 uses) has had none of its symbols looked up; real LINK read it
+	// all the same, for its map lists it with its ident and file.
+	if len(s.Library.Indexes) > 0 {
+		if _, ok := s.Library.Indexes[0].Lookup(name); ok {
+			if src, err := s.open(name); err == nil {
+				return src.Image(name)
+			}
+		}
 	}
 
 	return SharedImage{}, false
@@ -407,8 +424,16 @@ func (s *ObjectLibrarySource) module(rfa lbr.RFA) (*Input, error) {
 	return in, nil
 }
 
-// Files implements FileCounter.
-func (*ObjectLibrarySource) Files() int { return 1 }
+// Files implements FileCounter: the library, once a module has come from
+// it. SHR1A, linked /NOTRACEBACK, took nothing from STARLET.OLB, and its
+// map counts three files: SHR1.OBJ, IMAGELIB.OLB, and LIBRTL.EXE.
+func (s *ObjectLibrarySource) Files() int {
+	if len(s.modules) == 0 {
+		return 0
+	}
+
+	return 1
+}
 
 // Image implements SymbolSource: an object library describes no
 // shareable images.

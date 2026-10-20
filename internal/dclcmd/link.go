@@ -92,10 +92,13 @@ type LinkOptions struct {
 
 	// Map is /MAP: write a link map, to MapFile, or by default to a file
 	// named after the first file with the type MAP. Brief is /BRIEF:
-	// only the object modules and the image synopsis.
+	// only the object modules and the image synopsis. Full is /FULL:
+	// every section, and what libraries and shareable images contributed
+	// (docs/PHASE-68, subtask 8); it conflicts with /BRIEF.
 	Map     bool
 	MapFile string
 	Brief   bool
+	Full    bool
 }
 
 // linkInputs is what LINK's input files give the link.
@@ -129,6 +132,13 @@ func (c *Context) Link(opts LinkOptions) error {
 
 	if len(files) == 0 {
 		return vmserrors.New(vmserrors.CLI_NEEDFILENAME, "LINK")
+	}
+
+	// The Linker manual: /FULL "is not compatible with the /BRIEF
+	// qualifier". VMS's own message for the pair is unconfirmed; DCL's
+	// for elements that conflict is CONFLICT.
+	if opts.Full && opts.Brief {
+		return vmserrors.New(vmserrors.CLI_CONFLICT)
 	}
 
 	if opts.Debug && opts.DebugModule != "" {
@@ -266,6 +276,7 @@ func (c *Context) Link(opts LinkOptions) error {
 		ImageText: opts.Executable,
 		MapFile:   mapLoc.Name,
 		Brief:     opts.Brief,
+		Full:      opts.Full,
 	})
 
 	records := make([][]byte, len(lines))

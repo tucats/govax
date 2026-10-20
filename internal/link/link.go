@@ -326,11 +326,14 @@ type linker struct {
 	undefined []string
 	messages  []Message
 
-	// What image() laid out, for the map: the image sections, the
-	// fixup section's address and size, and the addresses the link
-	// placed anything at (the image's sections and the shareable images
-	// it placed, the stack aside).
+	// What image() laid out, for the map: the image sections (ownISDs
+	// those of the image's own, by address), the cells' addresses (by
+	// shareable image and offset there), the fixup section's address and
+	// size, and the addresses the link placed anything at (the image's
+	// sections and the shareable images it placed, the stack aside).
 	isdCount      int
+	ownISDs       []isd
+	cells         map[string]map[uint32]uint32
 	fixupVA       uint32
 	fixupLength   uint32
 	imageBlocks   uint32
@@ -379,6 +382,13 @@ type module struct {
 	// dstStart and dstEnd are where the module's records are in the
 	// debug symbol table, for the debug module table (debug.go).
 	dstStart, dstEnd uint32
+	// relocations counts the module's longwords the image activator or
+	// the debugger adds a shareable image's base to: its .ADDRESS
+	// longwords that hold offsets in shareable images, and in a shareable
+	// image those that hold its own addresses and its traceback records'
+	// addresses. A full map's module relocatable reference synopsis lists
+	// it (mapfile.go).
+	relocations int
 }
 
 // psect is one program section of the image, which modules contribute to.

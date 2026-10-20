@@ -24,6 +24,7 @@ var imageFixtureDirs = []string{
 	"../../testdata/mar/list/vax",
 	"../../testdata/mar/round/vax",
 	"../../testdata/mar/dst/vax",
+	"../../testdata/link68/vax",
 }
 
 // imageFixture is one image and its real analysis.
@@ -79,7 +80,9 @@ func TestReadImageFixtures(t *testing.T) {
 			t.Errorf("%s: %v", f.name, img.Problems)
 		}
 
-		if img.Fixups == nil {
+		// A based shareable image with nothing to fix up has none
+		// (testdata/link68's SHR3), and its header says so.
+		if img.Fixups == nil && img.IAFVA != 0 {
 			t.Errorf("%s: no fixup section", f.name)
 		}
 	}

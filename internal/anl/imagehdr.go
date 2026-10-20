@@ -3,6 +3,7 @@ package anl
 import (
 	"fmt"
 
+	"github.com/tucats/govax/internal/obj"
 	"github.com/tucats/govax/internal/vmsdef"
 	"github.com/tucats/govax/internal/vmsimage"
 )
@@ -56,6 +57,10 @@ func (a *imageAnalyzer) run() {
 
 	a.header()
 
+	if !a.opts.Header && !a.opts.Fixups {
+		a.globalSymbolTable()
+	}
+
 	if !a.opts.Header || a.opts.Fixups {
 		a.fixupSection()
 	}
@@ -73,11 +78,13 @@ func (a *imageAnalyzer) run() {
 	a.blank()
 }
 
-// Image types (IHD$B_IMGTYPE), as ANALYZE names them. Only the
-// executable's description is confirmed by a fixture.
+// Image types (IHD$B_IMGTYPE), as ANALYZE names them, both confirmed by
+// fixtures (testdata/link68's shareable images).
+const imageTypeShareable = 2
+
 var imageTypes = map[byte]string{
-	1: "executable (IHD$K_EXE)",
-	2: "shareable (IHD$K_LIM)",
+	1:                  "executable (IHD$K_EXE)",
+	imageTypeShareable: "shareable (IHD$K_LIM)",
 }
 
 // The named bits of the header's link flags, each ISD's flags, and the
@@ -175,6 +182,20 @@ func (a *imageAnalyzer) header() {
 
 	a.line("\t\timage type: " + typ)
 
+	// A shareable image's global section ident and match control, which
+	// images linked against it record: the ident's top byte is the major
+	// id, and the match control the link flags' top byte
+	// (testdata/link68's SHR1.ANI).
+	if img.Type == imageTypeShareable {
+		match, known := matchControls[int(img.LinkFlags>>24)]
+		if !known {
+			match = fmt.Sprintf("unknown (%d)", img.LinkFlags>>24)
+		}
+
+		a.line(fmt.Sprintf("\t\t\tglobal section major id: %%X'%02X', minor id: %%X'%06X'", img.Ident>>24, img.Ident&0xFFFFFF))
+		a.line("\t\t\tmatch control: " + match)
+	}
+
 	if img.MajorID != "02" || img.MinorID != "05" {
 		a.fail("Image format %s.%s is not the VAX image format, 02.05.", img.MajorID, img.MinorID)
 	}
@@ -218,9 +239,11 @@ func (a *imageAnalyzer) header() {
 
 	a.part("Image Section Descriptors (ISD)")
 
+	// The blank line between two ISDs closes the first: a full page
+	// still takes it (EXE1.ANI's page 3, testdata/link68).
 	for i, d := range img.ISDs {
 		if i > 0 {
-			a.blank()
+			a.spill()
 		}
 
 		a.section(i+1, d)
@@ -317,4 +340,33 @@ func (a *imageAnalyzer) checkBlocks(d vmsimage.ISD) {
 	if d.VBN <= uint32(a.img.Blocks) || last > a.img.FileBlocks {
 		a.fail("The section's blocks, %d to %d, are not in the file's %d blocks of image sections.", d.VBN, last, a.img.FileBlocks)
 	}
+}
+
+// globalSymbolTable describes a shareable image's global symbol table,
+// on a page of its own after the image section descriptors: its records,
+// as ANALYZE/OBJECT describes an object module's (testdata/link68's
+// SHR1.ANI).
+func (a *imageAnalyzer) globalSymbolTable() {
+	a.problems(vmsimage.PartSymbols)
+
+	if a.img.GST == nil {
+		return
+	}
+
+	a.page("SHAREABLE IMAGE - GLOBAL SYMBOL TABLE")
+	a.blank()
+	a.blank()
+
+	o := &objectAnalyzer{counts: map[obj.RecordType]int{}, sizes: map[obj.RecordType]int{}, records: a.img.GST}
+
+	for i, raw := range a.img.GST {
+		o.record(i+1, raw)
+	}
+
+	if o.inModule {
+		o.moduleEnd(true)
+	}
+
+	a.lines = append(a.lines, o.lines...)
+	a.errors += o.errors
 }

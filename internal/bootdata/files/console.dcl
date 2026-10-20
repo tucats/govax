@@ -711,7 +711,8 @@ grammar console
     ! debugger module, is refused. /NOSYSLIB
     ! skips IMAGELIB.OLB and STARLET.OLB, as VMS LINK's does. MAP is
     ! /[NO]MAP[=file] (empty default: the first object's name with type
-    ! MAP), and /BRIEF makes the map brief. LIBRARY, INCLUDE,
+    ! MAP), and /BRIEF makes the map brief, /FULL full (docs/PHASE-68,
+    ! subtask 8; the two conflict). LIBRARY, INCLUDE,
     ! SELECTIVE_SEARCH, and OPTIONS are positional: each belongs to the
     ! file it follows ("LINK MAIN,MYLIB/LIBRARY,PROG/OPTIONS").
     ! SHAREABLE is /SHAREABLE[=file] (docs/PHASE-68, subtask 5): a
@@ -758,6 +759,7 @@ grammar console
                     /type=$string               -
                     /default=""
         qualifier   brief/id=1357
+        qualifier   full/id=1365
 
     !
     ! docs/PHASE-38.md (internal/anl, internal/dclcmd/analyze.go):

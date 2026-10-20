@@ -82,6 +82,7 @@ type linkFlags struct {
 	mapWanted    bool   // --map, or --map-file
 	mapFile      string // --map-file
 	brief        bool   // --brief
+	full         bool   // --full
 	// libraries and options are --library and --options, each of which
 	// can be repeated: files LINK gets with /LIBRARY and /OPTIONS.
 	libraries, options []string
@@ -511,6 +512,16 @@ var linkGrammar = []cli.Option{
 			return nil
 		},
 	},
+	{
+		LongName:    "full",
+		Description: "Write a full map: every section, and what libraries and shareable images contributed",
+		OptionType:  cli.BooleanType,
+		Action: func(c *cli.Context) error {
+			link.mapWanted, link.full = true, true
+
+			return nil
+		},
+	},
 }
 
 // libraryGrammar is the library subcommand's own options.
@@ -794,6 +805,10 @@ func linkCommand(objects []string, f linkFlags) string {
 
 	if f.brief {
 		command += "/BRIEF"
+	}
+
+	if f.full {
+		command += "/FULL"
 	}
 
 	return command

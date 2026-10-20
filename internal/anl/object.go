@@ -385,10 +385,14 @@ func (a *objectAnalyzer) mainHeader(h *obj.MainHeader) {
 	a.line("\tmodule version: " + quote(h.Version))
 	a.line("\tcreation   date/time: " + h.Created)
 
-	// The patch time is shown only when there is one; real MACRO never
-	// writes one, so its line is unconfirmed. Its label is the one
-	// "creation   date/time" is padded to match.
-	if strings.Trim(h.Patched, " \x00") != "" {
+	// The patch time is shown only when there is one: real MACRO never
+	// writes one, and real LINK writes a shareable image's global symbol
+	// table with its creation time as its patch time, which ANALYZE/IMAGE
+	// leaves out (testdata/link68's SHR1.ANI). So a patch time is shown
+	// only when it differs from the creation time, and its line is
+	// unconfirmed. Its label is the one "creation   date/time" is padded
+	// to match.
+	if p := strings.Trim(h.Patched, " \x00"); p != "" && p != h.Created {
 		a.line("\tlast patch date/time: " + h.Patched)
 	}
 }

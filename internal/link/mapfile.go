@@ -30,10 +30,24 @@ import (
 //     the symbol table's flags;
 //   - on a new page, the image synopsis: the image's layout and counts.
 //
-// /BRIEF leaves out the psects and symbols. /FULL and /CROSS_REFERENCE
-// aren't written yet, and neither is real LINK's last section, its run
-// statistics (page faults and CPU time), which say nothing about the
-// image.
+// /BRIEF leaves out the psects and symbols. /FULL (Phase 68, from the
+// maps of testdata/link68, all /FULL) puts each section on a page of its
+// own and adds:
+//
+//   - in the object module synopsis, the modules libraries supplied and
+//     the shareable images used, cluster by cluster;
+//   - the module relocatable reference synopsis, after it;
+//   - the image section synopsis: each cluster's image sections, and
+//     each shareable image's;
+//   - in the program section synopsis, the libraries' modules'
+//     contributions, each psect after a blank line;
+//   - in the symbols by name, the symbols libraries and shareable images
+//     define that the image refers to;
+//   - the symbols by value.
+//
+// /CROSS_REFERENCE isn't written yet, and neither is real LINK's last
+// section, its run statistics (page faults and CPU time), which say
+// nothing about the image.
 
 // MapOptions are what a link map records that the link doesn't know.
 type MapOptions struct {
@@ -47,8 +61,11 @@ type MapOptions struct {
 	ImageText string
 	// MapFile is the map file's name, which the image synopsis records.
 	MapFile string
-	// Brief is /BRIEF: only the object module and image synopses.
+	// Brief is /BRIEF: only the object module and image synopses. Full
+	// is /FULL: every section, and what the libraries and shareable
+	// images contributed.
 	Brief bool
+	Full  bool
 }
 
 // Map lengths and widths.
@@ -89,14 +106,16 @@ func (img *Image) Map(opts MapOptions) []string {
 		"Module Name     Ident              Bytes      File                                Creation Date      Creator",
 		"-----------     -----              -----      -----                               -------------      -------")
 
-	for _, m := range l.modules {
-		if !m.input.System {
-			w.module(m)
+	for _, m := range l.mapModules(opts.Full) {
+		w.module(m)
 
-			for _, msg := range m.messages {
-				w.message(msg)
-			}
+		for _, msg := range m.messages {
+			w.message(msg)
 		}
+	}
+
+	if opts.Full {
+		w.relocations(l)
 	}
 
 	// Real LINK creates the image file after reading the modules, and
@@ -105,9 +124,17 @@ func (img *Image) Map(opts MapOptions) []string {
 		w.heading = opts.ImageFile
 	}
 
+	if opts.Full {
+		w.imageSections(l)
+	}
+
 	if !opts.Brief {
-		w.psects(l)
-		w.symbols(l)
+		w.psects(l, opts.Full)
+		w.symbols(l, opts.Full)
+	}
+
+	if opts.Full {
+		w.symbolsByValue(l)
 	}
 
 	// Writing the image, real LINK notes in the map that it has no
@@ -253,9 +280,8 @@ func trimFileName(name string) string {
 // psects writes the program section synopsis: each nonempty relocatable
 // psect, by address, and each nonempty contribution the command's modules
 // make to it.
-func (w *mapWriter) psects(l *linker) {
-	w.subhead, w.psectLine = nil, ""
-	w.out("")
+func (w *mapWriter) psects(l *linker, full bool) {
+	w.section(full)
 	w.box("Program Section Synopsis")
 	w.subheading(
 		"Psect Name      Module Name       Base     End           Length            Align                 Attributes",
@@ -283,6 +309,10 @@ func (w *mapWriter) psects(l *linker) {
 		numbers := mapExtent(p.base, p.length, p.align)
 		attrs := psectAttributes(p.flags)
 
+		if full {
+			w.out("")
+		}
+
 		var line string
 		if len(p.name) <= mapShortName {
 			line = fmt.Sprintf("%-16s%-15s%s %s", p.name, "", numbers, attrs)
@@ -295,7 +325,7 @@ func (w *mapWriter) psects(l *linker) {
 
 		for _, c := range p.contribs {
 			m := owners[c]
-			if c.size == 0 || m == nil || m.input.System {
+			if c.size == 0 || m == nil || m.input.System && !full {
 				continue
 			}
 
@@ -372,33 +402,9 @@ func psectAttributes(flags uint16) string {
 
 // symbols writes the global symbols the command's modules define, by
 // name, in columns filled down each page as the cross reference facility
-// fills them, then the key to their flags.
-func (w *mapWriter) symbols(l *linker) {
-	type entry struct {
-		name   string
-		value  uint32
-		suffix string
-	}
-
-	var list []entry
-
-	for _, g := range l.symbols {
-		switch {
-		case !g.defined && g.strongRef:
-			list = append(list, entry{g.name, 0, "-*"})
-		case !g.defined:
-			// Only referred to weakly: 0, with no flag.
-			list = append(list, entry{g.name, 0, ""})
-		case g.option:
-			list = append(list, entry{g.name, g.value, ""})
-		case g.fromSource || g.module == nil || g.module.input.System:
-			continue
-		case g.rel:
-			list = append(list, entry{g.name, g.value, "-R"})
-		default:
-			list = append(list, entry{g.name, g.value, ""})
-		}
-	}
+// fills them, then, in a map that isn't full, the key to their flags.
+func (w *mapWriter) symbols(l *linker, full bool) {
+	list := l.mapSymbols(full)
 
 	sort.Slice(list, func(i, j int) bool { return list[i].name < list[j].name })
 
@@ -420,8 +426,7 @@ func (w *mapWriter) symbols(l *linker) {
 		}
 	}
 
-	w.subhead, w.psectLine = nil, ""
-	w.out("")
+	w.section(full)
 	w.box("Symbols By Name")
 	w.subheading(heading...)
 
@@ -460,7 +465,12 @@ func (w *mapWriter) symbols(l *linker) {
 				// Every column but the last is followed by the blanks
 				// between columns.
 				e := list[i]
-				fmt.Fprintf(&b, "%-*.*s %08X%-4s", nameWidth, nameWidth, e.name, e.value, e.suffix)
+				suffix := ""
+				if e.flags != "" {
+					suffix = "-" + e.flags
+				}
+
+				fmt.Fprintf(&b, "%-*.*s %08X%-4s", nameWidth, nameWidth, e.name, e.value, suffix)
 
 				if col < perLine-1 {
 					b.WriteString(strings.Repeat(" ", blanks))
@@ -474,7 +484,28 @@ func (w *mapWriter) symbols(l *linker) {
 		lines = mapLinesPerPage - 6
 	}
 
-	if w.count+10 > mapLinesPerPage {
+	if !full {
+		w.symbolKey()
+	}
+}
+
+// section starts a section of the map: on a new page in a full map, and
+// after a blank line in another.
+func (w *mapWriter) section(full bool) {
+	w.subhead, w.psectLine = nil, ""
+
+	if full {
+		w.newPage()
+	} else {
+		w.out("")
+	}
+}
+
+// key writes a key to the special characters of the section above, after
+// three blank lines, on a new page if the key and its blanks won't fit on
+// this one.
+func (w *mapWriter) key(keys []string) {
+	if w.count+len(keys)+3 > mapLinesPerPage {
 		w.count = mapLinesPerPage
 		w.out("")
 	}
@@ -486,14 +517,19 @@ func (w *mapWriter) symbols(l *linker) {
 	w.out("\t  Key for special characters above:")
 	w.out("\t\t+--------------------+")
 
-	for _, key := range []string{
-		" *  - Undefined     ", " A  - Alias Name    ", " I  - Internal Name ", " U  - Universal     ",
-		" R  - Relocatable   ", " X  - External      ", " WK - Weak          ",
-	} {
+	for _, key := range keys {
 		w.out("\t\t!" + key + "!")
 	}
 
 	w.out("\t\t+--------------------+")
+}
+
+// symbolKey is the key to the symbol tables' flags.
+func (w *mapWriter) symbolKey() {
+	w.key([]string{
+		" *  - Undefined     ", " A  - Alias Name    ", " I  - Internal Name ", " U  - Universal     ",
+		" R  - Relocatable   ", " X  - External      ", " WK - Weak          ",
+	})
 }
 
 // synopsis writes the image synopsis, on a new page.
@@ -526,6 +562,10 @@ func (w *mapWriter) synopsis(l *linker, opts MapOptions) {
 		hex8(low), hex8(high), hex8(size), size, plural(size), pages, plural(pages)))
 
 	stack := uint32(l.opts.StackPages)
+	if l.opts.Shareable {
+		stack = 0
+	}
+
 	line("Stack size:", "%8d. page%s", stack, plural(stack))
 	line("Image header virtual block limits:", "%8d.%9d. (%5d. block)", 1, 1, 1)
 
@@ -563,8 +603,8 @@ func (w *mapWriter) synopsis(l *linker, opts MapOptions) {
 		line("Debugger transfer address:", "%08X", l.symbols[imgstaName].value)
 	}
 
-	if l.addressFixups > 0 {
-		line("Number of address fixups:", "%8d.", l.addressFixups)
+	if n := l.addressFixups + len(l.selfAddresses); n > 0 {
+		line("Number of address fixups:", "%8d.", n)
 	}
 
 	// Each target in a shareable image has a cell, whether general mode
@@ -579,12 +619,28 @@ func (w *mapWriter) synopsis(l *linker, opts MapOptions) {
 		line("Number of code references to shareable images:", "%8d.", cells)
 	}
 
-	line("Image type:", "EXECUTABLE.")
+	if l.opts.Shareable {
+		pic, m := "PIC", l.gsMatch()
+		if l.based() {
+			pic = "NOPIC"
+		}
 
-	format, estimate := "DEFAULT", 7+counts.modules/4
-	if opts.Brief {
-		format = "BRIEF"
+		line("Image type:", "%5s, SHAREABLE. Global Section Match=%s, Ident, Major=%d, Minor=%d", pic, matchName(m.Match), m.Major, m.Minor)
 	} else {
+		line("Image type:", "EXECUTABLE.")
+	}
+
+	// A full map's estimate counts the psects and symbols twice, as it
+	// lists them twice (SHR1's 66 blocks, SHR3's 15, MAIN1's 60).
+	format, estimate := "DEFAULT", 7+counts.modules/4
+
+	switch {
+	case opts.Brief:
+		format = "BRIEF"
+	case opts.Full:
+		format = "FULL"
+		estimate += 2 * (counts.psects + counts.symbols/16)
+	default:
 		estimate += counts.psects + counts.symbols/16
 	}
 
@@ -647,6 +703,18 @@ func (l *linker) mapCounts() mapCounts {
 		if g.option {
 			c.options++
 			c.symbols--
+		}
+	}
+
+	// A shareable image's symbols that UNIVERSAL= names aren't counted,
+	// though those a .TRANSFER makes universal are: that fits all eight
+	// of testdata/link68's shareable images (SHR1A's seven UNIVERSAL=
+	// routines and data leave 305, LIBRTL's), though why is unconfirmed.
+	if l.opts.Shareable {
+		for _, name := range l.opts.Universals {
+			if g := l.symbols[name]; g != nil && g.defined {
+				c.symbols--
+			}
 		}
 	}
 

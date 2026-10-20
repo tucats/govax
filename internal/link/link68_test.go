@@ -201,3 +201,205 @@ func TestMapClustersExecutable(t *testing.T) {
 		t.Errorf("only %d lines checked", checked)
 	}
 }
+
+// link68VMSSources are real LINK's default sources, as vmsSources, named
+// as on the probe's VAX, after the shareable images an options file
+// named (VMS's, from testdata/link68/vax, under the names the maps show).
+func link68VMSSources(t *testing.T, uses []string) []SymbolSource {
+	t.Helper()
+
+	sources, _ := link68Uses(t, uses)
+
+	vms := vmsSources(t)
+	lib := vms[0].(*ImageLibrarySource)
+	open := lib.Open
+	lib.Open = func(image string) (SymbolSource, error) {
+		src, err := open(image)
+		if ts, ok := src.(*TableSource); ok {
+			ts.File = "SYS$COMMON:[SYSLIB]" + image + ".EXE;1"
+		}
+
+		return src, err
+	}
+	vms[1].(*ObjectLibrarySource).File = "SYS$COMMON:[SYSLIB]STARLET.OLB;1"
+
+	return append(sources, vms...)
+}
+
+// link68ImageVersions are the versions of the probe's shareable images
+// that the other links read, as their maps name them.
+var link68ImageVersions = map[string]string{"shr1": "8", "shr3p": "1", "shr6": "1"}
+
+// TestMapShareableImagesFull links the probe's shareable images from real
+// MACRO's objects with real LINK's libraries, and checks each /FULL map
+// line for line against real LINK's, up to its run statistics: the
+// shareable images and library modules among the modules, the
+// relocatable references, the image sections (types, the fixup section,
+// the images used), every psect's contributions, the symbols by name with
+// their U flags and those of the images and libraries the image uses,
+// the symbols by value, and the image synopsis's SHAREABLE line.
+func TestMapShareableImagesFull(t *testing.T) {
+	for _, c := range shareableCases {
+		if c.image == "e1" {
+			continue // the probe kept no map of E1
+		}
+
+		t.Run(c.image, func(t *testing.T) {
+			want, _, image, mapFile := realMap(t, filepath.Join(link68Dir, "vax", c.image+".map"))
+
+			_, opts := realImage(t, filepath.Join(link68Dir, "vax", c.image+".exe"))
+			opts = c.shareableOptions(t, opts)
+			opts.Sources = link68VMSSources(t, c.uses)
+
+			var inputs []Input
+			for _, o := range c.objects {
+				inputs = append(inputs, Input{File: "DUA1:[000000]" + strings.ToUpper(o[0]) + ".OBJ;1", Module: link68Object(t, o[0]), Cluster: o[1]})
+			}
+
+			img, err := Link(inputs, opts)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			got := img.Map(MapOptions{ImageFile: image, ImageText: strings.ToUpper(c.image), MapFile: mapFile, Full: true})
+
+			for i := range max(len(got), len(want)) {
+				var g, w string
+				if i < len(got) {
+					g = got[i]
+				}
+
+				if i < len(want) {
+					w = want[i]
+				}
+
+				if g != w {
+					t.Errorf("line %d:\n got %q\nwant %q", i+1, g, w)
+				}
+			}
+		})
+	}
+}
+
+// TestMapExecutablesFull links the probe's programs from real MACRO's
+// objects, against VMS's shareable images named as in their options files
+// and real LINK's libraries, and checks each /FULL map line for line
+// against real LINK's, up to its run statistics: the shareable image
+// among the modules and its sections in the image section synopsis
+// (each a global section of its own, relocatable), the user stack with
+// the default cluster, the .ADDRESS references to shareable images, and
+// each symbol in a shareable image at its cell. EXE1 adds a based
+// cluster, a demand-zero section split off, and LIBRTL placed at link
+// time. MAIN1, MAIN2, and MAIN4, whose LIBRTL real LINK put right after
+// the shareable image that uses it, are subtask 9's.
+func TestMapExecutablesFull(t *testing.T) {
+	cases := []struct {
+		image, object string
+		uses          string
+		// text is the image's name as /EXECUTABLE= gave it, which the
+		// first page's heading shows ("" without the qualifier).
+		text string
+	}{
+		{image: "main3p", object: "main3", uses: "shr3p", text: "MAIN3P"},
+		{image: "main6", object: "main6", uses: "shr6"},
+		{image: "exe1"},
+	}
+
+	for _, c := range cases {
+		t.Run(c.image, func(t *testing.T) {
+			want, _, image, mapFile := realMap(t, filepath.Join(link68Dir, "vax", c.image+".map"))
+			_, opts := realImage(t, filepath.Join(link68Dir, "vax", c.image+".exe"))
+
+			var (
+				inputs []Input
+				uses   []string
+			)
+
+			if c.image == "exe1" {
+				opts = exe1Options(opts)
+				inputs = []Input{
+					{File: "DUA1:[000000]EXE1.OBJ;1", Module: link68Object(t, "exe1")},
+					{File: "DUA1:[000000]EXE1B.OBJ;1", Module: link68Object(t, "exe1b"), Cluster: "SECOND"},
+				}
+			} else {
+				uses = []string{c.uses}
+				_, opts.Clusters = link68Uses(t, uses)
+				inputs = []Input{{File: "DUA1:[000000]" + strings.ToUpper(c.object) + ".OBJ;1", Module: link68Object(t, c.object)}}
+			}
+
+			opts.Sources = link68VMSSources(t, uses)
+
+			img, err := Link(inputs, opts)
+			if err != nil {
+				t.Fatal(err)
+			}
+
+			got := img.Map(MapOptions{ImageFile: image, ImageText: c.text, MapFile: mapFile, Full: true})
+
+			for i := range max(len(got), len(want)) {
+				var g, w string
+				if i < len(got) {
+					g = got[i]
+				}
+
+				if i < len(want) {
+					w = want[i]
+				}
+
+				if g != w {
+					t.Errorf("line %d:\n got %q\nwant %q", i+1, g, w)
+				}
+			}
+		})
+	}
+}
+
+// TestMapShareableImagesGovaxTables links the probe's shareable images
+// with govax's own symbol tables, which TestMapShareableImagesFull's
+// libraries stand in for where VMS's aren't at hand, and checks that each
+// /FULL map's lines are real LINK's but for what those tables don't know:
+// LIBRTL's ident, file, and date, STARLET.OLB's SYS$P1_VECTOR module, and
+// the counts and the length estimate that follow from them.
+func TestMapShareableImagesGovaxTables(t *testing.T) {
+	differ := []string{
+		"LIBRTL   ", "Number of files:", "Number of modules:", "Number of program sections:",
+		"Number of global symbols:", "Estimated map length:",
+	}
+
+	for _, c := range shareableCases {
+		if c.image == "e1" {
+			continue
+		}
+
+		t.Run(c.image, func(t *testing.T) {
+			img, _ := linkShareableCase(t, c.image)
+			want, _, image, mapFile := realMap(t, filepath.Join(link68Dir, "vax", c.image+".map"))
+
+			vms := map[string]bool{}
+			for _, line := range want {
+				vms[line] = true
+			}
+
+			got := img.Map(MapOptions{ImageFile: image, ImageText: strings.ToUpper(c.image), MapFile: mapFile, Full: true})
+
+		lines:
+			for i, line := range got {
+				for _, d := range differ {
+					if strings.HasPrefix(line, d) {
+						continue lines
+					}
+				}
+
+				if !vms[line] {
+					t.Errorf("line %d %q isn't real LINK's", i+1, line)
+				}
+			}
+
+			// Real LINK's map has SYS$P1_VECTOR's line too, if it used
+			// STARLET.OLB.
+			if n := len(want) - len(got); n != 0 && n != 1 {
+				t.Errorf("%d lines, real LINK's %d", len(got), len(want))
+			}
+		})
+	}
+}

@@ -7,6 +7,8 @@ IMAGE HEADER
 		image format major id: 02, minor id: 05
 		header block count: 2
 		image type: shareable (IHD$K_LIM)
+			global section major id: %X'00', minor id: %X'000000'
+			match control: ISD$K_MATALL
 		I/O channel count: 16
 		I/O page count: 8
 		linker flags:

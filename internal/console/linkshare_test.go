@@ -251,3 +251,69 @@ func TestLinkShareableUsingAnother(t *testing.T) {
 		t.Errorf("SHR2.EXE differs from VMS's (%d bytes, want at least %d)", len(image), len(vms))
 	}
 }
+
+// TestLinkShareableFullMap links SHR2 against VMS's SHR1.EXE with
+// /MAP/FULL: the map is a full one (docs/PHASE-68, subtask 8), with the
+// image section synopsis and its SHR1 sections, the module relocatable
+// reference synopsis, the symbols by value, and the image synopsis's
+// SHAREABLE line. /FULL with /BRIEF is DCL's CONFLICT, and links nothing.
+func TestLinkShareableFullMap(t *testing.T) {
+	d, c, buf := newCommandDispatcher(t)
+	dir := t.TempDir()
+
+	object := filepath.Join(dir, "SHR2.OBJ")
+	if err := c.cmd().Macro(dclcmd.MacroOptions{Source: filepath.Join("..", "..", "testdata", "link68", "shr2.mar"), Object: object}); err != nil {
+		t.Fatalf("MACRO: %v", err)
+	}
+
+	shr1, err := os.ReadFile(filepath.Join(link68Vax, "shr1.exe"))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if err := os.WriteFile(filepath.Join(dir, "SHR1.EXE"), shr1, 0o644); err != nil {
+		t.Fatal(err)
+	}
+
+	exe, mapFile := filepath.Join(dir, "SHR2.EXE"), filepath.Join(dir, "SHR2.MAP")
+	proc := writeProcedure(t, dir, "link.com",
+		`$ LINK/SHAREABLE="`+exe+`"/MAP="`+mapFile+`"/FULL "`+object+`",SYS$INPUT/OPTIONS`,
+		`"`+filepath.Join(dir, "SHR1.EXE")+`"/SHAREABLE`,
+		"UNIVERSAL=SHR2_TWICE,SHR2_COUNT,SHR2_ADDR",
+		"GSMATCH=EQUAL,2,5",
+		"$ SHOW SYMBOL $STATUS",
+		`$ LINK/NOEXECUTABLE/MAP/FULL/BRIEF "`+object+`"`,
+	)
+
+	if err := d.Dispatch("@" + proc); err != nil && !vmserrors.MessageInhibited(err) {
+		t.Fatalf("@link: %v", err)
+	}
+
+	if got := buf.String(); !strings.HasPrefix(got, "  $STATUS == \"%X10000001\"\n") || !strings.Contains(got, "CONFLICT") {
+		t.Errorf("output %q", got)
+	}
+
+	data, err := os.ReadFile(mapFile)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	text := string(data)
+
+	for _, want := range []string{
+		"! Module Relocatable Reference Synopsis !",
+		"SHR2                                    6  ",
+		"! Image Section Synopsis !",
+		"SHR1               3     1    00000000-R        0   0 READ ONLY                  SHR1_001         LESS/EQUAL        1      1000",
+		"                   2     1    00000400-R        4   0 READ WRITE   FIXUP VECTORS",
+		"SHR2_TWICE      00000000-RU",
+		"! Symbols By Value !",
+		"00000448     RX-SHR1_COUNT",
+		"PIC, SHAREABLE. Global Section Match=EQUAL, Ident, Major=2, Minor=5",
+		"FULL in file",
+	} {
+		if !strings.Contains(text, want) {
+			t.Errorf("the map has no %q", want)
+		}
+	}
+}

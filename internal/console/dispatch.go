@@ -497,7 +497,8 @@ func (d *Dispatcher) bindGrammar() {
 			NoSysLib:      r.Present("SYSLIB") && r.Negated("SYSLIB"),
 			Map:           r.Present("MAP") && !r.Negated("MAP") && !r.Defaulted("MAP"),
 			MapFile:       r.String("MAP"),
-			Brief:         r.Present("BRIEF"),
+			Brief:         r.Present("BRIEF") && !r.Negated("BRIEF"),
+			Full:          r.Present("FULL") && !r.Negated("FULL"),
 		})
 	})
 
