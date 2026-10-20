@@ -40,6 +40,13 @@ port had the following objectives:
 - Introduction of more modern console features, such as using
   a proper `readline` library for command line input, etc.
 
+## User's manual
+
+The [user's manual](docs/MANUAL.md) explains how to use govax: the
+command line and configuration, the DCL commands and command
+procedures, writing programs in MACRO-32, the linker, the librarian,
+running programs, the debugger, and how govax works inside.
+
 ## Project Plan
 
 The [PLAN](docs/PLAN.md) file describes the overall porting plan,

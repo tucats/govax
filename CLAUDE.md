@@ -190,6 +190,10 @@ never had.
   doc.
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
+- `docs/MANUAL.md` — the user's manual (2026-10-20): what govax is, the command
+  line and configuration, every DCL command, command procedures, MACRO, LINK,
+  LIBRARY, RUN, the debugger, and internals. Its examples were run on govax; when
+  a change alters a command, a message, or an example's output, update it too.
 - `docs/DEVIATIONS.md` — running log of suspected ISA/behavior fidelity issues found in
   the C source during porting (see "Bug-fixing policy" below).
 - `docs/DEBUG-RECORDS.md` — a clean-room description of the debug symbol
@@ -1354,7 +1358,7 @@ expect adjustment as phases land):
 - `cmd/govax` — `main.go` (CLI entry point) plus `grammar.go` (the `tucats/gopackages`
   `app-cli/cli` option/subcommand grammar — `stats`/`path`/`instruction-limit`/
   `time-limit` options, repeatable `mount`/`mount-write DEVICE=container`,
-  `console`/`asm`/`run`/`macro`/`link`/`library`/`analyze` subcommands;
+  `console`/`run`/`macro`/`link`/`library`/`analyze` subcommands;
   `analyze --image` is ANALYZE/IMAGE). A one-shot subcommand that fails
   makes govax exit nonzero (124, as timeout(1) does, when `--instruction-limit`
   or `--time-limit` stopped it), and volumes still mounted are dismounted (flushed)

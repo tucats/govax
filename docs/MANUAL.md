@@ -1,0 +1,3882 @@
+# govax User's Manual
+
+govax is a VAX/VMS environment that runs on your own computer. It runs
+VAX machine code, provides the VMS system services and run-time library
+that VAX programs call, and gives you a DCL command line with the tools
+to build programs: a MACRO-32 assembler, a linker, a librarian, and a
+debugger modeled on the VMS debugger.
+
+This manual is for people who know VMS as users (DCL, file
+specifications, logical names, `RUN`, `MACRO`, `LINK`) and want to run
+existing VAX programs, or write new ones, without a VAX. It doesn't
+assume you know VAX system internals; the last part of the manual
+explains as much of them as you need to understand what govax is doing.
+
+The examples in this manual were run on govax, and the output shown is
+what govax printed (sometimes shortened, where `...` shows). Dates,
+times, node names, and version numbers will differ on your system.
+
+## Contents
+
+1. [What govax is, and what it isn't](#1-what-govax-is-and-what-it-isnt)
+2. [Getting started](#2-getting-started)
+3. [The govax command line](#3-the-govax-command-line)
+4. [Configuration](#4-configuration)
+5. [Files, volumes, and devices](#5-files-volumes-and-devices)
+6. [DCL command reference](#6-dcl-command-reference)
+7. [Command procedures and the DCL language](#7-command-procedures-and-the-dcl-language)
+8. [Programming in MACRO-32](#8-programming-in-macro-32)
+9. [The linker](#9-the-linker)
+10. [The librarian](#10-the-librarian)
+11. [Running programs](#11-running-programs)
+12. [The debugger](#12-the-debugger)
+13. [Internals](#13-internals)
+14. [Appendices](#14-appendices)
+
+---
+
+## 1. What govax is, and what it isn't
+
+### What it is
+
+govax emulates a VAX processor and, around it, enough of VMS for VAX
+programs to run as they would under VMS:
+
+- **The VAX instruction set, complete.** Every VAX instruction is
+  implemented, including the F, D, G, and H floating-point formats (with
+  VAX rounding, not IEEE), packed decimal, the string and character
+  instructions, the queue instructions, and the octaword instructions.
+  Memory management, access modes, exceptions, and interrupts follow the
+  VAX architecture.
+- **VMS system services.** Over ninety `SYS$` services: I/O (`$QIO`,
+  `$ASSIGN`), logical names, time, event flags, ASTs, condition handling,
+  processes (`$CREPRC`, `$HIBER`, `$WAKE`), mailboxes, global sections,
+  the lock manager (`$ENQ`, `$DEQ`), memory (`$EXPREG`, `$CRETVA`,
+  `$CRMPSC`), and information (`$GETJPI`, `$GETSYI`, `$GETDVI`). Appendix
+  A lists them.
+- **RMS**, on real Files-11 (ODS-2) disk volumes: `$OPEN`, `$CREATE`,
+  `$CONNECT`, `$GET`, `$PUT`, `$UPDATE`, `$FIND`, `$DELETE`, `$PARSE`,
+  `$SEARCH`, and the rest, with FABs, RABs, NAM blocks, and XABs, file
+  sharing between processes, and record locks.
+- **The run-time library.** About 170 `LIB$` routines (strings,
+  descriptors, conversions, dates and times, memory zones, condition
+  handling, file searches, the CLI routines, `LIB$SPAWN`), written in Go
+  and reached from VAX code exactly as the real LIBRTL is reached.
+- **Processes.** Several VMS processes run at once, scheduled by VMS's
+  priority rules: subprocesses, detached processes, mailboxes between
+  them, shared files, common event flags.
+- **Optional VMS paging.** With paging turned on, govax runs VMS's
+  memory management: working sets, page faults, the free and modified
+  page lists, a page file, and images mapped from their files.
+- **A DCL command interpreter.** Command procedures, symbols,
+  expressions, lexical functions, `IF`/`THEN`/`ELSE`, `GOSUB`, `CALL`,
+  `ON`, file I/O with `OPEN`/`READ`/`WRITE`, `SPAWN`, and the usual file
+  commands (`DIRECTORY`, `COPY`, `TYPE`, `DELETE`, `RENAME`, ...).
+- **Program development tools.** `MACRO` assembles MACRO-32 source into
+  VMS object modules. `LINK` links them into VMS executable and
+  shareable images. `LIBRARY` makes and maintains object, macro, and
+  shareable image libraries. `ANALYZE/OBJECT` and `ANALYZE/IMAGE`
+  describe object and image files. The debugger debugs programs at the
+  source line and instruction level.
+
+These are not loose imitations. The objects govax's `MACRO` writes, the
+images its `LINK` writes, and the libraries its `LIBRARY` writes are laid
+out byte for byte as VMS's tools lay them out, so they work on a real VAX,
+and VAX-built objects, libraries, and images work in govax. Most of the
+system's behavior (message texts, statuses, DCL's rules, the layout of
+`DIRECTORY` and `SHOW` output, the debugger's output) has been checked
+against VMS 7.1 and 7.3 running on a VAX emulator, and govax's test suite
+replays those VMS runs to keep it that way.
+
+### What it isn't
+
+- **It isn't a hardware emulator that boots VMS.** govax doesn't emulate
+  disk controllers, terminal multiplexers, or a console boot ROM, and it
+  can't boot a VMS distribution. If you want to run the real VMS
+  operating system, use [SIMH](https://simh.trailing-edge.com), which
+  does that very well. govax is VMS-compatible from the program's point
+  of view: its "operating system" is a small microkernel plus Go code
+  that behaves as VMS's services do.
+- **It doesn't include VMS's compilers or utilities.** There is no
+  FORTRAN, C, BASIC, or Pascal compiler; MACRO-32 is the language you can
+  build programs in. Images built by those compilers on a real VAX will
+  run if every run-time library routine they call is one govax provides
+  (see [Running programs built on VMS](#running-programs-built-on-vms)).
+- **It contains no DIGITAL, Compaq, HP, or VSI code or files.** govax was
+  written clean-room, from DIGITAL's manuals and from the output real VMS
+  produced. Its system macro library (`STARLET.MLB`) and its tables of
+  VMS symbols are its own. If you have VMS's own library files you can
+  point govax at them (see [`vax.library`](#files-and-libraries)), but
+  you don't need them.
+- **It is a single-user system.** You are the user `SYSTEM`, with all
+  privileges. There is no login, no user authorization file, no batch
+  or print queues, no networking (DECnet or TCP/IP), and no cluster.
+- **Some things VMS does are missing or simplified.** For example, a
+  program that fails prints its condition message but not yet VMS's
+  symbolic traceback; there is no `INSTALL`; there is no swapping. Where
+  govax knowingly differs from VMS, this manual says so, and
+  `docs/DEVIATIONS.md` keeps the detailed list.
+
+### Who it's for
+
+- You have VAX programs (MACRO-32 sources, or images and objects from a
+  VAX) and want to run, study, or debug them.
+- You want to learn or teach VAX assembly language and VMS programming
+  with a fast edit-assemble-run cycle on a modern machine.
+- You're curious how VMS works inside: govax lets you watch page faults,
+  working sets, the scheduler, and system services from the debugger.
+
+---
+
+## 2. Getting started
+
+### Building govax
+
+govax is written in Go. With Go installed (1.26 or later), from a clone
+of the repository:
+
+```sh
+go build ./cmd/govax          # makes ./govax
+go install ./cmd/govax        # or installs govax in your Go bin directory
+```
+
+govax needs no other files: the files it reads at startup (its command
+grammar, help text, startup procedure, and microkernel) are built into the
+executable. govax runs on macOS, Linux, and Windows.
+
+### Your first session
+
+Type `govax` with no arguments to get the console's prompt:
+
+```text
+$ govax
+govax 1.0-280
+%SYSTEM-S-INIT, Kernel initialized
+
+VAX>
+```
+
+Before the prompt appears, govax runs its startup procedure, `vax.init`
+(see [What happens at startup](#what-happens-at-startup)): it configures
+8 MB of memory, builds the page tables, loads and starts the microkernel,
+and defines the terminal and null devices. `%SYSTEM-S-INIT` says that has
+been done.
+
+At the `VAX>` prompt you type DCL commands, as at VMS's `$` prompt. Some
+things to try:
+
+```text
+VAX> SHOW SYSTEM
+GOVAX 1.0-280  on node mymac  20-OCT-2026 09:56:01.44  Uptime  0 00:00:00
+  Pid    Process Name    State  Pri      I/O       CPU       Page flts  Pages
+00000301 SYSTEM          CUR      4        0   0 00:00:00.04         7      7
+VAX> X = 6 * 7
+VAX> SHOW SYMBOL X
+  X = 42   Hex = 0000002A  Octal = 00000000052
+VAX> WRITE SYS$OUTPUT "Answer: ", X, " at ", F$TIME()
+Answer: 42 at 20-OCT-2026 09:56:01.44
+VAX> HELP
+```
+
+`HELP` lists every command and topic; `HELP DIRECTORY`, `HELP LINK`,
+`HELP LEXICAL`, and so on describe each one in detail. The help text and
+this manual cover the same ground; the help text is the place to look up
+a qualifier quickly.
+
+To leave govax, type `EXIT` (or `QUIT`, or `LOGOUT`) at the `VAX>`
+prompt, or press **Ctrl/Y**.
+
+The prompt has a line editor: the arrow keys move through the line and
+through earlier commands, which govax keeps between sessions in
+`~/.govax/history.txt`.
+
+### Hello, world
+
+Here is the classic first program, in MACRO-32. Put it in a file called
+`hello.mar` in your current directory:
+
+```asm
+        .TITLE  HELLO   Hello, world
+        .IDENT  /V1.0/
+
+        .PSECT  DATA, WRT, NOEXE, LONG
+MSG:    .ASCID  /Hello, world!/         ; a string descriptor
+
+        .PSECT  CODE, NOWRT, EXE, LONG
+        .ENTRY  HELLO, ^M<>             ; the main routine
+        PUSHAQ  MSG                     ; LIB$PUT_OUTPUT(MSG)
+        CALLS   #1, G^LIB$PUT_OUTPUT
+        RET                             ; R0 is its status: success
+
+        .END    HELLO                   ; HELLO is the transfer address
+```
+
+Assemble, link, and run it, either from your host shell:
+
+```text
+$ govax macro hello.mar
+$ govax link hello.obj
+$ govax run hello.exe
+Hello, world!
+```
+
+or at the `VAX>` prompt:
+
+```text
+VAX> MACRO "hello.mar"
+VAX> LINK "hello"
+VAX> RUN "hello.exe"
+Hello, world!
+```
+
+Notice the quotes at the `VAX>` prompt. DCL makes everything you type
+uppercase unless it's in quotes, and your host's file names are often
+lowercase (and on Linux, case-sensitive). Section 5 explains how govax
+decides whether a name means a host file or a file on a VAX disk.
+
+### Working on a VAX disk
+
+You can keep your work in host files, as above, but VAX programs that
+use RMS (`$OPEN`, `$GET`, `$PUT`, ...) read and write files on Files-11
+disk volumes, and VMS-style file names, versions, and directories only
+exist there. govax keeps a Files-11 volume in a single host file, called
+a *container*. The easiest way to get one is to let govax make it for
+you each time it starts:
+
+```sh
+govax config set vax.default.volume.file="~/vax/work.dsk"
+```
+
+The next time govax starts, it creates the container (the first time
+only), mounts it as `DUA0:`, and sets your default directory to
+`DUA0:[WORK]`:
+
+```text
+$ govax
+govax 1.0-280
+%MOUNT-I-CREATED, container /Users/me/vax/work.dsk created as an RD54 volume labeled WORK
+%MOUNT-I-MOUNTED, WORK mounted on _DUA0:
+%SYSTEM-S-INIT, Kernel initialized
+
+VAX> SHOW DEFAULT
+  DUA0:[WORK]
+VAX> COPY "hello.mar"/HOST *
+%COPY-S-COPIED, hello.mar copied to DUA0:[WORK]HELLO.MAR;1
+VAX> MACRO HELLO
+VAX> LINK HELLO
+VAX> RUN HELLO
+Hello, world!
+VAX> DIRECTORY
+
+Directory DUA0:[WORK]
+
+HELLO.EXE;1         HELLO.MAR;1         HELLO.OBJ;1
+
+Total of 3 files.
+```
+
+Now names work as they do on VMS: `HELLO` means `DUA0:[WORK]HELLO.MAR`
+to `MACRO` and `DUA0:[WORK]HELLO.EXE` to `RUN`, and each new file is a
+new version. `COPY ... /HOST` moves files between your host and the
+volume in either direction. The volume is an ordinary ODS-2 disk image;
+SIMH and other VAX emulators can mount it too.
+
+### What happens at startup
+
+Each time govax starts, it:
+
+1. Mounts the containers named by `--mount` and `--mount-write` options.
+2. Mounts the default volume, if `vax.default.volume.file` is set.
+3. Runs `vax.init`, govax's equivalent of a system startup and login
+   procedure. It is a DCL command procedure that:
+   - sets the size of physical memory (`INITIALIZE/VAX`),
+   - builds the page tables for the P0, P1, and S0 address regions and
+     the access modes' stacks (`VMINIT`),
+   - loads a console ROM and NVRAM if there are any (`LOAD/ROM/NOERROR`),
+   - assembles the microkernel into memory (`ASM "kernel.asm"`) and runs
+     its initialization under the debugger,
+   - defines the terminal `TTA0:` and the null device `NLA0:`.
+4. Installs the page file, if paging is on.
+5. Runs your own startup procedure, if `vax.startup.procedure` names one.
+6. Runs the command given on govax's command line and exits, or else
+   shows the `VAX>` prompt.
+
+The memory sizes `vax.init` uses can be changed with configuration
+settings (see [Memory](#memory)), so you rarely need a `vax.init` of your
+own. If you do, put one in a directory and give it to govax with `--path`
+(see [Global options](#global-options)).
+
+---
+
+## 3. The govax command line
+
+### Forms
+
+```text
+govax [global-options]                          interactive session
+govax [global-options] command [args...]        one DCL command, then exit
+govax [global-options] subcommand [options] [args...]
+```
+
+With no command, govax starts an interactive session. Anything else on
+the command line that isn't one of govax's subcommands is a DCL command:
+govax starts, runs `vax.init`, runs that one command, and exits.
+
+```text
+$ govax show system
+GOVAX 1.0-280  on node mymac  20-OCT-2026 10:10:37.70  Uptime  0 00:00:00
+  Pid    Process Name    State  Pri      I/O       CPU       Page flts  Pages
+00000301 SYSTEM          CUR      4        0   0 00:00:00.01         6      6
+$ govax console 'write sys$output f$getsyi("HW_NAME")'
+VAX (govax)
+```
+
+(`console` is the name of that default subcommand; you only need to type
+it when the DCL command's verb is the same as a govax subcommand's.)
+
+Remember that your host shell sees the command first: quote anything
+with `$`, quotes, brackets, or other characters your shell treats
+specially, as in the second example.
+
+### Subcommands
+
+The subcommands are shortcuts for DCL commands, with host-style options,
+for use from scripts and makefiles. Each one quotes its file names for
+you, so their case is kept.
+
+| Subcommand | DCL command it runs | Purpose |
+| --- | --- | --- |
+| `govax console CMD...` | `CMD` | Run one DCL command (the default). |
+| `govax run IMAGE [text...]` | `RUN IMAGE` | Run an image. Any words after the image's name are its command text, which it reads with `LIB$GET_FOREIGN`. |
+| `govax macro SOURCE` | `MACRO SOURCE` | Assemble a MACRO-32 source file. |
+| `govax link OBJECT...` | `LINK OBJECT,...` | Link object modules into an image. |
+| `govax library LIB [INPUT...]` | `LIBRARY LIB INPUT,...` | Create, change, list, or extract from a library. |
+| `govax analyze FILE...` | `ANALYZE/OBJECT` or `/IMAGE` | Describe object or image files. |
+| `govax config ...` | | View and change the configuration (section 4). |
+| `govax help` | | Show the command-line help. |
+| `govax version` | | Show govax's version. |
+
+Each subcommand's options mirror the DCL qualifiers; `govax SUBCOMMAND
+--help` lists them:
+
+```text
+govax run [--debug | --no-debug] IMAGE [text...]
+
+govax macro [--object FILE | --no-object] [--list | --list-file FILE]
+            [--show OPTS] [--no-show OPTS] [--cross-reference]
+            [--cross-reference-kinds KINDS] [--enable FUNCS]
+            [--disable FUNCS] [--debug OPTS | --no-debug]
+            [--library MLB]... SOURCE
+
+govax link [--executable FILE | --no-executable] [--shareable]
+           [--symbol-table FILE] [--debug] [--no-traceback]
+           [--no-syslib] [--no-userlibrary]
+           [--map | --map-file FILE] [--brief | --full]
+           [--library OLB]... [--options OPT]... OBJECT...
+
+govax library [--create] [--insert | --replace] [--delete MODS]
+              [--extract MODS] [--output FILE] [--list | --list-file FILE]
+              [--full] [--names] [--macro | --object | --share]
+              [--no-squeeze] [--selective-search] [--log]
+              LIBRARY [INPUT...]
+
+govax analyze [--image [--header] [--fixup-section]]
+              [--mhd] [--gsd] [--tir] [--tbt] [--dbg] [--lnk] [--eom]
+              [--include MODS] [--output | --output-file FILE] FILE...
+```
+
+For example:
+
+```text
+$ govax macro --list --cross-reference prog.mar
+$ govax link --map --full --options prog.opt prog.obj
+$ govax run echo.exe Hello there, '"Mixed Case"'
+Hello there, "Mixed Case"
+```
+
+### Global options
+
+Global options go before the subcommand or command.
+
+| Option | Meaning |
+| --- | --- |
+| `--mount DEV=FILE`, `-m` | Mount the container `FILE` read-only on device `DEV` before anything else. May be repeated. |
+| `--mount-write DEV=FILE` | Mount it for reading and writing. May be repeated. |
+| `--path DIR,...` | Host directories to search for files govax and its commands name (its startup files, `@` procedures, MACRO sources, ...), after the name as given. govax's built-in copies of its startup files are always searched last. |
+| `--profile NAME` | Use the configuration profile `NAME` instead of the default one (section 4). |
+| `--instruction-limit N`, `-i` | Stop a program after it has executed `N` VAX instructions. Each run (a `RUN`, or the debugger's `GO`, `CALL`, or `STEP`) starts with a fresh budget. |
+| `--time-limit D`, `-t` | Stop a run after the elapsed time `D` (`10s`, `2m`, ...). |
+| `--stats`, `-s` | When govax exits, show statistics: instructions executed, memory accesses, translation buffer use, and (with paging on) the paging counts. |
+| `--cpu-profile FILE` | Write a Go CPU profile of govax itself (for govax's developers; see `docs/PERFORMANCE.md`). |
+| `--version`, `-v` | Show the version. |
+| `--help`, `-h` | Show help. |
+
+The limits apply only to your commands, not to `vax.init`. They are a
+safety net for a program that loops forever when govax runs unattended,
+in a test script for instance.
+
+```text
+$ govax --mount-write DUA0=work.dsk macro 'DUA0:[SRC]PROG.MAR'
+$ govax --mount DUA0=ex.dsk run 'DUA0:[DEMO]GREET'
+What is your name? Grace
+Hello, Grace!
+$ govax --instruction-limit 5000000 run "./loop.exe"
+```
+
+### Exit status
+
+| Status | Meaning |
+| --- | --- |
+| 0 | The command succeeded (for `RUN`, the image's exit status was a success). |
+| 1 | The command failed: its message has been shown. |
+| 124 | `--instruction-limit` or `--time-limit` stopped it. (124 is the status the Unix `timeout` command uses.) |
+
+So a makefile or shell script can use govax like any other tool:
+
+```sh
+govax macro prog.mar && govax link prog.obj && govax run prog.exe
+```
+
+### Control keys
+
+govax gives the control keys their VMS meanings:
+
+| Key | At the `VAX>` prompt | While a program or command runs |
+| --- | --- | --- |
+| **Ctrl/C** | Cancels the line being typed. | Interrupts it, back to the prompt it was started from (`VAX>` or `DBG>`). A program that enabled a Ctrl/C AST gets the AST instead. |
+| **Ctrl/Y** | Ends govax. | Ends govax (a second Ctrl/Y exits at once if the first doesn't). A program with a Ctrl/Y AST gets it instead. In a command procedure, Ctrl/Y is DCL's: see [Ctrl/Y in procedures](#ctrly-in-procedures). |
+| **Ctrl/Z** | Echoes `*Exit*`, as DCL does. At `DBG>` it's `EXIT`. | End of file for the program's read (RMS's `RMS$_EOF`). |
+
+`SET NOCONTROL=Y` turns Ctrl/Y off. `HELP KEYS` has the details,
+including how the keys go to a subprocess that `SPAWN` is waiting for.
+
+---
+
+## 4. Configuration
+
+govax keeps settings in a *profile*: a file in the `.govax` directory of
+your home directory, read each time govax starts. You change them from
+your host shell with `govax config`, not from the `VAX>` prompt.
+
+### Setting, showing, and deleting
+
+```text
+govax config set KEY=VALUE      set a key
+govax config set KEY            set a key to true
+govax config show               show every key in the profile
+govax config show KEY           show one key's value
+govax config delete KEY         delete a key, so its default applies again
+```
+
+For example:
+
+```text
+$ govax config set vax.default.volume.file="~/vax/work.dsk"
+Configuration key vax.default.volume.file written
+$ govax config set vax.sysgen.paging.enable=true
+Configuration key vax.sysgen.paging.enable written
+$ govax config show
+Key                         Value
+vax.default.volume.file     ~/vax/work.dsk
+vax.sysgen.paging.enable    true
+$ govax config show vax.sysgen.paging.enable
+true
+$ govax config delete vax.sysgen.paging.enable
+```
+
+Keys are lowercase. govax warns, as it exits, about any key in the profile
+it doesn't recognize; that usually means a misspelling. It also warns
+about a value it can't use (a page count that isn't a number, say) and
+uses the default instead.
+
+Quote values your shell would otherwise change. In particular, zsh and
+some other shells treat `[...]` as a file name pattern:
+
+```sh
+govax config set "vax.sysgen.paging.file=DUA0:[WORK]PAGEFILE.SYS"
+```
+
+### Profiles
+
+You can keep several profiles, for different projects or for testing, and
+choose one with the global `--profile` option:
+
+```text
+govax --profile test config set vax.quantum=50     set a key in "test"
+govax --profile test                               run govax with "test"
+govax config list                                  list the profiles
+govax --profile test config set-description "For the test suite"
+govax config remove test                           delete the "test" profile
+```
+
+Without `--profile`, govax uses the profile named `default`.
+
+### Reading the configuration from DCL
+
+The lexical function `F$CONFIG`, which is govax's own, reads a key from a
+DCL procedure:
+
+```text
+$ IF F$CONFIG("vax.library", "EXISTS") THEN -
+     WRITE SYS$OUTPUT "Libraries in ", F$CONFIG("vax.library")
+$ PAGING = F$CONFIG("vax.sysgen.paging.enable", "BOOLEAN")
+```
+
+Its second argument is `VALUE` (the default: the value, or `""`),
+`EXISTS` (1 if the key is set), or `BOOLEAN` (1 if the value is TRUE, T,
+YES, Y, or 1 in any case). `vax.init` uses it to read the memory sizes.
+
+### Configuration keys
+
+#### The default volume
+
+| Key | Meaning | Default |
+| --- | --- | --- |
+| `vax.default.volume.file` | A container to mount at startup and make the default device. A leading `~/` is your home directory. govax creates it (initialized, with the default directory in it) if it doesn't exist. | none |
+| `vax.default.volume.label` | The label a new container gets. When set, an existing container's label must match or it isn't used. | `WORK` |
+| `vax.default.volume.device` | The device to mount it on. | `DUA0:` |
+| `vax.default.volume.type` | The disk type that sizes a new container (`RX50`, `RD54`, `RA81`, ...; see [Disk types](#disk-types)). | `RD54` (311,200 blocks) |
+| `vax.default.volume.directory` | The default directory, created in a new container. | `[WORK]` |
+
+If the volume can't be used, govax says why (`%MOUNT-W-NODEFAULT`) and
+starts without it. A container that can only be read is mounted
+read-only.
+
+#### Files and libraries
+
+| Key | Meaning |
+| --- | --- |
+| `vax.path` | Host directories to search for files, separated by commas, as with `--path`. |
+| `vax.library` | A host directory holding VMS's own `STARLET.MLB`, `STARLET.OLB`, `IMAGELIB.OLB`, and shareable images, if you have them. `MACRO` and `LINK` look there when `SYS$LIBRARY` and `SYS$SHARE` don't lead to the files (see [Using VMS's own libraries](#using-vmss-own-libraries)). |
+| `vax.link.library` | The older name for `vax.library`. |
+
+#### The console
+
+| Key | Meaning | Default |
+| --- | --- | --- |
+| `vax.startup.procedure` | A DCL procedure to run after `vax.init` each time govax starts: a volume file (`DUA0:[WORK]LOGIN.COM`) or a host file. If it doesn't exist, nothing happens. | none |
+| `vax.console.prompt` | The prompt. `SET PROMPT` changes it and saves it here. | `VAX> ` |
+| `vax.console.lines` | The screen height `TYPE/PAGE` uses when it can't ask the terminal. | 24 |
+| `vax.disassemble.symbolic` | Whether the debugger shows instructions with symbolic names by default. | true |
+| `vax.language` | The user's language, as `LIB$GET_USERS_LANGUAGE` returns it when `SYS$LANGUAGE` isn't defined. | the host's locale |
+
+A login procedure is a good place for your own symbols and logical
+names:
+
+```text
+$! DUA0:[WORK]LOGIN.COM
+$ SD :== SET DEFAULT
+$ DIR :== DIRECTORY/SIZE/DATE
+$ DEFINE SRC DUA0:[WORK.SRC]
+$ DEFINE SYS$SHARE DUA0:[SYSLIB]
+```
+
+```sh
+govax config set "vax.startup.procedure=DUA0:[WORK]LOGIN.COM"
+```
+
+#### The machine
+
+| Key | Meaning | Default |
+| --- | --- | --- |
+| `vax.hardware.clock` | true: the system time and clock follow the host's real time. false: time advances with the instructions executed, so every run is exactly repeatable. | false |
+| `vax.quantum` | In instruction-count mode, the instructions between clock ticks. (`vax.init` sets it to 1 with `SET QUANTUM 1`, so each instruction is one emulated millisecond.) | 20 |
+
+#### Memory
+
+These sizes are read by `vax.init`. Each is a count of 512-byte pages,
+decimal or `%X` hexadecimal.
+
+| Key | Meaning | Default |
+| --- | --- | --- |
+| `vax.memory.size` | Physical memory. | 16384 (8 MB) |
+| `vax.memory.p0` | The P0 (program) region's pages. | 16384; with paging, 19456 |
+| `vax.memory.p1` | The P1 (control) region's pages. | 8192; with paging, 5120 |
+| `vax.memory.s0` | The S0 (system) region's pages. | 8192; with paging, 16384 |
+| `vax.memory.ksp` | The kernel stack. | 20 |
+| `vax.memory.esp` | The executive stack. | 8 |
+| `vax.memory.ssp` | The supervisor stack. | 8 |
+| `vax.memory.isp` | The interrupt stack. | 4 |
+
+The defaults suit most programs. A program that needs more than about
+8 MB of P0 space needs a larger `vax.memory.p0` (and, without paging,
+more physical memory). Section 13 explains the regions.
+
+#### Processes
+
+| Key | Meaning | Default |
+| --- | --- | --- |
+| `vax.process.scheduler` | Whether programs can create processes (`$CREPRC`, `LIB$SPAWN`, `SPAWN`). Off, only the console's own process runs. | true |
+| `vax.process.quantum` | Instructions a process runs before another of the same priority gets the CPU. | 20000 |
+| `vax.process.preempt` | The access modes in which a process can lose the CPU: `all` (as VMS), `user`, or `none` (only when it waits). | all |
+
+#### System parameters
+
+The `vax.sysgen.*` keys are govax's SYSGEN parameters, named after the
+VMS parameters they stand for. Counts are in pages. Most only matter with
+paging on; section 13 explains what they control.
+
+| Key | VMS parameter | Default |
+| --- | --- | --- |
+| `vax.sysgen.paging.enable` | (govax's) turns VMS paging on | false |
+| `vax.sysgen.paging.file` | (govax's) the page file: a volume file, or a quoted host path | none |
+| `vax.sysgen.paging.size` | (govax's) the page file's size in blocks | 32768 |
+| `vax.sysgen.paging.defer` | (govax's) open the page file only when first needed | false |
+| `vax.sysgen.pql_dwsdefault` | PQL_DWSDEFAULT: a new process's default working set | 294 |
+| `vax.sysgen.pql_dwsquota` | PQL_DWSQUOTA: its working set quota | 588 |
+| `vax.sysgen.pql_dwsextent` | PQL_DWSEXTENT: its working set extent | 16400 |
+| `vax.sysgen.pql_dpgflquota` | PQL_DPGFLQUOTA: a new job's page file quota | 16400 |
+| `vax.sysgen.minwscnt` | MINWSCNT: the smallest working set | 20 |
+| `vax.sysgen.tbskipwsl` | TBSKIPWSL | 8 |
+| `vax.sysgen.growlim` | GROWLIM | 63 |
+| `vax.sysgen.freelim` | FREELIM | 32 |
+| `vax.sysgen.freegoal` | FREEGOAL | 200 |
+| `vax.sysgen.mpw_hilimit` | MPW_HILIMIT | 500 |
+| `vax.sysgen.mpw_lolimit` | MPW_LOLIMIT | 32 |
+| `vax.sysgen.mpw_wrtcluster` | MPW_WRTCLUSTER (a multiple of 8, 16 to 120) | 120 |
+| `vax.sysgen.pfcdefault` | PFCDEFAULT (0 to 127) | 32 |
+| `vax.sysgen.gblsections` | GBLSECTIONS | 128 |
+| `vax.sysgen.gblpages` | GBLPAGES | 4096 |
+| `vax.sysgen.gblpagfil` | GBLPAGFIL | 4096 |
+| `vax.sysgen.virtualpagecnt` | VIRTUALPAGECNT | P0 + P1 |
+
+The console's own process has the `SYSTEM` account's quotas rather than
+the PQL defaults: a working set default of 512, quota 1024, and page
+file quota 40960.
+
+#### Debugging switches
+
+`vax.debug.NAME` (true or false) sets the initial state of the `SET
+DEBUG` switch `NAME`: `vm`, `tb`, `symbols`, `exceptions`, `interrupts`,
+`chm`, `registers`, `fulldisasm`, `userhalt`, `keyboard`, `images`,
+`services`, `dcl`, `command`, `logicals`, `devices`, `process`,
+`libinit`, `rms`, or `userstep`. These trace govax's own workings, and
+are mainly for govax's developers.
+
+---
+
+## 5. Files, volumes, and devices
+
+govax works with two kinds of files: **host files**, the ordinary files
+of the computer govax runs on, and **volume files**, files on a Files-11
+(ODS-2) disk volume that govax has mounted. They behave differently:
+
+| | Host files | Volume files |
+| --- | --- | --- |
+| Names | your host's: `./src/prog.mar`, `/tmp/x.txt` | VMS's: `DUA0:[WORK.SRC]PROG.MAR;3` |
+| Versions, directories, protection | the host's | VMS's |
+| Used by the console's commands (`MACRO`, `LINK`, `LIBRARY`, `RUN`, `TYPE`, `COPY`, `@`, ...) | yes | yes |
+| Used by a running program's RMS calls (`$OPEN`, `$CREATE`, `$GET`, ...) | no | yes |
+| Listed by `DIRECTORY`, `DUMP`, `DELETE`, `PURGE`, `RENAME`, `F$SEARCH` | no | yes |
+
+The important line is the fourth: **a VAX program can only open files on a
+mounted volume.** The console's commands accept both, so you can keep
+sources on your host and still assemble, link, and run them, but a
+program that reads or writes files with RMS needs a volume.
+
+### How govax decides which kind a name is
+
+Each console command applies the same rules to a file name, in order:
+
+1. A name followed by the qualifier `/HOST` is a host file:
+   `TYPE "notes.txt"/HOST`.
+2. A name with a directory in brackets (`[SRC]PROG.MAR`), or with a
+   device or logical name of two or more characters and a colon
+   (`DUA0:PROG.MAR`, `SRC:PROG.MAR`), is a volume file.
+3. A name with `/` or `\` in it, or a Windows drive letter (`C:`), is a
+   host file: `"./prog.mar"`, `"/Users/me/prog.mar"`.
+4. Any other name (`PROG.MAR`, `PROG`) is a volume file in your default
+   directory if `SET DEFAULT` names a mounted volume, and a host file in
+   the host's current directory otherwise.
+
+DCL makes unquoted text uppercase, so **quote a host name** whenever its
+case matters: `MACRO "hello.mar"`, not `MACRO hello.mar` (which looks for
+`HELLO.MAR`, and on a case-sensitive host file system doesn't find
+`hello.mar`). Quotes also keep a `/` in a host path from being read as a
+qualifier.
+
+Without a default volume, your default directory is the host's current
+directory, and a bare `HELLO.MAR` means the host file `HELLO.MAR`.
+
+### Containers
+
+A container is a host file that holds a complete ODS-2 volume, block for
+block, the same "disk image" format SIMH and other emulators use. You
+make one with `INITIALIZE/CONTAINER`, attach it to a device with `MOUNT`,
+and detach it with `DISMOUNT`:
+
+```text
+VAX> INITIALIZE/CONTAINER "project.dsk" /DEVICE=RD54 PROJECT
+VAX> MOUNT DUA1: "project.dsk"
+%MOUNT-I-MOUNTED, PROJECT mounted on _DUA1:
+VAX> CREATE/DIRECTORY DUA1:[SRC]
+VAX> SET DEFAULT DUA1:[SRC]
+VAX> ...
+VAX> DISMOUNT DUA1:
+```
+
+`MOUNT` defines `DISK$label` in the system table, as VMS does, so the
+volume can also be named `DISK$PROJECT:[SRC]`. A volume is mounted for
+writing unless you say `/NOWRITE`. Writes reach the container when you
+dismount it or leave govax; govax dismounts every volume as it exits, so
+you don't have to.
+
+A container made elsewhere (on SIMH, say, or one holding a VMS
+distribution's files) mounts the same way. Mount someone else's volume
+with `/NOWRITE` if you don't want it changed.
+
+From the host shell, `--mount DEV=FILE` and `--mount-write DEV=FILE`
+mount containers before anything else, which is how a script runs a
+program that needs a volume:
+
+```sh
+govax --mount-write DUA0=project.dsk run 'DUA0:[SRC]PROG.EXE'
+```
+
+#### Disk types
+
+`INITIALIZE/CONTAINER /DEVICE=type` sizes a new volume as a DEC disk of
+that type (or give `/SIZE=blocks`). Some useful ones:
+
+| Type | Blocks | Size |
+| --- | ---: | ---: |
+| RX50 | 800 | 400 KB |
+| RD51 | 21,600 | 10.5 MB |
+| RD53 | 138,672 | 68 MB |
+| RD54 | 311,200 | 152 MB |
+| RA81 | 891,072 | 435 MB |
+| RA92 | 2,940,951 | 1.4 GB |
+
+`docs/DISK-DEVICES.md` lists them all.
+
+### Directories, versions, and the default directory
+
+Volume files have VMS's names: `device:[directory.subdirectory]name.type;version`.
+Every file you create is a new version; commands that read a file take
+the highest version unless you give one. `SET DEFAULT` sets the default
+device and directory, which fill in any part of a name you leave out:
+
+```text
+VAX> SET DEFAULT DUA0:[WORK]
+VAX> SET DEFAULT [.SRC]           ! DUA0:[WORK.SRC]
+VAX> SET DEFAULT [-]              ! back up to DUA0:[WORK]
+VAX> SHOW DEFAULT
+  DUA0:[WORK]
+```
+
+`CREATE/DIRECTORY` makes directories (and any missing ones above them);
+`DIRECTORY` lists files; `PURGE` removes old versions; `DELETE` needs a
+version (`;`, `;3`, or `;*`), as on VMS.
+
+### Moving files between the host and a volume
+
+`COPY` copies between the host and a volume, or between two volume
+locations. `/HOST` after either file name marks that one as a host path:
+
+```text
+VAX> COPY "prog.mar"/HOST DUA0:[WORK]       ! host to volume, same name
+VAX> COPY "prog.mar"/HOST *                 ! the same, into the default directory
+VAX> COPY PROG.LIS "prog.lis"/HOST          ! volume to host
+VAX> COPY *.MAR [BACKUP]*.SAV               ! volume to volume, wildcards
+```
+
+How the contents are copied:
+
+- **Text** goes to a volume as variable-length records, one per line
+  (host line endings removed), and comes back as host lines (LF, or CRLF
+  with `/CRLF`).
+- **Object modules** (`.OBJ`) are always copied record by record. On the
+  host they're kept in ODS-2's record layout (a 2-byte length, then the
+  record, padded to even), so a `.OBJ` can go to the host and back
+  intact.
+- **Anything else binary**, such as an image (`.EXE`) or a library, needs
+  `/BINARY`, which copies the bytes exactly. A copy from one volume
+  location to another always keeps the file's record format.
+
+```text
+VAX> COPY/BINARY "fromvax.exe"/HOST DUA0:[WORK]PROG.EXE
+```
+
+### Logical names
+
+Logical names work as on VMS: `DEFINE`, `ASSIGN`, `DEASSIGN`, `SHOW
+LOGICAL`, `SHOW TRANSLATION`, and `CREATE/NAME_TABLE`, with process, job,
+group, and system tables, access modes, search lists, and the CONCEALED
+and TERMINAL attributes. File names are translated through them, by the
+console's commands and by RMS in a running program:
+
+```text
+VAX> DEFINE SRC DUA0:[WORK.SRC]
+VAX> MACRO SRC:PROG
+VAX> DEFINE/TRANSLATION=CONCEALED PROJ DUA1:
+VAX> DIRECTORY PROJ:[PROJECT.SRC]
+
+Directory PROJ:[PROJECT.SRC]
+...
+VAX> DEFINE LIBS DUA0:[LIB1],DUA0:[LIB2]      ! a search list
+VAX> TYPE LIBS:HELLO.MAR                      ! the first one that has it
+```
+
+One VMS feature is missing: *rooted* directory logical names, whose
+equivalence ends in `.]` (`DEFINE/TRANSLATION=CONCEALED PROJ
+DUA1:[PROJECT.]`, then `PROJ:[SRC]`). govax doesn't yet treat such a name
+as the root of a directory tree.
+
+govax predefines `SYS$INPUT`, `SYS$OUTPUT`, `SYS$ERROR`, `SYS$COMMAND`,
+and `TT` (all the terminal, `_TTA0:`), `SYS$DISK` (set by `SET
+DEFAULT`), `DISK$label` for each mounted volume, and the date-format
+names `LIB$DT_FORMAT` and `LIB$DT_INPUT_FORMAT`. It doesn't define
+`SYS$LIBRARY`, `SYS$SHARE`, `SYS$SYSTEM`, or `SYS$LOGIN`, because there is
+no system disk; define them yourself (in a login procedure) if you keep
+libraries or shareable images on a volume.
+
+### Devices
+
+`SHOW DEVICES` lists the devices: the terminal `TTA0:`, the null device
+`NLA0:` (writes vanish, reads are at end of file), and each disk you've
+mounted. `MOUNT` creates a disk device the first time it's named; any
+disk name works (`DUA0`, `DUA1`, `DKA0`). Programs can also create mailboxes
+(`$CREMBX`), which appear as `MBAn:`. `SHOW DEVICE/FULL DUA0` shows a
+disk's details, read from the volume.
+
+`DEFINE/DEVICE` defines a device with given characteristics; `vax.init`
+uses it for `TTA0:` and `NLA0:`. You won't normally need it.
+
+---
+
+## 6. DCL command reference
+
+This section describes every command the `VAX>` prompt accepts, grouped
+by purpose. For each, it gives the syntax and the qualifiers you're
+likely to use; `HELP command` at the prompt has the complete list.
+
+General rules, as in VMS's DCL:
+
+- Verbs, qualifiers, and keywords can be abbreviated, as long as the
+  abbreviation is unique: `DIREC/SIZ`, `SHO DEF`, `SH SYS`.
+- Unquoted text is made uppercase; quoted text keeps its case and its
+  blanks. `""` inside quotes is a quote.
+- `!` starts a comment, outside quotes.
+- A line ending in `-` continues on the next line.
+- Qualifiers can go after the verb or after a parameter. A qualifier
+  after a file name may apply to that file only (`/HOST`, `/LIBRARY`).
+- Each command sets `$STATUS` (see [Statuses](#statuses-status-and-severity)).
+
+### 6.1 Files and directories
+
+#### DIRECTORY
+
+```text
+DIRECTORY [file-spec[,...]]
+    /SIZE[=USED|ALLOCATION|ALL]  /DATE  /OWNER  /PROTECTION  /FILE
+    /FULL  /VERSIONS=n  /[NO]HEADING  /[NO]TRAILING  /OUTPUT[=file]
+```
+
+Lists files on a volume, laid out as VMS lays them out. With no file
+spec, every version of every file in the default directory. Wildcards `*`
+and `%` work in every field, and `[...]` searches a directory tree.
+
+```text
+VAX> DIRECTORY/SIZE/DATE
+
+Directory DUA0:[HELLO]
+
+HELLO.EXE;1                5  20-OCT-2026 09:56:08.37
+HELLO.LIS;1                8  20-OCT-2026 09:56:08.37
+HELLO.MAP;1                8  20-OCT-2026 09:56:08.37
+HELLO.MAR;1                1  20-OCT-2026 09:56:08.36
+HELLO.OBJ;1                1  20-OCT-2026 09:56:08.36
+
+Total of 5 files, 23 blocks.
+```
+
+#### TYPE
+
+```text
+TYPE [/PAGE] [/HOST] file-spec
+```
+
+Displays a file (one file; no wildcards that match several). Volume files
+are shown record by record, whatever their record format; host files line
+by line. `/PAGE` stops after each screenful. `TYPE SYS$INPUT` types the
+lines that follow it in a command procedure.
+
+#### COPY
+
+```text
+COPY source[/HOST] destination[/HOST]
+    /BINARY  /QUIET  /VERBOSE  /TEST
+    (to the host only) /CRLF  /LF  /TIME  /STREAM  /DIRS  /IGNORE
+```
+
+Copies files between the host and a volume, or between volume locations
+(see [Moving files](#moving-files-between-the-host-and-a-volume)). A
+destination that's only a directory, or whose name is `*`, takes each
+source file's name; a `*` type takes the source's type. A wildcarded
+source copies every match. A copy never replaces an existing version:
+with no version in the destination, the copy is the next version.
+
+#### CREATE
+
+```text
+CREATE [/LOG] file-spec[/HOST]
+CREATE/DIRECTORY [/LOG] [/OWNER_UIC=uic] [/PROTECTION=(...)]
+                 [/VERSION_LIMIT=n] [/ALLOCATION=n] directory[,...]
+CREATE/NAME_TABLE [/PARENT_TABLE=table] table-name
+```
+
+`CREATE` makes a text file from what follows: at the terminal, the lines
+you type up to Ctrl/Z; in a procedure, the data lines after it.
+
+```text
+$ CREATE SETUP.DAT
+ITEM ONE
+ITEM TWO
+$ TYPE SETUP.DAT
+```
+
+`CREATE/DIRECTORY` makes a directory and any missing ones above it.
+`CREATE/NAME_TABLE` makes a logical name table.
+
+#### DELETE
+
+```text
+DELETE [/LOG] file-spec;version[,...]
+```
+
+Deletes volume files. A version is required (`;3`, `;*`, or `;` for the
+newest), as on VMS. Several specifications, separated by commas, take
+missing fields from the one before: `DELETE A.TXT;1,;2,B;1`.
+
+#### PURGE
+
+```text
+PURGE [/LIMIT=n] [file-spec]
+```
+
+Deletes all but the newest `n` versions (default 1) of each file.
+
+#### RENAME
+
+```text
+RENAME [/LOG] [/[NO]NEW_VERSION] input[,...] output
+```
+
+Renames or moves files within a volume. `*` in the output keeps that
+field of each input's name: `RENAME *.TXT *.OLD`. Directories can be
+moved too, with everything in them.
+
+#### DUMP
+
+```text
+DUMP [/BLOCK[=(START=n,END=n,COUNT=n)] | /RECORD[=(...)]] file-spec
+```
+
+Shows a volume file in hexadecimal and ASCII, a block or a record at a
+time, as VMS's DUMP does.
+
+#### SET DEFAULT and SHOW DEFAULT
+
+```text
+SET DEFAULT [device:][directory]
+SHOW DEFAULT
+```
+
+Sets and shows the default device and directory. Omitted parts are kept
+from the current default; `[.SUB]` and `[-]` are relative.
+
+### 6.2 Volumes and devices
+
+#### INITIALIZE/CONTAINER
+
+```text
+INITIALIZE/CONTAINER "file" [label] [/DEVICE=type | /SIZE=blocks] [/CLUSTER=n]
+```
+
+Creates a new, empty ODS-2 volume in a host file. It isn't mounted; use
+`MOUNT`.
+
+#### MOUNT and DISMOUNT
+
+```text
+MOUNT [/NOWRITE] [/NOLOG] device "file"
+DISMOUNT device
+```
+
+`MOUNT` attaches a container to a device (creating the device if it's
+new). `DISMOUNT` writes pending changes and detaches it; it refuses a
+volume with files open (a process still using them, say).
+
+#### SHOW DEVICES
+
+```text
+SHOW DEVICES [/FULL] [name]
+```
+
+Lists devices, or those whose names begin with `name`.
+
+#### DEFINE/DEVICE
+
+Defines a pseudodevice and its characteristics (`/DEVCLASS`, `/DEVTYPE`,
+`/DEVCHAR`, ...). `vax.init` uses it for the terminal and null device.
+
+### 6.3 Logical names
+
+```text
+DEFINE [/PROCESS|/JOB|/GROUP|/SYSTEM|/TABLE=t] [/USER_MODE|/SUPERVISOR_MODE|/EXECUTIVE_MODE]
+       [/TRANSLATION_ATTRIBUTES=(CONCEALED,TERMINAL)] [/[NO]LOG] name value[,...]
+ASSIGN [same qualifiers] value[,...] name
+DEASSIGN [/table qualifiers] [/mode] name
+DEASSIGN/ALL [/table qualifiers]
+SHOW LOGICAL [/table qualifiers] [/FULL] [/STRUCTURE] [name[,...]]
+SHOW TRANSLATION [/TABLE=t] name
+CREATE/NAME_TABLE [/PARENT_TABLE=t] [/mode] table
+```
+
+These follow VMS exactly. The default table is the process table, and
+the default mode supervisor. The job table is shared by the console's
+process and its subprocesses. A user-mode process name is deleted when
+the next image you `RUN` exits. `SHOW LOGICAL` follows a name through
+each level of translation:
+
+```text
+VAX> DEFINE MYDISK WORK4
+VAX> DEFINE/SYSTEM WORK4 $255$DUA17:
+VAX> SHOW LOGICAL MYDISK
+   "MYDISK" = "WORK4" (LNM$PROCESS_TABLE)
+1  "WORK4" = "$255$DUA17:" (LNM$SYSTEM_TABLE)
+```
+
+### 6.4 Symbols
+
+```text
+name = expression        name == expression      (local, global)
+name := string           name :== string
+SHOW SYMBOL [/LOCAL|/GLOBAL] [/ALL] [name]
+DELETE/SYMBOL [/LOCAL|/GLOBAL] [/ALL] [name]
+```
+
+DCL symbols hold integers and strings; section 7 describes them.
+
+```text
+VAX> SD :== SET DEFAULT
+VAX> FO*RTH :== $DUA0:[TOOLS]FORTH.EXE
+VAX> N = 42
+VAX> SHOW SYMBOL *
+  N = 42   Hex = 0000002A  Octal = 00000000052
+  $SEVERITY == "1"
+  $STATUS == "%X00030001"
+  FO*RTH == "$DUA0:[TOOLS]FORTH.EXE"
+  SD == "SET DEFAULT"
+```
+
+Local symbols are listed first, then global ones.
+
+### 6.5 Program development
+
+These commands are described fully in their own sections:
+
+| Command | Section |
+| --- | --- |
+| `MACRO source [qualifiers]` | [8. Programming in MACRO-32](#8-programming-in-macro-32) |
+| `LINK file[,...] [qualifiers]` | [9. The linker](#9-the-linker) |
+| `LIBRARY library [input[,...]] [qualifiers]` | [10. The librarian](#10-the-librarian) |
+| `ANALYZE/OBJECT` and `ANALYZE/IMAGE` | [Analyzing objects and images](#analyzing-objects-and-images) |
+
+### 6.6 Running programs and processes
+
+#### RUN
+
+```text
+RUN [/DEBUG | /NODEBUG] [/NOEXECUTE] image[/HOST]
+```
+
+Runs an image (default type `.EXE`). `/DEBUG` runs it under the debugger;
+`/NODEBUG` runs an image linked `/DEBUG` without it; `/NOEXECUTE` loads it
+without running it. `$STATUS` is the image's exit status. See
+[11. Running programs](#11-running-programs).
+
+#### Foreign commands and MCR
+
+```text
+symbol :== $image-file
+symbol [text]
+MCR image [text]
+```
+
+A symbol whose value starts with `$` is a foreign command: typing it runs
+the image, which reads the rest of the line with `LIB$GET_FOREIGN`. `MCR`
+does the same without a symbol.
+
+```text
+VAX> ECHO :== $DUA0:[TOOLS]ECHO.EXE
+VAX> ECHO one   two "Three"
+ONE TWO "Three"
+```
+
+#### SPAWN, ATTACH, and LOGOUT
+
+```text
+SPAWN [/NOWAIT] [/INPUT=file] [/OUTPUT=file] [/PROCESS=name]
+      [/PROMPT=string] [/NOSYMBOLS] [/NOLOGICAL_NAMES] [command]
+ATTACH process-name | ATTACH/IDENTIFICATION=pid
+LOGOUT
+```
+
+`SPAWN` creates a subprocess running DCL, with copies of your symbols and
+process logical names, and your default directory. With a command, it
+runs that command and logs out; without one, it reads commands from its
+input (you get a `$ ` prompt) until `LOGOUT`. Unless `/NOWAIT`, your
+process waits for it, and the terminal is the subprocess's meanwhile.
+`SPAWN`'s status is the subprocess's final status.
+
+```text
+VAX> SPAWN DIRECTORY/SIZE
+%DCL-S-SPAWNED, process SYSTEM_1 spawned
+%DCL-S-ATTACHED, terminal now attached to process SYSTEM_1
+
+Directory DUA0:[HELLO]
+...
+%DCL-S-RETURNED, control returned to process SYSTEM
+VAX> SPAWN/NOWAIT @NIGHTLY
+```
+
+A `/NOWAIT` subprocess runs alongside you: between your commands, while
+you type, and while your programs run. What it writes appears above the
+line you're typing. Commands that work on the machine itself (`DEBUG`,
+`VMINIT`, `INITIALIZE/VAX`, `SAVE`, `LOAD`, ...) aren't available in a
+subprocess (`%VAX-E-NOTSUBPROC`).
+
+`ATTACH` gives the terminal to another process of your job that's
+waiting for it. `LOGOUT` ends a subprocess's DCL; in the console's own
+process it ends govax.
+
+#### STOP
+
+```text
+STOP [process-name] [/IDENTIFICATION=pid] [/IMAGE] [/EXIT[=mode] | /NOEXIT]
+```
+
+With a process, deletes it (and its subprocesses), or with `/IMAGE` ends
+only the image it's running. Without one, in a command procedure, ends
+every procedure and returns to the prompt. The console's own process
+(PID `00000301`) can't be stopped.
+
+#### SHOW SYSTEM and SHOW PROCESS
+
+```text
+SHOW SYSTEM
+SHOW PROCESS [process-name] [/IDENTIFICATION=pid]
+```
+
+List the processes, with their states, priorities, CPU time, and page
+use, and show one process's details.
+
+#### WAIT
+
+```text
+WAIT delta-time                  ! WAIT 00:00:05
+```
+
+Waits; other processes run meanwhile. Ctrl/C or Ctrl/Y ends the wait.
+
+### 6.7 Command procedure control
+
+These are described in [section 7](#7-command-procedures-and-the-dcl-language).
+
+| Command | Purpose |
+| --- | --- |
+| `@file [p1 ... p8]` | Run a command procedure. |
+| `EXIT [status]` | End the procedure (at the prompt, end govax). |
+| `IF expr THEN command`, `IF`/`THEN`/`ELSE`/`ENDIF` | Conditional commands and blocks. |
+| `GOTO label` | Jump to a label. |
+| `GOSUB label`, `RETURN [status]` | Call a subroutine in the same procedure. |
+| `CALL label [p1 ... p8]`, `SUBROUTINE`, `ENDSUBROUTINE` | Call a subroutine at a new command level. |
+| `ON condition THEN command` | Choose what happens when a command fails, or on Ctrl/Y. |
+| `SET [NO]ON` | Turn status checking off and on. |
+| `CONTINUE` | Resume after Ctrl/Y; otherwise do nothing. |
+| `STOP` | End every procedure. |
+| `DECK`, `EOD` | Data lines that start with `$`. |
+| `OPEN`, `CLOSE`, `READ`, `WRITE`, `INQUIRE` | File and terminal I/O. |
+| `SET VERIFY`, `SET PREFIX` | Show a procedure's lines as they run. |
+| `SET CONTROL=Y`, `SET NOCONTROL=Y` | Turn Ctrl/Y on and off. |
+| `QUIT` | End govax, even from inside a procedure. |
+
+### 6.8 Information
+
+| Command | Shows |
+| --- | --- |
+| `SHOW DEFAULT` | The default device and directory. |
+| `SHOW DEVICES` | The devices. |
+| `SHOW LOGICAL`, `SHOW TRANSLATION` | Logical names. |
+| `SHOW SYMBOL` | DCL symbols. |
+| `SHOW SYSTEM`, `SHOW PROCESS` | Processes. |
+| `SHOW MEMORY [/FILES [/FULL]]` | Physical memory, the address regions, and with paging on the page lists, faults, and page file. |
+| `SHOW WORKING_SET` | The process's working set limit, quota, and extent. |
+| `SHOW VERSION` | The microkernel's version. |
+| `SHOW RADIX` | The console's numeric radix. |
+| `SHOW DEBUG` | The debugging switches. |
+| `SHOW STRINGS` | The console's string pool. |
+| `HELP [topic ...]` | The help text. |
+
+### 6.9 The machine and the console
+
+These commands work on the emulated machine itself, rather than on VMS
+objects. Most of them are used by `vax.init`; you need them only to
+change how the machine is set up.
+
+| Command | Purpose |
+| --- | --- |
+| `INITIALIZE/VAX pages` | Set physical memory to `pages` 512-byte pages, clearing the machine. The count is in the console's radix, hexadecimal by default: write `^D16384` for decimal. |
+| `VMINIT [/P0=n] [/P1=n] [/S0=n] [/KSP=n] [/ESP=n] [/SSP=n] [/ISP=n] [/[NO]PAGING]` | Build page tables for the address regions, and turn memory management on (section 13). |
+| `CLEAR MEMORY`, `ZERO` | Clear physical memory (and so turn memory management off). |
+| `SAVE file`, `LOAD file` | Save and restore memory and registers. |
+| `SAVE/ROM`, `LOAD/ROM`, `INIT/NVRAM`, `SAVE/NVRAM`, `LOAD/NVRAM` | The console ROM and NVRAM areas. |
+| `DEBUG` | Start the debugger on the machine as it is (section 12). |
+| `SET WORKING_SET [/LIMIT=n] [/QUOTA=n] [/EXTENT=n]` | Change your process's working set values. |
+| `SET QUANTUM n` | Instructions between clock ticks in instruction-count mode. |
+| `SET RADIX DECIMAL\|HEXADECIMAL` | The console's radix for `PRINT` and machine expressions (hexadecimal unless set). |
+| `SET PROMPT="text"` | Change the prompt (and save it in the configuration). |
+| `SET DEBUG [NO]switch` | govax's internal tracing switches. |
+| `PRINT item[,...]` | Print quoted text and machine expressions: numbers in the console's radix and the debugger's symbols, not DCL symbols (`PRINT "Base: ", 200+10`). For DCL values use `WRITE SYS$OUTPUT`. |
+| `TIME command` | Run a command and say how long it took. |
+| `TEST n` | govax's internal test sequences. |
+
+`BOOT` and `ROM` are reserved and not implemented.
+
+---
+
+## 7. Command procedures and the DCL language
+
+govax's command interpreter is DCL, and command procedures work as they
+do on VMS. This section is a complete guide to the language as govax
+implements it. If you already write DCL procedures, skim the headings
+and read [Differences from VMS DCL](#differences-from-vms-dcl).
+
+### Running a procedure
+
+```text
+@file-spec[/OUTPUT=file] [p1 [p2 ... p8]]
+```
+
+The file's type defaults to `.COM`. It may be on a volume or the host
+(quote a host name: `@"build.com"`). The procedure runs at a new
+*command level*, one deeper than the one that ran it; the terminal is
+level 0, and procedures may nest 32 deep. `/OUTPUT` sends its output to
+a file (`NL:` discards it).
+
+Up to eight parameters become the local symbols `P1` to `P8` (those not
+given are `""`). Unquoted parameters are made uppercase; quotes keep
+blanks and case, and `""` passes an empty one:
+
+```text
+VAX> @SETUP "Test Run" fast
+```
+
+gives `P1` the value `Test Run` and `P2` the value `FAST`.
+
+### The lines of a procedure
+
+| Line | Meaning |
+| --- | --- |
+| `$ command` | A command. Blanks after the `$` are ignored. |
+| `$! text` | A comment. `!` also starts a comment after a command. |
+| `$ label:` or `$ label: command` | A label, for `GOTO`, `GOSUB`, and `CALL`. |
+| `... -` | A line ending in `-` continues on the next line, which has no `$`. |
+| a line without `$` | **Data**, for whatever reads the procedure's input (see [Data lines](#data-lines-and-sysinput)). |
+
+### Symbols
+
+A symbol holds an integer or a string.
+
+```text
+$ COUNT = 0                      ! local integer
+$ NAME = "Ada"                   ! local string
+$ TOTAL == COUNT + 1             ! global (==)
+$ GREETING := Hello there        ! string assignment, := (value uppercased: HELLO THERE)
+$ MSG :== "Mixed Case kept"      ! global string assignment
+$ SD :== SET DEFAULT             ! a symbol as a command abbreviation
+$ FO*RTH :== $DUA0:[TOOLS]FORTH.EXE   ! foreign command; FO, FOR, FORT, FORTH all work
+```
+
+- `=` and `==` take an *expression* (below). `:=` and `:==` take the rest
+  of the line as a string: unquoted text is uppercased and its blanks
+  compressed, quoted text is kept.
+- **Local** symbols (`=`, `:=`) belong to their command level and go
+  when the procedure ends. A procedure sees the local symbols of the
+  levels that ran it. **Global** symbols (`==`, `:==`) last until you
+  delete them. A local symbol hides a global one of the same name.
+- A `*` in the name marks the shortest abbreviation that still means it.
+- When the first word of a command is a symbol, its value replaces it.
+  So a symbol can rename or abbreviate a command, and a value starting
+  with `$` makes a foreign command (the image runs with the rest of the
+  line as its command text).
+- `SHOW SYMBOL` displays symbols; `DELETE/SYMBOL` deletes them.
+
+### Expressions
+
+The value of an `=` or `==` assignment, and the condition of an `IF`, is
+an expression.
+
+**Operands:**
+
+| Operand | Examples |
+| --- | --- |
+| integers (32-bit, wrapping) | `13`, `-5`, `%X1F` (hex), `%O17` (octal), `%D10` |
+| strings | `"in quotes"`, with `""` for a quote |
+| symbols | `COUNT`, `P1` |
+| lexical functions | `F$LENGTH(NAME)` |
+
+**Operators**, from first done to last (parentheses group):
+
+| Operators | Meaning |
+| --- | --- |
+| `+` `-` (unary) | sign |
+| `*` `/` | multiply, divide (integer) |
+| `+` `-` | add, subtract; on strings, concatenate and remove the first occurrence |
+| `.EQ.` `.NE.` `.LT.` `.LE.` `.GT.` `.GE.` | compare integers |
+| `.EQS.` `.NES.` `.LTS.` `.LES.` `.GTS.` `.GES.` | compare strings |
+| `.NOT.` | bitwise not |
+| `.AND.` | bitwise and |
+| `.OR.` | bitwise or |
+
+A comparison is 1 when true and 0 when false. **A value is true when it
+is odd**: an odd integer, a string that holds an odd number, or a string
+that starts with `T` or `Y` (either case). Where an integer is wanted, a
+string holding a number is that number, and any other string is 0 (or 1
+if it starts with T or Y). Where a string is wanted, an integer becomes
+its decimal digits.
+
+```text
+$ BALANCE = 142 * 14
+$ WEEKEND = "Saturday, " + "Sunday"
+$ BIG = COUNT .GT. 10 .AND. NAME .EQS. "TOTAL"
+$ SHORT = "ABCDEF" - "CD"            ! "ABEF"
+```
+
+### Symbol substitution
+
+Anywhere in a command, a symbol's name between apostrophes is replaced by
+its value before DCL reads the command:
+
+```text
+$ FILE = "REPORT.LIS"
+$ TYPE 'FILE'
+$ @NEXT 'P1' 'P2'
+$ COPY 'NAME'.MAR [BACKUP]         ! the closing apostrophe may be left off at a word's end
+```
+
+Inside quotes, use two apostrophes before the name and one after:
+
+```text
+$ WRITE SYS$OUTPUT "Creating ''NAME'.DAT"
+```
+
+A lexical function can be substituted too: `'F$LENGTH(X)'`. An undefined
+symbol is replaced by nothing. Substitution happens first, so a symbol can
+supply any part of a command, the verb included; and a value that itself
+contains `'NAME'` is substituted again.
+
+`&NAME` is a second kind of substitution, done later, after the command
+is uppercased: the value keeps its case and stays a single parameter even
+with blanks in it. It's useful for passing a value through unchanged:
+
+```text
+$ COUNT = 1
+$ TYPE &P'COUNT'                   ! 'COUNT' first, giving &P1, then P1's value
+```
+
+Data lines and debugger commands are never substituted.
+
+### Statuses: $STATUS and $SEVERITY
+
+Every command ends with a VMS condition value, which DCL keeps in the
+global symbol `$STATUS`, with its severity (the low three bits) in
+`$SEVERITY`:
+
+| Severity | Meaning |
+| --- | --- |
+| 0 | warning |
+| 1 | success |
+| 2 | error |
+| 3 | informational |
+| 4 | severe (fatal) error |
+
+So `$STATUS` is odd (true) after a command that succeeded:
+
+```text
+$ COPY 'P1' SAVE.DAT
+$ IF .NOT. $STATUS THEN WRITE SYS$OUTPUT "The copy failed"
+```
+
+After `RUN`, `$STATUS` is the image's exit status (its `R0` at exit, or
+what it passed to `$EXIT`); after `@`, the procedure's status. Bit 28
+(`%X10000000`) set means the message has already been shown. `SHOW
+SYMBOL`, `IF`, `GOTO`, and `CONTINUE` leave `$STATUS` as it was, so you
+can test the status of the command before them. `F$MESSAGE($STATUS)`
+gives the message text.
+
+### Error handling: ON and SET NOON
+
+By default, a procedure ends when one of its commands fails with an
+error or a severe error; a warning doesn't end it. An error also ends
+the procedures that ran this one. `ON` changes that:
+
+```text
+ON WARNING THEN command          ! act on warnings, errors, and severe errors
+ON ERROR THEN command            ! act on errors and severe errors
+ON SEVERE_ERROR THEN command     ! act on severe errors only
+ON CONTROL_Y THEN command        ! act on Ctrl/Y
+```
+
+The command runs in place of the default action (usually `EXIT`,
+`CONTINUE`, or `GOTO` a cleanup label), once: after it, the default is
+back until the next `ON`. (`ON CONTROL_Y` lasts until it's changed.)
+Each command level has its own setting. `SET NOON` turns checking off
+entirely; `$STATUS` is still set. `SET ON` turns it back on.
+
+```text
+$ ON ERROR THEN GOTO CLEAN_UP
+$ ON WARNING THEN CONTINUE
+```
+
+`EXIT status` ends a procedure with a status of your choosing, which
+becomes `$STATUS` in the level that ran it; a failure status's message is
+shown there unless bit 28 says it was shown already.
+
+### IF, THEN, ELSE, ENDIF
+
+```text
+$ IF expression THEN [$] command
+
+$ IF expression
+$ THEN
+$     commands
+$ [ELSE
+$     commands]
+$ ENDIF
+```
+
+The single-line form runs one command when the expression is true. In
+the block form, `THEN` must be the command right after the `IF`. Blocks
+nest up to 15 deep. The commands of the branch not taken are skipped
+without being read, so their symbols aren't substituted.
+
+```text
+$ IF P1 .EQS. "" THEN INQUIRE P1 "File name"
+$ IF F$SEARCH(P1) .EQS. ""
+$ THEN
+$     WRITE SYS$OUTPUT "No such file: ", P1
+$     EXIT 1
+$ ELSE
+$     TYPE 'P1'
+$ ENDIF
+```
+
+### GOTO and labels
+
+```text
+$ COUNT = 0
+$ LOOP:
+$   COUNT = COUNT + 1
+$   WRITE SYS$OUTPUT "Pass ", COUNT
+$   IF COUNT .LT. 3 THEN GOTO LOOP
+```
+
+A label is a name and a colon at the start of a command line. `GOTO`
+goes to the label it has passed most recently, or else searches forward.
+A label inside an `IF` block or a subroutine that the `GOTO` isn't in
+can't be reached. A missing label is `%DCL-W-USGOTO`, and ends the
+procedure.
+
+### Subroutines: GOSUB and CALL
+
+`GOSUB` calls a subroutine in the same procedure at the *same* command
+level; it sees the procedure's local symbols. `RETURN` comes back:
+
+```text
+$ GOSUB SHOW_COUNT
+$ EXIT
+$ SHOW_COUNT:
+$   WRITE SYS$OUTPUT "Count is ", COUNT
+$   RETURN
+```
+
+`CALL` runs a subroutine at a *new* command level, as `@` runs a file:
+it gets its own `P1` to `P8`, its own local symbols and labels, and its
+own `ON` setting. The subroutine is the lines between `label: SUBROUTINE`
+and `ENDSUBROUTINE`, which are skipped when the procedure runs through
+them:
+
+```text
+$ CALL GREET "Hello there" Ada
+$ EXIT
+$ GREET: SUBROUTINE
+$     WRITE SYS$OUTPUT P1, ", ", P2
+$ ENDSUBROUTINE
+```
+
+`CALL/OUTPUT=file` sends the subroutine's output to a file. `RETURN
+status` and `EXIT status` set the status returned.
+
+### Data lines and SYS$INPUT
+
+A line without a `$` is data. A program a procedure runs reads them as
+its input (`SYS$INPUT`), whether it reads with `LIB$GET_INPUT`, RMS
+`$GET`, or a terminal `$QIO`. The program reaches end of file at the next
+`$` line. `TYPE SYS$INPUT` and `CREATE` read data lines the same way, and
+so do the debugger and the interactive assembler when a procedure starts
+them:
+
+```text
+$ RUN GREET
+Ada Lovelace
+$ CREATE NOTES.TXT
+First line
+Second line
+$ TYPE NOTES.TXT
+```
+
+Data nothing reads is skipped after an image, with a `%DCL-W-SKPDAT`
+warning.
+
+To give a program data lines that start with `$`, put them between
+`DECK` and `EOD`:
+
+```text
+$ TYPE SYS$INPUT
+$ DECK
+$ This line starts with a dollar sign, and is typed.
+$ EOD
+```
+
+`DECK/DOLLARS=string` ends the data at a line starting with `string`
+instead.
+
+### File I/O: OPEN, READ, WRITE, CLOSE, INQUIRE
+
+```text
+OPEN [/READ] [/WRITE] [/APPEND] [/SHARE[=READ|WRITE]] [/ERROR=label] logical-name file
+READ [/END_OF_FILE=label] [/ERROR=label] [/PROMPT=string] logical-name symbol
+WRITE [/ERROR=label] [/UPDATE] [/SYMBOL] logical-name expression[,...]
+CLOSE [/ERROR=label] logical-name
+INQUIRE [/LOCAL|/GLOBAL] [/[NO]PUNCTUATION] symbol [prompt]
+```
+
+`OPEN` opens a file (default type `.DAT`) and defines a process logical
+name for it. `/READ` (the default) reads an existing file; `/WRITE` makes
+a new version; `/APPEND` adds to the end; `/READ/WRITE` reads and
+updates. `READ` reads a record into a symbol, keeping its case and
+blanks. `WRITE` writes one record made of its expressions' values.
+`CLOSE` closes the file. A file stays open until it's closed, even after
+the procedure ends.
+
+`SYS$INPUT`, `SYS$OUTPUT`, `SYS$ERROR`, and `SYS$COMMAND` need no `OPEN`.
+`READ SYS$COMMAND` and `INQUIRE` read the terminal, even inside a
+procedure.
+
+```text
+$ OPEN IN NAMES.DAT
+$ LOOP:
+$   READ/END_OF_FILE=DONE IN NAME
+$   WRITE SYS$OUTPUT "Hello, ", NAME
+$   GOTO LOOP
+$ DONE:
+$ CLOSE IN
+$
+$ OPEN/WRITE OUT RESULTS.DAT
+$ WRITE OUT "Count is ", COUNT
+$ CLOSE OUT
+$
+$ INQUIRE ANSWER "Continue (Y/N)"
+$ IF .NOT. ANSWER THEN EXIT
+```
+
+`/END_OF_FILE`, `/ERROR`, and the `OPEN` and `CLOSE` `/ERROR` labels
+branch without a message and without taking the `ON` action.
+
+### Lexical functions
+
+A lexical function returns an integer or a string. Use it in an
+expression, or between apostrophes. Arguments are expressions separated
+by commas; an optional argument may be left out, keeping its comma. A
+function with no arguments still takes `()`. Names may be abbreviated
+while unique (`F$LEN` is `F$LENGTH`).
+
+**Strings and data**
+
+| Function | Returns |
+| --- | --- |
+| `F$LENGTH(string)` | its length |
+| `F$EXTRACT(start, length, string)` | a substring, from offset 0 |
+| `F$LOCATE(substring, string)` | its offset, or the string's length if absent |
+| `F$ELEMENT(n, delimiter, string)` | the nth delimited element, from 0; the delimiter itself past the end |
+| `F$EDIT(string, edits)` | edited: `COLLAPSE`, `COMPRESS`, `TRIM`, `UPCASE`, `LOWERCASE`, `UNCOMMENT` (a list) |
+| `F$FAO(control, arg, ...)` | `$FAO` formatting: `!AS`, `!UL`, `!XL`, `!2UL`, ... |
+| `F$INTEGER(expr)`, `F$STRING(expr)` | the value as an integer, or a string |
+| `F$TYPE(symbol)` | `INTEGER`, `STRING`, `PROCESS_CONTEXT`, or `""` |
+| `F$CVSI(bit, size, string)`, `F$CVUI(...)` | a bit field, signed or unsigned |
+
+**The process and its environment**
+
+| Function | Returns |
+| --- | --- |
+| `F$ENVIRONMENT(item)` | `DEFAULT`, `DEPTH`, `PROCEDURE`, `PROMPT`, `ON_SEVERITY`, `VERIFY_PROCEDURE`, `INTERACTIVE`, `MAX_DEPTH`, `CONTROL`, ... |
+| `F$DIRECTORY()` | the default directory |
+| `F$GETJPI(pid, item)` | a `$GETJPI` item (`""` for this process): `PID`, `PRCNAM`, `USERNAME`, `UIC`, `STATE`, `CURPRIV`, `FREP0VA`, `VIRTPEAK`, ... |
+| `F$GETSYI(item)` | a `$GETSYI` item: `NODENAME`, `VERSION`, `BOOTTIME`, `HW_NAME`, the paging parameters, `PAGEFILE_FREE`, ... |
+| `F$PID(context)` | each process's PID in turn, then `""` |
+| `F$CONTEXT("PROCESS", context, item, value, op)` | selects the processes `F$PID` returns |
+| `F$PROCESS()` | the process's name |
+| `F$MODE()` | `INTERACTIVE` |
+| `F$USER()` | the UIC, `[SYSTEM]` |
+| `F$PRIVILEGE(privs)`, `F$SETPRV(privs)` | test, and set, privileges |
+| `F$IDENTIFIER(id, type)` | converts an identifier's name and value |
+| `F$VERIFY([proc] [,image])` | the verification settings, and sets them |
+| `F$CONFIG(key [,op])` | govax's own: a configuration key (section 4) |
+
+**Files, devices, names, messages, and time**
+
+| Function | Returns |
+| --- | --- |
+| `F$SEARCH(file [,stream])` | the next file matching a wildcard spec, then `""` |
+| `F$PARSE(file [,default] [,related] [,field] [,type])` | the full spec, or a field: `NODE`, `DEVICE`, `DIRECTORY`, `NAME`, `TYPE`, `VERSION`; type `SYNTAX_ONLY` doesn't check that the device and directory exist |
+| `F$FILE_ATTRIBUTES(file, item)` | from the file header: `ORG`, `RFM`, `RAT`, `MRS`, `EOF`, `ALQ`, `CDT`, `RDT`, `PRO`, `UIC`, `FID`, ... |
+| `F$GETDVI(device, item)` | a `$GETDVI` item: `EXISTS`, `MNT`, `VOLNAM`, `FREEBLOCKS`, ... |
+| `F$DEVICE([name] [,class] [,type])` | the next matching device, then `""` |
+| `F$TRNLNM(name [,table] [,index] [,mode] [,case] [,item])` | a logical name's translation, or an item about it |
+| `F$LOGICAL(name)` | the older form of `F$TRNLNM` |
+| `F$MESSAGE(status)` | a status's message text |
+| `F$TIME()` | the date and time now |
+| `F$CVTIME([time] [,format] [,field])` | a time converted to `COMPARISON`, `ABSOLUTE`, or `DELTA` form, or one field: `DATE`, `TIME`, `YEAR`, `WEEKDAY`, ... |
+
+`F$CSID`, `F$GETQUI`, and `F$LICENSE` aren't provided (no cluster,
+queues, or licenses). Here is a procedure that tours some of them:
+
+```text
+$ ! LEX.COM -- a tour of lexical functions
+$ WRITE SYS$OUTPUT "Process:  ", F$PROCESS(), "  PID ", F$GETJPI("","PID")
+$ WRITE SYS$OUTPUT "Node:     ", F$GETSYI("NODENAME"), " running ", F$GETSYI("VERSION")
+$ NOW = F$TIME()
+$ WRITE SYS$OUTPUT "Today is  ", F$CVTIME(NOW,,"WEEKDAY"), ", ", F$CVTIME(NOW,"ABSOLUTE","DATE")
+$ LIST = "RED,GREEN,BLUE"
+$ I = 0
+$ LOOP:
+$   COLOR = F$ELEMENT(I, ",", LIST)
+$   IF COLOR .EQS. "," THEN GOTO DONE
+$   WRITE SYS$OUTPUT F$FAO("!2UL. !AS (!UL letters)", I+1, F$EDIT(COLOR,"LOWERCASE"), F$LENGTH(COLOR))
+$   I = I + 1
+$   GOTO LOOP
+$ DONE:
+$ SPEC = "DUA0:[WORK.SUB]REPORT.LIS;3"
+$ WRITE SYS$OUTPUT F$PARSE(SPEC,,,"NAME","SYNTAX_ONLY"), " / ", F$PARSE(SPEC,,,"DIRECTORY","SYNTAX_ONLY")
+$ WRITE SYS$OUTPUT F$MESSAGE(%X1C)
+$ WRITE SYS$OUTPUT "Hex: ", F$FAO("!XL", 255), "  Upcase: ", F$EDIT("  mixed   Case ","COMPRESS,TRIM,UPCASE")
+```
+
+```text
+VAX> @LEX
+Process:  SYSTEM  PID 00000301
+Node:     GOVAX running V7.3
+Today is  Tuesday, 20-OCT-2026
+ 1. red (3 letters)
+ 2. green (5 letters)
+ 3. blue (4 letters)
+REPORT / [WORK.SUB]
+%SYSTEM-F-EXQUOTA, process quota exceeded
+Hex: 000000FF  Upcase: MIXED CASE
+```
+
+### Verification: SET VERIFY
+
+`SET VERIFY` shows each line of a procedure as it runs (after `'SYMBOL'`
+substitution); `SET NOVERIFY` stops it. `SET VERIFY=(PROCEDURE,IMAGE)`
+chooses command lines, data lines, or both. Skipped branches of an `IF`
+aren't shown. `SET PREFIX "(!5%T) "` puts the time before each line. A
+procedure that begins with
+
+```text
+$ ! 'F$VERIFY(0)'
+```
+
+turns verification off without that line being shown.
+
+### Ctrl/Y in procedures
+
+In a procedure, Ctrl/Y (and Ctrl/C, if no program takes it) is DCL's:
+
+- If the procedure has an `ON CONTROL_Y THEN command`, the command runs.
+- Otherwise the procedure is interrupted and you get the prompt. Commands
+  you type run in the procedure's context (with its symbols). `CONTINUE`
+  resumes it (and the image it was running, if any); `EXIT` or `STOP`
+  ends every procedure; a command that runs an image or a procedure ends
+  them and then runs.
+
+`SET NOCONTROL=Y` makes Ctrl/Y do nothing.
+
+### A complete example: BUILD.COM
+
+This procedure assembles, links, and runs a MACRO program, keeps a log
+of what it built, and reports failures. It uses parameters, `ON`,
+lexical functions, an `IF` block, `GOSUB`, and file I/O.
+
+```text
+$! BUILD.COM -- assemble, link, and run a MACRO program.
+$!
+$! Usage:  @BUILD name [DEBUG]
+$!
+$ ON ERROR THEN GOTO FAILED
+$ IF P1 .EQS. "" THEN INQUIRE P1 "Program name"
+$ NAME = F$PARSE(P1,,,"NAME")
+$ SOURCE = F$SEARCH(NAME + ".MAR")
+$ IF SOURCE .EQS. ""
+$ THEN
+$     WRITE SYS$OUTPUT "No source file for ", NAME
+$     EXIT 1
+$ ENDIF
+$ WRITE SYS$OUTPUT "Building ", SOURCE
+$ QUALS = ""
+$ IF P2 .EQS. "DEBUG" THEN QUALS = "/DEBUG"
+$ MACRO 'NAME''QUALS'
+$ LINK 'NAME''QUALS'
+$ GOSUB LOG_IT
+$ RUN/NODEBUG 'NAME'
+$ WRITE SYS$OUTPUT "''NAME' exited with status ", $STATUS
+$ EXIT
+$!
+$ LOG_IT:
+$ OPEN/APPEND/ERROR=NEW_LOG LOG BUILD.LOG
+$ GOTO WRITE_LOG
+$ NEW_LOG:
+$ OPEN/WRITE LOG BUILD.LOG
+$ WRITE_LOG:
+$ WRITE LOG F$TIME(), " built ", NAME, QUALS
+$ CLOSE LOG
+$ RETURN
+$!
+$ FAILED:
+$ WRITE SYS$OUTPUT "Build of ''NAME' failed: ", F$MESSAGE($STATUS)
+$ EXIT $STATUS
+```
+
+```text
+VAX> @BUILD HELLO
+Building DUA0:[HELLO]HELLO.MAR;1
+Hello, world!
+HELLO exited with status %X00000001
+VAX> @BUILD NOSUCH
+No source file for NOSUCH
+VAX> TYPE BUILD.LOG
+20-OCT-2026 09:57:39.58 built FACT
+20-OCT-2026 09:57:40.15 built HELLO
+```
+
+With `SET VERIFY`, the same run shows each line as it's executed. Note
+that the false `IF` block's lines are skipped, and the `GOSUB`'s lines
+appear where they run:
+
+```text
+VAX> SET VERIFY
+VAX> @BUILD HELLO
+...
+$ IF SOURCE .EQS. ""
+$ ENDIF
+$ WRITE SYS$OUTPUT "Building ", SOURCE
+Building DUA0:[HELLO]HELLO.MAR;1
+$ QUALS = ""
+$ IF P2 .EQS. "DEBUG" THEN QUALS = "/DEBUG"
+$ MACRO HELLO
+$ LINK HELLO
+$ GOSUB LOG_IT
+$ LOG_IT:
+$ OPEN/APPEND/ERROR=NEW_LOG LOG BUILD.LOG
+$ GOTO WRITE_LOG
+$ WRITE_LOG:
+$ WRITE LOG F$TIME(), " built ", NAME, QUALS
+$ CLOSE LOG
+$ RETURN
+$ RUN/NODEBUG HELLO
+Hello, world!
+$ WRITE SYS$OUTPUT "HELLO exited with status ", $STATUS
+HELLO exited with status %X00000001
+$ EXIT
+```
+
+### Differences from VMS DCL
+
+govax's DCL was checked against VMS 7.3 with probe procedures, and
+behaves as VMS's in the cases they cover. The differences to know about:
+
+- The prompt is `VAX>` (change it with `SET PROMPT` or
+  `vax.console.prompt`); a subprocess's is `$`.
+- At the terminal, `EXIT` ends govax, as `LOGOUT` would end a VMS session.
+- Commands that aren't VMS's: the machine commands of section 6.9, `PRINT`,
+  `TIME`, and `F$CONFIG`.
+- Commands VMS has that govax doesn't include `SUBMIT`, `PRINT` (VMS's,
+  for queues), `SET TERMINAL`, `SET PROCESS`, `SET FILE`, `BACKUP`,
+  `SORT`, `DIFFERENCES`, `SEARCH`, `EDIT`, `INSTALL`, `ANALYZE/DISK`, and
+  the compilers.
+- `F$MODE()` is always `INTERACTIVE`; there's no batch.
+- govax's `@` reads a procedure from a host file as well as a volume.
+
+---
+
+## 8. Programming in MACRO-32
+
+govax's `MACRO` command is a MACRO-32 assembler that behaves as VAX
+MACRO does: the same source language and directives, the same macro
+facility, the same object modules (byte for byte), and the same listing
+layout. This section shows how to write and build programs with it,
+through a series of complete examples. If MACRO-32 is new to you, read it
+in order; if you know it, the examples and the qualifier reference are
+what you need.
+
+### The MACRO command
+
+```text
+MACRO source[/HOST] [/OBJECT[=file] | /NOOBJECT] [/LIST[=file] | /NOLIST]
+      [/LIBRARY=(mlb,...)] [/SHOW=(...) | /NOSHOW=(...)]
+      [/CROSS_REFERENCE[=(...)]] [/DEBUG[=(...)] | /NODEBUG]
+      [/ENABLE=(...)] [/DISABLE=(...)]
+```
+
+| Qualifier | Meaning |
+| --- | --- |
+| `/OBJECT[=file]` | Write the object module (the default). It's named after the source, with type `.OBJ`, beside it. |
+| `/NOOBJECT` | Check the source without writing an object. |
+| `/LIST[=file]` | Write a listing (`.LIS`): the source with the generated code, the symbol table, the psect synopsis, and statistics. |
+| `/SHOW=(...)`, `/NOSHOW=(...)` | Listing options: `BINARY`, `CALLS`, `CONDITIONALS`, `DEFINITIONS`, `EXPANSIONS`. By default all but `BINARY` and `EXPANSIONS` are on. `/SHOW=EXPANSIONS` lists every line macros generate. |
+| `/CROSS_REFERENCE[=(...)]` | End the listing with a cross reference of `SYMBOLS`, `MACROS`, `OPCODES`, `DIRECTIVES`, `REGISTERS`, or `ALL` (default: symbols and macros). |
+| `/DEBUG[=(...)]`, `/NODEBUG` | What the object carries for the debugger: `TRACEBACK` (the default), `SYMBOLS`, `ALL` (what `/DEBUG` alone means), or `NONE`. Use `/DEBUG` for source-line debugging. |
+| `/ENABLE=(...)`, `/DISABLE=(...)` | Assembler functions, as `.ENABLE`/`.DISABLE`: `ABSOLUTE`, `DEBUG`, `GLOBAL`, `SUPPRESSION`, `TRACEBACK`, `TRUNCATION`, `VECTOR`. |
+| `/LIBRARY=(...)` | Macro libraries (`.MLB`) to search before the system macro library (VMS writes this as `MACRO PROG+LIB/LIBRARY`). |
+
+Every error in the source is reported, with its line, and then no object
+is written, so a failed assembly never replaces a good object:
+
+```text
+%DCL-E-ASSEMBLING, Assembling lines.mar: line 27: VAX-E-BRANCHRANGE, Branch displacement 135 out of range
+govax: DCL-E-ASMERRORS, 1 error(s) assembling lines.mar; no object file written
+```
+
+Warnings are reported, and the object is still written.
+
+### Example 1: Hello, world, explained
+
+```asm
+        .TITLE  HELLO   Hello, world
+        .IDENT  /V1.0/
+
+        .PSECT  DATA, WRT, NOEXE, LONG
+MSG:    .ASCID  /Hello, world!/
+
+        .PSECT  CODE, NOWRT, EXE, LONG
+        .ENTRY  HELLO, ^M<>
+        PUSHAQ  MSG
+        CALLS   #1, G^LIB$PUT_OUTPUT
+        RET
+
+        .END    HELLO
+```
+
+Line by line:
+
+- `.TITLE` names the module (`HELLO`) and gives the listing a title.
+  `.IDENT` is its version, which the linker's map and `ANALYZE` show.
+- `.PSECT` starts a *program section*. Sections with the same name, from
+  all the modules in a link, are gathered together. The attributes say
+  what the section is: `WRT` (writable) and `NOEXE` for data, `NOWRT` and
+  `EXE` for code. `LONG` aligns it on a longword. Keeping code and data
+  apart lets the linker make the code read-only.
+- `.ASCID` stores a string and, in front of it, a *string descriptor*:
+  the 8-byte structure (length, type, class, address) that VMS routines
+  take for a string argument. `MSG` is the descriptor's address.
+- `.ENTRY HELLO, ^M<>` defines a procedure entry point. Its first word
+  is the *entry mask*: the registers (R2 to R11) the procedure uses, which
+  `CALLS` saves and `RET` restores. `^M<>` saves none. (R0 and R1 are
+  scratch registers, never saved.)
+- `PUSHAQ MSG` pushes the descriptor's address: the routine's one
+  argument.
+- `CALLS #1, G^LIB$PUT_OUTPUT` calls the run-time library routine with
+  one argument from the stack. `G^` (general addressing) lets the linker
+  point the call into a shareable image, here LIBRTL.
+- `RET` returns. The routine's status is in R0: `LIB$PUT_OUTPUT` left
+  `SS$_NORMAL` (1) there, so the image exits with success.
+- `.END HELLO` ends the source, and names the *transfer address*, where
+  the image starts.
+
+The VAX calling standard behind this is worth knowing, because every
+example uses it:
+
+- A caller pushes the arguments in reverse order, then `CALLS #n, routine`.
+  (`CALLG arglist, routine` passes a prebuilt argument list instead.)
+- In the called routine, `AP` (the argument pointer) addresses the
+  argument list: `4(AP)` is the first argument, `8(AP)` the second, and
+  `(AP)` holds the count.
+- `FP` (the frame pointer) addresses the call frame that `CALLS` built;
+  `(FP)` is the routine's condition handler slot.
+- A routine returns a value, or a status, in R0 (R0 and R1 for 64 bits).
+  A status is a success when its low bit is set, so `BLBC R0, error`
+  ("branch on low bit clear") is the usual test.
+- Strings are passed by descriptor, most other values by reference
+  (their address), and some by value.
+
+### Example 2: Loops, recursion, and $FAO
+
+This program prints a table of factorials. It shows a loop with local
+labels, a recursive procedure that takes an argument, and the `$FAO_S`
+system service macro, which formats text as `printf` does.
+
+```asm
+        .TITLE  FACT    Print a table of factorials
+        .IDENT  /V1.0/
+
+; Prints N! for N = 1 to 10, formatting each line with $FAO.
+
+        .PSECT  DATA, WRT, NOEXE, LONG
+CTRSTR: .ASCID  /!2UL!! = !UL/          ; $FAO control string ("!!" is a "!")
+BUFFER: .BLKB   80                      ; where $FAO formats a line
+OUTDSC: .LONG   80                      ; descriptor of BUFFER
+        .ADDRESS BUFFER
+COUNT:  .LONG   0                       ; N
+RESULT: .LONG   0                       ; N!
+
+        .PSECT  CODE, NOWRT, EXE, LONG
+
+        .ENTRY  FACT, ^M<R2>
+        MOVL    #1, R2                  ; N = 1
+10$:    MOVL    R2, COUNT
+        PUSHL   R2                      ; FACTORIAL(N)
+        CALLS   #1, FACTORIAL
+        MOVL    R0, RESULT
+        MOVL    #80, OUTDSC             ; reset the buffer's length
+        $FAO_S  CTRSTR=CTRSTR, OUTLEN=OUTDSC, OUTBUF=OUTDSC, -
+                P1=COUNT, P2=RESULT
+        BLBC    R0, 90$
+        PUSHAQ  OUTDSC
+        CALLS   #1, G^LIB$PUT_OUTPUT
+        AOBLEQ  #10, R2, 10$            ; next N, through 10
+        MOVL    #1, R0                  ; SS$_NORMAL
+90$:    RET
+
+; FACTORIAL(n): returns n! in R0, by recursion.
+        .ENTRY  FACTORIAL, ^M<>
+        MOVL    4(AP), R0               ; n
+        CMPL    R0, #1
+        BLEQ    20$                     ; 0! = 1! = 1
+        SUBL3   #1, R0, -(SP)           ; FACTORIAL(n-1)
+        CALLS   #1, FACTORIAL
+        MULL2   4(AP), R0               ; times n
+        RET
+20$:    MOVL    #1, R0
+        RET
+
+        .END    FACT
+```
+
+```text
+$ govax macro fact.mar && govax link fact.obj && govax run fact.exe
+ 1! = 1
+ 2! = 2
+ 3! = 6
+ 4! = 24
+ 5! = 120
+ 6! = 720
+ 7! = 5040
+ 8! = 40320
+ 9! = 362880
+10! = 3628800
+```
+
+Things to notice:
+
+- **Local labels** like `10$` and `90$` are known only between two
+  ordinary labels (here, within `FACT`), so each routine can reuse them.
+- `FACT` uses R2, so its entry mask `^M<R2>` saves and restores it.
+  `FACTORIAL` uses only R0, which needs no saving.
+- `SUBL3 #1, R0, -(SP)` computes `n-1` straight onto the stack: the
+  argument for the recursive call.
+- `$FAO_S` is a system service macro. The `_S` form pushes its arguments
+  on the stack and calls `SYS$FAO`. Its `P1`, `P2`, ... are the
+  directives' arguments, pushed as longwords: `P1=COUNT` pushes the
+  contents of `COUNT`. `OUTLEN=OUTDSC` makes `$FAO` write the formatted
+  length into the descriptor's own length word, a common VMS idiom.
+- `AOBLEQ` ("add one and branch if less or equal") is the VAX's loop
+  instruction.
+- If `$FAO` fails, the routine returns its status. The control string
+  must be right: an unknown directive is `SS$_BADPARAM`, and the image
+  would exit with `%SYSTEM-F-BADPARAM`.
+
+### Example 3: Reading a file with RMS
+
+Programs read and write files through RMS, by filling in a *file access
+block* (FAB) and a *record access block* (RAB) and calling the RMS
+services. The `$FAB` and `$RAB` macros build the blocks; `$OPEN`,
+`$CONNECT`, `$GET`, and `$CLOSE` call the services. Remember that RMS
+works on volume files, so run this on a mounted volume.
+
+```asm
+        .TITLE  LINES   Number the lines of a file
+        .IDENT  /V1.0/
+
+; Reads the file LINES.DAT a record at a time with RMS, and writes
+; each record to the terminal with its line number in front.
+
+        .PSECT  DATA, WRT, NOEXE, LONG
+
+INFAB:  $FAB    FNM=<LINES.DAT>, -      ; the file to read
+                FAC=<GET>               ; read access only
+INRAB:  $RAB    FAB=INFAB, -            ; the record stream on it
+                UBF=RECORD, -           ; where $GET puts a record
+                USZ=RECSIZ              ; and how big that buffer is
+
+RECSIZ = 132
+RECORD: .BLKB   RECSIZ
+LINENO: .LONG   0
+CTRSTR: .ASCID  /!4UL  !AF/             ; line number, then counted text
+OUTBUF: .BLKB   160
+OUTDSC: .LONG   160
+        .ADDRESS OUTBUF
+
+        .PSECT  CODE, NOWRT, EXE, LONG
+
+        .ENTRY  LINES, ^M<R2>
+        $OPEN   FAB=INFAB               ; open the file
+        BLBS    R0, 5$
+        BRW     90$                     ; (too far for a BLBC)
+5$:     $CONNECT RAB=INRAB              ; and connect a stream to it
+        BLBS    R0, 10$
+        BRW     90$
+
+10$:    $GET    RAB=INRAB               ; the next record
+        BLBS    R0, 20$
+        BRW     80$                     ; RMS$_EOF at the end
+20$:    INCL    LINENO
+        MOVZWL  INRAB+RAB$W_RSZ, R2     ; its length
+        MOVL    #160, OUTDSC
+        $FAO_S  CTRSTR=CTRSTR, OUTLEN=OUTDSC, OUTBUF=OUTDSC, -
+                P1=LINENO, P2=R2, P3=#RECORD
+        PUSHAQ  OUTDSC
+        CALLS   #1, G^LIB$PUT_OUTPUT
+        BRB     10$
+
+80$:    CMPL    R0, #RMS$_EOF           ; the end of the file is success
+        BNEQ    90$
+        $CLOSE  FAB=INFAB
+        MOVL    #1, R0
+90$:    RET
+
+        .END    LINES
+```
+
+```text
+VAX> SET DEFAULT DUA0:[DEMO]
+VAX> COPY "lines.mar"/HOST *
+VAX> COPY "lines.dat"/HOST *
+VAX> MACRO LINES
+VAX> LINK LINES
+VAX> RUN LINES
+   1  The VAX-11/780 was announced in October 1977.
+   2  It was the first VAX.
+   3  Its successors ran VMS for decades.
+VAX> RENAME LINES.DAT GONE.DAT
+VAX> RUN LINES
+%RMS-E-FNF, file not found
+VAX> SHOW SYMBOL $STATUS
+  $STATUS == "%X00018292"
+```
+
+Notes:
+
+- The program returns RMS's status when something fails, so the image's
+  exit status is the RMS error, and DCL shows its message.
+- `RAB$W_RSZ` (the length of the record `$GET` read) and `RMS$_EOF` come
+  from govax's tables of VMS symbols, which the linker uses; you don't
+  have to define them. (`$RABDEF` and the other definition macros are
+  available too, to define such symbols in the module itself.)
+- The RMS and `$FAO_S` macros expand to a good deal of code, so a
+  byte-displacement branch (`BLBC`, `BRB`) over them can be out of range.
+  The assembler says so (`BRANCHRANGE`); branch around with `BRW`, as
+  here.
+- `!AF` formats counted text: a length (`P2`) and an address (`P3`).
+
+### Example 4: Terminal input, dynamic strings, and your own macros
+
+This example reads a line with `LIB$GET_INPUT`, into a *dynamic string*
+(a class D descriptor, whose memory the run-time library manages), and
+uses two macros from a macro library of its own.
+
+The macros, in `MYMAC.MAR`:
+
+```asm
+; MYMAC.MAR -- macros for MYMAC.MLB
+
+; PRINT desc: writes the string a descriptor describes to SYS$OUTPUT.
+        .MACRO  PRINT   DESC
+        PUSHAQ  DESC
+        CALLS   #1, G^LIB$PUT_OUTPUT
+        .ENDM   PRINT
+
+; CHECK: returns from the routine with R0 if R0 is a failure status.
+        .MACRO  CHECK   ?OK
+        BLBS    R0, OK
+        RET
+OK:
+        .ENDM   CHECK
+```
+
+`?OK` makes `OK` a *created local label*: each use of `CHECK` gets a
+label of its own (`30000$`, `30001$`, ...), so the macro can be used many
+times in one routine.
+
+The program, `GREET.MAR`:
+
+```asm
+        .TITLE  GREET   Ask for a name, and greet it
+        .LIBRARY /MYMAC/                ; search MYMAC.MLB for macros
+
+        .PSECT  DATA, WRT, NOEXE, LONG
+PROMPT: .ASCID  /What is your name? /
+NAME:   .WORD   0                       ; a dynamic string descriptor:
+        .BYTE   14                      ;   DSC$K_DTYPE_T, text
+        .BYTE   2                       ;   DSC$K_CLASS_D, so LIB$GET_INPUT
+        .LONG   0                       ;   gets the memory for it
+CTRSTR: .ASCID  /Hello, !AS!!/
+BUFFER: .BLKB   100
+OUTDSC: .LONG   100
+        .ADDRESS BUFFER
+
+        .PSECT  CODE, NOWRT, EXE, LONG
+        .ENTRY  GREET, ^M<>
+        PUSHAQ  PROMPT                  ; LIB$GET_INPUT(NAME, PROMPT)
+        PUSHAQ  NAME
+        CALLS   #2, G^LIB$GET_INPUT
+        CHECK                           ; RMS$_EOF if Ctrl/Z was typed
+        $FAO_S  CTRSTR=CTRSTR, OUTLEN=OUTDSC, OUTBUF=OUTDSC, P1=#NAME
+        CHECK
+        PRINT   OUTDSC
+        RET
+        .END    GREET
+```
+
+Build the macro library, then the program:
+
+```text
+VAX> LIBRARY/CREATE/MACRO MYMAC MYMAC
+VAX> LIBRARY/LIST MYMAC.MLB
+Directory of MACRO library DUA0:[DEMO]MYMAC.MLB;1 on 20-OCT-2026 10:09:28
+Creation date:  20-OCT-2026 10:09:28      Creator:  govax Librarian
+...
+CHECK
+PRINT
+VAX> MACRO GREET
+VAX> LINK GREET
+VAX> RUN GREET
+What is your name? Ada Lovelace
+Hello, Ada Lovelace!
+```
+
+Instead of `.LIBRARY` in the source, you can name the library on the
+command line: `MACRO GREET/LIBRARY=MYMAC`. For a one-off macro, just
+define it in the source with `.MACRO` ... `.ENDM`.
+
+`$DSCDEF` isn't among govax's own system macros (see
+[System macros](#system-macros)), which is why this example writes the
+descriptor's type and class as numbers.
+
+### Example 5: A condition handler
+
+VMS reports errors such as access violations as *conditions*, which a
+procedure can catch by establishing a *condition handler*: storing the
+handler's address in its call frame, at `(FP)`. This program reads
+address 0, which is never accessible; the handler catches the access
+violation and unwinds the call, so `RISKY` returns to `MAIN` with
+`SS$_ACCVIO` in R0.
+
+```asm
+        .TITLE  HANDLER Catch an access violation with a condition handler
+        $SSDEF                          ; SS$_ symbols
+
+        .PSECT  DATA, WRT, NOEXE, LONG
+CAUGHT: .ASCID  /Handler: caught an access violation, unwinding/
+DONE:   .ASCID  /Main: back from RISKY, R0 = SS$_ACCVIO/
+
+        .PSECT  CODE, NOWRT, EXE, LONG
+
+        .ENTRY  MAIN, ^M<>
+        CALLS   #0, RISKY               ; returns with SS$_ACCVIO in R0
+        CMPL    R0, #SS$_ACCVIO
+        BNEQ    10$
+        PUSHAQ  DONE
+        CALLS   #1, G^LIB$PUT_OUTPUT
+        MOVL    #SS$_NORMAL, R0
+10$:    RET
+
+; RISKY establishes HANDLER, then reads address 0.
+        .ENTRY  RISKY, ^M<>
+        MOVAB   HANDLER, (FP)           ; establish the condition handler
+        CLRL    R1
+        MOVL    (R1), R0                ; access violation
+        RET
+
+; HANDLER(signal-array, mechanism-array): for ACCVIO, unwind to RISKY's
+; caller with the condition in R0; otherwise resignal.
+        .ENTRY  HANDLER, ^M<>
+        MOVL    4(AP), R0               ; the signal array
+        CMPL    4(R0), #SS$_ACCVIO      ; its condition
+        BNEQ    20$
+        PUSHAQ  CAUGHT
+        CALLS   #1, G^LIB$PUT_OUTPUT
+        MOVL    8(AP), R0               ; the mechanism array
+        MOVL    #SS$_ACCVIO, 12(R0)     ; R0 for the routine unwound to
+        $UNWIND_S                       ; to RISKY's caller
+        RET
+20$:    MOVL    #SS$_RESIGNAL, R0
+        RET
+        .END    MAIN
+```
+
+```text
+$ govax run handler.exe
+Handler: caught an access violation, unwinding
+Main: back from RISKY, R0 = SS$_ACCVIO
+```
+
+Without the handler, the access violation would reach VMS's last-chance
+handler, which ends the image with its message:
+
+```text
+%SYSTEM-F-ACCVIO, access violation, reason mask=00, virtual address=00000000, PC=0000020E, PSL=03C00004
+```
+
+`LIB$SIGNAL` and `LIB$STOP` raise conditions of your own, and
+`LIB$ESTABLISH`, `LIB$REVERT`, and `LIB$SIG_TO_RET` work as on VMS.
+
+### The listing
+
+`/LIST` writes a listing laid out as VAX MACRO's. Here is the first page
+of `HELLO.LIS`:
+
+```text
+HELLO                           Fixture 9: hello, world                  20-OCT-2026 09:56:08  govax MACRO V0.0-0          Page   1
+V1.0                                                                     20-OCT-2026 09:56:08  DUA0:[HELLO]HELLO.MAR;1           (1)
+
+                                     0000     1         .TITLE  HELLO   Fixture 9: hello, world
+                                     0000     2         .IDENT  /V1.0/
+                                     0000     3
+                                 00000000     6         .PSECT  DATA, WRT, NOEXE, LONG
+2C 6F 6C 6C 65 48 00000008'010E0000' 0000     7 MSG:    .ASCID  /Hello, world!/
+               21 64 6C 72 6F 77 20  000E
+                                     0015     8
+                                 00000000     9         .PSECT  CODE, NOWRT, EXE, LONG
+                               0000  0000    10         .ENTRY  HELLO, ^M<>
+                   00000000'EF   7F  0002    11         PUSHAQ  MSG
+              00000000'GF   01   FB  0008    12         CALLS   #1, G^LIB$PUT_OUTPUT
+                                 04  000F    13         RET
+                                     0010    14
+                                     0010    15         .END    HELLO
+```
+
+The generated bytes are on the left, read right to left as the VAX
+stores them (lowest address on the right), then each line's offset in
+its psect. An apostrophe marks a value the linker will relocate; `G`
+marks a reference to a global symbol. Later pages hold the symbol table,
+the psect synopsis, and statistics.
+
+### Source language summary
+
+govax's MACRO accepts VAX MACRO's language. A quick reference:
+
+**Statements** have the form `label: opcode operands ; comment`. A line
+ending in `-` (before any comment) continues on the next.
+
+**Symbols**: `NAME = value` (local), `NAME == value` (global), `NAME:`
+(a label), `NAME::` (a global label), `10$:` (a local label).
+
+**Addressing modes:**
+
+| Syntax | Mode |
+| --- | --- |
+| `R3` | register |
+| `(R3)` | register deferred |
+| `(R3)+`, `-(R3)`, `@(R3)+` | autoincrement, autodecrement, autoincrement deferred |
+| `#5`, `S^#5`, `I^#500` | literal (short literal or immediate) |
+| `8(R3)`, `@8(R3)`, `B^8(R3)` | displacement, displacement deferred, with a size |
+| `LABEL`, `@LABEL` | relative (PC-relative), relative deferred |
+| `@#^X200` | absolute |
+| `G^NAME` | general: relative or absolute, as the linker decides |
+| `TABLE[R4]` | indexed |
+
+**Expressions** use `+ - * /`, `@` (shift), `&` (and), `!` (or), `\`
+(exclusive or), `^C` (complement), angle brackets for grouping, and
+radix operators `^X`, `^D`, `^O`, `^B`. Numbers are decimal by default.
+Binary operators are applied left to right with no precedence: write
+`1+<2*3>` for 7. `^M<R2,R3>` is a register mask; `^A/text/` is ASCII.
+
+**Directives** (VAX MACRO's), among them:
+
+| Kind | Directives |
+| --- | --- |
+| Module | `.TITLE`, `.IDENT`, `.SBTTL`, `.END` |
+| Sections | `.PSECT`, `.SAVE_PSECT`, `.RESTORE_PSECT`, `.ALIGN` |
+| Data | `.BYTE`, `.WORD`, `.LONG`, `.QUAD`, `.OCTA`, `.ADDRESS`, `.ASCII`, `.ASCIC`, `.ASCID`, `.ASCIZ`, `.F_FLOATING`, `.D_FLOATING`, `.G_FLOATING`, `.H_FLOATING`, `.PACKED`, `.BLKB`, `.BLKW`, `.BLKL`, `.BLKQ`, ... |
+| Procedures | `.ENTRY`, `.MASK`, `.TRANSFER` |
+| Symbols | `.GLOBAL`, `.EXTERNAL`, `.WEAK`, `.DEFAULT`, `.ENABLE`, `.DISABLE` |
+| Conditionals | `.IF`, `.IIF`, `.IF_TRUE`, `.IF_FALSE`, `.IF_TRUE_FALSE`, `.ENDC` |
+| Macros | `.MACRO`, `.ENDM`, `.MEXIT`, `.MDELETE`, `.MCALL`, `.LIBRARY`, `.NARG`, `.NCHR`, `.NTYPE`, `.IRP`, `.IRPC`, `.REPEAT`, `.ENDR`, `.INCLUDE` |
+| Listing | `.SHOW`, `.NOSHOW`, `.LIST`, `.NLIST`, `.PAGE`, `.CROSS`, `.NOCROSS`, `.ERROR`, `.WARN`, `.PRINT` |
+
+### System macros
+
+When the source calls a macro it doesn't define, MACRO searches, in
+order: the libraries named by `.LIBRARY` (the last named first), those
+named by `/LIBRARY`, then the system macro library, STARLET. govax has
+its own STARLET, written from DIGITAL's manuals and checked against VAX
+MACRO's output; its macros generate the same code VAX MACRO's would. It
+contains:
+
+- **RMS**: `$FAB`, `$RAB`, `$NAM`, the XABs (`$XABALL`, `$XABDAT`,
+  `$XABFHC`, `$XABITM`, `$XABKEY`, `$XABPRO`, `$XABRDT`, `$XABSUM`,
+  `$XABTRM`), their `_STORE` forms, and the services `$OPEN`, `$CREATE`,
+  `$CLOSE`, `$CONNECT`, `$DISCONNECT`, `$GET`, `$PUT`, `$FIND`,
+  `$UPDATE`, `$DELETE`, `$TRUNCATE`, `$FLUSH`, `$FREE`, `$RELEASE`,
+  `$REWIND`, `$READ`, `$WRITE`, `$SPACE`, `$WAIT`, `$PARSE`, `$SEARCH`,
+  `$DISPLAY`, `$ERASE`, `$RENAME`, `$REMOVE`, `$ENTER`, `$EXTEND`,
+  `$NXTVOL`.
+- **System services**, in the `_S` form (arguments on the stack), and
+  for most the plain form (an argument list in line) and the `_G` form
+  (`CALLG`): `$ASSIGN_S`, `$DASSGN_S`, `$QIO_S`, `$QIOW_S`, `$EXIT_S`,
+  `$HIBER_S`, `$FAO`, `$FAOL`, `$GETMSG`, `$PUTMSG`, `$ASCTIM`, `$BINTIM`,
+  `$NUMTIM`, `$GETTIM`, `$SETIMR`, `$CANTIM`, `$SCHDWK`, `$WAKE`,
+  `$SETEF`, `$CLREF`, `$READEF`, `$WAITFR`, `$WFLOR`, `$WFLAND`,
+  `$ASCEFC`, `$DACEFC`, `$DLCEFC`, `$DCLAST`, `$SETAST`, `$DCLEXH`,
+  `$CANEXH`, `$CREPRC`, `$DELPRC`, `$SUSPND`, `$RESUME`, `$FORCEX`,
+  `$SETPRI`, `$SETPRN`, `$SETPRV`, `$GETJPI(W)`, `$GETSYI(W)`,
+  `$GETDVI(W)`, `$CREMBX`, `$DELMBX`, `$ALLOC`, `$DALLOC`, `$CANCEL`,
+  `$BRKTHRU(W)`, `$SNDOPR`, `$CRELNM`, `$DELLNM`, `$TRNLNM`, `$CRELNT`,
+  `$CRELOG`, `$DELLOG`, `$TRNLOG`, `$EXPREG`, `$CRETVA`, `$DELTVA`,
+  `$CNTREG`, `$ADJSTK`, `$ADJWSL`, `$SETPRT`, `$LCKPAG`, `$ULKPAG`,
+  `$LKWSET`, `$ULWSET`, `$PURGWS`, `$CRMPSC`, `$MGBLSC`, `$DGBLSC`,
+  `$UPDSEC(W)`, `$ENQ(W)`, `$DEQ`, `$GETLKI(W)`, `$CMKRNL`, `$CMEXEC`,
+  `$SETEXV`, `$UNWIND`, `$SYNCH`, `$SETRWM`, `$ASCTOID`, `$IDTOASC`,
+  `$CANWAK`.
+- **Definitions**: `$ACCDEF`, `$ATRDEF`, `$BRKDEF`, `$CLIDEF`, `$DCDEF`,
+  `$DEVDEF`, `$DVIDEF`, `$FABDEF`, `$FIBDEF`, `$IODEF`, `$JPIDEF`,
+  `$LCKDEF`, `$LIBDEF`, `$LKIDEF`, `$LNMDEF`, `$MSGDEF`, `$NAMDEF`,
+  `$PQLDEF`, `$PRCDEF`, `$PRTDEF`, `$PRVDEF`, `$PSLDEF`, `$RABDEF`,
+  `$RMSDEF`, `$SECDEF`, `$SSDEF`, `$SYIDEF`, `$TTDEF`, and the XAB
+  definitions.
+
+If you have VMS's own system macro library, govax uses it instead (see
+below), and every VMS system macro is available.
+
+Symbols such as `SS$_NORMAL`, `RMS$_EOF`, `IO$_WRITEVBLK`, and the FAB
+and RAB field offsets are also known to the linker from govax's own
+tables, so a module can refer to them without defining them; the linker
+supplies their values, as VMS's LINK does from its system object
+library.
+
+#### Using VMS's own libraries
+
+If you have a VAX/VMS system or distribution, its library files make
+`MACRO` and `LINK` behave exactly as on VMS. Put them in a host directory
+and point `vax.library` at it, or keep them on a volume and define
+`SYS$LIBRARY` and `SYS$SHARE` to lead to them:
+
+| File | Used by | Without it |
+| --- | --- | --- |
+| the system macro library (STARLET's `.MLB`) | `MACRO`: every system macro | govax's own STARLET (above) |
+| the system object library, `STARLET.OLB` | `LINK`: the system library's modules | govax's tables of its symbols; routines it holds as code (`BAS$`, `MTH$`, ...) are missing |
+| `IMAGELIB.OLB` | `LINK`: which shareable image defines each routine | govax's tables of LIBRTL's routines |
+| `LIBRTL.EXE` and other shareable images | `LINK`: routine offsets | govax's tables |
+
+These are copyrighted files and aren't part of govax; the project's
+README lists them.
+
+### Mixing in other languages
+
+govax has no compilers, but object modules compiled on a VAX (FORTRAN,
+C, Pascal, BASIC) can be linked by govax's `LINK` with your MACRO
+modules, given the libraries above, and run if the run-time routines they
+call are ones govax provides ([Appendix B](#appendix-b-run-time-library-routines)).
+
+---
+
+## 9. The linker
+
+`LINK` combines object modules into an *image*: an executable image that
+`RUN` runs, or a shareable image whose routines other images call. Its
+images and maps are laid out as VMS's LINK lays them out, so an image
+linked by govax runs on VMS, and VMS's objects and libraries link in
+govax.
+
+```text
+LINK file[,...] [/EXECUTABLE[=file] | /SHAREABLE[=file] | /NOEXECUTABLE]
+     [/MAP[=file] [/BRIEF | /FULL] | /NOMAP] [/[NO]TRACEBACK] [/DEBUG]
+     [/SYMBOL_TABLE[=file]] [/[NO]SYSLIB] [/[NO]USERLIBRARY[=(tables)]]
+
+file:   object[.OBJ]
+        library/LIBRARY                  search an object or shareable image library
+        library/INCLUDE=(module,...)     take these modules from a library
+        object/SELECTIVE_SEARCH          take only the symbols referred to
+        options/OPTIONS                  an options file (.OPT)
+```
+
+| Qualifier | Meaning |
+| --- | --- |
+| `/EXECUTABLE[=file]` | Write an executable image (the default), named after the first object, type `.EXE`. |
+| `/SHAREABLE[=file]` | Write a shareable image instead. |
+| `/NOEXECUTABLE` | Link and report errors, without writing an image. |
+| `/MAP[=file]` | Write a link map (`.MAP`). `/BRIEF` makes it short; `/FULL` adds the image sections and what each library contributed. |
+| `/TRACEBACK` | Start the image through `SYS$IMGSTA` and give it a debug symbol table from the objects' traceback records (the default). `/NOTRACEBACK` starts it at its own transfer address. |
+| `/DEBUG` | Also include the objects' debugger records, and mark the image to start under the debugger. |
+| `/SYMBOL_TABLE[=file]` | Also write the image's global symbols as an `.STB` object. |
+| `/NOSYSLIB` | Don't search the system libraries. |
+| `/NOUSERLIBRARY` | Don't search the libraries `LNK$LIBRARY`, `LNK$LIBRARY_1`, ... name. |
+
+The simplest link is one object:
+
+```text
+VAX> LINK HELLO
+```
+
+and several objects and a library:
+
+```text
+VAX> LINK MAIN,SUBS,DUA0:[LIB]MATHLIB/LIBRARY
+VAX> LINK/EXECUTABLE=PROG/MAP/FULL MAIN,PROG/OPTIONS
+```
+
+### How symbols are resolved
+
+Each global symbol a module refers to must be defined by some module.
+`LINK` looks, in order, in:
+
+1. the object modules you named;
+2. the libraries you named with `/LIBRARY`;
+3. the user libraries `LNK$LIBRARY`, `LNK$LIBRARY_1`, ... `LNK$LIBRARY_999`
+   (logical names, searched in turn until one isn't defined);
+4. the system libraries: `IMAGELIB.OLB` (which shareable image defines a
+   routine) and `STARLET.OLB` (whose modules are added to the image), if
+   you have them;
+5. govax's own tables: every LIBRTL routine and the other run-time
+   routines govax provides, in their shareable images; STARLET's symbols
+   (`SS$_...`, `RMS$_...`, `IO$_...`, the FAB/RAB/NAM offsets, and more);
+   and the system services (`SYS$...`) at their addresses in the system
+   service vector.
+
+So without any VMS files, a call to `LIB$PUT_OUTPUT` or `SYS$QIOW`, or a
+reference to `SS$_NORMAL`, links just as it would on VMS.
+
+A symbol nothing defines is a warning: it's 0, each reference to it is
+reported, and the image is still written. A routine in a shareable image
+is reached with a general-mode operand (`CALLS #1, G^LIB$PUT_OUTPUT`) or
+an `.ADDRESS`; the image activator connects it at run time.
+
+### The map
+
+`/MAP` writes VMS's map: the object modules, the program sections and
+each module's part of them, the global symbols, and the image synopsis.
+`/BRIEF` keeps only the first and last; for example:
+
+```text
+VAX> LINK/EXECUTABLE=MAIN3/MAP=MAIN3/BRIEF MAIN,MATHLIB/LIBRARY
+VAX> TYPE MAIN3.MAP
+                                             +------------------------+
+                                             ! Object Module Synopsis !
+                                             +------------------------+
+
+Module Name     Ident              Bytes      File                                Creation Date      Creator
+-----------     -----              -----      -----                               -------------      -------
+MAIN            0                     198 DUA0:[SHR]MAIN.OBJ;1                 20-OCT-2026 09:59  govax MACRO V0.0-0
+ROUTINES        0                      18 DUA0:[SHR]MATHLIB.OLB;1              20-OCT-2026 09:59  govax MACRO V0.0-0
+...
+                                                 +----------------+
+                                                 ! Image Synopsis !
+                                                 +----------------+
+
+Virtual memory allocated:                         00000200 000007FF 00000600 (1536. bytes, 3. pages)
+Stack size:                                             20. pages
+...
+User transfer address:                            00000414
+Image type:                                       EXECUTABLE.
+```
+
+### Options files
+
+An options file (`/OPTIONS`) gives the linker more input files and
+options, a line each. `!` starts a comment and `-` continues a line. In a
+command procedure, `SYS$INPUT/OPTIONS` reads the options from the data
+lines after the `LINK` command. govax supports every VAX LINK option but
+`UNSUPPORTED=`:
+
+| Option | Meaning |
+| --- | --- |
+| `file/SHAREABLE` | Link against a shareable image (found as `RUN` would find it). |
+| `file/LIBRARY`, `/INCLUDE=`, `/SELECTIVE_SEARCH` | As on the command line. |
+| `STACK=pages` | The user stack's size (default 20). |
+| `IDENTIFICATION=id`, `NAME=name` | The image's ident and name. |
+| `SYMBOL=name,value` | Define a global symbol. |
+| `UNIVERSAL=name,...` | Make symbols visible to images that link against this shareable image. |
+| `GSMATCH=ALWAYS\|EQUAL\|LEQUAL,major,minor` | A shareable image's version match rule. |
+| `CLUSTER=name[,base][,pfc][,file,...]` | Place files' sections together, in order, optionally at an address. |
+| `COLLECT=cluster,psect,...` | Move program sections into a cluster. |
+| `PSECT_ATTR=psect,attribute,...` | Change a program section's attributes. |
+| `BASE=address` | The image's base address. |
+| `DZRO_MIN=pages`, `ISD_MAX=count` | When writable zero pages become demand-zero sections. |
+| `PROTECT=YES\|NO`, `IOSEGMENT=pages` | As on VMS. |
+
+### Shareable images
+
+A shareable image is a library of routines and data that other images
+call, linked once and used by many programs, as LIBRTL is. govax links,
+uses, and runs them as VMS does. Here is a complete example.
+
+A shareable image usually starts with a *transfer vector*, so that its
+routines keep their addresses from one version to the next. `VECTOR.MAR`:
+
+```asm
+        .TITLE  VECTOR  Transfer vector for MYSHR
+        .PSECT  VECTOR, PIC, SHR, NOWRT, EXE, QUAD
+        .TRANSFER       DOUBLE          ; DOUBLE is a universal symbol
+        .MASK           DOUBLE          ; its entry mask
+        JMP             L^DOUBLE+2      ; and a jump past it
+        .TRANSFER       SQUARE
+        .MASK           SQUARE
+        JMP             L^SQUARE+2
+        .END
+```
+
+The routines, `ROUTINES.MAR`:
+
+```asm
+        .TITLE  ROUTINES        Arithmetic routines for MYSHR
+        .PSECT  $CODE, PIC, SHR, NOWRT, EXE, LONG
+; DOUBLE(n): returns 2*n in R0
+        .ENTRY  DOUBLE, ^M<>
+        ADDL3   4(AP), 4(AP), R0
+        RET
+; SQUARE(n): returns n*n in R0
+        .ENTRY  SQUARE, ^M<>
+        MULL3   4(AP), 4(AP), R0
+        RET
+        .END
+```
+
+Its options, `MYSHR.OPT`, put the vector first and set its version rule:
+
+```text
+! MYSHR.OPT -- options for the shareable image
+CLUSTER=TRANSFER_VECTOR,,,VECTOR
+GSMATCH=LEQUAL,1,1000
+```
+
+A program that uses it, `MAIN.MAR`:
+
+```asm
+        .TITLE  MAIN    Calls MYSHR's routines
+        .PSECT  DATA, WRT, NOEXE, LONG
+CTR:    .ASCID  /double(!UL) = !UL, square = !UL/
+BUF:    .BLKB   80
+DSC:    .LONG   80
+        .ADDRESS BUF
+        .PSECT  CODE, NOWRT, EXE, LONG
+        .ENTRY  MAIN, ^M<R2,R3>
+        PUSHL   #7
+        CALLS   #1, G^DOUBLE
+        MOVL    R0, R2
+        PUSHL   #7
+        CALLS   #1, G^SQUARE
+        MOVL    R0, R3
+        $FAO_S  CTRSTR=CTR, OUTLEN=DSC, OUTBUF=DSC, P1=#7, P2=R2, P3=R3
+        PUSHAQ  DSC
+        CALLS   #1, G^LIB$PUT_OUTPUT
+        RET
+        .END    MAIN
+```
+
+and its options file, `MAIN.OPT`, one line: `MYSHR/SHAREABLE`.
+
+Build and run them:
+
+```text
+VAX> MACRO VECTOR
+VAX> MACRO ROUTINES
+VAX> LINK/SHAREABLE=MYSHR VECTOR,ROUTINES,MYSHR/OPTIONS
+VAX> MACRO MAIN
+VAX> DEFINE MYSHR DUA0:[SHR]MYSHR.EXE
+VAX> LINK MAIN,MAIN/OPTIONS
+VAX> RUN MAIN
+double(7) = 14, square = 49
+```
+
+The logical name `MYSHR` tells both `LINK` and `RUN` where the image is.
+(Without it, both look in `SYS$SHARE`, which you can define to a
+directory of shareable images.) At run time, the image activator finds
+`MYSHR`, checks its `GSMATCH` against the one `MAIN` was linked with,
+places it in the process's memory, and connects `MAIN`'s calls to it.
+
+`GSMATCH` decides which later versions of the shareable image a program
+accepts: `ALWAYS` any; `EQUAL` the same major and minor ids; `LEQUAL` the
+same major id and a minor id at least the program's. A mismatch stops the
+activation with `%SYSTEM-F-SHRIDMISMAT`. Without `GSMATCH`, the ident
+comes from the link time, so programs must be relinked whenever the
+shareable image is.
+
+`LINK` can also search a *shareable image library* for the images that
+define symbols, so programs needn't name them:
+
+```text
+VAX> LIBRARY/CREATE/SHARE SHRLIB MYSHR.EXE
+VAX> DEFINE LNK$LIBRARY DUA0:[SHR]SHRLIB.OLB
+VAX> LINK/EXECUTABLE=MAIN2 MAIN
+VAX> RUN MAIN2
+double(7) = 14, square = 49
+```
+
+A shareable image can't be run itself: `RUN MYSHR` is `%DCL-E-NOTFR`,
+"no transfer address", as on VMS.
+
+### Traceback and debugging
+
+By default (`/TRACEBACK`), the image carries a debug symbol table built
+from the objects' traceback records: module and routine names and line
+numbers, which the debugger's `SHOW CALLS` uses. With `MACRO/DEBUG` and
+`LINK/DEBUG`, it also carries the full debugger records (every symbol,
+its type, the source line table), and `RUN` starts it under the debugger.
+
+(On VMS, traceback records also give a failing program its symbolic
+stack dump. govax doesn't print that dump yet: a failing program shows
+only its condition's message.)
+
+---
+
+## 10. The librarian
+
+`LIBRARY` creates and maintains the three kinds of VMS library, laid out
+as VMS's librarian lays them out, so libraries move freely between govax
+and VMS:
+
+- **Macro libraries** (`.MLB`), which `MACRO` searches for macros;
+- **Object libraries** (`.OLB`), which `LINK` searches for modules;
+- **Shareable image libraries** (`.OLB`, made with `/SHARE`), which `LINK`
+  searches for the shareable images that define symbols.
+
+```text
+LIBRARY library [input[,...]]
+        /CREATE  /INSERT  /REPLACE  /DELETE=(module,...)  /EXTRACT=(module,...)
+        /OUTPUT=file  /LIST[=file]  /FULL  /NAMES  /WIDTH=n
+        /MACRO  /OBJECT  /SHARE  /NOSQUEEZE  /SELECTIVE_SEARCH  /LOG
+```
+
+| Qualifier | Meaning |
+| --- | --- |
+| `/CREATE` | Make a new library (a new version on a volume), then insert any input files. |
+| `/INSERT` | Insert modules; one already there is a warning and is left as it was. |
+| `/REPLACE` | Replace modules of the same names, inserting the rest. The default when input files are given. |
+| `/DELETE=(...)` | Delete modules (wildcards `*` and `%` allowed). |
+| `/EXTRACT=(...)` | Copy modules out to `/OUTPUT=file` (default: the library's name, type `.MAR` or `.OBJ`). |
+| `/LIST[=file]` | List the library's header and modules. `/FULL` adds idents, insertion times, and symbol counts; `/NAMES` lists each object module's global symbols. |
+| `/MACRO`, `/OBJECT`, `/SHARE` | The kind of new library (object by default). An existing library keeps its own kind. |
+| `/NOSQUEEZE` | Keep macros' comments and trailing blanks, which are removed by default. |
+| `/SELECTIVE_SEARCH` | Mark inserted object modules for selective search. |
+
+The input files are macro sources (`.MAR`: one module per macro), objects
+(`.OBJ`: one module per object module), or shareable images (`.EXE`).
+
+The librarian builds the whole library and writes it only when every
+step has succeeded, so an error leaves the library as it was.
+
+```text
+VAX> LIBRARY/CREATE/LOG MATHLIB ROUTINES
+%DCL-S-INSERTED, module ROUTINES inserted in DUA0:[SHR]MATHLIB.OLB;1
+VAX> LIBRARY/LIST/FULL/NAMES MATHLIB
+Directory of OBJECT library DUA0:[SHR]MATHLIB.OLB;1 on 20-OCT-2026 10:10:06
+Creation date:  20-OCT-2026 10:10:06      Creator:  govax Librarian
+Revision date:  20-OCT-2026 10:10:06      Library format:   3.0
+Number of modules:      1                 Max. key length:  31
+Other entries:          2                 Preallocated index blocks:     49
+Recoverable deleted blocks:      0        Total index blocks used:        2
+Max. Number history records:      20      Library history records:        0
+
+Module ROUTINES         Ident 0                Inserted 20-OCT-2026 10:10:06 2 symbols
+DOUBLE                           SQUARE
+
+VAX> LINK MAIN,MATHLIB/LIBRARY
+VAX> LIBRARY/EXTRACT=ROUTINES/OUTPUT=COPY.OBJ MATHLIB
+VAX> LIBRARY/DELETE=ROUTINES MATHLIB
+```
+
+A macro library:
+
+```text
+VAX> LIBRARY/CREATE/MACRO MYMAC MYMAC.MAR
+VAX> LIBRARY/REPLACE/MACRO MYMAC NEWMACS.MAR      ! update some macros
+VAX> MACRO PROG/LIBRARY=MYMAC
+```
+
+### Analyzing objects and images
+
+`ANALYZE/OBJECT` and `ANALYZE/IMAGE` describe object and image files in
+the same words and page layout as VMS's `ANALYZE`, which is useful for
+seeing exactly what the assembler or linker produced.
+
+```text
+ANALYZE/OBJECT file[,...] [/OUTPUT[=file]] [/INCLUDE=(module,...)]
+               [/MHD] [/GSD] [/TIR] [/TBT] [/DBG] [/LNK] [/EOM]
+ANALYZE/IMAGE  file[,...] [/OUTPUT[=file]] [/HEADER] [/FIXUP_SECTION]
+```
+
+`ANALYZE/OBJECT` shows each record of an object module (or of an object
+library's modules): headers, the global symbol directory, every text and
+relocation command, traceback and debugger records, and end of module.
+The record-type qualifiers show only those kinds. `ANALYZE/IMAGE` shows
+an image's header, its image sections, and its fixup section (the
+shareable images it uses and its references to them). Errors in a file
+are flagged with `***` and counted at the end.
+
+```text
+VAX> ANALYZE/OBJECT/GSD ROUTINES
+Analyze Object File                          20-OCT-2026 10:10:06.53   Page 1
+DUA0:[SHR]ROUTINES.OBJ;1
+ANALYZ V07-04
+
+This is an OpenVMS VAX object file
+...
+        1)  Entry Point Symbol and Mask Definition (GSD$C_EPM)
+                data type: DSC$K_DTYPE_Z (0)
+                ...
+                entry mask: <>
+                symbol: "DOUBLE"
+```
+
+From the host: `govax analyze routines.obj`, `govax analyze --image
+--header prog.exe`.
+
+---
+
+## 11. Running programs
+
+### RUN
+
+```text
+RUN [/DEBUG | /NODEBUG] [/NOEXECUTE] image[/HOST]
+```
+
+`RUN` finds the image (default type `.EXE`) by the file name rules of
+section 5, activates it and the shareable images it uses, and runs it
+from its transfer address. When the image exits, `$STATUS` is its exit
+status: the R0 its main routine returned, or the status it passed to
+`$EXIT`. A failure's message is shown.
+
+```text
+VAX> RUN HELLO
+Hello, world!
+VAX> RUN "/Users/me/vax/fact.exe"
+VAX> RUN/DEBUG FACT
+```
+
+`RUN` gives the image no command text. To pass it some, use a foreign
+command or `MCR`, or from the host shell, `govax run image text...`:
+
+```text
+VAX> ECHO :== $DUA0:[TOOLS]ECHO.EXE
+VAX> ECHO one   two "Three"
+ONE TWO "Three"
+VAX> MCR DUA0:[TOOLS]ECHO via mcr
+VIA MCR
+$ govax run echo.exe Hello there, '"Mixed Case"'
+Hello there, "Mixed Case"
+```
+
+(A foreign command's text is treated as DCL treats parameters:
+uppercased and compressed unless quoted. `govax run` passes the host
+shell's words as they are.)
+
+While an image runs, **Ctrl/C** stops it and returns to the prompt (or
+delivers a Ctrl/C AST, if the program asked for one). `STOP` at the next
+prompt ends an image Ctrl/C left stopped.
+
+### How an image is activated
+
+When `RUN` starts an image, govax does what VMS's image activator does:
+
+1. **Reads the image header**: its image sections (code, data,
+   demand-zero, the user stack), transfer addresses, and the list of
+   shareable images it was linked against.
+2. **Finds each shareable image**, and the ones they use in turn:
+   1. A shareable image govax provides itself (LIBRTL, LIBRTL2, the C
+      run-time library, and the other system images) is govax's own
+      routines, unless you've defined a logical name of the image's name
+      (`DEFINE LIBRTL DUA1:[X]LIBRTL.EXE`), which asks for that file
+      instead.
+   2. Otherwise its name is looked up with the default `SYS$SHARE:.EXE`,
+      as on VMS: a logical name of the image's name, or `SYS$SHARE`
+      (which you define; each element of a search list in turn).
+   3. Otherwise, the host: the `vax.library` directory, then the name as
+      given.
+
+   An image no rule finds stops the activation:
+
+   ```text
+   %DCL-W-ACTIMAGE, error activating image MYSHR
+   -CLI-E-IMAGEFNF, image file not found DUA0:[SYSLIB]MYSHR.EXE;
+   ```
+
+3. **Checks each shareable image's ident** against the program's `GSMATCH`
+   (`%SYSTEM-F-SHRIDMISMAT` if they don't match). govax's own routines
+   always match.
+4. **Places the images** in the process's P0 space: the program at its
+   base, each shareable image after it (or at its own base, if it was
+   linked with one).
+5. **Does the fixups**: fills in each image's references to the others,
+   and sets each page's protection (code read-only).
+6. **Creates the user stack** in P1 (`STACK=` pages, 20 by default) and
+   calls the image at its transfer address (through `SYS$IMGSTA`, for an
+   image linked `/TRACEBACK`).
+
+With paging off, the image's pages are copied into memory. With paging
+on, they're *mapped* from the image file and read in as they're touched,
+as on VMS (section 13).
+
+When the image exits, its exit handlers run, its user-mode logical names
+and locks go, and its address space (P0, and the P1 pages it made) is
+deleted, ready for the next image.
+
+### How a program reaches VMS
+
+A VAX program calls the system and the run-time library through fixed
+addresses, as on VMS:
+
+- **System services** are called at their entries in the *system service
+  vector* (`SYS$QIOW`, `SYS$EXIT`, ...), in P1 space at the addresses VMS
+  uses. Each entry holds a special instruction, `XFC` (the VAX's
+  "extended function call", reserved for customer extensions), that
+  passes control from the emulated VAX to govax's Go code for that
+  service. The service reads its arguments from the program's argument
+  list and returns a status in R0, exactly as VMS's would.
+- **Run-time library routines** (`LIB$`, `STR$`, ...) are reached through
+  the shareable image's transfer vector. govax puts a small *shim* at
+  each entry: a stub that, again with `XFC`, hands the call to the Go
+  routine. A few routines are written in VAX code in govax's microkernel
+  instead.
+
+To the program none of this is visible: it links and calls as on VMS.
+The debugger's `SHOW SHIM` lists the shims.
+
+### Running programs built on VMS
+
+An image linked on VMS runs in govax if:
+
+- it calls only system services and run-time routines govax provides
+  (Appendices A and B);
+- or it uses shareable images you can supply as files (your own, or VMS's
+  own if you have them), which run as VAX code.
+
+Copy the image into govax with `COPY/BINARY` (or mount the VAX disk it's
+on), and run it:
+
+```text
+VAX> COPY/BINARY "prog.exe"/HOST DUA0:[WORK]PROG.EXE
+VAX> RUN PROG
+```
+
+A program that calls a run-time routine govax doesn't have yet links and
+starts, and the call signals:
+
+```text
+%SYSTEM-E-UNSUPPORTED, unsupported operation or function
+-GOVAX-E-NOTIMPL, routine LIB$TPARSE is not implemented in govax
+```
+
+Programs from VAX compilers also need their language's run-time library
+(`FOR$`, `BAS$`, `PAS$`, `DECC$`); govax implements part of the C
+library and none of the others, so such programs need those libraries'
+images from a VMS system.
+
+### Processes
+
+Each `RUN` runs the image in your own process, the console's (named
+`SYSTEM`, PID `00000301`). Programs can create more processes, which run
+alongside it:
+
+- `SPAWN` and `LIB$SPAWN` create subprocesses that run DCL;
+- `$CREPRC` creates a subprocess or detached process that runs an image
+  (or, given `LOGINOUT.EXE` and an input file, DCL).
+
+They communicate through mailboxes, common event flags, global sections,
+the lock manager, and shared files, as on VMS. `SHOW SYSTEM` lists them,
+`STOP` deletes one, and the debugger's `SET PROCESS` lets you look at
+one. Section 13 describes how they're scheduled.
+
+### Limits
+
+From the host shell, `--instruction-limit` and `--time-limit` stop a
+program that runs too long (exit status 124). At the prompt, Ctrl/C does.
+
+---
+
+## 12. The debugger
+
+govax's debugger is modeled on the VMS debugger: its commands, its
+syntax, and its output follow VMS's, and it was checked against VMS 7.3
+debugger sessions. It also has commands of its own for looking at the
+machine underneath (registers, page tables, the translation buffer).
+
+The debugger has its own prompt, `DBG>`, and its own commands. DCL's
+commands aren't available there; `EXIT` returns to `VAX>`.
+
+### Starting the debugger
+
+There are three ways in:
+
+- **`RUN/DEBUG image`**, or `RUN` of an image linked `/DEBUG`: the image is
+  loaded and stopped at the first instruction of its main routine.
+  (`RUN/NODEBUG` runs a `/DEBUG` image without the debugger.)
+- **`DEBUG`** at the `VAX>` prompt: a session on the machine as it is,
+  with nothing running, for examining memory, setting breakpoints, or
+  assembling code.
+- **A breakpoint** reached while a program runs from the debugger.
+
+For source-line debugging, assemble with `/DEBUG` and link with
+`/DEBUG`:
+
+```text
+VAX> MACRO/DEBUG FACT
+VAX> LINK/DEBUG FACT
+VAX> RUN FACT
+
+         GOVAX DEBUG
+
+%DEBUG-I-INITIAL, Language: MACRO, Module: FACT
+DBG>
+```
+
+### A session
+
+Using the factorial program from section 8, stop in `FACTORIAL` when its
+argument is 3, look around, and step:
+
+```text
+DBG> SET BREAK FACTORIAL WHEN (.(AP+4) EQL 3)
+DBG> SHOW BREAK
+breakpoint at routine FACT\FACTORIAL
+   when (.(AP+4) EQL 3)
+DBG> GO
+ 1! = 1
+ 2! = 2
+break at routine FACT\FACTORIAL
+    34:         MOVL    4(AP), R0               ; n
+DBG> EVALUATE/DECIMAL .(AP+4)
+3
+DBG> SHOW CALLS
+ module name     routine name      line                rel PC           abs PC
+*FACT            FACTORIAL           34               00000002         00000466
+*FACT            FACT                20               00000015         00000415
+DBG> STEP
+stepped to FACT\FACTORIAL\%LINE 35
+    35:         CMPL    R0, #1
+DBG> STEP
+stepped to FACT\FACTORIAL\%LINE 36
+    36:         BLEQ    20$                     ; 0! = 1! = 1
+DBG> EXAMINE/INSTRUCTION .PC
+FACT\FACTORIAL\%LINE 36:        BLEQ     FACT\FACTORIAL\%LINE 41
+DBG> STEP/RETURN
+stepped on return from FACT\FACTORIAL\%LINE 36 to FACT\FACTORIAL\%LINE 40: RET
+    40:         RET
+DBG> EXAMINE/DECIMAL R0
+FACT\FACTORIAL\%R0:     6
+DBG> SHOW REGISTERS
+
+    Registers:
+
+    R0:  00000006      R4:  00000000     R8:  00000000     AP:  7FDFFFC4
+    R1:  00000000      R5:  00000000     R9:  00000000     FP:  7FDFFFB0
+    R2:  00000003      R6:  00000000     R10: 00000000     SP:  7FDFFFB0
+    R3:  00000000      R7:  00000000     R11: 00000000     PC:  0000047B
+
+    PSL: 03C00000
+         PSW:  C=0, V=0, Z=0, N=0, T=0, IV=0, FU=0, DV=0
+         PRIV: IPL=0, CUR_MOD=USER, PRV_MOD=USER, FPD=0, TP=0, CM=0
+DBG> CANCEL BREAK/ALL
+DBG> SET WATCH RESULT
+DBG> GO
+watch of FACT\RESULT at FACT\%LINE 21
+    21:         MOVL    R0, RESULT
+   old value: 00000002
+   new value: 00000006
+break at FACT\%LINE 22
+    22:         MOVL    #80, OUTDSC             ; reset the buffer's length
+DBG> CANCEL WATCH/ALL
+DBG> GO
+ 3! = 6
+ ...
+10! = 3628800
+%DEBUG-I-EXITSTATUS, is '%SYSTEM-S-NORMAL, normal successful completion'
+DBG> EXIT
+VAX>
+```
+
+After the program exits, the debugger stays, as VMS's does, until you
+`EXIT`.
+
+### Expressions and locations
+
+An address or value is an expression:
+
+| Form | Meaning |
+| --- | --- |
+| `200`, `^D512`, `%HEX 10` | numbers, in the input radix (hexadecimal unless `SET RADIX` says otherwise); `^X`, `^D`, `^O`, `^B` force one |
+| `COUNT`, `FACTORIAL` | a program's symbol (data, label, or routine) |
+| `FACT\FACTORIAL\20$` | a path name: module, routine, label |
+| `%LINE 34`, `FACT\%LINE 34` | the code of a source line |
+| `R0` ... `R11`, `AP`, `FP`, `SP`, `PC`, `PSL` | registers |
+| `.address`, `.(AP+4)` | the contents of a location |
+| `+ - * /`, `EQL NEQ LSS LEQ GTR GEQ`, `AND OR NOT` | operators |
+| `.` `%CURLOC`, `^` `%PREVLOC`, `\` `%CURVAL` | the current location, the one before it, and the last value shown |
+| `A:B` | a range, for `EXAMINE` |
+
+### Commands
+
+**Running**
+
+| Command | Meaning |
+| --- | --- |
+| `GO [address]` | Run until a breakpoint, the end, or Ctrl/C. |
+| `STEP [n]` | Step a line (or `n`); `/INSTRUCTION` a single instruction; `/INTO` into calls (the default is `/OVER`); `/RETURN` to the routine's `RET`. |
+| `SET STEP keyword` | Change `STEP`'s defaults: `LINE`/`INSTRUCTION`, `OVER`/`INTO`, `[NO]SILENT`, `[NO]SOURCE`. |
+| `CALL routine [(args)]` | Call a routine, as `CALLS` would; it runs until it returns, a breakpoint stops it, or Ctrl/C. |
+
+**Eventpoints**
+
+| Command | Meaning |
+| --- | --- |
+| `SET BREAK address` | Stop before the instruction at `address` (a routine's name means after its entry mask). |
+| `SET BREAK/CALL`, `/BRANCH`, `/LINE`, `/RETURN routine`, `/INSTRUCTION[=(op,...)]`, `/EXCEPTION` | Stop at each instruction of a kind, or when an exception is signaled. |
+| `SET TRACE ...` | As `SET BREAK`, but report and go on. |
+| `SET WATCH location` | Stop after an instruction changes it. |
+| `... /AFTER:n`, `/TEMPORARY`, `WHEN (cond)`, `DO (cmd;...)` | Skip the first `n`, remove after the first stop, stop only when true, run commands at the stop. |
+| `SHOW BREAK`, `SHOW TRACE`, `SHOW WATCH` | List them. |
+| `CANCEL BREAK [/ALL] [address]`, ... | Remove them. |
+
+**Examining and changing**
+
+| Command | Meaning |
+| --- | --- |
+| `EXAMINE [/type] location[,...]` | Show data, typed by the program's symbols or a qualifier: `/BYTE`, `/WORD`, `/LONGWORD`, `/QUADWORD`, `/OCTAWORD`, `/FLOAT`, `/D_FLOAT`, `/G_FLOAT`, `/H_FLOAT`, `/PACKED:n`, `/ASCII:n`, `/ASCIC`, `/ASCIZ`, `/ASCID`, `/DATE_TIME`, `/CONDITION_VALUE`, `/PSL`, `/PTE`; and `/HEX`, `/DECIMAL`, `/OCTAL`, `/BINARY`. |
+| `EXAMINE/INSTRUCTION location` | Disassemble, with symbolic names; `/OPERANDS` explains each operand. |
+| `DEPOSIT [/type] location = value` | Change memory or a register. `DEPOSIT/INSTRUCTION .PC = 'MOVL #1,R0'` assembles an instruction in place. |
+| `EVALUATE [/radix] expr` | Show a value; `/ADDRESS` an address; `/CONDITION_VALUE` a status's message. |
+| `SYMBOLIZE address` | The names for an address. |
+| `SHOW CALLS`, `SHOW STACK` | The call frames. |
+| `SHOW REGISTERS`, `SHOW PSL`, `SHOW name` | Registers, including privileged ones (`SHOW P0BR`). |
+| `SHOW IMAGE [/FULL]` | The loaded images; `/FULL` shows their sections, protections, and page states. |
+| `SHOW MODULE`, `SHOW SYMBOL pattern`, `SHOW SCOPE` | The program's debug symbols. |
+
+**Settings**
+
+| Command | Meaning |
+| --- | --- |
+| `SET RADIX [/INPUT\|/OUTPUT] radix` | Decimal, hexadecimal, octal, or binary. |
+| `SET MODE [NO]SYMBOLIC`, `OPERANDS`, `[NO]LINE` | Display modes. |
+| `SET TYPE [/OVERRIDE] type` | The default type for `EXAMINE` and `DEPOSIT`. |
+| `SET SOURCE dir,...` | Where to find source files. |
+| `@file` | Run debugger commands from a file. |
+
+### govax's machine commands
+
+These go beyond VMS's debugger, to the machine itself:
+
+| Command | Shows or does |
+| --- | --- |
+| `SHOW CPU_STATUS` | Every register, privileged ones included, and each mode's stack pointer. |
+| `SHOW PAGE address` | The page table entry for an address, and its form (valid, demand zero, in transition, in the page file, ...). |
+| `SET PTE address field=value` | Change a page table entry. |
+| `SHOW MEMORY [/STATISTICS]` | Memory regions, and with paging the page lists and faults. |
+| `SHOW TB` | The translation buffer. |
+| `SHOW SCB` | The system control block: the exception and interrupt vectors. |
+| `SHOW EXCEPTIONS` | Recent machine faults and exceptions. |
+| `SET BREAK/FAULT=code` | Stop when a machine fault is about to be delivered. |
+| `SHOW SHIM` | The stubs that stand for run-time library routines. |
+| `SHOW PROCESS`, `SET PROCESS pid` | List processes, and look at another one's registers and memory. |
+| `SHOW KSP`, `ESP`, `SSP`, `USP`, `ISP` | Dump a mode's stack. |
+| `SET MODE KERNEL` (or `EXECUTIVE`, `SUPERVISOR`, `USER`) | Switch the CPU's access mode. |
+| `SET PSL field=value`, `SET VM`, `SET NOVM` | Change the PSL; turn memory management on or off. |
+| `SHOW INSTRUCTIONS[/PROFILE]` | The instruction set; with `/PROFILE`, how often each instruction ran. |
+| `SHOW SYMBOL/SYSTEM pattern` | The machine's predefined symbols (`PTE$K_UR`, `VAX$PR_SBR`, ...). |
+
+### The interactive assembler
+
+`ASM` at the `DBG>` prompt assembles VAX instructions straight into
+memory, a line at a time (the prompt becomes `ASM>`) or from a file. It
+uses MACRO syntax, with directives of its own such as `.BASE` (where to
+assemble). `.END` returns to `DBG>`; `.END name` also calls the routine
+`name`. This makes the debugger a laboratory for trying instructions:
+
+```text
+VAX> DEBUG
+DBG> ASM
+ASM> .BASE ^X1000
+ASM> START:: MOVL #5, R1
+ASM>  CLRL R0
+ASM> LOOP: ADDL2 R1, R0
+ASM>  SOBGTR R1, LOOP
+ASM> DONE:: NOP
+ASM> .END
+DBG> EXAMINE/INSTRUCTION START:DONE
+START:  MOVL     S^#05,R1
+00001003:       CLRL     R0
+LOOP:   ADDL2    R1,R0
+00001008:       SOBGTR   R1,LOOP
+DONE:   NOP
+DBG> SET BREAK DONE
+DBG> DEPOSIT PC = START
+DBG> STEP/INSTRUCTION 3
+stepped to 00001008: SOBGTR R1,^X00001005
+DBG> EXAMINE R0,R1
+%R0:    00000005
+%R1:    00000005
+DBG> GO
+break at 0000100B
+DBG> EVALUATE/DECIMAL R0
+15
+DBG> EXIT
+```
+
+Numbers in the assembler are decimal unless marked (`^X1000`), as in
+MACRO. Code assembled this way runs in user mode; privileged instructions
+such as `HALT` fault there, as on a real VAX (`%SYSTEM-F-OPCDEC`), so end
+a test with a breakpoint, as above. `HELP ASM` at `DBG>` describes the
+assembler's directives.
+
+The debugger's `HELP` covers every command: `HELP SET BREAK`, `HELP
+EXAMINE /INSTRUCTION`, `HELP EXPRESSIONS`, and so on.
+
+---
+
+## 13. Internals
+
+This section explains how govax works inside: how it emulates the VAX
+processor, how VMS's services fit around it, and how memory, processes,
+and paging are managed. You don't need any of it to use govax, but it
+explains what you see in `SHOW MEMORY`, `SHOW SYSTEM`, and the debugger,
+and it's a gentle introduction to the VAX architecture and VMS's
+internals for readers who know VMS only from the outside.
+
+Two references are used throughout: DIGITAL's *VAX Architecture
+Reference Manual* for the processor, and Kenah and Bate's *VAX/VMS
+Internals and Data Structures* for how VMS works. govax's own design
+notes are in `docs/`, a document per development phase.
+
+### 13.1 The overall design
+
+govax is one Go program. Inside it:
+
+```text
+  +---------------------------------------------------------------+
+  |  Front end: the VAX> console, the DBG> debugger, cmd/govax     |
+  +---------------------------------------------------------------+
+  |  DCL interpreter (one per process that runs DCL)               |
+  |  MACRO, LINK, LIBRARY, ANALYZE, DIRECTORY, COPY, ...           |
+  +---------------------------------------------------------------+
+  |  "VMS" in Go:  system services   RMS     run-time library      |
+  |                processes, scheduler, lock manager, pager       |
+  +-------------------------------------+-------------------------+
+  |  The emulated VAX:  CPU (instruction set, exceptions,         |
+  |  interrupts, access modes)  +  memory (page tables, TB)       |
+  |  running the microkernel and your programs                    |
+  +---------------------------------------------------------------+
+  |  Host: files, terminal, clock                                  |
+  +---------------------------------------------------------------+
+```
+
+The emulated VAX runs real VAX machine code: your programs, and a small
+*microkernel* (`kernel.asm`, assembled into memory at startup) that sets
+up the system control block, handles change-mode instructions, and
+provides a few routines in VAX code. Everything else that VMS would do
+in its executive (system services, RMS, the scheduler, the pager, the
+run-time library) is Go code that the emulated machine calls into with
+the `XFC` instruction, or that runs between instructions.
+
+That split is the key to govax: from inside the machine, a program sees
+a VAX running VMS (the same addresses, calling conventions, data
+structures in its own memory, statuses, and side effects), while govax
+avoids emulating the whole VMS executive in VAX code.
+
+The Go packages follow the same layers; `CLAUDE.md` in the repository
+describes each one. The most important are `internal/cpu` (the
+processor), `internal/vm` (memory and address translation),
+`internal/corevms` (system services and processes), `internal/rms` (RMS,
+on the `ods2` module's Files-11 implementation), `internal/librtl` (the
+run-time library), `internal/paging` and `internal/sched` (VMS's paging
+and scheduling rules), `internal/dclshell` (DCL), `internal/asm`,
+`internal/link`, `internal/lbr` (MACRO, LINK, LIBRARY), and
+`internal/debugger`.
+
+### 13.2 The processor
+
+#### Registers and the PSL
+
+The VAX has sixteen 32-bit general registers. R0 to R11 are for general
+use (R0 and R1 also return results); R12 is AP, the argument pointer;
+R13 is FP, the frame pointer; R14 is SP, the stack pointer; and R15 is
+PC, the program counter.
+
+The *processor status longword* (PSL) holds the processor's state:
+
+| Bits | Field | Meaning |
+| --- | --- | --- |
+| 0-3 | C, V, Z, N | condition codes: carry, overflow, zero, negative |
+| 4 | T | trace (single-step) |
+| 5-7 | IV, FU, DV | trap enables: integer overflow, floating underflow, decimal overflow |
+| 16-20 | IPL | interrupt priority level, 0 to 31 |
+| 22-23 | PRV_MOD | the previous access mode |
+| 24-25 | CUR_MOD | the current access mode: 0 kernel, 1 executive, 2 supervisor, 3 user |
+| 26 | IS | running on the interrupt stack |
+| 27 | FPD | first part done (an interrupted long instruction) |
+| 30 | TP | trace pending |
+| 31 | CM | compatibility mode (running PDP-11 code) |
+
+The debugger's `SHOW PSL`, `SHOW REGISTERS`, and `SHOW CPU_STATUS` show
+them, with the privileged registers (the page table registers P0BR, P0LR,
+P1BR, P1LR, SBR, SLR; the stack pointers; SCBB; PCBB; and others).
+
+#### Access modes
+
+The VAX has four access modes, from most privileged to least: kernel,
+executive, supervisor, and user. Your programs run in user mode. Each
+mode has its own stack, and each page of memory says which modes may
+read or write it. A program enters a more privileged mode only through a
+*change mode* instruction (`CHMK`, `CHME`, `CHMS`), which goes to a
+handler the system chose, and returns with `REI`. Privileged instructions
+(`HALT`, `MTPR`, `LDPCTX`, ...) fault in any mode but kernel. This is the
+protection VMS is built on, and govax enforces it as the architecture
+defines.
+
+#### Instructions
+
+A VAX instruction is an opcode (one or two bytes) followed by operand
+*specifiers*, each a byte giving the addressing mode and register,
+followed by any displacement or literal. govax decodes instructions from
+a table generated from the architecture manual: each opcode's operands,
+with the data type and access of each (read, write, modify, address,
+branch). The decoder evaluates the specifiers, and the instruction's
+handler does the work. Every one of the VAX's instructions has a handler,
+and a test checks that none is missing:
+
+- **Integer and logical**: byte, word, longword, quadword, and octaword
+  moves, arithmetic, logic, shifts, rotates, bit fields (`EXTV`, `INSV`,
+  `FFS`, ...).
+- **Floating point** in all four VAX formats: F (32-bit), D and G
+  (64-bit), and H (128-bit). These aren't IEEE formats; govax implements
+  them from scratch with exact arithmetic (Go's `math/big`), rounding
+  once to the destination, as the hardware does, and raising the VAX's
+  floating overflow, underflow, divide by zero, and reserved operand
+  faults. `EMOD` and `POLY` are included.
+- **Packed decimal**: `ADDP`, `MULP`, `DIVP`, `CVTLP`, `CVTPT`, `ASHP`,
+  `EDITPC`, and the rest.
+- **Character strings**: `MOVC3`, `MOVC5`, `CMPC`, `LOCC`, `SKPC`,
+  `SCANC`, `SPANC`, `MATCHC`, `MOVTC`, `MOVTUC`, `CRC`.
+- **Procedures and branches**: `CALLS`, `CALLG`, `RET`, `JSB`, `RSB`,
+  `CASE`, `AOBLEQ`, `SOBGTR`, `ACBx`, `BBS`, ...
+- **Queues**: `INSQUE`, `REMQUE`, and the interlocked `INSQHI`, `REMQHI`,
+  `INSQTI`, `REMQTI`.
+- **Privileged**: `MTPR`, `MFPR`, `PROBER`, `PROBEW`, `CHMx`, `REI`,
+  `LDPCTX`, `SVPCTX`, `HALT`.
+
+Fidelity is checked by tests that run hundreds of instruction cases and
+compare them with the same cases run on VMS. Where govax knowingly
+differs from the architecture, `docs/DEVIATIONS.md` says how.
+
+#### Exceptions and interrupts
+
+An *exception* is something an instruction causes: an access violation,
+a reserved operand, an arithmetic error, a change-mode instruction. A
+*fault* (an access violation, say) is taken with the PC pointing at the
+faulting instruction, so it can be restarted; a *trap* (integer overflow,
+say) with the PC after it. Either way the processor pushes the PC and
+PSL, and goes to the routine whose address is in the *system control
+block* (SCB), a page of vectors. The debugger's `SHOW SCB` lists them.
+
+For a user program, VMS turns an exception into a *condition*: it builds
+a signal array and a mechanism array on the user stack and calls the
+condition handlers established in the call frames, innermost first (the
+handler in the program's frame at `(FP)`, then its caller's, ...),
+ending at the last-chance handler that prints the message and ends the
+image. govax does this in Go, calling the program's handlers as VAX
+procedures, so `LIB$SIGNAL`, `$UNWIND`, `LIB$ESTABLISH`, and handlers
+written in MACRO behave as on VMS (section 8, example 5).
+
+*Interrupts* come from outside the instruction stream (the clock,
+devices, software interrupts requested with `SIRR`) and are taken when
+their priority level is above the processor's IPL. VMS uses software
+interrupts at IPL 2 to deliver *ASTs* (asynchronous system traps):
+routines a program asks to have called when an I/O completes, a timer
+expires, or Ctrl/C is pressed. govax delivers ASTs between instructions,
+in the access mode they were requested in, at the moments the
+architecture allows.
+
+#### Time
+
+govax has two clocks to choose from (`vax.hardware.clock`):
+
+- **Instruction-count time** (the default). Time advances with the
+  instructions executed: after `vax.init`'s `SET QUANTUM 1`, each
+  instruction is one emulated millisecond. When every process is waiting
+  (for a timer, say), time jumps straight to the next timer. Every run of
+  a program is therefore exactly repeatable: the same output, the same
+  timings, the same interleaving of processes. govax's tests rely on this.
+- **Host time**: the system time and the VAX's interval clock follow the
+  host's real clock.
+
+The time of day starts from the host's when govax starts, in both modes.
+
+#### Speed
+
+govax is an interpreter, and runs on the order of tens of millions of
+VAX instructions per second on a modern computer: much faster than any
+real VAX. It caches the current instruction page (the *fetch window*)
+and recent address translations (the translation buffer, as the
+hardware does). `--stats` shows the counts; `docs/PERFORMANCE.md`
+describes how the emulator was profiled and tuned.
+
+#### Extended function codes
+
+The VAX reserves the `XFC` instruction for customer extensions. govax
+uses it as the doorway from emulated code to the emulator: `XFC`
+followed by a code byte calls into govax. The codes include console
+character I/O (`XFC$CONSOLE_WRITE`, `XFC$CONSOLE_READ`), running a
+console command from a program (`XFC$CONSOLE_CMD`), the system service
+vector, the run-time library shims, and DCL's own entry points. `HELP
+XFC` at `VAX>` lists the ones a program may use. A program built on VMS
+never contains `XFC`; govax puts it only in the memory it manages (the
+system service vector and the shims).
+
+### 13.3 Virtual memory
+
+#### The address space
+
+A VAX address is 32 bits, so each process sees 4 GB of *virtual*
+address space, in four regions of 1 GB:
+
+| Region | Addresses | Holds |
+| --- | --- | --- |
+| P0, the program region | `00000000`-`3FFFFFFF` | the image and its data; grows up |
+| P1, the control region | `40000000`-`7FFFFFFF` | the user stack (growing down from `7FE00000`), and system data per process: in govax, the system service vector at the top |
+| S0, the system region | `80000000`-`BFFFFFFF` | the system: page tables, the privileged stacks, the microkernel, pool; the same in every process |
+| S1 | `C0000000`-`FFFFFFFF` | reserved |
+
+P0 and P1 are private to each process: the same address in two
+processes is two different pages. S0 is shared by all.
+
+Memory is divided into 512-byte *pages*. An address is a page number and
+a byte within the page. Physical memory is divided into 512-byte *page
+frames*, numbered by their *page frame number* (PFN).
+
+#### Page tables
+
+Each page's mapping is a 32-bit *page table entry* (PTE):
+
+| Bits | Field | Meaning |
+| --- | --- | --- |
+| 31 | V | valid: the page is in memory, at the PFN |
+| 27-30 | PROT | protection: which modes may read and write |
+| 26 | M | modified: the page has been written |
+| 0-20 | PFN | the page frame |
+
+When V is clear, the hardware faults on any access (a *translation not
+valid* fault), and the rest of the PTE belongs to the operating system,
+which VMS uses to record where the page is (on a list, in a file, or to
+be created as zeros). The protection codes name the most privileged
+mode needed to read and to write the page:
+
+| Code | Read | Write |
+| --- | --- | --- |
+| `NA` | no access | no access |
+| `KR`, `KW` | kernel | none, kernel |
+| `ER`, `EW`, `ERKW` | executive | none, executive, kernel |
+| `SR`, `SW`, `SREW`, `SRKW` | supervisor | none, supervisor, executive, kernel |
+| `UR`, `UW`, `URSW`, `UREW`, `URKW` | user | none, user, supervisor, executive, kernel |
+
+The *system page table*, in physical memory, maps S0; the registers SBR
+and SLR give its address and length. Each process's *P0 and P1 page
+tables* live in S0, so they are themselves virtual (and, with paging on,
+pageable in part); P0BR/P0LR and P1BR/P1LR give their addresses and
+lengths. (P1's length register holds the lowest valid page, since P1
+grows down.)
+
+The processor caches recent translations in a *translation buffer*. Each
+process switch flushes its process entries, as the `LDPCTX` instruction
+does. The debugger's `SHOW TB` shows it, and `SHOW PAGE address` shows a
+page's PTE and what its form means:
+
+```text
+DBG> SHOW PAGE 7FDFFE00
+    Virtual address:   7FDFFE00
+    Region:            01
+    PTE Address:       8001BFFC
+    PTE Longword:      A5802006
+    PTE Form:          valid, PFN 00002006
+        VALID: 1
+        PROT:  04 (PTE$K_ALL)
+        M:     1
+        OWNER: 3
+        S:     0
+        PFN:   00002006
+    Physical address:  00400C00
+```
+
+#### VMINIT: setting up memory
+
+At startup, `vax.init` runs `INITIALIZE/VAX` (physical memory, 8 MB by
+default) and then `VMINIT`, which builds the system page table and the
+console process's P0 and P1 tables, places the privileged stacks in S0
+(kernel, executive, and supervisor, the latter two with no-access *guard
+pages* below them so that an overflow faults instead of overwriting
+something; and the interrupt stack), loads the page table registers, and
+turns memory management on (`MAPEN`). `SHOW MEMORY` shows the result:
+
+```text
+VAX> SHOW MEMORY
+
+    Physical Memory (8.00Mb)
+        00004000 (16384 decimal) pages
+        Addresses  00000000 - 007FFFFF
+
+    Virtual Memory (currently enabled)
+    There are 8198 physical pages mapped, 8186 free.
+
+        P0 Region
+            Size = 00004000 (16384 decimal) pages
+            PFN database = 128 pages  P0BR = 80008000    P0LR = 00004000
+            Physical addresses = 00400000-00BFFFFF
+            Virtual addresses  = 00000000-007FFFFF
+
+        P1 Region
+            Size = 00002000 ( 8192 decimal) pages
+            ...
+            Virtual addresses  = 7FC00000-7FFFFFFF
+
+        S0 Region
+            Size = 00002000 ( 8192 decimal) pages
+            ...
+            Virtual addresses  = 80000000-803FFFFF
+```
+
+With paging off (the default), memory management is simple. Every page of
+S0 is mapped to physical memory. P0 and P1 pages are given a page frame
+the first time they're touched, filled with zeros (*demand zero*), and
+keep it until the image exits; nothing is ever written out. A program can
+therefore use more P0 and P1 address space than there is memory, as long
+as it doesn't touch more pages than there are frames. An image's pages
+are copied into memory when it's activated.
+
+The sizes of the regions and stacks are the `vax.memory.*` settings
+(section 4). `docs/MODE-STACKS.md` describes the stacks' layout.
+
+### 13.4 Processes and scheduling
+
+#### Processes
+
+A VMS *process* is a program's context: its address space (P0 and P1),
+its registers, its privileged stacks, its quotas and privileges, its
+logical names and channels. govax keeps two kinds of state:
+
+- **The system**: what every process shares: devices and mounted volumes,
+  mailboxes, common event flags, global sections, the lock database, the
+  process table, the system logical name tables, and the S0 pool.
+- **Each process**: its own P0 and P1 page tables, kernel, executive, and
+  supervisor stacks (taken from the S0 pool, with guard pages), a
+  hardware *process control block* (the 96-byte PCB that `LDPCTX` loads
+  the registers from), and its VMS context: PID, name, UIC, privileges,
+  quotas, event flags, ASTs, channels, logical names, and image.
+
+The console's own process is process 1, PID `00000301`, named `SYSTEM`,
+with VMINIT's tables and stacks. Other processes are created by
+`$CREPRC`, `LIB$SPAWN`, and `SPAWN`, in a *job* (the console's process
+and its subprocesses share the job logical name table and the job's
+quotas, such as the page file quota). A detached process is a job of its
+own.
+
+Switching processes is what VMS's `SVPCTX` and `LDPCTX` instructions do,
+and govax uses the same code: save the outgoing process's registers in
+its PCB, load the incoming one's, and flush the process half of the
+translation buffer.
+
+#### Scheduling
+
+Only one process runs at a time; govax schedules them by VMS's rules
+(from *VAX/VMS Internals and Data Structures*, chapter 10):
+
+- Every process has a base priority and a current priority, from 0 to
+  31. Priorities 0 to 15 are *normal* (time-sharing), 16 to 31
+  *real-time*. The console's process and its subprocesses have base
+  priority 4.
+- Computable processes wait in a queue per priority; the scheduler runs
+  the first process in the highest non-empty queue.
+- A normal process runs until it waits, uses up its *quantum*
+  (`vax.process.quantum` instructions, 20,000 by default), or is
+  preempted by a computable process of higher or equal priority. Then it
+  goes to the back of its queue, so equal priorities take turns.
+- When a waiting normal process's event happens (an I/O completes, a
+  timer expires, an event flag is set), its priority is *boosted*, by an
+  amount depending on the event, and then decays by one each time it's
+  scheduled, back to its base. So interactive processes respond quickly,
+  and compute-bound ones get the CPU when others are waiting.
+- A real-time process is never boosted and has no quantum: it runs until
+  it waits.
+
+A process that calls a service that must wait (`$WAITFR`, `$HIBER`,
+`$QIOW` to a terminal or mailbox, `$ENQW` for a held lock, ...) is put in
+the corresponding VMS wait state, and another process runs. `SHOW SYSTEM`
+shows each process's state:
+
+| State | Meaning |
+| --- | --- |
+| `CUR` | current: it has the CPU |
+| `COM` | computable: ready, waiting for the CPU |
+| `LEF` | waiting for a local event flag (most I/O and timer waits) |
+| `CEF` | waiting for a common event flag |
+| `HIB` | hibernating (`$HIBER`) |
+| `SUSP` | suspended (`$SUSPND`) |
+| `MWAIT` | waiting for a resource, such as room in a full mailbox (`RWMBX`) |
+
+Preemption happens at instruction boundaries, in the access modes
+`vax.process.preempt` allows (all, as on VMS, by default), never at IPL
+3 or above or on the interrupt stack. When every process is waiting, the
+machine idles to the next timer.
+
+The console's DCL is itself a process's command interpreter. Between DCL
+commands, while you type at the prompt, and during `WAIT`, process 1
+lends the CPU to the others, so `SPAWN/NOWAIT` subprocesses and detached
+processes keep running. A subprocess's DCL runs in that process,
+alternating with its images as VMS's DCL does.
+
+#### Interprocess communication
+
+All of VMS's mechanisms work between processes:
+
+- **Mailboxes** (`$CREMBX`): message queues read and written with `$QIO`
+  or RMS, with the termination mailbox a creator can ask for.
+- **Common event flags** (`$ASCEFC`): flags shared by processes of a
+  group.
+- **Global sections** (`$CRMPSC`, `$MGBLSC`): memory shared between
+  processes, backed by a file or the page file.
+- **The lock manager** (`$ENQ`, `$DEQ`, `$GETLKI`): VMS's six lock modes,
+  conversion queues, value blocks, blocking ASTs, and deadlock detection.
+- **Shared files**: RMS's file sharing (FAB `FAC` and `SHR`) and record
+  locking, with one shared file control block per open file.
+
+### 13.5 Paging
+
+With paging on, govax manages memory as VMS does: each process has a
+*working set* of pages in memory, pages that leave it go to lists from
+which they can be reclaimed, modified pages are written to a *page file*,
+and images are mapped from their files and read in as they're used.
+
+Turn it on with:
+
+```sh
+govax config set vax.sysgen.paging.enable=true
+govax config set "vax.sysgen.paging.file=DUA0:[WORK]PAGEFILE.SYS"
+```
+
+The page file may be a volume file, as above, or a host file in quotes
+(`'vax.sysgen.paging.file="./pagefile.sys"'`). `vax.init` then runs
+`VMINIT/PAGING`, and govax creates the page file (`vax.sysgen.paging.size`
+blocks, 32,768 by default) before your first command. Without a page
+file, paging still works, but pages with no file of their own can't be
+written out.
+
+#### The page frame database
+
+govax keeps a record for every physical page frame (VMS's *PFN
+database*): its state, the virtual page it holds, its *backing store*
+(where its contents live when it isn't in memory: an image file, a
+section file, the page file, or nothing yet), and its share and
+reference counts. A frame is in one of three states:
+
+- **Active**: in a working set (or a global section's, or the system's).
+- **On the free list**: available for reuse, but still holding its old,
+  unmodified contents.
+- **On the modified list**: holding contents that must be written to its
+  backing store before the frame can be reused.
+
+A page that leaves a working set isn't lost: its frame goes to the end
+of the free or modified list, and its PTE is put in the *transition*
+form, still naming the frame. If the page is touched again before the
+frame is reused, the fault is resolved with no I/O at all: a *soft*
+fault. The lists act as a cache of recently used pages.
+
+#### Working sets
+
+Each process has a *working set list*: the pages it has in memory. Its
+size is bounded by three values, set from the process's quotas and
+changed with `SET WORKING_SET` or `$ADJWSL`:
+
+- the **limit** (the default working set size, which each image starts
+  with);
+- the **quota**: the size the process is guaranteed;
+- the **extent**: the most it can grow to while memory is plentiful
+  (`GROWLIM` free pages or more).
+
+When a process faults in a page and its working set is full, the oldest
+page in the list's dynamic part is replaced (passing over pages still in
+the translation buffer, `TBSKIPWSL`, and locked pages: `$LKWSET`,
+`$LCKPAG`). `$PURGWS` removes pages. When an image exits, its working set
+goes back to the limit.
+
+```text
+VAX> SHOW WORKING_SET
+  Working Set      /Limit=512   /Quota=1024    /Extent=16400
+  Adjustment enabled      Authorized Quota=1024  Authorized Extent=16400
+```
+
+#### Page faults
+
+When a program touches a page whose PTE isn't valid, the processor
+faults, and govax's pager resolves it, by the PTE's form:
+
+| Kind | The page was | Resolved by |
+| --- | --- | --- |
+| Demand zero | never used | taking a free frame and zeroing it |
+| Soft (free or modified list) | in transition | taking its frame back off the list |
+| Global valid | a global section page another process has in memory | sharing that frame |
+| Hard (read) | in a file: the image, a section file, or the page file | reading it, and some of its neighbors (*read clustering*: the section's cluster size, or `PFCDEFAULT` pages) |
+
+#### The modified page writer and the reclaimer
+
+When the modified list grows past `MPW_HILIMIT` pages (500), the
+*modified page writer* writes pages to their backing store, in clusters
+of up to `MPW_WRTCLUSTER` (120), until the list is a cluster below the
+high limit. Pages with no file of their own (demand-zero pages a program
+modified, copy-on-reference pages) get blocks in the page file then. A
+written page's frame moves to the free list, still holding its contents.
+
+When the free list falls below `FREELIM` (32), the *reclaimer* frees
+memory: it has the writer write the modified list down to `MPW_LOLIMIT`,
+and trims working sets that grew past their quotas, until `FREEGOAL`
+(200) pages are free.
+
+#### The page file and quotas
+
+The page file's space is allocated in runs, and released when a page is
+deleted or modified again. govax warns on the console when the page file
+passes 65% (`PAGEFRAG`) and 90% (`PAGECRIT`) full. Each job has a *page
+file quota* (`PGFLQUOTA`): every page a process creates that could need
+the page file (demand-zero pages, writable image pages, the user stack,
+heap pages) is charged against it when it's created, and `$CRETVA`,
+`$EXPREG`, and `LIB$GET_VM` fail with `SS$_EXQUOTA` past it. `SHOW
+MEMORY/FILES` shows the page file as VMS does.
+
+#### Sections and images
+
+- A **private file section** (`$CRMPSC` with a channel) maps a file into
+  the process's address space; its pages are read when first touched and
+  written back to the file when modified (or with `$UPDSEC`).
+- A **global section** is shared: its pages are counted by how many
+  working sets hold them, stay on the lists when none does, and come back
+  with a *global valid* fault in any process that maps it.
+- A **page-file section** has no file: its pages are demand-zero and
+  backed by the page file.
+- A **copy-on-reference** page is read from its file, then becomes the
+  process's own copy, backed by the page file.
+
+`RUN` uses the same mechanisms to activate an image: each of the image's
+sections is mapped from the image file (code read-only, writable data
+copy-on-reference), and its demand-zero sections are created as
+demand-zero pages. Nothing is read until it's touched. The image file
+stays open while the image runs, so others may only read it. The
+debugger's `SHOW IMAGE/FULL` shows each section's pages and where they
+are.
+
+#### The address space under paging
+
+With paging on, a process's address space contains only the pages that
+have been *created*: by image activation, by `$EXPREG`, `$CRETVA`,
+`$CRMPSC`, or the run-time library's heap. P0LR and P1LR describe just
+those pages, and grow and shrink as pages are created and deleted. An
+access beyond them is an access violation, except below the user stack,
+which grows by itself when user-mode code pushes past its bottom. Each
+process's page tables take room in proportion to the pages it has
+(`VIRTUALPAGECNT` bounds the total); only the parts of the tables in use
+take memory.
+
+#### Watching it work
+
+This program touches 2,000 pages, twice, in a 1 MB demand-zero array:
+
+```asm
+        .TITLE  TOUCH   Touch 2000 pages, twice
+        .PSECT  BIG, WRT, NOEXE, PAGE
+ARRAY:  .BLKB   512*2000                ; 2000 pages, demand zero
+        .PSECT  CODE, NOWRT, EXE, LONG
+        .ENTRY  TOUCH, ^M<R2,R3>
+        MOVL    #2, R3                  ; two passes
+10$:    MOVAB   ARRAY, R2
+        MOVL    #2000, R1
+20$:    INCL    (R2)                    ; touch (and modify) each page
+        ADDL2   #512, R2
+        SOBGTR  R1, 20$
+        SOBGTR  R3, 10$
+        MOVL    #1, R0
+        RET
+        .END    TOUCH
+```
+
+Run with paging on, a page file, and a working set of 200 pages:
+
+```text
+VAX> SET WORKING_SET/LIMIT=200/QUOTA=200
+VAX> RUN TOUCH
+VAX> SHOW MEMORY
+    ...
+    Page faults                4010
+        Free list              2000
+        Modified list             0
+        Global valid              0
+        Demand zero            2008
+        Read                      2
+            Pages read            2
+            Page file             0
+    Pages written              3360
+        Write I/Os               28
+```
+
+On the first pass, each page is a demand-zero fault. With only 200 pages
+in the working set, each new page pushes an old, modified one out to the
+modified list. When that list passes 500 pages, the modified page writer
+writes it to the page file, in clusters of 120, and the frames go to the
+free list. On the second pass, every page is still on the free list, so
+each fault is a soft fault: no I/O. (The two reads are the image's own
+pages.)
+
+With much less memory (`vax.memory.size=1536`), the free list can't hold
+the pages, their frames are reused, and the second pass must read them
+back. `govax --stats` reports:
+
+```text
+  Paging:
+    Page Faults:                    4,010
+      Demand Zero:                  2,008
+      Read:                         2,002
+        Pages Read:                 2,002
+          From Page File:           2,000
+    Pages Written:                  3,360
+      Write I/Os:                      28
+```
+
+#### How govax's paging differs from VMS's
+
+- There is no swapping: processes are never moved out of memory as a
+  whole.
+- Page reads and writes happen at once; a process never waits for them
+  (no `PFW`, `COLPG`, or `FPG` waits).
+- The page tables and process header aren't in the working set list, so
+  govax's smallest working set (`MINWSCNT`) is smaller than VMS's.
+- S0 is not paged.
+- There is one page file and no swap file.
+
+The phase documents `docs/PHASE-62` to `PHASE-67` describe the design
+in detail, and list every difference found by running the same probe
+programs on VMS.
+
+---
+
+## 14. Appendices
+
+### Appendix A: System services
+
+govax provides these system services. Their arguments, statuses, and
+side effects follow DIGITAL's *System Services Reference Manual*.
+
+| Area | Services |
+| --- | --- |
+| I/O | `$ASSIGN`, `$DASSGN`, `$QIO`, `$QIOW`, `$CANCEL`, `$ALLOC`, `$DALLOC`, `$BRKTHRU(W)`, `$SNDOPR` |
+| Logical names | `$CRELNM`, `$DELLNM`, `$TRNLNM`, `$CRELNT`, `$CRELOG`, `$DELLOG`, `$TRNLOG` |
+| Time and timers | `$GETTIM`, `$ASCTIM`, `$BINTIM`, `$NUMTIM`, `$SETIMR`, `$CANTIM`, `$SCHDWK`, `$CANWAK` |
+| Event flags | `$SETEF`, `$CLREF`, `$READEF`, `$WAITFR`, `$WFLOR`, `$WFLAND`, `$ASCEFC`, `$DACEFC`, `$DLCEFC` |
+| ASTs and synchronization | `$DCLAST`, `$SETAST`, `$SYNCH` |
+| Conditions and exit | `$EXIT`, `$DCLEXH`, `$CANEXH`, `$UNWIND`, `$SETEXV`, `$GETMSG`, `$PUTMSG`, `$FAO`, `$FAOL` |
+| Processes | `$CREPRC`, `$DELPRC`, `$HIBER`, `$WAKE`, `$SUSPND`, `$RESUME`, `$FORCEX`, `$SETPRI`, `$SETPRN`, `$SETPRV`, `$SETRWM`, `$CMKRNL`, `$CMEXEC` |
+| Information | `$GETJPI(W)`, `$GETSYI(W)`, `$GETDVI(W)`, `$GETLKI(W)`, `$ASCTOID`, `$IDTOASC` |
+| Mailboxes | `$CREMBX`, `$DELMBX` |
+| Memory | `$EXPREG`, `$CRETVA`, `$DELTVA`, `$CNTREG`, `$ADJSTK`, `$SETPRT`, `$ADJWSL`, `$PURGWS`, `$LKWSET`, `$ULWSET`, `$LCKPAG`, `$ULKPAG` |
+| Sections | `$CRMPSC`, `$MGBLSC`, `$DGBLSC`, `$UPDSEC(W)` |
+| Locks | `$ENQ`, `$ENQW`, `$DEQ` |
+| Command language | `$CLI` |
+| RMS | `$OPEN`, `$CREATE`, `$CLOSE`, `$CONNECT`, `$GET`, `$PUT`, `$FIND`, `$UPDATE`, `$DELETE`, `$TRUNCATE`, `$REWIND`, `$FLUSH`, `$FREE`, `$RELEASE`, `$WAIT`, `$ERASE`, `$RENAME`, `$PARSE`, `$SEARCH`, `$DISPLAY` |
+
+Other VMS services aren't available yet.
+
+### Appendix B: Run-time library routines
+
+govax's run-time library has these routines, written in Go from
+DIGITAL's *Run-Time Library* manuals and checked against VMS 7.1 by probe
+programs. Every other entry point of LIBRTL exists too, so programs link
+and run, but signals `GOVAX-E-NOTIMPL` if called.
+
+| Area | Routines |
+| --- | --- |
+| Output and input | `LIB$PUT_OUTPUT`, `LIB$GET_INPUT`, `LIB$GET_COMMAND`, `LIB$GET_FOREIGN` |
+| Strings and descriptors | `STR$UPCASE`, `LIB$SCOPY_DXDX`, `LIB$SCOPY_R_DX`, `LIB$SGET1_DD`, `LIB$SFREE1_DD`, `LIB$SFREEN_DD`, `LIB$ANALYZE_SDESC`, `LIB$LEN`, `LIB$CHAR`, `LIB$ICHAR`, `LIB$INDEX`, `LIB$LOCC`, `LIB$SKPC`, `LIB$SCANC`, `LIB$SPANC`, `LIB$MATCHC`, `LIB$MOVC3`, `LIB$MOVC5`, `LIB$MOVTC`, `LIB$MOVTUC`, `LIB$TRA_ASC_EBC`, `LIB$TRA_EBC_ASC`, `LIB$LOOKUP_KEY`, `LIB$CVT_DX_DX` |
+| Conversion | `LIB$CVT_DTB`, `LIB$CVT_HTB`, `LIB$CVT_OTB` |
+| Arithmetic and bits | `LIB$ADDX`, `LIB$SUBX`, `LIB$EMUL`, `LIB$EDIV`, `LIB$ADAWI`, `LIB$EMODF`/`D`/`G`/`H`, `LIB$POLYF`/`D`/`G`/`H`, `LIB$EXTV`, `LIB$EXTZV`, `LIB$INSV`, `LIB$FFC`, `LIB$FFS`, `LIB$BBSSI`, `LIB$BBCCI`, `LIB$CRC`, `LIB$CRC_TABLE` |
+| Queues | `LIB$INSQHI`, `LIB$INSQTI`, `LIB$REMQHI`, `LIB$REMQTI` |
+| Conditions | `LIB$SIGNAL`, `LIB$STOP`, `LIB$ESTABLISH`, `LIB$REVERT`, `LIB$SIG_TO_RET`, `LIB$MATCH_COND`, `LIB$CALLG` |
+| Memory | `LIB$GET_VM`, `LIB$FREE_VM`, `LIB$GET_VM_PAGE`, `LIB$FREE_VM_PAGE`, `LIB$CREATE_VM_ZONE`, `LIB$CREATE_USER_VM_ZONE`, `LIB$DELETE_VM_ZONE`, `LIB$RESET_VM_ZONE`, `LIB$FIND_VM_ZONE`, `LIB$SHOW_VM_ZONE`, `LIB$VERIFY_VM_ZONE`, `LIB$STAT_VM`, `LIB$SHOW_VM`, `LIB$VM_MALLOC`, `LIB$VM_CALLOC`, `LIB$VM_REALLOC`, `LIB$VM_FREE` |
+| Dates and times | `LIB$DATE_TIME`, `LIB$DAY`, `LIB$DAY_OF_WEEK`, `LIB$ADD_TIMES`, `LIB$SUB_TIMES`, `LIB$MULT_DELTA_TIME`, `LIB$MULTF_DELTA_TIME`, `LIB$CVT_TO_INTERNAL_TIME`, `LIB$CVT_FROM_INTERNAL_TIME`, `LIB$CVTF_TO_INTERNAL_TIME`, `LIB$CVTF_FROM_INTERNAL_TIME`, `LIB$CVT_VECTIM`, `LIB$SYS_ASCTIM`, `LIB$FORMAT_DATE_TIME`, `LIB$CONVERT_DATE_STRING`, `LIB$INIT_DATE_TIME_CONTEXT`, `LIB$FREE_DATE_TIME_CONTEXT`, `LIB$GET_DATE_FORMAT`, `LIB$GET_MAXIMUM_DATE_LENGTH` |
+| System service jackets and items | `LIB$SYS_FAO`, `LIB$SYS_FAOL`, `LIB$SYS_GETMSG`, `LIB$SYS_TRNLOG`, `LIB$GETJPI`, `LIB$GETSYI`, `LIB$GETDVI` |
+| Resources and timers | `LIB$GET_EF`, `LIB$FREE_EF`, `LIB$RESERVE_EF`, `LIB$GET_LUN`, `LIB$FREE_LUN`, `LIB$INIT_TIMER`, `LIB$SHOW_TIMER`, `LIB$STAT_TIMER`, `LIB$FREE_TIMER`, `LIB$WAIT` |
+| The command language | `LIB$GET_SYMBOL`, `LIB$SET_SYMBOL`, `LIB$DELETE_SYMBOL`, `LIB$SET_LOGICAL`, `LIB$DELETE_LOGICAL`, `LIB$GET_COMMON`, `LIB$PUT_COMMON`, `LIB$DO_COMMAND`, `LIB$RUN_PROGRAM`, `LIB$DISABLE_CTRL`, `LIB$ENABLE_CTRL`, `LIB$PAUSE`, `LIB$ATTACH`, `LIB$SPAWN` |
+| Files | `LIB$FIND_FILE`, `LIB$FIND_FILE_END`, `LIB$FILE_SCAN`, `LIB$FILE_SCAN_END`, `LIB$DELETE_FILE`, `LIB$RENAME_FILE`, `LIB$FID_TO_NAME`, `LIB$TRIM_FILESPEC`, `LIB$CREATE_DIR` |
+| Other | `LIB$AST_IN_PROG`, `LIB$ASN_WTH_MBX`, `LIB$GET_USERS_LANGUAGE`, `LIB$GET_ACCNAM`, `LIB$FORMAT_SOGW_PROT`, `LIB$PARSE_SOGW_PROT`, `LIB$PARSE_ACCESS_CODE`, `LIB$CURRENCY`, `LIB$DIGIT_SEP`, `LIB$RADIX_POINT`, `LIB$LP_LINES` |
+
+The tables `LIB$AB_ASC_EBC`, `LIB$AB_EBC_ASC`, and `LIB$AB_UPCASE` are
+there too, and the JSB entry points of the string routines. govax also
+provides part of the C run-time library (`DECC$`) for the microkernel's
+use.
+
+### Appendix C: Where govax differs from VMS
+
+The main differences, gathered from the rest of the manual:
+
+- No VMS boot, executive, or compilers; MACRO-32 is the only language you
+  can build in (section 1).
+- One user, `SYSTEM`, with all privileges; no login, batch, print
+  queues, networking, or clusters.
+- A program's RMS calls reach only files on mounted Files-11 volumes,
+  not host files (section 5).
+- No rooted-directory logical names (`DEV:[ROOT.]`).
+- A failing program shows its condition's message, but not yet the
+  symbolic traceback (section 9).
+- govax's own system macro library lacks some of VMS's definition macros
+  (`$DSCDEF`, for one); VMS's own library can be used instead (section 8).
+- Some LIBRTL routines aren't implemented yet (Appendix B).
+- With paging on: no swapping, no paging waits, a smaller minimum working
+  set (section 13.5).
+- The console has commands VMS's DCL doesn't (`VMINIT`, `PRINT`,
+  `DEBUG` without an image, ...), and lacks some VMS has (section 7).
+
+`docs/DEVIATIONS.md` is the full, detailed list, including every known
+difference in instruction behavior.
+
+### Appendix D: Further reading
+
+- `HELP` at the `VAX>` and `DBG>` prompts: every command and qualifier.
+- `docs/PLAN.md`: the project's plan and the list of development phases.
+- `docs/PHASE-nn - topic.md`: a design document for each phase, with its
+  decisions, the VMS behavior it reproduces, and the probe programs used
+  to check it against VMS.
+- `docs/DEVIATIONS.md`: known differences from the VAX architecture and
+  from VMS.
+- `docs/PERFORMANCE.md`: how govax was profiled and made faster.
+- `docs/MODE-STACKS.md`, `docs/DISK-DEVICES.md`, `docs/RMS-MACROS.md`,
+  `docs/DEBUG-RECORDS.md`: notes on particular subsystems.
+- DIGITAL's manuals: the *VAX Architecture Reference Manual*, the *VAX
+  MACRO and Instruction Set Reference Manual*, the *System Services
+  Reference Manual*, the *Run-Time Library* manuals, the *Guide to VMS
+  File Applications*, the *DCL Dictionary*, the *Linker* and *Librarian*
+  manuals, and the *Debugger Manual*.
+- Kenah and Bate, *VAX/VMS Internals and Data Structures*: how VMS works
+  inside, and the source of govax's scheduling and paging rules.
