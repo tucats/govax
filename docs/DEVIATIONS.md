@@ -4281,6 +4281,42 @@ widened."
   had (Part A and the subtasks' logs).
 - **Status**: fixed (docs/PHASE-68 - link shareable images.md).
 
+### [Phase 69] BACKUP save sets: what VMS 7.1 settled, and the rest chosen
+
+- **Where**: `internal/backup` (the format), `internal/rms` (`saveset.go`,
+  `restore.go`, `save.go`), and `internal/dclcmd` (`backup*.go`); the
+  probe is `testdata/backup69` (`TestBackup69Oracle`, VMS V7.1, BACKUP
+  V6.2, on simh's VAX, 2026-10-20), and its second round, VMS reading
+  govax's save sets, `testdata/backup69/round2` (`TestBackup69Round2`).
+- **Changed to VMS's behavior**: COPY's destination ignored the rule
+  that a name with a `/` is a host file, and wrote a volume file named
+  `./pi.bck`; COPY now follows `Session.Locate`'s rules on both sides.
+  DIRECTORY/FULL left "Contiguous best try" off the File attributes
+  line. The restore sets a file's version limit in its directory record
+  as well as its header, since VMS's DIRECTORY reads the record.
+- **Follows VMS 7.1, not the manual**: `/NOCRC` is the default for both
+  writing and reading a save set, and a block's data CRC is checked only
+  with `/CRC` on the input specifier, as VMS 7.1 did (the 7.3-2 manual
+  says `/CRC`). The header checksum is always checked. A listing shows
+  every file whatever `/SELECT` and `/EXCLUDE` say.
+- **Differs from VMS**: govax reads a save set stored as 512-byte records
+  (a save set FTP'd as fixed 512), which VMS refuses with NOTSAVESET
+  (Decision 3). DIRECTORY/FULL of an indexed file says `Indexed` where
+  VMS says `Indexed, Prolog: 3, Using 1 key`: govax doesn't read an
+  indexed file's prolog. A BACKUP with no output specifier is DCL's
+  INSFPRM; VMS prompts "_To:" at a terminal. Image, physical, and
+  incremental operations, tapes, and file-to-file copies aren't done.
+- **Unconfirmed**, govax's choices where the probe was silent (each
+  marked in the phase doc): the condition values of messages the probe
+  didn't show, BADQUALIFIERCOMBO for two date kinds or existing-file
+  qualifiers, what a listing says of a lost block, the owner of the
+  directories a restore makes, the existing-file rule for an existing
+  directory file, what a compare checks of a header-only file, how a save
+  chooses its buffer count and splits a record that doesn't fit, a
+  save's ACCONFLICT notice, and NOFILES naming the first input of a save
+  that saved nothing.
+- **Status**: fixed (docs/PHASE-69 - backup save sets.md).
+
 <!--
 Entry template:
 

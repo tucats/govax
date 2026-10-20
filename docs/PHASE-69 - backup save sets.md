@@ -1,6 +1,6 @@
 # Phase 69 — BACKUP save sets
 
-**Status:** in progress. Planned 2026-10-20; the plan reviewed and
+**Status:** done (2026-10-20). Planned 2026-10-20; the plan reviewed and
 accepted by the author the same day (Part B). Subtask 1, the survey, is
 done: Part A holds what the first save set
 (`testdata/backup69/vax/pi.bck`) and the public save set readers show of
@@ -9,7 +9,8 @@ the format. Subtask 2, the VMS probe (`testdata/backup69`), is done:
 blocks, and VMS's messages. Subtasks 3 (COPY to a host name), 4 (`internal/backup`, the
 reader), 5 (opening a save set), 6 (the command), 7 (BACKUP/LIST), 8
 (restoring a file), 9 (BACKUP's restore), 10 (BACKUP/COMPARE), and 11
-(saving) and 12 (the oracle, with the second VAX round) are done.
+(saving), 12 (the oracle, with the second VAX round), and 13 (the
+close-out) are done.
 
 ## Goal
 
@@ -634,7 +635,7 @@ reports, and every save set byte for byte (COPY/BINARY).
     of the probe's tree against VMS's. Then a second VAX round in which
     VMS lists, restores, and compares govax's save sets, replayed by
     `TestBackup69Round2`.
-13. **The close-out:** `docs/MANUAL.md` (BACKUP, with examples run on
+13. **The close-out** — done (2026-10-20): `docs/MANUAL.md` (BACKUP, with examples run on
     govax), `HELP BACKUP`, `CLAUDE.md`, `docs/PLAN.md`, and any
     `docs/DEVIATIONS.md` entries.
 
@@ -1377,3 +1378,24 @@ A leaf package (standard library only), `internal/backup`:
   their own. TREE2.LST's VERLIM.TXT lines are a listed difference: VMS
   read the tree before the restore fix. SSCOPY's copies, VMS's and
   govax's, each differ from their source in the one byte changed.
+
+### 2026-10-20 — Subtask 13: the close-out
+
+- **`docs/MANUAL.md`**: a BACKUP entry in section 6.1 (its four forms,
+  where qualifiers stand, saving to a volume and to the host, a listing,
+  restoring by the output-directory rules, an existing file and
+  `/NEW_VERSION`, a restore to a host directory, a compare that finds a
+  missing file and a changed block, and damaged save sets). Every
+  example was run on govax, on a fresh volume under a scratch profile.
+  Section 1 lists BACKUP among what govax does, section 5's "Moving
+  files" points to it for whole trees, 13.1 names `internal/backup`, and
+  Appendix C has BACKUP's limits and the 512-byte-record difference.
+- **`HELP BACKUP`** (subtask 6's, kept up through subtask 12) was read
+  against the command as it stands and needed no change.
+- **`CLAUDE.md`**: the phase in the overview, `testdata/backup69` among
+  the reference material, BACKUP among `internal/dclcmd`'s commands.
+  **`docs/PLAN.md`**: the phase's row marked done.
+  **`docs/DEVIATIONS.md`**: "[Phase 69] BACKUP save sets", what the probe
+  changed, where govax follows VMS 7.1 over the manual (`/NOCRC`), where
+  it differs (512-byte records, an indexed file's prolog, "_To:"), and
+  the unconfirmed choices.

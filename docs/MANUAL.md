@@ -72,6 +72,9 @@ programs to run as they would under VMS:
   expressions, lexical functions, `IF`/`THEN`/`ELSE`, `GOSUB`, `CALL`,
   `ON`, file I/O with `OPEN`/`READ`/`WRITE`, `SPAWN`, and the usual file
   commands (`DIRECTORY`, `COPY`, `TYPE`, `DELETE`, `RENAME`, ...).
+- **BACKUP save sets.** `BACKUP` lists, restores, compares, and writes
+  VMS save sets, on a volume or on the host. Save sets made on a VAX
+  restore in govax with every file attribute, and VMS restores govax's.
 - **Program development tools.** `MACRO` assembles MACRO-32 source into
   VMS object modules. `LINK` links them into VMS executable and
   shareable images. `LIBRARY` makes and maintains object, macro, and
@@ -801,6 +804,12 @@ How the contents are copied:
 VAX> COPY/BINARY "fromvax.exe"/HOST DUA0:[WORK]PROG.EXE
 ```
 
+To move a whole directory tree, with each file's record format, dates,
+protection, and other attributes, use a VMS save set: `BACKUP` writes
+one to the host or reads one from it (see [BACKUP](#backup)), and a
+save set made on a VAX and fetched by binary FTP can be restored
+directly.
+
 ### Logical names
 
 Logical names work as on VMS: `DEFINE`, `ASSIGN`, `DEASSIGN`, `SHOW
@@ -978,6 +987,154 @@ DUMP [/BLOCK[=(START=n,END=n,COUNT=n)] | /RECORD[=(...)]] file-spec
 
 Shows a volume file in hexadecimal and ASCII, a block or a record at a
 time, as VMS's DUMP does.
+
+#### BACKUP
+
+```text
+BACKUP/LIST[=file] [/FULL] save-set/SAVE_SET          list a save set
+BACKUP [/LOG] save-set/SAVE_SET output-spec           restore files
+BACKUP/COMPARE [/LOG] save-set/SAVE_SET file-spec     compare
+BACKUP [/LOG] file-spec[,...] save-set/SAVE_SET       save files
+```
+
+Works with VMS BACKUP save sets, as VMS V7.1's BACKUP does: the save
+sets govax writes are laid out as that VMS lays them out, and VMS reads
+them. A save set can be a file on a mounted volume (VMS keeps one as
+fixed-length records the size of its block) or a host file holding the
+same bytes, such as one fetched from a VAX by binary FTP. Image,
+physical, and incremental operations and tapes aren't supported.
+
+Which specifier has `/SAVE_SET` says what BACKUP does: a save set as
+input restores (or, with `/COMPARE`, compares); as output, saves. As in
+VMS, *where* a qualifier stands matters. After `BACKUP` it's a command
+qualifier (`/LIST`, `/FULL`, `/LOG`, `/COMPARE`). After the input
+specifier it's about the input: `/SELECT`, `/EXCLUDE`, `/CRC` for a save
+set, or `/SINCE`, `/BEFORE`, `/BY_OWNER`, `/EXCLUDE` for the files being
+saved. After the output specifier it's about the output: `/BLOCK_SIZE`,
+`/GROUP_SIZE`, `/CRC`, `/COMMENT` for a new save set, or `/NEW_VERSION`,
+`/OVERLAY`, `/REPLACE`, `/BY_OWNER` for restored files. `HELP BACKUP`
+lists them all.
+
+**Saving.** A save goes through each directory in order, every version
+of each file unless the specifier names one, and with `[dir...]` into
+each subdirectory:
+
+```text
+VAX> SET DEFAULT [WORK]
+VAX> BACKUP/LOG [.PROJ...]*.* PROJ.BCK/SAVE_SET
+%BACKUP-S-COPIED, copied DUA0:[WORK.PROJ]DOC.DIR;1
+%BACKUP-S-COPIED, copied DUA0:[WORK.PROJ.DOC]README.TXT;1
+%BACKUP-S-COPIED, copied DUA0:[WORK.PROJ]NOTES.TXT;2
+%BACKUP-S-COPIED, copied DUA0:[WORK.PROJ]NOTES.TXT;1
+```
+
+A quoted host path (or `/HOST`) writes the save set to the host. Here
+it also has 8192-byte blocks and a CRC in each block, and `;0` saves
+only each file's newest version:
+
+```text
+VAX> BACKUP/LOG [.PROJ...]*.TXT;0 "./proj.bck"/SAVE_SET/CRC/BLOCK_SIZE=8192
+```
+
+**Listing.** `/LIST` shows the save set's summary and its files, each
+with its size in blocks and its creation date; `/FULL` shows each file's
+dates, owner, protection, and record attributes, as DIRECTORY/FULL does.
+`/LIST=file` writes the listing to a file.
+
+```text
+VAX> BACKUP/LIST PROJ.BCK/SAVE_SET
+Listing of save set(s)
+
+Save set:          PROJ.BCK
+Written by:        SYSTEM
+UIC:               [000001,000004]
+Date:              20-OCT-2026 19:36:08.20
+Command:           BACKUP/LOG [.PROJ...]*.* PROJ.BCK/SAVE_SET
+Operating system:  OpenVMS VAX version V7.3
+BACKUP version:    V6.2
+Written on:        _GOVAX$DUA0:
+Block size:        32256
+Group size:        10
+Buffer count:      8
+
+[WORK.PROJ]DOC.DIR;1                                        1  20-OCT-2026 19:36
+[WORK.PROJ.DOC]README.TXT;1                                 1  20-OCT-2026 19:36
+[WORK.PROJ]NOTES.TXT;2                                      1  20-OCT-2026 19:36
+[WORK.PROJ]NOTES.TXT;1                                      1  20-OCT-2026 19:36
+
+Total of 4 files, 4 blocks
+End of save set
+```
+
+As in VMS V7.1, a listing shows every file in the save set; `/SELECT`
+and `/EXCLUDE` don't shorten it.
+
+**Restoring.** The output specifier names where the files go:
+`[*...]` puts each file back in the directory it was saved from;
+`[dir...]` puts them in a tree under `[dir]`; `[dir]` puts them all in
+that one directory. Under `[dir...]` a file keeps its whole directory
+(`[WORK.PROJ]NOTES.TXT` goes to `[dir.WORK.PROJ]`), unless `/SELECT`
+names a tree, in which case the part its `...` matched is kept:
+
+```text
+VAX> BACKUP/LOG PROJ.BCK/SAVE_SET/SELECT=[WORK.PROJ...] [RESTORED...]
+%BACKUP-S-CREDIR, created directory DUA0:[RESTORED.DOC]
+%BACKUP-S-CREATED, created DUA0:[RESTORED.DOC]README.TXT;1
+%BACKUP-S-CREATED, created DUA0:[RESTORED]NOTES.TXT;2
+%BACKUP-S-CREATED, created DUA0:[RESTORED]NOTES.TXT;1
+```
+
+A restored file keeps its version and every saved attribute: record
+format, dates, revision count, owner (with `/BY_OWNER=ORIGINAL` after the
+output specifier; by default you own it), protection, characteristics,
+version limit, allocation, and access control list. Missing directories
+are made. A file that already exists isn't restored unless the output
+specifier has `/NEW_VERSION` (restore it as the next version),
+`/OVERLAY` (write over it in place), or `/REPLACE` (delete it and
+restore it again):
+
+```text
+VAX> BACKUP PROJ.BCK/SAVE_SET/SELECT=[...]NOTES.TXT;1 [*...]
+%BACKUP-E-OPENOUT, error opening DUA0:[WORK.PROJ]NOTES.TXT;1 as output
+-RMS-E-FEX, file already exists, not superseded
+%BACKUP-W-NOFILES, no files selected from DUA0:[WORK]PROJ.BCK;
+VAX> BACKUP PROJ.BCK/SAVE_SET/SELECT=[...]NOTES.TXT;1 [*...]/NEW_VERSION/LOG
+%BACKUP-S-CREATED, created DUA0:[WORK.PROJ]NOTES.TXT;3
+```
+
+A host directory can be the output too (`"out"`, or `"out/..."` for a
+tree); its files are written as COPY writes them to the host, with
+their versions in their names:
+
+```text
+VAX> BACKUP PROJ.BCK/SAVE_SET/SELECT=[WORK.PROJ...] "out/..."/LOG
+%BACKUP-S-CREDIR, created directory out/DOC
+%BACKUP-S-CREATED, created out/DOC/README.TXT;1
+%BACKUP-S-CREATED, created out/NOTES.TXT;2
+%BACKUP-S-CREATED, created out/NOTES.TXT;1
+```
+
+**Comparing.** `/COMPARE` reads each file in the save set and the file
+it would be restored to, the output specifier's rules deciding which,
+and reports only a difference or a missing file (with `/LOG`, each file
+compared too). After `out/DOC/README.TXT;1` was deleted and a line added
+to `out/NOTES.TXT;2`:
+
+```text
+VAX> BACKUP/COMPARE PROJ.BCK/SAVE_SET/SELECT=[WORK.PROJ...] "out/..."
+%BACKUP-E-OPENIN, error opening out/DOC/README.TXT;1 as input
+-RMS-E-FNF, file not found
+%BACKUP-E-VERIFYERR, verification error for block 1 of out/NOTES.TXT;2
+```
+
+**Damaged save sets.** Every save set block carries a checksum of its
+header, and with `/CRC` (on the output specifier, when saving) a CRC of
+its data. Every ten blocks (`/GROUP_SIZE`) come with a redundancy
+block, from which BACKUP rebuilds one damaged block of the group as VMS
+does. A block's header is always checked; its data CRC only when the
+input specifier has `/CRC`, as in VMS V7.1, whose default is `/NOCRC`.
+A file the save set holds only part of (one cut short, say) is restored
+with zeros for the blocks missing, and a VBNMISSING message.
 
 #### SET DEFAULT and SHOW DEFAULT
 
@@ -3213,8 +3370,8 @@ processor), `internal/vm` (memory and address translation),
 on the `ods2` module's Files-11 implementation), `internal/librtl` (the
 run-time library), `internal/paging` and `internal/sched` (VMS's paging
 and scheduling rules), `internal/dclshell` (DCL), `internal/asm`,
-`internal/link`, `internal/lbr` (MACRO, LINK, LIBRARY), and
-`internal/debugger`.
+`internal/link`, `internal/lbr` (MACRO, LINK, LIBRARY), `internal/backup`
+(BACKUP's save sets), and `internal/debugger`.
 
 ### 13.2 The processor
 
@@ -3858,6 +4015,9 @@ The main differences, gathered from the rest of the manual:
 - Some LIBRTL routines aren't implemented yet (Appendix B).
 - With paging on: no swapping, no paging waits, a smaller minimum working
   set (section 13.5).
+- BACKUP works with save sets of files only: no image, physical, or
+  incremental operations, no tapes, and no copies of files to files. It
+  reads a save set stored as 512-byte records, which VMS refuses.
 - The console has commands VMS's DCL doesn't (`VMINIT`, `PRINT`,
   `DEBUG` without an image, ...), and lacks some VMS has (section 7).
 

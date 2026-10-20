@@ -186,8 +186,15 @@ never had.
   for a missing image, the GSMATCH check (SHRIDMISMAT), placement and
   each image's fixups (`machine/activate.go`), NOTFR for a shareable
   image run; checked against VMS 7.1 by `testdata/link68`, and VMS ran
-  govax's images in its second round. Each later phase has a planning
-  doc.
+  govax's images in its second round.
+  Phase 69 (done 2026-10-20) is BACKUP save sets: `internal/backup`
+  reads and writes VMS V7.1's format (blocks, CRCs, XOR groups,
+  attributes), and DCL's BACKUP (`internal/dclcmd/backup*.go`) lists,
+  restores (with every saved attribute, by VMS's output-directory and
+  existing-file rules), compares, and saves, a save set on a volume or
+  the host; checked against VMS 7.1 by `testdata/backup69`, and VMS
+  read govax's save sets in its second round. Each later phase has a
+  planning doc.
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
 - `docs/MANUAL.md` — the user's manual (2026-10-20): what govax is, the command
@@ -381,6 +388,17 @@ never had.
   depend on where LIBRTL went). `round2/` is VMS running govax's images
   (`run2.com`; results in `vax/round2/`, govax's images in its
   `govax/`), replayed by `TestLink68Round2`.
+- `testdata/backup69/` — Phase 69's probe of BACKUP (README.md):
+  `backup69.com` (a tree of files of every kind, 15 saves with the
+  output qualifiers, listings, restores every way, compares, and the
+  errors), `sscopy.mar` (copies a save set, cut short or with a byte
+  changed), `exchange.cmd`, `copyout.cmd`; `vax/` is VMS V7.1's log,
+  listings, and save sets. `TestBackup69Oracle` runs the procedure on
+  govax (Part 1's tree restored from VMS's own save sets: govax has no
+  CONVERT or SET FILE) and matches the log, listings, and save sets but
+  for `backup69Differences`. `round2/` is VMS reading govax's save sets
+  (`run2.com`; results in `vax/round2/`), replayed by
+  `TestBackup69Round2`.
 - `testdata/probe49/` — Phase 49's VMS probe in three rounds (`probe6`,
   `probe6b`, `probe6c`; README.md has each round's answers), run by
   `TestProbe6*`; `testdata/rms49/` and `testdata/sec49/` are the phase's
@@ -661,7 +679,8 @@ expect adjustment as phases land):
   CREATE, SET/SHOW DEFAULT, MOUNT/DISMOUNT, INITIALIZE/CONTAINER, the
   default volume, DEFINE/ASSIGN/DEASSIGN and SHOW LOGICAL/TRANSLATION,
   DEFINE/DEVICE and SHOW DEVICES, SHOW SYSTEM/PROCESS, SET and SHOW
-  WORKING_SET (`workingset.go`, Phase 63), MACRO, LINK
+  WORKING_SET (`workingset.go`, Phase 63), BACKUP (`backup*.go`,
+  Phase 69), MACRO, LINK
   (`linksource.go`, `GovaxSymbols`), LIBRARY, ANALYZE, the VMS library
   search (`syslib.go`), and paging (`page.go`). Each is a method of
   `Context`, which the console builds for each command from the DCL
