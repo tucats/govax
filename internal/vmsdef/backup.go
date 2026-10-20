@@ -57,7 +57,15 @@ var (
 	BackupBothSaveSets = backupCode(0x1FF8, 4)
 	BackupNoSaveSet    = backupCode(0x1FF7, 4)
 	BackupCmpInpSav    = backupCode(0x1FF6, 4)
-	BackupNotYet       = backupCode(0x1FF5, 4)
+
+	// A save's (subtask 11; 0x1FF5 was NOTYET, for a save before it):
+	// VMS's texts as the manual quotes them or as
+	// VMS's BACKUP is known to word them, unconfirmed against the probe,
+	// and govax's codes; the block and group sizes' texts are govax's.
+	BackupSearchFail  = backupCode(0x1FF4, 2)
+	BackupAccConflict = backupCode(0x1FF3, 0)
+	BackupBlockSize   = backupCode(0x1FF2, 4)
+	BackupGroupSize   = backupCode(0x1FF1, 4)
 )
 
 // backupMessages are BACKUP's messages, keyed as Messages is.
@@ -86,7 +94,11 @@ func init() {
 		BackupBothSaveSets: {"BOTHSAVSET", "input and output cannot both be save sets"},
 		BackupNoSaveSet:    {"NOSAVESET", "input or output must be a save set"},
 		BackupCmpInpSav:    {"CMPINPSAV", "/COMPARE requires save set as input"},
-		BackupNotYet:       {"NOTYET", "!AS is not implemented yet"},
+
+		BackupSearchFail:  {"SEARCHFAIL", "error searching for !AS"},
+		BackupAccConflict: {"ACCONFLICT", "!AS is open for write by another user"},
+		BackupBlockSize:   {"BLOCKSIZE", "block size must be from 2048 to 65535 bytes"},
+		BackupGroupSize:   {"GROUPSIZE", "group size must be from 0 to 100"},
 	} {
 		backupMessages[code&messageKeyMask] = Message{
 			Facility: "BACKUP", Ident: m.ident, Text: m.text, FAOCount: strings.Count(m.text, "!") - strings.Count(m.text, "!%S"),

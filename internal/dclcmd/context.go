@@ -73,6 +73,12 @@ type Context struct {
 	// through logical names (LINK's SYS$INPUT/OPTIONS).
 	InputStream func(spec string) bool
 
+	// ParseTime reads a time as DCL takes one in a qualifier's value: an
+	// absolute time, TODAY, TOMORROW, or YESTERDAY, or a combination with
+	// a delta (BACKUP's /SINCE and /BEFORE). ok is false for text that
+	// isn't one.
+	ParseTime func(text string) (uint64, bool)
+
 	// VerifyImage reports whether image verification is on, when a
 	// utility shows the lines it reads from a file (LINK's options
 	// files).

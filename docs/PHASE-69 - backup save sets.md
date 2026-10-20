@@ -8,7 +8,8 @@ the format. Subtask 2, the VMS probe (`testdata/backup69`), is done:
 "The probe's answers" in Part A settles the format, the CRCs, the XOR
 blocks, and VMS's messages. Subtasks 3 (COPY to a host name), 4 (`internal/backup`, the
 reader), 5 (opening a save set), 6 (the command), 7 (BACKUP/LIST), 8
-(restoring a file), and 9 (BACKUP's restore) are done.
+(restoring a file), 9 (BACKUP's restore), 10 (BACKUP/COMPARE), and 11
+(saving) are done.
 
 ## Goal
 
@@ -623,7 +624,7 @@ reports, and every save set byte for byte (COPY/BINARY).
    restores, file for file and header for header.
 10. **BACKUP/COMPARE** — done (2026-10-20): a save set's files against files on a volume or
     the host, with VMS's messages for a difference and a missing file.
-11. **Saving:** `internal/backup`'s writer (summary, file records, data
+11. **Saving** — done (2026-10-20): `internal/backup`'s writer (summary, file records, data
     records split as VMS splits them, null fill, XOR blocks, header
     checksum, data CRC) and the save command with its output save-set
     qualifiers and input file-selection qualifiers.
@@ -1195,3 +1196,93 @@ A leaf package (standard library only), `internal/backup`:
   `/LOG`); `TestBackupCompareHost` (a clean host restore, a changed
   byte's piece, a missing host file); `TestBackupMessages` checks a
   compare's OPENIN of a missing save set where it had NOTYET.
+
+### 2026-10-20 — Subtask 11: saving
+
+- **The layout** (`internal/backup/writer.go`, `Writer`), read off VMS's
+  save sets with a scratch dump and confirmed by rewriting all 16 of
+  them (`pi.bck` and the probe's 15) byte for byte from what `Read` makes
+  of them (`TestRewriteVAXSaveSets`):
+  - A record's body is padded with zeros to a multiple of 16 (the
+    summary's too: no terminator of its own, just the padding); a file
+    record's attributes are in the order Part A lists, DIR_STATUS (one
+    byte, %X0F) for a directory file and ACLSEGMENT for an ACL last.
+  - Data records hold whole blocks and never cross a block's end; a
+    record that doesn't fit starts the next block, where a file's data
+    goes on in a new record (an attribute record may end a block with
+    its data in the next: B69K8's MULTI.TXT;3). govax always leaves room
+    for the null record's header, which no save set contradicts or
+    settles (unconfirmed).
+  - A block's header names the file whose attribute record was written
+    last before the block began, its FID and directory ID with RVN 1
+    (the file record's FID has RVN 1 too, its BACKLINK 0): LIST.BCK's
+    block 2, which starts with A.TXT's record, names A.TXT.
+  - **An input list's elements each start a new block** (LIST.BCK:
+    TEXT.TXT in block 1, A.TXT at the start of block 2), `EndBlock`.
+  - The buffer count is 256K over the block size (8 for 32256, 32 for
+    8192; the rule between them govax's).
+- **The save set's messages:** VMS's log has every NOBACKUP notice
+  before the first COPIED, the whole tree fitting in its 8 buffers, so
+  `Writer.Saved` reports a file only when the block holding its last
+  record leaves the buffers (the oldest written when all are full; how
+  VMS's buffers cycle is unconfirmed).
+- **RMS's side** (`internal/rms/save.go`): `SaveSearch` walks an input
+  specifier as VMS did: a directory's entries in order, every version
+  when none is given (the manual's 7.3.3), and in a `[dir...]` search
+  each subdirectory where its .DIR entry is, saved first as a `Walked`
+  file whatever the selection says (B69NONE, B69BYO), then its files.
+  A search without "..." that finds nothing is RMS$_FNF, a missing
+  directory RMS$_DNF. Each file's attributes come from its header (the
+  FAT copied raw), its directory entry, and its directory: VERLIMIT and
+  DIR_VERLIM are the entry's version limit, which VMS wrote alike for
+  every file (VERLIM.TXT 3, [B69.SUB1]'s files 5), or the one govax
+  keeps in a file's FAT when it has one; the FAT's version word (a
+  directory's default limit) is 0 for a file, as VMS's are. A relative
+  or indexed file is saved whole: VMS saved all 9 blocks of
+  INDEXED.IDX, 8/9 by DIRECTORY (whether VMS saves to its end-of-file
+  block or its allocation, the same there, is unconfirmed). `Read`
+  accesses a file denying writers: a file open for writing is OPENIN
+  with -SYSTEM-W-ACCONFLICT, or with /IGNORE=INTERLOCK saved after a
+  W-ACCONFLICT notice (the manual's text; unconfirmed). `CreateSaveSet`
+  makes the save set's file before anything is read (OPENOUT first, as
+  VMS opens its output first), and `Finish` gives it its blocks: fixed
+  records of the block size, no carriage control, extend 0, owned by the
+  process or the output's /BY_OWNER UIC (sets.lst).
+- **The command** (`internal/dclcmd/backupsave.go`): the summary records
+  the command as DCL hands it over (B69COM's /COMMENT lost its quotes;
+  the rest uppercased and blanks squeezed, unconfirmed), the process's
+  user and UIC, the time, OpenVMS VAX and govax's version, the SID
+  (`corevms.System.SystemID`), BACKUP V6.2, and the output's full device
+  name ("_GOVAX$DUA1:", "_GOVAX$HOST:" for a host save set); no node
+  name, as VMS without DECnet wrote none. /BLOCK_SIZE is 2048 to 65535,
+  rounded up to 512 (the manual's 10000 is 10240), /GROUP_SIZE 0 to 100
+  (BLOCKSIZE and GROUPSIZE, govax's messages). /EXCLUDE never excludes a
+  directory file (the manual), /BY_OWNER takes `*` for the group or
+  member, and /SINCE and /BEFORE test the date /MODIFIED, /CREATED,
+  /EXPIRED, or /BACKUP names, read by DCL's time parser
+  (`Interpreter.ParseTime`, given to the commands as
+  `Context.ParseTime`); /BACKUP's /BEFORE takes a file never backed up.
+  An input list element with no device or directory takes the one
+  before it (DCL's sticky defaults; unconfirmed for BACKUP). An element
+  that finds nothing is SEARCHFAIL with RMS's reason (VMS's message as
+  it's known, unconfirmed), and a save whose searches went well but saved
+  nothing ends NOFILES, naming the first input (unconfirmed). NOTYET is
+  gone.
+- **Tests:** `TestBackupSaveOracle` (`internal/console`) restores VMS's
+  [B69] tree from B69.BCK and B69IGN.BCK, replays Part 2's 15 saves
+  (TODAY written as 20-OCT-2026, the test's clock having a day of its
+  own), matches VMS's messages and `$STATUS` line for line, and holds
+  each save set govax writes up against VMS's byte for byte, once what
+  is the run's own is taken from govax's (the summary's date, CPU ID,
+  device, and system version; the file IDs, backlinks, and high-water
+  marks a restore makes anew; a directory's dates, revision, and
+  contents). `TestBackupSaveMessages` (SEARCHFAIL, NOFILES, OPENOUT, a
+  host save set with /CRC restored and compared), `TestRecordedCommand`,
+  `TestStickyDefaults`, `TestSaveFilter`, `TestSaveSetName`
+  (`internal/dclcmd`), `TestWriterSaved`, `TestWriterBlockSize`.
+- **For subtask 12:** a restore sets a file's high-water mark to the
+  block after its data, where VMS's tree had other values (EXPIRE.TXT,
+  allocated 3 with 1 used, had 4: SET FILE seems to move it); the save
+  oracle masks it. govax keeps a file's version limit in its FAT where
+  VMS keeps it in the directory entry; the save writes VMS's form, and
+  the restore still writes the FAT's.

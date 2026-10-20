@@ -159,8 +159,10 @@ func TestBackupMessages(t *testing.T) {
 		{"BACKUP/COMPARE NONE.BCK/SAVE_SET [R1...]",
 			"BACKUP-F-OPENIN, error opening DUA0:[000000]NONE.BCK; as input\n-RMS-E-FNF, file not found", 0x10A3800C},
 
-		// Saving, until its subtask.
-		{"BACKUP *.MAR OTHER.BCK/SAVE_SET", "BACKUP-F-NOTYET, a BACKUP save is not implemented yet", 0x10A3FFAC},
+		// A save's sizes are checked before anything is made.
+		{"BACKUP *.MAR OTHER.BCK/SAVE_SET/BLOCK_SIZE=100", "BACKUP-F-BLOCKSIZE, block size must be from 2048 to 65535 bytes", 0x10A3FF94},
+		{"BACKUP *.MAR OTHER.BCK/SAVE_SET/BLOCK_SIZE=70000", "BACKUP-F-BLOCKSIZE, block size must be from 2048 to 65535 bytes", 0x10A3FF94},
+		{"BACKUP *.MAR OTHER.BCK/SAVE_SET/GROUP_SIZE=101", "BACKUP-F-GROUPSIZE, group size must be from 0 to 100", 0x10A3FF8C},
 	}
 
 	for _, tc := range cases {

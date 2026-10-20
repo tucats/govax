@@ -1,5 +1,5 @@
-// Package backup reads VMS BACKUP save sets (Phase 69; the writer comes
-// with the phase's subtask 11). A save set is what `BACKUP files
+// Package backup reads and writes VMS BACKUP save sets (Phase 69; the
+// writer, writer.go, is subtask 11). A save set is what `BACKUP files
 // saveset/SAVE_SET` writes: a sequence of save set blocks, each a few
 // thousand to 65535 bytes, that BACKUP alone was meant to interpret.
 // The layout here comes from save sets real VMS (V7.1, BACKUP V6.2)

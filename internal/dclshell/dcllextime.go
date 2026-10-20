@@ -48,6 +48,21 @@ func (c *Interpreter) systemTime() uint64 {
 	}
 }
 
+// ParseTime reads text as a time DCL takes as a qualifier's value (BACKUP's
+// /SINCE and /BEFORE): an absolute time, a day word, or a combination
+// with a delta, as F$CVTIME reads one, in VMS's format; ok is false for
+// text that isn't one.
+func (c *Interpreter) ParseTime(text string) (uint64, bool) {
+	now := vmsdef.GoTime(c.systemTime())
+
+	t, ok := parseCombinationTime(strings.ToUpper(strings.TrimSpace(text)), now)
+	if !ok {
+		return 0, false
+	}
+
+	return vmsdef.Time(t), true
+}
+
 // Time-unit sizes, in VMS's 100-nanosecond ticks.
 const (
 	ticksPerHundredth = vmsdef.TicksPerSecond / 100

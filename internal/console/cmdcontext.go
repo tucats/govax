@@ -27,6 +27,7 @@ func (c *Console) cmd() *dclcmd.Context {
 		TypeDCL:          c.TypeDCL,
 		InputStream:      c.IsInputStream,
 		VerifyImage:      c.VerifyImage,
+		ParseTime:        c.ParseTime,
 	}
 }
 

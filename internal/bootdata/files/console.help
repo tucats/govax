@@ -3546,9 +3546,10 @@ $BACK
     holding the same bytes (a binary FTP of a save set, or COPY/BINARY of
     one).
 
-    govax is adding BACKUP's operations in steps.  So far it lists save
-    sets, restores files from them, and compares them with files, as VMS
-    V7.1 does; saving says NOTYET.
+    It follows VMS V7.1's BACKUP V6.2: the save sets it writes are laid
+    out as that VMS lays them out, and VMS reads them.  Image, physical,
+    and incremental operations, tapes, and copies of files to files are
+    not done.
 
     Syntax:
 
@@ -3581,6 +3582,10 @@ $BACK
         /COMPARE        Compare the save set's files with the files named.
         /IGNORE=NOBACKUP
                         Save the data of files marked NOBACKUP too.
+                        Without it such a file's header alone is saved.
+        /IGNORE=INTERLOCK
+                        Save a file another process has open for writing,
+                        as it stands.  Without it such a file isn't saved.
 
     Input save-set qualifiers:
 
@@ -3598,6 +3603,8 @@ $BACK
     Input file-selection qualifiers (a save):
 
         /EXCLUDE=(file-spec[,...])
+                        Not the files these names match (a directory file
+                        is never excluded).
         /BY_OWNER[=uic] Only files with this owner (yours, with no UIC).
         /SINCE=time, /BEFORE=time
                         Only files dated since or before the time (TODAY,
@@ -3608,7 +3615,8 @@ $BACK
     Output save-set qualifiers (a save):
 
         /SAVE_SET       The output is a save set.
-        /BLOCK_SIZE=n   The save set's block size in bytes (32256).
+        /BLOCK_SIZE=n   The save set's block size in bytes, 2048 to 65535,
+                        rounded up to a multiple of 512 (32256).
         /GROUP_SIZE=n   Blocks in each redundancy group (10; 0 for none).
         /CRC            Write each block's CRC (the default is /NOCRC).
         /COMMENT=string Put the text in the save set's summary.
@@ -3639,6 +3647,13 @@ $BACK
     version.  Directories that don't exist are made.  A host directory
     may be the output too ("out", or "out/..." for a tree); its files are
     written as COPY writes them.
+
+    A save goes through each directory in order, every version of each
+    file unless the specifier names one, and with [dir...] into each
+    subdirectory, which is saved too, where its directory file is.  Each
+    element of an input list starts in a new save set block, and takes
+    the device and directory of the element before it when it names
+    none.
 
     A restored file keeps its saved attributes: record format, dates,
     revision count, protection, characteristics, version limit,

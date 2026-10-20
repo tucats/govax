@@ -1303,7 +1303,13 @@ expect adjustment as phases land):
   `volume.SetACL`), the missing directories made with revision 1 as
   VMS's BACKUP makes them, a saved directory file made as a directory;
   or on the host by COPY's rule (`restoredAsText`). DIRECTORY/FULL
-  shows ACLs (`aclText`).
+  shows ACLs (`aclText`). `save.go`: `Session.SaveSearch` walks an
+  input specifier in VMS BACKUP's order (a directory's entries in order,
+  a `[dir...]` search going into each subdirectory where its .DIR entry
+  is, that directory saved too, `Walked`), each `SaveFile` with its
+  `backup.Attributes` from the header, entry, and directory, and `Read`
+  (ACP access denying writers; ACCONFLICT); `CreateSaveSet`/`Finish`
+  make the save set file (fixed records of the block size).
 - `internal/link` — the VAX linker (Phase 30): builds a VMS executable image from
   `internal/obj` modules, laid out as real LINK lays images out (byte for byte on
   the fixtures). The console's `LINK` command (`internal/dclcmd/link.go`) drives it.
@@ -1353,6 +1359,13 @@ expect adjustment as phases land):
   a damaged block rebuilt from its redundancy (XOR) group
   (`Recovered`, `Lost`); `File.Data`, `Missing`, `HeaderOnly`. Tested on
   `testdata/backup69/vax`'s save sets against VMS's listings.
+  `writer.go` (subtask 11): `Writer` lays a save set out as VMS 7.1's
+  BACKUP does (records padded to 16, data records of whole blocks never
+  crossing a block, the null record, block headers naming the current
+  file, XOR blocks, CRCs; `Saved` reports a file once its block leaves
+  the buffers); `TestRewriteVAXSaveSets` rewrites every VMS save set
+  byte for byte. The command is `internal/dclcmd/backupsave.go`, and
+  `TestBackupSaveOracle` replays the probe's saves against VMS's.
 - `internal/anl` — VMS's ANALYZE utility (Phase 38): `AnalyzeObject` turns an
   object file's records into report `Line`s exactly as VMS 7.3's ANALYZE/OBJECT
   words them (`object.go`, `gsd.go`, `tir.go`, `dump.go`, errors in

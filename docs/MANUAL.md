@@ -1817,8 +1817,7 @@ behaves as VMS's in the cases they cover. The differences to know about:
 - Commands that aren't VMS's: the machine commands of section 6.9, `PRINT`,
   `TIME`, and `F$CONFIG`.
 - Commands VMS has that govax doesn't include `SUBMIT`, `PRINT` (VMS's,
-  for queues), `SET TERMINAL`, `SET PROCESS`, `SET FILE`, `BACKUP`,
-  `SORT`, `DIFFERENCES`, `SEARCH`, `EDIT`, `INSTALL`, `ANALYZE/DISK`, and
+  for queues), `SET TERMINAL`, `SET PROCESS`, `SET FILE`, `SORT`, `DIFFERENCES`, `SEARCH`, `EDIT`, `INSTALL`, `ANALYZE/DISK`, and
   the compilers.
 - `F$MODE()` is always `INTERACTIVE`; there's no batch.
 - govax's `@` reads a procedure from a host file as well as a volume.

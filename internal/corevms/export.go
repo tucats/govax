@@ -226,6 +226,16 @@ func (env *Environment) StatusText(status uint32) string {
 	return lines[0]
 }
 
+// SystemID is the CPU's system identification register (SYI$_SID), 0
+// without a CPU: what BACKUP records as a save set's CPU ID.
+func (s *System) SystemID() uint32 {
+	if s.cpu == nil {
+		return 0
+	}
+
+	return s.cpu.PR(registers.SID)
+}
+
 // ParseTime is $BINTIM's conversion of text to a VMS time, the fields an
 // absolute time leaves out taken from the process's clock. ok is false
 // for text $BINTIM would reject (SS$_IVTIME). The debugger's

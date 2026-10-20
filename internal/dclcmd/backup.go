@@ -13,8 +13,9 @@ import (
 // the command as its qualifiers' places give it, the operation its
 // specifiers name, the input save set opened and read, and BACKUP's
 // messages for what goes wrong on the way. The operations themselves are
-// the later subtasks': listing (7), restoring (8 and 9), comparing (10),
-// and saving (11).
+// in their own files: listing (backuplist.go), restoring
+// (backuprestore.go), comparing (backupcompare.go), and saving
+// (backupsave.go).
 //
 // # Where a qualifier stands
 //
@@ -126,7 +127,7 @@ func (c *Context) Backup(cmd BackupCommand) error {
 		return c.compareSaveSet(cmd)
 	}
 
-	return backupMessage(vmsdef.BackupNotYet, "a BACKUP save")
+	return c.saveSaveSet(cmd)
 }
 
 // backupOperationErrors are BACKUP's messages for the /SAVE_SET rule's
