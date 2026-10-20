@@ -3958,10 +3958,15 @@ $LINK
             <library>/LIBRARY
                         An object library (.OLB) searched for symbols the
                         objects don't define, before the system libraries,
-                        or a shareable image library such as IMAGELIB.
+                        or a shareable image library (LIBRARY/SHARE, or
+                        IMAGELIB).  A shareable image library's images are
+                        looked for beside it, then in SYS$LIBRARY, then as
+                        RUN finds them.
             <library>/INCLUDE=(<module>[,...])
-                        Adds those modules of the library to the image.
-                        With /LIBRARY too, the library is also searched.
+                        Adds those modules of the library to the image:
+                        of a shareable image library, those images, as an
+                        options file's /SHAREABLE does.  With /LIBRARY
+                        too, the library is also searched.
             <object>/SELECTIVE_SEARCH
                         Takes only the object's definitions of symbols
                         something else refers to.
@@ -4002,6 +4007,17 @@ $LINK
         /SYSLIB         Searches IMAGELIB.OLB and STARLET.OLB for symbols
                         the objects don't define, as VMS LINK does by
                         default.  /NOSYSLIB uses only govax's own tables.
+
+        /USERLIBRARY[=(<table>[,...])]
+                        Searches the default user libraries, after the
+                        command's own libraries and before the system's:
+                        the object or shareable image libraries the
+                        logical names LNK$LIBRARY, LNK$LIBRARY_1, ...
+                        LNK$LIBRARY_999 name, taken in turn until one
+                        isn't defined.  The tables are PROCESS, GROUP, and
+                        SYSTEM, searched in that order; ALL, the default,
+                        is all three.  /NOUSERLIBRARY (or NONE) searches
+                        none.
 
         /MAP[=<map>]    Writes a link map, laid out as VMS LINK lays out
                         its default map: the object modules, the program
@@ -4076,8 +4092,8 @@ $LINK
 
     From the host shell, "govax link <object>..." runs this command, with
     --executable <file>, --no-executable, --no-traceback, --debug,
-    --no-syslib, --map, --map-file <file>, --brief, --library <file>, or
-    --options <file>.
+    --no-syslib, --no-userlibrary, --map, --map-file <file>, --brief,
+    --library <file>, or --options <file>.
 
     Examples:
 
@@ -4114,7 +4130,10 @@ $LIBR
                         source (.MAR, the default type for a macro
                         library), one module for each macro, or object
                         files (.OBJ, the default for an object library),
-                        one module for each object module.  A bare name
+                        one module for each object module, or shareable
+                        images (.EXE, the default for a shareable image
+                        library), one module each, holding the image's
+                        name, ident, and universal symbols.  A bare name
                         is found beside the input before it.  With input
                         files and no operation named, their modules
                         replace any of the same names, as LIBRARIAN's
@@ -4156,8 +4175,11 @@ $LIBR
                         132 in a file).
 
         /MACRO          A macro library.  /OBJECT (the default) is an
-                        object library.  These choose a new library's
-                        type; an existing library keeps its own.
+                        object library, and /SHARE a shareable image
+                        library, which LINK searches for the images that
+                        define symbols (see HELP LINK).  These choose a
+                        new library's type; an existing library keeps its
+                        own.
 
         /NOSQUEEZE      Keeps macros' comments and trailing blanks.  By
                         default they're removed, as LIBRARIAN's /SQUEEZE
@@ -4179,7 +4201,7 @@ $LIBR
     From the host shell, "govax library <library> [<input>...]" runs this
     command, with --create, --insert, --replace, --delete, --extract,
     --output, --list, --list-file, --full, --names, --macro, --object,
-    --no-squeeze, --selective-search, and --log.
+    --share, --no-squeeze, --selective-search, and --log.
 
     Examples:
 
@@ -4191,6 +4213,10 @@ $LIBR
 
         LIBRARY/LIST/FULL/NAMES DUA0:[LIB]SUBS
         LIBRARY/EXTRACT=(ADD*)/OUTPUT="adds.mar" "mymacros.mlb"
+
+        LIBRARY/CREATE/SHARE DUA0:[LIB]MYSHR SHR1.EXE,SHR2.EXE
+        DEFINE LNK$LIBRARY DUA0:[LIB]MYSHR.OLB
+        LINK MAIN
 
     See also the help for MACRO and LINK.
 

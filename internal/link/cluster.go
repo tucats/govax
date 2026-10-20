@@ -299,9 +299,14 @@ func (l *linker) definePsect(c *cluster, name string, flags uint16) *psect {
 }
 
 // addImageClusters gives each shareable image the modules' symbols are
-// in a cluster, after the default cluster, in the order the symbols were
-// first referred to, and drops the cluster of an image an options file
-// named that nothing uses (unconfirmed: real LINK may keep it).
+// in a cluster, after the default cluster, and drops the cluster of an
+// image an options file named that nothing uses (unconfirmed: real LINK
+// may keep it). The images come in the order of the sources that
+// supplied them, as real LINK searches each library in turn, and from
+// one source in the order their symbols were first referred to: MAIN1L,
+// which calls LIB$PUT_OUTPUT before any of SHR1's routines, has SHR1
+// (from MYSHR.OLB, named on the command line) before LIBRTL (from
+// IMAGELIB.OLB).
 //
 // The images the options files' images use come first, each right after
 // the image that uses it, even when the modules refer to it too: MAIN1,
@@ -328,6 +333,8 @@ func (l *linker) addImageClusters() {
 	l.clusters = kept
 
 	l.addDependencies()
+
+	sort.SliceStable(refs, func(i, j int) bool { return refs[i].source < refs[j].source })
 
 	for _, g := range refs {
 		if g.defined && g.image != "" && g.strongRef && l.imageCluster(g.image) == nil {

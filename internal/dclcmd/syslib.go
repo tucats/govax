@@ -42,9 +42,9 @@ func (c *Context) HostLibraryDir() string {
 }
 
 // readLibraryFile reads a VMS library file: logical:file on a mounted
-// volume, or file in the host library directory. It returns nil data, and
-// no error, when neither has it.
-func (c *Context) readLibraryFile(logical, file string) ([]byte, string, error) {
+// volume, or file in the host library directory, and returns where it
+// was. It returns nil data, and no error, when neither has it.
+func (c *Context) readLibraryFile(logical, file string) ([]byte, rms.FileLocation, error) {
 	spec := logical + ":" + file
 
 	data, found, err := c.ContainerSession.ReadRawFile(rms.FileLocation{Name: spec})
@@ -56,14 +56,14 @@ func (c *Context) readLibraryFile(logical, file string) ([]byte, string, error) 
 
 	switch {
 	case err == nil:
-		return data, found.Name, nil
+		return data, found, nil
 	case !errors.As(err, &notMounted) && !errors.As(err, &notFound):
-		return nil, spec, err
+		return nil, rms.FileLocation{Name: spec}, err
 	}
 
 	dir := c.HostLibraryDir()
 	if dir == "" {
-		return nil, "", nil
+		return nil, rms.FileLocation{}, nil
 	}
 
 	for _, name := range []string{file, strings.ToLower(file)} {
@@ -71,13 +71,13 @@ func (c *Context) readLibraryFile(logical, file string) ([]byte, string, error) 
 
 		data, err := os.ReadFile(path)
 		if err == nil {
-			return data, path, nil
+			return data, rms.FileLocation{Host: true, Name: path}, nil
 		}
 
 		if !errors.Is(err, fs.ErrNotExist) {
-			return nil, path, err
+			return nil, rms.FileLocation{Host: true, Name: path}, err
 		}
 	}
 
-	return nil, "", nil
+	return nil, rms.FileLocation{}, nil
 }

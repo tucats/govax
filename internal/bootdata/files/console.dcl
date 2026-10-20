@@ -720,6 +720,9 @@ grammar console
     ! shareable image, named by its value or as EXECUTABLE says.
     ! SYMBOL_TABLE is /SYMBOL_TABLE[=file] (subtask 6): the image's
     ! global symbol table as an object module file, NAME.STB by default.
+    ! USERLIBRARY is /[NO]USERLIBRARY[=(table,...)] (subtask 12): the
+    ! tables (PROCESS, GROUP, SYSTEM, ALL, NONE) whose LNK$LIBRARY names
+    ! name default user libraries; ALL when it's left out.
     !
     verb link/id=1350
 
@@ -761,6 +764,9 @@ grammar console
                     /default=""
         qualifier   brief/id=1357
         qualifier   full/id=1365
+        qualifier   userlibrary/id=1366         -
+                    /type=$string/list          -
+                    /default=""
 
     !
     ! docs/PHASE-38.md (internal/anl, internal/dclcmd/analyze.go):
@@ -824,8 +830,10 @@ grammar console
     ! as COPY's parameters do. With input files and no operation named,
     ! they replace modules of the same names (LIBRARIAN's default
     ! /REPLACE). DELETE and EXTRACT take module names, which may hold * and
-    ! %. LIST is /LIST[=file] (empty default: the console). MACRO or OBJECT
-    ! picks a new library's type; SQUEEZE is on unless /NOSQUEEZE.
+    ! %. LIST is /LIST[=file] (empty default: the console). MACRO, OBJECT,
+    ! or SHARE (a shareable image symbol table library, whose inputs are
+    ! shareable images: docs/PHASE-68, subtask 12) picks a new library's
+    ! type; SQUEEZE is on unless /NOSQUEEZE.
     !
     verb library/id=1400
 
@@ -861,7 +869,10 @@ grammar console
         qualifier   squeeze/id=1417
         qualifier   selective_search/id=1418
         qualifier   log/id=1419
+        qualifier   share/id=1420
         disallow    macro and object
+        disallow    macro and share
+        disallow    object and share
         disallow    insert and replace
 
     !

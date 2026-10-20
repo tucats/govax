@@ -5,7 +5,8 @@
 // docs/PHASE-28.md's subtask 6, write.go and input.go). It reads a library
 // from its bytes and writes one as bytes; callers find, read, and write
 // the file. It imports only internal/obj, to read object modules' names
-// and symbols, and internal/vmsdef, for times.
+// and symbols, internal/vmsimage, to read a shareable image's global
+// symbol table (shareable.go), and internal/vmsdef, for times.
 //
 // The format comes from VMS 7.3's librarian sources
 // (vmssrc_archive/v73/lbr/lis/lbr.sdl, getput.lis, openclose.lis, subs.lis,

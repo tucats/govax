@@ -58,6 +58,7 @@ func TestLinkCommand(t *testing.T) {
 		{[]string{"a"}, linkFlags{executable: "s.exe", shareable: true}, `LINK "a"/EXECUTABLE="s.exe"/SHAREABLE`},
 		{[]string{"a"}, linkFlags{shareable: true, symbolTable: "s.stb"}, `LINK "a"/SHAREABLE/SYMBOL_TABLE="s.stb"`},
 		{[]string{"a"}, linkFlags{noSysLib: true}, `LINK "a"/NOSYSLIB`},
+		{[]string{"a"}, linkFlags{noUserLib: true}, `LINK "a"/NOUSERLIBRARY`},
 		{[]string{"a"}, linkFlags{mapWanted: true}, `LINK "a"/MAP`},
 		{[]string{"a"}, linkFlags{mapWanted: true, mapFile: "a.lst", brief: true}, `LINK "a"/MAP="a.lst"/BRIEF`},
 		{[]string{"a"}, linkFlags{mapWanted: true, full: true}, `LINK "a"/MAP/FULL`},

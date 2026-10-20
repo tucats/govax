@@ -442,8 +442,10 @@ type global struct {
 	image  string
 	placed bool
 	// order is its place in its shareable image's global symbol table,
-	// from 1 (Definition.Order); 0 if unknown.
-	order int
+	// from 1 (Definition.Order); 0 if unknown. source is the index in
+	// Options.Sources of the source that defined it.
+	order  int
+	source int
 	refs  []string // modules that refer to it
 	// strongRef says something refers to it other than weakly. A symbol
 	// only referred to weakly is 0, silently, if nothing defines it, and
@@ -703,7 +705,7 @@ func (l *linker) checkUndefined() error {
 				continue
 			}
 
-			d, ok, err := l.lookup(g.name)
+			d, source, ok, err := l.lookup(g.name)
 			if err != nil {
 				return fmt.Errorf("link: %s: %w", g.name, err)
 			}
@@ -713,7 +715,7 @@ func (l *linker) checkUndefined() error {
 			}
 
 			if d.Module == nil {
-				g.defined, g.fromSource, g.image, g.offset, g.order = true, true, d.Image, d.Value, d.Order
+				g.defined, g.fromSource, g.image, g.offset, g.order, g.source = true, true, d.Image, d.Value, d.Order, source
 
 				continue
 			}
@@ -806,16 +808,17 @@ func (l *linker) bySequence() []*global {
 	return all
 }
 
-// lookup finds a symbol in the first source that defines it.
-func (l *linker) lookup(name string) (Definition, bool, error) {
-	for _, src := range l.opts.Sources {
+// lookup finds a symbol in the first source that defines it, and returns
+// that source's index too.
+func (l *linker) lookup(name string) (Definition, int, bool, error) {
+	for i, src := range l.opts.Sources {
 		d, ok, err := src.Lookup(name)
 		if err != nil || ok {
-			return d, ok, err
+			return d, i, ok, err
 		}
 	}
 
-	return Definition{}, false, nil
+	return Definition{}, 0, false, nil
 }
 
 // sharedImage returns what the first source that knows the shareable

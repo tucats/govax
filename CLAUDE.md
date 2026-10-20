@@ -1277,7 +1277,11 @@ expect adjustment as phases land):
   LIBRARIAN's rules for turning macro source and object files into modules;
   `List` is LIBRARY/LIST's listing, in LIBRARIAN's own formats. The console's
   `LIBRARY` command (`internal/dclcmd/library.go`) drives it. Imports only
-  `internal/obj` and `internal/vmsdef`.
+  `internal/obj`, `internal/vmsimage`, and `internal/vmsdef`. Phase 68:
+  `ShareableModule` (`shareable.go`) is LIBRARY/SHARE's module for a
+  shareable image (its GST's header and end records, its ident, its
+  universal symbols); LINK searches such libraries by name and through
+  LNK$LIBRARY (`internal/dclcmd/userlib.go`, `/[NO]USERLIBRARY`).
 - `internal/anl` — VMS's ANALYZE utility (Phase 38): `AnalyzeObject` turns an
   object file's records into report `Line`s exactly as VMS 7.3's ANALYZE/OBJECT
   words them (`object.go`, `gsd.go`, `tir.go`, `dump.go`, errors in

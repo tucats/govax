@@ -17,17 +17,19 @@ import (
 //	        [/CREATE] [/INSERT | /REPLACE] [/DELETE=(module,...)]
 //	        [/EXTRACT=(module,...) [/OUTPUT=file]]
 //	        [/LIST[=file] [/FULL] [/NAMES] [/WIDTH=n]]
-//	        [/MACRO | /OBJECT] [/[NO]SQUEEZE] [/SELECTIVE_SEARCH] [/LOG]
+//	        [/MACRO | /OBJECT | /SHARE] [/[NO]SQUEEZE] [/SELECTIVE_SEARCH] [/LOG]
 //
-// It creates or changes a macro library (.MLB) or an object library
-// (.OLB) with internal/lbr, extracts modules from one, and lists one as
-// LIBRARY/LIST does. /MACRO or /OBJECT picks the type of a new library (an
-// object library by default, as on VMS) and the library's default file
-// type; an existing library keeps its own type, and naming the other is an
-// error.
+// It creates or changes a macro library (.MLB), an object library (.OLB),
+// or a shareable image symbol table library (.OLB, /SHARE; docs/PHASE-68 -
+// link shareable images.md, subtask 12) with internal/lbr, extracts
+// modules from one, and lists one as LIBRARY/LIST does. /MACRO, /OBJECT,
+// or /SHARE picks the type of a new library (an object library by default,
+// as on VMS) and the library's default file type; an existing library
+// keeps its own type, and naming another is an error.
 //
 // Input files are inserted in order: macro source (.MAR), one module per
-// macro, or object files (.OBJ), one module per object module. With no
+// macro, object files (.OBJ), one module per object module, or shareable
+// images (.EXE), one module each, holding its universal symbols. With no
 // operation named, they replace modules of the same names, as LIBRARIAN's
 // default /REPLACE does; with /INSERT or /CREATE, a module already in the
 // library is a warning and isn't changed. /DELETE= is done first, and
@@ -79,10 +81,11 @@ type LibraryOptions struct {
 	Names    bool
 	Width    int
 
-	// Macro is /MACRO and Object /OBJECT. NoSqueeze is /NOSQUEEZE, Selective
-	// /SELECTIVE_SEARCH, and Log /LOG.
+	// Macro is /MACRO, Object /OBJECT, and Share /SHARE. NoSqueeze is
+	// /NOSQUEEZE, Selective /SELECTIVE_SEARCH, and Log /LOG.
 	Macro     bool
 	Object    bool
+	Share     bool
 	NoSqueeze bool
 	Selective bool
 	Log       bool
@@ -105,7 +108,17 @@ type library struct {
 func (c *Context) Library(opts LibraryOptions) error {
 	l := &library{c: c, opts: opts, now: vmsdef.Time(time.Now())}
 
-	return l.run()
+	if err := l.run(); err != nil {
+		return err
+	}
+
+	// LIBRARIAN's status for a command that worked, as LINK's
+	// (testdata/link68's log: %X10000001 after LIBRARY/CREATE/SHARE).
+	if c.SetStatus != nil {
+		c.SetStatus(ssNormal | stsInhibitMsg)
+	}
+
+	return nil
 }
 
 func (l *library) run() error {
@@ -113,8 +126,12 @@ func (l *library) run() error {
 	opts := l.opts
 
 	typ, libType := lbr.TypeObject, "OLB"
-	if opts.Macro {
+
+	switch {
+	case opts.Macro:
 		typ, libType = lbr.TypeMacro, "MLB"
+	case opts.Share:
+		typ = lbr.TypeShareable
 	}
 
 	loc, err := s.Locate(opts.Library, opts.LibraryHost)
@@ -209,7 +226,7 @@ func (l *library) open(loc rms.FileLocation) error {
 	}
 
 	switch t := l.lib.Type; {
-	case l.opts.Macro && t != lbr.TypeMacro, l.opts.Object && t != lbr.TypeObject:
+	case l.opts.Macro && t != lbr.TypeMacro, l.opts.Object && t != lbr.TypeObject, l.opts.Share && t != lbr.TypeShareable:
 		return l.failed(fmt.Errorf("%s is a %s library", found.Name, t), found.Name)
 	}
 
@@ -338,6 +355,19 @@ func (l *library) readInput(loc rms.FileLocation) ([]*lbr.Entry, rms.FileLocatio
 		}
 
 		return entries, found, nil
+
+	case lbr.TypeShareable:
+		data, found, err := s.ReadRawFile(loc.WithDefaultType("EXE"))
+		if err != nil {
+			return nil, found, FileFailure(err, loc.Name)
+		}
+
+		e, err := l.b.ShareableModule(data)
+		if err != nil {
+			return nil, found, l.failed(fmt.Errorf("%s: %w", found.Name, err), l.found.Name)
+		}
+
+		return []*lbr.Entry{e}, found, nil
 	}
 
 	return nil, loc, l.failed(fmt.Errorf("LIBRARY can't insert modules in a %s library", l.b.Type), l.found.Name)

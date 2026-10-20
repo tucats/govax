@@ -170,10 +170,18 @@ func (s *Session) definesName(name string) bool {
 // specification tried; when none is there, a *NotFoundError, with that
 // specification. A name RMS can't parse (a host path) finds nothing.
 func (s *Session) FindShareableImage(name string) (FileLocation, string, error) {
+	return s.FindImageFile(name, ShareableDefault)
+}
+
+// FindImageFile is FindShareableImage with another default file
+// specification than SYS$SHARE:.EXE: LINK looks for a shareable image a
+// library names in the library's own directory first
+// ("DUA1:[000000].EXE"), then in SYS$LIBRARY (the Linker manual, 6.3.3.2).
+func (s *Session) FindImageFile(name, defaultSpec string) (FileLocation, string, error) {
 	ctx := &Context{Mounts: s.Mounts, Logicals: s.Logicals, Session: s}
 
-	defaults := []string{ShareableDefault}
-	if fs, err := translateSpec(s.Logicals, ShareableDefault); err == nil && len(fs) > 0 {
+	defaults := []string{defaultSpec}
+	if fs, err := translateSpec(s.Logicals, defaultSpec); err == nil && len(fs) > 0 {
 		defaults = defaults[:0]
 		for _, f := range fs {
 			defaults = append(defaults, f.Spec)

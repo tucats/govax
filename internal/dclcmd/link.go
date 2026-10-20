@@ -16,7 +16,8 @@ import (
 // This file implements docs/PHASE-30.md's LINK command:
 //
 //	LINK file[,file...][/HOST] [/EXECUTABLE[=image] | /NOEXECUTABLE | /SHAREABLE[=image]]
-//	     [/[NO]TRACEBACK] [/[NO]DEBUG] [/[NO]SYSLIB] [/MAP[=map] [/BRIEF] | /NOMAP]
+//	     [/[NO]TRACEBACK] [/[NO]DEBUG] [/[NO]SYSLIB] [/[NO]USERLIBRARY[=(table,...)]]
+//	     [/MAP[=map] [/BRIEF] | /NOMAP]
 //
 // where each file is an object, or has its own qualifier:
 //
@@ -45,8 +46,10 @@ import (
 // /EXECUTABLE or /MAP names them.
 //
 // Symbols the objects don't define come from the shareable images the
-// options files name, then the libraries named, in order, then the system
-// libraries and govax's own tables (linksource.go).
+// options files name, then the libraries named, in order, then the default
+// user libraries (LNK$LIBRARY, userlib.go), then the system libraries and
+// govax's own tables (linksource.go). A shareable image library's images
+// are looked for beside it first (openLibraryImage).
 
 // LinkOptions is one LINK command.
 type LinkOptions struct {
@@ -89,6 +92,12 @@ type LinkOptions struct {
 	// NoSysLib is /NOSYSLIB: don't search IMAGELIB.OLB and STARLET.OLB
 	// (linksource.go).
 	NoSysLib bool
+
+	// UserLibrary is /USERLIBRARY='s tables (PROCESS, GROUP, SYSTEM, ALL,
+	// NONE; none given is ALL), whose LNK$LIBRARY names name default user
+	// libraries (userlib.go). NoUserLibrary is /NOUSERLIBRARY.
+	UserLibrary   []string
+	NoUserLibrary bool
 
 	// Map is /MAP: write a link map, to MapFile, or by default to a file
 	// named after the first file with the type MAP. Brief is /BRIEF:
@@ -175,14 +184,29 @@ func (c *Context) Link(opts LinkOptions) error {
 		return FileFailure(err, opts.Executable)
 	}
 
+	var user []link.SymbolSource
+
+	if !opts.NoUserLibrary {
+		tables, err := userLibraryTableNames(opts.UserLibrary)
+		if err != nil {
+			return err
+		}
+
+		if user, err = c.userLibraries(tables); err != nil {
+			return err
+		}
+	}
+
 	system, err := c.LinkSources(!opts.NoSysLib)
 	if err != nil {
 		return vmserrors.Wrap(vmserrors.CLI_LINKING, err, exe.Name)
 	}
 
-	// Last, the images the shareable images the link uses use themselves,
-	// which no other source describes, read from their files.
-	sources := append(append(append(in.shared, in.libraries...), system...), c.usedImages())
+	// The default user libraries come after the command's own, and before
+	// the system's. Last, the images the shareable images the link uses
+	// use themselves, which no other source describes, read from their
+	// files.
+	sources := append(append(append(append(in.shared, in.libraries...), user...), system...), c.usedImages())
 
 	name := imageName(exe)
 	if in.options.Name != "" {
@@ -469,8 +493,8 @@ func (c *Context) linkInput(in *linkInputs, f link.InputFile, host, fromCommand 
 }
 
 // linkLibrary reads a library: one to search (/LIBRARY), whose modules
-// named by /INCLUDE are added to the link. A shareable image library, such
-// as IMAGELIB.OLB, can only be searched.
+// named by /INCLUDE are added to the link. A shareable image library's
+// modules named by /INCLUDE are its images, which the link uses.
 func (c *Context) linkLibrary(in *linkInputs, loc rms.FileLocation, f link.InputFile) (rms.FileLocation, error) {
 	data, found, err := c.ContainerSession.ReadRawFile(loc)
 	if err != nil {
@@ -484,17 +508,28 @@ func (c *Context) linkLibrary(in *linkInputs, loc rms.FileLocation, f link.Input
 
 	switch lib.Type {
 	case lbr.TypeShareable:
-		if len(f.Include) > 0 {
-			return found, vmserrors.Wrap(vmserrors.CLI_LINKING, fmt.Errorf("%s is a shareable image library, whose modules can't be included", found.Name), found.Name)
-		}
-
 		govax := GovaxSymbols(c.ShimLinks)
 
-		in.libraries = append(in.libraries, &link.ImageLibrarySource{
-			File:    found.Name,
-			Library: lib,
-			Open:    func(image string) (link.SymbolSource, error) { return c.openSharedImage(image, govax) },
-		})
+		// /INCLUDE= takes the images named into the link as an options
+		// file's NAME/SHAREABLE would (the Linker manual, 6.3.3.2).
+		for _, name := range f.Include {
+			image := strings.ToUpper(name)
+			if _, ok := lib.Lookup(image); !ok {
+				return found, vmserrors.Wrap(vmserrors.CLI_LINKING, fmt.Errorf("%s has no module %s", found.Name, image), found.Name)
+			}
+
+			src, err := c.openLibraryImage(image, found, govax)
+			if err != nil {
+				return found, vmserrors.Wrap(vmserrors.CLI_LINKING, err, found.Name)
+			}
+
+			in.shared = append(in.shared, src)
+			in.options.Clusters = append(in.options.Clusters, link.Cluster{Shareable: true, Image: image})
+		}
+
+		if f.Library {
+			in.libraries = append(in.libraries, c.imageLibrary(lib, found, govax))
+		}
 
 		return found, nil
 

@@ -9,7 +9,8 @@ subtask 4 (clusters for executables), subtask 5 (`LINK/SHAREABLE`,
 the image), subtask 6 (the global symbol table), subtask 7 (fixups
 and bases), subtask 8 (maps and ANALYZE/IMAGE), subtask 9 (linking
 against govax's shareable images), subtask 10 (finding a shareable
-image), and subtask 11 (activating govax's shareable images).
+image), subtask 11 (activating govax's shareable images), and subtask
+12 (shareable image libraries).
 
 ## Goal
 
@@ -584,7 +585,7 @@ them.
     unless a later round says otherwise). `RUN` of a shareable image:
     `%DCL-E-NOTFR`. All of this in both paging modes. `imageshare_test.go`'s hand-made image gives
     way to one LINK/SHAREABLE makes.
-12. **Shareable image libraries.**
+12. **Done (2026-10-20).** **Shareable image libraries.**
     `LIBRARY/CREATE/SHARE` and `/INSERT` of a shareable image (its GST
     as the library's module), and `LIBRARY/LIST` of one. LINK searches
     a user's shareable image library (`MYLIB/LIBRARY`), and its default
@@ -1391,3 +1392,75 @@ it rewrote by hand.
 
 Left for later: shareable image libraries (subtask 12), the oracle
 (subtask 13), and HELP RUN's account of activation (the close-out).
+
+### 2026-10-20 — Subtask 12: shareable image libraries
+
+govax's LIBRARY makes shareable image libraries, and LINK searches them,
+by name and as default user libraries, as VMS 7.1's did in R12 and E9.
+
+- **The library** (`lbr.Builder.ShareableModule`,
+  `internal/lbr/shareable.go`): R12's MYSHR.OLB showed that VMS's
+  librarian keeps little of an image. A module is named for the image
+  and holds two records of its global symbol table, its module header
+  and its end of module record; index 2 has its universal symbols; and
+  the module header's user data is 0, 4, and the image's global section
+  ident (IHD$L_IDENT), which LIBRARY/LIST/FULL shows as `Ident
+  01,0003E8`. The match control isn't kept. What the 4 is (the ident's
+  length?) is **unconfirmed**; both modules have it. Built from VMS's
+  SHR1.EXE and SHR2.EXE, govax's library is VMS's byte for byte, given
+  its times and librarian name (`TestCreateShareableLibrary`), and
+  LIBRARY/LIST/FULL/NAMES lists it as `myshr.lis` does
+  (`TestListShareableLibrary`; the listing already handled the type).
+- **LIBRARY/SHARE** (`internal/dclcmd/library.go`, `console.dcl`'s
+  `share`, `govax library --share`): a new library's type, as /MACRO and
+  /OBJECT are, and with it inputs are shareable images, default type
+  EXE. LIBRARY's `$STATUS` is now %X10000001 when it works, as R12's log
+  shows (it was DCL's generic success).
+- **Searching one** needed one change in `internal/link`: VMS searches
+  each library in turn, so the images a link uses get their clusters in
+  the order of the sources that supplied them, and in the order their
+  symbols were first referred to only within one source
+  (`global.source`, `addImageClusters`). MAIN1 calls LIB$PUT_OUTPUT
+  before SHR1's routines, and MAIN1L's map still has SHR1 (from
+  MYSHR.OLB) before LIBRTL (from IMAGELIB.OLB). The images themselves
+  were already right, SHR1's cells in the reverse of its table's order,
+  which subtask 9's `orderCells` had anticipated. MAIN1L and MAIN1U link
+  byte for byte, with their `/FULL` maps line for line
+  (`TestLinkThroughShareableImageLibrary`).
+- **Finding a library's images** (`dclcmd.openLibraryImage`): the
+  Linker manual's 6.3.3.2 rule, the image's name parsed with the
+  library's device and directory as the default, then SYS$LIBRARY
+  (`rms.Session.FindImageFile`, FindShareableImage with another
+  default), then where the image activator would look (subtask 10's
+  locator, then govax's tables). A host library's images are looked for
+  in its host directory. IMAGELIB.OLB's images follow the same rule now.
+  R12 can't tell the library's directory from the logical name SHR1,
+  which the probe had defined and which named the same file;
+  `TestShareableImageLibrary` links MAIN1L from another default
+  directory with no logical name, so only the library's directory finds
+  SHR1.
+- **Default user libraries** (`internal/dclcmd/userlib.go`): LINK's
+  `/[NO]USERLIBRARY[=(table,...)]` (PROCESS, GROUP, SYSTEM, ALL, NONE;
+  ALL by default; `govax link --no-userlibrary`). In each table chosen,
+  LNK$LIBRARY, LNK$LIBRARY_1, ... up to LNK$LIBRARY_999, until one isn't
+  defined; each an object or shareable image library, searched after
+  the command's own libraries and before IMAGELIB.OLB and STARLET.OLB,
+  as the manual has it. A keyword that isn't a table is DCL's IVKEYW.
+  The job table isn't searched, as the manual's list doesn't include it.
+- **/INCLUDE= of a shareable image library** takes the images named
+  into the link as an options file's NAME/SHAREABLE would (the manual's
+  6.3.3.2). It was refused before. No probe case: **unconfirmed** where
+  real LINK puts such an image's cluster; govax puts it where an
+  options file's would go.
+
+`TestShareableImageLibrary` runs R12 through DCL with govax's own SHR1
+and SHR2: LIBRARY/CREATE/SHARE, LIBRARY/LIST (VMS's listing but for its
+times and creator), MAIN1L, MAIN1U through LNK$LIBRARY, and E9 with
+/NOUSERLIBRARY (VMS's 6 UDFSYM and 13 USEUNDEF messages and status), the
+programs' headers and shareable image lists VMS's, and both running as
+VMS's did. `TestShareableImageLibraryHost` links through VMS's
+MYSHR.OLB as a host file, by /LIBRARY and by /INCLUDE=SHR1.
+
+HELP LIBRARY has /SHARE, and HELP LINK /USERLIBRARY and the library
+qualifiers' new meaning; the rest of HELP LINK and HELP RUN is the
+close-out's. Left: the oracle (subtask 13) and the close-out.

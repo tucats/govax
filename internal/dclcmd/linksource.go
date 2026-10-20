@@ -3,7 +3,10 @@ package dclcmd
 import (
 	"errors"
 	"fmt"
+	"io/fs"
 	"os"
+	"path/filepath"
+	"strings"
 
 	"github.com/tucats/govax/internal/corevms"
 	"github.com/tucats/govax/internal/lbr"
@@ -104,7 +107,7 @@ func (c *Context) LinkSources(sysLib bool) ([]link.SymbolSource, error) {
 
 	var sources []link.SymbolSource
 
-	data, name, err := c.readLibraryFile("SYS$LIBRARY", "IMAGELIB.OLB")
+	data, loc, err := c.readLibraryFile("SYS$LIBRARY", "IMAGELIB.OLB")
 	if err != nil {
 		return nil, err
 	}
@@ -112,17 +115,13 @@ func (c *Context) LinkSources(sysLib bool) ([]link.SymbolSource, error) {
 	if data != nil {
 		lib, err := lbr.Open(data)
 		if err != nil {
-			return nil, fmt.Errorf("%s: %w", name, err)
+			return nil, fmt.Errorf("%s: %w", loc.Name, err)
 		}
 
-		sources = append(sources, &link.ImageLibrarySource{
-			File:    name,
-			Library: lib,
-			Open:    func(image string) (link.SymbolSource, error) { return c.openSharedImage(image, govax) },
-		})
+		sources = append(sources, c.imageLibrary(lib, loc, govax))
 	}
 
-	data, name, err = c.readLibraryFile("SYS$LIBRARY", "STARLET.OLB")
+	data, loc, err = c.readLibraryFile("SYS$LIBRARY", "STARLET.OLB")
 	if err != nil {
 		return nil, err
 	}
@@ -130,10 +129,10 @@ func (c *Context) LinkSources(sysLib bool) ([]link.SymbolSource, error) {
 	if data != nil {
 		lib, err := lbr.Open(data)
 		if err != nil {
-			return nil, fmt.Errorf("%s: %w", name, err)
+			return nil, fmt.Errorf("%s: %w", loc.Name, err)
 		}
 
-		sources = append(sources, &link.ObjectLibrarySource{File: name, Library: lib, System: true})
+		sources = append(sources, &link.ObjectLibrarySource{File: loc.Name, Library: lib, System: true})
 	}
 
 	return append(sources, govax), nil
@@ -171,6 +170,68 @@ func (c *Context) openSharedImage(image string, govax *link.TableSource) (link.S
 	}
 
 	return sharedImageSource(data, loc.Name, image)
+}
+
+// imageLibrary is the shareable image library lib, read from loc, as a
+// symbol source: the images it names are found by openLibraryImage.
+func (c *Context) imageLibrary(lib *lbr.Library, loc rms.FileLocation, govax *link.TableSource) *link.ImageLibrarySource {
+	return &link.ImageLibrarySource{
+		File:    loc.Name,
+		Library: lib,
+		Open:    func(image string) (link.SymbolSource, error) { return c.openLibraryImage(image, loc, govax) },
+	}
+}
+
+// openLibraryImage returns the symbols of the shareable image image, which
+// the shareable image library at lib names. Real LINK looks for the image
+// in the library's device and directory, then in SYS$LIBRARY (the Linker
+// manual, 6.3.3.2); each is RMS's parse of the image's name with that
+// default, so a logical name of the image's name leads to its file
+// first, as testdata/link68's MAIN1L found SHR1. govax then looks where
+// the image activator would (openSharedImage): SYS$SHARE, the host, and
+// last its own tables.
+func (c *Context) openLibraryImage(image string, lib rms.FileLocation, govax *link.TableSource) (link.SymbolSource, error) {
+	s := c.ContainerSession
+
+	if lib.Host {
+		dir := filepath.Dir(lib.Name)
+
+		for _, name := range []string{image + ".EXE", strings.ToLower(image) + ".exe"} {
+			path := filepath.Join(dir, name)
+
+			data, err := os.ReadFile(path)
+			if err == nil {
+				return sharedImageSource(data, path, image)
+			}
+
+			if !errors.Is(err, fs.ErrNotExist) {
+				return nil, fmt.Errorf("%s: %w", path, err)
+			}
+		}
+	} else if s != nil {
+		for _, def := range []string{libraryDirectory(lib.Name) + ".EXE", "SYS$LIBRARY:.EXE"} {
+			found, _, err := s.FindImageFile(image, def)
+			if err != nil {
+				continue
+			}
+
+			data, loc, err := s.ReadRawFile(found)
+			if err != nil {
+				return nil, fmt.Errorf("%s: %w", found.Name, err)
+			}
+
+			return sharedImageSource(data, loc.Name, image)
+		}
+	}
+
+	return c.openSharedImage(image, govax)
+}
+
+// libraryDirectory is a volume file's device and directory: what its
+// name has before the file name ("DUA1:[000000]" of
+// "DUA1:[000000]MYSHR.OLB;1").
+func libraryDirectory(name string) string {
+	return name[:strings.LastIndexAny(name, ":]>")+1]
 }
 
 // ImageLocator is how LINK finds a shareable image's file

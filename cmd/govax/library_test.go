@@ -21,6 +21,7 @@ func TestLibraryCommand(t *testing.T) {
 		{"x", nil, libraryFlags{delete: []string{"a", "B*"}}, `LIBRARY "x"/DELETE=("a","B*")`},
 		{"x", nil, libraryFlags{extract: []string{"m"}, output: "o.mar"}, `LIBRARY "x"/EXTRACT=("m")/OUTPUT="o.mar"`},
 		{"x", nil, libraryFlags{list: true, listFile: "x.lis", full: true, names: true}, `LIBRARY "x"/LIST="x.lis"/FULL/NAMES`},
+		{"s", []string{"a.exe"}, libraryFlags{create: true, share: true}, `LIBRARY "s" "a.exe"/CREATE/SHARE`},
 	}
 
 	for _, c := range cases {

@@ -471,7 +471,9 @@ func (s *starletMacros) LibraryName() string {
 // openStarlet reads STARLET.MLB: SYS$LIBRARY's, the host library
 // directory's, or govax's own.
 func (c *Context) openStarlet() (asm.MacroLibrary, error) {
-	data, name, err := c.readLibraryFile("SYS$LIBRARY", "STARLET.MLB")
+	data, loc, err := c.readLibraryFile("SYS$LIBRARY", "STARLET.MLB")
+	name := loc.Name
+
 	if err != nil {
 		return nil, objectFailureAs(vmserrors.CLI_LIBRARY, err, name)
 	}

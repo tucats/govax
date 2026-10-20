@@ -45,7 +45,7 @@ type libraryFlags struct {
 	list                    bool     // --list, or --list-file
 	listFile                string   // --list-file
 	full, names             bool     // --full, --names
-	macro, object           bool     // --macro, --object
+	macro, object, share    bool     // --macro, --object, --share
 	noSqueeze               bool     // --no-squeeze
 	selective               bool     // --selective-search
 	log                     bool     // --log
@@ -79,6 +79,7 @@ type linkFlags struct {
 	noTraceback  bool   // --no-traceback
 	debug        bool   // --debug
 	noSysLib     bool   // --no-syslib
+	noUserLib    bool   // --no-userlibrary
 	mapWanted    bool   // --map, or --map-file
 	mapFile      string // --map-file
 	brief        bool   // --brief
@@ -460,6 +461,16 @@ var linkGrammar = []cli.Option{
 		},
 	},
 	{
+		LongName:    "no-userlibrary",
+		Description: "Don't search the default user libraries LNK$LIBRARY, LNK$LIBRARY_1, ...",
+		OptionType:  cli.BooleanType,
+		Action: func(c *cli.Context) error {
+			link.noUserLib = true
+
+			return nil
+		},
+	},
+	{
 		LongName:    "map",
 		Description: "Write a link map (default: the first object's name, with type .map)",
 		OptionType:  cli.BooleanType,
@@ -557,6 +568,7 @@ var libraryGrammar = []cli.Option{
 	libraryBool("names", "List each object module's global symbols", &library.names),
 	libraryBool("macro", "A macro library (.mlb)", &library.macro),
 	libraryBool("object", "An object library (.olb, the default)", &library.object),
+	libraryBool("share", "A shareable image library (.olb), whose inputs are shareable images", &library.share),
 	libraryBool("no-squeeze", "Keep macros' comments and trailing blanks", &library.noSqueeze),
 	libraryBool("selective-search", "Mark inserted object modules for selective search", &library.selective),
 	libraryBool("log", "Report each module inserted, replaced, or deleted", &library.log),
@@ -796,6 +808,10 @@ func linkCommand(objects []string, f linkFlags) string {
 		command += "/NOSYSLIB"
 	}
 
+	if f.noUserLib {
+		command += "/NOUSERLIBRARY"
+	}
+
 	switch {
 	case f.mapFile != "":
 		command += "/MAP=" + dclQuote(f.mapFile)
@@ -847,7 +863,7 @@ func libraryCommand(lib string, inputs []string, f libraryFlags) string {
 		name string
 	}{
 		{f.create, "/CREATE"}, {f.insert, "/INSERT"}, {f.replace, "/REPLACE"},
-		{f.macro, "/MACRO"}, {f.object, "/OBJECT"}, {f.noSqueeze, "/NOSQUEEZE"},
+		{f.macro, "/MACRO"}, {f.object, "/OBJECT"}, {f.share, "/SHARE"}, {f.noSqueeze, "/NOSQUEEZE"},
 		{f.selective, "/SELECTIVE_SEARCH"}, {f.log, "/LOG"},
 	} {
 		if q.set {
