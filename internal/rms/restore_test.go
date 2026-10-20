@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	"github.com/tucats/govax/internal/backup"
+	"github.com/tucats/ods2/filespec"
 	"github.com/tucats/ods2/ondisk"
 )
 
@@ -327,6 +328,45 @@ func TestRestoreVersions(t *testing.T) {
 	r, err := restore("DUA1:[R7]TEXT.TXT")
 	if err != nil || r.Name != "DUA1:[R7]TEXT.TXT;2" || len(r.Directories) != 0 {
 		t.Fatalf("restore with no version: %+v, %v; want ;2 and no directory made", r, err)
+	}
+}
+
+// TestRestoreEntryVersionLimit: a restored file's directory record has
+// its saved version limit, where VMS reads it (round 2's VERLIM.TXT), as
+// well as its header; a file saved without one has none.
+func TestRestoreEntryVersionLimit(t *testing.T) {
+	s := newRestoreSession(t, 2000, 1)
+	set := readSaveSet(t, "b69.bck")
+
+	for _, name := range []string{"[B69]VERLIM.TXT;1", "[B69]VERLIM.TXT;2", "[B69]TEXT.TXT;1"} {
+		target, err := s.Locate("DUA1:[R]", false)
+		if err != nil {
+			t.Fatal(err)
+		}
+
+		target.Name += strings.TrimPrefix(name, "[B69]")
+		if _, err := s.RestoreFile(target, savedFile(t, set, name), RestoreOptions{}); err != nil {
+			t.Fatalf("restoring %s: %v", name, err)
+		}
+	}
+
+	vol, _ := s.Mounts.Lookup("DUA1")
+
+	dir, err := filespec.ResolveDirectory(vol, []string{"R"})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	entries, err := dir.List()
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	want := map[string]uint16{"VERLIM.TXT": 3, "TEXT.TXT": ondisk.NoVersionLimit}
+	for _, e := range entries {
+		if e.VersionLimit != want[e.Name] {
+			t.Errorf("%s;%d: the record's limit is %d, want %d", e.Name, e.Version, e.VersionLimit, want[e.Name])
+		}
 	}
 }
 

@@ -63,7 +63,14 @@ func (c *Context) compareSaveSet(cmd BackupCommand) error {
 }
 
 // compare holds f up against the file at loc, with BACKUP's messages.
+// A saved directory file isn't compared, and nothing is said of it: VMS
+// V7.1's compares of govax's save sets passed over SUB1.DIR and SUB2.DIR
+// (round 2), whose blocks hold file IDs a restore makes anew.
 func (r *backupRestore) compare(f *backup.File, loc rms.FileLocation) {
+	if f.Directory() {
+		return
+	}
+
 	result, err := r.c.ContainerSession.CompareFile(loc, f)
 	if err != nil {
 		r.openInFailure(loc, err)

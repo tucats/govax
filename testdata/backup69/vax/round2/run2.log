@@ -1,0 +1,2195 @@
+$ WRITE SYS$OUTPUT F$GETSYI("VERSION"), " ", F$GETSYI("HW_NAME")
+V7.1     VAX 8600
+$ HERE = F$ENVIRONMENT("DEFAULT")
+$ SHOW DEFAULT
+  DUA1:[000000]
+$ !
+$ ! ------------------------------------------------------------------
+$ ! Part 1: the tree govax restored, as VMS sees its headers.
+$ ! ------------------------------------------------------------------
+$ !
+$ DIRECTORY/FULL/OUTPUT=[RESULTS]TREE2.LST [B69...]
+$ DIRECTORY/SIZE=ALL/DATE [B69...]
+
+Directory DUA1:[B69]
+
+ACL.TXT;1                  1/3        20-OCT-2026 11:55:35.79
+CONTIG.DAT;1              74/75       20-OCT-2026 11:55:35.88
+EMPTY.DAT;1                0/0        20-OCT-2026 11:55:35.02
+EXPIRE.TXT;1               1/3        20-OCT-2026 11:55:35.81
+FIX80.DAT;1                1/3        20-OCT-2026 11:55:34.98
+INDEXED.IDX;1              8/9        20-OCT-2026 11:55:35.01
+MULTI.TXT;3                1/3        20-OCT-2026 11:55:35.85
+MULTI.TXT;2                1/3        20-OCT-2026 11:55:35.84
+MULTI.TXT;1                1/3        20-OCT-2026 11:55:35.84
+NOBACK.TXT;1               1/3        20-OCT-2026 11:55:35.86
+OWNED.TXT;1                1/3        20-OCT-2026 11:55:35.85
+PI.EXE;1                   6/6        20-OCT-2026 11:55:35.21
+PI.OBJ;1                   5/6        20-OCT-2026 11:55:35.03
+PROT.TXT;1                 1/3        20-OCT-2026 11:55:35.87
+STMLF.TXT;1                1/3        20-OCT-2026 11:55:34.97
+SUB1.DIR;1                 1/3        20-OCT-2026 19:16:06.71
+TEXT.TXT;1                 1/3        20-OCT-2026 11:55:34.93
+VERLIM.TXT;2               1/3        20-OCT-2026 11:55:35.83
+VERLIM.TXT;1               1/3        20-OCT-2026 11:55:35.82
+VFC.TXT;1                  1/3        20-OCT-2026 11:55:34.99
+
+Total of 20 files, 108/141 blocks.
+
+Directory DUA1:[B69.SUB1]
+
+A.TXT;1                    1/3        20-OCT-2026 11:55:35.78
+MEDIUM.DAT;1              74/75       20-OCT-2026 11:55:35.22
+SUB2.DIR;1                 1/3        20-OCT-2026 19:16:06.72
+
+Total of 3 files, 76/81 blocks.
+
+Directory DUA1:[B69.SUB1.SUB2]
+
+B.TXT;1                    1/3        20-OCT-2026 11:55:35.79
+BIG.DAT;1                169/171      20-OCT-2026 11:55:35.39
+
+Total of 2 files, 170/174 blocks.
+
+Grand total of 3 directories, 25 files, 354/396 blocks.
+$ DIRECTORY/FULL/OUTPUT=[RESULTS]SETS2.LST [SETS]*.BCK
+$ DIRECTORY/SIZE=ALL [SETS]
+
+Directory DUA1:[SETS]
+
+B69.BCK;1                441/441    
+B69BYO.BCK;1             126/126    
+B69COM.BCK;1             441/441    
+B69CRC.BCK;1             441/441    
+B69EXC.BCK;1             126/126    
+B69G0.BCK;1              378/378    
+B69G3.BCK;1              504/504    
+B69IGN.BCK;1             126/126    
+B69K8.BCK;1              448/450    
+B69NOCRC.BCK;1           441/441    
+B69NONE.BCK;1            126/126    
+B69OWN.BCK;1             126/126    
+B69TXT.BCK;1             126/126    
+HOST.BCK;1               441/441    
+LIST.BCK;1               189/189    
+TEXT.BCK;1               126/126    
+
+Total of 16 files, 4606/4608 blocks.
+$ !
+$ ! ------------------------------------------------------------------
+$ ! Part 2: listings of govax's save sets.
+$ ! ------------------------------------------------------------------
+$ !
+$ LIST = "B69,B69K8,B69G0,B69G3,B69CRC,B69NOCRC,B69COM,B69EXC,B69BYO,B69TXT,B69NONE,TEXT,B69OWN,LIST,B69IGN,HOST"
+$ I = 0
+$ LIST_LOOP:
+$   F = F$ELEMENT(I, ",", LIST)
+$   IF F .EQS. "," THEN GOTO LIST_DONE
+$   BACKUP/LIST [SETS]B69.BCK/SAVE_SET
+Listing of save set(s)
+
+Save set:          B69.BCK
+Written by:        SYSTEM      
+UIC:               [000001,000004]
+Date:              20-OCT-2026 19:16:06.72
+Command:           BACKUP/LOG [B69...]*.* [SETS]B69.BCK/SAVE_SET
+Operating system:  OpenVMS VAX version V7.3
+BACKUP version:    V6.2
+Written on:        _GOVAX$DUA1:
+Block size:        32256
+Group size:        10
+Buffer count:      8
+
+[B69]ACL.TXT;1                                              1  20-OCT-2026 11:55
+[B69]CONTIG.DAT;1                                          74  20-OCT-2026 11:55
+[B69]EMPTY.DAT;1                                            0  20-OCT-2026 11:55
+[B69]EXPIRE.TXT;1                                           1  20-OCT-2026 11:55
+[B69]FIX80.DAT;1                                            1  20-OCT-2026 11:55
+[B69]INDEXED.IDX;1                                          8  20-OCT-2026 11:55
+[B69]MULTI.TXT;3                                            1  20-OCT-2026 11:55
+[B69]MULTI.TXT;2                                            1  20-OCT-2026 11:55
+[B69]MULTI.TXT;1                                            1  20-OCT-2026 11:55
+[B69]NOBACK.TXT;1                                           1  20-OCT-2026 11:55
+[B69]OWNED.TXT;1                                            1  20-OCT-2026 11:55
+[B69]PI.EXE;1                                               6  20-OCT-2026 11:55
+[B69]PI.OBJ;1                                               5  20-OCT-2026 11:55
+[B69]PROT.TXT;1                                             1  20-OCT-2026 11:55
+[B69]STMLF.TXT;1                                            1  20-OCT-2026 11:55
+[B69]SUB1.DIR;1                                             1  20-OCT-2026 19:16
+[B69.SUB1]A.TXT;1                                           1  20-OCT-2026 11:55
+[B69.SUB1]MEDIUM.DAT;1                                     74  20-OCT-2026 11:55
+[B69.SUB1]SUB2.DIR;1                                        1  20-OCT-2026 19:16
+[B69.SUB1.SUB2]B.TXT;1                                      1  20-OCT-2026 11:55
+[B69.SUB1.SUB2]BIG.DAT;1                                  169  20-OCT-2026 11:55
+[B69]TEXT.TXT;1                                             1  20-OCT-2026 11:55
+[B69]VERLIM.TXT;2                                           1  20-OCT-2026 11:55
+[B69]VERLIM.TXT;1                                           1  20-OCT-2026 11:55
+[B69]VFC.TXT;1                                              1  20-OCT-2026 11:55
+
+Total of 25 files, 354 blocks
+End of save set
+
+$   SHOW SYMBOL $STATUS
+  $STATUS == "%X10000001"
+$   I = I + 1
+$   GOTO LIST_LOOP
+$ LIST_LOOP:
+$   F = F$ELEMENT(I, ",", LIST)
+$   IF F .EQS. "," THEN GOTO LIST_DONE
+$   BACKUP/LIST [SETS]B69K8.BCK/SAVE_SET
+Listing of save set(s)
+
+Save set:          B69K8.BCK
+Written by:        SYSTEM      
+UIC:               [000001,000004]
+Date:              20-OCT-2026 19:16:06.72
+Command:           BACKUP [B69...]*.* [SETS]B69K8.BCK/SAVE_SET/BLOCK_SIZE=8192
+Operating system:  OpenVMS VAX version V7.3
+BACKUP version:    V6.2
+Written on:        _GOVAX$DUA1:
+Block size:        8192
+Group size:        10
+Buffer count:      32
+
+[B69]ACL.TXT;1                                              1  20-OCT-2026 11:55
+[B69]CONTIG.DAT;1                                          74  20-OCT-2026 11:55
+[B69]EMPTY.DAT;1                                            0  20-OCT-2026 11:55
+[B69]EXPIRE.TXT;1                                           1  20-OCT-2026 11:55
+[B69]FIX80.DAT;1                                            1  20-OCT-2026 11:55
+[B69]INDEXED.IDX;1                                          8  20-OCT-2026 11:55
+[B69]MULTI.TXT;3                                            1  20-OCT-2026 11:55
+[B69]MULTI.TXT;2                                            1  20-OCT-2026 11:55
+[B69]MULTI.TXT;1                                            1  20-OCT-2026 11:55
+[B69]NOBACK.TXT;1                                           1  20-OCT-2026 11:55
+[B69]OWNED.TXT;1                                            1  20-OCT-2026 11:55
+[B69]PI.EXE;1                                               6  20-OCT-2026 11:55
+[B69]PI.OBJ;1                                               5  20-OCT-2026 11:55
+[B69]PROT.TXT;1                                             1  20-OCT-2026 11:55
+[B69]STMLF.TXT;1                                            1  20-OCT-2026 11:55
+[B69]SUB1.DIR;1                                             1  20-OCT-2026 19:16
+[B69.SUB1]A.TXT;1                                           1  20-OCT-2026 11:55
+[B69.SUB1]MEDIUM.DAT;1                                     74  20-OCT-2026 11:55
+[B69.SUB1]SUB2.DIR;1                                        1  20-OCT-2026 19:16
+[B69.SUB1.SUB2]B.TXT;1                                      1  20-OCT-2026 11:55
+[B69.SUB1.SUB2]BIG.DAT;1                                  169  20-OCT-2026 11:55
+[B69]TEXT.TXT;1                                             1  20-OCT-2026 11:55
+[B69]VERLIM.TXT;2                                           1  20-OCT-2026 11:55
+[B69]VERLIM.TXT;1                                           1  20-OCT-2026 11:55
+[B69]VFC.TXT;1                                              1  20-OCT-2026 11:55
+
+Total of 25 files, 354 blocks
+End of save set
+
+$   SHOW SYMBOL $STATUS
+  $STATUS == "%X10000001"
+$   I = I + 1
+$   GOTO LIST_LOOP
+$ LIST_LOOP:
+$   F = F$ELEMENT(I, ",", LIST)
+$   IF F .EQS. "," THEN GOTO LIST_DONE
+$   BACKUP/LIST [SETS]B69G0.BCK/SAVE_SET
+Listing of save set(s)
+
+Save set:          B69G0.BCK
+Written by:        SYSTEM      
+UIC:               [000001,000004]
+Date:              20-OCT-2026 19:16:06.72
+Command:           BACKUP [B69...]*.* [SETS]B69G0.BCK/SAVE_SET/GROUP_SIZE=0
+Operating system:  OpenVMS VAX version V7.3
+BACKUP version:    V6.2
+Written on:        _GOVAX$DUA1:
+Block size:        32256
+Buffer count:      8
+
+[B69]ACL.TXT;1                                              1  20-OCT-2026 11:55
+[B69]CONTIG.DAT;1                                          74  20-OCT-2026 11:55
+[B69]EMPTY.DAT;1                                            0  20-OCT-2026 11:55
+[B69]EXPIRE.TXT;1                                           1  20-OCT-2026 11:55
+[B69]FIX80.DAT;1                                            1  20-OCT-2026 11:55
+[B69]INDEXED.IDX;1                                          8  20-OCT-2026 11:55
+[B69]MULTI.TXT;3                                            1  20-OCT-2026 11:55
+[B69]MULTI.TXT;2                                            1  20-OCT-2026 11:55
+[B69]MULTI.TXT;1                                            1  20-OCT-2026 11:55
+[B69]NOBACK.TXT;1                                           1  20-OCT-2026 11:55
+[B69]OWNED.TXT;1                                            1  20-OCT-2026 11:55
+[B69]PI.EXE;1                                               6  20-OCT-2026 11:55
+[B69]PI.OBJ;1                                               5  20-OCT-2026 11:55
+[B69]PROT.TXT;1                                             1  20-OCT-2026 11:55
+[B69]STMLF.TXT;1                                            1  20-OCT-2026 11:55
+[B69]SUB1.DIR;1                                             1  20-OCT-2026 19:16
+[B69.SUB1]A.TXT;1                                           1  20-OCT-2026 11:55
+[B69.SUB1]MEDIUM.DAT;1                                     74  20-OCT-2026 11:55
+[B69.SUB1]SUB2.DIR;1                                        1  20-OCT-2026 19:16
+[B69.SUB1.SUB2]B.TXT;1                                      1  20-OCT-2026 11:55
+[B69.SUB1.SUB2]BIG.DAT;1                                  169  20-OCT-2026 11:55
+[B69]TEXT.TXT;1                                             1  20-OCT-2026 11:55
+[B69]VERLIM.TXT;2                                           1  20-OCT-2026 11:55
+[B69]VERLIM.TXT;1                                           1  20-OCT-2026 11:55
+[B69]VFC.TXT;1                                              1  20-OCT-2026 11:55
+
+Total of 25 files, 354 blocks
+End of save set
+
+$   SHOW SYMBOL $STATUS
+  $STATUS == "%X10000001"
+$   I = I + 1
+$   GOTO LIST_LOOP
+$ LIST_LOOP:
+$   F = F$ELEMENT(I, ",", LIST)
+$   IF F .EQS. "," THEN GOTO LIST_DONE
+$   BACKUP/LIST [SETS]B69G3.BCK/SAVE_SET
+Listing of save set(s)
+
+Save set:          B69G3.BCK
+Written by:        SYSTEM      
+UIC:               [000001,000004]
+Date:              20-OCT-2026 19:16:06.72
+Command:           BACKUP [B69...]*.* [SETS]B69G3.BCK/SAVE_SET/GROUP_SIZE=3
+Operating system:  OpenVMS VAX version V7.3
+BACKUP version:    V6.2
+Written on:        _GOVAX$DUA1:
+Block size:        32256
+Group size:        3
+Buffer count:      8
+
+[B69]ACL.TXT;1                                              1  20-OCT-2026 11:55
+[B69]CONTIG.DAT;1                                          74  20-OCT-2026 11:55
+[B69]EMPTY.DAT;1                                            0  20-OCT-2026 11:55
+[B69]EXPIRE.TXT;1                                           1  20-OCT-2026 11:55
+[B69]FIX80.DAT;1                                            1  20-OCT-2026 11:55
+[B69]INDEXED.IDX;1                                          8  20-OCT-2026 11:55
+[B69]MULTI.TXT;3                                            1  20-OCT-2026 11:55
+[B69]MULTI.TXT;2                                            1  20-OCT-2026 11:55
+[B69]MULTI.TXT;1                                            1  20-OCT-2026 11:55
+[B69]NOBACK.TXT;1                                           1  20-OCT-2026 11:55
+[B69]OWNED.TXT;1                                            1  20-OCT-2026 11:55
+[B69]PI.EXE;1                                               6  20-OCT-2026 11:55
+[B69]PI.OBJ;1                                               5  20-OCT-2026 11:55
+[B69]PROT.TXT;1                                             1  20-OCT-2026 11:55
+[B69]STMLF.TXT;1                                            1  20-OCT-2026 11:55
+[B69]SUB1.DIR;1                                             1  20-OCT-2026 19:16
+[B69.SUB1]A.TXT;1                                           1  20-OCT-2026 11:55
+[B69.SUB1]MEDIUM.DAT;1                                     74  20-OCT-2026 11:55
+[B69.SUB1]SUB2.DIR;1                                        1  20-OCT-2026 19:16
+[B69.SUB1.SUB2]B.TXT;1                                      1  20-OCT-2026 11:55
+[B69.SUB1.SUB2]BIG.DAT;1                                  169  20-OCT-2026 11:55
+[B69]TEXT.TXT;1                                             1  20-OCT-2026 11:55
+[B69]VERLIM.TXT;2                                           1  20-OCT-2026 11:55
+[B69]VERLIM.TXT;1                                           1  20-OCT-2026 11:55
+[B69]VFC.TXT;1                                              1  20-OCT-2026 11:55
+
+Total of 25 files, 354 blocks
+End of save set
+
+$   SHOW SYMBOL $STATUS
+  $STATUS == "%X10000001"
+$   I = I + 1
+$   GOTO LIST_LOOP
+$ LIST_LOOP:
+$   F = F$ELEMENT(I, ",", LIST)
+$   IF F .EQS. "," THEN GOTO LIST_DONE
+$   BACKUP/LIST [SETS]B69CRC.BCK/SAVE_SET
+Listing of save set(s)
+
+Save set:          B69CRC.BCK
+Written by:        SYSTEM      
+UIC:               [000001,000004]
+Date:              20-OCT-2026 19:16:06.72
+Command:           BACKUP [B69...]*.* [SETS]B69CRC.BCK/SAVE_SET/CRC
+Operating system:  OpenVMS VAX version V7.3
+BACKUP version:    V6.2
+Written on:        _GOVAX$DUA1:
+Block size:        32256
+Group size:        10
+Buffer count:      8
+
+[B69]ACL.TXT;1                                              1  20-OCT-2026 11:55
+[B69]CONTIG.DAT;1                                          74  20-OCT-2026 11:55
+[B69]EMPTY.DAT;1                                            0  20-OCT-2026 11:55
+[B69]EXPIRE.TXT;1                                           1  20-OCT-2026 11:55
+[B69]FIX80.DAT;1                                            1  20-OCT-2026 11:55
+[B69]INDEXED.IDX;1                                          8  20-OCT-2026 11:55
+[B69]MULTI.TXT;3                                            1  20-OCT-2026 11:55
+[B69]MULTI.TXT;2                                            1  20-OCT-2026 11:55
+[B69]MULTI.TXT;1                                            1  20-OCT-2026 11:55
+[B69]NOBACK.TXT;1                                           1  20-OCT-2026 11:55
+[B69]OWNED.TXT;1                                            1  20-OCT-2026 11:55
+[B69]PI.EXE;1                                               6  20-OCT-2026 11:55
+[B69]PI.OBJ;1                                               5  20-OCT-2026 11:55
+[B69]PROT.TXT;1                                             1  20-OCT-2026 11:55
+[B69]STMLF.TXT;1                                            1  20-OCT-2026 11:55
+[B69]SUB1.DIR;1                                             1  20-OCT-2026 19:16
+[B69.SUB1]A.TXT;1                                           1  20-OCT-2026 11:55
+[B69.SUB1]MEDIUM.DAT;1                                     74  20-OCT-2026 11:55
+[B69.SUB1]SUB2.DIR;1                                        1  20-OCT-2026 19:16
+[B69.SUB1.SUB2]B.TXT;1                                      1  20-OCT-2026 11:55
+[B69.SUB1.SUB2]BIG.DAT;1                                  169  20-OCT-2026 11:55
+[B69]TEXT.TXT;1                                             1  20-OCT-2026 11:55
+[B69]VERLIM.TXT;2                                           1  20-OCT-2026 11:55
+[B69]VERLIM.TXT;1                                           1  20-OCT-2026 11:55
+[B69]VFC.TXT;1                                              1  20-OCT-2026 11:55
+
+Total of 25 files, 354 blocks
+End of save set
+
+$   SHOW SYMBOL $STATUS
+  $STATUS == "%X10000001"
+$   I = I + 1
+$   GOTO LIST_LOOP
+$ LIST_LOOP:
+$   F = F$ELEMENT(I, ",", LIST)
+$   IF F .EQS. "," THEN GOTO LIST_DONE
+$   BACKUP/LIST [SETS]B69NOCRC.BCK/SAVE_SET
+Listing of save set(s)
+
+Save set:          B69NOCRC.BCK
+Written by:        SYSTEM      
+UIC:               [000001,000004]
+Date:              20-OCT-2026 19:16:06.72
+Command:           BACKUP [B69...]*.* [SETS]B69NOCRC.BCK/SAVE_SET/NOCRC
+Operating system:  OpenVMS VAX version V7.3
+BACKUP version:    V6.2
+Written on:        _GOVAX$DUA1:
+Block size:        32256
+Group size:        10
+Buffer count:      8
+
+[B69]ACL.TXT;1                                              1  20-OCT-2026 11:55
+[B69]CONTIG.DAT;1                                          74  20-OCT-2026 11:55
+[B69]EMPTY.DAT;1                                            0  20-OCT-2026 11:55
+[B69]EXPIRE.TXT;1                                           1  20-OCT-2026 11:55
+[B69]FIX80.DAT;1                                            1  20-OCT-2026 11:55
+[B69]INDEXED.IDX;1                                          8  20-OCT-2026 11:55
+[B69]MULTI.TXT;3                                            1  20-OCT-2026 11:55
+[B69]MULTI.TXT;2                                            1  20-OCT-2026 11:55
+[B69]MULTI.TXT;1                                            1  20-OCT-2026 11:55
+[B69]NOBACK.TXT;1                                           1  20-OCT-2026 11:55
+[B69]OWNED.TXT;1                                            1  20-OCT-2026 11:55
+[B69]PI.EXE;1                                               6  20-OCT-2026 11:55
+[B69]PI.OBJ;1                                               5  20-OCT-2026 11:55
+[B69]PROT.TXT;1                                             1  20-OCT-2026 11:55
+[B69]STMLF.TXT;1                                            1  20-OCT-2026 11:55
+[B69]SUB1.DIR;1                                             1  20-OCT-2026 19:16
+[B69.SUB1]A.TXT;1                                           1  20-OCT-2026 11:55
+[B69.SUB1]MEDIUM.DAT;1                                     74  20-OCT-2026 11:55
+[B69.SUB1]SUB2.DIR;1                                        1  20-OCT-2026 19:16
+[B69.SUB1.SUB2]B.TXT;1                                      1  20-OCT-2026 11:55
+[B69.SUB1.SUB2]BIG.DAT;1                                  169  20-OCT-2026 11:55
+[B69]TEXT.TXT;1                                             1  20-OCT-2026 11:55
+[B69]VERLIM.TXT;2                                           1  20-OCT-2026 11:55
+[B69]VERLIM.TXT;1                                           1  20-OCT-2026 11:55
+[B69]VFC.TXT;1                                              1  20-OCT-2026 11:55
+
+Total of 25 files, 354 blocks
+End of save set
+
+$   SHOW SYMBOL $STATUS
+  $STATUS == "%X10000001"
+$   I = I + 1
+$   GOTO LIST_LOOP
+$ LIST_LOOP:
+$   F = F$ELEMENT(I, ",", LIST)
+$   IF F .EQS. "," THEN GOTO LIST_DONE
+$   BACKUP/LIST [SETS]B69COM.BCK/SAVE_SET
+Listing of save set(s)
+
+Save set:          B69COM.BCK
+Written by:        SYSTEM      
+UIC:               [000001,000004]
+Date:              20-OCT-2026 19:16:06.72
+Command:           BACKUP [B69...]*.* [SETS]B69COM.BCK/SAVE_SET/COMMENT=Phase 69's probe, with a comment
+Operating system:  OpenVMS VAX version V7.3
+BACKUP version:    V6.2
+Written on:        _GOVAX$DUA1:
+Block size:        32256
+Group size:        10
+Buffer count:      8
+
+[B69]ACL.TXT;1                                              1  20-OCT-2026 11:55
+[B69]CONTIG.DAT;1                                          74  20-OCT-2026 11:55
+[B69]EMPTY.DAT;1                                            0  20-OCT-2026 11:55
+[B69]EXPIRE.TXT;1                                           1  20-OCT-2026 11:55
+[B69]FIX80.DAT;1                                            1  20-OCT-2026 11:55
+[B69]INDEXED.IDX;1                                          8  20-OCT-2026 11:55
+[B69]MULTI.TXT;3                                            1  20-OCT-2026 11:55
+[B69]MULTI.TXT;2                                            1  20-OCT-2026 11:55
+[B69]MULTI.TXT;1                                            1  20-OCT-2026 11:55
+[B69]NOBACK.TXT;1                                           1  20-OCT-2026 11:55
+[B69]OWNED.TXT;1                                            1  20-OCT-2026 11:55
+[B69]PI.EXE;1                                               6  20-OCT-2026 11:55
+[B69]PI.OBJ;1                                               5  20-OCT-2026 11:55
+[B69]PROT.TXT;1                                             1  20-OCT-2026 11:55
+[B69]STMLF.TXT;1                                            1  20-OCT-2026 11:55
+[B69]SUB1.DIR;1                                             1  20-OCT-2026 19:16
+[B69.SUB1]A.TXT;1                                           1  20-OCT-2026 11:55
+[B69.SUB1]MEDIUM.DAT;1                                     74  20-OCT-2026 11:55
+[B69.SUB1]SUB2.DIR;1                                        1  20-OCT-2026 19:16
+[B69.SUB1.SUB2]B.TXT;1                                      1  20-OCT-2026 11:55
+[B69.SUB1.SUB2]BIG.DAT;1                                  169  20-OCT-2026 11:55
+[B69]TEXT.TXT;1                                             1  20-OCT-2026 11:55
+[B69]VERLIM.TXT;2                                           1  20-OCT-2026 11:55
+[B69]VERLIM.TXT;1                                           1  20-OCT-2026 11:55
+[B69]VFC.TXT;1                                              1  20-OCT-2026 11:55
+
+Total of 25 files, 354 blocks
+End of save set
+
+$   SHOW SYMBOL $STATUS
+  $STATUS == "%X10000001"
+$   I = I + 1
+$   GOTO LIST_LOOP
+$ LIST_LOOP:
+$   F = F$ELEMENT(I, ",", LIST)
+$   IF F .EQS. "," THEN GOTO LIST_DONE
+$   BACKUP/LIST [SETS]B69EXC.BCK/SAVE_SET
+Listing of save set(s)
+
+Save set:          B69EXC.BCK
+Written by:        SYSTEM      
+UIC:               [000001,000004]
+Date:              20-OCT-2026 19:16:06.72
+Command:           BACKUP [B69...]*.*/EXCLUDE=(*.DAT,[B69.SUB1.SUB2]*.*) [SETS]B69EXC.BCK/SAVE_SET
+Operating system:  OpenVMS VAX version V7.3
+BACKUP version:    V6.2
+Written on:        _GOVAX$DUA1:
+Block size:        32256
+Group size:        10
+Buffer count:      8
+
+[B69]ACL.TXT;1                                              1  20-OCT-2026 11:55
+[B69]EXPIRE.TXT;1                                           1  20-OCT-2026 11:55
+[B69]INDEXED.IDX;1                                          8  20-OCT-2026 11:55
+[B69]MULTI.TXT;3                                            1  20-OCT-2026 11:55
+[B69]MULTI.TXT;2                                            1  20-OCT-2026 11:55
+[B69]MULTI.TXT;1                                            1  20-OCT-2026 11:55
+[B69]NOBACK.TXT;1                                           1  20-OCT-2026 11:55
+[B69]OWNED.TXT;1                                            1  20-OCT-2026 11:55
+[B69]PI.EXE;1                                               6  20-OCT-2026 11:55
+[B69]PI.OBJ;1                                               5  20-OCT-2026 11:55
+[B69]PROT.TXT;1                                             1  20-OCT-2026 11:55
+[B69]STMLF.TXT;1                                            1  20-OCT-2026 11:55
+[B69]SUB1.DIR;1                                             1  20-OCT-2026 19:16
+[B69.SUB1]A.TXT;1                                           1  20-OCT-2026 11:55
+[B69.SUB1]SUB2.DIR;1                                        1  20-OCT-2026 19:16
+[B69]TEXT.TXT;1                                             1  20-OCT-2026 11:55
+[B69]VERLIM.TXT;2                                           1  20-OCT-2026 11:55
+[B69]VERLIM.TXT;1                                           1  20-OCT-2026 11:55
+[B69]VFC.TXT;1                                              1  20-OCT-2026 11:55
+
+Total of 19 files, 35 blocks
+End of save set
+
+$   SHOW SYMBOL $STATUS
+  $STATUS == "%X10000001"
+$   I = I + 1
+$   GOTO LIST_LOOP
+$ LIST_LOOP:
+$   F = F$ELEMENT(I, ",", LIST)
+$   IF F .EQS. "," THEN GOTO LIST_DONE
+$   BACKUP/LIST [SETS]B69BYO.BCK/SAVE_SET
+Listing of save set(s)
+
+Save set:          B69BYO.BCK
+Written by:        SYSTEM      
+UIC:               [000001,000004]
+Date:              20-OCT-2026 19:16:06.73
+Command:           BACKUP [B69...]*.*/BY_OWNER=[200,201] [SETS]B69BYO.BCK/SAVE_SET
+Operating system:  OpenVMS VAX version V7.3
+BACKUP version:    V6.2
+Written on:        _GOVAX$DUA1:
+Block size:        32256
+Group size:        10
+Buffer count:      8
+
+[B69]OWNED.TXT;1                                            1  20-OCT-2026 11:55
+[B69]SUB1.DIR;1                                             1  20-OCT-2026 19:16
+[B69.SUB1]SUB2.DIR;1                                        1  20-OCT-2026 19:16
+
+Total of 3 files, 3 blocks
+End of save set
+
+$   SHOW SYMBOL $STATUS
+  $STATUS == "%X10000001"
+$   I = I + 1
+$   GOTO LIST_LOOP
+$ LIST_LOOP:
+$   F = F$ELEMENT(I, ",", LIST)
+$   IF F .EQS. "," THEN GOTO LIST_DONE
+$   BACKUP/LIST [SETS]B69TXT.BCK/SAVE_SET
+Listing of save set(s)
+
+Save set:          B69TXT.BCK
+Written by:        SYSTEM      
+UIC:               [000001,000004]
+Date:              20-OCT-2026 19:16:06.73
+Command:           BACKUP [B69]*.TXT;*/SINCE=20-OCT-2026 [SETS]B69TXT.BCK/SAVE_SET
+Operating system:  OpenVMS VAX version V7.3
+BACKUP version:    V6.2
+Written on:        _GOVAX$DUA1:
+Block size:        32256
+Group size:        10
+Buffer count:      8
+
+[B69]ACL.TXT;1                                              1  20-OCT-2026 11:55
+[B69]EXPIRE.TXT;1                                           1  20-OCT-2026 11:55
+[B69]MULTI.TXT;3                                            1  20-OCT-2026 11:55
+[B69]MULTI.TXT;2                                            1  20-OCT-2026 11:55
+[B69]MULTI.TXT;1                                            1  20-OCT-2026 11:55
+[B69]NOBACK.TXT;1                                           1  20-OCT-2026 11:55
+[B69]OWNED.TXT;1                                            1  20-OCT-2026 11:55
+[B69]PROT.TXT;1                                             1  20-OCT-2026 11:55
+[B69]STMLF.TXT;1                                            1  20-OCT-2026 11:55
+[B69]TEXT.TXT;1                                             1  20-OCT-2026 11:55
+[B69]VERLIM.TXT;2                                           1  20-OCT-2026 11:55
+[B69]VERLIM.TXT;1                                           1  20-OCT-2026 11:55
+[B69]VFC.TXT;1                                              1  20-OCT-2026 11:55
+
+Total of 13 files, 13 blocks
+End of save set
+
+$   SHOW SYMBOL $STATUS
+  $STATUS == "%X10000001"
+$   I = I + 1
+$   GOTO LIST_LOOP
+$ LIST_LOOP:
+$   F = F$ELEMENT(I, ",", LIST)
+$   IF F .EQS. "," THEN GOTO LIST_DONE
+$   BACKUP/LIST [SETS]B69NONE.BCK/SAVE_SET
+Listing of save set(s)
+
+Save set:          B69NONE.BCK
+Written by:        SYSTEM      
+UIC:               [000001,000004]
+Date:              20-OCT-2026 19:16:06.73
+Command:           BACKUP/LOG [B69...]*.*/BEFORE=20-OCT-2026 [SETS]B69NONE.BCK/SAVE_SET
+Operating system:  OpenVMS VAX version V7.3
+BACKUP version:    V6.2
+Written on:        _GOVAX$DUA1:
+Block size:        32256
+Group size:        10
+Buffer count:      8
+
+[B69]SUB1.DIR;1                                             1  20-OCT-2026 19:16
+[B69.SUB1]SUB2.DIR;1                                        1  20-OCT-2026 19:16
+
+Total of 2 files, 2 blocks
+End of save set
+
+$   SHOW SYMBOL $STATUS
+  $STATUS == "%X10000001"
+$   I = I + 1
+$   GOTO LIST_LOOP
+$ LIST_LOOP:
+$   F = F$ELEMENT(I, ",", LIST)
+$   IF F .EQS. "," THEN GOTO LIST_DONE
+$   BACKUP/LIST [SETS]TEXT.BCK/SAVE_SET
+Listing of save set(s)
+
+Save set:          TEXT.BCK
+Written by:        SYSTEM      
+UIC:               [000001,000004]
+Date:              20-OCT-2026 19:16:06.73
+Command:           BACKUP [B69]TEXT.TXT [SETS]TEXT.BCK/SAVE_SET
+Operating system:  OpenVMS VAX version V7.3
+BACKUP version:    V6.2
+Written on:        _GOVAX$DUA1:
+Block size:        32256
+Group size:        10
+Buffer count:      8
+
+[B69]TEXT.TXT;1                                             1  20-OCT-2026 11:55
+
+Total of 1 file, 1 block
+End of save set
+
+$   SHOW SYMBOL $STATUS
+  $STATUS == "%X10000001"
+$   I = I + 1
+$   GOTO LIST_LOOP
+$ LIST_LOOP:
+$   F = F$ELEMENT(I, ",", LIST)
+$   IF F .EQS. "," THEN GOTO LIST_DONE
+$   BACKUP/LIST [SETS]B69OWN.BCK/SAVE_SET
+Listing of save set(s)
+
+Save set:          B69OWN.BCK
+Written by:        SYSTEM      
+UIC:               [000001,000004]
+Date:              20-OCT-2026 19:16:06.73
+Command:           BACKUP [B69]TEXT.TXT [SETS]B69OWN.BCK/SAVE_SET/BY_OWNER=[200,201]
+Operating system:  OpenVMS VAX version V7.3
+BACKUP version:    V6.2
+Written on:        _GOVAX$DUA1:
+Block size:        32256
+Group size:        10
+Buffer count:      8
+
+[B69]TEXT.TXT;1                                             1  20-OCT-2026 11:55
+
+Total of 1 file, 1 block
+End of save set
+
+$   SHOW SYMBOL $STATUS
+  $STATUS == "%X10000001"
+$   I = I + 1
+$   GOTO LIST_LOOP
+$ LIST_LOOP:
+$   F = F$ELEMENT(I, ",", LIST)
+$   IF F .EQS. "," THEN GOTO LIST_DONE
+$   BACKUP/LIST [SETS]LIST.BCK/SAVE_SET
+Listing of save set(s)
+
+Save set:          LIST.BCK
+Written by:        SYSTEM      
+UIC:               [000001,000004]
+Date:              20-OCT-2026 19:16:06.73
+Command:           BACKUP [B69]TEXT.TXT,[B69.SUB1]A.TXT [SETS]LIST.BCK/SAVE_SET
+Operating system:  OpenVMS VAX version V7.3
+BACKUP version:    V6.2
+Written on:        _GOVAX$DUA1:
+Block size:        32256
+Group size:        10
+Buffer count:      8
+
+[B69]TEXT.TXT;1                                             1  20-OCT-2026 11:55
+[B69.SUB1]A.TXT;1                                           1  20-OCT-2026 11:55
+
+Total of 2 files, 2 blocks
+End of save set
+
+$   SHOW SYMBOL $STATUS
+  $STATUS == "%X10000001"
+$   I = I + 1
+$   GOTO LIST_LOOP
+$ LIST_LOOP:
+$   F = F$ELEMENT(I, ",", LIST)
+$   IF F .EQS. "," THEN GOTO LIST_DONE
+$   BACKUP/LIST [SETS]B69IGN.BCK/SAVE_SET
+Listing of save set(s)
+
+Save set:          B69IGN.BCK
+Written by:        SYSTEM      
+UIC:               [000001,000004]
+Date:              20-OCT-2026 19:16:06.73
+Command:           BACKUP [B69]NOBACK.TXT/IGNORE=NOBACKUP [SETS]B69IGN.BCK/SAVE_SET
+Operating system:  OpenVMS VAX version V7.3
+BACKUP version:    V6.2
+Written on:        _GOVAX$DUA1:
+Block size:        32256
+Group size:        10
+Buffer count:      8
+
+[B69]NOBACK.TXT;1                                           1  20-OCT-2026 11:55
+
+Total of 1 file, 1 block
+End of save set
+
+$   SHOW SYMBOL $STATUS
+  $STATUS == "%X10000001"
+$   I = I + 1
+$   GOTO LIST_LOOP
+$ LIST_LOOP:
+$   F = F$ELEMENT(I, ",", LIST)
+$   IF F .EQS. "," THEN GOTO LIST_DONE
+$   BACKUP/LIST [SETS]HOST.BCK/SAVE_SET
+Listing of save set(s)
+
+%BACKUP-F-NOTSAVESET, DUA1:[SETS]HOST.BCK;1 is not a BACKUP save set
+$   SHOW SYMBOL $STATUS
+  $STATUS == "%X10A38104"
+$   I = I + 1
+$   GOTO LIST_LOOP
+$ LIST_LOOP:
+$   F = F$ELEMENT(I, ",", LIST)
+$   IF F .EQS. "," THEN GOTO LIST_DONE
+$ LIST_DONE:
+$ BACKUP/LIST/FULL [SETS]B69.BCK/SAVE_SET
+Listing of save set(s)
+
+Save set:          B69.BCK
+Written by:        SYSTEM      
+UIC:               [000001,000004]
+Date:              20-OCT-2026 19:16:06.72
+Command:           BACKUP/LOG [B69...]*.* [SETS]B69.BCK/SAVE_SET
+Operating system:  OpenVMS VAX version V7.3
+BACKUP version:    V6.2
+Written on:        _GOVAX$DUA1:
+Block size:        32256
+Group size:        10
+Buffer count:      8
+
+[B69]ACL.TXT;1        Size:       1/3         Created: 20-OCT-2026 11:55
+                      Owner: [000001,000004]  Revised: 20-OCT-2026 11:55 (2)
+                      File ID: (12,1,1)       Expires: <None specified>
+                                              Backup:  <No backup done>
+  File protection:    System:RWED, Owner:RWED, Group:RE, World:
+  File organization:  Sequential
+  File attributes:    Allocation = 3, Extend = 0
+                      Global Buffer Count = 0
+  Record format:      Variable length
+  Record attributes:  Carriage return
+
+[B69]CONTIG.DAT;1     Size:      74/75        Created: 20-OCT-2026 11:55
+                      Owner: [000001,000004]  Revised: 20-OCT-2026 11:55 (1)
+                      File ID: (13,1,1)       Expires: <None specified>
+                                              Backup:  <No backup done>
+  File protection:    System:RWED, Owner:RWED, Group:RE, World:
+  File organization:  Sequential
+  File attributes:    Allocation = 75, Extend = 0
+                      Global Buffer Count = 0, Contiguous
+  Record format:      VFC, 2 byte header
+  Record attributes:  Print file format
+
+[B69]EMPTY.DAT;1      Size:       0/0         Created: 20-OCT-2026 11:55
+                      Owner: [000001,000004]  Revised: 20-OCT-2026 11:55 (1)
+                      File ID: (14,1,1)       Expires: <None specified>
+                                              Backup:  <No backup done>
+  File protection:    System:RWED, Owner:RWED, Group:RE, World:
+  File organization:  Sequential
+  File attributes:    Allocation = 0, Extend = 0
+                      Global Buffer Count = 0
+  Record format:      Variable length
+  Record attributes:  Carriage return
+
+[B69]EXPIRE.TXT;1     Size:       1/3         Created: 20-OCT-2026 11:55
+                      Owner: [000001,000004]  Revised: 20-OCT-2026 11:55 (2)
+                      File ID: (15,1,1)       Expires:  1-JAN-2030 00:00
+                                              Backup:  <No backup done>
+  File protection:    System:RWED, Owner:RWED, Group:RE, World:
+  File organization:  Sequential
+  File attributes:    Allocation = 3, Extend = 0
+                      Global Buffer Count = 0
+  Record format:      Variable length
+  Record attributes:  Carriage return
+
+[B69]FIX80.DAT;1      Size:       1/3         Created: 20-OCT-2026 11:55
+                      Owner: [000001,000004]  Revised: 20-OCT-2026 11:55 (1)
+                      File ID: (16,1,1)       Expires: <None specified>
+                                              Backup:  <No backup done>
+  File protection:    System:RWED, Owner:RWED, Group:RE, World:
+  File organization:  Sequential
+  File attributes:    Allocation = 3, Extend = 0
+                      Global Buffer Count = 0
+  Record format:      Fixed length 80 byte records
+  Record attributes:  None
+
+[B69]INDEXED.IDX;1    Size:       8/9         Created: 20-OCT-2026 11:55
+                      Owner: [000001,000004]  Revised: 20-OCT-2026 11:55 (1)
+                      File ID: (17,1,1)       Expires: <None specified>
+                                              Backup:  <No backup done>
+  File protection:    System:RWED, Owner:RWED, Group:RE, World:
+  File organization:  Indexed
+  File attributes:    Allocation = 9, Extend = 0, maximum bucket size = 2
+                      Global Buffer Count = 0
+  Record format:      Variable length, maximum 80 bytes
+  Record attributes:  Carriage return
+
+[B69]MULTI.TXT;3      Size:       1/3         Created: 20-OCT-2026 11:55
+                      Owner: [000001,000004]  Revised: 20-OCT-2026 11:55 (1)
+                      File ID: (18,1,1)       Expires: <None specified>
+                                              Backup:  <No backup done>
+  File protection:    System:RWED, Owner:RWED, Group:RE, World:
+  File organization:  Sequential
+  File attributes:    Allocation = 3, Extend = 0
+                      Global Buffer Count = 0
+  Record format:      VFC, 2 byte header
+  Record attributes:  Print file format
+
+[B69]MULTI.TXT;2      Size:       1/3         Created: 20-OCT-2026 11:55
+                      Owner: [000001,000004]  Revised: 20-OCT-2026 11:55 (1)
+                      File ID: (19,1,1)       Expires: <None specified>
+                                              Backup:  <No backup done>
+  File protection:    System:RWED, Owner:RWED, Group:RE, World:
+  File organization:  Sequential
+  File attributes:    Allocation = 3, Extend = 0
+                      Global Buffer Count = 0
+  Record format:      Stream_LF
+  Record attributes:  Carriage return
+
+[B69]MULTI.TXT;1      Size:       1/3         Created: 20-OCT-2026 11:55
+                      Owner: [000001,000004]  Revised: 20-OCT-2026 11:55 (1)
+                      File ID: (20,1,1)       Expires: <None specified>
+                                              Backup:  <No backup done>
+  File protection:    System:RWED, Owner:RWED, Group:RE, World:
+  File organization:  Sequential
+  File attributes:    Allocation = 3, Extend = 0
+                      Global Buffer Count = 0
+  Record format:      Variable length
+  Record attributes:  Carriage return
+
+[B69]NOBACK.TXT;1     Size:       1/3         Created: 20-OCT-2026 11:55
+                      Owner: [000001,000004]  Revised: 20-OCT-2026 11:55 (2)
+                      File ID: (21,1,1)       Expires: <None specified>
+                                              Backup:  <No backup done>
+  File protection:    System:RWED, Owner:RWED, Group:RE, World:
+  File organization:  Sequential
+  File attributes:    Allocation = 3, Extend = 0
+                      Global Buffer Count = 0
+  Record format:      Variable length
+  Record attributes:  Carriage return
+
+[B69]OWNED.TXT;1      Size:       1/3         Created: 20-OCT-2026 11:55
+                      Owner: [000200,000201]  Revised: 20-OCT-2026 11:55 (2)
+                      File ID: (22,1,1)       Expires: <None specified>
+                                              Backup:  <No backup done>
+  File protection:    System:RWED, Owner:RWED, Group:RE, World:
+  File organization:  Sequential
+  File attributes:    Allocation = 3, Extend = 0
+                      Global Buffer Count = 0
+  Record format:      Variable length
+  Record attributes:  Carriage return
+
+[B69]PI.EXE;1         Size:       6/6         Created: 20-OCT-2026 11:55
+                      Owner: [000001,000004]  Revised: 20-OCT-2026 11:55 (1)
+                      File ID: (23,1,1)       Expires: <None specified>
+                                              Backup:  <No backup done>
+  File protection:    System:RWED, Owner:RWED, Group:RE, World:
+  File organization:  Sequential
+  File attributes:    Allocation = 6, Extend = 0
+                      Global Buffer Count = 0, Contiguous-best-try
+  Record format:      Fixed length 512 byte records
+  Record attributes:  None
+
+[B69]PI.OBJ;1         Size:       5/6         Created: 20-OCT-2026 11:55
+                      Owner: [000001,000004]  Revised: 20-OCT-2026 11:55 (1)
+                      File ID: (24,1,1)       Expires: <None specified>
+                                              Backup:  <No backup done>
+  File protection:    System:RWED, Owner:RWED, Group:RE, World:
+  File organization:  Sequential
+  File attributes:    Allocation = 6, Extend = 20
+                      Global Buffer Count = 0
+  Record format:      Variable length
+  Record attributes:  None
+
+[B69]PROT.TXT;1       Size:       1/3         Created: 20-OCT-2026 11:55
+                      Owner: [000001,000004]  Revised: 20-OCT-2026 11:55 (2)
+                      File ID: (25,1,1)       Expires: <None specified>
+                                              Backup:  <No backup done>
+  File protection:    System:RWED, Owner:RWED, Group:RWE, World:R
+  File organization:  Sequential
+  File attributes:    Allocation = 3, Extend = 0
+                      Global Buffer Count = 0
+  Record format:      Variable length
+  Record attributes:  Carriage return
+
+[B69]STMLF.TXT;1      Size:       1/3         Created: 20-OCT-2026 11:55
+                      Owner: [000001,000004]  Revised: 20-OCT-2026 11:55 (1)
+                      File ID: (26,1,1)       Expires: <None specified>
+                                              Backup:  <No backup done>
+  File protection:    System:RWED, Owner:RWED, Group:RE, World:
+  File organization:  Sequential
+  File attributes:    Allocation = 3, Extend = 0
+                      Global Buffer Count = 0
+  Record format:      Stream_LF
+  Record attributes:  Carriage return
+
+[B69]SUB1.DIR;1       Size:       1/3         Created: 20-OCT-2026 19:16
+                      Owner: [000001,000004]  Revised: 20-OCT-2026 19:16 (1)
+                      File ID: (27,1,1)       Expires: <None specified>
+                                              Backup:  <No backup done>
+  File protection:    System:RWE, Owner:RWE, Group:RE, World:E
+  File organization:  Sequential
+  File attributes:    Allocation = 3, Extend = 0
+                      Global Buffer Count = 0, Contiguous
+  Record format:      Variable length, maximum 512 bytes
+  Record attributes:  Non-spanned
+
+[B69.SUB1]A.TXT;1     Size:       1/3         Created: 20-OCT-2026 11:55
+                      Owner: [000001,000004]  Revised: 20-OCT-2026 11:55 (1)
+                      File ID: (28,1,1)       Expires: <None specified>
+                                              Backup:  <No backup done>
+  File protection:    System:RWED, Owner:RWED, Group:RE, World:
+  File organization:  Sequential
+  File attributes:    Allocation = 3, Extend = 0
+                      Global Buffer Count = 0
+  Record format:      Variable length
+  Record attributes:  Carriage return
+
+[B69.SUB1]MEDIUM.DAT;1
+                      Size:      74/75        Created: 20-OCT-2026 11:55
+                      Owner: [000001,000004]  Revised: 20-OCT-2026 11:55 (1)
+                      File ID: (29,1,1)       Expires: <None specified>
+                                              Backup:  <No backup done>
+  File protection:    System:RWED, Owner:RWED, Group:RE, World:
+  File organization:  Sequential
+  File attributes:    Allocation = 75, Extend = 0
+                      Global Buffer Count = 0
+  Record format:      VFC, 2 byte header
+  Record attributes:  Print file format
+
+[B69.SUB1]SUB2.DIR;1  Size:       1/3         Created: 20-OCT-2026 19:16
+                      Owner: [000001,000004]  Revised: 20-OCT-2026 19:16 (1)
+                      File ID: (30,1,1)       Expires: <None specified>
+                                              Backup:  <No backup done>
+  File protection:    System:RWE, Owner:RWE, Group:RE, World:E
+  File organization:  Sequential
+  File attributes:    Allocation = 3, Extend = 0
+                      Global Buffer Count = 0, Contiguous
+  Record format:      Variable length, maximum 512 bytes
+  Record attributes:  Non-spanned
+
+[B69.SUB1.SUB2]B.TXT;1
+                      Size:       1/3         Created: 20-OCT-2026 11:55
+                      Owner: [000001,000004]  Revised: 20-OCT-2026 11:55 (1)
+                      File ID: (31,1,1)       Expires: <None specified>
+                                              Backup:  <No backup done>
+  File protection:    System:RWED, Owner:RWED, Group:RE, World:
+  File organization:  Sequential
+  File attributes:    Allocation = 3, Extend = 0
+                      Global Buffer Count = 0
+  Record format:      Variable length
+  Record attributes:  Carriage return
+
+[B69.SUB1.SUB2]BIG.DAT;1
+                      Size:     169/171       Created: 20-OCT-2026 11:55
+                      Owner: [000001,000004]  Revised: 20-OCT-2026 11:55 (1)
+                      File ID: (32,1,1)       Expires: <None specified>
+                                              Backup:  <No backup done>
+  File protection:    System:RWED, Owner:RWED, Group:RE, World:
+  File organization:  Sequential
+  File attributes:    Allocation = 171, Extend = 0
+                      Global Buffer Count = 0
+  Record format:      VFC, 2 byte header
+  Record attributes:  Print file format
+
+[B69]TEXT.TXT;1       Size:       1/3         Created: 20-OCT-2026 11:55
+                      Owner: [000001,000004]  Revised: 20-OCT-2026 11:55 (1)
+                      File ID: (33,1,1)       Expires: <None specified>
+                                              Backup:  <No backup done>
+  File protection:    System:RWED, Owner:RWED, Group:RE, World:
+  File organization:  Sequential
+  File attributes:    Allocation = 3, Extend = 0
+                      Global Buffer Count = 0
+  Record format:      Variable length
+  Record attributes:  Carriage return
+
+[B69]VERLIM.TXT;2     Size:       1/3         Created: 20-OCT-2026 11:55
+                      Owner: [000001,000004]  Revised: 20-OCT-2026 11:55 (2)
+                      File ID: (34,1,1)       Expires: <None specified>
+                                              Backup:  <No backup done>
+  File protection:    System:RWED, Owner:RWED, Group:RE, World:
+  File organization:  Sequential
+  File attributes:    Allocation = 3, Extend = 0
+                      Global Buffer Count = 0
+  Record format:      Variable length
+  Record attributes:  Carriage return
+
+[B69]VERLIM.TXT;1     Size:       1/3         Created: 20-OCT-2026 11:55
+                      Owner: [000001,000004]  Revised: 20-OCT-2026 11:55 (1)
+                      File ID: (35,1,1)       Expires: <None specified>
+                                              Backup:  <No backup done>
+  File protection:    System:RWED, Owner:RWED, Group:RE, World:
+  File organization:  Sequential
+  File attributes:    Allocation = 3, Extend = 0
+                      Global Buffer Count = 0
+  Record format:      Variable length
+  Record attributes:  Carriage return
+
+[B69]VFC.TXT;1        Size:       1/3         Created: 20-OCT-2026 11:55
+                      Owner: [000001,000004]  Revised: 20-OCT-2026 11:55 (1)
+                      File ID: (36,1,1)       Expires: <None specified>
+                                              Backup:  <No backup done>
+  File protection:    System:RWED, Owner:RWED, Group:RE, World:
+  File organization:  Sequential
+  File attributes:    Allocation = 3, Extend = 0
+                      Global Buffer Count = 0
+  Record format:      VFC, 2 byte header
+  Record attributes:  Print file format
+
+
+Total of 25 files, 354 blocks
+End of save set
+
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X10000001"
+$ BACKUP/LIST/FULL [SETS]B69COM.BCK/SAVE_SET
+Listing of save set(s)
+
+Save set:          B69COM.BCK
+Written by:        SYSTEM      
+UIC:               [000001,000004]
+Date:              20-OCT-2026 19:16:06.72
+Command:           BACKUP [B69...]*.* [SETS]B69COM.BCK/SAVE_SET/COMMENT=Phase 69's probe, with a comment
+Operating system:  OpenVMS VAX version V7.3
+BACKUP version:    V6.2
+Written on:        _GOVAX$DUA1:
+Block size:        32256
+Group size:        10
+Buffer count:      8
+
+[B69]ACL.TXT;1        Size:       1/3         Created: 20-OCT-2026 11:55
+                      Owner: [000001,000004]  Revised: 20-OCT-2026 11:55 (2)
+                      File ID: (12,1,1)       Expires: <None specified>
+                                              Backup:  <No backup done>
+  File protection:    System:RWED, Owner:RWED, Group:RE, World:
+  File organization:  Sequential
+  File attributes:    Allocation = 3, Extend = 0
+                      Global Buffer Count = 0
+  Record format:      Variable length
+  Record attributes:  Carriage return
+
+[B69]CONTIG.DAT;1     Size:      74/75        Created: 20-OCT-2026 11:55
+                      Owner: [000001,000004]  Revised: 20-OCT-2026 11:55 (1)
+                      File ID: (13,1,1)       Expires: <None specified>
+                                              Backup:  <No backup done>
+  File protection:    System:RWED, Owner:RWED, Group:RE, World:
+  File organization:  Sequential
+  File attributes:    Allocation = 75, Extend = 0
+                      Global Buffer Count = 0, Contiguous
+  Record format:      VFC, 2 byte header
+  Record attributes:  Print file format
+
+[B69]EMPTY.DAT;1      Size:       0/0         Created: 20-OCT-2026 11:55
+                      Owner: [000001,000004]  Revised: 20-OCT-2026 11:55 (1)
+                      File ID: (14,1,1)       Expires: <None specified>
+                                              Backup:  <No backup done>
+  File protection:    System:RWED, Owner:RWED, Group:RE, World:
+  File organization:  Sequential
+  File attributes:    Allocation = 0, Extend = 0
+                      Global Buffer Count = 0
+  Record format:      Variable length
+  Record attributes:  Carriage return
+
+[B69]EXPIRE.TXT;1     Size:       1/3         Created: 20-OCT-2026 11:55
+                      Owner: [000001,000004]  Revised: 20-OCT-2026 11:55 (2)
+                      File ID: (15,1,1)       Expires:  1-JAN-2030 00:00
+                                              Backup:  <No backup done>
+  File protection:    System:RWED, Owner:RWED, Group:RE, World:
+  File organization:  Sequential
+  File attributes:    Allocation = 3, Extend = 0
+                      Global Buffer Count = 0
+  Record format:      Variable length
+  Record attributes:  Carriage return
+
+[B69]FIX80.DAT;1      Size:       1/3         Created: 20-OCT-2026 11:55
+                      Owner: [000001,000004]  Revised: 20-OCT-2026 11:55 (1)
+                      File ID: (16,1,1)       Expires: <None specified>
+                                              Backup:  <No backup done>
+  File protection:    System:RWED, Owner:RWED, Group:RE, World:
+  File organization:  Sequential
+  File attributes:    Allocation = 3, Extend = 0
+                      Global Buffer Count = 0
+  Record format:      Fixed length 80 byte records
+  Record attributes:  None
+
+[B69]INDEXED.IDX;1    Size:       8/9         Created: 20-OCT-2026 11:55
+                      Owner: [000001,000004]  Revised: 20-OCT-2026 11:55 (1)
+                      File ID: (17,1,1)       Expires: <None specified>
+                                              Backup:  <No backup done>
+  File protection:    System:RWED, Owner:RWED, Group:RE, World:
+  File organization:  Indexed
+  File attributes:    Allocation = 9, Extend = 0, maximum bucket size = 2
+                      Global Buffer Count = 0
+  Record format:      Variable length, maximum 80 bytes
+  Record attributes:  Carriage return
+
+[B69]MULTI.TXT;3      Size:       1/3         Created: 20-OCT-2026 11:55
+                      Owner: [000001,000004]  Revised: 20-OCT-2026 11:55 (1)
+                      File ID: (18,1,1)       Expires: <None specified>
+                                              Backup:  <No backup done>
+  File protection:    System:RWED, Owner:RWED, Group:RE, World:
+  File organization:  Sequential
+  File attributes:    Allocation = 3, Extend = 0
+                      Global Buffer Count = 0
+  Record format:      VFC, 2 byte header
+  Record attributes:  Print file format
+
+[B69]MULTI.TXT;2      Size:       1/3         Created: 20-OCT-2026 11:55
+                      Owner: [000001,000004]  Revised: 20-OCT-2026 11:55 (1)
+                      File ID: (19,1,1)       Expires: <None specified>
+                                              Backup:  <No backup done>
+  File protection:    System:RWED, Owner:RWED, Group:RE, World:
+  File organization:  Sequential
+  File attributes:    Allocation = 3, Extend = 0
+                      Global Buffer Count = 0
+  Record format:      Stream_LF
+  Record attributes:  Carriage return
+
+[B69]MULTI.TXT;1      Size:       1/3         Created: 20-OCT-2026 11:55
+                      Owner: [000001,000004]  Revised: 20-OCT-2026 11:55 (1)
+                      File ID: (20,1,1)       Expires: <None specified>
+                                              Backup:  <No backup done>
+  File protection:    System:RWED, Owner:RWED, Group:RE, World:
+  File organization:  Sequential
+  File attributes:    Allocation = 3, Extend = 0
+                      Global Buffer Count = 0
+  Record format:      Variable length
+  Record attributes:  Carriage return
+
+[B69]NOBACK.TXT;1     Size:       1/3         Created: 20-OCT-2026 11:55
+                      Owner: [000001,000004]  Revised: 20-OCT-2026 11:55 (2)
+                      File ID: (21,1,1)       Expires: <None specified>
+                                              Backup:  <No backup done>
+  File protection:    System:RWED, Owner:RWED, Group:RE, World:
+  File organization:  Sequential
+  File attributes:    Allocation = 3, Extend = 0
+                      Global Buffer Count = 0
+  Record format:      Variable length
+  Record attributes:  Carriage return
+
+[B69]OWNED.TXT;1      Size:       1/3         Created: 20-OCT-2026 11:55
+                      Owner: [000200,000201]  Revised: 20-OCT-2026 11:55 (2)
+                      File ID: (22,1,1)       Expires: <None specified>
+                                              Backup:  <No backup done>
+  File protection:    System:RWED, Owner:RWED, Group:RE, World:
+  File organization:  Sequential
+  File attributes:    Allocation = 3, Extend = 0
+                      Global Buffer Count = 0
+  Record format:      Variable length
+  Record attributes:  Carriage return
+
+[B69]PI.EXE;1         Size:       6/6         Created: 20-OCT-2026 11:55
+                      Owner: [000001,000004]  Revised: 20-OCT-2026 11:55 (1)
+                      File ID: (23,1,1)       Expires: <None specified>
+                                              Backup:  <No backup done>
+  File protection:    System:RWED, Owner:RWED, Group:RE, World:
+  File organization:  Sequential
+  File attributes:    Allocation = 6, Extend = 0
+                      Global Buffer Count = 0, Contiguous-best-try
+  Record format:      Fixed length 512 byte records
+  Record attributes:  None
+
+[B69]PI.OBJ;1         Size:       5/6         Created: 20-OCT-2026 11:55
+                      Owner: [000001,000004]  Revised: 20-OCT-2026 11:55 (1)
+                      File ID: (24,1,1)       Expires: <None specified>
+                                              Backup:  <No backup done>
+  File protection:    System:RWED, Owner:RWED, Group:RE, World:
+  File organization:  Sequential
+  File attributes:    Allocation = 6, Extend = 20
+                      Global Buffer Count = 0
+  Record format:      Variable length
+  Record attributes:  None
+
+[B69]PROT.TXT;1       Size:       1/3         Created: 20-OCT-2026 11:55
+                      Owner: [000001,000004]  Revised: 20-OCT-2026 11:55 (2)
+                      File ID: (25,1,1)       Expires: <None specified>
+                                              Backup:  <No backup done>
+  File protection:    System:RWED, Owner:RWED, Group:RWE, World:R
+  File organization:  Sequential
+  File attributes:    Allocation = 3, Extend = 0
+                      Global Buffer Count = 0
+  Record format:      Variable length
+  Record attributes:  Carriage return
+
+[B69]STMLF.TXT;1      Size:       1/3         Created: 20-OCT-2026 11:55
+                      Owner: [000001,000004]  Revised: 20-OCT-2026 11:55 (1)
+                      File ID: (26,1,1)       Expires: <None specified>
+                                              Backup:  <No backup done>
+  File protection:    System:RWED, Owner:RWED, Group:RE, World:
+  File organization:  Sequential
+  File attributes:    Allocation = 3, Extend = 0
+                      Global Buffer Count = 0
+  Record format:      Stream_LF
+  Record attributes:  Carriage return
+
+[B69]SUB1.DIR;1       Size:       1/3         Created: 20-OCT-2026 19:16
+                      Owner: [000001,000004]  Revised: 20-OCT-2026 19:16 (1)
+                      File ID: (27,1,1)       Expires: <None specified>
+                                              Backup:  <No backup done>
+  File protection:    System:RWE, Owner:RWE, Group:RE, World:E
+  File organization:  Sequential
+  File attributes:    Allocation = 3, Extend = 0
+                      Global Buffer Count = 0, Contiguous
+  Record format:      Variable length, maximum 512 bytes
+  Record attributes:  Non-spanned
+
+[B69.SUB1]A.TXT;1     Size:       1/3         Created: 20-OCT-2026 11:55
+                      Owner: [000001,000004]  Revised: 20-OCT-2026 11:55 (1)
+                      File ID: (28,1,1)       Expires: <None specified>
+                                              Backup:  <No backup done>
+  File protection:    System:RWED, Owner:RWED, Group:RE, World:
+  File organization:  Sequential
+  File attributes:    Allocation = 3, Extend = 0
+                      Global Buffer Count = 0
+  Record format:      Variable length
+  Record attributes:  Carriage return
+
+[B69.SUB1]MEDIUM.DAT;1
+                      Size:      74/75        Created: 20-OCT-2026 11:55
+                      Owner: [000001,000004]  Revised: 20-OCT-2026 11:55 (1)
+                      File ID: (29,1,1)       Expires: <None specified>
+                                              Backup:  <No backup done>
+  File protection:    System:RWED, Owner:RWED, Group:RE, World:
+  File organization:  Sequential
+  File attributes:    Allocation = 75, Extend = 0
+                      Global Buffer Count = 0
+  Record format:      VFC, 2 byte header
+  Record attributes:  Print file format
+
+[B69.SUB1]SUB2.DIR;1  Size:       1/3         Created: 20-OCT-2026 19:16
+                      Owner: [000001,000004]  Revised: 20-OCT-2026 19:16 (1)
+                      File ID: (30,1,1)       Expires: <None specified>
+                                              Backup:  <No backup done>
+  File protection:    System:RWE, Owner:RWE, Group:RE, World:E
+  File organization:  Sequential
+  File attributes:    Allocation = 3, Extend = 0
+                      Global Buffer Count = 0, Contiguous
+  Record format:      Variable length, maximum 512 bytes
+  Record attributes:  Non-spanned
+
+[B69.SUB1.SUB2]B.TXT;1
+                      Size:       1/3         Created: 20-OCT-2026 11:55
+                      Owner: [000001,000004]  Revised: 20-OCT-2026 11:55 (1)
+                      File ID: (31,1,1)       Expires: <None specified>
+                                              Backup:  <No backup done>
+  File protection:    System:RWED, Owner:RWED, Group:RE, World:
+  File organization:  Sequential
+  File attributes:    Allocation = 3, Extend = 0
+                      Global Buffer Count = 0
+  Record format:      Variable length
+  Record attributes:  Carriage return
+
+[B69.SUB1.SUB2]BIG.DAT;1
+                      Size:     169/171       Created: 20-OCT-2026 11:55
+                      Owner: [000001,000004]  Revised: 20-OCT-2026 11:55 (1)
+                      File ID: (32,1,1)       Expires: <None specified>
+                                              Backup:  <No backup done>
+  File protection:    System:RWED, Owner:RWED, Group:RE, World:
+  File organization:  Sequential
+  File attributes:    Allocation = 171, Extend = 0
+                      Global Buffer Count = 0
+  Record format:      VFC, 2 byte header
+  Record attributes:  Print file format
+
+[B69]TEXT.TXT;1       Size:       1/3         Created: 20-OCT-2026 11:55
+                      Owner: [000001,000004]  Revised: 20-OCT-2026 11:55 (1)
+                      File ID: (33,1,1)       Expires: <None specified>
+                                              Backup:  <No backup done>
+  File protection:    System:RWED, Owner:RWED, Group:RE, World:
+  File organization:  Sequential
+  File attributes:    Allocation = 3, Extend = 0
+                      Global Buffer Count = 0
+  Record format:      Variable length
+  Record attributes:  Carriage return
+
+[B69]VERLIM.TXT;2     Size:       1/3         Created: 20-OCT-2026 11:55
+                      Owner: [000001,000004]  Revised: 20-OCT-2026 11:55 (2)
+                      File ID: (34,1,1)       Expires: <None specified>
+                                              Backup:  <No backup done>
+  File protection:    System:RWED, Owner:RWED, Group:RE, World:
+  File organization:  Sequential
+  File attributes:    Allocation = 3, Extend = 0
+                      Global Buffer Count = 0
+  Record format:      Variable length
+  Record attributes:  Carriage return
+
+[B69]VERLIM.TXT;1     Size:       1/3         Created: 20-OCT-2026 11:55
+                      Owner: [000001,000004]  Revised: 20-OCT-2026 11:55 (1)
+                      File ID: (35,1,1)       Expires: <None specified>
+                                              Backup:  <No backup done>
+  File protection:    System:RWED, Owner:RWED, Group:RE, World:
+  File organization:  Sequential
+  File attributes:    Allocation = 3, Extend = 0
+                      Global Buffer Count = 0
+  Record format:      Variable length
+  Record attributes:  Carriage return
+
+[B69]VFC.TXT;1        Size:       1/3         Created: 20-OCT-2026 11:55
+                      Owner: [000001,000004]  Revised: 20-OCT-2026 11:55 (1)
+                      File ID: (36,1,1)       Expires: <None specified>
+                                              Backup:  <No backup done>
+  File protection:    System:RWED, Owner:RWED, Group:RE, World:
+  File organization:  Sequential
+  File attributes:    Allocation = 3, Extend = 0
+                      Global Buffer Count = 0
+  Record format:      VFC, 2 byte header
+  Record attributes:  Print file format
+
+
+Total of 25 files, 354 blocks
+End of save set
+
+$ BACKUP/LIST=[RESULTS]B69FULL2.LIS/FULL [SETS]B69.BCK/SAVE_SET
+$ !
+$ ! ------------------------------------------------------------------
+$ ! Part 3: restores, each with /LOG. The save sets written with /CRC
+$ ! are restored with /CRC on the input, so their CRCs are checked.
+$ ! ------------------------------------------------------------------
+$ !
+$ LIST = "B69,B69K8,B69G0,B69G3,B69NOCRC,B69COM,B69EXC,B69BYO,B69TXT,B69NONE,TEXT,B69OWN,LIST,B69IGN"
+$ I = 0
+$ RESTORE_LOOP:
+$   F = F$ELEMENT(I, ",", LIST)
+$   IF F .EQS. "," THEN GOTO RESTORE_DONE
+$   BACKUP/LOG [SETS]B69.BCK/SAVE_SET [VB69...]/BY_OWNER=ORIGINAL
+%BACKUP-S-CREDIR, created directory DUA1:[VB69.B69]
+%BACKUP-S-CREATED, created DUA1:[VB69.B69]ACL.TXT;1
+%BACKUP-S-CREATED, created DUA1:[VB69.B69]CONTIG.DAT;1
+%BACKUP-S-CREATED, created DUA1:[VB69.B69]EMPTY.DAT;1
+%BACKUP-S-CREATED, created DUA1:[VB69.B69]EXPIRE.TXT;1
+%BACKUP-S-CREATED, created DUA1:[VB69.B69]FIX80.DAT;1
+%BACKUP-S-CREATED, created DUA1:[VB69.B69]INDEXED.IDX;1
+%BACKUP-S-CREATED, created DUA1:[VB69.B69]MULTI.TXT;3
+%BACKUP-S-CREATED, created DUA1:[VB69.B69]MULTI.TXT;2
+%BACKUP-S-CREATED, created DUA1:[VB69.B69]MULTI.TXT;1
+%BACKUP-S-CREATED, created DUA1:[VB69.B69]NOBACK.TXT;1
+%BACKUP-S-CREATED, created DUA1:[VB69.B69]OWNED.TXT;1
+%BACKUP-S-CREATED, created DUA1:[VB69.B69]PI.EXE;1
+%BACKUP-S-CREATED, created DUA1:[VB69.B69]PI.OBJ;1
+%BACKUP-S-CREATED, created DUA1:[VB69.B69]PROT.TXT;1
+%BACKUP-S-CREATED, created DUA1:[VB69.B69]STMLF.TXT;1
+%BACKUP-S-CREDIR, created directory DUA1:[VB69.B69.SUB1]
+%BACKUP-S-CREATED, created DUA1:[VB69.B69.SUB1]A.TXT;1
+%BACKUP-S-CREATED, created DUA1:[VB69.B69.SUB1]MEDIUM.DAT;1
+%BACKUP-S-CREDIR, created directory DUA1:[VB69.B69.SUB1.SUB2]
+%BACKUP-S-CREATED, created DUA1:[VB69.B69.SUB1.SUB2]B.TXT;1
+%BACKUP-S-CREATED, created DUA1:[VB69.B69.SUB1.SUB2]BIG.DAT;1
+%BACKUP-S-CREATED, created DUA1:[VB69.B69]TEXT.TXT;1
+%BACKUP-S-CREATED, created DUA1:[VB69.B69]VERLIM.TXT;2
+%BACKUP-S-CREATED, created DUA1:[VB69.B69]VERLIM.TXT;1
+%BACKUP-S-CREATED, created DUA1:[VB69.B69]VFC.TXT;1
+$   SHOW SYMBOL $STATUS
+  $STATUS == "%X10000001"
+$   I = I + 1
+$   GOTO RESTORE_LOOP
+$ RESTORE_LOOP:
+$   F = F$ELEMENT(I, ",", LIST)
+$   IF F .EQS. "," THEN GOTO RESTORE_DONE
+$   BACKUP/LOG [SETS]B69K8.BCK/SAVE_SET [VB69K8...]/BY_OWNER=ORIGINAL
+%BACKUP-S-CREDIR, created directory DUA1:[VB69K8.B69]
+%BACKUP-S-CREATED, created DUA1:[VB69K8.B69]ACL.TXT;1
+%BACKUP-S-CREATED, created DUA1:[VB69K8.B69]CONTIG.DAT;1
+%BACKUP-S-CREATED, created DUA1:[VB69K8.B69]EMPTY.DAT;1
+%BACKUP-S-CREATED, created DUA1:[VB69K8.B69]EXPIRE.TXT;1
+%BACKUP-S-CREATED, created DUA1:[VB69K8.B69]FIX80.DAT;1
+%BACKUP-S-CREATED, created DUA1:[VB69K8.B69]INDEXED.IDX;1
+%BACKUP-S-CREATED, created DUA1:[VB69K8.B69]MULTI.TXT;3
+%BACKUP-S-CREATED, created DUA1:[VB69K8.B69]MULTI.TXT;2
+%BACKUP-S-CREATED, created DUA1:[VB69K8.B69]MULTI.TXT;1
+%BACKUP-S-CREATED, created DUA1:[VB69K8.B69]NOBACK.TXT;1
+%BACKUP-S-CREATED, created DUA1:[VB69K8.B69]OWNED.TXT;1
+%BACKUP-S-CREATED, created DUA1:[VB69K8.B69]PI.EXE;1
+%BACKUP-S-CREATED, created DUA1:[VB69K8.B69]PI.OBJ;1
+%BACKUP-S-CREATED, created DUA1:[VB69K8.B69]PROT.TXT;1
+%BACKUP-S-CREATED, created DUA1:[VB69K8.B69]STMLF.TXT;1
+%BACKUP-S-CREDIR, created directory DUA1:[VB69K8.B69.SUB1]
+%BACKUP-S-CREATED, created DUA1:[VB69K8.B69.SUB1]A.TXT;1
+%BACKUP-S-CREATED, created DUA1:[VB69K8.B69.SUB1]MEDIUM.DAT;1
+%BACKUP-S-CREDIR, created directory DUA1:[VB69K8.B69.SUB1.SUB2]
+%BACKUP-S-CREATED, created DUA1:[VB69K8.B69.SUB1.SUB2]B.TXT;1
+%BACKUP-S-CREATED, created DUA1:[VB69K8.B69.SUB1.SUB2]BIG.DAT;1
+%BACKUP-S-CREATED, created DUA1:[VB69K8.B69]TEXT.TXT;1
+%BACKUP-S-CREATED, created DUA1:[VB69K8.B69]VERLIM.TXT;2
+%BACKUP-S-CREATED, created DUA1:[VB69K8.B69]VERLIM.TXT;1
+%BACKUP-S-CREATED, created DUA1:[VB69K8.B69]VFC.TXT;1
+$   SHOW SYMBOL $STATUS
+  $STATUS == "%X10000001"
+$   I = I + 1
+$   GOTO RESTORE_LOOP
+$ RESTORE_LOOP:
+$   F = F$ELEMENT(I, ",", LIST)
+$   IF F .EQS. "," THEN GOTO RESTORE_DONE
+$   BACKUP/LOG [SETS]B69G0.BCK/SAVE_SET [VB69G0...]/BY_OWNER=ORIGINAL
+%BACKUP-S-CREDIR, created directory DUA1:[VB69G0.B69]
+%BACKUP-S-CREATED, created DUA1:[VB69G0.B69]ACL.TXT;1
+%BACKUP-S-CREATED, created DUA1:[VB69G0.B69]CONTIG.DAT;1
+%BACKUP-S-CREATED, created DUA1:[VB69G0.B69]EMPTY.DAT;1
+%BACKUP-S-CREATED, created DUA1:[VB69G0.B69]EXPIRE.TXT;1
+%BACKUP-S-CREATED, created DUA1:[VB69G0.B69]FIX80.DAT;1
+%BACKUP-S-CREATED, created DUA1:[VB69G0.B69]INDEXED.IDX;1
+%BACKUP-S-CREATED, created DUA1:[VB69G0.B69]MULTI.TXT;3
+%BACKUP-S-CREATED, created DUA1:[VB69G0.B69]MULTI.TXT;2
+%BACKUP-S-CREATED, created DUA1:[VB69G0.B69]MULTI.TXT;1
+%BACKUP-S-CREATED, created DUA1:[VB69G0.B69]NOBACK.TXT;1
+%BACKUP-S-CREATED, created DUA1:[VB69G0.B69]OWNED.TXT;1
+%BACKUP-S-CREATED, created DUA1:[VB69G0.B69]PI.EXE;1
+%BACKUP-S-CREATED, created DUA1:[VB69G0.B69]PI.OBJ;1
+%BACKUP-S-CREATED, created DUA1:[VB69G0.B69]PROT.TXT;1
+%BACKUP-S-CREATED, created DUA1:[VB69G0.B69]STMLF.TXT;1
+%BACKUP-S-CREDIR, created directory DUA1:[VB69G0.B69.SUB1]
+%BACKUP-S-CREATED, created DUA1:[VB69G0.B69.SUB1]A.TXT;1
+%BACKUP-S-CREATED, created DUA1:[VB69G0.B69.SUB1]MEDIUM.DAT;1
+%BACKUP-S-CREDIR, created directory DUA1:[VB69G0.B69.SUB1.SUB2]
+%BACKUP-S-CREATED, created DUA1:[VB69G0.B69.SUB1.SUB2]B.TXT;1
+%BACKUP-S-CREATED, created DUA1:[VB69G0.B69.SUB1.SUB2]BIG.DAT;1
+%BACKUP-S-CREATED, created DUA1:[VB69G0.B69]TEXT.TXT;1
+%BACKUP-S-CREATED, created DUA1:[VB69G0.B69]VERLIM.TXT;2
+%BACKUP-S-CREATED, created DUA1:[VB69G0.B69]VERLIM.TXT;1
+%BACKUP-S-CREATED, created DUA1:[VB69G0.B69]VFC.TXT;1
+$   SHOW SYMBOL $STATUS
+  $STATUS == "%X10000001"
+$   I = I + 1
+$   GOTO RESTORE_LOOP
+$ RESTORE_LOOP:
+$   F = F$ELEMENT(I, ",", LIST)
+$   IF F .EQS. "," THEN GOTO RESTORE_DONE
+$   BACKUP/LOG [SETS]B69G3.BCK/SAVE_SET [VB69G3...]/BY_OWNER=ORIGINAL
+%BACKUP-S-CREDIR, created directory DUA1:[VB69G3.B69]
+%BACKUP-S-CREATED, created DUA1:[VB69G3.B69]ACL.TXT;1
+%BACKUP-S-CREATED, created DUA1:[VB69G3.B69]CONTIG.DAT;1
+%BACKUP-S-CREATED, created DUA1:[VB69G3.B69]EMPTY.DAT;1
+%BACKUP-S-CREATED, created DUA1:[VB69G3.B69]EXPIRE.TXT;1
+%BACKUP-S-CREATED, created DUA1:[VB69G3.B69]FIX80.DAT;1
+%BACKUP-S-CREATED, created DUA1:[VB69G3.B69]INDEXED.IDX;1
+%BACKUP-S-CREATED, created DUA1:[VB69G3.B69]MULTI.TXT;3
+%BACKUP-S-CREATED, created DUA1:[VB69G3.B69]MULTI.TXT;2
+%BACKUP-S-CREATED, created DUA1:[VB69G3.B69]MULTI.TXT;1
+%BACKUP-S-CREATED, created DUA1:[VB69G3.B69]NOBACK.TXT;1
+%BACKUP-S-CREATED, created DUA1:[VB69G3.B69]OWNED.TXT;1
+%BACKUP-S-CREATED, created DUA1:[VB69G3.B69]PI.EXE;1
+%BACKUP-S-CREATED, created DUA1:[VB69G3.B69]PI.OBJ;1
+%BACKUP-S-CREATED, created DUA1:[VB69G3.B69]PROT.TXT;1
+%BACKUP-S-CREATED, created DUA1:[VB69G3.B69]STMLF.TXT;1
+%BACKUP-S-CREDIR, created directory DUA1:[VB69G3.B69.SUB1]
+%BACKUP-S-CREATED, created DUA1:[VB69G3.B69.SUB1]A.TXT;1
+%BACKUP-S-CREATED, created DUA1:[VB69G3.B69.SUB1]MEDIUM.DAT;1
+%BACKUP-S-CREDIR, created directory DUA1:[VB69G3.B69.SUB1.SUB2]
+%BACKUP-S-CREATED, created DUA1:[VB69G3.B69.SUB1.SUB2]B.TXT;1
+%BACKUP-S-CREATED, created DUA1:[VB69G3.B69.SUB1.SUB2]BIG.DAT;1
+%BACKUP-S-CREATED, created DUA1:[VB69G3.B69]TEXT.TXT;1
+%BACKUP-S-CREATED, created DUA1:[VB69G3.B69]VERLIM.TXT;2
+%BACKUP-S-CREATED, created DUA1:[VB69G3.B69]VERLIM.TXT;1
+%BACKUP-S-CREATED, created DUA1:[VB69G3.B69]VFC.TXT;1
+$   SHOW SYMBOL $STATUS
+  $STATUS == "%X10000001"
+$   I = I + 1
+$   GOTO RESTORE_LOOP
+$ RESTORE_LOOP:
+$   F = F$ELEMENT(I, ",", LIST)
+$   IF F .EQS. "," THEN GOTO RESTORE_DONE
+$   BACKUP/LOG [SETS]B69NOCRC.BCK/SAVE_SET [VB69NOCRC...]/BY_OWNER=ORIGINAL
+%BACKUP-S-CREDIR, created directory DUA1:[VB69NOCRC.B69]
+%BACKUP-S-CREATED, created DUA1:[VB69NOCRC.B69]ACL.TXT;1
+%BACKUP-S-CREATED, created DUA1:[VB69NOCRC.B69]CONTIG.DAT;1
+%BACKUP-S-CREATED, created DUA1:[VB69NOCRC.B69]EMPTY.DAT;1
+%BACKUP-S-CREATED, created DUA1:[VB69NOCRC.B69]EXPIRE.TXT;1
+%BACKUP-S-CREATED, created DUA1:[VB69NOCRC.B69]FIX80.DAT;1
+%BACKUP-S-CREATED, created DUA1:[VB69NOCRC.B69]INDEXED.IDX;1
+%BACKUP-S-CREATED, created DUA1:[VB69NOCRC.B69]MULTI.TXT;3
+%BACKUP-S-CREATED, created DUA1:[VB69NOCRC.B69]MULTI.TXT;2
+%BACKUP-S-CREATED, created DUA1:[VB69NOCRC.B69]MULTI.TXT;1
+%BACKUP-S-CREATED, created DUA1:[VB69NOCRC.B69]NOBACK.TXT;1
+%BACKUP-S-CREATED, created DUA1:[VB69NOCRC.B69]OWNED.TXT;1
+%BACKUP-S-CREATED, created DUA1:[VB69NOCRC.B69]PI.EXE;1
+%BACKUP-S-CREATED, created DUA1:[VB69NOCRC.B69]PI.OBJ;1
+%BACKUP-S-CREATED, created DUA1:[VB69NOCRC.B69]PROT.TXT;1
+%BACKUP-S-CREATED, created DUA1:[VB69NOCRC.B69]STMLF.TXT;1
+%BACKUP-S-CREDIR, created directory DUA1:[VB69NOCRC.B69.SUB1]
+%BACKUP-S-CREATED, created DUA1:[VB69NOCRC.B69.SUB1]A.TXT;1
+%BACKUP-S-CREATED, created DUA1:[VB69NOCRC.B69.SUB1]MEDIUM.DAT;1
+%BACKUP-S-CREDIR, created directory DUA1:[VB69NOCRC.B69.SUB1.SUB2]
+%BACKUP-S-CREATED, created DUA1:[VB69NOCRC.B69.SUB1.SUB2]B.TXT;1
+%BACKUP-S-CREATED, created DUA1:[VB69NOCRC.B69.SUB1.SUB2]BIG.DAT;1
+%BACKUP-S-CREATED, created DUA1:[VB69NOCRC.B69]TEXT.TXT;1
+%BACKUP-S-CREATED, created DUA1:[VB69NOCRC.B69]VERLIM.TXT;2
+%BACKUP-S-CREATED, created DUA1:[VB69NOCRC.B69]VERLIM.TXT;1
+%BACKUP-S-CREATED, created DUA1:[VB69NOCRC.B69]VFC.TXT;1
+$   SHOW SYMBOL $STATUS
+  $STATUS == "%X10000001"
+$   I = I + 1
+$   GOTO RESTORE_LOOP
+$ RESTORE_LOOP:
+$   F = F$ELEMENT(I, ",", LIST)
+$   IF F .EQS. "," THEN GOTO RESTORE_DONE
+$   BACKUP/LOG [SETS]B69COM.BCK/SAVE_SET [VB69COM...]/BY_OWNER=ORIGINAL
+%BACKUP-S-CREDIR, created directory DUA1:[VB69COM.B69]
+%BACKUP-S-CREATED, created DUA1:[VB69COM.B69]ACL.TXT;1
+%BACKUP-S-CREATED, created DUA1:[VB69COM.B69]CONTIG.DAT;1
+%BACKUP-S-CREATED, created DUA1:[VB69COM.B69]EMPTY.DAT;1
+%BACKUP-S-CREATED, created DUA1:[VB69COM.B69]EXPIRE.TXT;1
+%BACKUP-S-CREATED, created DUA1:[VB69COM.B69]FIX80.DAT;1
+%BACKUP-S-CREATED, created DUA1:[VB69COM.B69]INDEXED.IDX;1
+%BACKUP-S-CREATED, created DUA1:[VB69COM.B69]MULTI.TXT;3
+%BACKUP-S-CREATED, created DUA1:[VB69COM.B69]MULTI.TXT;2
+%BACKUP-S-CREATED, created DUA1:[VB69COM.B69]MULTI.TXT;1
+%BACKUP-S-CREATED, created DUA1:[VB69COM.B69]NOBACK.TXT;1
+%BACKUP-S-CREATED, created DUA1:[VB69COM.B69]OWNED.TXT;1
+%BACKUP-S-CREATED, created DUA1:[VB69COM.B69]PI.EXE;1
+%BACKUP-S-CREATED, created DUA1:[VB69COM.B69]PI.OBJ;1
+%BACKUP-S-CREATED, created DUA1:[VB69COM.B69]PROT.TXT;1
+%BACKUP-S-CREATED, created DUA1:[VB69COM.B69]STMLF.TXT;1
+%BACKUP-S-CREDIR, created directory DUA1:[VB69COM.B69.SUB1]
+%BACKUP-S-CREATED, created DUA1:[VB69COM.B69.SUB1]A.TXT;1
+%BACKUP-S-CREATED, created DUA1:[VB69COM.B69.SUB1]MEDIUM.DAT;1
+%BACKUP-S-CREDIR, created directory DUA1:[VB69COM.B69.SUB1.SUB2]
+%BACKUP-S-CREATED, created DUA1:[VB69COM.B69.SUB1.SUB2]B.TXT;1
+%BACKUP-S-CREATED, created DUA1:[VB69COM.B69.SUB1.SUB2]BIG.DAT;1
+%BACKUP-S-CREATED, created DUA1:[VB69COM.B69]TEXT.TXT;1
+%BACKUP-S-CREATED, created DUA1:[VB69COM.B69]VERLIM.TXT;2
+%BACKUP-S-CREATED, created DUA1:[VB69COM.B69]VERLIM.TXT;1
+%BACKUP-S-CREATED, created DUA1:[VB69COM.B69]VFC.TXT;1
+$   SHOW SYMBOL $STATUS
+  $STATUS == "%X10000001"
+$   I = I + 1
+$   GOTO RESTORE_LOOP
+$ RESTORE_LOOP:
+$   F = F$ELEMENT(I, ",", LIST)
+$   IF F .EQS. "," THEN GOTO RESTORE_DONE
+$   BACKUP/LOG [SETS]B69EXC.BCK/SAVE_SET [VB69EXC...]/BY_OWNER=ORIGINAL
+%BACKUP-S-CREDIR, created directory DUA1:[VB69EXC.B69]
+%BACKUP-S-CREATED, created DUA1:[VB69EXC.B69]ACL.TXT;1
+%BACKUP-S-CREATED, created DUA1:[VB69EXC.B69]EXPIRE.TXT;1
+%BACKUP-S-CREATED, created DUA1:[VB69EXC.B69]INDEXED.IDX;1
+%BACKUP-S-CREATED, created DUA1:[VB69EXC.B69]MULTI.TXT;3
+%BACKUP-S-CREATED, created DUA1:[VB69EXC.B69]MULTI.TXT;2
+%BACKUP-S-CREATED, created DUA1:[VB69EXC.B69]MULTI.TXT;1
+%BACKUP-S-CREATED, created DUA1:[VB69EXC.B69]NOBACK.TXT;1
+%BACKUP-S-CREATED, created DUA1:[VB69EXC.B69]OWNED.TXT;1
+%BACKUP-S-CREATED, created DUA1:[VB69EXC.B69]PI.EXE;1
+%BACKUP-S-CREATED, created DUA1:[VB69EXC.B69]PI.OBJ;1
+%BACKUP-S-CREATED, created DUA1:[VB69EXC.B69]PROT.TXT;1
+%BACKUP-S-CREATED, created DUA1:[VB69EXC.B69]STMLF.TXT;1
+%BACKUP-S-CREDIR, created directory DUA1:[VB69EXC.B69.SUB1]
+%BACKUP-S-CREATED, created DUA1:[VB69EXC.B69.SUB1]A.TXT;1
+%BACKUP-S-CREDIR, created directory DUA1:[VB69EXC.B69.SUB1.SUB2]
+%BACKUP-S-CREATED, created DUA1:[VB69EXC.B69]TEXT.TXT;1
+%BACKUP-S-CREATED, created DUA1:[VB69EXC.B69]VERLIM.TXT;2
+%BACKUP-S-CREATED, created DUA1:[VB69EXC.B69]VERLIM.TXT;1
+%BACKUP-S-CREATED, created DUA1:[VB69EXC.B69]VFC.TXT;1
+$   SHOW SYMBOL $STATUS
+  $STATUS == "%X10000001"
+$   I = I + 1
+$   GOTO RESTORE_LOOP
+$ RESTORE_LOOP:
+$   F = F$ELEMENT(I, ",", LIST)
+$   IF F .EQS. "," THEN GOTO RESTORE_DONE
+$   BACKUP/LOG [SETS]B69BYO.BCK/SAVE_SET [VB69BYO...]/BY_OWNER=ORIGINAL
+%BACKUP-S-CREDIR, created directory DUA1:[VB69BYO.B69]
+%BACKUP-S-CREATED, created DUA1:[VB69BYO.B69]OWNED.TXT;1
+%BACKUP-S-CREDIR, created directory DUA1:[VB69BYO.B69.SUB1]
+%BACKUP-S-CREDIR, created directory DUA1:[VB69BYO.B69.SUB1.SUB2]
+$   SHOW SYMBOL $STATUS
+  $STATUS == "%X10000001"
+$   I = I + 1
+$   GOTO RESTORE_LOOP
+$ RESTORE_LOOP:
+$   F = F$ELEMENT(I, ",", LIST)
+$   IF F .EQS. "," THEN GOTO RESTORE_DONE
+$   BACKUP/LOG [SETS]B69TXT.BCK/SAVE_SET [VB69TXT...]/BY_OWNER=ORIGINAL
+%BACKUP-S-CREDIR, created directory DUA1:[VB69TXT.B69]
+%BACKUP-S-CREATED, created DUA1:[VB69TXT.B69]ACL.TXT;1
+%BACKUP-S-CREATED, created DUA1:[VB69TXT.B69]EXPIRE.TXT;1
+%BACKUP-S-CREATED, created DUA1:[VB69TXT.B69]MULTI.TXT;3
+%BACKUP-S-CREATED, created DUA1:[VB69TXT.B69]MULTI.TXT;2
+%BACKUP-S-CREATED, created DUA1:[VB69TXT.B69]MULTI.TXT;1
+%BACKUP-S-CREATED, created DUA1:[VB69TXT.B69]NOBACK.TXT;1
+%BACKUP-S-CREATED, created DUA1:[VB69TXT.B69]OWNED.TXT;1
+%BACKUP-S-CREATED, created DUA1:[VB69TXT.B69]PROT.TXT;1
+%BACKUP-S-CREATED, created DUA1:[VB69TXT.B69]STMLF.TXT;1
+%BACKUP-S-CREATED, created DUA1:[VB69TXT.B69]TEXT.TXT;1
+%BACKUP-S-CREATED, created DUA1:[VB69TXT.B69]VERLIM.TXT;2
+%BACKUP-S-CREATED, created DUA1:[VB69TXT.B69]VERLIM.TXT;1
+%BACKUP-S-CREATED, created DUA1:[VB69TXT.B69]VFC.TXT;1
+$   SHOW SYMBOL $STATUS
+  $STATUS == "%X10000001"
+$   I = I + 1
+$   GOTO RESTORE_LOOP
+$ RESTORE_LOOP:
+$   F = F$ELEMENT(I, ",", LIST)
+$   IF F .EQS. "," THEN GOTO RESTORE_DONE
+$   BACKUP/LOG [SETS]B69NONE.BCK/SAVE_SET [VB69NONE...]/BY_OWNER=ORIGINAL
+%BACKUP-S-CREDIR, created directory DUA1:[VB69NONE.B69.SUB1]
+%BACKUP-S-CREDIR, created directory DUA1:[VB69NONE.B69.SUB1.SUB2]
+$   SHOW SYMBOL $STATUS
+  $STATUS == "%X10000001"
+$   I = I + 1
+$   GOTO RESTORE_LOOP
+$ RESTORE_LOOP:
+$   F = F$ELEMENT(I, ",", LIST)
+$   IF F .EQS. "," THEN GOTO RESTORE_DONE
+$   BACKUP/LOG [SETS]TEXT.BCK/SAVE_SET [VTEXT...]/BY_OWNER=ORIGINAL
+%BACKUP-S-CREDIR, created directory DUA1:[VTEXT.B69]
+%BACKUP-S-CREATED, created DUA1:[VTEXT.B69]TEXT.TXT;1
+$   SHOW SYMBOL $STATUS
+  $STATUS == "%X10000001"
+$   I = I + 1
+$   GOTO RESTORE_LOOP
+$ RESTORE_LOOP:
+$   F = F$ELEMENT(I, ",", LIST)
+$   IF F .EQS. "," THEN GOTO RESTORE_DONE
+$   BACKUP/LOG [SETS]B69OWN.BCK/SAVE_SET [VB69OWN...]/BY_OWNER=ORIGINAL
+%BACKUP-S-CREDIR, created directory DUA1:[VB69OWN.B69]
+%BACKUP-S-CREATED, created DUA1:[VB69OWN.B69]TEXT.TXT;1
+$   SHOW SYMBOL $STATUS
+  $STATUS == "%X10000001"
+$   I = I + 1
+$   GOTO RESTORE_LOOP
+$ RESTORE_LOOP:
+$   F = F$ELEMENT(I, ",", LIST)
+$   IF F .EQS. "," THEN GOTO RESTORE_DONE
+$   BACKUP/LOG [SETS]LIST.BCK/SAVE_SET [VLIST...]/BY_OWNER=ORIGINAL
+%BACKUP-S-CREDIR, created directory DUA1:[VLIST.B69]
+%BACKUP-S-CREATED, created DUA1:[VLIST.B69]TEXT.TXT;1
+%BACKUP-S-CREDIR, created directory DUA1:[VLIST.B69.SUB1]
+%BACKUP-S-CREATED, created DUA1:[VLIST.B69.SUB1]A.TXT;1
+$   SHOW SYMBOL $STATUS
+  $STATUS == "%X10000001"
+$   I = I + 1
+$   GOTO RESTORE_LOOP
+$ RESTORE_LOOP:
+$   F = F$ELEMENT(I, ",", LIST)
+$   IF F .EQS. "," THEN GOTO RESTORE_DONE
+$   BACKUP/LOG [SETS]B69IGN.BCK/SAVE_SET [VB69IGN...]/BY_OWNER=ORIGINAL
+%BACKUP-S-CREDIR, created directory DUA1:[VB69IGN.B69]
+%BACKUP-S-CREATED, created DUA1:[VB69IGN.B69]NOBACK.TXT;1
+$   SHOW SYMBOL $STATUS
+  $STATUS == "%X10000001"
+$   I = I + 1
+$   GOTO RESTORE_LOOP
+$ RESTORE_LOOP:
+$   F = F$ELEMENT(I, ",", LIST)
+$   IF F .EQS. "," THEN GOTO RESTORE_DONE
+$ RESTORE_DONE:
+$ BACKUP/LOG [SETS]B69CRC.BCK/SAVE_SET/CRC [VB69CRC...]/BY_OWNER=ORIGINAL
+%BACKUP-S-CREDIR, created directory DUA1:[VB69CRC.B69]
+%BACKUP-S-CREATED, created DUA1:[VB69CRC.B69]ACL.TXT;1
+%BACKUP-S-CREATED, created DUA1:[VB69CRC.B69]CONTIG.DAT;1
+%BACKUP-S-CREATED, created DUA1:[VB69CRC.B69]EMPTY.DAT;1
+%BACKUP-S-CREATED, created DUA1:[VB69CRC.B69]EXPIRE.TXT;1
+%BACKUP-S-CREATED, created DUA1:[VB69CRC.B69]FIX80.DAT;1
+%BACKUP-S-CREATED, created DUA1:[VB69CRC.B69]INDEXED.IDX;1
+%BACKUP-S-CREATED, created DUA1:[VB69CRC.B69]MULTI.TXT;3
+%BACKUP-S-CREATED, created DUA1:[VB69CRC.B69]MULTI.TXT;2
+%BACKUP-S-CREATED, created DUA1:[VB69CRC.B69]MULTI.TXT;1
+%BACKUP-S-CREATED, created DUA1:[VB69CRC.B69]NOBACK.TXT;1
+%BACKUP-S-CREATED, created DUA1:[VB69CRC.B69]OWNED.TXT;1
+%BACKUP-S-CREATED, created DUA1:[VB69CRC.B69]PI.EXE;1
+%BACKUP-S-CREATED, created DUA1:[VB69CRC.B69]PI.OBJ;1
+%BACKUP-S-CREATED, created DUA1:[VB69CRC.B69]PROT.TXT;1
+%BACKUP-S-CREATED, created DUA1:[VB69CRC.B69]STMLF.TXT;1
+%BACKUP-S-CREDIR, created directory DUA1:[VB69CRC.B69.SUB1]
+%BACKUP-S-CREATED, created DUA1:[VB69CRC.B69.SUB1]A.TXT;1
+%BACKUP-S-CREATED, created DUA1:[VB69CRC.B69.SUB1]MEDIUM.DAT;1
+%BACKUP-S-CREDIR, created directory DUA1:[VB69CRC.B69.SUB1.SUB2]
+%BACKUP-S-CREATED, created DUA1:[VB69CRC.B69.SUB1.SUB2]B.TXT;1
+%BACKUP-S-CREATED, created DUA1:[VB69CRC.B69.SUB1.SUB2]BIG.DAT;1
+%BACKUP-S-CREATED, created DUA1:[VB69CRC.B69]TEXT.TXT;1
+%BACKUP-S-CREATED, created DUA1:[VB69CRC.B69]VERLIM.TXT;2
+%BACKUP-S-CREATED, created DUA1:[VB69CRC.B69]VERLIM.TXT;1
+%BACKUP-S-CREATED, created DUA1:[VB69CRC.B69]VFC.TXT;1
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X10000001"
+$ BACKUP/LOG [SETS]HOST.BCK/SAVE_SET/CRC [VHOST...]/BY_OWNER=ORIGINAL
+%BACKUP-F-NOTSAVESET, DUA1:[SETS]HOST.BCK;1 is not a BACKUP save set
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X10A38104"
+$ DIRECTORY/FULL/OUTPUT=[RESULTS]VB69.LST [VB69...]
+$ DIRECTORY/SIZE=ALL [VB69K8...],[VB69G0...],[VB69G3...],[VB69CRC...],[VHOST...]
+
+Directory DUA1:[VB69K8]
+
+B69.DIR;1                  1/3      
+
+Total of 1 file, 1/3 blocks.
+
+Directory DUA1:[VB69K8.B69]
+
+ACL.TXT;1                  1/3      
+CONTIG.DAT;1              74/75     
+EMPTY.DAT;1                0/0      
+EXPIRE.TXT;1               1/3      
+FIX80.DAT;1                1/3      
+INDEXED.IDX;1              8/9      
+MULTI.TXT;3                1/3      
+MULTI.TXT;2                1/3      
+MULTI.TXT;1                1/3      
+NOBACK.TXT;1               1/3      
+OWNED.TXT;1                1/3      
+PI.EXE;1                   6/6      
+PI.OBJ;1                   5/6      
+PROT.TXT;1                 1/3      
+STMLF.TXT;1                1/3      
+SUB1.DIR;1                 1/3      
+TEXT.TXT;1                 1/3      
+VERLIM.TXT;2               1/3      
+VERLIM.TXT;1               1/3      
+VFC.TXT;1                  1/3      
+
+Total of 20 files, 108/141 blocks.
+
+Directory DUA1:[VB69K8.B69.SUB1]
+
+A.TXT;1                    1/3      
+MEDIUM.DAT;1              74/75     
+SUB2.DIR;1                 1/3      
+
+Total of 3 files, 76/81 blocks.
+
+Directory DUA1:[VB69K8.B69.SUB1.SUB2]
+
+B.TXT;1                    1/3      
+BIG.DAT;1                169/171    
+
+Total of 2 files, 170/174 blocks.
+
+Directory DUA1:[VB69G0]
+
+B69.DIR;1                  1/3      
+
+Total of 1 file, 1/3 blocks.
+
+Directory DUA1:[VB69G0.B69]
+
+ACL.TXT;1                  1/3      
+CONTIG.DAT;1              74/75     
+EMPTY.DAT;1                0/0      
+EXPIRE.TXT;1               1/3      
+FIX80.DAT;1                1/3      
+INDEXED.IDX;1              8/9      
+MULTI.TXT;3                1/3      
+MULTI.TXT;2                1/3      
+MULTI.TXT;1                1/3      
+NOBACK.TXT;1               1/3      
+OWNED.TXT;1                1/3      
+PI.EXE;1                   6/6      
+PI.OBJ;1                   5/6      
+PROT.TXT;1                 1/3      
+STMLF.TXT;1                1/3      
+SUB1.DIR;1                 1/3      
+TEXT.TXT;1                 1/3      
+VERLIM.TXT;2               1/3      
+VERLIM.TXT;1               1/3      
+VFC.TXT;1                  1/3      
+
+Total of 20 files, 108/141 blocks.
+
+Directory DUA1:[VB69G0.B69.SUB1]
+
+A.TXT;1                    1/3      
+MEDIUM.DAT;1              74/75     
+SUB2.DIR;1                 1/3      
+
+Total of 3 files, 76/81 blocks.
+
+Directory DUA1:[VB69G0.B69.SUB1.SUB2]
+
+B.TXT;1                    1/3      
+BIG.DAT;1                169/171    
+
+Total of 2 files, 170/174 blocks.
+
+Directory DUA1:[VB69G3]
+
+B69.DIR;1                  1/3      
+
+Total of 1 file, 1/3 blocks.
+
+Directory DUA1:[VB69G3.B69]
+
+ACL.TXT;1                  1/3      
+CONTIG.DAT;1              74/75     
+EMPTY.DAT;1                0/0      
+EXPIRE.TXT;1               1/3      
+FIX80.DAT;1                1/3      
+INDEXED.IDX;1              8/9      
+MULTI.TXT;3                1/3      
+MULTI.TXT;2                1/3      
+MULTI.TXT;1                1/3      
+NOBACK.TXT;1               1/3      
+OWNED.TXT;1                1/3      
+PI.EXE;1                   6/6      
+PI.OBJ;1                   5/6      
+PROT.TXT;1                 1/3      
+STMLF.TXT;1                1/3      
+SUB1.DIR;1                 1/3      
+TEXT.TXT;1                 1/3      
+VERLIM.TXT;2               1/3      
+VERLIM.TXT;1               1/3      
+VFC.TXT;1                  1/3      
+
+Total of 20 files, 108/141 blocks.
+
+Directory DUA1:[VB69G3.B69.SUB1]
+
+A.TXT;1                    1/3      
+MEDIUM.DAT;1              74/75     
+SUB2.DIR;1                 1/3      
+
+Total of 3 files, 76/81 blocks.
+
+Directory DUA1:[VB69G3.B69.SUB1.SUB2]
+
+B.TXT;1                    1/3      
+BIG.DAT;1                169/171    
+
+Total of 2 files, 170/174 blocks.
+
+Directory DUA1:[VB69CRC]
+
+B69.DIR;1                  1/3      
+
+Total of 1 file, 1/3 blocks.
+
+Directory DUA1:[VB69CRC.B69]
+
+ACL.TXT;1                  1/3      
+CONTIG.DAT;1              74/75     
+EMPTY.DAT;1                0/0      
+EXPIRE.TXT;1               1/3      
+FIX80.DAT;1                1/3      
+INDEXED.IDX;1              8/9      
+MULTI.TXT;3                1/3      
+MULTI.TXT;2                1/3      
+MULTI.TXT;1                1/3      
+NOBACK.TXT;1               1/3      
+OWNED.TXT;1                1/3      
+PI.EXE;1                   6/6      
+PI.OBJ;1                   5/6      
+PROT.TXT;1                 1/3      
+STMLF.TXT;1                1/3      
+SUB1.DIR;1                 1/3      
+TEXT.TXT;1                 1/3      
+VERLIM.TXT;2               1/3      
+VERLIM.TXT;1               1/3      
+VFC.TXT;1                  1/3      
+
+Total of 20 files, 108/141 blocks.
+
+Directory DUA1:[VB69CRC.B69.SUB1]
+
+A.TXT;1                    1/3      
+MEDIUM.DAT;1              74/75     
+SUB2.DIR;1                 1/3      
+
+Total of 3 files, 76/81 blocks.
+
+Directory DUA1:[VB69CRC.B69.SUB1.SUB2]
+
+B.TXT;1                    1/3      
+BIG.DAT;1                169/171    
+
+Total of 2 files, 170/174 blocks.
+%DIRECT-E-OPENIN, error opening DUA1:[VHOST...]*.*;* as input
+-RMS-E-DNF, directory not found
+-SYSTEM-W-NOSUCHFILE, no such file
+
+Grand total of 16 directories, 104 files, 1420/1596 blocks.
+$ !
+$ ! ------------------------------------------------------------------
+$ ! Part 4: compares. govax's B69.BCK against the tree it was made
+$ ! from, and against VMS's restore of it.
+$ ! ------------------------------------------------------------------
+$ !
+$ BACKUP/COMPARE/LOG [SETS]B69.BCK/SAVE_SET [*...]
+%BACKUP-S-COMPARED, compared DUA1:[B69]ACL.TXT;1
+%BACKUP-S-COMPARED, compared DUA1:[B69]CONTIG.DAT;1
+%BACKUP-S-COMPARED, compared DUA1:[B69]EMPTY.DAT;1
+%BACKUP-S-COMPARED, compared DUA1:[B69]EXPIRE.TXT;1
+%BACKUP-S-COMPARED, compared DUA1:[B69]FIX80.DAT;1
+%BACKUP-S-COMPARED, compared DUA1:[B69]INDEXED.IDX;1
+%BACKUP-S-COMPARED, compared DUA1:[B69]MULTI.TXT;3
+%BACKUP-S-COMPARED, compared DUA1:[B69]MULTI.TXT;2
+%BACKUP-S-COMPARED, compared DUA1:[B69]MULTI.TXT;1
+%BACKUP-S-COMPARED, compared DUA1:[B69]NOBACK.TXT;1
+%BACKUP-S-COMPARED, compared DUA1:[B69]OWNED.TXT;1
+%BACKUP-S-COMPARED, compared DUA1:[B69]PI.EXE;1
+%BACKUP-S-COMPARED, compared DUA1:[B69]PI.OBJ;1
+%BACKUP-S-COMPARED, compared DUA1:[B69]PROT.TXT;1
+%BACKUP-S-COMPARED, compared DUA1:[B69]STMLF.TXT;1
+%BACKUP-S-COMPARED, compared DUA1:[B69.SUB1]A.TXT;1
+%BACKUP-S-COMPARED, compared DUA1:[B69.SUB1]MEDIUM.DAT;1
+%BACKUP-S-COMPARED, compared DUA1:[B69.SUB1.SUB2]B.TXT;1
+%BACKUP-S-COMPARED, compared DUA1:[B69.SUB1.SUB2]BIG.DAT;1
+%BACKUP-S-COMPARED, compared DUA1:[B69]TEXT.TXT;1
+%BACKUP-S-COMPARED, compared DUA1:[B69]VERLIM.TXT;2
+%BACKUP-S-COMPARED, compared DUA1:[B69]VERLIM.TXT;1
+%BACKUP-S-COMPARED, compared DUA1:[B69]VFC.TXT;1
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X10000001"
+$ BACKUP/COMPARE/LOG [SETS]B69.BCK/SAVE_SET [VB69...]
+%BACKUP-S-COMPARED, compared DUA1:[VB69.B69]ACL.TXT;1
+%BACKUP-S-COMPARED, compared DUA1:[VB69.B69]CONTIG.DAT;1
+%BACKUP-S-COMPARED, compared DUA1:[VB69.B69]EMPTY.DAT;1
+%BACKUP-S-COMPARED, compared DUA1:[VB69.B69]EXPIRE.TXT;1
+%BACKUP-S-COMPARED, compared DUA1:[VB69.B69]FIX80.DAT;1
+%BACKUP-S-COMPARED, compared DUA1:[VB69.B69]INDEXED.IDX;1
+%BACKUP-S-COMPARED, compared DUA1:[VB69.B69]MULTI.TXT;3
+%BACKUP-S-COMPARED, compared DUA1:[VB69.B69]MULTI.TXT;2
+%BACKUP-S-COMPARED, compared DUA1:[VB69.B69]MULTI.TXT;1
+%BACKUP-S-COMPARED, compared DUA1:[VB69.B69]NOBACK.TXT;1
+%BACKUP-S-COMPARED, compared DUA1:[VB69.B69]OWNED.TXT;1
+%BACKUP-S-COMPARED, compared DUA1:[VB69.B69]PI.EXE;1
+%BACKUP-S-COMPARED, compared DUA1:[VB69.B69]PI.OBJ;1
+%BACKUP-S-COMPARED, compared DUA1:[VB69.B69]PROT.TXT;1
+%BACKUP-S-COMPARED, compared DUA1:[VB69.B69]STMLF.TXT;1
+%BACKUP-S-COMPARED, compared DUA1:[VB69.B69.SUB1]A.TXT;1
+%BACKUP-S-COMPARED, compared DUA1:[VB69.B69.SUB1]MEDIUM.DAT;1
+%BACKUP-S-COMPARED, compared DUA1:[VB69.B69.SUB1.SUB2]B.TXT;1
+%BACKUP-S-COMPARED, compared DUA1:[VB69.B69.SUB1.SUB2]BIG.DAT;1
+%BACKUP-S-COMPARED, compared DUA1:[VB69.B69]TEXT.TXT;1
+%BACKUP-S-COMPARED, compared DUA1:[VB69.B69]VERLIM.TXT;2
+%BACKUP-S-COMPARED, compared DUA1:[VB69.B69]VERLIM.TXT;1
+%BACKUP-S-COMPARED, compared DUA1:[VB69.B69]VFC.TXT;1
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X10000001"
+$ BACKUP/COMPARE/LOG [SETS]B69CRC.BCK/SAVE_SET/CRC [VB69CRC...]
+%BACKUP-S-COMPARED, compared DUA1:[VB69CRC.B69]ACL.TXT;1
+%BACKUP-S-COMPARED, compared DUA1:[VB69CRC.B69]CONTIG.DAT;1
+%BACKUP-S-COMPARED, compared DUA1:[VB69CRC.B69]EMPTY.DAT;1
+%BACKUP-S-COMPARED, compared DUA1:[VB69CRC.B69]EXPIRE.TXT;1
+%BACKUP-S-COMPARED, compared DUA1:[VB69CRC.B69]FIX80.DAT;1
+%BACKUP-S-COMPARED, compared DUA1:[VB69CRC.B69]INDEXED.IDX;1
+%BACKUP-S-COMPARED, compared DUA1:[VB69CRC.B69]MULTI.TXT;3
+%BACKUP-S-COMPARED, compared DUA1:[VB69CRC.B69]MULTI.TXT;2
+%BACKUP-S-COMPARED, compared DUA1:[VB69CRC.B69]MULTI.TXT;1
+%BACKUP-S-COMPARED, compared DUA1:[VB69CRC.B69]NOBACK.TXT;1
+%BACKUP-S-COMPARED, compared DUA1:[VB69CRC.B69]OWNED.TXT;1
+%BACKUP-S-COMPARED, compared DUA1:[VB69CRC.B69]PI.EXE;1
+%BACKUP-S-COMPARED, compared DUA1:[VB69CRC.B69]PI.OBJ;1
+%BACKUP-S-COMPARED, compared DUA1:[VB69CRC.B69]PROT.TXT;1
+%BACKUP-S-COMPARED, compared DUA1:[VB69CRC.B69]STMLF.TXT;1
+%BACKUP-S-COMPARED, compared DUA1:[VB69CRC.B69.SUB1]A.TXT;1
+%BACKUP-S-COMPARED, compared DUA1:[VB69CRC.B69.SUB1]MEDIUM.DAT;1
+%BACKUP-S-COMPARED, compared DUA1:[VB69CRC.B69.SUB1.SUB2]B.TXT;1
+%BACKUP-S-COMPARED, compared DUA1:[VB69CRC.B69.SUB1.SUB2]BIG.DAT;1
+%BACKUP-S-COMPARED, compared DUA1:[VB69CRC.B69]TEXT.TXT;1
+%BACKUP-S-COMPARED, compared DUA1:[VB69CRC.B69]VERLIM.TXT;2
+%BACKUP-S-COMPARED, compared DUA1:[VB69CRC.B69]VERLIM.TXT;1
+%BACKUP-S-COMPARED, compared DUA1:[VB69CRC.B69]VFC.TXT;1
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X10000001"
+$ !
+$ ! ------------------------------------------------------------------
+$ ! Part 5: govax's XOR blocks. SSCOPY complements byte 5000 of block 2
+$ ! (data, not header) of B69.BCK and of B69CRC.BCK; each copy is listed
+$ ! and restored, B69CRCD with /CRC so its CRC finds the damage. A
+$ ! byte of block 2's header (100) is changed in B69HDRD.
+$ ! ------------------------------------------------------------------
+$ !
+$ MACRO SSCOPY.MAR
+$ LINK SSCOPY.OBJ
+$ RUN SSCOPY
+[SETS]B69.BCK
+[SETS]B69D.BCK
+0
+2
+5000
+SSCOPY: 7 records copied
+$ RUN SSCOPY
+[SETS]B69CRC.BCK
+[SETS]B69CRCD.BCK
+0
+2
+5000
+SSCOPY: 7 records copied
+$ RUN SSCOPY
+[SETS]B69.BCK
+[SETS]B69HDRD.BCK
+0
+2
+100
+SSCOPY: 7 records copied
+$ BACKUP/LIST [SETS]B69D.BCK/SAVE_SET
+Listing of save set(s)
+
+Save set:          B69.BCK
+Written by:        SYSTEM      
+UIC:               [000001,000004]
+Date:              20-OCT-2026 19:16:06.72
+Command:           BACKUP/LOG [B69...]*.* [SETS]B69.BCK/SAVE_SET
+Operating system:  OpenVMS VAX version V7.3
+BACKUP version:    V6.2
+Written on:        _GOVAX$DUA1:
+Block size:        32256
+Group size:        10
+Buffer count:      8
+
+[B69]ACL.TXT;1                                              1  20-OCT-2026 11:55
+[B69]CONTIG.DAT;1                                          74  20-OCT-2026 11:55
+[B69]EMPTY.DAT;1                                            0  20-OCT-2026 11:55
+[B69]EXPIRE.TXT;1                                           1  20-OCT-2026 11:55
+[B69]FIX80.DAT;1                                            1  20-OCT-2026 11:55
+[B69]INDEXED.IDX;1                                          8  20-OCT-2026 11:55
+[B69]MULTI.TXT;3                                            1  20-OCT-2026 11:55
+[B69]MULTI.TXT;2                                            1  20-OCT-2026 11:55
+[B69]MULTI.TXT;1                                            1  20-OCT-2026 11:55
+[B69]NOBACK.TXT;1                                           1  20-OCT-2026 11:55
+[B69]OWNED.TXT;1                                            1  20-OCT-2026 11:55
+[B69]PI.EXE;1                                               6  20-OCT-2026 11:55
+[B69]PI.OBJ;1                                               5  20-OCT-2026 11:55
+[B69]PROT.TXT;1                                             1  20-OCT-2026 11:55
+[B69]STMLF.TXT;1                                            1  20-OCT-2026 11:55
+[B69]SUB1.DIR;1                                             1  20-OCT-2026 19:16
+[B69.SUB1]A.TXT;1                                           1  20-OCT-2026 11:55
+[B69.SUB1]MEDIUM.DAT;1                                     74  20-OCT-2026 11:55
+[B69.SUB1]SUB2.DIR;1                                        1  20-OCT-2026 19:16
+[B69.SUB1.SUB2]B.TXT;1                                      1  20-OCT-2026 11:55
+[B69.SUB1.SUB2]BIG.DAT;1                                  169  20-OCT-2026 11:55
+[B69]TEXT.TXT;1                                             1  20-OCT-2026 11:55
+[B69]VERLIM.TXT;2                                           1  20-OCT-2026 11:55
+[B69]VERLIM.TXT;1                                           1  20-OCT-2026 11:55
+[B69]VFC.TXT;1                                              1  20-OCT-2026 11:55
+
+Total of 25 files, 354 blocks
+End of save set
+
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X10000001"
+$ BACKUP/LOG [SETS]B69D.BCK/SAVE_SET [DB69D...]/BY_OWNER=ORIGINAL
+%BACKUP-S-CREDIR, created directory DUA1:[DB69D.B69]
+%BACKUP-S-CREATED, created DUA1:[DB69D.B69]ACL.TXT;1
+%BACKUP-S-CREATED, created DUA1:[DB69D.B69]CONTIG.DAT;1
+%BACKUP-S-CREATED, created DUA1:[DB69D.B69]EMPTY.DAT;1
+%BACKUP-S-CREATED, created DUA1:[DB69D.B69]EXPIRE.TXT;1
+%BACKUP-S-CREATED, created DUA1:[DB69D.B69]FIX80.DAT;1
+%BACKUP-S-CREATED, created DUA1:[DB69D.B69]INDEXED.IDX;1
+%BACKUP-S-CREATED, created DUA1:[DB69D.B69]MULTI.TXT;3
+%BACKUP-S-CREATED, created DUA1:[DB69D.B69]MULTI.TXT;2
+%BACKUP-S-CREATED, created DUA1:[DB69D.B69]MULTI.TXT;1
+%BACKUP-S-CREATED, created DUA1:[DB69D.B69]NOBACK.TXT;1
+%BACKUP-S-CREATED, created DUA1:[DB69D.B69]OWNED.TXT;1
+%BACKUP-S-CREATED, created DUA1:[DB69D.B69]PI.EXE;1
+%BACKUP-S-CREATED, created DUA1:[DB69D.B69]PI.OBJ;1
+%BACKUP-S-CREATED, created DUA1:[DB69D.B69]PROT.TXT;1
+%BACKUP-S-CREATED, created DUA1:[DB69D.B69]STMLF.TXT;1
+%BACKUP-S-CREDIR, created directory DUA1:[DB69D.B69.SUB1]
+%BACKUP-S-CREATED, created DUA1:[DB69D.B69.SUB1]A.TXT;1
+%BACKUP-S-CREATED, created DUA1:[DB69D.B69.SUB1]MEDIUM.DAT;1
+%BACKUP-S-CREDIR, created directory DUA1:[DB69D.B69.SUB1.SUB2]
+%BACKUP-S-CREATED, created DUA1:[DB69D.B69.SUB1.SUB2]B.TXT;1
+%BACKUP-S-CREATED, created DUA1:[DB69D.B69.SUB1.SUB2]BIG.DAT;1
+%BACKUP-S-CREATED, created DUA1:[DB69D.B69]TEXT.TXT;1
+%BACKUP-S-CREATED, created DUA1:[DB69D.B69]VERLIM.TXT;2
+%BACKUP-S-CREATED, created DUA1:[DB69D.B69]VERLIM.TXT;1
+%BACKUP-S-CREATED, created DUA1:[DB69D.B69]VFC.TXT;1
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X10000001"
+$ BACKUP/LOG [SETS]B69CRCD.BCK/SAVE_SET/CRC [DB69CRCD...]/BY_OWNER=ORIGINAL
+%BACKUP-S-CREDIR, created directory DUA1:[DB69CRCD.B69]
+%BACKUP-S-CREATED, created DUA1:[DB69CRCD.B69]ACL.TXT;1
+%BACKUP-S-CREATED, created DUA1:[DB69CRCD.B69]CONTIG.DAT;1
+%BACKUP-S-CREATED, created DUA1:[DB69CRCD.B69]EMPTY.DAT;1
+%BACKUP-S-CREATED, created DUA1:[DB69CRCD.B69]EXPIRE.TXT;1
+%BACKUP-S-CREATED, created DUA1:[DB69CRCD.B69]FIX80.DAT;1
+%BACKUP-S-CREATED, created DUA1:[DB69CRCD.B69]INDEXED.IDX;1
+%BACKUP-S-CREATED, created DUA1:[DB69CRCD.B69]MULTI.TXT;3
+%BACKUP-S-CREATED, created DUA1:[DB69CRCD.B69]MULTI.TXT;2
+%BACKUP-S-CREATED, created DUA1:[DB69CRCD.B69]MULTI.TXT;1
+%BACKUP-S-CREATED, created DUA1:[DB69CRCD.B69]NOBACK.TXT;1
+%BACKUP-S-CREATED, created DUA1:[DB69CRCD.B69]OWNED.TXT;1
+%BACKUP-S-CREATED, created DUA1:[DB69CRCD.B69]PI.EXE;1
+%BACKUP-S-CREATED, created DUA1:[DB69CRCD.B69]PI.OBJ;1
+%BACKUP-S-CREATED, created DUA1:[DB69CRCD.B69]PROT.TXT;1
+%BACKUP-S-CREATED, created DUA1:[DB69CRCD.B69]STMLF.TXT;1
+%BACKUP-S-CREDIR, created directory DUA1:[DB69CRCD.B69.SUB1]
+%BACKUP-S-CREATED, created DUA1:[DB69CRCD.B69.SUB1]A.TXT;1
+%BACKUP-S-CREATED, created DUA1:[DB69CRCD.B69.SUB1]MEDIUM.DAT;1
+%BACKUP-S-CREDIR, created directory DUA1:[DB69CRCD.B69.SUB1.SUB2]
+%BACKUP-S-CREATED, created DUA1:[DB69CRCD.B69.SUB1.SUB2]B.TXT;1
+%BACKUP-S-CREATED, created DUA1:[DB69CRCD.B69.SUB1.SUB2]BIG.DAT;1
+%BACKUP-S-CREATED, created DUA1:[DB69CRCD.B69]TEXT.TXT;1
+%BACKUP-S-CREATED, created DUA1:[DB69CRCD.B69]VERLIM.TXT;2
+%BACKUP-S-CREATED, created DUA1:[DB69CRCD.B69]VERLIM.TXT;1
+%BACKUP-S-CREATED, created DUA1:[DB69CRCD.B69]VFC.TXT;1
+%BACKUP-I-XORERRS, 1 error recovered by redundancy group in DUA1:[SETS]B69CRCD.BCK;1
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X10000001"
+$ BACKUP/LOG [SETS]B69HDRD.BCK/SAVE_SET [DB69HDRD...]/BY_OWNER=ORIGINAL
+%BACKUP-S-CREDIR, created directory DUA1:[DB69HDRD.B69]
+%BACKUP-S-CREATED, created DUA1:[DB69HDRD.B69]ACL.TXT;1
+%BACKUP-S-CREATED, created DUA1:[DB69HDRD.B69]CONTIG.DAT;1
+%BACKUP-S-CREATED, created DUA1:[DB69HDRD.B69]EMPTY.DAT;1
+%BACKUP-S-CREATED, created DUA1:[DB69HDRD.B69]EXPIRE.TXT;1
+%BACKUP-S-CREATED, created DUA1:[DB69HDRD.B69]FIX80.DAT;1
+%BACKUP-S-CREATED, created DUA1:[DB69HDRD.B69]INDEXED.IDX;1
+%BACKUP-S-CREATED, created DUA1:[DB69HDRD.B69]MULTI.TXT;3
+%BACKUP-S-CREATED, created DUA1:[DB69HDRD.B69]MULTI.TXT;2
+%BACKUP-S-CREATED, created DUA1:[DB69HDRD.B69]MULTI.TXT;1
+%BACKUP-S-CREATED, created DUA1:[DB69HDRD.B69]NOBACK.TXT;1
+%BACKUP-S-CREATED, created DUA1:[DB69HDRD.B69]OWNED.TXT;1
+%BACKUP-S-CREATED, created DUA1:[DB69HDRD.B69]PI.EXE;1
+%BACKUP-S-CREATED, created DUA1:[DB69HDRD.B69]PI.OBJ;1
+%BACKUP-S-CREATED, created DUA1:[DB69HDRD.B69]PROT.TXT;1
+%BACKUP-S-CREATED, created DUA1:[DB69HDRD.B69]STMLF.TXT;1
+%BACKUP-S-CREDIR, created directory DUA1:[DB69HDRD.B69.SUB1]
+%BACKUP-S-CREATED, created DUA1:[DB69HDRD.B69.SUB1]A.TXT;1
+%BACKUP-S-CREATED, created DUA1:[DB69HDRD.B69.SUB1]MEDIUM.DAT;1
+%BACKUP-S-CREDIR, created directory DUA1:[DB69HDRD.B69.SUB1.SUB2]
+%BACKUP-S-CREATED, created DUA1:[DB69HDRD.B69.SUB1.SUB2]B.TXT;1
+%BACKUP-S-CREATED, created DUA1:[DB69HDRD.B69.SUB1.SUB2]BIG.DAT;1
+%BACKUP-S-CREATED, created DUA1:[DB69HDRD.B69]TEXT.TXT;1
+%BACKUP-S-CREATED, created DUA1:[DB69HDRD.B69]VERLIM.TXT;2
+%BACKUP-S-CREATED, created DUA1:[DB69HDRD.B69]VERLIM.TXT;1
+%BACKUP-S-CREATED, created DUA1:[DB69HDRD.B69]VFC.TXT;1
+%BACKUP-I-XORERRS, 1 error recovered by redundancy group in DUA1:[SETS]B69HDRD.BCK;1
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X10000001"
+$ BACKUP/COMPARE/LOG [SETS]B69CRCD.BCK/SAVE_SET/CRC [DB69CRCD...]
+%BACKUP-S-COMPARED, compared DUA1:[DB69CRCD.B69]ACL.TXT;1
+%BACKUP-S-COMPARED, compared DUA1:[DB69CRCD.B69]CONTIG.DAT;1
+%BACKUP-S-COMPARED, compared DUA1:[DB69CRCD.B69]EMPTY.DAT;1
+%BACKUP-S-COMPARED, compared DUA1:[DB69CRCD.B69]EXPIRE.TXT;1
+%BACKUP-S-COMPARED, compared DUA1:[DB69CRCD.B69]FIX80.DAT;1
+%BACKUP-S-COMPARED, compared DUA1:[DB69CRCD.B69]INDEXED.IDX;1
+%BACKUP-S-COMPARED, compared DUA1:[DB69CRCD.B69]MULTI.TXT;3
+%BACKUP-S-COMPARED, compared DUA1:[DB69CRCD.B69]MULTI.TXT;2
+%BACKUP-S-COMPARED, compared DUA1:[DB69CRCD.B69]MULTI.TXT;1
+%BACKUP-S-COMPARED, compared DUA1:[DB69CRCD.B69]NOBACK.TXT;1
+%BACKUP-S-COMPARED, compared DUA1:[DB69CRCD.B69]OWNED.TXT;1
+%BACKUP-S-COMPARED, compared DUA1:[DB69CRCD.B69]PI.EXE;1
+%BACKUP-S-COMPARED, compared DUA1:[DB69CRCD.B69]PI.OBJ;1
+%BACKUP-S-COMPARED, compared DUA1:[DB69CRCD.B69]PROT.TXT;1
+%BACKUP-S-COMPARED, compared DUA1:[DB69CRCD.B69]STMLF.TXT;1
+%BACKUP-S-COMPARED, compared DUA1:[DB69CRCD.B69.SUB1]A.TXT;1
+%BACKUP-S-COMPARED, compared DUA1:[DB69CRCD.B69.SUB1]MEDIUM.DAT;1
+%BACKUP-S-COMPARED, compared DUA1:[DB69CRCD.B69.SUB1.SUB2]B.TXT;1
+%BACKUP-S-COMPARED, compared DUA1:[DB69CRCD.B69.SUB1.SUB2]BIG.DAT;1
+%BACKUP-S-COMPARED, compared DUA1:[DB69CRCD.B69]TEXT.TXT;1
+%BACKUP-S-COMPARED, compared DUA1:[DB69CRCD.B69]VERLIM.TXT;2
+%BACKUP-S-COMPARED, compared DUA1:[DB69CRCD.B69]VERLIM.TXT;1
+%BACKUP-S-COMPARED, compared DUA1:[DB69CRCD.B69]VFC.TXT;1
+%BACKUP-I-XORERRS, 1 error recovered by redundancy group in DUA1:[SETS]B69CRCD.BCK;1
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X10000001"
+$ !
+$ ! ------------------------------------------------------------------
+$ ! Part 6: the volume, after govax's restores and VMS's.
+$ ! ------------------------------------------------------------------
+$ !
+$ ANALYZE/DISK_STRUCTURE DUA1:
+Analyze/Disk_Structure for _SIMVAX$DUA1: started on 20-OCT-2026 19:22:28.00
+
+%ANALDISK-I-OPENQUOTA, error opening QUOTA.SYS
+-SYSTEM-W-NOSUCHFILE, no such file
+%ANALDISK-I-BADHIGHWATER, file (72,1,1) NOBACK.TXT;1
+	inconsistent highwater mark and EFBLK
+%ANALDISK-I-BADHIGHWATER, file (99,1,1) NOBACK.TXT;1
+	inconsistent highwater mark and EFBLK
+%ANALDISK-I-BADHIGHWATER, file (126,1,1) NOBACK.TXT;1
+	inconsistent highwater mark and EFBLK
+%ANALDISK-I-BADHIGHWATER, file (153,1,1) NOBACK.TXT;1
+	inconsistent highwater mark and EFBLK
+%ANALDISK-I-BADHIGHWATER, file (180,1,1) NOBACK.TXT;1
+	inconsistent highwater mark and EFBLK
+%ANALDISK-I-BADHIGHWATER, file (207,1,1) NOBACK.TXT;1
+	inconsistent highwater mark and EFBLK
+%ANALDISK-I-BADHIGHWATER, file (231,1,1) NOBACK.TXT;1
+	inconsistent highwater mark and EFBLK
+%ANALDISK-I-BADHIGHWATER, file (256,1,1) NOBACK.TXT;1
+	inconsistent highwater mark and EFBLK
+%ANALDISK-I-BADHIGHWATER, file (293,1,1) NOBACK.TXT;1
+	inconsistent highwater mark and EFBLK
+%ANALDISK-I-BADHIGHWATER, file (326,1,1) NOBACK.TXT;1
+	inconsistent highwater mark and EFBLK
+%ANALDISK-I-BADHIGHWATER, file (353,1,1) NOBACK.TXT;1
+	inconsistent highwater mark and EFBLK
+%ANALDISK-I-BADHIGHWATER, file (380,1,1) NOBACK.TXT;1
+	inconsistent highwater mark and EFBLK
+$ SHOW SYMBOL $STATUS
+  $STATUS == "%X00000001"
+$ DIRECTORY/SIZE=ALL/DATE [SETS]
+
+Directory DUA1:[SETS]
+
+B69.BCK;1                441/441      20-OCT-2026 19:16:06.72
+B69BYO.BCK;1             126/126      20-OCT-2026 19:16:06.73
+B69COM.BCK;1             441/441      20-OCT-2026 19:16:06.72
+B69CRC.BCK;1             441/441      20-OCT-2026 19:16:06.72
+B69CRCD.BCK;1            441/441      20-OCT-2026 19:22:27.53
+B69D.BCK;1               441/441      20-OCT-2026 19:22:27.52
+B69EXC.BCK;1             126/126      20-OCT-2026 19:16:06.72
+B69G0.BCK;1              378/378      20-OCT-2026 19:16:06.72
+B69G3.BCK;1              504/504      20-OCT-2026 19:16:06.72
+B69HDRD.BCK;1            441/441      20-OCT-2026 19:22:27.55
+B69IGN.BCK;1             126/126      20-OCT-2026 19:16:06.73
+B69K8.BCK;1              448/450      20-OCT-2026 19:16:06.72
+B69NOCRC.BCK;1           441/441      20-OCT-2026 19:16:06.72
+B69NONE.BCK;1            126/126      20-OCT-2026 19:16:06.73
+B69OWN.BCK;1             126/126      20-OCT-2026 19:16:06.73
+B69TXT.BCK;1             126/126      20-OCT-2026 19:16:06.73
+HOST.BCK;1               441/441      20-OCT-2026 19:16:06.73
+LIST.BCK;1               189/189      20-OCT-2026 19:16:06.73
+TEXT.BCK;1               126/126      20-OCT-2026 19:16:06.73
+
+Total of 19 files, 5929/5931 blocks.
+$ SET NOVERIFY

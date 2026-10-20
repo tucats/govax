@@ -266,6 +266,10 @@ func (w *volumeRestore) restore(spec filespec.Spec, version uint16, opts Restore
 			return result, fmt.Errorf("restoring %s;%d: %w", fullName, version, err)
 		}
 
+		if err := w.setEntryLimit(parent, fullName); err != nil {
+			return result, err
+		}
+
 		out.Version = fmt.Sprint(version)
 		result.Name = out.String()
 		result.Created = true
@@ -290,11 +294,29 @@ func (w *volumeRestore) restore(spec filespec.Spec, version uint16, opts Restore
 		return result, fmt.Errorf("restoring %s;%d: %w", fullName, made1, err)
 	}
 
+	if err := w.setEntryLimit(parent, fullName); err != nil {
+		return result, err
+	}
+
 	out.Version = fmt.Sprint(made1)
 	result.Name = out.String()
 	result.Created = true
 
 	return result, nil
+}
+
+// setEntryLimit gives fullName's directory record in parent the saved
+// file's version limit, which VMS reads there: VMS V7.1's DIRECTORY/FULL
+// of a VERLIM.TXT govax restored with its limit only in the header said
+// "No version limit" (testdata/backup69's round 2). The record is every
+// version's, so a restore of another version of the name sets it again
+// (unconfirmed for one whose saved limit differs).
+func (w *volumeRestore) setEntryLimit(parent *volume.Directory, fullName string) error {
+	if err := parent.SetNameVersionLimit(fullName, fileVersionLimit(w.file.VersionLimit)); err != nil {
+		return fmt.Errorf("restoring %s: %w", fullName, err)
+	}
+
+	return nil
 }
 
 // existing applies rule to fullName;version in parent before a restore

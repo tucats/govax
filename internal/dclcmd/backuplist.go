@@ -151,7 +151,12 @@ func writeSaveSetSummary(l *backupListing, s backup.Summary) {
 	field("Command", s.Command)
 	field("Operating system", operatingSystemName(s.OpSys)+" version "+s.SystemVersion)
 	field("BACKUP version", s.BackupVersion)
-	field("CPU ID register", fmt.Sprintf("%08X", s.CPUID))
+	// A CPU ID of 0, govax's, isn't shown (VMS V7.1's listings of
+	// govax's save sets, round 2).
+	if s.CPUID != 0 {
+		field("CPU ID register", fmt.Sprintf("%08X", s.CPUID))
+	}
+
 	field("Written on", s.Device)
 	field("Block size", fmt.Sprint(s.BlockSize))
 

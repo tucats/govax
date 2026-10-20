@@ -60,3 +60,42 @@ that dry run was checked before the volume went to the VAX.
 Nothing on the volume is DIGITAL's: the tree is round 1's own files
 (PI.EXE linked from `testdata/mar/pi.mar`), and the save sets are
 govax's.
+
+## The results (2026-10-20)
+
+VMS V7.1 ran it; everything is in `../vax/round2/`, govax's save sets
+as VMS read them in `govax/`, and SSCOPY's damaged copies beside them.
+`TestBackup69Round2` (`internal/console/backup69round2_test.go`) makes
+the exchange volume again from `exchange.cmd`, holds its save sets to the
+ones VMS read (byte for byte but for the run's own values), runs RUN2.COM
+on govax, and matches VMS's log and reports.
+
+- VMS listed every one of govax's save sets as govax lists them, and
+  restored and compared all of them, `/CRC` on the input included: govax's
+  data CRCs and XOR blocks are right. SSCOPY's damage was recovered as
+  round 1's was (XORERRS for B69CRCD and B69HDRD, nothing for B69D, whose
+  data has no CRC), and every file came back.
+- **A CPU ID of 0 isn't listed:** VMS left out `CPU ID register:` for
+  govax's save sets. govax's listing now does too.
+- **A compare passes over directory files:** VMS said nothing at all of
+  SUB1.DIR and SUB2.DIR, no COMPARED and no VERIFYERR. govax now does the
+  same.
+- **A restore of directory files alone isn't NOFILES:** B69NONE.BCK
+  holds only the two directory files; VMS made them (two CREDIRs) and
+  ended with %X10000001. govax counted none and said NOFILES; it now
+  counts a restored directory file.
+- **A save set as 512-byte records is NOTSAVESET:** VMS refused HOST.BCK
+  (`%BACKUP-F-NOTSAVESET, ... is not a BACKUP save set`, %X10A38104),
+  listing and restoring. govax reads it (Decision 3), a listed
+  difference.
+- **VMS reads a file's version limit from its directory record:** its
+  DIRECTORY/FULL of govax's restored tree (`tree2.lst`) said "No version
+  limit" for VERLIM.TXT, whose limit govax's restore had put only in the
+  header. govax's restore now sets the record too (ods2's
+  `Directory.SetNameVersionLimit`).
+- ANALYZE/DISK_STRUCTURE found the volume sound. Its only notices were
+  QUOTA.SYS missing and BADHIGHWATER ("inconsistent highwater mark and
+  EFBLK") for the twelve header-only NOBACK.TXT files VMS's own restores
+  made; govax's NOBACK.TXT, restored with its data, wasn't named. Whether
+  VMS's restores of its own save sets do the same is unconfirmed (round 1
+  ran no ANALYZE).

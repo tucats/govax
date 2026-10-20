@@ -321,7 +321,17 @@ func (r *backupRestore) restore(f *backup.File, loc rms.FileLocation, opts rms.R
 		return
 	}
 
-	if !result.Created || f.Directory() {
+	// A saved directory file is restored as a directory, which CREDIR
+	// reports, and counts as a file restored: VMS V7.1 gave B69NONE.BCK,
+	// which held only two, no NOFILES (round 2). One that was there
+	// counts too (unconfirmed).
+	if f.Directory() {
+		r.files++
+
+		return
+	}
+
+	if !result.Created {
 		return
 	}
 

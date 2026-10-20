@@ -162,8 +162,12 @@ var (
 
 	// backup69System are the summary's fields that name the system that
 	// wrote the save set.
-	backup69System = regexp.MustCompile(`^(Operating system:  OpenVMS VAX version|CPU ID register:|Written on:) .*$`)
+	backup69System = regexp.MustCompile(`^(Operating system:  OpenVMS VAX version|Written on:) .*$`)
 )
+
+// backup69CPUID starts the summary's CPU ID line, which a listing leaves
+// out for govax's CPU ID, 0, and so is taken out of both runs' lines.
+const backup69CPUID = "CPU ID register:"
 
 // backup69RunMade are the types of the files whose times are the run's
 // own: the directories (the tree's made by the test's restore, VMS's by
@@ -173,10 +177,18 @@ var backup69RunMade = map[string]bool{"DIR": true, "BCK": true, "LST": true, "LI
 // backup69Mask masks what differs in every run, VMS's or govax's: the
 // times of the files the run made (on an entry's first line and the
 // lines that follow it to the next entry or a blank line), a save set's
-// date, the system that wrote it, and file IDs. The restored files'
-// dates are the saved files', so they're compared.
+// date and the system that wrote it (its CPU ID line taken out), and
+// file IDs. The restored files' dates are the saved files', so they're
+// compared.
 func backup69Mask(text string) []string {
-	lines := strings.Split(strings.TrimRight(strings.ReplaceAll(text, "\r", ""), "\n"), "\n")
+	var lines []string
+
+	for line := range strings.SplitSeq(strings.TrimRight(strings.ReplaceAll(text, "\r", ""), "\n"), "\n") {
+		if !strings.HasPrefix(line, backup69CPUID) {
+			lines = append(lines, line)
+		}
+	}
+
 	runMade := false
 
 	for i, line := range lines {

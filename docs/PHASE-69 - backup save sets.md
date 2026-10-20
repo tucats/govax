@@ -9,8 +9,7 @@ the format. Subtask 2, the VMS probe (`testdata/backup69`), is done:
 blocks, and VMS's messages. Subtasks 3 (COPY to a host name), 4 (`internal/backup`, the
 reader), 5 (opening a save set), 6 (the command), 7 (BACKUP/LIST), 8
 (restoring a file), 9 (BACKUP's restore), 10 (BACKUP/COMPARE), and 11
-(saving) are done. Subtask 12's oracle is done, and its second VAX round
-(`testdata/backup69/round2`) waits for the author's run.
+(saving) and 12 (the oracle, with the second VAX round) are done.
 
 ## Goal
 
@@ -629,8 +628,7 @@ reports, and every save set byte for byte (COPY/BINARY).
     records split as VMS splits them, null fill, XOR blocks, header
     checksum, data CRC) and the save command with its output save-set
     qualifiers and input file-selection qualifiers.
-12. **The oracle** — the oracle done (2026-10-20), the second round
-    prepared and waiting for the author: `TestBackup69Oracle` runs the probe's procedure on
+12. **The oracle** — done (2026-10-20): `TestBackup69Oracle` runs the probe's procedure on
     govax and matches VMS's log and listings, the restored files, and
     their headers, with a listed set of differences; govax's save sets
     of the probe's tree against VMS's. Then a second VAX round in which
@@ -1339,3 +1337,43 @@ A leaf package (standard library only), `internal/backup`:
   which govax lacks, ran, with XORERRS for the CRC and header damage and
   nothing for the data damage without a CRC, as round 1's VMS run showed.
   `TestBackup69Round2` follows VMS's run.
+
+### 2026-10-20 — Subtask 12: the second round
+
+- **VMS's run** (`testdata/backup69/vax/round2`; `round2/README.md` has
+  the findings): VMS V7.1 listed, restored, and compared every save set
+  govax made, `/CRC` on the input included, and recovered SSCOPY's damage
+  to them through govax's XOR blocks as it had its own. ANALYZE/
+  DISK_STRUCTURE found the volume sound, but for BADHIGHWATER on the
+  twelve header-only NOBACK.TXT files its own restores made (unconfirmed
+  whether it does that for its own save sets).
+- **Fixed from its answers:**
+  - A listing leaves out `CPU ID register:` when the CPU ID is 0, as VMS
+    did for govax's (`writeSaveSetSummary`). The round 1 oracle takes the
+    line out of both runs.
+  - A compare passes over a saved directory file without a word, as VMS
+    did (`backupRestore.compare`); subtask 10 had it match.
+  - A restored directory file counts as a file restored, so a save set of
+    directory files alone (B69NONE.BCK) ends without NOFILES, as VMS's
+    did (an existing one counts too, unconfirmed).
+  - VMS reads a file's version limit from its directory record (its
+    DIRECTORY/FULL of a VERLIM.TXT govax restored said "No version
+    limit"). The restore now sets the name's record to the saved limit
+    too (`volumeRestore.setEntryLimit`, over ods2's new
+    `Directory.SetNameVersionLimit`; `TestRestoreEntryVersionLimit`),
+    keeping the header's, which govax's DIRECTORY and ods2's version
+    enforcement read. The ods2 change is in its v0.1.24, which
+    `go.mod` pins.
+- **Left as it is:** VMS refuses a save set stored as 512-byte records
+  (NOTSAVESET, %X10A38104), which govax reads (Decision 3).
+- **`TestBackup69Round2`** (`internal/console/backup69round2_test.go`)
+  makes the exchange volume again by running `exchange.cmd`'s lines
+  (paths put in the test's directories), holds Part 2's 15 save sets to
+  the ones VMS read, byte for byte but for the run's own values, runs
+  RUN2.COM, and holds the log (1971 lines but for F$GETSYI's), TREE2.LST,
+  SETS2.LST, VB69.LST, and B69FULL2.LIS to VMS's, masked as round 1's.
+  HOST.BCK's listing and restore, the DIRECTORY that follows (compared up
+  to [VHOST...]), and ANALYZE/DISK_STRUCTURE are cut out and checked on
+  their own. TREE2.LST's VERLIM.TXT lines are a listed difference: VMS
+  read the tree before the restore fix. SSCOPY's copies, VMS's and
+  govax's, each differ from their source in the one byte changed.
