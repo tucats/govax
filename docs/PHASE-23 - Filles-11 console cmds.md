@@ -1588,3 +1588,21 @@ container was never created by anything this project wrote.
   element is reported and the rest go on; the command's error is the last
   failure (unconfirmed against VMS: which status DELETE leaves when
   several elements fail, or when only an earlier one does).
+
+### 2026-10-20 — Later: COPY's output version
+
+- `COPY V.OBJ Z.OBJ;7` made the next version of Z.OBJ, not version 7:
+  every COPY path created its output with ods2's `Volume.CreateFile`,
+  which always takes the next version. They now use `CreateFileVersion`
+  (`rms/copy.go`'s `createVersion`), with the version `destVersion`
+  takes from the destination: a number from 1 to 32767 as given, the
+  next for none or `;0`, and each source's own for `;*` (a host file's
+  next). A version that exists is an `rms.OutputExistsError`, which
+  `dclcmd.Context.Copy` shows as `%COPY-E-OPENOUT ... -RMS-E-FEX, file
+  already exists, not superseded` (unconfirmed against VMS: the status,
+  taken to be RMS$_FEX's).
+- The other commands that make volume files already went through
+  `CreateFileVersion` with the version given (`$CREATE`, DCL's OPEN,
+  CREATE, @/OUTPUT=, DIRECTORY/OUTPUT=, MACRO, LINK, LIBRARY, by
+  `rms.CreateRecordFile`); `TestOutputVersion` (`internal/console`)
+  checks each of them with COPY's cases.

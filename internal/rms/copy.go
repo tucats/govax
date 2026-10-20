@@ -408,6 +408,10 @@ func (s *Session) copyVolumeToVolume(sourceText, destText string, opts CopyOptio
 
 		if opts.Test {
 			dest := filespec.Spec{Device: destSpec.Device, Dirs: destSpec.Dirs, Name: name, Type: typ}
+			if v, err := destVersion(destSpec, m.Version); err == nil && v != 0 {
+				dest.Version = fmt.Sprint(v)
+			}
+
 			results = append(results, CopyResult{Kind: CopyTested, Source: sourceDisplay, Dest: dest.String()})
 
 			continue
@@ -418,13 +422,20 @@ func (s *Session) copyVolumeToVolume(sourceText, destText string, opts CopyOptio
 			return results, fmt.Errorf("copy: %w", err)
 		}
 
-		version, err := createBinaryFile(destVol, destDir, destBm, destIb, name, typ, src)
-
+		version, err := destVersion(destSpec, m.Version)
 		if err != nil {
 			return results, fmt.Errorf("copy: %w", err)
 		}
 
-		dest := filespec.Spec{Device: destSpec.Device, Dirs: destSpec.Dirs, Name: name, Type: typ, Version: fmt.Sprint(version)}
+		dest := filespec.Spec{Device: destSpec.Device, Dirs: destSpec.Dirs, Name: name, Type: typ}
+
+		version, err = createBinaryFile(destVol, destDir, destBm, destIb, name, typ, version, src)
+		if err != nil {
+			return results, fmt.Errorf("copy: %w", fullOutputName(err, dest))
+		}
+
+		dest.Version = fmt.Sprint(version)
+
 		results = append(results, CopyResult{Kind: CopyCopied, Source: sourceDisplay, Dest: dest.String()})
 	}
 
@@ -452,6 +463,9 @@ func (s *Session) copyFromHost(hostPath, destText string, opts CopyOptions) ([]C
 
 	if opts.Test {
 		dest := filespec.Spec{Device: destSpec.Device, Dirs: destSpec.Dirs, Name: name, Type: typ}
+		if v, err := destVersion(destSpec, 0); err == nil && v != 0 {
+			dest.Version = fmt.Sprint(v)
+		}
 
 		return []CopyResult{{Kind: CopyTested, Source: hostPath, Dest: dest.String()}}, nil
 	}
@@ -461,24 +475,29 @@ func (s *Session) copyFromHost(hostPath, destText string, opts CopyOptions) ([]C
 		return nil, fmt.Errorf("copy: %w", err)
 	}
 
-	var version uint16
-
-	switch kind, ok := hostRecordTypes[hostType]; {
-	case ok:
-		version, err = createRecordFileFromHost(destVol, destDir, destBm, destIb, name, typ, hostPath, data, kind)
-	case opts.Binary:
-		version, err = createBinaryFileFromHost(destVol, destDir, destBm, destIb, name, typ, bytes.NewReader(data), int64(len(data)))
-	default:
-		version, err = createTextFile(destVol, destDir, destBm, destIb, name, typ, func(w *odsrms.Writer) error {
-			return copyHostLinesAsRecords(w, bytes.NewReader(data))
-		})
-	}
-
+	// A host file has no version, so ";*" keeps none: the next is made.
+	version, err := destVersion(destSpec, 0)
 	if err != nil {
 		return nil, fmt.Errorf("copy: %w", err)
 	}
 
-	dest := filespec.Spec{Device: destSpec.Device, Dirs: destSpec.Dirs, Name: name, Type: typ, Version: fmt.Sprint(version)}
+	switch kind, ok := hostRecordTypes[hostType]; {
+	case ok:
+		version, err = createRecordFileFromHost(destVol, destDir, destBm, destIb, name, typ, version, hostPath, data, kind)
+	case opts.Binary:
+		version, err = createBinaryFileFromHost(destVol, destDir, destBm, destIb, name, typ, version, bytes.NewReader(data), int64(len(data)))
+	default:
+		version, err = createTextFile(destVol, destDir, destBm, destIb, name, typ, version, func(w *odsrms.Writer) error {
+			return copyHostLinesAsRecords(w, bytes.NewReader(data))
+		})
+	}
+
+	dest := filespec.Spec{Device: destSpec.Device, Dirs: destSpec.Dirs, Name: name, Type: typ}
+	if err != nil {
+		return nil, fmt.Errorf("copy: %w", fullOutputName(err, dest))
+	}
+
+	dest.Version = fmt.Sprint(version)
 
 	return []CopyResult{{Kind: CopyCopied, Source: hostPath, Dest: dest.String()}}, nil
 }
@@ -825,9 +844,9 @@ func resolveVolumeDest(destVol *volume.Volume, destSpec filespec.Spec) (*volume.
 }
 
 // createTextFile creates a brand-new Stream_LF file name.typ in destDir
-// (using destBm/destIb, destDir's device's bitmap caches), auto-assigning
-// the next version number the same way CreateFile/Directory.Insert always
-// does, calls fill to write its content through the freshly opened
+// (using destBm/destIb, destDir's device's bitmap caches) at version, or
+// at the next version number when version is 0 (see createVersion), calls
+// fill to write its content through the freshly opened
 // odsrms.Writer, and returns the version actually used (by looking the
 // new directory entry back up, the same way ods2's own
 // copyOneFileToVolume/copyHostFileToVolume do, rather than threading it
@@ -836,12 +855,12 @@ func resolveVolumeDest(destVol *volume.Volume, destSpec filespec.Spec) (*volume.
 // Stream_LF is the default (non-/BINARY) destination format on a volume,
 // matching ods2's own cmdCopy default; createBinaryFile/
 // createBinaryFileFromHost below are its /BINARY counterparts.
-func createTextFile(destVol *volume.Volume, destDir *volume.Directory, destBm *volume.Bitmap, destIb *volume.IndexBitmap, name, typ string, fill func(*odsrms.Writer) error) (uint16, error) {
+func createTextFile(destVol *volume.Volume, destDir *volume.Directory, destBm *volume.Bitmap, destIb *volume.IndexBitmap, name, typ string, version uint16, fill func(*odsrms.Writer) error) (uint16, error) {
 	fullName := name + "." + typ
 
-	dst, err := destVol.CreateFile(destDir, fullName, ondisk.RecAttr{Format: ondisk.RecordFormatStreamLF}, destBm, destIb)
+	dst, err := createVersion(destVol, destDir, fullName, version, ondisk.RecAttr{Format: ondisk.RecordFormatStreamLF}, destBm, destIb)
 	if err != nil {
-		return 0, fmt.Errorf("creating %s: %w", fullName, err)
+		return 0, err
 	}
 
 	w, err := odsrms.NewWriter(dst)
@@ -857,7 +876,7 @@ func createTextFile(destVol *volume.Volume, destDir *volume.Directory, destBm *v
 		return 0, fmt.Errorf("writing %s: %w", fullName, err)
 	}
 
-	return lookUpVersion(destDir, fullName)
+	return createdVersion(destDir, fullName, version)
 }
 
 // createBinaryFile creates a brand-new file name.typ in destDir with
@@ -867,19 +886,19 @@ func createTextFile(destVol *volume.Volume, destDir *volume.Directory, destBm *v
 // createTextFile, sharing its same "look the assigned version back up
 // via Directory.Lookup" convention. Functionally matches ods2's own
 // copyOneFileToVolume(binary: true).
-func createBinaryFile(destVol *volume.Volume, destDir *volume.Directory, destBm *volume.Bitmap, destIb *volume.IndexBitmap, name, typ string, src *volume.File) (uint16, error) {
+func createBinaryFile(destVol *volume.Volume, destDir *volume.Directory, destBm *volume.Bitmap, destIb *volume.IndexBitmap, name, typ string, version uint16, src *volume.File) (uint16, error) {
 	fullName := name + "." + typ
 
-	dst, err := destVol.CreateFile(destDir, fullName, copiedAttributes(src.Header.RecordAttributes), destBm, destIb)
+	dst, err := createVersion(destVol, destDir, fullName, version, copiedAttributes(src.Header.RecordAttributes), destBm, destIb)
 	if err != nil {
-		return 0, fmt.Errorf("creating %s: %w", fullName, err)
+		return 0, err
 	}
 
 	if err := copyRawToVolume(dst, src); err != nil {
 		return 0, fmt.Errorf("writing %s: %w", fullName, err)
 	}
 
-	return lookUpVersion(destDir, fullName)
+	return createdVersion(destDir, fullName, version)
 }
 
 // copiedAttributes is the record attributes a copy of a file with attr
@@ -909,7 +928,7 @@ func isHostRecordType(typ string) bool {
 // of a hostRecordTypes type, reading the host file in kind's layout and
 // writing its records with kind's attributes (recordfile.go), so a host
 // object module comes back as a real variable-length record file.
-func createRecordFileFromHost(destVol *volume.Volume, destDir *volume.Directory, destBm *volume.Bitmap, destIb *volume.IndexBitmap, name, typ, hostPath string, data []byte, kind RecordKind) (uint16, error) {
+func createRecordFileFromHost(destVol *volume.Volume, destDir *volume.Directory, destBm *volume.Bitmap, destIb *volume.IndexBitmap, name, typ string, version uint16, hostPath string, data []byte, kind RecordKind) (uint16, error) {
 	fullName := name + "." + typ
 
 	records, err := hostRecords(hostPath, data, kind)
@@ -917,16 +936,16 @@ func createRecordFileFromHost(destVol *volume.Volume, destDir *volume.Directory,
 		return 0, err
 	}
 
-	dst, err := destVol.CreateFile(destDir, fullName, newRecordAttributes(kind, records), destBm, destIb)
+	dst, err := createVersion(destVol, destDir, fullName, version, newRecordAttributes(kind, records), destBm, destIb)
 	if err != nil {
-		return 0, fmt.Errorf("creating %s: %w", fullName, err)
+		return 0, err
 	}
 
 	if err := putRecords(dst, records); err != nil {
 		return 0, fmt.Errorf("writing %s: %w", fullName, err)
 	}
 
-	return lookUpVersion(destDir, fullName)
+	return createdVersion(destDir, fullName, version)
 }
 
 // createBinaryFileFromHost mirrors createBinaryFile for a /HOST source
@@ -934,16 +953,89 @@ func createRecordFileFromHost(destVol *volume.Volume, destDir *volume.Directory,
 // with a known size instead of an already-open volume.File whose valid
 // length comes from odsrms.FileByteLength. Functionally matches ods2's
 // own copyHostFileToVolume(binary: true).
-func createBinaryFileFromHost(destVol *volume.Volume, destDir *volume.Directory, destBm *volume.Bitmap, destIb *volume.IndexBitmap, name, typ string, src io.Reader, size int64) (uint16, error) {
+func createBinaryFileFromHost(destVol *volume.Volume, destDir *volume.Directory, destBm *volume.Bitmap, destIb *volume.IndexBitmap, name, typ string, version uint16, src io.Reader, size int64) (uint16, error) {
 	fullName := name + "." + typ
 
-	dst, err := destVol.CreateFile(destDir, fullName, ondisk.RecAttr{Format: ondisk.RecordFormatUndefined, MaxRecordSize: ondisk.BlockSize}, destBm, destIb)
+	dst, err := createVersion(destVol, destDir, fullName, version, ondisk.RecAttr{Format: ondisk.RecordFormatUndefined, MaxRecordSize: ondisk.BlockSize}, destBm, destIb)
 	if err != nil {
-		return 0, fmt.Errorf("creating %s: %w", fullName, err)
+		return 0, err
 	}
 
 	if err := copyHostRawToVolume(dst, src, size); err != nil {
 		return 0, fmt.Errorf("writing %s: %w", fullName, err)
+	}
+
+	return createdVersion(destDir, fullName, version)
+}
+
+// OutputExistsError reports that COPY's output names a version that
+// already exists: COPY never supersedes a file. VMS's COPY reports it as
+// OPENOUT, with RMS$_FEX.
+type OutputExistsError struct {
+	// Spec is the output file's full name, "DUA0:[WORK]Z.OBJ;7".
+	Spec string
+
+	version string // the version asked for, for fullOutputName
+}
+
+func (e *OutputExistsError) Error() string {
+	return fmt.Sprintf("rms: %s: file already exists, not superseded", e.Spec)
+}
+
+// fullOutputName gives an *OutputExistsError in err the output's full
+// name, dest's device and directory with the name and version it has, and
+// returns err.
+func fullOutputName(err error, dest filespec.Spec) error {
+	var exists *OutputExistsError
+	if errors.As(err, &exists) {
+		dest.Version = exists.version
+		exists.Spec = dest.String()
+	}
+
+	return err
+}
+
+// destVersion is the version COPY gives an output file whose destination
+// is destSpec, copied from a file whose own version is source (0 for a
+// host file): destSpec's explicit version, the source's for ";*" (as
+// VMS's COPY keeps each input's version for an output version of *), or
+// 0, meaning the next version, when destSpec has none or ";0". Any other
+// version (a negative one, or one past 32767) is an error.
+func destVersion(destSpec filespec.Spec, source uint16) (uint16, error) {
+	if destSpec.Version == "*" {
+		return source, nil
+	}
+
+	v, ok := parseOpenVersion(destSpec.Version)
+	if !ok || v > 32767 {
+		return 0, fmt.Errorf("version %q: an output file needs a version from 1 to 32767", destSpec.Version)
+	}
+
+	return v, nil
+}
+
+// createVersion creates fullName in destDir at version, or at the next
+// version when version is 0, with attributes attr. A version that exists
+// already is an *OutputExistsError.
+func createVersion(destVol *volume.Volume, destDir *volume.Directory, fullName string, version uint16, attr ondisk.RecAttr, destBm *volume.Bitmap, destIb *volume.IndexBitmap) (*volume.File, error) {
+	dst, err := destVol.CreateFileVersion(destDir, fullName, version, attr, destBm, destIb)
+	if errors.Is(err, volume.ErrExists) {
+		return nil, &OutputExistsError{Spec: fmt.Sprintf("%s;%d", fullName, version), version: fmt.Sprint(version)}
+	}
+
+	if err != nil {
+		return nil, fmt.Errorf("creating %s: %w", fullName, err)
+	}
+
+	return dst, nil
+}
+
+// createdVersion is the version a file just created at version has:
+// version itself, or, when it was 0, the one Directory.Insert assigned
+// (lookUpVersion).
+func createdVersion(destDir *volume.Directory, fullName string, version uint16) (uint16, error) {
+	if version != 0 {
+		return version, nil
 	}
 
 	return lookUpVersion(destDir, fullName)

@@ -4,8 +4,12 @@ import (
 	"errors"
 
 	"github.com/tucats/govax/internal/rms"
+	"github.com/tucats/govax/internal/vmsdef"
 	"github.com/tucats/govax/internal/vmserrors"
 )
+
+// rmsFEX is RMS$_FEX, "file already exists, not superseded".
+var rmsFEX = vmsdef.Symbols["RMS$_FEX"]
 
 // This file implements the console COPY command (docs/PHASE-23.md,
 // subtasks 9 and 10) — the operator-facing half of "copy one or more
@@ -101,6 +105,15 @@ func (c *Context) Copy(sourceText string, sourceHost bool, destText string, dest
 		var multiple *rms.MultipleMatchesError
 		if errors.As(err, &multiple) {
 			return vmserrors.Wrap(vmserrors.CLI_AMBIGUOUS, err, "file specification", sourceText)
+		}
+
+		// VMS's COPY never supersedes a file (unconfirmed against VMS:
+		// the status, taken to be RMS$_FEX's, marked as shown).
+		var exists *rms.OutputExistsError
+		if errors.As(err, &exists) {
+			text := "COPY-E-OPENOUT, error opening " + exists.Spec + " as output\n" + ConditionLine(rmsFEX)
+
+			return vmserrors.ConditionError{Status: rmsFEX, Text: text}
 		}
 
 		var hostToHost *rms.HostToHostError

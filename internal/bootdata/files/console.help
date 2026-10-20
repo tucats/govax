@@ -168,6 +168,7 @@
 //                          link shareable images.md)
 //              10/20/26    DELETE's null version (FOO.TXT;) and its list
 //                          of specifications
+//              10/20/26    COPY makes its output at the version given
 
 This is the help documentation for the govax VAX emulator.  Topic sections are
 marked by a "$" delimiter.  This is followed by as many tokens of the help
@@ -3728,6 +3729,14 @@ $COPY
     DUA0:[DIR]NAME.TYPE) is used as-is, while the /HOST qualifier,
     attached to either parameter, tells COPY to instead treat that
     parameter as an ordinary host file system path.
+
+    A file copied to a volume is made at the version its destination
+    gives (COPY V.OBJ Z.OBJ;7 makes Z.OBJ;7), or at the next version when
+    it gives none or ;0.  A destination version of ;* keeps each source
+    file's version.  COPY never replaces an existing version:
+
+        %COPY-E-OPENOUT, error opening DUA0:[WORK]Z.OBJ;7 as output
+        -RMS-E-FEX, file already exists, not superseded
 
     Syntax:
 
