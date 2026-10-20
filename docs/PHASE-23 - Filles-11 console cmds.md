@@ -1569,3 +1569,22 @@ container was never created by anything this project wrote.
   names are looked at only without `/HOST`. A locked volume file is still
   TYPE-W-OPENIN (`typeFailure`); every other failure is `fileFailure`'s,
   so a missing host file is SS_NOSUCHFILE.
+
+### 2026-10-20 — Later: DELETE's null version and lists
+
+- `DELETE FOO.TXT;` deletes the latest version, as `FOO.TXT;0` does (DCL
+  Dictionary, DELETE: "a null version number ... a version number of 0
+  ... the latest version of the file is deleted"). `filespec.Parse`
+  can't tell `;` from no version, so `rms.Session.Delete` writes a
+  trailing `;` as `;0` first (`nullVersion`); ods2's glob already reads
+  0 as the highest. A spec with no `;` at all is still CLI_NEEDVERSION.
+- DELETE's SPEC is a `/list`, and `dclcmd.Context.Delete` splits plus
+  signs too, as VMS's `DELETE filespec[,...]`. `rms.Session.DeleteList`
+  gives each element after the first the device, directory, name, and
+  type of the one before it, never its version (the Dictionary:
+  "Subsequent file specifications need contain only a version number;
+  the defaults will come from the preceding specification"); an element
+  that names a device starts again from the process defaults. A failing
+  element is reported and the rest go on; the command's error is the last
+  failure (unconfirmed against VMS: which status DELETE leaves when
+  several elements fail, or when only an earlier one does).

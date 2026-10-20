@@ -3,6 +3,7 @@ package rms
 import (
 	"errors"
 	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/tucats/ods2/ondisk"
@@ -183,20 +184,96 @@ func TestSession_deleteWithoutVersionIsRejected(t *testing.T) {
 	}
 }
 
-// TestSession_deleteWithTrailingSemicolonIsRejected confirms "FOO.TXT;" (an
-// empty version field, which filespec.Parse can't tell apart from "no
-// version typed at all") is rejected the same way a bare "FOO.TXT" is.
-func TestSession_deleteWithTrailingSemicolonIsRejected(t *testing.T) {
-	s, _ := newDeleteTestSession(t)
+// TestSession_deleteNullVersionDeletesLatest confirms "FOO.TXT;" (a null
+// version) and "BAR.TXT;0" each delete only the latest version of the
+// name, as VMS's DELETE does (DCL Dictionary, DELETE).
+func TestSession_deleteNullVersionDeletesLatest(t *testing.T) {
+	s, vol := newDeleteTestSession(t)
 
-	_, err := s.Delete("FOO.TXT;")
-	if err == nil {
-		t.Fatal("Delete with an empty version (FOO.TXT;) = nil error, want an error")
+	for _, spec := range []string{"FOO.TXT;", "BAR.TXT;0"} {
+		deleted, err := s.Delete(spec)
+		if err != nil {
+			t.Fatalf("Delete(%s): %v", spec, err)
+		}
+
+		if len(deleted) != 1 || deleted[0].Version != 2 {
+			t.Errorf("Delete(%s) deleted %+v, want only version 2", spec, deleted)
+		}
+	}
+
+	after := mfdEntryNames(t, vol)
+	for _, name := range []string{"FOO.TXT;2", "BAR.TXT;2"} {
+		if containsName(after, name) {
+			t.Errorf("%s still present after deleting its latest version: %v", name, after)
+		}
+	}
+
+	for _, name := range []string{"FOO.TXT;1", "BAR.TXT;1", "BAZ.TXT;1"} {
+		if !containsName(after, name) {
+			t.Errorf("%s gone, want it kept: %v", name, after)
+		}
+	}
+}
+
+// TestSession_deleteListStickyDefaults confirms each element of a
+// DeleteList takes the name and type the element before it gave: ";1"
+// after "FOO.TXT;2" is FOO.TXT;1, and "BAR;*" is BAR.TXT;*.
+func TestSession_deleteListStickyDefaults(t *testing.T) {
+	s, vol := newDeleteTestSession(t)
+
+	results := s.DeleteList([]string{"FOO.TXT;2", ";1", "BAR;*"})
+
+	want := []string{"FOO.TXT;2", "[000000]FOO.TXT;1", "[000000]BAR.TXT;*"}
+	if len(results) != len(want) {
+		t.Fatalf("DeleteList returned %d results, want %d", len(results), len(want))
+	}
+
+	for i, r := range results {
+		if r.Err != nil {
+			t.Errorf("element %d (%s): %v", i, r.Spec, r.Err)
+		}
+
+		if !strings.HasSuffix(r.Spec, want[i]) {
+			t.Errorf("element %d's spec = %q, want one ending %q", i, r.Spec, want[i])
+		}
+	}
+
+	after := mfdEntryNames(t, vol)
+	if len(after) == 0 || !containsName(after, "BAZ.TXT;1") {
+		t.Errorf("BAZ.TXT;1 gone, want it kept: %v", after)
+	}
+
+	for _, name := range []string{"FOO.TXT;1", "FOO.TXT;2", "BAR.TXT;1", "BAR.TXT;2"} {
+		if containsName(after, name) {
+			t.Errorf("%s still present: %v", name, after)
+		}
+	}
+}
+
+// TestSession_deleteListContinuesPastFailure confirms an element that
+// fails doesn't stop the list, and an element after it that names its own
+// file is unaffected by the failed one.
+func TestSession_deleteListContinuesPastFailure(t *testing.T) {
+	s, vol := newDeleteTestSession(t)
+
+	results := s.DeleteList([]string{"NOSUCH.TXT;1", "BAZ.TXT", "BAZ.TXT;1"})
+
+	var notFound *NotFoundError
+	if !errors.As(results[0].Err, &notFound) {
+		t.Errorf("element 0's error = %v, want a *NotFoundError", results[0].Err)
 	}
 
 	var versionRequired *VersionRequiredError
-	if !errors.As(err, &versionRequired) {
-		t.Fatalf("Delete error = %v, want a *VersionRequiredError", err)
+	if !errors.As(results[1].Err, &versionRequired) {
+		t.Errorf("element 1's error = %v, want a *VersionRequiredError", results[1].Err)
+	}
+
+	if results[2].Err != nil || len(results[2].Deleted) != 1 {
+		t.Errorf("element 2 = %+v, want BAZ.TXT;1 deleted", results[2])
+	}
+
+	if containsName(mfdEntryNames(t, vol), "BAZ.TXT;1") {
+		t.Error("BAZ.TXT;1 still present")
 	}
 }
 

@@ -85,11 +85,11 @@ func TestConsolePurge_trimsVersionsAndPrintsConfirmation(t *testing.T) {
 		t.Errorf("Purge output = %q, want a PURGE-S-PURGED confirmation", buf.String())
 	}
 
-	if err := c.cmd().Delete("FOO.TXT;1", false); !isDeleteSearchFail(err) {
+	if err := c.cmd().Delete([]string{"FOO.TXT;1"}, false); !isDeleteSearchFail(err) {
 		t.Errorf("Delete of the purged-away version = %v, want SEARCHFAIL", err)
 	}
 
-	if err := c.cmd().Delete("FOO.TXT;2", false); err != nil {
+	if err := c.cmd().Delete([]string{"FOO.TXT;2"}, false); err != nil {
 		t.Errorf("Delete of the surviving version = %v, want success", err)
 	}
 }
@@ -156,7 +156,7 @@ func TestDispatch_purgeExplicitLimit(t *testing.T) {
 		t.Errorf("Dispatch PURGE/LIMIT=2 output = %q, want a keeping-2 confirmation", buf.String())
 	}
 
-	if err := c.cmd().Delete("FOO.TXT;1", false); !isDeleteSearchFail(err) {
+	if err := c.cmd().Delete([]string{"FOO.TXT;1"}, false); !isDeleteSearchFail(err) {
 		t.Errorf("Delete of the purged-away version = %v, want SEARCHFAIL", err)
 	}
 }

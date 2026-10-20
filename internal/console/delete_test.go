@@ -55,7 +55,7 @@ func createConsoleTestFile(t *testing.T, vol *volume.Volume, name string) {
 func TestConsoleDelete_notMounted(t *testing.T) {
 	c, _ := newTestConsole(t)
 
-	err := c.cmd().Delete("DUB0:FOO.TXT;1", false)
+	err := c.cmd().Delete([]string{"DUB0:FOO.TXT;1"}, false)
 	if err == nil {
 		t.Fatal("Delete against an unmounted device = nil error, want SS_DEVNOTMOUNT")
 	}
@@ -72,7 +72,7 @@ func TestConsoleDelete_versionRequired(t *testing.T) {
 	c, _ := newTestConsole(t)
 	mountFreshContainer(t, c, "DUA0")
 
-	err := c.cmd().Delete("DUA0:INDEXF.SYS", false)
+	err := c.cmd().Delete([]string{"DUA0:INDEXF.SYS"}, false)
 	if err == nil {
 		t.Fatal("Delete with no version = nil error, want CLI_NEEDVERSION")
 	}
@@ -97,7 +97,7 @@ func TestConsoleDelete_notFound(t *testing.T) {
 	c, _ := newTestConsole(t)
 	mountFreshContainer(t, c, "DUA0")
 
-	err := c.cmd().Delete("DUA0:NOSUCH*.TXT;*", false)
+	err := c.cmd().Delete([]string{"DUA0:NOSUCH*.TXT;*"}, false)
 
 	want := "DELETE-W-SEARCHFAIL, error searching for DUA0:[000000]NOSUCH*.TXT;*\n-RMS-E-FNF, file not found"
 	if !isDeleteSearchFail(err) || err.Error() != want {
@@ -112,7 +112,7 @@ func TestConsoleDelete_badFileSpec(t *testing.T) {
 	c, _ := newTestConsole(t)
 	mountFreshContainer(t, c, "DUA0")
 
-	err := c.cmd().Delete("DUA0:[UNTERMINATED", false)
+	err := c.cmd().Delete([]string{"DUA0:[UNTERMINATED"}, false)
 	if err == nil {
 		t.Fatal("Delete with an unterminated directory bracket = nil error, want CLI_BADFILESPEC")
 	}
@@ -141,7 +141,7 @@ func TestConsoleDelete_removesFileAndPrintsConfirmation(t *testing.T) {
 
 	createConsoleTestFile(t, vol, "FOO.TXT")
 
-	if err := c.cmd().Delete("FOO.TXT;1", true); err != nil {
+	if err := c.cmd().Delete([]string{"FOO.TXT;1"}, true); err != nil {
 		t.Fatalf("Delete: %v", err)
 	}
 
@@ -149,7 +149,7 @@ func TestConsoleDelete_removesFileAndPrintsConfirmation(t *testing.T) {
 		t.Errorf("Delete output = %q, want a DELETE-I-FILDEL line", buf.String())
 	}
 
-	if err := c.cmd().Delete("FOO.TXT;1", false); !isDeleteSearchFail(err) {
+	if err := c.cmd().Delete([]string{"FOO.TXT;1"}, false); !isDeleteSearchFail(err) {
 		t.Errorf("Delete of the now-removed file = %v, want SEARCHFAIL", err)
 	}
 }
@@ -188,6 +188,70 @@ func TestDispatch_deleteViaDCL(t *testing.T) {
 
 	if !strings.Contains(buf.String(), "%DELETE-I-FILDEL, DUA0:[000000]FOO.TXT;1 deleted") {
 		t.Errorf("Dispatch DELETE/LOG output = %q, want a DELETE-I-FILDEL line", buf.String())
+	}
+}
+
+// TestDispatch_deleteNullVersionAndList confirms DELETE's null version
+// ("FOO.TXT;", the latest) and its list of specifications: commas and plus
+// signs separate them, each takes the defaults the one before it gives,
+// and one that fails is reported without stopping the others.
+func TestDispatch_deleteNullVersionAndList(t *testing.T) {
+	c, buf := newTestConsole(t)
+	g := loadEvaxGrammar(t)
+	d := NewDispatcher(c, g, nil)
+
+	mountFreshContainer(t, c, "DUA0")
+
+	if err := c.cmd().SetDefault("DUA0:"); err != nil {
+		t.Fatalf("SetDefault: %v", err)
+	}
+
+	vol, ok := c.Mounts.Lookup("DUA0")
+	if !ok {
+		t.Fatal("Lookup(DUA0) after mount = not found")
+	}
+
+	for _, name := range []string{"FOO.TXT", "FOO.TXT", "FOO.TXT", "BAR.TXT", "BAZ.LIS"} {
+		createConsoleTestFile(t, vol, name)
+	}
+
+	if err := d.Dispatch("DELETE/LOG FOO.TXT;"); err != nil {
+		t.Fatalf("Dispatch DELETE FOO.TXT;: %v", err)
+	}
+
+	if got := buf.String(); !strings.Contains(got, "FOO.TXT;3 deleted") || strings.Count(got, "FILDEL") != 1 {
+		t.Errorf("DELETE FOO.TXT; output = %q, want FOO.TXT;3 alone deleted", got)
+	}
+
+	buf.Reset()
+
+	// ";1" is FOO.TXT;1, BAR's type is .TXT, and BAZ.LIS names its own.
+	if err := d.Dispatch("DELETE/LOG FOO.TXT;2, ;1,BAR;1+BAZ.LIS;"); err != nil {
+		t.Fatalf("Dispatch DELETE of a list: %v", err)
+	}
+
+	for _, name := range []string{"FOO.TXT;2", "FOO.TXT;1", "BAR.TXT;1", "BAZ.LIS;1"} {
+		if !strings.Contains(buf.String(), "]"+name+" deleted") {
+			t.Errorf("DELETE list output = %q, want %s deleted", buf.String(), name)
+		}
+	}
+
+	createConsoleTestFile(t, vol, "BAR.TXT")
+	buf.Reset()
+
+	// The first element's failure is shown, and the second still runs; the
+	// command fails, its message already shown.
+	err := d.Dispatch("DELETE NOSUCH.TXT;1,BAR.TXT;1")
+	if !strings.Contains(buf.String(), "%DELETE-W-SEARCHFAIL") {
+		t.Errorf("DELETE output = %q, want the first element's SEARCHFAIL", buf.String())
+	}
+
+	if err == nil || !vmserrors.MessageInhibited(err) {
+		t.Errorf("DELETE with a failed element = %v, want its error, already shown", err)
+	}
+
+	if err := c.cmd().Delete([]string{"BAR.TXT;*"}, false); !isDeleteSearchFail(err) {
+		t.Errorf("DELETE BAR.TXT;* after the list = %v, want SEARCHFAIL: the list left BAR.TXT;1", err)
 	}
 }
 

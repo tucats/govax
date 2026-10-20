@@ -166,6 +166,8 @@
 //                          LINK options, and shareable images; RUN's
 //                          activation of shareable images (docs/PHASE-68 -
 //                          link shareable images.md)
+//              10/20/26    DELETE's null version (FOO.TXT;) and its list
+//                          of specifications
 
 This is the help documentation for the govax VAX emulator.  Topic sections are
 marked by a "$" delimiter.  This is followed by as many tokens of the help
@@ -3476,12 +3478,20 @@ $DEL
     The DELETE command removes a file from a mounted ODS-2 volume and
     reclaims its storage.
 
-    A DELETE file specification must name a specific version -- either an
-    explicit version number (;3) or all versions (;*).  Unlike DIRECTORY,
+    A DELETE file specification must name a version: an explicit version
+    number (;3), all versions (;*), or the newest version, written as ;0 or
+    as a semicolon with no number after it (FOO.TXT;).  Unlike DIRECTORY,
     TYPE, and COPY, DELETE never defaults an omitted version to "the
-    newest one"; this matches real VMS DCL's own DELETE, which requires an
-    explicit version to guard against accidentally deleting the wrong
-    copy of a file.
+    newest one"; this matches real VMS DCL's own DELETE, which requires a
+    version to guard against accidentally deleting the wrong copy of a
+    file.
+
+    Several files may be deleted at once, their specifications separated
+    by commas or plus signs.  Each specification after the first takes
+    the device, directory, name, and type it leaves out from the one
+    before it, but never the version: DELETE A.TXT;1,;2,B;1 deletes
+    A.TXT;1, A.TXT;2, and B.TXT;1.  A specification that fails is
+    reported, and the rest are still deleted.
 
     As VMS's DELETE, it says nothing of the files it deletes unless /LOG is
     given.  A specification that finds no file is a warning:
@@ -3491,15 +3501,16 @@ $DEL
 
     Syntax:
 
-        DELETE[/LOG] <file-spec>;<version>
+        DELETE[/LOG] <file-spec>;<version>[,...]
 
     Parameter:
 
-        <file-spec>;<version>
-                        The file, and version, to delete.  <file-spec> may
-                        include wildcards in its name/type; any part left
-                        out is filled in from the current default device/
-                        directory (see SET DEFAULT).
+        <file-spec>;<version>[,...]
+                        The files, and versions, to delete.  <file-spec>
+                        may include wildcards in its name/type; any part
+                        left out of the first is filled in from the current
+                        default device/directory (see SET DEFAULT), and of
+                        the others from the specification before it.
 
     Qualifier:
 
@@ -3511,7 +3522,11 @@ $DEL
 
         DELETE FOO.TXT;1
 
+        DELETE FOO.TXT;
+
         DELETE OLDFILE.DAT;*
+
+        DELETE A.LIS;*,B;*,C.OBJ;*
 
         DEL *.TMP;1
 

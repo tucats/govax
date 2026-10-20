@@ -2,6 +2,7 @@ package rms
 
 import (
 	"fmt"
+	"strings"
 
 	"github.com/tucats/ods2/filespec"
 	"github.com/tucats/ods2/volume"
@@ -24,12 +25,14 @@ import (
 // Every file on an ODS-2 volume can have several "versions" -- FOO.TXT;1,
 // FOO.TXT;2, and so on, each a complete, independent copy of the file kept
 // side by side (the same idea as a text editor's numbered backup files, but
-// built into the file system itself). DELETE always has to say exactly
-// which version(s) it means: a specific number ("FOO.TXT;3"), or every
-// version at once ("FOO.TXT;*"). Unlike DIRECTORY -- where "no version
-// typed" sensibly means "show me the newest one" -- DELETE never guesses,
-// because guessing wrong here would silently destroy data: see
-// ErrVersionRequired below.
+// built into the file system itself). DELETE always has to say which
+// version(s) it means: a specific number ("FOO.TXT;3"), every version at
+// once ("FOO.TXT;*"), or the newest, written as a version of 0
+// ("FOO.TXT;0") or as a semicolon with no number after it ("FOO.TXT;").
+// Unlike DIRECTORY -- where "no version typed" sensibly means "show me the
+// newest one" -- DELETE never guesses when the version is left out
+// altogether, because guessing wrong here would silently destroy data: see
+// VersionRequiredError below.
 
 // DeletedFile reports one file DELETE actually removed -- Session.Delete's
 // own per-match record, giving the console layer (internal/console/
@@ -85,13 +88,13 @@ func (e *NotFoundError) Error() string {
 // from its volume, reclaiming its storage, and returns one DeletedFile per
 // file actually removed.
 //
-// specText's version field is mandatory: a bare "FOO.TXT" (or a trailing-
-// semicolon "FOO.TXT;", which filespec.Parse can't tell apart from "no
-// version typed at all" -- see filespec.Spec.Version's own doc comment)
-// fails with a *VersionRequiredError before anything on the volume is
-// touched. A specific number ("FOO.TXT;3") deletes just that version; "*"
-// ("FOO.TXT;*") deletes every version of that name; the name/type portion
-// may itself be wildcarded ("*.TXT;3") to hit several files in one call.
+// specText's version field is mandatory: a bare "FOO.TXT" fails with a
+// *VersionRequiredError before anything on the volume is touched. A
+// specific number ("FOO.TXT;3") deletes just that version; "*"
+// ("FOO.TXT;*") deletes every version of that name; 0 ("FOO.TXT;0") or a
+// null version ("FOO.TXT;", see nullVersion) deletes the newest; the
+// name/type portion may itself be wildcarded ("*.TXT;3") to hit several
+// files in one call.
 //
 // Matching real VMS (and ods2's own DeleteFile/cmdDelete), this only
 // supports a single-device volume -- not expected to matter in practice,
@@ -100,6 +103,8 @@ func (e *NotFoundError) Error() string {
 // A search list deletes the matching files in each of its elements
 // (User's Manual §11.7.1); it's an error only if none of them has any.
 func (s *Session) Delete(specText string) (deleted []DeletedFile, err error) {
+	specText = nullVersion(specText)
+
 	err = s.eachSpec(specText, func(vol *volume.Volume, r resolvedSpec) error {
 		files, err := deleteOnVolume(vol, r, specText)
 		deleted = append(deleted, files...)
@@ -111,6 +116,115 @@ func (s *Session) Delete(specText string) (deleted []DeletedFile, err error) {
 	}
 
 	return deleted, nil
+}
+
+// nullVersion returns specText with a null version -- a semicolon with no
+// number after it, "FOO.TXT;" -- written as version 0, "FOO.TXT;0". DELETE
+// reads both as the file's latest version (DCL Dictionary, DELETE), but
+// filespec.Parse can't tell "FOO.TXT;" from a spec with no version at all
+// (see filespec.Spec.Version's own doc comment), so the 0 has to be added
+// to the text before it is parsed.
+func nullVersion(specText string) string {
+	trimmed := strings.TrimRight(specText, " \t")
+	if strings.HasSuffix(trimmed, ";") {
+		return trimmed + "0"
+	}
+
+	return specText
+}
+
+// DeleteResult is what DeleteList did with one element of its list.
+type DeleteResult struct {
+	// Spec is the element as Delete was given it: the text typed, with the
+	// defaults the elements before it supplied filled in.
+	Spec string
+
+	// Deleted is the files removed (even when Err is set, those removed
+	// before the failure), and Err why the element failed, as Delete
+	// returns them.
+	Deleted []DeletedFile
+	Err     error
+}
+
+// DeleteList deletes the files each element of specs names, in order, as
+// DCL's DELETE takes its list of file specifications. As VMS's DELETE,
+// each element after the first takes its defaults from the one before it
+// (DCL Dictionary, DELETE: "Subsequent file specifications need contain
+// only a version number; the defaults will come from the preceding
+// specification"): an element that names no device gets the device,
+// directory, name, and type it leaves out from the previous element,
+// though never its version, which each element must still give. So
+// "A.TXT;1,B;2,;3" deletes A.TXT;1, B.TXT;2, and B.TXT;3.
+//
+// A failing element doesn't stop the list; its result says why it failed,
+// and the next element is tried.
+func (s *Session) DeleteList(specs []string) []DeleteResult {
+	var (
+		results []DeleteResult
+		sticky  *filespec.Spec
+	)
+
+	for _, text := range specs {
+		text = s.listDefaults(nullVersion(text), sticky)
+
+		if next := s.listSticky(text); next != nil {
+			sticky = next
+		}
+
+		deleted, err := s.Delete(text)
+		results = append(results, DeleteResult{Spec: text, Deleted: deleted, Err: err})
+	}
+
+	return results
+}
+
+// listDefaults returns text with sticky's device, directory, name, and
+// type filled in where text leaves them out (see DeleteList), as a full
+// specification. Text that names a device of its own (directly, or as a
+// logical name that translates to one) is returned as it is, to be
+// resolved against the process defaults like any other, as is text that
+// doesn't parse: Delete reports its error.
+func (s *Session) listDefaults(text string, sticky *filespec.Spec) string {
+	if sticky == nil {
+		return text
+	}
+
+	fs, err := translateSpec(s.Logicals, text)
+	if err != nil {
+		return text
+	}
+
+	probe, err := parseTranslated(fs[0], filespec.Spec{})
+	if err != nil || probe.Device != "" {
+		return text
+	}
+
+	spec, err := parseTranslated(fs[0], *sticky)
+	if err != nil {
+		return text
+	}
+
+	// filespec.Parse inherits a default's directory but not its "..."
+	// flag, so carry that across when the text has no directory.
+	if !strings.ContainsAny(text, "[<") {
+		spec.Recursive = sticky.Recursive
+	}
+
+	return spec.String()
+}
+
+// listSticky returns the defaults text supplies to the next element of a
+// DeleteList: its device, directory, name, and type, as its first search
+// list element resolves them, or nil if text doesn't resolve.
+func (s *Session) listSticky(text string) *filespec.Spec {
+	specs, err := expandSpec(s.Logicals, text, s.Default)
+	if err != nil || len(specs) == 0 {
+		return nil
+	}
+
+	r := specs[0].Spec
+
+	return &filespec.Spec{Device: r.Device, Dirs: r.Dirs, Recursive: r.Recursive, Name: r.Name, Type: r.Type}
 }
 
 // deleteOnVolume is Delete for one resolved spec on one volume, returning

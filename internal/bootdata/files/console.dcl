@@ -527,15 +527,16 @@ grammar console
     ! ods2's own cmdDelete declares MinArgs=1 (there is no sensible "delete
     ! everything in the current directory" default the way a bare DIRECTORY
     ! has one), so a bare DELETE with nothing typed after it is a missing
-    ! required argument. The further rule that the spec name a *specific*
-    ! version (";3" or ";*", never defaulted) is enforced by
-    ! internal/rms.Session.Delete itself, not by this grammar -- see
-    ! docs/PHASE-23.md's subtask 6.
+    ! required argument. The further rule that the spec name a version
+    ! (";3", ";*", or the latest as ";0" or ";", never left out) is
+    ! enforced by internal/rms.Session.Delete itself, not by this grammar --
+    ! see docs/PHASE-23.md's subtask 6. SPEC is a list, as VMS's DELETE
+    ! filespec[,...]; internal/dclcmd's Delete splits plus signs too.
     !
     verb delete/id=1100
 
         parameter   spec/id=1101               -
-                    /type=$string               -
+                    /type=$string/list          -
                     /prompt="File specification"
         qualifier   log/id=1102
 
