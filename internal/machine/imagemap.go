@@ -45,7 +45,7 @@ func (p *ImageProcess) mapsImages() bool {
 // its header, maps its sections at P0's high-water mark, and finishes as
 // the copying loader does (finishLoad). The image file stays open while
 // any of its sections is mapped.
-func (p *ImageProcess) imageMap(fn string, flag uint32) (*ICB, error) {
+func (p *ImageProcess) imageMap(fn string, flag uint32, linked *ISD) (*ICB, error) {
 	var (
 		data []byte
 		src  corevms.PageSource
@@ -81,7 +81,13 @@ func (p *ImageProcess) imageMap(fn string, flag uint32) (*ICB, error) {
 		return nil, err
 	}
 
+	base, err := p.imageBase(data, flag, linked)
+	if err != nil {
+		return nil, err
+	}
+
 	icb := p.newICB(fn, flag)
+	icb.Base = base
 	icb.Mapped = true
 	icb.Spec = spec
 

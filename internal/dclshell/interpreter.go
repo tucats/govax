@@ -165,6 +165,14 @@ func (c *Interpreter) Run(fn string, opts machine.RunOptions) error {
 
 	err := c.machine.Run(fn, opts)
 
+	// An image with no transfer address: DCL's NOTFR is the command's
+	// status (testdata/link68's E7, RUN of a shareable image).
+	if errors.Is(err, machine.ErrNoTransfer) {
+		c.SetCommandStatus(cliStatusNoTransfer, nil)
+
+		return c.statusFailure(cliStatusNoTransfer)
+	}
+
 	// An image that can't be activated: DCL's messages, as a
 	// subprocess's RUN shows them (activationFailure).
 	var ve vmserrors.VMSError

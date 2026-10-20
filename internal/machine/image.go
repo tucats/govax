@@ -126,6 +126,17 @@ type ICB struct {
 	// process's JPI$_IMAGNAME (ActivateImage).
 	Spec imageSpec
 
+	// Ident and Match are a shareable image's global section ident and
+	// match control, from its header (IHD$L_IDENT and the top byte of
+	// IHD$L_LNKFLAGS), which the images naming it were linked against
+	// (identMatches).
+	Ident uint32
+	Match int
+
+	// Type is the header's image type, IHD$K_EXE or IHD$K_LIM; 0 when
+	// the header couldn't be decoded.
+	Type byte
+
 	// LinkDebug is the image header's IHD$V_LNKDEBUG: the image was
 	// linked /DEBUG, so RUN starts the debugger on it unless told not to.
 	LinkDebug bool
@@ -348,6 +359,13 @@ func (p *ImageProcess) readIAF(addr uint32) (IAF, error) {
 // shareable.go): one govax's shims stand for isn't loaded, and one that
 // isn't found stops the activation.
 func (p *ImageProcess) imageLoad(fn string, flag uint32) (*ICB, error) {
+	return p.loadImage(fn, flag, nil)
+}
+
+// loadImage is imageLoad, for a shareable image the image naming it maps
+// through linked, its first global section ISD (nil for the main image),
+// which says where it goes when the link placed it (imageBase).
+func (p *ImageProcess) loadImage(fn string, flag uint32, linked *ISD) (*ICB, error) {
 	for _, icb := range p.ICBList {
 		if icb.Name == fn {
 			return icb, nil
@@ -355,7 +373,7 @@ func (p *ImageProcess) imageLoad(fn string, flag uint32) (*ICB, error) {
 	}
 
 	if p.mapsImages() {
-		return p.imageMap(fn, flag)
+		return p.imageMap(fn, flag, linked)
 	}
 
 	var (
@@ -386,6 +404,11 @@ func (p *ImageProcess) imageLoad(fn string, flag uint32) (*ICB, error) {
 		nblocks = 1
 	}
 
+	at, err := p.imageBase(data, flag, linked)
+	if err != nil {
+		return nil, err
+	}
+
 	// The C source loads the header one page above the current high-water
 	// mark (page zero of P0 can't be written on VMS -- it's the guard
 	// page VMInit installs, see vminit.go), then treats everything from
@@ -402,6 +425,7 @@ func (p *ImageProcess) imageLoad(fn string, flag uint32) (*ICB, error) {
 	}
 
 	icb := p.newICB(fn, flag)
+	icb.Base = at
 	icb.Spec = spec
 
 	transferOffset, err := p.readIHDTransferOffset(base)
@@ -497,8 +521,18 @@ func (p *ImageProcess) newICB(fn string, flag uint32) *ICB {
 // setTransfer records transfer address n of icb, v as the header gives
 // it (relative to the image's base; 0 for none), and defines its symbol:
 // MAIN for the main image's first, SHARE$name_INITIALIZE and
-// SHARE$name_TRANSFER_n for a shareable image's.
+// SHARE$name_TRANSFER_n for a shareable image's. A shareable image's
+// address outside P0 is the system's, not the image's: SYS$IMGSTA, which
+// LINK makes a shareable image's first with traceback (testdata/link68's
+// SHR1), and which isn't an initialization routine to call. It is kept
+// as it is, with no symbol.
 func (p *ImageProcess) setTransfer(icb *ICB, n, v uint32) {
+	if icb.Flags&icbSecondary != 0 && v >= p1Start {
+		icb.Transfer[n] = v
+
+		return
+	}
+
 	if v != 0 {
 		var sname string
 
@@ -541,8 +575,12 @@ func (p *ImageProcess) finishLoad(icb *ICB, data []byte) error {
 	icb.Flags &^= icbIncomplete
 
 	img, err := vmsimage.ReadImage(data)
-	if err == nil && img.Fixups != nil {
-		icb.Protections = img.Fixups.Protections
+	if err == nil {
+		icb.Ident, icb.Match, icb.Type = img.Ident, int(img.LinkFlags>>24&7), img.Type
+
+		if img.Fixups != nil {
+			icb.Protections = img.Fixups.Protections
+		}
 	}
 
 	icb.Debug, icb.LinkDebug, icb.DebugErr = readDebugSymbols(img, err, data, icb.Base)
@@ -555,20 +593,35 @@ func (p *ImageProcess) finishLoad(icb *ICB, data []byte) error {
 		return err
 	}
 
-	for _, shr := range icb.SHRList {
+	// The images are activated from the list's end: VMS 7.1 put MAIN1's
+	// LIBRTL, last in its list, right after MAIN1, then SHR1
+	// (testdata/link68's R1; unconfirmed for two images of the user's).
+	for i := len(icb.SHRList) - 1; i >= 0; i-- {
+		shr := icb.SHRList[i]
 		if shr.ID == 0 {
 			continue
 		}
 
-		// An image the shims stand for has no file; one that isn't found
-		// stops the activation (Decision 4).
-		dep, err := p.imageLoad(shr.Name, icbSecondary)
+		linked := linkedSection(icb, shr.Name)
+
+		// An image the shims stand for has no file (but may have pages
+		// the link placed it on); one that isn't found stops the
+		// activation (Decision 4).
+		dep, err := p.loadImage(shr.Name, icbSecondary, linked)
 		if errors.Is(err, errEmulated) {
+			if err := p.placeEmulated(icb, shr.Name); err != nil {
+				return err
+			}
+
 			continue
 		}
 
 		if err != nil {
 			return err
+		}
+
+		if linked != nil && !identMatches(linked, dep) {
+			return &IdentMismatchError{Image: dep.Name, File: dep.Spec.Name}
 		}
 
 		shr.Icb = dep

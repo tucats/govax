@@ -91,10 +91,10 @@ func (m *Machine) Run(fn string, opts RunOptions) error {
 		return err
 	}
 
+	// An image with no transfer address (a shareable image) doesn't run:
+	// DCL's NOTFR.
 	if !ok {
-		m.Printf("No transfer address!\n")
-
-		return nil
+		return noTransfer(main, fn)
 	}
 
 	if opts.NoExecute {
@@ -260,8 +260,8 @@ func mainTransferAddress(icb *ICB) (uint32, bool) {
 // to main's own entry point, a call to $EXIT with main's status when the
 // P1 vector is present, and a RET) and returns its address -- the Go
 // equivalent of console_run's own assemble_direct-built IMAGE$INIT
-// procedure. ok is false if main has no usable transfer address, matching
-// console_run's own "No transfer address!" case: no driver is written at
+// procedure. ok is false if main has no usable transfer address (RUN's
+// ErrNoTransfer): no driver is written at
 // all, since a procedure with LIB$INITIALIZE calls but no final RET would
 // have nothing safe to fall through to. p.ICBList[1:] is main's dependency
 // list in load order (id-0 self-references live only in each ICB's own
@@ -443,7 +443,7 @@ func (m *Machine) ActivateCreatedImage(env *corevms.Environment, image string, h
 	}
 
 	if !ok {
-		return 0, fmt.Errorf("console: image %s has no transfer address", image)
+		return 0, noTransfer(main, image)
 	}
 
 	return driver, nil

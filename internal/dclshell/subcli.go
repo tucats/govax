@@ -130,6 +130,12 @@ var (
 	ssUnsupported     = vmsdef.Symbols["SS$_UNSUPPORTED"]
 	ssControlY        = vmsdef.Symbols["SS$_CONTROLY"]
 	cliStatusImageFNF = vmsdef.LibrarySymbols["CLI$_IMAGEFNF"]
+
+	// cliStatusNoTransfer is CLI$_NOTFR, RUN's for an image with no
+	// transfer address, and ssIdentMismatch SS$_SHRIDMISMAT, for a
+	// shareable image whose ident doesn't match.
+	cliStatusNoTransfer = vmsdef.LibrarySymbols["CLI$_NOTFR"]
+	ssIdentMismatch     = vmsdef.Symbols["SS$_SHRIDMISMAT"]
 )
 
 // processOneCommands are the console commands, by the grammar's name for
@@ -1023,6 +1029,26 @@ func (c *Interpreter) activationFailure(env *corevms.Environment, image string, 
 		say("-CLI-E-IMAGEFNF, image file not found %s", shareable.Spec)
 
 		return cliStatusImageFNF | stsInhibitMsg
+	}
+
+	// A shareable image whose ident doesn't match the one the image was
+	// linked against: DCL names it and its file (testdata/link68's R5).
+	var mismatch *machine.IdentMismatchError
+	if errors.As(err, &mismatch) {
+		say("%%DCL-W-ACTIMAGE, error activating image %s", mismatch.Image)
+		say("-CLI-E-IMGNAME, image file %s", mismatch.File)
+		say("-%s", strings.TrimPrefix(env.StatusText(ssIdentMismatch), "%"))
+
+		return ssIdentMismatch | stsInhibitMsg
+	}
+
+	// An image with no transfer address: the command's status is NOTFR,
+	// its message DCL's (a subprocess's RUN keeps it, though the message
+	// has been shown).
+	if errors.Is(err, machine.ErrNoTransfer) {
+		say("%%%s", c.statusText(cliStatusNoTransfer))
+
+		return cliStatusNoTransfer
 	}
 
 	say("%%DCL-W-ACTIMAGE, error activating image %s", strings.ToUpper(image))

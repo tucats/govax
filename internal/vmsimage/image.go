@@ -312,8 +312,12 @@ func ReadImage(data []byte) (*Image, error) {
 	return img, nil
 }
 
-// imageTypeShareable is IHD$K_LIM, a shareable image's type.
-const imageTypeShareable = 2
+// TypeExecutable is IHD$K_EXE, an executable image's type, and
+// TypeShareable IHD$K_LIM, a shareable image's (Image.Type).
+const (
+	TypeExecutable = 1
+	TypeShareable  = 2
+)
 
 // globalSymbols reads a shareable image's global symbol table: its
 // records, in ODS-2's variable-length layout (a length word, the record,
@@ -322,7 +326,7 @@ const imageTypeShareable = 2
 // last record, mid-block, and govax pads it to a block, so only the
 // header's count of records is read.
 func (img *Image) globalSymbols(data []byte) {
-	if img.Type != imageTypeShareable || img.GSTVBN == 0 {
+	if img.Type != TypeShareable || img.GSTVBN == 0 {
 		return
 	}
 

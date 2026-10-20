@@ -8,8 +8,8 @@ are subtask 2 (MACRO's `.TRANSFER`), subtask 3 (options files),
 subtask 4 (clusters for executables), subtask 5 (`LINK/SHAREABLE`,
 the image), subtask 6 (the global symbol table), subtask 7 (fixups
 and bases), subtask 8 (maps and ANALYZE/IMAGE), subtask 9 (linking
-against govax's shareable images), and subtask 10 (finding a shareable
-image).
+against govax's shareable images), subtask 10 (finding a shareable
+image), and subtask 11 (activating govax's shareable images).
 
 ## Goal
 
@@ -572,7 +572,7 @@ them.
     with the spec RMS tried, `$STATUS` %X100388B2. Console tests with a
     logical name, a partial one, `SYS$SHARE` on a volume and as a
     search list, and the host.
-11. **Activating govax's shareable images.** The GSMATCH check (Part
+11. **Done (2026-10-20).** **Activating govax's shareable images.** The GSMATCH check (Part
     A's rule: the match controls agree, then the linked-with control
     decides; ACTIMAGE, IMGNAME, SHRIDMISMAT, %X100020BC), a shareable
     image's own fixups (self-relative `.ADDRESS`, its G^ cells, a
@@ -1324,3 +1324,70 @@ Choices to review:
 Left for subtask 11: the GSMATCH check, a shareable image's own fixups,
 and the rest of activation. HELP RUN's account of how an image is found
 is the close-out's.
+
+### 2026-10-20 — Subtask 11: activating shareable images
+
+RUN activates a program's shareable images as VMS's image activator
+does for images that aren't installed, in both loaders
+(`internal/machine/activate.go`). Every run of the probe that ran on
+VMS runs on govax with VMS's output, with VMS's images and with the
+ones govax's MACRO and LINK make: MAIN1 (R1), MAIN2 through SHR2 and
+SHR1 (R7), MAIN3 against the based SHR3 and MAIN3P against SHR3P (R8),
+MAIN4 against SHR4 and its relink (R9), MAIN6 (R10), EXE1 (R11), and
+MAIN1A (R6). Only where an image lands differs: govax's shims stand for
+LIBRTL, which on VMS took 279 pages before SHR1, so SHR1_ORIGIN and
+MAIN3P's addresses are masked (`TestActivateVMSShareableImages`,
+`TestActivateGovaxShareableImages`).
+
+- **The GSMATCH check** (`identMatches`): the image's global section
+  ISD for the shareable image (`NAME_001`) against the image's header
+  (`ICB.Ident`, `ICB.Match`). The match controls must agree, then the
+  linked-with one decides (Part A's rule). A mismatch is
+  `IdentMismatchError`: DCL shows ACTIMAGE, IMGNAME with the file as
+  found, and `-SYSTEM-F-SHRIDMISMAT`, `$STATUS` %X100020BC
+  (`activationFailure`). `TestActivateIdentMatch` relinks SHR1 through
+  R5's eight GSMATCH= values (NEVER's link failing, as on VMS) and runs
+  MAIN1 and MAIN1N after each, with VMS's results and file versions;
+  VMS's SHR1A relinked fails MAIN1A, as R6's did. The shims always
+  match. ALWAYS in the program against another control in the image
+  fails, which is **unconfirmed** (the probe didn't try it).
+- **Placement** (`imageBase`): an image the naming image maps through a
+  BASED global section ISD goes so that its first section is at that
+  ISD's address, a based shareable image (PICIMG clear) at its own
+  addresses, any other at P0's high-water mark. A placed image on pages
+  another image holds is SS$_VA_IN_USE (**unconfirmed**: no probe case).
+- **The load order** is the shareable image list from its end, as
+  MAIN1's LIBRTL was mapped before SHR1 on VMS; **unconfirmed** for two
+  images of the user's, as Part A says.
+- **An emulated image the link placed** (EXE1's LIBRTL_001 and
+  LIBRTL_002, BASED, no G^ cells: the code calls the addresses) gets
+  demand-zero pages there, the first section holding a transfer vector
+  into the shims (`placeEmulated`): at each routine's offset its entry
+  mask and `JMP @#stub+2` (eight bytes, as a vector entry is), a JSB
+  routine's `JMP @#stub`, a table's contents. It is listed as an image
+  (LIBRTL at ^X10E00), so the debugger shows it, and its pages take its
+  sections' protections. With paging on its pages are created as a
+  demand-zero section's are, so they count against PGFLQUOTA, where
+  VMS would map LIBRTL's global sections.
+- **A shareable image's own fixups** needed nothing new: its G^ cells,
+  its `.ADDRESS` list relative to itself (image 0), and its
+  change-protection list. `TestActivateProtectionChanges` checks SHR6's
+  first page, read-only with a `.ADDRESS`, UR after the fixups, and its
+  fixup page UREW.
+- **RUN of a shareable image** is `%DCL-E-NOTFR, no transfer address`,
+  `$STATUS` %X0003889A (E7): `ErrNoTransfer`, for an image whose
+  header's type is IHD$K_EXE or IHD$K_LIM and that has no transfer
+  address; anything else with none (a text file run) is still BADHDR,
+  as testdata/mp's probe 5 found. RUN's old "No transfer address!" line
+  is gone. Such an image, its first section at VPN 0, goes a page up,
+  so P0's first page stays the guard page.
+- **A shareable image's first transfer address** with traceback is
+  SYS$IMGSTA, the system's: it isn't relocated, and defines no
+  `SHARE$name_INITIALIZE`, so RUN's /INIT doesn't call it.
+
+`imageshare_test.go`'s shareable image is now one LINK/SHAREABLE makes
+(SHRDATA, with a universal data longword), in place of the executable
+it rewrote by hand.
+
+Left for later: shareable image libraries (subtask 12), the oracle
+(subtask 13), and HELP RUN's account of activation (the close-out).
