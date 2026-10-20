@@ -1336,6 +1336,15 @@ expect adjustment as phases land):
   shareable image (its GST's header and end records, its ident, its
   universal symbols); LINK searches such libraries by name and through
   LNK$LIBRARY (`internal/dclcmd/userlib.go`, `/[NO]USERLIBRARY`).
+- `internal/backup` — VMS BACKUP save sets (Phase 69): a leaf package
+  (standard library only). `Read` takes any `io.ReaderAt` (a volume
+  file or a host file), the block size from the first block's header;
+  block headers and their CRC-16 checksum, the data CRC-32 (checked only
+  with `Options.CheckCRC`, `/CRC`, as VMS 7.1 does), records, the
+  `Summary` and each file's `Attributes` (the FAT area kept whole), and
+  a damaged block rebuilt from its redundancy (XOR) group
+  (`Recovered`, `Lost`); `File.Data`, `Missing`, `HeaderOnly`. Tested on
+  `testdata/backup69/vax`'s save sets against VMS's listings.
 - `internal/anl` — VMS's ANALYZE utility (Phase 38): `AnalyzeObject` turns an
   object file's records into report `Line`s exactly as VMS 7.3's ANALYZE/OBJECT
   words them (`object.go`, `gsd.go`, `tir.go`, `dump.go`, errors in

@@ -6,7 +6,8 @@ done: Part A holds what the first save set
 (`testdata/backup69/vax/pi.bck`) and the public save set readers show of
 the format. Subtask 2, the VMS probe (`testdata/backup69`), is done:
 "The probe's answers" in Part A settles the format, the CRCs, the XOR
-blocks, and VMS's messages.
+blocks, and VMS's messages. Subtask 3 (COPY to a host name) and
+subtask 4 (`internal/backup`, the reader) are done.
 
 ## Goal
 
@@ -274,7 +275,7 @@ then 73 for a directory and 78 for a file with an ACL:
 | --- | --- | --- | --- | --- | --- | --- |
 | 42 (%X2A) | FILENAME | var. | `[XFER.PI]PI.EXE;1` | ... | ... | The file's name as listed (confirmed) |
 | 43 (%X2B) | STRUCLEV | 2 | %X0201 | %X0201 | %X0201 | The volume's structure level: ODS-2 |
-| 44 (%X2C) | FID | 6 | (19,1,0) | (18,1,0) | (16,2,0) | The file ID (confirmed) |
+| 44 (%X2C) | FID | 6 | (19,1,1) | (18,1,1) | (16,2,1) | The file ID, RVN 1, which DIRECTORY shows as 0 (confirmed) |
 | 45 (%X2D) | BACKLINK | 6 | (17,1,0) | (17,1,0) | (17,1,0) | The directory's file ID (confirmed, [XFER.PI]) |
 | 46 (%X2E) | FILESIZE | 4 | 6 | 24 | 6 | The allocation in blocks (confirmed) |
 | 47 (%X2F) | UIC | 4 | [1,4] | [1,4] | [1,4] | The owner (confirmed) |
@@ -372,7 +373,8 @@ also holds VMS's restored trees; answer 13 used them.
 4. **The summary is in block 1 only.** A later data block starts with
    whatever record comes next, and its header's "current file" fields
    (offsets 80 to 253) name the file being saved: its FID (with RVN 1,
-   unlike the file record's FID, whose RVN is 0), directory ID, name as
+   as the file record's FID has too, which DIRECTORY shows as 0;
+   corrected in subtask 4), directory ID, name as
    a counted string, record type, record attributes, record size,
    maximum record, and allocation. They are zero in block 1.
 5. **Data records never cross a block's end.** A file's data goes on in
@@ -589,7 +591,7 @@ reports, and every save set byte for byte (COPY/BINARY).
    user's manual says, so `"./pi.bck"` is a host file. Side finding 2:
    DIRECTORY/FULL's characteristic words, among them "Contiguous best
    try".
-4. **`internal/backup`, reading:** blocks (header, checksum, data CRC,
+4. **`internal/backup`, reading** — done (2026-10-20): blocks (header, checksum, data CRC,
    flags), records, the summary, file attributes into Go types, a file's
    data in VBN order, and XOR recovery of a damaged block from its group.
    Tested on `pi.bck` (the files match `pi.exe`, `pi.mar`, `pi.obj`),
@@ -759,3 +761,64 @@ original, the damaged block rebuilt from its group. So VMS 7.1 checks
 the CRC only when told, and recovers a block whose CRC fails as it does
 a block whose header checksum fails. Question 8's answer, and answer 13,
 say so. govax follows VMS 7.1, defaulting to `/NOCRC` both ways.
+
+### 2026-10-20 — Subtask 4: `internal/backup`, the reader
+
+A leaf package (standard library only), `internal/backup`:
+
+- `block.go`: the block header (`ParseHeader`, `BlockHeader`, its
+  current-file fields as `CurrentFile`), `Plausible` (size 256,
+  subsystem 1, a block size from 2048 to 65535), the NOCRC flag.
+- `crc.go`: `HeaderChecksum` (CRC-16, %XA001, table-driven) and
+  `DataCRC` (`hash/crc32`'s IEEE CRC-32), each with the CRC longword and
+  checksum word taken as zero.
+- `record.go`: `Records` splits a block's records (packed with no
+  padding, a null record or the block's end ends them), the record
+  types, and the record flags.
+- `attributes.go`: attribute lists, `Summary` (every summary attribute)
+  and `Attributes` (every file attribute the probe's save sets carry,
+  the FAT area kept whole with accessors for its fields, `Used`, ACL
+  segments packed), each with the raw `List` for later use (the writer).
+- `reader.go`: `Read(io.ReaderAt, size, Options)` reads every block,
+  repairs what it can, and decodes the records into `SaveSet.Files`.
+  A block is damaged when its header checksum fails, or with
+  `Options.CheckCRC` (`/CRC` on the input) its data CRC. `repair`
+  rebuilds a damaged data block as the XOR of its group's other blocks
+  and its redundancy block, writing back the header fields the
+  redundancy block wrote over (size, opsys, subsystem, application,
+  number, flags) and recomputing the checks. The group's place comes from
+  the summary's group size, or, if block 1 is the damaged one, from the
+  first intact redundancy block. A block that can't be rebuilt (no
+  group, or two damaged in one) is `Lost`; the files whose data it held
+  miss those blocks, and the files whose records it held are gone (after
+  a lost block, data records are kept only if the block header's current
+  file is the file being read). `Recovered` lists the rebuilt blocks'
+  numbers, so the listing can place XORERRS as VMS does: after the files
+  of the group (B69HDRD's listing prints it after the last file, before
+  the total). `File.Data` gives the used blocks in VBN order, zeros where
+  missing; `File.Missing` the VBN ranges VBNMISSING names;
+  `File.HeaderOnly` a NOBACKUP file saved without its data (whose record
+  has no HEADONLY flag: no record flag but DIRECTORY was seen).
+  `ErrNotSaveSet` for a first block that isn't a BACKUP block or holds
+  no summary.
+- **Tests** (`backup_test.go`): `pi.bck`'s summary, attributes, and data
+  against VMS's listing and the original files; every block of all 21
+  save sets passes its checks but the two SSCOPY damaged
+  (`TestChecks`); every probe save set's files, sizes, and total match
+  VMS's plain BACKUP/LIST in the log (`TestVAXListings`); large files
+  split across blocks read the same from every block and group size
+  (`TestSplitData`); directories, NOBACKUP, the ACL, an empty file, an
+  owner (`TestFileKinds`); the comment, buffer count, and group sizes;
+  the current-file header fields; B69HDRD and (with `/CRC`) B69CRCD
+  repaired byte for byte into B69 and B69CRC, B69CRCD without `/CRC`
+  and B69G0D and B69NOCRCD read with the damage (`TestRecovery`); a
+  lost block in B69G0 (`TestLostBlock`); B69CUT's MEDIUM.DAT missing
+  blocks 11 through 74, as VMS's VBNMISSING said (`TestTruncated`);
+  NOTSAVESET for a text file, an image, nothing, and zeros.
+- **Corrections to Part A:** the file record's FID carries RVN 1, like
+  the block header's (answer 4 said 0: DIRECTORY shows it as 0). The
+  probe's UICs are octal: OWNED.TXT's [200,201] is %X00800081.
+- **For subtask 7:** a save set with `/GROUP_SIZE=0` lists no "Group
+  size" line (B69G0's listing). B69CUT's listing shows every file the
+  two blocks hold, MEDIUM.DAT with its full 74 blocks, and no message.
+
