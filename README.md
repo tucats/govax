@@ -116,12 +116,9 @@ does.
 
 Here's a general list of next tasks:
 
-- Addition of a virtual-memory pager, so processes support working sets properly.
-- Support for supervisor-mode console command handling, to mimic how VAX/VMS
-  maintains a DCL shell in P1 space.
 - More accurate device operations and reference counting
-- More complete DCL support (IF statement, lexicals)
 - ANALYZE/DISK/REPAIR for ODS2 container volumes
+- Support for BACKUP command to manage save-sets
 
 Beyond that, this project was never aiming to emulate real hardware
 (disk controllers, network controllers, etc.) or boot an unmodified
