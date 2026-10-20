@@ -435,8 +435,15 @@ also holds VMS's restored trees; answer 13 used them.
     and success, and the restored CONTIG.DAT on the exchange volume has
     the changed byte in all three, B69CRCD's included, although its CRC
     shows the damage. The damaged header (B69HDRD) was found and
-    recovered from its XOR group. Why VMS didn't check B69CRCD's CRC on
-    input, where the manual says `/CRC` is the default, is question 8.
+    recovered from its XOR group. The second round (`round2.log`)
+    explains it: **VMS 7.1 checks the data CRC only when `/CRC` is given
+    on the input save set.** No BACKUP symbol is defined. With `/CRC`,
+    the restore of B69CRCD ends `%BACKUP-I-XORERRS, 1 error recovered by
+    redundancy group in DUA1:[SETS]B69CRCD.BCK;1` (after the last file's
+    CREATED line), and the restored CONTIG.DAT on the exchange volume
+    matches the original. So on this VAX `/NOCRC` is the default both
+    for writing and for reading, where the 7.3-2 manual says `/CRC`
+    (question 8).
 14. **DIRECTORY/FULL** of [B69]PI.EXE ends its File attributes line with
     ", Contiguous best try", which govax's leaves out (side finding 2,
     confirmed).
@@ -523,18 +530,18 @@ The author took each proposal and added `/COMPARE`.
 7. **Side finding 1** (COPY to a `/`-named host file): fix it here or
    separately? *Here, as a small subtask.*
 
-### Open question (from the probe, 2026-10-20)
+### The probe's question (answered by the second round, 2026-10-20)
 
 8. **Does govax check the CRC on input?** VMS restored B69CRCD's damaged
    block silently, though the CRC shows the damage and the manual says
-   `/CRC` is the input default (answer 13). Two explanations fit: this
-   VAX's BACKUP doesn't check the CRC unless told (it doesn't write one
-   unless told either), or the check is there but its message was
-   missed. A short second round would settle it: `SHOW SYMBOL BACKUP`,
-   and B69CRCD restored with `/CRC` placed after the input save set.
-   Until then, proposed: govax's reader checks the CRC whenever a block
-   has one, and recovers or reports as VMS does for a bad header
-   checksum. The restore follows the second round's answer.
+   `/CRC` is the input default (answer 13). *The second round settled
+   it: VMS 7.1 checks the CRC only when the input save set has `/CRC`,
+   and then recovers the block from its group (XORERRS).* govax does as
+   VMS 7.1 did: `/NOCRC` is the default for writing and for reading.
+   With `/CRC` on the input, a block whose CRC fails is recovered from
+   its group, as a block whose header checksum fails always is. The
+   header checksum is checked whatever `/CRC` says, as VMS found
+   B69HDRD's damage without it.
 
 ### The probe's cases (subtask 2; `testdata/backup69`)
 
@@ -741,3 +748,14 @@ case gave an answer.
   "./pi2.bck"` writes the host file, byte for byte, and leaves the
   default volume alone. DIRECTORY/FULL of PI.EXE and PI.DIR prints VMS's
   lines.
+
+### 2026-10-20 — Subtask 2: the second round (question 8)
+
+The author ran the two commands question 8 asked for (`round2.log`).
+No BACKUP symbol is defined. With `/CRC` on the input save set, the
+restore of B69CRCD reports `%BACKUP-I-XORERRS` after the last file, and
+the restored CONTIG.DAT on the exchange volume (`[X.B69]`) matches the
+original, the damaged block rebuilt from its group. So VMS 7.1 checks
+the CRC only when told, and recovers a block whose CRC fails as it does
+a block whose header checksum fails. Question 8's answer, and answer 13,
+say so. govax follows VMS 7.1, defaulting to `/NOCRC` both ways.

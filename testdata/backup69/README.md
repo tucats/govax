@@ -67,6 +67,7 @@ says what they show.
 | `sets.lst` | DIRECTORY/FULL of the save set files |
 | `r1.lst`, `r7.lst` | DIRECTORY/FULL of `[R1...]` (the whole tree restored) and of `[R7]` (after the version qualifiers) |
 | `text.lis`, `b69full.lis` | `/LIST=file` of TEXT.BCK, and of B69.BCK with `/FULL` |
+| `round2.log` | The second round (2026-10-20), typed by the author: `SHOW SYMBOL BACKUP` (none) and B69CRCD restored with `/CRC` on the input save set |
 | `*.bck` | Every save set, byte for byte: `b69`, `b69k8`, `b69g0`, `b69g3`, `b69crc`, `b69nocrc`, `b69com`, `b69exc`, `b69byo`, `b69txt`, `b69none`, `text`, `b69own`, `list`, `b69ign`, and SSCOPY's `b69cut`, `b69crcd`, `b69g0d`, `b69nocrcd`, `b69hdrd` |
 
 The restored trees stayed on the exchange volume, which is local only.
