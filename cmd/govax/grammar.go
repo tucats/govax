@@ -164,15 +164,6 @@ var grammar = []cli.Option{
 		DefaultVerb:          true,
 	},
 	{
-		LongName:             "asm",
-		Aliases:              []string{"assemble"},
-		Description:          "Assemble VAX source file",
-		OptionType:           cli.Subcommand,
-		Action:               asmCmd,
-		ParametersExpected:   1,
-		ParameterDescription: "filename",
-	},
-	{
 		LongName:             "macro",
 		Description:          "Assemble a MACRO-32 source file into an object module",
 		OptionType:           cli.Subcommand,
@@ -666,10 +657,6 @@ func consoleCmd(c *cli.Context) error {
 	return run(paths, instructionLimit, timeLimit, os.Stdout, nil, args)
 }
 
-func asmCmd(c *cli.Context) error {
-	return doCmd(c, "asm")
-}
-
 // macroCmd runs the console's MACRO command. The file names are quoted,
 // so DCL keeps their case and a host path's "/" isn't read as a
 // qualifier.
@@ -938,21 +925,6 @@ func runCommand(image string, f runFlags) string {
 	}
 
 	return command
-}
-
-// doCmd runs the console command cmd on the subcommand's parameters, each
-// quoted so DCL keeps a host file name's case and its "/" isn't read as a
-// qualifier.
-func doCmd(c *cli.Context, cmd string) error {
-	args := []string{cmd}
-
-	for _, arg := range c.FindGlobal().Parameters {
-		args = append(args, dclQuote(arg))
-	}
-
-	paths = loadConfigPaths(paths)
-
-	return run(paths, instructionLimit, timeLimit, os.Stdout, nil, args)
 }
 
 // See if there is a "vax.path" config item. If so, add it to the
