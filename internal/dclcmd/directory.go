@@ -49,6 +49,14 @@ import (
 //     facility, not SYS, since these are argument-validation problems
 //     rather than a device/volume state problem).
 func (c *Context) Directory(specText string, opts rms.DirectoryOptions) error {
+	return c.DirectoryTo(specText, opts, "")
+}
+
+// DirectoryTo is Directory with /OUTPUT: the listing goes to the file
+// output names (default type LIS) in place of the console, or to the
+// console when output is "". DIRECTORY/OUTPUT with no file is
+// DIRECTORY.LIS (the DCL Dictionary), which the caller passes.
+func (c *Context) DirectoryTo(specText string, opts rms.DirectoryOptions, output string) error {
 	if opts.OwnerName == nil && c.RTL != nil {
 		opts.OwnerName = c.RTL.IdentifierText
 	}
@@ -67,10 +75,41 @@ func (c *Context) Directory(specText string, opts rms.DirectoryOptions) error {
 		return vmserrors.Wrap(vmserrors.CLI_BADFILESPEC, err, specText)
 	}
 
-	c.Printf("%s", text)
+	if output == "" {
+		c.Printf("%s", text)
+	} else if err := c.writeDirectoryListing(output, text); err != nil {
+		return err
+	}
 
 	if !found {
 		return vmserrors.ConditionError{Status: directNoFiles, Text: "DIRECT-W-NOFILES, no files found"}
+	}
+
+	return nil
+}
+
+// writeDirectoryListing writes text, DIRECTORY's listing, as the text
+// file name names, its type LIS unless it gives one.
+func (c *Context) writeDirectoryListing(name, text string) error {
+	s := c.ContainerSession
+
+	out, err := s.Locate(name, false)
+	if err != nil {
+		return FileFailure(err, name)
+	}
+
+	out = out.WithDefaultType("LIS")
+
+	var records [][]byte
+
+	if text != "" {
+		for line := range strings.SplitSeq(strings.TrimSuffix(text, "\n"), "\n") {
+			records = append(records, []byte(line))
+		}
+	}
+
+	if _, err := s.CreateRecordFile(out, rms.TextRecords, records); err != nil {
+		return objectFailureAs(vmserrors.CLI_BADFILESPEC, err, out.Name)
 	}
 
 	return nil

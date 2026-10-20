@@ -90,6 +90,19 @@ func TestShowLogical_manualExamples(t *testing.T) {
 		"%SHOW-S-NOTRAN, no translation for logical name NOSUCH\n")
 }
 
+// TestShowLogical_everyTable: a name defined in more than one table is
+// shown from each, in search order, as VMS showed a process SYS$SHARE
+// and then the system's (testdata/link68's log, R4).
+func TestShowLogical_everyTable(t *testing.T) {
+	d, _, buf := logicalDispatcher(t)
+
+	mustDispatch(t, d, "DEFINE/SYSTEM SHARED SYS$SYSROOT:[SYSLIB]", "DEFINE SHARED DUA1:[000000.SHRDIR],SYS$SYSROOT:[SYSLIB]")
+	wantOutput(t, d, buf, "SHOW LOGICAL SHARED",
+		"   \"SHARED\" = \"DUA1:[000000.SHRDIR]\" (LNM$PROCESS_TABLE)\n"+
+			"\t= \"SYS$SYSROOT:[SYSLIB]\"\n"+
+			"   \"SHARED\" = \"SYS$SYSROOT:[SYSLIB]\" (LNM$SYSTEM_TABLE)\n")
+}
+
 func TestShowLogical_iterationStops(t *testing.T) {
 	d, _, buf := logicalDispatcher(t)
 

@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"unicode/utf8"
 
@@ -104,9 +105,11 @@ type analyzeOne func(loc rms.FileLocation) ([]anl.Line, int, rms.FileLocation, e
 // analyzeFiles runs an ANALYZE command's analysis on each of its files,
 // inputType being their default type, and writes the reports, each paged
 // on its own under title, to the console or the /OUTPUT file (default
-// type outputType). A file that can't be read stops the command; a file
+// type outputType), each followed by its count of errors
+// (analysisCount). A file that can't be read stops the command; a file
 // the analysis finds errors in doesn't, and the command then ends with
-// CLI_ANALYZEERRORS once every report is written.
+// CLI_ANALYZEERRORS once every report is written, its message inhibited:
+// the count said it, and VMS shows nothing more.
 func (c *Context) analyzeFiles(opts AnalyzeOptions, inputType, outputType, title string, analyze analyzeOne) error {
 	s := c.ContainerSession
 
@@ -156,13 +159,15 @@ func (c *Context) analyzeFiles(opts AnalyzeOptions, inputType, outputType, title
 		}
 
 		if count > 0 && problems == nil {
-			problems = vmserrors.New(vmserrors.CLI_ANALYZEERRORS, found.Name)
+			problems = vmserrors.InhibitMessage(vmserrors.New(vmserrors.CLI_ANALYZEERRORS, found.Name))
 		}
 
 		if !opts.Output {
 			c.Printf("%s", latin1ToUTF8(report.Bytes()))
 			report.Reset()
 		}
+
+		c.Printf("%s\n", analysisCount(found.Name, count))
 	}
 
 	if opts.Output {
@@ -172,6 +177,21 @@ func (c *Context) analyzeFiles(opts AnalyzeOptions, inputType, outputType, title
 	}
 
 	return problems
+}
+
+// analysisCount is the message ANALYZE shows after each file's report,
+// with the number of errors its analysis found, as VMS 7's ANALYZE words
+// it: the count ends in column 76 (every VMS log in testdata has it
+// there). Where a name too long for that puts the count is unconfirmed;
+// here a blank always separates them.
+func analysisCount(name string, count int) string {
+	const prefix = "%ANALYZE-I-ERRORS, "
+
+	number := strconv.Itoa(count)
+	pad := 76 - len(prefix) - len(name) - len(number)
+	pad = max(pad, 1)
+
+	return prefix + name + strings.Repeat(" ", pad) + number + " errors"
 }
 
 // analyzeRecords reads the object records to analyze at loc: an object

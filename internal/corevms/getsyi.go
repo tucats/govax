@@ -32,6 +32,11 @@ const (
 	nominalNodeName = "GOVAX"
 	vmsSoftwareType = "VMS"
 
+	// hardwareName is SYI$_HW_NAME, the model's name, which VMS takes
+	// from the CPU type (testdata/link68's VAX answered "VAX 8600").
+	// govax's SID names no model, so this names the emulator.
+	hardwareName = "VAX (govax)"
+
 	// localCSID is the node's cluster system ID. A node outside a
 	// cluster has none, so it is 0 — which also means "this node" in
 	// csidadr.
@@ -58,6 +63,7 @@ const maxNodeNameLength = 15
 //     software type ("VMS ").
 //   - SYI$_SID is the CPU's system identification register, and SYI$_CPU
 //     the processor type in its high byte (1 for a VAX-11/780, ...).
+//   - SYI$_HW_NAME is hardwareName.
 //   - SYI$_BOOTTIME is when this Environment was created: the INIT,
 //     VMINIT, or ZERO that set the machine up, govax's "boot".
 //   - The cluster items describe a node outside any cluster: not a
@@ -92,6 +98,7 @@ var syiItemsByName = map[string]func(env *Environment) itemValue{
 	"SYI$_NODE_SWVERS":    func(env *Environment) itemValue { return itemPadded(VersionString, 4) },
 	"SYI$_NODE_SWTYPE":    func(env *Environment) itemValue { return itemPadded(vmsSoftwareType, 4) },
 	"SYI$_NODENAME":       func(env *Environment) itemValue { return itemString(env.NodeName) },
+	"SYI$_HW_NAME":        func(env *Environment) itemValue { return itemString(hardwareName) },
 	"SYI$_SID":            func(env *Environment) itemValue { return itemLong(env.cpu.PR(registers.SID)) },
 	"SYI$_CPU":            func(env *Environment) itemValue { return itemLong(env.cpu.PR(registers.SID) >> 24) },
 	"SYI$_BOOTTIME":       func(env *Environment) itemValue { return itemQuad(env.BootTime) },
@@ -171,7 +178,7 @@ func (sys *System) sysgenPQL(name string) uint32 {
 }
 
 // syiCodeOf returns the $SYIDEF item code called name. A few items
-// (FREE_GBLPAGES, FREE_GBLSECTS, CONTIG_GBLPAGES) are among STARLET.OLB's
+// (FREE_GBLPAGES, FREE_GBLSECTS, CONTIG_GBLPAGES, HW_NAME) are among STARLET.OLB's
 // definitions but not vmsdef.Symbols'.
 func syiCodeOf(name string) (uint32, bool) {
 	if code, ok := vmsdef.Symbols[name]; ok {

@@ -184,6 +184,12 @@ func TestLexicalVolumeFiles(t *testing.T) {
 		{text: `F$PARSE("[NOSUCH]X",,,, "SYNTAX_ONLY")`, want: "DUA0:[NOSUCH]X.;"},
 		{text: `F$PARSE("DUB0:X")`, want: ""},
 
+		// A relative directory on the MFD keeps the MFD's name, as VMS
+		// writes it (testdata/link68's log).
+		{text: `F$PARSE("[.WORK]X",,, "DIRECTORY")`, want: "[000000.WORK]"},
+		{text: `F$PARSE("[.WORK]X")`, want: "DUA0:[000000.WORK]X.;"},
+		{text: `F$PARSE("[WORK]X",,, "DIRECTORY")`, want: "[WORK]"},
+
 		{text: `F$SEARCH("[WORK]*.*")`, want: "DUA0:[WORK]NOTES.TXT;1"},
 		{text: `F$SEARCH("[WORK]*.*")`, want: "DUA0:[WORK]STATS.DAT;2"},
 		{text: `F$SEARCH("[WORK]*.*")`, want: ""},
@@ -250,6 +256,7 @@ func TestLexicalProcess(t *testing.T) {
 		// 15.3.1: the node name, and the version.
 		{text: `F$GETSYI("NODENAME")`, want: env.NodeName},
 		{text: `F$GETSYI("VERSION")`, want: "V7.3    "},
+		{text: `F$GETSYI("HW_NAME")`, want: "VAX (govax)"},
 		{text: `F$GETSYI("CLUSTER_MEMBER")`, want: "FALSE"},
 		{text: `F$GETSYI("NODENAME", "` + strings.ToLower(env.NodeName) + `")`, want: env.NodeName},
 		{text: `F$GETSYI("NODENAME", "ELSEWHERE")`, vms: "SS$_NOSUCHNODE"},

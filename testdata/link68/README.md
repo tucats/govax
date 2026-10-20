@@ -86,6 +86,19 @@ At the end, `FILES.LST` is a `DIRECTORY/FULL` of everything, and a
    first version (`SHR1.EXE;1`, `SHR1A.EXE;1`, `SHR4.EXE;1`); SHR1A's
    and SHR4's relinks come back too, as `shr1a-2.exe` and `shr4-2.exe`.
 
+## The oracle and round 2
+
+`TestLink68Oracle` (`internal/console/link68oracle_test.go`, subtask 13)
+runs `LINK68.COM` on govax, in both paging modes, copies the results out
+as `copyout.cmd` does, and holds each to VMS's: the log line for line,
+the maps, analyses, and listings line for line with times and the
+tools' names masked, and the objects and images byte for byte but for
+their times, the tools' names, and idents that come from the link time.
+What still differs is listed in the test, each with its reason.
+
+`round2/` is the second VAX round: govax's images, run, analyzed, and
+linked against on VMS (its README).
+
 Nothing here is DIGITAL's: the images are linked from this probe's own
 objects, and the shareable image library holds only their symbol
 tables.

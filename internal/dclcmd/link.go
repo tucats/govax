@@ -295,23 +295,36 @@ func (c *Context) Link(opts LinkOptions) error {
 		return FileFailure(err, opts.MapFile)
 	}
 
-	// The map records its own name as it's about to be created: on a
-	// volume, without the version it gets.
-	lines := img.Map(link.MapOptions{
-		ImageFile: imageFile,
-		ImageText: opts.Executable,
-		MapFile:   mapLoc.Name,
-		Brief:     opts.Brief,
-		Full:      opts.Full,
-	})
+	// The map records its own name, on a volume with the version it
+	// gets, as real LINK's maps do ("FULL in file DUA1:[000000]SHR1.MAP;1",
+	// testdata/link68): the map is written, then written again at that
+	// version with its name in it.
+	mapRecords := func(name string) [][]byte {
+		lines := img.Map(link.MapOptions{
+			ImageFile: imageFile,
+			ImageText: opts.Executable,
+			MapFile:   name,
+			Brief:     opts.Brief,
+			Full:      opts.Full,
+		})
 
-	records := make([][]byte, len(lines))
-	for i, line := range lines {
-		records[i] = []byte(line)
+		records := make([][]byte, len(lines))
+		for i, line := range lines {
+			records[i] = []byte(line)
+		}
+
+		return records
 	}
 
-	if _, err := s.CreateRecordFile(mapLoc, rms.TextRecords, records); err != nil {
+	created, err := s.CreateRecordFile(mapLoc, rms.TextRecords, mapRecords(mapLoc.Name))
+	if err != nil {
 		return vmserrors.Wrap(vmserrors.CLI_LINKING, err, mapLoc.Name)
+	}
+
+	if !mapLoc.Host && created.Name != mapLoc.Name {
+		if _, err := s.RewriteRecordFile(created, rms.TextRecords, mapRecords(created.Name)); err != nil {
+			return vmserrors.Wrap(vmserrors.CLI_LINKING, err, created.Name)
+		}
 	}
 
 	return nil

@@ -141,9 +141,16 @@ func (a *Assembler) Object(opts ObjectOptions) (*obj.Module, error) {
 		}
 	}
 
+	// Real MACRO's count leaves one record out: in every listing and
+	// object pair in testdata (75 of them), it is one less than the
+	// records the object holds, each with a SRC header. Taken to be that
+	// header, which an object without Source lacks (unconfirmed).
 	m, err := b.Build()
 	if m != nil {
 		a.objectRecords = len(m.Records)
+		if opts.Source != "" {
+			a.objectRecords--
+		}
 	}
 
 	return m, err

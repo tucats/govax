@@ -280,6 +280,12 @@ func (c *Context) Macro(opts MacroOptions) error {
 		}
 	}
 
+	// MACRO's status for an assembly that worked, as LINK's and
+	// LIBRARY's (testdata/link68's log: %X10000001 after each MACRO/LIST).
+	if status == nil && c.SetStatus != nil {
+		c.SetStatus(ssNormal | stsInhibitMsg)
+	}
+
 	return status
 }
 

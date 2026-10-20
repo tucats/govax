@@ -334,7 +334,16 @@ func (d *Dispatcher) bindGrammar() {
 
 		// VMS's DIRECTORY image ends with SS$_NORMAL (VMS 7.3,
 		// testdata/dcl50's round 5).
-		if err := d.Console.cmd().Directory(r.String("SPEC"), opts); err != nil {
+		// /OUTPUT with no file is DIRECTORY.LIS.
+		output := ""
+		if r.Present("OUTPUT") && !r.Defaulted("OUTPUT") {
+			output = r.String("OUTPUT")
+			if output == "" {
+				output = "DIRECTORY.LIS"
+			}
+		}
+
+		if err := d.Console.cmd().DirectoryTo(r.String("SPEC"), opts, output); err != nil {
 			return err
 		}
 

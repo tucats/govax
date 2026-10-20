@@ -129,6 +129,7 @@ var syiForms = map[string]forms{
 	"SYI$_NODE_SWVERS":    both(FormString),
 	"SYI$_NODE_SWTYPE":    both(FormString),
 	"SYI$_NODENAME":       both(FormString),
+	"SYI$_HW_NAME":        both(FormString),
 	"SYI$_BOOTTIME":       both(FormTime),
 	"SYI$_CLUSTER_MEMBER": both(FormBoolean),
 	"SYI$_NODE_CSID":      both(FormHex),

@@ -9,8 +9,9 @@ subtask 4 (clusters for executables), subtask 5 (`LINK/SHAREABLE`,
 the image), subtask 6 (the global symbol table), subtask 7 (fixups
 and bases), subtask 8 (maps and ANALYZE/IMAGE), subtask 9 (linking
 against govax's shareable images), subtask 10 (finding a shareable
-image), subtask 11 (activating govax's shareable images), and subtask
-12 (shareable image libraries).
+image), subtask 11 (activating govax's shareable images), subtask 12
+(shareable image libraries), and subtask 13 (the oracle; its second VAX
+round, `testdata/link68/round2`, waits for the author).
 
 ## Goal
 
@@ -591,7 +592,7 @@ them.
     a user's shareable image library (`MYLIB/LIBRARY`), and its default
     libraries (`LNK$LIBRARY`, `LNK$LIBRARY_1`, ...; `/USERLIBRARY`),
     matched against `myshr.olb`, `myshr.lis`, and MAIN1L/MAIN1U.
-13. **The milestone and the oracle.** `TestLink68Oracle` runs
+13. **Done (2026-10-20), but for the VAX round.** **The milestone and the oracle.** `TestLink68Oracle` runs
     `LINK68.COM` on govax: MACRO, LINK/SHAREABLE, LINK, ANALYZE, and
     RUN. It matches VMS's log, maps, and `.ANI`s (times masked) and the
     images byte for byte, but for a listed set of differences. A second
@@ -1464,3 +1465,93 @@ MYSHR.OLB as a host file, by /LIBRARY and by /INCLUDE=SHR1.
 HELP LIBRARY has /SHARE, and HELP LINK /USERLIBRARY and the library
 qualifiers' new meaning; the rest of HELP LINK and HELP RUN is the
 close-out's. Left: the oracle (subtask 13) and the close-out.
+
+### 2026-10-20 — Subtask 13: the oracle
+
+`TestLink68Oracle` (`internal/console/link68oracle_test.go`) runs
+`LINK68.COM` on govax as the author ran it on VMS, in both paging
+modes: the sources and procedure on an RD51 in DUA1, the default
+directory, and SYS$SHARE `SYS$SYSROOT:[SYSLIB]` in the system table, as
+on VMS, with SYS$SYSROOT `DUA0:` (govax has no rooted directories). It
+then copies the results out with `copyout.cmd`'s own lines and holds
+each to VMS's:
+
+- **The log** line for line (928 lines), dates and the addresses that
+  depend on where SHR1 and SHR3P landed masked (VMS put LIBRTL's 279
+  pages before them; govax's shims take none). Listed differences: the
+  version line (`V7.1 VAX 8600`; govax's F$GETSYI says V7.3 and names
+  itself), and E3's messages and status (below). govax's COPY says what
+  it copied, which VMS's doesn't without /LOG; that line is left out.
+- **The maps** line for line up to their Map format line (the run
+  statistics after it are VMS's process's, which govax doesn't write),
+  without STARLET.OLB's module SYS$P1_VECTOR. Listed: the LIBRTL module
+  line and the counts of files, modules, and psects, where govax's tables
+  stand for LIBRTL.EXE and STARLET.OLB.
+- **ANALYZE/IMAGE's and ANALYZE/OBJECT's reports** line for line, with
+  no listed differences, and **the listings** but for MACRO's
+  performance indicators and the page break they move.
+- **The objects and the symbol table file** record for record, the main
+  header's times and the language processor header aside, and **the
+  images** byte for byte up to the global symbol table, and the table
+  record for record, but for the link time and linker ID and the idents
+  that come from the link time (the images linked without GSMATCH=,
+  and the global section ISDs of the programs that use them). `myshr.lis`
+  matches; `myshr.olb` holds govax's images' tables, with their times,
+  and `files.lst` the volume's file IDs, so neither is compared.
+
+Every file VMS's run made, govax's makes. Then the volume dismounts:
+nothing is left open.
+
+What the oracle found, fixed here:
+
+- **A failed activation left its image files held** with paging on:
+  RUN's IMAGEFNF (R2, R3), SHRIDMISMAT (R5), and NOTFR (E7) mapped
+  sections that stayed until the next RUN, so DISMOUNT said a file was
+  open. `ActivateImage` now takes down what it made when it fails
+  (`ResetICBList`), as do RUN and `ActivateCreatedImage` for NOTFR.
+- **ANALYZE** shows `%ANALYZE-I-ERRORS, file   n errors` after each
+  file, as VMS's does (`analysisCount`; every VMS log in testdata puts
+  the count's end in column 76; a name too long for that is
+  unconfirmed). A file with errors still ends the command with
+  CLI_ANALYZEERRORS, its message inhibited, since VMS shows no more.
+- **MACRO's `$STATUS`** is %X10000001 when it works, as LINK's and
+  LIBRARY's.
+- **MACRO's listing** counts one object record fewer than the object
+  holds, as real MACRO does in all 75 listing and object pairs in
+  testdata; taken to be the SRC header, which an object made without a
+  command line lacks (**unconfirmed** which record it is).
+- **LINK's map** names itself with the version it gets
+  (`FULL in file DUA1:[000000]SHR1.MAP;1`), as every real map in
+  testdata does: it's written, then rewritten at that version.
+- **F$PARSE** keeps the MFD's name for a relative directory on it:
+  `[.SHRDIR]` on `[000000]` is `[000000.SHRDIR]`, as `$PARSE` already
+  gave it (`rms.mfdRelative`).
+- **SHOW LOGICAL** shows a name from every table that has it, in
+  search order (R4's process SYS$SHARE, then the system's).
+- **DIRECTORY/OUTPUT[=file]** (default DIRECTORY.LIS; type LIS), which
+  LINK68.COM's FILES.LST needs.
+- **F$GETSYI("HW_NAME")**: govax's SID names no model, so it is
+  "VAX (govax)".
+
+Left as listed differences:
+
+- **E3**, a shareable image named as an object: VMS's LINK reads its
+  blocks as object records and reports each illegal one (RECTYP, then
+  SEQNCE for each block that looks like a module header, NOEOM, ERRORS,
+  NOIMGFIL, the undefined symbols, and ILLRECTYP again in pass 2;
+  `$STATUS` %X106482B2). govax refuses the file with one message. One
+  case doesn't settle the rules for garbage input; a later phase can
+  take it up.
+- LINK's run statistics in a map, and MACRO's performance indicators,
+  are the process's, which govax doesn't keep.
+- COPY says what it copied without /LOG (govax's, since Phase 23).
+
+**Round 2** (`testdata/link68/round2`, needs the author): `exchange.cmd`
+makes a volume on which govax has run `LINK68.COM`, and `run2.com` has
+VMS analyze each of govax's images, run govax's programs against govax's
+shareable images, link against them (MAIN1V, MAIN2V), and use govax's
+library (MAIN1W) and its images in VMS's librarian (MYSHRV). The
+results go in `testdata/link68/vax/round2/` (`copyout.cmd`). It also
+shows whether VMS 7.1's LIBRTL matches the ident govax's tables give it.
+
+Left: round 2's results, and the close-out.

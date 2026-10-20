@@ -244,18 +244,25 @@ func (d logicalDisplay) listLogicalTables(tables []*lnm.Table, pattern string, f
 	}
 }
 
-// showLogicalName prints name's definition from the first of tables that
-// has it, then its iterative translations. It reports whether any table
-// had name.
+// showLogicalName prints name's definition from each of tables that has
+// it, in search order, each followed by its iterative translations: VMS
+// shows a process SYS$SHARE, then the system's (testdata/link68's log,
+// R4). It reports whether any table had name.
 func (d logicalDisplay) showLogicalName(tables []*lnm.Table, name string, full bool) bool {
-	e := d.findLogical(tables, name)
-	if e == nil {
-		return false
+	shown := false
+
+	for _, t := range tables {
+		e, err := d.db.Translate(t.Name, name, lnm.User, 0)
+		if err != nil {
+			continue
+		}
+
+		d.printLogicalChain(tables, e, 0, []string{e.Name}, full)
+
+		shown = true
 	}
 
-	d.printLogicalChain(tables, e, 0, []string{e.Name}, full)
-
-	return true
+	return shown
 }
 
 // findLogical returns name's entry in the first of tables that has it.

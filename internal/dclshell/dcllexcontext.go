@@ -34,8 +34,8 @@ import (
 //
 // govax has every process on its one node, and the console's process
 // may see them all: the GROUP and WORLD privileges the Dictionary
-// mentions aren't asked for. HW_MODEL, HW_NAME, and STS, which $GETSYI
-// and $GETJPI don't answer in govax, are CLI_IVKEYW.
+// mentions aren't asked for. HW_MODEL and STS, which $GETSYI and
+// $GETJPI don't answer in govax, and HW_NAME, are CLI_IVKEYW.
 
 // processContextType is the context type F$CONTEXT knows, and the type
 // F$TYPE gives its symbol.

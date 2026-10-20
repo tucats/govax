@@ -92,8 +92,10 @@ func (m *Machine) Run(fn string, opts RunOptions) error {
 	}
 
 	// An image with no transfer address (a shareable image) doesn't run:
-	// DCL's NOTFR.
+	// DCL's NOTFR. What its activation made goes.
 	if !ok {
+		m.ResetICBList()
+
 		return noTransfer(main, fn)
 	}
 
@@ -179,12 +181,17 @@ func languageName(code uint32) string {
 // as VMS's image activator likewise changes a section's protection after
 // fixing it up (the IAF's change-protection list). Returns the main
 // image's ICB. Needs ensureShims to have run. The image goes into p's
-// process, through its address space, whichever process is current.
+// process, through its address space, whichever process is current. An
+// activation that fails takes down what it made (ResetICBList), so a
+// mapped image file it opened isn't left held (a DISMOUNT after
+// testdata/link68's R3 found one).
 func (p *ImageProcess) ActivateImage(fn string) (*ICB, error) {
 	c := p.m
 
 	main, err := p.imageLoad(fn, icbMain)
 	if err != nil {
+		p.ResetICBList()
+
 		return nil, vmserrors.Wrap(vmserrors.CLI_ACTIVATE, err, fn)
 	}
 
@@ -194,6 +201,8 @@ func (p *ImageProcess) ActivateImage(fn string) (*ICB, error) {
 
 	for _, dep := range p.ICBList {
 		if err := p.imageFixup(dep); err != nil {
+			p.ResetICBList()
+
 			return nil, vmserrors.Wrap(vmserrors.CLI_FIXUP, err, dep.Name)
 		}
 	}
@@ -443,6 +452,8 @@ func (m *Machine) ActivateCreatedImage(env *corevms.Environment, image string, h
 	}
 
 	if !ok {
+		p.ResetICBList()
+
 		return 0, noTransfer(main, image)
 	}
 

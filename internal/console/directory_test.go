@@ -1,6 +1,7 @@
 package console
 
 import (
+	"bytes"
 	"errors"
 	"path/filepath"
 	"regexp"
@@ -124,6 +125,46 @@ func TestDispatch_directoryViaDCL(t *testing.T) {
 
 	if !strings.Contains(buf.String(), "INDEXF.SYS;1") {
 		t.Errorf("Dispatch DIRECTORY output = %q, want it to contain INDEXF.SYS;1", buf.String())
+	}
+}
+
+// TestDispatch_directoryOutput: DIRECTORY/OUTPUT=file writes the listing
+// to the file, type LIS by default, and nothing to the console; with no
+// file, to DIRECTORY.LIS (the DCL Dictionary). testdata/link68's
+// LINK68.COM writes its FILES.LST so.
+func TestDispatch_directoryOutput(t *testing.T) {
+	c, buf := newTestConsole(t)
+	d := NewDispatcher(c, loadEvaxGrammar(t), nil)
+
+	mountFreshContainer(t, c, "DUA0")
+
+	if err := c.cmd().SetDefault("DUA0:[000000]"); err != nil {
+		t.Fatalf("SetDefault: %v", err)
+	}
+
+	for _, tc := range []struct{ line, file string }{
+		{"DIRECTORY/OUTPUT=FILES *.SYS", "DUA0:[000000]FILES.LIS"},
+		{"DIRECTORY/OUTPUT=FILES.LST INDEXF.SYS", "DUA0:[000000]FILES.LST"},
+		{"DIRECTORY/OUTPUT *.SYS", "DUA0:[000000]DIRECTORY.LIS"},
+	} {
+		buf.Reset()
+
+		if err := d.Dispatch(tc.line); err != nil {
+			t.Fatalf("%s: %v", tc.line, err)
+		}
+
+		if buf.Len() != 0 {
+			t.Errorf("%s wrote to the console: %q", tc.line, buf)
+		}
+
+		records, _, err := c.ContainerSession.ReadRecordFile(rms.FileLocation{Name: tc.file}, rms.TextRecords)
+		if err != nil {
+			t.Fatalf("%s: %v", tc.file, err)
+		}
+
+		if text := string(bytes.Join(records, []byte("\n"))); !strings.Contains(text, "Directory DUA0:[000000]") || !strings.Contains(text, "INDEXF.SYS;1") {
+			t.Errorf("%s:\n%s", tc.file, text)
+		}
 	}
 }
 

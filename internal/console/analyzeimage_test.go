@@ -74,7 +74,8 @@ func TestAnalyzeImage_hostFile(t *testing.T) {
 		t.Fatalf("ANALYZE: %v", err)
 	}
 
-	if buf.Len() != 0 {
+	// Only the count of errors goes to the console, as on VMS.
+	if !strings.HasPrefix(buf.String(), "%ANALYZE-I-ERRORS, ") || strings.Count(buf.String(), "\n") != 1 {
 		t.Errorf("ANALYZE/OUTPUT wrote to the console: %q", buf.String())
 	}
 
@@ -200,7 +201,12 @@ func TestAnalyzeImage_linked(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	got := buf.String()
+	// The report, then the count of errors.
+	got, count, _ := strings.Cut(buf.String(), "%ANALYZE-I-ERRORS, ")
+	if !strings.HasSuffix(count, " 0 errors\n") {
+		t.Errorf("the count of errors: %q", count)
+	}
+
 	if normalizeImageAnalysis(got, true) != normalizeImageAnalysis(string(want), true) {
 		t.Errorf("the analysis differs from VMS's:\n%s", got)
 	}

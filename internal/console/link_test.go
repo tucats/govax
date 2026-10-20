@@ -556,7 +556,7 @@ func TestLink_map(t *testing.T) {
 	if found.Name != "DUA0:[000000]PSECTS.MAP;1" ||
 		!strings.Contains(text, "\nDUA0:[000000]PSECTS.EXE;1 ") ||
 		!strings.Contains(text, "PSECTS          V1.0                   94 DUA0:[000000]PSECTS.OBJ;1") ||
-		!strings.Contains(text, "in file DUA0:[000000]PSECTS.MAP\n") {
+		!strings.Contains(text, "in file DUA0:[000000]PSECTS.MAP;1\n") {
 		t.Errorf("volume map %s:\n%s", found.Name, text)
 	}
 }

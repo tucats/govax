@@ -44,7 +44,8 @@ func TestAnalyze_hostFile(t *testing.T) {
 		t.Fatalf("ANALYZE: %v", err)
 	}
 
-	if buf.Len() != 0 {
+	// Only the count of errors goes to the console, as on VMS.
+	if !strings.HasPrefix(buf.String(), "%ANALYZE-I-ERRORS, ") || strings.Count(buf.String(), "\n") != 1 {
 		t.Errorf("ANALYZE/OUTPUT wrote to the console: %q", buf.String())
 	}
 

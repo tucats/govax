@@ -369,7 +369,7 @@ func lexGetJPI(e *dclExpression, args []lexicalArg) (dclValue, error) {
 var syiKeywords = map[string]bool{
 	"BOOTTIME": true, "CLUSTER_MEMBER": true, "CPU": true, "MINWSCNT": true,
 	"NODE_CSID": true, "NODE_SWTYPE": true, "NODE_SWVERS": true,
-	"NODENAME": true, "SID": true, "VERSION": true,
+	"NODENAME": true, "SID": true, "VERSION": true, "HW_NAME": true,
 	"GROWLIM": true, "FREELIM": true, "FREEGOAL": true, "TBSKIPWSL": true,
 	"MPW_HILIMIT": true, "MPW_LOLIMIT": true, "PQL_DWSDEFAULT": true,
 	"PQL_DWSQUOTA": true, "PQL_DWSEXTENT": true, "PQL_DPGFLQUOTA": true,

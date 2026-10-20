@@ -99,7 +99,7 @@ func (s *Session) Parse(spec, def, related string, syntaxOnly, noConceal bool) (
 		Name:      full.Name,
 		Type:      "." + full.Type,
 		Version:   ";" + full.Version,
-		Directory: filespec.Spec{Dirs: full.Dirs, Recursive: full.Recursive}.String(),
+		Directory: filespec.Spec{Dirs: mfdRelative(fs[0].Spec, defaults.Spec.Dirs, full.Dirs), Recursive: full.Recursive}.String(),
 	}
 
 	if display != "" {
@@ -122,6 +122,34 @@ func (s *Session) Parse(spec, def, related string, syntaxOnly, noConceal bool) (
 	}
 
 	return p, true, nil
+}
+
+// mfdRelative is dirs, the directory spec's text leads to through the
+// default directory def, written as VMS writes it: a relative directory
+// applied to the MFD keeps the MFD's name, so [.SUB] on [000000] is
+// [000000.SUB], as $PARSE gives it (applyDir; testdata/link68's log, where
+// F$PARSE("[.SHRDIR]",,,"DIRECTORY") was "[000000.SHRDIR]").
+func mfdRelative(spec string, def, dirs []string) []string {
+	if len(dirs) == 0 || dirs[0] == "000000" || len(def) > 0 && def[0] != "000000" {
+		return dirs
+	}
+
+	open := strings.IndexAny(spec, "[<")
+	if open < 0 {
+		return dirs
+	}
+
+	end := strings.IndexAny(spec[open:], "]>")
+	if end < 0 {
+		return dirs
+	}
+
+	d, ok := scanDir(spec[open+1 : open+end])
+	if !ok || !d.Relative || len(d.Elems) == 0 || strings.Trim(d.Elems[0], "-") == "" {
+		return dirs
+	}
+
+	return append([]string{"000000"}, dirs...)
 }
 
 // Search returns every file spec names, as successive calls of F$SEARCH

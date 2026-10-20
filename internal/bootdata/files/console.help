@@ -161,6 +161,7 @@
 //                          items; VMINIT/PAGING's description of the
 //                          finished paging program
 //              10/20/26    MOUNT/NOLOG
+//              10/20/26    DIRECTORY/OUTPUT; F$GETSYI's HW_NAME
 
 This is the help documentation for the govax VAX emulator.  Topic sections are
 marked by a "$" delimiter.  This is followed by as many tokens of the help
@@ -1402,7 +1403,8 @@ $LEXI
                                          OWNER; FREP0VA "" with no P0
                                          pages), FREPTECNT, and VIRTPEAK
         F$GETSYI(item [,node])           $GETSYI's items: NODENAME, VERSION,
-                                         BOOTTIME, SID, ...; the paging
+                                         BOOTTIME, SID, HW_NAME ("VAX
+                                         (govax)"), ...; the paging
                                          parameters; PAGEFILE_PAGE and
                                          PAGEFILE_FREE (the page file's
                                          size and free pages); the global
@@ -3362,7 +3364,7 @@ $DIR
 
         DIRECTORY [/FULL] [/FILE] [/SIZE[=option]] [/DATE] [/OWNER]
                   [/PROTECTION] [/VERSIONS=n] [/[NO]HEADING]
-                  [/[NO]TRAILING] [file-spec]
+                  [/[NO]TRAILING] [/OUTPUT[=file]] [file-spec]
 
     Parameter:
 
@@ -3404,6 +3406,11 @@ $DIR
                         its full name, one to a line.
 
         /NOTRAILING     No totals.
+
+        /OUTPUT[=file]  Writes the listing to a file in place of the
+                        terminal: file (type LIS unless it gives one), or
+                        DIRECTORY.LIS.  A specification that finds no file
+                        still shows %DIRECT-W-NOFILES at the terminal.
 
     Examples:
 

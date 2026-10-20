@@ -513,6 +513,9 @@ grammar console
                     /type=$integer
         qualifier   heading/id=909
         qualifier   trailing/id=910
+        qualifier   output/id=911               -
+                    /type=$string               -
+                    /default=""
 
     !
     ! govax-native extension (Phase 23, internal/rms + internal/console):
