@@ -7,7 +7,8 @@ done: Part A holds what the first save set
 the format. Subtask 2, the VMS probe (`testdata/backup69`), is done:
 "The probe's answers" in Part A settles the format, the CRCs, the XOR
 blocks, and VMS's messages. Subtasks 3 (COPY to a host name), 4 (`internal/backup`, the
-reader), 5 (opening a save set), and 6 (the command) are done.
+reader), 5 (opening a save set), 6 (the command), and 7 (BACKUP/LIST)
+are done.
 
 ## Goal
 
@@ -606,7 +607,7 @@ reports, and every save set byte for byte (COPY/BINARY).
    position-dependent qualifiers), `HELP BACKUP` in `console.help`, and
    BACKUP's messages (from the probe's log) in `vmsdef`, where VMS's
    condition values live, rather than `vmserrors`.
-7. **BACKUP/LIST:** the summary block and file lines in VMS's layout,
+7. **BACKUP/LIST** — done (2026-10-20): the summary block and file lines in VMS's layout,
    `/BRIEF`, `/FULL` (sharing DIRECTORY/FULL's writer where the layouts
    agree), `/LIST=file`, `/SELECT` and `/EXCLUDE`, the totals, and "End
    of save set". Checked against the probe's listings.
@@ -935,3 +936,53 @@ A leaf package (standard library only), `internal/backup`:
   procedure, the message shown once and the procedure ended with its
   status). The verb count and the parameter-qualifier walk in
   `internal/dcl`'s tests know BACKUP.
+
+### 2026-10-20 — Subtask 7: BACKUP/LIST
+
+- **The listing** (`internal/dclcmd/backuplist.go`, `listSaveSet`):
+  "Listing of save set(s)" and a blank, written before the save set is
+  opened (VMS shows OPENIN and NOTSAVESET after it); the summary, each
+  label padded to 19 columns; a line per file (`/BRIEF`, the default:
+  the name in 52 columns, the used blocks in 9, the creation time to the
+  minute) or a block per file (`/FULL`); a blank; "Total of n files, m
+  blocks" (the used blocks, `plural`'s "1 file, 1 block"); and "End of
+  save set" with a CR LF of its own, as `$FAO`'s `!/` writes it (the log
+  and the `.LIS` files show a CR and then an empty line). `$STATUS` is
+  %X10000001, as VMS's was. `/LIST=file` writes the lines as a text
+  file, type LIS by default (DIRECTORY/OUTPUT's writer), and BACKUP's
+  messages among them still go to SYS$OUTPUT (unconfirmed: the probe's
+  `/LIST=file` commands had none).
+- **`/FULL` isn't DIRECTORY/FULL's layout**, so it shares nothing with
+  `rms`'s writer: three columns (22, 24, the rest), the name on a line of
+  its own when longer than 21 characters (MEDIUM.DAT's 22; 21 is
+  unconfirmed), the owner as six-digit octal halves, the file ID with
+  its RVN ("(36,1,1)"), "Allocation = 3, Extend = 0" (", maximum bucket
+  size = 2" for an indexed file; for a relative one unconfirmed),
+  "Global Buffer Count = 0" with ", Contiguous" or ", Contiguous-best-try"
+  (nothing for NOBACKUP or a directory, and no version limit), the record
+  format with ", maximum n bytes" when the file has a limit, and the
+  record attributes "Carriage return", "Print file format", "Non-spanned",
+  "None". The words for Stream, Stream_CR, Undefined, Fortran carriage
+  control, combined attributes, and other characteristics are govax's
+  guesses (unconfirmed). `backup.Attributes.GlobalBuffers` is new
+  (FAT$W_GBC).
+- **What VMS V7.1 showed:** the summary leaves out `/COMMENT` (B69COM's
+  listings), a listing ignores `/SELECT` and `/EXCLUDE` (the probe's two
+  such listings show all 25 files; `HELP BACKUP` says so), B69CUT lists
+  its 18 files with MEDIUM.DAT at 74 blocks and no message, and B69HDRD's
+  XORERRS comes after the last file, before the blank and the total,
+  naming the save set with its version. govax reports XORERRS once with
+  the count of rebuilt blocks; where VMS puts it for damage in several
+  groups is unconfirmed, as is what a listing says of a lost block
+  (govax: nothing).
+- **Tests:** `TestBackupListOracle` (`internal/console/backuplist_test.go`)
+  puts the 20 save sets on a fresh DUA1 in [SETS], runs each of the
+  log's BACKUP/LIST commands but the two with `/LIST=file` and the one
+  naming the [B69] tree (28 listings, errors included), and matches VMS's
+  output line for line, with `$STATUS`; `TestBackupListFile` matches
+  TEXT.LIS and B69FULL.LIS byte for byte as copied to the host, and a
+  default LIS type; `TestBackupListHost` lists `pi.bck` as a host file
+  (the README's listing); `TestBackupListingFields` (dclcmd) covers the
+  file ID's high byte, protection, the UIC, and the record attributes the
+  probe doesn't reach. `TestBackupMessages` no longer expects NOTYET for
+  a listing.

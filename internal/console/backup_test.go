@@ -154,7 +154,6 @@ func TestBackupMessages(t *testing.T) {
 
 		// The operations, until their subtasks: the save set is read
 		// first.
-		{"BACKUP/LIST PI.BCK/SAVE_SET", "BACKUP-F-NOTYET, BACKUP/LIST is not implemented yet", 0x10A3FFAC},
 		{"BACKUP PI.BCK/SAVE_SET [R1...]", "BACKUP-F-NOTYET, a BACKUP restore is not implemented yet", 0x10A3FFAC},
 		{"BACKUP/COMPARE PI.BCK/SAVE_SET [R1...]", "BACKUP-F-NOTYET, BACKUP/COMPARE is not implemented yet", 0x10A3FFAC},
 		{"BACKUP *.MAR OTHER.BCK/SAVE_SET", "BACKUP-F-NOTYET, a BACKUP save is not implemented yet", 0x10A3FFAC},

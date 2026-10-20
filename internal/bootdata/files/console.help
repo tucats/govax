@@ -3544,10 +3544,9 @@ $BACK
     holding the same bytes (a binary FTP of a save set, or COPY/BINARY of
     one).
 
-    govax is adding BACKUP's operations in steps.  So far it finds the
-    operation, opens and checks the input save set, and reports VMS's
-    messages for what is wrong; listing, restoring, comparing, and saving
-    then say NOTYET.
+    govax is adding BACKUP's operations in steps.  So far it lists save
+    sets, as VMS V7.1 lists them; restoring, comparing, and saving open
+    and check the input save set, then say NOTYET.
 
     Syntax:
 
@@ -3567,10 +3566,14 @@ $BACK
 
     Command qualifiers:
 
-        /LIST[=file]    List the save set, on SYS$OUTPUT or into the file.
-        /BRIEF, /FULL   The listing's layout: each file's name, size, and
-                        creation date (the default), or a DIRECTORY/FULL
-                        layout.
+        /LIST[=file]    List the save set, on SYS$OUTPUT or into the file
+                        (its type LIS unless it gives one).  As in VMS
+                        V7.1, a listing shows every file: /SELECT and
+                        /EXCLUDE don't change it.
+        /BRIEF, /FULL   The listing's layout: each file's name, used
+                        blocks, and creation date (the default), or a
+                        block of each file's dates, owner, file ID,
+                        protection, and record attributes.
         /LOG            Show each file as it is saved, restored, or
                         compared.
         /COMPARE        Compare the save set's files with the files named.

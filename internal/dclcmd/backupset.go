@@ -101,7 +101,7 @@ type SaveSetInput struct {
 	// Name is the save set file's full name with its version
 	// ("DUA1:[SETS]B69.BCK;1"), or the host path. Expanded is the name
 	// as given, expanded ("DUA1:[SETS]B69.BCK;"), as VMS names the save
-	// set in NOFILES and the listing's XORERRS; the host path for a host
+	// set in NOFILES (XORERRS names it by Name); the host path for a host
 	// file.
 	Name     string
 	Expanded string

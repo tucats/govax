@@ -118,16 +118,15 @@ func (c *Context) Backup(cmd BackupCommand) error {
 		return backupOperationFailure(err)
 	}
 
-	var in *SaveSetInput
+	if op == BackupList {
+		return c.listSaveSet(cmd)
+	}
 
 	if op != BackupSave {
-		in, err = c.ReadSaveSet(cmd.Input, backup.Options{CheckCRC: cmd.CheckCRC})
-		if err != nil {
+		if _, err := c.ReadSaveSet(cmd.Input, backup.Options{CheckCRC: cmd.CheckCRC}); err != nil {
 			return backupOpenFailure(err)
 		}
 	}
-
-	_ = in
 
 	return backupMessage(vmsdef.BackupNotYet, backupOperationNames[op])
 }
@@ -135,7 +134,6 @@ func (c *Context) Backup(cmd BackupCommand) error {
 // backupOperationNames name the operations for NOTYET, until each is in
 // place.
 var backupOperationNames = map[BackupOperation]string{
-	BackupList:    "BACKUP/LIST",
 	BackupRestore: "a BACKUP restore",
 	BackupCompare: "BACKUP/COMPARE",
 	BackupSave:    "a BACKUP save",

@@ -314,6 +314,7 @@ const (
 	fatVFCSize    = 15 // byte
 	fatMaxRecord  = 16 // word
 	fatExtend     = 18 // word: the default extension
+	fatGlobalBufs = 20 // word: the global buffer count
 )
 
 // swapped reads a FAT block number, high word first.
@@ -356,6 +357,10 @@ func (f Attributes) VFCSize() uint8    { return f.RecordAttributes[fatVFCSize] }
 
 func (f Attributes) Extend() uint16 {
 	return binary.LittleEndian.Uint16(f.RecordAttributes[fatExtend:])
+}
+
+func (f Attributes) GlobalBuffers() uint16 {
+	return binary.LittleEndian.Uint16(f.RecordAttributes[fatGlobalBufs:])
 }
 
 // Used is how many blocks the file's data uses, as BACKUP/LIST and
