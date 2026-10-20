@@ -236,7 +236,11 @@ func (d *Dispatcher) bindGrammar() {
 		// TestParse_mountNowrite in internal/dcl/parse_test.go).
 		write := !r.Negated("WRITE")
 
-		return d.Console.cmd().MountCommand(r.String("DEVICE"), r.String("FILE"), write)
+		// LOG defaults to present the same way: only /NOLOG keeps
+		// MOUNT's MOUNTED message from being shown.
+		log := !r.Negated("LOG")
+
+		return d.Console.cmd().MountCommand(r.String("DEVICE"), r.String("FILE"), write, log)
 	})
 
 	g.Bind("DISMOUNT", func(id int64, r *dcl.Result) error {

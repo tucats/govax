@@ -160,6 +160,7 @@
 //                          (P1TOOSMALL); F$GETJPI's address space
 //                          items; VMINIT/PAGING's description of the
 //                          finished paging program
+//              10/20/26    MOUNT/NOLOG
 
 This is the help documentation for the govax VAX emulator.  Topic sections are
 marked by a "$" delimiter.  This is followed by as many tokens of the help
@@ -3269,7 +3270,7 @@ $MOUN
 
     Syntax:
 
-        MOUNT [/WRITE] [/NOWRITE] <device> <file>
+        MOUNT [/WRITE] [/NOWRITE] [/[NO]LOG] <device> <file>
 
     Parameters:
 
@@ -3292,6 +3293,13 @@ $MOUN
         /NOWRITE        Mounts the volume read-only.  Any attempt to
                         create or write a file on the volume fails.
 
+        /LOG            Reports the volume's label and the device it was
+                        mounted on.  This is the default.
+
+        /NOLOG          Mounts the volume without the MOUNTED message,
+                        as in a startup procedure that runs each time
+                        govax starts.  Errors are still reported.
+
     Examples:
 
         MOUNT DUA0 disk1.dsk
@@ -3300,7 +3308,8 @@ $MOUN
         MOUNT/NOWRITE DUA1 "system disk.dsk"
 
     MOUNT reports the volume's label and the device it was mounted on,
-    as above, unless SET NOVERBOSE has turned the console's messages off.
+    as above, unless MOUNT/NOLOG is used or SET NOVERBOSE has turned the
+    console's messages off.
 
     As on VMS, MOUNT defines the logical name DISK$label (for example
     DISK$USERDISK for a volume labeled USERDISK) in the system table, so

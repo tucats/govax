@@ -102,16 +102,21 @@ func (c *Context) Mount(device, path string, write bool) error {
 	return nil
 }
 
-// MountCommand is the console's MOUNT command: Mount, then, when the
-// console is verbose, VMS's message saying what was mounted where:
+// MountCommand is the console's MOUNT command: Mount, then, when log is
+// true (no /NOLOG) and the console is verbose, VMS's message saying what
+// was mounted where:
 //
 //	%MOUNT-I-MOUNTED, WORK mounted on _DUA0:
-func (c *Context) MountCommand(device, path string, write bool) error {
+//
+// /NOLOG silences only that message; a failed mount is still reported.
+func (c *Context) MountCommand(device, path string, write, log bool) error {
 	if err := c.Mount(device, path, write); err != nil {
 		return err
 	}
 
-	c.reportMounted(device, false)
+	if log {
+		c.reportMounted(device, false)
+	}
 
 	return nil
 }

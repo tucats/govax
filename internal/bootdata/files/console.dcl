@@ -430,6 +430,7 @@ grammar console
                     /type=$string               -
                     /prompt="Container file"
         qualifier   write/id=703
+        qualifier   log/id=704
 
     verb dismount/id=710
 

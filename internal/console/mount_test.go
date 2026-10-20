@@ -500,6 +500,34 @@ func TestDispatch_mountMessage(t *testing.T) {
 	}
 }
 
+// TestDispatch_mountNolog confirms MOUNT/NOLOG mounts the volume without
+// the MOUNTED message, even with the console verbose, and that a failed
+// MOUNT/NOLOG still reports its error.
+func TestDispatch_mountNolog(t *testing.T) {
+	c, buf := newTestConsole(t)
+	d := NewDispatcher(c, loadEvaxGrammar(t), nil)
+
+	t.Cleanup(func() { _ = c.Mounts.DismountAll() })
+
+	c.Verbose = true
+
+	if err := d.Dispatch(fmt.Sprintf(`MOUNT/NOLOG DUA2 "%s"`, newTestContainer(t, "TESTVOL"))); err != nil {
+		t.Fatalf("Dispatch MOUNT/NOLOG: %v", err)
+	}
+
+	if buf.Len() != 0 {
+		t.Errorf("MOUNT/NOLOG output = %q, want none", buf.String())
+	}
+
+	if _, mounted := c.Mounts.Lookup("DUA2"); !mounted {
+		t.Errorf("MOUNT/NOLOG didn't mount DUA2")
+	}
+
+	if err := d.Dispatch(fmt.Sprintf(`MOUNT/NOLOG DUA2 "%s"`, newTestContainer(t, "OTHER"))); err == nil {
+		t.Errorf("MOUNT/NOLOG of a mounted device succeeded, want SS_DEVMOUNT")
+	}
+}
+
 // TestShowDevices_operationsCompleted: for a mounted volume, SHOW
 // DEVICE/FULL's "Operations completed" is ods2's count of the volume's
 // block reads and writes since the mount, so writing a file makes it
