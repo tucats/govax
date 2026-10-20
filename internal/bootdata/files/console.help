@@ -3547,8 +3547,8 @@ $BACK
     one).
 
     govax is adding BACKUP's operations in steps.  So far it lists save
-    sets and restores files from them, as VMS V7.1 does; comparing and
-    saving open and check the input save set, then say NOTYET.
+    sets, restores files from them, and compares them with files, as VMS
+    V7.1 does; saving says NOTYET.
 
     Syntax:
 

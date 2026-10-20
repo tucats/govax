@@ -621,7 +621,7 @@ reports, and every save set byte for byte (COPY/BINARY).
    `/EXCLUDE`, the existing-file rules and `/NEW_VERSION`, `/OVERLAY`,
    `/REPLACE`, `/BY_OWNER`, and `/LOG`. Checked against the probe's
    restores, file for file and header for header.
-10. **BACKUP/COMPARE:** a save set's files against files on a volume or
+10. **BACKUP/COMPARE** — done (2026-10-20): a save set's files against files on a volume or
     the host, with VMS's messages for a difference and a missing file.
 11. **Saving:** `internal/backup`'s writer (summary, file records, data
     records split as VMS splits them, null fill, XOR blocks, header
@@ -1157,3 +1157,41 @@ A leaf package (standard library only), `internal/backup`:
   and `TestRestoreParentOwner` (`internal/rms`); ods2's
   `TestParseEmptyBracketsIsDefault`. `TestBackupMessages` checks a
   restore's OPENIN where it had NOTYET.
+
+### 2026-10-20 — Subtask 10: BACKUP/COMPARE
+
+- **`rms.Session.CompareFile`** (`internal/rms/compare.go`) holds one
+  `backup.File` up against the file a `FileLocation` names. On a volume
+  the file is found as DUMP finds one (`OpenDump`: one file, the saved
+  version), and each block the save set holds is compared whole with the
+  file's block of the same number, as the manual says BACKUP "processes
+  files by blocks"; a block past the file's allocation differs, and
+  blocks the save set lacks aren't compared. A header-only (NOBACKUP)
+  file has nothing to compare and matches, as VMS found NOBACK.TXT; a
+  saved directory file matches if it's there (its blocks hold file IDs a
+  restore changes; unconfirmed, the probe compared none). The header's
+  attributes aren't compared (unconfirmed: the probe changed none). On
+  the host the file is compared with what a restore would write there by
+  COPY's rule, in 512-byte pieces numbered as blocks (govax's). A missing
+  file is a `*DCLFileError` (RMS$_FNF, or DNF).
+- **The command** (`internal/dclcmd/backupcompare.go`,
+  `Context.compareSaveSet`): the files `/SELECT` and `/EXCLUDE` choose,
+  each compared with the file the output specifier names for it by a
+  restore's rules (`restoreTarget`, `location`: `[*...]`, `[dir]`,
+  `[dir...]`, a name or type given, the saved version), on the restore's
+  progress type (`backupRestore`, its counter now `files`, its ending
+  `finish`, shared). VERIFYERR for each block that differs, with or
+  without `/LOG`, then COMPARED with `/LOG` (even after VERIFYERR, as
+  VMS showed); OPENIN at severity E with RMS's reason for a missing file,
+  and the compare goes on; NOFILES when none was compared; `$STATUS` by
+  the restore's rule (VERIFYERR's %X10A38272, OPENIN's %X10A3800A). A
+  file the save set has only part of is VBNMISSING before its COMPARED
+  (unconfirmed for a compare). NOTYET is now only a save's.
+- **Tests:** `TestBackupCompareOracle` (`internal/console`) replays Part
+  5 of VMS's log (B69TXT against the [B69] tree, TEXT against a restored
+  copy, the copy with a line appended, the copy deleted, and each
+  `$STATUS`), matching VMS line for line; `TestBackupCompareSelections`
+  (`/SELECT`, a file shorter than the saved one, no COMPARED without
+  `/LOG`); `TestBackupCompareHost` (a clean host restore, a changed
+  byte's piece, a missing host file); `TestBackupMessages` checks a
+  compare's OPENIN of a missing save set where it had NOTYET.

@@ -4,7 +4,6 @@ import (
 	"errors"
 	"strings"
 
-	"github.com/tucats/govax/internal/backup"
 	"github.com/tucats/govax/internal/rms"
 	"github.com/tucats/govax/internal/vmsdef"
 	"github.com/tucats/govax/internal/vmserrors"
@@ -123,22 +122,11 @@ func (c *Context) Backup(cmd BackupCommand) error {
 		return c.listSaveSet(cmd)
 	case BackupRestore:
 		return c.restoreSaveSet(cmd)
+	case BackupCompare:
+		return c.compareSaveSet(cmd)
 	}
 
-	if op != BackupSave {
-		if _, err := c.ReadSaveSet(cmd.Input, backup.Options{CheckCRC: cmd.CheckCRC}); err != nil {
-			return backupOpenFailure(err)
-		}
-	}
-
-	return backupMessage(vmsdef.BackupNotYet, backupOperationNames[op])
-}
-
-// backupOperationNames name the operations for NOTYET, until each is in
-// place.
-var backupOperationNames = map[BackupOperation]string{
-	BackupCompare: "BACKUP/COMPARE",
-	BackupSave:    "a BACKUP save",
+	return backupMessage(vmsdef.BackupNotYet, "a BACKUP save")
 }
 
 // backupOperationErrors are BACKUP's messages for the /SAVE_SET rule's

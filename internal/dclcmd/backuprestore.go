@@ -89,17 +89,24 @@ func (c *Context) restoreSaveSet(cmd BackupCommand) error {
 		r.restore(f, target.location(parseSavedName(f.Name), carried), opts)
 	}
 
+	return r.finish(in)
+}
+
+// finish ends a restore or a compare of the save set in: XORERRS for the
+// blocks rebuilt, NOFILES when no file was made or compared, and the
+// command's status.
+func (r *backupRestore) finish(in *SaveSetInput) error {
 	if n := len(in.Set.Recovered); n > 0 {
 		r.message(vmsdef.BackupXorErrs, n, in.Name)
 	}
 
-	if r.created == 0 {
+	if r.files == 0 {
 		r.message(vmsdef.BackupNoFiles, in.Expanded)
 	}
 
 	if r.status == 0 {
-		if c.SetStatus != nil {
-			c.SetStatus(ssNormal | stsInhibitMsg)
+		if r.c.SetStatus != nil {
+			r.c.SetStatus(ssNormal | stsInhibitMsg)
 		}
 
 		return nil
@@ -286,12 +293,14 @@ func keepSaved(given, saved string) string {
 	return given
 }
 
-// backupRestore is one restore's progress: what it has said and made.
+// backupRestore is one restore's progress, or one compare's: what it has
+// said and done.
 type backupRestore struct {
 	c   *Context
 	log bool
 
-	created int
+	// files counts the files made (or, for a compare, compared).
+	files int
 
 	// status is the most severe message's code so far, 0 for none worse
 	// than informational.
@@ -320,7 +329,7 @@ func (r *backupRestore) restore(f *backup.File, loc rms.FileLocation, opts rms.R
 		r.message(vmsdef.BackupVBNMissing, result.Name, m.First, m.Last)
 	}
 
-	r.created++
+	r.files++
 
 	if r.log {
 		r.message(vmsdef.BackupCreated, result.Name)

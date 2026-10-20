@@ -153,11 +153,13 @@ func TestBackupMessages(t *testing.T) {
 		{"BACKUP *.MAR [R1]", "BACKUP-F-NOSAVESET, input or output must be a save set", 0x10A3FFBC},
 		{"BACKUP/COMPARE *.MAR OTHER.BCK/SAVE_SET", "BACKUP-F-CMPINPSAV, /COMPARE requires save set as input", 0x10A3FFB4},
 
-		// The operations, until their subtasks: the save set is read
-		// first.
+		// The save set is read first.
 		{"BACKUP NONE.BCK/SAVE_SET [R1...]",
 			"BACKUP-F-OPENIN, error opening DUA0:[000000]NONE.BCK; as input\n-RMS-E-FNF, file not found", 0x10A3800C},
-		{"BACKUP/COMPARE PI.BCK/SAVE_SET [R1...]", "BACKUP-F-NOTYET, BACKUP/COMPARE is not implemented yet", 0x10A3FFAC},
+		{"BACKUP/COMPARE NONE.BCK/SAVE_SET [R1...]",
+			"BACKUP-F-OPENIN, error opening DUA0:[000000]NONE.BCK; as input\n-RMS-E-FNF, file not found", 0x10A3800C},
+
+		// Saving, until its subtask.
 		{"BACKUP *.MAR OTHER.BCK/SAVE_SET", "BACKUP-F-NOTYET, a BACKUP save is not implemented yet", 0x10A3FFAC},
 	}
 
