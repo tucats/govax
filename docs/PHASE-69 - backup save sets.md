@@ -9,7 +9,8 @@ the format. Subtask 2, the VMS probe (`testdata/backup69`), is done:
 blocks, and VMS's messages. Subtasks 3 (COPY to a host name), 4 (`internal/backup`, the
 reader), 5 (opening a save set), 6 (the command), 7 (BACKUP/LIST), 8
 (restoring a file), 9 (BACKUP's restore), 10 (BACKUP/COMPARE), and 11
-(saving) are done.
+(saving) are done. Subtask 12's oracle is done, and its second VAX round
+(`testdata/backup69/round2`) waits for the author's run.
 
 ## Goal
 
@@ -628,7 +629,8 @@ reports, and every save set byte for byte (COPY/BINARY).
     records split as VMS splits them, null fill, XOR blocks, header
     checksum, data CRC) and the save command with its output save-set
     qualifiers and input file-selection qualifiers.
-12. **The oracle:** `TestBackup69Oracle` runs the probe's procedure on
+12. **The oracle** — the oracle done (2026-10-20), the second round
+    prepared and waiting for the author: `TestBackup69Oracle` runs the probe's procedure on
     govax and matches VMS's log and listings, the restored files, and
     their headers, with a listed set of differences; govax's save sets
     of the probe's tree against VMS's. Then a second VAX round in which
@@ -1286,3 +1288,54 @@ A leaf package (standard library only), `internal/backup`:
   oracle masks it. govax keeps a file's version limit in its FAT where
   VMS keeps it in the directory entry; the save writes VMS's form, and
   the restore still writes the FAT's.
+
+### 2026-10-20 — Subtask 12: the oracle, and round 2 prepared
+
+- **`TestBackup69Oracle`** (`internal/console/backup69oracle_test.go`)
+  runs BACKUP69.COM on govax, on an RD54 with VMS's 3-block clusters as
+  DUA1 holding SSCOPY.MAR, and holds its log and reports to VMS's. govax
+  has no CONVERT, SET FILE, or SET SECURITY, so Part 1's tree is VMS's
+  own, restored from B69.BCK and B69IGN.BCK (`/BY_OWNER=ORIGINAL`, every
+  saved attribute), and govax's copy of the procedure has CREATE/DIRECTORY
+  [SETS] in place of the lines that make it; the logs are compared without
+  them. TODAY is written 20-OCT-2026 in the procedure and in VMS's log, as
+  `TestBackupSaveOracle` writes it. Everything else runs as VMS ran it:
+  the 15 saves, every listing, the restores, the compares, the errors,
+  and SSCOPY (MACRO, LINK, RUN) making the truncated and damaged save
+  sets from govax's own, which govax then lists and restores.
+- **The masks** (`backup69Mask`) take out only what is the run's own:
+  the times of the files the run made (a directory, save set, report, or
+  log, on its entry's lines in DIRECTORY and BACKUP/LIST reports), a
+  summary's date, the system that wrote a save set (version, CPU ID,
+  device), and file IDs. The restored files' dates are the saved files',
+  so they're compared.
+- **What matches:** the log, 2900 lines after Part 1's are taken out, but
+  for 5 listed differences (`backup69Differences`); TREE.LST, SETS.LST,
+  R1.LST, R7.LST, TEXT.LIS, and B69FULL.LIS line for line but for 6; and
+  Part 2's 15 save sets byte for byte against VMS's in `[VAX]`, once the
+  run's own values are taken from govax's (`compareSaveSet`, now given
+  the two files' names, shared with `TestBackupSaveOracle`). The listed
+  differences: F$GETSYI's line; DIRECTORY/FULL of INDEXED.IDX, where VMS
+  shows `Indexed, Prolog: 3, Using 1 key` and govax `Indexed` (govax
+  doesn't read an indexed file's prolog; no definition of its layout is
+  in govax, so it's left for a later phase rather than read off one
+  file); and the revision count of the tree's [B69.SUB1] and
+  [B69.SUB1.SUB2], 0 as VMS's CREATE/DIRECTORY made them, 1 as the
+  test's restore makes them, as VMS's BACKUP does.
+- **Round 2** (`testdata/backup69/round2`, its README), for the author:
+  `exchange.cmd` builds `testdata/disks/backup69-round2.dsk` with round
+  1's tree restored by govax and Part 2's save sets made by govax (the
+  same commands, `/SINCE` and `/BEFORE` naming 20-OCT-2026), plus
+  HOST.BCK, a save set govax wrote to the host, copied on as fixed
+  512-byte records. `run2.com` has VMS look at the tree's headers
+  (TREE2.LST), list every save set (and `/FULL`), restore each with
+  `/LOG` (B69CRC.BCK and HOST.BCK with `/CRC` on the input), compare
+  B69.BCK with the tree and with VMS's restore of it, damage B69.BCK and
+  B69CRC.BCK in block 2's data and B69.BCK in block 2's header with
+  SSCOPY and restore them (govax's XOR blocks), and ANALYZE/DISK_STRUCTURE
+  the volume. `copyout.cmd` brings the results back into `vax/round2/`,
+  govax's save sets into `vax/round2/govax/`. govax ran RUN2.COM on a
+  copy of the volume first: every command but ANALYZE/DISK_STRUCTURE,
+  which govax lacks, ran, with XORERRS for the CRC and header damage and
+  nothing for the data damage without a CRC, as round 1's VMS run showed.
+  `TestBackup69Round2` follows VMS's run.

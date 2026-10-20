@@ -125,17 +125,19 @@ func TestBackupSaveOracle(t *testing.T) {
 		}
 
 		if m := saveSet.FindStringSubmatch(cmd); m != nil {
-			t.Run(m[1], func(t *testing.T) { compareSaveSet(t, c, m[1]) })
+			t.Run(m[1], func(t *testing.T) {
+				compareSaveSet(t, c, m[1], "DUA1:[SETS]"+m[1]+".BCK;2", "DUA1:[SETS]"+m[1]+".BCK;1")
+			})
 		}
 	}
 }
 
-// compareSaveSet holds govax's save set [SETS]name.BCK;2 up against
-// VMS's, ;1: it rewrites VMS's with govax's values for what is the run's
-// own and wants govax's bytes.
-func compareSaveSet(t *testing.T, c *Console, name string) {
-	gotData, got := readVolumeSaveSet(t, c, "DUA1:[SETS]"+name+".BCK;2")
-	wantData, want := readVolumeSaveSet(t, c, "DUA1:[SETS]"+name+".BCK;1")
+// compareSaveSet holds govax's save set name, the volume file gotFile,
+// up against VMS's, wantFile: it rewrites VMS's with govax's values for
+// what is the run's own and wants govax's bytes.
+func compareSaveSet(t *testing.T, c *Console, name, gotFile, wantFile string) {
+	gotData, got := readVolumeSaveSet(t, c, gotFile)
+	wantData, want := readVolumeSaveSet(t, c, wantFile)
 
 	if len(got.Files) != len(want.Files) {
 		var names []string

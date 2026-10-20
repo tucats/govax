@@ -54,6 +54,18 @@ Every BACKUP that may fail is followed by `SHOW SYMBOL $STATUS`.
 
        govax console < testdata/backup69/copyout.cmd
 
+### On govax (subtask 12)
+
+`TestBackup69Oracle` (`internal/console/backup69oracle_test.go`) runs
+the procedure on govax and holds its log, the `.LST` and `.LIS` reports,
+and Part 2's save sets to `vax/`'s. govax has no CONVERT, SET FILE, or
+SET SECURITY, so Part 1's tree is VMS's own, restored from `b69.bck` and
+`b69ign.bck`, and govax's copy of the procedure has only CREATE/DIRECTORY
+[SETS] in Part 1's place; TODAY is written 20-OCT-2026, the run's day.
+
+`round2/` is the second round, in which VMS reads govax's save sets
+(its README).
+
 ## `vax/` — VMS's results (2026-10-20)
 
 The author's run of `@BACKUP69` on the simh VAX (V7.1, BACKUP V6.2),
