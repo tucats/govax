@@ -4,6 +4,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"reflect"
 	"testing"
 	"time"
 
@@ -292,6 +293,69 @@ func TestSessionCopy_wildcardRejectedForNonDirectoryVolumeDestination(t *testing
 
 	if multiple.Count != 2 {
 		t.Errorf("MultipleMatchesError.Count = %d, want 2", multiple.Count)
+	}
+}
+
+// TestSessionCopy_wildcardOutputFields confirms that a "*" name or type
+// in the output is the input file's own, as in VMS's COPY: "*" keeps
+// both, "*.OLD" keeps the name and gives the type OLD, and a wildcarded
+// source may be copied onto either, each match to its own name. Before
+// this, "*" was taken literally and made a file named "*".
+func TestSessionCopy_wildcardOutputFields(t *testing.T) {
+	s, _ := newCopyTestSession(t)
+
+	results, err := s.Copy("FOO.TXT", false, "*", false, CopyOptions{})
+	if err != nil {
+		t.Fatalf("Copy FOO.TXT *: %v", err)
+	}
+
+	if want := "DUA0:[000000]FOO.TXT;2"; results[0].Dest != want {
+		t.Errorf("Copy FOO.TXT *: Dest = %q, want %q", results[0].Dest, want)
+	}
+
+	results, err = s.Copy("*.TXT", false, "*.OLD", false, CopyOptions{})
+	if err != nil {
+		t.Fatalf("Copy *.TXT *.OLD: %v", err)
+	}
+
+	var dests []string
+	for _, r := range results {
+		dests = append(dests, r.Dest)
+	}
+
+	if want := []string{"DUA0:[000000]DUP.OLD;1", "DUA0:[000000]FOO.OLD;1"}; !reflect.DeepEqual(dests, want) {
+		t.Errorf("Copy *.TXT *.OLD: Dests = %q, want %q", dests, want)
+	}
+
+	hostPath := filepath.Join(t.TempDir(), "notes.txt")
+	if err := os.WriteFile(hostPath, []byte("a note\n"), 0o644); err != nil {
+		t.Fatalf("WriteFile: %v", err)
+	}
+
+	results, err = s.Copy(hostPath, true, "*.LIS", false, CopyOptions{})
+	if err != nil {
+		t.Fatalf("Copy notes.txt/HOST *.LIS: %v", err)
+	}
+
+	if want := "DUA0:[000000]NOTES.LIS;1"; results[0].Dest != want {
+		t.Errorf("Copy notes.txt/HOST *.LIS: Dest = %q, want %q", results[0].Dest, want)
+	}
+}
+
+// TestSessionCopy_partialOutputWildcardRefused confirms that an output
+// name holding a wildcard other than a whole "*" field is refused, not
+// made into a file of that name.
+func TestSessionCopy_partialOutputWildcardRefused(t *testing.T) {
+	s, _ := newCopyTestSession(t)
+
+	for _, dest := range []string{"F*.TXT", "FOO.T%T", "%"} {
+		if _, err := s.Copy("FOO.TXT", false, dest, false, CopyOptions{}); err == nil {
+			t.Errorf("Copy FOO.TXT %s = nil error, want a refusal", dest)
+		}
+	}
+
+	if names, _ := s.Search("*.TXT;*"); len(names) != 3 {
+		t.Errorf("files after the refused copies = %q, want the 3 .TXT files the test began with", names)
 	}
 }
 

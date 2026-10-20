@@ -3756,7 +3756,12 @@ $COPY
                         mounted volume.  A destination naming no file of
                         its own (a bare directory, container or host)
                         inherits each copied source file's own name and
-                        type.
+                        type.  On a volume, a name or type written as "*"
+                        is the source file's too: COPY X.MAR * keeps
+                        X.MAR's name and type, and COPY *.TXT [SAVE]*.OLD
+                        copies each .TXT file to an .OLD file of the same
+                        name.  Other wildcards (A*, %) aren't allowed in
+                        the destination.
 
     Object modules (.OBJ files) are always copied as records, whatever
     the qualifiers.  On the host, an object module is kept in the same
@@ -4262,9 +4267,11 @@ $LINK
 
     With /TRACEBACK, the objects' traceback records become the image's
     debug symbol table, after the image's other blocks, as VMS LINK
-    writes it, so a failing program gives VMS's symbolic traceback.
-    Debugger records (from MACRO/DEBUG) are skipped unless the link is
-    /DEBUG.
+    writes it.  The debugger reads it (SHOW CALLS names each routine and
+    line), and the image runs on VMS with VMS's symbolic traceback; govax
+    itself doesn't print a traceback yet when a program fails, only the
+    condition's message.  Debugger records (from MACRO/DEBUG) are skipped
+    unless the link is /DEBUG.
 
     From the host shell, "govax link <object>..." runs this command, with
     --executable <file>, --shareable, --no-executable, --symbol-table

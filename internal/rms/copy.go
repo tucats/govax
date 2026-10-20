@@ -64,10 +64,11 @@ import (
 // files sharing a VMS name that would otherwise collide as different
 // versions of the same file). A source matching several files against
 // any other kind of destination fails with a *MultipleMatchesError --
-// matching ods2's own destAcceptsMultiple restriction, minus its further
-// destination-name wildcard-substitution case (e.g. copying "*.TXT" onto
-// "*.OLD" to rename every match's type), which this project doesn't
-// implement (no example in this project's own design doc calls for it).
+// matching ods2's own destAcceptsMultiple restriction. On a volume, a
+// destination name or type written as "*" is the input file's own, as in
+// VMS's COPY: "COPY *.TXT [SAVE]*.OLD" copies each .TXT file to an .OLD
+// file of the same name, and "COPY X.MAR *" keeps X.MAR's name and type.
+// Partial wildcards in the output (A*, %) are refused.
 //
 // # Qualifier scope, per direction
 //
@@ -377,9 +378,11 @@ func (s *Session) copyVolumeToVolume(sourceText, destText string, opts CopyOptio
 		return nil, fmt.Errorf("copy: %w", err)
 	}
 
-	destIsDirOnly := destSpec.Name == "" && destSpec.Type == ""
+	if err := checkDestWildcards(destSpec, destText); err != nil {
+		return nil, err
+	}
 
-	if err := requireMatchable(matches, destIsDirOnly, sourceText); err != nil {
+	if err := requireMatchable(matches, destTakesInputNames(destSpec), sourceText); err != nil {
 		return nil, err
 	}
 
@@ -456,6 +459,10 @@ func (s *Session) copyFromHost(hostPath, destText string, opts CopyOptions) ([]C
 	destVol, destSpec, err := s.resolveVolume(destText)
 	if err != nil {
 		return nil, fmt.Errorf("copy: %w", err)
+	}
+
+	if err := checkDestWildcards(destSpec, destText); err != nil {
+		return nil, err
 	}
 
 	hostName, hostType := hostBaseNameType(hostPath)
@@ -801,21 +808,43 @@ func matchDisplay(m filespec.Match) string {
 // fallbackName/fallbackType (a matched source file's own name/type, or a
 // /HOST source's host-derived name/type) if destText named no file of
 // its own at all -- e.g. "COPY FOO.TXT DUA0:[SUBDIR]" naming only a
-// directory. Unlike ods2's own volumeDestName, there is no
-// wildcard-substitution case ('*'/'%' in destSpec's own Name/Type) to
-// handle -- this project doesn't implement that (see this file's own
-// top-of-file "Multi-file" doc comment).
+// directory. A name or type written as "*" is the input file's too, as
+// in VMS's COPY: "COPY FOO.TXT *.OLD" makes FOO.OLD, and "COPY FOO.TXT *"
+// makes FOO.TXT. (checkDestWildcards refuses any other wildcard first.)
 func destNameType(destSpec filespec.Spec, fallbackName, fallbackType string) (name, typ string) {
 	name, typ = destSpec.Name, destSpec.Type
-	if name == "" {
+	if name == "" || name == "*" {
 		name = fallbackName
 	}
 
-	if typ == "" {
+	if typ == "" || typ == "*" {
 		typ = fallbackType
 	}
 
 	return name, typ
+}
+
+// destTakesInputNames reports whether a volume destination gives each
+// input file its own name, so that a wildcarded source matching several
+// files can be copied onto it: a destination naming only a device and
+// directory, or one whose name is "*" ("*", "*.*", "[SAVE]*.OLD"). Its
+// type may be anything: files with different names don't collide,
+// whatever type they're given.
+func destTakesInputNames(destSpec filespec.Spec) bool {
+	return destSpec.Name == "" || destSpec.Name == "*"
+}
+
+// checkDestWildcards refuses an output name or type holding a wildcard
+// other than a whole "*" field (A*, %, *X*): such a name can't be made
+// from the input's, and isn't a file name ODS-2 allows.
+func checkDestWildcards(destSpec filespec.Spec, destText string) error {
+	for _, field := range []string{destSpec.Name, destSpec.Type} {
+		if field != "*" && strings.ContainsAny(field, "*%") {
+			return fmt.Errorf("copy: output %q: a wildcard in the output must be a whole name or type", destText)
+		}
+	}
+
+	return nil
 }
 
 // resolveVolumeDest resolves destSpec's target Directory on destVol and
