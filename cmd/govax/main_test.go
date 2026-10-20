@@ -275,3 +275,56 @@ func TestRun_bareAsmStartsAtX200(t *testing.T) {
 		t.Errorf("output = %q, want the MOVL assembled at 200", buf.String())
 	}
 }
+
+// TestReportFailure_shownOnce runs a one-shot "govax run" of a program
+// that fails with an access violation: the console shows the
+// %SYSTEM-F-ACCVIO message as the image ends, and govax must then exit
+// nonzero without showing the failure again (it once added a second
+// line, "govax: SYSTEM-F-ACCVIO, ..., reason mask=!XB, ...", from the
+// message's unformatted text).
+func TestReportFailure_shownOnce(t *testing.T) {
+	dir := t.TempDir()
+	source := filepath.Join(dir, "crash.mar")
+
+	program := "\t.ENTRY\tCRASH, ^M<>\n\tCLRL\tR1\n\tMOVL\t(R1), R0\n\tRET\n\t.END\tCRASH\n"
+	if err := os.WriteFile(source, []byte(program), 0o644); err != nil {
+		t.Fatalf("WriteFile: %v", err)
+	}
+
+	for _, command := range []string{
+		macroCommand(source, macroFlags{}),
+		linkCommand([]string{filepath.Join(dir, "crash.obj")}, linkFlags{}),
+	} {
+		var out bytes.Buffer
+		if err := run(nil, 0, 0, &out, emptyStdin(), []string{command}); err != nil {
+			t.Fatalf("%s: %v\n%s", command, err, out.String())
+		}
+	}
+
+	var out bytes.Buffer
+
+	err := run(nil, 0, 0, &out, emptyStdin(), []string{runCommand(filepath.Join(dir, "crash.exe"), runFlags{})})
+	if err == nil {
+		t.Fatalf("run of a failing image = nil error, want its failure\n%s", out.String())
+	}
+
+	if got := strings.Count(out.String(), "ACCVIO"); got != 1 {
+		t.Errorf("console showed ACCVIO %d times, want once:\n%s", got, out.String())
+	}
+
+	var report bytes.Buffer
+	if status := reportFailure(&report, err); status != 1 {
+		t.Errorf("reportFailure status = %d, want 1", status)
+	}
+
+	if report.Len() != 0 {
+		t.Errorf("reportFailure showed the failure again: %q", report.String())
+	}
+
+	// A failure the console hasn't shown is still reported.
+	report.Reset()
+
+	if status := reportFailure(&report, vmserrors.New(vmserrors.CLI_NOFILE)); status != 1 || report.Len() == 0 {
+		t.Errorf("reportFailure of an unshown failure = %d, %q; want 1 and its message", status, report.String())
+	}
+}

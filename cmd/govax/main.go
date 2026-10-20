@@ -87,17 +87,28 @@ func main() {
 	stopCPUProfile()
 
 	if err != nil {
-		// A run stopped by --instruction-limit or --time-limit has shown
-		// its own message already; it only needs its exit status.
-		if isLimitStop(err) {
-			os.Exit(limitExitStatus)
-		}
-
-		fmt.Fprintln(os.Stderr, "govax:", err)
-		os.Exit(1)
+		os.Exit(reportFailure(os.Stderr, err))
 	}
 
 	auditConfig()
+}
+
+// reportFailure shows govax's failure err on w, unless its message has
+// been shown already, and returns the exit status for it.
+func reportFailure(w io.Writer, err error) int {
+	// A run stopped by --instruction-limit or --time-limit has shown its
+	// own message already; it only needs its exit status.
+	if isLimitStop(err) {
+		return limitExitStatus
+	}
+
+	// So has a failure the console marked as shown (an image's exit
+	// status, a command that reports as it goes), as at the prompt.
+	if !vmserrors.MessageInhibited(err) {
+		fmt.Fprintln(w, "govax:", err)
+	}
+
+	return 1
 }
 
 // limitExitStatus is govax's exit status when --instruction-limit or
