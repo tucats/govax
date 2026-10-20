@@ -83,6 +83,10 @@ type FileAttributes struct {
 	// since 17-NOV-1858), 0 for one never set.
 	Revision                          uint16
 	Created, Revised, Expires, Backup uint64
+
+	// ACL is the file's access control list, its entries packed as the
+	// header holds them (ondisk.FileHeader.ACL); nil for none.
+	ACL []byte
 }
 
 // Used is how many blocks the file's data uses, as DIRECTORY/SIZE counts
@@ -222,6 +226,10 @@ func headerAttributes(h ondisk.FileHeader) FileAttributes {
 		Journal:          h.Journaling,
 		Owner:            uint32(h.Owner.Group)<<16 | uint32(h.Owner.Member),
 		Protection:       h.FileProtection,
+	}
+
+	if acl, err := h.ACL(); err == nil {
+		a.ACL = acl
 	}
 
 	if ident, err := h.Ident(); err == nil {

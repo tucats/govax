@@ -7,8 +7,8 @@ done: Part A holds what the first save set
 the format. Subtask 2, the VMS probe (`testdata/backup69`), is done:
 "The probe's answers" in Part A settles the format, the CRCs, the XOR
 blocks, and VMS's messages. Subtasks 3 (COPY to a host name), 4 (`internal/backup`, the
-reader), 5 (opening a save set), 6 (the command), and 7 (BACKUP/LIST)
-are done.
+reader), 5 (opening a save set), 6 (the command), 7 (BACKUP/LIST), and
+8 (restoring a file) are done.
 
 ## Goal
 
@@ -611,7 +611,7 @@ reports, and every save set byte for byte (COPY/BINARY).
    `/BRIEF`, `/FULL` (sharing DIRECTORY/FULL's writer where the layouts
    agree), `/LIST=file`, `/SELECT` and `/EXCLUDE`, the totals, and "End
    of save set". Checked against the probe's listings.
-8. **Restoring a file** (`internal/rms`): a new file on a volume with
+8. **Restoring a file** — done (2026-10-20) (`internal/rms`): a new file on a volume with
    the saved record attributes, characteristics, owner, protection,
    dates, revision count, version limit, ACL, allocation, and data up to
    its end of file. Directories made as needed. Host output by COPY's
@@ -986,3 +986,86 @@ A leaf package (standard library only), `internal/backup`:
   file ID's high byte, protection, the UIC, and the record attributes the
   probe doesn't reach. `TestBackupMessages` no longer expects NOTYET for
   a listing.
+
+### 2026-10-20 — Subtask 8: restoring a file
+
+- **ods2** (committed locally, not tagged or pushed; Decision 2's
+  `docs/PHASE-22.md` step is the author's): `ondisk.FileHeader.ACL`
+  reads the header's access control entries (up to a zero length
+  byte), and `ondisk.ACLArea` pads a list to whole words. Every header
+  rewrite (`existingAreas`: `UpdateHeader`, `Extend`, `Close`,
+  `SetVersionLimit`) used to drop the ACL; it now keeps it.
+  `volume.SetACL` sets or removes it. `rms.NewReaderFrom` reads records
+  from any `BlockSource`, `rms.BytesSource` being a file's data in
+  memory, so a saved file's records can be read with no volume.
+- **`rms.Session.RestoreFile`** (`internal/rms/restore.go`) makes one
+  `backup.File` at a `FileLocation`. On a volume: one name with no
+  wildcards; the next version without one, and an existing version an
+  `*OutputExistsError` with the full name (RMS$_FEX). The directories
+  that don't exist are made first, with what a directory inherits from
+  its parent, and given revision count 1, as VMS's BACKUP gave every
+  directory it made (`r1.lst`'s [R1.B69], [R1.B69.SUB1]); they are
+  returned top down for CREDIR. The file gets the saved FAT whole (end
+  of file and longest record included), its characteristics (less
+  marked-for-delete and directory), protection, record protection,
+  access level, journaling and recovery-unit bytes, revision count, four
+  dates, version limit (VERLIMIT, 32767 kept as 0, ods2's "none"), the
+  saved allocation or more if the data needs it, the data, and the ACL.
+  A contiguous file needs one free run as long as its allocation
+  (`ErrNoContiguousSpace`, which wraps `ErrACPDeviceFull`; VMS's message
+  unconfirmed). A header-only (NOBACKUP) file gets its allocation and
+  end of file and no data, reading as zeros. A file that can't be made
+  whole is deleted. A saved directory file (`SUB1.DIR`) is made as a
+  directory with its saved default version limit (its FAT's, 5), owner,
+  protection, and allocation, new dates, and revision 1; one that exists
+  is left alone (`Created` false). `RestoreOptions.Owner` overrides the
+  saved owner, for subtask 9's `/BY_OWNER`.
+- **The high-water mark** is the restore's own (the block after the last
+  written, 1 when none was), not the saved HIGHWATER: the blocks between
+  the end of file and it weren't saved. What VMS records is unconfirmed.
+- **To the host**, by COPY's rule (Decision 9): an object module's
+  records (by the name's type) in the host's object layout, which is
+  ODS-2's, so PI.OBJ comes out as VMS's bytes up to its end of file; a
+  text file's records as lines (`restoredAsText`: a sequential format
+  with implied, print, or FORTRAN carriage control, govax's line, since
+  VMS has no host); anything else its bytes up to its end of file. The
+  host file's time is the saved revision time. A saved directory is a
+  host directory. An existing host file is an `*OutputExistsError`.
+- **DIRECTORY/FULL** (`internal/rms/directory.go`), so a restored tree
+  can be checked against VMS's: "Access Cntrl List:" shows the ACL
+  (`aclText`: identifier ACEs as `(IDENTIFIER=[SYSTEM],ACCESS=READ+WRITE)`,
+  later ones beneath the first, the identifier named as the owner is;
+  the access words past READ and WRITE in an order that's unconfirmed,
+  and any other kind of ACE in hexadecimal, govax's text); a directory's
+  record attributes read "No carriage control, Non-spanned" (VMS's
+  `tree.lst`; govax wrote "Non-spanned"); and an indexed file's
+  attributes line has "Maximum bucket size: 2, " (a relative file's
+  taken to be the same, unconfirmed). VMS's "Indexed, Prolog: 3, Using
+  1 key" needs the file's prolog, which DIRECTORY doesn't read: a listed
+  difference.
+- **Tests** (`internal/rms/restore_test.go`): `TestRestoreTreeOracle`
+  restores all 25 of B69.BCK's files under [R1] on a volume with VMS's
+  3-block clusters, checks the four directories made, and matches
+  DIRECTORY/FULL of [R1...] with VMS's `r1.lst` line for line, file IDs
+  and the directories' dates masked, but for the prolog line (owner
+  [1,4] given, as VMS's restore gave OWNED.TXT). `TestRestoreData` (data
+  across save set blocks, a VFC file, an empty file, PI.EXE from
+  `pi.bck` byte for byte against VMS's `pi.exe`; B69.BCK's PI.EXE and
+  PI.OBJ were made again by the probe, so they aren't the fixture's),
+  `TestRestoreOwnerKept`, `TestRestoreVersions`, `TestRestoreHeaderOnly`,
+  `TestRestoreContiguousNoRoom`, `TestRestoreDirectoryExists`,
+  `TestRestoreReadOnly`, `TestRestoreToHost` (lines for the text, VFC,
+  and stream files alike, PI.EXE and PI.OBJ byte for byte, a directory,
+  an existing file), `TestACLText`. ods2: `TestACLRoundTrip`,
+  `TestACLNone`, `TestACLOddLength`, `TestACLTruncated`, `TestSetACL`
+  (kept through `UpdateHeader` and `Extend`, removed by nil),
+  `TestReaderFromBytes`, `TestBytesSourceReadBlock`.
+- **For subtask 9:** VMS's default restore gave OWNED.TXT [SYSTEM], not
+  its saved [200,201] (`/BY_OWNER`'s default); the R1 restore's log has
+  no CREDIR for [R1], which didn't exist (the probe never made it), only
+  for [R1.B69], made with it for the first file, while [R3...]'s shows
+  [R3]: VMS seems to log one CREDIR per path it makes, naming the
+  deepest level, which `RestoreResult.Directories` (every level) lets
+  the command do; and a restore to
+  an existing version needs the existing-file rules on top of
+  `OutputExistsError`.

@@ -1296,6 +1296,14 @@ expect adjustment as phases land):
   default `SYS$SHARE:.EXE`, each element of a search list in turn),
   then the host; a missing image is an `ImageNotFoundError` with the
   spec RMS tried last.
+  Phase 69: `saveset.go`'s `OpenSaveSet` (a save set as an
+  `io.ReaderAt`), and `restore.go`'s `Session.RestoreFile`: one
+  `backup.File` made on a volume with every saved header field, its
+  allocation (`ErrNoContiguousSpace`), data, and ACL (ods2's
+  `volume.SetACL`), the missing directories made with revision 1 as
+  VMS's BACKUP makes them, a saved directory file made as a directory;
+  or on the host by COPY's rule (`restoredAsText`). DIRECTORY/FULL
+  shows ACLs (`aclText`).
 - `internal/link` — the VAX linker (Phase 30): builds a VMS executable image from
   `internal/obj` modules, laid out as real LINK lays images out (byte for byte on
   the fixtures). The console's `LINK` command (`internal/dclcmd/link.go`) drives it.

@@ -64,7 +64,13 @@ func writeRecords(w io.Writer, f *volume.File, lineEnding []byte) error {
 		return err
 	}
 
-	attr := f.Header.RecordAttributes
+	return writeRecordsFrom(w, r, f.Header.RecordAttributes, lineEnding)
+}
+
+// writeRecordsFrom is writeRecords for the records r reads, of a file
+// whose record attributes are attr: a volume file's, or a file's held in
+// memory (a restore from a save set to the host, restore.go).
+func writeRecordsFrom(w io.Writer, r *odsrms.Reader, attr ondisk.RecAttr, lineEnding []byte) error {
 	isVFC := attr.Format == ondisk.RecordFormatVFC
 	printFile := attr.Attributes&ondisk.AttrPrintCC != 0
 	vfcSize := int(attr.VfcSize)

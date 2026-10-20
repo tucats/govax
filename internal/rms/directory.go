@@ -1,6 +1,7 @@
 package rms
 
 import (
+	"encoding/binary"
 	"fmt"
 	"sort"
 	"strings"
@@ -379,14 +380,106 @@ func writeFullEntry(b *strings.Builder, name string, m filespec.Match, a FileAtt
 	b.WriteString("Recording: <None specified>\n")
 	fmt.Fprintf(b, "File organization:  %s\n", organizationName(a.Organization))
 	b.WriteString("Shelved state:      Online \n")
-	fmt.Fprintf(b, "File attributes:    Allocation: %d, Extend: %d, Global buffer count: %d, %s%s\n",
-		a.Allocated, a.Extend, a.GlobalBuffers, limit, characteristicsText(a.Characteristics))
+	fmt.Fprintf(b, "File attributes:    Allocation: %d, Extend: %d, %sGlobal buffer count: %d, %s%s\n",
+		a.Allocated, a.Extend, bucketText(a), a.GlobalBuffers, limit, characteristicsText(a.Characteristics))
 	fmt.Fprintf(b, "Record format:      %s\n", recordFormatText(a))
 	fmt.Fprintf(b, "Record attributes:  %s\n", recordAttributesText(a.RecordAttributes))
 	b.WriteString("RMS attributes:     None\n")
 	b.WriteString("Journaling enabled: None\n")
 	fmt.Fprintf(b, "File protection:    %s\n", fullProtection(a.Protection))
-	b.WriteString("Access Cntrl List:  None\n\n")
+	fmt.Fprintf(b, "Access Cntrl List:  %s\n\n", aclText(a.ACL, opts))
+}
+
+// The access control entry's fields, as the header holds each ACE: its
+// length, its type, its flags, and for an identifier ACE the access it
+// grants and the identifier, a UIC as member word then group word
+// (testdata/backup69's ACL.TXT).
+const (
+	aceTypeIdentifier = 1
+	aceIdentifierSize = 12
+)
+
+// aceAccessWords are an identifier ACE's access bits, in the order VMS
+// 7.1 joins them with "+" ("ACCESS=READ+WRITE", testdata/backup69's
+// tree.lst). The order past READ and WRITE is unconfirmed.
+var aceAccessWords = []struct {
+	bit  uint32
+	text string
+}{
+	{0x01, "READ"},
+	{0x02, "WRITE"},
+	{0x04, "EXECUTE"},
+	{0x08, "DELETE"},
+	{0x10, "CONTROL"},
+}
+
+// aclText is /FULL's "Access Cntrl List:" text for acl: "None", or each
+// entry in parentheses, the second and later on lines of their own
+// beneath the first, as VMS 7.1 lays them out:
+//
+//	Access Cntrl List:  (IDENTIFIER=[SYSTEM],ACCESS=READ+WRITE)
+//	                    (IDENTIFIER=[200,201],ACCESS=READ)
+//
+// The identifier is the UIC as opts names an owner. Only an identifier
+// ACE with no flags is shown as VMS shows it (the only kind the probe
+// made); any other entry shows its type and bytes in hexadecimal, govax's
+// own text.
+func aclText(acl []byte, opts DirectoryOptions) string {
+	var entries []string
+
+	for len(acl) > 0 {
+		size := int(acl[0])
+		if size == 0 || size > len(acl) {
+			break
+		}
+
+		entries = append(entries, aceText(acl[:size], opts))
+		acl = acl[size:]
+	}
+
+	if len(entries) == 0 {
+		return "None"
+	}
+
+	return strings.Join(entries, "\n"+strings.Repeat(" ", len("Access Cntrl List:  ")))
+}
+
+// aceText is one access control entry as aclText shows it.
+func aceText(ace []byte, opts DirectoryOptions) string {
+	le := binary.LittleEndian
+
+	if len(ace) == aceIdentifierSize && ace[1] == aceTypeIdentifier && le.Uint16(ace[2:]) == 0 {
+		access := le.Uint32(ace[4:])
+		uic := uint32(le.Uint16(ace[10:]))<<16 | uint32(le.Uint16(ace[8:]))
+
+		var words []string
+
+		for _, w := range aceAccessWords {
+			if access&w.bit != 0 {
+				words = append(words, w.text)
+			}
+		}
+
+		if len(words) == 0 {
+			words = append(words, "NONE")
+		}
+
+		return fmt.Sprintf("(IDENTIFIER=%s,ACCESS=%s)", ownerText(uic, opts), strings.Join(words, "+"))
+	}
+
+	return fmt.Sprintf("(ACE type %d: %X)", ace[1], ace)
+}
+
+// bucketText is what /FULL's file attributes line says of an indexed
+// file's bucket size, after its extension: "Maximum bucket size: 2, "
+// (testdata/backup69's INDEXED.IDX). A relative file's is taken to be
+// shown the same way (unconfirmed); a sequential file has none.
+func bucketText(a FileAttributes) string {
+	if a.Organization == 0 {
+		return ""
+	}
+
+	return fmt.Sprintf("Maximum bucket size: %d, ", a.BucketSize)
 }
 
 // characteristicWords are the words /FULL's file attributes line adds for
@@ -516,9 +609,12 @@ func recordAttributesText(rat uint8) string {
 		text = "Print file carriage control"
 	}
 
+	// A directory's records have no carriage control and don't span
+	// blocks: VMS 7.1 shows "No carriage control, Non-spanned"
+	// (testdata/backup69's tree.lst). With neither, it's "None".
 	if rat&ondisk.AttrNoSpan != 0 {
 		if text == "" {
-			return "Non-spanned"
+			text = "No carriage control"
 		}
 
 		text += ", Non-spanned"
