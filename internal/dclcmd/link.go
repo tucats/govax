@@ -180,7 +180,9 @@ func (c *Context) Link(opts LinkOptions) error {
 		return vmserrors.Wrap(vmserrors.CLI_LINKING, err, exe.Name)
 	}
 
-	sources := append(append(in.shared, in.libraries...), system...)
+	// Last, the images the shareable images the link uses use themselves,
+	// which no other source describes, read from their files.
+	sources := append(append(append(in.shared, in.libraries...), system...), c.usedImages())
 
 	name := imageName(exe)
 	if in.options.Name != "" {

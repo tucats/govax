@@ -7,7 +7,8 @@ subtasks. Subtask 1, the VMS probe (`testdata/link68`), is done, and so
 are subtask 2 (MACRO's `.TRANSFER`), subtask 3 (options files),
 subtask 4 (clusters for executables), subtask 5 (`LINK/SHAREABLE`,
 the image), subtask 6 (the global symbol table), subtask 7 (fixups
-and bases), and subtask 8 (maps and ANALYZE/IMAGE).
+and bases), subtask 8 (maps and ANALYZE/IMAGE), and subtask 9 (linking
+against govax's shareable images).
 
 ## Goal
 
@@ -552,7 +553,7 @@ them.
    lines, the GST section, and the change-protection address printed
    twice for the based images (MAIN3, EXE1), all matched against the
    probe's `.ANI`s.
-9. **Linking against govax's shareable images.** An options file's
+9. **Done (2026-10-19).** **Linking against govax's shareable images.** An options file's
    `MYSHR/SHAREABLE` of a govax-made image. The global section ISD and
    SHL entry from its header (its name, `_001`, ident, match, and the
    first ISD's page count), the order of several shareable images (the
@@ -1183,3 +1184,66 @@ LINK put LIBRTL right after the shareable image that uses it, though the
 program refers to LIBRTL itself (govax's cluster for it comes from
 IMAGELIB, at the end), and MAIN3's (a based shareable image, which
 `placeClusters` still refuses).
+
+### 2026-10-19 — Subtask 9: linking against govax's shareable images
+
+Every program of the probe that uses a shareable image links byte for
+byte as real LINK's: MAIN1, MAIN1A, MAIN1N, MAIN2, MAIN3, MAIN3P,
+MAIN4, and MAIN6, against VMS's shareable images and against the ones
+govax's LINK makes, from real MACRO's objects and from govax's
+(`TestLinkProgramsAgainstShareableImages`, `programs_test.go`). Their
+`/FULL` maps match real LINK's line for line up to the run statistics
+(`TestMapExecutablesFull`, which now holds all eight with EXE1).
+`TestLinkAgainstGovaxShareableImages` runs the cycle through DCL on a
+volume, all govax's: MACRO, LINK/SHAREABLE of SHR1 and of SHR2 against
+it, then MAIN2 against SHR2, with SHR1 found through its logical name;
+MAIN2's header and shareable image list are VMS's but for its name,
+time, ident, and linker ID.
+
+What the images settled:
+
+- **A global section ISD is the image's first section's**: its pages
+  (SHR3P's first section is SHRFXD, so `ReadShareableImage` no longer
+  looks only for an SHRPIC one), and its type and attributes too, with
+  GBL and the match control added. MAIN3P's ISD for SHR3P is
+  `ISD$K_SHRFXD`, and MAIN6's for SHR6 is CRF+WRT, since SHR6's first
+  section is one the activator fixes up (`globalSectionISD`). An image
+  whose sections aren't known is taken to start with an SHRPIC section,
+  as LIBRTL does.
+- **The images a shareable image uses come right after it** in the
+  cluster list, even when the program refers to them itself: MAIN1,
+  which calls LIB$PUT_OUTPUT, has SHR1, LIBRTL, then the default
+  cluster, and MAIN2 SHR2, SHR1, LIBRTL. `addImageClusters` now adds
+  the options files' images' dependencies before the clusters of the
+  images found in libraries (the maps' module and image section
+  synopses showed it; the images themselves were already right).
+- **An image used only through another is read from its file.** MAIN2's
+  ISD for SHR1 has SHR1's ident, match control, and first section's
+  pages, and its map lists `DUA1:[000000]SHR1.EXE;8`: real LINK opened
+  SHR1.EXE through the logical name the probe had defined. A shareable
+  image list holds only names, so the file is the only place these
+  come from. `link.ImageFileSource` is a source that describes images
+  by opening their files, after every other source, and defines no
+  symbols. DCL's LINK opens each by RMS's parse of the image's name with
+  the default `SYS$SHARE:.EXE`, then as IMAGELIB's images are found
+  (`dclcmd.usedImages`). Subtask 10's locator will take its place.
+- **A based shareable image** (MAIN3's SHR3) is placed in the first
+  allocation pass, each section where it was linked
+  (`placeBasedImage`), and gets a global section ISD per section, BASED,
+  with LASTCLU when it is the cluster at the highest address. Then the
+  default cluster's sections and the user stack have no LASTCLU (MAIN3's
+  don't; MAIN1's do). PICIMG is clear. Its symbols, absolute in its
+  table, are now read as the image plus their addresses, its base being
+  0, so the link resolves them as it does those of an image it placed
+  (EXE1's LIBRTL): no cells, the image counted as used, and the map
+  showing them at their addresses, unflagged, with the global symbol
+  count right (310).
+- **E5**, an executable based on top of SHR3: `%LINK-W-BASSHRBEL`, then
+  `CONFMEM` for the default cluster, and no image, with real LINK's
+  status (`TestLinkBasedOverBasedImage`). BASSHRBEL is given when the
+  image's base is at or below the executable's BASE=; whether it is
+  given for one below the base that doesn't overlap is **unconfirmed**.
+  The FatalError of a CONFMEM now carries the link's earlier messages.
+- MAIN1N was linked while SHR1 was EQUAL,1,1001 (the probe's `NEVER`
+  relink failed), and the tests link it against that SHR1.
+

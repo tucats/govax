@@ -15,10 +15,10 @@ import (
 //
 // The cluster list is, in order: a cluster for each CLUSTER= option and
 // each shareable image an options file names, in the order the options
-// files give them; then the default cluster, which holds every other input
-// file; then a cluster for each shareable image the link found in a
-// library (IMAGELIB.OLB), in the order their symbols were first referred
-// to. Pass 1 reads the files cluster by cluster in that order, so a
+// files give them, each image followed by those it uses itself; then the
+// default cluster, which holds every other input file; then a cluster for
+// each shareable image the link found in a library (IMAGELIB.OLB), in the
+// order their symbols were first referred to. Pass 1 reads the files cluster by cluster in that order, so a
 // CLUSTER= option's files come before the command line's (testdata/
 // link68's EXE1: EXE1B's module before EXE1's).
 //
@@ -37,7 +37,9 @@ import (
 // image cluster normally gets its addresses from the image activator, at
 // run time; but with BASE=, real LINK placed LIBRTL at link time, in the
 // second pass, in the gap after the default cluster (EXE1), and resolved
-// the references to it then, leaving it no fixup cells. Whether a based
+// the references to it then, leaving it no fixup cells. A based shareable
+// image (BASE= when it was linked) is placed in the first pass, each of
+// its sections where it was linked (MAIN3's SHR3). Whether a based
 // CLUSTER= without BASE= does the same is unconfirmed; govax doesn't.
 
 // defaultClusterName is the default cluster's, as a map names it.
@@ -300,18 +302,18 @@ func (l *linker) definePsect(c *cluster, name string, flags uint16) *psect {
 // in a cluster, after the default cluster, in the order the symbols were
 // first referred to, and drops the cluster of an image an options file
 // named that nothing uses (unconfirmed: real LINK may keep it).
+//
+// The images the options files' images use come first, each right after
+// the image that uses it, even when the modules refer to it too: MAIN1,
+// which calls LIB$PUT_OUTPUT itself, has the clusters SHR1, LIBRTL (which
+// SHR1 uses), then the default cluster, and MAIN2 SHR2, SHR1, LIBRTL.
 func (l *linker) addImageClusters() {
 	used := map[string]bool{}
+	refs := l.bySequence()
 
-	for _, g := range l.bySequence() {
-		if !g.defined || g.image == "" || !g.strongRef {
-			continue
-		}
-
-		used[g.image] = true
-
-		if l.imageCluster(g.image) == nil {
-			l.newCluster(g.image).image = g.image
+	for _, g := range refs {
+		if g.defined && g.image != "" && g.strongRef {
+			used[g.image] = true
 		}
 	}
 
@@ -324,6 +326,14 @@ func (l *linker) addImageClusters() {
 	}
 
 	l.clusters = kept
+
+	l.addDependencies()
+
+	for _, g := range refs {
+		if g.defined && g.image != "" && g.strongRef && l.imageCluster(g.image) == nil {
+			l.newCluster(g.image).image = g.image
+		}
+	}
 
 	l.addDependencies()
 }
@@ -482,10 +492,14 @@ func noImage(msg Message) *FatalError {
 }
 
 // conflictingMemory is real LINK's error for a cluster whose addresses
-// another has (E5).
-func conflictingMemory(c *cluster, at uint32) *FatalError {
-	return noImage(Message{'E', "CONFMEM", fmt.Sprintf(
+// another has (E5), after the messages the link has given so far (E5's
+// BASSHRBEL).
+func (l *linker) conflictingMemory(c *cluster, at uint32) *FatalError {
+	fe := noImage(Message{'E', "CONFMEM", fmt.Sprintf(
 		"conflicting virtual memory requirement\n\tat %%X%08X for %d. pages in cluster %s", at, c.size/blockSize, c.name)})
+	fe.Messages = append(slices.Clone(l.messages), fe.Messages...)
+
+	return fe
 }
 
 // placeClusters gives each cluster its addresses in the manual's two
@@ -500,12 +514,14 @@ func (l *linker) placeClusters() error {
 			c.shared = l.sharedImage(c.image)
 
 			if c.shared.Based {
-				return fmt.Errorf("link: based shareable image %s isn't supported yet", c.image)
+				if err := l.placeBasedImage(c, free); err != nil {
+					return err
+				}
 			}
 
 		case c.based && c.size > 0:
 			if !free.take(c.base, c.size) {
-				return conflictingMemory(c, c.base)
+				return l.conflictingMemory(c, c.base)
 			}
 
 			c.placed = true
@@ -535,7 +551,7 @@ func (l *linker) placeClusters() error {
 
 		at, ok := free.first(c.size)
 		if !ok || !free.take(at, c.size) {
-			return conflictingMemory(c, at)
+			return l.conflictingMemory(c, at)
 		}
 
 		c.base, c.placed = at, true
@@ -544,7 +560,7 @@ func (l *linker) placeClusters() error {
 	var last *cluster
 
 	for _, c := range l.clusters {
-		if c.placed && (last == nil || c.base > last.base) {
+		if c.placed && (last == nil || c.start() > last.start()) {
 			last = c
 		}
 	}
@@ -586,6 +602,51 @@ func (l *linker) placeClusters() error {
 	}
 
 	return nil
+}
+
+// placeBasedImage places a based shareable image's cluster, in the first
+// allocation pass: each of its sections is where the image was linked,
+// its offset an address, so the cluster's base is 0 (testdata/link68's
+// MAIN3, whose SHR3 is at ^X300000). Its references were resolved by its
+// absolute symbols, and it needs no cells. An executable's BASE= at or
+// above the image is real LINK's BASSHRBEL warning, and then the default
+// cluster's CONFMEM if they overlap (E5, both at ^X300000; whether
+// BASSHRBEL is given for an image below the base that doesn't overlap is
+// unconfirmed).
+func (l *linker) placeBasedImage(c *cluster, free *freeList) error {
+	if len(c.shared.Layout) == 0 {
+		return fmt.Errorf("link: based shareable image %s's image sections aren't known", c.image)
+	}
+
+	if b := l.opts.Base; b != nil && !l.opts.Shareable && c.start() <= pageUp(*b) {
+		file := c.shared.File
+		if file == "" {
+			file = c.image
+		}
+
+		l.messages = append(l.messages, Message{'W', "BASSHRBEL", fmt.Sprintf(
+			"shareable image %s has base of %%X%08X\n\twhich is below image base of %%X%08X", file, c.start(), pageUp(*b))})
+	}
+
+	for _, sec := range c.shared.Layout {
+		if !free.take(sec.Offset, sec.Pages*blockSize) {
+			return l.conflictingMemory(c, sec.Offset)
+		}
+	}
+
+	c.size, c.placed = c.shared.size(), true
+
+	return nil
+}
+
+// start is the cluster's lowest address, once placed: its base, or a
+// based shareable image's first section.
+func (c *cluster) start() uint32 {
+	if !c.user() && c.shared.Based && len(c.shared.Layout) > 0 {
+		return c.base + c.shared.Layout[0].Offset
+	}
+
+	return c.base
 }
 
 // based says some cluster has a base of its own, so the image isn't

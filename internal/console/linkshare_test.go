@@ -5,12 +5,15 @@ import (
 	"encoding/binary"
 	"os"
 	"path/filepath"
+	"reflect"
 	"strings"
 	"testing"
 
 	"github.com/tucats/govax/internal/dclcmd"
 	"github.com/tucats/govax/internal/obj"
+	"github.com/tucats/govax/internal/rms"
 	"github.com/tucats/govax/internal/vmserrors"
+	"github.com/tucats/govax/internal/vmsimage"
 )
 
 // link68Vax is the probe's directory of VMS's files (testdata/link68).
@@ -315,5 +318,96 @@ func TestLinkShareableFullMap(t *testing.T) {
 		if !strings.Contains(text, want) {
 			t.Errorf("the map has no %q", want)
 		}
+	}
+}
+
+// TestLinkAgainstGovaxShareableImages runs the probe's shareable image
+// cycle through DCL on a volume, all of it govax's (docs/PHASE-68's
+// subtask 9): MACRO of the sources, LINK/SHAREABLE of SHR1 and of SHR2,
+// which uses SHR1, then MAIN2 linked against SHR2. SHR1 is found through
+// its logical name, as the probe's VAX found it, for MAIN2's global
+// section ISD for SHR1. MAIN2's header, its image sections and their
+// global section names, idents, match controls, and pages, is VMS's but
+// for its name, time, and linker ID, and so is its shareable image list.
+func TestLinkAgainstGovaxShareableImages(t *testing.T) {
+	d, c, buf := newCommandDispatcher(t)
+	mountFreshContainer(t, c, "DUA1:")
+	dir := t.TempDir()
+
+	for _, name := range []string{"xfr1", "shr1", "shr2", "main2"} {
+		src := filepath.Join("..", "..", "testdata", "link68", name+".mar")
+		if err := c.cmd().Macro(dclcmd.MacroOptions{Source: src, Object: "DUA1:[000000]" + strings.ToUpper(name) + ".OBJ"}); err != nil {
+			t.Fatalf("MACRO %s: %v", name, err)
+		}
+	}
+
+	proc := writeProcedure(t, dir, "link.com",
+		"$ SET DEFAULT DUA1:[000000]",
+		"$ LINK/SHAREABLE=SHR1/NOMAP SYS$INPUT/OPTIONS",
+		"CLUSTER=SHR1_VECTORS,,,XFR1.OBJ",
+		"SHR1.OBJ",
+		"GSMATCH=LEQUAL,1,1000",
+		"UNIVERSAL=SHR1_COUNT,SHR1_TABLE,SHR1_ORIGIN",
+		"$ SHOW SYMBOL $STATUS",
+		"$ DEFINE SHR1 DUA1:[000000]SHR1.EXE",
+		"$ LINK/SHAREABLE=SHR2/NOMAP SHR2.OBJ,SYS$INPUT/OPTIONS",
+		"SHR1/SHAREABLE",
+		"UNIVERSAL=SHR2_TWICE,SHR2_COUNT,SHR2_ADDR",
+		"GSMATCH=EQUAL,2,5",
+		"$ SHOW SYMBOL $STATUS",
+		"$ LINK/NOMAP MAIN2.OBJ,SYS$INPUT/OPTIONS",
+		"SHR2/SHAREABLE",
+		"$ SHOW SYMBOL $STATUS",
+	)
+
+	if err := d.Dispatch("@" + proc); err != nil && !vmserrors.MessageInhibited(err) {
+		t.Fatalf("@link: %v", err)
+	}
+
+	if got, want := buf.String(), strings.Repeat("  $STATUS == \"%X10000001\"\n", 3); got != want {
+		t.Errorf("output %q, want %q", got, want)
+	}
+
+	image, _, err := c.ContainerSession.ReadRawFile(rms.FileLocation{Name: "DUA1:[000000]MAIN2.EXE"})
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	vms, err := os.ReadFile(filepath.Join(link68Vax, "main2.exe"))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	// The header block, with the image's own name, link time, and linker
+	// ID, and its ident, which is from the link time.
+	const ident, ihi = 0x24, 0x58
+
+	header := bytes.Clone(vms[:512])
+	copy(header[ident:ident+4], image[ident:ident+4])
+	copy(header[ihi:ihi+40], image[ihi:ihi+40])
+	copy(header[ihi+56:ihi+80], image[ihi+56:ihi+80])
+
+	if !bytes.Equal(image[:512], header) {
+		for i := range header {
+			if image[i] != header[i] {
+				t.Errorf("MAIN2.EXE's header differs from VMS's at %#x: %02X, want %02X", i, image[i], header[i])
+
+				break
+			}
+		}
+	}
+
+	got, err := vmsimage.ReadImage(image)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	want, err := vmsimage.ReadImage(vms)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	if !reflect.DeepEqual(got.Fixups.Shared, want.Fixups.Shared) {
+		t.Errorf("shareable image list %q, want %q", got.Fixups.Shared, want.Fixups.Shared)
 	}
 }

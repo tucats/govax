@@ -22,8 +22,9 @@ import (
 // from the image file's bytes, and returns it as a source, with the
 // image's name. The source defines each of the image's universal symbols:
 // a relocatable one as the image plus its offset there, an absolute one
-// as its value. It describes the image as a global section ISD will: its
-// shareable section's page count, and its global section ident and match
+// as its value, but for a based image's, which are the image plus their
+// addresses (its base being 0). It describes the image as a global section ISD will: its
+// first section's page count, and its global section ident and match
 // control (GSMATCH), from the image header, the shareable images it uses
 // itself, from its fixup section, and its ident. Each symbol's Order is
 // its place in the table.
@@ -70,8 +71,12 @@ func ReadShareableImage(data []byte) (*TableSource, string, error) {
 			continue
 		}
 
+		// A based image's symbols are absolute, its addresses: they are
+		// still in the image, at offsets from 0, which the link resolves
+		// as it does those of an image it places (testdata/link68's MAIN3,
+		// whose map shows SHR3_GET at ^X300000, unflagged).
 		d := Definition{Value: s.Value, Order: i + 1}
-		if s.Flags&obj.SymREL != 0 {
+		if s.Flags&obj.SymREL != 0 || h.based {
 			d.Image = name
 		}
 
@@ -107,7 +112,7 @@ type imageHeader struct {
 	name        string
 	ident       uint32 // IHD$L_IDENT: the global section ident
 	matchCtl    uint32 // IHD$V_MATCHCTL
-	sharedPages uint32 // the first shareable section's pages
+	sharedPages uint32 // the first section's pages
 	sections    int    // its image sections, other than global ones and the stack
 	gstVBN      uint32
 	gstRecords  int
@@ -170,12 +175,16 @@ func readImageHeader(data []byte) (imageHeader, error) {
 			return h, fmt.Errorf("link: the image header's section descriptors are damaged")
 		}
 
+		// The image's own sections are those that aren't global sections
+		// of other images, or its stack. The first one's pages are what a
+		// global section ISD that maps the image gives: SHR1's vector page,
+		// LIBRTL's 264 shared pages, SHR3P's position-dependent page.
 		flags := le.Uint32(b[p+8:])
-		if h.sharedPages == 0 && flags&0xFF000000 == isdTypeSharedPIC {
-			h.sharedPages = uint32(le.Uint16(b[p+2:]))
-		}
-
 		if flags&isdGBL == 0 && flags&0xFF000000 != isdTypeUserStack {
+			if h.sections == 0 {
+				h.sharedPages = uint32(le.Uint16(b[p+2:]))
+			}
+
 			h.sections++
 			h.layout = append(h.layout, SharedSection{
 				Offset: (le.Uint32(b[p+4:]) & isdVPNMask) * blockSize,
@@ -438,3 +447,65 @@ func (s *ObjectLibrarySource) Files() int {
 // Image implements SymbolSource: an object library describes no
 // shareable images.
 func (*ObjectLibrarySource) Image(string) (SharedImage, bool) { return SharedImage{}, false }
+
+// ImageFileSource describes shareable images by reading their files: the
+// images a shareable image the link uses uses itself, which no other
+// source describes. Real LINK read SHR1.EXE when it linked MAIN2 against
+// SHR2, which uses SHR1, for SHR1's ident, match control, and first
+// section's pages, which MAIN2's global section ISD for SHR1 holds, and
+// its map lists SHR1's file (testdata/link68). The source defines no
+// symbols: a program's references resolve only in the images it names.
+// It goes after the other sources, so an image they describe (LIBRTL,
+// say) is theirs.
+type ImageFileSource struct {
+	// Open returns the image's own symbols, given its name: its global
+	// symbol table, from the image file (ReadShareableImage). An error
+	// leaves the image undescribed.
+	Open func(image string) (SymbolSource, error)
+
+	opened map[string]SymbolSource
+}
+
+// Lookup implements SymbolSource: the source defines no symbols.
+func (*ImageFileSource) Lookup(string) (Definition, bool, error) { return Definition{}, false, nil }
+
+// Image implements SymbolSource: the image file's description of itself,
+// opened the first time it is asked for.
+func (s *ImageFileSource) Image(name string) (SharedImage, bool) {
+	src, ok := s.opened[name]
+	if !ok {
+		if s.Open == nil {
+			return SharedImage{}, false
+		}
+
+		var err error
+		if src, err = s.Open(name); err != nil {
+			src = nil
+		}
+
+		if s.opened == nil {
+			s.opened = map[string]SymbolSource{}
+		}
+
+		s.opened[name] = src
+	}
+
+	if src == nil {
+		return SharedImage{}, false
+	}
+
+	return src.Image(name)
+}
+
+// Files implements FileCounter: the image files it has read.
+func (s *ImageFileSource) Files() int {
+	n := 0
+
+	for _, src := range s.opened {
+		if fc, ok := src.(FileCounter); ok {
+			n += fc.Files()
+		}
+	}
+
+	return n
+}

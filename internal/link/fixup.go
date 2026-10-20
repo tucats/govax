@@ -346,11 +346,20 @@ func (l *linker) fixupSection(f fixupLayout, fixupVA uint32) []byte {
 }
 
 // globalSectionISD returns the ISD that maps a shareable image the
-// image activator places: a global section (ISD$V_GBL), position
-// independent and shareable (ISD$K_SHRPIC), the size of the image's first
-// section, with its ident and match control, named for that section.
+// image activator places: a global section (ISD$V_GBL) the size of the
+// image's first section, with its ident and match control, named for that
+// section. Its type and attributes are the first section's too: SHR3P's
+// is ISD$K_SHRFXD, and SHR6's, which the activator fixes up, is CRF+WRT
+// (testdata/link68's MAIN3P and MAIN6). An image whose sections aren't
+// known is taken to start with a shared, position independent one, as
+// LIBRTL does.
 func globalSectionISD(img SharedImage) (isd, error) {
-	d := globalISD(img, 1, img.Pages, isdTypeSharedPIC)
+	flags := uint32(isdTypeSharedPIC)
+	if len(img.Layout) > 0 {
+		flags = img.Layout[0].Flags
+	}
+
+	d := globalISD(img, 1, img.Pages, flags)
 	if len(d.name) > 43 {
 		return isd{}, fmt.Errorf("shareable image name %q is too long", img.Name)
 	}

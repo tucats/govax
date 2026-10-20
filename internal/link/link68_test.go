@@ -284,50 +284,36 @@ func TestMapShareableImagesFull(t *testing.T) {
 // TestMapExecutablesFull links the probe's programs from real MACRO's
 // objects, against VMS's shareable images named as in their options files
 // and real LINK's libraries, and checks each /FULL map line for line
-// against real LINK's, up to its run statistics: the shareable image
-// among the modules and its sections in the image section synopsis
-// (each a global section of its own, relocatable), the user stack with
-// the default cluster, the .ADDRESS references to shareable images, and
-// each symbol in a shareable image at its cell. EXE1 adds a based
-// cluster, a demand-zero section split off, and LIBRTL placed at link
-// time. MAIN1, MAIN2, and MAIN4, whose LIBRTL real LINK put right after
-// the shareable image that uses it, are subtask 9's.
+// against real LINK's, up to its run statistics: the shareable images
+// among the modules, the options file's image followed by those it uses
+// (LIBRTL right after SHR1, though MAIN1 calls it itself), and their
+// sections in the image section synopsis (each a global section of its
+// own, relocatable, or at its address for MAIN3's based SHR3), the user
+// stack with the default cluster, the .ADDRESS references to shareable
+// images, and each symbol in a shareable image at its cell (or, for
+// SHR3's, at its address). EXE1 adds a based cluster, a demand-zero
+// section split off, and LIBRTL placed at link time.
 func TestMapExecutablesFull(t *testing.T) {
-	cases := []struct {
-		image, object string
-		uses          string
-		// text is the image's name as /EXECUTABLE= gave it, which the
-		// first page's heading shows ("" without the qualifier).
-		text string
-	}{
-		{image: "main3p", object: "main3", uses: "shr3p", text: "MAIN3P"},
-		{image: "main6", object: "main6", uses: "shr6"},
-		{image: "exe1"},
-	}
+	cases := append([]link68Program{{image: "exe1"}}, link68Programs...)
 
 	for _, c := range cases {
 		t.Run(c.image, func(t *testing.T) {
 			want, _, image, mapFile := realMap(t, filepath.Join(link68Dir, "vax", c.image+".map"))
 			_, opts := realImage(t, filepath.Join(link68Dir, "vax", c.image+".exe"))
 
-			var (
-				inputs []Input
-				uses   []string
-			)
+			var inputs []Input
 
 			if c.image == "exe1" {
 				opts = exe1Options(opts)
+				opts.Sources = link68VMSSources(t, nil)
 				inputs = []Input{
 					{File: "DUA1:[000000]EXE1.OBJ;1", Module: link68Object(t, "exe1")},
 					{File: "DUA1:[000000]EXE1B.OBJ;1", Module: link68Object(t, "exe1b"), Cluster: "SECOND"},
 				}
 			} else {
-				uses = []string{c.uses}
-				_, opts.Clusters = link68Uses(t, uses)
+				opts = c.options(t, opts, false, link68VMSSources(t, nil)...)
 				inputs = []Input{{File: "DUA1:[000000]" + strings.ToUpper(c.object) + ".OBJ;1", Module: link68Object(t, c.object)}}
 			}
-
-			opts.Sources = link68VMSSources(t, uses)
 
 			img, err := Link(inputs, opts)
 			if err != nil {

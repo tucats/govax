@@ -6,6 +6,7 @@ import (
 	"github.com/tucats/govax/internal/corevms"
 	"github.com/tucats/govax/internal/lbr"
 	"github.com/tucats/govax/internal/link"
+	"github.com/tucats/govax/internal/rms"
 	"github.com/tucats/govax/internal/vmsdef"
 )
 
@@ -150,16 +151,45 @@ func (c *Context) openSharedImage(image string, govax *link.TableSource) (link.S
 		return &shimImage{image: image, file: file, govax: govax}, nil
 	}
 
+	return sharedImageSource(data, name, image)
+}
+
+// usedImages is the source of the shareable images that a shareable image
+// the link uses uses itself (testdata/link68's MAIN2, linked against
+// SHR2, which uses SHR1): each is read from its file, found by RMS's
+// parse of the image's name with the default SYS$SHARE:.EXE, as the image
+// activator finds it, so a logical name of the image's name leads to it,
+// else SYS$SHARE; else as IMAGELIB's images are found (openSharedImage).
+// An image none of these finds is left undescribed.
+func (c *Context) usedImages() *link.ImageFileSource {
+	govax := GovaxSymbols(c.ShimLinks)
+
+	return &link.ImageFileSource{Open: func(image string) (link.SymbolSource, error) {
+		s := c.ContainerSession
+		if p, found, err := s.Parse(image, "SYS$SHARE:.EXE", "", false, false); err == nil && found {
+			data, loc, err := s.ReadRawFile(rms.FileLocation{Name: p.String()})
+			if err == nil {
+				return sharedImageSource(data, loc.Name, image)
+			}
+		}
+
+		return c.openSharedImage(image, govax)
+	}}
+}
+
+// sharedImageSource reads the shareable image image's global symbol
+// table from its file's bytes, read from file.
+func sharedImageSource(data []byte, file, image string) (link.SymbolSource, error) {
 	src, got, err := link.ReadShareableImage(data)
 	if err != nil {
-		return nil, fmt.Errorf("%s: %w", name, err)
+		return nil, fmt.Errorf("%s: %w", file, err)
 	}
 
 	if got != image {
-		return nil, fmt.Errorf("%s is shareable image %s, not %s", name, got, image)
+		return nil, fmt.Errorf("%s is shareable image %s, not %s", file, got, image)
 	}
 
-	src.File = name
+	src.File = file
 
 	return src, nil
 }
