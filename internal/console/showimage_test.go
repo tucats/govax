@@ -45,7 +45,7 @@ func TestShowImageFull_mapped(t *testing.T) {
 	first := show()
 
 	for _, want := range []string{
-		"    file DUA0:[000000]IMAP.EXE, mapped\n",
+		"    file DUA0:[000000]IMAP.EXE;1, mapped\n",
 		"    section       start     end       pages  prot  backing store\n",
 		"    demand zero   00000400  000053FF     40  ALL   page file\n",
 		"                  pages: 40 demand zero\n",

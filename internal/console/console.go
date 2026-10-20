@@ -57,6 +57,11 @@ type Console struct {
 // other commands will accept.
 func New(out io.Writer) *Console {
 	m := machine.NewMachine(out)
+	c := &Console{Machine: m, Interpreter: dclshell.NewInterpreter(m, out)}
 
-	return &Console{Machine: m, Interpreter: dclshell.NewInterpreter(m, out)}
+	// RUN looks for a shareable image in the host library directory LINK
+	// and MACRO use (HostLibrary, or else the settings).
+	m.Hooks.LibraryDir = func() string { return c.cmd().HostLibraryDir() }
+
+	return c
 }

@@ -12,8 +12,10 @@ import (
 )
 
 // This file finds the VMS library files LINK and MACRO use (IMAGELIB.OLB,
-// STARLET.OLB, shareable images, STARLET.MLB), as VMS finds them through
-// SYS$LIBRARY and SYS$SHARE (docs/PHASE-28.md subtask 9). Each is looked
+// STARLET.OLB, and the macro library), as VMS finds them through
+// SYS$LIBRARY (docs/PHASE-28.md subtask 9); shareable images are found
+// as RUN finds them (linksource.go's openSharedImage, rms.ImageLocator),
+// the host library directory among the places. Each library is looked
 // for through its logical name on a mounted volume first, then in the host
 // library directory: Context.HostLibrary, or else the vax.library setting,
 // or else the older vax.link.library, which named LINK's directory before

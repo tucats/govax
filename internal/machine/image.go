@@ -343,10 +343,10 @@ func (p *ImageProcess) readIAF(addr uint32) (IAF, error) {
 // otherwise the file is opened, its header parsed, each section loaded or
 // zero-filled into P0 space starting at the current high-water mark
 // (p.process().RegionSize[0]), and -- if the image carries a FIXUPVEC section --
-// its sharable-image dependency list is built and recursively loaded
-// (secondary images only; a missing secondary image file is tolerated, not
-// fatal, matching image_load's own VAX_FNF handling one level up in
-// console_run/here).
+// its sharable-image dependency list is built and recursively loaded. A
+// secondary image is found by the shareable image rules (findShareable,
+// shareable.go): one govax's shims stand for isn't loaded, and one that
+// isn't found stops the activation.
 func (p *ImageProcess) imageLoad(fn string, flag uint32) (*ICB, error) {
 	for _, icb := range p.ICBList {
 		if icb.Name == fn {
@@ -358,7 +358,21 @@ func (p *ImageProcess) imageLoad(fn string, flag uint32) (*ICB, error) {
 		return p.imageMap(fn, flag)
 	}
 
-	data, spec, err := p.m.readImage(fn, flag == icbMain)
+	var (
+		data []byte
+		spec imageSpec
+		err  error
+	)
+
+	if flag == icbMain {
+		data, spec, err = p.m.readImage(fn, true)
+	} else {
+		var loc rms.FileLocation
+		if loc, err = p.findShareable(fn); err == nil {
+			data, spec, err = p.readShareable(loc)
+		}
+	}
+
 	if err != nil {
 		return nil, err
 	}
@@ -546,9 +560,15 @@ func (p *ImageProcess) finishLoad(icb *ICB, data []byte) error {
 			continue
 		}
 
+		// An image the shims stand for has no file; one that isn't found
+		// stops the activation (Decision 4).
 		dep, err := p.imageLoad(shr.Name, icbSecondary)
+		if errors.Is(err, errEmulated) {
+			continue
+		}
+
 		if err != nil {
-			continue // matches image_load's VAX_FNF-is-tolerated handling
+			return err
 		}
 
 		shr.Icb = dep
@@ -818,9 +838,9 @@ func (p *ImageProcess) imageFixup(icb *ICB) error {
 // specification, or a bare name while the default directory is on a
 // volume, is a file on a mounted volume, with the type EXE if it has none;
 // anything else, or any name with /HOST, is a host file, found as
-// findImage finds it. A shareable image the main image needs is always
-// looked for on the host (findImage), and govax's shims stand in for one
-// that isn't there.
+// findImage finds it. A shareable image (main false) is found as the
+// image activator finds it (ImageLocator): an image govax's shims stand
+// for has no file to read (errEmulated).
 func (m *Machine) ReadImage(fn string, main bool) ([]byte, error) {
 	data, _, err := m.readImage(fn, main)
 
@@ -830,6 +850,17 @@ func (m *Machine) ReadImage(fn string, main bool) ([]byte, error) {
 // readImage is ReadImage, also returning where the image was found
 // (imageSpec).
 func (m *Machine) readImage(fn string, main bool) ([]byte, imageSpec, error) {
+	if !main {
+		p := m.images()
+
+		loc, err := p.findShareable(fn)
+		if err != nil {
+			return nil, imageSpec{}, err
+		}
+
+		return p.readShareable(loc)
+	}
+
 	if s := m.Hooks.Session(); main && s != nil {
 		loc, err := s.Locate(fn, m.runHost)
 		if err != nil {
@@ -1008,7 +1039,7 @@ func imageLow(icb *ICB) uint32 {
 	return icb.Base + low<<9
 }
 
-// findImage locates fn on the native filesystem, matching find_image: try
+// findImage locates the main image fn on the host, matching find_image: try
 // it verbatim (adding a .exe suffix if it doesn't already have one), then
 // with SharePrefix prepended, then lowercased -- stopping at the first
 // candidate that exists. A literal ESC (0x1B) SharePrefix disables the

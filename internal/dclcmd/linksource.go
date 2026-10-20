@@ -1,7 +1,9 @@
 package dclcmd
 
 import (
+	"errors"
 	"fmt"
+	"os"
 
 	"github.com/tucats/govax/internal/corevms"
 	"github.com/tucats/govax/internal/lbr"
@@ -27,11 +29,12 @@ import (
 //     the shims stand for (shimTable) in images not captured; and the
 //     system services at their addresses in the P1 vector.
 //
-// Each VMS file is looked for through its logical name (SYS$LIBRARY or
-// SYS$SHARE) on a mounted volume first, then in the host library
-// directory the vax.library setting names (readLibraryFile, syslib.go). A
-// file that isn't there is skipped; a file that's there but can't be read
-// is an error. /NOSYSLIB skips the libraries.
+// Each library is looked for through SYS$LIBRARY on a mounted volume
+// first, then in the host library directory the vax.library setting
+// names (readLibraryFile, syslib.go), and each shareable image as the
+// image activator finds it (openSharedImage). A file that isn't there is
+// skipped; a file that's there but can't be read is an error. /NOSYSLIB
+// skips the libraries.
 //
 // The image a link writes is the same whichever source defined a routine,
 // since it refers to the routine by its image and offset: govax's RUN
@@ -136,43 +139,56 @@ func (c *Context) LinkSources(sysLib bool) ([]link.SymbolSource, error) {
 	return append(sources, govax), nil
 }
 
-// openSharedImage returns the symbols of the shareable image IMAGELIB
-// names: its global symbol table, from SYS$SHARE:<image>.EXE or the host
-// library directory, or else govax's own tables for it.
+// openSharedImage returns the symbols of the shareable image image: its
+// global symbol table, read from the file the image activator's rules
+// find (ImageLocator), or else govax's own tables for it. LINK reads an
+// image's file even when govax's shims stand for it at RUN, since only
+// the file gives its symbols as real LINK sees them.
 func (c *Context) openSharedImage(image string, govax *link.TableSource) (link.SymbolSource, error) {
-	file := image + ".EXE"
+	found, err := c.ImageLocator().Find(image)
 
-	data, name, err := c.readLibraryFile("SYS$SHARE", file)
-	if err != nil {
+	var notFound *rms.ImageNotFoundError
+
+	switch {
+	case errors.As(err, &notFound):
+		return &shimImage{image: image, file: image + ".EXE", govax: govax}, nil
+	case err != nil:
 		return nil, err
 	}
 
-	if data == nil {
-		return &shimImage{image: image, file: file, govax: govax}, nil
+	loc := found.Location
+
+	var data []byte
+
+	if loc.Host {
+		data, err = os.ReadFile(loc.Name)
+	} else {
+		data, loc, err = c.ContainerSession.ReadRawFile(loc)
 	}
 
-	return sharedImageSource(data, name, image)
+	if err != nil {
+		return nil, fmt.Errorf("%s: %w", loc.Name, err)
+	}
+
+	return sharedImageSource(data, loc.Name, image)
+}
+
+// ImageLocator is how LINK finds a shareable image's file
+// (rms.ImageLocator), as RUN does but for govax's shims: a logical name
+// of the image's name, SYS$SHARE, then the host (SET SHARE_PREFIX's
+// prefix, the host library directory, the current directory).
+func (c *Context) ImageLocator() rms.ImageLocator {
+	return rms.ImageLocator{Session: c.ContainerSession, Prefix: c.SharePrefix, Library: c.HostLibraryDir()}
 }
 
 // usedImages is the source of the shareable images that a shareable image
 // the link uses uses itself (testdata/link68's MAIN2, linked against
-// SHR2, which uses SHR1): each is read from its file, found by RMS's
-// parse of the image's name with the default SYS$SHARE:.EXE, as the image
-// activator finds it, so a logical name of the image's name leads to it,
-// else SYS$SHARE; else as IMAGELIB's images are found (openSharedImage).
-// An image none of these finds is left undescribed.
+// SHR2, which uses SHR1): each is read from its file (openSharedImage),
+// which real LINK opens as the image activator would.
 func (c *Context) usedImages() *link.ImageFileSource {
 	govax := GovaxSymbols(c.ShimLinks)
 
 	return &link.ImageFileSource{Open: func(image string) (link.SymbolSource, error) {
-		s := c.ContainerSession
-		if p, found, err := s.Parse(image, "SYS$SHARE:.EXE", "", false, false); err == nil && found {
-			data, loc, err := s.ReadRawFile(rms.FileLocation{Name: p.String()})
-			if err == nil {
-				return sharedImageSource(data, loc.Name, image)
-			}
-		}
-
 		return c.openSharedImage(image, govax)
 	}}
 }

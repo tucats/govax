@@ -10,6 +10,7 @@ import (
 	"github.com/tucats/govax/internal/lnm"
 	"github.com/tucats/govax/internal/machine"
 	"github.com/tucats/govax/internal/registers"
+	"github.com/tucats/govax/internal/rms"
 	"github.com/tucats/govax/internal/vmsdef"
 	"github.com/tucats/govax/internal/vmserrors"
 )
@@ -1013,6 +1014,16 @@ func (c *Interpreter) cliImageEnded(env *corevms.Environment) bool {
 // image process 1's LIB$RUN_PROGRAM named (testdata/lib57).
 func (c *Interpreter) activationFailure(env *corevms.Environment, image string, err error) uint32 {
 	say := func(format string, args ...any) { fmt.Fprintf(c.Out, format+"\n", args...) }
+
+	// A shareable image the image uses that isn't there: DCL names it,
+	// and the file RMS looked for it as (testdata/link68's R2 and R3).
+	var shareable *rms.ImageNotFoundError
+	if errors.As(err, &shareable) {
+		say("%%DCL-W-ACTIMAGE, error activating image %s", shareable.Image)
+		say("-CLI-E-IMAGEFNF, image file not found %s", shareable.Spec)
+
+		return cliStatusImageFNF | stsInhibitMsg
+	}
 
 	say("%%DCL-W-ACTIMAGE, error activating image %s", strings.ToUpper(image))
 

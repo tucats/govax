@@ -3,7 +3,9 @@ package machine
 import (
 	"encoding/binary"
 
+	"github.com/tucats/govax/internal/corevms"
 	"github.com/tucats/govax/internal/registers"
+	"github.com/tucats/govax/internal/rms"
 	"github.com/tucats/govax/internal/vmserrors"
 	"github.com/tucats/govax/internal/vmsimage"
 )
@@ -44,7 +46,22 @@ func (p *ImageProcess) mapsImages() bool {
 // the copying loader does (finishLoad). The image file stays open while
 // any of its sections is mapped.
 func (p *ImageProcess) imageMap(fn string, flag uint32) (*ICB, error) {
-	data, src, spec, err := p.m.openImage(fn, flag == icbMain)
+	var (
+		data []byte
+		src  corevms.PageSource
+		spec imageSpec
+		err  error
+	)
+
+	if flag == icbMain {
+		data, src, spec, err = p.m.openImage(fn, true)
+	} else {
+		var loc rms.FileLocation
+		if loc, err = p.findShareable(fn); err == nil {
+			data, src, spec, err = p.openShareable(loc)
+		}
+	}
+
 	if err != nil {
 		return nil, err
 	}

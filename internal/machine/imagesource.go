@@ -30,6 +30,17 @@ func (m *Machine) OpenImage(fn string, main bool) ([]byte, corevms.PageSource, e
 
 // openImage is OpenImage, also returning where the image was found.
 func (m *Machine) openImage(fn string, main bool) ([]byte, corevms.PageSource, imageSpec, error) {
+	if !main {
+		p := m.images()
+
+		loc, err := p.findShareable(fn)
+		if err != nil {
+			return nil, nil, imageSpec{}, err
+		}
+
+		return p.openShareable(loc)
+	}
+
 	if s := m.Hooks.Session(); main && s != nil {
 		loc, err := s.Locate(fn, m.runHost)
 		if err != nil {
@@ -78,4 +89,21 @@ func openHostImage(path string) ([]byte, corevms.PageSource, error) {
 	}
 
 	return data, corevms.NewHostPageSource(f, int64(len(data)), f), nil
+}
+
+// openShareable opens the shareable image file at loc as OpenImage opens
+// an image.
+func (p *ImageProcess) openShareable(loc rms.FileLocation) ([]byte, corevms.PageSource, imageSpec, error) {
+	if loc.Host {
+		data, src, err := openHostImage(loc.Name)
+
+		return data, src, hostImageSpec(loc.Name), err
+	}
+
+	a, data, found, err := p.session().AccessImage(loc)
+	if err != nil {
+		return nil, nil, imageSpec{}, err
+	}
+
+	return data, a, imageSpec{Name: found.Physical}, nil
 }

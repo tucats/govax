@@ -37,6 +37,10 @@ type Context struct {
 	Paths       *respath.Resolver
 	HostLibrary string
 
+	// SharePrefix is SET SHARE_PREFIX's prefix, where a shareable image
+	// is looked for on the host first (rms.ImageLocator).
+	SharePrefix string
+
 	// ShimLinks are the routines govax's shims stand in for, which LINK
 	// takes as symbols (GovaxSymbols).
 	ShimLinks []corevms.ShimLink

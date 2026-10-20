@@ -185,7 +185,7 @@ func (d *Debugger) showImage(full bool) error {
 // leaving the working set for the free and modified lists, and going to
 // the page file. For example, part way through a run:
 //
-//	    file DUA0:[000000]IMAP.EXE, mapped
+//	    file DUA0:[000000]IMAP.EXE;1, mapped
 //	    section       start     end       pages  prot  backing store
 //	    demand zero   00000400  000053FF     40  ALL   page file
 //	                  pages: 28 valid, 12 in transition (on the modified list)

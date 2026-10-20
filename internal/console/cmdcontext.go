@@ -17,6 +17,7 @@ func (c *Console) cmd() *dclcmd.Context {
 		Devices:          c.Devices,
 		Paths:            c.Paths,
 		HostLibrary:      c.HostLibrary,
+		SharePrefix:      c.SharePrefix,
 		ShimLinks:        machine.ShimTable,
 		ScreenSize:       c.ScreenSize,
 		Verbose:          c.Verbose,

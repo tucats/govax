@@ -367,8 +367,10 @@ type ImageInfo struct {
 	// that has one.
 	Program *dbgsym.Program
 
-	// File is the file the image was loaded from, and Mapped whether it
-	// was mapped from it (with paging on) rather than copied.
+	// File is the file the image was loaded from, as it was found (a
+	// volume file's full specification, a host file's absolute path), and
+	// Mapped whether it was mapped from it (with paging on) rather than
+	// copied.
 	File   string
 	Mapped bool
 
@@ -399,13 +401,18 @@ func (m *Machine) Images() []ImageInfo {
 			}
 		}
 
+		file := icb.Spec.Name
+		if file == "" {
+			file = icb.File
+		}
+
 		out = append(out, ImageInfo{
 			Name:    imageDisplayName(icb.File),
 			Base:    base,
 			End:     icb.End,
 			Main:    icb.Flags&icbMain != 0,
 			Program: icb.Debug,
-			File:    icb.File,
+			File:    file,
 			Mapped:  icb.Mapped,
 			icb:     icb,
 		})

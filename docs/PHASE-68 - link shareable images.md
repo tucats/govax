@@ -7,8 +7,9 @@ subtasks. Subtask 1, the VMS probe (`testdata/link68`), is done, and so
 are subtask 2 (MACRO's `.TRANSFER`), subtask 3 (options files),
 subtask 4 (clusters for executables), subtask 5 (`LINK/SHAREABLE`,
 the image), subtask 6 (the global symbol table), subtask 7 (fixups
-and bases), subtask 8 (maps and ANALYZE/IMAGE), and subtask 9 (linking
-against govax's shareable images).
+and bases), subtask 8 (maps and ANALYZE/IMAGE), subtask 9 (linking
+against govax's shareable images), and subtask 10 (finding a shareable
+image).
 
 ## Goal
 
@@ -562,7 +563,7 @@ them.
    BASED and LASTCLU, no G^ cells (`ReadShareableImage` must give its
    sections, not a page count of 0). MAIN1, MAIN2, and MAIN3, byte for
    byte.
-10. **Finding a shareable image.** Decision 3's locator, used by both
+10. **Done (2026-10-20).** **Finding a shareable image.** Decision 3's locator, used by both
     loaders (copy and map), by LINK for IMAGELIB's images (folding
     `readLibraryFile`'s rule into it), and exported for Phase 61. SHOW
     IMAGES shows each image's file. The default spec is
@@ -1247,3 +1248,79 @@ What the images settled:
 - MAIN1N was linked while SHR1 was EQUAL,1,1001 (the probe's `NEVER`
   relink failed), and the tests link it against that SHR1.
 
+### 2026-10-20 — Subtask 10: finding a shareable image
+
+RUN finds a program's shareable images as VMS's image activator does,
+and LINK finds the images it reads the same way. The locator is
+`rms.ImageLocator` (`internal/rms/shareable.go`), not in
+`internal/machine` as Decision 3 put it: LINK's code (`internal/dclcmd`)
+can't import the machine, and both import `rms`. The machine adds the
+shims (`machine.ImageLocator`, `machine.Emulated`,
+`Machine.FindShareableImage`, `internal/machine/shareable.go`), and
+`dclcmd.Context.ImageLocator` is LINK's, without them. The rules, in
+order:
+
+1. An image govax stands for goes to the shims, unless a logical name
+   of its own name is defined (question 1's answer).
+2. RMS's parse of the name with the default `SYS$SHARE:.EXE`
+   (`Session.FindShareableImage`): a logical name of the image's name,
+   its missing fields from SYS$SHARE's translation, else SYS$SHARE;
+   every element of SYS$SHARE's search list in turn, the highest
+   version. The parse is `$OPEN`'s own name processing (`expandName`),
+   run once per element of the default's search list, since it takes
+   only a default's first element.
+3. The host: SET SHARE_PREFIX's prefix, the host library directory
+   (`Console.HostLibrary`, else `vax.library`; the machine asks through
+   `Hooks.LibraryDir`), then the name as given, each as written and then
+   in lower case.
+
+Both loaders use it (`imageLoad` and `imageMap`, through
+`ImageProcess.findShareable`, with the process's own session, so a
+subprocess's logical names count), and so do `ReadImage` and `OpenImage`
+for an image that isn't the main one. `findImage` now finds only a main
+image on the host. LINK's IMAGELIB images and the images a shareable
+image uses come through one function (`openSharedImage`); govax's own
+tables stand in for an image no rule finds, as before.
+
+An image that isn't found stops the activation (Decision 4) with an
+`*rms.ImageNotFoundError`: the image and the specification RMS tried
+last (with the device it translated to). DCL shows
+`%DCL-W-ACTIMAGE, error activating image SHR1` and
+`-CLI-E-IMAGEFNF, image file not found DUA2:[SYSLIB]SHR1.EXE;`, and
+`$STATUS` is %X100388B2, as in R2 and R3 (`activationFailure`). The
+debugger's SHOW IMAGE/FULL now shows each image's file as it was found,
+version and all (`ImageInfo.File`). The console's own SHOW IMAGES
+(`Machine.ShowImages`) has no command bound to it, so it was left as it
+was.
+
+`TestFindShareableImageAtRun` runs VMS's MAIN1 against VMS's SHR1 with
+RUN/NOEXECUTE, in both paging modes: R1 (a logical name), R2 (a partial
+one, its device from SYS$SHARE), R3 (none), R4 (SYS$SHARE a search list,
+SHR1 in its first place, then only in its second), then the host library
+directory and the prefix. `TestFindShareableImageEmulated` checks the
+shims rule and the error; `TestLinkImageLocator` checks LINK's locator.
+
+Choices to review:
+
+- **VMS's run-time libraries count as emulated** (`runtimeLibraries`:
+  MTHRTL, CMA$TIS_SHR, FORRTL, VAXCRTL, ... beside the images with
+  shims). DEC C programs name MTHRTL and CMA$TIS_SHR whether or not they
+  call them (`testdata/exe`'s simple, sieve, putc), and govax has no file
+  or shim for either. Taken literally, Decision 4 would stop those
+  milestone programs from running. Now govax stands for these libraries
+  as it does for LIBRTL, and a routine of theirs it lacks resolves to
+  `LIB$_UNRESOLVED`, as before. Decision 4 stops activation only for an
+  image that isn't VMS's. The list is VMS 7's libraries as best known,
+  **unconfirmed** beyond the images testdata names.
+- **SYS$SHARE isn't defined.** govax has no system disk for it to name.
+  Without it, a missing image's message shows the name unexpanded
+  (`SYS$SHARE:[000000]NOSUCH.EXE;`, the default directory filling in
+  the directory), and the host comes next. A user who keeps shareable
+  images on a volume defines SYS$SHARE (in `vax.init`, say).
+- Each element of SYS$SHARE's search list is tried in turn, with the
+  primary name's elements inside each. Which of the two RMS iterates
+  first when both are search lists is **unconfirmed**; R4 has only one.
+
+Left for subtask 11: the GSMATCH check, a shareable image's own fixups,
+and the rest of activation. HELP RUN's account of how an image is found
+is the close-out's.

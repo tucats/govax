@@ -177,12 +177,11 @@ type Machine struct {
 	otherImages map[*corevms.Environment]*ImageProcess
 
 	// SharePrefix is a directory/filename prefix consulted when locating a
-	// sharable image dependency that isn't found under its bare name,
-	// matching vax.console.share_prefix (SET SHARE, not yet ported --
-	// there is no console command that sets this field yet). A literal
-	// ESC (0x1B) prefix means "don't search for sharable images at all",
-	// matching find_image's own check; empty (the default) searches
-	// alongside the loading image with no prefix.
+	// main image on the host, and the first place on the host a
+	// shareable image is looked for (ImageLocator), matching
+	// vax.console.share_prefix (SET SHARE, not yet ported -- there is no
+	// console command that sets this field yet). A literal ESC (0x1B)
+	// prefix means none, matching find_image's own check.
 	SharePrefix string
 
 	// Paths is the search-path policy (docs/PHASE-15.md) every file-reading
@@ -280,6 +279,11 @@ type Hooks struct {
 	// it has dealt with it. Without one, the key is the running
 	// process's (its Ctrl/C or Ctrl/Y AST), or else stops the machine.
 	HandleAttention func(key byte) bool
+
+	// LibraryDir is the host directory of VMS's library files, where a
+	// shareable image is looked for after the volumes (ImageLocator); nil
+	// reads the vax.library setting.
+	LibraryDir func() string
 }
 
 // consoleTerminal is the physical device name of process 1's terminal,
