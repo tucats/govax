@@ -86,7 +86,7 @@ var rmsFEX = vmsdef.Symbols["RMS$_FEX"]
 //     CLI_BADFILESPEC, matching Context.Type/Context.Delete/Context.
 //     Directory's own catch-all bucket.
 func (c *Context) Copy(sourceText string, sourceHost bool, destText string, destHost bool, opts rms.CopyOptions) error {
-	results, err := c.ContainerSession.Copy(sourceText, sourceHost, destText, destHost, opts)
+	results, err := c.copyFiles(sourceText, sourceHost, destText, destHost, opts)
 	if err != nil {
 		if lnmErr := logicalNameFailure(err); lnmErr != nil {
 			return lnmErr
@@ -129,6 +129,26 @@ func (c *Context) Copy(sourceText string, sourceHost bool, destText string, dest
 	}
 
 	return nil
+}
+
+// copyFiles decides which side of the copy each name is on by the rules
+// every command shares (rms.Session.Locate: /HOST, a VMS specification, a
+// host path with "/" or "\", then the default directory's side), and
+// copies. Without it a name like "./notes.txt" was taken for a file in
+// the default directory of a volume (docs/PHASE-69 - backup save
+// sets.md, side finding 1).
+func (c *Context) copyFiles(sourceText string, sourceHost bool, destText string, destHost bool, opts rms.CopyOptions) ([]rms.CopyResult, error) {
+	source, err := c.ContainerSession.Locate(sourceText, sourceHost)
+	if err != nil {
+		return nil, err
+	}
+
+	dest, err := c.ContainerSession.Locate(destText, destHost)
+	if err != nil {
+		return nil, err
+	}
+
+	return c.ContainerSession.Copy(sourceText, source.Host, destText, dest.Host, opts)
 }
 
 // printCopyResult prints whichever of the four "%COPY-..." line shapes

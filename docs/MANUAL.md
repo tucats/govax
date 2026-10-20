@@ -771,12 +771,16 @@ version (`;`, `;3`, or `;*`), as on VMS.
 ### Moving files between the host and a volume
 
 `COPY` copies between the host and a volume, or between two volume
-locations. `/HOST` after either file name marks that one as a host path:
+locations. `/HOST` after either file name marks that one as a host path.
+Without it, each name follows the rules of
+[How govax decides which kind a name is](#how-govax-decides-which-kind-a-name-is),
+so a quoted path with a `/` in it is a host file too:
 
 ```text
 VAX> COPY "prog.mar"/HOST DUA0:[WORK]       ! host to volume, same name
 VAX> COPY "prog.mar"/HOST *                 ! the same, into the default directory
 VAX> COPY PROG.LIS "prog.lis"/HOST          ! volume to host
+VAX> COPY PROG.LIS "./prog.lis"             ! the same: the "/" makes it a host path
 VAX> COPY *.MAR [BACKUP]*.SAV               ! volume to volume, wildcards
 ```
 

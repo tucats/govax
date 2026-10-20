@@ -577,11 +577,11 @@ reports, and every save set byte for byte (COPY/BINARY).
 2. **The VMS probe** — done (2026-10-20). `testdata/backup69`: the
    procedure, SSCOPY, the exchange volume, the author's run, and Part
    A's "The probe's answers".
-3. **COPY to a host name** (side finding 1): COPY's source and
-   destination follow `Session.Locate`'s rules, as the user's manual
-   says, so `"./pi.bck"` is a host file. Tested both ways, and the
-   manual checked. DIRECTORY/FULL's "Contiguous best try" (side finding
-   2) goes with it.
+3. **COPY to a host name** — done (2026-10-20). Side finding 1: COPY's
+   source and destination follow `Session.Locate`'s rules, as the
+   user's manual says, so `"./pi.bck"` is a host file. Side finding 2:
+   DIRECTORY/FULL's characteristic words, among them "Contiguous best
+   try".
 4. **`internal/backup`, reading:** blocks (header, checksum, data CRC,
    flags), records, the summary, file attributes into Go types, a file's
    data in VBN order, and XOR recovery of a damaged block from its group.
@@ -711,3 +711,33 @@ case gave an answer.
   bad CRC, and proposes a short second VAX round.
 - VMS's DIRECTORY/FULL shows "Contiguous best try" for PI.EXE, which
   confirms side finding 2. It goes with subtask 3.
+
+### 2026-10-20 — Subtask 3: COPY to a host name, and DIRECTORY/FULL's characteristics
+
+- **COPY** (`internal/dclcmd/copy.go`): `Context.Copy` now decides each
+  name's side with `rms.Session.Locate`, as every other command does
+  (`copyFiles`), and hands the results to `Session.Copy` as its explicit
+  host flags. `/HOST` still forces a host name, a VMS specification is a
+  volume file, a name with `/` or `\` is a host file, and a bare name
+  goes with the default directory: on its volume after a SET DEFAULT
+  onto one, the host otherwise. Before, a name without `/HOST` was
+  always a volume file, so `COPY ... "./pi.bck"` made a volume file of
+  that name. `Session.Copy` is unchanged. `TestDispatch_copyHostPathWithoutHost`
+  (`internal/console/copy_test.go`) copies to and from a quoted host
+  path without `/HOST` and checks that no volume file was named after
+  it. It fails without the change. The user's manual's "Moving files"
+  section says so, with an example run on govax.
+- **DIRECTORY/FULL** (`internal/rms/directory.go`): the File attributes
+  line's characteristic words are a table (`characteristicWords`) in bit
+  order. It now has VMS 7.1's "Contiguous best try", "Contiguous", and
+  "Directory file" (`tree.lst`) beside the page file's "Backups
+  disabled" and "MoveFile disabled". A directory's version limit reads
+  "Default version limit: n", 32767 when it has none
+  (`versionLimitText`), as VMS shows a directory. The order of
+  characteristics no example shows together (Backups disabled with
+  Contiguous, say) is taken to be by bit, unconfirmed.
+  `TestCharacteristicsText` and `TestVersionLimitText`.
+- Checked end to end on `xfer.dsk`: `COPY/BINARY DUA1:[XFER]PI.BCK
+  "./pi2.bck"` writes the host file, byte for byte, and leaves the
+  default volume alone. DIRECTORY/FULL of PI.EXE and PI.DIR prints VMS's
+  lines.

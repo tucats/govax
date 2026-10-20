@@ -283,7 +283,8 @@ func TestSession_directoryBadFileSpec(t *testing.T) {
 }
 
 // DIRECTORY/FULL's file attributes line ends with the characteristics VMS
-// 7.1 names (testdata/pg64's page file), and nothing for the others.
+// 7.1 names (testdata/pg64's page file, testdata/backup69's tree), and
+// nothing for the others.
 func TestCharacteristicsText(t *testing.T) {
 	for _, c := range []struct {
 		fch  uint32
@@ -292,10 +293,30 @@ func TestCharacteristicsText(t *testing.T) {
 		{0, ""},
 		{ondisk.FchNoBackup, ", Backups disabled"},
 		{ondisk.FchNoBackup | fchNoMove, ", Backups disabled, MoveFile disabled"},
-		{ondisk.FchContigB, ""},
+		{ondisk.FchContigB, ", Contiguous best try"},
+		{ondisk.FchContig | ondisk.FchDirectory, ", Contiguous, Directory file"},
+		{ondisk.FchLocked, ""},
 	} {
 		if got := characteristicsText(c.fch); got != c.want {
 			t.Errorf("characteristicsText(%#x) = %q, want %q", c.fch, got, c.want)
+		}
+	}
+}
+
+// A directory's version limit is its files' default, 32767 when it has
+// none, as VMS 7.1's DIRECTORY/FULL shows it (testdata/backup69's tree).
+func TestVersionLimitText(t *testing.T) {
+	for _, c := range []struct {
+		attr FileAttributes
+		want string
+	}{
+		{FileAttributes{}, "No version limit"},
+		{FileAttributes{VersionLimit: 3}, "Version limit: 3"},
+		{FileAttributes{Characteristics: ondisk.FchDirectory}, "Default version limit: 32767"},
+		{FileAttributes{Characteristics: ondisk.FchDirectory, VersionLimit: 5}, "Default version limit: 5"},
+	} {
+		if got := versionLimitText(c.attr); got != c.want {
+			t.Errorf("versionLimitText(%+v) = %q, want %q", c.attr, got, c.want)
 		}
 	}
 }

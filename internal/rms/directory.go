@@ -367,10 +367,7 @@ func writeFullEntry(b *strings.Builder, name string, m filespec.Match, a FileAtt
 
 	sizes := fmt.Sprintf("Size: %12d/%d", a.Used(), a.Allocated)
 
-	limit := "No version limit"
-	if a.VersionLimit != 0 {
-		limit = fmt.Sprintf("Version limit: %d", a.VersionLimit)
-	}
+	limit := versionLimitText(a)
 
 	fmt.Fprintf(b, "%-30sFile ID:  %-22s\n", name, m.Fid.String())
 	fmt.Fprintf(b, "%-30sOwner:    %s\n", sizes, ownerText(a.Owner, opts))
@@ -392,22 +389,58 @@ func writeFullEntry(b *strings.Builder, name string, m filespec.Match, a FileAtt
 	b.WriteString("Access Cntrl List:  None\n\n")
 }
 
+// characteristicWords are the words /FULL's file attributes line adds for
+// a file's characteristics, in the order VMS 7.1 shows them (by bit, as
+// far as the examples go): testdata/pg64's page file shows ", Backups
+// disabled, MoveFile disabled", and testdata/backup69's tree shows
+// "Contiguous best try", "Contiguous", and "Directory file" (a directory
+// says ", Contiguous, Directory file"). The other characteristics' words
+// aren't known, so they show nothing.
+var characteristicWords = []struct {
+	bit  uint32
+	text string
+}{
+	{ondisk.FchNoBackup, "Backups disabled"},
+	{ondisk.FchContigB, "Contiguous best try"},
+	{ondisk.FchContig, "Contiguous"},
+	{ondisk.FchDirectory, "Directory file"},
+	{fchNoMove, "MoveFile disabled"},
+}
+
 // characteristicsText is what /FULL's file attributes line adds for a
-// file's characteristics, each after a comma: VMS 7.1's page file shows
-// ", Backups disabled, MoveFile disabled" (testdata/pg64). The other
-// characteristics' words aren't known, so they show nothing.
+// file's characteristics, each after a comma (characteristicWords).
 func characteristicsText(fch uint32) string {
 	var b strings.Builder
 
-	if fch&ondisk.FchNoBackup != 0 {
-		b.WriteString(", Backups disabled")
-	}
-
-	if fch&fchNoMove != 0 {
-		b.WriteString(", MoveFile disabled")
+	for _, w := range characteristicWords {
+		if fch&w.bit != 0 {
+			b.WriteString(", ")
+			b.WriteString(w.text)
+		}
 	}
 
 	return b.String()
+}
+
+// versionLimitText is the version limit's part of /FULL's file attributes
+// line. A directory's limit is the default for the files in it, and VMS
+// 7.1 shows a directory without one as 32767, the largest version number
+// (testdata/backup69's tree).
+func versionLimitText(a FileAttributes) string {
+	switch {
+	case a.Directory():
+		limit := a.VersionLimit
+		if limit == 0 {
+			limit = ondisk.NoVersionLimit
+		}
+
+		return fmt.Sprintf("Default version limit: %d", limit)
+
+	case a.VersionLimit == 0:
+		return "No version limit"
+	}
+
+	return fmt.Sprintf("Version limit: %d", a.VersionLimit)
 }
 
 // ownerText is an owner's UIC as opts writes it.

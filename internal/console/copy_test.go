@@ -556,3 +556,57 @@ func TestDispatch_copyVfcAcceptedButIgnored(t *testing.T) {
 		t.Errorf("Type(BAR.TXT): %v", err)
 	}
 }
+
+// A quoted host path with a "/" in it is a host file without /HOST, as
+// the user's manual's rule 3 says, in either direction (docs/PHASE-69 -
+// backup save sets.md, side finding 1: COPY wrote "./pi.bck" onto the
+// default volume as a file of that name).
+func TestDispatch_copyHostPathWithoutHost(t *testing.T) {
+	d, c := newTestDispatcher(t)
+	mountFreshContainer(t, c, "DUA0")
+
+	if err := c.cmd().SetDefault("DUA0:"); err != nil {
+		t.Fatalf("SetDefault: %v", err)
+	}
+
+	vol, ok := c.Mounts.Lookup("DUA0")
+	if !ok {
+		t.Fatal("Lookup(DUA0) after mount = not found")
+	}
+
+	createConsoleTestFileWithContent(t, vol, "FOO.TXT", "to the host and back")
+
+	dir := t.TempDir()
+	out := filepath.Join(dir, "out.txt")
+
+	if err := d.Dispatch(`COPY FOO.TXT "` + out + `"`); err != nil {
+		t.Fatalf("Dispatch(COPY to a host path): %v", err)
+	}
+
+	got, err := os.ReadFile(out)
+	if err != nil {
+		t.Fatalf("COPY to %s made no host file: %v", out, err)
+	}
+
+	if !strings.Contains(string(got), "to the host and back") {
+		t.Errorf("host file = %q, want FOO.TXT's text", got)
+	}
+
+	if err := d.Dispatch(`COPY "` + out + `" BACK.TXT`); err != nil {
+		t.Fatalf("Dispatch(COPY from a host path): %v", err)
+	}
+
+	if err := c.cmd().Type("BACK.TXT", false, false); err != nil {
+		t.Fatalf("Type(BACK.TXT): %v", err)
+	}
+
+	// Neither name may have become a volume file named after the path.
+	entries, _, err := c.ContainerSession.Directory("DUA0:[000000]*.TXT;*", rms.DirectoryOptions{})
+	if err != nil {
+		t.Fatalf("Directory: %v", err)
+	}
+
+	if strings.Contains(entries, "/") {
+		t.Errorf("volume directory = %q, want no file named after a host path", entries)
+	}
+}
