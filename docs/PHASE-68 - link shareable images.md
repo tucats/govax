@@ -1,7 +1,7 @@
 # Phase 68 — LINK makes shareable images, and programs use them
 
-**Status:** planned (2026-10-19); the plan reviewed and accepted by the
-author the same day. Part A is the survey. Part B holds the decisions
+**Status:** done (2026-10-20). Planned 2026-10-19; the plan reviewed
+and accepted by the author the same day. Part A is the survey. Part B holds the decisions
 and the author's answers to the plan's questions. Part C is the
 subtasks. Subtask 1, the VMS probe (`testdata/link68`), is done, and so
 are subtask 2 (MACRO's `.TRANSFER`), subtask 3 (options files),
@@ -10,8 +10,8 @@ the image), subtask 6 (the global symbol table), subtask 7 (fixups
 and bases), subtask 8 (maps and ANALYZE/IMAGE), subtask 9 (linking
 against govax's shareable images), subtask 10 (finding a shareable
 image), subtask 11 (activating govax's shareable images), subtask 12
-(shareable image libraries), and subtask 13 (the oracle, and its second
-VAX round, `testdata/link68/round2`).
+(shareable image libraries), subtask 13 (the oracle, and its second
+VAX round, `testdata/link68/round2`), and subtask 14 (the close-out).
 
 ## Goal
 
@@ -597,7 +597,7 @@ them.
     RUN. It matches VMS's log, maps, and `.ANI`s (times masked) and the
     images byte for byte, but for a listed set of differences. A second
     VAX round runs govax's images on VMS (needs the author).
-14. **Close-out.** HELP LINK and HELP RUN (`console.help`: the new
+14. **Done (2026-10-20).** **Close-out.** HELP LINK and HELP RUN (`console.help`: the new
     qualifiers and options, and how a shareable image is found),
     `CLAUDE.md`, `PLAN.md`, and `DEVIATIONS.md`. The Phase 30 doc gets a
     pointer here.
@@ -1590,3 +1590,38 @@ an explicit version (ods2 always takes the next), so the test makes
 SHR1.EXE;8 by copying eight times.
 
 Left: the close-out.
+
+### 2026-10-20 — Subtask 14: the close-out
+
+- **HELP RUN** (`console.help`) describes activation: how a shareable
+  image is found (govax's own images unless a logical name of the
+  image's name is defined, then `SYS$SHARE:.EXE` by RMS's parse, then
+  the host library directory and the name as given), the missing
+  image's messages and status, the GSMATCH check and its rule, where
+  each image goes, its fixups, and that shareable images are private to
+  the process. RUN of a shareable image is NOTFR; the old account (the
+  shims for every image, an image without a transfer address loaded but
+  not run) is gone.
+- **HELP LINK** has `/SHAREABLE[=image]`, `/SYMBOL_TABLE[=file]`,
+  `/FULL`, every VAX LINK option with its values (UNSUPPORTED= refused),
+  SYS$INPUT/OPTIONS, how sections are laid out in clusters, a
+  "Shareable images" section (a transfer vector with `.TRANSFER`, an
+  options file with CLUSTER=, GSMATCH=, and UNIVERSAL=, and a program
+  using the image), and the host command line's `--shareable`,
+  `--symbol-table`, and `--full`. `TestLoadHelpFile_phase68Topics`
+  checks that HELP RUN, LINK, and LIBRARY mention them.
+- `CLAUDE.md` describes the phase, `testdata/link68`, and the packages
+  it touched (`internal/link`, `internal/machine`, `internal/rms`);
+  `PLAN.md`'s index marks it done; `DEVIATIONS.md` has an entry for what
+  VMS settled, what changed (a missing shareable image now stops
+  activation, GSMATCH is checked, RUN of an image with no transfer
+  address is NOTFR), what isn't reproduced (E3, the run statistics,
+  where images land beside LIBRTL), and the unconfirmed choices; the
+  Phase 30 doc points here.
+
+SET SHARE_PREFIX, which `Machine.SharePrefix` waits for, still has no
+command, so the help doesn't mention the prefix. Out of scope, as
+Decision 7 has it: INSTALL and shared global sections, `/SYSTEM`,
+`/P0IMAGE`, `/HEADER`, `/CONTIGUOUS`, `/CROSS_REFERENCE`,
+`/SHAREABLE=COPY`, and LIB$FIND_IMAGE_SYMBOL (Phase 61, which can use
+`machine.ImageLocator` and `link.ReadShareableImage`).

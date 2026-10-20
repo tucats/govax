@@ -14,6 +14,12 @@ LINK V11-39 writes, byte for byte apart from the debug symbol table, and
 its maps line for line; real VMS 7.3 analyzes govax-linked images with no
 errors and runs them.
 
+**Later:** [Phase 68](PHASE-68%20-%20link%20shareable%20images.md)
+(done 2026-10-20) added `LINK/SHAREABLE`, all of VAX LINK's options
+(clusters, `COLLECT=`, `PSECT_ATTR=`, `BASE=`, `GSMATCH=`, ...),
+`/SYMBOL_TABLE`, `/FULL` maps, and shareable image libraries, and RUN's
+activation of the shareable images a program uses.
+
 **Started 2026-09-30.** The user chose to do this phase
 before Phases 28 and 29, so that simple programs get a full MACRO, LINK, and RUN
 cycle first (see [Phase order](#phase-order)).

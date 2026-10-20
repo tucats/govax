@@ -111,6 +111,49 @@ func TestLoadHelpFile_phase23Topics(t *testing.T) {
 	}
 }
 
+// TestLoadHelpFile_phase68Topics checks that HELP RUN, LINK, and LIBRARY
+// describe shareable images (docs/PHASE-68, the close-out): how RUN finds
+// and checks them, and LINK's /SHAREABLE, its options, and its other new
+// qualifiers.
+func TestLoadHelpFile_phase68Topics(t *testing.T) {
+	h, err := help.Load(vaxHelpPath(t))
+	if err != nil {
+		t.Fatalf("LoadHelpFile: %v", err)
+	}
+
+	cases := []struct {
+		words []string
+		want  []string
+	}{
+		{[]string{"RUN"}, []string{"SYS$SHARE:.EXE", "IMAGEFNF", "SHRIDMISMAT", "%DCL-E-NOTFR"}},
+		{[]string{"LINK"}, []string{
+			"/SHAREABLE[=<image>]", "/SYMBOL_TABLE[=<file>]", "/FULL",
+			"UNIVERSAL=<name>", "GSMATCH=<match>,<major>,<minor>", "CLUSTER=<name>",
+			"COLLECT=<cluster>", "PSECT_ATTR=<psect>", "BASE=<address>",
+			"DZRO_MIN=<pages>", "ISD_MAX=<count>", "PROTECT=YES|NO",
+			"IOSEGMENT=<pages>", ".TRANSFER", "--shareable", "--symbol-table",
+		}},
+		{[]string{"LIBRARY"}, []string{"/SHARE"}},
+	}
+
+	c, buf := newTestConsole(t)
+
+	for _, tc := range cases {
+		buf.Reset()
+
+		if err := c.Help(h, tc.words); err != nil {
+			t.Fatalf("Help(%v): %v", tc.words, err)
+		}
+
+		got := buf.String()
+		for _, want := range tc.want {
+			if !strings.Contains(got, want) {
+				t.Errorf("Help(%v) doesn't mention %q", tc.words, want)
+			}
+		}
+	}
+}
+
 // TestLoadHelpFile_everyKeyResolves is a whole-file regression check for
 // the class of bug TestLoadHelpFile_phase23Topics originally caught: every
 // "$"-prefixed key line in the real vax.help file, reconstructed into the

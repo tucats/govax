@@ -4238,6 +4238,49 @@ widened."
   (`internal/vm`); `TestConditions_assembledProgram`'s MASK is now 0.
   The probe's handlers (subtask 8) are to confirm them on VMS.
 
+### [Phase 68] Shareable images: what VMS 7.1 settled, and the rest chosen
+
+- **Where**: `internal/asm` (`.TRANSFER`), `internal/link` (options,
+  clusters, `LINK/SHAREABLE`, the GST, fixups, maps), `internal/lbr`
+  (`shareable.go`), `internal/dclcmd` (`link.go`, `userlib.go`,
+  `library.go`), `internal/rms/shareable.go` (the locator), and
+  `internal/machine` (`shareable.go`, `activate.go`); the probe is
+  `testdata/link68` (`TestLink68Oracle`, VMS V7.1 on simh's VAX 8600,
+  2026-10-19), and its second round, VMS running govax's images,
+  `testdata/link68/round2` (`TestLink68Round2`, 2026-10-20).
+- **Changed to VMS's behavior**: RUN looked for a program's shareable
+  images only on the host and skipped any it didn't find, so a program
+  failed later, at its first call, with LIB$_UNRESOLVED; it now finds
+  them as the image activator does (a logical name of the image's name,
+  then `SYS$SHARE:.EXE`, then the host) and stops with ACTIMAGE and
+  IMAGEFNF, `$STATUS` %X100388B2, when one isn't there (govax's own
+  images, and VMS's run-time libraries, stand in for themselves, by the
+  author's choice). RUN never checked an image's ident; GSMATCH is now
+  enforced (SHRIDMISMAT, %X100020BC). RUN of an image with no transfer
+  address loaded it and said "No transfer address!"; it is now
+  `%DCL-E-NOTFR` for a shareable image or an executable, as on VMS.
+  Beyond the phase: ANALYZE's per-file ERRORS message and its status,
+  MACRO's and LIBRARY's success status (%X10000001), the listing's
+  object record count, the map naming its own version, F$PARSE of a
+  relative directory on the MFD, SHOW LOGICAL across tables,
+  DIRECTORY/OUTPUT, and F$GETSYI("HW_NAME") (the phase doc's subtask 13).
+- **Not reproduced**: E3, a shareable image named to LINK as an object:
+  VMS reads its blocks as object records and reports each illegal one;
+  govax refuses the file with one message. LINK's run statistics in a
+  map and MACRO's performance indicators (the process's, which govax
+  doesn't keep). Where an image lands differs from VMS whenever LIBRTL
+  is mapped first, since govax's shims take no P0 pages. Shareable
+  images stay process-private (no INSTALL, no shared global sections).
+- **Unconfirmed**, govax's choices where the probe was silent (each
+  marked in the phase doc): the load order of two user images, ALWAYS
+  in a program against another control in the image, SS$_VA_IN_USE for a
+  placed image on taken pages, which of two search lists RMS iterates
+  first, the list of run-time libraries treated as emulated, where an
+  /INCLUDE'd library image's cluster goes, the shareable library
+  module's "4", and many of LINK's layout rules for cases no probe image
+  had (Part A and the subtasks' logs).
+- **Status**: fixed (docs/PHASE-68 - link shareable images.md).
+
 <!--
 Entry template:
 

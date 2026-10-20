@@ -162,6 +162,10 @@
 //                          finished paging program
 //              10/20/26    MOUNT/NOLOG
 //              10/20/26    DIRECTORY/OUTPUT; F$GETSYI's HW_NAME
+//              10/20/26    LINK/SHAREABLE, /SYMBOL_TABLE, /FULL, the VAX
+//                          LINK options, and shareable images; RUN's
+//                          activation of shareable images (docs/PHASE-68 -
+//                          link shareable images.md)
 
 This is the help documentation for the govax VAX emulator.  Topic sections are
 marked by a "$" delimiter.  This is followed by as many tokens of the help
@@ -1075,20 +1079,16 @@ $@
 
 $RUN 
 $RUN ,/DEB
-    The RUN command loads a VAX/VMS image into memory, and executes it.  This
-    command assumes that a VMINIT has been run, and the standard micro-kernel
-    (kernel.asm) has been loaded and initialized.  
-    
-    The command will load a valid, normal VAX/VMS image into memory.  References
-    to sharable images must be resolved using "software shims".  These are stubs
-    that map sharable image vector slots to routines in memory, typically supplied
-    by the micro-kernel.  Some shims may redirect control to native runtime code
-    via a special XFC instruction.  See the help on ASM PSEUDO SHIM or SHOW SHIM
-    for more information.
-    
-    If the image has a transfer address, then the image is started at it's user
-    transfer address.  If there is no transfer address, the image is loaded but
-    not executed.  
+    The RUN command loads a VAX/VMS executable image into memory, activates
+    the shareable images it was linked against, and runs it.  This command
+    assumes that a VMINIT has been run, and the standard micro-kernel
+    (kernel.asm) has been loaded and initialized.  The shareable images are
+    activated as VMS's image activator activates images that aren't
+    installed (see "Shareable images" below).
+
+    The image is started at its transfer address.  A shareable image (one
+    LINK/SHAREABLE made) has none, and running one is %DCL-E-NOTFR, "no
+    transfer address", as on VMS.
     
     If the optional /DEBUG qualifier is used, the image is loaded and then run
     under the debugger, which stops it at the first instruction of its main
@@ -1117,11 +1117,57 @@ $RUN ,/DEB
                         
                         If the native file system is case sensitive, the name may 
                         need to be enclosed in quotes to preserve case.
-                        
-                        The image is mapped into memory and executed.  The
-                        shareable images it uses are always looked for on
-                        the native system; govax's shims stand in for any
-                        that aren't there.
+
+    Shareable images:
+
+    Each shareable image the program names (in its shareable image list,
+    and those images' own lists in turn) is found, checked, and placed in
+    the process's P0 space before the program runs.  An image is found
+    by these rules, in order:
+
+        1. An image govax stands for (LIBRTL, LIBRTL2, the system's
+           run-time libraries, ...) is govax's own routines, unless a
+           logical name of the image's own name is defined: DEFINE
+           LIBRTL DUA1:[X]LIBRTL.EXE asks for that file instead.
+        2. The image's name parsed with the default SYS$SHARE:.EXE, as
+           VMS's activator does: a logical name of the image's name
+           (DEFINE MYSHR DUA0:[LIB]MYSHR.EXE) leads to its file, with any
+           fields it lacks taken from SYS$SHARE; otherwise SYS$SHARE does,
+           each place of a search list in turn.  govax doesn't define
+           SYS$SHARE (it has no system disk); define it, in vax.init say,
+           to keep shareable images on a volume.
+        3. The host: the host library directory (the vax.library
+           setting), then the name as given, each as written and then in
+           lower case.
+
+    An image no rule finds stops the activation, as on VMS:
+
+        %DCL-W-ACTIMAGE, error activating image MYSHR
+        -CLI-E-IMAGEFNF, image file not found DUA0:[SYSLIB]MYSHR.EXE;
+
+    (here with SYS$SHARE defined as DUA0:[SYSLIB]), and $STATUS %X100388B2.
+
+    The image's ident and match control (LINK's GSMATCH= option) are
+    checked against those the program was linked with.  The two match
+    controls must agree, and then the program's decides: ALWAYS matches
+    any ident, EQUAL needs the same major and minor ids, and LEQUAL the
+    same major id and a minor id no lower than the program's.  A mismatch
+    is %SYSTEM-F-SHRIDMISMAT, with the image's file named.  govax's own
+    routines always match.
+
+    A shareable image linked at a base address (BASE=) goes there, as does
+    one the program's link placed (an executable linked with BASE=); any
+    other goes at the end of P0's pages, the shareable image list taken
+    from its end, so the program's last image is placed first.  Then each
+    image's fixups are done (its .ADDRESS list and its G^ cells, and those
+    of the program), and its pages take their protections.  Shareable
+    images are private to the process: copied into memory, or mapped
+    from their files with paging on (VMINIT/PAGING; see HELP VMINIT), never
+    shared with another process.
+
+    The debugger's SHOW IMAGE lists the images and the files they came
+    from, and its HELP SHOW SHIM and HELP ASM PSEUDO SHIM describe how
+    govax's own routines are reached.
 
     RUN gives the image no command text: LIB$GET_FOREIGN returns an empty
     string.  To pass an image text, run it as a foreign command (see HELP
@@ -3949,13 +3995,18 @@ $MACR
 $LINK
 
     The LINK command links object modules (.OBJ files, such as MACRO
-    writes) into a VAX/VMS executable image (.EXE) that RUN can run.
+    writes) into a VAX/VMS executable image (.EXE) that RUN can run, or
+    into a shareable image (/SHAREABLE) whose routines and data other
+    images use.  Its images and maps are laid out as VMS's LINK lays them
+    out, so an image made here runs on VMS, and VMS's images link here.
 
     Syntax:
 
         LINK <file>[,<file>...][/HOST] [/EXECUTABLE[=<image>] |
-             /NOEXECUTABLE] [/[NO]TRACEBACK] [/[NO]DEBUG] [/[NO]SYSLIB]
-             [/MAP[=<map>] [/BRIEF] | /NOMAP]
+             /SHAREABLE[=<image>] | /NOEXECUTABLE] [/SYMBOL_TABLE[=<file>]]
+             [/[NO]TRACEBACK] [/[NO]DEBUG] [/[NO]SYSLIB]
+             [/[NO]USERLIBRARY[=(<table>[,...])]]
+             [/MAP[=<map>] [/BRIEF | /FULL] | /NOMAP]
 
     Parameter:
 
@@ -3994,7 +4045,24 @@ $LINK
                         case as the object's type.  A name that is only a
                         directory gets that name in it.
 
+        /SHAREABLE[=<image>]
+                        Makes a shareable image: one with no transfer
+                        address, linked at address 0 so that RUN can put
+                        it anywhere, whose universal symbols (the options
+                        UNIVERSAL= and the objects' .TRANSFER) are in its
+                        global symbol table for other links to use.  The
+                        image is named as /EXECUTABLE names it (one or the
+                        other may name it, not both).  Its options file
+                        sets its ident and match control (GSMATCH=); see
+                        "Shareable images" below.
+
         /NOEXECUTABLE   Links and reports any errors, but writes no image.
+
+        /SYMBOL_TABLE[=<file>]
+                        Also writes the image's global symbol table as an
+                        object module file (default: the first object's
+                        name with the type STB), which another link can
+                        take as an object.
 
         /TRACEBACK      Starts the image through SYS$IMGSTA, as VMS LINK
                         does by default, and gives it a debug symbol
@@ -4037,24 +4105,100 @@ $LINK
         /BRIEF          Makes the map brief: only the object modules and
                         the image synopsis.
 
+        /FULL           Makes the map full: it also lists the image
+                        sections (the Image Section Synopsis: each
+                        cluster's sections, their types, and a shareable
+                        image's global section names, matches, and idents),
+                        and the program sections and symbols the libraries
+                        and shareable images gave.
+
     An options file has a line for each option or list of input files. An
     exclamation point starts a comment, and a hyphen at a line's end
     continues it.  Its files may have /LIBRARY, /INCLUDE, and
     /SELECTIVE_SEARCH, and also /SHAREABLE, a shareable image (.EXE) whose
-    symbols the image uses.  A host path is written in quotes, for its
-    slashes.  The options are:
+    symbols the image uses, found as RUN would find it (see HELP RUN), so
+    a logical name of its name or SYS$SHARE leads to it.  A host path is
+    written in quotes, for its slashes.  SYS$INPUT/OPTIONS reads the
+    options from SYS$INPUT: in a command procedure, the data lines after
+    the LINK command.  Options and keywords may be abbreviated.  The
+    options are VAX LINK's:
 
         STACK=<pages>           The user stack's size (default 20).
         IDENTIFICATION=<id>     The image's identification.
         NAME=<name>             The image's name in its header.
         SYMBOL=<name>,<value>   Defines a global symbol, whatever the
                                 objects say.
+        UNIVERSAL=<name>[,...]  Makes symbols universal: a shareable
+                                image's symbols other images may use.
+        GSMATCH=<match>,<major>,<minor>
+                                A shareable image's match control (ALWAYS,
+                                EQUAL, or LEQUAL) and ident; RUN checks it
+                                (see HELP RUN).  Without it the ident comes
+                                from the link time, and the match is
+                                EQUAL, so a program must be relinked when
+                                the image is.
+        CLUSTER=<name>[,<base>][,<pfc>][,<file>...]
+                                A cluster of image sections: the files
+                                named, placed together and in this order,
+                                at an address if <base> is given.
+        COLLECT=<cluster>,<psect>[,...]
+                                Moves program sections into a cluster.
+        PSECT_ATTR=<psect>,<attribute>[,...]
+                                Changes a program section's attributes
+                                (PIC, SHR, WRT, EXE, RD, GBL, ... and their
+                                NO forms, or an alignment).
+        BASE=<address>          The image's base address.  An executable
+                                linked at a base places its shareable
+                                images at link time too.
+        DZRO_MIN=<pages>        The fewest pages of a writable section's
+                                uninitialized run that become a demand-zero
+                                section of their own.
+        ISD_MAX=<count>         The most image sections an executable may
+                                have before demand-zero runs stay with
+                                their sections (ignored, with OPTIGNSHR, for
+                                a shareable image).
+        PROTECT=YES|NO          Marks the image sections of the clusters
+                                that follow as protected, as VMS needs for
+                                a shareable image installed /PROTECT
+                                (govax has no INSTALL; RUN ignores it).
+        IOSEGMENT=<pages>[,[NO]P0BUFS]
+                                The image I/O segment's size.
 
-    Numbers are decimal, or hexadecimal or octal after %X or %O.
+    UNSUPPORTED= is refused.  Numbers are decimal, or hexadecimal or octal
+    after %X or %O.  A bad option or value is %LINK-F-OPTSYNERR or
+    OPTVALERR, quoting it.
 
     Program sections are laid out as VMS LINK lays them out: grouped into
-    image sections by their attributes, from address 200 (hexadecimal).
-    Writable pages nothing is stored in become demand-zero.
+    image sections by their attributes, from address 200 (hexadecimal) in
+    an executable and 0 in a shareable image, cluster by cluster: the
+    options' clusters, then the default cluster, then a cluster for each
+    shareable image.  Writable pages nothing is stored in become
+    demand-zero.
+
+    Shareable images:
+
+    A library of routines linked /SHAREABLE has, in the usual pattern, a
+    transfer vector first, so that its routines keep their addresses from
+    one version of the image to the next:
+
+        .TRANSFER   MY_ROUTINE          ; MY_ROUTINE is universal
+        .MASK       MY_ROUTINE          ; the routine's entry mask
+        JMP         L^MY_ROUTINE+2      ; and a jump past it
+
+    with an options file such as
+
+        CLUSTER=TRANSFER_VECTOR,,,VECTOR
+        GSMATCH=LEQUAL,1,1000
+        UNIVERSAL=MY_DATA
+
+    A program uses it by naming it in an options file (MYSHR/SHAREABLE),
+    and reaches its routines and data with general mode operands
+    (CALLS #0,G^MY_ROUTINE) or a .ADDRESS of them.  The image's GSMATCH=
+    decides which later versions the program accepts: with LEQUAL, any
+    with the same major id and a higher or equal minor id.  A shareable
+    image may itself use others.  LIBRARY/CREATE/SHARE makes a library of
+    shareable images, which LINK searches for the images that define
+    symbols (see HELP LIBRARY).
 
     A global symbol the objects don't define is looked up, in order, in:
 
@@ -4083,8 +4227,9 @@ $LINK
 
     A routine in a shareable image is reached with a general mode operand
     (CALLS #1,G^LIB$PUT_OUTPUT) or a .ADDRESS of it; the image reaches it
-    through its fixup section, and RUN connects it to the real image if
-    it is there, or else to govax's own routine.
+    through its fixup section, and RUN connects it to the image, or for
+    LIBRTL and the system's other images, to govax's own routines (see
+    HELP RUN).
 
     A symbol nothing defines is a warning, as in VMS LINK: it is 0, each
     reference to it is reported, and the image is still written.  A
@@ -4098,9 +4243,10 @@ $LINK
     /DEBUG.
 
     From the host shell, "govax link <object>..." runs this command, with
-    --executable <file>, --no-executable, --no-traceback, --debug,
-    --no-syslib, --no-userlibrary, --map, --map-file <file>, --brief,
-    --library <file>, or --options <file>.
+    --executable <file>, --shareable, --no-executable, --symbol-table
+    <file>, --no-traceback, --debug, --no-syslib, --no-userlibrary, --map,
+    --map-file <file>, --brief, --full, --library <file>, or --options
+    <file>.
 
     Examples:
 
@@ -4111,6 +4257,12 @@ $LINK
         LINK DUA0:[OBJ]MAIN,SUB /EXECUTABLE=DUA0:[EXE]PROG.EXE
         LINK "hello"/MAP
         LINK MAIN,MYLIB/LIBRARY,PROG/OPTIONS
+
+        LINK/SHAREABLE=MYSHR/MAP/FULL VECTOR,ROUTINES,MYSHR/OPTIONS
+        DEFINE MYSHR DUA0:[WORK]MYSHR.EXE
+        LINK MAIN,SYS$INPUT/OPTIONS     ! in a procedure, then the line:
+        MYSHR/SHAREABLE
+        RUN MAIN
 
     See also the help for MACRO and RUN.
 

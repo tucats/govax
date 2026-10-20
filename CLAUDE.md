@@ -173,7 +173,21 @@ never had.
   can't hold making no pages, P0's made page by page; an exception with
   no user stack to report it ending the image; checked against VMS 7.1
   by `testdata/pg67`). Paging is synchronous, with no
-  PFW, COLPG, or FPG waits. Each later phase has a planning doc.
+  PFW, COLPG, or FPG waits.
+  Phase 68 (done 2026-10-20) is shareable images: MACRO's `.TRANSFER`,
+  every VAX LINK option (`internal/link/options.go`; SYS$INPUT/OPTIONS),
+  clusters, `LINK/SHAREABLE` (the GST, GSMATCH, its fixups, based
+  images), `/SYMBOL_TABLE`, `/FULL` maps, ANALYZE/IMAGE of them, linking
+  against govax-made images, shareable image libraries
+  (LIBRARY/SHARE, LNK$LIBRARY, `/USERLIBRARY`), and RUN's activation:
+  the locator (`rms.ImageLocator`, `machine.ImageLocator`: govax's own
+  images unless a logical name of the image's name is defined, then
+  `SYS$SHARE:.EXE` by RMS's parse, then the host), ACTIMAGE/IMAGEFNF
+  for a missing image, the GSMATCH check (SHRIDMISMAT), placement and
+  each image's fixups (`machine/activate.go`), NOTFR for a shareable
+  image run; checked against VMS 7.1 by `testdata/link68`, and VMS ran
+  govax's images in its second round. Each later phase has a planning
+  doc.
   Read the relevant phase doc
   before starting work on that subsystem, and extend its progress log as you go.
 - `docs/DEVIATIONS.md` — running log of suspected ISA/behavior fidelity issues found in
@@ -352,6 +366,17 @@ never had.
   `vax/pg67s.exe`) on govax and matches VMS's lines, VIRTPEAK masked,
   but for `expectedPG67Differences` (the first instruction's lines, and
   counts that follow from VMS's own FREPTECNT and quota).
+- `testdata/link68/` — Phase 68's probe of shareable images (README.md):
+  sources, options files, `link68.com` (MACRO, LINK/SHAREABLE, LINK,
+  ANALYZE, LIBRARY/SHARE, and RUN, with the error cases), and `vax/`,
+  VMS V7.1's log, maps, listings, analyses, objects, images, and
+  library. `TestLink68Oracle` runs `LINK68.COM` on govax in both paging
+  modes and matches the log, maps, `.ANI`s, listings, and objects line
+  for line or record for record, and the images byte for byte, but for a
+  listed set of differences (times and idents, the addresses that
+  depend on where LIBRTL went). `round2/` is VMS running govax's images
+  (`run2.com`; results in `vax/round2/`, govax's images in its
+  `govax/`), replayed by `TestLink68Round2`.
 - `testdata/probe49/` — Phase 49's VMS probe in three rounds (`probe6`,
   `probe6b`, `probe6c`; README.md has each round's answers), run by
   `TestProbe6*`; `testdata/rms49/` and `testdata/sec49/` are the phase's
@@ -619,6 +644,13 @@ expect adjustment as phases land):
   (`imagesource.go`) returns an image's bytes and its held source,
   through `rms.Session.AccessImage` for a volume image (read access,
   sharing reads only, so a writer gets RMS$_FLK while it runs).
+  Phase 68: `shareable.go` finds a shareable image (`ImageLocator`,
+  `FindShareableImage`: `Emulated` images go to the shims unless a
+  logical name of their name is defined, then `rms.ImageLocator`), and
+  `activate.go` activates a program's images in both loaders: the
+  GSMATCH check (`identMatches`, `IdentMismatchError`), placement
+  (`imageBase`; `placeEmulated` for LIBRTL placed at link time), and a
+  failed activation taken down (`ResetICBList`).
 - `internal/dclcmd` — the utility commands (Phase 52; earlier in
   `internal/console`): DIRECTORY, TYPE, COPY, DELETE, PURGE, RENAME,
   DUMP (`dump.go`, Phase 51),
@@ -1253,6 +1285,13 @@ expect adjustment as phases land):
   I/O bypasses the record layer and never extends the file, so a fault
   in the middle of an RMS call can use it. DISMOUNT of the page file's
   volume is refused with VMS's messages (`FilesOpenError`).
+  Phase 68: `shareable.go`'s `ImageLocator` is the image activator's
+  search, shared by RUN and LINK: an image its `Emulated` hook claims
+  (the machine's; LINK has none) unless a logical name of its name is
+  defined, then `Session.FindShareableImage` (the name parsed with the
+  default `SYS$SHARE:.EXE`, each element of a search list in turn),
+  then the host; a missing image is an `ImageNotFoundError` with the
+  spec RMS tried last.
 - `internal/link` — the VAX linker (Phase 30): builds a VMS executable image from
   `internal/obj` modules, laid out as real LINK lays images out (byte for byte on
   the fixtures). The console's `LINK` command (`internal/dclcmd/link.go`) drives it.
@@ -1267,8 +1306,19 @@ expect adjustment as phases land):
   global symbol table after the DST (`debug.go`). The three real `/DEBUG`
   images (TRDBGLNK, TRLNKDBG, FORTH) match byte for byte, except that
   govax pads the GST to a whole block where real LINK ends the file
-  mid-block (Decision 7). Fixup cells for a shareable image
-  are in symbol-name order (`orderCells`).
+  mid-block (Decision 7). Fixup cells for a shareable image follow
+  the image's own global symbol table (`orderCells`, `fixup.go`).
+  Phase 68: the options files (`options.go`, `OptionsParser`, every
+  VAX LINK option but UNSUPPORTED=), clusters and the allocation passes
+  (`cluster.go`: CLUSTER=, COLLECT=, PSECT_ATTR=, BASE=, DZRO_MIN=,
+  ISD_MAX=, IOSEGMENT=), `Options.Shareable` (`shareable.go`: the
+  image at base 0, its section types, GSMATCH, its fixup section and
+  `.ADDRESS` list; `universal.go`: the GST from UNIVERSAL= and
+  `.TRANSFER`'s `OPR_REDEF`, also written as an `.STB` by
+  `Image.SymbolTable`), based images, and `/FULL` maps (`mapfull.go`).
+  `ReadShareableImage` reads a shareable image's GST and sections, VMS's
+  or govax's, for a link against it; the images a link uses get their
+  clusters in the order their sources supplied them.
 - `internal/lbr` — the librarian file format (Phase 30): reads `.OLB`/`.MLB`/etc.
   libraries, their B-tree indexes and module records, including DCX data-reduced
   libraries (`dcx.go`) such as STARLET.OLB. Writes them too (Phase 28): `Builder`
