@@ -173,7 +173,8 @@ func TestLink68Oracle(t *testing.T) {
 		}
 
 		for _, entry := range names {
-			if name := entry.Name(); name != "link68.log" {
+			// round2 is the second round's (TestLink68Round2).
+			if name := entry.Name(); name != "link68.log" && !entry.IsDir() {
 				t.Run(name, func(t *testing.T) { link68CompareFile(t, out, name) })
 			}
 		}

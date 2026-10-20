@@ -10,8 +10,8 @@ the image), subtask 6 (the global symbol table), subtask 7 (fixups
 and bases), subtask 8 (maps and ANALYZE/IMAGE), subtask 9 (linking
 against govax's shareable images), subtask 10 (finding a shareable
 image), subtask 11 (activating govax's shareable images), subtask 12
-(shareable image libraries), and subtask 13 (the oracle; its second VAX
-round, `testdata/link68/round2`, waits for the author).
+(shareable image libraries), and subtask 13 (the oracle, and its second
+VAX round, `testdata/link68/round2`).
 
 ## Goal
 
@@ -592,7 +592,7 @@ them.
     a user's shareable image library (`MYLIB/LIBRARY`), and its default
     libraries (`LNK$LIBRARY`, `LNK$LIBRARY_1`, ...; `/USERLIBRARY`),
     matched against `myshr.olb`, `myshr.lis`, and MAIN1L/MAIN1U.
-13. **Done (2026-10-20), but for the VAX round.** **The milestone and the oracle.** `TestLink68Oracle` runs
+13. **Done (2026-10-20).** **The milestone and the oracle.** `TestLink68Oracle` runs
     `LINK68.COM` on govax: MACRO, LINK/SHAREABLE, LINK, ANALYZE, and
     RUN. It matches VMS's log, maps, and `.ANI`s (times masked) and the
     images byte for byte, but for a listed set of differences. A second
@@ -1555,3 +1555,38 @@ results go in `testdata/link68/vax/round2/` (`copyout.cmd`). It also
 shows whether VMS 7.1's LIBRTL matches the ident govax's tables give it.
 
 Left: round 2's results, and the close-out.
+
+### 2026-10-20 — Subtask 13: round 2 on VMS
+
+The author ran `RUN2.COM` on VMS V7.1, on a volume govax had run
+`LINK68.COM` on. The results are in `testdata/link68/vax/round2/`, and
+govax's images and library from that volume in its `govax/`
+(`round2/README.md` has the findings):
+
+- VMS's ANALYZE/IMAGE finds 0 errors in each of govax's 19 images, so a
+  global symbol table ending at a block's end (Decision 7) is fine.
+- Every program of govax's runs on VMS with round 1's output against
+  govax's shareable images, LIBRTL's ident (govax's tables') included.
+- VMS's LINK reads govax's images' tables (MAIN1V, MAIN2V, and through
+  govax's MYSHR.OLB), and VMS's LIBRARIAN makes, from govax's images,
+  the library govax makes (MYSHRV.OLB, byte for byte given its times:
+  `TestCreateShareableLibraryOfGovaxImages`).
+- A new GSMATCH case confirms Part A's rule: MAIN1N (linked against
+  EQUAL,1,1001) fails against LEQUAL,1,1000.
+
+`TestLink68Round2` runs RUN2.COM on govax, in both paging modes, with
+the same images, and matches VMS's RUN2.LOG up to its closing
+DIRECTORY (the volume's), each `.AN2` (VMS's analysis of a govax image
+against govax's), the maps of the links, MAIN1V's and MAIN2V's images,
+and the library listings. What it found: **ANALYZE's `$STATUS`** after
+a clean analysis is its ERRORS message's, %X10B18033, inhibited
+(`anlErrors`); after errors it stays CLI_ANALYZEERRORS
+(**unconfirmed**).
+
+RUN2.COM's link through MYSHR.OLB lacked `/EXECUTABLE=MAIN1W`, so it
+wrote MAIN1V.EXE;2 and its RUN found no MAIN1W; the procedure is kept as
+run, and govax's run of it does the same. COPY can't give a volume file
+an explicit version (ods2 always takes the next), so the test makes
+SHR1.EXE;8 by copying eight times.
+
+Left: the close-out.

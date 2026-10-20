@@ -16,10 +16,17 @@ var link68Dir = filepath.Join("..", "..", "testdata", "link68", "vax")
 func shareableModules(t *testing.T, b *Builder, images ...string) []*Entry {
 	t.Helper()
 
+	return shareableModulesIn(t, b, link68Dir, images...)
+}
+
+// shareableModulesIn is shareableModules for the images in dir.
+func shareableModulesIn(t *testing.T, b *Builder, dir string, images ...string) []*Entry {
+	t.Helper()
+
 	var entries []*Entry
 
 	for _, name := range images {
-		e, err := b.ShareableModule(readFixture(t, filepath.Join(link68Dir, name+".exe")))
+		e, err := b.ShareableModule(readFixture(t, filepath.Join(dir, name+".exe")))
 		if err != nil {
 			t.Fatalf("%s: %v", name, err)
 		}
@@ -49,6 +56,36 @@ func TestCreateShareableLibrary(t *testing.T) {
 	}
 
 	entries := shareableModules(t, b, "shr1", "shr2")
+	withRealTimes(t, b, real, entries)
+
+	for _, e := range entries {
+		if err := b.Insert(e); err != nil {
+			t.Fatal(err)
+		}
+	}
+
+	requireSameLibrary(t, b.Bytes(), want)
+}
+
+// TestCreateShareableLibraryOfGovaxImages makes MYSHRV.OLB from govax's
+// SHR1.EXE and SHR2.EXE, as VMS's librarian did in testdata/link68's
+// round 2, and checks it is VMS's byte for byte, given its times and
+// name: real LIBRARIAN reads govax's images' tables as govax does.
+func TestCreateShareableLibraryOfGovaxImages(t *testing.T) {
+	round2 := filepath.Join(link68Dir, "round2")
+	want := readFixture(t, filepath.Join(round2, "myshrv.olb"))
+
+	real, err := Open(want)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	b, err := Create(TypeShareable)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	entries := shareableModulesIn(t, b, filepath.Join(round2, "govax"), "shr1", "shr2")
 	withRealTimes(t, b, real, entries)
 
 	for _, e := range entries {

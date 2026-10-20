@@ -176,8 +176,19 @@ func (c *Context) analyzeFiles(opts AnalyzeOptions, inputType, outputType, title
 		}
 	}
 
+	if problems == nil && c.SetStatus != nil {
+		c.SetStatus(anlErrors | stsInhibitMsg)
+	}
+
 	return problems
 }
+
+// anlErrors is the condition value of ANALYZE's ERRORS message (the
+// facility's informational), which VMS's ANALYZE/IMAGE leaves as its
+// $STATUS when it found no errors: %X10B18033, with STS$M_INHIB_MSG
+// (testdata/link68's round 2). What it leaves after finding errors is
+// unconfirmed; govax's is CLI_ANALYZEERRORS.
+const anlErrors = 0x00B18033
 
 // analysisCount is the message ANALYZE shows after each file's report,
 // with the number of errors its analysis found, as VMS 7's ANALYZE words

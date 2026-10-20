@@ -45,6 +45,31 @@ what govax made. It asks:
 
        govax console < testdata/link68/round2/copyout.cmd
 
+## The results (2026-10-20)
+
+VMS V7.1 ran it; everything is in `../vax/round2/`, with govax's images
+and library from the volume in `govax/`. `TestLink68Round2`
+(`internal/console/link68round2_test.go`) runs RUN2.COM on govax with
+those same images and matches VMS's log, analyses, maps, images, and
+listings; `TestCreateShareableLibraryOfGovaxImages` (`internal/lbr`)
+matches MYSHRV.OLB.
+
+- VMS's ANALYZE/IMAGE finds 0 errors in all 19 of govax's images, and
+  its reports match govax's own analyses of them. Its `$STATUS` is
+  %X10B18033, ANALYZE's ERRORS message, inhibited.
+- Every program runs with round 1's output, LIBRTL's ident included.
+  MAIN1A fails against SHR1A's relink, as on round 1. MAIN1N, linked
+  against SHR1's EQUAL,1,1001 relink (the NEVER link failed), fails
+  against the final LEQUAL,1,1000: the match controls must agree.
+- VMS's LINK reads govax's images' tables (MAIN1V, MAIN2V, through
+  MYSHR.OLB), and its maps name govax's images' creator as their LNM
+  record says, `Linker govax V1.0-551`.
+- VMS's LIBRARIAN makes the library govax makes from govax's images
+  (MYSHRV.OLB), and lists govax's MYSHR.OLB as govax does.
+- RUN2.COM's link through MYSHR.OLB gave no `/EXECUTABLE=MAIN1W`, so it
+  wrote MAIN1V.EXE;2 and `RUN MAIN1W` found no file: the procedure's
+  mistake, kept as run (govax's run of it does the same).
+
 Nothing here is DIGITAL's: the images are govax's, linked from this
 probe's own sources, and VMS's links of them use only those images and
 VMS's own LIBRTL by name.
