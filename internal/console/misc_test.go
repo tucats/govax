@@ -310,3 +310,41 @@ func TestHelp_nilHelp(t *testing.T) {
 		t.Errorf("output = %q, want a no-help-file message", buf.String())
 	}
 }
+
+// TestPrint_DCLSymbols checks that PRINT's expressions find a DCL symbol
+// before a machine symbol of the same name, and that a DCL string that
+// isn't a number leaves the machine's symbol to be found.
+func TestPrint_DCLSymbols(t *testing.T) {
+	d, c, buf := newCommandDispatcher(t)
+
+	c.Symbols.Set("COUNT", 0x10, machine.SymbolUser)
+	c.Symbols.Set("NAME", 0x20, machine.SymbolUser)
+
+	for _, line := range []string{
+		"COUNT = 5",
+		`TEXT = "%X40"`,
+		`NEG = "-2"`,
+		`NAME = "FRED"`,
+	} {
+		if err := d.Dispatch(line); err != nil {
+			t.Fatalf("%s: %v", line, err)
+		}
+	}
+
+	for _, tc := range []struct{ line, want string }{
+		{"PRINT COUNT", "00000005"},
+		{"PRINT COUNT+TEXT", "00000045"},
+		{"PRINT NEG", "FFFFFFFE"},
+		{"PRINT NAME", "00000020"},
+	} {
+		buf.Reset()
+
+		if err := d.Dispatch(tc.line); err != nil {
+			t.Fatalf("%s: %v", tc.line, err)
+		}
+
+		if got := strings.TrimSpace(buf.String()); got != tc.want {
+			t.Errorf("%s = %q, want %q", tc.line, got, tc.want)
+		}
+	}
+}

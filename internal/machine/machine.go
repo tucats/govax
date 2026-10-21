@@ -291,6 +291,12 @@ type Hooks struct {
 	// shareable image is looked for after the volumes (ImageLocator); nil
 	// reads the vax.library setting.
 	LibraryDir func() string
+
+	// DCLSymbol returns the value of the DCL symbol name as a number, for
+	// PRINT's expressions, which look in DCL's symbol table before the
+	// machine's; ok is false when DCL has no such symbol, or one whose
+	// value isn't a number. Nil for no DCL.
+	DCLSymbol func(name string) (v uint32, ok bool)
 }
 
 // consoleTerminal is the physical device name of process 1's terminal,

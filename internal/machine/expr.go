@@ -74,6 +74,11 @@ type Evaluator struct {
 	// debugger path name (FORTH\NEXT, DBGDIS\START\LOOP), or a line
 	// (%LINE 120, DBGSUB\%LINE 14). Nil for none.
 	Debug DebugNames
+
+	// Names, when set, is asked about a name before any other table
+	// (PRINT's DCL symbols, Hooks.DCLSymbol); ok false passes the name
+	// on to the usual lookup. Nil for none.
+	Names func(name string) (v uint32, ok bool)
 }
 
 // DebugNames looks names up in a debugger's symbol table, for the
@@ -878,7 +883,8 @@ func (e *Evaluator) parseDefined(s string) (uint32, string, error) {
 	return boolToUint32(ok), s[1:], nil
 }
 
-// lookupSymbol resolves name from the console's symbol table, then from
+// lookupSymbol resolves name from the Names hook, if there is one, then
+// from the console's symbol table, then from
 // the assembler's predefined system symbols (asm.BuiltinSymbol: PTE$K_*,
 // VAX$PR_*, XFC$*, OPC$_*, ...), which the C source kept in that same
 // table. A console symbol of the same name wins.
@@ -887,6 +893,12 @@ func (e *Evaluator) parseDefined(s string) (uint32, string, error) {
 // path name (one with a backslash) is looked for only there.
 func (e *Evaluator) lookupSymbol(name string) (uint32, bool) {
 	if !strings.Contains(name, `\`) {
+		if e.Names != nil {
+			if v, ok := e.Names(name); ok {
+				return v, true
+			}
+		}
+
 		if v, ok := e.Symbols.Get(name); ok {
 			return v, true
 		}

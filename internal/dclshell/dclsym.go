@@ -177,6 +177,41 @@ func (t *dclSymbolTable) lookup(word string) (dclSymbol, bool) {
 	return dclSymbol{}, false
 }
 
+// numericSymbol is the machine's Hooks.DCLSymbol, which PRINT's
+// expressions ask about a name before the machine's symbol table: the
+// value of the DCL symbol name means, if it's an integer or a string
+// holding a number (with an optional sign, as DCL reads one). A string
+// that isn't a number (a foreign command, "TRUE") isn't taken, so it
+// can't hide a machine symbol of the same name.
+func (c *Interpreter) numericSymbol(name string) (uint32, bool) {
+	sym, ok := c.dclSymbols.lookup(name)
+	if !ok {
+		return 0, false
+	}
+
+	if sym.integer {
+		return uint32(sym.dclValue().Int()), true
+	}
+
+	text := strings.TrimSpace(sym.value)
+	negative := strings.HasPrefix(text, "-")
+
+	if negative || strings.HasPrefix(text, "+") {
+		text = strings.TrimSpace(text[1:])
+	}
+
+	n, ok := parseDCLNumber(text)
+	if !ok {
+		return 0, false
+	}
+
+	if negative {
+		n = -n
+	}
+
+	return n, true
+}
+
 // lookup returns the symbol word names: the one whose full name it is, or
 // else the one it's an allowed abbreviation of.
 func (t dclSymbols) lookup(word string) (dclSymbol, bool) {

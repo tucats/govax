@@ -1398,7 +1398,7 @@ change how the machine is set up.
 | `SET RADIX DECIMAL\|HEXADECIMAL` | The console's radix for `PRINT` and machine expressions (hexadecimal unless set). |
 | `SET PROMPT="text"` | Change the prompt (and save it in the configuration). |
 | `SET DEBUG [NO]switch` | govax's internal tracing switches. |
-| `PRINT item[,...]` | Print quoted text and machine expressions: numbers in the console's radix and the debugger's symbols, not DCL symbols (`PRINT "Base: ", 200+10`). For DCL values use `WRITE SYS$OUTPUT`. |
+| `PRINT item[,...]` | Print quoted text and machine expressions, numbers in the console's radix (`PRINT "Base: ", 200+10`). A name is a DCL symbol's value first, if it's an integer or a string holding a number (`COUNT = 5`, then `PRINT COUNT+1`), then the machine's symbol. For DCL string values use `WRITE SYS$OUTPUT`. |
 | `TIME command` | Run a command and say how long it took. |
 | `TEST n` | govax's internal test sequences. |
 

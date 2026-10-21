@@ -61,6 +61,7 @@ func NewInterpreter(m *machine.Machine, out io.Writer) *Interpreter {
 		ConsoleCommand:  c.consoleCommand,
 		RequestQuit:     func() { c.quit = true },
 		HandleAttention: c.HandleAttention,
+		DCLSymbol:       c.numericSymbol,
 	}
 
 	c.setStatus(ssNormal, nil)

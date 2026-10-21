@@ -2737,6 +2737,15 @@ $PRIN
     spaces or zeroes.  If the radix is hexadecimal, the values are
     printed as 8-byte hexadecimal values.
 
+    A name in an expression is looked for first among the DCL symbols:
+    one with an integer value, or a string value that is a number
+    ("5", "-2", "%X40"), is that number.  A name that isn't such a DCL
+    symbol is looked for among the machine's symbols (ASM's and MACRO
+    images', the predefined ones, the registers), as before.
+
+        $ COUNT = 5
+        $ PRINT "Count+1: ", COUNT+1
+
     Syntax:
 
         PRINT <expression> [, <expression>...]
