@@ -3,6 +3,7 @@ package corevms
 import (
 	"errors"
 	"fmt"
+	"math/bits"
 
 	"github.com/tucats/govax/internal/cpu"
 	"github.com/tucats/govax/internal/registers"
@@ -371,16 +372,19 @@ func (env *Environment) DispatchException(code uint32, params []uint32, pc uint3
 }
 
 // noStackToReport reports whether an exception in mode psl's couldn't be
-// reported because the user stack has no room for its arrays and can't
-// grow: in created space (regions.go), a user-mode exception whose
-// dispatch failed with SYS$SRCHANDLER in place, which only the stack's
-// expansion failing (the paging file quota, or the table area's room)
-// can cause. The book's 16.2.1.3: "If there is not enough user stack to
-// report the exception, the normal condition handler search is bypassed
-// and the exception is reported directly to the last chance handler,"
-// which by default ends the image.
+// reported because the user stack has no room for its arrays: a
+// user-mode exception whose dispatch failed with SYS$SRCHANDLER in place,
+// which only a stack that can't be written can cause. In created space
+// (regions.go) that's the stack's expansion failing (the paging file
+// quota, or the table area's room); with paging off, whose user stack
+// is a fixed size, a program that has used all of it (a runaway
+// recursion), or an SP the program set somewhere else. The book's
+// 16.2.1.3: "If there is not enough user stack to report the exception,
+// the normal condition handler search is bypassed and the exception is
+// reported directly to the last chance handler," which by default ends
+// the image.
 func (env *Environment) noStackToReport(psl registers.PSL) bool {
-	if !env.createdSpace() || psl.CurMod() != registers.User {
+	if psl.CurMod() != registers.User {
 		return false
 	}
 
@@ -545,11 +549,22 @@ func (env *Environment) nextHandler(d *conditionDispatch) (uint32, error) {
 			// last-chance handler when "the stack is invalid".
 			handler, err1 := env.mem.LoadLongword(env.cpu, frame)
 			caller, err2 := env.mem.LoadLongword(env.cpu, frame+12)
+			savedPC, err3 := env.mem.LoadLongword(env.cpu, frame+16)
 
-			if err1 != nil || err2 != nil {
+			if err1 != nil || err2 != nil || err3 != nil {
 				d.stage = stageLastChance
 
 				continue
+			}
+
+			// A condition handler's own frame (the dispatcher called it,
+			// so its saved PC is SYS$SRCHANDLER's) is searched, but the
+			// frames above it aren't: the earlier condition's search
+			// has looked at them already.
+			if savedPC == srchandlerAddr {
+				if next, ok := env.pastSearchedFrames(frame); ok {
+					caller = next
+				}
 			}
 
 			d.fp, d.depth = caller, depth+1
@@ -569,6 +584,48 @@ func (env *Environment) nextHandler(d *conditionDispatch) (uint32, error) {
 			return env.catchAll(d)
 		}
 	}
+}
+
+// pastSearchedFrames returns the frame a search goes on to after
+// frame, the call frame of a condition handler the dispatcher called,
+// for a condition raised while that handler (or a procedure it called)
+// was running: "multiply active signals" (Internals book, 4.3.3). The
+// frames from the one the earlier condition happened in up to the one
+// that established the handler were searched for the earlier condition,
+// so they are passed over, and the search goes on with the
+// establisher's caller. Without the skip a handler that signals would
+// be called again for its own condition, and one that faults would be
+// called for its fault until the stack ran out.
+//
+// The establisher is the earlier condition's mechanism array's frame.
+// That array is found from the handler's frame as the book finds it: the
+// SP before the handler's call, which the frame's register save mask and
+// stack alignment give, is the handler's argument list, whose second
+// longword is the mechanism array's address. ok is false if any of it
+// can't be read.
+func (env *Environment) pastSearchedFrames(frame uint32) (next uint32, ok bool) {
+	c := env.cpu
+
+	maskPSW, err := env.mem.LoadLongword(c, frame+4)
+	if err != nil {
+		return 0, false
+	}
+
+	// Bits 16-27 are the entry mask's registers, saved after the frame's
+	// five longwords; bits 30-31 the bytes CALLG's longword alignment
+	// dropped.
+	saved := uint32(bits.OnesCount32(maskPSW >> 16 & 0xFFF))
+	argList := frame + 20 + 4*saved + maskPSW>>30
+
+	mech, err1 := env.mem.LoadLongword(c, argList+8)
+	establisher, err2 := env.mem.LoadLongword(c, mech+4)
+	next, err3 := env.mem.LoadLongword(c, establisher+12)
+
+	if errors.Join(err1, err2, err3) != nil {
+		return 0, false
+	}
+
+	return next, true
 }
 
 // callConditionHandler calls handler for d with the mechanism array's

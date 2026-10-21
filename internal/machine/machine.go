@@ -226,6 +226,13 @@ type Machine struct {
 	imageStatus uint32
 	imageEnded  bool
 	runHost     bool
+
+	// imageSP and imageMode are process 1's stack pointer and access mode
+	// when RUN called its image, so an image that never exits gets the
+	// stack back at its rundown (EndAbandonedImage), as a returning one
+	// gives it back by returning.
+	imageSP   uint32
+	imageMode registers.AccessMode
 }
 
 // Hooks are what the machine asks of the console that runs it, about

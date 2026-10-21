@@ -39,8 +39,9 @@ further.
 | `exchange2.cmd`, `copyout2.cmd` | Add round 2 to the exchange volume, and copy its results into `vax/` |
 
 `tb70.com` takes an optional P1, the list of parts to run (`"S,A,O"`);
-VMS's run gives none. govax's own dry run leaves part H out
-(`docs/PHASE-70 - traceback.md`'s side findings: govax loops on it).
+VMS's run gives none. govax's own dry run left part H out
+(`docs/PHASE-70 - traceback.md`'s side findings: govax looped on it,
+until subtask 3).
 
 ## The VAX run
 

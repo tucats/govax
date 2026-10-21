@@ -123,6 +123,61 @@ func TestXfcImageExitWithoutConsoleCallHalts(t *testing.T) {
 	}
 }
 
+// TestImageExitLongChain: image exit finds the console's frame however
+// many frames a runaway recursion left above it. The chain climbs, 8
+// bytes a frame (only each frame's saved FP and PC are read), for more
+// frames than maxUnwindFrames; the console's frame is last.
+func TestImageExitLongChain(t *testing.T) {
+	e := newEngine()
+	c := e.cpu
+
+	const (
+		first   = 0x1000
+		console = 0xF0000
+		stride  = 8
+	)
+
+	fp := uint32(first)
+	for ; fp+stride < console-20; fp += stride {
+		putLongword(t, c, e.mem, fp+12, fp+stride)
+		putLongword(t, c, e.mem, fp+16, 0x2000) // a return PC in the program
+	}
+
+	if frames := (fp - first) / stride; frames <= maxUnwindFrames {
+		t.Fatalf("only %d frames; the test needs more than %d", frames, maxUnwindFrames)
+	}
+
+	putLongword(t, c, e.mem, fp+12, console) // the last frame's caller
+	putLongword(t, c, e.mem, console+4, 0)  // no registers saved
+	putLongword(t, c, e.mem, console+12, SentinelReturn)
+	putLongword(t, c, e.mem, console+16, SentinelReturn)
+
+	c.SetGPR(registers.FP, first)
+
+	if err := e.exitImage(); !errors.Is(err, ErrConsoleCallReturned) {
+		t.Fatalf("exitImage = %v, want ErrConsoleCallReturned", err)
+	}
+
+	if sp := c.GPR(registers.SP); sp != console+20 {
+		t.Errorf("SP = %#x, want %#x, past the console's frame", sp, console+20)
+	}
+}
+
+// TestImageExitLoopingChain: a chain that loops back on itself ends in
+// a halt, not a hang.
+func TestImageExitLoopingChain(t *testing.T) {
+	e := newEngine()
+	c := e.cpu
+
+	putLongword(t, c, e.mem, 0x1000+12, 0x2000)
+	putLongword(t, c, e.mem, 0x2000+12, 0x1000)
+	c.SetGPR(registers.FP, 0x1000)
+
+	if err := e.exitImage(); !errors.Is(err, ErrHalted) {
+		t.Fatalf("exitImage = %v, want ErrHalted", err)
+	}
+}
+
 // TestXfcShimImageCall: a shim answering with an image's *ServiceCall
 // (the subprocess CLI's RUN, docs/PHASE-48.md) has the image called on a
 // frame whose saved PC and FP are SentinelReturn: the image's $EXIT

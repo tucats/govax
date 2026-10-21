@@ -1,10 +1,13 @@
 package corevms
 
 import (
+	"errors"
 	"strings"
 	"testing"
 
+	"github.com/tucats/govax/internal/cpu"
 	"github.com/tucats/govax/internal/registers"
+	"github.com/tucats/govax/internal/vmsdef"
 )
 
 // Addresses the condition tests lay things out at, inside the fixture's
@@ -214,6 +217,36 @@ func TestDispatchException_declines(t *testing.T) {
 	}
 }
 
+// TestDispatchException_noUserStack checks the book's rule for a
+// user-mode exception whose arrays the stack can't take, with paging off
+// as in created space: no search, the image's end (cpu.ErrImageExit)
+// with the condition, marked STS$M_INHIB_MSG, as its status.
+func TestDispatchException_noUserStack(t *testing.T) {
+	env := conditionFixture(t)
+
+	if env.createdSpace() {
+		t.Fatal("the fixture is in created space; the test is for paging off")
+	}
+
+	psl := env.cpu.PSL()
+	psl.SetCurMod(registers.User)
+	env.cpu.SetGPR(registers.SP, 0x7FFF0000)
+
+	ok, err := env.DispatchException(scbReservedOp, nil, 0x3000, psl)
+	if ok || !errors.Is(err, cpu.ErrImageExit) {
+		t.Fatalf("DispatchException = %v, %v; want the image's end", ok, err)
+	}
+
+	want := vmsdef.Symbols["SS$_ROPRAND"] | stsInhibitMsg
+	if env.Process.ExitStatus != want || env.cpu.GPR(registers.R0) != want {
+		t.Errorf("exit status %#x, R0 %#x; want %#x", env.Process.ExitStatus, env.cpu.GPR(registers.R0), want)
+	}
+
+	if len(env.Process.conditions) != 0 {
+		t.Errorf("%d dispatches; want none", len(env.Process.conditions))
+	}
+}
+
 // TestSrchandler_resignalThenContinue walks a search: frame A's handler
 // resignals, frame B's changes the PC and saved R0 and continues.
 func TestSrchandler_resignalThenContinue(t *testing.T) {
@@ -405,6 +438,52 @@ func TestSrchandler_nested(t *testing.T) {
 	if _, err := serviceSysSrchandler(env, nil); err != nil || c.GPR(registers.PC) != 0x3000 {
 		t.Errorf("outer continue: %v, PC %#x; want PC 0x3000", err, c.GPR(registers.PC))
 	}
+}
+
+// TestSrchandler_multiplyActive checks VMS's search for a condition
+// raised in a handler (the Internals book's "multiply active signals"):
+// the handler's own frame is searched, then the frames the first search
+// looked at, up to the handler's establisher, are passed over. The
+// handler's frame is laid out as the engine's call builds it: below the
+// first dispatch's argument list, with two registers saved, its saved PC
+// SYS$SRCHANDLER's and its saved FP the frame the first condition
+// happened in.
+func TestSrchandler_multiplyActive(t *testing.T) {
+	env := conditionFixture(t)
+	c := env.cpu
+
+	if ok, _ := env.DispatchException(scbReservedOp, nil, 0x3000, c.PSL()); !ok {
+		t.Fatal("not dispatched")
+	}
+
+	outer := env.Process.conditions[0]
+	_, _ = serviceSysSrchandler(env, nil) // calls condH1, established by frame A
+
+	const handlerHH = 0x5200 // the handler condH1 established for itself
+
+	handlerFrame := outer.sp - 8 - 20 // two saved registers, then the frame
+
+	putLongword(t, env, handlerFrame, handlerHH)
+	putLongword(t, env, handlerFrame+4, 0x0003<<16)
+	putLongword(t, env, handlerFrame+12, condFrameA)
+	putLongword(t, env, handlerFrame+16, condStub)
+	c.SetGPR(registers.FP, handlerFrame)
+	c.SetGPR(registers.SP, handlerFrame-0x40)
+
+	if ok, _ := env.DispatchException(scbReservedAddr, nil, 0x5010, c.PSL()); !ok {
+		t.Fatal("inner not dispatched")
+	}
+
+	r0, err := serviceSysSrchandler(env, nil)
+	expectHandlerCall(t, env, r0, err, handlerHH, handlerFrame, 0)
+
+	// handlerHH resignals: frame A (condH1, which is running) is passed
+	// over, and frame B's handler is next, one frame up.
+	c.SetGPR(registers.R0, ssResignal)
+	c.SetGPR(registers.SP, env.Process.conditions[1].sp)
+
+	r0, err = serviceSysSrchandler(env, nil)
+	expectHandlerCall(t, env, r0, err, condH2, condFrameB, 1)
 }
 
 // TestSrchandler_noDispatch checks that reaching SYS$SRCHANDLER with

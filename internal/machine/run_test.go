@@ -130,3 +130,41 @@ func TestRun_driverCallsExitHandlers(t *testing.T) {
 		t.Errorf("the exit handler saw status %d (%v), want 7: it wasn't called", got, err)
 	}
 }
+
+// TestEndAbandonedImage_restoresStack: an image that never exited (here
+// stopped deep in its stack) gets the stack back at its rundown, so the
+// next image starts where RUN called this one: SP when the CPU is in the
+// image's mode, else that mode's stack pointer register.
+func TestEndAbandonedImage_restoresStack(t *testing.T) {
+	c := newBootableMachine(t)
+
+	if c.ProcessOne() == nil {
+		t.Fatal("no process 1")
+	}
+
+	const base, deep = 0x7FDFFFD0, 0x7F400600
+
+	mode := c.CPU.PSL().CurMod()
+
+	c.imageActive, c.imageSP, c.imageMode = true, base, mode
+	c.CPU.SetGPR(registers.SP, deep)
+	c.EndAbandonedImage()
+
+	if sp := c.CPU.GPR(registers.SP); sp != base || c.ImageActive() {
+		t.Errorf("same mode: SP %#x, active %v; want %#x, not active", sp, c.ImageActive(), uint32(base))
+	}
+
+	other := registers.User
+	if mode == registers.User {
+		other = registers.Kernel
+	}
+
+	c.imageActive, c.imageMode = true, other
+	c.CPU.SetPR(registers.PrivReg(other), deep)
+	c.CPU.SetGPR(registers.SP, 0x1234)
+	c.EndAbandonedImage()
+
+	if got := c.CPU.PR(registers.PrivReg(other)); got != base || c.CPU.GPR(registers.SP) != 0x1234 {
+		t.Errorf("other mode: its stack pointer %#x, SP %#x; want %#x, SP unchanged", got, c.CPU.GPR(registers.SP), uint32(base))
+	}
+}

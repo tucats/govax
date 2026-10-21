@@ -58,8 +58,13 @@ func (m *Machine) Run(fn string, opts RunOptions) error {
 		return err
 	}
 
-	// A previous image that was stopped and never exited ends now.
+	// A previous image that was stopped and never exited ends now, and
+	// the CPU comes back to process 1 if a run left it in another.
 	m.EndAbandonedImage()
+
+	if err := m.ReturnToProcessOne(); err != nil {
+		return err
+	}
 
 	savedMode := m.CPU.PSL().CurMod()
 	m.Engine.SetModeStack(registers.Kernel, false)
@@ -104,6 +109,7 @@ func (m *Machine) Run(fn string, opts RunOptions) error {
 	}
 
 	m.imageActive = true
+	m.imageSP, m.imageMode = m.CPU.GPR(registers.SP), savedMode
 
 	if !m.runsUnderDebugger(main, opts.Debug) {
 		m.imageEnded = false
@@ -500,11 +506,33 @@ func (m *Machine) ImageRundown() {
 // exited: one a HALT, CTRL/C, CTRL/Y, or an instruction or time limit
 // stopped, and that nothing resumed. On VMS such an image is run down
 // when the next one starts (or the process logs out), closing the files
-// it left open; RUN and EndSession do the same here.
+// it left open; RUN and EndSession do the same here. The stack goes back
+// to where it was when RUN called the image (restoreImageStack), so the
+// next image doesn't start where this one stopped, perhaps at the
+// stack's end.
 func (m *Machine) EndAbandonedImage() {
 	if m.imageActive {
 		m.imageActive = false
+		m.restoreImageStack()
 		m.ImageRundown()
+	}
+}
+
+// restoreImageStack sets the stack pointer of the mode RUN ran its image
+// in back to the one RUN called it with (imageSP), leaving the CPU in the
+// mode and on the stack it's in: SP if it's on that mode's stack, else
+// the mode's stack pointer register (KSP, ESP, SSP, or USP), which SP
+// becomes when the CPU next enters the mode. Only process 1's: if the
+// CPU can't come back to it (a nested run), nothing changes.
+func (m *Machine) restoreImageStack() {
+	if m.ReturnToProcessOne() != nil || m.RunningProcess() != m.processOne {
+		return
+	}
+
+	if psl := m.CPU.PSL(); psl.CurMod() == m.imageMode && !psl.IS() {
+		m.CPU.SetGPR(registers.SP, m.imageSP)
+	} else {
+		m.CPU.SetPR(registers.PrivReg(m.imageMode), m.imageSP)
 	}
 }
 

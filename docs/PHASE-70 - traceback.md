@@ -2,8 +2,9 @@
 
 **Status:** in progress. Planned 2026-10-21; Part B's decisions
 accepted by the author the same day. Subtasks 1 (the survey and the
-VMS probe, `testdata/tb70`) and 2 (the probe's two VAX rounds; Part A,
-"The probe's answers") are done.
+VMS probe, `testdata/tb70`), 2 (the probe's two VAX rounds; Part A,
+"The probe's answers"), and 3 (the nested-signal search and the stack
+after a blown run) are done.
 
 ## Goal
 
@@ -141,7 +142,9 @@ it showed of govax, beside the missing dumps:
    part H, every later image (also under the other images) failed at
    once with `%SYSTEM-F-ACCVIO, reason mask=05, address 0x7fbffff8`
    (written by the engine, not the catch-all), each run's address 4
-   lower: image rundown doesn't recover the stack.
+   lower: image rundown doesn't recover the stack. (Subtask 3 found
+   three causes: the run ended in a HALT, not an exit, so nothing
+   reset the stack; see the progress log.)
 3. **Arithmetic traps have the wrong condition.** Part I (integer
    overflow, IV set) reported `%NONAME-W-NOMSG, Message number
    80000000`, and part Z (integer divide by zero) `%SYSTEM-E-ACCVIO`
@@ -474,3 +477,50 @@ the program's SP, which it shows, and its FP and AP are VMS's own
 goes to SYS$OUTPUT only, the rest to SYS$ERROR and to a different
 SYS$OUTPUT the program doesn't hold. Part A and Part B record the
 answers. Subtask 2 is done; the probe has no more questions.
+
+### 2026-10-21 — Subtask 3: the nested-signal search, and the stack after a blown run
+
+**Finding 1.** The frame walk (`corevms/condition.go`'s `nextHandler`)
+now does what the Internals book's 4.3.3, "Multiply Active Signals",
+describes: a frame whose saved PC is SYS$SRCHANDLER's XFC is a
+condition handler's (the dispatcher called it), so after it is searched
+the walk goes on not to its saved FP (the frame the earlier condition
+happened in) but to the caller of the earlier condition's establisher
+(`pastSearchedFrames`). As in the book, the earlier dispatch's arrays
+are found from the handler's frame alone: the SP before its call, from
+the frame's register save mask and alignment bits, is the handler's
+argument list, whose mechanism array names the establisher. Depths go
+on counting one a frame. VMS's own TB70 on govax now calls HAV once
+(part H, no loop) and INHANDH once (S11), with VMS's messages; the
+dumps are subtasks 6 and 7. `TestSrchandler_multiplyActive`.
+
+**Finding 2** had three causes, all fixed:
+
+1. With paging off, an exception whose arrays the user stack can't take
+   fell back to the console's report and halted the machine. The book's
+   16.2.1.3 rule (the last-chance exit: the image ends with the
+   condition, STS$M_INHIB_MSG, and no message, as `testdata/pg67`'s VMS
+   run showed) applied only in created space; `noStackToReport` now
+   applies it in both modes. `TestDispatchException_noUserStack`.
+2. Image exit (`cpu/exit.go`'s `exitImage`) walks the frame chain to
+   the console's frame, and gave up after 100,000 frames: a runaway
+   recursion leaves about 290,000 in the default 10 MB stack. Only steps
+   that don't go up the stack count toward the limit now (a climbing
+   chain can't loop). With paging on, the walk paged in ~20,000 stack
+   pages in one step, emptying the free list before the reclaimer could
+   run (`%GOVAX-F-MEMEXHAUST`); each frame is now an instruction
+   boundary for the pager (`vm.Memory.BeginInstruction`), as the walk
+   keeps nothing it translated. `TestImageExitLongChain`,
+   `TestImageExitLoopingChain`.
+3. An image that never exits (a HALT, Ctrl/C, a limit) left SP where it
+   stopped, so the next RUN started there. RUN records process 1's SP
+   and mode when it calls the image (`Machine.imageSP`, `imageMode`),
+   and `EndAbandonedImage` puts it back before the rundown, as SP or the
+   mode's stack pointer register (`restoreImageStack`); RUN now brings
+   the CPU back to process 1 before activating. Checked with a program
+   that pushes 1,000 longwords and halts in kernel mode: the next image
+   starts at the same SP (it started 4,080 bytes lower before).
+   `TestEndAbandonedImage_restoresStack`.
+
+A runaway recursion now ends with `$STATUS` `%X1000000C` and no
+message, in both paging modes, and the next image runs normally.

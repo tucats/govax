@@ -23,7 +23,11 @@ import "github.com/tucats/govax/internal/registers"
 
 // maxUnwindFrames bounds exitImage's walk up the frame chain, so a
 // corrupted chain that loops back on itself stops the machine instead
-// of hanging it.
+// of hanging it. Only steps that don't go up the stack count: a caller's
+// frame is normally at a higher address than its callee's (stacks grow
+// down), and a chain that keeps climbing can't loop, however long it is
+// (a runaway recursion fills a stack with hundreds of thousands of
+// frames).
 const maxUnwindFrames = 100_000
 
 // callForService calls call.Routine with the argument list call.ArgList,
@@ -72,7 +76,7 @@ func (e *Engine) callForService(call *ServiceCall) error {
 func (e *Engine) exitImage() error {
 	fp := e.cpu.GPR(registers.FP)
 
-	for n := 0; n < maxUnwindFrames && fp != 0; n++ {
+	for n := 0; n < maxUnwindFrames && fp != 0; {
 		savedFP, err := e.mem.LoadLongword(e.cpu, fp+12)
 		if err != nil {
 			break
@@ -89,7 +93,17 @@ func (e *Engine) exitImage() error {
 			return emulRet(e, nil)
 		}
 
+		if savedFP <= fp {
+			n++
+		}
+
 		fp = savedFP
+
+		// Each frame is an instruction boundary for the pager: the walk
+		// keeps nothing it translated, so the reclaimer may run between
+		// frames, as between instructions. A long chain on pages paged
+		// out would otherwise empty the free list in one step.
+		e.mem.BeginInstruction()
 	}
 
 	return ErrHalted
