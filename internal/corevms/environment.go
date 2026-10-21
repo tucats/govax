@@ -102,12 +102,11 @@ type Environment struct {
 	channels    []*channel
 	nextChannel uint32
 
-	// outputStream is the stream PutOutput writes SYS$OUTPUT's records
-	// through when it names a mailbox or NL: (recdevice.go).
-	outputStream *recordDevice
-
-	// outputFile is SYS$OUTPUT when it names a file (outfile.go).
-	outputFile *outputFile
+	// output and errorOutput are where SYS$OUTPUT's and SYS$ERROR's
+	// records go when they name a mailbox, NL:, or a file (outfile.go):
+	// PutOutput writes SYS$OUTPUT's, and a condition's message both
+	// (msgout.go).
+	output, errorOutput processOutput
 
 	// sectionPages are the pages of the process's address space mapped
 	// to global sections (gblsec.go), which image rundown unmaps.
@@ -325,15 +324,17 @@ func NewEnvironment(sys *System, logicals *lnm.Database, consoleIn io.Reader, co
 // table and in no job.
 func newEnvironment(sys *System, logicals *lnm.Database, consoleIn io.Reader, consoleOut io.Writer) *Environment {
 	return &Environment{
-		System:     sys,
-		Logicals:   logicals,
-		files:      rms.NewFileTable(consoleOut),
-		Process:    NewProcess(),
-		consoleIn:  consoleIn,
-		consoleOut: consoleOut,
-		openFiles:  map[uint32]*os.File{},
-		hostClaims: map[uint32]*rms.HostClaim{},
-		nextFID:    3,
+		System:      sys,
+		Logicals:    logicals,
+		files:       rms.NewFileTable(consoleOut),
+		Process:     NewProcess(),
+		consoleIn:   consoleIn,
+		consoleOut:  consoleOut,
+		output:      processOutput{name: "SYS$OUTPUT"},
+		errorOutput: processOutput{name: "SYS$ERROR"},
+		openFiles:   map[uint32]*os.File{},
+		hostClaims:  map[uint32]*rms.HostClaim{},
+		nextFID:     3,
 	}
 }
 

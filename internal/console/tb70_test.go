@@ -401,3 +401,113 @@ func excmsgValueMatches(name, got, want string, loose bool) bool {
 
 	return loose || g == w || w >= 0x7FF00000
 }
+
+// TestTB70Output replays the parts of TB70.COM and TB70B.COM that run
+// an image with SYS$OUTPUT and SYS$ERROR defined to different files
+// (round 1's A, with and without traceback, and S; round 2's N and M),
+// then TB70.COM's SPAWN of part A and its run with no part, and matches
+// VMS's output line for line: where the messages and dumps went, as
+// TYPE shows each file (excmsgMatch's rules for the "improperly
+// handled" dump, tb70Masked's for PCs outside the image).
+func TestTB70Output(t *testing.T) {
+	for _, r := range []struct{ file, from, to, define string }{
+		{"tb70.log", "$ DEFINE TB70_PART A", "$ DIRECTORY/SIZE=ALL/DATE", "TB70_PART"},
+		{"tb70b.log", "$ DEFINE TB70B_PART N", "$ DIRECTORY/SIZE=ALL TB70B*.*", "TB70B_PART"},
+	} {
+		_, dispatch := tb70Console(t)
+
+		// The procedure's earlier runs left the part's name defined.
+		dispatch("DEFINE/NOLOG " + r.define + " S")
+
+		for _, cmd := range tb70LogCommands(t, r.file, r.from, r.to) {
+			if cmd.line == "" {
+				continue
+			}
+
+			var got []string
+
+			for _, line := range strings.Split(dispatch(cmd.line), "|") {
+				if line != "" {
+					got = append(got, line)
+				}
+			}
+
+			for _, problem := range excmsgMatch(tb70Masked(got), tb70Masked(cmd.want), false, nil) {
+				t.Errorf("%s: %s: %s\ngot:\n%s\nwant:\n%s", r.file, cmd.line, problem, strings.Join(got, "\n"), strings.Join(cmd.want, "\n"))
+			}
+		}
+	}
+}
+
+// tb70Command is a command of a VMS log (tb70LogCommands) and its
+// output, without blank lines.
+type tb70Command struct {
+	line string
+	want []string
+}
+
+// tb70LogCommands returns the commands of the VMS log file in vax/ from
+// the line from to the line to (not included), each with its output,
+// leaving out comments.
+func tb70LogCommands(t *testing.T, file, from, to string) []tb70Command {
+	t.Helper()
+
+	data, err := os.ReadFile(filepath.Join(tb70Dir, "vax", file))
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	var commands []tb70Command
+
+	started := false
+
+	for _, line := range strings.Split(strings.ReplaceAll(string(data), "\r", ""), "\n") {
+		switch {
+		case line == from:
+			started = true
+		case !started:
+			continue
+		case line == to:
+			return commands
+		}
+
+		switch cmd, ok := strings.CutPrefix(line, "$ "); {
+		case ok && strings.HasPrefix(cmd, "!"):
+			commands = append(commands, tb70Command{}) // output after a comment is none
+		case ok:
+			commands = append(commands, tb70Command{line: cmd})
+		case line != "" && len(commands) > 0:
+			commands[len(commands)-1].want = append(commands[len(commands)-1].want, line)
+		}
+	}
+
+	t.Fatalf("%s: no %q after %q", file, to, from)
+
+	return nil
+}
+
+// TestTB70OutputSameFile runs part A twice with SYS$OUTPUT and SYS$ERROR
+// both defined to one file: each run's message and dump are written to
+// it once, and each image makes a version of its own, as its own open of
+// the file would (the image's files are forgotten at rundown).
+func TestTB70OutputSameFile(t *testing.T) {
+	_, dispatch := tb70Console(t)
+
+	dispatch("DEFINE/NOLOG TB70_PART A")
+
+	for range 2 {
+		dispatch("DEFINE/USER_MODE SYS$OUTPUT TB70SAME.LOG")
+		dispatch("DEFINE/USER_MODE SYS$ERROR TB70SAME.LOG")
+
+		if got := dispatch("RUN TB70"); got != "" {
+			t.Errorf("RUN TB70 wrote %q to the terminal", got)
+		}
+	}
+
+	for _, version := range []string{"1", "2"} {
+		got := strings.Split(dispatch("TYPE TB70SAME.LOG;"+version), "|")
+		if len(got) != 7 || !strings.HasPrefix(got[0], "%SYSTEM-F-ACCVIO,") || !strings.HasPrefix(got[1], "%TRACE-F-TRACEBACK,") {
+			t.Errorf("TB70SAME.LOG;%s:\n%s", version, strings.Join(got, "\n"))
+		}
+	}
+}

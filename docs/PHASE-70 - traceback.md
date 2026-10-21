@@ -5,8 +5,8 @@ accepted by the author the same day. Subtasks 1 (the survey and the
 VMS probe, `testdata/tb70`), 2 (the probe's two VAX rounds; Part A,
 "The probe's answers"), 3 (the nested-signal search and the stack
 after a blown run), 4 (the arithmetic traps), 5 (the image startup
-frame and the search's order), 6 (the traceback dump), and 7
-(EXE$EXCMSG's dump) are done.
+frame and the search's order), 6 (the traceback dump), 7
+(EXE$EXCMSG's dump), and 8 (SYS$OUTPUT and SYS$ERROR) are done.
 
 ## Goal
 
@@ -734,3 +734,43 @@ delivery's; N, TB70SHR's place; X, image rundown's). `excmsg_test.go`
 checks the layout, which conditions get the dump by LIB$SIGNAL and
 LIB$STOP, the SP after a CALLS, and a long signal array. The manual's
 example 5 shows the dump (run on govax).
+
+### 2026-10-21 — Subtask 8: SYS$OUTPUT and SYS$ERROR
+
+**Decision 3.** Every message the condition handlers write, and their
+dumps, now goes through `corevms/msgout.go`'s `putMessage`, which does
+what the Internals book's 30.2.2 says `$PUTMSG` does (SYS$ERROR, and
+SYS$OUTPUT too when it's different) with the probe's two rules: a
+success message goes to SYS$OUTPUT only, and a SYS$OUTPUT file the image
+has written to itself (`outputFile.held`, set by `PutOutput`) gets
+nothing. Two names are different when their process logical names
+translate to different strings; an undefined SYS$ERROR is SYS$OUTPUT.
+The catch-all's message, the traceback and "improperly handled" dumps
+(`reportCondition`'s `after` now returns the dump's lines), ATTCONSTO,
+and `$PUTMSG` itself (by its vector's first condition's severity) all
+use it, where each wrote to the terminal before. That a program's own
+`$PUTMSG` of a success message follows the first rule is unconfirmed:
+the probe saw only the catch-all's.
+
+SYS$ERROR needed SYS$OUTPUT's machinery: `outfile.go`'s `processOutput`
+is one name's stream (a mailbox or NL:) and file, and `PutOutput` is
+`putRecord` on SYS$OUTPUT's. A file the CLI makes at startup (a SPAWN's
+log) is `permanent`, kept for the process's life; one an image's writes
+or messages make is the image's, and image rundown forgets it
+(`forgetImageOutput`), so the next image makes a new version, as its
+own open would on VMS (govax used to append to the earlier image's).
+Messages to a full mailbox don't wait (the line stays pending on the
+stream, the lines after it are lost; unconfirmed).
+
+**Finding 5** had no cause left of its own: with the stack fixed
+(finding 2, subtask 3) a DEFINE/USER_MODE SYS$OUTPUT file before RUN
+gets the program's lines, in process 1 as in a subprocess. What the dry
+run saw was the stack's: every image after part H failed at once. What
+was missing is the messages' routing above.
+
+`TestTB70Output` replays TB70.COM's split runs (part A with and without
+traceback, part S), its SPAWN of part A and its run with no part, and
+TB70B.COM's N and M, command by command, and matches VMS's log, each
+file's TYPE included. `TestTB70OutputSameFile` checks one file for both
+names (one copy of the message) and a version per image. The manual's
+section 9 describes where the messages go.

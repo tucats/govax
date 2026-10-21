@@ -742,9 +742,9 @@ func (env *Environment) continueCondition(d *conditionDispatch) (uint32, error) 
 
 // catchAll is what happens when no handler continued (the search's
 // stageCatchAll): VMS's catch-all handler. It writes the condition's
-// message to the terminal (unless STS$M_INHIB_MSG says not to), and for
-// an exception's condition that ends the image the "improperly handled
-// condition" dump (excmsg.go), then either continues the program (a
+// message where $PUTMSG would (msgout.go; unless STS$M_INHIB_MSG says
+// not to), and for an exception's condition that ends the image the
+// "improperly handled condition" dump (excmsg.go), then either continues the program (a
 // condition that isn't SEVERE, signaled by LIB$SIGNAL or the hardware)
 // or ends the image through $EXIT with the condition value as the status
 // (a SEVERE one, or any LIB$STOP), marked STS$M_INHIB_MSG because the
@@ -766,13 +766,9 @@ func (env *Environment) catchAll(d *conditionDispatch) (uint32, error) {
 
 	// An exception's condition that ends the image gets EXE$EXCMSG's
 	// dump after its message.
-	var dump func()
+	var dump func() []string
 	if exiting && exceptionConditions[cond&condIDMask] {
-		dump = func() {
-			for _, line := range env.improperlyHandledDump(d, words) {
-				env.writeConsole(line + "\n")
-			}
-		}
+		dump = func() []string { return env.improperlyHandledDump(d, words) }
 	}
 
 	if env.reportCondition(d, words, dump) {
@@ -796,12 +792,13 @@ func (env *Environment) catchAll(d *conditionDispatch) (uint32, error) {
 // instruction, finds the message already shown, and carries on with
 // its action, and letting the program continue is just running it.
 //
-// after, if not nil, writes what follows the message when no debugger
-// takes the condition: the traceback handler's dump. Under the VMS
+// The message goes where $PUTMSG writes it (msgout.go). after, if not
+// nil, returns what follows it when no debugger takes the condition, a
+// dump, written to the same place. Under the VMS
 // debugger an unhandled condition gets its message and the debugger's
 // break, and never a dump, even when the program goes on
 // (testdata/dbgcmd's except.dlg).
-func (env *Environment) reportCondition(d *conditionDispatch, words []uint32, after func()) bool {
+func (env *Environment) reportCondition(d *conditionDispatch, words []uint32, after func() []string) bool {
 	if d.reported {
 		return false
 	}
@@ -811,9 +808,7 @@ func (env *Environment) reportCondition(d *conditionDispatch, words []uint32, af
 	if words[0]&stsInhibitMsg == 0 {
 		body, tail := words[:len(words)-2], words[len(words)-2:]
 
-		for _, line := range env.formatMessageVector(body, tail, defaultMessageFlags, "") {
-			env.writeConsole(line + "\n")
-		}
+		env.putMessage(words[0], env.formatMessageVector(body, tail, defaultMessageFlags, ""))
 	}
 
 	if env.OnUnhandled != nil && env.OnUnhandled(env.unhandledCondition(d, words[0])) {
@@ -821,7 +816,7 @@ func (env *Environment) reportCondition(d *conditionDispatch, words []uint32, af
 	}
 
 	if after != nil {
-		after()
+		env.putMessage(words[0], after())
 	}
 
 	return false
@@ -872,9 +867,7 @@ func (env *Environment) attemptToContinueFromStop(d *conditionDispatch) (uint32,
 		return 0, fmt.Errorf("rtl: can't read the condition's signal array at %08X", d.sig)
 	}
 
-	for _, line := range env.formatMessageVector([]uint32{libAttConSto, 0}, nil, defaultMessageFlags, "") {
-		env.writeConsole(line + "\n")
-	}
+	env.putMessage(libAttConSto, env.formatMessageVector([]uint32{libAttConSto, 0}, nil, defaultMessageFlags, ""))
 
 	return env.exitForCondition(d, cond)
 }

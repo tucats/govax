@@ -199,9 +199,11 @@ type putmsgCall struct {
 	fp uint32
 
 	// lines are the formatted message lines, and next the one whose
-	// action routine is running.
+	// action routine is running; cond is the vector's first condition,
+	// whose severity decides where they go (putMessage).
 	lines []string
 	next  int
+	cond  uint32
 
 	// sp is where $PUTMSG put the routine's argument list, and savedSP
 	// the stack pointer before that, restored when the routine returns.
@@ -245,7 +247,7 @@ func serviceSysPutmsg(env *Environment, argv []uint32) (uint32, error) {
 			call = top
 
 			if c.GPR(registers.R0)&1 != 0 {
-				env.writeConsole(call.lines[call.next] + "\n")
+				env.putMessage(call.cond, call.lines[call.next:call.next+1])
 			}
 
 			c.SetGPR(registers.SP, call.savedSP)
@@ -260,15 +262,17 @@ func serviceSysPutmsg(env *Environment, argv []uint32) (uint32, error) {
 			return st, nil
 		}
 
+		// The first condition's severity decides where the lines go
+		// (msgout.go); the vector was readable, so it's there.
+		cond, _ := env.mem.LoadLongword(c, optArg(argv, 0)+4)
+
 		if actrtn == 0 {
-			for _, line := range lines {
-				env.writeConsole(line + "\n")
-			}
+			env.putMessage(cond, lines)
 
 			return ssNormal, nil
 		}
 
-		call = &putmsgCall{fp: c.GPR(registers.FP), lines: lines}
+		call = &putmsgCall{fp: c.GPR(registers.FP), lines: lines, cond: cond}
 		p.putmsg = append(p.putmsg, call)
 	}
 

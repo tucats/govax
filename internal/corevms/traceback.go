@@ -88,11 +88,7 @@ func shimTraceback(env *Environment, argv []uint32) (uint32, error) {
 		return ssResignal, nil
 	}
 
-	dump := func() {
-		for _, line := range env.tracebackDump(d, cond, startup) {
-			env.writeConsole(line + "\n")
-		}
-	}
+	dump := func() []string { return env.tracebackDump(d, cond, startup) }
 
 	if env.reportCondition(d, words, dump) {
 		return 0, ErrWait

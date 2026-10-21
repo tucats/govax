@@ -2863,6 +2863,20 @@ by its psect instead, and only the main image's PCs are named: one in a
 shareable image or LIBRTL has blank columns. Under the debugger an
 unhandled condition breaks into it instead, with no dump.
 
+A condition's message and its dump go where VMS's `$PUTMSG` writes:
+to `SYS$ERROR`, and to `SYS$OUTPUT` too when the two name different
+places. A success message goes to `SYS$OUTPUT` only, and a `SYS$OUTPUT`
+file the program has written to itself gets none of them:
+
+```
+$ DEFINE/USER_MODE SYS$OUTPUT FAIL.OUT
+$ DEFINE/USER_MODE SYS$ERROR FAIL.ERR
+$ RUN FAIL
+```
+
+leaves the message and dump in both files if the program wrote nothing
+to `SYS$OUTPUT`, and in `FAIL.ERR` alone if it did.
+
 ---
 
 ## 10. The librarian

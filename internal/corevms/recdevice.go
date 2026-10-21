@@ -269,11 +269,23 @@ func (r *recordDevice) Close() {
 // record is a line on the terminal, and the status is SS$_NORMAL. A
 // SYS$OUTPUT that names a file (no device, or a disk) gets the line as a
 // record of that file (outfile.go), or, if the file can't be written, the
-// terminal does.
+// terminal does. A file the image writes this way is one it holds open
+// (outputFile.held).
 func (env *Environment) PutOutput(record string) (uint32, error) {
-	device, st := env.deviceName("SYS$OUTPUT")
+	if f := env.openRecordFile(&env.output); f != nil && f != env.output.permanent {
+		f.held = true
+	}
+
+	return env.putRecord(&env.output, record, false)
+}
+
+// putRecord writes record to out's name as PutOutput describes. async
+// true doesn't wait for room in a full mailbox: the record is left
+// pending on the stream (recordDevice.Put), and the status is SS$_NORMAL.
+func (env *Environment) putRecord(out *processOutput, record string, async bool) (uint32, error) {
+	device, st := env.deviceName(out.name)
 	if st != 0 || env.isFileDevice(device) {
-		if !env.putOutputFile(record) {
+		if !env.putRecordFile(out, record) {
 			env.writeConsole(record + "\n")
 			env.countIO(false)
 		}
@@ -281,13 +293,13 @@ func (env *Environment) PutOutput(record string) (uint32, error) {
 		return ssNormal, nil
 	}
 
-	out := env.outputStream
-	if out == nil || out.ch.Name != device || !slices.Contains(env.channels, out.ch) {
-		if out != nil {
-			out.Close()
+	stream := out.stream
+	if stream == nil || stream.ch.Name != device || !slices.Contains(env.channels, stream.ch) {
+		if stream != nil {
+			stream.Close()
 		}
 
-		env.outputStream = nil
+		out.stream = nil
 
 		dev, found, st := env.OpenRecordDevice(device, fabFACPut)
 		if !found {
@@ -301,11 +313,14 @@ func (env *Environment) PutOutput(record string) (uint32, error) {
 			return st, nil
 		}
 
-		out = dev.(*recordDevice)
-		env.outputStream = out
+		stream = dev.(*recordDevice)
+		out.stream = stream
 	}
 
-	status, _, err := out.Put([]byte(record), false)
+	status, pending, err := stream.Put([]byte(record), async)
+	if pending {
+		return ssNormal, nil
+	}
 
 	return status, err
 }

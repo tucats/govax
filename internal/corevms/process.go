@@ -432,7 +432,8 @@ func serviceSysAdjwsl(env *Environment, argv []uint32) (uint32, error) {
 // user mode, and disassociates its common event flag clusters (deleting
 // temporary ones nobody else uses), cancels its outstanding $SETIMR
 // timers and $SCHDWK wakeups, discards its queued user-mode ASTs, and
-// forgets its user-mode exit handlers and any $PUTMSG, $CMKRNL, or
+// forgets its user-mode exit handlers, the SYS$OUTPUT and SYS$ERROR
+// files it made (forgetImageOutput), and any $PUTMSG, $CMKRNL, or
 // LIB$ routine left waiting for a routine it called, deletes P0 and the
 // sections mapped there (DeleteP0, unless KeepP0 keeps them), resets the working-set limit to its default (resetWorkingSet),
 // forgets the image's name (Process.ImageName), and forgets its heap (releaseHeap) and its RTL packages' data
@@ -450,6 +451,7 @@ func (env *Environment) ImageRundown() {
 	env.flushUserASTs()
 	env.cancelUserExitHandlers()
 	env.cancelPutmsgCalls()
+	env.forgetImageOutput()
 	env.cancelChangeModeCalls()
 	env.cancelShimCalls()
 	env.cancelConditions()
